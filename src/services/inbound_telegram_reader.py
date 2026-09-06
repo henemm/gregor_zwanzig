@@ -23,6 +23,13 @@ from services.trip_command_processor import (
     InboundMessage,
     TripCommandProcessor,
     _BARE_KEYWORD_MAP,
+    _erste_zeile,
+    _metric_id_for_word,
+    _ohne_praefix,
+    _ohne_zitat,
+    _QUERY_KEYS,
+    _VALID_COMMANDS as _PROCESSOR_COMMANDS,
+    unknown_command_body,
 )
 from services.trip_day import trip_local_today
 
@@ -30,9 +37,10 @@ logger = logging.getLogger(__name__)
 
 TELEGRAM_API_BASE = "https://api.telegram.org"
 
-_VALID_COMMANDS = {"ruhetag", "startdatum", "report", "abbruch", "status", "hilfe",
-                   "glance", "heute", "morgen", "heute_gewitter",
-                   "timeline_heute", "timeline_morgen", "now"}
+# Issue #2134: keine eigene (achte) Befehlsliste mehr — der Reader kennt genau
+# das, was der Prozessor ausfuehrt (Steuerbefehle) plus die lesenden
+# Abfrage-Schluessel, die er selbst als `### query: <key>` kodiert.
+_VALID_COMMANDS = _PROCESSOR_COMMANDS | _QUERY_KEYS
 
 _SHORTCUT_MAP = {
     "/s": "glance",
@@ -202,28 +210,21 @@ class InboundTelegramReader:
                 self.sent_message_ids.append(mid)
             return True
 
-        # Befehl parsen
-        key, value = self._parse_command(text)
+        # Befehl parsen UND kodieren — ein Einstieg, damit ein Test denselben
+        # Weg nimmt wie der Produktivpfad (Issue #2134).
+        key, body = self._command_body(text)
         if key is None:
             mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
                 subject="Unbekannter Befehl",
-                body="Bekannte Befehle: heute, morgen, jetzt, gewitter, ruhetag, status, stop, weiter, hilfe",
+                # Issue #2134: derselbe abgeleitete Text wie im Prozessor —
+                # vorher war das die achte, eigenstaendig gepflegte Liste.
+                body=unknown_command_body("Das war kein bekannter Befehl."),
                 settings=user_settings,
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
             return True
-
-        # InboundMessage bauen und verarbeiten
-        # Query-Keys werden als "### query: <key>" kodiert
-        from services.trip_command_processor import _QUERY_KEYS
-        if key in _QUERY_KEYS:
-            body = f"### query: {key}"
-        elif value:
-            body = f"### {key}: {value}"
-        else:
-            body = f"### {key}"
 
         inbound = InboundMessage(
             channel="telegram",
@@ -447,31 +448,66 @@ class InboundTelegramReader:
             logger.error(f"telegram-connect Fehler: {e}")
         return True
 
+    def _command_body(self, text: str) -> tuple[str | None, str | None]:
+        """Getippter Text -> ``(interner Schluessel, Prozessor-Body)``.
+
+        Der EINE Einstieg des Telegram-Drahts: Erkennen und Kodieren stehen
+        beieinander, damit ein Test genau den Weg nimmt, den auch
+        ``_process_update`` nimmt. Vorher lag die Kodierung offen im
+        Update-Handler zwischen zwei Netz-Aufrufen und war damit ausserhalb
+        eines Live-Laufs nicht pruefbar — genau die Luecke, durch die
+        ``/strecke 5`` unbemerkt am Prozessor vorbeilief (Issue #2134).
+
+        ``(None, None)``, wenn kein Befehl erkannt wurde.
+        """
+        key, value = self._parse_command(text)
+        if key is None:
+            return None, None
+        # Query-Keys werden als "### query: <key>" kodiert
+        if key in _QUERY_KEYS:
+            return key, f"### query: {key}"
+        if value:
+            return key, f"### {key}: {value}"
+        return key, f"### {key}"
+
     def _parse_command(self, text: str) -> tuple[str | None, str | None]:
         """Parst ersten nicht-leeren Satz: 'ruhetag 2' → ('ruhetag', '2').
 
         Immer lowercase. Unbekannte Befehle → (None, None).
         Auflösungs-Reihenfolge:
+          0. Zitat-Praefix ab (``_ohne_zitat``, #2137) — der Slash bleibt noch
+             stehen, er traegt hier Bedeutung.
           1. Slash-Shortcuts (_SHORTCUT_MAP): /h, /m, /s, /hg, /jetzt, ...
-          2. Bare Keywords (_BARE_KEYWORD_MAP, channel-agnostisch wie E-Mail):
-             heute, morgen, jetzt, gewitter, stop, weiter, hilfe, status, ...
+             GANZE Zeile UND erstes Token, sonst faellt '/strecke 5' durch
+             (#2120: genau der gemeldete Fall).
+          2. Slash ab (``_ohne_praefix``), dann Bare Keywords
+             (_BARE_KEYWORD_MAP, channel-agnostisch wie E-Mail): heute, morgen,
+             jetzt, gewitter, stop, weiter, hilfe, status, ...
              stop→abbruch, jetzt→now, gewitter→heute_gewitter etc.
           3. _VALID_COMMANDS-Fallback: startdatum, report (nicht in _BARE_KEYWORD_MAP).
         Kein '### ' Prefix nötig — Freitext.
+
+        Warum die Reihenfolge nicht umgestellt werden darf: fiele der Slash
+        vor Schritt 1, wuerde '/status' zu 'status' und verloere seine
+        Sonderbedeutung als Glance-Alias — die Etappenliste kaeme statt der
+        Uebersicht. Die Praefix-Behandlung selbst kommt aus DERSELBEN Quelle
+        wie im Prozessor (Issue #2134), nur in zwei Stufen aufgerufen.
         """
-        first_line = next(
-            (line.strip() for line in text.splitlines() if line.strip()),
-            "",
-        )
+        first_line = _ohne_zitat(_erste_zeile(text)).lower()
         if not first_line:
             return None, None
 
-        # Kurzbefehl-Mapping: /s /h /m /hg
-        lower_first = first_line.lower()
-        if lower_first in _SHORTCUT_MAP:
-            return _SHORTCUT_MAP[lower_first], None
+        # Kurzbefehl-Mapping: /s /h /m /hg — vor dem Slash-Streifen
+        if first_line in _SHORTCUT_MAP:
+            return _SHORTCUT_MAP[first_line], None
+        teile = first_line.split(None, 1)
+        if teile[0] in _SHORTCUT_MAP:
+            rest = teile[1].strip() if len(teile) > 1 else None
+            return _SHORTCUT_MAP[teile[0]], rest or None
 
-        parts = lower_first.split(None, 1)
+        parts = _ohne_praefix(first_line).split(None, 1)
+        if not parts:
+            return None, None
         key = parts[0]
         value = parts[1].strip() if len(parts) > 1 else None
 
@@ -480,6 +516,12 @@ class InboundTelegramReader:
             return _BARE_KEYWORD_MAP[key], value or None
 
         if key not in _VALID_COMMANDS:
+            # Issue #2134: ein getipptes Katalog-Kuerzel (`Visib`, `FZ`, ...)
+            # wird durchgereicht — der Prozessor loest es gegen denselben
+            # Katalog auf. Steuerbefehle sind oben bereits abgearbeitet, ein
+            # Metrikwort kann sie deshalb nicht verdraengen (AC-20).
+            if _metric_id_for_word(key):
+                return key, value or None
             return None, None
 
         return key, value or None

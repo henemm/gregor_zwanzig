@@ -185,7 +185,18 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # GEMESSEN: einziger Unterschied im gerenderten Output dieses Fixtures ist
 # "Sonne 0.4h" statt "Sonne 24 min" (Direktvergleich HTML/Plain, s. PR #2014).
 # Alter Digest 3aae0e13…, neuer 66997d04….
-_EXPECTED_SHA256 = "66997d04443b4dc36588a992926b96e15354ec24cbfb1305c87d3a2db3b1a8bd"
+# Issue #2134 (2026-09-06): erneut fortgeschrieben, wieder AUSDRUECKLICH. Der
+# Fussz.-Block "Antwort-Kommandos" stammt in BEIDEN Fassungen (Klartext und
+# HTML) jetzt aus derselben Quelle `_COMMAND_SPECS` (PO-Vorgabe 3) statt aus
+# zwei divergierenden Listen -- STRECKE fehlte in beiden, RUHETAG zusaetzlich
+# im HTML. NACHGEMESSEN gegen den unveraenderten HEAD-Stand (Baum per
+# `git archive HEAD` ausgepackt, identisches Fixture gerendert): der HEAD-Lauf
+# reproduziert exakt den alten Digest 66997d04…; der Byte-Diff besteht im
+# Klartext aus genau den Zeilen des Kommando-Blocks und im HTML aus EINEM
+# zusammenhaengenden Bereich innerhalb der Kommando-Tabelle (Spalte 809 bis
+# -228 der einzigen geaenderten Zeile 55, Zeilenzahl unveraendert). Kein
+# Unterschied ausserhalb des Blocks. Alter Digest 66997d04…, neuer 3fc03b40….
+_EXPECTED_SHA256 = "3fc03b40ca53578fbc244d86fe3b367ba613c0645fd9d4102c849d4e41407a05"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

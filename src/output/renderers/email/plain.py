@@ -21,6 +21,10 @@ if TYPE_CHECKING:
     from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
+# Issue #2134: EINE Quelle fuer den Befehlssatz. Import-Richtung ist etabliert
+# und zirkelfrei (`renderers/narrow.py:52` holt sich ACTIONS_BUBBLE_BUTTONS aus
+# demselben Modul); die Gegenrichtung existiert nicht.
+from services.trip_command_processor import command_rows
 from utils.timezone import local_fmt
 
 from output.renderers.day_window import (
@@ -361,18 +365,14 @@ def render_plain(
         lines.append(render_undelivered_plain(undelivered, tz=tz))
         lines.append("")
 
-    # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz)
+    # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz).
+    # Issue #2134: abgeleitet aus `_COMMAND_SPECS` — dieselbe Quelle wie die
+    # Erkennung, der HTML-Block und beide Fehlertexte. Vorher fehlte STRECKE
+    # hier und zusätzlich RUHETAG im HTML.
     lines.append("")
     lines.append("── Antwort-Kommandos ──")
-    lines.append("  HEUTE / MORGEN       – Wetter heutige/morgige Etappe")
-    lines.append("  JETZT / NOW          – Nowcast Regen/Gewitter ~2h")
-    lines.append("  GEWITTER             – Gewittergefahr heutige Etappe")
-    lines.append("  RUHETAG [N]          – Etappen um N Tage verschieben")
-    lines.append("  STATUS               – Heute und kommende Etappen")
-    lines.append("  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen")
-    lines.append("  SKIP                 – Nächstes Briefing überspringen")
-    lines.append("  STOP / WEITER        – Briefings deaktivieren / reaktivieren")
-    lines.append("  HILFE / HELP         – Alle Befehle anzeigen")
+    for label, beschreibung in command_rows():
+        lines.append(f"  {label:<20} – {beschreibung}")
     lines.append("")
 
     all_rows = [r for tbl in seg_tables for r in tbl]

@@ -26,15 +26,18 @@ GR20 E1: 17–18°C, gef. 11–12°C, ⛅, starker Regen max 8:00, mäßiger Win
 
 
 ── Antwort-Kommandos ──
-  HEUTE / MORGEN       – Wetter heutige/morgige Etappe
-  JETZT / NOW          – Nowcast Regen/Gewitter ~2h
+  HEUTE                – Wetter der heutigen Etappe
+  MORGEN               – Wetter der morgigen Etappe
+  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
   GEWITTER             – Gewittergefahr heutige Etappe
-  RUHETAG [N]          – Etappen um N Tage verschieben
+  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
   STATUS               – Heute und kommende Etappen
   PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
   SKIP                 – Nächstes Briefing überspringen
-  STOP / WEITER        – Briefings deaktivieren / reaktivieren
-  HILFE / HELP         – Alle Befehle anzeigen
+  STOP                 – Briefings dauerhaft deaktivieren
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
 
 Einheiten: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 Spalten: Temp = Temperatur · TmpMin = Tiefsttemperatur-Alarm · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Thdr = Gewitter · SnowL = Schneefallgrenze · Cloud = Bewölkung · Sun = Sonnenstunden

@@ -34,7 +34,7 @@ Leerzustand) — nur der Trigger ist jetzt epik-nativ der Drilldown-Button-Callb
 ## Source
 
 - **File:** `src/services/trip_command_processor.py`
-- **Identifier:** `TripCommandProcessor._handle_drilldown`, `_format_drilldown`, `_DRILLDOWN_PATTERN`, `_DRILLDOWN_METRICS`
+- **Identifier:** `TripCommandProcessor._handle_drilldown`, `_format_drilldown`, `_DRILLDOWN_PATTERN`, `_DRILLDOWN_TOKEN_METRIC`, `_DRILLDOWN_TOKEN_EMOJI` (Nachtrag 2026-09-06: `_DRILLDOWN_METRICS` gibt es seit Issue #2134 nicht mehr, s. u.)
 
 ## Estimated Scope
 
@@ -57,11 +57,8 @@ Leerzustand) — nur der Trigger ist jetzt epik-nativ der Drilldown-Button-Callb
 ```
 _DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
 
-_DRILLDOWN_METRICS = {
-  "thunder": ("thunder_level", "⛈️ Gewitter", _thunder_label),   # ⚪ keins / 🟡 mäßig / 🔴 hoch
-  "wind":    ("wind10m_kmh",  "💨 Wind",      _num_label("km/h")),# "23 km/h"
-  "precip":  ("precip_1h_mm", "🌧 Niederschlag", _num_label("mm")),# "1.4 mm"
-}
+_DRILLDOWN_TOKEN_METRIC = {"thunder": "thunder", "wind": "wind", "precip": "precipitation"}
+_DRILLDOWN_TOKEN_EMOJI  = {"thunder": "⛈️", "wind": "💨", "precip": "🌧"}
 
 process(): im Query-Dispatch-Zweig zusätzlich:
   if _DRILLDOWN_PATTERN.match(actual_key):  # actual_key aus "### query: <k>" ODER direkt "### <k>"
@@ -69,7 +66,10 @@ process(): im Query-Dispatch-Zweig zusätzlich:
       return _handle_drilldown(trip, metric, day_token, received_at, user_id)
 
 _handle_drilldown(trip, metric, day_token, received_at, user_id):
-  field, header, fmt = _DRILLDOWN_METRICS[metric]
+  definition = get_metric(_DRILLDOWN_TOKEN_METRIC[metric])   # Katalog-Auflösung statt dritter Liste
+  field = definition.dp_field
+  header = f"{_DRILLDOWN_TOKEN_EMOJI[metric]} {definition.label_de}"
+  fmt = _metric_formatter(definition)   # dispatcht nach is_level/dp_field, s. u.
   if day_token == "today":  from_time, hours = received_at, 12
   else:                     from_time = (received_at+1d) @ 00:00 (gleiche tz), hours = 24
   res = WeatherExtractor(user_id).drilldown(trip.id, field, from_time=from_time, hours=hours)
@@ -86,6 +86,17 @@ _format_drilldown(res, header, fmt):
   for pt in res.points: lines.append(f"{pt.ts.astimezone():%H:%M}  {fmt(pt.value)}")
   return "\n".join(lines)   # >4096 wird vom TelegramOutput abgeschnitten (Button bleibt)
 ```
+
+**Nachtrag 2026-09-06 (Issue #2134):** Die feste Zuordnungsliste `_DRILLDOWN_METRICS`
+(Feld + Überschrift + Formatierer je Metrik) ist entfallen. `_handle_drilldown` löst
+Feld, Beschriftung und Formatierer jetzt aus dem Metrik-Katalog auf (`get_metric()`,
+`_metric_formatter()` nach `is_level`/`dp_field` — dieselbe Ableitung wie beim
+freien Abrufwort, `docs/specs/modules/feat_2134_adhoc_abruf_metrik_katalog.md`). Nur
+noch der Token→Katalog-ID-Zeiger (`_DRILLDOWN_TOKEN_METRIC`) und das Button-Emoji
+(`_DRILLDOWN_TOKEN_EMOJI`) sind handgeschrieben — bewusst, weil die drei Buttons eine
+kuratierte Auswahl bleiben (s. Known Limitations der #2134-Spec) und `_DRILLDOWN_PATTERN`
+unverändert auf `thunder|wind|precip` begrenzt ist. Die Verhaltens-ACs dieser Spec
+(stündliche Liste, „Zurück"-Button, Leerzustand, Einheiten) sind davon unberührt.
 
 KEINE Änderung an `inbound_telegram_reader.py` (Trigger ist Button/Callback → #655).
 

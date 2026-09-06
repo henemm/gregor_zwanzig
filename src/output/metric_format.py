@@ -24,7 +24,7 @@ from __future__ import annotations
 from typing import Iterable, Optional
 
 from app.metric_catalog import get_metric
-from app.models import ThunderLevel
+from app.models import PrecipType, ThunderLevel
 
 # Beide ThunderLevel-Skalen wohnen seit der #1196-Nacharbeit in der
 # Domaenenschicht (app/thunder_scale.py) -- der Zeitplaner braucht sie, darf
@@ -59,6 +59,7 @@ __all__ = [
     "thunder_label_value",
     "thunder_level_from_signals",
     "THUNDER_LABEL_DE",
+    "PRECIP_TYPE_LABEL_DE",
     "thunder_ampel_band",
     "max_thunder",
 ]
@@ -285,6 +286,20 @@ THUNDER_LABEL_DE: dict[ThunderLevel, str] = {
     ThunderLevel.LOW: "leicht",
     ThunderLevel.MED: "mittel",
     ThunderLevel.HIGH: "hoch",
+}
+
+
+# Geteilte deutsche Beschriftung der Niederschlagsart (Issue #2134, analog zu
+# THUNDER_LABEL_DE). Der Ad-hoc-Abruf einer Groesse mit ``dp_field ==
+# "precip_type"`` liefert sonst den internen Enum-Bezeichner (``SNOW``), der
+# fuer einen Wanderer keine Aussage ist. Schluessel ist das Enum-Mitglied;
+# weil ``PrecipType`` ein ``str``-Enum mit Name == Wert ist, findet auch ein
+# roher String aus dem Snapshot-Roundtrip ("SNOW") seinen Eintrag.
+PRECIP_TYPE_LABEL_DE: dict[PrecipType, str] = {
+    PrecipType.RAIN: "Regen",
+    PrecipType.SNOW: "Schnee",
+    PrecipType.MIXED: "Schneeregen",
+    PrecipType.FREEZING_RAIN: "gefrierender Regen",
 }
 
 

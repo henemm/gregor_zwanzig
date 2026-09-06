@@ -13,6 +13,7 @@ Defines all available weather metrics with:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
@@ -1054,6 +1055,46 @@ def get_all_metrics() -> list[MetricDefinition]:
     Use _METRICS directly when internal iteration over all metrics is needed.
     """
     return [m for m in _METRICS if m.selectable]
+
+
+def normalize_command_word(word: str) -> str:
+    """Normalisiert ein getipptes Abrufwort (Issue #2134).
+
+    Kleingeschrieben, ``%`` -> ``pct``, ``°`` getilgt, uebrige
+    Nicht-Alphanumerik getilgt. Die ``%``-Regel ist keine Kosmetik: ohne sie
+    fielen ``Rain`` (precipitation) und ``Rain%`` (rain_probability) auf
+    dasselbe Wort zusammen. ``0°Line`` -> ``0line``.
+    """
+    w = (word or "").strip().lower().replace("%", "pct").replace("°", "")
+    return re.sub(r"[^a-z0-9]", "", w)
+
+
+def metric_command_words() -> dict[str, str]:
+    """Normalisiertes Abrufwort -> ``metric.id`` (Issue #2134).
+
+    Einzige Quelle des Ad-hoc-Abrufvokabulars. Speist sich ausschliesslich aus
+    ``get_all_metrics()`` und erbt damit die ``selectable=False``-Filterung
+    (``confidence`` #710, ``temperature_cold``, ``cape``) — eine eigene
+    Iteration ueber ``_METRICS`` wuerde diese Regel ein zweites Mal
+    formulieren, also genau die Doppelpflege einfuehren, die dieses Ticket
+    abschafft.
+
+    Erste Schreibweise ist die Tabellenueberschrift ``col_label`` (PO-Vorgabe
+    1), zweite der ``sms_code`` — er macht schwer tippbare Kuerzel wie
+    ``0°Line`` ueber ``FZ`` erreichbar. Die Ueberschrift gewinnt bei Gleichheit
+    (``setdefault`` in zwei Durchlaeufen), damit ein kuenftiges Kuerzel keine
+    bestehende Ueberschrift verdraengt.
+    """
+    woerter: dict[str, str] = {}
+    for metric in get_all_metrics():
+        wort = normalize_command_word(metric.col_label)
+        if wort:
+            woerter.setdefault(wort, metric.id)
+    for metric in get_all_metrics():
+        wort = normalize_command_word(metric.sms_code)
+        if wort:
+            woerter.setdefault(wort, metric.id)
+    return woerter
 
 
 def get_metrics_by_category(category: str) -> list[MetricDefinition]:

@@ -28,6 +28,9 @@ if TYPE_CHECKING:
     from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
+# Issue #2134: EINE Quelle fuer den Befehlssatz (s. plain.py) — zirkelfrei,
+# `renderers/narrow.py:52` importiert seit jeher aus demselben Modul.
+from services.trip_command_processor import command_rows
 from utils.timezone import local_dt, local_fmt, tz_abbrev
 
 from output.renderers.day_window import (
@@ -469,18 +472,13 @@ def _render_mobile_hour_list(
 
 
 def _render_kommandos_section() -> str:
-    """JSX EmailPreview L185-200 — Antwort-Kommandos eigene Sektion (AC-8)."""
-    cmds = [
-        ("HEUTE", "Wetter heutige Etappe"),
-        ("MORGEN", "Wetter morgige Etappe"),
-        ("JETZT / NOW", "Nowcast ~2h"),
-        ("GEWITTER", "Gewittergefahr heutige Etappe"),
-        ("PAUSE 2d", "Briefings pausieren"),
-        ("SKIP", "Nächstes überspringen"),
-        ("STOP / WEITER", "Deaktivieren / reaktivieren"),
-        ("STATUS", "Trip-Status abrufen"),
-        ("HELP", "Alle Kommandos"),
-    ]
+    """JSX EmailPreview L185-200 — Antwort-Kommandos eigene Sektion (AC-8).
+
+    Issue #2134: die Befehlsliste ist ABGELEITET (`_COMMAND_SPECS`), nicht mehr
+    hier eingetippt — vorher fehlten STRECKE und RUHETAG, die der
+    Klartext-Fußzeile bekannt waren.
+    """
+    cmds = command_rows()
     rows = []
     for i in range(0, len(cmds), 3):
         tds = ""

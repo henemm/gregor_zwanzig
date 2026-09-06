@@ -52,8 +52,15 @@ _REMOVED_KEYWORDS = ["CONFIG"]
 # HTML-specific keywords added by #884 design (Antwort-Kommandos 3x2-grid)
 # Issue #1058: CONFIG removed from the HTML block (dead command, never dispatched).
 _HTML_NEW_KEYWORDS = ["PAUSE", "SKIP", "STOP", "STATUS", "HELP"]
-# Keywords removed from the HTML kommandos block by #884 / #1058
-_HTML_REMOVED_KEYWORDS = ["HILFE", "CONFIG"]
+# Keywords removed from the HTML kommandos block by #884 / #1058.
+# Issue #2134: HILFE ist hier RAUS. Der HTML- und der Klartext-Block stammen
+# seitdem aus derselben Quelle (`_COMMAND_SPECS`) und muessen dieselbe
+# Befehlsmenge tragen (AC-11) -- die Klartext-Fussz. nannte HILFE seit jeher.
+# Die #884-Entscheidung "HILFE durch HELP ersetzt" galt nur fuer den HTML-Block
+# und ist damit ueberholt; HELP steht weiter als Alias in der Beschreibung.
+# Das Deutsch-Wort im deutschen Produkt zu verschweigen waere eine
+# Kanal-Abweichung, die AC-11 gerade abschafft.
+_HTML_REMOVED_KEYWORDS = ["CONFIG"]
 
 
 # ---------------------------------------------------------------------------
