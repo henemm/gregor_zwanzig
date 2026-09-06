@@ -113,11 +113,43 @@ def _mail(night: bool = False):
     )
 
 
+def _ohne_erzeugungszeit(text: str) -> str:
+    """Die Mail OHNE die Fusszeile ``Generated: <Datum> HH:MM UTC``.
+
+    Diese Zeile traegt die WANDUHR (``email/plain.py:388``,
+    ``datetime.now(timezone.utc)``) und keinen einzigen Wetterwert. Sie gehoert
+    deshalb nicht zur gemessenen Flaeche: um HH:47 steht der Marker 47 dort,
+    und die Anzeige-Invarianz waere verletzt gemeldet, ohne dass die Ausgabe je
+    einen 20-Uhr-Wert gezeigt haette (CI-Lauf 34030635641, rot um 11:47Z).
+    """
+    return "\n".join(
+        z for z in text.splitlines() if not z.startswith("Generated: ")
+    )
+
+
 def _ziel_abschnitt(plain: str) -> str:
-    """Aufbau: "━━ 🏁 Wetter am Ziel: 17:00–19:00 | 300m ━━\\n<Tabelle>\\n━━ …".
-    Teil 0 ist der Rest der Ueberschrift, Teil 1 die Stundentabelle."""
+    """NUR die Stundentabelle des Ziel-Abschnitts.
+
+    Aufbau: "━━ 🏁 Wetter am Ziel: 17:00–19:00 | 300m ━━\\n<Tabelle>\\n\\n…".
+    Nach dem Ueberschriften-Ende beginnt die Tabelle; sie endet an der ersten
+    Leerzeile bzw. an der naechsten Abschnittslinie. Ein blosses
+    ``split("━━")[1]`` reichte NICHT: ohne folgenden ━━-Abschnitt (Mail ohne
+    Nacht-Block) lief der vermeintliche „Abschnitt" bis zum Mail-Ende und mass
+    Kommandoliste, Legende und Zeitstempel-Fusszeile mit.
+    """
     assert "Wetter am Ziel" in plain, f"Fixture kaputt: kein Ziel-Abschnitt.\n{plain}"
-    return plain.split("Wetter am Ziel", 1)[1].split("━━")[1]
+    nach_ueberschrift = plain.split("Wetter am Ziel", 1)[1].split("━━", 1)[1]
+    tabelle: list[str] = []
+    for zeile in nach_ueberschrift.splitlines():
+        if zeile.startswith("━━") or zeile.startswith("──"):
+            break
+        if not zeile.strip():
+            if tabelle:
+                break
+            continue
+        tabelle.append(zeile)
+    assert tabelle, f"Fixture kaputt: leere Ziel-Stundentabelle.\n{plain}"
+    return "\n".join(tabelle)
 
 
 def test_ac10_ziel_stundentabelle_zeigt_keine_20_uhr_zeile():
@@ -271,7 +303,7 @@ def test_ac15_kachelzeile_sms_und_kurzuebersicht_ohne_20_uhr_wert():
 
     segmente = _segmente()
     ausgaben = {
-        "Mail (inkl. Kachelzeile)": _mail().email_plain,
+        "Mail (inkl. Kachelzeile)": _ohne_erzeugungszeit(_mail().email_plain),
         "SMS": SMSTripFormatter().format_sms(segmente, tz=TZ),
         "Telegram-Kurzuebersicht": CompactSummaryFormatter().format_stage_summary(
             segmente, "Tag 1", build_default_display_config(), tz=TZ),
