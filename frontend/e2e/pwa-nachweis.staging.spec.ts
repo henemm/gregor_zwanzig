@@ -195,8 +195,26 @@ test('Staging: die neue Version meldet sich und wird erst auf Antippen aktiv', a
 		alteSkriptUrl,
 		{ timeout: 30_000 }
 	);
-	expect(
-		await controllingScriptUrl(page),
-		'nach dem Antippen kontrolliert immer noch die alte Fassung'
-	).not.toBe(alteSkriptUrl);
+
+	// Laut Spec/AC-9 loest die Uebernahme GENAU EIN `location.reload()` aus,
+	// sobald `controllerchange` feuert -- der Ausfuehrungskontext der Seite ist
+	// waehrend dieses Neuladens kurzzeitig zerstoert. Das ist der Vorgang
+	// selbst, kein Befund (derselbe Kniff wie in
+	// pwa-update-und-abmelden.spec.ts, Test "AC-9"). Ein einzelner `evaluate`-
+	// Aufruf direkt nach dem `waitForFunction` traf auf Staging zuverlaessig
+	// genau in dieses Fenster -- deshalb hier `expect.poll` mit Fehlerfang statt
+	// eines einzelnen Aufrufs.
+	const aktuelleSkriptUrl = async (): Promise<string | null> => {
+		try {
+			return await controllingScriptUrl(page);
+		} catch {
+			return null;
+		}
+	};
+	await expect
+		.poll(aktuelleSkriptUrl, {
+			timeout: 20_000,
+			message: 'nach dem Antippen kontrolliert immer noch die alte Fassung'
+		})
+		.not.toBe(alteSkriptUrl);
 });
