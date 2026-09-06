@@ -14,7 +14,7 @@ Issue #2128 · Scheibe 1 zu Epic #2127 · Workflow `feat-2128-pwa-installierbar`
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO-Freigabe 2026-09-06 („Go")
 
 ## Purpose
 
