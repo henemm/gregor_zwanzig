@@ -141,6 +141,7 @@ def test_ac1_fixture_ensures_user_with_active_trip(tmp_path):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.real_data_root
+@pytest.mark.timeout(240)
 @pytest.mark.skipif(
     not live_telegram_enabled(),
     reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
@@ -162,6 +163,15 @@ def test_ac3_all_seven_commands_produce_meaningful_content():
 
     Läuft gegen das CWD-`data`-Verzeichnis (get_data_dir ist CWD-relativ) — in der
     Validierung im Staging-Tree mit echten Wetter-Providern.
+
+    @pytest.mark.timeout(240) (statt globalem 30s-Default, Issue #1210 AC-1
+    erlaubt deklarierte Ausnahmen): der Test macht für sieben Kommandos echte
+    Wetterabrufe. Ist die Primärquelle für Gewittersignale nicht erreichbar,
+    greift die Ersatzquelle mit GRIB-Rasterlesen, und die Summe sprengt 30s —
+    gemessen 52s am 2026-09-07, ohne dass irgendetwas defekt war. Der Nachbar
+    AC-4 trug den Marker von Anfang an; hier fehlte er, was jede
+    Telegram-Auslieferung zwang, diesen Pflicht-Test als Rot abzubuchen
+    (zweimal am 2026-09-07 aufgetreten, gebucht in #1196).
     """
     from tests.tdd._telegram_live_fixture import (
         TEST_USER_ID,
