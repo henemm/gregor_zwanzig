@@ -1082,9 +1082,9 @@ Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen un
 
 | Method | Path | Status | Description |
 |--------|------|--------|-------------|
-| GET | `/api/trips/{id}/weather-config` | 200 / 404 | `display_config` eines Trips lesen — Antwort traegt `ETag` (#1395 S2) |
+| GET | `/api/trips/{id}/weather-config` | 200 / 400 / 404 | `display_config` eines Trips lesen — Antwort traegt `ETag` (#1395 S2) |
 | PUT | `/api/trips/{id}/weather-config` | 200 / 400 / 404 / **412** | `display_config` eines Trips setzen — prueft `If-Match`, Antwort traegt neuen `ETag` (#1395 S2) |
-| GET | `/api/locations/{id}/weather-config` | 200 / 404 | `display_config` einer Location lesen |
+| GET | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location lesen |
 | PUT | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location setzen — **kein** `ETag`/`If-Match` (Orte liegen auf einer anderen Datei-Ebene) |
 
 ### Nebenlaeufigkeit: `ETag` / `If-Match` (Issue #1395, seit 2026-07-27, Orts-Vergleiche seit S6 2026-07-31)
@@ -1165,6 +1165,7 @@ null
 | Status | Body | Szenario |
 |--------|------|----------|
 | 400 | `{"error":"bad_request"}` | Request-Body ist kein gueltiges JSON (PUT) |
+| 400 | `{"error":"validation_error","detail":"invalid id"}` | Pfad-Parameter `{id}` verletzt `store.ValidEntityID` (Pfadsegment-Pruefung gegen Traversal, Issue #2140 S2) — Vorpruefung vor dem Store-Zugriff, gilt fuer GET **und** PUT, Trip wie Location |
 | 404 | `{"error":"not_found"}` | Parent-Entitaet nicht gefunden |
 
 ### Notes
@@ -2150,6 +2151,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 ### Notes
 
 - **User Isolation:** Every preset belongs to one user (read from Auth-Context). No user can see/modify another user's presets.
+- **Entitäts-ID-Guard (Issue #2140 S2):** Der Pfad-Parameter `{id}` bei `PUT`/`DELETE` durchläuft vor jedem Store-Zugriff `store.ValidEntityID` (Pfadsegment-Prüfung gegen Traversal, keine Zeichen-Whitelist — Umlaute in Presets sind ohnehin serverseitig generiert und damit unbetroffen). Fehltreffer liefern den oben stehenden generischen `400 validation_error`.
 - **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body. `letzter_versand`, `top_ort_letzter_versand`, and `previous_schedule` are server-managed (not client-writable).
 - **forecast_hours (Issue #764, @deprecated #1268):** Vorhersage-Horizont — Legacy-Erklärung: (24|48|72 Stunden) wurde beim Orts-Vergleich-Versand verwendet. **Seit Issue #1268:** Das Feld ist deprecated und wird vom Dispatch nicht mehr gelesen. Der Versand verwendet fest 96 h (Issue #1305, zuvor 48 h — geteilte Konstante `COMPARE_FORECAST_HOURS` in `src/services/comparison_engine.py`). Beim Bearbeiten wird der Wert aus dem Preset nicht mehr hydratisiert und nicht mehr in den Request-Body geschrieben. Die Go-API akzeptiert den Wert bei PUT zum Bestandsschutz (RMW-Spread), schreibt ihn aber nicht selbst. Neue Presets erhalten 0 (Go Zero-Value, keine Editor-Eingabe). Bekannte Limitation #1280 (s. Spec #1268): Versandzeit-Genauigkeit (Minuten vs. Stunden) sichtbar geworden; **PO-Entscheid liegt vor** (2026-07-16: Eingabe auf volle Stunden begrenzen), Umsetzung in #1280.
 - **display_config (Issue #680):** Opaque JSON object stored as `map[string]interface{}` (no server-side schema validation). Contains `active_metrics` (persisted Metrik-Auswahl), `ideal_ranges` (Bewertungs-Schwellwerte), und zukünftig `output_layout` + `schedule_config`. Round-Trip beim Update: Server gibt `display_config` unverändert zurück, Frontend reicht nur geänderte Felder. Bestandsfelder erhalten sich automatisch (RMW-Semantik). **Fix #1191:** `CompareAlertService._build_eval_config` reicht `display_config` seither auch in die Δ-Alarm-Auswertung durch (vorher immer `None`, wodurch der #961-Deaktivierungs-Filter für Compare-Presets wirkungslos blieb — analog zum Trip-Pfad in `trip_alert.py`). Migrations-Skript `scripts/migrate_1191_compare_active_metrics.py` setzt auf Bestands-Presets ohne `active_metrics` einmalig den vollen Metrik-Satz (bewahrt „alles feuert", jetzt explizit + abschaltbar).
@@ -3118,6 +3120,7 @@ GET /api/preview/gr20/email?type=evening
 | 400 | `{"error":"invalid_trip_or_date"}` | Trip not found or date unparseable |
 | 400 | `{"error":"invalid_type"}` | `type` parameter not in `["morning", "evening"]` |
 | 400 | `{"error":"no_segments"}` | Trip has no stages/segments for the given date |
+| 422 | `{"detail":"invalid trip_id: '...'"}` | `trip_id` verletzt `VALID_ENTITY_ID_RE` (Pendant zu `store.ValidEntityID`, Issue #2140 S2) — geprüft in `PreviewService._load_trip`, vor jedem Pfadbau, unabhängig davon, ob der Go-Proxy die Kennung roh durchreicht |
 | 503 | `{"error":"weather_unavailable"}` | Weather provider API unreachable (only when `demo=false`) |
 
 **Notes:**
@@ -3500,6 +3503,10 @@ Leerbefund statt Exception/HTTP 500.
 **Notes:**
 - Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Wetterdaten-Fetch, kein
   Versand, keine Persistenz.
+- **Entitäts-ID-Guard (Issue #2140 S2):** Verletzt `trip_id` `VALID_ENTITY_ID_RE`, behandelt
+  `_load_trip_raw` das wie „nicht gefunden" und der Endpoint antwortet mit dem regulären `404`
+  oben — bewusst **kein** eigener Statuscode, damit eine Ausbruchs-Kennung nicht von einem
+  existierenden fremden Trip unterscheidbar ist.
 - **Zwei verschiedene Dinge heißen „onset".** Der Payload-Typ `onset` hier ist der
   **Radar-Nowcast** („Regen beginnt in ~20 Minuten", Minuten seit jetzt). Die
   **Beginn-Verschiebung** aus #1468 (Uhrzeit, zu der Gewitter/Starkregen im Tagesfenster
@@ -3755,6 +3762,17 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-07: Issue #2140 Scheibe 2 — Entitäts-Kennungen (Trip-, Orts-, Compare-Preset-ID) werden
+  gegen Pfad-Traversal gesperrt (`store.ValidEntityID` in Go, `VALID_ENTITY_ID_RE` in Python,
+  Parität über `tests/unit/test_entity_id_pattern_parity.py`). Betroffen: `GET`/`PUT
+  /api/trips/{id}/weather-config` und `.../locations/{id}/weather-config` (neu: `400
+  validation_error` auch bei `GET`, s. Section 11), `PUT`/`DELETE /api/compare/presets/{id}` (fällt
+  unter den bereits dokumentierten generischen `400 validation_error`, s. Section 16), sowie
+  `GET /api/preview/{trip_id}/email|sms|telegram` (neu: `422` bei ungültiger `trip_id`, s. Section
+  20) und `POST /api/trips/{trip_id}/alert-preview` (fällt bewusst unter den bestehenden `404`, s.
+  Section 22.5). Bewusst **keine** ASCII-Zeichen-Whitelist (Begründung und Bestandsorte mit
+  Diakritika: `docs/specs/modules/fix_2140_entitaets_id_pfadsperre.md`). Fortsetzung von Scheibe 1
+  (Nutzer-Kennungen, `37559f9f`).
 - 2026-08-23: Issue #2050 Scheibe S4b-2 — zwei Sachverhalte, die das System bereits kennt und in
   Auslöseentscheidung/Protokoll führt, aber im Alarmtext nicht zeigte, werden jetzt dort
   kenntlich gemacht: ausgefallene Gewitterprüfung (`convective_checked=false` — der Text
