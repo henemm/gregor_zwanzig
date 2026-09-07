@@ -177,6 +177,17 @@ class Settings(BaseSettings):
     # Deployment environment (GZ_ENV)
     env: str = Field(default="production", description="Deployment environment (GZ_ENV)")
 
+    # Issue #2142 — gemeinsames Geheimnis Go-API -> Python-Core. Dieselbe
+    # Umgebungsvariable, die die Go-Seite als GZ_CORE_SHARED_SECRET liest;
+    # beide Prozesse lesen je Umgebung dieselbe .env, ein Abgleich entfaellt.
+    # Bewusst KEIN Fail-Fast hier (wie bei _resend_default_deny): Settings()
+    # wird auch von CLI und Tests gebaut, die den Core gar nicht ansprechen.
+    # Die Durchsetzung sitzt in der Middleware von api/main.py.
+    core_shared_secret: str = Field(
+        default="",
+        description="Gemeinsames Geheimnis Go -> Python-Core (env: GZ_CORE_SHARED_SECRET, #2142)",
+    )
+
     # SMS settings (for sms channel)
     sms_gateway_url: str = Field(default="https://gateway.seven.io/api/sms", description="SMS gateway HTTP endpoint")
     seven_api_key: Optional[str] = Field(default=None, description="seven.io API key (env: GZ_SEVEN_API_KEY)")
@@ -428,6 +439,9 @@ class Settings(BaseSettings):
     _SENSITIVE_FIELDS = {
         "smtp_pass", "imap_pass", "test_smtp_pass", "test_imap_pass",
         "seven_api_key", "telegram_bot_token",
+        # Issue #2142: repr(settings) landet in Logzeilen — das gemeinsame
+        # Geheimnis darf dort nie im Klartext auftauchen.
+        "core_shared_secret",
         # Issue #1676: die gelernte Geraete-Rufnummer gehoert nach S1-Vorgabe
         # nur maskiert in Protokolle — repr(settings) landet in Logzeilen.
         "premium_sms_reply_to",

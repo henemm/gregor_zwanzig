@@ -77,7 +77,7 @@ bzw. in den Specs unter `docs/specs/`.
 | [0012](0012-telegram-parse-mode-html.md) | Telegram-Formatierung — parse_mode=HTML statt Markdown/MarkdownV2 | Akzeptiert |
 | [0013](0013-alert-threshold-ist-delta-sensitivitaet.md) | Alert-Renderer: `threshold` ist immer Δ-Sensitivitätsschwelle, nie Absolutwert-Referenz | Akzeptiert |
 | [0014](0014-telegram-multi-bubble-format.md) | Telegram-Ausgabe: Multi-Bubble-Tabellenformat ersetzt Prosa | Akzeptiert |
-| [0015](0015-dual-stack-zielarchitektur.md) | Dual-Stack (Go + Python) als dauerhafte Zielarchitektur — präzisiert 0001 | Akzeptiert |
+| [0015](0015-dual-stack-zielarchitektur.md) | Dual-Stack (Go + Python) als dauerhafte Zielarchitektur — präzisiert 0001 | Teilweise abgelöst durch 0062 (Regel 2, Auth-Teil) |
 | [0016](0016-amtliche-warnungen-additiver-typ.md) | Amtliche Warnungen als additiver externer Alert-Typ (Nachtrag im Index) | Akzeptiert |
 | [0017](0017-output-paket-konsolidierung.md) | Ein Output-Paket: `src/output/` mit `renderers/` + `channels/`; `formatters/`+`outputs/` aufgelöst | Akzeptiert |
 | [0018](0018-provider-fallback-ohne-kaschieren.md) | Modell-Fallback bei Wetter-Quell-Ausfall — mit Ausweichen, aber ohne Kaschieren | Akzeptiert |
@@ -124,3 +124,4 @@ bzw. in den Specs unter `docs/specs/`.
 | [0059](0059-compare-ausblick-erbt-grundauswahl.md) | Der 3-Tages-Ausblick verhält sich wie ein Kanal — Grundauswahl statt eigener Liste, für Trip UND Ortsvergleich (löst 0053 Punkt 1 ab, schreibt 0050/0055 fort, Issue #1848 Scheibe A3) | Akzeptiert |
 | [0060](0060-dauerhafte-anmeldung-mit-widerrufsliste.md) | Dauerhafte Anmeldung mit dateibasierter Liste gültiger Sitzungen — Widerruf überlebt den Neustart, „auf allen Geräten abmelden" (löst 0030 ab, Issue #2129 Scheibe S2 von #2127) | Akzeptiert |
 | [0061](0061-pwa-service-worker-bauform.md) | PWA-Bauform: handgeführter Service Worker statt vite-plugin-pwa/Workbox — vier Speicherregeln mit harter `/api/`-Grenze, kein automatisches `skipWaiting`, Inhalte erst in Scheibe 4 (ergänzt 0003, Issue #2128 Scheibe 1 von #2127) | Akzeptiert |
+| [0062](0062-python-core-authentifiziert-gegenueber-go.md) | Der Python-Core authentifiziert den Aufrufer selbst — gemeinsames Geheimnis `X-GZ-Core-Auth` statt Netzwerk-Vertrauen, fail-closed (löst 0015 Regel 2 im Auth-Teil ab, Issue #2142 aus Epic #2138) | Akzeptiert |

@@ -61,7 +61,16 @@ func TelegramWebhookHandler(pythonCoreURL string) http.HandlerFunc {
 		// und ein Retry-Sturm ausgeschlossen ist. Fehler beim Forward werden geloggt
 		// und ändern die 200-Antwort an Telegram nicht — Telegram soll nie retrien.
 		url := pythonCoreURL + "/api/internal/telegram-webhook"
-		resp, err := client.Post(url, "application/json", bytes.NewReader(body))
+		fwd, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		fwd.Header.Set("Content-Type", "application/json")
+		// Issue #2142 (AC-10): Python prüft das Telegram-Secret ein zweites Mal
+		// (Defense in Depth) — ohne diesen Header antwortet der Core mit 403.
+		fwd.Header.Set("X-Telegram-Bot-Api-Secret-Token", secret)
+		resp, err := client.Do(fwd)
 		if err != nil {
 			log.Printf("[telegram-webhook] forward error: %v", err)
 		} else {

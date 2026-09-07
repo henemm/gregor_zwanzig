@@ -1,6 +1,6 @@
 # ADR-0015: Dual-Stack (Go + Python) als dauerhafte Zielarchitektur
 
-- **Status:** Akzeptiert (PO-Entscheidung E-0, „go" 2026-07-05)
+- **Status:** Teilweise abgelöst durch ADR-0062 (Regel 2, Auth-Teil) — im Übrigen akzeptiert (PO-Entscheidung E-0, „go" 2026-07-05)
 - **Datum:** 2026-07-05
 - **Bezug:** [ADR-0001](0001-go-sveltekit-migration.md) (präzisiert dessen Endzustand),
   `docs/project/architektur-roadmap-2026-07.md` (Entscheidung E-0),
@@ -42,6 +42,13 @@ Daraus folgende Regeln:
 2. **Neue API-/Auth-/Persistenz-Belange entstehen im Go-Backend.** Der Python-Core bekommt
    keine eigene Auth und keine neuen direkt exponierten Endpoints; er bleibt hinter dem Go-Proxy
    (interne Ports nur für Betrieb/Validierung).
+   > **Abgelöst durch [ADR-0062](0062-python-core-authentifiziert-gegenueber-go.md) (2026-09-07,
+   > Issue #2142) — aber nur im Auth-Teil:** Der Python-Core prüft seit #2142 selbst, ob eine
+   > Anfrage von der Go-API stammt (gemeinsames Geheimnis `X-GZ-Core-Auth`, fail-closed). Die
+   > Netzwerk-Isolation stand ausschließlich in der systemd-Unit eines fremden Repos und war
+   > damit keine Zusicherung dieses Codes. **Unverändert gültig bleibt:** keine neuen direkt
+   > exponierten Endpoints im Python-Core, Nutzer-Auth und Mandantentrennung vollständig in Go
+   > — die neue Prüfung ist Dienst-zu-Dienst-Auth, keine Nutzer-Auth.
 3. **Keine Logik-Duplizierung zwischen den Stacks.** Wo heute Doppel-Logik existiert
    (z. B. Schema-Migrationen im Go-Schreibpfad vs. Python-Loader, siehe Issue #1000), ist pro
    Fall genau EINE Seite als Owner zu bestimmen und die andere abzubauen.

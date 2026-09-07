@@ -235,6 +235,13 @@ dessen CI-Ampel (alle 5 Checks) auf dem letzten Stand grün ist. Danach in diese
 | 4b | Post-Deploy-Selftest | `python3 .claude/hooks/prod_selftest.py` (Commit/Health/AC-Attestation) — nur Exit 0 fährt weiter |
 | 5 | Issue schließen | `gh issue close <N>` — nur wenn 4b Exit 0 |
 
+**Seit #2142 zusätzliche Pflicht-Voraussetzung vor Schritt 4:** `GZ_CORE_SHARED_SECRET`
+(≥32 Zeichen, identischer Wert in beiden Prozessen) muss von Hand in der `.env` **beider**
+Umgebungen (Staging **und** Produktion) eingetragen sein, **bevor** der neue Stand live geht.
+Fehlt die Variable, beendet sich die Go-API beim Start (Fail-Fast), und der Python-Core
+weist ohne gesetztes Geheimnis jede Anfrage außer `/health` mit `503` ab. Siehe
+`docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`.
+
 `systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `flock-Lock → hart
 auf origin/main syncen (Daten unberührt, WIP gesichert) → Go-Binary bauen → Frontend bauen →
 alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code-Drift, den
