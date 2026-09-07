@@ -55,6 +55,7 @@ from services.trip_command_processor import (
     TripCommandProcessor,
 )
 from services.weather_snapshot import WeatherSnapshotService
+from tests.helpers.verlauf_abdeckung import abgedeckte_stunden
 
 # Korsika — loest zu Europe/Paris auf, also NIE UTC. Nur dadurch ist auf dem
 # UTC-Server ueberhaupt pruefbar, ob Ortszeit oder Weltzeit angezeigt wird.
@@ -186,6 +187,18 @@ def _expected_local(now: datetime, offset_hours: int, fmt: str) -> str:
     return (now + timedelta(hours=offset_hours)).astimezone(_TRIP_TZ).strftime(fmt)
 
 
+def _erwartete_stunden(now: datetime) -> list[str]:
+    """Die Ortszeit-Stunden des Antwortfensters.
+
+    Issue #2185: der Einzelmetrik-Verlauf fasst gleiche Folgestunden zu
+    Zeitbereichen zusammen, die alte Zaehlform ">=6 Stundenzeilen" ist damit
+    unbrauchbar. Ersatz ist die ABDECKUNGS-Zusicherung (Spec
+    ``feat_2185_verlauf_wechselpunkte.md`` AC-7): geprueft wird, WELCHE
+    Stunden die Antwort abdeckt, nicht wie viele Zeilen sie dafuer braucht.
+    """
+    return [_expected_local(now, i, "%H:%M") for i in range(_HOURS)]
+
+
 # ---------------------------------------------------------------------------
 # 1) Knopfdruck liefert eine Antwort statt eines Absturzes
 # ---------------------------------------------------------------------------
@@ -207,10 +220,20 @@ def test_drilldown_button_answers_instead_of_crashing(env, callback_data):
         f"{callback_data}: erwartet eine Antwort, bekam "
         f"success={result.success} / {result.confirmation_body!r}"
     )
-    assert len(re.findall(r"\b\d{2}[: ]", result.confirmation_body)) >= 6, (
-        f"{callback_data}: erwartet >=6 Stundenzeilen, body:\n"
-        f"{result.confirmation_body}"
-    )
+    body = result.confirmation_body
+    if callback_data == "dd_hours_today":
+        # Die Vierspalten-Tabelle bleibt Stunde fuer Stunde — diese Scheibe
+        # fasst sie nicht an (#2185 AC-10).
+        assert len(re.findall(r"^\d{2}\s", body, re.M)) >= 6, (
+            f"{callback_data}: erwartet >=6 Stundenzeilen, body:\n{body}"
+        )
+    else:
+        # Abdeckung statt Zeilenzahl (#2185, s. `_erwartete_stunden`).
+        assert abgedeckte_stunden(body) == _erwartete_stunden(env), (
+            f"{callback_data}: der Verlauf muss genau die Stunden des "
+            f"Antwortfensters abdecken, abgedeckt: "
+            f"{abgedeckte_stunden(body)}\n{body}"
+        )
 
 
 # ---------------------------------------------------------------------------

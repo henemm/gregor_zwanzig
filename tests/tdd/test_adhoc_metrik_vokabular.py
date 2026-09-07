@@ -32,9 +32,14 @@ from tests.helpers.adhoc_metrik_fixtures import (
     sende,
     standard_felder,
     steuerbefehl_woerter,
-    stundenzeilen,
     text_woerter,
 )
+# Issue #2185: die Wechselpunkt-Verdichtung fasst aufeinanderfolgende Stunden
+# mit demselben Anzeigetext im Einzelgroessen-Verlauf (`_format_drilldown`)
+# zu EINEM Zeitbereich zusammen — Zeilen- bzw. Treffer-Zahl sind dort kein
+# brauchbarer Stellvertreter mehr fuer "mehrere Stunden". Ersatz: die
+# Abdeckungs-Zusicherung aus feat_2185_verlauf_wechselpunkte.md AC-7.
+from tests.helpers.verlauf_abdeckung import abgedeckte_stunden
 
 
 # ===========================================================================
@@ -61,10 +66,19 @@ def test_ac1_visib_liefert_stundenwerte_der_sichtweite_in_km():
         f"AC-1: erwartet eine befuellte Antwort, erhalten success="
         f"{result.success} / body={result.confirmation_body!r}"
     )
+    # Issue #2185: nach der Wechselpunkt-Verdichtung steht der Wert ggf. nur
+    # EINMAL in der Antwort, deckt aber mehrere Stunden ab. Die Zusicherung
+    # "mehrere Stunden zeigen diesen Wert" wird daher an der ABDECKUNG
+    # gemessen (>=3 Stunden), nicht mehr an der Zeilen-/Treffer-Zahl.
     treffer = re.findall(r"\d+(?:[.,]\d+)?\s*km(?!/)", result.confirmation_body)
-    assert len(treffer) >= 3, (
-        f"AC-1: erwartet mehrere Stundenwerte mit der Katalog-Einheit km, "
+    assert len(treffer) >= 1, (
+        f"AC-1: erwartet einen Stundenwert mit der Katalog-Einheit km, "
         f"gefunden {treffer!r} in:\n{result.confirmation_body}"
+    )
+    abgedeckt = abgedeckte_stunden(result.confirmation_body)
+    assert len(abgedeckt) >= 3, (
+        f"AC-1: erwartet mindestens 3 abgedeckte Stunden, gefunden "
+        f"{abgedeckt!r} in:\n{result.confirmation_body}"
     )
 
 
@@ -89,10 +103,16 @@ def test_ac2_humid_liefert_stundenwerte_ueber_den_kanal_eingang():
         f"erhalten command={result.command!r} / "
         f"body={result.confirmation_body!r}"
     )
+    # Issue #2185: Wechselpunkt-Verdichtung — siehe Kommentar bei AC-1 oben.
     treffer = re.findall(r"\b55\s*%", result.confirmation_body)
-    assert len(treffer) >= 3, (
-        f"AC-2: erwartet mehrere Stundenwerte '55 %', gefunden {treffer!r} "
+    assert len(treffer) >= 1, (
+        f"AC-2: erwartet den Stundenwert '55 %', gefunden {treffer!r} "
         f"in:\n{result.confirmation_body}"
+    )
+    abgedeckt = abgedeckte_stunden(result.confirmation_body)
+    assert len(abgedeckt) >= 3, (
+        f"AC-2: erwartet mindestens 3 abgedeckte Stunden, gefunden "
+        f"{abgedeckt!r} in:\n{result.confirmation_body}"
     )
 
 
@@ -308,10 +328,16 @@ def test_ac20_gewitter_und_thdr_liefern_zwei_verschiedene_antworten():
         f"erhalten command={stunden.command!r} / "
         f"body={stunden.confirmation_body!r}"
     )
-    zeilen = stundenzeilen(stunden.confirmation_body)
-    assert len(zeilen) >= 6, (
+    # Issue #2185: `Thdr` laeuft ueber denselben verdichtenden
+    # Einzelgroessen-Formatierer (`_format_drilldown`) wie AC-1/AC-2 oben —
+    # anders als die Vierspalten-Stundentabelle `dd_hours_*`, die nicht
+    # verdichtet (AC-10) und deshalb unangetastet bleibt. Zeilenzahl ist hier
+    # kein brauchbarer Stellvertreter mehr; ersetzt durch die
+    # Abdeckungs-Zusicherung aus feat_2185_verlauf_wechselpunkte.md AC-7.
+    abgedeckt = abgedeckte_stunden(stunden.confirmation_body)
+    assert len(abgedeckt) >= 6, (
         f"AC-20: `Thdr` muss einen Stundenverlauf liefern, gefunden "
-        f"{len(zeilen)} Stundenzeilen in:\n{stunden.confirmation_body}"
+        f"{len(abgedeckt)} abgedeckte Stunden in:\n{stunden.confirmation_body}"
     )
     assert stunden.confirmation_body != tages.confirmation_body, (
         "AC-20: Tagesaussage und Stundenverlauf sind dieselbe Antwort — der "

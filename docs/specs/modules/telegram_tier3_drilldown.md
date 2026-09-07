@@ -114,6 +114,9 @@ nächsten 6–12 h speziell für `thunder_level` (≥6 Zeilen, je Uhrzeit + Risi
 unabhängig davon ob die Metrik in der Übersicht ausgeblendet ist.
   - Test: mock-frei, echter Snapshot via `WeatherSnapshotService.save`; `process(InboundMessage(body="### query: dd_thunder_today"))`; Assertion ≥6 HH:MM-Zeilen + Stufen-Labels.
 
+> **Abgelöst durch #2185 (Wechselpunkt-Verdichtung), PO-Entscheid 2026-09-07** — Zeilenzahl-Form
+> ersetzt durch Abdeckungs-Zusicherung, siehe `feat_2185_verlauf_wechselpunkte.md`.
+
 **AC-2:** Given die Drilldown-Antwort, When sie erzeugt wird, Then trägt sie ein
 `reply_markup`-Inline-Keyboard mit einem als „Zurück" beschrifteten Button (callback
 `tl_today`/`tl_tomorrow`).

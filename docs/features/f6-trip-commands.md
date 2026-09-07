@@ -293,7 +293,7 @@ Diese Zoom-Navigation ersetzt die Nachricht in-place — kein Nachrichten-Spam. 
 2. Klick auf „Timeline heute"
    Nachricht wird in-place aktualisiert → Timeline-Details mit Buttons je kritischer Metrik
 3. Klick auf „Gewitter stündlich"
-   Nachricht wird aktualisiert → stündliche Gewitter-Serie mit „Zurück"-Button
+   Nachricht wird aktualisiert → Gewitter-Verlauf mit „Zurück"-Button (Issue #2185: aufeinanderfolgende Stunden mit identischem Text werden zu einem Zeitbereich `HH:MM–HH:MM` zusammengefasst, statt jede Stunde einzeln zu listen)
 4. Klick auf „Zurück"
    Zurück zur Timeline-Übersicht
 ```
