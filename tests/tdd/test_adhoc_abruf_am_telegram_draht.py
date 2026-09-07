@@ -17,6 +17,8 @@ echter Trip und echter Stunden-Snapshot unter isolierter Datenwurzel.
 """
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 
 from app.metric_catalog import get_metric
@@ -27,11 +29,12 @@ from services.trip_command_processor import (
     _QUERY_KEYS,
 )
 from tests.helpers.adhoc_metrik_fixtures import (
+    TRIP_TZ,
     ist_unbekannt,
     lege_trip_an,
     standard_felder,
-    stundenzeilen,
 )
+from tests.helpers.verlauf_abdeckung import abgedeckte_stunden
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +89,23 @@ def fix():
     # Bewusst funktionsweit: die Datenwurzel ist je Test isoliert, ein
     # modulweit angelegter Trip waere ab dem zweiten Test unauffindbar.
     return lege_trip_an("draht", _felder_mit_katalog_groessen)
+
+
+def _erwartete_stunden(fix) -> list[str]:
+    """Die zwoelf Ortszeit-Stunden des Antwortfensters ("heute" = 12 h).
+
+    Issue #2185: der Verlauf fasst gleiche Folgestunden zu Zeitbereichen
+    zusammen — eine konstante Groesse kann kuenftig in EINER Zeile stehen.
+    Die alte Schwelle ">= 3 Stundenzeilen" wuerde daran scheitern, ohne dass
+    etwas fehlt. Ersatz ist die ABDECKUNGS-Zusicherung (Spec
+    ``feat_2185_verlauf_wechselpunkte.md`` AC-7): geprueft wird, WELCHE
+    Stunden die Antwort abdeckt — das ist staerker als jede Zeilenzahl, weil
+    es auch einen verschluckten oder doppelt gezaehlten Zeitpunkt faengt.
+    """
+    return [
+        (fix.now + timedelta(hours=i)).astimezone(TRIP_TZ).strftime("%H:%M")
+        for i in range(12)
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -250,10 +270,11 @@ def test_f001_getipptes_katalogkuerzel_liefert_stundenwerte(fix, wort, metric_id
         f"subject={result.confirmation_subject!r}, "
         f"body={result.confirmation_body!r}"
     )
-    zeilen = stundenzeilen(result.confirmation_body)
-    assert len(zeilen) >= 3, (
-        f"F001: {wort!r} muss einen Stundenverlauf liefern, gefunden "
-        f"{len(zeilen)} Stundenzeilen in:\n{result.confirmation_body}"
+    # Abdeckung statt Zeilenzahl (Issue #2185, s. `_erwartete_stunden`).
+    assert abgedeckte_stunden(result.confirmation_body) == _erwartete_stunden(fix), (
+        f"F001: {wort!r} muss den Verlauf des ganzen Antwortfensters liefern, "
+        f"abgedeckt: {abgedeckte_stunden(result.confirmation_body)}\n"
+        f"{result.confirmation_body}"
     )
     # Wert statt Form: die Antwort muss die ANGEFRAGTE Groesse tragen, nicht
     # irgendeine. Ohne diese Zusicherung waere jede beliebige Stundentabelle
@@ -299,8 +320,10 @@ def test_f002_sms_code_zweitschreibweise_fz_liefert_nullgradgrenze(fix):
         f"F002: 'FZ' muss Werte liefern, erhalten "
         f"body={result.confirmation_body!r}"
     )
-    assert len(stundenzeilen(result.confirmation_body)) >= 3, (
-        f"F002: 'FZ' muss einen Stundenverlauf liefern:\n"
+    # Abdeckung statt Zeilenzahl (Issue #2185, s. `_erwartete_stunden`).
+    assert abgedeckte_stunden(result.confirmation_body) == _erwartete_stunden(fix), (
+        f"F002: 'FZ' muss den Verlauf des ganzen Antwortfensters liefern, "
+        f"abgedeckt: {abgedeckte_stunden(result.confirmation_body)}\n"
         f"{result.confirmation_body}"
     )
 

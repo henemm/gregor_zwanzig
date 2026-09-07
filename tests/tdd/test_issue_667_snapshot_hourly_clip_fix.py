@@ -19,7 +19,6 @@ GitHub Issue: #667
 """
 from __future__ import annotations
 
-import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -44,6 +43,15 @@ from services.trip_command_processor import (
     InboundMessage,
     TripCommandProcessor,
 )
+
+# Issue #2185: die Wechselpunkt-Verdichtung fasst aufeinanderfolgende Stunden
+# mit identischem formatiertem Wert zu EINEM Zeitbereich zusammen. Damit ist
+# die Zeilenzahl (`_count_time_lines`) kein brauchbarer Stellvertreter mehr
+# fuer "die Liste reicht ueber das Etappenfenster hinaus" — eine verdichtete
+# Antwort kann wenige Zeilen und trotzdem viele abgedeckte Stunden haben.
+# Ersatz: die Abdeckungs-Zusicherung aus feat_2185_verlauf_wechselpunkte.md
+# AC-7 (siehe tests/helpers/verlauf_abdeckung.py).
+from tests.helpers.verlauf_abdeckung import abgedeckte_stunden
 
 # ---------------------------------------------------------------------------
 # Fixe Zeitstempel
@@ -158,11 +166,6 @@ def _process(body: str) -> CommandResult:
     return TripCommandProcessor().process(msg)
 
 
-def _count_time_lines(body: str) -> int:
-    """Zählt stündliche Datenzeilen (beginnen mit HH:MM)."""
-    return sum(1 for ln in body.splitlines() if re.match(r"^\s*\d{2}:\d{2}", ln))
-
-
 # ---------------------------------------------------------------------------
 # AC-1 — Persistierte Stundenreihe nicht aufs Etappenfenster beschnitten
 # ---------------------------------------------------------------------------
@@ -195,10 +198,14 @@ def test_ac2_drilldown_exceeds_segment_window(env: Path) -> None:
     """
     result = _process("### query: dd_thunder_today")
     assert result.success is True
-    n_lines = _count_time_lines(result.confirmation_body)
-    assert n_lines >= 10, (
-        f"Drilldown lieferte nur {n_lines} Stundenzeilen — auf das 4h-Etappenfenster "
-        f"beschnitten statt der vollen ≤12h-Vorschau."
+    # Issue #2185: statt Zeilen zaehlen wir abgedeckte Stunden — die
+    # Wechselpunkt-Verdichtung kann dieselbe Spanne mit weniger Zeilen
+    # darstellen.
+    abgedeckt = abgedeckte_stunden(result.confirmation_body)
+    assert len(abgedeckt) >= 10, (
+        f"Drilldown deckte nur {len(abgedeckt)} Stunden ab ({abgedeckt!r}) — "
+        f"auf das 4h-Etappenfenster beschnitten statt der vollen "
+        f"≤12h-Vorschau."
     )
 
 

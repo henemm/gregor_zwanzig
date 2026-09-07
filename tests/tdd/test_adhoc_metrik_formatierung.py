@@ -40,6 +40,12 @@ from tests.helpers.adhoc_metrik_fixtures import (
     standard_felder,
     stundenzeilen,
 )
+# Issue #2185: die Wechselpunkt-Verdichtung fasst aufeinanderfolgende Stunden
+# mit demselben Wert zu EINEM Zeitbereich zusammen — "mehrere Stunden tragen
+# diesen Wert" laesst sich daher nicht mehr an der Anzahl der Wert-Treffer
+# ablesen (nach der Verdichtung steht der Wert oft nur noch einmal). Ersatz:
+# die Abdeckungs-Zusicherung aus feat_2185_verlauf_wechselpunkte.md AC-7.
+from tests.helpers.verlauf_abdeckung import abgedeckte_stunden
 
 # Zahlenwert einer Stundenzeile, unabhaengig von deren Praefix/Emoji — z.B.
 # "08:00  Sonne: 0.5 h" -> 0.5. Bewusst KEIN fester "h"-Anker im Präfix, damit
@@ -163,10 +169,19 @@ def test_ac14_wdir_liefert_himmelsrichtungen_statt_gradzahl():
         f"body={result.confirmation_body!r}"
     )
     body = result.confirmation_body
+    # Issue #2185: nach der Wechselpunkt-Verdichtung steht der Wert ggf. nur
+    # EINMAL in der Antwort, deckt aber mehrere Stunden ab. Die Zusicherung
+    # "mehrere Stunden zeigen diesen Wert" wird daher an der ABDECKUNG
+    # gemessen (>=3 Stunden), nicht mehr an der Zeilen-/Treffer-Zahl.
     treffer = re.findall(rf"\b{erwartet}\b", body)
-    assert len(treffer) >= 3, (
-        f"AC-14: erwartet mehrere Stundenwerte als Himmelsrichtung "
-        f"{erwartet!r} ({grad} Grad), gefunden {treffer!r} in:\n{body}"
+    assert len(treffer) >= 1, (
+        f"AC-14: erwartet die Himmelsrichtung {erwartet!r} ({grad} Grad) in "
+        f"der Antwort, gefunden {treffer!r} in:\n{body}"
+    )
+    abgedeckt = abgedeckte_stunden(body)
+    assert len(abgedeckt) >= 3, (
+        f"AC-14: erwartet mindestens 3 abgedeckte Stunden, gefunden "
+        f"{abgedeckt!r} in:\n{body}"
     )
     assert str(grad) not in body, (
         f"AC-14: die rohe Gradzahl {grad!r} steht in der Antwort — heute "
@@ -205,10 +220,16 @@ def test_ac15_ptype_liefert_deutsches_wort_statt_enum_bezeichner():
         "die deutschen Woerter der Niederschlagsart haben noch keine Quelle."
     )
     wort = labels[PrecipType.SNOW] if PrecipType.SNOW in labels else labels["SNOW"]
+    # Issue #2185: Wechselpunkt-Verdichtung — siehe Kommentar bei AC-14 oben.
     treffer = re.findall(rf"\b{re.escape(wort)}\b", body)
-    assert len(treffer) >= 3, (
-        f"AC-15: erwartet mehrere Stundenwerte als deutsches Wort {wort!r}, "
+    assert len(treffer) >= 1, (
+        f"AC-15: erwartet das deutsche Wort {wort!r} in der Antwort, "
         f"gefunden {treffer!r} in:\n{body}"
+    )
+    abgedeckt = abgedeckte_stunden(body)
+    assert len(abgedeckt) >= 3, (
+        f"AC-15: erwartet mindestens 3 abgedeckte Stunden, gefunden "
+        f"{abgedeckt!r} in:\n{body}"
     )
     for roh in ("SNOW", "PrecipType"):
         assert roh not in body, (
@@ -242,10 +263,16 @@ def test_ac16_visib_wird_in_km_umgerechnet_nicht_in_metern_gezeigt():
         f"command={result.command!r} / body={result.confirmation_body!r}"
     )
     body = result.confirmation_body
+    # Issue #2185: Wechselpunkt-Verdichtung — siehe Kommentar bei AC-14 oben.
     treffer = re.findall(r"\b2(?:[.,]0+)?\s*km(?!/)", body)
-    assert len(treffer) >= 3, (
-        f"AC-16: erwartet mehrere umgerechnete Werte '2 km'/'2.0 km' aus "
+    assert len(treffer) >= 1, (
+        f"AC-16: erwartet einen umgerechneten Wert '2 km'/'2.0 km' aus "
         f"2000 m, gefunden {treffer!r} in:\n{body}"
+    )
+    abgedeckt = abgedeckte_stunden(body)
+    assert len(abgedeckt) >= 3, (
+        f"AC-16: erwartet mindestens 3 abgedeckte Stunden, gefunden "
+        f"{abgedeckt!r} in:\n{body}"
     )
     assert "2000" not in body, (
         f"AC-16: die rohe Meterzahl 2000 steht in der Antwort — die "

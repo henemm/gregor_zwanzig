@@ -1175,7 +1175,7 @@ class TripCommandProcessor:
         self, res, header: str, fmt, tz, with_emoji: bool = True,
         hail_by_ts: Optional[dict] = None,
     ) -> str:
-        """Formatiert DrilldownResult als stündliche Liste.
+        """Formatiert DrilldownResult als Verlauf mit WECHSELPUNKTEN.
 
         ``tz`` ist Pflicht (Issue #1402): ein Default wuerde die Ortszeit
         wieder still gegen die Prozess-Zeitzone tauschen.
@@ -1184,15 +1184,41 @@ class TripCommandProcessor:
         das Hagel-Kennzeichen zu. Nur bei bestaetigtem Hagel (``True``) haengt
         der deskriptive Zusatz an — Stunden mit ``None``/``False`` bleiben
         zeichengleich (kein unbedingtes Anhaengen, ADR-0007 kein Rat).
+
+        Issue #2185 (Epic #2133, S2): aufeinanderfolgende Stunden mit
+        identischem ANZEIGETEXT verschmelzen zu einem Zeitbereich
+        ``HH:MM–HH:MM``. Gruppenschluessel ist der formatierte Text samt
+        Hagelnotiz, nicht der Rohwert — die Rundung des Formatierers IST die
+        Kategorie. Fortsetzung nur bei einem Abstand von HOECHSTENS einer
+        Stunde: eine fehlende Stunde bricht die Gruppe, damit ein Bereich nie
+        Gueltigkeit fuer eine ungemessene Stunde behauptet (#2167). Fehlende
+        Werte brauchen keine Sonderlogik — ``fmt(None, ...)`` liefert einen
+        eigenen Text und damit einen eigenen Schluessel. Eine Einzelstunde
+        bleibt zeichengleich zur alten Form; die letzte Gruppe wird wie jede
+        andere GESCHLOSSEN dargestellt, kein "ab HH:MM".
         """
         from output.metric_format import format_hail_note
 
         hail_by_ts = hail_by_ts or {}
-        lines = [f"{header} — stündlich"]
+        lines = [f"{header} — Verlauf"]
+        groups: list[tuple[tuple[str, str], list]] = []
         for pt in res.points:
-            time_str = local_fmt(pt.ts, tz)
-            line = f"{time_str}  {fmt(pt.value, with_emoji=with_emoji)}"
-            note = format_hail_note(hail_by_ts.get(pt.ts))
+            key = (
+                fmt(pt.value, with_emoji=with_emoji),
+                format_hail_note(hail_by_ts.get(pt.ts)) or "",
+            )
+            if groups and groups[-1][0] == key and (
+                pt.ts - groups[-1][1][-1].ts <= timedelta(hours=1)
+            ):
+                groups[-1][1].append(pt)
+            else:
+                groups.append((key, [pt]))
+
+        for (text, note), pts in groups:
+            time_str = local_fmt(pts[0].ts, tz)
+            if len(pts) > 1:
+                time_str = f"{time_str}–{local_fmt(pts[-1].ts, tz)}"
+            line = f"{time_str}  {text}"
             if note:
                 line = f"{line} · {note}"
             lines.append(line)
