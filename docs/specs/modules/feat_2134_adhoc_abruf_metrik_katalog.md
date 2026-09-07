@@ -112,6 +112,7 @@ Keine neue Liste — Dispatch nach Eigenschaft des `MetricDefinition`-Eintrags:
 | `metric.is_level` | `_thunder_fmt` (bereits katalog-gespeist über `THUNDER_LABEL_DE`) | `metric_format.py:283` |
 | `dp_field == "wind_direction_deg"` | `degrees_to_compass()` | `src/utils/geo.py:32` |
 | `dp_field == "precip_type"` | neues `PRECIP_TYPE_LABEL_DE` (analog zu `THUNDER_LABEL_DE`) | neu in `src/output/metric_format.py` |
+| `dp_field == "dni_wm2"` | `WeatherMetricsService.dni_to_sunny_fraction()` → `format_value()` (rechnet W/m² in Sonnenstunden um, bevor die Katalog-Einheit „h" angehängt wird) | nachgetragen durch Fix #2167, `docs/specs/modules/fix_2167_sonnenstunden_einheit.md`, `trip_command_processor.py:379-400` |
 | sonst | `format_value(metric.id, value)` | `metric_format.py:78-130` — rundet, hängt Einheit an, rechnet `display_unit` m→km (Sichtweite) |
 
 Die Prüfung geht auf `metric.is_level`, **nicht** auf `metric.id == "thunder"`

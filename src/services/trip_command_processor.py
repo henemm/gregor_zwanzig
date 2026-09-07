@@ -376,6 +376,28 @@ def _metric_formatter(metric):
             name = name.rsplit(".", 1)[-1]
             return PRECIP_TYPE_LABEL_DE.get(name, "· keine Daten")
         return _precip_type
+    if metric.dp_field == "dni_wm2":
+        # Issue #2167: der Katalog fuehrt `sunshine` mit unit="h", das Rohfeld
+        # traegt aber W/m². Ohne diesen Zweig laeuft die Direktstrahlung
+        # unveraendert durch `format_value()` und wird als `781.5 h`
+        # beschriftet. `dni_to_sunny_fraction()` ist die EINE Umrechnung im
+        # Bestand — dieselbe, die das Briefing je Einzelstunde geht.
+        from app.config import Settings
+        from services.weather_metrics import WeatherMetricsService
+
+        # Band EINMAL je Abruf holen, nicht je Stundenzeile (24 Aufrufe).
+        _settings = Settings()
+        dni_min = _settings.sunny_dni_min_wm2
+        dni_max = _settings.sunny_dni_max_wm2
+
+        def _sonnenstunden(value, *, with_emoji: bool = True) -> str:
+            if value is None:
+                return "· keine Daten"
+            anteil = WeatherMetricsService.dni_to_sunny_fraction(
+                value, dni_min, dni_max
+            )
+            return format_value(metric.id, anteil)
+        return _sonnenstunden
 
     def _katalog(value, *, with_emoji: bool = True) -> str:
         if value is None:
