@@ -36,6 +36,84 @@ def _use_fixture_provider(request):
         os.environ.pop("GZ_TEST_FIXTURE_DIR", None)
 
 
+# ---------------------------------------------------------------------------
+# Issue #2142: Core-Auth-Header zentral fuer jeden TestClient
+# ---------------------------------------------------------------------------
+
+CORE_AUTH_HEADER = "X-GZ-Core-Auth"
+CORE_SECRET_ENV = "GZ_CORE_SHARED_SECRET"
+# Nur fuer den Testlauf. Kein Produktivwert, steht bewusst im Repo.
+_CORE_AUTH_TEST_SECRET = "pytest-core-shared-secret-0123456789abcdef"
+
+# Beim IMPORT dieser conftest, nicht in einer Fixture: Testmodule werden vor
+# dem ersten Fixture-Lauf eingesammelt, und ein dort auf Modulebene gebauter
+# TestClient braucht das Geheimnis bereits. ``setdefault`` laesst einen von
+# aussen gesetzten Wert (Server-.env, CI) unangetastet.
+os.environ.setdefault(CORE_SECRET_ENV, _CORE_AUTH_TEST_SECRET)
+
+
+def _patch_testclient_with_core_auth() -> None:
+    """Versorgt JEDE ``TestClient``-Instanz mit dem gueltigen Auth-Header.
+
+    Ohne das braechen die ~68 Bestands-Testdateien geschlossen mit 401, sobald
+    ``api/main.py`` die Pruefung durchsetzt. Der Waechter selbst wird dabei
+    NICHT abgeschaltet — es gibt keinen ``_in_pytest()``-Bypass: ein Test, der
+    den Header aus seinem Client wieder entfernt, bekommt weiterhin 401
+    (AC-11, ``tests/tdd/test_core_auth_enforcement.py``).
+
+    Der Wert wird bei jeder Instanziierung frisch aus der Umgebung gelesen,
+    damit ein Test, der das Geheimnis per ``monkeypatch.setenv`` aendert,
+    danach auch einen dazu passenden Client bekommt.
+
+    Gepatcht wird ``starlette.testclient.TestClient`` — ``fastapi.testclient``
+    re-exportiert genau diese Klasse.
+    """
+    from starlette.testclient import TestClient
+
+    if getattr(TestClient, "_gz_core_auth_patched", False):
+        return
+
+    original_init = TestClient.__init__
+
+    def __init__(self, *args, **kwargs):  # noqa: ANN001, ANN202
+        original_init(self, *args, **kwargs)
+        secret = os.environ.get(CORE_SECRET_ENV, "")
+        if secret:
+            self.headers[CORE_AUTH_HEADER] = secret
+
+    TestClient.__init__ = __init__
+    TestClient._gz_core_auth_patched = True
+
+
+_patch_testclient_with_core_auth()
+
+
+@pytest.fixture(autouse=True)
+def _core_auth_secret_configured():
+    """Stellt fuer jeden Test sicher, dass ein Geheimnis konfiguriert ist.
+
+    Fehlt es (weil ein vorheriger Test es ohne monkeypatch aus der Umgebung
+    geraeumt hat), antwortete der Core mit 503 statt mit dem erwarteten
+    Verhalten. Tests, die den unkonfigurierten Zustand BEWUSST herstellen
+    wollen, ueberschreiben das per eigenem ``monkeypatch.delenv`` im Test —
+    diese Fixture laeuft als autouse zuerst und wird danach ueberstimmt.
+
+    BEWUSST OHNE ``monkeypatch``: als autouse-Fixture wuerde sie den
+    function-scoped ``monkeypatch`` VOR ``_isolate_data_root`` aufbauen. Damit
+    liefe ``monkeypatch.undo()`` erst NACH dessen Restore — ein Test, der
+    ``loader._DATA_ROOT`` per ``monkeypatch.setattr`` umbiegt (z. B.
+    ``tests/tdd/test_compare_dispatch_failed_tally.py``), setzte den Wert am
+    Ende auf SEINEN tmp-Pfad zurueck statt auf den echten Baum. Alle folgenden
+    ``@pytest.mark.real_data_root``-Tests lasen dann eine leere Wegwerf-Wurzel
+    und scheiterten mit 404 ("Trip ... nicht gefunden"). Reines
+    ``os.environ``-Setzen hat keine Fixture-Abhaengigkeit und verschiebt die
+    Reihenfolge nicht.
+    """
+    if not os.environ.get(CORE_SECRET_ENV):
+        os.environ[CORE_SECRET_ENV] = _CORE_AUTH_TEST_SECRET
+    yield
+
+
 _REPO_DATA_USERS = root / "data" / "users"
 
 # Issue #1624: die frueher unter ``<repo>/data/users`` COMMITTETEN

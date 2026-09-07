@@ -38,7 +38,9 @@ Das Backend besteht aus zwei klar getrennten Schichten (siehe `docs/adr/0015-dua
   Scheduler, Alert-System, Inbound-Handler.
 
 Die Vertragsgrenze zwischen Go und Python ist HTTP mit den DTOs aus
-`docs/reference/api_contract.md`.
+`docs/reference/api_contract.md`. Seit Issue #2142 authentifiziert sich die Go-API gegenüber
+dem Python-Core mit einem gemeinsamen Geheimnis (`GZ_CORE_SHARED_SECRET`, Header
+`X-GZ-Core-Auth`) — Details siehe `docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`.
 
 ### Python-Core: Wetter-Pipeline und Rendering
 

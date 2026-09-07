@@ -14,6 +14,9 @@ type Config struct {
 	OpenMeteoRetries  int    `envconfig:"OPENMETEO_RETRIES" default:"5"`
 	CacheDir          string `envconfig:"CACHE_DIR" default:"data/cache"`
 	SessionSecret     string `envconfig:"SESSION_SECRET" default:"dev-secret-change-me"`
+	// Issue #2142 — gemeinsames Geheimnis Go -> Python-Core. Default bewusst
+	// leer: ein Platzhalter-Literal waere ein oeffentlich bekanntes Secret.
+	CoreSharedSecret  string `envconfig:"CORE_SHARED_SECRET" default:""`
 	AuthUser          string `envconfig:"AUTH_USER" default:"admin"`
 	AuthPass          string `envconfig:"AUTH_PASS" default:""`
 	HeartbeatComparePresets string `envconfig:"HEARTBEAT_COMPARE_PRESETS" default:""`

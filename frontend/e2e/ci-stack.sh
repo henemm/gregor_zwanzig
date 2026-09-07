@@ -27,6 +27,13 @@ PY_PORT="${GZ_CI_STACK_PY_PORT:-8000}"
 PY_HEALTH_URL="http://127.0.0.1:${PY_PORT}/health"
 GO_HEALTH_URL="http://127.0.0.1:${GO_PORT}/api/health"
 HEALTH_TIMEOUT_SEC="${GZ_CI_STACK_HEALTH_TIMEOUT:-60}"
+# #2142 — gemeinsames Geheimnis Go -> Python-Core. Anders als
+# GZ_SESSION_SECRET MUSS es hier gesetzt werden, und zwar fuer BEIDE Prozesse
+# mit demselben Wert: der Python-Core riegelt ohne konfiguriertes Geheimnis
+# jede Anfrage mit 503 ab (fail-closed), der Stack kaeme nie ueber seine
+# Boot-Pruefung hinaus. Fester Wert statt Zufall, damit ein Neustart eines
+# einzelnen Prozesses den Stack nicht zerreisst.
+CORE_SHARED_SECRET="${GZ_CORE_SHARED_SECRET:-ci-stack-core-shared-secret-0123456789}"
 
 wait_for_health() {
 	local url="$1" name="$2" waited=0
@@ -47,6 +54,7 @@ start_stack() {
 		cd "$REPO_ROOT"
 		GZ_DATA_DIR="$DATA_ROOT" GZ_CACHE_DIR="$DATA_ROOT/cache" \
 			GZ_TEST_FIXTURE_DIR=fixtures/openmeteo \
+			GZ_CORE_SHARED_SECRET="$CORE_SHARED_SECRET" \
 			uv run uvicorn api.main:app --host 127.0.0.1 --port "$PY_PORT" \
 			> "$STATE_DIR/python-core.log" 2>&1 &
 		echo $! > "$STATE_DIR/python-core.pid"
@@ -54,6 +62,7 @@ start_stack() {
 	GZ_PORT="$GO_PORT" GZ_PYTHON_CORE_URL="http://localhost:${PY_PORT}" \
 		GZ_DATA_DIR="$DATA_ROOT" GZ_CACHE_DIR="$DATA_ROOT/cache" \
 		GZ_TEST_FIXTURE_DIR="$REPO_ROOT/fixtures/openmeteo" \
+		GZ_CORE_SHARED_SECRET="$CORE_SHARED_SECRET" \
 		GZ_USER_ID=admin GZ_AUTH_PASS=test1234 GZ_ENV=staging \
 		"$GO_BIN" > "$STATE_DIR/go-server.log" 2>&1 &
 	echo $! > "$STATE_DIR/go-server.pid"
