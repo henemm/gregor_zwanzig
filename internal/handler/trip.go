@@ -50,6 +50,9 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		// Issue #1395 S2: Sperre auch beim Lesen — sonst koennte ein
 		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung
@@ -86,9 +89,33 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// rejectInvalidEntityID weist eine Entitaets-Kennung ab, die kein sicheres
+// Pfadsegment ist (Issue #2140 Scheibe 2). Vor-Pruefung VOR dem ersten
+// Store-Aufruf, damit die Route einen sauberen 400er im bestehenden
+// validation_error-Muster liefert statt eines 404/204/500 aus dem Store.
+// Die eigentliche Sperre sitzt im Store (store.ValidEntityID) und faengt
+// auch Aufrufer, die hier nicht vorbeikommen.
+func rejectInvalidEntityID(w http.ResponseWriter, id string) bool {
+	if store.ValidEntityID(id) {
+		return false
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error":  "validation_error",
+		"detail": "invalid id",
+	})
+	return true
+}
+
 func validateTrip(t model.Trip) error {
 	if t.ID == "" {
 		return fmt.Errorf("id required")
+	}
+	// Issue #2140 Scheibe 2: die Kennung landet ueber SaveTrip in einem
+	// Dateipfad — ein Trenner darin bricht aus dem Nutzerverzeichnis aus.
+	if !store.ValidEntityID(t.ID) {
+		return fmt.Errorf("invalid id")
 	}
 	if t.Name == "" {
 		return fmt.Errorf("name required")
@@ -236,6 +263,9 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		// Issue #1395 S2: Sperre ueber den GANZEN Lesen-Pruefen-Schreiben-Zyklus.
 		// ACHTUNG: PUT /api/briefings/{id}?kind=route reicht per ServeHTTP hierher
@@ -455,6 +485,9 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		// Issue #1395 S2: Sperre um den Lesen-Aendern-Schreiben-Zyklus, damit
 		// dieser PATCH nicht mitten in einen laufenden PUT hineinschreibt.
@@ -596,6 +629,9 @@ func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		// Issue #1395 S2: Der Loeschpfad veraendert dieselbe Datei wie alle
 		// Schreibpfade und braucht darum dieselbe Sperre. Ohne sie faellt ein

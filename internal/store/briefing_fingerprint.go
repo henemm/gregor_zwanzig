@@ -25,6 +25,10 @@ import (
 // unterscheiden damit "kein Dokument" von "Dokument mit Stand X", ohne
 // os.IsNotExist selbst auswerten zu muessen.
 func (s *Store) BriefingFingerprint(id string) (string, error) {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Join.
+	if !ValidEntityID(id) {
+		return "", ErrInvalidEntityID
+	}
 	data, err := os.ReadFile(filepath.Join(s.briefingsDir(), id+".json"))
 	if err != nil {
 		if os.IsNotExist(err) {

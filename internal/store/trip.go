@@ -172,6 +172,10 @@ func (s *Store) LoadTrips() ([]model.Trip, error) {
 }
 
 func (s *Store) LoadTrip(id string) (*model.Trip, error) {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return nil, ErrInvalidEntityID
+	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
@@ -216,6 +220,12 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 // pointer parameter makes the normalization visible to every caller that
 // holds the same trip afterwards.
 func (s *Store) SaveTrip(trip *model.Trip) error {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join. Ohne sie
+	// ueberschreibt eine Kennung wie "../../bob/user" die user.json eines
+	// fremden Kontos (briefingsDir liegt zwei Ebenen unter data/users/).
+	if !ValidEntityID(trip.ID) {
+		return ErrInvalidEntityID
+	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	// trips/<id>.json wird NICHT mehr angefasst (Rollback-Faehigkeit, AC-26).
 	dir := s.briefingsDir()
@@ -259,6 +269,10 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 }
 
 func (s *Store) DeleteTrip(id string) error {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return ErrInvalidEntityID
+	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	path := filepath.Join(s.briefingsDir(), id+".json")
 

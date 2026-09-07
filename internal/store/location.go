@@ -59,6 +59,10 @@ func (s *Store) LoadLocations() ([]model.Location, error) {
 }
 
 func (s *Store) LoadLocation(id string) (*model.Location, error) {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return nil, ErrInvalidEntityID
+	}
 	path := filepath.Join(s.LocationsDir(), id+".json")
 
 	data, err := os.ReadFile(path)
@@ -78,6 +82,12 @@ func (s *Store) LoadLocation(id string) (*model.Location, error) {
 }
 
 func (s *Store) SaveLocation(loc model.Location) error {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join. LocationsDir()
+	// liegt wie briefingsDir() zwei Ebenen unter data/users/ — eine Kennung
+	// wie "../../bob/user" schriebe sonst in ein fremdes Nutzerverzeichnis.
+	if !ValidEntityID(loc.ID) {
+		return ErrInvalidEntityID
+	}
 	dir := s.LocationsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -92,6 +102,10 @@ func (s *Store) SaveLocation(loc model.Location) error {
 }
 
 func (s *Store) DeleteLocation(id string) error {
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return ErrInvalidEntityID
+	}
 	path := filepath.Join(s.LocationsDir(), id+".json")
 	err := os.Remove(path)
 	if os.IsNotExist(err) {

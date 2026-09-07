@@ -21,6 +21,9 @@ func GetTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		// Issue #1395 S2: Sperre auch beim Lesen, damit der ausgelieferte ETag
 		// zur ausgelieferten Fassung gehoert (analog TripHandler).
 		defer s.LockBriefing(id)()
@@ -53,6 +56,9 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		// Issue #1395 S2: Sperre + Vorbedingung, identisch zu UpdateTripHandler.
 		// Dieser Pfad schreibt dieselbe Datei UND synchronisiert dabei
 		// alert_rules (model.SyncAlertRules) — ein verlorener Schreibvorgang
@@ -132,6 +138,9 @@ func GetLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		loc, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -154,6 +163,9 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		loc, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")

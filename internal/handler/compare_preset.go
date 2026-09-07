@@ -281,6 +281,10 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
+		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+			return
+		}
 
 		// Issue #1395 S6: Sperre ueber den GANZEN Lesen-Pruefen-Schreiben-Zyklus.
 		// Dieselbe Sperre nimmt der zweite Schreibweg
@@ -536,6 +540,10 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
+		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+			return
+		}
 
 		// Issue #1395 S6: dieselbe Sperre wie die Schreibpfade — ein DELETE, das
 		// mitten in einen laufenden PUT faellt, wuerde sonst die Datei entfernen
@@ -580,6 +588,10 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
+		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+			return
+		}
 
 		// Issue #1395 S6: Sperre wie bei den Schreibpfaden, aber KEIN If-Match
 		// (analog UpdateTripStateHandler, AC-15) — der Zustandswechsel ist kein
@@ -626,6 +638,10 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
+		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+			return
+		}
 
 		// Issue #1395 S6: Sperre auch beim Lesen — sonst koennte ein
 		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung

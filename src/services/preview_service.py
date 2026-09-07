@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.config import Settings
-from app.loader import get_briefings_dir, load_trip
+from app.loader import VALID_ENTITY_ID_RE, get_briefings_dir, load_trip
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -62,8 +62,14 @@ class PreviewService:
 
         Raises:
             FileNotFoundError: wenn der Trip nicht existiert.
-            ValueError: wenn der Eintrag ein Vergleich (kind=vergleich) ist.
+            ValueError: wenn der Eintrag ein Vergleich (kind=vergleich) ist
+                oder die Kennung kein sicheres Pfadsegment ist (#2140 S2).
         """
+        # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, spiegelt
+        # store.ValidEntityID auf der Go-Seite (Paritaets-Test
+        # tests/unit/test_entity_id_pattern_parity.py).
+        if not VALID_ENTITY_ID_RE.match(trip_id):
+            raise ValueError(f"invalid trip_id: {trip_id!r}")
         trips_dir = get_briefings_dir(user_id)
         path = trips_dir / f"{trip_id}.json"
         if not path.exists():
