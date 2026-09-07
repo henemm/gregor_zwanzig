@@ -1256,24 +1256,56 @@ def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
 def lookup_user_by_telegram_chat_id(chat_id: str, data_dir: str | None = None) -> str | None:
     """Find user_id whose telegram_chat_id matches the given chat_id (int/str-tolerant).
 
+    Eindeutigkeit ist Pflicht (Issue #2141): tragen ZWEI echte Nutzer dieselbe
+    Chat-ID (Bestandsdaten aus der Zeit vor dem Fix), gibt es keine zulässige
+    Zuordnung — die Funktion liefert None und protokolliert die Kollision. Der
+    Aufrufer läuft damit in den bestehenden "kein Treffer"-Pfad, der den
+    Registrierungs-Hinweis verschickt; eine Exception bliebe im Chat stumm.
+
+    Mehrdeutigkeit gilt nur unter ECHTEN Nutzern: der Vorrang des echten
+    Kontos vor Test-Nutzern (Issue #1013) bleibt erhalten.
+
     Args:
         chat_id: Telegram chat ID to match (compared as strings)
         data_dir: Root data directory (default: get_data_root())
 
     Returns:
-        Matching user_id or None if no match found
+        Matching user_id or None if no match found or the match is ambiguous
     """
+    from app.config import is_test_user_id
+
     if data_dir is None:
         data_dir = str(get_data_root())
+
+    real_matches: list[str] = []
+    test_matches: list[str] = []
     for uid in list_all_user_ids(data_dir):
         profile_path = Path(data_dir) / "users" / uid / "user.json"
-        if profile_path.exists():
-            try:
-                profile = json.loads(profile_path.read_text(encoding="utf-8"))
-                if str(profile.get("telegram_chat_id", "")) == str(chat_id):
-                    return uid
-            except Exception:
-                continue
+        if not profile_path.exists():
+            continue
+        try:
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if str(profile.get("telegram_chat_id", "")) != str(chat_id):
+            continue
+        if is_test_user_id(uid, data_dir=data_dir):
+            test_matches.append(uid)
+        else:
+            real_matches.append(uid)
+
+    if len(real_matches) > 1:
+        logger.error(
+            "Telegram-Chat-ID %s ist mehrdeutig — keine Zuordnung. "
+            "Kollidierende Nutzer: %s (Issue #2141)",
+            chat_id,
+            ", ".join(real_matches),
+        )
+        return None
+    if real_matches:
+        return real_matches[0]
+    if test_matches:
+        return test_matches[0]
     return None
 
 

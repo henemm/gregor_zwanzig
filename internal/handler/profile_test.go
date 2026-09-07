@@ -84,7 +84,10 @@ func TestUpdateProfileHandler(t *testing.T) {
 
 	h := UpdateProfileHandler(s, config.Config{})
 
-	// WHEN: Bob updates his channel settings
+	// WHEN: Bob updates his channel settings and smuggles a telegram_chat_id in
+	// (Issue #2141: die Chat-ID ist eine Identitaetszuordnung und darf ueber
+	// diesen generischen Decoder nicht gesetzt werden — nur der Leerstring zum
+	// Trennen kommt durch, siehe TestUpdateProfileClearsOwnTelegramChatID).
 	body := `{"mail_to":"bob@example.com","telegram_chat_id":"42"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	ctx := middleware.ContextWithUserID(req.Context(), "bob")
@@ -102,8 +105,13 @@ func TestUpdateProfileHandler(t *testing.T) {
 	if resp["mail_to"] != "bob@example.com" {
 		t.Errorf("expected mail_to 'bob@example.com', got '%v'", resp["mail_to"])
 	}
-	if resp["telegram_chat_id"] != "42" {
-		t.Errorf("expected telegram_chat_id '42', got '%v'", resp["telegram_chat_id"])
+	// THEN: die mitgeschickte telegram_chat_id wurde NICHT uebernommen.
+	if got, ok := resp["telegram_chat_id"]; ok && got != "" {
+		t.Errorf("telegram_chat_id must NOT be settable via profile update, got '%v'", got)
+	}
+	onDisk := mustLoadUser(t, s, "bob")
+	if onDisk.TelegramChatID != "" {
+		t.Errorf("telegram_chat_id landete in user.json: %q, erwartet leer", onDisk.TelegramChatID)
 	}
 	// password_hash must not leak
 	if _, hasHash := resp["password_hash"]; hasHash {
