@@ -43,7 +43,6 @@ from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 import httpx
-import pytest
 
 from app import loader
 from app.config import Settings, is_test_user_id
