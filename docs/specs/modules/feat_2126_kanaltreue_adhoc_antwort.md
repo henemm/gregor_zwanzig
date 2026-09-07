@@ -268,13 +268,17 @@ erhalten dürfen.
   gebaut, dass sie für alle vier Kanalnamen korrekt auflöst, sobald sie eintreffen können.
   Premium-SMS als Eingangsweg ist Scheibe **S4** von Epic #2133 und baut ausdrücklich auf
   dieser Scheibe auf.
-- **Unbekannter Absender (`user_id == "default"`) bleibt unrepariert.** Der
-  Registrierungshinweis an eine unbekannte `chat_id`/E-Mail-Adresse geht weiterhin an das
-  Default-/Betreiberprofil statt an den tatsächlichen Absender
-  (`inbound_telegram_reader.py:181-194`, `:305-317`; `inbound_email_reader.py:106`, `:121-132`).
-  Dieser Pfad erreicht `_handle_query`/`send_on_demand_report` nie und ist damit von dieser
-  Spec strukturell nicht erfasst — eigenes Issue nach Projektregel (nutzersichtbares
-  Fehlverhalten).
+- **Unbekannter Absender (`user_id == "default"`) — durch #2168 erledigt.** Die frühere Fassung
+  dieses Punkts behauptete, der Registrierungshinweis gehe auf **drei** Pfaden an das
+  Default-/Betreiberprofil. Nachgemessen hielt davon nur einer stand:
+  - Telegram-Text-Nachricht (`inbound_telegram_reader.py:181-196`) — **war** betroffen,
+    seit #2168 behoben: der Hinweis geht an die anfragende `chat_id`.
+  - Telegram-Callback-Query (`:305-317`) — **war nie betroffen**: `edit_telegram_message_text`
+    bekommt `chat_id=chat_id` explizit übergeben; `settings` liefert dort nur das Bot-Token.
+  - E-Mail (`inbound_email_reader.py:106`) — **war nie betroffen**: `_authorize` verwirft einen
+    unbekannten Absender **vor** jeder Antwortstelle, es geht überhaupt keine Antwort raus.
+  Der Pfad erreicht `_handle_query`/`send_on_demand_report` weiterhin nie und ist damit von
+  dieser Spec strukturell nicht erfasst; ein eigenes Issue ist dafür nicht mehr offen.
 - **Adress-ACs (AC-7/AC-8) sind für Test-Nutzer und Staging strukturell blind.**
   `Settings.with_user_profile` setzt `force_test` bei einer Test-User-ID oder `env == "staging"`
   (`src/app/config.py:369`) und verwirft dann die Profil-`telegram_chat_id` (`:387`). Testkennungen

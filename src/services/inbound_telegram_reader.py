@@ -187,7 +187,9 @@ class InboundTelegramReader:
                     "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
                     "im Account-Bereich auf gregor20.henemm.com)."
                 ),
-                settings=settings,
+                # #2168: an den fragenden Chat antworten, nicht an die Basis-
+                # /Betreiber-Chat-ID (Muster wie `_process_start_command`).
+                settings=settings.model_copy(update={"telegram_chat_id": chat_id}),
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
