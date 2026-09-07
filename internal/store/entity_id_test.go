@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -262,26 +263,88 @@ func TestPathTraversal_StoreBriefingFingerprint_RejectInvalidID_AC8(t *testing.T
 }
 
 // -----------------------------------------------------------------------
-// ValidEntityID — Einheitsfaelle der Pruefung selbst
+// ValidEntityID — Einheitsfaelle der Pruefung selbst (AC-10, Muster-Paritaet)
+//
+// Go- und Python-Seite pruefen dasselbe VERHALTEN gegen EINE geteilte,
+// versionierte Wahrheitstabelle: tests/fixtures/entity_id_pattern_parity/
+// faelle.json. Das Python-Pendant ist tests/unit/test_entity_id_pattern_
+// parity.py. Driftet eine der beiden Seiten von der Tabelle ab, wird genau
+// diese Seite rot — ohne dass ein Test den Quelltext der anderen Seite als
+// Daten liest (CLAUDE.md: Dateiinhalt-Checks sind kein Verhaltensnachweis).
+//
+// Pfadanker: os.Getwd()-Aufstieg bis zum Verzeichnis mit go.mod (genau eine
+// im Repo) — also relativ zum Testlauf, nicht ueber einen festen Repo-Pfad;
+// so misst ein Lauf aus dem Worktree auch die Fixture des Worktrees. NICHT
+// runtime.Caller(0): das liefert unter -trimpath einen modulrelativen Pfad
+// und bricht still (gleiche Bauart wie internal/mail/recipient_parity_test.go).
 // -----------------------------------------------------------------------
 
-func TestValidEntityID_RejectsUnsafeSegments(t *testing.T) {
-	cases := []string{
-		"",               // leer
-		"/",              // reiner Trenner
-		"a/b",            // enthaelt Trenner
-		"\\",             // Backslash (Windows-Trenner)
-		"a\\b",           // enthaelt Backslash
-		"a\x00b",         // NUL-Byte eingebettet
-		".",              // Punkt-Segment
-		"..",             // Traversal-Segment
-		"../x",           // beginnt mit Traversal
-		"../../bob/user", // die im Kontext-Dokument nachgewiesene Ausbruchs-ID
-		".hidden",        // fuehrender Punkt
+const maxEntityIDRepoRootAscent = 6
+
+func entityIDRepoRoot(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("entityIDRepoRoot: os.Getwd() fehlgeschlagen: %v", err)
 	}
-	for _, id := range cases {
+	for i := 0; i < maxEntityIDRepoRootAscent; i++ {
+		if _, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	t.Fatalf(
+		"entityIDRepoRoot: kein go.mod innerhalb von %d Ebenen ueber %q gefunden — "+
+			"Pfadanker verloren, der Laeufer findet die Wahrheitstabelle nicht.",
+		maxEntityIDRepoRootAscent, dir,
+	)
+	return ""
+}
+
+type entityIDFalltabelle struct {
+	Invalid []string `json:"invalid"`
+	Valid   []string `json:"valid"`
+}
+
+// ladeEntityIDFalltabelle liest die geteilte Wahrheitstabelle. Eine fehlende
+// oder leere Tabelle bricht laut ab — sie wuerde sonst "nichts gefunden,
+// alles gruen" still durchwinken und den Paritaetsnachweis entwerten.
+func ladeEntityIDFalltabelle(t *testing.T) entityIDFalltabelle {
+	t.Helper()
+	pfad := filepath.Join(
+		entityIDRepoRoot(t), "tests", "fixtures", "entity_id_pattern_parity", "faelle.json",
+	)
+	raw, err := os.ReadFile(pfad)
+	if err != nil {
+		t.Fatalf(
+			"Geteilte Wahrheitstabelle fehlt: %s — ohne sie hat der Paritaets"+
+				"nachweis keine Faelle und wuerde still gruen durchlaufen: %v", pfad, err,
+		)
+	}
+	var daten entityIDFalltabelle
+	if err := json.Unmarshal(raw, &daten); err != nil {
+		t.Fatalf("ladeEntityIDFalltabelle: %s ist kein gueltiges JSON: %v", pfad, err)
+	}
+	if len(daten.Invalid) == 0 || len(daten.Valid) == 0 {
+		t.Fatalf(
+			"%s enthaelt eine leere Fallmenge (invalid=%d, valid=%d) — leere "+
+				"Mengen sind stilles Gruen.", pfad, len(daten.Invalid), len(daten.Valid),
+		)
+	}
+	return daten
+}
+
+func TestValidEntityID_RejectsUnsafeSegments(t *testing.T) {
+	for _, id := range ladeEntityIDFalltabelle(t).Invalid {
 		if ValidEntityID(id) {
-			t.Errorf("ValidEntityID(%q) = true, erwartet false (unsicheres Pfadsegment)", id)
+			t.Errorf(
+				"ValidEntityID(%q) = true, erwartet false (unsicheres Pfadsegment) — "+
+					"die Python-Seite lehnt es laut geteilter Wahrheitstabelle ab", id,
+			)
 		}
 	}
 }
@@ -291,18 +354,13 @@ func TestValidEntityID_RejectsUnsafeSegments(t *testing.T) {
 // Bestandsorte mit Diakritika (docs/specs/modules/fix_2140_entitaets_id_pfadsperre.md,
 // Abschnitt "Warum die ... ASCII-Whitelist verworfen wurde") muessen zulaessig bleiben.
 func TestValidEntityID_AcceptsUnicodeLetters(t *testing.T) {
-	cases := []string{
-		"trip123",
-		"cp-a1b2c3d4",
-		"hochfügen",
-		"pollença",
-		"übergangsjoch-zillertal-arena",
-		"serfaus-schöngamp-berg",
-		"mühlbach",
-	}
-	for _, id := range cases {
+	for _, id := range ladeEntityIDFalltabelle(t).Valid {
 		if !ValidEntityID(id) {
-			t.Errorf("ValidEntityID(%q) = false, erwartet true (gueltiges Unicode-Pfadsegment ohne Trenner)", id)
+			t.Errorf(
+				"ValidEntityID(%q) = false, erwartet true (gueltiges Unicode-Pfadsegment "+
+					"ohne Trenner) — die Python-Seite laesst es laut geteilter "+
+					"Wahrheitstabelle zu", id,
+			)
 		}
 	}
 }

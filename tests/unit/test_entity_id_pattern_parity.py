@@ -1,94 +1,94 @@
-# doc-compliance-test
 """entity_id-Muster-Paritaet Python <-> Go (Issue #2140 Scheibe 2, AC-10).
 
-Bauart wie tests/unit/test_user_id_pattern_parity.py (#1364): das
-Zulassungsmuster fuer ENTITAETS-Kennungen (Trip/Ort/Vergleichs-Preset)
-existiert zweimal — in der kanonischen Go-Quelle
-(internal/store/pathsafe.go, ``ValidEntityIDRe``, analog dem bestehenden
-``ValidUserIDRe`` daneben) und im Python-Core (``app.loader.VALID_ENTITY_ID_RE``).
-Driften beide, akzeptiert eine Seite Kennungen, die die andere ablehnt —
-genau die Asymmetrie, die Scheibe 1 fuer Nutzer-Kennungen bereits schliesst.
+Das Zulassungsmuster fuer ENTITAETS-Kennungen (Trip/Ort/Vergleichs-Preset)
+existiert zweimal — in der Go-Quelle (``internal/store/pathsafe.go``,
+``ValidEntityID``) und im Python-Core (``app.loader.VALID_ENTITY_ID_RE``).
+Driften beide, akzeptiert eine Seite Kennungen, die die andere ablehnt — genau
+die Asymmetrie, die Scheibe 1 fuer Nutzer-Kennungen bereits schliesst.
 
-ANNAHME (an den Team-Lead zurueckgemeldet, siehe RED-Bericht): die Spec
-(docs/specs/modules/fix_2140_entitaets_id_pfadsperre.md) nennt fuer die
-Go-Seite nur die Funktion ``ValidEntityID``, keinen expliziten Regex-Namen.
-Dieser Test erwartet — analog zu ``ValidUserIDRe`` neben ``ValidUserID`` in
-derselben Datei — eine begleitende Variable ``ValidEntityIDRe``. Waehlt die
-Implementierung stattdessen eine reine Funktion ohne Regex-Variable, muss
-dieser Test angepasst werden (das ist eine bewusste, im RED-Bericht
-dokumentierte Schnittstellen-Entscheidung dieser TDD-Phase, keine
-Fehlannahme).
-
-Strukturregel auf Quelltext-als-Daten: das Go-Muster ist aus Python nur als
-Text erreichbar (kein Go-Toolchain-Aufruf im Kernlauf) — gleiche
-Werkzeug-Klasse wie test_user_id_pattern_parity.py; daher
-``# doc-compliance-test``.
+Der Nachweis laeuft ueber VERHALTEN auf beiden Seiten, nicht ueber
+Quelltext-Vergleich: beide Seiten pruefen dieselbe versionierte
+Wahrheitstabelle (``tests/fixtures/entity_id_pattern_parity/faelle.json``).
+Das Go-Pendant ist ``internal/store/entity_id_test.go``
+(``TestValidEntityID_FolgtDerGeteiltenWahrheitstabelle``). Driftet eine der
+beiden Seiten von der Tabelle ab, wird genau diese Seite rot — ohne dass ein
+Test Produkt-Quelltext als Daten liest (CLAUDE.md: Dateiinhalt-Checks sind
+kein Verhaltensnachweis).
 """
 from __future__ import annotations
 
-import re
+import json
 from pathlib import Path
 
 from app.loader import VALID_ENTITY_ID_RE
 
-_REPO = Path(__file__).resolve().parents[2]
-_PATHSAFE_GO = _REPO / "internal" / "store" / "pathsafe.go"
+# Relativ zur eigenen Testdatei aufgeloest (nie ueber den festen
+# Hauptrepo-Pfad) — sonst misst ein Lauf aus dem Worktree die Fixture des
+# Hauptrepos und wird falsch gruen.
+_FALLTABELLE = (
+    Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "entity_id_pattern_parity"
+    / "faelle.json"
+)
 
 
-def test_python_muster_ist_deckungsgleich_mit_go():
-    """Given das kanonische Go-Muster in store/pathsafe.go (ValidEntityIDRe)
-    / When das Python-Muster (VALID_ENTITY_ID_RE) daneben gelegt wird / Then
-    sind beide identisch — analog test_user_id_pattern_parity.py fuer
-    Nutzer-Kennungen."""
-    go_src = _PATHSAFE_GO.read_text(encoding="utf-8")
-    m = re.search(
-        r"ValidEntityIDRe\s*=\s*regexp\.MustCompile\(`([^`]+)`\)", go_src
+def _lade_falltabelle() -> tuple[list[str], list[str]]:
+    """Laedt die geteilte Wahrheitstabelle und weist leere Mengen ab.
+
+    Eine fehlende oder leere Tabelle wuerde 'nichts gefunden, alles gruen'
+    still durchwinken — der Paritaetsnachweis waere dann wirkungslos.
+    """
+    assert _FALLTABELLE.exists(), (
+        f"Geteilte Wahrheitstabelle fehlt: {_FALLTABELLE} — ohne sie hat der "
+        "Paritaetsnachweis keine Faelle und wuerde still gruen durchlaufen."
     )
-    assert m, (
-        "ValidEntityIDRe nicht in pathsafe.go gefunden — entweder wurde die "
-        "Guard-Regex anders benannt/verschoben, oder ValidEntityID ist als "
-        "reine Funktion ohne begleitende Regex-Variable implementiert. In "
-        "letzterem Fall muss dieser Paritaetstest neu gefasst werden (siehe "
-        "Docstring-Hinweis oben, RED-Bericht #2140 Scheibe 2)."
+    daten = json.loads(_FALLTABELLE.read_text(encoding="utf-8"))
+    invalid = daten["invalid"]
+    valid = daten["valid"]
+    assert invalid and valid, (
+        f"{_FALLTABELLE} enthaelt eine leere Fallmenge (invalid={len(invalid)}, "
+        f"valid={len(valid)}) — leere Mengen sind stilles Gruen."
     )
-    assert VALID_ENTITY_ID_RE.pattern == m.group(1)
+    return invalid, valid
 
 
-def test_python_muster_stimmt_mit_spec_beispielen_ueberein():
-    """Given die in der Spec beschriebene Regel (nicht leer, kein '/', kein
-    '\\', kein NUL-Byte, nicht '.' und nicht '..', kein fuehrender Punkt,
-    Unicode-Buchstaben zulaessig) / When VALID_ENTITY_ID_RE gegen dieselbe
-    Beispielmenge wie internal/store/entity_id_test.go laeuft / Then
-    entscheidet es fuer jede Eingabe identisch — unabhaengig davon, ob die
-    Go-Seite als Regex oder als Funktion implementiert ist (Bauart-Redundanz
-    zur vorigen Pruefung)."""
-    invalid = [
-        "",
-        "/",
-        "a/b",
-        "\\",
-        "a\\b",
-        "a\x00b",
-        ".",
-        "..",
-        "../x",
-        "../../bob/user",
-        ".hidden",
-    ]
-    valid = [
-        "trip123",
-        "cp-a1b2c3d4",
-        "hochfügen",
-        "pollença",
-        "übergangsjoch-zillertal-arena",
-        "serfaus-schöngamp-berg",
-        "mühlbach",
-    ]
+def test_python_muster_folgt_der_geteilten_wahrheitstabelle():
+    """Given die geteilte Wahrheitstabelle, gegen die auch die Go-Seite
+    (store.ValidEntityID) laeuft / When VALID_ENTITY_ID_RE gegen jeden Fall
+    entscheidet / Then stimmt jedes Urteil mit der Tabelle ueberein — weicht
+    eine der beiden Seiten ab, wird genau diese Seite rot."""
+    invalid, valid = _lade_falltabelle()
+
     for entity_id in invalid:
         assert not VALID_ENTITY_ID_RE.match(entity_id), (
-            f"VALID_ENTITY_ID_RE akzeptiert unsicheres Segment {entity_id!r}"
+            f"VALID_ENTITY_ID_RE akzeptiert unsicheres Segment {entity_id!r} — "
+            "die Go-Seite lehnt es laut geteilter Wahrheitstabelle ab."
         )
     for entity_id in valid:
         assert VALID_ENTITY_ID_RE.match(entity_id), (
-            f"VALID_ENTITY_ID_RE lehnt gueltiges Unicode-Segment {entity_id!r} ab"
+            f"VALID_ENTITY_ID_RE lehnt gueltiges Unicode-Segment {entity_id!r} "
+            "ab — die Go-Seite laesst es laut geteilter Wahrheitstabelle zu."
         )
+
+
+def test_wahrheitstabelle_deckt_die_spec_regel_vollstaendig_ab():
+    """Given die in der Spec beschriebene Regel (nicht leer, kein '/', kein
+    '\\', kein NUL-Byte, nicht '.' und nicht '..', kein fuehrender Punkt,
+    Unicode-Buchstaben zulaessig) / When die geteilte Wahrheitstabelle daneben
+    gelegt wird / Then traegt sie zu jedem Regelteil mindestens einen Fall —
+    sonst koennte die Paritaet an einem ungeprueften Regelteil auseinander
+    driften, ohne dass ein Test rot wird (Selbstnachweis der Tabelle)."""
+    invalid, valid = _lade_falltabelle()
+
+    assert "" in invalid, "Regelteil 'nicht leer' hat keinen Fall"
+    assert any("/" in x for x in invalid), "Regelteil 'kein /' hat keinen Fall"
+    assert any("\\" in x for x in invalid), "Regelteil 'kein \\' hat keinen Fall"
+    assert any("\x00" in x for x in invalid), "Regelteil 'kein NUL' hat keinen Fall"
+    assert "." in invalid and ".." in invalid, "Punkt-Segmente haben keinen Fall"
+    assert any(
+        x.startswith(".") and x not in {".", ".."} for x in invalid
+    ), "Regelteil 'kein fuehrender Punkt' hat keinen Fall"
+    assert any(
+        any(ord(c) > 127 for c in x) for x in valid
+    ), "Positivkontrolle Unicode-Buchstaben hat keinen Fall"
