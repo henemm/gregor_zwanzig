@@ -2988,6 +2988,15 @@ Returns updated profile object (same as `GET /api/auth/profile`).
   exclusively the learned reply address, never configuration" would collapse: a user could enter a
   foreign number and have paid Premium-SMS delivered there. Guarded by
   `internal/handler/profile_test.go::TestUpdateProfileHandlerIgnoresPremiumSmsReplyFields`
+- **`telegram_chat_id` accepts only the empty string (Issue #2141):** die Chat-ID ist eine
+  Identitätszuordnung, keine Einstellung, und wird ausschließlich über den localhost-gesperrten
+  Einmal-Token-Flow gesetzt (`POST /api/internal/telegram-connect`, siehe unten). Sendet dieser
+  Endpoint `{"telegram_chat_id":""}`, wird die bestehende Verknüpfung gelöscht ("Telegram trennen"
+  im Konto-Bereich); ein nicht-leerer Wert wird stillschweigend ignoriert — kein 400, die Antwort
+  zeigt weiterhin den zuvor gespeicherten Wert. Ohne diese Sperre könnte ein Nutzer die Chat-ID
+  eines fremden Kontos übernehmen und dessen Telegram-Nachrichten mitlesen bzw. eigene als dieses
+  Konto empfangen (Chat-ID-Hijacking). Guarded by
+  `internal/handler/profile_telegram_chat_id_test.go`
 
 **Error Responses:**
 
@@ -2995,6 +3004,43 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 |--------|------|----------|
 | 400 | `{"error":"bad_request"}` | JSON not decodable |
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+
+#### POST /api/internal/telegram-connect
+
+Internal endpoint, localhost-only (`requireLocalOnly`) — called only by the Python
+`InboundTelegramReader` after a user sends `/start <token>` to the Telegram bot. Resolves the
+one-time deep-link token issued by `GET /api/auth/telegram-link` to a `user_id` and persists the
+sending chat's `chat_id` on that user (Issue #2141: erst nach einer Eindeutigkeitsprüfung).
+
+**Request Body:**
+```json
+{
+  "token": "<hex token from GET /api/auth/telegram-link>",
+  "chat_id": "55501"
+}
+```
+
+**Response 200:**
+```json
+{"status": "ok"}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"bad request"}` | JSON not decodable, or `token`/`chat_id` empty |
+| 404 | `{"error":"user not found"}` | Token resolved to a `user_id` whose `user.json` no longer exists |
+| 409 | `{"error":"chat_id_already_linked"}` | **(Issue #2141)** `chat_id` is already linked to a **different** real user's account — re-connecting the account that already owns it is explicitly not a conflict (200); test users (`model.IsTestUserID`) never trigger this and never win a collision, see `internal/store/user.go::FindUserByTelegramChatID`. `SaveUser` does not run in this case, the existing owner's link is untouched |
+| 422 | `{"error":"token invalid or expired"}` | Token unknown or past its 24h TTL |
+| 500 | `{"error":"lookup failed"}` | `FindUserByTelegramChatID` failed |
+| 500 | `{"error":"save failed"}` | `SaveUser` failed |
+| 403 | `forbidden` (plain text) | Request did not originate from `127.0.0.1`/`::1`, or arrived via a proxy header (`requireLocalOnly`) |
+
+**Notes:**
+- Uniqueness check and `SaveUser` run under the same process-wide mutex (`telegramConnectMu`) to
+  close a TOCTOU window between two concurrent connect attempts targeting the same `chat_id`
+  (Issue #2141).
 
 #### POST /api/auth/tier-change-request
 
@@ -3048,7 +3094,7 @@ type User struct {
     CreatedAt          time.Time              `json:"created_at"`
     MailTo             string                 `json:"mail_to,omitempty"`
     SmsTo              string                 `json:"sms_to,omitempty"`  // NEW (Issue #609) — SMS recipient phone number
-    TelegramChatID     string                 `json:"telegram_chat_id,omitempty"`
+    TelegramChatID     string                 `json:"telegram_chat_id,omitempty"`  // Identitätszuordnung, keine Einstellung (Issue #2141): einziger Schreiber ist `POST /api/internal/telegram-connect`; `PUT /api/auth/profile` nimmt nur den Leerstring an (Trennen)
     OAuthProvider      string                 `json:"oauth_provider,omitempty"`
     OAuthSub           string                 `json:"oauth_sub,omitempty"`
     DisplayName        string                 `json:"display_name,omitempty"`  // NEW (Issue #642) — user's chosen display name; omitempty if not set

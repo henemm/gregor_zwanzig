@@ -186,7 +186,10 @@ mehr der Produktivpfad.
 **Lookup-Funktionen** (`src/app/loader.py`):
 - `list_all_user_ids(data_dir)` – alle User-IDs unter `data/users/` (ausschließt test_ / _ Präfixe)
 - `lookup_user_by_email(email)` – sucht User mit `mail_to == email` (case-insensitive)
-- `lookup_user_by_telegram_chat_id(chat_id)` – sucht User mit `telegram_chat_id == chat_id`
+- `lookup_user_by_telegram_chat_id(chat_id)` – sucht User mit `telegram_chat_id == chat_id`; tragen
+  mehrere echte Nutzer dieselbe Chat-ID (Bestandsdaten von vor Issue #2141), liefert die Funktion
+  `None` statt einer der beiden IDs und protokolliert die Kollision (`logger.error`) — ein echter
+  Treffer hat weiterhin Vorrang vor Test-Nutzern (Issue #1013)
 
 **Konfiguration:** Nutzer-Profile liegen in `data/users/<user_id>/user.json` mit Feldern `mail_to` und `telegram_chat_id`.
 

@@ -165,6 +165,11 @@ func GetTelegramStatusHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// telegramConnectMu serialisiert Kollisionsprüfung und Speichern im
+// Connect-Endpunkt (Issue #2141). Wirkt prozessintern — je Umgebung läuft
+// genau ein gregor-api-Prozess auf demselben Datenverzeichnis.
+var telegramConnectMu sync.Mutex
+
 // PostTelegramConnectHandler — POST /api/internal/telegram-connect
 // Called only by the Python InboundTelegramReader (localhost only).
 // Resolves the one-time token to a user_id and saves the chat_id.
@@ -194,6 +199,25 @@ func PostTelegramConnectHandler(s *store.Store, ts *TelegramTokenStore) http.Han
 			http.Error(w, "user not found", http.StatusNotFound)
 			return
 		}
+		// Issue #2141: Eindeutigkeit der Chat-ID. Prüfung UND Speichern laufen
+		// unter demselben Lock, sonst könnten zwei gleichzeitige Connects
+		// beide an der Prüfung vorbeikommen (TOCTOU).
+		telegramConnectMu.Lock()
+		defer telegramConnectMu.Unlock()
+
+		existing, err := s.FindUserByTelegramChatID(body.ChatID)
+		if err != nil {
+			http.Error(w, "lookup failed", http.StatusInternalServerError)
+			return
+		}
+		if existing != nil && existing.ID != pt.UserID {
+			// Re-Connect desselben Nutzers ist bewusst kein Konflikt.
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]string{"error": "chat_id_already_linked"})
+			return
+		}
+
 		user.TelegramChatID = body.ChatID
 		if err := s.SaveUser(*user); err != nil {
 			http.Error(w, "save failed", http.StatusInternalServerError)

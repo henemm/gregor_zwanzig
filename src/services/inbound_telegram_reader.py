@@ -444,6 +444,26 @@ class InboundTelegramReader:
                     )
                 except Exception as ce:
                     logger.warning(f"Bestätigungsnachricht fehlgeschlagen: {ce}")
+            elif resp.status_code == 409:
+                # Issue #2141: die Chat-ID gehört bereits einem anderen Konto.
+                # Ohne Rückmeldung wäre das aus Nutzersicht ein Stillstand.
+                logger.warning(
+                    f"telegram-connect: chat_id {chat_id} bereits mit einem anderen Konto verknüpft"
+                )
+                try:
+                    conflict_settings = settings.model_copy(update={"telegram_chat_id": chat_id})
+                    self._notification_service.send_telegram_message(
+                        chat_id=chat_id,
+                        subject="Verbinden nicht möglich",
+                        body=(
+                            "Dieser Chat ist bereits mit einem anderen Gregor-Konto verbunden. "
+                            "Trenne die Verbindung zuerst im Konto-Bereich des anderen Kontos "
+                            "und sende danach erneut /start."
+                        ),
+                        settings=conflict_settings,
+                    )
+                except Exception as ce:
+                    logger.warning(f"Konflikt-Nachricht fehlgeschlagen: {ce}")
             else:
                 logger.warning(f"telegram-connect returned {resp.status_code}")
         except Exception as e:

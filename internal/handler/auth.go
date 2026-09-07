@@ -714,8 +714,16 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 		if update.SmsTo != nil {
 			user.SmsTo = *update.SmsTo
 		}
-		if update.TelegramChatID != nil {
-			user.TelegramChatID = *update.TelegramChatID
+		// Issue #2141: die Telegram-Chat-ID ist eine Identitätszuordnung, keine
+		// Einstellung — gesetzt wird sie ausschließlich über den
+		// localhost-gesperrten Einmal-Token-Flow (PostTelegramConnectHandler).
+		// Über diesen generischen Profil-Decoder kommt nur der Leerstring durch,
+		// damit "Telegram trennen" im Konto-Bereich weiter funktioniert. Ein
+		// nicht-leerer Wert fließt nirgends ein; die Antwort (toProfileResponse)
+		// zeigt den unveränderten gespeicherten Wert, der Aufrufer sieht die
+		// Nicht-Übernahme also unmittelbar. Muster wie premium_sms_reply_to.
+		if update.TelegramChatID != nil && *update.TelegramChatID == "" {
+			user.TelegramChatID = ""
 		}
 
 		if err := s.SaveUser(*user); err != nil {

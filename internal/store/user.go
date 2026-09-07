@@ -254,3 +254,33 @@ func (s *Store) FindUserByEmail(email string) (*model.User, error) {
 	}
 	return nil, nil
 }
+
+// FindUserByTelegramChatID searches all users for one whose TelegramChatID
+// matches exactly (Chat-IDs sind numerisch — kein EqualFold). Returns
+// (nil, nil) if no match found or if chatID is empty: ein leeres Feld ist
+// keine Verknüpfung. Test-Nutzer (model.IsTestUserID) werden übersprungen —
+// Issue #1013 hält fest, dass ein echter Nutzer gegen die Fixture gewinnt,
+// sonst könnte sich der PO auf Staging nicht mehr verbinden, sobald
+// tg-live-e2e dieselbe Chat-ID trägt. Issue #2141.
+func (s *Store) FindUserByTelegramChatID(chatID string) (*model.User, error) {
+	if strings.TrimSpace(chatID) == "" {
+		return nil, nil
+	}
+	ids, err := s.ListUserIDs()
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		if model.IsTestUserID(id) {
+			continue
+		}
+		u, err := s.LoadUser(id)
+		if err != nil || u == nil {
+			continue
+		}
+		if u.TelegramChatID == chatID {
+			return u, nil
+		}
+	}
+	return nil, nil
+}
