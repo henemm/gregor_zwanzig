@@ -1,0 +1,7 @@
+{
+ "beschreibung": "Genau eine echte Zeile, deren fetched_at NACH fenster_start liegt (negativer Vorlauf: -1 day, 19:44:39.640814). Eine Rueckschau, keine Vorhersage.",
+ "herkunft": "echte Zeilen aus /home/hem/gz-messdaten/khw-2026-08-mitschnitt/ (unveraendert)",
+ "zeilen": [
+  {"cache_hit": false, "day_window_end_hour": 20, "day_window_start_hour": 5, "fenster_ende": "2026-08-21T19:00:00+00:00", "fenster_start": "2026-08-21T12:00:00+00:00", "fetched_at": "2026-08-21T16:15:20.359186+00:00", "grund": "aenderung", "lat": 46.706056, "lon": 12.406271, "model": "icon_d2", "provider": "openmeteo", "segment_id": "Ziel", "source": "alarm", "werte": {"cape_max_jkg": 60.0, "gust_max_kmh": 65.9, "pop_max_pct": 100, "precip_sum_mm": 7.7, "snow_new_sum_cm": null, "snowfall_limit_m": null, "temp_max_c": 8.8, "temp_min_c": 8.1, "thunder_level_max": "NONE", "wind_max_kmh": 20.2}, "written_at": "2026-08-21T16:15:20.377376+00:00"}
+ ]
+}
