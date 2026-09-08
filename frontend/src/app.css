@@ -245,6 +245,34 @@
   }
 }
 
+/* Issue #2131 — Offline-Bänder unter der fixierten Kopfleiste.
+
+   Die Stand-Zeile (`#gz-stand`, app.html) und das Sperr-Band
+   (`[data-gz-offline-band]`, OfflineSperre.svelte) stehen beide AUSSERHALB von
+   <main> — die Kompensation der fixierten TopAppBar (`.mobile-scroll-pad`,
+   oben) erfasst sie deshalb nicht, und unter 900px lag die Stand-Zeile
+   vollständig hinter der Leiste (Adversary-Finding F006, live gemessen:
+   Stand-Zeile 0–35px, Kopfleiste 0–56px, z-index 60).
+
+   Kompensiert wird deshalb <body>, sobald eines der Bänder da ist — und <main>
+   gibt seine eigene Kompensation im selben Fall ab, sonst entstünde der
+   Abstand doppelt. Ohne Band ändert sich nichts, ab 900px (Kopfleiste ist
+   `desktop:hidden`) ebenfalls nicht.
+
+   Bewusst ohne @layer: diese Regeln müssen die Utility `.mobile-scroll-pad`
+   schlagen, und ungeschichtete Deklarationen gehen geschichteten vor. */
+@media (max-width: 899px) {
+  body:has(#gz-stand:not([hidden])),
+  body:has([data-gz-offline-band]) {
+    padding-top: 56px;
+  }
+
+  body:has(#gz-stand:not([hidden])) .mobile-scroll-pad,
+  body:has([data-gz-offline-band]) .mobile-scroll-pad {
+    padding-top: 0;
+  }
+}
+
 @layer components {
   /* === Issue #143 + #209: Topo-Hintergrundmuster === */
   .g-topo {

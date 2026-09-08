@@ -18,6 +18,14 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<!-- Issue #2131 — Markierung fuer die Stand-Zeile. Der Service Worker
+		     ersetzt genau diese Zeile beim ABLEGEN durch die fertig formatierte
+		     Stand-Zeile; live ausgeliefert bleibt sie leer und verborgen.
+		     Bewusst AUSSERHALB des Hydrierungs-Wurzelknotens: innerhalb wuerde
+		     Svelte beim Hydrieren ueber demselben Knoten stehen und der
+		     eingeschriebene Stand haenge an einer Uebereinstimmung, die niemand
+		     garantiert. -->
+		<div id="gz-stand" hidden></div>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

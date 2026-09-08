@@ -13,9 +13,11 @@
 import { test, expect, type Page } from '@playwright/test';
 import * as fs from 'node:fs';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
+import { createTestTrip } from './helpers.ts';
 import {
 	AUTH_STATE,
 	activateServiceWorker,
+	cacheNamenMitEintrag,
 	cacheNames,
 	controllingScriptUrl,
 	programmpfadeImSpeicher,
@@ -651,9 +653,34 @@ test('AC-24: scheitert das Raeumen, bleibt der Merker fuer den naechsten Versuch
 // ===========================================================================
 // AC-11 — beide Abmelde-Wege raeumen Speicher und Worker
 // ===========================================================================
+//
+// Issue #2131 (Scheibe 4, Adversary-Finding F003): beide Nachweise besuchen
+// jetzt VOR dem Abmelden eine Trip-Ansicht. Ohne diesen Besuch legt die App in
+// dieser Datei nie mehr als den Programm-Cache an — der Zwei-Cache-Fall
+// (Programm-Cache UND Daten-Cache, getrennt gefuehrt seit #2131) traete nie
+// ein, und "nach dem Abmelden ist alles leer" bewiese nur, dass EIN Cache weg
+// ist. Die Ober-Schranke unten macht den Aufbau sichtbar; die anschliessende
+// "alles leer"-Zusicherung bleibt unveraendert scharf — sie deckt jetzt aber
+// tatsaechlich zwei Speicher statt einem.
 
 test('AC-11: Abmelden ueber die Seitenleiste raeumt Speicher und Worker', async ({ page }) => {
 	await activateServiceWorker(page);
+
+	const trip = await createTestTrip(page.request, {});
+	await page.goto(`/trips/${trip.id}`);
+	await page.waitForLoadState('networkidle');
+	await expect
+		.poll(async () => (await cacheNamenMitEintrag(page, `/trips/${trip.id}`)).length, {
+			timeout: 15_000
+		})
+		.toBeGreaterThan(0);
+
+	const namenVorAbmeldung = await cacheNames(page);
+	expect(
+		namenVorAbmeldung.length,
+		'Aufbau soll Programm-Cache plus hoechstens einen Daten-Cache anlegen — ' +
+			`erhalten: ${JSON.stringify(namenVorAbmeldung)}`
+	).toBeLessThanOrEqual(2);
 	expect((await readCacheEntries(page)).length).toBeGreaterThan(0);
 
 	const sidebar = page.getByTestId('desktop-sidebar');
@@ -667,7 +694,38 @@ test('AC-11: Abmelden ueber die Seitenleiste raeumt Speicher und Worker', async 
 });
 
 test('AC-11: "Auf allen Geraeten abmelden" raeumt Speicher und Worker', async ({ page }) => {
+	// Frische Anmeldung: der vorangehende Nachweis hat die geteilte Sitzung
+	// bereits real abgemeldet (echter Aufruf von /api/auth/logout). Die
+	// anschliessende Trip-Anlage geht direkt gegen die API — anders als eine
+	// SvelteKit-Seitenlast (die Fehler beim Nachladen der Kontoseite stumm
+	// schluckt) scheitert ein direkter API-Aufruf mit der verbrauchten Sitzung
+	// sofort mit 401. Dieselbe Anmeldung wie in global.setup.ts/afterAll unten.
+	await page.goto('/login');
+	await page.fill('input[name="username"]', process.env.E2E_USER ?? 'admin');
+	await page.fill('input[name="password"]', process.env.E2E_PASS ?? 'test1234');
+	await page.click('button[type="submit"]');
+	await page.waitForURL('/');
+
 	await activateServiceWorker(page, '/account');
+
+	const trip = await createTestTrip(page.request, {});
+	await page.goto(`/trips/${trip.id}`);
+	await page.waitForLoadState('networkidle');
+	await expect
+		.poll(async () => (await cacheNamenMitEintrag(page, `/trips/${trip.id}`)).length, {
+			timeout: 15_000
+		})
+		.toBeGreaterThan(0);
+
+	const namenVorAbmeldung = await cacheNames(page);
+	expect(
+		namenVorAbmeldung.length,
+		'Aufbau soll Programm-Cache plus hoechstens einen Daten-Cache anlegen — ' +
+			`erhalten: ${JSON.stringify(namenVorAbmeldung)}`
+	).toBeLessThanOrEqual(2);
+
+	// Zurueck auf die Konto-Seite, wo der Abmelde-Dialog liegt.
+	await page.goto('/account');
 	expect((await readCacheEntries(page)).length).toBeGreaterThan(0);
 
 	await page.getByRole('button', { name: 'Auf allen Geräten abmelden' }).click();

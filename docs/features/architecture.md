@@ -825,12 +825,41 @@ Das Frontend ist eine installierbare Progressive Web App:
   Update-Hinweises (`frontend/src/lib/pwa/serviceWorkerUpdate.ts`), nicht schon beim Erkennen
   (PO-Entscheid Epic #2127 — kein ungefragtes Datenvolumen im Funkloch).
   Räumen des Geräte-Speichers beim Abmelden: `frontend/src/lib/pwa/geraetespeicher.ts`.
-- **Offline-Seite:** `frontend/static/offline.html` (eigenständig, kein SvelteKit-Rendering).
+- **Offline-Seite:** `frontend/static/offline.html` — seit #2131 keine Sackgasse mehr, sondern
+  eine Übersicht der offline vorgehaltenen Ansichten (Titel + Stand), Einstiegspunkt auch für den
+  Homescreen-Start (`start_url: "/"`).
 - **Fonts:** lokal ausgeliefert statt über Google Fonts geladen (kein externer Ladepfad mehr).
 - **Icon:** maskable Symbol für die Installation.
 
 Details, Speicherregeln im Volltext und die 24 Acceptance Criteria: `docs/specs/modules/pwa_installierbar_offline_start.md`,
 Bauform-Entscheidung: `docs/adr/0061-pwa-service-worker-bauform.md`.
+
+**Offline-Ansicht mit Stand-Kennzeichnung (Issue #2131, Scheibe 4 zu Epic #2127):** Trip- und
+Ortsvergleichs-Ansicht (`/trips/[id]`, `/compare/[id]`) bleiben ohne Netz aus dem Gerätespeicher
+sichtbar — mit allen anderen Routen ausdrücklich **nicht**:
+
+- **Ablage-Positivliste statt Feldfilter:** nur `/trips/[id]` und `/compare/[id]` (Seitenantwort
+  **und** `__data.json` für die clientseitige Navigation) werden abgelegt. Startseite/Cockpit
+  (`/`), `/archiv` sowie `/api/cockpit/status` und `/api/archive/stats` sind dauerhaft
+  ausgeschlossen, weil sie Alarm-Historie zeigen — ein veralteter Alarmstand wäre gefährlicher als
+  gar keiner.
+- **Stand-Kennzeichnung im Byte-Strom:** Der Worker schreibt die Stand-Zeile („Stand: TT.MM.,
+  HH:MM — offline, aus dem Gerätespeicher") beim Ablegen in die Antwortkopie ein, nicht erst
+  client-seitig beim Anzeigen — es gibt kein Zeitfenster mit ungekennzeichnet sichtbarem Altstand.
+- **Zweiter Cache-Bucket, mandantengetrennt:** `gz-daten-<mandanten-hash>` neben dem
+  Programm-Cache `gz-${version}` aus #2128; die Kennung kommt über einen Antwort-Header aus
+  `frontend/src/hooks.server.ts`, fail-closed (fehlt der Header, wird nicht abgelegt). Fester
+  Obergrenzen-Bestand mit Ältestes-zuerst-Verdrängung; Nutzerwechsel auf demselben Gerät räumt den
+  Bucket des vorherigen Nutzers beim ersten Online-Abruf des neuen.
+- **Schreib-Sperre statt Ausblenden:** Bearbeitungs- und Speichern-Elemente bleiben sichtbar, sind
+  aber gesperrt und tragen eine sichtbare Begründung (`OfflineSperre.svelte`, `offlineGate.ts`,
+  Vorbild `premiumSmsAlarmGate.ts`) — sowohl bei aus dem Speicher gezeigten Ansichten als auch bei
+  Netzverlust während einer live geladenen Sitzung (`frontend/src/lib/stores/verbindung.svelte.ts`).
+- Programm-Update lässt den Inhalts-Bucket unangetastet; Abmelden über beide bekannten Wege leert
+  ihn vollständig mit.
+
+Details, Entscheidungsbegründung (Positivliste, Header-Ablauf, Verdrängung, Sperr-Design) und die
+18 Acceptance Criteria: `docs/specs/modules/pwa_offline_ansicht_letzter_stand.md`.
 
 ### Anlege- und Bearbeitungs-Editoren (Wizards abgeschafft)
 

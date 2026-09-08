@@ -28,6 +28,46 @@ function headerFields(init?: HeadersInit): Record<string, string> {
 	return { ...(init as Record<string, string>) };
 }
 
+/**
+ * Issue #2131: meldet den Ausgang eines Abrufs an den Verbindungs-Store.
+ *
+ * Bewusst ueber ein DOM-Ereignis statt eines Imports: `$lib/api.ts` wird auch
+ * von node:test-Nachweisen geladen, die keine Svelte-Runen ausfuehren koennen —
+ * ein Import des Runen-Stores wuerde sie beim Laden zerreissen.
+ */
+function meldeAbrufAusgang(erfolg: boolean): void {
+	if (typeof window === 'undefined') return;
+	window.dispatchEvent(new CustomEvent(erfolg ? 'gz-abruf-gelungen' : 'gz-abruf-fehlgeschlagen'));
+}
+
+/**
+ * Issue #2131 AC-10: ein Schreibversuch ohne Verbindung wird abgewiesen, bevor
+ * er losgeht — nicht erst, wenn er scheitert.
+ *
+ * Die gesperrte Oberflaeche allein genuegt dafuer nicht: ein gesperrtes
+ * Bedienelement kann von aussen trotzdem ein `change`-Ereignis erhalten (der
+ * Nutzer tippt hartnaeckig, ein Skript setzt einen Wert). Der Schreibweg selbst
+ * muss die Sperre kennen, sonst haengt die Zusicherung an der Oberflaeche
+ * statt an der Stelle, an der sie wirkt.
+ */
+const SCHREIBEND = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+let schreibsperre = false;
+
+if (typeof window !== 'undefined') {
+	window.addEventListener('gz-schreibsperre', (ereignis) => {
+		schreibsperre = (ereignis as CustomEvent<{ gesperrt?: boolean }>).detail?.gesperrt === true;
+	});
+}
+
+function schreibenVerboten(method: string): boolean {
+	if (!SCHREIBEND.has(method)) return false;
+	// Geraetemeldung „keine Verbindung" ist als NEGATIVES Signal verlaesslich
+	// und gilt auch dann, wenn die Oberflaeche ihren Zustand noch nicht
+	// gemeldet hat (erster Frame, Ereignisreihenfolge).
+	if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+	return schreibsperre;
+}
+
 async function send<T>(
 	method: string,
 	path: string,
@@ -58,7 +98,20 @@ async function send<T>(
 	if (body !== undefined) {
 		opts.body = JSON.stringify(body);
 	}
-	const res = await fetch(path, opts);
+	let res: Response;
+	try {
+		res = await fetch(path, opts);
+	} catch (netzfehler) {
+		// Issue #2131: der einzige belastbare Beweis, dass der Server NICHT
+		// erreichbar ist. `navigator.onLine` allein taugt dafuer nicht (es meldet
+		// nur eine vorhandene Netzwerkschnittstelle). Ab hier sperrt die
+		// Oberflaeche — bis ein Abruf nachweislich wieder gelingt.
+		meldeAbrufAusgang(false);
+		throw netzfehler;
+	}
+	// Auch eine 4xx/5xx-Antwort BEWEIST einen erreichbaren Server: es hat
+	// jemand geantwortet. Nur der ausbleibende Antwortende sperrt.
+	meldeAbrufAusgang(true);
 	if (!res.ok) {
 		// Issue #1006 — Sitzung abgelaufen (24h-TTL): zentral behandeln statt die
 		// rohe {"error":"unauthorized"}-Meldung an Aufrufer durchzureichen.
@@ -106,6 +159,13 @@ async function send<T>(
 }
 
 async function request<T>(method: string, path: string, body?: unknown, extra?: RequestInit): Promise<T> {
+	if (schreibenVerboten(method)) {
+		const gesperrt = new Error(
+			'Ohne Verbindung lässt sich nichts speichern — die Änderung wurde nicht abgeschickt.'
+		) as Error & { status: number };
+		gesperrt.status = 0;
+		throw gesperrt;
+	}
 	const tripId = extractTripId(path);
 	// `{ keepalive: true }` setzt im gesamten Repo ausschliesslich der
 	// willUnload-Zweig beim Verlassen der Seite. Dieser Vorgang hat nur ein sehr

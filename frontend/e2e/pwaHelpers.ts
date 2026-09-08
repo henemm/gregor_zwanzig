@@ -74,6 +74,60 @@ export async function readCacheEntries(page: Page): Promise<CacheEntry[]> {
 }
 
 /**
+ * Rohtext des abgelegten Eintrags zu `pfad` — oder `null`, wenn keiner liegt.
+ *
+ * Liest den BYTESTROM aus dem Speicher, nicht die angezeigte Seite. Der
+ * Unterschied ist der Kern von #2131 AC-4: eine Stand-Zeile, die erst eine
+ * Anzeige-Logik im Browser erzeugt, gaebe es im abgelegten Dokument gar nicht —
+ * und waere vor der Hydrierung unsichtbar.
+ */
+export async function readCacheBody(page: Page, pfad: string): Promise<string | null> {
+	return page.evaluate(async (p) => {
+		for (const cacheName of await caches.keys()) {
+			const cache = await caches.open(cacheName);
+			for (const request of await cache.keys()) {
+				if (new URL(request.url).pathname !== p) continue;
+				const response = await cache.match(request);
+				if (response) return response.text();
+			}
+		}
+		return null;
+	}, pfad);
+}
+
+/**
+ * Namen aller Speicher, die einen Eintrag zu `pfad` fuehren.
+ *
+ * Bewusst ueber den INHALT statt ueber ein Namensmuster: ein Nachweis, der auf
+ * `gz-daten-…` prueft, misst die Benennung und nicht die Trennung — und wuerde
+ * still blind, sobald der Name sich aendert.
+ */
+export async function cacheNamenMitEintrag(page: Page, pfad: string): Promise<string[]> {
+	return page.evaluate(async (p) => {
+		const treffer: string[] = [];
+		for (const cacheName of await caches.keys()) {
+			const cache = await caches.open(cacheName);
+			for (const request of await cache.keys()) {
+				if (new URL(request.url).pathname === p) {
+					treffer.push(cacheName);
+					break;
+				}
+			}
+		}
+		return treffer;
+	}, pfad);
+}
+
+/** Pfade aller abgelegten Trip-/Vergleichs-Ansichten (ohne `__data.json`). */
+export async function abgelegteAnsichten(page: Page): Promise<string[]> {
+	const entries = await readCacheEntries(page);
+	const pfade = entries
+		.map((e) => new URL(e.url).pathname)
+		.filter((p) => /^\/(trips|compare)\/[^/]+$/.test(p));
+	return [...new Set(pfade)].sort();
+}
+
+/**
  * Pfade aller Dateien, die der laufende Worker abgelegt hat — also genau die
  * Liste, die ein vorab ladender Worker anfordern wuerde. Wird aus dem echten
  * Speicher gelesen statt im Test festgeschrieben: eine feste Liste veraltete
