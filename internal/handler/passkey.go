@@ -474,8 +474,11 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 			return
 		}
 
+		// Issue #2130: hier zwingend auffindbar (discoverable) — ohne Passwort
+		// und ohne auffindbaren Passkey haette der Nutzer keinen Wiedereinstieg.
 		tempUser := &model.User{ID: req.Username}
-		creation, sessionData, err := wa.BeginRegistration(tempUser)
+		creation, sessionData, err := wa.BeginRegistration(tempUser,
+			webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementRequired))
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "webauthn_begin_failed")
 			return

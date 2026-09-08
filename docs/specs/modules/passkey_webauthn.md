@@ -2,7 +2,7 @@
 entity_id: passkey_webauthn
 type: module
 created: 2026-05-30
-updated: 2026-05-30
+updated: 2026-09-08
 status: draft
 version: "1.0"
 tags: [go, sveltekit, multi-user, auth, webauthn, fido2, passkey, security]
@@ -11,6 +11,15 @@ tags: [go, sveltekit, multi-user, auth, webauthn, fido2, passkey, security]
 <!-- Issue #450 — Passkey als Anmelde-Methode (WebAuthn) — V1 Add-on -->
 
 # Passkey-Anmeldung (WebAuthn/FIDO2) — V1 Add-on
+
+> **Konfigurationsteil veraltet (Issue #2130, 2026-09-08):** Die hier beschriebene Annahme,
+> Production/Staging setzten `WEBAUTHN_RP_ID`/`WEBAUTHN_RP_ORIGINS` explizit
+> (`gregor20.henemm.com` bzw. `staging.gregor20.henemm.com`), war nie umgesetzt — der Server
+> sendete in Produktion unbemerkt den Default `rpId: "localhost"`, wodurch Passkey nie
+> funktionierte. Die RP-ID wird seither aus `GZ_PUBLIC_HOST` abgeleitet
+> (`internal/config/webauthn.go`). Aktuelle Konfiguration: `docs/reference/api_contract.md` §19,
+> Details: `docs/specs/modules/passkey_rp_konfiguration.md`. Der restliche Inhalt (Endpunkte,
+> Datenmodell) bleibt gültig.
 
 ## Approval
 

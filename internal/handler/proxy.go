@@ -14,7 +14,10 @@ import (
 
 const version = "0.1.0"
 
-func HealthHandler(pythonURL string, gitCommit string) http.HandlerFunc {
+// HealthHandler liefert den Gesundheitsstatus. rpID ist die effektive
+// Passkey-RP-ID der real gebauten WebAuthn-Instanz (Issue #2130) — der
+// Post-Deploy-Selbsttest haelt sie gegen den Produktions-Hostnamen.
+func HealthHandler(pythonURL string, gitCommit string, rpID string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 2 * time.Second}
 		pythonStatus := "ok"
@@ -34,10 +37,11 @@ func HealthHandler(pythonURL string, gitCommit string) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
-			"status":      status,
-			"version":     version,
-			"python_core": pythonStatus,
-			"commit":      gitCommit,
+			"status":        status,
+			"version":       version,
+			"python_core":   pythonStatus,
+			"commit":        gitCommit,
+			"webauthn_rpid": rpID,
 		})
 	}
 }

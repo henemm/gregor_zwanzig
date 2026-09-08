@@ -124,7 +124,10 @@ func New(deps Deps) chi.Router {
 		passkeyRegPubLimiter.Middleware(handler.PasskeyRegisterPublicFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, *deps.Config)).ServeHTTP,
 	)
 
-	r.Get("/api/health", handler.HealthHandler(deps.Config.PythonCoreURL, deps.GitCommit))
+	// Issue #2130: Quelle ist die effektive RP-ID der real gebauten Instanz,
+	// nicht deps.Config.WebAuthnRPID (der nicht abgeleitete Rohwert) — sonst
+	// meldete /api/health etwas anderes, als der Browser bei begin bekommt.
+	r.Get("/api/health", handler.HealthHandler(deps.Config.PythonCoreURL, deps.GitCommit, deps.WebAuthn.Config.RPID))
 	r.Get("/api/config", handler.ProxyHandler(deps.Config.PythonCoreURL, "/config"))
 	r.Get("/api/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/metrics"))
 	r.Get("/api/templates", handler.ProxyHandler(deps.Config.PythonCoreURL, "/templates"))

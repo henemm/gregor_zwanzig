@@ -64,6 +64,8 @@ start_stack() {
 		GZ_TEST_FIXTURE_DIR="$REPO_ROOT/fixtures/openmeteo" \
 		GZ_CORE_SHARED_SECRET="$CORE_SHARED_SECRET" \
 		GZ_USER_ID=admin GZ_AUTH_PASS=test1234 GZ_ENV=staging \
+		GZ_PUBLIC_HOST="http://localhost:4173" \
+		GZ_WEBAUTHN_RP_ORIGINS="http://localhost:4173,http://localhost:5173" \
 		"$GO_BIN" > "$STATE_DIR/go-server.log" 2>&1 &
 	echo $! > "$STATE_DIR/go-server.pid"
 

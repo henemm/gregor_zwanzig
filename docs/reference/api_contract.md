@@ -2644,7 +2644,18 @@ User login with username + password, returns session cookie.
 **Issue #467** — Discoverable credentials (login without username) via Conditional UI. Browser shows Passkeys as native autofill suggestions on username field focus (`mediation: 'conditional'`).
 
 **Key Configuration:**
-- **RP-ID (Relying Party):** Prod `gregor20.henemm.com`, Staging `staging.gregor20.henemm.com` (isolated)
+- **RP-ID (Relying Party):** wird seit Issue #2130 aus `GZ_PUBLIC_HOST` abgeleitet
+  (`internal/config/webauthn.go::NewWebAuthn`/`resolveWebAuthnRP`/`deriveFromPublicHost`), nicht
+  mehr als separate, leicht vergessene ENV-Variable gepflegt. Prod: `gregor20.henemm.com`
+  (Default in `internal/config/config.go:39`, `GZ_PUBLIC_HOST` fehlt aktuell in der Prod-`.env`
+  und trifft dort zufällig zu). Staging: `staging.gregor20.henemm.com`, sofern dort
+  `GZ_PUBLIC_HOST` gesetzt ist (#2200 — bis dahin läuft Staging weiter auf dem Prod-Default).
+  Explizite `GZ_WEBAUTHN_RP_ID`/`GZ_WEBAUTHN_RP_ORIGINS` bleiben als Override erhalten (z.B.
+  lokal, wo `PublicHost` selbst nicht auf `localhost` zeigen soll). Die effektive RP-ID ist über
+  `GET /api/health` (Feld `webauthn_rpid`) beobachtbar und wird vom Post-Deploy-Selbsttest
+  (`prod_selftest.py`) gegen den erwarteten Hostnamen geprüft — vor #2130 lief Passkey in
+  Produktion nie, weil der Server unbemerkt `rpId: "localhost"` sendete (#878). Details:
+  `docs/specs/modules/passkey_rp_konfiguration.md`.
 - **Rate-Limit:** 30 requests/hour per IP (all 7 endpoints)
 - **Body-Size-Cap:** 64 KB (`http.MaxBytesReader`)
 - **Challenge-TTL:** 5 minutes (in-memory store with garbage collection)
@@ -3808,6 +3819,13 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-08: Issue #2130 — Passkey-RP-ID/Origins werden nicht mehr auf dem Default `localhost`
+  belassen, sondern aus `GZ_PUBLIC_HOST` abgeleitet (`internal/config/webauthn.go`, verdrahtet
+  über `cmd/server/main.go`). `GET /api/health` liefert zusätzlich `webauthn_rpid` (effektiver
+  Wert, `internal/router/router.go`/`internal/handler/proxy.go`), geprüft vom
+  Post-Deploy-Selbsttest. Neu registrierte Passkeys fordern zudem `ResidentKey: preferred`
+  (`/register/public/begin`: `required`), damit sie im Autofill-Dialog auffindbar sind. Siehe
+  Section B) oben und `docs/specs/modules/passkey_rp_konfiguration.md`.
 - 2026-09-07: Issue #2140 Scheibe 2 — Entitäts-Kennungen (Trip-, Orts-, Compare-Preset-ID) werden
   gegen Pfad-Traversal gesperrt (`store.ValidEntityID` in Go, `VALID_ENTITY_ID_RE` in Python,
   Parität über `tests/unit/test_entity_id_pattern_parity.py`). Betroffen: `GET`/`PUT
