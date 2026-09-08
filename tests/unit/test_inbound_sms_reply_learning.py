@@ -523,6 +523,67 @@ def test_server_error_response_keeps_pointer_and_retries_next_run(monkeypatch):
     assert fake_post.calls[1]["json"]["from"] == GARMIN_FROM_A
 
 
+def test_transient_failure_halts_the_rest_of_the_journal_window(monkeypatch):
+    """Fix F001 (Mehr-Nachrichten-Fall, Adversary #2184 F001): Given ein
+    Journal-Fenster mit ZWEI Garmin-Nachrichten, deren erste (niedrigere id)
+    an einem Netzwerkfehler scheitert, waehrend die zweite zuzuordnen waere /
+    When der Poll laeuft / Then wird die zweite NICHT gelernt und der
+    Dedup-Zeiger bleibt VOR der ersten stehen -- der naechste Lauf versucht
+    beide erneut, in derselben Reihenfolge (R2).
+
+    Zwei Nachrichten sind Pflicht: bei nur EINER verhalten sich `break` und
+    `continue` im Fehlerzweig identisch, deshalb faengt keiner der bisherigen
+    Zwei-Lauf-Tests die Mutation `break` -> `continue`. Mit `continue`
+    wanderte der Zeiger ueber BEIDE Nachrichten hinweg, weil die erfolgreiche
+    zweite `max_seen` hochzieht -- die Rueckadresse der ersten waere dauerhaft
+    verloren, ohne dass irgendwo ein Fehler sichtbar wird (genau der Schaden,
+    den Fix F001 verhindert).
+    """
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    fenster = [_garmin_message(9001, GARMIN_FROM_A),
+               _garmin_message(9002, GARMIN_FROM_B)]
+    fake_get = _FakeJournalEndpoint([fenster, fenster])
+    fake_post = _TransientlyFailingLearnRecorder(fail_times=1)
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    reader = reader_mod.InboundSmsReader()
+
+    result_1 = reader.poll_and_process(_settings())
+    assert result_1 == 0, (
+        f"Lauf 1: nach dem Fehlschlag der ersten Nachricht darf KEINE weitere "
+        f"Nachricht desselben Fensters gelernt werden, gemeldet wurden "
+        f"{result_1!r}"
+    )
+    assert [c["json"]["from"] for c in fake_post.calls] == [GARMIN_FROM_A], (
+        f"Lauf 1: der Poll muss NACH dem Fehlschlag abbrechen -- die zweite "
+        f"Nachricht darf gar nicht erst gemeldet werden, gemeldet wurden "
+        f"{[c['json']['from'] for c in fake_post.calls]!r}"
+    )
+    assert reader.last_failed_count == 1, (
+        f"Lauf 1: genau ein voruebergehender Fehlschlag, gezaehlt wurden "
+        f"{reader.last_failed_count!r}"
+    )
+
+    result_2 = reader.poll_and_process(_settings())
+    assert [c["json"]["from"] for c in fake_post.calls[1:]] == [
+        GARMIN_FROM_A, GARMIN_FROM_B,
+    ], (
+        f"Lauf 2: der Zeiger muss VOR der ersten Nachricht stehen geblieben "
+        f"sein -- beide Nachrichten werden erneut versucht, in Reihenfolge "
+        f"ihrer id, gemeldet wurden "
+        f"{[c['json']['from'] for c in fake_post.calls[1:]]!r}"
+    )
+    assert result_2 == 2, (
+        f"Lauf 2: beide Nachrichten muessen jetzt gelernt werden, gemeldet "
+        f"wurden {result_2!r}"
+    )
+    assert reader.last_failed_count == 0
+
+
 class _RejectingLearnRecorder:
     """POST premium-sms-learn antwortet immer mit HTTP 409 (bewusste
     Ablehnung, AC-5-Mehrdeutigkeit) -- keine Netzwerk-/Serverstoerung."""

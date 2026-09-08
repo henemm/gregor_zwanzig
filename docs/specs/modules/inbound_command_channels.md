@@ -2,10 +2,10 @@
 entity_id: inbound_command_channels
 type: module
 created: 2026-02-17
-updated: 2026-08-10
+updated: 2026-09-08
 status: draft
-version: "1.3"
-tags: [f6, inbound, email, sms, imap, polling, channel, shortcode]
+version: "1.4"
+tags: [f6, inbound, email, sms, premium-sms, imap, polling, channel, shortcode]
 ---
 
 # Inbound Command Channels
@@ -356,14 +356,29 @@ Beide Reader nutzen denselben `TripCommandProcessor` und dieselben DTOs.
 Der einzige Unterschied: Polling-Quelle und Reply-Output.
 
 > **Hinweis (Issue #1676, Scheibe S1, 2026-08-10):** Der oben skizzierte
-> `InboundSmsReader` ist NICHT der inzwischen gebaute. Der reale
+> `InboundSmsReader` ist NICHT der ursprünglich gebaute. Der reale
 > `src/services/inbound_sms_reader.py` (Spec:
-> `docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md`) verarbeitet
-> **keine Trip-Befehle** und ruft `TripCommandProcessor` nicht auf — er pollt
-> das seven.io-Journal ausschließlich, um für Premium-Nutzer die Garmin-
-> inReach-Rückadresse (Kennzeichen `inreachlink.com`) zu lernen und in
-> `user.json` zu speichern. Ein SMS-Befehlskanal nach diesem Vorbild
-> (F1-Erweiterbarkeit) ist damit weiterhin **nicht** implementiert.
+> `docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md`) verarbeitete zu
+> diesem Zeitpunkt **keine Trip-Befehle** und rief `TripCommandProcessor` nicht
+> auf — er pollte das seven.io-Journal ausschließlich, um für Premium-Nutzer die
+> Garmin-inReach-Rückadresse (Kennzeichen `inreachlink.com`) zu lernen und in
+> `user.json` zu speichern.
+>
+> **Nachtrag (Issue #2184, Scheibe S4 Epic #2133, 2026-09-08):** Das hat sich
+> geändert. Derselbe Poll-Durchlauf verarbeitet jetzt zusätzlich den vor dem
+> Kennzeichen stehenden Nachrichtentext als Befehl: nach dem unveränderten
+> Lernaufruf, in einem eigenen nachgelagerten `try/except` (darf den F001-
+> Dedup-Zeiger nicht beeinflussen), wird `InboundMessage(channel="premium_sms",
+> ...)` gebaut und an `TripCommandProcessor.process()` delegiert; die Antwort
+> geht per `NotificationService.send_command_reply_premium_sms` an die soeben
+> gelernte Rückadresse zurück. Premium-SMS ist damit — nach Email und Telegram —
+> der **dritte Erzeuger** von `InboundMessage` und ein vollwertiger
+> Ad-hoc-Abrufkanal, auf demselben `TripCommandProcessor` wie oben beschrieben.
+> Es gibt weiterhin **keinen** generischen SMS-Kanal (nur Premium-SMS über den
+> Garmin-inReach-Rückkanal); die Trip-Auswahl bei fehlendem Trip-Namen im Text
+> läuft über den neuen geteilten Baustein `pick_active_trip`
+> (`src/services/trip_selection.py`). Details:
+> `docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md`.
 
 ## Configuration
 
@@ -502,6 +517,11 @@ Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
 ## Changelog
 
+- 2026-09-08: v1.4 HINWEIS: Abschnitt 9 um Nachtrag zu Issue #2184 (Epic #2133,
+  Scheibe S4) ergänzt — Premium-SMS ist seit dieser Scheibe der dritte
+  Erzeuger von `InboundMessage` und ein vollwertiger Ad-hoc-Abrufkanal (zuvor
+  lernte der Reader nur die Rückadresse, ohne Befehle zu verarbeiten). Kein
+  Code in dieser Spec geändert.
 - 2026-08-10: v1.3 HINWEIS: Abschnitt 9 (SMS-Channel Future) um Klarstellung
   ergänzt — der reale `InboundSmsReader` aus Issue #1676 Scheibe S1 ist kein
   Trip-Befehlskanal, sondern lernt ausschließlich die Garmin-inReach-

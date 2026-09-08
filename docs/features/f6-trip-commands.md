@@ -1,12 +1,20 @@
 # Trip-Befehle — Email-Reply & Telegram (F6)
 
-**Updated:** 2026-08-23 (Issue #2051 Scheibe S4 — neues Abfrage-Kommando `STRECKE`/`/strecke`:
+**Updated:** 2026-09-08 (Issue #2184, Epic #2133 Scheibe S4 — Premium-SMS ist jetzt
+ein dritter Eingangsweg: der vor dem Garmin-inReach-Kennzeichen `inreachlink.com`
+stehende Text wird als Befehl verarbeitet, die Antwort geht per Premium-SMS an die
+gelernte Rückadresse zurück; die Gewitter-Herkunft bleibt auf SMS/Premium-SMS wie
+bisher unterdrückt); 2026-08-23 (Issue #2051 Scheibe S4 — neues Abfrage-Kommando `STRECKE`/`/strecke`:
 Regen-Ereignisflächen entlang der Reststrecke des aktuell aktiven Wegabschnitts, erreichbar über
 Email und Telegram); 2026-06-13 (Briefing-Mail lesbar: D/W/G-Kürzel aus E-Mail-Betreff entfernt — neu `[GZ#GRANK] Tag 3 — Morgen — Gewitter` ohne Zahlenkürzel); 2026-06-12 (Bug #775 — Trip-Shortcode-Routing: E-Mail-Betreff trägt neuen `[GZ#XXXX]`-Shortcode als primären Routing-Key, RFC-2047-Dekodierung, toleranter Whitespace-Lookup als Fallback); 2026-06-11 (Issue #731 — Befehlssatz vereinheitlicht: abruf-zentriert (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE), PAUSE/SKIP/CONFIG entfernt); 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
 
-Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
+Gregor Zwanzig empfaengt Trip-Befehle ueber drei Kanäle:
 - **Email:** Du antwortest auf einen bestehenden Report (alle 5 Minuten abgerufen)
 - **Telegram:** Du schreibst eine Nachricht oder klickst einen Button (Webhook-Push seit Issue #637)
+- **Premium-SMS** (Garmin inReach, seit Issue #2184): Du schreibst den Befehl in die
+  Garmin-Nachricht, vor den automatisch angehängten Link (Kennzeichen
+  `inreachlink.com`) — abgerufen im selben 5-Minuten-Poll wie der Rückadress-Lernlauf
+  (Issue #1676)
 
 ## Email: So funktioniert's
 
@@ -22,6 +30,30 @@ Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
 1. Du sendest eine Nachricht an den Bot oder klickst einen Button in der Chat-Nachricht
 2. Der Bot verarbeitet den Befehl sofort (Webhook-Push)
 3. Der Bot antwortet mit einer Bestaetigung oder aktualisiert die Nachricht in-place (Zoom-Navigation)
+
+## Premium-SMS: So funktioniert's (Garmin inReach, seit Issue #2184)
+
+1. Du schreibst den Befehl in die Nachricht auf deinem Garmin-inReach-Gerät — Garmin hängt
+   automatisch einen Link plus Koordinaten an (Kennzeichen `inreachlink.com`)
+2. Gregor liest dein Gerät am Kennzeichen und deine Rückadresse per Absendernummer aus
+   (Voraussetzung: die Rückadresse ist bereits gelernt, s. `POST
+   /api/internal/premium-sms-learn`, Issue #1676 S1); nur der Text **vor** dem Kennzeichen
+   zählt als Befehl
+3. Gregor verarbeitet den Befehl über denselben `TripCommandProcessor` wie Email/Telegram
+   (kein eigener Trip-Bezug im Text nötig — die Trip-Auswahl folgt derselben Regel wie beim
+   Telegram-Bot ohne Trip-Namen: aktiver Trip am Ortstag, sonst der nächste zukünftige)
+4. Die Bestaetigung geht per Premium-SMS an deine gelernte Rückadresse zurück
+
+**Besonderheit:** Auf Premium-SMS (wie auf regulärem SMS) bleibt die Gewitter-Herkunft
+(„wegen hoher Blitzdichte" o.ä.) grundsätzlich unterdrückt — sie kostet Zeichen auf einem
+Kanal, der pro Zeichen Geld und Garmin-Kontingent kostet. Die Stufe selbst
+(„Gewitter: hoch") bleibt sichtbar. Details: `docs/features/gewitter-gesamtkonzept.md`,
+Spec `docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md`.
+
+Nicht eindeutig zuordenbare Absender (Lernaufruf schlägt fehl, z. B. mehrere Kandidaten)
+und die allererste Verbindungsnachricht des Geräts ohne Befehlsabsicht lösen **keine**
+Verarbeitung bzw. dieselbe „Unbekannter Befehl"-Antwort wie auf den anderen Kanälen aus —
+kein stilles Verwerfen.
 
 ## Befehlsformat
 
@@ -74,8 +106,9 @@ Gregor antwortet mit dem Wetter fuer die heutige Etappe.
 
 Zeigt die Regen-Ereignisflächen entlang der Reststrecke des **aktuell aktiven
 Wegabschnitts** (nicht der ganzen Tagesetappe — siehe Grenze unten). Erreichbar über
-Email (Freitext `STRECKE` in der ersten Zeile) und Telegram (Freitext `strecke` oder
-Slash `/strecke`). Anders als die Kurzbefehle im Bot-Menü (Abschnitt „Telegram —
+Email (Freitext `STRECKE` in der ersten Zeile), Telegram (Freitext `strecke` oder
+Slash `/strecke`) und Premium-SMS (Freitext `STRECKE` vor dem Garmin-Kennzeichen, seit
+Issue #2184). Anders als die Kurzbefehle im Bot-Menü (Abschnitt „Telegram —
 Abfrage-Befehle" unten) taucht `/strecke` **nicht** im Telegram-Bot-Menü auf — es muss
 getippt werden.
 
@@ -104,8 +137,9 @@ abgelehnt — kein Wetterabruf.
 **Bekannte Grenze:** Die Antwort deckt nur das aktuell aktive Wegpunkt-Segment ab, nicht
 die volle Resttagesetappe (Bestandsgrenze aus S2a/S2b im Alarm-Pfad — dieselben Bausteine
 `derive_rain_zones()`/`points_along_remaining_route()` — hier nur über die
-`Geprüft:`-Zeile sichtbar gemacht, nicht behoben). Kein SMS-/Premium-SMS-Kanal (dort gibt
-es keinen Inbound-Kommando-Pfad).
+`Geprüft:`-Zeile sichtbar gemacht, nicht behoben). Kein regulärer SMS-Kanal (dafür gibt es
+keinen Inbound-Kommando-Pfad); über Premium-SMS (Garmin inReach, seit Issue #2184)
+funktioniert `STRECKE` wie jeder andere bekannte Befehl.
 
 **Beispiel:**
 ```

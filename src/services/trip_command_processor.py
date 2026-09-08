@@ -58,7 +58,7 @@ class InboundMessage:
     trip_name: str
     body: str
     sender: str
-    channel: str            # "email" or "sms"
+    channel: str            # "email", "telegram", "sms" oder "premium_sms"
     received_at: datetime
     user_id: str = "default"
 
@@ -764,8 +764,10 @@ class TripCommandProcessor:
     ) -> CommandResult:
         """Dispatch read-only query. Never mutates trip state.
 
-        Issue #2126: `channel` ist der Anfrageweg und geht NUR in den
-        heute/morgen-Zweig, weil nur der einen Briefing-Versand auslöst. Das
+        Issue #2126: `channel` ist der Anfrageweg und steuert im
+        heute/morgen-Zweig den Briefing-Versand. Issue #2184: er geht
+        zusätzlich in die drei Formatierer, weil die Gewitter-Herkunft auf
+        SMS/Premium-SMS entfällt (PO-Abwahl, AC-8). Das
         `report`-Kommando läuft über denselben Draht mit derselben
         Herkunftskennung und bleibt bewusst mehrkanalig — deshalb sitzt die
         Einschränkung hier und nicht am Nachrichteneingang in `process()`.
@@ -817,7 +819,7 @@ class TripCommandProcessor:
 
         if query_key == "glance":
             body = self._fmt_glance(timeline, today, tomorrow, tz_heute, tz_morgen,
-                                    trip=trip)
+                                    trip=trip, channel=channel)
             return CommandResult(
                 success=True, command="glance",
                 confirmation_subject=f"[{trip.name}] Glance",
@@ -826,7 +828,8 @@ class TripCommandProcessor:
                 reply_markup=_GLANCE_BUTTONS,
             )
         elif query_key == "heute_gewitter":
-            body = self._fmt_gewitter(timeline, today, tz_heute, trip=trip)
+            body = self._fmt_gewitter(timeline, today, tz_heute, trip=trip,
+                                      channel=channel)
             return CommandResult(
                 success=True, command="heute_gewitter",
                 confirmation_subject=f"[{trip.name}] Gewitter heute",
@@ -835,7 +838,7 @@ class TripCommandProcessor:
             )
         elif query_key == "timeline_heute":
             body = self._fmt_timeline(timeline, today, "Heute", "today", tz_heute,
-                                      trip=trip)
+                                      trip=trip, channel=channel)
             return CommandResult(
                 success=True, command="timeline_heute",
                 confirmation_subject=f"[{trip.name}] Timeline heute",
@@ -845,7 +848,7 @@ class TripCommandProcessor:
             )
         elif query_key == "timeline_morgen":
             body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow", tz_morgen,
-                                      trip=trip)
+                                      trip=trip, channel=channel)
             return CommandResult(
                 success=True, command="timeline_morgen",
                 confirmation_subject=f"[{trip.name}] Timeline morgen",
@@ -1357,8 +1360,13 @@ class TripCommandProcessor:
                 "thunder": thunder, "precip": precip, "pop": pop,
                 "hail_flag": hail_flag, "thunder_signals": thunder_signals}
 
-    def _fmt_day_agg(self, agg: dict, label: str) -> str:
-        """Formatiert Tages-Aggregat als kompakte Zeile."""
+    def _fmt_day_agg(self, agg: dict, label: str,
+                     *, channel: str | None = None) -> str:
+        """Formatiert Tages-Aggregat als kompakte Zeile.
+
+        Issue #2184: `channel` ist der Anfrageweg — Muster wie `with_emoji`
+        in `_handle_drilldown()`.
+        """
         t_max = f"{agg['temp_max']:.0f}" if agg['temp_max'] is not None else "?"
         t_min = f"{agg['temp_min']:.0f}" if agg['temp_min'] is not None else "?"
         wind = f"{agg['wind_max']:.0f}" if agg['wind_max'] is not None else "?"
@@ -1370,12 +1378,14 @@ class TripCommandProcessor:
         # Traeger (kein Gewitter, Alt-Schnappschuss ohne das Feld) bleibt die
         # Zeile zeichengleich zu bisher (AC-16). Denselben Schluessel und
         # denselben Textbaustein nutzt `_fmt_gewitter()` -- keine zweite
-        # Formulierung. KANAL: GLANCE erreicht ausschliesslich E-Mail und
-        # Telegram (`InboundMessage` hat genau diese zwei Erzeuger); einen
-        # SMS-/Premium-SMS-Kommandopfad gibt es nicht, die PO-Abwahl "SMS ohne
-        # Herkunft" greift hier strukturell.
+        # Formulierung. KANAL (Issue #2184): auf SMS und Premium-SMS bleibt die
+        # Herkunft weg -- PO-Abwahl (feat_1680_s5a AC-12, s5b AC-9). Seit S4
+        # gibt es einen Premium-SMS-Kommandopfad (`inbound_sms_reader`), die
+        # frueher rein strukturelle Sicherung ("InboundMessage hat nur zwei
+        # Erzeuger") traegt nicht mehr -- deshalb dieser echte Guard.
         from output.metric_format import thunder_signal_label
-        _traeger = agg.get("thunder_signals")
+        zeige_herkunft = channel not in ("sms", "premium_sms")
+        _traeger = agg.get("thunder_signals") if zeige_herkunft else None
         _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
         if _herkunft:
             thunder_label = f"{thunder_label} · {_herkunft}"
@@ -1386,7 +1396,8 @@ class TripCommandProcessor:
         )
 
     def _fmt_glance(self, timeline, today, tomorrow, tz_heute, tz_morgen,
-                    *, trip: Optional[Trip] = None) -> str:
+                    *, trip: Optional[Trip] = None,
+                    channel: str | None = None) -> str:
         """Fix #1795 AC-4: je Tag die Zone SEINER EIGENEN Etappe — ``tz_heute``
         für ``today``, ``tz_morgen`` für ``tomorrow`` (nicht eine gemeinsame
         Zone für beide Tage).
@@ -1403,19 +1414,22 @@ class TripCommandProcessor:
         agg_morgen = self._aggregate_day(timeline, tomorrow, tz_morgen)
         lines = ["🗓 Glance — heute & morgen", ""]
         if agg_heute:
-            lines.append(self._fmt_day_agg(agg_heute, f"heute ({today:%d.%m})"))
+            lines.append(self._fmt_day_agg(agg_heute, f"heute ({today:%d.%m})",
+                                           channel=channel))
         else:
             lines.append(f"heute ({today:%d.%m}): " + self._tagesaussage_ohne_daten(
                 trip, today, "today"))
         if agg_morgen:
-            lines.append(self._fmt_day_agg(agg_morgen, f"morgen ({tomorrow:%d.%m})"))
+            lines.append(self._fmt_day_agg(agg_morgen, f"morgen ({tomorrow:%d.%m})",
+                                           channel=channel))
         else:
             lines.append(f"morgen ({tomorrow:%d.%m}): " + self._tagesaussage_ohne_daten(
                 trip, tomorrow, "tomorrow"))
         return "\n".join(lines)
 
     def _fmt_gewitter(self, timeline, today, tz,
-                      *, trip: Optional[Trip] = None) -> str:
+                      *, trip: Optional[Trip] = None,
+                      channel: str | None = None) -> str:
         """Fix #1818: ``trip`` trennt „keine Wetterdaten" von „keine Etappe"
         (s. ``_tagesaussage_ohne_daten``); der Zusatz „— kein Gewitter-Status"
         bleibt dem tatsaechlich etappenlosen Tag vorbehalten (AC-6)."""
@@ -1441,19 +1455,22 @@ class TripCommandProcessor:
         # additiv VOR dem Hagel-Suffix, rein deskriptiv ohne Bewertung
         # (ADR-0007). Ohne Traeger (kein Gewitter, Alt-Schnappschuss ohne das
         # Feld) bleibt die Zeile zeichengleich zu bisher.
-        # KANAL: das GEWITTER-Kommando erreicht ausschliesslich E-Mail und
-        # Telegram -- `InboundMessage` hat genau diese zwei Erzeuger
-        # (inbound_email_reader.py, inbound_telegram_reader.py). Es gibt keinen
-        # SMS-/Premium-SMS-Kommandopfad, die PO-Abwahl "SMS ohne Herkunft"
-        # greift hier also strukturell, ohne Kanal-Unterscheidung.
-        traeger = agg.get("thunder_signals")
+        # KANAL (Issue #2184): auf SMS und Premium-SMS bleibt die Herkunft weg
+        # -- PO-Abwahl (feat_1680_s5a AC-12, s5b AC-9). Bis Scheibe S4 war das
+        # strukturell gesichert (`InboundMessage` hatte nur die zwei Erzeuger
+        # inbound_email_reader.py/inbound_telegram_reader.py); mit dem
+        # Premium-SMS-Kommandopfad aus `inbound_sms_reader.py` faellt diese
+        # Sicherung weg und wird durch diesen Guard ersetzt.
+        zeige_herkunft = channel not in ("sms", "premium_sms")
+        traeger = agg.get("thunder_signals") if zeige_herkunft else None
         herkunft = ", ".join(thunder_signal_label(n) for n in traeger or [])
         if herkunft:
             suffix = f" · {herkunft}{suffix}"
         return f"⛈ Gewitter heute ({today:%d.%m}): {label}{suffix}"
 
     def _fmt_timeline(self, timeline, target_date, label: str, day_token: str, tz,
-                      *, trip: Optional[Trip] = None) -> str:
+                      *, trip: Optional[Trip] = None,
+                      channel: str | None = None) -> str:
         """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken).
 
         Fix #1818: ``trip`` trennt „keine Wetterdaten" von „keine Etappe"
@@ -1499,10 +1516,14 @@ class TripCommandProcessor:
             # globale Herkunft (AC-10). `getattr`, weil ein Alt-Schnappschuss
             # vor Scheibe 1/2 das Feld nicht kennt (AC-15): dann bleibt die
             # Zeile zeichengleich, ohne "unbekannt" und ohne leeren Trenner.
-            # KANAL: die Timeline erreicht nur E-Mail und Telegram (s. Hinweis
-            # in `_fmt_day_agg()`), SMS/Premium-SMS haben keinen Kommandopfad.
+            # KANAL (Issue #2184): auf SMS und Premium-SMS bleibt die Herkunft
+            # weg (PO-Abwahl, s. Hinweis in `_fmt_day_agg()`). Seit Scheibe S4
+            # gibt es einen Premium-SMS-Kommandopfad, der die frueher rein
+            # strukturelle Sicherung ersetzt.
             from output.metric_format import thunder_signal_label
-            _traeger = getattr(m, "thunder_level_max_signals", None)
+            zeige_herkunft = channel not in ("sms", "premium_sms")
+            _traeger = (getattr(m, "thunder_level_max_signals", None)
+                        if zeige_herkunft else None)
             _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
             if _herkunft:
                 t_label = f"{t_label} · {_herkunft}"

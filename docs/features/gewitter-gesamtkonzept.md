@@ -451,6 +451,15 @@ denselben Zusatz — letzter Ausgabeort ohne Herkunft, **Ticket #1680 damit schl
 SMS/Premium-SMS/Telegram/Kompakt-Mail bleiben strukturell ohne Herkunft. **Go-DTO und Frontend
 fallen weiterhin ersatzlos** — dort existiert kein Ort, an dem die Herkunft erscheinen könnte.
 
+🔴 **Nachtrag (#2184, S4 Epic #2133, 2026-09-08):** „strukturell ohne Herkunft" galt bis hierhin
+nur, weil `InboundMessage` genau zwei Erzeuger hatte (E-Mail, Telegram) und der SMS-/
+Premium-SMS-Kommandopfad schlicht nicht existierte. Mit Premium-SMS als drittem Erzeuger
+(Garmin-inReach-Rückkanal ruft jetzt `TripCommandProcessor` auf) ist die Abwesenheit kein
+Nebeneffekt fehlenden Codes mehr, sondern ein echter Kanal-Guard: `_fmt_day_agg`, `_fmt_gewitter`
+und `_fmt_timeline` bekommen einen `channel`-Parameter, `zeige_herkunft = channel not in
+("sms", "premium_sms")`. Die PO-Entscheidung selbst bleibt unverändert — nur ihre Absicherung
+wechselt von „es gibt keinen Pfad" zu „der Pfad existiert und wird explizit unterdrückt".
+
 Drei Festlegungen, die aus der Umsetzung stammen und hier nicht überlesen werden dürfen:
 
 - **Genannt werden ALLE tragenden Zutaten, nicht die eine „auslösende"** (PO-Auslegung (ii)).

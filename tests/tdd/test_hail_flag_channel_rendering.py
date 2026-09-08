@@ -166,6 +166,19 @@ def _make_trip(day: datetime) -> Trip:
 
 @pytest.fixture
 def gewitter_kommando_env(tmp_path: Path, monkeypatch):
+    """Liefert den Anfragezeitpunkt fuer das GEWITTER-Kommando.
+
+    Der Tag bleibt der laufende (das Kommando matcht Segmente gegen SEIN
+    'heute'), die Uhrzeit ist aber FEST auf 08:00 UTC gesetzt statt auf die
+    Wanduhr. Grund (Issue #2186): der Ad-hoc-Tageswert gilt seither ab dem
+    Anfragezeitpunkt -- ein angebrochenes Segment wird ueber sein Restfenster
+    neu gerechnet. Das Hagel-Ereignis der Fixture liegt auf 12:00 UTC; mit
+    `datetime.now()` als Anfragezeit war der Test deshalb nur vormittags
+    gruen und ab 12 Uhr rot, weil der Hagel dann fachlich korrekt hinter dem
+    Anfragezeitpunkt lag. Ein fester Anker vor dem Ereignis prueft die
+    Zusicherung (Hagel-Hinweis erscheint, ueber den geteilten Helfer) zu
+    jeder Tageszeit gleich.
+    """
     from services.weather_snapshot import WeatherSnapshotService
 
     redirect = lambda user_id="default": tmp_path / user_id
@@ -173,11 +186,12 @@ def gewitter_kommando_env(tmp_path: Path, monkeypatch):
     monkeypatch.setattr("services.trip_command_processor.get_data_dir", redirect)
 
     now = datetime.now(tz=timezone.utc)
+    anfrage = now.replace(hour=8, minute=0, second=0, microsecond=0)
     save_trip(_make_trip(now), _USER_ID)
     WeatherSnapshotService(_USER_ID).save(
         _TRIP_ID, [_segment_mit_hail(True, day=now.date())], now.date(),
     )
-    return now
+    return anfrage
 
 
 def test_ac7_gewitter_kommando_zeigt_denselben_hagel_hinweis(gewitter_kommando_env):
