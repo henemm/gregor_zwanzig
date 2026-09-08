@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.origin_guard import running_origin
-from output.channels.base import OutputConfigError, OutputError
+from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -399,11 +399,17 @@ class EmailOutput:
         Raises:
             OutputConfigError: If SMTP configuration is incomplete
         """
-        if not settings.can_send_email():
+        # Issue #2144: mail_to bewusst NICHT hier prüfen -- ein fehlender
+        # Empfänger ist ein legitimer Laufzeitzustand (Nutzer ohne eigenes
+        # mail_to), keine Fehlkonfiguration. Der Guard dafür sitzt in
+        # send() und wirft dort ChannelBlockedError statt hier
+        # OutputConfigError, damit der aufrufende Trip-Briefing-Pfad
+        # (notification_service.py) unconditional konstruieren kann.
+        if not (settings.smtp_host and settings.smtp_user and settings.smtp_pass):
             raise OutputConfigError(
                 "email",
                 "Incomplete SMTP configuration. "
-                "Required: smtp_host, smtp_user, smtp_pass, mail_to",
+                "Required: smtp_host, smtp_user, smtp_pass",
             )
 
         # Hard-Guard: Staging darf NIEMALS über Resend senden — unabhängig von is_test_mode.
@@ -635,6 +641,18 @@ class EmailOutput:
         Raises:
             OutputError: If sending fails after all retry attempts
         """
+        # Issue #2144: kein Empfaenger bekannt (weder Profil-mail_to noch
+        # per-Aufruf-Override) -- sauber abbrechen statt an [None] zu senden.
+        # Muss VOR jedem Verbindungsaufbau greifen (Vorbild premium_sms.py
+        # `_resolve_recipient()`).
+        if not to and not self._to:
+            raise ChannelBlockedError(
+                self.name,
+                "kein Empfaenger bekannt -- weder settings.mail_to noch ein "
+                "per-Aufruf-Override sind gesetzt.",
+                reason_code="email_no_recipient",
+            )
+
         # Build message once (outside retry loop)
         # Use inbound address as From if set (Gmail supports plus-addresses)
         from_addr = self._reply_to or self._from

@@ -10,7 +10,7 @@ import httpx
 
 from app.config import Settings
 from app.origin_guard import running_origin
-from output.channels.base import OutputConfigError, OutputError
+from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
 
 logger = logging.getLogger(__name__)
 
@@ -401,6 +401,17 @@ class TelegramOutput:
                 Test-Chat-ID (Issue #1288) — VOR jedem httpx.post.
         """
         chat_id = self._guard_code_origin(self._settings.telegram_chat_id)
+        # Issue #2144: kein Empfaenger bekannt (Nutzer ohne eigene
+        # telegram_chat_id) -- sauber abbrechen statt mit chat_id=None
+        # einen Bot-API-Call zu versuchen (Vorbild premium_sms.py
+        # `_resolve_recipient()`).
+        if not chat_id:
+            raise ChannelBlockedError(
+                self.name,
+                "kein Empfaenger bekannt -- settings.telegram_chat_id ist "
+                "nicht gesetzt.",
+                reason_code="telegram_no_chat_id",
+            )
         self._guard_test_mode_bot_token()
         self._guard_test_mode_chat_id()
         token = self._settings.telegram_bot_token

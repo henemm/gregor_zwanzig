@@ -66,6 +66,18 @@ def _settings_all_channels() -> Settings:
     })
 
 
+# Issue #2144 AC-2: `with_user_profile()` ueberschreibt mail_to/sms_to jetzt
+# IMMER (auch auf None), wenn das Profil das Feld nicht traegt. Deckungsgleich
+# mit `_settings_all_channels()` -- sonst wischt with_user_profile() die dort
+# konfigurierten Kanal-Ziele weg, sobald ein Profil (auch nur fuer Tier/
+# Premium-Rueckadresse) geschrieben wird.
+_ALL_CHANNELS_RECIPIENTS = {
+    "mail_to": "gregor-test@henemm.com",
+    "sms_to": "+41791234567",
+    "telegram_chat_id": "99999",
+}
+
+
 def _write_premium_profile(uid: str, at: datetime) -> None:
     """Lernt eine frische Garmin-Rückadresse (Pflicht für Premium-SMS,
     `output/channels/premium_sms.py`) und setzt den Tier auf `premium`
@@ -76,6 +88,7 @@ def _write_premium_profile(uid: str, at: datetime) -> None:
         "id": uid, "tier": "premium",
         "premium_sms_reply_to": "+41791234567",
         "premium_sms_reply_at": (at - timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
+        **_ALL_CHANNELS_RECIPIENTS,
     }
     (d / "user.json").write_text(json.dumps(profile), encoding="utf-8")
 
@@ -83,7 +96,8 @@ def _write_premium_profile(uid: str, at: datetime) -> None:
 def _write_tier(uid: str, tier: str) -> None:
     d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}), encoding="utf-8")
+    profile = {"id": uid, "tier": tier, **_ALL_CHANNELS_RECIPIENTS}
+    (d / "user.json").write_text(json.dumps(profile), encoding="utf-8")
 
 
 def _radar_trip(uid: str, trip_id: str, **flags) -> object:

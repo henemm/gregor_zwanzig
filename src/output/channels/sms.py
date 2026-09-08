@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from app.origin_guard import running_origin
-from output.channels.base import OutputConfigError
+from output.channels.base import ChannelBlockedError
 from output.channels.seven_io_base import SevenIoChannelBase
 
 
@@ -24,12 +24,12 @@ class SMSOutput(SevenIoChannelBase):
 
     CHANNEL_NAME = "sms"
 
-    def _validate_config(self) -> None:
-        if not self._settings.can_send_sms():
-            raise OutputConfigError(
-                "sms",
-                "SMS nicht konfiguriert: sms_api_key und sms_to sind Pflichtfelder",
-            )
+    # Issue #2144: kein eigener _validate_config()-Override mehr -- der
+    # Empfaenger ist ein legitimer Laufzeitzustand (Nutzer ohne eigenes
+    # sms_to), keine Fehlkonfiguration, und wird erst in
+    # `_resolve_recipient()` geprueft (Vorbild premium_sms.py). Die Basis
+    # (`SevenIoChannelBase._validate_config`) prueft weiterhin Gateway und
+    # API-Key -- unterscheidbar von fehlendem Empfaenger.
 
     def _origin(self) -> str:
         """Herkunft DIESES Moduls — siehe `SevenIoChannelBase._origin`."""
@@ -39,4 +39,12 @@ class SMSOutput(SevenIoChannelBase):
         return self._settings.sms_from or None
 
     def _resolve_recipient(self) -> str:
-        return self._settings.sms_to
+        sms_to = self._settings.sms_to
+        if not sms_to:
+            raise ChannelBlockedError(
+                self.name,
+                "kein Empfaenger bekannt -- settings.sms_to ist nicht "
+                "gesetzt.",
+                reason_code="sms_no_recipient",
+            )
+        return sms_to

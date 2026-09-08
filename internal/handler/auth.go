@@ -97,6 +97,7 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 			ID:           req.Username,
 			PasswordHash: string(hash),
 			Email:        req.Email,
+			MailTo:       req.Email,
 			CreatedAt:    time.Now(),
 		}
 		if err := s.SaveUser(user); err != nil {

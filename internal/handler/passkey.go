@@ -536,6 +536,7 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		newUser := model.User{
 			ID:        entry.UserID,
 			Email:     entry.Email,
+			MailTo:    entry.Email,
 			CreatedAt: now,
 			PasskeyCredentials: []model.WebAuthnCredential{{
 				ID:              credential.ID,

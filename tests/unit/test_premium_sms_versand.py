@@ -395,17 +395,16 @@ def test_sender_is_fixed_number_regardless_of_sms_from(stub) -> None:
 # AC-2: Empfaenger ist die gelernte Rueckadresse, nie sms_to
 # ---------------------------------------------------------------------------
 
-def test_recipient_comes_from_learned_reply_to_not_sms_to(stub, monkeypatch) -> None:
-    """AC-2: Given ``GZ_SMS_TO`` steht bewusst widersprüchlich im Prozess-
-    Environment / When das Briefing per Premium-SMS geht / Then geht der POST
+def test_recipient_comes_from_learned_reply_to_not_sms_to(stub) -> None:
+    """AC-2: Given ``sms_to`` ist bewusst auf einen widersprüchlichen Wert
+    gesetzt / When das Briefing per Premium-SMS geht / Then geht der POST
     ausschliesslich an die gelernte Rueckadresse."""
     user_id = "tdd-1676-recipient"
     contradicting = "+49111111111"
-    monkeypatch.setenv("GZ_SMS_TO", contradicting)
     _write_profile(user_id, tier="premium", reply_to=LEARNED_REPLY_TO)
-    settings = _stub_settings(stub.port, user_id, sms_to=_KEEP)
+    settings = _stub_settings(stub.port, user_id, sms_to=contradicting)
     assert settings.sms_to == contradicting, (
-        f"GZ_SMS_TO wurde nicht wirksam ({settings.sms_to!r}) — der Widerspruch, "
+        f"sms_to wurde nicht wirksam ({settings.sms_to!r}) — der Widerspruch, "
         "den dieser Test braucht, liegt nicht vor."
     )
 

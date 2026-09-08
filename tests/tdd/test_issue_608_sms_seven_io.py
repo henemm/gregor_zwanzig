@@ -85,12 +85,19 @@ class TestSmsConfigValidation:
         """
         GIVEN: sms_to fehlt
         WHEN: SMSOutput(settings) instanziiert wird
-        THEN: OutputConfigError geworfen, kein HTTP-Request
+        THEN: Konstruktion selbst wirft NICHT mehr (Issue #2144: ein
+        fehlender Empfaenger ist ein legitimer Laufzeitzustand, keine
+        Fehlkonfiguration) -- erst `send()` bricht sauber ab, mit
+        `ChannelBlockedError`/`reason_code='sms_no_recipient'` statt des
+        frueheren undifferenzierten `OutputConfigError`.
         """
+        from output.channels.base import ChannelBlockedError
         from output.channels.sms import SMSOutput
-        settings = _settings_with_sms(sms_to=None)
-        with pytest.raises(OutputConfigError):
-            SMSOutput(settings)
+        settings = _settings_with_sms(sms_to=None, seven_sandbox_key="test-key")
+        output = SMSOutput(settings)
+        with pytest.raises(ChannelBlockedError) as excinfo:
+            output.send("test", "Gregor Zwanzig Test")
+        assert excinfo.value.reason_code == "sms_no_recipient"
 
 
 # ---------------------------------------------------------------------------
