@@ -618,7 +618,12 @@ Es gibt **drei** Postfächer: `gregor-test@` (Test-/Gate-Mails), `gregor-staging
 `/home/hem/gregor_zwanzig_staging/data/` — der Ordner dort ist stillgelegter Altbestand.
 Der pro Nutzer abweichende Empfänger steht in
 `/var/lib/gregor-staging/users/<uid>/user.json` als `mail_to` und **überschreibt** das
-globale `GZ_MAIL_TO` aus der `.env`.
+globale `GZ_MAIL_TO` aus der `.env`. **Fehlt `mail_to`/`telegram_chat_id`/`sms_to` im
+Profil, gibt es seit Issue #2144 KEINEN Fallback mehr auf das globale `GZ_MAIL_TO`/
+`GZ_TELEGRAM_CHAT_ID`/`GZ_SMS_TO`:** der betroffene Kanal wird für diesen Nutzer sauber
+übersprungen (`ChannelBlockedError` mit `reason_code` `email_no_recipient` /
+`telegram_no_chat_id` / `sms_no_recipient`, protokolliert statt an eine fremde Adresse
+zugestellt).
 
 ```bash
 systemctl cat gregor-python-staging | grep GZ_DATA_DIR      # Wurzel feststellen

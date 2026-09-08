@@ -205,6 +205,7 @@ func createMagicLinkUser(s *store.Store, email string) (*model.User, error) {
 		user := model.User{
 			ID:        id,
 			Email:     email,
+			MailTo:    email,
 			CreatedAt: time.Now(),
 		}
 		if err := s.SaveUser(user); err != nil {

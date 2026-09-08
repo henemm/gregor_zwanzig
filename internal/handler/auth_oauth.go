@@ -203,6 +203,7 @@ func createOAuthUser(s *store.Store, provider, sub, email string) (*model.User, 
 			OAuthProvider: provider,
 			OAuthSub:      sub,
 			Email:         email,
+			MailTo:        email,
 			CreatedAt:     time.Now(),
 		}
 		if err := s.SaveUser(user); err != nil {

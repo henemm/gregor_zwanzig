@@ -392,13 +392,16 @@ class Settings(BaseSettings):
         except (json.JSONDecodeError, OSError):
             return base
 
-        overrides = {}
-        if profile.get("mail_to"):
-            overrides["mail_to"] = profile["mail_to"]
-        if profile.get("telegram_chat_id") and not force_test:
-            overrides["telegram_chat_id"] = profile["telegram_chat_id"]
-        if profile.get("sms_to"):
-            overrides["sms_to"] = profile["sms_to"]
+        # Issue #2144: immer explizit setzen (auch auf None), statt nur bei
+        # vorhandenem Profilwert zu ueberschreiben -- sonst bleibt bei einem
+        # Nutzer ohne eigenen Empfaenger der globale .env-Fallback (Betreiber-
+        # Adresse) auf base/self stehen (Cross-Tenant-Zustellung).
+        overrides = {
+            "mail_to": profile.get("mail_to") or None,
+            "sms_to": profile.get("sms_to") or None,
+        }
+        if not force_test:
+            overrides["telegram_chat_id"] = profile.get("telegram_chat_id") or None
         # Issue #1676 S2a: gelernte Premium-SMS-Rueckadresse (S1 schreibt sie
         # hier hinein). Der Zeitstempel wird zu einem zeitzonenbehafteten
         # datetime aufgeloest — model_copy() unten umgeht die Feld-Validierung,
@@ -409,9 +412,6 @@ class Settings(BaseSettings):
         reply_at = _parse_learned_timestamp(profile.get("premium_sms_reply_at"))
         if reply_at is not None:
             overrides["premium_sms_reply_at"] = reply_at
-
-        if not overrides:
-            return base
 
         return base.model_copy(update=overrides)
 
