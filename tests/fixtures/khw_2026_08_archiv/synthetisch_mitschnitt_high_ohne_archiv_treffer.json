@@ -1,0 +1,9 @@
+{
+ "beschreibung": "AC-7: ein Etappentag, dessen Archiv-Stunden hoechstens LOW erreichen, waehrend der Mitschnitt fuer denselben Tag HIGH zeigt (z.B. durch den Radar-Override, der aus der Rekonstruktion strukturell unsichtbar ist).",
+ "herkunft": "konstruiert nach Spec AC-7 / Known Limitations (Radar-Override)",
+ "mitschnitt_stufe": "HIGH",
+ "stunden": [
+  {"time": "2026-09-01T09:00", "weather_code": 2, "cape": 350.0, "convective_inhibition": 0.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0},
+  {"time": "2026-09-01T12:00", "weather_code": 2, "cape": 0.0, "convective_inhibition": 0.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0}
+ ]
+}

@@ -1,0 +1,7 @@
+{
+ "beschreibung": "AC-4: konstruierte Stunde mit CAPE ueber der HIGH-Sprosse (1200 J/kg, icon_d2xDE_ALPEN) und CIN=150 (>100) -- die CIN-Daempfung muss die Stufe auf LOW deckeln, nicht ungedaempft HIGH zaehlen.",
+ "herkunft": "konstruiert nach Spec AC-4 (keine reale Archiv-Stunde mit dieser CAPE-Hoehe im KHW-Zeitraum aufgezeichnet)",
+ "stunden": [
+  {"time": "2026-08-30T15:00", "weather_code": 2, "cape": 1500.0, "convective_inhibition": 150.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0}
+ ]
+}

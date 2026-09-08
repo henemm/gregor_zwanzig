@@ -1,0 +1,9 @@
+{
+ "beschreibung": "AC-10: ein ruhiger Tag ohne jede Ereignisstunde (kein Wettercode aus THUNDER_CODES) -- angelehnt an die Gegenprobe 25.08. aus der Live-Machbarkeitspruefung (LPI durchgehend 0.0, CIN meist 0-1), Einzelwerte konstruiert.",
+ "herkunft": "konstruiert nach Spec AC-10, Groessenordnung an docs/context/feat-2181-s2c-signalherkunft.md orientiert (Gegenprobe 25.08.)",
+ "stunden": [
+  {"time": "2026-08-25T09:00", "weather_code": 1, "cape": 30.0, "convective_inhibition": 0.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0},
+  {"time": "2026-08-25T13:00", "weather_code": 3, "cape": 60.0, "convective_inhibition": 1.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0},
+  {"time": "2026-08-25T17:00", "weather_code": 2, "cape": 20.0, "convective_inhibition": 0.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0}
+ ]
+}

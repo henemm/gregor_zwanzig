@@ -150,11 +150,13 @@ Für lokale Entwicklung und Debugging existiert weiterhin die CLI in `src/app/cl
 mehr der Produktivpfad.
 
 **Analyse-Werkzeuge (kein Produktivpfad):** `src/analysis/` enthält reine
-Auswertungswerkzeuge für bereits vorhandene Wetter-Mitschnitte, aktuell
-`thunder_replay.py` (Issue #2181 Scheibe S2a). Kein anderer Code importiert das Paket
-und es hat keinen Netz-, Datei-, DB- oder Umgebungszugriff — es läuft ausschließlich,
-wenn jemand es gezielt für eine Auswertung aufruft. Spec:
-`docs/specs/modules/feat_2181_s2a_gewitter_mitschnitt_auswertung.md`.
+Auswertungswerkzeuge für bereits vorhandene Wetter-Mitschnitte bzw. Archivdaten, aktuell
+`thunder_replay.py` (Issue #2181 Scheibe S2a) und `thunder_ablation.py` (Issue #2181
+Scheibe S2c). Kein anderer Code importiert das Paket und es hat keinen Netz-, Datei-,
+DB- oder Umgebungszugriff — es läuft ausschließlich, wenn jemand es gezielt für eine
+Auswertung aufruft. Specs:
+`docs/specs/modules/feat_2181_s2a_gewitter_mitschnitt_auswertung.md`,
+`docs/specs/modules/feat_2181_s2c_gewitter_archiv_ablation.md`.
 
 ## Debug-Prinzip
 - Alle Schritte schreiben standardisierte Debug-Zeilen in den DebugBuffer
