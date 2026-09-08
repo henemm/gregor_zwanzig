@@ -23,19 +23,27 @@ from pathlib import Path
 
 import httpx
 import pytest
-from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from providers import meteofrance as mf  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(REPO_ROOT / ".env")
 
 
 def _require_meteofrance_key() -> None:
     if not os.environ.get("GZ_METEOFRANCE_APIKEY"):
         pytest.skip("GZ_METEOFRANCE_APIKEY nicht konfiguriert (.env)")
+
+
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown).
+# Autouse-Fixture fordert stattdessen die geteilte `dotenv_env`-Fixture aus
+# tests/conftest.py an, bevor JEDER Test dieser Datei laeuft (inkl.
+# `_require_meteofrance_key()` oben).
+@pytest.fixture(autouse=True)
+def _dotenv(dotenv_env):
+    yield
 
 
 @pytest.mark.live

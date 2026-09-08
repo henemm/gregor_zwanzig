@@ -12,6 +12,56 @@ src = root / "src"
 if str(src) not in sys.path:
     sys.path.insert(0, str(src))
 
+# ---------------------------------------------------------------------------
+# Issue #1196 Klasse B: geteilte .env-Fixture statt Modul-weitem load_dotenv()
+# ---------------------------------------------------------------------------
+
+_DOTENV_PATH = root / ".env"
+
+
+@pytest.fixture(scope="module")
+def dotenv_env():
+    """Laedt Werte aus der Worktree-``.env`` NUR fuer Tests, die dies per
+    Fixture anfordern -- ersetzt das fruehere modulweite ``load_dotenv()`` auf
+    Modulebene mehrerer Live-/E-Mail-Testdateien.
+
+    Root Cause (#1196 Klasse B): ein ``load_dotenv()``-Aufruf auf Modulebene
+    laeuft beim COLLECT, nicht beim Testlauf -- unabhaengig davon, ob der
+    jeweilige Test spaeter per Marker deselektiert wird. Jeder Volllauf, der
+    eine dieser Dateien nur EINSAMMELT, schrieb damit die komplette lokale
+    ``.env`` dauerhaft (kein Teardown) nach ``os.environ`` und kontaminierte
+    andere, spaeter im selben Prozess laufende Tests (Beleg: der
+    Vorbelegungs-Waechter in ``tests/tdd/_telegram_live_fixture.py``,
+    ``test_issue_1014_live_optin.py::test_with_optin_gate_returns_true_and_sources_env``).
+
+    MODULE-Scope + eigenes ``pytest.MonkeyPatch()`` statt der
+    function-scoped ``monkeypatch``-Fixture, damit auch module-scoped
+    Fixtures (z.B. ``session_cookie`` in den Account-Page-Live-Tests) diese
+    Fixture anfordern koennen (eine function-scoped Fixture waere dort ein
+    Scope-Mismatch). Bewusst NICHT session-scoped: dann blieben die Werte
+    bis zum Ende des Laufs in ``os.environ`` und traefen jedes spaeter
+    laufende Modul -- exakt die Verschmutzung, die hier abgestellt wird.
+    Mit Modul-Scope werden sie am Ende des anfordernden Moduls zurueckgerollt.
+    Nur FEHLENDE Keys werden gesetzt -- Vorrang fuer bereits gesetzte Werte
+    (Shell-Export, CI), analog ``load_dotenv(override=False)``. Fehlt die
+    ``.env`` (CI), ist die Fixture ein No-op.
+    """
+    if not _DOTENV_PATH.exists():
+        yield
+        return
+
+    from dotenv import dotenv_values
+
+    mp = pytest.MonkeyPatch()
+    try:
+        for key, value in dotenv_values(_DOTENV_PATH).items():
+            if value is not None and key not in os.environ:
+                mp.setenv(key, value)
+        yield
+    finally:
+        mp.undo()
+
+
 # Issue #346: force all tests onto the offline FixtureProvider so pytest runs
 # never hit the live Open-Meteo API (and exhaust the server-IP rate limit).
 _FIXTURE_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures", "openmeteo")

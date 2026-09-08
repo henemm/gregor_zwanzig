@@ -12,21 +12,29 @@ import os
 import re
 import pytest
 import httpx
-from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT, nicht beim Testlauf, und kontaminierte os.environ dauerhaft fuer
+# den Rest des Prozesses -- Fix: `dotenv_env`-Fixture aus tests/conftest.py,
+# von session_cookie() unten angefordert.
+#
+# SVELTE_BASE bleibt bewusst ein reiner `os.environ.get(...)`-Modulwert ohne
+# dotenv: er wird nur ausgewertet, wenn GZ_SVELTE_BASE bereits vor dem
+# Pytest-Start in der Shell exportiert ist (CI/Server) -- ein Override NUR
+# ueber die lokale `.env`-Datei greift hier nicht mehr, weil Fixtures erst
+# nach dem Collect laufen. In der Praxis unveraendert, da GZ_SVELTE_BASE so
+# gut wie nie von seinem Default abweicht (dokumentiert statt stillschweigend
+# gebrochen, #1196).
 
 # Dialt real (Prod-API/GeoSphere/Staging-Stack) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
 pytestmark = pytest.mark.live
 
 SVELTE_BASE = os.environ.get("GZ_SVELTE_BASE", "https://gregor20.henemm.com")
 GO_BASE = "http://localhost:8090"
-FORM_HEADERS = {"Origin": SVELTE_BASE}
 
 
 @pytest.fixture(scope="module")
-def session_cookie():
+def session_cookie(dotenv_env):
     """Login and return gz_session cookie for authenticated tests."""
     user = os.environ.get("GZ_AUTH_USER", "default")
     pw = os.environ.get("GZ_AUTH_PASS")
