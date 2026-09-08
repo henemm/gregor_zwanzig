@@ -60,13 +60,13 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
-import pytest
 
 
-# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
-# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
-# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
-pytestmark = pytest.mark.live
+# Kern-Schicht (Test-Politik, CLAUDE.md): alle Tests dieser Datei arbeiten mit
+# lokalen HTTP-Servern bzw. Fixtures und laufen ohne Netz. Der modulweite
+# `live`-Marker vom 2026-08-04 ("lief im Kern nie gruen") war eine
+# Verwechslung von "war rot" mit "braucht Netz" -- #1196 Klasse A, 2026-09-08:
+# offline nachgemessen (--disable-socket --allow-hosts=127.0.0.1,::1,localhost).
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "dpc"
 
