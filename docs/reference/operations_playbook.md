@@ -353,6 +353,87 @@ und durch `tests/test_wip_safety.py` gegen echte Wegwerf-Repos abgesichert.
 
 ---
 
+## Betriebs-Backup der Nutzerdaten und Restore (#2145)
+
+Nicht zu verwechseln mit den Snapshots des Pre-Edit-Hooks `data_schema_backup.py` (weiter
+oben) — die greifen nur am Entwicklerrechner vor Schema-Edits. Der folgende Abschnitt
+beschreibt die **Betriebs**-Sicherung der Produktivdaten fremder Nutzer.
+
+### Was gesichert wird
+
+| | |
+|---|---|
+| Quelle | `/var/lib/gregor` (Prod) und `/var/lib/gregor-staging` — beide Datenwurzeln seit #1595 |
+| Wann | **täglich 3:00**, Cron des Users `hem`, `henemm-infra/scripts/backup.sh` |
+| Lokal | `/home/hem/backups/gregor-data_<datum>.tar.gz`, Retention 30 Tage |
+| Off-site | restic, verschlüsselt, auf den Heimserver über WireGuard (10.10.0.2), **append-only** |
+| Mitgesichert | Server-Config und alle `.env`-Dateien der Projekte |
+| Überwachung | BetterStack-Heartbeat 451531 „Backup (täglich)", Periode 24 h + 2 h Toleranz |
+
+Der Heartbeat wird **nur** gepingt, wenn lokales *und* Off-site-Backup durchliefen — und
+sonntags zusätzlich der Restore-Test. „Backup ok" heißt hier also *wiederherstellbar*, nicht
+bloß *geschrieben*. Bleibt der Ping aus, alarmiert BetterStack.
+
+### RPO und RTO
+
+- **RPO (maximaler Datenverlust): 24 Stunden.** Ein Ausfall um 2:59 verliert einen Tag
+  Nutzerarbeit — Trips, Orte, Empfänger, Kontoänderungen. Bis 2026-09-08 waren es 7 Tage.
+- **RTO Datenrückholung: unter 2 Minuten**, gemessen im Restore-Test (27 MB über VPN,
+  entschlüsseln und entpacken).
+- **RTO Gesamtwiederherstellung: geschätzt 15–30 Minuten** — Dienste stoppen, Baum ersetzen,
+  Rechte richten, Dienste starten. **Nicht durchgespielt**; nur die Datenrückholung ist
+  nachgewiesen. Wer das belastbar braucht, muss es einmal auf Staging fahren.
+
+### Wiederherstellen (Ernstfall)
+
+Der Restore-Test unten macht die Schritte 1–3 bereits nachweislich; für den Ernstfall
+kommen nur Dienststopp und das Ersetzen des Baums dazu.
+
+```bash
+# 1. Snapshot suchen (als root, restic-Zugangsdaten liegen in /etc/henemm/restic.env)
+sudo bash -c 'set -a; . /etc/henemm/restic.env; set +a; restic snapshots --tag offsite'
+
+# 2. Zurückholen — NIE direkt über den Live-Baum, immer erst daneben
+sudo bash -c 'set -a; . /etc/henemm/restic.env; set +a; \
+  restic restore <snapshot-id> --target /var/tmp/restore'
+
+# 3. Archiv entpacken und ansehen, BEVOR irgendetwas ersetzt wird
+sudo tar xzf /var/tmp/restore/home/hem/backups/gregor-data_<datum>.tar.gz -C /var/tmp/restore
+sudo ls /var/tmp/restore/var/lib/gregor/users     # sind alle Nutzer da?
+
+# 4. Erst jetzt Dienste stoppen und den Baum ersetzen
+sudo systemctl stop gregor-python gregor-api gregor-frontend
+sudo mv /var/lib/gregor /var/lib/gregor.kaputt-$(date -u +%FT%TZ)
+sudo mv /var/tmp/restore/var/lib/gregor /var/lib/gregor
+sudo systemctl start gregor-python gregor-api gregor-frontend
+```
+
+**Den defekten Baum verschieben, nicht löschen.** Er ist der einzige Träger dessen, was seit
+dem letzten Backup entstanden ist, und die einzige Grundlage für die Frage, was überhaupt
+kaputtging.
+
+### Restore-Test
+
+`sudo bash /home/hem/henemm-infra/scripts/restore-test-gregor.sh` — läuft sonntags automatisch
+aus `backup.sh`, jederzeit auch von Hand. Er holt den jüngsten Off-site-Snapshot zurück,
+entschlüsselt und entpackt ihn in ein temporäres Verzeichnis (das in jedem Ausgang wieder
+verschwindet) und prüft:
+
+1. Ist der Snapshot jünger als 48 h?
+2. Lässt er sich entschlüsseln und entpacken?
+3. Ist **jedes** Nutzerverzeichnis des Live-Baums enthalten, mit mindestens 80 % seiner
+   Dateien? Der Prozentsatz lässt Zuwachs seit dem Backup zu, nicht Verlust.
+4. Sind alle wiederhergestellten JSON-Dateien parsebar?
+
+Punkt 3 ist der eigentliche Zweck. Ein Archiv, das ein Nutzerverzeichnis verloren hat, bleibt
+groß und besteht jede Größenschwelle — genau der Fehler aus henemm-infra#184. **Überschreibt
+nichts**, Staging bleibt unberührt.
+
+Stand 2026-09-08: bestanden, 4 Nutzer, 320 JSON-Dateien. Die Fangkraft ist gegengeprüft — mit
+einem gelöschten Nutzerverzeichnis und einer beschädigten JSON-Datei wird der Test rot.
+
+---
+
 ## Daten-Schema-Reworks — Anti-Pattern-Codebeispiele
 
 Prinzip (steht in `CLAUDE.md`): **Read-Modify-Write mit Merge — bestehendes Objekt laden, nur
