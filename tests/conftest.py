@@ -19,7 +19,7 @@ if str(src) not in sys.path:
 _DOTENV_PATH = root / ".env"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def dotenv_env():
     """Laedt Werte aus der Worktree-``.env`` NUR fuer Tests, die dies per
     Fixture anfordern -- ersetzt das fruehere modulweite ``load_dotenv()`` auf
@@ -34,14 +34,17 @@ def dotenv_env():
     Vorbelegungs-Waechter in ``tests/tdd/_telegram_live_fixture.py``,
     ``test_issue_1014_live_optin.py::test_with_optin_gate_returns_true_and_sources_env``).
 
-    Session-Scope + eigenes ``pytest.MonkeyPatch()`` statt der
-    function-scoped ``monkeypatch``-Fixture, damit auch MODULE-scoped
+    MODULE-Scope + eigenes ``pytest.MonkeyPatch()`` statt der
+    function-scoped ``monkeypatch``-Fixture, damit auch module-scoped
     Fixtures (z.B. ``session_cookie`` in den Account-Page-Live-Tests) diese
     Fixture anfordern koennen (eine function-scoped Fixture waere dort ein
-    Scope-Mismatch). Nur FEHLENDE Keys werden gesetzt -- Vorrang fuer bereits
-    gesetzte Werte (Shell-Export, CI), analog ``load_dotenv(override=False)``.
-    Fehlt die ``.env`` (CI), ist die Fixture ein No-op. Zurueckgerollt wird
-    am Sessionende, nie ungeteardownt wie zuvor.
+    Scope-Mismatch). Bewusst NICHT session-scoped: dann blieben die Werte
+    bis zum Ende des Laufs in ``os.environ`` und traefen jedes spaeter
+    laufende Modul -- exakt die Verschmutzung, die hier abgestellt wird.
+    Mit Modul-Scope werden sie am Ende des anfordernden Moduls zurueckgerollt.
+    Nur FEHLENDE Keys werden gesetzt -- Vorrang fuer bereits gesetzte Werte
+    (Shell-Export, CI), analog ``load_dotenv(override=False)``. Fehlt die
+    ``.env`` (CI), ist die Fixture ein No-op.
     """
     if not _DOTENV_PATH.exists():
         yield
