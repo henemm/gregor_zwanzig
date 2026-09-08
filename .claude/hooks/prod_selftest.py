@@ -369,6 +369,22 @@ def _check_health() -> tuple[bool, str]:
             return False, "JSON-Decode-Fehler"
         if payload.get("status") != "ok":
             return False, f"status={payload.get('status')!r}"
+        # Issue #2130: die effektive Passkey-RP-ID muss zum echten Prod-Hostnamen
+        # passen. Fehlt das Feld oder weicht es ab, ist Passkey clientseitig
+        # kaputt (SecurityError) — genau der Zustand, der drei Monate unbemerkt
+        # blieb, weil kein Gate den Wert je gegen die Wirklichkeit gehalten hat.
+        erwartete_rpid = urlparse(PROD_BASE).hostname
+        if "webauthn_rpid" not in payload:
+            return False, (
+                f"webauthn_rpid fehlt in /api/health — Passkey-RP-ID unbewacht "
+                f"(erwartet {erwartete_rpid!r})"
+            )
+        rpid = payload.get("webauthn_rpid")
+        if rpid != erwartete_rpid:
+            return False, (
+                f"webauthn_rpid={rpid!r} weicht vom Prod-Hostnamen "
+                f"{erwartete_rpid!r} ab — Passkey-Anmeldung scheitert im Browser"
+            )
         return True, "HTTP 200, status=ok"
     except (urllib.error.URLError, OSError) as exc:
         return False, f"unreachable ({exc})"

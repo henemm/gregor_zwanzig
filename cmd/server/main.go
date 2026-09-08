@@ -3,10 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/go-webauthn/webauthn/webauthn"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
@@ -89,16 +87,11 @@ func main() {
 		})
 	}
 
-	// Issue #450 — WebAuthn/Passkey init (RPID/RPOrigins from config).
-	origins := strings.Split(cfg.WebAuthnRPOrigins, ",")
-	for i := range origins {
-		origins[i] = strings.TrimSpace(origins[i])
-	}
-	webAuthn, err := webauthn.New(&webauthn.Config{
-		RPID:          cfg.WebAuthnRPID,
-		RPDisplayName: cfg.WebAuthnRPDisplayName,
-		RPOrigins:     origins,
-	})
+	// Issue #450 — WebAuthn/Passkey init.
+	// Issue #2130: RP-ID/Origins werden in config.NewWebAuthn aus PublicHost
+	// abgeleitet. Der Aufbau steht bewusst NICHT mehr hier inline — sonst waeren
+	// die Tests gruen, waehrend der laufende Server weiter "localhost" sendet.
+	webAuthn, err := config.NewWebAuthn(cfg)
 	if err != nil {
 		log.Fatalf("webauthn init: %v", err)
 	}
