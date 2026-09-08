@@ -119,7 +119,14 @@ def test_sms_blocked_when_sms_to_missing_distinct_reason_code():
     API-Konfiguration, nicht mehr der undifferenzierte ``OutputConfigError``."""
     from output.channels.sms import SMSOutput
 
-    settings = Settings(seven_api_key="tdd-2144-key", sms_to=None)
+    # seven_sandbox_key deckungsgleich mit seven_api_key gesetzt, damit die
+    # unabhaengige Herkunftssperre (#1476/#1336, seven_io_base.py) NICHT vor
+    # dem hier geprueften Empfaenger-Guard greift -- ohne .env (z.B. in CI)
+    # waere seven_sandbox_key sonst leer und der Test schluege an der
+    # falschen Stelle fehl.
+    settings = Settings(
+        seven_api_key="tdd-2144-key", seven_sandbox_key="tdd-2144-key", sms_to=None,
+    )
 
     with pytest.raises(ChannelBlockedError) as excinfo:
         SMSOutput(settings).send("Betreff", "Text")

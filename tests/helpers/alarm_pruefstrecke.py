@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from app.trip import Trip
 
 from app.config import Settings
+from app.loader import get_data_dir
 from output.channels import telegram as telegram_mod
 from output.channels.telegram import reset_telegram_rate_limit_for_tests
 from output.channels.premium_sms import PREMIUM_SMS_SENDER
@@ -119,6 +120,25 @@ class AlarmPruefstrecke:
         _, seven_port = _start_seven_io_stub(self._seven_received)
         self._telegram_url = f"http://127.0.0.1:{telegram_port}"
         base = settings if settings is not None else Settings()
+        # Issue #2144 AC-2: `with_user_profile()` ueberschreibt mail_to/
+        # sms_to jetzt IMMER (auch auf None), wenn das Profil das Feld nicht
+        # traegt -- unconditional, bewusst OHNE force_test-Ausnahme (anders
+        # als telegram_chat_id, AC-3). Die Pruefstrecke simuliert einen
+        # Nutzer mit vollstaendig konfigurierten Kanaelen; das Profil muss
+        # diese Felder deshalb selbst tragen (Read-Modify-Write, damit
+        # `_write_tier()`/`_write_premium_profile()`-Aufrufe vor oder nach
+        # dieser Konstruktion nichts verlieren), sonst wischt
+        # `with_user_profile()` die hier uebergebenen Kanal-Ziele weg.
+        profile_path = get_data_dir(user_id) / "user.json"
+        try:
+            profile = json.loads(profile_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            profile = {"id": user_id}
+        profile.setdefault("mail_to", base.mail_to)
+        profile.setdefault("sms_to", base.sms_to)
+        profile.setdefault("telegram_chat_id", base.telegram_chat_id)
+        profile_path.parent.mkdir(parents=True, exist_ok=True)
+        profile_path.write_text(json.dumps(profile))
         # Wie in Produktion (`TripAlertService(settings=None, ...)` baut sich
         # intern `Settings().with_user_profile(user_id)`, Vorbild
         # `trip_alert.py:198`): `premium_sms_reply_to`/`_at` sind KEIN
