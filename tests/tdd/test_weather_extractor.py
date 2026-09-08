@@ -324,3 +324,56 @@ class TestMultiUserIsolation:
         assert res_a.points[0].metrics.temp_max_c == 20.0
         assert res_b.available is False
         assert res_b.points == []
+
+
+# ---------------------------------------------------------------------------
+# Issue #2186 AC-9 — Rueckwaertskompatibilitaet des ungefensterten Aufrufs
+#
+# SPEC: docs/specs/modules/feat_2186_tagesaggregat_ab_jetzt.md v1.0
+#
+# Die Spec verweist fuer AC-9 auf `tests/unit/test_weather_extractor.py`; die
+# Suite liegt tatsaechlich hier (`tests/tdd/`), ein `tests/unit`-Pendant gibt
+# es nicht. Verankert wird sie deshalb an der real vorhandenen Datei.
+# ---------------------------------------------------------------------------
+
+class TestTimelineOhneFromTime:
+    def test_ac9_aufruf_ohne_from_time_bleibt_unveraendert(self, tmp_path: Path) -> None:
+        """
+        GIVEN einen Snapshot, dessen Segment zum Zeitpunkt eines gedachten
+              Abrufs laengst begonnen haette,
+        WHEN timeline() OHNE `from_time` aufgerufen wird — so wie die vier
+             bestehenden Aufrufer es tun,
+        THEN liefert es die gespeicherten Aggregate unveraendert, und der
+             ausdrueckliche Default `from_time=None` ergibt exakt dasselbe.
+
+        Der zweite Teil ist der eigentliche Waechter: er faellt, solange der
+        Parameter fehlt, und schuetzt danach die Zusicherung, dass sein
+        Default nichts veraendert.
+        """
+        svc = _snapshot_service(tmp_path)
+        seg = _segment_weather(
+            1, 8, 12, end_elevation_m=1400.0, temp_max_c=17.5,
+            hourly=_hours(
+                (8, ThunderLevel.MED, 6.0),
+                (9, ThunderLevel.MED, 7.0),
+                (10, None, 15.0),
+                (11, None, 17.5),
+            ),
+        )
+        svc.save("gr20", [seg], date(2026, 2, 14))
+        extractor = _extractor(tmp_path)
+
+        ohne_argument = extractor.timeline("gr20")
+
+        assert ohne_argument.available is True
+        assert len(ohne_argument.points) == 1
+        # Das GESPEICHERTE Aggregat, nicht ein neu gerechnetes Restfenster.
+        assert ohne_argument.points[0].metrics.temp_max_c == 17.5
+        assert ohne_argument.points[0].metrics.wind_max_kmh == 22.0
+        assert ohne_argument.points[0].arrival_time == datetime(
+            2026, 2, 14, 12, 0, tzinfo=timezone.utc,
+        )
+
+        mit_default = extractor.timeline("gr20", from_time=None)
+        assert mit_default.points[0].metrics == ohne_argument.points[0].metrics
+        assert mit_default.points[0].arrival_time == ohne_argument.points[0].arrival_time
