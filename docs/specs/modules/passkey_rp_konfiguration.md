@@ -14,7 +14,7 @@ tags: [go, tooling, e2e, auth, webauthn, passkey, config]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — PO (Henning), 2026-09-08, im Workflow `feat-2130-passkey-anmeldung`
 
 ## Purpose
 
