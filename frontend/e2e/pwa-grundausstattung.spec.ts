@@ -14,9 +14,11 @@ import { assertNotProdBaseURL } from './prodUrlGuard.ts';
 import {
 	AUTH_STATE,
 	activateServiceWorker,
+	cacheNamenMitEintrag,
 	cacheNames,
 	readCacheEntries
 } from './pwaHelpers.ts';
+import { createTestTrip } from './helpers.ts';
 
 // Die Bestandsstrecke bekommt den Worker abgeschaltet (AC-16). Diese Datei ist
 // genau die Ausnahme und sagt das ausdruecklich, damit sie unabhaengig von der
@@ -219,7 +221,7 @@ test('AC-6: kein /api/-Eintrag im Speicher, auch nach Vorabruf beim Ueberfahren 
 // Speicher nichts liegen, was nicht zum Programm gehoert. Jede kuenftige
 // Aenderung, die Regel 4 zu einem Ablage-Zweig macht, schlaegt hier an — und
 // `/api/` ist dabei automatisch mit erfasst.
-test('AC-21: nach normaler Nutzung liegt ausschliesslich das Programm im Speicher', async ({
+test('AC-21: nach normaler Nutzung liegen nur Programm und Positivlisten-Daten im Speicher', async ({
 	page,
 	baseURL
 }) => {
@@ -299,33 +301,75 @@ test('AC-21: nach normaler Nutzung liegt ausschliesslich das Programm im Speiche
 		'keine Anfrage erreichte Regel 4 — eine ablegende Regel 4 waere hier unsichtbar'
 	).toBeGreaterThan(0);
 
-	const fremd = (await readCacheEntries(page)).filter((e) => !programm.has(e.url));
+	// Issue #2131 (Scheibe 4): seit der Offline-Ansicht liegt neben dem Programm
+	// auch die zuletzt angesehene Trip-/Vergleichs-Ansicht im Speicher. Der
+	// Nachweis prueft deshalb nicht mehr „nur Programm", sondern „Programm UND
+	// genau die Positivliste" — jede Ablage darueber hinaus schlaegt weiterhin an.
+	const trip = await createTestTrip(page.request, {});
+	await page.goto(`/trips/${trip.id}`);
+	await page.waitForLoadState('networkidle');
+	await expect
+		.poll(async () => (await cacheNamenMitEintrag(page, `/trips/${trip.id}`)).length, {
+			timeout: 15_000
+		})
+		.toBeGreaterThan(0);
+
+	// Genau drei Eintraege darf die Positivliste erzeugen: die Seitenantwort, ihre
+	// `__data.json` fuer die Client-Navigation und die Buchfuehrung fuer
+	// Verdraengung und Offline-Uebersicht.
+	const erlaubt = new Set([
+		`/trips/${trip.id}`,
+		`/trips/${trip.id}/__data.json`,
+		'/__gz-offline-index'
+	]);
+	const fremd = (await readCacheEntries(page)).filter(
+		(e) => !programm.has(e.url) && !erlaubt.has(new URL(e.url).pathname)
+	);
 	expect(
 		fremd.map((e) => e.url),
-		'im Gerätespeicher liegt etwas, das nicht zum Programm gehoert — der naechste Nutzer ' +
-			'desselben Geraets saehe fremde Inhalte (ADR-0003)'
+		'im Gerätespeicher liegt etwas, das weder zum Programm noch zur Positivliste gehoert — ' +
+			'der naechste Nutzer desselben Geraets saehe fremde Inhalte (ADR-0003)'
 	).toEqual([]);
 });
 
 // ===========================================================================
-// AC-7 — kein HTML-Dokument im Speicher (Ausnahme: die Offline-Seite)
+// AC-7 — HTML im Speicher NUR aus der Positivliste (plus die Offline-Seite)
 // ===========================================================================
+//
+// Bis #2128 lautete die Zusicherung „gar kein HTML". Seit #2131 (Scheibe 4)
+// liegen Trip- und Vergleichs-Ansicht bewusst als HTML im Speicher — MIT
+// eingeschriebener Stand-Zeile. Die Grenze verlaeuft jetzt an der Positivliste:
+// jede andere Seite waere weiterhin ein eingefrorener Stand ohne
+// Kennzeichnung, und `/` und `/archiv` truegen zusaetzlich Alarm-Historie.
 
-test('AC-7: nach mehreren Seitenwechseln liegt kein HTML-Dokument im Speicher', async ({ page }) => {
+test('AC-7: nach mehreren Seitenwechseln liegt HTML nur aus der Positivliste im Speicher', async ({
+	page
+}) => {
 	await activateServiceWorker(page);
 
-	for (const ziel of ['/trips', '/locations', '/account', '/']) {
+	const trip = await createTestTrip(page.request, {});
+	for (const ziel of ['/trips', '/locations', '/account', '/', `/trips/${trip.id}`]) {
 		await page.goto(ziel);
 		await page.waitForLoadState('networkidle');
 	}
+	// Positivkontrolle: ohne abgelegtes HTML pruefte der Ausschluss unten nichts.
+	await expect
+		.poll(async () => (await cacheNamenMitEintrag(page, `/trips/${trip.id}`)).length, {
+			timeout: 15_000
+		})
+		.toBeGreaterThan(0);
 
 	const entries = await readCacheEntries(page);
 	const html = entries.filter(
-		(e) => e.contentType.includes('text/html') && !e.url.endsWith('/offline.html')
+		(e) =>
+			e.contentType.includes('text/html') &&
+			!e.url.endsWith('/offline.html') &&
+			new URL(e.url).pathname !== `/trips/${trip.id}`
 	);
 	expect(
 		html.map((e) => e.url),
-		'HTML im Speicher — das waere ein eingefrorener Stand ohne Kennzeichnung (Scheibe 4, #2131)'
+		'HTML ausserhalb der Positivliste im Speicher — das waere ein eingefrorener Stand ohne ' +
+			'Kennzeichnung, bei `/` und `/archiv` zusaetzlich mit Alarm-Historie (#2131)'
 	).toEqual([]);
 });
 
@@ -377,10 +421,21 @@ test('AC-14: nach geleertem Gerätespeicher startet die App normal und fuellt ne
 	expect((await readCacheEntries(page)).length).toBeGreaterThan(0);
 
 	// Das Betriebssystem raeumt den Zwischenspeicher, die App bleibt installiert.
+	// "Zwischenspeicher raeumen" trifft real ALLES Zwischengespeicherte -- nicht
+	// nur die per JS sichtbare CacheStorage, sondern auch den browsereigenen
+	// HTTP-Speicher. Ohne das zweite Raeumen bedient Chromium die noch frischen,
+	// hash-versionierten Programmdateien (`Cache-Control: immutable`) aus genau
+	// diesem HTTP-Speicher, OHNE das Fetch-Ereignis des Workers je auszuloesen --
+	// ein unvollstaendig nachgestelltes Raeumen taeuscht dann, je nach Zufall der
+	// Ablaufreihenfolge, ein Nachfuellen vor, das in Wahrheit gar nicht lief
+	// (Befund beim Nachweis zu AC-14: `Network.clearBrowserCache` behebt es
+	// deterministisch, blosses `caches.delete` bleibt zufaellig rot).
 	await page.evaluate(async () => {
 		for (const name of await caches.keys()) await caches.delete(name);
 	});
 	expect(await cacheNames(page)).toEqual([]);
+	const cdp = await page.context().newCDPSession(page);
+	await cdp.send('Network.clearBrowserCache');
 
 	await page.reload();
 	await expect(page.getByTestId('desktop-sidebar')).toBeVisible();

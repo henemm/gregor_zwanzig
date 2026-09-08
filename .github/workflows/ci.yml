@@ -239,19 +239,20 @@ jobs:
       # Gruende, beide zwingend:
       #   1) Ratschen-Filter A (docs/reference/gates_und_ratschen.md,
       #      "e2e-Ratsche") schliesst jede Datei mit `waitForTimeout` aus.
-      #      pwa-update-und-abmelden.spec.ts hat 10 solcher Stellen,
-      #      pwa-grundausstattung.spec.ts 2 -- sie sind dort unvermeidbar
-      #      (Nachlauf-Beobachtung: "die Seite hat NICHT nochmal neu geladen",
-      #      "der wartende Worker hat NICHT uebernommen" -- ein Ausbleiben
-      #      laesst sich nicht erwarten, nur abwarten). Aufnahme in die
-      #      Positivliste waere ein Ratschen-Verstoss.
-      #   2) Beide Dateien brauchen `serviceWorkers: 'allow'`. Das ist eine
+      #      pwa-update-und-abmelden.spec.ts hat 11 solcher Stellen,
+      #      pwa-grundausstattung.spec.ts 2, pwa-offline-sperre-und-mandant.spec.ts
+      #      2, pwa-offline-ansicht-mit-stand.spec.ts 1 -- sie sind dort
+      #      unvermeidbar (Nachlauf-Beobachtung: "die Seite hat NICHT nochmal
+      #      neu geladen", "der wartende Worker hat NICHT uebernommen" -- ein
+      #      Ausbleiben laesst sich nicht erwarten, nur abwarten). Aufnahme in
+      #      die Positivliste waere ein Ratschen-Verstoss.
+      #   2) Alle vier Dateien brauchen `serviceWorkers: 'allow'`. Das ist eine
       #      PROJEKT-Einstellung; die Bestandsstrecke laeuft bewusst mit
       #      'block' (AC-16), damit der seit #2128 auf jeder Seite
       #      registrierte Worker ihr Verhalten nicht veraendert.
       # Der Schutz gegen "Datei verschwindet klaglos" haengt hier nicht an der
       # Existenzpruefung der Liste, sondern an E2E_MIN_EXECUTED_PWA: faellt
-      # eine der beiden Dateien weg, sinkt `expected` unter 27 und das Gate
+      # eine der vier Dateien weg, sinkt `expected` unter 49 und das Gate
       # wird rot.
       #
       # 🔴 REIHENFOLGE IST KRITISCH: PWA VOR bug-703 (gemessen 2026-09-06).
@@ -274,7 +275,7 @@ jobs:
       # er muss nur ZULETZT laufen.
       E2E_MIN_SPECS: 46     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
       E2E_MIN_EXECUTED_HAUPT: 224      # Hauptlauf: 44 Dateien + global.setup -- exakt belegt, kein Puffer
-      E2E_MIN_EXECUTED_PWA: 27         # Zweitlauf: 26 Faelle in 2 PWA-Dateien + global.setup -- exakt belegt, kein Puffer
+      E2E_MIN_EXECUTED_PWA: 49         # Zweitlauf: 48 Faelle in 4 PWA-Dateien + global.setup -- exakt belegt, kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
       - uses: actions/checkout@v4

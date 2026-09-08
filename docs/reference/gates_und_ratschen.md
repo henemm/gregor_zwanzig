@@ -178,7 +178,8 @@ Verfahren, Abbruchgrenze).
 
 ### Dritter Playwright-Lauf: PWA-Strecke (`--project=pwa`, ab #2128)
 
-Die PWA-Nachweise (`pwa-grundausstattung.spec.ts`, `pwa-update-und-abmelden.spec.ts`) laufen
+Die PWA-Nachweise (`pwa-grundausstattung.spec.ts`, `pwa-update-und-abmelden.spec.ts`,
+`pwa-offline-ansicht-mit-stand.spec.ts`, `pwa-offline-sperre-und-mandant.spec.ts`) laufen
 **nicht** über die Positivliste, sondern über die feste Projektzuordnung in
 `frontend/playwright.config.ts` (`testMatch: /pwa-.*\.spec\.ts/`, `testIgnore` schließt sie im
 Standardprojekt `tests` aus). Zwei unabhängige Gründe, beide zwingend:
@@ -194,7 +195,7 @@ Standardprojekt `tests` aus). Zwei unabhängige Gründe, beide zwingend:
    bestehenden Dateilisten.
 
 Schutz gegen stilles Verschwinden einer Datei hängt hier **nicht** an einer Listenlänge, sondern an
-`E2E_MIN_EXECUTED_PWA` (aktuell 27 = 26 Testfälle in 2 Dateien + `global.setup`): fällt eine Datei
+`E2E_MIN_EXECUTED_PWA` (aktuell 49 = 48 Testfälle in 4 Dateien + `global.setup`): fällt eine Datei
 weg, sinkt `expected` darunter und das Gate wird rot.
 
 **Die Reihenfolge ist kritisch: PWA-Lauf VOR dem bug-703-Ratelimit-Lauf** (gemessen 2026-09-06).

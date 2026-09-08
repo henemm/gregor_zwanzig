@@ -71,15 +71,68 @@
 				outline: 3px solid var(--ink);
 				outline-offset: 2px;
 			}
+			/* Issue #2131 — Uebersicht der vorgehaltenen Ansichten. Hoher
+			   Kontrast (ADR-0008): der Stand ist eine Entscheidungsgrundlage
+			   und darf nicht in einem blassen Grau stehen. */
+			.hinweis {
+				margin: 0 0 20px;
+				padding: 10px 12px;
+				border-left: 3px solid #c08a1a;
+				background: rgba(192, 138, 26, 0.12);
+				color: #6b4a06;
+				font-size: 14px;
+				font-weight: 600;
+			}
+			ul.liste {
+				list-style: none;
+				margin: 0 0 20px;
+				padding: 0;
+				border-top: 1px solid var(--border);
+			}
+			ul.liste li {
+				border-bottom: 1px solid var(--border);
+				padding: 10px 0;
+			}
+			ul.liste a {
+				display: block;
+				color: var(--ink);
+				font-size: 15px;
+				font-weight: 600;
+				text-decoration: none;
+				min-height: 24px;
+			}
+			ul.liste a:hover,
+			ul.liste a:focus-visible {
+				text-decoration: underline;
+			}
+			ul.liste .stand {
+				display: block;
+				margin-top: 2px;
+				color: #4a4841;
+				font-size: 13px;
+			}
+			p.leer {
+				color: #4a4841;
+			}
 		</style>
 	</head>
 	<body>
-		<main>
+		<main data-testid="offline-uebersicht">
 			<h1>Keine Verbindung</h1>
 			<p>
 				Gregor Zwanzig erreicht gerade das Netz nicht. Die App selbst liegt auf dem Gerät, die
 				Inhalte kommen vom Server. Sobald wieder Empfang da ist, lädt die Seite normal.
 			</p>
+			<!-- Issue #2131 AC-8: das Fehlen der Alarme wird ausdruecklich benannt.
+			     Eine leere Stelle waere von „keine Alarme" nicht zu unterscheiden —
+			     genau die Ununterscheidbarkeit, die ADR-0034 ausschliesst. -->
+			<p class="hinweis" data-testid="offline-alarme-hinweis">
+				Alarme sind ohne Netz nicht abrufbar. Was hier fehlt, heißt nicht „keine Warnung“ —
+				es heißt „nicht abgefragt“.
+			</p>
+			<!-- Issue #2131 AC-18: der Service Worker ersetzt diese Marke beim
+			     Ausliefern durch die Liste der vorgehaltenen Ansichten. -->
+			<!--GZ_LISTE-->
 			<button type="button" onclick="location.reload()">Erneut versuchen</button>
 		</main>
 	</body>

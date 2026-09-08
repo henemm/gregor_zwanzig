@@ -300,6 +300,43 @@ Zwei-Nutzer-Playwright-Nachweis.
   - Test: Playwright legt vorher zwei Ansichten ab, startet offline auf `/`, prüft die Liste samt
     Stand-Angaben und klickt einen Eintrag an, um die Ansicht zu öffnen.
 
+### Betroffene Dateien (Ist-Stand nach Lieferung)
+
+Die Zahlen unter „Estimated Scope" waren eine Schätzung vor der Arbeit; das hier ist die gemessene
+Liste.
+
+**Geändert — Programm:**
+- `frontend/src/service-worker.ts` — Ablage-Positivliste, `__data.json`, Stand-Einschrieb,
+  Mandanten-Bucket, präzisierter `activate`-Sweep, Verdrängung
+- `frontend/src/hooks.server.ts` — Mandanten-Header an authentifizierten Nicht-`/api/`-Antworten
+- `frontend/src/lib/api.ts` — Anschluss an den Verbindungs-Store (fehlgeschlagener Abruf sperrt)
+- `frontend/src/routes/+layout.svelte` — Markierungselement für den Stand-Einschrieb
+- `frontend/src/routes/compare/[id]/+page.svelte` — Schreib-Sperre eingebunden
+- `frontend/src/app.css`, `frontend/src/app.html` — Stand-Zeile/Sperr-Optik
+- `frontend/static/offline.html` — von Sackgasse zu Übersicht der abgelegten Ansichten
+
+**Neu — Programm:**
+- `frontend/src/lib/components/shared/OfflineSperre.svelte` — sichtbar gesperrtes Element mit
+  Begründung (Vorbild `premiumSmsAlarmGate.ts`, ADR-0034: kennzeichnen statt weglassen)
+- `frontend/src/lib/components/shared/offlineGate.ts` — reine Gate-Funktion `{ disabled, hint }`
+- `frontend/src/lib/pwa/offlineStand.ts`, `frontend/src/lib/pwa/standText.ts` — Formatierung und
+  Einschrieb der Stand-Zeile
+- `frontend/src/lib/stores/verbindung.svelte.ts` — Verbindungs-Store (Svelte-5-Runen), asymmetrisch:
+  sofort sperren auf `offline`/fehlgeschlagenen Abruf, entsperren erst nach nachweislich
+  gelungenem Abruf
+
+**Neu — Nachweise:**
+- `frontend/e2e/pwa-offline-ansicht-mit-stand.spec.ts`
+- `frontend/e2e/pwa-offline-sperre-und-mandant.spec.ts`
+- `frontend/src/lib/__tests__/apiSchreibsperre.test.ts`
+- `frontend/src/lib/components/shared/__tests__/offlineGate.test.ts`
+
+**Geändert — Bestandswächter (Abschnitt „Known Limitations" begründet die Anpassung):**
+- `frontend/e2e/pwa-grundausstattung.spec.ts`, `frontend/e2e/pwa-update-und-abmelden.spec.ts`,
+  `frontend/e2e/pwaHelpers.ts`
+
+**Doku:** diese Spec, `docs/features/architecture.md`.
+
 ## Known Limitations
 
 - Die Listenseiten (`/trips`, `/compare`, `/locations`), die Startseite und das Archiv werden
@@ -318,7 +355,7 @@ Zwei-Nutzer-Playwright-Nachweis.
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** ADR-0062 (neu anzulegen, Fortschreibung von ADR-0061)
+- **ADR-Nr.:** ADR-0063 (Fortschreibung von ADR-0061)
 - **Rationale:**
   1. **Ablage-Positivliste statt Feldfilter oder Endpunkt-Split** — nur `/trips/[id]` und
      `/compare/[id]` (Seitenantwort und `__data.json`) werden abgelegt; `/` und `/archiv` sind
@@ -355,3 +392,8 @@ Zwei-Nutzer-Playwright-Nachweis.
 ## Changelog
 
 - 2026-09-06: Initial spec created (Issue #2131, Scheibe 4 zu Epic #2127)
+- 2026-09-08: Ist-Stand nach Lieferung nachgezogen (Abschnitt „Betroffene Dateien"), zugehöriger
+  Architektur-Überblick in `docs/features/architecture.md` ergänzt. ADR-0063 („Fortschreibung von
+  ADR-0061") angelegt (`docs/adr/0063-pwa-offline-inhalte-positivliste-und-mandanten-bucket.md`)
+  und im Index (`docs/adr/README.md`) eingetragen. Nummer 0062 war beim Rebase bereits durch
+  #2142 belegt — deshalb 0063.

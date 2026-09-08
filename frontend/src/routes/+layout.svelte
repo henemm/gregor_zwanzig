@@ -14,6 +14,10 @@
 	// die Anmeldeseite, die ohne TopAppBar/Sidebar/BottomNav rendert.
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import { initServiceWorkerUpdate } from '$lib/pwa/serviceWorkerUpdate';
+	// Issue #2131 — Offline-Ansicht mit Stand-Kennzeichnung.
+	import { afterNavigate } from '$app/navigation';
+	import { initOfflineStand, standAnwenden } from '$lib/pwa/offlineStand';
+	import OfflineSperre from '$lib/components/shared/OfflineSperre.svelte';
 
 	let { children, data } = $props();
 
@@ -78,6 +82,13 @@
 		}
 	}
 
+	// Issue #2131: die Stand-Zeile des DOKUMENTS steht schon im ausgelieferten
+	// Bytestrom (der Worker schreibt sie beim Ablegen ein). Hier wird sie nur
+	// bei einer Client-Navigation nachgefuehrt — dort entsteht kein neues
+	// Dokument, und der Stand der vorigen Ansicht bliebe sonst stehen (AC-5).
+	if (browser) initOfflineStand();
+	afterNavigate(() => standAnwenden());
+
 	if (browser) {
 		darkMode = localStorage.getItem('gz-dark') === '1';
 		if (darkMode) applyDarkMode(true);
@@ -129,6 +140,10 @@
 		backHref={topAppBarStore.fill.backHref}
 		right={topAppBarStore.fill.right}
 	/>
+	<!-- Issue #2131 — sichtbare Begruendung der Bearbeitungssperre; sperrt
+	     zugleich die Bedienelemente der Ansicht (ADR-0034: gesperrt und
+	     begruendet, nicht versteckt). -->
+	<OfflineSperre />
 	<div class="flex h-screen">
 		<Sidebar
 			userId={data.userId}

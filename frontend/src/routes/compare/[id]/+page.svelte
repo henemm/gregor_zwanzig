@@ -258,6 +258,12 @@
 	}
 </script>
 
+<!-- Issue #2131 — eigener Seitentitel wie bei der Trip-Ansicht
+     (trips/[id]/+page.svelte). Ohne ihn traegt das Dokument nur den
+     Platzhalter aus app.html, und die Offline-Uebersicht listet jeden
+     Ortsvergleich als „Gregor Zwanzig". -->
+<svelte:head><title>{currentPreset.name} — Gregor Zwanzig</title></svelte:head>
+
 <!-- Desktop-Layout (#491, #582) — full-width Header nach JSX-Vorlage -->
 <div class="hidden desktop:block" style="position: relative; padding: 22px 40px 0; border-bottom: 1px solid var(--g-rule)">
 	<!-- Breadcrumb (Issue #582 + Bug #589). Issue #1256 S8c (AC-10): App-weiter
