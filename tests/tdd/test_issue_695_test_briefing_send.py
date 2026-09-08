@@ -30,14 +30,33 @@ import re
 from pathlib import Path
 
 import pytest
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-GO_BASE = os.environ.get("GZ_API_BASE", "http://localhost:8090")
-TEST_USER = os.environ.get("GZ_AUTH_USER", "default")
-TEST_PASS = os.environ.get("GZ_AUTH_PASS", "")
+
+
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown fuer
+# den Rest des Prozesses). GO_BASE/TEST_USER/TEST_PASS wurden dafuer von
+# Modul-Konstanten zu Funktionen -- sie werden ausschliesslich innerhalb von
+# Testkoerpern gelesen (nie in einem skipif), sodass die untenstehende
+# autouse-Fixture `_dotenv` (fordert die geteilte `dotenv_env`-Fixture aus
+# tests/conftest.py an) laengst gelaufen ist, bevor der jeweilige Wert
+# gebraucht wird.
+def _go_base() -> str:
+    return os.environ.get("GZ_API_BASE", "http://localhost:8090")
+
+
+def _test_user() -> str:
+    return os.environ.get("GZ_AUTH_USER", "default")
+
+
+def _test_pass() -> str:
+    return os.environ.get("GZ_AUTH_PASS", "")
+
+
+@pytest.fixture(autouse=True)
+def _dotenv(dotenv_env):
+    yield
 
 
 # ---------------------------------------------------------------------------
@@ -83,10 +102,10 @@ class TestGoProxyRoute:
     def _login(self):
         """Authentifizierte Session gegen localhost:8090."""
         import httpx
-        client = httpx.Client(base_url=GO_BASE, timeout=15)
+        client = httpx.Client(base_url=_go_base(), timeout=15)
         resp = client.post(
             "/api/auth/login",
-            json={"username": TEST_USER, "password": TEST_PASS},
+            json={"username": _test_user(), "password": _test_pass()},
         )
         if resp.status_code != 200:
             pytest.skip(

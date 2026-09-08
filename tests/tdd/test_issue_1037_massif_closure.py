@@ -28,16 +28,23 @@ from pathlib import Path
 
 import httpx
 import pytest
-from dotenv import load_dotenv
 
 from app.profile import ActivityProfile
 from app.user import SavedLocation
 from services.comparison_engine import ComparisonEngine
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(REPO_ROOT / ".env")
 
 _ENDPOINT = "https://www.risque-prevention-incendie.fr/static/{src}/import_data/{ymd}.json"
+
+
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown).
+# Autouse-Fixture fordert stattdessen die geteilte `dotenv_env`-Fixture aus
+# tests/conftest.py an, bevor JEDER Test dieser Datei laeuft.
+@pytest.fixture(autouse=True)
+def _dotenv(dotenv_env):
+    yield
 
 
 def _live_massifs(src: str) -> dict:

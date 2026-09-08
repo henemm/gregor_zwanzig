@@ -12,10 +12,13 @@ import os
 import re
 import pytest
 import httpx
-from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown fuer
+# den Rest des Prozesses). Fix: `dotenv_env`-Fixture aus tests/conftest.py,
+# von session_cookie() unten angefordert. SVELTE_BASE bleibt ein reiner
+# `os.environ.get(...)`-Modulwert ohne dotenv (Begruendung: siehe
+# test_account_page.py, identisches Muster).
 
 SVELTE_BASE = os.environ.get("GZ_SVELTE_BASE", "https://gregor20.henemm.com")
 GO_BASE = "http://localhost:8090"
@@ -27,7 +30,7 @@ pytestmark = pytest.mark.live
 
 
 @pytest.fixture(scope="module")
-def session_cookie():
+def session_cookie(dotenv_env):
     """Login and return gz_session cookie for authenticated tests."""
     user = os.environ.get("GZ_AUTH_USER", "default")
     pw = os.environ.get("GZ_AUTH_PASS")
