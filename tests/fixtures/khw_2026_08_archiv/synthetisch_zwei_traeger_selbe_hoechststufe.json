@@ -1,0 +1,8 @@
+{
+ "beschreibung": "AC-6: zwei Stunden desselben Tages, die HIGH ueber verschiedene, jeweils alleinige Traeger erreichen (Wettercode bzw. CAPE) -- die Tagesverdichtung muss beide Namen in der Traegerliste fuehren.",
+ "herkunft": "konstruiert nach Spec AC-6",
+ "stunden": [
+  {"time": "2026-08-31T10:00", "weather_code": 96, "cape": 0.0, "convective_inhibition": 0.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0},
+  {"time": "2026-08-31T14:00", "weather_code": 2, "cape": 1500.0, "convective_inhibition": 0.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0}
+ ]
+}

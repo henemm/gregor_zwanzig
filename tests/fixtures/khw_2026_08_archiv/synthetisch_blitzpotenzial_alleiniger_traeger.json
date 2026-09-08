@@ -1,0 +1,7 @@
+{
+ "beschreibung": "AC-5: konstruierte Stunde mit Blitzpotenzial ueber der HIGH-Sprosse (50 J/kg, DE_ALPEN), Wettercode und CAPE unterhalb ihrer eigenen Sprossen.",
+ "herkunft": "konstruiert nach Spec AC-5",
+ "stunden": [
+  {"time": "2026-08-30T16:00", "weather_code": 2, "cape": 50.0, "convective_inhibition": 0.0, "lightning_potential": 60.0, "precipitation": 0.0, "showers": 0.0}
+ ]
+}

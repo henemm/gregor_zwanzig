@@ -1,0 +1,15 @@
+{
+ "beschreibung": "AC-1: drei Tage -- Differenz 50 J/kg (< Toleranz 150), Differenz 400 J/kg (> Toleranz) und Differenz GENAU 150 J/kg (== Toleranz, inklusive Grenze -> im_toleranzband). Zahlen exakt wie in der Spec (AC-1 Testvorgabe), der Grenzfall-Tag ergaenzt den Mutations-Fund F001.",
+ "herkunft": "Spec-Vorgabe feat_2181_s2c_gewitter_archiv_ablation.md AC-1",
+ "mitschnitt_tageswerte_primaer": {
+  "2026-08-29": {"cape_max_jkg": 550.0, "thunder_level_max": "HIGH"},
+  "2026-09-02": {"cape_max_jkg": 500.0, "thunder_level_max": "MED"},
+  "2026-09-03": {"cape_max_jkg": 500.0, "thunder_level_max": "MED"}
+ },
+ "archiv_cape_tagesmaximum": {
+  "2026-08-29": 500.0,
+  "2026-09-02": 100.0,
+  "2026-09-03": 350.0
+ },
+ "toleranz_jkg": 150.0
+}
