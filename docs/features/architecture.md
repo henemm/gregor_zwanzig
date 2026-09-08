@@ -204,14 +204,13 @@ Auswertung aufruft. Specs:
 
 **Konfiguration:** Nutzer-Profile liegen in `data/users/<user_id>/user.json` mit Feldern `mail_to` und `telegram_chat_id`.
 
-### Premium-SMS-Rückkanal (Issue #1676, Scheibe S1 — kein Trip-Befehlskanal)
+### Premium-SMS-Rückkanal (Issue #1676, Scheibe S1 — Rückadresse lernen)
 
 **Komponente:** `src/services/inbound_sms_reader.py` (`InboundSmsReader.poll_and_process()`),
 getriggert vom Go-Cron-Job `premium_sms_poll` (`*/5 * * * *`) über
 `POST /api/scheduler/inbound-sms`.
 
-**Zweck:** Anders als die beiden Handler oben verarbeitet dieser Reader **keine
-Trip-Befehle** — er pollt das seven.io-Journal (`GET journal/inbound`), erkennt
+**Zweck:** Der Reader pollt das seven.io-Journal (`GET journal/inbound`), erkennt
 darin Antworten des Garmin inReach am Kennzeichen `inreachlink.com` und lernt
 daraus die aktuell gültige (von Garmin je Gespräch neu vergebene) Rückadresse
 für genau einen Premium-Nutzer. Schreibender Endpoint ist ausschließlich der
@@ -222,8 +221,21 @@ Reader nicht (Sandbox-Key liefert auf dem Lesepfad dasselbe Produktiv-Journal
 wie der Prod-Key — siehe `docs/specs/modules/egress_guard_sms.md` → Known
 Limitations), außer der Trockenlauf-Schalter `GZ_PREMIUM_SMS_POLL_DRYRUN=1`
 ist gesetzt. Details: `docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md`.
-Kein Frontend, keine Befehlsausführung. Der Versand über diese gelernte
-Rückadresse ist seit Scheibe S2a live (s. u.) — **nur fürs Trip-Briefing**.
+Der Versand über diese gelernte Rückadresse ist seit Scheibe S2a live (s. u.) —
+**nur fürs Trip-Briefing**.
+
+🔴 **Nachtrag (#2184, S4 Epic #2133, 2026-09-08):** „Kein Frontend, keine
+Befehlsausführung" galt nur bis hierhin. Seit #2184 wird der vor dem Kennzeichen
+stehende Nachrichtentext im selben Poll-Durchlauf — **nach** dem unveränderten
+Lernaufruf, in einem eigenen, nachgelagerten `try/except` — als Befehl an
+`TripCommandProcessor` gegeben; die Antwort geht per neuer
+`NotificationService.send_command_reply_premium_sms` an die soeben gelernte
+Rückadresse zurück. Premium-SMS ist damit der dritte Erzeuger von
+`InboundMessage` (neben E-Mail, Telegram) und schließt den letzten der vier
+Eingangswege aus Epic #2133 (`channel="premium_sms"`, kanalneutral bereits seit
+S3/#2126). Kein Frontend weiterhin, aber Befehlsausführung ja. Details:
+`docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md`,
+`docs/specs/modules/inbound_command_channels.md`.
 
 ### Premium-SMS als Versandkanal (Issue #1676, Scheibe S2a — nur Trip-Briefing)
 

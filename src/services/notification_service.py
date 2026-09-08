@@ -1806,6 +1806,19 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Failed to send confirmation: {e}")
 
+    def send_command_reply_premium_sms(
+        self, result: CommandResult, settings: Settings,
+    ) -> None:
+        """Sendet eine Command-Bestätigung per Premium-SMS (Issue #2184)."""
+        try:
+            PremiumSmsOutput(settings).send(
+                subject=result.confirmation_subject,
+                body=result.confirmation_body,
+            )
+            logger.info(f"Premium-SMS confirmation sent: {result.confirmation_subject}")
+        except Exception as e:
+            logger.error(f"Failed to send premium-sms confirmation: {e}")
+
     def send_command_reply_telegram(
         self,
         result: CommandResult,

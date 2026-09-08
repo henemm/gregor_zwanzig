@@ -2,9 +2,9 @@
 entity_id: feat_2126_kanaltreue_adhoc_antwort
 type: module
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-08
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [kanaltreue, adhoc-abruf, trip-command-processor, trip-report-scheduler, epic-2133]
 ---
 
@@ -268,6 +268,14 @@ erhalten dürfen.
   gebaut, dass sie für alle vier Kanalnamen korrekt auflöst, sobald sie eintreffen können.
   Premium-SMS als Eingangsweg ist Scheibe **S4** von Epic #2133 und baut ausdrücklich auf
   dieser Scheibe auf.
+
+  🔴 **Nachtrag (#2184, S4 Epic #2133, 2026-09-08): Überholt für Premium-SMS.** Seit #2184
+  verarbeitet `InboundSmsReader` den vor dem Garmin-Kennzeichen `inreachlink.com` stehenden
+  Text als Befehl und ruft `TripCommandProcessor` auf — Premium-SMS ist damit der dritte
+  Erzeuger von `InboundMessage` (`channel="premium_sms"`), diese Scheibe trägt wie oben
+  vorausgesagt. Regulär-SMS bleibt weiterhin **kein** Befehlskanal. Details:
+  `docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md`,
+  `docs/specs/modules/inbound_command_channels.md`.
 - **Unbekannter Absender (`user_id == "default"`) — durch #2168 erledigt.** Die frühere Fassung
   dieses Punkts behauptete, der Registrierungshinweis gehe auf **drei** Pfaden an das
   Default-/Betreiberprofil. Nachgemessen hielt davon nur einer stand:
@@ -307,6 +315,10 @@ erhalten dürfen.
 
 ## Changelog
 
+- 2026-09-08 (Docs-Nachtrag, kein Code geändert): Known-Limitations-Punkt „SMS und Premium-SMS
+  als Eingangsweg sind heute nicht möglich" um Nachtrag zu #2184 (Epic #2133 S4) ergänzt —
+  Premium-SMS ist seither der dritte `InboundMessage`-Erzeuger. Ursprüngliche Aussage bleibt
+  stehen (historisch korrekt zum Zeitpunkt dieser Spec), nur als überholt markiert.
 - 2026-09-06: Initial spec created
 - 2026-09-06: AC-5 auf echte Nutzerprofile statt gestubbtem `sms_allowed` umgestellt
 - 2026-09-06: PO-Freigabe erteilt (AC-4 bestätigt: antworten statt ablehnen)

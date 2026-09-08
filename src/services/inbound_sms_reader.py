@@ -43,13 +43,17 @@ import logging
 import os
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
 
 from app.config import Settings
-from app.loader import get_data_root
+from app.loader import get_data_root, load_all_trips
 from app.origin_guard import classify_origin
+from services.notification_service import NotificationService
+from services.trip_command_processor import InboundMessage, TripCommandProcessor
+from services.trip_selection import pick_active_trip
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +193,20 @@ class InboundSmsReader:
                     )
                 else:
                     learned += 1
+                    # Issue #2184: der Text VOR dem Kennzeichen ist ein Befehl.
+                    # Eigenes, NACHGELAGERTES try/except: der Dedup-Zeiger steht
+                    # oben bereits fest, und ein Verarbeitungsfehler ist kein
+                    # voruebergehender Lernfehler (F001) -- er darf `failed`
+                    # nicht erhoehen, sonst kippt der Go-Scheduler-Status von
+                    # "ok" auf "partial" (AC-6).
+                    try:
+                        self._verarbeite_befehl(settings, text, sender, response)
+                    except Exception as e:
+                        logger.warning(
+                            "Premium-SMS-Kommandoverarbeitung fehlgeschlagen "
+                            "fuer maskierte Nummer %s: %s -- Lernvorgang bleibt "
+                            "erfolgreich (AC-6).", _mask(sender), e,
+                        )
             elif 400 <= response.status_code < 500:
                 # Bewusste Ablehnung (z.B. 409 Mehrdeutigkeit, AC-5) --
                 # abschliessende Entscheidung, kein Wiederholungsgrund.
@@ -210,6 +228,51 @@ class InboundSmsReader:
 
         self._save_last_seen_id(data_root, max_seen)
         return learned, failed
+
+    def _verarbeite_befehl(
+        self, settings: Settings, text: str, sender: str, response,
+    ) -> None:
+        """Issue #2184 (Epic #2133 S4): den Befehlstext einer Garmin-Nachricht
+        verarbeiten und die Antwort per Premium-SMS zurueckschicken.
+
+        Der Nutzer kommt aus der Erfolgsantwort des Lern-Endpunkts. Fehlt der
+        Schluessel oder ist er leer, wird NICHT verarbeitet und schon gar nicht
+        auf den Mandanten "default" zurueckgefallen (AC-9,
+        Cross-User-Datenleck-Verbot) -- der 200er-Vertrag des Go-Endpunkts wird
+        nicht stillschweigend vorausgesetzt.
+        """
+        user_id = (response.json() or {}).get("user_id") or ""
+        if not user_id:
+            logger.warning(
+                "premium-sms-learn antwortete mit HTTP 200 ohne verwertbare "
+                "user_id fuer maskierte Nummer %s -- keine "
+                "Kommandoverarbeitung (AC-9).", _mask(sender),
+            )
+            return
+
+        # Der Nutzertext steht VOR dem Kennzeichen, danach folgen der von
+        # Garmin erzeugte Link und die Koordinaten (Beleg #1676 S1).
+        befehl = text.split(GARMIN_MARKER, 1)[0].strip()
+        now_utc = datetime.now(timezone.utc)
+        # Satelliten-Text traegt keinen Trip-Namen (jedes Zeichen kostet) --
+        # dieselbe geteilte Auswahlregel wie im Telegram-Reader.
+        trip = pick_active_trip(load_all_trips(user_id), now_utc)
+        result = TripCommandProcessor().process(InboundMessage(
+            trip_name=trip.name if trip else "",
+            body=befehl,
+            sender=sender,
+            channel="premium_sms",
+            received_at=now_utc,
+            user_id=user_id,
+        ))
+        # `heute`/`morgen` haben das Briefing selbst schon per Premium-SMS
+        # verschickt -- eine zweite, kostenpflichtige Satelliten-SMS daneben
+        # waere die Bestaetigung des Briefings (AC-10).
+        if not result.suppress_email_reply:
+            user_settings = settings.with_user_profile(user_id)
+            NotificationService(
+                user_settings, user_id=user_id,
+            ).send_command_reply_premium_sms(result, user_settings)
 
     def _fetch_journal(self, api_key: str) -> list[dict] | None:
         """GET journal/inbound. None bei Fehler (fail-soft, Schritt 5)."""
