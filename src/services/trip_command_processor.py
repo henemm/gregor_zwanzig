@@ -799,11 +799,12 @@ class TripCommandProcessor:
 
         from services.weather_extractor import WeatherExtractor
         extractor = WeatherExtractor(user_id=user_id)
-        timeline = extractor.timeline(trip.id)
+        # Issue #2186: der Tageswert fuer "heute" gilt AB dem Anfragezeitpunkt.
+        timeline = extractor.timeline(trip.id, from_time=received_at)
 
         if not timeline.available:
             _fetch_and_save_snapshot(trip=trip, user_id=user_id, today=today, tomorrow=tomorrow)
-            timeline = extractor.timeline(trip.id)
+            timeline = extractor.timeline(trip.id, from_time=received_at)
 
         # Fix #1818: der undatierte Anker traegt strukturell nur EINEN Tag —
         # der jeweils fehlende wird, falls vorhanden, aus dem datierten
@@ -811,6 +812,7 @@ class TripCommandProcessor:
         timeline = self._mit_datiertem_rueckfall(
             timeline, trip.id, user_id,
             ((today, tz_heute), (tomorrow, tz_morgen)),
+            from_time=received_at,
         )
 
         if query_key == "glance":
@@ -1225,7 +1227,9 @@ class TripCommandProcessor:
         return "\n".join(lines)
 
     def _mit_datiertem_rueckfall(self, timeline: "TimelineResult", trip_id: str,
-                                 user_id: str, tage) -> "TimelineResult":
+                                 user_id: str, tage, *,
+                                 from_time: Optional[datetime] = None,
+                                 ) -> "TimelineResult":
         """Gestufte Quellenaufloesung JE angefragtem Tag (Issue #1818).
 
         Der undatierte Anker ``{trip_id}.json`` traegt strukturell nur EINEN
@@ -1243,7 +1247,10 @@ class TripCommandProcessor:
         wie in ``_aggregate_day``/``_fmt_timeline`` (Ortstag, #1795), damit
         ein Rueckfall-Wegpunkt nicht in einen fremden Tag rutscht.
 
-        ``tage`` ist eine Folge von ``(target_date, tz)``-Paaren.
+        ``tage`` ist eine Folge von ``(target_date, tz)``-Paaren. ``from_time``
+        geht unveraendert an ``timeline_dated()`` weiter (Issue #2186) — der
+        Rueckfall beantwortet dieselbe Frage wie der Anker und muss deshalb
+        dasselbe Fenster sehen.
         """
         if not timeline.available:
             return timeline
@@ -1263,7 +1270,7 @@ class TripCommandProcessor:
             # ehrliche Datenluecken-Meldung, weil die Punktliste der
             # Formatierer dann nicht leer ist.
             verworfen.update(tages_idx)
-            datiert = extractor.timeline_dated(trip_id, target_date)
+            datiert = extractor.timeline_dated(trip_id, target_date, from_time)
             ergaenzt.extend(
                 p for p in datiert.points
                 if local_dt(p.arrival_time, tz).date() == target_date
