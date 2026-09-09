@@ -168,6 +168,11 @@ def _settings() -> Settings:
     return Settings(
         telegram_bot_token="test-bot-token",
         telegram_chat_id="99999",
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout schaltet
+        # TelegramOutput auf die Test-Chat-ID um bzw. bricht ohne sie ab.
+        # Explizit auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196).
+        telegram_test_chat_id="99999",
     )
 
 

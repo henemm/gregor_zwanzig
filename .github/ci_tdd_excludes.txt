@@ -59,6 +59,22 @@
 # - test_compare_official_alert · test_issue_649_compare_daily_dedup
 # - test_issue_764_compare_forecast_hours_consume · test_issue_883_acute_danger_override
 #
+# Klasse C Teil 2 (2026-09-09, #1196): die 4 test_telegram_kurzstil_*-Dateien
+# scheiterten auf dem Runner NICHT am Netz (Telegram/seven.io laufen dort
+# schon gegen lokale HTTP-Stubs), sondern an der Herkunftssperre #1476:
+# aus einem Nicht-Prod-Checkout verlangt TelegramOutput GZ_TELEGRAM_TEST_
+# CHAT_ID und der seven.io-Kanal GZ_SEVEN_SANDBOX_KEY -- beides kam lokal
+# still aus der Host-.env (pydantic-settings fuellt ungesetzte Felder aus
+# der Umgebung). Saniert: telegram_test_chat_id = Stub-Chat-ID und
+# seven_sandbox_key = Stub-Key explizit in den Settings-Helfern der Tests;
+# compare_official_alert zusaetzlich Dummy-SMTP fuer can_send_email() (der
+# AC-6-Test beobachtet den Mail-Pfad ueber mail_sink). Kein Test dialt echt
+# Telegram -> kein live-Marker noetig. Nachgemessen ohne .env mit den
+# CI-Flags (--disable-socket, --allow-hosts=localhost): 18/18 gruen,
+# --collect-only vorher/nachher je 18 (5+2+9+2).
+# - test_telegram_kurzstil_compare_official_alert · test_telegram_kurzstil_parse_mode
+# - test_telegram_kurzstil_trip_alert · test_telegram_kurzstil_trip_briefing
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -85,7 +101,3 @@ tests/tdd/test_issue_833_gate.py
 tests/tdd/test_issue_995_scheduler_pause.py
 tests/tdd/test_staging_gate.py
 tests/tdd/test_telegram_html_escaping.py
-tests/tdd/test_telegram_kurzstil_compare_official_alert.py
-tests/tdd/test_telegram_kurzstil_parse_mode.py
-tests/tdd/test_telegram_kurzstil_trip_alert.py
-tests/tdd/test_telegram_kurzstil_trip_briefing.py

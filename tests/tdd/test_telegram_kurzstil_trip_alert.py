@@ -221,8 +221,17 @@ def _settings(*, sms_port: int) -> Settings:
     return Settings(
         telegram_bot_token="test-bot-token",
         telegram_chat_id="99999",
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout schaltet
+        # TelegramOutput auf die Test-Chat-ID um bzw. bricht ohne sie ab.
+        # Explizit auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196).
+        telegram_test_chat_id="99999",
         sms_gateway_url=f"http://127.0.0.1:{sms_port}/api/sms",
         seven_api_key="test-stub-key",
+        # Issue #1476: seven.io-Kanaele verlangen aus einem Testlauf den
+        # Sandbox-Key; identisch zum Stub-Key, damit kein GZ_SEVEN_SANDBOX_KEY
+        # aus einer Host-.env noetig ist (#1196).
+        seven_sandbox_key="test-stub-key",
         sms_to="+49000000000",
         sms_from=None,
     )
