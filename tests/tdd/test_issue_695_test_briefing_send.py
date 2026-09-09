@@ -118,6 +118,12 @@ class TestGoProxyRoute:
             client.cookies.set("gz_session", m.group(1))
         return client
 
+    # #1196 Klasse C Teil 4: braucht einen echten Go-Server auf localhost:8090
+    # (`_login()` wirft ohne laufenden Server eine ungefangene httpx.ConnectError,
+    # kein Skip) -- auf dem CI-Runner strukturell nicht gegeben, kein Settings-
+    # Fix moeglich. Nachbar-Test derselben Klasse existiert nicht; Datei bleibt
+    # sonst deterministisch.
+    @pytest.mark.live
     def test_go_proxy_returns_404_for_unknown_trip(self):
         """
         GIVEN: Go-API läuft auf localhost:8090, Python-Staging auf Port 8001

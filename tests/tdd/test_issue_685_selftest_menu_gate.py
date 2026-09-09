@@ -35,6 +35,13 @@ from pathlib import Path
 
 HOOKS_DIR = Path(".claude/hooks").resolve()
 PS_PATH = (HOOKS_DIR / "prod_selftest.py").resolve()
+# #1196 Klasse C Teil 4: prod_selftest.py hat `REPO_DIR` hart auf den
+# Produktiv-Server-Pfad `/home/hem/gregor_zwanzig` codiert -- auf dem
+# CI-Runner (und in jedem Worktree) existiert der nicht, `_load_bot_commands()`
+# fand die Quelldatei nie und lieferte still None. Der Test loest seinen
+# Pruefling relativ zur eigenen Testdatei auf (Projektregel), nicht ueber den
+# festen Hauptrepo-Pfad -- REPO_DIR wird unten je Aufruf ueberschrieben.
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 EXPECTED_COMMANDS = [
     "glance", "heute", "morgen", "now", "heute_gewitter",
@@ -49,6 +56,9 @@ def _load_prod_selftest():
     spec = importlib.util.spec_from_file_location("prod_selftest_685", str(PS_PATH))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    # #1196 Klasse C Teil 4: REPO_DIR ueberschreiben (s. Kommentar oben) --
+    # dieselbe Testdatei-relative Aufloesung, egal ob Haupt-Checkout oder Worktree.
+    mod.REPO_DIR = REPO_ROOT
     return mod
 
 
@@ -119,6 +129,11 @@ def test_ac1_load_bot_commands_without_pydantic(tmp_path):
         f"spec = importlib.util.spec_from_file_location('ps685', {str(PS_PATH)!r})\n"
         "mod = importlib.util.module_from_spec(spec)\n"
         "spec.loader.exec_module(mod)\n"
+        # #1196 Klasse C Teil 4: REPO_DIR ueberschreiben statt des hart auf
+        # /home/hem/gregor_zwanzig codierten Produktiv-Server-Pfads (s. Kommentar
+        # oben) -- die Quelldatei src/output/channels/telegram.py wird sonst
+        # nie gefunden, ausserhalb des exakten Server-Checkouts.
+        f"mod.REPO_DIR = __import__('pathlib').Path({str(REPO_ROOT)!r})\n"
         "res = mod._load_bot_commands()\n"
         "print(json.dumps([c['command'] for c in res] if res else None))\n"
     )

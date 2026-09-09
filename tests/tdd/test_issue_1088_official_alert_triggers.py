@@ -419,6 +419,7 @@ class TestAC5Bundling:
         """
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         user_id = _fresh_user("ac5")
         _clean_user(user_id)
@@ -442,8 +443,13 @@ class TestAC5Bundling:
             register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
 
             mail_calls: list = []
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung, und
+            # can_send_email() ist nur mit Host-.env True -- auf dem CI-Runner
+            # lief der Versand in "kein Alert-Kanal konfiguriert". Dummy-SMTP
+            # (settings_email_only) + mail_sink (DI-Naht) ersetzen den Versand.
             svc = TripAlertService(
-                user_id=user_id,
+                user_id=user_id, settings=settings_email_only(),
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
             )
 
@@ -540,6 +546,7 @@ class TestF001OfficialTriggerViaCheckAllTrips:
         from app.loader import save_trip
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         user_id = _fresh_user("f001")
         _clean_user(user_id)
@@ -578,8 +585,13 @@ class TestF001OfficialTriggerViaCheckAllTrips:
             register_official_alert_source(counting_source)
 
             mail_calls: list = []
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung, und
+            # can_send_email() ist nur mit Host-.env True -- auf dem CI-Runner
+            # lief der Versand in "kein Alert-Kanal konfiguriert". Dummy-SMTP
+            # (settings_email_only) + mail_sink (DI-Naht) ersetzen den Versand.
             svc = TripAlertService(
-                user_id=user_id,
+                user_id=user_id, settings=settings_email_only(),
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
             )
 
@@ -763,7 +775,10 @@ class TestS4bEventIdentityWiring:
                 label="AC-1-Warnung",
             )
             register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
-            svc = TripAlertService(user_id=uid, mail_sink=lambda s, b: None)
+            # #1196 Klasse C Teil 4: Dummy-SMTP wie im Nowcast-Pfad oben --
+            # ohne settings= baut TripAlertService Settings() aus der Umgebung
+            # (can_send_email() nur mit Host-.env True).
+            svc = TripAlertService(user_id=uid, settings=settings_email_only(), mail_sink=lambda s, b: None)
             notices = svc.check_official_alert_triggers(trip_amtlich)
             assert len(notices) == 1, "Voraussetzung: die amtliche Warnung muss neu sein"
 
@@ -842,6 +857,7 @@ class TestS4bEventIdentityWiring:
         from services.alert_gate import check_event_identity_gate as _real_identity
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         order: list[str] = []
         _order_spy(
@@ -876,7 +892,11 @@ class TestS4bEventIdentityWiring:
             def _mail_sink(subject, body):
                 order.append("mail_sink")
 
-            svc = _RecordingTripAlertService(user_id=uid, mail_sink=_mail_sink)
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung.
+            svc = _RecordingTripAlertService(
+                user_id=uid, settings=settings_email_only(), mail_sink=_mail_sink,
+            )
             notices = svc.check_official_alert_triggers(trip)
             assert len(notices) == 1, "Voraussetzung: die amtliche Warnung muss neu sein"
 
@@ -912,6 +932,7 @@ class TestS4bEventIdentityWiring:
         from services.alert_gate import record_event_identity
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         calls: list = []
         original = threshold_mod.split_by_threshold
@@ -942,7 +963,9 @@ class TestS4bEventIdentityWiring:
             )
             register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
 
-            svc = TripAlertService(user_id=uid, mail_sink=lambda s, b: None)
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung.
+            svc = TripAlertService(user_id=uid, settings=settings_email_only(), mail_sink=lambda s, b: None)
             notices = svc.check_official_alert_triggers(trip)
             assert len(notices) == 1, "Voraussetzung: die Warnung muss als NEU erkannt werden"
 
@@ -999,6 +1022,7 @@ class TestS4bEventIdentityWiring:
         from services.alert_log import REASON_EVENT_DUPLICATE, REASON_OFFICIAL_ALERT
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         uid = _fresh_user("s4b-ac17")
         _clean_user(uid)
@@ -1027,8 +1051,10 @@ class TestS4bEventIdentityWiring:
             register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, eigenstaendig))
 
             mail_calls: list = []
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung.
             svc = TripAlertService(
-                user_id=uid,
+                user_id=uid, settings=settings_email_only(),
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
             )
             notices = svc.check_official_alert_triggers(trip)

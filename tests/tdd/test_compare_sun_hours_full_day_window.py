@@ -236,7 +236,13 @@ class TestSunHoursThroughDispatch:
             "empfaenger": ["gregor-test@henemm.com"],
             "created_at": "2026-01-01T00:00:00Z",
         }
-        settings = Settings().with_user_profile(user_id)
+        # #1196 Klasse C Teil 4 (Vorbild test_issue_764::_capture_forecast_hours):
+        # Empfaenger explizit statt aus der Host-.env erben -- send_one_compare_
+        # preset prueft settings.mail_to VOR dem Engine-Aufruf (#1452) und brach
+        # auf dem CI-Runner mit "kein Empfaenger" ab, bevor das beobachtete
+        # ComparisonResult ueberhaupt erreicht wurde. Die Adresse wird nie
+        # angeschrieben: die Recording-Engine bricht vor SMTP ab.
+        settings = Settings(mail_to="empfaenger@example.com")
 
         original_fetch = ce_mod.fetch_forecast_for_location
         original_engine = ce_mod.ComparisonEngine

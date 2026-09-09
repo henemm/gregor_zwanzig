@@ -110,7 +110,15 @@ def fake_bot(monkeypatch):
         server.server_close()
 
 
-_LOCAL_SETTINGS = Settings(telegram_bot_token="test-token-650", telegram_chat_id="12345")
+_LOCAL_SETTINGS = Settings(
+    telegram_bot_token="test-token-650",
+    telegram_chat_id="12345",
+    # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout verlangt
+    # TelegramOutput die Test-Chat-ID, sonst bricht der Versand ab. Explizit
+    # auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+    # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196 Klasse C).
+    telegram_test_chat_id="12345",
+)
 
 _INLINE_KEYBOARD = {
     "inline_keyboard": [[{"text": "🌤️ Briefing", "callback_data": "briefing"}]]
