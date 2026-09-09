@@ -112,3 +112,4 @@ data/debug/
 # Migration befüllt, service-verwaltet): beides durch die Regel `data/users/*`
 # weiter oben abgedeckt (#1602). Die frühere Einzelaufzählung war der Grund,
 # warum echte Nutzerdaten durch das Raster fielen.
+.claude/settings.local.json
