@@ -212,6 +212,14 @@ class Settings(BaseSettings):
         default=None,
         description="Zeitpunkt, zu dem die Rueckadresse gelernt wurde (30-Tage-Frist)",
     )
+    email_verified_at: Optional[str] = Field(
+        default=None,
+        description="RFC3339 Verifizierungszeitpunkt der mail_to-Adresse (#2143) -- NUR aus user.json, analog premium_sms_reply_to: extra='ignore' (Zeile ~117) wuerde das Feld sonst beim Laden des Nutzerprofils stillschweigend verwerfen.",
+    )
+    mail_server_hostname: Optional[str] = Field(
+        default="mail.henemm.com",
+        description="Eigener Mailserver-Hostname fuer den authserv-id-Abgleich bei der SPF/DKIM-Pruefung eingehender Mails (#2143, env: GZ_MAIL_SERVER_HOSTNAME)",
+    )
 
     # Telegram settings (for telegram channel via Bot API)
     telegram_bot_token: str = Field(default="", description="Telegram Bot API token from @BotFather")
@@ -399,6 +407,7 @@ class Settings(BaseSettings):
         overrides = {
             "mail_to": profile.get("mail_to") or None,
             "sms_to": profile.get("sms_to") or None,
+            "email_verified_at": profile.get("email_verified_at") or None,
         }
         if not force_test:
             overrides["telegram_chat_id"] = profile.get("telegram_chat_id") or None

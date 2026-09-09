@@ -1232,24 +1232,55 @@ def list_all_user_ids(data_dir: str | None = None) -> list[str]:
 def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
     """Find user_id whose mail_to matches the given email address (case-insensitive).
 
+    Eindeutigkeit ist Pflicht (Issue #2143, analog #2141): tragen ZWEI echte
+    Nutzer dieselbe mail_to-Adresse (Bestandsdaten/Fehlkonfiguration), gibt es
+    keine zulaessige Zuordnung -- die Funktion liefert None und protokolliert
+    die Kollision, statt den ersten Treffer zu nehmen (Adress-Uebernahme).
+
+    Mehrdeutigkeit gilt nur unter ECHTEN Nutzern: der Vorrang des echten
+    Kontos vor Test-Nutzern (Issue #1013) bleibt erhalten.
+
     Args:
         email: Sender email address to match against user profiles
         data_dir: Root data directory (default: get_data_root())
 
     Returns:
-        Matching user_id or None if no match found
+        Matching user_id or None if no match found or the match is ambiguous
     """
+    from app.config import is_test_user_id
+
     if data_dir is None:
         data_dir = str(get_data_root())
+
+    real_matches: list[str] = []
+    test_matches: list[str] = []
     for uid in list_all_user_ids(data_dir):
         profile_path = Path(data_dir) / "users" / uid / "user.json"
-        if profile_path.exists():
-            try:
-                profile = json.loads(profile_path.read_text(encoding="utf-8"))
-                if profile.get("mail_to", "").lower() == email.lower():
-                    return uid
-            except Exception:
-                continue
+        if not profile_path.exists():
+            continue
+        try:
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if profile.get("mail_to", "").lower() != email.lower():
+            continue
+        if is_test_user_id(uid, data_dir=data_dir):
+            test_matches.append(uid)
+        else:
+            real_matches.append(uid)
+
+    if len(real_matches) > 1:
+        logger.error(
+            "Email-Adresse %s ist mehrdeutig — keine Zuordnung. "
+            "Kollidierende Nutzer: %s (Issue #2143)",
+            email,
+            ", ".join(real_matches),
+        )
+        return None
+    if real_matches:
+        return real_matches[0]
+    if test_matches:
+        return test_matches[0]
     return None
 
 

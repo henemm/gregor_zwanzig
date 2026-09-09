@@ -25,6 +25,7 @@ Aufzeichner an der ``EmailOutput``-Konstruktor-Naht (Muster
 from __future__ import annotations
 
 import email.message
+import json
 import sys
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -35,10 +36,15 @@ for _p in (str(ROOT), str(ROOT / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from app import loader  # noqa: E402
 from app.config import Settings  # noqa: E402
 from app.loader import load_all_trips, save_trip  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from services.inbound_email_reader import InboundEmailReader  # noqa: E402
+from tests.fixtures.authentication_results_fixtures import (  # noqa: E402
+    AR_PASS,
+    TEST_AUTHSERV_ID,
+)
 
 #: Exakter Standort aus ``providers/fixture.py::_FIXTURE_LOCATIONS`` — nur
 #: als Timezone-Anker fuer ``trip_local_today`` gebraucht, kein Wetterabruf
@@ -56,6 +62,7 @@ def _basis_settings() -> Settings:
         smtp_host="smtp.invalid",
         smtp_user="unbrauchbar",
         smtp_pass="unbrauchbar",
+        mail_server_hostname=TEST_AUTHSERV_ID,
     )
 
 
@@ -95,11 +102,15 @@ class _FakeImap:
         self.store_aufrufe.append((uid, flags, val))
 
 
-def _raw_mail(*, from_addr: str, subject: str, body: str) -> bytes:
+def _raw_mail(
+    *, from_addr: str, subject: str, body: str, auth_header: str | None = None,
+) -> bytes:
     msg = email.message.EmailMessage()
     msg["From"] = from_addr
     msg["To"] = BASIS_MAIL_TO
     msg["Subject"] = subject
+    if auth_header is not None:
+        msg["Authentication-Results"] = auth_header
     msg.set_content(body)
     return msg.as_bytes()
 
@@ -177,30 +188,49 @@ def test_ac2_unbekannter_absender_erhaelt_ueberhaupt_keine_antwort(monkeypatch):
 
 
 def test_ac3_bekannter_absender_mit_existierendem_trip_erhaelt_sehr_wohl_eine_antwort(
-    monkeypatch,
+    tmp_path, monkeypatch,
 ):
     """AC-3 (Positivkontrolle zu AC-2, MUSS GRUEN SEIN).
 
-    GIVEN DERSELBE Testanordnung wie AC-2, aber mit einem bekannten Absender
-          (== Basis-``mail_to``) und einem existierenden Trip im Betreff.
+    GIVEN DERSELBE Testanordnung wie AC-2, aber mit einem bekannten,
+          per Nutzerprofil verifizierten Absender (== Basis-``mail_to``) und
+          einem existierenden Trip im Betreff.
     WHEN  ``_process_single`` diese Nachricht verarbeitet.
     THEN  wird SEHR WOHL eine Antwort versendet.
 
     Ohne diese Kontrolle waere das leere Ergebnis in AC-2 genauso gut durch
     einen kaputten Testaufbau erklaerbar wie durch korrektes Blocken.
+
+    #2143: der bekannte Absender braucht seit dem SPF/DKIM+Verifizierungs-
+    Fix ein echtes Nutzerprofil (mail_to + email_verified_at) UND einen
+    gueltigen Authentication-Results-Header -- der frueher genuegende
+    "default"-Fallback (kein Profil-Match) wird jetzt ueber das neue
+    ``user_id == "default"``-Gate (ADR-0003) abgelehnt.
     """
+    monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
+    user_id = "bekannt"
+    user_dir = tmp_path / "users" / user_id
+    user_dir.mkdir(parents=True, exist_ok=True)
+    (user_dir / "user.json").write_text(
+        json.dumps({
+            "id": user_id,
+            "mail_to": BASIS_MAIL_TO,
+            "email_verified_at": "2026-01-01T00:00:00Z",
+        }),
+        encoding="utf-8",
+    )
+
     aufzeichnungen = _email_aufzeichner_installieren(monkeypatch)
     settings = _basis_settings()
     reader = InboundEmailReader()
 
-    # Der bekannte Absender ist HIER "default" (kein Profil-Match noetig) --
-    # `_authorize` laesst ihn durch, weil er == settings.mail_to ist.
-    trip = _trip_anlegen("default", name="AC3 Bekannter Absender Trip")
+    trip = _trip_anlegen(user_id, name="AC3 Bekannter Absender Trip")
 
     raw = _raw_mail(
         from_addr=BASIS_MAIL_TO,
         subject=f"[{trip.name}] Status",
         body="status",
+        auth_header=AR_PASS,
     )
     imap = _FakeImap(raw)
 

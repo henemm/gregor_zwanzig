@@ -26,6 +26,24 @@ AC-2/AC-4 sind Regressions-Sicherungsnetze (Erfolgspfad bzw. registrierter
 Nutzer) und sind im aktuellen Stand bereits grün — sie sichern ab, dass der Fix
 den Normalfall nicht bricht.
 
+Issue #2143 (SECURITY-FIX, Adversary-Finding F003): `_deliver_mail()` liefert
+per AUTHENTIFIZIERTER SMTP-Submission (Port 587, STARTTLS, Login) aus. Empirisch
+verifiziert (Analyse-Phase #2143): dieser Pfad durchlaeuft NICHT die anonyme
+Port-25-Inbound-Pipeline, auf der Stalwart den `Authentication-Results`-Header
+prependt -- eine so zugestellte Mail traegt GAR KEINEN solchen Header und faellt
+strukturell immer durch `_spf_dkim_pass`. `test_ac1_exception_marks_mail_seen_no_reprocess`
+und `test_ac2_success_path_processes_and_marks_seen` pruefen deshalb NICHT mehr
+den Erfolgspfad (der ist mit authentifizierter Submission durch #2143 strukturell
+unerreichbar), sondern dass eine ueber diesen Kanal zugestellte Mail trotz
+gueltigem `mail_to`/`email_verified_at` fail-closed abgelehnt wird (0 verarbeitet)
+UND trotzdem `\\Seen` markiert wird (kein Endlos-Reprocessing, #1009 bleibt
+abgesichert). Ausserdem tragen die Testdaten jetzt `real_data_root` als Marker
+(siehe `pytestmark` unten) -- `_make_user()` schreibt ueber den festen Pfad
+`_DATA_USERS` direkt in den echten `data/users`-Baum, der neue
+`lookup_user_by_email`-Aufruf in `_resolve_settings_for_sender` geht aber ueber
+`get_data_root()`, das die autouse-Fixture `_isolate_data_root`
+(`tests/conftest.py:199-231`) sonst auf ein isoliertes Tempverzeichnis umbiegt.
+
 Mock-frei (CLAUDE.md): echter SMTP-Versand ins Stalwart-Test-Postfach
 gregor-test@henemm.com, echter IMAP-Roundtrip, echte Telegram-Bot-API. Die
 Fehlerinjektion für AC-1 erfolgt über eine ECHTE `TripCommandProcessor`-
@@ -67,7 +85,11 @@ import services.inbound_email_reader as _reader_mod
 
 # Issue #1210 B1: der bekannte 39-%-Hänger -> addopts-wirksamer Marker statt
 # nur Credential-Skip (primaere Ausschlussmechanik, nicht Defense-in-Depth).
-pytestmark = pytest.mark.email
+# real_data_root (#2143 F003): _make_user() schreibt ueber den festen Pfad
+# _DATA_USERS direkt in den echten data/users-Baum -- ohne diesen Marker biegt
+# die autouse-Fixture _isolate_data_root get_data_root() auf ein isoliertes
+# Tempverzeichnis um, das lookup_user_by_email() dann nicht sieht.
+pytestmark = [pytest.mark.email, pytest.mark.real_data_root]
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 # Hauptrepo-Pfad bewusst fest (#1409, Klasse B): geprueft werden soll die PRODUKTIVE
@@ -118,6 +140,7 @@ def _make_user(user_id: str, mail_to: str) -> None:
         "id": user_id,
         "created_at": "2026-07-07T00:00:00Z",
         "mail_to": mail_to,
+        "email_verified_at": "2026-07-07T00:00:00Z",
     }))
 
 
@@ -179,6 +202,27 @@ def _deliver_mail(header_from: str, subject: str, body: str) -> None:
         server.sendmail(envelope_from, [_TEST_MAILBOX], msg.as_string())
 
 
+def _deliver_mail_anonymous(
+    envelope_from: str, header_from: str, subject: str, body: str,
+) -> None:
+    """Liefert eine Mail ueber die ECHTE anonyme Inbound-Pipeline ein (Port 25).
+
+    Kein STARTTLS, kein Login -- exakt der Weg, den eine fremde Mail von aussen
+    nimmt. Nur auf diesem Weg prependt Stalwart einen ECHTEN
+    ``Authentication-Results``-Header (die authentifizierte Submission auf
+    Port 587 in ``_deliver_mail`` traegt strukturell nie einen, #2143 F003).
+    Empfaenger ist IMMER das eigene Test-Postfach -- niemals eine fremde
+    Domain (das waere ein Relay-Versuch gegen fremde Infrastruktur).
+    """
+    msg = MIMEText(body, "plain", "utf-8")
+    msg["From"] = header_from
+    msg["To"] = _TEST_MAILBOX
+    msg["Subject"] = subject
+    with smtplib.SMTP("mail.henemm.com", 25, timeout=15) as server:
+        server.ehlo()
+        server.sendmail(envelope_from, [_TEST_MAILBOX], msg.as_string())
+
+
 def _subject(msg) -> str:
     raw = decode_header(msg.get("Subject", ""))[0][0]
     return raw.decode(errors="replace") if isinstance(raw, bytes) else str(raw)
@@ -213,6 +257,26 @@ def _flags_for_uid(uid: bytes) -> str:
     try:
         _, data = m.uid("fetch", uid, "(FLAGS)")
         return data[0].decode() if data and data[0] else ""
+    finally:
+        m.logout()
+
+
+def _peek_msg(uid: bytes):
+    """Holt die Rohnachricht OHNE das \\Seen-Flag zu setzen (BODY.PEEK)."""
+    m = _imap()
+    try:
+        _, data = m.uid("fetch", uid, "(BODY.PEEK[])")
+        return email.message_from_bytes(data[0][1]) if data and data[0] else None
+    finally:
+        m.logout()
+
+
+def _unseen_uids() -> list[bytes]:
+    """UNSEEN-Bestand des geteilten Test-Postfachs (Kontaminations-Protokoll)."""
+    m = _imap()
+    try:
+        _, data = m.uid("search", None, "UNSEEN")
+        return data[0].split() if data and data[0] else []
     finally:
         m.logout()
 
@@ -264,23 +328,30 @@ class _FailingProcessor(TripCommandProcessor):
     ohne die echte IMAP/SMTP-Kommunikation zu ersetzen.
     """
 
+    calls: list = []
+
     def process(self, inbound):  # noqa: D401 — bewusst überschrieben
+        _FailingProcessor.calls.append(inbound)
         raise RuntimeError("simulierter Verarbeitungsfehler (#1009 RED)")
 
 
 # ===========================================================================
-# AC-1 (#1009) — defensiver Backstop (grün): Mail trotz Exception \Seen
+# AC-1 (#1009) — defensiver Backstop (grün): unautorisierte Mail bleibt \Seen
 # ===========================================================================
 
 @_email_gate
-def test_ac1_exception_marks_mail_seen_no_reprocess():
-    """AC-1 (Backstop, grün): trotz Exception in process() ist die Mail \\Seen.
-
-    Gegen das reale Stalwart-IMAP KEIN RED — `imap.fetch(RFC822)` setzt \\Seen
-    implizit vor der Exception, daher ist die Mail auch ohne den finally-Fix
-    bereits gelesen und wird nicht erneut verarbeitet. Der Test sichert die vom
-    Fix garantierte Nachbedingung ab (Anti-Regression gegen eine künftige
-    Umstellung auf BODY.PEEK, die die Schleife scharf machen würde).
+def test_ac1_unauthorized_mail_is_rejected_and_marked_seen_no_reprocess():
+    """AC-1 (Backstop, grün, #2143 F003 umgestellt): eine ueber authentifizierte
+    SMTP-Submission zugestellte Mail traegt STRUKTURELL keinen
+    ``Authentication-Results``-Header (empirisch verifiziert, #2143) und wird
+    deshalb fail-closed von ``_spf_dkim_pass`` abgelehnt, BEVOR
+    ``TripCommandProcessor.process()`` je aufgerufen wird -- die urspruengliche
+    Exception-Backstop-Frage (Seen trotz Exception in process()) ist ueber
+    diesen Liefer-Kanal seit #2143 nicht mehr erreichbar. Der Test sichert
+    stattdessen ab, dass (a) der Processor NICHT aufgerufen wird und (b) die
+    Mail trotzdem \\Seen markiert wird (kein Endlos-Reprocessing) -- die vom
+    #1009-Fix garantierte finally-Nachbedingung gilt auch fuer den
+    Autorisierungs-Ablehnungspfad.
     """
     user_id = "tdd-1009-usera"
     cmd_addr = "tdd-1009-cmd@henemm.com"
@@ -297,19 +368,28 @@ def test_ac1_exception_marks_mail_seen_no_reprocess():
 
     orig = _reader_mod.TripCommandProcessor
     _reader_mod.TripCommandProcessor = _FailingProcessor
+    _FailingProcessor.calls = []
     try:
-        InboundEmailReader().poll_and_process(settings)
+        processed = InboundEmailReader().poll_and_process(settings)
     finally:
         _reader_mod.TripCommandProcessor = orig
 
     try:
+        assert processed == 0, (
+            f"#2143 F003: Mail ohne Authentication-Results-Header wurde "
+            f"verarbeitet (processed={processed}) statt fail-closed abgelehnt"
+        )
+        assert not _FailingProcessor.calls, (
+            "#2143 F003: TripCommandProcessor wurde trotz fehlendem "
+            "SPF/DKIM-Nachweis aufgerufen"
+        )
         uids_after = _find_uids_by_token(token, timeout_s=20)
         assert uids_after, "Mail nach Poll nicht mehr auffindbar"
         flags = _flags_for_uid(uids_after[0])
         assert "\\Seen" in flags, (
-            f"#1009: Mail blieb UNSEEN nach Exception in process() "
-            f"(FLAGS={flags!r}) — kein try/except/finally in _process_single "
-            f"→ Endlos-Reprocessing"
+            f"#1009: Mail blieb UNSEEN nach Ablehnung (FLAGS={flags!r}) — "
+            f"kein try/except/finally-\\Seen im Ablehnungspfad → "
+            f"Endlos-Reprocessing"
         )
     finally:
         _delete_uids(_find_uids_by_token(token, timeout_s=20))
@@ -317,15 +397,24 @@ def test_ac1_exception_marks_mail_seen_no_reprocess():
 
 
 # ===========================================================================
-# AC-2 (#1009) — Regressionsnetz: Erfolgspfad markiert Mail \Seen, gibt 1
+# AC-2 (#1009) — Regressionsnetz: unautorisierte Mail ohne SPF/DKIM-Header
+# wird fail-closed abgelehnt UND \Seen markiert (#2143 F003 umgestellt)
 # ===========================================================================
 
 @_email_gate
-def test_ac2_success_path_processes_and_marks_seen():
-    """AC-2 (Regression, evtl. bereits grün): erfolgreicher status-Befehl.
-
-    Erwartung: poll_and_process gibt >=1 zurück, Mail wird \\Seen. Sichert ab,
-    dass der #1009-Fix den Normalfall nicht bricht.
+def test_ac2_mail_without_authentication_results_header_is_rejected_and_marked_seen():
+    """AC-2 (#2143 F003 umgestellt, vormals 'Erfolgspfad'): eine authentifiziert
+    zugestellte Mail (kein ``Authentication-Results``-Header, empirisch
+    verifiziert #2143) mit sonst vollstaendig gueltigem ``mail_to`` UND
+    ``email_verified_at`` wird ueber diesen Liefer-Kanal strukturell NIE
+    verarbeitet -- ``poll_and_process`` gibt 0 zurueck, die Mail wird trotzdem
+    \\Seen markiert (kein Endlos-Reprocessing). Der urspruengliche 'gueltiger
+    Erfolgspfad wird verarbeitet'-Nachweis fuer diesen Liefer-Kanal ist seit
+    #2143 nicht mehr moeglich (kein SPF/DKIM-Nachweis ueber authentifizierte
+    Submission) -- der Normalfall-Nachweis fuer den authorisierten Pfad liegt
+    im Kern-Test ``test_ac6_valid_verified_sender_with_spf_dkim_pass_is_processed``
+    (``test_inbound_email_sender_authentication.py``, mit synthetischem
+    Authentication-Results-Header).
     """
     user_id = "tdd-1009-userb"
     cmd_addr = "tdd-1009-userb@henemm.com"  # eindeutig → Lookup trifft nur diesen User
@@ -342,11 +431,139 @@ def test_ac2_success_path_processes_and_marks_seen():
 
     try:
         processed = InboundEmailReader().poll_and_process(settings)
-        assert processed >= 1, f"Erfolgspfad verarbeitete 0 Befehle (got {processed})"
+        assert processed == 0, (
+            f"#2143 F003: Mail ohne Authentication-Results-Header wurde "
+            f"verarbeitet (processed={processed}) statt fail-closed abgelehnt"
+        )
 
         uids_after = _find_uids_by_token(token, timeout_s=20)
         flags = _flags_for_uid(uids_after[0]) if uids_after else ""
-        assert "\\Seen" in flags, f"Erfolgreiche Mail nicht \\Seen (FLAGS={flags!r})"
+        assert "\\Seen" in flags, f"Abgelehnte Mail nicht \\Seen (FLAGS={flags!r})"
+    finally:
+        _delete_uids(_find_uids_by_token(token, timeout_s=20))
+        _cleanup_user(user_id)
+
+
+# ===========================================================================
+# #2143 F005 — Live-E2E ueber die ECHTE anonyme Inbound-Pipeline (Port 25)
+# ===========================================================================
+
+@_email_gate
+def test_live_authorized_sender_over_real_anonymous_pipeline_is_processed():
+    """#2143 F005 (positiv): ein autorisierter, verifizierter Absender kommt
+    ueber die REALE anonyme Port-25-Pipeline mit einem ECHTEN, von Stalwart
+    prependeten ``Authentication-Results``-Header durch und wird verarbeitet.
+
+    Der Absender liegt unter ``henemm.com``, dessen SPF-Record den Mechanismus
+    ``a:mail.henemm.com`` enthaelt -- die IP dieses Hosts ist damit ein
+    zugelassener Sender, Stalwart schreibt ``spf=pass`` und ``dmarc=pass``.
+    Damit ist bewiesen, dass der #2143-Fix den Normalfall NICHT blockiert
+    (die uebrigen SPF/DKIM-Tests arbeiten mit synthetischen Headern).
+    """
+    suffix = uuid.uuid4().hex[:8]
+    user_id = f"tdd-2143-livepos-{suffix}"
+    sender = f"{user_id}@henemm.com"
+    token = f"GZ2143POS-{suffix}"
+    _make_user(user_id, mail_to=sender)
+    _make_trip(user_id, trip_id=f"t{suffix}", name=token)
+
+    settings = _base_email_settings()
+    _deliver_mail_anonymous(
+        envelope_from=sender, header_from=sender,
+        subject=f"[{token}] status", body="status",
+    )
+
+    uids = _find_uids_by_token(token)
+    assert uids, "Mail kam ueber die anonyme Port-25-Pipeline nicht an"
+    msg = _peek_msg(uids[0])
+    auth_results = msg.get("Authentication-Results") if msg else None
+    unseen_before = _unseen_uids()
+    print(f"[F005-pos] Authentication-Results = {auth_results!r}")
+    print(f"[F005-pos] UNSEEN vor Poll = {[u.decode() for u in unseen_before]}, "
+          f"eigene UID = {uids[0].decode()}")
+
+    try:
+        reader = InboundEmailReader()
+        _uid, user_settings = reader._resolve_settings_for_sender(sender, settings)
+        assert reader._authorize(sender, user_settings, msg), (
+            f"#2143 F005: ECHT zugestellte Mail des autorisierten Absenders "
+            f"wurde abgelehnt. Authentication-Results={auth_results!r}"
+        )
+
+        processed = InboundEmailReader().poll_and_process(settings)
+        print(f"[F005-pos] poll_and_process = {processed}")
+        assert processed >= 1, (
+            f"#2143 F005: autorisierter Absender kam ueber die echte anonyme "
+            f"Pipeline NICHT durch (processed={processed}). "
+            f"Authentication-Results={auth_results!r}"
+        )
+
+        uids_after = _find_uids_by_token(token, timeout_s=20)
+        assert uids_after, "Mail nach Poll nicht mehr auffindbar"
+        flags = _flags_for_uid(uids_after[0])
+        assert "\\Seen" in flags, f"Verarbeitete Mail nicht \\Seen (FLAGS={flags!r})"
+    finally:
+        _delete_uids(_find_uids_by_token(token, timeout_s=20))
+        _cleanup_user(user_id)
+
+
+@_email_gate
+def test_live_spoofed_envelope_over_real_anonymous_pipeline_is_rejected():
+    """#2143 F005 (negativ): der ``From:``-Header behauptet die ``mail_to``-
+    Adresse eines gueltigen, verifizierten Nutzers, der Envelope-Absender liegt
+    aber unter einer fremden, nicht kontrollierten Domain.
+
+    Stalwart schreibt dann einen ECHTEN Header ohne ``spf=pass`` -- die Mail
+    wird fail-closed abgelehnt (0 verarbeitet) und trotzdem \\Seen markiert
+    (kein Endlos-Reprocessing, #1009). ``.invalid`` ist per RFC 2606
+    reserviert, es wird also keine reale fremde Domain kontaktiert.
+    """
+    suffix = uuid.uuid4().hex[:8]
+    user_id = f"tdd-2143-livespoof-{suffix}"
+    sender = f"{user_id}@henemm.com"
+    token = f"GZ2143SPOOF-{suffix}"
+    _make_user(user_id, mail_to=sender)
+    _make_trip(user_id, trip_id=f"t{suffix}", name=token)
+
+    settings = _base_email_settings()
+    _deliver_mail_anonymous(
+        envelope_from=f"spoofer-{uuid.uuid4().hex[:8]}@spoofer-domain.invalid",
+        header_from=sender,
+        subject=f"[{token}] status", body="status",
+    )
+
+    uids = _find_uids_by_token(token)
+    assert uids, "Spoof-Mail kam ueber die anonyme Port-25-Pipeline nicht an"
+    msg = _peek_msg(uids[0])
+    auth_results = msg.get("Authentication-Results") if msg else None
+    unseen_before = _unseen_uids()
+    print(f"[F005-neg] Authentication-Results = {auth_results!r}")
+    print(f"[F005-neg] UNSEEN vor Poll = {[u.decode() for u in unseen_before]}, "
+          f"eigene UID = {uids[0].decode()}")
+
+    try:
+        reader = InboundEmailReader()
+        _uid, user_settings = reader._resolve_settings_for_sender(sender, settings)
+        assert not reader._authorize(sender, user_settings, msg), (
+            f"#2143 F005: gefaelschter Envelope-Absender wurde autorisiert. "
+            f"Authentication-Results={auth_results!r}"
+        )
+
+        processed = InboundEmailReader().poll_and_process(settings)
+        print(f"[F005-neg] poll_and_process = {processed}")
+        assert processed == 0, (
+            f"#2143 F005: gefaelschte Mail wurde verarbeitet "
+            f"(processed={processed}). UNSEEN vor Poll: "
+            f"{[u.decode() for u in unseen_before]}"
+        )
+
+        uids_after = _find_uids_by_token(token, timeout_s=20)
+        assert uids_after, "Spoof-Mail nach Poll nicht mehr auffindbar"
+        flags = _flags_for_uid(uids_after[0])
+        assert "\\Seen" in flags, (
+            f"#1009: abgelehnte Spoof-Mail blieb UNSEEN (FLAGS={flags!r}) "
+            f"→ Endlos-Reprocessing"
+        )
     finally:
         _delete_uids(_find_uids_by_token(token, timeout_s=20))
         _cleanup_user(user_id)
