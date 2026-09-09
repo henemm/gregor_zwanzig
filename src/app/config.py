@@ -188,6 +188,14 @@ class Settings(BaseSettings):
         description="Gemeinsames Geheimnis Go -> Python-Core (env: GZ_CORE_SHARED_SECRET, #2142)",
     )
 
+    # Issue #2272 — oeffentliche Basis-URL fuer Nutzer-Links. Bewusst OHNE
+    # Default: ein fehlender Wert ist ein Konfigurationsfehler, ein Fallback
+    # auf die Produktionsadresse waere derselbe Bug mit Log-Zeile.
+    public_host: Optional[str] = Field(
+        default=None,
+        description="Oeffentliche Basis-URL fuer Nutzer-Links (env: GZ_PUBLIC_HOST, #2272)",
+    )
+
     # SMS settings (for sms channel)
     sms_gateway_url: str = Field(default="https://gateway.seven.io/api/sms", description="SMS gateway HTTP endpoint")
     seven_api_key: Optional[str] = Field(default=None, description="seven.io API key (env: GZ_SEVEN_API_KEY)")
@@ -464,3 +472,20 @@ class Settings(BaseSettings):
             else:
                 fields.append(f"{name}={value!r}")
         return f"Settings({', '.join(fields)})"
+
+
+def resolve_public_host(settings: Settings) -> Optional[str]:
+    """Oeffentliche Basis-URL ohne trailing Slash — `None`, wenn nicht gesetzt.
+
+    Issue #2272: einzige Ableitungsquelle fuer alle Nutzer-Links des
+    Python-Core. Ein trailing Slash in GZ_PUBLIC_HOST erzeugte sonst
+    Doppel-Slashes in `resolve_public_url`.
+    """
+    value = settings.public_host
+    return value.rstrip("/") if value else None
+
+
+def resolve_public_url(settings: Settings, path: str) -> Optional[str]:
+    """Vollstaendige oeffentliche URL — `None`, wenn kein Host konfiguriert ist."""
+    host = resolve_public_host(settings)
+    return f"{host}{path}" if host else None

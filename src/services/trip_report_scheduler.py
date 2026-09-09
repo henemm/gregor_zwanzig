@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
-from app.config import Settings
+from app.config import Settings, resolve_public_url
 from app.loader import get_data_dir, load_all_trips, save_trip
 from app.models import (
     NormalizedTimeseries,
@@ -1827,7 +1827,7 @@ class TripReportSchedulerService:
             profile=trip.aggregation.profile,
             shortcode=getattr(trip, 'shortcode', None) or None,
             stage_total=len(trip.stages) if trip.stages else None,
-            trip_url=f"https://gregor20.henemm.com/trips/{trip.id}",
+            trip_url=resolve_public_url(self._settings, f"/trips/{trip.id}"),
             send_email=send_email,
             send_sms=send_sms,
             send_premium_sms=send_premium_sms,

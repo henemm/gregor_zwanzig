@@ -1921,13 +1921,24 @@ class TripCommandProcessor:
         Spalten-Konfiguration hat keinen Inline-Telegram-Bearbeitungsflow
         (Spec Known Limitations) — ein informativer Hinweis statt eines
         stillen, unsichtbaren Nichts-Tuns.
+
+        ``success=True`` ist hier konstant und bewusst nicht vom Ausgang der
+        Host-Auflösung abhängig: liefert ``resolve_public_host`` ``None``
+        (GZ_PUBLIC_HOST nicht konfiguriert, fail-closed, #2272), ändert das
+        allein den Text, nie ob das Kommando verarbeitet wurde. Geführt als
+        Ausnahme in ``INTENTIONAL_CONSTANT_SUCCESS``
+        (``tests/test_success_status_guard.py``).
         """
+        from app.config import Settings, resolve_public_host
+
+        host = resolve_public_host(Settings())
         return CommandResult(
             success=True, command="columns",
             confirmation_subject="Spalten",
             confirmation_body=(
-                "Spalten-Konfiguration ist nur im Trip-Editor möglich:\n"
-                "https://gregor20.henemm.com"
+                f"Spalten-Konfiguration ist nur im Trip-Editor möglich:\n{host}"
+                if host
+                else "Spalten-Konfiguration ist nur im Trip-Editor möglich."
             ),
         )
 
@@ -2017,13 +2028,24 @@ class TripCommandProcessor:
         )
 
     def _show_config(self, trip: Trip) -> CommandResult:
-        """Return a link to trip settings — read-only, no save_trip."""
-        url = f"https://gregor20.henemm.com/trips/{trip.id}"
+        """Return a link to trip settings — read-only, no save_trip.
+
+        ``success=True`` ist hier konstant und bewusst nicht vom Ausgang der
+        Host-Auflösung abhängig: liefert ``resolve_public_url`` ``None``
+        (GZ_PUBLIC_HOST nicht konfiguriert, fail-closed, #2272), entfällt nur
+        die Link-Zeile, nie der Erfolg des Kommandos. Geführt als Ausnahme in
+        ``INTENTIONAL_CONSTANT_SUCCESS``
+        (``tests/test_success_status_guard.py``).
+        """
+        from app.config import Settings, resolve_public_url
+
+        url = resolve_public_url(Settings(), f"/trips/{trip.id}")
+        link_line = f"{url}\n" if url else ""
         return CommandResult(
             success=True, command="config",
             confirmation_subject=f"[{trip.name}] Trip-Einstellungen",
             confirmation_body=(
-                f"Einstellungen für '{trip.name}':\n{url}\n\n"
+                f"Einstellungen für '{trip.name}':\n{link_line}\n"
                 "Dort kannst du Zeitplan, Kanäle und Alarm-Schwellen anpassen."
             ),
             trip_name=trip.name,
