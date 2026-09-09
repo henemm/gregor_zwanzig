@@ -191,6 +191,7 @@ class TestAC9AlertDispatchUnaffected:
         from services.trip_alert import TripAlertService
         from services.radar_service import RadarNowcastService
         from providers.brightsky import RadarFrame
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         trip_id = "ac9-paused-trip"
         now = datetime.now(timezone.utc)
@@ -233,8 +234,13 @@ class TestAC9AlertDispatchUnaffected:
             ]
 
         captured: list[str] = []
+        # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+        # settings= baut TripAlertService Settings() aus der Umgebung, und
+        # can_send_email() ist nur mit Host-.env True -- auf dem CI-Runner
+        # lief der Versand in "kein Alert-Kanal konfiguriert". Dummy-SMTP
+        # (settings_email_only) + mail_sink (DI-Naht) ersetzen den Versand.
         svc = TripAlertService(
-            throttle_hours=2, user_id=_USER_AC9,
+            throttle_hours=2, user_id=_USER_AC9, settings=settings_email_only(),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: captured.append(subject),
         )

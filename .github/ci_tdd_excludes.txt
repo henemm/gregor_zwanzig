@@ -95,6 +95,49 @@
 # - test_issue_1040_alerts_toggle · test_issue_1168_alert_engine_extract
 # - test_issue_638_alerts_redesign · test_issue_816_alert_deviation
 #
+# Klasse C Teil 4 (2026-09-09, #1196): die letzten 11 Eintraege einzeln
+# vermessen, 10 saniert, 1 verbleibt (kein Fehlverhalten, s.u.):
+# (a) Host-.env-Erbschaft wie Teil 1/3 -- TripAlertService/send_one_compare_
+#     preset ohne explizite Settings bauen Settings() aus der Umgebung:
+#     test_compare_sun_hours_full_day_window, test_issue_1104_compare_config_
+#     foundation, test_issue_1107_compare_sections (TestDispatchWiring),
+#     test_issue_1088_official_alert_triggers (AC-5/F001/S4b-ac1/ac11/ac12/
+#     ac17, 6 Tests) und test_issue_995_scheduler_pause (AC-9) -- Dummy-SMTP
+#     (Settings(mail_to=...) bzw. settings_email_only()) explizit gesetzt.
+# (b) Herkunftssperre #1476 wie Teil 2 -- telegram_test_chat_id fehlte:
+#     test_issue_650_telegram_foundation, test_telegram_html_escaping.
+# (c) Hartkodierter Hauptrepo-Pfad (Anti-Pattern, Projektregel): REPO_DIR in
+#     test_staging_gate.py war trotz des #1096/#1327-Kommentars direkt
+#     darueber noch auf /home/hem/gregor_zwanzig fixiert -- FileNotFoundError
+#     auf jedem Runner/Worktree ohne diesen Pfad. Fix: REPO_DIR = _REPO_ROOT
+#     (testdatei-relativ, dieselbe Zeile wie STAGING_GATE). Zusaetzlich musste
+#     der modulweit aufgerufene Telegram-Live-Gate (#686, write_verdict() ruft
+#     ihn immer, GZ_SKIP_E2E_GATE wirkt dort nicht) mit einer Stub-Chat-ID
+#     bedient werden -- er prueft sonst die ECHTE Commit-Historie (HEAD~1..HEAD)
+#     auf Telegram-Pfade und waere vom zufaelligen Zustand der Projekthistorie
+#     abhaengig gewesen (Datei testet nicht das Telegram-Gate selbst).
+# (d) test_issue_685_selftest_menu_gate: derselbe Anti-Pattern-Pfad, diesmal
+#     in .claude/hooks/prod_selftest.py (REPO_DIR-Konstante, nicht Testcode) --
+#     Fix bleibt im Test: `mod.REPO_DIR` wird nach dem Laden auf die testdatei-
+#     relative Repo-Wurzel ueberschrieben (AC-1-Subprozess ebenso), statt den
+#     Produktiv-Server-Pfad im Hook selbst anzufassen.
+# (e) test_issue_695_test_briefing_send: `test_go_proxy_returns_404_for_
+#     unknown_trip` (AC-5) braucht einen echten Go-Server auf localhost:8090 --
+#     kein Settings-Fix moeglich (`_login()` wirft ohne Server eine ungefangene
+#     ConnectError). Bekommt `@pytest.mark.live` (einzelner Test, nicht
+#     modulweit); die uebrigen 3 Tests der Datei bleiben deterministisch.
+# NICHT saniert (bleibt gelistet): test_issue_833_gate.py -- 6 der 8 Tests
+# brauchen echtes Playwright-Chromium (`_check_rendered`, AC-1/AC-6). Der
+# CI-Job installiert das per `uv run playwright install --with-deps chromium`
+# unmittelbar vor pytest (separater Workflow-Schritt, .github/workflows/
+# ci.yml:30) -- vermutlich bereits gruen dort. In dieser Sandbox nicht
+# nachmessbar: gecachte Browser-Revision (1194) != von playwright==1.57.0
+# geforderter Revision (1200, browsers.json), Nachinstallation vom
+# Sandbox-Egress blockiert (403 auf cdn.playwright.dev/playwright.download.
+# prss.microsoft.com). Kein Beleg gegen Herausnahme, aber auch keiner dafuer --
+# echte Vermessung braucht den Runner (naechste Sichtung durch #1196-Nachfolger
+# oder mit Runner-Zugriff).
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -102,14 +145,4 @@
 #
 # Eine Datei entfernen = sie laeuft ab dann auf CI; neue Dateien laufen
 # automatisch (kein Eintrag noetig). Bestandssanierung: #1196.
-tests/tdd/test_compare_sun_hours_full_day_window.py
-tests/tdd/test_issue_1088_official_alert_triggers.py
-tests/tdd/test_issue_1104_compare_config_foundation.py
-tests/tdd/test_issue_1107_compare_sections.py
-tests/tdd/test_issue_650_telegram_foundation.py
-tests/tdd/test_issue_685_selftest_menu_gate.py
-tests/tdd/test_issue_695_test_briefing_send.py
 tests/tdd/test_issue_833_gate.py
-tests/tdd/test_issue_995_scheduler_pause.py
-tests/tdd/test_staging_gate.py
-tests/tdd/test_telegram_html_escaping.py
