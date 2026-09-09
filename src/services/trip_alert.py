@@ -45,8 +45,9 @@ from services.trip_segments import measured_segment_km  # Issue #2036
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
 from services.throttle_store import ThrottleStore
+from services.alert_channels import _briefing_channels as _shared_briefing_channels
+from services.alert_channels import effective_alert_channels
 from services.trip_day import anchor_tz, trip_local_today
-from services.user_tier import premium_sms_allowed, sms_allowed
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import (
     day_offset, format_reference_at, local_dt, local_fmt, to_utc, tz_for_coords,
@@ -2869,74 +2870,23 @@ class TripAlertService:
         return result.sent
 
     def _effective_alert_channels(self, trip: "Trip") -> set[str]:
-        """Issue #638: Compute effective alert channels for a trip.
-
-        Semantik: Union über jede aktive Regel ihrer individuell effektiven Kanäle.
-        Pro Regel: rule.channels falls nicht leer, SONST geerbte Briefing-Kanäle aus
-        report_config. Kein globaler Override-Shortcut — sonst verschluckt ein Trip mit
-        [Regel-A: telegram, Regel-B: []/briefing-email] den E-Mail-Kanal von Regel-B.
-
-        Legacy-Pfad (keine aktiven alert_rules): erbt die Briefing-Kanäle aus
-        report_config; falls report_config None ist → Default {"email"} (altes Verhalten:
-        "not report_config or report_config.send_email" → E-Mail-Default nur bei
-        report_config=None; existiert report_config mit allen Kanälen aus, wird nichts
-        versendet — der Nutzer hat explizit alle Kanäle abgeschaltet).
-
-        Issue #1258 S3 (D2): ist `trip.alert_channels` gesetzt (dict mit
-        email/telegram/sms bool-Keys), ersetzt es NUR den geerbten
-        Briefing-Anteil (an beiden Stellen unten, Legacy-Pfad UND
-        per-Regel-Fallback) — nicht-leere `rule.channels`-Overrides (#638)
-        gewinnen unverändert weiter, das SMS-Tier-Gate bleibt aktiv.
-        `alert_channels=None` liefert exakt das bisherige Verhalten.
+        """Issue #2279 S1: duenner Delegat auf den geteilten Kern
+        `services.alert_channels.effective_alert_channels` -- derselbe
+        Algorithmus wie bisher (Issue #638/#1258 S3), jetzt auch fuer den
+        Ortsvergleich nutzbar (ADR-0021). Aufruf ueber das im Modul
+        importierte Symbol `effective_alert_channels`, damit Tests die
+        Delegation per `monkeypatch` am Modul-Namensraum nachweisen koennen
+        (AC-6).
 
         Returns:
-            Set of channel names ("email", "telegram", "sms") to use for alert dispatch.
+            Set of channel names ("email", "telegram", "sms", "premium_sms")
+            to use for alert dispatch.
         """
-        active_rules = [r for r in (trip.alert_rules or []) if r.enabled]
-        briefing = self._briefing_channels(trip.report_config)
-
-        if trip.alert_channels is not None:
-            # Scharfes Kanal-Set ersetzt den geerbten Briefing-Anteil vollständig
-            # (auch wenn alle drei Kanäle aus sind — bewusst kein {"email"}-Default,
-            # der Nutzer hat explizit konfiguriert).
-            inherited = {
-                ch for ch in ("email", "telegram", "sms", "premium_sms")
-                if trip.alert_channels.get(ch)
-            }
-        else:
-            # Legacy-Pfad: E-Mail-Default gilt NUR wenn report_config None ist
-            # (kein explizites Ausschalten).
-            inherited = briefing if (briefing or trip.report_config is not None) else {"email"}
-
-        # Legacy-Pfad: keine aktiven alert_rules → erbe die (ggf. ersetzten) Kanäle.
-        if not active_rules:
-            channels = inherited
-        else:
-            channels = set()
-            for rule in active_rules:
-                if rule.channels:
-                    channels.update(rule.channels)
-                else:
-                    channels.update(inherited)
-
-        if "sms" in channels and not sms_allowed(self._user_id):
-            channels = channels - {"sms"}
-        if "premium_sms" in channels and not premium_sms_allowed(self._user_id):
-            channels = channels - {"premium_sms"}
-        return channels
+        return effective_alert_channels(trip, self._settings, self._user_id)
 
     @staticmethod
     def _briefing_channels(config) -> set[str]:
-        """Return the set of active briefing channels from report_config (or empty set)."""
-        channels: set[str] = set()
-        if config is None:
-            return channels
-        if config.send_email:
-            channels.add("email")
-        if config.send_telegram:
-            channels.add("telegram")
-        if getattr(config, "send_sms", False):
-            channels.add("sms")
-        if getattr(config, "send_premium_sms", False):
-            channels.add("premium_sms")
-        return channels
+        """Duenner Wrapper (Issue #2279 S1) -- die Logik wohnt jetzt im
+        geteilten Kern `services.alert_channels._briefing_channels`, keine
+        Doppelung."""
+        return _shared_briefing_channels(config)

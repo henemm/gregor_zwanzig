@@ -296,3 +296,4 @@ eigenen Testdatei auf (kein fester Hauptrepo-Pfad); Nutzerverzeichnisse über
 ## Changelog
 
 - 2026-09-09: Initial spec created
+- 2026-09-09: PO-Freigabe (go), Umsetzung S1, Adversary VERIFIED (6 Mutationen gefangen, 0 Findings); Folge-Scheibe S2 = #2293

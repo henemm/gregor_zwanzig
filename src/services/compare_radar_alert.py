@@ -36,10 +36,8 @@ from services.alert_gate import (
 )
 from utils.timezone import first_resolvable_tz
 from services.alert_state import AlertStateService
-from services.compare_alert_channels import (
-    effective_compare_channels,
-    effective_compare_telegram_style,
-)
+from services.alert_channels import effective_alert_channels
+from services.compare_alert_channels import effective_compare_telegram_style
 from services.compare_alert_guard import is_silenced
 from services.compare_preset_access import (
     load_compare_alert_presets,
@@ -166,7 +164,7 @@ class CompareRadarAlertService:
         # Protokoll-Eintrag einer Abweisung braucht die Kanaele des Nutzers.
         # Die Funktion ist rein (liest nur Preset/Settings/Tier), das Vorziehen
         # aendert am Versandverhalten nichts.
-        effective_channels = effective_compare_channels(preset, self._settings, self._user_id)
+        effective_channels = effective_alert_channels(preset, self._settings, self._user_id)
 
         # Issue #1467 S3: Ruhezeit -> Sperrzeit -> Tages-Obergrenze aus dem
         # geteilten Baustein, VOR jedem Nowcast-Abruf. Ersetzt den frueheren

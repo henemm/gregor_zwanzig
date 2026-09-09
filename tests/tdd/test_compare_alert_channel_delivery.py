@@ -10,8 +10,9 @@ GEMESSENER IST-STAND (HEAD 6b6ad80d): `compare_alert.py:272` verdrahtet
 `channels={"email"}` FEST — ein Nutzer kann Telegram/SMS fuer
 Ortsvergleich-Alarme im Alarme-Tab einschalten (`AlertChannelPicker`,
 `AlarmeTab.svelte:295`) und bekommt trotzdem nur E-Mail. AG4 ersetzt die feste
-Liste durch den bereits vorhandenen Resolver
-`services/compare_alert_channels.py::effective_compare_channels()` (AG1),
+Liste durch den bereits vorhandenen Resolver aus
+`services/compare_alert_channels.py` (AG1; seit Issue #2279 S1 umbenannt zu
+`effective_compare_briefing_channels`),
 den heute nur `compare_official_alert.py:257` und
 `scheduler_dispatch_service.py:288` benutzen.
 

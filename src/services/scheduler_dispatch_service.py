@@ -26,7 +26,7 @@ from services.alert_briefing_anchor import (
     undelivered_since_last_briefing,
     write_anchor_and_reset_memory,
 )
-from services.compare_alert_channels import effective_compare_channels
+from services.compare_alert_channels import effective_compare_briefing_channels
 
 logger = logging.getLogger("scheduler.dispatch")
 
@@ -348,19 +348,20 @@ def build_compare_preset_subject(name: str, target_date: date) -> str:
     return f"Wetter-Vergleich: {name} ({target_date.strftime('%d.%m.%Y')})"
 
 
-def _effective_compare_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
-    """Duenner Wrapper (Issue #1467 S2 AG1) — delegiert an den geteilten
-    Resolver `services.compare_alert_channels.effective_compare_channels`
-    (identisches Muster wie `compare_official_alert._effective_channels`,
-    Alarm-Pfad, jetzt auch fuer den Briefing-Pfad, Issue #1270 KB-3). Aufruf
-    ueber den Modul-Namensraum, damit Tests das importierte Symbol im
-    VERBRAUCHENDEN Modul patchen koennen (AC-3b).
+def _effective_compare_briefing_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
+    """Duenner Wrapper (Issue #1467 S2 AG1, umbenannt in Issue #2279 S1) —
+    delegiert an den geteilten Briefing-Resolver
+    `services.compare_alert_channels.effective_compare_briefing_channels`.
+    Bleibt bewusst auf dem Briefing-Resolver, NICHT auf der Alarm-Auflösung
+    `effective_alert_channels` — Briefing- und Alarm-Kanäle muessen getrennt
+    bleiben. Aufruf ueber den Modul-Namensraum, damit Tests das importierte
+    Symbol im VERBRAUCHENDEN Modul patchen koennen (AC-6).
 
     `send_email` ist auf Preset-Ebene bewusst NICHT beruecksichtigt: es wird gar
     nicht persistiert (vorbestehende Altlast, `versand_tab_vergleich.md` KL-6) —
     E-Mail bleibt daher wie bisher immer aktiv.
     """
-    return effective_compare_channels(preset, settings, user_id)
+    return effective_compare_briefing_channels(preset, settings, user_id)
 
 
 def send_one_compare_preset(
@@ -581,7 +582,7 @@ def send_one_compare_preset(
                 result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
             ),
             recipients=empfaenger,
-            effective_channels=_effective_compare_channels(preset, settings, user_id),
+            effective_channels=_effective_compare_briefing_channels(preset, settings, user_id),
             compare_hourly_enabled=opts.hourly_enabled,
             mail_sink=mail_sink,
             sms_sink=sms_sink,
