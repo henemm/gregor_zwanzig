@@ -3,7 +3,7 @@ entity_id: fix_2232_kuerzel_ein_modell_trip_vergleich
 type: module
 created: 2026-09-09
 updated: 2026-09-09
-status: draft
+status: approved
 version: "1.0"
 tags: [backend, frontend, metrik-kaskade, kuerzel, sms, compare, adr-0011, issue-2232]
 ---
@@ -12,7 +12,7 @@ tags: [backend, frontend, metrik-kaskade, kuerzel, sms, compare, adr-0011, issue
 
 ## Approval
 
-- [ ] Approved — PO-go zum Zielbild 2026-09-09, ACs zur Freigabe
+- [x] Approved — PO, 2026-09-09 („go"), ohne Einschränkung. Damit entschieden: **Entscheidungspunkt 4** — der Zusatz „(Gehzeit)" wird aus `label_de` der vier Größen gestrichen (Empfehlung angenommen).
 
 ## Purpose
 
