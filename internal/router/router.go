@@ -65,6 +65,9 @@ func New(deps Deps) chi.Router {
 		verifyLimiter.Middleware(handler.VerifyEmailHandler(deps.Store)).ServeHTTP,
 	)
 	r.Delete("/api/auth/account", handler.DeleteAccountHandler(deps.Store))
+	// Issue #2270: Datenexport nach DSGVO Art. 20 — authentifiziert, bewusst
+	// NICHT in der Public-Allowlist von AuthMiddleware.
+	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
 	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config))
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret))

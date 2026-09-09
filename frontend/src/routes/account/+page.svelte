@@ -3,7 +3,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Btn } from '$lib/components/atoms';
-	import { api } from '$lib/api.js';
+	import { api, downloadUserDataExport } from '$lib/api.js';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -45,6 +45,10 @@
 	let showDeleteAccountDialog = $state(false);
 	let showLogoutAllDialog = $state(false);
 	let logoutAllErrorMsg = $state<string | null>(null);
+
+	// Issue #2270 — Datenexport nach DSGVO Art. 20.
+	let exportBusy = $state(false);
+	let exportErrorMsg = $state<string | null>(null);
 
 	// Issue #2246 — Passkey-Karte. Die Liste kommt aus dem ohnehin geladenen
 	// Profil, ein eigener Lese-Abruf waere ein zweiter Weg zu denselben Daten.
@@ -414,6 +418,21 @@
 			// Fall (AC-20).
 			if (body?.status !== 401) vergissAbmeldung();
 			logoutAllErrorMsg = body?.detail ?? body?.error ?? 'Abmelden fehlgeschlagen';
+		}
+	}
+
+	// Issue #2270 — Datenexport. Der Download laeuft am JSON-Client vorbei
+	// (s. downloadUserDataExport in $lib/api).
+	async function exportiereMeineDaten() {
+		exportBusy = true;
+		exportErrorMsg = null;
+		try {
+			await downloadUserDataExport();
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string; message?: string };
+			exportErrorMsg = body?.detail ?? body?.error ?? body?.message ?? 'Download fehlgeschlagen';
+		} finally {
+			exportBusy = false;
 		}
 	}
 </script>
@@ -969,7 +988,35 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root class="border-red-200">
+	<!--
+		Issue #2270: eigene Karte, bewusst VOR und nicht IN der Gefahrenzone —
+		der Export ist nichts Destruktives.
+	-->
+	<Card.Root data-testid="data-export-card">
+		<Card.Header>
+			<Card.Title>Deine Daten</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<p class="mb-4 text-sm text-muted-foreground">
+				Du kannst jederzeit alles herunterladen, was zu deinem Konto gespeichert ist — Orte,
+				Touren, Vergleiche, Einstellungen und die Versand-Protokolle. Du bekommst ein
+				ZIP-Archiv; Anmelde-Merkmale und technische Fehlersuch-Protokolle sind nicht dabei.
+			</p>
+			<Btn
+				variant="outline"
+				data-testid="data-export-button"
+				disabled={exportBusy}
+				onclick={exportiereMeineDaten}
+			>
+				{exportBusy ? 'Archiv wird erstellt …' : 'Daten herunterladen'}
+			</Btn>
+			{#if exportErrorMsg}
+				<p class="mt-2 text-sm text-red-600" data-testid="data-export-error">{exportErrorMsg}</p>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root class="border-red-200" data-testid="danger-zone-card">
 		<Card.Header>
 			<Card.Title class="text-red-700">Gefahrenzone</Card.Title>
 		</Card.Header>

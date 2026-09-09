@@ -2,7 +2,7 @@
 entity_id: account_deletion
 type: module
 created: 2026-04-16
-updated: 2026-04-16
+updated: 2026-09-09
 status: draft
 version: "1.0"
 tags: [go, auth, account-deletion, f15]
@@ -17,6 +17,8 @@ tags: [go, auth, account-deletion, f15]
 ## Purpose
 
 Eingeloggte User koennen ihren Account loeschen. Alle User-Daten werden kaskadierend entfernt (locations, trips, subscriptions, gpx, snapshots, user.json). **Seit #2129/ADR-0060:** Da `data/users/{id}/sessions.json` Teil des geloeschten Verzeichnisses ist, werden damit alle Anmeldungen des Nutzers auf allen Geraeten ungueltig, nicht nur die des loeschenden Geraets — davor blacklistete der Logout-Pfad nur die eine aktuelle Session.
+
+**Seit #2270:** Es gibt eine lesende Gegenrichtung — `GET /api/auth/export` liefert dem Nutzer denselben Datenbaum als ZIP zum Herunterladen, abzueglich einer begruendeten Ausnahmeliste (Geheimnisse, Betriebsdaten). Details: `docs/specs/modules/user_data_export.md`.
 
 ## Scope
 
@@ -82,3 +84,4 @@ NICHT exempt von AuthMiddleware — nur eingeloggte User koennen ihren Account l
 
 - 2026-04-16: Initial spec (F15 Phase 3 — Account Deletion, GitHub Issue #53)
 - 2026-09-06: Session-Invalidierung durch #2129 (ADR-0060) auf alle Geraete ausgeweitet — Details dort, nicht hier nachpflegen.
+- 2026-09-09: Querverweis auf #2270 (Datenexport, lesende Gegenrichtung) ergaenzt — Details dort, nicht hier nachpflegen.
