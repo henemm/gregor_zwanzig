@@ -31,8 +31,11 @@ from output.metric_format import (
     THUNDER_LABEL_DE,
     format_value,
     thunder_ampel_band,
+    thunder_label_value,
 )
+from output.tokens.metrics import LEVELS as _STUFENBUCHSTABEN
 from services.trip_day import anchor_tz, display_tz, trip_local_now, trip_local_today
+from utils.ascii_fold import fold_ascii
 from utils.geo import degrees_to_compass
 from utils.timezone import UTC, local_dt, local_fmt, local_hour
 
@@ -459,6 +462,99 @@ def _traegt_werte(res) -> bool:
     ausgeliefert wurde.
     """
     return bool(res.available) and any(p.value is not None for p in res.points)
+
+
+# ---------------------------------------------------------------------------
+# Kurzform-Verlauf (Issue #2207, Epic #2133 / S5)
+# ---------------------------------------------------------------------------
+
+#: Kanaele, die den Verlauf in KURZFORM statt als Langform bekommen. ``sms``
+#: hat heute keinen produktiven Eingang (Spec "Known Limitations"), steht hier
+#: aber mit drin, damit bei kuenftiger Aktivierung keine stille Luecke bleibt.
+_KURZFORM_KANAELE = ("premium_sms", "sms")
+
+#: Zeichenbudget einer Premium-SMS im GSM-7-Alphabet.
+_KURZFORM_MAX_ZEICHEN = 160
+
+
+def _ist_kurzform_kanal(channel: Optional[str]) -> bool:
+    """Bekommt dieser Anfrageweg die Kurzform (statt der Langform)?"""
+    return channel in _KURZFORM_KANAELE
+
+
+def _gruppiere_wechselpunkte(points, schluessel):
+    """Aufeinanderfolgende Stunden mit gleichem Anzeigetext verschmelzen.
+
+    Issue #2185 (S2) hat diese Verdichtung eingefuehrt, Issue #2207 (S5) sie
+    aus ``_format_drilldown`` herausgeloest: Lang- UND Kurzform rufen
+    denselben Helfer, damit die Gruppengrenzen strukturell nie auseinander
+    laufen koennen (AC-14). Fortsetzung nur bei einem Abstand von HOECHSTENS
+    einer Stunde — eine fehlende Stunde bricht die Gruppe, damit ein Bereich
+    nie Gueltigkeit fuer eine ungemessene Stunde behauptet (#2167).
+
+    Rueckgabe: Liste von ``(schluessel, [DrilldownPoint, ...])``.
+    """
+    groups: list[tuple[object, list]] = []
+    for pt in points:
+        key = schluessel(pt)
+        if groups and groups[-1][0] == key and (
+            pt.ts - groups[-1][1][-1].ts <= timedelta(hours=1)
+        ):
+            groups[-1][1].append(pt)
+        else:
+            groups.append((key, [pt]))
+    return groups
+
+
+def _kurzform_kuerzel(metric, folgetag: bool = False) -> str:
+    """Kuerzel einer Groesse fuer die Kurzform (AC-3/AC-6).
+
+    ``sms_code`` ist die Quelle; ist er leer (im Katalog genau
+    ``temperature_night`` und ``temperature_day_high``), tritt ``col_label``
+    an seine Stelle — keine zweite, eigene Abkuerzungsliste. Ein Verlauf des
+    Folgetags traegt ein ``+`` (Konvention wie ``TH+``), sonst waeren die
+    Stundenzahlen zwischen heute und morgen mehrdeutig.
+    """
+    return (metric.sms_code or metric.col_label) + ("+" if folgetag else "")
+
+
+def _kurzform_wert(metric, value) -> str:
+    """Ein Verlaufswert in Kurzform: ohne Einheit, gerundet nach Katalog.
+
+    ``None`` heisst "Stunde liegt vor, traegt aber keinen Wert" und wird als
+    ``?`` ausgewiesen (``sms_format.md`` §4) — die Kurzform darf sie nicht
+    stillschweigend ueberspringen (AC-12).
+
+    Nicht-numerische Groessen kennt ``format_value`` nicht. Zwei von ihnen
+    fuehrt die Kurzform-Grammatik ausdruecklich (AC-5, ``sms_format.md``
+    §5a) und beide tragen dort dasselbe Kuerzel wie im Briefing:
+
+    * **Stufengroessen** (heute nur ``thunder``) den Stufenbuchstaben
+      ``-``/``L``/``M``/``H``. Die Zuordnung wird NICHT neu aufgeschrieben,
+      sondern kommt aus den beiden vorhandenen Quellen des Briefing-Pfads:
+      ``thunder_label_value()`` (``app/thunder_scale.py``, Render-Skala) und
+      ``tokens/metrics.LEVELS`` — dieselbe Kette, die das ``TH:``-Token baut.
+      Die Fallunterscheidung geht wie in ``_metric_formatter`` ueber
+      ``is_level``, nicht ueber ``metric.id``.
+    * **Windrichtung** das Himmelsrichtungs-Kuerzel (``W``, ``NW`` …) aus
+      ``degrees_to_compass()`` — genau der Helfer, den die Langform ueber
+      ``_metric_formatter`` benutzt, damit es keine zweite Umrechnung gibt.
+
+    Ohne diese beiden Zweige stuenden in der Kurzform ``270`` bzw. ``HIGH``:
+    laenger als die Langform (``W``/``hoch``) und ausserhalb der Grammatik.
+    Fuer alles weitere Nicht-Numerische (z.B. Niederschlagsart) bleibt es
+    beim Namen der Auspraegung.
+    """
+    if value is None:
+        return "?"
+    if metric.is_level:
+        return _STUFENBUCHSTABEN.get(thunder_label_value(value), "-")
+    if metric.dp_field == "wind_direction_deg":
+        return degrees_to_compass(value)
+    try:
+        return format_value(metric.id, value, style="bare")
+    except (TypeError, ValueError):
+        return str(getattr(value, "value", value)).rsplit(".", 1)[-1]
 
 
 def _erstes_wort(body: str) -> Optional[str]:
@@ -967,9 +1063,14 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
 
-        body = self._format_drilldown(
-            res, header, fmt, tz, with_emoji=with_emoji, hail_by_ts=hail_by_ts,
-        )
+        if _ist_kurzform_kanal(channel):
+            body = self._format_drilldown_kurzform(
+                res, definition, tz, folgetag=(day_token == "tomorrow"),
+            )
+        else:
+            body = self._format_drilldown(
+                res, header, fmt, tz, with_emoji=with_emoji, hail_by_ts=hail_by_ts,
+            )
         back = "tl_today" if day_token == "today" else "tl_tomorrow"
         markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
         return CommandResult(
@@ -1015,20 +1116,30 @@ class TripCommandProcessor:
         res = WeatherExtractor(user_id).drilldown(
             trip.id, metric.dp_field, from_time=from_time, hours=hours,
         )
+        kurzform = _ist_kurzform_kanal(channel)
         if not _traegt_werte(res):
+            # Gefuehrt heisst nicht gefuellt — auch die Kurzform SAGT das
+            # (Issue #2207, AC-13), auf englisch wie der uebrige Kurztext.
             return CommandResult(
                 success=False, command=f"metrik_{metric_id}",
                 confirmation_subject=f"[{trip.name}] {metric.label_de}",
                 confirmation_body=(
+                    fold_ascii(f"{_kurzform_kuerzel(metric)} no data")
+                    if kurzform else
                     f"{metric.label_de}: für diesen Ort und Zeitraum nicht "
                     f"verfügbar (keine stündlichen Werte vorhanden)."
                 ),
                 trip_name=trip.name,
             )
-        body = self._format_drilldown(
-            res, metric.label_de, _metric_formatter(metric), tz,
-            with_emoji=(channel == "telegram"),
-        )
+        if kurzform:
+            body = self._format_drilldown_kurzform(
+                res, metric, tz, folgetag=(day_token == "tomorrow"),
+            )
+        else:
+            body = self._format_drilldown(
+                res, metric.label_de, _metric_formatter(metric), tz,
+                with_emoji=(channel == "telegram"),
+            )
         back = "tl_today" if day_token == "today" else "tl_tomorrow"
         return CommandResult(
             success=True, command=f"metrik_{metric_id}",
@@ -1206,18 +1317,13 @@ class TripCommandProcessor:
 
         hail_by_ts = hail_by_ts or {}
         lines = [f"{header} — Verlauf"]
-        groups: list[tuple[tuple[str, str], list]] = []
-        for pt in res.points:
-            key = (
+        groups = _gruppiere_wechselpunkte(
+            res.points,
+            lambda pt: (
                 fmt(pt.value, with_emoji=with_emoji),
                 format_hail_note(hail_by_ts.get(pt.ts)) or "",
-            )
-            if groups and groups[-1][0] == key and (
-                pt.ts - groups[-1][1][-1].ts <= timedelta(hours=1)
-            ):
-                groups[-1][1].append(pt)
-            else:
-                groups.append((key, [pt]))
+            ),
+        )
 
         for (text, note), pts in groups:
             time_str = local_fmt(pts[0].ts, tz)
@@ -1228,6 +1334,58 @@ class TripCommandProcessor:
                 line = f"{line} · {note}"
             lines.append(line)
         return "\n".join(lines)
+
+    def _format_drilldown_kurzform(
+        self, res, metric, tz, *, folgetag: bool = False,
+    ) -> str:
+        """Derselbe Verlauf wie ``_format_drilldown``, kurzformtauglich.
+
+        Issue #2207 (Epic #2133, S5): auf dem Satellitengeraet ist der
+        ausgeschriebene Langform-Text teuer und teils gar nicht darstellbar.
+        Diese Fassung sagt dasselbe mit Katalog-Kuerzel und
+        ``{wert}@{h}``/``{wert}@{h1}-{h2}``; die Wechselpunkt-Gruppen kommen
+        aus DEMSELBEN Helfer wie die Langform (AC-14). Grammatik und
+        Kuerzungsregel: ``docs/reference/sms_format.md`` §5a.
+
+        Der fertige Text laeuft durch ``fold_ascii()``, BEVOR gemessen wird
+        ("zuerst falten, dann kuerzen"): bliebe ein einziges GSM-7-fremdes
+        Zeichen stehen (Gedankenstrich, Gradzeichen, Umlaut aus einem
+        ``col_label``), kodierte das Gateway die ganze Nachricht in UCS-2 und
+        das Budget halbierte sich (AC-11). Passt die Zeile dann nicht in 160
+        Zeichen, fallen HINTERE GANZE Gruppen weg (nie ein Teil einer Gruppe,
+        nie eine aus der Mitte) und ein englischer Anhang benennt die Zahl
+        der nicht gezeigten Stunden — die Luecke wird genannt, nicht
+        verschwiegen (AC-8/AC-9).
+        """
+        kuerzel = _kurzform_kuerzel(metric, folgetag)
+        if not any(pt.value is not None for pt in res.points):
+            # "Gefuehrt heisst nicht gefuellt" (AC-13) gehoert HIERHER, nicht
+            # in eine dritte Kopie an einem der beiden Aufruforte: sonst
+            # antwortet derselbe Verlauf je nach Abrufweg verschieden. Der
+            # getippte Weg faengt den Fall schon vorher ab
+            # (``_traegt_werte``), der strukturierte Token ``dd_*`` lief
+            # bisher in eine Zeile voller ``?`` (Adversary-Fund F003).
+            return fold_ascii(f"{kuerzel} no data")
+        gruppen = _gruppiere_wechselpunkte(
+            res.points, lambda pt: _kurzform_wert(metric, pt.value),
+        )
+        tokens: list[str] = []
+        for text, pts in gruppen:
+            von = local_hour(pts[0].ts, tz)
+            spanne = f"{von}" if len(pts) == 1 else f"{von}-{local_hour(pts[-1].ts, tz)}"
+            tokens.append(f"{text}@{spanne}")
+        stunden = [len(pts) for _text, pts in gruppen]
+
+        gezeigt = len(tokens)
+        while True:
+            entfallen = sum(stunden[gezeigt:])
+            teile = [kuerzel, *tokens[:gezeigt]]
+            if entfallen:
+                teile.append(f"+{entfallen}h not shown")
+            zeile = fold_ascii(" ".join(teile))
+            if gezeigt == 0 or len(zeile) <= _KURZFORM_MAX_ZEICHEN:
+                return zeile
+            gezeigt -= 1
 
     def _mit_datiertem_rueckfall(self, timeline: "TimelineResult", trip_id: str,
                                  user_id: str, tage, *,

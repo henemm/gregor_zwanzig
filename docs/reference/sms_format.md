@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.29"
+version: "2.30"
 status: active
 created: 2025-12-27
-updated: 2026-08-17
+updated: 2026-09-08
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.29)
+# SMS / Kompakt-Format Specification (v2.30)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -482,6 +482,52 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 
 ---
 
+## 5a. Ad-hoc-Verlauf in Kurzform (Issue #2207, Epic #2133 S5)
+
+Der **Ad-hoc-Verlauf einer Einzelgröße** (getipptes Metrik-Wort, z. B. `wind`
+oder `visib`) ist keine Token-Zeile im Sinne von §2 — er beantwortet eine
+Frage nach dem *Stundenverlauf* einer einzigen Größe. Auf E-Mail und Telegram
+antwortet er ausgeschrieben (`Sichtweite — Verlauf`, Zeilen mit `HH:MM`), auf
+**Premium-SMS und `sms`** in der hier beschriebenen Kurzform. Erzeugt in
+`TripCommandProcessor._format_drilldown_kurzform()`; die Wechselpunkt-Gruppen
+kommen aus demselben Helfer wie die Langform (`_gruppiere_wechselpunkte()`,
+Issue #2185), damit die Gruppengrenzen beider Fassungen nicht auseinander
+laufen können.
+
+**Aufbau:** `{Kürzel} {wert}@{h1}-{h2} {wert}@{h} …`
+
+```
+VS 0.3@14-16 5.0@17 42.5@18-21
+```
+
+| Element | Regel |
+|---|---|
+| Kürzel | `metric.sms_code`; ist er leer (im Katalog genau `temperature_night` und `temperature_day_high`), tritt `col_label` an seine Stelle (`Night`, `DayMax`) — **keine** zweite Abkürzungsliste |
+| Folgetag | `+` direkt am Kürzel (`VS+`), Konvention wie `TH+` — ohne das wären die Stundenzahlen zwischen heute und morgen mehrdeutig |
+| Bereich | Aufeinanderfolgende Stunden mit **identischem Anzeigetext** verschmelzen zu `{wert}@{h1}-{h2}`; eine Einzelstunde bleibt `{wert}@{h}` |
+| Lücke | Fehlt ein Zeitpunkt ganz, **bricht der Bereich** — ein Bereich behauptet nie Gültigkeit für eine ungemessene Stunde (#2167) |
+| Werte-Format | Ohne Einheit, gerundet nach `metric.decimals` (Konventionen §5); Stunden 0–23 **ohne** führende Null |
+| Nicht-numerische Größen | Tragen dieselben Kürzel wie im Briefing, nicht den ausgeschriebenen Wert: Windrichtung als Himmelsrichtungs-Kürzel (`W`, `NW` … wie §3.2a, aus `degrees_to_compass()`), Gewitter als Stufenbuchstabe (`-`/`L`/`M`/`H` wie §3.2/§4, aus `thunder_label_value()` + `tokens/metrics.LEVELS`) — die Kurzform ist nie länger als die Langform |
+| `?` | Ein Zeitpunkt, der **vorliegt, aber keinen Wert trägt**, erscheint als `?@{h}` — die Bedeutung „unbekannt" aus §4. Der Unterschied zur fehlenden Stunde ist der zwischen „nichts gemessen" und „gar nicht abgefragt" |
+| Keine Daten | Ist die Größe für Ort und Zeitraum insgesamt nicht befüllt, lautet die ganze Antwort `{Kürzel} no data` — englisch wie der übrige Kurztext, kein Schweigen und keine leere Zeile („geführt ≠ gefüllt") |
+| Zeichensatz | Der fertige Text läuft durch `fold_ascii()` (§1) — ein einziges GSM-7-fremdes Zeichen (Gedankenstrich, `·`, `°`, Umlaut aus einem `col_label`) würde die Nachricht auf UCS-2 umschalten und das Budget faktisch halbieren |
+
+**Kürzung (eigene Regel, NICHT die Rangfolge aus §6):** Gemessen wird **nach**
+der Faltung („erst falten, dann kürzen"). Passt die Zeile nicht in 160
+Zeichen, fallen **hintere ganze** Gruppen weg — nie ein Teil einer Gruppe,
+nie eine Gruppe aus der Mitte. Wurde gekürzt, benennt ein englischer Anhang
+die Zahl der nicht mehr gezeigten Stunden; ohne Kürzung erscheint **kein**
+Anhang. Der Anhang zählt zur 160er-Grenze mit.
+
+```
+VS 0.3@10 5.0@11 12.5@12 8.2@13 3.1@14 +2h not shown
+```
+
+Ein Verlauf ergibt immer **genau eine** Nachricht — keine Aufteilung auf
+mehrere Premium-SMS.
+
+---
+
 ## 6. Truncation-Strategie
 
 Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser **Reihenfolge** entfernt:
@@ -668,6 +714,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.27 | 2026-08-15 | **Temperatur-Auflösung Scheibe 1 (Issue #1728) — die Auswertungswahl steuert `K`/`D`/`FK`/`FD` nicht mehr.** Vier neue, eigenständig wählbare Katalog-Größen (`temperature_day_low`/`temperature_day_high`/`wind_chill_day_low`/`wind_chill_day_high`) übernehmen die Sichtbarkeits-Gates dieser vier Kürzel von der bisherigen Auswertungswahl (`MetricConfig.aggregations`) der Elterngrößen „Temperatur"/„Gefühlte Temperatur" — exakt nach dem Muster von `temperature_night`/`wind_chill_night` (#1484/#1660 A). `temperature`/`wind_chill` bleiben als Katalogeinträge bestehen und liefern weiterhin den Stundenwert für Stundentabelle und Telegram-Zelle; `WC` bleibt unverändert an `wind_chill` gebunden (PO E3, „WC soll bleiben" — **löst die in v2.24 angekündigte, nie umgesetzte Entfernung ab**, s. §3.6/§9-Korrekturen). Das Bereichs-Token-Verhalten aus v2.26 ist unverändert, greift jetzt aber, wenn **beide** neuen Tagesrichtungs-Größen aktiviert sind, statt bei „beide Auswertungen gewählt". Betrifft §2, den Hinweis zu `K`/`FK`/`FD`/`FN`, §3.2, §3.6, §4, §9. Reine Backend-Scheibe — der Trip-Editor zeigt bis Scheibe 2 weiterhin die (jetzt wirkungslose) alte Auswertungswahl für „Temperatur"/„Gefühlte Temperatur" an. Spec: `docs/specs/modules/feat_1728_s1_temp_aufloesung.md`. |
 | 2.28 | 2026-08-16 | **`WC` entfällt ersatzlos (Fix #1887 Scheibe A).** Löst die in v2.27 (PO E3, #1728) getroffene Entscheidung „WC soll bleiben" ab — die PO-Freigabe zu #1887 legt die Regel „verschieden von `FD` ⇒ bleibt" dem Sinn nach aus: die nachgewiesene Wert-Dublette betrifft `FK`, nicht `FD`. Die sechs Trip-SMS-Mehrfach-Kürzel `K`/`D`/`N`/`FK`/`FD`/`FN` kommen jetzt aus dem neuen Register-Feld `MetricDefinition.sms_multi_symbols` statt aus einer handgetippten Nebentabelle (`SMS_MULTI_SYMBOLS_BY_METRIC` wird zur reinen Ableitung). Die zwei toten `sms_code`-Werte `TD` (`temperature_day_high`) und `TN` (`temperature_night`) sind auf `""` gesetzt — kein Leser erreichte sie je; `temperature`/`temperature_cold`/`wind_chill` behalten unverändert `D`/`N`/`TF`. Betrifft §2 (Format-Zeile, Token-Tabelle, `K D`/`FK FD`-Hinweis, Fix-#1677-Absatz), §3.6 (Token-Tabelle, Korrektur-Block), §4 (Null-Repräsentation), §5 (Beispielwerte), §6 (Truncation-Reihenfolge), §8.5 (Beispiel), §9 (Datenquellen-Mapping), §10 (Geltungsbereich). Spec: `docs/specs/modules/fix_1887_e6a_sms_kuerzel_register.md`. |
 | 2.29 | 2026-08-17 | **Drei Register-Kürzel geändert (Fix #1926, PO-Konsistenzentscheid).** `K`→`L` (Tages-Tiefsttemperatur, Gehzeit) und `FK`→`FL` (gefühlte Tages-Tiefsttemperatur, Gehzeit) — reine Konsistenz-Fixes ohne Sprachbezug (ADR-0042 Klasse 1 bleibt von Sprachfragen ausgenommen). `NL`→`FZ` (Nullgradgrenze) zur Kollisionsvermeidung mit dem Schnee-/`SL`-Bereich. Alle drei neuen Werte kollisionsfrei gegen alle 32 Katalog-Einträge geprüft. Betrifft §2 (Format-Zeile, Token-Tabelle, `L D`/`FL FD`-Hinweis), §3.2 (Token-Tabelle, Gehzeit-Berechnung-Absatz), §3.2a (Invers-Min-Klasse), §4 (Null-Repräsentation), §6 (Truncation-Reihenfolge), §9 (Datenquellen-Mapping). Historische, datierte Korrektur-Absätze (§3.6, die WC/FK-Dublette vom 2026-08-11 ff.) bleiben mit dem damaligen Kürzel-Namen stehen. Spec: `docs/specs/modules/fix_1926_metrik_kuerzel_englisch.md`. |
+| 2.30 | 2026-09-08 | **Neuer §5a: Ad-hoc-Verlauf in Kurzform (Issue #2207, Epic #2133 Scheibe S5).** Der Ad-hoc-Verlauf einer Einzelgröße erreichte Premium-SMS bisher wortwörtlich als derselbe ausgeschriebene Text wie E-Mail und Telegram (Wortlabel, `HH:MM`-Uhrzeiten, kein Längenbudget) — auf dem Satellitengerät teuer und teils gar nicht darstellbar. Neu für die Kanäle `premium_sms`/`sms`: Bereichsnotation `{Kürzel} {wert}@{h1}-{h2}` bzw. `{wert}@{h}` (Kürzel aus `sms_code`, ersatzweise `col_label`; `+` am Kürzel für den Folgetag wie `TH+`), `?@{h}` für einen vorliegenden Zeitpunkt ohne Wert (§4-Bedeutung „unbekannt"), `{Kürzel} no data` für eine insgesamt unbefüllte Größe. Nicht-numerische Größen tragen dabei dieselben Kürzel wie im Briefing (Windrichtung als Himmelsrichtung `W`/`NW` nach §3.2a, Gewitter als Stufenbuchstabe `-`/`L`/`M`/`H` nach §3.2/§4) — beides aus den vorhandenen Quellen des Briefing-Pfads (`degrees_to_compass()` bzw. `thunder_label_value()` + `tokens/metrics.LEVELS`), keine zweite Umrechnung. Eigene Kürzungsregel (bewusst NICHT die Token-Rangfolge aus §6, die einen anderen Nachrichtentyp betrifft): nach `fold_ascii()` gemessen, hintere **ganze** Gruppen fallen weg, Anhang `+{N}h not shown` nur bei tatsächlicher Kürzung. Genau eine Nachricht je Verlauf. **Keine** Änderung an der Token-Zeile (§2–§6) und **keine** Änderung an der E-Mail-/Telegram-Langform. Grouping-Kern mit der Langform geteilt (`_gruppiere_wechselpunkte()`, aus #2185 herausgelöst). Spec: `docs/specs/modules/feat_2207_kurzform_verlauf.md`. |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:
