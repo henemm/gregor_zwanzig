@@ -137,9 +137,19 @@ def _corridor_plus_level_trip(trip_id: str) -> Trip:
 
 
 def _service(user_id: str, sink: list):
+    from app.config import Settings
     from services.trip_alert import TripAlertService
 
+    # #1196 Klasse C (Vorbild Batch 4 / test_issue_883): ohne Settings baut der
+    # Service Settings() aus der Umgebung, und can_send_email() ist nur mit
+    # Host-.env True -- auf dem CI-Runner lief jeder Fall in "No alert channel
+    # configured". Dummy-SMTP + mail_sink (DI-Naht) ersetzen den Versand;
+    # test.invalid ist RFC-2606-reserviert, es wird nie gedialt.
     return TripAlertService(
+        settings=Settings(
+            smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+            mail_to="empfaenger@example.com",
+        ),
         user_id=user_id,
         mail_sink=lambda subject, body: sink.append((subject, body)),
     )

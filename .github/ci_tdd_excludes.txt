@@ -75,6 +75,26 @@
 # - test_telegram_kurzstil_compare_official_alert · test_telegram_kurzstil_parse_mode
 # - test_telegram_kurzstil_trip_alert · test_telegram_kurzstil_trip_briefing
 #
+# Klasse C Teil 3 (2026-09-09, #1196): der Alarm-Block, 8 Dateien, 53 Tests,
+# davon 18 auf dem Runner rot -- drei Ursachen, alle Host-.env-Erbschaft:
+# (a) TripAlertService ohne settings= baut Settings() aus der Umgebung;
+#     can_send_email() ist nur mit Host-.env True, sonst "No alert channel
+#     configured" (run_deadline, tenancy_two_users, bundle_791 AC-1,
+#     corridor AC-2). Saniert: Dummy-SMTP im Testaufbau, Versand faengt die
+#     bestehende mail_sink-DI-Naht (Vorbild Batch 4 / test_issue_883).
+# (b) Telegram-Tests ohne telegram_test_chat_id liefen in die Herkunftssperre
+#     #1476 (816, 1168, 638). Saniert wie Teil 2: Stub-Chat-ID explizit.
+# (c) 1040 AC-3 erbte mail_to ueber Settings().with_user_profile() aus der
+#     Host-.env; send_one_compare_preset prueft mail_to vor der Engine (#1452).
+#     Saniert wie test_issue_764: Settings(mail_to=...) explizit.
+# Kein Test dialt echt (--disable-socket haette es gemeldet) -> kein
+# live-Marker noetig. Nachgemessen ohne .env mit den CI-Flags: 53/53 gruen,
+# --collect-only vorher/nachher je 53 (7+2+4+12+8+10+6+4).
+# - test_alert_run_deadline · test_alert_tenancy_two_users
+# - test_bundle_791_847_844_alerts · test_corridor_no_longer_triggers_alerts
+# - test_issue_1040_alerts_toggle · test_issue_1168_alert_engine_extract
+# - test_issue_638_alerts_redesign · test_issue_816_alert_deviation
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -82,21 +102,13 @@
 #
 # Eine Datei entfernen = sie laeuft ab dann auf CI; neue Dateien laufen
 # automatisch (kein Eintrag noetig). Bestandssanierung: #1196.
-tests/tdd/test_alert_run_deadline.py
-tests/tdd/test_alert_tenancy_two_users.py
-tests/tdd/test_bundle_791_847_844_alerts.py
 tests/tdd/test_compare_sun_hours_full_day_window.py
-tests/tdd/test_corridor_no_longer_triggers_alerts.py
-tests/tdd/test_issue_1040_alerts_toggle.py
 tests/tdd/test_issue_1088_official_alert_triggers.py
 tests/tdd/test_issue_1104_compare_config_foundation.py
 tests/tdd/test_issue_1107_compare_sections.py
-tests/tdd/test_issue_1168_alert_engine_extract.py
-tests/tdd/test_issue_638_alerts_redesign.py
 tests/tdd/test_issue_650_telegram_foundation.py
 tests/tdd/test_issue_685_selftest_menu_gate.py
 tests/tdd/test_issue_695_test_briefing_send.py
-tests/tdd/test_issue_816_alert_deviation.py
 tests/tdd/test_issue_833_gate.py
 tests/tdd/test_issue_995_scheduler_pause.py
 tests/tdd/test_staging_gate.py
