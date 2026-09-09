@@ -73,3 +73,52 @@ identischer Konfiguration verschiedene Mengen liefern können.
 3. **Briefing-Pfad des Vergleichs** darf nicht versehentlich Alarm-Kanäle lesen (sonst folgt das Briefing einem künftigen `alert_channels`).
 4. **Go-Roundtrip:** ohne Struct-Feld verliert jeder Go-Save ein per `/api/briefings` gesetztes `alert_channels` (BUG-DATALOSS-GR221-Muster).
 5. Schwellen/`AlertRules` für den Vergleich (Befund-Absatz im Issue) sind **nicht** Teil des Zielbilds — außerhalb dieser Scheibe.
+
+## Analysis
+
+### Type
+Rework (Feature-Pfad), Tech-Lead-Entscheidung 2026-09-09 nach Plan-Gegenprobe (Sonnet).
+
+### Scheibenschnitt (Entscheidung)
+
+Die Plan-Gegenprobe beziffert das Gesamtzielbild auf ~550-1150 LoC (allein die Go-RMW-Testvorlage
+`compare_preset_alert_channel_thresholds_test.go` hat 976 Zeilen). Daher **zwei Scheiben** nach dem
+Hausmuster (#1467 S1-S4b, #1258 S1-S3):
+
+- **S1 = dieses Ticket (#2279):** EINE Auflösung in Python, drei Compare-Alarmpfade umgehängt,
+  E-Mail-Regel, Tier-Gates einmal, Readiness raus aus der Auflösung, Briefing-Resolver des
+  Vergleichs sauber getrennt und umbenannt. Lesepfad für `alert_channels` beim Vergleich
+  (Roh-Dict) inklusive — Bestand ohne Feld verhält sich identisch (Erbe).
+- **S2 = Folge-Issue:** Go-Feld `ComparePreset.AlertChannels` + Feld-Level-Merge auf beiden
+  PUT-Wegen + Go-Tests, Compare-Alarme-Tab auf das Trip-Muster (`alarmeDeliveryPayload`,
+  E-Mail-Toggle → schließt #2212 in der UI), Migration flach → `alert_channels` (Dry-Run, Report,
+  Backup, Snapshot-Vergleich). Bis S2 ist ein `alert_channels` auf dem Vergleich nur per
+  Datei/Test erreichbar; der Go-Roundtrip würde einen per API gesetzten Key verwerfen —
+  **deshalb schreibt S1 das Feld nirgends** (kein Datenverlust-Risiko, kein Split-Brain).
+
+### Affected Files (S1)
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `src/services/alert_channels.py` | CREATE | `effective_alert_channels(subscription, settings, user_id)` = dünner Dispatcher → `_trip_channel_inputs(trip)` / `_compare_channel_inputs(preset)` → reiner Kern `resolve_alert_channels(override, inherited, rule_channel_sets, user_id)` (Muster `app/day_window.py:26`: primitive Eingaben, Adapter am Rand) |
+| `src/services/trip_alert.py:2871-2926` | MODIFY | `_effective_alert_channels` wird dünner Delegat (6 Aufrufer + Tests unverändert) |
+| `src/services/compare_alert.py:111,603`, `compare_official_alert.py:465-471`, `compare_radar_alert.py:169` | MODIFY | Aufruf der geteilten Funktion |
+| `src/services/compare_alert_channels.py` | MODIFY | `effective_compare_channels` → `effective_compare_briefing_channels` (Readiness bleibt, nur Briefing); alter Name verschwindet |
+| `src/services/scheduler_dispatch_service.py:29,351-363` | MODIFY | Umbenennung nachziehen (Briefing-Pfad bleibt auf Briefing-Resolver) |
+| `tests/tdd/test_compare_alert_channels.py:175-233` | MODIFY | Verdrahtungsnachweise AC-3a/3b auf die neuen Symbole |
+| `tests/tdd/test_alert_channel_resolution_parity.py` | CREATE | Paritätstabelle 16 Kombinationen × beide kinds, Bestand-Identität, E-Mail-aus, Settings-Inertheit, Tier-Gates einmal |
+| `tests/tdd/test_compare_alert_email_off.py` | CREATE | Ende-zu-Ende: Vergleich mit `alert_channels.email=false` → Abweichungs-/Radar-/amtlicher Alarm ohne Mail (Sinks) |
+
+### Scope Assessment
+- Files: 8 (2 neu) · Estimated LoC: src ≈ +150/−45, tests ≈ +280 · Risk: MEDIUM (Verhaltensneutralität Bestand; Readiness-Verschiebung nur ins Protokoll sichtbar)
+- LoC-Override 500 wird voraussichtlich gebraucht (Tests).
+
+### Technical Approach
+- **Kern-Algorithmus = Trip-Algorithmus** (Override → Erbe → Regel-Union → Tier-Gates). Vergleich liefert `override = preset.get("alert_channels")`, `inherited = {"email"} ∪ {telegram|sms|premium_sms bei truthy send_*}`, keine Regel-Overrides.
+- **`settings` bleibt in der Signatur, ist aber inert** (Issue-Signatur, Aufrufer haben es ohnehin); ein Tripwire-Test belegt: Ergebnis unabhängig vom `Settings`-Objekt. Readiness prüft ausschließlich die Zustellung (`notification_service.py:1663-1774`, `:1214-1232`, `:1320-1345`) — Plan-Gegenprobe: kein Test pinnt eine Readiness-Filterung im Alarmpfad; `test_compare_dispatch_channel_fanout.py:253` betrifft den Briefing-Pfad, der auf dem Briefing-Resolver bleibt.
+- Sichtbare Nebenwirkung: `effective_channels` im Unterdrückungs-Protokoll (`alert_log`) listet beim Vergleich jetzt auch nicht-sendebereite Opt-in-Kanäle — wie beim Trip seit je; `channels_not_sent`/`not_delivered` speisen sich aus `result.sent_channels` und bleiben korrekt.
+
+### Dependencies
+`services.user_tier` (Tier-Gates), `app.trip.Trip`/`AlertRule`, Preset-Roh-Dict via `compare_preset_access`, `notification_service` (Sendezeit-Guards, unverändert).
+
+### Open Questions
+- keine — Scheibenschnitt und Migrations-Aufschub sind Tech-Lead-Entscheidung; PO bestätigt über die ACs.
