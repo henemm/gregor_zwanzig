@@ -63,6 +63,10 @@ from output.renderers.sms_trip import SMSTripFormatter  # noqa: E402
 from output.renderers.trip_report import TripReportFormatter  # noqa: E402
 from services.weather_metrics import WeatherMetricsService  # noqa: E402
 
+from tests.helpers.mail_zeitstempel import (  # noqa: E402
+    hat_minutenstempel, ohne_minutenstempel,
+)
+
 _JAHR, _MONAT, _TAG = 2026, 8, 11
 _TZ = ZoneInfo("UTC")
 _START_H, _ENDE_H = 7, 17
@@ -206,13 +210,32 @@ def test_ac9_briefing_mail_bleibt_mit_und_ohne_die_neuen_rohwerte_identisch():
     """AC-9 (Kanal 4/4, Trip-Briefing-Mail): Given dasselbe Segment einmal mit
     und einmal ohne die neuen Rohwerte, When das Trip-Briefing (HTML +
     Klartext + Betreff) gerendert wird, Then sind alle drei Teile
-    zeichengleich."""
+    zeichengleich.
+
+    #2242: ``ohne``/``mit`` sind zwei NACHEINANDER gerenderte Mails, jede mit
+    eigenem ``datetime.now(timezone.utc)`` in Fusszeile/Kopfzeile. Ueber eine
+    Minutengrenze hinweg waeren HTML/Klartext dadurch NICHT mehr
+    zeichengleich, obwohl die eigentliche Zusicherung (keine Ausgabe-Aenderung
+    durch die neuen Rohwerte) haelt. ``ohne_minutenstempel()`` maskiert genau
+    diesen Wanduhr-Anteil, alles andere bleibt im Vergleich."""
     ohne = _briefing_mail(False)
     mit = _briefing_mail(True)
     assert ohne.email_html.strip(), "Briefing-HTML ist leer -- Vergleich pruefte nichts"
+    assert hat_minutenstempel(ohne.email_html), (
+        "Positivkontrolle: kein bekannter Zeitstempel im HTML gefunden -- "
+        "die Maske in tests/helpers/mail_zeitstempel.py ist veraltet."
+    )
+    assert hat_minutenstempel(ohne.email_plain), (
+        "Positivkontrolle: kein bekannter Zeitstempel im Klartext gefunden -- "
+        "die Maske in tests/helpers/mail_zeitstempel.py ist veraltet."
+    )
     assert mit.email_subject == ohne.email_subject, "Briefing-Betreff aendert sich durch die neuen Rohwerte"
-    assert mit.email_html == ohne.email_html, "Briefing-HTML aendert sich durch die neuen Rohwerte"
-    assert mit.email_plain == ohne.email_plain, "Briefing-Klartext aendert sich durch die neuen Rohwerte"
+    assert ohne_minutenstempel(mit.email_html) == ohne_minutenstempel(ohne.email_html), (
+        "Briefing-HTML aendert sich durch die neuen Rohwerte (Zeitstempel bereits maskiert)"
+    )
+    assert ohne_minutenstempel(mit.email_plain) == ohne_minutenstempel(ohne.email_plain), (
+        "Briefing-Klartext aendert sich durch die neuen Rohwerte (Zeitstempel bereits maskiert)"
+    )
 
 
 # =============================================================================

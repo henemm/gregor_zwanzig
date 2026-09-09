@@ -32,16 +32,13 @@ KEINE Mocks. Echte Trip-/Wetter-Objekte, echter Renderpfad.
 """
 from __future__ import annotations
 
-import re
 from datetime import date, datetime, time, timedelta, timezone
+
+from tests.helpers.mail_zeitstempel import hat_minutenstempel, ohne_minutenstempel
 
 # Klasse-A-Text aus output/renderers/email/outlook_state_hint.py — das ist die
 # Zusicherung an den Empfaenger, nicht bloss ein interner Wert.
 TEXT_NO_STAGES = "Keine weiteren Etappen — kein Ausblick."
-
-# Einzige zulaessige HTML-Abweichung: das minutengenaue "gesendet"-Label
-# (#623 AC-5), das zwei Renderaufrufe naturgemaess verschieden stempeln koennen.
-_SENT_LABEL = re.compile(r"gesendet [A-Za-z]{2} · \d{2}:\d{2}")
 
 _TRIP_ID = "tdd-1486-outlook-absent"
 _REPORT_TYPE = "evening"
@@ -187,7 +184,15 @@ def test_preview_matches_sent_when_the_outlook_is_absent():
     assert TEXT_NO_STAGES in sent.email_html
 
     # --- AC-6: Vorschau ist zeichengleich zum Versand.
-    assert preview.email_plain == sent.email_plain, (
+    # #2242: Vorschau und Versand sind zwei UNABHAENGIGE Renderaufrufe, jeder
+    # mit eigenem ``datetime.now(timezone.utc)`` in Kopf-/Fusszeile. Ueber
+    # eine Minutengrenze hinweg waere der Vergleich sonst falsch-rot, obwohl
+    # die eigentliche Zusicherung (Vorschau == Versand) haelt.
+    assert hat_minutenstempel(preview.email_plain), (
+        "Positivkontrolle: kein bekannter Zeitstempel im Klartext gefunden -- "
+        "die Maske in tests/helpers/mail_zeitstempel.py ist veraltet."
+    )
+    assert ohne_minutenstempel(preview.email_plain) == ohne_minutenstempel(sent.email_plain), (
         "Klartext-Mail: Vorschau divergiert vom Versand, wenn der Ausblick "
         f"entfaellt.\nVorschau:\n{preview.email_plain}\n\nVersand:\n{sent.email_plain}"
     )
@@ -197,7 +202,11 @@ def test_preview_matches_sent_when_the_outlook_is_absent():
     assert preview.telegram_bubbles == sent.telegram_bubbles, (
         "Telegram: die Vorschau-Bubbles weichen vom Versand ab."
     )
-    assert _SENT_LABEL.sub("", preview.email_html) == _SENT_LABEL.sub("", sent.email_html), (
+    assert hat_minutenstempel(preview.email_html), (
+        "Positivkontrolle: kein bekannter Zeitstempel im HTML gefunden -- "
+        "die Maske in tests/helpers/mail_zeitstempel.py ist veraltet."
+    )
+    assert ohne_minutenstempel(preview.email_html) == ohne_minutenstempel(sent.email_html), (
         "HTML-Mail: Vorschau divergiert vom Versand, wenn der Ausblick entfaellt."
     )
 
