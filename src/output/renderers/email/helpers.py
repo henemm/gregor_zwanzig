@@ -923,6 +923,10 @@ def format_trend_tokens(stage: dict) -> dict:
             wind_risk       — bool (wind_kmh >= 50)
             thunder_word    — 'kein' / 'leicht' / 'mittel' / 'hoch'
             thunder_plain   — '⚡–' / '⚡leicht' / '⚡mittel' / '⚡hoch'
+                              (#2176: die LOW-Form wird von den Ausblick-
+                              Zellenbauern in `thunder_branch.py` auf das
+                              nackte 'leicht' zurueckgeschnitten -- das ⚡
+                              darf bei LOW nicht vor dem Stufenwort stehen)
             precip_token    — '{erst}@{h}({peak}@{h})' or '-' (#640)
             wind_token      — '{v}@{h}(...)' or '-' (#640)
             gust_token      — '{v}@{h}(...)' or '-' (#640)
@@ -1716,6 +1720,7 @@ def _pill_for_metric(
         max_lvl = ThunderLevel.NONE
         first_thunder_ts = None
         peak_ts = None
+        peak_dp = None
         # Issue #1474b: die Erwaehnungsschwelle kommt aus derselben Quelle
         # wie SMS/Telegram (Trip-Einstellung ?? DEFAULTS["TH:"] = 1.0, "ab
         # leicht") -- nicht mehr fest an ThunderLevel.MED gebunden.
@@ -1736,6 +1741,7 @@ def _pill_for_metric(
             if thunder_ordinal(lvl) > thunder_ordinal(max_lvl):
                 max_lvl = lvl
                 peak_ts = dp.ts
+                peak_dp = dp
         # Issue #1475 S5a: Hagel ist ein eigenes, rein deskriptives Kennzeichen
         # NEBEN der Gewitterstufe (nie ein Bestandteil davon, Spec AC-3). Der
         # Zusatz erscheint nur bei "ja"; bei "unbekannt"/"nein" bleibt der Text
@@ -1782,7 +1788,20 @@ def _pill_for_metric(
             # unsichtbar. Das Wort kommt aus THUNDER_LABEL_DE (SSoT, #1480),
             # nicht aus einer lokalen Wortliste.
             _stufe = THUNDER_LABEL_DE[max_lvl]
-            return (f"Gewitter {_stufe} ab {first_hh:02d}:00 · "
+            # Issue #2176: bei LOW steht statt der Gewitteransage die
+            # Luftmassen-Aussage aus der geteilten Quelle -- herkunftsabhaengig
+            # ueber DIESELBE `_traeger`-Liste, die unten den ·-Zusatz speist.
+            # Form "lang" mit dem CAPE-Wert DER Spitzenstunde: diese Pille ist
+            # der real verdrahtete E-Mail-Highlight-Pfad, an dem AC-2 den
+            # Zahlenwert verlangt.
+            if max_lvl == ThunderLevel.LOW:
+                from output.metric_format import thunder_low_statement_sentence
+                _kopf = thunder_low_statement_sentence(
+                    "lang", _traeger, cape_jkg=peak_dp.cape_jkg,
+                )
+            else:
+                _kopf = f"Gewitter {_stufe}"
+            return (f"{_kopf} ab {first_hh:02d}:00 · "
                     f"stärkste {peak_hh:02d}:00"
                     f"{_origin_suffix}{_hail_suffix}", _tone)
         # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf

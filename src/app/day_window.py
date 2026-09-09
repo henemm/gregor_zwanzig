@@ -237,7 +237,6 @@ def night_addendum(
 # muss fuer sich lesbar sein -- ein „nachts Gewitter" ohne Stufe waere von
 # „Stufe unbekannt" nicht unterscheidbar.
 _NIGHT_ADDENDUM_WORD = {
-    "LOW": "leichtes",
     "MED": "mittleres",
     "HIGH": "starkes",
 }
@@ -249,8 +248,20 @@ def format_night_addendum(level, hour: int) -> str:
     EINE Stelle fuer den Wortlaut: beide Bauwege des Vorschau-Satzes
     (Trend-Weg und Fetch-Weg) sind wortgleich, aber unabhaengiger Code --
     eine zweite Kopie wuerde driften.
+
+    Issue #2176: ``LOW`` hat hier kein Adjektiv mehr, sondern eine eigene,
+    ereignisfreie Aussage -- der Nacht-Halbsatz ist der einzige Ort, an dem
+    der Baustein MITTEN im Satz steht (deshalb klein geschrieben).
     """
-    word = _NIGHT_ADDENDUM_WORD.get(getattr(level, "name", str(level)))
+    name = getattr(level, "name", str(level))
+    if name == "LOW":
+        from app.thunder_scale import thunder_low_statement
+
+        # Herkunft liegt an dieser Stelle nicht vor (der Nacht-Treffer traegt
+        # nur Stufe + Stunde) -- unbekannte Herkunft ist KEINE reine
+        # Luftmasse (Spec AC-4), der Baustein entscheidet das selbst.
+        return f", nachts {thunder_low_statement('kurz', None)} ab {int(hour):02d}:00"
+    word = _NIGHT_ADDENDUM_WORD.get(name)
     if word is None:
         return ""
     return f", nachts {word} Gewitter ab {int(hour):02d}:00"

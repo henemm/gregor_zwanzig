@@ -46,6 +46,15 @@ Davon zu unterscheiden sind **Böen** und **Starkregen**: Sie sind eigenständig
 die auch ohne Gewitter existieren, und bleiben es (E9). Sie erscheinen also ebenfalls, aber
 nicht als Gewitteraussage — die vollständige Liste steht in 2.1b.
 
+🔴 **Nachtrag 2026-09-08 (ADR-0064, Issue #2176):** Die Stufe „leicht" ist seither keine
+Gewitter-**Ereignisbehauptung** mehr — in keinem Kanal erscheint dafür noch das Wort
+„Gewitter" als Ereignis (Tabellenkopf/Katalogeintrag „Gewitter" bleibt als reiner
+Metrik-Name zulässig). Statt „Gewitter möglich" steht dort eine Luftmassen-Aussage mit dem
+CAPE-Wert, außer die Einstufung stammt (auch) aus Blitzdichte/-potenzial/Wettercode — dann
+bleibt der tatsächliche Signal-Träger sichtbar. Die vier-stufige, nutzersichtbare
+Gewitterleiter (`keine/möglich/wahrscheinlich/akut`) beginnt seither bei `MED`, nicht mehr
+bei `LOW`. Das Stufenwort „leicht" selbst und die Werte-Spalte oben bleiben unverändert.
+
 ### 2.1 Die Wahrscheinlichkeit entfällt — gemessen, nicht vermutet
 
 Geplant war eine zweite Achse „Gewitter-Wahrscheinlichkeit 0–100 %". **Es gibt dafür keine

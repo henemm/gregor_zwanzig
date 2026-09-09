@@ -609,7 +609,21 @@ class CompactSummaryFormatter:
         start_h = min(thunder_hours)
         end_h = max(thunder_hours) + 1
 
-        if friendly:
+        # Issue #2176: die HOECHSTE Stufe im Fenster entscheidet, ob hier eine
+        # Gewitteransage oder die ereignisfreie Luftmassen-Aussage steht --
+        # aus DERSELBEN `thunder_paare`-Liste, die unten die Herkunft speist
+        # (kein zweiter Datenzugriff). MED/HIGH bleiben unveraendert (AC-6).
+        from output.metric_format import (
+            thunder_low_statement_sentence, thunder_ordinal,
+        )
+        max_lvl = max((lvl for lvl, _ in thunder_paare), key=thunder_ordinal)
+        if max_lvl == ThunderLevel.LOW:
+            traeger_low = union_of_max_carriers(thunder_paare)
+            text = (
+                f"{thunder_low_statement_sentence('kurz', traeger_low)} "
+                f"{start_h}:00–{end_h}:00"
+            )
+        elif friendly:
             text = f"⚡ möglich {start_h}:00–{end_h}:00"
         else:
             text = f"Gewitter möglich {start_h}:00–{end_h}:00"

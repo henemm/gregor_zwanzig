@@ -51,6 +51,25 @@ def _thunder_token_parts(token: Optional[str]):
     return m.group(1), m.group(2), peak_suffix
 
 
+def _token_is_pure_low(token: Optional[str]) -> bool:
+    """Issue #2176: traegt der Token AUSSCHLIESSLICH die Stufe "leicht"?
+
+    🔴 Der Peak-Zusatz MUSS mitgeprueft werden: ``leicht@5(hoch@15)`` ist der
+    meteorologische Normalfall eines ueber den Nachmittag eskalierenden
+    Gewitters -- wer nur die erste Gruppe liest, nimmt dem Ausblick das
+    ⚡ vor einer ECHTEN HIGH-Ansage weg (Spec AC-6, Regressionsanker gegen
+    Ueberkorrektur).
+    """
+    from output.metric_format import THUNDER_LABEL_DE
+    from app.models import ThunderLevel
+
+    m = _THUNDER_TOKEN_RE.match(token or "")
+    if not m:
+        return False
+    leicht = THUNDER_LABEL_DE[ThunderLevel.LOW]
+    return m.group(1) == leicht and m.group(3) in (None, leicht)
+
+
 def resolve_thunder_day_branch(tok: dict, stage: dict) -> str:
     """Waehlt die Datenquelle fuer das Tages-Gewitterwort (#1671).
 
@@ -143,7 +162,13 @@ def _tagesteil(tok: dict, stage: dict, *, praefix: str, mit_uhrzeit: bool,
     parts = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
     if parts:
         trenn = " " if mit_uhrzeit else ""
-        teil = f"{praefix}{parts[0]}{trenn}@{parts[1]}{parts[2]}"
+        # Issue #2176: ⚡ ist hier ein EREIGNIS-Symbol unmittelbar vor dem
+        # Stufenwort -- bei einer reinen "leicht"-Zelle faellt es weg. Peak
+        # mitgeprueft: `leicht@5(hoch@15)` behaelt es (Spec AC-6).
+        _pfx = "" if praefix and _token_is_pure_low(
+            tok.get("thunder_day_token")
+        ) else praefix
+        teil = f"{_pfx}{parts[0]}{trenn}@{parts[1]}{parts[2]}"
         origin = tok.get("thunder_day_origin") if mit_herkunft else None
         if origin:
             teil += f" · {origin}"
@@ -157,11 +182,17 @@ def _tagesteil(tok: dict, stage: dict, *, praefix: str, mit_uhrzeit: bool,
         return _THUNDER_MAP["NONE"]["plain"] if praefix else _fmt_thunder(None)
     # Ohne jede Stundenreihe (Alt-Aufrufer/Compare) kann der Split nichts
     # sagen -- dann das ungefilterte Aggregat.
-    if praefix:
-        return tok["thunder_plain"]
     from app.models import ThunderLevel
 
     level = (stage.get("thunder", "NONE") or "NONE").upper()
+    if praefix:
+        # Issue #2176: `thunder_plain` ist "⚡leicht" -- das Ereignis-Symbol
+        # steht dort unmittelbar vor dem Stufenwort. Bei LOW bleibt allein das
+        # unveraenderte Stufenwort stehen (Spec AC-1).
+        if level == "LOW":
+            return _THUNDER_MAP["LOW"]["word"]
+        return tok["thunder_plain"]
+
     return _fmt_thunder(getattr(ThunderLevel, level, ThunderLevel.NONE))
 
 
@@ -207,7 +238,10 @@ def thunder_cell_telegram(tok: dict, stage: dict) -> str:
     if branch != "day":
         return _tagesteil(tok, stage, praefix="⚡", mit_uhrzeit=False,
                           mit_herkunft=False)
-    teil = f"⚡{tok.get('thunder_day_token', '-')}"
+    # Issue #2176: eigener Bauweg (roher Token) -- dieselbe ⚡-Regel wie in
+    # `_tagesteil`, sonst bliebe das Ereignis-Symbol genau hier stehen.
+    _token = tok.get("thunder_day_token", "-")
+    teil = _token if _token_is_pure_low(_token) else f"⚡{_token}"
     origin = tok.get("thunder_day_origin")
     if origin:
         teil += f" · {origin}"

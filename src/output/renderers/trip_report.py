@@ -743,6 +743,8 @@ class TripReportFormatter:
         Values outside segment window are annotated with "nachts".
         Precip/POP/CAPE: from segment-only aggregated values.
         """
+        from output.metric_format import thunder_low_statement_sentence
+
         highlights = []
 
         # Thunder (segment hours only)
@@ -754,8 +756,24 @@ class TripReportFormatter:
             for dp in seg_data.timeseries.data:
                 if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
                     elev = int(seg_data.segment.start_point.elevation_m or 0)
+                    # Issue #2176: LOW ist keine Ereignisbehauptung mehr,
+                    # sondern die Luftmassen-Aussage MIT ihrem CAPE-Wert
+                    # (Spec AC-2: der Zahlenwert steht AN der Aussage, nicht
+                    # nur in der ohnehin vorher bestehenden Stundentabellen-
+                    # Spalte; die 1000-J/kg-Highlight-Schwelle weiter unten
+                    # bedient einen anderen Zweck und bleibt unveraendert).
+                    # ⚡ bleibt hier Metrik-Kennzeichner der Zeile, steht aber
+                    # nicht mehr vor einer Ereignisaussage.
+                    if dp.thunder_level == ThunderLevel.LOW:
+                        _kopf = thunder_low_statement_sentence(
+                            "lang",
+                            getattr(dp, "thunder_level_signals", None),
+                            getattr(dp, "cape_jkg", None),
+                        )
+                    else:
+                        _kopf = "Gewitter möglich"
                     highlights.append(
-                        f"⚡ Gewitter möglich ab {local_fmt(dp.ts, self._tz)} "
+                        f"⚡ {_kopf} ab {local_fmt(dp.ts, self._tz)} "
                         f"({'am Ziel' if seg_data.segment.segment_id == 'Ziel' else f'Segment {seg_data.segment.segment_id}'}, >{elev}m)"
                     )
                     break
@@ -909,7 +927,9 @@ class TripReportFormatter:
         # Issue #1474 (AC-12): deutsches Wort statt generischem englischen
         # Fallback ("Thunderstorm") -- die einzige LOW-Instanz im ganzen
         # System (s. Spec Known Limitations).
-        (RiskType.THUNDERSTORM, RiskLevel.LOW): "⚠️ Gewitter leicht",
+        # Issue #2176: LOW traegt keine Gewitter-Ereignisbehauptung mehr --
+        # dieselbe Umstellung wie `sms_trip._SMS_RISK_LABELS`.
+        (RiskType.THUNDERSTORM, RiskLevel.LOW): "⚠️ Luftmasse leicht",
         (RiskType.WIND, RiskLevel.HIGH): "⚠️ Storm",
         (RiskType.WIND, RiskLevel.MODERATE): "⚠️ High Wind",
         (RiskType.RAIN, RiskLevel.HIGH): "⚠️ Heavy Rain",

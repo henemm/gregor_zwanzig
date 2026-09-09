@@ -208,8 +208,16 @@ def trip_briefing_due_at(
 
 def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
     """Returns a hint text when conditions are notable, else None."""
+    from app.thunder_scale import thunder_low_statement_sentence
+
     notes = []
-    if thunder != "NONE":
+    if thunder == "LOW":
+        # Issue #2176: "leicht" ist keine Ereignisbehauptung mehr. Die
+        # Trend-Notiz kennt an dieser Stelle keine Traegerliste -- unbekannte
+        # Herkunft ist KEINE reine Luftmasse (Spec AC-4), der Baustein
+        # entscheidet das selbst.
+        notes.append(thunder_low_statement_sentence("kurz", None))
+    elif thunder != "NONE":
         notes.append("Gewitter möglich")
     if precip_mm > 5:
         notes.append(f"Regen {precip_mm:.0f} mm")
@@ -2765,8 +2773,8 @@ class TripReportSchedulerService:
         )
         from app.models import ThunderLevel
         from app.thunder_scale import (
-            thunder_label_value, thunder_ordinal, thunder_signal_label,
-            union_of_max_carriers,
+            thunder_label_value, thunder_low_statement_sentence,
+            thunder_ordinal, thunder_signal_label, union_of_max_carriers,
         )
 
         win_start, win_end = resolve_configured_window(window_start, window_end)
@@ -2831,7 +2839,11 @@ class TripReportSchedulerService:
         if level == ThunderLevel.NONE:
             text = "Kein Gewitter erwartet"
         elif level == ThunderLevel.LOW:
-            text = f"Leichtes Gewitter möglich ab {when}" if when else "Leichtes Gewitter möglich"
+            # Issue #2176: LOW verlaesst die Gewitterleiter -- die Aussage
+            # nennt die Luftmasse, kein Ereignis. Herkunft aus DERSELBEN
+            # `carriers`-Rechnung, die unten den ·-Zusatz speist.
+            _kern = thunder_low_statement_sentence("kurz", carriers)
+            text = f"{_kern} ab {when}" if when else _kern
         elif level == ThunderLevel.MED:
             text = f"Gewitter möglich ab {when}" if when else "Gewitter möglich"
         else:
@@ -2999,7 +3011,10 @@ class TripReportSchedulerService:
         ist die geteilte Sortier-Skala -- kein zweites, driftendes Ordinal.
         """
         from app.models import ThunderLevel
-        from app.thunder_scale import thunder_ordinal, thunder_signal_label
+        from app.thunder_scale import (
+            thunder_low_statement_sentence, thunder_ordinal,
+            thunder_signal_label,
+        )
         # Issue #1475 Nachbesserung (Punkt 4a): das Hagel-Aggregat kommt ueber
         # den kanonischen Basis-Metrik-Weg (``summarize_points`` ->
         # ``_compute_hail_flag`` -> ``hail_priority``) statt ueber einen
@@ -3067,22 +3082,28 @@ class TripReportSchedulerService:
             )
             earliest_local = _local(earliest_ts)
             when = earliest_local.strftime("%H:%M")
-            if level == ThunderLevel.NONE:
-                text = "Kein Gewitter erwartet"
-            elif level == ThunderLevel.LOW:
-                text = f"Leichtes Gewitter möglich ab {when}"
-            elif level == ThunderLevel.MED:
-                text = f"Gewitter möglich ab {when}"
-            else:
-                text = f"Starkes Gewitter erwartet ab {when}"
             # Issue #1680 S5b: der ohnehin vorhandene summarize_points()-Aufruf
             # (bisher nur fuer `hail_flag`, s.u.) wird in eine Variable
             # gehoben und zusaetzlich um die Traegerliste der Tagesstufe
             # gelesen. Beide Groessen entstehen ueber DIESELBE `thunder_dps`-
             # Menge, aus der auch `level` stammt -- kein zweiter Datenzugriff,
             # keine zweite Fensterfilterung.
+            # Issue #2176: der Aufruf steht jetzt VOR dem Textbau, weil die
+            # LOW-Aussage die Traegerliste selbst braucht (herkunftsabhaengig).
             summary = summarize_points(thunder_dps)
             carriers = getattr(summary, "thunder_level_max_signals", None)
+            if level == ThunderLevel.NONE:
+                text = "Kein Gewitter erwartet"
+            elif level == ThunderLevel.LOW:
+                # Issue #2176: LOW ist eine Luftmassen-, keine Ereignisaussage.
+                text = (
+                    f"{thunder_low_statement_sentence('kurz', carriers)} "
+                    f"ab {when}"
+                )
+            elif level == ThunderLevel.MED:
+                text = f"Gewitter möglich ab {when}"
+            else:
+                text = f"Starkes Gewitter erwartet ab {when}"
             # Herkunft unmittelbar hinter der Tagesaussage, VOR dem
             # Nacht-Halbsatz (und damit vor dem Hagel-Zusatz des Renderers).
             # Level-Check am Wirkort (Spec AC-6), Traeger-Guard gegen den

@@ -255,7 +255,14 @@ def _tg_day_footer(
             thunder_word = "?" if has_gap else THUNDER_LABEL_DE[ThunderLevel.NONE]
         else:
             thunder_word = THUNDER_LABEL_DE[_SEV_TO_THUNDER_LEVEL[max_thunder_sev]]
-        parts.append(f"⚡ {thunder_word}")
+        # Issue #2176: ⚡ ist hier das Ereignis-Symbol unmittelbar vor dem
+        # Stufenwort. Bei "leicht" traegt die Fusszeile stattdessen die
+        # Luftmassen-Beschriftung -- kanaltypisch kurz, ohne CAPE-Wert und
+        # ohne Herkunft (Spec AC-1/AC-2-Ausnahme fuer Kurzformen).
+        if max_thunder_sev == _thunder_severity(ThunderLevel.LOW):
+            parts.append(f"Luftmasse {thunder_word}")
+        else:
+            parts.append(f"⚡ {thunder_word}")
         # Issue #1475 S5a: Hagel-Kennzeichen rein deskriptiv NEBEN der
         # Gewitterstufe -- derselbe geteilte Textbaustein wie Mail und
         # `GEWITTER`-Kommando (#1481 DRY, call-time Import). Bei

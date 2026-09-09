@@ -664,7 +664,9 @@ class TestPlainDayWordComesFromDayToken:
         # #1493: das Tageswort traegt jetzt die Onset-Stunde -- geprueft
         # bleibt, dass Wort UND Stunde aus dem Tagestoken stammen (Stunde 9),
         # nicht aus dem Aggregat ("HIGH").
-        assert row.endswith("⚡leicht@9"), (
+        # #2176: bei LOW steht kein "⚡" mehr vor dem Stufenwort (Ereignis-
+        # symbol); MED/HIGH tragen es weiter, s. Test darunter.
+        assert row.endswith("leicht@9"), (
             f"Wort stammt nicht aus dem Tagestoken: {row!r}"
         )
 

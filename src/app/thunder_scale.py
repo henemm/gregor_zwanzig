@@ -28,6 +28,9 @@ __all__ = [
     "thunder_signal_label",
     "THUNDER_SIGNAL_LABEL_DE",
     "union_of_max_carriers",
+    "thunder_low_statement",
+    "thunder_low_statement_sentence",
+    "THUNDER_LABEL_DE",
 ]
 
 # Kanonische Ordnungsquelle fuer ThunderLevel (str-Enum ohne eigene Ordnung,
@@ -171,3 +174,108 @@ def union_of_max_carriers(
             if name not in traeger:
                 traeger.append(name)
     return traeger or None
+
+
+# ---------------------------------------------------------------------------
+# Issue #2176: die LOW-Aussage OHNE Ereignisbehauptung
+#
+# `ThunderLevel.LOW` verlaesst mit dieser Scheibe die vier-stufige,
+# nutzersichtbare Gewitterleiter (PO-Entscheid 2026-09-08, Epic #1419
+# Abschnitt 9): "leicht" misst eine Luftmasse, kein Ereignis. Bis hierher baute
+# JEDE der sechs+ Formulierungsstellen ihren LOW-Satz selbst aus
+# "Gewitter"-Strings -- die geteilte Quelle liefert deshalb ein FERTIGES
+# Satzfragment, nicht nur einen Baustein, sonst bliebe genau diese
+# Sechsfach-Duplizierung bestehen.
+#
+# Domaenenschicht (nicht `output/metric_format.py`) aus DEMSELBEN Grund wie
+# `thunder_signal_label` darueber: `app/day_window.py` und
+# `services/trip_report_scheduler.py` brauchen den Baustein, duerfen aber keine
+# Darstellungsschicht importieren (Waechter #1365). `output.metric_format`
+# re-exportiert ihn unveraendert.
+_LOW_KERN_REINE_LUFTMASSE = "instabile Luftmasse"
+_LOW_KERN_GEMISCHT = "schwaches Signal"
+
+
+# Geteilte deutsche Beschriftung (Issue #1474, "geteilte Quelle statt Kopien"
+# statt fuenffach dupliziertem Label). NONE fehlt bewusst nicht -- Konsumenten
+# mit abweichender NONE-Darstellung (z.B. compare_html.py "—" statt "kein")
+# ueberschreiben nur diesen einen Eintrag lokal.
+#
+# Issue #2176 hierher verschoben aus `output/metric_format.py`, nach DEMSELBEN
+# Muster wie `THUNDER_SIGNAL_LABEL_DE` darueber: `thunder_low_statement()`
+# haengt das Stufenwort an und braucht es deshalb in der Domaenenschicht -- ein
+# Import aus `output.metric_format` waere hier ein Zirkelbezug UND ein
+# Schichtbruch (Waechter #1365). `output.metric_format` re-exportiert das Dict
+# unveraendert, alle bestehenden Importe bleiben gueltig.
+THUNDER_LABEL_DE: dict[ThunderLevel, str] = {
+    ThunderLevel.NONE: "kein",
+    ThunderLevel.LOW: "leicht",
+    ThunderLevel.MED: "mittel",
+    ThunderLevel.HIGH: "hoch",
+}
+
+
+def _thunder_low_is_pure_cape(carriers: Optional[Iterable[str]]) -> bool:
+    """True NUR wenn ``carriers`` eine NICHT-LEERE Menge ist und ausschliesslich
+    ``"cape"`` enthaelt.
+
+    ``None`` UND ``[]`` gelten BEIDE als unbekannte/fehlende Herkunft -- KEINE
+    reine Luftmasse (Analogie ADR-0048 Regel 5: unbekannte Herkunft ist keine
+    Aussage, nicht "unauffaellig"). LOW kann strukturell aus reiner
+    Blitzdichte ohne jeden CAPE-Beitrag entstehen; eine pauschale
+    "nur Luftmasse"-Behauptung waere dort sachlich falsch (Spec AC-4).
+    """
+    if not carriers:
+        return False
+    return set(carriers) <= {"cape"}
+
+
+def thunder_low_statement(
+    form: str,
+    carriers: Optional[Iterable[str]],
+    cape_jkg: Optional[float] = None,
+) -> str:
+    """Fertige LOW-Aussage OHNE Gewitterwort, herkunftsabhaengig (#2176).
+
+    ``form="lang"`` (E-Mail-/Telegram-Fliesstext) traegt den CAPE-Wert, wenn
+    bekannt (Spec AC-2: der Zahlenwert steht AN der Aussage, nicht nur in der
+    ohnehin vorher bestehenden Stundentabellen-Spalte). ``form="kurz"``
+    (Kompakt/Fusszeile/SMS-Umfeld) traegt ihn NICHT -- dort entscheidet das
+    Zeichenbudget.
+
+    Rueckgabe ist bewusst KLEIN geschrieben: der Baustein steht mal
+    satzanfangs (Highlight, Pille), mal mitten im Satz (Nacht-Zusatz).
+    Satzanfangs setzen die Aufrufer ``thunder_low_statement_sentence()``.
+
+    Das STUFENWORT ("leicht") bleibt Teil der Aussage: #2176 nimmt die
+    Ereignisbehauptung heraus, nicht die Stufe. `feat_1474` AC-11 ("jeder
+    Kanal zeigt ein erkennbares 'leicht'") und `fix_1488` AC-4 bleiben laut
+    Spec-Dependencies fuer das Stufenwort in Kraft -- nur die Satzform mit
+    "Gewitter" entfaellt. Stufenwort und CAPE teilen sich EINE Klammer, sonst
+    stuenden bei ``form="lang"`` zwei Klammern hintereinander.
+    """
+    if form not in ("lang", "kurz"):
+        raise ValueError(f"Unbekannte thunder_low_statement-Form: {form!r}")
+    kern = (
+        _LOW_KERN_REINE_LUFTMASSE if _thunder_low_is_pure_cape(carriers)
+        else _LOW_KERN_GEMISCHT
+    )
+    zusatz = [THUNDER_LABEL_DE[ThunderLevel.LOW]]
+    if form == "lang" and cape_jkg is not None:
+        zusatz.append(f"CAPE {cape_jkg:.0f} J/kg")
+    return f"{kern} ({', '.join(zusatz)})"
+
+
+def thunder_low_statement_sentence(
+    form: str,
+    carriers: Optional[Iterable[str]],
+    cape_jkg: Optional[float] = None,
+) -> str:
+    """``thunder_low_statement()`` satzanfangs -- erster Buchstabe gross.
+
+    Eigene Funktion statt ``str.capitalize()`` an vier Aufrufstellen:
+    ``capitalize()`` wuerde den Rest KLEIN schreiben und aus
+    "instabile Luftmasse" ein falsches "Instabile luftmasse" machen.
+    """
+    text = thunder_low_statement(form, carriers, cape_jkg)
+    return text[:1].upper() + text[1:]
