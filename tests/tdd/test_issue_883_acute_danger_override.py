@@ -227,10 +227,20 @@ def _ensure_real_user_dir(uid: str) -> None:
 
 
 def _new_service(uid: str, frames, captured: list):
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
+    # #1196 Klasse C (Vorbild Batch 4, test_feature_656_radar_nowcast): ohne
+    # Settings baut der Service Settings() aus der Umgebung, und
+    # can_send_email() ist nur mit Host-.env True — auf dem CI-Runner lief
+    # jeder Override-Fall in "No channel configured; skipping radar alert"
+    # (count=0). Dummy-SMTP + mail_sink (DI-Naht) ersetzen den Versand.
+    settings = Settings(
+        smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+        mail_to="empfaenger@example.com",
+    )
     return TripAlertService(
-        throttle_hours=2, user_id=uid,
+        throttle_hours=2, user_id=uid, settings=settings,
         radar_service=RadarNowcastService(frame_source=frames),
         mail_sink=lambda subject, body: captured.append((subject, body)),
     )

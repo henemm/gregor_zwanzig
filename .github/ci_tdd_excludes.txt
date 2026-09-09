@@ -49,6 +49,16 @@
 # validator.env bzw. importierbares Hook-Plugin voraus — nur auf dem
 # Server gegeben, also Staging-Lane).
 #
+# Klasse C (2026-09-09, #1196): 4 Dateien erbten Empfaenger/SMTP aus der
+# Host-.env (Settings().with_user_profile() bzw. Service-Default) und liefen
+# auf dem Runner in "kein Empfaenger"/"No channel configured". Saniert:
+# Settings im Testaufbau explizit (764, 883), Nutzerprofil mit mail_to im
+# isolierten Root (649), Endpoint-Test reicht dem echten Service Settings +
+# mail_sink per Subklasse hinein (compare_official_alert AC-8). Nachgemessen
+# ohne .env mit den CI-Flags (--disable-socket): 31/31 gruen.
+# - test_compare_official_alert · test_issue_649_compare_daily_dedup
+# - test_issue_764_compare_forecast_hours_consume · test_issue_883_acute_danger_override
+#
 # WICHTIG (Lektion aus PR #1551): Lokale Offline-Laeufe im Haupt-Checkout
 # (.env + befuellte data/users/) sind KEIN Beleg fuer CI-Gruen. Einzig
 # verbindliche Vermessung ist der Runner. Ursachen und Sanierungsreihenfolge:
@@ -59,7 +69,6 @@
 tests/tdd/test_alert_run_deadline.py
 tests/tdd/test_alert_tenancy_two_users.py
 tests/tdd/test_bundle_791_847_844_alerts.py
-tests/tdd/test_compare_official_alert.py
 tests/tdd/test_compare_sun_hours_full_day_window.py
 tests/tdd/test_corridor_no_longer_triggers_alerts.py
 tests/tdd/test_issue_1040_alerts_toggle.py
@@ -68,14 +77,11 @@ tests/tdd/test_issue_1104_compare_config_foundation.py
 tests/tdd/test_issue_1107_compare_sections.py
 tests/tdd/test_issue_1168_alert_engine_extract.py
 tests/tdd/test_issue_638_alerts_redesign.py
-tests/tdd/test_issue_649_compare_daily_dedup.py
 tests/tdd/test_issue_650_telegram_foundation.py
 tests/tdd/test_issue_685_selftest_menu_gate.py
 tests/tdd/test_issue_695_test_briefing_send.py
-tests/tdd/test_issue_764_compare_forecast_hours_consume.py
 tests/tdd/test_issue_816_alert_deviation.py
 tests/tdd/test_issue_833_gate.py
-tests/tdd/test_issue_883_acute_danger_override.py
 tests/tdd/test_issue_995_scheduler_pause.py
 tests/tdd/test_staging_gate.py
 tests/tdd/test_telegram_html_escaping.py

@@ -568,6 +568,7 @@ def test_ac7_two_users_isolated():
 def test_ac8_scheduler_endpoint_delegates():
     from fastapi.testclient import TestClient
 
+    import services.compare_official_alert as coa_mod
     from api.main import app
     from services.official_alerts import register_official_alert_source
 
@@ -575,6 +576,25 @@ def test_ac8_scheduler_endpoint_delegates():
     _clean_user(uid)
     b, backup = _sources_backup()
     b._REGISTERED_SOURCES.clear()
+
+    # #1196 Klasse C: der Endpoint baut `CompareOfficialAlertService(user_id=...)`
+    # ohne Settings/Sinks — der Service zog dann Settings() aus der Host-.env
+    # (Empfaenger + SMTP) und der E-Mail-Zweig lief gegen echtes SMTP. Ohne
+    # .env (CI-Runner): can_send_email() False → kein Kanal → count=0.
+    # Echte Subklasse (kein Mock, Attribut-Rebind wie in
+    # test_issue_764_compare_forecast_hours_consume) reicht dem echten Service
+    # deterministische Settings + mail_sink hinein; der Endpoint bleibt der
+    # echte Aufrufer, die Delegation und der Zaehler werden weiter real geprueft.
+    original_service = coa_mod.CompareOfficialAlertService
+    mails: list = []
+
+    class _ConfiguredService(original_service):
+        def __init__(self, **kwargs):
+            kwargs.setdefault("settings", _settings_all_channels())
+            kwargs.setdefault("mail_sink", lambda subject, body: mails.append(body))
+            super().__init__(**kwargs)
+
+    coa_mod.CompareOfficialAlertService = _ConfiguredService
     try:
         save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
         _write_presets(uid, [_preset("p1", ["loc-a"], ["e@x.invalid"])])
@@ -587,7 +607,9 @@ def test_ac8_scheduler_endpoint_delegates():
         # Delegation an den Service → numerische Alarm-Anzahl (hier 1).
         count = data if isinstance(data, int) else data.get("sent", data.get("count"))
         assert count == 1, f"Erwartet 1 versendeter Alarm über Endpoint, erhalten: {data!r}"
+        assert len(mails) == 1, "Der ueber den Endpoint gestartete Service muss genau eine Mail erzeugen."
     finally:
+        coa_mod.CompareOfficialAlertService = original_service
         b._REGISTERED_SOURCES.clear()
         b._REGISTERED_SOURCES.extend(backup)
         _clean_user(uid)
