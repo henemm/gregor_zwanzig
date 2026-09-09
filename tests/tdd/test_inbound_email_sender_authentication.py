@@ -49,6 +49,7 @@ SPEC: docs/specs/modules/inbound_command_channels.md v1.5, §5, AC-1..AC-4, AC-6
 """
 from __future__ import annotations
 
+import email
 import json
 from datetime import date, time
 from pathlib import Path
@@ -65,7 +66,6 @@ from services.trip_command_processor import TripCommandProcessor
 import services.inbound_email_reader as _reader_mod
 
 from tests.fixtures.authentication_results_fixtures import (
-    AR_FAIL,
     AR_PASS,
     TEST_AUTHSERV_ID,
 )
@@ -111,18 +111,25 @@ def _trip_file_bytes(user_id: str, trip_id: str) -> bytes:
 
 
 def _base_settings(mail_to: str, mail_server_hostname: str = TEST_AUTHSERV_ID) -> Settings:
-    return Settings(mail_to=mail_to, mail_server_hostname=mail_server_hostname)
+    # smtp_host/-user/-pass explizit setzen, damit can_send_email() unabhaengig
+    # von einer lokalen .env deterministisch True liefert (Kern-Schicht-Regel).
+    return Settings(
+        mail_to=mail_to,
+        mail_server_hostname=mail_server_hostname,
+        smtp_host="smtp.example.com",
+        smtp_user="test-user",
+        smtp_pass="test-pass",
+    )
 
 
-def _msg(from_addr: str, trip_name: str, body: str = "status", auth_header: str | None = AR_PASS) -> "email.message.Message":
-    import email as _email
+def _msg(from_addr: str, trip_name: str, body: str = "status", auth_header: str | None = AR_PASS) -> email.message.Message:
     lines = [f"From: {from_addr}", "To: cmd@example.com", f"Subject: [{trip_name}] Befehl"]
     if auth_header is not None:
         lines.append(f"Authentication-Results: {auth_header}")
     lines.append("")
     lines.append(body)
     raw = "\r\n".join(lines).encode("utf-8")
-    return _email.message_from_bytes(raw)
+    return email.message_from_bytes(raw)
 
 
 class _FakeImap:
