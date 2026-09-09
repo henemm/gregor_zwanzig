@@ -25,6 +25,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from app.config import Settings
 from app.models import (
     Corridor,
     ForecastMeta,
@@ -43,6 +44,19 @@ from app.trip import Stage, Trip, Waypoint
 from services.official_alerts.models import OfficialAlert
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
+
+def _settings() -> Settings:
+    """Dummy-SMTP, damit can_send_email() ohne Host-.env True ist."""
+    # #1196 Klasse C (Vorbild Batch 4 / test_issue_883): ohne Settings baut der
+    # Service Settings() aus der Umgebung, und can_send_email() ist nur mit
+    # Host-.env True -- auf dem CI-Runner lief jeder Fall in "No alert channel
+    # configured". Dummy-SMTP + mail_sink (DI-Naht) ersetzen den Versand;
+    # test.invalid ist RFC-2606-reserviert, es wird nie gedialt.
+    return Settings(
+        smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+        mail_to="empfaenger@example.com",
+    )
 
 # Pfadregel #1409: Pruefling relativ zur Testdatei, nicht ueber den Hauptrepo-Pfad.
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
@@ -186,7 +200,6 @@ def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
     from services.official_alerts import register_official_alert_source
     from services.trip_alert import TripAlertService
     from services.trip_report_scheduler import TripReportSchedulerService
-    from app.config import Settings
 
     alice, bob = _user_pair()
     _clean_user(alice)
@@ -211,7 +224,7 @@ def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
         # ── Schritt 1: nur alice laeuft ──────────────────────────────────────
         mail_alice: list = []
         svc_alice = TripAlertService(
-            user_id=alice, mail_sink=lambda subject, body: mail_alice.append((subject, body)),
+            settings=_settings(), user_id=alice, mail_sink=lambda subject, body: mail_alice.append((subject, body)),
         )
         notices_alice = svc_alice.check_official_alert_triggers(trip_alice)
         assert len(notices_alice) == 1, (
@@ -238,7 +251,7 @@ def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
         # Die Entprellung von alice darf bob NICHT stumm schalten.
         mail_bob: list = []
         svc_bob = TripAlertService(
-            user_id=bob, mail_sink=lambda subject, body: mail_bob.append((subject, body)),
+            settings=_settings(), user_id=bob, mail_sink=lambda subject, body: mail_bob.append((subject, body)),
         )
         notices_bob = svc_bob.check_official_alert_triggers(trip_bob)
         assert len(notices_bob) == 1, (
@@ -309,7 +322,7 @@ def test_ac34b_wertebereich_wirkt_bei_beiden_nutzern_gleich_nicht():
 
             mails: list = []
             svc = TripAlertService(
-                user_id=user_id, mail_sink=lambda subject, body: mails.append((subject, body)),
+                settings=_settings(), user_id=user_id, mail_sink=lambda subject, body: mails.append((subject, body)),
             )
             sent = svc.check_and_send_alerts(trip, cached, fresh_weather=cached)
 
