@@ -275,6 +275,20 @@ _WEBHOOK_ACK_JUSTIFICATION = (
     "— verhindert Retry-Sturm (dokumentiert im Docstring, Z. 54f.)"
 )
 
+# Zwei rein informative, schreibfreie Kommando-Antworten (Issue #2272). Sie
+# wurden erst durch die Public-Host-Auflösung zu Klasse-1-Funden: vorher gab es
+# gar keinen Aufruf vor dem `return` (wie `api/routers/health.py`, AC-16).
+_SHOW_COLUMNS_INFO_LOCATION = (
+    "src/services/trip_command_processor.py::_show_columns_info::0"
+)
+_SHOW_CONFIG_LOCATION = "src/services/trip_command_processor.py::_show_config::0"
+_PUBLIC_HOST_INFO_JUSTIFICATION = (
+    "Rein informative Antwort ohne Fehlerpfad, kein fachlicher Erfolgsstatus "
+    "— resolve_public_host/resolve_public_url liefert None nur bei nicht "
+    "konfiguriertem GZ_PUBLIC_HOST (fail-closed) und ändert damit allein den "
+    "Text, nie ob das Kommando verarbeitet wurde (dokumentiert im Docstring)"
+)
+
 
 # ---------------------------------------------------------------------------
 # Scanfläche
@@ -1753,6 +1767,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 INTENTIONAL_CONSTANT_SUCCESS: dict[str, str] = {
     _WEBHOOK_ACK_LOCATION: _WEBHOOK_ACK_JUSTIFICATION,
+    _SHOW_COLUMNS_INFO_LOCATION: _PUBLIC_HOST_INFO_JUSTIFICATION,
+    _SHOW_CONFIG_LOCATION: _PUBLIC_HOST_INFO_JUSTIFICATION,
 }
 
 
@@ -3268,6 +3284,38 @@ def test_webhook_ack_is_documented_exception_not_silent_pass():
     )
 
 
+def test_public_host_info_exceptions_keep_their_wording():
+    """Dieselbe Wortlaut-Sperre wie beim Webhook-Ack, für die zwei
+    Public-Host-Ausnahmen aus #2272 (Spec-Entscheidung:
+    ``docs/specs/modules/public_host.md``, Known Limitations).
+
+    Ohne sie ist der Dict-Wert frei überschreibbar: ein Füllsatz an die Stelle
+    der Begründung, und die Ausnahme steht weiter, hat aber nichts mehr zu
+    sagen — genau der Mechanismus, an dem #1405 ``scheduler.py:54`` (B2)
+    verlor. Die Sperre bindet den Eintrag an eine benannte Konstante, deren
+    Wortlaut die Spec wörtlich führt; sie zu ändern heißt, die Spec-Aussage
+    zu ändern.
+    """
+    for location in (_SHOW_COLUMNS_INFO_LOCATION, _SHOW_CONFIG_LOCATION):
+        assert location in INTENTIONAL_CONSTANT_SUCCESS, (
+            "Die Public-Host-Ausnahme fehlt in INTENTIONAL_CONSTANT_SUCCESS — "
+            "ohne Eintrag taucht die Stelle bei jeder Prüfung erneut als "
+            f"vermeintlicher Fehlalarm auf. Code reference: {location}"
+        )
+        assert INTENTIONAL_CONSTANT_SUCCESS[location] == (
+            _PUBLIC_HOST_INFO_JUSTIFICATION
+        ), (
+            "Die Begründung weicht vom in der Spec festgelegten Wortlaut ab — "
+            "die Aussage 'informative Antwort ohne Fehlerpfad, kein fachlicher "
+            f"Erfolgsstatus' MUSS dastehen. Code reference: {location}"
+        )
+        assert location not in KNOWN_VIOLATIONS, (
+            "Die Stelle steht zugleich in KNOWN_VIOLATIONS — 'bewusst erlaubt' "
+            "und 'Reparatur ausstehend' schließen sich aus. Code reference: "
+            f"{location}"
+        )
+
+
 def test_intentional_exceptions_carry_nonempty_justification():
     """AC-14 (zweite Hälfte): jeder Eintrag in INTENTIONAL_CONSTANT_SUCCESS
     trägt eine nichtleere fachliche Begründung, und jeder Eintrag ist noch
@@ -3305,7 +3353,11 @@ def test_intentional_exceptions_carry_nonempty_justification():
 
 
 # Genehmigte Ausnahmen, fest verdrahtet — Zuwachs ist eine Spec-Entscheidung.
-_APPROVED_EXCEPTIONS = {_WEBHOOK_ACK_LOCATION}
+_APPROVED_EXCEPTIONS = {
+    _WEBHOOK_ACK_LOCATION,
+    _SHOW_COLUMNS_INFO_LOCATION,
+    _SHOW_CONFIG_LOCATION,
+}
 
 
 def test_intentional_exception_list_cannot_grow():

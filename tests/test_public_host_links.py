@@ -29,7 +29,6 @@ from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
 import httpx
-import pytest
 
 from app.config import Settings
 from app.trip import Stage, Trip, Waypoint
