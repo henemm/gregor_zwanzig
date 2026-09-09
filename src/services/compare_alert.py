@@ -25,10 +25,8 @@ import services.alert_urgency as alert_urgency
 from services.alert_gate import check_briefing_imminent
 from services.alert_preset import _PRESET_TABLE
 from services.alert_state import AlertStateService
-from services.compare_alert_channels import (
-    effective_compare_channels,
-    effective_compare_telegram_style,
-)
+from services.alert_channels import effective_alert_channels
+from services.compare_alert_channels import effective_compare_telegram_style
 from services.compare_alert_guard import is_silenced
 from services.compare_location_weather_source import CompareLocationWeatherSource
 from services.compare_preset_access import (
@@ -108,7 +106,7 @@ class CompareAlertService:
             alert_log.append_suppressed_entry(
                 self._user_id, entity_id=preset_id, entity_type="compare",
                 reason=alert_log.REASON_FORECAST_CHANGE, gate_reason=gate_reason,
-                effective_channels=effective_compare_channels(
+                effective_channels=effective_alert_channels(
                     preset, self._settings, self._user_id,
                 ),
             )
@@ -581,11 +579,10 @@ class CompareAlertService:
 
         Issue #1467 S2 AG4: die Kanalliste war hier fest `{"email"}` verdrahtet —
         der Telegram-/SMS-Schalter im Alarme-Tab (`AlertChannelPicker`,
-        `AlarmeTab.svelte:295`) war dadurch wirkungslos. Jetzt entscheidet der
-        EINE Compare-Kanal-Resolver aus AG1 (`compare_alert_channels.py`,
-        ADR-0021) — dieselbe Fassung, die `compare_official_alert.py` und
-        `scheduler_dispatch_service.py` schon nutzen; dies ist ihr dritter
-        Aufrufer, keine vierte Kopie.
+        `AlarmeTab.svelte:295`) war dadurch wirkungslos. Issue #2279 S1: die
+        Aufloesung laeuft jetzt ueber die EINE geteilte Alarm-Auflösung
+        `services.alert_channels.effective_alert_channels` (ADR-0021), die
+        auch der Trip-Pfad und die beiden anderen Compare-Alarmpfade nutzen.
 
         Bug #1191: `display_config` wird jetzt IMMER durchgereicht (analog
         Trip-Pfad `trip_alert.py:191`) — aus `active_metrics` (Summary-Keys)
@@ -600,7 +597,7 @@ class CompareAlertService:
                 (preset.get("display_config") or {}).get("metric_alert_levels")
                 or _STANDARD_METRIC_LEVELS
             ),
-            channels=effective_compare_channels(preset, self._settings, self._user_id),
+            channels=effective_alert_channels(preset, self._settings, self._user_id),
             display_config=self._display_config_from_active_metrics(preset),
             # Issue #1971: das Preset-`metric_alert_levels` ist eine TEIL-Angabe —
             # eine später eingeführte Metrik (Beginn-Alarme #1468) steht darin

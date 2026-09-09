@@ -43,10 +43,8 @@ from services.alert_gate import (
     resolve_hazard_class,
 )
 from services.alert_state import AlertStateService
-from services.compare_alert_channels import (
-    effective_compare_channels,
-    effective_compare_telegram_style,
-)
+from services.alert_channels import effective_alert_channels
+from services.compare_alert_channels import effective_compare_telegram_style
 from services.compare_alert_guard import is_silenced
 from services.compare_preset_access import (
     load_compare_alert_presets,
@@ -463,12 +461,14 @@ class CompareOfficialAlertService:
             state_svc.save(entity_id, state)
 
     def _effective_channels(self, preset: dict) -> set[str]:
-        """Duenner Wrapper (Issue #1467 S2 AG1) — delegiert an den geteilten
-        Resolver `services.compare_alert_channels.effective_compare_channels`.
-        Aufruf ueber den Modul-Namensraum (`coa_module.effective_compare_channels`
-        entspricht hier dem Modulattribut), damit Tests das Symbol im
-        VERBRAUCHENDEN Modul patchen koennen (AC-3a)."""
-        return effective_compare_channels(preset, self._settings, self._user_id)
+        """Duenner Wrapper (Issue #2279 S1) — delegiert an die geteilte
+        Alarm-Auflösung `services.alert_channels.effective_alert_channels`
+        (vormals eine gleichnamige, jetzt entfernte Funktion in
+        `compare_alert_channels.py`). Aufruf ueber den Modul-Namensraum
+        (`coa_module.effective_alert_channels` entspricht hier dem
+        Modulattribut), damit Tests das Symbol im VERBRAUCHENDEN Modul
+        patchen koennen (AC-6)."""
+        return effective_alert_channels(preset, self._settings, self._user_id)
 
     def _notification_service_for(self, preset: dict) -> NotificationService:
         """Duenner Wrapper (Issue #1467 S4a) auf den geteilten Helfer

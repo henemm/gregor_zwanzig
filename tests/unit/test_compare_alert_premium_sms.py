@@ -263,7 +263,7 @@ def test_compare_deviation_alert_reaches_premium_sms():
     Aenderungsalarm fuer einen betroffenen Vergleichsort ausgeloest wird /
     Then wird der Ort zusaetzlich per Premium-SMS gemeldet.
 
-    ROT-Grund (gemessen): ``effective_compare_channels()`` hat keinen
+    ROT-Grund (gemessen): der damalige Compare-Kanal-Resolver hatte keinen
     ``premium_sms``-Zweig (``compare_alert_channels.py:28-36``).
     """
     from services.compare_alert import CompareAlertService
@@ -317,8 +317,8 @@ def test_compare_radar_alert_reaches_premium_sms():
     Premium-SMS gemeldet -- eigener, strukturell getrennter Dispatcher
     (``compare_radar_alert.py``).
 
-    ROT-Grund (gemessen): derselbe fehlende ``premium_sms``-Zweig in
-    ``effective_compare_channels()``, hier ueber den Radar-Pfad erreicht.
+    ROT-Grund (gemessen): derselbe fehlende ``premium_sms``-Zweig im
+    damaligen Compare-Kanal-Resolver, hier ueber den Radar-Pfad erreicht.
     """
     from services.compare_radar_alert import CompareRadarAlertService
     from services.radar_service import RadarNowcastService
@@ -367,7 +367,7 @@ def test_compare_official_alert_reaches_premium_sms():
     (``send_multi_location_official_alert``, in der Spec als
     "send_compare_official_alert" bezeichnet).
 
-    ROT-Grund (gemessen): weder ``effective_compare_channels()`` noch
+    ROT-Grund (gemessen): weder der damalige Compare-Kanal-Resolver noch
     ``send_multi_location_official_alert()`` kennen ``premium_sms``.
     """
     from services.compare_official_alert import CompareOfficialAlertService

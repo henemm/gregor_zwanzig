@@ -86,6 +86,8 @@ def _emit_default_delta_threshold() -> dict[str, float]:
 # ---------------------------------------------------------------------------
 
 
+# Kalter go build/Toolchain-Lauf auf dem CI-Runner braucht >30 s (CI 2026-09-09, zweimal reproduziert) — deklarierte Ausnahme gemaess pyproject.toml
+@pytest.mark.timeout(120)
 def test_817_ac4_cross_lang_contract_go_block_exists():
     """
     AC-4 RED-Treiber: DefaultDeltaThreshold in trip.go muss existieren und

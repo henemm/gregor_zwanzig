@@ -75,7 +75,7 @@ def _radar_preset(
     """Direktes Compare-Preset-Dict (Vorbild
     `test_compare_radar_alert.py::_radar_preset`), zusaetzlich mit
     `send_telegram=True` + `display_config.telegram_style` — genau die zwei
-    Felder, die `effective_compare_channels()`/`effective_compare_telegram_
+    Felder, die die Compare-Kanal-Auflösung / `effective_compare_telegram_
     style()` fuer diesen Test auswerten."""
     return {
         "id": preset_id,
@@ -179,7 +179,7 @@ class _TelegramStub:
 
 
 def _telegram_only_settings() -> Settings:
-    """Nur Telegram sendebereit — `effective_compare_channels()` nimmt zwar
+    """Nur Telegram sendebereit — die Compare-Kanal-Auflösung nimmt zwar
     immer `"email"` auf, aber ohne SMTP-Konfiguration schlaegt der E-Mail-
     Versuch lediglich fehl (Best-Effort, `_log_error`) und beeinflusst die
     Telegram-Assertions nicht.

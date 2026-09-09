@@ -1,10 +1,14 @@
-"""Die EINE Compare-Versandregel: Kanaele UND Telegram-Darstellungsstil
-(Issue #1467 Scheibe S2, Arbeitsgang AG1 + Korrektur-Runde K-5).
+"""Die EINE Compare-BRIEFING-Versandregel: Kanaele UND
+Telegram-Darstellungsstil (Issue #1467 Scheibe S2, Arbeitsgang AG1 +
+Korrektur-Runde K-5; umbenannt in Issue #2279 Scheibe S1).
 
-Ersetzt die vormals zweimal funktional identisch gebaute Fassung:
-`compare_official_alert.py::CompareOfficialAlertService._effective_channels`
-und `scheduler_dispatch_service.py::_effective_compare_channels`. Beide
-Stellen delegieren jetzt hierher, das Verhalten bleibt unveraendert.
+Ausschliesslich fuer den Compare-BRIEFING-Versand zustaendig
+(`scheduler_dispatch_service.py`) -- die Compare-ALARM-Pfade
+(`compare_alert.py`, `compare_official_alert.py`, `compare_radar_alert.py`)
+nutzen seit Issue #2279 S1 die geteilte Alarm-Auflösung
+`services.alert_channels.effective_alert_channels`. Der vormalige (kuerzere)
+Funktionsname dieses Moduls vor der Umbenennung ist vollstaendig entfernt
+(Spec-Abschnitt "Umbenennung des Briefing-Resolvers").
 
 Regel: E-Mail ist immer aktiv; Telegram nur bei `preset.get("send_telegram")`
 UND `settings.can_send_telegram()`; SMS nur bei `preset.get("send_sms")` UND
@@ -25,9 +29,12 @@ from app.config import Settings
 from services.user_tier import premium_sms_allowed, sms_allowed
 
 
-def effective_compare_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
+def effective_compare_briefing_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
     """E-Mail immer; Telegram/SMS nur bei Preset-Opt-in UND globaler
     User-Faehigkeit (bei SMS zusaetzlich Tier-Gate ueber `sms_allowed`).
+
+    Ausschliesslich fuer den Compare-BRIEFING-Versand (nicht Alarme, s.
+    Modul-Docstring).
 
     Issue #1701 (S2b, D2): Premium-SMS bewusst OHNE
     `settings.can_send_premium_sms()` — diese Methode wurde in S2a nach
