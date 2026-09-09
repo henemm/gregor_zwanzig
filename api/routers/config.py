@@ -1,4 +1,6 @@
 """Config endpoint — exposes non-sensitive settings."""
+from collections.abc import Mapping
+
 from fastapi import APIRouter
 
 router = APIRouter()
@@ -27,6 +29,28 @@ def get_templates() -> list[dict]:
     return get_all_templates()
 
 
+def sms_symbols_for(
+    metric_id: str,
+    mehrfach_symbole: Mapping[str, tuple[str, ...]],
+    einzel_symbole: Mapping[str, str],
+) -> list[str]:
+    """Rangfolge der Editor-Marke: Mehrfach-Token vor Einzel-Symbol (Fix #1613 —
+    `SMS_MULTI_SYMBOLS_BY_METRIC` deckt z.B. "thunder" bereits vollstaendig ab,
+    ein zusaetzlicher Eintrag aus `SMS_SYMBOL_BY_METRIC` waere ein Duplikat).
+    `":"` trennt nur eine Stufenangabe ab und gehoert nicht zum Kuerzel.
+
+    Die beiden Tabellen kommen als Parameter statt aus dem Modulnamensraum,
+    damit die RANGFOLGE an einem divergierenden Datenpunkt pruefbar ist: im
+    echten Register faellt keine Groesse auseinander, eine Vertauschung der
+    Zweige waere dort unbeobachtbar (Adversary-Fund F001 zu #2232). Zweiter
+    Leser derselben Rangfolge -- mit eigener Tabelle, deshalb eigene Funktion --
+    ist `metric_catalog.kurzform_kuerzel()`.
+    """
+    if metric_id in mehrfach_symbole:
+        return [s.rstrip(":") for s in mehrfach_symbole[metric_id]]
+    return [einzel_symbole[metric_id].rstrip(":")]
+
+
 @router.get("/sms-symbols")
 def get_sms_symbols():
     """Read-only Serialisierung der SMS-Kuerzel-Kataloge (Issue #1318 AC-9).
@@ -46,12 +70,9 @@ def get_sms_symbols():
     from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
 
     def _symbols_for(metric_id: str) -> list[str]:
-        # SMS_MULTI_SYMBOLS_BY_METRIC hat Vorrang (deckt z.B. "thunder"
-        # bereits vollstaendig ab -> kein Duplikat-Eintrag aus
-        # SMS_SYMBOL_BY_METRIC). Fix #1613.
-        if metric_id in SMS_MULTI_SYMBOLS_BY_METRIC:
-            return [s.rstrip(":") for s in SMS_MULTI_SYMBOLS_BY_METRIC[metric_id]]
-        return [SMS_SYMBOL_BY_METRIC[metric_id].rstrip(":")]
+        return sms_symbols_for(
+            metric_id, SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC,
+        )
 
     all_metric_ids = list(SMS_SYMBOL_BY_METRIC.keys()) + [
         mid for mid in SMS_MULTI_SYMBOLS_BY_METRIC if mid not in SMS_SYMBOL_BY_METRIC

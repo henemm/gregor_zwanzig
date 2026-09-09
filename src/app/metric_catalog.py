@@ -16,6 +16,7 @@ import logging
 import re
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Optional
 
 logger = logging.getLogger(__name__)
@@ -1377,7 +1378,12 @@ def get_sms_code(metric_id: str) -> str:
 
 
 
-def kurzform_kuerzel(metric_id: str) -> str:
+def kurzform_kuerzel(
+    metric_id: str,
+    *,
+    mehrfach_symbole: Optional[Mapping[str, tuple[str, ...]]] = None,
+    sms_codes: Optional[Mapping[str, str]] = None,
+) -> str:
     """Das Kuerzel, das die Kurzform (SMS/Premium-SMS) fuer diese Groesse
     TATSAECHLICH sendet -- ``""`` wenn sie keines fuehrt (#2232).
 
@@ -1397,11 +1403,24 @@ def kurzform_kuerzel(metric_id: str) -> str:
     ``sms_multi_symbols``. Wer das gesendete Kuerzel braucht (Vergleichs-SMS,
     Editor-Marke), fragt hier; wer die eindeutige Registerkennung braucht
     (Alarm-Pfad), fragt ``get_sms_code()``.
+
+    ``mehrfach_symbole``/``sms_codes`` injizieren Registerkopien (Muster
+    ``compare_metric_catalog.kuerzel_identity_violations(entries=...)``).
+    Gebraucht wird das fuer den Wirkungsnachweis der RANGFOLGE: im echten
+    Register traegt keine Groesse zugleich ein ``sms_code`` UND ein davon
+    ABWEICHENDES ``sms_multi_symbols[0]``, eine Vertauschung der beiden Zweige
+    waere dort also unbeobachtbar (Adversary-Fund F001). Ueber die Parameter
+    laesst sich genau so ein divergierender Datenpunkt vorlegen -- ohne
+    ``patch()`` auf Modulglobale.
     """
-    mehrfach = SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id)
+    mehrfach = (
+        SMS_MULTI_SYMBOLS_BY_METRIC if mehrfach_symbole is None else mehrfach_symbole
+    ).get(metric_id)
     if mehrfach:
         return mehrfach[0].rstrip(":")
-    return get_sms_code(metric_id)
+    if sms_codes is None:
+        return get_sms_code(metric_id)
+    return sms_codes.get(metric_id, "")
 
 
 def get_decimals(metric_id: str) -> int:
