@@ -1,8 +1,11 @@
 package store
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -203,6 +206,193 @@ func (s *Store) DeleteUser(id string) error {
 	}
 	dir := s.UserDir(id)
 	return os.RemoveAll(dir)
+}
+
+// --- Datenexport nach DSGVO Art. 20 (Issue #2270) ---------------------------
+//
+// Die Erlaubnisliste steht bewusst HIER im Produktivcode und wird vom Test
+// NICHT importiert (internal/handler/data_export_test.go fuehrt eine eigene
+// Erwartungsliste). Teilten sich beide eine Konstante, spiegelte der Test nur
+// die Annahme des Codes zurueck und ein entfernter Eintrag bliebe gruen.
+//
+// Erlaubnisliste statt Sperrliste: ein durchgelassenes Geheimnis ist der
+// teurere Fehler als eine vergessene Datenart. Die Gegenrichtung (eine neue
+// Datenart faellt still aus dem Export) bewacht der Drift-Test.
+
+// exportErlaubteDateienExakt — Vergleich auf Gleichheit, kein Praefix.
+var exportErlaubteDateienExakt = []string{
+	"user.json", // wird gefiltert ausgeliefert, s. exportFilterUserJSON
+	"groups.json",
+	"metric_presets.json",
+	"alert_log.json",
+	"briefing_log.json",
+	"pending_briefings.json",
+	"briefing_slots.json",
+	"briefing_anchor.json",
+	"throttle_state.json",
+	// Altbestand aus src/services/throttle_store.py:31-33: Vorgaenger-Dateien,
+	// die bei Nutzern aus aelteren Staenden noch im Ordner liegen.
+	"alert_throttle.json",
+	"compare_alert_throttle.json",
+	"radar_alert_throttle.json",
+}
+
+// exportErlaubteOrdner — Vergleich auf Praefix, der Inhalt wandert vollstaendig
+// mit. briefings/ traegt Trips, Compare-Presets und Subscriptions in EINEM
+// Ordner; der Briefing-Fingerabdruck wird daraus berechnet und hat keine
+// eigene Datei.
+var exportErlaubteOrdner = []string{
+	"locations/",
+	"gpx/",
+	"weather_snapshots/",
+	"compare_weather_snapshots/",
+	"briefings/",
+	"alert_state/",
+}
+
+// exportGeheimnisFelder fliegen aus der ausgelieferten user.json. Die uebrigen
+// Profilfelder bleiben unangetastet — deshalb Feld-Entfernung auf der
+// generischen Map statt einer handgepflegten Positivliste, die bei jedem neuen
+// Profilfeld still veralten wuerde.
+var exportGeheimnisFelder = []string{"password_hash", "passkey_credentials"}
+
+// ExportUser schreibt die exportfaehigen Daten des Nutzers als ZIP-Archiv
+// direkt in w. Durchgereicht statt gepuffert: der Speicherbedarf bleibt
+// unabhaengig von der Datenmenge des Nutzers.
+//
+// Bewusst hingenommen (Spec Known Limitations b): Bricht das Packen mitten
+// drin ab, ist der Erfolgs-Statuscode bereits gesendet und die Uebertragung
+// endet mit einem unvollstaendigen Archiv. Das ist dem stillen Teilexport mit
+// vorgetaeuschter Vollstaendigkeit vorgezogen.
+//
+// id ist die Kennung aus dem Auth-Kontext, nicht s.UserID: der Aufrufer haelt
+// den Wurzel-Store (Voreinstellung "default"), UserDir(id) ist die eine
+// Pfad-Engstelle.
+func (s *Store) ExportUser(id string, w io.Writer) error {
+	if !ValidUserID(id) {
+		return ErrInvalidUserID
+	}
+	zw := zip.NewWriter(w)
+	if err := exportWalkUserDir(s.UserDir(id), zw); err != nil {
+		zw.Close()
+		return err
+	}
+	// Close schreibt das zentrale Verzeichnis — ohne diesen Aufruf ist das
+	// Archiv nicht lesbar.
+	return zw.Close()
+}
+
+func exportWalkUserDir(base string, zw *zip.Writer) error {
+	err := filepath.WalkDir(base, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		// Nur echte Dateien wandern mit. filepath.WalkDir FOLGT Verweisen
+		// nicht, meldet sie aber als Nicht-Ordner — os.Open/os.ReadFile beim
+		// Packen folgen ihnen sehr wohl. Ein Verweis im Nutzerordner zoege
+		// damit unter unauffaelligem, erlaubtem Namen fremde Nutzerdaten oder
+		// Dateien ausserhalb des Datenbaums ins Archiv. d.Type() stammt aus
+		// dem readdir-Eintrag und hat lstat-Semantik: es misst den Verweis
+		// selbst, niemals sein Ziel. Nachweis:
+		// internal/handler/data_export_test.go,
+		// TestExportFolgtKeinemVerweisAusDemNutzerordner.
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		rel, rerr := filepath.Rel(base, p)
+		if rerr != nil {
+			return rerr
+		}
+		name := filepath.ToSlash(rel)
+		if !exportNameIstSicher(name) || !exportIstErlaubt(name) {
+			return nil
+		}
+		return exportSchreibeEintrag(zw, name, p)
+	})
+	// Ein Nutzer ohne angelegtes Verzeichnis liefert ein leeres, aber gueltiges
+	// Archiv statt eines Fehlers.
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// exportNameIstSicher haelt jeden Archiv-Eintragsnamen relativ zum
+// Nutzerordner. ValidUserID/pathsafe.go schuetzen nur die Nutzerordner-Ebene;
+// Entitaets-Dateinamen innerhalb des Ordners durchlaufen diese Pruefung nicht.
+// Der Vergleich laeuft ueber Pfad-SEGMENTE — ein Dateiname wie "..evil.json"
+// ist legitim, nur ".." als eigenes Segment ist es nicht.
+func exportNameIstSicher(name string) bool {
+	if name == "" || name == "." || strings.HasPrefix(name, "/") || filepath.IsAbs(name) {
+		return false
+	}
+	if strings.Contains(name, `\`) {
+		return false
+	}
+	for _, seg := range strings.Split(name, "/") {
+		if seg == ".." {
+			return false
+		}
+	}
+	return true
+}
+
+func exportIstErlaubt(name string) bool {
+	for _, f := range exportErlaubteDateienExakt {
+		if name == f {
+			return true
+		}
+	}
+	for _, d := range exportErlaubteOrdner {
+		if strings.HasPrefix(name, d) {
+			return true
+		}
+	}
+	return false
+}
+
+func exportSchreibeEintrag(zw *zip.Writer, name, path string) error {
+	if name == "user.json" {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		gefiltert, err := exportFilterUserJSON(raw)
+		if err != nil {
+			return err
+		}
+		f, err := zw.Create(name)
+		if err != nil {
+			return err
+		}
+		_, err = f.Write(gefiltert)
+		return err
+	}
+	src, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	f, err := zw.Create(name)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(f, src)
+	return err
+}
+
+func exportFilterUserJSON(raw []byte) ([]byte, error) {
+	var felder map[string]interface{}
+	if err := json.Unmarshal(raw, &felder); err != nil {
+		return nil, err
+	}
+	for _, k := range exportGeheimnisFelder {
+		delete(felder, k)
+	}
+	return json.MarshalIndent(felder, "", "  ")
 }
 
 func (s *Store) UserExists(id string) bool {

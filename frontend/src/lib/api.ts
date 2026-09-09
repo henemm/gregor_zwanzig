@@ -197,6 +197,34 @@ export async function refreshTripEtag(tripId: string): Promise<void> {
 	await api.get(`/api/trips/${tripId}`);
 }
 
+/**
+ * Issue #2270 — Datenexport nach DSGVO Art. 20.
+ *
+ * `request<T>` liefert ausschliesslich geparstes JSON und kann eine Archivdatei
+ * deshalb nicht transportieren. Der Download nimmt denselben Sonderweg wie
+ * `uploadGpx`, nur in der Gegenrichtung: rohes `fetch`, Blob, Objekt-URL und
+ * ein programmatischer Anker-Klick.
+ */
+export async function downloadUserDataExport(): Promise<void> {
+	const res = await fetch('/api/auth/export');
+	if (!res.ok) {
+		const detail = await res.text();
+		throw new Error(`Download fehlgeschlagen (${res.status}): ${detail}`);
+	}
+	const treffer = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') ?? '');
+	const blob = await res.blob();
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = treffer?.[1] ?? 'gregor-zwanzig-export.zip';
+	document.body.appendChild(a);
+	a.click();
+	a.remove();
+	// Die Objekt-URL erst verzoegert freigeben: Safari bricht einen noch
+	// laufenden Download ab, wenn die Quelle sofort widerrufen wird.
+	setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 export async function uploadGpx(
 	file: File,
 	stageDate: string,

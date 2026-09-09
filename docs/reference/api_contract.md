@@ -135,6 +135,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/_validator/sms-fidelity-preview` | POST |
 | `/api/archive/stats` | GET |
 | `/api/auth/account` | DELETE |
+| `/api/auth/export` | GET |
 | `/api/auth/forgot-password` | POST |
 | `/api/auth/google/callback` | GET |
 | `/api/auth/google/init` | GET |
@@ -3132,6 +3133,35 @@ verändert — Freigabe erfolgt weiterhin manuell durch den PO.
 - Kein Dedup, kein Clear-Endpoint, kein Rate-Limiting über die Session-Auth hinaus — siehe
   `docs/specs/_archive/modules/issue_1071_tier_change_request.md` (Known Limitations).
 
+#### GET /api/auth/export
+
+Liefert dem angemeldeten Nutzer seinen Datenbestand als ZIP-Archiv aus (DSGVO Art. 20, Issue
+#2270) — die lesende Gegenrichtung zu `DELETE /api/auth/account`. Authentifiziert über die
+Session (nicht in der Public-Allowlist von `AuthMiddleware`); die Nutzerkennung kommt
+ausschließlich aus dem Auth-Kontext, ein Request-Parameter hat keine Wirkung.
+
+**Response 200:**
+- `Content-Type: application/zip`
+- `Content-Disposition: attachment; filename="gregor-zwanzig-export.zip"`
+- Body: ZIP-Archiv des Nutzerbaums, durchgereicht statt gepuffert
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | Kein gültiges Session-Cookie |
+| 401 | `{"error":"unauthorized"}` (`Content-Type: application/json`) | Auth-Kontext ohne Nutzerkennung (leerer String) — ausdrückliche Handler-Prüfung, verhindert die Auslieferung des `default`-Sammelordners |
+
+**Notes:**
+- Geheimnisse sind bewusst ausgeschlossen: `sessions.json`, `password_reset.json`,
+  `email_verification.json` sowie `password_hash`/`passkey_credentials` aus `user.json` erscheinen
+  nirgends im Archiv.
+- Das Archiv wird gestreamt: bricht das Packen mitten im Vorgang ab, ist der 200-Statuscode bereits
+  gesendet — die Übertragung endet dann mit einem unvollständigen ZIP statt einem korrigierten
+  Fehlerstatus.
+- Vollständige Erlaubnis-/Ausnahmeliste, Pfadsicherheit im Archiv und Mandantentrennung:
+  `docs/specs/modules/user_data_export.md`.
+
 ### User Model Extensions
 
 **File:** `internal/model/user.go`
@@ -3859,6 +3889,11 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-09: Issue #2270 (Epic #2138) — neuer Endpoint `GET /api/auth/export` liefert dem
+  angemeldeten Nutzer seinen Datenbestand als ZIP-Archiv aus (DSGVO Art. 20), lesende
+  Gegenrichtung zu `DELETE /api/auth/account`. Geheimnisse (`sessions.json`,
+  `password_reset.json`, `email_verification.json`, `password_hash`, `passkey_credentials`)
+  sind ausgeschlossen. Details Section 19 C) und `docs/specs/modules/user_data_export.md`.
 - 2026-09-09: Issue #2236 (Doku-Drift, abgespalten aus #1199) — **kein API-Change**, nur Nachzug der
   Doku auf die Code-Wahrheit. Section 15 (`GET /api/metrics`, B2-36): die Antwort ist ein nach
   Kategorien geschluesseltes Objekt ohne `metrics`-Huelle, der Anzeigename heisst `label` (nicht
