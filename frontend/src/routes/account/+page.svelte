@@ -14,6 +14,7 @@
 	import { metricCountLabel, showDefaultBadge, isValidRename, applyRename, removePreset, isEmpty } from '$lib/utils/presetCardHelpers';
 	import { formatNextRun } from '$lib/utils/schedulerTime';
 	import { ABMELDE_MERKMAL, merkeAbmeldung, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
+	import { isWebAuthnSupported, registerPasskey, deletePasskey, type RegisteredPasskey } from '$lib/passkey';
 	let { data } = $props();
 
 	let displayName = $state(data.profile?.display_name ?? '');
@@ -44,6 +45,21 @@
 	let showDeleteAccountDialog = $state(false);
 	let showLogoutAllDialog = $state(false);
 	let logoutAllErrorMsg = $state<string | null>(null);
+
+	// Issue #2246 — Passkey-Karte. Die Liste kommt aus dem ohnehin geladenen
+	// Profil, ein eigener Lese-Abruf waere ein zweiter Weg zu denselben Daten.
+	// `null` heisst "noch nicht gemessen": WebAuthn laesst sich erst im Browser
+	// pruefen, und ein serverseitiges `false` liesse den Hinweis kurz aufblitzen.
+	let passkeySupported = $state<boolean | null>(null);
+	let showPasskeyDialog = $state(false);
+	let passkeyLabel = $state('');
+	let passkeyBusy = $state(false);
+	let passkeySuccessMsg = $state<string | null>(null);
+	let passkeyErrorMsg = $state<string | null>(null);
+	// Rueckfrage vor dem Loeschen (PO-Entscheid 2026-09-08): das Entfernen ist
+	// nicht umkehrbar, und jede andere destruktive Aktion dieser Seite fragt nach.
+	let deletePasskeyTarget = $state<RegisteredPasskey | null>(null);
+	const passkeys = $derived((data.profile?.passkeys ?? []) as RegisteredPasskey[]);
 
 	// Issue #1068 — Nutzerlevel-Badge (immer sichtbar). Der Wert kommt aus
 	// data.profile.tier (Response-Feld ist serverseitig immer gesetzt, Default "free").
@@ -199,6 +215,70 @@
 		}
 	}
 
+	/**
+	 * Bezeichnung einer Passkey-Zeile: das freiwillige Label zuerst, sonst der
+	 * aus der AAGUID abgeleitete Geraetename (fehlt bei Null-AAGUID), sonst ein
+	 * neutraler Platzhalter — namenlos darf keine Zeile bleiben.
+	 */
+	function passkeyTitel(pk: RegisteredPasskey): string {
+		return pk.label?.trim() || pk.authenticator_name?.trim() || 'Unbenannter Passkey';
+	}
+
+	/** Rohe Zeremonie-Fehler in verstaendliches Deutsch uebersetzen. */
+	function passkeyFehlertext(e: unknown, ersatz: string): string {
+		const name = (e as { name?: string })?.name;
+		if (name === 'NotAllowedError' || name === 'AbortError' || name === 'TimeoutError') {
+			return 'Das Anlegen wurde abgebrochen oder hat zu lange gedauert. Bitte versuche es noch einmal.';
+		}
+		return ersatz;
+	}
+
+	async function createPasskey() {
+		// Der Dialog bleibt waehrend der Zeremonie offen und zeigt den
+		// Wartezustand — ein Dialog, der vor der Geraeteabfrage zugeht, wirkt,
+		// als sei nichts passiert. Geschlossen wird erst im `finally`.
+		passkeyBusy = true;
+		passkeySuccessMsg = null;
+		passkeyErrorMsg = null;
+		try {
+			await registerPasskey(passkeyLabel.trim());
+			passkeyLabel = '';
+			// Liste aus dem Server-Stand nachziehen statt die Seite neu zu laden.
+			await invalidateAll();
+			passkeySuccessMsg = 'Passkey angelegt';
+			setTimeout(() => (passkeySuccessMsg = null), 4000);
+		} catch (e: unknown) {
+			passkeyErrorMsg = passkeyFehlertext(
+				e,
+				'Der Passkey konnte nicht angelegt werden. Bitte versuche es noch einmal.'
+			);
+		} finally {
+			passkeyBusy = false;
+			showPasskeyDialog = false;
+		}
+	}
+
+	/** Bestaetigte Rueckfrage: erst hier wird wirklich geloescht. */
+	async function confirmDeletePasskey() {
+		const ziel = deletePasskeyTarget;
+		deletePasskeyTarget = null;
+		if (!ziel) return;
+		await removePasskey(ziel.id);
+	}
+
+	async function removePasskey(id: string) {
+		passkeySuccessMsg = null;
+		passkeyErrorMsg = null;
+		try {
+			await deletePasskey(id);
+			await invalidateAll();
+			passkeySuccessMsg = 'Passkey entfernt';
+			setTimeout(() => (passkeySuccessMsg = null), 4000);
+		} catch {
+			passkeyErrorMsg = 'Der Passkey konnte nicht entfernt werden. Bitte versuche es noch einmal.';
+		}
+	}
+
 	async function save() {
 		errorMsg = null;
 		successMsg = null;
@@ -271,7 +351,10 @@
 	// Nutzer saehen UTC statt ihrer eigenen Zone. Die Uhrzeit entsteht deshalb erst
 	// nach dem Mounten im Browser; bis dahin steht dort '—'.
 	let imBrowser = $state(false);
-	onMount(() => { imBrowser = true; });
+	onMount(() => {
+		imBrowser = true;
+		passkeySupported = isWebAuthnSupported();
+	});
 
 	function getProvider(lat: number, lon: number): string {
 		return (lat >= 45 && lat <= 50 && lon >= 8 && lon <= 18)
@@ -471,6 +554,77 @@
 			>
 				Speichern
 			</button>
+		</Card.Content>
+	</Card.Root>
+
+	<!-- Issue #2246 — Passkeys verwalten -->
+	<Card.Root data-testid="passkeys-card">
+		<Card.Header>
+			<Card.Title>Passkeys</Card.Title>
+		</Card.Header>
+		<Card.Content class="space-y-4">
+			{#if passkeySuccessMsg}
+				<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+					{passkeySuccessMsg}
+				</div>
+			{/if}
+			{#if passkeyErrorMsg}
+				<div
+					data-testid="passkey-error"
+					class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+				>
+					{passkeyErrorMsg}
+				</div>
+			{/if}
+
+			{#if passkeys.length === 0}
+				<p data-testid="passkey-empty" class="text-sm text-muted-foreground">
+					Du hast noch keinen Passkey. Mit einem Passkey meldest du dich per Face ID, Touch ID,
+					Windows Hello oder Sicherheitsschlüssel an — ohne Passwort.
+				</p>
+			{:else}
+				<ul class="space-y-2">
+					{#each passkeys as pk (pk.id)}
+						<li
+							data-testid="passkey-row"
+							class="flex items-start justify-between gap-3 rounded-md border border-input p-3"
+						>
+							<div class="space-y-1">
+								<span class="block text-sm font-medium">{passkeyTitel(pk)}</span>
+								{#if pk.label?.trim() && pk.authenticator_name?.trim()}
+									<span class="block text-sm text-muted-foreground">{pk.authenticator_name}</span>
+								{/if}
+								<span class="block text-sm text-muted-foreground">
+									Angelegt am {formatDate(pk.created_at)}
+								</span>
+								{#if pk.last_used_at}
+									<span data-testid="passkey-last-used" class="block text-sm text-muted-foreground">
+										Zuletzt verwendet am {formatDate(pk.last_used_at)}
+									</span>
+								{/if}
+							</div>
+							<button
+								onclick={() => (deletePasskeyTarget = pk)}
+								class="shrink-0 inline-flex items-center gap-1 min-h-[44px] text-sm text-destructive hover:underline"
+							>
+								<Trash2Icon class="h-4 w-4" aria-hidden="true" />
+								Löschen
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			{#if passkeySupported === true}
+				<Btn onclick={() => (showPasskeyDialog = true)} disabled={passkeyBusy}>
+					Passkey hinzufügen
+				</Btn>
+			{:else if passkeySupported === false}
+				<p data-testid="passkey-unsupported" class="text-sm text-muted-foreground">
+					Dieser Browser oder dieses Gerät unterstützt Passkeys nicht. Melde dich mit einem anderen
+					Gerät an, um hier einen Passkey anzulegen.
+				</p>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 
@@ -850,6 +1004,90 @@
 			<Dialog.Footer>
 				<Btn variant="outline" onclick={() => (deletePresetTarget = null)}>Abbrechen</Btn>
 				<Btn variant="destructive" onclick={confirmDeletePreset}>Löschen</Btn>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Passkey löschen Rückfrage (#2246) -->
+	<Dialog.Root
+		open={deletePasskeyTarget !== null}
+		onOpenChange={(open) => { if (!open) deletePasskeyTarget = null; }}
+	>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>Passkey löschen</Dialog.Title>
+				<Dialog.Description>
+					Möchtest du „{deletePasskeyTarget ? passkeyTitel(deletePasskeyTarget) : ''}" wirklich
+					löschen? Du kannst dich dann mit diesem Gerät nicht mehr ohne Passwort anmelden und musst
+					den Passkey bei Bedarf neu anlegen.
+				</Dialog.Description>
+			</Dialog.Header>
+			<Dialog.Footer>
+				<Btn
+					variant="outline"
+					data-testid="passkey-delete-cancel"
+					onclick={() => (deletePasskeyTarget = null)}>Abbrechen</Btn
+				>
+				<Btn variant="destructive" data-testid="passkey-delete-confirm" onclick={confirmDeletePasskey}
+					>Löschen</Btn
+				>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Passkey anlegen Dialog (#2246) -->
+	<Dialog.Root
+		open={showPasskeyDialog}
+		onOpenChange={(open) => { if (!open && !passkeyBusy) showPasskeyDialog = false; }}
+	>
+		<!--
+			Waehrend der Zeremonie darf sich der Dialog auf KEINEM Weg schliessen
+			(AC-9). `onOpenChange` allein reicht dafuer nicht: der Dialog schliesst
+			seinen eigenen Zustand bei Escape/Aussenklick/X selbst und meldet das
+			nur noch — der Waechter dort ueberspringt dann bloss das Zuruecksetzen
+			von `showPasskeyDialog`, die Anzeige ist da schon weg (gemessen
+			09.09.2026: Dialog nach 77 ms bis 1,5 s weg, waehrend `passkeyBusy`
+			noch stand und keine Rueckmeldung vorlag). Das Schliessen muss deshalb
+			an der Quelle abgelehnt werden; `onOpenChange` bleibt als zweite
+			Sicherung stehen.
+		-->
+		<Dialog.Content
+			escapeKeydownBehavior={passkeyBusy ? 'ignore' : 'close'}
+			interactOutsideBehavior={passkeyBusy ? 'ignore' : 'close'}
+			showCloseButton={!passkeyBusy}
+		>
+			<Dialog.Header>
+				<Dialog.Title>Passkey hinzufügen</Dialog.Title>
+				<Dialog.Description>
+					Vergib eine Bezeichnung, damit du diesen Passkey später wiedererkennst — das ist
+					freiwillig. Danach bestätigst du die Erstellung an deinem Gerät.
+				</Dialog.Description>
+			</Dialog.Header>
+			<div class="space-y-2">
+				<label for="passkeyLabel" class="text-sm font-medium">Bezeichnung (optional)</label>
+				<input
+					id="passkeyLabel"
+					data-testid="passkey-label-input"
+					type="text"
+					maxlength="50"
+					disabled={passkeyBusy}
+					bind:value={passkeyLabel}
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+			{#if passkeyBusy}
+				<p data-testid="passkey-create-pending" class="text-sm text-muted-foreground">
+					Bestätige das Anlegen jetzt an deinem Gerät — per Face ID, Touch ID, Windows Hello oder
+					Sicherheitsschlüssel. Dieses Fenster bleibt so lange offen.
+				</p>
+			{/if}
+			<Dialog.Footer>
+				<Btn variant="outline" disabled={passkeyBusy} onclick={() => (showPasskeyDialog = false)}>
+					Abbrechen
+				</Btn>
+				<Btn data-testid="passkey-create-confirm" disabled={passkeyBusy} onclick={createPasskey}>
+					Anlegen
+				</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
