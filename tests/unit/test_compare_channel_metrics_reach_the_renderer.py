@@ -43,7 +43,7 @@ DISPLAY_CONFIG = {
 VISIBLE_HIDDEN: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "email": (("Temperatur", "Sonnenstunden"), ("UV-Index",)),
     "telegram": (("Temp max", "UV max"), ("Sonne",)),
-    "sms": ((" D+ ",), (" SU ", " UV ")),
+    "sms": ((" D ",), (" SU ", " UV ")),
 }
 
 
