@@ -162,16 +162,20 @@ def test_render_plain_segment_header_local_time_cest():
         friendly_keys=set(),
     )
 
-    # Segment-Kopfzeile: "━━ Segment 1: HH:MM–HH:MM | ..."
-    assert _LOCAL_START in output, (
-        f"render_plain-Output muss lokale Startzeit {_LOCAL_START!r} enthalten.\n"
-        f"Tatsächlicher Output (Auszug):\n"
-        + "\n".join(line for line in output.splitlines() if "━━" in line or "Segment" in line)
+    # #2242: NUR die Segment-Kopfzeile(n) ("━━ Segment 1: HH:MM–HH:MM | ...")
+    # pruefen, nicht den gesamten Text -- die Fusszeile ("Generated: ... UTC")
+    # traegt IMMER eine Wanduhr-UTC-Uhrzeit und loeste um 08:00 UTC einen
+    # Fehlalarm aus (CI-Praezedenzfall, gemessen s. Bericht #2242). Positiv-
+    # und Negativpruefung messen dieselbe Flaeche.
+    kopfzeilen = "\n".join(line for line in output.splitlines() if "━━" in line)
+    assert kopfzeilen, f"Keine Segment-Kopfzeile im Output gefunden:\n{output}"
+    assert _LOCAL_START in kopfzeilen, (
+        f"render_plain-Kopfzeile muss lokale Startzeit {_LOCAL_START!r} enthalten.\n"
+        f"Kopfzeile(n):\n{kopfzeilen}"
     )
-    assert _UTC_START not in output, (
-        f"render_plain-Output darf UTC-Zeit {_UTC_START!r} NICHT enthalten.\n"
-        f"Tatsächlicher Output (Auszug):\n"
-        + "\n".join(line for line in output.splitlines() if _UTC_START in line)
+    assert _UTC_START not in kopfzeilen, (
+        f"render_plain-Kopfzeile darf UTC-Zeit {_UTC_START!r} NICHT enthalten.\n"
+        f"Kopfzeile(n):\n{kopfzeilen}"
     )
 
 

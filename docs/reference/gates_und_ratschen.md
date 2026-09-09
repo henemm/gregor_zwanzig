@@ -273,6 +273,7 @@ Criteria und bekannte Grenzen: `docs/specs/modules/thunder_scale_guard.md`.*
 | staging_gate — `frontend/e2e/` nicht als Code klassifiziert (#1197) | 2026-11-15 | Live erlebt 2026-08-15 (PR-Stack #1736/#1852/#1881/#1882), Fix folgt |
 | Thunder-Scale-Wächter — keine neue lokale Kopie der Gewitter-Stufenskala (#1480, Backend + Frontend) | 2026-11-01 | 8 von 8 Python-Verstößen aus #1474 (`860a3baf^`) gefangen; Frontend 8 von 8 SYNTH-Formen inkl. der neunten Stelle (`['NONE','MED','HIGH','LOW']`) |
 | `_SELF_EXEMPT`-Eintrag `test_gehzeit_metriken_bleiben_trip_exklusiv.py` in `test_765_backend_hygiene_compliance.py` (#1848 C) | 2026-11-17 | Kommentar-Wächter liest `src/app/metric_catalog.py` als DATEN für eine AST-Prüfung (sind in Kommentaren genannte Funktionsnamen auflösbar?) — kein Verhaltensnachweis auf Code-Strings; Freigabe Tech-Lead 2026-08-19 |
+| Gestellte-Uhr-Ratsche make_trip+save_trip (#2242) | 2026-12-08 | 3 Dateien in 3 Wochen nach #2050 ungeschützt (#2242) |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.
