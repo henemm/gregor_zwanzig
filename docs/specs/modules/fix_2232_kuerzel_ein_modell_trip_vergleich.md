@@ -311,11 +311,19 @@ Details siehe „Implementation Details" unten.
     gegen den Stand vor der Änderung vergleichen.
 
 - **AC-8:** Given der Metrik-Katalog nach der Umstellung / When die bestehende Ratsche
-  `tests/unit/test_sms_token_symbol_register_ratchet.py` läuft / Then ist
-  `temperature_day_high.sms_code == "D"`, identisch zu seinem Eintrag in
-  `sms_multi_symbols`, ohne dass eine neue Ausnahmezeile in der Ratsche ergänzt wurde.
-  - Test: der bestehende Ratschen-Test bleibt unverändert grün — kein Eingriff in seine
-    Ausnahmeliste.
+  `tests/unit/test_sms_token_symbol_register_ratchet.py` und die Eindeutigkeits-Wächter
+  (`test_issue_917_alert_renderer.py::test_all_sms_codes_globally_unique`,
+  `test_temp_tagesrichtung_aufloesung.py::TestCatalogSmsCodesStayUnique`) laufen / Then
+  bleiben alle ohne neue Ausnahmezeile grün, und der Vergleichs-Renderer löst das Kürzel
+  über dieselbe Rangfolge wie `/api/sms-symbols` auf (`sms_multi_symbols` vor `sms_code`,
+  `metric_catalog.kurzform_kuerzel()`), sodass `temperature_day_high` in SMS und Marke
+  `D` liefert.
+  - Test: Ratsche und Eindeutigkeits-Wächter unverändert grün; `kurzform_kuerzel("temperature_day_high") == "D"`.
+  - **Rev. 2a (Umsetzungsbefund):** `temperature_day_high.sms_code = "D"` ist nicht
+    setzbar, weil `temperature.sms_code = "D"` vom Alarm-Pfad gelesen wird
+    (`alert/render.py:177`) und drei Wächter globale Eindeutigkeit ohne Ausnahmeliste
+    verlangen. Tech-Lead-Entscheid: `sms_code` bleibt leer, Auflösung über
+    `kurzform_kuerzel()` — Zweck erfüllt, Wächter unverletzt.
 
 - **AC-9:** Given ein Ortsvergleich mit Mail- und Telegram-Versand und gewählter
   Tageshöchst-/Tagestiefst- sowie gefühlter Höchst-/Tiefsttemperatur / When beide
@@ -417,6 +425,8 @@ Details siehe „Implementation Details" unten.
   Zuge der Implementierung geändert, nicht durch diese Spec.
 
 ## Changelog
+
+- 2026-09-09: Rev. 2a — AC-8 an Umsetzungsbefund angepasst (`kurzform_kuerzel()` statt `sms_code="D"`), Tech-Lead-Entscheid.
 
 - 2026-09-09: Initial spec created (Tech-Lead-Zielbild, PO-go zum Zielbild; ACs zur Freigabe)
 - 2026-09-09: Rev. 2 — Weg A (Kürzel-Identität getrennt von Auflösungs-Identität) nach
