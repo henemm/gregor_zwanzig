@@ -34,6 +34,30 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s.replace("_", " ")).strip().lower()
 
 
+def parse_authentication_results(header_value: str) -> tuple[str | None, dict[str, str]]:
+    """RFC-8601-Parsing: liefert (authserv-id, {method: result, ...}).
+
+    Format: "<authserv-id>; method1=result1 param=val param2=val; method2=result2 ...".
+    Nur der jeweils ERSTE Token nach '=' pro Segment zaehlt als method=result,
+    weitere Tokens im Segment (z.B. header.d=..., smtp.mailfrom=...) sind
+    Zusatzparameter und werden ignoriert.
+    """
+    segments = [s.strip() for s in header_value.split(";")]
+    if not segments:
+        return None, {}
+    authserv_id = segments[0] or None
+    results: dict[str, str] = {}
+    for segment in segments[1:]:
+        if not segment:
+            continue
+        first_token = segment.split()[0]
+        if "=" not in first_token:
+            continue
+        method, result = first_token.split("=", 1)
+        results[method.strip().lower()] = result.strip().lower()
+    return authserv_id, results
+
+
 class InboundEmailReader:
     """Polls IMAP inbox and processes trip commands from email replies."""
 
@@ -104,7 +128,11 @@ class InboundEmailReader:
         # 1. Resolve user-scoped settings for sender, then authorize
         from_addr = self._parse_sender(msg.get("From", ""))
         _user_id, user_settings = self._resolve_settings_for_sender(from_addr, settings)
-        if not self._authorize(from_addr, user_settings):
+        if _user_id == "default":
+            logger.warning(f"Unresolved/ambiguous sender: {from_addr!r}")
+            imap.store(uid, "+FLAGS", "\\Seen")
+            return 0
+        if not self._authorize(from_addr, user_settings, msg):
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
 
@@ -185,8 +213,15 @@ class InboundEmailReader:
         _, addr = email.utils.parseaddr(from_header)
         return addr.lower()
 
-    def _authorize(self, sender: str, settings: Settings) -> bool:
-        """Single-user: sender must match mail_to or inbound_address (only if distinct from mail_from)."""
+    def _authorize(
+        self, sender: str, settings: Settings, msg: email.message.Message,
+    ) -> bool:
+        """Single-user: sender must match mail_to or inbound_address (only if distinct from mail_from).
+
+        #2143: zusaetzlich zur bestehenden Adress-Logik muss der Absender
+        verifiziert sein (email_verified_at) und der Transport SPF/DKIM
+        bestehen -- beides fail-closed.
+        """
         mail_from_lower = (settings.mail_from or "").lower()
         if mail_from_lower and sender == mail_from_lower:
             return False
@@ -199,7 +234,33 @@ class InboundEmailReader:
         authorized = sender in allowed
         if not authorized:
             logger.debug(f"Ignoring email from: {sender!r}")
-        return authorized
+            return False
+
+        if not settings.email_verified_at:
+            logger.warning(f"Sender not verified: {sender!r}")
+            return False
+        if not self._spf_dkim_pass(msg, settings.mail_server_hostname):
+            logger.warning(f"SPF/DKIM check failed: {sender!r}")
+            return False
+        return True
+
+    def _spf_dkim_pass(
+        self, msg: email.message.Message, expected_authserv_id: str | None,
+    ) -> bool:
+        """Nur der ERSTE Authentication-Results-Header zaehlt (msg.get(), NIE
+        get_all() -- Stalwart prependt seinen echten Header, ein Angreifer
+        koennte einen zweiten gefaelschten Header mit pass anhaengen, AC-5)."""
+        if not expected_authserv_id:
+            return False
+        header_value = msg.get("Authentication-Results")
+        if not header_value:
+            return False
+        authserv_id, results = parse_authentication_results(header_value)
+        if authserv_id != expected_authserv_id:
+            return False
+        return results.get("spf") == "pass" and (
+            results.get("dkim") == "pass" or results.get("dmarc") == "pass"
+        )
 
     def _extract_plain_body(self, msg: email.message.Message) -> str:
         """Extract plain-text body. Multipart: first text/plain part."""
