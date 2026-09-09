@@ -4,7 +4,9 @@
 //
 // Spec: docs/specs/modules/fix_1719_s4_kuerzel_vereinheitlichung.md
 //   AC-5 (zwei beschriftete Marken) · AC-6 (alle Kuerzel, Quelle /api/sms-symbols)
-//   AC-7 (dieselben Marken in den drei Vergleichs-Editoren, Quelle sms_code)
+//   AC-7 (dieselben Marken in den drei Vergleichs-Editoren)
+//   #2232 AC-4: Quelle ist jetzt fuer BEIDE Flaechen /api/sms-symbols
+//     (frueher: Vergleich aus sms_code — s. Block "die RICHTIGE Quelle")
 //   AC-8 (der Bestandswaechter aus #1453 bleibt gruen)
 //   AC-9 (keine leere oder erfundene Marke)
 //
@@ -498,40 +500,49 @@ describe('AC-6/AC-7: die Kurzform-Marke wird je Flaeche aus der RICHTIGEN Quelle
 		);
 	});
 
+	// Issue #2232: Erwartung UMGEDREHT. Bis 2026-09-09 verlangte dieser Block
+	// das Gegenteil — der Vergleich MUSSTE aus `sms_code` lesen, die Trip-Quelle
+	// war ihm verboten (Spec #1719 S4 Requirement 3, ADR-0011 Nachtrag E7:
+	// "bewusst verschiedene Kuerzel-Quellen"). Gemessene Folge: dieselbe
+	// Wettergroesse trug je Flaeche eine andere Marke (`D` gegen `D+`), und die
+	// zugestellte Vergleichs-SMS wich von beiden ab. Ab #2232 lesen BEIDE
+	// Flaechen `/api/sms-symbols`; verschieden ist nur noch die KENNUNG, unter
+	// der nachgeschlagen wird (`kuerzel_metric_id`, vom Backend mitgeliefert).
 	for (const [name, datei, waehle] of VERGLEICHSFLAECHEN) {
-		test(`${name}: aus dem Register, NICHT aus den Trip-SMS-Kuerzeln`, () => {
+		test(`${name}: aus /api/sms-symbols, NICHT mehr aus dem Register`, () => {
 			const quelle = kuerzelQuelle(datei, waehle);
-			assert.ok(quelle, `AC-7 FAIL: ${name} uebergibt kein \`kuerzelById\`.`);
+			assert.ok(quelle, `AC-4 FAIL: ${name} uebergibt kein \`kuerzelById\`.`);
 			assert.ok(
-				quelle!.has(REGISTER_QUELLE),
-				`AC-7 FAIL: die Kurzform-Marke von ${name} wird nicht aus ` +
-					`\`${REGISTER_QUELLE}\` gespeist. Die Vergleichs-SMS rendert aus ` +
-					`\`get_sms_code()\` (comparison.py:625) — die Marke zeigte dann ein ` +
-					`Kuerzel, das der Vergleich nie sendet. ` +
+				TRIP_QUELLEN.some((q) => quelle!.has(q)),
+				`AC-4 FAIL: die Kurzform-Marke von ${name} wird nicht aus ` +
+					`${TRIP_QUELLEN.join('/')} gespeist. Sie zeigte dann wieder ein ` +
+					`anderes Kuerzel als der Trip-Editor fuer dieselbe Groesse — genau ` +
+					`der Fehler, den #2232 behebt. ` +
 					`Erreichbar: ${JSON.stringify([...quelle!].sort())}`
 			);
-			const trip = TRIP_QUELLEN.filter((q) => quelle!.has(q));
-			assert.deepEqual(
-				trip,
-				[],
-				`AC-7 FAIL: die Kurzform-Marke von ${name} wird aus der TRIP-Quelle ` +
-					`gespeist (${trip.join(', ')}). Trip und Vergleich senden aus ` +
-					`VERSCHIEDENEN Tabellen; eine flaechenblinde Quelle macht den ` +
-					`Vergleich falsch — genau der Fehler, den diese Scheibe behebt, nur ` +
-					`auf der anderen Flaeche.`
+			assert.ok(
+				!quelle!.has(REGISTER_QUELLE),
+				`AC-4 FAIL: die Kurzform-Marke von ${name} wird (auch) aus ` +
+					`\`${REGISTER_QUELLE}\` gespeist. Das war bis #2232 die ` +
+					`Vergleichs-Quelle und ist seitdem die ZWEITE Quelle, die es nicht ` +
+					`mehr geben darf: die Vergleichs-SMS rendert aus ` +
+					`\`kurzform_kuerzel()\` ueber \`kuerzel_metric_id\`. ` +
+					`Erreichbar: ${JSON.stringify([...quelle!].sort())}`
 			);
 		});
 	}
 });
 
-describe('AC-7: die Kurzform-Marke des Vergleichs speist sich aus dem Register', () => {
+describe('#1453: die Namensform-Datengrundlage des Vergleichs bleibt vollstaendig', () => {
 	for (const [name, datei, waehle] of VERGLEICHSFLAECHEN) {
 		test(`${name}: die Zeile erreicht das Register-Kuerzel (sms_code)`, () => {
-			// INVARIANTEN-WAECHTER, heute gruen und absichtlich so: die Datengrundlage
-			// steht seit #1453. Er bewacht, dass die Umstellung sie nicht mitreisst —
-			// eine flaechenblinde Korrektur auf die Trip-SMS-Kuerzel wuerde den
-			// Vergleich falsch machen (er sendet aus `get_sms_code()`, comparison.py).
-			// KEIN Nachweis, dass AC-7 erfuellt ist; das leistet der Test darueber.
+			// INVARIANTEN-WAECHTER, heute gruen und absichtlich so.
+			// Issue #2232: `sms_code` ist NICHT mehr die Quelle der Kurzform-Marke
+			// (das ist seit #2232 /api/sms-symbols, s. Block darueber). Es bleibt
+			// aber die dritte NAMENSFORM, die der Editor je Zeile anzeigt (#1453,
+			// bewacht von weather_metric_name_forms_visible.test.ts). Dieser Test
+			// haelt fest, dass die Umstellung der Marken-Quelle die Namensform-
+			// Datengrundlage nicht mitgerissen hat.
 			const erreicht = erreichteNamen(join(SHARED, datei), waehle);
 			assert.ok(erreicht, `${name}: WeatherV2Reihenfolge-Einbettung nicht gefunden`);
 			assert.ok(

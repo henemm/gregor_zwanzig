@@ -1071,19 +1071,25 @@ const EINBETTUNGEN = [
 		// `materializedOutlookKeys` (die daraus entsteht) schluege fehl.
 		// Gesaet wird die ECHTE Vergleichs-Grundauswahl -- dieselbe Menge, die
 		// WeatherMetricsTab.svelte am Ortsvergleich-Mount durchreicht.
+		// #2232: die Marken kommen jetzt als Prop aus `/api/sms-symbols` (die
+		// Flaeche laedt sie nicht selbst — zwei Ladewege waeren zwei Quellen).
+		// Gesaet wird DIESELBE Abbildung, die WeatherMetricsTab durchreicht.
 		saat: () => ({
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
 			metricKeys: null,
-			grundauswahl: gerendertVergleich()
+			grundauswahl: gerendertVergleich(),
+			smsSymbols: tripKuerzelById()
 		})
 	},
 	{
 		name: 'Stundenverlauf (CompareHourlyLayoutControls)',
 		datei: () => join(SHARED, 'CompareHourlyLayoutControls.svelte'),
 		waehle: () => true,
+		// #2232: s. Ausblick oben — Marken als Prop, nicht selbst geladen.
 		saat: () => ({
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
-			wiz: { hourlyMetricKeys: null }
+			wiz: { hourlyMetricKeys: null },
+			smsSymbols: tripKuerzelById()
 		})
 	}
 ] as const;

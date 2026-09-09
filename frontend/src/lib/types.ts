@@ -528,6 +528,13 @@ export interface CompareMetricCatalogEntry {
 	// ohne sie im Browser ein zweites Mal zu führen.
 	col_label?: string;
 	sms_code?: string;
+	// Issue #2232: die Kennung, unter der die KURZFORM-MARKE dieser Größe in
+	// `/api/sms-symbols` steht. Für die Temperatur-Familie ist das eine ANDERE
+	// als `metric_id` (`temperature_day_high` statt `temperature`), damit Trip
+	// und Ortsvergleich dieselbe Marke zeigen, ohne dieselbe Größe zu sein
+	// (verschiedene Zeitfenster, #1848 Scheibe C). Das Backend löst sie auf —
+	// der Browser führt dafür KEINE eigene Regel.
+	kuerzel_metric_id?: string;
 	// Issue #1435 (E1a-1, live): Alarm-Identität der Größe aus dem zentralen
 	// Register — `null`, wenn sie nicht alarmfähig ist. E1a-2 macht sie zur
 	// EINZIGEN Quelle dafür, welche Alarm-Zeilen der Alarme-Reiter zeigt.

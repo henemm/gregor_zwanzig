@@ -193,12 +193,23 @@ _METRICS: list[MetricDefinition] = [
     ),
     # Wie temperature_day_low, Gegenrichtung. Fix #1887 E6 Scheibe A (AC-3):
     # der DEC-8-Kompromiss "TD" ist aufgehoben, nicht nur verschoben -- "TD"
-    # erreichte KEINEN der beiden get_sms_code()-Leser (comparison.py:647,
-    # alert/render.py:93) und war damit ein toter Wert. Das tatsaechlich
-    # gesendete Kuerzel "D" traegt jetzt ausschliesslich sms_multi_symbols;
-    # sms_code ist leer.
+    # erreichte KEINEN der beiden get_sms_code()-Leser und war damit ein toter
+    # Wert.
+    # Fix #2232: sms_code bleibt LEER -- gemessen (2026-09-09), nicht
+    # uebersehen. Der Ortsvergleich erreicht diese Groesse seit #2232 sehr wohl
+    # (ueber compare_metric_catalog.kuerzel_metric_id), der frueher hier
+    # vermerkte Grund ("kein get_sms_code()-Leser") ist also entfallen. Ein
+    # sms_code="D" waere aber eine Doppelvergabe mit "temperature" (sms_code
+    # "D", gelesen vom Alarm-Pfad alert/render.py::_code) und liesse drei
+    # bestehende Eindeutigkeits-Waechter rot werden. Das gesendete Kuerzel
+    # steht stattdessen weiterhin ausschliesslich in sms_multi_symbols und wird
+    # ueber kurzform_kuerzel() aufgeloest -- DIESELBE Rangfolge, die auch
+    # /api/sms-symbols und compact_label benutzen.
     # 🔴 Gehzeit-Fensterung (collect_hiking_window_points()), NICHT das
-    # Tagesfenster 04-19 von temperature_min/temperature_max.
+    # Tagesfenster 04-19 von temperature_min/temperature_max. Das gilt fuer den
+    # WERT; das KUERZEL "D" ("Tageshoechst") trifft auf beide Fenster zu und
+    # wird deshalb geteilt -- die Kennung selbst bleibt trip-exklusiv
+    # (#1848 Scheibe C).
     MetricDefinition(
         id="temperature_day_high", label_de="Tages-Höchsttemperatur (Gehzeit)",
         unit="°C", dp_field="t2m_c", category="temperature",
@@ -1363,6 +1374,34 @@ def get_sms_code(metric_id: str) -> str:
     """
     m = _METRICS_BY_ID.get(metric_id)
     return m.sms_code if m is not None else ""
+
+
+
+def kurzform_kuerzel(metric_id: str) -> str:
+    """Das Kuerzel, das die Kurzform (SMS/Premium-SMS) fuer diese Groesse
+    TATSAECHLICH sendet -- ``""`` wenn sie keines fuehrt (#2232).
+
+    Rangfolge identisch zu ``/api/sms-symbols::_symbols_for`` und
+    ``_kurzform_kuerzel`` (oben): Mehrfach-Token haben Vorrang, davon benennt
+    das ERSTE die Groesse; ``":"`` trennt nur eine Stufenangabe ab und gehoert
+    nicht zum Kuerzel. Erst danach greift ``sms_code``.
+
+    Warum es diese Funktion neben ``get_sms_code()`` gibt: ``sms_code`` ist
+    global eindeutig (drei Waechter, u. a.
+    ``test_sms_token_symbol_register_ratchet.py::
+    test_register_kuerzel_bezeichnen_je_genau_eine_groesse``) und deshalb fuer
+    Groessen, die ein Kuerzel mit ihrer Elterngroesse TEILEN, nicht besetzbar:
+    ``temperature_day_high`` sendet dasselbe ``D`` wie ``temperature``, weil
+    beide "Tageshoechst" bedeuten -- nur ueber verschiedene Fenster (Gehzeit
+    vs. 04-19, #1848 Scheibe C). Genau diese Groessen fuehren ihr Kuerzel in
+    ``sms_multi_symbols``. Wer das gesendete Kuerzel braucht (Vergleichs-SMS,
+    Editor-Marke), fragt hier; wer die eindeutige Registerkennung braucht
+    (Alarm-Pfad), fragt ``get_sms_code()``.
+    """
+    mehrfach = SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id)
+    if mehrfach:
+        return mehrfach[0].rstrip(":")
+    return get_sms_code(metric_id)
 
 
 def get_decimals(metric_id: str) -> int:

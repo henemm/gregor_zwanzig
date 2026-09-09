@@ -55,7 +55,7 @@ Kein Renderer-Fehler, sondern eine unterschiedliche Modellierung derselben Wette
 Trip-SMS-Token entstehen als Literale in `src/output/tokens/builder.py:324-330`, per
 Ratsche `tests/unit/test_sms_token_symbol_register_ratchet.py` an `sms_multi_symbols`
 gekettet; der Bereichs-Token `D9/24` entsteht in `builder.py:378-385`. Die
-Editor-Marke des Touren-Editors kommt aus `/api/sms-symbols`
+Editor-Marke des Trip-Editors kommt aus `/api/sms-symbols`
 (`api/routers/config.py:30-69`) → `WeatherMetricsTab.svelte:188-191, 1558`.
 
 **Ortsvergleich:** `COMPARE_METRIC_CATALOG` (`compare_metric_catalog.py:112-114` für

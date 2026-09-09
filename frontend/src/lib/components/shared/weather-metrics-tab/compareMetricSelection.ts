@@ -20,6 +20,9 @@ export interface CompareSelectionEntry {
 	// Groesse, unveraendert aus der Katalogantwort durchgereicht.
 	col_label?: string;
 	sms_code?: string;
+	// Issue #2232: Kennung fuer den Nachschlag der Kurzform-Marke in
+	// `/api/sms-symbols` (s. types.ts CompareMetricCatalogEntry).
+	kuerzel_metric_id?: string;
 	// Issue #1406 Scheibe B: Stundenverlauf-Angaben, unveraendert aus der
 	// Katalogantwort durchgereicht (s. types.ts CompareMetricCatalogEntry).
 	hourlySelectable?: boolean;
@@ -61,6 +64,11 @@ export function toCompareSelectionEntries(
 		// Nur ergaenzen, wenn der Endpoint sie liefert (deepEqual-Vertrag #1350).
 		...(m.col_label !== undefined ? { col_label: m.col_label } : {}),
 		...(m.sms_code !== undefined ? { sms_code: m.sms_code } : {}),
+		// #2232: Kuerzel-Kennung unveraendert durchreichen (deepEqual-Vertrag
+		// #1350: nur ergaenzen, wenn der Endpoint sie liefert).
+		...(m.kuerzel_metric_id !== undefined
+			? { kuerzel_metric_id: m.kuerzel_metric_id }
+			: {}),
 		// #1406 B: nur ergaenzen, wenn der Endpoint sie liefert — sonst braechen
 		// die strikten deepEqual-Vergleiche aus #1350 (AC-2).
 		...(m.hourlySelectable !== undefined ? { hourlySelectable: m.hourlySelectable } : {}),
