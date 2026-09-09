@@ -135,10 +135,16 @@ Je Zeile im Bereich „Reihenfolge" stehen beschriftete Marken:
 2. ⠿ Nacht-Tiefsttemperatur °C  Mail Nacht   Kurzform N           [Roh|Einfach] [Aus]
 ```
 
-**Die Quelle richtet sich nach der Fläche** — der Touren-Editor zeigt die Trip-SMS-Kürzel
+> **⚠️ ABGELÖST am 2026-09-09 durch #2232 — der folgende Absatz gilt nicht mehr.**
+> Beide Flächen lesen die Kurzform-Marke seitdem aus `/api/sms-symbols`; der Vergleich
+> schlägt dort unter `kuerzel_metric_id` nach (Backend-aufgelöst). Begründung und
+> Messung: `docs/specs/modules/fix_2232_kuerzel_ein_modell_trip_vergleich.md`,
+> ADR-0011 Nachtrag 2026-09-09.
+
+~~**Die Quelle richtet sich nach der Fläche** — der Touren-Editor zeigt die Trip-SMS-Kürzel
 (`/api/sms-symbols`, deckt Mehrfach-Token und Grammatik ab), die drei Vergleichs-Editoren
 das Register-Kürzel, weil die Vergleichs-SMS aus `get_sms_code()` rendert
-(`comparison.py:625`). Eine flächenblinde Korrektur würde den Vergleich falsch machen.
+(`comparison.py:625`). Eine flächenblinde Korrektur würde den Vergleich falsch machen.~~
 
 ### 4. Die Marken bleiben in jeder Fenstergröße vollständig lesbar
 
@@ -373,7 +379,18 @@ PO-Entscheid 2026-08-12: ausliefern, beide Fälle in #1791. **Beim Schließen ge
 - Kürzel-Vorgabe und Ausnahmeliste gehören in `metric_catalog.py` neben die
   `MetricDefinition` — eine Quelle, nicht zwei.
 - Das Frontend führt **keine** eigene Kürzel-Liste; die Kurzform-Marke speist sich aus
-  `/api/sms-symbols` (Touren) bzw. dem bereits gelieferten `sms_code` (Vergleich).
-  `/api/metrics` braucht dafür **kein** neues Feld.
+  `/api/sms-symbols` (Trip) bzw. ~~dem bereits gelieferten `sms_code` (Vergleich)~~ —
+  **seit #2232 ebenfalls aus `/api/sms-symbols`, nachgeschlagen unter
+  `kuerzel_metric_id`**. `/api/metrics` braucht dafür **kein** neues Feld.
 - Playwright folgt dem S2/S3-Tripel: `<name>.staging.setup.ts` + `.staging.spec.ts` +
   `playwright.<name>.staging.config.ts`.
+
+## Changelog
+
+- 2026-09-09: Requirement 3 (Abschnitt 3, „Die Quelle richtet sich nach der Fläche") für
+  die Temperatur-Familie **abgelöst durch #2232**. Trip und Ortsvergleich lesen die
+  Kurzform-Marke ab sofort BEIDE aus `/api/sms-symbols`; der Vergleich adressiert sie
+  über das neue Katalogfeld `kuerzel_metric_id`. Der Vergleichs-Weg über `sms_code`
+  entfällt. Grund: die getrennten Quellen zeigten für dieselbe Wettergröße
+  widersprüchliche Kürzel (`D+`/`D-` gegen `L`/`D`). Die Auflösungs-Identität
+  (`metric_id`) bleibt getrennt — siehe ADR-0011 Nachtrag 2026-09-09.

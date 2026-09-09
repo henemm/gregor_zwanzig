@@ -29,6 +29,7 @@
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
 	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts';
+	import { kuerzelMarken, markenKennung } from './weather-metrics-tab/kuerzelMarken.ts';
 	import type { CompareAggregationGroup } from './weather-metrics-tab/compareAggregationGrouping.ts';
 	import type { CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
 	import type { MetricEntry } from '../trip-detail/metricsEditor.ts';
@@ -47,12 +48,17 @@
 		 *  kein zweites Vokabular). Leer/nicht geladen: der Auswahl-Block bleibt
 		 *  leer, Schalter und Hinweis bleiben bedienbar. */
 		catalog?: CompareSelectionEntry[];
+		// Issue #2232: Kurzform-Marken aus `/api/sms-symbols` (Kennung ->
+		// Kuerzel), gereicht von WeatherMetricsTab -- DIESELBE Quelle, aus der
+		// auch der Trip-Editor seine Marke speist. Diese Flaeche laedt den
+		// Endpoint bewusst NICHT selbst: zwei Ladewege waeren zwei Quellen.
+		smsSymbols?: Record<string, string[]>;
 		/** Issue #1361 Befund 4: direkter Speicherausloeser nach einer
 		 *  Ziehgeste in der Reihenfolge-Liste. Ohne Uebergabe (Anlege-Seite)
 		 *  bleibt die Mutation lokal im wiz-State. */
 		onHourlyCommit?: () => void;
 	}
-	let { wiz, onHourlyCommit, catalog = [] }: Props = $props();
+	let { wiz, onHourlyCommit, catalog = [], smsSymbols = {} }: Props = $props();
 
 	const hourlyGroups = $derived(groupCompareCatalog(catalog));
 
@@ -136,16 +142,26 @@
 		return map;
 	});
 
-	// Issue #1719 S4: Kurzform-Marke = Register-Kuerzel (`sms_code`) — die
-	// Vergleichs-SMS rendert aus `get_sms_code()`. Die Legacy-Schluessel
-	// bekommen dasselbe Kuerzel wie ihre Groesse, sonst traegt dieselbe Zeile
-	// je nach Auswahlstand mal eine Marke und mal keine.
-	const hourlyKuerzelById = $derived.by(() => {
-		const map: Record<string, string[]> = {};
-		for (const [key, eintrag] of Object.entries(hourlyMetricById))
-			if (eintrag.sms_code) map[key] = [eintrag.sms_code];
-		return map;
-	});
+	// Issue #2232: Kurzform-Marke aus `/api/sms-symbols` — dieselbe Quelle wie
+	// im Trip-Editor. Bis #1719 S4 kam sie hier aus `sms_code`; das war eine
+	// zweite Quelle und zeigte fuer die Temperatur-Familie eine Marke, die der
+	// Vergleich gar nicht sendet. Nachgeschlagen wird unter der Kennung, die
+	// das Backend je Katalogzeile mitliefert (`kuerzel_metric_id`).
+	// Die Legacy-Schluessel bekommen dasselbe Kuerzel wie ihre Groesse, sonst
+	// traegt dieselbe Zeile je nach Auswahlstand mal eine Marke und mal keine.
+	const hourlyKuerzelById = $derived(
+		kuerzelMarken(
+			hourlyGroups.flatMap((group) => {
+				const eintrag = catalog.find((e) => e.metric_id === group.metric_id);
+				const kennung = markenKennung(eintrag ?? {}, group.metric_id);
+				return [
+					[group.metric_id, kennung] as const,
+					...group.hourly_legacy_keys.map((legacy) => [legacy, kennung] as const)
+				];
+			}),
+			smsSymbols
+		)
+	);
 
 	function onHourlyRemove(key: string): void {
 		const group = hourlyGroups.find(

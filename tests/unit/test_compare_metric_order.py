@@ -121,13 +121,13 @@ def _html_labels(html: str) -> list[str]:
 # Katalog-Kuerzel (`metric_catalog.get_sms_code`) statt der Telegram-Vollform
 # ("D" statt "Temp"). Die SMS ist flach ("Ort Kuerzel Wert Kuerzel Wert"),
 # deshalb wird ueber Tokens statt ueber ein Trennzeichen ausgelesen.
-# Adversary-Fund Runde 3 (PO-Entscheidung 2026-07-29): `temp_max` bietet im
-# Ortsvergleich mehr als eine Auswertung (Hoechst-/Tiefstwert) -- das Kuerzel
-# traegt deshalb IMMER das Auswertungszeichen ("D+", nicht bloss "D"), auch
-# wenn (wie hier) nur der Hoechstwert gewaehlt ist (ein Kuerzel darf nicht je
-# nach Auswahl etwas anderes bedeuten).
+# Issue #2232: das Auswertungszeichen ("D+" fuer den Hoechstwert, PO-
+# Entscheidung 2026-07-29) ist ERSATZLOS entfallen. Hoechst- und Tiefstwert
+# tragen seitdem eigene Kuerzel ("D"/"L"), aufgeloest ueber
+# `compare_metric_catalog.kuerzel_metric_id` -- dieselben, die die Trip-SMS
+# sendet. Das Kuerzel bedeutet weiterhin unabhaengig von der Auswahl dasselbe.
 _SMS_CODE = {
-    "temp_max": "D+", "wind_max": "W", "sunny_hours": "SU", "cloud_avg": "CT",
+    "temp_max": "D", "wind_max": "W", "sunny_hours": "SU", "cloud_avg": "CT",
 }
 _SMS_LABEL_TOKENS = set(_SMS_CODE.values())
 

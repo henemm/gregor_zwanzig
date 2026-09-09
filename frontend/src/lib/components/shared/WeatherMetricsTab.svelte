@@ -25,6 +25,7 @@
 	import WeatherV2PresetBar from './weather-metrics-tab/WeatherV2PresetBar.svelte';
 	import WeatherV2Grundauswahl from './weather-metrics-tab/WeatherV2Grundauswahl.svelte';
 	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
+	import { kuerzelMarken, markenKennung } from './weather-metrics-tab/kuerzelMarken.ts';
 	// WeatherV2Kanaele entfernt in Issue #736 (Kanal-Config → Versand-Reiter)
 	// Issue #1719 Scheibe S3: WeatherV2MailPreview ("So kommt es an") ist
 	// ersatzlos entfernt (PO-Entscheid) — samt Mobile-FAB/Sheet weiter unten.
@@ -1132,15 +1133,19 @@
 		return map;
 	});
 
-	// Issue #1719 S4: die Kurzform-Marke des VERGLEICHS zeigt das
-	// Register-Kuerzel — die Vergleichs-SMS rendert aus `get_sms_code()`
-	// (comparison.py:625), nicht aus den Trip-SMS-Tabellen. Genau EIN Kuerzel
-	// je Groesse; Groessen ohne Registereintrag bekommen gar keine Marke.
-	const compareKuerzelById = $derived.by(() => {
-		const map: Record<string, string[]> = {};
-		for (const e of compareCatalog) if (e.sms_code) map[e.metric] = [e.sms_code];
-		return map;
-	});
+	// Issue #2232: die Kurzform-Marke des VERGLEICHS kommt aus DERSELBEN Quelle
+	// wie die des Trips — `/api/sms-symbols` (`metricSymbols`), nachgeschlagen
+	// unter der vom Backend mitgelieferten Kennung (`kuerzel_metric_id`). Bis
+	// #1719 S4 kam sie aus `sms_code`; das war eine zweite Marken-Quelle und
+	// zeigte fuer Tageshoechst/-tiefst ein Kuerzel, das die Vergleichs-SMS gar
+	// nicht sendet (`D` fuer beide Richtungen statt `D`/`L`).
+	// Groessen ohne Eintrag im Endpoint bekommen weiterhin gar keine Marke.
+	const compareKuerzelById = $derived(
+		kuerzelMarken(
+			compareCatalog.map((e) => [e.metric, markenKennung(e)] as const),
+			metricSymbols
+		)
+	);
 
 	// ── Issue #1703 Scheibe 8: Kanal-Ebene der Uebersichtstabelle ────────────
 	// Reiner View-State (analog `activeChannel` im route-Zweig), NIE Teil des
@@ -1420,7 +1425,10 @@
 				     Register-Objekt `metricById` (GET /api/metrics) und damit eine
 				     andere Datenform als die, ueber die groupCompareCatalog()
 				     gruppiert. -->
-				<CompareHourlyLayoutControls {wiz} {onHourlyCommit} catalog={compareCatalog} />
+				<CompareHourlyLayoutControls
+					{wiz} {onHourlyCommit} catalog={compareCatalog}
+					smsSymbols={metricSymbols}
+				/>
 			</div>
 		{/if}
 		<!-- Issue #1361 Befund 2/#1368: Bedienflaeche des 3-Tages-Ausblicks.
@@ -1449,6 +1457,7 @@
 					{onOutlookCommit}
 					enabled={wiz.outlookEnabled}
 					onEnabledChange={onCompareOutlookEnabled}
+					smsSymbols={metricSymbols}
 				/>
 			</div>
 		{/if}
@@ -1846,6 +1855,7 @@
 						onMetricFormats={onOutlookMetricFormats}
 						title="3-Tages-Vorschau"
 						showEmailOnlyHint={false}
+						smsSymbols={metricSymbols}
 					/>
 				</div>
 				{/if}

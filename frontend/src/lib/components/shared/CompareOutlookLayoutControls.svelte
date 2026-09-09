@@ -21,6 +21,7 @@
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
 	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts';
+	import { kuerzelMarken, markenKennung } from './weather-metrics-tab/kuerzelMarken.ts';
 	import type { MetricEntry } from '../trip-detail/metricsEditor.ts';
 	import type { CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
 	import {
@@ -77,12 +78,17 @@
 		 *  speichern kann, darf sie auch nicht anbieten (sonst genau der
 		 *  wirkungslose Schalter, der #2049 ausgeloest hat). */
 		onMetricFormats?: (formats: Record<string, boolean>) => void;
+		/** Issue #2232: Kurzform-Marken aus `/api/sms-symbols` (Kennung ->
+		 *  Kuerzel), gereicht vom Aufrufer -- DIESELBE Quelle, aus der auch der
+		 *  Trip-Editor seine Marke speist. Diese Flaeche laedt den Endpoint
+		 *  bewusst NICHT selbst: zwei Ladewege waeren zwei Quellen. */
+		smsSymbols?: Record<string, string[]>;
 	}
 	let {
 		metricKeys, catalog, onMetricKeys, onOutlookCommit,
 		title = '3-Tages-Ausblick', enabled = true, onEnabledChange,
 		showEmailOnlyHint = true, grundauswahl = null,
-		metricFormats = null, onMetricFormats
+		metricFormats = null, onMetricFormats, smsSymbols = {}
 	}: Props = $props();
 
 	function handleEnabledToggle(checked: boolean): void {
@@ -111,18 +117,16 @@
 		return map;
 	});
 
-	// Issue #1719 S4: Kurzform-Marke = Register-Kuerzel (`sms_code`) — die
-	// Vergleichs-SMS rendert aus `get_sms_code()`, nicht aus den
-	// Trip-SMS-Tabellen.
-	const outlookKuerzelById = $derived.by(() => {
-		const map: Record<string, string[]> = {};
-		// #1848 A2: nach Kennung geschluesselt, analog outlookMetricById.
-		for (const e of catalog) {
-			const id = e.metric_id ?? e.metric;
-			if (e.sms_code && !map[id]) map[id] = [e.sms_code];
-		}
-		return map;
-	});
+	// Issue #2232: Kurzform-Marke aus `/api/sms-symbols` — dieselbe Quelle wie
+	// im Trip-Editor (bis #1719 S4 kam sie aus `sms_code`, einer zweiten
+	// Quelle). Nachgeschlagen unter der vom Backend mitgelieferten Kennung.
+	// #1848 A2: nach Kennung geschluesselt, analog outlookMetricById.
+	const outlookKuerzelById = $derived(
+		kuerzelMarken(
+			catalog.map((e) => [e.metric_id ?? e.metric, markenKennung(e)] as const),
+			smsSymbols
+		)
+	);
 
 	// Issue #1848 A3: die Grundauswahl der Flaeche, uebersetzt in das Vokabular
 	// des Ausblicks (KENNUNGEN seit A2). Die Zuordnung Katalog-Schluessel ->

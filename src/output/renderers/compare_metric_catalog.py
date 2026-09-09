@@ -41,6 +41,21 @@ als eigenes Feld `aggregation_label` daneben (Maximum/Minimum/Mittel/Summe)
 statt im Namen ("Temperatur max"). Wertebereiche, `kind` und `ordinalLabels`
 bleiben kuratiert -- abgeleitet wird ausschliesslich der Name.
 
+#2232 (docs/specs/modules/fix_2232_kuerzel_ein_modell_trip_vergleich.md, Weg A):
+vier Eintraege tragen zusaetzlich `kuerzel_metric_id`. Dieses Feld speist
+AUSSCHLIESSLICH das SMS-Kuerzel und die Editor-Marke -- nie Wert, Fenster,
+Alarm, Ausblick, Persistenz oder Mail-Spaltenkopf. Grund: Trip und
+Ortsvergleich sollen fuer Tageshoechst/-tiefst dasselbe Kuerzel senden
+(`D`/`L`/`FD`/`FL` statt `D+`/`D-`/`TF+`/`TF-`), duerfen dafuer aber NICHT
+dieselbe Kennung fuehren -- der Trip fenstert ueber die Gehzeit
+(`collect_hiking_window_points()`), der Vergleich ueber ein konfiguriertes
+Tagesfenster (04-19). Gleiche Kennung hiesse gleiche Zahl, und die ist es
+nicht (#1848 Scheibe C, PO-Entscheid 2026-08-19). Gemessen an Rev. 1 dieser
+Spec, die `metric_id` selbst umstellen wollte: 101 zusaetzlich rote Tests,
+darunter stiller Verlust gespeicherter Auswahl im Paar- und
+Ausblick-Kennungsformat. Der Modul-Import-Assert unten (AC-11) haelt die
+Trennung dauerhaft.
+
 Keys sind identisch zu `compare_metric_ids.py::FRONTEND_TO_RENDERER_METRIC_ID`
 (keine sechste Kopie der Keyliste) -- der Modul-Import-Assert unten macht eine
 kuenftige Drift wie #1324 strukturell unmoeglich: fehlt ein Key im Katalog oder
@@ -111,7 +126,8 @@ COMPARE_METRIC_CATALOG: list[dict] = [
      "metric_id": "uv_index", "aggregation": "max"},
     {"key": "temp_max_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -20, "rangeMax": 45, "step": 1,
-     "metric_id": "temperature", "aggregation": "max"},
+     "metric_id": "temperature", "aggregation": "max",
+     "kuerzel_metric_id": "temperature_day_high"},
     {"key": "thunder_level_max", "unit": "", "decimals": 0,
      "higherIsBetter": False, "kind": "ordinal",
      # Issue #1474 F001: vier Eintraege, deckungsgleich mit ThunderLevel/
@@ -123,7 +139,8 @@ COMPARE_METRIC_CATALOG: list[dict] = [
      "metric_id": "thunder", "aggregation": "max"},
     {"key": "temp_min_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -30, "rangeMax": 30, "step": 1,
-     "metric_id": "temperature", "aggregation": "min"},
+     "metric_id": "temperature", "aggregation": "min",
+     "kuerzel_metric_id": "temperature_day_low"},
     {"key": "gust_max_kmh", "unit": "km/h", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 150, "step": 5,
      "metric_id": "gust", "aggregation": "max"},
@@ -141,10 +158,12 @@ COMPARE_METRIC_CATALOG: list[dict] = [
      "metric_id": "wind_direction", "aggregation": "avg"},
     {"key": "wind_chill_min_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -30, "rangeMax": 30, "step": 1,
-     "metric_id": "wind_chill", "aggregation": "min"},
+     "metric_id": "wind_chill", "aggregation": "min",
+     "kuerzel_metric_id": "wind_chill_day_low"},
     {"key": "wind_chill_max_c", "unit": "°C", "decimals": 0,
      "higherIsBetter": True, "kind": "range", "rangeMin": -20, "rangeMax": 45, "step": 1,
-     "metric_id": "wind_chill", "aggregation": "max"},
+     "metric_id": "wind_chill", "aggregation": "max",
+     "kuerzel_metric_id": "wind_chill_day_high"},
     {"key": "humidity_avg_pct", "unit": "%", "decimals": 0,
      "higherIsBetter": False, "kind": "range", "rangeMin": 0, "rangeMax": 100, "step": 5,
      "metric_id": "humidity", "aggregation": "avg"},
@@ -237,6 +256,87 @@ assert not _duplicate_pairs, (
     "Speicherformat von display_config.active_metrics nicht unterscheidbar."
 )
 
+def kuerzel_metric_id_for(entry: dict) -> str:
+    """Die Kennung, unter der DIESE Katalogzeile ihr SMS-Kuerzel und ihre
+    Editor-Marke fuehrt (#2232): `kuerzel_metric_id`, sonst `metric_id`.
+
+    EINE Aufloesungsregel fuer alle Leser (SMS-Renderer, Katalog-Antwort,
+    Endpoint-Deckungstest) -- die Fallback-Logik `kuerzel_metric_id ?? metric_id`
+    steht damit an genau einer Stelle und nicht in jedem Aufrufer erneut."""
+    return entry.get("kuerzel_metric_id") or entry["metric_id"]
+
+
+def kuerzel_identity_violations(entries: list[dict] | None = None) -> list[str]:
+    """Jede Verletzung der Kuerzel-/Auflösungs-Trennung (#2232, AC-11); leere
+    Liste = in Ordnung.
+
+    Zwei Bedingungen an eine gesetzte `kuerzel_metric_id`:
+
+      (a) sie existiert im zentralen Register -- sonst zeigte die Marke ins
+          Leere und `get_sms_code()` liefe auf einen unbekannten Namen;
+      (b) sie ist KEINE Kennung, die der Ortsvergleich selbst als `metric_id`
+          anbietet -- sonst waere das Feld keine getrennte Kuerzel-Identitaet
+          mehr, sondern eine zweite Auflösungs-Identitaet, und die
+          Gehzeit-Exklusivitaet aus #1848 Scheibe C waere umgangen.
+
+    `entries` injiziert eine Testkopie (Muster
+    `duplicate_metric_aggregation_pairs(entries=...)`), damit der
+    Wirkungsnachweis DIESELBE Funktion faehrt wie der Import-Assert -- eine im
+    Test nachgebaute Kopie der Pruflogik bewiese nichts (Adversary-Fund F002).
+    """
+    source = COMPARE_METRIC_CATALOG if entries is None else entries
+    angeboten = {
+        e.get("metric_id") for e in source if isinstance(e, dict)
+    }
+    befunde: list[str] = []
+    for entry in source:
+        if not isinstance(entry, dict):
+            continue
+        kuerzel_id = entry.get("kuerzel_metric_id")
+        if not kuerzel_id:
+            continue
+        try:
+            get_metric(kuerzel_id)
+        except KeyError:
+            befunde.append(
+                f"{entry.get('key')!r}: kuerzel_metric_id {kuerzel_id!r} ist im "
+                "zentralen Register (src/app/metric_catalog.py) unbekannt"
+            )
+            continue
+        if kuerzel_id in angeboten:
+            befunde.append(
+                f"{entry.get('key')!r}: kuerzel_metric_id {kuerzel_id!r} wird vom "
+                "Ortsvergleich selbst als metric_id angeboten -- das Feld darf "
+                "NUR eine Kennung tragen, die der Vergleich nicht fuehrt "
+                "(Gehzeit-Exklusivitaet #1848 Scheibe C)"
+            )
+    return befunde
+
+
+def assert_kuerzel_identity(entries: list[dict] | None = None) -> None:
+    """Wirft ``AssertionError``, wenn `entries` die Trennung von Kuerzel- und
+    Auflösungs-Identitaet verletzt (#2232, AC-11).
+
+    Der Modul-Import unten ruft sie ohne Argument auf -- eine Verletzung laesst
+    also den Import scheitern, nicht erst den ersten Renderaufruf. Der
+    Wirkungsnachweis im Test ruft DIESELBE Funktion mit einer verfaelschten
+    Katalogkopie; damit fahren Zusicherung und Nachweis denselben Code (Muster
+    ``duplicate_metric_aggregation_pairs``, Adversary-Fund F002 aus Scheibe A)
+    und der Test braucht dafuer keinen Produkt-Quelltext zu lesen (Hygiene-
+    Regel #765)."""
+    befunde = kuerzel_identity_violations(entries)
+    assert not befunde, (
+        "compare_metric_catalog.py verletzt die Trennung von Kuerzel- und "
+        "Auflösungs-Identitaet (#2232):\n  " + "\n  ".join(befunde)
+    )
+
+
+# Drift-Waechter (#2232, AC-11): schlaegt beim Modul-Import an, wenn eine
+# `kuerzel_metric_id` unbekannt ist oder mit einer angebotenen Vergleichsgroesse
+# zusammenfaellt -- ueber genau die Funktion oben, nicht ueber eine zweite Kopie.
+assert_kuerzel_identity()
+
+
 # Umkehr-Index (#1373 Scheibe B, Spec Punkt 1): (metric_id, aggregation) -> key.
 # KEINE fuenfte Uebersetzungstabelle, sondern ein reiner Index ueber die in
 # Scheibe A kuratierten Herkunftsfelder -- Eindeutigkeit garantiert der Assert
@@ -319,6 +419,11 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
             "label": label,
             "col_label": metric.col_label,
             "sms_code": metric.sms_code,
+            # #2232: die Kennung, unter der die Editor-Marke in
+            # /api/sms-symbols nachzuschlagen ist. Sie reist HIER mit, damit
+            # der Browser keine zweite Kuerzel-Quelle und keine eigene
+            # Fallback-Regel braucht (Implementation Details Punkt 3).
+            "kuerzel_metric_id": kuerzel_metric_id_for(entry),
             "aggregation_label": aggregation_label_de(aggregation),
             "alertMetric": alert_metric,
             "alarmCapable": alert_metric is not None,
