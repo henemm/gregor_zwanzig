@@ -11,10 +11,11 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 import httpx
 
-from app.config import Settings
+from app.config import Settings, resolve_public_host
 from app.loader import load_all_trips
 from app.trip import Trip
 from services.notification_service import NotificationService
@@ -36,6 +37,13 @@ from services.trip_selection import pick_active_trip
 logger = logging.getLogger(__name__)
 
 TELEGRAM_API_BASE = "https://api.telegram.org"
+
+
+def _bare_public_host(settings: Settings) -> str | None:
+    """Blosser Host ohne Schema — fuer die Fliesstext-Erwaehnung in Chat-Antworten."""
+    full = resolve_public_host(settings)
+    return urlsplit(full).netloc or None if full else None
+
 
 # Issue #2134: keine eigene (achte) Befehlsliste mehr — der Reader kennt genau
 # das, was der Prozessor ausfuehrt (Steuerbefehle) plus die lesenden
@@ -179,13 +187,14 @@ class InboundTelegramReader:
         # KEINE Trip-/Wetterdaten. Betreiber-Account faellt hier nie hinein, da
         # `henning` regulaer per telegram_chat_id registriert ist.
         if user_id == "default":
+            host = _bare_public_host(settings)
             mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
                 subject="Registrierung erforderlich",
                 body=(
                     "Dieser Chat ist noch nicht mit einem Gregor-Zwanzig-Konto "
                     "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
-                    "im Account-Bereich auf gregor20.henemm.com)."
+                    f"im Account-Bereich{f' auf {host}' if host else ''})."
                 ),
                 # #2168: an den fragenden Chat antworten, nicht an die Basis-
                 # /Betreiber-Chat-ID (Muster wie `_process_start_command`).
@@ -202,10 +211,15 @@ class InboundTelegramReader:
         now_utc = datetime.now(tz=timezone.utc)
         trip = self._find_active_trip(now_utc, user_id)
         if not trip:
+            host = _bare_public_host(settings)
             mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
                 subject="Fehler",
-                body="Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip auf gregor20.henemm.com",
+                body=(
+                    f"Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip auf {host}"
+                    if host
+                    else "Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip."
+                ),
                 settings=user_settings,
             )
             if mid is not None:
@@ -306,13 +320,14 @@ class InboundTelegramReader:
             # answer_telegram_callback_query laeuft weiterhin im finally.
             if user_id == "default":
                 if message_id is not None and chat_id:
+                    host = _bare_public_host(settings)
                     self._notification_service.edit_telegram_message_text(
                         chat_id=chat_id,
                         message_id=message_id,
                         text=(
                             "Dieser Chat ist noch nicht mit einem Gregor-Zwanzig-Konto "
                             "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
-                            "im Account-Bereich auf gregor20.henemm.com)."
+                            f"im Account-Bereich{f' auf {host}' if host else ''})."
                         ),
                         settings=settings,
                     )

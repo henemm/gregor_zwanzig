@@ -242,6 +242,16 @@ Fehlt die Variable, beendet sich die Go-API beim Start (Fail-Fast), und der Pyth
 weist ohne gesetztes Geheimnis jede Anfrage außer `/health` mit `503` ab. Siehe
 `docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`.
 
+**Seit #2272 zusätzliche Pflicht-Voraussetzung vor Schritt 4:** `GZ_PUBLIC_HOST` muss vor
+dem Prod-Deploy dieses Fixes zusätzlich in `/home/hem/gregor_zwanzig/.env`
+(`https://gregor20.henemm.com`) und in `/home/hem/gregor_zwanzig_staging/.env`
+(`https://staging.gregor20.henemm.com`) eingetragen sein — dieselbe Variable, die die
+Go-API bereits seit #2200/#2130 liest, jetzt zusätzlich vom Python-Core (`GZ_PUBLIC_HOST`,
+`env_prefix="GZ_"`, `src/app/config.py`) konsumiert. Anders als Go (Prod-Default) reagiert
+der Python-Core fail-closed: Fehlt die Variable, lässt er in Trip-Report-Mails und
+Telegram-Antworten den Host-/Link-Anteil ersatzlos weg, statt auf die Produktionsadresse
+zurückzufallen. Siehe `docs/specs/modules/public_host.md`.
+
 `systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `flock-Lock → hart
 auf origin/main syncen (Daten unberührt, WIP gesichert) → Go-Binary bauen → Frontend bauen →
 alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code-Drift, den
