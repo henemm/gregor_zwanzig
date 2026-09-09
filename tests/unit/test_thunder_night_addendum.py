@@ -35,7 +35,10 @@ _DAY_AFTER = date(2026, 7, 5)
 # Wortschatz des Nacht-Zusatzes (Spec, Implementation Details 3). Bewusste
 # Abweichung vom Tagestext: MED traegt hier ein Adjektiv, weil der Halbsatz
 # fuer sich lesbar sein muss.
-_ADD_LOW = ", nachts leichtes Gewitter ab "
+# #2176: LOW ist keine Ereignisaussage mehr -- der Halbsatz nennt die
+# Luftmasse. Ohne Traegerliste im Nacht-Zusatz gilt die Herkunft als
+# unbekannt, also "schwaches Signal" statt "instabile Luftmasse".
+_ADD_LOW = ", nachts schwaches Signal (leicht) ab "
 _ADD_MED = ", nachts mittleres Gewitter ab "
 _ADD_HIGH = ", nachts starkes Gewitter ab "
 
@@ -249,7 +252,7 @@ def test_ac6_plus2_nennt_nachtgewitter_aus_der_eigenen_zeitreihe():
     row = _trend_row({23: ThunderLevel.LOW}, ThunderLevel.LOW, fc_date=_DAY_AFTER)
     entry = _entry_from_trend(row, key="+2")
     assert entry is not None, "Vorschau-Eintrag fuer uebermorgen fehlt ganz"
-    assert entry["text"] == "Kein Gewitter erwartet, nachts leichtes Gewitter ab 23:00", (
+    assert entry["text"] == "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 23:00", (
         f'"+2" verschweigt das Gewitter ausserhalb des Fensters: {entry["text"]!r}'
     )
 
@@ -323,7 +326,7 @@ def test_ac7_nachtquelle_hat_vorrang_auch_wenn_sie_ENTWARNT():
         row, night_weather=_night_series({2: ThunderLevel.LOW}),
     )
     assert entry is not None
-    assert entry["text"] == "Kein Gewitter erwartet, nachts leichtes Gewitter ab 02:00", (
+    assert entry["text"] == "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 02:00", (
         "Die eigene Etappen-Reihe ueberstimmt die Nacht-Quelle nach OBEN -- "
         "die Vorschau behauptet ein staerkeres Gewitter, als die "
         f"Nacht-Tabelle derselben Mail zeigt: {entry['text']!r}"
@@ -384,7 +387,7 @@ def test_trend_plus2_ignoriert_die_nachtquelle():
         key="+2",
     )
     assert entry is not None, "Vorschau-Eintrag fuer uebermorgen fehlt ganz"
-    assert entry["text"] == "Kein Gewitter erwartet, nachts leichtes Gewitter ab 23:00", (
+    assert entry["text"] == "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 23:00", (
         'Die Nacht-Reihe wurde auch fuer "+2" herangezogen, obwohl es dort '
         f"keine Nacht-Tabelle als Gegenquelle gibt: {entry['text']!r}"
     )
@@ -409,7 +412,7 @@ def test_fetch_plus2_ignoriert_die_nachtquelle():
     )
     entry = (fc or {}).get("+2")
     assert entry is not None, "Vorschau-Eintrag fuer uebermorgen fehlt ganz"
-    assert entry["text"] == "Kein Gewitter erwartet, nachts leichtes Gewitter ab 23:00", (
+    assert entry["text"] == "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 23:00", (
         'Fetch-Weg: die Nacht-Reihe wurde auch fuer "+2" herangezogen: '
         f"{entry['text']!r}"
     )

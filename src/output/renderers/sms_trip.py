@@ -97,7 +97,13 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
     (RiskType.THUNDERSTORM, RiskLevel.MODERATE): "Gewitter",
     # Issue #1474 (AC-12): deutsches Wort statt generischem englischen
     # Fallback ("Thunderstorm").
-    (RiskType.THUNDERSTORM, RiskLevel.LOW): "Gewitter leicht",
+    # Issue #2176: KEINE Gewitteransage mehr -- "leicht" misst eine Luftmasse.
+    # Der EINZIGE Ort, an dem SMS/Premium-SMS bei LOW wortwoertlich "Gewitter"
+    # sagte (der `TH:L`-Token spricht das Wort nie aus). Das Stufenwort bleibt
+    # stehen: es ist der einzige SMS-Text mit Stufenwort ueberhaupt, ohne es
+    # waere #1474 AC-12 fuer diesen Kanal tot (Spec-Dependencies: AC-11 bleibt
+    # fuer das Stufenwort gueltig, nur nicht fuer die Ereignisaussage).
+    (RiskType.THUNDERSTORM, RiskLevel.LOW): "Luftmasse leicht",
     (RiskType.WIND, RiskLevel.HIGH): "Sturm",
     (RiskType.WIND, RiskLevel.MODERATE): "Wind",
     (RiskType.RAIN, RiskLevel.HIGH): "Regen",

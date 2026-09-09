@@ -112,7 +112,11 @@ def _thunder_statements(*, night_thunder, has_gap):
     from app.models import ThunderLevel
     from output.renderers.narrow import render_telegram_bubbles
 
-    marken = (get_metric("thunder").compact_label, "⚡")
+    # #2176: bei LOW faellt das Ereignis-Symbol "⚡" weg, die Fusszeile beginnt
+    # dort mit der Luftmassen-Beschriftung (narrow.py:263). Ohne diese dritte
+    # Marke faende der Sammler die Fusszeile nicht mehr und die Zusicherung
+    # "ZWEI Zeilen, EINE Aussage" liefe leer, statt zu pruefen.
+    marken = (get_metric("thunder").compact_label, "⚡", "Luftmasse")
 
     night = (
         _make_night_weather(night_thunder) if night_thunder is not None else None

@@ -107,7 +107,7 @@ def test_fallback_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
     # #1651: die TAGES-Aussage bleibt die Entwarnung, das Nachtgewitter wird
     # nun aber angehaengt genannt statt verschwiegen.
     assert entry["text"] == (
-        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 02:00"
+        "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 02:00"
     ), entry["text"]
 
 
@@ -128,7 +128,7 @@ def test_fallback_ab_stunde_kommt_aus_dem_fenster():
     # #1651: "ab 04:00" ist und bleibt die Tages-Aussage; die 02:00 erscheinen
     # ausschliesslich im angehaengten Nacht-Halbsatz.
     assert entry["text"] == (
-        "Leichtes Gewitter möglich ab 04:00, nachts leichtes Gewitter ab 02:00"
+        "Schwaches Signal (leicht) ab 04:00, nachts schwaches Signal (leicht) ab 02:00"
     ), entry["text"]
     assert entry["hour"] == 4, entry
 
@@ -165,7 +165,7 @@ def test_trend_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
     )
     assert entry["hour"] is None, entry
     assert entry["text"] == (
-        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 02:00"
+        "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 02:00"
     ), entry["text"]
 
 
@@ -182,7 +182,7 @@ def test_trend_ab_stunde_kommt_aus_dem_fenster():
     assert entry is not None
     assert entry["level"] == ThunderLevel.LOW
     assert entry["text"] == (
-        "Leichtes Gewitter möglich ab 19:00, nachts leichtes Gewitter ab 02:00"
+        "Schwaches Signal (leicht) ab 19:00, nachts schwaches Signal (leicht) ab 02:00"
     ), entry["text"]
 
 
@@ -234,7 +234,7 @@ def test_konfiguriertes_fenster_wird_beachtet():
     # #1651: das KONFIGURIERTE Fenster bestimmt auch, was "ausserhalb" ist --
     # 05:00 liegt vor Fensterbeginn 06:00 und wird deshalb angehaengt genannt.
     assert entry["text"] == (
-        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 05:00"
+        "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 05:00"
     ), entry["text"]
 
 
@@ -251,4 +251,4 @@ def test_mitternachts_fenster_wrap_zaehlt_nachtstunden():
     entry = (fc or {}).get("+1")
     assert entry is not None
     assert entry["level"] == ThunderLevel.LOW
-    assert entry["text"] == "Leichtes Gewitter möglich ab 23:00", entry["text"]
+    assert entry["text"] == "Schwaches Signal (leicht) ab 23:00", entry["text"]

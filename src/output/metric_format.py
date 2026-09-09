@@ -41,8 +41,11 @@ from app.models import PrecipType, ThunderLevel
 from app.thunder_scale import (  # noqa: F401  (Re-Export, s.o.)
     _THUNDER_LABEL_VALUE,
     _THUNDER_ORDER,
+    THUNDER_LABEL_DE,
     THUNDER_SIGNAL_LABEL_DE,
     thunder_label_value,
+    thunder_low_statement,
+    thunder_low_statement_sentence,
     thunder_ordinal,
     thunder_signal_label,
     union_of_max_carriers,
@@ -58,6 +61,9 @@ __all__ = [
     "thunder_ordinal",
     "thunder_label_value",
     "thunder_level_from_signals",
+    # Issue #2176: Re-Export der LOW-Aussage aus der Domaenenschicht.
+    "thunder_low_statement",
+    "thunder_low_statement_sentence",
     "THUNDER_LABEL_DE",
     "PRECIP_TYPE_LABEL_DE",
     "thunder_ampel_band",
@@ -277,16 +283,9 @@ def cloud_emoji(pct: Optional[float]) -> str:
 
 
 
-# Geteilte deutsche Beschriftung (Issue #1474, "geteilte Quelle statt Kopien"
-# statt fuenffach dupliziertem Label). NONE fehlt bewusst nicht -- Konsumenten
-# mit abweichender NONE-Darstellung (z.B. compare_html.py "—" statt "kein")
-# ueberschreiben nur diesen einen Eintrag lokal.
-THUNDER_LABEL_DE: dict[ThunderLevel, str] = {
-    ThunderLevel.NONE: "kein",
-    ThunderLevel.LOW: "leicht",
-    ThunderLevel.MED: "mittel",
-    ThunderLevel.HIGH: "hoch",
-}
+# THUNDER_LABEL_DE liegt seit #2176 in `app/thunder_scale.py` (Domaenenschicht)
+# und wird oben unveraendert re-exportiert -- `thunder_low_statement()` haengt
+# das Stufenwort an und darf dafuer keine Darstellungsschicht importieren.
 
 
 # Geteilte deutsche Beschriftung der Niederschlagsart (Issue #2134, analog zu

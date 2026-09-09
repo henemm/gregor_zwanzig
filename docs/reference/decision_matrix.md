@@ -90,6 +90,13 @@ Ereignis — ohne Auslöser passiert trotz hoher Werte nichts. „mittel"/„hoc
 Signalen vorbehalten, die tatsächliche Blitzaktivität vorhersagen. CAPE ist zugleich die
 einzige Größe, die „leicht" **außerhalb Frankreichs** überhaupt erreichbar macht.
 
+🔴 **Seit ADR-0064 (#2176) verlässt „leicht" die nutzersichtbare Gewitterleiter.** In keinem
+Kanal erscheint für `LOW` noch eine Gewitter-Ereignisbehauptung; statt „Gewitter möglich"
+steht eine Luftmassen-Aussage mit dem CAPE-Wert (außer bei Blitzdichte-/Blitzpotenzial-/
+Wettercode-Anteil, dann bleibt der tatsächliche Signal-Träger sichtbar). Die vierstufige
+Leiter `kein/möglich/wahrscheinlich/akut` beginnt seither bei `MED`. Das Enum `ThunderLevel`
+und die Fusionslogik dieses Abschnitts sind davon unberührt — reine Darstellungsänderung.
+
 🔴 **Die CAPE-Schwelle ist modellabhängig — eine Zahl für alle Quellen war ein Fehler
 (#1592, ADR-0048).** CAPE ist ein modellabhängiges Konstrukt, kein Messwert: ICON liefert
 Mixed-Layer, Météo-France Most-Unstable, GFS Surface-Based. Die frühere feste Grenze von

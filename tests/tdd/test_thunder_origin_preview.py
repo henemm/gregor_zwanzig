@@ -602,14 +602,16 @@ def test_ac4_herkunft_steht_vor_dem_nacht_halbsatz():
     diese Reihenfolge, und eine reine Gleichheitspruefung sagt dann zwar
     „falsch", aber nicht „an der falschen Stelle".
 
-    „Wortgleich zu heute" ist am gemessenen Ist-Stand festgemacht: heute
-    liefert dieselbe Fixture ``…ab 14:00, nachts leichtes Gewitter ab 02:00``
+    „Wortgleich zu heute" ist am gemessenen Ist-Stand festgemacht: dieselbe
+    Fixture liefert ``…ab 14:00, nachts schwaches Signal (leicht) ab 02:00``
     (``format_night_addendum``, EINE Wortlaut-Quelle fuer beide Bauwege).
+    Der Nacht-Anteil ist LOW und traegt seit #2176 die Luftmassen- statt der
+    Ereignisaussage; die Tagesaussage (MED) bleibt die Gewitteransage.
     """
     zeile = _beide_fassungen(_mail(
         _rueckfall([_dp(2, cape=400.0, cin=5.0), _dp(14, cape=800.0, cin=5.0)])
     ))
-    nacht = ", nachts leichtes Gewitter ab 02:00"
+    nacht = ", nachts schwaches Signal (leicht) ab 02:00"
     assert zeile == (
         f"{_DATUM}: ⚡ Gewitter möglich ab 14:00 · CAPE{nacht}"
     ), (

@@ -236,10 +236,10 @@ def test_tagesgewitter_erscheint_trotz_leerem_24h_aggregat():
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
     # #1493: der Tagesteil traegt jetzt die Onset-Stunde (`@16`).
-    assert _gewitterfeld(ausblick) == "Tleicht@16", (
+    # #2176: bei LOW faellt das Ereignissymbol "⚡" (ASCII-gefaltet "T") weg.
+    assert _gewitterfeld(ausblick) == "leicht@16", (
         f"Die Kompakt-Ausblick-Zeile muss auf das Tagesgewitter 'leicht' "
-        f"(ASCII-gefaltet 'Tleicht@16') enden, nicht auf das leere 24h-Aggregat: "
-        f"{ausblick!r}")
+        f"enden, nicht auf das leere 24h-Aggregat: {ausblick!r}")
 
 
 def test_kein_tagesgewitter_trotz_aggregat_high():

@@ -130,7 +130,12 @@ _THUNDER_KWARGS = dict(
     canonical_symbols=(
         ("src/app/thunder_scale.py", "_THUNDER_ORDER"),
         ("src/app/thunder_scale.py", "_THUNDER_LABEL_VALUE"),
-        ("src/output/metric_format.py", "THUNDER_LABEL_DE"),
+        # #2176: von `output/metric_format.py` hierher gezogen -- die
+        # LOW-Aussage haengt das Stufenwort an und darf dafuer keine
+        # Darstellungsschicht importieren (Waechter #1365). Weiterhin EINE
+        # kanonische Quelle, nur eine Schicht tiefer; `metric_format`
+        # re-exportiert sie.
+        ("src/app/thunder_scale.py", "THUNDER_LABEL_DE"),
         ("src/output/metric_format.py", "_THUNDER_AMPEL_BAND"),
     ),
 )

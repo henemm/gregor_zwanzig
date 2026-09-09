@@ -191,6 +191,32 @@ def _label(e: AlertEvent) -> str:
     return get_alert_label(e.metric_id)
 
 
+def _deviation_label(e: AlertEvent) -> str:
+    """Kuerzel der Abweichungs-Alarmzeile -- STUFENABHAENGIG (Issue #2176).
+
+    Schwesterfunktion zu `_corridor_label()` mit derselben Regel, angewandt auf
+    die Felder des Abweichungs-Ereignisses: bleiben VORHER- UND NACHHER-Wert
+    auf "leicht" oder darunter, traegt die Zeile keine Ereignisbehauptung mehr
+    -- "leicht" misst eine Luftmasse. Sobald einer der beiden MED/HIGH
+    erreicht, bleibt es bei "Gewitter" (Spec AC-6) -- deshalb der Blick auf
+    BEIDE Werte, nicht nur auf `value_to`.
+
+    Ohne diese Weiche sagte derselbe Alarmbereich bei identischer Stufe je nach
+    Alarmart Verschiedenes: der Korridor-Alarm "Luftmasse", der
+    Abweichungs-Alarm "Gewitter". `_label()` selbst bleibt levelunabhaengig --
+    es ist weiterhin der Metrikname fuer MED/HIGH, fuer die
+    Beginn-Verschiebungs-Ereignisse und fuer jede andere Groesse.
+    """
+    if _is_level_metric(e.metric_id):
+        from app.models import ThunderLevel
+        from output.metric_format import thunder_ordinal
+
+        low = thunder_ordinal(ThunderLevel.LOW)
+        if max(int(round(e.value_from, 0)), int(round(e.value_to, 0))) <= low:
+            return "Luftmasse"
+    return _label(e)
+
+
 def _location_of(events, location_label: str | None = None) -> str:
     """Ortsangabe einer Ereignismenge (Issue #1744 A1) — Betreff, Mailkoerper
     und Telegram-Langform holen sie ALLE hier, damit eine Mail nicht zwei
@@ -405,12 +431,31 @@ def _corridor_value_str(ce: CorridorEvent) -> str:
     return f"Grenze {_val(ce, ce.bound)} · jetzt {_val(ce, ce.value)}"
 
 
+def _corridor_label(ce: CorridorEvent) -> str:
+    """Kuerzel der Korridor-Alarmzeile -- STUFENABHAENGIG (Issue #2176).
+
+    Bei der Gewitter-Metrik traegt ein Treffer, der die Stufe "leicht" WEDER
+    an der Grenze NOCH am Ist-Wert verlaesst, keine Ereignisbehauptung mehr:
+    "leicht" misst eine Luftmasse. Sobald Grenze ODER Ist-Wert MED/HIGH
+    erreicht, bleibt es bei "Gewitter" (Spec AC-6, Regressionsanker) --
+    deshalb der Blick auf BEIDE Werte, nicht nur auf `ce.value`.
+    """
+    if _is_level_metric(ce.metric_id):
+        from app.models import ThunderLevel
+        from output.metric_format import thunder_ordinal
+
+        low = thunder_ordinal(ThunderLevel.LOW)
+        if max(int(round(ce.bound, 0)), int(round(ce.value, 0))) <= low:
+            return "Luftmasse"
+    return _label(ce)
+
+
 def _corridor_line(ce: CorridorEvent) -> str:
     """Eigener Wortlaut: NIE 'vorher', NIE 'von A auf B' -- nur Groesse,
     Grenze, Ist-Wert, Etappe (Issue #1444 S1, ADR-0013)."""
     return (
-        f"{_label(ce)}: deine Grenze {_val(ce, ce.bound)} ist gerissen — "
-        f"jetzt {_val(ce, ce.value)} ({_corridor_when(ce)})"
+        f"{_corridor_label(ce)}: deine Grenze {_val(ce, ce.bound)} ist "
+        f"gerissen — jetzt {_val(ce, ce.value)} ({_corridor_when(ce)})"
     )
 
 
@@ -1207,14 +1252,14 @@ def render_subject(msg: AlertMessage) -> str:
         n = len(msg.corridor_events)
         if n == 1:
             ce = msg.corridor_events[0]
-            return f"[{msg.trip_short}] {_corridor_when(ce)} · Grenze gerissen: {_label(ce)}"
+            return f"[{msg.trip_short}] {_corridor_when(ce)} · Grenze gerissen: {_corridor_label(ce)}"
         return f"[{msg.trip_short}] {n} Grenzen gerissen"
     evs = _sorted(msg)
     km = _km_str(msg)
     if len(evs) == 1:
         e = evs[0]
         return (
-            f"[{msg.trip_short}] {km} · {arrow(e)} {_label(e)}: "
+            f"[{msg.trip_short}] {km} · {arrow(e)} {_deviation_label(e)}: "
             f"{_val(e, e.value_from)}→{_val(e, e.value_to)}"
         )
     # Issue #981: Zähler UND Top-3-Auswahl nur aus über-Schwelle-Events; ohne
@@ -1229,7 +1274,7 @@ def render_subject(msg: AlertMessage) -> str:
     # Issue #1935/#1779 (E5): Einheit immer anhaengen (nicht mehr nur bei
     # '%') -- dieselbe Regel wie im E-Mail-Zweig (AC-11).
     top3 = ", ".join(
-        f"{_label(e)} {_num(e, e.value_to)}{_unit_suffix(e)}"
+        f"{_deviation_label(e)} {_num(e, e.value_to)}{_unit_suffix(e)}"
         for e in over_evs[:3]
     )
     return f"[{msg.trip_short}] {km} · {arrow(over_evs[0])} {n} über Schwelle: {top3}"
@@ -1243,13 +1288,13 @@ def _h1(msg: AlertMessage) -> str:
     evs = _sorted(msg)
     if len(evs) == 1:
         e = evs[0]
-        return f"{_label(e)} {_val(e, e.value_from)} → {_val(e, e.value_to)} seit dem Briefing"
+        return f"{_deviation_label(e)} {_val(e, e.value_from)} → {_val(e, e.value_to)} seit dem Briefing"
     return f"{len(evs)} Werte über der Alarm-Schwelle"
 
 
 def _email_line(e: AlertEvent) -> str:
     return (
-        f"{_label(e)} · Schwelle {_val_delta(e, e.threshold)} · "
+        f"{_deviation_label(e)} · Schwelle {_val_delta(e, e.threshold)} · "
         f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)} · "
         f"Änderung {side_label(e)}"
     )
@@ -1280,7 +1325,7 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
     """
     unit = get_metric(e.metric_id).unit
     row1 = (
-        f"{_label(e)} · {unit}",
+        f"{_deviation_label(e)} · {unit}",
         f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}",
     )
     mark = "✓" if not over_thr(e) else "✗"
@@ -1348,7 +1393,7 @@ def _render_email_corridor_only(msg: AlertMessage) -> tuple[str, str]:
     kein erfundenes "vorher" (ADR-0013)."""
     n = len(msg.corridor_events)
     h1 = (
-        f"{_label(msg.corridor_events[0])}: Grenze gerissen" if n == 1
+        f"{_corridor_label(msg.corridor_events[0])}: Grenze gerissen" if n == 1
         else f"{n} Grenzen gerissen"
     )
     footer = f"Stand: heute {msg.stand_at}"
@@ -1356,7 +1401,7 @@ def _render_email_corridor_only(msg: AlertMessage) -> tuple[str, str]:
         [h1, "", *[_corridor_line(ce) for ce in msg.corridor_events], "", footer]
     )
     rows = [
-        _datarow_html(_label(ce), _corridor_value_str(ce), G_DANGER, i == 0)
+        _datarow_html(_corridor_label(ce), _corridor_value_str(ce), G_DANGER, i == 0)
         for i, ce in enumerate(msg.corridor_events)
     ]
     html = (
@@ -1439,7 +1484,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                 else:
                     delta_suffix = schwelle_suffix = " %" if unit == "%" else ""
                 data_rows.append((
-                    f"{loc_prefix}{_label(e)}{where_when} · "
+                    f"{loc_prefix}{_deviation_label(e)}{where_when} · "
                     f"Änderung {_num_delta(e, delta)}{delta_suffix} · "
                     f"Schwelle {_num_delta(e, e.threshold)}{schwelle_suffix}",
                     f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
@@ -1450,7 +1495,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                 # Schwellen-Zahl, Wert mit neutralem Pfeil, kein über/unter-Suffix
                 # (Design-Vorlage Zeilen 231-234).
                 data_rows.append((
-                    f"{loc_prefix}{_label(e)}{where_when} · unter Schwelle",
+                    f"{loc_prefix}{_deviation_label(e)}{where_when} · unter Schwelle",
                     f"{_num(e, e.value_from)} → {_num(e, e.value_to)}{unit_suffix}",
                 ))
         km = _km_str(msg)
@@ -1494,7 +1539,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
             G_DANGER, not rows,
         ))
     for ce in msg.corridor_events:
-        rows.append(_datarow_html(_label(ce), _corridor_value_str(ce), G_DANGER, not rows))
+        rows.append(_datarow_html(_corridor_label(ce), _corridor_value_str(ce), G_DANGER, not rows))
 
     html = (
         "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
@@ -1528,7 +1573,7 @@ def render_telegram(msg: AlertMessage) -> str:
     km = _km_str(msg)
     if len(evs) == 1:
         e = evs[0]
-        verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_label(e)}"
+        verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_deviation_label(e)}"
         # Issue #2020 Scheibe 2: Telegram traegt DIESELBEN Saetze wie die
         # E-Mail (Kanal-Paritaet) -- vorher fehlte hier jede Zeitangabe, der
         # Kanal konnte den Tagesbezug also gar nicht nennen.
@@ -1551,7 +1596,7 @@ def render_telegram(msg: AlertMessage) -> str:
         with_where_when = _per_event_where_when(evs)
         # Issue #1935/#1779 (E5): Einheit immer anhaengen (AC-11).
         metric_line = " · ".join(
-            f"{_label(e)}{f' {_where_when(e)}' if with_where_when else ''} "
+            f"{_deviation_label(e)}{f' {_where_when(e)}' if with_where_when else ''} "
             f"{_num(e, e.value_from)}→{_num(e, e.value_to)}"
             f"{_unit_suffix(e)}"
             for e in evs

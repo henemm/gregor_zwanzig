@@ -143,8 +143,12 @@ class TestBuildThunderForecastLow:
             f"F005: LOW darf NICHT als starkes Gewitter gemeldet werden: {entry['text']!r}"
         )
         assert entry["text"] != med_text
-        assert "leicht" in entry["text"].lower(), (
-            f"LOW-Text muss 'leicht' benennen (Skala AC-6): {entry['text']!r}"
+        # #2176: der LOW-Text benennt keine Gewitterstufe mehr, sondern die
+        # Luftmasse -- die Trennschaerfe gegen MED/HIGH bleibt die Zusicherung
+        # dieses Tests und wird hier positiv festgehalten (Onset-Stunde
+        # mitgebunden, sonst bliebe von der Zeitangabe nichts bewacht).
+        assert entry["text"] == "Schwaches Signal (leicht) ab 14:00", (
+            f"LOW-Text muss die Luftmassen-Aussage tragen (#2176): {entry['text']!r}"
         )
 
     def test_med_and_high_text_unchanged(self):
