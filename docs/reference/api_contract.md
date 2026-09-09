@@ -1160,6 +1160,16 @@ null
 
 **PUT Request Body:** Beliebiges gueltiges JSON-Objekt (opaque, kein Schema). Response: gespeichertes `display_config`.
 
+> **Metrik-Reihenfolge bei blossen ID-Strings (Hinweis 2026-09-09, #2236 C4-45; Befund #1703 S7):**
+> Go speichert `display_config` opak, ausgewertet wird es erst beim Laden im Python-Kern
+> (`src/app/loader.py::_parse_display_config`). Enthaelt `metrics[]` **blosse ID-Strings**
+> (`["wind", "temperature"]`, Legacy-Flachform, #1262), werden sie zu
+> `{"metric_id": ..., "enabled": true}` **ohne** `bucket`/`order` normalisiert — die
+> **Array-Position wird verworfen**; Spalte und Reihenfolge kommen dann aus `auto_distribute()`
+> (Katalog-Vorgabe, #360), nicht aus der gesendeten Liste. Wer eine Reihenfolge setzen will, sendet
+> vollstaendige `MetricConfig`-Objekte mit explizitem `bucket`/`order`; nur solche Eintraege
+> werden unveraendert uebernommen.
+
 ### Error Responses
 
 | Status | Body | Szenario |
@@ -1550,54 +1560,84 @@ Provides metadata about available weather metrics, including per-metric format m
 
 Returns catalog of all available weather metrics with format mode options and defaults.
 
+**Antwortform (Korrektur 2026-09-09, #2236 B2-36):** ein Objekt, dessen Schluessel die
+Katalog-Kategorien sind (`temperature` · `wind` · `precipitation` · `atmosphere` · `winter`, aus
+`MetricDefinition.category`), je Kategorie eine Liste von Metrik-Eintraegen. Es gibt **kein**
+umhuellendes `metrics`-Feld — `metrics[]` in der Feldtabelle unten steht fuer „ein Eintrag in einer
+dieser Listen". Das fruehere Beispiel (`{"metrics": [...]}` mit `name`) beschrieb eine Form, die
+der Code nie gesendet hat.
+
 **Response 200:**
 
 ```json
 {
-  "metrics": [
+  "temperature": [
     {
       "id": "temperature",
-      "name": "Temperature",
+      "label": "Temperatur",
       "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "trip_default_enabled": true,
+      "has_friendly_format": false,
       "format_modes": ["raw"],
-      "default_format_mode": "raw"
-    },
+      "default_format_mode": "raw",
+      "col_label": "Temp",
+      "sms_code": "D",
+      "decimals": 0,
+      "cmp": "über",
+      "change_alert_metric": "temperature_change",
+      "aggregations": [
+        {"id": "min", "label": "Minimum", "alert_metric": "temperature_min"},
+        {"id": "max", "label": "Maximum", "alert_metric": "temperature_max"},
+        {"id": "avg", "label": "Mittel", "alert_metric": null}
+      ]
+    }
+  ],
+  "wind": [
     {
       "id": "wind_direction",
-      "name": "Wind Direction",
-      "unit": "degrees",
+      "label": "Windrichtung",
+      "unit": "°",
+      "category": "wind",
+      "default_enabled": false,
+      "trip_default_enabled": false,
+      "has_friendly_format": true,
       "format_modes": ["raw", "scale"],
-      "default_format_mode": "scale"
-    },
-    {
-      "id": "cloud_total",
-      "name": "Cloud Cover (Total)",
-      "unit": "%",
-      "format_modes": ["raw", "symbol"],
-      "default_format_mode": "symbol"
-    },
-    {
-      "id": "sunshine",
-      "name": "Sunshine",
-      "unit": "hours",
-      "format_modes": ["raw", "symbol"],
-      "default_format_mode": "symbol"
+      "default_format_mode": "scale",
+      "col_label": "WDir",
+      "sms_code": "WD",
+      "decimals": null,
+      "cmp": "",
+      "change_alert_metric": null,
+      "aggregations": [
+        {"id": "avg", "label": "Mittel", "alert_metric": null}
+      ]
     }
-  ]
+  ],
+  "precipitation": ["..."],
+  "atmosphere": ["..."],
+  "winter": ["..."]
 }
 ```
+
+*(Beispiel gekuerzt; Werte aus einem echten Aufruf von `get_metrics()` am 2026-09-09.)*
 
 **Field Definitions:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| metrics[] | array | List of available metrics (only selectable ones — meta-metrics like `confidence` and `cape` (#1585) are excluded) |
+| `<category>` | array | Liste der Metrik-Eintraege dieser Kategorie (nur waehlbare — Meta-Groessen wie `confidence` und `cape` (#1585) sind ausgefiltert). Die Antwort hat **kein** `metrics`-Feld; `metrics[]` in den folgenden Zeilen meint einen Eintrag dieser Listen (#2236 B2-36) |
 | metrics[].id | string | Metric identifier (e.g., `wind_direction`, `cloud_total`) |
-| metrics[].name | string | Human-readable metric name |
-| metrics[].unit | string | Unit of measurement |
+| metrics[].label | string | Deutscher Anzeigename (`MetricDefinition.label_de`, z. B. `Temperatur`). **Korrektur 2026-09-09 (#2236, B2-36):** das Feld heisst `label`, nicht `name` — `name` hat der Code nie gesendet |
+| metrics[].unit | string | Unit of measurement (`display_unit`, sonst `unit`) |
+| metrics[].category | string | Katalog-Kategorie, identisch mit dem umgebenden Schluessel |
+| metrics[].default_enabled | bool | Vorbelegung fuer Orte/Abonnements (`build_default_display_config()`); fuer neue Trips gilt `trip_default_enabled` |
+| metrics[].has_friendly_format | bool | Ob die Groesse eine Klartext-/Symbol-Darstellung kennt (`use_friendly_format`) |
+| metrics[].col_label | string | Kurze Spaltenueberschrift fuer Tabellen (z. B. `Temp`, `WDir`) |
 | metrics[].format_modes | string[] | Supported format modes for this metric (`raw`, `scale`, `simplified`, `symbol`) |
 | metrics[].default_format_mode | string | Recommended default format mode (must be in `format_modes`) |
-| metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metrics have `selectable=false`: `confidence` (Issue #710) and, since 2026-08-10, `cape` (Issue #1585, precedent-following the confidence pattern per ADR-0005) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints resp. thunderstorm-level fusion (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
+| *(nicht gesendet)* `selectable` | — | **Kein Antwortfeld** (Korrektur 2026-09-09, #2236 B2-36): `MetricDefinition.selectable` wirkt nur als Filter, whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metrics have `selectable=false`: `confidence` (Issue #710) and, since 2026-08-10, `cape` (Issue #1585, precedent-following the confidence pattern per ADR-0005) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints resp. thunderstorm-level fusion (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
 | metrics[].trip_default_enabled | bool | **Neu Issue #1552.** Ob die Größe zur Vorbelegung eines **neu angelegten Trips** gehört — unabhängig von `default_enabled` (das weiterhin die Orte-/Abonnement-Konfiguration über `build_default_display_config()` versorgt; vor #1552 zeigte der Anlege-Dialog `default_enabled` als Vorbelegung an, während der Versand eines nie eingestellten Trips tatsächlich einem anderen Siebener-Satz folgte — Überschneidung nur 5 von 10). Quelle: `MetricDefinition.trip_default_rank is not None` (`metric_catalog.py`). **Seit Issue #1728 Scheibe 1 (2026-08-15) tragen neun statt sieben Größen einen Rang:** `temperature`(1), `wind`(2), `gust`(3), `precipitation`(4), `thunder`(5), `freezing_level`(6), `visibility`(7), `temperature_day_low`(8), `temperature_day_high`(9) — die beiden neuen Ränge sind angehängt, die ursprünglichen sieben unverändert. `wind_chill_day_low`/`wind_chill_day_high` bekommen bewusst **keinen** Rang (folgen der Lage von `wind_chill` selbst, das ebenfalls keinen Rang trägt) — dieselbe Rangfolge, aus der `DEFAULT_TRIP_METRIC_IDS` (`src/output/renderers/trip_metric_ids.py`) abgeleitet wird, statt sie hart zu listen |
 | metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
 | metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |
@@ -3819,6 +3859,13 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-09: Issue #2236 (Doku-Drift, abgespalten aus #1199) — **kein API-Change**, nur Nachzug der
+  Doku auf die Code-Wahrheit. Section 15 (`GET /api/metrics`, B2-36): die Antwort ist ein nach
+  Kategorien geschluesseltes Objekt ohne `metrics`-Huelle, der Anzeigename heisst `label` (nicht
+  `name`), `selectable` wird nicht gesendet; fehlende Felder (`category`, `default_enabled`,
+  `has_friendly_format`, `col_label`) ergaenzt, Beispiel aus echtem Aufruf. Section 11
+  (`PUT .../weather-config`, C4-45): Hinweis, dass blosse ID-Strings in `metrics[]` keine
+  Reihenfolge setzen (Array-Position wird beim Laden verworfen, `auto_distribute()` greift).
 - 2026-09-08: Issue #2130 — Passkey-RP-ID/Origins werden nicht mehr auf dem Default `localhost`
   belassen, sondern aus `GZ_PUBLIC_HOST` abgeleitet (`internal/config/webauthn.go`, verdrahtet
   über `cmd/server/main.go`). `GET /api/health` liefert zusätzlich `webauthn_rpid` (effektiver

@@ -147,9 +147,26 @@ Diese Tabelle definiert, welche Information aus welcher Quelle bezogen wird.
 | Parameter | Status | Bemerkung |
 |-----------|--------|-----------|
 | sunshine_duration | REJECTED | Abgelehnt am 2025-12-31 |
-| direct_radiation | NOT APPROVED | - |
+| direct_radiation | NOT APPROVED | wird auch nicht gesendet — der Code fragt stattdessen `direct_normal_irradiance` (DNI) ab, s. Ist-Tabelle unten (#2236 B2-67) |
 | snowfall | NOT APPROVED | Verwende GeoSphere SNOWGRID |
 | snow_depth | NOT APPROVED | Verwende GeoSphere/Bergfex |
+
+**Produktiv gesendet, aber in dieser Positivliste nicht gefuehrt (Befund #2236 B2-67, Stand 2026-09-09):**
+
+`src/providers/openmeteo.py::fetch_forecast` sendet acht Parameter, die hier weder genehmigt noch
+abgelehnt stehen. Diese Tabelle ist der **Ist-Stand**, kein Freigabe-Nachweis — die Freigabe ist
+PO-Entscheid und als Antrag #5 (unten) vorbereitet.
+
+| Parameter | Feld in ForecastDataPoint | Spec-Spur | Status |
+|-----------|---------------------------|-----------|--------|
+| apparent_temperature | wind_chill_c | #1887 E6 (herstellereigene gefuehlte Temperatur, keine Windchill-Formel) | in Betrieb, Freigabe offen |
+| visibility | visibility_m | #846 (Sichtweite-Alarm), `feat_1492_s2b_fallback_sichtbarkeit.md` | in Betrieb, Freigabe offen |
+| precipitation_probability | pop_pct | `feat_1492_s2b_fallback_sichtbarkeit.md` | in Betrieb, Freigabe offen |
+| cape | cape_jkg | #1592 / #1679 (Gewitter-Fusion, ADR-0048) | in Betrieb, Freigabe offen |
+| freezing_level_height | freezing_level_m | #959 (Nullgradgrenze) | in Betrieb, Freigabe offen |
+| uv_index | uv_index | `provider_openmeteo.md` (bei allen 5 Wettermodellen `null`; produktiv ueber die Air-Quality-API `/v1/air-quality`, CAMS) | in Betrieb, Freigabe offen |
+| direct_normal_irradiance | dni_wm2 | `weather_emoji_dni.md` (Spec selbst nicht freigegeben) | in Betrieb, Freigabe offen |
+| is_day | is_day | `weather_emoji_dni.md` | in Betrieb, Freigabe offen |
 
 ---
 
@@ -243,6 +260,22 @@ Parameter, reiner Nachtrag.
 | Daten | Status | Bemerkung |
 |-------|--------|-----------|
 | `minutely_15` (precipitation, weather_code) | approved (Nachtrag) | Open-Meteo, seit #656 produktiv im Nowcast-Pfad (Fallback + Konvektions-Sidecar) |
+
+#### Antrag #5: Open-Meteo — acht bereits produktiv gesendete Parameter nachtraeglich freigeben
+
+**Datum:** 2026-09-09
+**Status:** ⏳ OFFEN — PO-Entscheid ausstehend
+**Antragsteller:** Claude (Issue #2236, Befund B2-67 aus #1199)
+**Spec:** dieses Dokument (Ist-Tabelle unter „2. Open-Meteo")
+
+**Zusammenfassung:** `fetch_forecast` sendet seit laengerem `apparent_temperature`, `visibility`,
+`precipitation_probability`, `cape`, `freezing_level_height`, `uv_index`,
+`direct_normal_irradiance` und `is_day`, ohne dass diese Positivliste sie fuehrt. Die Parameter
+tragen produktive Funktionen (Windchill-Spalte, Sichtweite-Alarm, Gewitter-Fusion, Nullgradgrenze,
+UV, Wetter-Emoji Tag/Nacht). Der Antrag legalisiert den Bestand; er fuehrt **keinen** neuen
+Parameter ein. Bei Ablehnung eines Eintrags ist der Rueckbau ein eigenes Issue.
+
+**Genehmigt durch:** — (offen)
 
 #### Antrag #4: Open-Meteo `elevation` — Wegpunkt-Hoehe an den Provider
 

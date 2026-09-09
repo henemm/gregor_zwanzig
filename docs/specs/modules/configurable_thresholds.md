@@ -443,7 +443,15 @@ def _fmt_val(self, key: str, val, html: bool = False) -> str:
     # ... rest unchanged ...
 ```
 
-**Note:** Friendly format emoji thresholds (CAPE, visibility, cloud) remain hardcoded because they represent domain-specific human perception scales (e.g., WHO CAPE scale, aviation visibility categories), not user-configurable preferences.
+**Note:** Friendly format emoji thresholds (CAPE, visibility, cloud) remain hardcoded because they represent domain-specific human perception scales (e.g., the NWS/SPC CAPE ladder, aviation visibility categories), not user-configurable preferences.
+
+> **Quellen-Korrektur 2026-09-09 (#2236, C3-98):** Eine „WHO thunderstorm energy scale" existiert
+> nicht — die Angabe war erfunden, die Emoji-Leiter 300/1000/2000 J/kg war projektintern gesetzt.
+> Belegt ist die NWS/SPC-Leiter (weak < 1000 · moderate 1000–2500 · strong 2500–4000 ·
+> extreme > 4000 J/kg, s. `docs/features/gewitter-gesamtkonzept.md` Abschnitt 3.5b), seit #1679
+> im Code (`feat_1679_cin_paarung_cape_leiter.md`). Die untere CAPE-Schwelle ist seit #1592 /
+> ADR-0048 je Modell und Gebiet geeicht (mindestens 300 J/kg) statt einer festen Zahl. Die hier
+> beschriebene 300/1000/2000-Emoji-Leiter gibt es im Code nicht mehr.
 
 ### 6. Update trip_report_formatter_v2.md Spec (~20 LoC)
 
@@ -469,7 +477,7 @@ All display and risk thresholds are sourced from MetricCatalog (RISK-04).
 - Wind Chill: risk high <-20
 
 **Hardcoded (Domain-Specific):**
-- CAPE emoji (300/1000/2000) — WHO thunderstorm energy scale
+- CAPE emoji (300/1000/2000) — historisch, projektintern gesetzt; belegte Leiter ist NWS/SPC 1000/2500/4000 (#1679), untere Schwelle modellabhaengig (#1592, ADR-0048). Die „WHO"-Zuschreibung war erfunden (#2236, C3-98)
 - Visibility friendly (10k/4k/1k) — Aviation visibility categories
 - Cloud emoji (10/30/70/90) — Meteorological coverage standards
 
@@ -573,7 +581,7 @@ Update lines 406-497 color threshold documentation to reference catalog source.
    - Phase 2 will add `UnifiedWeatherDisplayConfig` threshold overrides
 
 2. **Friendly Format Thresholds Hardcoded** — Domain-specific scales not configurable
-   - CAPE emoji (300/1000/2000) follows WHO thunderstorm scale
+   - CAPE emoji (300/1000/2000) — projektintern; heute NWS/SPC-Leiter 1000/2500/4000 (#1679) mit modellabhaengiger Untergrenze (#1592). Fruehere „WHO"-Zuschreibung war erfunden (#2236, C3-98)
    - Visibility friendly (10k/4k/1k) follows aviation categories
    - Cloud emoji (10/30/70/90) follows meteorological standards
    - Rationale: These represent expert knowledge, not user preferences
