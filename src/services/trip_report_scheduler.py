@@ -120,6 +120,11 @@ def _is_transient_fetch_error(exc: Exception) -> bool:
 
 logger = logging.getLogger("trip_report_scheduler")
 
+# Issue #2220 (C5-58): die vier heute bekannten `restrict_to_channel`-Namen —
+# ausschliesslich fuer den Namens-Guard in `_resolve_channel_flags`, kein
+# Kanal-Enum (Spec: Cross-Cutting-Refactoring waere unverhaeltnismaessig).
+_BEKANNTE_KANAELE = {"email", "sms", "premium_sms", "telegram"}
+
 
 def _slot_stunde(trip: "Trip", report_type: str) -> int:
     """Konfigurierte Ortsstunde eines Slots — EINE Fassung fuer den Sammellauf
@@ -1745,6 +1750,15 @@ class TripReportSchedulerService:
         als Kommentar an beiden Formelstellen; sie lebt jetzt hier.
         """
         if restrict_to_channel is not None:
+            if restrict_to_channel not in _BEKANNTE_KANAELE:
+                # Issue #2220 (C5-58): nur Beobachtbarkeit, das Ergebnis
+                # bleibt unveraendert vier-mal False — der Guard prueft den
+                # NAMEN, nicht das Ergebnis-Tupel (AC-9-Falle: "sms" ohne
+                # Tier-Berechtigung liefert dasselbe Tupel, ist aber ein
+                # bekannter Name und darf keine Warnung ausloesen).
+                logger.warning(
+                    "Unbekannter Kanalname in restrict_to_channel: %r", restrict_to_channel
+                )
             return (
                 restrict_to_channel == "email",
                 restrict_to_channel == "sms" and sms_allowed(user_id),

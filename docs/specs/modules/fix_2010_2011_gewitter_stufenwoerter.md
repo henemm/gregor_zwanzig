@@ -2,7 +2,7 @@
 entity_id: fix_2010_2011_gewitter_stufenwoerter
 type: bugfix
 created: 2026-08-22
-updated: 2026-08-22
+updated: 2026-09-09
 status: draft
 version: "1.0"
 tags: [gewitter, telegram, mail, ampel, renderer, issue-2010, issue-2011, issue-1480]
@@ -69,6 +69,12 @@ _thunder_fmt(): _MAP_PLAIN wird aus THUNDER_LABEL_DE abgeleitet (wie oben).
   Wort-Suffix, z.B. {level.name: f"{emoji} {label}" fuer level,label in
   THUNDER_LABEL_DE.items(), emoji aus einer separaten festen Emoji-Zuordnung}.
 
+  >>> ÜBERHOLT durch #2220 (C5-63), siehe
+  >>> docs/specs/modules/fix_2220_telegram_kommando_befunde.md: die Symbolfolge
+  >>> ⚪/🟢/🟡/🔴 war selbst fehlerhaft (drei von vier Einträgen widersprachen
+  >>> ihrem Bandnamen). Gültig ist seither die bandtreue Zuordnung
+  >>> green→🟢, yellow→🟡, orange→🟠, red→🔴 (NONE zeigt jetzt 🟢 statt ⚪).
+
 _handle_hours_drilldown() (~Zeile 790-817): das if/elif mit eigenem
   "mäßig"-Literal verschwindet; die Stundenzeile liest dieselbe abgeleitete
   Karte (Wort ueber _MAP_PLAIN-Aequivalent, Symbol ueber die separate
@@ -132,6 +138,12 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
   („mittel" statt „mäßig" bei MED), beides gemeinsam in derselben Zeile.
   - Test: Emoji-Regex weiterhin erfüllt UND Wortsuche auf „mittel" (nicht „mäßig") in
     derselben Antwort.
+  - 🔴 **ÜBERHOLT durch #2220 (C5-63)** — die hier verlangte Symbolfolge ⚪/🟢/🟡/🔴 war
+    selbst der Fehler (drei von vier Symbolen widersprachen ihrem Bandnamen; NONE zeigte
+    fälschlich ⚪ statt 🟢). Gültig ist seither die bandtreue Zuordnung `green→🟢, yellow→🟡,
+    orange→🟠, red→🔴`, siehe `docs/specs/modules/fix_2220_telegram_kommando_befunde.md`.
+    Dieser AC-Wortlaut bleibt als historischer Stand stehen und wird NICHT nachträglich
+    umgeschrieben — bei „Spec-Konformität herstellen" gilt die #2220-Fassung, nicht diese.
 
 - **AC-3 (#2010, Stundendrilldown ist ein unabhängiger zweiter Pfad):** Given eine
   Stundenübersicht-Anfrage (`dd_hours_today`/`dd_hours_tomorrow`) mit mindestens einer
@@ -248,3 +260,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
 ## Changelog
 
 - 2026-08-22: Initial spec created (Issues #2010, #2011).
+- 2026-09-09: Symbolfolge ⚪/🟢/🟡/🔴 (Implementation Details, AC-2) durch #2220 (C5-63) als
+  überholt kenntlich gemacht — die Folge war selbst fehlerhaft, gültig ist seither die
+  bandtreue Zuordnung green→🟢/yellow→🟡/orange→🟠/red→🔴. Ursprünglicher Wortlaut und AC-2
+  bleiben unverändert erhalten, nur ein Vermerk ergänzt.

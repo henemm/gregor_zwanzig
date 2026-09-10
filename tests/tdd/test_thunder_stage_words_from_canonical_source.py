@@ -75,9 +75,13 @@ def test_ac1_thunder_fmt_plain_zeigt_die_vier_korrekten_woerter(level, expected_
 @pytest.mark.parametrize(
     "level,expected_word,expected_emoji",
     [
-        (ThunderLevel.NONE, "kein", "⚪"),
-        (ThunderLevel.LOW, "leicht", "🟢"),
-        (ThunderLevel.MED, "mittel", "🟡"),
+        # Issue #2220 C5-63: Zielskala A -- bandtreu zur kanonischen Quelle
+        # thunder_ampel_band() (NONE=green, LOW=yellow, MED=orange, HIGH=red)
+        # und zur Mail-Ampel (_AMPEL_DOT_COLORS). Der vormalige Ist-Stand
+        # (NONE=⚪, LOW=🟢, MED=🟡) widersprach seinem eigenen Bandnamen.
+        (ThunderLevel.NONE, "kein", "🟢"),
+        (ThunderLevel.LOW, "leicht", "🟡"),
+        (ThunderLevel.MED, "mittel", "🟠"),
         (ThunderLevel.HIGH, "hoch", "🔴"),
     ],
 )
@@ -199,15 +203,16 @@ def test_ac3_hours_drilldown_med_stunde_zeigt_mittel_nicht_maessig(env):
     assert "mäßig" not in body, f"'mäßig' noch im Stundendrilldown-Body:\n{body}"
 
 
-def test_ac3_hours_drilldown_med_stunde_zeigt_gelbes_emoji_telegram(env):
-    """AC-3, Emoji (Telegram-Kanal): die MED-Stunde zeigt das gelbe
-    Kreis-Emoji 🟡 am Zeilenende, 'mäßig' erscheint nirgends im Body."""
+def test_ac3_hours_drilldown_med_stunde_zeigt_oranges_emoji_telegram(env):
+    """AC-3, Emoji (Telegram-Kanal): die MED-Stunde zeigt das orangene
+    Kreis-Emoji 🟠 am Zeilenende (Issue #2220 C5-63: Zielskala A), 'mäßig'
+    erscheint nirgends im Body."""
     result = _process("### query: dd_hours_today", channel="telegram")
     assert result.success is True, f"Erwartet success=True: {result.confirmation_body!r}"
     body = result.confirmation_body
 
-    zeilen_mit_gelb = [ln for ln in body.splitlines() if ln.rstrip().endswith("🟡")]
-    assert zeilen_mit_gelb, f"Keine Zeile mit 🟡 (Emoji, MED) gefunden:\n{body}"
+    zeilen_mit_orange = [ln for ln in body.splitlines() if ln.rstrip().endswith("🟠")]
+    assert zeilen_mit_orange, f"Keine Zeile mit 🟠 (Emoji, MED) gefunden:\n{body}"
     assert "mäßig" not in body, f"'mäßig' noch im Stundendrilldown-Body:\n{body}"
 
 
@@ -224,8 +229,8 @@ _NONE_STUNDEN = ("10", "13")
 def test_ac3_hours_drilldown_none_stunde_zeigt_strich_statt_stufenwort(env, channel, karte):
     """AC-3 / Implementation Details #2010: der NONE-Sonderfall bleibt ein
     eigener Zweig -- eine Stunde ohne Gewitter zeigt '—', NICHT den Eintrag,
-    den ``thunder_karte`` fuer NONE traegt ('kein' bzw. ⚪). Ohne den
-    Sonderfall stuende dort dieser Eintrag."""
+    den ``thunder_karte`` fuer NONE traegt ('kein' bzw. 🟢 seit #2220
+    Zielskala A). Ohne den Sonderfall stuende dort dieser Eintrag."""
     none_eintrag = karte()["NONE"]
     assert none_eintrag and none_eintrag != "—", (
         "Positivkontrolle: die Stufenkarte muss fuer NONE einen eigenen, vom "
