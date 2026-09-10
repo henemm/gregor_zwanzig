@@ -187,6 +187,31 @@ def lpi_thresholds_jkg(region: Optional[str]) -> Optional[Tuple[float, float, fl
     return LPI_THRESHOLDS_JKG.get(region)
 
 
+# Issue #2263: die LPI-Leiter wird nach der LIEFERNDEN Quelle geschluesselt,
+# nicht mehr nach dem geografischen Gebiet -- die Leiter kalibriert eine
+# Groesse (`lpi` aus ICON-D2 vs. `lpi_con_max` aus ICON-EU), kein Gebiet. Die
+# Gebiets-Schluessel in `LPI_THRESHOLDS_JKG` bleiben unveraendert bestehen und
+# werden hier lediglich von ihrer liefernden Quelle aus erreicht (ADR-0065).
+# `fr_direct` bekommt bewusst KEINEN Eintrag -- AROME liefert dort Blitzdichte,
+# kein LPI (s. Kommentar bei `LPI_THRESHOLDS_JKG`).
+_LPI_QUELLE_ZU_SCHLUESSEL: Dict[str, str] = {
+    "de_direct": "DE_ALPEN",
+    "eu_direct": "EU_REST",
+}
+
+
+def lpi_schluessel_fuer_quelle(quelle: Optional[str]) -> Optional[str]:
+    """Uebersetzt die liefernde Gewitterquelle (Providername, z.B.
+    ``"eu_direct"``) auf den bestehenden Kalibrierungs-Schluessel von
+    ``LPI_THRESHOLDS_JKG``. ``None`` fuer eine unbekannte oder fehlende
+    Quelle sowie fuer ``fr_direct`` (keine Kalibrierung, AROME liefert
+    Blitzdichte statt LPI) -- identisch "nicht belegt" wie bei
+    ``lpi_thresholds_jkg()``."""
+    if quelle is None:
+        return None
+    return _LPI_QUELLE_ZU_SCHLUESSEL.get(quelle)
+
+
 # Issue #1592 Scheibe C3: kein neu gesetzter Wert -- die bis Scheibe C1
 # ueberall gueltige, modellblinde CAPE-Schwelle. Genau fuer DIESE Welt wurde
 # die Empfindlichkeitsleiter der CAPE-Aenderungsalarme (1200/600/200,

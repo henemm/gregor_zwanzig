@@ -342,6 +342,13 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
   allein als Tabellenschlüssel, weil `thunder_routing._REGIONS` das liefernde Modell für LPI
   bereits eindeutig festlegt (DE_ALPEN → ICON-D2, EU_REST → ICON-EU) — das ist bewusst
   einfacher als das CAPE-Muster, kein Fehler.
+  🔄 **Nachtrag 2026-09-09 (#2263, ADR-0065):** Das gilt nur, solange keine Vertretung (ADR-0047)
+  eingesprungen ist. Fällt die Primärquelle aus, liefert eine andere Quelle als die, die
+  `thunder_region_for()` für die Koordinate nennt — die Region legt das liefernde Modell dann
+  NICHT mehr eindeutig fest. `_schwellen_fuer_reihe()` löst den Tabellenschlüssel seither über die
+  tatsächlich liefernde Quelle auf (`app.model_registry.lpi_schluessel_fuer_quelle()`), nicht mehr
+  über die Region allein. Diese Spec gilt **ausschließlich in der Schlüsselungs-Frage** als
+  abgelöst — `LPI_THRESHOLDS_JKG` und die FR-Aussparung bleiben unverändert gültig.
 - **Momentanwert-vs-60-Minuten-Maximum-Unterschied bleibt bestehen.** ICON-D2 liefert LPI als
   Momentanwert, ICON-EU als 60-Minuten-Maximum (s. `feat_1474c` Known Limitations) — beide
   landen weiterhin im selben Feld `lightning_potential_lpi_jkg`. Die neue Region-Tabelle ändert

@@ -181,6 +181,11 @@ aufgelösten Leiter. Geprüft wird die entstehende Stufe, **nie** der Tabellenin
 4. **Die Unterscheidung hängt allein an der Region.** `dwd_eu.py:108` bildet `lpi_con_max`
    auf dasselbe interne Feld `lpi` ab wie ICON-D2; nur `_REGIONS` (first-match-wins)
    trennt die Leitern. Ein Umbau dort würde die Leiterwahl still falsch machen.
+   🔄 **Nachtrag 2026-09-09 (#2263, ADR-0065):** Das gilt nur im Normalfall ohne Vertretung
+   (ADR-0047). Springt bei Ausfall der Primärquelle `eu_direct` für `de_direct` ein, liefert eine
+   andere Quelle als die, die `_REGIONS` für die Koordinate nennt — die Leiterwahl folgt seither
+   der tatsächlich liefernden Quelle (`app.model_registry.lpi_schluessel_fuer_quelle()`), nicht
+   mehr der Region allein.
 5. **Keine der beiden Haupttouren ist betroffen:** Karnischer Höhenweg (≈46,6 N / 12,8 O)
    liegt in `DE_ALPEN`, GR20/Korsika (≈42,2 N / 9,07 O) in `FR`. `EU_REST` betrifft Nord-,
    Ost- und Südeuropa.
