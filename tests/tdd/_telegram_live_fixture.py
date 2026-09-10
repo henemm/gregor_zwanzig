@@ -263,7 +263,15 @@ def ensure_test_user_with_active_trip(
     has_telegram_config = bool(
         trip and trip.report_config and trip.report_config.send_telegram
     )
-    needs_refresh = not ({today, tomorrow} <= trip_stages) or not has_telegram_config
+    needs_refresh = (
+        not ({today, tomorrow} <= trip_stages)
+        or not has_telegram_config
+        # Issue #2296: Die Zeiten der Heute-Etappe sind laufzeitabhaengig
+        # (s. _heute_etappe_zeiten). Ohne diese Pruefung erbte ein zweiter
+        # Lauf am selben Kalendertag die Zeiten des ersten und stand ab deren
+        # Ende wieder vor einer leeren Heute-Timeline.
+        or not _heute_etappe_offen(trip, today)
+    )
     if needs_refresh:
         _delete_snapshot(user_id=user_id, trip_id="tg-live-e2e-trip", data_dir=data_dir)
         _create_active_trip(user_id=user_id, data_dir=data_dir)
@@ -518,15 +526,58 @@ def _ensure_weather_snapshot(trip, user_id: str) -> None:
         pass  # fail-soft: Snapshot-Fehler verhindert den Test nicht
 
 
+def _heute_etappe_zeiten(jetzt_lokal: datetime) -> tuple[str, str]:
+    """Start-/Ankunftszeit der Heute-Etappe in Ortszeit (Issue #2296).
+
+    Das Ende liegt IMMER in der Zukunft und bleibt IMMER auf dem heutigen
+    Ortstag. Beides ist Bedingung dafür, dass `heute_gewitter`/`timeline_heute`
+    Inhalt liefern: `weather_extractor._restfenster_aggregat` wirft ein
+    vollständig vergangenes Segment aus der Timeline (`jetzt >= end_time` →
+    None), und `_aggregate_day` zählt einen Wegpunkt nur dann zu „heute", wenn
+    sein Anzeige-Ende auf dem heutigen Ortstag liegt. Ein fest verdrahtetes
+    Ende (früher 14:00 Ortszeit) verfiel deshalb am eigenen Erzeugungstag.
+    """
+    tages_ende = jetzt_lokal.replace(hour=23, minute=59, second=0, microsecond=0)
+    tages_beginn = jetzt_lokal.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = max(jetzt_lokal - timedelta(hours=1), tages_beginn)
+    ende = min(jetzt_lokal + timedelta(hours=2), tages_ende)
+    return start.strftime("%H:%M"), ende.strftime("%H:%M")
+
+
+def _heute_etappe_offen(trip, today: date) -> bool:
+    """True, solange die Heute-Etappe des Fixture-Trips noch läuft (#2296).
+
+    Gemessen an derselben Umrechnung, die auch der Produktivpfad benutzt. Das
+    Ziel-Segment zählt nicht mit: es überlebt die Etappe um Stunden, trägt aber
+    genau den Zustand, den `_heute_etappe_zeiten` vermeiden soll.
+    """
+    if trip is None:
+        return False
+    from services.trip_segments import convert_trip_to_segments
+
+    jetzt = datetime.now(tz=timezone.utc)
+    return any(
+        str(seg.segment_id) != "Ziel" and seg.end_time > jetzt
+        for seg in convert_trip_to_segments(trip, today)
+    )
+
+
 def _create_active_trip(user_id: str, data_dir: str) -> None:
     """Erstellt einen gültigen Trip mit start_date=heute-1, end_date=heute+2.
 
     Koordinaten: Korsika (GR20-Region) — echte Wetterdaten verfügbar.
     """
+    from utils.timezone import tz_for_coords
+
     today = date.today()
     start = today - timedelta(days=1)
     tomorrow = today + timedelta(days=1)
     end = today + timedelta(days=2)
+    # Ortszone der Heute-Etappe (Koordinaten von w2/w3), damit die Zeiten in
+    # derselben Zone entstehen, in der convert_trip_to_segments sie liest.
+    heute_start, heute_ankunft = _heute_etappe_zeiten(
+        datetime.now(tz=tz_for_coords(42.15, 9.13))
+    )
 
     # Issue #1250 Scheibe 7a Cutover (ADR-0023): die Anwendung liest Trips
     # aus briefings/, nicht mehr aus trips/ (s. app.loader.load_all_trips,
@@ -575,7 +626,7 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
                         "lat": 42.15,
                         "lon": 9.13,
                         "elevation_m": 1640,
-                        "arrival_calculated": "08:00",
+                        "arrival_calculated": heute_start,
                     },
                     {
                         "id": "w3",
@@ -583,10 +634,10 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
                         "lat": 42.20,
                         "lon": 9.17,
                         "elevation_m": 1842,
-                        "arrival_calculated": "14:00",
+                        "arrival_calculated": heute_ankunft,
                     },
                 ],
-                "start_time": "08:00",
+                "start_time": heute_start,
             },
             {
                 "id": "s3",
