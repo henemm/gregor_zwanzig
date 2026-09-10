@@ -24,6 +24,13 @@ Netz-Sperre-Probe-gruene Tests + 2 aus test_issue_338 kommen in die
 Standard-Selektion zurueck); 6 Voll-Dialer-Dateien bleiben unveraendert
 modul-live. Spec: docs/specs/modules/rework_1211c_live_feinschnitt.md
 
+#2240 (2026-09-10): der einzelne Rolling-Trip-Dialer aus #937
+(test_issue_937_staging_rolling_trip.py) bekommt denselben `staging`-Marker
+wie Liste A -- zusaetzlich aber einen eigenen Collect-Zeit-Socket-Nachweis
+per Bootstrap-Subprozess, weil sein `skipif`-Ausdruck bislang schon beim
+Einsammeln einen echten POST auf den Versand-Endpunkt absetzte (Klasse
+#1477). Spec: docs/specs/modules/fix_2240_rolling_trip_test_versandsperre.md
+
 #1708 B1 (2026-08-16): test_bug_338_openmeteo_call_counter.py wandert von
 den 6 Voll-Dialern (_C2_KEEP_MODULE_LIVE) nach _C2_SPLIT_FILES. Erste
 Messung (nur `--disable-socket`) ergab faelschlich 5 live/1 offline -- nach
@@ -103,6 +110,12 @@ _STAGING_DIALER_FILES = (
     "tests/tdd/test_prod_selftest_730.py",
     "tests/tdd/test_ssr_cache_headers.py",
 )
+
+# #2240 (2026-09-10): einzelner Rolling-Trip-Dialer (Issue #937) -- eigener
+# Eintrag statt Aufnahme in _STAGING_DIALER_FILES, weil er zusaetzlich einen
+# Collect-Zeit-Socket-Nachweis (Bootstrap-Subprozess) braucht, den die 22
+# Dateien aus Liste A nicht brauchen.
+_ROLLING_TRIP_DIALER = "tests/tdd/test_issue_937_staging_rolling_trip.py"
 
 # Batch 3 (#1211b), K3-Tabelle: 3 Dateien bekommen einen modul-weiten Marker
 # (jeder Test dialt) -- je (Pfad, Marker)-Paar, 2x live + 1x staging.
@@ -200,6 +213,46 @@ _C2_KEEP_MODULE_LIVE = (
 # addopts liefert bereits ein "-q" -> Quiet-Level 2 -> kompaktes "pfad: N"-Format
 # statt einzelner Test-IDs (empirisch verifiziert, kein Rateversuch).
 _COLLECTED_LINE = re.compile(r"^(tests/\S+\.py): (\d+)$", re.MULTILINE)
+
+
+# #2240: Bootstrap-Skript fuer einen eigenstaendigen Python-Prozess, der
+# `socket.socket.connect`/`connect_ex` VOR `import pytest` patcht -- Nachweis,
+# dass die Rolling-Trip-Collection keinen Socket oeffnet (AC-3/AC-4). Laeuft
+# per `python -c <script> <pytest_args...>`; sys.argv[1:] sind dann die
+# pytest_args. `{extra_setup}`/`{raise_expr}` werden je Variante gefuellt.
+_SOCKET_BOOTSTRAP_TEMPLATE = """
+import socket
+
+{extra_setup}
+
+def _blocked_connect(self, *a, **k):
+    raise {raise_expr}
+
+def _blocked_connect_ex(self, *a, **k):
+    raise {raise_expr}
+
+socket.socket.connect = _blocked_connect
+socket.socket.connect_ex = _blocked_connect_ex
+
+import sys
+import pytest
+sys.exit(pytest.main(sys.argv[1:]))
+"""
+
+# Variante A (AC-3): Collect-Zeit-Egress muss als Collection-Error sichtbar
+# werden, nicht still geschluckt -- RuntimeError-Unterklasse statt OSError,
+# damit httpx sie NICHT als httpx.ConnectError mappt.
+_BOOTSTRAP_COLLECT_TIME_EGRESS = _SOCKET_BOOTSTRAP_TEMPLATE.format(
+    extra_setup="class _CollectTimeEgress(RuntimeError):\n    pass",
+    raise_expr='_CollectTimeEgress("kein Netzzugriff waehrend der Collection erlaubt")',
+)
+
+# Variante B (AC-4): OSError, die httpx zu httpx.ConnectError mappt --
+# simuliert Port 8001 zu, der Testkoerper faengt das per pytest.skip() ab.
+_BOOTSTRAP_CONNECTION_REFUSED = _SOCKET_BOOTSTRAP_TEMPLATE.format(
+    extra_setup="",
+    raise_expr='ConnectionRefusedError(111, "blocked")',
+)
 
 
 def _collect(*extra_args: str, timeout: int) -> subprocess.CompletedProcess:
@@ -588,3 +641,91 @@ def test_timeout_ini_default_kills_hanging_test(tmp_path):
             "ohne Abbruch durch einen ini-Timeout-Mechanismus."
         )
     assert res.returncode != 0, f"Haengender Test muss fehlschlagen: rc={res.returncode}"
+
+
+def test_rolling_trip_dialer_excluded_from_default(default_collect):
+    """GIVEN der Rolling-Trip-Dialer aus #937 WHEN die Standard-Selektion
+    (`not email and not live and not staging`) sammelt THEN erscheint die
+    Datei mit 0 gesammelten Tests -- kein Versand-Risiko im Kernlauf (AC-1).
+    Schlaegt heute fehl: die Datei traegt noch keinen Marker, 2 gesammelt."""
+    assert default_collect.returncode == 0, default_collect.stderr
+    default_counts = _collected_counts(default_collect.stdout)
+    assert default_counts.get(_ROLLING_TRIP_DIALER, 0) == 0, (
+        f"{_ROLLING_TRIP_DIALER} darf im Standardlauf nicht erscheinen: "
+        f"{default_counts.get(_ROLLING_TRIP_DIALER)} gesammelt."
+    )
+
+
+@pytest.mark.staging
+def test_rolling_trip_dialer_collected_under_staging(staging_collect):
+    """GIVEN `-m staging` wird bewusst aufgerufen WHEN der Rolling-Trip-Dialer
+    seinen Modul-Marker traegt THEN erscheint die Datei mit mindestens einem
+    gesammelten Test -- der Marker verschiebt, loescht nicht (AC-2). Schlaegt
+    heute fehl, weil der Marker noch fehlt (0 gesammelt unter `-m staging`)."""
+    assert staging_collect.returncode == 0, staging_collect.stderr
+    staging_counts = _collected_counts(staging_collect.stdout)
+    assert staging_counts.get(_ROLLING_TRIP_DIALER, 0) > 0, (
+        f"{_ROLLING_TRIP_DIALER} fehlt unter `-m staging`: "
+        f"{staging_counts.get(_ROLLING_TRIP_DIALER, 0)} gesammelt."
+    )
+
+
+@pytest.mark.timeout(180)
+def test_rolling_trip_collection_opens_no_socket():
+    """GIVEN ein Python-Prozess, in dem `socket.socket.connect`/`connect_ex`
+    vor dem pytest-Start jeden Verbindungsaufbau mit einer RuntimeError-
+    Unterklasse abweisen WHEN pytest die Rolling-Trip-Datei nur sammelt
+    (`--collect-only -o addopts=`) THEN endet die Collection mit Exit 0 und
+    beiden Test-IDs, ohne Collection-Error -- kein Netzaufruf zur Collect-
+    Zeit (AC-3). Subprozess statt `--disable-socket`: pytest-socket sperrt
+    erst in `pytest_runtest_setup`, nicht waehrend der Collection -- ein
+    reines `--disable-socket`-Collect waere hier kein Nachweis. Schlaegt
+    heute fehl: der `skipif`-Ausdruck ruft `httpx.post` bereits beim
+    Einsammeln auf, der gepatchte Socket wirft, pytest meldet einen
+    Collection-Error (Exit 2)."""
+    pytest_args = [
+        "--collect-only", "-q", "-o", "addopts=", "-p", "no:cacheprovider",
+        _ROLLING_TRIP_DIALER,
+    ]
+    res = subprocess.run(
+        [sys.executable, "-c", _BOOTSTRAP_COLLECT_TIME_EGRESS, *pytest_args],
+        cwd=_REPO_ROOT, capture_output=True, text=True, timeout=120,
+    )
+    combined = res.stdout + res.stderr
+    assert res.returncode == 0, f"rc={res.returncode}\nstdout={res.stdout}\nstderr={res.stderr}"
+    for test_id in (
+        f"{_ROLLING_TRIP_DIALER}::test_setup_script_exists_and_is_importable",
+        f"{_ROLLING_TRIP_DIALER}::test_rolling_trip_send_returns_sent_true",
+    ):
+        assert test_id in res.stdout, f"{test_id} fehlt in der Collection: {res.stdout}"
+    assert "ERROR" not in combined, combined
+
+
+@pytest.mark.timeout(180)
+def test_rolling_trip_send_skips_at_runtime_when_port_closed():
+    """GIVEN derselbe Bootstrap, aber `connect` wirft `ConnectionRefusedError`
+    (Port 8001 zu, von httpx zu `httpx.ConnectError` gemappt) WHEN der
+    Send-Test gezielt ausgefuehrt wird (`-o addopts=` hebt den Marker-Filter
+    auf) THEN wird er als skipped gemeldet (nicht passed, nicht failed,
+    nicht error) und der Prozess endet mit Exit 0 (AC-4). Auf JEDEM Host
+    sicher: der Socket ist gepatcht, es kann nichts versendet werden."""
+    pytest_args = [
+        "-q", "-o", "addopts=", "-p", "no:cacheprovider", "-rs",
+        f"{_ROLLING_TRIP_DIALER}::test_rolling_trip_send_returns_sent_true",
+    ]
+    res = subprocess.run(
+        [sys.executable, "-c", _BOOTSTRAP_CONNECTION_REFUSED, *pytest_args],
+        cwd=_REPO_ROOT, capture_output=True, text=True, timeout=120,
+    )
+    assert res.returncode == 0, f"rc={res.returncode}\nstdout={res.stdout}\nstderr={res.stderr}"
+    assert "1 skipped" in res.stdout, res.stdout
+
+    # Nur die pytest-eigene Summary-Zeile pruefen (nicht den gesamten
+    # Output) -- Dateipfade/Skip-Gruende koennten sonst faelschlich "error"
+    # o.ae. enthalten (Spec-Vorgabe).
+    summary_match = re.search(r"(\d+ \w+(?:, \d+ \w+)* in [\d.]+s)", res.stdout)
+    assert summary_match, f"Keine pytest-Zusammenfassungszeile gefunden: {res.stdout}"
+    summary_line = summary_match.group(1).lower()
+    assert "passed" not in summary_line, summary_line
+    assert "failed" not in summary_line, summary_line
+    assert "error" not in summary_line, summary_line
