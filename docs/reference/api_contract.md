@@ -3894,6 +3894,16 @@ function corridorInside(value, min, max) {
   Gegenrichtung zu `DELETE /api/auth/account`. Geheimnisse (`sessions.json`,
   `password_reset.json`, `email_verification.json`, `password_hash`, `passkey_credentials`)
   sind ausgeschlossen. Details Section 19 C) und `docs/specs/modules/user_data_export.md`.
+- 2026-09-09: Issue #2263 (Epic #2257) — **kein DTO-/Feld-Wechsel**, nur die interne
+  Schwellen-Schlüsselung: `_schwellen_fuer_reihe()` (`src/providers/thunder_enrichment.py`) löst
+  die LPI-Leiter für `lightning_potential_lpi_jkg` jetzt über die **liefernde Quelle** auf, nicht
+  mehr blind über das geografische Gebiet der Koordinate. Springt bei Ausfall einer Direktquelle
+  die benannte Vertretung ein (ADR-0047), wird ihr Wert gegen die für SIE kalibrierte Leiter
+  bewertet (`app.model_registry.lpi_schluessel_fuer_quelle()`: `de_direct`→`DE_ALPEN`,
+  `eu_direct`→`EU_REST`, `fr_direct`→kein Schlüssel). Vorher verpuffte das Vertretungssignal für
+  FR/Korsika vollständig und wurde für DE_ALPEN fälschlich eskaliert (HIGH statt MED).
+  `LPI_THRESHOLDS_JKG`/`lpi_thresholds_jkg()` bleiben unverändert. Siehe ADR-0065,
+  `docs/specs/modules/fix_2263_lpi_leiter_nach_liefernder_quelle.md`.
 - 2026-09-09: Issue #2236 (Doku-Drift, abgespalten aus #1199) — **kein API-Change**, nur Nachzug der
   Doku auf die Code-Wahrheit. Section 15 (`GET /api/metrics`, B2-36): die Antwort ist ein nach
   Kategorien geschluesseltes Objekt ohne `metrics`-Huelle, der Anzeigename heisst `label` (nicht

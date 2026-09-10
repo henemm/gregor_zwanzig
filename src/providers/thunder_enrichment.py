@@ -281,11 +281,12 @@ def _schwellen_fuer_reihe(
 ) -> Tuple[
     Optional[Tuple[float, float, float]], Optional[Tuple[float, float, float]]
 ]:
-    """Loest die beiden gebietsabhaengigen Schwellenleitern der Fusion EINMAL
-    je Reihe auf: die geeichte CAPE-Leiter (Issue #1592 C1 / #1679,
-    Modell x Gebiet) und die Blitzpotenzial-Leiter (Issue #1679, Gebiet).
-    BEIDE haengen am SELBEN Gebiets-Nachschlag -- kein zweiter
-    Aufloesungs-Ort.
+    """Loest die beiden Schwellenleitern der Fusion EINMAL je Reihe auf: die
+    geeichte CAPE-Leiter (Issue #1592 C1 / #1679, Modell x Gebiet) und die
+    Blitzpotenzial-Leiter (Issue #1679, seit #2263 nach LIEFERNDER Quelle
+    statt nach Gebiet -- die Leiter kalibriert eine Groesse, deren Skala je
+    nach liefernder Quelle wechselt, kein Gebiet; welche Skala das im
+    Einzelfall ist, steht ausschliesslich in `app.model_registry`, ADR-0065).
 
     Wohnt bewusst NEBEN ``enrich_thunder()`` statt darin: der Kern-Dispatch
     dort darf keinen einzelnen Signalnamen im Quelltext tragen (Waechter
@@ -293,15 +294,34 @@ def _schwellen_fuer_reihe(
     AC-9), und der Name der Nachschlag-Funktion traegt ihn.
     """
     from app.model_registry import (
-        cape_ladder_thresholds_jkg, effective_cape_model_id, lpi_thresholds_jkg,
+        cape_ladder_thresholds_jkg, effective_cape_model_id,
+        lpi_schluessel_fuer_quelle, lpi_thresholds_jkg,
     )
-    from providers.thunder_routing import thunder_region_for
+    from providers.thunder_routing import (
+        thunder_provider_for, thunder_region_for, thunder_vertretung_for,
+    )
 
     region = thunder_region_for(location.latitude, location.longitude)
-    return (
-        cape_ladder_thresholds_jkg(effective_cape_model_id(reihe.meta), region),
-        lpi_thresholds_jkg(region),
+    cape_leiter = cape_ladder_thresholds_jkg(
+        effective_cape_model_id(reihe.meta), region,
     )
+
+    # #2263: die liefernde Quelle bestimmt die LPI-Leiter, nicht das Gebiet.
+    # Erkennungsmerkmal der Vertretung ist ausschliesslich `fallback_metrics`
+    # (Feldname, aus `_SIGNAL_ZU_FELD` abgeleitet statt literal hingeschrieben)
+    # -- NIE `fallback_model`: das Feld traegt nur den Providernamen und kann
+    # zugleich vom Grundvorhersage-Fallback belegt sein (ADR-0047 Known
+    # Limitations 3), dann bliebe die Vertretung sonst unerkannt.
+    primaerquelle = thunder_provider_for(location.latitude, location.longitude)
+    lpi_feld = _SIGNAL_ZU_FELD["lpi"]
+    vertretung_aktiv = lpi_feld in (reihe.meta.fallback_metrics or ())
+    if vertretung_aktiv and primaerquelle is not None:
+        liefernde_quelle = thunder_vertretung_for(primaerquelle)
+    else:
+        liefernde_quelle = primaerquelle
+    lpi_leiter = lpi_thresholds_jkg(lpi_schluessel_fuer_quelle(liefernde_quelle))
+
+    return (cape_leiter, lpi_leiter)
 
 
 def enrich_thunder(

@@ -85,6 +85,15 @@ das schärfste vorhandene Ergebnis (`max_thunder()`).
 | **DWD-Blitzpotenzial** `lightning_potential_lpi_jkg` — **DE_ALPEN (ICON-D2)** | **≥ 1** | **≥ 30** | **≥ 50** | DE/Alpen/AT (`de_direct`) | ✅ **geeicht seit #1679** (Muster analog ADR-0048): `LPI_THRESHOLDS_JKG["DE_ALPEN"]` in `src/app/model_registry.py` — Bína et al., Atmospheric Research 2022 / ASR Copernicus 2022 (COSMO-D2, dieselbe Modellfamilie wie ICON-D2): „skilful forecast … for LPI thresholds 30, 40 and 50 J/kg", Nachweisschwelle 1 J/kg. Alle drei Werte belegt |
 | **DWD-Blitzpotenzial** `lightning_potential_lpi_jkg` — **EU_REST (ICON-EU)** | **≥ 5** | **≥ 20** | **≥ 50** | Rest-Europa (`eu_direct`) | ⚠️ **Interim seit #1474c, durch #1679 bewusst unverändert**: `LPI_THRESHOLDS_JKG["EU_REST"]`. 5 J/kg = betrieblicher DWD-Schwellenwert (Blitz-ja/nein), 50 J/kg = oberes Ende der publizierten Verifikationsspanne (~90 % Blitzwahrscheinlichkeit) — [ASR 19, 29 (2022)](https://asr.copernicus.org/articles/19/29/2022/), [DWD ICON-Bericht 2022/10](https://www.dwd.de/EN/ourservices/reports_on_icon/pdf_einzelbaende/2022_10.pdf). 🔴 20 J/kg ("leicht"→"mittel") weiterhin NICHT publiziert, interpoliert (PO-freigegeben 2026-08-04) — eigene Eichung erst mit #1678 |
 
+✅ **Die LPI-Leiter folgt seit #2263 der liefernden Quelle, nicht dem Gebiet der Koordinate
+(ADR-0065).** Die Spalte „Gebiet" oben beschreibt nur den Normalfall ohne Vertretung. Springt bei
+Ausfall der Primärquelle die benannte Vertretung ein (`de_direct → eu_direct`, `fr_direct →
+eu_direct`, ADR-0047), wird ihr Wert gegen die für SIE kalibrierte Leiter bewertet — nicht gegen
+die Leiter des ursprünglich zuständigen Gebiets. `app.model_registry.lpi_schluessel_fuer_quelle()`
+übersetzt die tatsächlich liefernde Quelle in den Tabellenschlüssel (`de_direct`→`DE_ALPEN`,
+`eu_direct`→`EU_REST`, `fr_direct`→kein Schlüssel). Vorher verpuffte das Vertretungssignal für
+FR/Korsika vollständig und wurde für DE_ALPEN fälschlich zu HIGH statt MED eskaliert.
+
 🔴 **CAPE deckelt bei „leicht" und eskaliert nie.** Es misst *verfügbare Energie*, kein
 Ereignis — ohne Auslöser passiert trotz hoher Werte nichts. „mittel"/„hoch" bleiben
 Signalen vorbehalten, die tatsächliche Blitzaktivität vorhersagen. CAPE ist zugleich die
