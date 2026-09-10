@@ -206,7 +206,7 @@ _MORGEN_BUTTONS = {
 
 # Kreis-Emoji je Ampelband der Stufe (`thunder_ampel_band`, metric_format.py) --
 # das Symbol stellt das Band dar, es ist keine zweite Stufen-Zuordnung.
-_BAND_EMOJI = {"green": "⚪", "yellow": "🟢", "orange": "🟡", "red": "🔴"}
+_BAND_EMOJI = {"green": "🟢", "yellow": "🟡", "orange": "🟠", "red": "🔴"}
 
 
 def _thunder_words() -> dict:
@@ -1401,12 +1401,20 @@ class TripCommandProcessor:
         Reihenfolge (AC-4): der Anker hat Vorrang, sobald er fuer den Tag
         AUSWERTBARE Werte traegt (`_traegt_tageswerte`, F005) — die blosse
         Existenz eines Wegpunkts genuegt nicht, sonst gewaenne ein
-        inhaltsleerer Fehler-Platzhalter gegen echte Werte. Nur fuer einen
-        Tag, den er so nicht traegt, wird der bereits vorliegende datierte
-        Snapshot ``{trip_id}_{YYYY-MM-DD}.json`` rein LESEND nachgezogen — kein
-        Netzabruf, kein Schreibvorgang (AC-7). Der Tagesfilter ist derselbe
-        wie in ``_aggregate_day``/``_fmt_timeline`` (Ortstag, #1795), damit
-        ein Rueckfall-Wegpunkt nicht in einen fremden Tag rutscht.
+        inhaltsleerer Fehler-Platzhalter gegen echte Werte. Seit Issue #2220
+        (C5-38) faellt diese Entscheidung PRO PUNKT, nicht mehr pro Tag: nur
+        die einzelnen nicht-tragenden Anker-Punkte eines Tages werden gegen
+        den passenden Punkt des datierten Snapshots ersetzt (Zuordnung ueber
+        `label`, die Segment-ID — nicht `arrival_time`/Index, siehe Spec
+        Known Limitations #2); traegt weder Anker- noch Snapshot-Punkt,
+        entfaellt der Punkt. Kennt der Anker den Tag ueberhaupt nicht (leere
+        `tages_idx` — der undatierte Anker traegt strukturell nur EINEN Tag,
+        siehe oben), wird der Tag wie bisher vollstaendig aus dem datierten
+        Snapshot uebernommen. Der Snapshot ``{trip_id}_{YYYY-MM-DD}.json``
+        wird dabei rein LESEND nachgezogen — kein Netzabruf, kein
+        Schreibvorgang (AC-7). Der Tagesfilter ist derselbe wie in
+        ``_aggregate_day``/``_fmt_timeline`` (Ortstag, #1795), damit ein
+        Rueckfall-Wegpunkt nicht in einen fremden Tag rutscht.
 
         ``tage`` ist eine Folge von ``(target_date, tz)``-Paaren. ``from_time``
         geht unveraendert an ``timeline_dated()`` weiter (Issue #2186) — der
@@ -1422,21 +1430,36 @@ class TripCommandProcessor:
         for target_date, tz in tage:
             tages_idx = [i for i, p in enumerate(timeline.points)
                          if local_dt(p.arrival_time, tz).date() == target_date]
-            if any(_traegt_tageswerte(timeline.points[i]) for i in tages_idx):
-                continue  # der Anker traegt den Tag mit Werten — er gewinnt (AC-4)
-            # Der Anker traegt fuer diesen Tag hoechstens inhaltsleere
-            # Fehler-Platzhalter (F005). Die werden verworfen: bleiben sie
-            # liegen, gewinnt „🌡 ?–? °C" gegen echte Werte aus dem datierten
-            # Snapshot — und wenn auch der nichts hergibt, verdecken sie die
-            # ehrliche Datenluecken-Meldung, weil die Punktliste der
-            # Formatierer dann nicht leer ist.
-            verworfen.update(tages_idx)
+            fehlend = [i for i in tages_idx if not _traegt_tageswerte(timeline.points[i])]
+            # Fall (a): Anker traegt JEDEN Punkt des Tages — er gewinnt (AC-4),
+            # kein Netzabruf.
+            if tages_idx and not fehlend:
+                continue
             datiert = extractor.timeline_dated(trip_id, target_date, from_time)
-            ergaenzt.extend(
+            tages_snapshot = [
                 p for p in datiert.points
                 if local_dt(p.arrival_time, tz).date() == target_date
-                and _traegt_tageswerte(p)
-            )
+            ]
+            if not tages_idx:
+                # Fall (b), der #1818-KERNFALL: der Anker kennt diesen Tag
+                # ueberhaupt nicht (strukturell nur EIN Tag pro Anker, siehe
+                # Docstring oben) — wie vor #2220 komplett aus dem Snapshot
+                # uebernehmen. NICHT mit Fall (c) zusammenlegen: `fehlend`
+                # waere hier immer leer und wuerde diesen Zweig faelschlich
+                # ueberspringen, ohne den Snapshot je zu holen.
+                ergaenzt.extend(p for p in tages_snapshot if _traegt_tageswerte(p))
+                continue
+            # Fall (c), der Mischfall (#2220 C5-38): nur die einzelnen
+            # nicht-tragenden Anker-Punkte werden ersetzt (bei Treffer) bzw.
+            # verworfen (sonst) — bleiben sie liegen, gewinnt „🌡 ?–? °C"
+            # gegen echte Werte, und wenn auch der Snapshot nichts hergibt,
+            # verdecken sie die ehrliche Datenluecken-Meldung.
+            snapshot_by_label = {p.label: p for p in tages_snapshot}
+            for i in fehlend:
+                verworfen.add(i)
+                ersatz = snapshot_by_label.get(timeline.points[i].label)
+                if ersatz is not None and _traegt_tageswerte(ersatz):
+                    ergaenzt.append(ersatz)
         if not ergaenzt and not verworfen:
             return timeline
         return dataclasses.replace(
