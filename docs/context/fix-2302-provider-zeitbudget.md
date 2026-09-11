@@ -7,11 +7,48 @@
 
 ## Request Summary
 
-Vier der fünf Wetterquellen prüfen ihr Zeitbudget nur **zwischen** zwei HTTP-Abrufen, nie
-**während** eines Abrufs. Ein einzelner Abruf gegen eine Gegenstelle, die die Verbindung
-annimmt und dann schweigt, kann das Budget um ein Vielfaches überziehen. Das Gegenmittel
-existiert bereits in `src/providers/openmeteo.py` (gebaut unter #1448 S3), ist aber kopiert
-statt geteilt.
+Vier der fünf Wetterquellen prüfen ihr Zeitbudget nur **zwischen** zwei `_request`-Aufrufen,
+nie **innerhalb** eines Aufrufs. Das Gegenmittel existiert bereits in
+`src/providers/openmeteo.py` (gebaut unter #1448 S3), ist aber kopiert statt geteilt.
+
+### 🔴 Präzise Fassung des Mechanismus — die lockere Formulierung führt in die Irre
+
+**Eine einzelne HTTP-Anfrage hängt NICHT unbegrenzt.** Alle fünf Provider bauen
+`httpx.Client(timeout=TIMEOUT)` mit `TIMEOUT = 30.0` als **Skalar** (`dwd.py:59`,
+`dwd_eu.py:78`, `meteofrance.py:78`, `geosphere.py:50`, `openmeteo.py:62`). Ein Skalar setzt
+bei httpx `connect`/`read`/`write`/`pool` **gleich** — die Read-Phase bricht nach 30 s mit
+`httpx.ReadTimeout` ab. Die Ticket-Bemerkung, es fehle `httpx.Timeout(connect=…, read=…)`,
+benennt daher **keinen** Defekt: der Skalar setzt `read` bereits.
+
+**Der Befund ist die ungebremste Summe der Retry-Kette**, nicht ein endloser Einzelabruf:
+`ReadTimeout` ist in allen vier `_is_retryable_error` wiederholbar (z. B. `dwd.py:139`), der
+Dekorator feuert 5 Versuche mit 2–60 s Backoff (`dwd.py:316-322`) — und **erst danach** kommt
+die Budgetprüfung wieder dran. Die Zusicherung muss also die **Kette** deckeln, nicht den
+einzelnen Versuch.
+
+### 🔴 Der eine wirklich unbegrenzte Fall — und er wird vom Vorbild NICHT gedeckt
+
+Das httpx-Timeout begrenzt die Wartezeit **auf das nächste Stück Daten**, nicht die
+Gesamtdauer der Antwort. Jedes eintreffende Byte stellt die Uhr zurück. Eine Gegenstelle,
+die langsam tröpfelt, läuft damit **unbegrenzt**.
+
+**Selbst gemessen** (lokaler Server, ein Byte alle 0,3 s, Skalar-Timeout 0,5 s):
+
+```
+ERFOLG nach 6.08s (Skalar-Timeout 0.5s, Body=20B)
+=> Faktor 12.2x ueber dem Timeout — Skalar deckelt die GESAMTDAUER NICHT.
+```
+
+Der Abruf galt als **Erfolg**, kein Timeout. Wichtig: Das Muster aus `openmeteo.py` hilft
+dagegen **ebenfalls nicht** — `min(TIMEOUT, restzeit)` (`:673`) ist wieder nur ein Skalar
+derselben Art, und `_stop_at_request_deadline` greift ausschließlich **zwischen** zwei
+Versuchen.
+
+**Folge für die Spec:** Der Fix deckelt die **Wiederholungskette** verlässlich. Er deckelt
+**nicht** eine einzelne, beliebig lang hingezogene Antwort. Das gehört als ausdrückliche
+Grenze in die Spec — sonst steht eine Zusicherung im Haus, die nicht hält. Ob der
+Tröpfel-Fall mitgenommen wird, ist eine eigene Entscheidung (**D6**); er braucht ein
+anderes Mittel als das kopierte Muster.
 
 ## Drei Korrekturen am Ticket — vor der Analyse zu klären
 
@@ -35,6 +72,14 @@ ebenfalls. Beide Stellen sind veraltet.
 Folgetick per `TryLock` übersprungen (`scheduler.go:127-132`, `:532-539`) — die
 Alarmprüfung findet in dem Zyklus nicht statt. Das ist die Schadensform, die die Spec
 adressieren muss.
+
+**🔴 Und die Änderung senkt die Dringlichkeit nicht, sie erhöht sie.** Die alten 120 s
+wirkten als **unfreiwilliger Notausgang**: Ein interner Stall wurde von außen nach rund
+zwei Minuten abgeschnitten, ob man wollte oder nicht. Mit 3000 s fehlt dieser Notausgang.
+Ein Stall von bis zu ~390 s je Abruf — bei DWD/ICON-EU mit Lauf-Rückfall bis zu ~3 × 390 s
+≈ 1170 s, also fast 20 Minuten (K3) — läuft jetzt **ohne jedes äußere Eingreifen** durch.
+Bei einem 15-Minuten-Takt heißt das: **potenziell mehr als ein** übersprungener Tick, nicht
+nur der Folgetick. Das gehört in die Begründung, nicht in eine Fußnote.
 
 ### K2 — Météo-France ist auf dem Gewitter-Pfad bereits geschützt
 
@@ -68,9 +113,33 @@ dort bei rund **drei mal 390 s**. (Bei Météo-France nicht, s. K2.)
 | `meteofrance.py` | Grund `180.0` (`:93`) · Gewitter `45.0` (`:114`) | `:501` zwischen Offsets · `:632` je (Gruppe × Offset), **unter** dem Cache-Zugriff `:628` · `:680` zwischen Lauf-Kandidaten | Grund **keiner** (`:434`) → 30 s · Gewitter **`timeout=restzeit`** (`:647`) | 5 ×, 2–60 s, `{500,502,503,504}` — Gewitterpfad **ohne** Retry |
 | `geosphere.py` | **keines** | **keine** | `:320` **keiner** → 30 s · `:429` fest `3.0` · `:546` fest `10.0` | 5 ×, 2–60 s, **`{502,503,504}` — ohne 500**; `:429`/`:546` ohne Retry |
 
-Alle vier bauen den Client mit einem **Skalar**-Timeout, nirgends
-`httpx.Timeout(connect=…, read=…)`: `dwd.py:310`, `dwd_eu.py:299`, `meteofrance.py:412-415`,
-`geosphere.py:223`.
+Alle vier bauen den Client mit einem **Skalar**-Timeout: `dwd.py:310`, `dwd_eu.py:299`,
+`meteofrance.py:412-415`, `geosphere.py:223`. Das ist für sich **kein** Defekt (s. Request
+Summary) — der Skalar setzt `read` mit.
+
+### Der sechste HTTP-Pfad im Alarm-Lauf — vollständigkeitshalber
+
+Die Rede von „vier von fünf Quellen" verschweigt einen weiteren Alarm-relevanten
+Aufrufpfad: **`src/services/radar_service.py:849`** baut `httpx.Client(timeout=HTTPX_TIMEOUT)`
+mit `HTTPX_TIMEOUT = 8.0` (`:143`). Aufgerufen im **selben** Alarm-Lauf über
+`trip_alert.py:1460-1465` (`_get_radar_service`) und `trip_alert.py:1587`
+(`check_radar_alerts`); Regen-/Radar-Alarme sind eine reguläre Alarmart.
+
+**Bewertung: unkritisch — aber geprüft, nicht übergangen.** Das Modul hat **keinen**
+`@retry`-Dekorator (gezielter Grep: keine Treffer). Die Problemklasse „Retry-Kette summiert
+sich" existiert dort also nicht; ein Einzelabruf bleibt durch den 8-s-Skalar gedeckelt.
+Der Tröpfel-Fall (D6) gilt allerdings auch hier.
+**Zu entscheiden:** Soll der Baustein so gebaut sein, dass ein künftiger Retry in
+`radar_service.py` nicht dieselbe Lücke aufreißt?
+
+Ebenfalls geprüft und **zurecht draußen**: `brightsky.py` (`TIMEOUT = 8.0`) ist zwar in
+`base.py:296-297` registriert, wird aber nur von `validator_render_service.py` benutzt,
+nicht von `region_routing.py` oder dem Alarm-Pfad.
+
+**Ungeklärt, nicht entlastet:** `services/official_alerts/meteoalarm_feed.py:55`
+(`TIMEOUT = 15.0`, Aufruf `:209`) — der Weg bis in den Alarm-Lauf ließ sich nicht
+zurückverfolgen, er ist in `trip_alert.py` nicht referenziert. In `/30-write-spec` zu
+klären oder ausdrücklich als außerhalb zu erklären.
 
 ### `geosphere.py` ist der Ausreißer
 
@@ -487,6 +556,20 @@ lassen. Dabei ist die dortige Begründung zu entkräften oder zu übernehmen, ni
 dem Bestand: `test_send_slot_and_fetch_deadline.py` und `test_thunder_budget_and_failsoft.py`
 messen sehr wohl Wanduhrzeit, mit großzügigem Sicherheitsabstand
 (`dauer < (_ANTWORTZEIT_S + _ZEITGRENZE_S)/2`).
+
+**D6 — Wird der Tröpfel-Fall mitgenommen?**
+Die einzige wirklich unbegrenzte Lücke (s. Request Summary, selbst gemessen: Faktor 12,2)
+wird vom kopierten Muster **nicht** geschlossen. Sie bräuchte eine Obergrenze auf die
+**Gesamtdauer** einer Antwort — httpx bietet dafür keinen eingebauten Parameter, es wäre
+ein eigenes Mittel (z. B. Streaming mit Fristprüfung je Chunk, oder ein Wachhund-Thread).
+Drei Wege: (a) mitnehmen, (b) ausdrücklich als Grenze in die Spec schreiben und
+vertagen (eigenes Ticket), (c) verschweigen — **(c) scheidet aus**.
+Gegen (a) spricht, dass es den Fix verdoppelt und eine Bauform braucht, für die es im Haus
+kein Vorbild gibt. Für (b) spricht, dass echte Wetterdienste eher schweigen als tröpfeln.
+
+**D7 — Deckt der Baustein auch künftige Nutzer?**
+`radar_service.py` hat heute keinen Retry und ist deshalb unkritisch. Soll der Baustein so
+geschnitten sein, dass ein dort später ergänzter Retry die Lücke nicht erneut öffnet?
 
 ## Risks & Considerations
 
