@@ -161,6 +161,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/telegram-status` | GET |
 | `/api/auth/tier-change-request` | POST |
 | `/api/auth/verify-email` | POST |
+| `/api/auth/verify-email/resend` | POST |
+| `/api/auth/verify-email/staging-token` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404) |
 | `/api/briefings` | GET, POST |
 | `/api/briefings/{id}` | DELETE, GET, PUT |
 | `/api/cockpit/status` | GET |
@@ -3162,6 +3164,96 @@ ausschließlich aus dem Auth-Kontext, ein Request-Parameter hat keine Wirkung.
 - Vollständige Erlaubnis-/Ausnahmeliste, Pfadsicherheit im Archiv und Mandantentrennung:
   `docs/specs/modules/user_data_export.md`.
 
+#### POST /api/auth/verify-email/resend
+
+Löst erneut den Versand der Bestätigungsmail aus (Issue #2304, Vorbereitung der Login-Pflicht
+aus #2271/Epic #2138). Öffentlich — exakter Pfad in der Public-Allowlist von `AuthMiddleware`
+(der Eintrag für `/api/auth/verify-email` ist ein reiner Gleichheitsvergleich und deckt diesen
+Unterpfad nicht mit ab, deshalb ein eigener Allowlist-Eintrag). Nutzlast enthält bewusst nur die
+Nutzerkennung, keine Adresse — verhindert Adress-zu-Konto-Zuordnung, analog
+`ForgotPasswordHandler`.
+
+**Request Body:**
+```json
+{
+  "username": "henning"
+}
+```
+
+**Response 200 (immer, enumerationsfrei):**
+```json
+{"status": "ok"}
+```
+
+Antwortet identisch — Statuscode und Body — unabhängig davon, ob das Konto existiert, bereits
+bestätigt ist, keine Kontaktadresse hinterlegt hat, oder die Nutzlast unparsebar/leer ist. Bei
+existierendem, unbestätigtem Konto **mit** Kontaktadresse (`mail_to`, ersatzweise `email`) wird
+intern `dispatchVerificationMail` aufgerufen — dieselbe Versandlogik wie beim ursprünglichen
+Registrierungsflow, kein neuer Codepfad.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Mehr als 5 Aufrufe/Stunde von derselben IP (`NewIPRateLimiter(5, time.Hour)`, Muster `forgotLimiter`) |
+
+**Notes:**
+- Mail-Versand ist "fire and forget" (Goroutine + 20s-Timeout, wie bei `ForgotPasswordHandler`
+  und `POST /api/auth/tier-change-request`).
+- Details, Enumerationsschutz-AC, Nachweisführung ohne Live-Mailversand:
+  `docs/specs/modules/email_verify_vorbereitung_2304.md`.
+
+#### POST /api/auth/verify-email/staging-token
+
+**Existiert ausschließlich, wenn der Dienst mit `GZ_ENV=staging` läuft** — in Produktion ist die
+Route nicht registriert und liefert den normalen Chi-404 (kein Handler-Body). Registrierung:
+`internal/router/router.go`, gleiches Muster wie andere `GZ_ENV`-gegateten Routen (#830).
+
+**Anmeldepflichtig** (Session-Cookie via `AuthMiddleware`) — bewusst **nicht** in der Public-
+Allowlist und bewusst **nicht** unter einem der pauschal freigeschalteten Präfixe
+(`/api/debug/`, `/api/internal/`, `/api/webhooks/telegram/`), da diese die Anmeldepflicht
+aufheben würden.
+
+Zweck: Auf Staging sind Auth-Mails strukturell nicht zustellbar (Egress-Sperre #1337,
+Resend-Sperre), zur Laufzeit angelegte E2E-Test-Konten brauchen aber einen Weg an ihr
+Verifikations-Token, um die künftige Login-Pflicht (#2271) dort überhaupt prüfbar zu machen.
+
+**Request Body:**
+```json
+{
+  "username": "e2e-758"
+}
+```
+
+**Response 200:**
+```json
+{"token": "<Klartext-Verifikations-Token>"}
+```
+
+Gibt **nur** das Token heraus und setzt `email_verified_at` **nicht** selbst — einziger Schreiber
+dieses Feldes bleibt `POST /api/auth/verify-email` (`VerifyEmailHandler`), der das gelieferte
+Token danach entgegennimmt. Der Testweg prüft damit den echten Produktionspfad mit, statt ihn zu
+umgehen. Gilt auch für bereits bestätigte Konten (liefert ein Token, ohne den bestehenden
+Zeitstempel anzurühren).
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid request"}` | JSON nicht dekodierbar, `username` leer, oder pfad-unsichere Kennung (`store.ValidUserID`) |
+| 401 | (via `AuthMiddleware`) | Kein gültiges Session-Cookie |
+| 404 | `{"error":"unknown user"}` | Kein Konto zu `username` gefunden |
+| 404 | (Chi-Default, kein JSON-Body) | Route nicht registriert — jeder Aufruf außerhalb von `GZ_ENV=staging`, insbesondere Produktion |
+| 500 | `{"error":"internal error"}` | Token-Erzeugung fehlgeschlagen |
+
+**Notes:**
+- Ein angemeldeter Staging-Nutzer kann über diesen Weg ein Token für ein beliebiges fremdes
+  Konto anfordern — der Handler prüft nur, DASS jemand angemeldet ist, nicht WESSEN Konto
+  verifiziert werden soll. Gilt als hinnehmbar, weil der Endpoint in Produktion nicht existiert
+  und kein Informationsgewinn gegenüber dem regulären Resend-Weg entsteht (Details/Risiko-
+  Abwägung: Spec, Abschnitt „Risiko").
+- Spec: `docs/specs/modules/email_verify_vorbereitung_2304.md`.
+
 ### User Model Extensions
 
 **File:** `internal/model/user.go`
@@ -3889,6 +3981,12 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-11: Issue #2304 (Epic #2138, S1 von #2271/#2146) — zwei neue Endpunkte: `POST
+  /api/auth/verify-email/resend` (öffentlich, enumerationsfrei, 5/h-Ratenlimit, löst erneuten
+  Bestätigungsmail-Versand aus) und `POST /api/auth/verify-email/staging-token` (existiert nur
+  bei `GZ_ENV=staging`, sonst 404; anmeldepflichtig; liefert ein Verifikations-Token ohne
+  Mailversand, setzt `email_verified_at` nicht selbst). Details Section 19,
+  `docs/specs/modules/email_verify_vorbereitung_2304.md`.
 - 2026-09-09: Issue #2270 (Epic #2138) — neuer Endpoint `GET /api/auth/export` liefert dem
   angemeldeten Nutzer seinen Datenbestand als ZIP-Archiv aus (DSGVO Art. 20), lesende
   Gegenrichtung zu `DELETE /api/auth/account`. Geheimnisse (`sessions.json`,

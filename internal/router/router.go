@@ -64,6 +64,21 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/auth/verify-email",
 		verifyLimiter.Middleware(handler.VerifyEmailHandler(deps.Store)).ServeHTTP,
 	)
+	// Issue #2304 — erneuter Versand der Bestätigungsmail (public, exakter
+	// Eintrag in der Public-Allowlist; der Eintrag /api/auth/verify-email ist
+	// ein Pfadvergleich und deckt diesen Unterpfad NICHT mit ab).
+	resendVerifyLimiter := authmw.NewIPRateLimiter(5, time.Hour)
+	r.Post("/api/auth/verify-email/resend",
+		resendVerifyLimiter.Middleware(handler.ResendVerificationHandler(deps.Store, *deps.Config)).ServeHTTP,
+	)
+	// Issue #2304 — staging-only Testweg (Muster #830 unten): gibt das
+	// Verifikations-Token ohne Mailversand heraus. ANMELDEPFLICHTIG — bewusst
+	// NICHT in der Public-Allowlist und bewusst nicht unter /api/debug/,
+	// /api/internal/ oder /api/webhooks/telegram/, die AuthMiddleware pauschal
+	// freigibt.
+	if os.Getenv("GZ_ENV") == "staging" {
+		r.Post("/api/auth/verify-email/staging-token", handler.StagingVerificationTokenHandler(deps.Store))
+	}
 	r.Delete("/api/auth/account", handler.DeleteAccountHandler(deps.Store))
 	// Issue #2270: Datenexport nach DSGVO Art. 20 — authentifiziert, bewusst
 	// NICHT in der Public-Allowlist von AuthMiddleware.
