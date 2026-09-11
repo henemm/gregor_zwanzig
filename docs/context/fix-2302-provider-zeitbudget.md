@@ -393,6 +393,61 @@ heute korrekte Quelle im Alarm-Pfad an. Und: **Wie kommt die providereigene Fris
 (25/45/60/150/180 s) an einen geteilten Dekorator**, ohne das prozessweit geteilte
 `Retrying`-Objekt anzufassen, das die Tests patchen?
 
+#### 🔴 Die harte Randbedingung: der Wert muss LAUFZEIT-spät aufgelöst werden
+
+Der `@retry`-Dekorator wird zur **Import-Zeit** ausgewertet (`openmeteo.py:620-626`). Alle
+fünf einschlägigen Tests patchen das Modul-Global zur **Laufzeit** (`:409`, `:413`, `:597`,
+`:645`, `:709`).
+
+**Eine Closure über den Wert** (`_make_hook(60.0)` beim Dekorieren) **fröre ihn ein** — die
+Patches liefen ins Leere, die Tests würden grün, ohne noch etwas zu bewachen. Das ist das
+Ausschlusskriterium, an dem die naheliegendste Bauform scheitert, und es ist genau die
+Falle „Test misst die Zusicherung nicht mehr".
+
+Zwei tragfähige Wege, an den providereigenen Wert zu kommen — beide über `retry_state`:
+
+- `retry_state.args[0]` **ist der Provider selbst** (`_request` ist eine gebundene Methode,
+  `self` steht im Positionsargument; im `retry_with`-Pfad explizit sichtbar,
+  `openmeteo.py:1087`). Ein geteilter Hook könnte
+  `getattr(retry_state.args[0], "FETCH_DEADLINE_SECONDS")` lesen: **eine** Funktion für alle
+  fünf Dekoratoren, Wert je Provider, Auflösung zur Laufzeit.
+- (zweiter Weg vom Agenten angerissen, in `/20-analyse` auszuarbeiten)
+
+**Zusatzkomplikation:** Es ist nicht „ein Wert je Provider", sondern teilweise **zwei
+Fristen im selben Modul** — `FETCH_DEADLINE_SECONDS` (dwd `:69` 180,0 · meteofrance `:93`
+180,0 · openmeteo `:74` 60,0) gegen `THUNDER_FETCH_DEADLINE_SECONDS` (dwd `:119` 150,0 ·
+meteofrance `:114` 45,0 · dwd_eu `:134` 25,0). Ein Unterscheidungsmerkmal auf **Modulebene
+reicht nicht**.
+
+#### Was die Vorlagen-Spec verbindlich macht
+
+`docs/specs/modules/fix_1448_s3_telegram_openmeteo.md` (477 Zeilen, Status `draft`,
+Approval-Kästchen **ungehakt**):
+
+- Verbindlich ist ausdrücklich nur das **Ergebnis** — Versuchszahl *und* verstrichene Zeit
+  beide durch die Restzeit begrenzt —, **nicht die Bauform** (`:190-199`). Wir sind in der
+  Wahl des geteilten Bausteins also frei.
+- Die Team-Lead-Präzisierung nach der RED-Phase (`:157-176`) verwirft den ursprünglichen
+  `deadline_at=None`-Default mit der Begründung: **„eine Absicherung, die man vergessen
+  kann einzuschalten, ist im Ernstfall keine."** Der `before`-Hook-Ersatzweg ist damit eine
+  **geforderte Eigenschaft**, kein Nebenprodukt — und muss im geteilten Baustein erhalten
+  bleiben.
+- Die Spec notiert selbst als Nebenbefund, dass `dwd.py` dieselbe Lücke noch hat
+  (`:436-440`), und dass die Provider-**Kette** als Ganzes weiterhin kein Budget hat
+  (`:428-435`). #2302 ist die Einlösung des ersten Punktes, nicht des zweiten.
+
+#### Schwachstelle der Vorlagen-Tests, die wir nicht erben sollten
+
+Fünf von acht Tests dort messen die Wanduhr. Aber: **Beide AC-6-Tests neutralisieren die
+Wartepausen per `wait_none()`** (`:594-595`, `:642-643`) — und schalten damit genau den
+Faktor aus, den die Zeitgrenze begrenzen soll. Nur `test_stop_condition_limits_retry_backoff_within_deadline`
+(`:673-729`) lässt sie spürbar stehen (`wait_fixed(1.5)`, `:711`).
+
+**Folge für unsere ACs:** Mindestens eine Zusicherung muss den Retry-Backoff **stehen
+lassen**, sonst misst sie den Abruf-Timeout und übersieht die Wartepausen — und die machen
+in der 390-Sekunden-Rechnung des Tickets den größeren Anteil aus (4 × bis 60 s gegen
+5 × 30 s).
+
 **D2 — Bekommt `geosphere.py` ein Budget?**
 Dort eines *einzuführen* ist neues Verhalten, nicht Härtung: Es kann Abrufe abbrechen, die
 heute langsam, aber erfolgreich durchlaufen — nutzersichtbar als fehlende Wetterdaten.
