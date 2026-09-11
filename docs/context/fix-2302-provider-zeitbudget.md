@@ -136,10 +136,30 @@ Ebenfalls geprüft und **zurecht draußen**: `brightsky.py` (`TIMEOUT = 8.0`) is
 `base.py:296-297` registriert, wird aber nur von `validator_render_service.py` benutzt,
 nicht von `region_routing.py` oder dem Alarm-Pfad.
 
-**Ungeklärt, nicht entlastet:** `services/official_alerts/meteoalarm_feed.py:55`
-(`TIMEOUT = 15.0`, Aufruf `:209`) — der Weg bis in den Alarm-Lauf ließ sich nicht
-zurückverfolgen, er ist in `trip_alert.py` nicht referenziert. In `/30-write-spec` zu
-klären oder ausdrücklich als außerhalb zu erklären.
+**Amtliche Warnungen — geklärt, außerhalb der Problemklasse.** Der Pfad **ist** Teil des
+Alarm-Laufs: `trip_alert.py:2579` importiert `get_official_alerts_for_location`, Aufruf
+`:2631`. Dahinter liegen sieben HTTP-Quellen — und alle sind anders gebaut als die
+Wetterprovider:
+
+| Quelle | Timeout am Abruf |
+|---|---|
+| `meteoalarm.py:43` / Aufruf `:743` | `8.0` |
+| `meteoalarm_feed.py:55` / `:209` | `15.0` |
+| `dpc.py:48` / `:162` | `15.0` |
+| `massif_closure.py:37` / `:106` | `15.0` |
+| `geosphere_warn.py:35` / `:96` | `8.0` |
+| `meteo_forets.py:44` / `:88` | `8.0` |
+| `vigilance.py:38` / `:91` | `8.0` |
+
+**Jede** gibt `timeout=` am Aufruf explizit mit, und **keine** verwendet den
+tenacity-`@retry` mit 5 Versuchen und 2–60 s Backoff — die Problemklasse von #2302
+existiert dort nicht. `meteoalarm.py` hat sogar ein eigenes Zeitbudget
+(`_PAGE_FETCH_BUDGET_SECONDS = 20.0`, `:129`, ausgewertet `:677`).
+
+**Ein Restvorbehalt:** `meteoalarm.py:80` `_rate_limit_retry_policy()` /
+`RateLimitRetryPolicy` (`:714`, `:783`) ist ein eigener Wiederholungsweg für 429-Antworten.
+Er ist nicht geprüft worden. Er gehört fachlich zu **#1993** (429-Sichtbarkeit), nicht
+hierher — aber er sollte dort einmal auf dieselbe Frage abgeklopft werden.
 
 ### `geosphere.py` ist der Ausreißer
 
@@ -477,10 +497,17 @@ Zwei tragfähige Wege, an den providereigenen Wert zu kommen — beide über `re
 
 - `retry_state.args[0]` **ist der Provider selbst** (`_request` ist eine gebundene Methode,
   `self` steht im Positionsargument; im `retry_with`-Pfad explizit sichtbar,
-  `openmeteo.py:1087`). Ein geteilter Hook könnte
-  `getattr(retry_state.args[0], "FETCH_DEADLINE_SECONDS")` lesen: **eine** Funktion für alle
-  fünf Dekoratoren, Wert je Provider, Auflösung zur Laufzeit.
-- (zweiter Weg vom Agenten angerissen, in `/20-analyse` auszuarbeiten)
+  `openmeteo.py:1087`).
+- **🔴 Aber `getattr(provider, "FETCH_DEADLINE_SECONDS")` scheitert.** Die Konstante ist
+  Modul-Global (`openmeteo.py:74`), **kein** Attribut der Klasse. Selbst gemessen:
+  `hasattr(OpenMeteoProvider, "FETCH_DEADLINE_SECONDS") → False`. Und sie als
+  Klassenattribut zu **spiegeln** fiele in genau die verbotene Falle: Die Tests patchen
+  `om_module.FETCH_DEADLINE_SECONDS` (`test_send_slot_and_fetch_deadline.py:413`, `:597`,
+  `:645`) — eine Kopie am Klassenobjekt sähe den Patch nie.
+- **Tragfähig: eine Accessor-Methode je Provider**, die den Modul-Global bei **Aufruf**
+  frisch liest. Der geteilte Hook schließt dann über den **stabilen Methodennamen**, nie
+  über den **volatilen Wert** — das ist der Unterschied zur verbotenen Closure. Details in
+  der Analyse unten.
 
 **Zusatzkomplikation:** Es ist nicht „ein Wert je Provider", sondern teilweise **zwei
 Fristen im selben Modul** — `FETCH_DEADLINE_SECONDS` (dwd `:69` 180,0 · meteofrance `:93`
@@ -586,3 +613,170 @@ geschnitten sein, dass ein dort später ergänzter Retry die Lücke nicht erneut
   er bleibt sonst auf dem Spec-Commit-Wert.
 - **Die Nachweis-Tests binden echte lokale Sockets.** Literal benennen, nie unter
   `--disable-socket` ohne `--allow-hosts=127.0.0.1` laufen lassen.
+
+---
+
+# Analysis (Phase 2)
+
+## Type
+
+**Bug** (Label `bug`, `priority:medium`, `area:weather`). Strukturbefund ohne beobachteten
+Vorfall — die Dringlichkeit ruht auf dem Mechanismus, nicht auf einem Zwischenfall.
+
+## D1 — Geteilter Baustein `src/providers/http.py`, MIT Migration von `openmeteo.py`
+
+Ohne Migration entstünden fünf Varianten statt vier. Das Risiko ist begrenzt, weil
+`openmeteo.py` bereits einen vollständigen Wanduhr-Testsatz hat
+(`test_send_slot_and_fetch_deadline.py`), der als Regressionsnetz dient: Die Migration ist
+ein **reiner Mechanik-Tausch**, keine Verhaltensänderung — der Nachweis lautet „derselbe
+Test bleibt **unverändert** grün".
+
+**Der Weg zur providereigenen Fristdauer: Accessor-Methode.**
+
+```python
+# je Provider-Modul, z. B. openmeteo.py
+def _fetch_deadline_seconds(self) -> float:
+    return FETCH_DEADLINE_SECONDS   # Modul-Global, Lookup zur AUFRUFZEIT
+```
+
+Der geteilte Hook schließt über den **Methodennamen** (stabil), nicht über den **Wert**
+(volatil, von Tests gepatcht). Schnittstelle in `src/providers/http.py`:
+
+| Funktion | Aufgabe |
+|---|---|
+| `make_deadline_before_hook(deadline_attr: str)` | Fabrik; setzt `kwargs["deadline_at"]`, wenn keiner übergeben wurde. **Kein** `getattr`-Default — fehlt der Accessor, soll es knallen, nicht still `None` liefern. |
+| `stop_at_deadline(retry_state) -> bool` | generisch, keine Fabrik nötig; liest nur den kwarg-Namen, den alle gleich nennen |
+| `capped_timeout_or_raise(*, provider_name, base_timeout, deadline_at, budget_label, budget_seconds)` | `openmeteo.py:666-673` verallgemeinert; Fehlertext-Bausteine kommen vom Aufrufer, damit jede Datei ihren Wortlaut behält |
+
+**Jeder Provider baut seinen `@retry(...)` weiterhin selbst** — es entsteht **kein**
+gemeinsames `Retrying`-Objekt.
+
+**Prüfbare Invariante (Randbedingung 3), heute bereits erfüllt — selbst gemessen:**
+
+```
+DwdDirectProvider._request.retry is MeteoFranceDirectProvider._request.retry  -> False
+DwdDirectProvider._request.retry is OpenMeteoProvider._request.retry          -> False
+```
+
+Diese Eigenschaft muss der Fix **erhalten**; sie ist die Grundlage dafür, dass die
+bestehenden Patches auf `OpenMeteoProvider._request.retry.wait`
+(`test_send_slot_and_fetch_deadline.py:411`, `:595`, `:643`) nur den eigenen Provider
+treffen. Gehört als Adversary-Prüfpunkt in die Spec.
+
+### 🔴 `dwd.py` ist der einzige echte Dual-Fall
+
+Zwei Budgets (`:69` Grund 180 s, `:119` Gewitter 150 s), aber **ein** `@retry`-dekoriertes
+`_request` (`:323`), das **beide** Pfade bedient (`:348` Grund, `:371` Gewitter). Ein
+`before`-Hook kann nicht zwei Vorgabewerte haben.
+
+**Auflösung:** Beide Aufrufer berechnen ihr `deadline_at` **heute schon** lokal (`:450`
+Gewitter, `:541` Grund) — es wird nur nicht durchgereicht. Also `_request(self, url,
+deadline_at=None)`, beide Call-Sites reichen ihren vorhandenen Wert explizit durch. Der
+Hook feuert dann nur noch als **Netz für den vergessenen Fall**, und sein Vorgabewert muss
+die **weitere** Hülle sein (180 s), nie 150 s — sonst verkürzte er im Netzfall heimlich den
+Gewitterpfad.
+
+Gegenprobe: `meteofrance.py`s `_request` bedient **nur** Grund (Gewitter geht per K2 direkt
+an `_request_once`), `dwd_eu.py` hat **nur** ein Budget. Für alle außer `dwd.py` genügt
+„ein Accessor je Modul".
+
+### Bewusst NICHT geteilt (kein Versehen)
+
+- `RETRY_STATUS_CODES` bleibt divergent. `meteofrance.py:86` dokumentiert die 500 explizit
+  als Reaktion auf Adversary #1143 F002 — Vereinheitlichen wäre eine stille
+  Verhaltensänderung mit eigener Vorgeschichte.
+- `_is_retryable_error` bleibt je Modul (nur openmeteo hat den `__cause__`-Zweig `:277-282`).
+- `RETRY_ATTEMPTS`/`WAIT_MIN`/`WAIT_MAX` (überall 5/2/60) **könnten** wandern — optional,
+  nicht Teil der Zusicherung; bei LoC-Druck weglassen.
+
+## D2 — `geosphere.py` bekommt ein Budget (einführen, nicht vertagen)
+
+Einzige Quelle ganz ohne Budget **und** über `region_routing.py:34` → `at_direct` am
+Alarm-Pfad. Genau das Profil, das Epic #2257 Block 2 adressiert; Vertagen ließe den
+größten Einzelposten liegen.
+
+- **Wert:** `FETCH_DEADLINE_SECONDS = 180.0`, analog dwd/meteofrance
+- **Umsetzung:** eine **gemeinsame** Frist über die drei sequenziellen Abrufe in
+  `fetch_combined` (`:588` → NWP `:618`, SNOWGRID `:623`, Wolken `:641`), nach dem Muster
+  `openmeteo.py:1010` — einmal bilden, an alle drei durchreichen
+- **Bei Überschreiten:** `ProviderRequestError`, **kein** stilles Leerergebnis (ADR-0018)
+- **Unberührt bleiben** `:429` (fest 3,0 s) und `:546` (fest 10,0 s) — anderer Aufrufpfad
+
+## D5 — Wanduhr-Test ergänzen und entmarkern, Zähl-Test behalten
+
+Die dortige Begründung („ein Laufzeit-Test misst die Maschine, nicht die Zeitgrenze") ist
+durch den eigenen Bestand widerlegt: `test_send_slot_and_fetch_deadline.py` und
+`test_thunder_budget_and_failsoft.py:133` messen Wanduhrzeit erfolgreich — mit **großzügigem
+Sicherheitsabstand** statt knapper Schwelle. Eine hart hängende Gegenstelle liegt
+Größenordnungen über jedem Maschinen-Jitter.
+
+- In **derselben Datei** einen Wanduhr-Test gegen `_HangingServer` ergänzen (httpx-Kopie
+  aus `test_send_slot_and_fetch_deadline.py:140-188` **übernehmen, nicht nachbauen**)
+- **Plus Normalfall-Gegenprobe** (Muster `:439`) — sonst wäre „bricht alles sofort ab" grün
+- `@pytest.mark.timeout(N)` je Hänger-Test (globaler Default 30 s, `pyproject.toml:69`)
+- **`live`-Marker (Z. 31) entfernen** (D4) — sonst bleibt auch die neue Zusicherung unsichtbar
+- **Zähl-Test nicht löschen:** Er prüft eine andere, echte Eigenschaft (Signal-Reihenfolge
+  unter Budgetdruck). Nur seine Docstring-Behauptung, das genüge als Zeitgrenzen-Nachweis,
+  wird korrigiert.
+
+## D6 / D7
+
+**D6 (Tröpfel-Fall):** Weg **(b)** — als ausdrückliche Grenze in die Spec, eigenes Ticket.
+Er bräuchte eine Obergrenze auf die Gesamtdauer einer Antwort, wofür httpx keinen Parameter
+hat und im Haus kein Vorbild existiert; echte Wetterdienste schweigen eher als sie tröpfeln.
+**Verschweigen scheidet aus.**
+
+**D7 (`radar_service.py`):** heute unkritisch (kein Retry). Der Baustein wird so gebaut,
+dass ein späterer Retry ihn **nutzen kann** — `radar_service.py` wird in diesem Fix
+**nicht** angefasst.
+
+## Schnitt — drei Scheiben
+
+| Scheibe | Inhalt | Warum eigenständig wertvoll | LoC |
+|---|---|---|---|
+| **A** | `src/providers/http.py` + openmeteo-Migration + meteofrance-**Grundpfad** | Der Baustein bekommt **sofort zwei** verschiedene Nutzer (beweist Generizität) und schließt die von K2 benannte Lücke | ~180–220 |
+| **B** | `dwd.py` (Grund + Gewitter, ein `_request` mit durchgereichtem `deadline_at`) + `dwd_eu.py` (Gewitter) + D5-Testüberarbeitung | Beide Dateien identisches Muster — ein Adversary-Durchgang deckt beide | ~180–220 |
+| **C** | `geosphere.py` (D2) | Höchster Einzel-Risiko-Posten: Alarm-Pfad, bisher null Budget | ~110–140 |
+
+Reihenfolge **A → B → C**. Keine Scheibe ist „nur Baustein" oder „nur Geosphere ohne
+Nutzer" — A trägt beides. **Jede Scheibe bleibt einzeln unter 250 LoC, kein Override
+nötig**; als ein Workflow würde es das Limit klar sprengen.
+
+**Während TDD-RED zu prüfen (K3, billig):** In `dwd.py` tragen `_fetch_series` (`:332`) und
+`_thunder_point` (`:352`) ihr `deadline_at` bereits lokal. Wird es **eine Ebene tiefer** in
+den Lauf-Rückfall (`:364-391`) durchgereicht, schließt das den 3×-Multiplikator mit —
+reines Parameter-Durchreichen, keine neue Logik. Falls doch nicht trivial: **ausdrücklich
+als offenen Rest benennen**, nicht stillschweigend weglassen.
+
+## Risiko
+
+**Die einzige echte Verhaltensverschlechterung:** Der neue Deckel `min(base_timeout,
+restzeit)` kann am **Ende** einer langen Offset-Schleife **unter** die heutigen festen 30 s
+fallen. `dwd.py:341` schützt heute nur **zwischen** Offsets, nicht den gerade laufenden
+Request — ein Abruf, der heute in 25 s durchkäme, kann nach dem Fix mit 5 s Restzeit
+scheitern. Das ist die **gewollte** Wirkung, aber die einzige Stelle, an der heute
+erfolgreiche (nur langsame) Abrufe neu kippen. **Im PR explizit benennen.**
+
+- **Geteiltes `Retrying`-Objekt:** Wird der Baustein versehentlich als **ein**
+  Modul-Level-Dekorator-Objekt gebaut statt als je Provider aufgerufene Fabrik, patchen
+  sich Tests gegenseitig kaputt. → Invariante oben, Adversary-Prüfpunkt.
+- **Bestehende Monkeypatches:** `test_send_slot_and_fetch_deadline.py:409-413`, `:593-597`,
+  `:641-645` patchen `om_module.TIMEOUT`/`om_module.FETCH_DEADLINE_SECONDS` direkt. Der
+  Migrationspfad darf diese **Modul-Globals nicht** nach `http.py` verschieben oder
+  umbenennen — sonst brechen vier Tests strukturell.
+- **Nie beobachtet:** Der Nachweis bleibt Konstruktion gegen `_HangingServer`; es gibt
+  keinen Live-Vorfall zu reproduzieren.
+
+## Deckungskarte — damit die Spec nicht überverspricht
+
+| Quelle | Nach dem Fix gedeckt | **Nicht** gedeckt |
+|---|---|---|
+| `openmeteo` | migriert, Verhalten unverändert | Kandidatenschleife/Anreicherungskette (ADR-0038-Gebiet) |
+| `dwd` | Grund + Gewitter | K3-Lauf-Rückfall, außer das Zusatz-Durchreichen gelingt |
+| `dwd_eu` | Gewitter (einziges Budget) | K3, wie dwd |
+| `meteofrance` | Grund (Gewitter war per K2 schon gedeckt) | K3 im Lauf-Rückfall (`:641`) |
+| `geosphere` | `fetch_combined`-Gesamtfrist | `:429`/`:546` bewusst unberührt |
+| **alle** | Retry-**Kette** gedeckelt | **Tröpfel-Fall (D6)** — einzelne, beliebig lang hingezogene Antwort |
+
+In **keinem** Fall Gegenstand von #2302: Cross-Provider-Totalausfall-Weiche und
+Gewitter-Vertretung (beide ADR-0047 Entscheidung 6, eigenes volles Budget per PO-Entscheid).
