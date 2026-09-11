@@ -183,6 +183,13 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 
 		// Success: single-use → delete entry, sign session, set cookie.
 		otpStore.Delete(normalizedEmail)
+
+		// Issue #2304 (AC-4/AC-5): der Empfang des Codes beweist den Besitz
+		// von normalizedEmail. Deckt sich das mit der effektiven
+		// Kontaktadresse, heilt die Bestätigung sich selbst — sonst nicht.
+		// Die Anmeldung darunter läuft in beiden Fällen weiter.
+		selfHealEmailVerification(s, entry.userID, normalizedEmail)
+
 		if !issueSession(w, r, s, entry.userID, cfg.SessionSecret) {
 			return
 		}

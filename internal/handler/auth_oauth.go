@@ -163,6 +163,13 @@ func googleOAuthCallbackHandlerInternal(cfg *config.Config, s *store.Store, user
 		var userId string
 		if existingUser != nil {
 			userId = existingUser.ID
+			// Issue #2304 (AC-6): Google hat userinfo.Email bestätigt
+			// (email_verified oben erzwungen). Deckt sich das mit der
+			// effektiven Kontaktadresse, heilt die Bestätigung sich selbst.
+			// NUR im Bestands-Zweig: neu angelegte OAuth-Konten durchlaufen
+			// den #1226-Double-Opt-In über dispatchVerificationMail unten —
+			// eine Vorab-Bestätigung würde den wirkungslos machen.
+			selfHealEmailVerification(s, userId, userinfo.Email)
 		} else {
 			newUser, err := createOAuthUser(s, "google", userinfo.Sub, userinfo.Email)
 			if err != nil {

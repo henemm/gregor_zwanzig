@@ -52,6 +52,11 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 				r.URL.Path == "/api/auth/logout" ||
 				r.URL.Path == "/api/auth/forgot-password" || r.URL.Path == "/api/auth/reset-password" ||
 				r.URL.Path == "/api/auth/verify-email" ||
+				// Issue #2304: exakter Pfad. Der Eintrag darueber ist ein
+				// Gleichheitsvergleich und deckt diesen Unterpfad nicht mit
+				// ab; der staging-only Testweg unter demselben Praefix bleibt
+				// bewusst anmeldepflichtig und steht deshalb NICHT hier.
+				r.URL.Path == "/api/auth/verify-email/resend" ||
 				r.URL.Path == "/api/auth/google/init" || r.URL.Path == "/api/auth/google/callback" ||
 				r.URL.Path == "/api/auth/magic-link" || r.URL.Path == "/api/auth/magic-link/verify" ||
 				r.URL.Path == "/api/auth/passkey/login/begin" || r.URL.Path == "/api/auth/passkey/login/finish" ||

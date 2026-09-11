@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -751,6 +752,99 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 // mail.SendVerificationMail selbst.
 var sendVerificationMailFn = mail.SendVerificationMail
 
+// issueVerificationToken erzeugt einen 24h-Verifikations-Token für userId,
+// persistiert seinen bcrypt-Hash und gibt den Klartext zurück (Issue #2304).
+// Herausgelöst aus dispatchVerificationMail, damit der staging-only Testweg
+// denselben Mechanismus benutzt, statt einen zweiten Token-Pfad zu bauen —
+// der Klartext ist nur hier und in der Bestätigungsmail zu sehen.
+func issueVerificationToken(s *store.Store, userId string) (string, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("token generation failed: %w", err)
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("token hash failed: %w", err)
+	}
+
+	if err := s.SaveVerificationToken(userId, model.EmailVerificationToken{
+		TokenHash: string(hash),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}); err != nil {
+		return "", fmt.Errorf("SaveVerificationToken failed: %w", err)
+	}
+	return token, nil
+}
+
+// selfHealEmailVerification setzt `EmailVerifiedAt`, wenn provenAddress — die
+// von einem Anmeldeweg NACHGEWIESENE Adresse (Magic-Link: Empfang des Codes im
+// Postfach; Google: `email_verified`) — der effektiven Kontaktadresse des
+// Kontos entspricht (mail_to, Rückfall email; dieselbe Vorrangregel wie
+// dispatchVerificationMail). Issue #2304, AC-4..AC-6.
+//
+// Der Adressvergleich steht bewusst HIER und nicht in den Aufrufern: nur so
+// ist er an einer Stelle prüfbar und mutierbar. Weicht die Adresse ab, bleibt
+// das Feld unangetastet — die Anmeldung selbst hängt nicht daran (S1 sperrt
+// nichts). Ein bereits gesetzter Zeitstempel wird nie neu gestempelt.
+func selfHealEmailVerification(s *store.Store, userId, provenAddress string) {
+	proven := strings.ToLower(strings.TrimSpace(provenAddress))
+	if proven == "" {
+		return
+	}
+	user, err := s.LoadUser(userId) // RMW: vollständiges Objekt laden
+	if err != nil || user == nil {
+		return
+	}
+	if user.EmailVerifiedAt != nil {
+		return
+	}
+	contact := user.MailTo
+	if contact == "" {
+		contact = user.Email
+	}
+	if !strings.EqualFold(strings.TrimSpace(contact), proven) {
+		return
+	}
+	now := time.Now().UTC()
+	user.EmailVerifiedAt = &now
+	if err := s.SaveUser(*user); err != nil {
+		log.Printf("email verification self-heal: SaveUser failed for %s: %v", userId, err)
+	}
+}
+
+// ResendVerificationHandler verschickt die Bestätigungsmail erneut (Issue
+// #2304, AC-7/AC-8). Nutzlast ist die Kennung, nicht die Adresse — analog
+// ForgotPasswordHandler, damit sich keine Adresse einem Konto zuordnen lässt.
+//
+// Die Antwort ist IMMER `200 {"status":"ok"}`: ob das Konto existiert, bereits
+// bestätigt ist oder keine Kontaktadresse hält, darf von außen nicht
+// unterscheidbar sein.
+func ResendVerificationHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
+	const ok = `{"status":"ok"}`
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Username string `json:"username"`
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Username == "" {
+			w.Write([]byte(ok))
+			return
+		}
+		if !store.ValidUserID(req.Username) {
+			log.Printf("email verification resend: rejected path-unsafe user id %q", req.Username)
+			w.Write([]byte(ok))
+			return
+		}
+		user, _ := s.LoadUser(req.Username)
+		if user != nil && user.EmailVerifiedAt == nil {
+			dispatchVerificationMail(s, cfg, req.Username, user)
+		}
+		w.Write([]byte(ok))
+	}
+}
+
 // dispatchVerificationMail erzeugt einen 24h-Verifikations-Token für userId
 // und verschickt eine Bestätigungsmail an die neue Empfänger-Adresse (Issue
 // #1219 Scheibe 2a-i) — Muster identisch zu ForgotPasswordHandler
@@ -767,25 +861,9 @@ func dispatchVerificationMail(s *store.Store, cfg config.Config, userId string, 
 		return
 	}
 
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		log.Printf("email verification: token generation failed for %s: %v", userId, err)
-		return
-	}
-	token := hex.EncodeToString(tokenBytes)
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
+	token, err := issueVerificationToken(s, userId)
 	if err != nil {
-		log.Printf("email verification: token hash failed for %s: %v", userId, err)
-		return
-	}
-
-	verificationToken := model.EmailVerificationToken{
-		TokenHash: string(hash),
-		ExpiresAt: time.Now().Add(24 * time.Hour),
-	}
-	if err := s.SaveVerificationToken(userId, verificationToken); err != nil {
-		log.Printf("email verification: SaveVerificationToken failed for %s: %v", userId, err)
+		log.Printf("email verification: token issuance failed for %s: %v", userId, err)
 		return
 	}
 

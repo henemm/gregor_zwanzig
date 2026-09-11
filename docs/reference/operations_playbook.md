@@ -598,6 +598,33 @@ Details (Read-Modify-Write-Prinzip, Restrisiken R1/R2, AC-Zuordnung): Spec
 
 ---
 
+## E-Mail-Bestätigung rückwirkend nachtragen (#2304, S1 aus #2271/#2146)
+
+Einmaliger Nachtrag-Lauf, der Bestandskonten ohne `email_verified_at` (angelegt, bevor der
+Self-Service-Bestätigungsflow existierte) als bestätigt markiert — Vorbereitung der künftigen
+Login-Pflicht (#2271), damit niemand durch sie ausgesperrt wird. Strukturelles Vorbild:
+`scripts/migrate_1219_email_verified.py`, anders als dort aber **keine** feste Positivliste,
+sondern alle Konten unter `--root` ohne gesetztes Feld. Läuft **je einmal** gegen **beide**
+Datenwurzeln:
+
+```bash
+uv run python3 scripts/backfill_2271_email_verified.py --root /var/lib/gregor/users            # Prod, Dry-Run (Default)
+uv run python3 scripts/backfill_2271_email_verified.py --root /var/lib/gregor/users --execute   # Prod, Backup + Schreiben
+uv run python3 scripts/backfill_2271_email_verified.py --root /var/lib/gregor-staging/users            # Staging, Dry-Run (Default)
+uv run python3 scripts/backfill_2271_email_verified.py --root /var/lib/gregor-staging/users --execute   # Staging, Backup + Schreiben
+```
+
+**Immer zuerst den Dry-Run lesen.** Das Script ist idempotent — ein zweiter Lauf über bereits
+migrierte Daten erzeugt einen leeren Plan und schreibt nichts. Backup: tar.gz des gesamten
+Baums unter `--root` nach `.backups/` entsteht automatisch vor jedem `--execute`-Lauf, der
+tatsächlich Konten ändert. Read-Modify-Write: nur `email_verified_at` wird ergänzt, alle
+anderen Felder (Trips, Empfänger, Passwort-Hash, Passkeys etc.) bleiben unangetastet.
+
+Details (Selbstheilung bei Magic-Link/OAuth, neue Resend-/Staging-Testweg-Endpunkte,
+Acceptance Criteria): Spec `docs/specs/modules/email_verify_vorbereitung_2304.md`.
+
+---
+
 ## „Versand gemeldet, Postfach leer" — zuerst den Empfänger nachsehen (#1847)
 
 Diese Falle hat sich **viermal** wiederholt (#1351, #1403, #1782, #1847) und jedes Mal
