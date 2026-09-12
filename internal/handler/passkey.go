@@ -562,12 +562,17 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		// Begin-Schritt übermittelte Adresse dauerhaft unverifiziert.
 		dispatchVerificationMail(s, cfg, entry.UserID, &newUser)
 
-		if !issueSession(w, r, s, entry.UserID, secret) {
-			return
-		}
-
+		// Issue #2271: KEIN Auto-Login mehr. Die Kontoerstellung war
+		// erfolgreich (201, kein 403), aber eine Sitzung gibt es erst nach
+		// der Bestaetigung der Adresse — wie bei RegisterHandler (auth.go:117),
+		// der schon immer ohne Auto-Login auskam. Der Hinweis reist
+		// maschinenlesbar im Feld status, damit kein Aufrufer an einer
+		// Formulierung haengt.
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(map[string]string{"id": entry.UserID})
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"id":     entry.UserID,
+			"status": "verification_pending",
+		})
 	}
 }

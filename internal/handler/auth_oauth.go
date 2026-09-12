@@ -185,6 +185,20 @@ func googleOAuthCallbackHandlerInternal(cfg *config.Config, s *store.Store, user
 			dispatchVerificationMail(s, *cfg, newUser.ID, newUser)
 		}
 
+		// Issue #2271: Vorpruefung NACH der Selbstheilung oben — liefe sie
+		// davor, wiese sie genau das Konto ab, das sich in diesem Request
+		// gerade heilt. Sie steht hier, weil dieser Fluss ein Redirect-Fluss
+		// ist: Erfolg und Ablehnung sind beide 302, der Unterschied steckt
+		// allein im Location-Header. Ein rohes JSON haette hier niemand
+		// gelesen.
+		if verified, readable := hasVerifiedEmail(s, userId); !readable || !verified {
+			log.Printf("oauth google: login refused, email not verified for %s", userId)
+			http.Redirect(w, r, "/login?error=email_not_verified", http.StatusFound)
+			return
+		}
+
+		// Das Gate in issueSession bleibt als Rueckfallebene bestehen (kein
+		// Weg umgeht es), ist hier aber durch die Vorpruefung unerreichbar.
 		if !issueSession(w, r, s, userId, cfg.SessionSecret) {
 			return
 		}

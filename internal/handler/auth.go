@@ -121,13 +121,64 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 	}
 }
 
-// issueSession mintet eine Anmelde-Kennung, traegt sie in die Gaesteliste des
-// Nutzers ein und setzt das Anmelde-Cookie (Issue #2129). EINE Stelle fuer alle
-// sechs Anmeldewege: wird eine davon vergessen, sperrt dieser Weg alle seine
-// Nutzer aus, weil ihr Merkmal zwar wohlgeformt, aber nicht gelistet waere.
+// hasVerifiedEmail liest den Bestaetigungsstand IMMER frisch von der Platte
+// (Issue #2271). Das ist kein Zierrat: selfHealEmailVerification schreibt per
+// SaveUser (auth.go:812) und laesst die Struct des Aufrufers unberuehrt — ein
+// Praedikat auf einer mitgereichten model.User saehe den im selben Request
+// geheilten Stand nicht und sperrte genau das Konto aus, das sich gerade heilt.
+//
+// Zweiter Rueckgabewert: false, wenn der Nutzer gar nicht lesbar war. Dann ist
+// "nicht bestaetigt" die falsche Aussage — der Aufrufer quittiert mit 500.
+func hasVerifiedEmail(s *store.Store, userId string) (verified bool, readable bool) {
+	user, err := s.LoadUser(userId)
+	if err != nil {
+		log.Printf("email verify gate: user.json unreadable for %s: %v", userId, err)
+		return false, false
+	}
+	if user == nil {
+		return false, true
+	}
+	return user.EmailVerifiedAt != nil, true
+}
+
+// issueSession ist der Weg fuer ANMELDUNGEN (Issue #2271): erst das
+// Bestaetigungs-Gate, dann die Ausstellung. Bewusst OHNE Parameter der
+// Aufrufer — ein Flag koennte ein kuenftiger siebter Anmeldeweg vergessen oder
+// als Abkuerzung setzen; das Gate liegt deshalb unumgehbar hier.
+//
+// Liefert false, wenn bereits geantwortet wurde (Gate oder Fehlerfall).
+func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret string) bool {
+	verified, readable := hasVerifiedEmail(s, userId)
+	if !readable {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"internal error"}`))
+		return false
+	}
+	if !verified {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(`{"error":"email_not_verified"}`))
+		return false
+	}
+	return issueSessionWithoutVerificationGate(w, r, s, userId, secret)
+}
+
+// issueSessionWithoutVerificationGate mintet eine Anmelde-Kennung, traegt sie
+// in die Gaesteliste des Nutzers ein und setzt das Anmelde-Cookie (Issue
+// #2129). EINE Stelle fuer alle Anmeldewege: wird eine davon vergessen, sperrt
+// dieser Weg alle seine Nutzer aus, weil ihr Merkmal zwar wohlgeformt, aber
+// nicht gelistet waere.
+//
+// Diese Variante laesst das Bestaetigungs-Gate aus und hat genau EINEN
+// legitimen Aufrufer: ChangePasswordHandler (Issue #2271). Wer gerade seine
+// E-Mail-Adresse geaendert hat, steht auf EmailVerifiedAt == nil (auth.go:708/713)
+// — liefe das Gate dort mit, koennte er sein Passwort nicht mehr aendern und
+// verloere im selben Zug seine Sitzung. Der sprechende Name macht die Ausnahme
+// sichtbar; ein Parameter an issueSession haette sie unsichtbar gemacht.
 //
 // Liefert false, wenn bereits geantwortet wurde (Fehlerfall).
-func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret string) bool {
+func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret string) bool {
 	sessionId, err := middleware.NewSessionID()
 	if err != nil {
 		log.Printf("session issue: id generation failed for %s: %v", userId, err)
@@ -996,7 +1047,11 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret string) http.H
 			w.Write([]byte(`{"error":"internal error"}`))
 			return
 		}
-		if !issueSession(w, r, s, userId, secret) {
+		// Issue #2271: bewusst OHNE Bestaetigungs-Gate. Wer gerade seine
+		// Adresse geaendert hat, steht auf EmailVerifiedAt == nil — er muss
+		// sein Passwort weiter aendern koennen, ohne dabei ausgesperrt zu
+		// werden. Das ist die einzige Stelle, die die Ausnahme nutzen darf.
+		if !issueSessionWithoutVerificationGate(w, r, s, userId, secret) {
 			return
 		}
 

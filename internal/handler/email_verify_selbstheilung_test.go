@@ -129,12 +129,17 @@ func TestSelbstheilungMagicLinkSetztBestaetigungBeiAdressgleichheit_AC4(t *testi
 }
 
 // AC-5: mail_to zeigt auf eine ANDERE Adresse als die nachgewiesene → das Feld
-// bleibt ungesetzt, UND die Anmeldung gelingt trotzdem (S1 sperrt nichts).
+// bleibt ungesetzt.
 //
-// Hinweis zur Aussagekraft: die erste Hälfte ist heute grün, weil es die
-// Selbstheilung noch gar nicht gibt (Grün durch Bauart). Ihre Wächterwirkung
-// entsteht erst mit der Implementierung — wer den Adressvergleich dann
-// weglässt und bedingungslos setzt, wird von genau diesem Test gefangen.
+// 🔴 Fortgeschrieben mit Issue #2271 (S2): Die zweite Zusicherung der S1-Fassung
+// ("die Anmeldung gelingt trotzdem, S1 sperrt nichts") ist mit der
+// Scharfschaltung des Login-Gates hinfällig — das Konto bleibt hier
+// unbestätigt, also verweigert das Gate in issueSession die Ausstellung. Die
+// Prüfung wurde deshalb umgedreht, nicht gestrichen: 403 ohne Merkmal. Ihre
+// Wächterwirkung bleibt dieselbe und wird sogar schärfer — wer den
+// Adressvergleich in selfHealEmailVerification weglässt und bedingungslos
+// bestätigt, bekommt hier 200 mit Cookie und wird von genau dieser Zeile
+// gefangen.
 func TestSelbstheilungMagicLinkSchweigtBeiAbweichenderKontaktadresse_AC5(t *testing.T) {
 	t.Cleanup(ResetOTPStoreForTest)
 	s := newTestStore(t)
@@ -154,19 +159,17 @@ func TestSelbstheilungMagicLinkSchweigtBeiAbweichenderKontaktadresse_AC5(t *test
 	cfg := &config.Config{SessionSecret: selbstheilungSecret}
 	w := magicLinkAnmeldung(t, s, cfg, nachgewiesen)
 
-	// Hälfte 1: die Anmeldung gelingt — mit gültigem Sitzungs-Merkmal.
-	if w.Code != http.StatusOK {
-		t.Fatalf("AC-5: die Anmeldung muss trotz abweichender Kontaktadresse gelingen, "+
-			"bekommen %d: %s", w.Code, w.Body.String())
+	// Hälfte 1 (#2271): Weil die Selbstheilung hier schweigt, bleibt das Konto
+	// unbestätigt — und das Login-Gate verweigert das Merkmal.
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("#2271: bei abweichender Kontaktadresse heilt nichts, also muss das Gate "+
+			"mit 403 greifen — bekommen %d: %s", w.Code, w.Body.String())
 	}
-	var sitzung *http.Cookie
 	for _, c := range w.Result().Cookies() {
 		if c.Name == "gz_session" {
-			sitzung = c
+			t.Errorf("#2271: der abgewiesene Anmeldeweg darf kein gz_session-Cookie ausstellen, "+
+				"bekommen %q", c.Value)
 		}
-	}
-	if sitzung == nil || sitzung.Value == "" {
-		t.Fatalf("AC-5: kein gz_session-Cookie in der Antwort — die Anmeldung wurde faktisch verweigert")
 	}
 
 	// Hälfte 2: das Bestätigungsfeld bleibt unangetastet.

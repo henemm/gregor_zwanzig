@@ -11,7 +11,6 @@ import (
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/mail"
-	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -220,29 +219,16 @@ func TestPasskeyRegisterPublicRoundtrip_Success(t *testing.T) {
 		t.Fatalf("AC-5: expected 1 PasskeyCredential, got %d", len(user.PasskeyCredentials))
 	}
 
-	// gz_session cookie must be set.
-	var sess *http.Cookie
+	// Issue #2271: Das Auto-Login ist entfallen — die Kontoerstellung gelingt,
+	// ein Anmelde-Merkmal gibt es erst nach der Bestaetigung der Adresse. Die
+	// vormaligen Cookie-Formpruefungen (HttpOnly/SameSite/MaxAge) haben hier
+	// keinen Gegenstand mehr; sie bewachen den Passkey-LOGIN-Pfad weiter
+	// (passkey_test.go:441, :499).
 	for _, c := range finishW.Result().Cookies() {
 		if c.Name == "gz_session" {
-			sess = c
-			break
+			t.Errorf("#2271: die oeffentliche Passkey-Registrierung darf kein "+
+				"gz_session-Cookie mehr ausstellen, bekommen %q", c.Value)
 		}
-	}
-	if sess == nil {
-		t.Fatalf("AC-5: expected gz_session cookie, none found")
-	}
-	if !sess.HttpOnly {
-		t.Errorf("AC-5: gz_session must be HttpOnly")
-	}
-	if sess.SameSite != http.SameSiteLaxMode {
-		t.Errorf("AC-5: expected SameSite=Lax, got %v", sess.SameSite)
-	}
-	// Issue #2129: die Anmeldung gilt unbefristet, bis sie widerrufen wird.
-	if sess.MaxAge != middleware.SessionMaxAgeSeconds {
-		t.Errorf("AC-5: expected MaxAge=%d, got %d", middleware.SessionMaxAgeSeconds, sess.MaxAge)
-	}
-	if !strings.HasPrefix(sess.Value, "passwordless.") {
-		t.Errorf("AC-5: session value should start with 'passwordless.', got %q", sess.Value)
 	}
 }
 
@@ -395,91 +381,10 @@ func TestPasskeyRegisterPublicFinish_UsernameRace(t *testing.T) {
 	}
 }
 
-// -----------------------------------------------------------------------------
-// F004: Cookie Secure-Flag — false on plain HTTP, true behind HTTPS proxy
-// -----------------------------------------------------------------------------
-
-func TestPasskeyRegisterPublicFinish_CookieSecureFlag(t *testing.T) {
-	rpID, origin := "localhost", "http://localhost"
-
-	t.Run("http_not_secure", func(t *testing.T) {
-		s := newTestStore(t)
-		wa := newTestWebAuthn(t, rpID, origin)
-		cs := NewChallengeStore()
-		secret := "test-secret-32-chars-long-enough"
-
-		// Begin
-		beginBody := []byte(`{"username":"sectest","email":"sec@example.com"}`)
-		beginReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/begin", bytes.NewReader(beginBody))
-		beginW := httptest.NewRecorder()
-		PasskeyRegisterPublicBeginHandler(s, wa, cs).ServeHTTP(beginW, beginReq)
-		if beginW.Code != http.StatusOK {
-			t.Fatalf("begin: got %d", beginW.Code)
-		}
-		var beginResp struct {
-			PublicKey struct {
-				Challenge string `json:"challenge"`
-			} `json:"publicKey"`
-		}
-		json.Unmarshal(beginW.Body.Bytes(), &beginResp)
-
-		auth := newTestAuthenticator(t, rpID, origin)
-		finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
-		finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
-		// No X-Forwarded-Proto header → Secure must be false
-		finishW := httptest.NewRecorder()
-		PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, config.Config{}).ServeHTTP(finishW, finishReq)
-		if finishW.Code != http.StatusCreated {
-			t.Fatalf("finish: got %d: %s", finishW.Code, finishW.Body.String())
-		}
-		for _, c := range finishW.Result().Cookies() {
-			if c.Name == "gz_session" && c.Secure {
-				t.Errorf("Secure must be false on plain HTTP, got true")
-			}
-		}
-	})
-
-	t.Run("https_secure", func(t *testing.T) {
-		s := newTestStore(t)
-		wa := newTestWebAuthn(t, rpID, origin)
-		cs := NewChallengeStore()
-		secret := "test-secret-32-chars-long-enough"
-
-		// Begin
-		beginBody := []byte(`{"username":"sectest2","email":"sec2@example.com"}`)
-		beginReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/begin", bytes.NewReader(beginBody))
-		beginW := httptest.NewRecorder()
-		PasskeyRegisterPublicBeginHandler(s, wa, cs).ServeHTTP(beginW, beginReq)
-		if beginW.Code != http.StatusOK {
-			t.Fatalf("begin: got %d", beginW.Code)
-		}
-		var beginResp struct {
-			PublicKey struct {
-				Challenge string `json:"challenge"`
-			} `json:"publicKey"`
-		}
-		json.Unmarshal(beginW.Body.Bytes(), &beginResp)
-
-		auth := newTestAuthenticator(t, rpID, origin)
-		finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
-		finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
-		finishReq.Header.Set("X-Forwarded-Proto", "https") // → Secure must be true
-		finishW := httptest.NewRecorder()
-		PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, config.Config{}).ServeHTTP(finishW, finishReq)
-		if finishW.Code != http.StatusCreated {
-			t.Fatalf("finish: got %d: %s", finishW.Code, finishW.Body.String())
-		}
-		var found bool
-		for _, c := range finishW.Result().Cookies() {
-			if c.Name == "gz_session" {
-				found = true
-				if !c.Secure {
-					t.Errorf("Secure must be true on HTTPS, got false")
-				}
-			}
-		}
-		if !found {
-			t.Errorf("gz_session cookie not found")
-		}
-	})
-}
+// Issue #2271: TestPasskeyRegisterPublicFinish_CookieSecureFlag (F004) ist
+// ersatzlos entfallen. Nach dem Wegfall des Auto-Logins stellt dieser Weg gar
+// kein Cookie mehr aus — der https-Teiltest waere laut rot, der http-Teiltest
+// liefe stumm ueber null Cookies und bewachte nichts mehr. Die Secure-Flag-
+// Logik bleibt ueber den Passkey-LOGIN-Pfad geprueft
+// (passkey_test.go:441 TestPasskeyLoginRoundtrip_Success, :499
+// TestPasskeyLoginCookieSecure_OnHTTPS).
