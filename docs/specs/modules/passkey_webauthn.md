@@ -339,21 +339,25 @@ export async function loginWithPasskey(username: string): Promise<void> {
 
 Fehler-Mapping: `NotAllowedError` (User-Abbruch) → UI zeigt "Anmeldung abgebrochen"; `TimeoutError` → "Zeitüberschreitung, bitte erneut versuchen"; Server-401 → "Kein passender Passkey gefunden".
 
-### Step 9: Login-Seite erweitern (`frontend/src/routes/login/+page.svelte`, +40 LoC)
+### Step 9: Login-Seite erweitern (`frontend/src/routes/login/+page.svelte`, +120 LoC)
 
-Bestehender Username/Passwort-Block bleibt unverändert. Darunter neuer Bereich:
+**Anordnung seit Issue #2247:** Siehe `docs/specs/modules/passkey_login_anordnung.md` für die massgebliche, bildschirmabhängige Anordnung des Passkey-Anmeldewegs. Diese Spec beschreibt hier nur noch die allgemeine Integration.
+
+Der Passkey-Block wird **immer serverseitig mitgerendert** (nicht erst nachträglich vom Browser eingefügt), damit der reservierte Platz von Anfang an mit der tatsächlichen Knopfhöhe übereinstimmt. Die Fähigkeitsprüfung im Browser tauscht danach nur noch den **Inhalt** dieses Platzes aus:
 
 ```svelte
-{#if webAuthnSupported}
-  <div class="separator">oder</div>
-  <button on:click={handlePasskey} disabled={!username}>
+<div id="passkey-container" class="passkey-block">
+  <!-- Zu Anfang: Knopf (am Server gerendert) -->
+  <button on:click={handlePasskey} id="passkey-button">
     🔑 Mit Passkey anmelden
   </button>
-  {#if passkeyError}<p class="error">{passkeyError}</p>{/if}
-{/if}
+  <!-- Nach Fähigkeitsprüfung: kein Knopf (nur Hinweistext auf Geräten ohne WebAuthn) -->
+</div>
 ```
 
-`onMount`-Hook setzt `webAuthnSupported = isWebAuthnSupported()`. `handlePasskey` ruft `loginWithPasskey(username)` — der Browser zeigt den Authenticator-Prompt.
+Das Benutzernamen-Feld trägt `autocomplete="username webauthn"` für Passkey-Vorschläge im Eingabefeld (ermöglicht den Conditional-UI-Weg ohne Knopfdruck).
+
+`onMount`-Hook prüft `isWebAuthnSupported()` und tauscht ggf. den Knopf durch einen Hinweistext. `handlePasskey` ruft `loginWithPasskey(username)` — der Browser zeigt den Authenticator-Prompt. Bei Geräten ohne WebAuthn wird der Knopf durch erklärendes Text ersetzt.
 
 ### Step 10: Account-Seite erweitern (`frontend/src/routes/account/+page.svelte`, +80 LoC)
 
@@ -472,5 +476,6 @@ Mock-freier Roundtrip — Test agiert als Authenticator:
 
 ## Changelog
 
+- 2026-09-11: Step 9 (Login-Seite) aktualisiert — Anordnung seit Issue #2247: bildschirmabhängig (Handy oben, Desktop unten), serverseitig mitgerendert, Verweis auf `docs/specs/modules/passkey_login_anordnung.md` als massgebliche Beschreibung der Anordnung hinzugefügt; Anmeldemechanismus selbst bleibt unverändert
 - 2026-05-30: Known Limitation „AAGUID-Display" (zeile 461) marked RESOLVED: Issue #468 liefert Authenticator-Name-Mapping über `internal/handler/aaguid.go` + Profile-Response-Feld `authenticator_name`.
 - 2026-05-30: Initial spec — V1 Add-on (PO-bestätigt), basierend auf Phase-1-Kontext + Phase-2-Analyse aus `docs/context/issue-450-passkey.md`
