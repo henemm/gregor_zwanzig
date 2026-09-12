@@ -29,8 +29,6 @@ from tests.tdd._dwd_eu_fixtures import (  # noqa: E402
     ABRUZZEN, dwd_eu, eu_server, hauptquelle_laeuft,
 )
 
-import pytest  # noqa: E402
-
 # #2302 Scheibe B: KEIN `live`-Marker mehr (s. Modul-Docstring oben) — die
 # Tests unten liefen bisher im Normallauf unsichtbar ("no tests collected").
 # `eu_server`/`hauptquelle_laeuft` sind lokale `ThreadingHTTPServer`, kein
