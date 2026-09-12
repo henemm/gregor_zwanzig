@@ -175,9 +175,101 @@ _REPO_DATA_USERS = root / "data" / "users"
 # handhaben; ``data/users/*`` ist seit #1602 ohnehin gitignored).
 _REAL_DATA_FIXTURE_SRC = root / "tests" / "fixtures" / "data_root"
 
+# Issue #2226 (Defekt 1 + 3): vor dem Fix gab es KEINE session-weite
+# Umleitung -- ``app.loader._DATA_ROOT`` blieb den gesamten Lauf ueber
+# unangetastet (None), bis eine funktionsweite Fixture sie kurzfristig
+# setzte. Hoeher gescopte Fixtures (module/class/session) liefen deshalb
+# VOR jeder Isolation direkt gegen den echten Baum. Die beiden Namen hier
+# sind die einzige Quelle der Wahrheit fuer "echte Wurzel" bzw. "isolierte
+# Session-Wurzel" -- von JEDER Redirect-Fixture unten gelesen/gesetzt,
+# nirgends hartkodiert.
+_ORIGINAL_DATA_ROOT: str | None = None
+_SESSION_DATA_ROOT: str | None = None
+
 
 @pytest.fixture(scope="session", autouse=True)
-def _materialize_real_data_root_fixtures() -> None:
+def _redirect_data_root_session(tmp_path_factory):
+    """Leitet ``app.loader._DATA_ROOT`` SOFORT bei Sessionstart auf eine
+    isolierte Wegwerf-Wurzel um -- laeuft vor JEDER hoeher gescopten
+    Fixture (pytest-Scope-Rang: session > package > module > class >
+    function), schliesst also Defekt 3 an der Wurzel.
+
+    Sichert den Ausgangswert nach ``_ORIGINAL_DATA_ROOT``, BEVOR er
+    ueberschrieben wird -- das ist die einzige Stelle, die diesen Wert je
+    setzt. ``_materialize_real_data_root_fixtures`` (unten) haengt explizit
+    von dieser Fixture ab, damit die Reihenfolge nicht dem Zufall der
+    Definitionsreihenfolge ueberlassen bleibt.
+    """
+    global _ORIGINAL_DATA_ROOT, _SESSION_DATA_ROOT
+
+    from app import loader
+
+    _ORIGINAL_DATA_ROOT = getattr(loader, "_DATA_ROOT", None)
+    _SESSION_DATA_ROOT = str(tmp_path_factory.mktemp("gz-data-root-session"))
+    loader._DATA_ROOT = _SESSION_DATA_ROOT
+    yield
+    loader._DATA_ROOT = _ORIGINAL_DATA_ROOT
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _isolate_data_root_module(request, _redirect_data_root_session):
+    """Modul-scope Gegenstueck zu ``_isolate_data_root`` (Funktionsebene,
+    unten). Noetig, weil ein modul-scope Fixture, das ``real_data_root``
+    ueber ``pytestmark`` traegt, VOR der funktionsweiten Redirect-Fixture
+    laeuft (Defekt 3) -- ohne dieses Gegenstueck wuerde das Opt-in fuer
+    hoeher gescopte Fixtures wirkungslos bleiben, weil die Umleitung auf
+    die echte Wurzel sonst erst zu spaet (auf Funktionsebene) griffe. Als
+    Fixture in der ROOT-conftest wird sie vor modul-eigenen Fixtures
+    DERSELBEN Testdatei gesetzt (pytest: Fixtures aus einer Vorfahren-
+    conftest laufen vor gleich gescopten Fixtures der Testdatei selbst).
+    """
+    if request.node.get_closest_marker("real_data_root"):
+        from app import loader
+
+        loader._DATA_ROOT = _ORIGINAL_DATA_ROOT
+        yield
+        loader._DATA_ROOT = _SESSION_DATA_ROOT
+        return
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _guard_repo_data_users_session(_materialize_real_data_root_fixtures):
+    """Session-weiter Waechter (Defekt 3): nimmt den Fingerprint des
+    ECHTEN ``<repo>/data/users``-Baums NACH abgeschlossener Materialisierung
+    (Abhaengigkeit oben) und vergleicht ihn am Ende der GESAMTEN Session
+    erneut. Faengt damit JEDEN Schreibzugriff auf den echten Baum,
+    unabhaengig vom Mechanismus (app.loader, CWD-relativ oder hartkodiert)
+    und unabhaengig vom Fixture-Scope -- die funktionsweite Pruefung in
+    ``_isolate_data_root`` sieht nur Schreibzugriffe INNERHALB einer
+    einzelnen Testfunktion, nicht in hoeher gescopten Fixtures.
+
+    WICHTIG: der ``before``-Schnappschuss darf NICHT vor der Materialisierung
+    genommen werden -- sonst kopiert ``_materialize_real_data_root_fixtures``
+    auf einem frischen (leeren) Checkout Dateien in den Baum, NACHDEM
+    ``before`` schon leer war, und der Waechter meldet einen falschen
+    Befund bei JEDEM Lauf auf einem frischen Checkout (z. B. CI). Deshalb
+    haengt diese Fixture explizit von der Materialisierung ab, statt beide
+    unabhaengig als Session-Fixtures zu deklarieren.
+    """
+    before = _snapshot_repo_data_users()
+    yield
+    after = _snapshot_repo_data_users()
+    if after != before:
+        pytest.fail(
+            "Issue #2226: der echte "
+            f"{_REPO_DATA_USERS}-Baum hat sich waehrend der GESAMTEN "
+            f"Session veraendert (vorher: {before}, nachher: {after}). "
+            "Ein Test/eine Fixture hat -- unabhaengig vom Scope -- direkt "
+            "oder ueber app.loader in den echten Baum geschrieben, ohne "
+            "@pytest.mark.real_data_root zu tragen, oder ein "
+            "real_data_root-Test hat seine Spur nicht vollstaendig "
+            "entfernt."
+        )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _materialize_real_data_root_fixtures(_redirect_data_root_session) -> None:
     """Rematerialisiert die umgezogenen Referenz-Fixtures additiv (nie
     ueberschreibend) in den echten, gitignoreten ``<repo>/data/users``-Baum.
 
@@ -189,6 +281,11 @@ def _materialize_real_data_root_fixtures() -> None:
     autouse-Session-Fixture in der ROOT-conftest, damit sie garantiert vor
     dem allerersten Test der gesamten Suite fertig ist (auch fuer
     tests/tdd/ und tests/unit/, nicht nur tests/integration/).
+
+    Haengt explizit von ``_redirect_data_root_session`` ab (Issue #2226) --
+    schreibt selbst ueber einen hartkodierten Pfad (``root / "data" / ...``,
+    nicht ``loader._DATA_ROOT``) und ist damit vom Redirect unabhaengig,
+    MUSS aber trotzdem vor dem session-weiten Waechter unten fertig sein.
 
     Zusaetzlich additiv gespiegelt: ``briefings/<id>.json`` aus jeder
     ``trips/<id>.json`` (Issue #1250 Scheibe 7a Cutover, ADR-0023) --
@@ -252,26 +349,36 @@ def _isolate_data_root(request, tmp_path_factory):
     test (Issue #1133), so pytest runs never write into the real
     ``data/users/`` tree.
 
-    Tests marked ``@pytest.mark.real_data_root`` or ``@pytest.mark.live``
-    opt out — they deliberately read/write the real tree (contract tests).
-    Issue #1624: die dafuer benoetigten, frueher direkt hier committeten
-    Referenz-Fixtures (gr221-mallorca, validator-issue110, GPX-Dateien) sind
-    nach ``tests/fixtures/data_root`` umgezogen (``data/`` bleibt so
-    vollstaendig untracked) und werden von der Session-Fixture
+    Nur ``@pytest.mark.real_data_root`` schaltet die Isolation ab -- Tests
+    opten damit bewusst gegen den echten Baum (Contract-Tests). Issue #2226
+    (Defekt 1): ``@pytest.mark.live`` allein bedeutet laut ``pyproject.toml``
+    nur Netz-Egress und schaltet die Isolation seither NICHT mehr ab; ein
+    live-markierter Test durchlaeuft denselben isolierten Pfad wie jeder
+    andere Test.
+
+    Issue #1624: die fuer das Opt-in benoetigten, frueher direkt hier
+    committeten Referenz-Fixtures (gr221-mallorca, validator-issue110,
+    GPX-Dateien) sind nach ``tests/fixtures/data_root`` umgezogen (``data/``
+    bleibt so vollstaendig untracked) und werden von der Session-Fixture
     ``_materialize_real_data_root_fixtures`` oben additiv wieder in diesen
     Baum kopiert -- fuer den echten Baum selbst aendert sich dadurch nichts.
 
-    Issue #1265 Teil C (Verursacher-Befund): die Redirect-Fixture allein
-    schützt nur Code-Pfade, die tatsächlich über ``app.loader`` gehen --
-    direkte ``<repo>/data/users``-Pfade laufen vorbei. Der Wächter unten
-    prüft deshalb zusätzlich am Test-Ende, dass unter dem ECHTEN
-    ``<repo>/data/users`` keine neuen/geänderten Top-Level-Einträge
-    entstanden sind, und FAILT den Test sonst mit Klartext-Hinweis.
+    Issue #1265 Teil C / #2226: diese funktionsweite Pruefung sieht nur
+    Schreibzugriffe INNERHALB der eigenen Testfunktion -- hoeher gescopte
+    Fixtures (module/class/session) laufen VOR ihr und werden vom
+    session-weiten Waechter (``_guard_repo_data_users_session`` oben)
+    gefangen, nicht hier.
     """
-    if request.node.get_closest_marker(
-        "real_data_root"
-    ) or request.node.get_closest_marker("live"):
+    if request.node.get_closest_marker("real_data_root"):
+        from app import loader
+
+        loader._DATA_ROOT = _ORIGINAL_DATA_ROOT
         yield
+        # Zurueck auf die Session-Wurzel, NICHT auf _ORIGINAL_DATA_ROOT --
+        # sonst sickert die echte Wurzel in JEDEN nachfolgenden Test durch,
+        # weil dessen eigene "before"-Erfassung dann faelschlich die echte
+        # Wurzel als Ausgangswert saehe (Issue #2226).
+        loader._DATA_ROOT = _SESSION_DATA_ROOT
         return
 
     from app import loader
@@ -294,7 +401,7 @@ def _isolate_data_root(request, tmp_path_factory):
             "app.loader.get_data_dir()-Basis bzw. tmp_path schreiben. "
             "Abhilfe: Pfad-Quelle auf get_data_dir()/tmp_path umstellen, "
             "oder falls der Test bewusst den echten Baum braucht: "
-            "@pytest.mark.real_data_root / @pytest.mark.live setzen."
+            "@pytest.mark.real_data_root setzen."
         )
 
 
@@ -375,9 +482,13 @@ def _isolate_warn_calls_path(request, tmp_path_factory):
     ``app.loader.get_data_root()`` folgt, schützt bereits ``_isolate_data_root``
     oben jeden normalen Test. Diese Umlenkung ist dort nicht mehr nötig — und
     schädlich, weil sie verdecken würde, ob die Datenwurzel überhaupt beachtet
-    wird. Sie bleibt genau für die Fälle, in denen ``_isolate_data_root``
-    aussteigt (``real_data_root``/``live``): dort soll die reale Diagnose-Datei
-    trotzdem NIE aus Tests wachsen.
+    wird. Sie bleibt genau für den Fall, in dem ``_isolate_data_root``
+    aussteigt (``real_data_root`` -- seit Issue #2226 steigt ``live`` allein
+    dort NICHT mehr aus): dort soll die reale Diagnose-Datei trotzdem NIE aus
+    Tests wachsen. Der zusätzliche ``live``-Zweig im Marker-Check unten ist
+    seit #2226 redundant, aber unschädlich: die Datenwurzel eines reinen
+    ``live``-Tests ist ohnehin schon isoliert, dieser Override betrifft nur
+    eine weitere, ebenfalls sichere tmp-Datei.
 
     Wichtig für die Rücklese-Tests (AC-7/8/9 in
     ``test_warn_service_egress.py`` sowie die MeteoAlarm-Suite): setzen diese

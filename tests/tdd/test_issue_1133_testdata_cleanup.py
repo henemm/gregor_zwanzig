@@ -232,49 +232,77 @@ def _call_fixture_generator(fixture_fn, request, factory):
 def test_ac2_marked_test_opts_out_of_data_root_override(tmp_path):
     """AC-2: Given ein Test ist mit @pytest.mark.real_data_root markiert /
     When er get_data_dir() (via die neue autouse-Fixture) aufruft / Then
-    wird der echte data/users/-Pfad zurueckgegeben — kein Fixture-Override
-    greift fuer diesen Test.
+    wird der echte data/users/-Pfad zurueckgegeben — kein Isolations-
+    Override greift fuer diesen Test.
 
-    Getestet durch direkte Ausfuehrung der (noch nicht existierenden)
-    Fixture-Funktion tests/conftest.py::_isolate_data_root mit einem
-    minimalen Fake-Request (marker_name="real_data_root") und einer echten
-    Fake-TmpPathFactory (schreibt echte Verzeichnisse unter tmp_path,
-    keine Mocks). Schlaegt aktuell mit AttributeError fehl, weil
-    _isolate_data_root in tests/conftest.py noch nicht existiert.
+    Getestet durch direkte Ausfuehrung der Fixture-Funktion
+    tests/conftest.py::_isolate_data_root mit einem minimalen Fake-Request
+    (marker_name="real_data_root") und einer echten Fake-TmpPathFactory
+    (schreibt echte Verzeichnisse unter tmp_path, keine Mocks).
 
-    Angenommener Fixture-Vertrag (durch diesen RED-Test spezifiziert):
-    Parameter heissen `request` und `tmp_path_factory`; die Fixture setzt
-    `loader._DATA_ROOT` NICHT, wenn `request.node.get_closest_marker(
-    "real_data_root")` einen Treffer liefert.
+    Vertrag NACH Issue #2226 (Defekt 1+3, aktualisiert -- der alte Vertrag
+    "die Fixture ruehrt loader._DATA_ROOT bei real_data_root gar nicht an"
+    ist ueberholt): seit #2226 gibt es eine session-weite Vorstufe
+    (``_redirect_data_root_session``), die ``loader._DATA_ROOT`` schon VOR
+    jedem Test auf eine isolierte Session-Wurzel umleitet. Ein
+    real_data_root-markierter Test muss die Fixture deshalb jetzt AKTIV auf
+    die echte Wurzel (``_ORIGINAL_DATA_ROOT``) umschalten -- und nach dem
+    Test wieder auf die Session-Wurzel (``_SESSION_DATA_ROOT``, NICHT auf
+    ``_ORIGINAL_DATA_ROOT``) zurueckstellen, sonst sickert die echte Wurzel
+    in jeden nachfolgenden Test durch. Die Zusicherung "ein
+    real_data_root-Test sieht die echte Wurzel, nicht die Wegwerf-Wurzel"
+    gilt unveraendert -- nur die Naht hat sich verschoben.
 
-    Issue #1624: dieser Vertrag gilt unveraendert fort. Die frueher hier
-    direkt committeten Referenz-Fixtures (gr221-mallorca, validator-issue110)
-    sind nach tests/fixtures/data_root umgezogen und werden von der
-    Session-Fixture ``_materialize_real_data_root_fixtures`` (tests/
-    conftest.py) additiv wieder in den echten Baum kopiert -- fuer diesen
-    Opt-out-Vertrag selbst aendert sich dadurch nichts.
+    ``_load_top_conftest()`` laedt ``tests/conftest.py`` als STANDALONE
+    Modul (nicht ueber pytest), daher hat die reale
+    ``_redirect_data_root_session``-Fixture auf dieser Modul-Instanz nie
+    gelaufen -- ``module._ORIGINAL_DATA_ROOT``/``_SESSION_DATA_ROOT``
+    werden hier deshalb explizit gesetzt, um genau den Zustand
+    nachzustellen, den ein echter pytest-Lauf zu diesem Zeitpunkt bereits
+    hergestellt haette (Session-Scope laeuft immer vor Funktions-Scope).
+
+    Issue #1624: die Referenz-Fixtures (gr221-mallorca, validator-issue110)
+    liegen unter tests/fixtures/data_root und werden von der Session-Fixture
+    ``_materialize_real_data_root_fixtures`` additiv in den echten Baum
+    kopiert -- fuer diesen Opt-in-Vertrag selbst aendert sich dadurch
+    nichts.
     """
     import app.loader as loader
 
     module = _load_top_conftest()
-    fixture_fn = module._isolate_data_root  # AttributeError in RED
+    fixture_fn = module._isolate_data_root
 
-    before = getattr(loader, "_DATA_ROOT", None)
+    real_root_sentinel = "/simulated/real/data/root"
+    session_root_sentinel = str(tmp_path / "simulated-session-root")
+    # Simuliert den Zustand, den _redirect_data_root_session in einem echten
+    # pytest-Lauf VOR diesem Test bereits hergestellt haette.
+    module._ORIGINAL_DATA_ROOT = real_root_sentinel
+    module._SESSION_DATA_ROOT = session_root_sentinel
+    loader._DATA_ROOT = session_root_sentinel
+
     request = _FakeRequest(marker_name="real_data_root")
     factory = _FakeTmpPathFactory(tmp_path)
 
     gen = _call_fixture_generator(fixture_fn, request, factory)
     next(gen)  # setup phase
 
-    assert loader._DATA_ROOT == before, (
-        "AC-2 verletzt: der Daten-Root-Override greift trotz "
-        "@pytest.mark.real_data_root"
+    assert loader._DATA_ROOT == real_root_sentinel, (
+        "AC-2 (#2226) verletzt: ein real_data_root-markierter Test muss auf "
+        f"die ECHTE Wurzel umgeleitet werden, steht aber auf "
+        f"{loader._DATA_ROOT!r} (erwartet: {real_root_sentinel!r})."
     )
 
     try:
         next(gen)  # teardown phase
     except StopIteration:
         pass
+
+    assert loader._DATA_ROOT == session_root_sentinel, (
+        "AC-2 (#2226) verletzt: nach dem Test muss die Fixture auf die "
+        f"SESSION-Wurzel zurueckstellen, steht aber auf "
+        f"{loader._DATA_ROOT!r} (erwartet: {session_root_sentinel!r}) -- "
+        "sonst sickert die echte Wurzel in jeden nachfolgenden Test durch."
+    )
 
 
 def test_ac1_unmarked_test_gets_override_via_real_fixture(tmp_path):

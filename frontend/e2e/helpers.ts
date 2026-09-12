@@ -1,5 +1,6 @@
 import { type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
+import { resolveE2EUser } from './testUser.ts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Issue #1771 Scheibe 1: geteilte, zustandsbasierte Ziehgeste für
@@ -97,8 +98,7 @@ export async function dragDndZoneItem(page: Page, source: Locator, target: Locat
 export async function login(page: Page) {
 	await page.goto('/');
 	if (!page.url().includes('/login')) return;
-	const user = process.env.GZ_E2E_USER ?? 'admin';
-	const pass = process.env.GZ_E2E_PASS ?? 'test1234';
+	const { user, pass } = resolveE2EUser();
 	await page.fill('input[name="username"]', user);
 	await page.fill('input[name="password"]', pass);
 	await page.click('button[type="submit"]');

@@ -20,6 +20,35 @@ import pytest
 
 from tests.tdd._telegram_live_fixture import ensure_test_user_with_active_trip
 
+# AC-6 (#2226): strukturell relativ zu DIESER Testdatei aufgeloest, NICHT
+# ueber app.loader/get_data_root() (dessen _DATA_ROOT zeigt zur Testzeit
+# selbst auf eine isolierte Wegwerf-Wurzel).
+#
+# WICHTIG (Adversary-Vorabpruefung, #2226): die untenstehende Zusatzassertion
+# gegen _REPO_DATA_USERS_ROOT ist in test_fixture_guard_raises_outside_
+# staging_and_creates_no_prod_dir NICHT "strikt staerker" als die bestehende
+# tmp_path-Assertion -- sie ist dort zahnlos. Der Test macht
+# monkeypatch.chdir(tmp_path); data_dir="data" resolved damit zu
+# tmp_path/data, der GZ_ENV-Guard in ensure_test_user_with_active_trip()
+# wirft VOR jedem Schreibzugriff. Der echte Baum wird von diesem Test also
+# per Konstruktion nie erreicht, egal ob der Guard oder die zugrundeliegende
+# Fixture spaeter regressieren -- pytest.raises(RuntimeError) faengt jede
+# Guard-Regression zuerst, und eine Fixture-Regression (Schreibzugriff zeigt
+# wieder auf den echten Baum statt auf data_dir) bleibt fuer DIESEN Test
+# unsichtbar (empirisch mit einer Mutations-Gegenprobe verifiziert: Aufruf-
+# Ziel in ensure_test_user_with_active_trip() testweise auf einen
+# repo-root-abgeleiteten Pfad umgebogen -- dieser Test blieb gruen, weil er
+# wegen des fruehen RuntimeError nie bis zum Schreibzugriff kommt; zwei
+# ANDERE Tests in dieser Datei, die den Guard legitim passieren, wurden
+# durch dieselbe Mutation rot).
+#
+# Die Assertion bleibt trotzdem als Verteidigung in der Tiefe stehen (sie
+# kostet nichts und deckt ab, falls dieser Test je ohne chdir liefe), aber
+# die eigentliche Deckung fuer "ein Schreibzugriff ausserhalb von
+# app.loader landet im echten Baum" liefert der session-weite Waechter aus
+# AC-5 (tests/tdd/test_data_root_isolation_scopes.py), nicht diese Zeile.
+_REPO_DATA_USERS_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
+
 
 def _write_user(data_dir: Path, user_id: str, chat_id: str = "", mail_to: str = "") -> None:
     user_dir = data_dir / "users" / user_id
@@ -44,6 +73,15 @@ def test_fixture_guard_raises_outside_staging_and_creates_no_prod_dir(tmp_path, 
         ensure_test_user_with_active_trip(chat_id="123456", data_dir="data")
 
     assert not (tmp_path / "data" / "users" / "tg-live-e2e").exists()
+    # AC-6 (#2226): Verteidigung in der Tiefe -- dieser Test erreicht den
+    # echten Baum wegen monkeypatch.chdir(tmp_path) + fruehem Guard-Raise
+    # per Konstruktion nie (s. Moduldocstring oben). Die eigentliche
+    # Deckung fuer CWD-relative/hartkodierte Schreibzugriffe in den echten
+    # Baum liefert der session-weite Waechter aus AC-5.
+    assert not (_REPO_DATA_USERS_ROOT / "tg-live-e2e").exists(), (
+        f"Fixture-Guard hat trotz RuntimeError eine Spur unter dem ECHTEN "
+        f"{_REPO_DATA_USERS_ROOT} hinterlassen."
+    )
 
 
 def test_fixture_guard_allows_explicit_tmp_path(tmp_path, monkeypatch):
