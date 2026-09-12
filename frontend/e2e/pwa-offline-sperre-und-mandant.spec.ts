@@ -16,7 +16,13 @@
 // Ausfuehrung:
 //   cd frontend && npx playwright test --project=pwa e2e/pwa-offline-sperre-und-mandant.spec.ts
 
-import { test, expect, type BrowserContext, type Page } from '@playwright/test';
+import {
+	test,
+	expect,
+	request as apiSitzung,
+	type BrowserContext,
+	type Page
+} from '@playwright/test';
 import * as fs from 'node:fs';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
 import {
@@ -89,6 +95,59 @@ async function wiederAnmelden(page: Page): Promise<void> {
  */
 const NUTZER_B = { username: 'e2e2131nutzerb', password: 'test1234' };
 
+/**
+ * Bestaetigt Bs E-Mail-Adresse ueber den staging-only Testweg (Issue #2271).
+ *
+ * Seit der Scharfschaltung stellt `issueSession` nur noch fuer bestaetigte
+ * Adressen ein Merkmal aus — ohne diesen Schritt scheitert Bs Anmeldung unten
+ * mit 403. Der Testweg ist anmeldepflichtig, und B selbst kann sich in diesem
+ * Moment nicht anmelden; das Token holt deshalb eine fremde Admin-Sitzung.
+ *
+ * 🔴 EIGENER API-Kontext statt `page.request`: an der zweiten Aufrufstelle
+ * (AC-12) ist der Stamm-Nutzer kurz zuvor ABGEMELDET worden — `page` haette
+ * dort gar keine Sitzung mehr. Ihn dort wieder anzumelden waere zudem ein
+ * Eingriff in die Lage, die der Nachweis gerade herstellt. Der eigene Kontext
+ * laesst den Browser-Kontext von `page` unberuehrt.
+ *
+ * Der geteilte Helfer `registriereBestaetigtenZweitnutzer` (helpers.ts) passt
+ * hier NICHT: er erwartet eine frische Kennung und eine bereits angemeldete
+ * fremde Sitzung — beides gibt es in dieser Datei bewusst nicht (fester Name
+ * wegen der Anlage-Bremse, siehe oben).
+ */
+async function bestaetigeZweitnutzer(page: Page): Promise<void> {
+	const basis = test.info().project.use.baseURL ?? new URL(page.url()).origin;
+	const admin = await apiSitzung.newContext({ baseURL: basis });
+	try {
+		const anmeldung = await admin.post('/api/auth/login', { data: ADMIN });
+		expect(
+			anmeldung.ok(),
+			`Admin-Anmeldung fuer den Bestaetigungs-Testweg fehlgeschlagen: ${anmeldung.status()}`
+		).toBeTruthy();
+
+		const tokenAntwort = await admin.post('/api/auth/verify-email/staging-token', {
+			data: { username: NUTZER_B.username }
+		});
+		expect(
+			tokenAntwort.ok(),
+			`Staging-Testweg antwortet ${tokenAntwort.status()} — laeuft das Ziel mit GZ_ENV=staging?`
+		).toBeTruthy();
+		const { token } = (await tokenAntwort.json()) as { token?: string };
+
+		// Der Testweg gibt auch fuer ein laengst bestaetigtes Konto ein frisches
+		// Token heraus (#2304 AC-11) — der Schritt bleibt ueber Laeufe hinweg
+		// wiederholbar, obwohl B einen festen Namen traegt.
+		const bestaetigung = await admin.post('/api/auth/verify-email', {
+			data: { user: NUTZER_B.username, token }
+		});
+		expect(
+			bestaetigung.ok(),
+			`Bestaetigung von B fehlgeschlagen: ${bestaetigung.status()}`
+		).toBeTruthy();
+	} finally {
+		await admin.dispose();
+	}
+}
+
 async function zweiterNutzerAnmelden(page: Page): Promise<string> {
 	const reg = await page.request.post('/api/auth/register', {
 		data: { ...NUTZER_B, email: `${NUTZER_B.username}@example.com` }
@@ -101,6 +160,8 @@ async function zweiterNutzerAnmelden(page: Page): Promise<string> {
 		[200, 201, 409, 429],
 		`unerwartete Antwort beim Anlegen von B: ${reg.status()}`
 	).toContain(reg.status());
+	// Issue #2271: zwischen Anlage und Anmeldung liegt jetzt die Bestaetigung.
+	await bestaetigeZweitnutzer(page);
 	const login = await page.request.post('/api/auth/login', { data: NUTZER_B });
 	expect(login.ok(), `Anmeldung B fehlgeschlagen: ${login.status()}`).toBeTruthy();
 	return NUTZER_B.username;

@@ -13,7 +13,7 @@
 //   npx playwright test e2e/compare-editor-autosave-user-isolation.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation } from './helpers';
+import { createTestLocation, registriereBestaetigtenZweitnutzer } from './helpers';
 
 async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
 	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts).
@@ -68,17 +68,14 @@ test('AC-12: Autosave-Änderung bei Nutzer A ändert Nutzer Bs eigenes Preset NI
 	const ctxB = await browser.newContext();
 	const pageB = await ctxB.newPage();
 	const userB = 'e2e1261b' + suffix;
-	const reg = await pageB.request.post('/api/auth/register', {
-		// Issue #1226: E-Mail ist Pflichtfeld bei der Registrierung.
-		data: { username: userB, password: 'test1234', email: `${userB}@example.com` }
-	});
-	expect([200, 201].includes(reg.status()), 'Registrierung B fehlgeschlagen: ' + reg.status()).toBeTruthy();
+	// Issue #1226: E-Mail ist Pflichtfeld bei der Registrierung.
 	// RegisterHandler setzt kein Session-Cookie — erst der Login etabliert die
 	// zweite echte Nutzer-Session (sonst presetB nicht unter userB isoliert).
-	const loginB = await pageB.request.post('/api/auth/login', {
-		data: { username: userB, password: 'test1234' }
-	});
-	expect(loginB.ok(), 'Login B fehlgeschlagen: ' + loginB.status()).toBeTruthy();
+	// Issue #2271: dazwischen liegt jetzt die Bestaetigung, sonst antwortet der
+	// Login mit 403. Das Token holt ausdruecklich AS Sitzung (`pageA.request`) —
+	// Bs Kontext erbt hier zwar den admin-storageState und kaeme zufaellig auch
+	// durch, aber genau dieses zufaellige Gruen waere schlimmer als ein Rot.
+	await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, userB, 'test1234');
 
 	const locB = await createLocation(pageB, `E2E 1261 AC12 B ${suffix}`, 48.6, 12.6);
 	const presetB = await createPresetWithLocation(pageB, `E2E 1261 AC12 Preset-B ${suffix}`, locB);

@@ -117,8 +117,15 @@
 		</div>
 
 		{#if registered}
-			<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
-				Konto erfolgreich erstellt. Bitte melde dich an.
+			<!-- Issue #2271 AC-14: seit der Scharfschaltung ist die Anmeldung erst
+			     nach bestaetigter Adresse moeglich — eine Aufforderung "melde dich
+			     an" schickte den Nutzer in einen Weg, der garantiert scheitert. -->
+			<div
+				data-testid="login-registered-hint"
+				class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800"
+			>
+				Konto erfolgreich erstellt. Wir haben dir eine E-Mail geschickt — bitte bestätige darin
+				deine Adresse. Erst danach ist die Anmeldung möglich.
 			</div>
 		{/if}
 
@@ -128,7 +135,44 @@
 			</div>
 		{/if}
 
-		{#if form?.error}
+		{#if form?.resent}
+			<!-- Issue #2271 AC-13: Quittung des erneuten Versands. Steht VOR dem
+			     Hinweis, der weiterhin erklaert, warum die Mail gebraucht wird. -->
+			<div
+				data-testid="login-resend-confirmed"
+				class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800"
+			>
+				Die Bestätigungsmail ist erneut unterwegs. Bitte sieh auch im Spam-Ordner nach.
+			</div>
+		{/if}
+
+		{#if form?.error === 'email_not_verified'}
+			<!-- Issue #2271 AC-12/AC-13: eigener Zweig VOR dem allgemeinen
+			     Fehlerkasten. Das Passwort stimmt hier — der Nutzer braucht den
+			     Grund und einen Ausweg, nicht die Meldung fuer falsche Daten. -->
+			<div
+				data-testid="login-error-email-not-verified"
+				class="space-y-3 rounded-md border border-destructive bg-destructive/10 p-3 text-sm"
+				style="color: var(--g-bad);"
+			>
+				<p>
+					Deine E-Mail-Adresse ist noch nicht bestätigt. Bitte öffne den Link in der
+					Bestätigungsmail — erst danach ist die Anmeldung möglich.
+				</p>
+				<form method="POST" action="?/resend">
+					<!-- Die Kennung reist verdeckt mit: der Nutzer hat sie gerade
+					     eingegeben, sie erneut zu tippen waere reine Schikane. -->
+					<input type="hidden" name="username" value={username} />
+					<button
+						type="submit"
+						data-testid="login-resend-submit"
+						class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					>
+						Bestätigungsmail erneut senden
+					</button>
+				</form>
+			</div>
+		{:else if form?.error}
 			<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm" style="color: var(--g-bad);">
 				{form.error === 'Rate limit exceeded' ? 'Zu viele Versuche — bitte in einigen Minuten erneut versuchen.' : form.error === 'Invalid credentials' ? 'Benutzername oder Passwort nicht korrekt.' : form.error === 'Username and password required' ? 'Bitte Benutzername und Passwort eingeben.' : form.error}
 			</div>
@@ -170,7 +214,9 @@
 			{/if}
 		</div>
 
-		<form method="POST" class="space-y-4">
+		<!-- Issue #2271: `action="?/login"` ist Pflicht — die Seite hat seit dem
+		     Resend-Formular zwei benannte Actions und keine `default` mehr. -->
+		<form method="POST" action="?/login" class="space-y-4">
 			<div class="space-y-2">
 				<label for="username" class="text-sm font-medium">Benutzername</label>
 				<input

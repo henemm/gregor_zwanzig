@@ -42,10 +42,27 @@ Bestandsnutzer ausgesperrt.
 4. **Antwortform je Fluss.** JSON-Wege antworten `403 {"error":"email_not_verified"}` ohne
    Cookie. Der Google-Redirect-Fluss antwortet ausschließlich über den `Location`-Header
    (`/login?error=email_not_verified`) — Erfolg und Ablehnung sind dort beide `302`.
-5. **Genau eine dokumentierte Ausnahme:** `ChangePasswordHandler` nutzt eine eigene, anders
-   benannte Funktion ohne Gate (`issueSessionWithoutVerificationGate`). Wer gerade seine
-   Adresse geändert hat, steht auf `EmailVerifiedAt == nil`; mit Gate könnte er sein Passwort
-   nicht mehr ändern und verlöre im selben Zug seine Sitzung.
+5. **Genau eine dokumentierte Ausnahme im Anmeldepfad:** `ChangePasswordHandler` nutzt eine
+   eigene, anders benannte Funktion ohne Gate (`issueSessionWithoutVerificationGate`). Wer
+   gerade seine Adresse geändert hat, steht auf `EmailVerifiedAt == nil`; mit Gate könnte er
+   sein Passwort nicht mehr ändern und verlöre im selben Zug seine Sitzung.
+6. **Der Betreiber-Account aus Umgebungsvariablen gilt als bestätigt** (`cmd/server/main.go`,
+   ENV-Bootstrap bei leerer Datenwurzel). Er entsteht aus `GZ_ADMIN_*`-Zugangsdaten und hat
+   **keine** E-Mail-Adresse — er könnte sich also niemals selbst bestätigen und wäre durch das
+   Gate dauerhaft ausgesperrt. Das trifft nicht nur Testläufe, sondern **jede frisch
+   aufgesetzte Installation**. Deshalb setzt der Bootstrap-Zweig `EmailVerifiedAt` beim
+   Anlegen mit.
+
+   **Preis, bewusst getragen:** `/api/auth/profile` meldet für dieses Konto
+   `email_verified: true`, obwohl keine Adresse hinterlegt ist. Die Alternative — ein
+   Umgebungsschalter, der das Gate abschaltet — ist durch AC-11 ausdrücklich verboten und wäre
+   die deutlich schlechtere Lösung: Sie würde das Gate überall dort aushebeln, wo die Variable
+   gesetzt ist, statt an genau einem Konto.
+
+   **Die Ausnahme ist eng zu halten:** Sie greift ausschließlich im Bootstrap-Zweig beim
+   Anlegen. Sie darf nie ein bestehendes Konto überschreiben und nie über einen Weg erreichbar
+   sein, der ohne Zugriff auf die Umgebungsvariablen auslösbar ist. Wer diesen Zweig anfasst,
+   prüft beides erneut.
 
 ## Verworfene Alternativen
 

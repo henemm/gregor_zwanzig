@@ -12,7 +12,13 @@
 //   npx playwright test --config=playwright.1461-s3b2b.staging.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation, createTestComparePreset, createTestTrip, cleanupTracked } from './helpers';
+import {
+	createTestLocation,
+	createTestComparePreset,
+	createTestTrip,
+	cleanupTracked,
+	registriereBestaetigtenZweitnutzer
+} from './helpers';
 
 function trackConsoleErrors(page: Page): string[] {
 	const errors: string[] = [];
@@ -417,14 +423,10 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 			ctxB = await browser.newContext({ storageState: undefined });
 			const pageB = await ctxB.newPage();
 			const userB = `e2e1461s3b2b${suffix}`;
-			const reg = await pageB.request.post('/api/auth/register', {
-				data: { username: userB, password: 'Test1234!x', email: `${userB}@example.com` }
-			});
-			expect([200, 201].includes(reg.status()), `Registrierung B fehlgeschlagen: ${reg.status()}`).toBeTruthy();
-			const loginB = await pageB.request.post('/api/auth/login', {
-				data: { username: userB, password: 'Test1234!x' }
-			});
-			expect(loginB.ok(), `Login B fehlgeschlagen: ${loginB.status()}`).toBeTruthy();
+			// Issue #2271: registrieren → Token ueber AS angemeldete Sitzung holen →
+			// bestaetigen → erst dann anmelden. Ohne die Bestaetigung dazwischen
+			// antwortet der Login mit 403 (das Gate sitzt in issueSession).
+			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, userB, 'Test1234!x');
 
 			// Nutzer B legt eigenen Ortsvergleich an — ohne eigene Schwelle: "gering".
 			const locB = await createTestLocation(pageB.request, { name: `S3b2b Mandant B ${suffix}`, lat: 48.3, lon: 12.4 });
