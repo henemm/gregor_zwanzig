@@ -264,6 +264,23 @@ Auf Prod lagen 124 von 139 `data/users/`-Verzeichnissen, auf Staging ~152 von 15
 
 `get_data_dir()` respektiert jetzt `_DATA_ROOT` und (als zweite Quelle) `GZ_DATA_DIR`. Neue autouse-Fixture `tests/conftest.py::_isolate_data_root` lenkt `loader._DATA_ROOT` für jeden Test auf ein `tmp_path_factory`-Verzeichnis um (Opt-out via `@pytest.mark.real_data_root`/`@pytest.mark.live`). `scripts/cleanup_1133_testdata.py` räumt bestehende Residuen einmalig auf (Backup + Positivliste + Dry-Run-Default).
 
+> **Korrektur 2026-09-12 (#2226):** Der `@pytest.mark.live`-Teil des obigen Opt-outs war selbst ein
+> Bug, nicht die Spezifikation — `live` bedeutet laut `pyproject.toml` nur „Netz-Egress erlaubt",
+> nicht „echter Dateibaum nötig", schaltete die Isolation aber ebenfalls ab. Zusätzlich entkamen
+> module-/class-/session-weite Fixtures der Isolation vollständig, weil sie vor der funktionsweiten
+> `_isolate_data_root` liefen (Scope-Rang session > package > module > class > function) — betraf
+> jeden Test, unabhängig vom Marker. #2226 kehrt die Vorzeichen um: eine neue session-weite Fixture
+> `_redirect_data_root_session` isoliert **per Default schon vor jeder höher gescopten Fixture**; ihr
+> Modul-Gegenstück `_isolate_data_root_module` sorgt dafür, dass auch ein `real_data_root`-Opt-in per
+> `pytestmark` auf Modulebene rechtzeitig greift (die funktionsweite Fixture allein löst es zu spät
+> auf). `_isolate_data_root` (funktionsweit) stellt nur noch für `@pytest.mark.real_data_root`-
+> markierte Tests die echte Wurzel wieder her. `live` allein schaltet seitdem nichts mehr ab. Ein
+> neuer session-weiter Wächter `_guard_repo_data_users_session` fängt jeden Schreibzugriff auf den
+> echten Baum während der GESAMTEN Session, unabhängig vom Mechanismus (`app.loader`, CWD-relativ
+> oder hartkodiert) und unabhängig vom Fixture-Scope. Sein Fingerprint (Dateizahl/mtime/Größe) sieht
+> allerdings neu angelegte **leere** Verzeichnisse nicht — bekanntes Non-Goal, gebucht in #1199.
+> Details: `docs/specs/modules/fix_2226_testdaten_isolation.md`.
+
 ### Known Limitations
 
 Mehrere Services konstruieren `Path("data/users/...")` weiterhin relativ statt über `get_data_dir()` (`src/services/trip_alert.py`, `trip_report_scheduler.py`, `user_tier.py`, `alert_daily_limit.py`, `gpx_processing.py`, `src/app/config.py`) — bewusst nicht migriert (LoC-Budget), bleiben strukturell anfällig für dieselbe Fallen-Klasse. Folge-Issue empfohlen, um diese Hardcodes ebenfalls auf `get_data_dir()` umzustellen.
