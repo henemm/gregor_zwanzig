@@ -6,7 +6,13 @@ Vermessung und Testart: siehe Modul-Docstring von
 `tests/tdd/_dwd_eu_fixtures.py` (Punkt 6: gemessene Latenz je Datei ~0,085 s
 aus 0,043-0,069 s Download plus 0,035 s bz2/rasterio-Auswertung).
 
-RED-GRUND: `providers.dwd_eu` existiert nicht -> ModuleNotFoundError.
+#2302 Scheibe B (2026-09-12): kein `live`-Marker mehr — die Tests brauchen
+kein echtes Netz, nur lokale `ThreadingHTTPServer`-Fixtures
+(`_dwd_eu_fixtures.eu_server`); der Egress-Waechter laesst `127.0.0.1`
+ausdruecklich durch (`egress_guard.py:72`). Die Korrektur wurde vorher
+uebersehen, weil dieselbe Lehre ("ein Laufzeit-Test misst die Maschine, nicht
+die Zeitgrenze") fuer den hier verwendeten ABRUFZAHL-Nachweis zutrifft, nicht
+aber fuer den Marker, der den Dateityp (Netz-Abhaengigkeit) beschreiben soll.
 """
 from __future__ import annotations
 
@@ -25,10 +31,10 @@ from tests.tdd._dwd_eu_fixtures import (  # noqa: E402
 
 import pytest  # noqa: E402
 
-# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
-# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
-# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
-pytestmark = pytest.mark.live
+# #2302 Scheibe B: KEIN `live`-Marker mehr (s. Modul-Docstring oben) — die
+# Tests unten liefen bisher im Normallauf unsichtbar ("no tests collected").
+# `eu_server`/`hauptquelle_laeuft` sind lokale `ThreadingHTTPServer`, kein
+# echtes Netz.
 
 
 # Volles Vorhersagefenster (24 h, deckungsgleich mit `dwd_eu.FORECAST_HOURS`).
@@ -46,10 +52,19 @@ def test_ac4_erschoepftes_gewitterbudget_bricht_nur_die_anreicherung_ab(monkeypa
     wird, Then bricht NUR die Anreicherung nach wenigen Abrufen ab und die
     Grundvorhersage kommt vollstaendig.
 
-    Gezaehlt werden ABRUFE, nicht Laufzeit — ein Laufzeit-Test misst die
-    Maschine, nicht die Zeitgrenze (Projektlehre). Ohne eigene Zeitgrenze
-    liefe der Gewitter-Abruf ueber alle Zeitschritte durch und dehnte jeden
-    Vorhersage-Abruf entsprechend.
+    Gezaehlt werden ABRUFE, nicht Laufzeit. #2302 Scheibe B, sachliche
+    Korrektur der fruehreren Begruendung "ein Laufzeit-Test misst die
+    Maschine, nicht die Zeitgrenze": diese Pauschalaussage ist ueberholt — die
+    neuen Wanduhr-Waechter in `test_provider_request_deadline.py` (AC-1/AC-2/
+    AC-4/AC-5 dieser Scheibe) messen die Zeitgrenze sehr wohl direkt, weil sie
+    eine feste UNTER- und OBERgrenze um einen bekannten, gepatchten Fristwert
+    legen. Der ABRUFZAHL-Nachweis hier bleibt trotzdem die richtige Wahl FUER
+    DIESEN Test: er prueft, dass die Budgetpruefung die Gesamtzahl der Abrufe
+    begrenzt (nicht nur irgendeine Laufzeit), und die Vergleichsmessung
+    (`ohne_zeitdruck` vs. `abrufe`) schliesst aus, dass eine kurze Fixture
+    allein die Schwelle erfuellt — genau das eine Wanduhr-Assertion allein
+    nicht leisten wuerde. Ohne eigene Zeitgrenze liefe der Gewitter-Abruf ueber
+    alle Zeitschritte durch und dehnte jeden Vorhersage-Abruf entsprechend.
 
     Zwei Laeufe ueber denselben regulaeren Weg, damit die Zahl etwas BEDEUTET:
     zuerst mit grosszuegigem Budget und schnellem Dienst — das ergibt die

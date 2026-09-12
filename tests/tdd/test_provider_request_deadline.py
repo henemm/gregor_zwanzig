@@ -67,25 +67,78 @@ gezielte Verfaelschung liess alle acht Tests oben gruen.
 | F002    | test_serienfrist_gilt_gemeinsam_ueber_mehrere_abrufe             |
 | F001    | test_aufgebrauchte_frist_bricht_am_kopf_des_naechsten_versuchs_ab |
 | F004    | test_einzelversuch_bleibt_auf_timeout_gedeckelt_wenn_frist_groesser_ist |
+
+---
+
+TDD RED — Issue #2302 Scheibe B: derselbe Baustein fuer `dwd.py` (ICON-D2)
+und `dwd_eu.py` (ICON-EU).
+
+SPEC: docs/specs/modules/fix_2302_s2_dwd_zeitbudget.md (AC-1..AC-9)
+
+Gemeinsame RED-Ursache aller Waechter unten: beide `_request`-Methoden
+(`dwd.py:323`, `dwd_eu.py:312`) kennen weder einen `deadline_at`-Parameter
+noch die Fristkonstanten ihres Moduls. Geprueft wird das Budget heute nur
+ZWISCHEN zwei Aufrufen (`dwd.py:341`, `dwd.py:486`, `dwd_eu.py:408`).
+
+`_HangingServer` (`:105`), `_antwortender_server` (`:193`) und die
+Normalfall-Bauform (`:351`) werden GETEILT, nicht kopiert (Spec Test Plan,
+"Heimat und Teilung").
+
+AC-Test-Mapping Scheibe B (parametrisierte IDs einzeln gelistet):
+| AC   | Testfunktion (ID)                                                   | Heute |
+|------|---------------------------------------------------------------------|-------|
+| AC-1 | test_dwd_grundpfad_bricht_bei_haengender_gegenstelle_ab[dwd]        | RED   |
+| AC-2 | test_dwd_grundpfad_bricht_bei_haengender_gegenstelle_ab[dwd_eu]     | RED   |
+| AC-3 | test_dwd_normalfall_liefert_unveraendert_daten[dwd]                 | KONTR.|
+| AC-3 | test_dwd_normalfall_liefert_unveraendert_daten[dwd_eu]              | KONTR.|
+| AC-4 | test_dwd_gewitterpfad_haelt_die_gewitterfrist_nicht_die_grundfrist  | RED   |
+| AC-5 | test_dwd_eu_gewitterpfad_haelt_seine_frist_und_bleibt_fail_soft     | RED   |
+| AC-6 | test_hook_vorgabewert_ist_die_weitere_frist[dwd]                    | RED   |
+| AC-6 | test_hook_vorgabewert_ist_die_weitere_frist[dwd_eu]                 | RED   |
+| AC-7 | test_laufzeit_patch_der_fristdauer_wirkt_dwd[dwd]                   | RED   |
+| AC-7 | test_laufzeit_patch_der_fristdauer_wirkt_dwd[dwd_eu]                | RED   |
+| AC-8 | test_retry_konfiguration_ist_je_dwd_provider_unabhaengig            | RED   |
+| AC-9 | test_thunder_zeitbudget_waechter_laeuft_im_normallauf_mit           | RED   |
+| AC-10| keine Testfunktion — Regressionslauf der sechs M3-Dateien im QA-Artefakt |   |
+| F-ADV1| test_dwd_frist_deckelt_auch_die_retry_wartepausen[dwd]/[dwd_eu]    | Adversary-Fix-Loop |
+| F-ADV2| test_dwd_serienfrist_gilt_gemeinsam_ueber_mehrere_abrufe           | Adversary-Fix-Loop |
+
+SPEC-ABWEICHUNG (AC-4, ausdruecklich gemeldet statt still gekapselt):
+AC-4 verlangt "liefert fail-soft `None`/eine unvollstaendige Reihe statt eine
+propagierte Ausnahme". Fuer `dwd.py` ist das faktisch falsch —
+`fetch_thunder_signals_named` wirft `ThunderSourceUnavailableError`, sobald
+JEDER Versuch fehlgeschlagen ist (`dwd.py:508-511`, #1492 S2a), und genau das
+ist gegen eine haengende Gegenstelle immer der Fall. Der AC-4-Waechter faengt
+deshalb ausschliesslich `ThunderSourceUnavailableError`; ein
+`ProviderRequestError` aus dem Fristabbruch, der bis zum Test durchschluege,
+laesst ihn scheitern. Fuer `dwd_eu.py` (AC-5) stimmt die AC-Formulierung — dort
+gibt es diesen Zaehlweg nicht.
 """
 from __future__ import annotations
 
 import json
 import socket
+import subprocess
+import sys
 import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import httpx
 import pytest
 import tenacity
 
+import providers.dwd as dwd_module
+import providers.dwd_eu as dwd_eu_module
 import providers.meteofrance as mf_module
 import providers.openmeteo as om_module
 from app.config import Location
-from providers.base import ProviderRequestError
+from providers.base import ProviderRequestError, ThunderSourceUnavailableError
+from providers.dwd import DwdDirectProvider
+from providers.dwd_eu import DwdEuDirectProvider
 from providers.http import capped_timeout_or_raise
 from providers.meteofrance import MeteoFranceDirectProvider
 from providers.openmeteo import OpenMeteoProvider
@@ -900,4 +953,600 @@ def test_einzelversuch_bleibt_auf_timeout_gedeckelt_wenn_frist_groesser_ist(
         "er auf TIMEOUT (0.3s), obwohl die Restzeit der Frist (5.0s) viel "
         "groesser ist. Ein Wert um ~5.0s bedeutet: der min()-Deckel fehlt, "
         "der Einzelversuch laeuft ueber das gesamte Budget."
+    )
+
+
+# ===========================================================================
+# Scheibe B (#2302) — dwd.py (ICON-D2) und dwd_eu.py (ICON-EU)
+# ===========================================================================
+
+# (Modul, Providerklasse, Name der Fristkonstante). `dwd_eu.py` hat NUR das
+# Gewitterbudget (kein `fetch_forecast`), `dwd.py` hat zwei Konstanten — die
+# hier genannte ist die WEITERE Huelle (180s), nie die Gewitterfrist (150s).
+_DWD = (dwd_module, DwdDirectProvider, "FETCH_DEADLINE_SECONDS")
+_DWD_EU = (dwd_eu_module, DwdEuDirectProvider, "THUNDER_FETCH_DEADLINE_SECONDS")
+_BEIDE = [pytest.param(_DWD, id="dwd"), pytest.param(_DWD_EU, id="dwd_eu")]
+
+
+def _dwd_ruesten(monkeypatch, modul, klasse, host, port, *, timeout, fristen, wait=None):
+    """BASE_URL auf den lokalen Server, `TIMEOUT` und die Fristkonstanten
+    klein, Wartepausen per `wait_none()` neutralisiert (die Pausen selbst sind
+    Gegenstand von AC-2 in Scheibe A, nicht der meisten Waechter hier).
+
+    `wait` ist optional und bleibt fuer alle bisherigen Aufrufer beim
+    Vorgabewert `wait_none()` -- nur
+    `test_dwd_frist_deckelt_auch_die_retry_wartepausen` setzt ihn bewusst auf
+    eine SPUERBARE Pause, weil genau diese Neutralisierung Adversary-Finding
+    F-ADV1 erst ermoeglicht hat.
+
+    `TIMEOUT` wird VOR dem Erzeugen des Providers gepatcht: der Client
+    uebernimmt ihn als Vorgabe-Timeout im Konstruktor (`dwd.py:310`).
+    """
+    monkeypatch.setattr(modul, "BASE_URL", f"http://{host}:{port}/")
+    monkeypatch.setattr(modul, "TIMEOUT", timeout)
+    for name, wert in fristen.items():
+        monkeypatch.setattr(modul, name, wert)
+    monkeypatch.setattr(
+        klasse._request.retry, "wait", wait if wait is not None else tenacity.wait_none()
+    )
+    return klasse()
+
+
+def _dwd_url(modul) -> str:
+    """Eine URL im Bestandsformat des jeweiligen Moduls — erst NACH dem
+    BASE_URL-Patch aufrufen, `_build_url` liest das Modul-Global zur
+    Aufrufzeit (`dwd.py:194`, `dwd_eu.py:210`)."""
+    return modul._build_url(datetime.now(timezone.utc), 1, modul.THUNDER_PARAMS[0])
+
+
+# ---------------------------------------------------------------------------
+# AC-1 / AC-2 — Grundpfad-`_request` bricht an der Frist ab
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(30)
+@pytest.mark.parametrize("fall", _BEIDE)
+def test_dwd_grundpfad_bricht_bei_haengender_gegenstelle_ab(monkeypatch, fall):
+    """RED (muss heute scheitern).
+
+    AC-1 (`dwd`) / AC-2 (`dwd_eu`): Given `_request` laeuft direkt gegen eine
+    Gegenstelle, die annimmt und nie antwortet, mit auf 0,45s gepatchter
+    Frist, When `_request(url, deadline_at=...)` aufgerufen wird, Then bricht
+    der Aufruf mit einer Ausnahme aus `(ProviderRequestError, httpx.HTTPError)`
+    ab und die verstrichene WANDUHRZEIT bleibt unter 0,9s.
+
+    RED-Grund heute: `_request` nimmt gar kein `deadline_at` an
+    (`dwd.py:323`, `dwd_eu.py:312`) — der Aufruf stirbt am `TypeError`, die
+    Wanduhr-Zusicherung wird in RED also noch nicht ausgeuebt.
+
+    TRAGENDE Groessenwahl: `TIMEOUT` (5,0s) liegt DEUTLICH OBERHALB der Frist
+    (0,45s). Nur so misst der Test den Timeout-DECKEL mit: reicht die
+    Implementierung den Rueckgabewert von `capped_timeout_or_raise` nicht als
+    `timeout=` an den Client durch, laeuft schon Versuch 1 volle 5,0s und der
+    Test wird rot. Mit einem `TIMEOUT` unterhalb der Frist bliebe genau diese
+    Verfaelschung gruen — `dwd.py` hat, anders als
+    `meteofrance._request_once:521`, keinen zweiten providereigenen Deckel.
+    Die Untergrenze 0,2s ist Positivkontrolle: sie faengt eine Mutation, die
+    den Deckel auf ~0 zusammenfallen laesst oder gar keinen Versuch hinausgehen
+    laesst.
+    """
+    modul, klasse, frist = fall
+    with _HangingServer() as server:
+        provider = _dwd_ruesten(
+            monkeypatch, modul, klasse, server.host, server.port,
+            timeout=5.0, fristen={frist: 0.45},
+        )
+        url = _dwd_url(modul)
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._request(url, deadline_at=time.monotonic() + 0.45)
+        elapsed = time.monotonic() - start
+
+    assert 0.2 <= elapsed < 0.9, (
+        f"_request() brauchte {elapsed:.2f}s -- die Frist (0.45s) muss den "
+        "Abbruch INNERHALB der Retry-Kette EINES Aufrufs erzwingen, und der "
+        "Einzelversuch muss auf die Restzeit gedeckelt sein. Ein Wert um "
+        "~5.0s bedeutet: der gedeckelte Timeout wird nicht an den "
+        "httpx-Client durchgereicht."
+    )
+
+
+# ---------------------------------------------------------------------------
+# F-ADV1 — die Frist deckelt AUCH bei dwd.py/dwd_eu.py die Retry-Wartepausen
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(30)
+@pytest.mark.parametrize("fall", _BEIDE)
+def test_dwd_frist_deckelt_auch_die_retry_wartepausen(monkeypatch, fall):
+    """Waechter fuer Adversary-Finding F-ADV1 (#2302 Scheibe B, MEDIUM).
+
+    Scheibe-B-Gegenstueck zu `test_frist_deckelt_auch_die_retry_wartepausen`
+    (:333-382, Scheibe A/AC-2). Entfernt man `| stop_at_deadline` aus dem
+    `stop=`-Ausdruck in `dwd.py:335` bzw. seinem Gegenstueck in `dwd_eu.py`,
+    blieben bis zu diesem Test ALLE elf dwd-bezogenen Tests gruen: der
+    Ruest-Helfer `_dwd_ruesten` setzt `wait` standardmaessig auf
+    `tenacity.wait_none()` und neutralisiert damit ueber die GESAMTE
+    Scheibe-B-Suite genau den Anteil, den diese Mutation sichtbar machen
+    wuerde. Ausserhalb von pytest nachgemessen: mit echter Wartepause ergibt
+    die Mutation ~1.45s statt ~0.45s (wie beim Scheibe-A-Vorbild).
+
+    AC-1 (`dwd`) / AC-2 (`dwd_eu`): Given dieselbe haengende Gegenstelle wie
+    im Grundpfad-Test oben, aber die Wartepausen werden NICHT neutralisiert,
+    sondern bleiben mit `wait_fixed(1.0)` spuerbar stehen, When der
+    Grundpfad mehrfach retryt, Then deckelt die Frist die KETTE AUS
+    VERSUCHEN UND WARTEPAUSEN gemeinsam.
+
+    TRAGENDE Groessenwahl (Vorbild :348-365, woertlich auf dwd uebertragen):
+    `TIMEOUT` (0.5s) liegt OBERHALB der Frist (0.45s). Nur so ist
+    `min(TIMEOUT, restzeit)` = restzeit, der erste Versuch scheitert also
+    GENAU an der Frist und die Stop-Bedingung greift VOR der ersten
+    Wartepause. Kehrt man die beiden Werte um, laeuft eine volle 1.0s-Pause
+    an und der Test wird falsch-rot.
+
+    Auch die Obergrenze 0.9s ist tragend, nicht grosszuegig geraten: eine
+    korrekte Umsetzung landet bei ~0.46s; faellt `stop_at_deadline` aus der
+    `stop`-Komposition, landet derselbe Aufruf bei ~1.45s (Versuch 1
+    scheitert an der Frist, kein Stop, volle 1.0s-Pause, dann greift erst
+    der Kopf-Check am Beginn von Versuch 2). 0.9s liegt zwischen beiden. Wer
+    die Schwelle hebt ODER senkt, nimmt diesem Test genau die Mutations-
+    Empfindlichkeit, fuer die es ihn gibt. Die Untergrenze 0.2s ist
+    Positivkontrolle (Muster der uebrigen Waechter in dieser Datei).
+    """
+    modul, klasse, frist = fall
+    with _HangingServer() as server:
+        provider = _dwd_ruesten(
+            monkeypatch, modul, klasse, server.host, server.port,
+            timeout=0.5, fristen={frist: 0.45}, wait=tenacity.wait_fixed(1.0),
+        )
+        url = _dwd_url(modul)
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._request(url, deadline_at=time.monotonic() + 0.45)
+        elapsed = time.monotonic() - start
+
+    assert 0.2 <= elapsed < 0.9, (
+        f"_request() brauchte {elapsed:.2f}s -- die Frist (0.45s) muss die "
+        "Kette aus Versuchen UND den absichtlich NICHT neutralisierten "
+        "Wartepausen (1.0s je Pause) gemeinsam deckeln. Ein Wert um ~1.45s "
+        "bedeutet: `stop_at_deadline` fehlt in der stop-Komposition, die "
+        "volle 1.0s-Pause nach dem ersten Versuch laeuft ungebremst an."
+    )
+
+
+# ---------------------------------------------------------------------------
+# F-ADV2 — die Serienfrist gilt GEMEINSAM ueber mehrere `_fetch_series`-Abrufe
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(20)
+def test_dwd_serienfrist_gilt_gemeinsam_ueber_mehrere_abrufe(monkeypatch):
+    """Waechter fuer Adversary-Finding F-ADV2 (`dwd.py:387`, MEDIUM).
+
+    Pendant zu `test_serienfrist_gilt_gemeinsam_ueber_mehrere_abrufe` (:729,
+    Scheibe A/F002), uebertragen auf `DwdDirectProvider._fetch_series` — NUR
+    `dwd.py` hat diese Methode, `dwd_eu.py` kennt keinen `fetch_forecast`-
+    Grundpfad (s. Modul-Docstring oben), darum hier unparametrisiert.
+
+    Warum kein Test, der `_request` direkt aufruft, diese Luecke schliesst:
+    die Zusicherung entsteht erst im ZUSAMMENSPIEL zweier Abrufe innerhalb
+    EINER Schleife. `_fetch_series` hat zwar eine Zwischenpruefung
+    (`dwd.py:380-385`), die weiter begrenzt -- die reicht aber nur, wenn der
+    EINZELNE `_request`-Aufruf die Restzeit der Serie kennt. Entfernt man
+    `deadline_at=deadline_at` aus dem Aufruf (`dwd.py:387`), bildet der
+    geteilte `before`-Hook (`providers/http.py:50-54`) fuer JEDEN Abruf ein
+    FRISCHES Fenster aus `FETCH_DEADLINE_SECONDS` statt der Restzeit -- direkte
+    `_request`-Tests uebergeben `deadline_at` immer explizit und sehen das
+    nie.
+
+    Given `_fetch_series` laeuft gegen einen ERREICHBAREN, aber spuerbar
+    langsamen Server, When der erste Abruf den groessten Teil der Serienfrist
+    verbraucht hat, Then bricht die Serie an der GEMEINSAMEN Frist ab -- der
+    zweite Abruf bekommt die RESTZEIT, keine frische volle Frist.
+
+    TRAGENDE Groessenwahl, WOERTLICH vom Vorbild uebernommen (dieselbe
+    Mechanik, derselbe Baustein): Frist 2,1s, Serverantwort nach 1,5s,
+    `TIMEOUT` (10,0s) bleibt deutlich oberhalb der Frist, Wartepausen per
+    `wait_none()` neutralisiert.
+    - KORREKT: Abruf 1 gelingt bei ~1,5s; Abruf 2 bekommt die Restzeit 0,6s
+      als Timeout, laeuft in den Lesetimeout -- Abbruch bei ~2,1s.
+    - VERFAELSCHT: Abruf 2 bekommt eine frische 2,1s-Frist, gelingt darum
+      bei ~3,0s; die Zwischenpruefung (Kopf von Abruf 3) schlaegt erst
+      danach an -- Abbruch bei ~3,0s.
+    Die Schwelle 2,6s liegt mittig zwischen beiden, s. Vorbild-Rechnung
+    (:745-763) fuer die volle Begruendung -- hier nicht wiederholt, um den
+    Test knapp zu halten.
+    """
+    with _zaehlender_server(delay=1.5) as (server, zaehler):
+        host, port = server.server_address
+        provider = _dwd_ruesten(
+            monkeypatch, dwd_module, DwdDirectProvider, host, port,
+            timeout=10.0, fristen={"FETCH_DEADLINE_SECONDS": 2.1},
+        )
+        deadline_at = time.monotonic() + dwd_module.FETCH_DEADLINE_SECONDS
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._fetch_series(
+                dwd_module.PARAMS[0], _ORT.latitude, _ORT.longitude,
+                datetime.now(timezone.utc), deadline_at,
+            )
+        elapsed = time.monotonic() - start
+
+    assert zaehler[0] >= 2, (
+        f"Die Gegenstelle sah nur {zaehler[0]} Anfrage(n) -- dieser Test misst "
+        "die GEMEINSAME Frist ueber MEHRERE Abrufe und braucht dafuer einen "
+        "zweiten Abruf. Passiert das nicht, passen die Testgroessen nicht mehr "
+        "zueinander (Frist 2.1s / Antwortzeit 1.5s)."
+    )
+    assert elapsed < 2.6, (
+        f"_fetch_series() brauchte {elapsed:.2f}s -- die Frist der SERIE "
+        "(2.1s) muss ueber ALLE Abrufe gemeinsam gelten. Ein Wert um ~3.0s "
+        "bedeutet: jeder `_request`-Aufruf hat eine frische volle Frist "
+        "bekommen, statt der Restzeit -- das Zeitbudget waere damit wieder "
+        "nur eine Pruefung ZWISCHEN den Abrufen."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-3 — Normalfall bleibt unveraendert (Pflicht-Gegenprobe)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(15)
+@pytest.mark.parametrize("fall", _BEIDE)
+def test_dwd_normalfall_liefert_unveraendert_daten(monkeypatch, fall):
+    """KONTROLLE (heute gruen, muss gruen bleiben).
+
+    AC-3: Given ein normal, also sofort antwortender lokaler Server, When
+    `_request` aufgerufen wird, Then liefert er unveraendert die Bytes der
+    Antwort und bricht nicht vorzeitig ab (< 2,0s).
+
+    Pflichtbestandteil laut Spec: ohne diese Gegenprobe waere ein Fix, der
+    schlicht ALLES sofort abbricht, ebenfalls gruen. `TIMEOUT` und die
+    Fristkonstanten bleiben hier absichtlich auf den Produktionswerten.
+    """
+    modul, klasse, _ = fall
+    with _antwortender_server() as server:
+        host, port = server.server_address
+        monkeypatch.setattr(modul, "BASE_URL", f"http://{host}:{port}/")
+        provider = klasse()
+        start = time.monotonic()
+        roh = provider._request(_dwd_url(modul))
+        elapsed = time.monotonic() - start
+
+    assert json.loads(roh)["hourly"]["time"], (
+        "`_request` lieferte nicht die unveraenderten Bytes der Server-"
+        f"Antwort zurueck: {roh[:120]!r}"
+    )
+    assert elapsed < 2.0, (
+        f"Normalfall verzoegert ({elapsed:.2f}s) -- die Fristpruefung darf "
+        "einen sofort antwortenden Server nicht ausbremsen."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-4 — der Dual-Fall: der Gewitterpfad haelt die GEWITTER-Frist
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(25)
+def test_dwd_gewitterpfad_haelt_die_gewitterfrist_nicht_die_grundfrist(monkeypatch):
+    """RED (muss heute scheitern).
+
+    AC-4: Given `THUNDER_FETCH_DEADLINE_SECONDS` ist auf 0,45s gepatcht und
+    `FETCH_DEADLINE_SECONDS` DEUTLICH GROESSER auf 5,0s, When
+    `fetch_thunder_signals_named` gegen die haengende Gegenstelle laeuft, Then
+    haelt die verstrichene Zeit die GEWITTER-Frist ein (< 0,9s), nicht die
+    weitere Grundpfad-Grenze.
+
+    Der Kern ist der KONTRAST der beiden Werte: patchte man beide auf
+    denselben kleinen Wert, bliebe der gefaehrliche Fehler "still die falsche
+    Frist" unbewacht. Faellt das Durchreichen von `deadline_at` an der
+    Gewitter-Aufrufstelle weg (Mutations-Gegenprobe, Spec Test Plan), setzt
+    der `before`-Hook seinen Vorgabewert aus `FETCH_DEADLINE_SECONDS` — die
+    Zeit laeuft dann gegen 5,0s und dieser Waechter wird rot.
+
+    Zusicherung ist die WANDUHR, kein Ausnahmetyp aus dem Fristabbruch:
+    `_thunder_point` faengt jede Ausnahme seines `_request`-Aufrufs selbst ab
+    (`dwd.py:392-397`). Gefangen wird hier ausschliesslich der
+    VORBESTEHENDE Zaehlweg-Vertrag `ThunderSourceUnavailableError`
+    (`dwd.py:508-511`) — schluege ein `ProviderRequestError` bis hierher
+    durch, waere der fail-soft-Vertrag gebrochen und der Test rot (s.
+    SPEC-ABWEICHUNG im Modul-Docstring).
+
+    TRAGENDE Groessenwahl: `TIMEOUT` (2,0s) liegt ueber der Gewitterfrist
+    (0,45s), damit ein verworfener Timeout-Deckel sichtbar wird, und weit
+    unter der gepatchten Grundpfad-Frist (5,0s), damit der heutige Fehlschlag
+    (5 Versuche x 2,0s ~ 10s) eine lesbare Assertion liefert statt eines
+    Timeout-Kills. Untergrenze 0,2s als Positivkontrolle.
+    """
+    with _HangingServer() as server:
+        provider = _dwd_ruesten(
+            monkeypatch, dwd_module, DwdDirectProvider, server.host, server.port,
+            timeout=2.0,
+            fristen={
+                "THUNDER_FETCH_DEADLINE_SECONDS": 0.45,
+                "FETCH_DEADLINE_SECONDS": 5.0,
+            },
+        )
+        start = time.monotonic()
+        with pytest.raises(ThunderSourceUnavailableError):
+            provider.fetch_thunder_signals_named(_ORT)
+        elapsed = time.monotonic() - start
+
+    assert 0.2 <= elapsed < 0.9, (
+        f"fetch_thunder_signals_named() brauchte {elapsed:.2f}s -- die "
+        "GEWITTER-Frist (0.45s) muss gelten, nicht die weitere Grundpfad-"
+        "Frist (5.0s). Ein Wert um ~5.0s bedeutet: die Gewitter-Aufrufstelle "
+        "reicht ihr deadline_at nicht durch und der before-Hook setzt "
+        "FETCH_DEADLINE_SECONDS als Vorgabewert. Ein Wert um ~10s bedeutet: "
+        "es gibt im _request ueberhaupt keine Frist."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-5 — derselbe Weg am einfachen Fall (ICON-EU, ein Budget)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(25)
+def test_dwd_eu_gewitterpfad_haelt_seine_frist_und_bleibt_fail_soft(monkeypatch):
+    """RED (muss heute scheitern).
+
+    AC-5: Given `THUNDER_FETCH_DEADLINE_SECONDS` (ICON-EUs einziges Budget)
+    ist auf 0,45s gepatcht, When `fetch_thunder_signals_named` gegen die
+    haengende Gegenstelle laeuft, Then haelt die verstrichene Zeit diese Frist
+    ein (< 0,9s) und der Aufruf liefert fail-soft eine unvollstaendige Reihe
+    statt einer propagierten Ausnahme.
+
+    Hier stimmt die AC-Formulierung woertlich: `dwd_eu.py` hat den
+    Zaehlweg-Vertrag aus `dwd.py:508-511` nicht, der Rueckgabewert ist also
+    tatsaechlich pruefbar. Zusicherung bleibt die Wanduhr plus dieser
+    Rueckgabewert — nie ein Ausnahmetyp (`dwd_eu.py:359-363` faengt jede
+    Ausnahme im `_thunder_point` ab).
+
+    RED-Grund heute: `_request` kennt keine Frist; der erste `_thunder_point`
+    laeuft seine fuenf Versuche x `TIMEOUT` (2,0s) ~ 10s durch, erst danach
+    greift die Budgetpruefung ZWISCHEN den Aufrufen (`dwd_eu.py:408`).
+    """
+    with _HangingServer() as server:
+        provider = _dwd_ruesten(
+            monkeypatch, dwd_eu_module, DwdEuDirectProvider, server.host, server.port,
+            timeout=2.0, fristen={"THUNDER_FETCH_DEADLINE_SECONDS": 0.45},
+        )
+        start = time.monotonic()
+        ergebnis = provider.fetch_thunder_signals_named(_ORT)
+        elapsed = time.monotonic() - start
+
+    assert all(
+        wert is None for reihe in ergebnis.values() for wert in reihe.values()
+    ), (
+        "Gegen eine nie antwortende Gegenstelle darf kein Wert entstehen, "
+        f"fail-soft bleibt None (Spec AC-2): {ergebnis!r}"
+    )
+    # Positivkontrolle gegen das leere Ergebnis: `all(...)` oben ist auch fuer
+    # eine LEERE Reihe wahr. Der erste Zeitschritt MUSS versucht worden sein
+    # und steht dann als None in der Reihe -- das trennt "Budget griff nach
+    # dem ersten Abruf" von "es lief gar kein Abruf".
+    assert 1 in ergebnis["lpi"], (
+        f"Der erste Zeitschritt fehlt ganz ({ergebnis['lpi']!r}) -- der "
+        "Gewitterpfad darf nicht VOR dem ersten Abruf abbrechen."
+    )
+    assert len(ergebnis["lpi"]) < len(dwd_eu_module.FORECAST_HOURS), (
+        f"Die Reihe ist vollstaendig ({len(ergebnis['lpi'])} Zeitschritte) -- "
+        "bei erschoepftem Budget muss sie ABBRECHEN, also unvollstaendig sein."
+    )
+    assert 0.2 <= elapsed < 0.9, (
+        f"fetch_thunder_signals_named() brauchte {elapsed:.2f}s -- die Frist "
+        "(0.45s) muss INNERHALB des ersten Abrufs greifen. Ein Wert um ~10s "
+        "bedeutet: gepruefft wird erst ZWISCHEN zwei Abrufen, der einzelne "
+        "haengende Abruf laeuft seine volle Retry-Kette durch."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-6 — der Hook-Vorgabewert kommt aus der WEITEREN Frist
+# ---------------------------------------------------------------------------
+
+
+_HOOK_FAELLE = [
+    # `dwd`: BEIDE Konstanten gepatcht, und zwar auf deutlich verschiedene
+    # Werte -- nur so ist an der Wanduhr ablesbar, WELCHE gewirkt hat.
+    pytest.param(
+        dwd_module, DwdDirectProvider,
+        {"FETCH_DEADLINE_SECONDS": 0.45, "THUNDER_FETCH_DEADLINE_SECONDS": 0.05},
+        id="dwd",
+    ),
+    # `dwd_eu`: nur eine Konstante vorhanden, kein Kontrast moeglich.
+    pytest.param(
+        dwd_eu_module, DwdEuDirectProvider,
+        {"THUNDER_FETCH_DEADLINE_SECONDS": 0.45},
+        id="dwd_eu",
+    ),
+]
+
+
+@pytest.mark.timeout(15)
+@pytest.mark.parametrize("modul, klasse, fristen", _HOOK_FAELLE)
+def test_hook_vorgabewert_ist_die_weitere_frist(monkeypatch, modul, klasse, fristen):
+    """RED (muss heute scheitern).
+
+    AC-6: Given `_request` wird OHNE `deadline_at` aufgerufen, When der
+    geteilte `before`-Hook feuert, Then setzt er die Frist selbst aus der
+    providereigenen `_fetch_deadline_seconds()`-Methode — und fuer
+    `DwdDirectProvider` ist dieser Vorgabewert `FETCH_DEADLINE_SECONDS`
+    (180s), nie `THUNDER_FETCH_DEADLINE_SECONDS` (150s).
+
+    Nachweisform des "nie 150s" ist die UNTERGRENZE: im `dwd`-Fall ist die
+    Gewitterkonstante auf 0,05s gepatcht, die Grundpfadkonstante auf 0,45s.
+    Loest der Accessor die falsche Konstante auf, endet der Aufruf nach ~0,05s
+    — neunfach unterhalb der 0,2s-Grenze, der Test wird rot. Im `dwd_eu`-Fall
+    gibt es nur eine Konstante; dort ist dieselbe Untergrenze die
+    Positivkontrolle "es ging ein echter Versuch hinaus".
+
+    Warum das eine eigene AC ist: eine Absicherung, die man vergessen kann
+    einzuschalten, ist im Ernstfall keine — und `_thunder_point` reicht heute
+    an KEINER Stelle ein `deadline_at` durch.
+
+    RED-Grund heute: `_request` liest die Konstanten ueberhaupt nicht, der
+    Aufruf laeuft seine fuenf Versuche x 0,3s ~ 1,5s durch.
+    """
+    with _HangingServer() as server:
+        provider = _dwd_ruesten(
+            monkeypatch, modul, klasse, server.host, server.port,
+            timeout=0.3, fristen=fristen,
+        )
+        url = _dwd_url(modul)
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._request(url)  # BEWUSST ohne deadline_at
+        elapsed = time.monotonic() - start
+
+    assert 0.2 <= elapsed < 0.9, (
+        f"_request() OHNE deadline_at brauchte {elapsed:.2f}s -- erwartet ist "
+        "die Frist 0.45s. Ein Wert um ~0.05s bedeutet: der Accessor liefert "
+        "die GEWITTER-Frist als Vorgabewert statt der weiteren Grundpfad-"
+        "Frist. Ein Wert um ~1.5s bedeutet: der before-Hook setzt gar keine "
+        "Frist."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-7 — ein LAUFZEIT-Patch der Fristdauer wirkt (Accessor statt Closure)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(15)
+@pytest.mark.parametrize("fall", _BEIDE)
+def test_laufzeit_patch_der_fristdauer_wirkt_dwd(monkeypatch, fall):
+    """RED (muss heute scheitern).
+
+    AC-7: Given die Fristkonstante des Moduls wird ZUR LAUFZEIT auf 0,05s
+    gepatcht, When `_request` gegen einen ERREICHBAREN, nur langsamen Server
+    (0,6s Antwortzeit) laeuft, Then gilt der gepatchte Wert und der Aufruf
+    bricht ab, statt die Antwort abzuwarten (< 0,4s).
+
+    Das ist der Test, der eine Closure-Bauform ausschliesst: friert der
+    Baustein die Fristdauer beim Dekorieren ein, liefe der Patch ins Leere und
+    der Aufruf kaeme nach 0,6s mit Daten zurueck. Der ERREICHBARE Server ist
+    bewusst gewaehlt — gegen eine haengende Gegenstelle waere "bricht schnell
+    ab" auch ohne wirksamen Patch erklaerbar.
+
+    RED-Grund heute: `_request` liest die Konstante nicht, der Abruf gelingt
+    nach 0,6s und wirft gar nichts ("DID NOT RAISE").
+    """
+    modul, klasse, frist = fall
+    with _antwortender_server(delay=0.6) as server:
+        host, port = server.server_address
+        provider = _dwd_ruesten(
+            monkeypatch, modul, klasse, host, port,
+            timeout=30.0, fristen={frist: 0.05},
+        )
+        url = _dwd_url(modul)
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._request(url)
+        elapsed = time.monotonic() - start
+
+    assert elapsed < 0.4, (
+        f"_request() brauchte {elapsed:.2f}s -- der zur Laufzeit auf 0.05s "
+        "gepatchte Wert haette vor der 0.6s-Antwort des erreichbaren Servers "
+        "greifen muessen. Ein Wert um ~0.6s bedeutet: die Fristdauer wurde "
+        "nicht zur Aufrufzeit gelesen (Closure statt Accessor)."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-8 — kein geteiltes Retrying-Objekt zwischen ICON-D2 und ICON-EU
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(25)
+def test_retry_konfiguration_ist_je_dwd_provider_unabhaengig(monkeypatch):
+    """RED (muss heute scheitern).
+
+    AC-8: Given der geteilte Baustein ist in beiden Providern verdrahtet, When
+    die Retry-Konfiguration des EINEN veraendert wird (hier
+    `DwdDirectProvider._request.retry.wait` auf spuerbare 3,0s), Then bleibt
+    das Verhalten von `DwdEuDirectProvider._request` unveraendert.
+
+    VERHALTENSBASIERT, und die Reihenfolge der Patches ist tragend: erst
+    ICON-EU auf `wait_none()`, DANACH ICON-D2 auf `wait_fixed(3.0)`. Teilten
+    sich beide ein `Retrying`, ueberschriebe der zweite Patch den ersten;
+    Versuch 1 scheitert dann bei 0,3s (Frist 0,45s noch nicht erreicht, also
+    kein Stop), es folgt die volle 3,0s-Pause und der Aufruf braucht ~3,3s.
+    Der `is not`-Vergleich steht ERGAENZEND am Ende -- stuende er vorn,
+    brauchte eine Mutation mit geteiltem Objekt den Test strukturell ab, bevor
+    die Wirkung gemessen ist.
+
+    RED-Grund heute: ohne Frist laufen fuenf volle Versuche x 0,3s ~ 1,5s.
+    """
+    with _HangingServer() as server:
+        provider = _dwd_ruesten(
+            monkeypatch, dwd_eu_module, DwdEuDirectProvider, server.host, server.port,
+            timeout=0.3, fristen={"THUNDER_FETCH_DEADLINE_SECONDS": 0.45},
+        )
+        # Reihenfolge tragend: dieser Patch kommt NACH dem ICON-EU-Patch.
+        monkeypatch.setattr(
+            DwdDirectProvider._request.retry, "wait", tenacity.wait_fixed(3.0)
+        )
+        url = _dwd_url(dwd_eu_module)
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._request(url)
+        elapsed = time.monotonic() - start
+
+    assert elapsed < 1.0, (
+        f"ICON-EUs _request brauchte {elapsed:.2f}s, obwohl nur die "
+        "Wartepause von ICON-D2 auf 3.0s gesetzt wurde -- die "
+        "Retry-Konfiguration wirkt offenbar providerUEBERGREIFEND. Ein Wert "
+        "um ~1.5s bedeutet dagegen: es gibt noch gar keine Frist."
+    )
+    assert (
+        DwdDirectProvider._request.retry is not DwdEuDirectProvider._request.retry
+    ), (
+        "de_direct und eu_direct teilen sich EIN Retrying-Objekt -- eine "
+        "Aenderung an der Retry-Konfiguration des einen wirkt damit still auf "
+        "den anderen."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-9 — der bestehende Zaehl-Waechter wird im Normallauf ueberhaupt gesammelt
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(120)
+def test_thunder_zeitbudget_waechter_laeuft_im_normallauf_mit():
+    """RED (muss heute scheitern).
+
+    AC-9: Given `tests/tdd/test_dwd_eu_thunder_time_budget.py` traegt keinen
+    `live`/`email`/`staging`-Marker mehr, When ein normaler
+    `pytest --collect-only`-Lauf MIT den Vorgabe-`addopts`
+    (`pyproject.toml:65`, inkl. `-m 'not email and not live and not staging'`)
+    laeuft, Then sammelt er die vorhandenen Tests (N > 0).
+
+    Der Unterprozess ist der Kern der Beweisform: nur ein Lauf mit den echten
+    `addopts` sieht den Marker-Filter, den ein `-m ''`-Override im Elternlauf
+    ausschaltet. Pruefling und Arbeitsverzeichnis werden RELATIV ZU DIESER
+    DATEI aufgeloest, damit der Test im Worktree nicht versehentlich den
+    Hauptcheckout vermisst.
+
+    RED-Grund heute: `pytestmark = pytest.mark.live` (`:31`) laesst den Lauf
+    mit "no tests collected (2 deselected)" enden — der Waechter ist im
+    Normallauf unsichtbar.
+    """
+    ziel = Path(__file__).resolve().parent / "test_dwd_eu_thunder_time_budget.py"
+    wurzel = Path(__file__).resolve().parents[2]
+    lauf = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only", str(ziel)],
+        cwd=str(wurzel), capture_output=True, text=True, timeout=100,
+    )
+    gesammelt = lauf.stdout.count("::")
+
+    assert gesammelt > 0, (
+        f"--collect-only sammelte {gesammelt} Tests aus {ziel.name} "
+        f"(Exit {lauf.returncode}). Ein Waechter, den der Normallauf "
+        "verwirft, bewacht nichts.\n--- stdout ---\n"
+        f"{lauf.stdout[-800:]}\n--- stderr ---\n{lauf.stderr[-400:]}"
     )
