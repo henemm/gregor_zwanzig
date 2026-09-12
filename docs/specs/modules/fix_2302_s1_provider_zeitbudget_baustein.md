@@ -2,8 +2,8 @@
 entity_id: fix_2302_s1_provider_zeitbudget_baustein
 type: module
 created: 2026-09-11
-updated: 2026-09-11
-status: draft
+updated: 2026-09-12
+status: implemented
 version: "1.0"
 tags: [provider, zeitbudget, deadline, retry, httpx, tenacity, alarm]
 ---
@@ -212,3 +212,9 @@ Accessor-Methode, nie direkt aus `http.py` heraus.
 ## Changelog
 
 - 2026-09-11: Initial spec created (Scheibe A von #2302)
+- 2026-09-12: Umsetzung: neuer geteilter Baustein `src/providers/http.py`
+  (`make_deadline_before_hook`, `stop_at_deadline`, `capped_timeout_or_raise`);
+  `openmeteo.py` darauf migriert (reiner Mechanik-Tausch); `meteofrance.py`-
+  Grundpfad (`_request`/`_request_once`) bekommt dasselbe Zeitbudget wie der
+  bereits geschützte Gewitterpfad. Beide Provider lesen ihre Frist über eine
+  eigene `_fetch_deadline_seconds()`-Accessor-Methode zur Aufrufzeit.

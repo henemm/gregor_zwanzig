@@ -58,6 +58,11 @@ from tenacity import (
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from providers import thunder_routing
 from providers.base import ProviderRequestError, ThunderSourceUnavailableError
+from providers.http import (
+    capped_timeout_or_raise,
+    make_deadline_before_hook,
+    stop_at_deadline,
+)
 # Zustaendigkeit der GRUNDVORHERSAGE. Fuer die Gewitter-Anreicherung BEWUSST
 # NICHT mehr befragt (Spec AC-12): dort entscheidet `thunder_routing`, weil die
 # Zustaendigkeit groessenabhaengig ist (Oesterreich: Schnee von GeoSphere,
@@ -418,20 +423,57 @@ class MeteoFranceDirectProvider:
     def name(self) -> str:
         return "fr_direct"
 
+    def _fetch_deadline_seconds(self) -> float:
+        """Fristdauer je ``_request``-Aufruf, gelesen zur AUFRUFZEIT.
+
+        #2302: der geteilte ``before``-Hook (``providers/http.py``) loest
+        ueber den NAMEN dieser Methode auf, nie ueber ihren Wert — so wirkt
+        ein Laufzeit-Patch des Modul-Globals unveraendert.
+        """
+        return FETCH_DEADLINE_SECONDS
+
     @retry(
-        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        stop=stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline,
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
         retry=retry_if_exception(_is_retryable_error),
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
     def _request(
         self, coverage_id: str, lat: float, lon: float,
         height: Optional[int], time_str: str,
+        deadline_at: Optional[float] = None,
     ) -> bytes:
         """GetCoverage-Request mit Retry-Logik (SPEC: api_retry.md-Muster,
-        502/503/504 + Connection-Errors, 5 Versuche, 2-60s Backoff)."""
-        return self._request_once(coverage_id, lat, lon, height, time_str)
+        502/503/504 + Connection-Errors, 5 Versuche, 2-60s Backoff).
+
+        #2302 Scheibe A: zusaetzlich durch ``FETCH_DEADLINE_SECONDS``
+        begrenzt — sowohl der HTTP-Timeout jedes einzelnen Versuchs als auch
+        die gesamte Wiederholkette dieses Aufrufs sind auf die Restzeit bis
+        ``deadline_at`` gedeckelt. Vorher pruefte nur ``_fetch_series``
+        ZWISCHEN zwei Aufrufen; ein einzelner haengender Aufruf konnte seine
+        vollen ``RETRY_ATTEMPTS`` Versuche plus vier Wartepausen (2-60s)
+        durchlaufen, ganz gleich wie viel Budget noch uebrig war.
+
+        Args:
+            deadline_at: Absolute monotone Frist. ``_fetch_series`` reicht
+                die Frist der SERIE durch — sie gilt damit ueber alle Abrufe
+                der Serie gemeinsam, statt dass jeder Abruf eine frische
+                volle Frist bekaeme. Fehlt sie, bildet der geteilte
+                ``before``-Hook sie selbst: die Absicherung haengt NICHT
+                daran, dass eine Aufrufstelle sie durchreicht.
+        """
+        request_timeout = capped_timeout_or_raise(
+            provider_name=self.name,
+            base_timeout=TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="FETCH_DEADLINE_SECONDS",
+            budget_seconds=FETCH_DEADLINE_SECONDS,
+        )
+        return self._request_once(
+            coverage_id, lat, lon, height, time_str, timeout=request_timeout
+        )
 
     def _request_once(
         self, coverage_id: str, lat: float, lon: float,
@@ -505,7 +547,14 @@ class MeteoFranceDirectProvider:
                     "ueberschritten",
                 )
             time_str = (run + timedelta(hours=offset)).strftime("%Y-%m-%dT%H:%M:%SZ")
-            raw = self._request(coverage_id, lat, lon, height, time_str)
+            # #2302: die Frist der SERIE ausdruecklich durchreichen (als
+            # Keyword — der `before`-Hook setzt denselben Namen in `kwargs`).
+            # Sonst bekaeme jeder einzelne Abruf eine frische volle Frist,
+            # und die Serienfrist waere wieder nur eine Pruefung ZWISCHEN den
+            # Abrufen.
+            raw = self._request(
+                coverage_id, lat, lon, height, time_str, deadline_at=deadline_at
+            )
             values[offset] = _read_point_value(raw, lat, lon)
         return values
 
