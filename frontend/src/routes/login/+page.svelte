@@ -4,6 +4,7 @@
 	import type { ActionData } from './$types.js';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 	import { abmeldungLiegtVor, raeumeGeraetespeicher, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
+	import { isWebAuthnSupported, loginWithPasskey, loginWithDiscoverablePasskey } from '$lib/passkey';
 
 	let { form, data }: { form: ActionData; data: { googleEnabled: boolean } } = $props();
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
@@ -29,10 +30,87 @@
 	});
 
 	let username = $state(form?.username ?? '');
+
+	// Issue #2247 — Passkey als erster Anmeldeweg auf dem Handy.
+	//
+	// Tri-State UMGEKEHRT gegenueber der Konto-Seite (#2246): `null` (noch nicht
+	// gemessen) UND `true` zeigen den Knopf, erst ein gemessenes `false` wechselt
+	// auf den Hinweistext. Nur so steht der Knopf bereits in der vom Server
+	// ausgelieferten Seite (`window` gibt es dort nie) -- entstuende er erst im
+	// Browser, verschoebe sich beim Nachladen alles darunter.
+	let webAuthnFaehig = $state<boolean | null>(null);
+	let passkeyFehler = $state<string | null>(null);
+	let usernameFeld = $state<HTMLInputElement | null>(null);
+	// Laufende Autofill-Anbindung (Conditional UI). Wird NUR abgebrochen, wenn
+	// der Nutzer die manuelle Zeremonie startet -- ein zweiter credentials.get()
+	// scheiterte sonst an der noch offenen ersten Anfrage.
+	let autofillAbbruch: AbortController | null = null;
+
+	onMount(() => {
+		webAuthnFaehig = isWebAuthnSupported();
+		if (webAuthnFaehig) void starteAutofillAnbindung();
+		return () => autofillAbbruch?.abort();
+	});
+
+	/**
+	 * Bietet den hinterlegten Passkey als Vorschlag im Benutzernamen-Feld an.
+	 * Startet nur, wenn der Browser das selbst meldet — die Pruefung laeuft rein
+	 * im Browser und verbraucht kein Anfrage-Kontingent.
+	 */
+	async function starteAutofillAnbindung(): Promise<void> {
+		try {
+			const pkc = window.PublicKeyCredential as unknown as {
+				isConditionalMediationAvailable?: () => Promise<boolean>;
+			};
+			if (typeof pkc?.isConditionalMediationAvailable !== 'function') return;
+			if (!(await pkc.isConditionalMediationAvailable())) return;
+			autofillAbbruch = new AbortController();
+			await loginWithDiscoverablePasskey(autofillAbbruch.signal);
+		} catch {
+			// Der Hintergrundweg bleibt stumm: ein Abbruch ist hier der Normalfall
+			// (der Nutzer nimmt stattdessen den Knopf), und eine Fehlermeldung fuer
+			// etwas, das der Nutzer nie angestossen hat, waere nur Laerm.
+		}
+	}
+
+	/** Rohe Zeremonie-Fehler in verstaendliches Deutsch uebersetzen (Muster: account/+page.svelte). */
+	function passkeyFehlertext(e: unknown): string {
+		const name = (e as { name?: string })?.name;
+		// Abbruch, Zeitueberschreitung und "kein passender Passkey" meldet WebAuthn
+		// ABSICHTLICH als denselben NotAllowedError (Privacy-Design) -- getrennte
+		// Texte dafuer sind strukturell unmoeglich, siehe Spec "Known Limitations".
+		if (name === 'NotAllowedError' || name === 'AbortError') {
+			return 'Die Anmeldung mit Passkey wurde abgebrochen oder es stand kein passender Passkey bereit. Bitte versuche es noch einmal oder melde dich mit Passwort an.';
+		}
+		return 'Die Anmeldung mit Passkey hat nicht geklappt. Bitte versuche es noch einmal oder melde dich mit Passwort an.';
+	}
+
+	async function mitPasskeyAnmelden(): Promise<void> {
+		passkeyFehler = null;
+		if (!username.trim()) {
+			// Nicht deaktivieren, sondern fuehren: ein deaktivierter Knopf ist per
+			// Tastatur nicht erreichbar und waere als erstes Element auf dem Handy
+			// ein toter Auftakt. Die Autofill-Anbindung laeuft dabei WEITER -- sie
+			// abzubrechen und neu zu starten kostete ein weiteres Token aus dem
+			// geteilten Passkey-Kontingent.
+			usernameFeld?.focus();
+			return;
+		}
+		autofillAbbruch?.abort();
+		autofillAbbruch = null;
+		try {
+			await loginWithPasskey(username.trim());
+		} catch (e: unknown) {
+			passkeyFehler = passkeyFehlertext(e);
+		}
+	}
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-background">
-	<div class="w-full max-w-sm space-y-6 p-6">
+	<!-- Issue #2247: `flex flex-col gap-6` statt `space-y-6` — `space-y-*` haengt
+	     den Abstand an alle Geschwister AUSSER dem ersten in DOKUMENT-Reihenfolge;
+	     nach der Umsortierung per `desktop:order-*` saesse er am falschen Element. -->
+	<div class="flex w-full max-w-sm flex-col gap-6 p-6">
 		<div class="space-y-2 text-center">
 			<Wordmark size="lg" href="/" />
 			<p class="text-muted-foreground text-sm">Anmelden um fortzufahren</p>
@@ -56,6 +134,42 @@
 			</div>
 		{/if}
 
+		<!-- Issue #2247 — Passkey-Weg. Steht im HTML VOR dem Passwort-Formular,
+		     damit er auf dem Handy der erste sichtbare Anmeldeweg ist; ab 900px
+		     schiebt `desktop:order-1` ihn unter das Formular (Google `order-2`,
+		     Fusslinks `order-3` bleiben dahinter). Die Fokusreihenfolge folgt auf
+		     dem Desktop weiterhin dem HTML — bewusst, siehe Spec. -->
+		<div class="desktop:order-1 space-y-2">
+			<!-- Feste Hoehe: der Bereich ist in allen drei Zustaenden (ungeprueft /
+			     faehig / nicht faehig) gleich hoch, damit der Inhaltstausch nach der
+			     Faehigkeitspruefung nichts darunter verschiebt. -->
+			<div data-testid="login-passkey-area" class="flex h-14 items-center justify-center">
+				{#if webAuthnFaehig === false}
+					<p data-testid="login-passkey-hint" class="text-center text-sm text-muted-foreground">
+						Dieses Gerät unterstützt keine Passkeys — bitte melde dich mit Passwort an.
+					</p>
+				{:else}
+					<button
+						type="button"
+						data-testid="login-passkey-btn"
+						onclick={mitPasskeyAnmelden}
+						class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					>
+						Mit Passkey anmelden
+					</button>
+				{/if}
+			</div>
+			{#if passkeyFehler}
+				<div
+					data-testid="login-passkey-error"
+					class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm"
+					style="color: var(--g-bad);"
+				>
+					{passkeyFehler}
+				</div>
+			{/if}
+		</div>
+
 		<form method="POST" class="space-y-4">
 			<div class="space-y-2">
 				<label for="username" class="text-sm font-medium">Benutzername</label>
@@ -64,8 +178,9 @@
 					name="username"
 					type="text"
 					required
-					autocomplete="username"
+					autocomplete="username webauthn"
 					bind:value={username}
+					bind:this={usernameFeld}
 					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
 			</div>
@@ -89,7 +204,7 @@
 			</button>
 		</form>
 		{#if data.googleEnabled}
-			<div class="relative">
+			<div class="desktop:order-2 relative">
 				<div class="absolute inset-0 flex items-center">
 					<span class="w-full border-t border-input"></span>
 				</div>
@@ -99,13 +214,13 @@
 			</div>
 			<a
 				href="/api/auth/google/init"
-				class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				class="desktop:order-2 inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				Mit Google anmelden
 			</a>
 		{/if}
 
-		<div class="space-y-2">
+		<div class="desktop:order-3 space-y-2">
 			<a href="/register" class="block text-center text-sm text-muted-foreground hover:underline">
 				Noch kein Konto? Konto erstellen
 			</a>
