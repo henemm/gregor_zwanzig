@@ -195,7 +195,7 @@ compare/[id]/+page.svelte + trips/[id]/+page.svelte (Scheibe A):
 - Gemessen 13.09. (RED-Lauf): Nach dem Neuladen zeigt `/trips/[id]` noch den alten Wert, obwohl der
   neue schon gespeichert ist. Die Seite wird geholt, bevor der `keepalive`-Speichervorgang ankommt.
   AC-9/AC-10 sichern „gespeichert", nicht „sofort richtig angezeigt". Das Verhalten besteht schon
-  seit #1376 und ist nicht Teil dieser Spec; eigenes Issue.
+  seit #1376 und ist nicht Teil dieser Spec; eigenes Issue #2317.
 - Update-Notizen/Changelog für den Nutzer sind kein Ziel dieser Spec.
 - Eine „Aktualisiert"-Meldung nach einer still (selbst) aktivierten Fassung ist kein Ziel dieser Spec.
 - Keine nginx-Änderungen: Messung 13.09. zeigt `/service-worker.js` mit `ETag` → 304/0 Byte,
