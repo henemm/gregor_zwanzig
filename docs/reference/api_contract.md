@@ -2681,6 +2681,37 @@ User login with username + password, returns session cookie.
 | 400 | `{"error":"invalid request"}` | JSON malformed (auth.go:124 — Klartext, KEIN snake_case) |
 | 401 | `{"error":"invalid credentials"}` | User not found or password incorrect — same message for both (auth.go:132,139; Klartext mit Leerzeichen) |
 
+#### POST /api/auth/magic-link
+
+Fordert einen 6-stelligen Anmeldecode (15 Min gültig) für `{"email": "..."}` an. Antwort **immer**
+`200 {"status":"ok"}` (keine Konto-Enumeration); `400 {"error":"invalid request"}` nur bei leerem
+Body/leerer Adresse. **Legt kein Konto an** (seit #2147). Der Code geht über den
+Bestätigungsmail-Weg (Resend-Sonderpfad ohne Empfänger-Allowlist), weil er wie die
+Bestätigungsmail ein Adressnachweis ist. Adressen werden per `TrimSpace + ToLower` normalisiert.
+
+#### POST /api/auth/magic-link/verify
+
+Löst `{"email","code"}` ein. Erfolg: `200 {"id": "<userId>"}` + `gz_session`-Cookie. Der Code wirkt
+genau einmal (auch bei gleichzeitigen Anfragen). Erst hier wird die Adresse X einem Konto zugeordnet
+(Issue #2147, Spec `magic_link_adress_eindeutigkeit.md`):
+
+- **Inhaber** von X = Nicht-Testkonto mit `email` oder `mail_to` gleich X. **Bestätigter Inhaber** =
+  zusätzlich `email_verified_at` gesetzt und X ist seine wirksame Kontaktadresse (`mail_to`,
+  ersatzweise `email`).
+- Genau ein bestätigter Inhaber → Anmeldung in dieses Konto (Konto unverändert).
+- Kein Inhaber → neues Konto `m-{8hex}` mit `email = mail_to = X`, sofort bestätigt.
+- Genau ein unbestätigter Inhaber ohne Passwort, Passkey und Google-Verknüpfung, X ist seine
+  Kontaktadresse → Konto wird bestätigt, seine bisherigen Sitzungen enden, dann Anmeldung.
+- Alles andere (mehrere Inhaber, X nur im Nebenfeld, unbestätigtes Konto mit Zugangsdaten) → keine
+  Anmeldung; dieselbe Antwort wie bei falschem Code. Das Log nennt nur Konto-IDs/Anzahl, nie X.
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid request"}` | JSON malformed, Adresse oder Code leer |
+| 400 | `{"error":"invalid_or_expired_code"}` | Kein/abgelaufener/falscher/verbrauchter Code **oder** Adresse nicht eindeutig zuordenbar |
+| 400 | `{"error":"max_attempts_exceeded"}` | 3 Fehlversuche |
+| 500 | `{"error":"internal error"}` | Konten nicht lesbar / Anlage oder Bestätigung fehlgeschlagen |
+
 ### B) Passkey Authentication (WebAuthn/FIDO2)
 
 **Issue #450** — Add WebAuthn (Face ID, Touch ID, Windows Hello, etc.) as alternative auth method alongside password. V1 is add-on (existing users keep passwords).

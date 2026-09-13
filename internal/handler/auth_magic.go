@@ -9,7 +9,9 @@ package handler
 //
 // The OTP-Store is a package-level sync.Map (key: normalized e-mail,
 // value: *otpEntry). TTL is 15 minutes; max 3 wrong attempts per entry.
-// New users are provisioned automatically with ID format "m-{8hex}".
+// Issue #2147: the account is resolved only when the code is redeemed
+// (store.ResolveAddressOwner); new users ("m-{8hex}") are created then, never
+// on request.
 
 import (
 	"crypto/rand"
@@ -34,7 +36,6 @@ import (
 // in place via the pointer — never re-Store the entry.
 type otpEntry struct {
 	code      string
-	userID    string
 	expiresAt time.Time
 	attempts  int32
 }
@@ -58,23 +59,9 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 			return
 		}
 
-		normalizedEmail := strings.ToLower(strings.TrimSpace(req.Email))
-
-		// Find existing user or create a new magic-link account.
-		user, err := s.FindUserByEmail(normalizedEmail)
-		if err != nil {
-			log.Printf("magic-link: FindUserByEmail error: %v", err)
-			w.Write([]byte(`{"status":"ok"}`))
-			return
-		}
-		if user == nil {
-			user, err = createMagicLinkUser(s, normalizedEmail)
-			if err != nil {
-				log.Printf("magic-link: createMagicLinkUser error: %v", err)
-				w.Write([]byte(`{"status":"ok"}`))
-				return
-			}
-		}
+		// Issue #2147: no account lookup/creation here — the code proves the
+		// address, the account is resolved when it is redeemed.
+		normalizedEmail := store.NormalizeEmailAddress(req.Email)
 
 		// Generate 6-digit OTP via crypto/rand.
 		var b [4]byte
@@ -87,7 +74,6 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 
 		otpStore.Store(normalizedEmail, &otpEntry{
 			code:      code,
-			userID:    user.ID,
 			expiresAt: time.Now().Add(15 * time.Minute),
 			attempts:  0,
 		})
@@ -103,14 +89,14 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 				Pass: cfg.SMTPPass,
 				From: cfg.SMTPFrom,
 			}
+			// Issue #2147: the code is an address proof like the verification
+			// mail — same Resend special path (the recipient allowlist only
+			// knows confirmed accounts, a not-yet-existing one would never
+			// receive it).
 			msg := mail.BuildMagicLinkMail(code)
-			fallbackCfg := mail.MailConfig{
-				Host: cfg.FallbackSMTPHost, Port: 587,
-				User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
-			}
-			go func(to string, m mail.Mail, c, fb mail.MailConfig) {
+			go func(to string, m mail.Mail, c mail.MailConfig) {
 				done := make(chan error, 1)
-				go func() { done <- mail.SendWithFallback(c, fb, to, m) }()
+				go func() { done <- sendVerificationMailFn(c, to, m) }()
 				select {
 				case err := <-done:
 					if err != nil {
@@ -119,7 +105,7 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 				case <-time.After(20 * time.Second):
 					log.Printf("magic-link: mail send timeout (20s) for %s", to)
 				}
-			}(normalizedEmail, msg, mailCfg, fallbackCfg)
+			}(normalizedEmail, msg, mailCfg)
 		}
 
 		w.Write([]byte(`{"status":"ok"}`))
@@ -142,7 +128,7 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 			return
 		}
 
-		normalizedEmail := strings.ToLower(strings.TrimSpace(req.Email))
+		normalizedEmail := store.NormalizeEmailAddress(req.Email)
 		if normalizedEmail == "" || req.Code == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(`{"error":"invalid request"}`))
@@ -181,20 +167,75 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 			return
 		}
 
-		// Success: single-use → delete entry, sign session, set cookie.
-		otpStore.Delete(normalizedEmail)
-
-		// Issue #2304 (AC-4/AC-5): der Empfang des Codes beweist den Besitz
-		// von normalizedEmail. Deckt sich das mit der effektiven
-		// Kontaktadresse, heilt die Bestätigung sich selbst — sonst nicht.
-		// Die Anmeldung darunter läuft in beiden Fällen weiter.
-		selfHealEmailVerification(s, entry.userID, normalizedEmail)
-
-		if !issueSession(w, r, s, entry.userID, cfg.SessionSecret) {
+		// Success: single-use. Only the caller that consumes the entry
+		// proceeds — a concurrent second redemption gets the neutral 400
+		// (Issue #2147 AC-9).
+		if !otpStore.CompareAndDelete(normalizedEmail, entry) {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"error":"invalid_or_expired_code"}`))
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]string{"id": entry.userID})
+
+		unlock := store.LockEmailAddress(normalizedEmail)
+		defer unlock()
+		userID, ok := resolveMagicLinkAccount(w, s, normalizedEmail)
+		if !ok {
+			return
+		}
+		if !issueSession(w, r, s, userID, cfg.SessionSecret) {
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]string{"id": userID})
 	}
+}
+
+// resolveMagicLinkAccount maps the proven address to exactly one account
+// (Issue #2147, Spec magic_link_adress_eindeutigkeit.md §4). The caller holds
+// store.LockEmailAddress. Returns false when a response was already written.
+func resolveMagicLinkAccount(w http.ResponseWriter, s *store.Store, address string) (string, bool) {
+	fail := func(status int, body string) (string, bool) {
+		w.WriteHeader(status)
+		w.Write([]byte(body))
+		return "", false
+	}
+	owner, resolution, err := s.ResolveAddressOwner(address)
+	if err != nil {
+		log.Printf("magic-link: address resolution failed: %v", err)
+		return fail(http.StatusInternalServerError, `{"error":"internal error"}`)
+	}
+	switch resolution {
+	case store.AddressFree:
+		user, err := createMagicLinkUser(s, address)
+		if err != nil {
+			log.Printf("magic-link: createMagicLinkUser error: %v", err)
+			return fail(http.StatusInternalServerError, `{"error":"internal error"}`)
+		}
+		return user.ID, true
+	case store.AddressOwned:
+		if owner.EmailVerifiedAt != nil {
+			return owner.ID, true
+		}
+		// Credential-less, unconfirmed account: confirm it (read-modify-write)
+		// and end its old sessions BEFORE issuing the new one.
+		user, err := s.LoadUser(owner.ID)
+		if err == nil && user == nil {
+			err = fmt.Errorf("account vanished")
+		}
+		if err == nil {
+			now := time.Now().UTC()
+			user.EmailVerifiedAt = &now
+			if err = s.SaveUser(*user); err == nil {
+				err = s.ClearSessions(owner.ID)
+			}
+		}
+		if err != nil {
+			log.Printf("magic-link: takeover of unconfirmed account %s failed: %v", owner.ID, err)
+			return fail(http.StatusInternalServerError, `{"error":"internal error"}`)
+		}
+		return owner.ID, true
+	}
+	log.Printf("magic-link: address not uniquely assignable — login refused")
+	return fail(http.StatusBadRequest, `{"error":"invalid_or_expired_code"}`)
 }
 
 // createMagicLinkUser provisions a new user with ID format "m-{8hex}".
@@ -209,11 +250,13 @@ func createMagicLinkUser(s *store.Store, email string) (*model.User, error) {
 		if s.UserExists(id) {
 			continue
 		}
+		now := time.Now().UTC()
 		user := model.User{
-			ID:        id,
-			Email:     email,
-			MailTo:    email,
-			CreatedAt: time.Now(),
+			ID:              id,
+			Email:           email,
+			MailTo:          email,
+			CreatedAt:       now,
+			EmailVerifiedAt: &now, // the redeemed code proved the address
 		}
 		if err := s.SaveUser(user); err != nil {
 			return nil, err

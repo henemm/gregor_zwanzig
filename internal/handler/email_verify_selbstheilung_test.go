@@ -89,12 +89,12 @@ func ladeKonto(t *testing.T, s *store.Store, uid string) *model.User {
 // Magic-Link nachgewiesene Adresse → nach der Anmeldung ist das Feld gesetzt.
 //
 // Der Vorrang mail_to > email wird hier NICHT mitgemessen — er KANN hier nicht
-// gemessen werden: der Magic-Link löst das Konto über FindUserByEmail auf
-// (auth_magic.go:64). Trüge email eine andere Adresse als die nachgewiesene,
-// fände der Fluss dieses Konto gar nicht und legte ein neues an; der Test
-// prüfte dann nichts. Deshalb sind beide Felder hier absichtlich gleich.
-// Bewacht wird der Vorrang von AC-5 (abweichendes mail_to → Feld bleibt nil)
-// und AC-6, dessen Fixture email und mail_to tatsächlich auseinanderzieht.
+// gemessen werden: seit #2147 übernimmt der Magic-Link ein unbestätigtes Konto
+// nur, wenn die nachgewiesene Adresse seine WIRKSAME Kontaktadresse ist
+// (store.ResolveAddressOwner). Deshalb sind beide Felder hier absichtlich
+// gleich. Bewacht wird der Vorrang von AC-5 (abweichendes mail_to → keine
+// Übernahme, Feld bleibt nil) und AC-6, dessen Fixture email und mail_to
+// tatsächlich auseinanderzieht.
 func TestSelbstheilungMagicLinkSetztBestaetigungBeiAdressgleichheit_AC4(t *testing.T) {
 	t.Cleanup(ResetOTPStoreForTest)
 	s := newTestStore(t)
@@ -103,7 +103,7 @@ func TestSelbstheilungMagicLinkSetztBestaetigungBeiAdressgleichheit_AC4(t *testi
 	const nachgewiesen = "rosa-postfach@beispiel.de"
 	if err := s.SaveUser(model.User{
 		ID:        uid,
-		Email:     nachgewiesen, // Grundlage der Konto-Auflösung (FindUserByEmail)
+		Email:     nachgewiesen, // Grundlage der Konto-Auflösung (ResolveAddressOwner)
 		MailTo:    nachgewiesen, // effektive Kontaktadresse — identisch
 		CreatedAt: time.Now(),
 	}); err != nil {
@@ -133,13 +133,15 @@ func TestSelbstheilungMagicLinkSetztBestaetigungBeiAdressgleichheit_AC4(t *testi
 //
 // 🔴 Fortgeschrieben mit Issue #2271 (S2): Die zweite Zusicherung der S1-Fassung
 // ("die Anmeldung gelingt trotzdem, S1 sperrt nichts") ist mit der
-// Scharfschaltung des Login-Gates hinfällig — das Konto bleibt hier
-// unbestätigt, also verweigert das Gate in issueSession die Ausstellung. Die
-// Prüfung wurde deshalb umgedreht, nicht gestrichen: 403 ohne Merkmal. Ihre
-// Wächterwirkung bleibt dieselbe und wird sogar schärfer — wer den
-// Adressvergleich in selfHealEmailVerification weglässt und bedingungslos
-// bestätigt, bekommt hier 200 mit Cookie und wird von genau dieser Zeile
-// gefangen.
+// Scharfschaltung des Login-Gates hinfällig.
+//
+// 🔴 Fortgeschrieben mit Issue #2147 (Scheibe A): Die nachgewiesene Adresse
+// steht hier nur im Nebenfeld `email` — das Konto hat sie nie als
+// Kontaktadresse nachgewiesen. Die Konto-Auflösung (store.ResolveAddressOwner)
+// weist das jetzt schon VOR dem Login-Gate neutral ab: 400
+// invalid_or_expired_code ohne Merkmal, statt 403. Der Wächter sitzt damit in
+// der Auflösung: wer dort die Kontaktadress-Bedingung weglässt und das Konto
+// übernimmt/bestätigt, bekommt 200 mit Cookie und wird hier gefangen.
 func TestSelbstheilungMagicLinkSchweigtBeiAbweichenderKontaktadresse_AC5(t *testing.T) {
 	t.Cleanup(ResetOTPStoreForTest)
 	s := newTestStore(t)
@@ -159,15 +161,15 @@ func TestSelbstheilungMagicLinkSchweigtBeiAbweichenderKontaktadresse_AC5(t *test
 	cfg := &config.Config{SessionSecret: selbstheilungSecret}
 	w := magicLinkAnmeldung(t, s, cfg, nachgewiesen)
 
-	// Hälfte 1 (#2271): Weil die Selbstheilung hier schweigt, bleibt das Konto
-	// unbestätigt — und das Login-Gate verweigert das Merkmal.
-	if w.Code != http.StatusForbidden {
-		t.Fatalf("#2271: bei abweichender Kontaktadresse heilt nichts, also muss das Gate "+
-			"mit 403 greifen — bekommen %d: %s", w.Code, w.Body.String())
+	// Hälfte 1 (#2147): Adresse nur im Nebenfeld → neutrale Abweisung,
+	// ununterscheidbar von einem falschen Code, kein Merkmal.
+	if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), `"invalid_or_expired_code"`) {
+		t.Fatalf("#2147: bei abweichender Kontaktadresse wird das Konto nicht zugeordnet, "+
+			"erwartet neutrale 400 invalid_or_expired_code — bekommen %d: %s", w.Code, w.Body.String())
 	}
 	for _, c := range w.Result().Cookies() {
 		if c.Name == "gz_session" {
-			t.Errorf("#2271: der abgewiesene Anmeldeweg darf kein gz_session-Cookie ausstellen, "+
+			t.Errorf("#2147: der abgewiesene Anmeldeweg darf kein gz_session-Cookie ausstellen, "+
 				"bekommen %q", c.Value)
 		}
 	}
@@ -317,22 +319,30 @@ func reichesKonto2304(uid, email, mailTo string) model.User {
 // gegen den Ausgangsstand bis auf email_verified_at. Der Ausgangsstand wird
 // bewusst aus dem Speicher gelesen (nicht die Fixture im Arbeitsspeicher
 // benutzt), damit beide Seiten denselben JSON-Rundlauf hinter sich haben.
+//
+// Seit #2147 übernimmt der Magic-Link ein unbestätigtes Konto nur, wenn es
+// KEINE Zugangsdaten hat (Konten mit Passwort/Passkey/Google werden nie
+// angefasst — AC-6 der Spec magic_link_adress_eindeutigkeit.md bewacht das
+// byteidentisch). Für den magic-link-Fall entfallen deshalb PasswordHash und
+// PasskeyCredentials aus der Fixture; alle übrigen reichen Felder bleiben und
+// bewachen den Read-Modify-Write der Übernahme. Der Google-Fall behält sie.
 func TestSelbstheilungErhaeltAlleUebrigenKontofelder_F001(t *testing.T) {
 	const magicAdresse = "eva-postfach@beispiel.de"
 	const googleAdresse = "fynn-google@beispiel.de"
 	const googleSub = "sub-2304-fynn"
 
 	faelle := []struct {
-		name     string
-		uid      string
-		email    string
-		mailTo   string
-		sub      string
-		anmelden func(t *testing.T, s *store.Store, konto model.User)
+		name       string
+		uid        string
+		email      string
+		mailTo     string
+		sub        string
+		zugangslos bool
+		anmelden   func(t *testing.T, s *store.Store, konto model.User)
 	}{
 		{
 			name: "magic-link", uid: "m-eva2304",
-			email: magicAdresse, mailTo: magicAdresse,
+			email: magicAdresse, mailTo: magicAdresse, zugangslos: true,
 			anmelden: func(t *testing.T, s *store.Store, konto model.User) {
 				t.Cleanup(ResetOTPStoreForTest)
 				cfg := &config.Config{SessionSecret: selbstheilungSecret}
@@ -373,6 +383,9 @@ func TestSelbstheilungErhaeltAlleUebrigenKontofelder_F001(t *testing.T) {
 			konto := reichesKonto2304(fall.uid, fall.email, fall.mailTo)
 			if fall.sub != "" {
 				konto.OAuthProvider, konto.OAuthSub = "google", fall.sub
+			}
+			if fall.zugangslos {
+				konto.PasswordHash, konto.PasskeyCredentials = "", nil
 			}
 			if err := s.SaveUser(konto); err != nil {
 				t.Fatalf("F001: Konto anlegen: %v", err)

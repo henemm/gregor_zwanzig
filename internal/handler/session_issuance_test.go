@@ -128,12 +128,13 @@ func mintViaMagicLink(t *testing.T) issued {
 
 	s := newTestStore(t)
 	const uid = "m-aabbccdd"
+	// #2147: unbestätigt, zugangslos, Adresse = wirksame Kontaktadresse (email)
+	// → das Einlösen übernimmt dieses Konto.
 	if err := s.SaveUser(model.User{ID: uid, Email: "magic@example.com", CreatedAt: time.Now()}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
 	}
 	otpStore.Store("magic@example.com", &otpEntry{
 		code:      "123456",
-		userID:    uid,
 		expiresAt: time.Now().Add(15 * time.Minute),
 	})
 
