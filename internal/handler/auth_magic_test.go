@@ -21,6 +21,7 @@ import (
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
+	"github.com/henemm/gregor-api/internal/store"
 )
 
 // resetOTPStore löscht alle OTP-Einträge zwischen Tests.
@@ -62,60 +63,44 @@ func TestMagicLinkRequestHandler_AlwaysReturns200(t *testing.T) {
 	}
 }
 
-// AC-2: Neuer User m-{8hex} wird angelegt, wenn E-Mail unbekannt.
+// AC-2 (seit #2147): Das Anfordern legt KEIN Konto an; der neue User
+// m-{8hex} entsteht erst beim Einlösen des Codes — mit email = mail_to.
 func TestMagicLinkRequestHandler_CreatesNewUserForUnknownEmail(t *testing.T) {
 	t.Cleanup(ResetOTPStoreForTest)
 
-	// GIVEN: Leerer Store
 	s := newTestStore(t)
-	cfg := &config.Config{SMTPHost: ""}
+	cfg := &config.Config{SMTPHost: "", SessionSecret: "test-secret"}
 
-	h := MagicLinkRequestHandler(s, cfg)
-
-	// WHEN: Neue E-Mail-Adresse
-	body := `{"email":"newuser@example.com"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/magic-link", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	// THEN: Neuer User existiert im Store
+	w := magicLinkAnmeldungMitZwischenstand(t, s, cfg, "newuser@example.com", 0)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf("expected 200 on redeem, got %d: %s", w.Code, w.Body.String())
 	}
 
 	ids, err := s.ListUserIDs()
 	if err != nil {
 		t.Fatalf("ListUserIDs: %v", err)
 	}
-	if len(ids) == 0 {
-		t.Fatal("expected a new user to be created in the store")
+	if len(ids) != 1 {
+		t.Fatalf("expected exactly one new user after redeem, got %v", ids)
 	}
-
-	// ID muss m-{8hex} Format haben
 	userID := ids[0]
-	if !strings.HasPrefix(userID, "m-") {
-		t.Errorf("expected user ID with prefix 'm-', got '%s'", userID)
+	if !strings.HasPrefix(userID, "m-") || len(userID) != 10 { // "m-" + 8 hex chars
+		t.Errorf("expected user ID m-{8hex}, got '%s'", userID)
 	}
-	if len(userID) != 10 { // "m-" + 8 hex chars
-		t.Errorf("expected ID length 10, got %d: '%s'", len(userID), userID)
-	}
-
-	// User hat E-Mail gesetzt
 	user, _ := s.LoadUser(userID)
 	if user == nil {
 		t.Fatal("expected loaded user, got nil")
 	}
-	if user.Email != "newuser@example.com" {
-		t.Errorf("expected Email 'newuser@example.com', got '%s'", user.Email)
+	if user.Email != "newuser@example.com" || user.MailTo != "newuser@example.com" {
+		t.Errorf("expected Email=MailTo='newuser@example.com', got %q / %q", user.Email, user.MailTo)
 	}
 }
 
-// AC-3: Bestehender User mit E-Mail → kein Duplikat.
+// AC-3 (seit #2147): Bestehender User mit dieser Adresse als Kontaktadresse →
+// weder Anfordern noch Einlösen legt ein Duplikat an; Anmeldung ins Bestandskonto.
 func TestMagicLinkRequestHandler_UsesExistingUserForKnownEmail(t *testing.T) {
 	t.Cleanup(ResetOTPStoreForTest)
 
-	// GIVEN: Bestehender User mit E-Mail-Feld
 	s := newTestStore(t)
 	existingUser := model.User{
 		ID:        "existing-alice",
@@ -126,27 +111,37 @@ func TestMagicLinkRequestHandler_UsesExistingUserForKnownEmail(t *testing.T) {
 		t.Fatalf("SaveUser: %v", err)
 	}
 
-	cfg := &config.Config{SMTPHost: ""}
-	h := MagicLinkRequestHandler(s, cfg)
-
-	// WHEN: Bekannte E-Mail
-	body := `{"email":"alice@example.com"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/magic-link", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	// THEN: Kein zweiter User angelegt — nur 1 User im Store
+	cfg := &config.Config{SMTPHost: "", SessionSecret: "test-secret"}
+	w := magicLinkAnmeldungMitZwischenstand(t, s, cfg, "alice@example.com", 1)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf("expected 200 on redeem, got %d: %s", w.Code, w.Body.String())
 	}
 	ids, _ := s.ListUserIDs()
-	if len(ids) != 1 {
-		t.Errorf("expected exactly 1 user in store, got %d", len(ids))
+	if len(ids) != 1 || ids[0] != "existing-alice" {
+		t.Errorf("expected only 'existing-alice' in store, got %v", ids)
 	}
-	if ids[0] != "existing-alice" {
-		t.Errorf("expected existing user ID 'existing-alice', got '%s'", ids[0])
+	var resp map[string]string
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["id"] != "existing-alice" {
+		t.Errorf("expected login into 'existing-alice', got '%s'", resp["id"])
 	}
+}
+
+// magicLinkAnmeldungMitZwischenstand: Anfordern → Kontenzahl muss noch
+// wantBefore sein (kein Anlegen beim Anfordern) → Einlösen.
+func magicLinkAnmeldungMitZwischenstand(t *testing.T, s *store.Store, cfg *config.Config, email string, wantBefore int) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/magic-link", strings.NewReader(`{"email":"`+email+`"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	MagicLinkRequestHandler(s, cfg).ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 on request, got %d", w.Code)
+	}
+	if ids, _ := s.ListUserIDs(); len(ids) != wantBefore {
+		t.Fatalf("request step must not create an account: expected %d users, got %v", wantBefore, ids)
+	}
+	return einloesen(s, cfg, email, otpCodeFor(t, email))
 }
 
 // AC-10: Wenn SMTPHost leer → 200 + Log-Warnung, kein Panic.
@@ -215,7 +210,6 @@ func TestMagicLinkVerifyHandler_ValidCode_SetsSessionCookie(t *testing.T) {
 	// OTP-Eintrag direkt setzen (für Test-Isolation ohne Mail-Versand)
 	otpStore.Store("verify@example.com", &otpEntry{
 		code:      "123456",
-		userID:    "m-aabbccdd",
 		expiresAt: time.Now().Add(15 * time.Minute),
 		attempts:  0,
 	})
@@ -273,7 +267,6 @@ func TestMagicLinkVerifyHandler_WrongCode_Returns400AndIncrementsAttempts(t *tes
 	s := newTestStore(t)
 	entry := &otpEntry{
 		code:      "999999",
-		userID:    "m-test0001",
 		expiresAt: time.Now().Add(15 * time.Minute),
 		attempts:  0,
 	}
@@ -312,7 +305,6 @@ func TestMagicLinkVerifyHandler_MaxAttempts_Returns400(t *testing.T) {
 	s := newTestStore(t)
 	otpStore.Store("maxattempts@example.com", &otpEntry{
 		code:      "777777",
-		userID:    "m-test0002",
 		expiresAt: time.Now().Add(15 * time.Minute),
 		attempts:  3, // Bereits 3 Fehlversuche
 	})
@@ -346,7 +338,6 @@ func TestMagicLinkVerifyHandler_ExpiredCode_Returns400AndDeletesEntry(t *testing
 	email := "expired@example.com"
 	otpStore.Store(email, &otpEntry{
 		code:      "424242",
-		userID:    "m-test0003",
 		expiresAt: time.Now().Add(-1 * time.Minute), // Bereits abgelaufen
 		attempts:  0,
 	})
@@ -410,7 +401,6 @@ func TestMagicLinkVerifyHandler_ValidCode_DeletesOTPEntry(t *testing.T) {
 
 	otpStore.Store(email, &otpEntry{
 		code:      "654321",
-		userID:    "m-onetime1",
 		expiresAt: time.Now().Add(15 * time.Minute),
 		attempts:  0,
 	})

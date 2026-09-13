@@ -60,24 +60,18 @@ func TestRegisterHandler_SetsMailToOnRegistration_AC1(t *testing.T) {
 	}
 }
 
-// AC-1 (Magic-Link-Weg): MagicLinkRequestHandler setzt MailTo für den neu
-// angelegten User auf dieselbe Adresse, mit der er sich angemeldet hat.
+// AC-1 (Magic-Link-Weg): der beim Einlösen des Codes neu angelegte User (seit
+// #2147 entsteht er erst dort) trägt MailTo = die Adresse, mit der er sich
+// angemeldet hat.
 func TestMagicLinkRequestHandler_SetsMailToOnRegistration_AC1(t *testing.T) {
 	t.Cleanup(ResetOTPStoreForTest)
 
 	s := newTestStore(t)
-	cfg := &config.Config{SMTPHost: ""}
+	cfg := &config.Config{SMTPHost: "", SessionSecret: "test-secret"}
 
-	h := MagicLinkRequestHandler(s, cfg)
-
-	body := `{"email":"mailto-magic@beispiel.de"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/magic-link", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
+	w := magicLinkAnmeldung(t, s, cfg, "mailto-magic@beispiel.de")
 	if w.Code != http.StatusOK {
-		t.Fatalf("AC-1: expected 200, got %d", w.Code)
+		t.Fatalf("AC-1: expected 200 on redeem, got %d: %s", w.Code, w.Body.String())
 	}
 
 	ids, err := s.ListUserIDs()

@@ -4,7 +4,7 @@ type: module
 created: 2026-09-13
 updated: 2026-09-13
 status: draft
-version: "1.1"
+version: "1.2"
 workflow: fix-2147-email-eindeutig
 tags: [security, multi-user, magic-link, auth, issue-2147, issue-2311, epic-2138]
 ---
@@ -29,8 +29,9 @@ Spec — siehe „Out of Scope".
 
 - **File:** `internal/handler/auth_magic.go` — **Identifier:** `MagicLinkRequestHandler`,
   `MagicLinkVerifyHandler`, `createMagicLinkUser`
-- **File:** `internal/store/user.go` — **Identifier:** `FindUserByEmail` (wird ersetzt durch
-  `ResolveAddressOwner`), neue Hilfsfunktion `NormalizeEmailAddress`
+- **File:** `internal/store/address_owner.go` (neu) — **Identifier:** `ResolveAddressOwner`,
+  `NormalizeEmailAddress`, `AddressResolution`
+- **File:** `internal/store/user.go` — **Identifier:** `FindUserByEmail` (entfernt)
 - **File:** `internal/store/address_lock.go` (neu) — **Identifier:** `LockEmailAddress`
 
 ## Estimated Scope
@@ -68,7 +69,7 @@ Spec — siehe „Out of Scope".
 - **Zugangsdaten eines Kontos:** `PasswordHash != ""` ODER `len(PasskeyCredentials) > 0` ODER
   `OAuthSub != ""`.
 
-### 1) `internal/store/user.go`
+### 1) `internal/store/address_owner.go` (neu; `FindUserByEmail` in `user.go` entfernt)
 
 ```go
 type AddressResolution int
@@ -251,6 +252,8 @@ für den Google-Pfad (`auth_oauth.go`) bleibt die Funktion unverändert.
   kein Datenverlust.
 - **Mehrdeutigkeit verbraucht den Code** (Verbrauch vor der Auflösung); neuer Versuch braucht einen
   neuen Code.
+- **Eine unlesbare Kontodatei sperrt den Magic-Link für alle.** Die Auflösung bricht bei jedem Lesefehler einer `user.json` mit 500 ab (fail-closed), weil ein übersprungenes Konto eine falsche Zuordnung oder ein Zweitkonto erzeugen könnte. Passwort-, Passkey- und Google-Anmeldung sind nicht betroffen. Testlücke erfasst in #1199.
+- **Anmeldecodes erreichen das Test-Postfach nicht.** Der Code läuft über den Bestätigungsmail-Pfad (#1219), der `gregor-test@henemm.com` auf allen Hosts sperrt; ein Live-Zustellnachweis über dieses Postfach ist nicht möglich.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -263,3 +266,4 @@ für den Google-Pfad (`auth_oauth.go`) bleibt die Funktion unverändert.
 - 2026-09-13: Initial spec created (Issue #2147, #2311, Epic #2138)
 - 2026-09-13: v1.1 — „bestätigt" pro Adresse (wirksame Kontaktadresse); keine Übernahme von Konten
   mit Zugangsdaten statt Zugangs-Löschung; Code-Versand über Bestätigungsmail-Weg
+- 2026-09-13: v1.2 — Umsetzung: Store-Logik in address_owner.go (Datei-Belegung durch Parallelsitzung), Known Limitations fail-closed und Test-Postfach ergänzt

@@ -463,28 +463,6 @@ func (s *Store) FindUserByOAuthSub(provider, sub string) (*model.User, error) {
 	return nil, nil
 }
 
-// FindUserByEmail searches all users for one whose Email field matches the given
-// address (case-insensitive). Returns (nil, nil) if no match found.
-func (s *Store) FindUserByEmail(email string) (*model.User, error) {
-	if strings.TrimSpace(email) == "" {
-		return nil, nil
-	}
-	ids, err := s.ListUserIDs()
-	if err != nil {
-		return nil, err
-	}
-	for _, id := range ids {
-		u, err := s.LoadUser(id)
-		if err != nil || u == nil {
-			continue
-		}
-		if strings.EqualFold(u.Email, strings.TrimSpace(email)) {
-			return u, nil
-		}
-	}
-	return nil, nil
-}
-
 // FindUserByTelegramChatID searches all users for one whose TelegramChatID
 // matches exactly (Chat-IDs sind numerisch — kein EqualFold). Returns
 // (nil, nil) if no match found or if chatID is empty: ein leeres Feld ist
