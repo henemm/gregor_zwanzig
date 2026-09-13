@@ -620,7 +620,8 @@ test.afterAll(async ({ browser }) => {
 		await page.fill('input[name="username"]', ADMIN.username);
 		await page.fill('input[name="password"]', ADMIN.password);
 		await page.click('button[type="submit"]');
-		await page.waitForURL('/');
+		// Issue #2248: Marker an der Zieladresse, der Pfad bleibt `/`.
+		await page.waitForURL((url) => url.pathname === '/');
 		await context.storageState({ path: AUTH_STATE });
 	} finally {
 		await context.close();
