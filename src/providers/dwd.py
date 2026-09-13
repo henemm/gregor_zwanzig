@@ -49,6 +49,11 @@ from tenacity import (
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from providers.base import ProviderRequestError, ThunderSourceUnavailableError
+from providers.http import (
+    capped_timeout_or_raise,
+    make_deadline_before_hook,
+    stop_at_deadline,
+)
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -313,17 +318,51 @@ class DwdDirectProvider:
     def name(self) -> str:
         return "de_direct"
 
+    def _fetch_deadline_seconds(self) -> float:
+        """Fristdauer je ``_request``-Aufruf, gelesen zur AUFRUFZEIT.
+
+        #2302 Scheibe B: der geteilte ``before``-Hook (``providers/http.py``)
+        loest ueber den NAMEN dieser Methode auf, nie ueber ihren Wert — so
+        wirkt ein Laufzeit-Patch des Modul-Globals unveraendert. Liefert IMMER
+        die WEITERE Huelle (``FETCH_DEADLINE_SECONDS``, 180s), NIE
+        ``THUNDER_FETCH_DEADLINE_SECONDS`` (150s) — sonst wuerde ein
+        vergessenes Durchreichen den Gewitterpfad heimlich verkuerzen statt
+        (im schlimmsten Fall) den Grundpfad heimlich zu verlaengern.
+        """
+        return FETCH_DEADLINE_SECONDS
+
     @retry(
-        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        stop=stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline,
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
         retry=retry_if_exception(_is_retryable_error),
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def _request(self, url: str) -> bytes:
+    def _request(self, url: str, deadline_at: Optional[float] = None) -> bytes:
         """GET-Request mit Retry-Logik (500/502/503/504 + Connection-Errors,
-        5 Versuche, 2-60s Backoff, ADR-0018: 4xx bleibt sichtbar)."""
-        response = self._client.get(url)
+        5 Versuche, 2-60s Backoff, ADR-0018: 4xx bleibt sichtbar).
+
+        #2302 Scheibe B: zusaetzlich durch ``FETCH_DEADLINE_SECONDS`` bzw.
+        ``THUNDER_FETCH_DEADLINE_SECONDS`` begrenzt — sowohl der HTTP-Timeout
+        jedes einzelnen Versuchs als auch die gesamte Wiederholkette dieses
+        Aufrufs sind auf die Restzeit bis ``deadline_at`` gedeckelt.
+
+        Args:
+            deadline_at: Absolute monotone Frist. Aufrufer reichen ihre
+                bereits lokal gebildete Frist durch (``_fetch_series``, der
+                Gewitterpfad ueber ``_thunder_point``); fehlt sie, bildet der
+                geteilte ``before``-Hook sie selbst aus
+                ``_fetch_deadline_seconds()``.
+        """
+        request_timeout = capped_timeout_or_raise(
+            provider_name=self.name,
+            base_timeout=TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="FETCH_DEADLINE_SECONDS",
+            budget_seconds=FETCH_DEADLINE_SECONDS,
+        )
+        response = self._client.get(url, timeout=request_timeout)
         if response.status_code in RETRY_STATUS_CODES:
             response.raise_for_status()  # loest Retry via HTTPStatusError aus
         response.raise_for_status()  # nicht-retryable Fehler (4xx)
@@ -345,13 +384,14 @@ class DwdDirectProvider:
                     "ueberschritten",
                 )
             url = _build_url(run, offset, param)
-            raw = self._request(url)
+            raw = self._request(url, deadline_at=deadline_at)
             values[offset] = _read_point_value(raw, lat, lon, param)
         return values
 
     def _thunder_point(
         self, param: str, lat: float, lon: float, ziel: datetime,
         kandidaten: List[datetime], zustand: Dict[str, object],
+        deadline_at: Optional[float] = None,
     ) -> Optional[float]:
         """EIN Punktwert eines Gewittersignals zum absoluten Zeitpunkt `ziel`.
 
@@ -368,7 +408,9 @@ class DwdDirectProvider:
                 return None
             zustand["versucht"] = int(zustand["versucht"]) + 1
             try:
-                raw = self._request(_build_url(lauf, ttt, param))
+                raw = self._request(
+                    _build_url(lauf, ttt, param), deadline_at=deadline_at
+                )
             except httpx.HTTPStatusError as e:
                 weiterer_kandidat = (
                     e.response.status_code == 404
@@ -470,6 +512,7 @@ class DwdDirectProvider:
                     break
                 anker_je_param[param] = self._thunder_point(
                     param, lat, lon, base, kandidaten, zustand,
+                    deadline_at=deadline_at,
                 )
             # #1531 AC-7: je ZEITSCHRITT ALLE Signale in THUNDER_PARAMS-
             # Reihenfolge abrufen (nicht je Signal alle Zeitschritte) --
@@ -489,6 +532,7 @@ class DwdDirectProvider:
                         roh_je_param[param][offset] = self._thunder_point(
                             param, lat, lon, base + timedelta(hours=offset),
                             kandidaten, zustand,
+                            deadline_at=deadline_at,
                         )
             for param in THUNDER_PARAMS:
                 kumuliert = param in THUNDER_CUMULATIVE_PARAMS
