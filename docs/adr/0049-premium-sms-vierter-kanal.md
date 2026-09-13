@@ -64,7 +64,11 @@ Verbindlich festgelegt:
    steht als auswertbares Ergebnisfeld (`blocked_channels`) beim Aufrufer —
    nicht nur in einer Logzeile. Begründung der 30 Tage: eine von Garmin
    inzwischen neu vergebene Nummer nimmt die SMS mit HTTP 200 an, der
-   Scheinerfolg wäre von einem echten nicht zu unterscheiden.
+   Scheinerfolg wäre von einem echten nicht zu unterscheiden. Dieselbe Frist
+   (`model.PremiumSmsReplyTTL`, 30 Tage) entscheidet seit #2154 auch im
+   **Eingangspfad**: eine eingehende Garmin-SMS confirmt eine gespeicherte
+   Rückadresse nur noch, wenn sie innerhalb dieser Frist liegt; sonst wird ein
+   Verknüpfungs-Code verlangt.
 5. **Eigenes Tier-Gate.** `premium_sms_allowed()` prüft ausschließlich
    `premium`. Eine Wiederverwendung von `sms_allowed()` (das `standard`
    durchlässt) wäre eine stille Rechte-Ausweitung.

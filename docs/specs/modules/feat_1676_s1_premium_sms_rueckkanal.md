@@ -303,6 +303,8 @@ protokolliert.
 - **AC-4:** Given genau ein Nutzer mit Tier `premium` existiert (kein gespeicherter Treffer für den Absender) / When eine als Garmin erkannte Nachricht eintrifft / Then wird sie diesem einen Nutzer zugeordnet, kein anderer Nutzer wird verändert.
   - Test: Fixture mit zwei Nutzern (einer `free`, einer `premium`) im Store, Endpoint aufrufen, nur den `premium`-Nutzer als verändert prüfen.
 
+> **Abgelöst durch `docs/specs/modules/fix_2154_premium_sms_verknuepfungscode.md` AC-1:** Diese Heuristik (Fallback auf den einen Kandidaten) war ein Sicherheitsbefund — bei genau einem Premium-Nutzer schreibt eine fremde SMS mit `inreachlink.com` dessen Rückadresse, Hijacking ohne Geheimnis. Fix #2154 ersetzt den Fallback durch einen Code-gestützten TTL-Abgleich, diese AC-4 entfällt ersatzlos.
+
 - **AC-5:** Given es existieren zwei Nutzer mit Tier `premium`, KEINER hat bereits eine passende `premium_sms_reply_to` gespeichert / When eine als Garmin erkannte Nachricht eintrifft / Then wird bei KEINEM der beiden Nutzer `user.json` verändert, der Endpoint antwortet mit einem Fehlerstatus statt 200, und es gibt keinen Fallback auf einen Default-Nutzer.
   - Test: Zwei-Nutzer-Fixture (beide `premium`), Endpoint aufrufen, beide `user.json`-Dateien vor/nach vergleichen — müssen identisch sein; HTTP-Status prüfen.
 

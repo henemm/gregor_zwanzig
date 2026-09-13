@@ -18,10 +18,18 @@ package handler
 // tatsaechlich/ueberschreibt tatsaechlich" (hier, gegen einen echten Store).
 // Ein frueherer Python-Fake bildete die Persistenzlogik selbst nach UND
 // schrieb selbst -- die Pruefung war damit tautologisch. Hier, gegen den
-// echten (noch zu implementierenden) Handler und einen echten Store, ist sie
-// es nicht: TestLearnSetsReplyAddressForSoleUnambiguousPremiumUser deckt die
-// Persistenz-Haelfte von AC-1 ab, TestLearnOverwritesReplyAddressAcrossCalls
-// die Persistenz-Haelfte von AC-3.
+// echten Handler und einen echten Store, ist sie es nicht:
+// TestLearnOverwritesReplyAddressAcrossCalls deckt die Persistenz-Haelfte von
+// AC-3 ab.
+//
+// Issue #2154 Scheibe A: die Persistenz-Haelfte von #1676 AC-1 hing an
+// TestLearnSetsReplyAddressForSoleUnambiguousPremiumUser ("genau ein
+// Premium-Kandidat ohne Code lernt"). Diese Zusicherung ist ABGELOEST -- sie
+// war die Uebernahme des Rueckkanals ohne jedes Geheimnis. An ihre Stelle
+// tritt AC-1 von fix_2154_premium_sms_verknuepfungscode.md
+// (TestLearnRejectsSoleCandidateWithoutCode, premium_sms_learn_without_code_test.go);
+// der alte Test wurde deshalb geloescht, nicht umgeschrieben. Die
+// Ueberschreib-Zusicherung bleibt und laeuft jetzt ueber den Code.
 
 import (
 	"bytes"
@@ -79,41 +87,6 @@ func newLearnRequestWithHeader(remoteAddr, headerName, headerValue string, body 
 }
 
 // ---------------------------------------------------------------------------
-// AC-4 UND AC-1 (Persistenz-Haelfte): genau ein Premium-Kandidat ohne
-// gespeicherten Treffer -> lernt tatsaechlich am persistierten user.json.
-// Die Reader-Haelfte von AC-1 (korrekter Aufruf) prueft
-// tests/unit/test_inbound_sms_reply_learning.py::test_garmin_marker_message_learns_reply_address.
-// ---------------------------------------------------------------------------
-
-func TestLearnSetsReplyAddressForSoleUnambiguousPremiumUser(t *testing.T) {
-	s := learnTestStore(t)
-	mustSaveUser(t, s, model.User{ID: "free-user", Tier: "free"})
-	mustSaveUser(t, s, model.User{ID: "premium-user", Tier: "premium"})
-
-	h := PostPremiumSmsLearnHandler(s)
-	req := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA})
-	rr := httptest.NewRecorder()
-	h(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("AC-4: erwartet 200, bekam %d, body=%s", rr.Code, rr.Body.String())
-	}
-
-	premium := mustLoadUser(t, s, "premium-user")
-	if premium.PremiumSmsReplyTo != garminFromA {
-		t.Errorf("AC-4: erwartet PremiumSmsReplyTo=%q, bekam %q", garminFromA, premium.PremiumSmsReplyTo)
-	}
-	if premium.PremiumSmsReplyAt == nil {
-		t.Error("AC-4: PremiumSmsReplyAt sollte gesetzt sein, ist nil")
-	}
-
-	free := mustLoadUser(t, s, "free-user")
-	if free.PremiumSmsReplyTo != "" {
-		t.Errorf("AC-4: free-user darf NICHT veraendert werden, hat aber PremiumSmsReplyTo=%q", free.PremiumSmsReplyTo)
-	}
-}
-
-// ---------------------------------------------------------------------------
 // AC-5: zwei Premium-Nutzer, kein gespeicherter Treffer -> ablehnen, kein Leck
 // ---------------------------------------------------------------------------
 
@@ -122,7 +95,7 @@ func TestLearnRejectsWhenTwoPremiumUsersAndNoStoredMatch(t *testing.T) {
 	mustSaveUser(t, s, model.User{ID: "premium-a", Tier: "premium"})
 	mustSaveUser(t, s, model.User{ID: "premium-b", Tier: "premium"})
 
-	h := PostPremiumSmsLearnHandler(s)
+	h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
 	req := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA})
 	rr := httptest.NewRecorder()
 	h(rr, req)
@@ -153,7 +126,7 @@ func TestLearnPrefersStoredMatchOverSoleCandidateRule(t *testing.T) {
 	})
 	mustSaveUser(t, s, model.User{ID: "premium-no-history", Tier: "premium"})
 
-	h := PostPremiumSmsLearnHandler(s)
+	h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
 	req := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA})
 	rr := httptest.NewRecorder()
 	h(rr, req)
@@ -187,16 +160,23 @@ func TestLearnPrefersStoredMatchOverSoleCandidateRule(t *testing.T) {
 // tests/unit/test_inbound_sms_reply_learning.py::test_newest_garmin_message_triggers_second_learn_call_with_new_sender.
 // Spec Implementation Details: "R2 braucht keine eigene Vergleichslogik im
 // Python-Reader" -- die Ueberschreib-Semantik ist reine Go-Verantwortung.
+//
+// Issue #2154: beide Aufrufe brauchen jetzt den Verknuepfungs-Code. Aufruf 1
+// hing frueher am abgeschafften Ein-Kandidaten-Fallback, Aufruf 2 hat als neue
+// Nummer ohnehin keinen gespeicherten Treffer. Damit beweist der zweite Aufruf
+// zusaetzlich, dass ein Code MEHRFACH benutzbar bleibt (Garmin vergibt die
+// Nummer je Gespraech neu -- ein Einmal-Code waere unbrauchbar).
 // ---------------------------------------------------------------------------
 
 func TestLearnOverwritesReplyAddressAcrossCalls(t *testing.T) {
 	s := learnTestStore(t)
 	mustSaveUser(t, s, model.User{ID: "premium-user", Tier: "premium"})
+	mustSaveLinkCode(t, s, "premium-user", linkCodeAnna)
 
-	h := PostPremiumSmsLearnHandler(s)
+	h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
 
-	// Call 1: Nachricht von garminFromA -- eindeutiger Kandidat (AC-4).
-	req1 := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA})
+	// Call 1: Nachricht von garminFromA -- per Verknuepfungs-Code zugeordnet.
+	req1 := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA, "code": linkCodeAnna})
 	rr1 := httptest.NewRecorder()
 	h(rr1, req1)
 	if rr1.Code != http.StatusOK {
@@ -213,8 +193,9 @@ func TestLearnOverwritesReplyAddressAcrossCalls(t *testing.T) {
 
 	time.Sleep(2 * time.Millisecond) // sicherstellen, dass sich der Zeitstempel unterscheidet
 
-	// Call 2: neue Nachricht von garminFromB -- muss Call 1 VOLLSTAENDIG ueberschreiben (AC-3).
-	req2 := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromB})
+	// Call 2: neue Nachricht von garminFromB, DERSELBE Code -- muss Call 1
+	// VOLLSTAENDIG ueberschreiben (AC-3).
+	req2 := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromB, "code": linkCodeAnna})
 	rr2 := httptest.NewRecorder()
 	h(rr2, req2)
 	if rr2.Code != http.StatusOK {
@@ -239,7 +220,7 @@ func TestLearnRejectsNonLocalhostCaller(t *testing.T) {
 	s := learnTestStore(t)
 	mustSaveUser(t, s, model.User{ID: "premium-user", Tier: "premium"})
 
-	h := PostPremiumSmsLearnHandler(s)
+	h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
 	req := newLearnRequest("203.0.113.5:54321", map[string]any{"from": garminFromA})
 	rr := httptest.NewRecorder()
 	h(rr, req)
@@ -265,7 +246,7 @@ func TestLearnRejectsRequestWithForwardedForHeaderEvenWithUniqueCandidate(t *tes
 	s := learnTestStore(t)
 	mustSaveUser(t, s, model.User{ID: "premium-user", Tier: "premium"})
 
-	h := PostPremiumSmsLearnHandler(s)
+	h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
 	// Genau EIN Premium-Kandidat -- ohne den Proxy-Header waere das ein
 	// eindeutiger Treffer (AC-4). Der Header allein muss trotzdem ablehnen:
 	// die Mehrdeutigkeitsregel darf nicht die einzige Schutzschicht sein.
@@ -291,7 +272,7 @@ func TestLearnRejectsRequestWithRealIPOrForwardedProtoHeader(t *testing.T) {
 			s := learnTestStore(t)
 			mustSaveUser(t, s, model.User{ID: "premium-user", Tier: "premium"})
 
-			h := PostPremiumSmsLearnHandler(s)
+			h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
 			req := newLearnRequestWithHeader("127.0.0.1:54321", headerName, "https",
 				map[string]any{"from": garminFromA})
 			rr := httptest.NewRecorder()
@@ -313,12 +294,19 @@ func TestLearnRejectsRequestWithRealIPOrForwardedProtoHeader(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestLearnDryRunNeverCallsSaveUser(t *testing.T) {
+	// Issue #2154: "eindeutiger Treffer" heisst jetzt "gueltiger
+	// Verknuepfungs-Code" -- der Ein-Kandidaten-Fallback ist abgeschafft. Der
+	// Untertest prueft damit weiter den POSITIVEN Trockenlauf-Pfad; der
+	// Untertest "Mehrdeutigkeit" deckt would_skip unveraendert ab.
 	t.Run("eindeutiger Treffer", func(t *testing.T) {
 		s := learnTestStore(t)
 		mustSaveUser(t, s, model.User{ID: "premium-user", Tier: "premium"})
+		mustSaveLinkCode(t, s, "premium-user", linkCodeAnna)
 
-		h := PostPremiumSmsLearnHandler(s)
-		req := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA, "dry_run": true})
+		h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
+		req := newLearnRequest("127.0.0.1:54321", map[string]any{
+			"from": garminFromA, "code": linkCodeAnna, "dry_run": true,
+		})
 		rr := httptest.NewRecorder()
 		h(rr, req)
 
@@ -345,7 +333,7 @@ func TestLearnDryRunNeverCallsSaveUser(t *testing.T) {
 		mustSaveUser(t, s, model.User{ID: "premium-a", Tier: "premium"})
 		mustSaveUser(t, s, model.User{ID: "premium-b", Tier: "premium"})
 
-		h := PostPremiumSmsLearnHandler(s)
+		h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
 		req := newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA, "dry_run": true})
 		rr := httptest.NewRecorder()
 		h(rr, req)

@@ -164,8 +164,16 @@ def trigger_inbound_sms():
     reader = InboundSmsReader()
     count = reader.poll_and_process(settings)
     failed = reader.last_failed_count
-    status = "partial" if failed > 0 else "ok"
-    return {"status": status, "count": count, "failed": failed}
+    # Issue #2154 AC-11: eine bewusste Ablehnung (409 fehlender/ungueltiger
+    # Verknuepfungs-Code, 429 Ratebremse) ist KEIN Netz-/5xx-Fehler und darf
+    # `failed` nicht erhoehen -- als "ok" durchgehen darf sie aber auch nicht,
+    # sonst bleibt ein dauerhaft ausgesperrter Nutzer unsichtbar. Denselben
+    # Wert "partial" wertet internal/scheduler/scheduler.go::
+    # triggerPremiumSmsPollEndpoint bereits zu einem sichtbaren
+    # partialRunError aus -- kein neues Go-Statusfeld noetig.
+    rejected = getattr(reader, "last_rejected_count", 0)
+    status = "partial" if failed > 0 or rejected > 0 else "ok"
+    return {"status": status, "count": count, "failed": failed, "rejected": rejected}
 
 
 @router.post("/inbound-telegram")

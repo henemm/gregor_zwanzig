@@ -26,7 +26,10 @@ type Deps struct {
 	ChallengeStore     *handler.ChallengeStore
 	Scheduler          *scheduler.Scheduler
 	TelegramTokenStore *handler.TelegramTokenStore
-	GitCommit          string
+	// Issue #2154 Scheibe A: prozessweiter Fehlversuchszaehler fuer
+	// Verknuepfungs-Code-Vergleiche, instanziiert in cmd/server/main.go.
+	PremiumSmsRateLimiter *handler.PremiumSmsRateLimiter
+	GitCommit             string
 }
 
 // New builds the chi router with all application routes.
@@ -94,7 +97,18 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store, deps.TelegramTokenStore))
 	// Issue #1676 Scheibe S1: Premium-SMS-Rueckkanal — lernt die von Garmin
 	// vergebene Rueckadresse (localhost-only, aufgerufen vom Python-Core).
-	r.Post("/api/internal/premium-sms-learn", handler.PostPremiumSmsLearnHandler(deps.Store))
+	premiumSmsLimiter := deps.PremiumSmsRateLimiter
+	if premiumSmsLimiter == nil {
+		// Aufbauten ohne diese Abhaengigkeit (Router-Tests) duerfen nicht
+		// abstuerzen; der Zaehler ist reiner Arbeitsspeicher, ein frischer ist
+		// funktional gleichwertig.
+		premiumSmsLimiter = handler.NewPremiumSmsRateLimiter(handler.DefaultPremiumSmsLinkCodeBudget)
+	}
+	r.Post("/api/internal/premium-sms-learn", handler.PostPremiumSmsLearnHandler(deps.Store, premiumSmsLimiter))
+	// Issue #2154 Scheibe A: Verknuepfungs-Code im Konto — anmeldepflichtig
+	// ueber die globale AuthMiddleware, bewusst NICHT in der Public-Allowlist.
+	r.Post("/api/auth/premium-sms-link-code", handler.PostPremiumSmsLinkCodeHandler(deps.Store, bcrypt.DefaultCost))
+	r.Get("/api/auth/premium-sms-link-code", handler.GetPremiumSmsLinkCodeHandler(deps.Store))
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected)
 	r.Post("/api/webhooks/telegram/{secret}", handler.TelegramWebhookHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(deps.Config))
