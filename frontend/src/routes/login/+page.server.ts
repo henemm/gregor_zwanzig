@@ -12,14 +12,18 @@ export const load: PageServerLoad = async () => {
 	};
 };
 
+// Issue #2271: `default` und benannte Actions schliessen sich in SvelteKit aus.
+// Der bisherige Login-Weg heisst deshalb jetzt `login` — jedes Formular, das
+// hierher postet, MUSS `action="?/login"` tragen (auch Browser-`fetch` aus
+// Tests: `/login?/login`).
 export const actions = {
-	default: async ({ request, cookies, url }) => {
+	login: async ({ request, cookies, url }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
 
 		if (!username || !password) {
-			return fail(400, { error: 'Username and password required', username });
+			return fail(400, { error: 'Username and password required', username, resent: false });
 		}
 
 		const clientIP = request.headers.get('x-real-ip') ?? '';
@@ -30,10 +34,20 @@ export const actions = {
 		});
 
 		if (resp.status === 429) {
-			return fail(429, { error: 'Rate limit exceeded', username });
+			return fail(429, { error: 'Rate limit exceeded', username, resent: false });
+		}
+		// Issue #2271 AC-12: VOR dem pauschalen `!resp.ok`-Zweig. Wessen Passwort
+		// stimmt und nur die Adresse noch nicht bestaetigt hat, saehe sonst
+		// "Ungueltige Anmeldedaten" — eine Meldung, die ihn in die falsche
+		// Richtung schickt (Passwort zuruecksetzen statt Postfach oeffnen).
+		if (resp.status === 403) {
+			const grund = await resp.json().catch(() => null);
+			if (grund?.error === 'email_not_verified') {
+				return fail(403, { error: 'email_not_verified', username, resent: false });
+			}
 		}
 		if (!resp.ok) {
-			return fail(401, { error: 'Invalid credentials', username });
+			return fail(401, { error: 'Invalid credentials', username, resent: false });
 		}
 
 		// Extract session cookie from Go response and set it for the browser
@@ -53,5 +67,29 @@ export const actions = {
 
 		// Issue #1006 — nach 401-Redirect zurück zur Ausgangsseite (nur relative Pfade).
 		redirect(302, safeRedirectPath(url.searchParams.get('redirect')));
+	},
+
+	// Issue #2271 AC-13 — erneuter Versand der Bestätigungsmail. Der Endpunkt
+	// antwortet aus Datenschutzgründen IMMER 200 (er verrät nicht, ob es das
+	// Konto gibt); die Seite quittiert deshalb ebenfalls immer bestätigend.
+	// `error` reist mit zurück, damit der Hinweis aus AC-12 stehen bleibt —
+	// SvelteKit ersetzt `form` vollständig durch diesen Rückgabewert, der
+	// Erklärungstext verschwände sonst genau dann, wenn er noch gebraucht wird.
+	resend: async ({ request }) => {
+		const data = await request.formData();
+		const username = data.get('username')?.toString() ?? '';
+
+		const clientIP = request.headers.get('x-real-ip') ?? '';
+		await fetch(`${API()}/api/auth/verify-email/resend`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
+			body: JSON.stringify({ username }),
+		}).catch(() => {
+			// Auch ein Netzfehler zur Go-API bleibt für den Nutzer eine Bestätigung:
+			// eine Fehlermeldung an dieser Stelle böte ihm keine andere Handlung an
+			// als dieselbe Schaltfläche noch einmal zu drücken.
+		});
+
+		return { error: 'email_not_verified', username, resent: true };
 	},
 } satisfies Actions;

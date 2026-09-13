@@ -107,8 +107,14 @@ func (e *authEnv) seedUser(t *testing.T, id, password string) {
 	if err != nil {
 		t.Fatalf("bcrypt: %v", err)
 	}
+	// #2271: Ein anmeldefaehiges Konto hat eine bestaetigte Adresse — ohne sie
+	// misst jeder Test dieser Datei das Login-Gate statt der Widerrufsmechanik,
+	// um die es hier geht. Bewusst am Seeder und nicht je Testfall: diese Datei
+	// kennt keinen Fall, der die Abweisung pruefen will.
+	verifiziert := time.Now().UTC()
 	if err := e.store.SaveUser(model.User{
-		ID: id, PasswordHash: string(hash), Email: id + "@example.com", CreatedAt: time.Now(),
+		ID: id, PasswordHash: string(hash), Email: id + "@example.com",
+		EmailVerifiedAt: &verifiziert, CreatedAt: time.Now(),
 	}); err != nil {
 		t.Fatalf("SaveUser %s: %v", id, err)
 	}

@@ -177,7 +177,13 @@ func TestLoginHandler_TraversalUsersBobPayload_CanImpersonateRealUser_AC1(t *tes
 func TestLoginHandler_ValidCredentials_StillWorks_AC2(t *testing.T) {
 	s := newTestStore(t)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
-	if err := s.SaveUser(model.User{ID: "alice", PasswordHash: string(hash), CreatedAt: time.Now()}); err != nil {
+	// #2271: bestaetigte Adresse gehoert zum Ausgangszustand — sonst misst
+	// diese Positivkontrolle das neue Gate statt der Anmeldung.
+	verifiziert := time.Now().UTC()
+	if err := s.SaveUser(model.User{
+		ID: "alice", PasswordHash: string(hash),
+		EmailVerifiedAt: &verifiziert, CreatedAt: time.Now(),
+	}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
 	}
 
@@ -383,7 +389,13 @@ func TestResetPassword_TraversalUsersBobPayload_HitsRealSecondUser_AC6(t *testin
 func TestResetPassword_RealUserStillWorks_AC7(t *testing.T) {
 	s := newTestStore(t)
 	oldHash, _ := bcrypt.GenerateFromPassword([]byte("oldpass"), bcrypt.MinCost)
-	if err := s.SaveUser(model.User{ID: "carla", PasswordHash: string(oldHash), CreatedAt: time.Now()}); err != nil {
+	// #2271: bestaetigte Adresse gehoert zum Ausgangszustand — die
+	// Positivkontrolle unten meldet sich nach dem Zuruecksetzen an.
+	verifiziert := time.Now().UTC()
+	if err := s.SaveUser(model.User{
+		ID: "carla", PasswordHash: string(oldHash),
+		EmailVerifiedAt: &verifiziert, CreatedAt: time.Now(),
+	}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
 	}
 	tokenHash, _ := bcrypt.GenerateFromPassword([]byte("realtoken123"), bcrypt.MinCost)

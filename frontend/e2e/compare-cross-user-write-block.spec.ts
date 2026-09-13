@@ -15,7 +15,7 @@
 //   npx playwright test e2e/compare-cross-user-write-block.spec.ts --config playwright.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation } from './helpers';
+import { createTestLocation, registriereBestaetigtenZweitnutzer } from './helpers';
 
 async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
 	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts).
@@ -65,16 +65,11 @@ test('Nutzer B kann per PUT NICHT das Preset von Nutzer A überschreiben (404, k
 		ctxB = await browser.newContext({ storageState: undefined });
 		const pageB = await ctxB.newPage();
 		const userB = 'e2e1273s4a' + suffix;
+		// Issue #2271: registrieren → Token holen → bestaetigen → anmelden. Das
+		// Token holt AS Sitzung (`pageA.request`), nicht Bs Kontext: der Testweg
+		// ist anmeldepflichtig, und B startet hier bewusst ohne jede Sitzung.
 		// E-Mail ist seit Issue #1226 Pflichtfeld bei der Registrierung.
-		const reg = await pageB.request.post('/api/auth/register', {
-			data: { username: userB, password: 'test1234', email: `${userB}@example.com` }
-		});
-		expect([200, 201].includes(reg.status()), 'Registrierung B fehlgeschlagen: ' + reg.status()).toBeTruthy();
-
-		const loginB = await pageB.request.post('/api/auth/login', {
-			data: { username: userB, password: 'test1234' }
-		});
-		expect(loginB.ok(), 'Login B fehlgeschlagen: ' + loginB.status()).toBeTruthy();
+		await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, userB, 'test1234');
 
 		// B versucht As Preset per PUT zu überschreiben → 404, kein Cross-User-Write.
 		const putB = await pageB.request.put(`/api/compare/presets/${presetA}`, {

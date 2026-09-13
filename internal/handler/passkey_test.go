@@ -369,6 +369,10 @@ func TestPasskeyLoginRoundtrip_Success(t *testing.T) {
 	secret := "test-secret-32-chars-long-enough"
 
 	// GIVEN: user with one registered passkey (we register via roundtrip first)
+	// #2271: bestaetigt seeden, BEVOR registerForUser laeuft — der Helfer
+	// seedet nur unter `if existing == nil` (:969), ein vorgeschaltetes
+	// SaveUser gewinnt, ohne den geteilten Helfer anzufassen.
+	seedeKonto2271(t, s, "alice", true)
 	auth := registerForUser(t, s, wa, cs, "alice")
 
 	// Step 1: Login Begin
@@ -454,6 +458,7 @@ func TestPasskeyLoginCookieSecure_OnHTTPS(t *testing.T) {
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
+	seedeKonto2271(t, s, "alice", true) // #2271: siehe TestPasskeyLoginRoundtrip_Success
 	auth := registerForUser(t, s, wa, cs, "alice")
 
 	// Login Begin
@@ -1135,6 +1140,7 @@ func TestPasskeyDiscoverableFinishHandler_FullRoundtrip_Success(t *testing.T) {
 
 	// Register a passkey for alice
 	userID := "alice"
+	seedeKonto2271(t, s, userID, true) // #2271: siehe TestPasskeyLoginRoundtrip_Success
 	auth := registerForUser(t, s, wa, cs, userID)
 
 	// Discoverable Begin
@@ -1277,6 +1283,7 @@ func TestPasskeyDiscoverableFinishHandler_ChallengeReplay_Returns401(t *testing.
 	secret := "test-secret"
 
 	userID := "alice"
+	seedeKonto2271(t, s, userID, true) // #2271: der erste Finish unten muss gelingen
 	auth := registerForUser(t, s, wa, cs, userID)
 
 	beginH := PasskeyLoginDiscoverableBeginHandler(wa, cs)

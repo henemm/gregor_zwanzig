@@ -106,6 +106,65 @@ export async function login(page: Page) {
 }
 
 /**
+ * Legt einen zweiten, sofort anmeldbaren Nutzer an (Issue #2271).
+ *
+ * Seit der Scharfschaltung des Login-Gates stellt `issueSession` nur noch fuer
+ * bestaetigte Adressen ein Merkmal aus. Ein zur Laufzeit registriertes Konto
+ * mit Zeitstempel-Suffix kann seine Bestaetigungsmail auf Staging nie empfangen
+ * (Egress-Sperre #1337) — ohne diesen Umweg waere jede Zwei-Nutzer-Spec
+ * strukturell nie wieder gruen.
+ *
+ * 🔴 Die Reihenfolge ist zwingend: registrieren → Token holen → bestaetigen →
+ * ERST DANN anmelden. Und das Token holt die BEREITS ANGEMELDETE fremde
+ * Sitzung (`adminRequest`), nicht der neue Nutzer: der Testweg ist
+ * anmeldepflichtig (staging_verify_token.go), und genau das kann das neue
+ * Konto in diesem Moment nicht. Moeglich ist es, weil der Handler die Kennung
+ * aus der Nutzlast nimmt und `email_verified_at` selbst nicht anfasst — das
+ * setzt weiterhin allein der regulaere Verifikations-Endpunkt.
+ *
+ * Braucht `GZ_ENV=staging` im Ziel-Stack (Staging und der isolierte
+ * CI-Stack erfuellen das, frontend/e2e/ci-stack.sh:66).
+ */
+export async function registriereBestaetigtenZweitnutzer(
+	adminRequest: APIRequestContext,
+	gastRequest: APIRequestContext,
+	username: string,
+	password: string
+): Promise<void> {
+	const reg = await gastRequest.post('/api/auth/register', {
+		data: { username, password, email: `${username}@example.com` }
+	});
+	if (![200, 201].includes(reg.status())) {
+		throw new Error(`Registrierung ${username} fehlgeschlagen: ${reg.status()} ${await reg.text()}`);
+	}
+
+	const tokenAntwort = await adminRequest.post('/api/auth/verify-email/staging-token', {
+		data: { username }
+	});
+	if (!tokenAntwort.ok()) {
+		throw new Error(
+			`Staging-Testweg antwortet ${tokenAntwort.status()} fuer ${username} — laeuft das Ziel mit GZ_ENV=staging, und ist die uebergebene Sitzung angemeldet?`
+		);
+	}
+	const { token } = (await tokenAntwort.json()) as { token?: string };
+	if (!token) throw new Error(`Staging-Testweg lieferte kein Token fuer ${username}`);
+
+	const bestaetigung = await gastRequest.post('/api/auth/verify-email', {
+		data: { user: username, token }
+	});
+	if (!bestaetigung.ok()) {
+		throw new Error(
+			`Bestaetigung ${username} fehlgeschlagen: ${bestaetigung.status()} ${await bestaetigung.text()}`
+		);
+	}
+
+	const login = await gastRequest.post('/api/auth/login', { data: { username, password } });
+	if (!login.ok()) {
+		throw new Error(`Login ${username} fehlgeschlagen: ${login.status()} ${await login.text()}`);
+	}
+}
+
+/**
  * Eingabe-Vertrag fuer Trip-Wizard Step 1 (Sub-Spec #161 §9).
  * Wiederverwendet in `trip-wizard-step1.spec.ts` und `trip-wizard-shell.spec.ts`.
  */

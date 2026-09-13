@@ -445,8 +445,12 @@ func TestLoginHandlerSuccess(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	dir := filepath.Join(s.DataDir, "users", "alice")
 	os.MkdirAll(dir, 0755)
+	// #2271: bestaetigte Adresse gehoert zum Ausgangszustand eines
+	// anmeldefaehigen Kontos — ohne sie misst dieser Test das Gate statt der
+	// Anmeldung.
 	os.WriteFile(filepath.Join(dir, "user.json"),
-		[]byte(`{"id":"alice","password_hash":"`+string(hash)+`","created_at":"2026-04-15T00:00:00Z"}`), 0644)
+		[]byte(`{"id":"alice","password_hash":"`+string(hash)+`",`+
+			`"email_verified_at":"2026-04-15T00:00:00Z","created_at":"2026-04-15T00:00:00Z"}`), 0644)
 
 	secret := "test-secret-32-chars-long-enough"
 	h := LoginHandler(s, secret)

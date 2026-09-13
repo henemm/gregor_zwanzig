@@ -3,10 +3,19 @@ package handler
 // TDD RED — Issue #2129: dauerhafte Anmeldung mit widerrufbarem Anmelde-Merkmal.
 // Spec: docs/specs/modules/session_allowlist.md — AC-1, AC-13, AC-18.
 //
-// Alle SECHS Anmeldewege in einem Lauf. Das ist der Test mit dem größten
-// Selbstschadens-Schutz: wird beim Umbau auch nur EINE der sechs
-// Ausstellungsstellen vergessen, sperrt dieser Anmeldeweg alle seine Nutzer
-// aus — und ohne diesen Test fiele das erst in Produktion auf.
+// Fortgeschrieben für Issue #2271 (S2 aus #2146, Epic #2138), Spec
+// docs/specs/modules/email_verify_scharfschaltung_2271.md — AC-4..AC-8:
+// Aus den SECHS Anmeldewegen werden drei Gruppen mit je EIGENEM Zähler —
+// 5 stellen aus, 4 verweigern, 1 Sonderfall stellt gar kein Merkmal mehr aus.
+// Ein einzelner Gesamtzähler fiele nicht auf, wenn ein Weg zwischen den
+// Gruppen wanderte; er ist deshalb durch drei ersetzt, nicht gestrichen.
+// Die Zusicherung "alle sechs stellen aus" nimmt ADR-0066 dokumentiert zurück.
+//
+// Das ist der Test mit dem größten Selbstschadens-Schutz: wird beim Umbau auch
+// nur EINE der ausstellenden Stellen vergessen, sperrt dieser Anmeldeweg alle
+// seine Nutzer aus — und ohne diesen Test fiele das erst in Produktion auf.
+// Umgekehrt gilt seit #2271 dasselbe für die Verweigerungen: fällt eine weg,
+// steht ein Anmeldeweg wieder offen, für den die Adresse nie bestätigt wurde.
 //
 // Kein Mock-Theater: Google läuft gegen zwei echte httptest-Server, die drei
 // Passkey-Wege gegen den vorhandenen ECDSA-Testauthentifikator mit echter
@@ -84,13 +93,22 @@ func probeIssuedCookie(t *testing.T, dataDir, cookieValue string) int {
 	return rr.Code
 }
 
-// --- die sechs Anmeldewege -------------------------------------------------
+// --- Gruppe 1: die fünf ausstellenden Anmeldewege ---------------------------
+//
+// #2271: Wo der Ausgangszustand eine bestätigte Adresse braucht, seeden diese
+// Minter sie SELBST. Sie messen die Ausstellung, nicht das Gate — ein Minter,
+// der unbestätigt seedet, wäre nach der Scharfschaltung aus dem falschen Grund
+// rot und die Positiv-Gruppe damit wertlos.
 
 func mintViaPassword(t *testing.T) issued {
 	t.Helper()
 	s := newTestStore(t)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
-	if err := s.SaveUser(model.User{ID: "alice", PasswordHash: string(hash), CreatedAt: time.Now()}); err != nil {
+	verifiziert := time.Now().UTC()
+	if err := s.SaveUser(model.User{
+		ID: "alice", PasswordHash: string(hash),
+		EmailVerifiedAt: &verifiziert, CreatedAt: time.Now(),
+	}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
 	}
 
@@ -173,6 +191,10 @@ func mintViaPasskeyLogin(t *testing.T) issued {
 	s := newTestStore(t)
 	wa := newTestWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
+	// #2271: bestätigt seeden, BEVOR registerForUser läuft. Der geteilte
+	// Helfer seedet nur unter `if existing == nil` (passkey_test.go:969) —
+	// ein vorgeschaltetes SaveUser gewinnt, ohne den Helfer anzufassen.
+	seedeKonto2271(t, s, "alice", true)
 	auth := registerForUser(t, s, wa, cs, "alice")
 
 	beginW := httptest.NewRecorder()
@@ -208,6 +230,7 @@ func mintViaPasskeyDiscoverable(t *testing.T) issued {
 	wa := newTestWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	const uid = "alice"
+	seedeKonto2271(t, s, uid, true) // #2271: siehe mintViaPasskeyLogin
 	auth := registerForUser(t, s, wa, cs, uid)
 
 	beginW := httptest.NewRecorder()
@@ -232,19 +255,84 @@ func mintViaPasskeyDiscoverable(t *testing.T) issued {
 	return issued{cookie: sessionCookieFrom(t, finishW, "Passkey-discoverable"), dataDir: s.DataDir, userID: uid}
 }
 
-func mintViaPasskeyRegistration(t *testing.T) issued {
+// --- Gruppe 2: die vier verweigernden Anmeldewege (#2271) ------------------
+
+// seedeKonto2271 legt ein Konto mit oder ohne bestätigte Adresse an — VOR dem
+// geteilten Seeder registerForUserAt (passkey_test.go:962), der nur unter
+// `if existing == nil` (:969) selbst seedet und ein bestehendes Konto deshalb
+// unangetastet lässt. Bewusst hier statt im Helfer: würde der Helfer bestätigt
+// seeden, spülte das ALLE Negativfälle unten stillschweigend grün.
+func seedeKonto2271(t *testing.T, s *store.Store, uid string, bestaetigt bool) {
+	t.Helper()
+	konto := model.User{ID: uid, PasswordHash: "h", CreatedAt: time.Now()}
+	if bestaetigt {
+		jetzt := time.Now().UTC()
+		konto.EmailVerifiedAt = &jetzt
+	}
+	if err := s.SaveUser(konto); err != nil {
+		t.Fatalf("SaveUser %q: %v", uid, err)
+	}
+}
+
+// abgewiesen bündelt, was ein verweigerter Anmeldeweg hinterlässt. Der Store
+// gehört dazu, weil eine Verweigerung auch NICHTS bestätigt haben darf — bei
+// OAuth ist genau das die zweite Hälfte der Zusicherung (AC-4).
+type abgewiesen struct {
+	code     int
+	body     string
+	location string
+	cookie   *http.Cookie
+	store    *store.Store
+	userID   string
+}
+
+// sessionCookieOderNil ist die Gegenstückfunktion zu sessionCookieFrom: sie
+// darf NICHT fatalen, denn die Abwesenheit des Cookies ist hier der Normalfall.
+func sessionCookieOderNil(w *httptest.ResponseRecorder) *http.Cookie {
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "gz_session" {
+			return c
+		}
+	}
+	return nil
+}
+
+// AC-1 (Tabellen-Anteil): Passwort-Login auf ein unbestätigtes Konto.
+func denyViaPassword(t *testing.T) abgewiesen {
+	t.Helper()
+	s := newTestStore(t)
+	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
+	if err := s.SaveUser(model.User{ID: "bob", PasswordHash: string(hash), CreatedAt: time.Now()}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/api/auth/login",
+		strings.NewReader(`{"username":"bob","password":"geheim123"}`))
+	w := httptest.NewRecorder()
+	LoginHandler(s, issuanceSecret).ServeHTTP(w, req)
+	return abgewiesen{
+		code: w.Code, body: strings.TrimSpace(w.Body.String()),
+		cookie: sessionCookieOderNil(w), store: s, userID: "bob",
+	}
+}
+
+// AC-2: Passkey-Login MIT Kennungseingabe auf ein unbestätigtes Konto.
+func denyViaPasskeyLogin(t *testing.T) abgewiesen {
 	t.Helper()
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
 	wa := newTestWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
+	const uid = "bob"
+	seedeKonto2271(t, s, uid, false)
+	auth := registerForUser(t, s, wa, cs, uid)
 
 	beginW := httptest.NewRecorder()
-	PasskeyRegisterPublicBeginHandler(s, wa, cs).ServeHTTP(beginW,
-		httptest.NewRequest("POST", "/api/auth/passkey/register/public/begin",
-			bytes.NewReader([]byte(`{"username":"passwordless","email":"pw@example.com"}`))))
-	if beginW.Code != http.StatusOK {
-		t.Fatalf("Passkey-Registrierung begin: erwartet 200, bekommen %d: %s", beginW.Code, beginW.Body.String())
+	PasskeyLoginBeginHandler(s, wa, cs).ServeHTTP(beginW,
+		httptest.NewRequest("POST", "/api/auth/passkey/login/begin",
+			bytes.NewReader([]byte(`{"username":"`+uid+`"}`))))
+	if beginW.Code != 200 {
+		t.Fatalf("Passkey-Login begin: erwartet 200, bekommen %d: %s", beginW.Code, beginW.Body.String())
 	}
 	var beginResp struct {
 		PublicKey struct {
@@ -252,30 +340,104 @@ func mintViaPasskeyRegistration(t *testing.T) issued {
 		} `json:"publicKey"`
 	}
 	if err := json.Unmarshal(beginW.Body.Bytes(), &beginResp); err != nil {
-		t.Fatalf("Passkey-Registrierung begin decode: %v", err)
+		t.Fatalf("Passkey-Login begin decode: %v", err)
 	}
 
-	auth := newTestAuthenticator(t, rpID, origin)
 	finishW := httptest.NewRecorder()
-	// Leere config.Config: kein SMTPHost → kein Verifikations-Dispatch.
-	PasskeyRegisterPublicFinishHandler(s, wa, cs, issuanceSecret, config.Config{}).ServeHTTP(finishW,
-		httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish",
-			bytes.NewReader(auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge))))
-	if finishW.Code != http.StatusCreated {
-		t.Fatalf("Passkey-Registrierung finish: erwartet 201, bekommen %d: %s", finishW.Code, finishW.Body.String())
-	}
-	return issued{
-		cookie:  sessionCookieFrom(t, finishW, "Passkey-Registrierung"),
-		dataDir: s.DataDir,
-		userID:  "passwordless",
+	PasskeyLoginFinishHandler(s, wa, cs, issuanceSecret).ServeHTTP(finishW,
+		httptest.NewRequest("POST", "/api/auth/passkey/login/finish",
+			bytes.NewReader(auth.makeAssertionResponse(t, beginResp.PublicKey.Challenge, 1))))
+	return abgewiesen{
+		code: finishW.Code, body: strings.TrimSpace(finishW.Body.String()),
+		cookie: sessionCookieOderNil(finishW), store: s, userID: uid,
 	}
 }
 
-// AC-1 / AC-13 / AC-18: Jeder der sechs Anmeldewege stellt ein vierteiliges
-// Anmelde-Merkmal aus, das die eigene Prüfung besteht und mindestens ein Jahr
-// im Browser bleibt.
-func TestAllSixLoginPaths_IssueFourPartCookie(t *testing.T) {
-	ways := []struct {
+// AC-3: Passkey-Login OHNE Kennungseingabe (discoverable) auf ein
+// unbestätigtes Konto.
+func denyViaPasskeyDiscoverable(t *testing.T) abgewiesen {
+	t.Helper()
+	rpID, origin := "localhost", "http://localhost"
+	s := newTestStore(t)
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+	const uid = "bob"
+	seedeKonto2271(t, s, uid, false)
+	auth := registerForUser(t, s, wa, cs, uid)
+
+	beginW := httptest.NewRecorder()
+	PasskeyLoginDiscoverableBeginHandler(wa, cs).ServeHTTP(beginW,
+		httptest.NewRequest("POST", "/api/auth/passkey/discoverable/begin", nil))
+	if beginW.Code != http.StatusOK {
+		t.Fatalf("Passkey-discoverable begin: erwartet 200, bekommen %d: %s", beginW.Code, beginW.Body.String())
+	}
+	var beginResp map[string]interface{}
+	_ = json.Unmarshal(beginW.Body.Bytes(), &beginResp)
+	pk, _ := beginResp["publicKey"].(map[string]interface{})
+	challenge, _ := pk["challenge"].(string)
+
+	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
+		bytes.NewReader(auth.makeAssertionResponseDiscoverable(t, challenge, 1, uid)))
+	finishReq.Header.Set("Content-Type", "application/json")
+	finishW := httptest.NewRecorder()
+	PasskeyLoginDiscoverableFinishHandler(s, wa, cs, issuanceSecret).ServeHTTP(finishW, finishReq)
+	return abgewiesen{
+		code: finishW.Code, body: strings.TrimSpace(finishW.Body.String()),
+		cookie: sessionCookieOderNil(finishW), store: s, userID: uid,
+	}
+}
+
+// AC-4: Google-OAuth auf ein unbestätigtes Bestandskonto, dessen effektive
+// Kontaktadresse von der durch Google bestätigten ABWEICHT — die Selbstheilung
+// greift dort nicht (EqualFold in selfHealEmailVerification schlägt fehl), also
+// bleibt das Konto unbestätigt und die Vorprüfung muss es abweisen.
+//
+// Ohne diesen Fall wäre der Deny-Zweig im OAuth-Fluss toter Code.
+func denyViaGoogleAdressabweichung(t *testing.T) abgewiesen {
+	t.Helper()
+	s := newTestStore(t)
+
+	// Bestands-Zweig erzwingen (OAuthProvider+OAuthSub passend zum Fake-Server):
+	// im Neuanlage-Zweig liefe createOAuthUser und der Test misst etwas anderes.
+	const uid = "g-2271-abw"
+	if err := s.SaveUser(model.User{
+		ID: uid, Email: "anders@example.com", MailTo: "anders@example.com",
+		OAuthProvider: "google", OAuthSub: "sub-2271-abw", CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
+
+	userinfoURL, tokenURL := oauthFakeServers(t, "sub-2271-abw", "google@example.com")
+	cfg := &config.Config{
+		GoogleClientID:     "test-client-id",
+		GoogleClientSecret: "test-secret",
+		GoogleRedirectURL:  "https://example.com/callback",
+		SessionSecret:      issuanceSecret,
+	}
+
+	const state = "state-2271-abw"
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/auth/google/callback?code=test-code&state="+state, nil)
+	req.AddCookie(&http.Cookie{Name: "gz_oauth_state", Value: state})
+	w := httptest.NewRecorder()
+	GoogleOAuthCallbackHandlerWithEndpoints(cfg, s, userinfoURL, tokenURL).ServeHTTP(w, req)
+	return abgewiesen{
+		code: w.Code, body: strings.TrimSpace(w.Body.String()),
+		location: w.Header().Get("Location"),
+		cookie:   sessionCookieOderNil(w), store: s, userID: uid,
+	}
+}
+
+// #2129 AC-1/AC-13/AC-18 · #2271 AC-6: Die FÜNF ausstellenden Anmeldewege
+// stellen ein vierteiliges Anmelde-Merkmal aus, das die eigene Prüfung besteht
+// und mindestens ein Jahr im Browser bleibt.
+//
+// #2271 AC-6: Der Zähler ist von 6 auf 5 gewandert, nicht gefallen. Der
+// Magic-Link-Eintrag ist zugleich der Wächter über die Reihenfolge
+// Heilung-vor-Gate: liefe das Gate zuerst, fehlte dort das Cookie und die
+// Gruppe hätte nur vier Einträge.
+func TestIssuingLoginPaths_IssueFourPartCookie(t *testing.T) {
+	issuing := []struct {
 		name string
 		mint func(*testing.T) issued
 	}{
@@ -284,14 +446,13 @@ func TestAllSixLoginPaths_IssueFourPartCookie(t *testing.T) {
 		{"Google", mintViaGoogle},
 		{"Passkey-Login", mintViaPasskeyLogin},
 		{"Passkey-ohne-Kennungseingabe", mintViaPasskeyDiscoverable},
-		{"Passkey-Registrierung", mintViaPasskeyRegistration},
 	}
 
-	if len(ways) != 6 {
-		t.Fatalf("AC-13 verlangt sechs Anmeldewege, abgedeckt sind %d", len(ways))
+	if len(issuing) != 5 {
+		t.Fatalf("#2271 AC-6 verlangt fünf ausstellende Anmeldewege, abgedeckt sind %d", len(issuing))
 	}
 
-	for _, way := range ways {
+	for _, way := range issuing {
 		t.Run(way.name, func(t *testing.T) {
 			got := way.mint(t)
 
@@ -327,5 +488,198 @@ func TestAllSixLoginPaths_IssueFourPartCookie(t *testing.T) {
 					way.name, code)
 			}
 		})
+	}
+}
+
+// --- #2271 AC-7: die vier verweigernden Anmeldewege -------------------------
+
+// Der Antwort-Vertrag des Gates (Spec "Antwortform"): JSON-Wege antworten 403
+// mit genau diesem Körper, der OAuth-Redirect-Fluss ausschließlich über den
+// Location-Parameter — kein rohes JSON in einem Redirect-Fluss.
+const (
+	verweigerungsKoerper2271 = `{"error":"email_not_verified"}`
+	verweigerungsZiel2271    = "/login?error=email_not_verified"
+)
+
+// AC-7: Vier Anmeldewege verweigern das Merkmal, solange die Adresse
+// unbestätigt ist. Der eigene Zähler ist nicht Kosmetik — eine Gruppe ohne ihn
+// fängt einen vergessenen oder unbemerkt entfernten Blockierfall nicht, genau
+// das, wogegen die alte `!= 6`-Zeile stand.
+func TestBlockingLoginPaths_RefuseUnverifiedAccounts(t *testing.T) {
+	blocking := []struct {
+		name string
+		// perRedirect: Die Ablehnung reist im Location-Header, nicht im
+		// Statuscode. Bei OAuth sind Erfolg UND Ablehnung beide 302 — ein
+		// Statuscode-Assert bewachte dort nichts.
+		perRedirect bool
+		deny        func(*testing.T) abgewiesen
+	}{
+		{"Passwort-unbestaetigt", false, denyViaPassword},
+		{"Passkey-Login-unbestaetigt", false, denyViaPasskeyLogin},
+		{"Passkey-ohne-Kennungseingabe-unbestaetigt", false, denyViaPasskeyDiscoverable},
+		{"Google-Adressabweichung", true, denyViaGoogleAdressabweichung},
+	}
+
+	if len(blocking) != 4 {
+		t.Fatalf("#2271 AC-7 verlangt vier verweigernde Anmeldewege, abgedeckt sind %d", len(blocking))
+	}
+
+	for _, way := range blocking {
+		t.Run(way.name, func(t *testing.T) {
+			got := way.deny(t)
+
+			if way.perRedirect {
+				// AC-4: der Location-Header trägt die Aussage.
+				if got.location != verweigerungsZiel2271 {
+					t.Errorf("AC-7/%s: erwartet Weiterleitung auf %q, bekommen %q (Status %d, Körper %s)",
+						way.name, verweigerungsZiel2271, got.location, got.code, got.body)
+				}
+			} else {
+				if got.code != http.StatusForbidden {
+					t.Errorf("AC-7/%s: erwartet 403, bekommen %d: %s", way.name, got.code, got.body)
+				}
+				if got.body != verweigerungsKoerper2271 {
+					t.Errorf("AC-7/%s: erwarteter Antwortkörper %s, bekommen %q",
+						way.name, verweigerungsKoerper2271, got.body)
+				}
+			}
+
+			// Gemeinsam für alle vier: kein Anmelde-Merkmal.
+			if got.cookie != nil {
+				t.Errorf("AC-7/%s: verweigerter Anmeldeweg darf kein gz_session-Cookie setzen, bekommen %q",
+					way.name, got.cookie.Value)
+			}
+
+			// Und: eine Verweigerung bestätigt nebenbei nichts. Bei AC-4 ist das
+			// die zweite Hälfte der Zusicherung — sonst bliebe "abgewiesen, aber
+			// im selben Zug bestätigt" unbemerkt.
+			nutzer, err := got.store.LoadUser(got.userID)
+			if err != nil || nutzer == nil {
+				t.Fatalf("AC-7/%s: Nutzer %q nach dem Versuch nicht ladbar: %v", way.name, got.userID, err)
+			}
+			if nutzer.EmailVerifiedAt != nil {
+				t.Errorf("AC-7/%s: ein verweigerter Anmeldeweg darf die Adresse nicht bestätigen, "+
+					"email_verified_at ist %v", way.name, nutzer.EmailVerifiedAt)
+			}
+		})
+	}
+}
+
+// --- #2271 AC-8: der Sonderfall --------------------------------------------
+
+// AC-8: Die öffentliche Passkey-Registrierung stellt KEIN Merkmal mehr aus.
+// Sie bleibt 201 — die Kontoerstellung war erfolgreich, ein 403 wäre hier
+// falsch — verliert aber das Auto-Login und weist stattdessen auf die
+// ausstehende Bestätigung hin.
+//
+// Bewusst eigenständig statt als sechster Tabelleneintrag: die Positiv-Gruppe
+// holt ihr Cookie über sessionCookieFrom, das ohne Cookie fatal abbricht.
+func TestPasskeyPublicRegistration_IssuesNoSession(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	s := newTestStore(t)
+	wa := newTestWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+
+	beginW := httptest.NewRecorder()
+	PasskeyRegisterPublicBeginHandler(s, wa, cs).ServeHTTP(beginW,
+		httptest.NewRequest("POST", "/api/auth/passkey/register/public/begin",
+			bytes.NewReader([]byte(`{"username":"passwordless","email":"pw@example.com"}`))))
+	if beginW.Code != http.StatusOK {
+		t.Fatalf("AC-8 begin: erwartet 200, bekommen %d: %s", beginW.Code, beginW.Body.String())
+	}
+	var beginResp struct {
+		PublicKey struct {
+			Challenge string `json:"challenge"`
+		} `json:"publicKey"`
+	}
+	if err := json.Unmarshal(beginW.Body.Bytes(), &beginResp); err != nil {
+		t.Fatalf("AC-8 begin decode: %v", err)
+	}
+
+	auth := newTestAuthenticator(t, rpID, origin)
+	finishW := httptest.NewRecorder()
+	// Leere config.Config: kein SMTPHost → kein Verifikations-Dispatch.
+	PasskeyRegisterPublicFinishHandler(s, wa, cs, issuanceSecret, config.Config{}).ServeHTTP(finishW,
+		httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish",
+			bytes.NewReader(auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge))))
+
+	if finishW.Code != http.StatusCreated {
+		t.Fatalf("AC-8: die Kontoerstellung bleibt erfolgreich — erwartet 201, bekommen %d: %s",
+			finishW.Code, finishW.Body.String())
+	}
+	if c := sessionCookieOderNil(finishW); c != nil {
+		t.Errorf("AC-8: die öffentliche Passkey-Registrierung darf kein gz_session-Cookie mehr "+
+			"ausstellen (Auto-Login entfällt), bekommen %q", c.Value)
+	}
+
+	// Der Hinweis auf die ausstehende Bestätigung ist maschinenlesbar, damit
+	// der Nachweis nicht an einer Formulierung hängt.
+	var antwort map[string]string
+	if err := json.Unmarshal(finishW.Body.Bytes(), &antwort); err != nil {
+		t.Fatalf("AC-8: Antwortkörper nicht lesbar: %v (%s)", err, finishW.Body.String())
+	}
+	if antwort["status"] != "verification_pending" {
+		t.Errorf("AC-8: Antwort muss auf die ausstehende Bestätigung hinweisen "+
+			`(status "verification_pending"), bekommen %q`, finishW.Body.String())
+	}
+	if antwort["id"] != "passwordless" {
+		t.Errorf("AC-8: die angelegte Kennung muss weiter in der Antwort stehen, bekommen %q",
+			finishW.Body.String())
+	}
+}
+
+// --- #2271 AC-5: die Reihenfolge Heilung-vor-Gate bei Google ----------------
+
+// AC-5: Ein unbestätigtes Bestandskonto, dessen effektive Kontaktadresse der
+// von Google bestätigten entspricht, heilt sich IM SELBEN Request und kommt
+// durch — Location `/`, nicht der Fehlerpfad, und danach ist die Adresse
+// bestätigt.
+//
+// Diese Reihenfolge war bei OAuth bisher unbewacht: mintViaGoogle seedet
+// vorverifiziert, selfHealEmailVerification steigt dort sofort aus
+// (auth.go:800), eine Vertauschung wäre unsichtbar geblieben. Beide
+// Zusicherungen stehen deshalb in DERSELBEN Funktion — ein Statuscode-Assert
+// allein bewachte nichts, weil Erfolg und Ablehnung beide 302 sind.
+func TestGoogleOAuth_SelfHealRunsBeforeGate(t *testing.T) {
+	s := newTestStore(t)
+
+	const uid = "g-2271-heilung"
+	const googleAdresse = "google@example.com"
+	if err := s.SaveUser(model.User{
+		ID: uid, Email: googleAdresse, MailTo: googleAdresse,
+		OAuthProvider: "google", OAuthSub: "sub-2271-heilung", CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
+
+	userinfoURL, tokenURL := oauthFakeServers(t, "sub-2271-heilung", googleAdresse)
+	cfg := &config.Config{
+		GoogleClientID:     "test-client-id",
+		GoogleClientSecret: "test-secret",
+		GoogleRedirectURL:  "https://example.com/callback",
+		SessionSecret:      issuanceSecret,
+	}
+
+	const state = "state-2271-heilung"
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/auth/google/callback?code=test-code&state="+state, nil)
+	req.AddCookie(&http.Cookie{Name: "gz_oauth_state", Value: state})
+	w := httptest.NewRecorder()
+	GoogleOAuthCallbackHandlerWithEndpoints(cfg, s, userinfoURL, tokenURL).ServeHTTP(w, req)
+
+	if ziel := w.Header().Get("Location"); ziel != "/" {
+		t.Errorf("AC-5: ein Konto, das sich in diesem Request heilt, muss durchkommen — "+
+			"erwartet Location %q, bekommen %q (Status %d)", "/", ziel, w.Code)
+	}
+	if c := sessionCookieOderNil(w); c == nil {
+		t.Errorf("AC-5: das geheilte Konto muss ein gz_session-Cookie bekommen, es gibt keins (Status %d)", w.Code)
+	}
+
+	nutzer, err := s.LoadUser(uid)
+	if err != nil || nutzer == nil {
+		t.Fatalf("AC-5: Nutzer %q nach dem Callback nicht ladbar: %v", uid, err)
+	}
+	if nutzer.EmailVerifiedAt == nil {
+		t.Error("AC-5: die Selbstheilung muss email_verified_at gesetzt haben — es ist nil")
 	}
 }

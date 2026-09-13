@@ -27,7 +27,13 @@
 //  Setup-Projekt: e2e/feat-1745-a.staging.setup.ts.)
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation, createTestComparePreset, createTestTrip, cleanupTracked } from './helpers';
+import {
+	createTestLocation,
+	createTestComparePreset,
+	createTestTrip,
+	cleanupTracked,
+	registriereBestaetigtenZweitnutzer
+} from './helpers';
 
 const KIND = 'premium_sms';
 
@@ -304,14 +310,10 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 			ctxB = await browser.newContext({ storageState: undefined });
 			const pageB = await ctxB.newPage();
 			const userB = `e2e1745a${suffix}`;
-			const reg = await pageB.request.post('/api/auth/register', {
-				data: { username: userB, password: 'Test1234!x', email: `${userB}@example.com` }
-			});
-			expect([200, 201].includes(reg.status()), `Registrierung B fehlgeschlagen: ${reg.status()}`).toBeTruthy();
-			const loginB = await pageB.request.post('/api/auth/login', {
-				data: { username: userB, password: 'Test1234!x' }
-			});
-			expect(loginB.ok(), `Login B fehlgeschlagen: ${loginB.status()}`).toBeTruthy();
+			// Issue #2271: registrieren → Token ueber AS angemeldete Sitzung holen →
+			// bestaetigen → erst dann anmelden. Ohne die Bestaetigung dazwischen
+			// antwortet der Login mit 403 (das Gate sitzt in issueSession).
+			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, userB, 'Test1234!x');
 
 			// B sieht As Trip nicht.
 			const getBOnA = await pageB.request.get(`/api/trips/${tripAId}`);
