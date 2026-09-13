@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
@@ -38,6 +39,11 @@ from app.models import (
     Provider,
 )
 from providers.base import ProviderRequestError
+from providers.http import (
+    capped_timeout_or_raise,
+    make_deadline_before_hook,
+    stop_at_deadline,
+)
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -54,6 +60,11 @@ RETRY_ATTEMPTS = 5
 RETRY_WAIT_MIN = 2   # seconds
 RETRY_WAIT_MAX = 60  # seconds
 RETRY_STATUS_CODES = {502, 503, 504}
+
+# Gesamt-Zeitbudget je _request-Kette (#2302 Scheibe C, analog dwd.py):
+# GeoSphere hatte bisher KEIN Zeitbudget -- eine haengende Gegenstelle
+# konnte die Retry-Kette rechnerisch ueber alle 5 Versuche offenhalten.
+FETCH_DEADLINE_SECONDS = 180.0
 
 
 def _is_retryable_error(exception: BaseException) -> bool:
@@ -283,10 +294,17 @@ class GeoSphereProvider:
     def __exit__(self, *args: Any) -> None:
         self.close()
 
+    def _fetch_deadline_seconds(self) -> float:
+        """Accessor fuer den geteilten `before`-Hook (#2302 Scheibe C):
+        loest `FETCH_DEADLINE_SECONDS` erst ZUR AUFRUFZEIT auf, damit ein
+        Laufzeit-Patch (Test-Monkeypatch) wirkt."""
+        return FETCH_DEADLINE_SECONDS
+
     @retry(
-        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        stop=stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline,
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
         retry=retry_if_exception(_is_retryable_error),
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
@@ -298,6 +316,8 @@ class GeoSphereProvider:
         parameters: List[str],
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
+        *,
+        deadline_at: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Make a request to the GeoSphere timeseries API with retry logic.
@@ -305,7 +325,19 @@ class GeoSphereProvider:
         SPEC: docs/specs/modules/api_retry.md
         - Retries on 502, 503, 504 and connection errors
         - 5 attempts with exponential backoff (2-60 seconds)
+
+        #2302 Scheibe C: `deadline_at` deckelt die GESAMTE Kette (Versuche
+        UND Wartepausen) auf `FETCH_DEADLINE_SECONDS`; ohne uebergebenen
+        Wert bildet der `before`-Hook selbst eine Default-Frist.
         """
+        request_timeout = capped_timeout_or_raise(
+            provider_name=self.name,
+            base_timeout=TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="FETCH_DEADLINE_SECONDS",
+            budget_seconds=FETCH_DEADLINE_SECONDS,
+        )
+
         params: Dict[str, Any] = {
             "lat_lon": f"{lat},{lon}",
             "parameters": ",".join(parameters),
@@ -317,7 +349,7 @@ class GeoSphereProvider:
             params["end"] = end.strftime("%Y-%m-%dT%H:%M")
 
         url = f"{BASE_URL}{endpoint}?{urlencode(params)}"
-        response = self._client.get(url)
+        response = self._client.get(url, timeout=request_timeout)
 
         # Check for retryable status codes before raise_for_status
         if response.status_code in RETRY_STATUS_CODES:
@@ -332,6 +364,8 @@ class GeoSphereProvider:
         lon: float,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
+        *,
+        deadline_at: Optional[float] = None,
     ) -> NormalizedTimeseries:
         """
         Fetch AROME (NWP) forecast data.
@@ -341,17 +375,25 @@ class GeoSphereProvider:
             lon: Longitude
             start: Start time (default: now)
             end: End time (default: +60h)
+            deadline_at: #2302 Scheibe C -- reicht eine von `fetch_combined`
+                gebildete Serienfrist durch. Bleibt es `None` (Direktaufruf),
+                bildet der `before`-Hook in `_request` selbst eine
+                Default-Frist.
 
         Returns:
             NormalizedTimeseries with forecast data
         """
-        data = self._request(ENDPOINTS["nwp"], lat, lon, NWP_PARAMS, start, end)
+        data = self._request(
+            ENDPOINTS["nwp"], lat, lon, NWP_PARAMS, start, end, deadline_at=deadline_at
+        )
         return self._parse_nwp_response(data)
 
     def fetch_snowgrid(
         self,
         lat: float,
         lon: float,
+        *,
+        deadline_at: Optional[float] = None,
     ) -> Tuple[Optional[float], Optional[float]]:
         """
         Fetch current snow depth from SNOWGRID.
@@ -359,6 +401,10 @@ class GeoSphereProvider:
         Args:
             lat: Latitude
             lon: Longitude
+            deadline_at: #2302 Scheibe C -- reicht eine von `fetch_combined`
+                gebildete Serienfrist durch. Bleibt es `None` (Direktaufruf,
+                z.B. `openmeteo._enrich_snow`), bildet der `before`-Hook in
+                `_request` selbst eine Default-Frist.
 
         Returns:
             Tuple of (snow_depth_cm, swe_kgm2) or (None, None) if unavailable
@@ -372,12 +418,18 @@ class GeoSphereProvider:
             start = end - timedelta(days=7)
             data = self._request(
                 ENDPOINTS["snowgrid"], lat, lon, SNOWGRID_PARAMS,
-                start=start, end=end
+                start=start, end=end, deadline_at=deadline_at,
             )
             result = self._parse_snowgrid_response(data)
             log_enrichment_call(PATH_SNOWGRID, OUTCOME_OK)
             return result
-        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.RequestError) as e:
+        except (
+            httpx.HTTPStatusError, httpx.TimeoutException, httpx.RequestError,
+            ProviderRequestError,
+        ) as e:
+            # #2302 Scheibe C: ProviderRequestError ergaenzt (Zeitbudget
+            # erschoepft, `capped_timeout_or_raise`) -- bleibt fail-soft
+            # (#1992 AC-3), aber sichtbar im enrichment_health-Journal.
             log_enrichment_call(PATH_SNOWGRID, OUTCOME_UNAVAILABLE, detail=str(e)[:200])
             return None, None
 
@@ -614,13 +666,18 @@ class GeoSphereProvider:
         Returns:
             NormalizedTimeseries with all available data
         """
+        # #2302 Scheibe C: EINE gemeinsame Serienfrist fuer NWP + SNOWGRID --
+        # sonst bekaeme SNOWGRID ueber den `before`-Hook-Vorgabewert ein
+        # frisches 180s-Fenster statt der verbleibenden Restzeit.
+        deadline_at = time.monotonic() + self._fetch_deadline_seconds()
+
         # Get main forecast
-        ts = self.fetch_nwp_forecast(lat, lon, start, end)
+        ts = self.fetch_nwp_forecast(lat, lon, start, end, deadline_at=deadline_at)
 
         # Enrich with snow data if requested
         if include_snow and ts.data:
             try:
-                snow_depth_cm, swe_kgm2 = self.fetch_snowgrid(lat, lon)
+                snow_depth_cm, swe_kgm2 = self.fetch_snowgrid(lat, lon, deadline_at=deadline_at)
             except Exception as e:
                 from providers.enrichment_health import (
                     OUTCOME_UNAVAILABLE, PATH_SNOWGRID, log_enrichment_call,

@@ -113,6 +113,40 @@ deshalb ausschliesslich `ThunderSourceUnavailableError`; ein
 `ProviderRequestError` aus dem Fristabbruch, der bis zum Test durchschluege,
 laesst ihn scheitern. Fuer `dwd_eu.py` (AC-5) stimmt die AC-Formulierung — dort
 gibt es diesen Zaehlweg nicht.
+
+---
+
+TDD RED — Issue #2302 Scheibe C: derselbe Baustein fuer `geosphere.py`
+(AROME/NWP + SNOWGRID).
+
+SPEC: docs/specs/modules/fix_2302_s3_geosphere_zeitbudget.md (AC-1..AC-8)
+
+Gemeinsame RED-Ursache: `GeoSphereProvider._request` (`geosphere.py:293`)
+kennt weder `deadline_at` noch eine Fristkonstante und reicht `timeout=`
+nicht an `self._client.get()` durch (Client-Default 30s). Anders als bei
+Scheibe B laufen die meisten Waechter unten NICHT am `TypeError` vorbei --
+`_request` und `fetch_combined` werden ohne `deadline_at` aufgerufen (ihre
+heutige Signatur), RED entsteht ausschliesslich ueber die WANDUHR.
+
+Ruest-Helfer `_geo_ruesten` ruehrt `wait` NIE implizit an (F-ADV1-Lehre aus
+Scheibe B) -- nur bei explizit uebergebenem `wait`. Fuer die reinen
+Deckel-Waechter (AC-1/AC-4/AC-6/AC-7, nicht wartepausen-kritisch) wird
+`stop` sichtbar im jeweiligen Testkoerper auf `stop_after_attempt(1)`
+gesetzt, um die RED-Laufzeit auf `TIMEOUT` zu begrenzen, statt auf die volle
+Retry-Kette samt Produktions-Backoff (2-60s) -- das ruehrt ausdruecklich
+nicht an `wait` und ist damit von der F-ADV1-Klasse unberuehrt.
+
+AC-Test-Mapping Scheibe C:
+| AC   | Testfunktion                                                        | Heute |
+|------|----------------------------------------------------------------------|-------|
+| AC-1 | test_geosphere_grundpfad_bricht_bei_haengender_gegenstelle_ab       | RED   |
+| AC-2 | test_geosphere_frist_deckelt_auch_die_retry_wartepausen             | RED   |
+| AC-3 | test_geosphere_fetch_combined_haelt_die_gemeinsame_serienfrist      | RED   |
+| AC-4 | test_geosphere_fetch_combined_nwp_frist_bricht_ab_ohne_leeres_ergebnis | RED |
+| AC-5 | test_geosphere_normalfall_liefert_unveraendert_daten                | KONTR.|
+| AC-6 | test_geosphere_hook_vorgabewert_ist_die_weitere_frist                | RED   |
+| AC-7 | test_geosphere_fetch_snowgrid_bleibt_fail_soft_und_journalisiert    | RED   |
+| AC-8 | keine Testfunktion — Regressionslauf der fuenf Dateien im QA-Artefakt|       |
 """
 from __future__ import annotations
 
@@ -133,12 +167,14 @@ import tenacity
 
 import providers.dwd as dwd_module
 import providers.dwd_eu as dwd_eu_module
+import providers.geosphere as geosphere_module
 import providers.meteofrance as mf_module
 import providers.openmeteo as om_module
 from app.config import Location
 from providers.base import ProviderRequestError, ThunderSourceUnavailableError
 from providers.dwd import DwdDirectProvider
 from providers.dwd_eu import DwdEuDirectProvider
+from providers.geosphere import GeoSphereProvider
 from providers.http import capped_timeout_or_raise
 from providers.meteofrance import MeteoFranceDirectProvider
 from providers.openmeteo import OpenMeteoProvider
@@ -1549,4 +1585,457 @@ def test_thunder_zeitbudget_waechter_laeuft_im_normallauf_mit():
         f"(Exit {lauf.returncode}). Ein Waechter, den der Normallauf "
         "verwirft, bewacht nichts.\n--- stdout ---\n"
         f"{lauf.stdout[-800:]}\n--- stderr ---\n{lauf.stderr[-400:]}"
+    )
+
+
+# ===========================================================================
+# Scheibe C (#2302) — geosphere.py (AROME/NWP + SNOWGRID)
+# ===========================================================================
+
+_GEO_LAT, _GEO_LON = 46.40, 12.52  # innerhalb SNOWGRID_BOUNDS (Alpen)
+
+
+def _geo_ruesten(monkeypatch, host, port, *, timeout, frist, wait=None):
+    """BASE_URL auf den lokalen Server, `TIMEOUT` und `FETCH_DEADLINE_SECONDS`
+    patchen. `wait` bleibt UNVERAENDERT (Produktions-`wait_exponential`),
+    wenn nicht EXPLIZIT uebergeben -- dieser Helfer darf die Wartepause NIE
+    implizit neutralisieren (F-ADV1-Lehre aus Scheibe B, Spec-Vorgabe fuer
+    Scheibe C). `FETCH_DEADLINE_SECONDS` existiert im heutigen Modul noch
+    nicht, darum `raising=False`. `TIMEOUT` wird VOR dem Erzeugen des
+    Providers gepatcht, der Client uebernimmt ihn als Konstruktor-Default.
+    """
+    monkeypatch.setattr(geosphere_module, "BASE_URL", f"http://{host}:{port}")
+    monkeypatch.setattr(geosphere_module, "TIMEOUT", timeout)
+    monkeypatch.setattr(
+        geosphere_module, "FETCH_DEADLINE_SECONDS", frist, raising=False
+    )
+    if wait is not None:
+        monkeypatch.setattr(GeoSphereProvider._request.retry, "wait", wait)
+    return GeoSphereProvider()
+
+
+def _minimaler_nwp_body() -> bytes:
+    """Minimales, aber gueltiges GeoJSON: `timestamps` + `t2m.data`, damit
+    `_parse_nwp_response` mindestens einen Datenpunkt liefert (Spec Test
+    Plan, Zwei-Pfad-Testserver)."""
+    jetzt = datetime.now(timezone.utc)
+    ts = [(jetzt + timedelta(hours=h)).strftime("%Y-%m-%dT%H:%M+00:00") for h in range(1, 4)]
+    body = {
+        "timestamps": ts,
+        "features": [{"properties": {"parameters": {"t2m": {"data": [10.0, 10.5, 11.0]}}}}],
+    }
+    return json.dumps(body).encode("utf-8")
+
+
+def _geo_zwei_pfad_handler(nwp_body: bytes, nwp_delay: float):
+    """EIN Handler fuer beide GeoSphere-Endpunkte, unterschieden ueber den
+    Datensatz-Teilstring in `self.path` (Spec Test Plan). Der SNOWGRID-Pfad
+    haengt (30s Schlaf -- laenger als jede hier gemessene Frist), der
+    NWP-Pfad antwortet nach `nwp_delay` mit gueltigem GeoJSON."""
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802 (http.server API)
+            if "nwp-v1-1h-2500m" in self.path:
+                if nwp_delay:
+                    time.sleep(nwp_delay)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(nwp_body)))
+                self.end_headers()
+                self.wfile.write(nwp_body)
+            elif "snowgrid_cl-v2-1d-1km" in self.path:
+                time.sleep(30)
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def log_message(self, *args):  # Ruhe im pytest-Output
+            pass
+
+    return _Handler
+
+
+@contextmanager
+def _geo_server(nwp_delay: float = 0.6):
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0), _geo_zwei_pfad_handler(_minimaler_nwp_body(), nwp_delay)
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield server
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def _snowgrid_journal_zeilen() -> list:
+    """Lokale Kopie des Journal-Lesers (Testplumbing, kein geteilter
+    Prueflingsbaustein), Muster `test_snowgrid_enrichment_health.py`."""
+    from app.loader import get_data_root
+
+    pfad = get_data_root().joinpath("diagnostics", "enrichment_calls.jsonl")
+    if not pfad.is_file():
+        return []
+    zeilen = [json.loads(z) for z in pfad.read_text().splitlines() if z.strip()]
+    return [z for z in zeilen if z.get("path") == "snowgrid"]
+
+
+def _snowgrid_unavailable_vorhanden() -> bool:
+    return any(z.get("outcome") == "unavailable" for z in _snowgrid_journal_zeilen())
+
+
+# ---------------------------------------------------------------------------
+# AC-1 — Grundpfad-`_request` bricht an der Frist ab
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(15)
+def test_geosphere_grundpfad_bricht_bei_haengender_gegenstelle_ab(monkeypatch):
+    """RED (muss heute scheitern -- als Timeout-Kill, s.u.).
+
+    AC-1: Given `_request` laeuft direkt gegen `_HangingServer`,
+    `FETCH_DEADLINE_SECONDS` auf 0,45s gepatcht, `TIMEOUT` auf 5,0s (DEUTLICH
+    OBERHALB der Frist -- nur so misst der Test den Timeout-DECKEL mit),
+    When `_request(endpoint, lat, lon, parameters)` OHNE `deadline_at`
+    laeuft, Then bricht der Aufruf mit `(ProviderRequestError,
+    httpx.HTTPError)` ab, Wanduhr < 0,9s.
+
+    KEIN Ueberschreiben von `.retry.stop`: der Produktionsausdruck
+    `stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline` bleibt VOLLSTAENDIG
+    verdrahtet -- ein `stop_after_attempt(1)`-Patch wuerde denselben Ausdruck
+    ERSETZEN, also auch `| stop_at_deadline` entfernen, und damit dieselbe
+    Mutationsfamilie unbewacht lassen, die F-ADV1 in Scheibe B aufgedeckt
+    hat (Adversary-Korrektur, s. Modul-Docstring Scheibe C).
+
+    RED-Grund heute: `_request` kennt keine Frist, `stop_after_attempt(5)`
+    ist die einzige Stop-Bedingung -- gegen die haengende Gegenstelle laeuft
+    das volle 5-Versuche-Backoff (~5x5,0s TIMEOUT + Produktions-Wartepausen,
+    Groessenordnung 40s+) weit ueber die hier gesetzte
+    `@pytest.mark.timeout(15)` hinaus. Der Test wird dadurch als
+    Timeout-Kill rot, nicht als lesbare Assertion -- bewusst in Kauf
+    genommen (PO-Korrektur K1), weil nur so die volle Produktions-`stop`-
+    Komposition gemessen wird. Nach GREEN liegt `elapsed` bei ~0,45s und die
+    Assertion unten greift normal.
+    """
+    with _HangingServer() as server:
+        provider = _geo_ruesten(monkeypatch, server.host, server.port, timeout=5.0, frist=0.45)
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._request(
+                geosphere_module.ENDPOINTS["nwp"], _GEO_LAT, _GEO_LON,
+                geosphere_module.NWP_PARAMS,
+            )
+        elapsed = time.monotonic() - start
+
+    assert 0.2 <= elapsed < 0.9, (
+        f"_request() brauchte {elapsed:.2f}s -- die Frist (0.45s) muss den "
+        "Einzelversuch deckeln. Ein Wert um ~5.0s bedeutet: der gedeckelte "
+        "Timeout wird nicht an den httpx-Client durchgereicht."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-2 — die Frist deckelt AUCH die Retry-Wartepausen (F-ADV1-Klasse)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(15)
+def test_geosphere_frist_deckelt_auch_die_retry_wartepausen(monkeypatch):
+    """RED (muss heute scheitern). Mutations-relevanter Waechter
+    (F-ADV1-Klasse) -- `wait` wird EXPLIZIT IM TEST gepatcht, nicht im
+    Ruest-Helfer.
+
+    AC-2: Given `TIMEOUT` 0,5s, `FETCH_DEADLINE_SECONDS` 0,45s, `wait`
+    EXPLIZIT auf `wait_fixed(1.0)`, When `_request` gegen `_HangingServer`
+    laeuft, Then liegt die verstrichene Zeit zwischen 0,2 und unter 0,9s --
+    die Wartepause selbst wird von der Frist gedeckelt, nicht nur die
+    HTTP-Versuche.
+
+    RED-Grund heute: ohne `stop_at_deadline` laufen bis zu 5 Versuche x 0,5s
+    TIMEOUT plus 4 volle 1,0s-Wartepausen durch (~6,5s).
+    """
+    with _HangingServer() as server:
+        provider = _geo_ruesten(
+            monkeypatch, server.host, server.port, timeout=0.5, frist=0.45,
+            wait=tenacity.wait_fixed(1.0),
+        )
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._request(
+                geosphere_module.ENDPOINTS["nwp"], _GEO_LAT, _GEO_LON,
+                geosphere_module.NWP_PARAMS,
+            )
+        elapsed = time.monotonic() - start
+
+    assert 0.2 <= elapsed < 0.9, (
+        f"_request() brauchte {elapsed:.2f}s -- die Frist (0.45s) muss die "
+        "Kette aus Versuchen UND Wartepausen (1.0s je Pause) gemeinsam "
+        "deckeln. Ein Wert um ~6.5s bedeutet: `stop_at_deadline` fehlt."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-3 — `fetch_combined` haelt die gemeinsame Serienfrist (Mutations-Pflicht)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(90)
+def test_geosphere_fetch_combined_haelt_die_gemeinsame_serienfrist(monkeypatch):
+    """RED (muss heute scheitern). Mutations-Pflicht-Waechter (Spec Test
+    Plan): korrekt ~1,0-1,1s, Mutation "deadline_at nicht an SNOWGRID
+    durchgereicht" ~1,6s, Mutation "stop_at_deadline entfernt" ~3s.
+
+    AC-3: Given `fetch_combined(lat, lon, include_cloud_layers=False)` laeuft
+    gegen den Zwei-Pfad-Server (NWP antwortet nach 0,6s, SNOWGRID haengt),
+    `FETCH_DEADLINE_SECONDS` 1,0s, `TIMEOUT` 10,0s, `wait` EXPLIZIT auf
+    `wait_fixed(1.0)` (wie AC-2 -- NICHT neutralisiert), When der Aufruf
+    durchlaeuft, Then liegt die GESAMTE Wanduhrzeit unter 1,35s, `ts.data`
+    ist nicht leer, alle Datenpunkte tragen `snow_depth_cm is None`, und das
+    Journal enthaelt einen `snowgrid`/`unavailable`-Eintrag.
+
+    RED-Grund heute: ohne Frist laeuft der SNOWGRID-Abruf seine volle
+    Retry-Kette (bis zu 5 Versuche x TIMEOUT=10s + 4 x 1,0s Wartepause,
+    ~54s) durch, bevor der bestehende `except Exception`-Fang in
+    `fetch_combined` (`geosphere.py:622-631`) greift -- weit jenseits 1,35s.
+    """
+    with _geo_server(nwp_delay=0.6) as server:
+        host, port = server.server_address
+        provider = _geo_ruesten(
+            monkeypatch, host, port, timeout=10.0, frist=1.0,
+            wait=tenacity.wait_fixed(1.0),
+        )
+        start = time.monotonic()
+        ts = provider.fetch_combined(_GEO_LAT, _GEO_LON, include_cloud_layers=False)
+        elapsed = time.monotonic() - start
+
+    assert ts.data, (
+        "fetch_combined() lieferte keine Datenpunkte -- der NWP-Abruf muss "
+        "gelingen, sonst wird der SNOWGRID-Pfad gar nicht erst versucht "
+        "(geosphere.py:621)."
+    )
+    assert all(dp.snow_depth_cm is None for dp in ts.data), (
+        "Datenpunkte tragen eine Schneehoehe -- SNOWGRID haette an der "
+        "haengenden Gegenstelle abbrechen muessen."
+    )
+    assert _snowgrid_unavailable_vorhanden(), (
+        "Kein Journal-Eintrag path='snowgrid' outcome='unavailable' -- ohne "
+        "Frist bricht der SNOWGRID-Pfad heute nicht rechtzeitig ab, um in "
+        "den bestehenden except-Zweig zu laufen."
+    )
+    assert elapsed < 1.35, (
+        f"fetch_combined() brauchte {elapsed:.2f}s -- die GEMEINSAME Frist "
+        "(1.0s) muss NWP- und SNOWGRID-Abruf zusammen deckeln. Werte um "
+        "~1.6s/~3s deuten auf die in der Spec benannten Mutationen hin."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-4 — der NWP-Pfad bricht ab statt ein leeres Ergebnis zu liefern (D2)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(15)
+def test_geosphere_fetch_combined_nwp_frist_bricht_ab_ohne_leeres_ergebnis(monkeypatch):
+    """RED (muss heute scheitern -- als Timeout-Kill, s.u.).
+
+    AC-4: Given `FETCH_DEADLINE_SECONDS` 0,45s, der Server fuer den
+    NWP-Endpunkt ist ein `_HangingServer`, When `fetch_combined` aufgerufen
+    wird -- derselbe Pfad wie `at_direct` (`regional_stubs.py:88-95`) --,
+    Then wirft der Aufruf `(ProviderRequestError, httpx.HTTPError)`, liefert
+    KEIN leeres/unvollstaendiges Ergebnis, Wanduhr < 0,9s. Bewusst
+    `fetch_combined`, nicht `fetch_forecast` (uebersetzt jeden httpx-Fehler
+    und zeigte den Ausnahmetyp der Frist allein nicht mehr).
+
+    KEIN Ueberschreiben von `.retry.stop` (PO-Korrektur K1, s.
+    AC-1-Begruendung): ein `stop_after_attempt(1)`-Patch wuerde
+    `| stop_at_deadline` aus dem Produktionsausdruck entfernen und damit
+    genau die Mutationsfamilie unbewacht lassen, die dieser Test eigentlich
+    absichern soll.
+
+    RED-Grund heute: ohne Frist laeuft das volle 5-Versuche-Backoff gegen
+    die haengende Gegenstelle (Groessenordnung 40s+), weit ueber
+    `@pytest.mark.timeout(15)` -- der Test wird als Timeout-Kill rot. Nach
+    GREEN liegt `elapsed` bei ~0,45s.
+    """
+    with _HangingServer() as server:
+        provider = _geo_ruesten(monkeypatch, server.host, server.port, timeout=5.0, frist=0.45)
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider.fetch_combined(_GEO_LAT, _GEO_LON, include_cloud_layers=False)
+        elapsed = time.monotonic() - start
+
+    assert 0.2 <= elapsed < 0.9, (
+        f"fetch_combined() brauchte {elapsed:.2f}s -- erwartet < 0.9s. Ein "
+        "Wert um ~5.0s bedeutet: der NWP-Abruf ist nicht auf die Frist "
+        "gedeckelt."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-5 — Normalfall bleibt unveraendert (Pflicht-Gegenprobe, KONTROLLE)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(10)
+def test_geosphere_normalfall_liefert_unveraendert_daten(monkeypatch):
+    """KONTROLLE (heute gruen, muss gruen bleiben) -- Pflicht-Gegenprobe.
+
+    AC-5: Given ein normal (sofort) antwortender lokaler GeoJSON-Server,
+    Standardfrist unveraendert (kein Patch von `FETCH_DEADLINE_SECONDS`),
+    When `fetch_nwp_forecast` aufgerufen wird, Then liefert er unveraendert
+    Daten, bricht nicht vorzeitig ab, Wanduhr < 2,0s.
+
+    Ohne diese AC waere ein Fix, der ALLES sofort abbricht, ebenfalls gruen.
+    """
+    with _geo_server(nwp_delay=0.0) as server:
+        host, port = server.server_address
+        monkeypatch.setattr(geosphere_module, "BASE_URL", f"http://{host}:{port}")
+        provider = GeoSphereProvider()
+        start = time.monotonic()
+        ts = provider.fetch_nwp_forecast(_GEO_LAT, _GEO_LON)
+        elapsed = time.monotonic() - start
+
+    assert ts.data, "fetch_nwp_forecast() lieferte keine Datenpunkte."
+    assert elapsed < 2.0, (
+        f"Normalfall verzoegert ({elapsed:.2f}s) -- die Fristpruefung darf "
+        "einen sofort antwortenden Server nicht ausbremsen."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-6 — der Hook-Vorgabewert kommt aus `_fetch_deadline_seconds()`
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(15)
+def test_geosphere_hook_vorgabewert_ist_die_weitere_frist(monkeypatch):
+    """RED (muss heute scheitern).
+
+    AC-6: Given `_request` OHNE `deadline_at` aufgerufen wird,
+    `FETCH_DEADLINE_SECONDS` zur LAUFZEIT auf einen sehr kleinen Wert
+    gepatcht, When der geteilte `before`-Hook feuert, Then setzt er die
+    Frist selbst aus `_fetch_deadline_seconds()` -- der gepatchte Wert wirkt
+    SOFORT. Zusaetzlich gilt im unveraenderten Modul:
+    `FETCH_DEADLINE_SECONDS == 180.0`.
+
+    `stop_after_attempt(1)` bleibt hier EXPLIZIT gesetzt (PO-Korrektur K1
+    erlaubt das ausdruecklich fuer AC-6): dieser Test bewacht NICHT die
+    `stop`-Komposition (das tun AC-1/AC-2/AC-3/AC-4), sondern ausschliesslich
+    WELCHEN Wert der `before`-Hook als `deadline_at` einsetzt, wenn keiner
+    uebergeben wurde. Diese Zusicherung ist nach dem ERSTEN Versuch bereits
+    vollstaendig geprueft (der Versuch faellt entweder bei ~0,05s oder bei
+    TIMEOUT); ein zweiter, dritter... Versuch mit vollem Produktions-Backoff
+    liefe nur denselben Beweis nochmal, kostete aber ~40s RED-Laufzeit ohne
+    zusaetzliche Mutations-Abdeckung. Ruehrt NICHT an `wait`.
+
+    RED-Grund heute (Wertpruefung): die Konstante existiert im Modul noch
+    gar nicht -- `AttributeError` statt 180.0.
+    RED-Grund heute (Hang-Teil): ohne Frist-Auswertung laeuft der eine
+    Versuch bis TIMEOUT (2,0s) statt bei ~0,05s abzubrechen.
+    """
+    assert geosphere_module.FETCH_DEADLINE_SECONDS == 180.0, (
+        "Modul-Konstante FETCH_DEADLINE_SECONDS fehlt oder weicht vom "
+        "dokumentierten Vorgabewert (180.0s) ab."
+    )
+    with _HangingServer() as server:
+        provider = _geo_ruesten(monkeypatch, server.host, server.port, timeout=2.0, frist=0.05)
+        monkeypatch.setattr(
+            GeoSphereProvider._request.retry, "stop", tenacity.stop_after_attempt(1)
+        )
+        start = time.monotonic()
+        with pytest.raises(_ABBRUCH):
+            provider._request(
+                geosphere_module.ENDPOINTS["nwp"], _GEO_LAT, _GEO_LON,
+                geosphere_module.NWP_PARAMS,
+            )  # BEWUSST ohne deadline_at
+        elapsed = time.monotonic() - start
+
+    assert elapsed < 0.9, (
+        f"_request() OHNE deadline_at brauchte {elapsed:.2f}s -- erwartet "
+        "ist die gepatchte Frist (0.05s). Ein Wert um ~2.0s bedeutet: der "
+        "before-Hook setzt gar keine Frist."
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-7 — `fetch_snowgrid` bleibt fail-soft und journalisiert den Frist-Fehler
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.timeout(15)
+def test_geosphere_fetch_snowgrid_bleibt_fail_soft_und_journalisiert(monkeypatch):
+    """RED (muss heute scheitern -- am Journal-`detail`, NICHT an der
+    Wanduhr; PO-Korrektur K2).
+
+    AC-7 (freigegebener Wortlaut, KEINE Wanduhr-Schwelle darin): Given
+    `fetch_snowgrid` direkt aufgerufen wird (Pfad, den
+    `openmeteo._enrich_snow` nutzt), `FETCH_DEADLINE_SECONDS` 0,45s, der
+    SNOWGRID-Endpunkt haengt, When der Aufruf durchlaeuft, Then liefert
+    `fetch_snowgrid` `(None, None)` ohne Ausnahme, und das Journal traegt
+    einen `snowgrid`/`unavailable`-Eintrag.
+
+    TIMEOUT (0,2s) liegt bewusst UNTER der Frist (0,45s) -- Gegenteil von
+    AC-1/AC-4/AC-6. Grund (am Code verifiziert, `providers/http.py:73-108`
+    und `tenacity/__init__.py:359-401,374-436`):
+    1. Versuch 1 scheitert nach ~0,2s an `TIMEOUT` (ReadTimeout, retryable).
+    2. `_run_wait` berechnet die Pause (hier `wait_fixed(1.0)`, EXPLIZIT
+       gesetzt -- kein Ruest-Default), `_run_stop` prueft DANACH, ob
+       abgebrochen wird: bei t~0,2s ist weder `stop_after_attempt(5)` noch
+       `stop_at_deadline` (Frist bei t=0,45s) erfuellt -- also wird
+       geschlafen (1,0s), t liegt danach bei ~1,2s, ueber der Frist.
+    3. Versuch 2: der Kopf-Check `capped_timeout_or_raise` (im
+       Funktionskoerper von `_request`, VOR dem HTTP-Aufruf) sieht eine
+       NEGATIVE Restzeit und wirft `ProviderRequestError` -- BEVOR ueberhaupt
+       ein zweiter HTTP-Versuch hinausgeht.
+    4. `_is_retryable_error(ProviderRequestError)` ist `False` ->
+       `retry_if_exception` liefert `False` -> tenacity ruft laut
+       `_post_retry_check_actions:398-401` sofort `rs.outcome.result()` auf
+       und reraised den `ProviderRequestError` UNGEDROSSELT (kein
+       `RetryError`-Wrapper, `wait`/`stop` werden fuer diesen Versuch gar
+       nicht mehr ausgewertet).
+    Damit dieser `ProviderRequestError` `fetch_snowgrid` NICHT verlaesst,
+    braucht `fetch_snowgrid` den in der Spec geforderten zusaetzlichen
+    Fang von `ProviderRequestError` (Implementation Details, Punkt
+    "fetch_snowgrid ... faengt zusaetzlich ProviderRequestError").
+
+    RED-Grund heute: dieser zusaetzliche Fang fehlt NICHT direkt sichtbar,
+    denn `fetch_snowgrid` faengt schon heute `httpx.TimeoutException` (der
+    `ReadTimeout` aus dem HEUTIGEN, frist-losen Code, der alle 5 Versuche
+    durchlaeuft) -- der Test bleibt also FUNKTIONAL gruen ((None,None) +
+    ein Journal-Eintrag entsteht so oder so). Die einzige Stelle, an der
+    heute UND nach GREEN unterschiedliches Verhalten sichtbar wird, ist der
+    Inhalt von `detail`: heute traegt er den rohen `ReadTimeout`-Text, nach
+    GREEN die `ProviderRequestError`-Meldung aus `capped_timeout_or_raise`
+    ("Zeitbudget (...) vor diesem Versuch bereits aufgebraucht",
+    `http.py:104-106`, verpackt in `[geosphere] ...` durch
+    `ProviderError.__init__`, `base.py:135`). Die `detail`-Assertion unten
+    ist damit der einzige Beleg, dass der NEUE Fangzweig griff -- eine
+    Mutation "`fetch_snowgrid` faengt `ProviderRequestError` nicht" laesst
+    den `ProviderRequestError` bis zu diesem Test durchschlagen und macht
+    ihn dadurch rot (keine Wanduhr-Schwelle noetig).
+    """
+    with _HangingServer() as server:
+        provider = _geo_ruesten(
+            monkeypatch, server.host, server.port, timeout=0.2, frist=0.45,
+            wait=tenacity.wait_fixed(1.0),
+        )
+        ergebnis = provider.fetch_snowgrid(_GEO_LAT, _GEO_LON)
+
+    assert ergebnis == (None, None), (
+        f"fetch_snowgrid() muss fail-soft (None, None) liefern, bekommen "
+        f"{ergebnis!r}."
+    )
+    zeilen = _snowgrid_journal_zeilen()
+    assert zeilen, "Kein Journal-Eintrag path='snowgrid'."
+    zeile = zeilen[-1]
+    assert zeile.get("outcome") == "unavailable", (
+        f"Erwartet outcome='unavailable', bekommen {zeile.get('outcome')!r}."
+    )
+    assert "Zeitbudget" in (zeile.get("detail") or ""), (
+        f"detail enthaelt nicht 'Zeitbudget' (bekommen: {zeile.get('detail')!r}) "
+        "-- das ist die Meldung von capped_timeout_or_raise() und der Beleg, "
+        "dass der NEUE ProviderRequestError-Fangzweig griff, nicht der "
+        "bestehende httpx.TimeoutException-Fang."
     )
