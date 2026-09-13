@@ -704,7 +704,9 @@ test('AC-11: "Auf allen Geraeten abmelden" raeumt Speicher und Worker', async ({
 	await page.fill('input[name="username"]', process.env.E2E_USER ?? 'admin');
 	await page.fill('input[name="password"]', process.env.E2E_PASS ?? 'test1234');
 	await page.click('button[type="submit"]');
-	await page.waitForURL('/');
+	// Issue #2248: die Anmeldung haengt einen Marker an die Zieladresse
+	// (`/?passkey_angebot=1`); der Pfad bleibt `/`.
+	await page.waitForURL((url) => url.pathname === '/');
 
 	await activateServiceWorker(page, '/account');
 
@@ -754,7 +756,8 @@ test.afterAll(async ({ browser }) => {
 		await page.fill('input[name="username"]', process.env.E2E_USER ?? 'admin');
 		await page.fill('input[name="password"]', process.env.E2E_PASS ?? 'test1234');
 		await page.click('button[type="submit"]');
-		await page.waitForURL('/');
+		// Issue #2248: Marker an der Zieladresse, der Pfad bleibt `/`.
+		await page.waitForURL((url) => url.pathname === '/');
 		await context.storageState({ path: AUTH_STATE });
 	} finally {
 		await context.close();

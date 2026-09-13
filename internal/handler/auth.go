@@ -639,6 +639,10 @@ type profileResponse struct {
 	CreatedAt         string                `json:"created_at"`
 	HasPasskey        bool                  `json:"has_passkey"`
 	Passkeys          []passkeyProfileEntry `json:"passkeys,omitempty"`
+	// Issue #2248 — Abweisung des Passkey-Angebots. Immer vorhanden (Muster
+	// HasPasskey): die Oberflaeche entscheidet an diesem Wert und darf nicht
+	// zwischen "false" und "Feld fehlt" unterscheiden muessen.
+	PasskeyPromptDismissed bool `json:"passkey_prompt_dismissed"`
 }
 
 // passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
@@ -690,6 +694,9 @@ func toProfileResponse(u *model.User) profileResponse {
 		CreatedAt:            u.CreatedAt.Format(time.RFC3339),
 		HasPasskey:           len(u.PasskeyCredentials) > 0,
 		Passkeys:             passkeys,
+		// Issue #2248: auf diesem Weg erfaehrt die Oberflaeche die Abweisung
+		// beim naechsten Laden.
+		PasskeyPromptDismissed: u.PasskeyPromptDismissed,
 	}
 }
 
@@ -726,6 +733,10 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			MailTo         *string `json:"mail_to"`
 			SmsTo          *string `json:"sms_to"`
 			TelegramChatID *string `json:"telegram_chat_id"`
+			// Issue #2248 — Pointer (Muster DisplayName): nur ein mitgeschickter
+			// Wert wird uebernommen, ein fehlendes Feld laesst die Abweisung
+			// unberuehrt.
+			PasskeyPromptDismissed *bool `json:"passkey_prompt_dismissed"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -777,6 +788,11 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 		// Nicht-Übernahme also unmittelbar. Muster wie premium_sms_reply_to.
 		if update.TelegramChatID != nil && *update.TelegramChatID == "" {
 			user.TelegramChatID = ""
+		}
+		// Issue #2248: Read-Modify-Write — das geladene Objekt wird geaendert,
+		// nicht ersetzt (BUG-DATALOSS-GR221).
+		if update.PasskeyPromptDismissed != nil {
+			user.PasskeyPromptDismissed = *update.PasskeyPromptDismissed
 		}
 
 		if err := s.SaveUser(*user); err != nil {
