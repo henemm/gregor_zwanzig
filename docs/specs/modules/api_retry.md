@@ -20,6 +20,8 @@ Automatische Wiederholung von fehlgeschlagenen API-Aufrufen bei transienten Fehl
 
 **Hintergrund:** Am 02.01.2026 um 07:00 lieferte die GeoSphere API fuer 4 von 5 Locations `502 Bad Gateway`. Die E-Mail enthielt nur 1 Skigebiet statt 5.
 
+**Update (#2302 Scheibe C):** Diese Spec beschreibt die Retry-Logik mit exponential Backoff. GeoSphere wurde ab Scheibe C um ein Zeitbudget-Limit (`FETCH_DEADLINE_SECONDS = 180.0`) erweitert, das über den geteilten Baustein `src/providers/http.py` durchgesetzt wird — Detaillierung: `docs/specs/modules/fix_2302_s3_geosphere_zeitbudget.md`.
+
 ## Source
 
 - **File:** `src/providers/geosphere.py`
