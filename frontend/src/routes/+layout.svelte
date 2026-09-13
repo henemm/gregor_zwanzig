@@ -18,6 +18,10 @@
 	import { afterNavigate } from '$app/navigation';
 	import { initOfflineStand, standAnwenden } from '$lib/pwa/offlineStand';
 	import OfflineSperre from '$lib/components/shared/OfflineSperre.svelte';
+	// Issue #2248 — einmaliges, geraeteuebergreifend abweisbares Passkey-Angebot.
+	import { ANGEBOT_MARKER, passkeyAngebotFaellig } from '$lib/passkeyAngebot.js';
+	import { isWebAuthnSupported, registerPasskey } from '$lib/passkey';
+	import { api } from '$lib/api.js';
 
 	let { children, data } = $props();
 
@@ -43,6 +47,35 @@
 	function iosHinweisSchliessen() {
 		iosHinweisSichtbar = false;
 		localStorage.setItem(IOS_HINWEIS_MERKER, 'gesehen');
+	}
+
+	// Issue #2248 — das Passkey-Angebot. Eigener Sichtbarkeits-Zustand, weil das
+	// Banner nach seiner Erfuellung sofort weg muss: der serverseitig geladene
+	// hasPasskey-Wert sagt in diesem Moment noch "kein Passkey".
+	let passkeyAngebotSichtbar = $state(false);
+
+	async function passkeyAngebotEinrichten() {
+		try {
+			await registerPasskey('Dieses Gerät');
+			passkeyAngebotSichtbar = false;
+		} catch {
+			// Abgebrochene oder gescheiterte Zeremonie: das Angebot bleibt stehen,
+			// der Nutzer kann es erneut versuchen oder abweisen.
+		}
+	}
+
+	async function passkeyAngebotAbweisen() {
+		passkeyAngebotSichtbar = false;
+		try {
+			// AUSSCHLIESSLICH das eigene Feld: kaeme ein abweichender
+			// email/mail_to-Wert mit, setzte der Profil-Endpunkt die
+			// Adress-Bestaetigung zurueck — nach #2271 eine Aussperr-Falle.
+			await api.put('/api/auth/profile', { passkey_prompt_dismissed: true });
+		} catch {
+			// Ein abgelehntes Angebot ist kein Vorgang, dessen Scheitern der Nutzer
+			// beheben muesste (Spec, Known Limitations). Es kann dann bei der
+			// naechsten Anmeldung erneut erscheinen.
+		}
 	}
 
 	const darkVars: Record<string, string> = {
@@ -94,6 +127,18 @@
 		if (darkMode) applyDarkMode(true);
 
 		iosHinweisSichtbar = iosHinweisFaellig();
+
+		// Issue #2248: der Marker steht in der Adresse des gerade geladenen
+		// Dokuments — genau dann, wenn die Passwort-Anmeldung eben hierher
+		// weitergeleitet hat. Er wird NICHT abgestreift (Spec): sonst waere die
+		// Reload-Zusicherung trivial wahr, weil das Neuladen eine markerfreie
+		// Adresse holte.
+		passkeyAngebotSichtbar = passkeyAngebotFaellig({
+			marker: new URLSearchParams(window.location.search).has(ANGEBOT_MARKER),
+			hasPasskey: data.hasPasskey === true,
+			dismissed: data.passkeyPromptDismissed === true,
+			webauthnFaehig: isWebAuthnSupported()
+		});
 
 		// SvelteKit registriert den Worker selbst (config.kit.serviceWorker.register
 		// = true) -- hier wird NICHT registriert, sondern nur zugehoert.
@@ -197,5 +242,41 @@
 			       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
 			       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
 		>Schließen</button>
+	</div>
+{/if}
+
+<!-- Issue #2248 — Passkey-Angebot nach der Passwort-Anmeldung. Gleiche Bauart
+     wie der iOS-Hinweis daneben, aber mit ZWEI Aktionen; der Toast-Baustein
+     kennt nur eine. -->
+{#if passkeyAngebotSichtbar}
+	<div
+		data-testid="passkey-angebot"
+		role="status"
+		style="position: fixed; left: 16px; right: 16px; bottom: 76px; z-index: 62;
+		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
+		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
+		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
+		       font-size: 14px; line-height: 1.4;"
+	>
+		<div>
+			Nächstes Mal ohne Passwort anmelden: Passkey auf diesem Gerät einrichten.
+		</div>
+		<div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
+			<button
+				type="button"
+				onclick={passkeyAngebotAbweisen}
+				style="background: transparent; border: none; color: inherit; font-size: 13px;
+				       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+				       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
+			>Nicht jetzt</button>
+			<button
+				type="button"
+				onclick={passkeyAngebotEinrichten}
+				style="background: var(--g-paper, #f6f4ee); border: none; color: var(--g-ink, #1a1a18);
+				       font-size: 13px; font-weight: 600; text-transform: uppercase;
+				       letter-spacing: 0.06em; font-family: var(--g-font-data); cursor: pointer;
+				       min-height: 44px; padding: 0 16px; border-radius: var(--g-radius-md, 0.5rem);"
+			>Jetzt einrichten</button>
+		</div>
 	</div>
 {/if}

@@ -36,6 +36,11 @@ type User struct {
 	// time.Time-Structs nicht).
 	PremiumSmsReplyTo string     `json:"premium_sms_reply_to,omitempty"`
 	PremiumSmsReplyAt *time.Time `json:"premium_sms_reply_at,omitempty"`
+	// Issue #2248 (#2199 Scheibe 3) — das Passkey-Angebot wurde abgewiesen. Der
+	// Vermerk gehoert ins Profil, damit er geraeteuebergreifend gilt. Schlichtes
+	// bool: "fehlt" und "false" bedeuten beide "nicht abgewiesen", es gibt hier
+	// kein Zeitstempel-Nullwert-Problem wie bei RequestedAt.
+	PasskeyPromptDismissed bool `json:"passkey_prompt_dismissed,omitempty"`
 }
 
 type PasswordResetToken struct {

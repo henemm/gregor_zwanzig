@@ -2984,7 +2984,8 @@ Returns authenticated user profile (requires valid session cookie).
       "created_at": "2026-05-25T10:00:00Z",
       "last_used_at": "2026-05-29T08:15:00Z"
     }
-  ]
+  ],
+  "passkey_prompt_dismissed": false
 }
 ```
 
@@ -3007,6 +3008,7 @@ Returns authenticated user profile (requires valid session cookie).
 | premium_sms_reply_at | string (RFC3339) | When that address was learned (Issue #1717 S3, raw value — here the timestamp *is* the payload, unlike `email_verified_at` which is never exposed); pointer server-side so it is omitted entirely instead of a zero-value timestamp. Same read-only rule as `premium_sms_reply_to` |
 | has_passkey | bool | Whether user has registered any passkeys |
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
+| passkey_prompt_dismissed | bool | Whether the user has declined the one-time passkey setup offer (Issue #2248); **always present**. Persisted server-side so the dismissal holds across devices; absent/`false` on the underlying `user.json` both mean "not dismissed" |
 
 **Error Responses:**
 
@@ -3034,6 +3036,7 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 - `display_name`: Optional, max 50 characters; trimmed (leading/trailing whitespace removed); empty or whitespace-only strings unset the field (reverts to fallback: `id`)
 - `mail_to`: Optional, any non-empty string (no format validation)
 - `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
+- `passkey_prompt_dismissed`: Optional bool (Issue #2248); sets whether the one-time passkey setup offer stays hidden
 - Empty strings allowed (unset field)
 - **Not accepted (Issue #1717 S3, AC-7):** `premium_sms_reply_to`, `premium_sms_reply_at`,
   `premium_sms_reply_state`, `premium_sms_allowed`. The decode struct does not contain them, so
@@ -3981,6 +3984,10 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-13: Issue #2248 — Profil-DTO erhält neues Feld `passkey_prompt_dismissed` (bool,
+  Muster `has_passkey`: immer vorhanden, kein `omitempty`). `GET`/`PUT /api/auth/profile` geben es
+  aus, `PUT` nimmt es optional entgegen. Hält fest, dass der Nutzer das einmalige
+  Passkey-Einrichtungsangebot abgelehnt hat, geräteübergreifend persistiert.
 - 2026-09-11: Issue #2304 (Epic #2138, S1 von #2271/#2146) — zwei neue Endpunkte: `POST
   /api/auth/verify-email/resend` (öffentlich, enumerationsfrei, 5/h-Ratenlimit, löst erneuten
   Bestätigungsmail-Versand aus) und `POST /api/auth/verify-email/staging-token` (existiert nur

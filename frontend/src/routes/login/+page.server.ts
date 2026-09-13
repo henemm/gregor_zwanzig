@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { safeRedirectPath } from '$lib/utils/safeRedirect.js';
+import { mitAngebotMarker } from '$lib/passkeyAngebot.js';
 import { SESSION_MAX_AGE_SECONDS } from '$lib/auth.js';
 import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
@@ -52,6 +53,8 @@ export const actions = {
 		}
 
 		// Issue #1006 — nach 401-Redirect zurück zur Ausgangsseite (nur relative Pfade).
-		redirect(302, safeRedirectPath(url.searchParams.get('redirect')));
+		// Issue #2248 — der Anmelde-Marker kommt NACH safeRedirectPath dazu: sonst
+		// prüfte die Open-Redirect-Sperre einen Wert, der so nie ausgeliefert wird.
+		redirect(302, mitAngebotMarker(safeRedirectPath(url.searchParams.get('redirect'))));
 	},
 } satisfies Actions;
