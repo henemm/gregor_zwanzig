@@ -21,7 +21,7 @@ Issue #2316 · Epic #2127 · Nachfolger von #2128 (`pwa_installierbar_offline_st
 
 Die installierte App erkennt neue Fassungen aktiv (nicht mehr nur beim zufälligen Neustart), bietet
 das Update über einen zurückstellbaren Hinweis an und lädt dabei — bindend aus #2127 — Programmdateien
-weiterhin erst NACH dem Antippen. Ungespeicherte Eingaben auf Tour- und Ortsvergleich-Detailseiten
+weiterhin erst NACH dem Antippen. Ungespeicherte Eingaben auf Trip- und Ortsvergleich-Detailseiten
 gehen beim Update nicht verloren.
 
 ## Source
@@ -159,13 +159,13 @@ compare/[id]/+page.svelte + trips/[id]/+page.svelte (Scheibe A):
 - **AC-7:** Given der iOS-Installationshinweis oder das Passkey-Angebot wird gerade am unteren Bildschirmrand angezeigt / When gleichzeitig ein Update verfügbar wird / Then bleibt der Update-Hinweis verborgen und erscheint erst, sobald der andere Hinweis geschlossen wurde — zwei Hinweise überlagern sich nie. *(Scheibe B)*
   - Nachweis: E2E Projekt `pwa`, Mobil-Viewport
 
-- **AC-8:** Given der Nutzer bearbeitet gerade eine neue Tour auf `/trips/new` oder einen neuen Ortsvergleich auf `/compare/new` / When währenddessen ein Update verfügbar wird / Then bleibt der Update-Hinweis zurückgehalten und erscheint erst nach dem Verlassen dieser Seite. *(Scheibe B)*
+- **AC-8:** Given der Nutzer bearbeitet gerade einen neuen Trip auf `/trips/new` oder einen neuen Ortsvergleich auf `/compare/new` / When währenddessen ein Update verfügbar wird / Then bleibt der Update-Hinweis zurückgehalten und erscheint erst nach dem Verlassen dieser Seite. *(Scheibe B)*
   - Nachweis: E2E Projekt `pwa`
 
 - **AC-9:** Given der Nutzer hat auf der Detailseite eines bestehenden Ortsvergleichs (`/compare/[id]`) eine Zahl eingetippt und das Feld noch nicht verlassen, die Änderung ist also noch nicht übertragen / When die Seite neu geladen wird — so wie es ein angenommenes Update tut / Then ist die Änderung nach dem Neuladen gespeichert, nicht verloren, und es erscheint keine Verlassen-Rückfrage. *(Scheibe A)*
   - Nachweis: E2E (Reload mit ausstehender Änderung, danach Wert aus dem Server gelesen)
 
-- **AC-10:** Given der Nutzer hat auf der Detailseite einer bestehenden Tour (`/trips/[id]`) eine Änderung gemacht, die noch nicht übertragen ist / When die Seite neu geladen wird — so wie es ein angenommenes Update tut / Then ist die Änderung nach dem Neuladen gespeichert, über denselben geteilten Speicher-Wächter wie beim Ortsvergleich. *(Scheibe A)*
+- **AC-10:** Given der Nutzer hat auf der Detailseite eines bestehenden Trips (`/trips/[id]`) eine Änderung gemacht, die noch nicht übertragen ist / When die Seite neu geladen wird — so wie es ein angenommenes Update tut / Then ist die Änderung nach dem Neuladen gespeichert, über denselben geteilten Speicher-Wächter wie beim Ortsvergleich. *(Scheibe A)*
   - Nachweis: E2E, beide Detailseiten mit gleichem Baustein; in Scheibe B zusätzlich einmal über den echten Update-Weg („Aktualisieren") im Projekt `pwa`
 
 - **AC-11:** Given der Nutzer tippt „Aktualisieren" an, während das Gerät offline ist oder der Download im Worker fehlschlägt / When der Worker den Fehlschlag per Nachricht meldet / Then zeigt das Fenster eine verständliche Meldung, lädt NICHT neu, die alte Fassung bleibt aktiv, und „Aktualisieren" ist danach erneut antippbar. *(Scheibe B)*
