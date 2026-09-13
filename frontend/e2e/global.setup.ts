@@ -41,8 +41,11 @@ setup('authenticate and seed test data', async ({ page, baseURL }) => {
 		await page.fill('input[name="username"]', user);
 		await page.fill('input[name="password"]', pass);
 		await page.click('button[type="submit"]');
-		await page.waitForURL('/');
-		await expect(page).toHaveURL('/');
+		// Issue #2248: die Anmeldung haengt seit dem Passkey-Angebot einen Marker
+		// an die Zieladresse (`/?passkey_angebot=1`). Der PFAD bleibt `/` — nur
+		// der exakte Adressvergleich traegt nicht mehr.
+		await page.waitForURL((url) => url.pathname === '/');
+		await expect(page).toHaveURL((url) => url.pathname === '/');
 		await page.context().storageState({ path: authFile });
 	} else {
 		await page.context().addCookies(
