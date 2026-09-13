@@ -9,10 +9,9 @@
 	// über diesen Store (title/eyebrow/leftIcon/backHref/right); Default (leer)
 	// = unverändertes Wordmark/Bell/Plus-Erscheinungsbild auf allen Seiten.
 	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
-	// Issue #2128 — die beiden app-weiten Systemhinweise der PWA. Sie haengen
+	// Issue #2128/#2316 — die app-weiten Systemhinweise der PWA. Sie haengen
 	// BEWUSST ausserhalb des Chrome-Blocks: der Update-Hinweis gehoert auch auf
 	// die Anmeldeseite, die ohne TopAppBar/Sidebar/BottomNav rendert.
-	import Toast from '$lib/components/mobile/Toast.svelte';
 	import { initServiceWorkerUpdate } from '$lib/pwa/serviceWorkerUpdate';
 	// Issue #2131 — Offline-Ansicht mit Stand-Kennzeichnung.
 	import { afterNavigate } from '$app/navigation';
@@ -26,7 +25,9 @@
 	let { children, data } = $props();
 
 	let updateBereit = $state(false);
+	let updateFehlgeschlagen = $state(false);
 	let updateUebernehmen: (() => void) | null = null;
+	let updateSpaeter: (() => void) | null = null;
 	let iosHinweisSichtbar = $state(false);
 
 	/** Geraeteweiter Merker (keine nutzerbezogene Angabe, ADR-0003 unberuehrt). */
@@ -145,14 +146,31 @@
 		if ('serviceWorker' in navigator) {
 			navigator.serviceWorker.ready
 				.then((registration) => {
-					updateUebernehmen = initServiceWorkerUpdate({
+					// Issue #2316 Scheibe B: aktive Pruef-Ausloeser (sichtbar/pageshow/
+					// 30-Min-Intervall), Drossel ueber die echte Browser-Uhr, Rueckfall
+					// bei ausbleibendem controllerchange, Fehlschlag-Meldung des Workers.
+					const steuerung = initServiceWorkerUpdate({
 						registration,
 						container: navigator.serviceWorker,
 						onUpdateReady: () => {
 							updateBereit = true;
 						},
-						reload: () => location.reload()
-					}).applyUpdate;
+						reload: () => location.reload(),
+						document,
+						window,
+						uhr: { now: () => Date.now() },
+						timer: {
+							setTimeout: (fn, ms) => window.setTimeout(fn, ms),
+							clearTimeout: (id) => window.clearTimeout(id),
+							setInterval: (fn, ms) => window.setInterval(fn, ms),
+							clearInterval: (id) => window.clearInterval(id)
+						},
+						onUpdateFailed: () => {
+							updateFehlgeschlagen = true;
+						}
+					});
+					updateUebernehmen = steuerung.applyUpdate;
+					updateSpaeter = steuerung.spaeter;
 				})
 				.catch(() => {});
 		}
@@ -170,6 +188,27 @@
 	// Showcase-Route (#370): ohne App-Chrome (TopAppBar/Sidebar/BottomNav), damit
 	// die Brand-Demos die einzigen App-Bausteine auf der Seite sind.
 	const isShowcase = $derived(page.url.pathname === '/_design');
+
+	// Issue #2316 (AC-8): auf den Anlege-Seiten lebt der Zwischenstand nur im
+	// Speicher — ein Reload ueber den Update-Hinweis wuerde ihn unbemerkt
+	// loeschen. Zurueckgehalten bis zum Verlassen dieser Seiten.
+	const istAnlegeSeite = $derived(
+		page.url.pathname === '/trips/new' || page.url.pathname === '/compare/new'
+	);
+	// Issue #2316 (AC-7): nie zwei Systemhinweise am unteren Bildschirmrand
+	// uebereinander — der Update-Hinweis hat den geringsten Vorrang.
+	const updateHinweisSichtbar = $derived(
+		updateBereit && !iosHinweisSichtbar && !passkeyAngebotSichtbar && !istAnlegeSeite
+	);
+
+	function updateAnwenden(): void {
+		updateFehlgeschlagen = false;
+		updateUebernehmen?.();
+	}
+	function updateSpaeterKlicken(): void {
+		updateBereit = false;
+		updateSpaeter?.();
+	}
 </script>
 
 {#if isLogin || isShowcase}
@@ -210,15 +249,43 @@
 <!-- Issue #2128 — Systemhinweise, app-weit und ausserhalb des Chrome-Blocks.
      Der feste Rahmen ist nur der Bezugspunkt fuer die absolut positionierte
      Toast-Optik; er hat selbst keine Hoehe und faengt daher keine Klicks ab. -->
-{#if updateBereit}
-	<div style="position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;">
-		<Toast
-			kind="info"
-			msg="Neue Version verfügbar"
-			hint="Wird erst auf Antippen geladen."
-			action="Jetzt aktualisieren"
-			onaction={() => updateUebernehmen?.()}
-		/>
+{#if updateHinweisSichtbar}
+	<!-- Issue #2316 — Zweiknopf-Hinweis nach Vorlage des Passkey-Banners
+	     (Muster unten): "Aktualisieren"/"Später" statt der frueheren
+	     Einknopf-Toast-Variante (#2128). -->
+	<div
+		data-testid="update-hinweis"
+		role="status"
+		style="position: fixed; left: 16px; right: 16px; bottom: 76px; z-index: 60;
+		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
+		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
+		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
+		       font-size: 14px; line-height: 1.4;"
+	>
+		<div>
+			{#if updateFehlgeschlagen}
+				Aktualisieren fehlgeschlagen — bitte erneut versuchen.
+			{:else}
+				Neue Version verfügbar. Wird erst auf Antippen geladen.
+			{/if}
+		</div>
+		<div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
+			<button
+				type="button"
+				onclick={updateSpaeterKlicken}
+				style="background: transparent; border: none; color: inherit; font-size: 13px;
+				       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+				       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
+			>Später</button>
+			<button
+				type="button"
+				onclick={updateAnwenden}
+				style="background: var(--g-paper, #f6f4ee); border: none; color: var(--g-ink, #1a1a18);
+				       font-size: 13px; font-weight: 600; text-transform: uppercase;
+				       letter-spacing: 0.06em; font-family: var(--g-font-data); cursor: pointer;
+				       min-height: 44px; padding: 0 16px; border-radius: var(--g-radius-md, 0.5rem);"
+			>Aktualisieren</button>
+		</div>
 	</div>
 {/if}
 

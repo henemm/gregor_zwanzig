@@ -1,8 +1,8 @@
-# ADR-0061: PWA-Bauform — handgeführter Service Worker, vier Speicherregeln, Update erst auf Nachfrage
+# ADR-0061: PWA-Bauform — handgeführter Service Worker, fünf Speicherregeln, Update erst auf Nachfrage
 
 - **Status:** Akzeptiert
-- **Datum:** 2026-09-06
-- **Bezug:** ergänzt [ADR-0003](0003-multi-tenant-isolation.md) (Mandantentrennung) · `frontend/src/service-worker.ts`, `frontend/src/lib/pwa/serviceWorkerUpdate.ts`, `frontend/static/offline.html`, Issue #2128 (Scheibe 1 von Epic #2127)
+- **Datum:** 2026-09-06 (§3 fortgeschrieben 2026-09-13, Issue #2316: aktive Update-Erkennung; Titel/§2 korrigiert — seit #2131 sind es fünf Speicherregeln, nicht vier)
+- **Bezug:** ergänzt [ADR-0003](0003-multi-tenant-isolation.md) (Mandantentrennung) · `frontend/src/service-worker.ts`, `frontend/src/lib/pwa/serviceWorkerUpdate.ts`, `frontend/static/offline.html`, Issue #2128 (Scheibe 1 von Epic #2127), Issue #2131 (Positivliste, Regel 2), Issue #2316 (aktive Update-Erkennung)
 
 ## Kontext
 
@@ -40,14 +40,20 @@ das zweite durch Leitsatz 4. Ein Werkzeug, dessen Voreinstellungen man
 vollständig abschalten muss, spart nichts und verdeckt die entscheidende Zeile.
 Der handgeführte Worker ist ~60 Zeilen und in vier Regeln lesbar.
 
-### 2. Vier Speicherregeln, Reihenfolge bindend
+### 2. Fünf Speicherregeln, Reihenfolge bindend
+
+Ursprünglich vier Regeln (2026-09-06); Issue #2131 hat eine **fünfte** eingefügt
+(Positivliste vorgehaltener Ansichten) und dabei die frühere Regel 2
+(„Seitenaufruf, nur Netz") zu Regel 3 verschoben — Titel und diese Tabelle
+sprachen bis 2026-09-13 fälschlich weiter von „vier".
 
 | # | Anfrageart | Verhalten |
 |---|---|---|
 | 1 | Pfad beginnt mit `/api/` | Der Worker fasst sie **gar nicht** an — kein `respondWith`, der Browser holt selbst. Kein Lesen, kein Schreiben, keine Ausnahme. |
-| 2 | Seitenaufruf (`request.mode === 'navigate'`) | Nur Netz, **nie** ablegen. Bei Netzfehler `offline.html` aus dem Speicher. |
-| 3 | Programmdatei (`build` + `files` aus `$service-worker`) | Aus dem Speicher; Fehlgriff wird aus dem Netz beantwortet **und nachgelegt**. |
-| 4 | alles Übrige | Netz, ohne Ablage. |
+| 2 | Positivliste vorgehaltener Ansichten (`/trips/<id>`, `/compare/<id>`, je Seitenantwort und `__data.json`, Issue #2131) | Netz zuerst und dabei ablegen (`netzSonstSpeicher`); ohne Netz Antwort **mit Stand-Kennzeichnung** aus dem eigenen Speicher. |
+| 3 | übriger Seitenaufruf (`request.mode === 'navigate'`) | Nur Netz, **nie** ablegen. Bei Netzfehler `offline.html`/die Offline-Übersicht aus dem Speicher. |
+| 4 | Programmdatei (`build` + `files` aus `$service-worker`) | Aus dem Speicher; Fehlgriff wird aus dem Netz beantwortet **und nachgelegt**. |
+| 5 | alles Übrige | Netz, ohne Ablage. |
 
 Die `/api/`-Grenze ist hart und steht vor allen anderen Regeln, damit sie auch
 den Vorabruf beim Überfahren von Verweisen
@@ -55,23 +61,28 @@ den Vorabruf beim Überfahren von Verweisen
 Abruf wäre die anfälligste Stelle für eine versehentliche Ablage.
 
 **Feststellung zu Regel 1 (ausdrücklich, kein blinder Fleck):** Regel 1 ist
-heute *wirkungsgleich redundant* zu Regel 4. Entfernt man sie ersatzlos, fällt
-eine `/api/`-Anfrage durch bis Regel 4 — und die legt nichts ab. Es gibt also
-derzeit keinen Nachweis, der allein auf das Entfernen von Regel 1 rot wird; das
-ist kein Versäumnis, sondern die Folge davon, dass Regel 4 nichts tut. Regel 1
-steht als **ausdrückliche Grenze für den Fall, dass Regel 4 je etwas ablegt** —
-und genau dieser Fall ist bewacht: `AC-21` prüft, dass nach normaler Nutzung
-**ausschließlich** Programmdateien im Gerätespeicher liegen, und schlägt damit
-bei jeder Änderung an, die Regel 4 zu einem Ablage-Zweig macht (`/api/` dabei
+heute *wirkungsgleich redundant* zu Regel 5 (die frühere Regel 4 „alles
+Übrige", durch die #2131-Positivliste um eine Position verschoben). Entfernt
+man sie ersatzlos, fällt eine `/api/`-Anfrage durch bis Regel 5 — und die legt
+nichts ab. Es gibt also derzeit keinen Nachweis, der allein auf das Entfernen
+von Regel 1 rot wird; das ist kein Versäumnis, sondern die Folge davon, dass
+Regel 5 nichts tut. Regel 1 steht als **ausdrückliche Grenze für den Fall, dass
+Regel 5 je etwas ablegt** — und genau dieser Fall ist bewacht: `AC-21` prüft,
+dass nach normaler Nutzung **ausschließlich** Programm- und
+Positivlisten-Daten im Gerätespeicher liegen, und schlägt damit bei jeder
+Änderung an, die Regel 5 zu einem Ablage-Zweig macht (`/api/` dabei
 automatisch mit erfasst). Beide Nachweise (`AC-6`, `AC-21`) lösen zusätzlich
 einen echten `/api/`-Abruf aus dem Browser aus, weil die Seitenwechsel ihre
 Daten serverseitig holen — ohne ihn berührte kein Nachweis die `/api/`-Grenze.
 
-Regel 2 hält `cache-control: no-cache` aus `frontend/src/hooks.server.ts` in
-Kraft, statt es zu unterlaufen. Ein abgelegtes HTML-Dokument wäre ein
+Regel 2 (Issue #2131) legt Trip-/Vergleichs-Ansichten **mit Stand-
+Kennzeichnung** ab — die einzige Ausnahme von „Inhalte bleiben
+online-gebunden" (§5, unten präzisiert). Regel 3 hält `cache-control:
+no-cache` aus `frontend/src/hooks.server.ts` für alle übrigen Seitenaufrufe in
+Kraft, statt es zu unterlaufen. Ein dort abgelegtes HTML-Dokument wäre ein
 eingefrorener Stand ohne Kennzeichnung — genau das, was Leitsatz 1 verbietet.
 
-Das Nachlegen in Regel 3 ist kein Komfort: `install` läuft für einen bereits
+Das Nachlegen in Regel 4 ist kein Komfort: `install` läuft für einen bereits
 installierten Worker nicht erneut. Ohne das Nachlegen bliebe ein vom
 Betriebssystem geleerter Zwischenspeicher dauerhaft leer, und die App liefe bei
 jedem Start wieder vollständig übers Netz.
@@ -79,17 +90,60 @@ jedem Start wieder vollständig übers Netz.
 Der Speichername trägt die Version (`gz-<version>`); `activate` löscht jeden
 anderen Namen. Damit gibt es keinen unbemerkt weiterlebenden Altbestand.
 
-### 3. Kein automatisches `skipWaiting`
+### 3. Kein automatisches `skipWaiting` — und aktives, aber sparsames Prüfen (Issue #2316)
 
 `self.skipWaiting()` steht ausschließlich im `message`-Zweig und reagiert nur
 auf `{type:"SKIP_WAITING"}`. Der Client zeigt bei einer bereitstehenden neuen
-Fassung den Hinweis „Neue Version verfügbar" und schickt die Nachricht erst auf
-Antippen; beim Wechsel der Kontrolle lädt er genau einmal neu. Bei der
-Erstinstallation (kein `controller` vorhanden) erscheint kein Hinweis.
+Fassung einen Zweiknopf-Hinweis „Aktualisieren"/„Später" und schickt die
+Nachricht erst auf Antippen; beim Wechsel der Kontrolle lädt er genau einmal
+neu. Bei der Erstinstallation (kein `controller` vorhanden) erscheint kein
+Hinweis.
 
 Registriert wird der Worker **nicht** von der App: SvelteKit tut das selbst
 (`config.kit.serviceWorker.register` ist per Default `true`). Ein eigenes
 `navigator.serviceWorker.register(...)` wäre eine Doppelregistrierung.
+
+**Fortschreibung 2026-09-13 (Issue #2316):** bis dahin bemerkte die App ein
+Update nur zufällig, beim nächsten vollständigen Neustart. Jetzt prüft
+`serviceWorkerUpdate.ts` aktiv, ohne die Nicht-Vorlade-Regel (Leitsatz 1/2 aus
+Epic #2127) zu verletzen — `registration.update()` fragt beim Server nur das
+Worker-Skript selbst ab (0 Byte dank ETag-Revalidierung, außer bei echter
+neuer Fassung), niemals Programmdateien:
+
+- **Auslöser:** `visibilitychange` (beim Sichtbarwerden), `pageshow`, ein
+  30-Minuten-Intervall, das **nur läuft, solange die Seite sichtbar ist**
+  (Timer stoppt beim Verstecken, startet beim erneuten Sichtbarwerden neu).
+- **Drossel:** höchstens eine tatsächliche Prüfung pro 60 Sekunden, über eine
+  hereingereichte Uhr (testbar, kein `Date.now()` direkt im Kern). Wartet
+  bereits ein installierter Worker, lösen weitere Auslöser gar keine Prüfung
+  mehr aus.
+- **„Später":** modul-interner Zustand ohne Persistenz — hält bis zum nächsten
+  echten Kaltstart (Modul-Neuinitialisierung), nicht bis zum nächsten
+  Sichtbarwerden.
+- **Rückfall ohne blinden Reload:** erreicht der übernommene Worker
+  `activated`, aber `controllerchange` bleibt aus, lädt das Fenster nach 4
+  Sekunden **genau einmal** automatisch neu (Timer hereingereicht, gegen
+  einen späten `controllerchange` UND gegen einen zweiten Timer-Lauf
+  abgesichert). Bleibt der Worker dagegen in `installed` hängen (Download im
+  Worker gescheitert), wird **kein** Timer scharf — sonst würde ein
+  gescheiterter Download in einen Reload auf dieselbe alte Fassung
+  umgedeutet, ohne dass der Nutzer vom Fehlschlag erführe.
+- **Fehlschlag-Meldung:** scheitert `programmdateienAblegen()` im `message`-
+  Zweig des Workers (Netzfehler vor `skipWaiting()`), meldet der Worker
+  `{type:'UPDATE_FEHLGESCHLAGEN'}` an **alle** Fenster
+  (`clients.matchAll({ includeUncontrolled: true })` — der neue, noch nicht
+  kontrollierende Worker sähe mit dem Default `includeUncontrolled: false`
+  sonst keine Fenster und die Meldung verpuffte). Das Fenster zeigt eine
+  verständliche Meldung, lädt nicht neu, die alte Fassung bleibt aktiv, und
+  „Aktualisieren" bleibt antippbar.
+- **Zurückgehalten** wird der Hinweis auf `/trips/new` und `/compare/new`
+  (Anlege-Zustand lebt nur im Speicher, ein Reload verlöre ihn unbemerkt) und
+  während der iOS-Installationshinweis oder das Passkey-Angebot am unteren
+  Bildschirmrand sichtbar sind — nie zwei Systemhinweise übereinander.
+
+Der Mechanismus ändert nichts an dieser ADR-Grundentscheidung (Speicherregeln,
+kein automatisches `skipWaiting`, kein Vorladen) — er ergänzt nur, **wann**
+geprüft wird. Details/Testplan: `docs/specs/modules/pwa_update_erkennung.md`.
 
 ### 4. Räumen nur nach einem echten Abmelde-Vorgang
 
@@ -110,6 +164,10 @@ Praxis verletzt, ohne dass es jemand bemerkt. Ein echtes Abmelden navigiert
 sofort und liegt weit innerhalb des Fensters.
 
 ### 5. Inhalte bleiben online-gebunden
+
+*(Stand 2026-09-06, durch Issue #2131 inzwischen abgelöst — s. Regel 2 in §2:
+Trip-/Vergleichs-Ansichten liegen seither MIT Stand-Kennzeichnung im Speicher.
+Absatz bleibt als Beleg der ursprünglichen Entscheidung stehen.)*
 
 In dieser Scheibe wird **kein Inhalt** offline verfügbar, nur Programmdateien.
 Wer ohne Netz eine Seite aufruft, sieht die Offline-Seite, nicht das zuletzt

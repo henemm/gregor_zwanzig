@@ -75,7 +75,9 @@ test('AC-9: Antippen uebernimmt die neue Version und laedt genau einmal neu', as
 	await triggerServiceWorkerUpdate(page);
 	await expect(page.getByText('Neue Version verfügbar')).toBeVisible({ timeout: 20_000 });
 
-	await page.getByRole('button', { name: 'Jetzt aktualisieren' }).click();
+	// Issue #2316: Zweiknopf-Hinweis ersetzt die alte Einknopf-Toast — der
+	// Knopf heisst jetzt "Aktualisieren" (nicht mehr "Jetzt aktualisieren").
+	await page.getByTestId('update-hinweis').getByRole('button', { name: 'Aktualisieren', exact: true }).click();
 
 	await page.waitForFunction(
 		(alt) => navigator.serviceWorker.controller?.scriptURL !== alt,
@@ -201,7 +203,8 @@ test('AC-17: scheitert die Uebertragung, bleibt die installierte Fassung aktiv u
 	// noch nie gesehen hat.
 	await context.route('**/*', (route) => route.abort());
 	try {
-		await page.getByRole('button', { name: 'Jetzt aktualisieren' }).click();
+		// Issue #2316: Knopf heisst jetzt "Aktualisieren" (Zweiknopf-Hinweis).
+		await page.getByTestId('update-hinweis').getByRole('button', { name: 'Aktualisieren', exact: true }).click();
 		await page.waitForTimeout(5_000);
 
 		expect(

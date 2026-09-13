@@ -40,8 +40,12 @@
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
+		/** Issue #2316 Scheibe A: reale Persistenz fuer context='vergleich' (Muster
+		 *  WeatherMetricsTab.svelte onCompareCommit) — direkt aufgerufen, NICHT als
+		 *  DOM-Event-Handler, darf also ein RequestInit (keepalive) entgegennehmen. */
+		onCompareCommit?: (init?: RequestInit) => Promise<void> | void;
 	}
-	let { context = 'route', trip, onTripUpdate, saveController }: Props = $props();
+	let { context = 'route', trip, onTripUpdate, saveController, onCompareCommit }: Props = $props();
 
 	const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
 
@@ -210,7 +214,18 @@
 	// auf "dirty" setzen — widerspruechlich neben dem Fehlerbanner sonst.
 	function maybeSchedule() {
 		if (context === 'vergleich') {
-			if (saveGateDecision(rows) === 'schedule') syncToWizard();
+			// Issue #2316 Scheibe A (AC-9, Spec-Korrektur nach RED-Messung): eine
+			// eingetippte, noch nicht verlassene Aenderung wird JETZT zusaetzlich
+			// ueber saveController.schedule() gemeldet -- genau wie im Trip-Kontext
+			// unten -- damit hasPending true wird und der geteilte
+			// beforeNavigate-Waechter sie beim Neuladen mit keepalive uebertraegt.
+			// Die eigentliche Persistenz bleibt der bestehende Weg (onCompareCommit
+			// = CompareTabs' handleCorridorCommit, diff-/queue-geschuetzt) --
+			// keine zweite, eigene PUT-Logik (keine Compare-Sonderloesung).
+			if (saveGateDecision(rows) === 'schedule') {
+				syncToWizard();
+				saveController?.schedule(async (init) => { await onCompareCommit?.(init); });
+			}
 			return;
 		}
 		if (saveGateDecision(rows) === 'schedule') saveController?.schedule(buildSaveFn());

@@ -201,9 +201,16 @@ describe('Einbau CompareTabs.svelte (Hub) — Mobile-Zweig context="vergleich"',
 		// Negativ-Gegenprobe: der mobile Mount muss im {#if isMobileViewport}-Zweig
 		// stehen, dessen {:else}-Zweig stattdessen den Desktop-CorridorEditor mountet
 		// (kein Step3Idealwerte-Aequivalent im Hub, s. Recherche-Ergebnis S4b-Kontext).
+		// Issue #2316 Scheibe A (AC-9) + F002 (Adversary MEDIUM): BEIDE Zweige
+		// reichen zusaetzlich saveController/onCompareCommit durch (Speicher-
+		// Waechter-Anschluss, mobil UND Desktop) und tragen je einen
+		// erklaerenden Kommentar davor -- das Muster erlaubt beliebige weitere
+		// Props vor dem `/>` sowie einen optionalen HTML-Kommentar davor, ohne
+		// die eigentliche Zusicherung (Mobile/Desktop-Gegenstueck-Paarung) zu
+		// verwaessern.
 		assert.match(
 			src,
-			/\{#if isMobileViewport\}\s*<CorridorEditorMobile context="vergleich" \/>\s*\{:else\}\s*<CorridorEditor context="vergleich" \/>/,
+			/\{#if isMobileViewport\}\s*(?:<!--[\s\S]*?-->\s*)?<CorridorEditorMobile context="vergleich"[^>]*\/>\s*\{:else\}\s*(?:<!--[\s\S]*?-->\s*)?<CorridorEditor context="vergleich"[^>]*\/>/,
 			'CorridorEditorMobile context="vergleich" muss im mobilen Zweig stehen, mit CorridorEditor context="vergleich" als Desktop-Gegenstueck im {:else}-Zweig'
 		);
 	});

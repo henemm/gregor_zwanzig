@@ -53,8 +53,12 @@
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
+		/** Issue #2316 F002 (Adversary MEDIUM): reale Persistenz fuer
+		 *  context='vergleich' -- Mobil-Pendant zu CorridorEditor.svelte, gleiche
+		 *  Route (handleCorridorCommit), kein Compare-Sonderweg. */
+		onCompareCommit?: (init?: RequestInit) => Promise<void> | void;
 	}
-	let { context = 'route', trip, onTripUpdate, saveController }: Props = $props();
+	let { context = 'route', trip, onTripUpdate, saveController, onCompareCommit }: Props = $props();
 
 	const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
 
@@ -177,7 +181,16 @@
 
 	function maybeSchedule() {
 		if (context === 'vergleich') {
-			if (saveGateDecision(rows) === 'schedule') syncToWizard();
+			// Issue #2316 F002 (Adversary MEDIUM, Mobil-Paritaet zu
+			// CorridorEditor.svelte/Desktop): auch mobil ueber
+			// saveController.schedule() anmelden, damit hasPending true wird und
+			// der geteilte beforeNavigate-Waechter eine Aenderung beim Entladen
+			// mit keepalive ueberträgt -- die eigentliche Persistenz bleibt
+			// onCompareCommit (= CompareTabs' handleCorridorCommit).
+			if (saveGateDecision(rows) === 'schedule') {
+				syncToWizard();
+				saveController?.schedule(async (init) => { await onCompareCommit?.(init); });
+			}
 			return;
 		}
 		if (saveGateDecision(rows) === 'schedule') saveController?.schedule(buildSaveFn());

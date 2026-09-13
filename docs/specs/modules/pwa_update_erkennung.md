@@ -3,7 +3,7 @@ entity_id: pwa_update_erkennung
 type: module
 created: 2026-09-13
 updated: 2026-09-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [pwa, frontend, offline, service-worker, issue-2316, epic-2127]
 ---
@@ -15,7 +15,7 @@ Issue #2316 · Epic #2127 · Nachfolger von #2128 (`pwa_installierbar_offline_st
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
@@ -124,7 +124,9 @@ compare/[id]/+page.svelte + trips/[id]/+page.svelte (Scheibe A):
   gültig: Anfragen, die der Worker selbst stellt, sind sichtbar.
 - Unit-Tests (`node:test`) nutzen echte `EventTarget`-Doppel und eine hereingereichte Uhr; kein
   `waitForTimeout`, kein Mock-Theater.
-- CI: `E2E_MIN_EXECUTED_PWA: 49` in `.github/workflows/ci.yml` um die neuen `pwa`-Fälle anheben.
+- CI: `speicherung-ueberlebt-neuladen.spec.ts` neu in `.github/ci_e2e_specs.txt` (Filter B im
+  Zielverbund 3× gemessen); `E2E_MIN_SPECS: 47`, `E2E_MIN_EXECUTED_HAUPT: 229`,
+  `E2E_MIN_EXECUTED_PWA: 60` in `.github/workflows/ci.yml`.
 
 ## Expected Behavior
 
@@ -217,3 +219,20 @@ compare/[id]/+page.svelte + trips/[id]/+page.svelte (Scheibe A):
 - 2026-09-13: Nach RED-Messung AC-9 präzisiert (nicht verlassenes Feld) und Umsetzungsweg Scheibe A
   korrigiert (Vergleichs-Hub meldet über `schedule()` an); Known Limitation „veraltete Anzeige nach
   Neuladen" ergänzt. Erneute PO-Freigabe nötig.
+- 2026-09-13: Umsetzung Scheibe A + Scheibe B abgeschlossen. Adversary: 3 Runden, Verdict VERIFIED,
+  15 Mutationen alle gefangen.
+- 2026-09-13: F002 (Adversary MEDIUM, Mobil-Parität): Mobil-Pendant `CorridorEditorMobile.svelte`
+  meldet beim Ortsvergleich ebenfalls über `saveController.schedule()` an — dieselbe
+  `handleCorridorCommit`-Route (`CompareTabs.svelte`) wie am Desktop-Editor. Ergänzt um E2E-Fall
+  „AC-9-Mobil" (laufende Ziehgeste am Band-Griff, Neuladen vor `pointerup`).
+- 2026-09-13: Testkorrektur AC-10/AC-11 (PO freigegeben): `controller.scriptURL` bleibt beim
+  Byte-Wechsel unter gleicher URL identisch (Sonde
+  `docs/artifacts/feat-2316-pwa-update-erkennung/sonde-skripturl-bytewechsel.txt`); Fassungsnachweis
+  daher über den Programm-Speichernamen `gz-<version>` (Helfer `fassungsKennung`) statt über die
+  Skript-URL.
+- 2026-09-13: CI-Ratsche angehoben: `speicherung-ueberlebt-neuladen.spec.ts` neu auf der
+  Positivliste, `E2E_MIN_SPECS` 47, `E2E_MIN_EXECUTED_HAUPT` 229, `E2E_MIN_EXECUTED_PWA` 60
+  (`pwa-update-erkennung.spec.ts` neu, 5 PWA-Dateien im Zweitlauf).
+- 2026-09-13: AC-15 (Staging-Zweifach-Deploy, echter Auslieferungsweg) bleibt bis zum nächsten
+  Zweifach-Deploy auf Staging offen — alle übrigen ACs sind über Unit-/E2E-Nachweis erfüllt, `status`
+  wird trotzdem auf `implemented` gesetzt, da der Produktivcode vollständig steht.

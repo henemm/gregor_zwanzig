@@ -12,6 +12,10 @@ tags: [pwa, frontend, offline, service-worker, issue-2128, epic-2127]
 
 Issue #2128 · Scheibe 1 zu Epic #2127 · Workflow `feat-2128-pwa-installierbar`
 
+Update-Auslöser (wann geprüft wird) und Hinweis-Knopftext sind seit #2316 fortgeschrieben —
+aktueller Stand in `pwa_update_erkennung.md`. Diese Spec bleibt gültig für Installierbarkeit,
+Speicherregeln (jetzt fünf, siehe ADR-0061 §3) und Offline-Start.
+
 ## Approval
 
 - [x] Approved — PO-Freigabe 2026-09-06 („Go")

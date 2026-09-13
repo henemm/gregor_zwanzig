@@ -18,7 +18,9 @@
 		isRuntimeExceeded
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
 	import { api } from '$lib/api';
 	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type ComparePreset } from '$lib/types';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -48,6 +50,11 @@
 	// routes/trips/[id]/+page.svelte:22. Wird an CompareDetail/CompareTabs
 	// durchgereicht und dort manuell (nicht via schedule()) getrieben.
 	const hubSaveCtl = createSaveStatus();
+
+	// Issue #2316 Scheibe A (AC-9): derselbe Speicher-Wächter wie /trips/[id] —
+	// vorher hatte der Hub gar keinen beforeNavigate-Wächter, eine getippte,
+	// noch nicht committete Änderung ging beim Neuladen verloren.
+	beforeNavigate((navigation) => sichereAusstehendeSpeicherung(navigation, hubSaveCtl, goto));
 
 	// Staging-Fund SF-2 (CRITICAL, AC-37): der Hub (CompareTabs) haelt fuer die
 	// Aktivierungs-Karte einen eigenen `localSchedule`-Zustand und PUT-Pfad
