@@ -177,3 +177,108 @@ export async function triggerServiceWorkerUpdate(page: Page): Promise<string> {
 export async function controllingScriptUrl(page: Page): Promise<string | null> {
 	return page.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? null);
 }
+
+// ===========================================================================
+// Issue #2316 — echter Fassungswechsel auf dem AUSLIEFERUNGSWEG
+// ===========================================================================
+//
+// Messbefund 13.09. (Spec pwa_update_erkennung.md, Testplan): `context.route`
+// faengt die Update-Pruefung des Worker-Skripts NICHT ab, `context.on('request')`
+// sieht sie nicht. Ein Fassungswechsel muss deshalb vom ausliefernden Server
+// kommen, und Abrufe des Worker-Skripts sind nur dort zaehlbar.
+//
+// `starteAuslieferung` legt dafuer eine kleine Weiterleitung vor den
+// Vorschau-Server (Port 4173). Die Seite wird ueber `origin` dieser Weiterleitung
+// geladen (Cookies von `localhost` gelten portuebergreifend, die Anmeldung aus
+// AUTH_STATE traegt also). Die Weiterleitung
+//   - zaehlt jeden ankommenden Abruf (Pfad) — die serverseitige Zaehlung;
+//   - liefert nach `neueFassungAusliefern()` unter DERSELBEN URL
+//     `/service-worker.js` eine byte-veraenderte Fassung B: die Bau-Kennung
+//     (`/_app/version.json`) ist durch eine gleich lange andere ersetzt. Damit
+//     traegt Fassung B wie ein echter neuer Bau einen EIGENEN, leeren Speicher
+//     (`gz-${version}`). `registration` wird nicht uebersteuert.
+
+export interface Auslieferung {
+	/** Ursprung der Weiterleitung, z. B. http://localhost:43123 */
+	origin: string;
+	/** Ab jetzt liefert `/service-worker.js` die byte-veraenderte Fassung B. */
+	neueFassungAusliefern: () => Promise<void>;
+	/** Laufende Nummer des naechsten Abrufs — Startmarke fuer `abrufeSeit`. */
+	marke: () => number;
+	/** Pfade aller Abrufe, die seit `marke` beim Server angekommen sind. */
+	abrufeSeit: (marke: number) => string[];
+	schliessen: () => Promise<void>;
+}
+
+const WORKER_SKRIPT = '/service-worker.js';
+
+export async function starteAuslieferung(ziel = 'http://localhost:4173'): Promise<Auslieferung> {
+	const http = await import('node:http');
+	const zielUrl = new URL(ziel);
+	const abrufe: string[] = [];
+	let fassungB: { alt: string; neu: string } | null = null;
+
+	const server = http.createServer((req, res) => {
+		const pfad = new URL(req.url ?? '/', 'http://weiterleitung').pathname;
+		abrufe.push(pfad);
+		const headers = { ...req.headers };
+		if (pfad === WORKER_SKRIPT) {
+			// Immer den vollen Bytestrom holen, damit Fassung B ihn veraendern kann.
+			delete headers['if-none-match'];
+			delete headers['if-modified-since'];
+			delete headers['accept-encoding'];
+		}
+		const weiter = http.request(
+			{ hostname: zielUrl.hostname, port: zielUrl.port, path: req.url, method: req.method, headers },
+			(antwort) => {
+				if (pfad !== WORKER_SKRIPT || !fassungB) {
+					res.writeHead(antwort.statusCode ?? 502, antwort.headers);
+					antwort.pipe(res);
+					return;
+				}
+				const teile: Buffer[] = [];
+				antwort.on('data', (t: Buffer) => teile.push(t));
+				antwort.on('end', () => {
+					const text = Buffer.concat(teile).toString('utf8');
+					const b = fassungB!;
+					const veraendert = text.includes(b.alt)
+						? text.split(b.alt).join(b.neu)
+						: `${text}\n// gz-e2e-fassung-B ${b.neu}\n`;
+					const body = Buffer.from(veraendert, 'utf8');
+					const kopf = { ...antwort.headers, 'content-length': String(body.length) };
+					delete kopf.etag;
+					delete kopf['last-modified'];
+					res.writeHead(antwort.statusCode ?? 200, kopf);
+					res.end(body);
+				});
+			}
+		);
+		weiter.on('error', () => {
+			res.writeHead(502);
+			res.end();
+		});
+		req.pipe(weiter);
+	});
+
+	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+	const port = (server.address() as import('node:net').AddressInfo).port;
+
+	return {
+		origin: `http://localhost:${port}`,
+		async neueFassungAusliefern() {
+			const antwort = await fetch(`${ziel}/_app/version.json`);
+			const { version } = (await antwort.json()) as { version: string };
+			// Gleich lange, sicher andere Kennung: jede Ziffer um eins weiter.
+			const neu = version.replace(/\d/g, (z) => String((Number(z) + 1) % 10));
+			fassungB = { alt: version, neu: neu === version ? `${version}b` : neu };
+		},
+		marke: () => abrufe.length,
+		abrufeSeit: (marke) => abrufe.slice(marke),
+		schliessen: () =>
+			new Promise<void>((resolve) => {
+				server.close(() => resolve());
+				// Offene Keep-alive-Verbindungen des Browsers hielten `close` sonst auf.
+				server.closeAllConnections();
+			})
+	};
+}

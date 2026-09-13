@@ -390,7 +390,13 @@
 	// als auch vom Fenster-Handler (`<svelte:window onpointerup>`) aufgerufen,
 	// damit ein Band-Handle-Drag mit Pointer-Release AUSSERHALB des Wrapper-
 	// Subtrees nicht mehr zu einem uebersehenen Commit fuehrt.
-	async function handleCorridorCommit(): Promise<void> {
+	// Issue #2316 Scheibe A (AC-9): `init` optional — nur der neue schedule()-Pfad
+	// aus CorridorEditor (onCompareCommit, direkter Funktionsaufruf) reicht hier
+	// `{ keepalive: true }` durch, damit der geteilte beforeNavigate-Waechter den
+	// Request beim Entladen ueberleben laesst (#1376-Muster). Die bestehenden
+	// DOM-Bindungen (onfocusout/onclick) rufen ausdruecklich OHNE Argument auf
+	// (s.u.), sonst laendete das Event-Objekt hier als `init`.
+	async function handleCorridorCommit(init: RequestInit | undefined = undefined): Promise<void> {
 		if (!idealwerteHydrated) return;
 		// Epic #1273 S1: `failure` trennt den No-Op-Fall (kein Diff, gar kein PUT)
 		// vom Fehlerfall — beide liefern `updated === null`. No-Op bekommt
@@ -416,7 +422,7 @@
 			const payload = flushPendingCorridorSave(currentPreset, current, lastPersistedCorridorSnapshot);
 			if (!payload) return null;
 			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body);
+				const result = await api.put<ComparePreset>(payload.url, payload.body, init);
 				// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen, s.o.
 				lastPersistedCorridorSnapshot = current;
 				return result;
@@ -1419,15 +1425,20 @@
 			{#if idealwerteHydrated}
 				<div
 					class="hub-corridor-wrap"
-					onfocusout={handleCorridorCommit}
-					onclick={handleCorridorCommit}
+					onfocusout={() => void handleCorridorCommit()}
+					onclick={() => void handleCorridorCommit()}
 				>
 					<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-
 					     Inline-Edit-Paritaet, Muster TripTabs.svelte:198-202. -->
 					{#if isMobileViewport}
-						<CorridorEditorMobile context="vergleich" />
+						<!-- Issue #2316 F002 (Adversary MEDIUM): dieselbe Verdrahtung wie
+						     der Desktop-Zweig unten (keine Compare-Sonderloesung). -->
+						<CorridorEditorMobile context="vergleich" {saveController} onCompareCommit={handleCorridorCommit} />
 					{:else}
-						<CorridorEditor context="vergleich" />
+						<!-- Issue #2316 Scheibe A (AC-9): saveController/onCompareCommit
+						     durchgereicht, damit eine eingetippte, noch nicht verlassene
+						     Aenderung ueber schedule()/hasPending sichtbar wird. -->
+						<CorridorEditor context="vergleich" {saveController} onCompareCommit={handleCorridorCommit} />
 					{/if}
 				</div>
 			{/if}

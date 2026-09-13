@@ -521,6 +521,17 @@ sw.addEventListener('message', (event) => {
 			} catch {
 				// Funkloch: NICHT umschalten. Die installierte Fassung bleibt
 				// aktiv und lauffaehig, ihr Speicher bleibt erhalten.
+				//
+				// Issue #2316 (AC-11): den Fenstern melden, sonst wartet die
+				// Oberflaeche fuer immer stumm auf einen Wechsel, der nie kommt.
+				// `includeUncontrolled: true` ist PFLICHT: dieser (neue) Worker
+				// kontrolliert noch KEIN Fenster (die alte Fassung tut das noch) --
+				// ohne die Option liefert `matchAll` eine leere Liste und die
+				// Nachricht erreicht niemanden.
+				const fenster = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
+				for (const client of fenster) {
+					client.postMessage({ type: 'UPDATE_FEHLGESCHLAGEN' });
+				}
 				return;
 			}
 			await sw.skipWaiting();

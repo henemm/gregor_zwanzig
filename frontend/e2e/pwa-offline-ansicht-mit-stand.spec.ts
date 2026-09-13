@@ -470,7 +470,8 @@ test('AC-16: nach einem angenommenen Update bleibt der vorgehaltene Inhalt erhal
 	const alteSkriptUrl = await controllingScriptUrl(page);
 	await triggerServiceWorkerUpdate(page);
 	await expect(page.getByText('Neue Version verfügbar')).toBeVisible({ timeout: 20_000 });
-	await page.getByRole('button', { name: 'Jetzt aktualisieren' }).click();
+	// Issue #2316: Knopf heisst jetzt "Aktualisieren" (Zweiknopf-Hinweis).
+	await page.getByTestId('update-hinweis').getByRole('button', { name: 'Aktualisieren', exact: true }).click();
 	await page.waitForFunction(
 		(alt) => navigator.serviceWorker.controller?.scriptURL !== alt,
 		alteSkriptUrl,

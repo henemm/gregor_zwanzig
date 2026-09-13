@@ -834,11 +834,19 @@ HTML + Client-Side Interactivity
 Das Frontend ist eine installierbare Progressive Web App:
 
 - **Service Worker:** `frontend/src/service-worker.ts` — handgeführt (kein `vite-plugin-pwa`),
-  vier Speicherregeln: `/api/*` nie im Speicher, Seitenaufrufe (Navigations-Requests) nie
-  abgelegt, Programmdateien (Build-Assets) aus dem Speicher, alles Übrige ohne Ablage.
+  fünf Speicherregeln (seit #2131 Regel 2 eingefügt): `/api/*` nie im Speicher, Positivliste
+  vorgehaltener Ansichten (`/trips/[id]`, `/compare/[id]`) mit Stand-Kennzeichnung, übrige
+  Seitenaufrufe (Navigations-Requests) nie abgelegt, Programmdateien (Build-Assets) aus dem
+  Speicher, alles Übrige ohne Ablage. Details: ADR-0061 §3.
 - **Update-Verhalten:** Der Download einer neuen Fassung passiert erst auf Antippen des
   Update-Hinweises (`frontend/src/lib/pwa/serviceWorkerUpdate.ts`), nicht schon beim Erkennen
-  (PO-Entscheid Epic #2127 — kein ungefragtes Datenvolumen im Funkloch).
+  (PO-Entscheid Epic #2127 — kein ungefragtes Datenvolumen im Funkloch). Seit #2316 prüft das
+  Modul aktiv statt nur beim zufälligen Neustart: bei Sichtbarwerden, `pageshow` und alle 30
+  Minuten (nur solange die Seite sichtbar ist), gedrosselt auf höchstens eine echte Prüfung pro
+  60 Sekunden; „Später" blendet den Hinweis bis zum nächsten Kaltstart aus. Ungespeicherte
+  Änderungen auf `/trips/[id]`/`/compare/[id]` sichert vor dem Reload der geteilte Speicher-Wächter
+  `frontend/src/lib/stores/ausstehendeSpeicherungSichern.ts` (ein Baustein für Trip und
+  Ortsvergleich, Trip/Vergleich-Code-Teilung).
   Räumen des Geräte-Speichers beim Abmelden: `frontend/src/lib/pwa/geraetespeicher.ts`.
 - **Offline-Seite:** `frontend/static/offline.html` — seit #2131 keine Sackgasse mehr, sondern
   eine Übersicht der offline vorgehaltenen Ansichten (Titel + Stand), Einstiegspunkt auch für den
@@ -847,6 +855,7 @@ Das Frontend ist eine installierbare Progressive Web App:
 - **Icon:** maskable Symbol für die Installation.
 
 Details, Speicherregeln im Volltext und die 24 Acceptance Criteria: `docs/specs/modules/pwa_installierbar_offline_start.md`,
+aktive Update-Erkennung und geteilter Speicher-Wächter: `docs/specs/modules/pwa_update_erkennung.md`,
 Bauform-Entscheidung: `docs/adr/0061-pwa-service-worker-bauform.md`.
 
 **Offline-Ansicht mit Stand-Kennzeichnung (Issue #2131, Scheibe 4 zu Epic #2127):** Trip- und

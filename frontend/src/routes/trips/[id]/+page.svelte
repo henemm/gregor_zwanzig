@@ -11,6 +11,7 @@
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
 	import { adoptEtagFromPageLoad, discardEtag } from '$lib/etagRegistry';
 
 	let { data } = $props();
@@ -39,24 +40,9 @@
 	const tripSaveCtl = createSaveStatus(trip.id);
 
 	// Issue #758: Flush ausstehender Auto-Saves vor Navigation (AC-5).
-	beforeNavigate(({ cancel, to, willUnload }) => {
-		if (willUnload) {
-			// Issue #1376: Reload/Tab-Verlassen — der 700ms-Debounce verfiel hier
-			// bisher kommentarlos (stiller Datenverlust). Jetzt Best-Effort-Flush
-			// mit `keepalive`, damit der Request das Entladen überlebt. Bewusst
-			// OHNE cancel() → keine Verlassen-Warnung (PO-Entscheidung 2026-07-25:
-			// still speichern statt fragen).
-			if (tripSaveCtl.hasPending) void tripSaveCtl.flush({ keepalive: true });
-			return;
-		}
-		if (tripSaveCtl.hasPending) {
-			cancel();
-			const targetUrl = to?.url?.href ?? null;
-			void tripSaveCtl.flush().then(() => {
-				if (targetUrl) void goto(targetUrl);
-			});
-		}
-	});
+	// Issue #2316 Scheibe A: die Logik lebt jetzt geteilt mit /compare/[id] in
+	// sichereAusstehendeSpeicherung() (dünne Hülle hier).
+	beforeNavigate((navigation) => sichereAusstehendeSpeicherung(navigation, tripSaveCtl, goto));
 
 	// Issue #516 — Initial-Tab aus ?tab=…-Query (kanonisches Schema, kein #hash mehr).
 	// $derived bleibt reaktiv falls user navigation triggert.

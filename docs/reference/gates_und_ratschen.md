@@ -179,24 +179,25 @@ Verfahren, Abbruchgrenze).
 ### Dritter Playwright-Lauf: PWA-Strecke (`--project=pwa`, ab #2128)
 
 Die PWA-Nachweise (`pwa-grundausstattung.spec.ts`, `pwa-update-und-abmelden.spec.ts`,
-`pwa-offline-ansicht-mit-stand.spec.ts`, `pwa-offline-sperre-und-mandant.spec.ts`) laufen
-**nicht** über die Positivliste, sondern über die feste Projektzuordnung in
-`frontend/playwright.config.ts` (`testMatch: /pwa-.*\.spec\.ts/`, `testIgnore` schließt sie im
-Standardprojekt `tests` aus). Zwei unabhängige Gründe, beide zwingend:
+`pwa-offline-ansicht-mit-stand.spec.ts`, `pwa-offline-sperre-und-mandant.spec.ts`,
+`pwa-update-erkennung.spec.ts` — Issue #2316, neu) laufen **nicht** über die Positivliste, sondern
+über die feste Projektzuordnung in `frontend/playwright.config.ts`
+(`testMatch: /pwa-.*\.spec\.ts/`, `testIgnore` schließt sie im Standardprojekt `tests` aus). Zwei
+unabhängige Gründe, beide zwingend:
 
-1. **Filter A schließt sie aus:** Beide Dateien enthalten `waitForTimeout` als Nachweis für ein
+1. **Filter A schließt sie aus:** Die Dateien enthalten `waitForTimeout` als Nachweis für ein
    *Ausbleiben* (z. B. „die Seite hat NICHT neu geladen", „der wartende Worker hat NICHT
    übernommen") — ein Ausbleiben lässt sich nicht per Warte-Assertion erzwingen, nur abwarten.
    Aufnahme in `.github/ci_e2e_specs.txt` wäre ein Ratschen-Verstoß.
-2. **Eigene Projekt-Einstellung nötig:** Beide Dateien brauchen `serviceWorkers: 'allow'`; die
+2. **Eigene Projekt-Einstellung nötig:** Alle fünf Dateien brauchen `serviceWorkers: 'allow'`; die
    Bestandsstrecke läuft bewusst mit `'block'` (Spec-AC-16), damit der seit #2128 auf jeder Seite
    registrierte Service Worker ihr Verhalten nicht verändert. Das ist eine Playwright-Projekt-
    Einstellung, keine Datei-Option — daher eigener CI-Schritt statt Aufnahme in eine der
    bestehenden Dateilisten.
 
 Schutz gegen stilles Verschwinden einer Datei hängt hier **nicht** an einer Listenlänge, sondern an
-`E2E_MIN_EXECUTED_PWA` (aktuell 49 = 48 Testfälle in 4 Dateien + `global.setup`): fällt eine Datei
-weg, sinkt `expected` darunter und das Gate wird rot.
+`E2E_MIN_EXECUTED_PWA` (aktuell 60 = 59 Testfälle in 5 Dateien + `global.setup`, Issue #2316 auf den
+Stand vom 2026-09-13 gehoben): fällt eine Datei weg, sinkt `expected` darunter und das Gate wird rot.
 
 **Die Reihenfolge ist kritisch: PWA-Lauf VOR dem bug-703-Ratelimit-Lauf** (gemessen 2026-09-06).
 Die frühere Begründung — „unkritisch, weil `global.setup.ts` nur einloggt, wenn
