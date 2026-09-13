@@ -61,6 +61,10 @@ func main() {
 
 	s := store.New(cfg.DataDir, cfg.UserID)
 	telegramTokenStore := handler.NewTelegramTokenStore(cfg.DataDir)
+	// Issue #2154 Scheibe A: eine Bremse fuer den ganzen Prozess — der
+	// Lernaufruf kommt immer von localhost, ein Zaehler je IP/Nummer/Konto
+	// waere wirkungslos bzw. missbrauchbar (Spec D5).
+	premiumSmsRateLimiter := handler.NewPremiumSmsRateLimiter(handler.DefaultPremiumSmsLinkCodeBudget)
 
 	// Seed default user from ENV credentials on first run
 	if !s.UserExists(cfg.UserID) && cfg.AuthPass != "" {
@@ -125,7 +129,10 @@ func main() {
 		ChallengeStore:     challengeStore,
 		Scheduler:          sched,
 		TelegramTokenStore: telegramTokenStore,
-		GitCommit:          gitCommit,
+
+		PremiumSmsRateLimiter: premiumSmsRateLimiter,
+
+		GitCommit: gitCommit,
 	})
 
 	log.Printf("Go API listening on %s:%s, proxying to %s", cfg.Host, cfg.Port, cfg.PythonCoreURL)

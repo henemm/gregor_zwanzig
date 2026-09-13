@@ -41,6 +41,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -52,7 +53,11 @@ from app.config import Settings
 from app.loader import get_data_root, load_all_trips
 from app.origin_guard import classify_origin
 from services.notification_service import NotificationService
-from services.trip_command_processor import InboundMessage, TripCommandProcessor
+from services.trip_command_processor import (
+    InboundMessage,
+    TripCommandProcessor,
+    bare_keywords,
+)
 from services.trip_selection import pick_active_trip
 
 logger = logging.getLogger(__name__)
@@ -63,6 +68,37 @@ GARMIN_MARKER = "inreachlink.com"
 DRYRUN_ENV_VAR = "GZ_PREMIUM_SMS_POLL_DRYRUN"
 
 _DEDUP_POINTER_NAME = "premium_sms_inbound.json"
+
+# Issue #2154 Scheibe A: Gestalt des Verknuepfungs-Codes (Spec D2) -- 7 Zeichen
+# aus 31 ohne die verwechselbaren I/L/O/0/1. Go-Pendant:
+# internal/handler/premium_sms_link_code.go::premiumSmsLinkCodeAlphabet.
+_LINK_CODE_PATTERN = re.compile(r"^[A-HJKMNP-Z2-9]{7}$")
+
+
+def split_link_code(text: str) -> tuple[str, str]:
+    """Zerlegt den Nutzertext einer Garmin-Nachricht in (Code, Befehl).
+
+    Issue #2154 Scheibe A, D9 -- die EINZIGE Stelle, an der zerlegt wird:
+    sowohl der Payload-Aufbau des Lernaufrufs als auch `_verarbeite_befehl`
+    rufen diese Funktion. Zwei getrennte Zerlegungen drifteten
+    auseinander, und der Code landete dann als erstes Wort im ausgefuehrten
+    Befehl (groesstes Bruchrisiko dieses Umbaus).
+
+    Der Nutzertext steht VOR dem Kennzeichen, danach folgen der von Garmin
+    erzeugte Link und die Koordinaten (Beleg #1676 S1). Steht davor ein Wort in
+    der Code-Gestalt, ist es der Verknuepfungs-Code; sonst gibt es keinen.
+
+    Ausnahme Steuerbefehle: RUHETAG und STRECKE sind sieben Zeichen lang und
+    treffen die Code-Gestalt exakt. Die Hilfe nennt alle Befehle in
+    GROSSBUCHSTABEN, ein "RUHETAG" per Satellit ist also der Normalfall -- ohne
+    diese Ausnahme wuerde er als Code abgeschnitten und der Befehl waere leer.
+    Ein bekannter Befehl ist ein Befehl, kein Code.
+    """
+    befehl = text.split(GARMIN_MARKER, 1)[0].strip()
+    teile = befehl.split(maxsplit=1)
+    if teile and _LINK_CODE_PATTERN.match(teile[0]) and teile[0].lower() not in bare_keywords():
+        return teile[0], (teile[1].strip() if len(teile) > 1 else "")
+    return "", befehl
 
 
 def _origin() -> str:
@@ -87,6 +123,11 @@ class InboundSmsReader:
         # ab (Hausnorm run_briefing_dispatch), statt bedingungslos "ok" zu
         # melden.
         self.last_failed_count = 0
+        # Issue #2154 AC-11: bewusste Ablehnungen (4xx) sind KEINE
+        # voruebergehenden Fehlschlaege, duerfen aber auch nicht als "ok"
+        # durchgehen -- ein dauerhaft ausgesperrter Nutzer bliebe sonst
+        # unsichtbar. Eigener Zaehler, getrennt von last_failed_count.
+        self.last_rejected_count = 0
 
     def poll_and_process(self, settings: Settings) -> int:
         """Holt neue Journal-Eintraege, meldet erkannte Garmin-Nachrichten.
@@ -94,9 +135,11 @@ class InboundSmsReader:
         Returns: Anzahl in diesem Lauf ECHT gelernter Rueckadressen (im
         Dry-Run strukturell immer 0, s. Spec Schritt 9/11). Die Anzahl
         vorruebergehend fehlgeschlagener Lernaufrufe steht danach in
-        `self.last_failed_count` (Fix F001).
+        `self.last_failed_count` (Fix F001), die Zahl bewusst abgelehnter
+        Lernaufrufe in `self.last_rejected_count` (Issue #2154 AC-11).
         """
         self.last_failed_count = 0
+        self.last_rejected_count = 0
 
         origin = _origin()
         dry_run = False
@@ -119,14 +162,16 @@ class InboundSmsReader:
         if not settings.seven_api_key:
             return 0
 
-        learned, failed = self._poll_journal(settings, dry_run)
+        learned, failed, rejected = self._poll_journal(settings, dry_run)
         self.last_failed_count = failed
+        self.last_rejected_count = rejected
         return learned
 
-    def _poll_journal(self, settings: Settings, dry_run: bool) -> tuple[int, int]:
+    def _poll_journal(self, settings: Settings, dry_run: bool) -> tuple[int, int, int]:
         """Kern des Polls: iteriert das Journal, meldet erkannte
-        Garmin-Nachrichten. Gibt `(gelernt, fehlgeschlagen)` zurueck --
-        Hausnorm `dispatch_orchestrator.run_briefing_dispatch()` (Fix F001).
+        Garmin-Nachrichten. Gibt `(gelernt, fehlgeschlagen, abgelehnt)` zurueck
+        -- Hausnorm `dispatch_orchestrator.run_briefing_dispatch()` (Fix F001),
+        um den Ablehnungszaehler erweitert (Issue #2154 AC-11).
 
         Der Dedup-Zeiger wandert fuer Nachrichten OHNE Kennzeichen und fuer
         Garmin-Nachrichten mit Erfolg ODER bewusster Ablehnung (HTTP 4xx).
@@ -140,7 +185,7 @@ class InboundSmsReader:
 
         messages = self._fetch_journal(settings.seven_api_key)
         if messages is None:
-            return 0, 0  # Netz-/HTTP-Fehler -- last_seen_id bleibt unveraendert
+            return 0, 0, 0  # Netz-/HTTP-Fehler -- last_seen_id bleibt unveraendert
 
         parsed: list[tuple[int, dict]] = []
         for m in messages:
@@ -160,6 +205,7 @@ class InboundSmsReader:
 
         learned = 0
         failed = 0
+        rejected = 0
         max_seen = last_seen_id
         for msg_id, message in new_messages:
             text = message.get("text", "") or ""
@@ -168,7 +214,13 @@ class InboundSmsReader:
                 continue
 
             sender = message.get("from", "")
+            # Issue #2154: der Code wird NUR mitgeschickt, wenn im Text auch
+            # einer steht -- ein leerer Wert waere kein "fehlender Code" und
+            # kippte den Entscheidungsbaum im Go-Endpunkt.
+            link_code, _ = split_link_code(text)
             payload: dict = {"from": sender}
+            if link_code:
+                payload["code"] = link_code
             if dry_run:
                 payload["dry_run"] = True
             try:
@@ -208,9 +260,11 @@ class InboundSmsReader:
                             "erfolgreich (AC-6).", _mask(sender), e,
                         )
             elif 400 <= response.status_code < 500:
-                # Bewusste Ablehnung (z.B. 409 Mehrdeutigkeit, AC-5) --
-                # abschliessende Entscheidung, kein Wiederholungsgrund.
+                # Bewusste Ablehnung (409 fehlender/ungueltiger Code, 429
+                # Ratebremse) -- abschliessende Entscheidung, kein
+                # Wiederholungsgrund, aber sichtbar (Issue #2154 AC-11).
                 max_seen = max(max_seen, msg_id)
+                rejected += 1
                 logger.warning(
                     "premium-sms-learn abgelehnt (HTTP %d) fuer maskierte "
                     "Nummer %s: %s", response.status_code, _mask(sender),
@@ -227,7 +281,7 @@ class InboundSmsReader:
                 break  # vorruebergehend: naechster Lauf versucht diese Nachricht erneut
 
         self._save_last_seen_id(data_root, max_seen)
-        return learned, failed
+        return learned, failed, rejected
 
     def _verarbeite_befehl(
         self, settings: Settings, text: str, sender: str, response,
@@ -250,9 +304,10 @@ class InboundSmsReader:
             )
             return
 
-        # Der Nutzertext steht VOR dem Kennzeichen, danach folgen der von
-        # Garmin erzeugte Link und die Koordinaten (Beleg #1676 S1).
-        befehl = text.split(GARMIN_MARKER, 1)[0].strip()
+        # Dieselbe Zerlegung wie beim Payload-Aufbau (Issue #2154 D9) -- ohne
+        # sie landete der Verknuepfungs-Code als erstes Wort im ausgefuehrten
+        # Befehl (AC-12).
+        _, befehl = split_link_code(text)
         now_utc = datetime.now(timezone.utc)
         # Satelliten-Text traegt keinen Trip-Namen (jedes Zeichen kostet) --
         # dieselbe geteilte Auswahlregel wie im Telegram-Reader.

@@ -147,6 +147,46 @@ func (s *Store) DeleteResetToken(userId string) error {
 	return err
 }
 
+// SaveLinkCode persistiert den Verknuepfungs-Code fuer den
+// Premium-SMS-Rueckkanal (Issue #2154 Scheibe A) — eigene Datei je Nutzer,
+// Vorbild SaveResetToken. Erneuern ersetzt die Datei vollstaendig und entwertet
+// damit den vorigen Code (Spec D3: Replace, kein Anhaengen).
+func (s *Store) SaveLinkCode(userId string, c model.PremiumSmsLinkCode) error {
+	if !ValidUserID(userId) {
+		return ErrInvalidUserID
+	}
+	dir := s.UserDir(userId)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileLogged(filepath.Join(dir, "premium_sms_link.json"), data)
+}
+
+// LoadLinkCode liest den gespeicherten Verknuepfungs-Code. "Nicht vorhanden"
+// ist kein Fehler, sondern (nil, nil) — wie LoadResetToken.
+func (s *Store) LoadLinkCode(userId string) (*model.PremiumSmsLinkCode, error) {
+	if !ValidUserID(userId) {
+		return nil, ErrInvalidUserID
+	}
+	path := filepath.Join(s.UserDir(userId), "premium_sms_link.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var code model.PremiumSmsLinkCode
+	if err := json.Unmarshal(data, &code); err != nil {
+		return nil, err
+	}
+	return &code, nil
+}
+
 // SaveVerificationToken persists an EmailVerificationToken (Issue #1219
 // Scheibe 2a-i) under data/users/<id>/email_verification.json. Mirrors
 // SaveResetToken. Overwrites an existing file without warning — a second

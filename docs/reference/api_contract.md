@@ -154,6 +154,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/passkey/register/public/begin` | POST |
 | `/api/auth/passkey/register/public/finish` | POST |
 | `/api/auth/password` | PUT |
+| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"AB3CD9F"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash) |
 | `/api/auth/profile` | GET, PUT |
 | `/api/auth/register` | POST |
 | `/api/auth/reset-password` | POST |
@@ -3099,6 +3100,68 @@ sending chat's `chat_id` on that user (Issue #2141: erst nach einer Eindeutigkei
   close a TOCTOU window between two concurrent connect attempts targeting the same `chat_id`
   (Issue #2141).
 
+#### POST /api/internal/premium-sms-learn
+
+Internal endpoint, localhost-only (`requireLocalOnly`) — called by the Python `InboundSmsReader`
+after polling the seven.io journal and finding a message bearing the Garmin `inreachlink.com`
+marker. Resolves the incoming sender number (`from`) to a `user_id` (checking for a stored,
+fresh reply address or a valid link code) and persists the address on that user (Issue #1676 S1,
+improved by Issue #2154 Scheibe A).
+
+**Request Body:**
+```json
+{
+  "from": "491501234567",
+  "code": "AB3CD9F",
+  "dry_run": false
+}
+```
+
+- `from` (string, required): The sender phone number from the SMS.
+- `code` (string, optional): Seven-character link code (alphanumeric, no ambiguous chars) issued by
+  `POST /api/auth/premium-sms-link-code`. If a stored reply address exists and is within the
+  `PremiumSmsReplyTTL` (30 days), `code` is ignored and the stored match confirms without
+  verification. Otherwise, `code` is required for resolution.
+- `dry_run` (bool, optional): If `true`, the endpoint returns the resolution outcome without
+  calling `SaveUser` — structurally unreachable, independent of success or failure.
+
+**Response 200 (dry_run=false, match found):**
+```json
+{
+  "status": "ok",
+  "user_id": "user-123",
+  "masked_from": "49150123****7"
+}
+```
+
+**Response 200 (dry_run=true, match found):**
+```json
+{
+  "status": "dry_run",
+  "outcome": "would_learn",
+  "user_id": "user-123",
+  "masked_from": "49150123****7"
+}
+```
+
+**Response 200 (dry_run=true, no match):**
+```json
+{
+  "status": "dry_run",
+  "outcome": "would_skip",
+  "reason": "no_unique_premium_candidate"
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"bad_request"}` | JSON not decodable, or `from` empty |
+| 403 | `forbidden` (plain text) | Request did not originate from `127.0.0.1`/`::1`, or arrived via a proxy header (`requireLocalOnly`) |
+| 409 | `{"error":"skipped","reason":"no_unique_premium_candidate"}` | No Premium user with a stored match to `from` exists, and no `code` provided, or no single unambiguous Premium candidate exists |
+| 429 | `{"error":"too_many_requests"}` | Global rate limit for unsuccessful code comparisons exhausted |
+
 #### POST /api/auth/tier-change-request
 
 Requests a level change (Free/Standard/Premium) for the authenticated user (Issue #1071, Slice 4
@@ -3256,6 +3319,67 @@ Zeitstempel anzurühren).
   und kein Informationsgewinn gegenüber dem regulären Resend-Weg entsteht (Details/Risiko-
   Abwägung: Spec, Abschnitt „Risiko").
 - Spec: `docs/specs/modules/email_verify_vorbereitung_2304.md`.
+
+#### POST /api/auth/premium-sms-link-code
+
+Authenticated endpoint (SessionAuth) — the authenticated user generates or renews their Premium-SMS
+link code. This code pairs the user's Garmin inReach device with their account in the inbound
+learning path (`POST /api/internal/premium-sms-learn`, Issue #2154 Scheibe A). Resolves the
+one-time TTL-less deep-link code to a `user_id` and generates a new 7-character link code,
+returning it **once** in plaintext in the response. Renewal invalidates the previous code.
+
+**Request Body:**
+```json
+{}
+```
+
+(Empty, user is resolved from SessionAuth)
+
+**Response 200:**
+```json
+{
+  "code": "AB3CD9F"
+}
+```
+
+The code is a 7-character alphanumeric string with no ambiguous characters (no I/L/O/0/1).
+Returned **only once**; subsequent `GET /api/auth/premium-sms-link-code` calls never expose it.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+| 500 | `{"error":"failed to generate code"}` | Code generation failed (cryptographic randomness unavailable) |
+
+#### GET /api/auth/premium-sms-link-code
+
+Authenticated endpoint (SessionAuth) — checks whether the authenticated user has a Premium-SMS
+link code configured. Does **not** return the code or its hash.
+
+**Request Body:**
+(None)
+
+**Response 200:**
+```json
+{
+  "exists": true
+}
+```
+
+or
+
+```json
+{
+  "exists": false
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
 
 ### User Model Extensions
 

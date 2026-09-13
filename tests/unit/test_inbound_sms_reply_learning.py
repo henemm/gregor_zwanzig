@@ -740,3 +740,306 @@ def test_unparseable_id_is_skipped_without_aborting_the_run(monkeypatch):
         f"der kaputte Eintrag darf den Lauf NICHT abbrechen, gesehen: {fake_post.calls!r}"
     )
     assert {c["json"]["from"] for c in fake_post.calls} == {GARMIN_FROM_A, GARMIN_FROM_B}
+
+
+# =============================================================================
+# Issue #2154 Scheibe A — Verknuepfungscode (TDD RED)
+# Spec: docs/specs/modules/fix_2154_premium_sms_verknuepfungscode.md v1.0
+#
+# Der Zustaendigkeitsschnitt des Modul-Docstrings gilt weiter: hier steht die
+# READER-Haelfte (welcher Aufruf, welcher Payload, welcher Zaehler, welcher
+# Befehlstext). Die Aufloesung selbst (Code gegen Hash, Ratebremse, TTL) ist
+# Go-Verantwortung und wird in internal/handler/ gegen einen echten Store
+# geprueft. Kein Fake hier bildet diese Entscheidung nach.
+# =============================================================================
+
+LINK_CODE = "AB3CD9F"
+
+
+def _garmin_message_with_text(msg_id: int, sender: str, text: str) -> dict:
+    message = _garmin_message(msg_id, sender)
+    message["text"] = text
+    return message
+
+
+class _AllPostsRecorder:
+    """Zeichnet JEDEN ausgehenden POST auf, nicht nur den Lernaufruf.
+
+    Der Premium-SMS-Versand laeuft ueber dasselbe modulweite ``httpx.post``
+    (``src/output/channels/seven_io_base.py:171``). Ein Versand waere also
+    zwangslaeufig ein WEITERER Eintrag in ``other_calls`` -- damit ist "es ging
+    nichts hinaus" am echten Transport gemessen und nicht am Lernaufruf.
+
+    Der Fake entscheidet nichts: er gibt den vorgegebenen Statuscode des
+    Lern-Endpunkts zurueck (dessen Aufloesungslogik ist Go-Verantwortung) und
+    antwortet auf jeden anderen POST mit der seven.io-Erfolgsantwort."""
+
+    def __init__(self, learn_status: int, learn_body: dict):
+        self._learn_status = learn_status
+        self._learn_body = learn_body
+        self.learn_calls: list[dict] = []
+        self.other_calls: list[dict] = []
+
+    def __call__(self, url, json=None, data=None, timeout=None, **kwargs):  # noqa: A002
+        if str(url).endswith(LEARN_ENDPOINT_SUFFIX):
+            self.learn_calls.append({"url": url, "json": json})
+            return httpx.Response(self._learn_status, json=self._learn_body)
+        self.other_calls.append({"url": url, "data": data})
+        return httpx.Response(200, text="100")
+
+
+class _SuppressedCommandResult:
+    """Antwort gilt als bereits verschickt -- unterdrueckt den zweiten
+    Versandpfad in ``_verarbeite_befehl`` (AC-10 aus #2184)."""
+
+    suppress_email_reply = True
+    confirmation_subject = ""
+    confirmation_body = ""
+
+
+class _CommandProcessorRecorder:
+    """Faengt die an ``TripCommandProcessor`` uebergebene ``InboundMessage`` ab.
+
+    Bildet die Befehlsverarbeitung NICHT nach -- er merkt sich nur, was ihm
+    uebergeben wurde. Die geprueften Werte entstehen vollstaendig im
+    Produktivcode."""
+
+    def __init__(self):
+        self.messages: list = []
+
+    def __call__(self):
+        return self
+
+    def process(self, message):
+        self.messages.append(message)
+        return _SuppressedCommandResult()
+
+
+# =============================================================================
+# AC-9 (ERHALTUNGS-WAECHTER, heute GRUEN): eine abgelehnte Verknuepfung loest
+# keine ausgehende Premium-SMS aus. Keine RED-Evidenz -- der Test belegt, dass
+# der Fix diese Eigenschaft nicht bricht, obwohl ab dem Fix deutlich mehr
+# Nachrichten abgelehnt werden als bisher.
+# =============================================================================
+
+def test_unknown_sender_without_code_receives_no_outbound_reply(monkeypatch):
+    """AC-9: Given eine unbekannte Nummer schickt eine Garmin-Nachricht ohne
+    gueltigen Code / When der Lernaufruf sie mit 409 ablehnt / Then verlaesst
+    KEINE Premium-SMS das System -- gemessen am ausgehenden Transport
+    (jeder httpx.post), nicht am Lernaufruf."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    fake_get = _FakeJournalEndpoint([[_garmin_message(11001, PRIVATE_FROM)]])
+    fake_post = _AllPostsRecorder(409, {"status": "skipped", "reason": "no_valid_code"})
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    reader = reader_mod.InboundSmsReader()
+    result = reader.poll_and_process(_settings())
+
+    assert result == 0
+    # Anti-Leerlauf: ohne diesen Nachweis waere "nichts ging hinaus" auch dann
+    # erfuellt, wenn der Poll ueberhaupt nichts getan haette.
+    assert len(fake_post.learn_calls) == 1, (
+        f"der Lernaufruf muss stattgefunden haben, gesehen: {fake_post.learn_calls!r}"
+    )
+    assert fake_post.other_calls == [], (
+        f"AC-9: nach einer Ablehnung darf KEIN weiterer ausgehender Aufruf "
+        f"erfolgen (der Premium-SMS-Versand laeuft ueber dasselbe httpx.post), "
+        f"gesehen: {fake_post.other_calls!r}"
+    )
+
+
+# =============================================================================
+# AC-12 (heute ROT): der Code darf nicht als erstes Wort im ausgefuehrten
+# Befehl landen. Heute schneidet inbound_sms_reader.py:254 nur am Kennzeichen
+# ab -- der Code bleibt stehen und wird zum Befehlsanfang.
+# =============================================================================
+
+def test_link_code_is_stripped_before_command_processing(monkeypatch):
+    """AC-12: Given eine Verknuepfungsnachricht traegt Code UND Befehl /
+    When sie verarbeitet wird / Then enthaelt der an TripCommandProcessor
+    uebergebene Befehlstext den Code NICHT."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    text = f"{LINK_CODE} heute inreachlink.com/g-0Ab1Cd2Ef... (51.9956, 7.7136)"
+    fake_get = _FakeJournalEndpoint([[_garmin_message_with_text(11002, GARMIN_FROM_A, text)]])
+    fake_post = _LearnCallRecorder()
+    recorder = _CommandProcessorRecorder()
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(reader_mod, "TripCommandProcessor", recorder)
+
+    reader = reader_mod.InboundSmsReader()
+    reader.poll_and_process(_settings())
+
+    assert len(recorder.messages) == 1, (
+        f"erwartet genau eine Befehlsverarbeitung, gesehen: {recorder.messages!r}"
+    )
+    befehl = recorder.messages[0].body
+    assert LINK_CODE not in befehl, (
+        f"AC-12: der Verknuepfungs-Code darf nicht Teil des Befehls sein, "
+        f"uebergeben wurde {befehl!r}"
+    )
+    assert befehl == "heute", (
+        f"AC-12: erwartet den Befehl ohne Code ('heute'), uebergeben wurde {befehl!r}"
+    )
+
+
+# =============================================================================
+# Payload-Vertrag (heute ROT): der Code aus dem Text wird im Lernaufruf
+# mitgeschickt -- und NUR dann, wenn im Text auch einer steht. Heute baut
+# inbound_sms_reader.py:171 unbedingt {"from": sender}.
+# =============================================================================
+
+def test_link_code_from_text_is_sent_in_learn_payload(monkeypatch):
+    """Given eine Garmin-Nachricht mit vorangestelltem Code und eine ohne /
+    When der Poll laeuft / Then traegt der erste Lernaufruf `code`, der
+    zweite hat KEINEN `code`-Schluessel (ein leerer Wert waere kein
+    'fehlender Code' und kippte den Entscheidungsbaum im Go-Endpunkt)."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    with_code = _garmin_message_with_text(
+        11003, GARMIN_FROM_A,
+        f"{LINK_CODE} inreachlink.com/g-0Ab1Cd2Ef... (51.9956, 7.7136)",
+    )
+    without_code = _garmin_message(11004, GARMIN_FROM_B)
+    fake_get = _FakeJournalEndpoint([[with_code, without_code]])
+    fake_post = _LearnCallRecorder()
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(reader_mod, "TripCommandProcessor", _CommandProcessorRecorder())
+
+    reader = reader_mod.InboundSmsReader()
+    reader.poll_and_process(_settings())
+
+    assert len(fake_post.calls) == 2, f"erwartet 2 Lernaufrufe, gesehen: {fake_post.calls!r}"
+    erster, zweiter = fake_post.calls[0]["json"], fake_post.calls[1]["json"]
+    assert erster.get("code") == LINK_CODE, (
+        f"der Code aus dem Text muss im Payload stehen, gesehen: {erster!r}"
+    )
+    assert erster["from"] == GARMIN_FROM_A
+    assert "code" not in zweiter, (
+        f"ohne Code im Text darf KEIN code-Schluessel mitgeschickt werden, gesehen: {zweiter!r}"
+    )
+
+
+# =============================================================================
+# Kollision Code-Gestalt vs. Steuerbefehl (Befund waehrend der Umsetzung):
+# RUHETAG und STRECKE sind sieben Zeichen aus genau dem Code-Alphabet. Die
+# Hilfe nennt alle Befehle in GROSSBUCHSTABEN -- ohne Ausnahme fuer bekannte
+# Befehle frisst die Code-Abtrennung sie auf, und der Wanderer bekommt auf
+# "RUHETAG" nichts. Gemessen an BEIDEN Wirkstellen: Payload und Befehlstext.
+# =============================================================================
+
+def test_uppercase_bare_keyword_is_not_mistaken_for_a_link_code(monkeypatch):
+    """Given eine Garmin-Nachricht, deren Befehl ein siebenstelliger
+    Grossbuchstaben-Befehl ist (RUHETAG/STRECKE) / When der Poll laeuft /
+    Then wird KEIN `code` mitgeschickt und der Befehl erreicht den
+    TripCommandProcessor vollstaendig."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    journal = [
+        _garmin_message_with_text(
+            11006, GARMIN_FROM_A, "RUHETAG inreachlink.com/g-0Ab1Cd2Ef... (51.9956, 7.7136)",
+        ),
+        _garmin_message_with_text(
+            11007, GARMIN_FROM_B, "STRECKE 12 inreachlink.com/g-0Ab1Cd2Ef... (51.9956, 7.7136)",
+        ),
+    ]
+    fake_get = _FakeJournalEndpoint([journal])
+    fake_post = _LearnCallRecorder()
+    recorder = _CommandProcessorRecorder()
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(reader_mod, "TripCommandProcessor", recorder)
+
+    reader = reader_mod.InboundSmsReader()
+    reader.poll_and_process(_settings())
+
+    assert len(fake_post.calls) == 2, f"erwartet 2 Lernaufrufe, gesehen: {fake_post.calls!r}"
+    for aufruf in fake_post.calls:
+        assert "code" not in aufruf["json"], (
+            f"ein bekannter Steuerbefehl ist KEIN Verknuepfungs-Code, gesehen: {aufruf['json']!r}"
+        )
+
+    befehle = [m.body for m in recorder.messages]
+    assert befehle == ["RUHETAG", "STRECKE 12"], (
+        f"der Befehl darf nicht als Code abgeschnitten werden, uebergeben wurde {befehle!r}"
+    )
+
+
+# =============================================================================
+# AC-11 (heute ROT): abgelehnte Lernversuche brauchen einen eigenen, von
+# Netz-/5xx-Fehlern unterscheidbaren Zaehler. Heute zaehlt der 4xx-Zweig
+# (inbound_sms_reader.py:210-218) gar nichts und meldet still "ok" -- ein
+# dauerhaft ausgesperrter Nutzer bleibt unsichtbar.
+# =============================================================================
+
+def test_rejected_learn_is_counted_separately_from_failures(monkeypatch):
+    """AC-11 (Reader-Haelfte): Given ein Lernaufruf wird mit 409 abgelehnt /
+    When der Poll durchlaeuft / Then zaehlt der Reader die Ablehnung in einem
+    EIGENEN Zaehler, nicht in `last_failed_count`."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    fake_get = _FakeJournalEndpoint([[_garmin_message(11005, GARMIN_FROM_A)]])
+    fake_post = _RejectingLearnRecorder()
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    reader = reader_mod.InboundSmsReader()
+    reader.poll_and_process(_settings())
+
+    assert reader.last_failed_count == 0, (
+        "eine bewusste Ablehnung ist KEIN voruebergehender Fehlschlag (Fix F001)"
+    )
+    assert getattr(reader, "last_rejected_count", None) == 1, (
+        "AC-11: die Ablehnung braucht einen eigenen Zaehler `last_rejected_count`, "
+        f"gesehen: {getattr(reader, 'last_rejected_count', '<Attribut fehlt>')!r}"
+    )
+
+
+def test_router_reports_partial_when_learn_was_rejected(monkeypatch):
+    """AC-11 (Antwortkoerper-Haelfte): Given der Reader meldet eine Ablehnung
+    ohne jeden Netzfehler / When der Trigger-Endpunkt aufgerufen wird / Then
+    meldet er `status: "partial"` (genau diesen Wert macht
+    internal/scheduler/scheduler.go::triggerPremiumSmsPollEndpoint zu einem
+    sichtbaren partialRunError) und weist die Ablehnung getrennt von `failed`
+    aus."""
+    import api.routers.scheduler as scheduler_router
+    import services.inbound_sms_reader as reader_mod
+
+    class _FakeReaderWithRejection:
+        def __init__(self):
+            self.last_failed_count = 0
+            self.last_rejected_count = 0
+
+        def poll_and_process(self, settings):
+            self.last_rejected_count = 1
+            return 0
+
+    monkeypatch.setattr(reader_mod, "InboundSmsReader", _FakeReaderWithRejection)
+
+    response = scheduler_router.trigger_inbound_sms()
+
+    assert response["status"] == "partial", (
+        f"AC-11: eine Ablehnung darf nicht als 'ok' durchgehen und muss den vom "
+        f"Go-Zeitplaner ausgewerteten Wert 'partial' tragen, bekam {response!r}"
+    )
+    assert response.get("rejected") == 1, (
+        f"AC-11: die Ablehnung muss eigenstaendig sichtbar sein, bekam {response!r}"
+    )
+    assert response.get("failed") == 0, (
+        f"AC-11: eine Ablehnung ist KEIN Netz-/5xx-Fehler und darf `failed` nicht "
+        f"erhoehen, bekam {response!r}"
+    )

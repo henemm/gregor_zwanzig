@@ -211,12 +211,13 @@ getriggert vom Go-Cron-Job `premium_sms_poll` (`*/5 * * * *`) über
 `POST /api/scheduler/inbound-sms`.
 
 **Zweck:** Der Reader pollt das seven.io-Journal (`GET journal/inbound`), erkennt
-darin Antworten des Garmin inReach am Kennzeichen `inreachlink.com` und lernt
-daraus die aktuell gültige (von Garmin je Gespräch neu vergebene) Rückadresse
-für genau einen Premium-Nutzer. Schreibender Endpoint ist ausschließlich der
-neue, localhost-only Go-Endpoint `POST /api/internal/premium-sms-learn`
-(`internal/handler/premium_sms_connect.go`), der `user.PremiumSmsReplyTo`/
-`PremiumSmsReplyAt` per Read-Modify-Write setzt. Außerhalb Produktion pollt der
+darin Antworten des Garmin inReach am Kennzeichen `inreachlink.com` und ordnet
+sie einem Nutzer zu. Bis #2154: bei gespeicherter Rückadresse oder genau einem
+Premium-Nutzer; seit #2154: bei gespeicherter, frischer Adresse (TTL-Abgleich)
+oder validem 7-stelligen Verknüpfungs-Code (s. `docs/specs/modules/fix_2154_premium_sms_verknuepfungscode.md`).
+Die aktuelle, gültige Rückadresse wird per Read-Modify-Write in `user.PremiumSmsReplyTo`/
+`PremiumSmsReplyAt` gespeichert — ausschließlich über den localhost-only Go-Endpoint
+`POST /api/internal/premium-sms-learn` (`internal/handler/premium_sms_connect.go`). Außerhalb Produktion pollt der
 Reader nicht (Sandbox-Key liefert auf dem Lesepfad dasselbe Produktiv-Journal
 wie der Prod-Key — siehe `docs/specs/modules/egress_guard_sms.md` → Known
 Limitations), außer der Trockenlauf-Schalter `GZ_PREMIUM_SMS_POLL_DRYRUN=1`

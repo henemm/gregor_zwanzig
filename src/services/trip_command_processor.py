@@ -151,6 +151,20 @@ def command_rows() -> list[tuple[str, str]]:
     return [(f"{w.upper()} {a}".strip(), b) for w, a, b in _COMMAND_SPECS]
 
 
+def bare_keywords() -> frozenset[str]:
+    """Alle als Alleinwort erkannten Steuerbefehle, kleingeschrieben — inkl.
+    Aliase (NOW, HELP), die in ``_COMMAND_SPECS`` nur in der Beschreibung
+    stehen.
+
+    Gebraucht vom Premium-SMS-Reader (Issue #2154): dort muss ein
+    vorangestellter Verknuepfungs-Code vom Befehlstext getrennt werden, und
+    RUHETAG/STRECKE haben zufaellig genau die Code-Gestalt. Bewusst eine
+    Funktion auf ``_BARE_KEYWORD_MAP`` statt einer zweiten Liste — eine Kopie
+    drifteter beim naechsten neuen Befehl auseinander.
+    """
+    return frozenset(_BARE_KEYWORD_MAP)
+
+
 def command_overview() -> str:
     """Einzeilige Aufzaehlung des Befehlssatzes — fuer Fehlertexte."""
     return ", ".join(w.upper() for w, _a, _b in _COMMAND_SPECS)
