@@ -26,6 +26,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -34,6 +35,12 @@ import (
 )
 
 const linkCodeRoutePath = "/api/auth/premium-sms-link-code"
+
+// Gestalt des Codes (Issue #2323): Praefix "XX" + 3 Buchstaben (ohne I/L/O) +
+// 3 Ziffern (ohne 0/1). Hier package-lokal nachgebildet, weil die Konstanten
+// in internal/handler unexportiert sind; die zeichengenaue Pruefung je Block
+// leistet assertLinkCodeShape in handler/premium_sms_link_code_test.go.
+var linkCodeShapeRe = regexp.MustCompile(`^XX[A-HJKMNP-Z]{3}[2-9]{3}$`)
 
 func TestPremiumSmsLinkCodeRouteIstVerdrahtetUndAnmeldepflichtig(t *testing.T) {
 	r, s, secret := newBriefingTestRouter(t)
@@ -62,8 +69,9 @@ func TestPremiumSmsLinkCodeRouteIstVerdrahtetUndAnmeldepflichtig(t *testing.T) {
 	if err := json.Unmarshal(rrPost.Body.Bytes(), &created); err != nil {
 		t.Fatalf("Antwort nicht JSON-dekodierbar: %v (%s)", err, rrPost.Body.String())
 	}
-	if len(created["code"]) != 7 {
-		t.Errorf("angemeldet erwartet einen 7-stelligen Klartext-Code, bekam %q", created["code"])
+	if !linkCodeShapeRe.MatchString(created["code"]) {
+		t.Errorf("angemeldet erwartet einen Klartext-Code der Gestalt %s (Issue #2323), bekam %q",
+			linkCodeShapeRe, created["code"])
 	}
 
 	rrGet := doBriefingRequest(t, r, http.MethodGet, linkCodeRoutePath, nil, sessionCookieFor(uid, secret))

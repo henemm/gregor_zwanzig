@@ -12,6 +12,11 @@ package handler
 //   (*store.Store).LoadLinkCode(userID string) (*model.PremiumSmsLinkCode, error)
 // bcryptCost als Parameter nach dem Vorbild RegisterHandler/ForgotPasswordHandler
 // (internal/handler/auth.go:31,231) — sonst kostet jeder Test Sekunden.
+//
+// Issue #2323 (PO-Entscheid 14.09.2026): Code-Format auf festen Praefix "XX"
+// + 3 Buchstaben (ohne I/L/O) + 3 Ziffern (ohne 0/1) umgestellt (vorher: 7
+// Zeichen aus 31, ohne festen Praefix). Shape-Konstanten unten tragen das
+// NEUE Format — Python-Pendant: src/services/inbound_sms_reader.py::_LINK_CODE_PATTERN.
 
 import (
 	"encoding/json"
@@ -30,10 +35,47 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// Alphabet der Code-Gestalt (Spec D2): 7 Zeichen, ohne I/L/O/0/1.
-const linkCodeLength = 7
+// Gestalt des Codes (Issue #2323): fester Praefix "XX" + 3 Buchstaben aus dem
+// Buchstaben-Alphabet (ohne I/L/O) + 3 Ziffern aus dem Ziffern-Alphabet (ohne
+// 0/1) — 8 Zeichen insgesamt.
+const (
+	linkCodePrefix      = "XX"
+	linkCodeLetterCount = 3
+	linkCodeDigitCount  = 3
+	linkCodeLength      = len(linkCodePrefix) + linkCodeLetterCount + linkCodeDigitCount
+)
 
-var linkCodeForbiddenChars = "ILO01"
+var linkCodeLetterAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ" // ohne I/L/O
+var linkCodeDigitAlphabet = "23456789"                 // ohne 0/1
+
+// assertLinkCodeShape prueft Praefix, Buchstaben- und Ziffernblock je an
+// ihrer eigenen Position — eine globale "keine verbotenen Zeichen irgendwo"-
+// Pruefung liesse eine vertauschte Reihenfolge (z.B. "XX249abc") durch.
+func assertLinkCodeShape(t *testing.T, code string) {
+	t.Helper()
+	if len(code) != linkCodeLength {
+		t.Errorf("AC-5: erwartet %d Zeichen, bekam %d (%q)", linkCodeLength, len(code), code)
+		return
+	}
+	if !strings.EqualFold(code[:len(linkCodePrefix)], linkCodePrefix) {
+		t.Errorf("AC-5: erwartet Praefix %q (case-insensitive), bekam %q in %q",
+			linkCodePrefix, code[:len(linkCodePrefix)], code)
+	}
+	letters := code[len(linkCodePrefix) : len(linkCodePrefix)+linkCodeLetterCount]
+	for _, c := range letters {
+		if !strings.ContainsRune(linkCodeLetterAlphabet, c) {
+			t.Errorf("AC-5: Buchstaben-Block %q enthaelt %q, nicht im Alphabet %q (Code: %q)",
+				letters, c, linkCodeLetterAlphabet, code)
+		}
+	}
+	digits := code[len(linkCodePrefix)+linkCodeLetterCount:]
+	for _, c := range digits {
+		if !strings.ContainsRune(linkCodeDigitAlphabet, c) {
+			t.Errorf("AC-5: Ziffern-Block %q enthaelt %q, nicht im Alphabet %q (Code: %q)",
+				digits, c, linkCodeDigitAlphabet, code)
+		}
+	}
+}
 
 // mustSaveLinkCode legt einen Verknuepfungs-Code als bcrypt-Hash ab — genau
 // so, wie es der Konto-Endpoint tut. Wird auch von
@@ -98,13 +140,7 @@ func TestLinkCodeReturnsCodeOnceInPlaintext(t *testing.T) {
 
 	code := createLinkCode(t, s, "anna")
 
-	if len(code) != linkCodeLength {
-		t.Errorf("AC-5/D2: erwartet %d Zeichen, bekam %d (%q)", linkCodeLength, len(code), code)
-	}
-	if i := strings.IndexAny(code, linkCodeForbiddenChars); i >= 0 {
-		t.Errorf("AC-5/D2: verwechselbares Zeichen %q im Code %q — verboten sind %q",
-			code[i], code, linkCodeForbiddenChars)
-	}
+	assertLinkCodeShape(t, code)
 
 	stored, err := s.LoadLinkCode("anna")
 	if err != nil || stored == nil {
@@ -115,6 +151,24 @@ func TestLinkCodeReturnsCodeOnceInPlaintext(t *testing.T) {
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(stored.CodeHash), []byte(code)); err != nil {
 		t.Errorf("AC-5: der gespeicherte Hash gehoert nicht zum ausgelieferten Code: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Issue #2323 AC-5: Shape-Assertion ueber viele reale Generierungsaufrufe --
+// ein einzelner Code beweist nicht, dass Buchstaben- und Ziffern-Alphabet an
+// der jeweils RICHTIGEN Position gezogen werden (crypto/rand koennte am
+// Zeichen des einzelnen Beispiels zufaellig richtig liegen).
+// ---------------------------------------------------------------------------
+
+func TestLinkCodeShapeHoldsAcrossManyGenerations(t *testing.T) {
+	s := learnTestStore(t)
+	mustSaveUser(t, s, model.User{ID: "anna", Tier: "premium"})
+
+	const n = 50
+	for i := 0; i < n; i++ {
+		code := createLinkCode(t, s, "anna")
+		assertLinkCodeShape(t, code)
 	}
 }
 

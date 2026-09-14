@@ -210,11 +210,16 @@ Auswertung aufruft. Specs:
 getriggert vom Go-Cron-Job `premium_sms_poll` (`*/5 * * * *`) über
 `POST /api/scheduler/inbound-sms`.
 
-**Zweck:** Der Reader pollt das seven.io-Journal (`GET journal/inbound`), erkennt
-darin Antworten des Garmin inReach am Kennzeichen `inreachlink.com` und ordnet
-sie einem Nutzer zu. Bis #2154: bei gespeicherter Rückadresse oder genau einem
+**Zweck:** Der Reader pollt das seven.io-Journal (`GET journal/inbound`) und
+entscheidet seit #2323 anhand des strukturell immer vorhandenen `to`-Felds
+(`to == SERVICE_NUMBER`), ob eine Nachricht überhaupt zur Auflösung vorgelegt
+wird — nicht mehr am abschaltbaren Garmin-Kartenlink-Text `inreachlink.com`
+im Nachrichteninhalt. Die Zuordnung zum Nutzer entscheidet unverändert der
+Go-Lern-Endpunkt: Bis #2154: bei gespeicherter Rückadresse oder genau einem
 Premium-Nutzer; seit #2154: bei gespeicherter, frischer Adresse (TTL-Abgleich)
-oder validem 7-stelligen Verknüpfungs-Code (s. `docs/specs/modules/fix_2154_premium_sms_verknuepfungscode.md`).
+oder validem Verknüpfungs-Code im Format `XX`+3 Buchstaben+3 Ziffern (s.
+`docs/specs/modules/fix_2154_premium_sms_verknuepfungscode.md`,
+Format-Änderung durch `docs/specs/modules/fix_2323_premium_sms_gate_generisch.md`).
 Die aktuelle, gültige Rückadresse wird per Read-Modify-Write in `user.PremiumSmsReplyTo`/
 `PremiumSmsReplyAt` gespeichert — ausschließlich über den localhost-only Go-Endpoint
 `POST /api/internal/premium-sms-learn` (`internal/handler/premium_sms_connect.go`). Außerhalb Produktion pollt der

@@ -79,13 +79,22 @@ mit `crypto/rand`, analog `telegram_connect.go:72-76`. Gespeichert wird
 ausschließlich der bcrypt-Hash (`internal/model/premium_sms_link.go`); der
 Klartext existiert nur im Antwortkörper des Erzeugungs-Aufrufs.
 
+> **Nachtrag (2026-09-14, Issue #2323):** Das Format wurde auf einen festen
+> Präfix `XX` (case-insensitive) + 3 Buchstaben (ohne I/L/O) + 3 Ziffern (ohne
+> 0/1) umgestellt, z.B. `XXdrt249` — leichter per Satellit abzutippen.
+> Schlüsselraum ohne den festen Präfix ≈ 23³·8³ ≈ 6,23 Mio. (kleiner als der
+> hier ursprünglich beschriebene, s. Known Limitations zur Ratebremse). Die
+> Zahlen in diesem Abschnitt beschreiben den Stand VOR #2323 (historischer
+> Beleg der D2-Abwägung); aktuelle Formaldefinition:
+> `docs/specs/modules/fix_2323_premium_sms_gate_generisch.md`.
+
 ### Neuer Konto-Endpoint (D1, D3, D6)
 
 ```
 POST /api/auth/premium-sms-link-code   (SessionAuth, echte user_id)
   -> erzeugt/erneuert den Code, gibt ihn EINMAL im Klartext zurueck
-     {"code": "AB3CD9F"}. Erneuern entwertet den alten Code
-     (Replace der Datei, kein Anhaengen).
+     {"code": "XXABC234"} (Format seit #2323, s. Nachtrag oben). Erneuern
+     entwertet den alten Code (Replace der Datei, kein Anhaengen).
 GET  /api/auth/premium-sms-link-code   (SessionAuth)
   -> {"exists": true|false} -- niemals der Code selbst, niemals der Hash.
 ```
@@ -176,7 +185,8 @@ der muss sich einmal neu verknüpfen (Folge, kein Fehler).
 ## Expected Behavior
 
 - **Input:** eingehende Garmin-SMS im seven.io-Journal, erkannt am Kennzeichen
-  `inreachlink.com`; optional davor ein 7-stelliger Verknüpfungs-Code
+  `inreachlink.com` (seit #2323: am `to`-Feld, s. Nachtrag oben); optional
+  davor ein Verknüpfungs-Code (Format seit #2323: `XX`+3+3)
 - **Output:** bei gültiger Auflösung (frischer gespeicherter Treffer ODER
   passender Code) aktualisierte `premium_sms_reply_to`/`-at` in genau einem
   `user.json`; bei fehlender/ungültiger Auflösung 409 bzw. 429, kein Schreiben,
@@ -311,6 +321,10 @@ der muss sich einmal neu verknüpfen (Folge, kein Fehler).
   eine echte, bezahlte SMS kostet und frühestens beim nächsten Fünf-Minuten-Poll
   überhaupt geprüft wird. Ein dateibasierter, neustartfester Zähler wäre die
   strengere Variante und gehört zu #2153, falls die Annahme je kippt.
+  **Nachtrag (#2323):** der Schlüsselraum ist seither kleiner (≈ 6,23 Mio.
+  ohne festen Präfix statt ≈ 2,75·10¹⁰) — macht die Ratebremse wichtiger als
+  hier ursprünglich angenommen, s. `fix_2323_premium_sms_gate_generisch.md`
+  Known Limitations.
 - **Staging kann den Schreibpfad nicht beweisen.** Der Poll läuft außerhalb
   der Produktion nur mit `GZ_PREMIUM_SMS_POLL_DRYRUN=1`, dann ohne
   Schreibwirkung — der Nachweis liegt vollständig im Kern (Go- und
@@ -411,3 +425,6 @@ gegen den heutigen Code rot (Fallback greift), nach Entfernen des
 - 2026-09-13: Initial spec erstellt — Issue #2154, Scheibe A
 - 2026-09-14: Nachtrag — Scheibe B (Konto-Oberfläche für den Code unter
   `/account`) ergänzt, s. `docs/specs/modules/fix_2154_s2_premium_sms_link_code_ui.md`
+- 2026-09-14: Nachtrag — Code-Format auf `XX`+3+3 umgestellt und
+  Akzeptanz-Gate auf `to == SERVICE_NUMBER` korrigiert, s.
+  `docs/specs/modules/fix_2323_premium_sms_gate_generisch.md`

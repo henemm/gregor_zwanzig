@@ -2,9 +2,9 @@
 entity_id: feat_1676_s1_premium_sms_rueckkanal
 type: module
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-09-14
 status: draft
-version: "1.5"
+version: "1.6"
 tags: [sms, inbound, premium, garmin, seven-io, dual-stack]
 ---
 
@@ -102,6 +102,18 @@ Frontend (folgt in S2/S3).
    Nachricht MIT Kennzeichen entscheidet Schritt 9 ueber das Anheben --
    NICHT mehr bedingungslos (Fix F001, v1.2, s.u.).
 8. Kein "inreachlink.com" im Text -> ignorieren, naechste Nachricht (R1).
+   **Nachtrag (v1.6, Fix #2323):** Schritt 7/8 beschreiben das
+   Content-Gate im Stand VOR #2323. Das Kennzeichen `inreachlink.com` im
+   Nachrichtentext war abschaltbar (Nutzer koennen den Kartenlink in ihrer
+   Garmin-Einstellung deaktivieren) und ignorierte dadurch legitime
+   Nachrichten dauerhaft und lautlos. Das Gate prueft seit #2323 stattdessen
+   das strukturell immer vorhandene Ziel-Feld (`message.get("to") ==
+   SERVICE_NUMBER`) -- ueber Annahme/Ablehnung der Absendernummer
+   entscheidet weiterhin ausschliesslich der Go-Lern-Endpunkt (Schritt 9).
+   `GARMIN_MARKER`/`inreachlink.com` bleibt als reines Text-Zerlegungsmerkmal
+   fuer `split_link_code()` bestehen (Trennung Code/Befehl vom
+   Garmin-Link+Koordinaten-Suffix), ist aber keine Zulassungsentscheidung
+   mehr. Details: `docs/specs/modules/fix_2323_premium_sms_gate_generisch.md`.
 9. "inreachlink.com" im Text -> POST premium-sms-learn {"from": msg.from,
    "dry_run": dry_run}, 5s Timeout.
    - HTTP 200: last_seen_id-Kandidat anheben. dry_run=False -> Zaehler
@@ -401,3 +413,10 @@ protokolliert.
   `tests/unit/test_inbound_sms_reply_learning.py` liefern `id` jetzt als
   Zeichenkette, exakt wie die gemessene API-Antwort. ACs wörtlich
   unverändert.
+- 2026-09-14: v1.6 — Fix #2323 (Ursprung #2322): das content-basierte
+  Akzeptanz-Gate (`inreachlink.com`-Kennzeichen im Text, Schritt 8) war
+  abschaltbar und ignorierte Nutzer, die den Garmin-Kartenlink deaktiviert
+  hatten, dauerhaft und lautlos. Korrigiert auf das strukturell immer
+  vorhandene Ziel-Feld (`to == SERVICE_NUMBER`). Nachtrag bei Schritt 8, ACs
+  wörtlich unverändert (betrifft nur die interne Gate-Bedingung, nicht die
+  Zuordnungslogik des Go-Endpunkts).
