@@ -89,6 +89,18 @@
       "host": "smtp.resend-fixture.test",
       "to": "paritaet-fixture@henemm.com",
       "soll": "allow"
+    },
+    {
+      "id": "adresse-nur-in-email-mail_to-abweichend",
+      "host": "smtp.resend-fixture.test",
+      "to": "nebenfeld-login@henemm.com",
+      "soll": "block"
+    },
+    {
+      "id": "wirksame-adresse-bei-abweichendem-email-erreichbar",
+      "host": "smtp.resend-fixture.test",
+      "to": "nebenfeld-kontakt@henemm.com",
+      "soll": "allow"
     }
   ],
   "profile": {
@@ -115,6 +127,11 @@
     "paritaet-fixture-nutzer": {
       "mail_to": "paritaet-fixture@henemm.com",
       "email_verified_at": "2026-01-01T00:00:00Z"
+    },
+    "nebenfeld-email-verifiziert": {
+      "email": "nebenfeld-login@henemm.com",
+      "mail_to": "nebenfeld-kontakt@henemm.com",
+      "email_verified_at": "2026-01-01T00:00:00Z"
     }
   },
   "ausnahmen": [
@@ -129,5 +146,5 @@
   ],
   "ausnahmen_hoechstzahl": 1,
   "verzweigungen_python": 15,
-  "verzweigungen_go": 34
+  "verzweigungen_go": 35
 }

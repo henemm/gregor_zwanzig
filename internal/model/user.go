@@ -41,6 +41,14 @@ type User struct {
 	// bool: "fehlt" und "false" bedeuten beide "nicht abgewiesen", es gibt hier
 	// kein Zeitstempel-Nullwert-Problem wie bei RequestedAt.
 	PasskeyPromptDismissed bool `json:"passkey_prompt_dismissed,omitempty"`
+	// Issue #2147 Scheibe B2 — ausstehende Adressaenderung eines bestaetigten
+	// Kontos. Solange sie aussteht, bleiben Email/MailTo auf den alten,
+	// bestaetigten Werten; die neue Adresse steht NUR hier (unsichtbar fuer
+	// ResolveAddressOwner, Allowlists, Versand). PendingContactField nennt das
+	// beim Einloesen zu schreibende Feld ("email"|"mail_to"). Beide fehlen im
+	// JSON, solange nichts aussteht (Bestandsdaten laden unveraendert).
+	PendingContactAddress string `json:"pending_contact_address,omitempty"`
+	PendingContactField   string `json:"pending_contact_field,omitempty"`
 }
 
 type PasswordResetToken struct {
@@ -53,6 +61,9 @@ type PasswordResetToken struct {
 type EmailVerificationToken struct {
 	TokenHash string    `json:"token_hash"`
 	ExpiresAt time.Time `json:"expires_at"`
+	// Issue #2147 Scheibe B2 — die zu beweisende Adresse (normalisiert). Leer
+	// bei Alt-Tokens von vor diesem Stand.
+	Address string `json:"address,omitempty"`
 }
 
 // WebAuthnCredential is the persisted form of a registered Passkey/FIDO2 credential.

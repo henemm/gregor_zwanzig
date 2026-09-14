@@ -256,6 +256,15 @@ def _extract_trip_name(self, subject: str) -> str | None:
 
 ### 5. Sender-Authentifizierung (v1.5, SECURITY-FIX #2143)
 
+> **Nachtrag Issue #2147 Scheibe B2 (2026-09-14):** `_resolve_settings_for_sender()` liefert bei
+> "kein Treffer"/"mehrdeutig" seither `None` statt der Zeichenkette `"default"`; das Gate in
+> `_process_single()` prüft entsprechend `_user_id is None`. Verhalten (kein Reply, SEEN markieren,
+> kein Rückfall auf ein Sammelkonto) bleibt identisch — nur der Rückgabetyp wechselt. `lookup_user_by_email()`
+> selbst prüft ab B2 zusätzlich, ob die Adresse die **wirksame** Kontaktadresse (`mail_to`, ersatzweise
+> `email`) ist, nicht mehr nur `mail_to` — der separate `email_verified_at`-Check in Schritt 2 unten
+> bleibt bestehen. Details: `docs/specs/modules/adresswechsel_nach_bestaetigung.md`. Der Codeblock
+> unten zeigt weiterhin den historischen `"default"`-Stand vor B2.
+
 **Vorher (bis v1.4, tautologisch):** Der Absender wurde per `lookup_user_by_email()`
 aus dem `From:`-Header aufgeloest und danach exakt gegen `mail_to` desselben,
 aus demselben Header aufgeloesten Profils geprueft — ein gefaelschter `From:`-Header

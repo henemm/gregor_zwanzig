@@ -432,6 +432,12 @@ einzigen Aufrufern trennen.
   Pending-Funktion vor diesem Deploy nicht existierte.
 - **Der Prozess-Lock (`LockEmailAddress`) ist prozesslokal**, wie bereits in A/B1 dokumentiert — kein
   verteiltes Locking über mehrere Instanzen.
+- **`token expired` vs. `invalid token` verrät bei bekannter Konto-Kennung eine ausstehende
+  Änderung.** Wer die Konto-Kennung kennt und ein beliebiges (falsches) Token gegen
+  `VerifyEmailHandler` schickt, kann aus der Unterscheidung der beiden Fehlercodes indirekt ableiten,
+  ob für dieses Konto gerade eine Adressänderung aussteht (adressgebundenes Token vorhanden →
+  `token expired`, kein Token/Alt-Token-Fall → `invalid token`) — kein Zugriff auf die neue Adresse
+  selbst, aber ein kleines Seitenkanal-Signal. Kein aktives Datenleck, bleibt für Scheibe C offen.
 
 ## Out of Scope
 
@@ -474,3 +480,14 @@ einzigen Aufrufern trennen.
 ## Changelog
 
 - 2026-09-14: Initial spec created (Issue #2147 Scheibe B2, #2311-Rest, Epic #2138)
+- 2026-09-14: Implementiert (Go-Handler + Store + Python + Frontend). Umsetzungsentscheidungen:
+  (a) ein bereits ersetztes adressgebundenes Token liefert beim Einlösen `400 token expired` —
+  Hash passt nicht mehr UND es liegt eine (neuere) ausstehende Änderung vor; (b) ein
+  adressgebundenes Token OHNE ausstehende Änderung wird nur bestätigt, wenn die Token-Adresse `X`
+  exakt der aktuellen wirksamen Adresse entspricht, sonst ebenfalls `400 token expired`; (c) die
+  Betreiber-Adresse für die Go-Allowlist wird über `config.PoEmailFromEnv()` ermittelt (Default
+  `config.DefaultPoEmail`, falls `GZ_PO_EMAIL` nicht gesetzt ist); (d) werden `email` und `mail_to`
+  in einem Aufruf gemeinsam geleert, wirkt das sofort — eine zuvor ausstehende Änderung wird dabei
+  verworfen, nicht weitergeführt; (e) werden `email` und `mail_to` gleichzeitig geändert und ist
+  `mail_to` dabei leer, zählt ausschließlich der `mail_to`-Wechsel als wirksamer Adresswechsel — die
+  gleichzeitig eingereichte `email`-Änderung wird in diesem Aufruf NICHT übernommen.

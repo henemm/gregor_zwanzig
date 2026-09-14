@@ -50,10 +50,14 @@ from tests.tdd._telegram_live_fixture import ensure_test_user_with_active_trip
 _REPO_DATA_USERS_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 
-def _write_user(data_dir: Path, user_id: str, chat_id: str = "", mail_to: str = "") -> None:
+def _write_user(
+    data_dir: Path, user_id: str, chat_id: str = "", mail_to: str = "", email_verified_at: str = ""
+) -> None:
     user_dir = data_dir / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
     profile = {"id": user_id, "telegram_chat_id": chat_id, "mail_to": mail_to}
+    if email_verified_at:
+        profile["email_verified_at"] = email_verified_at
     (user_dir / "user.json").write_text(json.dumps(profile), encoding="utf-8")
 
 
@@ -142,14 +146,20 @@ def test_lookup_by_telegram_chat_id_prefers_real_user_over_test_user(tmp_path):
 def test_lookup_by_email_prefers_real_user_over_test_user(tmp_path):
     """GIVEN echter User (henning) und mehrere Test-User mit identischer mail_to
     WHEN lookup_user_by_email(email) aufgerufen wird
-    THEN wird deterministisch die echte User-ID zurückgegeben."""
+    THEN wird deterministisch die echte User-ID zurückgegeben.
+
+    Alle Profile bestaetigt: seit Issue #2147 Scheibe B2 ordnet
+    lookup_user_by_email nur ueber eine BESTAETIGTE wirksame Adresse zu —
+    sonst lieferte der Lookup None und der Vorrang echt-vor-Test bliebe
+    ungeprueft."""
     from app.loader import lookup_user_by_email
 
     email = "henning@henemm.com"
-    _write_user(tmp_path, "tg-live-e2e", mail_to=email)
-    _write_user(tmp_path, "test_aaa", mail_to=email)
-    _write_user(tmp_path, "tdd-zzz", mail_to=email)
-    _write_user(tmp_path, "henning", mail_to=email)
+    verified = "2026-01-01T00:00:00Z"
+    _write_user(tmp_path, "tg-live-e2e", mail_to=email, email_verified_at=verified)
+    _write_user(tmp_path, "test_aaa", mail_to=email, email_verified_at=verified)
+    _write_user(tmp_path, "tdd-zzz", mail_to=email, email_verified_at=verified)
+    _write_user(tmp_path, "henning", mail_to=email, email_verified_at=verified)
 
     result = lookup_user_by_email(email, data_dir=str(tmp_path))
 

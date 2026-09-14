@@ -3060,6 +3060,7 @@ Returns authenticated user profile (requires valid session cookie).
 | has_passkey | bool | Whether user has registered any passkeys |
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
 | passkey_prompt_dismissed | bool | Whether the user has declined the one-time passkey setup offer (Issue #2248); **always present**. Persisted server-side so the dismissal holds across devices; absent/`false` on the underlying `user.json` both mean "not dismissed" |
+| pending_contact_address | string | Issue #2147 Scheibe B2: eine noch nicht bestätigte, ausstehende neue Kontaktadresse; `omitempty` — fehlt, solange keine Änderung aussteht. `email`/`mail_to` zeigen bis zur Bestätigung weiterhin die alten, wirksamen Werte; `email_verified` bleibt in dieser Zeit `true`. Wird erst über `POST /api/auth/verify-email` bestätigt (dann verschwindet dieses Feld und `mail_to`/`email` übernehmen den Wert) |
 
 **Error Responses:**
 
@@ -3102,6 +3103,15 @@ Returns updated profile object (same as `GET /api/auth/profile`).
   wird dabei frisch geladen (Read-Modify-Write). Ist die Zieladresse bereits einem anderen, echten
   Konto zugeordnet → `409 {"error":"email_taken"}`, das **gesamte** Update (auch andere
   mitgeschickte Felder) wird verworfen, nichts gespeichert, keine Mail versendet.
+- **Ausstehende Änderung statt Sofort-Reset bei bestätigtem Konto (Issue #2147 Scheibe B2):** Ändert
+  sich dabei die **wirksame** Kontaktadresse (`mail_to`, Rückfall `email`) eines bereits bestätigten
+  Kontos (`email_verified: true`) auf eine neue, nicht belegte Adresse, wird `email`/`mail_to`
+  **NICHT** sofort überschrieben und `email_verified` bleibt `true` — statt des früheren
+  Sofort-Resets entsteht eine ausstehende Änderung (`pending_contact_address` in der Antwort), die
+  Bestätigungsmail geht an die neue Adresse, wirksam wird sie erst über `POST /api/auth/verify-email`.
+  Ändert sich nur ein NICHT wirksames Feld, oder ist das Konto noch unbestätigt, gilt weiterhin die
+  bisherige Sofort-Logik (Reset/Mail wie oben beschrieben). Details:
+  `docs/specs/modules/adresswechsel_nach_bestaetigung.md`.
 - `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
 - `passkey_prompt_dismissed`: Optional bool (Issue #2248); sets whether the one-time passkey setup offer stays hidden
 - Empty strings allowed (unset field)
@@ -3299,6 +3309,31 @@ ausschließlich aus dem Auth-Kontext, ein Request-Parameter hat keine Wirkung.
   Fehlerstatus.
 - Vollständige Erlaubnis-/Ausnahmeliste, Pfadsicherheit im Archiv und Mandantentrennung:
   `docs/specs/modules/user_data_export.md`.
+
+#### POST /api/auth/verify-email
+
+Löst ein Bestätigungs-Token ein (Registrierung, Resend, oder — Issue #2147 Scheibe B2 — eine
+ausstehende Adressänderung aus `PUT /api/auth/profile`). Öffentlich (Public-Allowlist).
+
+**Request Body:**
+```json
+{"user": "henning", "token": "<Klartext-Token>"}
+```
+
+**Response 200:** aktualisiertes Konto ist bestätigt; bei einer zuvor ausstehenden Adressänderung
+ist sie jetzt die wirksame Kontaktadresse (`mail_to`/`email`), `pending_contact_address` verschwindet
+aus dem Profil.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid token"}` | Token-Hash passt nicht zum gespeicherten Token (und keine ausstehende Änderung liegt vor) |
+| 400 | `{"error":"token expired"}` | Token abgelaufen, ODER (Issue #2147 Scheibe B2) das adressgebundene Token wurde durch eine neuere Adressänderung bereits ersetzt |
+| 409 | `{"error":"address_taken"}` | Issue #2147 Scheibe B2: die ausstehende Zieladresse wurde zwischen Anfordern und Einlösen des Links einem anderen, echten Konto zugeordnet — die ausstehende Änderung wird verworfen, nichts übernommen |
+
+Details zur B2-Fallunterscheidung (Alt-Token ohne Adresse, adressgebundenes Token, erneute
+Belegt-Prüfung beim Einlösen): `docs/specs/modules/adresswechsel_nach_bestaetigung.md`.
 
 #### POST /api/auth/verify-email/resend
 
@@ -4180,6 +4215,13 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-14: Issue #2147 Scheibe B2 (Epic #2138) — Adresswechsel eines bestätigten Kontos wirkt
+  erst nach Bestätigung: neues Profil-Feld `pending_contact_address` (`omitempty`); `PUT
+  /api/auth/profile` legt bei geänderter wirksamer Adresse eines bestätigten Kontos eine
+  ausstehende Änderung statt eines Sofort-Resets an; `POST /api/auth/verify-email` bekommt neu
+  dokumentierte Fehlercodes `400 token expired` (ersetztes adressgebundenes Token) und `409
+  address_taken` (Adresse zwischenzeitlich vergeben). Details:
+  `docs/specs/modules/adresswechsel_nach_bestaetigung.md`.
 - 2026-09-13: Issue #2248 — Profil-DTO erhält neues Feld `passkey_prompt_dismissed` (bool,
   Muster `has_passkey`: immer vorhanden, kein `omitempty`). `GET`/`PUT /api/auth/profile` geben es
   aus, `PUT` nimmt es optional entgegen. Hält fest, dass der Nutzer das einmalige

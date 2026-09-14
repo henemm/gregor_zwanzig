@@ -54,7 +54,13 @@ func StagingVerificationTokenHandler(s *store.Store) http.HandlerFunc {
 		// Bewusst OHNE Blick auf user.EmailVerifiedAt: der Testweg gibt auch
 		// für ein bereits bestätigtes Konto ein Token heraus (AC-11) und
 		// rührt den bestehenden Zeitstempel dabei nicht an.
-		token, err := issueVerificationToken(s, req.Username)
+		// Issue #2147 Scheibe B2 (§3): bei ausstehender Aenderung an die
+		// ausstehende Adresse gebunden, sonst an die wirksame.
+		address := user.PendingContactAddress
+		if address == "" {
+			address = store.EffectiveContactAddress(user)
+		}
+		token, err := issueVerificationToken(s, req.Username, address)
 		if err != nil {
 			log.Printf("staging verification token: issuance failed for %s: %v", req.Username, err)
 			w.WriteHeader(http.StatusInternalServerError)

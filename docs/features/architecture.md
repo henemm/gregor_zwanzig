@@ -182,8 +182,10 @@ Auswertung aufruft. Specs:
 
 1. **Email-Handler** (`InboundEmailReader.poll_and_process()`)
    - Liest IMAP-Inbox (shared mailbox)
-   - Pro Nachricht: `lookup_user_by_email(from_addr)` → sucht User-Profil mit passender `mail_to`
-   - Fallback: `user_id = "default"` wenn kein User gefunden
+   - Pro Nachricht: `lookup_user_by_email(from_addr)` → sucht User-Profil mit passender, **bestätigter
+     wirksamer** Kontaktadresse (`mail_to`, ersatzweise `email`; Issue #2147 Scheibe B2)
+   - Kein Treffer/mehrdeutig: `user_id = None` (bis Scheibe B2: Fallback `"default"`) — Gate
+     `_process_single` verwirft ohne Antwort, kein Rückfall auf ein Sammelkonto
    - Ladet Trips des Nutzers via `load_all_trips(user_id)`
    - Verarbeitet Befehl (z. B. "status", "help")
    - Antwortet an die aufgelöste User-Adresse
@@ -204,7 +206,9 @@ Auswertung aufruft. Specs:
 
 **Lookup-Funktionen** (`src/app/loader.py`):
 - `list_all_user_ids(data_dir)` – alle User-IDs unter `data/users/` (ausschließt test_ / _ Präfixe)
-- `lookup_user_by_email(email)` – sucht User mit `mail_to == email` (case-insensitive)
+- `lookup_user_by_email(email)` – sucht User mit passender, **bestätigter wirksamer** Kontaktadresse
+  (`mail_to`, ersatzweise `email`; case-insensitive); mehrdeutig oder unbestätigt → `None` (Issue
+  #2147 Scheibe B2)
 - `lookup_user_by_telegram_chat_id(chat_id)` – sucht User mit `telegram_chat_id == chat_id`; tragen
   mehrere echte Nutzer dieselbe Chat-ID (Bestandsdaten von vor Issue #2141), liefert die Funktion
   `None` statt einer der beiden IDs und protokolliert die Kollision (`logger.error`) — ein echter

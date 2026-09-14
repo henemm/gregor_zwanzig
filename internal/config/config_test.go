@@ -96,3 +96,32 @@ func TestLoadFromEnv(t *testing.T) {
 		t.Errorf("expected custom user ID, got %s", cfg.UserID)
 	}
 }
+
+// Issue #2147 Scheibe B2 (AC-16): der Resend-Guard liest die Betreiber-Adresse
+// ueber PoEmailFromEnv — sie muss in jedem Fall (Variable fehlt, gesetzt,
+// leer gesetzt) mit Config.PoEmail aus Load uebereinstimmen, sonst driftet
+// der Default zwischen Tier-Antrag-Versand und Empfaenger-Guard.
+func TestPoEmailFromEnvGleichLoad(t *testing.T) {
+	t.Setenv("GZ_PO_EMAIL", "")
+	for _, fall := range []struct {
+		name  string
+		setze func()
+	}{
+		{"variable fehlt", func() { os.Unsetenv("GZ_PO_EMAIL") }},
+		{"variable gesetzt", func() { os.Setenv("GZ_PO_EMAIL", "betreiber@beispiel.de") }},
+		{"variable leer", func() { os.Setenv("GZ_PO_EMAIL", "") }},
+	} {
+		fall.setze()
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("%s: Load: %v", fall.name, err)
+		}
+		if got := PoEmailFromEnv(); got != cfg.PoEmail {
+			t.Errorf("%s: PoEmailFromEnv()=%q, Load().PoEmail=%q", fall.name, got, cfg.PoEmail)
+		}
+	}
+	os.Unsetenv("GZ_PO_EMAIL")
+	if cfg, _ := Load(); cfg.PoEmail != DefaultPoEmail {
+		t.Errorf("default-Tag von Config.PoEmail (%q) weicht von DefaultPoEmail (%q) ab", cfg.PoEmail, DefaultPoEmail)
+	}
+}
