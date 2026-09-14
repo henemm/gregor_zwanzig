@@ -19,6 +19,7 @@ from __future__ import annotations
 import shutil
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -88,7 +89,7 @@ def _save_cached(user_id: str, trip_id: str) -> None:
         aggregated=SegmentWeatherSummary(precip_sum_mm=2.0),
         fetched_at=now, provider="openmeteo",
     )
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), [data])
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), [data])
 
 
 def _mk_alert(vf: datetime, vt: datetime, level: int, *, hazard: str = "thunderstorm",

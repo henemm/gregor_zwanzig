@@ -35,7 +35,8 @@ frische Anker bereits, wenn der Reset laeuft?).
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -112,7 +113,7 @@ def _trip(trip_id: str) -> Trip:
     # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
     # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(LAT, LON),
         waypoints=[
             Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
                      arrival_calculated="08:00"),
@@ -181,7 +182,7 @@ def _trip_anchor_gust(user_id: str, trip_id: str) -> float | None:
     """Liest den Δ-Anker des Trips ueber den echten Snapshot-Service."""
     from services.weather_snapshot import WeatherSnapshotService
 
-    cached = WeatherSnapshotService(user_id=user_id).load_dated(trip_id, date.today())
+    cached = WeatherSnapshotService(user_id=user_id).load_dated(trip_id, ortstag(LAT, LON))
     if not cached:
         return None
     return cached[0].aggregated.gust_max_kmh
@@ -311,7 +312,7 @@ def test_ac27_ad_hoc_abruf_laesst_anker_und_gedaechtnis_unberuehrt(monkeypatch):
     trip = _trip(f"trip-ag5-adhoc-{uuid.uuid4().hex[:6]}")
 
     WeatherSnapshotService(user_id=uid).save_dated(
-        trip.id, date.today(), [_data(1, gust_max_kmh=20.0)]
+        trip.id, ortstag(LAT, LON), [_data(1, gust_max_kmh=20.0)]
     )
     vorher = {
         "gust_max_kmh:1": {"last_reported_value": 42.0, "reported_at": "x"},

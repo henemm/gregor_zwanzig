@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
+from tests.helpers.ortstag import ortstag
+from tests.helpers.alert_log_fixtures import LAT as GUST_LAT, LON as GUST_LON
 
 from tests.helpers.alert_log_fixtures import gust_alert_trip, settings_email_only, weather
 
@@ -32,7 +34,7 @@ def test_ac10_rollierender_anker_vom_falschen_tag_wird_verworfen(caplog):
 
     user_id, trip_id = f"tdd-1916-ac10a-{uuid.uuid4().hex[:8]}", "trip-ac10a"
     trip = gust_alert_trip(trip_id)
-    gestern = date.today() - timedelta(days=1)
+    gestern = ortstag(GUST_LAT, GUST_LON) - timedelta(days=1)
     WeatherSnapshotService(user_id=user_id).save_alarm_anchor(
         trip_id, gestern, [weather(1, gust_max_kmh=10.0)], "email",
     )
@@ -60,7 +62,7 @@ def test_ac10_regression_rollierender_anker_vom_heutigen_tag_bleibt_gueltig():
 
     user_id, trip_id = f"tdd-1916-ac10b-{uuid.uuid4().hex[:8]}", "trip-ac10b"
     trip = gust_alert_trip(trip_id)
-    heute = date.today()
+    heute = ortstag(GUST_LAT, GUST_LON)
     WeatherSnapshotService(user_id=user_id).save_alarm_anchor(
         trip_id, heute, [weather(1, gust_max_kmh=17.0)], "email",
     )

@@ -23,7 +23,8 @@ import imaplib
 import re
 import sys
 import time
-from datetime import date, time as dt_time
+from datetime import time as dt_time
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -74,7 +75,7 @@ STUBAI_WAYPOINTS = [
 @pytest.fixture
 def test_trip():
     """Create a test trip with today's date and real Stubai coordinates."""
-    today = date.today()
+    today = ortstag(47.11, 11.31)
     stage = Stage(
         id="T1",
         name="Etappe 1: Neustift - Franz-Senn-Huette",
@@ -107,7 +108,7 @@ def segments_from_trip(test_trip):
     from services.trip_report_scheduler import TripReportSchedulerService
 
     service = TripReportSchedulerService()
-    today = date.today()
+    today = ortstag(47.11, 11.31)
     segments = service._convert_trip_to_segments(test_trip, today)
     normal = [s for s in segments if s.segment_id != "Ziel"]
     assert len(normal) == 2, f"Expected 2 normal segments from 3 waypoints, got {len(normal)}"
@@ -271,7 +272,8 @@ class TestReportFormatting:
         # β2: Subject nutzt deutschen ReportType-Label "Morgen" statt "Morning Report"
         assert "Morgen" in report.email_subject
         # Datum als Stage-Substitut wenn keine Stage-Bezeichnung verfügbar
-        assert date.today().strftime("%d.%m.%Y") in report.email_subject
+        # #2314: Datum der Segmente aus segments_from_trip (Ortstag)
+        assert ortstag(47.11, 11.31).strftime("%d.%m.%Y") in report.email_subject
 
     def test_sms_format_compact(self, segments_from_trip):
         """SMS is <=160 chars and follows the v2.0 token wire format

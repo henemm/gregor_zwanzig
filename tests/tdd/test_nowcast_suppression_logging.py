@@ -30,7 +30,9 @@ Kein Netz.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
+from tests.helpers.alert_log_fixtures import LAT as GUST_LAT, LON as GUST_LON
 
 import pytest
 
@@ -779,7 +781,7 @@ def test_ac16_amtliche_ereignis_identitaet_unterdrueckung_erzeugt_protokoll_eint
         # an ihrem Bestandsverhalten).
         trip.official_alert_triggers_enabled = None
         WeatherSnapshotService(user_id=uid).save_dated(
-            trip.id, date.today(), [weather(1, precip_sum_mm=2.0)],
+            trip.id, ortstag(GUST_LAT, GUST_LON), [weather(1, precip_sum_mm=2.0)],
         )
         alert = OfficialAlert(
             source="tdd-s4b-ac16", hazard="thunderstorm", level=3,

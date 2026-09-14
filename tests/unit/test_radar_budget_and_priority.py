@@ -24,6 +24,7 @@ wird -- Vererbung, kein Verhalten vorgetaeuscht) bewiesen.
 from __future__ import annotations
 
 from datetime import date, datetime, time, timezone
+from tests.helpers.ortstag import ortstag
 
 import httpx
 import pytest
@@ -184,7 +185,7 @@ def test_trip_alert_scheduler_radar_check_uses_polling_priority():
     from app.trip import Stage, Trip, Waypoint
     from services.trip_alert import TripAlertService
 
-    today = date.today()
+    today = ortstag(48.0, 9.0)
     trip = Trip(
         id="budget-ac6-trip",
         name="AC6 Budget Trip",
@@ -275,7 +276,7 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
     import services.radar_service as radar_service_module
     monkeypatch.setattr(radar_service_module, "RadarNowcastService", _CapturingRadarServiceClass)
 
-    today = date.today()
+    today = ortstag(48.0, 9.0)
     trip = Trip(
         id="ac6-jetzt-trip",
         name="AC6 Jetzt Trip",

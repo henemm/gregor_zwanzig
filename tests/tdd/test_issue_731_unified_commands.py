@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import shutil
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -141,7 +142,7 @@ def _render_plain() -> str:
 
 def _make_trip(enabled: bool = True) -> Trip:
     """Trip mit Etappen gestern/heute/morgen."""
-    start = date.today() - timedelta(days=1)
+    start = ortstag(42.13, 9.13) - timedelta(days=1)
     stages = []
     for i in range(3):
         stages.append(Stage(

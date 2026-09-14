@@ -31,6 +31,7 @@ import html as html_module
 import shutil
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 from app.models import (
@@ -134,7 +135,7 @@ def _minimal_trip(trip_id: str, **trip_kwargs) -> Trip:
 def _save_cached(user_id: str, trip_id: str, cached: list[SegmentWeatherData]) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), cached)
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), cached)
 
 
 class _MultiPeriodOfficialAlertSource:

@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import dataclasses
 import uuid
-from datetime import date, datetime, time as dtime, timedelta, timezone
+from datetime import datetime, time as dtime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 
 from app.models import ChangeSeverity, WeatherChange
 from utils.timezone import local_fmt, tz_for_coords
@@ -90,7 +91,7 @@ def test_ac2_anker_von_anderem_kalendertag_traegt_expliziten_tagesbezug():
     eine Zusicherung angepasst werden.
     """
     tz = tz_for_coords(LAT, LON)
-    heute = date.today()
+    heute = ortstag(LAT, LON)
     gestern = heute - timedelta(days=1)
     anker_lokal = datetime.combine(gestern, dtime(18, 3), tzinfo=tz)
     anker_zeit = anker_lokal.astimezone(timezone.utc)

@@ -43,6 +43,7 @@ import threading
 import urllib.parse
 import uuid
 from datetime import date, datetime, time, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
@@ -199,16 +200,22 @@ def _settings_all_short_channels(sms_port: int) -> Settings:
 # Fixture-Daten (echte DTOs, kein Netz)
 # ---------------------------------------------------------------------------
 
+def _heute() -> date:
+    """Ortstag der heutigen Etappe (#2314): das Produkt sucht die Etappe am
+    Ortstag der Trip-Koordinaten (ADR-0044), nicht am Prozesstag."""
+    return ortstag(47.0, 11.0)
+
+
 def _multi_stage_trip(trip_id: str = "tdd-2122-trip", *, today_index: int = 2, n: int = 5) -> Trip:
-    """Trip mit `n` Etappen, deren Daten SYMMETRISCH um `date.today()` liegen
+    """Trip mit `n` Etappen, deren Daten SYMMETRISCH um `_heute()` liegen
     (relative Offsets, keine absoluten Kalenderdaten — laeuft an jedem
-    Kalendertag gleich). `date.today()` traegt die Etappe an Listenposition
+    Kalendertag gleich). `_heute()` (Ortstag, #2314) traegt die Etappe an Listenposition
     `today_index` (0-basiert): mit den Defaults ist 'heute' die DRITTE von
     fuenf Etappen (`stage_number == 3`) — bewusst NICHT die erste, damit eine
     kaputte Ableitung (z.B. immer 1 oder immer die Listenposition ohne
     Sortierung) nicht zufaellig durchrutscht.
     """
-    today = date.today()
+    today = _heute()
     stages = []
     for i in range(n):
         d = today + timedelta(days=i - today_index)
@@ -342,7 +349,7 @@ def test_ac2_radar_alert_shares_same_stage_prefix_as_deviation_alert():
             req = RadarAlertRequest(
                 onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
                 is_convective=False, intensity_label="leichter Regen",
-                source_label="Radar (DWD)", tz=TZ, segment_date=date.today(),
+                source_label="Radar (DWD)", tz=TZ, segment_date=_heute(),
             )
         except TypeError as exc:
             raise AssertionError(
@@ -459,7 +466,7 @@ def test_ac5_official_alert_carries_stage_prefix_from_rolling_anchor():
         # `send_official_alert` liest, legt die Implementierung fest (Spec
         # nennt nur "des tatsaechlich verwendeten Ankers").
         for channel in ("sms", "email", "telegram", "premium_sms"):
-            snap_svc.save_alarm_anchor(trip.id, date.today(), weather, channel)
+            snap_svc.save_alarm_anchor(trip.id, _heute(), weather, channel)
 
         alert = OfficialAlert(
             source="geosphere_warn", hazard="thunderstorm", level=2,
@@ -492,7 +499,7 @@ def test_ac6_radar_alert_uses_segment_date_not_wall_clock_today():
     Test: derselbe Trip, aber `segment_date=today`, nennt die heutige Etappe.
     """
     trip = _multi_stage_trip()  # heute = 3. Etappe, Vortag = 2. Etappe
-    vortag = date.today() - timedelta(days=1)
+    vortag = _heute() - timedelta(days=1)
     stub = _SevenIoStub()
     try:
         uid = f"tdd-2122-ac6-{uuid.uuid4().hex[:6]}"
@@ -516,7 +523,7 @@ def test_ac6_radar_alert_uses_segment_date_not_wall_clock_today():
             cooldown_display="2 Stunden", effective_channels={"sms"},
         )
         svc.send_radar_alert(
-            trip=trip, request=_req(date.today()), source="Radar (DWD)",
+            trip=trip, request=_req(_heute()), source="Radar (DWD)",
             cooldown_display="2 Stunden", effective_channels={"sms"},
         )
         assert len(stub.received) == 2, (
@@ -830,7 +837,7 @@ def test_f002_official_alert_omits_prefix_when_anchor_is_stale():
     try:
         weather = [_segment_weather_data()]
         snap_svc = WeatherSnapshotService(user_id=uid)
-        stale = date.today() - timedelta(days=2)
+        stale = _heute() - timedelta(days=2)
         for channel in ("sms", "email", "telegram", "premium_sms"):
             snap_svc.save_alarm_anchor(trip.id, stale, weather, channel)
 
@@ -856,7 +863,7 @@ def test_f002_official_alert_omits_prefix_when_anchor_is_stale():
         # Positivkontrolle: FRISCHER Anker (heute) -> Praefix erscheint.
         stub.received.clear()
         for channel in ("sms", "email", "telegram", "premium_sms"):
-            snap_svc.save_alarm_anchor(trip.id, date.today(), weather, channel)
+            snap_svc.save_alarm_anchor(trip.id, _heute(), weather, channel)
         svc.send_official_alert(
             trip=trip, notices=[(alert, ["1"])], effective_channels={"sms"},
         )

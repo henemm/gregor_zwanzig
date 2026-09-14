@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from app.config import Settings
@@ -42,6 +42,7 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+from tests.helpers.ortstag import ortstag
 
 LAT, LON = 47.0, 11.0
 
@@ -130,7 +131,7 @@ def gust_alert_trip(
     haben kann (gebraucht fuer AC-7: mehrere Ausloeser, EIN Protokoll-Eintrag).
     """
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(LAT, LON),  # #2314: Ortstag
         waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
     )
     metrics = [MetricConfig(metric_id="gust", enabled=True)]

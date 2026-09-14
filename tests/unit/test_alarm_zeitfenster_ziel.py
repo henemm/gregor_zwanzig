@@ -47,6 +47,7 @@ from services.weather_cache import reset_shared_weather_cache_for_tests
 from utils.timezone import tz_for_coords
 
 from tests.helpers.alert_log_fixtures import settings_email_only
+from tests.helpers.ortstag import ortstag
 
 # Mitteleuropa (Europe/Vienna) — AC-1/AC-2a/AC-2b/AC-3.
 ALPEN_LAT, ALPEN_LON = 47.0500, 11.5500
@@ -194,7 +195,7 @@ def _alarm_mails(
     ``report_config`` (Variante A/B) VOR dem Alarm-Lauf.
     """
     tz = tz_for_coords(lat, lon)
-    day = date.today()
+    day = ortstag(lat, lon)
     if trip is None:
         trip = _trip(f"t-{uuid.uuid4().hex[:8]}", lat, lon, day, arrival_local, day_window)
 
@@ -405,7 +406,11 @@ def _radar_mails_fuer_spaetankunft() -> list:
     # ``date.today()`` uebergeben und weicht selbst nach Auckland aus, wenn die
     # Ankunft noch vor UTC-Mitternacht liegt — dann stimmt das ORTSdatum
     # wieder mit dem Etappendatum ueberein (s. ``radar_fixture_ort``).
-    heute = date.today()
+    # #2314: der Radar-Pfad sucht die Etappe am Ortstag (trip_alert.py,
+    # trip_local_today), nicht am Prozesstag. Die Ortswahl ist auf den
+    # UTC-Tag gebaut (Reykjavik = UTC+0; Auckland nur um UTC-Mitternacht,
+    # dort ebenfalls UTC-Tag) -- also Ortstag Reykjavik als Etappendatum.
+    heute = ortstag(ISLAND_LAT, ISLAND_LON)
     dest_lat, dest_lon = radar_fixture_ort(arrival, heute)
     dest_tz = radar_fixture_tz(arrival, heute)
     start_hour, end_hour = radar_fixture_window(arrival, heute)
@@ -414,7 +419,7 @@ def _radar_mails_fuer_spaetankunft() -> list:
 
     trip_id = f"radar-{uuid.uuid4().hex[:8]}"
     stage = Stage(
-        id="S1", name="Tag 1", date=date.today(),
+        id="S1", name="Tag 1", date=heute,
         waypoints=[
             Waypoint(id="W1", name="Start",
                      lat=dest_lat - 0.05, lon=dest_lon - 0.05,
@@ -476,7 +481,7 @@ def test_gegenprobe_vorlaufsperre_wird_durch_fix_neutralisiert():
       ``report_config.enabled=False`` -> die Sperre ist neutralisiert, der
       Alarm muss zugestellt werden.
     """
-    day = date.today()
+    day = ortstag(ALPEN_LAT, ALPEN_LON)
 
     trip_a = _trip(f"t-{uuid.uuid4().hex[:8]}", ALPEN_LAT, ALPEN_LON, day, "13:18")
     trip_a.report_config.enabled = True
@@ -575,7 +580,7 @@ def test_1599_ac16_spaetankunft_1930_behaelt_mindestens_eine_stunde():
     Fenster schon zu ist") liesse nur 30 Minuten Ueberwachung. Einziger AC,
     der diese Verkuerzung sieht.
     """
-    day = date.today()
+    day = ortstag(ALPEN_LAT, ALPEN_LON)
     trip = _trip(f"t-{uuid.uuid4().hex[:8]}", ALPEN_LAT, ALPEN_LON, day, "19:30")
     dest = convert_trip_to_segments(trip, day)[-1]
     assert dest.segment_id == "Ziel"
@@ -593,7 +598,7 @@ def test_1599_ac17_spaetankunft_2030_behaelt_genau_das_mindestfenster():
     Fenstergrenze (alt 19:00, neu 20:00) — das Mindestfenster bleibt exakt
     eine Stunde. Unveraendertes Regressionsverhalten gegenueber #1584; der
     nachgezogene Guard darf das Fenster hier nicht wachsen lassen."""
-    day = date.today()
+    day = ortstag(ALPEN_LAT, ALPEN_LON)
     trip = _trip(f"t-{uuid.uuid4().hex[:8]}", ALPEN_LAT, ALPEN_LON, day, "20:30")
     dest = convert_trip_to_segments(trip, day)[-1]
     assert dest.end_time - dest.start_time == timedelta(hours=1), (
@@ -872,7 +877,7 @@ def test_ac5_alt_trip_ohne_tagesfenster_nutzt_default_4_19():
     inklusiv, „bis 19" endet zeitlich um 20:00 Ortszeit am Ankunftstag.
     """
     tz = tz_for_coords(ALPEN_LAT, ALPEN_LON)
-    day = date.today()
+    day = ortstag(ALPEN_LAT, ALPEN_LON)
     trip = _trip("t-ac5-alttrip", ALPEN_LAT, ALPEN_LON, day, "13:18")
     assert trip.report_config.day_window_start_hour is None
     assert trip.report_config.day_window_end_hour is None

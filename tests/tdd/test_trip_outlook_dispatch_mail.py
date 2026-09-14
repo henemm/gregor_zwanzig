@@ -30,7 +30,8 @@ from __future__ import annotations
 
 import sys
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 # Pfadregel #1409: Pruefling relativ zur eigenen Testdatei aufloesen.
@@ -101,7 +102,7 @@ def _trip(*, outlook_metrics, enabled_ids=None, leere_grundauswahl=False,
     from app.trip import Stage, Trip, Waypoint
 
     trip_id = f"trip-1720-{uuid.uuid4().hex[:8]}"
-    heute = date.today()
+    heute = ortstag(LAT, LON)
     # #1709: feste Ankunftszeiten statt Naismith-Self-Heal
     # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
     # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
@@ -155,7 +156,7 @@ def _fixture_scheduler_klasse():
     )
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    heute = date.today()
+    heute = ortstag(LAT, LON)
     # RED-Korrektur (#1720 S1, GREEN-Phase): der Abendbericht zielt auf MORGEN
     # (heute+1), der Ausblick zeigt die drei Etappen DANACH -- also heute+2,
     # +3, +4. Der Index wurde gegen ``heute`` gerechnet und rotierte die drei
@@ -523,7 +524,7 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
     sched_mod.TripReportSchedulerService = _fixture_scheduler_klasse()
     try:
         report, *_ = PreviewService(settings=settings)._build_report(
-            trip, date.today(), "morning", now_utc=datetime.now(timezone.utc),
+            trip, ortstag(LAT, LON), "morning", now_utc=datetime.now(timezone.utc),
         )
     finally:
         sched_mod.TripReportSchedulerService = original

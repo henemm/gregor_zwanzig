@@ -34,7 +34,8 @@ import re
 import socket
 import threading
 import urllib.parse
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -247,7 +248,7 @@ def _persisted_trip(user_id: str, *, send_sms: bool, send_premium_sms: bool):
     # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
     # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
-        id="S1", name="Etappe 1", date=date.today() + timedelta(days=1),
+        id="S1", name="Etappe 1", date=ortstag(42.2, 9.05) + timedelta(days=1),
         waypoints=[
             Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400,
                      arrival_calculated="08:00"),

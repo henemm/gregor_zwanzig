@@ -43,6 +43,7 @@ from app.trip import Stage, Trip, Waypoint
 from app.user import SavedLocation
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+from tests.helpers.ortstag import ortstag
 from tests.helpers.compare_briefings import write_compare_briefings
 
 def preset_root() -> Path:
@@ -404,7 +405,7 @@ def make_trip(
 
     Issue #1697: ``stage_date``/``lat``/``lon``/``arrival_start``/
     ``arrival_end``/``extra_stages`` sind ADDITIV — alle Defaults sind
-    bit-identisch zum bisherigen Verhalten (``date.today()``,
+    bit-identisch zum bisherigen Verhalten (Ortstag der Etappe, #2314,
     ``TRIP_LAT``/``TRIP_LON``, 00:00–23:59, keine zweite Etappe). Bestehende
     Aufrufer (``test_nowcast_suppression_logging.py``,
     ``test_trip_radar_nowcast_gate_migration.py``) bleiben unveraendert
@@ -412,7 +413,8 @@ def make_trip(
     dienen Faellen, die eine ANDERE Etappe/einen zweiten Tag brauchen (z.B.
     #1697 AC-1/AC-3/AC-5: Ortsdatum weicht vom Serverdatum ab).
     """
-    day = stage_date if stage_date is not None else date_type.today()
+    # #2314: Ortstag der Etappen-Koordinaten, nicht Prozesstag (ADR-0044).
+    day = stage_date if stage_date is not None else ortstag(lat, lon)
     stage = trip_stage(
         "S1", day, lat, lon, arrival_start=arrival_start, arrival_end=arrival_end,
     )
