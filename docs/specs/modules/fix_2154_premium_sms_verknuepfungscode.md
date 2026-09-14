@@ -299,6 +299,10 @@ der muss sich einmal neu verknüpfen (Folge, kein Fehler).
   beweist sie aber nicht.
 - **Kein Frontend für den Code.** Der Konto-Endpoint ist rein programmatisch
   nutzbar; eine Oberfläche zum Anzeigen/Erneuern folgt in Scheibe B.
+  > **Nachtrag (2026-09-14):** Scheibe B ergänzt genau diese Oberfläche unter
+  > `/account` (Karte „Code erzeugen/erneuern", nur für Tier `premium`),
+  > ohne den hier beschriebenen Backend-Vertrag zu ändern — s.
+  > `docs/specs/modules/fix_2154_s2_premium_sms_link_code_ui.md`.
 - **Die Ratebremse überlebt keinen Neustart.** Der Zähler liegt im
   Arbeitsspeicher; ein Dienst-Neustart setzt ihn auf null. Bewusst in Kauf
   genommen: die Bremse ist Tiefenstaffelung, nicht die tragende
@@ -355,7 +359,8 @@ gegen den heutigen Code rot (Fallback greift), nach Entfernen des
 ## Out of Scope
 
 - **Scheibe B** — Konto-Oberfläche im Frontend (Anzeigen/Erneuern des Codes
-  als UI-Element).
+  als UI-Element). Umgesetzt in
+  `docs/specs/modules/fix_2154_s2_premium_sms_link_code_ui.md`.
 - **#2153** — allgemeine Quoten/Rate-Limits am Profil.
 - **#2159** — Localhost-Guard hängt am nginx-Header (separates Ticket).
 
@@ -404,3 +409,5 @@ gegen den heutigen Code rot (Fallback greift), nach Entfernen des
 ## Changelog
 
 - 2026-09-13: Initial spec erstellt — Issue #2154, Scheibe A
+- 2026-09-14: Nachtrag — Scheibe B (Konto-Oberfläche für den Code unter
+  `/account`) ergänzt, s. `docs/specs/modules/fix_2154_s2_premium_sms_link_code_ui.md`
