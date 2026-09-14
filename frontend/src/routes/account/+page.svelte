@@ -15,6 +15,7 @@
 	import { formatNextRun } from '$lib/utils/schedulerTime';
 	import { ABMELDE_MERKMAL, merkeAbmeldung, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, registerPasskey, deletePasskey, type RegisteredPasskey } from '$lib/passkey';
+	import { profileSaveErrorMessage } from './profileSaveError';
 	let { data } = $props();
 
 	let displayName = $state(data.profile?.display_name ?? '');
@@ -295,8 +296,8 @@
 			successMsg = 'Profil gespeichert';
 			setTimeout(() => (successMsg = null), 4000);
 		} catch (e: unknown) {
-			const body = e as { detail?: string; error?: string };
-			errorMsg = body?.detail ?? body?.error ?? 'Speichern fehlgeschlagen';
+			const body = e as { detail?: string; error?: string; status?: number };
+			errorMsg = profileSaveErrorMessage(body?.status ?? 0, body);
 		}
 	}
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -72,7 +73,7 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 		// überhaupt greifen. Leeres Feld → generischer "validation failed"; Feld
 		// ohne "@" → eigener Fehlercode "invalid_email", damit das Frontend gezielt
 		// mappen kann. Formatprüfung minimal (strings.Contains) — Precedent aus
-		// PasskeyRegisterPublicBeginHandler, keine Uniqueness-Prüfung (Spec).
+		// PasskeyRegisterPublicBeginHandler.
 		if req.Email == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)
@@ -94,11 +95,33 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 			return
 		}
 
+		// Issue #2147 Scheibe B1: Adress-Eindeutigkeit unter Lock — zwei
+		// gleichzeitige Registrierungen (oder Registrierung/Profil-Update) auf
+		// dieselbe Adresse duerfen zusammen nur genau ein Konto ergeben (AC-13).
+		normalizedEmail := store.NormalizeEmailAddress(req.Email)
+		unlock := store.LockEmailAddress(normalizedEmail)
+		defer unlock()
+
+		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
+		if err != nil {
+			log.Printf("register: address uniqueness check failed: %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+		if taken {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(409)
+			w.Write([]byte(`{"error":"email_taken"}`))
+			return
+		}
+
 		user := model.User{
 			ID:           req.Username,
 			PasswordHash: string(hash),
-			Email:        req.Email,
-			MailTo:       req.Email,
+			Email:        normalizedEmail,
+			MailTo:       normalizedEmail,
 			CreatedAt:    time.Now(),
 		}
 		if err := s.SaveUser(user); err != nil {
@@ -716,6 +739,23 @@ func GetProfileHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// profileUpdateBeforeFreshReload ist eine Test-Naht (Issue #2147 Scheibe B1,
+// spiegelt magicLinkBeforeTakeoverReload aus auth_magic.go): im Normalbetrieb
+// nil und damit wirkungslos. Tests koennen sie setzen, um unmittelbar VOR dem
+// erneuten Laden des eigenen Kontos (innerhalb der Adress-Sperre) eine
+// Zwischenzeit-Aenderung einzuspielen.
+var profileUpdateBeforeFreshReload func(userID string)
+
+// profileUpdateAfterFirstAddressLock ist eine Test-Naht (Issue #2147 Scheibe
+// B1, F008-Fix): im Normalbetrieb nil und damit wirkungslos. Sie feuert
+// unmittelbar NACHDEM die erste Adresssperre der Sperrmenge genommen wurde
+// und BEVOR eine etwaige zweite genommen wird — genau die Stelle, an der die
+// Sortierung von addrs (sort.Strings) die Verklemmungsgefahr bei zwei
+// gleichzeitigen Anfragen mit ueberlappender Adressmenge abwendet. Tests
+// koennen hier eine Barriere setzen, die beide Anfragen erst gemeinsam
+// weiterlaufen laesst.
+var profileUpdateAfterFirstAddressLock func(userID string)
+
 func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
@@ -745,33 +785,152 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			return
 		}
 
+		// Display-Name-Format-Pruefung VOR jedem Schreibzugriff — bei einem
+		// ungueltigen Wert darf noch nichts (auch keine Adress-Sperre) berührt
+		// worden sein.
+		var newDisplayName string
 		if update.DisplayName != nil {
-			name := strings.TrimSpace(*update.DisplayName)
-			if name == "" {
-				user.DisplayName = "" // Fallback auf Login-Name
-			} else if utf8.RuneCountInString(name) > 50 || hasControlChars(name) {
+			newDisplayName = strings.TrimSpace(*update.DisplayName)
+			if newDisplayName != "" && (utf8.RuneCountInString(newDisplayName) > 50 || hasControlChars(newDisplayName)) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(400)
 				w.Write([]byte(`{"error":"invalid display_name"}`))
 				return
-			} else {
-				user.DisplayName = name
 			}
+		}
+
+		// Issue #2147 Scheibe B1 (PO-Korrektur nach Freigabe, Sicherheitsrueckschritt
+		// sonst): ZWEI getrennte Praedikate statt einem.
+		// - "Feld geaendert" (Reset-Praedikat): Feld gesendet UND normalisierter
+		//   neuer Wert != normalisierter Bestandswert — leer zaehlt als Wert.
+		//   Steuert EmailVerifiedAt-Reset + Bestaetigungsmail, EXAKT wie vor B1
+		//   (Spec §3: "das heutige Reset-/Mail-Verhalten bleibt in B1
+		//   unveraendert"). Sonst wuerde ein bestaetigtes mail_to geleert und
+		//   das dann wirksame, nie bestaetigte email als bestaetigt weitergefuehrt
+		//   (ResolveAddressOwner saehe einen bestaetigten Inhaber der neuen
+		//   wirksamen Adresse, ohne dass sie je bestaetigt wurde).
+		// - "geaendert UND belegbar" (Sperr-/Belegt-Praedikat): zusaetzlich neuer
+		//   Wert nicht leer — Leeren kann nie 409 ausloesen (Spec §3).
+		emailFieldChanged := update.Email != nil &&
+			store.NormalizeEmailAddress(*update.Email) != store.NormalizeEmailAddress(user.Email)
+		mailToFieldChanged := update.MailTo != nil &&
+			store.NormalizeEmailAddress(*update.MailTo) != store.NormalizeEmailAddress(user.MailTo)
+		emailChanged := emailFieldChanged && store.NormalizeEmailAddress(*update.Email) != ""
+		mailToChanged := mailToFieldChanged && store.NormalizeEmailAddress(*update.MailTo) != ""
+
+		if emailFieldChanged || mailToFieldChanged {
+			// Die alte Adresse eines geleerten Felds gehoert mit in die
+			// Sperrmenge — sie wird gerade frei.
+			addrSet := map[string]struct{}{}
+			if emailFieldChanged {
+				if o := store.NormalizeEmailAddress(user.Email); o != "" {
+					addrSet[o] = struct{}{}
+				}
+				if n := store.NormalizeEmailAddress(*update.Email); n != "" {
+					addrSet[n] = struct{}{}
+				}
+			}
+			if mailToFieldChanged {
+				if o := store.NormalizeEmailAddress(user.MailTo); o != "" {
+					addrSet[o] = struct{}{}
+				}
+				if n := store.NormalizeEmailAddress(*update.MailTo); n != "" {
+					addrSet[n] = struct{}{}
+				}
+			}
+			addrs := make([]string, 0, len(addrSet))
+			for a := range addrSet {
+				addrs = append(addrs, a)
+			}
+			sort.Strings(addrs)
+			unlocks := make([]func(), len(addrs))
+			for i, a := range addrs {
+				unlocks[i] = store.LockEmailAddress(a)
+				if i == 0 && profileUpdateAfterFirstAddressLock != nil {
+					profileUpdateAfterFirstAddressLock(userId)
+				}
+			}
+			defer func() {
+				for i := len(unlocks) - 1; i >= 0; i-- {
+					unlocks[i]()
+				}
+			}()
+
+			// Read-Modify-Write: das eigene Konto FRISCH laden (Spec §3,
+			// dieselbe TOCTOU-Absicherung wie F003 fuer den Magic-Link-Pfad).
+			if profileUpdateBeforeFreshReload != nil {
+				profileUpdateBeforeFreshReload(userId)
+			}
+			fresh, ferr := s.LoadUser(userId)
+			if ferr != nil || fresh == nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(500)
+				w.Write([]byte(`{"error":"internal error"}`))
+				return
+			}
+			user = fresh
+
+			if emailChanged {
+				taken, terr := s.IsAddressTakenByOtherAccount(*update.Email, userId)
+				if terr != nil {
+					log.Printf("profile update: address uniqueness check failed: %v", terr)
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(500)
+					w.Write([]byte(`{"error":"internal error"}`))
+					return
+				}
+				if taken {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(409)
+					w.Write([]byte(`{"error":"email_taken"}`))
+					return
+				}
+			}
+			if mailToChanged {
+				taken, terr := s.IsAddressTakenByOtherAccount(*update.MailTo, userId)
+				if terr != nil {
+					log.Printf("profile update: address uniqueness check failed: %v", terr)
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(500)
+					w.Write([]byte(`{"error":"internal error"}`))
+					return
+				}
+				if taken {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(409)
+					w.Write([]byte(`{"error":"email_taken"}`))
+					return
+				}
+			}
+		}
+
+		if update.DisplayName != nil {
+			user.DisplayName = newDisplayName // "" => Fallback auf Login-Name
 		}
 
 		// Issue #1219 Scheibe 1 (AC-5/AC-6): eine tatsächliche Änderung von
 		// email/mail_to setzt die Resend-Verifikation zurück — ein einmal
 		// verifiziertes Konto darf nicht nachträglich auf eine ungeprüfte
-		// Adresse umgebogen werden. No-Op-Updates (identischer Wert) lösen
-		// KEINEN Reset aus.
+		// Adresse umgebogen werden. Dieses Reset-Verhalten bleibt in B1
+		// UNVERÄNDERT (Spec §3) — es haengt am breiten "Feld geaendert"-
+		// Praedikat (leer zaehlt als Wert), NICHT am schmalen Sperr-Praedikat.
+		// Nur ein reiner Schreibweise-Unterschied loest KEINEN Reset aus
+		// (Issue #2147 Scheibe B1, Known Limitations); Leeren tut es weiterhin,
+		// sonst koennte eine nie bestaetigte zweite Adresse durch Leeren der
+		// bestaetigten wirksam werden, ohne dass EmailVerifiedAt zurückgesetzt
+		// wird (Sicherheitsrueckschritt, PO-Korrektur).
 		addressChanged := false
-		if update.Email != nil && *update.Email != user.Email {
-			user.Email = *update.Email
+		if update.Email != nil {
+			user.Email = store.NormalizeEmailAddress(*update.Email)
+		}
+		if emailFieldChanged {
 			user.EmailVerifiedAt = nil
 			addressChanged = true
 		}
-		if update.MailTo != nil && *update.MailTo != user.MailTo {
-			user.MailTo = *update.MailTo
+		if update.MailTo != nil {
+			user.MailTo = store.NormalizeEmailAddress(*update.MailTo)
+		}
+		if mailToFieldChanged {
 			user.EmailVerifiedAt = nil
 			addressChanged = true
 		}

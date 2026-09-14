@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -474,6 +475,20 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 			return
 		}
 
+		// Issue #2147 Scheibe B1 (AC-5): Belegt-Pruefung vor dem Ablegen im
+		// ChallengeStore — kein Lock hier, die endgueltige Pruefung passiert
+		// unter Lock im Finish-Schritt (AC-6).
+		taken, err := s.IsAddressTakenByOtherAccount(req.Email, "")
+		if err != nil {
+			log.Printf("passkey register public begin: address uniqueness check failed: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "internal_error")
+			return
+		}
+		if taken {
+			writeJSONError(w, http.StatusConflict, "email_taken")
+			return
+		}
+
 		// Issue #2130: hier zwingend auffindbar (discoverable) — ohne Passwort
 		// und ohne auffindbaren Passkey haette der Nutzer keinen Wiedereinstieg.
 		tempUser := &model.User{ID: req.Username}
@@ -528,6 +543,24 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 			return
 		}
 
+		// Issue #2147 Scheibe B1 (AC-6): die im Begin-Schritt hinterlegte
+		// Adresse kann zwischenzeitlich an ein anderes Konto vergeben worden
+		// sein — erneute Belegt-Pruefung unter Lock, bevor das Konto entsteht.
+		normalizedEmail := store.NormalizeEmailAddress(entry.Email)
+		unlock := store.LockEmailAddress(normalizedEmail)
+		defer unlock()
+
+		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
+		if err != nil {
+			log.Printf("passkey register public finish: address uniqueness check failed: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "internal_error")
+			return
+		}
+		if taken {
+			writeJSONError(w, http.StatusConflict, "email_taken")
+			return
+		}
+
 		tempUser := &model.User{ID: entry.UserID}
 		credential, err := wa.CreateCredential(tempUser, entry.SessionData, parsedResponse)
 		if err != nil {
@@ -538,8 +571,8 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		now := time.Now().UTC()
 		newUser := model.User{
 			ID:        entry.UserID,
-			Email:     entry.Email,
-			MailTo:    entry.Email,
+			Email:     normalizedEmail,
+			MailTo:    normalizedEmail,
 			CreatedAt: now,
 			PasskeyCredentials: []model.WebAuthnCredential{{
 				ID:              credential.ID,

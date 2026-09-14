@@ -22,16 +22,47 @@ func NormalizeEmailAddress(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }
 
-// effectiveContactAddress: mail_to, ersatzweise email (normalisiert).
-func effectiveContactAddress(u *model.User) string {
+// EffectiveContactAddress: mail_to, ersatzweise email (normalisiert).
+// Exportiert (Issue #2147 Scheibe B1), damit die Magic-Link-Uebernahme-
+// Nachpruefung in internal/handler dieselbe Definition nutzt statt einer
+// zweiten Ableitung.
+func EffectiveContactAddress(u *model.User) string {
 	if c := NormalizeEmailAddress(u.MailTo); c != "" {
 		return c
 	}
 	return NormalizeEmailAddress(u.Email)
 }
 
-func hasLoginCredentials(u *model.User) bool {
+// HasLoginCredentials meldet, ob u sich ohne Magic-Link anmelden kann
+// (Passwort, Passkey oder Google). Exportiert (Issue #2147 Scheibe B1) fuer
+// dieselbe Nachpruefung wie EffectiveContactAddress.
+func HasLoginCredentials(u *model.User) bool {
 	return u.PasswordHash != "" || len(u.PasskeyCredentials) > 0 || u.OAuthSub != ""
+}
+
+// forEachRealAccount laedt jedes Nicht-Testkonto und ruft fn auf. Bricht
+// sofort mit Fehler ab (fail-closed), wenn ListUserIDs oder LoadUser
+// fehlschlaegt — von ResolveAddressOwner und IsAddressTakenByOtherAccount
+// geteilt (Issue #2147 Scheibe B1).
+func (s *Store) forEachRealAccount(fn func(*model.User)) error {
+	ids, err := s.ListUserIDs()
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if model.IsTestUserID(id) {
+			continue
+		}
+		u, err := s.LoadUser(id)
+		if err != nil {
+			return err
+		}
+		if u == nil {
+			continue
+		}
+		fn(u)
+	}
+	return nil
 }
 
 // ResolveAddressOwner ordnet eine Adresse genau einem Konto zu (Issue #2147,
@@ -44,26 +75,17 @@ func (s *Store) ResolveAddressOwner(address string) (*model.User, AddressResolut
 	if x == "" {
 		return nil, AddressAmbiguous, nil
 	}
-	ids, err := s.ListUserIDs()
-	if err != nil {
-		return nil, AddressAmbiguous, err
-	}
 	var owners, confirmed []*model.User
-	for _, id := range ids {
-		if model.IsTestUserID(id) {
-			continue
-		}
-		u, err := s.LoadUser(id)
-		if err != nil {
-			return nil, AddressAmbiguous, err
-		}
-		if u == nil || (NormalizeEmailAddress(u.Email) != x && NormalizeEmailAddress(u.MailTo) != x) {
-			continue
+	if err := s.forEachRealAccount(func(u *model.User) {
+		if NormalizeEmailAddress(u.Email) != x && NormalizeEmailAddress(u.MailTo) != x {
+			return
 		}
 		owners = append(owners, u)
-		if u.EmailVerifiedAt != nil && effectiveContactAddress(u) == x {
+		if u.EmailVerifiedAt != nil && EffectiveContactAddress(u) == x {
 			confirmed = append(confirmed, u)
 		}
+	}); err != nil {
+		return nil, AddressAmbiguous, err
 	}
 	switch {
 	case len(confirmed) == 1:
@@ -71,7 +93,7 @@ func (s *Store) ResolveAddressOwner(address string) (*model.User, AddressResolut
 	case len(confirmed) == 0 && len(owners) == 0:
 		return nil, AddressFree, nil
 	case len(confirmed) == 0 && len(owners) == 1 &&
-		effectiveContactAddress(owners[0]) == x && !hasLoginCredentials(owners[0]):
+		EffectiveContactAddress(owners[0]) == x && !HasLoginCredentials(owners[0]):
 		return owners[0], AddressOwned, nil
 	}
 	// Nie die Adresse protokollieren — nur Kennungen und Anzahl.
@@ -82,4 +104,29 @@ func (s *Store) ResolveAddressOwner(address string) (*model.User, AddressResolut
 	log.Printf("address resolution: ambiguous — %d owner account(s), %d confirmed: %v",
 		len(owners), len(confirmed), ownerIDs)
 	return nil, AddressAmbiguous, nil
+}
+
+// IsAddressTakenByOtherAccount meldet, ob address (normalisiert) bereits von
+// irgendeinem anderen, echten Konto in email ODER mail_to getragen wird
+// (Issue #2147 Scheibe B1, Spec adress_eindeutigkeit_schreibpfade.md).
+// excludeUserID schliesst das eigene Konto aus (leer bei der Registrierung,
+// da es noch kein eigenes Konto gibt). Eine leere Adresse ist nie belegt.
+// Ein Lesefehler bricht fail-closed ab, statt eine falsche Freigabe zu geben.
+func (s *Store) IsAddressTakenByOtherAccount(address, excludeUserID string) (bool, error) {
+	x := NormalizeEmailAddress(address)
+	if x == "" {
+		return false, nil
+	}
+	taken := false
+	if err := s.forEachRealAccount(func(u *model.User) {
+		if u.ID == excludeUserID {
+			return
+		}
+		if NormalizeEmailAddress(u.Email) == x || NormalizeEmailAddress(u.MailTo) == x {
+			taken = true
+		}
+	}); err != nil {
+		return false, err
+	}
+	return taken, nil
 }

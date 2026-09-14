@@ -2640,9 +2640,9 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 **Validation:**
 - `username`: 3–50 characters, alphanumeric + underscore
 - `password`: ≥8 characters
-- `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing, no uniqueness check)
+- `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing); **uniqueness IS enforced** (Issue #2147 Scheibe B1) — normalisiert (`TrimSpace`+`ToLower`) darf `email`/`mail_to` keinem anderen, echten (Nicht-Test-)Konto bereits gehören, geprüft unter einer prozessweiten Sperre je Adresse (`store.LockEmailAddress`)
 
-**Check order (Issue #1517):** format checks (username length/regex, password length) → existence check (`s.UserExists`) → email presence/format. The existence check runs **before** the email checks, so a request for an already-registered username returns 409 regardless of whether `email` is set — previously a missing `email` on an existing username produced a misleading 400 `validation failed`.
+**Check order (Issue #1517):** format checks (username length/regex, password length) → existence check (`s.UserExists`) → email presence/format → **address-uniqueness check** (Issue #2147 Scheibe B1). The existence check runs **before** the email checks, so a request for an already-registered username returns 409 regardless of whether `email` is set — previously a missing `email` on an existing username produced a misleading 400 `validation failed`.
 
 **Error Responses:**
 
@@ -2653,7 +2653,8 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 | 409 | `{"error":"user already exists"}` | User with this ID already registered (auth.go:62-67 — Klartext mit Leerzeichen, KEIN snake_case; checked before email validation) |
 | 400 | `{"error":"validation failed"}` | `email` missing (auth.go:75-79) |
 | 400 | `{"error":"invalid_email"}` | `email` present but without `@` (auth.go:81-85) |
-| 500 | `{"error":"internal error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler (auth.go:88-93,102-106) |
+| 409 | `{"error":"email_taken"}` | `email` bereits von einem anderen, echten Konto (in `email` oder `mail_to`) getragen (Issue #2147 Scheibe B1) — kein Konto wird angelegt, keine Verifikationsmail |
+| 500 | `{"error":"internal error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler oder Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed) (auth.go:88-93,102-106) |
 
 Since Issue #1226, a valid `email` also triggers the existing `dispatchVerificationMail` helper (from #1219) after account creation — same Double-Opt-In flow as profile email changes. Google-OAuth account creation (`createOAuthUser`) and passkey-public account creation (`PasskeyRegisterPublicFinishHandler`) trigger the same dispatch on first-time account creation (not on existing-user login).
 
@@ -2884,6 +2885,24 @@ Complete passkey registration (requires valid session cookie, challenge from `re
 | 401 | (via `AuthMiddleware`) | No valid session cookie |
 | 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
 
+#### POST /api/auth/passkey/register/public/begin und .../finish
+
+Public (no session required) passkey registration for brand-new, passwordless accounts — Issue
+#466 V2 Add-on. **Begin** takes `{"username","email"}`, checks username availability and (Issue
+#2147 Scheibe B1) e-mail-address uniqueness, then issues a WebAuthn challenge held in the
+`ChallengeStore` (5 min TTL) together with the submitted address. **Finish** re-checks the address
+uniqueness of exactly the address stored in the challenge entry (not a client-supplied field) under
+`store.LockEmailAddress`, since the address may have been claimed by a different account between
+Begin and Finish, before creating the credential-less account.
+
+**Error Responses (both endpoints):**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 409 | `{"error":"user_already_exists"}` | Username already taken |
+| 409 | `{"error":"email_taken"}` | The e-mail address already belongs to another real account (Issue #2147 Scheibe B1) — no challenge (Begin) resp. no account/credential (Finish) is created |
+| 500 | `{"error":"internal_error"}` | Read failure during the address-uniqueness check (fail-closed, Issue #2147 Scheibe B1) |
+
 #### POST /api/auth/passkey/login/begin
 
 Initiate passkey login (public, no auth required).
@@ -3067,6 +3086,22 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 **Validation:**
 - `display_name`: Optional, max 50 characters; trimmed (leading/trailing whitespace removed); empty or whitespace-only strings unset the field (reverts to fallback: `id`)
 - `mail_to`: Optional, any non-empty string (no format validation)
+- **`email`/`mail_to` uniqueness (Issue #2147 Scheibe B1):** zwei getrennte Prädikate. **Breit**
+  ("Feld geändert"): Feld gesendet UND normalisierter (`TrimSpace`+`ToLower`) Wert ungleich
+  normalisiertem Bestand — leer zählt hier als Wert. Löst wie schon vor B1 (Issue #1219) den Reset
+  von `email_verified` aus und ruft `dispatchVerificationMail` auf, unverändert auch beim Leeren
+  eines Felds — ob dabei tatsächlich eine Mail rausgeht, hängt an der verbleibenden wirksamen
+  Kontaktadresse (`mail_to`, Rückfall `email`; sind beide leer, wird kein Token erzeugt und nichts
+  versendet). **Schmal** ("geändert UND belegbar"): zusätzlich neuer Wert nicht leer — nur
+  dieses engere Prädikat löst die Belegt-Prüfung aus (`store.IsAddressTakenByOtherAccount`,
+  `excludeUserID` = eigenes Konto); Leeren kann nie `409` auslösen. Ein reiner
+  Schreibweise-Unterschied (`Foo@X.de` → `foo@x.de`) erfüllt **keines** der beiden Prädikate — kein
+  Reset, keine Mail, keine Sperre. Alle vom breiten Prädikat betroffenen Adressen — bei Leeren auch
+  die frei werdende alte Adresse — werden sortiert+dedupliziert unter `store.LockEmailAddress`
+  gesperrt (feste Reihenfolge gegen Verklemmung bei gegenseitigem Adress-Tausch); das eigene Konto
+  wird dabei frisch geladen (Read-Modify-Write). Ist die Zieladresse bereits einem anderen, echten
+  Konto zugeordnet → `409 {"error":"email_taken"}`, das **gesamte** Update (auch andere
+  mitgeschickte Felder) wird verworfen, nichts gespeichert, keine Mail versendet.
 - `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
 - `passkey_prompt_dismissed`: Optional bool (Issue #2248); sets whether the one-time passkey setup offer stays hidden
 - Empty strings allowed (unset field)
@@ -3093,6 +3128,8 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 |--------|------|----------|
 | 400 | `{"error":"bad_request"}` | JSON not decodable |
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+| 409 | `{"error":"email_taken"}` | changed `email`/`mail_to` already belongs to another real account (Issue #2147 Scheibe B1) — entire update discarded, nothing saved |
+| 500 | `{"error":"internal error"}` | Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed, Issue #2147 Scheibe B1) |
 
 #### POST /api/internal/telegram-connect
 
