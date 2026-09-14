@@ -16,7 +16,8 @@ In der RED-Phase schlagen alle Tests fehl, weil die Module
 from __future__ import annotations
 
 import time as time_mod
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 
 import pytest
 
@@ -41,7 +42,7 @@ def _make_today_trip() -> Trip:
     arrival_override sorgt dafür, dass das Segment 00:00-23:59 Uhr Ortszeit
     aktiv ist — unabhängig von der Tageszeit, zu der der Test läuft (#979).
     """
-    today = date.today()
+    today = ortstag(_DE_LAT, _DE_LON)
     stages = [
         Stage(
             id="T1",
@@ -192,7 +193,7 @@ def test_ac3_now_command_returns_nowcast_under_10s():
 
 def test_ac3_now_command_without_today_stage_gives_clear_message():
     """AC-3 (Rand): Ohne heutige Etappe klare Meldung statt Absturz."""
-    today = date.today()
+    today = ortstag(_DE_LAT, _DE_LON)
     trip = Trip(
         id=_TRIP_ID,
         name=_TRIP_NAME,

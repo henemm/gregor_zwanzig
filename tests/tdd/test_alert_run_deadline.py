@@ -29,7 +29,7 @@ import logging
 import re
 import time
 import uuid
-from datetime import date
+from tests.helpers.ortstag import ortstag
 
 import pytest
 
@@ -128,7 +128,7 @@ def _weather_data(idx: int | str = 1, *, lat: float = LAT, lon: float = LON, **s
 def _save_cached(user_id: str, trip_id: str, cached: list[SegmentWeatherData]) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), cached)
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), cached)
 
 
 def _active_trip(trip_id: str, *, lat: float = LAT, lon: float = LON) -> Trip:
@@ -138,7 +138,7 @@ def _active_trip(trip_id: str, *, lat: float = LAT, lon: float = LON) -> Trip:
     ``{"enabled": False}`` laesst check_official_alert_triggers() sofort
     leer zurueckkehren)."""
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(lat, lon),
         waypoints=[Waypoint(id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0)],
     )
     trip = Trip(id=trip_id, name="Deadline-Test-Trip", stages=[stage])
@@ -156,7 +156,7 @@ def _official_trigger_trip(trip_id: str, *, lat: float = LAT, lon: float = LON) 
     -- "noch nicht migrierter Bestandstrip", Fallback auf aktiv), analog
     ``_minimal_trip`` in test_issue_1088."""
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(lat, lon),
         waypoints=[Waypoint(id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0)],
     )
     trip = Trip(id=trip_id, name="Amtliche-Warnung-Trip", stages=[stage], official_warnings=None)

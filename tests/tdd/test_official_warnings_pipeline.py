@@ -33,6 +33,7 @@ from __future__ import annotations
 import shutil
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 from app.models import (
@@ -101,7 +102,7 @@ def _cached_data() -> SegmentWeatherData:
 def _save_cached(user_id: str, trip_id: str) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), [_cached_data()])
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), [_cached_data()])
 
 
 def _registered_sources_backup():

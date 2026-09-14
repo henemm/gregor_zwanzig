@@ -17,7 +17,8 @@ Logik und Outcome-Ableitung laufen unveraendert echt).
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import timedelta
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -44,6 +45,9 @@ def _data_users(user_id: str) -> Path:
     respektiert die pytest-Isolation (tests/conftest.py, #1133/#1265)."""
     from app.loader import get_data_dir
     return get_data_dir(user_id)
+
+
+_INNSBRUCK = (47.2692, 11.4041)
 
 
 def _innsbruck_waypoints() -> list[dict]:
@@ -89,8 +93,9 @@ def past_only_trip():
     Open-Meteo-Vergangenheits-Request laeuft (Issue #1325 Root Cause)."""
     user_id = "tdd-1325-past"
     trip_id = "tdd-1325-past-trip"
-    early = (date.today() - timedelta(days=10)).isoformat()
-    late = (date.today() - timedelta(days=3)).isoformat()
+    heute = ortstag(*_INNSBRUCK)
+    early = (heute - timedelta(days=10)).isoformat()
+    late = (heute - timedelta(days=3)).isoformat()
     trip_path = _write_trip(
         user_id, trip_id,
         [
@@ -126,7 +131,9 @@ class _DateSensitiveOpenMeteoDouble:
     def fetch_forecast(self, location, start=None, end=None,
                         enrich_ensemble=True, enrich_snow=True):
         from providers.base import ProviderRequestError
-        today = date.today()
+        # #2314: das Produkt klemmt auf den Ortstag der Trip-Koordinaten
+        # (trip_local_today), nicht auf den Prozesstag.
+        today = ortstag(*_INNSBRUCK)
         if self._fail_for_today or start is None or start.date() != today:
             raise ProviderRequestError(
                 "openmeteo",

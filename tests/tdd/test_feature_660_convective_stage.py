@@ -21,7 +21,8 @@ In der RED-Phase schlagen die Tests fehl, weil:
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 
 import pytest
 
@@ -48,7 +49,7 @@ def _make_today_trip() -> Trip:
     arrival_override sorgt dafür, dass das Segment 00:00-23:59 Uhr Ortszeit
     aktiv ist — unabhängig von der Tageszeit, zu der der Test läuft (#979).
     """
-    today = date.today()
+    today = ortstag(_LAT, _LON)
     stages = [
         Stage(
             id="T1",

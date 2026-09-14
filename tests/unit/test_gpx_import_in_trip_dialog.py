@@ -93,14 +93,22 @@ class TestGpxToStageDataCustomDate:
         """
         GIVEN: GPX file without explicit date
         WHEN: gpx_to_stage_data() without stage_date
-        THEN: date defaults to today
+        THEN: date defaults to today AM ORT des ersten Wegpunkts (ADR-0044)
+
+        #2314: gestellte Uhr + hart hingeschriebener Soll-Tag, nie aus einer
+        Tagesberechnung abgeleitet (Tautologie-Verbot). 2026-09-14T23:00Z ist
+        auf Mallorca (Europe/Madrid, CEST) schon der 15.09. -- UTC-Tag und
+        Ortstag fallen auseinander, der Test unterscheidet richtig von falsch.
         """
+        from freezegun import freeze_time
+
         from services.gpx_processing import gpx_to_stage_data
 
         content = GPX_TAG4.read_bytes()
-        result = gpx_to_stage_data(content, "tag4.gpx", upload_dir=tmp_path)
+        with freeze_time("2026-09-14T23:00:00+00:00"):
+            result = gpx_to_stage_data(content, "tag4.gpx", upload_dir=tmp_path)
 
-        assert result["date"] == date.today().isoformat()
+        assert result["date"] == "2026-09-15"
 
 
 class TestGpxToStageDataInvalid:

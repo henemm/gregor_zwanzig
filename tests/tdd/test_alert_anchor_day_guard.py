@@ -24,6 +24,7 @@ import json
 import logging
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -152,7 +153,7 @@ def undatierten_anker_schreiben(
     from services.weather_snapshot import WeatherSnapshotService
 
     WeatherSnapshotService(user_id=user_id).save(
-        trip_id, [_wetter(ANKER_BOE_KMH)], date.today(),
+        trip_id, [_wetter(ANKER_BOE_KMH)], ortstag(LAT, LON),
     )
     pfad = get_snapshots_dir(user_id) / f"{trip_id}.json"
     daten = json.loads(pfad.read_text())
@@ -226,11 +227,11 @@ def test_ac1_anker_vom_vortag_wird_verworfen_und_gemeldet(caplog):
     HEUTE ROT: ``trip_alert.py:509`` gibt ``svc.load()`` ungeprueft zurueck.
     """
     user_id, trip_id = nutzer(), "trip-1661-ac1"
-    gestern = date.today() - timedelta(days=1)
+    gestern = ortstag(LAT, LON) - timedelta(days=1)
     undatierten_anker_schreiben(user_id, trip_id, target_date=gestern)
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis is None, (
         f"AC-1: Der Rueckfall-Anker traegt target_date={gestern.isoformat()} "
@@ -261,9 +262,9 @@ def test_ac1_wirkung_kein_alarm_gegen_den_anker_von_gestern(caplog):
     """
     user_id, trip_id = nutzer(), "trip-1661-ac1-wirkung"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
 
     with caplog.at_level(logging.DEBUG):
         ergebnis, mails = alarm_lauf(user_id)
@@ -293,10 +294,10 @@ def test_ac2_regression_undatierter_anker_von_heute_bleibt_gueltig(caplog):
     ersten Tageslauf grundsaetzlich ins Leere), kein Ausnahmefall.
     """
     user_id, trip_id = nutzer(), "trip-1661-ac2"
-    undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
+    undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis, (
         "AC-2: Ein Rueckfall mit target_date=heute ist gueltig und muss "
@@ -327,7 +328,7 @@ def test_ac3_regression_fehlendes_datum_unter_26_stunden_bleibt_gueltig(caplog):
                                 alter=timedelta(hours=10))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis, (
         "AC-3: Ein Anker ohne lesbares target_date, aber juenger als 26 h, "
@@ -356,7 +357,7 @@ def test_ac4_fehlendes_datum_ueber_26_stunden_wird_verworfen(caplog):
                                 alter=timedelta(hours=27))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis is None, (
         "AC-4: Ein Anker ohne target_date und aelter als 26 h taugt nicht mehr "
@@ -397,9 +398,9 @@ def test_ac5_verworfener_anker_ruehrt_gedaechtnis_und_ankerdatei_nicht_an(caplog
 
     user_id, trip_id = nutzer(), "trip-1661-ac5"
     anker_pfad = undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
 
     gedaechtnis = {"gust:1": {"last_reported_value": 42.0,
                               "reported_at": datetime.now(timezone.utc).isoformat()}}
@@ -451,7 +452,7 @@ def test_ac6_regression_anzeigepfad_zeigt_denselben_snapshot_weiterhin():
 
     user_id, trip_id = nutzer(), "trip-1661-ac6"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
 
     extractor = WeatherExtractor(user_id=user_id)
@@ -486,10 +487,10 @@ def test_ac11_verworfener_anker_erzeugt_diagnose_eintrag():
     """
     user_id, trip_id = nutzer(), "trip-1661-ac11"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
 
-    cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+    cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     zeilen = diagnose_zeilen(user_id)
     assert zeilen, (
@@ -524,9 +525,9 @@ def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
     bliebe komplett unsichtbar blind.
     """
     user_id, trip_id = nutzer(), "trip-1661-ac13"
-    trip = boeen_trip(trip_id, [date.today() - timedelta(days=1), date.today(),
-                                date.today() + timedelta(days=1)])
-    assert trip.start_date <= date.today() <= trip.end_date, "Fixtur-Schutz"
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON) - timedelta(days=1), ortstag(LAT, LON),
+                                ortstag(LAT, LON) + timedelta(days=1)])
+    assert trip.start_date <= ortstag(LAT, LON) <= trip.end_date, "Fixtur-Schutz"
 
     with caplog.at_level(logging.DEBUG):
         ergebnis = cached_weather(user_id, trip)
@@ -564,8 +565,8 @@ def test_ac14_noch_nicht_gestartete_tour_ohne_anker_bleibt_leise(caplog):
     JEDE noch nicht gestartete Tour taeglich Dauerrauschen erzeugen (#1199).
     """
     user_id, trip_id = nutzer(), "trip-1661-ac14"
-    trip = boeen_trip(trip_id, [date.today() + timedelta(days=2)])
-    assert trip.start_date > date.today(), "Fixtur-Schutz"
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON) + timedelta(days=2)])
+    assert trip.start_date > ortstag(LAT, LON), "Fixtur-Schutz"
 
     with caplog.at_level(logging.DEBUG):
         ergebnis = cached_weather(user_id, trip)
@@ -608,14 +609,14 @@ def test_ac15_diagnose_schreiber_scheitert_alarm_lauf_bricht_nicht_ab(caplog):
     """
     user_id, trip_id = nutzer(), "trip-1661-ac15"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
     sperre = get_data_dir(user_id) / "diagnostics"
     sperre.parent.mkdir(parents=True, exist_ok=True)
     sperre.write_text("kein Verzeichnis, sondern eine Datei")
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis is None, (
         "AC-15: Auch mit defektem Diagnose-Schreiber muss der Anker vom "
@@ -652,7 +653,7 @@ def test_altersnetz_grenze_25h50_wird_noch_verwendet(caplog):
                                 alter=timedelta(hours=25, minutes=50))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis, (
         "Ein Anker ohne target_date, 25 h 50 min alt, liegt INNERHALB der "
@@ -680,7 +681,7 @@ def test_altersnetz_grenze_26h10_wird_verworfen(caplog):
                                 alter=timedelta(hours=26, minutes=10))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis is None, (
         "Ein Anker ohne target_date, 26 h 10 min alt, liegt AUSSERHALB der "
@@ -711,9 +712,9 @@ def test_abgelaufene_tour_ohne_anker_bleibt_leise(caplog):
     jede laengst beendete Tour zur Dauer-Eskalation machen.
     """
     user_id, trip_id = nutzer(), "trip-1661-abgelaufen"
-    trip = boeen_trip(trip_id, [date.today() - timedelta(days=5),
-                                date.today() - timedelta(days=4)])
-    assert trip.end_date < date.today(), "Fixtur-Schutz: die Tour muss vorbei sein."
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON) - timedelta(days=5),
+                                ortstag(LAT, LON) - timedelta(days=4)])
+    assert trip.end_date < ortstag(LAT, LON), "Fixtur-Schutz: die Tour muss vorbei sein."
 
     with caplog.at_level(logging.DEBUG):
         ergebnis = cached_weather(user_id, trip)
@@ -773,9 +774,9 @@ def test_verworfener_delta_anker_schaltet_amtliche_warnung_NICHT_stumm(caplog):
 
     user_id, trip_id = nutzer(), "trip-1661-amtlich"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() + timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) + timedelta(days=1),
     )
-    trip = boeen_trip(trip_id, [date.today()])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     trip.official_alert_triggers_enabled = True
     save_trip(trip, user_id=user_id)
 
@@ -829,7 +830,7 @@ def abfrage_trip(trip_id: str) -> Trip:
     unter zwei Wegpunkten liefert ``convert_trip_to_segments`` GAR KEINE
     Segmente (``trip_segments.py:121-123``), die Abfrage schriebe dann keinen
     Snapshot. Vorbedingung, keine Zusicherung."""
-    trip = boeen_trip(trip_id, [date.today(), date.today() + timedelta(days=1)])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON), ortstag(LAT, LON) + timedelta(days=1)])
     for stage in trip.stages:
         stage.waypoints.append(Waypoint(id=f"{stage.id}-Z", name="Ziel",
                                         lat=LAT + 0.1, lon=LON + 0.1,
@@ -940,9 +941,9 @@ def test_ac1_wirkung_kein_abweichungsalarm_gegen_anker_ohne_briefing():
     Alarm raus.
     """
     user_id, trip_id = nutzer(), "trip-1699-ac1-wirkung"
-    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
+    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
     herkunft_setzen(pfad, False)
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
 
     ergebnis, mails = alarm_lauf(user_id)
 
@@ -988,9 +989,9 @@ def _amtlicher_lauf_mit_anker_ohne_briefing(user_id: str, trip_id: str):
     from services.official_alerts import OfficialAlert, register_official_alert_source
 
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, trip_id, target_date=date.today()), False,
+        undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)), False,
     )
-    trip = boeen_trip(trip_id, [date.today()])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     trip.official_alert_triggers_enabled = True
     save_trip(trip, user_id=user_id)
 
@@ -1060,15 +1061,15 @@ def test_ac3_amtliche_warnung_ueberlebt_auch_die_stufe_2_weiche():
 
     user_id, trip_id = nutzer(), "trip-1699-ac3-stufe2"
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, trip_id, target_date=date.today()), False,
+        undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)), False,
     )
-    trip = boeen_trip(trip_id, [date.today()])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     trip.official_alert_triggers_enabled = True
     save_trip(trip, user_id=user_id)
     svc = WeatherSnapshotService(user_id=user_id)
-    svc.save_alarm_anchor(trip_id, date.today(), [_wetter(ANKER_BOE_KMH)], "email")
+    svc.save_alarm_anchor(trip_id, ortstag(LAT, LON), [_wetter(ANKER_BOE_KMH)], "email")
 
-    assert svc.alarm_anchor_target_date(trip_id, "email") == date.today(), (
+    assert svc.alarm_anchor_target_date(trip_id, "email") == ortstag(LAT, LON), (
         "Fixtur-Schutz: nur ein TAGESGLEICHER rollierender Anker laesst die "
         "Kette ueberhaupt in die Stufe-2-Weiche laufen."
     )
@@ -1135,8 +1136,8 @@ def test_ac4_briefing_anker_bleibt_gueltig_und_alarmiert(caplog):
     ``test_ac1_wirkung_...``, ohne die dessen „kein Alarm" nichts bewiese.
     """
     user_id, trip_id = nutzer(), "trip-1699-ac4"
-    undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
-    trip = boeen_trip(trip_id, [date.today()])
+    undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     save_trip(trip, user_id=user_id)
 
     with caplog.at_level(logging.DEBUG):
@@ -1169,12 +1170,12 @@ def test_ac5_altbestand_ohne_herkunftsfeld_bleibt_gueltiger_anker(caplog):
     ``tests/integration/test_weather_snapshot.py``.
     """
     user_id, trip_id = nutzer(), "trip-1699-ac5"
-    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
+    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
     herkunft_setzen(pfad, _ENTFERNEN)
     assert "briefing_backed" not in json.loads(pfad.read_text()), "Fixtur-Schutz"
 
     with caplog.at_level(logging.DEBUG):
-        segmente = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        segmente = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert segmente and segmente[0].aggregated.gust_max_kmh == ANKER_BOE_KMH, (
         f"AC-5: Altbestand OHNE Herkunftsfeld gilt als briefing-gestuetzt. "
@@ -1243,7 +1244,7 @@ def test_ac7_regulaeres_briefing_heilt_den_abfrage_anker(caplog):
     vorher = len(diagnose_zeilen(user_id))
 
     WeatherSnapshotService(user_id=user_id).save(
-        trip_id, [_wetter(ANKER_BOE_KMH)], date.today(),
+        trip_id, [_wetter(ANKER_BOE_KMH)], ortstag(LAT, LON),
     )
 
     with caplog.at_level(logging.DEBUG):
@@ -1271,10 +1272,10 @@ def _ac10_lauf(user_id: str, trip_id: str, *, herkunft):
     """Tour, deren EINZIGE Basis der undatierte Anker ist (kein datierter, kein
     rollierender) — ``herkunft=False`` macht sie zum Abfrage-Anker."""
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, trip_id, target_date=date.today()),
+        undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)),
         herkunft,
     )
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
     return alarm_lauf(user_id)
 
 
@@ -1391,11 +1392,11 @@ def test_ac10_verworfene_basis_ruft_check_and_send_alerts_gar_nicht_erst_auf():
     verworfen, gueltig = "trip-1699-f002-a-verworfen", "trip-1699-f002-b-gueltig"
     user_id = nutzer()
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, verworfen, target_date=date.today()), False,
+        undatierten_anker_schreiben(user_id, verworfen, target_date=ortstag(LAT, LON)), False,
     )
-    undatierten_anker_schreiben(user_id, gueltig, target_date=date.today())
-    save_trip(boeen_trip(verworfen, [date.today()]), user_id=user_id)
-    save_trip(boeen_trip(gueltig, [date.today()]), user_id=user_id)
+    undatierten_anker_schreiben(user_id, gueltig, target_date=ortstag(LAT, LON))
+    save_trip(boeen_trip(verworfen, [ortstag(LAT, LON)]), user_id=user_id)
+    save_trip(boeen_trip(gueltig, [ortstag(LAT, LON)]), user_id=user_id)
 
     mails: list = []
     dienst = _dienst_mit_aufrufzaehler(user_id, mails)
@@ -1434,11 +1435,11 @@ def test_ac10_abgelaufener_rollierender_anker_bleibt_unveraendert():
 
     user_id, trip_id = nutzer(), "trip-1699-ac10-bestand"
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, trip_id, target_date=date.today()), False,
+        undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)), False,
     )
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
     WeatherSnapshotService(user_id=user_id).save_alarm_anchor(
-        trip_id, date.today() - timedelta(days=1), [_wetter(ANKER_BOE_KMH)],
+        trip_id, ortstag(LAT, LON) - timedelta(days=1), [_wetter(ANKER_BOE_KMH)],
         "email",
     )
     pfad = rollierender_anker_pfad(user_id, trip_id)
@@ -1517,10 +1518,10 @@ def test_torbedingung_matrix_basis_mal_amtliche_warnung(basis_gueltig, amtlich):
 
     user_id = nutzer()
     trip_id = f"trip-1699-matrix-{int(basis_gueltig)}{int(amtlich)}"
-    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
+    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
     if not basis_gueltig:
         herkunft_setzen(pfad, False)
-    trip = boeen_trip(trip_id, [date.today()])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     trip.official_alert_triggers_enabled = amtlich
     save_trip(trip, user_id=user_id)
 

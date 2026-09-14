@@ -25,6 +25,7 @@ import json
 import shutil
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -154,7 +155,7 @@ def _save_cached(user_id: str, trip_id: str, cached: list[SegmentWeatherData]) -
 
     # Testfehler-Korrektur: reale Signatur ist save_dated(trip_id, target_date,
     # segments) — nicht (trip_id, segments, target_date).
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), cached)
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), cached)
 
 
 class _CountingOfficialAlertSource:
@@ -554,7 +555,7 @@ class TestF001OfficialTriggerViaCheckAllTrips:
         oa_base._REGISTERED_SOURCES.clear()
         try:
             stage = Stage(
-                id="T1", name="Tag 1", date=date.today(),
+                id="T1", name="Tag 1", date=ortstag(LAT, LON),
                 waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
             )
             # Issue #1258: official_warnings=None (noch nicht migrierter

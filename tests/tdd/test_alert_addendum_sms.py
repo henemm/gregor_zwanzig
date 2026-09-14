@@ -37,7 +37,9 @@ import http.server
 import socket
 import threading
 import urllib.parse
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
+from tests.helpers.alert_log_fixtures import LAT as GUST_LAT, LON as GUST_LON
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -778,7 +780,7 @@ def test_ac_b12_amtliche_warnung_nach_nowcast_bleibt_unmarkierter_vollalarm():
         trip = gust_alert_trip("trip-2018-b12")
         trip.official_alert_triggers_enabled = None
         WeatherSnapshotService(user_id=uid).save_dated(
-            trip.id, date.today(), [weather(1, precip_sum_mm=2.0)],
+            trip.id, ortstag(GUST_LAT, GUST_LON), [weather(1, precip_sum_mm=2.0)],
         )
         # Stufe 4 (`LEVEL_LETTERS[4] == "H"` -> `HIGH`) uebertrifft den
         # registrierten Nowcast (`MODERATE`) -- die V2-Eskalation traegt die

@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 import sys
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -106,9 +106,10 @@ def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
     from app.metric_catalog import build_default_display_config
     from app.models import TripReportConfig
     from app.trip import Stage, Trip, Waypoint
+    from tests.helpers.ortstag import ortstag
 
     trip_id = f"trip-1720s2-{uuid.uuid4().hex[:8]}"
-    heute = date.today()
+    heute = ortstag(LAT, LON)  # #2314: Ortstag, nicht Prozesstag
     stages = [
         Stage(id=f"S{i}", name=f"Tag {i}", date=heute + timedelta(days=i),
               waypoints=[

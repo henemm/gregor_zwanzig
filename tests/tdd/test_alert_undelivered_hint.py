@@ -71,7 +71,8 @@ import json
 import os
 import re
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -234,7 +235,7 @@ def _trip(trip_id: str, *, email_format: str = "full") -> Trip:
     # Default-Start 08:00 samt Laufzeit-Schaetzung. Die Zeiten selbst tragen
     # keine Pruefaussage dieser Datei; sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(LAT, LON),
         waypoints=[
             Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
                      arrival_calculated="08:00"),

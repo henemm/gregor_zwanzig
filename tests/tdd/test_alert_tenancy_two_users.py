@@ -22,7 +22,8 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 from app.config import Settings
@@ -110,7 +111,7 @@ def _identical_trip() -> Trip:
     (P1a), gleiche Empfindlichkeitsstufen fuer Boeen und Gewitter (P1b),
     amtliche Warnungen aktiv (P4)."""
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(LAT, LON),
         waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
     )
     trip = Trip(
@@ -141,7 +142,7 @@ def _identical_trip() -> Trip:
 def _save_cached(user_id: str, cached: list[SegmentWeatherData]) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
-    WeatherSnapshotService(user_id=user_id).save_dated(TRIP_ID, date.today(), cached)
+    WeatherSnapshotService(user_id=user_id).save_dated(TRIP_ID, ortstag(LAT, LON), cached)
 
 
 def _state_dir(user_id: str) -> Path:
@@ -302,7 +303,7 @@ def test_ac34b_wertebereich_wirkt_bei_beiden_nutzern_gleich_nicht():
     _clean_user(bob)
     try:
         stage = Stage(
-            id="T1", name="Tag 1", date=date.today(),
+            id="T1", name="Tag 1", date=ortstag(LAT, LON),
             waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
         )
         cached = [_data(gust_max_kmh=25.0)]

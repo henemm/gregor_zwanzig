@@ -24,7 +24,8 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 
 from services.official_alerts.models import OfficialAlert
 
@@ -313,7 +314,7 @@ class TestAC7BriefingPassesExactSegmentWindow:
             "stages": [{
                 "id": "s1",
                 "name": "Etappe",
-                "date": date.today().isoformat(),
+                "date": ortstag(LAT, LON).isoformat(),
                 "waypoints": [
                     {"id": "w1", "name": "Start", "lat": LAT, "lon": LON, "elevation_m": 1000},
                     {"id": "w2", "name": "Ziel", "lat": LAT + 0.2, "lon": LON + 0.2, "elevation_m": 1500},

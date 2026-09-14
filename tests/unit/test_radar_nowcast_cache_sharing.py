@@ -24,7 +24,8 @@ die erwartete RED-Aussage (Spec, Implementation Details Abschnitt 2).
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 
 import pytest
 
@@ -279,7 +280,7 @@ def _e2e_trip(lat: float, lon: float):
             Stage(
                 id="T1",
                 name="Heute",
-                date=date.today(),
+                date=ortstag(lat, lon),
                 start_time=time(0, 0),
                 waypoints=[
                     Waypoint(

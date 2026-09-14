@@ -39,17 +39,25 @@ from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from app.models import ThunderLevel
+from tests.helpers.ortstag import ortstag
 
 _UTC = ZoneInfo("UTC")
-_TODAY = date.today()
-_TOMORROW = _TODAY + timedelta(days=1)
-
 # Zwei WEIT auseinanderliegende Orte, damit der FixtureProvider fuer die
 # Nachtquelle (Ankunft heute, Innsbruck) und die Folgeetappe (Zillertal)
 # VERSCHIEDENE Dateien waehlt (providers/fixture.py::_nearest). Nur so ist
 # unterscheidbar, aus welcher Quelle die Nacht-Angabe stammt.
 _TODAY_COORDS = [(47.2692, 11.4041), (47.2700, 11.4100)]      # -> innsbruck.json
 _TOMORROW_COORDS = [(47.2190, 11.8767), (47.2200, 11.8800)]   # -> zillertal.json
+
+
+def _today():
+    """Ortstag der heutigen Etappe, zur Testlaufzeit gelesen (#2314) --
+    eine Modulkonstante lief vor der gestellten Uhr und am Prozesstag."""
+    return ortstag(*_TODAY_COORDS[0])
+
+
+def _tomorrow():
+    return _today() + timedelta(days=1)
 
 _EXPECTED_ADDENDUM = ", nachts starkes Gewitter ab 00:00"
 
@@ -71,9 +79,11 @@ def _idx_tomorrow_local_midnight() -> int:
         hour=0, minute=0, second=0, microsecond=0
     )
     tz = tz_for_coords(*_TODAY_COORDS[-1])
-    for i in range(24, 0, -1):
+    # #2314: nachts liegt "morgen 00:00 Ortszeit" hinter Index 24 -- alle
+    # 72 Fixture-Stunden durchsuchen statt nur den ersten UTC-Tag.
+    for i in range(71, 0, -1):
         local = (base + timedelta(hours=i)).astimezone(tz)
-        if local.date() == _TOMORROW and local.hour == 0:
+        if local.date() == _tomorrow() and local.hour == 0:
             return i
     raise AssertionError("Fixture-Fehler: keine Stunde 'morgen 00:00 Ortszeit'")
 
@@ -152,8 +162,8 @@ def _trip(*, show_night_block: bool):
         id="tdd-1651-paritaet",
         name="TDD 1651 Paritaet",
         stages=[
-            _stage("S1", "Heute", _TODAY, _TODAY_COORDS),
-            _stage("S2", "Morgen", _TOMORROW, _TOMORROW_COORDS),
+            _stage("S1", "Heute", _today(), _TODAY_COORDS),
+            _stage("S2", "Morgen", _tomorrow(), _TOMORROW_COORDS),
         ],
         display_config=display_config,
         report_config=TripReportConfig(
@@ -218,7 +228,7 @@ def _run_both_paths(monkeypatch, tmp_path, *, show_night_block: bool):
     _probe_trip = _trip(show_night_block=show_night_block)
     assert scheduler._get_target_date(
         "morning", _probe_trip, _dt.datetime.now(_dt.timezone.utc),
-    ) == _TODAY, (
+    ) == _today(), (
         "Fixture-Fehler: Versand und Vorschau muessen denselben Zieltag bauen"
     )
 
@@ -231,7 +241,7 @@ def _run_both_paths(monkeypatch, tmp_path, *, show_night_block: bool):
 
     recorder.label = "vorschau"
     PreviewService()._build_report(
-        _trip(show_night_block=show_night_block), _TODAY, "morning",
+        _trip(show_night_block=show_night_block), _today(), "morning",
         now_utc=_dt.datetime.now(_dt.timezone.utc),
     )
 

@@ -35,7 +35,8 @@ import threading
 import time
 import urllib.parse
 import uuid
-from datetime import datetime, timedelta, date, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -179,7 +180,7 @@ def _make_trip(trip_id: str, send_sms: bool):
     # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
     # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
-        id="S1", name="Etappe 1", date=date.today() + timedelta(days=1),
+        id="S1", name="Etappe 1", date=ortstag(42.2, 9.05) + timedelta(days=1),
         waypoints=[
             Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400,
                      arrival_calculated="08:00"),
@@ -355,7 +356,7 @@ def _make_alert_trip(trip_id: str, send_sms: bool, rule_channels: list[str] | No
     # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
     # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
-        id="S1", name="Etappe 1", date=date.today() + timedelta(days=1),
+        id="S1", name="Etappe 1", date=ortstag(42.2, 9.05) + timedelta(days=1),
         waypoints=[
             Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400,
                      arrival_calculated="08:00"),
@@ -479,7 +480,7 @@ def _make_radar_trip(trip_id: str, send_sms: bool):
         time_window=TimeWindow(start=time_type(23, 58), end=time_type(23, 59)),
         arrival_override=end_str,
     )
-    stage = Stage(id="T1", name="Tag 1", date=date.today(), start_time=start_time, waypoints=[wp0, wp1])
+    stage = Stage(id="T1", name="Tag 1", date=ortstag(lat, lon), start_time=start_time, waypoints=[wp0, wp1])
     trip = Trip(id=trip_id, name="Radar-Tier-Trip", stages=[stage])
     trip.report_config = TripReportConfig(
         trip_id=trip_id, send_email=False, send_sms=send_sms, send_telegram=False,

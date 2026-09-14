@@ -45,7 +45,8 @@ import json
 import socket
 import threading
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
@@ -193,7 +194,7 @@ def _ac4_trip(trip_id: str) -> Trip:
     ``trip.alert_channels`` -- das ist ohnehin der praezisere Test: er prueft
     die Schwelle, nicht die Kanal-Vererbung (Issue #638 D2)."""
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(LAT, LON),
         waypoints=[
             Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0),
             Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0),
@@ -1212,7 +1213,7 @@ def test_einzeln_auftretende_amtliche_warnung_ohne_wetter_delta_respektiert_kana
     oa_base._REGISTERED_SOURCES.clear()
     try:
         stage = Stage(
-            id="T1", name="Tag 1", date=date.today(),
+            id="T1", name="Tag 1", date=ortstag(LAT_1088, LON_1088),
             waypoints=[
                 Waypoint(id="G1", name="Start", lat=LAT_1088, lon=LON_1088, elevation_m=1000.0),
             ],

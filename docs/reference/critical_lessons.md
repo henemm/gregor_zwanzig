@@ -98,3 +98,28 @@ Werkzeug aus #1709 / `docs/specs/modules/fix_1709_wallclock_ratsche_indirekt.md`
 Uhr-Schalter und Tagesbezug aus #2096 /
 `docs/specs/modules/fix_2096_tagesbezug_testwaechter.md`;
 Nebenbefund gebucht in #1199.
+
+## Fixture-Trips datieren nach dem Ortstag der Koordinaten, nie nach `date.today()`
+
+Test-Fixtures, die Trips/Anker/Schnappschüsse datieren, müssen den **Ortstag der
+Trip-Koordinaten** verwenden (`tests/helpers/ortstag.py` → `ortstag(lat, lon, *,
+now_utc=None)`, delegiert an `utils.timezone.tz_for_coords`, ADR-0044) — die
+Koordinaten des jeweils datierten Trips, nie pauschal irgendwelche. `date.today()`
+liefert den Tag der **Prozesszone** (CI: America/St_Johns), nicht den Ortstag,
+und weicht dort rund um Mitternacht UTC vom Produktverhalten ab. Ausnahme: Tests,
+die die Tagesberechnung selbst prüfen, brauchen eine gestellte Uhr plus einen
+Literal-Soll-Tag (sonst wird der Test tautologisch).
+
+Messgrenze: Unter `GZ_TEST_WALL_CLOCK_UTC`/freezegun liefert `date.today()` den
+**UTC-Tag**, nicht den St.-John's-Tag — lokal ist nur das Fenster 22:00–24:00 UTC
+des echten Ausfalls nachstellbar; ein grüner Lauf um 01:00 oder 04:00 Uhr ist
+kein Befund.
+
+Falle: Modulweite Konstanten wie `NOW = datetime.now(...)` werden beim Laden des
+Moduls gesetzt, also vor der gestellten Uhr — zwei Uhren laufen gegeneinander
+(Beispiel #2314, `tests/tdd/test_official_alert_time_window.py`).
+
+Die Wanduhr-Ratsche `tests/tdd/test_fixture_wallclock_ratchet.py` (#1667) wertet
+`ortstag(...)`-Aufrufe ohne gepinntes `now_utc` ebenfalls als Wanduhr-Abhängigkeit.
+
+Quelle: #2314 / `docs/specs/modules/fix_2314_ci_zeitzonen_riss.md`.
