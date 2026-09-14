@@ -742,6 +742,14 @@ Liste-basierter Editor für `Trip.alert_rules` (Issue #223/#179):
   zentrierter Pin) für einen Ort im Ortsvergleich-Anlege-Fluss; Props `lat`,
   `lon`.
 
+## Account Components (`account/`)
+
+- **`PremiumSmsLinkCard.svelte`** — Karte im Konto-Bereich (`/account`) für
+  Premium-Nutzer: erzeugt/erneuert den Premium-SMS-Verknüpfungscode (Issue
+  #2154 Scheibe B). Der Klartext-Code wird nur einmalig nach erfolgreichem
+  `POST` angezeigt, nie erneut ausgeliefert (fail-closed über
+  `premiumSmsLinkCodeExists`).
+
 ## Komponenten-Inventar: Dateisystem ist die Wahrheit
 
 Frühere Fassungen dieses Dokuments pflegten Datei-für-Datei-Tabellen aller
