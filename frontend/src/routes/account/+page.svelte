@@ -16,6 +16,13 @@
 	import { ABMELDE_MERKMAL, merkeAbmeldung, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, registerPasskey, deletePasskey, type RegisteredPasskey } from '$lib/passkey';
 	import { profileSaveErrorMessage } from './profileSaveError';
+	import PremiumSmsLinkCard from '$lib/components/account/PremiumSmsLinkCard.svelte';
+	import {
+		shouldShowPremiumSmsLinkCard,
+		resolveGenerateClick,
+		resolveDialogAction,
+		errorMessageFrom
+	} from '$lib/utils/premiumSmsLinkCodeHelpers';
 	let { data } = $props();
 
 	let displayName = $state(data.profile?.display_name ?? '');
@@ -46,6 +53,50 @@
 	let showDeleteAccountDialog = $state(false);
 	let showLogoutAllDialog = $state(false);
 	let logoutAllErrorMsg = $state<string | null>(null);
+
+	// Issue #2154 Scheibe B — Premium-SMS-Verknüpfungscode. `linkCodeValue`
+	// bleibt bewusst rein lokaler Client-State (AC-7): er fliesst nie in
+	// `data`/`PageData` und verschwindet bei Reload, weil das Backend nur den
+	// Hash haelt, nie den Klartext erneut liefert.
+	let linkCodeExists = $state(data.premiumSmsLinkCodeExists);
+	let linkCodeValue = $state<string | null>(null);
+	let linkCodeBusy = $state(false);
+	let linkCodeErrorMsg = $state<string | null>(null);
+	let showRenewConfirm = $state(false);
+
+	function onGenerateOrRenewClick() {
+		const decision = resolveGenerateClick(linkCodeExists, linkCodeBusy);
+		if (decision === 'confirm-dialog') {
+			showRenewConfirm = true;
+			return;
+		}
+		if (decision === 'call-post') runLinkCodeGenerate();
+	}
+
+	function onDialogConfirm() {
+		const decision = resolveDialogAction('confirm');
+		showRenewConfirm = false;
+		if (decision === 'call-post') runLinkCodeGenerate();
+	}
+
+	function onDialogCancel() {
+		resolveDialogAction('cancel');
+		showRenewConfirm = false;
+	}
+
+	async function runLinkCodeGenerate() {
+		linkCodeBusy = true;
+		linkCodeErrorMsg = null;
+		try {
+			const res = await api.post<{ code: string }>('/api/auth/premium-sms-link-code', {});
+			linkCodeValue = res.code;
+			linkCodeExists = true;
+		} catch (e: unknown) {
+			linkCodeErrorMsg = errorMessageFrom(e, 'Code-Vorgang fehlgeschlagen');
+		} finally {
+			linkCodeBusy = false;
+		}
+	}
 
 	// Issue #2270 — Datenexport nach DSGVO Art. 20.
 	let exportBusy = $state(false);
@@ -576,6 +627,21 @@
 			</button>
 		</Card.Content>
 	</Card.Root>
+
+	<!-- Issue #2154 Scheibe B — Premium-SMS-Verknüpfungscode (nur Tier Premium) -->
+	{#if shouldShowPremiumSmsLinkCard(data.profile?.tier)}
+		<PremiumSmsLinkCard
+			tier={data.profile?.tier}
+			exists={linkCodeExists}
+			codeValue={linkCodeValue}
+			busy={linkCodeBusy}
+			errorMsg={linkCodeErrorMsg}
+			showRenewConfirm={showRenewConfirm}
+			onGenerateOrRenewClick={onGenerateOrRenewClick}
+			onDialogConfirm={onDialogConfirm}
+			onDialogCancel={onDialogCancel}
+		/>
+	{/if}
 
 	<!-- Issue #2246 — Passkeys verwalten -->
 	<Card.Root data-testid="passkeys-card">
