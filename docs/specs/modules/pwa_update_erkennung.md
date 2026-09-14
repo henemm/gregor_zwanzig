@@ -236,3 +236,12 @@ compare/[id]/+page.svelte + trips/[id]/+page.svelte (Scheibe A):
 - 2026-09-13: AC-15 (Staging-Zweifach-Deploy, echter Auslieferungsweg) bleibt bis zum nächsten
   Zweifach-Deploy auf Staging offen — alle übrigen ACs sind über Unit-/E2E-Nachweis erfüllt, `status`
   wird trotzdem auf `implemented` gesetzt, da der Produktivcode vollständig steht.
+- 2026-09-14: AC-15 auf Staging gemessen, **PASS** — möglich seit henemm-infra#229 (Zugriffe von der
+  Server-IP ohne nginx-Basic-Auth; der Lauf nutzte bewusst keine Anmeldedaten für die Schranke).
+  Zweiter Build desselben Commits `c3b42530` per `auto-deploy-gregor-staging.sh --force`:
+  `service-worker.js` `f92fa465…` → `8455be42…`, Speichername `gz-1789330794578` → `gz-1789365451168`.
+  Profil A (App blieb über den Deploy offen, App-eigene Prüfung per `visibilitychange`): wartender
+  Worker + Hinweis „Neue Version verfügbar", nach „Aktualisieren" neuer Speichername, Hinweis weg.
+  Profil B (App vor dem Deploy beendet, danach Kaltstart): Hinweis erscheint. Beide Profile vor dem
+  Deploy nachweislich kontrolliert (`controller` gesetzt). Messprotokoll im Abschluss-Kommentar von
+  Issue #2316.
