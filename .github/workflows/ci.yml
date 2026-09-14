@@ -253,7 +253,7 @@ jobs:
       #      registrierte Worker ihr Verhalten nicht veraendert.
       # Der Schutz gegen "Datei verschwindet klaglos" haengt hier nicht an der
       # Existenzpruefung der Liste, sondern an E2E_MIN_EXECUTED_PWA: faellt
-      # eine der fuenf Dateien weg, sinkt `expected` unter 60 und das Gate
+      # eine der fuenf Dateien weg, sinkt `expected` unter 61 und das Gate
       # wird rot.
       #
       # 🔴 REIHENFOLGE IST KRITISCH: PWA VOR bug-703 (gemessen 2026-09-06).
@@ -275,8 +275,8 @@ jobs:
       # nur AC-3 vor AC-2 INNERHALB der Datei, per test.describe.serial) --
       # er muss nur ZULETZT laufen.
       E2E_MIN_SPECS: 47     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
-      E2E_MIN_EXECUTED_HAUPT: 229      # Hauptlauf: 46 Dateien (Issue #2316: speicherung-ueberlebt-neuladen.spec.ts neu) + global.setup -- exakt belegt, kein Puffer, gemessen 2026-09-13 im Zielverbund (3x --workers=1)
-      E2E_MIN_EXECUTED_PWA: 60         # Zweitlauf: 59 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu) + global.setup -- exakt belegt, kein Puffer
+      E2E_MIN_EXECUTED_HAUPT: 233      # Hauptlauf: 46 Dateien (Issue #2316: speicherung-ueberlebt-neuladen.spec.ts neu) + global.setup -- exakt belegt, kein Puffer, gemessen 2026-09-13 im Zielverbund (3x --workers=1); Issue #2317: +4 neue Faelle in speicherung-ueberlebt-neuladen.spec.ts (AC-2/AC-3/AC-4/AC-11), statisch aus der Fallzahl (--list) abgeleitet, keine neue Zielverbund-Messung
+      E2E_MIN_EXECUTED_PWA: 61         # Zweitlauf: 60 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu; Issue #2317: +1 Fall AC-6 dort, statisch aus --list abgeleitet) + global.setup -- kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
       - uses: actions/checkout@v4

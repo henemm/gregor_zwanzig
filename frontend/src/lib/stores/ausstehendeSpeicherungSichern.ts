@@ -13,6 +13,7 @@
 // `$app/navigation`, `goto`) bleibt eine dünne Hülle in den aufrufenden Seiten.
 
 import type { SaveStatus } from './saveStatusStore.svelte.ts';
+import { merkeSpeicherungBeimEntladen, type NachladeKennung } from '../pwa/geraetespeicher.ts';
 
 /** Entspricht dem Argument, das SvelteKits `beforeNavigate` an seinen Callback reicht. */
 export interface NavigationLike {
@@ -35,10 +36,15 @@ export interface NavigationLike {
 export function sichereAusstehendeSpeicherung(
 	navigation: NavigationLike,
 	ctl: SaveStatus,
-	goto: (href: string) => unknown
+	goto: (href: string) => unknown,
+	kennung?: NachladeKennung
 ): void {
 	if (navigation.willUnload) {
-		if (ctl.hasPending) void ctl.flush({ keepalive: true });
+		if (!ctl.hasPending) return;
+		// Zuerst der keepalive-PUT (zeitkritisch), DANN der Merker (#2317 Baustein 3):
+		// die neu geladene Seite holt den Server-Stand begrenzt nach.
+		void ctl.flush({ keepalive: true });
+		if (kennung) merkeSpeicherungBeimEntladen(kennung);
 		return;
 	}
 	if (ctl.hasPending) {

@@ -3,7 +3,7 @@ entity_id: speicherung_beim_neuladen
 type: module
 created: 2026-09-14
 updated: 2026-09-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [pwa, autosave, frontend, issue-2317, epic-2127]
 ---
@@ -34,10 +34,16 @@ nach dem Neuladen.
 
 - **File:** `frontend/src/lib/stores/ausstehendeSpeicherungSichern.ts` (gemeinsamer Wächter)
 - **Weitere Dateien:** `frontend/src/lib/stores/nachEntladenNachladen.ts` [CREATE],
+  `frontend/src/lib/stores/aktiveSpeicherung.ts` [CREATE],
+  `frontend/src/lib/components/shared/tripSpeicherung.ts` [CREATE],
+  `frontend/src/lib/components/compare/korridorCommit.ts` [CREATE],
   `frontend/src/lib/components/shared/corridor-editor/CorridorEditor.svelte`,
   `frontend/src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte`,
   `frontend/src/lib/components/shared/AlarmeTab.svelte`,
   `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`,
+  `frontend/src/lib/components/compare/CompareTabs.svelte`,
+  `frontend/src/lib/api.ts` (`getMitFassung`),
+  `frontend/src/lib/stores/saveStatusStore.svelte.ts` (Getter `laufendeSpeicherung`),
   `frontend/src/routes/trips/[id]/+page.svelte`, `frontend/src/routes/compare/[id]/+page.svelte`,
   `frontend/src/routes/+layout.svelte`, `frontend/src/lib/pwa/serviceWorkerUpdate.ts`,
   `frontend/src/lib/pwa/geraetespeicher.ts`
@@ -234,6 +240,11 @@ nächste Speicherung nicht fälschlich mit 412 kollidiert.
   vor #2317 schon der Fall und bleibt außerhalb dieses Tickets (kein gemeldeter Datenverlust dort).
 - Nach den bis zu 6 Nachlade-Versuchen wird still aufgehört; bleibt der Server-Stand danach älter
   als erwartet, zeigt die Seite weiterhin den zuletzt ausgelieferten Stand — kein Fehlerhinweis.
+- „Aktualisieren" bleibt gesperrt, solange auf der Detailseite ein ungelöster Speicherfehler oder
+  Konflikt steht — auch wenn gerade nichts aussteht. Ein ungelöster Fehler heißt: eine Eingabe ist
+  nicht beim Server angekommen, der Fassungswechsel würde sie verwerfen (AC-7). Die Sperre löst sich
+  mit dem nächsten erfolgreichen Speichern bzw. „Wiederholen"; beim nächsten Kaltstart übernimmt die
+  App die neue Fassung ohnehin (Adversary-Befund F005, bewusst beibehalten).
 - Kein neuer Hinweistext in der Oberfläche für den Nachlade-Vorgang (bewusst schlank gehalten).
   Bis zum Nachladen, also höchstens rund 3 Sekunden, ist nach dem Neuladen noch der alte Wert zu sehen.
 
@@ -250,3 +261,7 @@ nächste Speicherung nicht fälschlich mit 412 kollidiert.
 ## Changelog
 
 - 2026-09-14: Initial spec created (Issue #2317)
+- 2026-09-14: Known Limitation zur Aktualisieren-Sperre bei ungelöstem Speicherfehler ergänzt (Adversary F005)
+- 2026-09-14: Umsetzung abgeschlossen (Status `implemented`); Source-Liste um tatsächlich neue
+  Dateien ergänzt (`tripSpeicherung.ts`, `aktiveSpeicherung.ts`, `korridorCommit.ts`,
+  `CompareTabs.svelte`, `api.ts::getMitFassung`, `saveStatusStore.svelte.ts::laufendeSpeicherung`)

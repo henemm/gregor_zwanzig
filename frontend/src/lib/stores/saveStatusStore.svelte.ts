@@ -163,6 +163,13 @@ export class SaveStatus {
 		return this._pendingFn !== null;
 	}
 
+	/** Issue #2317 (AC-6): der gerade im Netz laufende Speichervorgang, oder null.
+	 *  „Aktualisieren" wartet ihn ab, bevor die neue Fassung die Seite neu laedt —
+	 *  sonst bricht das Neuladen einen regulaeren PUT ab. */
+	get laufendeSpeicherung(): Promise<void> | null {
+		return this._inflight ?? null;
+	}
+
 	/** Schedule a debounced save (700ms default). Calling again cancels previous timer.
 	 *  SOFORT setSaving() — damit der Indikator nie "idle" (Gespeichert ✓) zeigt,
 	 *  während eine ungespeicherte Änderung im Debounce-Fenster wartet (AC-1). */

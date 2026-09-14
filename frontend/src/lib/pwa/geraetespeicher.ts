@@ -92,6 +92,64 @@ export function abmeldungLiegtVor(url: URL): boolean {
 	return url.searchParams.get(ABMELDE_MERKMAL) === '1' || ausMerker;
 }
 
+// ---------------------------------------------------------------------------
+// Issue #2317 — Nachlade-Merker (Spec docs/specs/modules/speicherung_beim_neuladen.md,
+// Baustein 3). Traegt AUSSCHLIESSLICH die Kennung {typ, id}, nie eingegebene
+// Werte (AC-13, ADR-0003). Beim Abmelden geraeumt (AC-14/AC-15).
+// ---------------------------------------------------------------------------
+
+/** Schluessel des Merkers im Sitzungsspeicher des Tabs. */
+export const NACHLADE_MERKER = 'gz-nachladen';
+
+export interface NachladeKennung {
+	typ: 'trip' | 'vergleich';
+	id: string;
+}
+
+function vergissNachladeMerker(): void {
+	try {
+		globalThis.sessionStorage?.removeItem(NACHLADE_MERKER);
+	} catch {
+		/* Speicher verweigert (Safari privat) -- nichts zu raeumen */
+	}
+}
+
+/** Beim Entladen: eine Speicherung dieser Seite ging per keepalive raus. */
+export function merkeSpeicherungBeimEntladen(kennung: NachladeKennung): void {
+	try {
+		sessionStorage.setItem(NACHLADE_MERKER, JSON.stringify({ typ: kennung.typ, id: kennung.id }));
+	} catch {
+		/* Speicher verweigert -- dann eben kein Nachladen (Anzeige wie vor #2317) */
+	}
+}
+
+/**
+ * Liegt ein Merker fuer GENAU diese Kennung vor? Bei Treffer wird er verbraucht.
+ * Ein Merker einer anderen Seite bleibt liegen; ein unlesbarer wird geraeumt.
+ */
+export function nimmSpeicherungBeimEntladen(kennung: NachladeKennung): boolean {
+	let roh: string | null;
+	try {
+		roh = globalThis.sessionStorage?.getItem(NACHLADE_MERKER) ?? null;
+	} catch {
+		return false;
+	}
+	if (roh === null) return false;
+	let merker: Partial<NachladeKennung> | null = null;
+	try {
+		merker = JSON.parse(roh) as Partial<NachladeKennung>;
+	} catch {
+		merker = null;
+	}
+	if (!merker || typeof merker.typ !== 'string' || typeof merker.id !== 'string') {
+		vergissNachladeMerker();
+		return false;
+	}
+	if (merker.typ !== kennung.typ || merker.id !== kennung.id) return false;
+	vergissNachladeMerker();
+	return true;
+}
+
 /**
  * EIN Durchgang: jede Registrierung abmelden, jeden Speicher loeschen.
  *
@@ -171,6 +229,9 @@ const NACHLAUF_FRIST_MS = 10_000;
  * fuer den naechsten Versuch fest (AC-24).
  */
 export async function raeumeGeraetespeicher(): Promise<boolean> {
+	// #2317 AC-14/AC-15: synchron VOR jedem await -- der Merker darf keinen
+	// Augenblick laenger liegen als die Abmeldung.
+	vergissNachladeMerker();
 	const frist = Date.now() + NACHLAUF_FRIST_MS;
 	let leerSeit: number | null = null;
 	for (;;) {

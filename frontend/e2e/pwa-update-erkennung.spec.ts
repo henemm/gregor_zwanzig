@@ -2,6 +2,8 @@
 // Spec: docs/specs/modules/pwa_update_erkennung.md
 // Abgedeckt (E2E, Projekt `pwa`): AC-1, AC-2, AC-3, AC-6, AC-7 (Mobil), AC-8,
 //   AC-10 (ueber den echten Update-Weg), AC-11, AC-14.
+// Issue #2317 (docs/specs/modules/speicherung_beim_neuladen.md): AC-6 —
+//   „Aktualisieren" wartet auf den regulaeren Abschluss der ausstehenden Speicherung.
 // Nicht hier: AC-4/5/12/13 (Unit, src/lib/pwa/serviceWorkerUpdate.test.ts),
 //   AC-9/AC-10-Grundfall (e2e/speicherung-ueberlebt-neuladen.spec.ts),
 //   AC-15 (Staging-Zweifach-Deploy, kein RED-Test).
@@ -428,6 +430,174 @@ test('AC-10: Aenderung auf /trips/[id], sofort „Aktualisieren" → nach dem Ne
 				{ message: 'AC-10: die Aenderung ging beim Update verloren', timeout: 10_000 }
 			)
 			.toBe(55);
+	});
+});
+
+// ===========================================================================
+// Issue #2317 AC-6 — „Aktualisieren" schliesst die ausstehende Speicherung
+// REGULAER ab, BEVOR die neue Fassung uebernimmt
+// Spec: docs/specs/modules/speicherung_beim_neuladen.md § AC-6 (Baustein 2)
+//
+// Beobachtung im Browser, nicht am Server: ein Init-Skript protokolliert in
+// sessionStorage (ueberlebt das Neuladen, derselbe Tab) in Aufrufreihenfolge
+//   - jeden Browser-PUT auf /api/trips/… beim Absenden (keepalive, If-Match)
+//     und beim Eintreffen der Antwort (Status),
+//   - das SKIP_WAITING an den wartenden Worker (ServiceWorker.postMessage),
+//   - das Entladen des Dokuments (pagehide).
+// Die Reihenfolge ist ein Zaehler, keine Uhrzeit — `page.clock` ist installiert.
+//
+// Erwartung RED: heute geht SKIP_WAITING sofort raus; der PUT entsteht erst im
+// Entlade-Waechter danach (bzw. als abgebrochene Anfrage) → Reihenfolge-Assert rot.
+// ===========================================================================
+
+const PROTOKOLL_2317 = 'gz-e2e-2317-protokoll';
+
+type Protokolleintrag =
+	| { art: 'put-start'; pfad: string; keepalive: boolean; ifMatch: string | null }
+	| { art: 'put-antwort'; pfad: string; status: number }
+	| { art: 'put-fehler'; pfad: string }
+	| { art: 'skip-waiting' }
+	| { art: 'entladen' };
+
+async function protokolliereSpeichernUndUebernahme(page: Page): Promise<() => Promise<Protokolleintrag[]>> {
+	await page.addInitScript((schluessel: string) => {
+		const schreibe = (eintrag: unknown) => {
+			try {
+				const bisher = JSON.parse(sessionStorage.getItem(schluessel) ?? '[]') as unknown[];
+				bisher.push(eintrag);
+				sessionStorage.setItem(schluessel, JSON.stringify(bisher));
+			} catch {
+				/* Speicher nicht verfuegbar — Protokoll bleibt leer, Asserts melden das */
+			}
+		};
+		const originalFetch = window.fetch.bind(window);
+		window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+			const methode = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+			const pfad = new URL(url, location.href).pathname;
+			if (methode !== 'PUT' || !pfad.startsWith('/api/trips/')) return originalFetch(input, init);
+			schreibe({
+				art: 'put-start',
+				pfad,
+				keepalive: init?.keepalive === true,
+				ifMatch: new Headers(init?.headers ?? {}).get('If-Match')
+			});
+			return originalFetch(input, init).then(
+				(antwort) => {
+					schreibe({ art: 'put-antwort', pfad, status: antwort.status });
+					return antwort;
+				},
+				(fehler) => {
+					schreibe({ art: 'put-fehler', pfad });
+					throw fehler;
+				}
+			);
+		};
+		if (typeof ServiceWorker !== 'undefined') {
+			const originalPost = ServiceWorker.prototype.postMessage;
+			ServiceWorker.prototype.postMessage = function (this: ServiceWorker, nachricht: unknown, ...rest: unknown[]) {
+				if ((nachricht as { type?: string } | null)?.type === 'SKIP_WAITING') schreibe({ art: 'skip-waiting' });
+				return (originalPost as (...a: unknown[]) => void).call(this, nachricht, ...rest);
+			} as typeof ServiceWorker.prototype.postMessage;
+		}
+		window.addEventListener('pagehide', () => schreibe({ art: 'entladen' }));
+	}, PROTOKOLL_2317);
+	return async () => {
+		try {
+			return (await page.evaluate(
+				(schluessel) => JSON.parse(sessionStorage.getItem(schluessel) ?? '[]'),
+				PROTOKOLL_2317
+			)) as Protokolleintrag[];
+		} catch {
+			return []; // Ausfuehrungskontext waehrend des Neuladens zerstoert
+		}
+	};
+}
+
+test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abgeschlossen VOR SKIP_WAITING, Wert danach sichtbar', async ({
+	page
+}) => {
+	await mitAuslieferung(async (ausl) => {
+		const tripId = `e2e-gz-2317-update-${Date.now()}`;
+		const seed = await page.request.post('/api/trips', {
+			data: {
+				id: tripId,
+				name: `${E2E_TEST_PREFIX}2317 Update wartet`,
+				stages: [
+					{
+						id: 's1',
+						name: 'Tag 1',
+						date: '2026-08-01',
+						waypoints: [
+							{ id: 'a', name: 'a', lat: 42.0, lon: 9.0, elevation_m: 800 },
+							{ id: 'b', name: 'b', lat: 42.04, lon: 9.0, elevation_m: 800 }
+						]
+					}
+				],
+				corridors: [{ metric: 'wind_gust', range: [null, 70], notify: false, mark: false }]
+			}
+		});
+		expect(seed.ok(), `Trip-Anlage HTTP ${seed.status()}`).toBeTruthy();
+		registerForCleanup('trip', tripId);
+
+		const protokoll = await protokolliereSpeichernUndUebernahme(page);
+		const ladungen = await zaehleLadungen(page);
+		await appLaeuft(page, ausl, `/trips/${tripId}?tab=alerts`);
+		await neueFassungMitHinweis(page, ausl);
+		const vorher = await ladungen();
+		const alteFassung = await fassungsKennung(page);
+
+		const maxInput = page.locator('[data-testid="corridor-row-wind_gust"] input[type="number"]').first();
+		await expect(maxInput).toHaveValue('70', { timeout: 10_000 });
+		// Marke: nur was AB der Eingabe protokolliert wird, zaehlt (ein etwaiges
+		// SKIP_WAITING der Erst-Aktivierung bleibt davor).
+		const marke = (await protokoll()).length;
+
+		// Eingabe liegt im 700-ms-Fenster — und sofort „Aktualisieren".
+		await maxInput.fill('55');
+		await aktualisieren(page).click();
+
+		await expect.poll(() => fassungsKennung(page).catch(() => alteFassung), { timeout: 30_000 }).not.toBe(
+			alteFassung
+		);
+		await expect.poll(ladungen, { timeout: 20_000 }).toBe(vorher + 1);
+
+		const eintraege = await protokoll();
+		const tripPfad = `/api/trips/${tripId}`;
+		const idxSkip = eintraege.findIndex((e, i) => i >= marke && e.art === 'skip-waiting');
+		expect(idxSkip, `#2317 AC-6: kein SKIP_WAITING protokolliert — Protokoll: ${JSON.stringify(eintraege)}`).toBeGreaterThanOrEqual(0);
+
+		const vorUebernahme = eintraege.slice(marke, idxSkip);
+		const putStart = vorUebernahme.find(
+			(e): e is Extract<Protokolleintrag, { art: 'put-start' }> => e.art === 'put-start' && e.pfad === tripPfad
+		);
+		expect(
+			putStart,
+			`#2317 AC-6: die ausstehende Speicherung muss VOR der Uebernahme der neuen Fassung abgesetzt sein — Protokoll: ${JSON.stringify(eintraege)}`
+		).toBeTruthy();
+		expect(putStart!.keepalive, '#2317 AC-6: vor der Uebernahme wird regulaer gespeichert, NICHT als keepalive').toBe(false);
+		expect(putStart!.ifMatch, '#2317 AC-6: der regulaere Abschluss muss den Nebenlaeufigkeitsschutz (If-Match) tragen').toBeTruthy();
+		const putAntwort = vorUebernahme.find(
+			(e): e is Extract<Protokolleintrag, { art: 'put-antwort' }> => e.art === 'put-antwort' && e.pfad === tripPfad
+		);
+		expect(
+			putAntwort,
+			`#2317 AC-6: die Antwort des PUT muss eingetroffen sein, BEVOR der Worker SKIP_WAITING bekommt — Protokoll: ${JSON.stringify(eintraege)}`
+		).toBeTruthy();
+		expect(putAntwort!.status, '#2317 AC-6: der regulaere Abschluss muss angenommen worden sein').toBe(200);
+		expect(
+			vorUebernahme.some((e) => e.art === 'entladen'),
+			'#2317 AC-6: die Seite darf nicht vor SKIP_WAITING entladen worden sein'
+		).toBe(false);
+
+		await expect(
+			page.locator('[data-testid="corridor-row-wind_gust"] input[type="number"]').first(),
+			'#2317 AC-6: nach dem Fassungswechsel muss der eingegebene Wert (55) sichtbar sein'
+		).toHaveValue('55', { timeout: 10_000 });
+		const trip = (await (await page.request.get(`/api/trips/${tripId}`)).json()) as {
+			corridors?: Array<{ metric: string; range: [number | null, number | null] }>;
+		};
+		expect(trip.corridors?.find((c) => c.metric === 'wind_gust')?.range?.[1], '#2317 AC-6: Server-Stand').toBe(55);
 	});
 });
 

@@ -21,6 +21,13 @@
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
+	import { getContext, onMount } from 'svelte';
+	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
+	import {
+		inhaltsFassung,
+		starteNachladenNachEntladen,
+		vergleichNachladeQuelle
+	} from '$lib/stores/nachEntladenNachladen';
 	import { api } from '$lib/api';
 	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type ComparePreset } from '$lib/types';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -54,7 +61,41 @@
 	// Issue #2316 Scheibe A (AC-9): derselbe Speicher-Wächter wie /trips/[id] —
 	// vorher hatte der Hub gar keinen beforeNavigate-Wächter, eine getippte,
 	// noch nicht committete Änderung ging beim Neuladen verloren.
-	beforeNavigate((navigation) => sichereAusstehendeSpeicherung(navigation, hubSaveCtl, goto));
+	// Issue #2317 Baustein 3: mit Kennung — beim Entladen entsteht der Nachlade-Merker.
+	beforeNavigate((navigation) =>
+		sichereAusstehendeSpeicherung(navigation, hubSaveCtl, goto, { typ: 'vergleich', id: currentPreset.id })
+	);
+
+	// Issue #2317 Baustein 2: Anmeldung an der Anmeldestelle des Layouts (wie /trips/[id]).
+	const speicherAnmeldestelle = getContext<SpeicherAnmeldestelle | undefined>(AKTIVE_SPEICHERUNG);
+
+	// Issue #2317 Baustein 3: derselbe Nachlade-Baustein wie /trips/[id]. Ohne
+	// ETag im Seitenaufbau vergleicht er den Inhalt. Die Reiter (CompareTabs,
+	// Idealwerte) hydrieren ihren Zustand nur einmal aus `preset` — nach einer
+	// Uebernahme wird CompareDetail deshalb neu aufgebaut ({#key} unten), mit dem
+	// gerade offenen Reiter (CompareTabs schreibt ihn per replaceState in die
+	// Adresse, an SvelteKits `page.url` vorbei).
+	let uebernommeneFassung = $state(0);
+	let tabNachUebernahme = $state<string | null>(null);
+
+	onMount(() => {
+		const abmelden = speicherAnmeldestelle?.anmelden(hubSaveCtl);
+		const nachladen = starteNachladenNachEntladen<ComparePreset>({
+			kennung: { typ: 'vergleich', id: data.preset.id },
+			ctl: hubSaveCtl,
+			ausgelieferteFassung: inhaltsFassung(data.preset),
+			holen: vergleichNachladeQuelle<ComparePreset>(data.preset.id),
+			uebernehmen: (stand) => {
+				tabNachUebernahme = new URL(window.location.href).searchParams.get('tab');
+				currentPreset = stand;
+				uebernommeneFassung += 1;
+			}
+		});
+		return () => {
+			abmelden?.();
+			nachladen.stoppen();
+		};
+	});
 
 	// Staging-Fund SF-2 (CRITICAL, AC-37): der Hub (CompareTabs) haelt fuer die
 	// Aktivierungs-Karte einen eigenen `localSchedule`-Zustand und PUT-Pfad
@@ -444,14 +485,16 @@
      hubPutQueue-Instanzen/doppelte testids (S4-F001-/S7-F004-Fehlerklasse).
      CompareTabs schaltet Monitoring-Streifen + Idealwerte-Tab intern via
      isMobileViewport (matchMedia) um. -->
-<CompareDetail
-	preset={currentPreset}
-	locations={data.locations}
-	{initialTab}
-	onScheduleChange={handleScheduleChange}
-	saveController={hubSaveCtl}
-	bind:this={compareDetailRef}
-/>
+{#key uebernommeneFassung}
+	<CompareDetail
+		preset={currentPreset}
+		locations={data.locations}
+		initialTab={tabNachUebernahme ?? initialTab}
+		onScheduleChange={handleScheduleChange}
+		saveController={hubSaveCtl}
+		bind:this={compareDetailRef}
+	/>
+{/key}
 
 <!-- Bottom-Sheet für mobile Aktionen (#493) -->
 <MCompareActionSheet

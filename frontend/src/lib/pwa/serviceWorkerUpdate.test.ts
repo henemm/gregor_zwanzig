@@ -17,6 +17,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { initServiceWorkerUpdate } from './serviceWorkerUpdate.ts';
+// #2317: echte SaveStatus-Instanzen fuer die Anmeldestelle (Faelle ganz unten).
+import { SaveStatus } from '../stores/saveStatusStore.svelte.ts';
 
 // ===========================================================================
 // Doppel — echte EventTarget, echte Ereignisse
@@ -313,7 +315,7 @@ type AufbauMitAusloesern = {
 	fenster: EventTarget;
 	zeit: FakeZeit;
 	zaehler: { hinweise: number; neuladungen: number; fehlschlaege: number };
-	steuerung: { applyUpdate: () => void; spaeter: () => void };
+	steuerung: { applyUpdate: () => void | Promise<void>; spaeter: () => void };
 };
 
 function aufbauMitAusloesern(
@@ -323,6 +325,8 @@ function aufbauMitAusloesern(
 		zeit?: FakeZeit;
 		dokument?: FakeDokument;
 		fenster?: EventTarget;
+		/** #2317 — nur gesetzt, wenn ein Test ihn ausdruecklich hereinreicht. */
+		awaitPendingSave?: () => Promise<boolean>;
 	} = {}
 ): AufbauMitAusloesern {
 	const registration = optionen.registration ?? new PruefbareRegistration();
@@ -347,7 +351,8 @@ function aufbauMitAusloesern(
 		window: fenster as any,
 		uhr: zeit,
 		timer: zeit,
-		onUpdateFailed: () => void (zaehler.fehlschlaege += 1)
+		onUpdateFailed: () => void (zaehler.fehlschlaege += 1),
+		...(optionen.awaitPendingSave ? { awaitPendingSave: optionen.awaitPendingSave } : {})
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any) as unknown as AufbauMitAusloesern['steuerung'];
 
@@ -557,3 +562,389 @@ test('#2316 AC-13: bleibt der Worker nach dem Antippen in „installed", loest k
 	a.zeit.vergehen(4_001);
 	assert.equal(a.zaehler.neuladungen, 1, 'erst mit „activated" greift der 4-s-Rueckfall');
 });
+
+// ###########################################################################
+// TDD RED — Issue #2317 (Epic #2127): „Aktualisieren" wartet auf eine
+// ausstehende Speicherung.
+// Spec: docs/specs/modules/speicherung_beim_neuladen.md
+//   § Implementation Details „Baustein 2 — „Aktualisieren" wartet", § AC-6 (Unit-Anteil), § AC-7
+//
+// Zielschnittstelle:
+//   serviceWorkerUpdate.ts: neue Option `awaitPendingSave?: () => Promise<boolean>`;
+//     `applyUpdate()` darf ein Promise liefern. Erst `awaitPendingSave` abwarten;
+//     bei false ODER Wurf: KEIN SKIP_WAITING, KEIN reload, spaeter erneut antippbar.
+//   stores/aktiveSpeicherung.ts (neu, svelte-frei):
+//     erzeugeSpeicherAnmeldestelle() -> { anmelden(ctl) -> abmelden, wartenAufAusstehendeSpeicherung() }
+//
+// 🔴 VERTRAGSZWANG fuer /50: OHNE `awaitPendingSave` muss `applyUpdate()` die
+// SKIP_WAITING-Nachricht weiterhin SYNCHRON im selben Tick schicken. Die
+// bestehenden Faelle oben (#2128 AC-9, #2316 AC-11/12/13) pruefen `neu.posted`
+// direkt nach dem Aufruf, ohne zu warten — schon ein `await undefined` vor dem
+// postMessage macht sie rot. Nur MIT Option darf gewartet werden.
+//
+// Die Anmeldestelle arbeitet mit ECHTEN SaveStatus-Instanzen (Prototype-Methoden
+// schedule/flush/doSave); `saveFn` ist ein aufzeichnender Transport-Doppel.
+// ###########################################################################
+
+type Anmeldestelle = {
+	anmelden(ctl: SaveStatus): () => void;
+	wartenAufAusstehendeSpeicherung(): Promise<boolean>;
+};
+
+async function erzeugeAnmeldestelle(): Promise<Anmeldestelle> {
+	const m = (await import('../stores/aktiveSpeicherung.ts')) as unknown as {
+		erzeugeSpeicherAnmeldestelle?: () => Anmeldestelle;
+	};
+	assert.equal(typeof m.erzeugeSpeicherAnmeldestelle, 'function', 'erzeugeSpeicherAnmeldestelle fehlt');
+	return m.erzeugeSpeicherAnmeldestelle!();
+}
+
+/** Echte SaveStatus-Instanz ohne Konstruktor (Muster aus saveStatus.test.ts). */
+function createSaveStatus(tripId?: string): SaveStatus {
+	const inst = Object.create(SaveStatus.prototype) as SaveStatus;
+	const fields = inst as unknown as Record<string, unknown>;
+	fields.state = 'idle';
+	fields.savedAt = null;
+	fields.error = null;
+	fields._timer = null;
+	fields._pendingFn = null;
+	fields._inflight = null;
+	fields._lastFailed = null;
+	fields._unresolvedError = null;
+	if (tripId) fields._tripId = tripId;
+	return inst;
+}
+
+async function ruhe(): Promise<void> {
+	for (let i = 0; i < 5; i++) await new Promise<void>((r) => setImmediate(r));
+}
+
+/** Konfliktantwort, wie `api.ts` sie bei 412 wirft (Status + deutsche Servermeldung). */
+function konflikt412() {
+	return {
+		status: 412,
+		error: 'precondition_failed',
+		detail: 'Der Stand wurde zwischenzeitlich an anderer Stelle geaendert.'
+	};
+}
+
+/** Offline-Ablehnung, wie `api.ts` sie ohne Verbindung wirft (#2131). */
+function offlineFehler() {
+	return Object.assign(new Error('Ohne Verbindung lässt sich nichts speichern — die Änderung wurde nicht abgeschickt.'), {
+		status: 0
+	});
+}
+
+// ===========================================================================
+// AC-7 — serviceWorkerUpdate: ohne Freigabe kein Fassungswechsel
+// ===========================================================================
+
+test('#2317 AC-7: awaitPendingSave meldet false → kein SKIP_WAITING, kein Neuladen, spaeter erneut antippbar', async () => {
+	// GIVEN: eine neue Fassung wartet; die ausstehende Speicherung scheitert
+	let freigabe = false;
+	const a = aufbauMitAusloesern({ awaitPendingSave: async () => freigabe });
+	const neu = neueFassungWartet(a);
+
+	// WHEN: der Nutzer tippt „Aktualisieren"
+	await a.steuerung.applyUpdate();
+	await ruhe();
+
+	// THEN: die Seite bleibt, die Fehler-/Konfliktanzeige bleibt sichtbar
+	assert.deepEqual(neu.posted, [], 'ohne gesicherte Speicherung darf keine SKIP_WAITING-Nachricht rausgehen');
+	neu.setState('activated');
+	a.zeit.vergehen(5 * SEKUNDE);
+	assert.equal(a.zaehler.neuladungen, 0, 'ohne gesicherte Speicherung darf nicht neu geladen werden (auch kein 4-s-Rueckfall)');
+
+	// Gegenprobe/Wiederholung: ist das Speichern spaeter gelungen, wirkt „Aktualisieren" erneut
+	neu.setState('installed');
+	freigabe = true;
+	await a.steuerung.applyUpdate();
+	await ruhe();
+	assert.deepEqual(neu.posted, [{ type: 'SKIP_WAITING' }], 'nach gelungener Speicherung muss „Aktualisieren" wieder wirken');
+});
+
+test('#2317 AC-7: awaitPendingSave wirft → kein SKIP_WAITING, kein Neuladen, spaeter erneut antippbar', async () => {
+	let wirft = true;
+	const a = aufbauMitAusloesern({
+		awaitPendingSave: async () => {
+			if (wirft) throw new Error('Speichern unerwartet abgebrochen');
+			return true;
+		}
+	});
+	const neu = neueFassungWartet(a);
+
+	// Ob applyUpdate den Wurf weiterreicht oder schluckt, ist nicht festgelegt —
+	// festgelegt ist nur, dass KEIN Fassungswechsel folgt.
+	await Promise.resolve()
+		.then(() => a.steuerung.applyUpdate())
+		.catch(() => {});
+	await ruhe();
+
+	assert.deepEqual(neu.posted, [], 'nach einem Wurf beim Warten darf keine SKIP_WAITING-Nachricht rausgehen');
+	a.zeit.vergehen(5 * SEKUNDE);
+	assert.equal(a.zaehler.neuladungen, 0, 'nach einem Wurf darf nicht neu geladen werden');
+
+	wirft = false;
+	await a.steuerung.applyUpdate();
+	await ruhe();
+	assert.deepEqual(neu.posted, [{ type: 'SKIP_WAITING' }], '„Aktualisieren" muss nach einem Wurf erneut wirken');
+});
+
+test('#2317 AC-6 (Unit): solange awaitPendingSave offen ist, kein SKIP_WAITING — erst nach resolve(true) genau einmal', async () => {
+	let freigeben!: (ok: boolean) => void;
+	const offen = new Promise<boolean>((r) => {
+		freigeben = r;
+	});
+	const a = aufbauMitAusloesern({ awaitPendingSave: () => offen });
+	const neu = neueFassungWartet(a);
+
+	const lauf = a.steuerung.applyUpdate();
+	await ruhe();
+	assert.deepEqual(neu.posted, [], 'waehrend die Speicherung laeuft, darf die neue Fassung noch nicht uebernehmen');
+	assert.equal(a.zaehler.neuladungen, 0);
+
+	freigeben(true);
+	await lauf;
+	await ruhe();
+	assert.deepEqual(neu.posted, [{ type: 'SKIP_WAITING' }], 'nach abgeschlossener Speicherung genau EINE SKIP_WAITING-Nachricht');
+});
+
+test('#2317 F006: zweimal „Aktualisieren" ueberlappend → awaitPendingSave laeuft EINMAL, genau eine SKIP_WAITING-Nachricht', async () => {
+	let aufrufe = 0;
+	let freigeben!: (ok: boolean) => void;
+	const a = aufbauMitAusloesern({
+		awaitPendingSave: () => {
+			aufrufe++;
+			return new Promise<boolean>((r) => {
+				freigeben = r;
+			});
+		}
+	});
+	const neu = neueFassungWartet(a);
+
+	const erster = a.steuerung.applyUpdate();
+	const zweiter = a.steuerung.applyUpdate();
+	await ruhe();
+	assert.equal(aufrufe, 1, 'ein zweites Antippen waehrend des Wartens darf keinen zweiten Speicher-Abschluss starten');
+	assert.deepEqual(neu.posted, [], 'solange gewartet wird, kein SKIP_WAITING');
+
+	freigeben(true);
+	await Promise.all([erster, zweiter]);
+	await ruhe();
+	assert.deepEqual(neu.posted, [{ type: 'SKIP_WAITING' }], 'beide Antipper zusammen ergeben genau EINE SKIP_WAITING-Nachricht');
+});
+
+// ===========================================================================
+// AC-6/AC-7 — Anmeldestelle: ausstehende Speicherung regulaer abschliessen
+// ===========================================================================
+
+test('#2317 Anmeldestelle: nichts angemeldet → true (Aktualisieren darf weiter)', async () => {
+	const stelle = await erzeugeAnmeldestelle();
+	assert.equal(await stelle.wartenAufAusstehendeSpeicherung(), true);
+});
+
+test('#2317 Anmeldestelle: angemeldet, aber nichts ausstehend → true ohne Speichervorgang', async () => {
+	const stelle = await erzeugeAnmeldestelle();
+	const ctl = createSaveStatus('gr20');
+	stelle.anmelden(ctl);
+
+	assert.equal(await stelle.wartenAufAusstehendeSpeicherung(), true);
+	assert.equal(ctl.state, 'idle', 'ohne ausstehende Eingabe kein Speichervorgang');
+	assert.equal(ctl.savedAt, null, 'ohne Speichervorgang kein neuer Gespeichert-Zeitstempel');
+});
+
+test('#2317 AC-6 Anmeldestelle: ausstehende Eingabe wird OHNE keepalive gespeichert, danach true', async () => {
+	// GIVEN: eine Eingabe wartet im 700-ms-Fenster
+	const stelle = await erzeugeAnmeldestelle();
+	const ctl = createSaveStatus('gr20');
+	stelle.anmelden(ctl);
+	const inits: Array<RequestInit | undefined> = [];
+	ctl.schedule(async (init) => {
+		inits.push(init);
+	});
+
+	// WHEN
+	const ergebnis = await stelle.wartenAufAusstehendeSpeicherung();
+
+	// THEN
+	assert.equal(inits.length, 1, 'die ausstehende Speicherung muss genau einmal abgesetzt werden');
+	assert.notEqual(
+		inits[0]?.keepalive,
+		true,
+		'regulaer speichern: ohne keepalive — nur dann laeuft sie durch die Warteschlange mit If-Match'
+	);
+	assert.equal(ergebnis, true, 'nach gelungener Speicherung darf die neue Fassung uebernommen werden');
+	assert.equal(ctl.hasPending, false);
+	assert.equal(ctl.state, 'idle');
+});
+
+test('#2317 AC-7 Anmeldestelle: Konflikt (412) → false, Konfliktanzeige steht, Wiederholen bleibt moeglich', async () => {
+	const stelle = await erzeugeAnmeldestelle();
+	const ctl = createSaveStatus('gr20');
+	stelle.anmelden(ctl);
+	const saveFn = async () => {
+		throw konflikt412();
+	};
+	ctl.schedule(saveFn);
+
+	const ergebnis = await stelle.wartenAufAusstehendeSpeicherung();
+
+	assert.equal(ergebnis, false, 'ein Konflikt darf das Aktualisieren nicht freigeben');
+	assert.equal(ctl.state, 'conflict', 'die Konfliktanzeige des Reiters muss sichtbar bleiben');
+	// Sekundaer: die Eingabe ist nicht verworfen — der gescheiterte Vorgang liegt
+	// fuer „Wiederholen" (retryConflict) bereit. `_pendingFn` leert doSave bewusst.
+	const lastFailed = (ctl as unknown as { _lastFailed: { fn: unknown } | null })._lastFailed;
+	assert.equal(lastFailed?.fn, saveFn, 'der abgelehnte Speichervorgang muss fuer Wiederholen erhalten bleiben');
+});
+
+test('#2317 AC-7 Anmeldestelle: offline / Netzfehler → false, Fehleranzeige steht', async () => {
+	const stelle = await erzeugeAnmeldestelle();
+	const ctl = createSaveStatus('gr20');
+	stelle.anmelden(ctl);
+	ctl.schedule(async () => {
+		throw offlineFehler();
+	});
+
+	const ergebnis = await stelle.wartenAufAusstehendeSpeicherung();
+
+	assert.equal(ergebnis, false, 'ohne Verbindung darf das Aktualisieren nicht freigegeben werden');
+	assert.equal(ctl.state, 'error', 'die Fehleranzeige des Reiters muss sichtbar bleiben');
+});
+
+test('#2317 Anmeldestelle: nach dem Abmelden → true ohne Speichervorgang', async () => {
+	const stelle = await erzeugeAnmeldestelle();
+	const ctl = createSaveStatus('gr20');
+	const abmelden = stelle.anmelden(ctl);
+	let aufrufe = 0;
+	ctl.schedule(async () => {
+		aufrufe++;
+	});
+
+	abmelden();
+	const ergebnis = await stelle.wartenAufAusstehendeSpeicherung();
+
+	assert.equal(ergebnis, true, 'eine abgemeldete Seite darf das Aktualisieren nicht aufhalten');
+	assert.equal(aufrufe, 0, 'eine abgemeldete Seite darf nicht mehr gespeichert werden');
+	ctl.cancel();
+});
+
+/**
+ * #2317 AC-6 (Nachbesserung): der Speicher-Takt ist schon abgelaufen, der
+ * regulaere PUT ist UNTERWEGS (`hasPending` false). Liefert den Freigabe-Schalter.
+ */
+async function speicherungUnterwegs(ctl: SaveStatus): Promise<{ antworten: (fehler?: unknown) => void }> {
+	let aufloesen!: () => void;
+	let ablehnen!: (e: unknown) => void;
+	let abgesetzt = false;
+	ctl.schedule(async () => {
+		abgesetzt = true;
+		await new Promise<void>((res, rej) => {
+			aufloesen = res;
+			ablehnen = rej;
+		});
+	}, 1);
+	for (let i = 0; i < 50 && !abgesetzt; i++) await new Promise<void>((r) => setTimeout(r, 2));
+	assert.equal(abgesetzt, true, 'Vorbedingung: der Speicher-Takt ist abgelaufen, der PUT ist unterwegs');
+	assert.equal(ctl.hasPending, false, 'Vorbedingung: nichts steht mehr aus — nur der laufende PUT');
+	assert.equal(ctl.state, 'saving', 'Vorbedingung: der PUT laeuft noch');
+	return { antworten: (fehler) => (fehler === undefined ? aufloesen() : ablehnen(fehler)) };
+}
+
+test('#2317 AC-6 Anmeldestelle: ein UNTERWEGS befindlicher PUT wird abgewartet — erst nach seiner Antwort true', async () => {
+	const stelle = await erzeugeAnmeldestelle();
+	const ctl = createSaveStatus('gr20');
+	stelle.anmelden(ctl);
+	const put = await speicherungUnterwegs(ctl);
+
+	let ergebnis: boolean | undefined;
+	const warten = stelle.wartenAufAusstehendeSpeicherung().then((ok) => (ergebnis = ok));
+	await ruhe();
+	assert.equal(ergebnis, undefined, 'solange der PUT unterwegs ist, darf das Warten nicht freigeben — das Neuladen braeche ihn ab');
+
+	put.antworten();
+	await warten;
+	assert.equal(ergebnis, true, 'nach angenommenem PUT darf die neue Fassung uebernehmen');
+	assert.equal(ctl.state, 'idle');
+});
+
+test('#2317 AC-7 Anmeldestelle: scheitert der UNTERWEGS befindliche PUT (offline) → false, Fehleranzeige steht', async () => {
+	const stelle = await erzeugeAnmeldestelle();
+	const ctl = createSaveStatus('gr20');
+	stelle.anmelden(ctl);
+	const put = await speicherungUnterwegs(ctl);
+
+	let ergebnis: boolean | undefined;
+	const warten = stelle.wartenAufAusstehendeSpeicherung().then((ok) => (ergebnis = ok));
+	await ruhe();
+	assert.equal(ergebnis, undefined, 'solange der PUT unterwegs ist, darf das Warten nicht freigeben');
+
+	put.antworten(offlineFehler());
+	await warten;
+	assert.equal(ergebnis, false, 'ein gescheiterter laufender PUT darf das Aktualisieren nicht freigeben');
+	assert.equal(ctl.state, 'error', 'die Fehleranzeige des Reiters muss sichtbar bleiben');
+});
+
+// ===========================================================================
+// AC-6/AC-7 — Zusammenspiel: Anmeldestelle als awaitPendingSave
+// ===========================================================================
+
+test('#2317 AC-6 Zusammenspiel: SKIP_WAITING erst NACH abgeschlossener regulaerer Speicherung', async () => {
+	// GIVEN: Detailseite angemeldet, Eingabe ausstehend, neue Fassung wartet
+	const stelle = await erzeugeAnmeldestelle();
+	const ctl = createSaveStatus('gr20');
+	stelle.anmelden(ctl);
+	const inits: Array<RequestInit | undefined> = [];
+	let unterwegsFreigeben!: () => void;
+	const unterwegs = new Promise<void>((r) => {
+		unterwegsFreigeben = r;
+	});
+	ctl.schedule(async (init) => {
+		inits.push(init);
+		await unterwegs;
+	});
+	const a = aufbauMitAusloesern({ awaitPendingSave: () => stelle.wartenAufAusstehendeSpeicherung() });
+	const neu = neueFassungWartet(a);
+
+	// WHEN: „Aktualisieren"
+	const lauf = a.steuerung.applyUpdate();
+	await ruhe();
+
+	// THEN: erst speichern ...
+	assert.equal(inits.length, 1, 'die ausstehende Speicherung muss sofort abgesetzt werden');
+	assert.notEqual(inits[0]?.keepalive, true, 'regulaer, ohne keepalive');
+	assert.deepEqual(neu.posted, [], 'solange die Speicherung unterwegs ist, kein SKIP_WAITING');
+
+	// ... dann die neue Fassung
+	unterwegsFreigeben();
+	await lauf;
+	await ruhe();
+	assert.deepEqual(neu.posted, [{ type: 'SKIP_WAITING' }], 'nach der Speicherung genau eine SKIP_WAITING-Nachricht');
+	assert.equal(ctl.state, 'idle');
+});
+
+for (const [fall, fehler, zustand] of [
+	['Konflikt (412)', konflikt412, 'conflict'],
+	['offline', offlineFehler, 'error']
+] as const) {
+	test(`#2317 AC-7 Zusammenspiel: ${fall} beim Speichern → Seite laedt NICHT neu, Anzeige „${zustand}" bleibt`, async () => {
+		const stelle = await erzeugeAnmeldestelle();
+		const ctl = createSaveStatus('gr20');
+		stelle.anmelden(ctl);
+		ctl.schedule(async () => {
+			throw fehler();
+		});
+		const a = aufbauMitAusloesern({ awaitPendingSave: () => stelle.wartenAufAusstehendeSpeicherung() });
+		const neu = neueFassungWartet(a);
+
+		await Promise.resolve()
+			.then(() => a.steuerung.applyUpdate())
+			.catch(() => {});
+		await ruhe();
+		neu.setState('activated');
+		a.zeit.vergehen(5 * SEKUNDE);
+
+		assert.deepEqual(neu.posted, [], 'ohne gesicherte Speicherung keine SKIP_WAITING-Nachricht');
+		assert.equal(a.zaehler.neuladungen, 0, 'die Seite darf nicht neu laden');
+		assert.equal(ctl.state, zustand, 'die bestehende Fehler-/Konfliktanzeige muss sichtbar bleiben');
+	});
+}

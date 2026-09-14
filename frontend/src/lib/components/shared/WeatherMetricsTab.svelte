@@ -9,6 +9,7 @@
 	// Spec: docs/specs/modules/issue_587_weather_tab_v2.md
 	// Spec: docs/specs/modules/issue_618_mobile_weather_tab.md
 	import { api } from '$lib/api.js';
+	import { baueWetterMetrikenSpeicherung } from './tripSpeicherung.ts';
 	import type { Trip, MetricPreset, Horizons, ReportConfig, WeatherConfigMetric } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
@@ -970,13 +971,16 @@
 			saveController.setDirty();
 			return;
 		}
-		saveController.schedule(async () => {
-			await api.put(`/api/trips/${trip!.id}/weather-config`, payload);
-			// Issue #850: Server-Response enthält aktualisierte alert_rules — nie manuell konstruieren.
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
-			onTripUpdate?.(updated);
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
-		});
+		// #2317 Baustein 1: keepalive erreicht beide PUTs; regulaer bleibt die
+		// Reihenfolge weather-config -> Trip (Issue #850: Server-Response enthält
+		// aktualisierte alert_rules — nie manuell konstruieren).
+		saveController.schedule(baueWetterMetrikenSpeicherung<Trip>(
+			api,
+			trip!.id,
+			payload,
+			() => ({ report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled }),
+			nachWetterSpeicherung
+		));
 	}
 
 	// Issue #1361/#1372 S1b (Staging-Fund AC-5): das Tagesfenster ist reine
@@ -994,11 +998,17 @@
 			saveController.setDirty();
 			return;
 		}
-		saveController.schedule(async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
-			onTripUpdate?.(updated);
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
+		// #2317 Baustein 1: `init` (keepalive beim Entladen) erreicht den PUT.
+		saveController.schedule(async (init) => {
+			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled }, init);
+			nachWetterSpeicherung(updated);
 		});
+	}
+
+	/** Nebeneffekte nach erfolgreichem Auto-Save (beide Speicherpfade oben). */
+	function nachWetterSpeicherung(updated: Trip): void {
+		onTripUpdate?.(updated);
+		savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
 	}
 
 	// Issue #774: reportConfig-Änderungen (Checkboxen) triggern Auto-Save.

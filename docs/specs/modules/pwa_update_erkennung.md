@@ -194,10 +194,16 @@ compare/[id]/+page.svelte + trips/[id]/+page.svelte (Scheibe A):
   (nur Netz) landen — offline eventuell ohne Skript/Stil. Dieser Fall wird im Rahmen der E2E-Strecke
   (AC-3) am echten Ablauf mitbeobachtet; bestätigt er sich, folgt ein eigenes Issue.
 - Speichern beim Entladen bleibt Best-Effort (`keepalive`), wie heute bei `trips/[id]`.
-- Gemessen 13.09. (RED-Lauf): Nach dem Neuladen zeigt `/trips/[id]` noch den alten Wert, obwohl der
-  neue schon gespeichert ist. Die Seite wird geholt, bevor der `keepalive`-Speichervorgang ankommt.
-  AC-9/AC-10 sichern „gespeichert", nicht „sofort richtig angezeigt". Das Verhalten besteht schon
-  seit #1376 und ist nicht Teil dieser Spec; eigenes Issue #2317.
+- Gemessen 13.09. (RED-Lauf): Nach dem Neuladen zeigte `/trips/[id]` noch den alten Wert, obwohl
+  der neue schon gespeichert war — die Seite wurde geholt, bevor der `keepalive`-Speichervorgang
+  ankam. AC-9/AC-10 sichern „gespeichert", nicht „sofort richtig angezeigt". **Behoben durch
+  #2317** (`docs/specs/modules/speicherung_beim_neuladen.md`, Baustein 3,
+  `stores/nachEntladenNachladen.ts`): die neu geladene Detailseite holt bei erkanntem
+  Entladen-Speichern bis zu 6× im Abstand von 500 ms den Server-Stand nach. #2317 behebt außerdem,
+  dass bei Wertebereichen, Alarmen und Wetter-Metriken „gespeichert" beim Entladen bis dahin nie
+  verlässlich galt: die Speicherfunktionen der Reiter verschluckten den hier hereingereichten
+  `init`-Parameter (Baustein 1) und „Aktualisieren" wartet seither eine ausstehende Speicherung
+  regulär ab, bevor es die Fassung wechselt (Baustein 2, `stores/aktiveSpeicherung.ts`).
 - Update-Notizen/Changelog für den Nutzer sind kein Ziel dieser Spec.
 - Eine „Aktualisiert"-Meldung nach einer still (selbst) aktivierten Fassung ist kein Ziel dieser Spec.
 - Keine nginx-Änderungen: Messung 13.09. zeigt `/service-worker.js` mit `ETag` → 304/0 Byte,

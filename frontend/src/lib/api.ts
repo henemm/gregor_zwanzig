@@ -75,7 +75,9 @@ async function send<T>(
 	/** true = dieser Vorgang laeuft durch die Warteschlange (serialisierter PUT). */
 	serializedWrite: boolean,
 	body?: unknown,
-	extra?: RequestInit
+	extra?: RequestInit,
+	/** #2317: nimmt den ETag der Antwort und das Registry-Ergebnis auf. */
+	fassung?: AntwortFassung
 ): Promise<T> {
 	// Issue #1395 S3: den Stand ERST HIER nachschlagen — innerhalb der
 	// Warteschlange, also zu dem Zeitpunkt, zu dem die Anfrage tatsaechlich
@@ -150,8 +152,13 @@ async function send<T>(
 	if (tripId) {
 		const etag = res.headers.get('ETag');
 		if (etag) {
+			let inRegistry = true;
 			if (serializedWrite) setKnownEtag(tripId, etag);
-			else setKnownEtagIfUnchanged(tripId, etag, versionAtStart);
+			else inRegistry = setKnownEtagIfUnchanged(tripId, etag, versionAtStart);
+			if (fassung) {
+				fassung.etag = etag;
+				fassung.inRegistry = inRegistry;
+			}
 		}
 	}
 	if (res.status === 204) return undefined as T;
@@ -185,6 +192,25 @@ export const api = {
 	patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
 	del: (path: string) => request<void>('DELETE', path)
 };
+
+/** #2317: ETag einer Antwort und ob die Registry ihn uebernommen hat. */
+export interface AntwortFassung {
+	etag: string | null;
+	inRegistry: boolean;
+}
+
+/**
+ * Issue #2317 Baustein 3: GET wie `api.get`, liefert zusaetzlich den ETag DIESER
+ * Antwort und ob die Registry ihn uebernommen hat. `inRegistry === false` heisst:
+ * waehrend der GET unterwegs war, hat ein anderer Vorgang den Eintrag der Tour
+ * veraendert (F001-Regel in `send`) — der ETag passt dann nicht zum If-Match
+ * der naechsten Speicherung.
+ */
+export async function getMitFassung<T>(path: string): Promise<{ daten: T } & AntwortFassung> {
+	const fassung: AntwortFassung = { etag: null, inRegistry: false };
+	const daten = await send<T>('GET', path, extractTripId(path), false, undefined, undefined, fassung);
+	return { daten, ...fassung };
+}
 
 /**
  * Issue #1395 S4: laedt eine Tour ausschliesslich, um den bestehenden

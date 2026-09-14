@@ -196,8 +196,9 @@ unabhängige Gründe, beide zwingend:
    bestehenden Dateilisten.
 
 Schutz gegen stilles Verschwinden einer Datei hängt hier **nicht** an einer Listenlänge, sondern an
-`E2E_MIN_EXECUTED_PWA` (aktuell 60 = 59 Testfälle in 5 Dateien + `global.setup`, Issue #2316 auf den
-Stand vom 2026-09-13 gehoben): fällt eine Datei weg, sinkt `expected` darunter und das Gate wird rot.
+`E2E_MIN_EXECUTED_PWA` (aktuell 61 = 60 Testfälle in 5 Dateien + `global.setup`, Issue #2316 auf den
+Stand vom 2026-09-13 gehoben, Issue #2317 um den Fall AC-6 in `pwa-update-erkennung.spec.ts`
+ergänzt): fällt eine Datei weg, sinkt `expected` darunter und das Gate wird rot.
 
 **Die Reihenfolge ist kritisch: PWA-Lauf VOR dem bug-703-Ratelimit-Lauf** (gemessen 2026-09-06).
 Die frühere Begründung — „unkritisch, weil `global.setup.ts` nur einloggt, wenn

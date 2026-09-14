@@ -1,7 +1,7 @@
 # ADR-0061: PWA-Bauform — handgeführter Service Worker, fünf Speicherregeln, Update erst auf Nachfrage
 
 - **Status:** Akzeptiert
-- **Datum:** 2026-09-06 (§3 fortgeschrieben 2026-09-13, Issue #2316: aktive Update-Erkennung; Titel/§2 korrigiert — seit #2131 sind es fünf Speicherregeln, nicht vier)
+- **Datum:** 2026-09-06 (§3 fortgeschrieben 2026-09-13, Issue #2316: aktive Update-Erkennung; Titel/§2 korrigiert — seit #2131 sind es fünf Speicherregeln, nicht vier; §3 fortgeschrieben 2026-09-14, Issue #2317: Warten auf eine ausstehende Speicherung vor `SKIP_WAITING`)
 - **Bezug:** ergänzt [ADR-0003](0003-multi-tenant-isolation.md) (Mandantentrennung) · `frontend/src/service-worker.ts`, `frontend/src/lib/pwa/serviceWorkerUpdate.ts`, `frontend/static/offline.html`, Issue #2128 (Scheibe 1 von Epic #2127), Issue #2131 (Positivliste, Regel 2), Issue #2316 (aktive Update-Erkennung)
 
 ## Kontext
@@ -144,6 +144,15 @@ neuer Fassung), niemals Programmdateien:
 Der Mechanismus ändert nichts an dieser ADR-Grundentscheidung (Speicherregeln,
 kein automatisches `skipWaiting`, kein Vorladen) — er ergänzt nur, **wann**
 geprüft wird. Details/Testplan: `docs/specs/modules/pwa_update_erkennung.md`.
+
+**Fortschreibung 2026-09-14 (Issue #2317):** Vor dem `SKIP_WAITING`-Antippen wartet der Client
+über eine Anmeldestelle (`frontend/src/lib/stores/aktiveSpeicherung.ts`) jede ausstehende
+Speicherung der offenen Detailseite regulär ab (mit If-Match, ohne `keepalive`) statt einen
+laufenden PUT durch den Fassungswechsel abzuschneiden. Schlägt das fehl (Konflikt, Netzfehler),
+unterbleibt `SKIP_WAITING`, die alte Fassung bleibt aktiv und die Fehler-/Konfliktanzeige des
+Reiters steht. Ändert nichts an der Bauform hier — nur eine zusätzliche Wartebedingung vor dem
+ohnehin ausschließlich nutzergesteuerten `SKIP_WAITING`. Details:
+`docs/specs/modules/speicherung_beim_neuladen.md`.
 
 ### 4. Räumen nur nach einem echten Abmelde-Vorgang
 

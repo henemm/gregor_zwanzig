@@ -97,6 +97,7 @@
 		type AlarmSnapshot,
 		type LayoutSnapshot
 	} from './compareHubWizardBridge.ts';
+	import { baueKorridorCommit } from './korridorCommit.ts';
 	import { groupLocations } from './locationHelpers.js';
 	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
 
@@ -396,54 +397,37 @@
 	// Request beim Entladen ueberleben laesst (#1376-Muster). Die bestehenden
 	// DOM-Bindungen (onfocusout/onclick) rufen ausdruecklich OHNE Argument auf
 	// (s.u.), sonst laendete das Event-Objekt hier als `init`.
-	async function handleCorridorCommit(init: RequestInit | undefined = undefined): Promise<void> {
-		if (!idealwerteHydrated) return;
-		// Epic #1273 S1: `failure` trennt den No-Op-Fall (kein Diff, gar kein PUT)
-		// vom Fehlerfall — beide liefern `updated === null`. No-Op bekommt
-		// markPristine() (keine Speicher-Anzeige-Luege, #1269 AC-3), nur ein
-		// echter Fehler setError().
-		let failure: unknown = null;
-		saveController?.setSaving();
-		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
-		// KOMPLETT innerhalb des enqueueten fn lesen bzw. ausfuehren — bei
-		// tatsaechlicher Ausfuehrung ist `lastPersistedCorridorSnapshot` bereits
-		// durch einen zuvor in der Queue gelaufenen, erfolgreichen Edit
-		// aufgefrischt. Ein hier NEU (statt beim Funktionsaufruf) gelesenes
-		// `before` faellt bei einem Fehlschlag daher korrekt nur auf den Stand
-		// NACH diesem vorherigen Edit zurueck, nicht auf einen aelteren Stand
-		// (sonst UI/Server-Divergenz bis Reload). `current` bleibt trotzdem
-		// korrekt: wizardState wird zwischen Enqueue und Ausfuehrung von
-		// niemandem ausser dem Nutzer veraendert, ein hier gelesener Snapshot
-		// spiegelt also weiterhin (sogar aktueller) den Nutzerstand zum
-		// Commit-Zeitpunkt.
-		const updated = await hubPutQueue.enqueue(async () => {
-			const current = currentCorridorSnapshot();
-			const before = lastPersistedCorridorSnapshot ?? current;
-			const payload = flushPendingCorridorSave(currentPreset, current, lastPersistedCorridorSnapshot);
-			if (!payload) return null;
-			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body, init);
-				// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen, s.o.
-				lastPersistedCorridorSnapshot = current;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Wertebereich-Persistenz fehlgeschlagen, Rollback:', e);
-				wizardState.corridors = before.corridors;
-				wizardState.idealRanges = before.idealRanges;
-				wizardState.activeMetricKeys = before.activeMetricKeys;
-				wizardState.metricAlertLevels = before.metricAlertLevels;
-				failure = e;
-				return null;
-			}
-		});
-		if (updated) {
+	// Issue #2317 (AC-7): Rumpf nach korridorCommit.ts gezogen (unveraenderter
+	// Ablauf). Neu: ein gescheiterter PUT wird nach Rollback + setError()
+	// WEITERGEWORFEN, damit der Speicher-Takt (schedule -> doSave) ihn sieht und
+	// nicht „gespeichert" meldet. Die DOM-Aufrufer unten fangen ihn selbst.
+	const handleCorridorCommit = baueKorridorCommit({
+		bereit: () => idealwerteHydrated,
+		ctl: () => saveController,
+		queue: hubPutQueue,
+		put: (url, body, init) => api.put<ComparePreset>(url, body, init),
+		snapshot: currentCorridorSnapshot,
+		zuletztGespeichert: () => lastPersistedCorridorSnapshot,
+		merkeGespeichert: (s) => {
+			// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen.
+			lastPersistedCorridorSnapshot = s;
+		},
+		payload: (aktuell, zuletzt) => flushPendingCorridorSave(currentPreset, aktuell, zuletzt),
+		zuruecksetzen: (before) => {
+			wizardState.corridors = before.corridors;
+			wizardState.idealRanges = before.idealRanges;
+			wizardState.activeMetricKeys = before.activeMetricKeys;
+			wizardState.metricAlertLevels = before.metricAlertLevels;
+		},
+		uebernehmen: (updated) => {
 			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
-		} else {
-			saveController?.markPristine();
 		}
+	});
+
+	/** Commit aus einer Oberflaechen-Geste (ausserhalb des Speicher-Takts): die
+	 *  Fehleranzeige setzt der Commit selbst, der Wurf wird hier geschluckt. */
+	function commitAusGeste(): void {
+		handleCorridorCommit().catch(() => {});
 	}
 
 	// Fix-Loop 1 (F002, Adversary HIGH): `<svelte:window>` muss auf Komponenten-
@@ -461,7 +445,7 @@
 	// Handler bleibt eine reine 1-Zeilen-Delegation.
 	function handleWindowPointerUp(): void {
 		if (!shouldFlushOnWindowPointerUp(activeTab, idealwerteHydrated)) return;
-		void handleCorridorCommit();
+		commitAusGeste();
 	}
 
 	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (context="vergleich")
@@ -1425,8 +1409,8 @@
 			{#if idealwerteHydrated}
 				<div
 					class="hub-corridor-wrap"
-					onfocusout={() => void handleCorridorCommit()}
-					onclick={() => void handleCorridorCommit()}
+					onfocusout={() => commitAusGeste()}
+					onclick={() => commitAusGeste()}
 				>
 					<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-
 					     Inline-Edit-Paritaet, Muster TripTabs.svelte:198-202. -->

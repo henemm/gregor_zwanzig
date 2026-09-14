@@ -1,6 +1,14 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-08-11 (Issue #1745 Scheibe A — Premium-SMS ist jetzt auch im
+**Updated:** 2026-09-14 (Issue #2317 — Speichern beim Entladen/„Aktualisieren"/Anzeige nach
+Neuladen: Trip-Reiter reichen `init` (keepalive) über `shared/tripSpeicherung.ts` durch statt es zu
+verschlucken; `+layout.svelte` stellt per Svelte-Context (`stores/aktiveSpeicherung.ts`) eine
+Anmeldestelle bereit, an der `serviceWorkerUpdate.ts` vor `SKIP_WAITING` eine ausstehende
+Speicherung regulär abwartet (`SaveStatus.laufendeSpeicherung`); `stores/nachEntladenNachladen.ts`
+holt nach einem per Merker (`geraetespeicher.ts`, `gz-nachladen`) erkannten Entladen-Speichern bis
+zu 6× den Server-Stand nach, ohne eine neue lokale Eingabe zu überschreiben; siehe „Trip-Editor &
+Compare-Editor Save-Strategien" und „PWA" unten, Spec `docs/specs/modules/speicherung_beim_neuladen.md`);
+2026-08-11 (Issue #1745 Scheibe A — Premium-SMS ist jetzt auch im
 Alarme-Reiter als vierter Kanal sichtbar/schaltbar, mit eigener Dringlichkeits-Schwelle, in
 **beiden** Flächen (Trip UND Ortsvergleich); wirkt sofort für Gewitter-, Änderungs- und
 amtliche Alarme, **nicht** für Regen-/Radar-Alarme, die weiterhin am Briefing-Flag hängen
@@ -732,6 +740,23 @@ Solange zurückgestellt wird, zeigt der `SaveIndicator` ehrlich `dirty`/„Nicht
 
 Siehe `docs/specs/_archive/modules/issue_758_save_indicator.md`, `docs/specs/_archive/modules/issue_1234_autosave_hydration_gate.md`, `docs/specs/_archive/modules/issue_1269_save_status_lie.md` für technische Details.
 
+**Verlässlich beim Entladen (Issue #2317):** Die Speicherfunktionen der Trip-Reiter
+(Wertebereiche, Alarme, Wetter-Metriken) reichen den vom Speicher-Wächter
+(`ausstehendeSpeicherungSichern.ts::willUnload` → `flush({keepalive:true})`) hereingereichten
+`init`-Parameter jetzt an `api.put(url, body, init)` durch, statt ihn zu verschlucken — gebaut
+über `shared/tripSpeicherung.ts` (svelte-frei, `baueTripSpeicherung`/`baueWetterMetrikenSpeicherung`).
+Bei Wetter-Metriken laufen die beiden PUTs (`/weather-config`, `/api/trips/{id}`) nur beim
+Entladen parallel; regulär bleiben sie strikt nacheinander (#850). `SaveStatus` bekommt einen
+Getter `laufendeSpeicherung` (den gerade im Netz laufenden PUT); `+layout.svelte` stellt darüber
+per Svelte-Context (`stores/aktiveSpeicherung.ts`, Schlüssel `'aktive-speicherung'`) eine
+Anmeldestelle bereit, an der `trips/[id]`/`compare/[id]` ihren `SaveStatus` an-/abmelden — der
+Update-Hinweis (#2316) wartet darüber vor `SKIP_WAITING` eine ausstehende Speicherung regulär
+(ohne keepalive, mit If-Match) ab, statt einen laufenden PUT durch den Reload abzuschneiden. Im
+Ortsvergleich wirft die Idealwerte-Speicherfunktion (`compare/korridorCommit.ts`) einen
+gescheiterten PUT jetzt an den aufrufenden Speicher-Takt weiter, statt ihn selbst zu schlucken —
+sonst hätte `SaveStatus` fälschlich „gespeichert" gemeldet. Details:
+`docs/specs/modules/speicherung_beim_neuladen.md`.
+
 #### Design-System Lauf B (Issues #143, #144, #146)
 
 **Atom Components** — lightweight, token-based UI primitives:
@@ -851,8 +876,18 @@ Das Frontend ist eine installierbare Progressive Web App:
   60 Sekunden; „Später" blendet den Hinweis bis zum nächsten Kaltstart aus. Ungespeicherte
   Änderungen auf `/trips/[id]`/`/compare/[id]` sichert vor dem Reload der geteilte Speicher-Wächter
   `frontend/src/lib/stores/ausstehendeSpeicherungSichern.ts` (ein Baustein für Trip und
-  Ortsvergleich, Trip/Vergleich-Code-Teilung).
+  Ortsvergleich, Trip/Vergleich-Code-Teilung) — er hinterlässt beim Entladen zusätzlich einen
+  reinen Kennungs-Merker (`geraetespeicher.ts`, `gz-nachladen`: `{typ, id}`, keine Werte).
   Räumen des Geräte-Speichers beim Abmelden: `frontend/src/lib/pwa/geraetespeicher.ts`.
+  Seit #2317 wartet `serviceWorkerUpdate.ts` vor `SKIP_WAITING` außerdem eine noch ausstehende
+  Speicherung der offenen Detailseite regulär ab (`stores/aktiveSpeicherung.ts`); schlägt sie fehl
+  oder liegt ein Konflikt vor, bleibt die alte Fassung aktiv und die Reiter-Fehleranzeige stehen.
+  Findet die neu geladene Seite den Kennungs-Merker vor, holt `stores/nachEntladenNachladen.ts`
+  bis zu 6× im Abstand von 500 ms den Server-Stand nach und übernimmt ihn nur, wenn er sich
+  unterscheidet und der Nutzer seither nichts geändert hat (Trip: ETag-Vergleich über
+  `api.ts::getMitFassung`; Ortsvergleich: Inhalts-Fingerabdruck, da kein ETag existiert) — behebt
+  das Zeitfenster, in dem eine neu geladene Seite trotz erfolgreicher `keepalive`-Speicherung noch
+  den alten Stand zeigte. Details: `docs/specs/modules/speicherung_beim_neuladen.md`.
 - **Offline-Seite:** `frontend/static/offline.html` — seit #2131 keine Sackgasse mehr, sondern
   eine Übersicht der offline vorgehaltenen Ansichten (Titel + Stand), Einstiegspunkt auch für den
   Homescreen-Start (`start_url: "/"`).
