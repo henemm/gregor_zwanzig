@@ -1230,7 +1230,13 @@ def list_all_user_ids(data_dir: str | None = None) -> list[str]:
 
 
 def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
-    """Find user_id whose mail_to matches the given email address (case-insensitive).
+    """Find user_id whose CONFIRMED EFFECTIVE contact address matches (case-insensitive).
+
+    Wirksame Kontaktadresse = ``mail_to``, ersatzweise ``email``; ein Treffer
+    zaehlt nur bei gesetztem ``email_verified_at`` (Issue #2147 Scheibe B2,
+    Pendant zu Go ``ResolveAddressOwner``). Eine ausstehende Adressaenderung
+    (``pending_contact_address``) steht nie in ``mail_to``/``email`` und ordnet
+    daher nie zu.
 
     Eindeutigkeit ist Pflicht (Issue #2143, analog #2141): tragen ZWEI echte
     Nutzer dieselbe mail_to-Adresse (Bestandsdaten/Fehlkonfiguration), gibt es
@@ -1262,7 +1268,10 @@ def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
             profile = json.loads(profile_path.read_text(encoding="utf-8"))
         except Exception:
             continue
-        if profile.get("mail_to", "").lower() != email.lower():
+        if not isinstance(profile, dict) or not profile.get("email_verified_at"):
+            continue
+        effective = (profile.get("mail_to") or "").strip() or (profile.get("email") or "")
+        if effective.strip().lower() != email.strip().lower():
             continue
         if is_test_user_id(uid, data_dir=data_dir):
             test_matches.append(uid)

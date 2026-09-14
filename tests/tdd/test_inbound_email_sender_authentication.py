@@ -17,12 +17,14 @@ WEICHT bewusst vom illustrativen Code-Block in der Spec §5 ab — siehe
 Begruendung unten; die ACs selbst sind identisch erfuellt):
 
 * `_process_single` gated NACH `_resolve_settings_for_sender` explizit auf
-  `user_id == "default"` (analog `inbound_telegram_reader.py:181`, ADR-0003)
-  — VOR dem Aufruf von `_authorize`. `lookup_user_by_email` liefert `None`
-  bei Mehrfachtreffer (analog `lookup_user_by_telegram_chat_id`, #2141);
-  `_resolve_settings_for_sender`s bestehendes `... or "default"` deckt
-  "kein Treffer" UND "mehrdeutig" damit einheitlich ab, ohne dass
-  `_resolve_settings_for_sender` selbst geaendert werden muss.
+  eine fehlende Zuordnung — VOR dem Aufruf von `_authorize`.
+  `lookup_user_by_email` liefert `None` bei Mehrfachtreffer (analog
+  `lookup_user_by_telegram_chat_id`, #2141). Stand #2147 Scheibe B2
+  (``docs/specs/modules/adresswechsel_nach_bestaetigung.md`` §8, AC-14):
+  `_resolve_settings_for_sender` liefert dann `None` als Kennung (kein
+  Rueckfall mehr auf `"default"`), das Gate prueft `user_id is None`; "kein
+  Treffer", "mehrdeutig" und "nicht bestaetigt" sind damit einheitlich
+  abgedeckt. (Urspruenglich: `... or "default"` + Gate `== "default"`.)
 * `_authorize(self, sender, settings, msg)` bekommt WEITERHIN die bereits
   user-scoped `settings` (wie heute), NICHT die Basis-Settings — anders als
   die Spec-Pseudocode-Skizze, die `_authorize` einen eigenen

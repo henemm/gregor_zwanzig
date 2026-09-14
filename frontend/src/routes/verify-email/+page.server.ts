@@ -34,6 +34,16 @@ export const actions = {
 
 		if (!resp.ok) {
 			const body = await resp.json().catch(() => ({}));
+			// Issue #2147 Scheibe B2 (AC-17): die Adresse wurde zwischen Antrag
+			// und Klick an ein anderes Konto vergeben — eigene, verständliche
+			// Meldung statt des rohen Codes.
+			if (body.error === 'address_taken') {
+				return fail(409, {
+					error: 'Diese Adresse gehört inzwischen zu einem anderen Konto. Bitte ändere deine Adresse im Konto erneut.',
+					user,
+					token,
+				});
+			}
 			const msg =
 				body.error === 'token expired'
 					? 'Der Bestätigungslink ist abgelaufen. Bitte ändere deine Adresse erneut, um einen neuen Link zu erhalten.'

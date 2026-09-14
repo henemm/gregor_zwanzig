@@ -356,14 +356,15 @@ func TestProfilUpdateMailToLeerenGelingtImmer_AC9(t *testing.T) {
 	}
 }
 
-// TestProfilUpdateMailToLeerenSetztEmailVerifiedAtZurueck: Regressionswaechter
-// (PO-Korrektur nach Spec-Freigabe, Sicherheitsrueckschritt sonst) — ein
-// bestaetigtes mail_to zu leeren macht die nie bestaetigte email zur
-// wirksamen Kontaktadresse. Bliebe email_verified_at stehen, wuerde
-// ResolveAddressOwner diese nie bestaetigte Adresse faelschlich als
-// bestaetigt fuehren. Leeren bleibt trotzdem immer erlaubt (AC-9) — nur der
-// Bestaetigungsstand muss zurueckgesetzt werden, exakt wie vor Scheibe B1.
-func TestProfilUpdateMailToLeerenSetztEmailVerifiedAtZurueck(t *testing.T) {
+// TestProfilUpdateMailToLeerenMachtUngepruefteEmailNichtBestaetigtWirksam:
+// Regressionswaechter (PO-Korrektur nach Spec-Freigabe, Sicherheitsrueckschritt
+// sonst) — ein bestaetigtes mail_to zu leeren darf die nie bestaetigte email
+// NICHT als bestaetigte wirksame Kontaktadresse erscheinen lassen, sonst
+// fuehrte ResolveAddressOwner sie faelschlich als bestaetigt. Leeren bleibt
+// erlaubt (AC-9, Antwort 200). Seit Issue #2147 Scheibe B2 (AC-4) wird dafuer
+// nicht mehr die Bestaetigung zurueckgesetzt: mail_to bleibt bis zum
+// Bestaetigungslink stehen, die Aenderung wartet als ausstehend auf email.
+func TestProfilUpdateMailToLeerenMachtUngepruefteEmailNichtBestaetigtWirksam(t *testing.T) {
 	s := newTestStore(t)
 	cfg := config.Config{}
 	speichereKonto(t, s, model.User{
@@ -377,11 +378,15 @@ func TestProfilUpdateMailToLeerenSetztEmailVerifiedAtZurueck(t *testing.T) {
 		t.Fatalf("erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
 	}
 	u := ladeKonto(t, s, "leer-reset")
-	if u.MailTo != "" {
-		t.Errorf("mail_to muss leer sein, ist %q", u.MailTo)
+	if u.EmailVerifiedAt != nil && store.EffectiveContactAddress(u) == "b@beispiel.de" {
+		t.Errorf("die nie bestaetigte email wurde durch das Leeren bestaetigt wirksam (mail_to=%q)", u.MailTo)
 	}
-	if u.EmailVerifiedAt != nil {
-		t.Errorf("email_verified_at muss nach dem Leeren zurueckgesetzt sein, ist gesetzt: %v", u.EmailVerifiedAt)
+	if u.MailTo != "a@beispiel.de" {
+		t.Errorf("B2/AC-4: mail_to muss bis zur Bestaetigung stehen bleiben, ist %q", u.MailTo)
+	}
+	if u.PendingContactAddress != "b@beispiel.de" || u.PendingContactField != "mail_to" {
+		t.Errorf("B2/AC-4: das Leeren muss als ausstehend auf email warten, pending=%q field=%q",
+			u.PendingContactAddress, u.PendingContactField)
 	}
 }
 

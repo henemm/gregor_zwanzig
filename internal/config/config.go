@@ -1,6 +1,27 @@
 package config
 
-import "github.com/kelseyhightower/envconfig"
+import (
+	"os"
+
+	"github.com/kelseyhightower/envconfig"
+)
+
+// DefaultPoEmail ist die Betreiber-Adresse, wenn GZ_PO_EMAIL nicht gesetzt
+// ist. Struct-Tags koennen keine Konstante referenzieren — der default-Tag von
+// Config.PoEmail muss denselben Wert tragen; TestPoEmailFromEnvGleichLoad
+// haelt beide zusammen (Issue #2147 Scheibe B2, AC-16).
+const DefaultPoEmail = "gregor_zwanzig@henemm.com"
+
+// PoEmailFromEnv liefert die Betreiber-Adresse genau so, wie Load sie in
+// Config.PoEmail setzt (gesetzte Variable, auch leer, gewinnt; sonst der
+// Default). Fuer Pakete ohne Config-Objekt — der Resend-Empfaenger-Guard in
+// internal/mail laesst diese Adresse unabhaengig von Nutzerprofilen zu.
+func PoEmailFromEnv() string {
+	if v, ok := os.LookupEnv("GZ_PO_EMAIL"); ok {
+		return v
+	}
+	return DefaultPoEmail
+}
 
 type Config struct {
 	Host              string `envconfig:"HOST" default:"127.0.0.1"`

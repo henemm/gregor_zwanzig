@@ -78,6 +78,10 @@
 			// AUSSCHLIESSLICH das eigene Feld: kaeme ein abweichender
 			// email/mail_to-Wert mit, setzte der Profil-Endpunkt die
 			// Adress-Bestaetigung zurueck — nach #2271 eine Aussperr-Falle.
+			// Seit #2147 Scheibe B2 entfaellt diese Falle allgemein (eine
+			// Adressaenderung eines bestaetigten Kontos wartet als ausstehend
+			// auf den Bestaetigungslink); die Beschraenkung bleibt trotzdem
+			// richtig, das Angebot aendert nie eine Adresse.
 			await api.put('/api/auth/profile', { passkey_prompt_dismissed: true });
 		} catch {
 			// Ein abgelehntes Angebot ist kein Vorgang, dessen Scheitern der Nutzer

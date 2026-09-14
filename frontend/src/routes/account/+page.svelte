@@ -204,6 +204,21 @@
 		}
 	}
 
+	// Issue #2147 Scheibe B2 (AC-17) — ausstehende Adressaenderung: die
+	// Bestaetigungsmail an die ausstehende Adresse erneut anfordern. Der
+	// Endpunkt antwortet immer 200 (verraet nichts), die Seite quittiert daher
+	// bestaetigend.
+	let resendStatus = $state<TestStatus>('idle');
+	async function resendVerification() {
+		resendStatus = 'loading';
+		try {
+			await api.post('/api/auth/verify-email/resend', { username: data.profile?.id ?? '' });
+			resendStatus = 'ok';
+		} catch {
+			resendStatus = 'error';
+		}
+	}
+
 	async function sendTest(channel: string) {
 		testStatus[channel] = 'loading';
 		testError[channel] = null;
@@ -346,6 +361,10 @@
 			});
 			successMsg = 'Profil gespeichert';
 			setTimeout(() => (successMsg = null), 4000);
+			// Issue #2147 Scheibe B2: eine Adressaenderung eines bestaetigten
+			// Kontos steht danach als ausstehend im Profil — neu laden, damit
+			// der Hinweis sofort erscheint.
+			await invalidateAll();
 		} catch (e: unknown) {
 			const body = e as { detail?: string; error?: string; status?: number };
 			errorMsg = profileSaveErrorMessage(body?.status ?? 0, body);
@@ -564,6 +583,31 @@
 				{/if}
 				{#if testStatus.email === 'error'}
 					<span class="text-sm text-red-600">{testError.email}</span>
+				{/if}
+				{#if data.profile?.pending_contact_address}
+					<div
+						data-testid="pending-address-notice"
+						class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+					>
+						<p>
+							Bestätigung ausstehend für <strong>{data.profile.pending_contact_address}</strong> — bis dahin
+							gehen Mails weiter an <strong>{data.profile.mail_to || data.profile.email}</strong>.
+						</p>
+						<button
+							type="button"
+							onclick={resendVerification}
+							disabled={resendStatus === 'loading'}
+							class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+						>
+							Bestätigungsmail erneut senden
+						</button>
+						{#if resendStatus === 'ok'}
+							<span class="text-sm text-green-700">Bestätigungsmail verschickt</span>
+						{/if}
+						{#if resendStatus === 'error'}
+							<span class="text-sm text-red-700">Senden fehlgeschlagen</span>
+						{/if}
+					</div>
 				{/if}
 			</div>
 

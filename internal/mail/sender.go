@@ -19,6 +19,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/egress"
 	"github.com/henemm/gregor-api/internal/model"
 )
@@ -186,9 +187,12 @@ func resendAllowlistDataDir() string {
 	return "data"
 }
 
-// loadResendAllowlist sammelt normalisierte mail_to-/email-Adressen aller
-// VERIFIZIERTEN Nutzerprofile unter dataDir/users/<id>/user.json (Issue
-// #1219 Scheibe 1). Symmetrisches Pendant zu
+// loadResendAllowlist sammelt je VERIFIZIERTEM Nutzerprofil unter
+// dataDir/users/<id>/user.json dessen normalisierte WIRKSAME Kontaktadresse
+// (mail_to, ersatzweise email — Issue #2147 Scheibe B2; vorher beide Felder)
+// (Issue #1219 Scheibe 1). Eine ausstehende Adressaenderung
+// (pending_contact_address) steht nie in mail_to/email und ist damit nie
+// enthalten. Symmetrisches Pendant zu
 // src/output/channels/email.py::_load_resend_allowlist. Eignungskriterium
 // ist das gesetzte Profilfeld EmailVerifiedAt — Profile ohne (leeres/
 // fehlendes) email_verified_at werden konservativ ausgeschlossen, im
@@ -224,20 +228,19 @@ func loadResendAllowlist(dataDir string) map[string]bool {
 		if profile.EmailVerifiedAt == "" {
 			continue
 		}
-		for _, raw := range []string{profile.MailTo, profile.Email} {
-			if raw == "" {
-				continue
-			}
-			addr := raw
-			if parsed, perr := mail.ParseAddress(raw); perr == nil {
-				addr = parsed.Address
-			}
-			addr = strings.ToLower(strings.TrimSpace(addr))
-			if addr == "" || isReservedTestDomain(addr) {
-				continue
-			}
-			allowed[addr] = true
+		raw := profile.MailTo
+		if strings.TrimSpace(raw) == "" {
+			raw = profile.Email
 		}
+		addr := raw
+		if parsed, perr := mail.ParseAddress(raw); perr == nil {
+			addr = parsed.Address
+		}
+		addr = strings.ToLower(strings.TrimSpace(addr))
+		if addr == "" || isReservedTestDomain(addr) {
+			continue
+		}
+		allowed[addr] = true
 	}
 	return allowed
 }
@@ -391,6 +394,11 @@ func recipientBlocked(host, to string) error {
 	}
 
 	allowlist := loadResendAllowlist(resendAllowlistDataDir())
+	// Issue #2147 Scheibe B2 (AC-16): die konfigurierte Betreiber-Adresse
+	// (Tier-Antraege) ist unabhaengig von jedem Nutzerprofil zustellbar.
+	if po := normalizedAddrForGuardUncapped(config.PoEmailFromEnv()); po != "" {
+		allowlist[po] = true
+	}
 	parts := splitRecipientField(to)
 	var blocked []string
 	for _, part := range parts {

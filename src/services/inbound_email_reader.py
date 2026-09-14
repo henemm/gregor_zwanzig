@@ -128,7 +128,7 @@ class InboundEmailReader:
         # 1. Resolve user-scoped settings for sender, then authorize
         from_addr = self._parse_sender(msg.get("From", ""))
         _user_id, user_settings = self._resolve_settings_for_sender(from_addr, settings)
-        if _user_id == "default":
+        if _user_id is None:
             logger.warning(f"Unresolved/ambiguous sender: {from_addr!r}")
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
@@ -279,7 +279,7 @@ class InboundEmailReader:
 
     def _resolve_settings_for_sender(
         self, from_addr: str, base_settings: Settings, data_dir: str | None = None
-    ) -> tuple[str, Settings]:
+    ) -> tuple[str | None, Settings]:
         """Resolve user_id and user-scoped Settings for an incoming sender address.
 
         Args:
@@ -288,12 +288,17 @@ class InboundEmailReader:
             data_dir: Root data directory (default: get_data_root())
 
         Returns:
-            (user_id, user_scoped_settings) — user_id is "default" if no match
+            (user_id, user_scoped_settings) — user_id is None if there is no
+            unambiguous match on a confirmed effective address; there is no
+            fallback to an account "default" (Issue #2147 Scheibe B2, AC-14).
+            In that case the base settings are returned unchanged.
         """
         from app.loader import get_data_root, lookup_user_by_email
         if data_dir is None:
             data_dir = str(get_data_root())
-        user_id = lookup_user_by_email(from_addr, data_dir=data_dir) or "default"
+        user_id = lookup_user_by_email(from_addr, data_dir=data_dir)
+        if user_id is None:
+            return None, base_settings
         return user_id, base_settings.with_user_profile(user_id)
 
     def _find_trip_id(self, trip_name: str, user_id: str = "default") -> str | None:

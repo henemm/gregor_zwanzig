@@ -540,9 +540,28 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(vt.TokenHash), []byte(req.Token)); err != nil {
+			// Issue #2147 Scheibe B2 (AC-3): es gibt nur EIN Token je Konto —
+			// ein zweiter Adresswechsel ueberschreibt das erste, dessen Hash
+			// passt danach nicht mehr. Steht eine Aenderung aus, ist genau das
+			// der Fall "ersetzter Link" und wird wie ein abgelaufener Link
+			// beantwortet; ohne ausstehende Aenderung bleibt es "invalid token".
+			if u, lerr := s.LoadUser(req.User); lerr == nil && u != nil && u.PendingContactAddress != "" {
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"token expired"}`))
+				return
+			}
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"invalid token"}`))
 			return
+		}
+
+		// Adressgebundenes Token (B2 §2): unter der Adresssperre frisch laden,
+		// damit Belegt-Pruefung und Uebernahme nicht mit einem gleichzeitigen
+		// Profil-Update/einer Registrierung auf dieselbe Adresse verzahnen.
+		address := store.NormalizeEmailAddress(vt.Address)
+		if address != "" {
+			unlock := store.LockEmailAddress(address)
+			defer unlock()
 		}
 
 		user, err := s.LoadUser(req.User) // RMW: vollständiges Objekt laden
@@ -551,6 +570,71 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			w.Write([]byte(`{"error":"invalid token"}`))
 			return
 		}
+
+		pending := store.NormalizeEmailAddress(user.PendingContactAddress)
+		switch {
+		case address == "" && pending != "":
+			// Alt-Token (ohne Adresse) gegen ein Konto mit ausstehender
+			// Aenderung: kann nach dem Deploy nicht neu entstehen, defensiv
+			// ungueltig (B2 §2 Punkt 1).
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
+			return
+		case address != "" && pending == "":
+			// Adressgebundenes Token ohne ausstehende Aenderung (Erst-
+			// bestaetigung): nur die aktuell wirksame Adresse ist beweisbar.
+			if address != store.EffectiveContactAddress(user) {
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"token expired"}`))
+				return
+			}
+		case address != "" && pending != "":
+			if address != pending {
+				// Ein neuerer Wechsel hat die Aenderung ersetzt (AC-3).
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"token expired"}`))
+				return
+			}
+			taken, terr := s.IsAddressTakenByOtherAccount(pending, req.User)
+			if terr != nil {
+				log.Printf("email verification: address uniqueness check failed: %v", terr)
+				w.WriteHeader(500)
+				w.Write([]byte(`{"error":"internal error"}`))
+				return
+			}
+			if taken {
+				// Zwischenzeitlich an ein anderes Konto vergeben (AC-8/AC-9):
+				// nichts uebernehmen, ausstehende Aenderung + Token verwerfen.
+				user.PendingContactAddress = ""
+				user.PendingContactField = ""
+				if err := s.SaveUser(*user); err != nil {
+					w.WriteHeader(500)
+					w.Write([]byte(`{"error":"store_error"}`))
+					return
+				}
+				s.DeleteVerificationToken(req.User)
+				w.WriteHeader(409)
+				w.Write([]byte(`{"error":"address_taken"}`))
+				return
+			}
+			switch user.PendingContactField {
+			case "mail_to":
+				if pending == store.NormalizeEmailAddress(user.Email) {
+					user.MailTo = "" // "mail_to leeren"-Sonderfall (B2 §1/AC-4)
+				} else {
+					user.MailTo = pending
+				}
+			case "email":
+				user.Email = pending
+			default:
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"invalid token"}`))
+				return
+			}
+			user.PendingContactAddress = ""
+			user.PendingContactField = ""
+		}
+
 		now := time.Now().UTC()
 		user.EmailVerifiedAt = &now
 		if err := s.SaveUser(*user); err != nil {
@@ -666,6 +750,10 @@ type profileResponse struct {
 	// HasPasskey): die Oberflaeche entscheidet an diesem Wert und darf nicht
 	// zwischen "false" und "Feld fehlt" unterscheiden muessen.
 	PasskeyPromptDismissed bool `json:"passkey_prompt_dismissed"`
+	// Issue #2147 Scheibe B2 — ausstehende (noch nicht bestaetigte) neue
+	// Kontaktadresse. Fehlt, solange nichts aussteht; mail_to/email zeigen
+	// bis zur Bestaetigung die alten, wirksamen Werte.
+	PendingContactAddress string `json:"pending_contact_address,omitempty"`
 }
 
 // passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
@@ -720,6 +808,7 @@ func toProfileResponse(u *model.User) profileResponse {
 		// Issue #2248: auf diesem Weg erfaehrt die Oberflaeche die Abweisung
 		// beim naechsten Laden.
 		PasskeyPromptDismissed: u.PasskeyPromptDismissed,
+		PendingContactAddress:  u.PendingContactAddress,
 	}
 }
 
@@ -799,16 +888,11 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			}
 		}
 
-		// Issue #2147 Scheibe B1 (PO-Korrektur nach Freigabe, Sicherheitsrueckschritt
-		// sonst): ZWEI getrennte Praedikate statt einem.
-		// - "Feld geaendert" (Reset-Praedikat): Feld gesendet UND normalisierter
-		//   neuer Wert != normalisierter Bestandswert — leer zaehlt als Wert.
-		//   Steuert EmailVerifiedAt-Reset + Bestaetigungsmail, EXAKT wie vor B1
-		//   (Spec §3: "das heutige Reset-/Mail-Verhalten bleibt in B1
-		//   unveraendert"). Sonst wuerde ein bestaetigtes mail_to geleert und
-		//   das dann wirksame, nie bestaetigte email als bestaetigt weitergefuehrt
-		//   (ResolveAddressOwner saehe einen bestaetigten Inhaber der neuen
-		//   wirksamen Adresse, ohne dass sie je bestaetigt wurde).
+		// Issue #2147 Scheibe B1: ZWEI getrennte Praedikate.
+		// - "Feld geaendert": Feld gesendet UND normalisierter neuer Wert !=
+		//   normalisierter Bestandswert — leer zaehlt als Wert. Bestimmt die
+		//   Sperrmenge; OB und WIE die Aenderung wirkt, entscheidet seit B2 die
+		//   wirksame Kontaktadresse (siehe unten, "Adressaenderung wirkt").
 		// - "geaendert UND belegbar" (Sperr-/Belegt-Praedikat): zusaetzlich neuer
 		//   Wert nicht leer — Leeren kann nie 409 ausloesen (Spec §3).
 		emailFieldChanged := update.Email != nil &&
@@ -908,31 +992,65 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			user.DisplayName = newDisplayName // "" => Fallback auf Login-Name
 		}
 
-		// Issue #1219 Scheibe 1 (AC-5/AC-6): eine tatsächliche Änderung von
-		// email/mail_to setzt die Resend-Verifikation zurück — ein einmal
-		// verifiziertes Konto darf nicht nachträglich auf eine ungeprüfte
-		// Adresse umgebogen werden. Dieses Reset-Verhalten bleibt in B1
-		// UNVERÄNDERT (Spec §3) — es haengt am breiten "Feld geaendert"-
-		// Praedikat (leer zaehlt als Wert), NICHT am schmalen Sperr-Praedikat.
-		// Nur ein reiner Schreibweise-Unterschied loest KEINEN Reset aus
-		// (Issue #2147 Scheibe B1, Known Limitations); Leeren tut es weiterhin,
-		// sonst koennte eine nie bestaetigte zweite Adresse durch Leeren der
-		// bestaetigten wirksam werden, ohne dass EmailVerifiedAt zurückgesetzt
-		// wird (Sicherheitsrueckschritt, PO-Korrektur).
-		addressChanged := false
-		if update.Email != nil {
-			user.Email = store.NormalizeEmailAddress(*update.Email)
-		}
-		if emailFieldChanged {
-			user.EmailVerifiedAt = nil
-			addressChanged = true
-		}
-		if update.MailTo != nil {
-			user.MailTo = store.NormalizeEmailAddress(*update.MailTo)
-		}
-		if mailToFieldChanged {
-			user.EmailVerifiedAt = nil
-			addressChanged = true
+		// Adressaenderung wirkt — Issue #2147 Scheibe B2 (ersetzt den
+		// #1219-Reset): ein bestaetigtes Konto wird nie auf eine ungepruefte
+		// Adresse umgebogen, aber auch nicht mehr ausgesperrt. Massgeblich ist
+		// die wirksame Kontaktadresse (mail_to, ersatzweise email):
+		// 1. sie aendert sich nicht (inaktives Feld, "mail_to leeren" bei
+		//    gleichem email) -> sofort schreiben, kein Reset, keine Mail;
+		// 2. Konto unbestaetigt -> sofort schreiben + Bestaetigungsmail;
+		// 3. Konto bestaetigt, neue wirksame Adresse -> email/mail_to bleiben
+		//    auf den alten Werten, die Aenderung wartet als Pending-Feld auf
+		//    den Bestaetigungslink (VerifyEmailHandler).
+		sendVerification := false
+		if emailFieldChanged || mailToFieldChanged {
+			newEmail := user.Email
+			if update.Email != nil {
+				newEmail = store.NormalizeEmailAddress(*update.Email)
+			}
+			newMailTo := user.MailTo
+			if update.MailTo != nil {
+				newMailTo = store.NormalizeEmailAddress(*update.MailTo)
+			}
+			oldEffective := store.EffectiveContactAddress(user)
+			newEffective := store.EffectiveContactAddress(&model.User{Email: newEmail, MailTo: newMailTo})
+
+			switch {
+			case newEffective == oldEffective:
+				user.Email, user.MailTo = newEmail, newMailTo
+			case user.EmailVerifiedAt == nil || newEffective == "":
+				// Unbestaetigt: wie bisher direkt. Beide Felder leer: es gibt
+				// keine Adresse zu beweisen — direkt, Bestaetigungsstand bleibt.
+				user.Email, user.MailTo = newEmail, newMailTo
+				user.PendingContactAddress, user.PendingContactField = "", ""
+				sendVerification = user.EmailVerifiedAt == nil
+			default:
+				if mailToFieldChanged {
+					user.PendingContactField = "mail_to"
+					// Ein gleichzeitig geaendertes email wird sofort geschrieben,
+					// solange es das inaktive Feld ist. Ist es heute die
+					// wirksame Adresse (mail_to leer), bliebe sie sonst
+					// unbestaetigt wirksam — dann wird es nicht uebernommen.
+					if emailFieldChanged {
+						if store.NormalizeEmailAddress(user.MailTo) != "" {
+							user.Email = newEmail
+						} else {
+							log.Printf("profile update: email change for %s not applied while mail_to change is pending", userId)
+						}
+					}
+				} else {
+					user.PendingContactField = "email"
+				}
+				user.PendingContactAddress = newEffective
+				sendVerification = true
+			}
+		} else {
+			if update.Email != nil {
+				user.Email = store.NormalizeEmailAddress(*update.Email)
+			}
+			if update.MailTo != nil {
+				user.MailTo = store.NormalizeEmailAddress(*update.MailTo)
+			}
 		}
 		if update.SmsTo != nil {
 			user.SmsTo = *update.SmsTo
@@ -961,7 +1079,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			return
 		}
 
-		if addressChanged {
+		if sendVerification {
 			dispatchVerificationMail(s, cfg, userId, user)
 		}
 
@@ -983,7 +1101,11 @@ var sendVerificationMailFn = mail.SendVerificationMail
 // Herausgelöst aus dispatchVerificationMail, damit der staging-only Testweg
 // denselben Mechanismus benutzt, statt einen zweiten Token-Pfad zu bauen —
 // der Klartext ist nur hier und in der Bestätigungsmail zu sehen.
-func issueVerificationToken(s *store.Store, userId string) (string, error) {
+//
+// Issue #2147 Scheibe B2: das Token wird an address gebunden (die zu
+// beweisende Adresse, normalisiert gespeichert) — VerifyEmailHandler
+// bestaetigt nur genau diese Adresse.
+func issueVerificationToken(s *store.Store, userId, address string) (string, error) {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return "", fmt.Errorf("token generation failed: %w", err)
@@ -998,6 +1120,7 @@ func issueVerificationToken(s *store.Store, userId string) (string, error) {
 	if err := s.SaveVerificationToken(userId, model.EmailVerificationToken{
 		TokenHash: string(hash),
 		ExpiresAt: time.Now().Add(24 * time.Hour),
+		Address:   store.NormalizeEmailAddress(address),
 	}); err != nil {
 		return "", fmt.Errorf("SaveVerificationToken failed: %w", err)
 	}
@@ -1064,7 +1187,10 @@ func ResendVerificationHandler(s *store.Store, cfg config.Config) http.HandlerFu
 			return
 		}
 		user, _ := s.LoadUser(req.Username)
-		if user != nil && user.EmailVerifiedAt == nil {
+		// Issue #2147 Scheibe B2 (AC-11): auch ein bestaetigtes Konto mit
+		// ausstehender Aenderung bekommt den Link erneut — an die ausstehende
+		// Adresse (dispatchVerificationMail waehlt sie).
+		if user != nil && (user.EmailVerifiedAt == nil || user.PendingContactAddress != "") {
 			dispatchVerificationMail(s, cfg, req.Username, user)
 		}
 		w.Write([]byte(ok))
@@ -1076,18 +1202,22 @@ func ResendVerificationHandler(s *store.Store, cfg config.Config) http.HandlerFu
 // #1219 Scheibe 2a-i) — Muster identisch zu ForgotPasswordHandler
 // (Token-Erzeugung, Goroutine mit 20s-Timeout, Test-User→Gmail-Weiche). Die
 // effektive Adresse ist mail_to, Rückfall email; ist beides leer, passiert
-// nichts (kein Token, keine Mail).
+// nichts (kein Token, keine Mail). Steht eine Adressaenderung aus (Issue
+// #2147 Scheibe B2), geht die Mail an die AUSSTEHENDE Adresse.
 func dispatchVerificationMail(s *store.Store, cfg config.Config, userId string, user *model.User) {
 	recipient := user.MailTo
 	if recipient == "" {
 		recipient = user.Email
+	}
+	if user.PendingContactAddress != "" {
+		recipient = user.PendingContactAddress
 	}
 	if recipient == "" {
 		log.Printf("email verification: no address for user %s — no token generated", userId)
 		return
 	}
 
-	token, err := issueVerificationToken(s, userId)
+	token, err := issueVerificationToken(s, userId, recipient)
 	if err != nil {
 		log.Printf("email verification: token issuance failed for %s: %v", userId, err)
 		return

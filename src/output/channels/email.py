@@ -241,9 +241,12 @@ def _load_resend_allowlist(data_dir: str | None = None) -> frozenset[str]:
     umgestellt von der Namens-Heuristik (`is_test_user_id`) auf das explizite
     Profilfeld `email_verified_at`.
 
-    Sammelt normalisierte `mail_to`-/`email`-Adressen aller Nutzerprofile
-    unter `<data_dir>/users/<id>/user.json`, die ein GESETZTES
-    `email_verified_at` haben. Profile ohne (leeres/fehlendes)
+    Sammelt je Nutzerprofil unter `<data_dir>/users/<id>/user.json` mit
+    GESETZTEM `email_verified_at` dessen normalisierte WIRKSAME
+    Kontaktadresse (`mail_to`, ersatzweise `email` — Issue #2147 Scheibe B2,
+    vorher beide Felder; Pendant zu Go `loadResendAllowlist`). Eine
+    ausstehende Adressaenderung (`pending_contact_address`) steht nie in
+    `mail_to`/`email` und ist damit nie enthalten. Profile ohne (leeres/fehlendes)
     `email_verified_at` werden konservativ ausgeschlossen — im Zweifel nicht
     in die Allowlist aufnehmen. Reservierte Test-Domains (siehe
     `_is_reserved_test_domain()`) werden hier zusätzlich ausgeschlossen, auch
@@ -290,12 +293,13 @@ def _load_resend_allowlist(data_dir: str | None = None) -> frozenset[str]:
             continue
         if not profile.get("email_verified_at"):
             continue
-        for field in ("mail_to", "email"):
-            raw = profile.get(field)
-            if raw:
-                addr = _extract_addr(raw).strip().lower()
-                if addr and not _is_reserved_test_domain(addr):
-                    allowed.add(addr)
+        raw = profile.get("mail_to")
+        if not raw or not str(raw).strip():
+            raw = profile.get("email")
+        if raw:
+            addr = _extract_addr(raw).strip().lower()
+            if addr and not _is_reserved_test_domain(addr):
+                allowed.add(addr)
     return frozenset(allowed)
 
 
