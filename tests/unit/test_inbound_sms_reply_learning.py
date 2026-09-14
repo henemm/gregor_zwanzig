@@ -14,13 +14,25 @@ welchem Payload, wie oft, in welcher Reihenfolge. Sie behauptet NICHTS ueber
 die tatsaechliche Speicherwirkung (R3-Aufloesung, Read-Modify-Write,
 Ueberschreiben in `user.json`) -- das ist Go-Verantwortung und wird gegen
 einen ECHTEN Store bewiesen (`internal/handler/premium_sms_connect_test.go`,
-insbesondere `TestLearnSetsReplyAddressForSoleUnambiguousPremiumUser` fuer
-die Persistenz-Haelfte von AC-1 und `TestLearnOverwritesReplyAddressAcrossCalls`
+insbesondere `TestLearnMatchesCodeToCorrectAccountAmongTwoUsers` fuer die
+Persistenz-Haelfte von AC-1, `TestLearnPrefersStoredMatchOverSoleCandidateRule`
+fuer die Persistenz-Haelfte von AC-2 und `TestLearnOverwritesReplyAddressAcrossCalls`
 fuer die Persistenz-Haelfte von AC-3). Der urspruengliche Entwurf hatte einen
 Fake, der die Go-Persistenzlogik selbst nachbildete UND selbst schrieb --
 die Tests pruefen dann tautologisch gegen ihre eigene Schreibung (Fund: eine
 verfaelschte R3-Regel im Fake liess KEINEN Python-Test rot werden). Der
 `_LearnCallRecorder` unten schreibt bewusst NICHTS mehr auf die Platte.
+
+Issue #2323 (14.09.2026): das Content-Gate `GARMIN_MARKER not in text` (Zeile
+212) wird durch `message.get("to") != SERVICE_NUMBER` ersetzt -- der
+bestehende Go-Lern-Endpunkt (s.o.) entscheidet allein ueber Annahme/Ablehnung,
+kein Python-seitiger Vorfilter mehr. Gleichzeitig wechselt `_LINK_CODE_PATTERN`
+auf das neue Format `XX`-Praefix + 3 Buchstaben (ohne I/L/O) + 3 Ziffern (ohne
+0/1) -- Go-Pendant: `internal/handler/premium_sms_link_code.go`. Derselbe
+Zustaendigkeitsschnitt gilt weiter: AC-1/AC-2 dieser Spec pruefen hier nur die
+Reader-Haelfte (Payload-Inhalt, weitergereichte `user_id`), nicht die
+Aufloesung selbst -- die ist unveraendert und bereits durch die oben genannten
+Go-Tests bewiesen.
 
 Alle Rufnummern sind erfunden (`491700000000x`), einzige echte Nummer ist die
 im Issue oeffentliche Dienst-Nummer `4916092172595` als `to`-Feld.
@@ -71,6 +83,22 @@ def _private_message(msg_id: int, sender: str) -> dict:
         "reply_to_message_id": None,
         "price": 0.0,
     }
+
+
+def _private_message_with_text(msg_id: int, sender: str, text: str) -> dict:
+    message = _private_message(msg_id, sender)
+    message["text"] = text
+    return message
+
+
+def _message_to_other_number(msg_id: int, sender: str) -> dict:
+    """Issue #2323 AC-4: eine an eine ANDERE Nummer als die Dienstnummer
+    gerichtete Nachricht -- traegt bewusst das Garmin-Kennzeichen im Text,
+    damit der Test wirklich das `to`-Gate misst und nicht zufaellig am
+    (abzuloesenden) Marker-Gate haengen bleibt."""
+    message = _garmin_message(msg_id, sender)
+    message["to"] = "4915000000000"  # irgendeine Nummer, garantiert != SERVICE_NUMBER
+    return message
 
 
 class _FakeJournalEndpoint:
@@ -196,18 +224,65 @@ def test_garmin_marker_message_learns_reply_address(monkeypatch):
 
 
 # =============================================================================
-# AC-2: Nachricht ohne Kennzeichen bleibt folgenlos -- kein Lernaufruf
+# Issue #2323 AC-3: Nachricht an die Dienstnummer, ohne Code, von unbekannter
+# Nummer -- der ALTE Marker-Gate liess sie mangels "inreachlink.com" im Text
+# unversucht (ex-AC-2, `test_message_without_marker_is_ignored`). Das neue
+# `to`-Gate reicht JEDE Nachricht an die Dienstnummer weiter; die Aufloesung
+# entscheidet ausschliesslich der bestehende Go-Endpunkt (hier simuliert durch
+# den zaehlenden 409-Fake, den auch AC-4 unten verwendet).
 # =============================================================================
 
-def test_message_without_marker_is_ignored(monkeypatch):
-    """AC-2: Given eine eingehende SMS OHNE inreachlink.com / When der Poll
-    laeuft / Then setzt der Reader KEINEN Lernaufruf ab."""
+def test_message_to_service_number_without_code_is_attempted_and_rejected(monkeypatch):
+    """AC-3: Given eine Nachricht an die Dienstnummer OHNE Code von
+    unbekannter Absenderadresse (kein Kennzeichen im Text) / When der Poll
+    laeuft / Then setzt der Reader GENAU EINEN Lernaufruf ab, der Go-Endpunkt
+    lehnt ihn ab (409) -- kein `learned`-Hit, keine Antwort-SMS (der
+    409-Zweig ruft `_verarbeite_befehl` gar nicht erst auf)."""
     import services.inbound_sms_reader as reader_mod
 
     _fake_production_origin(monkeypatch, reader_mod)
 
     fake_get = _FakeJournalEndpoint([[_private_message(2001, PRIVATE_FROM)]])
-    fake_post = _LearnCallRecorder()
+    fake_post = _RejectingLearnRecorder()
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    reader = reader_mod.InboundSmsReader()
+    result = reader.poll_and_process(_settings())
+
+    assert result == 0
+    assert len(fake_post.calls) == 1, (
+        f"AC-3: eine Nachricht an die Dienstnummer muss IMMER einen "
+        f"Lernaufruf-Versuch ausloesen (der Go-Endpunkt entscheidet ueber "
+        f"Annahme/Ablehnung), gesehen: {fake_post.calls!r}"
+    )
+    assert reader.last_rejected_count == 1, (
+        f"AC-3: die Ablehnung muss im eigenen Zaehler auftauchen, "
+        f"gesehen: {reader.last_rejected_count!r}"
+    )
+    assert reader.last_failed_count == 0, (
+        "AC-3: eine bewusste 409-Ablehnung ist KEIN voruebergehender Fehlschlag (Fix F001)"
+    )
+
+
+# =============================================================================
+# Issue #2323 AC-4: eine Nachricht an eine ANDERE Nummer als die Dienstnummer
+# bleibt vollstaendig folgenlos -- unabhaengig davon, ob der Text das
+# Garmin-Kennzeichen traegt. Derselbe zaehlende Test-Double wie AC-3 oben,
+# damit der einzige Unterschied zwischen "Aufruf erfolgt, wird abgelehnt"
+# (AC-3) und "kein Aufruf" (AC-4) an derselben Beobachtungsstelle sichtbar ist.
+# =============================================================================
+
+def test_message_to_a_different_number_triggers_no_learn_attempt(monkeypatch):
+    """AC-4: Given eine eingehende SMS mit `to` != Dienstnummer (Text traegt
+    dennoch das Garmin-Kennzeichen) / When der Poll laeuft / Then setzt der
+    Reader KEINEN Lernaufruf-Versuch ab."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    fake_get = _FakeJournalEndpoint([[_message_to_other_number(2002, PRIVATE_FROM)]])
+    fake_post = _RejectingLearnRecorder()
     monkeypatch.setattr(httpx, "get", fake_get)
     monkeypatch.setattr(httpx, "post", fake_post)
 
@@ -216,7 +291,61 @@ def test_message_without_marker_is_ignored(monkeypatch):
 
     assert result == 0
     assert fake_post.calls == [], (
-        f"AC-2: ohne Kennzeichen darf KEIN Lernaufruf erfolgen, gesehen: {fake_post.calls!r}"
+        f"AC-4: eine Nachricht an eine ANDERE Nummer als die Dienstnummer darf "
+        f"KEINEN Lernaufruf-Versuch ausloesen -- selbst mit Garmin-Kennzeichen "
+        f"im Text, gesehen: {fake_post.calls!r}"
+    )
+    assert reader.last_rejected_count == 0
+    assert reader.last_failed_count == 0
+
+
+# =============================================================================
+# Issue #2323 AC-2: eine bekannte, frische Rueckadresse OHNE Code wird als
+# Befehl fuer GENAU DIESEN Nutzer verarbeitet -- Reader-Haelfte: die vom
+# Go-Endpunkt gemeldete user_id muss unveraendert bei TripCommandProcessor
+# ankommen. Text OHNE Kennzeichen (wie eine formlose Antwort ohne neuen
+# Garmin-Link) -- das beweist zugleich, dass das neue `to`-Gate nicht am
+# Marker haengt: der ALTE Marker-Gate haette diese Nachricht ignoriert.
+# =============================================================================
+
+def test_known_reply_address_without_code_is_processed_for_its_own_user(monkeypatch):
+    """AC-2 (Reader-Haelfte): Given eine Nachricht an die Dienstnummer ohne
+    Code und ohne Kennzeichen, von einer laut Go-Endpunkt bereits bekannten,
+    eindeutigen, frischen Rueckadresse / When der Poll laeuft / Then wird der
+    Text vollstaendig als Befehl an TripCommandProcessor uebergeben, mit der
+    vom Go-Endpunkt gemeldeten user_id."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    fake_get = _FakeJournalEndpoint(
+        [[_private_message_with_text(2003, GARMIN_FROM_A, "heute")]]
+    )
+    fake_post = _LearnCallRecorder(user_id="user-anna")
+    recorder = _CommandProcessorRecorder()
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(reader_mod, "TripCommandProcessor", recorder)
+
+    reader = reader_mod.InboundSmsReader()
+    result = reader.poll_and_process(_settings())
+
+    assert result == 1
+    assert len(fake_post.calls) == 1
+    assert "code" not in fake_post.calls[0]["json"], (
+        f"AC-2: ohne Code im Text darf KEIN code-Schluessel mitgeschickt "
+        f"werden, gesehen: {fake_post.calls[0]['json']!r}"
+    )
+    assert len(recorder.messages) == 1, (
+        f"erwartet genau eine Befehlsverarbeitung, gesehen: {recorder.messages!r}"
+    )
+    assert recorder.messages[0].user_id == "user-anna", (
+        f"AC-2: die vom Go-Endpunkt gemeldete user_id muss unveraendert bei "
+        f"TripCommandProcessor ankommen, gesehen: {recorder.messages[0].user_id!r}"
+    )
+    assert recorder.messages[0].body == "heute", (
+        f"AC-2: ohne Kennzeichen bleibt der gesamte Text der Befehl, "
+        f"gesehen: {recorder.messages[0].body!r}"
     )
 
 
@@ -751,9 +880,15 @@ def test_unparseable_id_is_skipped_without_aborting_the_run(monkeypatch):
 # Befehlstext). Die Aufloesung selbst (Code gegen Hash, Ratebremse, TTL) ist
 # Go-Verantwortung und wird in internal/handler/ gegen einen echten Store
 # geprueft. Kein Fake hier bildet diese Entscheidung nach.
+#
+# Issue #2323 (PO-Entscheid 14.09.2026): Code-Format auf festen Praefix `XX`
+# (case-insensitive) + 3 Buchstaben (ohne I/L/O) + 3 Ziffern (ohne 0/1)
+# umgestellt (vorher: 7 Zeichen aus 31, ohne festen Praefix). LINK_CODE unten
+# traegt deshalb das NEUE Format -- Go-Pendant:
+# internal/handler/premium_sms_link_code.go::premiumSmsLinkCodeAlphabet.
 # =============================================================================
 
-LINK_CODE = "AB3CD9F"
+LINK_CODE = "XXabc249"
 
 
 def _garmin_message_with_text(msg_id: int, sender: str, text: str) -> dict:
@@ -921,8 +1056,9 @@ def test_link_code_from_text_is_sent_in_learn_payload(monkeypatch):
 
     assert len(fake_post.calls) == 2, f"erwartet 2 Lernaufrufe, gesehen: {fake_post.calls!r}"
     erster, zweiter = fake_post.calls[0]["json"], fake_post.calls[1]["json"]
-    assert erster.get("code") == LINK_CODE, (
-        f"der Code aus dem Text muss im Payload stehen, gesehen: {erster!r}"
+    assert erster.get("code") == LINK_CODE.upper(), (
+        f"der Code aus dem Text muss im Payload stehen (normalisiert "
+        f"grossgeschrieben, Issue #2323 F001), gesehen: {erster!r}"
     )
     assert erster["from"] == GARMIN_FROM_A
     assert "code" not in zweiter, (
@@ -936,6 +1072,11 @@ def test_link_code_from_text_is_sent_in_learn_payload(monkeypatch):
 # Hilfe nennt alle Befehle in GROSSBUCHSTABEN -- ohne Ausnahme fuer bekannte
 # Befehle frisst die Code-Abtrennung sie auf, und der Wanderer bekommt auf
 # "RUHETAG" nichts. Gemessen an BEIDEN Wirkstellen: Payload und Befehlstext.
+#
+# Issue #2323: bleibt als Erhaltungswaechter GRUEN -- unter dem neuen
+# XX-Praefix-Format treffen RUHETAG/STRECKE die Code-Gestalt ohnehin nicht
+# mehr, die `bare_keywords()`-Sonderregel wird also nur noch ungenutzt (AC-6
+# entscheidet unten unabhaengig vom internen Weg).
 # =============================================================================
 
 def test_uppercase_bare_keyword_is_not_mistaken_for_a_link_code(monkeypatch):
@@ -975,6 +1116,86 @@ def test_uppercase_bare_keyword_is_not_mistaken_for_a_link_code(monkeypatch):
     assert befehle == ["RUHETAG", "STRECKE 12"], (
         f"der Befehl darf nicht als Code abgeschnitten werden, uebergeben wurde {befehle!r}"
     )
+
+
+# =============================================================================
+# Issue #2323 AC-6: RUHETAG/STRECKE muessen unabhaengig davon korrekt
+# ankommen, ob ihnen ein echter Verknuepfungs-Code vorangestellt ist. Der
+# Fall OHNE Code ist bereits durch obigen Test abgedeckt (bleibt gruen); der
+# Fall MIT vorangestelltem Code ist neu -- heute ROT, weil `_LINK_CODE_PATTERN`
+# das neue Format (noch) nicht erkennt und der Code deshalb Teil des
+# uebergebenen Befehlstexts bleibt.
+# =============================================================================
+
+def test_ruhetag_survives_with_and_without_leading_link_code(monkeypatch):
+    """AC-6: Given eine Nachricht traegt ausschliesslich RUHETAG ODER einen
+    gueltigen Verknuepfungs-Code gefolgt von RUHETAG / When der Poll laeuft /
+    Then ist der an TripCommandProcessor uebergebene Befehlstext in BEIDEN
+    Faellen exakt "RUHETAG"."""
+    import services.inbound_sms_reader as reader_mod
+
+    _fake_production_origin(monkeypatch, reader_mod)
+
+    journal = [
+        _garmin_message_with_text(
+            11008, GARMIN_FROM_A, "RUHETAG inreachlink.com/g-0Ab1Cd2Ef... (51.9956, 7.7136)",
+        ),
+        _garmin_message_with_text(
+            11009, GARMIN_FROM_B,
+            f"{LINK_CODE} RUHETAG inreachlink.com/g-0Ab1Cd2Ef... (51.9956, 7.7136)",
+        ),
+    ]
+    fake_get = _FakeJournalEndpoint([journal])
+    fake_post = _LearnCallRecorder()
+    recorder = _CommandProcessorRecorder()
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(reader_mod, "TripCommandProcessor", recorder)
+
+    reader = reader_mod.InboundSmsReader()
+    reader.poll_and_process(_settings())
+
+    befehle = [m.body for m in recorder.messages]
+    assert befehle == ["RUHETAG", "RUHETAG"], (
+        f"AC-6: RUHETAG muss in beiden Faellen (mit und ohne vorangestellten "
+        f"Code) unverfaelscht ankommen, uebergeben wurde {befehle!r}"
+    )
+    assert fake_post.calls[1]["json"].get("code") == LINK_CODE.upper(), (
+        f"AC-6: der vorangestellte Code muss trotzdem im Payload landen "
+        f"(normalisiert grossgeschrieben, Issue #2323 F001), "
+        f"gesehen: {fake_post.calls[1]['json']!r}"
+    )
+
+
+# =============================================================================
+# Issue #2323 AC-5: `_LINK_CODE_PATTERN` muss ausschliesslich das neue Format
+# akzeptieren (XX-Praefix + 3 Buchstaben ohne I/L/O + 3 Ziffern ohne 0/1),
+# unabhaengig von Gross-/Kleinschreibung. Heute ROT: die alte Regel
+# (7 Zeichen aus 31, kein Praefix, nur Grossbuchstaben) erkennt keinen der
+# Akzeptanz-Faelle und lehnt die Ablehnungs-Faelle aus dem falschen Grund ab.
+# =============================================================================
+
+def test_link_code_pattern_matches_new_format_table(monkeypatch):
+    """AC-5: Given eine Tabelle literaler Werte / When sie gegen
+    `_LINK_CODE_PATTERN` geprueft werden / Then akzeptiert das Muster
+    ausschliesslich gueltige XX+3+3-Codes in beiden Schreibweisen und lehnt
+    Formatverstoesse ab."""
+    import services.inbound_sms_reader as reader_mod
+
+    faelle = [
+        ("XXabc249", True, "gueltig, wie im Beispiel der Spec"),
+        ("xxABC249", True, "gueltig, gemischte Schreibweise (case-insensitive)"),
+        ("XXabc0249", False, "zu lang (9 statt 8 Zeichen)"),
+        ("XXab249", False, "zu kurz (7 statt 8 Zeichen)"),
+        ("XXilo249", False, "verbotene Buchstaben I/L/O"),
+        ("XXabc019", False, "verbotene Ziffern 0/1"),
+    ]
+    for code, erwartet_gueltig, grund in faelle:
+        treffer = reader_mod._LINK_CODE_PATTERN.match(code) is not None
+        assert treffer == erwartet_gueltig, (
+            f"AC-5: {code!r} ({grund}) -- erwartet gueltig={erwartet_gueltig}, "
+            f"Muster lieferte gueltig={treffer}"
+        )
 
 
 # =============================================================================

@@ -2,8 +2,8 @@
 Inbound SMS Reader — seven.io Journal-Polling fuer den Premium-SMS-Rueckkanal.
 
 Issue #1676 Scheibe S1: holt eingehende SMS aus dem seven.io-Journal ab,
-erkennt darunter Garmin-inReach-Nachrichten am Kennzeichen `inreachlink.com`
-und meldet die Absendernummer an den internen Go-Endpunkt
+erkennt die an die Dienstnummer gerichteten Nachrichten am `to`-Feld (Issue
+#2323) und meldet die Absendernummer an den internen Go-Endpunkt
 `POST /api/internal/premium-sms-learn`, der die eigentliche Nutzer-Aufloesung
 (R3) und Persistenz uebernimmt (Go bleibt einziger Schreiber von `user.json`).
 
@@ -53,11 +53,7 @@ from app.config import Settings
 from app.loader import get_data_root, load_all_trips
 from app.origin_guard import classify_origin
 from services.notification_service import NotificationService
-from services.trip_command_processor import (
-    InboundMessage,
-    TripCommandProcessor,
-    bare_keywords,
-)
+from services.trip_command_processor import InboundMessage, TripCommandProcessor
 from services.trip_selection import pick_active_trip
 
 logger = logging.getLogger(__name__)
@@ -65,14 +61,17 @@ logger = logging.getLogger(__name__)
 JOURNAL_URL = "https://gateway.seven.io/api/journal/inbound"
 LEARN_ENDPOINT = "http://localhost:8090/api/internal/premium-sms-learn"
 GARMIN_MARKER = "inreachlink.com"
+# Issue #2323: bewusst EIGENE Konstante, nicht aus premium_sms.py importiert --
+# sonst folgte dieses Gate einer Aenderung der Absendernummer stillschweigend.
+SERVICE_NUMBER = "4916092172595"
 DRYRUN_ENV_VAR = "GZ_PREMIUM_SMS_POLL_DRYRUN"
 
 _DEDUP_POINTER_NAME = "premium_sms_inbound.json"
 
-# Issue #2154 Scheibe A: Gestalt des Verknuepfungs-Codes (Spec D2) -- 7 Zeichen
-# aus 31 ohne die verwechselbaren I/L/O/0/1. Go-Pendant:
-# internal/handler/premium_sms_link_code.go::premiumSmsLinkCodeAlphabet.
-_LINK_CODE_PATTERN = re.compile(r"^[A-HJKMNP-Z2-9]{7}$")
+# Issue #2323: Gestalt des Verknuepfungs-Codes -- fester Praefix "XX" + 3
+# Buchstaben (ohne I/L/O) + 3 Ziffern (ohne 0/1), Gross-/Kleinschreibung egal.
+# Go-Pendant: internal/handler/premium_sms_link_code.go::generatePremiumSmsLinkCode.
+_LINK_CODE_PATTERN = re.compile(r"^XX[A-HJKMNP-Z]{3}[2-9]{3}$", re.IGNORECASE)
 
 
 def split_link_code(text: str) -> tuple[str, str]:
@@ -88,16 +87,21 @@ def split_link_code(text: str) -> tuple[str, str]:
     erzeugte Link und die Koordinaten (Beleg #1676 S1). Steht davor ein Wort in
     der Code-Gestalt, ist es der Verknuepfungs-Code; sonst gibt es keinen.
 
-    Ausnahme Steuerbefehle: RUHETAG und STRECKE sind sieben Zeichen lang und
-    treffen die Code-Gestalt exakt. Die Hilfe nennt alle Befehle in
-    GROSSBUCHSTABEN, ein "RUHETAG" per Satellit ist also der Normalfall -- ohne
-    diese Ausnahme wuerde er als Code abgeschnitten und der Befehl waere leer.
-    Ein bekannter Befehl ist ein Befehl, kein Code.
+    Der feste Praefix "XX" (Issue #2323) macht die Gestalt eindeutig -- kein
+    Steuerbefehl beginnt so. Die frueher noetige Ausnahme fuer RUHETAG/STRECKE
+    (sieben Zeichen aus dem alten Code-Alphabet) entfaellt damit.
+
+    Der Code wird beim Zurueckgeben grossgeschrieben, damit er zum
+    ausschliesslich gross erzeugten und case-sensitiv per bcrypt verglichenen
+    Go-Hash passt (Issue #2323 F001): case-insensitive Eingabe -- ein per
+    Satellit kleingeschrieben abgetippter Code wuerde sonst erkannt, aber vom
+    Lern-Endpunkt immer abgelehnt -- und normalisierter Versand. Der
+    Befehlstext bleibt unveraendert.
     """
     befehl = text.split(GARMIN_MARKER, 1)[0].strip()
     teile = befehl.split(maxsplit=1)
-    if teile and _LINK_CODE_PATTERN.match(teile[0]) and teile[0].lower() not in bare_keywords():
-        return teile[0], (teile[1].strip() if len(teile) > 1 else "")
+    if teile and _LINK_CODE_PATTERN.match(teile[0]):
+        return teile[0].upper(), (teile[1].strip() if len(teile) > 1 else "")
     return "", befehl
 
 
@@ -173,8 +177,9 @@ class InboundSmsReader:
         -- Hausnorm `dispatch_orchestrator.run_briefing_dispatch()` (Fix F001),
         um den Ablehnungszaehler erweitert (Issue #2154 AC-11).
 
-        Der Dedup-Zeiger wandert fuer Nachrichten OHNE Kennzeichen und fuer
-        Garmin-Nachrichten mit Erfolg ODER bewusster Ablehnung (HTTP 4xx).
+        Der Dedup-Zeiger wandert fuer Nachrichten an eine ANDERE Nummer als die
+        Dienstnummer und fuer gemeldete Nachrichten mit Erfolg ODER bewusster
+        Ablehnung (HTTP 4xx).
         Bei einem VORUEBERGEHENDEN Fehlschlag (Netzwerk/Timeout/5xx) bricht
         die Schleife ab, BEVOR der Zeiger ueber diese (und alle in diesem
         Journal-Fenster nachfolgenden) Nachrichten hinwegwandert -- der
@@ -209,7 +214,10 @@ class InboundSmsReader:
         max_seen = last_seen_id
         for msg_id, message in new_messages:
             text = message.get("text", "") or ""
-            if GARMIN_MARKER not in text:
+            # Issue #2323: das Gate haengt am strukturell immer vorhandenen
+            # Ziel-Feld, nicht mehr am abschaltbaren Garmin-Kartenlink im Text.
+            # Ueber Annahme/Ablehnung entscheidet allein der Go-Lern-Endpunkt.
+            if message.get("to") != SERVICE_NUMBER:
                 max_seen = max(max_seen, msg_id)
                 continue
 

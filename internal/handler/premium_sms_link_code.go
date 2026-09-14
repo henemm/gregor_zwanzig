@@ -30,28 +30,45 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// premiumSmsLinkCodeAlphabet: 31 Zeichen ohne die verwechselbaren I/L/O/0/1
-// (Spec D2). Der Code wird per Satellit abgetippt — eine Verwechslung kostet
-// einen Rateversuch und eine bezahlte SMS.
-const premiumSmsLinkCodeAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+// Gestalt des Codes (Issue #2323): fester Praefix "XX" + 3 Buchstaben + 3
+// Ziffern, jeweils ohne die verwechselbaren I/L/O/0/1. Der Code wird per
+// Satellit abgetippt — eine Verwechslung kostet einen Rateversuch und eine
+// bezahlte SMS. Der feste Praefix macht ihn im Befehlstext eindeutig von einem
+// Steuerbefehl unterscheidbar (Python-Pendant:
+// src/services/inbound_sms_reader.py::_LINK_CODE_PATTERN).
+const premiumSmsLinkCodePrefix = "XX"
+const premiumSmsLinkCodeLetterAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ"
+const premiumSmsLinkCodeDigitAlphabet = "23456789"
+const premiumSmsLinkCodeLetterCount = 3
+const premiumSmsLinkCodeDigitCount = 3
 
-// premiumSmsLinkCodeLength: 7 Zeichen => 31^7 ~ 2,75e10 (~35 Bit).
-const premiumSmsLinkCodeLength = 7
-
-// generatePremiumSmsLinkCode zieht den Code aus crypto/rand.
-//
-// rand.Int statt "Zufallsbyte modulo 31": 256 ist kein Vielfaches von 31, ein
-// Modulo verzerrte die ersten acht Zeichen des Alphabets und naehme dem
-// Geheimnis Entropie.
+// generatePremiumSmsLinkCode zieht Buchstaben- und Ziffernblock getrennt aus
+// crypto/rand — ein gemeinsames Alphabet liesse Ziffern an Buchstabenposition
+// landen und umgekehrt.
 func generatePremiumSmsLinkCode() (string, error) {
-	limit := big.NewInt(int64(len(premiumSmsLinkCodeAlphabet)))
-	out := make([]byte, premiumSmsLinkCodeLength)
+	letters, err := randomStringFromAlphabet(premiumSmsLinkCodeLetterAlphabet, premiumSmsLinkCodeLetterCount)
+	if err != nil {
+		return "", err
+	}
+	digits, err := randomStringFromAlphabet(premiumSmsLinkCodeDigitAlphabet, premiumSmsLinkCodeDigitCount)
+	if err != nil {
+		return "", err
+	}
+	return premiumSmsLinkCodePrefix + letters + digits, nil
+}
+
+// randomStringFromAlphabet: rand.Int statt "Zufallsbyte modulo n" — 256 ist
+// kein Vielfaches der Alphabetlaengen, ein Modulo verzerrte die vorderen
+// Zeichen des Alphabets und naehme dem Geheimnis Entropie.
+func randomStringFromAlphabet(alphabet string, length int) (string, error) {
+	limit := big.NewInt(int64(len(alphabet)))
+	out := make([]byte, length)
 	for i := range out {
 		n, err := rand.Int(rand.Reader, limit)
 		if err != nil {
 			return "", err
 		}
-		out[i] = premiumSmsLinkCodeAlphabet[n.Int64()]
+		out[i] = alphabet[n.Int64()]
 	}
 	return string(out), nil
 }

@@ -154,7 +154,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/passkey/register/public/begin` | POST |
 | `/api/auth/passkey/register/public/finish` | POST |
 | `/api/auth/password` | PUT |
-| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"AB3CD9F"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash) |
+| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
 | `/api/auth/profile` | GET, PUT |
 | `/api/auth/register` | POST |
 | `/api/auth/reset-password` | POST |
@@ -3171,22 +3171,24 @@ sending chat's `chat_id` on that user (Issue #2141: erst nach einer Eindeutigkei
 #### POST /api/internal/premium-sms-learn
 
 Internal endpoint, localhost-only (`requireLocalOnly`) — called by the Python `InboundSmsReader`
-after polling the seven.io journal and finding a message bearing the Garmin `inreachlink.com`
-marker. Resolves the incoming sender number (`from`) to a `user_id` (checking for a stored,
-fresh reply address or a valid link code) and persists the address on that user (Issue #1676 S1,
-improved by Issue #2154 Scheibe A).
+after polling the seven.io journal and finding a message addressed to the service number
+(`to == SERVICE_NUMBER`, Issue #2323; previously gated on the Garmin `inreachlink.com` marker in
+the message text). Resolves the incoming sender number (`from`) to a `user_id` (checking for a
+stored, fresh reply address or a valid link code) and persists the address on that user (Issue
+#1676 S1, improved by Issue #2154 Scheibe A, gate corrected by Issue #2323).
 
 **Request Body:**
 ```json
 {
   "from": "491501234567",
-  "code": "AB3CD9F",
+  "code": "XXABC234",
   "dry_run": false
 }
 ```
 
 - `from` (string, required): The sender phone number from the SMS.
-- `code` (string, optional): Seven-character link code (alphanumeric, no ambiguous chars) issued by
+- `code` (string, optional): Link code in the format `XX` + 3 letters (no I/L/O) + 3 digits (no
+  0/1), case-insensitive (Issue #2323; previously a 7-character alphanumeric code) issued by
   `POST /api/auth/premium-sms-link-code`. If a stored reply address exists and is within the
   `PremiumSmsReplyTTL` (30 days), `code` is ignored and the stored match confirms without
   verification. Otherwise, `code` is required for resolution.
@@ -3393,8 +3395,8 @@ Zeitstempel anzurühren).
 Authenticated endpoint (SessionAuth) — the authenticated user generates or renews their Premium-SMS
 link code. This code pairs the user's Garmin inReach device with their account in the inbound
 learning path (`POST /api/internal/premium-sms-learn`, Issue #2154 Scheibe A). Resolves the
-one-time TTL-less deep-link code to a `user_id` and generates a new 7-character link code,
-returning it **once** in plaintext in the response. Renewal invalidates the previous code.
+one-time TTL-less deep-link code to a `user_id` and generates a new link code, returning it
+**once** in plaintext in the response. Renewal invalidates the previous code.
 
 **Request Body:**
 ```json
@@ -3406,12 +3408,14 @@ returning it **once** in plaintext in the response. Renewal invalidates the prev
 **Response 200:**
 ```json
 {
-  "code": "AB3CD9F"
+  "code": "XXABC234"
 }
 ```
 
-The code is a 7-character alphanumeric string with no ambiguous characters (no I/L/O/0/1).
-Returned **only once**; subsequent `GET /api/auth/premium-sms-link-code` calls never expose it.
+The code has a fixed prefix `XX` followed by 3 letters (no I/L/O) and 3 digits (no 0/1),
+case-insensitive on input (Issue #2323; previously a 7-character alphanumeric code without the
+fixed prefix). Returned **only once**; subsequent `GET /api/auth/premium-sms-link-code` calls
+never expose it.
 
 **Error Responses:**
 
