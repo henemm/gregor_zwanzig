@@ -37,6 +37,18 @@ export const actions = {
 			return fail(429, { error: 'Zu viele Versuche — bitte in einigen Minuten erneut versuchen.', username, email });
 		}
 		if (resp.status === 409) {
+			// Issue #2147 Scheibe B1 (AC-15): "email_taken" ist ein Adress-, kein
+			// Kennungskonflikt — eigene, verständliche Meldung statt der
+			// sachlich falschen "Benutzername bereits vergeben".
+			const body = await resp.json().catch(() => ({}) as { error?: string });
+			if (body?.error === 'email_taken') {
+				return fail(409, {
+					error:
+						"Diese E-Mail-Adresse gehört bereits zu einem Konto. Melde dich an – bei Bedarf über 'Passwort vergessen' oder den Anmeldelink per E-Mail.",
+					username,
+					email,
+				});
+			}
 			return fail(409, { error: 'Benutzername bereits vergeben', username, email });
 		}
 		if (resp.status === 400) {

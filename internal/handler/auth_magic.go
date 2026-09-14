@@ -43,6 +43,12 @@ type otpEntry struct {
 // otpStore holds active OTP challenges, keyed by lower-cased trimmed e-mail.
 var otpStore sync.Map
 
+// magicLinkBeforeTakeoverReload ist eine Test-Naht (Issue #2147 Scheibe B1,
+// AC-12): im Normalbetrieb nil und damit wirkungslos. Tests koennen sie
+// setzen, um zwischen der Zuordnung (ResolveAddressOwner) und dem erneuten
+// Laden in resolveMagicLinkAccount eine Zwischenzeit-Aenderung einzuspielen.
+var magicLinkBeforeTakeoverReload func(userID string)
+
 // MagicLinkRequestHandler returns the HTTP handler for POST /api/auth/magic-link.
 // Always responds 200 (no user enumeration); generates a 6-digit OTP, stores it
 // with a 15-min TTL, and dispatches the OTP-mail asynchronously (10s timeout).
@@ -215,6 +221,12 @@ func resolveMagicLinkAccount(w http.ResponseWriter, s *store.Store, address stri
 		if owner.EmailVerifiedAt != nil {
 			return owner.ID, true
 		}
+		// Issue #2147 Scheibe B1 (AC-12): Test-Naht VOR dem Neuladen, damit ein
+		// Test eine Zwischenzeit-Aenderung (Zugangsdaten oder Adresse) genau
+		// zwischen Zuordnung und Neuladen einspielen kann.
+		if magicLinkBeforeTakeoverReload != nil {
+			magicLinkBeforeTakeoverReload(owner.ID)
+		}
 		// Credential-less, unconfirmed account: confirm it (read-modify-write)
 		// and end its old sessions BEFORE issuing the new one.
 		user, err := s.LoadUser(owner.ID)
@@ -222,6 +234,15 @@ func resolveMagicLinkAccount(w http.ResponseWriter, s *store.Store, address stri
 			err = fmt.Errorf("account vanished")
 		}
 		if err == nil {
+			// Issue #2147 Scheibe B1 (AC-12): das frisch geladene Konto muss X
+			// weiterhin als wirksame Kontaktadresse tragen und weiterhin OHNE
+			// Zugangsdaten sein — sonst hat es die Zwischenzeit veraendert und
+			// die Uebernahme wird verweigert (dieselbe neutrale Antwort wie bei
+			// jeder anderen Mehrdeutigkeit).
+			if store.HasLoginCredentials(user) || store.EffectiveContactAddress(user) != address {
+				log.Printf("magic-link: takeover of account %s refused — account changed since assignment", owner.ID)
+				return fail(http.StatusBadRequest, `{"error":"invalid_or_expired_code"}`)
+			}
 			now := time.Now().UTC()
 			user.EmailVerifiedAt = &now
 			if err = s.SaveUser(*user); err == nil {
