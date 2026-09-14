@@ -29,6 +29,7 @@
 	import ScreenScroll from '$lib/components/mobile/ScreenScroll.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import { api } from '$lib/api';
+	import { baueTripSpeicherung } from '../tripSpeicherung.ts';
 	import { toCompareProfile, type Trip, type SensLevel, type Corridor } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
@@ -156,13 +157,14 @@
 	// Alarme (AC-2/AC-3).
 	function buildSaveFn() {
 		const payload = buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors);
-		return async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, {
-				corridors: payload.corridors,
-				display_config: trip!.display_config,
-			});
-			onTripUpdate?.(updated);
-		};
+		// #2317 Baustein 1: die Entlade-Option (keepalive) erreicht den PUT.
+		// display_config wird wie bisher erst beim Speichern gelesen.
+		return baueTripSpeicherung<Trip>(
+			api,
+			trip!.id,
+			() => ({ corridors: payload.corridors, display_config: trip!.display_config }),
+			(updated) => onTripUpdate?.(updated)
+		);
 	}
 	function syncToWizard() {
 		if (!ws) return;

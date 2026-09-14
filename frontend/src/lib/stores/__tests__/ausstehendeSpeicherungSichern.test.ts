@@ -37,11 +37,16 @@
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
 //     src/lib/stores/__tests__/ausstehendeSpeicherungSichern.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { SaveStatus } from '../saveStatusStore.svelte.ts';
 import { sichereAusstehendeSpeicherung } from '../ausstehendeSpeicherungSichern.ts';
+import {
+	installiereSitzungsspeicher,
+	entferneSitzungsspeicher,
+	type SitzungsspeicherDoppel
+} from '../../__tests__/sitzungsspeicherDoppel.ts';
 
 /** Echte SaveStatus-Instanz ohne Konstruktor (Muster aus saveStatus.test.ts). */
 function createTestInstance(): SaveStatus {
@@ -167,5 +172,124 @@ describe('Issue #2316 Scheibe A: gemeinsamer Speicher-Wächter vor dem Verlassen
 		assert.equal(calls.length, 0);
 		assert.equal(ctl.state, 'idle');
 		assert.equal(ctl.savedAt, null);
+	});
+});
+
+// ###########################################################################
+// TDD RED — Issue #2317 AC-13: Nachlade-Merker beim Entladen traegt NUR die Kennung.
+//
+// Spec: docs/specs/modules/speicherung_beim_neuladen.md
+//   § Implementation Details „Baustein 3 — Anzeige nach Browser-Neuladen", § AC-13
+//
+// Zielschnittstelle (Erweiterung, bestehende drei Parameter unveraendert):
+//   sichereAusstehendeSpeicherung(navigation, ctl, goto, kennung?: NachladeKennung)
+//   geraetespeicher.ts: NACHLADE_MERKER = 'gz-nachladen', Wert JSON {typ, id}
+//
+// Die vier Faelle OBEN (#2316) rufen ohne Kennung und bleiben unveraendert gruen.
+// Neue Exporte werden per `await import(...)` INNERHALB der Tests geholt — ein
+// statischer Import eines fehlenden Exports liesse die ganze Datei beim Laden
+// scheitern und damit auch die bestehenden Faelle.
+// ###########################################################################
+
+const GEHEIMER_WERT = 'GEHEIM-42.7';
+
+describe('Issue #2317 AC-13: Merker beim Entladen enthaelt ausschliesslich die Kennung', () => {
+	let speicher: SitzungsspeicherDoppel;
+
+	beforeEach(() => {
+		speicher = installiereSitzungsspeicher();
+	});
+
+	afterEach(() => {
+		entferneSitzungsspeicher();
+	});
+
+	async function merkerSchluessel(): Promise<string> {
+		const modul = (await import('../../pwa/geraetespeicher.ts')) as Record<string, unknown>;
+		assert.equal(
+			typeof modul.NACHLADE_MERKER,
+			'string',
+			'geraetespeicher.ts muss den Schluessel NACHLADE_MERKER exportieren'
+		);
+		return modul.NACHLADE_MERKER as string;
+	}
+
+	for (const kennung of [
+		{ typ: 'trip', id: 'gr20' },
+		{ typ: 'vergleich', id: 'cp-alpen' }
+	] as const) {
+		test(`(d) Neuladen + ausstehende Eingabe (${kennung.typ}): Merker {typ,id} gesetzt, KEIN eingegebener Wert im Geraetespeicher`, async () => {
+			// GIVEN: eine Eingabe mit wiedererkennbarem Wert wartet im 700-ms-Fenster
+			const schluessel = await merkerSchluessel();
+			const ctl = createTestInstance();
+			const inits: Array<RequestInit | undefined> = [];
+			const gesendet: string[] = [];
+			const eingabe = { corridor: { upper: GEHEIMER_WERT, notiz: `Eingabe ${GEHEIMER_WERT}` } };
+			ctl.schedule(async (init) => {
+				inits.push(init);
+				gesendet.push(JSON.stringify(eingabe)); // aufgezeichneter Rumpf des Transports
+			});
+			const { navigation, rec } = createNavigation(true, null);
+			const { goto } = createGoto();
+
+			// WHEN: der Browser entlaedt die Seite
+			sichereAusstehendeSpeicherung(navigation, ctl, goto, kennung);
+			await tick();
+
+			// THEN: der keepalive-Flush laeuft wie bisher ...
+			assert.equal(inits.length, 1, 'die ausstehende Speicherung muss weiterhin abgesetzt werden');
+			assert.equal(inits[0]?.keepalive, true, 'weiterhin keepalive:true beim Entladen');
+			assert.ok(gesendet[0]?.includes(GEHEIMER_WERT), 'Vorbedingung: der Wert ging tatsaechlich ueber den Transport');
+			assert.equal(rec.cancelCalls, 0, 'weiterhin keine Verlassen-Rueckfrage');
+
+			// ... UND genau ein Merker liegt vor, der nur die Kennung traegt
+			assert.equal(speicher.length, 1, 'genau EIN Eintrag im Geraetespeicher erwartet');
+			const roh = speicher.getItem(schluessel);
+			assert.notEqual(roh, null, `unter "${schluessel}" muss der Nachlade-Merker liegen`);
+			assert.deepEqual(
+				JSON.parse(roh as string),
+				{ typ: kennung.typ, id: kennung.id },
+				'der Merker darf ausschliesslich {typ, id} enthalten — keine weiteren Felder'
+			);
+			for (const [k, v] of speicher.alleEintraege()) {
+				assert.ok(
+					!k.includes(GEHEIMER_WERT) && !v.includes(GEHEIMER_WERT),
+					`der eingegebene Wert darf in keinem Geraetespeicher-Eintrag auftauchen (gefunden in "${k}")`
+				);
+			}
+		});
+	}
+
+	test('(e) Neuladen OHNE ausstehende Eingabe: kein Merker', async () => {
+		// GIVEN: nichts wartet aufs Speichern
+		await merkerSchluessel();
+		const ctl = createTestInstance();
+		const { navigation } = createNavigation(true, null);
+		const { goto } = createGoto();
+
+		// WHEN: der Browser entlaedt die Seite
+		sichereAusstehendeSpeicherung(navigation, ctl, goto, { typ: 'trip', id: 'gr20' });
+		await tick();
+
+		// THEN: kein Merker — sonst loeste jeder Neuladevorgang Nachlade-Anfragen aus (AC-9)
+		assert.equal(speicher.length, 0, 'ohne ausstehende Speicherung darf kein Merker entstehen');
+	});
+
+	test('(f) App-interne Navigation MIT ausstehender Eingabe: kein Merker', async () => {
+		// GIVEN: eine Eingabe wartet, die Seite wird aber NICHT entladen
+		await merkerSchluessel();
+		const ctl = createTestInstance();
+		ctl.schedule(async () => {});
+		const { navigation } = createNavigation(false, 'http://localhost:4173/trips');
+		const { goto } = createGoto();
+
+		// WHEN: der Nutzer innerhalb der App wegnavigiert
+		sichereAusstehendeSpeicherung(navigation, ctl, goto, { typ: 'trip', id: 'gr20' });
+		await tick();
+		await tick();
+
+		// THEN: das Dokument bleibt, die Speicherung wird regulaer abgewartet — kein Merker
+		assert.equal(speicher.length, 0, 'bei App-interner Navigation darf kein Nachlade-Merker entstehen');
+		ctl.cancel();
 	});
 });

@@ -102,6 +102,10 @@ describe('Staging-Fund AC-5: scheduleReportConfigOnlySave() schreibt AUSSCHLIESS
 		const body = functionBody('scheduleReportConfigOnlySave');
 		assert.ok(!/weather-config/.test(body), `scheduleReportConfigOnlySave() darf /weather-config nicht ansprechen:\n${body}`);
 		assert.match(body, /api\.put<Trip>\(`\/api\/trips\/\$\{trip!\.id\}`/, 'scheduleReportConfigOnlySave() muss /api/trips/{id} (report_config) schreiben');
+		// #2317 Baustein 1: die Speicherfunktion nimmt `init` entgegen UND reicht es an
+		// den PUT durch — sonst geht beim Entladen kein keepalive raus.
+		assert.match(body, /schedule\(async \(init\) =>/, 'scheduleReportConfigOnlySave(): die Speicherfunktion muss `init` entgegennehmen (#2317)');
+		assert.match(body, /api\.put<Trip>\([^;]*,\s*init\)/, 'scheduleReportConfigOnlySave(): `init` muss an den PUT durchgereicht werden (#2317)');
 	});
 
 	test('der ambiente $effect (reagiert auf JEDE reportConfig-Aenderung) ruft scheduleReportConfigOnlySave(), nicht scheduleAutoSave()', () => {

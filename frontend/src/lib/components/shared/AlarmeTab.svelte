@@ -18,6 +18,7 @@
 
 	import { onMount, untrack } from 'svelte';
 	import { api } from '$lib/api';
+	import { baueTripSpeicherung } from './tripSpeicherung.ts';
 	import { Eyebrow } from '$lib/components/atoms';
 	import type { Trip, AlertMetric, SensLevel } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -311,10 +312,8 @@
 			},
 			trip?.display_config as Record<string, unknown> | undefined
 		);
-		return async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, payload);
-			onTripUpdate?.(updated);
-		};
+		// #2317 Baustein 1: die Entlade-Option (keepalive) erreicht den PUT.
+		return baueTripSpeicherung<Trip>(api, trip!.id, payload, (updated) => onTripUpdate?.(updated));
 	}
 
 	// svelte-ignore state_referenced_locally -- Initialwert des Dirty-Check-

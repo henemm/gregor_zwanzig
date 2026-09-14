@@ -13,6 +13,9 @@
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
 	import { adoptEtagFromPageLoad, discardEtag } from '$lib/etagRegistry';
+	import { getContext, onMount } from 'svelte';
+	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
+	import { starteNachladenNachEntladen, tripNachladeQuelle } from '$lib/stores/nachEntladenNachladen';
 
 	let { data } = $props();
 
@@ -42,7 +45,39 @@
 	// Issue #758: Flush ausstehender Auto-Saves vor Navigation (AC-5).
 	// Issue #2316 Scheibe A: die Logik lebt jetzt geteilt mit /compare/[id] in
 	// sichereAusstehendeSpeicherung() (dünne Hülle hier).
-	beforeNavigate((navigation) => sichereAusstehendeSpeicherung(navigation, tripSaveCtl, goto));
+	// Issue #2317 Baustein 3: mit Kennung — beim Entladen entsteht der Nachlade-Merker.
+	beforeNavigate((navigation) =>
+		sichereAusstehendeSpeicherung(navigation, tripSaveCtl, goto, { typ: 'trip', id: trip.id })
+	);
+
+	// Issue #2317 Baustein 2: SaveStatus an der Anmeldestelle des Layouts melden,
+	// damit „Aktualisieren" eine ausstehende Speicherung vorher abschliesst.
+	const speicherAnmeldestelle = getContext<SpeicherAnmeldestelle | undefined>(AKTIVE_SPEICHERUNG);
+
+	// Issue #2317 Baustein 3: die Reiter uebernehmen `trip` nur beim Mount in
+	// lokale Zustaende. Nach einer Uebernahme per Nachladen werden sie deshalb
+	// ueber diesen Zaehler neu aufgebaut ({#key} unten), sonst bliebe die
+	// sichtbare Zahl auf dem alten Stand. Den ETag der uebernommenen Fassung hat
+	// api.ts beim Nachlade-GET bereits in die Registry gelegt.
+	let uebernommeneFassung = $state(0);
+
+	onMount(() => {
+		const abmelden = speicherAnmeldestelle?.anmelden(tripSaveCtl);
+		const nachladen = starteNachladenNachEntladen<Trip>({
+			kennung: { typ: 'trip', id: trip.id },
+			ctl: tripSaveCtl,
+			ausgelieferteFassung: data.etag,
+			holen: tripNachladeQuelle<Trip>(trip.id),
+			uebernehmen: (stand) => {
+				trip = stand;
+				uebernommeneFassung += 1;
+			}
+		});
+		return () => {
+			abmelden?.();
+			nachladen.stoppen();
+		};
+	});
 
 	// Issue #516 — Initial-Tab aus ?tab=…-Query (kanonisches Schema, kein #hash mehr).
 	// $derived bleibt reaktiv falls user navigation triggert.
@@ -298,14 +333,16 @@
 		</div>
 	</div>
 	<TripHeader {trip} {now} onStatusChange={handleStatusChange} onTripUpdate={handleTripUpdate} saveController={tripSaveCtl} />
-	<TripTabs
-		{initialTab}
-		badges={{}}
-		{trip}
-		onTripUpdate={handleTripUpdate}
-		saveController={tripSaveCtl}
-		metricsCatalog={data.metricsCatalog}
-	/>
+	{#key uebernommeneFassung}
+		<TripTabs
+			{initialTab}
+			badges={{}}
+			{trip}
+			onTripUpdate={handleTripUpdate}
+			saveController={tripSaveCtl}
+			metricsCatalog={data.metricsCatalog}
+		/>
+	{/key}
 </main>
 
 <ConfirmDialog

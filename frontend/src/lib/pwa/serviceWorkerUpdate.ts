@@ -54,11 +54,18 @@ export interface ServiceWorkerUpdateOptions {
 	timer?: Zeitgeber;
 	/** #2316 — der Worker meldet einen gescheiterten Download vor skipWaiting(). */
 	onUpdateFailed?: () => void;
+	/**
+	 * #2317 Baustein 2 — vor SKIP_WAITING abwarten: schliesst eine ausstehende
+	 * Speicherung regulaer ab. false (Konflikt/offline) oder Wurf: KEIN
+	 * Fassungswechsel, der Hinweis bleibt antippbar.
+	 */
+	awaitPendingSave?: () => Promise<boolean>;
 }
 
 export interface ServiceWorkerUpdateSteuerung {
-	/** Uebernahme anstossen: der wartende Worker bekommt SKIP_WAITING. */
-	applyUpdate: () => void;
+	/** Uebernahme anstossen: der wartende Worker bekommt SKIP_WAITING.
+	 *  #2317: mit `awaitPendingSave` erst nach gesicherter Speicherung (Promise). */
+	applyUpdate: () => void | Promise<void>;
 	/** #2316 — Hinweis bis zum naechsten Kaltstart ausblenden. */
 	spaeter: () => void;
 }
@@ -72,7 +79,8 @@ export function initServiceWorkerUpdate({
 	window: fenster,
 	uhr,
 	timer,
-	onUpdateFailed
+	onUpdateFailed,
+	awaitPendingSave
 }: ServiceWorkerUpdateOptions): ServiceWorkerUpdateSteuerung {
 	let bereitsNeugeladen = false;
 	let uebernahmeAngestossen = false;
@@ -201,12 +209,33 @@ export function initServiceWorkerUpdate({
 		handler();
 	}
 
+	function uebernehmen(): void {
+		uebernahmeAngestossen = true;
+		const wartend = registration.waiting ?? registration.installing;
+		wartend?.postMessage({ type: 'SKIP_WAITING' });
+		if (wartend && timer) beobachteAktivierung(wartend);
+	}
+
+	/** #2317: laufendes Warten — ein zweites Antippen haengt sich daran, statt
+	 *  mit leerer Warteschlange sofort SKIP_WAITING zu schicken. */
+	let laufendesWarten: Promise<void> | null = null;
+
 	return {
 		applyUpdate() {
-			uebernahmeAngestossen = true;
-			const wartend = registration.waiting ?? registration.installing;
-			wartend?.postMessage({ type: 'SKIP_WAITING' });
-			if (wartend && timer) beobachteAktivierung(wartend);
+			// OHNE awaitPendingSave bleibt der Ablauf synchron (#2128 AC-9, #2316 AC-11..13).
+			if (!awaitPendingSave) return uebernehmen();
+			if (laufendesWarten) return laufendesWarten;
+			const lauf = (async () => {
+				try {
+					if (await awaitPendingSave()) uebernehmen();
+				} catch {
+					/* Speichern gescheitert -- kein Fassungswechsel, Anzeige des Reiters bleibt */
+				} finally {
+					laufendesWarten = null;
+				}
+			})();
+			laufendesWarten = lauf;
+			return lauf;
 		},
 		spaeter() {
 			spaeterAktiv = true;

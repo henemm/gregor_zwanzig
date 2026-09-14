@@ -13,6 +13,8 @@
 	// BEWUSST ausserhalb des Chrome-Blocks: der Update-Hinweis gehoert auch auf
 	// die Anmeldeseite, die ohne TopAppBar/Sidebar/BottomNav rendert.
 	import { initServiceWorkerUpdate } from '$lib/pwa/serviceWorkerUpdate';
+	import { setContext } from 'svelte';
+	import { AKTIVE_SPEICHERUNG, erzeugeSpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	// Issue #2131 — Offline-Ansicht mit Stand-Kennzeichnung.
 	import { afterNavigate } from '$app/navigation';
 	import { initOfflineStand, standAnwenden } from '$lib/pwa/offlineStand';
@@ -26,7 +28,12 @@
 
 	let updateBereit = $state(false);
 	let updateFehlgeschlagen = $state(false);
-	let updateUebernehmen: (() => void) | null = null;
+	let updateUebernehmen: (() => void | Promise<void>) | null = null;
+
+	// Issue #2317 Baustein 2: die Detailseiten melden hier ihren SaveStatus an;
+	// „Aktualisieren" schliesst eine ausstehende Speicherung vorher regulaer ab.
+	const speicherAnmeldestelle = erzeugeSpeicherAnmeldestelle();
+	setContext(AKTIVE_SPEICHERUNG, speicherAnmeldestelle);
 	let updateSpaeter: (() => void) | null = null;
 	let iosHinweisSichtbar = $state(false);
 
@@ -167,7 +174,8 @@
 						},
 						onUpdateFailed: () => {
 							updateFehlgeschlagen = true;
-						}
+						},
+						awaitPendingSave: () => speicherAnmeldestelle.wartenAufAusstehendeSpeicherung()
 					});
 					updateUebernehmen = steuerung.applyUpdate;
 					updateSpaeter = steuerung.spaeter;
@@ -203,7 +211,9 @@
 
 	function updateAnwenden(): void {
 		updateFehlgeschlagen = false;
-		updateUebernehmen?.();
+		// #2317: bei gescheiterter Speicherung bleibt der Hinweis stehen und die
+		// Konflikt-/Fehleranzeige des Reiters sichtbar — erneut antippbar.
+		void Promise.resolve(updateUebernehmen?.()).catch(() => {});
 	}
 	function updateSpaeterKlicken(): void {
 		updateBereit = false;
