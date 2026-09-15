@@ -243,6 +243,9 @@ deklarierte, aber in `aggregate_stage()` **nicht implementierte** Zweig
 Verbraucher. Ihn hier zu ergänzen wäre Code ohne Wirkort — genau der Fehler,
 den Scheibe 2 bewusst vermieden hat. Er bleibt Known Limitation, **aber ab
 sofort mit Beweiskette statt mit Vermutung** (s. Known Limitations 1).
+🔴 **Nachtrag 2026-09-15 (#2195):** Der Zweig ist inzwischen implementiert —
+nicht durch einen Ausblick-Verbraucher, sondern durch einen unabhängigen
+Bugfix der Etappen-Tagesaggregation, s. Known Limitations 1.
 
 **3. Der Zeitplaner darf `union_of_max_carriers` nicht importieren.** Eine
 Architektur-Wache (`tests/unit/test_notification_service.py:183-192`) erlaubt
@@ -429,6 +432,11 @@ Hagel-Schlüssel seit #1475 — geerbte Annahme, kein neuer Fehler.
    **nur** über den in „Am Code gemessen" Punkt 2 als unerreichbar bewiesenen
    Notnagel-Zweig. Bleibt gebucht (#1199); ein Fix braucht zuerst einen echten
    Verbraucher.
+   🔴 **Nachtrag 2026-09-15 (#2195):** Geschlossen — `aggregate_stage()` hat
+   seither einen `union_of_max_carriers`-Zweig (`weather_metrics.py:1391-1400`,
+   BEWUSST vor dem `is not None`-Vorfilter). Der "echte Verbraucher" war ein
+   unabhängiger Bugfix der Etappen-Tagesaggregation, nicht der hier erwartete
+   Ausblick-Pfad. Details: `docs/specs/modules/bug_2195_tageswert_feldverlust.md`.
 2. **Der Nachtteil trägt nie eine Herkunft** (AC-6, bewusst). Reine
    Nachtgewitter-Tage zeigen damit keine Zutat.
 3. **`sdi_2` (Superzellen) bleibt außen vor** — die Fusion hat vier Zutaten,
