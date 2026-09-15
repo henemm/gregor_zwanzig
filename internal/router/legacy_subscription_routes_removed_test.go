@@ -74,8 +74,11 @@ func newTestRouterForLegacySubscriptionCheck(t *testing.T) (http.Handler, string
 		GitCommit:          "test",
 	})
 
-	sessionCookie := authmw.SignSession("legacy-sub-test-user", cfg.SessionSecret)
-	return r, sessionCookie
+	const uid, sid = "legacy-sub-test-user", "sess-legacy-sub-test"
+	if err := s.AddSession(uid, sid); err != nil {
+		t.Fatalf("AddSession: %v", err)
+	}
+	return r, authmw.SignSessionWithID(uid, sid, cfg.SessionSecret)
 }
 
 // AC-1: alle 9 vormaligen /api/subscriptions*-Routen antworten mit 404.

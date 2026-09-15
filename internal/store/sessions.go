@@ -27,14 +27,6 @@ type Session struct {
 
 type sessionFile struct {
 	Sessions []Session `json:"sessions"`
-	// LegacyRevokedAt schliesst die Abmelde-Luecke des Uebergangs: ein
-	// Alt-Merkmal steht auf keiner Gaesteliste, es gaebe beim Abmelden also
-	// nichts zu entfernen, und es waere bis zu 24 Stunden weiter gueltig.
-	//
-	// Das ist KEINE wiederauferstandene Sperrliste: ein einzelner Wert je
-	// Nutzer, kein Verzeichnis einzelner Merkmale. Er faellt mit dem
-	// Legacy-Zweig ersatzlos weg.
-	LegacyRevokedAt *time.Time `json:"legacy_revoked_at,omitempty"`
 }
 
 // sessionsPath ist die gemeinsame Engstelle aller fuenf Einstiege
@@ -96,32 +88,6 @@ func (s *Store) LoadSessions(userId string) ([]Session, error) {
 	defer unlock()
 	f, err := s.readSessionFile(userId)
 	return f.Sessions, err
-}
-
-// LegacyRevokedAt liefert den Zeitpunkt, ab dem Alt-Merkmale dieses Nutzers
-// nicht mehr gelten (nil, wenn nie widerrufen wurde).
-func (s *Store) LegacyRevokedAt(userId string) (*time.Time, error) {
-	unlock := lockSessions(userId)
-	defer unlock()
-	f, err := s.readSessionFile(userId)
-	return f.LegacyRevokedAt, err
-}
-
-// RevokeLegacySessions entwertet alle Alt-Merkmale dieses Nutzers, ohne die
-// Gaesteliste anzutasten. Gebraucht beim Abmelden mit einem Alt-Merkmal: dort
-// gibt es keinen Eintrag zu entfernen, und ohne diesen Vermerk bliebe die
-// Zusage "Abmelden wirkt" im Uebergangsfenster unerfuellt.
-func (s *Store) RevokeLegacySessions(userId string) error {
-	unlock := lockSessions(userId)
-	defer unlock()
-
-	f, err := s.readSessionFile(userId)
-	if err != nil {
-		return err
-	}
-	now := time.Now()
-	f.LegacyRevokedAt = &now
-	return s.writeSessionFile(userId, f)
 }
 
 // HasSession beantwortet die Frage, an der die gesamte unbefristete Anmeldung
@@ -192,14 +158,10 @@ func (s *Store) RemoveSession(userId, sessionId string) error {
 }
 
 // ClearSessions leert die Gaesteliste ("auf allen Geraeten abmelden", ebenso
-// Passwortwechsel und Passwort-Zuruecksetzen) UND entwertet die Alt-Merkmale.
-// Ohne den zweiten Teil bliebe genau hier dieselbe Luecke offen wie beim
-// Abmelden: ein Alt-Merkmal steht auf keiner Liste, ein Leeren traefe es also
-// nicht.
+// Passwortwechsel und Passwort-Zuruecksetzen).
 func (s *Store) ClearSessions(userId string) error {
 	unlock := lockSessions(userId)
 	defer unlock()
 
-	now := time.Now()
-	return s.writeSessionFile(userId, sessionFile{LegacyRevokedAt: &now})
+	return s.writeSessionFile(userId, sessionFile{})
 }

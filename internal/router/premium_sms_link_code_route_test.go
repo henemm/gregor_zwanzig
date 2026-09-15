@@ -49,6 +49,9 @@ func TestPremiumSmsLinkCodeRouteIstVerdrahtetUndAnmeldepflichtig(t *testing.T) {
 	if err := s.SaveUser(model.User{ID: uid, Tier: "premium", CreatedAt: time.Now()}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
 	}
+	if err := s.AddSession(uid, sessionIDFor(uid)); err != nil {
+		t.Fatalf("AddSession: %v", err)
+	}
 
 	// --- 1. Angemeldet: die Route existiert UND der Handler sieht die
 	//        Nutzerkennung aus dem geprueften Merkmal.

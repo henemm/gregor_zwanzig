@@ -12,11 +12,23 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 
-// signSession-Helfer (identisch zu auth.ts signSession)
+// signSession-Helfer im dreiteiligen Format von 2025. Die beiden
+// Format-Vergleichstests unten arbeiten mit nachgebauten Kopien von damals und
+// brauchen genau dieses Format; der Prüfling in auth.ts kennt es seit #2262
+// nicht mehr.
 function signSession(userId: string, secret: string): string {
 	const ts = Math.floor(Date.now() / 1000);
 	const sig = createHmac('sha256', secret).update(`${userId}:${ts}`).digest('hex');
 	return `${userId}.${ts}.${sig}`;
+}
+
+// Vierteiliges Merkmal, das der echte Prüfling heute erwartet.
+function newCookie(userId: string, sessionId: string, secret: string): string {
+	const ts = Math.floor(Date.now() / 1000);
+	const sig = createHmac('sha256', secret)
+		.update(`${userId}:${sessionId}:${ts}`)
+		.digest('hex');
+	return `${userId}.${sessionId}.${ts}.${sig}`;
 }
 
 // Die AKTUELLE (unfixte) verifySession-Logik
@@ -105,5 +117,5 @@ test('AC-7: auth.ts verifySession zerlegt von rechts (Verhalten, echte Funktion)
 	const secret = 'test-secret-32-chars-minimum-ok!';
 	const uid = 'user.with.dots';
 
-	assert.deepEqual(verifySession(signSession(uid, secret), secret), { userId: uid });
+	assert.deepEqual(verifySession(newCookie(uid, 'sess-dots0001', secret), secret), { userId: uid });
 });

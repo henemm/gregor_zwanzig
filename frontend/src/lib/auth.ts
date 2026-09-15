@@ -8,18 +8,6 @@ import { createHmac } from 'crypto';
 export const SESSION_MAX_AGE_SECONDS = 400 * 24 * 60 * 60;
 
 /**
- * Ablauffrist des ALTEN dreiteiligen Merkmals. Bleibt scharf, damit der
- * Altbestand binnen 24 Stunden nach dem Deploy von selbst verschwindet.
- */
-const LEGACY_MAX_AGE_SECONDS = 86400;
-
-export function signSession(userId: string, secret: string): string {
-	const ts = Math.floor(Date.now() / 1000);
-	const sig = createHmac('sha256', secret).update(`${userId}:${ts}`).digest('hex');
-	return `${userId}.${ts}.${sig}`;
-}
-
-/**
  * Zweite Prüfstelle: der Frontend-Server prüft Format und Signatur des
  * Anmelde-Merkmals. Die Gästeliste kennt er NICHT — er hat keinen Zugriff auf
  * den Nutzer-Datenbestand. Nach einem Widerruf lädt die Seite deshalb noch
@@ -27,50 +15,26 @@ export function signSession(userId: string, secret: string): string {
  * nächste Klick den harten Sprung auf die Anmelde-Seite auslöst. Das ist
  * dasselbe Verhalten wie mit der abgelösten Sperrliste, keine Umleitungsschleife.
  *
- * Beide Formate werden VON RECHTS zerlegt, damit eine Nutzerkennung mit Punkt
- * hier und im Go-Dienst dieselbe Kennung ergibt. Die Segmentzahl allein
- * unterscheidet die Formate nicht eindeutig — ein Alt-Merkmal für
- * `alice.smith` hat ebenfalls vier Segmente —, deshalb entscheidet die
- * Signatur: erst das neue Format versuchen, dann das alte.
+ * Zerlegt wird VON RECHTS, damit eine Nutzerkennung mit Punkt hier und im
+ * Go-Dienst dieselbe Kennung ergibt.
  */
-export function verifySession(
-	cookie: string,
-	secret: string,
-	maxAge = LEGACY_MAX_AGE_SECONDS
-): { userId: string } | null {
+export function verifySession(cookie: string, secret: string): { userId: string } | null {
 	const parts = cookie.split('.');
+	if (parts.length < 4) return null;
 
-	if (parts.length >= 4) {
-		const sig = parts[parts.length - 1];
-		const tsStr = parts[parts.length - 2];
-		const sessionId = parts[parts.length - 3];
-		const userId = parts.slice(0, parts.length - 3).join('.');
-		if (userId && sessionId && tsStr && sig) {
-			const ts = parseInt(tsStr, 10);
-			if (!isNaN(ts)) {
-				const expected = createHmac('sha256', secret)
-					.update(`${userId}:${sessionId}:${ts}`)
-					.digest('hex');
-				// Kein Ablauf: beim neuen Format trägt die Gästeliste des
-				// Go-Dienstes die Gültigkeit, nicht der Zeitstempel.
-				if (sig === expected) return { userId };
-			}
-		}
-	}
+	const sig = parts[parts.length - 1];
+	const tsStr = parts[parts.length - 2];
+	const sessionId = parts[parts.length - 3];
+	const userId = parts.slice(0, parts.length - 3).join('.');
+	if (!userId || !sessionId || !tsStr || !sig) return null;
 
-	if (parts.length >= 3) {
-		const sig = parts[parts.length - 1];
-		const tsStr = parts[parts.length - 2];
-		const userId = parts.slice(0, parts.length - 2).join('.');
-		if (!userId || !tsStr || !sig) return null;
+	const ts = parseInt(tsStr, 10);
+	if (isNaN(ts)) return null;
 
-		const ts = parseInt(tsStr, 10);
-		if (isNaN(ts)) return null;
-		if (Date.now() / 1000 - ts > maxAge) return null;
-
-		const expected = createHmac('sha256', secret).update(`${userId}:${ts}`).digest('hex');
-		if (sig === expected) return { userId };
-	}
-
-	return null;
+	const expected = createHmac('sha256', secret)
+		.update(`${userId}:${sessionId}:${ts}`)
+		.digest('hex');
+	// Kein Ablauf: die Gästeliste des Go-Dienstes trägt die Gültigkeit,
+	// nicht der Zeitstempel.
+	return sig === expected ? { userId } : null;
 }

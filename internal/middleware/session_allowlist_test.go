@@ -156,96 +156,29 @@ func TestNewFormatCookie_ValidBeyond24Hours(t *testing.T) {
 	}
 }
 
-// AC-10: Ein gültiges dreiteiliges Alt-Merkmal wird angenommen UND im selben
-// Zug durch ein vierteiliges ersetzt.
-func TestLegacyCookie_AcceptedAndUpgradedToFourPart(t *testing.T) {
-	dataDir := t.TempDir()
-	seedUserRecord(t, dataDir, "alice")
-	legacy := makeSessionCookie("alice", time.Now().Unix(), testSecret)
-
-	rr := authProbe(t, dataDir, testSecret, legacy)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("AC-10: gültiges Alt-Merkmal muss angenommen werden, bekommen %d", rr.Code)
-	}
-	up := upgradedCookie(rr)
-	if up == "" {
-		t.Fatalf("AC-10: erwartet nachgesetztes gz_session-Cookie in der Antwort, keines gesetzt")
-	}
-	if segments(up) != 4 {
-		t.Fatalf("AC-10: nachgesetztes Merkmal muss 4 Segmente haben, hat %d (%q)", segments(up), up)
-	}
-	if !strings.HasPrefix(up, "alice.") {
-		t.Errorf("AC-10: nachgesetztes Merkmal muss auf 'alice' lauten, ist %q", up)
-	}
-
-	// Zweite Anfrage MIT dem gehobenen Merkmal. Ohne sie prüft der Test nur
-	// die FORM des neuen Cookies, nicht seine Brauchbarkeit — und wäre auch
-	// dann grün, wenn die Hebung das Merkmal gar nicht in die Gästeliste
-	// einträgt. Genau das ist der Fall, den AC-10 ausschließt: der Nutzer darf
-	// sich nicht erneut anmelden müssen, das gehobene Merkmal muss sofort
-	// tragen.
-	rrUpgraded := authProbe(t, dataDir, testSecret, up)
-	if rrUpgraded.Code != http.StatusOK {
-		t.Errorf("AC-10: das gehobene Merkmal muss sofort gültig sein, bekommen %d", rrUpgraded.Code)
-	}
-	if rrUpgraded.Body.String() != "alice" {
-		t.Errorf("AC-10: gehobenes Merkmal muss Nutzerkennung 'alice' tragen, bekommen %q",
-			rrUpgraded.Body.String())
-	}
-}
-
-// AC-11: Ein Alt-Merkmal jenseits von 24 Stunden wird abgewiesen.
+// Fehlerzweig der Gästelisten-Prüfung: ist die Gästeliste unlesbar (kaputtes
+// oder halb geschriebenes JSON), wird das Merkmal abgewiesen — die Prüfstelle
+// macht ZU, nicht auf.
 //
-// Positivkontrolle voran: ein frisches Alt-Merkmal MUSS durchkommen (und
-// gehoben werden). Ohne diese Kontrolle bestünde der Test auch dann, wenn die
-// Prüfstelle jedes Alt-Merkmal pauschal abwiese — er prüfte dann nichts.
-func TestLegacyCookie_OlderThan24Hours_Rejected(t *testing.T) {
-	dataDir := t.TempDir()
-	seedUserRecord(t, dataDir, "alice")
-
-	fresh := makeSessionCookie("alice", time.Now().Add(-23*time.Hour).Unix(), testSecret)
-	rrFresh := authProbe(t, dataDir, testSecret, fresh)
-	if rrFresh.Code != http.StatusOK {
-		t.Fatalf("AC-11 Positivkontrolle: 23 h altes Alt-Merkmal muss gültig sein, bekommen %d", rrFresh.Code)
-	}
-	if segments(upgradedCookie(rrFresh)) != 4 {
-		t.Errorf("AC-11 Positivkontrolle: 23 h altes Alt-Merkmal muss gehoben werden, nachgesetzt wurde %q",
-			upgradedCookie(rrFresh))
-	}
-
-	stale := makeSessionCookie("alice", time.Now().Add(-25*time.Hour).Unix(), testSecret)
-	rrStale := authProbe(t, dataDir, testSecret, stale)
-	if rrStale.Code != http.StatusUnauthorized {
-		t.Errorf("AC-11: 25 h altes Alt-Merkmal muss abgewiesen werden, bekommen %d", rrStale.Code)
-	}
-}
-
-// Fehlerzweig der Widerrufs-Prüfung: ist die Gästeliste unlesbar (kaputtes
-// oder halb geschriebenes JSON), wird das Alt-Merkmal abgewiesen — die
-// Prüfstelle macht ZU, nicht auf.
-//
-// Warum das zählt: bei fail-open würde eine beschädigte Datei jedes
-// Alt-Merkmal durchwinken, auch ein zuvor widerrufenes. Der Widerruf hinge
-// dann an der Unversehrtheit einer Datei, die niemand überwacht — dieselbe
-// Fehlerklasse wie ein Merkmal, das eine Kontolöschung überlebt, nur über
-// einen anderen Auslöser.
+// Warum das zählt: bei fail-open würde eine beschädigte Datei jedes korrekt
+// signierte Merkmal durchwinken, auch ein zuvor widerrufenes. Der Widerruf
+// hinge dann an der Unversehrtheit einer Datei, die niemand überwacht.
 //
 // Eine FEHLENDE Datei ist etwas anderes und bleibt der leere Stand
-// (TestNewFormatCookie_NoAllowlistFile_Returns401NotServerError, und die
-// Positivkontrolle hier läuft ebenfalls ohne Datei).
-func TestLegacyCookie_CorruptAllowlistFile_Rejected(t *testing.T) {
+// (TestNewFormatCookie_NoAllowlistFile_Returns401NotServerError).
+func TestCorruptAllowlistFile_Rejected(t *testing.T) {
 	// Dasselbe Merkmal in beiden Hälften — der einzige Unterschied ist der
 	// Zustand der Datei.
-	legacy := makeSessionCookie("alice", time.Now().Unix(), testSecret)
+	const sid = "sess-corrupt01"
 
 	// Positivkontrolle in EIGENEM Datenbestand: bei intaktem Bestand muss
 	// genau dieses Merkmal durchkommen. Ohne sie bestünde der Test auch dann,
-	// wenn Alt-Merkmale generell abgewiesen würden.
+	// wenn jedes Merkmal abgewiesen würde.
 	okDir := t.TempDir()
-	seedUserRecord(t, okDir, "alice")
-	if rr := authProbe(t, okDir, testSecret, legacy); rr.Code != http.StatusOK {
-		t.Fatalf("Positivkontrolle: bei intaktem Bestand muss das Alt-Merkmal gültig sein, bekommen %d",
+	writeAllowlist(t, okDir, "alice", sid)
+	cookie := makeNewSessionCookie("alice", sid, time.Now().Unix(), testSecret)
+	if rr := authProbe(t, okDir, testSecret, cookie); rr.Code != http.StatusOK {
+		t.Fatalf("Positivkontrolle: bei intaktem Bestand muss das Merkmal gültig sein, bekommen %d",
 			rr.Code)
 	}
 
@@ -257,9 +190,9 @@ func TestLegacyCookie_CorruptAllowlistFile_Rejected(t *testing.T) {
 		t.Fatalf("WriteFile sessions.json: %v", err)
 	}
 
-	rr := authProbe(t, badDir, testSecret, legacy)
+	rr := authProbe(t, badDir, testSecret, cookie)
 	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("unlesbare Gästeliste muss das Alt-Merkmal abweisen (fail-closed), bekommen %d", rr.Code)
+		t.Errorf("unlesbare Gästeliste muss das Merkmal abweisen (fail-closed), bekommen %d", rr.Code)
 	}
 }
 
@@ -330,8 +263,7 @@ func TestNewFormatCookie_NoAllowlistFile_Returns401NotServerError(t *testing.T) 
 	}
 }
 
-// AC-14 (Go-Seite): Eine Nutzerkennung mit Punkt wird von rechts zerlegt —
-// beide Formate müssen dieselbe Kennung liefern.
+// AC-14 (Go-Seite): Eine Nutzerkennung mit Punkt wird von rechts zerlegt.
 //
 // GEMESSEN WIRD SEIT ISSUE #2140 die Zerlegung selbst (validateSession), nicht
 // mehr die Ende-zu-Ende-Strecke über authProbe: die Pfad-Traversal-Sperre
@@ -345,39 +277,17 @@ func TestDottedUserID_SplitFromTheRight(t *testing.T) {
 	const uid = "alice.smith"
 	const sid = "sess-dot00001"
 
-	t.Run("neues Format", func(t *testing.T) {
-		cookie := makeNewSessionCookie(uid, sid, time.Now().Unix(), testSecret)
-		gotUID, gotSID, _, isNew, ok := validateSession(cookie, testSecret)
-		if !ok {
-			t.Fatalf("AC-14: Merkmal mit %q muss gültig zerlegt werden, wurde verworfen", uid)
-		}
-		if !isNew {
-			t.Errorf("AC-14: vierteiliges Merkmal muss als neues Format gelesen werden")
-		}
-		if gotUID != uid {
-			t.Errorf("AC-14: erwartet Nutzerkennung %q, bekommen %q", uid, gotUID)
-		}
-		if gotSID != sid {
-			t.Errorf("AC-14: erwartet Anmelde-Kennung %q, bekommen %q", sid, gotSID)
-		}
-	})
-
-	t.Run("Altformat", func(t *testing.T) {
-		cookie := makeSessionCookie(uid, time.Now().Unix(), testSecret)
-		gotUID, gotSID, _, isNew, ok := validateSession(cookie, testSecret)
-		if !ok {
-			t.Fatalf("AC-14: Alt-Merkmal mit %q muss gültig zerlegt werden, wurde verworfen", uid)
-		}
-		if isNew {
-			t.Errorf("AC-14: dreiteiliges Merkmal darf nicht als neues Format gelesen werden")
-		}
-		if gotUID != uid {
-			t.Errorf("AC-14: erwartet Nutzerkennung %q, bekommen %q", uid, gotUID)
-		}
-		if gotSID != "" {
-			t.Errorf("AC-14: Alt-Merkmal trägt keine Anmelde-Kennung, bekommen %q", gotSID)
-		}
-	})
+	cookie := makeNewSessionCookie(uid, sid, time.Now().Unix(), testSecret)
+	gotUID, gotSID, _, ok := validateSession(cookie, testSecret)
+	if !ok {
+		t.Fatalf("AC-14: Merkmal mit %q muss gültig zerlegt werden, wurde verworfen", uid)
+	}
+	if gotUID != uid {
+		t.Errorf("AC-14: erwartet Nutzerkennung %q, bekommen %q", uid, gotUID)
+	}
+	if gotSID != sid {
+		t.Errorf("AC-14: erwartet Anmelde-Kennung %q, bekommen %q", sid, gotSID)
+	}
 }
 
 // Issue #2140: Die Pfad-Traversal-Sperre muss auch auf dem Weg durch die
@@ -399,7 +309,6 @@ func TestTraversalUserIDInCookie_Returns401NotServerError(t *testing.T) {
 		cookie string
 	}{
 		{"neues Format", makeNewSessionCookie("../bob", "sess-bobs00001", time.Now().Unix(), testSecret)},
-		{"Altformat", makeSessionCookie("../bob", time.Now().Unix(), testSecret)},
 		{"users-Nutzlast trifft Bobs echtes Verzeichnis", makeNewSessionCookie("../users/bob", "sess-bobs00001", time.Now().Unix(), testSecret)},
 	}
 	for _, tc := range cases {

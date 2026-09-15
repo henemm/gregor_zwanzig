@@ -24,6 +24,8 @@ import { verifySession } from './auth.ts';
 const SECRET = 'test-secret-32-chars-minimum-ok!';
 
 // Altes dreiteiliges Merkmal: {userId}.{ts}.{sig}, Signatur über "{userId}:{ts}".
+// Seit dem Rückbau (#2262) stellt kein Ausstellungsweg es mehr aus — der
+// Helfer baut es für den Ablehnungsnachweis (AC-19) von Hand nach.
 function legacyCookie(userId: string, ts: number, secret = SECRET): string {
 	const sig = createHmac('sha256', secret).update(`${userId}:${ts}`).digest('hex');
 	return `${userId}.${ts}.${sig}`;
@@ -57,32 +59,6 @@ test('AC-3: vierteiliges Merkmal bleibt jenseits von 24 Stunden gültig', () => 
 	assert.deepEqual(result, { userId: 'alice' }, '25 h altes neues Merkmal muss gültig bleiben');
 });
 
-// AC-10: Ein gültiges Alt-Merkmal wird weiterhin angenommen — niemand fliegt
-// durch das Deploy hinaus. (Die Hebung auf das neue Format leistet der
-// Go-Dienst; der Frontend-Server muss das Alt-Merkmal nur weiter lesen.)
-test('AC-10: gültiges dreiteiliges Alt-Merkmal wird weiterhin angenommen', () => {
-	const result = verifySession(legacyCookie('alice', now()), SECRET);
-	assert.deepEqual(result, { userId: 'alice' });
-});
-
-// AC-11: Ein Alt-Merkmal jenseits von 24 Stunden wird abgewiesen — die alte
-// Grenze bleibt für das alte Format scharf.
-// Positivkontrolle voran: ein 23 h altes Alt-Merkmal MUSS durchkommen. Ohne sie
-// bestünde der Test auch dann, wenn jedes Alt-Merkmal pauschal abgewiesen würde.
-test('AC-11: dreiteiliges Alt-Merkmal älter als 24 h wird abgewiesen', () => {
-	assert.deepEqual(
-		verifySession(legacyCookie('alice', now() - 23 * 3600), SECRET),
-		{ userId: 'alice' },
-		'Positivkontrolle: 23 h altes Alt-Merkmal muss gültig sein'
-	);
-
-	assert.equal(
-		verifySession(legacyCookie('alice', now() - 25 * 3600), SECRET),
-		null,
-		'25 h altes Alt-Merkmal muss abgewiesen werden'
-	);
-});
-
 // AC-12 (a): Manipulierte Signatur wird abgewiesen — mit Positivkontrolle,
 // damit der Test nicht nur bestätigt, dass das ganze Format abgewiesen wird.
 test('AC-12a: manipulierte Signatur im vierteiligen Merkmal wird abgewiesen', () => {
@@ -101,18 +77,37 @@ test('AC-12a: manipulierte Signatur im vierteiligen Merkmal wird abgewiesen', ()
 // AC-14: Nutzerkennung mit Punkt — von rechts zerlegen. Beide Prüfstellen
 // müssen dieselbe Kennung herauslesen; das Go-Gegenstück steht in
 // internal/middleware/session_allowlist_test.go (TestDottedUserID_SplitFromTheRight).
-test('AC-14: Nutzerkennung mit Punkt wird in beiden Formaten von rechts zerlegt', () => {
+test('AC-14: Nutzerkennung mit Punkt wird von rechts zerlegt', () => {
 	const uid = 'alice.smith';
 
 	assert.deepEqual(
 		verifySession(newCookie(uid, 'sess-dot00001', now()), SECRET),
 		{ userId: uid },
-		'neues Format: erwartet alice.smith'
+		'erwartet alice.smith'
+	);
+});
+
+// AC-19 (b), Frontend-Server: Ein Alt-Format-Merkmal wird nach dem Rückbau
+// abgewiesen (null) — ohne Sonderbehandlung.
+//
+// Positivkontrolle zuerst: ein neues (vierteiliges) Merkmal muss weiterhin
+// angenommen werden — sonst bewiese `null` nur eine kaputte Funktion, nicht
+// die gezielte Ablehnung des Alt-Formats.
+//
+// TDD RED — Issue #2262: Vor der Implementierung akzeptiert `verifySession`
+// noch beide Formate, dieser Test schlägt daher aktuell fehl.
+test('AC-19: Alt-Format wird nach dem Rückbau abgewiesen, neues Format bleibt gültig', () => {
+	const control = newCookie('alice', 'sess-ac19-ctrl', now());
+	assert.deepEqual(
+		verifySession(control, SECRET),
+		{ userId: 'alice' },
+		'Positivkontrolle: neues Format muss weiterhin gültig sein'
 	);
 
-	assert.deepEqual(
-		verifySession(legacyCookie(uid, now()), SECRET),
-		{ userId: uid },
-		'Altformat: erwartet alice.smith'
+	const legacy = legacyCookie('alice', now());
+	assert.equal(
+		verifySession(legacy, SECRET),
+		null,
+		'AC-19: Alt-Format-Merkmal muss nach dem Rückbau abgewiesen werden'
 	);
 });
