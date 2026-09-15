@@ -105,6 +105,8 @@ Koordinate außerhalb DE/AT liegt. Jeder Schritt ist fail-soft (Exception/Leeran
 - **AC-4:** Given AROME-`minutely_15`-Daten, die einen konvektiven WMO-Code (95/96/99) für einen nassen Frame im Nowcast-Fenster führen / When `RadarNowcastService` daraus ein Ergebnis ableitet / Then ist `result.is_convective == True` und `intensity_to_text` liefert "Starker Hagel/Gewitter" — d.h. der hochauflösende AROME-`weather_code` speist das Gewitter-Signal (kein separater Blitz-Feed nötig).
   - Test: Deterministischer Test, der reale `RadarFrame`-Objekte (konstruiert aus AROME-Feldwerten inkl. `is_convective=True`, kein `Mock`) durch `_derive_result`/`intensity_to_text` führt → `is_convective` propagiert, Intensitäts-String korrekt. Ergänzend ein echter Fetch gegen die AROME-Koordinate, der die Parse-Struktur (`weather_code` vorhanden) belegt.
 
+> Nachtrag 2026-09-15 (#2205, ADR-0069): Konvektiver Frame ohne Hagel (Wettercode 95) trägt jetzt das Label „Gewitter" (`INTENSITY_CONVECTIVE_NO_HAIL`); „Starker Hagel/Gewitter" nur noch bei Wettercode 96/99 (`RadarFrame.hail`).
+
 ## AC-Test-Mapping (Test-Plan)
 
 | AC | Testfunktion |

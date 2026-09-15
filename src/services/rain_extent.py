@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from services.radar_service import (
     INTENSITY_CONVECTIVE,
+    INTENSITY_CONVECTIVE_NO_HAIL,
     INTENSITY_HEAVY,
     INTENSITY_LIGHT,
     INTENSITY_MODERATE,
@@ -37,7 +38,9 @@ _INTENSITY_RANK = {
     INTENSITY_LIGHT: 0,
     INTENSITY_MODERATE: 1,
     INTENSITY_HEAVY: 2,
-    INTENSITY_CONVECTIVE: 3,
+    # Issue #2205: Gewitter mit Hagel (96/99) schlaegt Gewitter ohne Hagel (95).
+    INTENSITY_CONVECTIVE_NO_HAIL: 3,
+    INTENSITY_CONVECTIVE: 4,
 }
 
 

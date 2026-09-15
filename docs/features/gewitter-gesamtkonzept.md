@@ -351,6 +351,11 @@ ersetzt die heutige Fassung aus 3.1.
 | **Radar-Beobachtung** | nicht konvektiv | — | konvektiv | — | #1419 §4 |
 | **Updraft-Helizität** | trägt vorerst **nichts** bei — keine übertragbare Schwelle | | | | — |
 
+> **Stand 2026-09-15:** Die Wettercode-Zeile oben (< 95 kein · 95 leicht · 96 mittel · 99 hoch)
+> ist bewusst NICHT umgesetzt — Wettercode 95/96/99 bleibt auf `ThunderLevel.HIGH` (höchste
+> Stufe), siehe [ADR-0069](../adr/0069-wettercode-95-96-99-bleibt-hoechste-stufe.md). Statt der
+> Stufe wird die Hagel-Information im Text unterschieden (Issue #2205).
+
 Der Superzellen-Index kennt bewusst **kein „leicht"**: Der DWD nennt ihn ein experimentelles
 Produkt mit zwei Schwellen; eine dritte zu erfinden wäre Eigenkalibrierung.
 

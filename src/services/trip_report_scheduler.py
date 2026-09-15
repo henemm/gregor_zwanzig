@@ -243,8 +243,9 @@ def _night_thunder_hours(night_weather, fc_date: date, to_local):
     data = getattr(night_weather, "data", None)
     if not data:
         return None
+    # Issue #2205: drittes Element = Hagel-Kennzeichen DERSELBEN Stunde.
     hours = [
-        (to_local(dp.ts).hour, dp.thunder_level)
+        (to_local(dp.ts).hour, dp.thunder_level, getattr(dp, "hail_flag", None))
         for dp in data
         if dp.thunder_level is not None and to_local(dp.ts).date() == fc_date
     ]
@@ -2787,8 +2788,9 @@ class TripReportSchedulerService:
         )
         from app.models import ThunderLevel
         from app.thunder_scale import (
-            thunder_label_value, thunder_low_statement_sentence,
-            thunder_ordinal, thunder_signal_label, union_of_max_carriers,
+            format_hail_note, thunder_label_value,
+            thunder_low_statement_sentence, thunder_ordinal,
+            thunder_signal_label, union_of_max_carriers,
         )
 
         win_start, win_end = resolve_configured_window(window_start, window_end)
@@ -2873,12 +2875,32 @@ class TripReportSchedulerService:
         # Traegerliste entsteht kein leerer ·-Trenner (Spec AC-11).
         if level != ThunderLevel.NONE and carriers:
             text += " · " + ", ".join(thunder_signal_label(n) for n in carriers)
+        # Issue #2205: Hagel je Stunde aus `row["hourly_hail"]` (Stunden mit
+        # bestaetigtem Hagel, `build_outlook_row`) -- NICHT `row["hail"]`, das
+        # den ganzen Kalendertag inkl. Nacht abdeckt. Tages-Hagel ueber
+        # DIESELBE `windowed`-Menge wie die Stufe (wie der Rueckfall ueber
+        # `thunder_dps`); ohne Stundenprobe im Fenster Fail-soft wie `level`.
+        _hail_hours = {int(h) for h in (row.get("hourly_hail") or ())}
+        if not windowed:
+            day_hail = row.get("hail")
+        elif any(int(hv.hour) in _hail_hours for hv in windowed):
+            day_hail = True
+        elif row.get("hail") is True:
+            day_hail = False
+        else:
+            day_hail = row.get("hail")
+        # Tages-Hagel steht hinter der Herkunft und VOR dem Nacht-Halbsatz --
+        # der Renderer haengt seit #2205 nichts mehr an die ganze Zeile.
+        _day_hail_note = format_hail_note(day_hail)
+        if _day_hail_note:
+            text += f" · {_day_hail_note}"
         # Issue #1651: das Gewitter AUSSERHALB des Fensters wird angehaengt
         # genannt. Quelle sind dieselben, ohnehin vorliegenden Stundenproben
         # der Zeile -- fuer 00:00-06:00 des Folgetags schlaegt `night_hourly`
         # sie, weil dieselbe Reihe daneben als Nacht-Tabelle steht.
         own_hourly = [
-            (int(hv.hour), _value_to_level.get(int(hv.value), ThunderLevel.NONE))
+            (int(hv.hour), _value_to_level.get(int(hv.value), ThunderLevel.NONE),
+             True if int(hv.hour) in _hail_hours else None)
             for hv in all_hourly
         ]
         add = night_addendum(own_hourly, night_hourly, win_start, win_end)
@@ -2894,8 +2916,9 @@ class TripReportSchedulerService:
             # Issue #1475 Nachbesserung (Punkt 4a): auch der PRIMAERE Pfad
             # (Trend-Zeile, Abend-Default) traegt das Hagel-Kennzeichen --
             # sonst waere der Wurzelfix im Regelbetrieb wirkungslos und nur
-            # im Fallback-Fetch sichtbar. Quelle: build_outlook_row()["hail"].
-            "hail": row.get("hail"),
+            # im Fallback-Fetch sichtbar. Issue #2205: fensterbezogen wie
+            # `level` (SMS `+HL` passt damit zu `TH+`).
+            "hail": day_hail,
         }
 
     def _collect_future_stage_weather(
@@ -3026,7 +3049,7 @@ class TripReportSchedulerService:
         """
         from app.models import ThunderLevel
         from app.thunder_scale import (
-            thunder_low_statement_sentence, thunder_ordinal,
+            format_hail_note, thunder_low_statement_sentence, thunder_ordinal,
             thunder_signal_label,
         )
         # Issue #1475 Nachbesserung (Punkt 4a): das Hagel-Aggregat kommt ueber
@@ -3126,12 +3149,18 @@ class TripReportSchedulerService:
                 text += " · " + ", ".join(
                     thunder_signal_label(n) for n in carriers
                 )
+            # Issue #2205: Tages-Hagel (dieselbe `thunder_dps`-Menge) hinter
+            # der Herkunft und VOR dem Nacht-Halbsatz, wortgleich zum Trend-Weg.
+            _day_hail_note = format_hail_note(getattr(summary, "hail_flag", None))
+            if _day_hail_note:
+                text += f" · {_day_hail_note}"
             # Issue #1651: Nacht-Zusatz, wortgleich zum Trend-Weg (eine
             # Wortlaut-Quelle: format_night_addendum). `night_weather` reicht
             # nur bis 06:00 des Folgetags und ist deshalb allein fuer "+1"
             # eine Gegenquelle; "+2" traegt ausschliesslich seine eigene Reihe.
             add = night_addendum(
-                [(_local(dp.ts).hour, dp.thunder_level) for dp in day_dps],
+                [(_local(dp.ts).hour, dp.thunder_level,
+                  getattr(dp, "hail_flag", None)) for dp in day_dps],
                 _night_thunder_hours(night_weather, fc_date, _local)
                 if offset == 1 else None,
                 win_start, win_end,

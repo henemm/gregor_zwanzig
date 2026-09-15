@@ -24,7 +24,8 @@ MESSGRUNDLAGE (gemessen 2026-08-23 an diesem Aufbau, nicht angenommen):
   Ortszeit; Tier `standard` -> Tageslimit 4.
 * Radar-Rate -> Dringlichkeit ueber `alert_urgency.urgency_from_radar`:
   0,6 mm/h -> "Leichter Regen" -> LOW; 2,0 mm/h -> "Maessiger Regen" ->
-  MODERATE; konvektiv -> "Starker Hagel/Gewitter" -> HIGH (jede Rate).
+  MODERATE; konvektiv -> "Gewitter" (bzw. "Starker Hagel/Gewitter" bei
+  Hagel, #2205) -> HIGH (jede Rate).
   Jede benutzte Stufe wird zusaetzlich am ECHTEN Nowcast-Ergebnis GEMESSEN
   (`_gemessene_dringlichkeit`), nicht nur behauptet.
 

@@ -595,7 +595,12 @@ def build_outlook_row(
     # (eine Fensterauflösung, nicht zwei; Spec AC-9).
     _thunder_signals: list = []
     _hat_signale = False
+    # Issue #2205: Ortszeit-Stunden mit bestaetigtem Hagel -- Quelle fuer den
+    # Hagelzusatz im Nacht-Halbsatz der Gewitter-Vorschau (Trend-Weg).
+    _hail_hours: list = []
     for dp in points:
+        if getattr(dp, "hail_flag", None) is True:
+            _hail_hours.append(_lh(dp.ts, tz))
         lh = _lh(dp.ts, tz)
         if dp.precip_1h_mm is not None:
             _hourly_precip.append(HourlyValue(hour=lh, value=dp.precip_1h_mm))
@@ -663,6 +668,8 @@ def build_outlook_row(
         "hourly_thunder_signals": (
             tuple(_thunder_signals) if _hat_signale else None
         ),
+        # Issue #2205: ohne Hagelstunde bleibt das Row-Dict zeichengleich.
+        "hourly_hail": tuple(_hail_hours) or None,
     }
     row.update({k: v for k, v in optional.items() if v is not None})
 

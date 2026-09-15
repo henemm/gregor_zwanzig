@@ -623,13 +623,8 @@ def hail_priority(values: Iterable[Optional[bool]]) -> Optional[bool]:
     return None
 
 
-def format_hail_note(hail_flag: Optional[bool]) -> Optional[str]:
-    """Der EINE gemeinsame Anzeige-Textbaustein fuer das Hagel-Kennzeichen
-    (Trip-/Compare-Mail-Renderer UND ``GEWITTER``-Kommando, #1481 DRY-Pflicht).
-
-    Rein deskriptiv, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
-    "unbekannt"/"nein" gibt es KEINEN Zusatztext (kein Rauschen).
-    """
-    if hail_flag is True:
-        return "Hagel: ja"
-    return None
+# `format_hail_note` wohnt seit #2205 in `app/thunder_scale.py` (Domaenen-
+# schicht): der Nacht-Halbsatz der Gewitter-Vorschau (`app/day_window.py`,
+# vom Zeitplaner aufgerufen) braucht denselben Wortlaut. Re-Export haelt alle
+# bestehenden `from output.metric_format import format_hail_note` gueltig.
+from app.thunder_scale import format_hail_note  # noqa: E402,F401

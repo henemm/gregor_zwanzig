@@ -77,6 +77,12 @@ class AlertEvent:
     # wie `Trip.numbered_stage_label()`. Gesetzt vom Trip-Abweichungspfad;
     # der Ortsvergleich setzt sie nie (AC-9).
     stage_number: int | None = None
+    # Issue #2205: additiv, Default `None`. Hagel-Kennzeichen des Segment-
+    # Aggregats (`hail_flag`, dieselbe Punktmenge wie die Gewitterstufe) --
+    # gesetzt NUR fuer die Gewitter-Metrik. Wortlaut kommt ausschliesslich aus
+    # `format_hail_note` bzw. `FORECAST_TH_HAIL_SUFFIX`; `None`/`False` -> keine
+    # Hagelaussage (byte-identisch zum Bestand).
+    hail_flag: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -265,6 +271,8 @@ class CorridorEvent:
     km_measured: bool = False
     # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
     stage_number: int | None = None
+    # Issue #2205: additiv, Muster `AlertEvent.hail_flag` (o.).
+    hail_flag: bool | None = None
 
 
 @dataclass(frozen=True)

@@ -328,13 +328,10 @@ def render_plain(
             if key in thunder_forecast:
                 fc = thunder_forecast[key]
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
-                # Issue #1475 Nachbesserung (Punkt 4b): Hagel-Kennzeichen der
-                # Vorschau-Etappe aus dem neuen "hail"-Feld (Wurzelfix in
-                # _build_thunder_forecast). Rein deskriptiv (ADR-0007).
-                from output.metric_format import format_hail_note
-                _note = format_hail_note(fc.get("hail"))
-                _suffix = f" · {_note}" if _note else ""
-                _thunder_lines.append(f"  {fc['date']}: {icon}{fc['text']}{_suffix}")
+                # Issue #2205: der Hagel-Zusatz steht seit #2205 IN `fc['text']`
+                # (Tagesteil vor dem Nacht-Halbsatz, Zeitplaner) -- ein Suffix
+                # hinter der ganzen Zeile klebte am Nacht-Halbsatz bzw. doppelte.
+                _thunder_lines.append(f"  {fc['date']}: {icon}{fc['text']}")
         if _thunder_lines:
             lines.append("━━ Gewitter-Vorschau ━━")
             lines.extend(_thunder_lines)

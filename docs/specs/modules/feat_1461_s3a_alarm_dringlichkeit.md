@@ -129,6 +129,8 @@ Provider-Daten (z.B. `level=5`) werden als `HIGH` eingestuft statt als `LOW`: ei
 falsch-hoher Alarm ist unbequem, ein falsch-niedriger verschluckt eine echte Warnung
 (AC-3).
 
+> Nachtrag 2026-09-15 (#2205, ADR-0069): Konvektiver Frame ohne Hagel (Wettercode 95) trägt jetzt das Label „Gewitter" (`INTENSITY_CONVECTIVE_NO_HAIL`); „Starker Hagel/Gewitter" nur noch bei Wettercode 96/99 (`RadarFrame.hail`).
+
 ```python
 def urgency_from_radar(*, is_convective: bool, intensity_label: str) -> str:
     if is_convective:
