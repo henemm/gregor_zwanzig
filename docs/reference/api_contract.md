@@ -2383,13 +2383,12 @@ Seite, deren Datenabrufe alle 401 geben. Zuruecksetzen, Kontoloeschung und
 `logout-all` stellen **kein** neues Merkmal aus — wer zuruecksetzt, weil das
 Passwort abgegriffen wurde, soll ausgesperrt bleiben.
 
-**Uebergangsformat:** Ein Alt-Merkmal steht auf keiner Gaesteliste, ein Widerruf
-haette dort also nichts zu entfernen. Dafuer traegt `sessions.json` zusaetzlich
-`legacy_revoked_at`: Abmelden mit einem Alt-Merkmal setzt den Zeitstempel, und
-danach gilt kein Alt-Merkmal mehr, dessen Ausstellungszeit nicht juenger ist.
-Der Wert wird bei jedem Leeren der Liste mitgesetzt und faellt mit dem
-Legacy-Zweig ersatzlos weg. Ein Alt-Merkmal eines **geloeschten** Kontos wird
-abgewiesen, weil die Pruefstelle die Existenz des Kontos verlangt.
+**Uebergangsformat — ENTFALLEN am 2026-09-15 (#2262), kein API-Vertrag mehr.**
+Das alte dreiteilige Merkmal `{userId}.{ts}.{sig}` wird an beiden Pruefstellen
+wie jedes unbekannte Cookie mit 401 abgewiesen, ohne stille Hebung. Das Feld
+`legacy_revoked_at` in `sessions.json` wird weder geschrieben noch gelesen;
+Bestandsdateien, die es noch tragen, bleiben lesbar (unbekannte Felder werden
+ignoriert) und verlieren es beim naechsten Schreiben.
 
 ### Session Handling
 
@@ -2397,7 +2396,7 @@ Google OAuth users receive the same session mechanism as password-auth users:
 - Cookie: `gz_session` (format: `{userId}.{sessionId}.{timestamp}.{sig}`, signiert ueber `{userId}:{sessionId}:{timestamp}`)
 - User-ID format for OAuth users: `g-{8hex}` (no dots to prevent session parsing errors)
 - Session verification: `frontend/src/lib/auth.ts` → `verifySession()` zerlegt von rechts (identisch zum Go-Dienst)
-- Gueltigkeit: das Merkmal gilt unbefristet, solange seine `sessionId` in `data/users/<user_id>/sessions.json` steht (Issue #2129, ADR-0060). Das alte dreiteilige Format `{userId}.{timestamp}.{sig}` bleibt uebergangsweise gueltig, behaelt dabei aber seine 24-Stunden-Grenze und wird beim naechsten authentifizierten Aufruf still durch ein vierteiliges ersetzt.
+- Gueltigkeit: das Merkmal gilt unbefristet, solange seine `sessionId` in `data/users/<user_id>/sessions.json` steht (Issue #2129, ADR-0060). Das alte dreiteilige Format `{userId}.{timestamp}.{sig}` wird seit dem 2026-09-15 (#2262) an beiden Pruefstellen wie jedes unbekannte Cookie mit 401 abgewiesen, ohne stille Hebung (siehe Uebergangsformat-Absatz oben).
 
 ---
 

@@ -45,10 +45,13 @@ func newSmsFidelityTestRouter(t *testing.T, pythonURL string) (http.Handler, str
 
 	s := store.New(cfg.DataDir, cfg.UserID)
 
-	// Issue #2129: sessionCookieFor signiert ein Alt-Merkmal; der Legacy-Zweig
-	// laesst es nur durch, wenn das Konto existiert.
+	// Issue #2129: die AuthMiddleware laesst das Merkmal von sessionCookieFor
+	// nur durch, wenn seine Anmelde-Kennung auf der Gaesteliste steht.
 	if err := s.SaveUser(model.User{ID: "user1", CreatedAt: time.Now()}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
+	}
+	if err := s.AddSession("user1", sessionIDFor("user1")); err != nil {
+		t.Fatalf("AddSession: %v", err)
 	}
 
 	wa, err := webauthn.New(&webauthn.Config{

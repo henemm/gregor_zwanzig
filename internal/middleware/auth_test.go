@@ -15,7 +15,10 @@ import (
 
 const testSecret = "test-secret-32-chars-minimum-ok!"
 
-// helper: create a valid signed cookie value
+// makeSessionCookie baut das ALTE dreiteilige Merkmal. Seit dem Rückbau
+// (#2262) stellt kein Ausstellungsweg es mehr aus — der Helfer bleibt, weil
+// die Ablehnung des Alt-Formats (AC-19, legacy_format_rejected_test.go) es
+// von Hand nachbauen muss.
 func makeSessionCookie(userId string, ts int64, secret string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(fmt.Sprintf("%s:%d", userId, ts)))
@@ -33,14 +36,11 @@ func dummyHandler() http.HandlerFunc {
 }
 
 func TestValidCookie_Returns200(t *testing.T) {
-	// GIVEN: a valid session cookie
+	// GIVEN: a valid session cookie whose session id is on the allowlist
 	ts := time.Now().Unix()
-	cookie := makeSessionCookie("default", ts, testSecret)
-
-	// Issue #2129: der Legacy-Zweig prueft, ob das Konto noch existiert —
-	// sonst wuerde ein Alt-Merkmal eine geloeschte Kontoerkennung ueberdauern.
 	dataDir := t.TempDir()
-	seedUserRecord(t, dataDir, "default")
+	writeAllowlist(t, dataDir, "default", "sess-valid0001")
+	cookie := makeNewSessionCookie("default", "sess-valid0001", ts, testSecret)
 
 	// WHEN: request with valid cookie hits a protected endpoint
 	req := httptest.NewRequest("GET", "/api/trips", nil)
@@ -63,25 +63,6 @@ func TestNoCookie_Returns401(t *testing.T) {
 	// GIVEN: no session cookie
 	// WHEN: request without cookie
 	req := httptest.NewRequest("GET", "/api/trips", nil)
-	rr := httptest.NewRecorder()
-
-	handler := AuthMiddleware(testSecret, store.New(t.TempDir(), "test"))(dummyHandler())
-	handler.ServeHTTP(rr, req)
-
-	// THEN: 401 Unauthorized
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", rr.Code)
-	}
-}
-
-func TestExpiredCookie_Returns401(t *testing.T) {
-	// GIVEN: a cookie older than 24h
-	ts := time.Now().Unix() - 90000 // 25 hours ago
-	cookie := makeSessionCookie("default", ts, testSecret)
-
-	// WHEN: request with expired cookie
-	req := httptest.NewRequest("GET", "/api/trips", nil)
-	req.AddCookie(&http.Cookie{Name: "gz_session", Value: cookie})
 	rr := httptest.NewRecorder()
 
 	handler := AuthMiddleware(testSecret, store.New(t.TempDir(), "test"))(dummyHandler())

@@ -70,7 +70,8 @@ steht — nicht mehr, solange eine Frist läuft.
   sich nicht selbst aus. Beim **Zurücksetzen** eines vergessenen Passworts
   geschieht das bewusst nicht — dort ist Aussperren im Kompromittierungsfall
   die richtige Antwort.
-- **Auch Alt-Merkmale sind widerrufbar.** Ein Zeitstempel `legacy_revoked_at`
+- **Auch Alt-Merkmale sind widerrufbar.** (Historisch — mit #2262 am
+  2026-09-15 ersatzlos entfallen.) Ein Zeitstempel `legacy_revoked_at`
   in derselben Datei wird bei jedem Widerruf gesetzt; der Legacy-Zweig weist
   danach jedes ältere Alt-Merkmal ab. Ohne ihn bliebe ein Nutzer, der sich
   anmeldet, nichts tut und sich sofort abmeldet, bis zu 24 Stunden angemeldet —
@@ -85,6 +86,12 @@ steht — nicht mehr, solange eine Frist läuft.
   sollen. Wird mit dieser Entscheidung beseitigt.
 
 ### Migrationspfad (Folgepflicht aus ADR-0030)
+
+> 🔴 **Übergangsabschnitt erledigt am 2026-09-15 (#2262).** Der hier
+> beschriebene Legacy-Zweig ist ersatzlos entfernt — samt `legacy_revoked_at`,
+> `SignSession` und der stillen Hebung. Es gibt nur noch das vierteilige
+> Merkmal; ein dreiteiliges wird an beiden Prüfstellen wie jedes unbekannte
+> Cookie mit 401 abgewiesen. Der folgende Absatz ist historisch.
 
 Merkmale im alten dreiteiligen Format bleiben gültig und **behalten ihre
 24-Stunden-Grenze**. Bei einem gültigen Alt-Merkmal legt die Middleware
@@ -127,6 +134,7 @@ Nutzer ohne `sessions.json` haben eine leere Liste — kein Migrationsskript.
   unbefristeter Anmeldung ist genau das gewollt.
 - **Folgepflichten:** Das Cookie-Format bleibt API-Vertrag — Änderungen nur mit
   neuem ADR und Migrationspfad. Der Legacy-Zweig für dreiteilige Merkmale ist
-  nach dem Deploy verzichtbar und soll dann entfernt werden. Beide Prüfstellen
+  nach dem Deploy verzichtbar und soll dann entfernt werden — **erledigt am
+  2026-09-15 (#2262)**. Beide Prüfstellen
   (Go und Frontend-Server) müssen bei jeder Formatänderung gemeinsam
   ausgeliefert werden; getrennte Deploys sperren Nutzer aus.

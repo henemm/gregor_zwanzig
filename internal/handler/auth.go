@@ -660,17 +660,8 @@ func LogoutHandler(s *store.Store, secret string) http.HandlerFunc {
 		cookie, err := r.Cookie("gz_session")
 		if err == nil && cookie.Value != "" {
 			if userId, sessionId, ok := middleware.SessionFromCookie(cookie.Value, secret); ok {
-				if sessionId != "" {
-					if err := s.RemoveSession(userId, sessionId); err != nil {
-						log.Printf("logout: allowlist removal failed for %s: %v", userId, err)
-					}
-				} else if err := s.RevokeLegacySessions(userId); err != nil {
-					// Alt-Merkmal: es steht auf keiner Gaesteliste, es gaebe
-					// also nichts zu entfernen. Ohne den Widerrufs-Vermerk
-					// bliebe es bis zu 24 Stunden weiter gueltig — die Zusage
-					// "Abmelden wirkt" bekommt auch im Uebergangsfenster
-					// keine Ausnahme.
-					log.Printf("logout: legacy revocation failed for %s: %v", userId, err)
+				if err := s.RemoveSession(userId, sessionId); err != nil {
+					log.Printf("logout: allowlist removal failed for %s: %v", userId, err)
 				}
 			}
 		}

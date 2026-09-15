@@ -122,6 +122,9 @@ func callSweepRoute(t *testing.T, r http.Handler, s *store.Store, secret, userID
 	if err := s.SaveUser(model.User{ID: userID, CreatedAt: time.Now()}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
 	}
+	if err := s.AddSession(userID, sessionIDFor(userID)); err != nil {
+		t.Fatalf("AddSession: %v", err)
+	}
 	req := httptest.NewRequest(method, path, bytes.NewReader([]byte(`{}`)))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(sessionCookieFor(userID, secret))

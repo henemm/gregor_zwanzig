@@ -38,6 +38,9 @@ func TestExportRouteIstVerdrahtetUndGeschuetzt(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
 	}
+	if err := s.AddSession(uid, sessionIDFor(uid)); err != nil {
+		t.Fatalf("AddSession: %v", err)
+	}
 	as := s.WithUser(uid)
 	if err := as.ProvisionUserDirs(uid); err != nil {
 		t.Fatalf("ProvisionUserDirs: %v", err)

@@ -59,13 +59,16 @@ func newBriefingTestRouter(t *testing.T) (http.Handler, *store.Store, string) {
 
 	s := store.New(cfg.DataDir, cfg.UserID)
 
-	// Issue #2129: der Legacy-Zweig der AuthMiddleware laesst ein
-	// dreiteiliges Merkmal nur noch durch, wenn das Konto existiert — sonst
-	// ueberdauerte es eine Kontoloeschung. sessionCookieFor signiert
-	// Alt-Merkmale, die Konten muessen also auf der Platte liegen.
+	// Issue #2129: die AuthMiddleware laesst ein Merkmal nur durch, wenn seine
+	// Anmelde-Kennung auf der Gaesteliste des Nutzers steht. Konto UND
+	// Gaestelisten-Eintrag muessen also auf der Platte liegen, damit
+	// sessionCookieFor ein brauchbares Cookie liefert.
 	for _, id := range []string{"user1", "userA", "userB"} {
 		if err := s.SaveUser(model.User{ID: id, CreatedAt: time.Now()}); err != nil {
 			t.Fatalf("SaveUser %s: %v", id, err)
+		}
+		if err := s.AddSession(id, sessionIDFor(id)); err != nil {
+			t.Fatalf("AddSession %s: %v", id, err)
 		}
 	}
 
@@ -98,10 +101,19 @@ func newBriefingTestRouter(t *testing.T) (http.Handler, *store.Store, string) {
 	return r, s, cfg.SessionSecret
 }
 
+// sessionIDFor liefert die feste Anmelde-Kennung, die newBriefingTestRouter in
+// die Gaesteliste eintraegt und sessionCookieFor ins Merkmal schreibt.
+func sessionIDFor(userId string) string {
+	return "sess-" + userId
+}
+
 // sessionCookieFor signiert ein gueltiges gz_session-Cookie fuer userId, damit
 // AuthMiddleware den Request bis zur chi-Routenaufloesung durchlaesst.
 func sessionCookieFor(userId, secret string) *http.Cookie {
-	return &http.Cookie{Name: "gz_session", Value: authmw.SignSession(userId, secret)}
+	return &http.Cookie{
+		Name:  "gz_session",
+		Value: authmw.SignSessionWithID(userId, sessionIDFor(userId), secret),
+	}
 }
 
 func doBriefingRequest(t *testing.T, r http.Handler, method, path string, body []byte, cookie *http.Cookie) *httptest.ResponseRecorder {
