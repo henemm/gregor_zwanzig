@@ -1131,6 +1131,12 @@ betroffen.
   `ETag`-Header und **ohne** dass geschrieben wird. Der Client soll neu laden,
   nicht blind wiederholen.
 - `If-Match: *` und Kommalisten (ein Treffer genuegt) werden akzeptiert.
+- **Schwache Validatoren `W/"<fp>"` werden wie `"<fp>"` verglichen** (Issue #2317,
+  2026-09-15). nginx komprimiert JSON per gzip und schwaecht dabei den starken
+  `ETag` ab; Browser reichen genau diese Form als `If-Match` zurueck. Bewusste
+  Abweichung vom starken Vergleich nach RFC 7232 §3.1 — das `W/` stammt nur vom
+  eigenen Transport-Proxy. Vorher scheiterte hinter nginx jeder zweite
+  Schreibvorgang einer Sitzung mit falschem `412` (seit 2026-07-27).
 - **Ein erfolgreicher `PUT` liefert immer den NEUEN Stempel zurueck.** Pflicht,
   nicht Bequemlichkeit: Der Server heilt beim Lesen in-memory ohne
   Rueckschreiben, der naechste Save persistiert die Heilung — die Datei aendert

@@ -46,9 +46,11 @@ nach dem Neuladen.
   `frontend/src/lib/stores/saveStatusStore.svelte.ts` (Getter `laufendeSpeicherung`),
   `frontend/src/routes/trips/[id]/+page.svelte`, `frontend/src/routes/compare/[id]/+page.svelte`,
   `frontend/src/routes/+layout.svelte`, `frontend/src/lib/pwa/serviceWorkerUpdate.ts`,
-  `frontend/src/lib/pwa/geraetespeicher.ts`
-- **Schicht:** Frontend (SvelteKit). Kein Go-Anteil, kein Python-Anwendungscode. Go liefert nur
-  ETag und If-Match wie bisher (`internal/handler/trip.go`, `internal/handler/etag.go`).
+  `frontend/src/lib/pwa/geraetespeicher.ts`,
+  `internal/handler/etag.go` (`ifMatchAllows`, Fix-Loop 1 — siehe Baustein 4)
+- **Schicht:** Frontend (SvelteKit) plus eine Go-Korrektur im If-Match-Vergleich (Baustein 4).
+  Kein Python-Anwendungscode. Ursprünglich als „Kein Go-Anteil" geplant; die Staging-Verifikation
+  von `68a1418f` (AC-11 BROKEN) hat die Ursache des falschen 412 im Go-Vergleich belegt.
 
 ## Estimated Scope
 
@@ -106,6 +108,23 @@ abgesetzte Speicherung), UND (c) der Nutzer seit dem Laden der Seite nichts geä
 "seit Laden verändert"-Merker, unabhängig von hasPending). Bei Übernahme auf dem Trip wird
 zusätzlich adoptEtagFromPageLoad-artig die Registry auf den übernommenen ETag gesetzt, damit die
 nächste Speicherung nicht fälschlich mit 412 kollidiert.
+```
+
+**Baustein 4 — If-Match akzeptiert schwache Validatoren (Fix-Loop 1, 2026-09-14):**
+```
+Befund Staging (68a1418f): nginx komprimiert JSON-Antworten (gzip on, gzip_proxied any) und
+schwächt dabei den starken ETag "<fp>" standardgemäß zu W/"<fp>" ab. Der Browser reicht genau das
+als If-Match zurück. internal/handler/etag.go::ifMatchAllows strippte nur Anführungszeichen, nicht
+das W/-Präfix — ein passender Fingerabdruck scheiterte deshalb IMMER mit 412 (jeder zweite
+Schreibvorgang einer Sitzung, alle Aufrufer: trip.go, weather_config.go, compare_preset.go,
+briefing_subscription.go; seit #1395 S2, 2026-07-27). Die Frontend-Registry (Baustein 3) war
+korrekt: sie hielt exakt den vom Server gelieferten Stempel.
+Korrektur: ifMatchAllows entfernt je Listenelement ein führendes "W/" vor dem Anführungszeichen-
+Trim. Bewusste Abweichung von RFC 7232 §3.1 (starker Vergleich bei If-Match): das W/ stammt
+ausschließlich von unserem eigenen Transport-Proxy, der Fingerabdruck selbst ist stark.
+Der isolierte CI-Stack läuft ohne gzip-Proxy und kann diese Fehlerklasse nicht zeigen — der
+Nachweis liegt deshalb im Go-Handler-Test (internal/handler/if_match_weak_etag_test.go) plus
+Staging-Messung der AC-11-Geste nach dem Deploy.
 ```
 
 ### Verworfene Alternativen
