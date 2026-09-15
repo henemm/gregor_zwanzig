@@ -3,7 +3,7 @@ entity_id: google_login_adress_verknuepfung
 type: module
 created: 2026-09-15
 updated: 2026-09-15
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2147-c-google-verknuepfung
 tags: [security, multi-user, auth, issue-2147, epic-2138]
@@ -13,7 +13,7 @@ tags: [security, multi-user, auth, issue-2147, epic-2138]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
@@ -66,7 +66,10 @@ email_verified == false → oauth_failed (bestehende Sperre auth_oauth.go:150, V
                           unverändert — gleicher Code für freie und belegte Adressen, kein Enumerations-Kanal)
 normalize(email) → LockEmailAddress(normalized)
   → FindUserByOAuthSub(sub) ERNEUT unter Lock
-      Treffer → Bestandszweig (unverändert: Login per sub, selfHealEmailVerification)
+      Treffer → direkt zum Login-Gate, OHNE selfHealEmailVerification (Treffer erst unter Lock =
+                paralleler Callback hat das Konto gerade angelegt/verknüpft; Selbstheilung würde den
+                Double-Opt-In eines frischen Neukontos umgehen und AC-13 brechen). Der Bestandszweig
+                VOR dem Lock (AC-12) heilt unverändert.
       kein Treffer → ResolveAddressOwner(normalized) klassifizieren:
         Free (auch: nur PendingContactAddress eines anderen Kontos)
           → createOAuthUser, Email/MailTo NORMALISIERT (nicht mehr roh)
@@ -240,3 +243,5 @@ Kontrast mindestens WCAG-AA.
   Adresse registriert ist, und damit AC-11 widersprochen. Präzisiert: AC-6 ohne Hinweis-Mail, AC-11
   ohne AC-9, AC-13 Doppelklick gleicher `sub` endet in Login, AC-19 drei Fundstellen, Logzeile
   mehrdeutiger Adressen ohne IDs.
+- 2026-09-15: Implementiert (Adversary R3 VERIFIED); Fix-Loop 1 ergänzte Test-Naht
+  `googleLinkBeforeTakeoverReload` für den Übernahme-Re-Check.

@@ -819,6 +819,7 @@ HTML + Client-Side Interactivity
   - Init: GET `/api/auth/google/init` → redirect to Google consent
   - Callback: GET `/api/auth/google/callback?code=...&state=...` → create/lookup user, issue session
   - User-ID format for OAuth users: `g-{8hex}` to prevent session parsing errors
+  - Unbekannter `sub` + Adresse gehört bereits einem bestätigten Konto → Verknüpfung statt Zweitkonto (Hinweis-Mail); mehrdeutige Lage → neutrale Ablehnung `/login?error=oauth_link_failed`; `email_verified=false` bleibt immer `oauth_failed` (ADR-0067, Issue #2147 Scheibe C)
 - **Magic Link (Issue #449):** `/api/auth/magic-link` + `/api/auth/magic-link/verify` (6-digit OTP per E-Mail)
 
 **Session Format (ADR-0060, löst ADR-0030 ab):** Server-side-signed cookie `gz_session = <userId>.<sessionId>.<timestamp>.<hmacSig>` (HttpOnly, SameSite=Lax, Secure on HTTPS, Cookie-Lebensdauer 400 Tage) — identisch über alle Auth-Methoden hinweg. Gültig, solange `sessionId` in `data/users/<user_id>/sessions.json` steht, keine Ablaufprüfung. Abmelden entfernt den Eintrag; `POST /api/auth/logout-all` leert die Liste. Alte dreiteilige Merkmale (`<userId>.<timestamp>.<hmacSig>`) bleiben mit ihrer 24h-TTL gültig und werden bei Gebrauch still auf das neue Format gehoben.

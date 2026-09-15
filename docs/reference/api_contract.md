@@ -2277,14 +2277,19 @@ Handles the OAuth callback from Google. Exchanges authorization code for ID toke
 5. Validate `email_verified: true` in userinfo
 6. Lookup user by `OAuthProvider: "google"` + `OAuthSub: sub`
    - **Found:** Issue `gz_session` cookie, redirect to `/`
-   - **Not Found:** Generate new User-ID (`g-{8hex}`), create new user, issue `gz_session` cookie, redirect to `/`
-7. On any error: Redirect to `/login?error=oauth_failed` (no stack traces exposed)
+   - **Not Found:** under the per-address lock (ADR-0067, Issue #2147 Scheibe C) look up the `sub` again, then resolve the normalized address:
+     - free address → generate new User-ID (`g-{8hex}`), create new user with normalized `email`/`mail_to` (double opt-in, ADR-0066)
+     - confirmed owner without Google identity → link (`OAuthProvider`/`OAuthSub` set, `EmailVerifiedAt` and sessions unchanged), notice mail without link to the effective contact address
+     - unconfirmed owner without credentials → take over (confirm, link, clear old sessions, no mail)
+     - confirmed owner with another Google identity, unconfirmed owner with credentials, address only in the secondary field, or several owners → redirect to `/login?error=oauth_link_failed`, nothing written
+   - Then the ADR-0066 gate: unconfirmed address → `/login?error=email_not_verified`
+7. On any error (incl. unreadable account during the address scan): Redirect to `/login?error=oauth_failed` (no stack traces exposed)
 
 **Response:**
 
 | Status | Behavior |
 |--------|----------|
-| 302 | Redirect to `/` (success) or `/login?error=oauth_failed` (failure) |
+| 302 | Redirect to `/` (success) or `/login?error=oauth_failed` / `/login?error=oauth_link_failed` / `/login?error=email_not_verified` (failure) |
 | 400 | Invalid query parameters or malformed request |
 
 **Error Cases:**
@@ -2296,6 +2301,8 @@ Handles the OAuth callback from Google. Exchanges authorization code for ID toke
 | Google userinfo endpoint unavailable | 302 to `/login?error=oauth_failed` |
 | ID collision after 3 generation attempts | 302 to `/login?error=oauth_failed` |
 | Network error during token exchange | 302 to `/login?error=oauth_failed` |
+| Unreadable account during address scan | 302 to `/login?error=oauth_failed` |
+| Address not uniquely assignable (another Google identity, unconfirmed account with credentials, secondary field only, several owners) | 302 to `/login?error=oauth_link_failed` — same code for all cases, no statement whether the address exists |
 
 **Side Effects:**
 

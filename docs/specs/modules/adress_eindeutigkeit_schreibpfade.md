@@ -187,7 +187,7 @@ geprüfte Adresse im Klartext.
   Trip-Versandpfad und trägt ein eigenes Regressionsrisiko, siehe Scheibenschnitt unten).
 - **Scheibe C:** Google-OAuth verknüpft ein bestehendes bestätigtes Konto statt ein Zweitkonto
   anzulegen; Kollisionszähler beim Serverstart für Bestandsduplikate; übergreifendes ADR
-  „Adress-Eindeutigkeit".
+  „Adress-Eindeutigkeit". Umgesetzt in `google_login_adress_verknuepfung.md` / ADR 0067.
 - **Bestehende Doppel-Adressen** (bereits vor dieser Scheibe entstanden) werden durch B1 nicht
   aufgelöst und nicht gemeldet.
 

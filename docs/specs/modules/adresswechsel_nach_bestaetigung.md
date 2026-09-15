@@ -416,7 +416,8 @@ einzigen Aufrufern trennen.
   zwischenzeitlich beanspruchen, bevor der ursprüngliche Nutzer seinen Bestätigungslink einlöst — der
   Einlöse-Vorgang fängt das über die erneute Belegt-Prüfung (`409 address_taken`, AC-8/AC-9) ab,
   verliert aber die ausstehende Änderung ersatzlos. Kein aktives Datenleck, aber ein unbequemer
-  Nutzerpfad; bleibt für Scheibe C offen.
+  Nutzerpfad; blieb für Scheibe C offen — diese Magic-Link-Lücke selbst ist NICHT Teil von
+  `google_login_adress_verknuepfung.md` / ADR 0067 und bleibt weiterhin offen.
 - **Resend-Allowlist auf Staging nicht live messbar.** Staging versendet über Stalwart, nicht über
   Resend-Hosts (`with_user_profile`, `src/app/config.py:394-397`: `force_test` greift für
   `env == "staging"`) — die engere Allowlist ist nur über den Kern-Test bewiesen, nicht per
@@ -437,13 +438,17 @@ einzigen Aufrufern trennen.
   `VerifyEmailHandler` schickt, kann aus der Unterscheidung der beiden Fehlercodes indirekt ableiten,
   ob für dieses Konto gerade eine Adressänderung aussteht (adressgebundenes Token vorhanden →
   `token expired`, kein Token/Alt-Token-Fall → `invalid token`) — kein Zugriff auf die neue Adresse
-  selbst, aber ein kleines Seitenkanal-Signal. Kein aktives Datenleck, bleibt für Scheibe C offen.
+  selbst, aber ein kleines Seitenkanal-Signal. Kein aktives Datenleck, blieb für Scheibe C offen —
+  auch dieses Seitenkanal-Signal ist NICHT Teil von `google_login_adress_verknuepfung.md` / ADR 0067
+  und bleibt weiterhin offen.
 
 ## Out of Scope
 
 - **Scheibe C:** Google-OAuth verknüpft ein bestehendes bestätigtes Konto statt ein Zweitkonto
   anzulegen; Kollisionszähler beim Serverstart für Bestandsduplikate; übergreifendes ADR
-  „Adress-Eindeutigkeit"; Auflösung der Magic-Link-Lücke aus „Known Limitations".
+  „Adress-Eindeutigkeit"; Auflösung der Magic-Link-Lücke aus „Known Limitations". Verknüpfung +
+  ADR umgesetzt in `google_login_adress_verknuepfung.md` / ADR 0067; die Magic-Link-Lücke und das
+  Seitenkanal-Signal aus „Known Limitations" bleiben offen.
 - **Mail-Text der Bestätigungsmail gegen fremd ausgelöste Bestätigung** (z. B. ein Hinweis „falls du
   das nicht warst") ist NICHT Teil dieser Scheibe — die bestehende `BuildVerificationMail` bleibt
   textlich unverändert.

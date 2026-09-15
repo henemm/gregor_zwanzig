@@ -96,13 +96,10 @@ func (s *Store) ResolveAddressOwner(address string) (*model.User, AddressResolut
 		EffectiveContactAddress(owners[0]) == x && !HasLoginCredentials(owners[0]):
 		return owners[0], AddressOwned, nil
 	}
-	// Nie die Adresse protokollieren — nur Kennungen und Anzahl.
-	ownerIDs := make([]string, 0, len(owners))
-	for _, u := range owners {
-		ownerIDs = append(ownerIDs, u.ID)
-	}
-	log.Printf("address resolution: ambiguous — %d owner account(s), %d confirmed: %v",
-		len(owners), len(confirmed), ownerIDs)
+	// Nie die Adresse und nie Kontokennungen protokollieren — nur Anzahlen
+	// (Issue #2147 Scheibe C, AC-11).
+	log.Printf("address resolution: ambiguous — %d owner account(s), %d confirmed",
+		len(owners), len(confirmed))
 	return nil, AddressAmbiguous, nil
 }
 
