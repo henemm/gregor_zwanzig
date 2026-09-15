@@ -9,6 +9,7 @@ SPEC: docs/specs/modules/weather_emoji_dni.md v1.0 (DNI-based emoji)
 """
 from __future__ import annotations
 
+import dataclasses
 from datetime import datetime, tzinfo
 from typing import List, Optional
 
@@ -984,32 +985,21 @@ class WeatherMetricsService:
         cloud_mid_avg = self._compute_cloud_mid(timeseries)
         cloud_high_avg = self._compute_cloud_high(timeseries)
 
-        # Create new summary with basis + extended metrics
-        extended_summary = SegmentWeatherSummary(
-            # Copy basis metrics
-            temp_min_c=basis_summary.temp_min_c,
-            temp_max_c=basis_summary.temp_max_c,
-            temp_avg_c=basis_summary.temp_avg_c,
-            wind_max_kmh=basis_summary.wind_max_kmh,
-            gust_max_kmh=basis_summary.gust_max_kmh,
-            precip_sum_mm=basis_summary.precip_sum_mm,
-            cloud_avg_pct=basis_summary.cloud_avg_pct,
-            humidity_avg_pct=basis_summary.humidity_avg_pct,
-            thunder_level_max=basis_summary.thunder_level_max,
-            visibility_min_m=basis_summary.visibility_min_m,
-            # Issue #1468: die beiden Beginn-Zeitpunkte MUESSEN mitkopiert
-            # werden -- diese Funktion baut ein NEUES Summary, und ihr
-            # Ergebnis ist das, was der Trip-Pfad als `aggregated` weitergibt
-            # (segment_weather.py:282). Ohne die Uebernahme waere der
-            # Beginn-Alarm im Trip-Pfad strukturell tot (dieselbe Naht wie
-            # #1391/#1392, s. hail_flag).
-            thunder_onset_utc=basis_summary.thunder_onset_utc,
-            precip_heavy_onset_utc=basis_summary.precip_heavy_onset_utc,
-            # Felder aus compute_basis_metrics() die bisher fehlten (Issue #226)
-            dominant_wmo_code=basis_summary.dominant_wmo_code,
-            dni_avg_wm2=basis_summary.dni_avg_wm2,
-            sunny_hours=basis_summary.sunny_hours,  # Issue #347
-            # Add extended metrics
+        # Merge statt Neubau (Issue #2195, vierter Fall nach #1391/#1392/#1468):
+        # dataclasses.replace() legt NUR die Extended-Felder ueber das
+        # Basis-Objekt -- alle Basisfelder (inkl. kuenftig hinzugefuegte)
+        # bleiben automatisch erhalten, die Naht ist damit strukturell zu,
+        # nicht mehr nur fuer eine feste Kopier-Liste. Bei einem kuenftigen
+        # Feld, das BEIDE Stufen setzen, gewinnt Extended (Read-Modify-Write-
+        # Reihenfolge). `replace()` ist geprueft sicher: keine `init=False`-
+        # Felder, `__post_init__` betrifft nur den von der Basis nie
+        # gesetzten Test-Alias `wind_dir_deg_avg`.
+        extended_summary = dataclasses.replace(
+            basis_summary,
+            # Issue #1592 C0: normalisierte Modell-Herkunft des CAPE-Werts,
+            # fuer die C1-Fusion (thunder_enrichment) EINMAL ueber
+            # `model_registry.effective_cape_model_id` aufgeloest.
+            cape_model_id=effective_cape_model_id(timeseries.meta),
             dewpoint_avg_c=dewpoint_avg,
             pressure_avg_hpa=pressure_avg,
             wind_chill_min_c=wind_chill_min,
@@ -1018,24 +1008,15 @@ class WeatherMetricsService:
             freezing_level_m=freezing_level,
             pop_max_pct=pop_max,
             cape_max_jkg=cape_max,
-            # Issue #1592 C0: normalisierte Modell-Herkunft des CAPE-Werts,
-            # fuer die C1-Fusion (thunder_enrichment) EINMAL ueber
-            # `model_registry.effective_cape_model_id` aufgeloest.
-            cape_model_id=effective_cape_model_id(timeseries.meta),
-            # New metrics (v2.3)
             uv_index_max=uv_index_max,
             snow_new_sum_cm=fresh_snow_sum,
             wind_direction_avg_deg=wind_dir_avg,
             precip_type_dominant=precip_type_dom,
-            # Issue #121: forecast confidence aggregation
             confidence_pct_min=confidence_min,
-            # Issue #1391: Schneefallgrenze (Trip-Pfad)
             snowfall_limit_m=snowfall_limit,
-            # Issue #1392: Bewoelkungsstufen-Tageswerte (Trip-Pfad)
             cloud_low_avg_pct=cloud_low_avg,
             cloud_mid_avg_pct=cloud_mid_avg,
             cloud_high_avg_pct=cloud_high_avg,
-            # Merge aggregation config
             aggregation_config={
                 **basis_summary.aggregation_config,
                 "dewpoint_avg_c": "avg",
@@ -1404,6 +1385,21 @@ def aggregate_stage(
             from output.metric_format import hail_priority
             result_fields[field_name] = hail_priority(
                 [getattr(s, field_name, None) for s in summaries]
+            )
+            continue
+
+        if agg_rule == "union_of_max_carriers":
+            # Issue #2195: BEWUSST VOR dem generischen ``is not None``-
+            # Vorfilter (wie ``hail_priority`` oben) -- der Vorfilter wuerde
+            # Segmente ohne Traeger herausnehmen und die Hoechststufe nur
+            # noch ueber die VERBLEIBENDE Teilmenge neu bestimmen, wodurch
+            # ein niedrigeres Segment faelschlich zur Etappen-Hoechststufe
+            # werden koennte. Paare aus der VOLLSTAENDIGEN ``summaries``-
+            # Liste, Vereinigung ueber die kanonische Domaenen-Funktion.
+            from app.thunder_scale import union_of_max_carriers
+            result_fields[field_name] = union_of_max_carriers(
+                [(getattr(s, "thunder_level_max", None), getattr(s, field_name, None))
+                 for s in summaries]
             )
             continue
 

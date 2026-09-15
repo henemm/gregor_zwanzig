@@ -2741,12 +2741,10 @@ _S2_NUR_TRIP_ERLAUBT = {
     ),
 }
 _S2_NUR_COMPARE_ERLAUBT = {
-    "hail_flag": (
-        "``compute_extended_metrics()`` baut ein NEUES Summary und kopiert "
-        "hail_flag nicht aus dem Basis-Aggregat mit (weather_metrics.py:774ff, "
-        "gesetzt wird es in compute_basis_metrics:459) -- eigener Befund an "
-        "derselben Naht, nicht Gegenstand dieser Scheibe"
-    ),
+    # Issue #2195: der bisherige "hail_flag"-Eintrag ist gegenstandslos --
+    # ``compute_extended_metrics()`` baut seither per ``dataclasses.replace()``
+    # auf dem Basis-Aggregat auf und verliert das Feld nicht mehr. Struktur
+    # bleibt stehen (leere Ausnahmeliste ist ein gueltiger Zustand).
 }
 
 
