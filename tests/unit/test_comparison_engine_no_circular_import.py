@@ -44,7 +44,7 @@ FIXTURE_DIR = PROJECT_ROOT / "fixtures" / "openmeteo"
 
 _SCRIPT = """
 import sys
-from datetime import date
+from datetime import datetime, timezone
 
 from app.user import SavedLocation
 from services.comparison_engine import ComparisonEngine, fetch_forecast_for_location
@@ -69,7 +69,10 @@ fetch_cloud_low = result.get("cloud_low_avg")
 cmp_result = ComparisonEngine.run(
     locations=[loc],
     time_window=(0, 23),
-    target_date=date.today(),
+    # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag -- nicht
+    # am Prozesstag des Subprozesses (der die geerbte GZ_TEST_PROCESS_TZ
+    # traegt, s. Testdocstring/AC-8).
+    target_date=datetime.now(timezone.utc).date(),
     forecast_hours=48,
     official_alerts_enabled=False,
 )

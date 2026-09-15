@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import date as date_type, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
 from freezegun import freeze_time
@@ -50,6 +50,7 @@ from services.radar_service import (
 )
 
 from tests.helpers.alert_log_fixtures import settings_email_only, weather
+from tests.helpers.ortstag import ortstag
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -92,7 +93,9 @@ def _active_trip(trip_id: str) -> Trip:
 
     Muster: test_issue_818_radar_briefing_integration.py::_make_active_trip.
     """
-    today = date_type.today()
+    # #2314 D2: der Etappentag folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=100.0,
         arrival_override="00:00",

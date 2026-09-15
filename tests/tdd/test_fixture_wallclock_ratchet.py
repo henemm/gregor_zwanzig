@@ -251,10 +251,15 @@ def _ist_wanduhr_traeger(node: ast.AST) -> bool:
     return False
 
 
+_UTC_TAG_GESCHWISTER = {"ortstag", "utc_tag"}
+
+
 def _ist_ortstag_ohne_gepinnte_uhr(node: ast.Call) -> bool:
-    """``ortstag(lat, lon)`` (#2314) liest ohne ``now_utc=`` die Wanduhr —
-    derselbe Wanduhr-Tag wie ``date.today()``, nur in der Ortszone. Ohne diesen
-    Zweig waere der Helfer ein generischer Bypass der Ratsche.
+    """``ortstag(lat, lon)`` (#2314) bzw. ``utc_tag()`` (#2314 Durchgang 2)
+    liest ohne ``now_utc=`` die Wanduhr — derselbe Wanduhr-Tag wie
+    ``date.today()``, nur einmal in der Ortszone (``ortstag``) und einmal am
+    UTC-Tag (``utc_tag``). Ohne diesen Zweig waere einer der beiden Helfer
+    ein generischer Bypass der Ratsche.
 
     Gepinnt ist die Uhr nur, wenn ``now_utc=`` gesetzt ist UND sein Ausdruck
     selbst keinen Wanduhr-Traeger enthaelt (Adversary F004:
@@ -264,7 +269,7 @@ def _ist_ortstag_ohne_gepinnte_uhr(node: ast.Call) -> bool:
     auch in zusammengesetzten Ausdruecken (``jetzt + timedelta(...)``)."""
     f = node.func
     name = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
-    if name != "ortstag":
+    if name not in _UTC_TAG_GESCHWISTER:
         return False
     uhr = next((k.value for k in node.keywords if k.arg == "now_utc"), None)
     if uhr is None:
@@ -765,6 +770,47 @@ def test_scanner_schweigt_bei_ortstag_mit_literalem_zeitpunkt(tmp_path):
     ))
     funde = scan_wallclock_arrival_fixtures(tmp_path)
     assert funde == [], f"Falsch-Positiv bei literalem Zeitpunkt: {[f.ref for f in funde]}"
+
+
+# ═══════ AC-10 (#2314 Durchgang 2): utc_tag() darf kein unbewachter Bypass sein ═══════
+#
+# Gespiegelt am ortstag-Paar oben (test_scanner_erkennt_ortstag_ohne_now_utc_
+# als_etappendatum / test_scanner_schweigt_bei_ortstag_mit_gepinnter_uhr):
+# `utc_tag()` (Spec fix_2314_nachtfenster_utc_tag, neu in tests/helpers/
+# ortstag.py, kommt erst mit /50) liest ohne `now_utc=` ebenfalls die
+# Wanduhr -- der Scanner muss ihn deshalb GENAUSO behandeln wie
+# `ortstag(lat, lon)` ohne `now_utc=`, sonst waere `utc_tag()` ein
+# unbewachter Bypass dieser Ratsche (Spec, Abschnitt "Wanduhr-Ratsche
+# #1667"). `_fall_ortstag()` ist bewusst generisch (ersetzt nur den
+# `date.today()`-Ausdruck in der Vorlage) und funktioniert deshalb
+# unveraendert auch mit `utc_tag(...)`-Ausdruecken.
+
+def test_scanner_erkennt_utc_tag_ohne_now_utc_als_etappendatum(tmp_path):
+    """#2314 D2, AC-10: `utc_tag()` ohne `now_utc=` liest die Wanduhr --
+    muss wie `ortstag(...)` ohne `now_utc=` ein Fund sein.
+
+    ROT heute: `_ist_ortstag_ohne_gepinnte_uhr()` (Zeile ~254) kennt nur den
+    Funktionsnamen ``"ortstag"``, nicht ``"utc_tag"`` -- der Scanner meldet
+    deshalb 0 statt der erwarteten 1 Fundstelle, bis /50 die Erkennung um
+    `utc_tag` erweitert."""
+    _attrappe(tmp_path, _fall_ortstag("utc_tag()"))
+    funde = scan_wallclock_arrival_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_utc_tag_mit_gepinnter_uhr(tmp_path):
+    """Kehrseite: mit `now_utc=` ist die Uhr gepinnt -- kein Wanduhr-Datum.
+
+    Heute bereits GRUEN, aber NICHT diskriminierend: der Scanner kennt
+    `utc_tag` ueberhaupt noch nicht (s. Test oben) und schweigt deshalb bei
+    JEDEM `utc_tag(...)`-Aufruf, ob gepinnt oder nicht -- dieser Test kann
+    momentan nicht von einem echten Falsch-Positiv unterscheiden, ob er aus
+    dem richtigen Grund gruen ist. Erst nach /50 (utc_tag() wird erkannt)
+    wird er zur echten Gegenprobe; der `erkennt`-Test oben traegt bis dahin
+    den RED-Nachweis fuer AC-10 alleine."""
+    _attrappe(tmp_path, _fall_ortstag("utc_tag(now_utc=FEST)"))
+    funde = scan_wallclock_arrival_fixtures(tmp_path)
+    assert funde == [], f"Falsch-Positiv bei gepinnter Uhr: {[f.ref for f in funde]}"
 
 
 # ═══════════════════════════ Regel-Budget ═══════════════════════════

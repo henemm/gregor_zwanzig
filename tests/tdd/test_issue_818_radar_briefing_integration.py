@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date as date_type, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -36,6 +36,7 @@ from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.arrival_window_fixtures import past_window_offsets, stage_date
+from tests.helpers.ortstag import ortstag
 
 # #1940 AC-7: 12:00 Ortszeit in Pacific/Auckland (UTC+12, August). Die Uhr
 # gestellt statt der Zeitzone vertraut: ein oestlicher Ort allein garantiert
@@ -97,7 +98,9 @@ def _make_active_trip(trip_id: str) -> Trip:
     abends zu leeren Segmenten (#979). arrival_override fixiert die
     Start-/Endzeit auf den ganzen Tag.
     """
-    today = date_type.today()
+    # #2314 D2: der Etappentag folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=100.0,
         arrival_override="00:00",
@@ -176,7 +179,9 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
     # get_data_dir() (isoliert) — Schreibpfad muss identisch aufgelöst werden.
     from app.loader import get_snapshots_dir
 
-    today = date_type.today()
+    # #2314 D2: target_date folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     snapshots_dir = get_snapshots_dir(user_id)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)

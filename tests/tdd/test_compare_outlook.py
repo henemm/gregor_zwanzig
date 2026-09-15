@@ -29,6 +29,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from bs4 import BeautifulSoup
 
+from tests.helpers.ortstag import utc_tag
+
 TARGET_DATE = date(2026, 7, 20)
 
 
@@ -108,7 +110,7 @@ def test_engine_retains_multiday_slice_without_extra_fetch(monkeypatch):
     result = ce_mod.ComparisonEngine.run(
         locations=[loc],
         time_window=(0, 23),
-        target_date=date.today(),
+        target_date=utc_tag(),  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
         forecast_hours=ce_mod.COMPARE_FORECAST_HOURS,
         official_alerts_enabled=False,
     )

@@ -31,7 +31,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date as date_type, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -40,6 +40,7 @@ from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+from tests.helpers.ortstag import ortstag
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
@@ -162,7 +163,9 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
     """
     from app.loader import get_snapshots_dir
 
-    today = date_type.today()
+    # #2314 D2: target_date folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     snapshots_dir = get_snapshots_dir(user_id)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)

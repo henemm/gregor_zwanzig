@@ -12,10 +12,11 @@ direkt vorbereitet (kein Mock der Klasse).
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.loader import get_data_root
 from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
+from tests.helpers.ortstag import utc_tag
 
 
 def _budget_path():
@@ -25,7 +26,8 @@ def _budget_path():
 def _write_budget(calls: int) -> None:
     path = _budget_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"date": date.today().isoformat(), "calls": calls}))
+    # #2314 D2: Produkt liest den Zaehler am UTC-Tag, nicht am Prozesstag.
+    path.write_text(json.dumps({"date": utc_tag().isoformat(), "calls": calls}))
 
 
 def _write_corrupt_budget() -> None:

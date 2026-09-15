@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from freezegun import freeze_time
+
 from services.trip_command_processor import TripCommandProcessor
 from services.trip_segments import resolve_current_segment
 from tests.helpers.strecke_fixtures import (
@@ -28,17 +30,39 @@ from tests.helpers.strecke_fixtures import (
 
 _KANAL = "telegram"
 
+# #2314 D2 (Familie D, KEIN Tagesfehler): `active_three_point_trip()` nutzt
+# negative Versaetze (-120/-30 Minuten). Nahe Ortszeit-Mitternacht (kritisch
+# bei GZ_TEST_WALL_CLOCK_UTC=00:20) ist die gewuenschte Vergangenheit nicht
+# darstellbar -- `active_window_offsets()` wirft ValueError (s.
+# tests/helpers/arrival_window_fixtures.py). Ein VERSCHACHTELTES
+# freeze_time auf eine unkritische Ortszeit (Mittag) macht Fixturbau UND
+# `now_utc`-Erfassung unabhaengig von der (ggf. bereits gestellten)
+# Wanduhr -- es wirkt UNTER dem Session-freeze_time der
+# `_gestellte_wanduhr`-Fixture (#2096). Koordinaten bleiben 0,0.
+_UNKRITISCHER_ANKER = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
 
-def _aktives_segment(trip):
-    """`(active, segment_date)` fuer den 'jetzt' der Fixture --
+
+def _aktives_segment(trip, now_utc):
+    """`(active, segment_date)` fuer das uebergebene `now_utc` --
     `active_three_point_trip()` legt Segment 2 (WP1->WP2) als echt
     zeitaktiv an."""
-    now_utc = datetime.now(timezone.utc)
     resolved = resolve_current_segment(trip, now_utc, trip.stages[0].date)
     assert resolved is not None, (
         "Testvoraussetzung: die Fixture muss ein aktives Segment liefern"
     )
     return resolved
+
+
+def _gebauter_trip(trip_id: str, km_mid: float = 3.0, km_end: float = 8.0):
+    """Baut den Trip UND liest `now_utc` unter demselben, unkritischen
+    Zeitanker (Mittag) -- Etappendatum (`stage_date`) und `now_utc` bleiben
+    so zueinander konsistent, unabhaengig von der realen/gestellten Wanduhr.
+    Liefert `(trip, now_utc, active, segment_date)`."""
+    with freeze_time(_UNKRITISCHER_ANKER):
+        trip = active_three_point_trip(trip_id, km_mid, km_end)
+        now_utc = datetime.now(timezone.utc)
+        active, segment_date = _aktives_segment(trip, now_utc)
+    return trip, now_utc, active, segment_date
 
 
 # --------------------------------------------------------------------------
@@ -55,8 +79,7 @@ def test_ac13_erster_punkt_liegt_bei_der_genannten_km_zahl():
     from services.trip_segments import points_from_km
 
     trip_id = fresh_trip_id("ac13")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    active, segment_date = _aktives_segment(trip)
+    trip, _now_utc, active, segment_date = _gebauter_trip(trip_id)
     assert active.start_point.distance_from_start_km == 3.0, (
         f"Testvoraussetzung: start_point muss km 3.0 tragen, erhalten "
         f"{active.start_point.distance_from_start_km}"
@@ -93,8 +116,7 @@ def test_ac14_oberer_rand_ist_eingeschlossen_und_ergibt_einen_punkt(monkeypatch)
     from services.trip_segments import points_from_km
 
     trip_id = fresh_trip_id("ac14")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    active, segment_date = _aktives_segment(trip)
+    trip, now_utc, active, segment_date = _gebauter_trip(trip_id)
 
     punkte = points_from_km(trip, active, segment_date, 8.0)
     assert len(punkte) == 1, (
@@ -108,7 +130,6 @@ def test_ac14_oberer_rand_ist_eingeschlossen_und_ergibt_einen_punkt(monkeypatch)
 
     # Draht-Test: `_show_strecke` selbst darf hier KEINE Fehlermeldung
     # liefern -- der obere Rand ist eine gueltige, entartete Anfrage.
-    now_utc = datetime.now(timezone.utc)
     calls: list = []
     monkeypatch.setattr(
         "services.radar_service.RadarNowcastService",
@@ -143,8 +164,7 @@ def test_f005_unterer_rand_ist_eingeschlossen_und_ergibt_reguläre_punkte(monkey
     from services.trip_segments import points_from_km
 
     trip_id = fresh_trip_id("f005")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    active, segment_date = _aktives_segment(trip)
+    trip, now_utc, active, segment_date = _gebauter_trip(trip_id)
 
     # Kippunkt exakt am unteren Rand: regulaerer (nicht entarteter) Fall,
     # da die Reststrecke im Segment (5 km) ueber der Punktabstand-Schwelle
@@ -160,7 +180,6 @@ def test_f005_unterer_rand_ist_eingeschlossen_und_ergibt_reguläre_punkte(monkey
         f"erhalten {len(punkte)}"
     )
 
-    now_utc = datetime.now(timezone.utc)
     monkeypatch.setattr(
         "services.radar_service.RadarNowcastService",
         recording_radar_service_type([], script=lambda idx: nass(10, 20)),
@@ -212,8 +231,7 @@ _ERWARTETE_ABLEHNUNG = "Ungültige km-Angabe. Gültiger Bereich für die aktuell
 def test_ac15_ueber_der_oberen_grenze_wird_abgelehnt(monkeypatch):
     """AC-15 Fall 1: '/strecke 8.1' liegt ueber der oberen Grenze (8 km)."""
     trip_id = fresh_trip_id("ac15a")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    now_utc = datetime.now(timezone.utc)
+    trip, now_utc, _active, _segment_date = _gebauter_trip(trip_id)
     nowcast_spy = _spion(monkeypatch)
 
     result = TripCommandProcessor()._show_strecke(trip, "8.1", now_utc, trip_id, _KANAL)
@@ -231,8 +249,7 @@ def test_ac15_ueber_der_oberen_grenze_wird_abgelehnt(monkeypatch):
 def test_ac15_unter_der_unteren_grenze_wird_abgelehnt(monkeypatch):
     """AC-15 Fall 2: '/strecke 2.9' liegt unter der unteren Grenze (3 km)."""
     trip_id = fresh_trip_id("ac15b")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    now_utc = datetime.now(timezone.utc)
+    trip, now_utc, _active, _segment_date = _gebauter_trip(trip_id)
     nowcast_spy = _spion(monkeypatch)
 
     result = TripCommandProcessor()._show_strecke(trip, "2.9", now_utc, trip_id, _KANAL)
@@ -250,8 +267,7 @@ def test_ac15_unter_der_unteren_grenze_wird_abgelehnt(monkeypatch):
 def test_ac15_nicht_numerisch_wird_abgelehnt(monkeypatch):
     """AC-15 Fall 3: '/strecke abc' ist nicht-numerisch."""
     trip_id = fresh_trip_id("ac15c")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    now_utc = datetime.now(timezone.utc)
+    trip, now_utc, _active, _segment_date = _gebauter_trip(trip_id)
     nowcast_spy = _spion(monkeypatch)
 
     result = TripCommandProcessor()._show_strecke(trip, "abc", now_utc, trip_id, _KANAL)
@@ -275,8 +291,7 @@ def test_ac15_positivkontrolle_gueltiges_argument_ruft_den_nowcast(monkeypatch):
     from tests.helpers.strecke_fixtures import nass
 
     trip_id = fresh_trip_id("ac15d")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    now_utc = datetime.now(timezone.utc)
+    trip, now_utc, _active, _segment_date = _gebauter_trip(trip_id)
 
     calls: list = []
     monkeypatch.setattr(
@@ -305,8 +320,7 @@ def test_ac16_dezimalwert_wird_nicht_gerundet():
     from services.trip_segments import points_from_km
 
     trip_id = fresh_trip_id("ac16")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    active, segment_date = _aktives_segment(trip)
+    trip, _now_utc, active, segment_date = _gebauter_trip(trip_id)
 
     punkte = points_from_km(trip, active, segment_date, 5.5)
 
@@ -337,8 +351,7 @@ def test_f006_fraktionale_km_werden_in_der_textausgabe_gerundet_nicht_abgeschnit
     from services.trip_segments import points_from_km
 
     trip_id = fresh_trip_id("f006")
-    trip = active_three_point_trip(trip_id, 3.0, 8.0)
-    active, segment_date = _aktives_segment(trip)
+    trip, now_utc, active, segment_date = _gebauter_trip(trip_id)
     punkte = points_from_km(trip, active, segment_date, 5.5)
     assert [p.distance_from_start_km for p in punkte] == [5.5, 7.5], (
         f"Testvoraussetzung: die zwei Punkte muessen fraktional bei km "
@@ -352,7 +365,6 @@ def test_f006_fraktionale_km_werden_in_der_textausgabe_gerundet_nicht_abgeschnit
         "unten wirkungslos"
     )
 
-    now_utc = datetime.now(timezone.utc)
     monkeypatch.setattr(
         "services.radar_service.RadarNowcastService",
         recording_radar_service_type([], script=lambda idx: nass(10, 20)),

@@ -23,8 +23,8 @@ wird -- Vererbung, kein Verhalten vorgetaeuscht) bewiesen.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
-from tests.helpers.ortstag import ortstag
+from datetime import datetime, time, timezone
+from tests.helpers.ortstag import ortstag, utc_tag
 
 import httpx
 import pytest
@@ -100,7 +100,7 @@ def _write_budget(calls_openmeteo: int) -> None:
     path = _budget_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "date": date.today().isoformat(),
+        "date": utc_tag().isoformat(),  # #2314 D2: Produkt liest den Zaehler am UTC-Tag
         "calls": {"openmeteo": calls_openmeteo},
         "cache_hits": 0,
         "cache_misses": 0,

@@ -17,12 +17,13 @@ sondern die reale httpx-Klasse mit aufgezeichneten Daten.
 """
 from __future__ import annotations
 
-from datetime import date, time
+from datetime import time
 
 import httpx
 import pytest
 
 from services.radar_service import NowcastResult, RadarNowcastService
+from tests.helpers.ortstag import ortstag, utc_tag
 
 # Atlantik: ausserhalb ALLER fuenf Bounding-Boxen (RADOLAN/INCA/DPC/AROME-FR/
 # ICON-D2, radar_service.py:28-58) -- identische Koordinate wie
@@ -116,7 +117,7 @@ def _write_budget(calls_openmeteo: int) -> None:
     path = get_data_root() / "diagnostics" / "forecast_budget.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "date": date.today().isoformat(),
+        "date": utc_tag().isoformat(),  # #2314 D2: Produkt liest den Zaehler am UTC-Tag
         "calls": {"openmeteo": calls_openmeteo},
         "cache_hits": 0, "cache_misses": 0,
     }
@@ -365,7 +366,9 @@ def test_both_alarm_paths_receive_data_unavailable_flag():
     from services.compare_radar_alert import CompareRadarAlertService
     from services.trip_alert import TripAlertService
 
-    today = date.today()
+    # #2314 D2: TripAlertService prueft Segmente gegen den Ortstag der
+    # Trip-Koordinaten (trip_local_today, ADR-0044), nicht den Prozesstag.
+    today = ortstag(_ATLANTIC_LAT, _ATLANTIC_LON)
     trip = Trip(
         id="ac8-fetch-failure-trip", name="AC8 Fetch Failure Trip",
         stages=[Stage(

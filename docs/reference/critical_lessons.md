@@ -110,16 +110,29 @@ und weicht dort rund um Mitternacht UTC vom Produktverhalten ab. Ausnahme: Tests
 die die Tagesberechnung selbst prüfen, brauchen eine gestellte Uhr plus einen
 Literal-Soll-Tag (sonst wird der Test tautologisch).
 
-Messgrenze: Unter `GZ_TEST_WALL_CLOCK_UTC`/freezegun liefert `date.today()` den
-**UTC-Tag**, nicht den St.-John's-Tag — lokal ist nur das Fenster 22:00–24:00 UTC
-des echten Ausfalls nachstellbar; ein grüner Lauf um 01:00 oder 04:00 Uhr ist
-kein Befund.
+Messgrenze (Stand Durchgang 1, #2314): Unter `GZ_TEST_WALL_CLOCK_UTC`/freezegun
+liefert `date.today()` den **UTC-Tag**, nicht den St.-John's-Tag — mit dem
+Uhr-Schalter allein war nur das Fenster 22:00–24:00 UTC nachstellbar.
+
+**Zweites Fenster 00:00–02:30 UTC (Durchgang 2, #2314):** Root-`conftest.py`
+bekam den additiven Env-Knopf `GZ_TEST_PROCESS_TZ` (Default `America/St_Johns`
+unverändert, #1402 bleibt in Kraft). Gesetzt auf eine „Gestern-Zone" (Prozesstag
+= UTC-Tag − 1, z. B. `Pacific/Marquesas`) macht er „Prozesstag ≠ UTC-Tag" **zu
+jeder Tageszeit** lokal herstellbar, statt auf den echten Nachtlauf zu warten.
+Selbstschutz: trägt die gewählte Zone gerade nicht, schlägt der Lauf sichtbar
+fehl statt still grün zu laufen. Neuer Helfer `tests/helpers/ortstag.py::
+utc_tag(*, now_utc=None)` (Geschwister von `ortstag()`) datiert Fixtures, die
+das Produkt am **UTC-Tag** verankert (`_today_utc`, `FixtureProvider`) —
+Familie A/C aus #2314; Familie B bleibt bei `ortstag(lat, lon)`.
 
 Falle: Modulweite Konstanten wie `NOW = datetime.now(...)` werden beim Laden des
 Moduls gesetzt, also vor der gestellten Uhr — zwei Uhren laufen gegeneinander
 (Beispiel #2314, `tests/tdd/test_official_alert_time_window.py`).
 
 Die Wanduhr-Ratsche `tests/tdd/test_fixture_wallclock_ratchet.py` (#1667) wertet
-`ortstag(...)`-Aufrufe ohne gepinntes `now_utc` ebenfalls als Wanduhr-Abhängigkeit.
+`ortstag(...)`- **und `utc_tag(...)`-Aufrufe** ohne gepinntes `now_utc` gleichermaßen
+als Wanduhr-Abhängigkeit — `utc_tag()` ist damit kein unbewachter Bypass.
+
+Quelle Durchgang 2: `docs/specs/modules/fix_2314_nachtfenster_utc_tag.md`.
 
 Quelle: #2314 / `docs/specs/modules/fix_2314_ci_zeitzonen_riss.md`.

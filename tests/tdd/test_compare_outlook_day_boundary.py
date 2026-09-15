@@ -23,6 +23,8 @@ from datetime import date, timedelta
 
 from bs4 import BeautifulSoup
 
+from tests.helpers.ortstag import utc_tag
+
 _OUTLOOK_TABLE_MARKER = "border-top:2px solid #1d1c1a"
 _WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 
@@ -83,7 +85,7 @@ def test_normal_window_outlook_skips_the_detail_day():
     3-Tages-Ausblicks vertreten — die erste Ausblick-Zeile gehoert dem
     Folgetag.
     """
-    target = date.today()
+    target = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
     result, loc_result = _run_engine((9, 16), target)
 
     detail_days = _days_of(loc_result, loc_result.hourly_data)
@@ -120,7 +122,7 @@ def test_midnight_window_outlook_skips_both_detail_days():
     Stundentabelle ebenfalls beruehrte Folgetag) in einer Ausblick-Zeile
     vertreten — der Ausblick beginnt fruehestens bei `target_date + 2 Tagen`.
     """
-    target = date.today()
+    target = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
     next_day = target + timedelta(days=1)
     result, loc_result = _run_engine((22, 4), target)
 
