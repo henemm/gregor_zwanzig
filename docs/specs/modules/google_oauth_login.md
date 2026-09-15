@@ -38,7 +38,7 @@ Ergänzt das bestehende Username/Passwort-Auth-System um eine Google-Sign-In-Opt
 ### Out of Scope
 
 - Apple Sign-In (auf Issue #426 verschoben; `OAuthProvider`/`OAuthSub`-Felder sind bereits kompatibel)
-- Account-Linking (ein Google-Konto mit bestehendem Passwort-Konto zusammenführen) — in v1 sind separate Konten akzeptiert
+- Account-Linking (ein Google-Konto mit bestehendem Passwort-Konto zusammenführen) — in v1 sind separate Konten akzeptiert. **Abgelöst durch ADR-0067** (Issue #2147 Scheibe C): Google-Login verknüpft mit dem bestätigten Konto derselben Adresse statt ein zweites Konto anzulegen, siehe `google_login_adress_verknuepfung.md`.
 - Admin-seitige OAuth-Konto-Verwaltung
 
 ## Source
@@ -202,7 +202,7 @@ In den jeweiligen `.svelte`-Seiten erscheint der Button nur wenn `data.googleEna
 | `email_verified: false` in Userinfo | Redirect zu `/login?error=oauth_failed` |
 | Google Userinfo-Endpoint nicht erreichbar | Redirect zu `/login?error=oauth_failed` |
 | ID-Kollision nach 3 Versuchen | Redirect zu `/login?error=oauth_failed` (extrem unwahrscheinlich) |
-| Gleiche E-Mail, verschiedene Auth-Methoden | Zwei getrennte Konten — kein Account-Linking in v1 |
+| Gleiche E-Mail, verschiedene Auth-Methoden | Zwei getrennte Konten — kein Account-Linking in v1 (**abgelöst durch ADR-0067**: Verknüpfung bzw. Ablehnung `oauth_link_failed`, siehe `google_login_adress_verknuepfung.md`) |
 
 ## Acceptance Criteria
 
@@ -229,7 +229,7 @@ In den jeweiligen `.svelte`-Seiten erscheint der Button nur wenn `data.googleEna
 
 ## Known Limitations
 
-- **Kein Account-Linking in v1:** Wer sich mit Google einloggt und schon ein Passwort-Konto mit gleicher E-Mail-Adresse hat, erhält ein separates Konto. Zusammenführung ist für eine spätere Version vorgesehen.
+- **Kein Account-Linking in v1:** Wer sich mit Google einloggt und schon ein Passwort-Konto mit gleicher E-Mail-Adresse hat, erhält ein separates Konto. Zusammenführung ist für eine spätere Version vorgesehen. **Abgelöst durch ADR-0067** (Issue #2147 Scheibe C, Spec `google_login_adress_verknuepfung.md`).
 - **`FindUserByOAuthSub` iteriert alle User:** Bei sehr vielen Nutzern (>10.000) könnte die lineare Suche spürbar werden. Für die aktuelle Nutzerzahl ist das unbedenklich.
 - **Apple Sign-In verschoben:** Das Datenmodell (`OAuthProvider`/`OAuthSub`) ist bereits Apple-kompatibel; die Implementierung folgt in Issue #426.
 - **Keine E-Mail-Verifikation:** Die E-Mail aus dem Google-Userinfo-Endpoint wird ohne eigene Verifikation übernommen. Google garantiert bereits, dass die E-Mail verifiziert ist (`email_verified: true` im Claim muss geprüft werden).

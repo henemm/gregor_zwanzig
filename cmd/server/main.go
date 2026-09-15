@@ -60,6 +60,9 @@ func main() {
 	installGuards(cfg)
 
 	s := store.New(cfg.DataDir, cfg.UserID)
+	// Issue #2147 Scheibe C (AC-16/AC-17): Bestandsduplikate von E-Mail-Adressen
+	// nur messen, nur Zahlen ins Log; fail-soft, der Start laeuft immer weiter.
+	s.LogAddressCollisions()
 	telegramTokenStore := handler.NewTelegramTokenStore(cfg.DataDir)
 	// Issue #2154 Scheibe A: eine Bremse fuer den ganzen Prozess — der
 	// Lernaufruf kommt immer von localhost, ein Zaehler je IP/Nummer/Konto

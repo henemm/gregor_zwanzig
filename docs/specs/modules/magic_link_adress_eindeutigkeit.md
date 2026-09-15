@@ -150,7 +150,8 @@ für den Google-Pfad (`auth_oauth.go`) bleibt die Funktion unverändert.
   `lookup_user_by_email` über beide Felder, Resend-Allowlist nur mit wirksamen Kontaktadressen,
   Mail-Text der Bestätigungsmail gegen fremd ausgelöste Bestätigung.
 - **Scheibe C:** Google-Login verknüpft bestehendes bestätigtes Konto statt Zweitkonto,
-  Kollisionszähler beim Start (ohne Adressen), ADR „Adress-Eindeutigkeit".
+  Kollisionszähler beim Start (ohne Adressen), ADR „Adress-Eindeutigkeit". Umgesetzt in
+  `google_login_adress_verknuepfung.md` / ADR 0067.
 - Issue #2147 bleibt bis Scheibe C offen.
 
 ## Acceptance Criteria
@@ -260,6 +261,7 @@ für den Google-Pfad (`auth_oauth.go`) bleibt die Funktion unverändert.
 - **ADR-Nr.:** keine
 - **Rationale:** Scheibe A trifft keine Grundsatzentscheidung über Kontoübernahme; das
   übergreifende ADR „Adress-Eindeutigkeit" folgt mit Scheibe C, wenn alle Anmeldewege feststehen.
+  Umgesetzt: ADR 0067 (`docs/adr/0067-adress-eindeutigkeit.md`).
 
 ## Changelog
 

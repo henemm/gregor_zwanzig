@@ -10,6 +10,23 @@
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
 	// Issue #1006 — Sitzung abgelaufen (zentraler 401-Redirect aus api.ts).
 	const sessionExpired = $derived($page.url.searchParams.get('expired') === '1');
+	// Issue #2147 Scheibe C (AC-18) — Ablehnungen des Google-Redirect-Flusses.
+	// Neutral formuliert: keine Aussage, ob eine Adresse im System existiert.
+	// Unbekannte Codes zeigen nichts.
+	// Map statt Objekt-Literal: ein Code wie `constructor` traefe sonst
+	// Object.prototype.
+	const GOOGLE_FEHLERTEXTE = new Map<string, string>([
+		[
+			'oauth_link_failed',
+			'Die Anmeldung mit Google war nicht möglich. Bitte melde dich mit Passwort, Passkey oder E-Mail-Code an.'
+		],
+		['oauth_failed', 'Die Anmeldung mit Google hat nicht geklappt. Bitte versuche es noch einmal.'],
+		[
+			'email_not_verified',
+			'Deine E-Mail-Adresse ist noch nicht bestätigt. Bitte öffne den Link in der Bestätigungsmail — erst danach ist die Anmeldung möglich.'
+		]
+	]);
+	const googleFehler = $derived(GOOGLE_FEHLERTEXTE.get($page.url.searchParams.get('error') ?? '') ?? null);
 
 	// Issue #2128 AC-11/AC-12 — Raeumen NUR nach einem echten Abmelde-Vorgang.
 	// Auf /login landet auch, wessen Sitzung abgelaufen ist oder wer die Seite
@@ -132,6 +149,16 @@
 		{#if sessionExpired}
 			<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm" style="color: var(--g-bad);">
 				Sitzung abgelaufen — bitte neu anmelden.
+			</div>
+		{/if}
+
+		{#if googleFehler && !form}
+			<div
+				data-testid="login-google-error"
+				class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm"
+				style="color: var(--g-bad);"
+			>
+				{googleFehler}
 			</div>
 		{/if}
 
