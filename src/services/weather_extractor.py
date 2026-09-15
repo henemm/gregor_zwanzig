@@ -6,7 +6,7 @@ Issue #652, Epic #639 Teil 3/6
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, fields as dataclass_fields, replace
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -160,24 +160,12 @@ class WeatherExtractor:
             fenster_ts, tz=location_tz(seg.segment.start_point),
             day_window_start_hour=window_start, day_window_end_hour=window_end,
         )
-        neu = service.compute_extended_metrics(fenster_ts, basis)
-        # ``compute_extended_metrics`` baut ein NEUES Summary und kopiert nur
-        # eine feste Feldauswahl aus ``basis`` mit (dieselbe Naht wie
-        # #1391/#1392/#1468, s. `weather_metrics.py`). ``basis`` und ``neu``
-        # stammen hier aus DERSELBEN Zeitreihe (``fenster_ts``) -- jedes Feld,
-        # das in ``basis`` gesetzt und in ``neu`` ``None`` ist, ist deshalb
-        # zwingend ein Kopierverlust und kein legitimer Leerwert. Generisch
-        # statt feldweise, damit kuenftige Kopierluecken (wie zuletzt
-        # `hail_flag`, Issue #2186) nicht erneut manuell nachgezogen werden
-        # muessen.
-        nachgezogen = {
-            f.name: getattr(basis, f.name)
-            for f in dataclass_fields(SegmentWeatherSummary)
-            if f.init
-            and getattr(neu, f.name) is None
-            and getattr(basis, f.name) is not None
-        }
-        return replace(neu, **nachgezogen) if nachgezogen else neu
+        # ``compute_extended_metrics()`` baut seit Issue #2195 per
+        # ``dataclasses.replace(basis, ...)`` auf ``basis`` auf und verliert
+        # dadurch strukturell keine Basisfelder mehr -- der bisherige
+        # generische Nachzug (frueher hier, Issue #2186) ist damit toter
+        # Code und entfaellt.
+        return service.compute_extended_metrics(fenster_ts, basis)
 
     def timeline_dated(
         self,

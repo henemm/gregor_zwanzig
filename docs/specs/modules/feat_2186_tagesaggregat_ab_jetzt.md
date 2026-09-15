@@ -2,7 +2,7 @@
 entity_id: feat_2186_tagesaggregat_ab_jetzt
 type: module
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-15
 status: draft
 version: "1.0"
 tags: [ad-hoc-abruf, timeline, tagesaggregat, telegram, email]
@@ -225,6 +225,12 @@ lesen alle aus demselben `TimelineResult`, das `_punkte()` bereits gefenstert li
 - `hail_flag` fehlt im geprüften Bestand durchgehend (Serialisierung lässt `None` weg); ein
   Test, der Hagel über echte Snapshots beweisen will, misst nichts und wird hier nicht
   verlangt.
+  - Nachtrag 2026-09-15 (#2195): Diese Limitation gilt seit Issue #2195 nur noch für
+    Snapshots, die VOR dem dortigen Fix geschrieben wurden — `compute_extended_metrics()`
+    verliert `hail_flag` (und `thunder_level_max_signals`) nicht mehr. Der hier beschriebene
+    Nachzug-Workaround in `weather_extractor.py` (Zeilenbereich `:164-180`, s. o.) ist im Zuge
+    von #2195 entfernt worden, weil er nach dem Wurzel-Fix toter Code war; `_punkte()` ruft
+    `compute_basis_metrics()` → `compute_extended_metrics()` seither ohne zusätzlichen Nachzug.
 - Ortsvergleich-Snapshots (`compare_weather_snapshots/`) sind nicht Teil dieser Spec —
   Ortsvergleich-Themen sind zurückgestellt.
 
