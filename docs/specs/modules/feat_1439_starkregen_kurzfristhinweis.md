@@ -250,6 +250,8 @@ ab; der Eintrag bleibt bewusst auf eine Zeile beschränkt.
   - Test: Injizierten Nowcast mit `is_convective=True` verwenden, prüfen
     dass keine Starkregen-Zeile erscheint.
 
+> Nachtrag 2026-09-15 (#2205, ADR-0069): Konvektiver Frame ohne Hagel (Wettercode 95) trägt jetzt das Label „Gewitter" (`INTENSITY_CONVECTIVE_NO_HAIL`); „Starker Hagel/Gewitter" nur noch bei Wettercode 96/99 (`RadarFrame.hail`).
+
 - **AC-8:** Given `docs/specs/data_sources.md` enthält aktuell keinen
   Eintrag für `minutely_15` / When diese Spec-Scheibe abgeschlossen wird /
   Then enthält die Datenquellen-Tabelle einen Nachtrags-Eintrag für

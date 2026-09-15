@@ -427,8 +427,27 @@ def _corridor_when(ce: CorridorEvent) -> str:
     return when
 
 
+def _hail_note_suffix(e) -> str:
+    """Issue #2205: bestehende Hagelaussage (`format_hail_note`) als Zusatz
+    ` · Hagel: ja` -- leer bei `None`/`False` (byte-identisch zum Bestand)."""
+    from output.metric_format import format_hail_note
+
+    note = format_hail_note(getattr(e, "hail_flag", None))
+    return f" · {note}" if note else ""
+
+
+def _sms_hail_suffix(e) -> str:
+    """Issue #2205: bestehender SMS-Suffix `+HL` NUR bei bestaetigtem Hagel."""
+    from output.tokens.builder import FORECAST_TH_HAIL_SUFFIX
+
+    return FORECAST_TH_HAIL_SUFFIX if getattr(e, "hail_flag", None) is True else ""
+
+
 def _corridor_value_str(ce: CorridorEvent) -> str:
-    return f"Grenze {_val(ce, ce.bound)} · jetzt {_val(ce, ce.value)}"
+    return (
+        f"Grenze {_val(ce, ce.bound)} · jetzt {_val(ce, ce.value)}"
+        f"{_hail_note_suffix(ce)}"
+    )
 
 
 def _corridor_label(ce: CorridorEvent) -> str:
@@ -455,12 +474,13 @@ def _corridor_line(ce: CorridorEvent) -> str:
     Grenze, Ist-Wert, Etappe (Issue #1444 S1, ADR-0013)."""
     return (
         f"{_corridor_label(ce)}: deine Grenze {_val(ce, ce.bound)} ist "
-        f"gerissen — jetzt {_val(ce, ce.value)} ({_corridor_when(ce)})"
+        f"gerissen — jetzt {_val(ce, ce.value)}{_hail_note_suffix(ce)} "
+        f"({_corridor_when(ce)})"
     )
 
 
 def _sms_corridor_token(ce: CorridorEvent) -> str:
-    tok = f"!{_code(ce)}{int(round(ce.value))}"
+    tok = f"!{_code(ce)}{int(round(ce.value))}{_sms_hail_suffix(ce)}"
     return tok + f"@{ce.occurred_at[:2]}" if ce.occurred_at else tok
 
 
@@ -1295,7 +1315,8 @@ def _h1(msg: AlertMessage) -> str:
 def _email_line(e: AlertEvent) -> str:
     return (
         f"{_deviation_label(e)} · Schwelle {_val_delta(e, e.threshold)} · "
-        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)} · "
+        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}"
+        f"{_hail_note_suffix(e)} · "
         f"Änderung {side_label(e)}"
     )
 
@@ -1326,9 +1347,10 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
     unit = get_metric(e.metric_id).unit
     row1 = (
         f"{_deviation_label(e)} · {unit}",
-        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}",
+        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}"
+        f"{_hail_note_suffix(e)}",  # Issue #2205
     )
-    mark = "✓" if not over_thr(e) else "✗"
+    mark ="✓" if not over_thr(e) else "✗"
     row2 = (
         f"Änderung {_val_delta(e, abs(e.value_to - e.value_from))}",
         f"{side_label(e)} Alarm-Schwelle {_val_delta(e, e.threshold)} {mark}",
@@ -1488,7 +1510,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                     f"Änderung {_num_delta(e, delta)}{delta_suffix} · "
                     f"Schwelle {_num_delta(e, e.threshold)}{schwelle_suffix}",
                     f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
-                    f"{unit_suffix} {side_label(e)}",
+                    f"{unit_suffix}{_hail_note_suffix(e)} {side_label(e)}",
                 ))
             else:
                 # Issue #980: gedämpfte Unter-Schwelle-Zeile — Label OHNE
@@ -1496,7 +1518,8 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                 # (Design-Vorlage Zeilen 231-234).
                 data_rows.append((
                     f"{loc_prefix}{_deviation_label(e)}{where_when} · unter Schwelle",
-                    f"{_num(e, e.value_from)} → {_num(e, e.value_to)}{unit_suffix}",
+                    f"{_num(e, e.value_from)} → {_num(e, e.value_to)}{unit_suffix}"
+                    f"{_hail_note_suffix(e)}",
                 ))
         km = _km_str(msg)
         footer = (
@@ -1598,7 +1621,7 @@ def render_telegram(msg: AlertMessage) -> str:
         metric_line = " · ".join(
             f"{_deviation_label(e)}{f' {_where_when(e)}' if with_where_when else ''} "
             f"{_num(e, e.value_from)}→{_num(e, e.value_to)}"
-            f"{_unit_suffix(e)}"
+            f"{_unit_suffix(e)}{_hail_note_suffix(e)}"
             for e in evs
         )
         lines = [f"<b>{_esc(verdict)}</b>", metric_line]
@@ -1653,6 +1676,7 @@ def _sms_token(
     else:
         sign = "+" if e.value_to >= e.value_from else "-"
         tok = f"{sign}{_code(e)}{int(round(e.value_to))}"
+    tok += _sms_hail_suffix(e)  # Issue #2205: vor `@HH`, Muster tokens.builder
     if e.occurred_at:
         # Issue #2020 Scheibe 2: liegt der Zeitpunkt an einem anderen Tag,
         # klebt das Wochentagskuerzel vor die Stunde (`@Do15`) -- dieselbe

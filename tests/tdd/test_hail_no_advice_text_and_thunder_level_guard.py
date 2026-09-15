@@ -157,14 +157,34 @@ def _gewitter_vorschau_abschnitt(plain: str) -> str:
 def test_ac11_gewitter_vorschau_klartext_kein_ratschlagstext():
     from output.renderers.email.plain import render_plain
 
+    from datetime import date
+
+    from services.trip_report_scheduler import TripReportSchedulerService
+
     dc = build_default_display_config()
-    thunder_forecast = {
-        "+1": {
-            "date": "06.08.2026", "level": ThunderLevel.HIGH,
-            "text": "Starkes Gewitter erwartet ab 14:00", "hour": 14,
-            "hail": True,
-        },
-    }
+    # Issue #2205: der Hagel-Zusatz der Vorschau entsteht im Zeitplaner (in
+    # `fc['text']`), nicht mehr als Renderer-Suffix -- der Eintrag kommt
+    # deshalb aus dem echten Rueckfallweg; einzig der Netzabruf ist ersetzt.
+    etappe = _segment_thunder_hail_true()
+
+    class _Trip:
+        report_config = None
+
+        def get_future_stages(self, target_date):
+            return []
+
+    class _ZeitplanerOhneNetz(TripReportSchedulerService):
+        def _collect_future_stage_weather(self, trip, target_date, now_utc,
+                                          wanted_dates=None):
+            return [etappe]
+
+    thunder_forecast = _ZeitplanerOhneNetz()._build_thunder_forecast_from_trend_or_fetch(
+        _Trip(), date(2026, 8, 4),
+        now_utc=datetime(2026, 8, 4, 4, 0, tzinfo=timezone.utc), tz=_TZ,
+        multi_day_trend=None,
+    )
+    assert thunder_forecast and thunder_forecast["+1"]["hail"] is True, (
+        f"Vorbedingung: Zeitplaner-Eintrag mit Hagel erwartet: {thunder_forecast!r}")
     plain = render_plain(
         segments=[_segment_thunder_hail_true()], seg_tables=[[]],
         trip_name="Vorschau-Test", report_type="evening", dc=dc, night_rows=[],

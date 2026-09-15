@@ -201,23 +201,39 @@ def night_addendum(
 
     Rueckgabe ``None``, wenn ausserhalb des Fensters kein Gewitter liegt
     (dann entsteht kein Zusatz).
+
+    Issue #2205 (AC-9/AC-10): Eintraege duerfen als drittes Element das
+    Hagel-Kennzeichen der Stunde tragen (``(Stunde, Stufe, hail_flag)``).
+    Rueckgabe ist dann ``(Stufe, Stunde, Hagel)``: Hagel ist ``True``, wenn
+    eine der Stunden mit der GEWINNENDEN Stufe -- dieselbe Menge, ueber die
+    ``hour`` gebildet wird -- Hagel meldet; sonst ``None``. ``night_hourly``
+    schlaegt ``own_hourly`` fuer Hagel auf genau den Stunden, auf denen es
+    auch die Stufe schlaegt (keine zwei Quellen fuer dieselbe Stunde,
+    #1498/#1653).
     """
     from app.models import ThunderLevel
     from app.thunder_scale import thunder_ordinal
 
-    def _peak_per_hour(pairs) -> dict:
+    def _peak_per_hour(entries) -> tuple[dict, dict]:
         peaks: dict = {}
-        for hour, level in pairs or ():
+        hail: dict = {}
+        for hour, level, *rest in entries or ():
             if level is None:
                 continue
             h = int(hour)
             prev = peaks.get(h)
             if prev is None or thunder_ordinal(level) > thunder_ordinal(prev):
                 peaks[h] = level
-        return peaks
+            if rest and rest[0] is True:
+                hail[h] = True
+        return peaks, hail
 
-    merged = _peak_per_hour(own_hourly)
-    merged.update(_peak_per_hour(night_hourly))
+    merged, merged_hail = _peak_per_hour(own_hourly)
+    night_peaks, night_hail = _peak_per_hour(night_hourly)
+    merged.update(night_peaks)
+    for h in night_peaks:
+        merged_hail.pop(h, None)
+    merged_hail.update(night_hail)
 
     outside = [
         (hour, level)
@@ -228,8 +244,10 @@ def night_addendum(
     if not outside:
         return None
     level = max((lv for _h, lv in outside), key=thunder_ordinal)
-    hour = min(h for h, lv in outside if lv == level)
-    return level, hour
+    peak_hours = [h for h, lv in outside if lv == level]
+    hour = min(peak_hours)
+    hail = True if any(merged_hail.get(h) for h in peak_hours) else None
+    return level, hour, hail
 
 
 # Wortschatz des Nacht-Zusatzes (#1651). Bewusste Abweichung vom Tagestext,
@@ -242,7 +260,7 @@ _NIGHT_ADDENDUM_WORD = {
 }
 
 
-def format_night_addendum(level, hour: int) -> str:
+def format_night_addendum(level, hour: int, hail=None) -> str:
     """Der angehaengte Halbsatz zu einem ``night_addendum()``-Treffer.
 
     EINE Stelle fuer den Wortlaut: beide Bauwege des Vorschau-Satzes
@@ -252,7 +270,15 @@ def format_night_addendum(level, hour: int) -> str:
     Issue #2176: ``LOW`` hat hier kein Adjektiv mehr, sondern eine eigene,
     ereignisfreie Aussage -- der Nacht-Halbsatz ist der einzige Ort, an dem
     der Baustein MITTEN im Satz steht (deshalb klein geschrieben).
+
+    Issue #2205: ``hail`` (aus ``night_addendum()``) haengt bei bestaetigtem
+    Hagel die bestehende Hagelaussage an -- Wortlaut aus der EINEN Quelle
+    ``format_hail_note`` (Domaenenschicht ``app/thunder_scale.py``).
     """
+    from app.thunder_scale import format_hail_note
+
+    _note = format_hail_note(hail)
+    _suffix = f" · {_note}" if _note else ""
     name = getattr(level, "name", str(level))
     if name == "LOW":
         from app.thunder_scale import thunder_low_statement
@@ -260,11 +286,12 @@ def format_night_addendum(level, hour: int) -> str:
         # Herkunft liegt an dieser Stelle nicht vor (der Nacht-Treffer traegt
         # nur Stufe + Stunde) -- unbekannte Herkunft ist KEINE reine
         # Luftmasse (Spec AC-4), der Baustein entscheidet das selbst.
-        return f", nachts {thunder_low_statement('kurz', None)} ab {int(hour):02d}:00"
+        return (f", nachts {thunder_low_statement('kurz', None)} "
+                f"ab {int(hour):02d}:00{_suffix}")
     word = _NIGHT_ADDENDUM_WORD.get(name)
     if word is None:
         return ""
-    return f", nachts {word} Gewitter ab {int(hour):02d}:00"
+    return f", nachts {word} Gewitter ab {int(hour):02d}:00{_suffix}"
 
 
 def hour_in_window(hour: int, start_hour: int, end_hour: int) -> bool:

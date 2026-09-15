@@ -111,6 +111,8 @@ lon > 10, Slowenien, Tschechien, Ost-Alpen). DE/AT treffen ihr Radar weiterhin z
 - **AC-4:** Given ein `NowcastResult` mit `source == "ICON-D2"` / When `format_now_text(result)` rendert / Then nennt der Text transparent die echte Quelle ("DWD ICON-D2"); ein konvektiver ICON-D2-`weather_code` (95/96/99) treibt `is_convective` → `intensity_to_text` = "Starker Hagel/Gewitter".
   - Test: (a) Pure-Function-Test: `format_now_text` mit `NowcastResult(source="ICON-D2")` enthält "DWD ICON-D2". (b) Deterministischer Test: reale `RadarFrame`-Objekte mit konvektivem Code → `is_convective`+Intensität korrekt. Kein Mock.
 
+> Nachtrag 2026-09-15 (#2205, ADR-0069): Konvektiver Frame ohne Hagel (Wettercode 95) trägt jetzt das Label „Gewitter" (`INTENSITY_CONVECTIVE_NO_HAIL`); „Starker Hagel/Gewitter" nur noch bei Wettercode 96/99 (`RadarFrame.hail`).
+
 ## AC-Test-Mapping (Test-Plan)
 
 | AC | Testfunktion |

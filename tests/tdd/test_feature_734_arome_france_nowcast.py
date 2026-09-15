@@ -134,7 +134,8 @@ def test_ac3_format_now_text_transparent_source_labels():
 def test_ac4_arome_convective_weathercode_drives_intensity():
     """GIVEN ein konvektiver AROME-Frame im Nowcast-Fenster (echte RadarFrame-Objekte)
     WHEN der Service daraus ableitet
-    THEN is_convective == True und intensity_to_text == 'Starker Hagel/Gewitter'.
+    THEN is_convective == True und intensity_to_text == 'Gewitter'
+    (Issue #2205: ohne Hagel-Kennzeichen kein Hagel-Wortlaut).
     Contract-Guard: belegt, dass die AROME-Konvektions-Klassifikation greift.
     """
     from datetime import datetime, timedelta, timezone
@@ -149,7 +150,7 @@ def test_ac4_arome_convective_weathercode_drives_intensity():
 
     assert result.source == "AROME-FR"
     assert result.is_convective is True
-    assert result.intensity_label == "Starker Hagel/Gewitter"
+    assert result.intensity_label == "Gewitter"
 
 
 # Dialt real Open-Meteo/AROME (#1211-2b) -- nur via -m live

@@ -165,6 +165,18 @@ def _find_segment(segments, segment_id: str):
     return match
 
 
+def _hail_flag_for(metric_id: str, entry) -> bool | None:
+    """Hagel-Kennzeichen fuer ein Alarm-Ereignis (Issue #2205).
+
+    Nur die Gewitter-Metrik traegt eine Hagelaussage. Quelle ist das
+    Segment-Aggregat (`SegmentWeatherData.aggregated.hail_flag`, dieselbe
+    Punktmenge wie `thunder_level_max`). Ein blanker `TripSegment`-Eintrag
+    ohne Aggregat liefert `None` -> keine Hagelaussage."""
+    if metric_id != "thunder":
+        return None
+    return getattr(getattr(entry, "aggregated", None), "hail_flag", None)
+
+
 def _fmt_occurred_at(value, tz) -> str | None:
     """Peak-Zeitpunkt (UTC-`datetime`, s. `WeatherChange.occurred_at`) → "HH:MM"
     in ORTSZEIT (Issue #1386). Guard: naiv hereingereichte Zeitstempel gelten
@@ -370,6 +382,7 @@ def to_alert_message(
             segment_id=normalize_segment_id(match.segment_id),
             km_measured=km_measured,  # Issue #2036
             stage_number=stage_number,  # Issue #2122
+            hail_flag=_hail_flag_for(metric_id, eintrag),  # Issue #2205
         ))
     corridor_events = (
         to_corridor_events(corridor_hits, segments, tz=tz, stage_number=stage_number)
@@ -441,7 +454,9 @@ def to_corridor_events(
     for hit in hits:
         try:
             metric_id = _resolve_corridor_metric_id(hit.metric, hit.direction)
-            match = _trip_segment(_find_segment(segments, hit.segment_id))
+            # Issue #2205: den Roheintrag behalten -- nur er traegt das Aggregat.
+            entry = _find_segment(segments, hit.segment_id)
+            match = _trip_segment(entry)
             events.append(CorridorEvent(
                 metric_id=metric_id, value=hit.value, bound=hit.bound,
                 direction=hit.direction,
@@ -456,6 +471,7 @@ def to_corridor_events(
                 segment_id=normalize_segment_id(match.segment_id),
                 km_measured=bool(getattr(match, "distance_measured", False)),
                 stage_number=stage_number,  # Issue #2122
+                hail_flag=_hail_flag_for(metric_id, entry),  # Issue #2205
             ))
         except Exception as e:
             logger.warning(

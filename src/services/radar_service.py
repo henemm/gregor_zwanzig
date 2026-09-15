@@ -134,7 +134,10 @@ LOCATION_SHARPNESS_LIMIT_MIN = 60
 # Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings
 # in intensity_to_text() -- alert_urgency.py vergleicht gegen diese Konstanten
 # statt gegen Zeichenketten-Duplikate (E3). Wortlaut unveraendert.
+# Issue #2205: der Hagel-Wortlaut gilt nur noch fuer WMO 96/99; Code 95
+# (Gewitter ohne Hagel) traegt INTENSITY_CONVECTIVE_NO_HAIL.
 INTENSITY_CONVECTIVE = "Starker Hagel/Gewitter"
+INTENSITY_CONVECTIVE_NO_HAIL = "Gewitter"
 INTENSITY_HEAVY = "Starker Regen"
 INTENSITY_MODERATE = "Mäßiger Regen"
 INTENSITY_LIGHT = "Leichter Regen"
@@ -384,15 +387,17 @@ def _laufendes_frame(frames: list, now: datetime):
     `_MAX_FRAME_COVERAGE`. Reicht sie nicht bis `now` (Datenluecke), gibt es
     kein laufendes Bild -- dann `None` statt einer Hochrechnung.
 
-    Rueckgabe: `(timestamp, rate_mm_h, is_convective, deckung_ende)`.
+    Rueckgabe: `(timestamp, rate_mm_h, is_convective, deckung_ende, hail)`.
     """
     by_ts: dict[datetime, float] = {}
     konvektiv: dict[datetime, bool] = {}
+    hagel: dict[datetime, bool] = {}
     for f in frames:
         vorhanden = by_ts.get(f.timestamp)
         if vorhanden is None or f.precip_mm_h > vorhanden:
             by_ts[f.timestamp] = f.precip_mm_h
             konvektiv[f.timestamp] = bool(f.is_convective)
+            hagel[f.timestamp] = bool(getattr(f, "hail", False))
     reihe = sorted(by_ts.items())
     for i, (ts, rate) in enumerate(reihe):
         if ts > now:
@@ -401,7 +406,7 @@ def _laufendes_frame(frames: list, now: datetime):
         if i + 1 < len(reihe) and reihe[i + 1][0] < deckung_ende:
             deckung_ende = reihe[i + 1][0]
         if ts <= now < deckung_ende:
-            return ts, rate, konvektiv[ts], deckung_ende
+            return ts, rate, konvektiv[ts], deckung_ende, hagel[ts]
     return None
 
 
@@ -439,14 +444,17 @@ class RadarNowcastService:
     # Public API
     # ------------------------------------------------------------------
 
-    def intensity_to_text(self, mm_per_h: float, is_convective: bool = False) -> str:
+    def intensity_to_text(
+        self, mm_per_h: float, is_convective: bool = False, hail: bool = False,
+    ) -> str:
         """Map mm/h rate to German intensity label.
 
         Convective flag (thunderstorm/hail WMO 95/96/99) overrides all rate-based
-        stages — even at very low precipitation rates.
+        stages — even at very low precipitation rates. Issue #2205: only hail
+        (WMO 96/99) carries the hail wording; 95 is plain "Gewitter".
         """
         if is_convective:
-            return INTENSITY_CONVECTIVE
+            return INTENSITY_CONVECTIVE if hail else INTENSITY_CONVECTIVE_NO_HAIL
         # Guard: NaN or non-numeric input → treat as dry
         if not isinstance(mm_per_h, (int, float)) or mm_per_h != mm_per_h:
             return INTENSITY_DRY
@@ -461,6 +469,10 @@ class RadarNowcastService:
     def _is_convective_weathercode(self, code) -> bool:
         """Return True if WMO weather code indicates convective activity (thunderstorm/hail)."""
         return code in (95, 96, 99)
+
+    def _is_hail_weathercode(self, code) -> bool:
+        """Issue #2205: True only for WMO 96/99 (Gewitter mit Hagel), not 95."""
+        return code in (96, 99)
 
     def get_nowcast(
         self, lat: float, lon: float, elevation_m: Optional[int] = None,
@@ -777,6 +789,7 @@ class RadarNowcastService:
             )
             if abs(nearest.timestamp - frame.timestamp) <= tolerance:
                 frame.is_convective = nearest.is_convective
+                frame.hail = getattr(nearest, "hail", False)
 
     def _fetch_openmeteo_minutely15(
         self, lat: float, lon: float, elevation_m: Optional[int] = None
@@ -873,7 +886,10 @@ class RadarNowcastService:
                 mm_h = float(raw) * 4.0
                 code = wcodes[i] if i < len(wcodes) else None
                 is_convective = self._is_convective_weathercode(code)
-                frames.append(RadarFrame(timestamp=dt, precip_mm_h=mm_h, is_convective=is_convective))
+                frames.append(RadarFrame(
+                    timestamp=dt, precip_mm_h=mm_h, is_convective=is_convective,
+                    hail=self._is_hail_weathercode(code),
+                ))
             return frames
         except Exception as e:
             logger.warning(f"Open-Meteo minutely_15 (models={models}) failed: {e}")
@@ -916,7 +932,10 @@ class RadarNowcastService:
                 ts = base + timedelta(minutes=offset_min)
                 is_convective = self._is_convective_weathercode(code)
                 frames.append(
-                    RadarFrame(timestamp=ts, precip_mm_h=float(precip), is_convective=is_convective)
+                    RadarFrame(
+                        timestamp=ts, precip_mm_h=float(precip), is_convective=is_convective,
+                        hail=self._is_hail_weathercode(code),
+                    )
                 )
             return frames
         except Exception as e:
@@ -981,8 +1000,14 @@ class RadarNowcastService:
         is_convective = any(
             f.is_convective for f in window if f.precip_mm_h >= _DRY_THRESHOLD_MM_H
         ) or bool(already_running and _laufend[2])
+        # Issue #2205: Hagel (WMO 96/99) nach derselben Regel wie is_convective.
+        hail = any(
+            getattr(f, "hail", False) for f in window if f.precip_mm_h >= _DRY_THRESHOLD_MM_H
+        ) or bool(already_running and _laufend[4])
 
-        intensity_label = self.intensity_to_text(max_rate, is_convective=is_convective)
+        intensity_label = self.intensity_to_text(
+            max_rate, is_convective=is_convective, hail=hail,
+        )
 
         # Issue #1329 C2 AC-6: throttled=True nur wenn KEINE Frames geliefert
         # wurden UND die Ursache eine Budget-Drosselung war (nicht "echt kein

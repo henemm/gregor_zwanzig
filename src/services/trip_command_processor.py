@@ -1584,6 +1584,12 @@ class TripCommandProcessor:
         _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
         if _herkunft:
             thunder_label = f"{thunder_label} · {_herkunft}"
+        # Issue #2205 (AC-13/14): Hagelaussage aus DEMSELBEN Aggregat, nach der
+        # Herkunft -- wie `_fmt_gewitter()`, auf allen Kanaelen.
+        from output.metric_format import format_hail_note
+        _hagel = format_hail_note(agg.get("hail_flag"))
+        if _hagel:
+            thunder_label = f"{thunder_label} · {_hagel}"
         precip = f"{agg['precip']:.1f}" if agg.get('precip') else "0.0"
         return (
             f"{label}: 🌡 {t_min}–{t_max}°C  💨 {wind} km/h  "
@@ -1722,6 +1728,11 @@ class TripCommandProcessor:
             _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
             if _herkunft:
                 t_label = f"{t_label} · {_herkunft}"
+            # Issue #2205 (AC-13/14): Hagel DIESES Wegpunkts, aus demselben `m`.
+            from output.metric_format import format_hail_note
+            _hagel = format_hail_note(getattr(m, "hail_flag", None))
+            if _hagel:
+                t_label = f"{t_label} · {_hagel}"
             lines.append(
                 f"   🌡 {t_min}–{t_max} °C  💨 {wind} km/h  "
                 f"🌧 {precip} mm  ⛈ {t_label}"
