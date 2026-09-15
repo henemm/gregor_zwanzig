@@ -3239,6 +3239,9 @@ stored, fresh reply address or a valid link code) and persists the address on th
 }
 ```
 
+`reason` also takes the value `stored_reply_to_ambiguous` when two or more Premium users hold a
+fresh stored match on the same `from` and no resolving `code` was provided (Issue #2328).
+
 **Error Responses:**
 
 | Status | Body | Scenario |
@@ -3246,6 +3249,7 @@ stored, fresh reply address or a valid link code) and persists the address on th
 | 400 | `{"error":"bad_request"}` | JSON not decodable, or `from` empty |
 | 403 | `forbidden` (plain text) | Request did not originate from `127.0.0.1`/`::1`, or arrived via a proxy header (`requireLocalOnly`) |
 | 409 | `{"error":"skipped","reason":"no_unique_premium_candidate"}` | No Premium user with a stored match to `from` exists, and no `code` provided, or no single unambiguous Premium candidate exists |
+| 409 | `{"status":"skipped","reason":"stored_reply_to_ambiguous"}` | Two or more Premium users hold a fresh stored match on `from` (Garmin reuses reply addresses from a rotating pool) and no `code` resolved the collision — no user record is written (Issue #2328) |
 | 429 | `{"error":"too_many_requests"}` | Global rate limit for unsuccessful code comparisons exhausted |
 
 #### POST /api/auth/tier-change-request
