@@ -476,6 +476,12 @@ Mutationen ausschließlich per String-Ersetzung mit externer Sicherungskopie
    entsteht der zweite Verbraucher. Präzedenz derselben Fehlerklasse im
    selben `else`-Zweig: #1592 F003 (`cape_model_id`), dort war der zweite
    Verbraucher bereits da und der Befund echt.
+   🔴 **Nachtrag 2026-09-15 (#2195):** Diese Known Limitation ist geschlossen —
+   `aggregate_stage()` hat seither einen eigenen `union_of_max_carriers`-Zweig
+   (`weather_metrics.py:1391-1400`). Der Anlass war nicht die hier erwartete
+   Trip-Seiten-Scheibe (deren Herkunft läuft seit #1680 S2 über einen anderen
+   Pfad), sondern ein unabhängiger Bugfix der Etappen-Tagesaggregation. Details:
+   `docs/specs/modules/bug_2195_tageswert_feldverlust.md`.
 
 ## Nicht in dieser Scheibe
 

@@ -491,6 +491,14 @@ GEWITTER-Kommando, Compare-Stundentabelle, Go-DTO, Frontend. ⚠️ Wer die Herk
 `union_of_max_carriers` zu kennen — sonst gewinnt dort die Herkunft des *ersten* Segments,
 während die Stufe über alle Segmente maximiert wird (Known Limitation 7, gebucht in #1199).
 
+🔴 **Überholt (2026-09-15, #2195):** `aggregate_stage()` kennt `union_of_max_carriers`
+inzwischen — die hier beschriebene Voraussetzung ist damit erfüllt. Anlass war jedoch nicht
+diese Scheibe (Herkunft auf der Trip-Seite existiert bereits seit #1680 S2 über einen
+separaten Pfad, s. `metric_output_matrix.md` Zeile „Herkunft der Gewitterstufe — Trip"),
+sondern ein unabhängiger Bugfix an der Etappen-Tagesaggregation (`weather_metrics.py:1391-1400`,
+`docs/specs/modules/bug_2195_tageswert_feldverlust.md`). Die übrige „Noch offen"-Liste dieses
+Absatzes ist davon unberührt und nicht Gegenstand dieses Nachtrags.
+
 ### Was das je Gebiet konkret bedeutet
 
 Die Gebietsgrenzen sind **ganze Länderregionen**, nicht einzelne Touren: „FR" umfasst

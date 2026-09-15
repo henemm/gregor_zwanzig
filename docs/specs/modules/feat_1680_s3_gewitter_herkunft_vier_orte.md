@@ -542,6 +542,12 @@ Beispieltexten oben. Wer implementiert, richtet sich nach dieser Liste.
    den generischen `else`-Zweig (`weather_metrics.py:1265-1266`, liefert
    `values[0]`). Known Limitation 7 aus Scheibe 1 bleibt bestehen und gehoert
    in die Ausblick-Scheibe.
+   🔴 **Nachtrag 2026-09-15 (#2195):** inzwischen geschlossen, aber nicht durch
+   die Ausblick-Scheibe (S5a blieb bei "kein Verbraucher", s. dort) — sondern
+   durch einen unabhaengigen Bugfix der Etappen-Tagesaggregation.
+   `aggregate_stage()` hat seither einen `union_of_max_carriers`-Zweig
+   (`weather_metrics.py:1391-1400`). Details:
+   `docs/specs/modules/bug_2195_tageswert_feldverlust.md`.
 4. **Mehrtages-Ausblick, Trip-Stundentabelle und Gewitter-Vorschau bleiben
    ohne Herkunft.** Beim Ausblick gehen die Traeger strukturell verloren:
    `HourlyValue` (`src/output/tokens/dto.py:15-18`) ist ein frozen Dataclass
