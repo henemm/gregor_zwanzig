@@ -13,8 +13,14 @@ package handler
 // Aufloesung seit Issue #2154 Scheibe A (Kandidaten nur Premium-Tier); loest
 // die alte R3-Heuristik ab, deren Ein-Kandidaten-Fallback jede fremde Nummer
 // ohne Geheimnis zur Rueckadresse machte:
-//  1. Frischer Treffer auf gespeicherte PremiumSmsReplyTo (innerhalb
+//  1. GENAU EIN frischer Treffer auf gespeicherte PremiumSmsReplyTo (innerhalb
 //     model.PremiumSmsReplyTTL) -> dieser Nutzer, Code wird ignoriert.
+//  1a. Bei >=2 frischen Treffern (Garmin vergibt Rueckadressen aus einem
+//     rotierenden Pool erneut, Issue #2328) wird NICHT sofort abgelehnt,
+//     sondern der Code-Pfad entscheidet; scheitert dieser mangels Code,
+//     lautet der Grund reasonStoredReplyToAmbiguous statt
+//     reasonLinkCodeRequired. Sonst waere die Kollision ein Lockout, aus dem
+//     sich niemand mehr heilen kann.
 //  2. Sonst ohne Code -> kein Ziel (der eigentliche Bugfix, AC-1).
 //  3. Sonst mit Code -> Budget der Ratebremse pruefen, dann bcrypt-Vergleich
 //     gegen den gespeicherten Verknuepfungs-Code jedes Kandidaten; genau ein
@@ -37,9 +43,10 @@ import (
 
 // Ablehnungsgruende, wie sie im Antwortkoerper erscheinen.
 const (
-	reasonLinkCodeRequired    = "link_code_required"
-	reasonLinkCodeInvalid     = "link_code_invalid"
-	reasonLinkCodeRateLimited = "link_code_rate_limited"
+	reasonLinkCodeRequired       = "link_code_required"
+	reasonLinkCodeInvalid        = "link_code_invalid"
+	reasonLinkCodeRateLimited    = "link_code_rate_limited"
+	reasonStoredReplyToAmbiguous = "stored_reply_to_ambiguous"
 )
 
 // PostPremiumSmsLearnHandler baut den Handler mit injiziertem Store und
@@ -67,7 +74,7 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 		}
 
 		var candidates []*model.User
-		var storedMatch *model.User
+		var storedMatches []*model.User
 		for _, id := range userIDs {
 			user, err := s.LoadUser(id)
 			if err != nil || user == nil {
@@ -78,7 +85,7 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 			}
 			candidates = append(candidates, user)
 			if user.PremiumSmsReplyTo == body.From {
-				storedMatch = user
+				storedMatches = append(storedMatches, user)
 			}
 		}
 
@@ -89,7 +96,7 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 			// prozessweite Fehlversuchszaehler sind von hier aus erreichbar.
 			// Der Trockenlauf rechnet gegen eine Wegwerf-Bremse, damit ein
 			// falscher Code die echte Bremse nie beruehrt (AC-8).
-			target, reason := resolvePremiumSmsTarget(s, candidates, storedMatch, body.Code, rl.scratch())
+			target, reason := resolvePremiumSmsTarget(s, candidates, storedMatches, body.Code, rl.scratch())
 			if target == nil {
 				json.NewEncoder(w).Encode(map[string]string{
 					"status":  "dry_run",
@@ -108,7 +115,7 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 			return
 		}
 
-		target, reason := resolvePremiumSmsTarget(s, candidates, storedMatch, body.Code, rl)
+		target, reason := resolvePremiumSmsTarget(s, candidates, storedMatches, body.Code, rl)
 		if reason == reasonLinkCodeRateLimited {
 			w.WriteHeader(http.StatusTooManyRequests)
 			json.NewEncoder(w).Encode(map[string]string{
@@ -145,20 +152,30 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 // bcrypt-Vergleich gefragt (AC-7). Stuende die Pruefung dahinter, koennte ein
 // Angreifer weiter raten und die Bremse waere Zierde.
 func resolvePremiumSmsTarget(
-	s *store.Store, candidates []*model.User, storedMatch *model.User,
+	s *store.Store, candidates []*model.User, storedMatches []*model.User,
 	code string, rl *PremiumSmsRateLimiter,
 ) (*model.User, string) {
-	// Schritt 4: nur ein FRISCHER gespeicherter Treffer bestaetigt ohne Code.
-	// Dieselbe Frist-Semantik wie im Sendepfad und in der Oberflaeche — eine
-	// zweite, eigene Vergleichsformel hier waere ein Drift-Risiko.
-	if storedMatch != nil &&
-		model.DerivePremiumSmsReplyState(storedMatch.PremiumSmsReplyTo, storedMatch.PremiumSmsReplyAt) == model.PremiumSmsStateFresh {
-		return storedMatch, ""
+	// Schritt 4: nur ein EINZIGER FRISCHER gespeicherter Treffer bestaetigt ohne
+	// Code. Dieselbe Frist-Semantik wie im Sendepfad und in der Oberflaeche —
+	// eine zweite, eigene Vergleichsformel hier waere ein Drift-Risiko.
+	var freshMatches []*model.User
+	for _, candidate := range storedMatches {
+		if model.DerivePremiumSmsReplyState(candidate.PremiumSmsReplyTo, candidate.PremiumSmsReplyAt) == model.PremiumSmsStateFresh {
+			freshMatches = append(freshMatches, candidate)
+		}
+	}
+	if len(freshMatches) == 1 {
+		return freshMatches[0], ""
 	}
 
 	// Schritt 5: ohne Code kein Ziel. Hier stand bis #2154 der
-	// len(candidates)==1-Fallback — er entfaellt ersatzlos (AC-1).
+	// len(candidates)==1-Fallback — er entfaellt ersatzlos (AC-1). Bei >=2
+	// frischen Treffern (Issue #2328) benennt der eigene Grund die Kollision,
+	// damit sie nicht als fehlender Code missverstanden wird.
 	if code == "" {
+		if len(freshMatches) > 1 {
+			return nil, reasonStoredReplyToAmbiguous
+		}
 		return nil, reasonLinkCodeRequired
 	}
 

@@ -231,7 +231,12 @@ Go-Lern-Endpunkt: Bis #2154: bei gespeicherter Rückadresse oder genau einem
 Premium-Nutzer; seit #2154: bei gespeicherter, frischer Adresse (TTL-Abgleich)
 oder validem Verknüpfungs-Code im Format `XX`+3 Buchstaben+3 Ziffern (s.
 `docs/specs/modules/fix_2154_premium_sms_verknuepfungscode.md`,
-Format-Änderung durch `docs/specs/modules/fix_2323_premium_sms_gate_generisch.md`).
+Format-Änderung durch `docs/specs/modules/fix_2323_premium_sms_gate_generisch.md`);
+seit #2328: die frische Adresse zieht nur bei **genau einem** Treffer — bei zwei
+oder mehr frischen Treffern auf dieselbe Nummer (Garmin vergibt Rückadressen aus
+einem rotierenden Pool erneut) lehnt der Endpunkt mit 409/`stored_reply_to_ambiguous`
+ab, auflösbar allein per Verknüpfungs-Code (s.
+`docs/specs/modules/fix_2328_premium_sms_rueckkanal_kollision.md`).
 Die aktuelle, gültige Rückadresse wird per Read-Modify-Write in `user.PremiumSmsReplyTo`/
 `PremiumSmsReplyAt` gespeichert — ausschließlich über den localhost-only Go-Endpoint
 `POST /api/internal/premium-sms-learn` (`internal/handler/premium_sms_connect.go`). Außerhalb Produktion pollt der
