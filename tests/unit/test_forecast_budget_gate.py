@@ -24,7 +24,7 @@ abgeleitet, nie aus `date.today()`.
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -42,6 +42,7 @@ from services.segment_weather import SegmentWeatherService
 from services.weather_cache import (
     reset_shared_weather_cache_for_tests,
 )
+from tests.helpers.ortstag import utc_tag
 
 
 class CountingFakeProvider:
@@ -119,7 +120,7 @@ def _write_budget(calls_openmeteo: int, cache_hits: int = 0, cache_misses: int =
     path = _budget_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "date": date.today().isoformat(),
+        "date": utc_tag().isoformat(),  # #2314 D2: Produkt liest den Zaehler am UTC-Tag
         "calls": {"openmeteo": calls_openmeteo},
         "cache_hits": cache_hits,
         "cache_misses": cache_misses,

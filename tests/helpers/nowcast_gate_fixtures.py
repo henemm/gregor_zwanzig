@@ -468,8 +468,12 @@ def frozen_active_window(hour_utc: int = 12):
     """
     from freezegun import freeze_time
 
+    # #2314 D2: der Ankertag folgt dem Ortstag der Standard-Koordinaten
+    # dieser Datei (TRIP_LAT/TRIP_LON, Reykjavik, ganzjaehrig UTC+0), nicht
+    # dem Prozesstag — sonst zielt der Anker unter einer Gestern-Zone
+    # (GZ_TEST_PROCESS_TZ) auf den falschen Kalendertag.
     anker = datetime.combine(
-        date_type.today(), datetime.min.time(), tzinfo=TRIP_ZONE,
+        ortstag(TRIP_LAT, TRIP_LON), datetime.min.time(), tzinfo=TRIP_ZONE,
     ) + timedelta(hours=hour_utc)
     with freeze_time(anker):
         yield anker

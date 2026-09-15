@@ -39,6 +39,8 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from tests.helpers.ortstag import utc_tag
+
 from app.config import Settings
 from app.loader import get_data_dir, load_all_trips, load_trip_from_dict, save_trip
 from app.models import OutlookState, TripReportConfig
@@ -135,7 +137,7 @@ def test_ac1_heutige_und_kuenftige_etappe_behalten_beide_ihre_kilometrierung():
     RED heute: der zweite Save (Ausblick) überschreibt die `stages`-Liste
     mit dem stale `trip` von VOR dem ersten Backfill -- die heutige Etappe
     verliert ihre gerade erst geschriebene Kilometrierung wieder."""
-    heute = date.today()
+    heute = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
     user = _uid("ac1")
     trip = _trip_mit_n_unvermessenen_etappen(user, [heute, heute + timedelta(days=1)])
     trip.report_config = TripReportConfig(
@@ -176,7 +178,7 @@ def test_ac2_ausblicksschleife_bewahrt_alle_drei_etappen_nicht_nur_die_letzte():
     unabhängig vom ``target_date``-Argument -- die drei Etappen liegen
     deshalb auf heute/heute+1/heute+2, `target_date` (für "künftig") auf
     gestern."""
-    heute = date.today()
+    heute = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
     gestern = heute - timedelta(days=1)
     user = _uid("ac2")
     dates = [heute, heute + timedelta(days=1), heute + timedelta(days=2)]
@@ -214,7 +216,7 @@ def test_ac3_heutige_etappe_verliert_kilometrierung_nicht_durch_spaeteren_ausbli
     RED heute: exakt dieser zeitlich spätere Save der künftigen Etappe
     überschreibt die `stages`-Liste mit dem stale (unvermessenen) Stand der
     heutigen Etappe."""
-    heute = date.today()
+    heute = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
     user = _uid("ac3")
     trip = _trip_mit_n_unvermessenen_etappen(user, [heute, heute + timedelta(days=1)])
     trip.report_config = TripReportConfig(
@@ -250,7 +252,7 @@ def test_ac7_on_demand_snapshot_pfad_bewahrt_heutige_etappe():
     wieder mit dem stale Stand überschreiben."""
     from services.trip_command_processor import _fetch_and_save_snapshot
 
-    heute = date.today()
+    heute = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
     morgen = heute + timedelta(days=1)
     user = _uid("ac7")
     trip = _trip_mit_n_unvermessenen_etappen(user, [heute, morgen])
@@ -287,7 +289,7 @@ def test_ac4_ueberschriebene_convert_methode_bleibt_frei_von_fremdem_trip():
     überschriebener Aufruf mit einem ANDEREN Trip (`trip_other`). Danach
     muss `_build_stage_trend(trip_a, ...)` weiterhin mit `trip_a` arbeiten
     -- nicht mit dem Ergebnis des früheren `trip_other`-Aufrufs."""
-    heute = date.today()
+    heute = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
     user = _uid("ac4")
     trip_other = _minimal_trip(f"i2109-ac4-other-{uuid.uuid4().hex[:6]}", heute)
     trip_a = _minimal_trip(f"i2109-ac4-a-{uuid.uuid4().hex[:6]}", heute + timedelta(days=1))
@@ -360,7 +362,7 @@ def test_ac5_backfill_exception_bleibt_fail_soft():
     original = track_resolution.backfill_stage_distances
     track_resolution.backfill_stage_distances = _boom
     try:
-        heute = date.today()
+        heute = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
         user = _uid("ac5")
         trip = _minimal_trip(f"i2109-ac5-{uuid.uuid4().hex[:6]}", heute + timedelta(days=1))
         service = TripReportSchedulerService(_settings_no_transport(), user_id=user)
@@ -387,7 +389,7 @@ def test_ac6_persist_false_schreibt_weiterhin_nichts_auf_die_platte():
 
     Bestehender Test `test_preview_does_not_mutate_trip_data.py` bleibt
     unverändert und wird von dieser Änderung nicht berührt."""
-    heute = date.today()
+    heute = utc_tag()  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
     user = _uid("ac6")
     trip = _trip_mit_n_unvermessenen_etappen(user, [heute])
 

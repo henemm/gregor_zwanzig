@@ -14,13 +14,13 @@ Quellen-Registry. Pfadregel #1409: alles ueber ``app.loader``.
 from __future__ import annotations
 
 import sys
-from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 
 from tests.helpers.briefing_imminent_fixtures import (  # noqa: F401  (Re-Export)
     TRIP_LAT, TRIP_LON, TRIP_ZONE, load_trip_obj, nur_diese_warnquelle,
     settings_email_only,
 )
+from tests.helpers.ortstag import ortstag
 
 
 class gate_spion:
@@ -187,7 +187,9 @@ def schnappschuss_speichern(user_id: str, trip_id: str, *,
             data=[]),
         aggregated=SegmentWeatherSummary(precip_sum_mm=2.0),
         fetched_at=jetzt, provider="openmeteo")
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date_type.today(), [daten])
+    # #2314 D2: das Produkt sucht den Schnappschuss am Ortstag der
+    # Trip-Koordinaten (trip_local_today, ADR-0044), nicht am Prozesstag.
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(lat, lon), [daten])
 
 
 def gelb_ins_melde_gedaechtnis(user_id: str, trip_id: str, quelle: StufenWarnquelle) -> int:

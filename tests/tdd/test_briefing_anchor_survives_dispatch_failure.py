@@ -84,6 +84,7 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+from tests.helpers.ortstag import ortstag
 
 # Pfadregel #1409: Pruefling relativ zur Testdatei aufloesen, nie ueber einen
 # festen Hauptrepo-Pfad — sonst pruefte dieser Test aus dem Worktree die
@@ -186,7 +187,7 @@ def _trip(trip_id: str, *, with_levels: bool = False,
     bestehenden "keine Segmente"-Regel (`:392-395`) verfaellt.
     """
     # #1667 S1 / #1697: wanduhr-robuste Ankunftszeit + Ortstag statt roher
-    # date.today() ohne arrival_calculated — sonst greift ab ~17:00 UTC der
+    # Wanduhr ohne arrival_calculated — sonst greift ab ~17:00 UTC der
     # Naismith-Default 08:00 und das Ziel-Segment endet am Tagesfenster-Ende
     # (19:00 Ortszeit) VOR dem Testlauf.
     heute = stage_date(LAT, LON)
@@ -306,7 +307,7 @@ def test_ac1_versandfehler_schreibt_datierten_und_undatierten_snapshot_trotzdem(
     _run_failing_briefing(uid, trip, gust=25.0)
 
     svc = _snapshots(uid)
-    dated = svc.load_dated(trip.id, date.today())
+    dated = svc.load_dated(trip.id, ortstag(LAT, LON))
     undated = svc.load(trip.id)
 
     assert dated is not None, (
@@ -459,7 +460,7 @@ def test_ac5_ad_hoc_versandfehler_laesst_anker_und_gedaechtnis_unberuehrt():
     uid = _fresh_user("ac5")
     trip = _trip(f"trip-1629-ac5-{uuid.uuid4().hex[:6]}")
 
-    _snapshots(uid).save_dated(trip.id, date.today(), [_data(1, gust_max_kmh=20.0)])
+    _snapshots(uid).save_dated(trip.id, ortstag(LAT, LON), [_data(1, gust_max_kmh=20.0)])
     vorher = {
         "gust_max_kmh:1": {"last_reported_value": 42.0, "reported_at": "x"},
         "official_alert:region:Gailtal:thunderstorm:none:none": {
@@ -470,7 +471,7 @@ def test_ac5_ad_hoc_versandfehler_laesst_anker_und_gedaechtnis_unberuehrt():
 
     _run_failing_briefing(uid, trip, gust=48.0, on_demand=True)
 
-    dated = _snapshots(uid).load_dated(trip.id, date.today())
+    dated = _snapshots(uid).load_dated(trip.id, ortstag(LAT, LON))
     assert dated is not None and dated[0].aggregated.gust_max_kmh == pytest.approx(20.0), (
         "Der Ad-hoc-Abruf darf den Δ-Anker auch im Fehlerfall nicht "
         f"ueberschreiben, gefunden: {dated and dated[0].aggregated.gust_max_kmh!r} "
@@ -512,7 +513,7 @@ class _FixedOfficialAlertSource:
 def _official_alert_today():
     from services.official_alerts import OfficialAlert
 
-    day = date.today()
+    day = ortstag(LAT, LON)
     valid_from = datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
     return OfficialAlert(
         source="tdd-1629", hazard="thunderstorm", level=2,
@@ -689,7 +690,7 @@ def test_ac7_defekter_diagnose_schreiber_verdeckt_die_versandausnahme_nicht():
     # sofort auffallen.
     _run_failing_briefing(uid, trip, gust=25.0)
 
-    assert _snapshots(uid).load_dated(trip.id, date.today()) is not None, (
+    assert _snapshots(uid).load_dated(trip.id, ortstag(LAT, LON)) is not None, (
         "Auch bei defektem Diagnose-Schreiber muss der Wetter-Snapshot des "
         "Tages entstehen — der Diagnose-Eintrag ist fail-soft, der Anker nicht "
         "(AC-7)"
@@ -751,7 +752,7 @@ def test_ac9_alarm_lauf_desselben_tages_prueft_nach_gescheitertem_briefing_regul
     _snapshots(uid).save(
         trip.id,
         [_data(1, segment=_segment(1, day_offset=-1), gust_max_kmh=25.0)],
-        date.today() - timedelta(days=1),
+        ortstag(LAT, LON) - timedelta(days=1),
     )
 
     _run_failing_briefing(uid, trip, gust=25.0)
@@ -822,7 +823,7 @@ def test_ac10_fehler_vor_dem_versand_schreibt_keinen_anker():
     with pytest.raises(RuntimeError):
         scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
-    assert _snapshots(uid).load_dated(trip.id, date.today()) is None, (
+    assert _snapshots(uid).load_dated(trip.id, ortstag(LAT, LON)) is None, (
         "Ein Fehler VOR dem Versand darf keinen datierten Anker erzeugen — "
         "sonst vergleicht der Alarm gegen eine Referenz, die nie ein Briefing "
         "war (AC-10)"
@@ -910,7 +911,7 @@ def _seed_marker(user_id: str, trip: Trip, *, reason: str | None,
     entry: dict = {
         "trip_id": trip.id,
         "report_type": report_type,
-        "date": (target_date or date.today()).isoformat(),
+        "date": (target_date or ortstag(LAT, LON)).isoformat(),
         "slot_hour": slot_hour,
         "failed_segment_ids": list(failed_segment_ids or []),
         "attempts": 0,
@@ -1184,7 +1185,7 @@ def test_vermerk_mit_vergangenem_zieltag_verfaellt_ohne_zustellversuch(monkeypat
     trip = _trip(f"trip-1662-ac4-{uuid.uuid4().hex[:6]}", stage_offsets=(-1, 0))
     save_trip(trip, user_id=uid)
     _seed_marker(uid, trip, reason="dispatch_error",
-                 target_date=date.today() - timedelta(days=1))
+                 target_date=ortstag(LAT, LON) - timedelta(days=1))
 
     zugestellt = _recording_email(monkeypatch)
     _strategy(uid, _settings_email_ok()).pre_pass(now_utc=_zeitpunkt_ortsstunde(9), due=[])
@@ -1452,7 +1453,7 @@ def test_wetterfehler_vermerk_behaelt_die_segment_schnittmengen_regel(monkeypatc
     settings = _settings_email_ok()
     scheduler = _AllSegmentsFailing(settings=settings, user_id=uid)
     segment_ids = [
-        str(s.segment_id) for s in scheduler._convert_trip_to_segments(trip, date.today())
+        str(s.segment_id) for s in scheduler._convert_trip_to_segments(trip, ortstag(LAT, LON))
     ]
     assert segment_ids, "Vorbedingung: die Tour muss heute Abschnitte haben"
     _seed_marker(uid, trip, reason=None, failed_segment_ids=segment_ids)
@@ -1495,7 +1496,7 @@ def test_versandfehler_schreibt_anker_diagnose_UND_vermerk():
 
     _run_failing_briefing(uid, trip, gust=25.0)
 
-    assert _snapshots(uid).load_dated(trip.id, date.today()) is not None, (
+    assert _snapshots(uid).load_dated(trip.id, ortstag(LAT, LON)) is not None, (
         "REGRESSION #1629: der datierte Wetter-Anker fehlt (#1662 AC-11)"
     )
     journal = _dispatch_failure_journal(uid)

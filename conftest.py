@@ -16,9 +16,36 @@ Sammlung laeuft. ``tests/conftest.py`` liegt unterhalb dieser Datei und wird
 danach importiert; Tests, die selbst eine TZ fixieren (z. B.
 ``tests/tdd/test_compare_local_time_basis.py``), sichern/stellen ihren
 eigenen Ausgangswert wieder her und bleiben davon unberuehrt.
+
+``GZ_TEST_PROCESS_TZ`` (Issue #2314, Durchgang 2): additiver Env-Knopf, mit
+dem sich "Prozesstag != UTC-Tag" (Nachtfenster 00:00-02:30 UTC) lokal
+herstellen laesst, ohne auf die echte Nacht zu warten. Ohne gesetzte
+Variable ist das Verhalten byte-identisch zum bisherigen Default
+``America/St_Johns`` -- der #1402-Waechter bleibt unangetastet. Ist die
+Variable gesetzt, aber die gewaehlte Zone traegt zum Laufzeitpunkt zufaellig
+nicht (Prozesstag == UTC-Tag, z. B. weil die Zone das Tagesfenster gerade
+nicht abdeckt), bricht der Lauf sichtbar mit Zone und UTC-Zeit in der
+Meldung ab -- Selbstschutz gegen ein still gruenes, aber wirkungsloses
+Ergebnis.
 """
 import os
 import time
+from datetime import datetime, timezone
 
-os.environ["TZ"] = "America/St_Johns"
+_GZ_TEST_PROCESS_TZ = os.environ.get("GZ_TEST_PROCESS_TZ")
+os.environ["TZ"] = _GZ_TEST_PROCESS_TZ or "America/St_Johns"
 time.tzset()
+
+if _GZ_TEST_PROCESS_TZ:
+    _prozess_heute = datetime.now().date()
+    _utc_heute = datetime.now(timezone.utc).date()
+    if _prozess_heute == _utc_heute:
+        _jetzt_utc = datetime.now(timezone.utc)
+        raise RuntimeError(
+            f"GZ_TEST_PROCESS_TZ={_GZ_TEST_PROCESS_TZ!r} traegt zum "
+            f"Laufzeitpunkt NICHT: Prozesstag ({_prozess_heute.isoformat()}) "
+            f"== UTC-Tag ({_utc_heute.isoformat()}) bei UTC-Zeit "
+            f"{_jetzt_utc.isoformat()}. Eine Zone waehlen, die JETZT eine "
+            f"Gestern-Zone ist (docs/specs/modules/"
+            f"fix_2314_nachtfenster_utc_tag.md, Messreferenz-Tabelle)."
+        )

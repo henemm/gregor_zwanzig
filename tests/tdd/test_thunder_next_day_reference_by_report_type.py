@@ -28,6 +28,7 @@ from datetime import date, timedelta
 from src.output.tokens.dto import HourlyValue
 from src.app.models import ThunderLevel
 from src.services.trip_report_scheduler import TripReportSchedulerService
+from tests.helpers.ortstag import utc_tag
 
 
 def _trend_rows_for(target: date) -> list[dict]:
@@ -76,7 +77,9 @@ class TestThunderNextDayReferenceByReportType:
         """
         svc = TripReportSchedulerService()
         target = svc._get_target_date("morning", _zonenloser_trip(), _jetzt())
-        assert target == date.today(), (
+        # #2314 D2: der Trip hat KEINE Wegpunkte -- es gilt der UTC-Rueckfall
+        # (trip_tz, Durchgang 1), nicht der Prozesstag.
+        assert target == utc_tag(), (
             "Vorbedingung: morning-Zieltag muss heute sein"
         )
 
@@ -100,7 +103,9 @@ class TestThunderNextDayReferenceByReportType:
         """
         svc = TripReportSchedulerService()
         target = svc._get_target_date("evening", _zonenloser_trip(), _jetzt())
-        assert target == date.today() + timedelta(days=1), (
+        # #2314 D2: der Trip hat KEINE Wegpunkte -- es gilt der UTC-Rueckfall
+        # (trip_tz, Durchgang 1), nicht der Prozesstag.
+        assert target == utc_tag() + timedelta(days=1), (
             "Vorbedingung: evening-Zieltag muss heute+1 sein"
         )
 

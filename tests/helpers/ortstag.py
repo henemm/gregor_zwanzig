@@ -23,3 +23,14 @@ def ortstag(lat: float, lon: float, *, now_utc: datetime | None = None) -> date:
     """
     jetzt = now_utc if now_utc is not None else datetime.now(timezone.utc)
     return jetzt.astimezone(tz_for_coords(lat, lon)).date()
+
+
+def utc_tag(*, now_utc: datetime | None = None) -> date:
+    """Der UTC-Kalendertag, gemessen an now_utc (Default: jetzt).
+
+    Fuer Fixtures, die einen Zaehler oder Cache-Eintrag datieren, den das
+    Produkt am UTC-Tag verankert (_today_utc, FixtureProvider). Keine eigene
+    Zonenarithmetik -- reiner .date()-Zugriff auf einen UTC-Zeitpunkt.
+    """
+    jetzt = now_utc if now_utc is not None else datetime.now(timezone.utc)
+    return jetzt.date()
