@@ -1,7 +1,13 @@
 # Spec: Favicon einrichten
 
 **Issue:** (ohne Issue-Nr., direkter PO-Auftrag)
-**Status:** Draft
+**Status:** Abgelöst durch `docs/specs/modules/brand_icon_silhouette.md` (Issue #2341)
+
+> **Abgelöst (2026-09-16):** AC-2 dieser Spec ("kein abgeschnittenes Icon") traf laut
+> Issue #2341 nicht zu — `apple-touch-icon.png` berührte den Rand. Die kanonische
+> Marken-Geometrie (gefüllte Silhouette + 1,35× vergrößerter Blitz) und die
+> Schutzzonen-Regel stehen jetzt in `docs/specs/modules/brand_icon_silhouette.md`.
+> Dieses Dokument bleibt als Herkunftsnachweis der Dateiliste bestehen.
 **Created:** 2026-05-27
 
 ## Was wird gemacht
