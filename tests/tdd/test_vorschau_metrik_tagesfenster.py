@@ -164,7 +164,10 @@ def test_ac1_tagesgewitter_sichtbar_trotz_none_im_aggregat():
     erwartet_plain = "⚡" + stufe_mit_herkunft.replace("hoch", "hoch@14", 1)
 
     # #2098: hinter der Auswahl steht die fest angehaengte ACC-Zusatzspalte.
-    assert html_outlook_headers(html) == ["Tag", "Gewitter", "ACC"], (
+    # #2136/ADR-0068: `col_label` ("Thdr") statt deutschem Langnamen.
+    from app.metric_catalog import get_metric
+
+    assert html_outlook_headers(html) == ["Tag", get_metric("thunder").col_label, "ACC"], (
         f"Testaufbau: unerwartete Kopfzeile {html_outlook_headers(html)!r}."
     )
     zeilen = html_outlook_body_rows(html)
@@ -176,10 +179,11 @@ def test_ac1_tagesgewitter_sichtbar_trotz_none_im_aggregat():
     )
 
     block = plain_outlook_block(plain)
-    assert block is not None and f"Gewitter {erwartet_plain}" in block, (
+    thunder_label = get_metric("thunder").col_label
+    assert block is not None and f"{thunder_label} {erwartet_plain}" in block, (
         f"Klartext-Ausblick:\n{block}\nenthaelt nicht "
-        f"'Gewitter {erwartet_plain}' -- dieselbe Ursache wie im HTML-Zweig "
-        "(AC-1)."
+        f"'{thunder_label} {erwartet_plain}' -- dieselbe Ursache wie im "
+        "HTML-Zweig (AC-1)."
     )
 
 

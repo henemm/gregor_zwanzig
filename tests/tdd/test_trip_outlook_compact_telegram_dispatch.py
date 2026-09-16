@@ -38,15 +38,24 @@ from tests.helpers.trip_outlook_channels import (  # noqa: E402
 # verwechselt (Spec, Pruefhinweis 2).
 AUSWAHL = [NIEDERSCHLAG, BOEEN]
 
+# #2136/ADR-0068: Kompakt-Mail und Telegram lesen dieselbe
+# `outlook_columns()`-Quelle wie Trip/Compare und erben deren Umstellung auf
+# `MetricDefinition.col_label` automatisch (Spec "Known Limitations" --
+# Kollateralwirkung, kein eigener Codepfad). Abgeleitet statt getippt.
+from app.metric_catalog import get_metric  # noqa: E402
+
+_NIEDERSCHLAG_LABEL = get_metric(NIEDERSCHLAG).col_label
+_BOEEN_LABEL = get_metric(BOEEN).col_label
+
 KOMPAKT_ERWARTET = [
-    "XX  Niederschlag 2.5 mm  Boeen 44 km/h",
-    "XX  Niederschlag 0.0 mm  Boeen 52 km/h",
-    "XX  Niederschlag 7.1 mm  Boeen 33 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL} 2.5 mm  {_BOEEN_LABEL} 44 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL} 0.0 mm  {_BOEEN_LABEL} 52 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL} 7.1 mm  {_BOEEN_LABEL} 33 km/h",
 ]
 TELEGRAM_ERWARTET = [
-    "XX  Niederschlag: 2.5 mm  Böen: 44 km/h",
-    "XX  Niederschlag: 0.0 mm  Böen: 52 km/h",
-    "XX  Niederschlag: 7.1 mm  Böen: 33 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL}: 2.5 mm  {_BOEEN_LABEL}: 44 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL}: 0.0 mm  {_BOEEN_LABEL}: 52 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL}: 7.1 mm  {_BOEEN_LABEL}: 33 km/h",
 ]
 
 

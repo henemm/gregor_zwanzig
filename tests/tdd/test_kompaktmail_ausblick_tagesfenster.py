@@ -50,7 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from bs4 import BeautifulSoup  # noqa: E402
 
-from app.metric_catalog import build_default_display_config  # noqa: E402
+from app.metric_catalog import build_default_display_config, get_metric  # noqa: E402
 from app.model_registry import (  # noqa: E402
     cape_ladder_thresholds_jkg, lpi_thresholds_jkg,
 )
@@ -195,12 +195,22 @@ def _kompakt_ausblick_zeile(text: str, ueberschrift: str = _AUSBLICK_UEBERSCHRIF
     return zeilen[0]
 
 
+def _gewitter_kopf() -> str:
+    """Beschriftung der Gewitter-Spalte -- abgeleitet, nicht getippt.
+
+    #2136/ADR-0068: beide Ausblick-Pfade tragen seither denselben
+    ``MetricDefinition.col_label`` ("Thdr") -- der vormalige Katalogname
+    "Gewitter" (#1848 A3) ist damit entfallen (Muster
+    ``tests/tdd/test_thunder_origin_outlook.py::_gewitter_kopf``)."""
+    return get_metric("thunder").col_label
+
+
 def _gewitterfeld(zeile: str) -> str:
     """Die Gewitterspalte einer Kompakt-Ausblick-Zeile, spaltengenau.
 
     🔴 #1848 A3: das Gewitterfeld ist nicht mehr zwangslaeufig das LETZTE der
     Zeile. Seit der Ausblick die Grundauswahl erbt, rendert der Trip ueber den
-    konfigurierbaren Zweig (``Gewitter Tleicht@16  Bewoelkung -  …``); der
+    konfigurierbaren Zweig (``Thdr Tleicht@16  Cloud -  …``); der
     feste Zweig (``… 25    Tleicht@16``) bleibt fuer Touren ohne Grundauswahl
     in Kraft. Beide Formen werden hier auf DASSELBE Feld reduziert, damit die
     Zusicherungen unveraendert am Zellentext haengen und nicht an dessen
@@ -209,11 +219,14 @@ def _gewitterfeld(zeile: str) -> str:
     Spaltengrenze ist der zwei-Zeichen-Zwischenraum (``"  ".join`` bzw. die
     Feldpolsterung des festen Zweigs); INNERHALB des Gewitterfelds stehen nur
     einfache Leerzeichen (``" - nachts hoch @2"``, ``" (hoch @15)"``).
-    """
+
+    #2136/ADR-0068: das Feld-Praefix ist seither `col_label` ("Thdr"), nicht
+    mehr der deutsche Katalog-Langname ("Gewitter")."""
+    praefix = f"{_gewitter_kopf()} "
     felder = re.split(r"\s{2,}", zeile.rstrip())
-    beschriftet = [f for f in felder if f.startswith("Gewitter ")]
+    beschriftet = [f for f in felder if f.startswith(praefix)]
     if beschriftet:
-        return beschriftet[0][len("Gewitter "):]
+        return beschriftet[0][len(praefix):]
     return felder[-1]
 
 
@@ -498,15 +511,15 @@ def _mit_herkunft_ausblick_zeile() -> dict:
     return zeile
 
 
-def _gew_zelle(html: str, kopf: str = "Gewitter") -> str:
+def _gew_zelle(html: str, kopf: "str | None" = None) -> str:
     """Der Text der Gewitter-Zelle der Ausblick-Tabelle aus fertigem
     Mail-HTML (Muster tests/tdd/test_thunder_origin_outlook.py::_gew_zelle).
 
-    #1848 A3: die Vorgabe ist jetzt der Katalogname "Gewitter" -- seit der
-    Ausblick die Grundauswahl erbt, traegt die Kopfzeile ausgeschriebene
-    deutsche Namen statt der Kuerzel des festen Zweigs ("Gew"). Die
-    Kuerzel-Fassung bleibt ueber den Parameter erreichbar (Touren ohne
-    Grundauswahl, ADR-0050 D4)."""
+    ``kopf`` (Default ``None`` -> ``_gewitter_kopf()``, `col_label` "Thdr"):
+    #2136/ADR-0068 -- seither dieselbe Beschriftung in BEIDEN Ausblick-Pfaden,
+    der vormalige Katalogname "Gewitter" (#1848 A3) ist entfallen."""
+    if kopf is None:
+        kopf = _gewitter_kopf()
     suppe = BeautifulSoup(html, "html.parser")
     tabellen = [
         t for t in suppe.find_all("table")

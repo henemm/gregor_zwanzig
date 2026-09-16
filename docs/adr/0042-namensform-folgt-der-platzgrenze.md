@@ -1,8 +1,16 @@
 # ADR-0042: Die Namensform einer Wettergröße folgt der Platzgrenze, nicht einer pauschalen Sprachpräferenz
 
-- **Status:** Akzeptiert (PO-Entscheidung 2026-08-02)
+- **Status:** Akzeptiert (PO-Entscheidung 2026-08-02) — **Klasse-2-Tabelle, Zeile
+  „3-Tages-Ausblick" abgelöst durch ADR-0068** (2026-09-15)
 - **Datum:** 2026-08-02
 - **Bezug:** Issue #1453, Issue #1401 A2b (verursachend), Issue #862/#849 (bestätigt), Issue #1420/#1404 (Prüfer-Übergang, hier beendet), Spec `docs/specs/modules/fix_1453_namensformen.md`, Epic #1372
+
+> **Teil-Ablösung (2026-09-15, ADR-0068, Issue #2136):** Die Zeile „3-Tages-Ausblick" in der
+> Klasse-2-Tabelle unten ordnete den Ausblick der Namensklasse „voll" (deutsch) zu. PO-Ansage
+> 2026-09-06: Einheitlichkeit des Vokabulars über alle Kanäle wiegt schwerer als die
+> flächenweise Feinjustierung — der Ausblick wandert in die Klasse „Kurzform" (`col_label`,
+> englisch), wie die Etappentabelle. Die übrigen Zeilen und die gesamte Systematik dieses ADR
+> (Protokoll-Token, Alarm-Kurzform, Auflösungspflicht) gelten unverändert.
 
 ## Kontext
 

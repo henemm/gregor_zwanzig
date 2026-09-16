@@ -42,8 +42,20 @@ OUTLOOK_EYEBROW = "Ausblick · nächste 3 Tage"
 PLAIN_OUTLOOK_HEADING = "Nächste Etappen"
 
 # Legende des Legacy-Zweigs (html.py:1360-1366); #9a978d ist ihr Anker.
+# 🔴 #2136/ADR-0068 (Adversary F001): dieser Block ist im Produktivcode
+# entfernt -- ``html_outlook_legend()`` liefert seither immer ``None``. Bleibt
+# als Erkennungs-Regex stehen, damit ein versehentliches Wiederauftauchen
+# (z.B. Merge-Konflikt) messbar waere.
 _LEGEND_RE = re.compile(
     r'<div style="font-family:[^"]*font-size:9px;color:#9a978d;[^"]*">(.*?)</div>',
+    re.DOTALL,
+)
+# Geteilte Fusszeilen-Spaltenlegende (html.py:build_column_legend-Aufrufer,
+# `column_legend_text`) -- seit #2136/ADR-0068 die EINZIGE Quelle, die auch
+# die Ausblick-Kuerzel aufloest (Pfad 1 UND Pfad 2, `outlook_active=True`).
+_FOOTER_COLUMN_LEGEND_RE = re.compile(
+    r'<div style="font-size:10px;color:rgba\(255,255,255,0\.5\);margin-top:8px;">'
+    r'(Spalten:.*?)</div>',
     re.DOTALL,
 )
 _UNSET = object()
@@ -321,6 +333,14 @@ def html_outlook_table(html: str) -> Optional[str]:
 def html_outlook_legend(html: str) -> Optional[str]:
     treffer = _LEGEND_RE.search(html)
     return treffer.group(0) if treffer else None
+
+
+def html_footer_column_legend(html: str) -> Optional[str]:
+    """Die eine Zeile 'Spalten: ...' aus der Mail-Fusszeile (#2136/ADR-0068) --
+    Nachfolger von ``html_outlook_legend()`` fuer alles, was frueher der
+    Altbestand-Legendenblock (Pfad 1) erklaert hat."""
+    treffer = _FOOTER_COLUMN_LEGEND_RE.search(html)
+    return treffer.group(1) if treffer else None
 
 
 def _entkerne(zellen: list[str]) -> list[str]:

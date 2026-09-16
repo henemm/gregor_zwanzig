@@ -705,16 +705,20 @@ class TestComparePlainMetricsBranch:
         ]
 
     def test_compare_plain_has_exactly_one_line_per_row(self):
+        from app.metric_catalog import get_metric
         from src.output.renderers.email.outlook import render_outlook_plain
         out = render_outlook_plain(
             self._rows(), show_acc=False, metrics=self._METRICS,
             heading="3-Tages-Ausblick", show_name=False,
         )
+        # #2136/ADR-0068: das Spaltenpraefix ist seither `col_label` ("Temp"),
+        # nicht mehr der deutsche Compare-Katalog-Langname ("Temperatur").
+        temp_kopf = get_metric("temperature").col_label
         assert out.split("\n") == [
             "",
             "3-Tages-Ausblick",
-            "Mo  Temperatur 21  Wind 25",
-            "Di  Temperatur 19  Wind 12",
+            f"Mo  {temp_kopf} 21  Wind 25",
+            f"Di  {temp_kopf} 19  Wind 12",
             "",
         ], f"Compare-Klartext-Ausblick unerwartet:\n{out!r}"
 

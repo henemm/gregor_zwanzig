@@ -191,16 +191,16 @@ sein Standardverhalten für Aufrufer ohne Auswahl nicht.
    viertes Vokabular. Aufgelöst über `compare_metric_catalog.key_for()`
    (Existenz-/Gültigkeitsprüfung) und `metric_catalog._METRICS`
    (`summary_fields[aggregation]` → Feldname auf `SegmentWeatherSummary`).
-   **Korrektur PO-Entscheidung 2026-07-27 (geht dieser Spec-Fassung vor):**
-   Der Spaltenkopf kommt aus `compare_metric_catalog.label`, NICHT aus
-   `metric_catalog.col_label`. Begründung: `col_label` liefert für
-   `temperature` min/max/avg denselben Text „Temp" — zwei gewählte
-   Temperatur-Auswertungen ergäben zwei identisch beschriftete Spalten;
-   außerdem sind die Kürzel englisch („Rain"/„Thdr"/„PType") und erfüllen
-   AC-1 („lesbare Spaltenköpfe statt der kryptischen Kürzel") damit nur
-   halb. `compare_metric_catalog.label` ist deutsch und eindeutig
-   („Temperatur max", „Niederschlag", „Böen") und stammt aus derselben
-   Katalogantwort, die die Auswahl ohnehin auflöst. Reihenfolge = Auswahlreihenfolge, kein
+   **Korrektur PO-Entscheidung 2026-07-27 (geht dieser Spec-Fassung vor) —
+   ABGELÖST DURCH ISSUE #2136 / ADR-0068 (2026-09-15):** Diese Fassung ordnete
+   dem Spaltenkopf `compare_metric_catalog.label` (deutsch) statt
+   `metric_catalog.col_label` zu, mit der Begründung, `col_label` liefere für
+   `temperature` min/max/avg identisch „Temp". Seit #1848 A1 (Min/Max-Merge)
+   und #1401 A1 (Duplikat-Suffix) löst `outlook_columns()` diese Kollision
+   generisch und quellenunabhängig auf — der technische Einwand von damals
+   ist entkräftet. Issue #2136/ADR-0068 stellt die Spaltenkopf-Quelle auf
+   `col_label` um, damit dieselbe Größe in Etappentabelle und 3-Tages-Ausblick
+   denselben Namen trägt. Reihenfolge = Auswahlreihenfolge, kein
    eigenes Bedienelement über `WeatherV2Reihenfolge` hinaus (Muster
    `_visible_hour_metrics`).
 

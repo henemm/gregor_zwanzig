@@ -1398,22 +1398,15 @@ def render_html(
         outlook_table = render_outlook_table(multi_day_trend, show_acc=True,
                                              metrics=_outlook_metrics)
 
-        # Code-Legende — NUR im Altbestand (#1720 S1, AC-9): sie beschreibt
-        # ausschliesslich die sieben festen Spalten. Bei aktiver Auswahl sind
-        # die Tabellenkoepfe bereits ausgeschriebene deutsche Katalog-Labels;
-        # eine Legende wuerde dort Kuerzel erklaeren, die gar nicht vorkommen.
-        # "N Tagestief" statt "N Nacht-Tief" (AC-8): die Spalte zeigt
-        # `summary.temp_min_c`, das Tages-Minimum IM WANDERFENSTER -- die
-        # Nachtdaten (_fetch_night_weather) fliessen hier gar nicht ein.
+        # Adversary F001 (#2136/ADR-0068): der frueher hier gepflegte
+        # Altbestand-Kuerzel-Block (Pfad 1, "N Tagestief · D Tag-Hoch °C ...")
+        # ist entfernt -- er widersprach seit der col_label-Umstellung den
+        # <th>-Koepfen direkt darueber ("Temp Minimum"/"Temp Maximum"/"Rain"/
+        # "Rain%"/"Wind"/"Gust"/"Thdr" statt N/D/R/PR/Wind/Böen/Gew). Die
+        # Spaltenlegende fuer BEIDE Pfade kommt seither ausschliesslich aus
+        # der geteilten Fusszeile (`build_column_legend(..., outlook_active=
+        # True)`, unten bei `column_legend_text`) -- eine Quelle statt zwei.
         outlook_legend = ""
-        if _outlook_metrics is None:
-            outlook_legend = (
-                f'<div style="font-family:{FONT_DATA};font-size:9px;color:#9a978d;'
-                f'margin-top:6px;line-height:1.8;">'
-                f'N Tagestief · D Tag-Hoch °C · R Regen mm · PR Regen-W. % · '
-                f'Wind/Böen km/h · Gew Gewitter-Stufe @h · ACC Prognose-Genauigkeit'
-                f'</div>'
-            )
 
         # AC-6 (#899): Context label (gesendet-Zeitstempel) bleibt erhalten
         _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -1669,7 +1662,14 @@ def render_html(
 
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
-    column_legend_text = build_column_legend(all_rows) if all_rows else ""
+    # #2136/ADR-0068 (AC-5): die Trip-Legende loest zusaetzlich zu den
+    # Stundentabellen-Kuerzeln auch die im 3-Tages-Ausblick DERSELBEN Mail
+    # sichtbaren Kuerzel auf -- `outlook_active`/`_outlook_metrics` sind
+    # bereits weiter oben fuer den Ausblick-Block selbst aufgeloest.
+    column_legend_text = (
+        build_column_legend(all_rows, _outlook_metrics, outlook_active=outlook_active)
+        if all_rows or outlook_active else ""
+    )
 
     # AC-11 (#911): RISK-Legende als eigene Section vor dem Footer (helles #fbfaf6),
     # RISK-Präfix + CSS-Dots (border-radius:50%) statt Emoji-Kreise im dunklen Footer.

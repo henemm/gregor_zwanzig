@@ -409,9 +409,13 @@ def test_ac10_acc_steht_in_kopf_und_datenzeile_an_derselben_position():
             f"An der ACC-Position (Index {kopf.index(_ACC_LABEL)}) steht kein "
             f"Farbpunkt (Auswahl {auswahl!r})."
         )
-        assert zellen[kopf.index("Niederschlag")].get_text(strip=True) == "2.5 mm", (
+        # #2136/ADR-0068: `col_label` ("Rain") statt deutschem Langnamen.
+        from app.metric_catalog import get_metric
+
+        niederschlag_label = get_metric("precipitation").col_label
+        assert zellen[kopf.index(niederschlag_label)].get_text(strip=True) == "2.5 mm", (
             "Die Niederschlags-Zelle steht nicht unter ihrer Beschriftung: "
-            f"{zellen[kopf.index('Niederschlag')].get_text(strip=True)!r} "
+            f"{zellen[kopf.index(niederschlag_label)].get_text(strip=True)!r} "
             f"(Auswahl {auswahl!r}) -- Spaltenversatz."
         )
 

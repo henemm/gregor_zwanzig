@@ -557,7 +557,49 @@ def build_units_legend(rows: list[dict]) -> str:
     return format_units_legend(pairs)
 
 
-def build_column_legend(rows: list[dict]) -> str:
+# #2136/ADR-0068 (AC-5): Pfad 1 des 3-Tages-Ausblicks (keine Auswahl) zeigt
+# fest diese sechs Groessen (plus "Tag", kein Katalogfeld) -- dieselbe Menge,
+# die outlook.py als thead (siebenspaltig, Temperatur mit Tief/Hoch-Suffix)
+# UND als Klartext-Praefixe (vierspaltig, ohne Regenwahrscheinlichkeit/Böen)
+# rendert. 🔴 Diese Liste ist NICHT die einzige -- outlook.py fuehrt die
+# Kennungen fuer die konkrete Kopf-/Praefix-Reihenfolge (inkl. der
+# Min/Max-Aufspaltung bei Temperatur) noch einmal separat; eine kuenftige
+# Vereinheitlichung koennte hier eine ((metric_id, aggregation), ...)-Tupelliste
+# fuehren, aus der outlook.py UND diese Legende ableiten, statt drei
+# unabhaengige Kennungslisten zu pflegen.
+OUTLOOK_FIXED_METRIC_IDS = (
+    "temperature", "precipitation", "rain_probability", "wind", "gust", "thunder",
+)
+
+
+def outlook_legend_pairs(outlook_metrics: Optional[list]) -> list[tuple[str, str]]:
+    """(Kuerzel, Langname)-Paare der im 3-Tages-Ausblick TATSAECHLICH
+    sichtbaren Spalten (#2136/ADR-0068, AC-5) -- Pfad 1 (``outlook_metrics is
+    None``, feste sechs Groessen) oder Pfad 2 (``outlook_columns()``),
+    dieselbe Quelle, die auch die Ausblick-Kopfzeile speist. Geteilt zwischen
+    Trip (`build_column_legend`) und Ortsvergleich
+    (`compare_html._column_legend_text`) -- keine zweite Ableitung."""
+    if outlook_metrics is None:
+        metric_ids = list(OUTLOOK_FIXED_METRIC_IDS)
+    else:
+        from output.renderers.compare_outlook_metric_ids import outlook_columns
+
+        metric_ids = [c.get("metric_id") for c in outlook_columns(outlook_metrics)
+                      if c.get("metric_id")]
+    pairs: list[tuple[str, str]] = []
+    for metric_id in metric_ids:
+        try:
+            m = get_metric(metric_id)
+        except KeyError:
+            continue
+        pairs.append((m.col_label, m.label_de))
+    return pairs
+
+
+def build_column_legend(
+    rows: list[dict], outlook_metrics: Optional[list] = None, *,
+    outlook_active: bool = False,
+) -> str:
     """Trip-Weg zur Spalten-Legende (#1472): 'Spalten: Feels = Gefuehlte
     Temperatur · Dew = Taupunkt'.
 
@@ -574,10 +616,19 @@ def build_column_legend(rows: list[dict]) -> str:
     unmoeglich; ein stiller `continue` wuerde nur einen unerreichbaren Zweig
     vortaeuschen und eine Spalte im Fehlerfall wortlos verschlucken. Der
     Zwilling `build_units_legend()` (daruber) traegt die alte Form noch als
-    Altlast in `KNOWN_VIOLATIONS`."""
+    Altlast in `KNOWN_VIOLATIONS`.
+
+    ``outlook_active``/``outlook_metrics`` (#2136/ADR-0068, AC-5): ist der
+    3-Tages-Ausblick DERSELBEN Mail sichtbar, werden seine Spaltenkoepfe
+    zusaetzlich aufgeloest -- `format_column_legend()` dedupliziert bereits
+    gleichlautende Kuerzel, ein Ueberschneiden mit der Stundentabelle ist
+    also unschaedlich. `outlook_active=False` (Default) laesst bestehende
+    Aufrufer unveraendert."""
     pairs: list[tuple[str, str]] = []
     for col_key, col_label in visible_cols(rows):
         pairs.append((col_label, get_metric_by_col_key(col_key).label_de))
+    if outlook_active:
+        pairs.extend(outlook_legend_pairs(outlook_metrics))
     return format_column_legend(pairs)
 
 

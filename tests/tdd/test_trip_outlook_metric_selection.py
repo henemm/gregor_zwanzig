@@ -37,10 +37,10 @@ for _pfad in (REPO_ROOT, REPO_ROOT / "src"):
         sys.path.insert(0, str(_pfad))
 
 from tests.helpers.trip_outlook_selection import (  # noqa: E402
-    OUTLOOK_EYEBROW, REFERENCE_LEGEND, REFERENCE_PLAIN, REFERENCE_TABLE,
-    display_config, html_outlook_body_rows, html_outlook_headers,
-    html_outlook_legend, html_outlook_table, outlook_rows, plain_outlook_block,
-    render_trip_mail,
+    OUTLOOK_EYEBROW, REFERENCE_PLAIN, REFERENCE_TABLE,
+    display_config, html_footer_column_legend, html_outlook_body_rows,
+    html_outlook_headers, html_outlook_legend, html_outlook_table,
+    outlook_rows, plain_outlook_block, render_trip_mail,
 )
 
 # Auswahl-Bausteine: reine Kennungen (#1848 A2, vorher Paare aus #1373).
@@ -55,11 +55,6 @@ CONFIDENCE = "confidence"
 # (Confidence nicht waehlbar) unberuehrt bleibt.
 _ACC = "ACC"
 
-# Die EINE dokumentierte Abweichung zwischen Aufzeichnung und Sollstand
-# (AC-8 / Implementation Details 5): `temp_lo` ist `summary.temp_min_c`, das
-# Tages-Minimum IM WANDERFENSTER -- nicht das naechtliche Tief.
-LEGENDE_ALT = "N Nacht-Tief"
-LEGENDE_NEU = "N Tagestief"
 
 
 def _dc_altpfad():
@@ -119,30 +114,30 @@ def test_ac1_bestandstrip_html_ausblick_bleibt_byte_identisch():
     )
 
 
-def test_ac1_bestandstrip_legende_bleibt_bis_auf_die_ac8_korrektur_identisch():
-    """AC-1 (Legende) + AC-8: die Legendenzeile ist byte-identisch zur
-    Aufzeichnung, bis auf GENAU EINE dokumentierte Ersetzung
-    ``N Nacht-Tief`` -> ``N Tagestief``.
+def test_ac1_bestandstrip_altbestand_legendenblock_ist_abgeloest():
+    """AC-1 (Legende) + #2136/ADR-0068 (Adversary F001): der Altbestand-
+    Legendenblock aus #1720/AC-8 (Pfad 1, eigener ``<div>`` mit hartkodierten
+    Kuerzeln ``N Tagestief · D Tag-Hoch °C · ...``) ist entfernt -- er
+    widersprach seit der ``col_label``-Umstellung (#2136) den ``<th>``-Koepfen
+    direkt darueber. Ersetzt DIESEN Test (ehemals
+    ``test_ac1_bestandstrip_legende_bleibt_bis_auf_die_ac8_korrektur_identisch``,
+    byte-identisch zur ALTEN Legendenaufzeichnung): der Block existiert nicht
+    mehr, in KEINEM Pfad -- ``html_outlook_legend()`` liefert nun immer
+    ``None``, symmetrisch zur AC-9-Erwartung bei aktiver Auswahl.
 
-    Ganzzeilen-Vergleich statt Teilstring-Suche: so faellt auch auf, wenn bei
-    der Korrektur ein anderes Zeichen mitwandert.
+    Die inhaltliche Aussage der Legende (Kuerzel -> Langname, inkl. der
+    AC-8-Korrektur "kein Nachtwert") lebt seither ausschliesslich in der
+    geteilten Fusszeilen-Spaltenlegende weiter (``build_column_legend(...,
+    outlook_active=True)``) -- bewacht von
+    ``test_ac8_footer_legende_nennt_spalte_n_nicht_mehr_als_nachtwert``.
     """
     html, _ = render_trip_mail(_dc_altpfad(), outlook_rows())
-    legende = html_outlook_legend(html)
 
-    assert legende is not None, (
-        "Der Bestandstrip zeigt keine Legende mehr. Sie darf ausschliesslich "
-        "bei AKTIVER Auswahl entfallen (AC-9), nicht im Altbestand."
-    )
-    aufgezeichnet = REFERENCE_LEGEND.read_text(encoding="utf-8")
-    assert LEGENDE_ALT in aufgezeichnet, (
-        "Vorbedingung: die Aufzeichnung muss den ALTEN Wortlaut tragen, sonst "
-        "prueft dieser Test die Korrektur gegen sich selbst."
-    )
-    erwartet = aufgezeichnet.replace(LEGENDE_ALT, LEGENDE_NEU)
-    assert legende == erwartet, (
-        f"Erlaubt ist genau EINE Aenderung: {LEGENDE_ALT!r} -> {LEGENDE_NEU!r} "
-        f"(AC-8).\nErwartet: {erwartet!r}\nErhalten: {legende!r}"
+    assert html_outlook_legend(html) is None, (
+        "Der Altbestand-Legendenblock (Pfad 1, #1720/AC-8) ist wieder da -- "
+        "er wurde unter #2136/ADR-0068 (Adversary F001) entfernt, weil er "
+        "den col_label-Tabellenkoepfen widersprach. Erhalten: "
+        f"{html_outlook_legend(html)!r}"
     )
 
 
@@ -201,17 +196,18 @@ def test_ac5_spalten_erscheinen_in_auswahlreihenfolge_im_html():
 
     Mutation 4 (Auswahl ueber ein ``set`` statt eine geordnete Liste).
     """
+    from app.metric_catalog import get_metric
+
     auswahl = [GEWITTER, TEMPERATUR, NIEDERSCHLAG]
     html, _ = render_trip_mail(display_config(outlook_metrics=auswahl),
                                outlook_rows(metrics=auswahl))
 
-    assert html_outlook_headers(html) == [
-        "Tag", "Gewitter", "Temperatur", "Niederschlag", _ACC,
-    ], (
+    # #2136/ADR-0068: Spaltenkoepfe tragen `col_label`, abgeleitet statt
+    # getippt -- dieselbe Quelle wie die Stunden-/Etappentabelle.
+    erwartet = ["Tag"] + [get_metric(m).col_label for m in auswahl] + [_ACC]
+    assert html_outlook_headers(html) == erwartet, (
         f"Kopfzeile {html_outlook_headers(html)!r} folgt nicht der "
-        "Auswahlreihenfolge. Katalog-Reihenfolge waere ['Niederschlag', "
-        "'Temperatur', 'Gewitter'], alphabetisch ['Gewitter', 'Niederschlag', "
-        "'Temperatur'] -- beide waeren falsch (AC-5)."
+        f"Auswahlreihenfolge. Erwartet {erwartet!r} (AC-5)."
     )
 
 
@@ -249,6 +245,8 @@ def test_ac5_klartext_zeigt_dieselben_groessen_in_derselben_reihenfolge():
     Mutation 2: wird ``metrics=`` nur an ``render_outlook_table`` uebergeben,
     bleibt der Klartext bei den festen Tokens.
     """
+    from app.metric_catalog import get_metric
+
     auswahl = [GEWITTER, TEMPERATUR, NIEDERSCHLAG]
     _, plain = render_trip_mail(display_config(outlook_metrics=auswahl),
                                 outlook_rows(metrics=auswahl))
@@ -256,10 +254,12 @@ def test_ac5_klartext_zeigt_dieselben_groessen_in_derselben_reihenfolge():
 
     assert block is not None, "Kein Klartext-Ausblick trotz aktiver Auswahl."
     zeile = block.splitlines()[1]
-    positionen = [zeile.find(l) for l in ("Gewitter", "Temperatur", "Niederschlag")]
+    # #2136/ADR-0068: das Praefix ist seither `col_label`, nicht mehr der
+    # deutsche Katalog-Langname.
+    positionen = [zeile.find(get_metric(m).col_label) for m in auswahl]
     assert all(p >= 0 for p in positionen), (
-        f"Klartext nennt die gewaehlten Groessen nicht mit ihren deutschen "
-        f"Katalog-Bezeichnungen. Zeile: {zeile!r} (AC-3/AC-5)"
+        f"Klartext nennt die gewaehlten Groessen nicht mit ihrer "
+        f"Tabellenueberschrift (`col_label`). Zeile: {zeile!r} (AC-3/AC-5)"
     )
     assert positionen == sorted(positionen), (
         f"Klartext-Reihenfolge weicht von der Auswahl ab: {zeile!r} (AC-5)"
@@ -268,22 +268,38 @@ def test_ac5_klartext_zeigt_dieselben_groessen_in_derselben_reihenfolge():
 
 # ══════════════════════════ AC-8 / AC-9 — Legende ════════════════════════════
 
-def test_ac8_legende_nennt_spalte_n_nicht_mehr_als_nachtwert():
-    """AC-8: Given ein Trip ohne Auswahl / When der HTML-Teil betrachtet wird /
-    Then bezeichnet die Legende die Spalte "N" als Tageswert, nicht als
-    "Nacht-Tief" -- die Zahl ist das Tages-Minimum im Wanderfenster.
+def test_ac8_footer_legende_nennt_spalte_n_nicht_mehr_als_nachtwert():
+    """AC-8 (PO-Entscheid 2026-08-14, umgezogen unter #2136/ADR-0068,
+    Adversary F001): Given ein Trip ohne Auswahl / When der HTML-Teil
+    betrachtet wird / Then behauptet KEINE Spaltenlegende einen Nachtwert
+    fuer die Temperatur-Minimumspalte -- die Zahl ist das Tages-Minimum im
+    Wanderfenster, nicht das naechtliche Tief.
+
+    Wirkort-Umzug: der frueher hier gepruefte Altbestand-Legendenblock
+    (Pfad 1, eigener ``<div>``) ist entfernt (siehe
+    ``test_ac1_bestandstrip_altbestand_legendenblock_ist_abgeloest``). Die
+    Zusicherung wirkt seither in der geteilten Fusszeilen-Spaltenlegende
+    (``build_column_legend(..., outlook_active=True)``) -- genau DORT prueft
+    dieser Test jetzt, statt eine Stelle zu bewachen, die nichts mehr
+    rendert.
     """
     html, _ = render_trip_mail(_dc_altpfad(), outlook_rows())
-    legende = html_outlook_legend(html)
+    footer_legende = html_footer_column_legend(html)
 
-    assert legende is not None, "Legende fehlt im Altbestand (AC-1/AC-8)."
-    assert "Nacht" not in legende, (
-        "Die Legende behauptet weiterhin einen Nachtwert fuer 'N'. Gemessen "
-        "ist das Tages-Minimum im Wanderfenster (Default 08:00 bis letzte "
-        f"Wegpunkt-Ankunft); Nachtdaten fliessen hier nicht ein: {legende!r}"
+    assert footer_legende is not None, (
+        "Die Fusszeilen-Spaltenlegende fehlt im Altbestand -- der Ausblick "
+        "ist aktiv (AC-1), sie muesste seine Kuerzel mit aufloesen (AC-5)."
     )
-    assert LEGENDE_NEU in legende, (
-        f"Erwartet {LEGENDE_NEU!r} in der Legende, erhalten: {legende!r}"
+    assert "Nacht" not in footer_legende, (
+        "Die Fusszeilen-Legende behauptet einen Nachtwert fuer die "
+        "Temperatur-Minimumspalte. Gemessen ist das Tages-Minimum im "
+        "Wanderfenster (Default 08:00 bis letzte Wegpunkt-Ankunft); "
+        f"Nachtdaten fliessen hier nicht ein: {footer_legende!r}"
+    )
+    assert "Temp = Temperatur" in footer_legende, (
+        f"Erwartet 'Temp = Temperatur' in der Fusszeilen-Legende (Kuerzel "
+        f"{'Temp'!r} ist der tatsaechlich gerenderte Tabellenkopf, #2136), "
+        f"erhalten: {footer_legende!r}"
     )
 
 
@@ -295,11 +311,15 @@ def test_ac9_aktive_auswahl_zeigt_keine_abkuerzungs_legende_mehr():
     Mutation 7: wird die Legende unabhaengig von der Auswahl gebaut, erklaert
     sie Spalten, die gar nicht gezeigt werden (z.B. "R Regen mm").
     """
+    from app.metric_catalog import get_metric
+
     auswahl = [BOEEN, NIEDERSCHLAG]
     html, _ = render_trip_mail(display_config(outlook_metrics=auswahl),
                                outlook_rows(metrics=auswahl))
 
-    assert html_outlook_headers(html) == ["Tag", "Böen", "Niederschlag", _ACC], (
+    # #2136/ADR-0068: `col_label`-Spaltenkoepfe statt deutscher Langnamen.
+    erwartet = ["Tag"] + [get_metric(m).col_label for m in auswahl] + [_ACC]
+    assert html_outlook_headers(html) == erwartet, (
         f"Vorbedingung von AC-9: {html_outlook_headers(html)!r}"
     )
     assert html_outlook_legend(html) is None, (
@@ -431,12 +451,16 @@ def test_ac14_nicht_grundausgewaehlte_groesse_erscheint_in_keinem_teil():
     Mutation 8 (die wichtigste): ein Schnitt nur im Frontend zeigt dem Nutzer
     das richtige Verhalten, waehrend die Mail es nicht einhaelt.
     """
+    from app.metric_catalog import get_metric
+
     dc = display_config(enabled_ids={"precipitation"},
                         outlook_metrics=[NIEDERSCHLAG, SCHNEEHOEHE])
     # Zeilen wie ein korrekt schneidender Scheduler sie baut (s. Dateikopf).
     html, plain = render_trip_mail(dc, outlook_rows(metrics=[NIEDERSCHLAG]))
 
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag", _ACC], (
+    # #2136/ADR-0068: `col_label`-Spaltenkopf statt deutschem Langnamen.
+    erwartet = ["Tag", get_metric(NIEDERSCHLAG).col_label, _ACC]
+    assert html_outlook_headers(html) == erwartet, (
         f"Kopfzeile {html_outlook_headers(html)!r}: eine Groesse ausserhalb "
         "der Grundauswahl erscheint. Die Vorschau darf nur abwaehlen, nie "
         "hinzufuegen (AC-14)."
@@ -477,18 +501,20 @@ def test_ac16_leere_grundauswahl_schneidet_die_vorschau_nicht():
     Mutation 10, der naheliegendste Fehler beim Nachbilden von
     ``_clip_to_global_maximum()`` (Regel D4, models.py:913-914).
     """
+    from app.metric_catalog import get_metric
+
     auswahl = [NIEDERSCHLAG, BOEEN, SCHNEEHOEHE]
     dc = display_config(leere_grundauswahl=True, outlook_metrics=auswahl)
     html, plain = render_trip_mail(dc, outlook_rows(metrics=auswahl))
 
-    assert html_outlook_headers(html) == [
-        "Tag", "Niederschlag", "Böen", "Schneehöhe", _ACC,
-    ], (
+    # #2136/ADR-0068: `col_label`-Spaltenkoepfe statt deutscher Langnamen.
+    erwartet = ["Tag"] + [get_metric(m).col_label for m in auswahl] + [_ACC]
+    assert html_outlook_headers(html) == erwartet, (
         f"Kopfzeile {html_outlook_headers(html)!r}: bei leerer Grundauswahl "
         "wurde geschnitten. D4: kein Maximum definiert -> nicht schneiden, "
         "sonst Totalausfall fuer jeden Altbestand (AC-16)."
     )
     block = plain_outlook_block(plain)
-    assert block is not None and "Schneehöhe" in block, (
+    assert block is not None and get_metric(SCHNEEHOEHE).col_label in block, (
         f"Auch der Klartext muss alle drei Groessen zeigen:\n{block}\n(AC-16)"
     )

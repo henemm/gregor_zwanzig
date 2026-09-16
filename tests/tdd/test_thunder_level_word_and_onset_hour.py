@@ -65,7 +65,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from bs4 import BeautifulSoup  # noqa: E402
 
 from app.day_window import resolve_configured_window  # noqa: E402
-from app.metric_catalog import build_default_display_config  # noqa: E402
+from app.metric_catalog import build_default_display_config, get_metric  # noqa: E402
 from app.model_registry import (  # noqa: E402
     cape_ladder_thresholds_jkg, lpi_thresholds_jkg,
 )
@@ -457,7 +457,10 @@ def test_ac4_kompakt_ausblick_zeigt_dieselbe_onset_stunde():
     # #1848 A3: Spaltengrenze statt Zeilenende (s. `_gewitterfeld`). Die
     # Kompakt-Mail ist ASCII-gefaltet, das "⚡" ist dort ein "T" -- deshalb
     # hier die Feldabgrenzung von Hand am selben Trennmuster.
-    assert ("T" + zeile.split("Gewitter T", 1)[-1]).split("  ")[0].rstrip() == (
+    # #2136/ADR-0068: das Feld-Praefix ist seither `col_label` ("Thdr"),
+    # nicht mehr der deutsche Katalog-Langname ("Gewitter").
+    gewitter_kopf = get_metric("thunder").col_label
+    assert ("T" + zeile.split(f"{gewitter_kopf} T", 1)[-1]).split("  ")[0].rstrip() == (
         "Tmittel@14 (hoch @18)"
     ), (
         f"Nur die Onset-Stunde kommt hinzu — der Peak-Zusatz bleibt "

@@ -390,10 +390,13 @@ def render_comparison_text(
     # Spalten), damit HTML und Klartext derselben Mail nie auseinanderlaufen.
     # Bedingung identisch zum HTML-Pfad (`_render_legend`): nur bei
     # eingeschalteter Stundentabelle.
-    if hourly_enabled:
+    # #2136/ADR-0068 (AC-5): dieselbe Bedingungserweiterung wie im HTML-Pfad
+    # (`_render_legend`) -- die Spalten-Legende bleibt sichtbar, sobald der
+    # Ausblick sichtbar ist, auch bei abgeschalteter Stundentabelle.
+    if hourly_enabled or outlook_enabled:
         for _legend in (
             _units_legend_text(visible_hour_metrics),
-            _column_legend_text(visible_hour_metrics),
+            _column_legend_text(visible_hour_metrics, outlook_metrics, outlook_enabled),
         ):
             if _legend:
                 lines.append(_legend)
