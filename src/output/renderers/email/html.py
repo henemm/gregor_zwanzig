@@ -1359,12 +1359,9 @@ def render_html(
             if key in thunder_forecast:
                 fc = thunder_forecast[key]
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
-                # Issue #1475 Nachbesserung (Punkt 4b): identischer Hagel-Zusatz
-                # wie in der Klartext-Fassung (geteilte Quelle format_hail_note).
-                from output.metric_format import format_hail_note
-                _note = format_hail_note(fc.get("hail"))
-                _suffix = f" · {_note}" if _note else ""
-                items.append(f"<li>{fc['date']}: {icon}{fc['text']}{_suffix}</li>")
+                # Issue #2205: Hagel-Zusatz steht IN `fc['text']` (Zeitplaner),
+                # wortgleich zur Klartext-Fassung -- kein Suffix mehr hier.
+                items.append(f"<li>{fc['date']}: {icon}{fc['text']}</li>")
         if items:
             thunder_html = f"""
             <div class="section">

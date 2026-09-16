@@ -31,7 +31,24 @@ __all__ = [
     "thunder_low_statement",
     "thunder_low_statement_sentence",
     "THUNDER_LABEL_DE",
+    "format_hail_note",
 ]
+
+
+def format_hail_note(hail_flag: Optional[bool]) -> Optional[str]:
+    """Der EINE gemeinsame Anzeige-Textbaustein fuer das Hagel-Kennzeichen
+    (Trip-/Compare-Mail-Renderer UND ``GEWITTER``-Kommando, #1481 DRY-Pflicht).
+
+    Rein deskriptiv, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
+    "unbekannt"/"nein" gibt es KEINEN Zusatztext (kein Rauschen).
+
+    Issue #2205: aus ``output/metric_format.py`` hierher gezogen (dort
+    re-exportiert) -- der Nacht-Halbsatz (``app/day_window.py``) liegt auf
+    dem Zeitplaner-Pfad und darf keine Darstellungsschicht importieren.
+    """
+    if hail_flag is True:
+        return "Hagel: ja"
+    return None
 
 # Kanonische Ordnungsquelle fuer ThunderLevel (str-Enum ohne eigene Ordnung,
 # app/models.py). ThunderLevel(str, Enum) hasht/vergleicht identisch zu

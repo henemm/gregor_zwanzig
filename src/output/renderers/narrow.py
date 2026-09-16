@@ -192,6 +192,28 @@ def _day_window_thunder_severity(
     return worst
 
 
+def _day_window_hail_note(
+    segments: list[SegmentWeatherData],
+    night_weather: Optional["NormalizedTimeseries"],
+    tz: ZoneInfo,
+    *,
+    start_hour: int = DAY_WINDOW_START_HOUR,
+    end_hour: int = DAY_WINDOW_END_HOUR,
+) -> Optional[str]:
+    """Hagelaussage ueber DIESELBE Tagesfenster-Punktmenge wie
+    ``_day_window_thunder_severity`` (Issue #2205): Fusszeile und
+    Kurzuebersicht derselben Bubble lesen dieses eine Ergebnis.
+    """
+    from output.metric_format import format_hail_note, hail_priority
+    from output.renderers.day_window import build_day_window_points
+
+    return format_hail_note(hail_priority([
+        getattr(dp, "hail_flag", None) for dp in build_day_window_points(
+            segments, night_weather, tz, start_hour=start_hour, end_hour=end_hour,
+        )
+    ]))
+
+
 def _tg_day_footer(
     segments: list[SegmentWeatherData],
     enabled_metric_ids: set[str] | list[str],
@@ -216,8 +238,6 @@ def _tg_day_footer(
     bubbles``, dem echten Bubble-Einstiegspunkt mit ``night_weather``) bereits
     ermittelte Ziel-Datenluecke — KEINE eigene Berechnung mehr hier.
     """
-    from output.renderers.day_window import build_day_window_points
-
     enabled = set(enabled_metric_ids)
     max_thunder_sev = 0
     min_vis: Optional[int] = None
@@ -267,13 +287,10 @@ def _tg_day_footer(
         # Gewitterstufe -- derselbe geteilte Textbaustein wie Mail und
         # `GEWITTER`-Kommando (#1481 DRY, call-time Import). Bei
         # "unbekannt"/"nein" bleibt die Zeile zeichengleich (Spec AC-6).
-        from output.metric_format import format_hail_note, hail_priority
-        _hail_note = format_hail_note(hail_priority([
-            getattr(dp, "hail_flag", None) for dp in build_day_window_points(
-                segments, night_weather, tz,
-                start_hour=day_window_start_hour, end_hour=day_window_end_hour,
-            )
-        ]))
+        _hail_note = _day_window_hail_note(
+            segments, night_weather, tz,
+            start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+        )
         if _hail_note:
             parts.append(_hail_note)
 
@@ -426,6 +443,7 @@ def _overview_line(
     hiking_felt_extrema: Optional[tuple[float, float, str]] = None,
     has_gap: bool = False,
     day_thunder_sev: Optional[int] = None,
+    day_thunder_hail_note: Optional[str] = None,
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -524,6 +542,10 @@ def _overview_line(
                     value = THUNDER_LABEL_DE[
                         _SEV_TO_THUNDER_LEVEL[day_thunder_sev]
                     ]
+                    # Issue #2205 (AC-15/16): Hagel aus derselben
+                    # Tagesfenster-Quelle wie die Fusszeile.
+                    if day_thunder_hail_note:
+                        value = f"{value} · {day_thunder_hail_note}"
             else:
                 worst_row = max(
                     hits, key=lambda h: _thunder_severity(h.get(key))
@@ -743,6 +765,10 @@ def render_telegram_bubbles(
         [sd for sd in segments if not sd.has_error], night_weather, tz,
         start_hour=day_window_start_hour, end_hour=day_window_end_hour,
     )
+    _day_thunder_hail_note = _day_window_hail_note(
+        [sd for sd in segments if not sd.has_error], night_weather, tz,
+        start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+    )
     overview_lines: list[str] = ["Kurzübersicht"]
     # Issue #1484: die Nacht-Untergrenze der T-Zeile folgt der EIGENEN
     # Groesse "temperature_night". Ohne aktive "temperature" bekommt sie
@@ -790,6 +816,7 @@ def render_telegram_bubbles(
             hiking_felt_extrema=_hiking_felt,
             has_gap=has_gap,
             day_thunder_sev=_day_thunder_sev,
+            day_thunder_hail_note=_day_thunder_hail_note,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus

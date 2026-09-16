@@ -122,6 +122,8 @@ Zone:
   eigenen Docstring festgehalten, eine reine Auswertung ohne Kopplung an
   `radar_service.py`.
 
+> Nachtrag 2026-09-15 (#2205, ADR-0069): Konvektiver Frame ohne Hagel (Wettercode 95) trägt jetzt das Label „Gewitter" (`INTENSITY_CONVECTIVE_NO_HAIL`); „Starker Hagel/Gewitter" nur noch bei Wettercode 96/99 (`RadarFrame.hail`).
+
 **E3 — Zwei neue Renderer, kein Antasten der bestehenden Suffix-Helfer.**
 `_onset_extent_suffix()`/`_sms_onset_extent_suffix()` (`render.py`, S2a/S2b,
 live) bleiben unverändert — sie hängen eine Ausdehnungs-**Angabe** an einen

@@ -89,6 +89,62 @@ def _thunder_forecast(hail) -> dict:
     }
 
 
+def _thunder_forecast_vom_zeitplaner(hail) -> dict:
+    """Issue #2205: der Hagel-Zusatz der Vorschau entsteht seit #2205 im
+    Zeitplaner (in ``fc['text']``), nicht mehr als Renderer-Suffix aus
+    ``fc['hail']`` -- der Wirkort wandert, die Mail-Zusicherung bleibt. Echter
+    ``_build_thunder_forecast_from_trend_or_fetch`` (Rueckfallweg), einzig der
+    Netzabruf liefert ein fertiges Folgetags-Segment (Gewitter HIGH 14 Uhr
+    Ortszeit, ``hail_flag=hail``)."""
+    from datetime import date
+
+    from services.trip_report_scheduler import TripReportSchedulerService
+    from services.weather_metrics import WeatherMetricsService
+
+    seg = TripSegment(
+        segment_id=2,
+        start_point=GPXPoint(lat=42.0, lon=9.0, elevation_m=400.0),
+        end_point=GPXPoint(lat=42.1, lon=9.1, elevation_m=900.0),
+        start_time=datetime(2026, 8, 6, 6, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 8, 6, 14, 0, tzinfo=timezone.utc),
+        duration_hours=8.0, distance_km=12.0, ascent_m=500.0, descent_m=0.0,
+    )
+    ts = NormalizedTimeseries(
+        meta=ForecastMeta(provider=Provider.OPENMETEO, model="test", grid_res_km=1.0),
+        data=[ForecastDataPoint(
+            ts=datetime(2026, 8, 6, 12, 0, tzinfo=timezone.utc), t2m_c=15.0,
+            thunder_level=ThunderLevel.HIGH, hail_flag=hail,
+        )],
+    )
+    etappe = SegmentWeatherData(
+        segment=seg, timeseries=ts,
+        aggregated=WeatherMetricsService().compute_basis_metrics(ts, tz=None),
+        fetched_at=datetime.now(timezone.utc), provider="openmeteo",
+    )
+
+    class _Trip:
+        report_config = None
+
+        def get_future_stages(self, target_date):
+            return []
+
+    class _ZeitplanerOhneNetz(TripReportSchedulerService):
+        def _collect_future_stage_weather(self, trip, target_date, now_utc,
+                                          wanted_dates=None):
+            return [etappe]
+
+    forecast = _ZeitplanerOhneNetz()._build_thunder_forecast_from_trend_or_fetch(
+        _Trip(), date(2026, 8, 5),
+        now_utc=datetime(2026, 8, 5, 4, 0, tzinfo=timezone.utc), tz=_TZ,
+        multi_day_trend=None,
+    )
+    assert forecast and "+1" in forecast, (
+        f"Vorbedingung: '+1'-Eintrag aus dem Zeitplaner erwartet: {forecast!r}")
+    assert forecast["+1"]["hail"] is hail, (
+        f"Vorbedingung: fc['hail'] muss {hail!r} tragen: {forecast!r}")
+    return forecast
+
+
 # =============================================================================
 # AC-5(a) — E-Mail-Vorschau: Klartext UND HTML zeigen denselben Hagel-Hinweis
 # =============================================================================
@@ -102,14 +158,14 @@ def test_ac5a_email_plain_gewitter_vorschau_zeigt_hagel_hinweis():
         trip_name="Vorschau-Test", report_type="evening", dc=dc, night_rows=[],
         night_weather=None, changes=None, stage_name="Etappe1", stage_stats=None,
         multi_day_trend=None, compact_summary=None, tz=_TZ, friendly_keys=set(),
-        thunder_forecast=_thunder_forecast(True),
+        thunder_forecast=_thunder_forecast_vom_zeitplaner(True),
     )
     plain_unbekannt = render_plain(
         segments=[_segment_heute_ohne_gewitter()], seg_tables=[[]],
         trip_name="Vorschau-Test", report_type="evening", dc=dc, night_rows=[],
         night_weather=None, changes=None, stage_name="Etappe1", stage_stats=None,
         multi_day_trend=None, compact_summary=None, tz=_TZ, friendly_keys=set(),
-        thunder_forecast=_thunder_forecast(None),
+        thunder_forecast=_thunder_forecast_vom_zeitplaner(None),
     )
     assert _HAGEL_HINWEIS in plain_true, (
         f"Klartext-Gewitter-Vorschau mit thunder_forecast['+1']['hail']=True "
@@ -130,14 +186,14 @@ def test_ac5a_email_html_gewitter_vorschau_zeigt_hagel_hinweis():
         trip_name="Vorschau-Test", report_type="evening", dc=dc, night_rows=[],
         night_weather=None, changes=None, stage_name="Etappe1", stage_stats=None,
         multi_day_trend=None, compact_summary=None, tz=_TZ, friendly_keys=set(),
-        thunder_forecast=_thunder_forecast(True),
+        thunder_forecast=_thunder_forecast_vom_zeitplaner(True),
     )
     html_unbekannt = render_html(
         segments=[_segment_heute_ohne_gewitter()], seg_tables=[[]],
         trip_name="Vorschau-Test", report_type="evening", dc=dc, night_rows=[],
         night_weather=None, changes=None, stage_name="Etappe1", stage_stats=None,
         multi_day_trend=None, compact_summary=None, tz=_TZ, friendly_keys=set(),
-        thunder_forecast=_thunder_forecast(None),
+        thunder_forecast=_thunder_forecast_vom_zeitplaner(None),
     )
     assert _HAGEL_HINWEIS in html_true, (
         f"HTML-Gewitter-Vorschau mit thunder_forecast['+1']['hail']=True muss "
