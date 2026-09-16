@@ -27,6 +27,7 @@ from pathlib import Path
 STATIC_DIR = Path(__file__).resolve().parents[1] / "frontend" / "static"
 MASKABLE_ICON = STATIC_DIR / "icon-maskable-512.png"
 RANDFUELLENDES_ICON = STATIC_DIR / "favicon-512.png"
+APPLE_TOUCH_ICON = STATIC_DIR / "apple-touch-icon.png"
 
 # Hintergrund laut Spec (`background_color`/`theme_color` im Manifest).
 BACKGROUND_RGB = (246, 244, 238)
@@ -95,6 +96,27 @@ class TestAC2MaskableIconSchutzzone:
             f"{len(fremde)} Motivpixel liegen im Schnittrand (ausserhalb der "
             f"mittleren {int(SAFE_FRACTION * 100)} %), z.B. {fremde[:5]}. "
             "Android wuerde sie wegschneiden (AC-2)."
+        )
+
+
+class TestAC5AppleTouchIconSchutzzone:
+    """AC-5 (Issue #2341, docs/specs/modules/brand_icon_silhouette.md):
+    das Bergmotiv im iOS-Homescreen-Icon liegt vollstaendig in der
+    Schutzzone. Bisher (#2341-Ticket) beruehrt es den Rand -- dieselbe
+    Randpruefung wie bei AC-2 (Android maskable), hier auf
+    `apple-touch-icon.png` angewandt, wo es bislang KEINE Schutzzone gibt.
+    """
+
+    def test_apple_touch_icon_existiert(self):
+        assert APPLE_TOUCH_ICON.is_file(), f"{APPLE_TOUCH_ICON} fehlt"
+
+    def test_rand_traegt_ausschliesslich_die_hintergrundfarbe(self):
+        assert APPLE_TOUCH_ICON.is_file(), f"{APPLE_TOUCH_ICON} fehlt"
+        fremde = border_pixels_other_than_background(APPLE_TOUCH_ICON)
+        assert fremde == [], (
+            f"{len(fremde)} Motivpixel liegen im Schnittrand (ausserhalb der "
+            f"mittleren {int(SAFE_FRACTION * 100)} %), z.B. {fremde[:5]}. "
+            "Genau das ist die im Ticket #2341 gemeldete Rand-Beruehrung (AC-5)."
         )
 
 

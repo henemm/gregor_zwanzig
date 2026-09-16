@@ -44,7 +44,7 @@ Beide folgen aus dem PO-Leitprinzip „hoher Kontrast = Lesbarkeit" (CLAUDE.md).
 | Name                  | Beschreibung                                                                       |
 |-----------------------|------------------------------------------------------------------------------------|
 | `BrandIcon`           | Berg+Blitz-Glyph. Drei Sizes (sm/md/lg) oder px-Override.                          |
-| `BrandIconSquare`     | Quadratische Variante mit Nebenkante + Horizont (Favicon, Avatar, App-Icon).      |
+| `BrandIconSquare`     | Quadratische Variante, gefüllte Silhouette (Favicon, Avatar, App-Icon; #2341).     |
 | `BrandWordmark`       | Lockup: BrandIcon + Mono-Typo. Prop `icon="left"|"only"|"none"`.                   |
 | `BrandUserBadge`      | Avatar + Name + Sekundärzeile (Sidebar-Footer).                                    |
 | `BrandSidebarHeader`  | Standard-Spacing-Block für Wordmark im Sidebar-Header.                             |

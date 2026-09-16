@@ -44,8 +44,9 @@
  *  ───────────────────────────────────────────────────────────────────── */
 
 /* ─────────────────── BrandIcon ─────────────────── */
-/* Kanonisches Bildmark. Bergkamm in --g-ink, Blitz in --g-accent.
- * Sharp miter-Joins, scharfe Spitzen — alpine Gewitter-DNA.
+/* Kanonisches Bildmark. Gefüllte Bergsilhouette in --g-ink (#1a1a18),
+ * Blitz in --g-accent, 1,35× vergrößert um seinen Schwerpunkt (45.5, 20).
+ * Scharfe Spitzen — alpine Gewitter-DNA.
  * Drei Größen abgestimmt auf BrandWordmark-Sizes; px-Override möglich. */
 function BrandIcon({
   size = "md",
@@ -55,28 +56,24 @@ function BrandIcon({
 }) {
   const SIZES = { sm: 18, md: 24, lg: 32 };
   const px = typeof size === "number" ? size : (SIZES[size] ?? SIZES.md);
-  // Stroke-Width proportional zur Render-Größe, mit Floor für Hairline-Schutz.
-  const sw = Math.max(1.6, px / 12);
   return (
     <svg
       width={px} height={px} viewBox="0 0 64 64"
       style={{ display: "inline-block", flexShrink: 0, verticalAlign: "middle", ...style }}
       aria-label="Gregor Zwanzig"
     >
-      {/* Blitz — Akzent-Orange, scharfe Spitzen */}
-      <path d="M48 11 L41 23 L45 23 L43 29 L50 17 L46 17 Z"
-            fill={accent} strokeLinejoin="miter" strokeMiterlimit="8"/>
-      {/* Hauptkamm — vier Spitzen, miter-Joins */}
-      <path d="M3 54 L18 22 L29 38 L38 26 L52 50 L61 54 Z"
-            stroke={color} strokeWidth={sw}
-            strokeLinejoin="miter" strokeLinecap="square" strokeMiterlimit="8"
-            fill="none"/>
+      {/* Hauptkamm — gefüllte Silhouette, vier Spitzen */}
+      <path d="M3 54 L18 22 L29 38 L38 26 L52 50 L61 54 Z" fill="#1a1a18"/>
+      {/* Blitz — Akzent-Orange, über der Silhouette, 1,35× */}
+      <g transform="translate(45.5,20) scale(1.35) translate(-45.5,-20)">
+        <path d="M48 11 L41 23 L45 23 L43 29 L50 17 L46 17 Z" fill={accent}/>
+      </g>
     </svg>
   );
 }
 
-/* Square-Variante mit Nebenkante + Horizont — für Favicon, Avatar, App-Icon.
- * Mehr Detail als der Lockup-Icon, weil hier der Glyph allein steht und Raum hat. */
+/* Square-Variante — für Favicon, Avatar, App-Icon. Dieselbe gefüllte
+ * Silhouette wie BrandIcon, nur auf einer Hintergrundfläche. */
 function BrandIconSquare({
   size = 96,
   color = "var(--g-ink)",
@@ -85,9 +82,6 @@ function BrandIconSquare({
   bleed = false,
   style,
 }) {
-  const showSubLine = size >= 32;
-  const showHorizon = size >= 28;
-  const sw = Math.max(1.4, size / 36);
   return (
     <div style={{
       width: size, height: size, background: bg, color,
@@ -96,22 +90,10 @@ function BrandIconSquare({
       display: "inline-block", flexShrink: 0, ...style,
     }}>
       <svg viewBox="0 0 64 64" width={size} height={size} preserveAspectRatio="xMidYMid meet">
-        <path d="M48 11 L41 23 L45 23 L43 29 L50 17 L46 17 Z"
-              fill={accent} strokeLinejoin="miter" strokeMiterlimit="8"/>
-        <path d="M3 54 L18 22 L29 38 L38 26 L52 50 L61 54 Z"
-              stroke={color} strokeWidth={sw}
-              strokeLinejoin="miter" strokeLinecap="square" strokeMiterlimit="8"
-              fill="none"/>
-        {showSubLine && (
-          <path d="M3 54 L18 22 L25 32"
-                stroke={color} strokeWidth={sw}
-                strokeLinejoin="miter" strokeLinecap="square" strokeMiterlimit="8"
-                opacity="0.45" fill="none"/>
-        )}
-        {showHorizon && (
-          <line x1="3" y1="58" x2="61" y2="58"
-                stroke={color} strokeWidth="1" opacity="0.3"/>
-        )}
+        <path d="M3 54 L18 22 L29 38 L38 26 L52 50 L61 54 Z" fill="#1a1a18"/>
+        <g transform="translate(45.5,20) scale(1.35) translate(-45.5,-20)">
+          <path d="M48 11 L41 23 L45 23 L43 29 L50 17 L46 17 Z" fill={accent}/>
+        </g>
       </svg>
     </div>
   );
