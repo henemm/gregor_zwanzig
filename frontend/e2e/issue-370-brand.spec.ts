@@ -195,8 +195,15 @@ test.describe('Issue #370 — Brand-Bibliothek lib/brand/', () => {
 		 * THEN:  Weder ein <path> mit D_NEBENKANTE noch ein <line>-Element mit
 		 *        y1="58" existiert -- beide Zusatzelemente der alten Kontur-Optik
 		 *        sind ersatzlos entfernt.
+		 *
+		 * BrandIconSquare wird laut docs/context/fix-2341-pwa-logo.md NUR im
+		 * `_design-system`-Showcase eingebunden (nicht live im Produkt, auch
+		 * nicht auf `/_design` -- dort gibt es nur BrandWordmark/BrandIcon).
+		 * Korrektur nach CI-Fehlschlag: vorher stand hier faelschlich
+		 * `/_design` (Copy-Paste aus den AC-1-Tests), obwohl der Kommentar
+		 * direkt darunter schon immer die richtige Route nannte.
 		 */
-		await page.goto('/_design');
+		await page.goto('/_design-system');
 
 		// BrandIconSquare traegt keinen eigenen data-testid; die Panel-Caption
 		// "Favicon · Avatar · App-Icon" (siehe _design-system/+page.svelte) ist
@@ -210,7 +217,7 @@ test.describe('Issue #370 — Brand-Bibliothek lib/brand/', () => {
 	});
 
 	// ─── AC-3 (Issue #2341): favicon.svg ist randfuellende Fill-Silhouette ───
-	test('AC-3 (Issue #2341): favicon.svg zeigt eine durchgehend gefuellte Bergflaeche', async ({ page }) => {
+	test('AC-3 (Issue #2341): favicon.svg zeigt eine durchgehend gefuellte Bergflaeche', async ({ page, baseURL }) => {
 		/**
 		 * GIVEN: /favicon.svg wird als <img> im Browser gerendert
 		 * WHEN:  Ein Pixel INNERHALB der Bergkamm-Flaeche (Punkt (30,45) im
@@ -218,9 +225,14 @@ test.describe('Issue #370 — Brand-Bibliothek lib/brand/', () => {
 		 * THEN:  Der Pixel traegt durchgehend die Ink-Farbe (#1a1a18 = rgb(26,26,24)),
 		 *        nicht die Hintergrundfarbe mit duenner Umrandung wie bei einer
 		 *        Kontur-Linie -- echte Bildinhalts-Pruefung, kein SVG-Quelltext-Match.
+		 *
+		 * `page.setContent()` navigiert NICHT zur baseURL -- eine relative
+		 * `src="/favicon.svg"` würde gegen `about:blank` aufgelöst und nie laden
+		 * (CI-Fehlschlag: Pixel kam als [0,0,0] statt [26,26,24] zurück, weil das
+		 * <img> gar nicht erst geladen hatte). Deshalb die absolute URL bauen.
 		 */
 		await page.setContent(`
-			<img id="fav" src="/favicon.svg" width="256" height="256" />
+			<img id="fav" src="${baseURL}/favicon.svg" width="256" height="256" />
 			<canvas id="cv" width="256" height="256"></canvas>
 		`);
 		const img = page.locator('#fav');
