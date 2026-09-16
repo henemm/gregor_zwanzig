@@ -587,12 +587,21 @@ def outlook_legend_pairs(outlook_metrics: Optional[list]) -> list[tuple[str, str
         metric_ids = [c.get("metric_id") for c in outlook_columns(outlook_metrics)
                       if c.get("metric_id")]
     pairs: list[tuple[str, str]] = []
+    dropped: list[str] = []
     for metric_id in metric_ids:
         try:
             m = get_metric(metric_id)
         except KeyError:
+            dropped.append(metric_id)
             continue
         pairs.append((m.col_label, m.label_de))
+    if dropped:
+        # #2136: Verwerfung protokolliert statt stumm (Referenzmuster der
+        # Compare-Aufloeser, vgl. compare_outlook_metric_ids.outlook_columns).
+        logger.warning(
+            "outlook_legend_pairs: %s ohne Katalog-Entsprechung — Legenden-"
+            "Eintrag entfaellt (#2136)", dropped,
+        )
     return pairs
 
 

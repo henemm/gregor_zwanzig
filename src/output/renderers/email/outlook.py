@@ -229,7 +229,7 @@ def render_outlook_table(
             f'<th {_oh_style}>{_html.escape(label)}</th>' for label in _pfad1_labels
         )
         + f'{_acc_th}'
-        + f'</tr></thead>'
+        + '</tr></thead>'
     )
 
     # Fix #1801 S1: MED/HIGH aus tone_css() (EINE Quelle); LOW bleibt bewusst
