@@ -707,10 +707,23 @@ class MeteoFranceDirectProvider:
                                 )
                                 if not weiterer_kandidat:
                                     fehlgeschlagen += 1
-                                    logger.warning(
-                                        "Blitzdichte +%dh nicht abrufbar: %s",
-                                        offset, e,
-                                    )
+                                    # #1993: 429 (Meteo-France-Rate-Limit)
+                                    # erkennbar von echtem Datenausfall
+                                    # unterscheiden -- gleiche Behandlung
+                                    # (raw = None, kein Retry), nur die
+                                    # Log-Aussage weicht ab.
+                                    if e.response.status_code == 429:
+                                        logger.warning(
+                                            "Blitzdichte +%dh gedrosselt "
+                                            "(429) — Meteo-France-Limit "
+                                            "erreicht",
+                                            offset,
+                                        )
+                                    else:
+                                        logger.warning(
+                                            "Blitzdichte +%dh nicht abrufbar: %s",
+                                            offset, e,
+                                        )
                                     raw = None
                                     break
                                 if not rueckfall_protokolliert:  # AC-7
