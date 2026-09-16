@@ -99,3 +99,32 @@ def test_emoji_modus_plausible_pille_bleibt_stumm():
     )
     errors = v._check_metric_plausibility(_mail(180, [tbl]))
     assert errors == []
+
+
+def test_ausblick_tabelle_mit_gleichem_header_verfaelscht_die_summe_nicht():
+    """Given eine 'kein Regen'-Pille, eine Stundentabelle mit 0.0 mm Regen UND
+    einen 3-Tages-Ausblick MIT eigener 'Rain'-Spalte (#2136/ADR-0068: der
+    Ausblick traegt seither denselben col_label-Kuerzel-Text wie die
+    Stundentabelle) / When der Pruefer prueft / Then zaehlt er NUR die
+    Stundentabelle — der TAEGLICHE Ausblickswert (2.5/1.0 mm) darf die
+    'kein Regen'-Summe nicht verfaelschen (#2136-Folgebug; Unterscheidungs-
+    merkmal ist der feste 'Tag'-Erstkopf des Ausblicks)."""
+    v = _load_validator()
+    hourly = (
+        "<table><tr><th>Zeit</th><th>Rain</th></tr>"
+        "<tr><td>09:00</td><td>0.0</td></tr>"
+        "<tr><td>10:00</td><td>0.0</td></tr></table>"
+    )
+    outlook = (
+        "<table><tr><th>Tag</th><th>Rain</th></tr>"
+        "<tr><td>Mo</td><td>2.5</td></tr>"
+        "<tr><td>Di</td><td>1.0</td></tr></table>"
+    )
+    html = (
+        "<span>kein Regen</span>"
+        + '<div class="section desktop-only">' + hourly + "</div>"
+        + '<div class="mobile-compact"><div style="overflow-x:auto;">'
+        + hourly + "</div></div>"
+        + outlook
+    )
+    assert v._check_metric_plausibility(html) == []
