@@ -2,21 +2,23 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
-**Last Updated:** 2026-08-23 (Issue #2098 — ACC-Spalte erscheint jetzt auch im konfigurierbaren
+**Last Updated:** 2026-09-15 (Issue #2136/ADR-0068 — Pfad 1 des Ausblicks („Altform-Zweig")
+verliert seine hartkodierte Kürzel-Namensliste `N · D · R · PR · Wind · Böen · Gew`; Spaltenköpfe
+(HTML) und Klartext-Tokenpräfixe kommen jetzt aus `MetricDefinition.col_label` desselben
+zentralen Registers, das auch die Etappentabelle speist — dieselbe Quelle, mit der Pfad 2 seither
+ebenfalls arbeitet (vorher deutscher Langname aus dem Compare-Katalog))
+
+**Vorher:** 2026-08-23 (Issue #2098 — ACC-Spalte erscheint jetzt auch im konfigurierbaren
 Ausblick-Zweig, fest hinter den gewählten Metriken, mit Klartext-Wort statt nur Farbpunkt;
 Sonnenstunden werden beim Etappen-Aggregat mit der Regel `sum` zusammengefasst statt `–` zu zeigen)
 
-**Vorher:** 2026-08-22 (Issue #2011 — `_thunder_risk_level()` ruft für String-/Enum-Rohwerte
+**Vorherige Aktualisierung:** 2026-08-22 (Issue #2011 — `_thunder_risk_level()` ruft für String-/Enum-Rohwerte
 jetzt tatsächlich `thunder_ampel_band()` auf statt einer eigenen Stufen-Wort-Kette; nur der
 numerische Legacy-Fallback bleibt hartcodiert, s.u.)
 
-**Vorherige Aktualisierung:** 2026-08-22 (Issue #2049 — Abgrenzung „Metric Display Contract" (Sektion 4/5)
+**Davor:** 2026-08-22 (Issue #2049 — Abgrenzung „Metric Display Contract" (Sektion 4/5)
 gegen die eigene, unabhängige Roh/Einfach-Entscheidung des 3-Tages-Ausblicks (Sektion 6,
 `display_config.outlook_metric_formats`) ergänzt)
-
-**Davor:** 2026-08-14 (Bug #1801 S2 — neue Ampel-Palette (Punkt/Fläche/Text) für
-gelb/orange/rot, WCAG-Fix grüner Zelltext (`G_AMPEL_TEXT_GREEN`); `html.py`/`outlook.py`
-beziehen die Zellfarben seither aus `design_tokens.tone_css()` statt eigener Kopien)
 
 **Acceptance Validators (seit Issue #733):**
 - **Trip-Briefing-Mail** (beide Formate: `full` HTML / `compact` Nur-Text): `.claude/hooks/briefing_mail_validator.py` (dispatcht auf `X-GZ-Mail-Type` + `X-GZ-Format` Header)
@@ -94,9 +96,12 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Struktur:** `<table>` mit einer `<tr>` pro Folge-Etappe
 - **Zwei Render-Zweige**, unterschieden am Parameter `metrics` von `render_outlook_table()` /
   `render_outlook_plain()` — **nicht** an der Mail-Art:
-  - **Altform-Zweig** (`metrics=None`): die sieben festen Spalten `N · D · R · PR · Wind · Böen ·
-    Gew`, ACC-Spalte je nach `show_acc`. Trip und Ortsvergleich fuhren früher hierüber; heute nur
-    noch Altbestand ohne aufgelöste Metrik-Auswahl.
+  - **Altform-Zweig** (`metrics=None`): acht feste Spalten (Tag + sieben Wettergrößen), ACC-Spalte
+    je nach `show_acc`. Trip und Ortsvergleich fuhren früher hierüber; heute nur noch Altbestand
+    ohne aufgelöste Metrik-Auswahl. Die Spaltenköpfe sind seit #2136/ADR-0068 (2026-09-15) **keine**
+    eigene Namensliste mehr — sie kommen aus `MetricDefinition.col_label` (dieselbe Quelle wie die
+    Etappentabelle), mit `aggregation_label_de()` als Kollisionsauflösung für die beiden
+    Temperatur-Spalten Tief/Hoch. Vorher hartkodiert: `N · D · R · PR · Wind · Böen · Gew`.
   - **Konfigurierbarer Zweig** (`metrics` gesetzt): die gewählten Metrik-Spalten in
     Auswahl-Reihenfolge, dahinter die ACC-Spalte je nach `show_acc`. **Trip** fährt seit #1848 A3
     hierüber, der **Ortsvergleich** seit #1361/#1368.

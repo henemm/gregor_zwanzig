@@ -17,13 +17,22 @@ nicht **Zuordnung**. Vertauschte man Einheit oder Auswertung zweier
 Katalog-Zeilen, bliebe jede darauf gestuetzte Achse gruen.
 
 Die erwartete Spaltenueberschrift wird hier aus den Katalog-Feldern
-``label`` + ``aggregation_label`` GERECHNET und nicht aus
+``col_label`` + ``aggregation_label`` GERECHNET und nicht aus
 ``outlook_columns()`` uebernommen: sonst waeren Massstab und Prueflig
 dieselbe Funktion und die Beschriftungs-Zusicherung bewiese nichts. Die Regel
 "bei mehrfach vorkommendem Namen haengt die Auswertung an" ist die
 freigegebene Produktvorgabe (PO-Entscheidung 2026-07-27, "keine zwei gleich
 beschrifteten Spalten") — sie steht hier als Soll, nicht als Kopie einer
 Implementierung.
+
+#2136/ADR-0068 (2026-09-15): die Beschriftungs-QUELLE wechselt von
+``label`` (deutscher Compare-Katalog-Langname) auf ``col_label``
+(``MetricDefinition.col_label``, dieselbe Quelle wie die Stunden-/
+Etappentabelle derselben Mail) -- der Compare-Katalog fuehrt ``col_label``
+bereits als eigenes Feld mit (``compare_metric_catalog.py:420``), es entsteht
+keine neue Quelle. Die Merge-/Dedup-Rechnung selbst (Duplikat-Suffix,
+Min/Max-Zusammenfuehrung) bleibt unveraendert -- sie arbeitet generisch auf
+der Beschriftung, unabhaengig von deren Quelle.
 """
 from __future__ import annotations
 
@@ -59,10 +68,12 @@ def compare_outlook_soll_spalten(entries: list[dict] | None = None) -> list[dict
     ist.
     """
     geliefert = get_compare_metric_catalog(entries)
-    haeufigkeit = Counter(e["label"] for e in geliefert)
+    # #2136/ADR-0068: Beschriftungs-Quelle ist `col_label`, nicht mehr der
+    # deutsche Compare-Katalog-Langname `label`.
+    haeufigkeit = Counter(e["col_label"] for e in geliefert)
     roh: list[dict] = []
     for eintrag in geliefert:
-        label = eintrag["label"]
+        label = eintrag["col_label"]
         auswertung_label = eintrag.get("aggregation_label", "")
         mehrdeutig = haeufigkeit[label] > 1 and bool(auswertung_label)
         roh.append({

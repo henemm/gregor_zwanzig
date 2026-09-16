@@ -378,7 +378,13 @@ def render_plain(
         lines.append(legend_text)
     # Issue #1472: zweite Legenden-Zeile, die die englischen Spaltenkuerzel
     # aufloest (ADR-0042-Bedingung an der Stelle, an der gelesen wird).
-    column_legend_text = build_column_legend(all_rows) if all_rows else ""
+    # #2136/ADR-0068 (AC-5): zusaetzlich die im 3-Tages-Ausblick DERSELBEN
+    # Mail sichtbaren Kuerzel -- `outlook_active`/`_outlook_metrics` sind
+    # bereits weiter oben fuer den Ausblick-Block selbst aufgeloest.
+    column_legend_text = (
+        build_column_legend(all_rows, _outlook_metrics, outlook_active=outlook_active)
+        if all_rows or outlook_active else ""
+    )
     if column_legend_text:
         lines.append(column_legend_text)
     lines.append("-" * 60)

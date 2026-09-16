@@ -50,7 +50,7 @@ from app.day_window import (  # noqa: E402
     resolve_configured_window, segment_window_points,
 )
 from app.loader import get_snapshots_dir, save_trip  # noqa: E402
-from app.metric_catalog import build_default_display_config  # noqa: E402
+from app.metric_catalog import build_default_display_config, get_metric  # noqa: E402
 from app.model_registry import (  # noqa: E402
     cape_ladder_thresholds_jkg, lpi_thresholds_jkg,
 )
@@ -551,16 +551,19 @@ def test_ac7_ausblick_zelle_zeigt_traeger_und_hagel_aus_der_etappe():
         stage_name="Etappe A", multi_day_trend=[zeile],
     )
 
+    # #2136/ADR-0068: der Ausblick-Spaltenkopf ist seither `col_label`
+    # ("Thdr"), nicht mehr der deutsche Compare-Katalog-Langname ("Gewitter").
+    gewitter_kopf = get_metric("thunder").col_label
     suppe = BeautifulSoup(bericht.email_html, "html.parser")
     tabellen = [
         t for t in suppe.find_all("table")
-        if {"Tag", "Gewitter"} <= {th.get_text(strip=True) for th in t.find_all("th")}
+        if {"Tag", gewitter_kopf} <= {th.get_text(strip=True) for th in t.find_all("th")}
     ]
     assert len(tabellen) == 1, f"Vorbedingung: genau EINE Ausblick-Tabelle, {len(tabellen)}"
     koepfe = [th.get_text(strip=True) for th in tabellen[0].find_all("th")]
     zellen = [td.get_text(strip=True)
               for td in tabellen[0].find("tbody").find_all("tr")[0].find_all("td")]
-    zelle = zellen[koepfe.index("Gewitter")]
+    zelle = zellen[koepfe.index(gewitter_kopf)]
 
     herkunft = thunder_signal_label("cape")
     hagel = format_hail_note(True)

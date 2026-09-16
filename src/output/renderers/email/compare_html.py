@@ -1394,7 +1394,10 @@ def _units_legend_text(visible: list[dict]) -> str:
     return format_units_legend(pairs)
 
 
-def _column_legend_text(visible: list[dict]) -> str:
+def _column_legend_text(
+    visible: list[dict], outlook_metrics: list[dict] | None = None,
+    outlook_enabled: bool = False,
+) -> str:
     """Issue #1472 (AC-1/AC-8): Spalten-Zeile fuer die sichtbaren Stunden-
     Spalten -- 'Spalten: Thdr = Gewitter · Visib = Sichtweite'.
 
@@ -1405,22 +1408,38 @@ def _column_legend_text(visible: list[dict]) -> str:
     Auswertungs-Zusatz wie der Kopf ('Temp max = Temperatur Maximum') statt
     ein Kuerzel zu erklaeren, das in der Tabelle gar nicht vorkommt.
     Formatiert vom geteilten Helfer `helpers.format_column_legend` -- dieselbe
-    Quelle wie die Trip-Briefing-Legende (keine Kopie)."""
-    from output.renderers.email.helpers import format_column_legend
+    Quelle wie die Trip-Briefing-Legende (keine Kopie).
+
+    ``outlook_enabled``/``outlook_metrics`` (#2136/ADR-0068, AC-5): ist der
+    3-Tages-Ausblick DERSELBEN Mail sichtbar, werden zusaetzlich dessen
+    Spaltenkoepfe aufgeloest -- `outlook_legend_pairs()` (geteilt mit der
+    Trip-Legende), `format_column_legend()` dedupliziert bereits
+    gleichlautende Kuerzel."""
+    from output.renderers.email.helpers import format_column_legend, outlook_legend_pairs
 
     kurz = derive_row_labels(visible, form="short")
     lang = derive_row_labels(visible, form="long")
     pairs = [(k["label"], lng["label"]) for k, lng in zip(kurz, lang)]
+    if outlook_enabled:
+        pairs += outlook_legend_pairs(outlook_metrics)
     return format_column_legend(pairs)
 
 
-def _render_units_legend(hourly_metrics: list[str] | None) -> str:
+def _render_units_legend(
+    hourly_metrics: list[str] | None, outlook_metrics: list[dict] | None = None,
+    outlook_enabled: bool = False,
+) -> str:
     """Einheiten-Legende UNTER der Stundentabelle (nicht im Spaltenkopf) --
     die Spaltenkoepfe bleiben 'Zeit'/'Sicht' (AC-2). Issue #1472: darunter die
-    zweite Zeile, die die englischen Kuerzel aufloest (ADR-0042-Bedingung)."""
+    zweite Zeile, die die englischen Kuerzel aufloest (ADR-0042-Bedingung).
+    #2136/ADR-0068 (AC-5): ``outlook_enabled``/``outlook_metrics`` speisen die
+    Spalten-Legende zusaetzlich mit den Ausblick-Kuerzeln."""
     visible = _visible_hour_metrics(hourly_metrics)
     blocks = ""
-    for text in (_units_legend_text(visible), _column_legend_text(visible)):
+    for text in (
+        _units_legend_text(visible),
+        _column_legend_text(visible, outlook_metrics, outlook_enabled),
+    ):
         if not text:
             continue
         blocks += (
@@ -1430,7 +1449,10 @@ def _render_units_legend(hourly_metrics: list[str] | None) -> str:
     return blocks
 
 
-def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool = True) -> str:
+def _render_legend(
+    hourly_metrics: list[str] | None = None, hourly_enabled: bool = True,
+    outlook_metrics: list[dict] | None = None, outlook_enabled: bool = False,
+) -> str:
     items = [("#2f8a3e", "unkritisch"), ("#e3b008", "Achtung"), ("#e07b1a", "Warnung"), ("#c52a22", "Gefahr")]
     dots = "".join(
         f'<span style="display:inline-block;margin-right:16px;font-family:{FONT_DATA};'
@@ -1439,7 +1461,12 @@ def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool
         f'background:{color};margin-right:6px;vertical-align:middle;"></span>{label}</span>'
         for color, label in items
     )
-    units = _render_units_legend(hourly_metrics) if hourly_enabled else ""
+    # #2136/ADR-0068 (AC-5): die Legende bleibt sichtbar, sobald der Ausblick
+    # sichtbar ist -- auch wenn die Stundentabelle abgeschaltet ist.
+    units = (
+        _render_units_legend(hourly_metrics, outlook_metrics, outlook_enabled)
+        if hourly_enabled or outlook_enabled else ""
+    )
     return (
         f'<div style="background:{G_PAPER};border-top:1px solid #e6e1d3;padding:18px 24px;'
         f'margin-top:22px;font-family:{FONT_DATA};font-size:10px;color:{G_INK_MUTED};">'
@@ -1694,7 +1721,9 @@ def render_compare_html(
         if has_undelivered(undelivered) else ""
     )
 
-    legend_html = _render_legend(hourly_metrics, hourly_enabled)
+    legend_html = _render_legend(
+        hourly_metrics, hourly_enabled, outlook_metrics, outlook_enabled,
+    )
     abo_html = _render_abo_footer(
         preset_name, preset_schedule, preset_weekday, len(locations), sig, header_tz,
     )

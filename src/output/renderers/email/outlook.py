@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from datetime import tzinfo
     from app.models import SegmentWeatherSummary, ForecastDataPoint
 
-from app.metric_catalog import get_metric
+from app.metric_catalog import aggregation_label_de, get_metric
 from output.renderers.email.helpers import format_trend_tokens
 from output.renderers.email.thunder_branch import (
     resolve_thunder_day_branch, thunder_cell_html, thunder_cell_plain,
@@ -203,18 +203,33 @@ def render_outlook_table(
             f'<tbody>{body}</tbody></table>'
         )
 
+    # #2136/ADR-0068: die sieben Standardfall-Kuerzel (bisher "N D R PR Wind
+    # Böen Gew") sind KEINE eigene Namensliste mehr, sondern aus demselben
+    # zentralen Register abgeleitet wie die Stunden-/Etappentabelle derselben
+    # Mail (`MetricDefinition.col_label`). Die beiden Temperatur-Spalten (bisher
+    # "N"/"D") sind der statische Kollisionsfall aus AC-7: eine nackte
+    # `col_label`-Ersetzung ergaebe zweimal "Temp" -- deshalb traegt jede ihr
+    # Auswertungs-Suffix (`aggregation_label_de`, dieselbe Wortquelle wie die
+    # Duplikat-Aufloesung in `outlook_columns()`). `Tag` bleibt unveraendert,
+    # ist kein Katalogfeld; die Spaltenzahl bleibt bei acht.
+    _temp_col_label = get_metric("temperature").col_label
+    _pfad1_labels = (
+        f"{_temp_col_label} {aggregation_label_de('min')}",
+        f"{_temp_col_label} {aggregation_label_de('max')}",
+        get_metric("precipitation").col_label,
+        get_metric("rain_probability").col_label,
+        get_metric("wind").col_label,
+        get_metric("gust").col_label,
+        get_metric("thunder").col_label,
+    )
     outlook_thead = (
         f'<thead><tr>'
         f'<th {_oh_style}>Tag</th>'
-        f'<th {_oh_style}>N</th>'
-        f'<th {_oh_style}>D</th>'
-        f'<th {_oh_style}>R</th>'
-        f'<th {_oh_style}>PR</th>'
-        f'<th {_oh_style}>Wind</th>'
-        f'<th {_oh_style}>Böen</th>'
-        f'<th {_oh_style}>Gew</th>'
-        f'{_acc_th}'
-        f'</tr></thead>'
+        + "".join(
+            f'<th {_oh_style}>{_html.escape(label)}</th>' for label in _pfad1_labels
+        )
+        + f'{_acc_th}'
+        + '</tr></thead>'
     )
 
     # Fix #1801 S1: MED/HIGH aus tone_css() (EINE Quelle); LOW bleibt bewusst
@@ -372,10 +387,19 @@ def render_outlook_plain(
         # auch der konfigurierbare Zweig oben ruft.
         thunder_word = thunder_cell_plain(tok, stage)
 
+        # #2136/ADR-0068 (AC-4): jedes tatsaechlich gerenderte Token traegt
+        # das `col_label`-Praefix seiner Groesse -- dieselbe Quelle wie die
+        # Pfad-1-Kopfzeile des HTML-Ausblicks und die Stundentabelle derselben
+        # Mail. Die Temperatur-Spanne bleibt OHNE Auswertungs-Suffix: der
+        # Klartext fuehrt Tief/Hoch bereits als EIN Token zusammen (kein
+        # AC-7-Kollisionsfall, den gibt es nur bei zwei getrennten Spalten).
         name_field = f"{name:<26} " if show_name else ""
         line = (
-            f"{weekday:<3} {name_field}{tok['temp_str']:<8} "
-            f"{precip_str:<5} {tok['wind_str']:<5} {thunder_word}"
+            f"{weekday:<3} {name_field}"
+            f"{get_metric('temperature').col_label} {tok['temp_str']:<8} "
+            f"{get_metric('precipitation').col_label} {precip_str:<5} "
+            f"{get_metric('wind').col_label} {tok['wind_str']:<5} "
+            f"{get_metric('thunder').col_label} {thunder_word}"
         )
         lines.append(line)
 

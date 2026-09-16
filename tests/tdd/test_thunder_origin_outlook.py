@@ -204,7 +204,20 @@ def _mail(zeilen: list[dict], *, report_config: TripReportConfig | None = None):
 # Messsonden auf der ZUGESTELLTEN Ausgabe
 # ---------------------------------------------------------------------------
 
-def _gew_zelle(html: str, kopf: str = "Gewitter") -> str:
+def _gewitter_kopf() -> str:
+    """Beschriftung der Gewitter-Spalte -- abgeleitet, nicht getippt.
+
+    #2136/ADR-0068: beide Ausblick-Pfade (der feste Sieben-Spalten-Zweig OHNE
+    Grundauswahl UND der grundauswahl-getriebene Zweig ueber
+    ``outlook_columns()``) tragen seither denselben `MetricDefinition.col_label`
+    ("Thdr") -- die vormalige Unterscheidung "Gew" (fest) vs. "Gewitter"
+    (Katalog-Langname, #1848 A3) ist damit entfallen."""
+    from app.metric_catalog import get_metric
+
+    return get_metric("thunder").col_label
+
+
+def _gew_zelle(html: str, kopf: "str | None" = None) -> str:
     """Der Text der Gewitter-Zelle der Ausblick-Tabelle aus fertigem Mail-HTML.
 
     Die Ausblick-Tabelle ist die EINZIGE Tabelle der Mail mit der Kopfzelle
@@ -214,13 +227,11 @@ def _gew_zelle(html: str, kopf: str = "Gewitter") -> str:
     eine spaeter eingeschobene Spalte darf diesen Test nicht still
     verschieben.
 
-    ``kopf`` ist die Beschriftung der Gewitter-Spalte: der Katalogname
-    "Gewitter" (``outlook_columns()``), seit #1848 A3 die Vorgabe -- der
-    Ausblick erbt die Grundauswahl und traegt deshalb ausgeschriebene
-    deutsche Spaltennamen. Das Kuerzel "Gew" des festen Sieben-Spalten-
-    Ausblicks bleibt ueber den Parameter erreichbar; es gilt nur noch fuer
-    Flaechen ganz ohne Grundauswahl (ADR-0050 D4).
+    ``kopf`` (Default ``None`` -> ``_gewitter_kopf()``, `col_label` "Thdr"):
+    seit #2136/ADR-0068 dieselbe Beschriftung in BEIDEN Ausblick-Pfaden.
     """
+    if kopf is None:
+        kopf = _gewitter_kopf()
     suppe = BeautifulSoup(html, "html.parser")
     tabellen = [
         t for t in suppe.find_all("table")
@@ -486,7 +497,9 @@ def test_ac7_ohne_gewitter_bleibt_die_zelle_zeichengleich():
     # #1848 A3: das Gewitterfeld ist nicht mehr das letzte der Zeile (der
     # Ausblick erbt die Grundauswahl, weitere Spalten folgen). Geprueft wird
     # unveraendert der Zellentext, nur spaltengenau statt am Zeilenende.
-    assert "Gewitter ⚡–" in zeile_ruhig, (
+    # #2136/ADR-0068: das Klartext-Praefix ist `col_label` ("Thdr"), nicht
+    # mehr der deutsche Katalog-Langname ("Gewitter").
+    assert f"{_gewitter_kopf()} ⚡–" in zeile_ruhig, (
         f"Der Klartext-Ausblick bleibt zeichengleich '⚡–': {zeile_ruhig!r}")
 
     laut = _gew_zelle(_mail([_ausblick_zeile([_dp(16, cape=400.0, cin=5.0)])]).email_html)
@@ -640,9 +653,10 @@ def test_ac11a_compare_ausblick_ohne_metrikauswahl_erbt_die_herkunft():
     """
     html, text = _compare_mail([_dp(16, cape=400.0, cin=5.0)])
     # Ohne gespeicherte Spaltenauswahl UND ohne Grundauswahl bleibt der feste
-    # Sieben-Spalten-Ausblick in Kraft (ADR-0050 D4) -- dort heisst die Spalte
-    # weiterhin "Gew", nicht "Gewitter" (#1848 A3).
-    zelle = _gew_zelle(html, kopf="Gew")
+    # Sieben-Spalten-Ausblick in Kraft (ADR-0050 D4) -- die Spalte traegt seit
+    # #2136/ADR-0068 denselben `col_label` ("Thdr") wie der grundauswahl-
+    # getriebene Zweig, `_gew_zelle()` braucht keinen expliziten Kopf mehr.
+    zelle = _gew_zelle(html)
     assert zelle == "leicht @16 · CAPE", (
         f"Der Compare-Ausblick erbt den geteilten Zeilenbau und muss die "
         f"Herkunft ebenso nennen: {zelle!r}")
@@ -701,13 +715,15 @@ def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():
 
     html_a, text_a = _compare_mail([_dp(16, cape=400.0, cin=5.0)],
                                    outlook_metrics=auswahl)
-    zelle_a = _gew_zelle(html_a, kopf="Gewitter")
+    zelle_a = _gew_zelle(html_a)
     assert zelle_a == "leicht @16 · CAPE", (
         f"Auch der Metrik-Zweig des Compare-Ausblicks muss die tragende Zutat "
         f"nennen — seit #1848 A3 aus demselben Zellenbau wie der feste Zweig, "
         f"also MIT Onset-Uhrzeit: {zelle_a!r}")
     zeile_a = _klartext_ausblick_zeile(text_a, _COMPARE_UEBERSCHRIFT)
-    assert "Gewitter leicht@16 · CAPE" in zeile_a, (
+    # #2136/ADR-0068: das Klartext-Praefix ist seither `col_label` ("Thdr"),
+    # nicht mehr der deutsche Katalog-Langname ("Gewitter").
+    assert f"{_gewitter_kopf()} leicht@16 · CAPE" in zeile_a, (
         f"Der Klartext-Ausblick des Metrik-Zweigs muss dieselbe Herkunft "
         f"zeigen: {zeile_a!r}")
 
@@ -715,7 +731,7 @@ def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():
         [_dp(2, cape=1500.0, cin=5.0), _dp(16, dichte=0.005)],
         outlook_metrics=auswahl,
     )
-    zelle_b = _gew_zelle(html_b, kopf="Gewitter")
+    zelle_b = _gew_zelle(html_b)
     # #1848 A3: Metrik-Zweig und fester Zweig liefern fuer DIESELBE Fixture
     # jetzt zeichengleich denselben Text (nachgemessen) -- vorher stand hier
     # "hoch · CAPE", waehrend der feste Zweig derselben Mail den Satz unten
@@ -729,7 +745,7 @@ def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():
     fest_b, _ = _compare_mail(
         [_dp(2, cape=1500.0, cin=5.0), _dp(16, dichte=0.005)],
     )
-    assert _gew_zelle(fest_b, kopf="Gew") == zelle_b, (
+    assert _gew_zelle(fest_b) == zelle_b, (
         "Metrik-Zweig und fester Zweig derselben Mailart muessen dieselbe "
         "Gewitter-Zelle zeigen — sonst haette der Ortsvergleich zwei "
         "Bedeutungen fuer dieselbe Spalte (#1848 A3)."

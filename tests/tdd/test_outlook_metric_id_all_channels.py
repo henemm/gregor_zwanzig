@@ -85,7 +85,10 @@ def test_ac4_temperatur_kennung_zeigt_ueberall_dieselbe_eine_spannen_spalte():
     # #2098: hinter der Auswahl steht die fest angehaengte ACC-Zusatzspalte
     # (Tag + 1 Metrikspalte + ACC) -- die Zusicherung "GENAU EINE
     # Temperatur-Spalte" wird deshalb an der Auswahl-Mitte geprueft.
-    assert kopf == ["Tag", "Temperatur", "ACC"], (
+    # #2136/ADR-0068: `col_label` ("Temp") statt deutschem Langnamen.
+    from app.metric_catalog import get_metric
+
+    assert kopf == ["Tag", get_metric("temperature").col_label, "ACC"], (
         f"HTML-Mail: Die Ausblick-Tabelle hat die Kopfzeile {kopf!r}. Aus der "
         "einen Kennung 'temperature' muss GENAU EINE Wert-Spalte entstehen "
         "(neben 'Tag' und der festen ACC-Spalte) — Tief und Hoch gehoeren in "

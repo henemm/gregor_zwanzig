@@ -1,9 +1,17 @@
 # ADR-0037: 3-Tages-Ausblick der Vergleichs-Mail datengetrieben aus dem Metrik-Katalog
 
-- **Status:** Akzeptiert — **Punkt 2 abgelöst durch ADR-0055** (2026-08-14)
+- **Status:** Akzeptiert — **Punkt 2 abgelöst durch ADR-0055** (2026-08-14), **Abschnitt
+  „Verworfene Alternativen" Punkt 3 abgelöst durch ADR-0068** (2026-09-15)
 - **Datum:** 2026-07-27
 - **Bezug:** GitHub-Issue #1361 (Befund 2), #1368, Epic #1372 (Etappe S3 Scheibe A), Dach
   #1374, Spec `docs/specs/modules/issue_1361_1368_ausblick_konfigurierbar.md`
+
+> **Teil-Ablösung (2026-09-15, ADR-0068, Issue #2136):** Der dritte Punkt unter „Verworfene
+> Alternativen" — „Spaltenköpfe aus `metric_catalog.col_label`" — verwarf diesen Ansatz wegen
+> der Temperatur-Kollision (min/max/avg → identisch „Temp"). Zwischenzeitlich (#1848 A1,
+> #1401 A1) hat `outlook_columns()` eine generische Merge-/Dedup-Logik bekommen, die diese
+> Kollision unabhängig von der Label-Quelle auflöst. ADR-0068 nimmt den Ansatz mit dieser
+> Begründung wieder auf; die übrigen Punkte dieses ADR gelten unverändert.
 
 > **Teil-Ablösung (2026-08-14, ADR-0055, Issue #1720 Scheibe 1):** Punkt 2 der
 > Entscheidung unten sichert zu, der Trip rufe „weiterhin ohne `metrics` auf —

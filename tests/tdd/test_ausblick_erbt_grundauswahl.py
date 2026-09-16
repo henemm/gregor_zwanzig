@@ -109,23 +109,31 @@ def test_ac4_in_der_grundauswahl_abgewaehlte_groesse_erscheint_nie_im_ausblick()
     in ``outlook_metrics`` / When der Ausblick gerendert wird / Then
     erscheint dafuer KEINE Spalte -- unabhaengig davon, was gespeichert ist.
     """
+    from app.metric_catalog import get_metric
+
     enabled = {"temperature", "wind", "precipitation"}  # kein "thunder"
     auswahl = ["temperature", "thunder"]
     dc = display_config(enabled_ids=enabled, outlook_metrics=auswahl)
     rows = outlook_rows(trip_display_config=dc, report_type="evening")
     html, plain = render_trip_mail(dc, rows)
 
+    # #2136/ADR-0068: die Spaltenkoepfe tragen `col_label` ("Thdr"/"Temp"),
+    # nicht mehr den deutschen Katalog-Langnamen ("Gewitter"/"Temperatur").
+    thunder_label = get_metric("thunder").col_label
+    temp_label = get_metric("temperature").col_label
+
     kopf = html_outlook_headers(html)
-    assert "Gewitter" not in kopf, (
-        f"Kopfzeile {kopf!r}: 'Gewitter' erscheint, obwohl die Groesse in der "
-        "Grundauswahl nicht aktiv ist (AC-4)."
+    assert thunder_label not in kopf, (
+        f"Kopfzeile {kopf!r}: {thunder_label!r} erscheint, obwohl die Groesse "
+        "in der Grundauswahl nicht aktiv ist (AC-4)."
     )
-    assert kopf[1:] == ["Temperatur", _ACC], (
-        f"Erwartet nur die Grundauswahl-gedeckte Spalte 'Temperatur': {kopf!r}"
+    assert kopf[1:] == [temp_label, _ACC], (
+        f"Erwartet nur die Grundauswahl-gedeckte Spalte {temp_label!r}: {kopf!r}"
     )
     block = plain_outlook_block(plain)
-    assert block is not None and "Gewitter" not in block, (
-        f"Klartext-Ausblick nennt 'Gewitter' trotz Grundauswahl-Abwahl: {block!r}"
+    assert block is not None and thunder_label not in block, (
+        f"Klartext-Ausblick nennt {thunder_label!r} trotz "
+        f"Grundauswahl-Abwahl: {block!r}"
     )
 
 

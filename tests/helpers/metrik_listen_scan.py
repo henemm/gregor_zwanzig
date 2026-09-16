@@ -342,6 +342,8 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "email/compare_html.py", "_HOUR_FMT_OVERRIDES", "schluessel"),
     (_R + "email/compare_html.py", "_HOUR_SEV_OVERRIDES", "schluessel"),
     (_R + "email/helpers.py", "NO_HOURLY_COLUMN_METRIC_IDS", "element"),
+    # #2136: die sechs festen Ausblick-Groessen (Pfad 1, keine Auswahl).
+    (_R + "email/helpers.py", "OUTLOOK_FIXED_METRIC_IDS", "element"),
     (_R + "email/helpers.py", "_AMPEL_KEY_TO_METRIC_ID", "wert"),
     (_R + "email/helpers.py", "_AMPEL_CAPABLE_METRIC_IDS", "element"),
     (_R + "email/helpers.py", "_PILL_CATALOG_ORDER", "element"),

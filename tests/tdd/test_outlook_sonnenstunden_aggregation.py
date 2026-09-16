@@ -155,16 +155,28 @@ def _spalten_und_zellen(summary) -> tuple[list[str], list[str]]:
     return kopf, zellen
 
 
+def _sonnen_kopf() -> str:
+    """Beschriftung der Sonnenstunden-Spalte -- abgeleitet, nicht getippt.
+
+    #2136/ADR-0068: der konfigurierbare Ausblick traegt seither
+    ``MetricDefinition.col_label`` ("Sun") statt des deutschen
+    Compare-Katalog-Langnamens ("Sonnenstunden")."""
+    from app.metric_catalog import get_metric
+
+    return get_metric("sunshine").col_label
+
+
 def _sonnen_zelle(summary) -> str:
     kopf, zellen = _spalten_und_zellen(summary)
-    assert "Sonnenstunden" in kopf, (
+    sonnen_kopf = _sonnen_kopf()
+    assert sonnen_kopf in kopf, (
         f"Vorbedingung: die Sonnenstunden-Spalte muss ueberhaupt im Kopf "
         f"stehen, sonst prueft der Test nichts. Kopf: {kopf!r}"
     )
     assert len(zellen) == len(kopf), (
         f"Kopf und Datenzeile laufen auseinander: {kopf!r} vs. {zellen!r}"
     )
-    return zellen[kopf.index("Sonnenstunden")]
+    return zellen[kopf.index(sonnen_kopf)]
 
 
 # ---------------------------------------------------------------------------
