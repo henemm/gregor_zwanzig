@@ -300,15 +300,19 @@ jeder weitere Ort darin wird daraus bedient — ein 8-Orte-Vergleich sinkt von
 Gebiets; verstreute Nutzer (Korsika, Pyrenäen, Alpen gleichzeitig) addieren
 sich weiterhin gebietsweise.
 
-**Zwei bekannte Lücken, noch nicht gebaut (Folge-Scheibe):**
+**Zwei bekannte Lücken:**
 - Der Zwischenspeicher bündelt **gleichzeitige** Abrufe nicht — zwei Threads,
   die dieselbe Kachel anfordern, laden beide. Heute folgenlos, weil alle
   Aufrufer (Trip wie Ortsvergleich) sequentiell laufen; wird relevant, sobald
-  der Alarm-Lauf parallelisiert wird.
-- Es fehlt eine **aktive Drosselung**, die Abrufe je Minute zählt und wartet
-  (Muster: `telegram.py` Sende-Drossel), statt auf Einhaltung zu hoffen —
-  sonst erscheinen HTTP-429-Abweisungen im Betrieb als „keine Gewitterdaten
-  verfügbar".
+  der Alarm-Lauf parallelisiert wird. Noch nicht gebaut.
+- Es fehlt weiterhin eine **aktive Drosselung**, die Abrufe je Minute zählt
+  und wartet (Muster: `telegram.py` Sende-Drossel), statt auf Einhaltung zu
+  hoffen. **Behoben ist nur die Sichtbarkeit (#1993, 2026-09-16):** ein HTTP
+  429 auf einen Blitzdichte-Abruf erzeugt jetzt eine eigene Log-Meldung
+  („gedrosselt (429) — Meteo-France-Limit erreicht", `meteofrance.py`) statt
+  der generischen „nicht abrufbar" — im Betrieb von echtem Datenausfall
+  unterscheidbar. Der Abruf wird dabei weiterhin nicht wiederholt und nicht
+  aktiv gedrosselt.
 
 ## Historie
 
