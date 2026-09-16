@@ -139,6 +139,11 @@ type Scheduler struct {
 	// per (process, jobName) — avoids MQ spam on every cron tick.
 	onceMissingHB   map[string]*sync.Once
 	onceMissingHBmu sync.Mutex
+
+	// userState verzeichnet Job-Ergebnisse je (jobID, userID), GETRENNT von
+	// lastRuns (Issue #2149 Scheibe A) — eigener Mutex, eigene Persistenz,
+	// s. user_run_state.go.
+	userState *userRunState
 }
 
 // New creates a Scheduler from config and store. Returns error if timezone is invalid.
@@ -169,6 +174,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 			return notify.SendMQ(sender, recipient, priority, subject, body)
 		},
 		onceMissingHB: make(map[string]*sync.Once),
+		userState:     newUserRunState(st.DataDir),
 	}
 
 	// Register jobs and store EntryID → jobMeta mapping
@@ -239,7 +245,63 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 	if err != nil {
 		return fmt.Errorf("list users: %w", err)
 	}
+	userIDs := filterOutTestUsers(jobID, allUserIDs)
 
+	if len(userIDs) == 0 {
+		log.Printf("[scheduler] %s: no users registered, skipping", jobID)
+		return nil
+	}
+
+	// Issue #1447 S2a: Rangfolge error > partial > ok bei gemischten
+	// Nutzer-Ergebnissen — ein einzelner echter Fehler macht den gesamten
+	// Job-Lauf "error", auch wenn andere Nutzer nur "partial" waren.
+	//
+	// Issue #2149 Scheibe A: zusaetzlich wird JEDE Klassifikation ueber
+	// s.userState.Record je (jobID, userID) verbucht — die Flanken-Ergebnisse
+	// werden gesammelt und am Ende dieses Laufs zu hoechstens einer Nachricht
+	// je Art gebuendelt (Spec Abschnitt 2, gegen Telegram-Laerm).
+	var firstHardErr, firstPartialErr error
+	var failedUsers, partialUsers, recoveredUsers []string
+	var lastFailedErrText string
+	for _, uid := range userIDs {
+		outcome, errText, hardErr, partialErr := s.classifyUserOutcome(jobID, path, uid)
+		if hardErr != nil && firstHardErr == nil {
+			firstHardErr = hardErr
+		}
+		if partialErr != nil && firstPartialErr == nil {
+			firstPartialErr = partialErr
+		}
+		failureEdge, partialEdge, recoveryEdge := s.userState.Record(jobID, uid, outcome, errText)
+		if failureEdge {
+			failedUsers = append(failedUsers, uid)
+			lastFailedErrText = errText
+		}
+		if partialEdge {
+			partialUsers = append(partialUsers, uid)
+		}
+		if recoveryEdge {
+			recoveredUsers = append(recoveredUsers, uid)
+		}
+	}
+
+	// Pruning-Basis ist die bereits gefilterte userIDs-Liste (Spec Abschnitt
+	// 1) — entfernt geloeschte Konten UND jedes potenziell geleakte Testkonto
+	// aus dem Zustand dieses Jobs in einem Schritt. persistLocked() greift
+	// hier ausserhalb jeder s.mu-Sperre (eigener Mutex, s. user_run_state.go).
+	s.userState.Prune(jobID, userIDs)
+	s.sendBundledUserAlerts(jobID, failedUsers, partialUsers, recoveredUsers, lastFailedErrText)
+
+	if firstHardErr != nil {
+		return firstHardErr
+	}
+	return firstPartialErr // nil, falls kein Nutzer partial war -> "ok"
+}
+
+// filterOutTestUsers entfernt Test-/tdd-Konten (Issue #1265, Defense-in-
+// Depth) aus der Nutzerliste, mit einem Log-Hinweis je Lauf (nicht je Job-
+// Tick) — ausgelagert aus runForAllUsers, um dessen Funktionslaenge klein zu
+// halten (Issue #2149 Scheibe A).
+func filterOutTestUsers(jobID string, allUserIDs []string) []string {
 	userIDs := make([]string, 0, len(allUserIDs))
 	var skipped []string
 	for _, uid := range allUserIDs {
@@ -252,39 +314,58 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 	if len(skipped) > 0 {
 		log.Printf("[scheduler] %s: skipping %d test-user account(s): %v", jobID, len(skipped), skipped)
 	}
+	return userIDs
+}
 
-	if len(userIDs) == 0 {
-		log.Printf("[scheduler] %s: no users registered, skipping", jobID)
-		return nil
+// classifyUserOutcome ruft triggerEndpointForUser auf und klassifiziert das
+// Ergebnis (ok/partial/error) inkl. Logging — ausgelagert aus
+// runForAllUsers, damit diese uebersichtlich bleibt (Issue #2149 Scheibe A).
+// hardErr/partialErr sind nur gesetzt, wenn der jeweilige Fall vorliegt (fuer
+// die Rangfolge error > partial > ok in runForAllUsers).
+func (s *Scheduler) classifyUserOutcome(jobID, path, uid string) (outcome, errText string, hardErr, partialErr error) {
+	err := s.triggerEndpointForUser(path, uid)
+	if err == nil {
+		return "ok", "", nil, nil
 	}
+	var pe *partialRunError
+	if errors.As(err, &pe) {
+		log.Printf("[scheduler] %s: user %s partial: %v", jobID, uid, err)
+		return "partial", err.Error(), nil, err
+	}
+	log.Printf("[scheduler] %s: user %s failed: %v", jobID, uid, err)
+	return "error", err.Error(), err, nil
+}
 
-	// Issue #1447 S2a: Rangfolge error > partial > ok bei gemischten
-	// Nutzer-Ergebnissen — ein einzelner echter Fehler macht den gesamten
-	// Job-Lauf "error", auch wenn andere Nutzer nur "partial" waren.
-	var firstHardErr, firstPartialErr error
-	for _, uid := range userIDs {
-		err := s.triggerEndpointForUser(path, uid)
-		if err == nil {
-			continue
-		}
-		var pe *partialRunError
-		if errors.As(err, &pe) {
-			log.Printf("[scheduler] %s: user %s partial: %v", jobID, uid, err)
-			if firstPartialErr == nil {
-				firstPartialErr = err
-			}
-			continue
-		}
-		log.Printf("[scheduler] %s: user %s failed: %v", jobID, uid, err)
-		if firstHardErr == nil {
-			firstHardErr = err
-		}
-		// continue — do not stop other users
+// sendBundledUserAlerts versendet hoechstens eine Nachricht je Art
+// (Fehler-Alarm high, Teilerfolg-Hinweis normal, Entwarnung normal) fuer
+// einen einzelnen Job-Lauf (Spec Abschnitt 2, AC-11). Die echte userID steht
+// bewusst im Klartext (Spec Abschnitt 4 — interner Betriebskanal), der
+// Fehlertext ist bereits an der Konstruktionsstelle redigiert.
+func (s *Scheduler) sendBundledUserAlerts(jobID string, failedUsers, partialUsers, recoveredUsers []string, lastFailedErrText string) {
+	if s.notifier == nil {
+		return
 	}
-	if firstHardErr != nil {
-		return firstHardErr
+	if len(failedUsers) > 0 {
+		subject := fmt.Sprintf("Nutzer-Fehlerserie bei Job %s (#2149)", jobID)
+		body := formatUserAlertBody(jobID, failedUsers, lastFailedErrText)
+		if err := s.notifier("gregor", "infra", "high", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: user failure alert notifier failed: %v", err)
+		}
 	}
-	return firstPartialErr // nil, falls kein Nutzer partial war -> "ok"
+	if len(partialUsers) > 0 {
+		subject := fmt.Sprintf("Nutzer-Läufe wiederholt unvollständig bei Job %s (#2149)", jobID)
+		body := formatUserAlertBody(jobID, partialUsers, "")
+		if err := s.notifier("gregor", "infra", "normal", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: user partial alert notifier failed: %v", err)
+		}
+	}
+	if len(recoveredUsers) > 0 {
+		subject := fmt.Sprintf("Nutzer-Läufe wieder OK bei Job %s (#2149)", jobID)
+		body := formatUserAlertBody(jobID, recoveredUsers, "")
+		if err := s.notifier("gregor", "infra", "normal", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: user recovery notifier failed: %v", err)
+		}
+	}
 }
 
 // briefingDispatch ist der vereinheitlichte stündliche Briefing-Einstieg
@@ -614,20 +695,33 @@ type triggerResponseBody struct {
 }
 
 // triggerEndpointForUser sends a POST to the Python trigger endpoint for a specific user.
+//
+// Issue #2149 Scheibe A: der zurueckgegebene Fehlertext ist an allen vier
+// Konstruktionsstellen redigiert (kein "?user_id=<id>" mehr) — er fliesst
+// unveraendert in jobResult.Error und damit in den oeffentlichen, ohne
+// Anmeldung erreichbaren /api/scheduler/status-Endpoint (Spec Abschnitt 3).
+// Ein *url.Error (aus s.client.Post) enthaelt in seinem Error()-Text IMMER
+// die volle angefragte URL inkl. "?user_id=..." — errors.Unwrap(err) liefert
+// die innere Ursache OHNE URL; die volle Kette bleibt via wrapped erhalten
+// (Issue #1912 errors.As/errors.Is).
 func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	url := s.pythonURL + path + "?user_id=" + userID
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
+		cause := errors.Unwrap(err)
+		if cause == nil {
+			cause = err
+		}
 		// Issue #1912: ein Timeout ist kein Ausfallbeweis — der Core kann
 		// dabei erfolgreich weiterarbeiten. Nur eine tatsaechlich verweigerte
 		// Verbindung (kein Timeout) bleibt ein harter Fehler.
 		if isTimeoutTransportError(err) {
 			return &partialRunError{
-				msg:     fmt.Sprintf("%s?user_id=%s timed out: %v", path, userID, err),
-				wrapped: err,
+				msg:     fmt.Sprintf("%s timed out: %v", path, cause),
+				wrapped: err, // unveraendert: volle Kette fuer #1912 errors.As
 			}
 		}
-		return fmt.Errorf("HTTP error: %w", err)
+		return fmt.Errorf("%s: transport error: %v", path, cause)
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
@@ -644,8 +738,8 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil {
 		if parsed.Failed > 0 {
 			return fmt.Errorf(
-				"%s?user_id=%s reported %d failed (status=%s, count=%d): %s",
-				path, userID, parsed.Failed, parsed.Status, parsed.Count, string(body),
+				"%s reported %d failed (status=%s, count=%d): %s",
+				path, parsed.Failed, parsed.Status, parsed.Count, string(body),
 			)
 		}
 		// Issue #1447 S2a: status="partial" ohne failed (Scheibe S1 —
@@ -654,8 +748,8 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 		// jobResult.Status "partial", nicht "error".
 		if parsed.Status == "partial" {
 			return &partialRunError{msg: fmt.Sprintf(
-				"%s?user_id=%s reported partial status (count=%d): %s",
-				path, userID, parsed.Count, string(body),
+				"%s reported partial status (count=%d): %s",
+				path, parsed.Count, string(body),
 			)}
 		}
 	}
@@ -761,6 +855,20 @@ func (s *Scheduler) overlapField(jobID string) map[string]any {
 	return overlap
 }
 
+// usersField builds the "users" sibling field (Issue #2149 Scheibe A) for a
+// Fan-out-Job — nil for the three globalen Jobs ohne Nutzer-Fan-out
+// (fehlendes Feld bedeutet "nicht anwendbar", analog overlapField). Nur
+// Zahlen, keine IDs (Spec Abschnitt 5). Braucht kein s.mu, weil userState
+// einen eigenen Mutex haelt — darf trotzdem nur aufgerufen werden, waehrend
+// s.mu (RLock) bereits gehalten wird, um die Lock-Reihenfolge s.mu ->
+// userState.mu konsistent zu halten (nie umgekehrt).
+func (s *Scheduler) usersField(jobID string) map[string]any {
+	if !fanOutJobIDs[jobID] {
+		return nil
+	}
+	return s.userState.Aggregate(jobID)
+}
+
 // Status returns current scheduler state for API exposure.
 func (s *Scheduler) Status() map[string]any {
 	s.mu.RLock()
@@ -794,6 +902,9 @@ func (s *Scheduler) Status() map[string]any {
 				if overlap := s.overlapField(sub.id); overlap != nil {
 					subJob["overlap"] = overlap
 				}
+				if users := s.usersField(sub.id); users != nil {
+					subJob["users"] = users
+				}
 				jobs = append(jobs, subJob)
 			}
 			continue
@@ -816,6 +927,9 @@ func (s *Scheduler) Status() map[string]any {
 			}
 			if overlap := s.overlapField(meta.id); overlap != nil {
 				job["overlap"] = overlap
+			}
+			if users := s.usersField(meta.id); users != nil {
+				job["users"] = users
 			}
 		} else {
 			job["id"] = int(e.ID)
