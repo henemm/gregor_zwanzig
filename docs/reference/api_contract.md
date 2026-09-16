@@ -1253,6 +1253,11 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
       "overlap": {
         "skipped_since_last_run": 3,
         "last_skipped_at": "2026-08-01T13:00:00Z"
+      },
+      "users": {
+        "total": 3,
+        "failing": 1,
+        "partial": 0
       }
     }
   ],
@@ -1300,10 +1305,14 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 | jobs[].last_run | object \| null | Metadata of last execution (null if never run) |
 | jobs[].last_run.time | datetime | ISO-8601 UTC timestamp of the last **actually executed** run — never overwritten by a skipped (overlapping) tick |
 | jobs[].last_run.status | enum | `ok`, `partial` or `error`. **Two distinct causes produce `partial`:** (1) Issue #1447 S2a — a per-user run reported `status: "partial"` without `failed`, e.g. the alert-run deadline from S1; (2) Issue #1912 — the HTTP call to the Python core hit the scheduler's client **timeout** (`net.Error` with `Timeout()`, or `context.DeadlineExceeded`). A timeout means "the core did not answer **in time**", which is **not** proof of an outage — the core may well complete the dispatch afterwards (measured 2026-08-16: timeout at 18:02, successful dispatch at 18:04:38). Every other transport failure (connection refused, DNS) stays `error`, because an unreachable core **is** an outage. |
-| jobs[].last_run.error | string \| null | Error code/message if status='error' or 'partial' |
+| jobs[].last_run.error | string \| null | Error code/message if status='error' or 'partial'. **Since Issue #2149 Scheibe A, this text never contains a `user_id`** — the four construction sites in `triggerEndpointForUser` build the message from `path` and the unwrapped transport cause (`errors.Unwrap`), even for a `*url.Error` whose own `Error()` text would otherwise embed the full requested URL including `?user_id=...`. |
 | jobs[].overlap | object \| null (Issue #1447 S2a) | Present **only** when at least one tick has been skipped since the last executed run of this job, because the previous run of the same job ID was still in progress (`sync.Mutex.TryLock()` in `recordRun`). Absent field means no overlap is occurring — never an error signal. |
 | jobs[].overlap.skipped_since_last_run | int | Number of consecutive ticks skipped since the last executed run; resets to 0 (and the `overlap` field disappears) the next time the job actually runs, regardless of outcome |
 | jobs[].overlap.last_skipped_at | datetime | ISO-8601 UTC timestamp of the most recently skipped tick |
+| jobs[].users | object \| absent (Issue #2149 Scheibe A) | Anonymous per-user aggregate, present **only** on the seven fan-out jobs that run via `runForAllUsers` (`trip_reports_hourly`, `alert_checks`, `radar_alert_checks`, `compare_alert_checks`, `compare_radar_alert_checks`, `compare_official_alert_checks`, `compare_presets_daily`). Absent on the three global jobs without user fan-out (`inbound_command_poll`, `data_write_selftest`, `premium_sms_poll`) — absent means "not applicable", not "all ok". Contains **only counts, never user IDs**. |
+| jobs[].users.total | int | Number of users with a recorded state entry for this job |
+| jobs[].users.failing | int | Number of users with `ConsecutiveFailures >= 1` |
+| jobs[].users.partial | int | Number of users with `ConsecutivePartial >= 1` |
 | briefing_health | object (Issues #1115, #1421, #1629, #1661) | Health metrics for scheduler services (provider/weather, briefing dispatch, deviation-alert anchors). Privacy-safe aggregate across all users — only numeric and timestamps, no `user_id`/`trip_id`/reason appears here. |
 | briefing_health.provider_error_streak_since | string \| null (Issue #1115, ADR-0018) | ISO-8601 UTC timestamp when the current unbroken series of provider (weather/forecast API) errors started, or `null` if no error streak is active. External monitor calculates `now - provider_error_streak_since` to escalate with outage duration. Gap threshold (for streak detection): 2 hours. |
 | briefing_health.provider_errors_recent_count | int (Issue #1115, ADR-0018) | Count of provider errors in the last 24 hours. Used to distinguish temporary transients from persistent outages. |

@@ -217,3 +217,4 @@ No other changes to `main.go`.
 
 - 2026-04-16: v1.0 Initial spec — Scheduler Multi-User Iteration (Issue #63)
 - 2026-04-16: v1.1 Status updated to implemented — all 9 tests pass (4 store + 5 scheduler)
+- 2026-09-15: Pro-Nutzer-Sichtbarkeit (Buchführung je (Job, Nutzer), Alarme, Redaktion des öffentlichen Fehlertexts) s. Scheibe A von #2149, `docs/specs/modules/fix_2149_scheduler_nutzer_sichtbarkeit.md` — keine inhaltliche Änderung an der hier getroffenen Sequenziell-Entscheidung.

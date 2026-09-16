@@ -1013,7 +1013,7 @@ Frontend **does not** directly call E-Mail/SMS channels. Instead:
 - **Frontend Errors:** Client-side error logging (future: Sentry)
 - **Backend Metrics:** BetterStack heartbeats for jobs (morning/evening reports, trip alerts, compare subscriptions)
 - **Health Checks:** `/api/health` (backend), `/` (frontend)
-- **Scheduler Status:** `/api/scheduler/status` shows last-run timestamps and errors per job
+- **Scheduler Status:** `/api/scheduler/status` shows per-job status + per-user aggregates (since #2149 Scheibe A: `users{total, failing, partial}` pro Fan-out-Job; `last_run.error` trägt keine Nutzerkennung mehr); Zustandsdatei `scheduler_user_state.json` unter `store.DataDir` persistiert `(jobID, userID)`-Paare mit letztem Lauf, Status, Fehler und Zähler für Fehler-/Teilerfolgs-Folgen
 
 **Compare-Specific:**
 - Frontend validiert die Editor-Tabs vor dem Speichern (Schreib-Gate, s. Save-Strategien)
