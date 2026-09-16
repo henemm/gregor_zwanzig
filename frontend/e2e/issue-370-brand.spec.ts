@@ -217,7 +217,7 @@ test.describe('Issue #370 — Brand-Bibliothek lib/brand/', () => {
 	});
 
 	// ─── AC-3 (Issue #2341): favicon.svg ist randfuellende Fill-Silhouette ───
-	test('AC-3 (Issue #2341): favicon.svg zeigt eine durchgehend gefuellte Bergflaeche', async ({ page, baseURL }) => {
+	test('AC-3 (Issue #2341): favicon.svg zeigt eine durchgehend gefuellte Bergflaeche', async ({ page }) => {
 		/**
 		 * GIVEN: /favicon.svg wird als <img> im Browser gerendert
 		 * WHEN:  Ein Pixel INNERHALB der Bergkamm-Flaeche (Punkt (30,45) im
@@ -226,21 +226,23 @@ test.describe('Issue #370 — Brand-Bibliothek lib/brand/', () => {
 		 *        nicht die Hintergrundfarbe mit duenner Umrandung wie bei einer
 		 *        Kontur-Linie -- echte Bildinhalts-Pruefung, kein SVG-Quelltext-Match.
 		 *
-		 * `page.setContent()` navigiert NICHT zur baseURL -- eine relative
-		 * `src="/favicon.svg"` würde gegen `about:blank` aufgelöst und nie laden
-		 * (CI-Fehlschlag: Pixel kam als [0,0,0] statt [26,26,24] zurück, weil das
-		 * <img> gar nicht erst geladen hatte). Deshalb die absolute URL bauen.
+		 * `page.setContent()` navigiert NICHT zur baseURL: eine relative
+		 * `src="/favicon.svg"` laedt gegen `about:blank` nie (1. CI-Fehlschlag,
+		 * Pixel [0,0,0]); eine ABSOLUTE URL laedt zwar, gilt dem Dokument aber
+		 * als Cross-Origin und tainted den Canvas (2. CI-Fehlschlag,
+		 * SecurityError bei getImageData). Deshalb zuerst auf eine echte Seite
+		 * navigieren (etabliert den App-Origin) und Bild+Canvas komplett
+		 * IM BROWSER same-origin aufbauen -- kein DOM-Element im Test noetig.
 		 */
-		await page.setContent(`
-			<img id="fav" src="${baseURL}/favicon.svg" width="256" height="256" />
-			<canvas id="cv" width="256" height="256"></canvas>
-		`);
-		const img = page.locator('#fav');
-		await expect(img).toBeVisible();
+		await page.goto('/');
 
-		const rgb = await page.evaluate(() => {
-			const img = document.getElementById('fav') as HTMLImageElement;
-			const canvas = document.getElementById('cv') as HTMLCanvasElement;
+		const rgb = await page.evaluate(async () => {
+			const img = new Image();
+			img.src = '/favicon.svg';
+			await img.decode();
+			const canvas = document.createElement('canvas');
+			canvas.width = 256;
+			canvas.height = 256;
 			const ctx = canvas.getContext('2d')!;
 			ctx.drawImage(img, 0, 0, 256, 256);
 			// Punkt (30,45) im 64x64-ViewBox -> Faktor 4 -> (120,180)
