@@ -28,7 +28,6 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import numpy as np
-import pytest
 from rasterio.io import MemoryFile
 from rasterio.transform import from_bounds
 
