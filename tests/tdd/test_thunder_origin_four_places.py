@@ -364,7 +364,7 @@ def test_ac1_pille_nennt_die_tragende_zutat():
     """AC-1: Given das Gewitterfenster der Pille kommt ausschliesslich ueber
     CAPE zustande, When die Trip-Mail gerendert wird, Then nennt die Pille die
     Zutat neben dem Zeitfenster."""
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15, 16)])
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15, 16)])
     assert _pille(_mail([seg])) == "Gewitter hoch ab 14:00 · stärkste 14:00 · CAPE", (
         f"Die Pille muss die tragende Zutat neben dem Zeitfenster nennen: "
         f"{_pille(_mail([seg]))!r}")
@@ -375,7 +375,7 @@ def test_ac5_pille_nennt_beide_zutaten_derselben_stunde():
     Hoechststufe, When die Pille gerendert wird, Then werden BEIDE in der
     Katalogreihenfolge aus ``THUNDER_SIGNAL_LABEL_DE`` genannt -- kein
     Gewinner wird gekuert (PO-Auslegung (ii))."""
-    seg = _segment([_dp(14, cape=1500.0, cin=5.0, lpi=60.0)])
+    seg = _segment([_dp(14, cape=3000.0, cin=5.0, lpi=60.0)])
     zutaten = seg.timeseries.data[0].thunder_level_signals
     assert zutaten == ["cape", "blitzpotenzial"], (
         f"Vorbedingung: die ECHTE Fusion muss BEIDE Zutaten als tragend "
@@ -395,7 +395,7 @@ def test_ac6_pille_vereinigt_die_zutaten_zweier_stunden():
     Das ist die Gegenprobe zur Mutation (a) der Spec ("nur der Datenpunkt der
     Spitzenstunde"): die Spitzenstunde ist hier 14:00 und traegt allein CAPE.
     """
-    seg = _segment([_dp(14, cape=1500.0, cin=5.0), _dp(17, lpi=60.0)])
+    seg = _segment([_dp(14, cape=3000.0, cin=5.0), _dp(17, lpi=60.0)])
     fruehe, spaete = (dp.thunder_level_signals for dp in seg.timeseries.data)
     assert (fruehe, spaete) == (["cape"], ["blitzpotenzial"]), (
         f"Vorbedingung: die beiden Stunden muessen VERSCHIEDENE Zutaten "
@@ -417,7 +417,7 @@ def test_ac8_pille_nennt_keine_zutat_ausserhalb_des_tagesfensters():
     Fixture die dritte Zutat gar nicht erst erzeugte.
     """
     seg = _segment(
-        [_dp(2, dichte=0.5)] + [_dp(h, cape=1500.0, cin=5.0) for h in (14, 15)],
+        [_dp(2, dichte=0.5)] + [_dp(h, cape=3000.0, cin=5.0) for h in (14, 15)],
         start_h=6, end_h=17,
     )
     assert seg.aggregated.thunder_level_max_signals == ["blitzdichte", "cape"], (
@@ -456,7 +456,7 @@ def test_ac10_timeline_zeigt_je_wegpunkt_nur_die_eigene_zutat(kommando):
     """
     heute = kommando.heute
     wegpunkte = [
-        _segment([_dp(10, tag=heute, cape=1500.0, cin=5.0)],
+        _segment([_dp(10, tag=heute, cape=3000.0, cin=5.0)],
                  tag=heute, start_h=6, end_h=10, seg_id=1),
         _segment([_dp(14, tag=heute, lpi=60.0)],
                  tag=heute, start_h=11, end_h=14, seg_id=2),
@@ -483,7 +483,7 @@ def test_ac15_alt_schnappschuss_zeigt_die_stufe_ohne_herkunft(kommando):
     Schnappschuss nennt die Zutat sehr wohl.
     """
     heute = kommando.heute
-    segmente = [_segment([_dp(10, tag=heute, cape=1500.0, cin=5.0)],
+    segmente = [_segment([_dp(10, tag=heute, cape=3000.0, cin=5.0)],
                          tag=heute, start_h=6, end_h=10)]
 
     vollstaendig = kommando.frage(segmente, body=_TIMELINE_HEUTE)
@@ -526,7 +526,7 @@ def test_ac7_glance_vereinigt_die_zutaten_zweier_wegpunkte(kommando):
     Wegpunkts."""
     heute = kommando.heute
     antwort = kommando.frage([
-        _segment([_dp(10, tag=heute, cape=1500.0, cin=5.0)],
+        _segment([_dp(10, tag=heute, cape=3000.0, cin=5.0)],
                  tag=heute, start_h=6, end_h=10, seg_id=1),
         _segment([_dp(14, tag=heute, lpi=60.0)],
                  tag=heute, start_h=11, end_h=14, seg_id=2),
@@ -548,7 +548,7 @@ def test_ac11_glance_nennt_keine_zutat_eines_anderen_kalendertags(kommando):
     """
     heute, morgen = kommando.heute, kommando.morgen
     antwort = kommando.frage([
-        _segment([_dp(10, tag=heute, cape=1500.0, cin=5.0)],
+        _segment([_dp(10, tag=heute, cape=3000.0, cin=5.0)],
                  tag=heute, start_h=6, end_h=10, seg_id=1),
         _segment([_dp(14, tag=morgen, dichte=0.5)],
                  tag=morgen, start_h=6, end_h=14, seg_id=2),
@@ -596,7 +596,7 @@ def test_ac9_jede_stundenzeile_zeigt_nur_die_zutat_ihres_datenpunkts():
     Zutat IHRES EIGENEN Datenpunkts -- keine Vermischung zwischen benachbarten
     Zeilen, in HTML wie im Klartext."""
     ort = _ort("Zweistundenort",
-               [_cdp(14, cape=1500.0, cin=5.0), _cdp(15, dichte=0.5)])
+               [_cdp(14, cape=3000.0, cin=5.0), _cdp(15, dichte=0.5)])
     traeger = [dp.thunder_level_signals for dp in ort.hourly_data]
     assert traeger == [["cape"], ["blitzdichte"]], (
         f"Vorbedingung: die beiden Stunden muessen VERSCHIEDENE Zutaten "
@@ -635,7 +635,7 @@ def test_ac12_compare_sms_und_telegram_zeigen_keine_stunden_herkunft():
     Gegenprobe zur Mutation (f) der Spec, die die SMS-Zelle probeweise ueber
     die Herkunfts-Aufrufstelle baut.
     """
-    ort = _ort("Leckort", [_cdp(14, cape=1500.0, cin=5.0),
+    ort = _ort("Leckort", [_cdp(14, cape=3000.0, cin=5.0),
                            _cdp(15, dichte=0.005)])
     stufen = [(dp.thunder_level, dp.thunder_level_signals)
               for dp in ort.hourly_data]
@@ -690,8 +690,8 @@ def test_ac14_s1_uebersichtszeile_bleibt_zeichengleich():
     eigene Zutat sehr wohl zeigt.
     """
     orte = (
-        _ort("Alpenort", [_cdp(14, cape=1500.0, cin=5.0)]),
-        _ort("Driftort", [_cdp(14, cape=800.0, cin=5.0)],
+        _ort("Alpenort", [_cdp(14, cape=3000.0, cin=5.0)]),
+        _ort("Driftort", [_cdp(14, cape=1500.0, cin=5.0)],
              thunder_level_max=ThunderLevel.HIGH),
     )
     html, text = _compare_mail(*orte)
@@ -729,7 +729,7 @@ def test_ac16_ohne_gewitter_bleiben_pille_timeline_und_glance_zeichengleich(
     heute = kommando.heute
     ruhig = _segment([_dp(h, tag=heute, cape=50.0, cin=5.0) for h in (10, 11)],
                      tag=heute, start_h=6, end_h=11)
-    laut = _segment([_dp(h, tag=heute, cape=1500.0, cin=5.0) for h in (10, 11)],
+    laut = _segment([_dp(h, tag=heute, cape=3000.0, cin=5.0) for h in (10, 11)],
                     tag=heute, start_h=6, end_h=11)
 
     assert _pille(_mail([ruhig])) == "kein Gewitter", (
@@ -762,7 +762,7 @@ def test_ac16_ohne_gewitter_bleibt_die_compare_stundenzelle_zeichengleich():
     seine Herkunft sehr wohl.
     """
     ruhig = _ort("Ruhigort", [_cdp(14, cape=50.0, cin=5.0)])
-    laut = _ort("Sturmort", [_cdp(14, cape=1500.0, cin=5.0)])
+    laut = _ort("Sturmort", [_cdp(14, cape=3000.0, cin=5.0)])
     assert ruhig.hourly_data[0].thunder_level == ThunderLevel.NONE, (
         f"Vorbedingung: der ruhige Ort muss die ECHTE Stufe NONE tragen: "
         f"{ruhig.hourly_data[0].thunder_level!r}")
@@ -799,7 +799,7 @@ def test_ac13_trip_sms_zeigt_die_stufe_aber_keine_herkunft():
     die Herkunft sehr wohl -- sonst waere dieses AC auch dann gruen, wenn die
     Herkunft nirgends erschiene.
     """
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0, lpi=60.0) for h in (14, 15, 16)])
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0, lpi=60.0) for h in (14, 15, 16)])
     bericht = _mail([seg])
 
     assert bericht.sms_text, (

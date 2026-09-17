@@ -55,7 +55,7 @@ außerhalb des Repos unter `/home/hem/gz-messdaten/`, weil er genau einmal läuf
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `app.model_registry.cape_ladder_thresholds_jkg(model_id, region)` | Nachschlag (genutzt) | Liefert die geeichte (low, med, high)-CAPE-Leiter — für `icon_d2`×`DE_ALPEN` 300/750/1200 J/kg. Kein hartkodierter Zahlenwert im neuen Modul. |
+| `app.model_registry.cape_ladder_thresholds_jkg(model_id, region)` | Nachschlag (genutzt) | Liefert die (low, med, high)-CAPE-Leiter — `low` geeicht je Modell/Gebiet (für `icon_d2`×`DE_ALPEN` 300 J/kg), `med`/`high` seit #2178 feste NWS/SPC-Absolutwerte 1000/2500 J/kg für alle Kombinationen. Kein hartkodierter Zahlenwert im neuen Modul. |
 | `providers.thunder_routing.thunder_region_for(lat, lon)` | Nachschlag (genutzt) | Bestimmt aus den Mitschnitt-Koordinaten das Gebiet (`DE_ALPEN` für den KHW), das an `cape_ladder_thresholds_jkg` geht. |
 | `app.models.ThunderLevel` | Enum (genutzt) | Parst die Mitschnitt-Strings `"NONE"/"LOW"/"MED"/"HIGH"` in denselben Enum-Typ, den der Produktivpfad verwendet — kein eigener String-Vergleich. |
 | `app.thunder_scale.thunder_ordinal(level)` | Funktion (genutzt) | Kanonische Ordnung (`NONE=0 < LOW=1 < MED=2 < HIGH=3`) für den Tages-Maximum-Vergleich mehrerer Segmente — dieselbe Ordnung wie `max_thunder()`, keine eigene Sortierregel. |

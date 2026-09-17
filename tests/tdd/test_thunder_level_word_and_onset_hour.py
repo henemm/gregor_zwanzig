@@ -105,10 +105,10 @@ _KOMPAKT = TripReportConfig(email_format="compact")
 def _dp(h: int, *, tag: date, cape=None, cin=None) -> ForecastDataPoint:
     """Ein Stundenpunkt mit ROHWERTEN — Stufe und Traeger rechnet die Fusion.
 
-    Geeichte CAPE-Leiter der Testregion DE_ALPEN/icon_d2: 300/750/1200 J/kg
-    (leicht/mittel/hoch). ``cin=5.0`` liegt im Band "schwacher Deckel"
+    Geeichte CAPE-Leiter der Testregion DE_ALPEN/icon_d2: 300/1000/2500 J/kg
+    (leicht/mittel/hoch, #2178). ``cin=5.0`` liegt im Band "schwacher Deckel"
     (Betrag < 25) und laesst die Leiter voll zaehlen. Damit ergibt sich ueber
-    die echte Fusion: 200 -> kein, 400 -> leicht, 800 -> mittel, 1500 -> hoch.
+    die echte Fusion: 200 -> kein, 400 -> leicht, 1500 -> mittel, 3000 -> hoch.
     """
     return ForecastDataPoint(
         ts=datetime(tag.year, tag.month, tag.day, h, 0, tzinfo=timezone.utc),
@@ -354,7 +354,7 @@ def test_ac1_html_pille_nennt_die_gewitterstufe_als_wort():
     (die Spec legt "Gewitter mittel ab 14:00" fest); ein blosses ``in`` liesse
     "Gewitter ab 14:00 · stärkste 18:00 · mittel" durchgehen.
     """
-    punkte = _tagespunkte({14: 400.0, 18: 800.0})
+    punkte = _tagespunkte({14: 400.0, 18: 1500.0})
     stufen = _stufen(punkte)
     assert stufen[14] is ThunderLevel.LOW and stufen[18] is ThunderLevel.MED, (
         f"Vorbedingung: die ECHTE Fusion muss ab 14 Uhr ein Gewitter und als "
@@ -378,7 +378,7 @@ def test_ac2_klartext_pille_nennt_dieselbe_gewitterstufe():
     DERSELBEN Mail, und zusaetzlich, dass beide Teile denselben Wortlaut
     tragen.
     """
-    punkte = _tagespunkte({14: 400.0, 18: 800.0})
+    punkte = _tagespunkte({14: 400.0, 18: 1500.0})
     bericht = _mail([_etappe(punkte)], [])
 
     pille = _pille_klartext(bericht.email_plain)
@@ -412,8 +412,8 @@ def test_ac3_klartext_ausblick_zeigt_die_onset_stunde():
     zum Bestand (#1653/#1680 S5a) und werden hier mitgeprueft: die Aenderung
     darf ausschliesslich die Onset-Stunde HINZUFUEGEN, nichts umstellen.
     """
-    punkte = _fusioniere([_dp(14, tag=_MORGEN, cape=800.0, cin=5.0),
-                          _dp(18, tag=_MORGEN, cape=1500.0, cin=5.0)])
+    punkte = _fusioniere([_dp(14, tag=_MORGEN, cape=1500.0, cin=5.0),
+                          _dp(18, tag=_MORGEN, cape=3000.0, cin=5.0)])
     stufen = _stufen(punkte)
     assert stufen[14] is ThunderLevel.MED and stufen[18] is ThunderLevel.HIGH, (
         f"Vorbedingung: Onset-Stunde 14 Uhr 'mittel', Spitze 18 Uhr 'hoch': "
@@ -446,8 +446,8 @@ def test_ac4_kompakt_ausblick_zeigt_dieselbe_onset_stunde():
     #1671 bereits: "- nachts hoch @2"). Der Kompakt-Ausblick traegt
     bestandsgemaess KEINE Herkunft (#1680 S5a AC-13, von #1493 unberuehrt).
     """
-    punkte = _fusioniere([_dp(14, tag=_MORGEN, cape=800.0, cin=5.0),
-                          _dp(18, tag=_MORGEN, cape=1500.0, cin=5.0)])
+    punkte = _fusioniere([_dp(14, tag=_MORGEN, cape=1500.0, cin=5.0),
+                          _dp(18, tag=_MORGEN, cape=3000.0, cin=5.0)])
     bericht = _mail([_etappe(_tagespunkte({}))], [_ausblick_zeile(punkte)],
                     report_config=_KOMPAKT)
     zeile = _ausblick_zeile_text(bericht.email_plain, _AUSBLICK_KOMPAKT)
@@ -492,13 +492,13 @@ def test_ac5_telegram_und_sms_bleiben_zeichengleich():
     "hoch" um 18 Uhr, waehrend AC-1 als Hoechststufe "mittel" braucht. Beide
     Zusicherungen an derselben Etappe sind rechnerisch unvereinbar.
     """
-    heute = _tagespunkte({14: 800.0, 18: 1500.0})
+    heute = _tagespunkte({14: 1500.0, 18: 3000.0})
     stufen = _stufen(heute)
     assert stufen[14] is ThunderLevel.MED and stufen[18] is ThunderLevel.HIGH, (
         f"Vorbedingung der SMS-Erwartung: 14 Uhr 'mittel', 18 Uhr 'hoch': "
         f"{stufen!r}")
-    morgen = _fusioniere([_dp(14, tag=_MORGEN, cape=800.0, cin=5.0),
-                          _dp(18, tag=_MORGEN, cape=1500.0, cin=5.0)])
+    morgen = _fusioniere([_dp(14, tag=_MORGEN, cape=1500.0, cin=5.0),
+                          _dp(18, tag=_MORGEN, cape=3000.0, cin=5.0)])
 
     bericht = _mail([_etappe(heute)], [_ausblick_zeile(morgen)])
 
@@ -568,9 +568,9 @@ def test_ac6_ohne_gewitter_bleiben_pille_und_ausblick_ohne_stufe_und_stunde():
             f"Ohne Ereignis darf kein Stufenwort '{wort}' erscheinen: "
             f"{zeile!r}")
 
-    laut = _mail([_etappe(_tagespunkte({14: 800.0}))],
+    laut = _mail([_etappe(_tagespunkte({14: 1500.0}))],
                  [_ausblick_zeile(_fusioniere(
-                     [_dp(14, tag=_MORGEN, cape=800.0, cin=5.0)]))])
+                     [_dp(14, tag=_MORGEN, cape=1500.0, cin=5.0)]))])
     assert "mittel" in _pille_klartext(laut.email_plain), (
         f"Gegenprobe gescheitert: mit erreichter Stufe MUSS das Stufenwort in "
         f"der Pille erscheinen, sonst beweist der Leerfall nichts: "
@@ -639,8 +639,8 @@ def test_ac9_ortsvergleich_zeigt_dieselbe_onset_stunde_wie_der_trip():
     schon gruen (beide Seiten zeigen heute uebereinstimmend ``⚡mittel (hoch
     @18) · CAPE``, also uebereinstimmend OHNE Onset-Stunde).
     """
-    punkte = _fusioniere([_dp(14, tag=_MORGEN, cape=800.0, cin=5.0),
-                          _dp(18, tag=_MORGEN, cape=1500.0, cin=5.0)])
+    punkte = _fusioniere([_dp(14, tag=_MORGEN, cape=1500.0, cin=5.0),
+                          _dp(18, tag=_MORGEN, cape=3000.0, cin=5.0)])
     stufen = _stufen(punkte)
     assert stufen[14] is ThunderLevel.MED and stufen[18] is ThunderLevel.HIGH, (
         f"Vorbedingung: Onset-Stunde 14 Uhr 'mittel', Spitze 18 Uhr 'hoch': "

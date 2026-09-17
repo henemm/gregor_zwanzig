@@ -132,7 +132,7 @@ def _dp(h: int, *, tag: date = _MORGEN, cape=None, cin=None, lpi=None,
     """Ein Stundenpunkt mit ROHWERTEN — Stufe und Traeger rechnet die Fusion.
 
     Geeichte Leitern der Testregion DE_ALPEN/icon_d2 (gemessen ueber
-    ``model_registry``, nicht geraten): CAPE 300/750/1200 J/kg, LPI
+    ``model_registry``, nicht geraten): CAPE 300/1000/2500 J/kg (#2178), LPI
     1/30/50 J/kg, Blitzdichte 0.003/0.015/0.075 je km2. ``cin=5.0`` liegt im
     Band „schwacher Deckel" (Betrag < 25) und laesst die CAPE-Leiter voll
     zaehlen.
@@ -149,7 +149,7 @@ def _dp(h: int, *, tag: date = _MORGEN, cape=None, cin=None, lpi=None,
 
 def _eine_zutat_14uhr() -> list[ForecastDataPoint]:
     """Die Standard-Fixture „genau EINE tragende Zutat im Tagesfenster":
-    14 Uhr, CAPE 800 J/kg bei schwachem Deckel → ueber die echte Fusion
+    14 Uhr, CAPE 1500 J/kg bei schwachem Deckel → ueber die echte Fusion
     ``MED`` mit der Traegerliste ``['cape']``, im Text „· CAPE".
 
     ALS FUNKTION statt als Konstante, damit jede Verwendung zwangslaeufig ein
@@ -158,13 +158,13 @@ def _eine_zutat_14uhr() -> list[ForecastDataPoint]:
     vor. Ein Aufrufausdruck kann — anders als eine Variable — nicht versehentlich
     ein zweites Mal durch die Fusion gereicht werden.
     """
-    return [_dp(14, cape=800.0, cin=5.0)]
+    return [_dp(14, cape=1500.0, cin=5.0)]
 
 
 def _kein_gewitter_am_tag() -> list[ForecastDataPoint]:
     """Die ENTSCHEIDBARE „Kein Gewitter"-Fixture (AC-6): 14 Uhr CAPE 200 J/kg
     → ueber die echte Fusion ``NONE`` mit LEERER Traegerliste, dazu 21 Uhr
-    CAPE 800 → ``MED`` mit ``['cape']``, also AUSSERHALB des Standardfensters
+    CAPE 1500 → ``MED`` mit ``['cape']``, also AUSSERHALB des Standardfensters
     4-19.
 
     Warum nicht der ruhige Tag allein: fuehrt KEINE Stunde der Etappe eine
@@ -179,7 +179,7 @@ def _kein_gewitter_am_tag() -> list[ForecastDataPoint]:
     Als FUNKTION aus demselben Grund wie ``_eine_zutat_14uhr()``: jeder
     Fusionsdurchgang braucht ein frisches Objekt (s. ``_fusioniere``).
     """
-    return [_dp(14, cape=200.0), _dp(21, cape=800.0, cin=5.0)]
+    return [_dp(14, cape=200.0), _dp(21, cape=1500.0, cin=5.0)]
 
 
 def _fusioniere(punkte: list[ForecastDataPoint], *,
@@ -493,7 +493,7 @@ def test_ac1_rueckfallpfad_eine_zutat_klartext_und_html():
     durch ``multi_day_trend=None`` — s. ``_rueckfall()``.
 
     Fixture-Auflage der Spec (Testplan, „Fixture-Hinweis"): zusaetzlich zu
-    dem Punkt IM Tagesfenster (14 Uhr, CAPE 800 → MED) traegt die Fixture
+    dem Punkt IM Tagesfenster (14 Uhr, CAPE 1500 → MED) traegt die Fixture
     einen Punkt AUSSERHALB des Fensters mit einer ANDEREN Zutat auf
     DERSELBEN Stufe (21 Uhr, LPI 35 → MED ueber Blitzpotenzial). Laese die
     Implementierung die Traeger aus der ungefensterten Punktliste ``day_dps``
@@ -505,7 +505,7 @@ def test_ac1_rueckfallpfad_eine_zutat_klartext_und_html():
     des Fensters WIRD seit #1651 genannt) und deshalb Teil der Erwartung.
     """
     zeile = _beide_fassungen(_mail(
-        _rueckfall([_dp(14, cape=800.0, cin=5.0), _dp(21, lpi=35.0)])
+        _rueckfall([_dp(14, cape=1500.0, cin=5.0), _dp(21, lpi=35.0)])
     ))
     assert zeile == (
         f"{_DATUM}: ⚡ Gewitter möglich ab 14:00 · CAPE, "
@@ -535,7 +535,7 @@ def test_ac2_primaerpfad_eine_zutat_klartext_und_html():
     Erwartung ist bewusst zeichengleich zu AC-1 — dieselbe Fixture, derselbe
     Satz. Weicht sie ab, driften die beiden Bauwege auseinander.
     """
-    forecast, zeilen = _primaer([_dp(14, cape=800.0, cin=5.0), _dp(21, lpi=35.0)])
+    forecast, zeilen = _primaer([_dp(14, cape=1500.0, cin=5.0), _dp(21, lpi=35.0)])
     bericht = _mail(forecast, trend=zeilen, report_type="evening",
                     report_config=TripReportConfig(show_outlook=False))
     zeile = _beide_fassungen(bericht)
@@ -561,10 +561,10 @@ def test_ac3_zwei_zutaten_werden_beide_genannt():
     Gewinner gekuert (Auslegung (ii), unveraendert seit S1).
 
     Zwei Fixturen, weil sie verschiedene Fehler fangen:
-    (a) EIN Punkt mit zwei Zutaten (16 Uhr, CAPE 1500 + LPI 60 → beide HIGH)
+    (a) EIN Punkt mit zwei Zutaten (16 Uhr, CAPE 3000 + LPI 60 → beide HIGH)
         — Erstauftritt ist die Katalogreihenfolge: "CAPE, Blitzpotenzial".
         Prueft Verbinder und Reihenfolge innerhalb einer Stunde.
-    (b) ZWEI Punkte mit je EINER Zutat (15 Uhr LPI 60, 16 Uhr CAPE 1500) —
+    (b) ZWEI Punkte mit je EINER Zutat (15 Uhr LPI 60, 16 Uhr CAPE 3000) —
         Erstauftritt ist die ZEITLICHE Reihenfolge: "Blitzpotenzial, CAPE".
         Nur (b) faellt, wenn statt der Vereinigung die erste Traegerliste
         genommen wird; bei (a) waere die erste Liste zufaellig schon die
@@ -572,7 +572,7 @@ def test_ac3_zwei_zutaten_werden_beide_genannt():
     Bauweg: RUECKFALL (Spec-Testplan: „wahlweise Pfad").
     """
     zeile_a = _beide_fassungen(_mail(
-        _rueckfall([_dp(16, cape=1500.0, cin=5.0, lpi=60.0)])
+        _rueckfall([_dp(16, cape=3000.0, cin=5.0, lpi=60.0)])
     ))
     assert zeile_a == (
         f"{_DATUM}: ⚡ Starkes Gewitter erwartet ab 16:00 · CAPE, Blitzpotenzial"
@@ -581,7 +581,7 @@ def test_ac3_zwei_zutaten_werden_beide_genannt():
         f"— innerhalb EINER Stunde in Katalogreihenfolge: {zeile_a!r}")
 
     zeile_b = _beide_fassungen(_mail(
-        _rueckfall([_dp(15, lpi=60.0), _dp(16, cape=1500.0, cin=5.0)])
+        _rueckfall([_dp(15, lpi=60.0), _dp(16, cape=3000.0, cin=5.0)])
     ))
     assert zeile_b == (
         f"{_DATUM}: ⚡ Starkes Gewitter erwartet ab 15:00 · Blitzpotenzial, CAPE"
@@ -609,7 +609,7 @@ def test_ac4_herkunft_steht_vor_dem_nacht_halbsatz():
     Ereignisaussage; die Tagesaussage (MED) bleibt die Gewitteransage.
     """
     zeile = _beide_fassungen(_mail(
-        _rueckfall([_dp(2, cape=400.0, cin=5.0), _dp(14, cape=800.0, cin=5.0)])
+        _rueckfall([_dp(2, cape=400.0, cin=5.0), _dp(14, cape=1500.0, cin=5.0)])
     ))
     nacht = ", nachts schwaches Signal (leicht) ab 02:00"
     assert zeile == (
@@ -634,7 +634,7 @@ def test_ac5_herkunft_steht_vor_dem_hagel_zusatz():
     zweiter Dict-Schluessel hinter dem Hagel landet.
     """
     zeile = _beide_fassungen(_mail(
-        _rueckfall([_dp(14, cape=800.0, cin=5.0, hail=True)])
+        _rueckfall([_dp(14, cape=1500.0, cin=5.0, hail=True)])
     ))
     assert zeile == (
         f"{_DATUM}: ⚡ Gewitter möglich ab 14:00 · CAPE · Hagel: ja"
@@ -675,7 +675,7 @@ def test_ac6_kein_gewitter_zeigt_nie_herkunft():
     dort). Der Nacht-Halbsatz ist Folge derselben Auflage und Teil der
     Erwartung — er ist wortgleich zu heute und traegt selbst keine Herkunft.
 
-    Gegenprobe JE PFAD (Spec-Auflage): dieselbe 14-Uhr-Stunde mit ``cape=800``
+    Gegenprobe JE PFAD (Spec-Auflage): dieselbe 14-Uhr-Stunde mit ``cape=1500``
     liegt oberhalb NONE und MUSS ueber DENSELBEN Pfad die Herkunft zeigen.
     Ohne sie waere der jeweilige Abwesenheits-Nachweis auch dann gruen, wenn
     die Herkunft auf diesem Pfad ueberhaupt nicht entstuende.
@@ -742,7 +742,7 @@ def test_ac7_primaerpfad_abweichendes_fenster():
 
     Fenster 6-14. Die Fixture traegt ZWEI Stunden mit derselben Hoechststufe
     (hoch), aber VERSCHIEDENEN Zutaten: 10 Uhr ueber die Blitzdichte (0.1 je
-    km2), 18 Uhr ueber CAPE (1500 J/kg). Damit ist die Fensterfrage
+    km2), 18 Uhr ueber CAPE (3000 J/kg). Damit ist die Fensterfrage
     entscheidbar statt zufaellig richtig — bei entfernter Fensterfilterung
     (Pflicht-Mutation (b)) stuende dort „Blitzdichte, CAPE".
 
@@ -755,7 +755,7 @@ def test_ac7_primaerpfad_abweichendes_fenster():
     eng = TripReportConfig(show_outlook=False, day_window_start_hour=6,
                            day_window_end_hour=14)
     forecast, zeilen = _primaer(
-        [_dp(10, dichte=0.1), _dp(18, cape=1500.0, cin=5.0)],
+        [_dp(10, dichte=0.1), _dp(18, cape=3000.0, cin=5.0)],
         report_config=eng,
     )
     zeile = _beide_fassungen(_mail(forecast, trend=zeilen, report_type="evening",
@@ -772,7 +772,7 @@ def test_ac7_primaerpfad_abweichendes_fenster():
 
     weit = TripReportConfig(show_outlook=False)
     forecast_w, zeilen_w = _primaer(
-        [_dp(10, dichte=0.1), _dp(18, cape=1500.0, cin=5.0)],
+        [_dp(10, dichte=0.1), _dp(18, cape=3000.0, cin=5.0)],
         report_config=weit,
     )
     zeile_w = _beide_fassungen(_mail(forecast_w, trend=zeilen_w,
@@ -800,13 +800,13 @@ def test_ac8_primaerpfad_failsoft_ohne_traegerquelle():
     Fail-soft-Zweig lief und nicht der Regelzweig.
 
     Gegenprobe an derselben Fixture (Spec-Auflage): dieselben Punkte PLUS
-    eine Stunde IM Fenster (10 Uhr, CAPE 1500) — dann erscheint die Herkunft
+    eine Stunde IM Fenster (10 Uhr, CAPE 3000) — dann erscheint die Herkunft
     sehr wohl. Pflicht-Mutation (d) der Spec haengt dem Fail-soft-Zweig eine
     Herkunft aus dem Kalendertags-Maximum an; daran faellt der erste Teil.
     """
     eng = TripReportConfig(show_outlook=False, day_window_start_hour=6,
                            day_window_end_hour=14)
-    forecast, zeilen = _primaer([_dp(21, cape=1500.0, cin=5.0)], report_config=eng)
+    forecast, zeilen = _primaer([_dp(21, cape=3000.0, cin=5.0)], report_config=eng)
     zeile = _beide_fassungen(_mail(forecast, trend=zeilen, report_type="evening",
                                    report_config=eng))
     assert zeile == (
@@ -821,7 +821,7 @@ def test_ac8_primaerpfad_failsoft_ohne_traegerquelle():
             f"Maximum: {zeile!r}")
 
     forecast_g, zeilen_g = _primaer(
-        [_dp(10, cape=1500.0, cin=5.0), _dp(21, cape=1500.0, cin=5.0)],
+        [_dp(10, cape=3000.0, cin=5.0), _dp(21, cape=3000.0, cin=5.0)],
         report_config=eng,
     )
     zeile_g = _beide_fassungen(_mail(forecast_g, trend=zeilen_g,

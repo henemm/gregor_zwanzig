@@ -104,7 +104,7 @@ def _dp(h: int, *, tag: date = _MORGEN, cape=None, cin=None, lpi=None,
     """Ein Stundenpunkt mit ROHWERTEN — Stufe und Traeger rechnet die Fusion.
 
     Geeichte Leitern der Testregion DE_ALPEN/icon_d2 (gemessen, nicht
-    geraten): CAPE 300/750/1200 J/kg, LPI 1/30/50 J/kg, Blitzdichte
+    geraten): CAPE 300/1000/2500 J/kg (#2178), LPI 1/30/50 J/kg, Blitzdichte
     0.003/0.015/0.075 je km2. ``cin=5.0`` liegt im Band "schwacher Deckel"
     (Betrag < 25) und laesst die CAPE-Leiter voll zaehlen.
     """
@@ -400,7 +400,7 @@ def test_ac4_zwei_tragende_zutaten_werden_beide_genannt():
     Testartefakt.
     """
     zelle_a = _gew_zelle(_mail([
-        _ausblick_zeile([_dp(16, cape=1500.0, cin=5.0, lpi=60.0)])
+        _ausblick_zeile([_dp(16, cape=3000.0, cin=5.0, lpi=60.0)])
     ]).email_html)
     assert zelle_a == "hoch @16 · CAPE, Blitzpotenzial", (
         f"Beide Traeger der Hoechststufe muessen mit ', ' verbunden in "
@@ -408,7 +408,7 @@ def test_ac4_zwei_tragende_zutaten_werden_beide_genannt():
         f"das die Katalogreihenfolge: {zelle_a!r}")
 
     zelle_b = _gew_zelle(_mail([_ausblick_zeile(
-        [_dp(15, lpi=60.0), _dp(16, cape=1500.0, cin=5.0)]
+        [_dp(15, lpi=60.0), _dp(16, cape=3000.0, cin=5.0)]
     )]).email_html)
     assert zelle_b == "hoch @15 · Blitzpotenzial, CAPE", (
         f"Tragen ZWEI Stunden des Tagesfensters die Hoechststufe ueber "
@@ -601,7 +601,7 @@ def test_ac9_stufe_und_herkunft_stammen_aus_demselben_tagesfenster():
     wird dadurch schaerfer, nicht schwaecher.
     """
     abweichend = _gew_zelle(_mail([_ausblick_zeile(
-        [_dp(10, dichte=0.1), _dp(21, cape=1500.0, cin=5.0)],
+        [_dp(10, dichte=0.1), _dp(21, cape=3000.0, cin=5.0)],
         report_config=TripReportConfig(day_window_start_hour=20, day_window_end_hour=23),
     )]).email_html)
     assert abweichend == "hoch @21 · CAPE", (
@@ -613,7 +613,7 @@ def test_ac9_stufe_und_herkunft_stammen_aus_demselben_tagesfenster():
         f"{abweichend!r}")
 
     standard = _gew_zelle(_mail([_ausblick_zeile(
-        [_dp(10, dichte=0.1), _dp(21, cape=1500.0, cin=5.0)],
+        [_dp(10, dichte=0.1), _dp(21, cape=3000.0, cin=5.0)],
     )]).email_html)
     assert standard == "hoch @10 · Blitzdichte", (
         f"Im Standardfenster 4-19 muessen Stufe UND Herkunft aus der "
@@ -728,7 +728,7 @@ def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():
         f"zeigen: {zeile_a!r}")
 
     html_b, _ = _compare_mail(
-        [_dp(2, cape=1500.0, cin=5.0), _dp(16, dichte=0.005)],
+        [_dp(2, cape=3000.0, cin=5.0), _dp(16, dichte=0.005)],
         outlook_metrics=auswahl,
     )
     zelle_b = _gew_zelle(html_b)
@@ -743,7 +743,7 @@ def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():
         f"Die staerkere NACHT-Stufe darf in der Vorschau gar nicht "
         f"erscheinen (#1848 A3): {zelle_b!r}")
     fest_b, _ = _compare_mail(
-        [_dp(2, cape=1500.0, cin=5.0), _dp(16, dichte=0.005)],
+        [_dp(2, cape=3000.0, cin=5.0), _dp(16, dichte=0.005)],
     )
     assert _gew_zelle(fest_b) == zelle_b, (
         "Metrik-Zweig und fester Zweig derselben Mailart muessen dieselbe "
