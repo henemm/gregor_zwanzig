@@ -2,10 +2,10 @@
 entity_id: inbound_command_channels
 type: module
 created: 2026-02-17
-updated: 2026-09-08
+updated: 2026-09-17
 status: draft
-version: "1.5"
-tags: [f6, inbound, email, sms, premium-sms, imap, polling, channel, shortcode]
+version: "1.6"
+tags: [f6, inbound, email, sms, premium-sms, imap, polling, channel, shortcode, compare]
 ---
 
 # Inbound Command Channels
@@ -472,6 +472,23 @@ Der einzige Unterschied: Polling-Quelle und Reply-Output.
 > läuft über den neuen geteilten Baustein `pick_active_trip`
 > (`src/services/trip_selection.py`). Details:
 > `docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md`.
+>
+> **Nachtrag (Issue #2282, Scheibe S1, 2026-09-17):** `pick_active_trip` deckt nur
+> noch die Trip-Hälfte der Auswahl ab. Telegram- und Premium-SMS-Reader rufen bei
+> fehlendem Namen im Text jetzt die kind-neutrale `resolve_active_target(trips,
+> presets, now_utc, channel=...)` (`trip_selection.py`) auf, die zusätzlich aktive
+> Ortsvergleiche als Kandidaten einbezieht. Ist das Ergebnis eindeutig, bauen die
+> Reader `InboundMessage` wie bisher (Trip) bzw. setzen die additiven Felder
+> `resolved_kind="vergleich"`/`resolved_preset_id=<id>` (Trip-Verhalten bei
+> `resolved_kind=None` unverändert). Ist das Ergebnis mehrdeutig oder leer, senden
+> die Reader den von `resolve_active_target` gelieferten Text direkt über ihren
+> bestehenden Antwortweg und rufen `TripCommandProcessor.process()` **nicht** auf —
+> der bisherige, je Reader eigene Text „Kein aktiver Trip gefunden" ist damit
+> ersetzt durch den einheitlichen Text „Kein aktiver Trip oder Ortsvergleich
+> gefunden." Der E-Mail-Reader nutzt diese Auswahlfunktion nicht (dort ist der
+> Name im Betreff Pflicht), aber `_find_trip_id` sucht seither ebenfalls über
+> beide `kind`s, sodass ein `[Name]`-Betreff auch einen Ortsvergleich treffen
+> kann. Details: `docs/specs/modules/feat_2282_ortsvergleich_eingangskanaele.md`.
 
 ## Configuration
 
@@ -686,6 +703,13 @@ Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
 ## Changelog
 
+- 2026-09-17: v1.6 HINWEIS (#2282 Scheibe S1): Abschnitt 9 um Nachtrag ergänzt —
+  Telegram/Premium-SMS-Reader lösen bei fehlendem Namen jetzt über die
+  kind-neutrale `resolve_active_target()` auf (statt `pick_active_trip` allein),
+  die auch aktive Ortsvergleiche als Kandidaten liefert; einheitlicher
+  „Kein aktiver Trip oder Ortsvergleich gefunden"-Text ersetzt die bisherigen,
+  je Reader eigenen Texte. `_find_trip_id` (E-Mail) sucht seither ebenfalls über
+  beide `kind`s. Kein Code in dieser Spec geändert.
 - 2026-09-08: v1.5 SECURITY-FIX (#2143): Sender-Authentifizierung war tautologisch
   (Absender wurde aus From: aufgeloest und gegen dasselbe Profil geprueft) —
   SPF/DKIM/DMARC via Authentication-Results-Header (fail-closed, nur erster

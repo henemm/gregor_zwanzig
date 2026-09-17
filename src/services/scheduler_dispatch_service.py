@@ -336,6 +336,68 @@ def save_compare_preset_pause(
         logger.error("Failed to write briefing %s: %s", path, e)
 
 
+def resume_compare_preset(
+    user_id: str,
+    preset_id: str,
+    data_root: str | None = None,
+) -> str:
+    """Read-Modify-Write-Gegenstueck zu ``save_compare_preset_pause`` (Issue
+    #2282 Abschnitt 6, AC-9/AC-10): setzt ``schedule`` auf
+    ``previous_schedule`` zurueck (leer -> ``"daily"``, identisch zu
+    ``subscriptionHelpers.ts:computePauseToggle``) und loescht ``paused_at``
+    IM SELBEN Schreibvorgang (Mutations-Gegenprobe 3) — nie in zwei
+    getrennten Dateizugriffen, sonst koennte ein Crash dazwischen einen
+    inkonsistenten Zwischenzustand hinterlassen. Merge, kein Replace
+    (BUG-DATALOSS-GR221).
+
+    Rueckgabe: ``"resumed"`` | ``"not_paused"`` | ``"not_found"`` |
+    ``"wrong_kind"`` — der Aufrufer leitet den Antworttext daraus ab, statt
+    ihn hier zu behaupten.
+    """
+    if data_root is None:
+        data_root = str(get_data_root())
+    if not VALID_ENTITY_ID_RE.match(preset_id):
+        return "not_found"
+
+    path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
+    if not path.exists():
+        return "not_found"
+
+    try:
+        entry = _json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.error("Failed to read briefing %s for resume: %s", path, e)
+        return "not_found"
+    if not isinstance(entry, dict):
+        return "not_found"
+
+    # F002-Guard symmetrisch zu save_compare_preset_pause: eine route-Datei
+    # bei ID-Kollision nie still als Vergleich fortsetzen.
+    if entry.get("kind") not in (None, "", "vergleich"):
+        logger.warning(
+            "briefing %s traegt kind=%r (kein vergleich) -- Resume-Write "
+            "uebersprungen (F002, keine Trip-Korruption)",
+            path, entry.get("kind"),
+        )
+        return "wrong_kind"
+
+    pausiert = bool(entry.get("paused_at")) or entry.get("schedule") == "manual"
+    if not pausiert:
+        return "not_paused"
+
+    entry["schedule"] = entry.get("previous_schedule") or "daily"
+    entry.pop("paused_at", None)
+    entry["kind"] = "vergleich"
+
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            _json.dump(entry, f, indent=2, ensure_ascii=False)
+    except OSError as e:
+        logger.error("Failed to write briefing %s: %s", path, e)
+        return "not_found"
+    return "resumed"
+
+
 def build_compare_preset_subject(name: str, target_date: date) -> str:
     """Baut den Mail-Betreff fuer einen Compare-Preset-Versand (pure Funktion).
 

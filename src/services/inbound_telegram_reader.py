@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from app.config import Settings, resolve_public_host
-from app.loader import load_all_trips
+from app.loader import compare_preset_to_dict, load_all_trips, load_compare_presets
 from app.trip import Trip
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
@@ -30,9 +30,10 @@ from services.trip_command_processor import (
     _ohne_zitat,
     _QUERY_KEYS,
     _VALID_COMMANDS as _PROCESSOR_COMMANDS,
+    match_leading_name,
     unknown_command_body,
 )
-from services.trip_selection import pick_active_trip
+from services.trip_selection import pick_active_trip, resolve_active_target
 
 logger = logging.getLogger(__name__)
 
@@ -204,54 +205,116 @@ class InboundTelegramReader:
                 self.sent_message_ids.append(mid)
             return True
 
-        # Aktiven Trip ermitteln (user-scoped)
-        # #1727 S5a: EIN Zeitpunkt fuer Trip-Auswahl UND Nachrichtenstempel --
+        # Aktiven Trip/Ortsvergleich ermitteln (user-scoped)
+        # #1727 S5a: EIN Zeitpunkt fuer Auswahl UND Nachrichtenstempel --
         # vorher zwei knapp versetzte datetime.now()-Aufrufe, die an der
         # Tagesgrenze auf verschiedene Ortstage fallen konnten.
         now_utc = datetime.now(tz=timezone.utc)
-        trip = self._find_active_trip(now_utc, user_id)
-        if not trip:
-            host = _bare_public_host(settings)
+        trips = load_all_trips(user_id)
+        presets = [compare_preset_to_dict(p) for p in load_compare_presets(user_id)]
+
+        # Issue #2282 Abschnitt 2/4: ein vorangestellter Name hat Vorrang vor
+        # der aktiven Auswahl — Namensgleichheit/Kollision loest `process()`
+        # selbst auf (Abschnitt 4/AC-7).
+        named = match_leading_name(text, trips, presets)
+        if named is not None:
+            name_prefix, rest, name_kind, name_ziel = named
+            key, body = self._command_body(rest)
+            if key is None:
+                self._send_unknown_command(chat_id, user_settings)
+                return True
+            # Adversary F001-Nachtrag (#2282 Fix-Loop 2): match_leading_name
+            # kennt Kind/Objekt des Treffers bereits -- direkt uebernehmen,
+            # keine zweite Suche. Bei Namensgleichheit (name_kind is None)
+            # bleibt resolved_kind unveraendert None (process() loest die
+            # Rueckfrage selbst auf); die Lade-Nachricht ist in BEIDEN
+            # Nicht-Trip-Faellen (Vergleich ODER Namensgleichheit) falsch.
+            resolved_kind = "vergleich" if name_kind == "vergleich" else None
+            resolved_preset_id = name_ziel.get("id") if name_kind == "vergleich" else None
+            inbound = InboundMessage(
+                channel="telegram", trip_name=name_prefix, body=body,
+                sender=chat_id, received_at=now_utc, user_id=user_id,
+                resolved_kind=resolved_kind, resolved_preset_id=resolved_preset_id,
+            )
+            self._dispatch_and_reply(
+                key, inbound, chat_id, user_settings,
+                ladehinweis_erlaubt=(name_kind == "route"),
+            )
+            return True
+
+        ziel = resolve_active_target(trips, presets, now_utc, channel="telegram")
+        if ziel.kind is None:
+            # Issue #2282 AC-5: identischer Text wie Premium-SMS, kein
+            # Host-Zusatz mehr (der wuerde die Kanalgleichheit brechen).
             mid = self._notification_service.send_telegram_message(
-                chat_id=chat_id,
-                subject="Fehler",
-                body=(
-                    f"Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip auf {host}"
-                    if host
-                    else "Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip."
-                ),
-                settings=user_settings,
+                chat_id=chat_id, subject="Fehler", body=ziel.text, settings=user_settings,
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
             return True
+
+        if ziel.kind == "route":
+            trip_name, resolved_kind, resolved_preset_id = ziel.target.name, None, None
+        else:
+            preset = ziel.target
+            trip_name = preset.get("name", "")
+            resolved_kind, resolved_preset_id = "vergleich", preset.get("id")
 
         # Befehl parsen UND kodieren — ein Einstieg, damit ein Test denselben
         # Weg nimmt wie der Produktivpfad (Issue #2134).
         key, body = self._command_body(text)
         if key is None:
-            mid = self._notification_service.send_telegram_message(
-                chat_id=chat_id,
-                subject="Unbekannter Befehl",
-                # Issue #2134: derselbe abgeleitete Text wie im Prozessor —
-                # vorher war das die achte, eigenstaendig gepflegte Liste.
-                body=unknown_command_body("Das war kein bekannter Befehl."),
-                settings=user_settings,
-            )
-            if mid is not None:
-                self.sent_message_ids.append(mid)
+            self._send_unknown_command(chat_id, user_settings)
             return True
 
         inbound = InboundMessage(
             channel="telegram",
-            trip_name=trip.name,
+            trip_name=trip_name,
             body=body,
             sender=chat_id,
             received_at=now_utc,
             user_id=user_id,
+            resolved_kind=resolved_kind,
+            resolved_preset_id=resolved_preset_id,
         )
+        self._dispatch_and_reply(
+            key, inbound, chat_id, user_settings,
+            ladehinweis_erlaubt=(ziel.kind == "route"),
+        )
+        return True
 
-        if key in _QUERY_KEYS:
+    def _send_unknown_command(self, chat_id: str, user_settings: Settings) -> None:
+        mid = self._notification_service.send_telegram_message(
+            chat_id=chat_id,
+            subject="Unbekannter Befehl",
+            # Issue #2134: derselbe abgeleitete Text wie im Prozessor —
+            # vorher war das die achte, eigenstaendig gepflegte Liste.
+            body=unknown_command_body("Das war kein bekannter Befehl."),
+            settings=user_settings,
+        )
+        if mid is not None:
+            self.sent_message_ids.append(mid)
+
+    def _dispatch_and_reply(
+        self, key: str, inbound: InboundMessage, chat_id: str, user_settings: Settings,
+        *, ladehinweis_erlaubt: bool = True,
+    ) -> None:
+        """Fuehrt `process()` aus und schickt die Antwort — Query-Keys mit
+        Lade-Zwischennachricht (AC-4), sonst direkt. Extrahiert aus
+        `_process_update` (Issue #2282), Verhalten fuer den Trip-Pfad
+        unveraendert.
+
+        Adversary F001 (#2282 Fix-Loop 1/2): die Lade-Nachricht darf nur fuer
+        ein echtes Trip-Ziel erscheinen. Der Aufrufer entscheidet das VORHER
+        (``ladehinweis_erlaubt``) statt hier nur an ``resolved_kind`` zu
+        pruefen: beim vorangestellten Namen gibt es neben "eindeutig
+        Vergleich" (`resolved_kind=="vergleich"`) noch den
+        Namensgleichheits-Fall (Trip<->Vergleich identisch benannt,
+        `resolved_kind` bleibt `None`, `process()` antwortet nur mit einer
+        Rueckfrage) — auch dort waere die Lade-Nachricht irrefuehrend, ein
+        reiner ``resolved_kind`` -Vergleich saehe das nicht.
+        """
+        if key in _QUERY_KEYS and ladehinweis_erlaubt:
             # Loading-Message senden, dann Wetterdaten on-demand holen,
             # dann in-place ersetzen (AC-4)
             loading_mid = self._notification_service.send_telegram_message(
@@ -297,7 +360,6 @@ class InboundTelegramReader:
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
-        return True
 
     def _process_callback_query(self, callback: dict, settings: Settings) -> bool:
         """Verarbeitet einen Button-Klick (callback_query) — Zoom-Navigation.

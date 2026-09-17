@@ -35,6 +35,7 @@ from output.metric_format import (
 )
 from output.tokens.metrics import LEVELS as _STUFENBUCHSTABEN
 from services.trip_day import anchor_tz, display_tz, trip_local_now, trip_local_today
+from services.trip_selection import _gsm7_sicher
 from utils.ascii_fold import fold_ascii
 from utils.geo import degrees_to_compass
 from utils.timezone import UTC, local_dt, local_fmt, local_hour
@@ -51,6 +52,86 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s.replace("_", " ")).strip().lower()
 
 
+def _norm_gefaltet(s: str) -> str:
+    """F004 (#2282 Fix-Loop 2): dieselbe Faltung wie die Premium-SMS-
+    Rueckfrage (``trip_selection._gsm7_sicher``, EINE Quelle), zusaetzlich
+    per ``_norm`` normalisiert. Nur als FALLBACK nach einem gescheiterten
+    exakten ``_norm``-Vergleich einzusetzen — sonst antwortet der Nutzer auf
+    den in einer Rueckfrage angezeigten, gefalteten Namen ("Zuerich" statt
+    "Zürich") und findet nichts (kostenpflichtige Rueckfrage-Endlosschleife)."""
+    return _norm(_gsm7_sicher(s))
+
+
+def _rest_ist_gueltiger_befehl(rest: str) -> bool:
+    """Adversary F002 (#2282 Fix-Loop 1): Gueltigkeits-Pruefung fuer den Rest
+    NACH einem moeglichen Namens-Praefix. Heisst ein Trip/Vergleich zufaellig
+    wie ein Steuerbefehl (z. B. "Pause"), darf ``match_leading_name`` das
+    Wort nicht als Name konsumieren, wenn gar kein eigener Befehl mehr
+    uebrigbleibt ODER der Rest fuer sich allein nicht erkennbar ist ("pause
+    2d" mit Trip "Pause": der Rest "2d" ist ohne den vorangestellten Namen
+    KEIN eigener Befehl -- die ganze Nachricht ist dann der Befehl, nicht
+    Name+Rest). Instanziert ``TripCommandProcessor`` nur zur Wiederverwendung
+    von ``_parse_command`` (zustandslos, keine Nebenwirkungen) -- keine
+    zweite Parse-Logik."""
+    if not rest:
+        return False
+    key, _value = TripCommandProcessor()._parse_command(rest)
+    if key is not None:
+        return True
+    return bool(_metric_id_for_word(_erstes_wort(rest)))
+
+
+def match_leading_name(
+    text: str, trips: list, presets: list[dict],
+) -> tuple[str, str, str | None, object] | None:
+    """Prueft, ob ``text`` mit dem (tolerant normalisierten) Namen eines
+    Trips oder Ortsvergleichs beginnt (Issue #2282 Abschnitt 2/4) — laengster
+    Treffer gewinnt, aber NUR wenn danach ein fuer sich gueltiger Befehl
+    folgt (Adversary F002, sonst Rueckfall auf die aktive Auswahl). Liefert
+    ``(Name-Praefix wie im Originaltext, Rest, kind, ziel)`` oder ``None``.
+
+    ``kind``/``ziel`` (Adversary F001-Nachtrag, Fix-Loop 2): derselbe
+    Namens-Treffer, der ohnehin fuer Praefix/Rest berechnet wird, traegt die
+    Kind-Zugehoerigkeit UND das getroffene Objekt gleich mit — der Reader
+    braucht das fuer die Lade-Nachrichten-Entscheidung UND kann
+    ``resolved_kind``/``resolved_preset_id`` direkt setzen, ohne eine zweite
+    Suchlogik zu bauen. ``kind`` ist ``"route"``/``"vergleich"`` bei
+    eindeutigem Treffer, sonst ``None`` (Namensgleichheit Trip<->Vergleich —
+    ``ziel`` ist dann ebenfalls ``None``, ``process()``/``_resolve_vergleich``
+    loest die Rueckfrage identisch zum aktiven-Auswahl-Pfad auf).
+    """
+    raw_words = text.strip().split()
+    if not raw_words:
+        return None
+    kandidaten: list[tuple[str, str, object]] = [
+        ("route", t.name, t) for t in trips if getattr(t, "name", "")
+    ] + [
+        ("vergleich", p.get("name", ""), p) for p in presets if p.get("name")
+    ]
+    if not kandidaten:
+        return None
+    max_len = max(len(_norm(n).split()) for _, n, _obj in kandidaten)
+    for wortzahl in range(min(max_len, len(raw_words)), 0, -1):
+        prefix = " ".join(raw_words[:wortzahl])
+        rest = " ".join(raw_words[wortzahl:])
+        exakt = [(k, obj) for k, n, obj in kandidaten if _norm(n) == _norm(prefix)]
+        if exakt:
+            if not _rest_ist_gueltiger_befehl(rest):
+                continue
+            kinds = {k for k, _obj in exakt}
+            kind, ziel = (kinds.pop(), exakt[0][1]) if len(kinds) == 1 else (None, None)
+            return prefix, rest, kind, ziel
+        # F004 (#2282 Fix-Loop 2): kein exakter Treffer -- gefaltete Form
+        # probieren (Antwort auf eine Premium-SMS-Rueckfrage, F003). Mehrere
+        # gefaltete Treffer sind mehrdeutig, NIE stillschweigend der erste.
+        fold_p = _norm_gefaltet(prefix)
+        gefaltet = [(k, obj) for k, n, obj in kandidaten if _norm_gefaltet(n) == fold_p]
+        if gefaltet and _rest_ist_gueltiger_befehl(rest):
+            kind, ziel = gefaltet[0] if len(gefaltet) == 1 else (None, None)
+            return prefix, rest, kind, ziel
+    return None
+
+
 # ---------------------------------------------------------------------------
 # DTOs
 # ---------------------------------------------------------------------------
@@ -64,6 +145,13 @@ class InboundMessage:
     channel: str            # "email", "telegram", "sms" oder "premium_sms"
     received_at: datetime
     user_id: str = "default"
+    # Issue #2282 Abschnitt 3: additive Felder, Default None = Trip-Verhalten
+    # unveraendert. Ein Reader, der bereits eindeutig ueber
+    # ``trip_selection.resolve_active_target`` auf einen Ortsvergleich
+    # aufgeloest hat, setzt beide — ``process()`` sucht dann nicht erneut
+    # ueber den Namen (Namensgleichheits-Fall AC-7).
+    resolved_kind: str | None = None
+    resolved_preset_id: str | None = None
 
 
 @dataclass
@@ -122,21 +210,28 @@ _BARE_KEYWORD_MAP = {
 # Fussz. leiten ihren Text hieraus ab. Vorher waren das acht handgepflegte
 # Listen, von denen keine zwei uebereinstimmten (der Nutzer bekam je nach
 # Kanal und Fehlerweg eine andere Auskunft darueber, was er darf).
-# Aufbau je Eintrag: (Wort, Argumentform, Beschreibung). Aliase stehen in der
-# Beschreibung statt als eigener Eintrag — sie sind keine zweite Faehigkeit.
-_COMMAND_SPECS: tuple[tuple[str, str, str], ...] = (
-    ("heute",    "",            "Wetter der heutigen Etappe"),
-    ("morgen",   "",            "Wetter der morgigen Etappe"),
-    ("jetzt",    "",            "Nowcast Regen/Gewitter nächste ~2h (auch NOW)"),
-    ("gewitter", "",            "Gewittergefahr heutige Etappe"),
-    ("strecke",  "[km]",        "Regen-Ereignisflächen entlang der Reststrecke"),
-    ("ruhetag",  "[N]",         "Etappen um N Tage verschieben (Standard: 1)"),
-    ("status",   "",            "Heute und kommende Etappen"),
-    ("pause",    "[2d / 12h]",  "Briefings für Dauer unterbrechen"),
-    ("skip",     "",            "Nächstes Briefing überspringen"),
-    ("stop",     "",            "Briefings dauerhaft deaktivieren"),
-    ("weiter",   "",            "Briefings reaktivieren"),
-    ("hilfe",    "",            "Diese Hilfe anzeigen (auch HELP)"),
+# Aufbau je Eintrag: (Wort, Argumentform, Beschreibung, kinds). Aliase stehen
+# in der Beschreibung statt als eigener Eintrag — sie sind keine zweite
+# Faehigkeit. Issue #2282 Abschnitt 7: ``kinds`` ist die EINZIGE Quelle
+# sowohl fuer die Vergleichs-Hilfe als auch fuer die generische
+# Ablehnungsantwort "gibt es beim Ortsvergleich nicht" — keine zweite,
+# handgepflegte Liste.
+_ROUTE_ONLY = frozenset({"route"})
+_BEIDE_KINDS = frozenset({"route", "vergleich"})
+
+_COMMAND_SPECS: tuple[tuple[str, str, str, frozenset[str]], ...] = (
+    ("heute",    "",            "Wetter der heutigen Etappe", _ROUTE_ONLY),
+    ("morgen",   "",            "Wetter der morgigen Etappe", _ROUTE_ONLY),
+    ("jetzt",    "",            "Nowcast Regen/Gewitter nächste ~2h (auch NOW)", _ROUTE_ONLY),
+    ("gewitter", "",            "Gewittergefahr heutige Etappe", _ROUTE_ONLY),
+    ("strecke",  "[km]",        "Regen-Ereignisflächen entlang der Reststrecke", _ROUTE_ONLY),
+    ("ruhetag",  "[N]",         "Etappen um N Tage verschieben (Standard: 1)", _ROUTE_ONLY),
+    ("status",   "",            "Heute und kommende Etappen", _ROUTE_ONLY),
+    ("pause",    "[2d / 12h]",  "Briefings für Dauer unterbrechen", _BEIDE_KINDS),
+    ("skip",     "",            "Nächstes Briefing überspringen", _ROUTE_ONLY),
+    ("stop",     "",            "Briefings dauerhaft deaktivieren", _ROUTE_ONLY),
+    ("weiter",   "",            "Briefings reaktivieren", _BEIDE_KINDS),
+    ("hilfe",    "",            "Diese Hilfe anzeigen (auch HELP)", _BEIDE_KINDS),
 )
 
 
@@ -148,7 +243,7 @@ def command_rows() -> list[tuple[str, str]]:
     ``_COMMAND_SPECS`` zur Aufrufzeit, sonst waeren sie wieder
     danebengeschriebene Kopien (Mutations-Gegenprobe AC-10).
     """
-    return [(f"{w.upper()} {a}".strip(), b) for w, a, b in _COMMAND_SPECS]
+    return [(f"{w.upper()} {a}".strip(), b) for w, a, b, _kinds in _COMMAND_SPECS]
 
 
 def bare_keywords() -> frozenset[str]:
@@ -167,7 +262,7 @@ def bare_keywords() -> frozenset[str]:
 
 def command_overview() -> str:
     """Einzeilige Aufzaehlung des Befehlssatzes — fuer Fehlertexte."""
-    return ", ".join(w.upper() for w, _a, _b in _COMMAND_SPECS)
+    return ", ".join(w.upper() for w, _a, _b, _kinds in _COMMAND_SPECS)
 
 
 def unknown_command_body(prefix: str) -> str:
@@ -676,6 +771,13 @@ class TripCommandProcessor:
 
     def process(self, msg: InboundMessage) -> CommandResult:
         """Parse, validate, and execute a trip command."""
+        # Issue #2282 Abschnitt 5: die Vergleichs-Dispatch-Weiche laeuft VOR
+        # jedem Trip-Zweig (Drilldown/Query/Hilfe/Metrikwort/Dispatch) — der
+        # unveraenderte Trip-Pfad darunter bleibt byte-gleich.
+        vergleich = self._resolve_vergleich(msg)
+        if vergleich is not None:
+            return vergleich
+
         # 1. Parse command
         key, value = self._parse_command(msg.body)
 
@@ -849,6 +951,159 @@ class TripCommandProcessor:
                 return internal, rest or None
         return None, None
 
+    # -----------------------------------------------------------------------
+    # Ortsvergleich — Issue #2282 Scheibe S1
+    # -----------------------------------------------------------------------
+
+    def _find_compare_preset(self, name: str, user_id: str) -> Optional[dict]:
+        """Toleranter Namensvergleich ueber die Ortsvergleiche des Mandanten
+        (Pendant zu ``_find_trip``, Abschnitt 4)."""
+        from app.loader import compare_preset_to_dict, load_compare_presets
+
+        presets = load_compare_presets(user_id)
+        query = _norm(name)
+        for preset in presets:
+            if _norm(preset.name) == query:
+                return compare_preset_to_dict(preset)
+        # F004 (#2282 Fix-Loop 2): gefaltete Form (Premium-SMS-Rueckfrage).
+        fold_q = _norm_gefaltet(name)
+        treffer = [p for p in presets if _norm_gefaltet(p.name) == fold_q]
+        if len(treffer) == 1:
+            return compare_preset_to_dict(treffer[0])
+        return None
+
+    def _resolve_vergleich(self, msg: InboundMessage) -> Optional[CommandResult]:
+        """Loest auf, ob diese Nachricht einen Ortsvergleich meint (Abschnitt
+        3-5). ``None`` heisst: unveraenderter Trip-Pfad soll weiterlaufen.
+        """
+        if msg.resolved_kind == "vergleich" and msg.resolved_preset_id:
+            return self._dispatch_compare(msg, msg.resolved_preset_id, msg.trip_name)
+
+        trip_treffer = self._find_trip(msg.trip_name, msg.user_id)
+        preset_treffer = self._find_compare_preset(msg.trip_name, msg.user_id)
+
+        if trip_treffer and preset_treffer:
+            # AC-7: Namensgleichheit -> Rueckfrage statt stiller Trip-Wahl.
+            from services.trip_selection import resolve_active_target
+
+            erg = resolve_active_target(
+                [trip_treffer], [preset_treffer], msg.received_at, channel=msg.channel,
+            )
+            return CommandResult(
+                success=False, command="mehrdeutig",
+                confirmation_subject="Mehrdeutig",
+                confirmation_body=erg.text,
+                trip_name=msg.trip_name,
+            )
+        if preset_treffer and not trip_treffer:
+            return self._dispatch_compare(
+                msg, preset_treffer["id"], preset_treffer.get("name", msg.trip_name),
+            )
+        return None
+
+    def _dispatch_compare(
+        self, msg: InboundMessage, preset_id: str, name: str,
+    ) -> CommandResult:
+        """Vergleichs-Dispatch-Weiche (Abschnitt 5): deckt nur
+        pause/weiter/hilfe ab, alle anderen Befehle bekommen eine feste
+        Ablehnungs-/Uebergangsantwort aus ``_COMMAND_SPECS``."""
+        key, value = self._parse_command(msg.body)
+        # Adversary F001 (#2282 Fix-Loop 1): Telegram kodiert JEDEN Query-Key
+        # (heute/morgen/glance/heute_gewitter/timeline_heute/timeline_morgen)
+        # unbedingt als "### query: <key>" (inbound_telegram_reader.py
+        # _command_body), unabhaengig vom Ziel-kind -- dieselbe Entpackung
+        # wie im Trip-Pfad (process():~742-747), sonst bleibt key=="query"
+        # stehen und der generische Ablehnungszweig zeigt das falsche Wort
+        # "query" statt des tatsaechlich gesendeten Befehls.
+        if key == "query" and value and value.lower() in _QUERY_KEYS:
+            key = value.lower()
+        # "report" ist beim Trip kein Bare-Keyword (nur "### report: ...")
+        # -- am Vergleich muss die Uebergangsantwort trotzdem greifen, wenn
+        # es bloss als Wort gesendet wird (AC-11).
+        if key is None and (_erstes_wort(msg.body) or "").lower() == "report":
+            key = "report"
+        if key == "hilfe":
+            return self._show_help_for_kind("vergleich")
+        if key in ("report", "heute", "morgen"):
+            return self._compare_transitional(name)
+        if key == "pause":
+            return self._apply_compare_pause(preset_id, msg.user_id, name)
+        if key == "weiter":
+            return self._resume_compare(preset_id, msg.user_id, name)
+        wort = key if key is not None else (_erstes_wort(msg.body) or msg.body.strip())
+        return self._compare_unavailable(wort, name)
+
+    def _show_help_for_kind(self, kind: str) -> CommandResult:
+        """Hilfe, gefiltert auf die kind-Menge aus ``_COMMAND_SPECS`` (Abschnitt
+        7, AC-12) — einzige Quelle, keine zweite handgepflegte Liste."""
+        zeilen = ["Verfügbare Befehle:", ""]
+        for w, a, b, kinds in _COMMAND_SPECS:
+            if kind not in kinds:
+                continue
+            label = f"{w.upper()} {a}".strip()
+            zeilen.append(f"  {label:<21} – {b}")
+        return CommandResult(
+            success=True, command="hilfe",
+            confirmation_subject="Hilfe",
+            confirmation_body="\n".join(zeilen),
+        )
+
+    def _compare_transitional(self, name: str) -> CommandResult:
+        """report/heute/morgen am Vergleich (AC-11) — Übergangsantwort, kein
+        Versand (S2 baut ``restrict_to_channel`` in ``send_compare_report``)."""
+        return CommandResult(
+            success=False, command="report",
+            confirmation_subject=f"[{name}] Noch nicht verfügbar",
+            confirmation_body=(
+                "Report/Heute/Morgen sind für Ortsvergleiche per Nachricht "
+                "noch nicht verfügbar — bitte nutze die Web-App."
+            ),
+            trip_name=name,
+        )
+
+    def _compare_unavailable(self, befehl: str, name: str) -> CommandResult:
+        """Generische Ablehnung fuer alle Trip-only-Befehle am Vergleich
+        (AC-11) — Wortlaut aus derselben Quelle (``_COMMAND_SPECS``-Filter)."""
+        return CommandResult(
+            success=False, command=befehl,
+            confirmation_subject=f"[{name}] Befehl nicht verfügbar",
+            confirmation_body=f"'{befehl}' gibt es beim Ortsvergleich nicht.",
+            trip_name=name,
+        )
+
+    def _apply_compare_pause(self, preset_id: str, user_id: str, name: str) -> CommandResult:
+        """Pausiert einen Ortsvergleich unbefristet (AC-8) — ruft das
+        unveraenderte RMW-Vorbild ``save_compare_preset_pause`` auf, eine
+        mitgegebene Dauer wird nicht ausgewertet."""
+        from services.scheduler_dispatch_service import save_compare_preset_pause
+
+        save_compare_preset_pause(user_id, preset_id)
+        return CommandResult(
+            success=True, command="pause",
+            confirmation_subject=f"[{name}] Ortsvergleich pausiert",
+            confirmation_body=f"Ortsvergleich '{name}' pausiert, bis du 'weiter' sendest.",
+            trip_name=name,
+        )
+
+    def _resume_compare(self, preset_id: str, user_id: str, name: str) -> CommandResult:
+        """Setzt einen pausierten Ortsvergleich fort (AC-9/AC-10)."""
+        from services.scheduler_dispatch_service import resume_compare_preset
+
+        status = resume_compare_preset(user_id, preset_id)
+        if status != "resumed":
+            return CommandResult(
+                success=False, command="weiter",
+                confirmation_subject=f"[{name}] Ortsvergleich",
+                confirmation_body=f"Ortsvergleich '{name}' ist nicht pausiert.",
+                trip_name=name,
+            )
+        return CommandResult(
+            success=True, command="weiter",
+            confirmation_subject=f"[{name}] Ortsvergleich fortgesetzt",
+            confirmation_body=f"Ortsvergleich '{name}' wieder aktiv.",
+            trip_name=name,
+        )
+
     def _find_trip(self, trip_name: str, user_id: str = "default") -> Optional[Trip]:
         """Trip-Lookup: primär über GZ#-Shortcode, Fallback toleranter Namensvergleich."""
         trips = load_all_trips(user_id)
@@ -861,6 +1116,11 @@ class TripCommandProcessor:
         for trip in trips:
             if _norm(trip.name) == query:
                 return trip
+        # F004 (#2282 Fix-Loop 2): gefaltete Form (Premium-SMS-Rueckfrage).
+        fold_q = _norm_gefaltet(trip_name)
+        treffer = [t for t in trips if _norm_gefaltet(t.name) == fold_q]
+        if len(treffer) == 1:
+            return treffer[0]
         logger.warning(f"No trip found for name: {trip_name!r} (user: {user_id!r})")
         return None
 

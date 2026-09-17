@@ -29,6 +29,7 @@ from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
 import httpx
+import pytest
 
 from app.config import Settings
 from app.trip import Stage, Trip, Waypoint
@@ -322,11 +323,17 @@ class TestAC4TelegramProseUsesConfiguredHost:
 
     def test_line208_registered_chat_no_active_trip(self, monkeypatch):
         """
-        GIVEN eine registrierte chat_id ohne aktiven Trip und gesetzter Host
+        GIVEN eine registrierte chat_id ohne aktiven Trip/Ortsvergleich und
+              gesetzter Host
         WHEN _process_update die "Kein aktiver Trip"-Meldung baut (Zeile 208)
-        THEN enthält der Text den bloßen Staging-Host, nicht gregor20.henemm.com
+        THEN kommt exakt der Text aus `services.trip_selection` (Issue #2282
+             AC-5: identischer Text auf Telegram/Premium-SMS) — und zwar OHNE
+             jeden Host-Bezug, auch wenn ein Host konfiguriert ist. Das ersetzt
+             das alte AC-4-Verhalten dieser einen Stelle (Host im Fließtext):
+             AC-5 aus #2282 hat den Host-Zusatz hier bewusst entfernt.
         """
         from services.inbound_telegram_reader import InboundTelegramReader
+        from services.trip_selection import KEIN_KANDIDAT_TEXT
 
         chat_id = "777000208"
         _register_user("gz2272regchat208", chat_id)
@@ -336,13 +343,14 @@ class TestAC4TelegramProseUsesConfiguredHost:
         reader = InboundTelegramReader()
         reader._process_update(_incoming_update(chat_id, "status"), settings)
         body = "\n".join(rec.texts())
-        assert "staging.gregor20.henemm.com" in body, (
-            f"AC-4 (Zeile 208): 'Kein aktiver Trip'-Meldung enthält nicht "
-            f"den konfigurierten Host: {body!r}"
+        assert KEIN_KANDIDAT_TEXT in body, (
+            f"#2282 AC-5: 'Kein aktiver Trip oder Ortsvergleich'-Meldung "
+            f"fehlt oder weicht vom Text aus trip_selection ab: {body!r}"
         )
-        assert "https://staging.gregor20.henemm.com" not in body, (
-            f"AC-4 (Zeile 208): Spec verlangt bloßen Host im Fließtext "
-            f"(ohne Schema) — Text enthält die volle URL: {body!r}"
+        assert "staging.gregor20.henemm.com" not in body, (
+            f"#2282 AC-5: diese Stelle darf trotz konfiguriertem Host "
+            f"KEINEN Host-Zusatz mehr tragen (identischer Text wie ohne "
+            f"Host/wie Premium-SMS): {body!r}"
         )
         _assert_no_bare_prod_host(body)
 
@@ -375,6 +383,23 @@ class TestAC4TelegramProseUsesConfiguredHost:
 # AC-5 — Fail-closed an allen sechs Stellen, GZ_PUBLIC_HOST fehlt
 # ---------------------------------------------------------------------------
 
+@pytest.fixture
+def _ohne_dotenv(monkeypatch):
+    """Macht ``Settings()`` fuer die Dauer des Tests hermetisch gegen die
+    lokale, NICHT versionierte ``.env``: ``app/config.py:112-117`` liest sie
+    per pydantic-settings (``env_file=".env"``) IMMER mit, wenn dort
+    ``GZ_PUBLIC_HOST`` gesetzt ist — ``monkeypatch.delenv`` entfernt nur die
+    Prozessumgebungsvariable, nicht den .env-Fallback (Adversary-Befund,
+    #2282-Fix-Loop 3). In CI existiert keine ``.env``, daher dort ohnehin
+    gruen; dieser Fixture-Only-Fix (kein Produktivcode, keine .env
+    angefasst) macht den Test lokal ebenso hermetisch. Nur fuer die drei
+    betroffenen Tests angefordert — kein autouse, kein Einfluss auf die
+    uebrigen Tests dieser Datei (die bereits ueber einen expliziten
+    ``public_host=``-Konstruktor-Kwarg oder ``monkeypatch.setenv`` hermetisch
+    sind)."""
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+
+
 class TestAC5FailClosedWithoutPublicHost:
     def test_scheduler_trip_url_is_none_and_deep_link_absent(self, monkeypatch):
         """Scheduler (trip_report_scheduler.py:1830): trip_url None, HTML ohne Deep-Link-Block."""
@@ -390,7 +415,7 @@ class TestAC5FailClosedWithoutPublicHost:
             "GZ_PUBLIC_HOST einen Host-Verweis."
         )
 
-    def test_show_config_omits_link_entirely(self, monkeypatch):
+    def test_show_config_omits_link_entirely(self, monkeypatch, _ohne_dotenv):
         """trip_command_processor.py:1863: Link-Zeile entfällt exakt wie in der Spec spezifiziert."""
         from services.trip_command_processor import TripCommandProcessor
 
@@ -406,7 +431,7 @@ class TestAC5FailClosedWithoutPublicHost:
             f"{expected!r} sein, war {result.confirmation_body!r}."
         )
 
-    def test_columns_info_omits_link_entirely(self, monkeypatch):
+    def test_columns_info_omits_link_entirely(self, monkeypatch, _ohne_dotenv):
         """trip_command_processor.py:1772: URL-Zeile entfällt, Doppelpunkt wird zu Punkt."""
         from services.trip_command_processor import TripCommandProcessor
 
@@ -438,8 +463,12 @@ class TestAC5FailClosedWithoutPublicHost:
         assert "gregor20.henemm.com" not in body
 
     def test_line208_omits_host_clause(self, monkeypatch):
-        """inbound_telegram_reader.py:208: Adressteil entfällt."""
+        """inbound_telegram_reader.py:208: kein Host-Zusatz, unabhängig vom
+        Kandidaten-Text selbst (Issue #2282 AC-5 hat den früheren, Host-
+        behafteten Degradations-Text an dieser Stelle durch den
+        kanalneutralen Text aus `services.trip_selection` ersetzt)."""
         from services.inbound_telegram_reader import InboundTelegramReader
+        from services.trip_selection import KEIN_KANDIDAT_TEXT
 
         chat_id = "777100208"
         _register_user("gz2272regchat208b", chat_id)
@@ -449,8 +478,9 @@ class TestAC5FailClosedWithoutPublicHost:
         reader = InboundTelegramReader()
         reader._process_update(_incoming_update(chat_id, "status"), settings)
         body = "\n".join(rec.texts())
-        assert "Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip." in body, (
-            f"AC-5 (Zeile 208): erwarteter Degradations-Text fehlt: {body!r}"
+        assert KEIN_KANDIDAT_TEXT in body, (
+            f"AC-5 (Zeile 208, #2282-Nachfolgetext): erwarteter "
+            f"Degradations-Text fehlt: {body!r}"
         )
         assert "gregor20.henemm.com" not in body
 
@@ -525,7 +555,7 @@ class TestAC6And7HealthReportsEffectiveConfig:
             "unabhängige Ableitungen statt eines gemeinsamen Helpers."
         )
 
-    def test_health_public_host_null_when_unset(self, monkeypatch):
+    def test_health_public_host_null_when_unset(self, monkeypatch, _ohne_dotenv):
         """AC-7: ohne GZ_PUBLIC_HOST liefert /health public_host=null, kein Fallback."""
         from fastapi.testclient import TestClient
 

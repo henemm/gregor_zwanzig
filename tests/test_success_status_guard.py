@@ -1702,6 +1702,28 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/trip_command_processor.py::_resume_trip::0": (
         "B18 (#1405) — _resume_trip: dito."
     ),
+    # --- Issue #2282 Scheibe S1 (Ortsvergleich ueber Eingangskanaele) -----
+    # Dieselbe B18-Signatur wie _apply_pause/_cancel_trip/_resume_trip
+    # oben: nach einem unzugewiesenen RMW-Aufruf (save_compare_preset_pause)
+    # bzw. einer aus dem RMW-Ergebnis (resume_compare_preset) abgeleiteten
+    # Fallunterscheidung folgt ein Rueckgabe-Dict mit hartkodiertem
+    # `success`. Reparatur-Vorrat wie beim Trip-Pendant, keine neue Regel.
+    "src/services/trip_command_processor.py::_apply_compare_pause::0": (
+        "B18 (#1405, Analogie zu _apply_pause) — _apply_compare_pause: nach "
+        "unzugewiesenem save_compare_preset_pause(...)."
+    ),
+    "src/services/trip_command_processor.py::_resume_compare::0": (
+        "B18 (#1405, Analogie zu _resume_trip) — _resume_compare: der "
+        "'resumed'-Zweig behauptet success=True unabhaengig vom konkreten "
+        "Rueckgabewert des vorherigen resume_compare_preset(...)-Aufrufs "
+        "(nur die Statusgleichheit wird geprueft, nicht der Wert selbst "
+        "durchgereicht)."
+    ),
+    "src/services/trip_command_processor.py::_show_help_for_kind::0": (
+        "B18 (#1405, Analogie zu _show_help) — _show_help_for_kind: reine "
+        "Text-Zusammenstellung aus _COMMAND_SPECS, success=True ist "
+        "syntaktisch konstant wie beim Trip-Pendant."
+    ),
     # --- Issue #2051 S4 (/strecke-Kommando, Adversary-Runde 3): dieselbe
     # B18-Signatur wie _show_now/_show_status/_handle_query oben -- nach
     # einem Aufruf (get_nowcast(...)/derive_rain_zones(...)/den beiden

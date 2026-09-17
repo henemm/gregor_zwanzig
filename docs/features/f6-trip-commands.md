@@ -1,6 +1,13 @@
 # Trip-Befehle — Email-Reply & Telegram (F6)
 
-**Updated:** 2026-09-08 (Issue #2184, Epic #2133 Scheibe S4 — Premium-SMS ist jetzt
+**Hinweis (seit Issue #2282, Scheibe S1):** `PAUSE`/`WEITER`/`HILFE` sind über alle
+drei Eingangskanäle auch am **Ortsvergleich** ansprechbar — Details im Abschnitt
+„Ortsvergleich per Nachricht" unten.
+
+**Updated:** 2026-09-17 (Issue #2282 Scheibe S1, Epic #2133/#1374 — Ortsvergleiche
+sind jetzt über alle drei Eingangskanäle für `PAUSE`/`WEITER`/`HILFE` ansprechbar;
+die aktive Auswahl ohne Namen und die `[Name]`-Erkennung im E-Mail-Betreff arbeiten
+kanaltyp-übergreifend); 2026-09-08 (Issue #2184, Epic #2133 Scheibe S4 — Premium-SMS ist jetzt
 ein dritter Eingangsweg: der vor dem Garmin-inReach-Kennzeichen `inreachlink.com`
 stehende Text wird als Befehl verarbeitet, die Antwort geht per Premium-SMS an die
 gelernte Rückadresse zurück; die Gewitter-Herkunft bleibt auf SMS/Premium-SMS wie
@@ -40,8 +47,11 @@ Gregor Zwanzig empfaengt Trip-Befehle ueber drei Kanäle:
    /api/internal/premium-sms-learn`, Issue #1676 S1); nur der Text **vor** dem Kennzeichen
    zählt als Befehl
 3. Gregor verarbeitet den Befehl über denselben `TripCommandProcessor` wie Email/Telegram
-   (kein eigener Trip-Bezug im Text nötig — die Trip-Auswahl folgt derselben Regel wie beim
-   Telegram-Bot ohne Trip-Namen: aktiver Trip am Ortstag, sonst der nächste zukünftige)
+   (kein eigener Trip-/Vergleichs-Bezug im Text nötig — die Auswahl folgt derselben
+   kanalneutralen Regel wie beim Telegram-Bot ohne Namen: aktiver Trip am Ortstag, sonst
+   der nächste zukünftige; hat der Nutzer stattdessen **keinen** aktiven Trip, aber genau
+   einen aktiven Ortsvergleich, wird dieser angesprochen — Details siehe „Ortsvergleich
+   per Nachricht" unten)
 4. Die Bestaetigung geht per Premium-SMS an deine gelernte Rückadresse zurück
 
 **Besonderheit:** Auf Premium-SMS (wie auf regulärem SMS) bleibt die Gewitter-Herkunft
@@ -208,6 +218,44 @@ Briefing-Reports sind wieder aktiv. Naechster Report kommt planmaessig.
 
 ---
 
+## Ortsvergleich per Nachricht (seit Issue #2282, Scheibe S1)
+
+`PAUSE`, `WEITER` und `HILFE` sind über alle drei Eingangskanäle (Email, Telegram,
+Premium-SMS) auch für einen **Ortsvergleich** ansprechbar, nicht nur für einen Trip.
+Alle übrigen Befehle bleiben trip-exklusiv.
+
+**Adressierung ohne Namen** (Telegram/Premium-SMS): Hat der Nutzer keinen aktiven
+Trip, aber genau einen aktiven (auch bereits pausierten) Ortsvergleich, wird dieser
+angesprochen. Sind sowohl ein Trip als auch mindestens ein Ortsvergleich aktiv, oder
+mehrere Ortsvergleiche gleichzeitig, fragt Gregor zurück und zählt alle Kandidaten
+auf — es wird **kein** Befehl ausgeführt, bis mit vorangestelltem Namen geantwortet
+wird (z. B. `Zermatt pause`). Gibt es weder einen aktiven Trip noch einen aktiven
+Ortsvergleich, lautet die Antwort auf allen Kanälen einheitlich „Kein aktiver Trip
+oder Ortsvergleich gefunden."
+
+**Adressierung mit Namen:** Ein vorangestellter Name (Telegram/Premium-SMS) bzw. das
+`[Name]` im Email-Betreff wird gegen Trips **und** Ortsvergleiche geprüft. Tragen ein
+Trip und ein Ortsvergleich desselben Nutzers zufällig denselben Namen, fragt Gregor
+ebenfalls zurück, statt still den Trip zu bevorzugen.
+
+**Verhalten am Ortsvergleich:**
+
+| Befehl | Wirkung |
+|--------|---------|
+| `PAUSE` | Pausiert den Ortsvergleich unbefristet (eine mitgegebene Dauer wie `PAUSE 2d` wird ignoriert) — Antwort: „... pausiert, bis du 'weiter' sendest." |
+| `WEITER` | Setzt einen pausierten Ortsvergleich fort — Antwort: „... wieder aktiv." War der Vergleich nicht pausiert: „... ist nicht pausiert." (keine Änderung) |
+| `HILFE` | Zeigt nur die am Ortsvergleich verfügbaren Befehle (`PAUSE`, `WEITER`, `HILFE`) — nicht die volle Trip-Befehlsliste |
+| `REPORT`, `HEUTE`, `MORGEN` | Übergangsantwort: „... noch nicht verfügbar — bitte nutze die Web-App." (kein Versand) |
+| alle übrigen (`STRECKE`, `SKIP`, `RUHETAG`, `STARTDATUM`, `STOP`, `JETZT`/`NOW`, `STATUS`, `GEWITTER`, Drilldowns, Metrikwörter) | „'<befehl>' gibt es beim Ortsvergleich nicht." |
+
+**Bekannte Grenze:** Die Pause-Semantik am Ortsvergleich unterscheidet sich bewusst
+vom Trip — unbefristet bis `WEITER`, keine Dauer, kein `STOP`-Verweis. Der Wortlaut
+ist deshalb nicht identisch mit der Trip-`PAUSE`-Bestätigung.
+
+Spec: `docs/specs/modules/feat_2282_ortsvergleich_eingangskanaele.md`
+
+---
+
 ### Klassische Befehle (weiterhin unterstützt)
 
 Fuer reine Etappen-Verwaltung (keine PAUSE/SKIP/CONFIG mehr — siehe Issue #731):
@@ -269,7 +317,7 @@ Ohne `GZ_INBOUND_ADDRESS` werden alle ungelesenen Emails geprueft (wie bisher).
 
 - Der Befehl muss in der **ersten nicht-leeren Zeile** stehen
 - Gross-/Kleinschreibung ist egal (`### RUHETAG` funktioniert auch)
-- Der Trip wird aus dem Email-Betreff erkannt: **Primär über den Shortcode** `[GZ#XXXX]`, falls nicht vorhanden fallback auf Namensvergleich (robust gegen Whitespace-Variationen)
+- Der Trip wird aus dem Email-Betreff erkannt: **Primär über den Shortcode** `[GZ#XXXX]`, falls nicht vorhanden fallback auf Namensvergleich (robust gegen Whitespace-Variationen). Seit Issue #2282 findet derselbe `[Name]`-Namensvergleich im Betreff auch einen **Ortsvergleich** — nur `PAUSE`/`WEITER`/`HILFE` wirken dort (siehe unten)
 - Nur Emails von deiner konfigurierten Adresse werden akzeptiert
 - Unbekannte Befehle werden mit einer Hilfe-Antwort beantwortet
 

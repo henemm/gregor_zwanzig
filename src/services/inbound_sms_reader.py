@@ -50,11 +50,21 @@ from pathlib import Path
 import httpx
 
 from app.config import Settings
-from app.loader import get_data_root, load_all_trips
+from app.loader import (
+    compare_preset_to_dict,
+    get_data_root,
+    load_all_trips,
+    load_compare_presets,
+)
 from app.origin_guard import classify_origin
 from services.notification_service import NotificationService
-from services.trip_command_processor import InboundMessage, TripCommandProcessor
-from services.trip_selection import pick_active_trip
+from services.trip_command_processor import (
+    CommandResult,
+    InboundMessage,
+    TripCommandProcessor,
+    match_leading_name,
+)
+from services.trip_selection import resolve_active_target
 
 logger = logging.getLogger(__name__)
 
@@ -317,22 +327,57 @@ class InboundSmsReader:
         # Befehl (AC-12).
         _, befehl = split_link_code(text)
         now_utc = datetime.now(timezone.utc)
-        # Satelliten-Text traegt keinen Trip-Namen (jedes Zeichen kostet) --
-        # dieselbe geteilte Auswahlregel wie im Telegram-Reader.
-        trip = pick_active_trip(load_all_trips(user_id), now_utc)
-        result = TripCommandProcessor().process(InboundMessage(
-            trip_name=trip.name if trip else "",
-            body=befehl,
-            sender=sender,
-            channel="premium_sms",
-            received_at=now_utc,
-            user_id=user_id,
-        ))
+        user_settings = settings.with_user_profile(user_id)
+
+        # Issue #2282 Abschnitt 2/4: Satelliten-Text traegt normalerweise
+        # keinen Namen (jedes Zeichen kostet), kann aber einem Trip/Vergleich
+        # explizit vorangestellt sein -- dieselbe geteilte Auswahlregel wie
+        # im Telegram-Reader.
+        trips = load_all_trips(user_id)
+        presets = [compare_preset_to_dict(p) for p in load_compare_presets(user_id)]
+
+        named = match_leading_name(befehl, trips, presets)
+        if named is not None:
+            name_prefix, rest, name_kind, name_ziel = named
+            # Kind/Objekt kommen aus demselben Namens-Treffer wie
+            # prefix/rest -- keine zweite Suche (Adversary F001-Nachtrag).
+            resolved_kind = "vergleich" if name_kind == "vergleich" else None
+            resolved_preset_id = name_ziel.get("id") if name_kind == "vergleich" else None
+            result = TripCommandProcessor().process(InboundMessage(
+                trip_name=name_prefix, body=rest, sender=sender,
+                channel="premium_sms", received_at=now_utc, user_id=user_id,
+                resolved_kind=resolved_kind, resolved_preset_id=resolved_preset_id,
+            ))
+        else:
+            ziel = resolve_active_target(trips, presets, now_utc, channel="premium_sms")
+            if ziel.kind is None:
+                # AC-5: identischer Text wie Telegram, kein `process()`-Aufruf.
+                hinweis = CommandResult(
+                    success=False, command="mehrdeutig",
+                    confirmation_subject="Hinweis", confirmation_body=ziel.text,
+                )
+                NotificationService(
+                    user_settings, user_id=user_id,
+                ).send_command_reply_premium_sms(hinweis, user_settings)
+                return
+            if ziel.kind == "route":
+                inbound = InboundMessage(
+                    trip_name=ziel.target.name, body=befehl, sender=sender,
+                    channel="premium_sms", received_at=now_utc, user_id=user_id,
+                )
+            else:
+                preset = ziel.target
+                inbound = InboundMessage(
+                    trip_name=preset.get("name", ""), body=befehl, sender=sender,
+                    channel="premium_sms", received_at=now_utc, user_id=user_id,
+                    resolved_kind="vergleich", resolved_preset_id=preset.get("id"),
+                )
+            result = TripCommandProcessor().process(inbound)
+
         # `heute`/`morgen` haben das Briefing selbst schon per Premium-SMS
         # verschickt -- eine zweite, kostenpflichtige Satelliten-SMS daneben
         # waere die Bestaetigung des Briefings (AC-10).
         if not result.suppress_email_reply:
-            user_settings = settings.with_user_profile(user_id)
             NotificationService(
                 user_settings, user_id=user_id,
             ).send_command_reply_premium_sms(result, user_settings)
