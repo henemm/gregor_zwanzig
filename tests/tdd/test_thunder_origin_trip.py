@@ -231,7 +231,7 @@ def test_ac1_kurzzusammenfassung_nennt_die_tragende_zutat():
     """AC-1: Given das Gewitterfenster kommt ausschliesslich ueber CAPE
     zustande, When die Trip-Mail gerendert wird, Then lautet der Satz
     "Gewitter möglich 14:00–17:00 · CAPE" statt nur "... 14:00–17:00"."""
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15, 16)])
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15, 16)])
     zeile = _kurzfassung(_mail([seg]))
     assert _gewitter_teil(zeile) == "14:00–17:00 · CAPE", (
         f"Die Kurzzusammenfassung muss die tragende Zutat neben dem "
@@ -242,7 +242,7 @@ def test_ac1_auch_die_freundliche_schreibweise_traegt_die_herkunft():
     """AC-1 (zweiter Zweig): ``_format_thunder()`` hat zwei Textvarianten.
     Die Herkunft haengt an BEIDEN -- sonst zeigt jeder Trip mit der
     Default-Einstellung (``use_friendly_format=True``) weiterhin nichts."""
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15, 16)])
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15, 16)])
     zeile = _kurzfassung(_mail([seg], friendly=True))
     assert "⚡ möglich 14:00–17:00 · CAPE" in zeile, (
         f"Auch die freundliche Schreibweise muss die Herkunft tragen: {zeile!r}")
@@ -265,7 +265,7 @@ def test_ac3_beide_zutaten_derselben_stunde_werden_in_katalogreihenfolge_genannt
     Hoechststufe, When die Kurzzusammenfassung gerendert wird, Then werden
     BEIDE in der Reihenfolge aus ``THUNDER_SIGNAL_LABEL_DE`` genannt -- kein
     Gewinner wird gekuert (PO-Auslegung (ii))."""
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0, lpi=60.0) for h in (14, 15, 16)])
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0, lpi=60.0) for h in (14, 15, 16)])
     zeile = _kurzfassung(_mail([seg]))
     assert _gewitter_teil(zeile) == "14:00–17:00 · CAPE, Blitzpotenzial", (
         f"Beide Traeger der Hoechststufe muessen erscheinen, CAPE vor "
@@ -284,7 +284,7 @@ def test_ac4_gewitter_kommando_vereinigt_die_zutaten_mehrerer_wegpunkte(kommando
     """
     heute = kommando.heute
     wegpunkte = [
-        _segment([_dp(10, tag=heute, cape=1500.0, cin=5.0)],
+        _segment([_dp(10, tag=heute, cape=3000.0, cin=5.0)],
                  tag=heute, start_h=6, end_h=10, seg_id=1),
         _segment([_dp(14, tag=heute, lpi=60.0)],
                  tag=heute, start_h=11, end_h=14, seg_id=2),
@@ -309,7 +309,7 @@ def test_ac5_ankunftsstunde_behaelt_beide_zutaten():
     Zutat auf niedrigerer Stufe und darf nicht mitgenannt werden.
     """
     seg = _segment(
-        [_dp(12, dichte=0.005), _dp(16, cape=1500.0, cin=5.0, precip=5.0, gust=90.0)],
+        [_dp(12, dichte=0.005), _dp(16, cape=3000.0, cin=5.0, precip=5.0, gust=90.0)],
         start_h=6, end_h=16,
     )
     night = _reihe([_dp(16, lpi=60.0, precip=0.0, gust=1.0), _dp(18)])
@@ -325,7 +325,7 @@ def test_ac6_zutat_ausserhalb_des_tagesfensters_erscheint_nicht():
     gerendert wird, Then erscheint sie NICHT -- Zeitfenster und Herkunft
     stammen aus derselben gefensterten Liste, ohne zweiten Datenzugriff."""
     seg = _segment(
-        [_dp(2, dichte=0.5)] + [_dp(h, cape=1500.0, cin=5.0) for h in (14, 15)],
+        [_dp(2, dichte=0.5)] + [_dp(h, cape=3000.0, cin=5.0) for h in (14, 15)],
         start_h=6, end_h=17,
     )
     assert seg.aggregated.thunder_level_max_signals == ["blitzdichte", "cape"], (
@@ -344,7 +344,7 @@ def test_ac7_zutat_eines_anderen_kalendertags_erscheint_nicht(kommando):
     von Wegpunkten des Zieltags."""
     heute, morgen = kommando.heute, kommando.morgen
     antwort = kommando.frage([
-        _segment([_dp(14, tag=heute, cape=1500.0, cin=5.0)],
+        _segment([_dp(14, tag=heute, cape=3000.0, cin=5.0)],
                  tag=heute, start_h=6, end_h=14, seg_id=1),
         _segment([_dp(14, tag=morgen, dichte=0.5)],
                  tag=morgen, start_h=6, end_h=14, seg_id=2),
@@ -366,7 +366,7 @@ def test_ac8_sms_zeigt_die_stufe_aber_keine_herkunft():
     dann ist belegt, dass der Rueckfall auf ``email_plain``
     (``notification_service.py:417,433``) strukturell nicht greift (#868).
     """
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0, lpi=60.0) for h in (14, 15, 16)])
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0, lpi=60.0) for h in (14, 15, 16)])
     bericht = _mail([seg])
 
     assert bericht.sms_text, (
@@ -397,7 +397,7 @@ def test_ac9_alt_schnappschuss_zeigt_die_stufe_ohne_herkunft(kommando):
     nennt die Zutat sehr wohl.
     """
     heute = kommando.heute
-    segmente = [_segment([_dp(h, tag=heute, cape=1500.0, cin=5.0) for h in (14, 15)],
+    segmente = [_segment([_dp(h, tag=heute, cape=3000.0, cin=5.0) for h in (14, 15)],
                          tag=heute, start_h=6, end_h=16)]
 
     vollstaendig = kommando.frage(segmente)
@@ -423,7 +423,7 @@ def test_ac10_ohne_gewitter_bleiben_beide_ausgabeorte_zeichengleich(kommando):
     heute = kommando.heute
     ruhig = _segment([_dp(h, tag=heute, cape=50.0, cin=5.0) for h in (14, 15)],
                      tag=heute, start_h=6, end_h=16)
-    laut = _segment([_dp(h, tag=heute, cape=1500.0, cin=5.0) for h in (14, 15)],
+    laut = _segment([_dp(h, tag=heute, cape=3000.0, cin=5.0) for h in (14, 15)],
                     tag=heute, start_h=6, end_h=16)
 
     ruhige_zeile = _kurzfassung(_mail([ruhig]))

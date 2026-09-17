@@ -159,7 +159,7 @@ def frage():
     ]), user_id)
     WeatherSnapshotService(user_id).save(
         trip_id,
-        [_segment([_dp(h, cape=1500.0, cin=5.0, lpi=60.0) for h in (14, 15, 16)])],
+        [_segment([_dp(h, cape=3000.0, cin=5.0, lpi=60.0) for h in (14, 15, 16)])],
         _HEUTE,
     )
 

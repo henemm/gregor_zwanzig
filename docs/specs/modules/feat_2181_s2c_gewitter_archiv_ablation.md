@@ -181,7 +181,7 @@ stufe_gegen_niederschlag(
   - Test: Fixture-Stunde `code=96, cape=0, lpi=0` → `{"stufe": HIGH, "traeger": ["wettercode"]}`.
 
 - **AC-4:** Given eine Archiv-Stunde mit CAPE über der HIGH-Sprosse und CIN > 100 J/kg, When `ablation_je_stunde` sie auswertet, Then wird die CAPE-Stufe gemäß der bestehenden CIN-Dämpfungsregel (`_gedaempft_durch_cin`, ADR-0025) auf höchstens LOW heruntergesetzt, nicht ungedämpft auf HIGH gezählt.
-  - Test: Fixture-Stunde `cape=1500` (über HIGH-Sprosse 1200), `cin=150` → CAPE-Ast liefert höchstens LOW.
+  - Test: Fixture-Stunde `cape=3000` (über HIGH-Sprosse 2500, #2178), `cin=150` → CAPE-Ast liefert höchstens LOW.
 
 - **AC-5:** Given eine Archiv-Stunde mit `lightning_potential` über der HIGH-Sprosse und Wettercode/CAPE unterhalb ihrer Sprossen, When `ablation_je_stunde` sie auswertet, Then erscheint "blitzpotenzial" als alleiniger Träger der Höchststufe.
   - Test: Fixture-Stunde `cape` niedrig, `code=2` (kein Gewittercode), `lpi=60` (über HIGH-Sprosse 50) → `traeger == ["blitzpotenzial"]`, Stufe HIGH.

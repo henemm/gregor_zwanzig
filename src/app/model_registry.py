@@ -239,30 +239,35 @@ def cape_delta_threshold_jkg(
     return nominal * geeicht / CAPE_REFERENZ_NIVEAU_JKG
 
 
-# CAPE-Leiter (Issue #1679, CIN-Teil). Belegt: NWS/SPC, mehrfach unabhaengig
-# publiziert -- "Weak instability: less than 1000 J/kg, Moderate: 1000 to
-# 2500, Strong: 2500-4000, Extreme: greater than 4000" (Gesamtkonzept 3.5b).
-# Die beiden oberen Sprossen sind KEINE eigenstaendige Eichung, sondern die
-# publizierten Verhaeltnisse (2,5x / 4x) auf die bereits geeichte
-# LOW-Schwelle (#1592) uebertragen -- ueber dieselbe Umrechnung, die
-# `cape_delta_threshold_jkg()` schon fuer die Alarm-Empfindlichkeit nutzt.
-CAPE_LEITER_MED_NOMINAL_JKG = 2500.0
-CAPE_LEITER_HIGH_NOMINAL_JKG = 4000.0
+# CAPE-Leiter (Issue #1679, CIN-Teil; Issue #2178: MED/HIGH auf Absolutwerte
+# umgestellt). Belegt: NWS/SPC, mehrfach unabhaengig publiziert -- "Weak
+# instability: less than 1000 J/kg, Moderate: 1000 to 2500, Strong:
+# 2500-4000, Extreme: greater than 4000" (Gesamtkonzept 3.5b).
+#
+# MED/HIGH sind ab #2178 die publizierten Absolutwerte selbst, NICHT mehr
+# proportional aus der geeichten LOW-Schwelle hochgerechnet -- die
+# Umrechnung (2,5x/4x auf `low`) unterschaetzte MED/HIGH fuer alle
+# Modell-/Gebiets-Kombinationen mit `low` < 1000 J/kg systematisch (z.B.
+# DE_ALPEN/icon_d2: 750.0/1200.0 statt der publizierten 1000.0/2500.0).
+# `cape_delta_threshold_jkg()` bleibt als Funktion bestehen -- sie wird
+# weiterhin von `weather_change_detection.py` fuer die (unabhaengigen)
+# Aenderungsalarm-Presets genutzt, hier aber NICHT mehr aufgerufen.
+CAPE_LEITER_MED_ABSOLUT_JKG = 1000.0
+CAPE_LEITER_HIGH_ABSOLUT_JKG = 2500.0
 
 
 def cape_ladder_thresholds_jkg(
     model_id: Optional[str], region: Optional[str]
 ) -> Optional[Tuple[float, float, float]]:
-    """(low, med, high)-CAPE-Leiter fuer (``model_id``, ``region``),
-    regions-/modellskaliert. ``low`` ist unveraendert ``cape_threshold_jkg()``
-    -- keine zweite, abweichende Kalibrierung derselben Sprosse.
+    """(low, med, high)-CAPE-Leiter fuer (``model_id``, ``region``). ``low``
+    ist unveraendert ``cape_threshold_jkg()`` (regions-/modellgeeicht).
+    ``med``/``high`` sind feste, publizierte NWS/SPC-Absolutwerte,
+    unabhaengig von Modell/Region (#2178).
 
     ``None``, wenn keine Kalibrierung fuer die Kombination vorliegt --
-    identisch zu ``cape_threshold_jkg()``, kein Rueckfall auf die rohe
-    NWS-Leiter."""
+    identisch zu ``cape_threshold_jkg()``: fehlt ``low``, liefert die
+    GESAMTE Leiter ``None``, nicht ``(None, 1000.0, 2500.0)``."""
     low = cape_threshold_jkg(model_id, region)
     if low is None:
         return None
-    med = cape_delta_threshold_jkg(CAPE_LEITER_MED_NOMINAL_JKG, model_id, region)
-    high = cape_delta_threshold_jkg(CAPE_LEITER_HIGH_NOMINAL_JKG, model_id, region)
-    return (low, med, high)
+    return (low, CAPE_LEITER_MED_ABSOLUT_JKG, CAPE_LEITER_HIGH_ABSOLUT_JKG)

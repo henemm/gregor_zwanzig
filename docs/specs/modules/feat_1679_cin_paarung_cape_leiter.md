@@ -10,6 +10,15 @@ tags: [gewitter, cape, cin, model-registry, thunder-fusion, issue-1679]
 
 # CAPE bekommt eine belegte Leiter (1000/2500/4000 J/kg), gepaart mit der Konvektionshemmung CIN (Issue #1679, CIN-Teil)
 
+> **Abgelöst durch #2178 (`fix_2178_cape_leiter_absolutwerte.md`, 2026-09-16):** Die hier
+> beschriebene Herleitung von `med`/`high` — proportional (2,5×/4×) aus der geeichten `low`-Schwelle
+> hochgerechnet über `cape_delta_threshold_jkg()`, für `icon_d2`/`DE_ALPEN` `(300.0, 750.0, 1200.0)`
+> (siehe AC-1 unten) — ist seit #2178 nicht mehr aktuell. `med`/`high` sind jetzt feste, publizierte
+> NWS/SPC-Absolutwerte (1000.0/2500.0 J/kg), unabhängig von Modell/Region; für `icon_d2`/`DE_ALPEN`
+> liefert `cape_ladder_thresholds_jkg()` daher `(300.0, 1000.0, 2500.0)`. `low` bleibt unverändert
+> regional/modellgeeicht. Der Rest dieses Dokuments (CIN-Paarung, LOW-Deckelungs-Aufhebung) bleibt
+> gültig und unverändert von #2178.
+
 ## Approval
 
 - [ ] Approved

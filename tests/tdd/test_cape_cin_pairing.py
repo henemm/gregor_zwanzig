@@ -66,27 +66,28 @@ def _call_cape(cape_jkg, cin_jkg):
     )
 
 
-# ────────────── AC-1 — Leiter proportional zur bestehenden Kalibrierung ───
+# ────────────── AC-1 — MED/HIGH fest (NWS/SPC-Absolutwerte, #2178) ────────
 
 @pytest.mark.parametrize(
     "model_id, region, erwartet",
     [
-        ("icon_d2", "DE_ALPEN", (300.0, 750.0, 1200.0)),
-        ("ecmwf_ifs04", "EU_REST", (420.0, 1050.0, 1680.0)),
+        ("icon_d2", "DE_ALPEN", (300.0, 1000.0, 2500.0)),
+        ("ecmwf_ifs04", "EU_REST", (420.0, 1000.0, 2500.0)),
     ],
 )
-def test_ac1_cape_ladder_thresholds_jkg_proportional_zur_kalibrierung(
+def test_ac1_cape_ladder_thresholds_jkg_absolut_gegen_kalibrierte_low_schwelle(
     model_id, region, erwartet,
 ):
-    """AC-1: `cape_ladder_thresholds_jkg()` liefert (low, med, high) im
-    selben Verhaeltnis wie die publizierte NWS-Leiter (2500/1000=2.5x,
-    4000/1000=4x), verankert an der bereits geeichten LOW-Schwelle
-    (`cape_threshold_jkg()`, #1592) -- kein neuer Kalibrierungslauf.
+    """AC-1 (#2178): `cape_ladder_thresholds_jkg()` liefert MED/HIGH als
+    feste, publizierte NWS/SPC-Absolutwerte (1000.0/2500.0 J/kg) fuer JEDE
+    kalibrierte Modell-/Gebiets-Kombination -- nur LOW bleibt regional/
+    modellgeeicht (`cape_threshold_jkg()`, #1592) und unterscheidet sich
+    zwischen den Kombinationen.
 
-    Gegenprobe (Spec): Wuerde MED/HIGH mit der UNSKALIERTEN NWS-Leiter
-    (2500/4000 direkt) statt der regionsskalierten Version berechnet, laege
-    das Ergebnis fuer eine Kombination mit `cape_threshold_jkg` != 1000
-    (hier 300.0 bzw. 420.0) falsch.
+    Gegenprobe (Spec): Wuerde MED/HIGH weiterhin proportional zu LOW
+    hochgerechnet (alte Herleitung), ergaeben die zwei Kombinationen
+    UNTERSCHIEDLICHE MED/HIGH-Werte (750.0/1200.0 vs. 1050.0/1680.0) statt
+    der hier erwarteten, identischen 1000.0/2500.0.
     """
     from app.model_registry import cape_ladder_thresholds_jkg
 
@@ -117,6 +118,7 @@ def test_ac1_cape_ladder_low_stimmt_mit_cape_threshold_jkg_ueberein():
     [
         (None, "DE_ALPEN"),
         ("icon_d2", None),
+        (None, None),
         ("icon_d2", "EU_REST"),  # bewusst OHNE Eintrag, s. model_registry.py
     ],
 )

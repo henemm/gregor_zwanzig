@@ -131,7 +131,7 @@ def test_ac3_wettercode_traegt_high_unabhaengig_von_schwaecheren_signalen():
 
 
 def test_ac4_gedaempfte_cape_stufe_erreicht_hoechstens_low():
-    """AC-4: CAPE 1500 J/kg (ueber der HIGH-Sprosse 1200) mit CIN=150
+    """AC-4: CAPE 3000 J/kg (ueber der HIGH-Sprosse 2500, #2178) mit CIN=150
     (>100 J/kg) wird durch die CIN-Daempfung auf hoechstens LOW gedeckelt,
     nicht ungedaempft als HIGH gezaehlt."""
     stunde = _fixture("synthetisch_cape_hoch_cin_stark_gedaempft.json")["stunden"][0]

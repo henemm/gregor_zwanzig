@@ -201,7 +201,7 @@ def test_ac2_verworfene_rueckschau_hebt_den_tageswert_auch_dann_nicht_an():
 
     ueberhoeht = json.loads(json.dumps(rueckschau[0]))
     ueberhoeht["werte"] = dict(
-        ueberhoeht["werte"], cape_max_jkg=1300.0, thunder_level_max="HIGH"
+        ueberhoeht["werte"], cape_max_jkg=3000.0, thunder_level_max="HIGH"
     )
     assert vorlauf(ueberhoeht) == vorlauf(rueckschau[0]), (
         "die Konstruktion darf nur die Werte anfassen, nicht die Gueltigkeit"
@@ -211,7 +211,7 @@ def test_ac2_verworfene_rueckschau_hebt_den_tageswert_auch_dann_nicht_an():
         [ueberhoeht] + [z for z in zeilen if str(z["segment_id"]) != "1"]
     )
 
-    # Der Tag traegt weiterhin die gueltigen Segmente — 1300.0/HIGH schlaegt
+    # Der Tag traegt weiterhin die gueltigen Segmente — 3000.0/HIGH schlaegt
     # weder beim CAPE noch bei der Stufe durch.
     assert tageswerte["nur_alarm"]["2026-08-26"] == {
         "cape_max_jkg": 380.0, "thunder_level_max": ThunderLevel.LOW,
@@ -220,7 +220,7 @@ def test_ac2_verworfene_rueckschau_hebt_den_tageswert_auch_dann_nicht_an():
     # Und es kippt auch keine Kategorie: der konstruierte Wert liegt ueber
     # ALLEN drei Sprossen, ein Durchschlagen waere an jeder einzeln sichtbar.
     low, med, high = _schwellen()
-    assert low <= 380.0 < med and 1300.0 >= high, (
+    assert low <= 380.0 < med and 3000.0 >= high, (
         "Konstruktion muss die Sprossen-Kategorie ueberhaupt kippen koennen"
     )
     sprossen = cape_sprossen_treffer(tageswerte, _schwellen())["nur_alarm"]
@@ -325,17 +325,24 @@ def test_ac6_teilmengen_definition_folgt_der_spec():
 
 
 def test_ac7_jede_sprosse_traegt_eine_eigene_zaehlung():
-    """AC-7: drei getrennte Zahlen, keine kombinierte Kennzahl. Die vier
-    Fixture-Tage erreichen 0, 1, 2 bzw. 3 Sprossen."""
+    """AC-7: drei getrennte Zahlen, keine kombinierte Kennzahl.
+
+    Die vier Fixture-Tage (echte, unveraenderte Mitschnitt-Zeilen, siehe
+    ``cape_sprossen_spreizung.json``: 0.0 / 310.0 / 790.0 / 1460.0 J/kg)
+    erreichen mit der Absolut-Leiter aus #2178 (300/1000/2500 J/kg,
+    icon_d2/DE_ALPEN) 0, 1, 1 bzw. 2 Sprossen -- vor #2178 (300/750/1200,
+    proportional skaliert) waren es noch 0, 1, 2 bzw. 3. Die JSON-Datei
+    bleibt UNVERAENDERT (reale Aufzeichnung); nur die erwartete Verteilung
+    zieht mit der neuen Leiter nach."""
     zeilen = _zeilen("cape_sprossen_spreizung.json")
     ergebnis = cape_sprossen_treffer(tageswerte_je_teilmenge(zeilen), _schwellen())["alle_quellen"]
 
     assert ergebnis["low"]["ueber"] == 3
-    assert ergebnis["med"]["ueber"] == 2
-    assert ergebnis["high"]["ueber"] == 1
+    assert ergebnis["med"]["ueber"] == 1
+    assert ergebnis["high"]["ueber"] == 0
     assert ergebnis["low"]["unter"] == 1
-    assert ergebnis["med"]["unter"] == 2
-    assert ergebnis["high"]["unter"] == 3
+    assert ergebnis["med"]["unter"] == 3
+    assert ergebnis["high"]["unter"] == 4
     for sprosse in ("low", "med", "high"):
         zaehler = ergebnis[sprosse]
         assert zaehler["ueber"] + zaehler["unter"] + zaehler["keine_aussage"] == 4

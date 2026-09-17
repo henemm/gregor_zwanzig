@@ -97,8 +97,8 @@ def _dp(h: int, *, tag: date = _HEUTE, cape=None, cin=None, lpi=None,
         dichte=None, hail=None, **extra) -> ForecastDataPoint:
     """Ein Stundenpunkt mit ROHWERTEN — Stufe und Traeger rechnet die Fusion.
 
-    Geeichte Leitern DE_ALPEN/icon_d2 (am Code gemessen): ``cape=1500, cin=5``
-    -> hoch ['cape']; ``cape=400, cin=5`` -> leicht ['cape']; ``lpi=60`` ->
+    Geeichte Leitern DE_ALPEN/icon_d2 (am Code gemessen, #2178): ``cape=3000,
+    cin=5`` -> hoch ['cape']; ``cape=400, cin=5`` -> leicht ['cape']; ``lpi=60`` ->
     hoch ['blitzpotenzial']; ``dichte=0.005`` -> leicht ['blitzdichte'];
     ``cape=100`` -> kein Gewitter.
     """
@@ -195,7 +195,7 @@ def _gewitter_hagel_punkte(tag: date = _HEUTE) -> list[ForecastDataPoint]:
     return [
         _dp(12, tag=tag, cape=100.0, cin=5.0),
         _dp(13, tag=tag, cape=100.0, cin=5.0),
-        _dp(14, tag=tag, cape=1500.0, cin=5.0),
+        _dp(14, tag=tag, cape=3000.0, cin=5.0),
         _dp(15, tag=tag, cape=100.0, cin=5.0, hail=True),
         _dp(16, tag=tag, cape=100.0, cin=5.0),
     ]
@@ -346,7 +346,7 @@ def _vollstaendige_reihe() -> NormalizedTimeseries:
     punkte = []
     for h in range(8, 14):
         punkte.append(_dp(
-            h, cape=1500.0 if h == 10 else 100.0, cin=5.0,
+            h, cape=3000.0 if h == 10 else 100.0, cin=5.0,
             hail=True if h == 11 else None,
             precip_1h_mm=6.0 if h == 12 else 0.2, visibility_m=20000,
             wmo_code=95 if h == 10 else 2, is_day=1, dni_wm2=300.0,
@@ -434,7 +434,7 @@ def test_ac4_etappe_nennt_nur_die_traeger_des_hoechststufen_segments():
     Segments — mit dem niedrigeren Segment vorn kommt "blitzdichte" heraus.
     """
     niedrig = _segment_mit_basis([_dp(10, dichte=0.005)], seg_id=1)
-    hoch = _segment_mit_basis([_dp(14, cape=1500.0, cin=5.0)], seg_id=2)
+    hoch = _segment_mit_basis([_dp(14, cape=3000.0, cin=5.0)], seg_id=2)
     assert niedrig.aggregated.thunder_level_max == ThunderLevel.LOW
     assert hoch.aggregated.thunder_level_max == ThunderLevel.HIGH
 
@@ -459,9 +459,9 @@ def test_ac5_segmente_auf_gleicher_hoechststufe_werden_vereinigt():
     RED heute: ``values[0]`` liefert nur ``["cape"]``.
     """
     segmente = [
-        _segment_mit_basis([_dp(10, cape=1500.0, cin=5.0)], seg_id=1),
+        _segment_mit_basis([_dp(10, cape=3000.0, cin=5.0)], seg_id=1),
         _segment_mit_basis([_dp(13, lpi=60.0)], seg_id=2),
-        _segment_mit_basis([_dp(16, cape=1500.0, cin=5.0)], seg_id=3),
+        _segment_mit_basis([_dp(16, cape=3000.0, cin=5.0)], seg_id=3),
     ]
     assert {s.aggregated.thunder_level_max for s in segmente} == {ThunderLevel.HIGH}
 
@@ -488,7 +488,7 @@ def test_ac6_hoechststufe_ohne_traeger_nennt_nie_den_traeger_eines_niedrigeren_s
     RED heute: der Vorfilter nimmt das traegerlose Segment heraus, und
     ``values[0]`` liefert den Traeger des niedrigeren.
     """
-    hoch_basis = _segment_mit_basis([_dp(14, cape=1500.0, cin=5.0)], seg_id=1)
+    hoch_basis = _segment_mit_basis([_dp(14, cape=3000.0, cin=5.0)], seg_id=1)
     hoch_ohne = dataclasses.replace(hoch_basis, aggregated=dataclasses.replace(
         hoch_basis.aggregated, thunder_level_max_signals=None))
     niedrig = _segment_mit_basis([_dp(10, dichte=0.005)], seg_id=2)
@@ -632,7 +632,7 @@ def test_ac9_neuberechnung_ab_anfragezeit_behaelt_traeger_und_hagel():
     """
     punkte = (
         [_dp(h, cape=100.0, cin=5.0, t2m_c=3.0) for h in (6, 7, 8, 9, 10)]
-        + [_dp(11, cape=1500.0, cin=5.0), _dp(12, cape=100.0, cin=5.0, hail=True),
+        + [_dp(11, cape=3000.0, cin=5.0), _dp(12, cape=100.0, cin=5.0, hail=True),
            _dp(13, cape=100.0, cin=5.0)]
     )
     reihe = _reihe(punkte)
