@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
@@ -144,6 +145,56 @@ type Scheduler struct {
 	// lastRuns (Issue #2149 Scheibe A) — eigener Mutex, eigene Persistenz,
 	// s. user_run_state.go.
 	userState *userRunState
+
+	// Fix #2149 Scheibe B (Spec Abschnitt 8): Wartebudget je Nutzeraufruf,
+	// Laufbudget je Job-Lauf und Deckel je in den Hintergrund verlagertem
+	// Alarm-Aufruf. Unexported, damit Tests derselben Package sie direkt
+	// verkleinern koennen. s.client.Timeout (#1912) bleibt unveraendert.
+	alertWaitBudget    time.Duration
+	alertRunBudget     time.Duration
+	alertCallCap       time.Duration
+	briefingWaitBudget time.Duration
+	briefingRunBudget  time.Duration
+
+	// callBudget ist das nicht persistierte In-Flight-Register (Spec
+	// Abschnitt 2, eigener Mutex).
+	callBudget *userCallBudget
+
+	// runCounter zaehlt Eintritte in runForAllUsers je jobID fuer die
+	// Rotation der Nutzerreihenfolge; runBudgetSummary haelt die Budget-
+	// Zahlen des zuletzt abgeschlossenen Laufs je jobID (Spec Abschnitt 7/9).
+	// Beide geschuetzt durch s.mu wie overlapState.
+	runCounter       map[string]int
+	runBudgetSummary map[string]*jobBudgetSummary
+}
+
+// jobBudgetSummary sind die oeffentlichen Budget-Zahlen des zuletzt
+// abgeschlossenen Laufs eines Fan-out-Jobs (Fix #2149 Scheibe B, Spec
+// Abschnitt 9) -- nur Zahlen, keine Nutzerkennung.
+type jobBudgetSummary struct {
+	InFlight         int // am Laufende noch aktive Marker
+	SkippedInFlight  int // wegen Marker aus Vorlauf kein neuer POST
+	NotReachedBudget int // wegen erschoepftem Laufbudget gar nicht versucht
+}
+
+// budgetExceededError signalisiert, dass das Wartebudget eines Nutzeraufrufs
+// abgelaufen ist, waehrend der Aufruf im Hintergrund weiterlaeuft (Fix #2149
+// Scheibe B, Spec Abschnitt 4). Dockt per Unwrap an die partialRunError-Kette
+// an, damit recordRun den Job-Lauf als "partial" (nicht "error", #1346) rankt.
+// Der Text enthaelt nie eine Nutzerkennung oder URL (oeffentliches Feld).
+type budgetExceededError struct{ msg string }
+
+func (e *budgetExceededError) Error() string { return e.msg }
+func (e *budgetExceededError) Unwrap() error { return &partialRunError{msg: e.msg} }
+
+// alertBudgetJobIDs sind die fuenf Alarm-Fan-out-Jobs mit Alarm-Budgets und
+// eigenem Deckel (Spec Abschnitt 3/8).
+var alertBudgetJobIDs = map[string]bool{
+	"alert_checks":                  true,
+	"radar_alert_checks":            true,
+	"compare_alert_checks":          true,
+	"compare_radar_alert_checks":    true,
+	"compare_official_alert_checks": true,
 }
 
 // New creates a Scheduler from config and store. Returns error if timezone is invalid.
@@ -163,18 +214,29 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		// min) liegt knapp unter dem stuendlichen Cron-Abstand; die
 		// Overlap-Sperre in recordRun() verhindert, dass ein langsamer Lauf
 		// den Folgetick blockiert.
-		client: &http.Client{Timeout: 3000 * time.Second},
-		store:                   st,
-		lastRuns:                make(map[string]*jobResult),
-		entryMap:                make(map[cron.EntryID]jobMeta),
-		overlapState:            make(map[string]*jobOverlapState),
-		lastHardStatus:          make(map[string]string),
-		jobLocks:                make(map[string]*sync.Mutex),
+		client:         &http.Client{Timeout: 3000 * time.Second},
+		store:          st,
+		lastRuns:       make(map[string]*jobResult),
+		entryMap:       make(map[cron.EntryID]jobMeta),
+		overlapState:   make(map[string]*jobOverlapState),
+		lastHardStatus: make(map[string]string),
+		jobLocks:       make(map[string]*sync.Mutex),
 		notifier: func(sender, recipient, priority, subject, body string) error {
 			return notify.SendMQ(sender, recipient, priority, subject, body)
 		},
 		onceMissingHB: make(map[string]*sync.Once),
 		userState:     newUserRunState(st.DataDir),
+		// Fix #2149 Scheibe B, Spec Abschnitt 8: Alarm-Laufbudget = 80 % des
+		// */15-Takts, Deckel = 2 Takte; Briefing-Laufbudget = 80 % des
+		// Stundentakts auf zwei Teiljobs verteilt.
+		alertWaitBudget:    300 * time.Second,
+		alertRunBudget:     720 * time.Second,
+		alertCallCap:       1800 * time.Second,
+		briefingWaitBudget: 600 * time.Second,
+		briefingRunBudget:  1440 * time.Second,
+		callBudget:         newUserCallBudget(),
+		runCounter:         make(map[string]int),
+		runBudgetSummary:   make(map[string]*jobBudgetSummary),
 	}
 
 	// Register jobs and store EntryID → jobMeta mapping
@@ -260,11 +322,25 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 	// s.userState.Record je (jobID, userID) verbucht — die Flanken-Ergebnisse
 	// werden gesammelt und am Ende dieses Laufs zu hoechstens einer Nachricht
 	// je Art gebuendelt (Spec Abschnitt 2, gegen Telegram-Laerm).
+	//
+	// Fix #2149 Scheibe B: rotierte Reihenfolge, zuerst Ernte aller Spaet-
+	// ergebnisse (Marker-Zustand aktuell), dann je Nutzer Skip / Laufbudget /
+	// Aufruf mit Wartebudget (Spec Abschnitt 7). Die Schleife laeuft bei
+	// erschoepftem Laufbudget bewusst weiter, damit ein noch markierter Nutzer
+	// hinter der Budgetgrenze als skipped_in_flight (nicht not_reached) zaehlt.
+	rotated := s.rotateUsers(jobID, userIDs)
+	for _, uid := range rotated {
+		s.harvestLateResult(jobID, uid)
+	}
+	waitBudget, runBudget, callCap := s.budgetsFor(jobID)
+	deadline := time.Now().Add(runBudget)
+	summary := &jobBudgetSummary{}
+
 	var firstHardErr, firstPartialErr error
 	var failedUsers, partialUsers, recoveredUsers []string
 	var lastFailedErrText string
-	for _, uid := range userIDs {
-		outcome, errText, hardErr, partialErr := s.classifyUserOutcome(jobID, path, uid)
+	for _, uid := range rotated {
+		outcome, errText, hardErr, partialErr := s.runUserStep(jobID, path, uid, deadline, waitBudget, callCap, summary)
 		if hardErr != nil && firstHardErr == nil {
 			firstHardErr = hardErr
 		}
@@ -291,10 +367,126 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 	s.userState.Prune(jobID, userIDs)
 	s.sendBundledUserAlerts(jobID, failedUsers, partialUsers, recoveredUsers, lastFailedErrText)
 
+	for _, uid := range rotated {
+		if s.callBudget.IsInFlight(jobID, uid) {
+			summary.InFlight++
+		}
+	}
+	s.mu.Lock()
+	s.runBudgetSummary[jobID] = summary
+	s.mu.Unlock()
+
 	if firstHardErr != nil {
 		return firstHardErr
 	}
-	return firstPartialErr // nil, falls kein Nutzer partial war -> "ok"
+	if firstPartialErr != nil {
+		return firstPartialErr
+	}
+	if summary.NotReachedBudget > 0 {
+		// Spec Abschnitt 7: synthetischer Teilerfolg, damit der Job "partial"
+		// rankt, ohne lastHardStatus (#1346) zu beruehren.
+		return &partialRunError{msg: fmt.Sprintf("%s: Laufbudget erschöpft, %d Nutzer nicht erreicht",
+			jobID, summary.NotReachedBudget)}
+	}
+	return nil // kein Nutzer partial -> "ok"
+}
+
+// budgetsFor liefert (Wartebudget, Laufbudget, Deckel) fuer einen Fan-out-Job
+// (Fix #2149 Scheibe B, Spec Abschnitt 3/8). Briefing-Teiljobs haben keinen
+// eigenen Deckel (0) -- dort bleibt s.client.Timeout (#1912) der einzige.
+// Unbekannte jobIDs erhalten die Alarm-Werte.
+func (s *Scheduler) budgetsFor(jobID string) (wait, run, callCap time.Duration) {
+	if jobID == "trip_reports_hourly" || jobID == "compare_presets_daily" {
+		return s.briefingWaitBudget, s.briefingRunBudget, 0
+	}
+	return s.alertWaitBudget, s.alertRunBudget, s.alertCallCap
+}
+
+// rotateUsers zaehlt den Laufzaehler des Jobs hoch und rotiert die
+// Nutzerliste um Startindex = Laufzaehler mod N (Spec Abschnitt 7, AC-8).
+func (s *Scheduler) rotateUsers(jobID string, userIDs []string) []string {
+	s.mu.Lock()
+	start := s.runCounter[jobID] % len(userIDs)
+	s.runCounter[jobID]++
+	s.mu.Unlock()
+	rotated := make([]string, 0, len(userIDs))
+	rotated = append(rotated, userIDs[start:]...)
+	return append(rotated, userIDs[:start]...)
+}
+
+// harvestLateResult uebernimmt ein inzwischen fertiges Spaetergebnis eines
+// aktuell markierten Aufrufs rein informativ (Spec Abschnitt 6, AC-4): kein
+// Record(), keine Zaehler-/Flankenaenderung. Greift nie s.mu.
+func (s *Scheduler) harvestLateResult(jobID, uid string) {
+	err, ok := s.callBudget.TryHarvest(jobID, uid)
+	if !ok {
+		return
+	}
+	outcome, errText := "ok", ""
+	if err != nil {
+		errText = err.Error()
+		outcome = "error"
+		var pe *partialRunError
+		if errors.As(err, &pe) {
+			outcome = "partial"
+		}
+	}
+	log.Printf("[scheduler] %s: user %s late result harvested (%s), informational only", jobID, uid, outcome)
+	s.userState.RecordLate(jobID, uid, outcome, errText)
+}
+
+// runUserStep entscheidet fuer einen Nutzer: Skip bei noch laufendem Vorlauf-
+// Aufruf, not_reached bei erschoepftem Laufbudget, sonst Aufruf mit
+// Wartebudget = min(Wartebudget, Rest-Laufbudget) (Spec Abschnitt 7).
+func (s *Scheduler) runUserStep(jobID, path, uid string, deadline time.Time, waitBudget, callCap time.Duration, summary *jobBudgetSummary) (outcome, errText string, hardErr, partialErr error) {
+	if s.callBudget.IsInFlight(jobID, uid) {
+		summary.SkippedInFlight++
+		log.Printf("[scheduler] %s: user %s skipped, previous call still in flight", jobID, uid)
+		// Bewusst partialErr: ein Lauf mit uebersprungenem Nutzer darf nicht
+		// "ok" ranken, sonst pingt briefingDispatch den Heartbeat trotz
+		// haengendem Nutzer (AC-13).
+		msg := fmt.Sprintf("%s: Aufruf aus Vorlauf läuft noch", jobID)
+		return "skipped_in_flight", msg, nil, &partialRunError{msg: msg}
+	}
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		summary.NotReachedBudget++
+		log.Printf("[scheduler] %s: user %s not reached, run budget exhausted", jobID, uid)
+		return "not_reached", fmt.Sprintf("%s: Laufbudget erschöpft", jobID), nil, nil
+	}
+	err := s.callUserWithBudget(jobID, path, uid, min(waitBudget, remaining), callCap)
+	return s.classifyUserErr(jobID, uid, err)
+}
+
+// callUserWithBudget startet triggerEndpointForUser in einer Goroutine und
+// wartet hoechstens wait (Spec Abschnitt 1). Laeuft das Wartebudget ab, bleibt
+// der Aufruf im In-Flight-Register und laeuft weiter; Rueckgabe ist dann ein
+// *budgetExceededError. Bei Alarm-Jobs (callCap > 0) gibt der Deckel den
+// Marker ohne Buchung frei; ein danach eintreffendes Ergebnis wird verworfen.
+func (s *Scheduler) callUserWithBudget(jobID, path, uid string, wait, callCap time.Duration) error {
+	resultCh := make(chan error, 1)
+	var capped atomic.Bool
+	tok := s.callBudget.Begin(jobID, uid, resultCh, callCap, func() {
+		capped.Store(true)
+		log.Printf("[scheduler] %s: user %s call cap %v expired, in-flight marker released without booking", jobID, uid, callCap)
+	})
+	go func() {
+		err := s.triggerEndpointForUser(path, uid)
+		resultCh <- err // gepuffert: blockiert nie, auch wenn niemand mehr liest
+		if capped.Load() {
+			log.Printf("[scheduler] %s: user %s stale result after call cap discarded: %v", jobID, uid, err)
+		}
+	}()
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+	select {
+	case err := <-resultCh:
+		s.callBudget.Finish(jobID, uid, tok)
+		return err
+	case <-timer.C:
+		log.Printf("[scheduler] %s: user %s exceeded wait budget %v, call continues in background", jobID, uid, wait)
+		return &budgetExceededError{msg: fmt.Sprintf("%s: Wartebudget %v überschritten", jobID, wait)}
+	}
 }
 
 // filterOutTestUsers entfernt Test-/tdd-Konten (Issue #1265, Defense-in-
@@ -317,15 +509,21 @@ func filterOutTestUsers(jobID string, allUserIDs []string) []string {
 	return userIDs
 }
 
-// classifyUserOutcome ruft triggerEndpointForUser auf und klassifiziert das
-// Ergebnis (ok/partial/error) inkl. Logging — ausgelagert aus
-// runForAllUsers, damit diese uebersichtlich bleibt (Issue #2149 Scheibe A).
-// hardErr/partialErr sind nur gesetzt, wenn der jeweilige Fall vorliegt (fuer
-// die Rangfolge error > partial > ok in runForAllUsers).
-func (s *Scheduler) classifyUserOutcome(jobID, path, uid string) (outcome, errText string, hardErr, partialErr error) {
-	err := s.triggerEndpointForUser(path, uid)
+// classifyUserErr klassifiziert das Ergebnis eines Nutzeraufrufs
+// (ok/budget/partial/error) inkl. Logging — ausgelagert aus runForAllUsers,
+// damit diese uebersichtlich bleibt (Issue #2149 Scheibe A). hardErr/
+// partialErr sind nur gesetzt, wenn der jeweilige Fall vorliegt (fuer die
+// Rangfolge error > partial > ok in runForAllUsers).
+//
+// Fix #2149 Scheibe B (AC-9): budgetExceededError wird ZUERST geprueft — er
+// ist per Unwrap auch ein partialRunError, soll aber als "budget" zaehlen.
+func (s *Scheduler) classifyUserErr(jobID, uid string, err error) (outcome, errText string, hardErr, partialErr error) {
 	if err == nil {
 		return "ok", "", nil, nil
+	}
+	var be *budgetExceededError
+	if errors.As(err, &be) {
+		return "budget", err.Error(), nil, err
 	}
 	var pe *partialRunError
 	if errors.As(err, &pe) {
@@ -866,7 +1064,17 @@ func (s *Scheduler) usersField(jobID string) map[string]any {
 	if !fanOutJobIDs[jobID] {
 		return nil
 	}
-	return s.userState.Aggregate(jobID)
+	users := s.userState.Aggregate(jobID)
+	// Fix #2149 Scheibe B (Spec Abschnitt 9): Budget-Zahlen des zuletzt
+	// abgeschlossenen Laufs, immer vorhanden (0 ist ein gueltiger Wert).
+	summary := jobBudgetSummary{}
+	if sum, ok := s.runBudgetSummary[jobID]; ok && sum != nil {
+		summary = *sum
+	}
+	users["in_flight"] = summary.InFlight
+	users["skipped_in_flight"] = summary.SkippedInFlight
+	users["not_reached_budget"] = summary.NotReachedBudget
+	return users
 }
 
 // Status returns current scheduler state for API exposure.

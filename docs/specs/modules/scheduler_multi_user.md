@@ -29,7 +29,15 @@ Extends the Go cron scheduler to iterate over all registered users and fire one 
 - Wiring: pass `*store.Store` into `scheduler.New()`
 
 ### Out of Scope
-- Parallel user iteration (kept sequential to avoid Python overload)
+- Parallel user iteration (kept sequential to avoid Python overload) —
+  **Update 2026-09-17 (ADR-0070, Issue #2149 Scheibe B):** the user loop
+  itself stays sequential, but a single user's HTTP call may now keep
+  running in the background after its per-call wait budget expires (the
+  Go scheduler stops waiting, Python still finishes synchronously). This
+  can produce at most one extra, unsolicited Python request per hanging
+  user in the next tick — it is not real parallel iteration. Details:
+  `docs/specs/modules/fix_2149_scheduler_budget_teilb.md`,
+  `docs/adr/0070-aufruferseitige-wartegrenze-je-nutzeraufruf.md`.
 - Changes to Python endpoints (`api/routers/scheduler.py`)
 - Retry logic for failed per-user jobs
 - New cron expressions or schedule changes
@@ -218,3 +226,8 @@ No other changes to `main.go`.
 - 2026-04-16: v1.0 Initial spec — Scheduler Multi-User Iteration (Issue #63)
 - 2026-04-16: v1.1 Status updated to implemented — all 9 tests pass (4 store + 5 scheduler)
 - 2026-09-15: Pro-Nutzer-Sichtbarkeit (Buchführung je (Job, Nutzer), Alarme, Redaktion des öffentlichen Fehlertexts) s. Scheibe A von #2149, `docs/specs/modules/fix_2149_scheduler_nutzer_sichtbarkeit.md` — keine inhaltliche Änderung an der hier getroffenen Sequenziell-Entscheidung.
+- 2026-09-17: Wartebudget je Nutzeraufruf und Laufbudget je Job (ADR-0070)
+  s. Scheibe B von #2149,
+  `docs/specs/modules/fix_2149_scheduler_budget_teilb.md` — die
+  Nutzerschleife bleibt sequenziell, ein aufgegebener Aufruf darf aber im
+  Hintergrund weiterlaufen; Out-of-Scope-Absatz oben präzisiert.

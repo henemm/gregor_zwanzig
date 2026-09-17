@@ -31,7 +31,7 @@ const (
 // userJobRecord ist der Zustand eines einzelnen (jobID, userID)-Paars.
 type userJobRecord struct {
 	LastRun             time.Time `json:"last_run"`
-	LastStatus          string    `json:"last_status"` // ok|partial|error
+	LastStatus          string    `json:"last_status"` // ok|partial|error|budget|skipped_in_flight|not_reached
 	LastError           string    `json:"last_error,omitempty"`
 	ConsecutiveFailures int       `json:"consecutive_failures"`
 	ConsecutivePartial  int       `json:"consecutive_partial"`
@@ -186,7 +186,18 @@ func (u *userRunState) recordLocked(jobID, userID, outcome, errText string) (fai
 			failureEdge = true
 			rec.FailureAlertSent = true
 		}
-	case "partial":
+	case "budget", "skipped_in_flight":
+		// Fix #2149 Scheibe B (Spec Abschnitt 5): ein haengender Nutzer soll
+		// nach spaetestens drei Laeufen den high-Alarm ausloesen --
+		// ConsecutivePartial bleibt unveraendert.
+		rec.ConsecutiveFailures++
+		if rec.ConsecutiveFailures >= failureAlertThreshold && !rec.FailureAlertSent {
+			failureEdge = true
+			rec.FailureAlertSent = true
+		}
+	case "partial", "not_reached":
+		// "not_reached" (Scheibe B): Laufbudget vor diesem Nutzer erschoepft --
+		// keine eigene Schuld, zaehlt wie ein Teilerfolg.
 		rec.ConsecutivePartial++
 		if rec.ConsecutivePartial >= partialAlertThreshold && !rec.PartialAlertSent {
 			partialEdge = true
@@ -243,6 +254,28 @@ func (u *userRunState) Record(jobID, userID, outcome, errText string) (failureEd
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	return u.recordLocked(jobID, userID, outcome, errText)
+}
+
+// RecordLate uebernimmt ein spaet geerntetes Ergebnis (Fix #2149 Scheibe B,
+// Spec Abschnitt 6) rein informativ in LastRun/LastStatus/LastError -- ohne
+// Zaehler, Alarm-Merker oder Flanken anzufassen. Ein spaetes "ok" darf die
+// Fehlerserie NICHT zuruecksetzen (AC-4).
+func (u *userRunState) RecordLate(jobID, userID, outcome, errText string) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	byUser, ok := u.state[jobID]
+	if !ok {
+		byUser = make(map[string]*userJobRecord)
+		u.state[jobID] = byUser
+	}
+	rec, ok := byUser[userID]
+	if !ok {
+		rec = &userJobRecord{}
+		byUser[userID] = rec
+	}
+	rec.LastRun = time.Now()
+	rec.LastStatus = outcome
+	rec.LastError = errText
 }
 
 // Prune entfernt geloeschte/Test-Nutzer aus dem Zustand des Jobs und

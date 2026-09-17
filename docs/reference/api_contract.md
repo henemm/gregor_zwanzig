@@ -1257,7 +1257,10 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
       "users": {
         "total": 3,
         "failing": 1,
-        "partial": 0
+        "partial": 0,
+        "in_flight": 1,
+        "skipped_in_flight": 0,
+        "not_reached_budget": 0
       }
     }
   ],
@@ -1313,6 +1316,9 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 | jobs[].users.total | int | Number of users with a recorded state entry for this job |
 | jobs[].users.failing | int | Number of users with `ConsecutiveFailures >= 1` |
 | jobs[].users.partial | int | Number of users with `ConsecutivePartial >= 1` |
+| jobs[].users.in_flight | int (Issue #2149 Scheibe B, ADR-0070) | Number of user calls of this job that were still running in the background at the end of the **last completed run** (wait budget exceeded, call continues). Always present on fan-out jobs, `0` is a valid value (also before the first run). |
+| jobs[].users.skipped_in_flight | int (Issue #2149 Scheibe B) | Number of users in the last completed run that got **no** new POST because their call from a previous run was still in flight. Always present, `0` when none. |
+| jobs[].users.not_reached_budget | int (Issue #2149 Scheibe B) | Number of users in the last completed run that were not attempted at all because the job's run budget was exhausted (job ranks `partial`). Always present, `0` when none. |
 | briefing_health | object (Issues #1115, #1421, #1629, #1661) | Health metrics for scheduler services (provider/weather, briefing dispatch, deviation-alert anchors). Privacy-safe aggregate across all users — only numeric and timestamps, no `user_id`/`trip_id`/reason appears here. |
 | briefing_health.provider_error_streak_since | string \| null (Issue #1115, ADR-0018) | ISO-8601 UTC timestamp when the current unbroken series of provider (weather/forecast API) errors started, or `null` if no error streak is active. External monitor calculates `now - provider_error_streak_since` to escalate with outage duration. Gap threshold (for streak detection): 2 hours. |
 | briefing_health.provider_errors_recent_count | int (Issue #1115, ADR-0018) | Count of provider errors in the last 24 hours. Used to distinguish temporary transients from persistent outages. |

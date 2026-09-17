@@ -40,6 +40,12 @@ braucht dann ein eigenes ADR — das ist bereits in
 festgehalten und wird hier nicht neu verhandelt. Issue #2149 wird erst nach
 Scheibe B geschlossen.
 
+**Update 2026-09-17:** Scheibe B ist umgesetzt (Verdict VERIFIED) —
+Wartebudget je Nutzeraufruf, Laufbudget je Lauf, In-Flight-Register mit
+Token und die Outcome-Werte `budget`/`skipped_in_flight`/`not_reached` s.
+`docs/specs/modules/fix_2149_scheduler_budget_teilb.md` und
+`docs/adr/0070-aufruferseitige-wartegrenze-je-nutzeraufruf.md`.
+
 ## Source
 
 - **Datei:** `internal/scheduler/scheduler.go`
