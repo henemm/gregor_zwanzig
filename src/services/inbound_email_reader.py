@@ -315,5 +315,12 @@ class InboundEmailReader:
         for trip in trips:
             if _norm(trip.name) == query:
                 return trip.id
+        # Issue #2282 Abschnitt 4: der [Name]-Betreff findet jetzt auch
+        # Ortsvergleiche, nicht nur Trips.
+        from app.loader import load_compare_presets
+
+        for preset in load_compare_presets(user_id):
+            if _norm(preset.name) == query:
+                return preset.id
         logger.warning(f"No trip found for name: {trip_name!r} (user={user_id!r})")
         return None

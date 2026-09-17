@@ -155,6 +155,41 @@ def _fake_production_origin(monkeypatch, reader_mod) -> None:
     monkeypatch.setattr(reader_mod, "classify_origin", lambda root: "production")
 
 
+def _trip_mit_aktiver_etappe(user_id: str, name: str = "SMS Testtour") -> None:
+    """Legt einen minimalen, HEUTE aktiven Trip fuer ``user_id`` an (Issue
+    #2282 AC-5): der Reader bricht seit #2282 VOR ``TripCommandProcessor``
+    ab, wenn ``resolve_active_target`` weder Trip noch Ortsvergleich als
+    Kandidat findet -- ohne einen echten, aktiven Trip wuerde jede Nachricht
+    fuer den hiesigen synthetischen Nutzer den neuen "Kein aktiver Trip oder
+    Ortsvergleich"-Text ausloesen statt den Kommandoverarbeiter zu
+    erreichen. Der Trip-INHALT ist fuer die hier geprueften Zusicherungen
+    (Link-Code-Trennung, Gross-/Kleinschreibung, Payload-Aufbau) irrelevant
+    -- er muss nur als Auswahl-Kandidat zaehlen (Zustaendigkeitsschnitt s.
+    Modul-Docstring, nur Reader-Haelfte).
+    """
+    from datetime import date, timedelta
+
+    from app.loader import save_trip
+    from app.trip import Stage, Trip, Waypoint
+
+    heute = date.today()
+    trip = Trip(
+        id=f"trip-{user_id}",
+        name=name,
+        stages=[
+            Stage(
+                id="S1", name="Tag 1", date=heute - timedelta(days=1),
+                waypoints=[Waypoint(id="W1", name="A", lat=47.0, lon=11.0, elevation_m=800)],
+            ),
+            Stage(
+                id="S2", name="Tag 2", date=heute + timedelta(days=1),
+                waypoints=[Waypoint(id="W2", name="B", lat=47.0, lon=11.0, elevation_m=800)],
+            ),
+        ],
+    )
+    save_trip(trip, user_id)
+
+
 # =============================================================================
 # Abruf-Vertrag: X-Api-Key-Header, limit-Param, KEIN date_from
 # =============================================================================
@@ -317,6 +352,7 @@ def test_known_reply_address_without_code_is_processed_for_its_own_user(monkeypa
     import services.inbound_sms_reader as reader_mod
 
     _fake_production_origin(monkeypatch, reader_mod)
+    _trip_mit_aktiver_etappe("user-anna")
 
     fake_get = _FakeJournalEndpoint(
         [[_private_message_with_text(2003, GARMIN_FROM_A, "heute")]]
@@ -1000,6 +1036,7 @@ def test_link_code_is_stripped_before_command_processing(monkeypatch):
     import services.inbound_sms_reader as reader_mod
 
     _fake_production_origin(monkeypatch, reader_mod)
+    _trip_mit_aktiver_etappe("premium-user")
 
     text = f"{LINK_CODE} heute inreachlink.com/g-0Ab1Cd2Ef... (51.9956, 7.7136)"
     fake_get = _FakeJournalEndpoint([[_garmin_message_with_text(11002, GARMIN_FROM_A, text)]])
@@ -1087,6 +1124,7 @@ def test_uppercase_bare_keyword_is_not_mistaken_for_a_link_code(monkeypatch):
     import services.inbound_sms_reader as reader_mod
 
     _fake_production_origin(monkeypatch, reader_mod)
+    _trip_mit_aktiver_etappe("premium-user")
 
     journal = [
         _garmin_message_with_text(
@@ -1135,6 +1173,7 @@ def test_ruhetag_survives_with_and_without_leading_link_code(monkeypatch):
     import services.inbound_sms_reader as reader_mod
 
     _fake_production_origin(monkeypatch, reader_mod)
+    _trip_mit_aktiver_etappe("premium-user")
 
     journal = [
         _garmin_message_with_text(

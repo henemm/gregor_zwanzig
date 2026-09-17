@@ -2,10 +2,10 @@
 entity_id: trip_command_processor
 type: module
 created: 2026-02-17
-updated: 2026-02-19
+updated: 2026-09-17
 status: draft
-version: "2.1"
-tags: [f6, trip, command, rescheduling, channel-agnostic]
+version: "2.2"
+tags: [f6, trip, command, rescheduling, channel-agnostic, compare]
 ---
 
 # Trip Command Processor
@@ -44,6 +44,10 @@ InboundMessage (channel-agnostic DTO)
 TripCommandProcessor.process(msg: InboundMessage) -> CommandResult
     |
     +-- 1. Parse: _parse_command(msg.body) → (key, value)
+    +-- 1b. Vergleichs-Weiche (Issue #2282): resolved_kind=="vergleich" ODER
+    |        Name trifft einen Ortsvergleich → _dispatch_compare() statt
+    |        Schritt 2-4 (nur pause/weiter/hilfe wirken dort, siehe eigene
+    |        Spec feat_2282_ortsvergleich_eingangskanaele.md)
     +-- 2. Lookup: _find_trip(msg.trip_name) → Trip
     +-- 3. Validate: _validate_command(key, value, trip)
     +-- 4. Dispatch:
@@ -77,6 +81,12 @@ class InboundMessage:
     sender: str             # Email-Adresse oder Telefonnummer
     channel: str            # "email" oder "sms"
     received_at: datetime   # Empfangszeitpunkt
+    # Issue #2282 (Scheibe S1): additive Felder, Default None = Trip-Verhalten
+    # unveraendert. Ein Reader, der bereits eindeutig ueber
+    # trip_selection.resolve_active_target() auf einen Ortsvergleich
+    # aufgeloest hat, setzt beide.
+    resolved_kind: str | None = None       # None | "vergleich"
+    resolved_preset_id: str | None = None
 
 @dataclass
 class StageShift:
@@ -435,6 +445,16 @@ Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
 ## Changelog
 
+- 2026-09-17: v2.2 HINWEIS (#2282 Scheibe S1): `InboundMessage` bekommt additive
+  Felder `resolved_kind`/`resolved_preset_id` (Default `None` = Trip-Verhalten
+  unverändert); `process()` bekommt eine Vergleichs-Dispatch-Weiche VOR dem
+  bestehenden Trip-Dispatch, die nur `pause`/`weiter`/`hilfe` an Ortsvergleichen
+  bedient. Diese Spec dokumentiert weiterhin den historischen, deutlich kleineren
+  Trip-only-Befehlssatz (`ruhetag`/`report`/`startdatum`/`abbruch`) — der reale
+  Befehlssatz (inkl. `pause`/`weiter`/`hilfe`/`heute`/`morgen`/…) und die
+  Ortsvergleichs-Details stehen in `docs/features/f6-trip-commands.md` und
+  `docs/specs/modules/feat_2282_ortsvergleich_eingangskanaele.md`. Kein Code in
+  dieser Spec geändert.
 - 2026-02-19: v2.1 BUGFIX: Doppelpunkt-Separator optional (`[:\s]` statt nur `:`). Regex akzeptiert jetzt `### startdatum 2026-03-01` (Leerzeichen) zusaetzlich zu `### startdatum: 2026-03-01` (Doppelpunkt)
 - 2026-02-17: v2.0 Generisches ### key: value Framework, channel-agnostisch, 4 Befehle
 - 2026-02-17: v1.0 Initial spec (nur RUHETAG, Email-only)
