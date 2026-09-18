@@ -138,3 +138,7 @@ Nutzer ohne `sessions.json` haben eine leere Liste — kein Migrationsskript.
   2026-09-15 (#2262)**. Beide Prüfstellen
   (Go und Frontend-Server) müssen bei jeder Formatänderung gemeinsam
   ausgeliefert werden; getrennte Deploys sperren Nutzer aus.
+- **Nachtrag (#2353, 2026-09-17):** Ein Lesefehler der Gästeliste bei einem
+  gültig signierten Merkmal liefert 503 + Log, kein 401 — ein Serverfehler ist
+  keine Aussage über die Anmeldung. Eine pfadunsichere Nutzerkennung
+  (Traversal, #2140) bleibt weiterhin 401.

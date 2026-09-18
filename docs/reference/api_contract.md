@@ -2412,7 +2412,7 @@ Google OAuth users receive the same session mechanism as password-auth users:
 - Cookie: `gz_session` (format: `{userId}.{sessionId}.{timestamp}.{sig}`, signiert ueber `{userId}:{sessionId}:{timestamp}`)
 - User-ID format for OAuth users: `g-{8hex}` (no dots to prevent session parsing errors)
 - Session verification: `frontend/src/lib/auth.ts` → `verifySession()` zerlegt von rechts (identisch zum Go-Dienst)
-- Gueltigkeit: das Merkmal gilt unbefristet, solange seine `sessionId` in `data/users/<user_id>/sessions.json` steht (Issue #2129, ADR-0060). Das alte dreiteilige Format `{userId}.{timestamp}.{sig}` wird seit dem 2026-09-15 (#2262) an beiden Pruefstellen wie jedes unbekannte Cookie mit 401 abgewiesen, ohne stille Hebung (siehe Uebergangsformat-Absatz oben).
+- Gueltigkeit: das Merkmal gilt unbefristet, solange seine `sessionId` in `data/users/<user_id>/sessions.json` steht (Issue #2129, ADR-0060). Das alte dreiteilige Format `{userId}.{timestamp}.{sig}` wird seit dem 2026-09-15 (#2262) an beiden Pruefstellen wie jedes unbekannte Cookie mit 401 abgewiesen, ohne stille Hebung (siehe Uebergangsformat-Absatz oben). Kann die Gästeliste nicht gelesen werden (Serverfehler), antwortet die Middleware mit 503 statt 401; das Frontend bleibt dann auf der Seite (#2353).
 
 ---
 
