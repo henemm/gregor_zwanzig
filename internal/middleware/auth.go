@@ -6,7 +6,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -76,7 +78,21 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 			// Zustandsbehaelter muesste genau die Widerrufs-Zusicherung tragen,
 			// auf der die unbefristete Anmeldung beruht.
 			listed, lookupErr := sessions.HasSession(userId, sessionId)
-			if lookupErr != nil || !listed {
+			if lookupErr != nil {
+				if errors.Is(lookupErr, store.ErrInvalidUserID) {
+					// #2140: Traversal-Versuch bleibt 401, kein Serverfehler.
+					http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+					return
+				}
+				// Gaesteliste nicht lesbar (I/O-Fehler, kaputtes JSON) -- ein
+				// Serverfehler, keine Aussage ueber die Anmeldung (#2353). NIE
+				// sessionId/Cookie-Wert loggen. 503 bleibt fail-closed wie 401:
+				// es gewaehrt nichts, macht den Fehler aber sichtbar.
+				log.Printf("auth: Gaesteliste fuer Nutzer %q nicht lesbar: %v", userId, lookupErr)
+				http.Error(w, `{"error":"service_unavailable"}`, http.StatusServiceUnavailable)
+				return
+			}
+			if !listed {
 				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 				return
 			}

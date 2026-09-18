@@ -163,6 +163,11 @@ func TestNewFormatCookie_ValidBeyond24Hours(t *testing.T) {
 // Warum das zählt: bei fail-open würde eine beschädigte Datei jedes korrekt
 // signierte Merkmal durchwinken, auch ein zuvor widerrufenes. Der Widerruf
 // hinge dann an der Unversehrtheit einer Datei, die niemand überwacht.
+// "Fail-closed" heißt seit Issue #2353: nicht 200 — nicht zwingend 401. Ein
+// kaputtes/unlesbares JSON ist ein Serverfehler, keine Aussage über die
+// Anmeldung, und liefert deshalb 503 statt 401: 503 gewährt ebenso wenig wie
+// 401, macht den Serverfehler aber sichtbar (Log) statt ihn als "nicht
+// angemeldet" zu maskieren.
 //
 // Eine FEHLENDE Datei ist etwas anderes und bleibt der leere Stand
 // (TestNewFormatCookie_NoAllowlistFile_Returns401NotServerError).
@@ -191,8 +196,8 @@ func TestCorruptAllowlistFile_Rejected(t *testing.T) {
 	}
 
 	rr := authProbe(t, badDir, testSecret, cookie)
-	if rr.Code != http.StatusUnauthorized {
-		t.Errorf("unlesbare Gästeliste muss das Merkmal abweisen (fail-closed), bekommen %d", rr.Code)
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Errorf("unlesbare Gästeliste muss das Merkmal abweisen (fail-closed, #2353: 503, kein 401), bekommen %d", rr.Code)
 	}
 }
 
