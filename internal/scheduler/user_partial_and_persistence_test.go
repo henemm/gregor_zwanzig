@@ -349,6 +349,7 @@ func TestUserRunState_PruneRemovedUser_AndExcludeTestAccounts(t *testing.T) {
 	tmpDir := t.TempDir()
 	const testAccountID = "tdd-2149-leak"
 	mkUsers(t, tmpDir, "alice", "bob", testAccountID)
+	writeFlagProfile(t, tmpDir, testAccountID, true) // Issue #2152: Flag statt Namens-Heuristik
 
 	cfg := &config.Config{PythonCoreURL: server.URL, SchedulerTimezone: "Europe/Vienna"}
 	sched, err := New(cfg, store.New(tmpDir, "alice"))
@@ -405,6 +406,7 @@ func TestUserRunState_PruneBasisRemovesLeakedTestAccount_IsolatedFromLoopFilter(
 	tmpDir := t.TempDir()
 	const testAccountID = "tdd-2149-adv3-leak"
 	mkUsers(t, tmpDir, "alice", testAccountID)
+	writeFlagProfile(t, tmpDir, testAccountID, true) // Issue #2152: Flag statt Namens-Heuristik
 
 	cfg := &config.Config{PythonCoreURL: server.URL, SchedulerTimezone: "Europe/Vienna"}
 	sched, err := New(cfg, store.New(tmpDir, "alice"))

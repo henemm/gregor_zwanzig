@@ -553,7 +553,10 @@ class TestAC6SmsOnlyRadarDispatch:
         # (sms_allowed() liefert bei fehlender user.json "free" = False). Dieser
         # Test prueft den SMS-Dispatch-Mechanismus selbst, nicht das Tier-Gating.
         get_data_dir(uid).mkdir(parents=True, exist_ok=True)
-        (get_data_dir(uid) / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        # Issue #2152: Testkonto-Status ueber das Profilfeld (statt "tdd" im Namen).
+        (get_data_dir(uid) / "user.json").write_text(
+            json.dumps({"id": uid, "tier": "standard", "is_test_user": True})
+        )
         stub = _SevenStub(body="100")
         try:
             config = TripReportConfig(

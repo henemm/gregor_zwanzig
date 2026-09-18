@@ -138,8 +138,9 @@ class TestAC8ManualTestSendUnaffected:
         trip_id = "ac8-paused-trip"
         marker = uuid.uuid4().hex[:8]
         get_data_dir(_USER_AC8).mkdir(parents=True, exist_ok=True)
+        # Issue #2152: Testkonto-Status ueber das Profilfeld (Test-SMTP statt Resend).
         (get_data_dir(_USER_AC8) / "user.json").write_text(
-            json.dumps({"mail_to": "gregor-test@henemm.com"})
+            json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True})
         )
         trip = _make_trip(trip_id, TripReportConfig(trip_id=trip_id, send_email=True))
         trip.name = f"AC8 [{marker}]"

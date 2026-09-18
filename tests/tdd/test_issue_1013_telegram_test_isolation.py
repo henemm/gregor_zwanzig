@@ -51,13 +51,17 @@ _REPO_DATA_USERS_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
 
 def _write_user(
-    data_dir: Path, user_id: str, chat_id: str = "", mail_to: str = "", email_verified_at: str = ""
+    data_dir: Path, user_id: str, chat_id: str = "", mail_to: str = "",
+    email_verified_at: str = "", is_test_user: bool = False,
 ) -> None:
     user_dir = data_dir / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
     profile = {"id": user_id, "telegram_chat_id": chat_id, "mail_to": mail_to}
     if email_verified_at:
         profile["email_verified_at"] = email_verified_at
+    if is_test_user:
+        # Issue #2152: Testkonto-Status kommt aus dem Profilfeld, nicht aus dem Namen.
+        profile["is_test_user"] = True
     (user_dir / "user.json").write_text(json.dumps(profile), encoding="utf-8")
 
 
@@ -134,8 +138,8 @@ def test_lookup_by_telegram_chat_id_prefers_real_user_over_test_user(tmp_path):
 
     chat_id = "999888"
     _write_user(tmp_path, "tg-live-e2e", chat_id=chat_id)
-    _write_user(tmp_path, "test_aaa", chat_id=chat_id)
-    _write_user(tmp_path, "tdd-zzz", chat_id=chat_id)
+    _write_user(tmp_path, "test_aaa", chat_id=chat_id, is_test_user=True)
+    _write_user(tmp_path, "tdd-zzz", chat_id=chat_id, is_test_user=True)
     _write_user(tmp_path, "henning", chat_id=chat_id)
 
     result = lookup_user_by_telegram_chat_id(chat_id, data_dir=str(tmp_path))
@@ -157,8 +161,8 @@ def test_lookup_by_email_prefers_real_user_over_test_user(tmp_path):
     email = "henning@henemm.com"
     verified = "2026-01-01T00:00:00Z"
     _write_user(tmp_path, "tg-live-e2e", mail_to=email, email_verified_at=verified)
-    _write_user(tmp_path, "test_aaa", mail_to=email, email_verified_at=verified)
-    _write_user(tmp_path, "tdd-zzz", mail_to=email, email_verified_at=verified)
+    _write_user(tmp_path, "test_aaa", mail_to=email, email_verified_at=verified, is_test_user=True)
+    _write_user(tmp_path, "tdd-zzz", mail_to=email, email_verified_at=verified, is_test_user=True)
     _write_user(tmp_path, "henning", mail_to=email, email_verified_at=verified)
 
     result = lookup_user_by_email(email, data_dir=str(tmp_path))
@@ -171,19 +175,34 @@ def test_lookup_by_email_prefers_real_user_over_test_user(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_central_test_user_predicate_classifies_known_ids_correctly():
-    """GIVEN test_xyz, tdd-123, tg-live-e2e sowie henning, steffi, admin, default
+def test_central_test_user_predicate_classifies_known_ids_correctly(tmp_path):
+    """GIVEN test_xyz, tdd-123 MIT is_test_user:true im Profil, tg-live-e2e ohne
+    Flag, sowie henning, steffi, admin, default ohne Flag
     WHEN das zentrale Prädikat is_test_user_id() angewendet wird
-    THEN klassifiziert es Test-User als True und echte User als False."""
+    THEN klassifiziert es Test-User als True und echte User als False.
+
+    Issue #2152 (AC-10): entscheidend ist NUR das Profilfeld bzw. die
+    Fixture-Konstante — dieselben Namen OHNE Flag sind echte Nutzer."""
     from app.config import is_test_user_id
 
-    assert is_test_user_id("test_xyz") is True
-    assert is_test_user_id("tdd-123") is True
-    assert is_test_user_id("tg-live-e2e") is True
-    assert is_test_user_id("henning") is False
-    assert is_test_user_id("steffi") is False
-    assert is_test_user_id("admin") is False
-    assert is_test_user_id("default") is False
+    _write_user(tmp_path, "test_xyz", is_test_user=True)
+    _write_user(tmp_path, "tdd-123", is_test_user=True)
+    for uid in ("henning", "steffi", "admin", "default"):
+        _write_user(tmp_path, uid)
+
+    assert is_test_user_id("test_xyz", data_dir=str(tmp_path)) is True
+    assert is_test_user_id("tdd-123", data_dir=str(tmp_path)) is True
+    assert is_test_user_id("tg-live-e2e", data_dir=str(tmp_path)) is True
+    assert is_test_user_id("henning", data_dir=str(tmp_path)) is False
+    assert is_test_user_id("steffi", data_dir=str(tmp_path)) is False
+    assert is_test_user_id("admin", data_dir=str(tmp_path)) is False
+    assert is_test_user_id("default", data_dir=str(tmp_path)) is False
+
+    # Ohne Flag entscheidet der Name nicht mehr (Bug #2152).
+    _write_user(tmp_path, "test_xyz")
+    _write_user(tmp_path, "tdd-123")
+    assert is_test_user_id("test_xyz", data_dir=str(tmp_path)) is False
+    assert is_test_user_id("tdd-123", data_dir=str(tmp_path)) is False
 
 
 def test_central_test_user_predicate_is_case_insensitive_for_fixture_id():
@@ -199,10 +218,17 @@ def test_central_test_user_predicate_is_case_insensitive_for_fixture_id():
 
 
 def test_is_test_user_delegates_to_central_predicate():
-    """GIVEN dieselben User-IDs (inkl. design_tdd)
+    """GIVEN dieselben User-IDs (inkl. design_tdd), geflaggte Profile unter der
+    konfigurierten Datenwurzel (get_data_dir, Isolation #1133)
     WHEN Settings()._is_test_user(uid) und is_test_user_id(uid) verglichen werden
     THEN liefern beide identische Ergebnisse (Delegation, keine Logik-Duplizierung)."""
     from app.config import Settings, is_test_user_id
+    from app.loader import get_data_root
+
+    root = get_data_root()
+    _write_user(root, "test_xyz", is_test_user=True)
+    _write_user(root, "tdd-123", is_test_user=True)
+    _write_user(root, "design_tdd")
 
     settings = Settings()
     ids = [
@@ -212,6 +238,8 @@ def test_is_test_user_delegates_to_central_predicate():
 
     for uid in ids:
         assert settings._is_test_user(uid) == is_test_user_id(uid), uid
+    assert settings._is_test_user("test_xyz") is True
+    assert settings._is_test_user("design_tdd") is False
 
 
 # ---------------------------------------------------------------------------

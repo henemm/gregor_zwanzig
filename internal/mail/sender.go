@@ -57,15 +57,14 @@ type Mail struct {
 }
 
 // IsTestUser detects test-user accounts whose mail MUST NOT be sent through
-// Resend (spam reputation guard). Thin wrapper around
-// model.IsTestUserIDSubstringOnly (Issue #1265 — konsolidiertes Prädikat,
-// war zuvor hier dupliziert) — BEWUSST OHNE den tg-live-e2e-Fixed-Fixture-
-// Sonderfall aus model.IsTestUserID (Adversary Runde-2-Ripple-Fund, Fix-Loop
-// 1): das Passwort-Reset-/Verifikations-Mail-Routing in handler/auth.go
-// (Zeilen 249, 660) behält damit exakt sein Vor-#1265-Verhalten für
-// tg-live-e2e — kein stiller Verhaltenswechsel im Mail-Versandpfad.
-func IsTestUser(userID string) bool {
-	return model.IsTestUserIDSubstringOnly(userID)
+// Resend (spam reputation guard). Thin wrapper around model.IsTestAccount
+// (Issue #2152, ADR-0072): entscheidet ueber das geladene Profil (Feld
+// is_test_user ODER Fixture-ID tg-live-e2e), nicht mehr ueber den Namen —
+// Aufrufer (handler/auth.go, auth_oauth.go) laden das Profil vorher. Damit
+// gilt im Mail-Pfad dasselbe Praedikat wie im Scheduler/Store; die fruehere
+// Sonderbehandlung von tg-live-e2e (Issue #1265 Fix-Loop 1) entfaellt bewusst.
+func IsTestUser(u *model.User) bool {
+	return model.IsTestAccount(u)
 }
 
 // resendBlocked enforces the Resend default-deny (Issue #1122): Resend is

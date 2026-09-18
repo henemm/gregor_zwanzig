@@ -60,7 +60,8 @@ def _write_trip(user_id: str, trip_id: str, name: str, stages: list[dict]) -> Pa
     trips_dir = _data_users(user_id) / "trips"
     trips_dir.mkdir(parents=True, exist_ok=True)
     profile = _data_users(user_id) / "user.json"
-    profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld (Test-SMTP statt Resend).
+    profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True}))
     trip_path = trips_dir / f"{trip_id}.json"
     trip_path.write_text(json.dumps({
         "id": trip_id,

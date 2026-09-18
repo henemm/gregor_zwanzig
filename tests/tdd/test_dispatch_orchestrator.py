@@ -58,8 +58,9 @@ def _make_isolated_user(user_id: str) -> None:
 
     udir = get_data_dir(user_id)
     udir.mkdir(parents=True, exist_ok=True)
+    # Issue #2152: Testkonto-Status ueber das Profilfeld (Test-SMTP statt Resend).
     (udir / "user.json").write_text(
-        json.dumps({"id": user_id, "mail_to": "gregor-test@henemm.com"}),
+        json.dumps({"id": user_id, "mail_to": "gregor-test@henemm.com", "is_test_user": True}),
         encoding="utf-8",
     )
 

@@ -2677,7 +2677,7 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 
 **Request Body:**
 ```json
-{"username": "alice", "password": "geheim123", "email": "alice@example.com"}
+{"username": "alice", "password": "geheim123", "email": "alice@example.com", "is_test_user": false}
 ```
 
 **Response 201:**
@@ -2688,6 +2688,7 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 **Validation:**
 - `username`: 3–50 characters, alphanumeric + underscore
 - `password`: ≥8 characters
+- `is_test_user` (optional, Issue #2152/ADR-0072): `true` markiert das Konto dauerhaft als Testkonto (`user.json` → `is_test_user`). Der Testkonto-Status wird ausschliesslich aus diesem Feld gelesen (plus der festen Fixture-ID `tg-live-e2e`) — die frühere Namens-Heuristik (`test`/`tdd` im Usernamen) ist entfallen. Fehlt das Feld, ist das Konto ein normales Nutzerkonto.
 - `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing); **uniqueness IS enforced** (Issue #2147 Scheibe B1) — normalisiert (`TrimSpace`+`ToLower`) darf `email`/`mail_to` keinem anderen, echten (Nicht-Test-)Konto bereits gehören, geprüft unter einer prozessweiten Sperre je Adresse (`store.LockEmailAddress`)
 
 **Check order (Issue #1517):** format checks (username length/regex, password length) → existence check (`s.UserExists`) → email presence/format → **address-uniqueness check** (Issue #2147 Scheibe B1). The existence check runs **before** the email checks, so a request for an already-registered username returns 409 regardless of whether `email` is set — previously a missing `email` on an existing username produced a misleading 400 `validation failed`.
@@ -3215,7 +3216,7 @@ sending chat's `chat_id` on that user (Issue #2141: erst nach einer Eindeutigkei
 |--------|------|----------|
 | 400 | `{"error":"bad request"}` | JSON not decodable, or `token`/`chat_id` empty |
 | 404 | `{"error":"user not found"}` | Token resolved to a `user_id` whose `user.json` no longer exists |
-| 409 | `{"error":"chat_id_already_linked"}` | **(Issue #2141)** `chat_id` is already linked to a **different** real user's account — re-connecting the account that already owns it is explicitly not a conflict (200); test users (`model.IsTestUserID`) never trigger this and never win a collision, see `internal/store/user.go::FindUserByTelegramChatID`. `SaveUser` does not run in this case, the existing owner's link is untouched |
+| 409 | `{"error":"chat_id_already_linked"}` | **(Issue #2141)** `chat_id` is already linked to a **different** real user's account — re-connecting the account that already owns it is explicitly not a conflict (200); test users (`model.IsTestAccount`) never trigger this and never win a collision, see `internal/store/user.go::FindUserByTelegramChatID` (#2152, ADR-0072). `SaveUser` does not run in this case, the existing owner's link is untouched |
 | 422 | `{"error":"token invalid or expired"}` | Token unknown or past its 24h TTL |
 | 500 | `{"error":"lookup failed"}` | `FindUserByTelegramChatID` failed |
 | 500 | `{"error":"save failed"}` | `SaveUser` failed |

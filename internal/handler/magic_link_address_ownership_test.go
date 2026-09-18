@@ -594,6 +594,8 @@ func TestMagicLinkCodeWirktBeiGleichzeitigerEinloesungNurEinmal_AC9(t *testing.T
 
 // AC-10: trägt nur ein Testkonto die Adresse, wird es ignoriert — Anmeldung in
 // ein neu angelegtes reguläres Konto, das Testkonto bleibt unberührt.
+// Issue #2152: Testkonto ist die Fixture-ID tg-live-e2e (ohne Flag) oder ein
+// Konto mit is_test_user:true — der Name allein entscheidet nicht mehr.
 func TestMagicLinkIgnoriertTestkonten_AC10(t *testing.T) {
 	for _, testID := range []string{"tg-live-e2e", "gz-test-ac10"} {
 		t.Run(testID, func(t *testing.T) {
@@ -601,7 +603,8 @@ func TestMagicLinkIgnoriertTestkonten_AC10(t *testing.T) {
 			s := newTestStore(t)
 			cfg := eindeutigCfg()
 			const adresse = "fixture-ac10-2147@beispiel.de"
-			speichereKonto(t, s, model.User{ID: testID, Email: adresse, MailTo: adresse, EmailVerifiedAt: jetztBestaetigt()})
+			speichereKonto(t, s, model.User{ID: testID, Email: adresse, MailTo: adresse,
+				EmailVerifiedAt: jetztBestaetigt(), IsTestUser: testID != "tg-live-e2e"})
 			vorher := rohesKonto(t, s, testID)
 
 			w := einloesen(s, cfg, adresse, anfordern(t, s, cfg, adresse))

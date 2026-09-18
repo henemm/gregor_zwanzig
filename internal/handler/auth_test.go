@@ -542,3 +542,92 @@ func TestLoginHandlerMalformedJSON(t *testing.T) {
 		t.Fatalf("expected 400 for bad JSON, got %d", w.Code)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TDD RED — Issue #2152, AC-8 (+ AC-6 am Wirkort): POST /api/auth/register
+// akzeptiert das optionale Request-Feld "is_test_user", persistiert es in
+// user.json, und die Verifikations-Mail-Weiche (dispatchVerificationMail,
+// auth.go:1225) entscheidet ueber das Flag statt ueber den Namen.
+// Spec: docs/specs/modules/testkonto_profilfeld.md
+//
+// Bewusst KEIN neues Symbol referenziert: user.json wird als map[string]any
+// gegengelesen; die Weiche wird ueber die bestehende Naht sendVerificationMailFn
+// gemessen (sie wird NUR im Resend-Zweig fuer echte Nutzer aufgerufen).
+// Das RED ist eine Assertion, kein Compile-Fehler. GREEN: authRequest.IsTestUser
+// bool `json:"is_test_user"` → model.User{IsTestUser: req.IsTestUser};
+// dispatchVerificationMail laedt das Profil und prueft mail.IsTestUser(u).
+// ---------------------------------------------------------------------------
+
+// registerAndObserve registriert body, liest user.json als Roh-Map und meldet,
+// ob der Resend-Zweig (sendVerificationMailFn) innerhalb 1s aufgerufen wurde.
+func registerAndObserve(t *testing.T, body string) (map[string]any, bool) {
+	t.Helper()
+	s := newTestStore(t)
+	calls := make(chan struct{}, 1)
+	origSend := sendVerificationMailFn
+	sendVerificationMailFn = func(cfg mail.MailConfig, to string, msg mail.Mail) error {
+		calls <- struct{}{}
+		return nil
+	}
+	defer func() { sendVerificationMailFn = origSend }()
+
+	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	if w.Code != 201 {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+	var reg struct {
+		ID string `json:"id"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &reg)
+
+	dispatchedViaResend := false
+	select {
+	case <-calls:
+		dispatchedViaResend = true
+	case <-time.After(1 * time.Second):
+	}
+	data, err := os.ReadFile(filepath.Join(s.DataDir, "users", reg.ID, "user.json"))
+	if err != nil {
+		t.Fatalf("read user.json: %v", err)
+	}
+	var profile map[string]any
+	if err := json.Unmarshal(data, &profile); err != nil {
+		t.Fatalf("unmarshal user.json: %v", err)
+	}
+	return profile, dispatchedViaResend
+}
+
+// TestRegisterHandler_IsTestUserFlagWirdPersistiert_AC8 — mit
+// "is_test_user": true im Body traegt user.json das Feld dauerhaft, und die
+// Verifikations-Mail nimmt NICHT den Resend-Zweig (Testkonto → Test-SMTP).
+func TestRegisterHandler_IsTestUserFlagWirdPersistiert_AC8(t *testing.T) {
+	profile, viaResend := registerAndObserve(t,
+		`{"username":"mitarbeiter42","password":"geheim123","email":"m42@example.com","is_test_user":true}`)
+	if profile["is_test_user"] != true {
+		t.Errorf("AC-8: user.json muss is_test_user:true tragen, got %v (profile=%v)", profile["is_test_user"], profile)
+	}
+	if profile["email"] != "m42@example.com" || profile["mail_to"] != "m42@example.com" {
+		t.Errorf("AC-8: Nachbarfelder email/mail_to muessen unveraendert sein, got %v", profile)
+	}
+	if viaResend {
+		t.Error("AC-6/AC-8: Testkonto mit Flag darf die Verifikations-Mail NICHT ueber den Resend-Zweig senden")
+	}
+}
+
+// TestRegisterHandler_ProtesterOhneFlagLaeuftUeberResend_AC6_AC8 — ohne
+// Request-Feld bleibt is_test_user abwesend/false, und die Verifikations-Mail
+// eines Nutzers mit "test" im Namen laeuft ueber den Resend-Zweig (Wirkort der
+// Weiche auth.go:1225 — heute nimmt "protester" den Gmail-Zweig).
+func TestRegisterHandler_ProtesterOhneFlagLaeuftUeberResend_AC6_AC8(t *testing.T) {
+	profile, viaResend := registerAndObserve(t,
+		`{"username":"protester","password":"geheim123","email":"protester@example.com"}`)
+	if v, ok := profile["is_test_user"]; ok && v != false {
+		t.Errorf("AC-8: ohne Request-Feld darf is_test_user nicht true sein, got %v", v)
+	}
+	if !viaResend {
+		t.Error("AC-6: protester (kein Flag) ist ein echter Nutzer — Verifikations-Mail muss ueber den Resend-Zweig (sendVerificationMailFn) laufen, nicht ueber Gmail/Test-SMTP")
+	}
+}

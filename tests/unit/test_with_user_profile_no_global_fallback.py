@@ -117,16 +117,16 @@ def test_with_user_profile_returns_none_telegram_chat_id_for_normal_user(monkeyp
 
 def test_with_user_profile_keeps_force_test_chat_id_for_test_user(monkeypatch):
     """AC-3 (Fall 2) GIVEN dieselbe Lage, aber der Nutzer ist ein
-    Test-/Staging-Nutzer (``force_test`` aktiv ueber die Namens-Heuristik
-    ``is_test_user_id``) / WHEN ``with_user_profile()`` laeuft / THEN bleibt
-    der bestehende force_test-Sonderfall UNVERAENDERT: die Chat-ID kommt
-    ausschliesslich aus ``for_testing()`` (``GZ_TELEGRAM_TEST_CHAT_ID``),
-    unabhaengig vom (hier fehlenden) Profilinhalt."""
+    Testkonto (``force_test`` aktiv ueber das Profilfeld ``is_test_user`` —
+    Issue #2152 ersetzt die Namens-Heuristik) / WHEN ``with_user_profile()``
+    laeuft / THEN bleibt der bestehende force_test-Sonderfall UNVERAENDERT:
+    die Chat-ID kommt ausschliesslich aus ``for_testing()``
+    (``GZ_TELEGRAM_TEST_CHAT_ID``), unabhaengig vom uebrigen Profilinhalt."""
     test_chat_id = "test-chat-id-4711"
     monkeypatch.setenv("GZ_TELEGRAM_CHAT_ID", OPERATOR_TELEGRAM_CHAT)
     monkeypatch.setenv("GZ_TELEGRAM_TEST_CHAT_ID", test_chat_id)
     user_id = "tdd-2144-force-test-user"
-    _write_profile(user_id, {"id": user_id})
+    _write_profile(user_id, {"id": user_id, "is_test_user": True})
 
     settings = Settings().with_user_profile(user_id)
 

@@ -298,16 +298,17 @@ func (s *Scheduler) Stop() {
 // runForAllUsers iterates over all registered users and triggers the endpoint
 // for each. Returns nil only if all users succeeded.
 //
-// Issue #1265 (Defense-in-Depth): Test-/tdd-Konten werden vor der
-// Verarbeitung übersprungen (model.IsTestUserID) — auch wenn ein solches
-// Konto künftig wieder in data/users/ leakt, verarbeitet der Scheduler es
-// nie. Log-Hinweis einmal je Lauf (nicht pro Job-Tick).
+// Issue #1265 (Defense-in-Depth): Testkonten werden vor der Verarbeitung
+// übersprungen (model.IsTestAccount über das Profilfeld is_test_user bzw. die
+// feste Fixture-ID, Issue #2152) — auch wenn ein solches Konto künftig wieder
+// in data/users/ leakt, verarbeitet der Scheduler es nie. Log-Hinweis einmal
+// je Lauf (nicht pro Job-Tick).
 func (s *Scheduler) runForAllUsers(jobID, path string) error {
 	allUserIDs, err := s.store.ListUserIDs()
 	if err != nil {
 		return fmt.Errorf("list users: %w", err)
 	}
-	userIDs := filterOutTestUsers(jobID, allUserIDs)
+	userIDs := s.filterOutTestUsers(jobID, allUserIDs)
 
 	if len(userIDs) == 0 {
 		log.Printf("[scheduler] %s: no users registered, skipping", jobID)
@@ -489,15 +490,27 @@ func (s *Scheduler) callUserWithBudget(jobID, path, uid string, wait, callCap ti
 	}
 }
 
-// filterOutTestUsers entfernt Test-/tdd-Konten (Issue #1265, Defense-in-
-// Depth) aus der Nutzerliste, mit einem Log-Hinweis je Lauf (nicht je Job-
-// Tick) — ausgelagert aus runForAllUsers, um dessen Funktionslaenge klein zu
-// halten (Issue #2149 Scheibe A).
-func filterOutTestUsers(jobID string, allUserIDs []string) []string {
+// filterOutTestUsers entfernt Testkonten (Issue #1265, Defense-in-Depth) aus
+// der Nutzerliste, mit einem Log-Hinweis je Lauf (nicht je Job-Tick) —
+// ausgelagert aus runForAllUsers, um dessen Funktionslaenge klein zu halten
+// (Issue #2149 Scheibe A).
+//
+// Issue #2152: Testkonto ist, wessen geladenes Profil das Feld is_test_user
+// traegt (oder die feste Fixture-ID) — dafuer wird je ID das Profil ueber den
+// Store geladen (LoadUser nimmt die explizite ID, user records sind global).
+// Fail-open bei Ladefehler: ein unlesbares oder fehlendes Profil (nil, nil)
+// zaehlt als ECHTER Nutzer und wird bedient, mit Log. Ein Ladefehler darf
+// keinen echten Nutzer stumm schalten — der Fan-out-Aufruf selbst meldet
+// dann sauber, was mit dem Konto nicht stimmt.
+func (s *Scheduler) filterOutTestUsers(jobID string, allUserIDs []string) []string {
 	userIDs := make([]string, 0, len(allUserIDs))
 	var skipped []string
 	for _, uid := range allUserIDs {
-		if model.IsTestUserID(uid) {
+		u, err := s.store.LoadUser(uid)
+		if err != nil {
+			log.Printf("[scheduler] %s: user %s profile unreadable (%v), serving as real user", jobID, uid, err)
+		}
+		if model.IsTestAccount(u) {
 			skipped = append(skipped, uid)
 			continue
 		}

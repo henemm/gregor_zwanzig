@@ -286,7 +286,7 @@ func linkGoogleAccount(w http.ResponseWriter, r *http.Request, s *store.Store, c
 		log.Printf("oauth google: linking failed — account not saved")
 		return googleOAuthFail(w, r, "oauth_failed")
 	}
-	sendGoogleLinkNotice(cfg, user.ID, store.EffectiveContactAddress(user))
+	sendGoogleLinkNotice(cfg, user, store.EffectiveContactAddress(user))
 	return user.ID, true
 }
 
@@ -348,8 +348,8 @@ func buildGoogleLinkNoticeMail() mail.Mail {
 // sendGoogleLinkNotice verschickt die Hinweis-Mail über denselben Versandweg
 // wie die Bestätigungsmail (dispatchVerificationMail), fail-soft. Ein
 // Versandfehler wird nie roh protokolliert — SMTP-Fehler nennen den Empfänger.
-func sendGoogleLinkNotice(cfg config.Config, userId, to string) {
-	isTestUser := mail.IsTestUser(userId)
+func sendGoogleLinkNotice(cfg config.Config, user *model.User, to string) {
+	isTestUser := mail.IsTestUser(user)
 	if (isTestUser && cfg.GoogleSMTPHost == "") || (!isTestUser && cfg.SMTPHost == "") {
 		log.Printf("oauth google: link notice not sent — SMTP not configured")
 		return

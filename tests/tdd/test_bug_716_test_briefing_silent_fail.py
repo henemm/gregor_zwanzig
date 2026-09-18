@@ -71,7 +71,11 @@ def user_no_stages(tmp_path):
 
     # User-Profil: mail_to auf gregor-test setzen → with_user_profile übernimmt
     user_profile = get_data_dir(user_id) / "user.json"
-    user_profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld, nicht ueber "tdd" im Namen
+    # — sonst waehlt with_user_profile() die Prod-Credentials (Resend).
+    user_profile.write_text(
+        json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True})
+    )
 
     # Issue #904: Trip wirklich ohne Etappen → Endpoint muss 422 liefern.
     trip_path = trips_dir / f"{trip_id}.json"
@@ -111,7 +115,11 @@ def user_with_tomorrow_stage(tmp_path):
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     user_profile = get_data_dir(user_id) / "user.json"
-    user_profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld, nicht ueber "tdd" im Namen
+    # — sonst waehlt with_user_profile() die Prod-Credentials (Resend).
+    user_profile.write_text(
+        json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True})
+    )
 
     # Trip mit echter GR20-Etappe (Korsika) für morgen
     trip_path = trips_dir / f"{trip_id}.json"

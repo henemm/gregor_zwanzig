@@ -53,22 +53,33 @@ def _parse_learned_timestamp(raw: Any) -> Optional[datetime]:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def is_test_user_id(user_id: str, data_dir: str = "data") -> bool:
+def is_test_user_id(user_id: str, data_dir: str | None = None) -> bool:
     """Zentrales Test-User-Prädikat (Issue #1013 — eine Quelle statt zwei Konventionen).
 
-    True bei "test"/"tdd"-Substring (case-insensitive), dem Fixture-User tg-live-e2e
-    (ebenfalls case-insensitive, Adversary-Finding F002 Fix-Loop 1 -- vorher verglich
-    der Fixed-ID-Zweig gegen die UN-lowercased Originalvariable), oder wenn das Profil
-    (data_dir/users/<user_id>/user.json) is_test_user=True setzt (Adversary-Finding
-    F002 Runde 1 — Namens-Heuristik allein wird von neutral benannten Test-Usern mit
-    gesetztem Profil-Flag umgangen). Fail-soft: fehlt/kaputt die Profildatei,
-    entscheidet nur die Namens-Heuristik.
+    True ausschließlich für den Fixture-User tg-live-e2e (case-insensitive,
+    Adversary-Finding F002 Fix-Loop 1) oder wenn das Profil
+    (data_dir/users/<user_id>/user.json) is_test_user=True setzt. Die frühere
+    "test"/"tdd"-Substring-Heuristik ist ersatzlos entfallen (Issue #2152,
+    ADR-0072): sie traf echte Nutzer ("protester") und verfehlte Testkonten
+    mit neutralem Namen — Go-Pendant ``model.IsTestAccount``. Kein Fallback
+    auf den Namen, wenn das Feld fehlt.
+
+    ``data_dir=None`` liest unter der konfigurierten Datenwurzel
+    (``get_data_root()``: ``_DATA_ROOT`` > ``GZ_DATA_DIR`` > ``data``), nicht
+    unter einem literalen Pfad — respektiert die Testisolation (#1133/#1265).
+    Fail-soft: fehlt/kaputt die Profildatei, ist das Konto ein echter Nutzer.
     """
-    uid = user_id.lower()
-    if "test" in uid or "tdd" in uid or uid == "tg-live-e2e":
+    if user_id.lower() == "tg-live-e2e":
         return True
     try:
-        profile_path = Path(data_dir) / "users" / user_id / "user.json"
+        if data_dir is None:
+            # Lokaler Import: app.loader importiert app.config (Zirkularität).
+            from app.loader import get_data_root
+
+            root = get_data_root()
+        else:
+            root = Path(data_dir)
+        profile_path = root / "users" / user_id / "user.json"
         if profile_path.exists():
             profile = json.loads(profile_path.read_text(encoding="utf-8"))
             if profile.get("is_test_user") is True:
@@ -376,7 +387,8 @@ class Settings(BaseSettings):
 
     @staticmethod
     def _is_test_user(user_id: str) -> bool:
-        """Detect test user IDs. Thin wrapper — siehe is_test_user_id() (Issue #1013)."""
+        """Detect test user IDs. Thin wrapper — siehe is_test_user_id() (Issue #1013);
+        liest das Profilfeld unter der konfigurierten Datenwurzel (#2152)."""
         return is_test_user_id(user_id)
 
     def with_user_profile(self, user_id: str) -> "Settings":
