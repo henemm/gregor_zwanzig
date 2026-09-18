@@ -62,6 +62,11 @@ Konkret für CAPE:
 Unberührt bleibt die Produktentscheidung aus feat_1474 AC-6: **CAPE misst Energie, kein
 Ereignis** und eskaliert nie über `LOW`. Die Schwelle wird variabel, die Deckelung bleibt.
 
+> **[Abgelöst durch ADR-0071, 2026-09-18]** Dieser Satz ist bereits durch #1679 (Commit
+> `937bba52`, 2026-08-11) im Code widerlegt worden: CAPE erreicht seither bei schwacher/
+> mäßiger Konvektionshemmung (CIN) auch `MED`/`HIGH`. ADR-0071 dokumentiert diesen — und den
+> seither über #1896/#2178 weiter nachgeschärften — Ist-Zustand nachträglich.
+>
 > **[Abgelöst durch ADR-0064, 2026-09-08]** Dieser Satz ist durch #2176 gegenstandslos
 > geworden: `ThunderLevel.LOW` verlässt die vier-stufige, nutzersichtbare Gewitterleiter
 > vollständig, statt nur nie über sie hinaus zu eskalieren. Die übrigen Regeln dieser ADR
