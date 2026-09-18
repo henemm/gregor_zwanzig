@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/middleware"
-	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -61,6 +60,11 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		if kind == briefingKindRoute {
+			// Issue #2285 AC-4: Sperre + ETag symmetrisch zum vergleich-Zweig
+			// unten und zu GetTripHandler (trip.go) -- Sperre VOR LoadTrip,
+			// kein Selbst-Blockierer: dieser Zweig laedt selbst und
+			// delegiert NICHT an GetTripHandler.
+			defer s.LockBriefing(id)()
 			trip, err := s.LoadTrip(id)
 			if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
 				return
@@ -69,6 +73,8 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 				return
 			}
 			trip.Kind = briefingKindRoute
+			fp, fpErr := s.BriefingFingerprint(id)
+			setETagHeader(w, fp, fpErr)
 			writeJSON(w, http.StatusOK, trip)
 			return
 		}
@@ -252,30 +258,13 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		merged, err := mergeBriefingPatch(original, patch)
+		// Issue #2285: derselbe Merge-Kernel wie UpdateComparePresetHandler
+		// (compare_preset.go) -- Server-Feld-Restauration, Legacy-Sentinels
+		// und Normalisierung leben jetzt an EINER Stelle statt zweimal.
+		preset, err := applyComparePresetPatch(original, id, patch, time.Now().UTC())
 		if bailIf(w, err != nil, http.StatusBadRequest, "bad_request") {
 			return
 		}
-		var preset model.ComparePreset
-		if bailIf(w, json.Unmarshal(merged, &preset) != nil, http.StatusBadRequest, "bad_request") {
-			return
-		}
-		// Server-verwaltete Felder: nie vom Patch ueberschreibbar, exakter
-		// gleicher Feldsatz wie UpdateComparePresetHandler.
-		preset.ID = id
-		preset.UserID = original.UserID
-		preset.CreatedAt = original.CreatedAt
-		preset.LetzterVersand = original.LetzterVersand
-		preset.TopOrtLetzterVersand = original.TopOrtLetzterVersand
-		preset.PausedAt = original.PausedAt
-		preset.ArchivedAt = original.ArchivedAt
-		// end_date:"" ist der explizite Loesch-Sentinel (analog compare_preset.go:408).
-		if preset.EndDate != nil && *preset.EndDate == "" {
-			preset.EndDate = nil
-		}
-		// F008: paused_at bei erstmaligem Pausieren materialisieren (analog compare_preset.go:402).
-		store.MaterializePausedAt(&preset, time.Now().UTC())
-		store.NormalizeComparePreset(&preset)
 		if err := validateComparePreset(preset); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})
 			return
