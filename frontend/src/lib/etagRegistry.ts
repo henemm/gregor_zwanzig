@@ -39,9 +39,18 @@ export function etagVersion(tripId: string): number {
  * bewusst NICHT — dort prueft der Server kein `If-Match` (S2 AC-15, S6 AC-15)
  * und liefert keinen Stempel.
  *
- * Beide Ressourcenarten teilen sich EINE Registry: Preset-Kennungen tragen
- * immer das Praefix `cp-` (`newComparePresetID()`), eine Verwechslung mit einer
- * Tour-Kennung ist damit ausgeschlossen.
+ * Beide Ressourcenarten teilen sich EINEN Schluesselraum — Eintraege liegen
+ * unter der reinen Kennung, nicht unter dem Pfad.
+ *
+ * Issue #2276 S1 (Korrektur einer falschen Zusicherung): das Praefix `cp-`
+ * (`newComparePresetID()`) tragen NUR NEU erzeugte Presets. Alt-Ortsvergleiche
+ * im Bestand tragen Slug-Kennungen ohne Praefix (gemessen 2026-09-18:
+ * `zillertal-t-glich`). Eine Verwechslung mit einer Tour-Kennung ist damit
+ * NICHT ausgeschlossen: traegen eine Tour und ein Ortsvergleich dieselbe
+ * Kennung, ueberschreiben sich ihre Stempel gegenseitig. Der Sachverhalt ist
+ * als eigener Befund gebucht; ihn hier zu beheben ist nicht Teil von S1.
+ * Konsequenz fuer Aufrufer: die Ressourcenart NIE aus der Kennung ableiten,
+ * immer uebergeben (s. `refreshResourceEtag` in `api.ts`).
  */
 const RESOURCE_PATH_RE =
 	/^\/api\/(?:trips\/([^/?#]+)(?:\/weather-config)?|compare\/presets\/([^/?#]+))(?:[?#]|$)/;

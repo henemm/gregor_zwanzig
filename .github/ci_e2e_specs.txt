@@ -117,6 +117,57 @@
 # Zuwachs 51 Faelle: bug-274 1 · slice1 5 · slice3 9 · design-compliance-a 7 ·
 # issue-269 8 · issue-616 8 · trip-detail-actions 13.
 #
+# Aufnahme 2026-09-18 (#2276 S1 Teil 3, Ortsvergleich-Hub-Persistenztests).
+# Neun Kandidaten geprueft, EINER aufgenommen: compare-hub-inline-edit.
+#   Filter A (am Code nachgemessen, nicht uebernommen): vier Kandidaten
+#   tragen `page.waitForTimeout` und sind damit ohne Aenderung an der
+#   Spec-Datei keine Kandidaten -- compare-hub-save-chip:173,
+#   compare-hub-name-region-profil:240, compare-hourly-metric-order:411,
+#   compare-alarm-config:53. Reparatur ist NICHT Teil dieser Scheibe (#1196).
+#   Filter C: kein `path:`-Schreibziel in einem der neun -- alle bestehen.
+#   Filter B (isolierter Stack, Ports 8098/8006 statt 8095/8005: letztere
+#   waren durch verwaiste Prozesse fremder Sitzungen belegt; NICHT gegen
+#   Staging), 3 Zyklen mit je FRISCHEM Stack und geleerter Datenwurzel,
+#   Zielverbund 47 Dateien (46 Listen-Dateien ohne bug-703 + Neuzugang):
+#     Zyklus 1: expected=241, unexpected=0, skipped=0
+#     Zyklus 2: expected=241, unexpected=0, skipped=0
+#     Zyklus 3: expected=241, unexpected=0, skipped=0
+#   241 = 235 Faelle des bisherigen Hauptlauf-Verbunds + 6 neue Faelle der
+#   aufgenommenen Datei (beide Zahlen per `--list` ermittelt, nicht aus dem
+#   Lauf zurueckgerechnet; die 235 enthalten global.setup, vgl. F008 oben).
+# NICHT aufgenommen, Befund je Datei (fuer #1196, gemessen im selben Stack):
+#   compare-hub-briefing-times    4 von 9 Faellen rot: AC-2 (:82) Mobile-
+#                                 Briefings-Angabe "element(s) not found";
+#                                 AC-4 (:99) erwartet "Briefing-Zeiten",
+#                                 die Flaeche zeigt "Geplantes Briefing ·
+#                                 Kanäle"; AC-8 (:212) erwartet "Vorschau-
+#                                 Daten nicht verfügbar.", zeigt "Vorschau ·
+#                                 Prüfung"; AC-10 (:238) Zeitueberschreitung
+#                                 in `apiRequestContext.delete`.
+#   compare-hub-versand-inline    AC-35 (:108) bricht mit `ENOENT: no such
+#                                 file or directory, open 'playwright/.auth/
+#                                 staging-1256-s7.json'` -- eigener
+#                                 storageState aus einem dateispezifischen
+#                                 Staging-Setup, im GETEILTEN global.setup.ts
+#                                 nicht herstellbar (dieselbe Klasse wie
+#                                 issue-579-home-fidelity oben). Die uebrigen
+#                                 6 Faelle liefen deshalb gar nicht erst.
+#                                 🔴 Traegt den Lost-Update-Nachweis F004
+#                                 (:314) -- bleibt damit vorerst ungeratscht.
+#   compare-layout-tab-dissolution 2 von 6 rot: AC-2 (:216) und AC-6 (:340),
+#                                 je `toBeVisible` -> "element(s) not found".
+#   compare-metric-order          beide Faelle (:150, :226) rot in derselben
+#                                 Vorbedingung: "AC-13 FAIL: eine 'Aus in
+#                                 diesem Kanal'-Gruppe darf im Ortsvergleich
+#                                 nicht entstehen", Expected 0 / Received 2.
+# Hinweis zum Neuzugang (bewusst, kein Versehen): compare-hub-inline-edit.spec.ts:9
+# nennt `/home/hem/gregor_zwanzig` in einem AUSFUEHRUNGSHINWEIS-Kommentar, nicht
+# im Code -- die Datei liest daraus nichts (anders als
+# list-routes-btn-migration.spec.ts:26, das dort wirklich zugreift). Fuer den
+# regulaeren Positivlisten-Lauf ist das folgenlos; der Kandidatenpool-Filter des
+# VERMESSUNGSMODUS (ci.yml) grept den Pfad jedoch pauschal und wuerde die Datei
+# dort nicht auffuehren.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -128,6 +179,7 @@ e2e/compare-detail-edit-entry.spec.ts
 e2e/compare-editor-autosave-user-isolation.spec.ts
 e2e/compare-editor-slice1.spec.ts
 e2e/compare-editor-slice3.spec.ts
+e2e/compare-hub-inline-edit.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
 e2e/design-compliance-group-a.spec.ts

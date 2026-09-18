@@ -11,7 +11,7 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { refreshTripEtag } from '../api.ts';
+import { refreshResourceEtag } from '../api.ts';
 import { clearEtagRegistry, getKnownEtag } from '../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from './fakeTripServer.ts';
 
@@ -27,7 +27,7 @@ afterEach(() => server.restore());
 
 describe('AC-5 (Teil 1): refreshTripEtag() gibt den Trip-Datensatz nicht weiter', () => {
 	test('test_refreshTripEtag_returnsVoid_responseBodyNotExposed', async () => {
-		const result = await refreshTripEtag('gr20');
+		const result = await refreshResourceEtag('gr20', 'trip');
 
 		assert.equal(
 			result,
@@ -42,7 +42,7 @@ describe('AC-5 (Teil 2): refreshTripEtag() aktualisiert die Registry über den b
 	test('test_refreshTripEtag_updatesRegistryViaExistingGetSideEffect', async () => {
 		assert.equal(getKnownEtag('gr20'), undefined, 'Vorbedingung: kein bekannter Stand vor dem Refresh');
 
-		await refreshTripEtag('gr20');
+		await refreshResourceEtag('gr20', 'trip');
 
 		assert.equal(
 			getKnownEtag('gr20'),
@@ -60,7 +60,7 @@ describe('Grundlage für die Retry-Fehlerbehandlung: ein echter Netzwerkfehler w
 
 		let thrown: unknown;
 		try {
-			await refreshTripEtag('gr20');
+			await refreshResourceEtag('gr20', 'trip');
 			assert.fail('refreshTripEtag() hätte den Fetch-Fehler weiterreichen müssen');
 		} catch (e) {
 			thrown = e;

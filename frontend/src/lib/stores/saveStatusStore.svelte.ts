@@ -2,7 +2,8 @@
 // KEINE modul-globalen $state-Exporte (das wäre ein geteilter Singleton → bricht AC-6).
 // Jede Editor-Oberfläche erzeugt eine eigene Instanz via createSaveStatus().
 
-import { refreshTripEtag } from '../api.ts';
+import { refreshResourceEtag } from '../api.ts';
+import type { NachladeKennung } from '../pwa/geraetespeicher.ts';
 import type { ApiError } from '../types.js';
 
 export type SaveState = 'idle' | 'dirty' | 'saving' | 'error' | 'conflict';
@@ -44,6 +45,12 @@ export class SaveStatus {
 	private _lastFailed: { fn: SaveFn; init?: RequestInit } | null = null;
 
 	private _tripId?: string;
+	// Issue #2276 S1: die Ressourcenart der Kennung ('trip' | 'vergleich'). Eigenes
+	// Feld NEBEN `_tripId` statt eines gemeinsamen `_kennung`-Objekts: mehrere
+	// bestehende Testdateien bauen Instanzen per `Object.create(SaveStatus.prototype)`
+	// und setzen nur `_tripId` — ein zusammengefasstes Feld haette sie unbemerkt
+	// gebrochen.
+	private _resourceKind?: NachladeKennung['typ'];
 
 	// Issue #1703 S8 (Staging-Befund BROKEN): die Meldung des letzten ECHTEN
 	// Speicherversuchs, solange sie NICHT durch einen erfolgreichen ersetzt
@@ -52,8 +59,9 @@ export class SaveStatus {
 	// liefert keinen Payload) darf den Fehlschlag trotzdem nicht vergessen.
 	private _unresolvedError: string | null = null;
 
-	constructor(tripId?: string) {
-		this._tripId = tripId;
+	constructor(kennung?: NachladeKennung) {
+		this._tripId = kennung?.id;
+		this._resourceKind = kennung?.typ;
 	}
 
 	setSaving(): void {
@@ -142,12 +150,12 @@ export class SaveStatus {
 	 * loszuschicken.
 	 */
 	async retryConflict(): Promise<void> {
-		if (this.state !== 'conflict' || !this._lastFailed || !this._tripId) return;
+		if (this.state !== 'conflict' || !this._lastFailed || !this._tripId || !this._resourceKind) return;
 		const { fn, init } = this._lastFailed;
 		this._lastFailed = null;
 		this.setSaving();
 		try {
-			await refreshTripEtag(this._tripId);
+			await refreshResourceEtag(this._tripId, this._resourceKind);
 		} catch (e) {
 			this.setError(extractMessage(e));
 			return;
@@ -251,6 +259,6 @@ export class SaveStatus {
 	}
 }
 
-export function createSaveStatus(tripId?: string): SaveStatus {
-	return new SaveStatus(tripId);
+export function createSaveStatus(kennung?: NachladeKennung): SaveStatus {
+	return new SaveStatus(kennung);
 }
