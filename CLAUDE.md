@@ -54,7 +54,7 @@ OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake`, `/00-bug`
 |---------|---------|-------------|
 | `/10-context` | Kontext sammeln | — |
 | `/20-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
-| `/30-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('go') |
+| `/30-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** (`approved`/`freigabe`) |
 | `/40-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
 | `/50-implement` | Implementieren (GREEN) + Adversary | — |
 | `/60-validate` | Validieren vor Commit | — |
