@@ -33,10 +33,11 @@ const (
 // enrichmentAgg accumulates the per-path aggregate while scanning the journal
 // once.
 type enrichmentAgg struct {
-	lastAttemptAt  string
-	lastSuccessAt  string
-	lastFallbackAt string
-	selfThrottled  bool
+	lastAttemptAt      string
+	lastSuccessAt      string
+	lastFallbackAt     string
+	lastFallbackDetail string
+	selfThrottled      bool
 }
 
 // aggregateEnrichmentCalls scans path (data/diagnostics/enrichment_calls.jsonl)
@@ -97,6 +98,11 @@ func aggregateEnrichmentCalls(path string) (map[string]*enrichmentAgg, bool) {
 		case enrichmentOutcomeFallback:
 			if entry.Ts > agg.lastFallbackAt {
 				agg.lastFallbackAt = entry.Ts
+				// The youngest fallback wins including its own detail, even
+				// when empty — no falling back to the last seen non-empty
+				// detail (Issue #1647, AC-1). Coupled to lastFallbackAt so
+				// the two can never drift apart.
+				agg.lastFallbackDetail = entry.Detail
 			}
 		case enrichmentOutcomeSelfThrottled:
 			agg.selfThrottled = true
@@ -143,10 +149,11 @@ func (s *Scheduler) EnrichmentHealth() map[string]any {
 	}
 	for name, agg := range aggs {
 		result[name] = map[string]any{
-			"last_attempt_at":  nilIfEmpty(agg.lastAttemptAt),
-			"last_success_at":  nilIfEmpty(agg.lastSuccessAt),
-			"last_fallback_at": nilIfEmpty(agg.lastFallbackAt),
-			"self_throttled":   agg.selfThrottled,
+			"last_attempt_at":      nilIfEmpty(agg.lastAttemptAt),
+			"last_success_at":      nilIfEmpty(agg.lastSuccessAt),
+			"last_fallback_at":     nilIfEmpty(agg.lastFallbackAt),
+			"last_fallback_detail": nilIfEmpty(agg.lastFallbackDetail),
+			"self_throttled":       agg.selfThrottled,
 		}
 	}
 	return result

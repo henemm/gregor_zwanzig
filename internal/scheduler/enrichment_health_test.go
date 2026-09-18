@@ -246,6 +246,17 @@ func TestEnrichmentHealthSelfThrottledNurBeiEigenerDrosselung(t *testing.T) {
 		if !ok {
 			t.Fatalf("self_throttled fehlt oder ist kein bool: %#v", radar["self_throttled"])
 		}
+		// AC-2 (additiv, #1647): ohne eine einzige fallback-Zeile im Journal
+		// muss last_fallback_detail als Schluessel VORHANDEN und null sein --
+		// nicht bloss abwesend. Die vier Bestandsfelder (hier self_throttled)
+		// bleiben unveraendert gegen ihre bisherigen Erwartungswerte, dieser
+		// Block prueft nur zusaetzlich das neue Feld.
+		detail, present := radar["last_fallback_detail"]
+		if !present {
+			t.Errorf("last_fallback_detail fehlt im Aggregat (AC-2: additives Feld muss immer vorhanden sein, auch ohne fallback-Zeile)")
+		} else if detail != nil {
+			t.Errorf("last_fallback_detail: erwartet nil ohne fallback-Zeile, bekommen %#v", detail)
+		}
 		return flag
 	}
 
@@ -442,4 +453,65 @@ func TestEnrichmentHealthNeuePathWerteErscheinenAutomatisch(t *testing.T) {
 	if !ok || attempt != thunderAdditiveAusfall.Format(time.RFC3339) {
 		t.Errorf("thunder_additive.last_attempt_at: erwartet %v, bekommen %#v", thunderAdditiveAusfall.Format(time.RFC3339), thunderAdditive["last_attempt_at"])
 	}
+}
+
+// ---------------------------------------------------------------------------
+// AC-1 (#1647): last_fallback_detail traegt die juengste Ersatzquelle
+// ---------------------------------------------------------------------------
+
+// AC-1: zwei fallback-Zeilen mit unterschiedlichem detail, die zeitlich AELTERE
+// Zeile steht in der Datei ZULETZT (append-only, aber nicht garantiert
+// zeitlich sortiert). last_fallback_detail muss die Ersatzquelle der zeitlich
+// JUENGEREN Zeile tragen -- ueber den Zeitstempel entschieden, nicht ueber die
+// Position in der Datei. Zusatzfall: eine noch juengere dritte Zeile mit
+// leerem detail gewinnt inklusive ihres eigenen null -- es gibt bewusst
+// keinen Ruecksfall auf das zuletzt gesehene NICHT-leere detail.
+func TestEnrichmentHealthFallbackDetailNenntJuengsteErsatzquelle(t *testing.T) {
+	now := time.Now().UTC()
+
+	t.Run("juengere Zeile gewinnt trotz vertauschter Schreibreihenfolge", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		sched := newEnrichmentHealthTestScheduler(t, tmpDir)
+
+		juenger := now.Add(-1 * time.Hour)
+		aelter := now.Add(-2 * time.Hour)
+		// Schreibreihenfolge absichtlich vertauscht: die zeitlich AELTERE
+		// Zeile steht in der Datei ZULETZT.
+		writeEnrichmentJournal(t, tmpDir,
+			enrichmentLine(juenger, "thunder", "fallback", "eu_direct"),
+			enrichmentLine(aelter, "thunder", "fallback", "fr_direct"),
+		)
+
+		thunder := enrichmentEntry(t, sched.EnrichmentHealth(), "thunder")
+		got, ok := thunder["last_fallback_detail"]
+		if !ok {
+			t.Fatalf("last_fallback_detail fehlt im Aggregat: %#v", thunder)
+		}
+		if got != "eu_direct" {
+			t.Errorf("last_fallback_detail: erwartet %q (Ersatzquelle der zeitlich juengeren Zeile), bekommen %#v -- eine Implementierung \"letztes gesehenes NICHT-leeres detail\" waere hier falsch", "eu_direct", got)
+		}
+	})
+
+	t.Run("noch juengere Zeile mit leerem detail gewinnt inklusive ihres eigenen null", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		sched := newEnrichmentHealthTestScheduler(t, tmpDir)
+
+		aelter := now.Add(-2 * time.Hour)
+		mittel := now.Add(-1 * time.Hour)
+		juengsteOhneDetail := now.Add(-10 * time.Minute)
+		writeEnrichmentJournal(t, tmpDir,
+			enrichmentLine(mittel, "thunder", "fallback", "eu_direct"),
+			enrichmentLine(aelter, "thunder", "fallback", "fr_direct"),
+			enrichmentLine(juengsteOhneDetail, "thunder", "fallback", ""),
+		)
+
+		thunder := enrichmentEntry(t, sched.EnrichmentHealth(), "thunder")
+		got, ok := thunder["last_fallback_detail"]
+		if !ok {
+			t.Fatalf("last_fallback_detail fehlt im Aggregat: %#v", thunder)
+		}
+		if got != nil {
+			t.Errorf("last_fallback_detail: erwartet nil (der juengste Fallback hat kein detail, kein Ruecksfall auf das zuletzt gesehene NICHT-leere detail), bekommen %#v", got)
+		}
+	})
 }

@@ -170,7 +170,7 @@ den Radar-Nowcast-Pfad nachgeliefert. Spec: `docs/specs/modules/fix_1581_enrichm
    selbst, wie es das bereits für `warn_service_health` tut. Preis: „wächst mit der Ausfalldauer"
    ist damit keine im Repo testbare Eigenschaft mehr, sondern eine der externen Auswertung —
    akzeptierte Abweichung vom wörtlichen ADR-0018-Vorbild (`provider_error_streak_since`), keine
-   offene Lücke.
+   offene Lücke. (umgesetzt 2026-09-18, #1647: Block `2e-e`, Fenster 48 h)
 3. **Eigenes Journal (`data/diagnostics/enrichment_calls.jsonl`), kein Ausbau von
    `call_log.py`.** `call_log.py` schreibt nach `openmeteo_calls.jsonl`, derselben Datei, die
    `briefing_health` liest — ein Ausbau dort hätte `coreBriefingSources` berührt. Der gemeinsame
