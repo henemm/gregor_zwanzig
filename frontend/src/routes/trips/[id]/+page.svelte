@@ -40,7 +40,7 @@
 	});
 
 	// Issue #758: SaveStatus-Controller — eine Instanz pro Trip-Seite (kein Singleton!).
-	const tripSaveCtl = createSaveStatus(trip.id);
+	const tripSaveCtl = createSaveStatus({ typ: 'trip', id: trip.id });
 
 	// Issue #758: Flush ausstehender Auto-Saves vor Navigation (AC-5).
 	// Issue #2316 Scheibe A: die Logik lebt jetzt geteilt mit /compare/[id] in

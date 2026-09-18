@@ -212,7 +212,7 @@ jobs:
       # verbraucht damit das IP-Limit aus internal/router/router.go:45
       # (NewIPRateLimiter(30, time.Hour)) fuer den ganzen Job. Playwright
       # sortiert Dateien ALPHABETISCH (unabhaengig von der CLI-Reihenfolge);
-      # bug-703 liegt auf Position 3 von 46 (45 Listen-Dateien + global.setup;
+      # bug-703 liegt auf Position 3 von 49 (48 Listen-Dateien + global.setup;
       # vor Block B waren es 3 von 39). Jede spaeter laufende Datei mit
       # EIGENEM Login laeuft danach in "Login B fehlgeschlagen: 429" -- also
       # ausgerechnet die zwei Mandantentrennungs-Tests, die diese Scheibe
@@ -274,8 +274,8 @@ jobs:
       # bug-703 selbst haengt an KEINEM Vorlauf (sein Kopfkommentar fordert
       # nur AC-3 vor AC-2 INNERHALB der Datei, per test.describe.serial) --
       # er muss nur ZULETZT laufen.
-      E2E_MIN_SPECS: 47     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
-      E2E_MIN_EXECUTED_HAUPT: 233      # Hauptlauf: 46 Dateien (Issue #2316: speicherung-ueberlebt-neuladen.spec.ts neu) + global.setup -- exakt belegt, kein Puffer, gemessen 2026-09-13 im Zielverbund (3x --workers=1); Issue #2317: +4 neue Faelle in speicherung-ueberlebt-neuladen.spec.ts (AC-2/AC-3/AC-4/AC-11), statisch aus der Fallzahl (--list) abgeleitet, keine neue Zielverbund-Messung
+      E2E_MIN_SPECS: 48     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
+      E2E_MIN_EXECUTED_HAUPT: 241      # Hauptlauf: 47 Dateien (Issue #2276 S1 Teil 3: compare-hub-inline-edit.spec.ts neu) + global.setup -- exakt belegt, kein Puffer. 241 = 235 (bisheriger Verbund, per `--list` gemessen; die fruehere Schwelle 233 lag zwei Faelle darunter, weil bestehende Dateien seither Faelle dazubekommen haben) + 6 Faelle der neuen Datei (`--list`, nicht aus dem Lauf zurueckgerechnet). Zielverbund-Messung 2026-09-18, 3 Zyklen mit je frischem Stack: expected=241/241/241, unexpected=0, skipped=0
       E2E_MIN_EXECUTED_PWA: 61         # Zweitlauf: 60 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu; Issue #2317: +1 Fall AC-6 dort, statisch aus --list abgeleitet) + global.setup -- kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:

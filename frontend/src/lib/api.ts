@@ -1,4 +1,5 @@
 import type { ApiError, Stage } from './types.js';
+import type { NachladeKennung } from './pwa/geraetespeicher.ts';
 import {
 	discardEtag,
 	enqueueTripWrite,
@@ -213,14 +214,18 @@ export async function getMitFassung<T>(path: string): Promise<{ daten: T } & Ant
 }
 
 /**
- * Issue #1395 S4: laedt eine Tour ausschliesslich, um den bestehenden
- * ETag-Seiteneffekt von `send()` auszuloesen. Der Trip-Datensatz wird bewusst
- * NICHT zurueckgegeben — sonst entstuende die Versuchung, ihn dem sichtbaren
- * Seitenzustand zuzuweisen und ungespeicherte Aenderungen anderer Tabs zu
- * ueberschreiben.
+ * Issue #1395 S4: laedt eine Tour ODER einen Ortsvergleich ausschliesslich, um
+ * den bestehenden ETag-Seiteneffekt von `send()` auszuloesen. Der Datensatz wird
+ * bewusst NICHT zurueckgegeben — sonst entstuende die Versuchung, ihn dem
+ * sichtbaren Seitenzustand zuzuweisen und ungespeicherte Aenderungen anderer
+ * Tabs zu ueberschreiben.
+ *
+ * Issue #2276 S1: die Ressourcenart wird UEBERGEBEN, nie aus der Kennung
+ * abgeleitet. Eine Ableitung ueber das Praefix `cp-` waere am Bestand falsch —
+ * Alt-Ortsvergleiche tragen Slug-Kennungen ohne Praefix (s. `etagRegistry.ts`).
  */
-export async function refreshTripEtag(tripId: string): Promise<void> {
-	await api.get(`/api/trips/${tripId}`);
+export async function refreshResourceEtag(id: string, kind: NachladeKennung['typ']): Promise<void> {
+	await api.get(kind === 'vergleich' ? `/api/compare/presets/${id}` : `/api/trips/${id}`);
 }
 
 /**
