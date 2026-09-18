@@ -27,6 +27,9 @@ type authRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Email    string `json:"email"`
+	// Issue #2152: optionales Testkonto-Flag bei der Anlage (Projekt-Testkonten
+	// wie validator-issue110); wird persistiert, sonst bleibt es abwesend.
+	IsTestUser bool `json:"is_test_user,omitempty"`
 }
 
 func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.HandlerFunc {
@@ -123,6 +126,7 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 			Email:        normalizedEmail,
 			MailTo:       normalizedEmail,
 			CreatedAt:    time.Now(),
+			IsTestUser:   req.IsTestUser,
 		}
 		if err := s.SaveUser(user); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -302,6 +306,15 @@ func DeleteAccountHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// sendResetMailFn ist ein Test-Seam (Issue #2152 Fix-Loop 1, AC-6) analog zu
+// sendVerificationMailFn: package-private Funktionsvariable statt eines
+// direkten mail.SendWithFallback-Aufrufs im Passwort-Reset-Versand, damit
+// Tests die vom Testkonto-Profilfeld gesteuerte SMTP-Weiche (Gmail vs.
+// Resend) AM WIRKORT beobachten können — an der gewählten Konfiguration
+// selbst statt an einem Log-Wortlaut. Produktionsverhalten unverändert,
+// Default ist mail.SendWithFallback selbst.
+var sendResetMailFn = mail.SendWithFallback
+
 func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -367,8 +380,9 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		}
 
 		// Select SMTP config: test users → Gmail, normal users → Resend (cfg.SMTP*)
+		// — entschieden ueber das geladene Profil (Issue #2152), nicht den Namen.
 		var mailCfg mail.MailConfig
-		if mail.IsTestUser(req.Username) {
+		if mail.IsTestUser(user) {
 			if cfg.GoogleSMTPHost == "" {
 				log.Printf("password reset: Google SMTP not configured, mail not sent for test user %s", req.Username)
 				w.Write([]byte(`{"status":"ok"}`))
@@ -401,7 +415,7 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		}
 		go func(to string, msg mail.Mail, c, fb mail.MailConfig, username string) {
 			done := make(chan error, 1)
-			go func() { done <- mail.SendWithFallback(c, fb, to, msg) }()
+			go func() { done <- sendResetMailFn(c, fb, to, msg) }()
 			select {
 			case err := <-done:
 				if err != nil {
@@ -1217,12 +1231,13 @@ func dispatchVerificationMail(s *store.Store, cfg config.Config, userId string, 
 	msg := mail.BuildVerificationMail(cfg.PublicHost, userId, token)
 
 	// Select SMTP config synchronously (identisches Muster zu
-	// ForgotPasswordHandler): Test-User (IsTestUser) → Gmail-Config; echte
-	// User → Resend-Sonderpfad SendVerificationMail (NICHT SendWithFallback/
-	// Send — die Allowlist-Prüfung darf hier nicht greifen, die Adresse ist
-	// per Definition unverifiziert). Nur der eigentliche Sendevorgang läuft
-	// in der Goroutine mit 20s-Timeout, der Endpoint blockiert nicht.
-	isTestUser := mail.IsTestUser(userId)
+	// ForgotPasswordHandler): Test-User (IsTestUser ueber das geladene Profil,
+	// Issue #2152) → Gmail-Config; echte User → Resend-Sonderpfad
+	// SendVerificationMail (NICHT SendWithFallback/Send — die Allowlist-Prüfung
+	// darf hier nicht greifen, die Adresse ist per Definition unverifiziert).
+	// Nur der eigentliche Sendevorgang läuft in der Goroutine mit 20s-Timeout,
+	// der Endpoint blockiert nicht.
+	isTestUser := mail.IsTestUser(user)
 	if isTestUser && cfg.GoogleSMTPHost == "" {
 		log.Printf("email verification: Google SMTP not configured, mail not sent for test user %s", userId)
 		return

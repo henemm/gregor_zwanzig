@@ -49,6 +49,11 @@ type User struct {
 	// JSON, solange nichts aussteht (Bestandsdaten laden unveraendert).
 	PendingContactAddress string `json:"pending_contact_address,omitempty"`
 	PendingContactField   string `json:"pending_contact_field,omitempty"`
+	// Issue #2152 — Testkonto-Status als persistiertes Profilfeld (ADR-0072).
+	// Einzige Quelle der Wahrheit neben der festen Fixture-ID tg-live-e2e
+	// (IsTestAccount); ersetzt die "test"/"tdd"-Namens-Heuristik. omitempty:
+	// Bestandsprofile ohne das Feld laden unveraendert als echte Nutzer.
+	IsTestUser bool `json:"is_test_user,omitempty"`
 }
 
 type PasswordResetToken struct {

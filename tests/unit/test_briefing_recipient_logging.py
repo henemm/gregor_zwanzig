@@ -145,7 +145,9 @@ def _trip_anlegen(user_id: str, trip_id: str, report_config: dict) -> None:
 
     profil = get_data_dir(user_id) / "user.json"
     profil.parent.mkdir(parents=True, exist_ok=True)
-    profil.write_text(json.dumps({"mail_to": EMPFAENGER}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld — sonst nimmt
+    # with_user_profile() die Prod-Credentials statt for_testing().
+    profil.write_text(json.dumps({"mail_to": EMPFAENGER, "is_test_user": True}))
 
     briefings_dir = get_briefings_dir(user_id)
     briefings_dir.mkdir(parents=True, exist_ok=True)

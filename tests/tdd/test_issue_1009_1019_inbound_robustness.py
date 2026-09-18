@@ -141,6 +141,8 @@ def _make_user(user_id: str, mail_to: str) -> None:
         "created_at": "2026-07-07T00:00:00Z",
         "mail_to": mail_to,
         "email_verified_at": "2026-07-07T00:00:00Z",
+        # Issue #2152: Testkonto-Status ueber das Profilfeld (Test-SMTP statt Resend).
+        "is_test_user": True,
     }))
 
 

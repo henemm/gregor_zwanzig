@@ -136,14 +136,15 @@ func TestUpdateProfileHandler_ReservedDomainDoesNotCrashHandler_AC3(t *testing.T
 	}
 }
 
-// AC-6: ein Test-User (IsTestUser==true) mit NUR SMTPHost konfiguriert
-// (kein GoogleSMTPHost) darf NICHT über den Resend-Sonderpfad versendet
-// werden — der Handler muss synchron "Google SMTP not configured" loggen und
+// AC-6: ein Test-User (IsTestUser==true, Issue #2152: ueber das Profilfeld
+// is_test_user, nicht den Namen) mit NUR SMTPHost konfiguriert (kein
+// GoogleSMTPHost) darf NICHT über den Resend-Sonderpfad versendet werden —
+// der Handler muss synchron "Google SMTP not configured" loggen und
 // abbrechen, statt auf cfg.SMTPHost auszuweichen.
 func TestUpdateProfileHandler_TestUserUsesGoogleSMTPNotResend_AC6(t *testing.T) {
 	s := newTestStore(t)
 	dir := filepath.Join(s.DataDir, "users", "test-yara")
-	seedVerifyUser(t, dir, "test-yara", `{"id":"test-yara","mail_to":"alt@x.de"}`)
+	seedVerifyUser(t, dir, "test-yara", `{"id":"test-yara","mail_to":"alt@x.de","is_test_user":true}`)
 
 	var logBuf bytes.Buffer
 	log.SetOutput(&logBuf)

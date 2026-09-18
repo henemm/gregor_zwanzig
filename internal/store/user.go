@@ -466,10 +466,11 @@ func (s *Store) FindUserByOAuthSub(provider, sub string) (*model.User, error) {
 // FindUserByTelegramChatID searches all users for one whose TelegramChatID
 // matches exactly (Chat-IDs sind numerisch — kein EqualFold). Returns
 // (nil, nil) if no match found or if chatID is empty: ein leeres Feld ist
-// keine Verknüpfung. Test-Nutzer (model.IsTestUserID) werden übersprungen —
-// Issue #1013 hält fest, dass ein echter Nutzer gegen die Fixture gewinnt,
-// sonst könnte sich der PO auf Staging nicht mehr verbinden, sobald
-// tg-live-e2e dieselbe Chat-ID trägt. Issue #2141.
+// keine Verknüpfung. Test-Nutzer (model.IsTestAccount, Profilfeld statt
+// Namens-Heuristik — Issue #2152) werden übersprungen — Issue #1013 hält
+// fest, dass ein echter Nutzer gegen die Fixture gewinnt, sonst könnte sich
+// der PO auf Staging nicht mehr verbinden, sobald tg-live-e2e dieselbe
+// Chat-ID trägt. Issue #2141.
 func (s *Store) FindUserByTelegramChatID(chatID string) (*model.User, error) {
 	if strings.TrimSpace(chatID) == "" {
 		return nil, nil
@@ -479,11 +480,8 @@ func (s *Store) FindUserByTelegramChatID(chatID string) (*model.User, error) {
 		return nil, err
 	}
 	for _, id := range ids {
-		if model.IsTestUserID(id) {
-			continue
-		}
 		u, err := s.LoadUser(id)
-		if err != nil || u == nil {
+		if err != nil || u == nil || model.IsTestAccount(u) {
 			continue
 		}
 		if u.TelegramChatID == chatID {

@@ -178,6 +178,9 @@ func TestRunForAllUsersSkipsTestUsers(t *testing.T) {
 	tmpDir := t.TempDir()
 	s := store.New(tmpDir, "default")
 	createTestUsers(t, tmpDir, s, []string{"tdd-1265-leak", "real-user"})
+	// Issue #2152: Testkonto-Status kommt aus dem Profilfeld, nicht aus dem
+	// Namen — das geleakte Konto traegt is_test_user:true.
+	writeFlagProfile(t, tmpDir, "tdd-1265-leak", true)
 
 	cfg := &config.Config{
 		PythonCoreURL:     server.URL,

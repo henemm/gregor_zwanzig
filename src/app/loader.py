@@ -1206,10 +1206,11 @@ def list_all_user_ids(data_dir: str | None = None) -> list[str]:
         data_dir: Root data directory (default: get_data_root())
 
     Returns:
-        Sorted list of user_id strings (excludes entries starting with 'test' or '_'),
-        with real users sorted before remaining test-classified users
-        (is_test_user_id, z.B. tg-live-e2e/tdd-*) — deterministischer Lookup-Vorrang
-        unabhängig von der Dateisystem-Iterationsreihenfolge.
+        Sorted list of user_id strings (excludes technical entries starting with '_'),
+        with real users sorted before test-classified users (is_test_user_id:
+        Profilfeld is_test_user oder tg-live-e2e — Issue #2152, kein
+        Namens-Vorfilter mehr) — deterministischer Lookup-Vorrang unabhängig
+        von der Dateisystem-Iterationsreihenfolge.
     """
     from app.config import is_test_user_id
 
@@ -1220,9 +1221,7 @@ def list_all_user_ids(data_dir: str | None = None) -> list[str]:
         return []
     names = sorted(
         d.name for d in users_root.iterdir()
-        if d.is_dir()
-        and not d.name.startswith("_")
-        and not d.name.startswith("test")
+        if d.is_dir() and not d.name.startswith("_")
     )
     real = [n for n in names if not is_test_user_id(n, data_dir=data_dir)]
     test = [n for n in names if is_test_user_id(n, data_dir=data_dir)]

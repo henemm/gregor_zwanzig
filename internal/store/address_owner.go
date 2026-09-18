@@ -50,14 +50,18 @@ func (s *Store) forEachRealAccount(fn func(*model.User)) error {
 		return err
 	}
 	for _, id := range ids {
-		if model.IsTestUserID(id) {
-			continue
-		}
+		// Issue #2152: Testkonto-Status aus dem geladenen Profil (Flag oder
+		// Fixture-ID), nicht aus dem Namen — das Laden steht deshalb VOR der
+		// Klassifikation. Folge (bewusst): eine unlesbare user.json bricht auch
+		// dann ab, wenn das Konto frueher per Namen uebersprungen worden waere.
+		// Was sich nicht lesen laesst, laesst sich nicht als Testkonto einstufen;
+		// fail-closed ist hier richtig, weil eine uebersehene Zeile die
+		// Adress-Eindeutigkeit kippen wuerde (Issue #2147 Scheibe B1).
 		u, err := s.LoadUser(id)
 		if err != nil {
 			return err
 		}
-		if u == nil {
+		if u == nil || model.IsTestAccount(u) {
 			continue
 		}
 		fn(u)

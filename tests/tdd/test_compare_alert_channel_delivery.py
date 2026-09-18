@@ -275,7 +275,11 @@ def _write_tier(user_id: str, tier: str) -> None:
 
     path = get_data_dir(user_id)
     path.mkdir(parents=True, exist_ok=True)
-    (path / "user.json").write_text(json.dumps({"id": user_id, "tier": tier}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld — ohne Flag wuerde
+    # with_user_profile() die Prod-Credentials statt for_testing() nehmen.
+    (path / "user.json").write_text(
+        json.dumps({"id": user_id, "tier": tier, "is_test_user": True})
+    )
 
 
 def _setup_single_location_preset(

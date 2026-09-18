@@ -114,7 +114,7 @@ func TestTelegramConnectAllowsReconnectOfSameUser(t *testing.T) {
 // (Issue #1013, Vorrang des echten Kontos).
 func TestTelegramConnectIgnoresTestUserHoldingSameChatID(t *testing.T) {
 	const fixtureUserID = "tg-live-e2e"
-	if !model.IsTestUserID(fixtureUserID) {
+	if !model.IsTestAccount(&model.User{ID: fixtureUserID}) {
 		t.Fatalf("Testvoraussetzung verletzt: %q gilt nicht als Test-Nutzer", fixtureUserID)
 	}
 

@@ -65,7 +65,8 @@ def _write_trip(user_id: str, trip_id: str, stages: list[dict]) -> Path:
     briefings_dir = get_briefings_dir(user_id)
     briefings_dir.mkdir(parents=True, exist_ok=True)
     profile = _data_users(user_id) / "user.json"
-    profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld, nicht ueber "tdd" im Namen.
+    profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True}))
     trip_path = briefings_dir / f"{trip_id}.json"
     trip_path.write_text(json.dumps({
         "id": trip_id,
@@ -273,8 +274,8 @@ class TestAC3GenuineNoWeatherHonestOutcome:
         _patch_provider(monkeypatch, fail_for_today=True)
         _patch_email_transport(monkeypatch)
         # Haertung, kein Bugfix (Issue #1557): kein nachgewiesener Defekt.
-        # Ursache: `user_id` enthaelt "tdd" -> is_test_user_id() (config.py:
-        # 56-68) True -> with_user_profile() (:370) nimmt for_testing() als
+        # Ursache: Profil traegt is_test_user:true (#2152) -> is_test_user_id()
+        # True -> with_user_profile() nimmt for_testing() als
         # Basis -> SMTP kommt aus GZ_TEST_SMTP_*, NICHT den hier gesetzten
         # GZ_SMTP_*-Werten -- Route ist ueber diese Werte nicht falsifizierbar
         # (RED-Artefakt docs/artifacts/fix-1557-no-weather-outcome/

@@ -49,7 +49,7 @@ möglich, was als erwünschter Nebeneffekt gilt, nicht als Kollateralschaden.
   kappt den lokalen `webServer`/Build-Schritt; der Default-Lauf testet dann nicht mehr den
   lokal gebauten Stand. Größerer Verhaltensbruch als nötig, um das Leck zu schließen.
 - **`admin` in `NEVER_DELETE` belassen, nur Daten unter dem Konto leeren** — verworfen:
-  `admin` bliebe als 0-Presets-Konto bestehen und bleibt von der `IsTestUserID`-Heuristik
+  `admin` bliebe als 0-Presets-Konto bestehen und bleibt von der damaligen Namens-Heuristik
   abhängig, die den Namen nicht erkennt — das Loch würde sich beim nächsten E2E-Lauf wieder
   füllen, ohne dass ein struktureller Fix greift.
 
@@ -60,8 +60,10 @@ möglich, was als erwünschter Nebeneffekt gilt, nicht als Kollateralschaden.
   einer einzigen Stelle (geteilte Konstante) statt verteilt über 13 Testdateien.
 - **Negativ / Preis:** Wer lokal bewusst gegen einen anderen Port testen will (z.B. echtes
   Prod-Debugging), muss aktiv `GZ_E2E_API_PROXY_TARGET` setzen. Ein künftig neu angelegtes
-  Konto namens `admin` wäre wieder ungeschützt, weil `IsTestUserID` das Profil-Flag
-  `is_test_user` bewusst nicht liest (Known Limitation, unverändert seit #1265).
+  Konto namens `admin` wäre wieder ungeschützt, weil die damalige Namens-Heuristik es nicht erkannte
+  (Known Limitation seit #1265). **Abgelöst durch ADR-0072** (Issue #2152): der Testkonto-Status
+  kommt seither ausschließlich aus dem Profilfeld `is_test_user` (`model.IsTestAccount`), die
+  Namens-Heuristik ist entfallen.
 - **Folgepflichten:** Der Wurzel-Fix deckt nur den Playwright-Pfad ab. Neun Python-Tests
   zeigen weiterhin per Default auf Prod-Ports (`GO_BASE=localhost:8090` u.ä.) — das ist
   Testsuite-Hygiene mit bestehender Heimat (#1196), nicht Teil dieser Entscheidung.

@@ -286,8 +286,25 @@ class TestDispatchWiring:
 # ---------------------------------------------------------------------------
 
 
+def _flag_test_user(user_id: str) -> str:
+    """Issue #2152: Testkonto-Status kommt aus dem Profilfeld ``is_test_user``,
+    nicht mehr aus dem Namen — ohne dieses Profil naehme
+    ``with_user_profile()`` die PRODUKTIV-Credentials (Resend) statt
+    ``for_testing()`` (Stalwart-Test-Postfach)."""
+    import json as _json
+
+    from app.loader import get_data_dir
+
+    d = get_data_dir(user_id)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(
+        _json.dumps({"id": user_id, "is_test_user": True}), encoding="utf-8"
+    )
+    return user_id
+
+
 def _fresh_test_user() -> str:
-    return f"test1107e2e-{uuid.uuid4().hex[:8]}"
+    return _flag_test_user(f"test1107e2e-{uuid.uuid4().hex[:8]}")
 
 
 def _send_compare_preset_and_fetch_message(hourly_enabled, tag: str):

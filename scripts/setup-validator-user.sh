@@ -17,10 +17,12 @@ URL="${GZ_VALIDATION_URL:-https://staging.gregor20.henemm.com}"
 USER="${GZ_VALIDATOR_USER:?GZ_VALIDATOR_USER muss gesetzt sein}"
 PASS="${GZ_VALIDATOR_PASS:?GZ_VALIDATOR_PASS muss gesetzt sein}"
 
+# is_test_user:true (Issue #2152): Testkonto-Status kommt aus dem Profilfeld,
+# nicht mehr aus dem Namen — sonst liefe der Validator-User im Fan-out mit.
 HTTP_CODE=$(curl -s -o /tmp/validator-setup.out -w "%{http_code}" -X POST "$URL/api/auth/register" \
     -u "$USER:$PASS" \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"$USER\",\"password\":\"$PASS\"}")
+    -d "{\"username\":\"$USER\",\"password\":\"$PASS\",\"is_test_user\":true}")
 
 case "$HTTP_CODE" in
     201) echo "Test-User '$USER' angelegt auf $URL." ;;

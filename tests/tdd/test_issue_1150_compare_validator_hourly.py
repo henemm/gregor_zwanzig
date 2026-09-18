@@ -357,6 +357,23 @@ def _fixture_locations_3(loc_ids: list) -> list:
     ]
 
 
+def _flag_test_user(user_id: str) -> str:
+    """Issue #2152: Testkonto-Status kommt aus dem Profilfeld ``is_test_user``,
+    nicht mehr aus dem Namen — ohne dieses Profil naehme
+    ``with_user_profile()`` die PRODUKTIV-Credentials (Resend) statt
+    ``for_testing()`` (Stalwart-Test-Postfach)."""
+    import json as _json
+
+    from app.loader import get_data_dir
+
+    d = get_data_dir(user_id)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(
+        _json.dumps({"id": user_id, "is_test_user": True}), encoding="utf-8"
+    )
+    return user_id
+
+
 def _send_compare_preset_3loc(hourly_enabled, tag: str) -> str:
     """Sendet ECHT ein Compare-Preset mit DREI Orten per SMTP ueber den echten
     Preset-Versandpfad send_one_compare_preset() an gregor-test@henemm.com
@@ -370,7 +387,7 @@ def _send_compare_preset_3loc(hourly_enabled, tag: str) -> str:
     from app.config import Settings
     from services.scheduler_dispatch_service import send_one_compare_preset
 
-    user_id = f"test1150e2e-{uuid.uuid4().hex[:8]}"
+    user_id = _flag_test_user(f"test1150e2e-{uuid.uuid4().hex[:8]}")
     settings = Settings().with_user_profile(user_id)
     if not settings.can_send_email():
         pytest.skip("SMTP nicht konfiguriert (Test-Creds fehlen)")

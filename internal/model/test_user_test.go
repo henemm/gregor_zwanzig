@@ -1,43 +1,85 @@
 package model
 
-import "testing"
+import (
+	"encoding/json"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
+)
 
-// TestIsTestUserID_CaseParity (Issue #1265 Fix-Loop 1, Adversary-Finding
-// F002): der Fixed-ID-Zweig verglich vor dem Fix gegen die UN-lowercased
-// Originalvariable — eine Groß-Schreibvariante der Fixture-ID
-// (TG-LIVE-E2E) wurde fälschlich als echter User behandelt. Symmetrisch zu
-// tests/tdd/test_issue_1013_telegram_test_isolation.py::
-// test_central_test_user_predicate_is_case_insensitive_for_fixture_id.
-func TestIsTestUserID_CaseParity(t *testing.T) {
+// ---------------------------------------------------------------------------
+// TDD RED — Issue #2152, AC-5 (Go) + AC-8 (Roundtrip): Testkonto-Status ueber
+// Profilfeld statt Namens-Heuristik.
+// Spec: docs/specs/modules/testkonto_profilfeld.md
+//
+// Erwartete Produktivsymbole (entstehen in /50, NICHT hier deklariert — der
+// Build-Fehler dieses Pakets ist das beabsichtigte RED):
+//
+//	User.IsTestUser bool `json:"is_test_user,omitempty"`
+//	func IsTestAccount(u *User) bool   // = u.IsTestUser || strings.EqualFold(u.ID, "tg-live-e2e")
+//	                                    // nil-sicher: IsTestAccount(nil) == false
+//
+// IsTestUserID (rohe ID) und IsTestUserIDSubstringOnly sind laut Spec
+// (Implementation Details 2) entfallen — die frueheren Tests
+// TestIsTestUserID_CaseParity / TestIsTestUserIDSubstringOnly_ExcludesFixedFixture
+// pinnten die Namens-Heuristik und wurden in GREEN ersatzlos entfernt (AC-10);
+// die Case-Paritaet der Fixture-ID prueft TestIsTestAccount_ProfilfeldStattNamensHeuristik.
+// ---------------------------------------------------------------------------
+
+// TestIsTestAccount_ProfilfeldStattNamensHeuristik — AC-5: tg-live-e2e ohne
+// Flag bleibt Testkonto; "protester" ohne Flag ist KEINS (Name enthaelt
+// "test"); "mitarbeiter42" mit Flag ist eins (Name neutral).
+func TestIsTestAccount_ProfilfeldStattNamensHeuristik(t *testing.T) {
 	cases := []struct {
-		userID string
-		want   bool
+		name string
+		u    *User
+		want bool
 	}{
-		{"test_xyz", true},
-		{"tdd-123", true},
-		{"tg-live-e2e", true},
-		{"TG-LIVE-E2E", true},
-		{"Tg-Live-E2e", true},
-		{"henning", false},
-		{"steffi", false},
-		{"admin", false},
-		{"default", false},
+		{"tg-live-e2e ohne Flag", &User{ID: "tg-live-e2e"}, true},
+		{"TG-LIVE-E2E ohne Flag (case-insensitive)", &User{ID: "TG-LIVE-E2E"}, true},
+		{"protester ohne Flag", &User{ID: "protester"}, false},
+		{"tdd-prod-user ohne Flag", &User{ID: "tdd-prod-user"}, false},
+		{"mitarbeiter42 mit Flag", &User{ID: "mitarbeiter42", IsTestUser: true}, true},
+		{"admin mit Flag", &User{ID: "admin", IsTestUser: true}, true},
+		{"henning ohne Flag", &User{ID: "henning"}, false},
+		{"nil-Profil", nil, false},
 	}
 	for _, c := range cases {
-		if got := IsTestUserID(c.userID); got != c.want {
-			t.Errorf("IsTestUserID(%q) = %v, want %v", c.userID, got, c.want)
+		if got := IsTestAccount(c.u); got != c.want {
+			t.Errorf("IsTestAccount(%s) = %v, want %v", c.name, got, c.want)
 		}
 	}
 }
 
-// TestIsTestUserIDSubstringOnly_ExcludesFixedFixture dokumentiert, dass der
-// substring-only-Helfer (internal/mail-Konsument, Issue #1265 Fix-Loop 1
-// Ripple-Fund) den tg-live-e2e-Sonderfall NICHT enthält.
-func TestIsTestUserIDSubstringOnly_ExcludesFixedFixture(t *testing.T) {
-	if IsTestUserIDSubstringOnly("tg-live-e2e") {
-		t.Error("IsTestUserIDSubstringOnly('tg-live-e2e') = true, want false")
+// TestUserIsTestUser_JSONRoundtripErhaeltAlleFelder — AC-8 (Schema-Rework,
+// BUG-DATALOSS-GR221): User mit IsTestUser=true → JSON → zurueck, das Flag UND
+// die Nachbarfelder bleiben erhalten; ohne Flag fehlt der Schluessel im JSON
+// (omitempty), damit Bestandsdaten unveraendert laden.
+func TestUserIsTestUser_JSONRoundtripErhaeltAlleFelder(t *testing.T) {
+	created := time.Date(2026, 9, 17, 10, 0, 0, 0, time.UTC)
+	in := User{
+		ID: "mitarbeiter42", Email: "m42@example.com", MailTo: "m42-briefing@example.com",
+		TelegramChatID: "424242", DisplayName: "M 42", Tier: "basic",
+		CreatedAt: created, IsTestUser: true,
 	}
-	if !IsTestUserIDSubstringOnly("tdd-prod-user") {
-		t.Error("IsTestUserIDSubstringOnly('tdd-prod-user') = false, want true")
+	data, err := json.Marshal(in)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(string(data), `"is_test_user":true`) {
+		t.Errorf("JSON traegt kein is_test_user:true — got %s", data)
+	}
+	var out User
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !reflect.DeepEqual(in, out) {
+		t.Errorf("Roundtrip veraendert Felder:\n in=%+v\nout=%+v", in, out)
+	}
+
+	plain, _ := json.Marshal(User{ID: "henning", CreatedAt: created})
+	if strings.Contains(string(plain), "is_test_user") {
+		t.Errorf("ohne Flag darf der Schluessel fehlen (omitempty) — got %s", plain)
 	}
 }

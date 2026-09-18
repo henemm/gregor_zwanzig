@@ -54,11 +54,16 @@ from services.notification_service import NotificationService
 AMBIGUOUS_CHAT_ID = "55501"
 
 
-def _write_user(data_root: Path, user_id: str, chat_id: str = "", mail_to: str = "") -> None:
+def _write_user(
+    data_root: Path, user_id: str, chat_id: str = "", mail_to: str = "", is_test_user: bool = False,
+) -> None:
     """Echtes Nutzerprofil auf die Platte schreiben (kein gemocktes Listing)."""
     user_dir = data_root / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
     profile = {"id": user_id, "telegram_chat_id": chat_id, "mail_to": mail_to}
+    if is_test_user:
+        # Issue #2152: Testkonto-Status ueber das Profilfeld, nicht den Namen.
+        profile["is_test_user"] = True
     (user_dir / "user.json").write_text(json.dumps(profile), encoding="utf-8")
 
 
@@ -208,7 +213,9 @@ def test_lookup_still_prefers_real_user_over_test_users_sharing_the_chat_id(tmp_
     chat_id = "999888"
     test_user_ids = ["tg-live-e2e", "test_aaa", "tdd-zzz"]
     for uid in test_user_ids:
-        _write_user(tmp_path, uid, chat_id=chat_id)
+        # Issue #2152: test_aaa/tdd-zzz sind nur MIT Flag Testkonten; die
+        # Fixture-Konstante tg-live-e2e braucht keins.
+        _write_user(tmp_path, uid, chat_id=chat_id, is_test_user=(uid != "tg-live-e2e"))
     _write_user(tmp_path, "henning", chat_id=chat_id)
 
     # Die Test-Nutzer sind aus dem zentralen Praedikat abgeleitet, nicht geraten.

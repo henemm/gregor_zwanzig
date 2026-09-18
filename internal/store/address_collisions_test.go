@@ -16,7 +16,8 @@ package store
 //
 // Definition „hält": NormalizeEmailAddress(email) == X ODER
 // NormalizeEmailAddress(mail_to) == X (kreuzweise), leere Adresse zählt nie,
-// Testkonten (model.IsTestUserID, wie forEachRealAccount) zählen nie. Ein
+// Testkonten (model.IsTestAccount ueber das Profilfeld is_test_user, Issue
+// #2152, wie forEachRealAccount) zählen nie. Ein
 // Konto, das X in beiden Feldern trägt, hält X einmal.
 //
 // Echter Store auf t.TempDir(), kein Mock.
@@ -65,9 +66,9 @@ func kollisionBestand(t *testing.T) *Store {
 	kollisionKonto(t, s, model.User{ID: "delta-kollision", Email: "delta-kollision@beispiel.de", MailTo: "Dup2-Kollision@beispiel.de"})
 	kollisionKonto(t, s, model.User{ID: "tg-live-e2e", Email: "dup1-kollision@beispiel.de", MailTo: "dup1-kollision@beispiel.de"})
 	kollisionKonto(t, s, model.User{ID: "echo-kollision", Email: "dup3-kollision@beispiel.de"})
-	kollisionKonto(t, s, model.User{ID: "gz-test-dup3", MailTo: "dup3-kollision@beispiel.de"})
-	kollisionKonto(t, s, model.User{ID: "gz-test-eins", Email: "nurtest-kollision@beispiel.de"})
-	kollisionKonto(t, s, model.User{ID: "tdd-zwei", MailTo: "nurtest-kollision@beispiel.de"})
+	kollisionKonto(t, s, model.User{ID: "gz-test-dup3", IsTestUser: true, MailTo: "dup3-kollision@beispiel.de"})
+	kollisionKonto(t, s, model.User{ID: "gz-test-eins", IsTestUser: true, Email: "nurtest-kollision@beispiel.de"})
+	kollisionKonto(t, s, model.User{ID: "tdd-zwei", IsTestUser: true, MailTo: "nurtest-kollision@beispiel.de"})
 	kollisionKonto(t, s, model.User{ID: "foxtrot-kollision"})
 	kollisionKonto(t, s, model.User{ID: "golf-kollision", Email: "  ", MailTo: ""})
 	kollisionKonto(t, s, model.User{ID: "hotel-kollision", Email: "hotel-kollision@beispiel.de", MailTo: "hotel-kollision@beispiel.de"})
@@ -115,7 +116,7 @@ func TestAddressCollisions_AC16_OhneDuplikatNull(t *testing.T) {
 	kollisionKonto(t, s, model.User{ID: "juliett-kollision", Email: "juliett@beispiel.de"})
 	kollisionKonto(t, s, model.User{ID: "kilo-kollision"})
 	kollisionKonto(t, s, model.User{ID: "lima-kollision"})
-	kollisionKonto(t, s, model.User{ID: "gz-test-india", Email: "INDIA@beispiel.de"})
+	kollisionKonto(t, s, model.User{ID: "gz-test-india", IsTestUser: true, Email: "INDIA@beispiel.de"})
 
 	got, err := s.CountAddressCollisions()
 	if err != nil {
