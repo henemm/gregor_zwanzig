@@ -276,6 +276,83 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// applyComparePresetPatch ist der EINE Merge-Kernel fuer beide Compare-PUT-
+// Wege (UpdateComparePresetHandler unten und der vergleich-Zweig von
+// UpdateBriefingHandler, briefing_subscription.go) -- Issue #2285. Der
+// generische JSON-Overlay-Merge (mergeBriefingPatch, briefing_subscription.go)
+// ist strukturell preserve-by-default: ein Feld, das der Patch nicht traegt,
+// bleibt unveraendert, ohne dass jedes Struct-Feld einzeln als Rettungszeile
+// ausgeschrieben werden muss. Nested JSON-Objekte (display_config,
+// official_warnings, alert_channel_thresholds) werden dabei automatisch eine
+// Ebene tief feldweise gemergt (mergeConfigMap), das deckt den Vier-Kanal-
+// Schwellen-Merge und den OfficialWarnings.Sources-Fall generisch ab.
+//
+// Validierung (validateComparePreset) bleibt bewusst AUSSERHALB des Kernels
+// -- die Fehlerantwort ist Handler-Zustaendigkeit, nicht Merge-Zustaendigkeit.
+func applyComparePresetPatch(original model.ComparePreset, id string, patch []byte, now time.Time) (model.ComparePreset, error) {
+	merged, err := mergeBriefingPatch(original, patch)
+	if err != nil {
+		return model.ComparePreset{}, err
+	}
+	var p model.ComparePreset
+	if err := json.Unmarshal(merged, &p); err != nil {
+		return model.ComparePreset{}, err
+	}
+
+	// Server-verwaltete Felder: nie vom Client ueberschreibbar, UNBEDINGT aus
+	// original restauriert (Faelschungsschutz, Issue #2285 AC-3). Kind wird
+	// hier explizit restauriert -- der Store-seitige Zwang auf "vergleich"
+	// (SaveComparePreset) wirkt erst NACH der Response-Serialisierung und
+	// schuetzt den ausgelieferten Response-Body nicht.
+	p.ID = id
+	p.UserID = original.UserID
+	p.CreatedAt = original.CreatedAt
+	p.LetzterVersand = original.LetzterVersand
+	p.TopOrtLetzterVersand = original.TopOrtLetzterVersand
+	p.PausedAt = original.PausedAt
+	p.ArchivedAt = original.ArchivedAt
+	p.Kind = original.Kind
+
+	// Legacy-Sentinels (unveraendert zur bisherigen Compare-PUT-Semantik).
+	// #631: previous_schedule erhalten, wenn der Body es nicht traegt.
+	if p.PreviousSchedule == "" {
+		p.PreviousSchedule = original.PreviousSchedule
+	}
+	// Issue #764/#781: gueltigen Horizont sicherstellen, auch wenn das
+	// Original (Legacy-Daten) noch keinen hatte.
+	if p.ForecastHours == 0 {
+		p.ForecastHours = original.ForecastHours
+	}
+	if p.ForecastHours == 0 {
+		p.ForecastHours = 48
+	}
+	// Issue #511 F001: Default weekday=4 (Freitag) fuer weekly-Presets ohne
+	// explizit gesetztes weekday-Feld.
+	if p.Schedule == "weekly" && p.Weekday == nil {
+		four := 4
+		p.Weekday = &four
+	}
+	// Issue #1232 Scheibe 2b: End-Datum-Loesch-Sentinel -- MUSS NACH der
+	// Server-Feld-Restauration stehen, sonst wuerde ein bewusst gesendeter
+	// Leerstring faelschlich als "Feld fehlte" behandelt.
+	if p.EndDate != nil && *p.EndDate == "" {
+		p.EndDate = nil
+	}
+
+	// Issue #1250 Scheibe 2: materialisiert paused_at bei erstmaligem
+	// Pausieren (schedule=="manual").
+	store.MaterializePausedAt(&p, now)
+	// Issue #1244 F001: einzige Normalisierungsquelle (Corridors/
+	// LocationIDs/Empfaenger).
+	store.NormalizeComparePreset(&p)
+	// Issue #1361/#1372 S1b: ein ungueltiges Tagesfenster-Paar wird am
+	// Schreib-Seam geklemmt -- NACH dem Merge, damit ein bewusst gesendetes
+	// ungueltiges Paar wirklich geprueft wird, nicht der erhaltene Alt-Wert.
+	store.ClampComparePresetDayWindow(&p)
+
+	return p, nil
+}
+
 // PUT /api/compare/presets/{id}
 func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -321,199 +398,16 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		var updated model.ComparePreset
-		if err := json.NewDecoder(r.Body).Decode(&updated); err != nil {
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
 			return
 		}
-		// Preserve server-managed fields.
-		updated.ID = id
-		updated.UserID = original.UserID
-		updated.CreatedAt = original.CreatedAt
-		updated.LetzterVersand = original.LetzterVersand
-		updated.TopOrtLetzterVersand = original.TopOrtLetzterVersand
-		// Issue #582 — Read-Modify-Write: display_config aus Original erhalten wenn
-		// der Client es nicht mitsschickt (nil nach Decode = Feld fehlte im Request).
-		// Verhindert clobbern von Region/channel_layouts durch Clients die display_config
-		// nicht kennen (z.B. Editor-Tabs die nur Scheduler-Felder senden).
-		// Issue #1159: von Objekt-Level-RMW auf feldweisen Merge umgestellt — ein
-		// Teil-PUT von display_config (z.B. nur geaendertes region) loescht die
-		// uebrigen Original-Keys (ideal_ranges, channel_layouts, ...) nicht mehr.
-		// NUR display_config — alle anderen object-level-preserve-Felder bleiben
-		// unveraendert object-level.
-		updated.DisplayConfig = mergeConfigMap(original.DisplayConfig, updated.DisplayConfig)
-		// #631: previous_schedule erhalten wenn Body es nicht trägt (Datenverlust-Schutz).
-		if updated.PreviousSchedule == "" {
-			updated.PreviousSchedule = original.PreviousSchedule
+		updated, err := applyComparePresetPatch(original, id, bodyBytes, time.Now().UTC())
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+			return
 		}
-		// Issue #1040: official_alerts_enabled erhalten wenn Body es nicht trägt
-		// (nil nach Decode = Feld fehlte im Request). false ist ein gültiger,
-		// bewusst gesetzter Wert und darf nicht mit "Feld fehlte" verwechselt werden.
-		if updated.OfficialAlertsEnabled == nil {
-			updated.OfficialAlertsEnabled = original.OfficialAlertsEnabled
-		}
-		// Issue #1041 Slice 1b: radar_alert_enabled erhalten wenn Body es nicht
-		// trägt (nil nach Decode = Feld fehlte im Request), analog
-		// official_alerts_enabled — Datenverlust-Schutz (CLAUDE.md).
-		if updated.RadarAlertEnabled == nil {
-			updated.RadarAlertEnabled = original.RadarAlertEnabled
-		}
-		// Issue #1107: hourly_enabled erhalten wenn Body es nicht trägt.
-		if updated.HourlyEnabled == nil {
-			updated.HourlyEnabled = original.HourlyEnabled
-		}
-		// Issue #1361/#1368: outlook_enabled erhalten wenn Body es nicht
-		// trägt (nil nach Decode = Feld fehlte im Request), analog
-		// HourlyEnabled — sonst kippt der ausgeschaltete 3-Tages-Ausblick
-		// bei jedem PUT eines Clients, der das Feld nicht kennt.
-		if updated.OutlookEnabled == nil {
-			updated.OutlookEnabled = original.OutlookEnabled
-		}
-		// Issue #1361/#1372 S1b: Tagesfenster erhalten, wenn der Body es nicht
-		// traegt (nil nach Decode = Feld fehlte im Request) — analog
-		// HourlyEnabled. Ein explizit gesendetes Paar wird unten geklemmt.
-		if updated.DayWindowStartHour == nil {
-			updated.DayWindowStartHour = original.DayWindowStartHour
-		}
-		if updated.DayWindowEndHour == nil {
-			updated.DayWindowEndHour = original.DayWindowEndHour
-		}
-		// Issue #1170: Alarm-Konfiguration erhalten wenn Body sie nicht trägt
-		// (nil nach Decode = Feld fehlte im Request), analog official_alerts_enabled.
-		if updated.AlertCooldownMinutes == nil {
-			updated.AlertCooldownMinutes = original.AlertCooldownMinutes
-		}
-		if updated.AlertQuietFrom == nil {
-			updated.AlertQuietFrom = original.AlertQuietFrom
-		}
-		if updated.AlertQuietTo == nil {
-			updated.AlertQuietTo = original.AlertQuietTo
-		}
-		// Issue #1216 Slice 2b: Alarm-Trigger + Kanal-Felder erhalten wenn Body sie
-		// nicht traegt (nil nach Decode = Feld fehlte im Request), analog
-		// official_alerts_enabled — Datenverlust-Schutz (CLAUDE.md).
-		if updated.OfficialAlertTriggersEnabled == nil {
-			updated.OfficialAlertTriggersEnabled = original.OfficialAlertTriggersEnabled
-		}
-		// Issue #1258: official_warnings erhalten wenn Body es nicht traegt,
-		// analog OfficialAlertTriggersEnabled — Datenverlust-Schutz (CLAUDE.md).
-		if updated.OfficialWarnings == nil {
-			updated.OfficialWarnings = original.OfficialWarnings
-		} else if updated.OfficialWarnings.Sources == nil && original.OfficialWarnings != nil {
-			// Fix-Loop F002: RMW griff bisher nur auf Objekt-Ebene — ein PUT mit
-			// z.B. nur {"enabled":false} (sources im Body fehlt -> nil nach
-			// Decode) hat bestehende Sources geloescht, weil der ganze Pointer
-			// ersetzt wurde. Sources nur uebernehmen, wenn der Body sie
-			// mitschickt (explizites "sources":[] bleibt non-nil und wird
-			// respektiert — nur das Fehlen des Keys bedeutet "unveraendert").
-			updated.OfficialWarnings.Sources = original.OfficialWarnings.Sources
-		}
-		if updated.SendTelegram == nil {
-			updated.SendTelegram = original.SendTelegram
-		}
-		if updated.SendSms == nil {
-			updated.SendSms = original.SendSms
-		}
-		// Issue #1701 (S2b, D8): drittes Kanal-Opt-in-Feld, identisches
-		// Muster wie SendTelegram/SendSms daneben.
-		if updated.SendPremiumSms == nil {
-			updated.SendPremiumSms = original.SendPremiumSms
-		}
-		// Issue #1461 S3b-2b: alert_channel_thresholds erhalten wenn Body es
-		// nicht traegt (nil nach Decode = Feld fehlte im Request), analog
-		// OfficialWarnings -- PLUS Feld-Level-Merge innerhalb des
-		// Unterobjekts (Muster OfficialWarnings.Sources, Fix-Loop F002 dort):
-		// ein PUT, das nur EINEN Kanal mitschickt, darf die anderen,
-		// unangetasteten Kanaele nicht loeschen. PremiumSms (Issue #1701
-		// S2b): viertes Geschwisterfeld, identisches Muster.
-		if updated.AlertChannelThresholds == nil {
-			updated.AlertChannelThresholds = original.AlertChannelThresholds
-		} else if original.AlertChannelThresholds != nil {
-			if updated.AlertChannelThresholds.Email == nil {
-				updated.AlertChannelThresholds.Email = original.AlertChannelThresholds.Email
-			}
-			if updated.AlertChannelThresholds.Telegram == nil {
-				updated.AlertChannelThresholds.Telegram = original.AlertChannelThresholds.Telegram
-			}
-			if updated.AlertChannelThresholds.Sms == nil {
-				updated.AlertChannelThresholds.Sms = original.AlertChannelThresholds.Sms
-			}
-			if updated.AlertChannelThresholds.PremiumSms == nil {
-				updated.AlertChannelThresholds.PremiumSms = original.AlertChannelThresholds.PremiumSms
-			}
-		}
-		// Issue #764: forecast_hours erhalten wenn Body es nicht trägt (0 = Feld fehlte im Body).
-		if updated.ForecastHours == 0 {
-			updated.ForecastHours = original.ForecastHours
-		}
-		// Issue #781: Sicherstellen dass ein gültiger Horizont vorliegt, auch wenn
-		// das Original noch keinen hatte (Legacy-Daten, die nie geladen wurden).
-		if updated.ForecastHours == 0 {
-			updated.ForecastHours = 48
-		}
-
-		// Issue #511 F001: Default weekday=4 (Freitag) für weekly-Presets ohne
-		// explizit gesetztes weekday-Feld (analog Create).
-		if updated.Schedule == "weekly" && updated.Weekday == nil {
-			four := 4
-			updated.Weekday = &four
-		}
-
-		// Issue #1232 Scheibe 2a: nil-Preserve fuer die 5 Slot-Felder — fehlt
-		// ein Feld im Request-Body (nil nach Decode), wird der Original-Wert
-		// uebernommen. Ein explizit gesendetes false/"" ist ein gueltiger,
-		// bewusst gesetzter Wert (analog official_alerts_enabled).
-		if updated.MorningEnabled == nil {
-			updated.MorningEnabled = original.MorningEnabled
-		}
-		if updated.MorningTime == nil {
-			updated.MorningTime = original.MorningTime
-		}
-		if updated.EveningEnabled == nil {
-			updated.EveningEnabled = original.EveningEnabled
-		}
-		if updated.EveningTime == nil {
-			updated.EveningTime = original.EveningTime
-		}
-		if updated.EndDate == nil {
-			updated.EndDate = original.EndDate
-		}
-		// Issue #1231 Slice 4: corridors erhalten wenn Body sie nicht traegt (nil
-		// nach Decode = Feld fehlte im Request), analog display_config oben —
-		// Datenverlust-Schutz (CLAUDE.md). Ein explizit gesendetes leeres []
-		// ist eine bewusste Nutzer-Aenderung (alle Korridore entfernt) und bleibt
-		// als solches erhalten (nur echtes nil wird ersetzt).
-		if updated.Corridors == nil {
-			updated.Corridors = original.Corridors
-		}
-		// Issue #1250 Scheibe 2 (Adversary-Fund F002 MEDIUM): paused_at ist
-		// server-verwaltet, analog ID/UserID/CreatedAt oben — UNBEDINGT vom
-		// Original uebernehmen, ein vom Client mitgesendeter Wert wird
-		// ignoriert (sonst koennte ein Client mit schedule="manual" einen
-		// gefaelschten Zeitstempel unterschieben). MaterializePausedAt setzt
-		// ihn bei einer echten Pausierung; NormalizeComparePreset (unten)
-		// loescht ihn bei Entpausen wieder.
-		updated.PausedAt = original.PausedAt
-		store.MaterializePausedAt(&updated, time.Now().UTC())
-		// Issue #1232 Scheibe 2b: End-Datum-Loesch-Sentinel — ein explizit
-		// gesendeter Leerstring end_date:"" loescht ein gesetztes EndDate
-		// (statt es wie oben zu erhalten). Muss NACH dem Nil-Preserve-Block
-		// stehen, damit ein fehlendes Feld (nil) weiterhin den Original-Wert
-		// uebernimmt, waehrend ein bewusst gesendeter Leerstring loescht.
-		if updated.EndDate != nil && *updated.EndDate == "" {
-			updated.EndDate = nil
-		}
-
-		// Issue #1244 F001: einzige Normalisierungsquelle (Corridors/
-		// LocationIDs/Empfaenger) — muss NACH dem Corridors-Preserve-Block
-		// oben laufen, sonst bleibt "corridors":null in der Response, wenn
-		// bereits das Original (Legacy-Datei) null hatte.
-		store.NormalizeComparePreset(&updated)
-		// Issue #1361/#1372 S1b: ein ungueltiges Tagesfenster-Paar wird am
-		// Schreib-Seam geklemmt (analog ClampReportConfigDayWindow beim Trip) —
-		// NACH dem Preserve-Block, damit ein bewusst gesendetes ungueltiges
-		// Paar wirklich geprueft wird, nicht der erhaltene Alt-Wert.
-		store.ClampComparePresetDayWindow(&updated)
 
 		if err := validateComparePreset(updated); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})

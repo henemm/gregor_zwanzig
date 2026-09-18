@@ -1,7 +1,17 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-22 (Issue #2050 Scheibe S6, `feat-2050-s6-protokoll-vorwarnzeit` —
+**Updated:** 2026-09-18 (Issue #2285, `fix-2285-compare-put-merge-kernel` —
+ein Merge-Kernel `applyComparePresetPatch` (`internal/handler/compare_preset.go`)
+ersetzt die beiden bisher unabhängigen Merge-Implementierungen von
+`PUT /api/compare/presets/{id}` (dediziert, ~170 Zeilen Feldrettung entfallen)
+und `PUT /api/briefings/{id}?kind=vergleich` (Umgehungsweg); zusätzlich bekommt
+`GET /api/briefings/{id}?kind=route` Sperre und `ETag`, symmetrisch zum
+`vergleich`-Zweig und zu `GET /api/trips/{id}`. Trip-PUT bleibt unverändert
+(Pointer-DTO, Tech-Lead-Entscheidung). Kein neues ADR (reine Konsolidierung
+innerhalb ADR-0023). Details Abschnitt „Nebenläufigkeit: `ETag` / `If-Match`"
+unten, Spec: `docs/specs/modules/fix_2285_compare_put_merge_kernel.md`);
+2026-08-22 (Issue #2050 Scheibe S6, `feat-2050-s6-protokoll-vorwarnzeit` —
 `WeatherSnapshotService.load_dated()` bekommt additiven keyword-only Parameter
 `segment_fetched_at: bool = False`; datierte Snapshot-Segmente tragen additiv ihren eigenen
 `fetched_at`-Wert. Rein Python-intern, keine Go-/Frontend-Änderung, keine neue Route. Details
@@ -1108,6 +1118,8 @@ betroffen.
 | `PATCH /api/trips/{id}/state` | nein | nein |
 | `PATCH /api/trips/{id}/waypoints/{wp}/confirm` | nein | nein |
 | `DELETE /api/trips/{id}` | — | nein |
+| `GET /api/briefings/{id}?kind=route` | ja (seit #2285) | — |
+| `PUT /api/briefings/{id}?kind=route` | ja (der **neue** Stand) | **ja** |
 | `GET /api/compare/presets/{id}` | ja | — |
 | `PUT /api/compare/presets/{id}` | ja (der **neue** Stand) | **ja** |
 | `POST /api/compare/presets` | nein | — |
@@ -1155,6 +1167,14 @@ betroffen.
   (Issue #1395 S6) — kein Weg ist eine Umgehung des anderen. Namensraum-Kollision
   mit Trip-IDs ist ausgeschlossen, da Compare-Preset-IDs das Praefix `cp-`
   tragen.
+- **Beide Vergleichs-PUT-Wege teilen sich seit Issue #2285 denselben
+  Merge-Kernel** (`applyComparePresetPatch` in `compare_preset.go`) — identisches
+  Verhalten bei Server-Feld-Faelschung und denselben Legacy-Sentinels auf
+  beiden Wegen, statt zweier unabhaengiger Implementierungen.
+- **`GET /api/briefings/{id}?kind=route` traegt seit Issue #2285 Sperre und
+  `ETag`**, symmetrisch zum `vergleich`-Zweig und zu `GET /api/trips/{id}`. Der
+  zugehoerige `PUT`-Weg prueft `If-Match` unveraendert ueber die Delegation an
+  `UpdateTripHandler`.
 
 ### Response Format
 
