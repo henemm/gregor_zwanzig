@@ -231,56 +231,6 @@ export function snapshotForRollback<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
 }
 
-/** Plain-Snapshot der 4 persistenzrelevanten CorridorEditor-Felder (Teilmenge
- * von HubWizardFields ohne isEditMode/activityProfile, die der Idealwerte-Tab
- * nicht schreibt). */
-export interface CorridorSnapshot {
-	corridors: Corridor[];
-	idealRanges: Record<string, IdealRange>;
-	activeMetricKeys: string[];
-	metricAlertLevels: Record<string, string>;
-}
-
-/**
- * Issue #1256 Scheibe 6 Fix-Loop 1 (F002, Adversary HIGH): reine
- * Diff-/Payload-Entscheidung fuer den Idealwerte-Tab-Commit, entkoppelt vom
- * DOM-Event, das ihn ausloest (Wrapper-Bubbling ODER Fenster-Ebene) — beide
- * Aufrufer rufen dieselbe Funktion, damit ein Pointer-Release ausserhalb des
- * Wrapper-Subtrees (z. B. bei einem Band-Handle-Drag) nicht mehr zu einem
- * uebersehenen Commit fuehrt.
- * Liefert `null`, wenn sich der persistenzrelevante Ausschnitt seit dem
- * letzten persistierten Snapshot NICHT veraendert hat (Waechter gegen
- * unnoetige PUTs, #1234-Kontext) — sonst den fertigen PUT-Payload.
- */
-export function flushPendingCorridorSave(
-	preset: ComparePreset,
-	current: CorridorSnapshot,
-	before: CorridorSnapshot | null
-): { url: string; body: ComparePreset } | null {
-	const baseline = before ?? current;
-	if (JSON.stringify(current) === JSON.stringify(baseline)) return null;
-	return buildHubPutPayload(preset, {
-		corridors: current.corridors,
-		idealRanges: current.idealRanges,
-		activeMetricKeys: current.activeMetricKeys,
-		metricAlertLevels: current.metricAlertLevels
-	});
-}
-
-/**
- * Issue #1256 Scheibe 6 Fix-Loop 2 (F006, Adversary MEDIUM): reine
- * Entscheidungslogik fuer den fenster-weiten Pointerup-Flush-Guard
- * (`<svelte:window onpointerup>` in CompareTabs.svelte, F002-Fix aus Fix-Loop 1)
- * — herausgezogen aus dem Svelte-Handler, damit sie ohne DOM/Browser testbar
- * ist. Der Svelte-Handler `handleWindowPointerUp` wird dadurch zu einer
- * 1-Zeilen-Delegation; die untestbare Flaeche schrumpft auf diese Zeile.
- * Flush nur, wenn der Idealwerte-Tab aktiv UND bereits hydratisiert ist
- * (sonst gibt es keinen sinnvollen `wizardState`-Stand zum Speichern).
- */
-export function shouldFlushOnWindowPointerUp(activeTab: string, idealwerteHydrated: boolean): boolean {
-	return activeTab === 'idealwerte' && idealwerteHydrated;
-}
-
 /**
  * Issue #1256 Scheibe 6 Fix-Loop 3 (F007, Adversary CRITICAL): reine
  * Payload-Konstruktion fuer den Uebersicht-Tab-Pausieren/Aktivieren-Pfad
@@ -288,7 +238,7 @@ export function shouldFlushOnWindowPointerUp(activeTab: string, idealwerteHydrat
  * drei Hub-PUT-Pfade, der noch die eingefrorene `preset`-Prop statt der
  * laufend aktuellen `currentPreset`-Baseline spread'te (identischer Bug wie
  * F005 fuer die Orte-/Idealwerte-Pfade, hier fuer einen dritten,
- * vorbestehenden Pfad). Analog `flushPendingCorridorSave`: reine Funktion,
+ * vorbestehenden Pfad). Reine Funktion,
  * kein DOM/Browser-Bezug, der Svelte-Handler bleibt eine duenne Delegation.
  */
 export function buildToggleActivePutPayload(
@@ -365,7 +315,7 @@ export function hydrateVersandFieldsFromPreset(preset: ComparePreset): VersandSn
 
 /**
  * Issue #1256 Scheibe 7 (AC-35/36): Event-diskretisierte PUT-Persistenz fuer
- * den Hub-Versand-Tab, analog `flushPendingCorridorSave` — liefert `null`,
+ * den Hub-Versand-Tab (Diff-Muster wie beim Wertebereiche-Reiter) — liefert `null`,
  * wenn sich der Versand-Snapshot seit dem letzten persistierten Stand NICHT
  * veraendert hat (Waechter gegen unnoetige PUTs, #1234-Kontext), sonst den
  * fertigen PUT-Payload via `buildHubPutPayload` (Read-Modify-Write: alle

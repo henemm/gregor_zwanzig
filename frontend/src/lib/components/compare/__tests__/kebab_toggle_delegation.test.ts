@@ -25,12 +25,12 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ComparePreset, Corridor } from '../../../types.ts';
+import { createPutQueue, buildToggleActivePutPayload } from '../compareHubWizardBridge.ts';
+// Issue #2276 S3: der Wertebereiche-Diff lebt jetzt im geteilten Speichermodul.
 import {
-	createPutQueue,
 	flushPendingCorridorSave,
-	buildToggleActivePutPayload,
 	type CorridorSnapshot
-} from '../compareHubWizardBridge.ts';
+} from '../../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 
 function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	return {
@@ -76,7 +76,7 @@ describe('F004: Kebab-Toggle und Hub-Corridor-Edit teilen sich EINE currentPrese
 			metricAlertLevels: {}
 		};
 
-		// Hub-Idealwerte-Edit (analog handleCorridorCommit): neue Metrik hinzufuegen.
+		// Hub-Idealwerte-Edit (analog Wertebereiche-Speicherung, #2276 S3): neue Metrik hinzufuegen.
 		const newCorridor: Corridor = { metric: 'wind_gust', range: [null, 50], notify: true, mark: false, prio: 'mittel' };
 		const corridorCurrent = { corridors: [...currentPreset.corridors!, newCorridor], idealRanges: {}, activeMetricKeys: [], metricAlertLevels: {} };
 		currentPreset = await queue.enqueue(async () => {

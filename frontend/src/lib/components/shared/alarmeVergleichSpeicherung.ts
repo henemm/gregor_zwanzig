@@ -233,16 +233,3 @@ export function erstelleAlarmeVergleichSpeicherung(opt: AlarmeVergleichSpeicheru
 		}
 	};
 }
-
-/**
- * AC-6: beim Verlassen des Reiters „alarme" die ausstehende Alarm-Änderung
- * sichern, BEVOR der Wechsel freigegeben wird (TripTabs-Muster).
- */
-export async function sichereAlarmeVorReiterwechsel(
-	aktiverReiter: string,
-	zielReiter: string,
-	saveController?: SaveStatus
-): Promise<void> {
-	if (aktiverReiter !== 'alarme' || zielReiter === aktiverReiter || !saveController) return;
-	await saveController.flush();
-}
