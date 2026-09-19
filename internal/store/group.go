@@ -39,6 +39,9 @@ func slugify(s string) string {
 // groups from distinct legacy Location.Group strings, persists groups.json and
 // backfills group_id on the locations. Subsequent calls take the fast path.
 func (s *Store) LoadGroups() ([]model.Group, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(s.groupsFile())
 	if err == nil {
 		var wrapper struct {
@@ -154,6 +157,9 @@ func (s *Store) saveGroups(gs []model.Group) error {
 
 // SaveGroup upserts a group by ID.
 func (s *Store) SaveGroup(g model.Group) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	groups, err := s.LoadGroups()
 	if err != nil {
 		return err
@@ -177,6 +183,9 @@ func (s *Store) SaveGroup(g model.Group) error {
 // DeleteGroup removes a group by ID. Membership cleanup (group_id=nil on
 // locations) is the handler's responsibility.
 func (s *Store) DeleteGroup(id string) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	groups, err := s.LoadGroups()
 	if err != nil {
 		return err

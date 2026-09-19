@@ -403,7 +403,9 @@ func TestExportOhneAnmeldungLiefertKeinArchiv(t *testing.T) {
 	// Der Sammelordner "default" wird UEBER DEN STORE befuellt — genau der
 	// Ordner, auf den eine leere Kennung aufloest: UserIDFromContext liefert
 	// "" (middleware/auth.go:151-154), WithUser("") ist ein No-Op
-	// (store/store.go:21-24), Voreinstellung ist "default" (config.go:10).
+	// (store/store.go) und liefert den Basis-Store — hier mit Kennung
+	// "default", wie bei gesetzter GZ_USER_ID=default (seit #2151 Scheibe B
+	// gibt es keinen Config-Default mehr).
 	// Ohne diese Befuellung waere "Marker fehlt" bei jeder beliebigen leeren
 	// Antwort erfuellt und der Nachweis gegenstandslos.
 	exportSeedBasis(t, root, "default", "default-5b8e")

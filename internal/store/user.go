@@ -306,8 +306,8 @@ var exportGeheimnisFelder = []string{"password_hash", "passkey_credentials"}
 // vorgetaeuschter Vollstaendigkeit vorgezogen.
 //
 // id ist die Kennung aus dem Auth-Kontext, nicht s.UserID: der Aufrufer haelt
-// den Wurzel-Store (Voreinstellung "default"), UserDir(id) ist die eine
-// Pfad-Engstelle.
+// den Wurzel-Store (Kennung aus GZ_USER_ID, ohne Variable leer — Issue #2151
+// Scheibe B), UserDir(id) ist die eine Pfad-Engstelle.
 func (s *Store) ExportUser(id string, w io.Writer) error {
 	if !ValidUserID(id) {
 		return ErrInvalidUserID

@@ -87,6 +87,9 @@ func normalizeLoadedComparePreset(p *model.ComparePreset) {
 // kind==""/"route", AC-31). Spiegelt LoadTrips (trip.go), nur der kind-Filter
 // ist invertiert (dort wird kind=="vergleich" uebersprungen).
 func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	dir := s.briefingsDir()
 
 	entries, err := os.ReadDir(dir)
@@ -137,6 +140,9 @@ func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 // kein Preset). Spiegelt LoadTrip (trip.go) mit invertiertem kind-Guard
 // (Issue #1250 Scheibe 7b, AC-31).
 func (s *Store) LoadComparePreset(id string) (*model.ComparePreset, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
 	if !ValidEntityID(id) {
 		return nil, ErrInvalidEntityID
@@ -201,6 +207,9 @@ func migrateComparePresetSlots(p *model.ComparePreset) {
 // Alt-Datei compare_presets.json wird NICHT mehr angefasst (Rollback-
 // Faehigkeit, AC-32). Kein Array. Spiegelt SaveTrip (trip.go).
 func (s *Store) SaveComparePreset(p model.ComparePreset) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
 	if !ValidEntityID(p.ID) {
 		return ErrInvalidEntityID
@@ -229,6 +238,9 @@ func (s *Store) SaveComparePreset(p model.ComparePreset) error {
 // ueber diesen Wrapper geloescht — DELETE laeuft ausschliesslich ueber
 // DeleteComparePreset (echtes os.Remove, F-A).
 func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	for i := range presets {
 		if err := s.SaveComparePreset(presets[i]); err != nil {
 			return err
@@ -246,6 +258,9 @@ func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {
 // nicht als JSON lesbare Datei (Datenmuell) faellt fail-open durch zum Remove.
 // Nicht existierende Datei ist kein Fehler (idempotent).
 func (s *Store) DeleteComparePreset(id string) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
 	if !ValidEntityID(id) {
 		return ErrInvalidEntityID

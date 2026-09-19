@@ -18,6 +18,11 @@ func New(dataDir, userID string) *Store {
 // wuerde dort als "ungueltig" gelten, obwohl er hier seit jeher schlicht "kein
 // Wechsel" bedeutet. Die Pfadsicherheit haengt nicht an dieser Stelle, sondern
 // an den Store-Methoden, die aus einer Kennung einen Pfad bauen.
+//
+// Seit Issue #2151 Scheibe B traegt der Basis-Store ohne gesetzte GZ_USER_ID
+// eine LEERE Kennung (kein Config-Default "default" mehr). WithUser("") liefert
+// dann diesen Basis-Store, und dessen nutzerbezogene Methoden verweigern jeden
+// Dateizugriff ueber requireUser() mit ErrInvalidUserID (fail-closed).
 func (s *Store) WithUser(userId string) *Store {
 	if userId == "" {
 		return s

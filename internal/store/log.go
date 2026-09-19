@@ -21,6 +21,9 @@ type briefingLogFile struct {
 // LoadBriefingLog reads the user's briefing_log.json. Returns an empty slice
 // if the file is missing or corrupt (fail-soft). Issue #393.
 func (s *Store) LoadBriefingLog() ([]BriefingLogEntry, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	path := filepath.Join(s.DataDir, "users", s.UserID, "briefing_log.json")
 	b, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -61,6 +64,9 @@ type alertLogFile struct {
 // LoadAlertLog reads the user's alert_log.json. Returns an empty slice if the
 // file is missing or corrupt (fail-soft). Issue #393.
 func (s *Store) LoadAlertLog() ([]AlertLogEntry, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	path := filepath.Join(s.DataDir, "users", s.UserID, "alert_log.json")
 	b, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -95,6 +101,9 @@ func (s *Store) LoadAlertLog() ([]AlertLogEntry, error) {
 // per trip for the user-scoped store (Issue #396). Fail-soft: on load error it
 // returns an empty map and no error so the archive view never 500s.
 func (s *Store) BriefingCountByTrip() (map[string]int, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	entries, err := s.LoadBriefingLog()
 	if err != nil {
 		return map[string]int{}, nil
@@ -114,6 +123,9 @@ func (s *Store) BriefingCountByTrip() (map[string]int, error) {
 // historical alert is counted (the 48h-retention was removed in the Python
 // writer). Fail-soft: on load error it returns an empty map and no error.
 func (s *Store) AlertCountByEntity() (map[string]int, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	entries, err := s.LoadAlertLog()
 	if err != nil {
 		return map[string]int{}, nil
