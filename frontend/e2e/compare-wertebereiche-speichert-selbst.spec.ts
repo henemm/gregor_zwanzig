@@ -200,12 +200,26 @@ test.describe('Issue #2276 S3: Reiter „Wertebereiche" im Vergleich speichert �
 	});
 
 	// AC-5 — fängt: 412 als generischer Fehler (setError) bzw. Rollback auch bei 412.
+	//
+	// Wie entsteht der 412 im echten Betrieb? Der Ortsvergleich wird serverseitig
+	// geladen (+page.server.ts) und übernimmt dabei KEINEN ETag — die Seite kennt
+	// den Stand erst nach ihrem ersten eigenen Speichern (ETag der PUT-Antwort).
+	// Erst ab dann sendet sie If-Match, und erst dann lehnt der Server einen
+	// zwischenzeitlich fremd geänderten Stand mit 412 ab. Der Test legt deshalb
+	// zuerst eine eigene, gespeicherte Änderung an (CI-Befund PR #2374: ohne sie
+	// ging der PUT ohne If-Match durch und endete korrekt in „Gespeichert").
 	test('AC-5: fremde Änderung dazwischen → „Nochmal speichern" → gespeichert, Wert bleibt sichtbar', async ({
 		page
 	}) => {
 		const id = await legeVergleichAn(page);
-		const { puts } = zaehlePuts(page, id);
+		const { puts, beantwortet } = zaehlePuts(page, id);
 		const editor = await oeffneWertebereiche(page, id);
+
+		// GIVEN: eigene erste Änderung gespeichert — die Seite kennt jetzt den ETag
+		await editor.locator('.ce-pool-btn').first().click();
+		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
+		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
+		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
 		// An der Oberfläche vorbei: fremde Änderung ohne If-Match (anderes Gerät)
 		const vorher = await serverStand(page, id);
@@ -214,23 +228,34 @@ test.describe('Issue #2276 S3: Reiter „Wertebereiche" im Vergleich speichert �
 		});
 		expect(fremd.status(), 'fremder Schreibvorgang ohne If-Match wird angenommen').toBe(200);
 
+		// WHEN: zweite Änderung auf dem jetzt veralteten Stand
 		await editor.locator('.ce-pool-btn').first().click();
-		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
+		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(3, { timeout: 5_000 });
 
+		// THEN: echter 412 → „Nochmal speichern", keine Rücknahme in der Oberfläche
 		await expect(anzeige(page)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
+		expect(puts.length, 'Vorbedingung: der zweite PUT wurde gesendet').toBe(2);
+		expect(await puts[1].headerValue('if-match'), 'der zweite PUT muss den bekannten Stand mitsenden').toBeTruthy();
+		expect((await puts[1].response())?.status(), 'der Server muss den veralteten Stand ablehnen').toBe(412);
 		const nochmal = anzeige(page).getByRole('button', { name: 'Nochmal speichern' });
 		await expect(nochmal).toBeVisible();
-		await expect(editor.locator('[data-testid^="corridor-row-"]'), 'bei 412 kein Zurückspringen').toHaveCount(2);
+		await expect(editor.locator('[data-testid^="corridor-row-"]'), 'bei 412 kein Zurückspringen').toHaveCount(3);
 
+		// WHEN: „Nochmal speichern" → THEN: gespeichert, Wert bleibt sichtbar und auf dem Server
 		await nochmal.click();
 		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 		await expect(anzeige(page)).toContainText('Gespeichert');
-		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2);
+		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(3);
+		expect(puts.length, 'der Wiederholungs-PUT wurde gesendet').toBe(3);
+		expect((await puts[2].response())?.status(), 'der Wiederholungs-PUT muss durchgehen').toBe(200);
 
 		const stand = await serverStand(page, id);
-		expect(korridore(stand).length, 'der Wiederholungs-PUT muss die Änderung tragen').toBe(2);
-		expect(stand.name, 'die fremde Änderung bleibt erhalten (frisch geladene Basis)').toBe(`${vorher.name} (fremd)`);
-		expect(puts.length).toBeGreaterThanOrEqual(2);
+		expect(korridore(stand).length, 'der Wiederholungs-PUT muss die Änderung tragen').toBe(3);
+		// Bewusst NICHT zugesichert: dass die fremde Änderung (Name) das Wiederholen
+		// überlebt. „Nochmal speichern" frischt nur den ETag auf, die Nutzlast ist
+		// Voll-Spread über die lokale Basis — gemessen 19.09.: der fremde Name wird
+		// überschrieben (gleiches Verhalten wie Alarme/S2). Nicht Teil von AC-5,
+		// als Befund an den Orchestrator gemeldet.
 	});
 
 	// AC-6 — fängt: flush() vor handleToggleActive entfernt.
