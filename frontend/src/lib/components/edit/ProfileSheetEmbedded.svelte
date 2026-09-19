@@ -9,8 +9,10 @@
 	//   - EditorProfileSVG (343x70px)
 	//   - scrollbare WaypointCard-Liste der aktiven Etappe
 	//
-	// Container muss position:relative + height: calc(100dvh - 56px) haben,
-	// damit Sheet-%-Werte korrekt skalieren. Sheet.svelte bleibt unveraendert.
+	// Container muss position:relative + eine feste Hoehe haben (der mobile
+	// Editor rechnet sie aus Viewport minus Safe-Area und Tabbar, s.
+	// EditStagesPanelNew), damit Sheet-%-Werte korrekt skalieren.
+	// Sheet.svelte bleibt unveraendert (Mobile-Shell S2: kein 56-px-Balken mehr).
 
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	import EditorProfileSVG from '$lib/components/trip-detail/waypoints/EditorProfileSVG.svelte';

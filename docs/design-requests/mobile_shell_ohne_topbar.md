@@ -1,6 +1,6 @@
 # Mobile-Shell: schwebende Tabbar, kein fixer Balken oben
 
-**Status:** Konzept, PO-Entscheide vom 2026-09-19 eingearbeitet (§8) · **Soll-Bild:** Design-Canvas „Gregor Mobile Shell" (claude.ai, Artboards *Übersicht*, *Unterseite*, *Konto-Sheet*, *TabBar*) · **Scheibe S1 (Tabbar) ist umgesetzt**, S2–S4 sind Vorschlag.
+**Status:** PO-Entscheide vom 2026-09-19 eingearbeitet (§8) · **Soll-Bild:** Design-Canvas „Gregor Mobile Shell" (claude.ai, Artboards *Übersicht*, *Unterseite*, *Konto-Sheet*, *TabBar*) · **Scheiben S1 (Tabbar), S2 (Konto-Kreis + Sheet + Balken weg) und S3 (Charter/Katalog) sind umgesetzt** (PR #2364). §1 beschreibt den Stand davor.
 
 ## 1. Ausgangslage
 
@@ -73,8 +73,8 @@ Heute konsumiert nichts `env(safe-area-inset-top)` — der 56-px-Balken hat das 
 | Scheibe | Inhalt | LoC (grob) |
 |---|---|---|
 | **S1 — Tabbar** *(erledigt)* | `BottomNav.svelte` schwebend/Glas, `--g-nav-*` Tokens, `.mobile-scroll-pad`, Toast-/SaveIndicator-Anker auf `--g-nav-clearance`, `EditStagesPanelNew` 64→70, Doku, E2E | ~150 |
-| **S2 — Konto-Kreis + Sheet + Balken weg** (ein Zug, PO-Entscheid) | Konto-Kreis neben der Tabbar, `KontoSheet` aus `mobile/Sheet.svelte` (Konto · System-Status · Dunkles Design · Datenexport · Abmelden — keine Benachrichtigungen-Zeile), Drawer + `TopAppBar` + `topAppBarStore` löschen, Wordmark + Datum in die Übersicht, `<PageHeader back>` in `CompareNewEditor`/Compare-Liste, Safe-Area oben, `#gz-stand`-Sonderregel raus, 56-px-Konstanten, Tests aus §6 | ~400 (→ `loc_limit_override 500`) |
-| **S3 — Charter/Katalog** | CHARTER §2, AP-012-Ergänzung, COMPONENTS.md (`TopAppBar`/`Drawer` raus, `BottomNav` + `KontoSheet` neu), `SCREENS.json` | Doku |
+| **S2 — Konto-Kreis + Sheet + Balken weg** *(erledigt)* | Konto-Kreis neben der Tabbar, `KontoSheet` aus `mobile/Sheet.svelte` (Konto · System-Status · Dunkles Design · Datenexport · Abmelden — keine Benachrichtigungen-Zeile), Drawer + `TopAppBar` + `topAppBarStore` löschen, Wordmark + Datum in die Übersicht, `<PageHeader back>` in `CompareNewEditor`/Compare-Liste, Safe-Area oben, `#gz-stand`-Sonderregel raus, 56-px-Konstanten, Tests aus §6 | ~400 (→ `loc_limit_override 500`) |
+| **S3 — Charter/Katalog** *(erledigt, mit S2)* | CHARTER §2, AP-012-Ergänzung, COMPONENTS.md (`TopAppBar`/`Drawer` raus, `BottomNav` + `KontoSheet` neu), `SCREENS.json` | Doku |
 
 S2 ist bewusst ein Zug: Konto-Kreis und Balken-Abbau hängen am selben Layout, ein Zwischenstand mit beidem wäre doppelte Navigation.
 

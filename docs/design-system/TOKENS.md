@@ -160,6 +160,7 @@ Einzige erlaubte Glas-Fläche im Produkt. Konsumenten: `BottomNav.svelte`, `.mob
 | `--g-nav-h` | 64 px | Höhe der Leiste |
 | `--g-nav-gap` | 6 px | Abstand Leiste ↔ Home-Indicator-Zone |
 | `--g-nav-inset` | 16 px | seitlicher Rand |
+| `--g-nav-konto-gap` | 10 px | Luft zwischen Leiste und Konto-Kreis (Mobile-Shell S2) |
 | `--g-nav-glass` | paper, 86 % Deckung | Fläche der Leiste (über `backdrop-filter`) |
 | `--g-nav-blur` | 24 px | Blur-Radius des Glases |
 | `--g-nav-hairline` | ink, 10 % | 1-px-Rahmen |

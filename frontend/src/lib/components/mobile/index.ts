@@ -1,11 +1,12 @@
 // Issue #373 — Mobile-Touch-Primitives: kanonische Re-Export-Barrel (Bridge-Ansatz).
 //
-// Eine Quelle fuer alle 12 Primitive:
+// Eine Quelle fuer alle 11 Primitive:
 //   import { MBtn, MInput, MField, MSwitch, MTab, MIcon,
-//            TopAppBar, BottomNav, Drawer, Sheet, Toast, MobileShell }
+//            BottomNav, Drawer, Sheet, Toast, MobileShell }
 //     from '$lib/components/mobile';
 //
-// 10 neue Touch-Primitive + 2 Re-Export-Wrapper auf ui/sidebar/-Pendants (#267).
+// 10 neue Touch-Primitive + 1 Re-Export-Wrapper auf das ui/sidebar/-Pendant (#267).
+// Mobile-Shell S2: TopAppBar ist abgeschafft (kein fixer Balken oben mehr).
 //
 // Spec: docs/specs/modules/issue_373_mobile.md (AC-1)
 
@@ -21,8 +22,7 @@ export { default as Sheet } from './Sheet.svelte';
 export { default as Toast } from './Toast.svelte';
 export { default as MobileShell } from './MobileShell.svelte';
 
-// 2 Re-Export-Wrapper (Bridge auf ui/sidebar/, #267)
-export { default as TopAppBar } from './TopAppBar.svelte';
+// Re-Export-Wrapper (Bridge auf ui/sidebar/, #267)
 export { default as BottomNav } from './BottomNav.svelte';
 
 // Issue #493 — Compare Bottom-Sheet (Block E, Epic #485)

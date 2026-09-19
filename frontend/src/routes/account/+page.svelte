@@ -551,7 +551,7 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
+	<Card.Root id="kanaele">
 		<Card.Header>
 			<Card.Title>Kanäle</Card.Title>
 			<Card.Description>Wohin sollen deine Wetter-Reports gesendet werden?</Card.Description>
@@ -1103,7 +1103,7 @@
 		Issue #2270: eigene Karte, bewusst VOR und nicht IN der Gefahrenzone —
 		der Export ist nichts Destruktives.
 	-->
-	<Card.Root data-testid="data-export-card">
+	<Card.Root id="datenexport" data-testid="data-export-card">
 		<Card.Header>
 			<Card.Title>Deine Daten</Card.Title>
 		</Card.Header>

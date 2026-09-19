@@ -389,7 +389,7 @@
 	<section data-testid="nav-hint-section" class="space-y-3">
 		<Eyebrow>Navigation</Eyebrow>
 		<p class="text-sm text-[color:var(--g-ink-muted)]">
-			Sidebar, TopAppBar und BottomNav sind in dieser Seite nicht live darstellbar, da sie
+			Sidebar und BottomNav sind in dieser Seite nicht live darstellbar, da sie
 			$app/state-Abhängigkeiten haben. Visuell prüfbar über normale App-Navigation.
 		</p>
 	</section>

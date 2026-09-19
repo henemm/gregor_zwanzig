@@ -15,7 +15,7 @@ Die Datei ist in 10 Kategorien gegliedert, von Brand → Atoms → Molecules →
 4.5 **Molecules** — DetailRow, Field, StagePill, ChannelRow, ChannelChip, BriefingTimelineRow, BriefingScheduleRow, ThresholdRow, Stat, AlertRow, ConfirmDialog (Atomic Design Level 2, Epic #368/372)
 5. **Feedback** — Toast, Dialog
 6. **Overlay** — DropdownMenu, Sheet, Tooltip
-7. **Mobile-Shell** — PhoneFrame, TopAppBar, BottomNav, Drawer, MInput, MBtn
+7. **Mobile-Shell** — PhoneFrame, BottomNav (+ Konto-Kreis), KontoSheet, MInput, MBtn
 8. **Organisms** — TripHeader, TripWizardShell, AlertRulesEditor (Atomic Design Level 3, Epic #471)
 9. **Domain-Komponenten** — App-spezifische Bausteine (Trip-, Compare-, Email-Komponenten)
 
@@ -126,7 +126,7 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | `<DropdownMenu>` | `align: "start" \| "end"` (default `end`), Slot `trigger`, Slot default | Popover-Menü. Outside-Click + Esc schließen. |
 | `<DropdownItem>` | `icon: string`, `danger: boolean`, `disabled: boolean`, `shortcut: string`, `onClick` | Menü-Eintrag. |
 | `<DropdownDivider>` | — | Horizontale Trennlinie. |
-| `<Sheet>` | `open`, `onClose`, `snap: "peek" \| "half" \| "full"`, `title`, `eyebrow`, Slot default, Slot `footer` | Bottom-Sheet (Mobile). Backdrop + Handle + Drag-to-Close. |
+| `<Sheet>` | `open`, `onClose`, `snap: "peek" \| "half" \| "full" \| "collapsed" \| "auto"`, `title`, `eyebrow`, Slot default, Slot `footer` | Bottom-Sheet (Mobile). Backdrop + Handle + Drag-to-Close. `auto` = inhaltshoch (Deckel 84 %), z. B. Konto-Sheet. |
 | `<Tooltip>` | `content: string`, `side: "top" \| "right" \| "bottom" \| "left"` + Slot trigger | Sparsam verwenden — bevorzugt visible Helper-Text. |
 
 ---
@@ -136,15 +136,16 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | Komponente | Props | Was sie tut |
 |---|---|---|
 | `<PhoneFrame>` | `width: number` (default 375), `height: number`, `theme: "light" \| "dark"`, `time: string` + Children | Statisches Mobile-Bezel im Design-Canvas. **Nicht** im Produktiv-Code. |
-| `<MobileShell>` | `active`, `title`, `eyebrow`, `leftIcon`, `right`, Children, Footer, `drawerOpen`, `sheet`, `toast`, `onMenu` | Mobile Page-Wrapper: TopBar + Content + BottomNav. |
-| `<TopAppBar>` | `title`, `eyebrow`, `onMenu`, `leftIcon: "menu" \| "back" \| "close"`, `right`, `scrolled` | Mobile-Top-Bar. Height 56. |
-| `<BottomNav>` | `active`, `onChange` | Mobile Bottom-Nav. Height 64. Fix 4 Items. |
-| `<Drawer>` | `open`, `onClose` | Hamburger-Drawer. Konto + Logout. |
+| `<MobileShell>` | `active`, `onChange`, `showBottomNav`, `background`, Children, `drawer`, `sheet`, `toast` | Mobile Page-Wrapper: Content + BottomNav. **Kein Top-Balken** (Mobile-Shell S2). |
+| `<BottomNav>` | `active`, `onChange`, `initials`, `onKonto`, `kontoOpen` | Schwebende Glas-Bottom-Nav (Tokens `--g-nav-*`). Fix 4 Items + **Konto-Kreis** (User-Badge, 64 × 64 Glas, Avatar 36 px Akzent) rechts daneben, wenn `onKonto` gesetzt. Kein FAB (AP-012). |
+| `<KontoSheet>` | `open`, `onClose`, `initials`, `displayName`, `userId`, `darkMode`, `ontoggleDark` | Konto-Sheet aus `<Sheet snap="auto">`: Kopf (Avatar 44 px, Name, Schließen) · Kanäle & Empfänger · Einstellungen · System-Status · Dunkles Design (Switch) · Datenexport · Fuß mit Version + Abmelden. Ersetzt den Hamburger-Drawer. |
+| `<PageHeader>` | `eyebrow`, `title`, `sub`, `right`, `back: {href,label}`, `compact` | Seitenkopf (Atom, AP-011). `back` rendert einen `<BackLink>` (Mono-Caps, 36 px Touch) **über** dem Eyebrow — Rücksprung im Inhalt statt Balken. |
+| `<EditorStickyFooter>` | `context: "route" \| "vergleich"`, `testid`, `navClearance`, Children | Geteilter Sticky-Footer der Anlege-Editoren (Weiter/Aktivieren); hält über der schwebenden Tabbar. |
 | `<MInput>` | `type`, `placeholder`, `value`, `leftIcon`, `onChange` | Mobile-Input mit Min-Height 48, Body 16 px. |
 | `<MField>` | `label`, `sub`, Children | Field-Wrapper Mobile. |
 | `<MBtn>` | `variant`, `size: "md" \| "lg" \| "xl"`, `block`, `icon`, `onClick` | Mobile-Button mit Min-Height 48 (lg). |
 | `<MTab>` | `items`, `active`, `onChange`, `scrollable: boolean` | Tab-Bar Mobile (scrollbar wenn nötig). |
-| `<ScreenScroll>` | `padding`, `bg`, Children | Scrollbarer Mobile-Content-Bereich zwischen TopBar und BottomNav. |
+| `<ScreenScroll>` | `padding`, `bg`, Children | Scrollbarer Mobile-Content-Bereich über der BottomNav. |
 
 ---
 
@@ -222,6 +223,7 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.3 | 2026-09-19 | Mobile-Shell S2: `TopAppBar`/Hamburger-`Drawer` raus, `BottomNav` mit Konto-Kreis, `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, `Sheet snap="auto"` |
 | v1.2 | 2026-06-02 | MapControl, ProfileSheetEmbedded, EditorProfileSVG, EtappenStrip aus Wegpunkt-Editor-Handoff (#503) ergänzt |
 | v1.1 | 2026-05-31 | Molecules-Sektion (Epic #368/372) + ConfirmDialog (Issue #478) hinzugefügt; bestehende 10 Molecules dokumentiert |
 | v1.0 | 2026-05-21 | Initialer Katalog — Runde 1 |

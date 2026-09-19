@@ -274,8 +274,8 @@ jobs:
       # bug-703 selbst haengt an KEINEM Vorlauf (sein Kopfkommentar fordert
       # nur AC-3 vor AC-2 INNERHALB der Datei, per test.describe.serial) --
       # er muss nur ZULETZT laufen.
-      E2E_MIN_SPECS: 48     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
-      E2E_MIN_EXECUTED_HAUPT: 241      # Hauptlauf: 47 Dateien (Issue #2276 S1 Teil 3: compare-hub-inline-edit.spec.ts neu) + global.setup -- exakt belegt, kein Puffer. 241 = 235 (bisheriger Verbund, per `--list` gemessen; die fruehere Schwelle 233 lag zwei Faelle darunter, weil bestehende Dateien seither Faelle dazubekommen haben) + 6 Faelle der neuen Datei (`--list`, nicht aus dem Lauf zurueckgerechnet). Zielverbund-Messung 2026-09-18, 3 Zyklen mit je frischem Stack: expected=241/241/241, unexpected=0, skipped=0
+      E2E_MIN_SPECS: 50     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test). 50 = 48 + mobile-bottom-nav-floating (Mobile-Shell S1) + mobile-konto-sheet (S2)
+      E2E_MIN_EXECUTED_HAUPT: 252      # Hauptlauf: 49 Dateien + global.setup -- exakt belegt, kein Puffer. 252 = 241 (Stand #2276 S1) + 5 (mobile-bottom-nav-floating, Mobile-Shell S1) + 6 (mobile-konto-sheet, Mobile-Shell S2), per `npx playwright test --list` ueber die Positivliste gemessen 2026-09-19 (252 tests in 50 files); lokaler Lauf der Positivliste gegen den isolierten Stack: 246/246 vor S2, S2-Dateien 2x gruen.
       E2E_MIN_EXECUTED_PWA: 61         # Zweitlauf: 60 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu; Issue #2317: +1 Fall AC-6 dort, statisch aus --list abgeleitet) + global.setup -- kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:

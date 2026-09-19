@@ -187,13 +187,16 @@ describe('AC-4: /compare/[id]/+page.svelte hat mobilen Render-Pfad', () => {
 		);
 	});
 
-	test('/compare/[id]/+page.svelte hat ArrowLeft-Icon für Back-Navigation', () => {
+	// Mobile-Shell S2: Rücksprung als <BackLink> im Inhalt (Mono-Caps, 36 px)
+	// statt ArrowLeft-Icon in einer nachgebauten TopBar.
+	test('/compare/[id]/+page.svelte hat <BackLink> für Back-Navigation', () => {
 		assert.ok(existsSync(DETAIL_PAGE), '/compare/[id]/+page.svelte fehlt');
 		const src = readFileSync(DETAIL_PAGE, 'utf-8');
 		assert.match(
 			src,
-			/ArrowLeft/,
-			'/compare/[id]/+page.svelte hat kein ArrowLeft-Icon für Back-Navigation in mobiler TopBar'
+			/<BackLink href="\/compare"/,
+			'/compare/[id]/+page.svelte hat keinen <BackLink href="/compare"> für die Back-Navigation im mobilen Kopf'
 		);
+		assert.ok(!/ArrowLeft/.test(src), '/compare/[id]/+page.svelte nutzt noch das ArrowLeft-Icon der abgeschafften TopBar');
 	});
 });

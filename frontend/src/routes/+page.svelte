@@ -4,6 +4,7 @@
 
 	import type { Trip, ComparePreset, CockpitStatus } from '$lib/types.js';
 	import { Card, Pill, Dot, Eyebrow, Btn, SectionH, PageHeader } from '$lib/components/atoms';
+	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 	import {
 		BriefingTimelineRow,
 		QuickAction,
@@ -53,6 +54,8 @@
 		month: 'long',
 		year: 'numeric'
 	});
+	// Mobile-Shell S2 — Datum als Mono-Caption neben der Wordmark („Sa., 19. Sep.").
+	const heuteKurz = now.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
 
 	// --- Hero-Modus: trip > compare > planning --------------------------------
 	const activeLiveTrip = $derived(liveTrip(trips, now));
@@ -144,6 +147,13 @@
 </script>
 
 <div class="page-root" style:position="relative" style:max-width="1320px">
+	<!-- Mobile-Shell S2 — Wordmark + Datum als erste Zeile der Uebersicht (nur
+	     hier, nur mobil): die Marke einmal pro Sitzung statt in einem fixen
+	     Balken auf jedem Screen. Desktop traegt sie in der Sidebar. -->
+	<div class="desktop:hidden" data-testid="home-wordmark-row" style="display: flex; align-items: center; justify-content: space-between; height: 24px; margin: var(--g-s-2) 0 var(--g-s-5);">
+		<Wordmark size="sm" />
+		<span class="mono" data-testid="home-datum" style="font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-ink-3);">{heuteKurz}</span>
+	</div>
 	<!-- Topbar — AC-7: kein sub-Text, beide Buttons ghost -->
 	<PageHeader
 		eyebrow="Übersicht · {todayPretty}"

@@ -16,6 +16,8 @@ const MOBILE_VIEWPORT = { width: 375, height: 667 };
 const SIDE_INSET_PX = 16; // --g-nav-inset
 const NAV_HEIGHT_PX = 64; // --g-nav-h
 const NAV_GAP_PX = 6; // --g-nav-gap
+const KONTO_PX = 64; // Konto-Kreis (S2): --g-nav-h breit, rechts neben der Leiste
+const KONTO_GAP_PX = 10; // --g-nav-konto-gap
 
 test.describe('Mobile-Shell: schwebende Tabbar', () => {
 	test.beforeEach(async ({ page }) => {
@@ -29,17 +31,23 @@ test.describe('Mobile-Shell: schwebende Tabbar', () => {
 		/**
 		 * GIVEN: Mobile-Viewport 375 px
 		 * WHEN:  Uebersicht geladen
-		 * THEN:  Leiste ist fixed, beginnt 16 px vom linken Rand, endet 16 px vor
-		 *        dem rechten Rand und ihre Unterkante liegt 8 px ueber der
-		 *        Viewport-Unterkante (Safe-Area im Desktop-Browser = 0)
+		 * THEN:  Der Rahmen (Leiste + Konto-Kreis, S2) ist fixed, beginnt 16 px vom
+		 *        linken Rand, endet 16 px vor dem rechten Rand; die Leiste selbst
+		 *        endet vor Konto-Kreis + Luft, und die Unterkante liegt 6 px ueber
+		 *        der Viewport-Unterkante (Safe-Area im Desktop-Browser = 0)
 		 */
+		const shell = page.getByTestId('bottom-shell');
 		const nav = page.getByTestId('bottom-nav');
+		const shellBox = await shell.boundingBox();
 		const box = await nav.boundingBox();
+		expect(shellBox).not.toBeNull();
 		expect(box).not.toBeNull();
-		const position = await nav.evaluate((el) => getComputedStyle(el).position);
+		const position = await shell.evaluate((el) => getComputedStyle(el).position);
 		expect(position).toBe('fixed');
+		expect(Math.round(shellBox!.x)).toBe(SIDE_INSET_PX);
+		expect(Math.round(shellBox!.x + shellBox!.width)).toBe(MOBILE_VIEWPORT.width - SIDE_INSET_PX);
 		expect(Math.round(box!.x)).toBe(SIDE_INSET_PX);
-		expect(Math.round(box!.x + box!.width)).toBe(MOBILE_VIEWPORT.width - SIDE_INSET_PX);
+		expect(Math.round(box!.x + box!.width)).toBe(MOBILE_VIEWPORT.width - SIDE_INSET_PX - KONTO_PX - KONTO_GAP_PX);
 		expect(Math.round(box!.height)).toBe(NAV_HEIGHT_PX);
 		expect(Math.round(MOBILE_VIEWPORT.height - (box!.y + box!.height))).toBe(NAV_GAP_PX);
 	});

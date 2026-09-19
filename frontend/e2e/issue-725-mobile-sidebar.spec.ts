@@ -65,21 +65,19 @@ test.describe('Issue #725: Mobile-Sidebar', () => {
 		expect(asideWidth).toBe(220);
 	});
 
-	// ─── AC-3: Mobile-Drawer bleibt funktionsfähig ──────────────────────────
-	test('AC-3: Mobile-Menü-Drawer öffnet @375px korrekt', async ({ page }) => {
+	// ─── AC-3: Konto-Sheet bleibt funktionsfähig (Mobile-Shell S2 statt Drawer) ─
+	test('AC-3: Konto-Kreis öffnet das Konto-Sheet @375px korrekt', async ({ page }) => {
 		/**
 		 * GIVEN: eingeloggter Nutzer, Viewport 375×812
-		 * WHEN:  der Hamburger-Button (top-app-bar-hamburger) geklickt wird
-		 * THEN:  der separate Mobile-Drawer wird sichtbar
-		 *        (Fix am Desktop-<aside> beeinträchtigt den Drawer nicht)
+		 * WHEN:  der Konto-Kreis neben der Tabbar getippt wird
+		 * THEN:  das Konto-Sheet wird sichtbar
+		 *        (Fix am Desktop-<aside> beeinträchtigt das Sheet nicht)
 		 */
 		await page.setViewportSize(MOBILE);
 		await page.goto('/trips');
 
-		await page.getByTestId('top-app-bar-hamburger').click();
+		await page.getByTestId('konto-kreis').click();
 
-		// Der Mobile-Drawer ist der mobileMenuOpen-Block in Sidebar.svelte
-		const drawer = page.getByTestId('mobile-drawer');
-		await expect(drawer).toBeVisible();
+		await expect(page.getByTestId('konto-sheet')).toBeVisible();
 	});
 });

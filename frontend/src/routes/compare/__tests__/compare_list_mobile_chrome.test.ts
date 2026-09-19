@@ -1,8 +1,8 @@
 // TDD RED — Issue #1256 Scheibe S8d: Mobile-Editor-Fidelity, Gruppe A (Liste)
 //
 // Spec: docs/specs/modules/feat_1256_s8d_mobile_editor_fidelity.md (AC-1..AC-5)
-// Soll: screen-compare-list-mobile.jsx (Handoff-4), mobile-shell.jsx:87-114
-//       (TopAppBar title/eyebrow/right-Fähigkeiten, #373)
+// Soll: screen-compare-list-mobile.jsx (Handoff-4); seit Mobile-Shell S2
+//       ohne Kopfleiste — <PageHeader> traegt Titel/Eyebrow/Rechts-Slot.
 //
 // Source-Wächter (Kern-Schicht): prüfen den Soll-Zustand des Markups/der
 // Komponenten-Fähigkeiten. Verhaltensnachweis aus Nutzersicht folgt in
@@ -11,7 +11,7 @@
 // (S4-Lehre, s. compare_hub_fidelity.test.ts Kopf-Kommentar).
 //
 // RED-Erwartung (vor Implementation): AC-1..AC-5 FAIL (inkl. der
-// TopAppBar-Fähigkeits-Tests, die AC-1/AC-15 gemeinsam absichern).
+// PageHeader-Fähigkeits-Tests, die AC-1/AC-15 gemeinsam absichern).
 //
 // Ausführung:
 //   cd frontend && node --import ./test-lib-loader.mjs \
@@ -20,76 +20,54 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 
 const COMPARE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ROUTES_DIR = join(COMPARE_DIR, '..');
 const PAGE_FILE = join(COMPARE_DIR, '+page.svelte');
-const TOP_APP_BAR_FILE = join(ROUTES_DIR, '..', 'lib', 'components', 'ui', 'sidebar', 'TopAppBar.svelte');
+const PAGE_HEADER_FILE = join(ROUTES_DIR, '..', 'lib', 'components', 'atoms', 'PageHeader.svelte');
+const SIDEBAR_DIR = join(ROUTES_DIR, '..', 'lib', 'components', 'ui', 'sidebar');
 
 const page = () => readFileSync(PAGE_FILE, 'utf-8');
-const topAppBar = () => readFileSync(TOP_APP_BAR_FILE, 'utf-8');
+const pageHeader = () => readFileSync(PAGE_HEADER_FILE, 'utf-8');
 
-describe('TopAppBar-Fähigkeiten (mobile-shell.jsx:87-114, #373 additiv) — Grundlage für AC-1/AC-15', () => {
-	test('title-Prop existiert und wird gerendert', () => {
-		const bar = topAppBar();
-		assert.match(
-			bar,
-			/title\??:\s*string/,
-			'AC-1/AC-15 FAIL: TopAppBar-Props hat keine title-Prop (Soll: mobile-shell.jsx:105-109)'
-		);
-		assert.match(
-			bar,
-			/\{title\}/,
-			'AC-1/AC-15 FAIL: title wird nicht im Markup gerendert (Prop deklariert, aber ungenutzt reicht nicht)'
-		);
+// Mobile-Shell S2 (docs/design-requests/mobile_shell_ohne_topbar.md): die
+// globale Kopfleiste und ihr Store sind abgeschafft. Titel/Eyebrow/„Neuer
+// Vergleich" stehen mobil im <PageHeader> der Seite — derselbe Baustein wie
+// auf der Uebersicht (AP-011).
+describe('PageHeader-Fähigkeiten — Grundlage für AC-1/AC-15 ohne Kopfleiste', () => {
+	test('back-Prop rendert einen Rücksprung-Link über dem Eyebrow', () => {
+		const hdr = pageHeader();
+		assert.match(hdr, /back\??:\s*\{\s*href:\s*string;\s*label:\s*string\s*\}/, 'PageHeader hat keine back-Prop {href,label}');
+		assert.ok(hdr.includes('<BackLink'), 'PageHeader rendert bei back keinen <BackLink>');
 	});
 
-	test('Back-Variante von leftIcon rendert ein echtes Zurück-Tap-Ziel', () => {
-		// Bewusst der bereits im Repo etablierte Zurück-Pfeil-Pfad (identisch zur
-		// heutigen nachgebauten cm-mobile-appbar, CompareEditor.svelte:1128) —
-		// kein neu erfundener Mechanismus, sondern Wiederverwendung des
-		// vorhandenen Icons an der kanonischen Stelle.
-		assert.ok(
-			topAppBar().includes('M19 12H5M12 5l-7 7 7 7'),
-			'AC-15 FAIL: TopAppBar rendert bei leftIcon="back" kein Zurück-Icon (Pfad M19 12H5M12 5l-7 7 7 7 fehlt) — Ist: leftIcon nur als data-Attribut, kein sichtbares Element'
-		);
-	});
-
-	test('seiten-eigene rechte Aktion ersetzt die Default-Bell/Plus-Gruppe', () => {
-		assert.match(
-			topAppBar(),
-			/\{#if\s+right\}[\s\S]{0,80}\{@render right\(\)\}[\s\S]{0,400}\{:else\}[\s\S]{0,400}top-app-bar-bell/,
-			'AC-1/AC-15 FAIL: right ersetzt die Default-Bell/Plus-Gruppe nicht — Ist: right UND Bell/Plus werden immer beide gerendert (kein if/else)'
-		);
+	test('kein Kopfleisten-Store und keine TopAppBar-Komponente mehr im Repo', () => {
+		assert.ok(!existsSync(join(SIDEBAR_DIR, 'TopAppBar.svelte')), 'ui/sidebar/TopAppBar.svelte existiert noch');
+		assert.ok(!existsSync(join(ROUTES_DIR, '..', 'lib', 'stores', 'topAppBar.svelte.ts')), 'stores/topAppBar.svelte.ts existiert noch');
+		assert.ok(!page().includes('topAppBarStore'), 'compare/+page.svelte befüllt noch den Kopfleisten-Store');
 	});
 });
 
-describe('AC-1: Mobile-Kopf befüllt die Design-Kopfleiste (JSX-M Z.22)', () => {
+describe('AC-1: Mobiler Kopf steht im <PageHeader> der Seite (JSX-M Z.22)', () => {
 	test('eyebrow zeigt „Workspace · N" mit dynamischer Vergleichs-Anzahl', () => {
 		const code = page();
 		assert.match(
 			code,
-			/eyebrow[=:][^\n]*Workspace/,
-			'AC-1 FAIL: keine eyebrow-Befüllung Richtung „Workspace" für die Design-Kopfleiste erkennbar (Ist: nur statisches <Eyebrow>Workspace · Orts-Vergleiche</Eyebrow> im Desktop-Kopf, keine Zahl)'
-		);
-		assert.match(
-			code,
-			/Workspace[^\n]{0,60}presets\.length/,
-			'AC-1 FAIL: eyebrow zeigt nicht die dynamische Vergleichs-Anzahl (presets.length) — Soll: „Workspace · N"'
+			/<PageHeader[^\n]*eyebrow="Workspace · \{presets\.length\}"[^\n]*title="Orts-Vergleiche"/,
+			'AC-1 FAIL: der mobile <PageHeader> zeigt nicht „Workspace · N" + „Orts-Vergleiche"'
 		);
 	});
 
-	test('Plus-Tap-Ziel führt zusätzlich zur Design-Kopfleiste nach /compare/new', () => {
-		// Ist heute genau 1 Treffer (die bestehende „+ Neuer Vergleich"-CTA-Taste).
-		// Soll: ein zweiter Treffer als rechte Aktion der Design-Kopfleiste.
+	test('„Neuer Vergleich" führt auch mobil (Rechts-Slot) nach /compare/new', () => {
 		const matches = (page().match(/\/compare\/new/g) ?? []).length;
 		assert.ok(
 			matches >= 2,
-			`AC-1 FAIL: kein zweites /compare/new-Ziel für die rechte Kopfleisten-Aktion gefunden (${matches} Treffer, erwartet >=2 — einer bleibt die bestehende CTA-Taste)`
+			`AC-1 FAIL: kein zweites /compare/new-Ziel für den mobilen Rechts-Slot gefunden (${matches} Treffer, erwartet >=2 — einer bleibt die Desktop-CTA)`
 		);
+		assert.ok(page().includes('data-testid="compare-list-new-mobile"'), 'AC-1 FAIL: mobiler „Neuer Vergleich"-Knopf (compare-list-new-mobile) fehlt');
 	});
 });
 

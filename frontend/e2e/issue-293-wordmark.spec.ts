@@ -49,19 +49,23 @@ test.describe('Issue #293: Wordmark "gregor.zwanzig"', () => {
 		await expect(glyph).toBeVisible();
 	});
 
-	// ─── AC-2: Mobile TopAppBar zeigt kompaktes Wordmark ohne Untertitel ─────
-	test('AC-2: Mobile TopAppBar zeigt Wordmark ohne Untertitel', async ({ page }) => {
+	// ─── AC-2: Mobile Übersicht zeigt kompaktes Wordmark ohne Untertitel ─────
+	// Mobile-Shell S2: die Wordmark ist die erste Zeile der Übersicht (nur
+	// dort, nur mobil) — kein fixer Balken mehr.
+	test('AC-2: Mobile Übersicht zeigt Wordmark ohne Untertitel als erste Zeile', async ({ page }) => {
 		/**
 		 * GIVEN: User ist eingeloggt, Viewport < 900px (Mobile)
 		 * WHEN:  Startseite geladen wird
-		 * THEN:  TopAppBar enthält Link mit aria-label "Gregor Zwanzig — Home"
-		 *        aber KEINEN Untertitel "v0.20 · wetter-briefing"
+		 * THEN:  Die erste Inhaltszeile enthält Link mit aria-label "Gregor Zwanzig — Home"
+		 *        plus Datum, aber KEINEN Untertitel "v0.20 · wetter-briefing"
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/');
 
-		const topBar = page.getByTestId('top-app-bar');
-		const wordmark = topBar.locator('a[aria-label="Gregor Zwanzig — Home"]');
+		const zeile = page.getByTestId('home-wordmark-row');
+		await expect(zeile).toBeVisible();
+		await expect(page.getByTestId('home-datum')).not.toBeEmpty();
+		const wordmark = zeile.locator('a[aria-label="Gregor Zwanzig — Home"]');
 		await expect(wordmark).toBeVisible();
 		await expect(wordmark).toContainText('gregor');
 		await expect(wordmark).toContainText('zwanzig');
@@ -89,7 +93,7 @@ test.describe('Issue #293: Wordmark "gregor.zwanzig"', () => {
 		await page.setViewportSize(DESKTOP_VIEWPORT);
 		await page.goto('/');
 
-		// Sidebar-Wordmark explizit ansprechen (TopAppBar hat desktop:hidden, stört .first())
+		// Sidebar-Wordmark explizit ansprechen (die mobile Wordmark-Zeile hat desktop:hidden, stört .first())
 		const sidebar = page.getByTestId('desktop-sidebar');
 		const wordmark = sidebar.locator('a[aria-label="Gregor Zwanzig — Home"]');
 
@@ -115,7 +119,7 @@ test.describe('Issue #293: Wordmark "gregor.zwanzig"', () => {
 		await page.setViewportSize(DESKTOP_VIEWPORT);
 		await page.goto('/trips');
 
-		// Sidebar-Wordmark (Desktop-Sidebar ist sichtbar, TopAppBar hat desktop:hidden)
+		// Sidebar-Wordmark (Desktop-Sidebar ist sichtbar, die mobile Wordmark-Zeile hat desktop:hidden)
 		const wordmark = page.getByTestId('desktop-sidebar').locator('a[aria-label="Gregor Zwanzig — Home"]');
 		await expect(wordmark).toBeVisible();
 		await wordmark.click();
@@ -172,11 +176,11 @@ test.describe('Issue #293: Wordmark "gregor.zwanzig"', () => {
 	});
 
 	// ─── AC-8: Kein hartcodiertes "Gregor 20" in der UI ──────────────────────
-	test('AC-8: Kein sichtbarer Text "Gregor 20" in Sidebar oder TopAppBar', async ({ page }) => {
+	test('AC-8: Kein sichtbarer Text "Gregor 20" in der Sidebar', async ({ page }) => {
 		/**
 		 * GIVEN: User ist eingeloggt, Desktop-Viewport
 		 * WHEN:  Startseite geladen wird
-		 * THEN:  Sidebar und TopAppBar enthalten KEINEN Text "Gregor 20"
+		 * THEN:  Sidebar enthält KEINEN Text "Gregor 20"
 		 */
 		await page.setViewportSize(DESKTOP_VIEWPORT);
 		await page.goto('/');

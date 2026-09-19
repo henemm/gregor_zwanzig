@@ -65,7 +65,7 @@ test('+layout.svelte publicPages enthaelt /verify-email UND /reset-password (App
 	// GIVEN: der Source-Text von +layout.svelte
 	// WHEN: das publicPages-Array extrahiert wird
 	// THEN: enthaelt es /verify-email (steuert isLogin -> Standalone-Rendering
-	//   ohne Sidebar/TopAppBar/BottomNav) sowie weiterhin /reset-password als
+	//   ohne Sidebar/BottomNav) sowie weiterhin /reset-password als
 	//   Gegenprobe gegen versehentliches Entfernen
 	const pages = extractPublicPages(layoutSrc);
 	assert.ok(

@@ -6,7 +6,7 @@
 	// wird jetzt GENAU EINMAL gemountet und versorgt Desktop UND Mobile; die
 	// Viewport-Umschaltung (4-Stat-2×2 statt 5-Stat-Leiste, CorridorEditorMobile
 	// im Idealwerte-Tab) passiert INNERHALB von CompareTabs (matchMedia).
-	import { Btn } from '$lib/components/atoms';
+	import { Btn, BackLink } from '$lib/components/atoms';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
 	import CompareKebab from '$lib/components/compare/CompareKebab.svelte';
@@ -30,7 +30,6 @@
 	} from '$lib/stores/nachEntladenNachladen';
 	import { api } from '$lib/api';
 	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type ComparePreset } from '$lib/types';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
 
@@ -400,19 +399,13 @@
 	{/if}
 </div>
 
-<!-- Mobile-TopBar (#493) — bleibt bespoke Seiten-Chrome, s. Modulkommentar oben -->
+<!-- Mobiler Kopf (#493) — bleibt bespoke Seiten-Chrome, s. Modulkommentar oben.
+     Mobile-Shell S2: Ruecksprung als <BackLink> im Inhalt (kein fixer Balken
+     mehr), darunter die Eyebrow-Zeile (#1256 S8c AC-12) und der Preset-Name. -->
 <div class="desktop:hidden flex flex-col gap-4 p-4">
-	<!-- Issue #1256 S8c (AC-12): mobile Eyebrow-Zeile über dem Preset-Namen
-	     (Soll: screen-compare-detail-mobile.jsx:51, Styling analog TopAppBar.svelte:56-61). -->
+	<BackLink href="/compare" label="Vergleiche" ariaLabel="Zurück zur Übersicht" />
 	<span class="mono block" style="font-size: 9px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">Orts-Vergleich · Hub</span>
 	<div class="flex items-center gap-2 min-h-[44px]">
-		<a
-			href="/compare"
-			class="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
-			aria-label="Zurück zur Übersicht"
-		>
-			<ArrowLeftIcon size={20} />
-		</a>
 		<span class="flex-1 flex items-center gap-2 min-w-0">
 			{#if isEditingName}
 				<input type="text" data-testid="compare-hub-name-edit" bind:value={editName} aria-label="Name bearbeiten" class="min-w-0 flex-1 font-semibold px-2 py-1 rounded-md" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
