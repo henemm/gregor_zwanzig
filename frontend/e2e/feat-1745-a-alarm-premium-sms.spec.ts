@@ -8,8 +8,9 @@
 // 🔴 WARUM DREI KLICKPFADE UND NICHT EINER: Trip und Ortsvergleich teilen die
 // KOMPONENTE (AlarmeTab.svelte), aber NICHT den SPEICHERWEG. Der Trip
 // persistiert über `buildAlarmeDeliveryPayload` (ein konsolidierter PUT auf
-// /api/trips/{id}), der Ortsvergleich über die Bridge-Kette
-// (currentAlarmSnapshot → flushPendingAlarmSave → buildHubPutPayload → PUT auf
+// /api/trips/{id}), der Ortsvergleich seit #2276 S2 über den eigenen
+// Speicherweg des Reiters (shared/alarmeVergleichSpeicherung.ts:
+// alarmSnapshotAus → flushPendingAlarmSave → baueAlarmNutzlast → PUT auf
 // /api/compare/presets/{id}). Ein Nachweis, der die eine Kette prüft und die
 // andere annimmt, prüft das Falsche — und der Trip ist der Fall, an dem dieses
 // Issue aufgefallen ist (KHW 403).
@@ -137,7 +138,7 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 	});
 
 	// ── AC-10: Ortsvergleichs-Hub — Haken ────────────────────────────────────
-	// Mutation (Spec): currentAlarmSnapshot() (CompareTabs.svelte:575-596) liest
+	// Mutation (Spec): alarmSnapshotAus() (shared/alarmeVergleichSpeicherung.ts) liest
 	// `sendPremiumSms` nicht aus `wizardState` — der Klick wäre sichtbar, käme
 	// aber nie im PUT-Body an.
 	test('AC-10: hub_premium_sms_haken_ueberlebt_speichern_und_reload', async ({ page }) => {
@@ -174,7 +175,7 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 		expect(
 			body.send_premium_sms,
 			'PUT-Body enthält kein send_premium_sms — der Haken wäre sichtbar und wirkungslos ' +
-				'(currentAlarmSnapshot()/buildHubPutPayload, Landmine 3).'
+				'(alarmSnapshotAus()/baueAlarmNutzlast, Landmine 3).'
 		).toBe(true);
 
 		// ── Der eigentliche Beweis: neu laden ────────────────────────────────

@@ -54,8 +54,13 @@
 	// Epic #1273 S1: SaveStatus-Controller fuer den Hub — eine Instanz pro
 	// Compare-Detail-Seite (kein Singleton!), analog tripSaveCtl in
 	// routes/trips/[id]/+page.svelte:22. Wird an CompareDetail/CompareTabs
-	// durchgereicht und dort manuell (nicht via schedule()) getrieben.
-	const hubSaveCtl = createSaveStatus();
+	// durchgereicht. Die meisten Commit-Handler (Orte/Wertebereiche/Versand/
+	// Aktiv-Status) treiben ihn weiterhin manuell (nicht via schedule()); der
+	// Alarme-Reiter speichert seit Issue #2276 S2 selbst ueber
+	// saveController.schedule() (analog dem Trip-Zweig), siehe
+	// shared/alarmeVergleichSpeicherung.ts.
+	// Issue #2276 S2: mit Kennung — ein 412 wird zu „Nochmal speichern“ (conflict).
+	const hubSaveCtl = createSaveStatus({ typ: 'vergleich', id: data.preset.id });
 
 	// Issue #2316 Scheibe A (AC-9): derselbe Speicher-Wächter wie /trips/[id] —
 	// vorher hatte der Hub gar keinen beforeNavigate-Wächter, eine getippte,
