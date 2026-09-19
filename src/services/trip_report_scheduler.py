@@ -2312,21 +2312,24 @@ class TripReportSchedulerService:
         from providers.openmeteo import OpenMeteoProvider
         from app.config import Location
 
-        if not weather_data or not trip.stages:
+        if not weather_data:
             return
 
-        # 1. Last waypoint of last non-empty stage (Issue #805: pause stages have 0 waypoints)
-        last_wp = next(
-            (s.last_waypoint for s in reversed(trip.stages) if s.waypoints),
-            None,
-        )
-        if last_wp is None:
+        # 1. Issue #1983 AC-11: Anker ist der letzte Wegpunkt (end_point) des
+        # LETZTEN Segments aus dem UEBERGEBENEN `weather_data` -- nicht mehr
+        # der letzte Wegpunkt der gesamten Tour (`trip.stages[-1]`). Alle drei
+        # Aufrufer uebergeben bereits eine etappen-spezifische Liste; der
+        # Anker war bisher der einzige Teil, der das ignorierte (Spec
+        # "Architektur-Befund").
+        last_segment = weather_data[-1].segment
+        if last_segment is None:
             return
+        end_point = last_segment.end_point
         location = Location(
-            latitude=last_wp.lat,
-            longitude=last_wp.lon,
-            name=last_wp.name or "Ziel",
-            elevation_m=last_wp.elevation_m,
+            latitude=end_point.lat,
+            longitude=end_point.lon,
+            name="Etappenziel",
+            elevation_m=end_point.elevation_m,
         )
 
         # 2. Derive time range from weather_data
@@ -2352,7 +2355,7 @@ class TripReportSchedulerService:
 
         # 4. Timestamp-normalised lookup (mirrors openmeteo.py:770-787)
         now_utc = datetime.now(timezone.utc)
-        spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+        spreads_naive: Dict[datetime, "EnsembleHourStats"] = {}
         for k, v in spreads.items():
             k_naive = k.replace(tzinfo=None) if k.tzinfo is not None else k
             spreads_naive[k_naive] = v
@@ -2362,15 +2365,29 @@ class TripReportSchedulerService:
     def _apply_ensemble_spreads(
         self,
         weather_data: List[SegmentWeatherData],
-        spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]],
+        spreads_naive: Dict[datetime, "EnsembleHourStats"],
         now_utc: datetime,
     ) -> None:
         """Propagate pre-computed ensemble spreads onto DataPoints and set confidence_pct_min.
 
         No API call — works exclusively on provided data. Extracted from
         _enrich_ensemble_for_trip() to allow direct testing without a live provider.
+
+        Issue #1983 (Gewitter S6): setzt zusaetzlich `dp.thunder_probability_pct`
+        und wendet die Modelllauf-Mehrheit an -- Anhebung auf HIGH ab
+        `MODELLLAUF_ANHEBUNG_MIN_PCT`, Ein-Stufen-Daempfung unter
+        `MODELLLAUF_DAEMPFUNG_MAX_PCT` (AUSSER ein bereits radar-bestaetigter
+        Punkt, Sicherheits-Invariante "Beobachtung schlaegt Modell", Spec
+        Abschnitt "Sicherheits-Invariante").
         """
         from providers.openmeteo import compute_confidence_pct
+        from app.thunder_scale import (
+            MODELLLAUF_ANHEBUNG_MIN_PCT,
+            MODELLLAUF_DAEMPFUNG_MAX_PCT,
+            dampen_thunder_level_by_one_step,
+            elevate_thunder_level_by_modelllauf,
+        )
+        from app.models import ThunderLevel
 
         # 5. Propagate confidence onto every DataPoint of every segment
         for weather_item in weather_data:
@@ -2382,16 +2399,39 @@ class TripReportSchedulerService:
             if weather_item.timeseries is not None:
                 for dp in weather_item.timeseries.data:
                     dp_ts_naive = dp.ts.replace(tzinfo=None) if dp.ts.tzinfo else dp.ts
-                    spread = spreads_naive.get(dp_ts_naive)
-                    if spread is None:
+                    stats = spreads_naive.get(dp_ts_naive)
+                    if stats is None:
                         continue
-                    s_t, s_p = spread
+                    s_t = stats.spread_t2m_k
+                    s_p = stats.spread_precip_mm
                     dp.spread_t2m_k = s_t
                     dp.spread_precip_mm = s_p
                     if s_t is not None and s_p is not None:
                         dp_ts_utc = dp.ts if dp.ts.tzinfo else dp.ts.replace(tzinfo=timezone.utc)
                         lead_h = max(0.0, (dp_ts_utc - now_utc).total_seconds() / 3600.0)
                         dp.confidence_pct = compute_confidence_pct(s_t, s_p, lead_h)
+
+                    share_pct = stats.thunder_member_share_pct
+                    if share_pct is None:
+                        continue
+                    # AC-2..AC-9: das rohe Feld wird IMMER gesetzt, unabhaengig
+                    # von Anhebung/Daempfung/neutral (Spec Anwendung Punkt 1).
+                    dp.thunder_probability_pct = share_pct
+                    if share_pct >= MODELLLAUF_ANHEBUNG_MIN_PCT:
+                        dp.thunder_level, dp.thunder_level_signals = (
+                            elevate_thunder_level_by_modelllauf(
+                                dp.thunder_level, dp.thunder_level_signals
+                            )
+                        )
+                    elif (
+                        share_pct < MODELLLAUF_DAEMPFUNG_MAX_PCT
+                        and "radar" not in (dp.thunder_level_signals or [])
+                    ):
+                        gedaempft = dampen_thunder_level_by_one_step(dp.thunder_level)
+                        if gedaempft != dp.thunder_level:
+                            dp.thunder_level = gedaempft
+                            if gedaempft == ThunderLevel.NONE:
+                                dp.thunder_level_signals = None
 
                 # 6a. confidence_pct_min from DataPoints (SegmentWeatherSummary not frozen)
                 valid_conf = [
@@ -2414,9 +2454,11 @@ class TripReportSchedulerService:
                 seg_end.replace(tzinfo=None) if seg_end.tzinfo else seg_end
             )
             spread_confs: List[float] = []
-            for ts_naive, (s_t, s_p) in spreads_naive.items():
+            for ts_naive, stats in spreads_naive.items():
                 if ts_naive < seg_start_naive or ts_naive > seg_end_naive:
                     continue
+                s_t = stats.spread_t2m_k
+                s_p = stats.spread_precip_mm
                 if s_t is None or s_p is None:
                     continue
                 ts_utc = ts_naive.replace(tzinfo=timezone.utc)

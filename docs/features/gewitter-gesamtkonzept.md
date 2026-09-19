@@ -71,6 +71,17 @@ tragfähige Quelle.** Alle vier Wege wurden live geprüft:
 niemand — das ist eine bewusste Lücke, keine vergessene. Sollte je eine flächige, publizierte
 Quelle auftauchen, ist das Feld `thunder_probability_pct` bereits vorbereitet.
 
+🔴 **Nachtrag 2026-09-19 (ADR-0073, Issue #1983):** Der hier verworfene Weg „Anteil der
+Ensemble-Läufe mit Gewittercode" wurde inzwischen doch verdrahtet — aber **nicht** als die hier
+abgelehnte nutzersichtbare Prozent-Achse, sondern als internes, binäres fünftes
+Fusionssignal `modelllauf` mit weit auseinanderliegenden Schwellen (≥ 60 % hebt, < 10 % dämpft
+die vier anderen Signale um eine Stufe, 10–59 % neutral). Das widerspricht der Messung oben
+nicht: Die 0,04-%-Zahl belegt, dass eine feingranulare Prozentanzeige nicht belastbar ist —
+zwei grobe, weit getrennte Bänder für eine Ja/Nein-Wirkung sind das nicht. `thunder_level`
+bleibt die einzige nutzersichtbare Gewitter-Metrik, `thunder_probability_pct` erscheint
+weiterhin in keinem Renderer als Zahl. Details: Spec
+`docs/specs/modules/feat_1983_gewitter_modelllauf_mehrheit.md`.
+
 ### 2.1b Alle gewitterbezogenen Größen im Überblick
 
 Damit nichts durchs Raster fällt — das Produkt kennt **elf** Größen mit Gewitterbezug:
@@ -142,6 +153,14 @@ eine Stufe und nimmt dann **das schärfste**. Sind alle leer, ist das Ergebnis l
 | 2 | Blitzdichte (Blitze/km²/3 h) | 0,003 / 0,015 / **0,075** | ECMWF-Leitfaden; **0,075 nicht publiziert** |
 | 3 | Blitzpotenzial LPI (J/kg) | 5 / **20** / 50 | DWD/Copernicus; **20 interpoliert** ⇒ ersetzbar durch 1/30/50, s. 3.5b |
 | 4 | CAPE (J/kg) | ≥ 1000 → nur „leicht", **deckelt** | Katalog-Risikoschwelle |
+
+🔴 **Nachtrag 2026-09-19 (ADR-0073, Issue #1983):** Ein fünftes Signal `modelllauf` ist
+dazugekommen — Anteil der Open-Meteo-Ensemble-Member mit Gewittercode. Es fällt aus dem
+Tabellenraster oben heraus, weil es nicht dieselbe leicht/mittel/hoch-Übersetzung hat: es hebt
+ausschließlich auf `HIGH` (≥ 60 % Member-Anteil) und ist zugleich das **erste** Signal, das die
+übrigen vier nachträglich dämpfen darf (< 10 % ⇒ eine Stufe runter, nie unter `NONE`, außer bei
+Radar-Bestätigung). Details: ADR-0073, Spec
+`docs/specs/modules/feat_1983_gewitter_modelllauf_mehrheit.md`.
 
 ### 3.2 Die Annahmen darin — offen ausgesprochen
 

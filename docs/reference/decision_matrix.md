@@ -166,9 +166,13 @@ Gewitter erwartet"). Kanonische Quellen sind ausschließlich `thunder_ordinal()`
 `thunder_label_value()` und `THUNDER_LABEL_DE` (`output/metric_format.py`), für den
 Ortsvergleich-Editor `compare_metric_catalog.py::ordinalLabels`. Wächter dagegen: #1480.
 
-**Zweite Achse, vorbereitet:** `thunder_probability_pct` (Wahrscheinlichkeit, 0–100 %)
-liegt im Datenmodell, ist aber von **keiner** Quelle befüllt — kein Dienst liefert sie
-fertig, ableitbar allein aus dem Open-Meteo-Ensemble (#1419 S6, Kontingent #1329).
+**Zweite Achse, seit #1983 intern befüllt, weiterhin kein Nutzer-Renderer:**
+`thunder_probability_pct` (0–100 %) liegt im Datenmodell und wird im Trip-Briefing-Pfad seit
+Issue #1983 (2026-09-19, ADR-0073) aus dem Open-Meteo-Ensemble befüllt (Anteil der Member mit
+Gewittercode). Sie erscheint aber **weiterhin in keiner Ausgabe als Zahl** — der Wert wirkt nur
+als fünftes Fusionssignal `modelllauf` auf `thunder_level` (≥ 60 % hebt, < 10 % dämpft die
+übrigen vier Signale um eine Stufe). Details: ADR-0073, Spec
+`docs/specs/modules/feat_1983_gewitter_modelllauf_mehrheit.md`.
 
 ## Gewitter-Zuständigkeit: eigene Tabelle, getrennt von der Grundvorhersage (#1457 S2a)
 
