@@ -1,6 +1,6 @@
 # Mobile-Shell: schwebende Tabbar, kein fixer Balken oben
 
-**Status:** Konzept, PO-Entscheid offen (Fragen am Ende) · **Soll-Bild:** Design-Canvas „Gregor Mobile Shell" (claude.ai, Artboards *Übersicht*, *Unterseite*, *Konto-Sheet*, *TabBar*) · **Scheibe S1 (Tabbar) ist umgesetzt**, S2–S4 sind Vorschlag.
+**Status:** Konzept, PO-Entscheide vom 2026-09-19 eingearbeitet (§8) · **Soll-Bild:** Design-Canvas „Gregor Mobile Shell" (claude.ai, Artboards *Übersicht*, *Unterseite*, *Konto-Sheet*, *TabBar*) · **Scheibe S1 (Tabbar) ist umgesetzt**, S2–S4 sind Vorschlag.
 
 ## 1. Ausgangslage
 
@@ -18,7 +18,7 @@ Den `topAppBarStore` füllen nur zwei Seiten: die Vergleichs-Liste (Titel + „N
 
 1. **Kein fixer Balken oben.** Der Inhalt beginnt unter der Statusleiste (`env(safe-area-inset-top)`), die Papierfläche läuft bis an den Bildschirmrand.
 2. **Schwebende Glas-Tabbar** (iOS-27-Stil): 16 px Rand, 6 px über der Home-Indicator-Zone, Kapsel mit Blur (86 % Deckung — Lesbarkeit vor Glas), vier gleich breite Ziele, Aktiv-Kapsel in Akzent-Tint. *(umgesetzt, S1)*
-3. **Konto-Kreis** rechts neben der Tabbar (User-Badge mit Initialen, roter Punkt bei ungelesenen Benachrichtigungen). Tippen öffnet das **Konto-Sheet** von unten.
+3. **Konto-Kreis** rechts neben der Tabbar (User-Badge mit Initialen). Tippen öffnet das **Konto-Sheet** von unten.
 4. **Rücksprung im Inhalt**: Unterseiten zeigen oberhalb des `<PageHeader>` einen Rücksprung-Link (Mono-Caps, 36 px Touch-Ziel). Browser-Back und iOS-Swipe-Back funktionieren wie bisher.
 
 ## 2a. Leitplanken (PO, 2026-09-19)
@@ -33,8 +33,8 @@ Den `topAppBarStore` füllen nur zwei Seiten: die Vergleichs-Liste (Titel + „N
 |---|---|---|
 | Wordmark | Erste Zeile der **Übersicht** (nur dort), rechts daneben das Datum als Mono-Caption | Marke einmal pro Sitzung, nicht auf jedem Screen |
 | Seitentitel / Eyebrow (Store) | `<PageHeader>` der Seite — den gibt es schon | Store und Doppelpflege entfallen (AP-011: Page-Header nur via `<PageHeader>`) |
-| Hamburger → Drawer | **Konto-Kreis** → **Konto-Sheet**: Benachrichtigungen · Kanäle & Empfänger · Konto/Einstellungen · System-Status · Dark-Mode · Datenexport · Abmelden | Charter §2: Konto **nur** über User-Badge. Der Drawer duplizierte die Tabbar (E2E `mobile-bottom-nav` AC-4 verlangt das ohnehin nicht) |
-| Glocke (disabled) | Roter Punkt am Konto-Kreis + Zeile „Benachrichtigungen" im Sheet | Heute ohne Funktion — kein Verlust, aber ein klarer Ort, sobald #1701-Alarme einen Posteingang bekommen |
+| Hamburger → Drawer | **Konto-Kreis** → **Konto-Sheet**: Kanäle & Empfänger · Konto/Einstellungen · System-Status · Dunkles Design · Datenexport · Abmelden | Charter §2: Konto **nur** über User-Badge. Der Drawer duplizierte die Tabbar (E2E `mobile-bottom-nav` AC-4 verlangt das ohnehin nicht) |
+| Glocke (disabled) | entfällt ersatzlos | Heute ohne Funktion. Sobald #1701-Alarme einen Posteingang bekommen, ist der Konto-Kreis (Punkt) + eine Sheet-Zeile der vorgesehene Ort |
 | Plus → `/trips/new` | entfällt; Primäraktion steht im Page-Header | AP-004 (genau eine Primäraktion), AP-012 (kein zweiter Einstieg) |
 | „Neuer Vergleich" (Compare-Liste, Rechts-Slot) | Rechts-Slot des `<PageHeader>` | dasselbe Muster wie Übersicht |
 | „Aktivieren" (`CompareNewEditor`) | Sticky-Footer des Editors (wie Trip-Editor: geteilter Baustein, `context="vergleich"`) | Trip/Vergleich-Code-Teilung |
@@ -52,7 +52,7 @@ Nein, aber die Charter muss das sagen. AP-012 verbietet den **Primäraktions**-F
 Heute konsumiert nichts `env(safe-area-inset-top)` — der 56-px-Balken hat das verdeckt. Ohne Balken:
 
 - `main.mobile-scroll-pad`: `padding-top: calc(env(safe-area-inset-top) + var(--g-s-3))` statt `56px`.
-- `app.html`: `apple-mobile-web-app-status-bar-style` von `default` auf `black-translucent`, damit die Papierfläche unter der Statusleiste durchläuft (`theme-color` bleibt `#f6f4ee`; Statusleisten-Text ist dann hell — auf Papier schlecht lesbar → siehe Frage 3).
+- `app.html`: `apple-mobile-web-app-status-bar-style` bleibt `default` (PO-Entscheid): iOS zeichnet die Statusleiste selbst in `theme-color` `#f6f4ee` mit dunkler Schrift, die Seite beginnt direkt darunter. Kein Papier unter der Statusleiste, kein heller Statusleisten-Text.
 - Sheet/Editor-Konstanten, die 56 px annehmen: `EditStagesPanelNew.svelte` (`TOP_APP_BAR_PX`), `mobile/Sheet.svelte` (`56px` collapsed), `ProfileSheetEmbedded.svelte` (`100dvh - 56px`), `compare/[id]/+page.svelte:406` (handgebaute Leiste „analog TopAppBar").
 
 ## 6. Betroffene Tests
@@ -73,16 +73,17 @@ Heute konsumiert nichts `env(safe-area-inset-top)` — der 56-px-Balken hat das 
 | Scheibe | Inhalt | LoC (grob) |
 |---|---|---|
 | **S1 — Tabbar** *(erledigt)* | `BottomNav.svelte` schwebend/Glas, `--g-nav-*` Tokens, `.mobile-scroll-pad`, Toast-/SaveIndicator-Anker auf `--g-nav-clearance`, `EditStagesPanelNew` 64→70, Doku, E2E | ~150 |
-| **S2 — Konto-Kreis + Sheet** | Konto-Kreis neben der Tabbar, `KontoSheet` aus `mobile/Sheet.svelte` (Konto · System-Status · Dark-Mode · Abmelden · Benachrichtigungen-Zeile ohne Funktion), Hamburger + Glocke aus dem Balken raus, Drawer löschen, E2E AC-4 umschreiben | ~200 |
-| **S3 — Balken weg** | `TopAppBar` + `topAppBarStore` löschen, Wordmark + Datum in die Übersicht, `<PageHeader back>` in `CompareNewEditor`/Compare-Liste, Safe-Area oben, `#gz-stand`-Sonderregel raus, 56-px-Konstanten, Tests aus §6 | ~250 (→ `loc_limit_override 500`) |
-| **S4 — Charter/Katalog** | CHARTER §2, AP-012-Ergänzung, COMPONENTS.md (`TopAppBar`/`Drawer` raus, `BottomNav` + `KontoSheet` neu), `SCREENS.json` | Doku |
+| **S2 — Konto-Kreis + Sheet + Balken weg** (ein Zug, PO-Entscheid) | Konto-Kreis neben der Tabbar, `KontoSheet` aus `mobile/Sheet.svelte` (Konto · System-Status · Dunkles Design · Datenexport · Abmelden — keine Benachrichtigungen-Zeile), Drawer + `TopAppBar` + `topAppBarStore` löschen, Wordmark + Datum in die Übersicht, `<PageHeader back>` in `CompareNewEditor`/Compare-Liste, Safe-Area oben, `#gz-stand`-Sonderregel raus, 56-px-Konstanten, Tests aus §6 | ~400 (→ `loc_limit_override 500`) |
+| **S3 — Charter/Katalog** | CHARTER §2, AP-012-Ergänzung, COMPONENTS.md (`TopAppBar`/`Drawer` raus, `BottomNav` + `KontoSheet` neu), `SCREENS.json` | Doku |
 
-Jede Scheibe ist für sich deploybar; S2 kann vor S3 live gehen, weil der Balken bis S3 bestehen bleibt (dann nur mit Wordmark).
+S2 ist bewusst ein Zug: Konto-Kreis und Balken-Abbau hängen am selben Layout, ein Zwischenstand mit beidem wäre doppelte Navigation.
 
-## 8. Offene Fragen an den PO
+## 8. PO-Entscheidungen (2026-09-19)
 
-1. **Konto-Kreis neben der Tabbar oder fünftes Ziel in der Leiste?** Vorschlag: daneben (Charter: „genau 4 Bereiche", Konto ist kein Bereich).
-2. **Benachrichtigungen:** Die Glocke ist heute tot. Soll die Zeile im Konto-Sheet bis zu einem echten Posteingang (#1701) ganz entfallen, oder als Platzhalter mit „Keine neuen" stehen?
-3. **Statusleiste:** `black-translucent` gibt hellen Statusleisten-Text auf hellem Papier. Alternative: oben eine 44-px-Papierfläche stehen lassen (kein Balken, nur Farbe) und `default` behalten. Vorschlag: `default` behalten, Papier beginnt unter der Statusleiste.
-4. **Dark-Mode-Schalter:** heute im Drawer. Ins Konto-Sheet (Vorschlag) oder auf die Konto-Seite?
-5. **Reihenfolge:** S2 vor S3 (sichtbarer Nutzen früh, Balken vorerst nur Wordmark) — oder S3 in einem Zug?
+| Frage | Entscheidung |
+|---|---|
+| Konto-Kreis neben der Tabbar oder fünftes Ziel? | **Neben der Tabbar.** Charter §2 bleibt bei genau vier Bereichen. |
+| Benachrichtigungen im Konto-Sheet? | **Weglassen.** Kein Platzhalter, bis ein echter Posteingang existiert (#1701). |
+| Statusleiste (Systemzeile mit Uhrzeit, Empfang, Akku) | **Standard behalten.** Seite beginnt direkt unter der Statusleiste; kein Papier darunter, keine helle Systemschrift. |
+| Dunkles Design | **Ins Konto-Sheet** (ein Tipp weniger als über die Konto-Seite). |
+| Reihenfolge | **Konto-Kreis, Sheet und Balken-Abbau in einem Zug** (Scheibe S2). |
