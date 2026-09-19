@@ -121,8 +121,8 @@ describe('AC-12 (Kern): baueWetterMetrikenNutzlast — Voll-Spread, nur die zehn
 		const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
 
 		assertNurWetterMetrikenFelderGeaendert(preset, body as unknown as Record<string, unknown>);
-		assert.equal((body as Record<string, unknown>).day_window_start_hour, 6);
-		assert.equal((body as Record<string, unknown>).day_window_end_hour, 21);
+		assert.equal((body as unknown as Record<string, unknown>).day_window_start_hour, 6);
+		assert.equal((body as unknown as Record<string, unknown>).day_window_end_hour, 21);
 		assert.deepEqual((dc(body).metric_alert_levels as Record<string, unknown>), { wind_max_kmh: 'standard' });
 	});
 });

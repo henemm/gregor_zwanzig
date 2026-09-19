@@ -126,8 +126,12 @@ jobs:
     env:
       # Abgesenkt 2026-08-04 (#1196): 70/171 -> 36/141 nach Typ-Drift-Bereinigung
       # der Compare-Editor-Tests + Entfernung toter CSS-Regeln in CompareTabs.
+      # Abgesenkt 2026-09-19 (#2276 S4): 141 -> 132 Warnings (Wegfall der zwei
+      # historischen Wrapper-Divs im Wetter-Metriken-Reiter, Errors unveraendert
+      # bei 36 — die zwei neuen Kern-Test-Fehler kamen von einem fehlenden
+      # `as unknown as`-Bruecken-Cast, gefixt statt die Baseline anzuheben).
       BASELINE_ERRORS: 36
-      BASELINE_WARNINGS: 141
+      BASELINE_WARNINGS: 132
     defaults:
       run:
         working-directory: frontend

@@ -103,7 +103,7 @@ async function oeffneWetterMetriken(page: Page, id: string) {
 	await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 	const tab = page.locator('[data-testid="weather-metrics-tab-vergleich"]:visible');
 	await expect(tab).toBeVisible({ timeout: 10_000 });
-	await expect(tab.locator('[data-testid="weather-metrics-vergleich-row-snow_depth_cm"]')).toBeVisible({
+	await expect(tab.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"]')).toBeVisible({
 		timeout: 10_000
 	});
 	return tab;
@@ -132,7 +132,7 @@ test.describe('Issue #2276 S4: Reiter „Wetter-Metriken" im Vergleich speichert
 		expect(puts.length, 'Vorbedingung: das Öffnen des Reiters speichert nichts').toBe(0);
 
 		await tab
-			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth_cm"] input[type="checkbox"]')
+			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]')
 			.click();
 
 		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
@@ -156,7 +156,7 @@ test.describe('Issue #2276 S4: Reiter „Wetter-Metriken" im Vergleich speichert
 
 		// Domäne A: Metrikauswahl (Wetter-Metriken)
 		await tab
-			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth_cm"] input[type="checkbox"]')
+			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]')
 			.click();
 		// Domäne B: Stundenverlauf-Schalter (Layout) — im selben Entprell-Fenster, ohne await auf Speichern
 		await tab.locator('[data-testid="compare-layout-hourly-enabled-toggle"]').click();
@@ -200,7 +200,7 @@ test.describe('Issue #2276 S4: Reiter „Wetter-Metriken" im Vergleich speichert
 		const tab = await oeffneWetterMetriken(page, id);
 
 		await tab
-			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth_cm"] input[type="checkbox"]')
+			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]')
 			.click();
 		// sofort, innerhalb des Entprell-Fensters, den Reiter wechseln
 		await page.locator('[data-testid="compare-detail-tab-alarme"]:visible').click();
@@ -236,7 +236,7 @@ test.describe('Issue #2276 S4: Reiter „Wetter-Metriken" im Vergleich speichert
 
 		// GIVEN: eigene erste Änderung gespeichert — die Seite kennt jetzt den ETag (#2375)
 		await tab
-			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth_cm"] input[type="checkbox"]')
+			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]')
 			.click();
 		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
@@ -277,7 +277,7 @@ test.describe('Issue #2276 S4: Reiter „Wetter-Metriken" im Vergleich speichert
 		const tab = await oeffneWetterMetriken(page, id);
 
 		await tab
-			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth_cm"] input[type="checkbox"]')
+			.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]')
 			.click();
 		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
