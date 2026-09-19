@@ -766,8 +766,14 @@ aufrufenden Speicher-Takt weiter, statt ihn selbst zu schlucken — sonst hätte
 fälschlich „gespeichert" gemeldet. Seit #2276 S3 lebt diese Funktion in
 `shared/corridor-editor/wertebereicheVergleichSpeicherung.ts` (Nachfolger des inzwischen
 gelöschten `compare/korridorCommit.ts`); die `init`-Weiterreichung (Keepalive) blieb beim Umzug
-erhalten. Details: `docs/specs/modules/speicherung_beim_neuladen.md` und
-`docs/specs/modules/rework_2276_s3_wertebereiche.md`.
+erhalten. Seit #2276 S4 gilt dasselbe für den Wetter-Metriken/Layout-Reiter: die vormals zwei
+getrennten Commit-Funktionen (`handleWetterMetrikenCommit`/`handleLayoutCommit`) sind zu einer
+kombinierten Orchestrierung `erstelleWetterMetrikenVergleichSpeicherung()` in
+`shared/weather-metrics-tab/weatherMetricsCompareSave.ts` zusammengeführt (ein Snapshot über
+beide Domänen, ein `schedule()`-Aufruf pro Geste); die `init`-Weiterreichung bleibt erhalten.
+Details: `docs/specs/modules/speicherung_beim_neuladen.md`,
+`docs/specs/modules/rework_2276_s3_wertebereiche.md` und
+`docs/specs/modules/rework_2276_s4_wetter_metriken.md`.
 
 #### Design-System Lauf B (Issues #143, #144, #146)
 

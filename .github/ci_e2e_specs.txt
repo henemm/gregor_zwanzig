@@ -168,6 +168,15 @@
 # VERMESSUNGSMODUS (ci.yml) grept den Pfad jedoch pauschal und wuerde die Datei
 # dort nicht auffuehren.
 #
+# Aufnahme 2026-09-19 (#2276 S4): compare-wetter-metriken-speichert-selbst.spec.ts
+# — analog S2/S3-Praezedenz (compare-alarme-speichert-selbst.spec.ts,
+# compare-wertebereiche-speichert-selbst.spec.ts) wird NUR die eine neue,
+# eigene Spec dieser Scheibe geratscht (Scope-Disziplin, Spec § Known
+# Limitations). Die fuenf begleitenden, bereits bestehenden Compare-E2E-
+# Specs (compare-metric-order, compare-hourly-metric-order,
+# compare-layout-tab-dissolution, compare-hub-fidelity-s8c,
+# compare-editor-fidelity-s8d) bleiben bewusst aussen vor.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -184,6 +193,7 @@ e2e/compare-hub-inline-edit.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
 e2e/compare-wertebereiche-speichert-selbst.spec.ts
+e2e/compare-wetter-metriken-speichert-selbst.spec.ts
 e2e/design-compliance-group-a.spec.ts
 e2e/design-system-lauf-a.spec.ts
 e2e/dnd-helper-finalize-wait.spec.ts
