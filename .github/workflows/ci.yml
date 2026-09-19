@@ -274,8 +274,8 @@ jobs:
       # bug-703 selbst haengt an KEINEM Vorlauf (sein Kopfkommentar fordert
       # nur AC-3 vor AC-2 INNERHALB der Datei, per test.describe.serial) --
       # er muss nur ZULETZT laufen.
-      E2E_MIN_SPECS: 51     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test). 51 = 48 + mobile-bottom-nav-floating (Mobile-Shell S1) + mobile-konto-sheet (S2) + compare-alarme-speichert-selbst (#2276 S2)
-      E2E_MIN_EXECUTED_HAUPT: 255      # Hauptlauf: 50 Dateien + global.setup -- exakt belegt, kein Puffer. 255 = 252 (Stand Mobile-Shell S1+S2: 241 + 5 + 6) + 3 (compare-alarme-speichert-selbst, #2276 S2), per `npx playwright test --list` ueber die Positivliste gemessen 2026-09-19. #2276 S2 lokal gegen den isolierten Stack 3 Zyklen gruen (docs/artifacts/rework-2276-s2-alarme/e2e-output.txt).
+      E2E_MIN_SPECS: 52     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test). 52 = 48 + mobile-bottom-nav-floating (Mobile-Shell S1) + mobile-konto-sheet (S2) + compare-alarme-speichert-selbst (#2276 S2) + systemhinweise-unter-konto-sheet (#2370)
+      E2E_MIN_EXECUTED_HAUPT: 261      # Hauptlauf: 51 Dateien + global.setup -- exakt belegt, kein Puffer. 261 = 255 (Stand #2276 S2: 252 + 3) + 6 (systemhinweise-unter-konto-sheet, #2370: 4 Faelle + AC-2 x2 Viewports), per `npx playwright test --list` ueber die Positivliste gemessen 2026-09-19. #2276 S2 lokal gegen den isolierten Stack 3 Zyklen gruen (docs/artifacts/rework-2276-s2-alarme/e2e-output.txt).
       E2E_MIN_EXECUTED_PWA: 61         # Zweitlauf: 60 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu; Issue #2317: +1 Fall AC-6 dort, statisch aus --list abgeleitet) + global.setup -- kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
