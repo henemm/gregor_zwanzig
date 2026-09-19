@@ -210,7 +210,7 @@ def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = Que
 
 
 @router.post("/trips/{trip_id}/send")
-def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: str = "evening"):
+def send_test_trip_report(trip_id: str, user_id: str = Query(...), report_type: str = "evening"):
     """Test-Versand für einen spezifischen Trip. Issue #695."""
     from app.config import Settings
     from app.loader import load_all_trips
@@ -296,7 +296,7 @@ def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: s
 
 
 @router.post("/compare-presets/{preset_id}/send")
-def manual_send_compare_preset(preset_id: str, user_id: str = Query("default")):
+def manual_send_compare_preset(preset_id: str, user_id: str = Query(...)):
     """Einzelversand-Trigger fuer ein Compare-Preset. Issue #627.
 
     Ignoriert schedule — sendet sofort, egal ob daily/weekly/manual.

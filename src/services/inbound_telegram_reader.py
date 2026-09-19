@@ -187,7 +187,7 @@ class InboundTelegramReader:
         # #1019: unbekannter Absender (kein User-Match) erhaelt Registrierungs-Hinweis,
         # KEINE Trip-/Wetterdaten. Betreiber-Account faellt hier nie hinein, da
         # `henning` regulaer per telegram_chat_id registriert ist.
-        if user_id == "default":
+        if user_id is None:
             host = _bare_public_host(settings)
             mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
@@ -380,7 +380,7 @@ class InboundTelegramReader:
             # Button-Klick nur den Registrierungs-Hinweis, KEINE Trip-/Wetter-
             # daten. Die angeklickte Nachricht wird in-place ersetzt;
             # answer_telegram_callback_query laeuft weiterhin im finally.
-            if user_id == "default":
+            if user_id is None:
                 if message_id is not None and chat_id:
                     host = _bare_public_host(settings)
                     self._notification_service.edit_telegram_message_text(
@@ -459,7 +459,7 @@ class InboundTelegramReader:
 
     def _resolve_user_for_chat(
         self, chat_id: str, base_settings: Settings, data_dir: str | None = None
-    ) -> tuple[str, Settings]:
+    ) -> tuple[str | None, Settings]:
         """Resolve user_id and user-scoped Settings for an incoming Telegram chat ID.
 
         Args:
@@ -468,12 +468,16 @@ class InboundTelegramReader:
             data_dir: Root data directory (default: get_data_root())
 
         Returns:
-            (user_id, user_scoped_settings) — user_id is "default" if no match
+            (user_id, user_scoped_settings) — user_id is None if no match
+            (#2151: kein stiller Rueckfall auf "default"; ein echtes Konto
+            "default" mit verknuepftem Chat gilt als bekannt)
         """
         from app.loader import get_data_root, lookup_user_by_telegram_chat_id
         if data_dir is None:
             data_dir = str(get_data_root())
-        user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir) or "default"
+        user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir)
+        if user_id is None:
+            return None, base_settings
         return user_id, base_settings.with_user_profile(user_id)
 
     def _process_start_command(self, token: str, chat_id: str, settings: Settings) -> bool:
