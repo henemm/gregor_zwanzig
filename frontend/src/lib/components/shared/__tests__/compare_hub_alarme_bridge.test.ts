@@ -36,19 +36,20 @@
 //
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
-//     src/lib/components/compare/__tests__/compare_hub_alarme_bridge.test.ts
+//     src/lib/components/shared/__tests__/compare_hub_alarme_bridge.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { ComparePreset } from '../../../types.ts';
+// Issue #2276 S2: Speicherpfad-Helfer zogen nach shared/alarmeVergleichSpeicherung.ts;
+// Hydration und Hub-Payload-Bau bleiben in der Compare-Klebeschicht.
+import { hydrateAlarmFieldsFromPreset, buildHubPutPayload } from '../../compare/compareHubWizardBridge.ts';
 import {
-	hydrateAlarmFieldsFromPreset,
 	flushPendingAlarmSave,
-	buildHubPutPayload,
 	rollbackAlarmSnapshot,
 	type AlarmSnapshot
-} from '../compareHubWizardBridge.ts';
+} from '../alarmeVergleichSpeicherung.ts';
 
 function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	return {

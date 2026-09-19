@@ -174,6 +174,7 @@ e2e/alert-table-mobile-visibility.spec.ts
 e2e/bug-274-safe-area-insets.spec.ts
 e2e/bug-703-login-ratelimit.spec.ts
 e2e/bug-708-stage-delete-confirm.spec.ts
+e2e/compare-alarme-speichert-selbst.spec.ts
 e2e/compare-cross-user-write-block.spec.ts
 e2e/compare-detail-edit-entry.spec.ts
 e2e/compare-editor-autosave-user-isolation.spec.ts

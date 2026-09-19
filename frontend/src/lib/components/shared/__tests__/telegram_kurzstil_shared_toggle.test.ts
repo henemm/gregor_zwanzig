@@ -13,8 +13,9 @@
 // `doc-compliance-test` oben (Ausnahme zur Datei-Grep-Regel). Der eigentliche
 // VERHALTENS-Nachweis fuer AC-11 laeuft:
 //   - fuer den Hub-Alarme-Kurzstil-Pfad: als echter node:test in
-//     compare/__tests__/compare_hub_alarme_bridge.test.ts (#1260-Block,
-//     hydrateAlarmFieldsFromPreset/flushPendingAlarmSave gegen ein Preset-Objekt)
+//     shared/__tests__/compare_hub_alarme_bridge.test.ts (#1260-Block,
+//     hydrateAlarmFieldsFromPreset + flushPendingAlarmSave aus
+//     shared/alarmeVergleichSpeicherung.ts gegen ein Preset-Objekt, #2276 S2)
 //   - fuer den End-to-End-Klickpfad beider Kontexte: in der Staging-E2E
 //     (Playwright, kein jsdom-Mount moeglich — Svelte-5-Komponenten sind ohne
 //     @testing-library/svelte in diesem Setup nicht mountbar).

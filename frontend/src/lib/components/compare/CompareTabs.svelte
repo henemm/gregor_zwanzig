@@ -86,18 +86,16 @@
 		hydrateVersandFieldsFromPreset,
 		flushPendingVersandSave,
 		hydrateAlarmFieldsFromPreset,
-		flushPendingAlarmSave,
-		rollbackAlarmSnapshot,
 		hubActivationBanner,
 		createPutQueue,
 		hydrateLayoutFieldsFromPreset,
 		flushPendingLayoutSave,
 		rollbackLayoutSnapshot,
 		type VersandSnapshot,
-		type AlarmSnapshot,
 		type LayoutSnapshot
 	} from './compareHubWizardBridge.ts';
 	import { baueKorridorCommit } from './korridorCommit.ts';
+	import { sichereAlarmeVorReiterwechsel } from '../shared/alarmeVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
 	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
 
@@ -114,9 +112,12 @@
 		 * erfolgt. Wird nach erfolgreichem PUT mit dem neuen `schedule` aufgerufen. */
 		onScheduleChange?: (schedule: string) => void;
 		/** Epic #1273 S1: geteilter Hub-SaveStatus-Controller (aus der Routen-
-		 * Ebene). Wird von den 5 Commit-Handlern manuell getrieben
-		 * (setSaving/setSaved/setError/markPristine), NICHT via schedule() —
-		 * die Netzwerk-Serialisierung bleibt bei hubPutQueue. */
+		 * Ebene). Orte/Wertebereiche/Versand/Aktiv-Status treiben ihn weiterhin
+		 * manuell (setSaving/setSaved/setError/markPristine), NICHT via
+		 * schedule() — die Netzwerk-Serialisierung bleibt bei hubPutQueue.
+		 * Ausnahme seit Issue #2276 S2: der Alarme-Reiter (`AlarmeTab`) speichert
+		 * selbst ueber saveController.schedule() (analog dem Trip-Zweig), s.
+		 * shared/alarmeVergleichSpeicherung.ts. */
 		saveController?: SaveStatus;
 	}
 
@@ -149,7 +150,10 @@
 		return () => mq.removeEventListener('change', onChange);
 	});
 
-	function handleValueChange(value: string): void {
+	async function handleValueChange(value: string): Promise<void> {
+		// Issue #2276 S2 (AC-6, TripTabs-Muster): eine ausstehende Alarm-Aenderung
+		// vor dem Verlassen des Reiters senden, nicht verlieren.
+		await sichereAlarmeVorReiterwechsel(activeTab, value, saveController);
 		activeTab = value;
 		if (typeof window !== 'undefined') {
 			const url = new URL(window.location.href);
@@ -554,42 +558,14 @@
 
 	// Issue #1258 Scheibe 5 (AC-19, AC-29, H2/H3): eingebetteter AlarmeTab
 	// (context="vergleich") im 7. Hub-Tab — analog Idealwerte-/Versand-Bridge
-	// oben (gleicher `wizardState`/gleiche `currentPreset`-Baseline, eigene
-	// Snapshot-Baseline `lastPersistedAlarmSnapshot`). H3: der Alarme-Tab kann
+	// oben (gleicher `wizardState`/gleiche `currentPreset`-Baseline). Seit
+	// #2276 S2 speichert der Reiter selbst (Baseline + Diff-Gate in
+	// shared/alarmeVergleichSpeicherung.ts). H3: der Alarme-Tab kann
 	// als ERSTER Tab geoeffnet werden (Deep-Link `?tab=alarme`) — der
 	// Hydrations-Effekt hydriert deshalb ALLE Alarm-Felder eigenstaendig ueber
 	// `hydrateAlarmFieldsFromPreset` (statt sich auf einen bereits gelaufenen
 	// idealwerte-/versand-Effekt zu verlassen).
 	let alarmeHydrated = $state(false);
-	let lastPersistedAlarmSnapshot: AlarmSnapshot | null = null;
-
-	function currentAlarmSnapshot(): AlarmSnapshot {
-		return snapshotForRollback({
-			officialAlertsEnabled: wizardState.officialAlertsEnabled,
-			officialWarningsEnabled: wizardState.officialWarningsEnabled,
-			radarAlertEnabled: wizardState.radarAlertEnabled,
-			metricAlertLevels: wizardState.metricAlertLevels,
-			alertCooldownMinutes: wizardState.alertCooldownMinutes,
-			alertQuietFrom: wizardState.alertQuietFrom,
-			alertQuietTo: wizardState.alertQuietTo,
-			// Issue #1260: Kurzstil-Toggle im Snapshot, damit ein reiner
-			// Toggle-Klick (ohne andere Aenderung) als dirty erkannt wird und
-			// handleAlarmeCommit einen PUT ausloest.
-			telegramStyle: wizardState.telegramStyle,
-			// Issue #1461 S3b-2b (Speicher-Bugfix): der Alarme-Reiter zeigt seit
-			// dieser Scheibe den Kanal-Picker (Telegram/SMS-Schalter + Schwelle) —
-			// ohne diese beiden Felder war eine dortige Aenderung weder als
-			// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
-			sendTelegram: wizardState.sendTelegram,
-			sendSms: wizardState.sendSms,
-			// Issue #1745 A: ohne dieses Feld geht ein im Hub gesetzter Haken beim
-			// naechsten Speichern verloren (Snapshot-Diff sieht die Aenderung sonst
-			// nicht, flushPendingAlarmSave sendet sie deshalb nie).
-			sendPremiumSms: wizardState.sendPremiumSms,
-			channelThresholds: wizardState.channelThresholds
-		});
-	}
-
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): derselbe Grund wie beim
 	// Wetter-Metriken-Reiter unten — `hydrateAlarmFieldsFromPreset` hydriert
 	// `activeMetricKeys` mit (#1320, sonst zeigt die Empfindlichkeits-Tabelle
@@ -609,7 +585,6 @@
 		// ueberschrieben wird (H3: eigenstaendige Hydration ALLER Alarm-Felder,
 		// setzt KEINEN vorherigen idealwerte-/versand-Effekt voraus).
 		hydrateAlarmFieldsFromPreset(wizardState, currentPreset, catalog);
-		lastPersistedAlarmSnapshot = currentAlarmSnapshot();
 		alarmeHydrated = true;
 	}
 
@@ -620,62 +595,6 @@
 			alarmeHydrating = false;
 		});
 	});
-
-	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): change/focusout/
-	// click am Wrapper, Muster identisch `handleVersandCommit` (s. dortiger
-	// Kommentar SF-1/F001 zur Bubble-Phase).
-	//
-	// H3 Snapshot-Kreuzeffekte (Adversary-Punkt, Context Zeile 33/49):
-	// `metricAlertLevels` wird auch vom Idealwerte-Snapshot
-	// (`lastPersistedCorridorSnapshot`) und `alertCooldownMinutes`/
-	// `alertQuietFrom/To` auch vom Versand-Snapshot (`lastPersistedVersandSnapshot`)
-	// getrackt — der Alarme-Tab fuehrt (S5) die ERSTE Ueberlappung zwischen
-	// zwei Hub-Snapshots ein. Fuer den ERFOLGS-Pfad unkritisch: jeder
-	// Commit-Handler liest `current` IMMER frisch aus dem gemeinsamen
-	// `wizardState` (nie aus dem stale `before`), ein bereits von einem
-	// Nachbar-Tab persistiertes Feld wird beim naechsten Flush also korrekt
-	// mitgesendet — hoechstens ein redundanter Echo-PUT desselben Werts.
-	//
-	// Fix-Loop 1 (F001, Adversary CRITICAL): der FEHLER-Pfad (Rollback) darf
-	// deshalb NICHT pauschal alle Felder auf `before` zuruecksetzen — sonst
-	// wuerde ein zwischenzeitlicher Nachbar-Tab-Edit an einem geteilten Feld
-	// (z. B. Cooldown im Versand-Tab, waehrend dieser Alarme-PUT noch
-	// in-flight war und dann fehlschlaegt) still verworfen. Diff-basierter
-	// Rollback via `rollbackAlarmSnapshot` (compareHubWizardBridge.ts): pro
-	// Feld nur zuruecksetzen, wenn `wizardState` noch den Wert traegt, den
-	// DIESER gescheiterte Commit gesendet hat (`current`); ein Feld, das ein
-	// Nachbar-Tab seither veraendert hat, bleibt unangetastet.
-	async function handleAlarmeCommit(): Promise<void> {
-		if (!alarmeHydrated) return;
-		// Epic #1273 S1: `failure` trennt No-Op (markPristine) vom Fehler
-		// (setError), s. handleCorridorCommit.
-		let failure: unknown = null;
-		saveController?.setSaving();
-		const updated = await hubPutQueue.enqueue(async () => {
-			const current = currentAlarmSnapshot();
-			const before = lastPersistedAlarmSnapshot ?? current;
-			const payload = flushPendingAlarmSave(currentPreset, current, lastPersistedAlarmSnapshot);
-			if (!payload) return null;
-			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body);
-				lastPersistedAlarmSnapshot = current;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Alarme-Persistenz fehlgeschlagen, Rollback:', e);
-				rollbackAlarmSnapshot(wizardState, before, current);
-				failure = e;
-				return null;
-			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
-		} else {
-			saveController?.markPristine();
-		}
-	}
 
 	// Issue #1311 (C1): eingebetteter WeatherMetricsTab (context="vergleich")
 	// im neuen Hub-Tab "Wetter-Metriken" — analog Alarme-/Versand-Bridge oben.
@@ -998,6 +917,8 @@
 		const isPausing = localSchedule !== 'manual';
 		if (isPausing) previousSchedule = localSchedule;
 		const next = isPausing ? 'manual' : previousSchedule;
+		// Issue #2276 S2: ausstehende Alarm-Aenderung vorab senden (Design Punkt 5).
+		await saveController?.flush();
 		// Epic #1273 S1: einziger der 5 Handler mit try/catch AUSSERHALB des
 		// enqueue-Closures — ein echter Fehler propagiert normal, daher direktes
 		// Wrapping ohne `failure`-Variable.
@@ -1356,7 +1277,7 @@
 				     feuert VOR dem eigenen `onchange` der Checkbox (Klick-Reihenfolge:
 				     click -> change) — der erste Toggle wurde dadurch nie persistiert
 				     (Commit las den noch alten wizardState.activeMetricKeys). Muster
-				     identisch `.hub-versand-wrap`/`.hub-alarme-wrap` (SF-1-Erkenntnis,
+				     identisch `.hub-versand-wrap` (SF-1-Erkenntnis,
 				     s. dortige Kommentare): `onchange` MUSS in der Bubble-Phase laufen,
 				     dort ist die Checkbox-Mutation garantiert bereits abgeschlossen.
 				     Kein <svelte:window onpointerup> noetig (Checkbox-Toggles ohne
@@ -1440,16 +1361,19 @@
 	{#if activeTab === 'alarme'}
 		<div class="tab-panel" data-testid="compare-detail-panel-alarme">
 			{#if alarmeHydrated}
-				<!-- Muster identisch `.hub-versand-wrap` :987-994 (Bubble-Phase,
-				     SF-1-Erkenntnis) — onchange/onfocusout/onclick am Wrapper. -->
-				<div
-					class="hub-alarme-wrap"
-					onchange={handleAlarmeCommit}
-					onfocusout={handleAlarmeCommit}
-					onclick={handleAlarmeCommit}
-				>
-					<AlarmeTab context="vergleich" wiz={wizardState} catalog={alarmeCatalog} />
-				</div>
+				<!-- Issue #2276 S2: der Reiter speichert selbst (saveController,
+				     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. -->
+				<AlarmeTab
+					context="vergleich"
+					wiz={wizardState}
+					catalog={alarmeCatalog}
+					preset={currentPreset}
+					{saveController}
+					enqueueHubWrite={(fn) => hubPutQueue.enqueue(fn)}
+					onCompareUpdate={(updated) => {
+						currentPreset = updated;
+					}}
+				/>
 			{/if}
 		</div>
 	{/if}

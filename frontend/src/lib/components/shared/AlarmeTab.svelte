@@ -19,8 +19,13 @@
 	import { onMount, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import { baueTripSpeicherung } from './tripSpeicherung.ts';
+	// Issue #2276 S2: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import aus compare/, AC-9).
+	import {
+		alarmSnapshotAus,
+		erstelleAlarmeVergleichSpeicherung
+	} from './alarmeVergleichSpeicherung.ts';
 	import { Eyebrow } from '$lib/components/atoms';
-	import type { Trip, AlertMetric, SensLevel } from '$lib/types';
+	import type { Trip, AlertMetric, SensLevel, ComparePreset } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
@@ -80,6 +85,11 @@
 		// Modul-Getter registeredCompareMetricCatalog() ist nicht reaktiv und
 		// wuerde ein $derived nach spaeterem Laden nicht neu rechnen lassen.
 		catalog?: CompareSelectionEntry[];
+		// Issue #2276 S2: der vergleich-Zweig speichert selbst (Hub). Ohne `preset`
+		// oder `saveController` (Anlege-Seite) bleibt der Speicherzweig inaktiv.
+		preset?: ComparePreset;
+		onCompareUpdate?: (updated: ComparePreset) => void;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
 		// beide Kontexte
 		existingChannels?: Partial<AlertChannelState> | null;
 		onChannelToggle?: (kind: ChannelKind) => void;
@@ -105,6 +115,9 @@
 		onMetricLevelChange,
 		wiz,
 		catalog,
+		preset,
+		onCompareUpdate,
+		enqueueHubWrite,
 		existingChannels,
 		onChannelToggle,
 		existingChannelThresholds,
@@ -343,6 +356,31 @@
 		_prevAlarmeJson = currentJson;
 		if (saveController) saveController.schedule(buildAlarmeSaveFn());
 		else void buildAlarmeSaveFn()();
+	});
+
+	// ── Issue #2276 S2: vergleich-Zweig speichert selbst (analog Trip-Zweig) ───
+	// Diff-Gate gegen die zuletzt gespeicherte Baseline, Queue, Basis-Rueckmeldung
+	// und Rollback liegen in alarmeVergleichSpeicherung.ts; der $effect delegiert.
+	// Die Baseline entsteht beim Mount — CompareTabs mountet erst nach der
+	// Hydration. Anlege-Seite (ohne preset/saveController): Zweig inaktiv (AC-7).
+	const vergleichSpeicherung = untrack(() =>
+		context === 'vergleich' && wiz && preset && saveController
+			? erstelleAlarmeVergleichSpeicherung({
+					client: api,
+					wiz,
+					preset: () => preset!,
+					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
+					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
+					saveController
+				})
+			: null
+	);
+	$effect(() => {
+		if (context !== 'vergleich' || !wiz || !vergleichSpeicherung) return;
+		// Liest alle Alarmfelder (Abhaengigkeiten); das Melden selbst ohne
+		// Tracking, damit Zustandswechsel des Controllers keinen Neulauf ausloesen.
+		alarmSnapshotAus(wiz);
+		untrack(() => vergleichSpeicherung.aenderungMelden());
 	});
 </script>
 
