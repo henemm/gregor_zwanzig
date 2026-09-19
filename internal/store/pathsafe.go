@@ -57,3 +57,15 @@ var ErrInvalidEntityID = errors.New("invalid entity id")
 func ValidEntityID(id string) bool {
 	return ValidEntityIDRe.MatchString(id)
 }
+
+// requireUser verweigert jeden nutzerbezogenen Dateizugriff, solange der
+// Store keine gueltige Nutzer-Kennung traegt (Issue #2151 Scheibe B,
+// ADR-0003): ohne diese Pruefung baute ein Basis-Store mit leerer Kennung
+// Pfade wie users/groups.json statt users/<id>/groups.json — fail-closed statt
+// stillem Rueckfall.
+func (s *Store) requireUser() error {
+	if !ValidUserID(s.UserID) {
+		return ErrInvalidUserID
+	}
+	return nil
+}

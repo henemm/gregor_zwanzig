@@ -129,6 +129,13 @@ diese Spec lediglich einen klarstellenden Kommentar, dass der leere String bewus
 `ValidUserID` läuft (er würde sonst fälschlich als „ungültig" statt als „No-op" behandelt und
 bestehendes Verhalten kippen).
 
+> **Nachtrag (#2151 Scheibe B, 2026-09-19):** `WithUser("")` bleibt exakt dieser No-op — daran
+> ändert sich nichts. Was sich ändert, ist die Prämisse: Der Basis-Store (vor einem `WithUser`-
+> Aufruf) trug bislang eine echte Kennung (`"default"`, aus dem Config-Default). Seit Scheibe B
+> trägt er eine **leere** Kennung, und die dort neu eingeführte zentrale Prüfung `requireUser()`
+> verweigert deshalb jeden nutzerbezogenen Dateizugriff auf diesem Basis-Store. Details:
+> `docs/specs/modules/fix_2151_default_fallbacks_scheibe_b.md`.
+
 ## Expected Behavior
 
 - **Input:** Client-gesetzte Nutzer-Kennung in `username` (Login, Forgot, Reset) bzw. `user`

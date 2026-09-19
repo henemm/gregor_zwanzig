@@ -16,6 +16,9 @@ func (s *Store) LocationsDir() string {
 }
 
 func (s *Store) LoadLocations() ([]model.Location, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	dir := s.LocationsDir()
 
 	entries, err := os.ReadDir(dir)
@@ -59,6 +62,9 @@ func (s *Store) LoadLocations() ([]model.Location, error) {
 }
 
 func (s *Store) LoadLocation(id string) (*model.Location, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
 	if !ValidEntityID(id) {
 		return nil, ErrInvalidEntityID
@@ -82,6 +88,9 @@ func (s *Store) LoadLocation(id string) (*model.Location, error) {
 }
 
 func (s *Store) SaveLocation(loc model.Location) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join. LocationsDir()
 	// liegt wie briefingsDir() zwei Ebenen unter data/users/ — eine Kennung
 	// wie "../../bob/user" schriebe sonst in ein fremdes Nutzerverzeichnis.
@@ -102,6 +111,9 @@ func (s *Store) SaveLocation(loc model.Location) error {
 }
 
 func (s *Store) DeleteLocation(id string) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
 	if !ValidEntityID(id) {
 		return ErrInvalidEntityID

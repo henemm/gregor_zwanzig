@@ -8,8 +8,9 @@
 # laesst, ohne Staging (8091/8001) oder Prod (8090/8000) zu stoeren.
 # GZ_SESSION_SECRET bleibt UNGESETZT (halbseitig gesetzt bricht die
 # Cookie-Signatur). Health-Warteschleifen statt sleep (AC-3).
-# GZ_USER_ID=admin: Go-Default waere "default" (internal/config/config.go),
-# aber global.setup.ts meldet sich als E2E_USER ?? 'admin' an -- ohne diese
+# GZ_USER_ID=admin: Go-Voreinstellung ist leer (internal/config/config.go);
+# ohne GZ_USER_ID wird kein Seed-Konto angelegt (#2151 B). global.setup.ts
+# meldet sich als E2E_USER ?? 'admin' an -- ohne diese
 # Zeile scheitert die Anmeldung im e2e-Job garantiert an 401 (PR-Review
 # #1771 S2, Defekt 1). Variante bewusst HIER statt `E2E_USER=default` in
 # ci.yml: dieses Skript ist bereits die alleinige Quelle fuer den
