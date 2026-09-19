@@ -281,3 +281,49 @@ Aus dem Kontext-Dokument zusätzlich gemessen: Villach `20201`→AT202, Tamsweg
 `gemeindenr` real eine Ganzzahl ist, muss die Implementierung `str(gemeindenr)`
 bilden, bevor sie die ersten drei Zeichen nimmt, sonst wirft `gemeindenr[:3]`
 einen `TypeError`.
+
+---
+
+# Fixtures: MeteoAlarm-Feed Deutschland (Issue #1681)
+
+## `feed_germany_sample.json`
+
+- **Herkunft:** `https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany`
+  (öffentlicher, kontingentfreier CAP-Feed, kein Auth; Inhalt: amtliche
+  DWD-Warnungen).
+- **Aufgezeichnet:** 2026-09-19, ca. 16:50 MESZ (Vollabruf ~5 MB / 254
+  Einträge, davon 39 mit `responseType: ["AllClear"]`, 215 mit
+  `["Prepare"]`). Der Feed führt bereits abgelaufene Einträge der Vortage
+  weiter — die Stichprobe nutzt das: die Bayern-Einträge stammen vom
+  Unwettertag 16.09.2026 und sind zum Test-Referenzzeitpunkt
+  `2026-09-16T15:40:00Z` (17:40 MESZ) gültig.
+- **Auswahl:** 7 reale, unveränderte `warnings[]`-Elemente (Index im
+  Vollabruf in Klammern), ausgewählt für Testabdeckung:
+
+  | # | Index | Art / Stufe | `responseType` | Gültig (MESZ) | Warnzellen (Auszug) | Zweck |
+  |---|---|---|---|---|---|---|
+  | 1 | 108 | STARKREGEN, orange (3; Rain) | Prepare | 16.09. 14:00–23:00 | Garmisch-Partenkirchen `109180000`, Weilheim-Schongau, Ostallgäu, … | orange DE-Warnung für die Kanal-Parität (AC-10) |
+  | 2 | 141 | STARKES GEWITTER, orange (3; Thunderstorm) | Prepare | 16.09. 14:00–15:00 | Landsberg am Lech `109181000` | orange Gewitter DE vs. orange Gewitter IT (AC-10) |
+  | 3 | 211 | GEWITTER, gelb (2; Thunderstorm) | Prepare | 16.09. 17:25–18:30 | Garmisch-Partenkirchen `109180000`, Landsberg, Bad Tölz, Kaufbeuren, … | aktive gelbe Warnung Bayerische Alpen (AC-1, AC-11) |
+  | 4 | 216 | STARKES GEWITTER, orange (3; Thunderstorm) | **AllClear** | 16.09. 16:57–17:47 | Starnberg `109188000`, München `909184999`, Weilheim, … | Aufhebung mit zum Testzeitpunkt noch zukünftigem `expires` (AC-5) |
+  | 5 | 244 | WINDBÖEN, gelb (1; Wind) | Prepare | 19.09. 00:00–20.09. 00:00 | Kreis Cuxhaven – Küste `903352002`, Borkum, … | küstennahe **Kreis**-Zelle (Präfix `9…`) als Positivkontrolle neben der Seezelle (AC-7) |
+  | 6 | 245 | NEBEL, gelb (4; Fog) | Prepare | 19.09. 05:10–08:00 | Altötting, Mühldorf, `909187999` (Kreis und Stadt Rosenheim) | `9…`-Sammelzelle; Grundlage der konstruierten Drift-Kopie im Drift-Wächter (AC-9) |
+  | 7 | 246 | BÖEN, gelb (7; coastalevent) | Prepare | ab 19.09. 05:31, **ohne `expires`** | `501000004` (Elbe von Hamburg bis Cuxhaven) | Küsten-/Seezelle ohne Geometrie (AC-7) |
+
+- **Prüfpunkte (Ray-Cast gegen DWD-Layer `dwd:Warngebiete_Kreise`, 402 Flächen,
+  abgerufen 2026-09-19):** Garmisch-Partenkirchen 47.4921/11.0958 →
+  `109180000`; Lenggries 47.6800/11.5760 → `109173000` (Bad Tölz-Wolfratshausen,
+  nördlich der DPC-Bbox-Grenze 47,5 N); Starnberg 47.9990/11.3400 → `109188000` (einziger Eintrag der
+  Stichprobe für diese Zelle ist die Aufhebung #4); Landsberg 48.0480/10.8830
+  → `109181000`; Peine 52.32/10.23 → `103157000` (kein Eintrag in der
+  Stichprobe ⇒ deutscher Punkt ohne Warnung); Cuxhaven 53.8615/8.6944 →
+  `903352002`; Freilassing 47.8406/12.9767 → `109172000`; Weil am Rhein
+  47.5947/7.6206 → `108336000`. Innsbruck, Salzburg, Basel → kein Treffer.
+- **Drift-Befund der Aufzeichnung:** 290 distinkte `WARNCELLID`s im Vollabruf;
+  alle bis auf die acht Küsten-/Seezellen `501000001…501000008` liegen im
+  Kreis-Layer. Einen echten Drift-Fall enthält die Aufzeichnung daher nicht —
+  der Drift-Wächter-Test konstruiert ihn im Testcode aus einer Kopie von #6
+  (Vorbild `test_dpc_zone_drift.py`), die Fixture selbst bleibt unverändert.
+- **Unverändert:** Jedes ausgewählte `warnings[]`-Element ist eine 1:1-Kopie
+  aus dem Originalabruf (kein Feld umgeschrieben, keine Erfindung), kompakt
+  serialisiert (~140 KB).

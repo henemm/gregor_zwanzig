@@ -745,14 +745,16 @@ sauber gebaut (Abschnitt 6.1).
 
 ## 6. Amtliche Warnungen
 
-Warnungen der Wetterdienste kommen aus sieben registrierten Quellen
-(`official_alerts/__init__.py:36-42`): Vigilance und Meteo-Forêts für Frankreich,
-Massif-Sperrungen, GeoSphere für Österreich, MeteoAlarm-Feeds für Italien und Österreich, DPC
-für Italien. Gewitter erscheint dort als `hazard="thunderstorm"`.
+Warnungen der Wetterdienste kommen aus acht registrierten Quellen
+(`official_alerts/__init__.py:36-47`): Vigilance und Meteo-Forêts für Frankreich,
+Massif-Sperrungen, GeoSphere für Österreich, MeteoAlarm-Feeds für Italien, Österreich und (seit
+#1681) Deutschland, DPC für Italien. Gewitter erscheint dort als `hazard="thunderstorm"`.
 
-🔴 **Für Deutschland ist kein Warndienst registriert.** Der DWD betreibt einen amtlichen
-Warndienst, wir binden ihn nicht an. Wer in Deutschland unterwegs ist, bekommt also
-Gewitterwarnungen der Behörde nicht — anders als in Frankreich, Italien und Österreich.
+✅ **Nachtrag 2026-09-19 (#1681):** Der unten als Rang 10 geplante DWD-Anschluss ist umgesetzt —
+`MeteoAlarmFeedSource("DE")` ist registriert (nach AT, vor DPC), Zonenauflösung über eine
+eingecheckte DWD-Kreisgeometrie (`dwd_zones.py`, 402 Kreise). Wer in Deutschland unterwegs ist,
+bekommt damit dieselben amtlichen Gewitterwarnungen wie bisher schon in Frankreich, Italien und
+Österreich. Details: `docs/specs/modules/feat_1681_meteoalarm_de.md`.
 
 **Für E6 gibt es bereits Tickets — kein neues anlegen** (geprüft 2026-08-08):
 
@@ -965,7 +967,7 @@ blockiert.
 | **7** | ✅ **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max` | EU_REST bekommt eine belegte, publizierte Leiter (Schröder/Göcke/Köhler 2022) statt der Interim-Werte 5/20/50 — die zunächst vorgesehene Eichung über die Historical Forecast API (4.4) war nicht gangbar | ✅ erledigt — **#1678** |
 | **8** | **`sdi_2` einhängen** | Publizierte DWD-Schwelle vorhanden; erst sinnvoll, wenn die Skala geeicht ist | nach Rang 7 |
 | **9** | **Amtliche Warnung + Änderungsalarm zusammenführen** (E5); Radar-Nowcast bleibt eigener Kanal | Unabhängig von der Signalkette | ✅ E5 |
-| **10** | **Deutschland an den Meteoalarm-Feed** — `MeteoAlarmFeedSource("DE")` | Der Weg läuft produktiv für IT/AT und ist kontingentfrei. Offen: Punkt→Zone-Auflösung für DE, und 13,5 MB je Abruf ohne gzip | ✅ E6 |
+| **10** | ✅ **Deutschland an den Meteoalarm-Feed** — `MeteoAlarmFeedSource("DE")` | Der Weg läuft produktiv für IT/AT und ist kontingentfrei; Punkt→Zone-Auflösung über eingecheckte DWD-Kreisgeometrie | ✅ **erledigt** (#1681, Spec `docs/specs/modules/feat_1681_meteoalarm_de.md`) |
 
 **Nicht geplant:** Gewitter-Wahrscheinlichkeit (keine Quelle, Abschnitt 2.1),
 `dbz_cmax`/`echotop` (falsch kalibriert bzw. falsche Größe), Ausfallsichtbarkeit im Radar-Pfad

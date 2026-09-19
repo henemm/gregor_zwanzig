@@ -608,6 +608,10 @@ def _group_and_map_info_entries(entries: list[dict]) -> list[OfficialAlert]:
         type_raw = entry.get("type_raw")
         if not level_raw or not type_raw:
             continue
+        # Issue #1681 (AC-5): eine amtliche Aufhebung ist keine aktive Warnung.
+        # Bewusst eng: nur "AllClear" (IT/AT tragen None/"Monitor").
+        if "AllClear" in (entry.get("response_type") or ()):
+            continue
         key = (type_raw, level_raw, entry.get("onset"), entry.get("expires"), entry.get("area_desc"))
         lang_entry = {"lang": entry.get("lang") or "", "event": entry.get("event"), "headline": entry.get("headline")}
         if key not in groups:
