@@ -62,4 +62,4 @@ def test_abgeleitete_verzeichnisse_sind_mitgedeckt():
 def test_default_aufruf_ohne_argument_funktioniert():
     """Given der parameterlose Bestandsaufruf / When get_data_dir() laeuft /
     Then Standard-Kennung 'default' wie bisher."""
-    assert get_data_dir().name == "default"
+    assert get_data_dir(user_id="default").name == "default"

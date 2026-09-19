@@ -75,7 +75,7 @@ class TestThunderNextDayReferenceByReportType:
         WHEN:  thunder_forecast aus dem Trend abgeleitet wird
         THEN:  fc["+1"]["date"] == (heute + 1 Tag) — morgen, NICHT uebermorgen
         """
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
         target = svc._get_target_date("morning", _zonenloser_trip(), _jetzt())
         # #2314 D2: der Trip hat KEINE Wegpunkte -- es gilt der UTC-Rueckfall
         # (trip_tz, Durchgang 1), nicht der Prozesstag.
@@ -101,7 +101,7 @@ class TestThunderNextDayReferenceByReportType:
         WHEN:  thunder_forecast aus dem Trend abgeleitet wird
         THEN:  fc["+1"]["date"] == (heute + 2 Tage) — uebermorgen
         """
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
         target = svc._get_target_date("evening", _zonenloser_trip(), _jetzt())
         # #2314 D2: der Trip hat KEINE Wegpunkte -- es gilt der UTC-Rueckfall
         # (trip_tz, Durchgang 1), nicht der Prozesstag.
@@ -127,7 +127,7 @@ class TestThunderNextDayReferenceByReportType:
         Tag spaeter als im Morgenbriefing (uebermorgen vs. morgen) — nicht
         gleich, nicht zwei Tage verschoben.
         """
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
         _trip, _now = _zonenloser_trip(), _jetzt()
         morning_target = svc._get_target_date("morning", _trip, _now)
         evening_target = svc._get_target_date("evening", _trip, _now)

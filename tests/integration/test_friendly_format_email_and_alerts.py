@@ -796,7 +796,7 @@ class TestAlertFlowWithSimulatedData:
         """Changes detected across multiple segments."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
 
         cached = [
             _make_segment_weather(segment_id=1,
@@ -824,7 +824,7 @@ class TestAlertFlowWithSimulatedData:
         """
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
 
         changes = [
             WeatherChange(metric="temp_max_c", old_value=15.0, new_value=21.0,
@@ -881,7 +881,7 @@ class TestAlertFlowWithSimulatedData:
         fresh = [_make_segment_weather(
             summary=_make_summary(temp_max=19.0, wind_max=35.0))]  # temp +4, wind +25
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         # Trigger the detector setup
         if trip.display_config and trip.display_config.get_alert_enabled_metrics():
             from services.weather_change_detection import WeatherChangeDetectionService

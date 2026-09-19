@@ -381,7 +381,7 @@ def test_both_alarm_paths_receive_data_unavailable_flag():
             ],
         )],
     )
-    save_trip(trip)
+    save_trip(trip, user_id="default")
 
     trip_wrapper = _RecordingRadarService()
     trip_svc = TripAlertService(user_id="default", radar_service=trip_wrapper)

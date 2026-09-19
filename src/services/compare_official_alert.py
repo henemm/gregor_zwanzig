@@ -77,7 +77,8 @@ class CompareOfficialAlertService:
     def __init__(
         self,
         settings: Optional[Settings] = None,
-        user_id: str = "default",
+        *,
+        user_id: str,
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
         telegram_sink: Optional[object] = None,

@@ -102,7 +102,7 @@ class TestConfigRoundtrip:
         path = trips_dir / "test-trip.json"
         path.write_text(json.dumps(data, indent=2))
         # Load
-        loaded = load_trip(path)
+        loaded = load_trip(path, user_id="default")
         vis_mc = next(mc for mc in loaded.display_config.metrics if mc.metric_id == "visibility")
         assert vis_mc.enabled is False
 
@@ -129,7 +129,7 @@ class TestConfigRoundtrip:
         data = _trip_to_dict(trip)
         path = tmp_path / "test-trip.json"
         path.write_text(json.dumps(data, indent=2))
-        loaded = load_trip(path)
+        loaded = load_trip(path, user_id="default")
         vis_mc = next(mc for mc in loaded.display_config.metrics if mc.metric_id == "visibility")
         assert vis_mc.use_friendly_format is False
 
@@ -156,7 +156,7 @@ class TestConfigRoundtrip:
         data = _trip_to_dict(trip)
         path = tmp_path / "test-trip.json"
         path.write_text(json.dumps(data, indent=2))
-        loaded = load_trip(path)
+        loaded = load_trip(path, user_id="default")
         cape_mc = next(mc for mc in loaded.display_config.metrics if mc.metric_id == "cape")
         assert cape_mc.alert_enabled is True
         assert cape_mc.alert_threshold == 500.0
@@ -169,7 +169,7 @@ class TestConfigRoundtrip:
         data = _trip_to_dict(trip)
         path = tmp_path / "test-trip.json"
         path.write_text(json.dumps(data, indent=2))
-        loaded = load_trip(path)
+        loaded = load_trip(path, user_id="default")
         assert len(loaded.display_config.metrics) == original_count
 
 
@@ -211,7 +211,7 @@ class TestTripEditPreservesConfig:
         path.write_text(json.dumps(data, indent=2))
 
         # Simulate edit: load, change name, preserve configs, save
-        loaded = load_trip(path)
+        loaded = load_trip(path, user_id="default")
         edited = Trip(
             id=loaded.id,
             name="Renamed Trip",
@@ -225,7 +225,7 @@ class TestTripEditPreservesConfig:
         path.write_text(json.dumps(data2, indent=2))
 
         # Verify config survived
-        reloaded = load_trip(path)
+        reloaded = load_trip(path, user_id="default")
         assert reloaded.name == "Renamed Trip"
         assert reloaded.display_config is not None
         vis_mc = next(mc for mc in reloaded.display_config.metrics if mc.metric_id == "visibility")

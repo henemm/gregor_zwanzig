@@ -213,7 +213,7 @@ def test_ac1_premium_sms_und_sms_erhalten_kurzform_am_draht(monkeypatch):
     # Draht-Messpunkt (nicht der Formatierer): echtes PremiumSmsOutput.send.
     gesendet = _stelle_gesendetes(monkeypatch)
     settings = _dummy_settings()
-    NotificationService(settings=settings).send_command_reply_premium_sms(
+    NotificationService(settings=settings, user_id="default").send_command_reply_premium_sms(
         result_premium, settings,
     )
 
@@ -613,7 +613,7 @@ def test_ac5_niederschlagsart_kurzform_ueber_kommandopfad_nennt_die_art(monkeypa
     # PremiumSmsOutput.send an.
     gesendet = _stelle_gesendetes(monkeypatch)
     settings = _dummy_settings()
-    NotificationService(settings=settings).send_command_reply_premium_sms(
+    NotificationService(settings=settings, user_id="default").send_command_reply_premium_sms(
         result, settings,
     )
     assert gesendet and gesendet[0]["body"] == body, (
@@ -892,7 +892,7 @@ def test_ac10_uebergrosser_verlauf_loest_genau_einen_sendeaufruf_aus(monkeypatch
 
         gesendet = _stelle_gesendetes(monkeypatch)
         settings = _dummy_settings()
-        NotificationService(settings=settings).send_command_reply_premium_sms(
+        NotificationService(settings=settings, user_id="default").send_command_reply_premium_sms(
             result, settings,
         )
 
@@ -1130,7 +1130,7 @@ def test_ac13_strukturierter_token_ohne_werte_meldet_no_data(monkeypatch):
     # PremiumSmsOutput.send an.
     gesendet = _stelle_gesendetes(monkeypatch)
     settings = _dummy_settings()
-    NotificationService(settings=settings).send_command_reply_premium_sms(
+    NotificationService(settings=settings, user_id="default").send_command_reply_premium_sms(
         result, settings,
     )
     assert gesendet and gesendet[0]["body"] == body, (

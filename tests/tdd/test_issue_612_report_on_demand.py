@@ -286,7 +286,7 @@ class TestF002ReportTypeCaseInsensitive:
 
     def setup_method(self):
         self._trip = _save_user_trip()
-        save_trip(self._trip)
+        save_trip(self._trip, user_id="default")
 
     def teardown_method(self):
         _cleanup_user_trip()
@@ -302,6 +302,7 @@ class TestF002ReportTypeCaseInsensitive:
             sender="test@example.com",
             channel="email",
             received_at=datetime.now(tz=timezone.utc),
+            user_id="default",
         )
         result = TripCommandProcessor().process(msg)
         assert result.success is False, (
@@ -319,7 +320,7 @@ class TestAC5InvalidReportType:
     def setup_method(self):
         self._trip = _save_user_trip()
         # Auch für default-user einen Trip speichern damit _find_trip etwas findet
-        save_trip(self._trip)
+        save_trip(self._trip, user_id="default")
 
     def teardown_method(self):
         _cleanup_user_trip()
@@ -335,6 +336,7 @@ class TestAC5InvalidReportType:
             sender="test@example.com",
             channel="email",
             received_at=datetime.now(tz=timezone.utc),
+            user_id="default",
         )
         result = TripCommandProcessor().process(msg)
         assert result.success is False, (
@@ -348,6 +350,7 @@ class TestAC5InvalidReportType:
             sender="test@example.com",
             channel="email",
             received_at=datetime.now(tz=timezone.utc),
+            user_id="default",
         )
         result = TripCommandProcessor().process(msg)
         assert "morning" in result.confirmation_body, (
@@ -361,6 +364,7 @@ class TestAC5InvalidReportType:
             sender="test@example.com",
             channel="email",
             received_at=datetime.now(tz=timezone.utc),
+            user_id="default",
         )
         result = TripCommandProcessor().process(msg)
         assert "evening" in result.confirmation_body, (

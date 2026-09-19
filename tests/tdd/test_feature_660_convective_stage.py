@@ -186,7 +186,7 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
 
     user_id = "default"
     trip = _make_today_trip()
-    save_trip(trip)
+    save_trip(trip, user_id=user_id)
 
     radar_service = RadarNowcastService(
         frame_source=lambda lat, lon: _convective_frames(onset_minutes=10, rate_mm_h=4.0)
@@ -240,6 +240,6 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
     finally:
         EmailOutput.send = original_send
         from app.loader import get_briefings_dir
-        p = get_briefings_dir() / f"{_TRIP_ID}.json"
+        p = get_briefings_dir(user_id=user_id) / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()

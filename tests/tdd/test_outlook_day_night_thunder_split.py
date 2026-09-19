@@ -414,7 +414,7 @@ class _TrendSchedulerWithFixedWeather:
             def _enrich_ensemble_for_trip(self, trip, weather_data):
                 return None
 
-        return _Fixed()
+        return _Fixed(user_id="default")
 
 
 def _weather_with_thunder_hours():

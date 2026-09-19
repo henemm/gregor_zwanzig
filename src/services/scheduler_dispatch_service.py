@@ -163,7 +163,7 @@ def _dispatch_due_preset(
 
 
 def run_compare_presets_daily(
-    user_id: str = "default",
+    user_id: str,
     data_root: str | None = None,
     hour: int | None = None,
 ) -> tuple[int, int]:

@@ -144,7 +144,7 @@ class InboundMessage:
     sender: str
     channel: str            # "email", "telegram", "sms" oder "premium_sms"
     received_at: datetime
-    user_id: str = "default"
+    user_id: str
     # Issue #2282 Abschnitt 3: additive Felder, Default None = Trip-Verhalten
     # unveraendert. Ein Reader, der bereits eindeutig ueber
     # ``trip_selection.resolve_active_target`` auf einen Ortsvergleich
@@ -1104,7 +1104,7 @@ class TripCommandProcessor:
             trip_name=name,
         )
 
-    def _find_trip(self, trip_name: str, user_id: str = "default") -> Optional[Trip]:
+    def _find_trip(self, trip_name: str, user_id: str) -> Optional[Trip]:
         """Trip-Lookup: primär über GZ#-Shortcode, Fallback toleranter Namensvergleich."""
         trips = load_all_trips(user_id)
         first_token = trip_name.split()[0].upper() if trip_name.strip() else ""
@@ -2032,7 +2032,7 @@ class TripCommandProcessor:
 
     def _apply_ruhetag(
         self, trip: Trip, value: Optional[str], command_date: date,
-        user_id: str = "default",
+        user_id: str,
     ) -> CommandResult:
         """Shift all stages after command_date by +N days (default: 1)."""
         shift_days = int(value) if value and value.isdigit() else 1
@@ -2088,7 +2088,7 @@ class TripCommandProcessor:
         )
 
     def _trigger_report(
-        self, trip: Trip, value: Optional[str], user_id: str = "default",
+        self, trip: Trip, value: Optional[str], user_id: str,
     ) -> CommandResult:
         """Trigger an immediate morning/evening report."""
         report_type = (value or "morning").lower()
@@ -2112,7 +2112,7 @@ class TripCommandProcessor:
         )
 
     def _shift_start(
-        self, trip: Trip, value: Optional[str], user_id: str = "default",
+        self, trip: Trip, value: Optional[str], user_id: str,
     ) -> CommandResult:
         """Shift all stages relative to a new start date."""
         if not value:
@@ -2591,7 +2591,7 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _cancel_trip(self, trip: Trip, user_id: str = "default") -> CommandResult:
+    def _cancel_trip(self, trip: Trip, user_id: str) -> CommandResult:
         """Disable report scheduling for the trip."""
         if trip.report_config:
             new_config = dataclasses.replace(trip.report_config, enabled=False)
@@ -2605,7 +2605,7 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _resume_trip(self, trip: Trip, user_id: str = "default") -> CommandResult:
+    def _resume_trip(self, trip: Trip, user_id: str) -> CommandResult:
         """Reaktiviert den Report-Versand für den Trip (enabled=True via RMW)."""
         if trip.report_config:
             new_config = dataclasses.replace(trip.report_config, enabled=True)
@@ -2623,7 +2623,7 @@ class TripCommandProcessor:
     # Helpers
     # -----------------------------------------------------------------------
 
-    def _delete_snapshot(self, trip_id: str, user_id: str = "default") -> None:
+    def _delete_snapshot(self, trip_id: str, user_id: str) -> None:
         """Delete cached weather snapshot after date changes."""
         snapshot_path = get_snapshots_dir(user_id) / f"{trip_id}.json"
         try:
@@ -2633,11 +2633,11 @@ class TripCommandProcessor:
         except OSError as e:
             logger.error(f"Failed to delete snapshot {snapshot_path}: {e}")
 
-    def _get_command_log_path(self, user_id: str = "default") -> Path:
+    def _get_command_log_path(self, user_id: str) -> Path:
         """Get path to command_log.json."""
         return get_data_dir(user_id) / "command_log.json"
 
-    def _load_command_log(self, user_id: str = "default") -> list[dict]:
+    def _load_command_log(self, user_id: str) -> list[dict]:
         """Load command log entries."""
         path = self._get_command_log_path(user_id)
         if not path.exists():
@@ -2650,7 +2650,7 @@ class TripCommandProcessor:
 
     def _append_command_log(
         self, trip_id: str, command: str, command_date: date,
-        user_id: str = "default",
+        user_id: str,
     ) -> None:
         """Append entry to command log for idempotency tracking."""
         entries = self._load_command_log(user_id)
@@ -2667,7 +2667,7 @@ class TripCommandProcessor:
 
     def _is_already_applied(
         self, trip_id: str, command: str, command_date: date,
-        user_id: str = "default",
+        user_id: str,
     ) -> bool:
         """Check if command was already applied today (idempotency)."""
         for entry in self._load_command_log(user_id):

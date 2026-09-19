@@ -105,7 +105,15 @@ class InboundTelegramReader:
     def __init__(self) -> None:
         self._offset: int = 0
         self.sent_message_ids: list[int] = []  # Issue #686: collected for observability + cleanup
-        self._notification_service = NotificationService()
+        self._notification_service: NotificationService | None = None
+
+    def _ensure_notification_service(self, settings: Settings) -> None:
+        """#2151 Scheibe C: den Versanddienst erst mit den vorliegenden
+        ``settings`` bauen -- nie nutzerlos (kein ``with_user_profile("default")``).
+        Die genutzten Methoden lesen ohnehin nur die explizit uebergebenen
+        Nutzer-Settings."""
+        if self._notification_service is None:
+            self._notification_service = NotificationService(settings=settings)
 
     def poll_and_process(self, settings: Settings) -> int:
         """Long-polling: holt neue Updates, verarbeitet Befehle.
@@ -162,6 +170,7 @@ class InboundTelegramReader:
 
         Returns True wenn Update verarbeitet (nicht: ob Befehl erfolgreich).
         """
+        self._ensure_notification_service(settings)
         callback = update.get("callback_query")
         if callback:
             return self._process_callback_query(callback, settings)
@@ -438,7 +447,7 @@ class InboundTelegramReader:
         return None
 
     def _find_active_trip(
-        self, now_utc: datetime, user_id: str = "default",
+        self, now_utc: datetime, user_id: str,
     ) -> Trip | None:
         """Aktiver Trip = erster Trip mit Datum-Overlap, sonst frühester
         zukünftiger Trip; None wenn keine Trips existieren.
@@ -482,6 +491,7 @@ class InboundTelegramReader:
 
     def _process_start_command(self, token: str, chat_id: str, settings: Settings) -> bool:
         """Verarbeitet /start TOKEN — registriert chat_id beim Go-Backend."""
+        self._ensure_notification_service(settings)
         try:
             resp = httpx.post(
                 "http://localhost:8090/api/internal/telegram-connect",

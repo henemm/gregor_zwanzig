@@ -86,13 +86,13 @@ def _scheduler(weather=None):
     from services.trip_report_scheduler import TripReportSchedulerService
 
     if weather is None:
-        return TripReportSchedulerService()
+        return TripReportSchedulerService(user_id="default")
 
     class _FixtureWeatherScheduler(TripReportSchedulerService):
         def _fetch_weather(self, segments, provider=None):
             return weather(segments)
 
-    return _FixtureWeatherScheduler()
+    return _FixtureWeatherScheduler(user_id="default")
 
 
 def _warnings(caplog):

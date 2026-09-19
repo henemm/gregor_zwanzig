@@ -137,7 +137,7 @@ class TestSaveAndLoadRoundtrip:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         full_summary = SegmentWeatherSummary(
@@ -207,7 +207,7 @@ class TestLoadMissingFile:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         result = service.load("nonexistent-trip")
@@ -232,7 +232,7 @@ class TestLoadCorruptFile:
         corrupt_file = tmp_path / "broken-trip.json"
         corrupt_file.write_text("{invalid json content!!!")
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         result = service.load("broken-trip")
@@ -249,7 +249,7 @@ class TestLoadCorruptFile:
         bad_file = tmp_path / "bad-structure.json"
         bad_file.write_text(json.dumps({"trip_id": "bad-structure"}))
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         result = service.load("bad-structure")
@@ -275,7 +275,7 @@ class TestSaveFailure:
         readonly_dir.mkdir()
         readonly_dir.chmod(0o444)
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = readonly_dir
 
         seg = _make_segment_weather()
@@ -302,7 +302,7 @@ class TestEnumSerialization:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         seg = _make_segment_weather(
@@ -324,7 +324,7 @@ class TestEnumSerialization:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         seg = _make_segment_weather(
@@ -344,7 +344,7 @@ class TestEnumSerialization:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         seg = _make_segment_weather(
@@ -374,7 +374,7 @@ class TestNoneFieldHandling:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         seg = _make_segment_weather(
@@ -395,7 +395,7 @@ class TestNoneFieldHandling:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         seg = _make_segment_weather()
@@ -464,7 +464,7 @@ class TestJsonStructure:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         seg = _make_segment_weather()
@@ -486,7 +486,7 @@ class TestJsonStructure:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         seg = _make_segment_weather()
@@ -596,19 +596,6 @@ class TestBriefingBackedHerkunft:
 
 class TestLoaderHelper:
     """Verify get_snapshots_dir() exists and follows pattern."""
-
-    def test_get_snapshots_dir_default(self) -> None:
-        """
-        GIVEN: Default user_id
-        WHEN: get_snapshots_dir()
-        THEN: Returns <data_root>/users/default/weather_snapshots (Issue
-        #1133: data_root ist unter Tests der isolierte Root, nicht das
-        harte "data")
-        """
-        from app.loader import get_data_root, get_snapshots_dir
-
-        result = get_snapshots_dir()
-        assert result == get_data_root() / "users" / "default" / "weather_snapshots"
 
     def test_get_snapshots_dir_custom_user(self) -> None:
         """

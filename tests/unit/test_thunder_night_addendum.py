@@ -103,7 +103,7 @@ def _entry_from_trend(row, *, night_weather=None, key="+1"):
     kwargs = {}
     if night_weather is not None:
         kwargs["night_weather"] = night_weather
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         None, _TODAY, datetime.now(timezone.utc), _UTC,
         multi_day_trend=[row], **kwargs,
     )
@@ -139,7 +139,7 @@ def test_ac1_fetch_nachtgewitter_wird_mit_uhrzeit_genannt():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     seg = _segment(_day_points(_TOMORROW, {}), thunder_level_max=ThunderLevel.NONE)
-    fc = TripReportSchedulerService()._build_thunder_forecast(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(
         seg, _TODAY, tz=_UTC,
         night_weather=_night_series({0: ThunderLevel.HIGH}),
     )
@@ -406,7 +406,7 @@ def test_fetch_plus2_ignoriert_die_nachtquelle():
         _day_points(_DAY_AFTER, {23: ThunderLevel.LOW}),
         thunder_level_max=ThunderLevel.LOW,
     )
-    fc = TripReportSchedulerService()._build_thunder_forecast(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(
         seg, _TODAY, tz=_UTC,
         night_weather=_night_series({0: ThunderLevel.HIGH}, night_of=_DAY_AFTER),
     )

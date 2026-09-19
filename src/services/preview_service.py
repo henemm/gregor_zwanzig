@@ -51,7 +51,7 @@ class PreviewService:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or Settings()
 
-    def _load_trip(self, trip_id: str, user_id: str = "default") -> "Trip":
+    def _load_trip(self, trip_id: str, user_id: str) -> "Trip":
         """Lädt einen Trip aus `data/users/<user>/briefings/<id>.json`
         (Issue #1250 Scheibe 7a Cutover, ADR-0023 -- war `trips/<id>.json`).
 
@@ -351,7 +351,7 @@ class PreviewService:
         self,
         trip_id: str,
         *,
-        user_id: str = "default",
+        user_id: str,
         report_type: str = "morning",
         target_date: str | None = None,
         demo: bool = False,
@@ -375,7 +375,7 @@ class PreviewService:
         self,
         trip_id: str,
         *,
-        user_id: str = "default",
+        user_id: str,
         report_type: str = "morning",
         target_date: str | None = None,
         demo: bool = False,
@@ -401,7 +401,7 @@ class PreviewService:
         self,
         trip_id: str,
         *,
-        user_id: str = "default",
+        user_id: str,
         report_type: str = "morning",
         target_date: str | None = None,
         demo: bool = False,

@@ -133,7 +133,7 @@ def _thunder_forecast_vom_zeitplaner(hail) -> dict:
                                           wanted_dates=None):
             return [etappe]
 
-    forecast = _ZeitplanerOhneNetz()._build_thunder_forecast_from_trend_or_fetch(
+    forecast = _ZeitplanerOhneNetz(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         _Trip(), date(2026, 8, 5),
         now_utc=datetime(2026, 8, 5, 4, 0, tzinfo=timezone.utc), tz=_TZ,
         multi_day_trend=None,

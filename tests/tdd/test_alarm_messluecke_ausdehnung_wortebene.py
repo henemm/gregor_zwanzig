@@ -158,7 +158,7 @@ def _vier_kanal_lauf(radar: _LueckenRadar, tag: str):
                 "alert_on_changes": True,
             },
         }))
-        trip = load_trip(pfad)
+        trip = load_trip(pfad, user_id="default")
 
     strecke = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels())
     lauf = strecke.lauf(

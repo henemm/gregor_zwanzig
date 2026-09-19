@@ -276,7 +276,7 @@ Criteria und bekannte Grenzen: `docs/specs/modules/thunder_scale_guard.md`.*
 | Thunder-Scale-Wächter — keine neue lokale Kopie der Gewitter-Stufenskala (#1480, Backend + Frontend) | 2026-11-01 | 8 von 8 Python-Verstößen aus #1474 (`860a3baf^`) gefangen; Frontend 8 von 8 SYNTH-Formen inkl. der neunten Stelle (`['NONE','MED','HIGH','LOW']`) |
 | `_SELF_EXEMPT`-Eintrag `test_gehzeit_metriken_bleiben_trip_exklusiv.py` in `test_765_backend_hygiene_compliance.py` (#1848 C) | 2026-11-17 | Kommentar-Wächter liest `src/app/metric_catalog.py` als DATEN für eine AST-Prüfung (sind in Kommentaren genannte Funktionsnamen auflösbar?) — kein Verhaltensnachweis auf Code-Strings; Freigabe Tech-Lead 2026-08-19 |
 | Gestellte-Uhr-Ratsche make_trip+save_trip (#2242) | 2026-12-08 | 3 Dateien in 3 Wochen nach #2050 ungeschützt (#2242) |
-| `user_id="default"`-Wächter — keine Defaults in `api/`, fixierte Bestandsliste in `src/` (#2151 Scheibe A) | 2026-12-18 | — |
+| `user_id="default"`-Wächter — keine Defaults in `api/`, fixierte Bestandsliste in `src/` (#2151 Scheibe A); erweitert um Aufrufstellen-Prüfung (kein Literal `"default"` als `user_id`-Argument, `tests/test_user_id_default_guard.py`) und Test-Inventar `tests/test_test_suite_passes_user_id_explicitly.py` (#2151 Scheibe C) | 2026-12-18 | — |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.

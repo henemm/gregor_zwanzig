@@ -82,7 +82,7 @@ class TestBug801SnapshotDistanceRoundtrip:
         from services.weather_snapshot import WeatherSnapshotService
 
         seg = _make_seg_with_km(1, 12.3, 18.7, temp_min_c=5.0, temp_max_c=15.0)
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         target = date(2026, 6, 11)
@@ -120,7 +120,7 @@ class TestBug801SnapshotDistanceRoundtrip:
         }
         (tmp_path / "old-trip.json").write_text(json.dumps(old))
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
         loaded = service.load("old-trip")
 
@@ -140,7 +140,7 @@ class TestBug801SnapshotDistanceRoundtrip:
         from services.weather_snapshot import WeatherSnapshotService
 
         seg = _make_seg_with_km(1, 12.3, 18.7, temp_min_c=5.0, temp_max_c=15.0)
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
         target = date(2026, 6, 11)
         service.save_dated("trip-km", target, [seg])

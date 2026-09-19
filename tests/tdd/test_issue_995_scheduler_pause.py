@@ -151,7 +151,7 @@ class TestAC8ManualTestSendUnaffected:
         if not settings.can_send_email():
             pytest.skip("SMTP für tdd-995-ac8 nicht konfiguriert")
 
-        loaded = load_trip(get_briefings_dir(_USER_AC8) / f"{trip_id}.json")
+        loaded = load_trip(get_briefings_dir(_USER_AC8) / f"{trip_id}.json", user_id="default")
         sent = TripReportSchedulerService(user_id=_USER_AC8).send_test_report(loaded, "morning")
         assert sent is True, "Contract: Test-Versand muss auch für pausierten Trip funktionieren"
 
@@ -274,10 +274,10 @@ class TestAC10ReadModifyWritePreservesFields:
                           threshold=-5.0, severity=AlertSeverity.INFO, enabled=False),
             ]
             save_trip(trip, user_id=uid)
-            before = load_trip(get_briefings_dir(uid) / f"{trip_id}.json")
+            before = load_trip(get_briefings_dir(uid) / f"{trip_id}.json", user_id="default")
 
             _set_paused_at(uid, trip_id, "2026-07-03T08:00:00+00:00")
-            after = load_trip(get_briefings_dir(uid) / f"{trip_id}.json")
+            after = load_trip(get_briefings_dir(uid) / f"{trip_id}.json", user_id="default")
 
             assert getattr(after, "paused_at", None) == "2026-07-03T08:00:00+00:00", (
                 f"AC-10 ({uid}): paused_at wird beim Laden nicht durchgereicht "

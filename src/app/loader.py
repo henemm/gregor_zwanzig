@@ -397,7 +397,7 @@ _DATA_ROOT: str | None = None
 def load_trip(
     source: Union[str, Path, Dict[str, Any]],
     data_dir: Optional[Union[str, Path]] = None,
-    user_id: str = "default",
+    user_id: str | None = None,
 ) -> Optional[Trip]:
     """
     Load a Trip from a JSON file or a dict.
@@ -415,15 +415,19 @@ def load_trip(
     Args:
         source: Path to the JSON file, a trip ID (with ``data_dir``), or a dict.
         data_dir: Optional base data directory; activates trip-ID resolution.
-        user_id: User namespace under ``data_dir`` (default: "default").
+        user_id: User namespace under ``data_dir``; required together with
+            ``data_dir`` (#2151 Scheibe C: no silent fallback to "default").
 
     Returns:
         Trip object, or None if resolved via ``data_dir`` and not found.
 
     Raises:
         LoaderError: If the file cannot be loaded or is invalid
+        ValueError: If ``data_dir`` is given without ``user_id``
     """
     if data_dir is not None and not isinstance(source, dict):
+        if not user_id:
+            raise ValueError("load_trip: data_dir given without user_id (#2151)")
         path = Path(data_dir) / "users" / user_id / "briefings" / f"{source}.json"
         if not path.exists():
             return None
@@ -1162,7 +1166,7 @@ VALID_USER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00][^/\\\x00]*$")
 
 
-def get_data_dir(user_id: str = "default") -> Path:
+def get_data_dir(user_id: str) -> Path:
     """Get the data directory for a user.
 
     Honors the module-level ``_DATA_ROOT`` override (used in tests) and,
@@ -1179,12 +1183,12 @@ def get_data_dir(user_id: str = "default") -> Path:
     return get_data_root() / "users" / user_id
 
 
-def get_locations_dir(user_id: str = "default") -> Path:
+def get_locations_dir(user_id: str) -> Path:
     """Get the locations directory for a user."""
     return get_data_dir(user_id) / "locations"
 
 
-def get_briefings_dir(user_id: str = "default") -> Path:
+def get_briefings_dir(user_id: str) -> Path:
     """Get the briefings directory for a user (Issue #1250 Cutover, ADR-0023).
     Seit S7a leben route-Entitäten (Trips) hier; seit S7b (AC-31) leben auch
     vergleich-Entitäten (ComparePresets) hier als per-Datei
@@ -1194,7 +1198,7 @@ def get_briefings_dir(user_id: str = "default") -> Path:
     return get_data_dir(user_id) / "briefings"
 
 
-def get_snapshots_dir(user_id: str = "default") -> Path:
+def get_snapshots_dir(user_id: str) -> Path:
     """Get the weather snapshots directory for a user."""
     return get_data_dir(user_id) / "weather_snapshots"
 
@@ -1352,12 +1356,12 @@ def lookup_user_by_telegram_chat_id(chat_id: str, data_dir: str | None = None) -
 # Location CRUD
 # =============================================================================
 
-def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
+def load_all_locations(user_id: str) -> List[SavedLocation]:
     """
     Load all locations for a user.
 
     Args:
-        user_id: User identifier (default: "default")
+        user_id: User identifier
 
     Returns:
         List of SavedLocation objects
@@ -1398,13 +1402,13 @@ def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
     return locations
 
 
-def save_location(location: SavedLocation, user_id: str = "default") -> Path:
+def save_location(location: SavedLocation, user_id: str) -> Path:
     """
     Save a location to JSON file.
 
     Args:
         location: SavedLocation object to save
-        user_id: User identifier (default: "default")
+        user_id: User identifier
 
     Returns:
         Path to the saved file
@@ -1461,13 +1465,13 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
     return path
 
 
-def delete_location(location_id: str, user_id: str = "default") -> None:
+def delete_location(location_id: str, user_id: str) -> None:
     """
     Delete a location file.
 
     Args:
         location_id: ID of the location to delete
-        user_id: User identifier (default: "default")
+        user_id: User identifier
     """
     path = get_locations_dir(user_id) / f"{location_id}.json"
     if path.exists():
@@ -1479,7 +1483,7 @@ def delete_location(location_id: str, user_id: str = "default") -> None:
 # =============================================================================
 
 def load_all_trips(
-    user_id: str = "default",
+    user_id: str,
     include_archived: bool = False,
 ) -> List[Trip]:
     """
@@ -1491,7 +1495,7 @@ def load_all_trips(
     they stay reachable via ``load_compare_presets`` (AC-30).
 
     Args:
-        user_id: User identifier (default: "default")
+        user_id: User identifier
         include_archived: When False (default), trips with archived_at set are
             excluded. Set True for shortcode deduplication (Bug #824).
 
@@ -1790,7 +1794,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
 
 def save_trip(
     trip: Trip,
-    user_id: str = "default",
+    user_id: str,
     data_dir: Optional[Union[str, Path]] = None,
 ) -> Path:
     """
@@ -1812,7 +1816,7 @@ def save_trip(
 
     Args:
         trip: Trip object to save
-        user_id: User identifier (default: "default")
+        user_id: User identifier
         data_dir: Optional base data directory override.
 
     Returns:
@@ -1857,7 +1861,7 @@ def save_trip(
     return path
 
 
-def delete_trip(trip_id: str, user_id: str = "default") -> None:
+def delete_trip(trip_id: str, user_id: str) -> None:
     """
     Delete a trip file.
 
@@ -1871,7 +1875,7 @@ def delete_trip(trip_id: str, user_id: str = "default") -> None:
 
     Args:
         trip_id: ID of the trip to delete
-        user_id: User identifier (default: "default")
+        user_id: User identifier
     """
     path = get_briefings_dir(user_id) / f"{trip_id}.json"
     if not path.exists():

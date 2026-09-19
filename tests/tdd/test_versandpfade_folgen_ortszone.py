@@ -214,7 +214,7 @@ class _AufzeichnenderScheduler(TripReportSchedulerService):
 def _scheduler() -> _AufzeichnenderScheduler:
     """Settings IMMER explizit (#1477): ein blankes ``Settings()`` fällt bei
     fehlenden Feldern still auf die Produktiv-``.env`` zurück."""
-    return _AufzeichnenderScheduler(settings_email_only(), "default")
+    return _AufzeichnenderScheduler(settings_email_only(), user_id="default")
 
 
 # ══════════════ AC-1: Test-Fallback wählt und klemmt nach dem Ortstag ══════════════
@@ -419,7 +419,7 @@ def _tour_ist_auffindbar(trip: Trip) -> None:
     räumt einen Vermerk AUCH weg, wenn er die zugehörige Tour nicht findet
     (``trip is None``). Ohne diesen Anker wäre der Test in beide Richtungen aus
     dem falschen Grund grün bzw. rot."""
-    gefunden = [t.id for t in load_all_trips()]
+    gefunden = [t.id for t in load_all_trips(user_id="default")]
     assert trip.id in gefunden, (
         f"Testaufbau: der Scheduler findet die Tour {trip.id!r} nicht "
         f"(geladen: {gefunden}) — er entfernte den Vermerk dann mangels Tour, "
@@ -451,7 +451,7 @@ def test_ac4_versandfehler_vermerk_verfaellt_nach_dem_ortstag():
         _uhr_eingefroren(WESTKUESTE_UTC)
         servertag = date.today()
         trip = _trip("vermerk-westkueste", [D20], WP_LA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         _tour_ist_auffindbar(trip)
         scheduler = _scheduler()
         pfad = _vermerk_schreiben(scheduler, trip, D20)
@@ -819,7 +819,7 @@ def _fall_pending_marker(tmp_path):
     einzige Weg, den Vermerk zu entfernen.
     """
     trip = _trip("param-vermerk", [D20], WP_KORSIKA)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     _tour_ist_auffindbar(trip)
     scheduler = _scheduler()
     pfad = _vermerk_schreiben(scheduler, trip, D20)

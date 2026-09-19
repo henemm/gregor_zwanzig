@@ -412,7 +412,7 @@ def test_ac4_channels_survive_save_load_roundtrip(tmp_path):
     trip = _trip(rule, report_config=None)
 
     path = save_trip(trip, user_id="tdd-638-ac4", data_dir=tmp_path)
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="tdd-638-ac4")
 
     assert loaded is not None
     assert len(loaded.alert_rules) == 1
@@ -440,7 +440,7 @@ def test_ac4_legacy_rule_without_channels_defaults_to_empty(tmp_path):
         ],
     }
 
-    loaded = load_trip(legacy)
+    loaded = load_trip(legacy, user_id="default")
 
     assert loaded is not None
     assert len(loaded.alert_rules) == 1
@@ -462,8 +462,8 @@ def test_ac5_per_user_alert_channels_are_isolated(tmp_path):
     path_a = save_trip(trip_a, user_id="tdd-638-userA", data_dir=tmp_path)
     path_b = save_trip(trip_b, user_id="tdd-638-userB", data_dir=tmp_path)
 
-    loaded_a = load_trip(path_a)
-    loaded_b = load_trip(path_b)
+    loaded_a = load_trip(path_a, user_id="tdd-638-userA")
+    loaded_b = load_trip(path_b, user_id="tdd-638-userB")
 
     assert loaded_a.alert_rules[0].channels == ["telegram"]
     assert loaded_b.alert_rules[0].channels == ["email"]

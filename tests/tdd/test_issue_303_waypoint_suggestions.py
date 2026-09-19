@@ -115,7 +115,7 @@ class TestLoaderNewFields:
             }],
         })
 
-        trip = load_trip("t1", data_dir=data_dir)
+        trip = load_trip("t1", data_dir=data_dir, user_id="default")
         assert trip is not None
         wp = trip.stages[0].waypoints[0]
         assert wp.origin == "algorithmic"
@@ -138,9 +138,9 @@ class TestLoaderNewFields:
 
         data_dir = tmp_path / "users" / "default"
         data_dir.mkdir(parents=True)
-        save_trip(trip, data_dir=tmp_path)
+        save_trip(trip, data_dir=tmp_path, user_id="default")
 
-        loaded = load_trip("t-rtrip", data_dir=tmp_path)
+        loaded = load_trip("t-rtrip", data_dir=tmp_path, user_id="default")
         assert loaded is not None
         wp2 = loaded.stages[0].waypoints[0]
         assert wp2.origin == "algorithmic"
@@ -161,9 +161,9 @@ class TestLoaderNewFields:
         stage = Stage(id="S1", name="Tag 1", date=date(2026, 5, 26), waypoints=[wp])
         trip = Trip(id="t-false", name="FalseConfirm", stages=[stage])
 
-        save_trip(trip, data_dir=tmp_path)
+        save_trip(trip, data_dir=tmp_path, user_id="default")
 
-        loaded = load_trip("t-false", data_dir=tmp_path)
+        loaded = load_trip("t-false", data_dir=tmp_path, user_id="default")
         assert loaded is not None
         wp2 = loaded.stages[0].waypoints[0]
         assert wp2.confirmed is False, f"confirmed=False ging durch Roundtrip verloren: {wp2.confirmed}"
@@ -179,7 +179,7 @@ class TestLoaderNewFields:
         trip = Trip(id="t-omit", name="Omit", stages=[stage])
 
         data_dir = tmp_path
-        save_trip(trip, data_dir=data_dir)
+        save_trip(trip, data_dir=data_dir, user_id="default")
 
         trip_file = tmp_path / "users" / "default" / "briefings" / "t-omit.json"
         raw = json.loads(trip_file.read_text())
