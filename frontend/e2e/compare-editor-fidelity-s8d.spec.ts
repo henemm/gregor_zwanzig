@@ -255,12 +255,12 @@ test.describe('Issue #1256 S8d (AC-6/AC-7): mobiler Orte-Tab dense-Stack', () =>
 	});
 });
 
-test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versand ohne Boden-CTA', () => {
+test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versand mit Aktivieren im Sticky-Footer', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 	});
 
-	test('CTA-Labels wechseln pro Tab; Versand-Tab hat keine Floating-CTA mehr', async ({ page }) => {
+	test('CTA-Labels wechseln pro Tab; Versand-Tab zeigt Aktivieren im Sticky-Footer', async ({ page }) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `E2E S8d Ort-CtaA ${suffix}`, 47.09, 11.09);
 		const locB = await createLocation(page, `E2E S8d Ort-CtaB ${suffix}`, 47.1, 11.1);
@@ -343,8 +343,9 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 			'true'
 		);
 
-		// AC-12: Versand-Tab hat keine Boden-Floating-CTA mehr.
-		await expect(page.locator('[data-testid="cm-mobile-cta"]:visible')).toHaveCount(0);
+		// AC-12 (Mobile-Shell S2): der Sticky-Footer bleibt auf Versand und traegt
+		// dort „Briefing aktivieren" — derselbe Baustein, den AC-15 prueft.
+		await expect(page.getByTestId('cm-mobile-activate')).toBeVisible();
 	});
 });
 
