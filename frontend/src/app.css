@@ -179,6 +179,20 @@
     --g-paper-deep: #ecead9;  /* #576: tokens.css-Sync */
     --g-rule-soft: #e7e2d3;  /* #378: opak, ersetzt rgba(26,26,24,0.08) */
 
+    /* Schwebende Tabbar (iOS-27-Stil) — einzige Quelle fuer Geometrie und Glas.
+       Konsumenten: BottomNav.svelte, .mobile-scroll-pad, Toast-/SaveIndicator-Anker.
+       --g-nav-clearance = Oberkante der Leiste ab Viewport-Unterkante. */
+    --g-nav-h: 64px;
+    --g-nav-gap: 6px;          /* Abstand Leiste <-> Home-Indicator-Zone (tief = Daumen-erreichbar) */
+    --g-nav-inset: 16px;       /* seitlicher Rand */
+    --g-nav-konto-gap: 10px;   /* Luft zwischen Leiste und Konto-Kreis (Canvas „TabBar") */
+    --g-nav-glass: rgba(246, 244, 238, 0.86);   /* --g-paper mit 86 % Deckung: Lesbarkeit vor Glas (PO 2026-09-19) */
+    --g-nav-blur: 24px;
+    --g-nav-hairline: rgba(26, 26, 24, 0.10);
+    --g-nav-highlight: rgba(255, 255, 255, 0.65);
+    --g-nav-active: rgba(196, 90, 42, 0.12);    /* Kapsel des aktiven Items */
+    --g-nav-clearance: calc(var(--g-nav-h) + var(--g-nav-gap) + env(safe-area-inset-bottom));
+
     /* === Atomic-Design-Bridge (#369) — Sandbox-Token-Namen + -Werte, additiv.
        Damit 1:1 aus der Claude-Design-Sandbox uebernommene Bausteine pixeltreu rendern.
        Bestehende Tokens bleiben unveraendert. Mapping: docs/design-requests/issue_15_atomic_design/spec/TOKEN-MAPPING.md === */
@@ -229,13 +243,18 @@
   }
 }
 
-/* Issue #267 — Padding für Mobile-Content unter TopAppBar + über BottomNav.
+/* Issue #267 / Mobile-Shell S2 — Padding für Mobile-Content: oben unter der
+   Statusleiste, unten über der schwebenden BottomNav.
    Im utilities-Layer, damit Tailwind-Utilities mit gleicher Specificity
-   nicht das padding-bottom überschreiben. */
+   nicht das padding-bottom überschreiben. Oben gibt es keinen fixen Balken
+   mehr: der Inhalt beginnt unter der Safe-Area (env(safe-area-inset-top),
+   ≈54 px auf dem Gerät, 0 im Browser) plus einem Raster-Schritt Luft.
+   Unten: Leiste schwebt (--g-nav-clearance) plus ein Raster-Schritt, damit
+   die letzte Karte nicht unter dem Glas endet. */
 @layer utilities {
   .mobile-scroll-pad {
-    padding-top: 56px;
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    padding-top: calc(env(safe-area-inset-top) + var(--g-s-3));
+    padding-bottom: calc(var(--g-nav-clearance) + var(--g-s-4));
   }
   @media (min-width: 900px) {
     .mobile-scroll-pad {
@@ -245,31 +264,26 @@
   }
 }
 
-/* Issue #2131 — Offline-Bänder unter der fixierten Kopfleiste.
+/* Issue #2131 / Mobile-Shell S2 — Offline-Bänder unter der Safe-Area.
 
    Die Stand-Zeile (`#gz-stand`, app.html) und das Sperr-Band
    (`[data-gz-offline-band]`, OfflineSperre.svelte) stehen beide AUSSERHALB von
-   <main> — die Kompensation der fixierten TopAppBar (`.mobile-scroll-pad`,
-   oben) erfasst sie deshalb nicht, und unter 900px lag die Stand-Zeile
-   vollständig hinter der Leiste (Adversary-Finding F006, live gemessen:
-   Stand-Zeile 0–35px, Kopfleiste 0–56px, z-index 60).
-
-   Kompensiert wird deshalb <body>, sobald eines der Bänder da ist — und <main>
-   gibt seine eigene Kompensation im selben Fall ab, sonst entstünde der
-   Abstand doppelt. Ohne Band ändert sich nichts, ab 900px (Kopfleiste ist
-   `desktop:hidden`) ebenfalls nicht.
+   <main> und sind damit die erste Zeile des Dokuments. Ohne fixen Balken gibt
+   es nichts mehr, was sie verdecken könnte — nur die Statusleiste des Geräts:
+   das erste Band trägt deshalb die Safe-Area selbst, und <main> gibt seinen
+   Safe-Area-Anteil im selben Fall ab, sonst entstünde der Abstand doppelt.
 
    Bewusst ohne @layer: diese Regeln müssen die Utility `.mobile-scroll-pad`
    schlagen, und ungeschichtete Deklarationen gehen geschichteten vor. */
 @media (max-width: 899px) {
-  body:has(#gz-stand:not([hidden])),
-  body:has([data-gz-offline-band]) {
-    padding-top: 56px;
+  body > #gz-stand:not([hidden]),
+  body > #gz-stand[hidden] + * [data-gz-offline-band] {
+    margin-top: env(safe-area-inset-top);
   }
 
   body:has(#gz-stand:not([hidden])) .mobile-scroll-pad,
   body:has([data-gz-offline-band]) .mobile-scroll-pad {
-    padding-top: 0;
+    padding-top: var(--g-s-3);
   }
 }
 

@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Issue #578 — Sidebar 1:1 nach brand-kit.jsx::BrandSidebar (Zeilen 266–351).
 	// Desktop: Inline-Styles + eigene SVG-Icons (kein Lucide, kein Tailwind im aside).
-	// Mobile: Slide-in-Drawer bleibt funktional (Lucide im Footer erlaubt).
+	// Mobile: kein Drawer mehr (Mobile-Shell S2) — Konto/Abmelden liegen im
+	// Konto-Sheet (ui/sidebar/KontoSheet.svelte), das die Tabbar oeffnet.
 	import UserIcon from '@lucide/svelte/icons/user';
 	import MonitorIcon from '@lucide/svelte/icons/monitor';
 	import ChevronUp from '@lucide/svelte/icons/chevron-up';
@@ -16,10 +17,9 @@
 		currentPath: string;
 		darkMode: boolean;
 		ontoggleDark: () => void;
-		mobileMenuOpen: boolean;
 	}
 
-	let { userId, displayName, currentPath, darkMode, ontoggleDark, mobileMenuOpen = $bindable(false) }: SidebarProps = $props();
+	let { userId, displayName, currentPath, darkMode, ontoggleDark }: SidebarProps = $props();
 
 	// Issue #642 — Anzeigename hat Vorrang vor dem Login-Namen.
 	const shownName = $derived((displayName && displayName.trim()) || userId || '');
@@ -40,22 +40,11 @@
 		return currentPath.startsWith(href);
 	}
 
-	function closeMobileMenu() { mobileMenuOpen = false; }
 	function closeUserMenu() { userMenuOpen = false; }
 	function userInitial(id: string | null | undefined): string {
 		return (id ?? '?').charAt(0).toUpperCase();
 	}
 </script>
-
-<!-- Mobile overlay backdrop — z-50 damit Backdrop VOR Drawer liegt (AC-9-Fix). -->
-{#if mobileMenuOpen}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 z-50 bg-black/50 desktop:hidden"
-		onclick={closeMobileMenu}
-		onkeydown={(e) => e.key === 'Escape' && closeMobileMenu()}
-	></div>
-{/if}
 
 <!--
   DESKTOP: Statische aside mit Inline-Styles 1:1 nach brand-kit.jsx::BrandSidebar.
@@ -201,66 +190,3 @@
 		{/if}
 	</div>
 </aside>
-
-<!-- MOBILE: Slide-in Drawer — z-[55] damit Drawer VOR Backdrop (z-50) liegt, TopAppBar z-[60] bleibt oben -->
-<nav
-	data-testid="mobile-drawer"
-	class="fixed z-[55] h-full w-60 flex-col bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 desktop:hidden
-	{mobileMenuOpen ? 'flex translate-x-0' : 'hidden -translate-x-full'}"
->
-	<div class="mb-6"><Wordmark size="md" /></div>
-
-	<!-- Mobile: Nav-Items -->
-	{#each navItems as item}
-		<a
-			href={item.href}
-			class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
-			class:bg-sidebar-accent={isActive(item.href)}
-			onclick={closeMobileMenu}
-		>
-			{item.label}
-		</a>
-	{/each}
-
-	<!-- Mobile drawer: Secondary items (Lucide erlaubt hier laut Spec) -->
-	<div class="flex flex-col gap-1 mt-2">
-		<a
-			href="/account"
-			class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
-			onclick={closeMobileMenu}
-		>
-			<UserIcon class="size-4 shrink-0 opacity-70" />
-			Konto
-		</a>
-		<a
-			href="/account#system-status"
-			class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
-			onclick={closeMobileMenu}
-		>
-			<MonitorIcon class="size-4 shrink-0 opacity-70" />
-			System-Status
-		</a>
-		<button
-			onclick={() => { ontoggleDark(); closeMobileMenu(); }}
-			class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent text-left"
-		>
-			{#if darkMode}
-				<SunIcon class="size-4 opacity-70" />
-				Light Mode
-			{:else}
-				<MoonIcon class="size-4 opacity-70" />
-				Dark Mode
-			{/if}
-		</button>
-	</div>
-
-	<!-- Mobile Footer: Logout -->
-	<div class="mt-auto border-t border-border/50 pt-3">
-		<form method="POST" action="/logout">
-			<button type="submit" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10">
-				<LogOut class="size-4 opacity-70" />
-				Abmelden
-			</button>
-		</form>
-	</div>
-</nav>

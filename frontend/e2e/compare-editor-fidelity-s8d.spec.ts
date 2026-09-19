@@ -78,8 +78,10 @@ async function createPresetWithLocations(page: Page, name: string, locationIds: 
 // Gruppe A — Mobile-Liste (compare/+page.svelte)
 // ─────────────────────────────────────────────────────────────────────────
 
-test.describe('Issue #1256 S8d (AC-1): mobile Design-Kopfleiste auf /compare', () => {
-	test('Titel + Eyebrow sichtbar, Plus navigiert nach /compare/new; andere Seiten/Desktop unverändert', async ({
+// Mobile-Shell S2: kein fixer Balken mehr — Titel/Eyebrow/„Neuer Vergleich"
+// stehen mobil im <PageHeader> der Seite (Rechts-Slot), wie auf der Übersicht.
+test.describe('Issue #1256 S8d (AC-1): mobiler Seitenkopf auf /compare', () => {
+	test('Titel + Eyebrow sichtbar, „Neuer Vergleich" navigiert nach /compare/new; andere Seiten/Desktop unverändert', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -90,20 +92,21 @@ test.describe('Issue #1256 S8d (AC-1): mobile Design-Kopfleiste auf /compare', (
 		await page.goto('/compare');
 		await page.waitForLoadState('networkidle');
 
-		const bar = page.getByTestId('top-app-bar');
-		await expect(bar).toBeVisible();
-		await expect(bar.getByTestId('top-app-bar-title')).toHaveText('Orts-Vergleiche');
-		await expect(bar).toContainText('Workspace ·');
+		const head = page.locator('.desktop\\:hidden [data-slot="page-header"]:visible');
+		await expect(head).toBeVisible();
+		await expect(head.locator('h1')).toHaveText('Orts-Vergleiche');
+		await expect(head).toContainText('Workspace ·');
+		await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
 
-		const plus = page.getByTestId('top-app-bar-new-compare');
-		await expect(plus).toBeVisible();
-		await plus.click();
+		const neu = page.getByTestId('compare-list-new-mobile');
+		await expect(neu).toBeVisible();
+		await neu.click();
 		await page.waitForURL('**/compare/new');
 
-		// Andere Seite (/trips) zeigt weiterhin den Wordmark-Default.
+		// Andere Seite (/trips) traegt keinen Vergleichs-Kopf.
 		await page.goto('/trips');
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('top-app-bar').getByTestId('top-app-bar-title')).toHaveCount(0);
+		await expect(page.getByTestId('compare-list-new-mobile')).toHaveCount(0);
 
 		// Desktop-Viewport auf /compare zeigt weiterhin den 32px-Titel.
 		await page.setViewportSize(DESKTOP);
@@ -252,12 +255,12 @@ test.describe('Issue #1256 S8d (AC-6/AC-7): mobiler Orte-Tab dense-Stack', () =>
 	});
 });
 
-test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versand ohne Boden-CTA', () => {
+test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versand mit Aktivieren im Sticky-Footer', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 	});
 
-	test('CTA-Labels wechseln pro Tab; Versand-Tab hat keine Floating-CTA mehr', async ({ page }) => {
+	test('CTA-Labels wechseln pro Tab; Versand-Tab zeigt Aktivieren im Sticky-Footer', async ({ page }) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `E2E S8d Ort-CtaA ${suffix}`, 47.09, 11.09);
 		const locB = await createLocation(page, `E2E S8d Ort-CtaB ${suffix}`, 47.1, 11.1);
@@ -340,8 +343,9 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 			'true'
 		);
 
-		// AC-12: Versand-Tab hat keine Boden-Floating-CTA mehr.
-		await expect(page.locator('[data-testid="cm-mobile-cta"]:visible')).toHaveCount(0);
+		// AC-12 (Mobile-Shell S2): der Sticky-Footer bleibt auf Versand und traegt
+		// dort „Briefing aktivieren" — derselbe Baustein, den AC-15 prueft.
+		await expect(page.getByTestId('cm-mobile-activate')).toBeVisible();
 	});
 });
 
@@ -371,12 +375,15 @@ test.describe('Issue #1256 S8d (AC-13/AC-14): Profil-Häkchen + gekürzte Metrik
 	});
 });
 
-test.describe('Issue #1256 S8d (AC-15): genau eine App-Leiste im mobilen Editor', () => {
+// Mobile-Shell S2: statt App-Leiste traegt der Editor einen <PageHeader back>
+// (Rücksprung + Eyebrow + Reiter-Titel) und den geteilten Sticky-Footer mit
+// „Briefing aktivieren" auf dem Versand-Reiter.
+test.describe('Issue #1256 S8d (AC-15): genau ein Kopf im mobilen Editor', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 	});
 
-	test('„…" vor Bereitschaft, „Aktivieren" danach; Zurück navigiert /compare; Titel wechselt mit Tab', async ({
+	test('kein Aktivieren vor Versand, „Briefing aktivieren" im Footer danach; Zurück navigiert /compare; Titel wechselt mit Tab', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -386,17 +393,19 @@ test.describe('Issue #1256 S8d (AC-15): genau eine App-Leiste im mobilen Editor'
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 
-		const bars = page.getByTestId('top-app-bar');
-		await expect(bars).toHaveCount(1);
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Vergleich');
-		await expect(bars.getByTestId('top-app-bar-activate')).toHaveText('…');
+		const head = page.getByTestId('cm-mobile-head');
+		await expect(head).toHaveCount(1);
+		const titel = head.locator('h1');
+		await expect(titel).toHaveText('Vergleich');
+		await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
+		await expect(page.getByTestId('cm-mobile-activate')).toHaveCount(0);
 
 		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld.
 		await page.getByTestId('compare-editor-name-mobile').fill(`E2E S8d Bar ${suffix}`);
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Vergleich');
+		await expect(titel).toHaveText('Vergleich');
 		const cta = page.locator('[data-testid="cm-mobile-cta"]:visible');
 		await cta.getByRole('button').click();
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Orte');
+		await expect(titel).toHaveText('Orte');
 
 		await page.getByTestId('compare-step2-mobile-library-btn').click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locA}"]`).click();
@@ -410,19 +419,20 @@ test.describe('Issue #1256 S8d (AC-15): genau eine App-Leiste im mobilen Editor'
 		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
 
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Versand');
-		await expect(bars.getByTestId('top-app-bar-activate')).toHaveText('Aktivieren');
+		await expect(titel).toHaveText('Versand');
+		const aktivieren = page.getByTestId('cm-mobile-activate');
+		await expect(aktivieren).toBeVisible();
+		await expect(aktivieren).toHaveText('Briefing aktivieren');
+		await expect(aktivieren).toBeEnabled();
 
-		await bars.getByTestId('top-app-bar-back').click();
+		await head.getByTestId('back-link').click();
 		await page.waitForURL('**/compare');
 
-		// F001-Fix (Adversary): Rück-Navigation muss die App-Leiste wirklich in
-		// den Listen-Zustand versetzen, nicht nur die URL wechseln — beweist,
-		// dass der Editor-Store-Reset ($effect-Cleanup, CompareEditor.svelte:225)
-		// bei Client-Navigation tatsächlich greift statt hängenzubleiben.
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Orts-Vergleiche');
-		await expect(bars).toContainText('Workspace ·');
-		await expect(bars.getByTestId('top-app-bar-back')).toHaveCount(0);
+		// Rück-Navigation zeigt den Listen-Kopf, kein Editor-Kopf haengt nach.
+		await expect(page.getByTestId('cm-mobile-head')).toHaveCount(0);
+		const liste = page.locator('.desktop\\:hidden [data-slot="page-header"]:visible');
+		await expect(liste.locator('h1')).toHaveText('Orts-Vergleiche');
+		await expect(liste).toContainText('Workspace ·');
 	});
 });
 

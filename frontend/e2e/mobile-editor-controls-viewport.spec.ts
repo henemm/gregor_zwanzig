@@ -1,7 +1,7 @@
 // Regressionstest — Mobile Etappen-Editor: Steuerelemente müssen im Viewport bleiben.
 //
-// Bug (#963): `.mobile-map-wrap` setzt `height: calc(100dvh - 56px)` und nimmt an,
-// direkt unter der 56px-TopAppBar zu sitzen. Tatsächlich liegt davor variabel hoher
+// Bug (#963): `.mobile-map-wrap` setzte `height: calc(100dvh - 56px)` und nahm an,
+// direkt unter der damaligen 56px-TopAppBar zu sitzen. Tatsächlich liegt davor variabel hoher
 // Chrome-Content (Breadcrumb, TripHeader, Tab-Leiste, EtappenStrip, Etappen-Header,
 // optional Cascade-Strip). Die absolut positionierten Steuerelemente
 // (`stage-switcher-pill`, `add-waypoint`) erben den fehlerhaften Offset und landen
@@ -9,16 +9,18 @@
 //
 // WICHTIG: Playwrights `.click()` scrollt automatisch in den sichtbaren Bereich —
 // das würde den Bug verschleiern. Daher wird die Bounding-Box IMMER VOR jedem Klick
-// explizit gegen die Viewport-Grenzen geprüft (TopAppBar 56px, BottomNav 64px, siehe
-// app.css:190-205). Kein `scrollIntoViewIfNeeded` vor der Prüfung.
+// explizit gegen die Viewport-Grenzen geprüft (oben: Seitenanfang — seit
+// Mobile-Shell S2 gibt es keinen fixen Balken mehr, im Test-Viewport ist die
+// Safe-Area 0; unten: schwebende BottomNav, app.css --g-nav-*). Kein
+// `scrollIntoViewIfNeeded` vor der Prüfung.
 //
 // Ausführen: cd frontend && npx playwright test e2e/mobile-editor-controls-viewport.spec.ts
 
 import { test, expect, type Page, type Locator } from '@playwright/test';
 
 const MOBILE = { width: 390, height: 844 };
-const TOP_APP_BAR = 56; // fixe TopAppBar-Höhe (app.css .mobile-scroll-pad padding-top)
-const BOTTOM_NAV = 64; // fixe BottomNav-Höhe (app.css .mobile-scroll-pad padding-bottom)
+const CONTENT_TOP = 0; // kein fixer Balken oben (Mobile-Shell S2); Safe-Area im Test 0
+const BOTTOM_NAV = 64; // BottomNav-Höhe (app.css --g-nav-h)
 
 const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: 800 });
 
@@ -69,7 +71,7 @@ function control(page: Page, testid: string): Locator {
 
 /**
  * Prüft, dass die Bounding-Box eines Steuerelements vollständig innerhalb des
- * sichtbaren Viewports liegt (unterhalb TopAppBar, oberhalb BottomNav) — OHNE
+ * sichtbaren Viewports liegt (unterhalb des Seitenanfangs, oberhalb BottomNav) — OHNE
  * vorheriges Auto-Scroll. Gibt die Box für Folge-Assertions zurück.
  */
 async function expectWithinViewport(page: Page, testid: string, scope: 'editor' | 'page' = 'editor') {
@@ -86,8 +88,8 @@ async function expectWithinViewport(page: Page, testid: string, scope: 'editor' 
 	const bottom = box!.y + box!.height;
 	expect(
 		top,
-		`${testid}: Oberkante y=${top.toFixed(0)}px liegt über der TopAppBar-Grenze (${TOP_APP_BAR}px)`
-	).toBeGreaterThanOrEqual(TOP_APP_BAR);
+		`${testid}: Oberkante y=${top.toFixed(0)}px liegt über dem Seitenanfang (${CONTENT_TOP}px)`
+	).toBeGreaterThanOrEqual(CONTENT_TOP);
 	expect(
 		bottom,
 		`${testid}: Unterkante y=${bottom.toFixed(0)}px liegt unter der BottomNav-Grenze (${viewportHeight - BOTTOM_NAV}px, Viewport ${viewportHeight}px)`

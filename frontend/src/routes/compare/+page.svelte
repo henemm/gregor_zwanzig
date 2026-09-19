@@ -9,7 +9,7 @@
 	import type { ComparePreset } from '$lib/types.js';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api.js';
-	import { Eyebrow, Btn, Card, Stat } from '$lib/components/atoms';
+	import { Eyebrow, Btn, Card, Stat, PageHeader } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import ListTable from '$lib/components/organisms/ListTable.svelte';
 	import CompareTile from '$lib/components/compare/CompareTile.svelte';
@@ -26,7 +26,6 @@
 	import { buildFreshTogglePutPayload } from '$lib/components/compare/compareHubWizardBridge.js';
 	import { sendTargetLabel } from '$lib/components/shared/versand-tab/sendTargetLabel.js';
 	import MIcon from '$lib/components/mobile/MIcon.svelte';
-	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
 
 	let { data } = $props();
 	let presets: ComparePreset[] = $state(data.presets ?? []);
@@ -201,29 +200,13 @@
 	// Issue #1256 Scheibe 8 (AC-21) macht die dense-Kachel zur reinen Navigation —
 	// Aktionen (inkl. Archivieren) leben mobil jetzt ausschließlich im Detail-Hub.
 
-	// Issue #1256 Scheibe 8d (AC-1): mobile Design-Kopfleiste befüllen
-	// (title/eyebrow/rechte Plus-Aktion → /compare/new). $effect-Cleanup
-	// setzt beim Verlassen der Seite zurück (SSR-fest, kein Flackern).
-	$effect(() => {
-		topAppBarStore.set({
-			title: 'Orts-Vergleiche',
-			eyebrow: `Workspace · ${presets.length}`,
-			right: topAppBarNewCompare
-		});
-		return () => topAppBarStore.reset();
-	});
+	// Mobile-Shell S2: Titel, Eyebrow und „Neuer Vergleich" stehen mobil im
+	// <PageHeader> der Seite (Rechts-Slot) — derselbe Baustein wie die
+	// Uebersicht, kein Kopfleisten-Store mehr (AP-011).
 </script>
 
-{#snippet topAppBarNewCompare()}
-	<a
-		href="/compare/new"
-		data-testid="top-app-bar-new-compare"
-		aria-label="Neuer Vergleich"
-		class="flex items-center justify-center rounded-md hover:bg-accent"
-		style="width: 44px; height: 44px;"
-	>
-		<MIcon kind="plus" size={20} />
-	</a>
+{#snippet neuerVergleichMobil()}
+	<Btn href="/compare/new" variant="ghost" size="sm" data-testid="compare-list-new-mobile">+ Neuer Vergleich</Btn>
 {/snippet}
 
 <div style="background: var(--g-paper)">
@@ -297,7 +280,8 @@
 		     hebt das main-px-4 (S8-Falle Doppel-Padding) auf, bevor die eigene
 		     12/16/24-Polsterung greift — Netto-Abstand bleibt 16px. -->
 		<div class="desktop:hidden -mx-4" style="padding: 12px 16px 24px">
-			<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin-bottom: 14px">
+			<PageHeader eyebrow="Workspace · {presets.length}" title="Orts-Vergleiche" right={neuerVergleichMobil} compact />
+			<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin: 14px 0">
 				Stehende Monitore: dieselben Orte im Blick. Briefings wie beim Trip —
 				morgens für heute, abends für morgen. Ohne Ranking — läuft, bis du stoppst.
 			</div>

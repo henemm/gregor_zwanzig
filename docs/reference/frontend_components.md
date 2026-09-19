@@ -1,6 +1,6 @@
 # Frontend Components Reference
 
-**Updated:** 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Updated:** 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
 **Version:** 1.11
 
 ## Overview
@@ -26,8 +26,8 @@ frontend/src/lib/components/
 │   ├── elev-sparkline/   # GREGOR atom (Issue #146)
 │   │
 │   └── sidebar/
-│       ├── TopAppBar.svelte    # Fixed top bar (mobile-only, Issue #267)
-│       ├── BottomNav.svelte    # Fixed bottom nav (mobile-only, Issue #267)
+│       ├── BottomNav.svelte    # Schwebende Glas-Bottom-Nav + Konto-Kreis (mobile-only)
+│       ├── KontoSheet.svelte   # Konto-Sheet (Mobile-Shell S2, ersetzt den Drawer)
 │       └── Sidebar.svelte      # Main navigation (Issue #145)
 │
 ├── trip-new/             # Progressiver Anlege-Editor /trips/new (TripNewEditor, #622)
@@ -331,9 +331,9 @@ interface ElevSparklineProps {
 
 **File:** `frontend/src/lib/components/ui/wordmark/Wordmark.svelte` (thin
 wrapper, delegiert an `lib/brand/BrandWordmark.svelte` — die kanonische
-Brand-Bibliothek, Issue #370). Rendert das Gregor-Zwanzig-Logo, Standard-
-Inhalt der `TopAppBar` (s. "App-Shell Navigation" unten), solange keine
-Seite per `topAppBarStore` einen `title` setzt.
+Brand-Bibliothek, Issue #370). Rendert das Gregor-Zwanzig-Logo: Desktop in
+der Sidebar, mobil als erste Zeile der Übersicht (`size="sm"`, nur auf `/`,
+Mobile-Shell S2 — kein fixer Balken mehr).
 
 **Props:**
 ```typescript
@@ -504,127 +504,75 @@ Both can coexist in the same codebase without conflicts — namespaces (Gregor `
 
 Mobile-responsive navigation system with responsive layout switching at the 900px breakpoint.
 
-### TopAppBar Component
+### Kein Top-Balken mehr (Mobile-Shell S2)
 
-**File:** `frontend/src/lib/components/ui/sidebar/TopAppBar.svelte`
+Seit 2026-09-19 gibt es auf Mobile **keinen fixen Balken oben** und keinen
+Hamburger-Drawer (`docs/design-requests/mobile_shell_ohne_topbar.md`, PO-
+Entscheide §8). Ersatz:
 
-Fixed header bar for mobile viewports (< 900px). This is the ONE globally
-mounted instance (in `+layout.svelte`); on unfilled pages it shows the
-default hamburger + Wordmark + Bell/Plus. Since Issue #1256 Scheibe S8d it
-can be **filled per-page** (title/eyebrow/back/right action) — see
-"Per-Page Fill Pattern" below.
+| Früher im Balken | Jetzt |
+|---|---|
+| Wordmark | Erste Zeile der Übersicht (`routes/+page.svelte`, `data-testid="home-wordmark-row"`, mit Datum als Mono-Caption) |
+| Seitentitel/Eyebrow via `topAppBarStore` | `<PageHeader eyebrow title>` der Seite (AP-011); Store gelöscht |
+| `leftIcon: back` + `backHref` | `<PageHeader back={{ href, label }}>` — rendert `<BackLink>` (Atom) über dem Eyebrow; auch allein nutzbar (Compare-Hub) |
+| Rechts-Slot („Neuer Vergleich", „Aktivieren") | Rechts-Slot des `<PageHeader>` bzw. `<EditorStickyFooter context="vergleich">` (geteilter Sticky-Footer, `shared/`) |
+| Hamburger → Drawer | **Konto-Kreis** in `BottomNav` → `<KontoSheet>` |
+| Glocke / Plus | entfallen (AP-004/AP-012) |
 
-**Props (Updated 2026-07-15, Issue #1256 S8d — additive over #267/#373):**
-```typescript
-interface Props {
-  mobileMenuOpen?: boolean;   // #267: hamburger drawer toggle
-  darkMode?: boolean;         // #267 (optional, default false)
-  ontoggleDark?: () => void;  // #267 (optional)
-  eyebrow?: string;           // #373: small all-caps line above title
-  leftIcon?: string;          // #373/#1256-S8d: 'back' renders a back-arrow
-                               // link (→ backHref) instead of the hamburger
-  right?: Snippet;            // #373: replaces the default Bell/Plus group
-  dense?: boolean;            // #373: compact title size
-  scrolled?: boolean;         // #373: scroll-state styling hook
-  title?: string;             // #1256-S8d: replaces the Wordmark default
-                               // when set
-  backHref?: string;          // #1256-S8d: target for leftIcon="back"
-                               // (default '/')
-}
-```
+**Safe-Area oben:** `.mobile-scroll-pad { padding-top: calc(env(safe-area-inset-top) + var(--g-s-3)) }`.
+Die Offline-Bänder (`#gz-stand`, `[data-gz-offline-band]`) sind die erste Zeile
+des Dokuments und tragen die Safe-Area selbst (`app.css`), `<main>` gibt seinen
+Anteil dann ab. `apple-mobile-web-app-status-bar-style` bleibt `default`.
 
-**Layout:**
-- **Height:** 56px, `position: fixed; top: 0; left: 0; right: 0; z-index: 60`
-- **Background:** `var(--g-paper)`
-- **Border:** `1px solid var(--g-rule-soft)` (bottom)
-- **Visibility:** Mobile only (`class="desktop:hidden"`)
+### KontoSheet Component
 
-**Sections:**
-1. **Left:** Hamburger button (Menu/X icon), or a back-arrow link when
-   `leftIcon="back"` (navigates to `backHref`)
-2. **Center:** `title` (+ optional `eyebrow` above it) if filled, otherwise
-   the Wordmark default
-3. **Right:** page-supplied `right` snippet if given, otherwise the default
-   Bell (disabled) + Plus→`/trips/new` group
+**File:** `frontend/src/lib/components/ui/sidebar/KontoSheet.svelte`
 
-**Usage (unfilled, #267 default):**
-```svelte
-import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
+Konto-Sheet aus `mobile/Sheet.svelte` (`snap="auto"`, inhaltshoch). Vom
+`+layout.svelte` gemountet, geöffnet über den Konto-Kreis der `BottomNav`,
+schließt bei jeder Navigation (`afterNavigate`).
 
-let mobileMenuOpen = $state(false);
-// ... in template:
-<TopAppBar bind:mobileMenuOpen />
-```
+**Props:** `open`, `onClose`, `initials` (aus `$lib/utils/initialen`), `displayName`, `userId`, `darkMode`, `ontoggleDark`.
 
-### Per-Page Fill Pattern (Issue #1256 Scheibe S8d)
-
-Pages can populate the single global `TopAppBar` instance instead of
-mounting their own header. This replaced an earlier anti-pattern (a
-hand-rebuilt `cm-mobile-appbar` inside `CompareEditor.svelte`) per the
-PO rule "use/extend the Design component, never rebuild it in-page"
-(2026-07-15).
-
-**Store:** `frontend/src/lib/stores/topAppBar.svelte.ts` — a small Runes
-singleton (`topAppBarStore`, `fill: $state<TopAppBarFill>({})`) since there
-is exactly one mounted `TopAppBar`.
-
-**Contract:**
-- A page/component calls `topAppBarStore.set({ title, eyebrow, leftIcon,
-  backHref, right })` in an `$effect` on mount and `topAppBarStore.reset()`
-  on cleanup (SvelteKit navigation away from the page).
-- `+layout.svelte` reads `topAppBarStore.fill` and spreads it onto the one
-  `<TopAppBar>` mount — no other page is affected.
-- Default (`fill = {}`) reproduces the exact pre-#1256-S8d appearance
-  (Wordmark + Bell + Plus→`/trips/new`), so pages that never call `set()`
-  are unchanged.
-
-**Reference implementations:** `frontend/src/routes/compare/+page.svelte`
-(mobile list header: title "Orts-Vergleiche", eyebrow "Workspace · N",
-right = Plus→`/compare/new`). *(Der frühere zweite Referenzfall,
-`frontend/src/lib/components/compare/CompareEditor.svelte` — mobile editor
-header mit aktivem Tab-Namen/Compare-Name/Zurück-Icon — ist mit Epic #1301
-Scheibe F2b am 2026-07-19 gelöscht; die Datei existiert nicht mehr.)*
-
-**Reuse note:** this is a generic pattern, not Compare-specific — intended
-to be reused by Trip pages during the Trip/Compare convergence work
-(Epic #1230) rather than re-invented per surface.
+**Inhalt (PO 2026-09-19, keine Benachrichtigungen-Zeile):** Kopf (Avatar 44 px
+Akzent, Name, Schließen) · Kanäle & Empfänger (`/account#kanaele`) ·
+Einstellungen (`/account`) · System-Status (`/account#system-status`) ·
+Dunkles Design (`<Switch>`) · Datenexport (`/account#datenexport`) · Fuß mit
+Version + Abmelden (`POST /logout`). TestIDs: `konto-sheet`, `konto-sheet-*`.
 
 ### BottomNav Component
 
 **File:** `frontend/src/lib/components/ui/sidebar/BottomNav.svelte`
 
-Fixed footer bar for mobile viewports (< 900px). Contains 4 workspace navigation items with active state indication.
+Schwebende Glas-Leiste (iOS-27-Stil) für Mobile-Viewports (< 900px). 4 Workspace-Ziele mit Aktiv-Kapsel. Konzept: `docs/design-requests/mobile_shell_ohne_topbar.md`.
 
-**Props:** None — route detection via SvelteKit `page` store
+**Props:** `active?: string` (überschreibt die Routen-Erkennung), `onChange?: (id) => void` — ohne Props Routen-Erkennung via `$app/state`. **Konto-Kreis (S2):** `initials`, `onKonto`, `kontoOpen` — nur mit `onKonto` gerendert (`data-testid="konto-kreis"`, 64 × 64 Glas, Avatar 36 px Akzent, `aria-haspopup="dialog"`). Rahmen `bottom-shell` (flex, `--g-nav-konto-gap`) trägt die Position; Leiste und Kreis teilen das Glas (`.nav-glass`).
 
-**Layout:**
-- **Height:** 64px + `env(safe-area-inset-bottom)` (iPhone notch/home-indicator support)
-- `position: fixed; bottom: 0; left: 0; right: 0; z-index: 50`
-- **Background:** `var(--g-paper-deep)`
-- **Border:** `1px solid var(--g-rule-soft)` (top)
-- **Grid:** 4 equal columns `grid-template-columns: repeat(4, 1fr)`
+**Layout (alle Werte aus den `--g-nav-*` Tokens in `app.css`):**
+- `position: fixed; z-index: 50`, `left/right: var(--g-nav-inset)` (16px), `bottom: calc(var(--g-nav-gap) + env(safe-area-inset-bottom))` (6px über der Home-Indicator-Zone)
+- **Height:** `var(--g-nav-h)` (64px), innen `padding: var(--g-s-1)`, Radius `--g-r-pill`
+- **Glas:** `background: var(--g-nav-glass)` (paper, 86 %) + `backdrop-filter: blur(var(--g-nav-blur)) saturate(180%)`, `1px solid var(--g-nav-hairline)`, `--g-shadow-3` + innere Highlight-Linie
+- **Fallback:** ohne `backdrop-filter`-Support oder bei `prefers-reduced-transparency: reduce` opak `--g-paper-deep`
+- **Grid:** 4 gleiche Spalten, `gap: var(--g-s-1)`
 - **Visibility:** Mobile only (`class="desktop:hidden"`)
+- **Oberkante für Dritte:** `--g-nav-clearance` = `--g-nav-h + --g-nav-gap + safe-area`; `.mobile-scroll-pad`, Toast-Anker in `+layout.svelte` und `SaveIndicator` rechnen damit — nie mit 64px hart.
 
-**Navigation Items (auto-generated from NAV_ITEMS):**
+**Navigation Items:**
 
 | Icon | Label | Route |
 |------|-------|-------|
 | LayoutDashboard | Übersicht | `/` |
 | Route | Trips | `/trips` |
 | GitCompare | Vergleich | `/compare` |
-| MapPin | Locations | `/locations` |
+| Archive | Archiv | `/archiv` |
 
 **Per-Item Styling:**
-- **Active State:** 
-  - Accent line top: `box-shadow: inset 0 2px 0 var(--g-accent)`
-  - Font-weight: 600
-  - Color: `var(--g-ink)`
-- **Inactive State:**
-  - No line
-  - Font-weight: 500
-  - Color: `var(--g-ink-muted)`
-- **Icon Size:** 22px
-- **Label Size:** 10px
+- **Touch-Ziel:** `min-height: 44px`, Radius `--g-r-pill`
+- **Active State:** Kapsel `background: var(--g-nav-active)` (Akzent 12 %), Icon `--g-accent`, Label `--g-ink` / 600, `aria-current="page"`
+- **Inactive State:** kein Hintergrund, Icon + Label `--g-ink-2` / 500
+- **Icon Size:** 24px (`size-6`)
+- **Label Size:** `--g-text-xs` (11px)
+- **E2E:** `frontend/e2e/mobile-bottom-nav-floating.spec.ts` (Geometrie + Computed Style)
 
 **Usage:**
 ```svelte
@@ -636,53 +584,44 @@ import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
 
 ### Layout Integration
 
-Both components are orchestrated in `frontend/src/routes/+layout.svelte`:
+The shell is orchestrated in `frontend/src/routes/+layout.svelte`:
 
 ```svelte
 <script>
-  import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
   import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
-  
-  let mobileMenuOpen = $state(false);
+  import KontoSheet from '$lib/components/ui/sidebar/KontoSheet.svelte';
+  import { initialen } from '$lib/utils/initialen';
+
+  let kontoOpen = $state(false);
+  const kontoInitialen = $derived(initialen(data.displayName, data.userId));
 </script>
 
-<TopAppBar bind:mobileMenuOpen />
-
-<div class="desktop:flex h-screen">
-  <Sidebar bind:mobileMenuOpen />
-  
-  <main class="flex-1 overflow-y-auto mobile:pt-14 mobile-scroll-pad">
+<div class="flex h-screen">
+  <Sidebar ... />
+  <main class="mobile-scroll-pad flex-1 overflow-auto px-4 desktop:p-6">
     {@render children()}
   </main>
 </div>
 
-<BottomNav />
+<BottomNav initials={kontoInitialen} {kontoOpen} onKonto={() => (kontoOpen = true)} />
+<KontoSheet open={kontoOpen} onClose={() => (kontoOpen = false)} ... />
 ```
 
 **Responsive Breakpoint:** 900px (custom `@custom-variant` in `app.css`)
-- **< 900px:** TopAppBar visible, BottomNav visible, Sidebar drawer-only
-- **>= 900px:** TopAppBar hidden, BottomNav hidden, Sidebar full sidebar (unchanged)
+- **< 900px:** BottomNav + Konto-Kreis visible, kein Balken oben, Sidebar hidden
+- **>= 900px:** BottomNav hidden, Sidebar full sidebar (unchanged)
 
-**CSS Utilities Added:**
-- `--g-paper-deep` — BottomNav background (slightly darker than surface)
+**CSS Utilities:**
+- `--g-nav-*` — Geometrie und Glas der schwebenden Leiste (`docs/design-system/TOKENS.md`)
 - `--g-rule-soft` — Border/divider color (soft ink at 8% opacity)
-- `.mobile-scroll-pad` — Padding-bottom to prevent BottomNav overlap: `calc(64px + env(safe-area-inset-bottom))`
+- `.mobile-scroll-pad` — Padding-top `calc(env(safe-area-inset-top) + var(--g-s-3))`, Padding-bottom `calc(var(--g-nav-clearance) + var(--g-s-4))`
 - `@custom-variant mobile` — Matches viewport < 900px
 - `@custom-variant desktop` — Matches viewport >= 900px
 
 ### Sidebar Component Updates
-
-**File:** `frontend/src/lib/components/ui/sidebar/Sidebar.svelte`
-
-Updated to support both desktop full-sidebar and mobile drawer modes.
-
-**Changes from Issue #267:**
-- Removed mobile-specific (hamburger, overlay) UI logic
-- Added 4th NavItem for Locations (`/locations`)
-- Accepts `mobileMenuOpen` as `$bindable()` prop to control drawer state
+- Desktop-only (`hidden desktop:flex`); der mobile Drawer wurde mit Mobile-Shell S2 entfernt
 - All `md:` Tailwind breakpoint classes → `desktop:` (900px instead of 768px)
-- On mobile, drawer shows only secondary items (Konto, Status, Dark Mode, Logout)
-- Workspace routes (Übersicht, Trips, Vergleich, Locations) removed from drawer, available only in BottomNav
+- Konto, Status, Dark Mode, Logout: Desktop im User-Badge-Dropdown, mobil im `KontoSheet`
 
 ---
 
@@ -776,7 +715,7 @@ Kanonische Komponenten-Hierarchie, 1:1 an die Claude-Design-Sandbox angeglichen.
 | **brand** | `lib/brand/` | Marken-Bausteine: BrandIcon, BrandIconSquare, BrandWordmark, BrandUserBadge, BrandSidebar, BrandShell (Issue #370) |
 | **atoms** | `lib/components/atoms/` | 13 Atome: Eyebrow, Pill, Card, Btn, Input, Switch, Dot, WIcon, ElevSparkline, SectionH, AvatarStack, TopoBg, KV (Issue #371) |
 | **molecules** | `lib/components/molecules/` | 9 Molecules: Field, DetailRow, ChannelRow, ChannelChip, BriefingTimelineRow, BriefingScheduleRow, ThresholdRow, Stat, AlertRow (Issue #372) |
-| **mobile** | `lib/components/mobile/` | 12 Touch-Primitive (M*): MBtn, MInput, MField, MSwitch, MTab, MIcon, TopAppBar, BottomNav, Drawer, Sheet, Toast, MobileShell (Issue #373) |
+| **mobile** | `lib/components/mobile/` | 11 Touch-Primitive (M*): MBtn, MInput, MField, MSwitch, MTab, MIcon, BottomNav, Drawer, Sheet, Toast, MobileShell (Issue #373; TopAppBar seit Mobile-Shell S2 entfernt) |
 
 **Naming-Konvention:** Brand-only → `Brand*`. Mobile-only → `M*`. Atoms/Molecules → sprechender Name ohne Prefix. **Konflikt-Regel:** Bei Widerspruch gewinnt `brand-kit`, dann `atoms`.
 

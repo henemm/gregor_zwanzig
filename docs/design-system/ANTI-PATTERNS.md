@@ -257,6 +257,8 @@
 - Quadratisch ≥ 44 × 44 px
 - Komponente heißt `<MapControl>` — der Name `FAB` bleibt für das verbotene Muster reserviert
 
+**Kein FAB — der Konto-Kreis der Mobile-Nav (Charter §2):** Der User-Badge rechts neben der schwebenden Bottom-Nav ist **Navigation, keine Aktion**: Glas wie die Leiste (kein Akzent-Fill außer dem Avatar-Badge selbst), Teil der Tabbar-Gruppe, auf jedem Screen gleich, öffnet das Konto-Sheet. Er löst keine Screen-Primäraktion aus dem Page-Header — genau das verbietet AP-012. Der Primäraktions-FAB bleibt verboten.
+
 **Falsch:**
 ```svelte
 <!-- Primäraktion als schwebender Akzent-Kreis -->

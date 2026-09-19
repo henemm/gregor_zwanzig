@@ -78,19 +78,21 @@
 	// F002: 45% Freiraum oberhalb des 'half'-Sheets (Default-Snap) = 90px bei
 	// 200px Floor, komfortabel über der `add-waypoint`-Unterkante (56px, +34px Marge).
 	const MOBILE_EDITOR_MIN_HEIGHT_PX = 200;
-	const BOTTOM_NAV_HEIGHT_PX = 64; // app.css `.mobile-scroll-pad` padding-bottom (ohne Safe-Area)
+	const BOTTOM_NAV_HEIGHT_PX = 70; // app.css --g-nav-h (64) + --g-nav-gap (6): Oberkante der schwebenden Leiste (ohne Safe-Area)
 
 	// Liest `env(safe-area-inset-bottom)` als px-Zahl aus (Notch-Geräte) — CSS
 	// `env()` ist in JS nicht direkt abfragbar, daher kurzzeitige Mess-Sonde.
-	function getSafeAreaBottomPx(): number {
+	function getSafeAreaPx(seite: 'top' | 'bottom'): number {
 		const probe = document.createElement('div');
 		probe.style.cssText =
-			'position:fixed;bottom:0;left:0;height:env(safe-area-inset-bottom);width:0;visibility:hidden;pointer-events:none;';
+			`position:fixed;${seite}:0;left:0;height:env(safe-area-inset-${seite});width:0;visibility:hidden;pointer-events:none;`;
 		document.body.appendChild(probe);
 		const h = probe.getBoundingClientRect().height;
 		probe.remove();
 		return h;
 	}
+	const getSafeAreaBottomPx = () => getSafeAreaPx('bottom');
+	const getSafeAreaTopPx = () => getSafeAreaPx('top');
 
 	$effect(() => {
 		if (!browser || !mobileEditorEl) return;
@@ -115,14 +117,16 @@
 	// Wegpunkt-Button genau in das Band am unteren Rand, das der Banner belegte —
 	// beide lagen formal im Ausschnitt, waren real aber unklickbar.
 	// Regel: passt der Banner ÜBER die Steuerelemente (Unterkante 8px über deren
-	// Oberkante, Oberkante noch unter der TopAppBar), wird er dort verankert; sonst
+	// Oberkante, Oberkante noch unter dem Seitenanfang), wird er dort verankert; sonst
 	// bleibt er unten über der BottomNav — dann liegt der Kartenblock nämlich im
 	// oberen Bildschirmbereich und die Steuerelemente sind weit vom unteren Rand
 	// entfernt. Damit ist Überlappungsfreiheit in beiden Fällen konstruktiv
 	// garantiert, unabhängig von Chrome-Höhe und Scrollposition.
 	const MAP_CONTROLS_TOP_PX = 12; // .stage-switcher-pill / .map-control: top:12px
 	const CASCADE_GAP_PX = 8;
-	const TOP_APP_BAR_PX = 56; // app.css `.mobile-scroll-pad` padding-top
+	// Mobile-Shell S2: kein fixer Balken oben mehr — der Inhalt beginnt unter der
+	// Safe-Area plus --g-s-3 (app.css `.mobile-scroll-pad` padding-top).
+	const CONTENT_TOP_GAP_PX = 12;
 	let cascadeEl = $state<HTMLDivElement | null>(null);
 	let cascadeBottomPx = $state(BOTTOM_NAV_HEIGHT_PX + CASCADE_GAP_PX);
 
@@ -133,7 +137,7 @@
 		function place(): void {
 			const controlsTop = mapEl.getBoundingClientRect().top + MAP_CONTROLS_TOP_PX;
 			const bannerBottomY = controlsTop - CASCADE_GAP_PX;
-			const fitsAbove = bannerBottomY - bannerEl.offsetHeight >= TOP_APP_BAR_PX;
+			const fitsAbove = bannerBottomY - bannerEl.offsetHeight >= getSafeAreaTopPx() + CONTENT_TOP_GAP_PX;
 			cascadeBottomPx = fitsAbove
 				? window.innerHeight - bannerBottomY
 				: BOTTOM_NAV_HEIGHT_PX + CASCADE_GAP_PX + getSafeAreaBottomPx();

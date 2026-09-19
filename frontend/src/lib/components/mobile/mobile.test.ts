@@ -21,25 +21,28 @@ const here = dirname(fileURLToPath(import.meta.url));
 const read = (f: string) => readFileSync(join(here, f), 'utf-8');
 const has = (f: string) => existsSync(join(here, f));
 
-const ALL_12 = [
+// Mobile-Shell S2: TopAppBar ist abgeschafft (kein fixer Balken oben) — 11 Primitive.
+const ALL_11 = [
 	'MBtn', 'MInput', 'MField', 'MSwitch', 'MTab', 'MIcon',
-	'TopAppBar', 'BottomNav', 'Drawer', 'Sheet', 'Toast', 'MobileShell',
+	'BottomNav', 'Drawer', 'Sheet', 'Toast', 'MobileShell',
 ];
 
 const NEW_10 = ['MBtn', 'MInput', 'MField', 'MSwitch', 'MTab', 'MIcon', 'Drawer', 'Sheet', 'Toast', 'MobileShell'];
 
-test('#373 AC-1: alle 12 Primitive-Dateien existieren in mobile/', () => {
-	for (const name of ALL_12) {
+test('#373 AC-1: alle 11 Primitive-Dateien existieren in mobile/', () => {
+	for (const name of ALL_11) {
 		assert.ok(has(`${name}.svelte`), `mobile/${name}.svelte fehlt`);
 	}
 	assert.ok(has('index.ts'), 'mobile/index.ts fehlt');
 });
 
-test('#373 AC-1: index.ts re-exportiert alle 12 Primitive', () => {
+test('#373 AC-1: index.ts re-exportiert alle 11 Primitive, TopAppBar nicht mehr', () => {
 	const idx = read('index.ts');
-	for (const name of ALL_12) {
+	for (const name of ALL_11) {
 		assert.ok(new RegExp(`\\b${name}\\b`).test(idx), `index.ts exportiert ${name} nicht`);
 	}
+	assert.ok(!/export .*TopAppBar/.test(idx), 'index.ts exportiert noch TopAppBar (Mobile-Shell S2: abgeschafft)');
+	assert.ok(!has('TopAppBar.svelte'), 'mobile/TopAppBar.svelte existiert noch (Mobile-Shell S2: abgeschafft)');
 });
 
 test('#373 AC-2: MSwitch role/aria/data-testid + 44px Hit-Area', () => {
@@ -86,13 +89,8 @@ test('#373 AC-6: Token-Disziplin + Varianten (Sheet snap, Toast kind)', () => {
 	}
 });
 
-test('#373 F001: MobileShell-Hamburger bind-Kette intakt (mobileMenuOpen propagiert)', () => {
-	// MobileShell muss mobileMenuOpen via bind: an den TopAppBar-Wrapper geben,
-	// und der Wrapper muss es als $bindable weiterreichen — sonst togglet der
-	// Hamburger nicht (latenter Defekt vor Showcase #374).
+test('Mobile-Shell S2: MobileShell mountet keinen Top-Balken mehr', () => {
 	const shell = read('MobileShell.svelte');
-	assert.ok(/bind:mobileMenuOpen/.test(shell), 'MobileShell: bind:mobileMenuOpen fehlt');
-	const wrap = read('TopAppBar.svelte');
-	assert.ok(/mobileMenuOpen\s*=\s*\$bindable/.test(wrap), 'mobile/TopAppBar: mobileMenuOpen nicht $bindable');
-	assert.ok(/bind:mobileMenuOpen/.test(wrap), 'mobile/TopAppBar: bind:mobileMenuOpen an ui/sidebar fehlt');
+	assert.ok(!/TopAppBar/.test(shell), 'MobileShell importiert/mountet noch TopAppBar');
+	assert.ok(!/mobileMenuOpen/.test(shell), 'MobileShell traegt noch die Hamburger-bind-Kette');
 });

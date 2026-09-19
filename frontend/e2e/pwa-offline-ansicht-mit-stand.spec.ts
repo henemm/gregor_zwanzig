@@ -2,7 +2,7 @@
 // Spec: docs/specs/modules/pwa_offline_ansicht_letzter_stand.md
 // Abgedeckt: AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-16, AC-17, AC-18
 // Dazu die Adversary-Findings F004 (unterscheidbare Titel in der Uebersicht)
-// und F006 (Baender am mobilen Viewport nicht von der Kopfleiste verdeckt).
+// und F006 (Baender am mobilen Viewport liegen frei am Seitenanfang).
 //
 // Alle Nachweise laufen ueber echtes Browserverhalten: echter Service Worker,
 // echter Gerätespeicher (CacheStorage), echter Netzverkehr, echte Trips und
@@ -660,7 +660,12 @@ test('F004: die Offline-Uebersicht benennt Trip und Ortsvergleich mit ihren eige
 test.describe('F006: Offline-Baender am mobilen Viewport', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
-	test('F006: Stand-Zeile und Sperr-Band liegen frei vor der fixierten Kopfleiste', async ({
+	// Mobile-Shell S2: es gibt keine fixierte Kopfleiste mehr. Die Baender sind
+	// die erste Zeile des Dokuments; was bleibt, ist der Nachweis, dass sie frei
+	// liegen (nichts zeichnet darueber) und dass der Inhalt seinen oberen
+	// Abstand nicht doppelt bekommt (app.css: das Band traegt die Safe-Area,
+	// <main> gibt seinen Safe-Area-Anteil ab und behaelt nur --g-s-3).
+	test('F006: Stand-Zeile und Sperr-Band liegen frei am Seitenanfang, kein doppelter Abstand', async ({
 		page,
 		context
 	}) => {
@@ -676,13 +681,10 @@ test.describe('F006: Offline-Baender am mobilen Viewport', () => {
 			await expect(page.getByTestId('offline-stand')).toBeVisible({ timeout: 15_000 });
 			await expect(page.getByTestId('offline-sperre-hinweis')).toBeVisible();
 
-			// Positivkontrolle: ohne die fixierte Kopfleiste gibt es nichts zu
-			// verdecken — der Nachweis waere dann leer. Sie erscheint nur unter
-			// 900px Breite (`desktop:hidden`).
-			await expect(
-				page.getByTestId('top-app-bar'),
-				'keine fixierte Kopfleiste — dieser Viewport prueft die Verdeckung gar nicht'
-			).toBeVisible();
+			// Positivkontrolle: mobiler Viewport — die schwebende Tabbar ist da,
+			// ein fixer Balken oben nicht mehr.
+			await expect(page.getByTestId('bottom-nav')).toBeVisible();
+			await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
 
 			const bild = await page.evaluate(() => {
 				const messe = (el: Element | null) => {
@@ -696,17 +698,12 @@ test.describe('F006: Offline-Baender am mobilen Viewport', () => {
 						fremd: treffer ? `${treffer.tagName}.${treffer.className}` : 'nichts'
 					};
 				};
-				const leiste = document.querySelector('[data-testid="top-app-bar"]');
 				const inhalt = document.querySelector('main.mobile-scroll-pad');
 				return {
 					stand: messe(document.querySelector('[data-testid="offline-stand"]')),
 					band: messe(document.querySelector('[data-testid="offline-sperre-hinweis"]')),
-					leisteUnterkante: leiste ? leiste.getBoundingClientRect().bottom : -1,
-					// Die Kopfleiste wird an zwei Stellen kompensiert: <body> traegt
-					// den Versatz, sobald ein Band da ist, <main> gibt seinen dann ab.
-					kompensation:
-						parseFloat(getComputedStyle(document.body).paddingTop) +
-						(inhalt ? parseFloat(getComputedStyle(inhalt).paddingTop) : 0)
+					mainPaddingTop: inhalt ? parseFloat(getComputedStyle(inhalt).paddingTop) : -1,
+					bodyPaddingTop: parseFloat(getComputedStyle(document.body).paddingTop)
 				};
 			});
 
@@ -723,20 +720,14 @@ test.describe('F006: Offline-Baender am mobilen Viewport', () => {
 				band.obenauf,
 				`am Mittelpunkt des Sperr-Bandes liegt "${band.fremd}" obenauf — die Begruendung ist verdeckt`
 			).toBe(true);
-			expect(
-				stand.top,
-				`die Stand-Zeile beginnt bei ${stand.top}px und liegt damit unter der Kopfleiste (Unterkante ${bild.leisteUnterkante}px)`
-			).toBeGreaterThanOrEqual(bild.leisteUnterkante);
-			expect(
-				band.top,
-				`das Sperr-Band beginnt bei ${band.top}px und ist von der Kopfleiste angeschnitten`
-			).toBeGreaterThanOrEqual(bild.leisteUnterkante);
-			// Die andere Richtung: der Versatz darf auch nicht doppelt entstehen —
-			// <body> und <main> zusammen ergeben genau die Hoehe der Kopfleiste.
-			expect(
-				bild.kompensation,
-				`Kopfleiste und Inhalt sind um ${bild.kompensation}px auseinander, die Leiste ist aber nur ${bild.leisteUnterkante}px hoch`
-			).toBe(bild.leisteUnterkante);
+			// Die Stand-Zeile ist die erste Zeile des Dokuments (Safe-Area im
+			// Test-Viewport 0) — nichts schiebt sie mehr unter einen Balken.
+			expect(stand.top, `die Stand-Zeile beginnt erst bei ${stand.top}px`).toBeLessThanOrEqual(1);
+			expect(band.top, 'das Sperr-Band ist angeschnitten').toBeGreaterThanOrEqual(0);
+			// Kein doppelter Abstand: <body> kompensiert nichts mehr, <main>
+			// behaelt nur den Raster-Schritt (--g-s-3 = 12px).
+			expect(bild.bodyPaddingTop, 'body traegt noch eine Balken-Kompensation').toBe(0);
+			expect(bild.mainPaddingTop, 'main hat mehr als den Raster-Schritt oben').toBe(12);
 		} finally {
 			await context.setOffline(false);
 		}

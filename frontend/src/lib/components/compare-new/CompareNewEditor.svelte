@@ -51,7 +51,8 @@
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
-	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
+	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
+	import { PageHeader } from '$lib/components/atoms';
 
 	interface Props {
 		locations?: Location[];
@@ -186,7 +187,7 @@
 	// `if (!ready || saving || savedTripId) return`) — ein Doppelklick auf
 	// „Briefing aktivieren" darf NUR EIN Preset anlegen (Staging-Fund #1301 F2a:
 	// 2× POST /api/compare/presets = Duplikat-Karteileiche). Während des Speicherns
-	// sind beide Aktivieren-Knöpfe (Desktop + mobile App-Leiste) disabled + „…".
+	// sind beide Aktivieren-Knöpfe (Desktop + mobiler Sticky-Footer) disabled.
 	let activating = $state(false);
 	async function handleActivate() {
 		if (!canActivateNow || activating) return;
@@ -227,29 +228,12 @@
 		}
 	}
 
-	// ── Mobile: EINE globale Design-Kopfleiste befüllen (AC-15-Muster) ─────────
-	$effect(() => {
-		topAppBarStore.set({
-			title: TAB_DEFS.find((t) => t.id === activeTab)?.label ?? 'Vergleich',
-			eyebrow: wiz.name.trim() || 'Neuer Vergleich',
-			leftIcon: 'back',
-			backHref: '/compare',
-			right: topAppBarActivate
-		});
-		return () => topAppBarStore.reset();
-	});
+	// ── Mobile-Shell S2: Kopf im Inhalt statt globaler Kopfleiste ──────────────
+	// <PageHeader back> traegt Ruecksprung + Eyebrow + Reiter-Titel; „Briefing
+	// aktivieren" sitzt im geteilten Sticky-Footer (EditorStickyFooter).
+	const mobileTitel = $derived(TAB_DEFS.find((t) => t.id === activeTab)?.label ?? 'Vergleich');
+	const mobileEyebrow = $derived(wiz.name.trim() || 'Neuer Vergleich');
 </script>
-
-<!-- Mobile App-Bar: rechte Aktion „…"/„Aktivieren" (analog CompareEditor). -->
-{#snippet topAppBarActivate()}
-	<button
-		type="button"
-		data-testid="top-app-bar-activate"
-		disabled={!canActivateNow || activating}
-		onclick={handleActivate}
-		style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {canActivateNow && !activating ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {canActivateNow && !activating ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;"
-	>{activating ? '…' : canActivateNow ? 'Aktivieren' : '…'}</button>
-{/snippet}
 
 <!-- Create-Aktivierungs-Banner als Snippet-Prop für VersandTab (1:1 Muster). -->
 {#snippet versandActivationBanner()}
@@ -427,6 +411,10 @@
 		<Toast kind="info" msg={lockToastMsg} />
 	{/if}
 
+	<div data-testid="cm-mobile-head" style="padding: 0 16px; flex-shrink: 0;">
+		<PageHeader back={{ href: '/compare', label: 'Vergleiche' }} eyebrow={mobileEyebrow} title={mobileTitel} compact />
+	</div>
+
 	<!-- Fortschrittsbalken -->
 	<div class="cm-mobile-flex" data-testid="cm-mobile-progress" style="align-items: center; gap: 8px; padding: 8px 16px 0; flex-shrink: 0;">
 		<div style="display: flex; gap: 3px; flex: 1;">
@@ -503,10 +491,12 @@
 		{/if}
 	</div>
 
-	<!-- Floating-CTA (nicht auf Versand — dort sitzt „Aktivieren" in der App-Bar) -->
-	{#if activeTab !== 'versand'}
-		<div data-testid="cm-mobile-cta" style="position: sticky; bottom: 0; padding: 12px 16px; background: var(--g-paper); border-top: 1px solid var(--g-rule-soft); flex-shrink: 0;">
-			{#if activeTab === 'vergleich'}
+	<!-- Sticky-Footer (geteilter Baustein): Weiter-Aktion des Reiters, auf
+	     Versand „Briefing aktivieren" (Mobile-Shell S2, vorher App-Leiste). -->
+	<EditorStickyFooter context="vergleich" testid="cm-mobile-cta">
+			{#if activeTab === 'versand'}
+				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? 'Speichere…' : canActivateNow ? 'Briefing aktivieren' : 'Versand einrichten zum Aktivieren'}</MBtn>
+			{:else if activeTab === 'vergleich'}
 				<MBtn block variant={canContinue ? 'primary' : 'quiet'} size="xl" disabled={!canContinue} onclick={handleMobileNext}>{canContinue ? 'Orte hinzufügen →' : 'Name eingeben'}</MBtn>
 			{:else if activeTab === 'orte'}
 				{@const restOrte = 2 - wiz.pickedIds.length}
@@ -518,8 +508,7 @@
 			{:else if activeTab === 'alarme'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Versand einrichten →</MBtn>
 			{/if}
-		</div>
-	{/if}
+	</EditorStickyFooter>
 </div><!-- /.cm-mobile -->
 
 <!-- Mobile Bibliotheks-Sheet (Orte-Tab) -->

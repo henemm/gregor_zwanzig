@@ -7,8 +7,9 @@
 // CSS-only-Switch: .cm-desktop / .cm-mobile per @media (max-width: 899px).
 //
 // RED-Phase: Alle Tests schlagen fehl, weil kein .cm-mobile-Markup existiert:
-//   - top-app-bar, cm-mobile-tabbar, cm-mobile-progress, cm-mobile-cta fehlen
-//   - top-app-bar-save / top-app-bar-activate fehlen (Issue #1256 S8d: Design-Kopfleiste ersetzt cm-mobile-appbar)
+//   - cm-mobile-head, cm-mobile-tabbar, cm-mobile-progress, cm-mobile-cta fehlen
+//   - cm-mobile-activate im Sticky-Footer fehlt (Mobile-Shell S2: kein Top-Balken,
+//     Rücksprung + Titel im <PageHeader back>, Aktivieren im geteilten Footer)
 //   - compare-step2-mobile-library-btn fehlt (Bottom-Sheet für Bibliothek)
 //
 // Ausführen:
@@ -55,14 +56,16 @@ async function createPreset(page: Page): Promise<string> {
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 
-	// AC-1: Mobile App-Leiste + scrollbare Tab-Bar + Progress sichtbar; Desktop-Breadcrumb verborgen.
-	test('AC-1: Mobile zeigt App-Leiste + Tab-Bar + Progress; Desktop-Breadcrumb verborgen', async ({ page }) => {
+	// AC-1: Mobiler Kopf (Rücksprung + Titel) + scrollbare Tab-Bar + Progress sichtbar; Desktop-Breadcrumb verborgen.
+	test('AC-1: Mobile zeigt Kopf mit Rücksprung + Tab-Bar + Progress; Desktop-Breadcrumb verborgen', async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/compare/new');
 
-		// top-app-bar (Design-Kopfleiste, Issue #1256 S8d) muss sichtbar sein (Höhe > 0)
-		const appbar = page.getByTestId('top-app-bar');
-		await expect(appbar).toBeVisible();
+		// Kopf im Inhalt (Mobile-Shell S2): Rücksprung-Link nach /compare
+		const head = page.getByTestId('cm-mobile-head');
+		await expect(head).toBeVisible();
+		await expect(head.getByTestId('back-link')).toHaveAttribute('href', '/compare');
+		await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
 
 		// cm-mobile-tabbar muss sichtbar und mindestens 44px hoch sein
 		const tabbar = page.getByTestId('cm-mobile-tabbar');
@@ -76,8 +79,7 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		// Desktop-Breadcrumb muss verborgen sein
 		// Die Desktop-Klasse hat keinen eigenen testid — wir prüfen, ob das
 		// cm-desktop-div nicht sichtbar ist. Dazu: der TopoBg-Wrapper enthält die
-		// Desktop-Breadcrumb-Zeile. Wir prüfen direkt, dass top-app-bar sichtbar
-		// und die Desktop-Topbar nicht überlappt.
+		// Desktop-Breadcrumb-Zeile.
 		// Einfacher: kein horizontal overflow
 		const overflow = await page.evaluate(
 			() => (document.scrollingElement?.scrollWidth ?? 0) - window.innerWidth
@@ -86,11 +88,11 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 	});
 
 	// AC-1 Desktop-Regression: ≥900px → Desktop sichtbar, Mobile-Elemente verborgen
-	test('AC-1b: Desktop (≥900px) unverändert — top-app-bar nicht sichtbar', async ({ page }) => {
+	test('AC-1b: Desktop (≥900px) unverändert — mobiler Kopf nicht sichtbar', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		await page.goto('/compare/new');
 
-		await expect(page.getByTestId('top-app-bar')).toBeHidden();
+		await expect(page.getByTestId('cm-mobile-head')).toBeHidden();
 		await expect(page.getByTestId('compare-editor')).toBeVisible();
 	});
 
@@ -162,18 +164,21 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		await expect(checkbox).toBeVisible();
 	});
 
-	// AC-4a: Create-Modus — Floating-CTA sichtbar; bei ausgefülltem Tab wechselt aktiver Tab weiter.
-	test('AC-4a: Floating-CTA im Create-Modus sichtbar; top-app-bar-activate in App-Leiste', async ({ page }) => {
+	// AC-4a: Create-Modus — Sticky-Footer sichtbar; auf dem Versand-Reiter trägt er „Briefing aktivieren".
+	test('AC-4a: Sticky-Footer im Create-Modus sichtbar; Aktivieren im Footer statt App-Leiste', async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/compare/new');
 
-		// Floating-CTA muss sichtbar sein
+		// Sticky-Footer (geteilter Baustein) muss sichtbar sein
 		const cta = page.getByTestId('cm-mobile-cta');
 		await expect(cta).toBeVisible();
+		await expect(cta).toHaveAttribute('data-context', 'vergleich');
 
-		// Aktivieren-Button in App-Leiste muss sichtbar sein (deaktiviert, da noch nicht bereit)
-		const activateBtn = page.getByTestId('top-app-bar-activate');
-		await expect(activateBtn).toBeVisible();
+		// Kein Aktivieren in einer App-Leiste mehr (Mobile-Shell S2)
+		await expect(page.getByTestId('top-app-bar-activate')).toHaveCount(0);
+		// Vor dem Versand-Reiter gibt es keinen Aktivieren-Knopf — erst dort
+		// sitzt er im Footer (siehe compare-editor-fidelity-s8d AC-15).
+		await expect(page.getByTestId('cm-mobile-activate')).toHaveCount(0);
 	});
 
 	// Epic #1273 S4c: Der frühere Edit-Modus-Speichern-Farbwechsel-Test wurde
@@ -191,9 +196,8 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/compare/new');
 
-		// top-app-bar muss da sein (Mobile-Layout existiert)
-		const appbar = page.getByTestId('top-app-bar');
-		await expect(appbar).toBeVisible();
+		// Mobiler Kopf muss da sein (Mobile-Layout existiert)
+		await expect(page.getByTestId('cm-mobile-head')).toBeVisible();
 
 		// Einen Vergleichs-Namen eingeben (Epic #1301 F3: eigenständiges Mobile-Feld)
 		await page.getByTestId('compare-editor-name-mobile').fill('AC5-Mobile-Test-' + Date.now());

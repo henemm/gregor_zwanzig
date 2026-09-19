@@ -143,44 +143,8 @@ test.describe('Issue #578: Sidebar 1:1 nach brand-kit.jsx', () => {
 	});
 });
 
-test.describe('Issue #578: Mobile-Drawer bleibt funktional', () => {
-	test.use({ viewport: { width: 375, height: 812 } });
-
-	test.beforeEach(async ({ page }) => {
-		test.skip(!VALIDATOR_USER || !VALIDATOR_PASS, 'GZ_VALIDATOR_USER/PASS not set');
-
-		await page.goto(`${STAGING_URL}/login`);
-		await page.fill('input[name="username"]', VALIDATOR_USER);
-		await page.fill('input[name="password"]', VALIDATOR_PASS);
-		await page.click('button[type="submit"]');
-		await page.waitForURL((u) => !u.pathname.includes('/login'), { timeout: 15_000 });
-		await page.goto(STAGING_URL + '/');
-		await page.waitForLoadState('networkidle');
-	});
-
-	// AC-9: Mobile-Drawer Hamburger öffnet, Backdrop schließt.
-	test('AC-9: Mobile-Drawer öffnet via Hamburger, Backdrop schließt', async ({ page }) => {
-		const drawer = page.locator('[data-testid="mobile-drawer"]');
-		// Vor Klick: Drawer hat -translate-x-full / hidden
-		await expect(drawer).toHaveClass(/-translate-x-full|hidden/);
-
-		// Hamburger-Button im Mobile-Topbar (außerhalb der Sidebar)
-		const hamburger = page
-			.locator('button')
-			.filter({ has: page.locator('svg') })
-			.first();
-		await hamburger.click();
-
-		await expect(drawer).toHaveClass(/translate-x-0/);
-
-		// Backdrop: .fixed.inset-0.bg-black/50 (z-50, vor Drawer z-40)
-		const backdrop = page.locator('.fixed.inset-0.bg-black\\/50').first();
-		await expect(backdrop).toBeVisible();
-		await backdrop.click();
-
-		await expect(drawer).toHaveClass(/-translate-x-full|hidden/);
-	});
-});
+// Mobile-Shell S2: der Hamburger-Drawer ist abgeschafft (AC-9 entfaellt);
+// Konto/Abmelden liegen im Konto-Sheet — Nachweis: e2e/mobile-konto-sheet.spec.ts.
 
 test.describe('Issue #578: Field-Molecule Token-Treue', () => {
 	test.beforeEach(async ({ page }) => {

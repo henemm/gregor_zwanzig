@@ -29,6 +29,8 @@ export { default as Segmented } from './Segmented.svelte';
 
 // Issue #573 — PageHeader Atom
 export { default as PageHeader } from './PageHeader.svelte';
+// Mobile-Shell S2 — Rücksprung-Link im Inhalt (auch allein nutzbar)
+export { default as BackLink } from './BackLink.svelte';
 
 // Issue #578 — Stat Atom
 export { default as Stat } from './Stat.svelte';

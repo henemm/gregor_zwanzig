@@ -3,15 +3,16 @@
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
 	import { Sidebar } from '$lib/components/ui/sidebar';
-	import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
 	import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
-	// Issue #1256 Scheibe 8d — Seiten befüllen die EINE globale Design-Kopfleiste
-	// über diesen Store (title/eyebrow/leftIcon/backHref/right); Default (leer)
-	// = unverändertes Wordmark/Bell/Plus-Erscheinungsbild auf allen Seiten.
-	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
+	// Mobile-Shell S2 — kein fixer Balken oben mehr: Seitentitel kommen aus dem
+	// <PageHeader> der Seite, Konto/Abmelden aus dem Konto-Sheet, das der
+	// Konto-Kreis neben der Tabbar oeffnet (docs/design-requests/
+	// mobile_shell_ohne_topbar.md).
+	import KontoSheet from '$lib/components/ui/sidebar/KontoSheet.svelte';
+	import { initialen } from '$lib/utils/initialen';
 	// Issue #2128/#2316 — die app-weiten Systemhinweise der PWA. Sie haengen
 	// BEWUSST ausserhalb des Chrome-Blocks: der Update-Hinweis gehoert auch auf
-	// die Anmeldeseite, die ohne TopAppBar/Sidebar/BottomNav rendert.
+	// die Anmeldeseite, die ohne Sidebar/BottomNav rendert.
 	import { initServiceWorkerUpdate } from '$lib/pwa/serviceWorkerUpdate';
 	import { setContext } from 'svelte';
 	import { AKTIVE_SPEICHERUNG, erzeugeSpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
@@ -112,7 +113,9 @@
 	};
 
 	let darkMode = $state(false);
-	let mobileMenuOpen = $state(false);
+	// Mobile-Shell S2 — Konto-Sheet; schliesst bei jeder Navigation.
+	let kontoOpen = $state(false);
+	const kontoInitialen = $derived(initialen(data.displayName, data.userId));
 
 	function applyDarkMode(dark: boolean) {
 		const el = document.documentElement;
@@ -132,7 +135,10 @@
 	// bei einer Client-Navigation nachgefuehrt — dort entsteht kein neues
 	// Dokument, und der Stand der vorigen Ansicht bliebe sonst stehen (AC-5).
 	if (browser) initOfflineStand();
-	afterNavigate(() => standAnwenden());
+	afterNavigate(() => {
+		standAnwenden();
+		kontoOpen = false;
+	});
 
 	if (browser) {
 		darkMode = localStorage.getItem('gz-dark') === '1';
@@ -197,7 +203,7 @@
 	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 	const isLogin = $derived(publicPages.includes(page.url.pathname));
 	const isWizard = $derived(page.url.pathname.startsWith('/trips/new'));
-	// Showcase-Route (#370): ohne App-Chrome (TopAppBar/Sidebar/BottomNav), damit
+	// Showcase-Route (#370): ohne App-Chrome (Sidebar/BottomNav), damit
 	// die Brand-Demos die einzigen App-Bausteine auf der Seite sind.
 	const isShowcase = $derived(page.url.pathname === '/_design');
 
@@ -228,16 +234,6 @@
 {#if isLogin || isShowcase}
 	{@render children()}
 {:else}
-	<TopAppBar
-		bind:mobileMenuOpen
-		{darkMode}
-		ontoggleDark={toggleDark}
-		title={topAppBarStore.fill.title}
-		eyebrow={topAppBarStore.fill.eyebrow}
-		leftIcon={topAppBarStore.fill.leftIcon}
-		backHref={topAppBarStore.fill.backHref}
-		right={topAppBarStore.fill.right}
-	/>
 	<!-- Issue #2131 — sichtbare Begruendung der Bearbeitungssperre; sperrt
 	     zugleich die Bedienelemente der Ansicht (ADR-0034: gesperrt und
 	     begruendet, nicht versteckt). -->
@@ -249,14 +245,22 @@
 			currentPath={page.url.pathname}
 			{darkMode}
 			ontoggleDark={toggleDark}
-			bind:mobileMenuOpen
 		/>
 		<main class="mobile-scroll-pad flex-1 overflow-auto px-4 desktop:p-6 desktop:pt-6">
 			{@render children()}
 		</main>
 	</div>
 	{#if !isWizard}
-		<BottomNav />
+		<BottomNav initials={kontoInitialen} {kontoOpen} onKonto={() => (kontoOpen = true)} />
+		<KontoSheet
+			open={kontoOpen}
+			onClose={() => (kontoOpen = false)}
+			initials={kontoInitialen}
+			displayName={data.displayName}
+			userId={data.userId}
+			{darkMode}
+			ontoggleDark={toggleDark}
+		/>
 	{/if}
 {/if}
 
@@ -270,7 +274,7 @@
 	<div
 		data-testid="update-hinweis"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: 76px; z-index: 60;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 60;
 		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
@@ -307,7 +311,7 @@
 	<div
 		data-testid="ios-install-hint"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: 76px; z-index: 61;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 61;
 		       display: flex; align-items: center; gap: 12px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
@@ -333,7 +337,7 @@
 	<div
 		data-testid="passkey-angebot"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: 76px; z-index: 62;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 62;
 		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
