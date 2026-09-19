@@ -396,8 +396,13 @@ def build_token_line(
         # den Hagel-Suffix, und nur bei bestaetigtem Hagel ("ja").
         suffix = (FORECAST_TH_HAIL_SUFFIX
                   if sym == FORECAST_TH and today.hail_flag is True else "")
+        # Issue #1794: PR kennt zusaetzlich einen metrik-lokalen Fehlbestand
+        # (Fensterpunkte vorhanden, `pop_pct` durchgaengig None) — dort waere
+        # "-" eine falsche Entwarnung. Alle anderen Kuerzel bleiben allein am
+        # segmentweiten `has_data_gap`.
+        gap = today.has_data_gap or (sym == "PR" and today.pop_all_missing)
         tok = _mk_metric(sym, samples, spec, report_type, is_lvl,
-                          has_gap=today.has_data_gap, value_suffix=suffix)
+                          has_gap=gap, value_suffix=suffix)
         if tok:
             tokens.append(tok)
 
