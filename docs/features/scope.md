@@ -37,8 +37,8 @@ tauglich, unterwegs steuerbar (Inbound-Kommandos), kontextbezogen (Profil).
 - **Orts-Vergleich:** Vergleichsmatrix über ≥2 Orte mit Idealbereichen,
   Winner-Logik, eigenem Mail-Template, Zeitplan-Versand.
 - **Alerts als Abweichungs-Wächter:** Nowcast/aktueller Forecast vs. letztes
-  Briefing (Deviation-Engine), Radar-Nowcast, amtliche Warnungen (FR/AT/IT) —
-  für Trips und Orts-Vergleiche.
+  Briefing (Deviation-Engine), Radar-Nowcast, amtliche Warnungen (FR/AT/IT/DE,
+  DE seit #1681 über den MeteoAlarm-Feed) — für Trips und Orts-Vergleiche.
 - **Steuerung unterwegs:** Inbound-Kommandos per E-Mail/Telegram (Umplanung,
   Zoom), Webhook-basierter Telegram-Bot.
 - **Planungs-Frontend:** Trip-/Compare-Verwaltung, progressive Anlege-Editoren,

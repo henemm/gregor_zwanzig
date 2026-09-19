@@ -1,6 +1,6 @@
 ---
 spec_file: /home/hem/gregor_zwanzig/.claude/worktrees/majestic-sauteeing-petal/docs/specs/modules/feat_1681_meteoalarm_de.md
-spec_sha256: ed07014a7ba6ceb44c6b18e2f98e263fd18f8281ac7d6ed985f00b9cd8fcc822
+spec_sha256: 0fd17e78797cba62d6cc70998a45878befc4a762cc6272c178bb4af5014fa6eb
 ---
 
 # PO-Briefing: feat-1681-meteoalarm-de
@@ -19,15 +19,16 @@ Fertig ist es, wenn ein Testpunkt in einem deutschen Landkreis mit aktiver amtli
 
 ## Wie geprüft wird
 
-Automatisierte Tests spielen zehn festgelegte Szenarien gegen eine aufgezeichnete Kopie eines echten deutschen Warn-Feeds durch (aktive Warnung, warnungsfreie Lage, Ausfall, Grenzfall zu Österreich, aufgehobene Warnung, und dass eine deutsche Warnung dieselben vier Versandwege zugewiesen bekommt wie eine österreichische); der tatsächliche Live-Abruf beim echten Dienst und die reale Zustellung an Empfänger werden damit nicht bewiesen, sondern erst in der separaten Prüfung auf der Vorabversion vor der Freischaltung.
+Automatisierte Tests spielen zwölf festgelegte Szenarien gegen eine aufgezeichnete Kopie eines echten deutschen Warn-Feeds durch (aktive Warnung, warnungsfreie Lage, Ausfall, Grenzfall zu Österreich, aufgehobene Warnung, gleiche Versandwege wie bei einer österreichischen Warnung, die Rückwirkung eines Ausfalls des italienischen Diensts in Grenznähe zu Österreich, und den Sonderfall einer Stadt, die als Insel in einem sie umgebenden Landkreis liegt); der tatsächliche Live-Abruf beim echten Dienst und die reale Zustellung an Empfänger werden damit nicht bewiesen, sondern erst in der separaten Prüfung auf der Vorabversion vor der Freischaltung.
 
 ## Kritische Anmerkungen
 
-- Die Spec ändert dabei auch bereits produktives Verhalten für Italien und Österreich mit — aufgehobene Warnungen verschwinden künftig aus der Liste aktiver Warnungen —, obwohl das Ticket ausschließlich die Deutschland-Anbindung verlangt hat.
+- Die Spec ändert nachträglich, im selben Zug, auch das Verhalten für Italien in Grenznähe zu Österreich: Fällt künftig der italienische Warndienst aus, wird das nicht mehr durch die österreichische Quelle überdeckt — das ist inzwischen bewusst so vorgesehen und mit einem eigenen Testfall abgesichert, aber keiner der formulierten Abnahmepunkte deckt diese Verhaltensänderung für Italien ab, sodass der PO sie nur indirekt mitfreigibt; der bestehende Abnahmepunkt zur Unverändertheit für Italien/Österreich bezieht sich nachweislich nur auf die bisherigen Testfälle, nicht auf dieses neue Verhalten.
+- Die Spec ändert außerdem bereits produktives Verhalten für Italien und Österreich mit — aufgehobene Warnungen verschwinden künftig aus der Liste aktiver Warnungen —, obwohl das Ticket ausschließlich die Deutschland-Anbindung verlangt hat.
 - Der eingebaute Wächter erkennt nur neu auftauchende, unbekannte Warngebiets-Kennungen; wird ein bestehender deutscher Landkreis bei einer künftigen Gebietsreform unter gleicher Kennung neu zugeschnitten, bemerkt das System das nicht und kann eine Warnung stillschweigend der falschen Gegend zuordnen.
 - Der Abruf des deutschen Feeds kostet dauerhaft rund 240 MB Datenverkehr pro Tag und Umgebung, weil der Anbieter keine Kompression anbietet — diese Kostenentscheidung wurde in der Spec selbständig getroffen, ohne dass das Ticket dazu etwas vorgegeben hätte.
 - Dass die eingebundenen DWD-Geodaten korrekt mit dem vorgeschriebenen Quellenvermerk gekennzeichnet sind, wird nur durch eine Dateiprüfung nachgewiesen, nicht durch einen Verhaltenstest.
 
 ## Freigabe-Frage
 
-Sollen die deutschen Unwetterwarnungen wie beschrieben freigeschaltet werden — inklusive der Verhaltensänderung bei aufgehobenen Warnungen für Italien und Österreich, dem dauerhaften Mehrverbrauch von rund 240 MB Datenverkehr pro Tag und der bekannten Einschränkung, dass eine künftige Gebietsreform mit unveränderter Kennung nicht erkannt würde?
+Sollen die deutschen Unwetterwarnungen wie beschrieben freigeschaltet werden — inklusive der bewusst mitgelieferten, aber von keinem Abnahmepunkt gedeckten Verhaltensänderung für Italien in Grenznähe zu Österreich, der Verhaltensänderung bei aufgehobenen Warnungen für Italien und Österreich, dem dauerhaften Mehrverbrauch von rund 240 MB Datenverkehr pro Tag und der bekannten Einschränkung, dass eine künftige Gebietsreform mit unveränderter Kennung nicht erkannt würde?

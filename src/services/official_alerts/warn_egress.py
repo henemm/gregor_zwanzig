@@ -83,6 +83,18 @@ def mark_fetch_incomplete() -> None:
     _record_fetch_failure()
 
 
+def mark_not_covered() -> None:
+    """Issue #1681 (AC-3): vermerkt im aktiven ``observe_fetch_failure()``-
+    Kontext, dass die Quelle fuer den Punkt fachlich NICHT zustaendig ist
+    (ZAMG 404, AT Fall 1, keine DPC-/DWD-Zone) -- trotz ``covers() == True``
+    des groben Vorfilters. ``base.py`` nimmt sie dann aus der ``covering``-
+    Bilanz, damit sie den Ausfall der wirklich zustaendigen Quelle nicht
+    kompensiert. Ausserhalb eines aktiven Kontexts ein No-Op."""
+    sink = _fetch_failure_sink.get()
+    if sink is not None:
+        sink["not_covered"] = True
+
+
 @contextmanager
 def observe_fetch_failure() -> Iterator[dict]:
     """Beobachtet, ob innerhalb des Kontexts mindestens ein ``cached_fetch``
@@ -90,7 +102,7 @@ def observe_fetch_failure() -> Iterator[dict]:
     Schluessel ``failed`` (bool, initial ``False``).
 
     Verschachtelbar und thread-/task-sicher (``contextvars``)."""
-    sink: dict = {"failed": False}
+    sink: dict = {"failed": False, "not_covered": False}
     token = _fetch_failure_sink.set(sink)
     try:
         yield sink
@@ -440,6 +452,8 @@ def cached_fetch(
         log_warn_service_call(service, host, status=None, cache_hit=True, ok=cached_ok)
         if not cached_ok:
             _record_fetch_failure()
+        elif entry["ttl"] == WARN_NOT_COVERED_TTL:
+            mark_not_covered()  # Issue #1681: gecachtes "nicht zustaendig"
         # Issue #1944 (Luecke a): der Treffer meldet die Kennung SEINES
         # Ursprungsabrufs -- kein zusaetzlicher Mitschnitt noetig.
         _record_capture_id(entry.get("capture_id"))
@@ -563,6 +577,7 @@ def cached_fetch(
         # Issue #1422 S1: "nicht zustaendig" ist fachlich ein ERFOLG (ok=True),
         # auch wenn der Statuscode 404 sonst ein Fehlschlag waere.
         log_warn_service_call(service, host, status=status, cache_hit=False, ok=True)
+        mark_not_covered()  # Issue #1681
         return neutral_value
 
     if status >= 400:

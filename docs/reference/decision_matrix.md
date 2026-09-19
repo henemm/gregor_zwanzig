@@ -36,10 +36,11 @@ Direktanbieter `de_direct` (DWD-GRIB2), `eu_direct` (DWD-EU), `geosphere` (Zeitr
 Regelbetrieb nur Gewitter-/Schneesignale liefern, keine Temperatur; die Asymmetrie greift nur beim
 in ADR-0018 bereits abgesicherten Cross-Provider-Totalausfall.
 
-Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm, DPC, Vigilance,
-Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle — sie sind kein
-Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
-länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`.
+Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm (IT/AT/DE),
+DPC, Vigilance, Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle —
+sie sind kein Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
+länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`
+(AT/IT) sowie Issue #1681 (DE, `docs/specs/modules/feat_1681_meteoalarm_de.md`).
 
 ## 🔴 Abrufnamen IMMER gegen das Angebot des Dienstes prüfen (Lehre aus #1457, 2026-08-03)
 

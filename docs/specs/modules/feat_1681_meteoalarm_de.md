@@ -52,6 +52,8 @@ Quelle stumm überdeckt werden.
 | `src/services/official_alerts/meteoalarm.py` | MODIFY | `_group_and_map_info_entries` (Z. 595-644) verwirft Info-Einträge mit `responseType: AllClear` als nicht-aktive Warnung, statt sie wie bisher unbeachtet weiterzureichen |
 | `src/services/official_alerts/__init__.py` | MODIFY | `register_official_alert_source(MeteoAlarmFeedSource("DE"))` nach AT, vor DPC (Z. 22-42), mit Reihenfolge-Kommentar |
 | `src/services/official_alerts/base.py` | MODIFY (klein) | „nicht zuständig" der österreichischen Quelle (ZAMG 404) darf nach DE-Registrierung nicht mehr automatisch als erfolgreiche, zuständige Quelle in der `covering`/`failed`-Bilanz (Z. 119-225) zählen — sonst maskiert AT einen DE-Ausfall in den Bayerischen Alpen |
+| `src/services/official_alerts/warn_egress.py` | MODIFY (klein) | Generisches Signal `mark_not_covered()` im bestehenden `observe_fetch_failure()`-Kontext (Schlüssel `not_covered`); `cached_fetch` setzt es bei ZAMG-404 (frisch und aus dem Cache) — Grundlage für den `base.py`-Abzug (AC-3) |
+| `src/services/official_alerts/dpc.py` | MODIFY (1 Zeile) | `DpcSource.fetch` meldet „keine DPC-Zone" als `mark_not_covered()` — in Garmisch reicht die DPC-Radar-Bbox bis 47,5 N und hätte den DE-Ausfall sonst mitkompensiert (AC-3) |
 | `src/services/official_alerts/data/dwd_warngebiete_kreise.json` | CREATE | DWD-Layer `dwd:Warngebiete_Kreise` (402 Flächen, WGS84, ~0,9 MB), Kopf mit Quellenvermerk |
 | `src/services/official_alerts/dwd_zones.py` (oder gleichwertiges Kleinmodul) | CREATE | Loader für die Kreisgeometrie, analog `dpc.py:62-88` (`_ZONES_PATH`, `_load_zones`), nutzt den bestehenden `geo_ray_cast.py` weiter |
 | `tests/tdd/test_meteoalarm_feed_deutschland.py` | CREATE | Verhaltenstests gegen die aufgezeichnete Fixture, Drei-Zustände-Regel, Grenzpunkte, AllClear, Südbayern-Kompensation |
@@ -163,6 +165,16 @@ gegen den echten DE-Feed nur in `/e2e-verify`.
   amtlichen Warnungen über die Registry ermittelt werden (alle registrierten Quellen, echte
   Registrierungsreihenfolge) THEN enthält das Ergebnis diese Warnung genau einmal, mit deutscher
   Herkunft, und `unavailable=False`.
+- [ ] Test 11 (Südtirol, Folgewirkung des generischen „nicht zuständig"-Signals, nachgetragen
+  2026-09-19): GIVEN ein Punkt in Bozen, registriert sind nur GeoSphere und
+  `MeteoAlarmFeedSource("IT")`, ZAMG antwortet mit 404 („nicht zuständig") WHEN der IT-Feed
+  ausfällt THEN `unavailable=True`; WHEN der IT-Feed erreichbar ist THEN `unavailable=False`
+  (`test_f002_suedtirol_zamg_404_kompensiert_it_ausfall_nicht`). Die bisherigen IT/AT-Testfälle
+  (Test 6) bleiben unverändert grün.
+- [ ] Test 12 (Enklaven, nachgetragen 2026-09-19): GIVEN ein Punkt in Baden-Baden (Enklave im
+  Landkreis Rastatt) WHEN das Warngebiet ermittelt wird THEN liefert es Baden-Baden, nicht
+  Rastatt — unabhängig von der Reihenfolge der Kreise in der Geometrie
+  (`test_f003_enklave_baden_baden_gehoert_nicht_zum_umschliessenden_kreis_rastatt`).
 
 ## Acceptance Criteria
 
@@ -282,5 +294,11 @@ gegen den echten DE-Feed nur in `/e2e-verify`.
 
 ## Changelog
 
+- 2026-09-19: Implementierung — „nicht zuständig" als generisches Signal (`warn_egress.mark_not_covered()`,
+  gesetzt von ZAMG-404, AT Fall 1, DPC ohne Zone); `base.py` nimmt solche Quellen aus der
+  `covering`-Bilanz. Folgewirkung über DE hinaus (Tech-Lead-Entscheid, gleiches Prinzip wie AC-3):
+  in Südtirol kompensiert ein ZAMG-404 einen Ausfall des IT-Feeds nicht mehr — dort erscheint
+  jetzt „amtliche Warnungen nicht abrufbar" statt einer scheinbar warnungsfreien Lage.
+  `warn_egress.py` und `dpc.py` in die Dateitabelle aufgenommen.
 - 2026-09-19: Initial spec created (Issue #1681, Analyse-Grundlage
   `docs/context/feat-1681-meteoalarm-de.md`, Entscheidungen 1–7 unverändert übernommen).

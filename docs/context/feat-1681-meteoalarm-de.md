@@ -228,3 +228,15 @@ Feature (Länder-Ergänzung einer bestehenden Quelle) mit zwei mitgezogenen Korr
 
 ### Open Questions
 - keine blockierenden. Produktfrage „aktive Entwarnung bei Aufhebung amtlicher Warnungen" separat.
+
+---
+
+## RED-Phase — Hinweise für die Implementierung (2026-09-19)
+
+Tests: `tests/tdd/test_meteoalarm_feed_deutschland.py` (AC-1–8, 10, 11), `tests/tdd/test_dwd_warnzellen_drift.py` (AC-9); Fixture `tests/fixtures/meteoalarm_feed/feed_germany_sample.json` (7 echte Einträge). 21 rot, AC-6-Golden-Master grün (korrekt). Sicherung: Scratchpad `red_backup/`.
+
+1. **Garmisch hat DREI stille Mitzuständige**, nicht nur AT: auch `DpcSource` (Bbox bis 47,5° N; Garmisch 47,49°) antwortet ohne Netz leer-erfolgreich. Der `base.py`-Fix muss jede fachlich nicht zuständige Quelle aus der Ausfall-Bilanz nehmen, nicht nur den AT-Zweig. AC-3 läuft zusätzlich mit Lenggries (47,68° N, nur AT-Quellen).
+2. Tests belegen die Modul-Caches mit echten Einträgen vor (Muster `test_official_alerts_unavailable_hint.py`), Kern-Schicht, `--disable-socket`, keine Ratsche nötig.
+3. Drift-Abgleich der WARNCELLIDs muss auf dem Auswertungspfad (`fetch()`/`_alerts_for_zone`) liegen, nicht nur in `_parse_feed` (im Test läuft der Parser nicht).
+4. Festgelegte Schnittstellen: `meteoalarm_feed._zone_for_point_de(lat, lon)` → WARNCELLID als `str` oder `None`; Cache-Schlüssel `"DE"`; Geometriedatei mit Feld `WARNCELLID`; Drift-Funde über `log_zone_drift`, Dienstname beginnt mit `meteoalarm_feed`; AC-8-README unter `src/services/official_alerts/data/README.md`, nennt `dwd_warngebiete_kreise.json` und den Quellenvermerk wörtlich.
+5. Geometrie-Rohdaten (DWD WFS, 402 Flächen) liegen im Scratchpad als `kreise_all.json`.

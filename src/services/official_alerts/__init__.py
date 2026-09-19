@@ -39,6 +39,12 @@ register_official_alert_source(MassifClosureSource())
 register_official_alert_source(GeoSphereWarnSource())
 register_official_alert_source(MeteoAlarmFeedSource("IT"))
 register_official_alert_source(MeteoAlarmFeedSource("AT"))
+# Issue #1681: MeteoAlarmFeedSource("DE") NACH AT, VOR DpcSource -- keine
+# funktionale Abhaengigkeit (eigene DWD-Kreisgeometrie, kein ZAMG-Cache);
+# Gewitter-Tie-Break "zuerst registriert gewinnt" betrifft DE nur bei
+# Ueberschneidung mit DPC. "Nicht zustaendig"-Antworten von AT/GeoSphere/DPC
+# kompensieren einen DE-Ausfall nicht (warn_egress.mark_not_covered, AC-3).
+register_official_alert_source(MeteoAlarmFeedSource("DE"))
 register_official_alert_source(DpcSource())
 
 __all__ = [

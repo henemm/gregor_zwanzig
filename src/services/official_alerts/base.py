@@ -188,6 +188,13 @@ def get_official_alerts_with_status(
                     failed += 1
                     continue
         results.extend(_enrich_with_capture_id(source_alerts, capture_ids))
+        # Issue #1681 (AC-3): der grobe covers()-Vorfilter sagte "zustaendig",
+        # die Quelle stellte beim Abruf aber fest "fuer diesen Punkt nicht
+        # zustaendig" (ZAMG 404, keine Zone) -- sie zaehlt dann NICHT als
+        # zustaendige Quelle und kompensiert keinen fremden Ausfall.
+        if fetch_status["not_covered"] and not fetch_status["failed"] and not source_alerts:
+            covering -= 1
+            continue
         # Kein Throw, aber ein interner cached_fetch-Fehlschlag (Real-Pfad):
         # die Quelle lieferte fail-soft [], war aber real nicht abrufbar.
         if fetch_status["failed"]:
