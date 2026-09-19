@@ -29,15 +29,13 @@ from __future__ import annotations
 import email
 import json
 import uuid
-from datetime import date, datetime, time, timezone
-from pathlib import Path
+from datetime import date, time
 
 import pytest
 
 from app.config import Settings
 from app.loader import get_data_dir, save_trip
 from app.trip import Stage, TimeWindow, Trip, Waypoint
-import services.inbound_email_reader as _email_reader_mod
 from services.inbound_email_reader import InboundEmailReader
 from services.inbound_telegram_reader import InboundTelegramReader
 from tests.fixtures.authentication_results_fixtures import AR_PASS, TEST_AUTHSERV_ID
