@@ -213,6 +213,7 @@ e2e/issue-724-trip-name-save-error.spec.ts
 e2e/issue-725-mobile-sidebar.spec.ts
 e2e/issue-767-768-test-briefing.spec.ts
 e2e/issue-951-sheet-bottomnav.spec.ts
+e2e/mobile-bottom-nav-floating.spec.ts
 e2e/mobile-editor-controls-viewport.spec.ts
 e2e/speicherung-ueberlebt-neuladen.spec.ts
 e2e/tokens-and-topo.spec.ts

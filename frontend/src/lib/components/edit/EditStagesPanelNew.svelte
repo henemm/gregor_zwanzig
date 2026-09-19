@@ -78,7 +78,7 @@
 	// F002: 45% Freiraum oberhalb des 'half'-Sheets (Default-Snap) = 90px bei
 	// 200px Floor, komfortabel über der `add-waypoint`-Unterkante (56px, +34px Marge).
 	const MOBILE_EDITOR_MIN_HEIGHT_PX = 200;
-	const BOTTOM_NAV_HEIGHT_PX = 64; // app.css `.mobile-scroll-pad` padding-bottom (ohne Safe-Area)
+	const BOTTOM_NAV_HEIGHT_PX = 70; // app.css --g-nav-h (64) + --g-nav-gap (6): Oberkante der schwebenden Leiste (ohne Safe-Area)
 
 	// Liest `env(safe-area-inset-bottom)` als px-Zahl aus (Notch-Geräte) — CSS
 	// `env()` ist in JS nicht direkt abfragbar, daher kurzzeitige Mess-Sonde.

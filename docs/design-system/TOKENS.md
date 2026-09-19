@@ -151,6 +151,24 @@
 
 Dezent. Kein Material-Lifting.
 
+### 11a. Schwebende Tabbar (Mobile-Shell)
+
+Einzige erlaubte Glas-Fläche im Produkt. Konsumenten: `BottomNav.svelte`, `.mobile-scroll-pad`, Toast-/SaveIndicator-Anker.
+
+| Token | Wert | Verwendung |
+|---|---|---|
+| `--g-nav-h` | 64 px | Höhe der Leiste |
+| `--g-nav-gap` | 6 px | Abstand Leiste ↔ Home-Indicator-Zone |
+| `--g-nav-inset` | 16 px | seitlicher Rand |
+| `--g-nav-glass` | paper, 86 % Deckung | Fläche der Leiste (über `backdrop-filter`) |
+| `--g-nav-blur` | 24 px | Blur-Radius des Glases |
+| `--g-nav-hairline` | ink, 10 % | 1-px-Rahmen |
+| `--g-nav-highlight` | weiß, 65 % | innere Oberkanten-Linie |
+| `--g-nav-active` | accent, 12 % | Kapsel des aktiven Ziels |
+| `--g-nav-clearance` | `h + gap + safe-area` | Oberkante der Leiste ab Viewport-Unterkante — **damit** rechnen, nie mit 64 px hart |
+
+Fallback ohne `backdrop-filter` und bei `prefers-reduced-transparency`: opak `--g-paper-deep`.
+
 ---
 
 ## 12. Special-Effects

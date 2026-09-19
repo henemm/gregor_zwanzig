@@ -270,7 +270,7 @@
 	<div
 		data-testid="update-hinweis"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: 76px; z-index: 60;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 60;
 		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
@@ -307,7 +307,7 @@
 	<div
 		data-testid="ios-install-hint"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: 76px; z-index: 61;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 61;
 		       display: flex; align-items: center; gap: 12px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
@@ -333,7 +333,7 @@
 	<div
 		data-testid="passkey-angebot"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: 76px; z-index: 62;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 62;
 		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));

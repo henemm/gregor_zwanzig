@@ -593,38 +593,35 @@ to be reused by Trip pages during the Trip/Compare convergence work
 
 **File:** `frontend/src/lib/components/ui/sidebar/BottomNav.svelte`
 
-Fixed footer bar for mobile viewports (< 900px). Contains 4 workspace navigation items with active state indication.
+Schwebende Glas-Leiste (iOS-27-Stil) für Mobile-Viewports (< 900px). 4 Workspace-Ziele mit Aktiv-Kapsel. Konzept: `docs/design-requests/mobile_shell_ohne_topbar.md`.
 
-**Props:** None — route detection via SvelteKit `page` store
+**Props:** `active?: string` (überschreibt die Routen-Erkennung), `onChange?: (id) => void` — ohne Props Routen-Erkennung via `$app/state`.
 
-**Layout:**
-- **Height:** 64px + `env(safe-area-inset-bottom)` (iPhone notch/home-indicator support)
-- `position: fixed; bottom: 0; left: 0; right: 0; z-index: 50`
-- **Background:** `var(--g-paper-deep)`
-- **Border:** `1px solid var(--g-rule-soft)` (top)
-- **Grid:** 4 equal columns `grid-template-columns: repeat(4, 1fr)`
+**Layout (alle Werte aus den `--g-nav-*` Tokens in `app.css`):**
+- `position: fixed; z-index: 50`, `left/right: var(--g-nav-inset)` (16px), `bottom: calc(var(--g-nav-gap) + env(safe-area-inset-bottom))` (6px über der Home-Indicator-Zone)
+- **Height:** `var(--g-nav-h)` (64px), innen `padding: var(--g-s-1)`, Radius `--g-r-pill`
+- **Glas:** `background: var(--g-nav-glass)` (paper, 86 %) + `backdrop-filter: blur(var(--g-nav-blur)) saturate(180%)`, `1px solid var(--g-nav-hairline)`, `--g-shadow-3` + innere Highlight-Linie
+- **Fallback:** ohne `backdrop-filter`-Support oder bei `prefers-reduced-transparency: reduce` opak `--g-paper-deep`
+- **Grid:** 4 gleiche Spalten, `gap: var(--g-s-1)`
 - **Visibility:** Mobile only (`class="desktop:hidden"`)
+- **Oberkante für Dritte:** `--g-nav-clearance` = `--g-nav-h + --g-nav-gap + safe-area`; `.mobile-scroll-pad`, Toast-Anker in `+layout.svelte` und `SaveIndicator` rechnen damit — nie mit 64px hart.
 
-**Navigation Items (auto-generated from NAV_ITEMS):**
+**Navigation Items:**
 
 | Icon | Label | Route |
 |------|-------|-------|
 | LayoutDashboard | Übersicht | `/` |
 | Route | Trips | `/trips` |
 | GitCompare | Vergleich | `/compare` |
-| MapPin | Locations | `/locations` |
+| Archive | Archiv | `/archiv` |
 
 **Per-Item Styling:**
-- **Active State:** 
-  - Accent line top: `box-shadow: inset 0 2px 0 var(--g-accent)`
-  - Font-weight: 600
-  - Color: `var(--g-ink)`
-- **Inactive State:**
-  - No line
-  - Font-weight: 500
-  - Color: `var(--g-ink-muted)`
-- **Icon Size:** 22px
-- **Label Size:** 10px
+- **Touch-Ziel:** `min-height: 44px`, Radius `--g-r-pill`
+- **Active State:** Kapsel `background: var(--g-nav-active)` (Akzent 12 %), Icon `--g-accent`, Label `--g-ink` / 600, `aria-current="page"`
+- **Inactive State:** kein Hintergrund, Icon + Label `--g-ink-2` / 500
+- **Icon Size:** 24px (`size-6`)
+- **Label Size:** `--g-text-xs` (11px)
+- **E2E:** `frontend/e2e/mobile-bottom-nav-floating.spec.ts` (Geometrie + Computed Style)
 
 **Usage:**
 ```svelte

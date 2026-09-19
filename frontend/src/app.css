@@ -179,6 +179,19 @@
     --g-paper-deep: #ecead9;  /* #576: tokens.css-Sync */
     --g-rule-soft: #e7e2d3;  /* #378: opak, ersetzt rgba(26,26,24,0.08) */
 
+    /* Schwebende Tabbar (iOS-27-Stil) — einzige Quelle fuer Geometrie und Glas.
+       Konsumenten: BottomNav.svelte, .mobile-scroll-pad, Toast-/SaveIndicator-Anker.
+       --g-nav-clearance = Oberkante der Leiste ab Viewport-Unterkante. */
+    --g-nav-h: 64px;
+    --g-nav-gap: 6px;          /* Abstand Leiste <-> Home-Indicator-Zone (tief = Daumen-erreichbar) */
+    --g-nav-inset: 16px;       /* seitlicher Rand */
+    --g-nav-glass: rgba(246, 244, 238, 0.86);   /* --g-paper mit 86 % Deckung: Lesbarkeit vor Glas (PO 2026-09-19) */
+    --g-nav-blur: 24px;
+    --g-nav-hairline: rgba(26, 26, 24, 0.10);
+    --g-nav-highlight: rgba(255, 255, 255, 0.65);
+    --g-nav-active: rgba(196, 90, 42, 0.12);    /* Kapsel des aktiven Items */
+    --g-nav-clearance: calc(var(--g-nav-h) + var(--g-nav-gap) + env(safe-area-inset-bottom));
+
     /* === Atomic-Design-Bridge (#369) — Sandbox-Token-Namen + -Werte, additiv.
        Damit 1:1 aus der Claude-Design-Sandbox uebernommene Bausteine pixeltreu rendern.
        Bestehende Tokens bleiben unveraendert. Mapping: docs/design-requests/issue_15_atomic_design/spec/TOKEN-MAPPING.md === */
@@ -231,11 +244,13 @@
 
 /* Issue #267 — Padding für Mobile-Content unter TopAppBar + über BottomNav.
    Im utilities-Layer, damit Tailwind-Utilities mit gleicher Specificity
-   nicht das padding-bottom überschreiben. */
+   nicht das padding-bottom überschreiben. Unten: Leiste schwebt
+   (--g-nav-clearance) plus ein Raster-Schritt Luft, damit die letzte Karte
+   nicht unter dem Glas endet. */
 @layer utilities {
   .mobile-scroll-pad {
     padding-top: 56px;
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--g-nav-clearance) + var(--g-s-4));
   }
   @media (min-width: 900px) {
     .mobile-scroll-pad {
