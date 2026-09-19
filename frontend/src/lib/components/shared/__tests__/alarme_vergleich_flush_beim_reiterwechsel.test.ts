@@ -9,9 +9,10 @@
 // Prüfstand nicht ausführbar (kein DOM, SSR führt keine Ereignisse aus).
 // Die Entscheidung „wann wird vor dem Wechsel gesichert" liegt deshalb in
 //
-//   shared/alarmeVergleichSpeicherung.ts
-//   sichereAlarmeVorReiterwechsel(aktiverReiter: string, zielReiter: string,
-//                                 saveController?: SaveStatus): Promise<void>
+//   shared/corridor-editor/wertebereicheVergleichSpeicherung.ts (seit #2276 S3
+//   generisch fuer alle selbst speichernden Reiter, vorher reiter-spezifisch)
+//   sichereSelbstSpeichererVorReiterwechsel(aktiverReiter: string, zielReiter: string,
+//                                           saveController?: SaveStatus): Promise<void>
 //
 // und `handleValueChange` wartet sie ab, BEVOR `activeTab` umgestellt wird.
 // (existiert noch NICHT → RED per ERR_MODULE_NOT_FOUND)
@@ -31,10 +32,10 @@ import { SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
 import type { ComparePreset } from '../../../types.ts';
 import { createPutQueue, hydrateAlarmFieldsFromPreset } from '../../compare/compareHubWizardBridge.ts';
-import {
-	erstelleAlarmeVergleichSpeicherung,
-	sichereAlarmeVorReiterwechsel
-} from '../alarmeVergleichSpeicherung.ts';
+import { erstelleAlarmeVergleichSpeicherung } from '../alarmeVergleichSpeicherung.ts';
+// Issue #2276 S3: der reiter-spezifische Guard ist im generischen, listenbasierten
+// Flush-Guard aufgegangen — die S2-Zusicherungen gelten fuer ihn unveraendert.
+import { sichereSelbstSpeichererVorReiterwechsel } from '../corridor-editor/wertebereicheVergleichSpeicherung.ts';
 
 const PRESET_ID = 'cp-2276-reiter';
 
@@ -116,7 +117,7 @@ describe('AC-6: Reiterwechsel weg von „alarme" sendet die ausstehende Alarm-Ä
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Änderung wartet im Debounce-Fenster');
 		assert.equal(puts().length, 0, 'Vorbedingung: noch nichts gesendet');
 
-		await sichereAlarmeVorReiterwechsel('alarme', 'versand', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'versand', ctl);
 
 		assert.equal(puts().length, 1, 'die Alarm-Änderung muss vor dem Reiterwechsel gesendet werden');
 		assert.equal(puts()[0].status, 200, 'der PUT muss abgeschlossen sein, bevor der Wechsel weiterläuft');
@@ -134,7 +135,7 @@ describe('AC-6: Reiterwechsel weg von „alarme" sendet die ausstehende Alarm-Ä
 		wiz.radarAlertEnabled = true;
 		speicherung.aenderungMelden();
 
-		await sichereAlarmeVorReiterwechsel('alarme', 'alarme', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'alarme', ctl);
 
 		assert.equal(puts().length, 0, 'ohne echten Wechsel bleibt der Debounce unangetastet');
 		assert.equal(ctl.hasPending, true);
@@ -142,7 +143,7 @@ describe('AC-6: Reiterwechsel weg von „alarme" sendet die ausstehende Alarm-Ä
 	});
 
 	test('ohne Controller (Anlege-Seite) → kein Fehler, kein PUT', async () => {
-		await sichereAlarmeVorReiterwechsel('alarme', 'versand', undefined);
+		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'versand', undefined);
 		assert.equal(puts().length, 0);
 	});
 });

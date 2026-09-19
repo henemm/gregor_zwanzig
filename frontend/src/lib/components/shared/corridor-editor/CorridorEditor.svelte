@@ -14,11 +14,15 @@
 	// (Pointer->Wert, Clamping) liegt in corridorEditorState.ts, hier nur die
 	// duenne DOM-Event-Verdrahtung (PO-Vorgabe: Geste muss funktionieren) —
 	// funktioniert unveraendert auch fuer den Ordinal-Modus (scale=[0,2], step=1).
-	import { getContext } from 'svelte';
+	import { getContext, untrack } from 'svelte';
 	import { Eyebrow } from '$lib/components/atoms';
 	import { api } from '$lib/api';
 	import { baueTripSpeicherung } from '../tripSpeicherung.ts';
-	import { toCompareProfile, type Trip, type SensLevel, type Corridor } from '$lib/types';
+	import { toCompareProfile, type Trip, type SensLevel, type Corridor, type ComparePreset } from '$lib/types';
+	import {
+		erstelleWertebereicheVergleichSpeicherung,
+		wertebereicheVergleichSpeicherungAktiv
+	} from './wertebereicheVergleichSpeicherung.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import {
@@ -41,14 +45,32 @@
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
-		/** Issue #2316 Scheibe A: reale Persistenz fuer context='vergleich' (Muster
-		 *  WeatherMetricsTab.svelte onCompareCommit) — direkt aufgerufen, NICHT als
-		 *  DOM-Event-Handler, darf also ein RequestInit (keepalive) entgegennehmen. */
-		onCompareCommit?: (init?: RequestInit) => Promise<void> | void;
+		/** Issue #2276 S3: der vergleich-Zweig speichert selbst (Hub). Ohne `preset`
+		 *  (Anlege-Seite) bleibt der Zweig inaktiv. */
+		preset?: ComparePreset;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
+		onCompareUpdate?: (updated: ComparePreset) => void;
 	}
-	let { context = 'route', trip, onTripUpdate, saveController, onCompareCommit }: Props = $props();
+	let { context = 'route', trip, onTripUpdate, saveController, preset, enqueueHubWrite, onCompareUpdate }: Props =
+		$props();
 
 	const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+
+	// Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
+	// AlarmeTab, S2). Baseline beim Mount — CompareTabs mountet erst nach der
+	// Hydration (Design Punkt 6). Anlege-Seite/Trip: inaktiv (AC-9, AC-12).
+	const vergleichSpeicherung = untrack(() =>
+		wertebereicheVergleichSpeicherungAktiv({ context, ws, preset, saveController })
+			? erstelleWertebereicheVergleichSpeicherung({
+					client: api,
+					ws: ws!,
+					preset: () => preset!,
+					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
+					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
+					saveController: saveController!
+				})
+			: null
+	);
 
 	// AC-10: "zuletzt bekannte Stufe" bezieht sich auf den beim Mount geladenen
 	// Stand, nicht auf einen laufenden Zwischenstand dieser Session — gilt fuer
@@ -216,17 +238,13 @@
 	// auf "dirty" setzen — widerspruechlich neben dem Fehlerbanner sonst.
 	function maybeSchedule() {
 		if (context === 'vergleich') {
-			// Issue #2316 Scheibe A (AC-9, Spec-Korrektur nach RED-Messung): eine
-			// eingetippte, noch nicht verlassene Aenderung wird JETZT zusaetzlich
-			// ueber saveController.schedule() gemeldet -- genau wie im Trip-Kontext
-			// unten -- damit hasPending true wird und der geteilte
-			// beforeNavigate-Waechter sie beim Neuladen mit keepalive uebertraegt.
-			// Die eigentliche Persistenz bleibt der bestehende Weg (onCompareCommit
-			// = CompareTabs' handleCorridorCommit, diff-/queue-geschuetzt) --
-			// keine zweite, eigene PUT-Logik (keine Compare-Sonderloesung).
+			// Issue #2276 S3: genau EIN Auslöser — nach dem Spiegeln in den Wizard-
+			// Zustand meldet der Editor die Änderung an die eigene Orchestrierung
+			// (Diff-Gate, Queue, Rückmeldung, Rollback in wertebereicheVergleichSpeicherung.ts).
+			// Anlege-Seite: kein Speicherweg hier, Speichern über wiz.saveNewPreset().
 			if (saveGateDecision(rows) === 'schedule') {
 				syncToWizard();
-				saveController?.schedule(async (init) => { await onCompareCommit?.(init); });
+				vergleichSpeicherung?.aenderungMelden();
 			}
 			return;
 		}
