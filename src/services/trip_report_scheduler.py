@@ -47,6 +47,7 @@ from utils.timezone import local_dt, tz_for_coords
 if TYPE_CHECKING:
     from app.models import TripReportConfig
     from app.trip import Stage, Trip
+    from providers.openmeteo import EnsembleHourStats
     from services.report_config_resolver import ReportRenderOptions
 
 # Issue #766: Inter-Mail-Delay beim Sammelversand, um Rate-Limits (452) zu

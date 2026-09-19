@@ -34,7 +34,6 @@ KEINE MOCKS/patch()/MagicMock -- echte Dataclasses, echter
 """
 from __future__ import annotations
 
-import copy
 import json
 import statistics
 from datetime import date, datetime, timedelta, timezone
