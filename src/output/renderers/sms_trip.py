@@ -430,6 +430,13 @@ def _segments_to_normalized_forecast(
         sum(pressure_values) / len(pressure_values) if pressure_values else None
     )
 
+    # Issue #1794: Fensterpunkte vorhanden, aber KEIN einziger mit belegtem
+    # `pop_pct` -> kein Messwert, nur Fehlbestand. Ein echtes 0 % (pop_pct == 0)
+    # zaehlt als Messwert und darf die Entwarnung "-" behalten.
+    pop_all_missing = bool(window_points) and all(
+        getattr(dp, "pop_pct", None) is None for dp in window_points
+    )
+
     # Issue #121: worst-case daily confidence aggregation over segments.
     confs = [s.aggregated.confidence_pct_min for s in segments
              if s.aggregated.confidence_pct_min is not None]
@@ -466,6 +473,7 @@ def _segments_to_normalized_forecast(
         night_wind_chill_min_c=night_felt_min,
         rain_hourly=rain_samples_d,
         pop_hourly=pop_samples_d,
+        pop_all_missing=pop_all_missing,
         wind_hourly=wind_samples_d,
         gust_hourly=gust_samples_d,
         thunder_hourly=thunder_samples_d,

@@ -67,6 +67,10 @@ class DailyForecast:
     precip_type_dominant: Optional[str] = None    # Ein-Buchstaben-Code G/S/M/R (PT)
     sunshine_hours: Optional[float] = None        # unrunde Sonnenstunden (SU)
     pressure_avg_hpa: Optional[float] = None      # Tagesmittel hPa (HP)
+    # Issue #1794: Die Fensterpunkte lagen vollstaendig vor, trugen aber
+    # durchgaengig kein `pop_pct` — ein metrik-lokaler Fehlbestand, den
+    # `has_data_gap` (nur Datenpunkt-Existenz) nicht erkennt. Nur fuer PR.
+    pop_all_missing: bool = False
 
 
 @dataclass(frozen=True)
