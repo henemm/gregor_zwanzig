@@ -230,8 +230,16 @@ def test_ac5_herkunft_heisst_weiterhin_blitzpotenzial():
     """AC-5: der Wert stammt ausschliesslich aus dem Stundenmaximum
     (Momentanwert ``None``, Stundenmaximum 40,0 J/kg, DE_ALPEN). Die Herkunft
     heisst weiterhin exakt ``"blitzpotenzial"`` -- es entsteht KEIN neuer
-    Signalname (etwa ``"blitzpotenzial_max"``) und keine zweite Beschriftung
-    (``app.thunder_scale.THUNDER_SIGNAL_LABEL_DE`` bleibt vierschluessig).
+    Signalname (etwa ``"blitzpotenzial_max"``) und keine zweite Beschriftung.
+
+    Nachgezogen fuer Issue #1983 (Gewitter S6): ``THUNDER_SIGNAL_LABEL_DE``
+    ist seither fuenfschluesselig (``"modelllauf"`` kam als PO-genehmigtes,
+    NICHT an der Fusion (``_signal_levels()``) beteiligtes Signal hinzu --
+    Spec Abschnitt "Sicherheits-Invariante": "Amtliche Warnungen sind kein
+    Fusionssignal ... `_signal_levels()` kennt genau vier Schluessel").
+    Diese AC bewacht weiterhin, dass die vier FUSIONSRELEVANTEN Namen
+    unveraendert bleiben und dass NICHT zusaetzlich ``"blitzpotenzial_max"``
+    o.ae. aus DIESER Aenderung entsteht.
 
     Die Fusion ist statistik-blind: sie bekommt EINE Zahl und EINE Leiter.
     Welche Statistik die Zahl traegt, entscheidet allein der Aufrufer.
@@ -256,10 +264,11 @@ def test_ac5_herkunft_heisst_weiterhin_blitzpotenzial():
         f"{dp.thunder_level_signals!r}"
     )
     assert set(THUNDER_SIGNAL_LABEL_DE) == {
-        "wettercode", "blitzdichte", "cape", "blitzpotenzial",
+        "wettercode", "blitzdichte", "cape", "blitzpotenzial", "modelllauf",
     }, (
-        "Die Signalmenge ist geschlossen -- diese Scheibe darf keinen "
-        f"neuen Signalnamen einfuehren: {sorted(THUNDER_SIGNAL_LABEL_DE)}"
+        "Die Signalmenge ist geschlossen (vier Fusionssignale + #1983s "
+        "'modelllauf') -- diese Scheibe darf keinen weiteren neuen "
+        f"Signalnamen einfuehren: {sorted(THUNDER_SIGNAL_LABEL_DE)}"
     )
 
 

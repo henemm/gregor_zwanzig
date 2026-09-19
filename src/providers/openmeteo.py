@@ -24,7 +24,7 @@ import statistics
 import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Tuple
 
 import httpx
 from tenacity import (
@@ -272,6 +272,27 @@ _PROBE_COORDS = {
 # WMO Weather Code to Thunder Level mapping
 # https://open-meteo.com/en/docs#weathervariables
 THUNDER_CODES = {95, 96, 99}  # Thunderstorm codes
+
+# Issue #1983 (Gewitter S6): Mindestzahl gueltiger Ensemble-Member je Stunde,
+# damit ein Gewittercode-Anteil ueberhaupt gebildet wird -- bewusst ein
+# ANDERER (hoeherer) Mindestwert als die Spread-Mindestzahl (5, s.u.
+# `_fetch_ensemble_spread`): Streuung und Mehrheits-Prozentsatz sind zwei
+# verschiedene Aussagen mit verschiedenen Stichproben-Anforderungen (Spec
+# "Schwellen-Herkunft").
+ENSEMBLE_THUNDER_MIN_MEMBERS = 20
+
+
+class EnsembleHourStats(NamedTuple):
+    """Je-Stunde-Statistik aus `_fetch_ensemble_spread` (Issue #1983).
+
+    Benannte Struktur statt 2-Tupel: ein drittes Feld haette als Tupel-
+    Position 2/3 Vertauschungs-Risiko getragen (Adversary-Risiko, Spec
+    "Rueckgabetyp"). `thunder_member_share_pct` ist `None`, wenn weniger als
+    `ENSEMBLE_THUNDER_MIN_MEMBERS` gueltige Wettercodes vorlagen.
+    """
+    spread_t2m_k: Optional[float]
+    spread_precip_mm: Optional[float]
+    thunder_member_share_pct: Optional[int]
 
 
 def _is_retryable_error(exception: Exception) -> bool:
@@ -724,20 +745,27 @@ class OpenMeteoProvider:
         location: "Location",
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
-    ) -> Dict[datetime, Tuple[Optional[float], Optional[float]]]:
+    ) -> Dict[datetime, "EnsembleHourStats"]:
         """
         Fetch ensemble spread from OpenMeteo Ensemble API. Best-effort.
 
-        Issue #121 / AC-3, AC-6: Returns dict mapping timestamp -> (spread_t2m_k,
-        spread_precip_mm). On ANY failure (HTTP error, timeout, connection error,
-        malformed response) returns {} - never raises to caller (AC-6).
+        Issue #121 / AC-3, AC-6: Returns dict mapping timestamp -> EnsembleHourStats
+        (spread_t2m_k, spread_precip_mm, thunder_member_share_pct). On ANY failure
+        (HTTP error, timeout, connection error, malformed response) returns {} -
+        never raises to caller (AC-6).
 
         Spread is computed as stdev across ensemble members. Requires >=5 valid
         members per hour; otherwise that hour's spread is None.
+
+        Issue #1983 (Gewitter S6): zusaetzlich `weather_code` je Stunde ueber
+        alle Member-/Kontrolllauf-Spalten von ICON-EPS und GEFS (OHNE
+        `weather_code_ecmwf_ifs04`, liefert keine Member) ausgewertet --
+        Anteil der Gewittercodes (95/96/99) an den gueltigen Werten, `None`
+        bei weniger als `ENSEMBLE_THUNDER_MIN_MEMBERS` gueltigen Werten.
         """
         params = _punkt_params(
             location,
-            hourly="temperature_2m,precipitation",
+            hourly="temperature_2m,precipitation,weather_code",
             models="ecmwf_ifs04,icon_seamless,gfs_seamless",
             timezone="UTC",
         )
@@ -769,8 +797,14 @@ class OpenMeteoProvider:
             # Collect all member keys for temperature_2m and precipitation.
             temp_keys = [k for k in hourly.keys() if k.startswith("temperature_2m")]
             precip_keys = [k for k in hourly.keys() if k.startswith("precipitation")]
+            # Issue #1983: alle Member-/Kontrolllauf-Spalten fuer weather_code,
+            # OHNE weather_code_ecmwf_ifs04 (liefert keine Member, Spec Punkt 1).
+            wcode_keys = [
+                k for k in hourly.keys()
+                if k.startswith("weather_code") and "ecmwf" not in k
+            ]
 
-            result: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+            result: Dict[datetime, "EnsembleHourStats"] = {}
             for i, time_str in enumerate(times):
                 try:
                     ts = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
@@ -799,7 +833,27 @@ class OpenMeteoProvider:
 
                 spread_t = statistics.stdev(temp_vals) if len(temp_vals) >= 5 else None
                 spread_p = statistics.stdev(precip_vals) if len(precip_vals) >= 5 else None
-                result[ts] = (spread_t, spread_p)
+
+                # Issue #1983: Gewittercode-Anteil ueber alle gueltigen
+                # weather_code-Werte dieser Stunde.
+                n_valid = 0
+                n_thunder = 0
+                for k in wcode_keys:
+                    arr = hourly.get(k, [])
+                    if i >= len(arr) or arr[i] is None:
+                        continue
+                    n_valid += 1
+                    if arr[i] in THUNDER_CODES:
+                        n_thunder += 1
+                thunder_share: Optional[int] = None
+                if n_valid >= ENSEMBLE_THUNDER_MIN_MEMBERS:
+                    thunder_share = int(round(100 * n_thunder / n_valid))
+
+                result[ts] = EnsembleHourStats(
+                    spread_t2m_k=spread_t,
+                    spread_precip_mm=spread_p,
+                    thunder_member_share_pct=thunder_share,
+                )
 
             return result
         except Exception as e:
@@ -1158,7 +1212,7 @@ class OpenMeteoProvider:
             if spreads:
                 now_utc = datetime.now(timezone.utc)
                 # Build a lookup with naive UTC ts to match primary timeseries.
-                spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+                spreads_naive: Dict[datetime, "EnsembleHourStats"] = {}
                 for k, v in spreads.items():
                     k_naive = k.replace(tzinfo=None) if k.tzinfo is not None else k
                     spreads_naive[k_naive] = v
@@ -1168,7 +1222,11 @@ class OpenMeteoProvider:
                     spread = spreads_naive.get(dp_ts_naive)
                     if spread is None:
                         continue
-                    s_t, s_p = spread
+                    # Nur Typanpassung (EnsembleHourStats statt 2-Tupel) --
+                    # KEINE modelllauf-Semantik in diesem Pfad (Spec
+                    # "Abgrenzung: fetch_forecast(enrich_ensemble=True)").
+                    s_t = spread.spread_t2m_k
+                    s_p = spread.spread_precip_mm
                     dp.spread_t2m_k = s_t
                     dp.spread_precip_mm = s_p
                     if s_t is not None and s_p is not None:

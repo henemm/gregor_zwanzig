@@ -32,6 +32,10 @@ __all__ = [
     "thunder_low_statement_sentence",
     "THUNDER_LABEL_DE",
     "format_hail_note",
+    "MODELLLAUF_ANHEBUNG_MIN_PCT",
+    "MODELLLAUF_DAEMPFUNG_MAX_PCT",
+    "dampen_thunder_level_by_one_step",
+    "elevate_thunder_level_by_modelllauf",
 ]
 
 
@@ -121,6 +125,11 @@ THUNDER_SIGNAL_LABEL_DE: dict[str, str] = {
     "blitzdichte": "Blitzdichte",
     "cape": "CAPE",
     "blitzpotenzial": "Blitzpotenzial",
+    # Issue #1983 (Gewitter S6): fuenftes Signal, NICHT Teil der Fusion in
+    # `_signal_levels()` (die bleibt bei den vier obigen Schluesseln) --
+    # entsteht ausschliesslich in `trip_report_scheduler._apply_ensemble_spreads`
+    # ueber `elevate_thunder_level_by_modelllauf()`.
+    "modelllauf": "Modellläufe",
 }
 
 
@@ -191,6 +200,51 @@ def union_of_max_carriers(
             if name not in traeger:
                 traeger.append(name)
     return traeger or None
+
+
+# ---------------------------------------------------------------------------
+# Issue #1983 (Gewitter S6): Modelllauf-Mehrheit als fuenftes Fusionssignal
+# (nur anhebend) UND als Ein-Stufen-Daempfer auf die vier bestehenden Signale
+# (nur bei ausgeprägter Uneinigkeit der Ensemble-Laeufe). Beide Helfer wirken
+# NACH der eigentlichen Fusion auf das bereits gebildete `dp.thunder_level`
+# (Spec "Architektur-Befund" -- der Ensemble-Abruf liegt zeitlich hinter
+# `_signal_levels()`, ein mathematisch gleichwertiger Ersatz fuer "jedes
+# Einzelsignal daempfen und neu fusionieren").
+MODELLLAUF_ANHEBUNG_MIN_PCT = 60
+MODELLLAUF_DAEMPFUNG_MAX_PCT = 10
+
+# Umkehrabbildung von `_THUNDER_ORDER` fuer den Ein-Stufen-Daempfer.
+_THUNDER_BY_ORDINAL = {ordinal: level for level, ordinal in _THUNDER_ORDER.items()}
+
+
+def dampen_thunder_level_by_one_step(level: Optional[ThunderLevel]) -> Optional[ThunderLevel]:
+    """Daempft `level` um GENAU eine Stufe, niemals unter `NONE` (Issue #1983 AC-4).
+
+    `None` ("keine Aussage") bleibt `None` -- nichts zu daempfen. Die
+    Traegerliste ist NICHT Teil dieser Funktion (Aufrufer-Verantwortung,
+    Spec: Traeger bleiben unveraendert, ausser das Ergebnis faellt auf
+    `NONE` -- dann leert sie der Aufrufer).
+    """
+    if level is None:
+        return None
+    return _THUNDER_BY_ORDINAL[max(0, thunder_ordinal(level) - 1)]
+
+
+def elevate_thunder_level_by_modelllauf(
+    level: Optional[ThunderLevel],
+    carriers: Optional[list[str]],
+) -> tuple[ThunderLevel, Optional[list[str]]]:
+    """Hebt `level` auf `HIGH` an, Traegerliste ueber `union_of_max_carriers()`
+    gebildet (Issue #1983 AC-2, S2-Wiederverwendung #1680).
+
+    `modelllauf` ist ein fuenftes Signal auf der Skalen-Obergrenze `HIGH` --
+    das neue Maximum ist deshalb nach Konstruktion immer `HIGH`, unabhaengig
+    vom Ausgangswert.
+    """
+    new_carriers = union_of_max_carriers(
+        [(level, carriers), (ThunderLevel.HIGH, ["modelllauf"])]
+    )
+    return ThunderLevel.HIGH, new_carriers
 
 
 # ---------------------------------------------------------------------------
