@@ -39,7 +39,7 @@ import {
 	buildComparePresetSavePayload,
 	buildNewComparePresetPayload
 } from '../compareEditorSave.ts';
-import { hydrateLayoutFieldsFromPreset } from '../compareHubWizardBridge.ts';
+import { hydrateLayoutFieldsFromPreset } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import {
 	registerCompareMetricCatalog,
 	type CompareSelectionEntry

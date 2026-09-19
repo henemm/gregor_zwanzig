@@ -30,7 +30,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildComparePresetSavePayload } from '../compareEditorSave.ts';
-import { flushPendingLayoutSave, type LayoutSnapshot } from '../compareHubWizardBridge.ts';
+import { flushPendingLayoutSave, type LayoutSnapshot } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import type { ComparePreset } from '../../../types.ts';
 
 /** Ortsvergleich mit MEHREREN gesetzten `display_config`-Feldern -- nur so

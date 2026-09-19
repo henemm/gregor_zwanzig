@@ -8,9 +8,18 @@
 	//          (Wizard + Orts-Vergleich nutzen sie).
 	// Spec: docs/specs/modules/issue_587_weather_tab_v2.md
 	// Spec: docs/specs/modules/issue_618_mobile_weather_tab.md
+	import { untrack } from 'svelte';
 	import { api } from '$lib/api.js';
 	import { baueWetterMetrikenSpeicherung } from './tripSpeicherung.ts';
-	import type { Trip, MetricPreset, Horizons, ReportConfig, WeatherConfigMetric } from '$lib/types';
+	import type { Trip, MetricPreset, Horizons, ReportConfig, WeatherConfigMetric, ComparePreset } from '$lib/types';
+	// Issue #2276 S4: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import
+	// aus compare/, AC-9) — geteilte kombinierte Wetter-Metriken/Layout-
+	// Orchestrierung.
+	import {
+		erstelleWetterMetrikenVergleichSpeicherung,
+		wetterMetrikenSnapshotAus,
+		wetterMetrikenVergleichSpeicherungAktiv
+	} from './weather-metrics-tab/weatherMetricsCompareSave.ts';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
 	// Issue #1311 (C1, Fix-Loop 1 / F001): private Sub-Komponenten von
@@ -158,24 +167,15 @@
 		saveController?: SaveStatus;
 		// vergleich (neu, Issue #1311)
 		wiz?: CompareWizardState;
-		/** Issue #1359 (vergleich): direkter Speicherauslöser nach einer
-		 *  Ziehgeste. Browser unterdrücken nach einem Drag häufig das
-		 *  nachfolgende `click` — der Wrapper-Commit in CompareTabs.svelte
-		 *  (`.hub-wetter-metriken-wrap` onclick/onchange) würde dann NIE
-		 *  feuern und die neue Reihenfolge bliebe ungespeichert. Der Trip löst
-		 *  aus demselben Grund direkt aus (`onDndReorder` → scheduleAutoSave). */
-		onCompareCommit?: () => void;
-		/** Issue #1361 Befund 4: derselbe direkte Speicherausloeser, aber fuer
-		 *  den Stundenverlauf-Reihenfolge-Block (eigener Hub-Speicherpfad
-		 *  `.hub-layout-hourly-wrap`/`handleLayoutCommit`, getrennt von
-		 *  `onCompareCommit`). Reine Weiterreichung an CompareHourlyLayoutControls. */
-		onHourlyCommit?: () => void;
-		/** Issue #1361/#1368: derselbe direkte Speicherausloeser fuer den
-		 *  Ausblick-Block (teilt sich den Layout-Speicherpfad mit dem
-		 *  Stundenverlauf). Reine Weiterreichung an CompareOutlookLayoutControls. */
-		onOutlookCommit?: () => void;
+		// Issue #2276 S4: der vergleich-Zweig speichert selbst (Hub), analog
+		// AlarmeTab/CorridorEditor — ersetzt `onCompareCommit`/`onHourlyCommit`/
+		// `onOutlookCommit` (Wrapper-Bubble entfaellt). Ohne `preset` oder
+		// `saveController` (Anlege-Seite) bleibt der Speicherzweig inaktiv.
+		preset?: ComparePreset;
+		onCompareUpdate?: (updated: ComparePreset) => void;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
 	}
-	let { context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange, onTripUpdate, saveController, wiz, onCompareCommit, onHourlyCommit, onOutlookCommit }: Props = $props();
+	let { context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange, onTripUpdate, saveController, wiz, preset, onCompareUpdate, enqueueHubWrite }: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
@@ -1185,12 +1185,15 @@
 		const base = wiz.channelActiveMetricKeys[compareChannel]
 			?? startCompareChannelOverride(materializedActiveMetricKeys);
 		wiz.channelActiveMetricKeys = { ...wiz.channelActiveMetricKeys, [compareChannel]: mutate(base) };
-		onCompareCommit?.();
 	}
 
-	// Ziehen = Reihenfolge des AKTIVEN KANALS setzen + SOFORT speichern
-	// (s. onCompareCommit-Prop) — nach einer Ziehgeste unterdruecken Browser das
-	// nachfolgende `click`, der Wrapper-Commit in CompareTabs greift dann nicht.
+	// Ziehen = Reihenfolge des AKTIVEN KANALS setzen — der reaktive $effect
+	// unten (Issue #2276 S4) meldet die Aenderung an die kombinierte
+	// Vergleichs-Speicherung; kein expliziter Commit-Call mehr noetig
+	// (ersetzt den fruehreren `onCompareCommit`-Aufruf, der nach einer
+	// Ziehgeste noetig war, weil Browser das nachfolgende `click` oft
+	// unterdruecken — ein $effect reagiert auf State-Aenderungen, nicht auf
+	// DOM-Ereignisse, und ist gegen dieses Problem immun).
 	function onCompareDndReorder(newOrder: string[]) {
 		editCompareChannel(() => [...newOrder]);
 	}
@@ -1244,6 +1247,38 @@
 		if (!wiz) return;
 		wiz.officialAlertsEnabled = (e.target as HTMLInputElement).checked;
 	}
+
+	// ── Issue #2276 S4: vergleich-Zweig speichert selbst (analog AlarmeTab/
+	// CorridorEditor) ───────────────────────────────────────────────────────
+	// EINE kombinierte Orchestrierung ueber Wetter-Metriken- UND Layout-
+	// Domaene (Design-Entscheidung 1 — zwei unabhaengige Selbst-Speicherer auf
+	// demselben Reiter wuerden sich in derselben Event-Tick gegenseitig
+	// ueberschreiben). Die Baseline entsteht beim Mount — CompareTabs mountet
+	// diese Komponente erst NACH BEIDEN Katalog-Ladevorgaengen (AC-3). Auf der
+	// Anlege-Seite (ohne preset/saveController) und im Trip (`context ===
+	// 'route'`) bleibt der Zweig inaktiv (AC-10/AC-13).
+	const vergleichSpeicherung = untrack(() =>
+		wetterMetrikenVergleichSpeicherungAktiv({ context, wiz, preset, saveController })
+			? erstelleWetterMetrikenVergleichSpeicherung({
+					client: api,
+					wiz: wiz!,
+					preset: () => preset!,
+					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
+					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
+					saveController: saveController!
+				})
+			: null
+	);
+	$effect(() => {
+		if (context !== 'vergleich' || !wiz || !vergleichSpeicherung) return;
+		// Liest alle neun persistenzrelevanten Felder (Abhaengigkeiten) — deckt
+		// sowohl die drei bislang stillen Gesten (Metrik-Checkbox, Amtliche-
+		// Warnungen-Schalter, Tagesfenster, AC-5) als auch die drei Drag-Ende-
+		// Faelle ab. Das Melden selbst ohne Tracking, damit Zustandswechsel des
+		// Controllers keinen Neulauf ausloesen.
+		wetterMetrikenSnapshotAus(wiz);
+		untrack(() => vergleichSpeicherung.aenderungMelden());
+	});
 </script>
 
 {#snippet officialAlertsToggle(checked: boolean, onToggle: (e: Event) => void)}
@@ -1436,7 +1471,7 @@
 				     andere Datenform als die, ueber die groupCompareCatalog()
 				     gruppiert. -->
 				<CompareHourlyLayoutControls
-					{wiz} {onHourlyCommit} catalog={compareCatalog}
+					{wiz} catalog={compareCatalog}
 					smsSymbols={metricSymbols}
 				/>
 			</div>
@@ -1464,7 +1499,6 @@
 					onMetricKeys={onCompareOutlookMetricKeys}
 					metricFormats={wiz.outlookMetricFormats}
 					onMetricFormats={onCompareOutlookMetricFormats}
-					{onOutlookCommit}
 					enabled={wiz.outlookEnabled}
 					onEnabledChange={onCompareOutlookEnabled}
 					smsSymbols={metricSymbols}

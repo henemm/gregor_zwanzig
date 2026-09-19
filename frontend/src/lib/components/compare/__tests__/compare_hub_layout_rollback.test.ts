@@ -23,7 +23,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { rollbackLayoutSnapshot, type LayoutSnapshot } from '../compareHubWizardBridge.ts';
+import { rollbackLayoutSnapshot, type LayoutSnapshot } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 
 /** State-Stub analog dem echten `wizardState` (CompareWizardState-Instanz) —
  * traegt neben den beiden Layout-Feldern auch unrelated Felder aus anderen

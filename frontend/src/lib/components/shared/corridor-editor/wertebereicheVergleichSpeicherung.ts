@@ -201,8 +201,13 @@ export function wertebereicheVergleichSpeicherungAktiv(p: {
 }
 
 /** Reiter des Ortsvergleich-Hubs, die SELBST über den einen Speicher-Platz des
- *  Controllers speichern (Design Punkt 4). */
-export const SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[] = ['alarme', 'idealwerte'];
+ *  Controllers speichern (Design Punkt 4). Issue #2276 S4: 'wetter-metriken'
+ *  ergaenzt (kombinierte Wetter-Metriken/Layout-Orchestrierung). */
+export const SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[] = [
+	'alarme',
+	'idealwerte',
+	'wetter-metriken'
+];
 
 /**
  * Generischer Flush-Guard vor dem Reiterwechsel (TripTabs-Muster): verlässt
