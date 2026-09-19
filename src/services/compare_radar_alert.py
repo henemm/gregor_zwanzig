@@ -110,7 +110,8 @@ class CompareRadarAlertService:
     def __init__(
         self,
         settings: Optional[Settings] = None,
-        user_id: str = "default",
+        *,
+        user_id: str,
         radar_service: Optional[object] = None,
         mail_sink: Optional[object] = None,
     ) -> None:

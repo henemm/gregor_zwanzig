@@ -51,7 +51,7 @@ class TestSnapshotCoordinateRoundTrip:
             provider="openmeteo",
         )
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         service.save("test-trip", [seg_weather], date(2026, 4, 5))
@@ -100,7 +100,7 @@ class TestSnapshotCoordinateRoundTrip:
             provider="openmeteo",
         )
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         service.save("test-trip", [seg_weather], date(2026, 4, 5))
@@ -145,7 +145,7 @@ class TestSnapshotBackwardCompatibility:
         filepath = tmp_path / "old-trip.json"
         filepath.write_text(json.dumps(old_snapshot))
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         loaded = service.load("old-trip")

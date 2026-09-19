@@ -12,7 +12,7 @@ from services.notification_service import (
 def test_notification_service_send_empty_segments_returns_not_sent():
     """GIVEN NotificationService / WHEN send_trip_report with empty segments /
     THEN result.sent is False and error is set."""
-    svc = NotificationService()
+    svc = NotificationService(user_id="default")
     # TripReportRequest requires a trip object; we use a minimal dummy.
     class _DummyTrip:
         name = "dummy"

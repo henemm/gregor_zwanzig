@@ -84,7 +84,7 @@ def _write_trip(user_id: str, trip_id: str, stages: list[dict]) -> Path:
 
 def _load_trip(user_id: str, trip_id: str):
     from app.loader import load_trip
-    return load_trip(_data_users(user_id) / "briefings" / f"{trip_id}.json")
+    return load_trip(_data_users(user_id) / "briefings" / f"{trip_id}.json", user_id=user_id)
 
 
 @pytest.fixture

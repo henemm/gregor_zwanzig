@@ -60,7 +60,7 @@ class TestSaveDated:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         target = date(2026, 6, 11)
@@ -77,7 +77,7 @@ class TestSaveDated:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         service.save_dated("trip-x", date(2026, 6, 10), [_make_segment_weather()])
@@ -98,7 +98,7 @@ class TestLoadDated:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         yesterday = date.today() - timedelta(days=1)
@@ -126,7 +126,7 @@ class TestLoadDatedMissing:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         result = service.load_dated("noch-kein-trip", date(2026, 6, 10))
@@ -141,7 +141,7 @@ class TestLoadDatedMissing:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         service.save_dated("trip-a", date(2026, 6, 11), [_make_segment_weather()])
@@ -162,7 +162,7 @@ class TestRetention:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         base = date(2026, 6, 1)
@@ -180,7 +180,7 @@ class TestRetention:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         base = date(2026, 6, 1)
@@ -205,7 +205,7 @@ class TestExistingSaveLoadUnchanged:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         service.save("trip-x", [_make_segment_weather()], date(2026, 6, 11))
@@ -222,7 +222,7 @@ class TestExistingSaveLoadUnchanged:
         """
         from services.weather_snapshot import WeatherSnapshotService
 
-        service = WeatherSnapshotService()
+        service = WeatherSnapshotService(user_id="default")
         service._snapshots_dir = tmp_path
 
         original = _make_segment_weather()

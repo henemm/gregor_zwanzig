@@ -156,7 +156,7 @@ class TestAC3Shortcode:
         """Datenverlust-Schutz: shortcode übersteht save → load."""
         trip = _make_trip("tp", "Persist Test", shortcode="GZ#PERS")
         path = save_trip(trip, _USER_A)
-        loaded = load_trip(path)
+        loaded = load_trip(path, user_id="default")
         assert loaded.shortcode == "GZ#PERS"
 
 

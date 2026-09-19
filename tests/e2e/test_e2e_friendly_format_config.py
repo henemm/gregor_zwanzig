@@ -66,9 +66,9 @@ def send_report():
     from app.loader import load_all_trips
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    trips = load_all_trips()
+    trips = load_all_trips(user_id="default")
     trip = next(t for t in trips if t.id == "gr221-mallorca")
-    service = TripReportSchedulerService()
+    service = TripReportSchedulerService(user_id="default")
     service.send_test_report(trip, "morning")
     return time.time()
 
@@ -264,7 +264,7 @@ def test_alert_enabled():
     modify_metric_config("wind", alert_enabled=False)
     importlib.reload(app.loader)
     from app.loader import load_all_trips
-    trips = load_all_trips()
+    trips = load_all_trips(user_id="default")
     # Issue #1250 Scheibe 7a Cutover: load_all_trips liest seit dem Cutover
     # briefings/ statt trips/ (ADR-0023). data/users/default/briefings/
     # existiert erst NACH dem produktiven Migrations-Deploy-Schritt

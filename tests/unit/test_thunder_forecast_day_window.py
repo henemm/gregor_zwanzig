@@ -97,7 +97,7 @@ def test_fallback_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
 
     seg = _segment(_tomorrow_points({2: ThunderLevel.LOW}),
                    thunder_level_max=ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TODAY, tz=_UTC)
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TODAY, tz=_UTC)
     entry = (fc or {}).get("+1")
     assert entry is not None, "Vorschau-Eintrag fuer morgen fehlt ganz"
     assert entry["level"] == ThunderLevel.NONE, (
@@ -121,7 +121,7 @@ def test_fallback_ab_stunde_kommt_aus_dem_fenster():
         _tomorrow_points({2: ThunderLevel.LOW, 4: ThunderLevel.LOW}),
         thunder_level_max=ThunderLevel.LOW,
     )
-    fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TODAY, tz=_UTC)
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TODAY, tz=_UTC)
     entry = (fc or {}).get("+1")
     assert entry is not None
     assert entry["level"] == ThunderLevel.LOW
@@ -155,7 +155,7 @@ def test_trend_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     row = _trend_row({2: ThunderLevel.LOW}, ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         None, _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
@@ -175,7 +175,7 @@ def test_trend_ab_stunde_kommt_aus_dem_fenster():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     row = _trend_row({2: ThunderLevel.LOW, 19: ThunderLevel.LOW}, ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         None, _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
@@ -225,7 +225,7 @@ def test_konfiguriertes_fenster_wird_beachtet():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     row = _trend_row({5: ThunderLevel.LOW}, ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         _StubTrip(6, 18), _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
@@ -245,7 +245,7 @@ def test_mitternachts_fenster_wrap_zaehlt_nachtstunden():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     row = _trend_row({23: ThunderLevel.LOW}, ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         _StubTrip(22, 2), _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")

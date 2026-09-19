@@ -148,7 +148,7 @@ def test_alert_fires_iff_active_on_weather_tab_and_not_off(
     levels = {} if level_config is None else {alert_metric_key: level_config}
     trip = _trip(metrics=metrics, metric_alert_levels=levels)
 
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     fired = _fired(detector, kind, alert_metric_key, fields)
 
@@ -178,7 +178,7 @@ def test_documents_open_question_mixed_snow_line_catalog_state():
         MetricConfig(metric_id="freezing_level", enabled=False),
     ]
     trip = _trip(metrics=metrics, metric_alert_levels={"snow_line": "standard"})
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     fired = _fired(detector, "delta", "snow_line", ("freezing_level_m",))
     print(
@@ -223,7 +223,7 @@ def test_f001_inaktive_levelmetrik_blockiert_backfill_nicht():
         MetricConfig(metric_id="gust", enabled=False),
     ]
     trip = _trip(metrics=metrics, metric_alert_levels={"wind_gust": "standard"})
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     thresholds = dict(getattr(detector, "_thresholds", {}) or {})
 
@@ -250,7 +250,7 @@ def test_f001_aktive_offmetrik_blockiert_backfill_weiterhin_ac6():
     """
     metrics = [MetricConfig(metric_id="temperature", enabled=True)]
     trip = _trip(metrics=metrics, metric_alert_levels={"temperature_min": "off"})
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     thresholds = dict(getattr(detector, "_thresholds", {}) or {})
 
@@ -291,7 +291,7 @@ def test_f004_teilkollision_backfillt_freies_feld_unterdrueckt_belegtes():
         MetricConfig(metric_id="gust", enabled=True),
     ]
     trip = _trip(metrics=metrics, metric_alert_levels={"wind_gust": "off"})
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     thresholds = dict(getattr(detector, "_thresholds", {}) or {})
 
@@ -322,7 +322,7 @@ def test_f004_vollkollision_unterdrueckt_regel_weiterhin_ac6():
         metrics=metrics,
         metric_alert_levels={"temperature_min": "off", "temperature_max": "off"},
     )
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     thresholds = dict(getattr(detector, "_thresholds", {}) or {})
 

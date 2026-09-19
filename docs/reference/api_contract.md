@@ -1496,7 +1496,10 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 - `user_id` query parameter determines which user's data (trip, email config) is used
 - Trip must exist in `data/users/{user_id}/briefings/` directory (seit ADR-0023 / #1250 S7a; `trips/` ist toter Bestand, Issue #1708)
 - Email sent to `settings.mail_to` for that user (set via `/api/auth/profile`)
-- Default `user_id="default"` provided for backwards compatibility (e.g. test-mode without auth)
+- `user_id` is a mandatory query parameter (HTTP 422 if missing/empty, see table above, Issue #2151
+  Scheibe A) — there is no implicit default anymore. The account named `default` remains a valid,
+  explicitly-passable value (`?user_id=default`), it is simply never assumed silently
+  (2026-09-19, Issue #2151 Scheibe C).
 
 **Bug #716 Fix (2026-06-10):**
 - Prior: silent failure (HTTP 200 even when no email sent) when stages missing for target date

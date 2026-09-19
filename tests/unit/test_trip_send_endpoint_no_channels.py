@@ -260,7 +260,7 @@ class TestAC2LogLineDistinguishesOutcome:
         _patch_email_transport(monkeypatch)
 
         user_id, trip_id = trip_no_channels
-        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json")
+        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json", user_id=user_id)
         service = TripReportSchedulerService(user_id=user_id)
 
         with caplog.at_level(logging.INFO, logger="trip_report_scheduler"):
@@ -315,7 +315,7 @@ class TestAC3ActiveChannelUnchanged:
         _patch_email_transport(monkeypatch)
 
         user_id, trip_id = trip_with_email_channel
-        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json")
+        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json", user_id=user_id)
         service = TripReportSchedulerService(user_id=user_id)
 
         with caplog.at_level(logging.INFO, logger="trip_report_scheduler"):
@@ -382,7 +382,7 @@ class TestAC4ConfiguredButUnreachableChannel:
         _patch_telegram_unreachable(monkeypatch)
 
         user_id, trip_id = trip_with_unreachable_telegram
-        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json")
+        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json", user_id=user_id)
         service = TripReportSchedulerService(user_id=user_id)
 
         with caplog.at_level(logging.INFO, logger="trip_report_scheduler"):

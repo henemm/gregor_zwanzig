@@ -160,7 +160,7 @@ def test_ac1_ac2_status_filtert_gegen_den_ortstag(
         # Tourname traegt die Zone: der ausgegebene Body identifiziert im
         # Fehlerfall selbst, welcher der beiden Faelle gebrochen ist.
         trip = _trip(f"status-{zone.split('/')[-1].lower()}", etappen, coords)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         servertag = date.today()
 
         body = _befehl(trip, "### status", now_utc).confirmation_body
@@ -221,7 +221,7 @@ def test_ac3_jetzt_nimmt_den_wegpunkt_der_ortstag_etappe(monkeypatch):
             "Testaufbau nicht diskriminierend: Servertag- und Ortstag-Etappe "
             "muessen verschiedene Wegpunkte tragen"
         )
-        save_trip(trip)
+        save_trip(trip, user_id="default")
 
         ergebnis = _befehl(trip, "### now", NACHTS_UTC)
 
@@ -267,7 +267,7 @@ def test_ac4_ruhetag_verschiebt_im_ganzen_ortstag_dieselben_etappen(
             assert now_utc.astimezone(ZoneInfo(KORSIKA_ZONE)).date() == D21 \
                 == now_utc.date(), "Kontrolllauf: Orts- und Weltzeit-Tag gleich"
         trip = _trip("ruhetag-gleichheit", [D21, D22, D23], WP_KORSIKA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
 
         ergebnis = _befehl(trip, "### ruhetag", now_utc)
 
@@ -293,10 +293,10 @@ def test_ac5_ruhetag_ohne_zukuenftige_etappe_meldet_nichts_zu_verschieben():
     with freeze_time(NACHTS_UTC):
         _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
         trip = _trip("ein-etappen-tour", [D21], WP_KORSIKA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
 
         ergebnis = _befehl(trip, "### ruhetag", NACHTS_UTC)
-        danach = load_all_trips()[0]
+        danach = load_all_trips(user_id="default")[0]
 
     assert ergebnis.success is False, (
         "AC-5: die heutige Etappe wurde als zukuenftig behandelt — "
@@ -334,13 +334,13 @@ def test_ac6_command_log_traegt_den_ortstag_und_sperrt_die_zweitausfuehrung():
     with freeze_time(NACHTS_UTC):
         _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
         trip = _trip("ruhetag-log", [D21, D22], WP_KORSIKA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         erster_lauf = _befehl(trip, "### ruhetag", NACHTS_UTC)
     with freeze_time(zweiter):
         zweiter_lauf = _befehl(trip, "### ruhetag", zweiter)
-        danach = load_all_trips()[0]
+        danach = load_all_trips(user_id="default")[0]
 
-    eintraege = json.loads((get_data_dir() / "command_log.json").read_text())
+    eintraege = json.loads((get_data_dir(user_id="default") / "command_log.json").read_text())
     assert erster_lauf.success is True, erster_lauf.confirmation_body
     assert [e["date"] for e in eintraege] == ["2026-08-21"], (
         f"AC-6: command_log traegt {[e['date'] for e in eintraege]}, erwartet "
@@ -527,7 +527,7 @@ def _trip_zwei_wegpunkte(trip_id: str) -> Trip:
 def _fall_status(monkeypatch):
     """`/status` — welche Etappen bleiben in der Liste?"""
     trip = _trip("param-status", [D20, D21, D22, D23], WP_KORSIKA)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     body = _befehl(trip, "### status", PARAM_UTC).confirmation_body
     return frozenset(t for t in (D20, D21, D22, D23) if f"{t:%d.%m.%Y}" in body)
 
@@ -546,7 +546,7 @@ def _fall_jetzt(monkeypatch):
     monkeypatch.setattr("services.radar_service.RadarNowcastService",
                         _AufzeichnenderNowcast)
     trip = _trip_zwei_wegpunkte("param-jetzt")
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     _befehl(trip, "### now", PARAM_UTC)
     return tuple(aufrufe)
 
@@ -554,7 +554,7 @@ def _fall_jetzt(monkeypatch):
 def _fall_ruhetag(monkeypatch):
     """`### ruhetag` — ab welchem Tag gelten Etappen als verschiebbar?"""
     trip = _trip("param-ruhetag", [D20, D21, D22, D23], WP_KORSIKA)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     ergebnis = _befehl(trip, "### ruhetag", PARAM_UTC)
     return frozenset(s.old_date for s in (ergebnis.shifts or []))
 

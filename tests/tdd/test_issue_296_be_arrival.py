@@ -66,7 +66,7 @@ def _write_trip_fixture(tmp_path, *, with_arrival: bool) -> str:
 def test_loader_preserves_arrival_calculated(tmp_path):
     """AC-4: Fixture MIT arrival_calculated → geladener Waypoint trägt den Wert."""
     path = _write_trip_fixture(tmp_path, with_arrival=True)
-    trip = load_trip(path)
+    trip = load_trip(path, user_id="default")
 
     wp2 = trip.stages[0].waypoints[1]
     assert wp2.arrival_calculated == "10:15"
@@ -75,7 +75,7 @@ def test_loader_preserves_arrival_calculated(tmp_path):
 def test_loader_handles_missing_arrival_calculated(tmp_path):
     """AC-4: Fixture OHNE das Feld → kein Fehler, arrival_calculated is None."""
     path = _write_trip_fixture(tmp_path, with_arrival=False)
-    trip = load_trip(path)
+    trip = load_trip(path, user_id="default")
 
     for wp in trip.stages[0].waypoints:
         assert wp.arrival_calculated is None

@@ -167,7 +167,7 @@ class _RecordingNotificationService(NotificationService):
     (Kern-Schicht — deterministisch, kein Netz, CLAUDE.md Testschicht-Regel)."""
 
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(user_id="default")
         self.replies: list = []
 
     def send_command_reply_email(self, result, settings):

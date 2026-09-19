@@ -178,7 +178,7 @@ def test_ac11_gewitter_vorschau_klartext_kein_ratschlagstext():
                                           wanted_dates=None):
             return [etappe]
 
-    thunder_forecast = _ZeitplanerOhneNetz()._build_thunder_forecast_from_trend_or_fetch(
+    thunder_forecast = _ZeitplanerOhneNetz(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         _Trip(), date(2026, 8, 4),
         now_utc=datetime(2026, 8, 4, 4, 0, tzinfo=timezone.utc), tz=_TZ,
         multi_day_trend=None,

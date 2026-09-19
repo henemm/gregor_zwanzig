@@ -69,7 +69,15 @@ class InboundEmailReader:
     )
 
     def __init__(self) -> None:
-        self._notification_service = NotificationService()
+        self._notification_service: NotificationService | None = None
+
+    def _ensure_notification_service(self, settings: Settings) -> None:
+        """#2151 Scheibe C: den Versanddienst erst mit den vorliegenden
+        ``settings`` bauen -- nie nutzerlos (kein ``with_user_profile("default")``).
+        Die genutzten Methoden lesen ohnehin nur die explizit uebergebenen
+        Nutzer-Settings."""
+        if self._notification_service is None:
+            self._notification_service = NotificationService(settings=settings)
 
     def poll_and_process(self, settings: Settings) -> int:
         """
@@ -122,6 +130,7 @@ class InboundEmailReader:
         settings: Settings,
     ) -> int:
         """Process one email. Returns 1 if command processed, else 0."""
+        self._ensure_notification_service(settings)
         _, msg_data = imap.fetch(uid, "(RFC822)")
         msg = email.message_from_bytes(msg_data[0][1])
 
@@ -301,7 +310,7 @@ class InboundEmailReader:
             return None, base_settings
         return user_id, base_settings.with_user_profile(user_id)
 
-    def _find_trip_id(self, trip_name: str, user_id: str = "default") -> str | None:
+    def _find_trip_id(self, trip_name: str, user_id: str) -> str | None:
         """Trip-Lookup: primär über GZ#-Shortcode, Fallback toleranter Namensvergleich."""
         trips = load_all_trips(user_id)
         # Shortcode-Routing: "GZ#HERM ..." → erstes Token ist der Code

@@ -344,7 +344,8 @@ class TripAlertService:
         self,
         settings: Optional[Settings] = None,
         throttle_hours: int = 2,
-        user_id: str = "default",
+        *,
+        user_id: str,
         radar_service: Optional[object] = None,
         mail_sink: Optional[object] = None,
     ) -> None:

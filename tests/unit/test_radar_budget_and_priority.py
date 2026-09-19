@@ -205,7 +205,7 @@ def test_trip_alert_scheduler_radar_check_uses_polling_priority():
             )
         ],
     )
-    save_trip(trip)
+    save_trip(trip, user_id="default")
 
     fake = _CapturingRadarService()
     svc = TripAlertService(user_id="default", radar_service=fake)
@@ -296,11 +296,12 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
             )
         ],
     )
-    save_trip(trip)
+    save_trip(trip, user_id="default")
 
     msg = InboundMessage(
         trip_name=trip.name, body="### now", sender="gregor-test@henemm.com",
         channel="email", received_at=datetime.now(tz=timezone.utc),
+        user_id="default",
     )
     result = TripCommandProcessor().process(msg)
 

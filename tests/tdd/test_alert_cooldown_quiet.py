@@ -150,7 +150,7 @@ def test_ac7_loader_roundtrip_cooldown_minutes(tmp_path):
     trip_dict = _trip_to_dict(trip)
     trip_file.write_text(json.dumps(trip_dict))
 
-    loaded = load_trip(trip_file)
+    loaded = load_trip(trip_file, user_id="default")
     assert loaded.alert_cooldown_minutes == 45
     assert loaded.alert_quiet_from == "22:00"
     assert loaded.alert_quiet_to == "07:00"
@@ -174,7 +174,7 @@ def test_ac8_legacy_trip_without_cooldown_loads_as_none(tmp_path):
     trip_file = tmp_path / "legacy-trip.json"
     trip_file.write_text(json.dumps(legacy))
 
-    trip = load_trip(trip_file)
+    trip = load_trip(trip_file, user_id="default")
     assert trip.alert_cooldown_minutes is None
     assert trip.alert_quiet_from is None
     assert trip.alert_quiet_to is None

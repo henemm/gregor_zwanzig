@@ -76,7 +76,7 @@ def test_thunder_entry_from_trend_row_no_gewitter_word_for_pure_cape_low():
         "hourly_thunder": (HourlyValue(hour=14, value=1.0),),
         "hourly_thunder_signals": ((14, ThunderLevel.LOW, ["cape"]),),
     }
-    entry = TripReportSchedulerService()._thunder_entry_from_trend_row(row, _TARGET)
+    entry = TripReportSchedulerService(user_id="default")._thunder_entry_from_trend_row(row, _TARGET)
 
     assert entry["level"] == ThunderLevel.LOW, (
         f"Testaufbau fehlerhaft -- erwartet LOW, erhalten {entry!r}"
@@ -132,7 +132,7 @@ def test_build_thunder_forecast_no_gewitter_word_for_pure_cape_low():
     ]
     seg = _segment(1, points, thunder_level_max=ThunderLevel.LOW)
 
-    fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TARGET, tz=_UTC)
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TARGET, tz=_UTC)
 
     assert fc is not None and "+1" in fc, f"Kein +1-Eintrag: {fc!r}"
     entry = fc["+1"]

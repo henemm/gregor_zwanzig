@@ -80,7 +80,8 @@ class CompareAlertService:
     def __init__(
         self,
         settings: Optional[Settings] = None,
-        user_id: str = "default",
+        *,
+        user_id: str,
         weather_source: Optional[object] = None,
         mail_sink: Optional[object] = None,
     ) -> None:

@@ -28,49 +28,8 @@ from pathlib import Path
 _REPO = Path(__file__).resolve().parents[1]
 
 # (Datei relativ zum Repo, qualifizierter Name) -- darf nur SCHRUMPFEN.
-# Stand #2151 Scheibe A; Abbau in Scheibe C.
-_SRC_BESTAND: frozenset[tuple[str, str]] = frozenset({
-    ("src/app/loader.py", "load_trip"),
-    ("src/app/loader.py", "get_data_dir"),
-    ("src/app/loader.py", "get_locations_dir"),
-    ("src/app/loader.py", "get_briefings_dir"),
-    ("src/app/loader.py", "get_snapshots_dir"),
-    ("src/app/loader.py", "load_all_locations"),
-    ("src/app/loader.py", "save_location"),
-    ("src/app/loader.py", "delete_location"),
-    ("src/app/loader.py", "load_all_trips"),
-    ("src/app/loader.py", "save_trip"),
-    ("src/app/loader.py", "delete_trip"),
-    ("src/services/alert_state.py", "AlertStateService.__init__"),
-    ("src/services/compare_alert.py", "CompareAlertService.__init__"),
-    ("src/services/compare_official_alert.py", "CompareOfficialAlertService.__init__"),
-    ("src/services/compare_radar_alert.py", "CompareRadarAlertService.__init__"),
-    ("src/services/compare_weather_snapshot.py", "CompareWeatherSnapshotService.__init__"),
-    ("src/services/inbound_email_reader.py", "InboundEmailReader._find_trip_id"),
-    ("src/services/inbound_telegram_reader.py", "InboundTelegramReader._find_active_trip"),
-    ("src/services/notification_service.py", "NotificationService.__init__"),
-    ("src/services/preview_service.py", "PreviewService._load_trip"),
-    ("src/services/preview_service.py", "PreviewService.render_email_preview"),
-    ("src/services/preview_service.py", "PreviewService.render_sms_preview"),
-    ("src/services/preview_service.py", "PreviewService.render_telegram_preview"),
-    ("src/services/scheduler_dispatch_service.py", "run_compare_presets_daily"),
-    ("src/services/trip_alert.py", "TripAlertService.__init__"),
-    ("src/services/trip_command_processor.py", "InboundMessage.user_id"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._find_trip"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._apply_ruhetag"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._trigger_report"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._shift_start"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._cancel_trip"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._resume_trip"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._delete_snapshot"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._get_command_log_path"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._load_command_log"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._append_command_log"),
-    ("src/services/trip_command_processor.py", "TripCommandProcessor._is_already_applied"),
-    ("src/services/trip_report_scheduler.py", "TripReportSchedulerService.__init__"),
-    ("src/services/weather_extractor.py", "WeatherExtractor.__init__"),
-    ("src/services/weather_snapshot.py", "WeatherSnapshotService.__init__"),
-})
+# Stand #2151 Scheibe C: leer -- jede neue Fundstelle ist rot.
+_SRC_BESTAND: frozenset[tuple[str, str]] = frozenset()
 
 _INBOUND_READER = (
     "src/services/inbound_email_reader.py",
@@ -269,3 +228,95 @@ def test_ac11_waechter_faengt_einen_gepflanzten_or_default(tmp_path):
         encoding="utf-8",
     )
     assert finde_or_default(datei) == [1]
+
+
+# ═══════════════════════ AC-2 (Scheibe C) ═════════════════════════════════════
+#
+# Spec: docs/specs/modules/fix_2151_default_fallbacks_scheibe_c.md (Test 2/3,
+# AC-2). Der Signatur-Rueckfall (oben, _SRC_BESTAND) wird in Scheibe C
+# entfernt -- dieser zweite Sammler bewacht, dass der Rueckfall dabei nicht
+# einfach an die AUFRUFSTELLE verschoben wird: das Literal ``"default"`` als
+# ``user_id``, als Keyword ueberall, positionell nur bei ``with_user_profile``
+# (die einzige Stelle im Bestand mit positioneller Uebergabe).
+
+
+def _ist_default_call_argument(knoten: ast.Call) -> str | None:
+    """Traegt dieser ``Call``-Knoten das Literal ``"default"`` als
+    Nutzerkennung an der Aufrufstelle -- liefert eine kurze Fund-Beschreibung,
+    sonst ``None``."""
+    for kw in knoten.keywords:
+        if kw.arg == "user_id" and _ist_default_literal(kw.value):
+            return 'keyword user_id="default"'
+    name = getattr(knoten.func, "attr", None) or getattr(knoten.func, "id", None)
+    if name == "with_user_profile" and knoten.args and _ist_default_literal(knoten.args[0]):
+        return 'positional with_user_profile("default")'
+    return None
+
+
+class _AufrufstellenSammler(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.funde: list[tuple[int, str]] = []
+
+    def visit_Call(self, node: ast.Call) -> None:
+        fund = _ist_default_call_argument(node)
+        if fund is not None:
+            self.funde.append((node.lineno, fund))
+        self.generic_visit(node)
+
+
+def finde_default_aufrufstellen(
+    wurzel: Path, *unterordner: str,
+) -> dict[str, list[tuple[int, str]]]:
+    """Alle Aufrufstellen unter den angegebenen Unterordnern von ``wurzel``
+    mit dem Literal ``"default"`` als ``user_id``-Argument (Keyword ueberall,
+    positionell nur bei ``with_user_profile``)."""
+    ergebnis: dict[str, list[tuple[int, str]]] = {}
+    for teil in unterordner:
+        basis = wurzel / teil
+        if not basis.exists():
+            continue
+        for datei in sorted(basis.rglob("*.py")):
+            sammler = _AufrufstellenSammler()
+            sammler.visit(ast.parse(datei.read_text(encoding="utf-8"), filename=str(datei)))
+            if sammler.funde:
+                ergebnis[datei.relative_to(wurzel).as_posix()] = sammler.funde
+    return ergebnis
+
+
+def test_ac2_keine_default_aufrufstelle_im_produktivbaum():
+    """AC-2 (Ist-Stand): weder ``src/``, ``api/`` noch ``tools/`` haben eine
+    Aufrufstelle mit dem Literal ``"default"`` als Nutzerkennung."""
+    funde = finde_default_aufrufstellen(_REPO, "src", "api", "tools")
+    assert funde == {}, (
+        "AC-2: Aufruf mit user_id='default' als Literal an einer Aufrufstelle "
+        f"gefunden -- Kennung explizit durchreichen statt Literal: {funde}"
+    )
+
+
+def test_ac2_waechter_faengt_gepflanzte_aufrufstellen_beider_formen(tmp_path):
+    """AC-2 (Empfindlichkeit): ein gepflanzter Baum mit je einer Stelle pro
+    Form (Keyword ueberall, positionell nur bei ``with_user_profile``) wird
+    gefunden; ein nicht-literales Argument und ein Keyword mit anderem Wert
+    werden NICHT gemeldet."""
+    modul = tmp_path / "src" / "services"
+    modul.mkdir(parents=True)
+    (modul / "dienst.py").write_text(
+        "from app.config import Settings\n"
+        "from app.loader import save_trip\n"
+        "def f(trip, user_id):\n"
+        "    save_trip(trip, user_id=\"default\")\n"
+        "    Settings().with_user_profile(\"default\")\n"
+        "    Settings().with_user_profile(user_id)\n"
+        "    save_trip(trip, user_id=\"nutzer_a\")\n"
+        "    andere_funktion(\"default\")\n",
+        encoding="utf-8",
+    )
+
+    funde = finde_default_aufrufstellen(tmp_path, "src")
+
+    assert list(funde.keys()) == ["src/services/dienst.py"]
+    zeilen = {zeile for zeile, _art in funde["src/services/dienst.py"]}
+    assert zeilen == {4, 5}, (
+        f"AC-2: erwartet genau die Zeilen 4 (Keyword) und 5 (positionell bei "
+        f"with_user_profile), gefunden: {funde}"
+    )

@@ -71,6 +71,7 @@ def _make_msg(body: str) -> InboundMessage:
         sender="gregor-test@henemm.com",
         channel="email",
         received_at=datetime.now(tz=timezone.utc),
+        user_id="default",
     )
 
 
@@ -167,7 +168,7 @@ def test_ac2_format_now_text_dry():
 def test_ac3_now_command_returns_nowcast_under_10s():
     """AC-3: `### now` liefert in <10s eine erfolgreiche Nowcast-Antwort."""
     trip = _make_today_trip()
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     try:
         processor = TripCommandProcessor()
         start = time_mod.monotonic()
@@ -186,7 +187,7 @@ def test_ac3_now_command_returns_nowcast_under_10s():
         assert "uelle" in body or "Quelle" in body
     finally:
         from app.loader import get_briefings_dir
-        p = get_briefings_dir() / f"{_TRIP_ID}.json"
+        p = get_briefings_dir(user_id="default") / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()
 
@@ -202,7 +203,7 @@ def test_ac3_now_command_without_today_stage_gives_clear_message():
             waypoints=[Waypoint(id="W1", name="X", lat=_DE_LAT, lon=_DE_LON, elevation_m=500)],
         )],
     )
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     try:
         result = TripCommandProcessor().process(_make_msg("### now"))
         # Kein heutiger Standort -> klare, positionsbezogene Meldung (nicht der
@@ -213,7 +214,7 @@ def test_ac3_now_command_without_today_stage_gives_clear_message():
         assert any(kw in body for kw in ("etappe", "standort", "position", "heute"))
     finally:
         from app.loader import get_briefings_dir
-        p = get_briefings_dir() / f"{_TRIP_ID}.json"
+        p = get_briefings_dir(user_id="default") / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()
 
@@ -265,7 +266,7 @@ def test_ac4_check_radar_alerts_sends_once_then_throttles():
 
     user_id = "default"
     trip = _make_today_trip()
-    save_trip(trip)
+    save_trip(trip, user_id=user_id)
 
     # Echte Frame-Quelle (normale Funktion, KEIN Mock) liefert Onset in 10 min.
     def real_frame_source(lat: float, lon: float):
@@ -312,6 +313,6 @@ def test_ac4_check_radar_alerts_sends_once_then_throttles():
         assert radar_entries[0].get("severity") == "HIGH"
     finally:
         from app.loader import get_briefings_dir
-        p = get_briefings_dir() / f"{_TRIP_ID}.json"
+        p = get_briefings_dir(user_id=user_id) / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()

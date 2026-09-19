@@ -414,7 +414,7 @@ class TripReportSchedulerService:
         >>> service.send_reports("morning")  # Send reports for today's trips
     """
 
-    def __init__(self, settings: Optional[Settings] = None, user_id: str = "default") -> None:
+    def __init__(self, settings: Optional[Settings] = None, *, user_id: str) -> None:
         """
         Initialize the service.
 

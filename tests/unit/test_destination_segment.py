@@ -78,7 +78,7 @@ class TestSchedulerDestinationSegment:
     def _load_trip_and_get_segments(self):
         from app.loader import load_trip
         from services.trip_report_scheduler import TripReportSchedulerService
-        trip = load_trip(TRIP_FILE)
+        trip = load_trip(TRIP_FILE, user_id="default")
         target_date = trip.stages[1].date
         svc = TripReportSchedulerService.__new__(TripReportSchedulerService)
         segments = svc._convert_trip_to_segments(trip, target_date)

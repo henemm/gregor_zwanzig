@@ -98,7 +98,7 @@ def test_ac2_production_trips_roundtrip_contract():
     for trip_path in trip_files:
         original = json.loads(trip_path.read_text())
         try:
-            trip = load_trip(original)
+            trip = load_trip(original, user_id="default")
         except Exception:
             # Pre-existing kaputtes Trip-Schema — nicht Scope dieses Fixes.
             continue

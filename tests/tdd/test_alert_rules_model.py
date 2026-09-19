@@ -242,7 +242,7 @@ def test_ac6_trip_roundtrip_preserves_alert_rules_and_legacy(tmp_path):
 
     # Reload
     raw = json.loads(trip_path.read_text())
-    trip_loaded = load_trip(raw)
+    trip_loaded = load_trip(raw, user_id="default")
 
     assert len(trip_loaded.alert_rules) == 2
     ids = {r.id for r in trip_loaded.alert_rules}
@@ -300,7 +300,7 @@ def test_ac9_all_production_trips_load_with_additive_migration():
     for trip_path in trip_files:
         original = json.loads(trip_path.read_text())
         try:
-            trip = load_trip(original)
+            trip = load_trip(original, user_id="default")
         except Exception:
             # Pre-existing kaputtes Trip-Schema — wird in Folge-Issue gefixt.
             # Issue #205 darf hier NICHT regredieren, aber muss nicht reparieren.

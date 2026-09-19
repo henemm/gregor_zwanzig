@@ -71,7 +71,7 @@ _PROVIDER_MAP.update({p.value: p for p in Provider})
 class WeatherSnapshotService:
     """Persist and load aggregated weather snapshots as JSON files."""
 
-    def __init__(self, user_id: str = "default") -> None:
+    def __init__(self, user_id: str) -> None:
         self._user_id = user_id
         self._snapshots_dir = get_snapshots_dir(user_id)
 

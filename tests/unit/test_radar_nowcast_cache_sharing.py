@@ -376,7 +376,7 @@ def test_end_to_end_trip_and_compare_radar_paths_share_one_fetch(monkeypatch):
     _vorverdrahtete_klasse(monkeypatch, source)
 
     trip = _e2e_trip(46.5, 12.0)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     mess_lat, mess_lon, mess_hoehe = _messpunkt_des_trips(trip)
 
     trip_svc = TripAlertService(user_id="default")
@@ -442,7 +442,7 @@ def test_end_to_end_trip_und_vergleich_am_selben_wegpunkt_erzeugen_zwei_fetches(
 
     lat, lon = 46.5, 12.0
     trip = _e2e_trip(lat, lon)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     mess_lat, mess_lon, _mess_hoehe = _messpunkt_des_trips(trip)
 
     # Voraussetzung: die beiden Stellen muessen sich ueberhaupt unterscheiden

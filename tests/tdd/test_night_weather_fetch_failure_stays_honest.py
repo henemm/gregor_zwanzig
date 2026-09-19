@@ -160,7 +160,7 @@ class TestFetchNightWeatherFailureIsConsistentAcrossCallers:
         )
 
         last_segment = _last_segment()
-        result = TripReportSchedulerService()._fetch_night_weather(last_segment)
+        result = TripReportSchedulerService(user_id="default")._fetch_night_weather(last_segment)
 
         assert result is None, (
             f"Scheduler-Delegator lieferte {result!r} statt None bei "
@@ -190,7 +190,7 @@ class TestFetchNightWeatherFailureIsConsistentAcrossCallers:
         )
 
         last_segment = _last_segment()
-        scheduler_result = TripReportSchedulerService()._fetch_night_weather(last_segment)
+        scheduler_result = TripReportSchedulerService(user_id="default")._fetch_night_weather(last_segment)
         preview_result = fetch_night_weather(last_segment, provider=_ThrowingProvider())
 
         assert scheduler_result is None
