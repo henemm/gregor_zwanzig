@@ -1463,10 +1463,10 @@ Sends an immediate test briefing for a specific trip via the user's configured e
 Triggers immediate test briefing send for one trip. Returns success/failure based on whether stage data exists for the target date.
 
 **Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `user_id` | string | `"default"` | User identifier (multi-tenant scoping) |
-| `report_type` | string | `"evening"` | `"morning"` (today's stages) or `"evening"` (tomorrow's stages) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | yes | User identifier (multi-tenant scoping) — seit Issue #2151 Scheibe A Pflicht statt Default |
+| `report_type` | string | no (default `"evening"`) | `"morning"` (today's stages) or `"evening"` (tomorrow's stages) |
 
 **Response 200 (Success):**
 
@@ -1483,6 +1483,7 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 
 | Status | Scenario | Detail |
 |--------|----------|--------|
+| 422 | Missing or empty `user_id` query parameter (Issue #2151 Scheibe A) | FastAPI validation error — `user_id` ist Pflicht |
 | 404 | Trip `trip_id` not found for user | `"Trip {trip_id} not found"` |
 | 409 | Another send for the same `(user_id, trip_id, report_type)` is already in progress (Issue #1756) | `"Versand für {report_type} läuft bereits — bitte warten"` |
 | 422 | SMTP not configured for user (Issue #474) | `"SMTP not configured for this user"` |
@@ -2608,7 +2609,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| user_id | string | yes (via appendUserID) | User identifier (appended by Go proxy; anti-spoofing via Auth-Context) |
+| `user_id` | string | yes | User identifier — seit Issue #2151 Scheibe A explizit Pflicht (appended by Go proxy; anti-spoofing via Auth-Context) |
 
 **Response 200 (Success):**
 
@@ -2645,6 +2646,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 | Status | Body | Scenario |
 |--------|------|----------|
+| 422 | FastAPI validation error | Missing or empty `user_id` query parameter (Issue #2151 Scheibe A) |
 | 422 | `{"detail":"Preset <id>: kein Empfaenger — mail_to fehlt in den Konto-Settings"}` | Keine `mail_to`-Adresse in den Konto-Settings des Users (dokumentierte Korrektur 2026-08-02, Issue #1452 — vorheriger Stand dieser Zeile beschrieb einen `400`/`no_recipients`-Fehlerkörper, der im Code nicht mehr existiert) |
 | 404 | `{"error":"not_found"}` | Preset ID not found in user's preset list |
 | 500 | `{"error":"send_failed","detail":"..."}` | Email dispatch failed (network/Resend error) |
@@ -4268,6 +4270,7 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-19: Issue #2151 Scheibe A — `user_id` wird in den Routen `POST /api/scheduler/trips/{trip_id}/send` und `POST /api/scheduler/compare-presets/{preset_id}/send` zur Pflicht (kein Default mehr); fehlender Parameter → HTTP 422. Details: `docs/specs/modules/fix_2151_default_fallbacks_scheibe_a.md`.
 - 2026-09-15: Issue #2136/ADR-0068 — **kein neues Feld**, Korrektur einer Aussage in Section 19:
   die Spaltenköpfe des 3-Tages-Ausblicks (Trip UND Ortsvergleich, HTML + Klartext) kommen jetzt
   aus `metric_catalog.col_label` (dieselbe Quelle wie die Etappentabelle), **nicht** mehr aus dem

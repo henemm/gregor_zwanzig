@@ -127,6 +127,14 @@ _SELF_EXEMPT = {
     # Eintrag zurueckbauen (Regel-Budget, CLAUDE.md "Backlog & Nebenbefunde").
     # Spec: docs/specs/modules/feat_1848_c_waechter_gehzeit_trip_exklusiv.md
     "test_gehzeit_metriken_bleiben_trip_exklusiv.py",
+    # #2151 Scheibe A AC-8..AC-11: AST-Struktur-Waechter gegen stille
+    # user_id-Default-Rueckfaelle ("default") in api/, src/ (Ratsche) und den
+    # Inbound-Readern. Liest Produkt-Quelltext als DATEN fuer eine
+    # AST-Strukturregel, kein Verhaltensnachweis auf Code-Strings; gleiche
+    # Werkzeug-Klasse wie test_report_config_scheduler_structure.py;
+    # # doc-compliance-test.
+    # Spec: docs/specs/modules/fix_2151_default_fallbacks_scheibe_a.md
+    "test_user_id_default_guard.py",
 }
 # #1408 F005 / #1469: `test_validator_log_unique_filenames.py` stand hier als
 # ausdruecklicher FEHLALARM-Eintrag, weil `_collect_listed_product_paths()`

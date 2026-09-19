@@ -135,6 +135,7 @@ class PreviewService:
         report_type: str,
         now_utc: datetime,
         demo: bool = False,
+        user_id: str | None = None,
     ):
         """Gemeinsame Pipeline: segments → weather → format_email → TripReport.
 
@@ -149,13 +150,19 @@ class PreviewService:
             demo: Wenn True (Issue #483), wird der FixtureProvider statt der
                 Live-OpenMeteo-API genutzt. Damit ist die Vorschau immer
                 verfügbar — unabhängig von API-Limit oder Datum.
+            user_id: Nutzer der Anfrage (#2151/#2057) -- der Scheduler misst
+                Etappen mit dessen GPX statt still mit ``users/default``.
 
         Returns: (report, segment_weather, stage_name, trip_tz) — segment_weather,
         stage_name und trip_tz werden von render_sms_preview wiederverwendet
         (Issue #188 / Bug #397: tz muss in die SMS-Token durchgereicht werden).
         """
         from services.trip_report_scheduler import TripReportSchedulerService
-        scheduler = TripReportSchedulerService(self.settings)
+        # Ohne user_id bekommt der Scheduler ``None`` statt seines
+        # Signatur-Defaults "default": ``_convert_trip_to_segments`` ueberspringt
+        # dann den GPX-Backfill -- kein Zugriff auf irgendeinen Nutzerordner
+        # (ADR-0003, #2151 AC-2).
+        scheduler = TripReportSchedulerService(self.settings, user_id=user_id)
         # Issue #2036 CI-Nachschlag (PR #2055/#2058): eine Vorschau ist "kein
         # Versand, nur Render" (Modul-Docstring) -- sie darf den
         # Trip-Bestand nicht als Seiteneffekt veraendern. Das Attribut steuert
@@ -356,7 +363,7 @@ class PreviewService:
         now_utc = datetime.now(timezone.utc)
         target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
         report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo,
+            trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
         )
         # Issue #722: compact format — wrap plain text in <pre> for browser preview
         if not report.email_html and report.email_plain:
@@ -384,7 +391,7 @@ class PreviewService:
         now_utc = datetime.now(timezone.utc)
         target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
         report, _segment_weather, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo,
+            trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
         )
         # Issue #954: kein eigener Renderpfad mehr — report.sms_text ist bereits
         # der #944-korrekte Versandtext (inkl. disabled_specs-Filterung).
@@ -411,7 +418,7 @@ class PreviewService:
         now_utc = datetime.now(timezone.utc)
         target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
         report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo,
+            trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
         )
         bubbles = report.telegram_bubbles or []
         body = "\n\n---\n\n".join(bubbles)
