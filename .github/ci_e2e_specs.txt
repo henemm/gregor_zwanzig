@@ -183,6 +183,7 @@ e2e/compare-editor-slice3.spec.ts
 e2e/compare-hub-inline-edit.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
+e2e/compare-wertebereiche-speichert-selbst.spec.ts
 e2e/design-compliance-group-a.spec.ts
 e2e/design-system-lauf-a.spec.ts
 e2e/dnd-helper-finalize-wait.spec.ts

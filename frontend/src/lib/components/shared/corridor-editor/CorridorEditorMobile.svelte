@@ -24,13 +24,17 @@
 	//  - Issue #1371: das "Warnen"-Bedienelement (Effekt-Buttons) ist entfernt —
 	//    der Reiter markiert nur noch, die Alarm-Empfindlichkeit setzt
 	//    ausschliesslich der Reiter Alarme.
-	import { getContext } from 'svelte';
+	import { getContext, untrack } from 'svelte';
 	import { Eyebrow, Dot } from '$lib/components/atoms';
 	import ScreenScroll from '$lib/components/mobile/ScreenScroll.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import { api } from '$lib/api';
 	import { baueTripSpeicherung } from '../tripSpeicherung.ts';
-	import { toCompareProfile, type Trip, type SensLevel, type Corridor } from '$lib/types';
+	import { toCompareProfile, type Trip, type SensLevel, type Corridor, type ComparePreset } from '$lib/types';
+	import {
+		erstelleWertebereicheVergleichSpeicherung,
+		wertebereicheVergleichSpeicherungAktiv
+	} from './wertebereicheVergleichSpeicherung.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import { corridorFmt } from './corridorMatch.ts';
@@ -54,14 +58,32 @@
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
-		/** Issue #2316 F002 (Adversary MEDIUM): reale Persistenz fuer
-		 *  context='vergleich' -- Mobil-Pendant zu CorridorEditor.svelte, gleiche
-		 *  Route (handleCorridorCommit), kein Compare-Sonderweg. */
-		onCompareCommit?: (init?: RequestInit) => Promise<void> | void;
+		/** Issue #2276 S3: der vergleich-Zweig speichert selbst (Hub). Ohne `preset`
+		 *  (Anlege-Seite) bleibt der Zweig inaktiv. */
+		preset?: ComparePreset;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
+		onCompareUpdate?: (updated: ComparePreset) => void;
 	}
-	let { context = 'route', trip, onTripUpdate, saveController, onCompareCommit }: Props = $props();
+	let { context = 'route', trip, onTripUpdate, saveController, preset, enqueueHubWrite, onCompareUpdate }: Props =
+		$props();
 
 	const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+
+	// Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
+	// AlarmeTab, S2). Baseline beim Mount — CompareTabs mountet erst nach der
+	// Hydration (Design Punkt 6). Anlege-Seite/Trip: inaktiv (AC-9, AC-12).
+	const vergleichSpeicherung = untrack(() =>
+		wertebereicheVergleichSpeicherungAktiv({ context, ws, preset, saveController })
+			? erstelleWertebereicheVergleichSpeicherung({
+					client: api,
+					ws: ws!,
+					preset: () => preset!,
+					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
+					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
+					saveController: saveController!
+				})
+			: null
+	);
 
 	// AC-10: "zuletzt bekannte Stufe" bezieht sich auf den beim Mount geladenen
 	// Stand — analog Desktop (CorridorEditor.svelte), gilt fuer beide Kontexte.
@@ -183,15 +205,13 @@
 
 	function maybeSchedule() {
 		if (context === 'vergleich') {
-			// Issue #2316 F002 (Adversary MEDIUM, Mobil-Paritaet zu
-			// CorridorEditor.svelte/Desktop): auch mobil ueber
-			// saveController.schedule() anmelden, damit hasPending true wird und
-			// der geteilte beforeNavigate-Waechter eine Aenderung beim Entladen
-			// mit keepalive ueberträgt -- die eigentliche Persistenz bleibt
-			// onCompareCommit (= CompareTabs' handleCorridorCommit).
+			// Issue #2276 S3: genau EIN Auslöser — nach dem Spiegeln in den Wizard-
+			// Zustand meldet der Editor die Änderung an die eigene Orchestrierung
+			// (Diff-Gate, Queue, Rückmeldung, Rollback in wertebereicheVergleichSpeicherung.ts).
+			// Anlege-Seite: kein Speicherweg hier, Speichern über wiz.saveNewPreset().
 			if (saveGateDecision(rows) === 'schedule') {
 				syncToWizard();
-				saveController?.schedule(async (init) => { await onCompareCommit?.(init); });
+				vergleichSpeicherung?.aenderungMelden();
 			}
 			return;
 		}

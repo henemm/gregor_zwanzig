@@ -79,9 +79,7 @@
 	import {
 		hydrateWizardStateFromPreset,
 		buildHubPutPayload,
-		flushPendingCorridorSave,
 		snapshotForRollback,
-		shouldFlushOnWindowPointerUp,
 		buildToggleActivePutPayload,
 		hydrateVersandFieldsFromPreset,
 		flushPendingVersandSave,
@@ -94,8 +92,7 @@
 		type VersandSnapshot,
 		type LayoutSnapshot
 	} from './compareHubWizardBridge.ts';
-	import { baueKorridorCommit } from './korridorCommit.ts';
-	import { sichereAlarmeVorReiterwechsel } from '../shared/alarmeVergleichSpeicherung.ts';
+	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
 	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
 
@@ -151,9 +148,10 @@
 	});
 
 	async function handleValueChange(value: string): Promise<void> {
-		// Issue #2276 S2 (AC-6, TripTabs-Muster): eine ausstehende Alarm-Aenderung
-		// vor dem Verlassen des Reiters senden, nicht verlieren.
-		await sichereAlarmeVorReiterwechsel(activeTab, value, saveController);
+		// Issue #2276 S2/S3 (TripTabs-Muster): eine ausstehende Aenderung eines
+		// selbst speichernden Reiters (Alarme, Wertebereiche) vor dem Verlassen
+		// senden — beide teilen den EINEN Speicher-Platz des Controllers.
+		await sichereSelbstSpeichererVorReiterwechsel(activeTab, value, saveController);
 		activeTab = value;
 		if (typeof window !== 'undefined') {
 			const url = new URL(window.location.href);
@@ -217,10 +215,10 @@
 	let currentLocationIds = $state<string[]>([...currentPreset.location_ids]);
 	const orteCount = $derived(currentLocationIds.length);
 	// Fix-Loop 2 (F003-Analogie): zuletzt ERFOLGREICH persistierter Orte-Stand,
-	// analog lastPersistedCorridorSnapshot/lastPersistedVersandSnapshot — nur
+	// analog lastPersistedVersandSnapshot — nur
 	// so kann persistPickedIds beim Rollback auf den Stand NACH einem zuvor
 	// in der Queue bereits erfolgreichen Edit zurueckfallen statt auf einen
-	// aelteren, beim Funktionsaufruf gelesenen Stand (s. handleCorridorCommit).
+	// aelteren, beim Funktionsaufruf gelesenen Stand.
 	let lastPersistedLocationIds: string[] = [...currentLocationIds];
 
 	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
@@ -333,28 +331,6 @@
 	const wizardState = new CompareWizardState();
 	setContext('compare-wizard-state', wizardState);
 	let idealwerteHydrated = $state(false);
-	let lastPersistedCorridorSnapshot: {
-		corridors: typeof wizardState.corridors;
-		idealRanges: typeof wizardState.idealRanges;
-		// Issue #1366 F002: CorridorSnapshot (compareHubWizardBridge.ts) erwartet
-		// weiterhin `string[]` (nicht nullable) -- materialisiert unten.
-		activeMetricKeys: string[];
-		metricAlertLevels: typeof wizardState.metricAlertLevels;
-	} | null = null;
-
-	function currentCorridorSnapshot() {
-		return snapshotForRollback({
-			corridors: wizardState.corridors,
-			idealRanges: wizardState.idealRanges,
-			// Issue #1366 F002: `null` ("nie eingestellt") auf die Vorgabemenge
-			// materialisieren -- kein `new Set(null)`-Aufruf ueber einen ungeprueften
-			// Zwischenstand in buildCompareCorridorSavePayload (compareHubWizardBridge
-			// -> corridorEditorState.ts), konsistent mit CorridorEditor(Mobile).svelte.
-			activeMetricKeys: materializeActiveMetricKeys(wizardState.activeMetricKeys),
-			metricAlertLevels: wizardState.metricAlertLevels
-		});
-	}
-
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): dritte Hydrationsstelle mit
 	// derselben Wurzel — auch hier wird die Katalogantwort abgewartet, BEVOR
 	// hydriert und der Grundzustand aufgenommen wird. Ohne Aufloesung traefe das
@@ -372,7 +348,6 @@
 		wizardState.idealRanges = hydrated.idealRanges;
 		if (hydrated.activeMetricKeys !== null) wizardState.activeMetricKeys = hydrated.activeMetricKeys;
 		wizardState.metricAlertLevels = hydrated.metricAlertLevels;
-		lastPersistedCorridorSnapshot = currentCorridorSnapshot();
 		idealwerteHydrated = true;
 	}
 
@@ -384,72 +359,15 @@
 		});
 	});
 
-	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): blur an
-	// Zahlenfeldern (onfocusout bubbelt, blur nicht), click an
-	// ✕/Markieren/+Metrik, pointerup nach Slider-Drag — je EIN PUT,
-	// nur wenn sich der persistenzrelevante Ausschnitt tatsächlich geändert hat.
-	//
-	// Fix-Loop 1 (F002, Adversary HIGH): Diff-/Payload-Entscheidung liegt in
-	// `flushPendingCorridorSave` (compareHubWizardBridge.ts) — dieselbe reine
-	// Funktion wird sowohl vom Wrapper-Handler (onfocusout/onclick, Z. unten)
-	// als auch vom Fenster-Handler (`<svelte:window onpointerup>`) aufgerufen,
-	// damit ein Band-Handle-Drag mit Pointer-Release AUSSERHALB des Wrapper-
-	// Subtrees nicht mehr zu einem uebersehenen Commit fuehrt.
-	// Issue #2316 Scheibe A (AC-9): `init` optional — nur der neue schedule()-Pfad
-	// aus CorridorEditor (onCompareCommit, direkter Funktionsaufruf) reicht hier
-	// `{ keepalive: true }` durch, damit der geteilte beforeNavigate-Waechter den
-	// Request beim Entladen ueberleben laesst (#1376-Muster). Die bestehenden
-	// DOM-Bindungen (onfocusout/onclick) rufen ausdruecklich OHNE Argument auf
-	// (s.u.), sonst laendete das Event-Objekt hier als `init`.
-	// Issue #2317 (AC-7): Rumpf nach korridorCommit.ts gezogen (unveraenderter
-	// Ablauf). Neu: ein gescheiterter PUT wird nach Rollback + setError()
-	// WEITERGEWORFEN, damit der Speicher-Takt (schedule -> doSave) ihn sieht und
-	// nicht „gespeichert" meldet. Die DOM-Aufrufer unten fangen ihn selbst.
-	const handleCorridorCommit = baueKorridorCommit({
-		bereit: () => idealwerteHydrated,
-		ctl: () => saveController,
-		queue: hubPutQueue,
-		put: (url, body, init) => api.put<ComparePreset>(url, body, init),
-		snapshot: currentCorridorSnapshot,
-		zuletztGespeichert: () => lastPersistedCorridorSnapshot,
-		merkeGespeichert: (s) => {
-			// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen.
-			lastPersistedCorridorSnapshot = s;
-		},
-		payload: (aktuell, zuletzt) => flushPendingCorridorSave(currentPreset, aktuell, zuletzt),
-		zuruecksetzen: (before) => {
-			wizardState.corridors = before.corridors;
-			wizardState.idealRanges = before.idealRanges;
-			wizardState.activeMetricKeys = before.activeMetricKeys;
-			wizardState.metricAlertLevels = before.metricAlertLevels;
-		},
-		uebernehmen: (updated) => {
-			currentPreset = updated;
-		}
-	});
-
-	/** Commit aus einer Oberflaechen-Geste (ausserhalb des Speicher-Takts): die
-	 *  Fehleranzeige setzt der Commit selbst, der Wurf wird hier geschluckt. */
-	function commitAusGeste(): void {
-		handleCorridorCommit().catch(() => {});
+	// Issue #2276 S3: der Wertebereiche-Reiter speichert selbst (CorridorEditor/
+	// Mobile -> shared/corridor-editor/wertebereicheVergleichSpeicherung.ts) —
+	// EIN Speicherweg, kein Wrapper und kein fensterweiter pointerup-Auffang mehr.
+	// Queue und Basis-Rueckmeldung als benannte Funktionen durchgereicht.
+	function reiheHubSchreibvorgangEin<T>(fn: () => Promise<T>): Promise<T> {
+		return hubPutQueue.enqueue(fn);
 	}
-
-	// Fix-Loop 1 (F002, Adversary HIGH): `<svelte:window>` muss auf Komponenten-
-	// Top-Level stehen (Svelte-Constraint, nicht in {#if}-Bloecken zulaessig) —
-	// die Gemountet-Bedingung ("solange der Idealwerte-Tab gemountet ist")
-	// wird daher im Handler selbst geprueft. Faengt JEDEN Pointerup im
-	// Dokument ab, auch wenn ein Band-Handle-Drag (CorridorEditor.svelte,
-	// kein setPointerCapture) ausserhalb des `.hub-corridor-wrap`-Subtrees
-	// endet (z. B. ueber der Tab-Leiste). `flushPendingCorridorSave` bleibt
-	// der Waechter gegen unnoetige PUTs (No-Op bei unveraendertem Snapshot).
-	//
-	// Fix-Loop 2 (F006, Adversary MEDIUM): die Guard-Entscheidung selbst ist in
-	// `shouldFlushOnWindowPointerUp` (reine, exportierte Funktion in
-	// compareHubWizardBridge.ts) ausgelagert und dort unit-getestet — dieser
-	// Handler bleibt eine reine 1-Zeilen-Delegation.
-	function handleWindowPointerUp(): void {
-		if (!shouldFlushOnWindowPointerUp(activeTab, idealwerteHydrated)) return;
-		commitAusGeste();
+	function uebernehmeHubAntwort(updated: ComparePreset): void {
+		currentPreset = updated;
 	}
 
 	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (context="vergleich")
@@ -511,12 +429,12 @@
 	async function handleVersandCommit(): Promise<void> {
 		if (!versandHydrated) return;
 		// Epic #1273 S1: `failure` trennt No-Op (markPristine) vom Fehler
-		// (setError), s. handleCorridorCommit.
+		// (setError).
 		let failure: unknown = null;
 		saveController?.setSaving();
 		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
 		// KOMPLETT innerhalb des enqueueten fn — identisches Prinzip wie
-		// handleCorridorCommit (s. dortiger Kommentar): `lastPersistedVersandSnapshot`
+		// persistPickedIds: `lastPersistedVersandSnapshot`
 		// ist zur tatsaechlichen Ausfuehrungszeit bereits durch einen zuvor in der
 		// Queue gelaufenen, erfolgreichen Edit aufgefrischt — ein hier erst
 		// gelesenes `before` faellt bei einem Fehlschlag daher korrekt nur auf
@@ -917,7 +835,9 @@
 		const isPausing = localSchedule !== 'manual';
 		if (isPausing) previousSchedule = localSchedule;
 		const next = isPausing ? 'manual' : previousSchedule;
-		// Issue #2276 S2: ausstehende Alarm-Aenderung vorab senden (Design Punkt 5).
+		// Issue #2276 S2/S3: ausstehende Aenderung der selbst speichernden Reiter
+		// (Alarme, Wertebereiche) vorab senden — unabhaengig vom aktiven Reiter,
+		// weil der Kebab auch von anderen Reitern aus pausiert (S3 AC-6).
 		await saveController?.flush();
 		// Epic #1273 S1: einziger der 5 Handler mit try/catch AUSSERHALB des
 		// enqueue-Closures — ein echter Fehler propagiert normal, daher direktes
@@ -927,7 +847,7 @@
 			// Fix-Loop 3 (F007, Adversary CRITICAL): Payload aus currentPreset
 			// bauen (nicht der eingefrorenen preset-Prop) und die Baseline nach
 			// Erfolg auffrischen — identisches Muster wie persistPickedIds/
-			// handleCorridorCommit (F005), da dies einer von mehreren
+			// handleVersandCommit (F005), da dies einer von mehreren
 			// PUT-Pfaden im selben Komponenten-Scope ist.
 			// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
 			// currentPreset erst zur Ausfuehrungszeit gelesen wird — verhindert
@@ -993,8 +913,6 @@
 		wetterMetrikenHydrated = false;
 	});
 </script>
-
-<svelte:window onpointerup={handleWindowPointerUp} />
 
 <!-- Epic #1273 S1: geteilter Save-Chip (position:fixed, daher Mount-Stelle frei),
      analog TripHeader.svelte:194-195. -->
@@ -1328,24 +1246,16 @@
 	{#if activeTab === 'idealwerte'}
 		<div class="tab-panel" data-testid="compare-detail-panel-idealwerte">
 			{#if idealwerteHydrated}
-				<div
-					class="hub-corridor-wrap"
-					onfocusout={() => commitAusGeste()}
-					onclick={() => commitAusGeste()}
-				>
-					<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-
-					     Inline-Edit-Paritaet, Muster TripTabs.svelte:198-202. -->
-					{#if isMobileViewport}
-						<!-- Issue #2316 F002 (Adversary MEDIUM): dieselbe Verdrahtung wie
-						     der Desktop-Zweig unten (keine Compare-Sonderloesung). -->
-						<CorridorEditorMobile context="vergleich" {saveController} onCompareCommit={handleCorridorCommit} />
-					{:else}
-						<!-- Issue #2316 Scheibe A (AC-9): saveController/onCompareCommit
-						     durchgereicht, damit eine eingetippte, noch nicht verlassene
-						     Aenderung ueber schedule()/hasPending sichtbar wird. -->
-						<CorridorEditor context="vergleich" {saveController} onCompareCommit={handleCorridorCommit} />
-					{/if}
-				</div>
+				<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung, Muster TripTabs.svelte.
+				     Issue #2276 S3: der Reiter speichert selbst (saveController, Hub-Queue,
+				     Basis-Rueckmeldung) — kein Wrapper mehr. -->
+				{#if isMobileViewport}
+					<!-- Mobil: dieselbe Verdrahtung wie der Desktop-Zweig. -->
+					<CorridorEditorMobile context="vergleich" preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
+				{:else}
+					<!-- Desktop. -->
+					<CorridorEditor context="vergleich" preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
+				{/if}
 			{/if}
 		</div>
 	{/if}

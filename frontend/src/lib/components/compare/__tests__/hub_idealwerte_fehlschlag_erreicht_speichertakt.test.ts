@@ -4,125 +4,103 @@
 //
 // Spec: docs/specs/modules/speicherung_beim_neuladen.md § AC-7
 //
-// Pruefstand: ECHTE SaveStatus-Instanz (Prototype-Methoden schedule/flush/doSave),
-// ECHTE Hub-Warteschlange (`createPutQueue`), ECHTE Anmeldestelle
-// (`erzeugeSpeicherAnmeldestelle`) und die ECHTE Commit-Funktion aus
-// `korridorCommit.ts`, die CompareTabs.svelte verdrahtet. Nur der Transport ist
-// ein aufzeichnendes Doppel (liefert eine Antwort bzw. wirft wie `api` offline).
+// Issue #2276 S3: umgehaengt von der alten Hub-Commit-Funktion auf den heute
+// einzigen Speicherweg des Wertebereiche-Reiters
+// (`shared/corridor-editor/wertebereicheVergleichSpeicherung.ts`). Die
+// Zusicherungen an den Speicher-Takt bleiben unveraendert; entfallen ist nur
+// der Fall „Oberflaechen-Geste ohne Speicher-Takt" — diesen zweiten Weg gibt es
+// nicht mehr (Spec rework_2276_s3_wertebereiche, Design Punkt 3).
+//
+// Pruefstand: ECHTE SaveStatus-Instanz, ECHTE Hub-Warteschlange, ECHTE
+// Anmeldestelle (`erzeugeSpeicherAnmeldestelle`), ECHTE Orchestrierung. Nur der
+// Transport ist ein aufzeichnendes Doppel (liefert eine Antwort bzw. wirft wie
+// `api` offline).
 //
 // Ausfuehren:
-//   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
-//     --experimental-test-module-mocks --test \
-//     src/lib/components/compare/__tests__/hub_idealwerte_fehlschlag_erreicht_speichertakt.test.ts
+//   cd frontend && npm test -- src/lib/components/compare/__tests__/hub_idealwerte_fehlschlag_erreicht_speichertakt.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import { erzeugeSpeicherAnmeldestelle } from '../../../stores/aktiveSpeicherung.ts';
+import type { ComparePreset } from '../../../types.ts';
 import { createPutQueue } from '../compareHubWizardBridge.ts';
-import { baueKorridorCommit } from '../korridorCommit.ts';
-
-type Stand = { min: number };
-type Preset = { id: string; min: number };
-
-function createTestInstance(): SaveStatus {
-	const inst = Object.create(SaveStatus.prototype) as SaveStatus;
-	const fields = inst as unknown as Record<string, unknown>;
-	fields.state = 'idle';
-	fields.savedAt = null;
-	fields.error = null;
-	fields._timer = null;
-	fields._pendingFn = null;
-	fields._inflight = null;
-	fields._lastFailed = null;
-	fields._unresolvedError = null;
-	return inst;
-}
+import { erstelleWertebereicheVergleichSpeicherung } from '../../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
+import {
+	createController,
+	hydrierterWs,
+	korridor,
+	makePreset,
+	wertebereicheBedienung
+} from '../../shared/corridor-editor/__tests__/wertebereicheVergleichPruefstand.ts';
 
 const OFFLINE = 'Ohne Verbindung lässt sich nichts speichern — die Änderung wurde nicht abgeschickt.';
 
-/** Hub mit einer Idealwerte-Eingabe 30 → 45; `transport` entscheidet ueber den PUT. */
-function hub(transport: (url: string, body: unknown, init?: RequestInit) => Promise<Preset>) {
-	const ctl = createTestInstance();
-	const ui: Stand = { min: 45 };
-	let zuletzt: Stand | null = { min: 30 };
-	let preset: Preset = { id: 'cp-alpen', min: 30 };
+/** Hub mit einer Idealwerte-Eingabe (Wind max 40 → 55); `transport` entscheidet ueber den PUT. */
+function hub(transport: (url: string, body: unknown, init?: RequestInit) => Promise<ComparePreset>) {
+	let preset = makePreset('cp-alpen');
+	const ws = hydrierterWs(preset);
+	const ctl = createController('cp-alpen');
+	const queue = createPutQueue();
 	const puts: Array<{ url: string; init?: RequestInit }> = [];
-	const commit = baueKorridorCommit<Stand, Preset>({
-		bereit: () => true,
-		ctl: () => ctl,
-		queue: createPutQueue(),
-		put: (url, body, init) => {
-			puts.push({ url, init });
-			return transport(url, body, init);
+	const speicherung = erstelleWertebereicheVergleichSpeicherung({
+		client: {
+			put: <T>(url: string, body: unknown, init?: RequestInit) => {
+				puts.push({ url, init });
+				return transport(url, body, init) as Promise<T>;
+			}
 		},
-		snapshot: () => ({ ...ui }),
-		zuletztGespeichert: () => zuletzt,
-		merkeGespeichert: (s) => {
-			zuletzt = s;
-		},
-		payload: (aktuell, vorher) =>
-			vorher && vorher.min === aktuell.min ? null : { url: `/api/compare/presets/${preset.id}`, body: { ...preset, min: aktuell.min } },
-		zuruecksetzen: (vorher) => {
-			ui.min = vorher.min;
-		},
-		uebernehmen: (p) => {
+		ws,
+		preset: () => preset,
+		enqueueHubWrite: (fn) => queue.enqueue(fn),
+		onCompareUpdate: (p) => {
 			preset = p;
-		}
+		},
+		saveController: ctl
 	});
-	return { ctl, ui, puts, commit, preset: () => preset, zuletzt: () => zuletzt };
+	wertebereicheBedienung(ws).patch('wind_max_kmh', { max: 55 });
+	speicherung.aenderungMelden();
+	return { ctl, ws, puts, speicherung, preset: () => preset };
 }
 
 describe('Issue #2317 AC-7 (Ortsvergleich): gescheiterter Idealwerte-PUT erreicht den Speicher-Takt', () => {
 	test('offline im Speicher-Takt (schedule → flush): Zustand „error" mit Meldung, Rollback, Aktualisieren NICHT freigegeben', async () => {
-		// GIVEN: der Hub hat eine Eingabe im Speicher-Takt (wie CorridorEditor: schedule(init => onCompareCommit(init)))
 		const h = hub(async () => {
 			throw Object.assign(new Error(OFFLINE), { status: 0 });
 		});
 		const stelle = erzeugeSpeicherAnmeldestelle();
 		stelle.anmelden(h.ctl);
-		h.ctl.schedule(async (init) => {
-			await h.commit(init);
-		});
 
 		// WHEN: der Nutzer tippt „Aktualisieren"
 		const freigabe = await stelle.wartenAufAusstehendeSpeicherung();
 
-		// THEN
 		assert.equal(h.puts.length, 1, 'Vorbedingung: der PUT wurde versucht');
 		assert.equal(h.ctl.state, 'error', 'der Fehlschlag muss beim SaveStatus ankommen — nicht „gespeichert"');
 		assert.equal(h.ctl.error, OFFLINE, 'die bestehende Fehlermeldung bleibt sichtbar (genau diese, keine zweite)');
 		assert.equal(h.ctl.savedAt, null, 'ein gescheiterter PUT darf keinen Gespeichert-Zeitstempel setzen');
 		assert.equal(freigabe, false, 'ohne gesicherte Speicherung darf die App die neue Fassung nicht laden (AC-7)');
-		assert.equal(h.ui.min, 30, 'Rollback auf den zuletzt gespeicherten Stand wie bisher');
-		assert.deepEqual(h.zuletzt(), { min: 30 }, 'die Baseline darf nach einem Fehlschlag nicht vorruecken');
-	});
+		assert.deepEqual(korridor(h.ws, 'wind_max_kmh')?.range, [0, 40], 'Rollback auf den zuletzt gespeicherten Stand wie bisher');
 
-	test('Oberflaechen-Geste (direkter Aufruf, ohne Speicher-Takt): Fehleranzeige gesetzt, der Aufruf lehnt ab', async () => {
-		const h = hub(async () => {
-			throw Object.assign(new Error(OFFLINE), { status: 0 });
-		});
-
-		await assert.rejects(h.commit(), (e: Error) => e.message === OFFLINE, 'der Fehlschlag muss beim Aufrufer ankommen');
-		assert.equal(h.ctl.state, 'error');
-		assert.equal(h.ctl.error, OFFLINE);
+		// Die Baseline darf nach einem Fehlschlag nicht vorruecken: dieselbe Eingabe
+		// erneut gemeldet muss wieder einen Speichervorgang einplanen.
+		wertebereicheBedienung(h.ws).patch('wind_max_kmh', { max: 55 });
+		h.speicherung.aenderungMelden();
+		assert.equal(h.ctl.hasPending, true, 'die Baseline ist nach dem Fehlschlag vorgerueckt');
+		h.ctl.cancel();
 	});
 
 	test('Gegenprobe Erfolg: Zustand idle, Preset und Baseline uebernommen, keepalive erreicht den PUT, Aktualisieren freigegeben', async () => {
-		const h = hub(async (url, body) => ({ ...(body as Preset) }));
+		const h = hub(async (_url, body) => ({ ...(body as ComparePreset) }));
 		const stelle = erzeugeSpeicherAnmeldestelle();
 		stelle.anmelden(h.ctl);
-		h.ctl.schedule(async (init) => {
-			await h.commit(init);
-		});
 
 		await h.ctl.flush({ keepalive: true });
 
 		assert.equal(h.puts[0]?.init?.keepalive, true, 'die Entlade-Option muss den PUT erreichen');
 		assert.equal(h.ctl.state, 'idle');
-		assert.deepEqual(h.preset(), { id: 'cp-alpen', min: 45 });
-		assert.deepEqual(h.zuletzt(), { min: 45 });
+		assert.deepEqual(korridor(h.preset(), 'wind_max_kmh')?.range, [0, 55], 'die Basis folgt der Server-Antwort');
+		h.speicherung.aenderungMelden();
+		assert.equal(h.ctl.hasPending, false, 'die Baseline muss nach Erfolg vorgerueckt sein');
 		assert.equal(await stelle.wartenAufAusstehendeSpeicherung(), true);
 	});
 });

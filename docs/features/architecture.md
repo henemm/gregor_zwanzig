@@ -727,7 +727,7 @@ See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
 - Trip: `TripHeader.svelte`; Ortsvergleich: der Compare-Editor-Header — beide rendern einen `SaveIndicator` (zentral sichtbar über allen Tabs)
 - Alle Änderungen triggern **Auto-Save** mit Debounce (~700 ms): Trip (Name, Etappen, Briefing, Metriken), Ortsvergleich (Orte, Wertebereich, Layout, Versand, Alarme)
 - Zustände: `idle` (sauber) → `dirty` → `saving` (API-Call läuft) → `idle` (erfolgreich, `savedAt` gesetzt) oder `error` (Fehler)
-- Seit #1395 S4 (Trip, seit #2276 S1 `createSaveStatus({ typ: 'trip', id })`): bei einem `412`-ETag-Konflikt zusätzlicher Zustand `conflict` statt generischem `error` — der `SaveIndicator` zeigt „Nochmal speichern"; der Klick frischt den ETag-Stand still auf (`refreshResourceEtag(id, kind)`) und wiederholt danach automatisch den abgelehnten Speichervorgang (`retryConflict()`). Die Adresse des Auffrischens folgt ausschließlich der übergebenen Art (`NachladeKennung.typ`: `'trip'` → `/api/trips/{id}`, `'vergleich'` → `/api/compare/presets/{id}`), nie der Form der Kennung — Alt-Ortsvergleiche tragen Slugs ohne `cp-`-Präfix. **Stand Ortsvergleich:** der Mechanismus ist seit #2276 S1 entitätsneutral bereit; der Hub (`compare/[id]/+page.svelte`) ruft `createSaveStatus({ typ: 'vergleich', id })` seit #2276 S1 mit Kennung auf. Real „Nochmal speichern"-fähig ist seit #2276 S2 der Alarme-Reiter, weil er als einziger der Hub-Commit-Handler über `saveController.schedule()` läuft (analog dem Trip-Zweig, `shared/alarmeVergleichSpeicherung.ts`) und damit `doSave()`s Konflikt-Erkennung durchläuft. Orte/Wertebereiche/Versand/Aktiv-Status melden einen `412` weiterhin manuell über `setError()` (kein `schedule()`-Pfad) und landen dort unverändert bei generischem `error`, nicht bei `conflict`. Siehe `docs/specs/modules/issue_1395_s4_conflict_retry.md`, `docs/specs/modules/rework_2276_s1_netz_und_fundament.md` und `docs/specs/modules/rework_2276_s2_alarme.md`.
+- Seit #1395 S4 (Trip, seit #2276 S1 `createSaveStatus({ typ: 'trip', id })`): bei einem `412`-ETag-Konflikt zusätzlicher Zustand `conflict` statt generischem `error` — der `SaveIndicator` zeigt „Nochmal speichern"; der Klick frischt den ETag-Stand still auf (`refreshResourceEtag(id, kind)`) und wiederholt danach automatisch den abgelehnten Speichervorgang (`retryConflict()`). Die Adresse des Auffrischens folgt ausschließlich der übergebenen Art (`NachladeKennung.typ`: `'trip'` → `/api/trips/{id}`, `'vergleich'` → `/api/compare/presets/{id}`), nie der Form der Kennung — Alt-Ortsvergleiche tragen Slugs ohne `cp-`-Präfix. **Stand Ortsvergleich:** der Mechanismus ist seit #2276 S1 entitätsneutral bereit; der Hub (`compare/[id]/+page.svelte`) ruft `createSaveStatus({ typ: 'vergleich', id })` seit #2276 S1 mit Kennung auf. Real „Nochmal speichern"-fähig sind seit #2276 S2 (Alarme) und seit #2276 S3 (Wertebereiche) diese beiden Reiter, weil sie als einzige der Hub-Commit-Handler über `saveController.schedule()` laufen (analog dem Trip-Zweig, `shared/alarmeVergleichSpeicherung.ts` bzw. `shared/corridor-editor/wertebereicheVergleichSpeicherung.ts`) und damit `doSave()`s Konflikt-Erkennung durchlaufen. Orte/Versand/Aktiv-Status melden einen `412` weiterhin manuell über `setError()` (kein `schedule()`-Pfad) und landen dort unverändert bei generischem `error`, nicht bei `conflict`. Siehe `docs/specs/modules/issue_1395_s4_conflict_retry.md`, `docs/specs/modules/rework_2276_s1_netz_und_fundament.md`, `docs/specs/modules/rework_2276_s2_alarme.md` und `docs/specs/modules/rework_2276_s3_wertebereiche.md`.
 - Flush vor Navigation: `beforeNavigate` leert die Debounce-Queue (Datenverlust-Schutz)
 - **Store:** `saveStatusStore.svelte.ts` (Klasse `SaveStatus`) — pro Editor-Instanz ein eigenes Objekt, kein globales Sharing
 
@@ -761,10 +761,13 @@ per Svelte-Context (`stores/aktiveSpeicherung.ts`, Schlüssel `'aktive-speicheru
 Anmeldestelle bereit, an der `trips/[id]`/`compare/[id]` ihren `SaveStatus` an-/abmelden — der
 Update-Hinweis (#2316) wartet darüber vor `SKIP_WAITING` eine ausstehende Speicherung regulär
 (ohne keepalive, mit If-Match) ab, statt einen laufenden PUT durch den Reload abzuschneiden. Im
-Ortsvergleich wirft die Idealwerte-Speicherfunktion (`compare/korridorCommit.ts`) einen
-gescheiterten PUT jetzt an den aufrufenden Speicher-Takt weiter, statt ihn selbst zu schlucken —
-sonst hätte `SaveStatus` fälschlich „gespeichert" gemeldet. Details:
-`docs/specs/modules/speicherung_beim_neuladen.md`.
+Ortsvergleich wirft die Idealwerte-Speicherfunktion einen gescheiterten PUT jetzt an den
+aufrufenden Speicher-Takt weiter, statt ihn selbst zu schlucken — sonst hätte `SaveStatus`
+fälschlich „gespeichert" gemeldet. Seit #2276 S3 lebt diese Funktion in
+`shared/corridor-editor/wertebereicheVergleichSpeicherung.ts` (Nachfolger des inzwischen
+gelöschten `compare/korridorCommit.ts`); die `init`-Weiterreichung (Keepalive) blieb beim Umzug
+erhalten. Details: `docs/specs/modules/speicherung_beim_neuladen.md` und
+`docs/specs/modules/rework_2276_s3_wertebereiche.md`.
 
 #### Design-System Lauf B (Issues #143, #144, #146)
 

@@ -110,7 +110,7 @@ test.describe('Issue #2276 S2: Reiter „Alarme" im Vergleich speichert selbst',
 		expect((await serverStand(page, id)).radar_alert_enabled).toBe(true);
 	});
 
-	// AC-6 — fängt: sichereAlarmeVorReiterwechsel in handleValueChange
+	// AC-6 — fängt: sichereSelbstSpeichererVorReiterwechsel in handleValueChange
 	test('AC-6: Alarm ändern und sofort zu „Versand" wechseln → PUT ist beim Wechsel schon beantwortet', async ({
 		page
 	}) => {
