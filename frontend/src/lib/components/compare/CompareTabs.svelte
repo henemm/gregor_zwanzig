@@ -78,13 +78,14 @@
 		buildHubPutPayload,
 		snapshotForRollback,
 		buildToggleActivePutPayload,
-		hydrateVersandFieldsFromPreset,
-		flushPendingVersandSave,
 		hydrateAlarmFieldsFromPreset,
 		hubActivationBanner,
-		createPutQueue,
-		type VersandSnapshot
+		createPutQueue
 	} from './compareHubWizardBridge.ts';
+	// Issue #2276 S5: der Versand-Reiter speichert selbst — Snapshot, Diff-Gate,
+	// Nutzlast und Rollback liegen im geteilten Baustein; hier bleibt nur die
+	// Hydration des Wizard-Zustands vor dem Mount.
+	import { hydrateVersandFieldsFromPreset } from '../shared/versandVergleichSpeicherung.ts';
 	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
 	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
@@ -208,7 +209,7 @@
 	let currentLocationIds = $state<string[]>([...currentPreset.location_ids]);
 	const orteCount = $derived(currentLocationIds.length);
 	// Fix-Loop 2 (F003-Analogie): zuletzt ERFOLGREICH persistierter Orte-Stand,
-	// analog lastPersistedVersandSnapshot — nur
+	// analog zur Snapshot-Baseline der selbst speichernden Reiter — nur
 	// so kann persistPickedIds beim Rollback auf den Stand NACH einem zuvor
 	// in der Queue bereits erfolgreichen Edit zurueckfallen statt auf einen
 	// aelteren, beim Funktionsaufruf gelesenen Stand.
@@ -364,27 +365,11 @@
 	}
 
 	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (context="vergleich")
-	// im Versand-Tab — analog Idealwerte-Bridge oben (S6-Muster), gleicher
-	// `wizardState`/gleiche `currentPreset`-Baseline, ABER eigene Snapshot-
-	// Baseline (`lastPersistedVersandSnapshot`), damit der Versand-Flush den
-	// Idealwerte-Flush nicht ueberschreibt.
+	// im Versand-Tab — gleicher `wizardState`/gleiche `currentPreset`-Baseline wie
+	// die Nachbar-Reiter. Seit #2276 S5 speichert der Reiter selbst (Baseline +
+	// Diff-Gate in shared/versandVergleichSpeicherung.ts); hier bleibt nur die
+	// Hydration, die `wizardState` VOR dem Mount befuellt.
 	let versandHydrated = $state(false);
-	let lastPersistedVersandSnapshot: VersandSnapshot | null = null;
-
-	function currentVersandSnapshot(): VersandSnapshot {
-		return snapshotForRollback({
-			sendTelegram: wizardState.sendTelegram,
-			sendSms: wizardState.sendSms,
-			morningEnabled: wizardState.morningEnabled,
-			morningTime: wizardState.morningTime,
-			eveningEnabled: wizardState.eveningEnabled,
-			eveningTime: wizardState.eveningTime,
-			endDate: wizardState.endDate,
-			alertCooldownMinutes: wizardState.alertCooldownMinutes,
-			alertQuietFrom: wizardState.alertQuietFrom,
-			alertQuietTo: wizardState.alertQuietTo
-		});
-	}
 
 	$effect(() => {
 		if (activeTab !== 'versand' || versandHydrated) return;
@@ -402,70 +387,8 @@
 		wizardState.alertCooldownMinutes = hydrated.alertCooldownMinutes;
 		wizardState.alertQuietFrom = hydrated.alertQuietFrom;
 		wizardState.alertQuietTo = hydrated.alertQuietTo;
-		lastPersistedVersandSnapshot = currentVersandSnapshot();
 		versandHydrated = true;
 	});
-
-	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): change an
-	// Toggles/Zeit-/Datumsfeldern (Bubble-Phase, s. Staging-Fund SF-1 unten am
-	// Wrapper-Markup), focusout an Cooldown-/Stille-Stunden-Zahlenfeldern
-	// (onfocusout bubbelt, blur nicht — S6-Kommentar).
-	//
-	// Fix-Loop 1 (F001, Adversary HIGH): zusaetzlich onclick am Wrapper —
-	// `VTLaufzeitVergleich` (Laufzeit-Control) mutiert `wiz.endDate` bei
-	// „Bis auf Weiteres" rein per Klick auf einen Button, der weder ein
-	// change- noch garantiert ein focusout-Event ausloest (WebKit fokussiert
-	// Buttons nicht per Klick) — ohne onclick wuerde diese Aenderung nie
-	// geflusht. `flushPendingVersandSave` bleibt der Waechter gegen
-	// unnoetige PUTs (No-Op bei unveraendertem Snapshot), daher unkritisch,
-	// dass auch andere Klicks im Subtree diesen Handler ausloesen.
-	async function handleVersandCommit(): Promise<void> {
-		if (!versandHydrated) return;
-		// Epic #1273 S1: `failure` trennt No-Op (markPristine) vom Fehler
-		// (setError).
-		let failure: unknown = null;
-		saveController?.setSaving();
-		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
-		// KOMPLETT innerhalb des enqueueten fn — identisches Prinzip wie
-		// persistPickedIds: `lastPersistedVersandSnapshot`
-		// ist zur tatsaechlichen Ausfuehrungszeit bereits durch einen zuvor in der
-		// Queue gelaufenen, erfolgreichen Edit aufgefrischt — ein hier erst
-		// gelesenes `before` faellt bei einem Fehlschlag daher korrekt nur auf
-		// den Stand NACH diesem vorherigen Edit zurueck.
-		const updated = await hubPutQueue.enqueue(async () => {
-			const current = currentVersandSnapshot();
-			const before = lastPersistedVersandSnapshot ?? current;
-			const payload = flushPendingVersandSave(currentPreset, current, lastPersistedVersandSnapshot);
-			if (!payload) return null;
-			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body);
-				lastPersistedVersandSnapshot = current;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Versand-Persistenz fehlgeschlagen, Rollback:', e);
-				wizardState.sendTelegram = before.sendTelegram;
-				wizardState.sendSms = before.sendSms;
-				wizardState.morningEnabled = before.morningEnabled;
-				wizardState.morningTime = before.morningTime;
-				wizardState.eveningEnabled = before.eveningEnabled;
-				wizardState.eveningTime = before.eveningTime;
-				wizardState.endDate = before.endDate;
-				wizardState.alertCooldownMinutes = before.alertCooldownMinutes;
-				wizardState.alertQuietFrom = before.alertQuietFrom;
-				wizardState.alertQuietTo = before.alertQuietTo;
-				failure = e;
-				return null;
-			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
-		} else {
-			saveController?.markPristine();
-		}
-	}
 
 	// Issue #1258 Scheibe 5 (AC-19, AC-29, H2/H3): eingebetteter AlarmeTab
 	// (context="vergleich") im 7. Hub-Tab — analog Idealwerte-/Versand-Bridge
@@ -723,12 +646,12 @@
 		try {
 			// Fix-Loop 3 (F007, Adversary CRITICAL): Payload aus currentPreset
 			// bauen (nicht der eingefrorenen preset-Prop) und die Baseline nach
-			// Erfolg auffrischen — identisches Muster wie persistPickedIds/
-			// handleVersandCommit (F005), da dies einer von mehreren
-			// PUT-Pfaden im selben Komponenten-Scope ist.
+			// Erfolg auffrischen — identisches Muster wie persistPickedIds
+			// (F005), da dies einer von mehreren PUT-Pfaden im selben
+			// Komponenten-Scope ist.
 			// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
 			// currentPreset erst zur Ausfuehrungszeit gelesen wird — verhindert
-			// den Race mit handleVersandCommit im selben Versand-Tab.
+			// den Race mit dem Versand-Speicherweg im selben Versand-Tab.
 			currentPreset = await hubPutQueue.enqueue(async () => {
 				const { url, body } = buildToggleActivePutPayload(currentPreset, next, previousSchedule);
 				return api.put<ComparePreset>(url, body);
@@ -1136,22 +1059,22 @@
 	{#if activeTab === 'versand'}
 		<div class="tab-panel" data-testid="compare-detail-panel-versand">
 			{#if versandHydrated}
-				<!-- Staging-Fund SF-1 (CRITICAL, AC-35): `onchange` MUSS in der Bubble-
-				     Phase laufen, nicht `onchangecapture` — Capture liefe VOR dem
-				     Checkbox-eigenen `onchange`, das `wiz.sendTelegram` (o.ä.) erst
-				     setzt. Mit Capture sah `handleVersandCommit` daher noch den
-				     ALTEN Wert, der Diff-Waechter erkannte keine Aenderung und der
-				     PUT blieb aus, bis zufaellig ein anderes Event (focusout/click)
-				     feuerte. In der Bubble-Phase ist die Ziel-Mutation garantiert
-				     abgeschlossen, bevor der Wrapper-Handler laeuft. -->
-				<div
-					class="hub-versand-wrap"
-					onchange={handleVersandCommit}
-					onfocusout={handleVersandCommit}
-					onclick={handleVersandCommit}
-				>
-					<VersandTab context="vergleich" wiz={wizardState} activation={hubActivationCard} />
-				</div>
+				<!-- Issue #2276 S5: der Reiter speichert selbst (saveController,
+				     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. Der
+				     reaktive $effect in VersandTab.svelte beobachtet alle 10
+				     Versandfelder und ersetzt damit auch das historische
+				     Wrapper-`onclick` fuer „Bis auf Weiteres" (F001). -->
+				<VersandTab
+					context="vergleich"
+					wiz={wizardState}
+					activation={hubActivationCard}
+					preset={currentPreset}
+					{saveController}
+					enqueueHubWrite={(fn) => hubPutQueue.enqueue(fn)}
+					onCompareUpdate={(updated) => {
+						currentPreset = updated;
+					}}
+				/>
 			{/if}
 		</div>
 	{/if}

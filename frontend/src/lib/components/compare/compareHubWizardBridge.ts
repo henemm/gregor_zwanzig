@@ -274,73 +274,12 @@ export async function buildFreshTogglePutPayload(
 	);
 }
 
-/** Plain-Snapshot der 10 persistenzrelevanten Versand-Felder (OHNE sendEmail —
- * `ComparePreset` kennt kein `send_email`-Feld, s. `hydrateVersandFieldsFromPreset`). */
-export interface VersandSnapshot {
-	sendTelegram: boolean;
-	sendSms: boolean;
-	morningEnabled: boolean;
-	morningTime: string;
-	eveningEnabled: boolean;
-	eveningTime: string;
-	endDate: string | null;
-	alertCooldownMinutes?: number;
-	alertQuietFrom?: string;
-	alertQuietTo?: string;
-}
-
-/**
- * Issue #1256 Scheibe 7 (AC-35/36): Hydration der Versand-Felder, die der
- * eingebettete `VersandTab context="vergleich"` im Hub aus `wizardState.*`
- * liest. Defaults identisch zur Edit-Routen-Hydration
- * (routes/compare/[id]/edit/+page.svelte:44-61). `sendEmail` ist IMMER true —
- * ComparePreset hat kein `send_email`-Feld (vorbestehende Luecke, Known
- * Limitation der S7-Freigabe).
- */
-export function hydrateVersandFieldsFromPreset(preset: ComparePreset): VersandSnapshot & { sendEmail: true } {
-	return {
-		sendEmail: true,
-		sendTelegram: preset.send_telegram ?? false,
-		sendSms: preset.send_sms ?? false,
-		morningEnabled: preset.morning_enabled ?? true,
-		morningTime: (preset.morning_time ?? '06:00').slice(0, 5),
-		eveningEnabled: preset.evening_enabled ?? false,
-		eveningTime: (preset.evening_time ?? '18:00').slice(0, 5),
-		endDate: preset.end_date ?? null,
-		alertCooldownMinutes: preset.alert_cooldown_minutes ?? undefined,
-		alertQuietFrom: preset.alert_quiet_from ?? undefined,
-		alertQuietTo: preset.alert_quiet_to ?? undefined
-	};
-}
-
-/**
- * Issue #1256 Scheibe 7 (AC-35/36): Event-diskretisierte PUT-Persistenz fuer
- * den Hub-Versand-Tab (Diff-Muster wie beim Wertebereiche-Reiter) — liefert `null`,
- * wenn sich der Versand-Snapshot seit dem letzten persistierten Stand NICHT
- * veraendert hat (Waechter gegen unnoetige PUTs, #1234-Kontext), sonst den
- * fertigen PUT-Payload via `buildHubPutPayload` (Read-Modify-Write: alle
- * nicht-Versand-Felder unveraendert aus `preset`, #1257-Kontext).
- */
-export function flushPendingVersandSave(
-	preset: ComparePreset,
-	current: VersandSnapshot,
-	before: VersandSnapshot | null
-): { url: string; body: ComparePreset } | null {
-	const baseline = before ?? current;
-	if (JSON.stringify(current) === JSON.stringify(baseline)) return null;
-	return buildHubPutPayload(preset, {
-		sendTelegram: current.sendTelegram,
-		sendSms: current.sendSms,
-		morningEnabled: current.morningEnabled,
-		morningTime: current.morningTime,
-		eveningEnabled: current.eveningEnabled,
-		eveningTime: current.eveningTime,
-		endDate: current.endDate,
-		alertCooldownMinutes: current.alertCooldownMinutes,
-		alertQuietFrom: current.alertQuietFrom,
-		alertQuietTo: current.alertQuietTo
-	});
-}
+// Issue #2276 Scheibe S5 (Epic #2345): `VersandSnapshot`,
+// `hydrateVersandFieldsFromPreset` und `flushPendingVersandSave` sind in den
+// geteilten Baustein `shared/versandVergleichSpeicherung.ts` umgezogen — der
+// Versand-Reiter speichert selbst und laedt die Klebeschicht zur Laufzeit
+// nicht mehr (AC-8). `buildHubPutPayload` bleibt hier: die Orte- und
+// Aktivieren/Pausieren-Pfade brauchen ihn weiterhin.
 
 /** Modell der Hub-Aktivierungs-Karte (Soll: `screen-compare-detail.jsx:273-277`
  * + `:313-325`). Die JSX-active-Copy "im konfigurierten Rhythmus" ist eine

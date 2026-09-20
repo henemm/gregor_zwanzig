@@ -202,11 +202,13 @@ export function wertebereicheVergleichSpeicherungAktiv(p: {
 
 /** Reiter des Ortsvergleich-Hubs, die SELBST über den einen Speicher-Platz des
  *  Controllers speichern (Design Punkt 4). Issue #2276 S4: 'wetter-metriken'
- *  ergaenzt (kombinierte Wetter-Metriken/Layout-Orchestrierung). */
+ *  ergaenzt (kombinierte Wetter-Metriken/Layout-Orchestrierung); S5: 'versand'
+ *  (Versand-Reiter speichert seit dem Wegfall des Wrapper-Divs selbst). */
 export const SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[] = [
 	'alarme',
 	'idealwerte',
-	'wetter-metriken'
+	'wetter-metriken',
+	'versand'
 ];
 
 /**

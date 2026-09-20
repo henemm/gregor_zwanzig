@@ -13,7 +13,7 @@
 	import { onMount, untrack, type Snippet } from 'svelte';
 	import { api } from '$lib/api.js';
 	import { toHHMMSS } from '$lib/utils/time';
-	import type { Trip, ReportConfig } from '$lib/types';
+	import type { Trip, ReportConfig, ComparePreset } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import VTBriefingChannels from './versand-tab/VTBriefingChannels.svelte';
@@ -24,6 +24,13 @@
 	// report_config-Blobs steht als reine, pruefbare Funktion neben beiden
 	// Schreibern statt zweimal im jeweiligen Effect-Rumpf.
 	import { mergeReportConfig } from './versand-tab/mergeReportConfig.ts';
+	// Issue #2276 S5: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import aus
+	// compare/compareHubWizardBridge.ts, AC-8).
+	import {
+		erstelleVersandVergleichSpeicherung,
+		versandSnapshotAus,
+		versandVergleichSpeicherungAktiv
+	} from './versandVergleichSpeicherung.ts';
 	// Issue #1258 Scheibe S4 (E5): die komplette Alert-Zustellungs-Sektion des
 	// vergleich-Zweigs (Cooldown-/Quiet-Karten + Beispiel-Warnung) zog atomar
 	// in AlarmeTab.svelte um (Radar/Metrik-Level-Tabelle waren dort nie).
@@ -48,6 +55,11 @@
 		wiz?: CompareWizardState;
 		/** Issue #1232 Scheibe 2b: Create-Aktivierungs-Banner (1:1 JSX-Slot), nur vergleich. */
 		activation?: Snippet;
+		// Issue #2276 S5: der vergleich-Zweig speichert selbst (Hub). Ohne `preset`
+		// oder `saveController` (Anlege-Seite) bleibt der Speicherzweig inaktiv.
+		preset?: ComparePreset;
+		onCompareUpdate?: (updated: ComparePreset) => void;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
 	}
 	let {
 		context = 'route',
@@ -58,7 +70,10 @@
 		onChannelChange,
 		onJump,
 		wiz,
-		activation
+		activation,
+		preset,
+		onCompareUpdate,
+		enqueueHubWrite
 	}: Props = $props();
 
 	// ── Sektion 1+2: Briefing-Kanäle + Zeitplan (report_config) ────────────────
@@ -246,6 +261,34 @@
 	// zwei Schreibpfaden auf dieselben Trip-Felder, F002-Race-Lektion). Der
 	// vergleich-Zweig unten ist unverändert (eigene wiz.*-Bindung, kein
 	// Self-Save, S4-Thema).
+
+	// ── Issue #2276 S5: vergleich-Zweig speichert selbst (analog Alarme-Reiter) ─
+	// Diff-Gate gegen die zuletzt gespeicherte Baseline, Queue, Basis-Rueckmeldung
+	// und der diff-basierte Rollback liegen in versandVergleichSpeicherung.ts; der
+	// $effect delegiert. Die Baseline entsteht beim Mount — CompareTabs mountet
+	// erst nach der Hydration. Anlege-Seite (ohne preset/saveController): Zweig
+	// inaktiv (AC-9), Trip-Zweig ebenso (AC-12).
+	const vergleichSpeicherung = untrack(() =>
+		versandVergleichSpeicherungAktiv({ context, wiz, preset, saveController })
+			? erstelleVersandVergleichSpeicherung({
+					client: api,
+					wiz: wiz!,
+					preset: () => preset!,
+					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
+					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
+					saveController: saveController!
+				})
+			: null
+	);
+	$effect(() => {
+		if (context !== 'vergleich' || !wiz || !vergleichSpeicherung) return;
+		// Liest ALLE 10 Versandfelder (Abhaengigkeiten) — `endDate` eingeschlossen,
+		// damit „Bis auf Weiteres" ohne change-/focusout-Ereignis wirkt (AC-5).
+		// Das Melden selbst ohne Tracking, damit Zustandswechsel des Controllers
+		// keinen Neulauf ausloesen.
+		versandSnapshotAus(wiz);
+		untrack(() => vergleichSpeicherung.aenderungMelden());
+	});
 </script>
 
 {#if context === 'route'}
