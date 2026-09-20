@@ -259,6 +259,54 @@ ist erlaubt.
 *Regel-Budget: Prüfdatum 2026-11-01, siehe Tabelle unten. Detailmechanik, alle 24 Acceptance
 Criteria und bekannte Grenzen: `docs/specs/modules/thunder_scale_guard.md`.*
 
+## Store-Scope-Call-Guard (#2156, seit 2026-09-20)
+
+Zwei Wächter setzen ADR-0003 (Mandantentrennung) strukturell durch, statt sie wie bisher allein
+der Review-Disziplin zu überlassen:
+
+| Sprachraum | Wächter-Datei | Scanfläche | Befundtyp |
+|---|---|---|---|
+| Go | `internal/handler/store_scope_call_guard_test.go` | `internal/handler/*.go` und `internal/store/*.go`, je ohne `_test.go` | Aufruf einer nutzergebundenen `*Store`-Methode **vor** der `WithUser`-Bindung; unklassifizierte oder fehlerhaft markierte Store-Methode |
+| Python | `tests/test_router_user_id_required.py` | `api/routers/*.py` | Endpunkt mit `user_id`-Parameter, der einen Default trägt statt Pflichtparameter zu sein |
+
+Die Auslösermenge des Go-Wächters ist **nirgends im Testcode kodiert**: Sie wird zur Testzeit per
+`go/ast` aus `internal/store/*.go` abgeleitet (Methoden, deren Körper strukturell
+`s.requireUser()` aufruft) und um die im Quelltext markierten Methoden ergänzt. Jede Abweichung
+vom Regelfall steht damit begründet dort, wo sie wirkt — nicht als stille Positivliste im
+Testcode (PO-Entscheid zur Spec v2.0).
+
+### Marker-Syntax
+
+Alle vier Marker folgen derselben Bauform: Markername, Doppelpunkt, **mindestens 15 sinnvolle
+Zeichen** Begründung (Buchstaben und Ziffern zählen, Leer- und Satzzeichen nicht).
+
+| Marker | Wo | Bedeutung |
+|---|---|---|
+| `// gz-store-scope-exempt: <Begründung>` | Doc-Kommentar der Methode in `internal/store/*.go` | Die Methode braucht **keine** `WithUser`-Bindung — sie nimmt die Kennung als Parameter, sucht kontoübergreifend, oder ist selbst der Bindungsmechanismus (`WithUser`). Heute **23** Stück. |
+| `// gz-store-scope-required: <Begründung>` | ebenda | Die Methode ist nutzergebunden, obwohl sie `requireUser()` **nicht** ruft (baut Pfad oder Schlüssel direkt aus `s.UserID`). Heute **1** Stück: `LockBriefing`. |
+| `// gz-store-scope-call: <Begründung>` | Kommentarzeile unmittelbar über der Aufrufzeile in `internal/handler/*.go` | Unterdrückt **genau diesen** Fund, wenn ein Handler eine Auslöser-Methode bewusst ohne Bindung ruft (etwa ein `requireLocalOnly`-Endpunkt). Heute **0** Stück. |
+| `# gz-user-id-optional: <Begründung>` | Kommentarzeile über der Endpunkt-Funktion in `api/routers/*.py` | Erlaubt dort ausnahmsweise ein optionales `user_id`. Heute **0** Stück. |
+
+**Der Marker muss in der Kommentargruppe stehen, die unmittelbar an die Deklaration grenzt.** Eine
+Leerzeile dazwischen macht ihn zum *verwaisten* Marker und den Wächter rot. Trägt die Methode
+bereits einen godoc-Kommentar, gehört der Marker als **letzte** Zeile dieser Gruppe direkt über
+`func` — als erste Zeile würde er die godoc-Zusammenfassung verdrängen.
+
+**Vier Wege, sich mit einem Marker rot zu machen** (Marker-Hygiene): doppelte Markierung (beide
+Store-Marker an derselben Methode), Widerspruch (`exempt` an einer Methode, die `requireUser()`
+ruft), Verwaisung (Marker an einem Namen, den es nicht gibt, oder an einer Stelle, die die Regel
+ohnehin erfüllt) und eine Begründung unter 15 Zeichen. Auch ein `gz-store-scope-call`-Marker an
+einer ohnehin gebundenen Aufrufstelle gilt als verwaist — sonst verrotten Marker zur stillen
+Ausnahme, genau der Zustand, den die Marker-Konvention ablösen sollte.
+
+**Marker sind Selbstauskunft, kein Beweis.** Ein falsch begründeter `gz-store-scope-exempt` an
+einer tatsächlich nutzergebundenen Methode bleibt für den Wächter unsichtbar; dagegen hilft nur
+Review. Die Marker machen die Ausnahme sichtbar und begründungspflichtig, sie belegen sie nicht.
+
+*Regel-Budget: Prüfdatum 2026-12-20, siehe Tabelle unten. Alle acht Acceptance Criteria und die
+bekannten Grenzen (kein interprozeduraler Fluss, keine Zweig-Analyse):
+`docs/specs/modules/store_scope_call_guard.md`.*
+
 ## Regel-Budget: Prüfdaten im Überblick
 
 | Regel / Gate | Prüfdatum | Fang-Beleg bei Einführung |
@@ -277,6 +325,7 @@ Criteria und bekannte Grenzen: `docs/specs/modules/thunder_scale_guard.md`.*
 | `_SELF_EXEMPT`-Eintrag `test_gehzeit_metriken_bleiben_trip_exklusiv.py` in `test_765_backend_hygiene_compliance.py` (#1848 C) | 2026-11-17 | Kommentar-Wächter liest `src/app/metric_catalog.py` als DATEN für eine AST-Prüfung (sind in Kommentaren genannte Funktionsnamen auflösbar?) — kein Verhaltensnachweis auf Code-Strings; Freigabe Tech-Lead 2026-08-19 |
 | Gestellte-Uhr-Ratsche make_trip+save_trip (#2242) | 2026-12-08 | 3 Dateien in 3 Wochen nach #2050 ungeschützt (#2242) |
 | `user_id="default"`-Wächter — keine Defaults in `api/`, fixierte Bestandsliste in `src/` (#2151 Scheibe A); erweitert um Aufrufstellen-Prüfung (kein Literal `"default"` als `user_id`-Argument, `tests/test_user_id_default_guard.py`) und Test-Inventar `tests/test_test_suite_passes_user_id_explicitly.py` (#2151 Scheibe C) | 2026-12-18 | — |
+| Store-Scope-Call-Guard — Store-Aufruf ohne vorherige `WithUser`-Bindung (Go, `internal/handler/store_scope_call_guard_test.go`) und `user_id` als Pflichtparameter in `api/routers/` (Python, `tests/test_router_user_id_required.py`); Ausnahmen nur als begründeter Marker im Quelltext (#2156) | 2026-12-20 | offen — startet bewusst bei 0 Befunden (24 Marker gesetzt). Kriterium: ein Handler oder Endpunkt, der ohne Bindung bzw. mit optionalem `user_id` ausgeliefert worden wäre |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.

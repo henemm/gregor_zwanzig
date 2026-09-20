@@ -74,6 +74,7 @@ func (s *Store) forEachRealAccount(fn func(*model.User)) error {
 // email ODER mail_to == X; bestätigter Inhaber = EmailVerifiedAt gesetzt UND X
 // ist seine wirksame Kontaktadresse. Ein unlesbares Konto bricht mit Fehler ab
 // (fail-closed), statt still eine Zuordnung zu verfälschen.
+// gz-store-scope-exempt: sucht kontouebergreifend nach dem Inhaber einer Adresse
 func (s *Store) ResolveAddressOwner(address string) (*model.User, AddressResolution, error) {
 	x := NormalizeEmailAddress(address)
 	if x == "" {
@@ -113,6 +114,7 @@ func (s *Store) ResolveAddressOwner(address string) (*model.User, AddressResolut
 // excludeUserID schliesst das eigene Konto aus (leer bei der Registrierung,
 // da es noch kein eigenes Konto gibt). Eine leere Adresse ist nie belegt.
 // Ein Lesefehler bricht fail-closed ab, statt eine falsche Freigabe zu geben.
+// gz-store-scope-exempt: prueft kontouebergreifend, das eigene Konto kommt als Parameter
 func (s *Store) IsAddressTakenByOtherAccount(address, excludeUserID string) (bool, error) {
 	x := NormalizeEmailAddress(address)
 	if x == "" {
