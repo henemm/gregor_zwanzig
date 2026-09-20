@@ -69,7 +69,7 @@ export function alarmSnapshotAus(wiz: AlarmHydrationTarget): AlarmSnapshot {
  * EINZIGE Erzeugerin der Alarm-Nutzlast (Nahtstelle für #2293 `alert_channels`):
  * Voll-Spread über `preset` via `buildComparePresetSavePayload`, die Alarmfelder
  * aus `current`. Die Nicht-Alarmfelder laufen durch DIESELBEN Rückfälle wie
- * `buildHubPutPayload` (Lesenormalisierung #1373, sonst Datenverlust an der
+ * der abgeschaffte Hub-PUT-Pfad (Lesenormalisierung #1373, sonst Datenverlust an der
  * Metrik-Auswahl). `officialWarnings` trägt NIEMALS `sources` (F001, S4).
  */
 export function baueAlarmNutzlast(
