@@ -278,8 +278,8 @@ jobs:
       # bug-703 selbst haengt an KEINEM Vorlauf (sein Kopfkommentar fordert
       # nur AC-3 vor AC-2 INNERHALB der Datei, per test.describe.serial) --
       # er muss nur ZULETZT laufen.
-      E2E_MIN_SPECS: 53     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test). 53 = 48 + mobile-bottom-nav-floating (Mobile-Shell S1) + mobile-konto-sheet (S2) + compare-alarme-speichert-selbst (#2276 S2) + compare-wertebereiche-speichert-selbst (#2276 S3) + compare-wetter-metriken-speichert-selbst (#2276 S4)
-      E2E_MIN_EXECUTED_HAUPT: 267      # Hauptlauf: 52 Dateien + global.setup -- exakt belegt, kein Puffer. 267 = 261 (Stand #2276 S3) + 6 (compare-wetter-metriken-speichert-selbst, #2276 S4), per `npx playwright test --list` auf die neue Datei gemessen 2026-09-19 (6 Faelle). Die S4-Spec laeuft erstmals in CI.
+      E2E_MIN_SPECS: 54     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test). 54 = 48 + mobile-bottom-nav-floating (Mobile-Shell S1) + mobile-konto-sheet (S2) + compare-alarme-speichert-selbst (#2276 S2) + compare-wertebereiche-speichert-selbst (#2276 S3) + compare-wetter-metriken-speichert-selbst (#2276 S4) + compare-versand-speichert-selbst (#2276 S5)
+      E2E_MIN_EXECUTED_HAUPT: 273      # Hauptlauf: 53 Dateien + global.setup -- exakt belegt, kein Puffer. 273 = 267 (Stand #2276 S4) + 6 (compare-versand-speichert-selbst, #2276 S5), per `npx playwright test --list` auf die neue Datei gemessen 2026-09-20 (7 gelistete Faelle minus global.setup = 6). Die S5-Spec laeuft erstmals in CI.
       E2E_MIN_EXECUTED_PWA: 61         # Zweitlauf: 60 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu; Issue #2317: +1 Fall AC-6 dort, statisch aus --list abgeleitet) + global.setup -- kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
