@@ -23,6 +23,7 @@ func New(dataDir, userID string) *Store {
 // eine LEERE Kennung (kein Config-Default "default" mehr). WithUser("") liefert
 // dann diesen Basis-Store, und dessen nutzerbezogene Methoden verweigern jeden
 // Dateizugriff ueber requireUser() mit ErrInvalidUserID (fail-closed).
+// gz-store-scope-exempt: ist selbst der Bindungsmechanismus und kann sich nicht vorher binden
 func (s *Store) WithUser(userId string) *Store {
 	if userId == "" {
 		return s

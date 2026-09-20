@@ -27,6 +27,7 @@ type briefingLock struct {
 // Aufrufer haelt die Sperre ueber den GANZEN Lese-Pruef-Schreib-Zyklus
 // (defer unlock()). Nutzer-Trennung steckt im Schluessel: gleiche Briefing-ID
 // bei verschiedenen Nutzern sind verschiedene Sperren.
+// gz-store-scope-required: baut den Sperrschluessel direkt aus s.UserID, ohne requireUser aufzurufen
 func (s *Store) LockBriefing(id string) func() {
 	// \x00 als Trenner: kommt in UserID/ID nicht vor, verhindert Kollisionen
 	// wie ("ab","c") vs. ("a","bc").
