@@ -40,3 +40,31 @@ Empfänger") sind gegenstandslos.
   bei jeder neuen Route; Tests müssen grundsätzlich mit zwei Nutzern laufen.
 - **Folgepflichten:** Code-Review und Tests prüfen bei **jedem** neuen nutzerbezogenen Endpoint die
   Zwei-Nutzer-Isolation. Ein `"default"`-Fallback in authentifiziertem Pfad ist ein Blocker.
+
+## Durchsetzung (seit 2026-09-20, #2156)
+
+Diese Entscheidung hängt nicht mehr allein an Review-Disziplin. Zwei Wächter setzen sie zur
+Testzeit durch — sie laufen in der CI-Ampel (`go-test` bzw. `test`) und machen einen Verstoß rot:
+
+| Sprachraum | Wächter | Befund |
+|---|---|---|
+| Go | `internal/handler/store_scope_call_guard_test.go` | Aufruf einer nutzergebundenen `*Store`-Methode **vor** der `WithUser`-Bindung; unklassifizierte oder fehlerhaft markierte Store-Methode |
+| Python | `tests/test_router_user_id_required.py` | Endpunkt in `api/routers/` mit `user_id`-Parameter, der einen Default trägt statt Pflichtparameter zu sein |
+
+Die überwachte Methodenmenge ist **nicht im Testcode kodiert**, sondern wird zur Testzeit per
+`go/ast` aus `internal/store/*.go` abgeleitet — sie kann also nicht veralten. Ausnahmen sind
+nur als begründeter Marker am Quelltext zulässig (`gz-store-scope-exempt` /
+`gz-store-scope-required` / `gz-store-scope-call` / `gz-user-id-optional`), damit jede Abweichung
+dort steht und begründet ist, wo sie wirkt.
+
+Marker sind allerdings **Selbstauskunft, kein Beweis**: ein falsch begründeter
+`gz-store-scope-exempt` an einer tatsächlich nutzergebundenen Methode bleibt für den Wächter
+unsichtbar. Die oben genannte Review-Pflicht bleibt damit bestehen — die Wächter verengen sie,
+sie ersetzen sie nicht.
+
+Marker-Syntax, die vier Wege sich damit rot zu machen, und das Regel-Budget-Prüfdatum
+(**2026-12-20**): `docs/reference/gates_und_ratschen.md`, Abschnitt „Store-Scope-Call-Guard".
+Detailmechanik und alle acht Acceptance Criteria: `docs/specs/modules/store_scope_call_guard.md`.
+
+Ergänzend erzwingt seit #2151 ein eigener Wächter, dass `"default"` nicht als `user_id`-Literal
+in `api/` auftaucht — siehe dieselbe Referenz.
