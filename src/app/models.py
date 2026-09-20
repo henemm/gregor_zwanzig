@@ -164,6 +164,17 @@ class ForecastDataPoint:
     lightning_potential_lpi_jkg: Optional[float] = None
     hail_potential_grau_gsp: Optional[float] = None
 
+    # Hagel-Rohwert Meteo-France AROME (#1507 S5c, FR/Korsika): Coverage
+    # `HAIL__GROUND_OR_WATER_SURFACE`, "Total hail precipitation", uom
+    # `kg kg-1` (Massenanteil). BEWUSST ein EIGENES Feld, NICHT mit
+    # `hail_potential_grau_gsp` (DWD, kumulierter Graupel-Niederschlag)
+    # zusammengelegt: andere Quelle, andere Groesse, andere Skala (#1419
+    # Abs. 3.1) — beide heissen nur fachlich "Hagel-Rohwert". Reiner
+    # Rohwert: KEIN Einfluss auf `hail_flag` (dort entscheidet allein die
+    # WMO-Code-Ableitung aus #1475 S5a), keine Stufen-/Schwellenbildung,
+    # in dieser Scheibe auch kein Renderer-Anschluss.
+    hail_potential_mf: Optional[float] = None
+
     # Gewittergroessen DWD ICON-D2/ICON-EU (#1531, Fortfuehrung #1457 S2):
     # sieben Groessen, die Epic #1419 Abs. 2a/3.2 je Gebiet vorsieht, bisher
     # aber nicht abgerufen wurden. Je Groesse ein eigenes Feld -- die drei

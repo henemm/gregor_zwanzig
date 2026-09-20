@@ -27,7 +27,9 @@ Noetige.
 from __future__ import annotations
 
 import os
+import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -80,4 +82,43 @@ def test_hail_coverage_name_existiert_beim_dienst():
         "Dienst kennt ihn nicht (die im Issue #1507 genannten Kandidaten "
         "sind >1 Monat alt und muessen frisch verifiziert werden, "
         "S2a-Lehre: LITOTA3 existierte beim Dienst ebenfalls nicht)"
+    )
+
+    # AC-1 (Adversary #1507 F002): der BASISNAME allein beweist zu wenig.
+    # Waere `HAIL_COVERAGE_SUFFIX` leer, hiesse die gebildete ID
+    # `HAIL__..._2026-09-20T09.00.00Z` — sie enthaelt den Basisnamen genauso
+    # UND ist zusaetzlich ein PRAEFIX der richtigen, voll lauf-qualifizierten
+    # ID. Ein Teilstring-Vergleich gegen das Gesamtdokument ueberlebt solche
+    # Mutationen deshalb prinzipiell. Abgerufen wird aber die VOLLE ID; nur
+    # sie darf ueber "existiert beim Dienst" entscheiden.
+    #
+    # Darum: die angebotenen IDs aus `<wcs:CoverageId>` herausloesen und auf
+    # EXAKTE Mengenzugehoerigkeit pruefen — das schliesst die ganze
+    # Praefix-Klasse aus, nicht nur den einen Suffix-Fall.
+    ids = set(
+        re.findall(
+            r"<(?:\w+:)?CoverageId>\s*([^<]+?)\s*</(?:\w+:)?CoverageId>",
+            angebot,
+        )
+    )
+    assert ids, (
+        "Aus GetCapabilities liess sich keine einzige Coverage-ID "
+        "herausloesen — das Antwortformat hat sich geaendert; die Pruefung "
+        "unten liefe sonst gegen eine leere Menge und waere wertlos"
+    )
+
+    # Denselben Weg gehen wie der Produktivcode: Lauf-Kandidaten aus der
+    # AKTUELLEN Zeit (das Lauf-Datum wechselt mehrmals taeglich — ein fester
+    # Beleg von heute waere morgen falsch), primaerer Lauf = Kandidat 0.
+    laeufe = mf._thunder_run_candidates(datetime.now(timezone.utc))
+    primaer_id = (
+        f"{mf.HAIL_COVERAGE}___{mf._run_str(laeufe[0])}"
+        f"{mf.HAIL_COVERAGE_SUFFIX}"
+    )
+    assert primaer_id in ids, (
+        f"Die vom Code gebildete Hagel-Coverage-ID '{primaer_id}' steht "
+        "nicht im Angebot — entweder stimmt das Perioden-Suffix "
+        f"('{mf.HAIL_COVERAGE_SUFFIX}') nicht, oder der Sicherheitsabstand "
+        "zum Lauf reicht nicht. Jeder Abruf endete damit lautlos in 404 "
+        "(S2a-Lehre: LITOTA3)"
     )
