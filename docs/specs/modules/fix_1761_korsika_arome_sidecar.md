@@ -266,3 +266,7 @@ Instanzmethoden-Ersatz mit echten Objekten, Muster aus `test_issue_1161_inca_con
 
 - 2026-09-20: Initial spec created (Issue #1761), inkl. PO-Entscheidung Sidecar-Merge
   (Variante 2) statt reiner Umschaltung.
+- 2026-09-20: Scope-Nachtrag — Adversary-Finding F001: Test `test_radar_nowcast_italy_arpae_only.py`
+  durch Korsika-Koordinaten-Umlenkung betroffen; Fix via Koordinaten-Umbau (Variante a). Zusätzliche
+  Testdatei + dritte Spec-Datei (`fix_1648_radar_dpc_entfernen.md`) geändert. Übersteigt ursprüngliche
+  Estimated Scope (2 Spec-Dateien → 3, +1 Testdatei unerwartet).
