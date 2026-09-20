@@ -27,7 +27,7 @@ Korsika (GR20) läuft im Radar-Nowcast künftig auf der schärferen Météo-Fran
 ## Estimated Scope
 
 - **LoC:** ~55–75 produktiv, ~90–130 Tests
-- **Files:** 1 Kern-Datei (MODIFY), 1 Testdatei (MODIFY, 2 Assertions + Docstrings), 1 Testdatei (CREATE), 2 Spec-Dateien (MODIFY, Known-Limitations/Changelog)
+- **Files:** 1 Kern-Datei (MODIFY), 1 Testdatei (MODIFY, 2 Assertions + Docstrings), 1 Testdatei (CREATE), 2 Spec-Dateien (MODIFY, Known-Limitations/Changelog); zusätzlich (Adversary-Finding F001, siehe Changelog): 1 weitere Spec-Datei (`fix_1648_radar_dpc_entfernen.md`, Changelog-Zeile), 1 weitere Testdatei (`test_radar_nowcast_italy_arpae_only.py`, Koordinatentausch)
 - **Effort:** medium
 
 ## Dependencies
@@ -40,6 +40,7 @@ Korsika (GR20) läuft im Radar-Nowcast künftig auf der schärferen Météo-Fran
 | `RadarNowcastService._fetch_openmeteo_15` | method (bestehend) | Gemeinsamer, budget-gegateter Funnel (#1329 C2) — trägt automatisch sowohl den AROME- als auch den ARPAE-Sidecar-Aufruf |
 | `_ITALY_RADAR_LAT_MIN/_MAX/_LON_MIN/_MAX` | constant (bestehend, UNVERÄNDERT) | Bleibt exakt wie heute — Kopplung zu `DpcSource.covers()` (`official_alerts/dpc.py`) darf nicht angetastet werden |
 | `services.official_alerts.dpc.DpcSource` | service (bestehend, UNBERÜHRT) | Importiert `_ITALY_RADAR_*` direkt; Regressionswächter `tests/tdd/test_dpc_official_alert_bbox.py` |
+| `tests/tdd/test_radar_nowcast_italy_arpae_only.py::test_ac1_italy_mainland_uses_arpae_with_future_frames` | test (bestehend, MODIFY durch F001) | Vormals `test_ac1_gr20_vizzavona_uses_arpae_with_future_frames`, Koordinate auf Rom (41.90/12.50) gewechselt, weil Vizzavona seit #1761 nicht mehr über ARPAE läuft — bewacht weiterhin die #1648-Zusicherung |
 
 ## Implementation Details
 
@@ -230,7 +231,7 @@ ursprüngliche AC-1-Fassung noch nicht vorsah).
 | AC-4 | `test_fix_1761_korsika_arome_sidecar.py::test_ac4_region_bucket_matches_within_corsica` |
 | AC-5 | `test_fix_1761_korsika_arome_sidecar.py::test_ac5_sardinia_boundary_excluded` |
 | AC-6 | `test_fix_1761_korsika_arome_sidecar.py::test_ac6_arome_failure_falls_back_to_arpae` |
-| AC-7 | `tests/tdd/test_dpc_official_alert_bbox.py` (unverändert, Regressionswächter) |
+| AC-7 | `tests/tdd/test_dpc_official_alert_bbox.py` (unverändert, Regressionswächter); zusätzlich betroffen (Adversary-Finding F001): `tests/tdd/test_radar_nowcast_italy_arpae_only.py::test_ac1_italy_mainland_uses_arpae_with_future_frames` (Koordinatentausch, siehe Dependencies) |
 
 Neue Testdatei: `tests/tdd/test_fix_1761_korsika_arome_sidecar.py` (mock-frei, DI via
 Instanzmethoden-Ersatz mit echten Objekten, Muster aus `test_issue_1161_inca_convective.py`).
