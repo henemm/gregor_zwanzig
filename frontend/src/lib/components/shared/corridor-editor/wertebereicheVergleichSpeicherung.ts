@@ -55,7 +55,7 @@ export function corridorSnapshotAus(ws: WertebereicheZustand): CorridorSnapshot 
  * (Go-Merge mergt `display_config` nur auf Ebene 1), die vier Korridor-Felder
  * aus `current` — `metricAlertLevels` LIVE aus dem Zustand (AC-3), nie aus
  * einer eingefrorenen Preset-Kopie. Alle übrigen Felder laufen durch dieselben
- * Rückfälle wie `buildHubPutPayload` (Lesenormalisierung #1373).
+ * Rückfälle wie der abgeschaffte Hub-PUT-Pfad (Lesenormalisierung #1373).
  */
 export function baueWertebereichNutzlast(
 	preset: ComparePreset,

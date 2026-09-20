@@ -8,8 +8,8 @@
 // Reiter wuerden sich in derselben Event-Tick gegenseitig ueberschreiben,
 // Kontext-Dokument Abschnitt 1.7). `flushPendingWeatherMetricsSave` ist auf
 // `buildComparePresetSavePayload` (Voll-Spread, Go-Merge-Kernel mergt
-// display_config nur auf Ebene 1) umgestellt — der Laufzeit-Import von
-// `buildHubPutPayload` aus `compare/compareHubWizardBridge.ts` entfaellt
+// display_config nur auf Ebene 1) umgestellt — der Laufzeit-Import der
+// Hub-PUT-Erzeugerin aus `compare/compareHubWizardBridge.ts` entfaellt
 // (AC-9: dieses Modul laedt zur Laufzeit KEIN Modul aus `compare/` mehr,
 // ausser Typen).
 //
@@ -131,7 +131,7 @@ export interface WeatherMetricsSnapshot {
  * Toggle noch Tagesfenster seit dem letzten persistierten Stand veraendert
  * haben (kein Schreiben ohne Nutzer-Geste, AC-4) — sonst den fertigen
  * PUT-Payload ueber `buildComparePresetSavePayload` (Voll-Spread, Issue
- * #2276 S4: `buildHubPutPayload` entfaellt, `region` wird deshalb explizit
+ * #2276 S4: die Hub-PUT-Erzeugerin entfaellt, `region` wird deshalb explizit
  * aus dem Bestand zurueckgelesen, damit der unbedingte Region-Schreibpfad von
  * `buildComparePresetSavePayload` den Bestand nicht auf "" zuruecksetzt).
  */
@@ -225,7 +225,7 @@ export function hydrateLayoutFieldsFromPreset(
  * Issue #1299/C2 (AC-6): Event-diskretisierte PUT-Persistenz fuer den
  * Hub-Layout-Tab — liefert `null`, wenn sich der Snapshot seit dem letzten
  * persistierten Stand NICHT veraendert hat, sonst den fertigen PUT-Payload
- * via `buildComparePresetSavePayload` (Issue #2276 S4: `buildHubPutPayload`
+ * via `buildComparePresetSavePayload` (Issue #2276 S4: die Hub-PUT-Erzeugerin
  * entfaellt, `region` wird deshalb explizit zurueckgelesen).
  */
 export function flushPendingLayoutSave(
@@ -341,7 +341,7 @@ export function wetterMetrikenSnapshotAus(wiz: WetterMetrikenZustand): WetterMet
  * einer eingefrorenen Preset-Kopie. `hourlyMetricKeys`/`outlookMetricKeys`/
  * `outlookMetricFormats` fallen bei `null` ("nie eingestellt") auf den
  * bereits gespeicherten Preset-Stand zurueck (Rundlauf-Sicherung, analog dem
- * fruehreren `buildHubPutPayload`-Bestandsrueckfall) — eine bewusste
+ * fruehreren Hub-PUT-Bestandsrueckfall) — eine bewusste
  * Leerauswahl (`[]`) bleibt davon unberuehrt (nur `??`, kein `||`).
  */
 export function baueWetterMetrikenNutzlast(

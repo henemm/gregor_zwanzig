@@ -574,7 +574,7 @@
 		// "3-Tages-Vorschau" waehlt aus DERSELBEN Quelle, gegen die der Resolver
 		// serverseitig validiert (get_compare_metric_catalog()). Ohne die
 		// Erweiterung bliebe der Block beim Trip dauerhaft im Ladezustand.
-		if ((context === 'vergleich' || context === 'route') && !compareCatalogLoaded) {
+		if (!compareCatalogLoaded) {
 			loadCompareMetricCatalog();
 		}
 	});

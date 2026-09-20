@@ -115,7 +115,7 @@ export function versandSnapshotAus(wiz: VersandHydrationTarget): VersandSnapshot
 /**
  * EINZIGE Erzeugerin der Versand-Nutzlast: Voll-Spread über `preset` via
  * `buildComparePresetSavePayload`, die Versandfelder aus `current`. Die
- * Nicht-Versandfelder laufen durch DIESELBEN Rückfälle wie `buildHubPutPayload`
+ * Nicht-Versandfelder laufen durch DIESELBEN Rückfälle wie der abgeschaffte Hub-PUT-Pfad
  * (Lesenormalisierung #1373, sonst Datenverlust an der Metrik-Auswahl).
  * `officialWarnings` bleibt undefined — der Bestand round-trippt über
  * `...original`, ein Echo würde `sources` clobbern (F001, S4).
