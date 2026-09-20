@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/modules/fix_1761_korsika_arome_sidecar.md
-spec_sha256: 9e758a2773446fb83d389164ffd80cab4ec54bfd675578709e9d07b975d3f040
+spec_sha256: ab6a538966aef961ad431ebc7254f6a1c48a586297bde2bb4d01ae3e8603d070
 ---
 
 # PO-Briefing: fix-1761-korsika-radar-arome
@@ -23,9 +23,9 @@ Tests prüfen mit echten Koordinaten (Vizzavona, Conca, Grenze zu Sardinien) Que
 
 ## Kritische Anmerkungen
 
-- Zusätzlich zur Anfrage: eine komplexere Sidecar-Lösung statt einfacher Umschaltung, mit doppeltem Abfrage-Verbrauch pro Korsika-Nowcast (vom PO bereits entschieden).
-- Fällt die italienische Zusatzquelle aus, bleibt der Gewitter-Status für diesen einen Aufruf unbeantwortet statt falsch auf „kein Gewitter" zu stehen.
+- Sidecar-Lösung ist aufwendiger als die im Issue vorgeschlagene einfache Umschaltung, mit doppeltem Abfrage-Verbrauch (vom PO entschieden).
+- Fällt die italienische Zusatzquelle aus, bleibt der Gewitter-Status für diesen Aufruf unbeantwortet statt falsch „kein Gewitter".
 
 ## Freigabe-Frage
 
-Ist die aufwendigere Sidecar-Lösung mit doppeltem Abfrage-Verbrauch für Korsika trotz höherer Komplexität die richtige Wahl?
+Ist die bereits gebilligte, aufwendigere Sidecar-Lösung mit doppeltem Abfrage-Verbrauch für dich weiterhin die richtige Wahl?
