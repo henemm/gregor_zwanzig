@@ -255,7 +255,11 @@ ab. Wer sich in S6b auf sie verlässt, verlässt sich auf Tests, die nicht laufe
   Ersetzung an Ort und Stelle in S6b mitnehmen (Zeilenzahl erhalten!).
 - Tote Rückruf-Props `onOutlookCommit` / `onHourlyCommit` (s.o.) — fallen mit S6b.
 
-## Noch nicht gemessen
+## Noch nicht gemessen (erledigt — Ergebnisse im Abschnitt `# Analysis`)
+
+> Beide Punkte sind am 2026-09-20 gemessen: die Testbruch-Erhebung ergab
+> **einen** betroffenen Test, F-S6b-6 ist beantwortet. Der folgende Text ist
+> der Stand vor der Messung.
 
 - Welche der Testdateien unter `shared/__tests__/` und `compare/__tests__/`
   beim Umbau brechen. Stichprobe
@@ -426,7 +430,7 @@ Outlook-Präzedenzfall vorlag und dort getragen hat.
 | `shared/__tests__/context_herkunft_zweige_eingefroren.test.ts` | MODIFY | `WeatherMetricsTab.svelte:1273` **bewusst** aus der eingefrorenen Liste streichen, Soll-Anzahl 68 → 67, Begründung im Commit |
 | `frontend/e2e/<neue Spec>.spec.ts` | CREATE | Wertprop-Verdrahtung des Stundenverlaufs im Browser (Risiko 5) |
 | CI-Positivliste `ci_e2e_specs.txt` | MODIFY | Aufnahme **nur** der neuen Spec, mit Filter-B-Beleg |
-| `shared/__tests__/` (Bestand) | MODIFY? | abhängig von der laufenden Testbruch-Erhebung — siehe „Noch offen" |
+| `shared/__tests__/metricKuerzelLegende.test.ts` | MODIFY | Zeile 1084-1093: einzige `wiz`-Fixture des Kindes, auf die neuen Wertprops umstellen (gemessen, siehe Testbruch-Erhebung) |
 | `docs/specs/modules/rework_2276_s6b_*.md` | CREATE | Spec (Phase 3) |
 | `docs/reference/gates_und_ratschen.md` | MODIFY | Ratschen-Zahl 68 → 67 nachführen (dokumentarisch) |
 
@@ -467,16 +471,58 @@ Outlook-Präzedenzfall vorlag und dort getragen hat.
 - Einen Eintrag aus der 67er-Liste entfernen ⇒ nur die Ratsche darf rot
   werden, kein anderer Test (Rückdreh-Gegenprobe, S6a-Muster).
 
-## Noch offen (Messung läuft, blockiert Phase 3 nicht)
+## Testbruch-Erhebung (Ergebnis, nachgetragen 2026-09-20)
 
-- **Testbruch-Erhebung** über `shared/__tests__/` und `compare/__tests__/`: ein
-  Explore-Agent läuft noch. Ergebnis geht in die RED-Planung (`/40`), nicht in
-  den Zuschnitt. 🔴 **Harte Randbedingung schon jetzt:**
-  `wetter_metriken_speicherung_nur_im_vergleich_hub.test.ts` muss **grün
-  bleiben** — er ist der Träger von AC-13 und darf nicht „angepasst" werden.
-- **`activeMetricKeys`-Aufrufgraph**: Agent läuft noch. Unter dem gewählten
-  Zuschnitt ohne Folgen (F-S6b-3); dient nur der Absicherung, dass das Kind
-  wirklich außerhalb dieses Graphen liegt.
+Erhoben über `shared/__tests__/` (47 Dateien), `compare/__tests__/` (56) und
+`compare-new/__tests__/` (2) — **105 Dateien**, davon unter diesem Zuschnitt
+**eine** betroffen. Die genannten Zeilen sind eigenhändig gegengelesen.
+
+| Testdatei | betroffen? | Befund |
+|---|---|---|
+| `metricKuerzelLegende.test.ts:1084-1093` | **JA** | einzige Stelle, die eine `wiz`-Fixture für das Kind baut (`wiz: { hourlyMetricKeys: null }`). Muss auf die neuen Wertprops umgestellt werden. |
+| `weatherMetricsTabSharing.test.ts:67-70` | **nein** | prüft per Regex `wiz\|?\s*:\s*CompareWizardState` in **`WeatherMetricsTab`**. Bleibt grün, **weil das Elternteil `wiz` behält** — unter dem weiteren Zuschnitt wäre dieser Test gebrochen. |
+| `versand_speicherung_nur_im_vergleich_hub.test.ts` | nein | betrifft den Versand-Reiter, nicht diese Fläche |
+| `versand_tab_meldet_aenderungen_reaktiv.test.ts` | nein | dito |
+| `totcode_rueckbau_speicherweg.test.ts` (compare) | nein | prüft die `CompareWizardState`-Klasse selbst; die bleibt |
+| `compare_hourly_layout_controls_structure.test.ts` | nein | keine `wiz`-Assertion (gegengelesen) |
+
+🔴 **Zwei AST-Wächter über dem Mount-Block — Randbedingung für `/50`, vom
+Agenten nicht als solche benannt:**
+
+- `compare_hourly_layout_controls_structure.test.ts:458-474` fordert **genau
+  eine** Einbettung von `CompareHourlyLayoutControls` in `WeatherMetricsTab`
+  **und** das Attribut `compareCatalog`.
+- `weather_metrics_tab_compare_catalog_fetch.test.ts:196-210` fordert
+  ebenfalls das `catalog`-Attribut am Mount.
+
+Der Umbau des Mount-Blocks `:1466-1476` muss also `catalog={compareCatalog}`
+erhalten und darf keine zweite Einbettung erzeugen. Beide Wächter bleiben
+grün, wenn die Adapter-Props **zusätzlich** treten — was der Outlook-Mount
+`:1496-1505` genau so vormacht.
+
+**Der Testbruch-Befund stützt den Zuschnitt zusätzlich:** unter dem weiteren
+Schnitt (Elternteil mit umgestellt) wären **vier** Tests gebrochen, darunter
+`weatherMetricsTabSharing.test.ts`, das die Prop-Signatur von
+`WeatherMetricsTab` festschreibt. Unter dem gewählten Schnitt ist es **einer**.
+
+## `activeMetricKeys`-Aufrufgraph (Ergebnis, nachgetragen 2026-09-20)
+
+**F-S6b-3 bestätigt: `CompareHourlyLayoutControls` fasst `activeMetricKeys`
+nirgends an.** Die Komponente berührt ausschließlich `hourlyMetricKeys`
+(`:82`, `:97-98`, `:176`) und `hourlyEnabled` (`:108`, `:194`).
+
+Der Graph zur Einordnung (nicht Teil der Scheibe):
+
+| Rolle | Ort |
+|---|---|
+| SCHREIBEN | `WeatherMetricsTab.svelte:1098` · `CorridorEditor.svelte:225` · `CorridorEditorMobile.svelte:200` · `CompareTabs.svelte:343/457` (Hydration) · `compareHubWizardBridge.ts:438` |
+| LESEN | `AlarmeTab.svelte:188/201` · `wertebereicheVergleichSpeicherung.ts:47/71` · `weatherMetricsCompareSave.ts:321-322` |
+| Diff-/Rollback-Gate | `wertebereicheVergleichSpeicherung.ts:115` |
+| **kein Zugriff** | **`CompareHourlyLayoutControls.svelte`** |
+
+**Folge:** Risiko 3 („stiller Verlust der Reiter-Teilung") trifft diese Scheibe
+nicht. Es wird dafür **keine** Mutation erfunden; der Adversary prüft
+stattdessen die drei oben genannten Mutationen.
 
 ## Keine Fragen an den PO
 
