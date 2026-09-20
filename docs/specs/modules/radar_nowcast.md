@@ -2,7 +2,7 @@
 entity_id: radar_nowcast
 type: module
 created: 2026-06-07
-updated: 2026-06-08
+updated: 2026-09-20
 status: draft
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, radar]
@@ -125,7 +125,7 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
   der Nutzer *steht*, nicht nach dem, an dem er bei Ereigniseintritt stehen wird.
   Details: `fix_2052_now_aufenthaltsort.md`.
 - "Kollisionskurs" im MVP = Onset-/Annäherungs-Trend im Punkt-Nowcast, kein voll-physikalisches Zell-Tracking mit Bewegungsvektor.
-- RADOLAN deckt nur DE + Grenzregionen, INCA nur AT. Für Italien (inkl. Korsika, PO-Entscheidung 2026-07-09) liefert seit Issue #1648 **ausschließlich** ARPAE ICON-2I (2 km, via Open-Meteo) den Nowcast — der frühere Radar-DPC (Protezione Civile, #1162) ist ersatzlos entfernt, weil er strukturell nur eine einzelne Vergangenheits-Momentaufnahme lieferte und das Nowcast-Fenster (`timestamp >= now`) damit nie erreichen konnte. Reicht ARPAE nicht, fällt die Kette weiter auf AROME-FR/ICON-D2 (siehe `radar_nowcast_france.md`/`radar_nowcast_icon_d2.md`) bzw. zuletzt `minutely_15`. Konvektions-Indikator (WMO-weather_code) ist in Open-Meteo verfügbar; BrightSky/GeoSphere-Pfade haben kein natives Konvektions-Feld und nutzen einen Open-Meteo-Sidecar (ADR-0018) — ARPAE führt weather_code bereits mit, kein Sidecar nötig. Damit gibt es für Italien kein natives Radar-Konvektionssignal mehr (vormals Zielbild #1174).
+- RADOLAN deckt nur DE + Grenzregionen, INCA nur AT. Für Italien (**ohne** Korsika — Korsika hat seit Issue #1761 einen eigenen, vor der Italien-Box greifenden Zweig auf AROME-FR mit ARPAE-Gewitter-Sidecar, siehe `fix_1761_korsika_arome_sidecar.md`) liefert seit Issue #1648 **ausschließlich** ARPAE ICON-2I (2 km, via Open-Meteo) den Nowcast — der frühere Radar-DPC (Protezione Civile, #1162) ist ersatzlos entfernt, weil er strukturell nur eine einzelne Vergangenheits-Momentaufnahme lieferte und das Nowcast-Fenster (`timestamp >= now`) damit nie erreichen konnte. Reicht ARPAE nicht, fällt die Kette weiter auf AROME-FR/ICON-D2 (siehe `radar_nowcast_france.md`/`radar_nowcast_icon_d2.md`) bzw. zuletzt `minutely_15`. Konvektions-Indikator (WMO-weather_code) ist in Open-Meteo verfügbar; BrightSky/GeoSphere-Pfade haben kein natives Konvektions-Feld und nutzen einen Open-Meteo-Sidecar (ADR-0018) — ARPAE führt weather_code bereits mit, kein Sidecar nötig. Damit gibt es für Italien kein natives Radar-Konvektionssignal mehr (vormals Zielbild #1174). Für Korsika ist der ARPAE-Sidecar dagegen zwingend, weil AROME-FR dort strukturell keinen `weather_code` liefert (#1761).
 - Latenz-AC (< 10 s) abhängig von Fremd-API-Verfügbarkeit; Fallback-Kette bei Timeout/Leerantwort.
 - WMO-Codes sind eine Modell-Klassifikation, kein Live-Blitz-Detektor; Genauigkeit hängt vom Open-Meteo-Modell ab.
 
@@ -139,3 +139,4 @@ Testdatei: `tests/tdd/test_feature_656_radar_nowcast.py` (mock-frei).
 - 2026-07-09: Known Limitation zur regionalen Abdeckung korrigiert — Italien (inkl. Korsika) fällt seit Issue #1162 (Radar-DPC/Protezione Civile) nicht mehr auf den globalen `minutely_15`-Fallback zurück, siehe `docs/specs/_archive/modules/issue_1162_radar_dpc.md`
 - 2026-07-09: ARPAE-ICON-2I-Modell-Rückfall unter Radar-DPC ergänzt (Issue #1186) — vervollständigt die Zwei-Ebenen-Absicherung für Italien (echtes Radar primär, regionales Modell als Netz), siehe `docs/specs/modules/radar_nowcast_italy_arpae_fallback.md`
 - 2026-08-11: Radar-DPC als NowCast-Quelle **ersatzlos entfernt** (Issue #1648) — die "Zwei-Ebenen-Absicherung" von 2026-07-09 war faktisch eine Ein-Ebenen-Sperre: DPC lieferte immer genau ein Bild aus der Vergangenheit, `if frames: return` erreichte den ARPAE-Zweig darunter nie, und `_derive_result` verwarf das eine Bild. Der Italien-Zweig läuft jetzt direkt auf ARPAE ICON-2I; Bbox-Konstanten/`_within_dpc` sind gebietsbenannt (`_within_italy_radar`). Siehe `docs/specs/modules/fix_1648_radar_dpc_entfernen.md`. **Unberührt:** die amtliche DPC-Warnquelle (`services/official_alerts/dpc.py`, #1427).
+- 2026-09-20: Korsika aus dem Italien-Zweig herausgelöst (Issue #1761) — eigene Bbox `_CORSICA_*` + `_within_corsica`, geprüft VOR `_within_italy_radar`, Nowcast über AROME-FR (1,5 km) mit ARPAE-ICON-2I-Sidecar für `is_convective`/`hail`. Die Zuordnung „Italien inkl. Korsika" von 2026-07-09/2026-08-11 war eine reine Box-Reihenfolge-Nebenwirkung, keine fachliche Entscheidung. `_ITALY_RADAR_*` und die amtliche DPC-Warnzuständigkeit bleiben unverändert. Siehe `docs/specs/modules/fix_1761_korsika_arome_sidecar.md`.

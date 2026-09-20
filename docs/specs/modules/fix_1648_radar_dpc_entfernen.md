@@ -2,7 +2,7 @@
 entity_id: fix_1648_radar_dpc_entfernen
 type: bugfix
 created: 2026-08-11
-updated: 2026-08-11
+updated: 2026-09-20
 status: draft
 version: "1.0"
 tags: [providers, radar, nowcast, italy, issue-1648, cleanup, egress]
@@ -366,3 +366,15 @@ Issue-Nummer.
   05:XX UTC verifiziert (radar_service.py deckt sich mit den im Auftrag genannten Werten fast
   exakt; die vier Alarm-Konsumenten-Dateien sind seit der letzten Messung spürbar verschoben —
   keiner davon benötigt aber einen Code-Eingriff in dieser Scheibe).
+- 2026-09-20: **AC-1-Messkoordinate ersetzt** (Issue #1761) — die Zusicherung selbst ist
+  unverändert (Italien-Zweig läuft direkt auf ARPAE ICON-2I und liefert Zukunfts-Frames statt
+  einer DPC-Vergangenheitsaufnahme), aber sie wird nicht mehr an Vizzavona (42,1244/9,1339)
+  gemessen, sondern an Rom (41,90/12,50). Grund: Vizzavona lief hier ausschließlich deshalb auf
+  ARPAE, weil die Italien-Box vor der AROME-FR-Box geprüft wurde — eine Reihenfolge-Nebenwirkung,
+  die #1761 auflöst. Korsika hat seither einen eigenen, vorgeschalteten Zweig (AROME-FR +
+  ARPAE-Gewitter-Sidecar) und kann den Italien-Zweig nicht mehr belegen. Rom liegt außerhalb
+  JEDER vorgelagerten Box (Korsika, INCA, RADOLAN, AROME-FR, ICON-D2); am 2026-09-20 live
+  nachgemessen: `source=ARPAE-2I`, 96 Frames, 95 davon in der Zukunft. Test umbenannt:
+  `test_ac1_gr20_vizzavona_uses_arpae_with_future_frames` →
+  `test_ac1_italy_mainland_uses_arpae_with_future_frames`. Befund aus der Adversary-Verifikation
+  zu #1761 (F001, Verdict BROKEN), siehe `docs/specs/modules/fix_1761_korsika_arome_sidecar.md`.

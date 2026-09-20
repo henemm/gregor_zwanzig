@@ -2,7 +2,7 @@
 entity_id: radar_nowcast_france
 type: module
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-09-20
 status: draft
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, radar, france, europe]
@@ -138,3 +138,4 @@ Testdatei: `tests/tdd/test_feature_734_arome_france_nowcast.py` (mock-frei).
 ## Changelog
 
 - 2026-06-11: Initial spec created (Issue #734) — AROME-HD explizit für Frankreich-Box; ICON-D2 ausgegliedert nach #761
+- 2026-09-20: Die seit 2026-06-11 behauptete Korsika-Zuordnung zu AROME-FR wird mit Issue #1761 erstmals real eingelöst — bis dahin griff die (größere) Italien-Radar-Box vor der Frankreich-Box, sodass Korsika faktisch nie über AROME-FR lief. Neu ist eine eigene, vorgeschaltete Korsika-Box (`_within_corsica`) plus ARPAE-ICON-2I-Sidecar für `is_convective`/`hail`, weil AROME-FR an Korsika-Koordinaten strukturell keinen `weather_code` liefert (das sah die ursprüngliche AC-1-Fassung noch nicht vor). Siehe `docs/specs/modules/fix_1761_korsika_arome_sidecar.md`.
