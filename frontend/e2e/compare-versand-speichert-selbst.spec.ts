@@ -17,10 +17,13 @@
 // echten Browser messbar. Die Modul-Zusicherungen stehen in
 // src/lib/components/shared/__tests__/versand_*.test.ts.
 //
-// Getestet wird über Uhrzeit/Enddatum/SMS-Kanal, NICHT über Telegram: der
-// Telegram-Schalter braucht auf Staging eine chat-id-Sonderbehandlung
-// (compare-hub-versand-inline.spec.ts:17-22), die mit dem Speicherweg nichts
-// zu tun hat.
+// Getestet wird über Uhrzeit und Enddatum — NICHT über einen Kanal-Schalter.
+// Telegram braucht auf Staging eine chat-id-Sonderbehandlung
+// (compare-hub-versand-inline.spec.ts:17-22), und die SMS-Checkbox ist
+// produktseitig gesperrt, solange im Konto keine Handynummer hinterlegt ist
+// (`disabled={!availableChannels.sms}`, VTBriefingChannels.svelte:176) — das
+// Konto aus global.setup.ts hat keine. Beides hat mit dem Speicherweg nichts
+// zu tun; die Uhrzeit ist das Kontrollelement ohne Vorbedingung.
 //
 // #2375: der erste PUT nach SSR-Laden geht ohne If-Match durch — für den
 // 412-Fall (AC-6) speichert dieser Test deshalb ZUERST selbst, bevor er den
@@ -121,9 +124,6 @@ async function serverStand(page: Page, id: string): Promise<Record<string, unkno
 }
 
 const anzeige = (page: Page) => page.locator('[data-testid="save-indicator"]');
-const smsSchalter = (tab: ReturnType<Page['locator']>) =>
-	tab.locator('[data-testid="compare-step5-channel-sms"] input[type="checkbox"]');
-
 test.describe('Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert selbst', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize({ width: 1280, height: 900 });
@@ -172,7 +172,15 @@ test.describe('Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert sel
 		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 		const stand = await serverStand(page, id);
-		expect(stand.end_date, 'der reine Button-Klick muss ohne Wrapper-Ereignis gespeichert werden').toBe('');
+		// Schreibrichtung ist der Lösch-Sentinel end_date="" (#1232, im Unit-Test
+		// auf die PUT-Nutzlast geprüft); der Server normalisiert ihn zu nil
+		// (handler/compare_preset.go:338-339) und `omitempty` lässt das Feld beim
+		// Lesen weg (model/compare_preset.go:116). Gelesen wird also Abwesenheit —
+		// bewusst toBeUndefined() statt toBeFalsy(), das auch '' durchließe.
+		expect(
+			stand.end_date,
+			'der reine Button-Klick muss ohne Wrapper-Ereignis gespeichert werden'
+		).toBeUndefined();
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
@@ -234,14 +242,14 @@ test.describe('Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert sel
 		expect(fremd.status(), 'fremder Schreibvorgang ohne If-Match wird angenommen').toBe(200);
 
 		// WHEN: zweite Änderung auf dem jetzt veralteten Stand
-		const sms = smsSchalter(tab);
-		await sms.click();
+		const uhrzeit = tab.locator('[data-testid="report-morning-time"]');
+		await uhrzeit.selectOption('09:00');
 
 		// THEN: echter 412 → „Nochmal speichern", keine Rücknahme in der Oberfläche
 		await expect(anzeige(page)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
 		expect(puts.length, 'Vorbedingung: der zweite PUT wurde gesendet').toBe(2);
 		expect((await puts[1].response())?.status(), 'der Server muss den veralteten Stand ablehnen').toBe(412);
-		await expect(sms, 'bei 412 darf die Oberfläche nicht zurückspringen').toBeChecked();
+		await expect(uhrzeit, 'bei 412 darf die Oberfläche nicht zurückspringen').toHaveValue('09:00');
 		const nochmal = anzeige(page).getByRole('button', { name: 'Nochmal speichern' });
 		await expect(nochmal).toBeVisible();
 
@@ -252,7 +260,7 @@ test.describe('Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert sel
 		expect((await puts[2].response())?.status(), 'der Wiederholungs-PUT muss durchgehen').toBe(200);
 
 		const stand = await serverStand(page, id);
-		expect(stand.send_sms, 'der Wiederholungs-PUT muss die Änderung tragen').toBe(true);
+		expect(stand.morning_time, 'der Wiederholungs-PUT muss die Änderung tragen').toBe('09:00:00');
 	});
 
 	// AC-7 — fängt: der generische saveController.flush() in handleToggleActive
