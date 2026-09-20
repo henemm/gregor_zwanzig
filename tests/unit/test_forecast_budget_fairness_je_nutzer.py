@@ -24,6 +24,7 @@ AC-6 (Go-Status-Endpunkt darf keine Nutzerkennung ausgeben) liegt Go-seitig:
 from __future__ import annotations
 
 import json
+import logging
 from datetime import timedelta
 
 import pytest
@@ -178,16 +179,20 @@ def test_kaputter_nutzer_topf_drosselt_nicht_und_wirft_nicht(caplog):
 
     gate_a = ForecastBudgetGate(user_id=NUTZER_A)
 
-    with caplog.at_level("WARNING"):
+    with caplog.at_level(logging.WARNING, logger="forecast_budget"):
         ergebnis = gate_a.allow("polling")
 
     assert ergebnis is True, (
         "AC-4 (E3): ein unlesbarer Nutzer-Topf gilt als 'nicht ueberschritten' "
         "-- ein Lesefehler darf nie zur Drosselung fuehren"
     )
-    assert caplog.records, (
-        "AC-4: der verschluckte Lesefehler muss als WARNING sichtbar werden, "
-        "sonst ist der Fail-open-Weg im Betrieb unbeobachtbar"
+    # Auf den Logger des Prueflings eingegrenzt: ein blosses `caplog.records`
+    # waere schon von einer beliebigen fremden WARNING erfuellt und wuerde
+    # Abdeckung vortaeuschen (Muster des Fehlschlusses aus #2152).
+    warnungen = [r for r in caplog.records if r.name == "forecast_budget"]
+    assert warnungen, (
+        "AC-4: der verschluckte Lesefehler muss als WARNING des Gate-Loggers "
+        "sichtbar werden, sonst ist der Fail-open-Weg im Betrieb unbeobachtbar"
     )
 
 
@@ -221,6 +226,35 @@ def test_tageswechsel_setzt_nutzer_topf_und_aktive_nutzer_zurueck():
     assert stand["active_users_count"] == 0, (
         "AC-5: auch die Menge der aktiven Nutzer unterliegt dem Tagesreset -- "
         "sonst traegt N die Nutzer von gestern in den fairen Anteil von heute"
+    )
+
+
+def test_record_call_traegt_den_nutzer_in_die_menge_aktiver_nutzer_ein():
+    """Positivkontrolle zum Tagesreset oben.
+
+    Ohne diesen Test waere `active_users_count == 0` dort auch dann gruen,
+    wenn der SCHREIBWEG gar nicht existiert -- und alle uebrigen Tests lesen
+    `active_users` nur aus einer von Hand gelegten Datei. Faellt der
+    Schreibweg aus, bleibt N in Produktion dauerhaft 0, der faire Anteil
+    damit das ganze Tagesbudget, und Stufe 1 feuert nie: bei 81% globaler
+    Auslastung liefe `polling` dann fuer JEDEN durch, wo es heute fuer
+    jeden blockiert -- eine Rueckentwicklung des Kontoschutzes.
+    """
+    gate_a = ForecastBudgetGate(user_id=NUTZER_A)
+    gate_b = ForecastBudgetGate(user_id=NUTZER_B)
+
+    gate_a.record_call()
+    gate_b.record_call()
+
+    stand = gate_a.snapshot()
+    assert stand["active_users_count"] == 2, (
+        "record_call() muss den Nutzer in die Menge der heute aktiven Nutzer "
+        "eintragen -- diese Menge liefert N fuer den fairen Anteil"
+    )
+    assert stand["fair_share"] == ForecastBudgetGate.DAILY_BUDGET / 2, (
+        "Der faire Anteil wird zur Laufzeit aus N abgeleitet "
+        "(DAILY_BUDGET / max(N,1)) und lebt NEBEN den Bestandskonstanten, "
+        "nie an ihrer Stelle (E6)"
     )
 
 
