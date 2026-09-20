@@ -39,20 +39,23 @@ _ATLANTIC_LAT, _ATLANTIC_LON = 35.0, -40.0   # keine explizite Box → globaler 
 # Dialt real Open-Meteo/AROME (#1211-2b) -- nur via -m live
 @pytest.mark.live
 def test_ac1_arome_france_real_fetch_returns_arome_source():
-    """GIVEN reale Korsika-Koordinate (GR20-Region, Italien-Radar-Box, außerhalb DE/AT)
+    """GIVEN reale Korsika-Koordinate (GR20-Region, Italien-Radar-Box UND
+    AROME-FR-Box, außerhalb DE/AT)
     WHEN get_nowcast aufgerufen wird
-    THEN source == 'ARPAE-2I' (Issue #1648: die Italien-Radar-Box wird vor der
-    AROME-FR-Box geprüft und läuft seit dem Rückbau von Radar-DPC direkt auf
-    ARPAE ICON-2I) und ≥1 reale Frame mit mm/h ≥ 0 — NICHT der globale Fallback.
+    THEN source == 'AROME-FR' (Issue #1761: Korsika bekommt einen eigenen,
+    vor der Italien-Box greifenden Zweig — die vormalige ARPAE-Zuordnung
+    war eine reine Reihenfolge-Nebenwirkung, keine fachliche Entscheidung)
+    und ≥1 reale Frame mit mm/h ≥ 0 — NICHT der globale Fallback.
     """
     svc = RadarNowcastService()
     result = svc.get_nowcast(_CORSICA_LAT, _CORSICA_LON)
 
-    assert result.source == "ARPAE-2I", (
-        f"Korsika liegt in der Italien-Radar-Box, die vor AROME-FR geprüft wird, "
-        f"und muss seit Issue #1648 über ARPAE ICON-2I laufen (war: {result.source})"
+    assert result.source == "AROME-FR", (
+        f"Korsika muss seit Issue #1761 über den eigenen Korsika-Zweig auf "
+        f"AROME-FR laufen, nicht mehr über die (weiter greifende) Italien-Box "
+        f"(war: {result.source})"
     )
-    assert result.frames, "ARPAE-Fetch sollte reale Frames liefern"
+    assert result.frames, "AROME-Fetch sollte reale Frames liefern"
     for f in result.frames:
         assert isinstance(f.precip_mm_h, (int, float))
         assert f.precip_mm_h >= 0.0
@@ -81,13 +84,13 @@ def test_ac2_within_arome_france_bbox():
 def test_ac2_chain_routing_berlin_radar_atlantic_global():
     """GIVEN die Quellen-Kette mit korrekter Reihenfolge
     WHEN get_nowcast für verschiedene Regionen läuft
-    THEN Korsika→'ARPAE-2I', Berlin→'radar' (RADOLAN-Vorrang), Atlantik→'minutely_15'.
+    THEN Korsika→'AROME-FR', Berlin→'radar' (RADOLAN-Vorrang), Atlantik→'minutely_15'.
     (echte API-Calls, kein Mock)
     """
     svc = RadarNowcastService()
 
-    # Korsika: Italien-Radar-Box vor AROME-FR (Issue #1648 — ARPAE ICON-2I)
-    assert svc.get_nowcast(_CORSICA_LAT, _CORSICA_LON).source == "ARPAE-2I"
+    # Korsika: eigener Korsika-Zweig VOR der Italien-Radar-Box (Issue #1761 — AROME-FR)
+    assert svc.get_nowcast(_CORSICA_LAT, _CORSICA_LON).source == "AROME-FR"
 
     # Berlin: RADOLAN wird VOR AROME geprüft → echtes Radar
     assert svc.get_nowcast(_BERLIN_LAT, _BERLIN_LON).source == "radar"
