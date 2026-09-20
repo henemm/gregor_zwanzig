@@ -22,8 +22,11 @@ Das Ticket stammt vom 2026-09-09. Zwei seiner Aussagen treffen heute nicht mehr 
 
 Ebenfalls nicht im Ticket: `CompareWizardState` wird im Hub **nur als Feld-Container** genutzt
 (`setContext('compare-wizard-state')`, `CompareTabs.svelte:330`); seine Save-Methoden
-(`saveComparePreset`) laufen dort gar nicht — die benutzt nur der Anlege-Pfad
-(`routes/compare/new/+page.svelte`, Thema #2277 in P2).
+liefen dort gar nicht — die benutzt(e) nur der Anlege-Pfad (`routes/compare/new/+page.svelte`,
+Thema #2277 in P2). **Nachtrag 2026-09-20 (S6a, `a789b4b5`):** `saveComparePreset()` war zu
+diesem Zeitpunkt bereits Totcode (null Aufrufer, auch nicht vom Anlege-Pfad — der ruft
+`saveNewPreset()`) und wurde in S6a entfernt; siehe
+`docs/specs/modules/rework_2276_s6a_totcode_und_ratsche.md`.
 
 ## Related Files
 

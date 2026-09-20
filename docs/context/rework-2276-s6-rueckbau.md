@@ -178,6 +178,13 @@ Einsatz**; die Scheibe entscheidet sich an F2 und F3, nicht hier.
 
 ## Befund 5 — Totcode (Rückbau ohne Verhaltensrisiko)
 
+**Nachtrag 2026-09-20 (S6a, `a789b4b5`):** Die Zeilen 1–5 der Tabelle sind zurückgebaut —
+erledigt, nicht mehr für S6b–S6f offen. Die sechs dateiinternen Signaturtypen (letzte Zeile)
+bleiben **ausdrücklich stehen**, wie in der S6a-Spec festgehalten. Die dort genannten „9
+Kommentar-Nennungen" (Zeile 5) waren beim Nachzählen **7**. Details:
+`docs/specs/modules/rework_2276_s6a_totcode_und_ratsche.md`. Die Zeilenangaben unten bleiben
+als historischer Befund stehen.
+
 | Fundstelle | Lage |
 |---|---|
 | `CompareWizardState.saveComparePreset()` (Z. 194-235) | null Aufrufer; einziger Grund, warum der Anlege-Zustand den Hub-Nutzlastbauer importiert. **Festgenagelt** von `compare/__tests__/wizard_state_no_legacy_save.test.ts:47` („muss erhalten bleiben") — der Test muss mitgeändert werden |
