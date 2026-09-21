@@ -205,6 +205,27 @@ test.describe('#1895 Schritt 1: Modus-Auswahl und Absolut-Feld sind zurueckgebau
 		const edit = await openFirstRuleEditor(page, editor);
 
 		await edit.getByTestId('alert-rule-metric').selectOption('precipitation_sum');
+
+		// `enabled` wird hier bewusst UMGESCHALTET, nicht nur mitgelesen. An der
+		// reinen Funktion expandRules() ist das Durchreichen zwar geprueft, die
+		// Zusicherung WIRKT aber in saveEdit() der `.svelte`-Komponente: wer dort
+		// `enabled: true` erzwaenge, wuerde von keinem Funktionstest gefangen
+		// (Adversary-Mutation M17). Darum laeuft der Nachweis ueber die Bedien-
+		// flaeche: abwaehlen -> speichern -> die Ansichtszeile muss inaktiv sein.
+		const editAktiv = edit.getByRole('checkbox');
+		await expect(editAktiv).toBeChecked();
+		await editAktiv.click();
+		await expect(editAktiv).not.toBeChecked();
+
+		// F001 — die Regel-`id` wird hier MITGEMESSEN, ohne sie je zu lesen:
+		// AlertRulesEditor.svelte:50 schluesselt die Liste mit
+		// `{#each rules as rule, i (rule.id)}`. Ein keyed each zerstoert den
+		// `<li>`-Block, sobald sich sein Key aendert, und baut einen neuen auf.
+		// Der hier VOR dem Speichern gegriffene Knoten bleibt also nur dann mit
+		// dem Dokument verbunden, wenn die `id` das Speichern unveraendert
+		// ueberlebt. Die Zusicherung steht am Ende dieses Falls.
+		const liVorSpeichern = await editor.locator('.rules-list > li').first().elementHandle();
+
 		await edit.getByTestId('alert-rule-save').click();
 
 		// Genau eine Zeile: nicht null (Regel verloren -> das Pruef-Gate
@@ -214,9 +235,20 @@ test.describe('#1895 Schritt 1: Modus-Auswahl und Absolut-Feld sind zurueckgebau
 		const row = editor.getByTestId('alert-rule-row').first();
 		await expect.soft(row).toContainText('Niederschlag');
 		await expect.soft(row).toContainText('Δ');
-		await expect.soft(row.getByRole('checkbox')).toBeChecked();
+		// HART, nicht soft: das ist die einzige Messung von `enabled` am
+		// Speicherweg. Ein erzwungenes `enabled: true` in saveEdit() muss hier
+		// unmissverstaendlich rot werden.
+		await expect(row.getByRole('checkbox')).not.toBeChecked();
 		// Keine Paar-Markierung mehr, weil expandRules() nie mehr zwei Regeln liefert.
 		await expect.soft(editor.getByTestId('pair-indicator')).toHaveCount(0);
+
+		// HART und bewusst als LETZTE Zusicherung (alle vorherigen Awaits haben
+		// den Re-Render abgewartet): `isConnected === false` heisst, dass der
+		// keyed-each-Block neu aufgebaut wurde — und das passiert genau dann,
+		// wenn saveEdit() eine NEUE `id` vergibt (Adversary-Mutation M16).
+		// `?.` statt `!`: ein fehlender Handle liefert `undefined` und faellt
+		// ebenfalls durch, statt still gruen zu bleiben.
+		expect(await liVorSpeichern?.evaluate((n) => n.isConnected)).toBe(true);
 	});
 
 	// Dieser Fall ist ABSICHTLICH schon vor dem Umbau gruen und muss es danach
@@ -248,6 +280,16 @@ test.describe('#1895 Schritt 1: Modus-Auswahl und Absolut-Feld sind zurueckgebau
 		// Roundtrip IM EDITOR (kein API-Aufruf): die Ansichtszeile zeigt nur E-Mail.
 		const row = editor.getByTestId('alert-rule-row').first();
 		await expect(row).toBeVisible();
+
+		// F005 — Gegenrichtung zur `enabled`-Messung des AC-2-Falls: dort wird der
+		// Haken ABGEWAEHLT und danach „nicht gesetzt" erwartet, was nur ein
+		// erzwungenes `enabled: true` faengt. Hier bleibt der Haken UNBERUEHRT
+		// (geklickt werden nur Kanal-Chips), also muss er das Speichern gesetzt
+		// ueberleben. Ein in saveEdit() erzwungenes `enabled: false` wuerde jede
+		// Regel still deaktivieren und nur an dieser Stelle rot.
+		// (Damit bewacht dieser Fall mehr als der Kopfkommentar oben andeutet.)
+		await expect(row.getByRole('checkbox')).toBeChecked();
+
 		await expect.soft(row.locator('.channel-chip')).toHaveText(['E-Mail']);
 
 		// Und erneut geoeffnet steht Telegram weiter auf „aus".

@@ -1,10 +1,13 @@
-// TDD RED — Issue #284: AlertRulesEditor + ModeCard Restyle
+// TDD RED — Issue #284: AlertRulesEditor Restyle
 // Spec: docs/specs/modules/issue_284_alert_rules_restyle.md
 //
 // Diese Tests prüfen visuelle und strukturelle Eigenschaften nach dem Restyle.
 // Alle Tests MÜSSEN rot sein vor der Implementierung.
 //
 // Issue #319: Kebab-Öffnen vor Edit/Delete-Klicks vorgeschaltet.
+//
+// #1895 Schritt 1: der ModeCard-Teil dieser Datei (AC-5, example-Text kursiv)
+// ist mit der Modus-Auswahl gegenstandslos geworden und entfernt.
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -253,41 +256,6 @@ test.describe('Issue #284: AlertRulesEditor Restyle', () => {
 			const addBtn = page.locator('[data-testid="alert-rules-editor-add"]');
 			// MUSS rot sein: aktuell plain <button class="add-button">
 			await expect(addBtn).toHaveAttribute('data-slot', 'btn');
-		} finally {
-			await deleteTrip(request, id);
-		}
-	});
-
-	// AC-5: ModeCard example-Text ist nicht kursiv
-	// Issue #319: Kebab-Trigger öffnen, dann Edit-Button klicken
-	test('AC-5: ModeCard example-Text ist Mono-Font, nicht kursiv', async ({ page, request }) => {
-		const id = tripId('ac5');
-		await createTrip(request, id, [
-			{
-				id: 'r1',
-				kind: 'absolute',
-				metric: 'wind_gust',
-				threshold: 50,
-				unit: 'km/h',
-				severity: 'warning',
-				enabled: true
-			}
-		]);
-		try {
-			await page.goto(`/trips/${id}/edit`);
-			await page.locator('[data-testid="edit-tabs"] [data-value="alarmregeln"]').click();
-			await page.locator('[data-testid="alert-rule-kebab-trigger"]').first().click();
-			await page.locator('[data-testid="alert-rule-edit-btn"]').first().click();
-			// ModeCard (absolut) ist standard-ausgewählt
-			const modeCard = page.locator('[data-testid="mode-card-absolute-selected"]');
-			await expect(modeCard).toBeVisible();
-			// Example-Text: .example span suchen
-			// MUSS rot sein: aktuell font-style: italic
-			const fontStyle = await modeCard.evaluate((el) => {
-				const example = el.querySelector('.example');
-				return example ? getComputedStyle(example).fontStyle : 'not-found';
-			});
-			expect(fontStyle).toBe('normal');
 		} finally {
 			await deleteTrip(request, id);
 		}
