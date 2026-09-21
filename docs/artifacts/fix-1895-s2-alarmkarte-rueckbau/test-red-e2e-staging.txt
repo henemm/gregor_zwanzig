@@ -1,0 +1,1154 @@
+
+Running 7 tests using 1 worker
+
+  ✓  1 [setup] › e2e/fix-1895-modus-rueckbau.staging.setup.ts:10:1 › authenticate via API (staging) — 1895_modus_rueckbau (264ms)
+  ✘  2 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:174:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Boeen: weder Δ-Schwelle noch Zeitfenster, weiterhin keine Modus-Karten (AC-1) (32.1s)
+  ✘  3 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:203:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Metrik-Wechsel: auch Gewitter und Temperatur (Änderung) ohne Schwelle und Zeitfenster (AC-1) (1.0m)
+  ✘  4 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:227:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Weder Δ-Schwelle noch Zeitfenster noch Absolut-Feld — fuer KEINE Metrik (AC-1) (1.0m)
+  ✘  5 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:262:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Neue Regel erscheint ohne Wert und ohne Pille (AC-7, AC-2) (41.9s)
+  ✘  6 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:289:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Speichern erhaelt genau eine Regel — ohne Wert, ohne Pille (AC-2, AC-5) (12.3s)
+  ✓  7 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:351:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Kanal-Chips ueberleben den Rueckbau und schalten weiterhin um (AC-5) (2.2s)
+
+
+  1) [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:174:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Boeen: weder Δ-Schwelle noch Zeitfenster, weiterhin keine Modus-Karten (AC-1) 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      67 | //      Absicht: es faengt auch eine Umbeschriftung wie „Zeitfenster (h)".
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+    > 69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+         | 	                                                            ^
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:69:62)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:197:9
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+      69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+    > 70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+         | 	                                                               ^
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:70:65)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:197:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+    > 72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+         | 	                                                ^
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:72:50)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:197:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+    > 73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+         | 	                                                        ^
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:73:58)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:197:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+    > 74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+         | 	                                                 ^
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+      77 |
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:74:51)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:197:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+    > 75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+         | 	                                                  ^
+      76 | }
+      77 |
+      78 | // AC-1 Anti-Vakuum: die Bearbeiten-Karte steht wirklich und traegt die drei
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:75:52)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:197:3
+
+    Error Context: test-results/gewitter-absolutregel-gesp-d4644-in-keine-Modus-Karten-AC-1--tests/error-context.md
+
+  2) [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:203:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Metrik-Wechsel: auch Gewitter und Temperatur (Änderung) ohne Schwelle und Zeitfenster (AC-1) 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      67 | //      Absicht: es faengt auch eine Umbeschriftung wie „Zeitfenster (h)".
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+    > 69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+         | 	                                                            ^
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:69:62)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:10
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+      69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+    > 70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+         | 	                                                               ^
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:70:65)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+    > 72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+         | 	                                                ^
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:72:50)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+    > 73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+         | 	                                                        ^
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:73:58)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+    > 74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+         | 	                                                 ^
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+      77 |
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:74:51)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+    > 75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+         | 	                                                  ^
+      76 | }
+      77 |
+      78 | // AC-1 Anti-Vakuum: die Bearbeiten-Karte steht wirklich und traegt die drei
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:75:52)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      67 | //      Absicht: es faengt auch eine Umbeschriftung wie „Zeitfenster (h)".
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+    > 69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+         | 	                                                            ^
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:69:62)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:10
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+      69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+    > 70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+         | 	                                                               ^
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:70:65)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+    > 72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+         | 	                                                ^
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:72:50)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+    > 73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+         | 	                                                        ^
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:73:58)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+    > 74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+         | 	                                                 ^
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+      77 |
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:74:51)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')[22m
+    [2m    7 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+    > 75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+         | 	                                                  ^
+      76 | }
+      77 |
+      78 | // AC-1 Anti-Vakuum: die Bearbeiten-Karte steht wirklich und traegt die drei
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:75:52)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:218:4
+
+    Error: locator.selectOption: Target page, context or browser has been closed
+
+      220 |
+      221 | 		// Die Stufenwoerter aus dem alten Gewitter-Absolut-Select (#1488) bleiben weg.
+    > 222 | 		await edit.getByTestId('alert-rule-metric').selectOption('thunder_level');
+          | 		                                            ^
+      223 | 		await expect.soft(edit.locator('option', { hasText: /^MITTEL$/ })).toHaveCount(0);
+      224 | 		await expect.soft(edit.locator('option', { hasText: /^HOCH$/ })).toHaveCount(0);
+      225 | 	});
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:222:47
+
+    Error Context: test-results/gewitter-absolutregel-gesp-b6a98-welle-und-Zeitfenster-AC-1--tests/error-context.md
+
+  3) [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:227:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Weder Δ-Schwelle noch Zeitfenster noch Absolut-Feld — fuer KEINE Metrik (AC-1) 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      67 | //      Absicht: es faengt auch eine Umbeschriftung wie „Zeitfenster (h)".
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+    > 69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+         | 	                                                            ^
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:69:62)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:10
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+      69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+    > 70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+         | 	                                                               ^
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:70:65)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+    > 72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+         | 	                                                ^
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:72:50)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+    > 73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+         | 	                                                        ^
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:73:58)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+    > 74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+         | 	                                                 ^
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+      77 |
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:74:51)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+    > 75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+         | 	                                                  ^
+      76 | }
+      77 |
+      78 | // AC-1 Anti-Vakuum: die Bearbeiten-Karte steht wirklich und traegt die drei
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:75:52)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      67 | //      Absicht: es faengt auch eine Umbeschriftung wie „Zeitfenster (h)".
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+    > 69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+         | 	                                                            ^
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:69:62)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:10
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+      69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+    > 70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+         | 	                                                               ^
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:70:65)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+    > 72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+         | 	                                                ^
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:72:50)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+    > 73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+         | 	                                                        ^
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:73:58)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+    > 74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+         | 	                                                 ^
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+      77 |
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:74:51)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    [31mTest timeout of 60000ms exceeded.[39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')[22m
+    [2m    7 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+    > 75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+         | 	                                                  ^
+      76 | }
+      77 |
+      78 | // AC-1 Anti-Vakuum: die Bearbeiten-Karte steht wirklich und traegt die drei
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:75:52)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:251:4
+
+    Error: expect.soft .toHaveCount: Target page, context or browser has been closed
+
+      256 | 			// Testfalls vakuum-gruen — er lief am 2026-09-21 gegen den unveraenderten
+      257 | 			// Stand gruen durch, obwohl jede Metrik noch drei Modus-Karten anbot.
+    > 258 | 			await expect.soft(alleModusKarten(edit)).toHaveCount(0);
+          | 			                                         ^
+      259 | 		}
+      260 | 	});
+      261 |
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:258:45
+
+    Error: locator.selectOption: Target page, context or browser has been closed
+
+      240 |
+      241 | 		for (const wert of werte) {
+    > 242 | 			await edit.getByTestId('alert-rule-metric').selectOption(wert);
+          | 			                                            ^
+      243 | 			// Positivkontrolle je Metrik: die Card ist gerendert und bedienbar.
+      244 | 			// (Bis Schritt 1 stand hier `alert-rule-threshold` toHaveCount(1) — genau
+      245 | 			// das Element, das jetzt fehlen MUSS. Es taugt darum nicht mehr als
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:242:48
+
+    Error Context: test-results/gewitter-absolutregel-gesp-66144-d-—-fuer-KEINE-Metrik-AC-1--tests/error-context.md
+
+  4) [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:262:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Neue Regel erscheint ohne Wert und ohne Pille (AC-7, AC-2) 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-row').first().locator('.threshold')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-row').first().locator('.threshold')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      101 | 	).toBeGreaterThanOrEqual(1);
+      102 |
+    > 103 | 	await expect.soft(row.locator('.threshold')).toHaveCount(0);
+          | 	                                             ^
+      104 | 	await expect.soft(row.locator('[data-slot="pill"]')).toHaveCount(0);
+      105 |
+      106 | 	const text = (await row.innerText()).replace(/\s+/g, ' ').trim();
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:103:47)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:272:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-row').first().locator('[data-slot="pill"]')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-row').first().locator('[data-slot="pill"]')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      102 |
+      103 | 	await expect.soft(row.locator('.threshold')).toHaveCount(0);
+    > 104 | 	await expect.soft(row.locator('[data-slot="pill"]')).toHaveCount(0);
+          | 	                                                     ^
+      105 |
+      106 | 	const text = (await row.innerText()).replace(/\s+/g, ' ').trim();
+      107 | 	expect.soft(text, `Zeile darf kein „Δ" mehr zeigen: "${text}"`).not.toMatch(/Δ/);
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:104:55)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:272:3
+
+    Error: Zeile darf kein „Δ" mehr zeigen: "Böen > 20 km/h Δ E-Mail Telegram Aktiv ⋯"
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoMatch[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected pattern: not [32m/Δ/[39m
+    Received string:      [31m"Böen > 20 km/h [7mΔ[27m E-Mail Telegram Aktiv ⋯"[39m
+
+      105 |
+      106 | 	const text = (await row.innerText()).replace(/\s+/g, ' ').trim();
+    > 107 | 	expect.soft(text, `Zeile darf kein „Δ" mehr zeigen: "${text}"`).not.toMatch(/Δ/);
+          | 	                                                                    ^
+      108 | 	expect.soft(text, `Zeile darf kein „Abs" mehr zeigen: "${text}"`).not.toMatch(/Abs/);
+      109 | 	expect.soft(text, `Zeile darf keinen Zahlenwert mehr zeigen: "${text}"`).not.toMatch(/\d/);
+      110 | 	expect.soft(text, `Zeile darf kein Vergleichszeichen mehr zeigen: "${text}"`).not.toMatch(/[><≥]/);
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:107:70)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:272:3
+
+    Error: Zeile darf keinen Zahlenwert mehr zeigen: "Böen > 20 km/h Δ E-Mail Telegram Aktiv ⋯"
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoMatch[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected pattern: not [32m/\d/[39m
+    Received string:      [31m"Böen > [7m2[27m0 km/h Δ E-Mail Telegram Aktiv ⋯"[39m
+
+      107 | 	expect.soft(text, `Zeile darf kein „Δ" mehr zeigen: "${text}"`).not.toMatch(/Δ/);
+      108 | 	expect.soft(text, `Zeile darf kein „Abs" mehr zeigen: "${text}"`).not.toMatch(/Abs/);
+    > 109 | 	expect.soft(text, `Zeile darf keinen Zahlenwert mehr zeigen: "${text}"`).not.toMatch(/\d/);
+          | 	                                                                             ^
+      110 | 	expect.soft(text, `Zeile darf kein Vergleichszeichen mehr zeigen: "${text}"`).not.toMatch(/[><≥]/);
+      111 | 	expect.soft(text, `Zeile darf keine Einheit „km/h" mehr zeigen: "${text}"`).not.toMatch(/km\/h/);
+      112 | }
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:109:79)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:272:3
+
+    Error: Zeile darf kein Vergleichszeichen mehr zeigen: "Böen > 20 km/h Δ E-Mail Telegram Aktiv ⋯"
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoMatch[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected pattern: not [32m/[><≥]/[39m
+    Received string:      [31m"Böen [7m>[27m 20 km/h Δ E-Mail Telegram Aktiv ⋯"[39m
+
+      108 | 	expect.soft(text, `Zeile darf kein „Abs" mehr zeigen: "${text}"`).not.toMatch(/Abs/);
+      109 | 	expect.soft(text, `Zeile darf keinen Zahlenwert mehr zeigen: "${text}"`).not.toMatch(/\d/);
+    > 110 | 	expect.soft(text, `Zeile darf kein Vergleichszeichen mehr zeigen: "${text}"`).not.toMatch(/[><≥]/);
+          | 	                                                                                  ^
+      111 | 	expect.soft(text, `Zeile darf keine Einheit „km/h" mehr zeigen: "${text}"`).not.toMatch(/km\/h/);
+      112 | }
+      113 |
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:110:84)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:272:3
+
+    Error: Zeile darf keine Einheit „km/h" mehr zeigen: "Böen > 20 km/h Δ E-Mail Telegram Aktiv ⋯"
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoMatch[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected pattern: not [32m/km\/h/[39m
+    Received string:      [31m"Böen > 20 [7mkm/h[27m Δ E-Mail Telegram Aktiv ⋯"[39m
+
+      109 | 	expect.soft(text, `Zeile darf keinen Zahlenwert mehr zeigen: "${text}"`).not.toMatch(/\d/);
+      110 | 	expect.soft(text, `Zeile darf kein Vergleichszeichen mehr zeigen: "${text}"`).not.toMatch(/[><≥]/);
+    > 111 | 	expect.soft(text, `Zeile darf keine Einheit „km/h" mehr zeigen: "${text}"`).not.toMatch(/km\/h/);
+          | 	                                                                                ^
+      112 | }
+      113 |
+      114 | // `/trips/new` bis zum Alerts-Tab durchklicken. Uebernommen aus dem bereits
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:111:82)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:272:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-threshold')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      67 | //      Absicht: es faengt auch eine Umbeschriftung wie „Zeitfenster (h)".
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+    > 69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+         | 	                                                            ^
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:69:62)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:286:9
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByTestId('alert-rule-delta-window')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      68 | async function erwarteKeineSchwelleUndKeinZeitfenster(edit: ReturnType<Page['locator']>) {
+      69 | 	await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(0);
+    > 70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+         | 	                                                               ^
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:70:65)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:286:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByRole('spinbutton')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      70 | 	await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(0);
+      71 |
+    > 72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+         | 	                                                ^
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:72:50)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:286:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().locator('input[type="number"]')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      71 |
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+    > 73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+         | 	                                                        ^
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:73:58)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:286:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Δ-Schwelle')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      72 | 	await expect.soft(edit.getByRole('spinbutton')).toHaveCount(0);
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+    > 74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+         | 	                                                 ^
+      75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+      76 | }
+      77 |
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:74:51)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:286:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-edit').first().getByLabel('Zeitfenster')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      73 | 	await expect.soft(edit.locator('input[type="number"]')).toHaveCount(0);
+      74 | 	await expect.soft(edit.getByLabel('Δ-Schwelle')).toHaveCount(0);
+    > 75 | 	await expect.soft(edit.getByLabel('Zeitfenster')).toHaveCount(0);
+         | 	                                                  ^
+      76 | }
+      77 |
+      78 | // AC-1 Anti-Vakuum: die Bearbeiten-Karte steht wirklich und traegt die drei
+        at erwarteKeineSchwelleUndKeinZeitfenster (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:75:52)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:286:3
+
+    Error Context: test-results/gewitter-absolutregel-gesp-e8eba-t-und-ohne-Pille-AC-7-AC-2--tests/error-context.md
+
+  5) [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:289:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Speichern erhaelt genau eine Regel — ohne Wert, ohne Pille (AC-2, AC-5) 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-row').first().locator('.threshold')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-row').first().locator('.threshold')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      101 | 	).toBeGreaterThanOrEqual(1);
+      102 |
+    > 103 | 	await expect.soft(row.locator('.threshold')).toHaveCount(0);
+          | 	                                             ^
+      104 | 	await expect.soft(row.locator('[data-slot="pill"]')).toHaveCount(0);
+      105 |
+      106 | 	const text = (await row.innerText()).replace(/\s+/g, ' ').trim();
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:103:47)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:326:3
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-row').first().locator('[data-slot="pill"]')
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "soft toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('.tn-mobile').getByTestId('alert-rules-editor').getByTestId('alert-rule-row').first().locator('[data-slot="pill"]')[22m
+    [2m    9 × locator resolved to 1 element[22m
+    [2m      - unexpected value "1"[22m
+
+
+      102 |
+      103 | 	await expect.soft(row.locator('.threshold')).toHaveCount(0);
+    > 104 | 	await expect.soft(row.locator('[data-slot="pill"]')).toHaveCount(0);
+          | 	                                                     ^
+      105 |
+      106 | 	const text = (await row.innerText()).replace(/\s+/g, ' ').trim();
+      107 | 	expect.soft(text, `Zeile darf kein „Δ" mehr zeigen: "${text}"`).not.toMatch(/Δ/);
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:104:55)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:326:3
+
+    Error: Zeile darf kein „Δ" mehr zeigen: "Niederschlag > 20 mm Δ E-Mail Telegram Aktiv ⋯"
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoMatch[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected pattern: not [32m/Δ/[39m
+    Received string:      [31m"Niederschlag > 20 mm [7mΔ[27m E-Mail Telegram Aktiv ⋯"[39m
+
+      105 |
+      106 | 	const text = (await row.innerText()).replace(/\s+/g, ' ').trim();
+    > 107 | 	expect.soft(text, `Zeile darf kein „Δ" mehr zeigen: "${text}"`).not.toMatch(/Δ/);
+          | 	                                                                    ^
+      108 | 	expect.soft(text, `Zeile darf kein „Abs" mehr zeigen: "${text}"`).not.toMatch(/Abs/);
+      109 | 	expect.soft(text, `Zeile darf keinen Zahlenwert mehr zeigen: "${text}"`).not.toMatch(/\d/);
+      110 | 	expect.soft(text, `Zeile darf kein Vergleichszeichen mehr zeigen: "${text}"`).not.toMatch(/[><≥]/);
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:107:70)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:326:3
+
+    Error: Zeile darf keinen Zahlenwert mehr zeigen: "Niederschlag > 20 mm Δ E-Mail Telegram Aktiv ⋯"
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoMatch[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected pattern: not [32m/\d/[39m
+    Received string:      [31m"Niederschlag > [7m2[27m0 mm Δ E-Mail Telegram Aktiv ⋯"[39m
+
+      107 | 	expect.soft(text, `Zeile darf kein „Δ" mehr zeigen: "${text}"`).not.toMatch(/Δ/);
+      108 | 	expect.soft(text, `Zeile darf kein „Abs" mehr zeigen: "${text}"`).not.toMatch(/Abs/);
+    > 109 | 	expect.soft(text, `Zeile darf keinen Zahlenwert mehr zeigen: "${text}"`).not.toMatch(/\d/);
+          | 	                                                                             ^
+      110 | 	expect.soft(text, `Zeile darf kein Vergleichszeichen mehr zeigen: "${text}"`).not.toMatch(/[><≥]/);
+      111 | 	expect.soft(text, `Zeile darf keine Einheit „km/h" mehr zeigen: "${text}"`).not.toMatch(/km\/h/);
+      112 | }
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:109:79)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:326:3
+
+    Error: Zeile darf kein Vergleichszeichen mehr zeigen: "Niederschlag > 20 mm Δ E-Mail Telegram Aktiv ⋯"
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoMatch[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected pattern: not [32m/[><≥]/[39m
+    Received string:      [31m"Niederschlag [7m>[27m 20 mm Δ E-Mail Telegram Aktiv ⋯"[39m
+
+      108 | 	expect.soft(text, `Zeile darf kein „Abs" mehr zeigen: "${text}"`).not.toMatch(/Abs/);
+      109 | 	expect.soft(text, `Zeile darf keinen Zahlenwert mehr zeigen: "${text}"`).not.toMatch(/\d/);
+    > 110 | 	expect.soft(text, `Zeile darf kein Vergleichszeichen mehr zeigen: "${text}"`).not.toMatch(/[><≥]/);
+          | 	                                                                                  ^
+      111 | 	expect.soft(text, `Zeile darf keine Einheit „km/h" mehr zeigen: "${text}"`).not.toMatch(/km\/h/);
+      112 | }
+      113 |
+        at erwarteZeileOhneWertUndOhnePille (/home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:110:84)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/epic-1419-sichtung/frontend/e2e/gewitter-absolutregel-gesperrt.spec.ts:326:3
+
+    Error Context: test-results/gewitter-absolutregel-gesp-ed4e0--Wert-ohne-Pille-AC-2-AC-5--tests/error-context.md
+
+  5 failed
+    [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:174:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Boeen: weder Δ-Schwelle noch Zeitfenster, weiterhin keine Modus-Karten (AC-1) 
+    [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:203:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Metrik-Wechsel: auch Gewitter und Temperatur (Änderung) ohne Schwelle und Zeitfenster (AC-1) 
+    [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:227:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Weder Δ-Schwelle noch Zeitfenster noch Absolut-Feld — fuer KEINE Metrik (AC-1) 
+    [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:262:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Neue Regel erscheint ohne Wert und ohne Pille (AC-7, AC-2) 
+    [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:289:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Speichern erhaelt genau eine Regel — ohne Wert, ohne Pille (AC-2, AC-5) 
+  2 passed (3.6m)
+PLAYWRIGHT_EXIT=1
