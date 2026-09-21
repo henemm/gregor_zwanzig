@@ -24,9 +24,10 @@ export function newDefaultRule(): AlertRule {
 }
 
 // =============================================================================
-// #1895 Schritt 1 — expandRules() kennt keinen Modus mehr
+// #1895 Schritt 1 + 2 — expandRules() kennt weder Modus noch Zusatzparameter
 // =============================================================================
-// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md
+// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md (Schritt 1)
+// Spec: docs/specs/modules/fix_1895_s2_alarmkarte_rueckbau.md (Schritt 2, E-2)
 //
 // Bis #1895 nahm expandRules() den im Editor gewaehlten Modus
 // ('absolute' | 'delta' | 'both') und lieferte je nachdem eine oder zwei Regeln.
@@ -35,11 +36,19 @@ export function newDefaultRule(): AlertRule {
 // kind='delta' um (SyncAlertRules). Die Modus-Auswahl ist deshalb aus der
 // Bedienflaeche gefallen; hier bleibt der Δ-Zweig als einziger uebrig.
 //
+// Schritt 2 nimmt auch Δ-Schwelle und Zeitfenster aus der Karte. Damit fallen
+// die beiden Zusatzparameter weg: expandRules() REICHT `rule.threshold` und
+// `rule.delta_window` DURCH. Ein fest einprogrammiertes '6h' wuerde jede
+// Bestandsregel mit z.B. '12h' beim ersten Speichern still umschreiben (Klasse
+// BUG-DATALOSS-GR221, Verstoss gegen „Read-Modify-Write, kein Replace"); der
+// Rueckfall '6h' gilt darum ausschliesslich fuer eine Regel OHNE Zeitfenster.
+//
 // Zusicherung: IMMER genau eine Regel — nie zwei (das alte „Beides" erzeugte ein
 // Regel-Paar), nie null. `pair_id` faellt weg, alle uebrigen Felder (`id`,
-// `metric`, `enabled`, `channels`, `severity`, `unit`) werden unveraendert
-// durchgereicht. `channels` traegt die einzige verbliebene Wirkung der Regel und
-// darf hier weder erfunden noch verworfen werden.
+// `metric`, `enabled`, `channels`, `severity`, `unit`, `threshold`,
+// `delta_window`) werden unveraendert durchgereicht. `channels` traegt die
+// einzige verbliebene Wirkung der Regel und darf hier weder erfunden noch
+// verworfen werden.
 
 export const DELTA_ONLY_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>([
 	'temperature_change',
@@ -48,13 +57,16 @@ export const DELTA_ONLY_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>
 	'thunder_level'
 ]);
 
-export function expandRules(
-	rule: AlertRule,
-	deltaThreshold: number = rule.threshold,
-	deltaWindow: string = '6h'
-): AlertRule[] {
+export function expandRules(rule: AlertRule): AlertRule[] {
 	// pair_id explizit entfernen: eine Alt-Regel aus dem frueheren „Beides"-Modus
 	// darf die Paar-Markierung nicht ueber den Rueckbau hinweg mitschleppen.
 	const { pair_id: _pid, ...rest } = rule;
-	return [{ ...rest, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }];
+	return [
+		{
+			...rest,
+			kind: 'delta',
+			threshold: rule.threshold,
+			delta_window: rule.delta_window ?? '6h'
+		}
+	];
 }

@@ -1,0 +1,188 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/alert-rules-editor/alertRuleDefaults.test.ts src/lib/components/alert-rules-editor/__tests__/alertRegelNurAenderung.test.ts src/lib/components/alert-rules-editor/alertChannels.test.ts
+
+TAP version 13
+# Subtest: \#1895 AC-7 — newDefaultRule() liefert eine Aenderungsregel (Variante A)
+ok 1 - \#1895 AC-7 — newDefaultRule() liefert eine Aenderungsregel (Variante A)
+  ---
+  duration_ms: 2.850132
+  type: 'test'
+  ...
+# Subtest: \#1895 S2 AC-7 — eine neue Regel behaelt 20/6h, wenn sie expandRules() durchlaeuft
+ok 2 - \#1895 S2 AC-7 — eine neue Regel behaelt 20/6h, wenn sie expandRules() durchlaeuft
+  ---
+  duration_ms: 0.170867
+  type: 'test'
+  ...
+# Subtest: \#1895 AC-2 — expandRules() liefert fuer JEDE Metrik genau eine Aenderungsregel
+ok 3 - \#1895 AC-2 — expandRules() liefert fuer JEDE Metrik genau eine Aenderungsregel
+  ---
+  duration_ms: 0.79901
+  type: 'test'
+  ...
+# Subtest: \#1895 S2 AC-3 — Zeitfenster '1h' wird fuer jede Metrik durchgereicht (Schwelle 11)
+ok 4 - \#1895 S2 AC-3 — Zeitfenster '1h' wird fuer jede Metrik durchgereicht (Schwelle 11)
+  ---
+  duration_ms: 0.232821
+  type: 'test'
+  ...
+# Subtest: \#1895 S2 AC-3 — Zeitfenster '3h' wird fuer jede Metrik durchgereicht (Schwelle 18)
+ok 5 - \#1895 S2 AC-3 — Zeitfenster '3h' wird fuer jede Metrik durchgereicht (Schwelle 18)
+  ---
+  duration_ms: 0.060461
+  type: 'test'
+  ...
+# Subtest: \#1895 S2 AC-3 — Zeitfenster '6h' wird fuer jede Metrik durchgereicht (Schwelle 25)
+ok 6 - \#1895 S2 AC-3 — Zeitfenster '6h' wird fuer jede Metrik durchgereicht (Schwelle 25)
+  ---
+  duration_ms: 0.044587
+  type: 'test'
+  ...
+# Subtest: \#1895 S2 AC-3 — Zeitfenster '12h' wird fuer jede Metrik durchgereicht (Schwelle 32)
+ok 7 - \#1895 S2 AC-3 — Zeitfenster '12h' wird fuer jede Metrik durchgereicht (Schwelle 32)
+  ---
+  duration_ms: 0.090806
+  type: 'test'
+  ...
+# Subtest: \#1895 S2 AC-3 — Zeitfenster '24h' wird fuer jede Metrik durchgereicht (Schwelle 39)
+ok 8 - \#1895 S2 AC-3 — Zeitfenster '24h' wird fuer jede Metrik durchgereicht (Schwelle 39)
+  ---
+  duration_ms: 0.050465
+  type: 'test'
+  ...
+# Subtest: \#1895 AC-2 — eine Alt-Regel mit pair_id verliert nur die Paar-Markierung
+ok 9 - \#1895 AC-2 — eine Alt-Regel mit pair_id verliert nur die Paar-Markierung
+  ---
+  duration_ms: 0.200561
+  type: 'test'
+  ...
+# Subtest: \#1895 AC-3 — expandRules() reicht channels unveraendert durch
+ok 10 - \#1895 AC-3 — expandRules() reicht channels unveraendert durch
+  ---
+  duration_ms: 0.285259
+  type: 'test'
+  ...
+# Subtest: \#1895 S2 AC-3 — Bestandszeitfenster ueberlebt; 6h gilt nur fuer eine Regel ohne Fenster
+ok 11 - \#1895 S2 AC-3 — Bestandszeitfenster ueberlebt; 6h gilt nur fuer eine Regel ohne Fenster
+  ---
+  duration_ms: 0.099739
+  type: 'test'
+  ...
+# Subtest: effectiveAlertChannels: leere channels erbt alle aktiven Briefing-Kanaele
+ok 12 - effectiveAlertChannels: leere channels erbt alle aktiven Briefing-Kanaele
+  ---
+  duration_ms: 1.055105
+  type: 'test'
+  ...
+# Subtest: effectiveAlertChannels: fehlendes channels-Feld erbt alle aktiven Kanaele
+ok 13 - effectiveAlertChannels: fehlendes channels-Feld erbt alle aktiven Kanaele
+  ---
+  duration_ms: 0.107592
+  type: 'test'
+  ...
+# Subtest: effectiveAlertChannels: explizite channels werden zurueckgegeben (keine Vererbung)
+ok 14 - effectiveAlertChannels: explizite channels werden zurueckgegeben (keine Vererbung)
+  ---
+  duration_ms: 0.086762
+  type: 'test'
+  ...
+# Subtest: toggleAlertChannel: aktiven Kanal abwaehlen entfernt ihn
+ok 15 - toggleAlertChannel: aktiven Kanal abwaehlen entfernt ihn
+  ---
+  duration_ms: 0.098438
+  type: 'test'
+  ...
+# Subtest: toggleAlertChannel: inaktiven Kanal anwaehlen fuegt ihn hinzu
+ok 16 - toggleAlertChannel: inaktiven Kanal anwaehlen fuegt ihn hinzu
+  ---
+  duration_ms: 0.122435
+  type: 'test'
+  ...
+# Subtest: toggleAlertChannel: erstes Toggle materialisiert die geerbten Kanaele minus dem abgewaehlten
+ok 17 - toggleAlertChannel: erstes Toggle materialisiert die geerbten Kanaele minus dem abgewaehlten
+  ---
+  duration_ms: 0.095203
+  type: 'test'
+  ...
+# Subtest: toggleAlertChannel: laesst die Original-Regel unveraendert (immutabel)
+ok 18 - toggleAlertChannel: laesst die Original-Regel unveraendert (immutabel)
+  ---
+  duration_ms: 0.097987
+  type: 'test'
+  ...
+# Subtest: toggleAlertChannel: erhaelt severity und alle uebrigen Felder (kein Datenverlust)
+ok 19 - toggleAlertChannel: erhaelt severity und alle uebrigen Felder (kein Datenverlust)
+  ---
+  duration_ms: 0.092569
+  type: 'test'
+  ...
+# Subtest: newDefaultRule: liefert AlertRule mit den Vorgabe-Werten (\#1895 Variante A)
+ok 20 - newDefaultRule: liefert AlertRule mit den Vorgabe-Werten (\#1895 Variante A)
+  ---
+  duration_ms: 3.333819
+  type: 'test'
+  ...
+# Subtest: newDefaultRule: liefert eindeutige ID pro Aufruf
+ok 21 - newDefaultRule: liefert eindeutige ID pro Aufruf
+  ---
+  duration_ms: 0.254922
+  type: 'test'
+  ...
+# Subtest: newDefaultRule: erzeugt keine geteilten Referenzen (frische Objekte)
+ok 22 - newDefaultRule: erzeugt keine geteilten Referenzen (frische Objekte)
+  ---
+  duration_ms: 0.077216
+  type: 'test'
+  ...
+# Subtest: expandRules > eine Alt-Regel mit kind=absolute wird zur Aenderungsregel
+ok 23 - expandRules > eine Alt-Regel mit kind=absolute wird zur Aenderungsregel
+  ---
+  duration_ms: 0.132739
+  type: 'test'
+  ...
+# Subtest: expandRules > rule.threshold wird unveraendert durchgereicht (E-3)
+ok 24 - expandRules > rule.threshold wird unveraendert durchgereicht (E-3)
+  ---
+  duration_ms: 0.06688
+  type: 'test'
+  ...
+# Subtest: expandRules > das Zeitfenster der Regel wird durchgereicht, nicht auf 6h festgenagelt
+ok 25 - expandRules > das Zeitfenster der Regel wird durchgereicht, nicht auf 6h festgenagelt
+  ---
+  duration_ms: 0.063616
+  type: 'test'
+  ...
+# Subtest: expandRules > Bestandsregel mit 17/12h behaelt 17 und 12h (AC-3, Spec-Beispiel)
+ok 26 - expandRules > Bestandsregel mit 17/12h behaelt 17 und 12h (AC-3, Spec-Beispiel)
+  ---
+  duration_ms: 0.064868
+  type: 'test'
+  ...
+# Subtest: expandRules > kein Eingang erzeugt mehr zwei Regeln oder ein pair_id
+ok 27 - expandRules > kein Eingang erzeugt mehr zwei Regeln oder ein pair_id
+  ---
+  duration_ms: 0.120661
+  type: 'test'
+  ...
+# Subtest: expandRules > DELTA_ONLY_METRICS bleibt exportiert und unveraendert bestueckt
+ok 28 - expandRules > DELTA_ONLY_METRICS bleibt exportiert und unveraendert bestueckt
+  ---
+  duration_ms: 0.184167
+  type: 'test'
+  ...
+# Subtest: expandRules > mutiert die Eingangsregel nicht
+ok 29 - expandRules > mutiert die Eingangsregel nicht
+  ---
+  duration_ms: 0.326382
+  type: 'test'
+  ...
+1..29
+# tests 29
+# suites 0
+# pass 29
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 162.345673

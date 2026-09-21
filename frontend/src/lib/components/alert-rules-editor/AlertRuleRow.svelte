@@ -6,14 +6,19 @@
 	// Absolut-Schwellenfeld sind zurueckgebaut; es gibt nur noch Aenderungsregeln.
 	// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md
 	//
-	// View-Mode: Label + Threshold + Mode-Badge (Δ) + Kanal-Chips +
-	//            Enabled-Toggle + Kebab [Bearbeiten] [Löschen]
-	// Edit-Mode: Metric-Select + Δ-Schwelle + Zeitfenster + Kanal-Chips +
-	//            Enabled + Save/Cancel
+	// #1895 Schritt 2 — Δ-Schwelle, Zeitfenster, der Wert-Text und die „Δ"-Pille
+	// sind aus BEIDEN Ansichten der Karte zurueckgebaut. Sie loesen keinen Alarm
+	// aus (ADR-0043: die Empfindlichkeitsstufe ist der einzige Regler). Die
+	// Datenfelder `threshold`/`delta_window` bleiben im Modell und werden von
+	// expandRules() unveraendert durchgereicht.
+	// Spec: docs/specs/modules/fix_1895_s2_alarmkarte_rueckbau.md
+	//
+	// View-Mode: Label + Kanal-Chips + Enabled-Toggle + Kebab [Bearbeiten] [Löschen]
+	// Edit-Mode: Metric-Select + Kanal-Chips + Enabled + Save/Cancel
 	// F004-Guard: {#if info} um alles — unbekannte Metric crasht nicht.
 
 	import type { AlertRule, AlertMetric } from '$lib/types';
-	import { Btn, Pill } from '$lib/components/atoms';
+	import { Btn } from '$lib/components/atoms';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
 	import { ALERT_METRIC_LABELS } from '$lib/utils/alertMetricLabels';
@@ -40,16 +45,8 @@
 	let draft = $state<AlertRule>({ ...rule });
 	let kebabOpen = $state(false);
 
-	// Δ-Schwelle und Zeitfenster der Aenderungsregel.
-	// Initialwerte werden in startEdit() aus rule.* gesetzt; Defaults dienen Erst-Render.
-	let draftDeltaThreshold = $state<number>(20);
-	let draftDeltaWindow = $state<string>('6h');
-
 	let info = $derived(ALERT_METRIC_LABELS[rule.metric]);
 	let editChannels = $derived(effectiveAlertChannels(draft, activeChannels));
-	// #1488 Scheibe A: kein Thunder-Sonderfall mehr — die Stufenwoerter MITTEL/HOCH
-	// waren falsch beschriftet und ihre Schwelle wird nie ausgewertet.
-	let valueText = $derived(`${rule.threshold} ${info?.unit ?? ''}`.trim());
 
 	// Alle bekannten Metrics fuer das Select im Edit-Mode
 	const METRIC_OPTIONS: AlertMetric[] = [
@@ -65,18 +62,10 @@
 	];
 
 	function startEdit() {
+		// #1895 Schritt 2 (E-3): voller Spread, keine Vorbelegung. `threshold` und
+		// `delta_window` werden unveraendert durchgereicht — ein Ueberschreiben
+		// waere aktive Datenaenderung ohne Nutzerhandlung.
 		draft = { ...rule };
-		// #1895: die Δ-Schwelle wird nur aus einer Aenderungsregel gelesen. Eine
-		// Alt-Regel mit kind='absolute' traegt in `threshold` eine Absolut-Zahl
-		// (z.B. 50 km/h) — die waere als Δ-Schwelle eine voellig andere Aussage.
-		// Fuer sie gilt darum der Δ-Standardwert 20 / 6h.
-		if (rule.kind === 'delta') {
-			draftDeltaThreshold = rule.threshold;
-			draftDeltaWindow = rule.delta_window ?? '6h';
-		} else {
-			draftDeltaThreshold = 20;
-			draftDeltaWindow = '6h';
-		}
 		editing = true;
 	}
 
@@ -87,9 +76,9 @@
 			...draft,
 			unit: metricInfo?.unit || draft.unit
 		};
-		// #1895: expandRules() kennt keinen Modus mehr und liefert genau eine
-		// Aenderungsregel.
-		onSave(expandRules(synced, draftDeltaThreshold, draftDeltaWindow));
+		// #1895: expandRules() kennt weder Modus noch Zusatzparameter mehr und
+		// liefert genau eine Aenderungsregel.
+		onSave(expandRules(synced));
 		editing = false;
 	}
 
@@ -118,27 +107,8 @@
 					{/each}
 				</Select>
 
-				<!-- #1895: einziger verbleibender Zweig — Δ-Schwelle + Zeitfenster. -->
-				<input
-					type="number"
-					bind:value={draftDeltaThreshold}
-					data-testid="alert-rule-threshold"
-					class="number-input"
-					aria-label="Δ-Schwelle"
-				/>
-				<Select
-					bind:value={draftDeltaWindow}
-					data-testid="alert-rule-delta-window"
-					class="window-select"
-					aria-label="Zeitfenster"
-				>
-					<option value="1h">1 Stunde</option>
-					<option value="3h">3 Stunden</option>
-					<option value="6h">6 Stunden</option>
-					<option value="12h">12 Stunden</option>
-					<option value="24h">24 Stunden</option>
-				</Select>
-
+				<!-- #1895 Schritt 2: die beiden Eingaben fuer Schwelle und Fenster
+					 sind zurueckgebaut, sie loesen keinen Alarm aus (ADR-0043). -->
 				{#each activeChannels as ch}
 					<button type="button"
 						data-testid="alert-rule-channel-{ch}"
@@ -180,10 +150,8 @@
 				>paar</span>
 			{/if}
 			<span class="label">{info.label_de}</span>
-			<span class="threshold">{info.comparison} {valueText}</span>
-			<Pill tone="default" data-outlined>
-				{rule.kind === 'delta' ? 'Δ' : 'Abs'}
-			</Pill>
+			<!-- #1895 Schritt 2: kein Wert-Text und keine Modus-Pille mehr — die
+				 Zeile zeigt Metrik, Kanaele und den Aktiv-Haken. -->
 			{#each effectiveAlertChannels(rule, activeChannels) as ch}
 				<span class="channel-chip chip-active">{CHANNEL_LABEL_DE[ch] ?? ch}</span>
 			{/each}
@@ -260,7 +228,8 @@
 <style>
 	.alert-rule-view {
 		display: grid;
-		grid-template-columns: minmax(140px, 1fr) auto auto auto auto auto;
+		/* #1895 Schritt 2: exakt um die zwei entfallenen Spuren reduziert (6 -> 4). */
+		grid-template-columns: minmax(140px, 1fr) auto auto auto;
 		align-items: center;
 		gap: var(--g-s-3);
 		padding: var(--g-s-3) var(--g-s-4);
@@ -292,32 +261,6 @@
 	}
 	.label {
 		font-weight: 500;
-	}
-	.threshold {
-		font-family: var(--g-font-data);
-		font-variant-numeric: tabular-nums;
-		color: var(--g-ink-muted);
-	}
-	.number-input {
-		min-height: 36px;
-		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-sm);
-		background: var(--g-paper);
-		font-family: var(--g-font-ui);
-		font-size: var(--g-text-sm);
-		color: var(--g-ink);
-		width: 80px;
-	}
-	.window-select {
-		min-height: 36px;
-		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--g-ink-faint);
-		border-radius: var(--g-radius-sm);
-		background: var(--g-paper);
-		font-family: var(--g-font-ui);
-		font-size: var(--g-text-sm);
-		color: var(--g-ink);
 	}
 	.relative {
 		position: relative;
