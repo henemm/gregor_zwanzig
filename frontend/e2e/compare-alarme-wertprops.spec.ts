@@ -33,6 +33,15 @@
 
 import { test, expect, type Page, type Request } from '@playwright/test';
 import { E2E_TEST_PREFIX } from './helpers';
+// #1373 / ADR-0037: `display_config.active_metrics` wird in ZWEI Formen
+// gespeichert (Kurzform "wind_max_kmh" und Paar {metric_id, aggregation}).
+// Der Vergleich der Nachbar-Einstellungen laeuft deshalb ueber die
+// Lesenormalisierung DES PRODUKTS, nicht ueber eigene Zeichenketten-Logik.
+import {
+	normalizeStoredActiveMetrics,
+	toCompareSelectionEntries,
+	type CompareSelectionEntry
+} from '../src/lib/components/shared/weather-metrics-tab/compareMetricSelection.ts';
 
 let angelegt: string[] = [];
 
@@ -76,6 +85,20 @@ async function serverStand(page: Page, id: string): Promise<Record<string, unkno
 }
 
 const dc = (body: Record<string, unknown>) => (body.display_config as Record<string, unknown>) ?? {};
+
+/** Der Metrik-Katalog des Servers — Schluesselbund fuer die Lesenormalisierung
+ *  (dieselbe Quelle, aus der die Oberflaeche ihn zieht). */
+async function metrikKatalog(page: Page): Promise<CompareSelectionEntry[]> {
+	const res = await page.request.get('/api/compare/metrics');
+	expect(res.ok(), 'GET /api/compare/metrics HTTP ' + res.status()).toBeTruthy();
+	const katalog = toCompareSelectionEntries(await res.json());
+	expect(
+		katalog.length,
+		'Vorbedingung: der Metrik-Katalog ist leer — ohne ihn kann die Paar-Form nicht ' +
+			'aufgeloest werden und der Vergleich unten wuerde Formen statt Auswahl pruefen.'
+	).toBeGreaterThan(0);
+	return katalog;
+}
 
 /** Zaehlt die PUTs auf genau diesen Vergleich. */
 function zaehlePuts(page: Page, id: string): Request[] {
@@ -164,10 +187,25 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 		const id = await legeVergleichAn(page);
 		await oeffneAlarme(page, id);
 
+		// AlertChannelPicker.svelte:148 rendert in diesem Container das Atom
+		// <Switch> (atoms/Switch.svelte: <span role="switch" aria-checked> mit
+		// onclick) — KEIN <input type="checkbox">. Deshalb Klick-Geste und
+		// aria-checked statt .check()/toBeChecked(). Der Radar-/Kurzstil-Schalter
+		// weiter unten benutzt dagegen das Checkbox-Atom und bleibt unveraendert.
 		const telegram = page
-			.locator('[data-testid="alert-channel-toggle-telegram"] input[type="checkbox"]')
-			.first();
-		await telegram.check();
+			.locator('[data-testid="alert-channel-toggle-telegram"]')
+			.first()
+			.getByRole('switch');
+		await expect(
+			telegram,
+			'Vorbedingung: der Telegram-Kanal startet aus (send_telegram: false bei der Anlage) — ' +
+				'ein Klick schaltet ihn sonst AUS statt AN.'
+		).toHaveAttribute('aria-checked', 'false');
+		await telegram.click();
+		await expect(
+			telegram,
+			'AC-2 FAIL: der Telegram-Schalter nimmt die Geste nicht an.'
+		).toHaveAttribute('aria-checked', 'true');
 		await warteAufGespeichert(page);
 		await expect
 			.poll(async () => (await serverStand(page, id)).send_telegram, {
@@ -176,8 +214,10 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 			})
 			.toBe(true);
 
-		// Kanal-Schwelle: die Stufen-Auswahl steht in derselben Zeile.
-		const schwelle = page.locator('[data-testid="alert-channel-threshold-telegram-hoch"]').first();
+		// Kanal-Schwelle: die Stufen-Auswahl steht in derselben Zeile. Die Stufen
+		// heissen LOW/MODERATE/HIGH (alarme-tab/alertChannelState.ts:95) — „hoch"
+		// ist nur die Beschriftung, nicht der Wert.
+		const schwelle = page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]').first();
 		await schwelle.click();
 		await warteAufGespeichert(page);
 		await expect
@@ -190,7 +230,7 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 					)?.telegram,
 				{ timeout: 15_000, message: 'AC-2 FAIL: die Kanal-Schwelle wurde nicht gespeichert.' }
 			)
-			.toBe('hoch');
+			.toBe('HIGH');
 
 		// Kurzstil-Schalter — nur im Vergleich sichtbar, nur mit aktivem Telegram bedienbar.
 		const kurzstil = page
@@ -227,8 +267,11 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 		const id = await legeVergleichAn(page);
 		await oeffneAlarme(page, id);
 
-		// Empfindlichkeit fuer alle gewaehlten Groessen auf einmal.
-		await page.locator('[data-testid="alert-quickset-hoch"]').first().click();
+		// Empfindlichkeit fuer alle gewaehlten Groessen auf einmal. Die Stufen des
+		// Quicksets sind off/entspannt/standard/sensibel (SensLevel, types.ts:73;
+		// AlertMetricLevelTable.svelte:19) — „sensibel" ist die scharfe Stufe und
+		// weicht vom Startwert ab, die Geste ist also sichtbar.
+		await page.locator('[data-testid="alert-quickset-sensibel"]').first().click();
 		await warteAufGespeichert(page);
 		await expect
 			.poll(
@@ -243,7 +286,7 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 						'`onMetricLevelChange` am Mount, verpufft die Geste.'
 				}
 			)
-			.toContain('hoch');
+			.toContain('sensibel');
 
 		const cooldown = page.locator('[data-testid="alert-cooldown-input"]').first();
 		await cooldown.fill('45');
@@ -256,9 +299,11 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 			})
 			.toBe(45);
 
-		const stilleAn = page
-			.locator('[data-testid="alert-quiet-hours-toggle"] input[type="checkbox"]')
-			.first();
+		// AlertQuietHoursCard.svelte:36 gibt die Testid als Rest-Prop an <Checkbox>,
+		// und Checkbox.svelte spreizt sie auf das <input type="checkbox"> selbst —
+		// die Testid SITZT also auf dem Eingabefeld, ein Nachkommen-Selektor traefe
+		// hier nie.
+		const stilleAn = page.locator('[data-testid="alert-quiet-hours-toggle"]').first();
 		if (!(await stilleAn.isChecked())) await stilleAn.check();
 		const von = page.locator('[data-testid="alert-quiet-from"]').first();
 		const bis = page.locator('[data-testid="alert-quiet-to"]').first();
@@ -301,6 +346,7 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 
 	test('AC-2: eine Alarm-Geste laesst die uebrigen Einstellungen unangetastet', async ({ page }) => {
 		const id = await legeVergleichAn(page);
+		const katalog = await metrikKatalog(page);
 		const vorher = await serverStand(page, id);
 		await oeffneAlarme(page, id);
 
@@ -315,9 +361,25 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 		expect(nachher.location_ids, 'AC-2 FAIL: die Orte haben sich veraendert.').toEqual(
 			vorher.location_ids
 		);
+		// Metrik-Auswahl SEMANTISCH, nicht byteweise: der Speicherweg fuehrt die
+		// Auswahl dabei von der Kurzform ("wind_max_kmh") in die Paar-Form
+		// ({metric_id:"wind", aggregation:"max"}) ueber. Das ist die gewollte
+		// Lesenormalisierung #1373 / ADR-0037 (alarmeVergleichSpeicherung.ts:68-73,
+		// src/app/models.py:864-865: beide Formen bleiben dauerhaft gueltig) — sie
+		// existiert, um Datenverlust an der Metrik-Auswahl zu VERHINDERN. Beide
+		// Staende laufen deshalb durch dieselbe Normalisierung des Produkts und
+		// werden als Auswahl verglichen. Verschwindet ein Eintrag, wird die Auswahl
+		// leer oder kommt einer hinzu, faellt das weiterhin auf.
+		const auswahlVorher = normalizeStoredActiveMetrics(dc(vorher).active_metrics, katalog) ?? [];
+		const auswahlNachher = normalizeStoredActiveMetrics(dc(nachher).active_metrics, katalog) ?? [];
 		expect(
-			dc(nachher).active_metrics,
-			'AC-2 FAIL: die Metrik-Auswahl wurde mitgeschrieben.'
-		).toEqual(dc(vorher).active_metrics);
+			auswahlVorher.length,
+			'Vorbedingung: der Ausgangsstand hat eine nicht-leere Metrik-Auswahl — sonst waere ' +
+				'der Vergleich unten leer gegen leer und wuerde nichts bewachen.'
+		).toBeGreaterThan(0);
+		expect(
+			auswahlNachher,
+			'AC-2 FAIL: die Metrik-Auswahl hat sich durch die Alarm-Geste veraendert.'
+		).toEqual(auswahlVorher);
 	});
 });
