@@ -1,16 +1,23 @@
-// E2E — #1488 Scheibe A: der Absolut-Modus ist fuer Gewitter gesperrt.
+// E2E — #1895 Schritt 1: der Alarmregel-Editor kennt keinen Absolut-Modus mehr.
 //
-// Spec: docs/specs/modules/fix_1488_sa_gewitter_absolutregel.md (AC-1, AC-2)
+// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md (AC-1, AC-2, AC-3, AC-5, AC-7)
 //
-// Gemessener Bug (docs/context/fix-1488-gewitterstufen.md, Befund 1+3): auf
-// `/trips/new` -> Alarmregeln laesst sich fuer die Metrik „Gewitter" eine Regel
-// im Modus „Absolut" mit den Schwellen „MITTEL"/„HOCH" anlegen. Der Alarm-Dienst
-// wertet diese Schwelle nie aus, und beide Woerter alarmieren eine Stufe frueher
-// als beschriftet. Die Bedienflaeche verspricht eine Wirkung, die es nicht gibt.
+// Diese Datei war bis #1895 der Sperr-Waechter aus #1488 Scheibe A („fuer Gewitter
+// ist der Absolut-Modus gesperrt"). Sie wird hier IN PLACE zum Abwesenheits-
+// Waechter umgeschrieben und behaelt ihren Dateinamen: sie steht in der
+// E2E-Ratsche `ci_e2e_specs.txt` (Zeile 213) und laeuft im `e2e`-Check der
+// CI-Ampel. Ein neuer Dateiname haette den Ratschen-Eintrag entwertet — „Ratsche
+// leeren macht den abhaengigen Test vakuum-gruen".
 //
-// Regulaerer CI-Spec (kein `.staging.spec.ts`) und auf `.github/ci_e2e_specs.txt`
-// — ein von Hand gestarteter Staging-Spec belegt den Fix einmal und bewacht ihn
-// danach nie wieder; genau dieser Fehlertyp ist der Gegenstand des Tickets.
+// Gemessener Befund (docs/context/fix-1895-alarm-absolut-modus.md): der Editor
+// bietet drei Modus-Karten und ein Absolut-Schwellenfeld an. Seit dem Umbau #946
+// loest eine Absolut-Schwelle nie mehr einen Alarm aus, und der Go-Store schreibt
+// jede Absolut-Regel bei jedem Laden und Speichern still zu kind='delta' um
+// (SyncAlertRules). Die Bedienflaeche verspricht etwas, das es nicht gibt.
+//
+// Gemessen wird hier die `.svelte`-Verdrahtung im echten Browser. Der SSR-Harness
+// (node --test) erreicht den Bearbeiten-Zustand nicht und kann darum weder das
+// Verschwinden der Modus-Karten noch das Ueberleben der Kanal-Chips belegen.
 
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -18,23 +25,28 @@ import * as path from 'node:path';
 
 const MOBILE = { width: 390, height: 844 };
 
-// Locator fuer eine Modus-Karte. ModeCard.svelte:58-60 wechselt die testid je
-// nach Auswahl (`mode-card-absolute` <-> `mode-card-absolute-selected`) — ein
-// exakter Testid-Vergleich wuerde die ausgewaehlte Karte uebersehen und
-// „nicht vorhanden" melden, obwohl sie dasteht.
+// Modus-Karten-Locator. ModeCard.svelte:58-60 wechselte die testid je nach Auswahl
+// (`mode-card-absolute` <-> `mode-card-absolute-selected`) — ein exakter Vergleich
+// wuerde die ausgewaehlte Karte uebersehen und faelschlich „nicht vorhanden"
+// melden. Nach dem Rueckbau darf KEINE der beiden Varianten mehr auftauchen.
 function modeCard(scope: ReturnType<Page['locator']>, mode: 'absolute' | 'delta' | 'both') {
 	return scope.locator(`[data-testid="mode-card-${mode}"], [data-testid="mode-card-${mode}-selected"]`);
 }
 
+// Alle Modus-Karten zusammen — faengt auch eine vierte, neu erfundene Karte.
+function alleModusKarten(scope: ReturnType<Page['locator']>) {
+	return scope.locator('[data-testid^="mode-card-"]');
+}
+
 // `/trips/new` bis zum Alerts-Tab durchklicken. Uebernommen aus dem bereits
 // funktionierenden `issue-776-metrics-toggle.spec.ts::openNewTripZeitplan()`
-// (mobiler Pfad, Progressive-Tab-Unlock) — einziger zusaetzlicher Schritt ist
-// der Klick auf „Alerts". Kein Trip wird angelegt: der GPX-Upload loest nur den
+// (mobiler Pfad, Progressive-Tab-Unlock) — einziger zusaetzlicher Schritt ist der
+// Klick auf „Alerts". Kein Trip wird angelegt: der GPX-Upload loest nur den
 // zustandslosen `POST /api/gpx/parse` aus.
 async function openNewTripAlerts(page: Page) {
 	await page.setViewportSize(MOBILE);
 	await page.goto('/trips/new');
-	await page.getByTestId('trip-new-name-input-mobile').fill('#1488 Gewitter-Alarmregel');
+	await page.getByTestId('trip-new-name-input-mobile').fill('#1895 Alarmregel-Modus');
 	await page.getByTestId('trip-new-date-input').fill(new Date().toISOString().slice(0, 10));
 
 	const tabbar = page.getByTestId('tn-mobile-tabbar');
@@ -43,8 +55,7 @@ async function openNewTripAlerts(page: Page) {
 	const gpx = path.resolve('./e2e/fixtures/test-trip.gpx');
 	// IMMER den ersten verbleibenden offenen Datei-Input frisch aufloesen: eine
 	// Etappe mit gesetztem GPX verliert ihren Input komplett aus dem DOM
-	// (TripNewEditor.svelte `{#if s.gpx}`), ein fixierter Index zeigt danach
-	// ins Leere.
+	// (TripNewEditor.svelte `{#if s.gpx}`), ein fixierter Index zeigt danach ins Leere.
 	const stageCount = await page.locator('.tn-mobile input[type="file"][accept=".gpx"]').count();
 	for (let i = 0; i < stageCount; i++) {
 		const input = page.locator('.tn-mobile input[type="file"][accept=".gpx"]').first();
@@ -59,7 +70,7 @@ async function openNewTripAlerts(page: Page) {
 	await tabbar.getByRole('tab', { name: /Zeitplan/ }).click({ force: true });
 	await tabbar.getByRole('tab', { name: /Alerts/ }).click({ force: true });
 
-	// Harter Surface-Check: ohne den waere jedes spaetere `toHaveCount(0)`
+	// Harter Surface-Check: ohne ihn waere jedes spaetere `toHaveCount(0)`
 	// bedeutungslos (leerer DOM zaehlt auch 0). AlertRulesEditor wird sowohl im
 	// .tn-desktop- als auch im .tn-mobile-Baum gemountet — daher scopen.
 	const editor = page.locator('.tn-mobile').getByTestId('alert-rules-editor');
@@ -67,7 +78,7 @@ async function openNewTripAlerts(page: Page) {
 	return editor;
 }
 
-// Legt eine Default-Regel an (wind_gust/absolut) und oeffnet ihren Edit-Modus.
+// Legt eine Default-Regel an und oeffnet ihren Edit-Modus.
 async function openFirstRuleEditor(page: Page, editor: ReturnType<Page['locator']>) {
 	await editor.getByTestId('alert-rules-editor-add').click();
 	await editor.getByTestId('alert-rule-kebab-trigger').first().click();
@@ -77,69 +88,171 @@ async function openFirstRuleEditor(page: Page, editor: ReturnType<Page['locator'
 	return edit;
 }
 
-test.describe('#1488 Scheibe A: Absolut-Modus fuer Gewitter gesperrt', () => {
-	test('Böen: Absolut-Karte bleibt vorhanden und waehlbar (AC-2 Positivkontrolle)', async ({ page }) => {
+// Oeffnet den Edit-Modus einer bereits sichtbaren Regel (ohne eine neue anzulegen).
+async function reopenRuleEditor(editor: ReturnType<Page['locator']>) {
+	await editor.getByTestId('alert-rule-kebab-trigger').first().click();
+	await editor.getByTestId('alert-rule-edit-btn').first().click();
+	const edit = editor.getByTestId('alert-rule-edit').first();
+	await expect(edit).toBeVisible();
+	return edit;
+}
+
+test.describe('#1895 Schritt 1: Modus-Auswahl und Absolut-Feld sind zurueckgebaut', () => {
+	test('Boeen: keine Modus-Karten, keine Modus-Gruppe, aber Δ-Schwelle und Zeitfenster (AC-1)', async ({ page }) => {
 		const editor = await openNewTripAlerts(page);
 		const edit = await openFirstRuleEditor(page, editor);
 
-		// Default-Regel ist wind_gust (newDefaultRule) — keine Delta-only-Metrik.
+		// Positivkontrolle: die Card ist wirklich die Bearbeiten-Card der Boeen-Regel.
+		// Ohne sie hiesse „keine Modus-Karte" bloss „kein DOM".
 		await expect(edit.getByTestId('alert-rule-metric')).toHaveValue('wind_gust');
-		await expect(modeCard(edit, 'absolute')).toHaveCount(1);
-		await expect(modeCard(edit, 'absolute')).toBeEnabled();
-		await modeCard(edit, 'absolute').click();
-		await expect(edit.locator('[data-testid="mode-card-absolute-selected"]')).toHaveCount(1);
+
+		// Soft, damit ein frueher Bruch die spaeteren Zusicherungen nicht ungemessen
+		// laesst — „nicht ausgefuehrt" saehe im RED-Lauf aus wie „erfuellt".
+		await expect.soft(alleModusKarten(edit)).toHaveCount(0);
+		await expect.soft(modeCard(edit, 'absolute')).toHaveCount(0);
+		await expect.soft(modeCard(edit, 'delta')).toHaveCount(0);
+		await expect.soft(modeCard(edit, 'both')).toHaveCount(0);
+		await expect.soft(edit.locator('[role="radiogroup"][aria-label="Alarm-Modus"]')).toHaveCount(0);
+		await expect.soft(edit.getByTestId('alert-rule-delta-only-hint')).toHaveCount(0);
+		// Der „Beides"-Zweig trug zwei Schwellenfelder mit eigenen testids; nach dem
+		// Kollaps traegt der einzige verbleibende Zweig nur `alert-rule-threshold`.
+		await expect.soft(edit.getByTestId('alert-rule-threshold-abs')).toHaveCount(0);
+		await expect.soft(edit.getByTestId('alert-rule-threshold-delta')).toHaveCount(0);
+
+		// Der Δ-Zweig BLEIBT sichtbar (Annahme 1 der Spec, vom PO freigegeben).
+		await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(1);
+		await expect.soft(edit.getByTestId('alert-rule-threshold')).toBeVisible();
+		await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(1);
+		await expect.soft(edit.getByTestId('alert-rule-delta-window')).toBeVisible();
+
+		// Speichern-Knopf traegt fest „Speichern", nie mehr „Beide Regeln speichern".
+		await expect.soft(edit.getByTestId('alert-rule-save')).toHaveText('Speichern');
 	});
 
-	test('Gewitter: keine Absolut-Karte, kein MITTEL/HOCH-Select (AC-1)', async ({ page }) => {
+	test('Metrik-Wechsel: auch Gewitter und Temperatur (Änderung) ohne Modus-Auswahl (AC-1)', async ({ page }) => {
 		const editor = await openNewTripAlerts(page);
 		const edit = await openFirstRuleEditor(page, editor);
 
-		// Positivkontrolle im selben Testfall: bei Böen steht die Absolut-Karte da.
-		await expect(modeCard(edit, 'absolute')).toHaveCount(1);
+		for (const metric of ['thunder_level', 'temperature_change']) {
+			await edit.getByTestId('alert-rule-metric').selectOption(metric);
+			// Anti-Vakuum je Durchlauf: die Card steht nach dem Wechsel noch, und der
+			// Δ-Zweig ist gerendert. Sonst waere „keine Modus-Karte" nur „nichts da".
+			await expect(edit.getByTestId('alert-rule-metric')).toHaveValue(metric);
+			await expect(edit.getByTestId('alert-rule-threshold')).toHaveCount(1);
 
+			await expect.soft(alleModusKarten(edit)).toHaveCount(0);
+			await expect.soft(edit.locator('[role="radiogroup"][aria-label="Alarm-Modus"]')).toHaveCount(0);
+			await expect.soft(edit.getByTestId('alert-rule-threshold-abs')).toHaveCount(0);
+			await expect.soft(edit.getByTestId('alert-rule-delta-only-hint')).toHaveCount(0);
+			await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveCount(1);
+		}
+
+		// Die Stufenwoerter aus dem alten Gewitter-Absolut-Select (#1488) bleiben weg.
 		await edit.getByTestId('alert-rule-metric').selectOption('thunder_level');
-		// Gegenprobe, dass die Modus-Auswahl nach dem Metrik-Wechsel ueberhaupt
-		// noch gerendert wird — sonst waere die Abwesenheit der Absolut-Karte nur
-		// die Abwesenheit der ganzen Zeile.
-		await expect(modeCard(edit, 'delta')).toHaveCount(1);
-
-		// AC-1a: keine „Absolut"-Karte mehr fuer Gewitter.
-		// AC-1b: der Schwellwert-Select mit MITTEL/HOCH existiert nicht mehr im DOM.
-		// Beide als SOFT-Assertion: eine harte wuerde den Testfall an der ersten
-		// Stelle abbrechen, und die zweite Zusicherung bliebe im RED-Lauf
-		// ungemessen — „nicht ausgefuehrt" saehe dann aus wie „erfuellt".
-		await expect.soft(modeCard(edit, 'absolute')).toHaveCount(0);
 		await expect.soft(edit.locator('option', { hasText: /^MITTEL$/ })).toHaveCount(0);
 		await expect.soft(edit.locator('option', { hasText: /^HOCH$/ })).toHaveCount(0);
+	});
 
-		// AC-1c: der Modus darf nach dem Wechsel nicht auf der verschwundenen
-		// „Absolut"-Auswahl haengenbleiben. Ohne diese Zusicherung faengt KEIN
-		// Test die Entfernung des editMode-Guards (in der GREEN-Phase per
-		// Mutation gemessen, s. gegenprobe_mutation_editmode_guard.log) — der
-		// Nutzer saehe dann eine Schwelle, die beim Speichern still durch die
-		// Δ-Vorgabe ersetzt wird.
-		await expect.soft(edit.locator('[data-testid="mode-card-delta-selected"]')).toHaveCount(1);
+	test('Absolut-Schwellenfeld existiert fuer KEINE Metrik (AC-5)', async ({ page }) => {
+		const editor = await openNewTripAlerts(page);
+		const edit = await openFirstRuleEditor(page, editor);
 
-		// AC-1d: die Sperre haengt an DELTA_ONLY_METRICS, nicht am Namen
-		// 'thunder_level'. Ohne eine ZWEITE Delta-only-Metrik bliebe eine
-		// Verengung des Guards auf `draft.metric !== 'thunder_level'` unbemerkt
-		// (Adversary-Fund F001) — dann saehe der Nutzer bei
-		// „Temperatur (Änderung)" weiterhin eine anklickbare Absolut-Karte,
-		// deren Schwelle expandRules() beim Speichern still zu kind='delta'
-		// umschreibt. Genau dieses „sichtbar, aber wirkungslos" ist der Gegen-
-		// stand des Tickets. `temperature_change` gewaehlt, weil im selben
-		// Select erreichbar: kein zweiter Seitenaufbau, kein weiterer
-		// GPX-Durchlauf, damit der billigste der drei verbleibenden Faelle.
-		await edit.getByTestId('alert-rule-metric').selectOption('temperature_change');
-		await expect.soft(modeCard(edit, 'delta')).toHaveCount(1);
-		await expect.soft(modeCard(edit, 'absolute')).toHaveCount(0);
+		// Metrik-Werte aus dem DOM lesen, nicht abschreiben: eine abgeschriebene
+		// Liste wuerde beim naechsten neuen Select-Eintrag still veralten.
+		const werte = await edit
+			.getByTestId('alert-rule-metric')
+			.locator('option')
+			.evaluateAll((opts) => opts.map((o) => (o as HTMLOptionElement).value));
+		// Anti-Vakuum: eine leere Optionsliste wuerde die Schleife ueberspringen und
+		// den Test gruen lassen, ohne eine einzige Metrik gemessen zu haben.
+		expect(werte.length).toBeGreaterThanOrEqual(9);
+
+		for (const wert of werte) {
+			await edit.getByTestId('alert-rule-metric').selectOption(wert);
+			await expect(edit.getByTestId('alert-rule-metric')).toHaveValue(wert);
+			// Positivkontrolle je Metrik: die Card ist gerendert …
+			await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveCount(1);
+			// … und traegt trotzdem kein Absolut-Feld.
+			await expect.soft(edit.getByTestId('alert-rule-threshold-abs')).toHaveCount(0);
+			// Die Modus-Auswahl ist die EINZIGE Tuer zum Absolut-Feld: bis #1895 war
+			// `alert-rule-threshold-abs` nur im Modus „Beides" im DOM, im Modus
+			// „Absolut" dagegen nie. Ohne diese Zeile waere der ganze Testfall
+			// vakuum-gruen — er lief am 2026-09-21 gegen den unveraenderten Stand
+			// gruen durch, obwohl jede Metrik noch drei Modus-Karten anbot und der
+			// Nutzer das Absolut-Feld mit einem Klick erreicht haette. Solange eine
+			// Metrik Modus-Karten zeigt, ist „kein Absolut-Feld" nur eine Aussage
+			// ueber den gerade eingestellten Modus, nicht ueber die Metrik.
+			await expect.soft(alleModusKarten(edit)).toHaveCount(0);
+		}
+	});
+
+	test('Neue Regel startet als Aenderungsregel mit Δ 20 / 6h (AC-7)', async ({ page }) => {
+		const editor = await openNewTripAlerts(page);
+		await editor.getByTestId('alert-rules-editor-add').click();
+
+		const row = editor.getByTestId('alert-rule-row').first();
+		await expect(row).toBeVisible();
+		await expect.soft(row).toContainText('Δ');
+		await expect.soft(row).not.toContainText('Abs');
+
+		const edit = await reopenRuleEditor(editor);
+		await expect.soft(edit.getByTestId('alert-rule-threshold')).toHaveValue('20');
+		await expect.soft(edit.getByTestId('alert-rule-delta-window')).toHaveValue('6h');
+	});
+
+	test('Speichern erhaelt genau eine Regel — keine geht verloren, keine kommt hinzu (AC-2)', async ({ page }) => {
+		const editor = await openNewTripAlerts(page);
+		const edit = await openFirstRuleEditor(page, editor);
+
+		await edit.getByTestId('alert-rule-metric').selectOption('precipitation_sum');
+		await edit.getByTestId('alert-rule-save').click();
+
+		// Genau eine Zeile: nicht null (Regel verloren -> das Pruef-Gate
+		// has_active_rules koennte kippen) und nicht zwei (das alte „Beides"
+		// erzeugte ein Regel-Paar).
+		await expect(editor.getByTestId('alert-rule-row')).toHaveCount(1);
+		const row = editor.getByTestId('alert-rule-row').first();
+		await expect.soft(row).toContainText('Niederschlag');
+		await expect.soft(row).toContainText('Δ');
+		await expect.soft(row.getByRole('checkbox')).toBeChecked();
+		// Keine Paar-Markierung mehr, weil expandRules() nie mehr zwei Regeln liefert.
+		await expect.soft(editor.getByTestId('pair-indicator')).toHaveCount(0);
+	});
+
+	// Dieser Fall ist ABSICHTLICH schon vor dem Umbau gruen und muss es danach
+	// bleiben: AC-3 sichert nicht eine neue Faehigkeit zu, sondern das Ueberleben
+	// einer vorhandenen. Sein Biss wird darum nicht ueber RED gemessen, sondern in
+	// der Mutations-Gegenprobe (AC-6): faellt der Chip-Block aus der Edit-Card,
+	// muss dieser Fall rot werden. Gemessen am 2026-09-21: gruen gegen den
+	// unveraenderten Stand.
+	test('Kanal-Chips ueberleben den Rueckbau und schalten weiterhin um (AC-3)', async ({ page }) => {
+		const editor = await openNewTripAlerts(page);
+		const edit = await openFirstRuleEditor(page, editor);
+
+		// Standardkanaele in `/trips/new` sind E-Mail und Telegram (SMS ist aus).
+		const email = edit.getByTestId('alert-rule-channel-email');
+		const telegram = edit.getByTestId('alert-rule-channel-telegram');
+		await expect(email).toBeVisible();
+		await expect(telegram).toBeVisible();
+		await expect(edit.getByTestId('alert-rule-channel-sms')).toHaveCount(0);
+		await expect(email).toHaveAttribute('aria-pressed', 'true');
+		await expect(telegram).toHaveAttribute('aria-pressed', 'true');
+
+		// Umschalten erreicht toggleAlertChannel(): Telegram ab, E-Mail bleibt.
+		await telegram.click();
+		await expect(telegram).toHaveAttribute('aria-pressed', 'false');
+		await expect(email).toHaveAttribute('aria-pressed', 'true');
+
+		await edit.getByTestId('alert-rule-save').click();
+
+		// Roundtrip IM EDITOR (kein API-Aufruf): die Ansichtszeile zeigt nur E-Mail.
+		const row = editor.getByTestId('alert-rule-row').first();
+		await expect(row).toBeVisible();
+		await expect.soft(row.locator('.channel-chip')).toHaveText(['E-Mail']);
+
+		// Und erneut geoeffnet steht Telegram weiter auf „aus".
+		const wieder = await reopenRuleEditor(editor);
+		await expect.soft(wieder.getByTestId('alert-rule-channel-email')).toHaveAttribute('aria-pressed', 'true');
+		await expect.soft(wieder.getByTestId('alert-rule-channel-telegram')).toHaveAttribute('aria-pressed', 'false');
 	});
 });
-
-// AC-4 („Bestandsregel ueberlebt PUT→GET unveraendert") ist per PO-Entscheid
-// vom 2026-08-16 gestrichen und der zugehoerige Testfall hier entfernt: der
-// Go-Store normalisiert `alert_rules` bei jedem Laden und Speichern
-// (internal/store/trip.go:206/:238 -> model.SyncAlertRules), die Given-Bedingung
-// ist also gar nicht herstellbar. Der Befund ist in #1895 nachgetragen; die
-// Zusicherung „Scheibe A fuegt keinen Umschreibe-Code hinzu" bleibt eine
-// Unterlassung, kein Testfall.
