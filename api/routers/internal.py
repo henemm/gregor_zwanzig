@@ -1,10 +1,20 @@
-"""Internal Read-Only Endpoints für Tooling/Validator (Issue #115).
+"""Interne Endpunkte für Tooling/Validator und für den Go-Prozess (Issue #115).
 
 Spec: docs/specs/modules/validator_internal_loaded_endpoint.md
+Spec: docs/specs/modules/forecast_go_pfad_kontingent.md (#2391)
 
 Macht den Python-Loader-Output für den External Validator (Issue #110)
 direkt beobachtbar. Nicht versionsstabil, nicht für Frontend/Endbenutzer.
+
+Seit #2391 nicht mehr ausschliesslich read-only: die
+Kontingent-Reservierung (``POST /api/_internal/forecast-budget/reserve``)
+bucht im Erfolgsfall in den Tageszaehler (ADR-0076). Alle Routen dieses
+Moduls liegen hinter ``X-GZ-Core-Auth`` (ADR-0062, Middleware in
+``api/main.py``).
 """
+import math
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
@@ -21,6 +31,9 @@ from fastapi.responses import JSONResponse
 from app.loader import load_all_trips as _legacy_load_all_trips, _trip_to_dict
 from app.loader import load_all_trips
 from providers.base import get_provider
+# Bare-Import wie oben (#1308): der Monkeypatch auf die Klassenkonstante
+# DAILY_BUDGET trifft nur dann dieselbe Klasse, die dieser Endpunkt benutzt.
+from services.forecast_budget import ForecastBudgetGate
 from services.stage_weather import compute_stage_weather
 
 router = APIRouter()
@@ -82,3 +95,64 @@ def stages_weather(
         # einem ungefangenen 500 crashen (AC-5).
         return JSONResponse(status_code=500, content={"error": "store_error"})
     return {"results": results}
+
+
+# --- Kontingent-Reservierung fuer den Go-Forecast-Pfad (Issue #2391) --------
+
+# Ein Forecast-Abruf ueber den Go-Pfad kostet mindestens zwei Upstream-Calls
+# (doRequest fuer die Vorhersage + fetchUVData, beide laufen unbedingt). Die
+# Zahl ist bewusst eine Konstante HIER und keine Groesse auf der Leitung: ein
+# Query-Parameter "units" liesse Handler und Gate auseinanderdriften, weil der
+# Core dann jede vom Aufrufer geschickte Zahl annaehme, statt selbst zu wissen,
+# was ein Forecast-Abruf kostet (Spec, "Implementation Details").
+EINHEITEN_JE_FORECAST_ABRUF = 2
+
+
+def _sekunden_bis_utc_mitternacht(jetzt: datetime | None = None) -> int:
+    """Wartezeit bis zum Zaehler-Reset an der UTC-Tagesgrenze.
+
+    Der Tageszaehler wird an der UTC-Mitternacht zurueckgesetzt
+    (``ForecastBudgetGate._load_for_today``) — jeder kuerzere Wert waere eine
+    Luege gegenueber dem Aufrufer, jeder laengere unnoetig. Aufgerundet und auf
+    mindestens 1 geklemmt, damit ein Aufruf knapp vor der Grenze nie 0 nennt.
+    """
+    jetzt = jetzt or datetime.now(timezone.utc)
+    naechste = (jetzt + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return max(1, int(math.ceil((naechste - jetzt).total_seconds())))
+
+
+@router.post("/api/_internal/forecast-budget/reserve")
+def reserve_forecast_budget(user_id: str = Query(...), priority: str = Query(...)):
+    """Prueft und bucht das Tageskontingent eines Forecast-Abrufs in EINEM
+    Aufruf — der Weg, ueber den der Go-Handler ``/api/forecast`` an dasselbe
+    Gate andockt, ohne es in Go nachzubauen (ADR-0076, Issue #2391).
+
+    ``user_id`` ist Pflicht-Parameter OHNE Default (ADR-0003/ADR-0075 Punkt 4):
+    ein Ersatzwert wie ``"default"`` buchte auf ein fremdes Konto. ``priority``
+    ist bewusst ein freier String und kein ``Literal`` — das Gate kennt die
+    zulaessigen Werte, und eine Typeinschraenkung hier verdoppelte diese
+    Kenntnis.
+
+    Erlaubter und abgelehnter Weg sind zwei DISJUNKTE Zweige: eine Ablehnung
+    bucht nichts.
+    """
+    gate = ForecastBudgetGate(user_id)
+    if not gate.allow(priority):
+        return {
+            "allowed": False,
+            "retry_after_s": _sekunden_bis_utc_mitternacht(),
+        }
+
+    # Auf dem Go-Pfad gibt es keinen Antwort-Cache — jeder durchgelassene
+    # Abruf ist faktisch ein Miss. Ohne diese Buchung luege die Cache-Hit-Quote
+    # in /api/scheduler/status nach oben.
+    gate.record_cache_miss()
+    for _ in range(EINHEITEN_JE_FORECAST_ABRUF):
+        # Wiederholter Aufruf statt eines Zaehler-Parameters: record_call()
+        # traegt zusaetzlich die user_id in die mengengepruefte Menge
+        # "active_users" ein, der zweite Aufruf erhoeht also ausschliesslich
+        # "calls". Absicht, kein Kopierfehler (Spec Z. 73-85).
+        gate.record_call()
+    return {"allowed": True}
