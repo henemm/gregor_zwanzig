@@ -65,11 +65,28 @@ const ZAEHLBEFEHL =
 	` | grep -v __tests__ | grep -vE ':\\s*(\\*|//|/\\*)'`;
 
 /**
- * Eingefrorene Soll-Liste (68 Fundstellen) — Zielzustand NACH dem
- * Totcode-Rueckbau von S6a. Entspricht dem Anhang der Spec (69 Fundstellen,
- * Stand `73f504c9`) MINUS `WeatherMetricsTab.svelte:577` (tote Bedingung,
- * entfaellt per AC-1). Die Kategorien HERKUNFT/FACHLICH/DARSTELLUNG stehen im
- * Spec-Anhang, nicht hier — diese Ratsche misst Fundorte, nicht Absichten.
+ * Eingefrorene Soll-Liste (67 Fundstellen) — Zielzustand NACH dem
+ * Totcode-Rueckbau von S6a UND dem Guard-Rueckbau von S6b. Entspricht dem
+ * Anhang der S6a-Spec (69 Fundstellen, Stand `73f504c9`) MINUS
+ * `WeatherMetricsTab.svelte:577` (tote Bedingung, entfaellt per S6a AC-1)
+ * MINUS `WeatherMetricsTab.svelte:1273` (Redundanz, entfaellt per S6b AC-4/AC-5,
+ * Spec `docs/specs/modules/rework_2276_s6b_wetter_metriken.md`). Die
+ * Kategorien HERKUNFT/FACHLICH/DARSTELLUNG stehen im Spec-Anhang, nicht hier —
+ * diese Ratsche misst Fundorte, nicht Absichten.
+ *
+ * TDD RED (S6b): solange `:1273` noch `context !== 'vergleich' || !wiz ||
+ * !vergleichSpeicherung` lautet, meldet der Mengenvergleich
+ * „zusaetzlich: WeatherMetricsTab.svelte:1273" — das ist der rote Ausgangs-
+ * zustand dieser Scheibe. Gruen wird er mit der zeilentreuen Verkuerzung auf
+ * `if (!vergleichSpeicherung) return;`.
+ *
+ * 🔴 ZEILENZAHL-VERTRAG an S6b /50: `WeatherMetricsTab.svelte:1323` steht
+ * UNTERHALB des Instanz-Skripts (`</script>` bei 1282). Jede im Skript
+ * HINZUGEFUEGTE Zeile — auch die zwei neuen Wertprop-Adapter — verschiebt
+ * diesen eingefrorenen Eintrag. Wird der Waechter deshalb rot: die Zeilenzahl
+ * der bearbeiteten Datei wiederherstellen (Ersetzung an Ort und Stelle,
+ * vorhandenen Kommentarumfang mitnutzen) — NICHT die eingefrorene Liste
+ * nachziehen. Genau EIN Eintrag (`:1273`) darf in dieser Scheibe fallen.
  */
 const EINGEFROREN: readonly string[] = [
 	'AlarmeTab.svelte:171',
@@ -98,7 +115,6 @@ const EINGEFROREN: readonly string[] = [
 	'WeatherMetricsTab.svelte:560',
 	'WeatherMetricsTab.svelte:589',
 	'WeatherMetricsTab.svelte:602',
-	'WeatherMetricsTab.svelte:1273',
 	'WeatherMetricsTab.svelte:1323',
 	'versand-tab/vtBriefingChannelsText.ts:21',
 	'versand-tab/vtBriefingChannelsText.ts:26',
@@ -144,7 +160,7 @@ const EINGEFROREN: readonly string[] = [
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein
  *  versehentliches Kuerzen des Literals oben. */
-const EINGEFROREN_SOLL_ANZAHL = 68;
+const EINGEFROREN_SOLL_ANZAHL = 67;
 
 /** Reines Mengen-Delta in BEIDEN Richtungen. Bewusst als eigene Funktion, weil
  *  AC-3 verlangt, dass ein FEHLENDER Soll-Eintrag den Waechter genauso rot
@@ -198,7 +214,7 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 		);
 	});
 
-	test('die eingefrorene Soll-Liste ist unversehrt (68 Eintraege, keine Duplikate)', () => {
+	test('die eingefrorene Soll-Liste ist unversehrt (67 Eintraege, keine Duplikate)', () => {
 		assert.strictEqual(
 			EINGEFROREN.length,
 			EINGEFROREN_SOLL_ANZAHL,

@@ -1270,13 +1270,13 @@
 			: null
 	);
 	$effect(() => {
-		if (context !== 'vergleich' || !wiz || !vergleichSpeicherung) return;
+		if (!vergleichSpeicherung) return;
 		// Liest alle neun persistenzrelevanten Felder (Abhaengigkeiten) — deckt
 		// sowohl die drei bislang stillen Gesten (Metrik-Checkbox, Amtliche-
 		// Warnungen-Schalter, Tagesfenster, AC-5) als auch die drei Drag-Ende-
 		// Faelle ab. Das Melden selbst ohne Tracking, damit Zustandswechsel des
 		// Controllers keinen Neulauf ausloesen.
-		wetterMetrikenSnapshotAus(wiz);
+		wetterMetrikenSnapshotAus(wiz!);
 		untrack(() => vergleichSpeicherung.aenderungMelden());
 	});
 </script>
@@ -1470,8 +1470,16 @@
 				     Register-Objekt `metricById` (GET /api/metrics) und damit eine
 				     andere Datenform als die, ueber die groupCompareCatalog()
 				     gruppiert. -->
+				<!-- Issue #2276 S6b: flache Wertprops statt `wiz`-Bindung (dasselbe
+				     Muster wie der Ausblick-Mount darunter, #1720 S1). Die beiden
+				     Adapter schreiben exakt das, was die Komponente bis dahin selbst
+				     schrieb — und NUR das eine Feld. -->
 				<CompareHourlyLayoutControls
-					{wiz} catalog={compareCatalog}
+					metricKeys={wiz.hourlyMetricKeys}
+					onMetricKeys={(keys) => { if (wiz) wiz.hourlyMetricKeys = keys; }}
+					enabled={wiz.hourlyEnabled}
+					onEnabledChange={(checked) => { if (wiz) wiz.hourlyEnabled = checked; }}
+					catalog={compareCatalog}
 					smsSymbols={metricSymbols}
 				/>
 			</div>
