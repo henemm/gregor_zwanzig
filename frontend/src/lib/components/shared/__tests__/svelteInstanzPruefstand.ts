@@ -63,7 +63,14 @@ export function ohneTypen(quelle: string, knoten: Knoten): string {
 		}
 	}
 	lauf(knoten);
-	const zeichen = [...quelle];
+	// Issue #2276 S6c: `split('')` statt `[...quelle]`. Der Spread zerlegt nach
+	// CODE-POINTS, die AST-Offsets zaehlen aber UTF-16-Einheiten — jedes Zeichen
+	// ausserhalb der BMP (z. B. ein 🔴 im Kommentar oberhalb) verschiebt den
+	// Ausschnitt um eins. In `AlarmeTab.svelte` schnitt das genau die oeffnende
+	// `$`-Stelle des `$effect`-Aufrufs ab: der Rumpf liess sich nicht mehr
+	// uebersetzen (SyntaxError) — die Zusicherung IM Effekt waere unmessbar
+	// geblieben.
+	const zeichen = quelle.split('');
 	for (const [a, b] of loecher) for (let i = a; i < b && i < zeichen.length; i++) zeichen[i] = ' ';
 	return zeichen.slice(knoten.start, knoten.end).join('');
 }

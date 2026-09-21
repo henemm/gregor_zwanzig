@@ -19,6 +19,11 @@
 // deshalb Soll (Literal) gegen Ist (echter Zaehlbefehl) — in BEIDEN
 // Richtungen.
 //
+// 🔴 STAND S6c (Issue #2276): der Zeilenzahl-Vertrag unten gilt fuer
+// `AlarmeTab.svelte` in DIESER Scheibe NICHT — dort werden 14 Eintraege bewusst
+// gestrichen und 4 auf neue Zeilennummern nachgefuehrt. Begruendung und genaue
+// Auflage: Kommentar an `EINGEFROREN` weiter unten.
+//
 // TDD RED (Stand `73f504c9`)
 // -------------------------
 // Beim Stand vor S6a liefert der Zaehlbefehl 69 Fundstellen. Die eingefrorene
@@ -50,7 +55,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -65,48 +70,49 @@ const ZAEHLBEFEHL =
 	` | grep -v __tests__ | grep -vE ':\\s*(\\*|//|/\\*)'`;
 
 /**
- * Eingefrorene Soll-Liste (67 Fundstellen) — Zielzustand NACH dem
- * Totcode-Rueckbau von S6a UND dem Guard-Rueckbau von S6b. Entspricht dem
- * Anhang der S6a-Spec (69 Fundstellen, Stand `73f504c9`) MINUS
- * `WeatherMetricsTab.svelte:577` (tote Bedingung, entfaellt per S6a AC-1)
- * MINUS `WeatherMetricsTab.svelte:1273` (Redundanz, entfaellt per S6b AC-4/AC-5,
- * Spec `docs/specs/modules/rework_2276_s6b_wetter_metriken.md`). Die
- * Kategorien HERKUNFT/FACHLICH/DARSTELLUNG stehen im Spec-Anhang, nicht hier —
- * diese Ratsche misst Fundorte, nicht Absichten.
+ * Eingefrorene Soll-Liste (53 Fundstellen) — Zielzustand NACH S6a (Totcode),
+ * S6b (Guard-Rueckbau) UND S6c (Alarme-Flaeche auf Wertprops). Die Kategorien
+ * HERKUNFT/FACHLICH/DARSTELLUNG stehen im Spec-Anhang, nicht hier — diese
+ * Ratsche misst Fundorte, nicht Absichten.
  *
- * TDD RED (S6b): solange `:1273` noch `context !== 'vergleich' || !wiz ||
- * !vergleichSpeicherung` lautet, meldet der Mengenvergleich
- * „zusaetzlich: WeatherMetricsTab.svelte:1273" — das ist der rote Ausgangs-
- * zustand dieser Scheibe. Gruen wird er mit der zeilentreuen Verkuerzung auf
- * `if (!vergleichSpeicherung) return;`.
+ * TDD RED (S6c): solange die 14 in der Schicksals-Tabelle als FAELLT markierten
+ * AlarmeTab-Zweige im Quelltext stehen, meldet der Mengenvergleich sie als
+ * „zusaetzlich" — das ist der rote Ausgangszustand dieser Scheibe. Gruen wird
+ * er, wenn der Vergleichs-Zweig auf Wertprops steht und /50 die vier
+ * verbliebenen Eintraege auf ihre NEUEN Zeilennummern nachgefuehrt hat.
  *
- * 🔴 ZEILENZAHL-VERTRAG an S6b /50: `WeatherMetricsTab.svelte:1323` steht
- * UNTERHALB des Instanz-Skripts (`</script>` bei 1282). Jede im Skript
- * HINZUGEFUEGTE Zeile — auch die zwei neuen Wertprop-Adapter — verschiebt
- * diesen eingefrorenen Eintrag. Wird der Waechter deshalb rot: die Zeilenzahl
- * der bearbeiteten Datei wiederherstellen (Ersetzung an Ort und Stelle,
- * vorhandenen Kommentarumfang mitnutzen) — NICHT die eingefrorene Liste
- * nachziehen. Genau EIN Eintrag (`:1273`) darf in dieser Scheibe fallen.
+ * 🔴 VERTRAG AN S6c /50 — er ERSETZT den Zeilenzahl-Vertrag von S6a/S6b fuer
+ * DIESE Scheibe (Spec `rework_2276_s6c_alarme.md`, Design-Entscheidung 1):
+ * In `AlarmeTab.svelte` entstehen rund 24 neue Prop-Zeilen OBERHALB aller
+ * eingefrorenen Eintraege. Zeilenzahl-Wiederherstellung waere hier Verrenkung,
+ * nicht Sorgfalt — deshalb gilt ausnahmsweise:
+ *   * die 14 FAELLT-Eintraege werden BEWUSST gestrichen (Begruendung je
+ *     Eintrag in der Commit-Nachricht, im selben Commit wie der Rueckbau),
+ *   * die 4 BLEIBT-Eintraege werden auf ihre neu gemessenen Zeilennummern
+ *     nachgefuehrt — geprueft wird, dass der BEDINGUNGSTEXT derselbe ist
+ *     (siehe Kommentar an der Liste), nicht die Position,
+ *   * `alarme-tab/alarmeTabSections.ts:27/:38/:42` bleiben unberuehrt; ihre
+ *     Zeilennummern duerfen sich NICHT verschieben.
+ * Fuer alle Dateien AUSSERHALB von `AlarmeTab.svelte` gilt der alte Vertrag
+ * unveraendert weiter: verschobene Zeilennummer = Befund, kein Nachtrag.
  */
 const EINGEFROREN: readonly string[] = [
-	'AlarmeTab.svelte:171',
-	'AlarmeTab.svelte:174',
-	'AlarmeTab.svelte:186',
-	'AlarmeTab.svelte:199',
-	'AlarmeTab.svelte:216',
-	'AlarmeTab.svelte:221',
-	'AlarmeTab.svelte:243',
-	'AlarmeTab.svelte:253',
-	'AlarmeTab.svelte:280',
-	'AlarmeTab.svelte:285',
-	'AlarmeTab.svelte:345',
-	'AlarmeTab.svelte:367',
-	'AlarmeTab.svelte:379',
-	'AlarmeTab.svelte:424',
-	'AlarmeTab.svelte:443',
-	'AlarmeTab.svelte:459',
-	'AlarmeTab.svelte:467',
-	'AlarmeTab.svelte:482',
+	// S6c: von 18 AlarmeTab-Eintraegen bleiben genau diese VIER (Schicksals-
+	// Tabelle der Spec). Ihre Zeilennummern verschieben sich durch den Umbau —
+	// /50 misst die neuen und traegt sie HIER ein (Bedingungstext woertlich
+	// daneben, damit am Inhalt geprueft werden kann, nicht an der Position):
+	//   :256  `context === 'vergleich'` — Ableitung `unalertableSelectedMetricNames`
+	//         (FACHLICH: route liefert strukturell immer `[]`, #1435 AC-7)
+	//   :514  `{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}`
+	//         (Anzeige-Zwilling der fachlichen Zusicherung aus :256)
+	//   :533  `{#if context === 'vergleich'}` — Kurzstil-Schalter
+	//         (DARSTELLUNG: im Trip steht derselbe Schalter im Versand-Reiter, #1260 S5)
+	//   :566  `{#if context === 'vergleich'}` — Beispielwarnung
+	//         (FACHLICH: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten)
+	'AlarmeTab.svelte:256',
+	'AlarmeTab.svelte:514',
+	'AlarmeTab.svelte:533',
+	'AlarmeTab.svelte:566',
 	'VersandTab.svelte:284',
 	'VersandTab.svelte:294',
 	'VersandTab.svelte:330',
@@ -160,7 +166,45 @@ const EINGEFROREN: readonly string[] = [
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein
  *  versehentliches Kuerzen des Literals oben. */
-const EINGEFROREN_SOLL_ANZAHL = 67;
+const EINGEFROREN_SOLL_ANZAHL = 53;
+
+/**
+ * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
+ *
+ * Warum das noetig ist: in S6c verschieben sich ihre Zeilennummern zwangslaeufig
+ * (Design-Entscheidung 1 der Spec), die Liste oben wird also nachgefuehrt. Ohne
+ * diese Fesselung waere der billigste Weg zu Gruen, einfach die vier Nummern
+ * einzutragen, die der Zaehlbefehl gerade ausgibt — dann bewachte die Ratsche
+ * nur noch sich selbst. Geprueft wird deshalb: an der eingetragenen Zeile steht
+ * WOERTLICH diese Bedingung, und im Fenster darunter steht der Baustein, zu dem
+ * sie gehoert. Ein auf eine fremde Verzweigung gesetzter Eintrag faellt damit
+ * auf, auch wenn die Mengen stimmen.
+ */
+const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: string }[] = [
+	{
+		eintrag: 'AlarmeTab.svelte:256',
+		zeile: "context === 'vergleich'",
+		folgt: 'deriveUnalertableSelectedMetricNames('
+	},
+	{
+		eintrag: 'AlarmeTab.svelte:514',
+		zeile: "{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}",
+		folgt: 'alarme-unalertable-metrics-hint'
+	},
+	{
+		eintrag: 'AlarmeTab.svelte:533',
+		zeile: "{#if context === 'vergleich'}",
+		folgt: 'TelegramKurzstilToggle'
+	},
+	{
+		eintrag: 'AlarmeTab.svelte:566',
+		zeile: "{#if context === 'vergleich'}",
+		folgt: 'VTAlertSample'
+	}
+];
+
+/** Wie viele Zeilen unter dem Zweig nach dem zugehoerigen Baustein gesucht wird. */
+const FENSTER = 8;
 
 /** Reines Mengen-Delta in BEIDEN Richtungen. Bewusst als eigene Funktion, weil
  *  AC-3 verlangt, dass ein FEHLENDER Soll-Eintrag den Waechter genauso rot
@@ -214,7 +258,7 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 		);
 	});
 
-	test('die eingefrorene Soll-Liste ist unversehrt (67 Eintraege, keine Duplikate)', () => {
+	test('die eingefrorene Soll-Liste ist unversehrt (53 Eintraege, keine Duplikate)', () => {
 		assert.strictEqual(
 			EINGEFROREN.length,
 			EINGEFROREN_SOLL_ANZAHL,
@@ -243,6 +287,41 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 				'  eine VERSCHOBENE Zeilennummer ist ein Befund, kein Nachtrag.'
 		);
 	});
+});
+
+describe('S6c: die vier ueberlebenden AlarmeTab-Eintraege zeigen auf ihre eigene Bedingung', () => {
+	for (const { eintrag, zeile, folgt } of BLEIBT_MIT_INHALT) {
+		test(`${eintrag} traegt weiterhin \`${zeile}\``, () => {
+			assert.ok(
+				EINGEFROREN.includes(eintrag),
+				`Messaufbau kaputt: \`${eintrag}\` steht nicht mehr in EINGEFROREN. Diese vier ` +
+					'Eintraege BLEIBEN in S6c — wer einen davon streicht, entfernt eine fachliche ' +
+					'oder darstellerische Verzweigung, keine HERKUNFT-Weiche.'
+			);
+			const [datei, nr] = eintrag.split(':');
+			const zeilen = readFileSync(join(SHARED, datei), 'utf-8').split('\n');
+			const index = Number(nr) - 1;
+			assert.ok(
+				index >= 0 && index < zeilen.length,
+				`Ratsche verletzt: ${eintrag} zeigt hinter das Dateiende (${zeilen.length} Zeilen).`
+			);
+			assert.strictEqual(
+				zeilen[index].trim(),
+				zeile,
+				`Ratsche verletzt: an ${eintrag} steht eine ANDERE Bedingung als die eingefrorene. ` +
+					'Wurde die Liste nach einer Zeilenverschiebung nur „nachgezogen", zeigt der ' +
+					'Eintrag jetzt auf eine fremde Verzweigung — die Mengen stimmen dann, die ' +
+					'Aussage nicht mehr. Nachfuehren heisst: die Zeile suchen, die DIESE Bedingung ' +
+					'traegt.'
+			);
+			const fenster = zeilen.slice(index + 1, index + 1 + FENSTER).join('\n');
+			assert.ok(
+				fenster.includes(folgt),
+				`Ratsche verletzt: unter ${eintrag} steht kein \`${folgt}\` mehr. Der Eintrag ` +
+					'gehoert damit nicht mehr zu dem Baustein, fuer den er eingefroren wurde.'
+			);
+		});
+	}
 });
 
 describe('AC-3: Rueckdreh-Gegenprobe — ein fehlender Soll-Eintrag macht rot', () => {

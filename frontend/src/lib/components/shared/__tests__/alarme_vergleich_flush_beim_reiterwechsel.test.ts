@@ -98,7 +98,7 @@ function aufbau() {
 	const queue = createPutQueue();
 	const speicherung = erstelleAlarmeVergleichSpeicherung({
 		client: api,
-		wiz,
+		zustand: wiz,
 		preset: () => basis,
 		enqueueHubWrite: (fn) => queue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {

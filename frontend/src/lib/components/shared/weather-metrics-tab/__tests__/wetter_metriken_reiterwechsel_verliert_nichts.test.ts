@@ -76,7 +76,7 @@ function hub() {
 		saveController: ctl
 	};
 	const wetterMetriken = erstelleWetterMetrikenVergleichSpeicherung({ ...gemeinsam, wiz: ws });
-	const alarme = erstelleAlarmeVergleichSpeicherung({ ...gemeinsam, wiz: ws });
+	const alarme = erstelleAlarmeVergleichSpeicherung({ ...gemeinsam, zustand: ws });
 	return { ws, ctl, wetterMetriken, alarme, bedienung: wetterMetrikenBedienung(ws) };
 }
 

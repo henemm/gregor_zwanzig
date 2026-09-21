@@ -22,12 +22,12 @@
 	// Issue #2276 S2: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import aus compare/, AC-9).
 	import {
 		alarmSnapshotAus,
+		alarmZustandsBruecke,
 		erstelleAlarmeVergleichSpeicherung
 	} from './alarmeVergleichSpeicherung.ts';
 	import { Eyebrow } from '$lib/components/atoms';
 	import type { Trip, AlertMetric, SensLevel, ComparePreset } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import TelegramKurzstilToggle from '$lib/components/shared/TelegramKurzstilToggle.svelte';
 	import AlertCooldownCard from '$lib/components/alerts-tab/AlertCooldownCard.svelte';
@@ -79,8 +79,46 @@
 		activeMetrics?: AlertMetric[];
 		metricLevels?: Record<AlertMetric, SensLevel>;
 		onMetricLevelChange?: (metric: AlertMetric, level: SensLevel) => void;
-		// vergleich
-		wiz?: CompareWizardState;
+		// vergleich — Issue #2276 S6c: reine Wertprops + Rueckrufe. Das Buendel
+		// baut `compare/alarmePropsAus.ts`, alle drei Vergleichs-Mounts speisen
+		// es identisch ein; der Wizard-Zustand liegt beim Elternteil.
+		//
+		// 🔴 EINE Diskriminator-Regel fuer alle Felder: unterschieden wird an
+		// etwas, das das Buendel IMMER liefert und der Trip-Mount NIE uebergibt.
+		// Wo `undefined` kein gueltiger Wert ist, entscheidet der WERT; bei
+		// Cooldown und Stillen Stunden ist `undefined` gueltig („nicht
+		// gesetzt") — dort entscheidet die Anwesenheit des RUECKRUFS.
+		/** Persistenzwert OHNE Bedienelement hier: der Schalter „Amtliche
+		 *  Warnungen im Bericht" steht im Inhalt-Bereich (#1301 D2). Der Wert
+		 *  laeuft nur durch, damit er beim naechsten Alarm-PUT nicht aus der
+		 *  Nutzlast faellt. */
+		amtlicheWarnungenImBericht?: boolean;
+		officialWarningsEnabled?: boolean;
+		onOfficialWarningsChange?: (an: boolean) => void;
+		metricAlertLevels?: Record<string, string>;
+		activeMetricKeys?: string[] | null;
+		sendTelegram?: boolean;
+		sendSms?: boolean;
+		sendPremiumSms?: boolean;
+		channelThresholds?: Record<string, string>;
+		onThresholdChange?: (kind: ChannelKind, level: ChannelThreshold) => void;
+		telegramStyle?: 'rich' | 'kurzform';
+		onTelegramStyleChange?: (stil: 'rich' | 'kurzform') => void;
+		cooldownMinutes?: number;
+		onCooldownChange?: (minuten: number | undefined) => void;
+		quietFrom?: string;
+		quietTo?: string;
+		onQuietHoursChange?: (von: string | undefined, bis: string | undefined) => void;
+		radarAlertEnabled?: boolean;
+		onRadarAlertChange?: (an: boolean) => void;
+		/** Bezugsgroesse der Ortszeit in den Stillen Stunden (#1726/#1378 AC-4).
+		 *  Der Vorgabewert deckt den Trip-Mount vollstaendig ab, der nichts
+		 *  uebergibt; die drei Vergleichs-Mounts liefern „des ersten Orts". */
+		zonenBezug?: string;
+		/** Rollback-Senke des UNVERAENDERTEN Vergleichs-Speicherwegs:
+		 *  `rollbackAlarmSnapshot` setzt nach einem gescheiterten PUT feldweise
+		 *  zurueck. KEIN Bedienelement schreibt hierueber. */
+		onAlarmFeldSetzen?: (feld: string, wert: unknown) => void;
 		// #1435 E1a-2: geladener Compare-Katalog als UEBERGABEWERT — der
 		// Modul-Getter registeredCompareMetricCatalog() ist nicht reaktiv und
 		// wuerde ein $derived nach spaeterem Laden nicht neu rechnen lassen.
@@ -93,10 +131,10 @@
 		// beide Kontexte
 		existingChannels?: Partial<AlertChannelState> | null;
 		onChannelToggle?: (kind: ChannelKind) => void;
-		// Issue #1461 S3b-2a (route) + S3b-2b (vergleich): route liest den
-		// Bestand ueber diese Prop (Trip-Speicherweg); vergleich liest/schreibt
-		// stattdessen direkt gegen `wiz.channelThresholds` (Muster
-		// metricAlertLevels/sendTelegram — kein zweiter Speicherweg noetig).
+		// Issue #1461 S3b-2a (route): route liest den Bestand ueber diese Prop
+		// (Trip-Speicherweg). Der Vergleich liest/schreibt seit S6c ueber die
+		// Wertprop `channelThresholds` + `onThresholdChange` (kein zweiter
+		// Speicherweg noetig).
 		existingChannelThresholds?: Partial<Record<ChannelKind, string | null>> | null;
 		// Issue #1745 A: Testhaken fuer den Tarif-Zustand (Muster
 		// VTBriefingChannels.svelte:60,74,82). Ohne Uebergabe (`undefined`)
@@ -113,7 +151,27 @@
 		activeMetrics,
 		metricLevels,
 		onMetricLevelChange,
-		wiz,
+		amtlicheWarnungenImBericht,
+		officialWarningsEnabled,
+		onOfficialWarningsChange,
+		metricAlertLevels,
+		activeMetricKeys,
+		sendTelegram,
+		sendSms,
+		sendPremiumSms,
+		channelThresholds,
+		onThresholdChange,
+		telegramStyle,
+		onTelegramStyleChange,
+		cooldownMinutes,
+		onCooldownChange,
+		quietFrom,
+		quietTo,
+		onQuietHoursChange,
+		radarAlertEnabled,
+		onRadarAlertChange,
+		zonenBezug = 'der Tour',
+		onAlarmFeldSetzen,
 		catalog,
 		preset,
 		onCompareUpdate,
@@ -153,9 +211,8 @@
 
 	// ── (b) Amtliche Warnungen — scharfer Trigger (S1; Inhalt-Schalter s.u.) ───
 	// route: lokaler State (Grundlage fuer den EINEN $effect unten).
-	// vergleich: kein lokaler State — Anzeige/Aenderung direkt gegen wiz.*
-	// (kein Self-Save, Persistenz macht CompareEditor/Hub-Bridge, s. Modul-
-	// Kommentar VersandTab.svelte:42-46).
+	// vergleich: kein lokaler State — Anzeige aus der Wertprop, Aenderung ueber
+	// den Rueckruf nach oben (Issue #2276 S6c).
 	//
 	// D2 (#1301, #1292 P4): der Inhalt-Schalter (official_alerts_enabled)
 	// wurde HIER ENTFERNT — er war ein doppelter Schreibpfad neben dem
@@ -164,28 +221,28 @@
 	// Alleiniger Schreiber ist jetzt der Inhalt-Bereich.
 	// Trigger bindet fachlich auf official_warnings.enabled (S1, scharf).
 	// Legacy-Fallback identisch zur Pipeline (trip_alert.py): nil -> Ist-Verhalten.
-	let officialWarningsEnabled = $state<boolean>(
+	let routeOfficialWarningsEnabled = $state<boolean>(
 		trip?.official_warnings?.enabled ?? trip?.official_alert_triggers_enabled !== false
 	);
 	const displayOfficialWarningsEnabled = $derived(
-		context === 'vergleich' ? (wiz?.officialWarningsEnabled ?? false) : officialWarningsEnabled
+		officialWarningsEnabled ?? routeOfficialWarningsEnabled
 	);
 	function handleOfficialWarningsToggle(checked: boolean) {
-		if (context === 'vergleich') {
-			if (wiz) wiz.officialWarningsEnabled = checked;
+		if (officialWarningsEnabled === undefined) {
+			routeOfficialWarningsEnabled = checked;
 			return;
 		}
-		officialWarningsEnabled = checked;
+		onOfficialWarningsChange?.(checked);
 	}
 
 	// ── (c) Metrik-Level-Tabelle ────────────────────────────────────────────────
-	// vergleich: Ableitung aus wiz.activeMetricKeys (Compare-Metrik-Namensraum)
-	// gegen den durchgereichten Register-Katalog (#1435 E1a-2). route: aus Props
-	// (Ermittlung aus trip ist S3-Aufgabe, s. Context-Doc).
+	// vergleich: Ableitung aus der Wertprop `activeMetricKeys` (Compare-Metrik-
+	// Namensraum) gegen den durchgereichten Register-Katalog (#1435 E1a-2).
+	// route: aus `activeMetrics` (Ermittlung aus trip ist S3-Aufgabe).
 	const effectiveActiveMetrics = $derived(
-		context === 'vergleich'
+		activeMetricKeys !== undefined
 			? deriveActiveAlertMetricsFromCatalog(
-					materializeActiveMetricKeys(wiz?.activeMetricKeys ?? null),
+					materializeActiveMetricKeys(activeMetricKeys ?? null),
 					catalog ?? []
 				)
 			: (activeMetrics ?? [])
@@ -198,7 +255,7 @@
 	const unalertableSelectedMetricNames = $derived(
 		context === 'vergleich'
 			? deriveUnalertableSelectedMetricNames(
-					materializeActiveMetricKeys(wiz?.activeMetricKeys ?? null),
+					materializeActiveMetricKeys(activeMetricKeys ?? null),
 					catalog ?? []
 				)
 			: []
@@ -213,16 +270,12 @@
 		metricLevels ?? ({} as Record<AlertMetric, SensLevel>)
 	);
 	const effectiveMetricLevels = $derived(
-		context === 'vergleich'
-			? ((wiz?.metricAlertLevels ?? {}) as Record<AlertMetric, SensLevel>)
-			: routeMetricLevels
+		(metricAlertLevels as Record<AlertMetric, SensLevel> | undefined) ?? routeMetricLevels
 	);
 	function handleMetricLevelChange(metric: AlertMetric, level: SensLevel) {
-		if (context === 'vergleich') {
-			if (wiz) wiz.metricAlertLevels = { ...wiz.metricAlertLevels, [metric]: level };
-			return;
+		if (metricAlertLevels === undefined) {
+			routeMetricLevels = { ...routeMetricLevels, [metric]: level };
 		}
-		routeMetricLevels = { ...routeMetricLevels, [metric]: level };
 		onMetricLevelChange?.(metric, level);
 	}
 
@@ -240,31 +293,26 @@
 	// schedule()-Aufruf im Container.
 	let routeChannelState = $state<AlertChannelState>(resolveAlertChannels(existingChannels));
 	const displayChannelState = $derived<AlertChannelState>(
-		context === 'vergleich'
-			? {
-					telegram: wiz?.sendTelegram ?? false,
-					sms: wiz?.sendSms ?? false,
-					premium_sms: wiz?.sendPremiumSms ?? false,
+		sendTelegram === undefined
+			? routeChannelState
+			: {
+					telegram: sendTelegram,
+					sms: sendSms ?? false,
+					premium_sms: sendPremiumSms ?? false,
+					// E-Mail bleibt implizit — kein Toggle im vergleich-Zweig.
 					email: true
 				}
-			: routeChannelState
 	);
 	function handleChannelToggle(kind: ChannelKind) {
-		if (context === 'vergleich') {
-			if (!wiz) return;
-			if (kind === 'telegram') wiz.sendTelegram = !wiz.sendTelegram;
-			else if (kind === 'sms') wiz.sendSms = !wiz.sendSms;
-			else if (kind === 'premium_sms') wiz.sendPremiumSms = !wiz.sendPremiumSms;
-			// E-Mail bleibt implizit — kein Toggle im vergleich-Zweig.
-			return;
+		if (sendTelegram === undefined) {
+			routeChannelState = { ...routeChannelState, [kind]: !routeChannelState[kind] };
 		}
-		routeChannelState = { ...routeChannelState, [kind]: !routeChannelState[kind] };
 		onChannelToggle?.(kind);
 	}
 
 	// ── (d2) Kanal-Schwellen — Issue #1461 S3b-2a (route) + S3b-2b (vergleich) ─
 	// route: lokaler State, Bestand kommt ueber existingChannelThresholds-Prop.
-	// vergleich: bindet direkt an wiz.channelThresholds (Muster metricAlertLevels
+	// vergleich: liest die Wertprop `channelThresholds` (Muster metricAlertLevels
 	// oben) — kein eigener lokaler State, keine eigene Persistenz-Logik hier.
 	// 🔴 Auflage (Spec „Implementation Details"): die Sichtbarkeit der
 	// Stufen-Auswahl darf NICHT vom WERT dieses Zustands abhaengen (Regress auf
@@ -276,34 +324,56 @@
 	let routeChannelThresholds = $state<AlertChannelThresholdState>(
 		resolveAlertChannelThresholds(existingChannelThresholds)
 	);
+	// Die Vorgabe „gering" fuellt nur die Kanaele, fuer die noch nichts
+	// gespeichert ist — ein gehaltener Wert ueberlebt unveraendert
+	// (`resolveAlertChannelThresholds` allein drehte jeden ihm unbekannten Wert
+	// auf „gering" zurueck).
 	const displayChannelThresholds = $derived<AlertChannelThresholdState>(
-		context === 'vergleich'
-			? resolveAlertChannelThresholds(wiz?.channelThresholds ?? null)
-			: routeChannelThresholds
+		channelThresholds === undefined
+			? routeChannelThresholds
+			: ({
+					...resolveAlertChannelThresholds(channelThresholds),
+					...channelThresholds
+				} as AlertChannelThresholdState)
 	);
 	function handleThresholdChange(kind: ChannelKind, level: ChannelThreshold) {
-		if (context === 'vergleich') {
-			if (wiz) {
-				// Issue #1745 A (Landmine 1): die VOLLE, bereits berechnete
-				// `updated`-Struktur durchreichen statt Feld-fuer-Feld zu picken —
-				// applyThresholdChange() liefert nach der Typ-Erweiterung alle vier
-				// Kanaele (inkl. premium_sms). Ein explizites Dreifeld-Objekt hier
-				// wuerde premium_sms still verwerfen.
-				wiz.channelThresholds = applyThresholdChange(
-					resolveAlertChannelThresholds(wiz.channelThresholds ?? null),
-					kind,
-					level
-				) as unknown as Record<string, string>;
-			}
-			return;
+		if (channelThresholds === undefined) {
+			routeChannelThresholds = applyThresholdChange(routeChannelThresholds, kind, level);
 		}
-		routeChannelThresholds = applyThresholdChange(routeChannelThresholds, kind, level);
+		onThresholdChange?.(kind, level);
 	}
 
-	// ── (e)/(f) Cooldown/Stille Stunden — route: lokaler State, vergleich: wiz.* ─
-	let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
-	let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
-	let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+	// ── (e)/(f) Cooldown/Stille Stunden ───────────────────────────────────────
+	// `undefined` heisst hier „nicht gesetzt" und ist ein gueltiger Wert —
+	// deshalb entscheidet an DIESEN beiden Stellen als einzigen der RUECKRUF
+	// darueber, ob die Aenderung nach oben gemeldet oder lokal gehalten wird.
+	let routeCooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
+	let routeQuietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
+	let routeQuietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+	const displayCooldownMinutes = $derived(cooldownMinutes ?? routeCooldownMinutes);
+	const displayQuietFrom = $derived(quietFrom ?? routeQuietFrom);
+	const displayQuietTo = $derived(quietTo ?? routeQuietTo);
+	function handleCooldownChange(minuten: number | undefined) {
+		if (onCooldownChange) {
+			onCooldownChange(minuten);
+			return;
+		}
+		routeCooldownMinutes = minuten;
+	}
+	function handleQuietFromChange(von: string | undefined) {
+		if (onQuietHoursChange) {
+			onQuietHoursChange(von, displayQuietTo);
+			return;
+		}
+		routeQuietFrom = von;
+	}
+	function handleQuietToChange(bis: string | undefined) {
+		if (onQuietHoursChange) {
+			onQuietHoursChange(displayQuietFrom, bis);
+			return;
+		}
+		routeQuietTo = bis;
+	}
 
 	// ── AC-12/F001: EIN $effect, EINE konsolidierte Payload-Funktion (nur route) ─
 	// Vorbild: VersandTab.svelte:209-260 (buildAlertDeliverySaveFn, JSON-Diff-
@@ -315,10 +385,10 @@
 	function buildAlarmeSaveFn() {
 		const payload = buildAlarmeDeliveryPayload(
 			{
-				officialWarningsEnabled,
-				cooldownMinutes,
-				quietFrom,
-				quietTo,
+				officialWarningsEnabled: routeOfficialWarningsEnabled,
+				cooldownMinutes: routeCooldownMinutes,
+				quietFrom: routeQuietFrom,
+				quietTo: routeQuietTo,
 				channels: routeChannelState,
 				channelThresholds: routeChannelThresholds,
 				metricLevels: routeMetricLevels
@@ -333,21 +403,21 @@
 	// Snapshots liest bewusst nur einmal (Issue #1461 S3b-2a fuegt
 	// routeChannelThresholds zur bestehenden Liste hinzu).
 	let _prevAlarmeJson = JSON.stringify({
-		officialWarningsEnabled,
-		cooldownMinutes,
-		quietFrom,
-		quietTo,
+		routeOfficialWarningsEnabled,
+		routeCooldownMinutes,
+		routeQuietFrom,
+		routeQuietTo,
 		routeChannelState,
 		routeChannelThresholds,
 		routeMetricLevels
 	});
 	$effect(() => {
-		if (context !== 'route') return;
+		if (!trip) return;
 		const currentJson = JSON.stringify({
-			officialWarningsEnabled,
-			cooldownMinutes,
-			quietFrom,
-			quietTo,
+			routeOfficialWarningsEnabled,
+			routeCooldownMinutes,
+			routeQuietFrom,
+			routeQuietTo,
 			routeChannelState,
 			routeChannelThresholds,
 			routeMetricLevels
@@ -363,11 +433,31 @@
 	// und Rollback liegen in alarmeVergleichSpeicherung.ts; der $effect delegiert.
 	// Die Baseline entsteht beim Mount — CompareTabs mountet erst nach der
 	// Hydration. Anlege-Seite (ohne preset/saveController): Zweig inaktiv (AC-7).
+	// Der Speicherweg bleibt unveraendert; er bekommt den Alarmstand ueber die
+	// Bruecke aus den Wertprops (Namenszuordnung und Frisch-Lesen liegen in
+	// alarmeVergleichSpeicherung.ts, EINE Stelle fuer beide Namensraeume).
+	const alarmZustand = alarmZustandsBruecke(
+		() => ({
+			amtlicheWarnungenImBericht,
+			officialWarningsEnabled,
+			radarAlertEnabled,
+			metricAlertLevels,
+			cooldownMinutes,
+			quietFrom,
+			quietTo,
+			telegramStyle,
+			sendTelegram,
+			sendSms,
+			sendPremiumSms,
+			channelThresholds
+		}),
+		(feld, wert) => onAlarmFeldSetzen?.(feld, wert)
+	);
 	const vergleichSpeicherung = untrack(() =>
-		context === 'vergleich' && wiz && preset && saveController
+		preset && saveController
 			? erstelleAlarmeVergleichSpeicherung({
 					client: api,
-					wiz,
+					zustand: alarmZustand,
 					preset: () => preset!,
 					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
 					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
@@ -376,10 +466,10 @@
 			: null
 	);
 	$effect(() => {
-		if (context !== 'vergleich' || !wiz || !vergleichSpeicherung) return;
+		if (!vergleichSpeicherung) return;
 		// Liest alle Alarmfelder (Abhaengigkeiten); das Melden selbst ohne
 		// Tracking, damit Zustandswechsel des Controllers keinen Neulauf ausloesen.
-		alarmSnapshotAus(wiz);
+		alarmSnapshotAus(alarmZustand);
 		untrack(() => vergleichSpeicherung.aenderungMelden());
 	});
 </script>
@@ -442,40 +532,34 @@
 				/>
 				{#if context === 'vergleich'}
 					<!-- Issue #1260 S5: geteilter Kurzstil-Schalter (DIESELBE Komponente
-					     wie im Trip-Versand-Tab). Bindet an display_config.telegram_style
-					     via wiz.telegramStyle; nur aktiv, wenn Telegram-Kanal an ist. -->
+					     wie im Trip-Versand-Tab). Bindet an display_config.telegram_style;
+					     nur aktiv, wenn der Telegram-Kanal an ist. -->
 					<div class="alarme-telegram-style">
 						<TelegramKurzstilToggle
 							context="vergleich"
-							style={wiz?.telegramStyle ?? 'rich'}
-							disabled={!(wiz?.sendTelegram ?? false)}
-							onchange={(s) => {
-								if (wiz) wiz.telegramStyle = s;
-							}}
+							style={telegramStyle ?? 'rich'}
+							disabled={!(sendTelegram ?? false)}
+							onchange={(s) => onTelegramStyleChange?.(s)}
 						/>
 					</div>
 				{/if}
 			{:else if id === 'cooldown'}
-				{#if context === 'vergleich'}
-					<AlertCooldownCard bind:cooldown_minutes={wiz!.alertCooldownMinutes} />
-				{:else}
-					<AlertCooldownCard bind:cooldown_minutes={cooldownMinutes} />
-				{/if}
+				<AlertCooldownCard
+					bind:cooldown_minutes={() => displayCooldownMinutes, handleCooldownChange}
+				/>
 			{:else if id === 'quiet-hours'}
 				<!-- Issue #1726: EIN geteilter Baustein, zwei Bezugsgrössen — beim
 				     Vergleich gilt die Zone des erstgenannten Orts (#1378 AC-4). -->
-				{#if context === 'vergleich'}
-					<AlertQuietHoursCard bind:quiet_from={wiz!.alertQuietFrom} bind:quiet_to={wiz!.alertQuietTo} zonen_bezug="des ersten Orts" />
-				{:else}
-					<AlertQuietHoursCard bind:quiet_from={quietFrom} bind:quiet_to={quietTo} zonen_bezug="der Tour" />
-				{/if}
+				<AlertQuietHoursCard
+					bind:quiet_from={() => displayQuietFrom, handleQuietFromChange}
+					bind:quiet_to={() => displayQuietTo, handleQuietToChange}
+					zonen_bezug={zonenBezug}
+				/>
 			{:else if id === 'radar'}
 				<ChannelToggle
 					label="Radar-Alarm"
-					checked={wiz?.radarAlertEnabled ?? false}
-					onchange={(checked) => {
-						if (wiz) wiz.radarAlertEnabled = checked;
-					}}
+					checked={radarAlertEnabled ?? false}
+					onchange={(checked) => onRadarAlertChange?.(checked)}
 					testid="alarme-radar-toggle"
 				/>
 			{:else if id === 'sample'}

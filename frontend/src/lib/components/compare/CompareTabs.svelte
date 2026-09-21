@@ -49,6 +49,8 @@
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	// Issue #1258 Scheibe 5 (AC-19): geteilter Alarme-Organism im 7. Hub-Tab.
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
+	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
+	import { alarmePropsAus } from './alarmePropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
 	// vergleich-Kontext) — analog Alarme-/Versand-Bridge oben.
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
@@ -1043,7 +1045,7 @@
 				     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. -->
 				<AlarmeTab
 					context="vergleich"
-					wiz={wizardState}
+					{...alarmePropsAus(wizardState)}
 					catalog={alarmeCatalog}
 					preset={currentPreset}
 					{saveController}
