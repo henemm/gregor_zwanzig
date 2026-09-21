@@ -54,7 +54,7 @@ import { parse } from 'svelte/compiler';
 import { toCompareSelectionEntries } from '../weather-metrics-tab/compareMetricSelection.ts';
 import { deriveActiveAlertMetricsFromCatalog } from '../alarme-tab/activeAlertMetricsFromCatalog.ts';
 import { materializeActiveMetricKeys } from '../weather-metrics-tab/compareMetricOrder.ts';
-import { alarmSnapshotAus } from '../alarmeVergleichSpeicherung.ts';
+import { alarmSnapshotAus, rollbackAlarmSnapshot } from '../alarmeVergleichSpeicherung.ts';
 import {
 	umgebungFuer,
 	werte,
@@ -179,6 +179,11 @@ function saatVergleich(zusatz: Knoten = {}): Knoten {
 		profileOverride: { premium_sms_allowed: false },
 		// route-Props, die der Organismus auch im Vergleichs-Zweig deklariert —
 		// ohne sie scheitern seine route-Herleitungen still (ReferenceError).
+		// `trip` gehoert dazu: an den Vergleichs-Mounts ist die Prop DEKLARIERT
+		// und `undefined`, nicht abwesend. Fehlte sie hier, scheiterte der
+		// Trip-Speicher-Guard mit ReferenceError statt sauber abzubrechen —
+		// die Abwesenheits-Zusicherung von AC-6 waere dann unmessbar.
+		trip: undefined,
 		existingChannels: null,
 		existingChannelThresholds: null,
 		...zusatz
@@ -810,6 +815,23 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 		}
 	});
 
+	// 🔴 WAS DIESER FALL WIRKLICH BEWACHT (Adversary-Finding F002, /50 Fix-Loop):
+	// Die Zusicherung `gebaut === 0` ist fuer dieses Seed (`trip: undefined`)
+	// STRUKTURELL NIE VERLETZBAR. Faellt der Guard weg, laeuft der Rumpf zwar
+	// weiter, bricht aber in `buildAlarmeSaveFn()` an `trip!.id` mit TypeError
+	// ab, BEVOR der Spion `baueTripSpeicherung` je gerufen wird — der Zaehler
+	// bleibt also in JEDEM Fall 0. Der Fang laeuft deshalb ausschliesslich ueber
+	// `fehler === null`: ohne Tour muss der Rumpf SAUBER zurueckkehren, statt
+	// unterwegs zu scheitern. Beide moeglichen Fehlerarten (ReferenceError aus
+	// einer nicht gesaeten Deklaration, TypeError aus `trip!.id`) werden davon
+	// erfasst; der Fang ist deterministisch, aber er sitzt in der ZWEITEN
+	// Zusicherung, nicht in der ersten. Die erste bleibt als Rueckfallnetz
+	// stehen — sie kostet nichts und wuerde einen Durchgriff melden, der den
+	// Spion doch erreicht (z. B. wenn `buildAlarmeSaveFn()` sein `trip!.id`
+	// eines Tages nicht mehr zuerst liest).
+	// Der Gegenbeweis, dass der Trip-Zweig ueberhaupt noch arbeitet, steht im
+	// naechsten Fall („Gegenprobe: MIT `trip` …") — dort traegt `geplant === 1`
+	// die Aussage wirklich.
 	test('Wirkort: ohne `trip` ruehrt der Trip-Speicherweg nichts an', async () => {
 		const gebaut: unknown[] = [];
 		const geplant: unknown[] = [];
@@ -851,6 +873,8 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 		} catch (e) {
 			fehler = e;
 		}
+		// Rueckfallnetz, NICHT der tragende Fang (s. Kommentar ueber dem Test):
+		// fuer `trip: undefined` kann dieser Zaehler strukturell nicht steigen.
 		assert.deepStrictEqual(
 			{ gebaut: gebaut.length, geplant: geplant.length },
 			{ gebaut: 0, geplant: 0 },
@@ -858,10 +882,14 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 				'Genau das waere die Folge, wenn der Guard (`AlarmeTab.svelte:345`) ersatzlos ' +
 				'entfiele — der Vergleichs-Mount liefe in `buildAlarmeSaveFn()`, das `trip!.id` liest.'
 		);
+		// DER TRAGENDE FANG: ohne Tour muss der Rumpf sauber zurueckkehren.
+		// Faellt der Guard, scheitert er unterwegs — und genau das wird hier rot.
 		assert.strictEqual(
 			fehler,
 			null,
-			`AC-6 FAIL: der Trip-Speicher-Effekt ist ohne Tour gescheitert: ${(fehler as Error)?.message}`
+			'AC-6 FAIL: der Trip-Speicher-Effekt ist ohne Tour nicht sauber zurueckgekehrt, ' +
+				`sondern unterwegs gescheitert: ${(fehler as Error)?.message}. Der Guard ` +
+				'`if (!trip) return;` ist damit weg oder wirkungslos.'
 		);
 	});
 
@@ -901,6 +929,282 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 			gebaut.length,
 			1,
 			'AC-6 FAIL: die Speicherfunktion wurde nicht aus dem Trip-Stand gebaut.'
+		);
+	});
+});
+
+// ── F001 (Adversary Runde 2) + F003 (Runde 3): Frische-Garantie der Bruecke ──
+// `alarmZustandsBruecke()` (alarmeVergleichSpeicherung.ts) liest den Alarmstand
+// bei JEDEM Zugriff neu aus den Wertprops des Organismus.
+//
+// F001: Der Pruefer fror die GANZE Bruecke ein (`werte()` einmalig vor dem
+// Proxy) — 54 von 54 Kern-Tests blieben gruen, weil jeder Bestandstest den
+// Stand genau EINMAL liest und die erste Lesung auch eingefroren richtig ist.
+// Die Zusicherung war nirgends ueber die ZEIT geprueft.
+//
+// F003: Die erste Fassung dieser Faelle prueffte nur DREI der zwoelf
+// Snapshot-Felder. Der Pruefer fror daraufhin ein EINZIGES Feld ein
+// (`officialWarningsEnabled`) und blieb bei 3134/3134 gruen. Genau das ist die
+// gefaehrlichere Bruchform: `officialWarningsEnabled` ist der erste Schalter im
+// Reiter — braeche nur er, hoerte der Vergleich auf, DIESEN einen Schalter zu
+// speichern, waehrend die uebrige Flaeche normal weiterlaeuft. So ein Defekt
+// wird nicht gemeldet, weil „der Rest ja geht".
+//
+// Deshalb laufen beide Zusicherungen jetzt als Schleife ueber ALLE Felder, die
+// der Snapshot fuehrt — je Feld ein eigener Testfall, damit der rote Testname
+// das gebrochene Feld benennt.
+//
+// 🔴 VAKUUM-FALLE, bewusst verbaut: Die Feldliste kommt aus dem Produktivcode
+// (`alarmSnapshotAus`), damit sie nicht doppelt gepflegt wird. Genau dadurch
+// wuerde der Test still weniger pruefen, sobald jemand die Liste kuerzt — er
+// iterierte brav ueber weniger Felder und meldete nichts (Memory
+// `ratsche_leeren_macht_den_abhaengigen_test_vakuum_gruen`). Die MAECHTIGKEIT
+// ist deshalb als eigene Konstante eingefroren, und ein eigener Fall haelt den
+// Rollback des Speicherwegs gegen dieselbe Menge.
+//
+// Alle Faelle gehen durch den ECHTEN Weg: Wizard -> `alarmePropsAus` am
+// Hub-Mount -> Wertprops -> Organismus -> Bruecke -> Speicherweg. Kein Mock der
+// Bruecke, keine Attrappe des Speicherwegs, kein Dateiinhalt-Check.
+
+/** Ausgangsstand mit ALLEN Snapshot-Feldern gesetzt — kein `undefined`, sonst
+ *  faellt der Schluessel aus `JSON.stringify` und die Messgrundlage schrumpft
+ *  unbemerkt. */
+function alarmAusgangsstand(): Knoten {
+	return {
+		officialAlertsEnabled: true,
+		officialWarningsEnabled: true,
+		radarAlertEnabled: false,
+		metricAlertLevels: { wind_max_kmh: 'hoch' },
+		alertCooldownMinutes: 30,
+		alertQuietFrom: '22:00',
+		alertQuietTo: '07:00',
+		telegramStyle: 'rich',
+		sendTelegram: true,
+		sendSms: false,
+		sendPremiumSms: false,
+		channelThresholds: { telegram: 'MODERATE' },
+		activeMetricKeys: ['wind_max_kmh']
+	};
+}
+
+/** Je Snapshot-Feld: unter welchem PROP-Namen der Organismus es fuehrt und
+ *  welcher abweichende Wert die Aenderung ausloest. Die Zuordnung ist hier
+ *  ausgeschrieben, weil `PROP_JE_FELD` im Modul nicht exportiert ist; sie kann
+ *  nicht still veralten — der Messgrundlagen-Fall unten haelt ihre Schluessel
+ *  gegen die ECHTE Feldmenge des Snapshots, und eine falsche Prop-Zuordnung
+ *  laesst schon die Ausgangs-Lesung scheitern. */
+const FELD_AM_ORGANISMUS: Record<string, { prop: string; neu: unknown }> = {
+	officialAlertsEnabled: { prop: 'amtlicheWarnungenImBericht', neu: false },
+	officialWarningsEnabled: { prop: 'officialWarningsEnabled', neu: false },
+	radarAlertEnabled: { prop: 'radarAlertEnabled', neu: true },
+	metricAlertLevels: { prop: 'metricAlertLevels', neu: { wind_max_kmh: 'gering' } },
+	alertCooldownMinutes: { prop: 'cooldownMinutes', neu: 45 },
+	alertQuietFrom: { prop: 'quietFrom', neu: '23:00' },
+	alertQuietTo: { prop: 'quietTo', neu: '06:00' },
+	telegramStyle: { prop: 'telegramStyle', neu: 'kurzform' },
+	sendTelegram: { prop: 'sendTelegram', neu: false },
+	sendSms: { prop: 'sendSms', neu: true },
+	sendPremiumSms: { prop: 'sendPremiumSms', neu: true },
+	channelThresholds: { prop: 'channelThresholds', neu: { telegram: 'HIGH' } }
+};
+
+/** Eingefrorene Maechtigkeit der Snapshot-Feldmenge. Waechst oder schrumpft
+ *  `alarmSnapshotAus`, wird dieser Test rot — die Schleife darf NICHT still
+ *  ueber weniger Felder laufen. */
+const SNAPSHOT_FELDER_SOLL = 12;
+
+describe('F001/F003 Frische-Garantie: die Bruecke liest JEDES Feld bei JEDEM Zugriff neu', () => {
+	/** Das Buendel des Hub-Mounts — einmal gebaut, als Saat wiederverwendet.
+	 *  Geaendert wird spaeter die Umgebung des Organismus, nie dieses Objekt. */
+	let buendelCache: Knoten | null = null;
+	async function hubBuendel(): Promise<Knoten> {
+		if (buendelCache) return buendelCache;
+		const { quelle: q0, treffer } = einbettungen(HUB);
+		const s = streuung(treffer[0], q0);
+		assert.ok(s, 'F001 FAIL: der Hub-Mount streut kein Prop-Buendel (siehe AC-3).');
+		const { u: uHub } = await umgebungFuer(HUB, {
+			[s!.zustand]: alarmAusgangsstand(),
+			untrack: (fn: () => unknown) => fn(),
+			alarmeCatalog: katalog()
+		});
+		buendelCache = holeAusdruck(
+			uHub,
+			s!.ausdruck,
+			'F001 FAIL: das Buendel des Hub-Mounts laesst sich nicht auswerten.'
+		) as Knoten;
+		return buendelCache!;
+	}
+
+	/** Der Organismus, gespeist aus dem ECHTEN Buendel. Das Buendel ist noetig,
+	 *  weil die Bruecke ALLE Snapshot-Felder liest — fehlte eines in der Saat,
+	 *  scheiterte sie mit ReferenceError und der Test maesse still nichts. */
+	async function organismus(zusatz: Knoten = {}) {
+		const { ast, quelle, u } = await umgebungFuer(
+			TAB,
+			saatVergleich({ ...(await hubBuendel()), ...zusatz })
+		);
+		assert.ok(
+			u.alarmZustand,
+			'Messaufbau kaputt: die Bruecke zum Speicherweg liess sich nicht aus dem ' +
+				'Produktivcode herleiten (`umgebungFuer` schluckt Deklarations-Fehler still) — ' +
+				'dann misst hier nichts.'
+		);
+		return { ast, quelle, u };
+	}
+
+	test('Messgrundlage: der Snapshot fuehrt genau die eingefrorene Feldmenge', () => {
+		const felder = Object.keys(alarmSnapshotAus(alarmAusgangsstand() as never)).sort();
+		assert.strictEqual(
+			felder.length,
+			SNAPSHOT_FELDER_SOLL,
+			`F003 FAIL: der Alarm-Snapshot fuehrt ${felder.length} Felder statt ` +
+				`${SNAPSHOT_FELDER_SOLL}. Die Schleife unten wuerde sonst still ueber eine ` +
+				'andere Menge laufen und weniger bewachen, als hier zugesichert ist. Gefunden: ' +
+				felder.join(', ')
+		);
+		assert.deepStrictEqual(
+			Object.keys(FELD_AM_ORGANISMUS).sort(),
+			felder,
+			'F003 FAIL: die Zuordnung Snapshot-Feld -> Prop deckt sich nicht mehr mit der ' +
+				'ECHTEN Feldmenge des Snapshots — ein Feld waere unbewacht oder ein Eintrag ' +
+				'zeigt ins Leere.'
+		);
+	});
+
+	for (const [feld, { prop, neu }] of Object.entries(FELD_AM_ORGANISMUS)) {
+		test(`\`${feld}\`: eine Aenderung zwischen zwei Lesungen erreicht den Alarmstand`, async () => {
+			const { u } = await organismus();
+			const vorher = alarmSnapshotAus(u.alarmZustand as never) as Knoten;
+			assert.notDeepStrictEqual(
+				vorher[feld],
+				neu,
+				`Messaufbau kaputt: \`${feld}\` traegt schon vor der Aenderung den neuen Wert — ` +
+					'dann sagt ein Treffer nach der Aenderung nichts.'
+			);
+
+			// Genau das, was im Browser geschieht: der Elternteil aendert den Wizard,
+			// `alarmePropsAus` liefert das Buendel neu, die Prop traegt den neuen Wert.
+			u[prop] = neu;
+
+			const nachher = alarmSnapshotAus(u.alarmZustand as never) as Knoten;
+			assert.deepStrictEqual(
+				nachher[feld],
+				neu,
+				`F003 FAIL: die zweite Lesung von \`${feld}\` liefert den ALTEN Stand. Die ` +
+					`Bruecke haelt dieses Feld fest, statt es bei jedem Zugriff neu aus der Prop ` +
+					`\`${prop}\` zu lesen — der Speicherweg saehe hier ab der ersten Aenderung ` +
+					'dauerhaft veraltete Werte, waehrend die uebrigen Felder normal weiterlaufen.'
+			);
+		});
+
+		test(`\`${feld}\`: die Aenderung erreicht den Speicherweg (Diff-Gate plant einen Vorgang)`, async () => {
+			// Der Wirkort im Produkt: nicht „die Bruecke liefert frische Werte",
+			// sondern „das Diff-Gate sieht die Aenderung". Je Feld ein FRISCHER
+			// Aufbau — kumulierte Aenderungen wuerden den Unterschied eines
+			// eingefrorenen Feldes hinter dem eines anderen verstecken.
+			const geplant: unknown[] = [];
+			const { ast, quelle, u } = await organismus({
+				preset: { id: 'p1', name: 'x', location_ids: [], display_config: {} },
+				api: { put: async () => ({}) },
+				enqueueHubWrite: <T,>(fn: () => Promise<T>) => fn(),
+				saveController: {
+					schedule: (fn: unknown) => geplant.push(fn),
+					cancel: () => {},
+					markPristine: () => {}
+				}
+			});
+			assert.ok(
+				u.vergleichSpeicherung,
+				'Messaufbau kaputt: mit `preset` + `saveController` muss der Produktivcode eine ' +
+					'Vergleichs-Speicherung erzeugen.'
+			);
+			const rueckrufe = effekteVon(ast, quelle, u, 'vergleichSpeicherung');
+			assert.strictEqual(
+				rueckrufe.length,
+				1,
+				`Messaufbau kaputt: ${rueckrufe.length} $effect-Ruempfe nennen \`vergleichSpeicherung\`.`
+			);
+
+			rueckrufe[0]();
+			assert.strictEqual(
+				geplant.length,
+				0,
+				'Messaufbau kaputt: OHNE Aenderung darf das Diff-Gate nichts einplanen — sonst ' +
+					'zaehlt unten jeder Lauf statt jeder Aenderung.'
+			);
+
+			u[prop] = neu;
+			rueckrufe[0]();
+			assert.strictEqual(
+				geplant.length,
+				1,
+				`F003 FAIL: eine Aenderung an \`${feld}\` erreicht den Speicherweg nicht. Liest ` +
+					'die Bruecke dieses Feld nur einmal, vergleicht das Diff-Gate es dauerhaft ' +
+					'gegen sich selbst — der Vergleichs-Alarme-Reiter hoert lautlos auf, GENAU ' +
+					'diese Einstellung zu speichern, waehrend die uebrige Flaeche normal ' +
+					'weiterlaeuft und die Oberflaeche den neuen Wert anzeigt.'
+			);
+		});
+	}
+
+	test('zwei aufeinanderfolgende Aenderungen erreichen den Speicherweg BEIDE', async () => {
+		// Die Bruchform aus F001 in ihrer urspruenglichen Gestalt: eine ganz
+		// eingefrorene Bruecke laesst schon die erste Aenderung verpuffen, eine
+		// teilweise eingefrorene die zweite.
+		const geplant: unknown[] = [];
+		const { ast, quelle, u } = await organismus({
+			preset: { id: 'p1', name: 'x', location_ids: [], display_config: {} },
+			api: { put: async () => ({}) },
+			enqueueHubWrite: <T,>(fn: () => Promise<T>) => fn(),
+			saveController: {
+				schedule: (fn: unknown) => geplant.push(fn),
+				cancel: () => {},
+				markPristine: () => {}
+			}
+		});
+		const rueckrufe = effekteVon(ast, quelle, u, 'vergleichSpeicherung');
+		assert.strictEqual(rueckrufe.length, 1, 'Messaufbau kaputt: Effekt nicht registriert.');
+
+		u.cooldownMinutes = 45;
+		rueckrufe[0]();
+		assert.strictEqual(geplant.length, 1, 'F001 FAIL: die ERSTE Aenderung verpufft.');
+
+		u.sendSms = true;
+		rueckrufe[0]();
+		assert.strictEqual(
+			geplant.length,
+			2,
+			'F001 FAIL: die ZWEITE Aenderung erreicht den Speicherweg nicht mehr — genau das ' +
+				'Bild einer eingefrorenen Bruecke.'
+		);
+	});
+
+	test('der Rollback des Speicherwegs bedient dieselben Felder wie der Snapshot', () => {
+		// Rueckdreh-Gegenprobe zur Feldliste: `rollbackAlarmSnapshot()` fuehrt eine
+		// EIGENE Liste (alarmeVergleichSpeicherung.ts). Faellt dort ein Feld weg,
+		// bliebe es nach einem gescheiterten PUT auf dem versuchten Wert stehen —
+		// die Oberflaeche zeigte dann dauerhaft einen Wert, den der Server nie
+		// angenommen hat. Geprueft wird das VERHALTEN, nicht der Quelltext.
+		const vorher = alarmSnapshotAus(alarmAusgangsstand() as never) as Knoten;
+		const geaendert = alarmAusgangsstand();
+		for (const [feld, { neu }] of Object.entries(FELD_AM_ORGANISMUS)) geaendert[feld] = neu;
+		const versucht = alarmSnapshotAus(geaendert as never) as Knoten;
+		assert.notDeepStrictEqual(
+			versucht,
+			vorher,
+			'Messaufbau kaputt: der versuchte Stand unterscheidet sich in keinem Feld.'
+		);
+
+		const ziel: Knoten = { ...versucht };
+		rollbackAlarmSnapshot(ziel as never, vorher as never, versucht as never);
+
+		assert.deepStrictEqual(
+			ziel,
+			vorher,
+			'F003 FAIL: der Rollback hat nicht alle Snapshot-Felder zurueckgesetzt. Die ' +
+				'Feldliste in `rollbackAlarmSnapshot()` deckt sich nicht mehr mit der Menge, ' +
+				'die `alarmSnapshotAus()` fuehrt — das dort fehlende Feld bliebe nach einem ' +
+				'gescheiterten PUT auf dem versuchten Wert stehen.'
 		);
 	});
 });

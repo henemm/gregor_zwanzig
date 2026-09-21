@@ -186,6 +186,29 @@
 # wie issue-579-home-fidelity, s. Befund oben). Sie laeuft stattdessen
 # manuell gegen Staging, bevor die Scheibe abgeschlossen wird.
 #
+# Aufnahme 2026-09-21 (#2276 S6c): compare-alarme-wertprops.spec.ts
+# — analog S2/S3/S4/S5/S6b-Praezedenz wird NUR die eine neue, eigene Spec
+# dieser Scheibe geratscht (Scope-Disziplin). Sie traegt AC-2 der Spec
+# rework_2276_s6c_alarme.md: die Umstellung der Alarme-Flaeche des
+# Ortsvergleichs auf Wertprops wirkt in Prop-Verdrahtung und `$effect` — Orte,
+# die der SSR-Harness (`generate: 'server'`, kein DOM) nicht sieht. Ohne
+# diesen Eintrag liefe der Browser-Nachweis nie in der CI-Ampel
+# (`e2e` ist positivgelistet).
+#   Filter A: keine Treffer fuer waitForTimeout/test.skip/test.fixme/
+#             describe.skip, kein Hauptrepo-Pfad, kein __dirname.
+#   Filter B: 🔴 NICHT GEFAHREN. Fallzahl der neuen Datei per
+#             `npx playwright test --list` gemessen (2026-09-21): 5 gelistet
+#             minus global.setup = 4 eigene Faelle, 277 + 4 = 281. Ein
+#             lokaler Zielverbund-Zyklus wurde bewusst NICHT gefahren — der
+#             lokale Stack hat vier dokumentierte Fallen (Vite-Proxy zeigt per
+#             Default auf Staging, `.env`-Secret, belegte Ports, veralteter
+#             `admin.json`, der die Kontrollmessung ueberlebt), eine dort
+#             gewonnene Zahl waere unzuverlaessiger als die CI-Ampel selbst.
+#             ERSTE BESTAETIGUNG DURCH DEN CI-HAUPTLAUF AUF DEM PR: weicht die
+#             Zahl ab, meldet `e2e` das rot, bevor etwas nach `main` geht.
+#   Filter C: der Arbeitsbaum zeigt nur die erwarteten Quelldateien — die Spec
+#             veraendert keine versionierte Datei.
+
 # Aufnahme 2026-09-21 (#2276 S6b): compare-stundenverlauf-wertprops.spec.ts
 # — analog S2/S3/S4/S5-Praezedenz wird NUR die eine neue, eigene Spec dieser
 # Scheibe geratscht (Scope-Disziplin). Sie traegt AC-2 und AC-4 der Spec
@@ -225,6 +248,7 @@ e2e/bug-274-safe-area-insets.spec.ts
 e2e/bug-703-login-ratelimit.spec.ts
 e2e/bug-708-stage-delete-confirm.spec.ts
 e2e/compare-alarme-speichert-selbst.spec.ts
+e2e/compare-alarme-wertprops.spec.ts
 e2e/compare-cross-user-write-block.spec.ts
 e2e/compare-detail-edit-entry.spec.ts
 e2e/compare-editor-autosave-user-isolation.spec.ts

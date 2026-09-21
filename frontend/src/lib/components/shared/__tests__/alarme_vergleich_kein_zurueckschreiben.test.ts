@@ -146,7 +146,7 @@ describe('S2-AC-2: ein Nachbar-Reiter schreibt die gerade gespeicherten Alarmwer
 			},
 			saveController: ctl
 		};
-		const alarme = erstelleAlarmeVergleichSpeicherung(gemeinsam);
+		const alarme = erstelleAlarmeVergleichSpeicherung({ ...gemeinsam, zustand: wiz });
 		const versand = erstelleVersandVergleichSpeicherung(gemeinsam);
 
 		// 1) Alarm-Änderung: Radar an, Kurzstil, Telegram-Schwelle, Metrik-Stufe
@@ -191,7 +191,7 @@ describe('S2-AC-3: die Basis wird bei AUSFÜHRUNG in der Queue gelesen, nicht be
 		const rueckmeldungen: ComparePreset[] = [];
 		const speicherung = erstelleAlarmeVergleichSpeicherung({
 			client: api,
-			wiz,
+			zustand: wiz,
 			preset: () => basis,
 			enqueueHubWrite: (fn) => hubPutQueue.enqueue(fn),
 			// bewusst OHNE Basis-Übernahme: AC-3 prüft das Lesen, nicht die Rückmeldung
@@ -256,7 +256,7 @@ describe('S5-AC-2: der Versand-Speicherer liest `sendSms` LIVE aus wiz — auf D
 		// eingefrorenen Kopie statt live aus `wiz` befüllen, ginge die
 		// Alarme-Änderung im zweiten PUT verloren.
 		const versand = erstelleVersandVergleichSpeicherung(gemeinsam);
-		const alarme = erstelleAlarmeVergleichSpeicherung(gemeinsam);
+		const alarme = erstelleAlarmeVergleichSpeicherung({ ...gemeinsam, zustand: wiz });
 		assert.equal(wiz.sendSms, false, 'Vorbedingung: der SMS-Kanal ist aus');
 
 		// 1) Alarme-Reiter: SMS-Kanal an (AlarmeTab.handleChannelToggle mutiert wiz direkt)
@@ -387,7 +387,7 @@ describe('S5-AC-3: diff-basierter Rollback nach einem gescheiterten Versand-PUT 
 		const alarmCtl = createController();
 		const alarme = erstelleAlarmeVergleichSpeicherung({
 			client: api,
-			wiz,
+			zustand: wiz,
 			preset: () => basis,
 			enqueueHubWrite: (fn) => createPutQueue().enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {

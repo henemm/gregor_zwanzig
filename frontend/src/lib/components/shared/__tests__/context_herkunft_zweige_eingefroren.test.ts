@@ -101,18 +101,18 @@ const EINGEFROREN: readonly string[] = [
 	// Tabelle der Spec). Ihre Zeilennummern verschieben sich durch den Umbau —
 	// /50 misst die neuen und traegt sie HIER ein (Bedingungstext woertlich
 	// daneben, damit am Inhalt geprueft werden kann, nicht an der Position):
-	//   :199  `context === 'vergleich'` — Ableitung `unalertableSelectedMetricNames`
+	//   :256  `context === 'vergleich'` — Ableitung `unalertableSelectedMetricNames`
 	//         (FACHLICH: route liefert strukturell immer `[]`, #1435 AC-7)
-	//   :424  `{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}`
-	//         (Anzeige-Zwilling der fachlichen Zusicherung aus :199)
-	//   :443  `{#if context === 'vergleich'}` — Kurzstil-Schalter
+	//   :514  `{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}`
+	//         (Anzeige-Zwilling der fachlichen Zusicherung aus :256)
+	//   :533  `{#if context === 'vergleich'}` — Kurzstil-Schalter
 	//         (DARSTELLUNG: im Trip steht derselbe Schalter im Versand-Reiter, #1260 S5)
-	//   :482  `{#if context === 'vergleich'}` — Beispielwarnung
+	//   :566  `{#if context === 'vergleich'}` — Beispielwarnung
 	//         (FACHLICH: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten)
-	'AlarmeTab.svelte:199',
-	'AlarmeTab.svelte:424',
-	'AlarmeTab.svelte:443',
-	'AlarmeTab.svelte:482',
+	'AlarmeTab.svelte:256',
+	'AlarmeTab.svelte:514',
+	'AlarmeTab.svelte:533',
+	'AlarmeTab.svelte:566',
 	'VersandTab.svelte:284',
 	'VersandTab.svelte:294',
 	'VersandTab.svelte:330',
@@ -182,22 +182,22 @@ const EINGEFROREN_SOLL_ANZAHL = 53;
  */
 const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: string }[] = [
 	{
-		eintrag: 'AlarmeTab.svelte:199',
+		eintrag: 'AlarmeTab.svelte:256',
 		zeile: "context === 'vergleich'",
 		folgt: 'deriveUnalertableSelectedMetricNames('
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:424',
+		eintrag: 'AlarmeTab.svelte:514',
 		zeile: "{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}",
 		folgt: 'alarme-unalertable-metrics-hint'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:443',
+		eintrag: 'AlarmeTab.svelte:533',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'TelegramKurzstilToggle'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:482',
+		eintrag: 'AlarmeTab.svelte:566',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'VTAlertSample'
 	}

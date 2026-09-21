@@ -77,7 +77,7 @@ function hub() {
 		wiz,
 		ctl,
 		versand: erstelleVersandVergleichSpeicherung(gemeinsam),
-		alarme: erstelleAlarmeVergleichSpeicherung(gemeinsam),
+		alarme: erstelleAlarmeVergleichSpeicherung({ ...gemeinsam, zustand: wiz }),
 		bedienung: versandBedienung(wiz)
 	};
 }
