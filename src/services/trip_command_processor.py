@@ -917,7 +917,7 @@ class TripCommandProcessor:
         elif key == "status":
             return self._show_status(trip, msg.received_at)
         elif key == "now":
-            return self._show_now(trip, msg.received_at)
+            return self._show_now(trip, msg.received_at, msg.user_id)
         elif key == "weiter":
             return self._resume_trip(trip, msg.user_id)
         elif key == "pause":
@@ -2359,7 +2359,7 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _show_now(self, trip: Trip, now_utc: datetime) -> CommandResult:
+    def _show_now(self, trip: Trip, now_utc: datetime, user_id: str) -> CommandResult:
         """Fetch radar nowcast for today's stage position.
 
         Issue #1727 S5a (ADR-0044): der Standort haengt am ORTStag der Tour.
@@ -2370,6 +2370,10 @@ class TripCommandProcessor:
             trip: die Tour, deren heutiger Wegpunkt den Nowcast bestimmt.
             now_utc: Zeitpunkt der Abfrage (`msg.received_at`). Pflichtparameter
                 aus demselben Grund wie in :meth:`_show_status`.
+            user_id: echte Nutzerkennung (`msg.user_id`, Issue #2387).
+                Pflichtparameter ohne Default -- der Nowcast-Verbrauch des
+                `/jetzt`-Kommandos gehoert in den Budget-Topf DIESES
+                Nutzers (ADR-0003/ADR-0075), nicht in einen geratenen.
         """
         from services.radar_service import RadarNowcastService
         today = trip_local_today(trip, now_utc)
@@ -2420,7 +2424,8 @@ class TripCommandProcessor:
         # Issue #1329 C2: /jetzt ist eine Nutzeraktion -- explizit
         # user_briefing (Default, nie gedrosselt), zur Dokumentation der Absicht.
         result = svc.get_nowcast(
-            pos.lat, pos.lon, elevation_m=elevation_m, priority="user_briefing"
+            pos.lat, pos.lon, elevation_m=elevation_m, priority="user_briefing",
+            user_id=user_id,
         )
         # Issue #1402: ohne tz faellt format_now_text() auf das argumentlose
         # .astimezone() zurueck -- deutet die Onset-Zeit in der PROZESS-
@@ -2529,6 +2534,7 @@ class TripCommandProcessor:
             try:
                 result = svc.get_nowcast(
                     p.lat, p.lon, elevation_m=elevation_m, priority=prio,
+                    user_id=user_id,
                 )
             except Exception as e:
                 logger.warning(

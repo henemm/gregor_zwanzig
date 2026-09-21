@@ -484,7 +484,7 @@ class RadarNowcastService:
 
     def get_nowcast(
         self, lat: float, lon: float, elevation_m: Optional[int] = None,
-        priority: str = "user_briefing",
+        priority: str = "user_briefing", user_id: Optional[str] = None,
     ) -> NowcastResult:
         """
         Fetch frames (cache-first) and derive nowcast result.
@@ -495,7 +495,11 @@ class RadarNowcastService:
         Issue #1329 C2: `priority` steuert die Drosselung des internen
         open-meteo-Funnels ueber den geteilten `ForecastBudgetGate`
         ("polling" fuer Scheduler-Checks, "user_briefing" -- Default, nie
-        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`). Der Cache-Lookup
+        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`).
+
+        Issue #2387: `user_id` bucht den Verbrauch zusaetzlich in den
+        Budget-Topf DIESES Nutzers und entscheidet damit im Band zwischen
+        Schwelle und 100%, ob dieser Aufruf gedrosselt wird. Der Cache-Lookup
         selbst ist von `priority` unabhaengig; die Ableitung
         (`_derive_result`) laeuft bei Cache-Hit UND -Miss immer frisch
         relativ zur aktuellen (bzw. injizierten) Zeit -- der Cache liefert
@@ -507,7 +511,11 @@ class RadarNowcastService:
         self._inca_unavailable_this_call = False
         self._priority = priority
         from services.forecast_budget import ForecastBudgetGate
-        self._budget_gate = ForecastBudgetGate()
+        # Issue #2387: die Kennung entscheidet, WEN eine erreichte Schwelle
+        # trifft. `None` heisst ausdruecklich "unattributiert" (bewusst
+        # nutzerfreie Provider-Schicht, ADR-0075 Punkt 4) -- dann gilt das
+        # Bestandsverhalten: drosseln ab Schwelle, nie eine Befreiung.
+        self._budget_gate = ForecastBudgetGate(user_id)
         now = self._now_fn()
 
         # Adversary-Fund F001 (Issue #1329 C2, BROKEN-Verdict behoben): der

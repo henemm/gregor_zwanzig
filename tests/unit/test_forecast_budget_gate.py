@@ -28,7 +28,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.loader import get_data_root
+from app.loader import get_data_dir, get_data_root
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
@@ -115,7 +115,21 @@ def _budget_path():
     return get_data_root() / "diagnostics" / "forecast_budget.json"
 
 
-def _write_budget(calls_openmeteo: int, cache_hits: int = 0, cache_misses: int = 0) -> None:
+# Issue #2387: das Gate ist seit ADR-0075 an eine Nutzerkennung gebunden.
+# Die Bestandszusicherung "ab 80 % / 95 % wird gedrosselt" gilt weiterhin --
+# sie trifft jetzt den Nutzer, der den Verbrauch verursacht hat, statt alle.
+# Die Tests unten legen den Nutzer-Topf deshalb ueber den fairen Anteil
+# (DAILY_BUDGET / N = 9000 / 2 = 4500), sonst pruefte das Arrangement die
+# Schwelle an einem Nutzer, den sie gar nicht mehr meint.
+NUTZER = "nutzer_budget_gate"
+ZWEITER_NUTZER = "nutzer_zwei"
+UEBER_FAIREM_ANTEIL = ForecastBudgetGate.DAILY_BUDGET // 2 + 500
+
+
+def _write_budget(
+    calls_openmeteo: int, cache_hits: int = 0, cache_misses: int = 0,
+    active_users=(NUTZER, ZWEITER_NUTZER),
+) -> None:
     """Datei direkt vorbereiten (kein Mock der Klasse) — Test Plan Vorgabe."""
     path = _budget_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -124,8 +138,19 @@ def _write_budget(calls_openmeteo: int, cache_hits: int = 0, cache_misses: int =
         "calls": {"openmeteo": calls_openmeteo},
         "cache_hits": cache_hits,
         "cache_misses": cache_misses,
+        "active_users": list(active_users),
     }
     path.write_text(json.dumps(payload))
+
+
+def _write_user_budget(calls_openmeteo: int, user_id: str = NUTZER, tag=None) -> None:
+    """Nutzer-Topf vorbereiten (Issue #2387) — dasselbe Muster wie oben."""
+    path = get_data_dir(user_id) / "diagnostics" / "forecast_budget.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "date": (tag or utc_tag()).isoformat(),
+        "calls": {"openmeteo": calls_openmeteo},
+    }))
 
 
 def _write_corrupt_budget() -> None:
@@ -140,8 +165,9 @@ def _write_corrupt_budget() -> None:
 
 def test_budget_at_95_percent_blocks_alert_check_and_polling_but_not_briefing():
     _write_budget(calls_openmeteo=8550)  # 8550 / 9000 = 0.95
+    _write_user_budget(UEBER_FAIREM_ANTEIL)  # #2387: dieser Nutzer traegt die Last
 
-    gate = ForecastBudgetGate()
+    gate = ForecastBudgetGate(user_id=NUTZER)
 
     assert gate.allow("alert_check") is False, (
         "AC-5: bei >= 95% Budget muss alert_check abgewiesen werden"
@@ -160,8 +186,9 @@ def test_budget_at_95_percent_blocks_alert_check_and_polling_but_not_briefing():
 
 def test_budget_at_80_percent_blocks_only_polling():
     _write_budget(calls_openmeteo=7200)  # 7200 / 9000 = 0.80
+    _write_user_budget(UEBER_FAIREM_ANTEIL)  # #2387: dieser Nutzer traegt die Last
 
-    gate = ForecastBudgetGate()
+    gate = ForecastBudgetGate(user_id=NUTZER)
 
     assert gate.allow("polling") is False, (
         "Ab 80% Budget muss polling abgewiesen werden"
@@ -175,7 +202,7 @@ def test_budget_at_80_percent_blocks_only_polling():
 def test_budget_below_80_percent_allows_everything():
     _write_budget(calls_openmeteo=1000)  # 1000 / 9000 ~ 0.11
 
-    gate = ForecastBudgetGate()
+    gate = ForecastBudgetGate(user_id=NUTZER)
 
     assert gate.allow("polling") is True
     assert gate.allow("alert_check") is True
@@ -189,7 +216,7 @@ def test_budget_below_80_percent_allows_everything():
 def test_corrupted_counter_file_never_blocks_any_priority():
     _write_corrupt_budget()
 
-    gate = ForecastBudgetGate()
+    gate = ForecastBudgetGate(user_id=NUTZER)
 
     for priority in ("user_briefing", "alert_check", "polling"):
         assert gate.allow(priority) is True, (
@@ -202,7 +229,7 @@ def test_missing_counter_file_never_blocks_any_priority():
     # Bewusst KEINE Datei schreiben — erster Zugriff ueberhaupt.
     assert not _budget_path().exists()
 
-    gate = ForecastBudgetGate()
+    gate = ForecastBudgetGate(user_id=NUTZER)
 
     for priority in ("user_briefing", "alert_check", "polling"):
         assert gate.allow(priority) is True, (
@@ -213,8 +240,9 @@ def test_missing_counter_file_never_blocks_any_priority():
 
 def test_unknown_priority_is_never_throttled_even_under_budget_pressure():
     _write_budget(calls_openmeteo=8999)  # praktisch voll ausgeschoepft
+    _write_user_budget(UEBER_FAIREM_ANTEIL)
 
-    gate = ForecastBudgetGate()
+    gate = ForecastBudgetGate(user_id=NUTZER)
 
     assert gate.allow("some_future_priority") is True, (
         "Unbekannte Prioritaeten sind fail-open (Spec 2.1: 'nie drosseln')"
@@ -320,9 +348,11 @@ def test_counter_from_yesterday_utc_is_ignored_at_todays_utc_boundary():
         "calls": {"openmeteo": 8999},  # gestern praktisch ausgeschoepft
         "cache_hits": 0,
         "cache_misses": 0,
+        "active_users": [NUTZER, ZWEITER_NUTZER],
     }))
+    _write_user_budget(UEBER_FAIREM_ANTEIL, tag=(now_utc - timedelta(days=1)).date())
 
-    gate = ForecastBudgetGate()
+    gate = ForecastBudgetGate(user_id=NUTZER)
 
     assert gate.allow("polling", now=now_utc) is True, (
         "F002: ein 'gestern' (UTC) geschriebener, fast ausgeschoepfter "
@@ -347,9 +377,11 @@ def test_counter_from_today_utc_still_applies_with_injected_now():
         "calls": {"openmeteo": 8550},  # 95% -- ab hier alert_check/polling aus
         "cache_hits": 0,
         "cache_misses": 0,
+        "active_users": [NUTZER, ZWEITER_NUTZER],
     }))
+    _write_user_budget(UEBER_FAIREM_ANTEIL, tag=now_utc.date())
 
-    gate = ForecastBudgetGate()
+    gate = ForecastBudgetGate(user_id=NUTZER)
 
     assert gate.allow("alert_check", now=now_utc) is False, (
         "Ein heutiger (UTC), fast ausgeschoepfter Zaehlerstand muss "

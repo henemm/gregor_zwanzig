@@ -141,6 +141,7 @@ def _beginn_stunde(start_hour: int, end_hour: int) -> int | None:
     punkt = CompareLocationWeatherSource().fetch(
         ORT_ID, ISLAND_LAT, ISLAND_LON,
         start_hour=start_hour, end_hour=end_hour, target_date=_tag(),
+        user_id="nutzer_onset_compare",
     )
     onset = punkt.aggregated.thunder_onset_utc
     return None if onset is None else onset.hour

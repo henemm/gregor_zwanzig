@@ -239,7 +239,9 @@ class PreviewService:
         from services.segment_weather import fetch_night_weather, night_weather_needed
         night_weather = None
         if segment_weather and night_weather_needed(trip.display_config):
-            night_weather = fetch_night_weather(segment_weather[-1], provider=provider)
+            night_weather = fetch_night_weather(
+                segment_weather[-1], provider=provider, user_id=user_id,
+            )
 
         multi_day_trend = None
         outlook_state = None

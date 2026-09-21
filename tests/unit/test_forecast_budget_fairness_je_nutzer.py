@@ -334,6 +334,28 @@ def test_bei_vollem_budget_wird_auch_der_sparsame_nutzer_gedrosselt(prioritaet):
     )
 
 
+def test_kaputter_nutzer_topf_hebelt_den_harten_kontoschutz_nicht_aus():
+    """AC-8 x AC-4: die beiden Zusicherungen treffen sich hier.
+
+    AC-8 prueft Stufe 2 mit LESBAREM Topf, AC-4 den Fail-open mit globalem
+    Anteil im Stufe-1-Band. Die Kombination "unlesbarer Topf UND 100 %
+    Tagesbudget" faellt zwischen beide -- und genau dort entscheidet die
+    REIHENFOLGE der Stufen: wird der Nutzer-Topf vor der 100-%-Pruefung
+    gelesen, liefert sein fail-open-True den Aufruf frei und der harte
+    Kontoschutz gegenueber open-meteo hat ein Loch.
+    """
+    _schreibe_global(GLOBAL_VOLL, active_users=[NUTZER_A, NUTZER_B])
+    pfad = _nutzer_pfad(NUTZER_A)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text("{kein-gueltiges-json,,,")
+
+    assert ForecastBudgetGate(user_id=NUTZER_A).allow("polling") is False, (
+        "Bei 100 % Tagesbudget drosselt Stufe 2 UNABHAENGIG vom fairen "
+        "Anteil -- auch dann, wenn der Nutzer-Topf unlesbar ist und der "
+        "Verbrauch deshalb als 0 gilt (AC-8 uebersteuert AC-4)"
+    )
+
+
 # ---------------------------------------------------------------------------
 # AC-9: Bestandsdaten bleiben erhalten, der Nutzer-Topf beginnt frisch bei 0
 # ---------------------------------------------------------------------------
@@ -364,4 +386,319 @@ def test_globaler_bestandszaehler_bleibt_erhalten_nutzer_topf_beginnt_bei_null()
     assert stand["user_calls_today"] == 1, (
         "AC-9: der neue Nutzer-Topf beginnt unabhaengig bei 0 und zaehlt nur "
         "den eigenen Aufruf -- kein rueckwirkender Split des globalen Stands"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Wertpruefung am Alarm-Pfad (AC-7 an der WIRKSTELLE)
+#
+# AC-7 prueft die gebundene SIGNATUR (`user_id` ohne Default). Sie sagt nichts
+# ueber den WERT, der dort ankommt: ein Aufrufer, der still `None` einsetzt,
+# erfuellt die Signatur und liefert die Fairness trotzdem als Nulloperation
+# aus -- der Verbrauch landet nur im globalen Topf, Stufe 1 findet keinen
+# Verursacher, und bei 81 % globaler Auslastung drosselt es wieder JEDEN.
+#
+# Geprueft wird deshalb die WIRKUNG, nicht die Weitergabe eines Arguments:
+# das Produkt laeuft echt durch `TripAlertService._fetch_fresh_weather()`
+# (kein Nachbau der Schleife), und danach wird der Nutzer-Topf ausgelesen.
+# Nichts an dem, was hier geprueft wird, legt die Fixture selbst an -- den
+# Zaehlerstand schreibt `ForecastBudgetGate.record_call()` aus dem
+# Produktivpfad (`segment_weather.py`, VOR dem Provider-Aufruf).
+# ---------------------------------------------------------------------------
+
+class _ZaehlenderFakeProvider:
+    """Netzfreier Fake-Provider (KEIN Mock/patch/MagicMock) -- gleiche
+    Konstruktion wie `test_forecast_budget_gate.CountingFakeProvider`."""
+
+    def __init__(self) -> None:
+        self.call_count = 0
+
+    @property
+    def name(self) -> str:
+        return "openmeteo"
+
+    def fetch_forecast(self, location, start=None, end=None,
+                       enrich_ensemble: bool = True, enrich_snow: bool = True):
+        from datetime import datetime, timezone
+
+        from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
+
+        self.call_count += 1
+        meta = ForecastMeta(
+            provider=Provider.OPENMETEO, model="icon_d2", grid_res_km=2.2,
+            run=datetime.now(timezone.utc), interp="grid_point",
+        )
+        basis = start or datetime.now(timezone.utc)
+        return NormalizedTimeseries(
+            meta=meta,
+            data=[ForecastDataPoint(ts=basis + timedelta(hours=i), t2m_c=10.0 + i)
+                  for i in range(3)],
+        )
+
+
+def _platzhalter_segment():
+    """Ein Segment, das die Vorfilter von `_fetch_fresh_weather` passiert:
+    beginnt heute (UTC), endet in der Zukunft."""
+    from datetime import datetime, timezone
+
+    from app.models import GPXPoint, SegmentWeatherData, SegmentWeatherSummary, TripSegment
+
+    jetzt = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    punkt = GPXPoint(lat=47.2692, lon=11.4041, elevation_m=1200.0)
+    segment = TripSegment(
+        segment_id="alarm-wertpruefung",
+        start_point=punkt, end_point=punkt,
+        start_time=jetzt, end_time=jetzt + timedelta(hours=3),
+        duration_hours=3.0, distance_km=0.0, ascent_m=0, descent_m=0,
+    )
+    return SegmentWeatherData(
+        segment=segment, timeseries=None, aggregated=SegmentWeatherSummary(),
+        fetched_at=datetime.now(timezone.utc), provider="openmeteo",
+    )
+
+
+def test_alarmpfad_bucht_den_abruf_im_topf_des_pruefenden_nutzers(monkeypatch):
+    """Der `alert_check`-Abruf von `TripAlertService` muss die ECHTE Kennung
+    bis in den Budget-Topf tragen.
+
+    Mutations-Anker: wird in `trip_alert.py` an der `fetch_segment_weather`-
+    Aufrufstelle `user_id=self._user_id` durch `user_id=None` ersetzt, bleibt
+    der Nutzer-Topf leer und dieser Test wird rot -- waehrend AC-7 (reine
+    Signaturpruefung) gruen bliebe.
+    """
+    import providers.base as provider_basis
+    from services.trip_alert import TripAlertService
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+
+    reset_shared_weather_cache_for_tests()
+    provider = _ZaehlenderFakeProvider()
+    monkeypatch.setattr(provider_basis, "get_provider", lambda *a, **k: provider)
+
+    dienst = TripAlertService(user_id=NUTZER_A)
+    ergebnis = dienst._fetch_fresh_weather([_platzhalter_segment()])
+
+    # Kontrollmessung gegen Vakuum-Gruen: ohne echten Upstream-Versuch haette
+    # `record_call()` gar nicht laufen koennen, und die Zusicherung unten
+    # waere nur die Abwesenheit von allem.
+    assert provider.call_count == 1, (
+        "Testvoraussetzung: der Alarm-Pfad muss genau EINEN echten "
+        f"Upstream-Versuch ausloesen, tatsaechlich {provider.call_count}"
+    )
+    assert len(ergebnis) == 1, "Testvoraussetzung: ein Segment, ein Ergebnis"
+
+    assert ForecastBudgetGate(user_id=NUTZER_A).snapshot()["user_calls_today"] == 1, (
+        "Der alert_check-Abruf muss im Budget-Topf DES pruefenden Nutzers "
+        "ankommen -- sonst kennt Stufe 1 den Verursacher nicht und drosselt "
+        "bei Budget-Druck wieder alle (genau der Defekt aus #2387)"
+    )
+    assert ForecastBudgetGate(user_id=NUTZER_B).snapshot()["user_calls_today"] == 0, (
+        "Gegenlesung (ADR-0003): der Abruf von Nutzer A darf im Topf von B "
+        "NICHT auftauchen"
+    )
+
+
+def test_ortsvergleich_abrufpfad_bucht_im_topf_der_uebergebenen_kennung(monkeypatch):
+    """Dieselbe Wertpruefung fuer den Ortsvergleichs-Abrufpfad.
+
+    `test_ortsvergleich_abrufpfad_fuehrt_user_id_als_pflichtparameter`
+    (AC-7) prueft die gebundene Signatur -- dass der Parameter existiert und
+    keinen Default hat. Diese Zusicherung hier prueft, dass die uebergebene
+    Kennung auch WIRKT: `CompareLocationWeatherSource.fetch()` muss sie bis
+    zum Gate tragen. Wird sie an
+    `compare_location_weather_source.py` auf dem Weg zu
+    `fetch_segment_weather()` fallengelassen, bleibt AC-7 gruen und dieser
+    Test wird rot.
+
+    Trip- und Ortsvergleich-Pfad sind gleichrangig (PO-Vorgabe, Epic #1230):
+    eine Wertpruefung nur am Trip-Pfad liesse den Vergleich unbewacht.
+    """
+    import providers.base as provider_basis
+    from services.compare_location_weather_source import CompareLocationWeatherSource
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+
+    reset_shared_weather_cache_for_tests()
+    provider = _ZaehlenderFakeProvider()
+    monkeypatch.setattr(provider_basis, "get_provider", lambda *a, **k: provider)
+
+    CompareLocationWeatherSource().fetch(
+        "ort-wertpruefung", 47.2692, 11.4041, user_id=NUTZER_A,
+    )
+
+    assert provider.call_count == 1, (
+        "Testvoraussetzung: der Ortsvergleichs-Abruf muss genau EINEN echten "
+        f"Upstream-Versuch ausloesen, tatsaechlich {provider.call_count}"
+    )
+    assert ForecastBudgetGate(user_id=NUTZER_A).snapshot()["user_calls_today"] == 1, (
+        "Die an fetch() uebergebene Kennung muss bis in den Budget-Topf "
+        "durchschlagen -- ein auf dem Weg fallengelassenes user_id erfuellt "
+        "die Signaturpruefung aus AC-7 und bucht den Verbrauch trotzdem "
+        "unattributiert"
+    )
+    assert ForecastBudgetGate(user_id=NUTZER_B).snapshot()["user_calls_today"] == 0, (
+        "Gegenlesung (ADR-0003): der Abruf fuer Nutzer A darf im Topf von B "
+        "NICHT auftauchen"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Adversary Fix-Loop 1 (F001-F003): drei weitere Wertpruefungen.
+#
+# Gemessen war: eine Mutation auf `user_id=None` an diesen drei Stellen macht
+# KEINEN Test rot -- 55 / 40 / 108 Tests blieben gruen. Die schwerste ist
+# F003: das ist der produktive Scheduler-Versandpfad des taeglichen
+# Briefings, dort hatte AC-1/AC-10 im echten Versand keine Absicherung.
+# ---------------------------------------------------------------------------
+
+def _stage_trip(trip_id: str):
+    """Ein-Etappen-Trip mit zwei vermessenen Wegpunkten (Muster
+    `tests/tdd/test_stage_weather_parity.py`)."""
+    from app.trip import Stage, Trip, Waypoint
+
+    from tests.helpers.ortstag import utc_tag as _utc_tag
+
+    wp1 = Waypoint(id="g1", name="Start", lat=47.2692, lon=11.4041,
+                   elevation_m=600, arrival_calculated="08:35")
+    wp2 = Waypoint(id="g2", name="Ziel", lat=47.3010, lon=11.4500,
+                   elevation_m=1200, arrival_calculated="14:35")
+    stage = Stage(id="s1", name="Etappe 1", date=_utc_tag(), waypoints=[wp1, wp2])
+    return Trip(id=trip_id, name=trip_id, stages=[stage])
+
+
+def test_stage_weather_endpunkt_bucht_im_topf_der_uebergebenen_kennung():
+    """F002: `compute_stage_weather()` traegt die Kennung des anfragenden
+    Nutzers bis in den Budget-Topf.
+
+    Der Aufrufer (`api/routers/internal.py`, Endpunkt
+    `/api/_internal/trips/{trip_id}/stages-weather`) fuehrt `user_id` als
+    Pflicht-Query-Parameter; `_fetch_one()` reicht sie an
+    `fetch_segment_weather()` weiter. Wird sie dort fallengelassen, laeuft
+    der Cockpit-Abruf jedes Nutzers unattributiert -- Stufe 1 kennt den
+    Verursacher nicht.
+    """
+    from services.stage_weather import compute_stage_weather
+
+    provider = _ZaehlenderFakeProvider()
+    ergebnis = compute_stage_weather(
+        _stage_trip("trip-stage-wertpruefung"), provider, user_id=NUTZER_A,
+    )
+
+    assert provider.call_count >= 1, (
+        "Testvoraussetzung: der Etappen-Abruf muss mindestens EINEN echten "
+        f"Upstream-Versuch ausloesen, tatsaechlich {provider.call_count}"
+    )
+    assert "s1" in ergebnis, "Testvoraussetzung: die Etappe muss ausgewertet werden"
+
+    assert ForecastBudgetGate(user_id=NUTZER_A).snapshot()["user_calls_today"] >= 1, (
+        "F002: der Etappen-Wetterabruf muss im Budget-Topf DES anfragenden "
+        "Nutzers ankommen -- sonst bleibt der Cockpit-Verbrauch "
+        "unattributiert und Stufe 1 findet keinen Verursacher"
+    )
+    assert ForecastBudgetGate(user_id=NUTZER_B).snapshot()["user_calls_today"] == 0, (
+        "Gegenlesung (ADR-0003): der Abruf fuer Nutzer A darf im Topf von B "
+        "NICHT auftauchen"
+    )
+
+
+def test_scheduler_nachtabruf_bucht_im_topf_des_versendenden_nutzers(monkeypatch):
+    """F003 (schwerster der drei): der PRODUKTIVE Versandpfad.
+
+    `TripReportSchedulerService._fetch_night_weather()` beschafft die
+    Nachtreihe fuer das taegliche Briefing. Faellt die Kennung hier weg,
+    hat die Kernzusicherung des Tickets (AC-1/AC-10: nur der
+    Vielverbraucher wird gedrosselt) im echten Versand keine Grundlage --
+    der gesamte Nachtabruf aller Nutzer landet unattributiert im globalen
+    Topf.
+    """
+    import providers.base as provider_basis
+    from services.trip_report_scheduler import TripReportSchedulerService
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+
+    reset_shared_weather_cache_for_tests()
+    provider = _ZaehlenderFakeProvider()
+    monkeypatch.setattr(provider_basis, "get_provider", lambda *a, **k: provider)
+
+    dienst = TripReportSchedulerService(user_id=NUTZER_A)
+    reihe = dienst._fetch_night_weather(_platzhalter_segment())
+
+    assert provider.call_count == 1, (
+        "Testvoraussetzung: der Nachtabruf muss genau EINEN echten "
+        f"Upstream-Versuch ausloesen, tatsaechlich {provider.call_count} "
+        "(`fetch_night_weather` faengt Fehler intern ab -- ohne diese "
+        "Kontrollmessung waere der Test auch bei einem stillen Fehlschlag "
+        "gruen)"
+    )
+    assert reihe is not None, "Testvoraussetzung: die Nachtreihe muss ankommen"
+
+    assert ForecastBudgetGate(user_id=NUTZER_A).snapshot()["user_calls_today"] == 1, (
+        "F003: der Nachtabruf des taeglichen Briefings muss im Budget-Topf "
+        "DES versendenden Nutzers ankommen -- ohne ihn hat AC-1/AC-10 im "
+        "produktiven Versandpfad keine Grundlage"
+    )
+    assert ForecastBudgetGate(user_id=NUTZER_B).snapshot()["user_calls_today"] == 0, (
+        "Gegenlesung (ADR-0003): der Versand fuer Nutzer A darf im Topf von "
+        "B NICHT auftauchen"
+    )
+
+
+def test_vorschau_reicht_die_kennung_bis_in_den_nachtabruf(monkeypatch):
+    """F001: die Vorschau (`PreviewService._build_report`) traegt die
+    Kennung des anfragenden Nutzers in den Nachtabruf.
+
+    Anders als F002/F003 ist hier die Topf-Messung allein NICHT
+    trennscharf: derselbe Lauf bucht auch die Etappen-Abrufe, die ihre
+    Kennung ueber einen anderen Weg bekommen -- eine Mutation nur am
+    Nacht-Aufruf bliebe im Topf unsichtbar. Deshalb wird die ECHTE
+    `fetch_night_weather` zusaetzlich mit einem reinen Aufruf-Rekorder
+    umwickelt (kein Mock-Rueckgabewert, der echte Weg laeuft weiter --
+    Muster `tests/unit/test_preview_night_block.py`), der die tatsaechlich
+    angekommene Kennung festhaelt.
+    """
+    import dataclasses
+
+    import services.segment_weather as sw
+    from app.trip import Stage, Trip, Waypoint
+    from services.preview_service import PreviewService
+    from app.metric_catalog import build_default_display_config
+
+    from tests.helpers.ortstag import utc_tag as _utc_tag
+
+    empfangen: list = []
+    echte_funktion = sw.fetch_night_weather
+
+    def _rekorder(seg, provider=None, *, user_id=None):
+        empfangen.append(user_id)
+        return echte_funktion(seg, provider=provider, user_id=user_id)
+
+    monkeypatch.setattr(sw, "fetch_night_weather", _rekorder)
+
+    ziel = _utc_tag()
+    wp1 = Waypoint(id="G1", name="Start", lat=47.2692, lon=11.4041, elevation_m=600)
+    wp2 = Waypoint(id="G2", name="Ziel", lat=47.3010, lon=11.4500, elevation_m=1200)
+    dc = build_default_display_config(trip_id="vorschau-nacht-trip")
+    dc = dataclasses.replace(dc, show_night_block=True)
+    trip = Trip(
+        id="vorschau-nacht-trip", name="Vorschau-Nacht-Trip",
+        stages=[Stage(id="T1", name="Etappe 1", date=ziel, waypoints=[wp1, wp2])],
+        display_config=dc,
+    )
+
+    from datetime import datetime, timezone
+
+    PreviewService()._build_report(
+        trip, ziel, "evening", now_utc=datetime.now(timezone.utc), demo=True,
+        user_id=NUTZER_A,
+    )
+
+    assert empfangen, (
+        "Testvoraussetzung: die Vorschau muss Nachtdaten beschaffen -- ohne "
+        "Aufruf koennte diese Zusicherung nichts bewachen"
+    )
+    assert empfangen[0] == NUTZER_A, (
+        "F001: die Vorschau muss die Kennung des anfragenden Nutzers in den "
+        f"Nachtabruf durchreichen, angekommen ist {empfangen[0]!r} -- ein "
+        "stilles None bucht den Verbrauch unattributiert"
+    )
+    assert ForecastBudgetGate(user_id=NUTZER_B).snapshot()["user_calls_today"] == 0, (
+        "Gegenlesung (ADR-0003): die Vorschau fuer Nutzer A darf im Topf von "
+        "B NICHT auftauchen"
     )

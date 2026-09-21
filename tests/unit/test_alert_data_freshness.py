@@ -155,6 +155,9 @@ def test_alarm_path_reuses_fresh_entry_and_refetches_stale_entry_without_clear()
     _age_cache_entry_at(cache, 47.2190, 11.8767, stale_original_fetched_at)
 
     alert_service = TripAlertService.__new__(TripAlertService)
+    # `__new__` umgeht `__init__`: seit #2387 liest `_fetch_fresh_weather()`
+    # die Nutzerkennung fuer den Budget-Topf je Nutzer.
+    alert_service._user_id = "nutzer_data_freshness"
     call_time = datetime.now(timezone.utc)
 
     # WICHTIG: `_fetch_fresh_weather` darf hier KEIN `_cache.clear()` mehr

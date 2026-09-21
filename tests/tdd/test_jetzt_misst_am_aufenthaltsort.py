@@ -141,7 +141,7 @@ def _aufzeichnender_typ(calls: list, *, onset_minutes: int = 8):
                 cache=RadarNowcastCacheService(),
             )
 
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
             calls.append({
                 "lat": lat, "lon": lon,
                 "elevation_m": elevation_m, "priority": priority,
@@ -166,7 +166,7 @@ def _jetzt(monkeypatch, trip, now_utc: datetime):
         "services.radar_service.RadarNowcastService", _aufzeichnender_typ(calls),
     )
     with freeze_time(now_utc):
-        ergebnis = TripCommandProcessor()._show_now(trip, now_utc)
+        ergebnis = TripCommandProcessor()._show_now(trip, now_utc, "nutzer_jetzt")
     assert len(calls) == 1, (
         f"Testvoraussetzung: genau EIN get_nowcast()-Abruf je /jetzt erwartet, "
         f"gesehen {len(calls)} — Antwort: {ergebnis.confirmation_body!r}"

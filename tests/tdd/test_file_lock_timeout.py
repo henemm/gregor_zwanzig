@@ -178,7 +178,7 @@ def _build_case(case_name: str, tmp_path: Path):
     if case_name == "forecast_budget":
         from services.forecast_budget import ForecastBudgetGate
 
-        obj = ForecastBudgetGate(data_root=tmp_path)
+        obj = ForecastBudgetGate("nutzer-s2-dateisperren", data_root=tmp_path)
         module = importlib.import_module("services.forecast_budget")
     elif case_name == "throttle_store":
         from services.throttle_store import ThrottleStore

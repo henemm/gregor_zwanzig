@@ -199,7 +199,7 @@ class _ScriptedWeatherSource:
         self._values = dict(values)
 
     def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
-              elevation_m=None):
+              elevation_m=None, user_id=None):
         return _pwd(point_id, point_id, lat, lon, self._values.get(point_id, 0.0))
 
 

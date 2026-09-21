@@ -165,7 +165,8 @@ def _install_aufzeichnenden_nowcast(monkeypatch, calls: list) -> None:
     echtem `NowcastResult` (Transport-Grenze, kein Netz, kein Mock-Objekt) und
     haelt lat/lon/elevation_m/priority jedes Aufrufs fest."""
 
-    def _aufzeichnend(self, lat, lon, elevation_m=None, priority="user_briefing"):
+    def _aufzeichnend(self, lat, lon, elevation_m=None, priority="user_briefing",
+                      user_id=None):
         calls.append({
             "lat": lat, "lon": lon, "elevation_m": elevation_m,
             "priority": priority,

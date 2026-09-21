@@ -166,7 +166,7 @@ class _AbsturzRadar(RadarNowcastService):
 
     fehler = RuntimeError("Radar-Quelle nicht erreichbar (HTTP 503)")
 
-    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
         raise self.fehler
 
 
