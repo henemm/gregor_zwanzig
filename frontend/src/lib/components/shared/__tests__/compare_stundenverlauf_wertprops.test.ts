@@ -42,6 +42,7 @@ import { toCompareSelectionEntries } from '../weather-metrics-tab/compareMetricS
 import {
 	umgebungFuer,
 	werte,
+	effekteVon,
 	findeKomponenten,
 	attributAusdruck,
 	attributNamen,
@@ -403,6 +404,160 @@ describe('AC-1/AC-3 Wirkort: der Mount-Block in WeatherMetricsTab reicht die Wer
 			wiz.outlookEnabled,
 			true,
 			'AC-1 FAIL: der Adapter hat den Ausblick-Schalter mitbeschrieben.'
+		);
+	});
+});
+
+// ── Fix-Loop S6b, Adversary-Finding F001 (HIGH) ──────────────────────────────
+// Die Verkuerzung des Selbst-Speicher-Effekts in `WeatherMetricsTab.svelte`
+// (Z. 1272 ff.) traegt ihre Zusicherung im GUARD: der Effekt darf nur dort
+// arbeiten, wo es eine Vergleichs-Speicherung gibt. Die Mutation
+// `if (!vergleichSpeicherung) return;` -> `if (false) return;` hat KEINEN Test
+// rot gemacht — der Pruefstand verwarf `$effect`-Rueckrufe (`u.$effect = () => {}`),
+// und die E2E-Spec laeuft ausschliesslich im Ortsvergleich-Hub, wo
+// `vergleichSpeicherung` ohnehin gesetzt ist. Die Zusicherung WIRKT aber genau
+// dort, wo sie null ist: im Trip (`context === 'route'`) und auf der Anlege-
+// Seite `/compare/new` (ohne `preset`/`saveController`).
+//
+// Deshalb fuehrt der Block unten den Effekt-Rumpf WIRKLICH aus
+// (`effekteVon()`), mit `wetterMetrikenSnapshotAus` als Spion. Kein
+// Dateiinhalt-Check: gemessen wird, ob der Rumpf laeuft, nicht ob eine Zeile
+// im Quelltext steht.
+describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleichs-Speicherung', () => {
+	/** Saat fuer den Effekt. `vergleichSpeicherung` wird BEWUSST NICHT gesaet —
+	 *  die Umgebung leitet sie aus dem ECHTEN Produktivcode her
+	 *  (`wetterMetrikenVergleichSpeicherungAktiv`, Fixture-Falle #2387: eine
+	 *  gesaete Null wuerde genau die Bedingungskette ueberspringen, die den
+	 *  Wert ueberhaupt erst null macht).
+	 *  `untrack` ist gesaet, weil der Pruefstand `svelte`-Importe nicht bindet;
+	 *  ausserhalb einer Reaktion ist `untrack(fn)` exakt `fn()`. */
+	function saatEffekt(zusatz: Knoten, spion: (...a: unknown[]) => void): Knoten {
+		return {
+			context: 'route',
+			wiz: { hourlyMetricKeys: null, hourlyEnabled: true },
+			preset: null,
+			saveController: null,
+			untrack: (fn: () => unknown) => fn(),
+			wetterMetrikenSnapshotAus: spion,
+			...zusatz
+		};
+	}
+
+	async function effektAufbauen(zusatz: Knoten) {
+		const aufrufe: unknown[] = [];
+		const spion = (...a: unknown[]) => {
+			aufrufe.push(a);
+		};
+		const { ast, quelle, u } = await umgebungFuer(TAB, saatEffekt(zusatz, spion));
+		// Vorbedingung 1: der Spion haengt wirklich in der Umgebung. Trifft die
+		// Saat den Namen nicht, stuende dort die ECHTE Funktion — der Zaehler
+		// bliebe immer 0 und der Test waere vakuum-gruen.
+		assert.strictEqual(
+			u.wetterMetrikenSnapshotAus,
+			spion,
+			'Messaufbau kaputt: `wetterMetrikenSnapshotAus` ist nicht der Spion.'
+		);
+		// Vorbedingung 2: der Effekt existiert und liess sich registrieren.
+		// Eine leere Liste hiesse „nichts ausgefuehrt" — jede Abwesenheits-
+		// Zusicherung darunter waere dann wertlos.
+		const rueckrufe = effekteVon(ast, quelle, u, 'vergleichSpeicherung');
+		assert.strictEqual(
+			rueckrufe.length,
+			1,
+			'Messaufbau kaputt: ' +
+				rueckrufe.length +
+				' $effect-Rueckrufe nennen `vergleichSpeicherung` (erwartet: genau einer).'
+		);
+		aufrufe.length = 0;
+		return { u, rueckruf: rueckrufe[0], aufrufe };
+	}
+
+	const wirkorte: [string, Knoten][] = [
+		['Trip-Kontext (context === "route")', {}],
+		[
+			'Anlege-Seite /compare/new (vergleich, aber ohne preset/saveController)',
+			{ context: 'vergleich', preset: null, saveController: null }
+		]
+	];
+
+	for (const [was, zusatz] of wirkorte) {
+		test(`${was}: der Effekt-Rumpf ruehrt den Speicherweg NICHT an`, async () => {
+			const { u, rueckruf, aufrufe } = await effektAufbauen(zusatz);
+			// Vorbedingung 3: die Praemisse stammt aus dem Produktivcode.
+			assert.ok(
+				'vergleichSpeicherung' in u,
+				'Messaufbau kaputt: `vergleichSpeicherung` liess sich nicht herleiten ' +
+					'(umgebungFuer schluckt Deklarations-Fehler still).'
+			);
+			assert.strictEqual(
+				u.vergleichSpeicherung,
+				null,
+				`Messaufbau kaputt: hier darf es keine Vergleichs-Speicherung geben (${was}).`
+			);
+
+			let fehler: unknown = null;
+			try {
+				rueckruf();
+			} catch (e) {
+				fehler = e;
+			}
+			// ZUERST die Zusicherung — unter der Mutation `if (false) return;`
+			// laeuft `wetterMetrikenSnapshotAus(wiz!)` VOR dem TypeError aus
+			// `null.aenderungMelden()`. Nur diese Reihenfolge meldet den echten
+			// Befund statt eines Folgefehlers.
+			assert.strictEqual(
+				aufrufe.length,
+				0,
+				`AC-4 FAIL: der Selbst-Speicher-Effekt arbeitet, obwohl es keine ` +
+					`Vergleichs-Speicherung gibt (${was}). Faellt der Guard ` +
+					'`if (!vergleichSpeicherung) return;` weg, laeuft der Trip-/Anlege-Zweig ' +
+					'in den Vergleichs-Speicherweg.'
+			);
+			assert.strictEqual(
+				fehler,
+				null,
+				`AC-4 FAIL: der Effekt-Rumpf ist gescheitert (${was}): ${(fehler as Error)?.message}`
+			);
+		});
+	}
+
+	test('Gegenprobe: MIT Vergleichs-Speicherung laeuft derselbe Rumpf und meldet die Aenderung', async () => {
+		// Ohne diese Richtung misst der Block oben nur „der Effekt laeuft nie".
+		const geplant: unknown[] = [];
+		const wiz: Knoten = { hourlyMetricKeys: null, hourlyEnabled: true };
+		const { u, rueckruf, aufrufe } = await effektAufbauen({
+			context: 'vergleich',
+			wiz,
+			preset: { id: 'p1' },
+			api: { put: async () => ({}) },
+			saveController: {
+				schedule: (fn: unknown) => geplant.push(fn),
+				cancel: () => {},
+				markPristine: () => {}
+			}
+		});
+		assert.ok(
+			u.vergleichSpeicherung,
+			'Messaufbau kaputt: mit vergleich + wiz + preset + saveController muss der ' +
+				'Produktivcode eine Vergleichs-Speicherung erzeugen.'
+		);
+		// Der Stand weicht jetzt von der beim Erzeugen genommenen Baseline ab —
+		// `aenderungMelden()` muss deshalb einen Speichervorgang einplanen.
+		wiz.hourlyEnabled = false;
+
+		rueckruf();
+
+		assert.strictEqual(
+			aufrufe.length,
+			1,
+			'AC-4 FAIL: der Effekt-Rumpf liest den Stand nicht mehr — ein Test, der nur ' +
+				'„der Effekt laeuft nie" misst, waere vakuum-gruen.'
+		);
+		assert.strictEqual(
+			geplant.length,
+			1,
+			'AC-4 FAIL: die gemeldete Aenderung erreicht den Speicher-Controller nicht ' +
+				'(`aenderungMelden()` wurde nicht gerufen oder verpufft).'
 		);
 	});
 });

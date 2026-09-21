@@ -75,7 +75,7 @@ export function ohneTypen(quelle: string, knoten: Knoten): string {
 export async function umgebungFuer(
 	datei: string,
 	saat: Knoten
-): Promise<{ ast: Knoten; quelle: string; u: Knoten }> {
+): Promise<{ ast: Knoten; quelle: string; u: Knoten; effekte: Array<() => void> }> {
 	const quelle = readFileSync(datei, 'utf-8');
 	const ast: Knoten = parse(quelle, { modern: true });
 	const u: Knoten = { ...saat };
@@ -84,7 +84,19 @@ export async function umgebungFuer(
 	u.$derived = derived;
 	u.$state = (v: unknown) => v;
 	u.$props = () => ({});
-	u.$effect = () => {};
+	// `$effect` SAMMELT seine Rueckrufe, statt sie zu verwerfen (Issue #2276
+	// S6b Fix-Loop, Adversary-Finding F001): eine Attrappe `() => {}` macht
+	// jede Zusicherung IM Effekt-Rumpf unbeobachtbar — der Rumpf laeuft nie,
+	// also faengt auch keine Mutation darin ein Test. Registriert werden die
+	// Rueckrufe von `effekteVon()`; ausgefuehrt werden sie vom Aufrufer.
+	const effekte: Array<() => void> = [];
+	const effektAttrappe = ((fn: () => void) => {
+		effekte.push(fn);
+	}) as Knoten;
+	// `$effect.pre` / `$effect.root` verhalten sich fuer die Messung gleich.
+	effektAttrappe.pre = effektAttrappe;
+	effektAttrappe.gesammelt = effekte;
+	u.$effect = effektAttrappe;
 
 	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
 		if (stmt.type !== 'ImportDeclaration') continue;
@@ -144,7 +156,63 @@ export async function umgebungFuer(
 			}
 		}
 	}
-	return { ast, quelle, u };
+	return { ast, quelle, u, effekte };
+}
+
+/** Nennt der Teilbaum irgendwo den Bezeichner `name`? (AST, kein Textmuster.) */
+function nenntBezeichner(knoten: unknown, name: string): boolean {
+	if (knoten === null || typeof knoten !== 'object') return false;
+	if (Array.isArray(knoten)) return knoten.some((k) => nenntBezeichner(k, name));
+	const k = knoten as Knoten;
+	if (k.type === 'Identifier' && k.name === name) return true;
+	for (const key of Object.keys(k)) {
+		if (key === 'parent' || key === 'loc') continue;
+		if (nenntBezeichner(k[key], name)) return true;
+	}
+	return false;
+}
+
+/** Registriert die `$effect(...)`-Aufrufe des Instanz-Skripts gegen die
+ *  Umgebung `u` und gibt ihre Rueckrufe in Quelltext-Reihenfolge zurueck —
+ *  AUSGEFUEHRT wird nichts, das entscheidet der Aufrufer.
+ *
+ *  `nennt` grenzt auf die Effekte ein, die einen bestimmten Bezeichner
+ *  referenzieren (AST-Auswahl, kein Textmuster) — damit muss zum Messen
+ *  EINER Zusicherung nicht das ganze Effekt-Geflecht einer Komponente
+ *  auswertbar sein.
+ *
+ *  Anders als `umgebungFuer` schluckt diese Funktion NICHTS: scheitert die
+ *  Registrierung, scheitert sie LAUT. Eine still leere Liste waere die
+ *  gefaehrlichste Form von Gruen — der Aufrufer fuehrt dann nichts aus und
+ *  seine Zusicherung trifft ins Leere. */
+export function effekteVon(
+	ast: Knoten,
+	quelle: string,
+	u: Knoten,
+	nennt?: string
+): Array<() => void> {
+	const gesammelt = (u.$effect as Knoten)?.gesammelt as Array<() => void> | undefined;
+	if (!Array.isArray(gesammelt)) {
+		throw new Error(
+			'Pruefstand: `u.$effect` sammelt nicht — die Umgebung stammt nicht aus `umgebungFuer()`.'
+		);
+	}
+	const vorher = gesammelt.length;
+	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		if (stmt.type !== 'ExpressionStatement') continue;
+		const aufruf = stmt.expression as Knoten | undefined;
+		if (aufruf?.type !== 'CallExpression') continue;
+		const callee = aufruf.callee as Knoten;
+		const istEffekt =
+			(callee?.type === 'Identifier' && callee.name === '$effect') ||
+			(callee?.type === 'MemberExpression' &&
+				(callee.object as Knoten)?.type === 'Identifier' &&
+				(callee.object as Knoten).name === '$effect');
+		if (!istEffekt) continue;
+		if (nennt && !nenntBezeichner(aufruf.arguments, nennt)) continue;
+		werte(ohneTypen(quelle, aufruf), u);
+	}
+	return gesammelt.slice(vorher);
 }
 
 /** Alle Einbettungen der Komponente `name` im Markup — in Quelltext-Reihenfolge. */
