@@ -1418,7 +1418,19 @@ Fetches normalized weather forecast for a given coordinate.
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"invalid_coords"}` | lat/lon out of range or missing |
+| 401 | `{"error":"unauthorized","detail":"authentication required"}` | Kein Nutzerkontext (Issue #2391 — geprüft VOR Parametervalidierung, damit die Kontingent-Reservierung nie auf ein leeres/fremdes Konto bucht) |
+| 429 | `{"error":"budget_exceeded","detail":"daily forecast budget exhausted for this user"}`, Header `Retry-After` (Sekunden, 1..86400 geklemmt) | Tageskontingent des Nutzers erschöpft (Issue #2391, ADR-0076) |
 | 503 | `{"error":"provider_unavailable"}` | Weather provider API unreachable |
+
+**Note (Issue #2391, ADR-0076):** Vor dem eigentlichen Abruf reserviert der Go-Handler das
+Tageskontingent beim Python-Core über den neuen internen Endpunkt `POST
+/api/_internal/forecast-budget/reserve?user_id=...&priority=polling` (`api/routers/internal.py`,
+Section 23-Muster — kein Go-Proxy, `X-GZ-Core-Auth`-geschützt). Antwort `{"allowed": bool,
+"retry_after_s"?: int}` — `retry_after_s` ist nur bei `allowed: false` gesetzt. Ein Erfolg bucht
+2 Einheiten (ein Forecast-Abruf kostet Vorhersage- **und** UV-Abruf) gegen dieselbe
+`ForecastBudgetGate`-Zählung wie der reguläre Python-Pfad. Ist der Core nicht erreichbar oder
+antwortet fehlerhaft, gilt **fail-open** (Abruf läuft durch, WARNING-Log) — unverändertes
+Verhalten wie vor #2391.
 
 ---
 
@@ -4274,6 +4286,13 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-21: Issue #2391 (Scheibe S3 von #2150, Epic #2138) — `GET /api/forecast` (Go) bucht
+  vor dem Abruf das Tageskontingent beim Python-Core, statt es zu umgehen: neuer interner
+  Endpunkt `POST /api/_internal/forecast-budget/reserve` (`api/routers/internal.py`) prüft und
+  bucht in einem Aufruf gegen `ForecastBudgetGate`; neue Fehlerantworten `401` (fehlender
+  Nutzerkontext, geprüft vor der Parametervalidierung) und `429` mit `Retry-After`-Header bei
+  erschöpftem Kontingent. Fail-open bei unerreichbarem Core (unverändertes Verhalten). Details
+  Section 13, ADR-0076, `docs/specs/modules/forecast_go_pfad_kontingent.md`.
 - 2026-09-20: Issue #1507 Scheibe S5c (Block C von #2257, Epic #1419) — neues optionales Feld
   `hail_potential_mf` auf `ForecastDataPoint`: Hagel-**Rohwert** von Météo-France AROME für
   Frankreich/Korsika (`fr_direct`), Coverage `HAIL__GROUND_OR_WATER_SURFACE`, live gegen
