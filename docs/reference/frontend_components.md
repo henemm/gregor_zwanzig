@@ -666,19 +666,32 @@ von Trip-Editor und Trip-Detail-Ansicht:
 
 Liste-basierter Editor für `Trip.alert_rules` (Issue #223/#179):
 
-Seit Issue #1895 (2026-09-21) kennt der Editor nur noch den Änderungs-Modus
-(Δ, `kind: 'delta'`); die Modus-Auswahl (Absolut/Änderung/Beides), die Komponente
-`ModeCard` und das Absolut-Feld `alert-rule-threshold-abs` sind entfernt.
+Seit Issue #1895 Schritt 1 (2026-09-21) kennt der Editor nur noch den
+Änderungs-Modus (`kind: 'delta'`); die Modus-Auswahl (Absolut/Änderung/Beides),
+die Komponente `ModeCard` und das Absolut-Feld `alert-rule-threshold-abs` sind
+entfernt. Schritt 2 (2026-09-21) hat zusätzlich die Δ-Schwelle
+(`alert-rule-threshold`), das Zeitfenster (`alert-rule-delta-window`), den
+Wert-Text der Ansichtszeile und die Modus-Pille aus **beiden** Ansichten der
+Karte genommen: sie lösen keinen Alarm aus (ADR-0043 — die Empfindlichkeitsstufe
+ist der einzige Regler). Die Datenfelder `threshold` und `delta_window` bleiben
+im Modell und in der Persistenz unberührt.
 
 - **`AlertRulesEditor.svelte`** — Container: Empty-State, Liste, Add-Button;
   `updateRules(index, updated[])` ersetzt eine Regel durch die von der Zeile
   gelieferte Regelliste (seit #1895 genau eine Regel).
 - **`AlertRuleRow.svelte`** — eine Zeile pro `AlertRule` mit View- und
-  Edit-Modus (Metric-Select, Δ-Schwelle `alert-rule-threshold`, Zeitfenster
-  `alert-rule-delta-window`, Kanal-Chips, Aktiv-Checkbox).
+  Edit-Modus. Die Karte zeigt in beiden Ansichten **Metrik · Kanäle · aktiv**:
+  View-Modus Metrik-Name, Kanal-Chips, Aktiv-Haken und Kebab-Menü; Edit-Modus
+  Metric-Select, Kanal-Chips, Aktiv-Checkbox sowie Speichern/Abbrechen. Kein
+  Eingabefeld für Schwelle oder Zeitfenster, kein Zahlenwert und keine Pille in
+  der Ansichtszeile.
 - **`alertRuleDefaults.ts`** — `newDefaultRule()` liefert `kind: 'delta'`,
-  `threshold: 20`, `delta_window: '6h'`; `expandRules()` liefert je Eingaberegel
-  genau eine Regel mit `kind: 'delta'` und ohne `pair_id` (kein Regelpaar mehr).
+  `threshold: 20`, `delta_window: '6h'`; `expandRules(rule)` nimmt genau ein
+  Argument und liefert je Eingaberegel genau eine Regel mit `kind: 'delta'` und
+  ohne `pair_id` (kein Regelpaar mehr). `threshold` und `delta_window` werden
+  dabei **unverändert durchgereicht** — `'6h'` greift nur als Rückfall für eine
+  Regel ohne Zeitfenster (ein fester Wert würde Bestandsdaten still
+  überschreiben).
 
 ## Compare Components (`compare/`)
 

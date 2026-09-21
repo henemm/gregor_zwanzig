@@ -2,6 +2,7 @@
 //
 // Spec: docs/specs/modules/issue_223_alert_rules_editor.md (Section 2)
 // Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md (#1895 Schritt 1)
+// Spec: docs/specs/modules/fix_1895_s2_alarmkarte_rueckbau.md (#1895 Schritt 2, AC-3/AC-7)
 //
 // Ausfuehrung:
 //   cd frontend && npm test -- src/lib/components/alert-rules-editor/alertRuleDefaults.test.ts
@@ -44,20 +45,23 @@ test('newDefaultRule: erzeugt keine geteilten Referenzen (frische Objekte)', () 
 });
 
 // =============================================================================
-// #1895 Schritt 1 — expandRules() nach dem Rueckbau der Modus-Auswahl
+// #1895 Schritt 2 — expandRules(rule) reicht threshold und delta_window durch
 // =============================================================================
-// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md
+// Spec: docs/specs/modules/fix_1895_s2_alarmkarte_rueckbau.md (E-2, AC-3)
 //
-// Bis #1895 nahm expandRules() einen Modus ('absolute' | 'delta' | 'both') und
-// lieferte je nachdem eine oder zwei Regeln. Die Faelle unten sind die frueheren
-// Modus-Faelle aus #179/#297 — auf die einarmige Signatur
-// `expandRules(rule, deltaThreshold, deltaWindow)` umgeschrieben, nicht geloescht:
-// ohne sie staende die Funktion genau beim Umbau ohne Abdeckung.
+// Schritt 1 liess expandRules() noch zwei Zusatzargumente nehmen, weil der Editor
+// Δ-Schwelle und Zeitfenster als Eingabefelder anbot und sie explizit uebergab.
+// Schritt 2 nimmt beide Eingaben aus der Karte. Damit wird aus dem bis dahin
+// toten Signatur-Vorgabewert `deltaWindow = '6h'` der EINZIGE Pfad — und der
+// erste Speichervorgang wuerde jede Bestandsregel mit z.B. '12h' still auf '6h'
+// umschreiben (Klasse BUG-DATALOSS-GR221). Darum reicht die Funktion ab jetzt
+// `rule.threshold` und `rule.delta_window` durch; '6h' gilt nur noch als
+// Rueckfall fuer eine Regel OHNE Zeitfenster.
 //
-// Die Breitenabdeckung (jede Metrik, channels, enabled, id) liegt in
-// `__tests__/alertRegelNurAenderung.test.ts`. Hier stehen die Zusicherungen, die
-// dort NICHT gemessen werden: Parametervorrang, Reinheit, Kollaps der Zweige und
-// der Fortbestand von DELTA_ONLY_METRICS.
+// Die Breitenabdeckung (jede Metrik, jedes Zeitfenster, channels, enabled, id)
+// liegt in `__tests__/alertRegelNurAenderung.test.ts`. Hier stehen die
+// Zusicherungen, die dort NICHT gemessen werden: Reinheit, Kollaps der Zweige
+// und der Fortbestand von DELTA_ONLY_METRICS.
 
 const basis = (over: Partial<AlertRule> = {}): AlertRule =>
 	({
@@ -74,7 +78,7 @@ const basis = (over: Partial<AlertRule> = {}): AlertRule =>
 // ex „mode=absolute → eine Rule, kind=absolute (AC-4)" — der Absolut-Zweig ist weg:
 // eine Alt-Regel mit kind='absolute' kommt als Aenderungsregel zurueck.
 test('expandRules > eine Alt-Regel mit kind=absolute wird zur Aenderungsregel', () => {
-	const result = expandRules(basis(), 30, '6h');
+	const result = expandRules(basis());
 	assert.ok(Array.isArray(result), 'Rueckgabe muss Array sein');
 	assert.equal(result.length, 1, 'genau eine Regel');
 	assert.equal(result[0].kind, 'delta', 'es gibt keinen Absolut-Zweig mehr');
@@ -85,42 +89,48 @@ test('expandRules > eine Alt-Regel mit kind=absolute wird zur Aenderungsregel', 
 	);
 });
 
-// ex „mode=delta → eine Rule, kind=delta (AC-4)" + #297 AC-6 (deltaThreshold):
-// der uebergebene Δ-Wert gewinnt gegen rule.threshold.
-test('expandRules > der uebergebene Δ-Wert gewinnt gegen rule.threshold', () => {
-	const result = expandRules(basis({ threshold: 50 }), 30, '6h');
-	assert.equal(result.length, 1);
-	assert.equal(result[0].threshold, 30, 'die Absolut-Zahl 50 der Alt-Regel darf nicht durchschlagen');
-});
-
-// ex #297 AC-7 („delta-Rule traegt delta_window aus Parameter"): das Zeitfenster
-// wird durchgereicht und nicht auf den Vorgabewert '6h' festgenagelt.
-test('expandRules > das uebergebene Zeitfenster wird durchgereicht', () => {
-	const result = expandRules(basis(), 30, '3h');
-	assert.equal(result.length, 1);
-	assert.equal(result[0].delta_window, '3h', 'nicht auf 6h festgenagelt');
-});
-
-// ex #297 F005 („Absolute-Rule darf kein altes delta_window erben"): jetzt in der
-// einarmigen Fassung — ein bereits vorhandenes, ABWEICHENDES delta_window auf der
-// Eingangsregel darf den Parameter nicht ueberstimmen.
-test('expandRules F005 > ein vorhandenes delta_window der Regel ueberstimmt den Parameter nicht', () => {
-	const result = expandRules(basis({ kind: 'delta', delta_window: '12h' }), 30, '3h');
+// UMGEDREHT gegenueber Schritt 1 („der uebergebene Δ-Wert gewinnt gegen
+// rule.threshold"): es gibt keinen uebergebenen Wert mehr. Die Schwelle der
+// Eingangsregel wird unveraendert durchgereicht — das ist E-3 als Test.
+// Ein Ueberschreiben auf 20 waere aktive Datenaenderung ohne Nutzerhandlung.
+test('expandRules > rule.threshold wird unveraendert durchgereicht (E-3)', () => {
+	const result = expandRules(basis({ threshold: 50 }));
 	assert.equal(result.length, 1);
 	assert.equal(
-		result[0].delta_window,
-		'3h',
-		'F005: der Parameter gewinnt, nicht das alte Feld aus der Eingangsregel'
+		result[0].threshold,
+		50,
+		'die Schwelle der Eingangsregel darf nicht auf den Vorgabewert 20 zurueckgesetzt werden'
 	);
 });
 
-// Vorgabewerte der gefrorenen Signatur: ohne Zusatzargumente gelten
-// `rule.threshold` und die Konstante '6h' — NICHT `rule.delta_window`.
-test('expandRules > ohne Zusatzargumente gelten rule.threshold und die Konstante 6h', () => {
+// UMGEDREHT gegenueber Schritt 1 („das uebergebene Zeitfenster wird
+// durchgereicht"): durchgereicht wird jetzt das Fenster DER REGEL.
+test('expandRules > das Zeitfenster der Regel wird durchgereicht, nicht auf 6h festgenagelt', () => {
+	const result = expandRules(basis({ kind: 'delta', delta_window: '3h' }));
+	assert.equal(result.length, 1);
+	assert.equal(result[0].delta_window, '3h', 'nicht auf die Konstante 6h festgenagelt');
+});
+
+// GESTRICHEN, nicht vergessen: der Fall „expandRules F005 > ein vorhandenes
+// delta_window der Regel ueberstimmt den Parameter nicht" (Schritt 1,
+// alertRuleDefaults.test.ts:104-115) ist GEGENSTANDSLOS — es gibt keinen
+// Parameter mehr, den das Feld ueberstimmen koennte. Seine Zusicherung ist in
+// ihr Gegenteil verkehrt und steht als „das Zeitfenster der Regel wird
+// durchgereicht" direkt darueber. Bewusst gestrichen (Spec-Tabelle
+// „Bestandstests, die sich umdrehen"), nicht stillschweigend geloescht.
+
+// UMGEDREHT gegenueber Schritt 1 („ohne Zusatzargumente gelten rule.threshold
+// und die Konstante 6h"): der Signatur-Vorgabewert '6h' ist fort. Wortwoertliches
+// Beispiel aus AC-3 der Spec.
+test('expandRules > Bestandsregel mit 17/12h behaelt 17 und 12h (AC-3, Spec-Beispiel)', () => {
 	const result = expandRules(basis({ kind: 'delta', threshold: 17, delta_window: '12h' }));
 	assert.equal(result.length, 1);
-	assert.equal(result[0].threshold, 17, 'ohne Δ-Argument faellt die Funktion auf rule.threshold zurueck');
-	assert.equal(result[0].delta_window, '6h', 'der Signatur-Vorgabewert ist die Konstante 6h');
+	assert.equal(result[0].threshold, 17, 'die Schwelle 17 der Bestandsregel wird durchgereicht');
+	assert.equal(
+		result[0].delta_window,
+		'12h',
+		'das Zeitfenster 12h der Bestandsregel wird durchgereicht — NICHT auf die Konstante 6h zurueckgesetzt'
+	);
 });
 
 // ex „mode=both → zwei Rules (AC-5)" / „AC-10 pair-indicator": der Paar-Zweig ist
@@ -138,7 +148,7 @@ test('expandRules > kein Eingang erzeugt mehr zwei Regeln oder ein pair_id', () 
 	assert.ok(eingaben.length >= 6, 'Eingabeliste unerwartet kurz — Schleife misst nichts');
 
 	for (const eingabe of eingaben) {
-		const result = expandRules(eingabe, 20, '6h');
+		const result = expandRules(eingabe);
 		assert.equal(result.length, 1, `"${eingabe.metric}": genau eine Regel, nie ein Paar`);
 		assert.equal(result[0].kind, 'delta', `"${eingabe.metric}": nur noch Aenderungsregeln`);
 		assert.strictEqual(
@@ -170,8 +180,8 @@ test('expandRules > DELTA_ONLY_METRICS bleibt exportiert und unveraendert bestue
 // Reinheit: die Eingangsregel bleibt unberuehrt. `AlertRulesEditor` reicht dieselbe
 // Regel aus `bind:rules` herein — eine Mutation waere ein stiller Datenschaden.
 test('expandRules > mutiert die Eingangsregel nicht', () => {
-	const eingabe = basis({ pair_id: 'paar-1', channels: ['email'] });
+	const eingabe = basis({ pair_id: 'paar-1', channels: ['email'], delta_window: '3h' });
 	const vorher = JSON.stringify(eingabe);
-	expandRules(eingabe, 30, '3h');
+	expandRules(eingabe);
 	assert.equal(JSON.stringify(eingabe), vorher, 'die Eingangsregel darf nicht veraendert werden');
 });
