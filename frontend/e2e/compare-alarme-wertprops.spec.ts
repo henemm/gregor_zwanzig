@@ -252,9 +252,12 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 		await page.reload();
 		await oeffneAlarme(page, id);
 		await expect(
-			page.locator('[data-testid="alert-channel-toggle-telegram"] input[type="checkbox"]').first(),
+			page
+				.locator('[data-testid="alert-channel-toggle-telegram"]')
+				.first()
+				.getByRole('switch'),
 			'AC-2 FAIL: der Telegram-Kanal ist nach dem Neuladen wieder aus.'
-		).toBeChecked();
+		).toHaveAttribute('aria-checked', 'true');
 		await expect(
 			page.locator('[data-testid="telegram-kurzstil-toggle"] input[type="checkbox"]').first(),
 			'AC-2 FAIL: der Kurzstil ist nach dem Neuladen wieder aus.'
