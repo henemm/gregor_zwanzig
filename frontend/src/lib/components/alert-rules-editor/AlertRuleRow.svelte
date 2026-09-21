@@ -2,12 +2,13 @@
 	// Issue #223 — Eine Zeile pro AlertRule mit View- und Edit-Modus.
 	// Spec: docs/specs/modules/issue_223_alert_rules_editor.md §3.
 	//
-	// Issue #179 — Modus-Toggle (Δ / Absolut / Beides) im Edit-Modus.
-	// Spec: docs/specs/modules/issue_179_alert_konfigurator_modus_toggle.md
+	// #1895 Schritt 1 — die Modus-Auswahl (Änderung / Absolut / Beides) und das
+	// Absolut-Schwellenfeld sind zurueckgebaut; es gibt nur noch Aenderungsregeln.
+	// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md
 	//
-	// View-Mode: Label + Threshold + Mode-Badge (Abs / Δ) + Severity-Pill +
-	//            Enabled-Toggle + [Bearbeiten] + [Löschen]
-	// Edit-Mode: ModeCards-Zeile + Metric-Select + Threshold + Severity-Select +
+	// View-Mode: Label + Threshold + Mode-Badge (Δ) + Kanal-Chips +
+	//            Enabled-Toggle + Kebab [Bearbeiten] [Löschen]
+	// Edit-Mode: Metric-Select + Δ-Schwelle + Zeitfenster + Kanal-Chips +
 	//            Enabled + Save/Cancel
 	// F004-Guard: {#if info} um alles — unbekannte Metric crasht nicht.
 
@@ -16,8 +17,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
 	import { ALERT_METRIC_LABELS } from '$lib/utils/alertMetricLabels';
-	import { DELTA_ONLY_METRICS, expandRules, type AlertRuleMode } from './alertRuleDefaults';
-	import ModeCard from './ModeCard.svelte';
+	import { expandRules } from './alertRuleDefaults';
 	import { effectiveAlertChannels, toggleAlertChannel } from './alertChannels';
 
 	const CHANNEL_LABEL_DE: Record<string, string> = { email: 'E-Mail', telegram: 'Telegram', sms: 'SMS' };
@@ -38,12 +38,10 @@
 
 	let editing = $state(false);
 	let draft = $state<AlertRule>({ ...rule });
-	let editMode = $state<AlertRuleMode>('absolute');
 	let kebabOpen = $state(false);
 
-	// Issue #297 — separate Felder fuer Absolut-Schwelle, Delta-Schwelle und Zeitfenster.
+	// Δ-Schwelle und Zeitfenster der Aenderungsregel.
 	// Initialwerte werden in startEdit() aus rule.* gesetzt; Defaults dienen Erst-Render.
-	let draftAbsThreshold = $state<number>(50);
 	let draftDeltaThreshold = $state<number>(20);
 	let draftDeltaWindow = $state<string>('6h');
 
@@ -52,22 +50,6 @@
 	// #1488 Scheibe A: kein Thunder-Sonderfall mehr — die Stufenwoerter MITTEL/HOCH
 	// waren falsch beschriftet und ihre Schwelle wird nie ausgewertet.
 	let valueText = $derived(`${rule.threshold} ${info?.unit ?? ''}`.trim());
-
-	// Issue #179: Hinweistext wenn 'both' bei Delta-only Metrik auf 'delta' zurueckfaellt.
-	let deltaOnlyHint = $derived(
-		editing && editMode === 'both' && DELTA_ONLY_METRICS.has(draft.metric)
-	);
-
-	// #1488 Scheibe A: fuer Delta-only-Metriken gibt es keine 'Absolut'-Karte mehr.
-	// editMode koennte trotzdem auf 'absolute' stehen — beim Metrik-Wechsel im
-	// Select ebenso wie beim Oeffnen einer Altregel mit kind='absolute' via
-	// startEdit(). Ohne diesen Guard haenge der Modus auf einer Auswahl, die der
-	// Nutzer weder sieht noch abwaehlen kann.
-	$effect(() => {
-		if (editing && DELTA_ONLY_METRICS.has(draft.metric) && editMode === 'absolute') {
-			editMode = 'delta';
-		}
-	});
 
 	// Alle bekannten Metrics fuer das Select im Edit-Mode
 	const METRIC_OPTIONS: AlertMetric[] = [
@@ -84,26 +66,16 @@
 
 	function startEdit() {
 		draft = { ...rule };
-		// Issue #297 — Mode-Vorauswahl: pair_id zeigt mode='both', sonst rule.kind.
-		if (rule.pair_id) {
-			editMode = 'both';
-			if (rule.kind === 'absolute') {
-				draftAbsThreshold = rule.threshold;
-				draftDeltaThreshold = 20; // Partner-Wert nicht zugaenglich — Default.
-			} else {
-				draftDeltaThreshold = rule.threshold;
-				draftDeltaWindow = rule.delta_window ?? '6h';
-				draftAbsThreshold = 50; // Partner-Wert nicht zugaenglich — Default.
-			}
+		// #1895: die Δ-Schwelle wird nur aus einer Aenderungsregel gelesen. Eine
+		// Alt-Regel mit kind='absolute' traegt in `threshold` eine Absolut-Zahl
+		// (z.B. 50 km/h) — die waere als Δ-Schwelle eine voellig andere Aussage.
+		// Fuer sie gilt darum der Δ-Standardwert 20 / 6h.
+		if (rule.kind === 'delta') {
+			draftDeltaThreshold = rule.threshold;
+			draftDeltaWindow = rule.delta_window ?? '6h';
 		} else {
-			// AC-2 / AC-3: Mode-Vorauswahl aus rule.kind (Legacy-delta wird korrekt erkannt)
-			editMode = rule.kind === 'delta' ? 'delta' : 'absolute';
-			if (rule.kind === 'absolute') {
-				draftAbsThreshold = rule.threshold;
-			} else {
-				draftDeltaThreshold = rule.threshold;
-				draftDeltaWindow = rule.delta_window ?? '6h';
-			}
+			draftDeltaThreshold = 20;
+			draftDeltaWindow = '6h';
 		}
 		editing = true;
 	}
@@ -115,10 +87,9 @@
 			...draft,
 			unit: metricInfo?.unit || draft.unit
 		};
-		// Issue #297 — neue Signatur: separate Threshold-Felder + delta-Zeitfenster.
-		onSave(
-			expandRules(synced, editMode, draftAbsThreshold, draftDeltaThreshold, draftDeltaWindow)
-		);
+		// #1895: expandRules() kennt keinen Modus mehr und liefert genau eine
+		// Aenderungsregel.
+		onSave(expandRules(synced, draftDeltaThreshold, draftDeltaWindow));
 		editing = false;
 	}
 
@@ -137,33 +108,6 @@
 {#if info}
 	{#if editing}
 		<div class="alert-rule-edit" data-testid="alert-rule-edit">
-			<div class="mode-selector" role="radiogroup" aria-label="Alarm-Modus">
-				<!-- #1488 Scheibe A: Delta-only-Metriken kennen keinen Absolut-Modus. -->
-				{#if !DELTA_ONLY_METRICS.has(draft.metric)}
-					<ModeCard
-						mode="absolute"
-						selected={editMode === 'absolute'}
-						onSelect={() => (editMode = 'absolute')}
-					/>
-				{/if}
-				<ModeCard
-					mode="delta"
-					selected={editMode === 'delta'}
-					onSelect={() => (editMode = 'delta')}
-				/>
-				<ModeCard
-					mode="both"
-					selected={editMode === 'both'}
-					onSelect={() => (editMode = 'both')}
-				/>
-			</div>
-
-			{#if deltaOnlyHint}
-				<p class="delta-only-hint" data-testid="alert-rule-delta-only-hint">
-					Diese Metrik misst nur Änderungen — beim Speichern wird nur eine Δ-Regel erzeugt.
-				</p>
-			{/if}
-
 			<div class="edit-fields">
 				<Select
 					bind:value={draft.metric}
@@ -174,63 +118,26 @@
 					{/each}
 				</Select>
 
-				{#if editMode === 'both'}
-					<!-- Issue #297 AC-3: drei Felder bei mode='both' — abs + delta + zeitfenster. -->
-					<input
-						type="number"
-						bind:value={draftAbsThreshold}
-						data-testid="alert-rule-threshold-abs"
-						class="number-input"
-						aria-label="Absolut-Schwelle"
-					/>
-					<input
-						type="number"
-						bind:value={draftDeltaThreshold}
-						data-testid="alert-rule-threshold-delta"
-						class="number-input"
-						aria-label="Δ-Schwelle"
-					/>
-					<Select
-						bind:value={draftDeltaWindow}
-						data-testid="alert-rule-delta-window"
-						class="window-select"
-						aria-label="Zeitfenster"
-					>
-						<option value="1h">1 Stunde</option>
-						<option value="3h">3 Stunden</option>
-						<option value="6h">6 Stunden</option>
-						<option value="12h">12 Stunden</option>
-						<option value="24h">24 Stunden</option>
-					</Select>
-				{:else if editMode === 'delta'}
-					<!-- Issue #297 AC-2: Threshold + Zeitfenster bei mode='delta'. -->
-					<input
-						type="number"
-						bind:value={draftDeltaThreshold}
-						data-testid="alert-rule-threshold"
-						class="number-input"
-					/>
-					<Select
-						bind:value={draftDeltaWindow}
-						data-testid="alert-rule-delta-window"
-						class="window-select"
-						aria-label="Zeitfenster"
-					>
-						<option value="1h">1 Stunde</option>
-						<option value="3h">3 Stunden</option>
-						<option value="6h">6 Stunden</option>
-						<option value="12h">12 Stunden</option>
-						<option value="24h">24 Stunden</option>
-					</Select>
-				{:else}
-					<!-- AC-1: ein Threshold-Feld bei mode='absolute'. -->
-					<input
-						type="number"
-						bind:value={draftAbsThreshold}
-						data-testid="alert-rule-threshold"
-						class="number-input"
-					/>
-				{/if}
+				<!-- #1895: einziger verbleibender Zweig — Δ-Schwelle + Zeitfenster. -->
+				<input
+					type="number"
+					bind:value={draftDeltaThreshold}
+					data-testid="alert-rule-threshold"
+					class="number-input"
+					aria-label="Δ-Schwelle"
+				/>
+				<Select
+					bind:value={draftDeltaWindow}
+					data-testid="alert-rule-delta-window"
+					class="window-select"
+					aria-label="Zeitfenster"
+				>
+					<option value="1h">1 Stunde</option>
+					<option value="3h">3 Stunden</option>
+					<option value="6h">6 Stunden</option>
+					<option value="12h">12 Stunden</option>
+					<option value="24h">24 Stunden</option>
+				</Select>
 
 				{#each activeChannels as ch}
 					<button type="button"
@@ -247,8 +154,7 @@
 					variant="primary"
 					size="sm"
 					onclick={saveEdit}
-					data-testid="alert-rule-save"
-					>{editMode === 'both' ? 'Beide Regeln speichern' : 'Speichern'}</Btn
+					data-testid="alert-rule-save">Speichern</Btn
 				>
 				<Btn
 					variant="ghost"
@@ -374,17 +280,6 @@
 		border-radius: 0.375rem;
 		background: var(--g-surface-1, #fff);
 		font-size: 0.875rem;
-	}
-	.mode-selector {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-	.delta-only-hint {
-		margin: 0;
-		font-size: 0.8125rem;
-		color: var(--g-ink-muted);
-		font-style: italic;
 	}
 	.edit-fields {
 		display: flex;
