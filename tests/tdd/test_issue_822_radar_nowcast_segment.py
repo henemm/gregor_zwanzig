@@ -1140,7 +1140,7 @@ def _aufzeichnender_radar_dienst(frame_source):
             super().__init__(frame_source=fs)
             self.calls: list[dict] = []
 
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
             self.calls.append({
                 "lat": lat, "lon": lon, "elevation_m": elevation_m,
                 "priority": priority,

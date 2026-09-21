@@ -685,7 +685,7 @@ class _SkriptQuelle:
         self._wert = precip_sum_mm
 
     def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
-              elevation_m=None):
+              elevation_m=None, user_id=None):
         return _punkt(point_id, lat, lon, self._wert)
 
 

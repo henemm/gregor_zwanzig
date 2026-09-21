@@ -171,7 +171,7 @@ def test_fetch_night_weather_uses_injected_provider_not_live_openmeteo():
     last_segment = _last_segment(base_date=datetime.now(timezone.utc).date())
     spy = _SpyProvider(str(_FIXTURE_DIR))
 
-    result = fetch_night_weather(last_segment, provider=spy)
+    result = fetch_night_weather(last_segment, provider=spy, user_id="nutzer_nacht")
 
     assert spy.calls == 1, "Injizierter Provider wurde nicht (oder mehrfach) genutzt"
     assert result is not None
@@ -249,9 +249,9 @@ def test_preview_night_fetch_follows_night_metric_selection(monkeypatch):
     calls: list[int] = []
     real_fetch = sw.fetch_night_weather
 
-    def _recording_fetch(seg, provider=None):
+    def _recording_fetch(seg, provider=None, *, user_id=None):
         calls.append(1)
-        return real_fetch(seg, provider=provider)
+        return real_fetch(seg, provider=provider, user_id=user_id)
 
     monkeypatch.setattr(sw, "fetch_night_weather", _recording_fetch)
 
@@ -290,9 +290,9 @@ def test_preview_skips_night_fetch_when_neither_selected(monkeypatch):
     calls: list[int] = []
     real_fetch = sw.fetch_night_weather
 
-    def _recording_fetch(seg, provider=None):
+    def _recording_fetch(seg, provider=None, *, user_id=None):
         calls.append(1)
-        return real_fetch(seg, provider=provider)
+        return real_fetch(seg, provider=provider, user_id=user_id)
 
     monkeypatch.setattr(sw, "fetch_night_weather", _recording_fetch)
 

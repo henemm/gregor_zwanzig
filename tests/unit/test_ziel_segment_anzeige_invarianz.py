@@ -247,7 +247,7 @@ def test_ac12b_nachtabruf_holt_die_ankunftsstunde_wirklich_ab():
     )
     provider = _NachtfensterProvider()
 
-    reihe = fetch_night_weather(segmente[-1], provider=provider)
+    reihe = fetch_night_weather(segmente[-1], provider=provider, user_id="nutzer_nacht")
 
     assert provider.angefragt, (
         "Der Provider wurde nicht gefragt — der Abruf-Grenzwert waere ungeprueft."

@@ -772,6 +772,7 @@ def _write_compare_alert_snapshots(
             zusatz = {
                 "tage_ab_ortstag": tage_ab_ortstag,
                 "elevation_m": loc.elevation_m,
+                "user_id": user_id,  # Issue #2387 -- Budget-Topf je Nutzer
             }
             point = source.fetch(
                 loc.id, loc.lat, loc.lon, start_hour, end_hour, **zusatz

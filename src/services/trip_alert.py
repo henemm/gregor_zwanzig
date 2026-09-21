@@ -1808,7 +1808,8 @@ class TripAlertService:
                 # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
                 # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
                 result = radar_svc.get_nowcast(
-                    lat, lon, elevation_m=_elevation_m, priority="polling"
+                    lat, lon, elevation_m=_elevation_m, priority="polling",
+                    user_id=self._user_id,
                 )
             except Exception as e:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
@@ -1848,6 +1849,7 @@ class TripAlertService:
                                     if _p.elevation_m is not None else None
                                 ),
                                 priority="polling",
+                                user_id=self._user_id,
                             )
                         )
                     )
@@ -2466,6 +2468,7 @@ class TripAlertService:
                     enrich_ensemble=False,
                     enrich_snow=False,
                     priority="alert_check",
+                    user_id=self._user_id,
                 )
                 fresh_weather.append(fresh)
             except Exception as e:

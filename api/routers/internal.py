@@ -74,7 +74,7 @@ def stages_weather(
         return JSONResponse(status_code=404, content={"error": "not_found"})
 
     try:
-        results = compute_stage_weather(trip, provider)
+        results = compute_stage_weather(trip, provider, user_id=user_id)
     except Exception:
         # F001 (Adversary, Issue #1212): Last-Resort-Guard -- falls trotz der
         # Pro-Stage-Guards in compute_stage_weather doch etwas Unerwartetes

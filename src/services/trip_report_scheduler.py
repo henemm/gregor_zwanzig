@@ -1982,7 +1982,8 @@ class TripReportSchedulerService:
             # Issue #1329 C2: der Scheduler ist ein Hintergrund-/Cron-Prozess
             # wie der 15-Minuten-Alarm-Poll, kein direkter Nutzerklick.
             result = radar_svc.get_nowcast(
-                lat, lon, elevation_m=_elevation_m, priority="polling"
+                lat, lon, elevation_m=_elevation_m, priority="polling",
+                user_id=self._user_id,
             )
         except Exception as e:
             logger.warning(f"Starkregen-Kurzfristhinweis: Nowcast fehlgeschlagen fuer {trip.id}: {e}")
@@ -2209,7 +2210,9 @@ class TripReportSchedulerService:
                 try:
                     # Bug #288: Skip ensemble per-segment; will be added once via
                     # _enrich_ensemble_for_trip() to keep API-Calls at 1/Report.
-                    data = service.fetch_segment_weather(segment, enrich_ensemble=False)
+                    data = service.fetch_segment_weather(
+                        segment, enrich_ensemble=False, user_id=self._user_id,
+                    )
                 except Exception as e:
                     last_error = e
                     returned_error_data = None
@@ -2290,7 +2293,7 @@ class TripReportSchedulerService:
         kein Duplikat). Versand-Verhalten unveraendert.
         """
         from services.segment_weather import fetch_night_weather
-        return fetch_night_weather(last_segment)
+        return fetch_night_weather(last_segment, user_id=self._user_id)
 
     def _enrich_ensemble_for_trip(
         self,

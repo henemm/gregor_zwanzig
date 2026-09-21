@@ -56,7 +56,7 @@ class _FixedRadar(RadarNowcastService):
         kwargs.setdefault("source", "radar")
         self._fixed = NowcastResult(**kwargs)
 
-    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
         return self._fixed
 
 

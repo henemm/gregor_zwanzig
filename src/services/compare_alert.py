@@ -494,7 +494,7 @@ class CompareAlertService:
         # ohnehin. Eine konditionale Weitergabe wuerde eine Implementierung
         # ohne den Parameter still ohne Hoehe weiterlaufen lassen -- genau
         # der Fehler, den dieses Ticket beseitigt.
-        zusatz = {"elevation_m": loc.elevation_m}
+        zusatz = {"elevation_m": loc.elevation_m, "user_id": self._user_id}
         if anchor_target_date is not None:
             zusatz["target_date"] = anchor_target_date
         fresh_point = self._weather_source.fetch(

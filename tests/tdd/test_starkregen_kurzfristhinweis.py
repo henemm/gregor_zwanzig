@@ -244,7 +244,8 @@ def _install_fake_nowcast(
     `source_reach_minutes` additiv (Issue #2051 S3): ohne sie bleibt das
     `NowcastResult` unveraendert (`None`, Bestandsverhalten)."""
 
-    def _fake_get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+    def _fake_get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing",
+                          user_id=None):
         calls.append((lat, lon, priority))
         if raise_exc is not None:
             raise raise_exc

@@ -242,7 +242,7 @@ def test_ac4_compare_wiring_ueber_echten_aufrufpfad_liefert_referenz_zeitpunkt()
             self._val = precip_sum_mm
 
         def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
-                  elevation_m=None):
+                  elevation_m=None, user_id=None):
             return PointWeatherData(
                 id=point_id, name=point_id, lat=lat, lon=lon, timeseries=None,
                 aggregated=SegmentWeatherSummary(precip_sum_mm=self._val),

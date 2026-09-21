@@ -3,7 +3,7 @@ TDD RED -- Slice R1 (#1212): Python-Endpoint fuer Etappen-Wetter + Risiko.
 
 Spec: docs/specs/modules/stage_weather_python_endpoint.md
 
-Diese Datei prueft die SERVICE-Schicht `compute_stage_weather(trip, provider)`
+Diese Datei prueft die SERVICE-Schicht `compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")`
 direkt (kein HTTP), mit einem echten Test-Provider-Objekt (KEIN Mock!), der
 je nach angefragter Koordinate eine vorab konstruierte NormalizedTimeseries
 liefert. So durchlaufen die ECHTEN Bausteine (convert_trip_to_segments,
@@ -119,7 +119,7 @@ def test_ac1_service_result_shape_and_explicit_none_field():
     ])
     trip = _trip("trip-ac1", [stage])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     result = results["s1"]
     assert result is not None
@@ -153,7 +153,7 @@ def test_ac2_stage_risk_is_max_over_segments():
         (1.0, -30.0): {"wind10m_kmh": 5.0},
     })
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert "s1" in results
     assert results["s1"] is not None
@@ -181,7 +181,7 @@ def test_ac3_wind_exactly_70_is_yellow_not_red():
         (3.0, -30.0): {"wind10m_kmh": 70.0, "gust_kmh": 70.0},
     })
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert results["s1"] is not None
     assert results["s1"]["risk"] == "yellow", (
@@ -217,7 +217,7 @@ def test_ac4_wind_exposition_escalates_vs_non_exposed():
     ])
     trip = _trip("trip-ac4", [exposed_stage, non_exposed_stage])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert results["plain"] is not None
     assert results["plain"]["risk"] == "green", (
@@ -269,7 +269,7 @@ def test_ac5_fail_soft_per_stage():
 
     trip = _trip("trip-ac5", [ok_stage, no_date_stage, zero_wp_stage, fetch_fails_stage])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert results["ok"] is not None
     assert results["ok"]["risk"] in ("green", "yellow", "red")
@@ -303,7 +303,7 @@ def test_ac6_empty_stage_id_skipped():
     ])
     trip = _trip("trip-ac6", [empty_id_stage, valid_stage])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert "" not in results, "Etappe mit leerer ID darf keinen Schluessel im Ergebnis erzeugen"
     assert "valid" in results
@@ -337,7 +337,7 @@ def test_f001_broken_segment_build_does_not_crash_other_stages():
     ])
     trip = _trip("trip-f001", [stage_a, stage_b])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert results["B"] is None, f"Kaputte Segmentbildung muss die Stage auf None setzen, sah {results['B']}"
     assert results["A"] is not None, "Eine kaputte Stage darf andere Stages nicht mitreissen"
