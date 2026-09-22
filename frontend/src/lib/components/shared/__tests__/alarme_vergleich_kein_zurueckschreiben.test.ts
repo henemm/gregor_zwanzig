@@ -138,7 +138,7 @@ describe('S2-AC-2: ein Nachbar-Reiter schreibt die gerade gespeicherten Alarmwer
 		const hubPutQueue = createPutQueue();
 		const gemeinsam = {
 			client: api as PutClient,
-			wiz,
+			zustand: wiz,
 			preset: () => currentPreset,
 			enqueueHubWrite: <T,>(fn: () => Promise<T>) => hubPutQueue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {
@@ -242,7 +242,7 @@ describe('S5-AC-2: der Versand-Speicherer liest `sendSms` LIVE aus wiz — auf D
 		const hubPutQueue = createPutQueue();
 		const gemeinsam = {
 			client: api as PutClient,
-			wiz,
+			zustand: wiz,
 			preset: () => currentPreset,
 			enqueueHubWrite: <T,>(fn: () => Promise<T>) => hubPutQueue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {
@@ -308,7 +308,7 @@ describe('S5-AC-11: der Versand-PUT traegt die LIVE in wiz stehenden Legacy-Rest
 		const hubPutQueue = createPutQueue();
 		const versand = erstelleVersandVergleichSpeicherung({
 			client: api as PutClient,
-			wiz,
+			zustand: wiz,
 			preset: () => currentPreset,
 			enqueueHubWrite: <T,>(fn: () => Promise<T>) => hubPutQueue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {
@@ -371,7 +371,7 @@ describe('S5-AC-3: diff-basierter Rollback nach einem gescheiterten Versand-PUT 
 		const versandQueue = createPutQueue();
 		const versand = erstelleVersandVergleichSpeicherung({
 			client: haengenderClient,
-			wiz,
+			zustand: wiz,
 			preset: () => basis,
 			enqueueHubWrite: (fn) => versandQueue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {

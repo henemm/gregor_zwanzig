@@ -238,7 +238,7 @@ Kontext-Dokument genannten ~18 Dateien sind ein grober Vorbefund, keine verbindl
 | AC-2 (Wirkort-Guard: Self-Save-Effekt wirkt nur an Fläche B) | Kern — `effekteVon()`/`umgebungFuer()` | `$effect`-Rumpf, den SSR sonst verwirft — Muster `compare_alarme_wertprops.test.ts` AC-4 |
 | AC-3 (alle drei Mounts speisen dasselbe Bündel, Aufrufform) | Kern — AST-Wächter | Mounts C/D sind in der CI-Ampel strukturell unbewacht (`versand-tab-vergleich.spec.ts` ist NICHT in `.github/ci_e2e_specs.txt`) |
 | AC-4 (`sendEmail` bleibt eigenständig interaktiv, außerhalb der Brücke) | Kern — AST/Werte-Test | Statisch prüfbar: Bündel enthält `sendEmail`+Rückruf, Brücke `werte()` NICHT |
-| AC-5 (drei tote Legacy-Felder überleben Rollback/Payload unverändert) | Kern — bestehende SSR-Modultests | Regressionsnetz, unverändert lauffähig, da `versandZustandsBruecke` dieselbe `VersandHydrationTarget`-Schnittstelle erfüllt |
+| AC-5 (drei tote Legacy-Felder überleben Rollback/Payload unverändert) | Kern — dedizierter Test in `compare_versand_wertprops.test.ts` + bestehende SSR-Modultests | Bestehende SSR-Modultests instanziieren `VersandHydrationTarget` direkt und sehen keine Verdrahtungs-Regression in `VersandTab.svelte`s `werte()`-Closure (F-S6e-1) — der neue Kern-Test schließt genau diese Lücke |
 | AC-6 (Ratsche bewusst gepflegt) | Kern — `node --test` | Struktur-, kein Verhaltensnachweis |
 | AC-7 (Verhaltensgleichheit am Hub) | bestehende E2E, unverändert grün | `compare-versand-speichert-selbst.spec.ts` deckt bereits alle relevanten Abläufe ab — kein neuer Test nötig |
 | AC-8 (Fläche A bleibt unverändert) | bestehende E2E, unverändert grün | `versand-tab.spec.ts` (Route-Kontext), Regressionsschutz ohne neue Spec |
@@ -344,12 +344,23 @@ Zwischenstand.
   `baueVersandNutzlast` weiterhin alle drei Felder mit dem aktuellen Wert, und
   `rollbackVersandSnapshot` schreibt bei einem gescheiterten PUT über `onVersandFeldSetzen`
   zurück auf `wiz.<feld>`.
-  - Test: bestehende SSR-Modultests von `versandVergleichSpeicherung.ts` (Regressionsnetz) laufen
-    ohne inhaltliche Änderung grün — sie instanziieren `VersandHydrationTarget`-kompatible
+  - Test: Kern — dedizierter Test in `compare_versand_wertprops.test.ts` (AC-5-Block), sät die
+    drei Felder an Fläche B mit unterscheidbaren Werten und prüft sie im Zustand, den der Effekt
+    an `versandSnapshotAus` reicht — bewacht die Verdrahtung in `VersandTab.svelte`s
+    `werte()`-Closure, die von den bestehenden SSR-Modultests strukturell nicht erreicht wird.
+    Zusätzlich bestehende SSR-Modultests von `versandVergleichSpeicherung.ts` (Regressionsnetz)
+    laufen ohne inhaltliche Änderung grün — sie instanziieren `VersandHydrationTarget`-kompatible
     Objekte und prüfen deren Verhalten, nicht die Quelle der Referenz.
   - Mutations-Gegenprobe: die drei Legacy-Felder aus `versandZustandsBruecke`s `werte()`
-    entfernen ⇒ `baueVersandNutzlast` sendet `undefined` für sie ⇒ ein bestehender S5-Test
-    (AC-11, Reload-Überleben aller übrigen Felder) wird rot.
+    entfernen (line-neutral, damit die Ratsche nicht durch Zeilenverschiebung rot wird) ⇒ der
+    dedizierte AC-5-Test in `compare_versand_wertprops.test.ts` wird rot — er sät die drei Felder
+    an Fläche B mit unterscheidbaren Werten und prüft sie in dem Zustand, den der Effekt an
+    `versandSnapshotAus` reicht. Gemessen: 1 Test rot (3265 pass / 1 fail), die Ratsche
+    `context_herkunft_zweige_eingefroren.test.ts` bleibt 34/34 grün.
+    Nicht rot wird der bestehende S5-Test AC-11 (`versand_nutzlast_verliert_keine_daten.test.ts`):
+    er ruft `baueVersandNutzlast` mit einem handgebauten Snapshot-Objekt auf und läuft strukturell
+    nie durch `VersandTab.svelte`s `werte()`-Closure — er kann eine Verdrahtungs-Regression dort
+    also nicht sehen (Adversary-Finding F-S6e-1).
 
 - **AC-6 (Ratsche bewusst gepflegt — Strukturwächter, kein Verhaltensnachweis):** Given
   `context_herkunft_zweige_eingefroren.test.ts` hält heute `VersandTab.svelte:284/294/330` als

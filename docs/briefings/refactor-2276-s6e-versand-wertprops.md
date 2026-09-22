@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/modules/rework_2276_s6e_versand.md
-spec_sha256: 6b83c16b4311c7b827e77352a6919f63dbfe07c23985f6ac92075d1566de8a62
+spec_sha256: bfe41ca8fbfdc9031787962017903f620f2d72037e2c015abc106e2850cc2a94
 ---
 
 # PO-Briefing: refactor-2276-s6e-versand-wertprops

@@ -33,11 +33,12 @@
 // 🔴 STAND S6e (Issue #2276, Spec `rework_2276_s6e_versand.md`,
 // Design-Entscheidung 5): die Ausnahme gilt ZUSAETZLICH fuer
 // `VersandTab.svelte` — mit ANDERER Bilanz als S6c/S6d: 0 Eintraege werden
-// gestrichen, genau die drei heute unter `VersandTab.svelte:284/294/330`
-// gefuehrten Eintraege (die Markup-Weiche `{#if context === 'route'} …
-// {:else if context === 'vergleich'}` selbst) werden auf ihre in GREEN
-// gemessenen neuen Zeilennummern nachgefuehrt und per `BLEIBT_MIT_INHALT`
-// inhaltlich gefesselt. Grund: der Umbau auf Wertprops fuegt im SCRIPT-Teil
+// gestrichen, genau die drei in RED unter `VersandTab.svelte:284/294/330`
+// gefuehrten Eintraege (der Wirkort-Guard des Selbst-Speicher-Effekts und die
+// Markup-Weiche `{#if context === 'route'} … {:else if context ===
+// 'vergleich'}` selbst) sind in GREEN gemessen auf `:348/358/394`
+// nachgefuehrt und per `BLEIBT_MIT_INHALT` inhaltlich gefesselt. Grund: der
+// Umbau auf Wertprops fuegt im SCRIPT-Teil
 // (acht Wertprops + drei Legacy-Lesewerte + neun Rueckrufe) mehr Zeilen hinzu,
 // als er entfernt — die drei Zeilennummern verschieben sich nach unten, ohne
 // dass sich an der Bedingung selbst etwas aendert. TDD RED (diese Scheibe)
@@ -138,11 +139,12 @@ const ZAEHLBEFEHL =
  * 5): der Zeilenzahl-Vertrag gilt ZUSAETZLICH NICHT fuer `VersandTab.svelte`.
  * Anders als S6c (14/4) und S6d (6/22) aendert sich hier die Gesamtzahl NICHT:
  *   * 0 Eintraege werden gestrichen,
- *   * die drei bestehenden Eintraege (`VersandTab.svelte:284/294/330`, die
- *     Markup-Weiche `{#if context === 'route'} … {:else if context ===
- *     'vergleich'}` selbst) werden auf ihre neu gemessenen Zeilennummern
- *     nachgefuehrt und in `BLEIBT_MIT_INHALT` gefesselt — geprueft wird der
- *     Bedingungstext, nicht die Position,
+ *   * die drei bestehenden Eintraege (in RED `VersandTab.svelte:284/294/330`,
+ *     in GREEN gemessen `:348/358/394` — der Wirkort-Guard des
+ *     Selbst-Speicher-Effekts und die Markup-Weiche `{#if context === 'route'}
+ *     … {:else if context === 'vergleich'}` selbst) sind auf ihre neu
+ *     gemessenen Zeilennummern nachgefuehrt und in `BLEIBT_MIT_INHALT`
+ *     gefesselt — geprueft wird der Bedingungstext, nicht die Position,
  *   * `versandVergleichSpeicherung.ts:221` bleibt AUF SEINER ZEILE; fuer sie
  *     gilt weiterhin der alte, positionsbasierte Vertrag. Die Textaenderung an
  *     :221 (`!!p.wiz` -> `!!p.zustand`) bekommt bewusst KEINE Fesselung (Spec,
@@ -169,9 +171,13 @@ const EINGEFROREN: readonly string[] = [
 	'AlarmeTab.svelte:514',
 	'AlarmeTab.svelte:533',
 	'AlarmeTab.svelte:566',
-	'VersandTab.svelte:284',
-	'VersandTab.svelte:294',
-	'VersandTab.svelte:330',
+	// S6e: alle DREI VersandTab-Eintraege bleiben (0 gestrichen) — sie sind
+	// Wirkort-/Darstellungs-Weichen, kein `wiz`-Symptom. Ihre Zeilennummern
+	// verschoben sich durch die elf neuen Prop-Zeilen im Skript-Teil; die neuen
+	// sind gemessen und unten in BLEIBT_MIT_INHALT inhaltlich gefesselt.
+	'VersandTab.svelte:348',
+	'VersandTab.svelte:358',
+	'VersandTab.svelte:394',
 	'versandVergleichSpeicherung.ts:221',
 	'WeatherMetricsTab.svelte:545',
 	'WeatherMetricsTab.svelte:560',
@@ -368,6 +374,30 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:496',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'corridor-editor-mobile-neutral-hint'
+	},
+	// S6e (Issue #2276): die drei VersandTab-Eintraege — gemessen am Quelltext
+	// NACH dem Wertprop-Umbau. Der Wirkort-Guard im Effekt (:348) traegt seinen
+	// Text veraendert weiter (`!wiz` faellt weg, `!vergleichSpeicherung` bleibt);
+	// die beiden Markup-Weichen sind byte-identisch, nur nach unten gerutscht.
+	// Die `folgt`-Anker unterscheiden die beiden Markup-Zweige bewusst an der
+	// E-Mail-Kanalquelle (`send_email` = Tour-$state gegen `sendEmail` =
+	// Wertprop): der Rahmen darunter (`versand-tab`-Div, `VTBriefingChannels`)
+	// ist in beiden Zweigen gleich und taugte als Anker nicht — ein vertauschtes
+	// Paar faende dort seinen Anker und die Fesselung waere wertlos.
+	{
+		eintrag: 'VersandTab.svelte:348',
+		zeile: "if (context !== 'vergleich' || !vergleichSpeicherung) return;",
+		folgt: 'versandSnapshotAus(versandZustand);'
+	},
+	{
+		eintrag: 'VersandTab.svelte:358',
+		zeile: "{#if context === 'route'}",
+		folgt: 'email: send_email,'
+	},
+	{
+		eintrag: 'VersandTab.svelte:394',
+		zeile: "{:else if context === 'vergleich'}",
+		folgt: 'email: sendEmail ?? false,'
 	}
 ];
 
@@ -457,13 +487,14 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 	});
 });
 
-describe('S6c/S6d: jeder gefesselte Eintrag zeigt auf seine eigene Bedingung', () => {
+describe('S6c/S6d/S6e: jeder gefesselte Eintrag zeigt auf seine eigene Bedingung', () => {
 	for (const { eintrag, zeile, folgt } of BLEIBT_MIT_INHALT) {
 		test(`${eintrag} traegt weiterhin \`${zeile}\``, () => {
 			assert.ok(
 				EINGEFROREN.includes(eintrag),
 				`Messaufbau kaputt: \`${eintrag}\` steht nicht mehr in EINGEFROREN. Diese ` +
-					'Eintraege BLEIBEN (S6c: AlarmeTab, S6d: die beiden Corridor-Bausteine) — wer ' +
+					'Eintraege BLEIBEN (S6c: AlarmeTab, S6d: die beiden Corridor-Bausteine, ' +
+					'S6e: VersandTab) — wer ' +
 					'einen davon streicht, entfernt eine fachliche oder darstellerische ' +
 					'Verzweigung, keine HERKUNFT-Weiche.'
 			);

@@ -11,7 +11,8 @@
 //         geprueft (Markup-Ausdruck, nie eine Skript-Variable)
 //   AC-4  `sendEmail` bleibt eigenstaendig interaktiv, ausserhalb der
 //         Speicherweg-Bruecke `versandZustandsBruecke`
-//   AC-5  (bestehende SSR-Modultests, unveraendert gruen — kein neuer Test)
+//   AC-5  die drei toten Legacy-Restfelder erreichen den Speicherweg: die
+//         Bruecke reicht sie unveraendert an `versandSnapshotAus` weiter
 //   AC-6  (Ratsche `context_herkunft_zweige_eingefroren.test.ts` — reiner
 //         Strukturwaechter, siehe Vertragserweiterung dort statt hier)
 //
@@ -399,6 +400,50 @@ describe('AC-4: `sendEmail` bleibt eigenstaendig interaktiv, ausserhalb der Spei
 				'`baueVersandNutzlast` sendet es nie. Naehme die Bruecke es dennoch auf, saehe der ' +
 				'Payload-Baustein ein Feld, das er ignoriert: reines Rauschen im Diff-Gate.'
 		);
+	});
+});
+
+// ── AC-5 ─────────────────────────────────────────────────────────────────────
+// Derselbe Messaufbau wie AC-2/AC-4, andere Blickrichtung: nicht die
+// ABWESENHEIT von `sendEmail`, sondern die ANWESENHEIT der drei toten
+// Legacy-Restfelder im Zustand, den der Effekt dem Speicherweg reicht.
+// Warum hier und nicht im bestehenden S5-Netz: `versand_nutzlast_verliert_
+// keine_daten.test.ts` ruft `baueVersandNutzlast` mit einem handgebauten
+// Snapshot-Objekt auf und geht nie durch `VersandTab.svelte`s `werte()` —
+// faellt dort ein Feld weg, bleibt jener Test strukturell gruen (Adversary
+// F-S6e-1). Die Verdrahtung IM Baustein hat sonst keinen Kern-Test.
+
+describe('AC-5: die drei toten Legacy-Restfelder erreichen den Speicherweg unveraendert', () => {
+	test('die Bruecke, die der Effekt an `versandSnapshotAus` reicht, fuehrt alle drei Legacy-Werte', async () => {
+		// Gesaet wird NICHT der Saat-Default `undefined` (sonst waere der Test
+		// mit und ohne Verdrahtung gleich gruen), sondern drei unterscheidbare
+		// Werte — auch eine Feld-Vertauschung faellt damit auf.
+		const { rueckruf, gesehen } = await effektAufbauen(
+			flaecheB({ alertCooldownMinutes: 42, alertQuietFrom: '23:15', alertQuietTo: '05:45' })
+		);
+		rueckruf();
+		assert.strictEqual(
+			gesehen.length,
+			1,
+			'Messaufbau kaputt: siehe AC-2, Flaeche B — ohne einen gemeldeten Stand misst dieser ' +
+				'Test nichts.'
+		);
+		const zustand = gesehen[0] as Record<string, unknown>;
+		for (const [feld, erwartet] of [
+			['alertCooldownMinutes', 42],
+			['alertQuietFrom', '23:15'],
+			['alertQuietTo', '05:45']
+		] as const) {
+			assert.strictEqual(
+				zustand[feld],
+				erwartet,
+				`AC-5 FAIL: die Bruecke reicht \`${feld}\` nicht an den Speicherweg weiter ` +
+					`(gesehen: ${JSON.stringify(zustand[feld])}, gesaet: ${JSON.stringify(erwartet)}). ` +
+					'Das Feld hat kein Bedienelement, muss aber durch Snapshot/Nutzlast/Rollback laufen — ' +
+					'faellt es aus `werte()`, sendet `baueVersandNutzlast` `undefined` und der naechste ' +
+					'PUT loescht den gespeicherten Wert (BUG-DATALOSS-GR221-Klasse).'
+			);
+		}
 	});
 });
 

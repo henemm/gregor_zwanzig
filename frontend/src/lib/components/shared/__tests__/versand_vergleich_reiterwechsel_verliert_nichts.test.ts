@@ -65,7 +65,7 @@ function hub() {
 	const queue = createPutQueue();
 	const gemeinsam = {
 		client: api,
-		wiz,
+		zustand: wiz,
 		preset: () => basis,
 		enqueueHubWrite: <T>(fn: () => Promise<T>) => queue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {
