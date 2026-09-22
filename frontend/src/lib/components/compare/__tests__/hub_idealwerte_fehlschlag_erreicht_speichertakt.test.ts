@@ -24,7 +24,7 @@ import assert from 'node:assert/strict';
 
 import { erzeugeSpeicherAnmeldestelle } from '../../../stores/aktiveSpeicherung.ts';
 import type { ComparePreset } from '../../../types.ts';
-import { createPutQueue } from '../compareHubWizardBridge.ts';
+import { createPutQueue } from '../compareHubPersistenz.ts';
 import { erstelleWertebereicheVergleichSpeicherung } from '../../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 import {
 	createController,

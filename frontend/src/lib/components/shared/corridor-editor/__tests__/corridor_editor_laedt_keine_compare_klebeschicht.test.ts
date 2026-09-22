@@ -1,7 +1,10 @@
 // TDD RED — Issue #2276 Scheibe S3 (Epic #2345), AC-7: der geteilte
 // Wertebereiche-Organismus (CorridorEditor / CorridorEditorMobile) lädt zur
-// Laufzeit KEIN Modul aus `compare/compareHubWizardBridge.ts`; seine
-// Speicherhelfer kommen aus `shared/corridor-editor/wertebereicheVergleichSpeicherung.ts`.
+// Laufzeit KEIN Modul aus der Compare-Hub-Klebeschicht (`compare/
+// compareHubPersistenz.ts`, `compare/compareHubHydration.ts` — Issue #2276
+// S6f loeste die vormalige einteilige Bridge-Datei in diese beiden Module
+// auf); seine Speicherhelfer kommen aus
+// `shared/corridor-editor/wertebereicheVergleichSpeicherung.ts`.
 // Ein Laufzeit-Import von `buildComparePresetSavePayload` aus
 // `compare/compareEditorSave.ts` bleibt ausdrücklich zulässig (Design Punkt 9).
 //
@@ -12,7 +15,7 @@
 // Auflösungs-Haken (`module.registerHooks`, in-thread) protokolliert jede
 // Modul-URL, die beim Import + SSR-Render im `vergleich`-Kontext geladen wird.
 // `import type` verschwindet beim Übersetzen und bleibt zulässig.
-// (Abweichung vom Wortlaut „Mock auf compareHubWizardBridge.ts": ein
+// (Abweichung vom Wortlaut „Mock auf die Compare-Hub-Klebeschicht": ein
 // protokollierender Auflösungs-Haken beweist dasselbe, ohne einen Ersatz-Export
 // zu erfinden, der die eigene Annahme spiegelt.)
 //
@@ -32,6 +35,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { register, registerHooks } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -95,7 +99,13 @@ const controllerStub = {
 	setDirty() {}
 };
 
-const BRIDGE = '/src/lib/components/compare/compareHubWizardBridge.ts';
+// Issue #2276 S6f (Epic #2345): die Bridge wurde aufgeloest, ihre acht
+// Laufzeit-Exporte zogen byte-identisch in zwei neue Module — die
+// Abwesenheits-Pruefung erweitert sich auf BEIDE (AC-3).
+const BRIDGE_PFADE = [
+	'/src/lib/components/compare/compareHubPersistenz.ts',
+	'/src/lib/components/compare/compareHubHydration.ts'
+];
 const NEUES_MODUL = '/src/lib/components/shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 
 function renderVergleich(Komponente: unknown): string {
@@ -132,10 +142,18 @@ describe('AC-7: CorridorEditor(Mobile) lädt zur Laufzeit keine Compare-Klebesch
 			liste.some((u) => u.endsWith(NEUES_MODUL)),
 			'der Editor muss seine Vergleichs-Speicherhelfer aus shared/corridor-editor/wertebereicheVergleichSpeicherung.ts laden'
 		);
+		// Vakuum-Schutz (Issue #2276 S6f): eine reine Abwesenheits-Pruefung waere
+		// gruen, solange die neuen Module gar nicht existieren — das bewiese nichts.
+		for (const pfad of BRIDGE_PFADE) {
+			assert.ok(
+				existsSync(path.join(FRONTEND, pfad)),
+				`Vakuum-Schutz: ${pfad} muss existieren — sonst ist die Abwesenheits-Pruefung unten wirkungslos`
+			);
+		}
 		assert.deepEqual(
-			liste.filter((u) => u.endsWith(BRIDGE)),
+			liste.filter((u) => BRIDGE_PFADE.some((pfad) => u.endsWith(pfad))),
 			[],
-			'CorridorEditor (oder ein von ihm geladenes Modul) lädt compare/compareHubWizardBridge.ts zur Laufzeit'
+			'CorridorEditor (oder ein von ihm geladenes Modul) lädt compare/compareHubPersistenz.ts oder compare/compareHubHydration.ts zur Laufzeit'
 		);
 	});
 });

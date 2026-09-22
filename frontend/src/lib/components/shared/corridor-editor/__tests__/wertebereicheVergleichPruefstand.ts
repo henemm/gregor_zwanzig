@@ -4,7 +4,7 @@
 // `wertebereicheVergleichSpeicherung.ts`: der Prüfstand muss auch heute
 // laden, damit das Rot der Tests am fehlenden Modul liegt, nicht hier.
 //
-// Alles ECHT außer dem Transport: echte Hub-Hydration (compareHubWizardBridge),
+// Alles ECHT außer dem Transport: echte Hub-Hydration (compareHubHydration),
 // echte Editor-Logik (corridorEditorState: buildComparePool/patchRow/removeRow/
 // buildCompareCorridorSavePayload — exakt die Schritte von `syncToWizard()` in
 // CorridorEditor.svelte), echte SaveStatus-Instanz. Transport: `api` gegen
@@ -14,8 +14,8 @@ import { SaveStatus } from '../../../../stores/saveStatusStore.svelte.ts';
 import type { ComparePreset, SensLevel } from '../../../../types.ts';
 import {
 	hydrateAlarmFieldsFromPreset,
-	hydrateWizardStateFromPreset
-} from '../../../compare/compareHubWizardBridge.ts';
+	hydrateHubFieldsFromPreset
+} from '../../../compare/compareHubHydration.ts';
 import {
 	buildComparePool,
 	buildCompareCorridorSavePayload,
@@ -85,7 +85,7 @@ export function createController(id: string): SaveStatus {
 export function hydrierterWs(preset: ComparePreset): Record<string, unknown> {
 	const ws: Record<string, unknown> = {};
 	hydrateAlarmFieldsFromPreset(ws, preset, []);
-	const h = hydrateWizardStateFromPreset(preset, []);
+	const h = hydrateHubFieldsFromPreset(preset, []);
 	ws.isEditMode = h.isEditMode;
 	ws.corridors = h.corridors;
 	ws.activityProfile = h.activityProfile;

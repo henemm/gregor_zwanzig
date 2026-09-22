@@ -1,5 +1,5 @@
 // TDD — Hub-PUT-Queue: ALLE Schreibpfade des Ortsvergleich-Hubs laufen
-// serialisiert über EINE Kette (`createPutQueue`, compareHubWizardBridge.ts).
+// serialisiert über EINE Kette (`createPutQueue`, compareHubPersistenz.ts).
 //
 // Ursprung: Issue #1256 Scheibe 7 Fix-Loop 1 (F002/F003, Adversary CRITICAL) —
 // zwei unsynchronisierte Hub-PUT-Pfade (Versand-Änderung + Aktivieren/
@@ -35,7 +35,7 @@ import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
 import type { ComparePreset } from '../../../types.ts';
 import type { PutClient } from '../../shared/tripSpeicherung.ts';
-import { createPutQueue, buildToggleActivePutPayload } from '../compareHubWizardBridge.ts';
+import { createPutQueue, buildToggleActivePutPayload } from '../compareHubPersistenz.ts';
 import { erstelleVersandVergleichSpeicherung } from '../../shared/versandVergleichSpeicherung.ts';
 import {
 	createController,

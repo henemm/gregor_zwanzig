@@ -17,11 +17,11 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildComparePresetSavePayload, buildNewComparePresetPayload } from '../compareEditorSave.ts';
+import { buildHubPutPayload } from '../compareHubPersistenz.ts';
 import {
-	buildHubPutPayload,
 	hydrateAlarmFieldsFromPreset,
-	hydrateWizardStateFromPreset
-} from '../compareHubWizardBridge.ts';
+	hydrateHubFieldsFromPreset
+} from '../compareHubHydration.ts';
 import { buildCompareCorridorSavePayload } from '../../shared/corridor-editor/corridorEditorState.ts';
 import { rehydrateActiveMetrics } from '../compareEditorLoad.ts';
 import {
@@ -337,7 +337,7 @@ describe('AC-12: Bestandsrueckfall beim Speichern eines anderen Reiters', () => 
 // GELTUNGSBEREICH — bitte nicht mehr hineinlesen, als hier steht: geprueft
 // werden AUSSCHLIESSLICH die reinen Funktionen
 // `hydrateWeatherMetricsFromPreset`, `hydrateAlarmFieldsFromPreset`,
-// `hydrateWizardStateFromPreset`, `flushPendingWeatherMetricsSave` und
+// `hydrateHubFieldsFromPreset`, `flushPendingWeatherMetricsSave` und
 // `buildCompareCorridorSavePayload`. Ihr Vertrag: mit geladener Katalogantwort
 // liefert die Hydration Auswahl-Schluessel (nie die Rohform), und der
 // Dirty-Guard erzeugt nur bei echter Aenderung einen PUT.
@@ -469,11 +469,11 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 
 	test('Idealwerte-Reiter: ✕-Entfernen trifft die aufgeloeste Auswahl', () => {
 		// Dritte Hydrationsstelle (CompareTabs.svelte::hydrateIdealwerteTab ->
-		// hydrateWizardStateFromPreset). Ohne aufgeloeste Auswahl wuerde
+		// hydrateHubFieldsFromPreset). Ohne aufgeloeste Auswahl wuerde
 		// `activeSet.delete(key)` in buildCompareCorridorSavePayload eine
 		// Rohform-Auswahl nicht treffen — die entfernte Zeile blieb in der Mail.
 		const catalog = loadCatalog();
-		const hydrated = hydrateWizardStateFromPreset(makeMigratedPreset(), catalog);
+		const hydrated = hydrateHubFieldsFromPreset(makeMigratedPreset(), catalog);
 
 		assert.deepEqual(hydrated.activeMetricKeys, RESOLVED,
 			'der Idealwerte-Reiter muss dieselbe aufgeloeste Auswahl sehen'

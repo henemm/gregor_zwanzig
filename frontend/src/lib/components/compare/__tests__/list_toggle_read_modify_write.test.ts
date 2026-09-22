@@ -13,7 +13,7 @@
 // Server-Datenverlust ohne Fehlermeldung.
 //
 // Dieser Test ist ROT, weil `buildFreshTogglePutPayload` noch nicht in
-// `compareHubWizardBridge.ts` existiert (Phase 6 fuehrt ihn ein: GET-vor-PUT
+// `compareHubPersistenz.ts` existiert (Phase 6 fuehrt ihn ein: GET-vor-PUT
 // Read-Modify-Write, analog `buildToggleActivePutPayload`/`computePauseToggle`,
 // aber mit injizierbarem `getPreset` statt stale Prop). Einziger erwarteter
 // Fehlgrund: der Import scheitert / der Named Export ist `undefined`.
@@ -25,7 +25,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ComparePreset } from '../../../types.ts';
-import { buildFreshTogglePutPayload } from '../compareHubWizardBridge.ts'; // NEU — existiert noch nicht → RED
+import { buildFreshTogglePutPayload } from '../compareHubPersistenz.ts'; // NEU — existiert noch nicht → RED
 
 function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	return {

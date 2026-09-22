@@ -1,6 +1,8 @@
 // TDD RED — Issue #2276 Scheibe S2 (Epic #2345), AC-9: der geteilte
-// Alarme-Organismus lädt zur Laufzeit NICHT die Compare-Klebeschicht
-// (`compare/compareHubWizardBridge.ts`); seine Alarm-Helfer kommen aus
+// Alarme-Organismus lädt zur Laufzeit NICHT die Compare-Hub-Klebeschicht
+// (`compare/compareHubPersistenz.ts`, `compare/compareHubHydration.ts` —
+// Issue #2276 S6f loeste die vormalige einteilige Bridge-Datei in diese
+// beiden Module auf); seine Alarm-Helfer kommen aus
 // `shared/alarmeVergleichSpeicherung.ts`.
 //
 // Spec S2: docs/specs/modules/rework_2276_s2_alarme.md — AC-9, § Modul-Verschiebung
@@ -34,7 +36,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { register, registerHooks } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -104,7 +106,13 @@ function alarmProps(): Record<string, unknown> {
 	};
 }
 
-const BRIDGE = '/src/lib/components/compare/compareHubWizardBridge.ts';
+// Issue #2276 S6f (Epic #2345): die Bridge wurde aufgeloest, ihre acht
+// Laufzeit-Exporte zogen byte-identisch in zwei neue Module — die
+// Abwesenheits-Pruefung erweitert sich auf BEIDE (AC-3).
+const BRIDGE_PFADE = [
+	'/src/lib/components/compare/compareHubPersistenz.ts',
+	'/src/lib/components/compare/compareHubHydration.ts'
+];
 const NEUES_MODUL = '/src/lib/components/shared/alarmeVergleichSpeicherung.ts';
 
 describe('AC-9: AlarmeTab lädt zur Laufzeit keine Compare-Klebeschicht', () => {
@@ -135,16 +143,25 @@ describe('AC-9: AlarmeTab lädt zur Laufzeit keine Compare-Klebeschicht', () => 
 			HAUPTGRAPH.some((u) => u.endsWith(NEUES_MODUL)),
 			'AlarmeTab muss seine Alarm-Speicherhelfer aus shared/alarmeVergleichSpeicherung.ts laden'
 		);
+		// Vakuum-Schutz (Issue #2276 S6f): eine reine Abwesenheits-Pruefung waere
+		// gruen, solange die neuen Module gar nicht existieren — das bewiese nichts.
+		for (const pfad of BRIDGE_PFADE) {
+			assert.ok(
+				existsSync(path.join(FRONTEND, pfad)),
+				`Vakuum-Schutz: ${pfad} muss existieren — sonst ist die Abwesenheits-Pruefung unten wirkungslos`
+			);
+		}
 		assert.deepEqual(
-			HAUPTGRAPH.filter((u) => u.endsWith(BRIDGE)),
+			HAUPTGRAPH.filter((u) => BRIDGE_PFADE.some((pfad) => u.endsWith(pfad))),
 			[],
-			'AlarmeTab (oder ein von ihm geladenes Modul) lädt compare/compareHubWizardBridge.ts zur Laufzeit'
+			'AlarmeTab (oder ein von ihm geladenes Modul) lädt compare/compareHubPersistenz.ts oder compare/compareHubHydration.ts zur Laufzeit'
 		);
 	});
 
-	test('Gegenprobe: ein eingeschleuster Bridge-Import wird gesehen (kein Vakuum-Grün)', async () => {
-		// Eine Kopie des echten Prüflings mit EINEM zusätzlichen Wert-Import der
-		// Klebeschicht. Sie liegt in `__tests__/`, deshalb werden ihre relativen
+	test('Gegenprobe: ein eingeschleuster Import aus einem der neuen Hub-Module wird gesehen (kein Vakuum-Grün)', async () => {
+		// Eine Kopie des echten Prüflings mit EINEM zusätzlichen Wert-Import aus
+		// `compareHubHydration.ts` (Nachfolgemodul der aufgeloesten Bridge, Issue
+		// #2276 S6f). Sie liegt in `__tests__/`, deshalb werden ihre relativen
 		// Spezifizierer um eine Ebene angehoben. Gemessen wird der Ladegraph, nicht
 		// der Dateiinhalt — der Import allein genügt, ein Render ist dafür nicht nötig.
 		const kopie = path.join(HERE, '__gegenprobe_alarme_tab.svelte');
@@ -158,7 +175,7 @@ describe('AC-9: AlarmeTab lädt zur Laufzeit keine Compare-Klebeschicht', () => 
 				quelle.replace(
 					'<script lang="ts">',
 					'<script lang="ts">\n\timport { hydrateAlarmFieldsFromPreset } from ' +
-						"'../../compare/compareHubWizardBridge.ts';\n" +
+						"'../../compare/compareHubHydration.ts';\n" +
 						'\tvoid hydrateAlarmFieldsFromPreset;'
 				)
 			);
@@ -169,8 +186,8 @@ describe('AC-9: AlarmeTab lädt zur Laufzeit keine Compare-Klebeschicht', () => 
 				'Messaufbau kaputt: der Protokoll-Haken hat beim Laden der Kopie nichts gesehen.'
 			);
 			assert.ok(
-				[...geladen].some((u) => u.endsWith(BRIDGE)),
-				'Gegenprobe FAIL: ein echter Laufzeit-Import von compareHubWizardBridge.ts in ' +
+				[...geladen].some((u) => BRIDGE_PFADE.some((pfad) => u.endsWith(pfad))),
+				'Gegenprobe FAIL: ein echter Laufzeit-Import aus compareHubHydration.ts in ' +
 					'AlarmeTab.svelte bleibt unbemerkt. Dann bewiese der Test oben nichts mehr — ' +
 					'er zeigte nur, dass ein Objekt ohne `wiz`-Feld rendert.'
 			);

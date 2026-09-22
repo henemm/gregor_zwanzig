@@ -44,7 +44,8 @@ import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import { SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
 import type { ComparePreset } from '../../../types.ts';
-import { createPutQueue, hydrateAlarmFieldsFromPreset } from '../../compare/compareHubWizardBridge.ts';
+import { createPutQueue } from '../../compare/compareHubPersistenz.ts';
+import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
 import { erstelleAlarmeVergleichSpeicherung } from '../alarmeVergleichSpeicherung.ts';
 
 const PRESET_ID = 'cp-2276-s2';

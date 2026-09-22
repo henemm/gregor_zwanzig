@@ -31,7 +31,8 @@ import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import { SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
 import type { ComparePreset } from '../../../types.ts';
-import { createPutQueue, hydrateAlarmFieldsFromPreset } from '../../compare/compareHubWizardBridge.ts';
+import { createPutQueue } from '../../compare/compareHubPersistenz.ts';
+import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
 import { erstelleAlarmeVergleichSpeicherung } from '../alarmeVergleichSpeicherung.ts';
 // Issue #2276 S3: der reiter-spezifische Guard ist im generischen, listenbasierten
 // Flush-Guard aufgegangen — die S2-Zusicherungen gelten fuer ihn unveraendert.

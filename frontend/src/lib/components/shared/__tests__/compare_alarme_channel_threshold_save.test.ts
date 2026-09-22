@@ -23,7 +23,7 @@ import assert from 'node:assert/strict';
 import type { ComparePreset } from '../../../types.ts';
 // Issue #2276 S2: Speicherpfad-Helfer zogen nach shared/alarmeVergleichSpeicherung.ts;
 // die Hydration bleibt in der Compare-Klebeschicht.
-import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubWizardBridge.ts';
+import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
 import {
 	flushPendingAlarmSave,
 	rollbackAlarmSnapshot,
