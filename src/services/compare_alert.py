@@ -282,11 +282,30 @@ class CompareAlertService:
             # identisch zum Verhalten vor dieser Scheibe.
             entity_by_id = {t["entity_id"]: t for t in triggered}
             below_threshold_all: set[str] = set()
-            ids_by_channel: dict[str, list[str]] = {c: [] for c in config.channels}
+            #
+            # Issue #1895 S2: die Kanalmenge entsteht METRIK-BEWUSST JE ORT —
+            # erst hier liegt `t["changes"]` vor. `_build_eval_config` kennt
+            # die ausloesenden Metriken noch nicht und liefert weiter nur den
+            # preset-weiten Startwert (AC-11/AC-16). Ohne Eintrag in
+            # `alert_metric_channels` ist das Ergebnis je Ort identisch mit
+            # `config.channels` — Bestandsverhalten bleibt byte-gleich.
+            kanaele_je_ort = {
+                t["entity_id"]: self._kanaele_fuer_ort(preset, config, t)
+                for t in triggered
+            }
+            # AC-17: die Vorbelegung muss auch Kanaele abdecken, die ERST
+            # durch einen Metrik-Eintrag hinzukommen — sonst wirft die
+            # Zuweisung unten `KeyError` und der GANZE Vergleichs-Alarm
+            # dieses Ortes faellt aus.
+            alle_kanaele: set[str] = set(config.channels)
+            for _ort_kanaele in kanaele_je_ort.values():
+                alle_kanaele |= _ort_kanaele
+            ids_by_channel: dict[str, list[str]] = {c: [] for c in alle_kanaele}
             for t in triggered:
+                ort_kanaele = kanaele_je_ort[t["entity_id"]]
                 t_urgency = alert_urgency.urgency_from_changes(t["changes"])
                 allowed, suppressed = alert_channel_threshold.split_by_threshold(
-                    config.channels, t_urgency, thresholds,
+                    ort_kanaele, t_urgency, thresholds,
                 )
                 below_threshold_all |= suppressed
                 for c in allowed:
@@ -572,6 +591,18 @@ class CompareAlertService:
                     "last_reported_value": float(change.new_value), "reported_at": now_iso,
                 }
             entry["state_svc"].save(entry["entity_id"], alert_state)
+
+    def _kanaele_fuer_ort(self, preset: dict, config, t: dict) -> set[str]:
+        """Issue #1895 S2 (AC-11/AC-16/AC-17): Kanalmenge DIESES Ortes —
+        dieselbe geteilte Aufloesung wie preset-weit (ADR-0021), zusaetzlich
+        mit den rohen Summary-Keys der tatsaechlich ausloesenden Aenderungen.
+        Ohne ausloesende Metrik bleibt es beim preset-weiten Satz."""
+        metriken = [c.metric for c in (t.get("changes") or [])]
+        if not metriken:
+            return set(config.channels)
+        return effective_alert_channels(
+            preset, self._settings, self._user_id, metrics=metriken,
+        )
 
     def _build_eval_config(
         self, preset: dict, cooldown_minutes, all_locations: dict,

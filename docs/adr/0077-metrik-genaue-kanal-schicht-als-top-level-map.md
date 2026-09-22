@@ -38,6 +38,14 @@ für eine Metrik löscht still die Kanäle aller anderen Metriken.
    ist eine Analyse-Entscheidung für S3 (Editor-Spalte). Go validiert heute weder Metrik-Keys noch
    Stufenwerte; eine hier eingeführte Validierung wäre Scope-Creep und würde Bestandsdaten mit dem
    abgelösten Schlüssel `snow_line` brechen.
+
+   **Ergänzung S2 (2026-09-22, Issue #1895):** Das **Lese-Vokabular** legt S2 fest — ein Schlüssel
+   ist eine Katalog-`metric_id`, aufgelöst aus dem rohen Summary-Key der auslösenden Änderung über
+   die eine Rückwärts-Primitive `metric_catalog.metric_and_aggregation_for_field`
+   (wählbarkeitsdisambiguiert: `temp_min_c` ⇒ `temperature`, nie `temperature_cold`). Ein
+   unbekannter oder mehrdeutiger Schlüssel wirft nicht, sondern wird behandelt wie „kein Eintrag" —
+   die Metrik erbt (Punkt 4). Die **verbindliche, validierte** Schlüsselmenge samt Editor-Anzeige
+   und Bestandsdaten-Prüfung bleibt S3.
 4. **Regel: kein Eintrag = die Metrik erbt den Abo-weiten Kanal-Satz.** Ein fehlender Metrik-Schlüssel
    ist keine Abschaltung, sondern Nicht-Abweichung. Das ist die Fortschreibung von ADR-0046: Die
    Kanal-Ebene regelt, AUF WELCHEM WEG eine Meldung ankommt, nicht OB sie ankommt — auch die

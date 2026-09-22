@@ -2506,7 +2506,13 @@ class TripAlertService:
             fuers Alarm-Protokoll, deshalb die volle Ruecksage statt nur `bool`.
         """
         # Issue #638: Effective channels — per-alert override beats briefing channels.
-        effective_channels = self._effective_alert_channels(trip)
+        # Issue #1895 S2: metrik-bewusst — die ROHEN Summary-Keys der
+        # tatsaechlich ausloesenden Aenderungen entscheiden mit, welche
+        # Kanaele der Versand nimmt (AC-10). Ohne `changes` bleibt es beim
+        # abo-weiten Satz von vor dieser Scheibe.
+        effective_channels = self._effective_alert_channels(
+            trip, metrics=[c.metric for c in changes],
+        )
 
         # Issue #1461 S3b-2a: die Kanal-Schwelle filtert NUR den tatsaechlichen
         # Versand (allowed), nie das rohe Opt-in -- das bleibt fuer den
@@ -2873,7 +2879,9 @@ class TripAlertService:
                 )
         return result.sent
 
-    def _effective_alert_channels(self, trip: "Trip") -> set[str]:
+    def _effective_alert_channels(
+        self, trip: "Trip", metrics: Optional[List[str]] = None,
+    ) -> set[str]:
         """Issue #2279 S1: duenner Delegat auf den geteilten Kern
         `services.alert_channels.effective_alert_channels` -- derselbe
         Algorithmus wie bisher (Issue #638/#1258 S3), jetzt auch fuer den
@@ -2882,11 +2890,21 @@ class TripAlertService:
         Delegation per `monkeypatch` am Modul-Namensraum nachweisen koennen
         (AC-6).
 
+        Issue #1895 S2: `metrics` sind die rohen Summary-Keys der
+        ausloesenden Aenderungen. Ohne sie laeuft der Aufruf UNVERAENDERT
+        (ohne das neue Schluesselwort) — die metrikfreien Aufrufstellen
+        (Radar, amtliche Warnung, Protokoll-Zierde) bleiben dadurch exakt
+        auf dem Stand von vor dieser Scheibe (AC-13).
+
         Returns:
             Set of channel names ("email", "telegram", "sms", "premium_sms")
             to use for alert dispatch.
         """
-        return effective_alert_channels(trip, self._settings, self._user_id)
+        if not metrics:
+            return effective_alert_channels(trip, self._settings, self._user_id)
+        return effective_alert_channels(
+            trip, self._settings, self._user_id, metrics=metrics,
+        )
 
     @staticmethod
     def _briefing_channels(config) -> set[str]:

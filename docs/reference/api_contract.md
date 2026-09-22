@@ -1,7 +1,24 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-09-18 (Issue #2285, `fix-2285-compare-put-merge-kernel` —
+**Updated:** 2026-09-22 (Issue #1895 Scheibe S2, `feat-1895-s2-kanal-leser` —
+`alert_metric_channels` (S1, s. Abschnitt unten) bekommt seinen ersten Leser: Δ-Änderungsalarme
+lösen den Versand-Kanalsatz jetzt je AUSGELÖSTER Metrik auf (roher Summary-Key → Katalog-
+`metric_id` über `metric_catalog.metric_and_aggregation_for_field`, Wählbarkeits-Tie-Break),
+Vereinigung über alle ausgelösten Metriken einer Meldung; eine eintragslose oder mehrdeutig
+aufgelöste Metrik erbt weiterhin den bisherigen Kanalsatz (Regel-Union bzw. Abo-weit) statt die
+Vereinigung zu verkleinern. Beim Ortsvergleich geschieht das je Ort in der Ortsschleife — zwei
+Orte desselben Alarmlaufs können dadurch unterschiedliche Kanalsätze bekommen. Regen-/Nowcast-
+Alarme und amtliche Warnungen bleiben strukturell metrikfrei und unverändert (Abo-weiter Satz
+bzw. Regel-Union, je nachdem, was vor dieser Scheibe galt). Migration beim Laden (Python) kopiert
+`alert_rules[].channels` aktivierter Regeln mit nicht-leerer Kanalliste in
+`alert_metric_channels` (Read-Modify-Write mit Merge — ein bereits persistierter Eintrag gewinnt,
+`alert_rules` selbst bleibt unverändert bestehen). **Verhaltensänderung für Bestandsnutzer**
+(bewusst, PO-freigegeben): ein Alarm, der nach der Migration nur eine migrierte Metrik auslöst,
+erreicht danach nur noch deren Regel-Kanäle statt der bisherigen regelübergreifenden Union.
+Details Abschnitt „alert_metric_channels" unten, ADR-0077, Spec
+`docs/specs/modules/alert_metric_channels.md`);
+2026-09-18 (Issue #2285, `fix-2285-compare-put-merge-kernel` —
 ein Merge-Kernel `applyComparePresetPatch` (`internal/handler/compare_preset.go`)
 ersetzt die beiden bisher unabhängigen Merge-Implementierungen von
 `PUT /api/compare/presets/{id}` (dediziert, ~170 Zeilen Feldrettung entfallen)
@@ -922,7 +939,7 @@ Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md` (Trip), `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md` (Ortsvergleich).
 
-### alert_metric_channels (Issue #1895 S1 · Epic #1230)
+### alert_metric_channels (Issue #1895 S1 · S2 · Epic #1230)
 
 Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_channel_thresholds` („je Kanal", ADR-0046): **je Metrik** die Kanal-Zuordnung. Identischer Vertrag auf `Trip` **und** `ComparePreset` (Go jeweils `map[string]interface{}`, Python `Optional[dict]`), Parität ab S1.
 
@@ -936,6 +953,14 @@ Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_cha
 | `alert_metric_channels.<metrik>` | beliebige Kanal-Repräsentation | in S1 **bewusst unvalidiert** (weder Metrik-Schlüssel noch Kanalwerte, ADR-0077 Punkt 3). Ein im PUT-Body fehlender Metrik-Schlüssel behält seinen Bestandswert → **Feld-Level-Merge** je Metrik (`mergeConfigMap` im Trip-PUT, generischer `mergeBriefingPatch` im Vergleich-PUT); ein GANZ fehlendes `alert_metric_channels` im Body bewahrt das ganze Objekt (Top-Level-Erbe) |
 
 **Wirkung in S1: keine.** Die Scheibe ist reine Verrohrung (Feld, Persistenz, Roundtrip) — es gibt noch keinen Leser im Alarm-Pfad und keine Bedienfläche. Der Leser folgt in S2, die Editor-Spalte erst danach (Reihenfolge-Zwang aus ADR-0043, festgeschrieben in ADR-0077 Punkt 5). `alert_rules[].channels` bleibt in S1 unverändert die wirksame per-Regel-Präzedenz.
+
+**Semantik ab S2 (Issue #1895 · Leser + Migration).** Das Feld wirkt jetzt:
+
+- **Schlüssel = Katalog-`metric_id`.** Der Alarm-Pfad übersetzt den rohen Summary-Key der auslösenden Änderung (z. B. `gust_max_kmh`) über die eine Rückwärts-Primitive `metric_catalog.metric_and_aggregation_for_field` in die `metric_id` (`gust`) — mit Wählbarkeits-Tie-Break: `temp_min_c` ⇒ `temperature`, **nie** `temperature_cold`. Ein unbekannter oder mehrdeutiger Key wirft nicht, sondern gilt als „kein Eintrag" (fail-soft, die Metrik erbt).
+- **Wirkung je Alarm = Vereinigung über die ausgelösten Metriken.** Pro Metrik gilt der eigene Eintrag; hat eine Metrik keinen (oder einen leer aufgelösten) Eintrag, gilt für sie der Kanalsatz ohne diese Schicht (Abo-weiter Satz bzw. Regel-Union). Die Vereinigung kann nie unter diesen Satz fallen, wenn irgendeine ausgelöste Metrik eintragslos ist — ADR-0046: die Kanal-Ebene regelt den WEG, nicht das OB.
+- **Nur metrik-behaftete Alarme.** Regen-/Nowcast-Alarme und amtliche Warnungen sind strukturell metrikfrei und verwenden unverändert den Abo-weiten Satz.
+- **Je Ort beim Ortsvergleich.** Die Auflösung geschieht in der Ortsschleife: zwei Orte desselben Alarmlaufs können unterschiedliche Kanalsätze bekommen, wenn sie über verschiedene Metriken auslösen.
+- **Migration beim Laden (Python).** `alert_rules[].channels` wird in dieses Feld **kopiert** (`alert_rules` bleibt unverändert bestehen): nur aktivierte Regeln mit nicht-leerer Kanalliste, eins-zu-viele ausgerollt (`snow_line` ⇒ `snowfall_limit` **und** `freezing_level`), Kollisionen auf derselben `metric_id` unioniert, bereits vorhandene Einträge gewinnen (Read-Modify-Write mit Merge). Eine leere Regel-Kanalliste erzeugt **keinen** Schlüssel (ein `{}` läse sich als Override ins Leere). **Folge für Bestandsnutzer (bewusst, PO-freigegeben):** ein Alarm, der nur Metrik X auslöst, erreicht danach nur noch die Kanäle der X-Regel statt der regelübergreifenden Union.
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertMetricChannels`), ADR-0077 (schreibt ADR-0046 fort), Spec `docs/specs/modules/alert_metric_channels.md`.
 
