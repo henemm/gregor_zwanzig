@@ -15,10 +15,12 @@ setup('authenticate via API (staging)', async ({ playwright }) => {
 	// Config on top; der Login-Body braucht das stabile App-Konto.
 	const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
 	const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
-	// App-Konto: GZ_AUTH_* (Staging), Fallback auf den E2E-Default admin/test1234.
+	// App-Konto: mobile-audit (realer Testdaten-Bestand, vgl. Setup in
+	// docs/Workspaces). GZ_MOBILE_AUDIT_* erlaubt ein abweichendes Passwort,
+	// Default ist das bewusst feste Testpasswort des Staging-Nutzers.
 	const fallback = resolveE2EUser();
-	const authUser = process.env.GZ_AUTH_USER ?? fallback.user;
-	const authPass = process.env.GZ_AUTH_PASS ?? fallback.pass;
+	const authUser = process.env.GZ_MOBILE_AUDIT_USER ?? 'mobile-audit';
+	const authPass = process.env.GZ_MOBILE_AUDIT_PASS ?? (fallback.pass === 'test1234' ? 'MobileAudit2026!' : fallback.pass);
 	const ctx = await playwright.request.newContext({
 		baseURL: base,
 		ignoreHTTPSErrors: true,
