@@ -24,6 +24,12 @@
 // gestrichen und 4 auf neue Zeilennummern nachgefuehrt. Begruendung und genaue
 // Auflage: Kommentar an `EINGEFROREN` weiter unten.
 //
+// 🔴 STAND S6d (Issue #2276): dieselbe Ausnahme gilt ZUSAETZLICH fuer
+// `corridor-editor/CorridorEditor.svelte` und
+// `corridor-editor/CorridorEditorMobile.svelte` — dort werden 6 Eintraege
+// gestrichen und 22 auf neue Zeilennummern nachgefuehrt, per
+// `BLEIBT_MIT_INHALT` inhaltlich gefesselt.
+//
 // TDD RED (Stand `73f504c9`)
 // -------------------------
 // Beim Stand vor S6a liefert der Zaehlbefehl 69 Fundstellen. Die eingefrorene
@@ -70,7 +76,7 @@ const ZAEHLBEFEHL =
 	` | grep -v __tests__ | grep -vE ':\\s*(\\*|//|/\\*)'`;
 
 /**
- * Eingefrorene Soll-Liste (53 Fundstellen) — Zielzustand NACH S6a (Totcode),
+ * Eingefrorene Soll-Liste (47 Fundstellen) — Zielzustand NACH S6a (Totcode),
  * S6b (Guard-Rueckbau) UND S6c (Alarme-Flaeche auf Wertprops). Die Kategorien
  * HERKUNFT/FACHLICH/DARSTELLUNG stehen im Spec-Anhang, nicht hier — diese
  * Ratsche misst Fundorte, nicht Absichten.
@@ -93,8 +99,28 @@ const ZAEHLBEFEHL =
  *     (siehe Kommentar an der Liste), nicht die Position,
  *   * `alarme-tab/alarmeTabSections.ts:27/:38/:42` bleiben unberuehrt; ihre
  *     Zeilennummern duerfen sich NICHT verschieben.
- * Fuer alle Dateien AUSSERHALB von `AlarmeTab.svelte` gilt der alte Vertrag
- * unveraendert weiter: verschobene Zeilennummer = Befund, kein Nachtrag.
+ *
+ * 🔴 VERTRAG AN S6d /50 (Spec `rework_2276_s6d_wertebereiche.md`,
+ * Design-Entscheidung 5): der Zeilenzahl-Vertrag gilt ZUSAETZLICH NICHT fuer
+ * `corridor-editor/CorridorEditor.svelte` und
+ * `corridor-editor/CorridorEditorMobile.svelte`. Der Umbau auf Wertprops legt
+ * rund 30 Prop-Zeilen OBERHALB aller eingefrorenen Eintraege dieser beiden
+ * Dateien an; Zeilenzahl-Wiederherstellung waere hier Verrenkung, nicht
+ * Sorgfalt. Deshalb gilt fuer sie:
+ *   * die 6 FAELLT-Eintraege (3 Desktop/Mobil-Paare: der `getContext`-Zugriff
+ *     selbst und die beiden reinen Quellenwahlen `originalLevels` und
+ *     `originalActiveMetricKeys`) werden BEWUSST gestrichen,
+ *   * die 22 BLEIBT-Eintraege werden auf ihre neu gemessenen Zeilennummern
+ *     nachgefuehrt und sind ALLE in `BLEIBT_MIT_INHALT` gefesselt — geprueft
+ *     wird der Bedingungstext, nicht die Position,
+ *   * `corridor-editor/corridorEditorState.ts:297` und
+ *     `corridor-editor/wertebereicheVergleichSpeicherung.ts:200` bleiben AUF
+ *     IHRER ZEILE; fuer sie gilt weiterhin der alte, positionsbasierte
+ *     Vertrag. Die Textaenderung an :200 (`!!p.ws` -> `!!p.zustand`) bekommt
+ *     bewusst KEINE Fesselung (Spec, Design-Entscheidung 3).
+ * Fuer alle Dateien AUSSERHALB von `AlarmeTab.svelte` und den beiden
+ * Corridor-Bausteinen gilt der alte Vertrag unveraendert weiter: verschobene
+ * Zeilennummer = Befund, kein Nachtrag.
  */
 const EINGEFROREN: readonly string[] = [
 	// S6c: von 18 AlarmeTab-Eintraegen bleiben genau diese VIER (Schicksals-
@@ -124,34 +150,31 @@ const EINGEFROREN: readonly string[] = [
 	'WeatherMetricsTab.svelte:1323',
 	'versand-tab/vtBriefingChannelsText.ts:21',
 	'versand-tab/vtBriefingChannelsText.ts:26',
-	'corridor-editor/CorridorEditorMobile.svelte:70',
-	'corridor-editor/CorridorEditorMobile.svelte:91',
-	'corridor-editor/CorridorEditorMobile.svelte:96',
-	'corridor-editor/CorridorEditorMobile.svelte:98',
-	'corridor-editor/CorridorEditorMobile.svelte:126',
-	'corridor-editor/CorridorEditorMobile.svelte:151',
-	'corridor-editor/CorridorEditorMobile.svelte:207',
-	'corridor-editor/CorridorEditorMobile.svelte:234',
-	'corridor-editor/CorridorEditorMobile.svelte:297',
-	'corridor-editor/CorridorEditorMobile.svelte:310',
-	'corridor-editor/CorridorEditorMobile.svelte:313',
-	'corridor-editor/CorridorEditorMobile.svelte:318',
-	'corridor-editor/CorridorEditorMobile.svelte:330',
-	'corridor-editor/CorridorEditorMobile.svelte:451',
-	'corridor-editor/CorridorEditor.svelte:57',
-	'corridor-editor/CorridorEditor.svelte:79',
-	'corridor-editor/CorridorEditor.svelte:89',
-	'corridor-editor/CorridorEditor.svelte:95',
-	'corridor-editor/CorridorEditor.svelte:138',
-	'corridor-editor/CorridorEditor.svelte:170',
-	'corridor-editor/CorridorEditor.svelte:240',
-	'corridor-editor/CorridorEditor.svelte:268',
-	'corridor-editor/CorridorEditor.svelte:302',
-	'corridor-editor/CorridorEditor.svelte:315',
-	'corridor-editor/CorridorEditor.svelte:318',
-	'corridor-editor/CorridorEditor.svelte:324',
-	'corridor-editor/CorridorEditor.svelte:345',
-	'corridor-editor/CorridorEditor.svelte:474',
+	// S6d: von 14 Corridor-Paaren bleiben elf (Schicksals-Tabelle der Spec).
+	// Ihre Zeilennummern verschieben sich durch den Wertprop-Umbau — die neuen
+	// sind gemessen und unten in BLEIBT_MIT_INHALT inhaltlich gefesselt.
+	'corridor-editor/CorridorEditorMobile.svelte:144',
+	'corridor-editor/CorridorEditorMobile.svelte:172',
+	'corridor-editor/CorridorEditorMobile.svelte:197',
+	'corridor-editor/CorridorEditorMobile.svelte:252',
+	'corridor-editor/CorridorEditorMobile.svelte:279',
+	'corridor-editor/CorridorEditorMobile.svelte:342',
+	'corridor-editor/CorridorEditorMobile.svelte:355',
+	'corridor-editor/CorridorEditorMobile.svelte:358',
+	'corridor-editor/CorridorEditorMobile.svelte:363',
+	'corridor-editor/CorridorEditorMobile.svelte:375',
+	'corridor-editor/CorridorEditorMobile.svelte:496',
+	'corridor-editor/CorridorEditor.svelte:141',
+	'corridor-editor/CorridorEditor.svelte:184',
+	'corridor-editor/CorridorEditor.svelte:216',
+	'corridor-editor/CorridorEditor.svelte:285',
+	'corridor-editor/CorridorEditor.svelte:313',
+	'corridor-editor/CorridorEditor.svelte:347',
+	'corridor-editor/CorridorEditor.svelte:360',
+	'corridor-editor/CorridorEditor.svelte:363',
+	'corridor-editor/CorridorEditor.svelte:369',
+	'corridor-editor/CorridorEditor.svelte:390',
+	'corridor-editor/CorridorEditor.svelte:519',
 	'corridor-editor/corridorEditorState.ts:297',
 	'versand-tab/VTSchedulePlan.svelte:55',
 	'versand-tab/VTSchedulePlan.svelte:83',
@@ -166,7 +189,7 @@ const EINGEFROREN: readonly string[] = [
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein
  *  versehentliches Kuerzen des Literals oben. */
-const EINGEFROREN_SOLL_ANZAHL = 53;
+const EINGEFROREN_SOLL_ANZAHL = 47;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
@@ -200,6 +223,121 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		eintrag: 'AlarmeTab.svelte:566',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'VTAlertSample'
+	},
+	// S6d (Issue #2276): die 22 ueberlebenden Corridor-Eintraege — gemessen am
+	// Quelltext NACH dem Wertprop-Umbau. `isFreshCompareCreate` ist der eine
+	// Eintrag, dessen TEXT sich mitgeaendert hat (`ws?.isEditMode`/`ws?.corridors`
+	// -> Wertprops, Spec Design-Entscheidung 3); die uebrigen zehn Paare tragen
+	// ihren Bedingungstext byte-identisch weiter, nur ihre Position verschob sich.
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:141',
+		zeile: "const isFreshCompareCreate = context === 'vergleich' && !isEditMode && (corridors ?? []).length === 0;",
+		folgt: 'buildComparePrefillRows(profileKey, defs)'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:184',
+		zeile: "if (context !== 'vergleich' || compareDefs !== null || compareDefsError) return;",
+		folgt: 'loadCompareMetricCatalog()'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:216',
+		zeile: "if (context !== 'route' || routeExtraDefs !== null) return;",
+		folgt: 'loadRouteExtraMetricDefs()'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:285',
+		zeile: "if (context === 'vergleich') {",
+		folgt: 'vergleichSpeicherung?.aenderungMelden();'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:313',
+		zeile: "const next = context === 'vergleich'",
+		folgt: 'addCompareRow(rows, poolLeft'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:347',
+		zeile: "{#if context === 'vergleich' && compareDefsError}",
+		folgt: 'corridor-editor-vergleich-load-error'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:360',
+		zeile: "{:else if context === 'vergleich' && compareDefs === null}",
+		folgt: 'corridor-editor-vergleich-loading'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:363',
+		zeile: "{:else if context === 'route' && routeExtraDefs === null}",
+		folgt: 'corridor-editor-route-loading'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:369',
+		zeile: "{#if context === 'vergleich'}",
+		folgt: 'class="ce-h2"'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:390',
+		zeile: "{#if context === 'route' && routeDefsFailed}",
+		folgt: 'corridor-editor-route-load-warning'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditor.svelte:519',
+		zeile: "{#if context === 'vergleich'}",
+		folgt: 'corridor-editor-neutral-hint'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:144',
+		zeile: "const isFreshCompareCreate = context === 'vergleich' && !isEditMode && (corridors ?? []).length === 0;",
+		folgt: 'buildComparePrefillRows(profileKey, defs)'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:172',
+		zeile: "if (context !== 'vergleich' || compareDefs !== null || compareDefsError) return;",
+		folgt: 'loadCompareMetricCatalog()'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:197',
+		zeile: "if (context !== 'route' || routeExtraDefs !== null) return;",
+		folgt: 'loadRouteExtraMetricDefs()'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:252',
+		zeile: "if (context === 'vergleich') {",
+		folgt: 'vergleichSpeicherung?.aenderungMelden();'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:279',
+		zeile: "const next = context === 'vergleich'",
+		folgt: 'addCompareRow(rows, poolLeft'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:342',
+		zeile: "{#if context === 'vergleich' && compareDefsError}",
+		folgt: 'corridor-editor-mobile-vergleich-load-error'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:355',
+		zeile: "{:else if context === 'vergleich' && compareDefs === null}",
+		folgt: 'corridor-editor-mobile-vergleich-loading'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:358',
+		zeile: "{:else if context === 'route' && routeExtraDefs === null}",
+		folgt: 'corridor-editor-mobile-route-loading'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:363',
+		zeile: "{#if context === 'vergleich'}",
+		folgt: 'class="cem-title"'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:375',
+		zeile: "{#if context === 'route' && routeDefsFailed}",
+		folgt: 'corridor-editor-mobile-route-load-warning'
+	},
+	{
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:496',
+		zeile: "{#if context === 'vergleich'}",
+		folgt: 'corridor-editor-mobile-neutral-hint'
 	}
 ];
 
@@ -258,7 +396,7 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 		);
 	});
 
-	test('die eingefrorene Soll-Liste ist unversehrt (53 Eintraege, keine Duplikate)', () => {
+	test('die eingefrorene Soll-Liste ist unversehrt (47 Eintraege, keine Duplikate)', () => {
 		assert.strictEqual(
 			EINGEFROREN.length,
 			EINGEFROREN_SOLL_ANZAHL,
@@ -289,14 +427,15 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 	});
 });
 
-describe('S6c: die vier ueberlebenden AlarmeTab-Eintraege zeigen auf ihre eigene Bedingung', () => {
+describe('S6c/S6d: jeder gefesselte Eintrag zeigt auf seine eigene Bedingung', () => {
 	for (const { eintrag, zeile, folgt } of BLEIBT_MIT_INHALT) {
 		test(`${eintrag} traegt weiterhin \`${zeile}\``, () => {
 			assert.ok(
 				EINGEFROREN.includes(eintrag),
-				`Messaufbau kaputt: \`${eintrag}\` steht nicht mehr in EINGEFROREN. Diese vier ` +
-					'Eintraege BLEIBEN in S6c — wer einen davon streicht, entfernt eine fachliche ' +
-					'oder darstellerische Verzweigung, keine HERKUNFT-Weiche.'
+				`Messaufbau kaputt: \`${eintrag}\` steht nicht mehr in EINGEFROREN. Diese ` +
+					'Eintraege BLEIBEN (S6c: AlarmeTab, S6d: die beiden Corridor-Bausteine) — wer ' +
+					'einen davon streicht, entfernt eine fachliche oder darstellerische ' +
+					'Verzweigung, keine HERKUNFT-Weiche.'
 			);
 			const [datei, nr] = eintrag.split(':');
 			const zeilen = readFileSync(join(SHARED, datei), 'utf-8').split('\n');

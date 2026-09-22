@@ -44,6 +44,7 @@
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
 	import { alarmePropsAus } from '../compare/alarmePropsAus.ts';
+	import { corridorPropsAus } from '../compare/corridorPropsAus.ts';
 	// #1435 E1a-2: der Alarme-Reiter leitet seine Zeilen aus dem Register-Katalog
 	// ab — die Anlege-Seite muss ihn deshalb ebenfalls laden (geteilter
 	// Promise-Cache, kein zweiter Netzwerk-Request) und durchreichen.
@@ -386,7 +387,7 @@
 		</div>
 	{:else if activeTab === 'idealwerte'}
 		{#if !isMobileViewport}
-			<CorridorEditor context="vergleich" />
+			<CorridorEditor context="vergleich" {...corridorPropsAus(wiz)} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
@@ -482,7 +483,7 @@
 			{/if}
 		{:else if activeTab === 'idealwerte'}
 			{#if isMobileViewport}
-				<CorridorEditorMobile context="vergleich" />
+				<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wiz)} />
 			{/if}
 		{:else if activeTab === 'alarme'}
 			{#if alarmeHydrated}

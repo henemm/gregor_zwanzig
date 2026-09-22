@@ -310,13 +310,15 @@ bekannten Grenzen (kein interprozeduraler Fluss, keine Zweig-Analyse):
 ## HERKUNFT-Zweig-Ratsche (#2276 Scheibe S6a, seit 2026-09-20)
 
 **Befristetes Messwerkzeug, kein Dauer-Gate.** `frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts`
-hält eine **eingefrorene** `Datei:Zeile`-Liste (53 Einträge — nach S6c; der Spec-Anhang misst
+hält eine **eingefrorene** `Datei:Zeile`-Liste (47 Einträge — nach S6d; der Spec-Anhang misst
 noch 69 auf dem Vor-S6a-Stand `73f504c9`, eine davon, `WeatherMetricsTab.svelte:577`, ist die
 per S6a AC-1 entfernte tote Bedingung, `WeatherMetricsTab.svelte:1273` wurde per S6b
 AC-4/AC-5 **bewusst gestrichen**, nachdem der Guard dort zeilentreu auf
-`if (!vergleichSpeicherung) return;` verkürzt war, und S6c hat 14 der 18 `AlarmeTab.svelte`-Einträge
-gestrichen (`:256`, `:514`, `:533`, `:566` bleiben, Zeilennummern nach dem Umbau) — jeweils gestrichen,
-nicht nachgezogen) aller produktiven
+`if (!vergleichSpeicherung) return;` verkürzt war, S6c hat 14 der 18 `AlarmeTab.svelte`-Einträge
+gestrichen (`:256`, `:514`, `:533`, `:566` bleiben, Zeilennummern nach dem Umbau), und S6d hat
+6 der 28 `CorridorEditor.svelte`/`CorridorEditorMobile.svelte`-Einträge gestrichen (3 Zeilen-Paare;
+die übrigen 22 auf neue Zeilennummern nachgeführt, in `BLEIBT_MIT_INHALT` inhaltlich gefesselt) — jeweils
+gestrichen, nicht nachgezogen) aller produktiven
 `context ===`/`context !==`-Verzweigungen unter `shared/` und vergleicht sie zur Testlaufzeit
 gegen den eingefrorenen Zählbefehl (`grep -rn 'context ===\|context !=='`, ohne Tests und
 Kommentare). Die Liste ist **nicht** aus dem Verzeichnis abgeleitet, sondern als Array im
@@ -359,7 +361,7 @@ Prüfdatum mit begründetem Zwischenstand verlängert).
 | Gestellte-Uhr-Ratsche make_trip+save_trip (#2242) | 2026-12-08 | 3 Dateien in 3 Wochen nach #2050 ungeschützt (#2242) |
 | `user_id="default"`-Wächter — keine Defaults in `api/`, fixierte Bestandsliste in `src/` (#2151 Scheibe A); erweitert um Aufrufstellen-Prüfung (kein Literal `"default"` als `user_id`-Argument, `tests/test_user_id_default_guard.py`) und Test-Inventar `tests/test_test_suite_passes_user_id_explicitly.py` (#2151 Scheibe C) | 2026-12-18 | — |
 | Store-Scope-Call-Guard — Store-Aufruf ohne vorherige `WithUser`-Bindung (Go, `internal/handler/store_scope_call_guard_test.go`) und `user_id` als Pflichtparameter in `api/routers/` (Python, `tests/test_router_user_id_required.py`); Ausnahmen nur als begründeter Marker im Quelltext (#2156) | 2026-12-20 | offen — startet bewusst bei 0 Befunden (24 Marker gesetzt). Kriterium: ein Handler oder Endpunkt, der ohne Bindung bzw. mit optionalem `user_id` ausgeliefert worden wäre |
-| HERKUNFT-Zweig-Ratsche `context_herkunft_zweige_eingefroren.test.ts` (#2276 Scheibe S6a) — befristetes Messfundament für S6b–S6f, keine Positivliste zum Nachziehen | 2026-12-19 | offen — startet bei 68 Fundstellen (Stand `a789b4b5`, nach S6a), 67 nach dem S6b-Rückbau von `WeatherMetricsTab.svelte:1273`, aktuell 53 nach dem S6c-Rückbau von 14 der 18 `AlarmeTab.svelte`-Einträge. Kriterium: eine in S6b–S6f nur **verschobene** statt entfernte HERKUNFT-Verzweigung, die ohne die eingefrorene Liste als erledigt durchgegangen wäre |
+| HERKUNFT-Zweig-Ratsche `context_herkunft_zweige_eingefroren.test.ts` (#2276 Scheibe S6a) — befristetes Messfundament für S6b–S6f, keine Positivliste zum Nachziehen | 2026-12-19 | offen — startet bei 68 Fundstellen (Stand `a789b4b5`, nach S6a), 67 nach dem S6b-Rückbau von `WeatherMetricsTab.svelte:1273`, 53 nach dem S6c-Rückbau von 14 der 18 `AlarmeTab.svelte`-Einträge, aktuell 47 nach dem S6d-Rückbau von 6 der 28 `CorridorEditor.svelte`/`CorridorEditorMobile.svelte`-Einträge. Kriterium: eine in S6b–S6f nur **verschobene** statt entfernte HERKUNFT-Verzweigung, die ohne die eingefrorene Liste als erledigt durchgegangen wäre |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.

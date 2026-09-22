@@ -72,7 +72,7 @@ function aufbau(preset = makePreset(PRESET_ID)) {
 	const rueckmeldungen: ComparePreset[] = [];
 	const speicherung = erstelleWertebereicheVergleichSpeicherung({
 		client: api,
-		ws,
+		zustand: ws,
 		preset: () => basis,
 		enqueueHubWrite: (fn) => queue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {

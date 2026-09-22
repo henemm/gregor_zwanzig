@@ -89,7 +89,7 @@ function hub() {
 		},
 		saveController: ctl
 	};
-	const wertebereiche = erstelleWertebereicheVergleichSpeicherung({ ...gemeinsam, ws });
+	const wertebereiche = erstelleWertebereicheVergleichSpeicherung({ ...gemeinsam, zustand: ws });
 	const alarme = erstelleAlarmeVergleichSpeicherung({ ...gemeinsam, zustand: ws });
 	const bedienung = wertebereicheBedienung(ws);
 	return { ws, ctl, wertebereiche, alarme, bedienung };

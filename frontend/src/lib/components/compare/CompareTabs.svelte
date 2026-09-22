@@ -51,6 +51,7 @@
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
 	import { alarmePropsAus } from './alarmePropsAus.ts';
+	import { corridorPropsAus } from './corridorPropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
 	// vergleich-Kontext) — analog Alarme-/Versand-Bridge oben.
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
@@ -1021,10 +1022,10 @@
 				     Basis-Rueckmeldung) — kein Wrapper mehr. -->
 				{#if isMobileViewport}
 					<!-- Mobil: dieselbe Verdrahtung wie der Desktop-Zweig. -->
-					<CorridorEditorMobile context="vergleich" preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
+					<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wizardState)} preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
 				{:else}
 					<!-- Desktop. -->
-					<CorridorEditor context="vergleich" preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
+					<CorridorEditor context="vergleich" {...corridorPropsAus(wizardState)} preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
 				{/if}
 			{/if}
 		</div>

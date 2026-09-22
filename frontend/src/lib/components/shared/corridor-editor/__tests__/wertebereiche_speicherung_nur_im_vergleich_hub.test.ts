@@ -17,7 +17,7 @@
 // NICHT → RED per ERR_MODULE_NOT_FOUND):
 //
 //   shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
-//   wertebereicheVergleichSpeicherungAktiv({ context, ws, preset, saveController }): boolean
+//   wertebereicheVergleichSpeicherungAktiv({ context, zustand, preset, saveController }): boolean
 //
 // Mutations-Gegenprobe (Spec AC-12): Kontext-Prüfung entfernen ⇒ der
 // route-Fall mit sonst vollständigen Props wird true ⇒ rot.
@@ -43,14 +43,14 @@ const saveController = createController('cp-2276-s3-kontext');
 
 describe('Positivfall: Ortsvergleich-Hub', () => {
 	test('vergleich + Wizard-Zustand + preset + saveController → Vergleichs-Speicherung aktiv', () => {
-		assert.equal(wertebereicheVergleichSpeicherungAktiv({ context: 'vergleich', ws, preset, saveController }), true);
+		assert.equal(wertebereicheVergleichSpeicherungAktiv({ context: 'vergleich', zustand: ws, preset, saveController }), true);
 	});
 });
 
 describe('AC-9: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', () => {
 	test('vergleich OHNE preset und OHNE saveController (Mount der Anlege-Seite) → inaktiv', () => {
 		assert.equal(
-			wertebereicheVergleichSpeicherungAktiv({ context: 'vergleich', ws, preset: undefined, saveController: undefined }),
+			wertebereicheVergleichSpeicherungAktiv({ context: 'vergleich', zustand: ws, preset: undefined, saveController: undefined }),
 			false,
 			'auf der Anlege-Seite darf kein zwischenzeitlicher PUT entstehen — Speichern nur über wiz.saveNewPreset()'
 		);
@@ -58,14 +58,14 @@ describe('AC-9: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', () 
 
 	test('vergleich mit saveController, aber ohne preset → inaktiv (keine Basis für einen PUT)', () => {
 		assert.equal(
-			wertebereicheVergleichSpeicherungAktiv({ context: 'vergleich', ws, preset: undefined, saveController }),
+			wertebereicheVergleichSpeicherungAktiv({ context: 'vergleich', zustand: ws, preset: undefined, saveController }),
 			false
 		);
 	});
 
 	test('vergleich mit preset, aber ohne Wizard-Zustand → inaktiv', () => {
 		assert.equal(
-			wertebereicheVergleichSpeicherungAktiv({ context: 'vergleich', ws: undefined, preset, saveController }),
+			wertebereicheVergleichSpeicherungAktiv({ context: 'vergleich', zustand: undefined, preset, saveController }),
 			false
 		);
 	});
@@ -74,7 +74,7 @@ describe('AC-9: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', () 
 describe('AC-12: Trip-Seite (route) — Vergleichs-Speicherung wird nie ausgelöst', () => {
 	test('route-Kontext mit sonst VOLLSTÄNDIGEN Props → inaktiv (die Kontext-Prüfung allein entscheidet)', () => {
 		assert.equal(
-			wertebereicheVergleichSpeicherungAktiv({ context: 'route', ws, preset, saveController }),
+			wertebereicheVergleichSpeicherungAktiv({ context: 'route', zustand: ws, preset, saveController }),
 			false,
 			'der route-Zweig darf die Vergleichs-Speicherung nicht auslösen — er speichert über baueTripSpeicherung'
 		);
@@ -82,7 +82,7 @@ describe('AC-12: Trip-Seite (route) — Vergleichs-Speicherung wird nie ausgelö
 
 	test('route-Kontext wie im Trip-Hub gemountet (ohne ws/preset) → inaktiv', () => {
 		assert.equal(
-			wertebereicheVergleichSpeicherungAktiv({ context: 'route', ws: undefined, preset: undefined, saveController }),
+			wertebereicheVergleichSpeicherungAktiv({ context: 'route', zustand: undefined, preset: undefined, saveController }),
 			false
 		);
 	});

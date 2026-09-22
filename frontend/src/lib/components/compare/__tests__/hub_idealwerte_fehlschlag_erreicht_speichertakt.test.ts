@@ -50,7 +50,7 @@ function hub(transport: (url: string, body: unknown, init?: RequestInit) => Prom
 				return transport(url, body, init) as Promise<T>;
 			}
 		},
-		ws,
+		zustand: ws,
 		preset: () => preset,
 		enqueueHubWrite: (fn) => queue.enqueue(fn),
 		onCompareUpdate: (p) => {

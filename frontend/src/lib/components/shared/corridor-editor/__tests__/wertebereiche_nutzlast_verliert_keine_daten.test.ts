@@ -10,7 +10,7 @@
 //
 // Zielschnittstelle (existiert noch NICHT → RED):
 //   shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
-//     corridorSnapshotAus(ws): CorridorSnapshot
+//     corridorSnapshotAus(zustand): CorridorSnapshot
 //     baueWertebereichNutzlast(preset, current: CorridorSnapshot): { url, body }
 //   (Spec „Affected Files" schreibt `baueWertebereichNutzlast`; der AC-11-Text
 //    nennt `baueWertebereicheNutzlast` — dieser Test legt den Namen aus
@@ -150,7 +150,7 @@ describe('AC-11 (Rundlauf): gespeichert und neu geladen — nur der Wertebereich
 		const queue = createPutQueue();
 		const speicherung = erstelleWertebereicheVergleichSpeicherung({
 			client: api,
-			ws,
+			zustand: ws,
 			preset: () => basis,
 			enqueueHubWrite: (fn) => queue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {

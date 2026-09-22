@@ -57,7 +57,7 @@ function aufbau(client: PutClient = api) {
 	const queue = createPutQueue();
 	const speicherung = erstelleWertebereicheVergleichSpeicherung({
 		client,
-		ws,
+		zustand: ws,
 		preset: () => basis,
 		enqueueHubWrite: (fn) => queue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {
