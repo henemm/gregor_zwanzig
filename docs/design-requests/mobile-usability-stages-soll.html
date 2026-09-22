@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gregor Zwanzig — Mobile Soll · Etappen-Tab (390×844)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Tokens — 1:1 aus frontend/src/app.css :root (Mobile-Shell-Stand 2026-09) */
+  :root {
+    --g-accent: #c45a2a; --g-accent-deep: #8c3e1a;
+    --g-accent-tint: rgba(196, 90, 42, 0.08);
+    --g-paper: #f6f4ee; --g-paper-deep: #ecead9;
+    --g-card: #ffffff; --g-card-alt: #faf8f1;
+    --g-rule: #d8d3c2; --g-rule-soft: #e7e2d3;
+    --g-ink: #1a1a18; --g-ink-2: #45433d; --g-ink-3: #6b675c;
+    --g-ink-4: #9a958a; --g-ink-muted: #5c5a52;
+    --g-good: #3d6b3a; --g-warn: #c08a1a; --g-bad: #a83232; --g-info: #2c5a8c;
+    --g-font-sans: 'Inter Tight', system-ui, sans-serif;
+    --g-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --g-text-xs: 11px; --g-text-sm: 13px; --g-text-md: 15px; --g-text-lg: 17px; --g-text-xl: 20px;
+    --g-track-tight: -0.02em; --g-track-wide: 0.06em; --g-track-caps: 0.12em;
+    --g-s-1: 4px; --g-s-2: 8px; --g-s-3: 12px; --g-s-4: 16px; --g-s-5: 20px; --g-s-6: 24px;
+    --g-r-1: 2px; --g-r-2: 4px; --g-r-3: 6px; --g-r-4: 10px; --g-r-pill: 999px;
+    --g-shadow-1: 0 1px 0 rgba(26,26,24,0.04), 0 1px 2px rgba(26,26,24,0.04);
+    --g-shadow-2: 0 1px 0 rgba(26,26,24,0.04), 0 4px 14px rgba(26,26,24,0.06);
+    --g-shadow-3: 0 2px 0 rgba(26,26,24,0.04), 0 12px 32px rgba(26,26,24,0.08);
+    --g-nav-h: 64px; --g-nav-gap: 6px; --g-nav-inset: 16px; --g-nav-konto-gap: 10px;
+    --g-nav-glass: rgba(246, 244, 238, 0.86); --g-nav-blur: 24px;
+    --g-nav-hairline: rgba(26,26,24,0.10); --g-nav-highlight: rgba(255,255,255,0.65);
+    --g-nav-active: rgba(196,90,42,0.12);
+  }
+  html, body { margin: 0; background: #ecead9; font-family: var(--g-font-sans); color: var(--g-ink); }
+  .mono { font-family: var(--g-font-mono); font-variant-numeric: tabular-nums; }
+  .canvas { display: flex; gap: var(--g-s-8); align-items: flex-start; padding: var(--g-s-8); flex-wrap: wrap; }
+
+  /* PhoneFrame 390×844 — ohne Statusleiste/Home-Indicator, dicht am Rand (mobile_shell-Konvention) */
+  .phone {
+    width: 390px; height: 844px; background: var(--g-paper);
+    border-radius: 28px; overflow: hidden; position: relative;
+    box-shadow: var(--g-shadow-3); flex-shrink: 0;
+    display: flex; flex-direction: column;
+  }
+  .scroll { flex: 1; overflow-y: auto; scrollbar-width: none; padding-bottom: calc(var(--g-nav-h) + var(--g-nav-gap) + 40px); }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  /* ── PageHeader (compact, AP-011) ─────────────────────────── */
+  .ph { padding: var(--g-s-3) var(--g-s-4) var(--g-s-3); }
+  .ph-eyebrow { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-3); letter-spacing: var(--g-track-wide); text-transform: uppercase; }
+  .ph-row { display: flex; align-items: center; gap: var(--g-s-2); margin-top: var(--g-s-1); min-width: 0; flex-wrap: nowrap; }
+  .ph-title { margin: 0; font-size: var(--g-text-xl); font-weight: 600; letter-spacing: var(--g-track-tight); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  .ph-edit { width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: none; border-radius: var(--g-r-2); color: var(--g-ink-3); cursor: pointer; }
+  .ph-edit:hover { background: var(--g-paper-deep); color: var(--g-ink); }
+  .ph-status { display: flex; align-items: center; gap: var(--g-s-3); margin-top: var(--g-s-1); font-size: var(--g-text-sm); color: var(--g-ink-muted); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--g-font-mono); font-size: var(--g-text-xs); font-weight: 600; letter-spacing: var(--g-track-wide); text-transform: uppercase; padding: 5px 10px; border-radius: var(--g-r-pill); }
+  .pill-info { border: 1px solid var(--g-info); color: var(--g-info); }
+  .pill-good { border: 1px solid var(--g-good); color: var(--g-good); }
+  .pill-warn { border: 1px solid var(--g-warn); color: var(--g-warn); background: rgba(192,138,26,0.08); }
+  .pill-bad  { border: 1px solid var(--g-bad);  color: var(--g-bad);  background: rgba(168,50,50,0.08); }
+
+  /* ── Mobile Metrics (Stat size="sm", Label-Min 11px) ──────── */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--g-s-2); margin: 0 var(--g-s-4); padding: var(--g-s-3) 0; border-top: 1px solid var(--g-rule-soft); border-bottom: 1px solid var(--g-rule-soft); }
+  .stat-label { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-muted); letter-spacing: var(--g-track-caps); text-transform: uppercase; margin-bottom: 3px; }
+  .stat-value { font-family: var(--g-font-mono); font-size: var(--g-text-lg); font-weight: 600; }
+
+  /* ── MTabBar (Band + Fade, 44px-Trigger — Paket 2) ────────── */
+  .tabband { display: flex; overflow-x: auto; scrollbar-width: none; gap: var(--g-s-2); padding: var(--g-s-2) var(--g-s-4); scroll-snap-type: x mandatory; scroll-padding-inline: 12px;
+    mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); }
+  .tabband::-webkit-scrollbar { display: none; }
+  .tab { flex-shrink: 0; scroll-snap-align: start; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: var(--g-s-2) var(--g-s-3); border-radius: var(--g-r-pill); border: 1px solid var(--g-rule); background: var(--g-card); color: var(--g-ink-2); font-family: var(--g-font-sans); font-size: var(--g-text-sm); font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .tab .badge { font-family: var(--g-font-mono); font-size: var(--g-text-xs); font-weight: 600; padding: 2px 7px; border-radius: var(--g-r-pill); background: var(--g-paper-deep); color: var(--g-ink-3); }
+  .tab.active { background: var(--g-accent); border-color: var(--g-accent); color: var(--g-paper); font-weight: 600; }
+  .tab.active .badge { background: rgba(255,255,255,0.22); color: var(--g-paper); }
+  .tab:focus-visible { outline: 2px solid var(--g-accent); outline-offset: 2px; }
+
+  /* ── MapCard (feste Höhe: max(240px, 40dvh) — Mock zeigt Floor 240px) ── */
+  .mapcard { position: relative; margin: var(--g-s-3) var(--g-s-4) 0; height: 240px; border-radius: var(--g-r-3); overflow: hidden; border: 1px solid var(--g-rule); box-shadow: var(--g-shadow-1); }
+  .map-note { position: absolute; top: var(--g-s-2); left: 50%; transform: translateX(-50%); font-family: var(--g-font-mono); font-size: 9px; color: var(--g-ink-3); background: rgba(255,255,255,0.75); padding: 2px 6px; border-radius: var(--g-r-1); }
+  .stage-pill { position: absolute; top: var(--g-s-3); left: var(--g-s-3); z-index: 2; max-width: 60%; padding: 6px 12px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-pill); box-shadow: var(--g-shadow-2); font-family: var(--g-font-mono); font-size: var(--g-text-xs); font-weight: 600; color: var(--g-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .mapcontrols { position: absolute; top: var(--g-s-3); right: var(--g-s-3); z-index: 2; display: flex; flex-direction: column; gap: var(--g-s-2); }
+  .mapcontrol { width: 44px; height: 44px; border-radius: var(--g-r-3); background: var(--g-card); border: 1px solid var(--g-rule); box-shadow: var(--g-shadow-2); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--g-ink); padding: 0; }
+  .attr { position: absolute; bottom: 6px; right: 6px; font-family: var(--g-font-mono); font-size: 9px; color: var(--g-ink-3); background: rgba(255,255,255,0.7); padding: 1px 5px; border-radius: var(--g-r-1); }
+
+  /* ── ProfileSheetEmbedded (unter der Karte, Snaps) ────────── */
+  .sheet { margin: var(--g-s-3) var(--g-s-4) 0; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-4); box-shadow: var(--g-shadow-2); overflow: hidden; transition: height 200ms ease-out; height: 92px; }
+  .sheet.half { height: 260px; }
+  .sheet-handle { display: flex; justify-content: center; padding-top: var(--g-s-2); padding-bottom: var(--g-s-1); cursor: pointer; }
+  .sheet-handle span { width: 36px; height: 4px; border-radius: var(--g-r-pill); background: var(--g-rule); }
+  .sheet-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 0 var(--g-s-4) var(--g-s-2); }
+  .eyebrow { font-family: var(--g-font-mono); font-size: var(--g-text-xs); font-weight: 600; letter-spacing: var(--g-track-caps); text-transform: uppercase; color: var(--g-ink-muted); }
+  .sheet-title { font-size: var(--g-text-sm); font-weight: 600; margin-top: 2px; }
+  .sheet-meta { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-3); margin-top: 2px; }
+  .sheet-body { padding: 0 var(--g-s-4) var(--g-s-3); }
+
+  /* ── StageCardM-Liste (vertikal, Griff 44px) ──────────────── */
+  .listhead { display: flex; justify-content: space-between; align-items: center; margin: var(--g-s-5) var(--g-s-4) var(--g-s-3); }
+  .list { display: flex; flex-direction: column; gap: var(--g-s-2); margin: 0 var(--g-s-4); }
+  .scard { display: flex; align-items: stretch; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-1); overflow: hidden; }
+  .scard.active { background: var(--g-accent-tint); border-color: var(--g-accent); box-shadow: inset 3px 0 0 var(--g-accent); }
+  .scard.pause { background: var(--g-card-alt); border-style: dashed; }
+  .grip { width: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: grab; color: var(--g-ink-4); border-right: 1px solid var(--g-rule-soft); }
+  .scard-body { flex: 1; min-width: 0; padding: var(--g-s-3); cursor: pointer; }
+  .scard-top { display: flex; align-items: baseline; gap: var(--g-s-2); }
+  .scard-code { font-family: var(--g-font-mono); font-size: var(--g-text-xs); font-weight: 600; color: var(--g-ink-3); letter-spacing: var(--g-track-wide); }
+  .scard.active .scard-code { color: var(--g-accent-deep); }
+  .scard-date { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-4); }
+  .scard-title { font-size: var(--g-text-sm); font-weight: 600; line-height: 1.3; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scard.pause .scard-title { font-style: italic; color: var(--g-ink-2); }
+  .scard-meta { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-3); margin-top: 4px; }
+  .scard-risk { flex-shrink: 0; display: flex; align-items: flex-start; padding: var(--g-s-3) var(--g-s-3) 0 0; }
+  .addstage { margin: var(--g-s-2) var(--g-s-4) 0; min-height: 44px; border: 1px dashed var(--g-rule); border-radius: var(--g-r-3); background: transparent; color: var(--g-ink-3); font-family: var(--g-font-mono); font-size: var(--g-text-xs); font-weight: 600; letter-spacing: var(--g-track-wide); text-transform: uppercase; cursor: pointer; }
+  .addstage:hover { border-color: var(--g-accent); color: var(--g-accent); }
+
+  /* ── BottomNav (schwebend, Glas) + Konto-Kreis ────────────── */
+  .navbar { position: absolute; left: var(--g-nav-inset); right: var(--g-nav-inset); bottom: var(--g-nav-gap); z-index: 10; display: flex; align-items: flex-end; gap: var(--g-nav-konto-gap); }
+  .nav { flex: 1; height: var(--g-nav-h); display: grid; grid-template-columns: repeat(4, 1fr); background: var(--g-nav-glass); backdrop-filter: blur(var(--g-nav-blur)); -webkit-backdrop-filter: blur(var(--g-nav-blur)); border: 1px solid var(--g-nav-hairline); border-radius: var(--g-r-pill); box-shadow: var(--g-shadow-2), inset 0 1px 0 var(--g-nav-highlight); }
+  .nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-2); font-family: var(--g-font-sans); font-size: 10px; font-weight: 500; border-radius: var(--g-r-pill); margin: 5px; }
+  .nav button.active { background: var(--g-nav-active); color: var(--g-accent-deep); font-weight: 700; }
+  .konto { width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; background: var(--g-nav-glass); backdrop-filter: blur(var(--g-nav-blur)); border: 1px solid var(--g-nav-hairline); box-shadow: var(--g-shadow-2), inset 0 1px 0 var(--g-nav-highlight); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .konto span { width: 36px; height: 36px; border-radius: 50%; background: var(--g-accent); color: var(--g-paper); font-size: var(--g-text-sm); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+  /* ── Panel: Übersicht (Tab-Wechsel-Demo) ──────────────────── */
+  .panel { padding: var(--g-s-3) var(--g-s-4) 0; }
+  .card { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-1); padding: var(--g-s-3); }
+  .mbtn { min-height: 48px; border-radius: var(--g-r-2); font-family: var(--g-font-sans); font-size: var(--g-text-md); font-weight: 600; cursor: pointer; padding: 0 var(--g-s-4); }
+  .mbtn-primary { background: var(--g-accent); border: 1px solid var(--g-accent); color: var(--g-paper); }
+  .mbtn-ghost { background: transparent; border: 1px solid var(--g-rule); color: var(--g-ink-2); }
+
+  /* ── Legend ───────────────────────────────────────────────── */
+  .legend { width: 340px; font-size: var(--g-text-sm); color: var(--g-ink-2); line-height: 1.6; }
+  .legend h2 { font-size: var(--g-text-xl); margin: 0 0 var(--g-s-2); color: var(--g-ink); }
+  .legend li { margin-bottom: var(--g-s-2); }
+  .legend code { font-family: var(--g-font-mono); font-size: var(--g-text-xs); background: var(--g-card); border: 1px solid var(--g-rule-soft); padding: 1px 5px; border-radius: var(--g-r-1); }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <div class="phone">
+    <div class="scroll" id="scroll">
+
+      <!-- PageHeader: Titel via Token-Skala (20px), min-width:0, Stift 44px -->
+      <div class="ph">
+        <div class="ph-eyebrow">Tirol · 23.–26. September 2026</div>
+        <div class="ph-row">
+          <h1 class="ph-title">Mobile Audit Alpenüberquerung</h1>
+          <button class="ph-edit" aria-label="Tour-Name bearbeiten" title="Tour-Name bearbeiten">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </div>
+        <div class="ph-status"><span>morgen</span><span class="pill pill-info">Geplant</span></div>
+      </div>
+
+      <!-- Stat-Row: Label-Min 11px (AP-017) -->
+      <div class="stats">
+        <div><div class="stat-label">Etappe</div><div class="stat-value">–/4</div></div>
+        <div><div class="stat-label">Briefing</div><div class="stat-value">–</div></div>
+        <div><div class="stat-label">Start in</div><div class="stat-value">1 Tg</div></div>
+      </div>
+
+      <!-- MTabBar (Paket 2): aktiver Tab sichtbar positioniert -->
+      <div class="tabband" role="tablist" aria-label="Tour-Detail" style="margin-top: var(--g-s-2)">
+        <button class="tab" role="tab" aria-selected="false" data-tab="uebersicht">Übersicht</button>
+        <button class="tab active" role="tab" aria-selected="true" data-tab="stages">Etappen &amp; Wegpunkte <span class="badge">4</span></button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="wetter" tabindex="-1">Wetter-Metriken</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="werte" tabindex="-1">Wertebereiche</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="alarme" tabindex="-1">Alarme <span class="badge">2</span></button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="versand" tabindex="-1">Versand</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="vorschau" tabindex="-1">Vorschau</button>
+      </div>
+
+      <!-- Panel: Übersicht (Tab-Wechsel-Demo) -->
+      <div class="panel" id="panel-uebersicht" hidden>
+        <div class="card">
+          <div class="eyebrow" style="margin-bottom: var(--g-s-2)">Höhenprofil · Gesamt</div>
+          <svg viewBox="0 0 326 80" width="100%" height="80" style="display:block">
+            <path d="M0,62 L40,48 L80,52 L120,30 L160,36 L200,18 L240,26 L280,10 L326,20 L326,80 L0,80 Z" fill="var(--g-accent-tint)"/>
+            <path d="M0,62 L40,48 L80,52 L120,30 L160,36 L200,18 L240,26 L280,10 L326,20" fill="none" stroke="var(--g-accent)" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--g-s-2); margin-top: var(--g-s-3)">
+          <button class="mbtn mbtn-primary">Email-Vorschau</button>
+          <button class="mbtn mbtn-ghost">SMS-Vorschau</button>
+        </div>
+      </div>
+
+      <!-- Panel: stages — Soll-Zustand -->
+      <div id="panel-stages">
+
+        <!-- MapCard: feste Höhe max(240px, 40dvh); Mock zeigt Floor 240px -->
+        <div class="mapcard">
+          <div class="map-note">Karte · max(240px, 40dvh) · hier Floor</div>
+          <svg viewBox="0 0 390 240" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style="position:absolute; inset:0">
+            <rect width="390" height="240" fill="#d9dec9"/>
+            <g stroke="rgba(26,26,24,0.08)" stroke-width="0.7" fill="none">
+              <path d="M-10 40 Q90 20 190 45 T400 35"/><path d="M-10 70 Q90 50 190 75 T400 65"/>
+              <path d="M-10 100 Q90 80 190 105 T400 95"/><path d="M-10 130 Q90 110 190 135 T400 125"/>
+              <path d="M-10 160 Q90 140 190 165 T400 155"/><path d="M-10 190 Q90 170 190 195 T400 185"/>
+              <path d="M-10 220 Q90 200 190 225 T400 215"/>
+            </g>
+            <path d="M0 195 Q80 175 150 192 T390 185 L390 240 L0 240 Z" fill="rgba(74,122,184,0.15)"/>
+            <path d="M30 210 L70 170 L115 150 L160 105 L205 90 L245 60 L290 45 L340 25"
+                  stroke="var(--g-accent)" stroke-width="3" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+            <g font-family="var(--g-font-mono)" font-weight="700" fill="var(--g-accent-deep)">
+              <g><circle cx="30" cy="210" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="30" y="214" text-anchor="middle" font-size="11">1</text></g>
+              <g><circle cx="115" cy="150" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="115" y="154" text-anchor="middle" font-size="11">2</text></g>
+              <g><circle cx="205" cy="90" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="205" y="94" text-anchor="middle" font-size="11">3</text></g>
+              <g><circle cx="290" cy="45" r="16" fill="#fff" stroke="var(--g-accent)" stroke-width="3"/><text x="290" y="49" text-anchor="middle" font-size="12">4</text></g>
+            </g>
+          </svg>
+          <button class="stage-pill">1 / 4 · KHW_00a · Birnlücke → Clarahütte</button>
+          <div class="mapcontrols">
+            <button class="mapcontrol" aria-label="Wegpunkt hinzufügen" title="Wegpunkt hinzufügen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button class="mapcontrol" aria-label="Kartenstil" title="Kartenstil"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></button>
+            <button class="mapcontrol" aria-label="Ort suchen" title="Ort suchen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
+          </div>
+          <div class="attr">© OpenStreetMap</div>
+        </div>
+
+        <!-- ProfileSheetEmbedded: unter der Karte, Snap peek (Klick = half) -->
+        <div class="sheet" id="sheet">
+          <div class="sheet-handle" onclick="document.getElementById('sheet').classList.toggle('half')" title="Snap wechseln"><span></span></div>
+          <div class="sheet-head">
+            <div>
+              <div class="eyebrow">Wegpunkte · Etappe 1</div>
+              <div class="sheet-title">WP #2 · Birnlücke</div>
+              <div class="sheet-meta">2667 m · ETA 10:42</div>
+            </div>
+            <span class="pill pill-good">Snap · peek</span>
+          </div>
+          <div class="sheet-body">
+            <svg viewBox="0 0 326 48" width="100%" height="48" style="display:block">
+              <path d="M0,36 L45,28 L90,32 L135,16 L180,22 L225,8 L270,14 L326,6 L326,48 L0,48 Z" fill="rgba(196,90,42,0.1)"/>
+              <path d="M0,36 L45,28 L90,32 L135,16 L180,22 L225,8 L270,14 L326,6" fill="none" stroke="var(--g-accent)" stroke-width="1.5"/>
+              <circle cx="45" cy="28" r="3.5" fill="#fff" stroke="var(--g-accent)" stroke-width="1.5"/>
+              <circle cx="135" cy="16" r="5" fill="var(--g-accent)" stroke="var(--g-accent)" stroke-width="1.5"/>
+              <circle cx="225" cy="8" r="3.5" fill="#fff" stroke="var(--g-accent)" stroke-width="1.5"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Vertikale StageCardM-Liste -->
+        <div class="listhead">
+          <span class="eyebrow">4 Etappen · ziehen zum Sortieren</span>
+          <button class="mbtn mbtn-ghost" style="min-height:44px; font-size: var(--g-text-sm)">+ Etappe</button>
+        </div>
+        <div class="list">
+          <div class="scard active">
+            <span class="grip" title="Ziehen zum Sortieren" aria-label="Ziehen zum Sortieren">⋮⋮</span>
+            <div class="scard-body">
+              <div class="scard-top"><span class="scard-code">01 · KHW_00a</span><span class="scard-date">23.09.</span></div>
+              <div class="scard-title">Birnlücke → Clarahütte</div>
+              <div class="scard-meta">12,4 km · ↑890 ↓420 · 5 WP</div>
+            </div>
+            <div class="scard-risk"><span class="pill pill-warn">med</span></div>
+          </div>
+          <div class="scard">
+            <span class="grip" title="Ziehen zum Sortieren" aria-label="Ziehen zum Sortieren">⋮⋮</span>
+            <div class="scard-body">
+              <div class="scard-top"><span class="scard-code">02 · KHW_00b</span><span class="scard-date">24.09.</span></div>
+              <div class="scard-title">Clarahütte → Neue Reichenberger Hütte</div>
+              <div class="scard-meta">14,1 km · ↑1240 ↓980 · 6 WP</div>
+            </div>
+            <div class="scard-risk"><span class="pill pill-bad">high</span></div>
+          </div>
+          <div class="scard">
+            <span class="grip" title="Ziehen zum Sortieren" aria-label="Ziehen zum Sortieren">⋮⋮</span>
+            <div class="scard-body">
+              <div class="scard-top"><span class="scard-code">03 · KHW_00c</span><span class="scard-date">25.09.</span></div>
+              <div class="scard-title">Reichenberger Hütte → Karlsbader Hütte</div>
+              <div class="scard-meta">9,8 km · ↑640 ↓1120 · 4 WP</div>
+            </div>
+            <div class="scard-risk"><span class="pill pill-good">low</span></div>
+          </div>
+          <div class="scard pause">
+            <span class="grip" title="Ziehen zum Sortieren" aria-label="Ziehen zum Sortieren">⋮⋮</span>
+            <div class="scard-body">
+              <div class="scard-top"><span class="scard-code">04 · PAUSE</span><span class="scard-date">26.09.</span></div>
+              <div class="scard-title">Pausentag</div>
+              <div class="scard-meta">⌂ Karlsbader Hütte</div>
+            </div>
+            <div class="scard-risk"><span class="pill" style="border:1px solid var(--g-rule); color:var(--g-ink-3)">Pause</span></div>
+          </div>
+        </div>
+        <button class="addstage">+ Etappe oder Pausentag</button>
+
+      </div>
+    </div>
+
+    <!-- BottomNav + Konto-Kreis -->
+    <div class="navbar">
+      <div class="nav">
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Übersicht</button>
+        <button class="active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 18c4-1 5-8 8-8s4 4 8 3"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="13" r="2"/></svg>Touren</button>
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>Vergleich</button>
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>Archiv</button>
+      </div>
+      <div class="konto" title="Konto"><span>MA</span></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <h2>Etappen-Tab · Soll (390×844)</h2>
+    <ul style="padding-left: 18px; margin: 0">
+      <li><strong>Titel-Zeile:</strong> <code>--g-text-xl</code> (20px) statt 38px, <code>min-width:0</code> + Ellipsis, Stift 44px — keine Überstehung.</li>
+      <li><strong>Karte:</strong> feste Höhe <code>max(240px, 40dvh)</code> per CSS — kein JS-Measuring, kein 34px-Clip. <code>MapControl</code> oben rechts (AP-012-Ausnahme).</li>
+      <li><strong>Profil-Sheet:</strong> unter der Karte, Snaps peek/half/full (Klick auf Griff in dieser Demo).</li>
+      <li><strong>Vertikale Liste</strong> statt 916px-Strip: <code>StageCardM</code> mit Drag-Griff 44px (griff-only, #1272), Pause-Karte, „+ Etappe". Skaliert auf 13+ Etappen — <code>StageSelectSheet</code> entfällt auf Mobile.</li>
+      <li><strong>Mini-Texte:</strong> nichts unter 11px (AP-017); Attribution ist die eine Ausnahme.</li>
+      <li><strong>Tab-Leiste:</strong> siehe <code>mobile-usability-tabs-soll.html</code> (Paket 2).</li>
+    </ul>
+    <p style="margin-top: var(--g-s-4); color: var(--g-ink-3); font-size: var(--g-text-xs)">Interaktiv: Tab-Klick wechselt Übersicht/stages. Mockup-Konvention: keine Statusleiste, kein Home-Indicator, dicht am Rand (mobile_shell_ohne_topbar.md §2a-3). Token-Werte 1:1 aus frontend/src/app.css :root.</p>
+  </div>
+
+</div>
+
+<script>
+  // Minimal-Interaktion: Tab-Wechsel Übersicht/stages (statisch sonst vollständig lesbar)
+  const tabs = document.querySelectorAll('.tab');
+  const pU = document.getElementById('panel-uebersicht');
+  const pS = document.getElementById('panel-stages');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => { x.classList.remove('active'); x.setAttribute('aria-selected', 'false'); x.tabIndex = -1; });
+    t.classList.add('active'); t.setAttribute('aria-selected', 'true'); t.tabIndex = 0;
+    const id = t.dataset.tab;
+    pU.hidden = id !== 'uebersicht';
+    pS.hidden = id !== 'stages';
+  }));
+</script>
+</body>
+</html>
