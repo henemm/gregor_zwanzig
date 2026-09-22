@@ -70,7 +70,7 @@ const ZAEHLBEFEHL =
 	` | grep -v __tests__ | grep -vE ':\\s*(\\*|//|/\\*)'`;
 
 /**
- * Eingefrorene Soll-Liste (53 Fundstellen) — Zielzustand NACH S6a (Totcode),
+ * Eingefrorene Soll-Liste (47 Fundstellen) — Zielzustand NACH S6a (Totcode),
  * S6b (Guard-Rueckbau) UND S6c (Alarme-Flaeche auf Wertprops). Die Kategorien
  * HERKUNFT/FACHLICH/DARSTELLUNG stehen im Spec-Anhang, nicht hier — diese
  * Ratsche misst Fundorte, nicht Absichten.
@@ -124,9 +124,6 @@ const EINGEFROREN: readonly string[] = [
 	'WeatherMetricsTab.svelte:1323',
 	'versand-tab/vtBriefingChannelsText.ts:21',
 	'versand-tab/vtBriefingChannelsText.ts:26',
-	'corridor-editor/CorridorEditorMobile.svelte:70',
-	'corridor-editor/CorridorEditorMobile.svelte:91',
-	'corridor-editor/CorridorEditorMobile.svelte:96',
 	'corridor-editor/CorridorEditorMobile.svelte:98',
 	'corridor-editor/CorridorEditorMobile.svelte:126',
 	'corridor-editor/CorridorEditorMobile.svelte:151',
@@ -138,9 +135,6 @@ const EINGEFROREN: readonly string[] = [
 	'corridor-editor/CorridorEditorMobile.svelte:318',
 	'corridor-editor/CorridorEditorMobile.svelte:330',
 	'corridor-editor/CorridorEditorMobile.svelte:451',
-	'corridor-editor/CorridorEditor.svelte:57',
-	'corridor-editor/CorridorEditor.svelte:79',
-	'corridor-editor/CorridorEditor.svelte:89',
 	'corridor-editor/CorridorEditor.svelte:95',
 	'corridor-editor/CorridorEditor.svelte:138',
 	'corridor-editor/CorridorEditor.svelte:170',
@@ -166,7 +160,7 @@ const EINGEFROREN: readonly string[] = [
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein
  *  versehentliches Kuerzen des Literals oben. */
-const EINGEFROREN_SOLL_ANZAHL = 53;
+const EINGEFROREN_SOLL_ANZAHL = 47;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
@@ -258,7 +252,7 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 		);
 	});
 
-	test('die eingefrorene Soll-Liste ist unversehrt (53 Eintraege, keine Duplikate)', () => {
+	test('die eingefrorene Soll-Liste ist unversehrt (47 Eintraege, keine Duplikate)', () => {
 		assert.strictEqual(
 			EINGEFROREN.length,
 			EINGEFROREN_SOLL_ANZAHL,
