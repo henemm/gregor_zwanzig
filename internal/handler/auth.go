@@ -850,7 +850,7 @@ var profileUpdateBeforeFreshReload func(userID string)
 // weiterlaufen laesst.
 var profileUpdateAfterFirstAddressLock func(userID string)
 
-func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
+func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFloodLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
@@ -1008,6 +1008,12 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 		//    auf den alten Werten, die Aenderung wartet als Pending-Feld auf
 		//    den Bestaetigungslink (VerifyEmailHandler).
 		sendVerification := false
+		// Issue #2404: die Adresse, an die die Bestaetigungsmail ginge — in
+		// beiden Zweigen, die sendVerification setzen, ist das die neue
+		// wirksame Adresse (Pending-Zweig schreibt sie nach
+		// PendingContactAddress, der unbestaetigte Zweig direkt nach
+		// email/mail_to). Schluessel des Adress-Buckets.
+		verificationAddress := ""
 		if emailFieldChanged || mailToFieldChanged {
 			newEmail := user.Email
 			if update.Email != nil {
@@ -1019,6 +1025,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			}
 			oldEffective := store.EffectiveContactAddress(user)
 			newEffective := store.EffectiveContactAddress(&model.User{Email: newEmail, MailTo: newMailTo})
+			verificationAddress = newEffective
 
 			switch {
 			case newEffective == oldEffective:
@@ -1075,6 +1082,25 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 		// nicht ersetzt (BUG-DATALOSS-GR221).
 		if update.PasskeyPromptDismissed != nil {
 			user.PasskeyPromptDismissed = *update.PasskeyPromptDismissed
+		}
+
+		// Issue #2404: die Mengenbremse greift genau dort, wo eine
+		// Bestaetigungsmail entstuende — Profil-Updates ohne wirksame
+		// Adressaenderung verbrauchen kein Kontingent (AC-5). Die Pruefung
+		// steht VOR SaveUser: bei Ablehnung bleibt kein Teil-Zustand zurueck,
+		// auch nicht fuer harmlose Felder im selben Request (AC-6). In
+		// dispatchVerificationMail waere sie strukturell zu spaet.
+		// verificationAddress != "": ohne Adresse verschickt
+		// dispatchVerificationMail nichts (beide Felder geleert bei einem
+		// unbestaetigten Konto) — dann darf auch kein Kontingent fallen. Sonst
+		// teilten sich alle Nutzer den Bucket des Leerstrings und der elfte,
+		// voellig unbeteiligte bekaeme 429.
+		if sendVerification && verificationAddress != "" && !mailLimiter.Allow(userId, verificationAddress) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Retry-After", mailLimiter.RetryAfterHeader())
+			w.WriteHeader(429)
+			w.Write([]byte(`{"error":"rate_limit_exceeded"}`))
+			return
 		}
 
 		if err := s.SaveUser(*user); err != nil {
@@ -1175,7 +1201,7 @@ func selfHealEmailVerification(s *store.Store, userId, provenAddress string) {
 // Die Antwort ist IMMER `200 {"status":"ok"}`: ob das Konto existiert, bereits
 // bestätigt ist oder keine Kontaktadresse hält, darf von außen nicht
 // unterscheidbar sein.
-func ResendVerificationHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
+func ResendVerificationHandler(s *store.Store, cfg config.Config, mailLimiter *MailFloodLimiter) http.HandlerFunc {
 	const ok = `{"status":"ok"}`
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -1196,7 +1222,28 @@ func ResendVerificationHandler(s *store.Store, cfg config.Config) http.HandlerFu
 		// ausstehender Aenderung bekommt den Link erneut — an die ausstehende
 		// Adresse (dispatchVerificationMail waehlt sie).
 		if user != nil && (user.EmailVerifiedAt == nil || user.PendingContactAddress != "") {
-			dispatchVerificationMail(s, cfg, req.Username, user)
+			// Issue #2404: ausschliesslich der Adress-Bucket. req.Username
+			// kommt aus dem Rumpf und ist faelschbar — ein User-Bucket-Verbrauch
+			// liesse einen Fremden das Profil-Kontingent des Opfers leerlaufen
+			// (AC-8). Zieladresse identisch zur Wahl in
+			// dispatchVerificationMail, hier bewusst dupliziert statt
+			// herausgeloest, um dessen Signatur unberuehrt zu lassen.
+			ziel := user.MailTo
+			if ziel == "" {
+				ziel = user.Email
+			}
+			if user.PendingContactAddress != "" {
+				ziel = user.PendingContactAddress
+			}
+			// Normalisiert, weil der Profil-Pfad auf der normalisierten
+			// Adresse keyt — sonst teilen beide Endpunkte den Bucket nur
+			// scheinbar. Leer heisst: keine Mail, also auch kein
+			// Bucket-Verbrauch (sonst teilten sich alle Konten den Bucket des
+			// Leerstrings).
+			zielNorm := store.NormalizeEmailAddress(ziel)
+			if zielNorm != "" && mailLimiter.AllowAddressOnly(zielNorm) {
+				dispatchVerificationMail(s, cfg, req.Username, user)
+			}
 		}
 		w.Write([]byte(ok))
 	}

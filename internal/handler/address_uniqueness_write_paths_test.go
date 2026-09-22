@@ -56,7 +56,7 @@ func schreibpfadProfilAktualisieren(s *store.Store, cfg config.Config, userID, b
 	req := httptest.NewRequest(http.MethodPut, "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), userID))
 	w := httptest.NewRecorder()
-	UpdateProfileHandler(s, cfg).ServeHTTP(w, req)
+	UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(w, req)
 	return w
 }
 
@@ -440,8 +440,8 @@ func TestProfilTauschGleichzeitigKeineVerklemmung_AC11(t *testing.T) {
 		start := make(chan struct{})
 		var wg sync.WaitGroup
 		wg.Add(2)
-		go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg).ServeHTTP(wA, reqA) }()
-		go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg).ServeHTTP(wB, reqB) }()
+		go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(wA, reqA) }()
+		go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(wB, reqB) }()
 		close(start)
 		wg.Wait()
 		close(fertig)
@@ -535,7 +535,7 @@ func TestRegistrierungGegenProfilUpdateRaceErgibtGenauEinenHalter_AC13(t *testin
 		go func() {
 			defer wg.Done()
 			<-start
-			UpdateProfileHandler(s, cfg).ServeHTTP(profW, profReq)
+			UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(profW, profReq)
 		}()
 		close(start)
 		wg.Wait()
@@ -666,8 +666,8 @@ func TestProfilTauschZweiAdressenGleichzeitigOhneVerklemmung_F008(t *testing.T) 
 			start := make(chan struct{})
 			var wg sync.WaitGroup
 			wg.Add(2)
-			go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg).ServeHTTP(wA, reqA) }()
-			go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg).ServeHTTP(wB, reqB) }()
+			go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(wA, reqA) }()
+			go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(wB, reqB) }()
 			close(start)
 			wg.Wait()
 			close(fertig)
@@ -907,8 +907,8 @@ func TestProfilUpdateRaceAufFreieAdresseErgibtGenauEinenHalter_F005(t *testing.T
 		start := make(chan struct{})
 		var wg sync.WaitGroup
 		wg.Add(2)
-		go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg).ServeHTTP(wA, reqA) }()
-		go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg).ServeHTTP(wB, reqB) }()
+		go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(wA, reqA) }()
+		go func() { defer wg.Done(); <-start; UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(wB, reqB) }()
 		close(start)
 		wg.Wait()
 

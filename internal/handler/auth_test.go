@@ -17,6 +17,13 @@ import (
 	"github.com/henemm/gregor-api/internal/middleware"
 )
 
+// weitMailLimiter ist die Mengenbremse fuer alle Tests, die nicht das
+// Flut-Verhalten selbst pruefen (Issue #2404): ein Kontingent, das im Testlauf
+// nie erreicht wird. Eine geteilte Instanz statt einer je Aufrufstelle — jede
+// Instanz haelt eine Aufraeum-Goroutine, und einige Aufrufstellen liegen in
+// Schleifen und Goroutinen.
+var weitMailLimiter = NewMailFloodLimiter(1_000_000, time.Hour)
+
 // testRegisterCfg liefert eine Config, deren SMTPHost gesetzt ist, damit der
 // (nicht-Test-User-)Dispatch-Zweig in RegisterHandler betreten wird. Der
 // tatsächliche SMTP-Dial wird in Dispatch-beobachtenden Tests über
