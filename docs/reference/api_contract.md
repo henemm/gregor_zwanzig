@@ -937,6 +937,14 @@ Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_cha
 
 **Wirkung in S1: keine.** Die Scheibe ist reine Verrohrung (Feld, Persistenz, Roundtrip) — es gibt noch keinen Leser im Alarm-Pfad und keine Bedienfläche. Der Leser folgt in S2, die Editor-Spalte erst danach (Reihenfolge-Zwang aus ADR-0043, festgeschrieben in ADR-0077 Punkt 5). `alert_rules[].channels` bleibt in S1 unverändert die wirksame per-Regel-Präzedenz.
 
+**Semantik ab S2 (Issue #1895 · Leser + Migration).** Das Feld wirkt jetzt:
+
+- **Schlüssel = Katalog-`metric_id`.** Der Alarm-Pfad übersetzt den rohen Summary-Key der auslösenden Änderung (z. B. `gust_max_kmh`) über die eine Rückwärts-Primitive `metric_catalog.metric_and_aggregation_for_field` in die `metric_id` (`gust`) — mit Wählbarkeits-Tie-Break: `temp_min_c` ⇒ `temperature`, **nie** `temperature_cold`. Ein unbekannter oder mehrdeutiger Key wirft nicht, sondern gilt als „kein Eintrag" (fail-soft, die Metrik erbt).
+- **Wirkung je Alarm = Vereinigung über die ausgelösten Metriken.** Pro Metrik gilt der eigene Eintrag; hat eine Metrik keinen (oder einen leer aufgelösten) Eintrag, gilt für sie der Kanalsatz ohne diese Schicht (Abo-weiter Satz bzw. Regel-Union). Die Vereinigung kann nie unter diesen Satz fallen, wenn irgendeine ausgelöste Metrik eintragslos ist — ADR-0046: die Kanal-Ebene regelt den WEG, nicht das OB.
+- **Nur metrik-behaftete Alarme.** Regen-/Nowcast-Alarme und amtliche Warnungen sind strukturell metrikfrei und verwenden unverändert den Abo-weiten Satz.
+- **Je Ort beim Ortsvergleich.** Die Auflösung geschieht in der Ortsschleife: zwei Orte desselben Alarmlaufs können unterschiedliche Kanalsätze bekommen, wenn sie über verschiedene Metriken auslösen.
+- **Migration beim Laden (Python).** `alert_rules[].channels` wird in dieses Feld **kopiert** (`alert_rules` bleibt unverändert bestehen): nur aktivierte Regeln mit nicht-leerer Kanalliste, eins-zu-viele ausgerollt (`snow_line` ⇒ `snowfall_limit` **und** `freezing_level`), Kollisionen auf derselben `metric_id` unioniert, bereits vorhandene Einträge gewinnen (Read-Modify-Write mit Merge). Eine leere Regel-Kanalliste erzeugt **keinen** Schlüssel (ein `{}` läse sich als Override ins Leere). **Folge für Bestandsnutzer (bewusst, PO-freigegeben):** ein Alarm, der nur Metrik X auslöst, erreicht danach nur noch die Kanäle der X-Regel statt der regelübergreifenden Union.
+
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertMetricChannels`), ADR-0077 (schreibt ADR-0046 fort), Spec `docs/specs/modules/alert_metric_channels.md`.
 
 ### official_warnings (Issue #1258)

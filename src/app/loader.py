@@ -625,6 +625,13 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # Issue #205: Alert Rules — either directly from JSON or migrated from legacy.
     alert_rules = _migrate_legacy_alert_rules(data)
 
+    # Issue #1895 S2: die Kanalzuordnung wandert beim Laden von der Regel auf
+    # die Metrik (kopierend, RMW mit Merge) — erst dadurch bekommt der Leser
+    # im Alarm-Pfad fuer Bestandsdaten ueberhaupt etwas zu lesen.
+    alert_metric_channels = _migrate_rule_channels_to_metric_channels(
+        alert_rules, data.get("alert_metric_channels"),
+    )
+
     # Issue #1231 (Slice 1): Corridors — additiv neben alert_rules, kein
     # Legacy-Migrationspfad in Slice 1 (s. scripts/migrate_1231_corridors.py, Slice 2).
     corridors = [_corridor_from_dict(c) for c in (data.get("corridors") or [])]
@@ -705,7 +712,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         alert_channel_thresholds=data.get("alert_channel_thresholds"),
         # Issue #1895 S1: explizit durchreichen (auch als None) -> None bleibt
         # "erbt den Abo-weiten Kanal-Satz" (s. Trip.alert_metric_channels).
-        alert_metric_channels=data.get("alert_metric_channels"),
+        # S2: der Wert ist bereits um die Regel-Kanaele ergaenzt (s.o.).
+        alert_metric_channels=alert_metric_channels,
         extra=extra,  # Issue #991: unmodellierte Top-Level-Keys
         # Issue #1250 Scheibe 4: abgeleitete flache Slot-/Kanal-Felder (Dual-Read)
         morning_time=morning_time,
@@ -752,6 +760,72 @@ def _migrate_metric_alert_levels(levels: Any) -> Any:
     value = migrated.pop("snow_line")
     migrated.setdefault("freezing_level", value)
     return migrated
+
+
+def _ist_waehlbare_katalog_groesse(metric_id: str) -> bool:
+    """`selectable`-Flag einer Katalog-Groesse, fail-soft. Eine Katalog-Luecke
+    darf das LADEN eines Trips nie sprengen (schlimmer als im Alarm-Pfad)."""
+    from app.metric_catalog import get_metric
+
+    try:
+        return bool(get_metric(metric_id).selectable)
+    except Exception:
+        return False
+
+
+def _katalog_ids_fuer_alarm_metrik(metric: Any) -> tuple:
+    """Issue #1895 S2: `AlertMetric` -> Katalog-`metric_id`s mit
+    Waehlbarkeits-Tie-Break (AC-18).
+
+    `_ALERT_METRIC_TO_CATALOG_ID` ist eins-zu-vielen. Bei mehreren Kandidaten
+    gewinnen die WAEHLBAREN (`TEMPERATURE_MIN` ⇒ nur `temperature`;
+    `temperature_cold` ist `selectable=False` und koennte im Editor nie
+    angeboten werden). Sind mehrere waehlbar, entstehen ALLE (`SNOW_LINE` ⇒
+    `snowfall_limit` UND `freezing_level`, #961-OR-Politik). Bei genau einem
+    Kandidaten gewinnt dieser, auch wenn er nicht waehlbar ist.
+    """
+    from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID
+
+    ids = tuple(_ALERT_METRIC_TO_CATALOG_ID.get(metric) or ())
+    if len(ids) <= 1:
+        return ids
+    waehlbar = tuple(i for i in ids if _ist_waehlbare_katalog_groesse(i))
+    return waehlbar or ids
+
+
+def _migrate_rule_channels_to_metric_channels(
+    alert_rules: List[AlertRule], bestehend: Any,
+) -> Optional[Dict[str, Any]]:
+    """Issue #1895 S2: `alert_rules[].channels` -> `alert_metric_channels`.
+
+    Die Kanalzuordnung hing an der falschen Entitaet (Regel statt Metrik,
+    #1895). Beim Laden wandert sie auf die Metrik — KOPIEREND, `alert_rules`
+    bleibt unberuehrt (Rueckbau erst S4).
+
+    Read-Modify-Write mit MERGE (BUG-DATALOSS-GR221, #102): ein bereits
+    persistierter Eintrag gewinnt und bleibt unangetastet, die Migration
+    ergaenzt nur fehlende Metriken (AC-22). Regeln:
+
+    * nur AKTIVIERTE Regeln (`enabled`) liefern einen Beitrag — eine heute
+      wirkungslose Regel darf durch die Migration nicht aktiv werden (AC-20);
+    * eine LEERE Kanalliste bedeutet "erbt" und erzeugt KEINEN Schluessel,
+      insbesondere kein `{}` (das laese sich als Override ins Leere, AC-19);
+    * mehrere Regeln auf derselben `metric_id` werden UNIONIERT — eine Union
+      kann nicht unterdruecken (AC-18);
+    * bleibt nichts uebrig, bleibt das Feld ungesetzt (AC-21, Pendant zum
+      `omitempty` der Go-Seite).
+    """
+    migriert: Dict[str, set] = {}
+    for rule in alert_rules or []:
+        if not rule.enabled or not rule.channels:
+            continue
+        for metric_id in _katalog_ids_fuer_alarm_metrik(rule.metric):
+            migriert.setdefault(metric_id, set()).update(rule.channels)
+
+    ergebnis: Dict[str, Any] = dict(bestehend) if isinstance(bestehend, dict) else {}
+    for metric_id, kanaele in migriert.items():
+        ergebnis.setdefault(metric_id, {ch: True for ch in sorted(kanaele)})
+    return ergebnis or None
 
 
 def _coerce_metric_entry(entry: Any) -> Any:
