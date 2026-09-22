@@ -395,3 +395,74 @@ def test_ac5_settings_readiness_does_not_change_the_resolved_set_for_compare(cle
         f"empty={result_empty!r}"
     )
     assert result_capable == {"email", "telegram", "sms"}
+
+
+# ══════ AC-14 (#1895 S2) — EIN Summary-Key, EINE Uebersetzung, ZWEI Flaechen ═
+# ERGAENZUNG zur 16er-Paritaetsmatrix oben (`test_ac1_*`, :225). Die 16
+# Bestandsfaelle bleiben unveraendert — hier kommt der `temp_min_c`-Fall
+# hinzu, den Issue #1895 Scheibe S2 braucht.
+#
+# SPEC: docs/specs/modules/alert_metric_channels.md, AC-14.
+# RED-Grund heute (gemessen): `effective_alert_channels()` kennt den
+# Parameter `metrics` nicht (`src/services/alert_channels.py:113`) —
+# `TypeError: effective_alert_channels() got an unexpected keyword argument
+# 'metrics'`.
+#
+# Warum genau dieser Schluessel: `temp_min_c` steht in ZWEI
+# `summary_fields` — `temperature` (`metric_catalog.py:121`) und
+# `temperature_cold` (`:147`). Letztere traegt `selectable=False` (`:149`),
+# ist also im Editor (S3) nie anwaehlbar; ein darauf geschluesselter Eintrag
+# waere strukturell unerreichbar. Die beiden vorhandenen Uebersetzer
+# widersprechen sich hier: `_resolve_metric_id` (`project.py:123`)
+# disambiguiert per Richtung, `_SUMMARY_KEY_TO_CATALOG_ID`
+# (`compare_alert.py:64`) mappt unbedingt auf `temperature_cold`.
+
+def test_ac14_temp_min_c_loest_in_beiden_flaechen_auf_temperature_auf(clean_user_dir):
+    """AC-14 (ROT): ein Alarm mit dem rohen Summary-Key `temp_min_c` liest
+    den Kanal-Eintrag unter `temperature` (waehlbar) — niemals unter
+    `temperature_cold`. Und zwar in BEIDEN Flaechen identisch: Trip und
+    Ortsvergleich liefern fuer denselben Summary-Key denselben Kanalsatz.
+
+    Beide Schluessel tragen im Testaufbau UNTERSCHIEDLICHE Kanaele. Faellt
+    der Waehlbarkeits-Tie-Break weg (Mutations-Gegenprobe der Spec:
+    „`temp_min_c` mappt auf `temperature_cold` statt `temperature`"), wird
+    diese Zusicherung rot — bei gleichen Kanaelen waere die Mutation
+    unbeobachtbar.
+    """
+    from services.alert_channels import effective_alert_channels
+
+    user_id = clean_user_dir(_fresh_uid("ac14"))
+    _write_tier(user_id, "premium")
+    settings = _settings_all_capable()
+    eintraege = {
+        "temperature": {"telegram": True},
+        "temperature_cold": {"sms": True},
+    }
+
+    trip = _trip("t-ac14", alert_channels=None)
+    trip.alert_metric_channels = dict(eintraege)
+    preset = _compare_preset(
+        "p-ac14", send_telegram=True, alert_metric_channels=dict(eintraege),
+    )
+
+    trip_result = effective_alert_channels(
+        trip, settings, user_id, metrics=["temp_min_c"],
+    )
+    compare_result = effective_alert_channels(
+        preset, settings, user_id, metrics=["temp_min_c"],
+    )
+
+    assert trip_result == {"telegram"}, (
+        "AC-14 (Trip): `temp_min_c` muss auf die WAEHLBARE Katalog-Groesse "
+        "`temperature` aufloesen (Eintrag {telegram}), nie auf "
+        f"`temperature_cold` (Eintrag {{sms}}). Gemessen: {trip_result!r}"
+    )
+    assert compare_result == {"telegram"}, (
+        "AC-14 (Ortsvergleich): dieselbe Aufloesung wie beim Trip — "
+        f"`temperature`, nicht `temperature_cold`. Gemessen: {compare_result!r}"
+    )
+    assert trip_result == compare_result, (
+        "AC-14: derselbe Summary-Key muss in beiden Flaechen denselben "
+        f"Kanal-Schluessel liefern — Trip: {trip_result!r}, "
+        f"Compare: {compare_result!r}"
+    )
