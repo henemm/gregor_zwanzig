@@ -1,0 +1,18 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/profile_mail_ratelimit_test.go:37:21: undefined: MailFloodLimiter
+internal/handler/profile_mail_ratelimit_test.go:38:9: undefined: NewMailFloodLimiter
+internal/handler/profile_mail_ratelimit_test.go:41:69: undefined: MailFloodLimiter
+internal/handler/profile_mail_ratelimit_test.go:45:31: too many arguments in call to UpdateProfileHandler
+	have (*store.Store, config.Config, unknown type)
+	want (*store.Store, config.Config)
+internal/handler/profile_mail_ratelimit_test.go:49:56: undefined: MailFloodLimiter
+internal/handler/profile_mail_ratelimit_test.go:53:36: too many arguments in call to ResendVerificationHandler
+	have (*store.Store, config.Config, unknown type)
+	want (*store.Store, config.Config)
+internal/handler/profile_mail_ratelimit_test.go:60:7: undefined: NewMailFloodLimiter
+internal/handler/profile_mail_ratelimit_test.go:72:7: undefined: NewMailFloodLimiter
+internal/handler/profile_mail_ratelimit_test.go:85:7: undefined: NewMailFloodLimiter
+internal/handler/profile_mail_ratelimit_test.go:101:7: undefined: NewMailFloodLimiter
+internal/handler/profile_mail_ratelimit_test.go:101:7: too many errors
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

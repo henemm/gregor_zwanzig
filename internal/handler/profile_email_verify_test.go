@@ -31,7 +31,7 @@ func TestUpdateProfileHandler_MailToChangeOfVerifiedAccountStaysPending_AC5(t *t
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"ivy","mail_to":"ivy-old@henemm.com","email_verified_at":"2026-07-01T00:00:00Z"}`), 0644)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
 	body := `{"mail_to":"ivy-new@henemm.com"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "ivy"))
@@ -63,7 +63,7 @@ func TestUpdateProfileHandler_EmailChangeOfVerifiedAccountStaysPending_AC5(t *te
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"jack","email":"jack-old@henemm.com","email_verified_at":"2026-07-01T00:00:00Z"}`), 0644)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
 	body := `{"email":"jack-new@henemm.com"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "jack"))
@@ -92,7 +92,7 @@ func TestUpdateProfileHandler_NoOpUpdateKeepsVerification_AC6(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"kim","mail_to":"kim@henemm.com","email_verified_at":"2026-07-01T00:00:00Z"}`), 0644)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
 	body := `{"mail_to":"kim@henemm.com"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "kim"))

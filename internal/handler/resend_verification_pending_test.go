@@ -22,7 +22,7 @@ func ausstehendResend(s *store.Store, cfg config.Config, uid string) *httptest.R
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/verify-email/resend",
 		strings.NewReader(fmt.Sprintf(`{"username":%q}`, uid)))
 	w := httptest.NewRecorder()
-	ResendVerificationHandler(s, cfg).ServeHTTP(w, req)
+	ResendVerificationHandler(s, cfg, weitMailLimiter).ServeHTTP(w, req)
 	return w
 }
 

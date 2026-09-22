@@ -82,7 +82,7 @@ func TestUpdateProfileHandler(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"bob","password_hash":"`+string(hash)+`"}`), 0644)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
 
 	// WHEN: Bob updates his channel settings and smuggles a telegram_chat_id in
 	// (Issue #2141: die Chat-ID ist eine Identitaetszuordnung und darf ueber
@@ -129,7 +129,7 @@ func TestUpdateProfilePreservesPasswordHash(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"charlie","password_hash":"`+originalHash+`"}`), 0644)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
 
 	// WHEN: Charlie updates profile (even trying to set password_hash)
 	body := `{"mail_to":"c@example.com","password_hash":"HACKED"}`
@@ -166,7 +166,7 @@ func TestUpdateProfileSetsSmsTo(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"dora","password_hash":"`+string(hash)+`"}`), 0644)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
 
 	body := `{"sms_to":"+49151TESTXXXX"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
@@ -226,7 +226,7 @@ func TestUpdateProfileAcceptsEmptySmsTo(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"frida","password_hash":"`+string(hash)+`","sms_to":"+49151OLDNUM"}`), 0644)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
 	body := `{"sms_to":""}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	ctx := middleware.ContextWithUserID(req.Context(), "frida")
@@ -761,7 +761,7 @@ func TestUpdateProfileHandlerIgnoresPremiumSmsReplyFields(t *testing.T) {
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "nora"))
 	w := httptest.NewRecorder()
-	UpdateProfileHandler(s, config.Config{}).ServeHTTP(w, req)
+	UpdateProfileHandler(s, config.Config{}, weitMailLimiter).ServeHTTP(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())

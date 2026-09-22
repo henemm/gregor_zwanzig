@@ -71,8 +71,13 @@ func New(deps Deps) chi.Router {
 	// Eintrag in der Public-Allowlist; der Eintrag /api/auth/verify-email ist
 	// ein Pfadvergleich und deckt diesen Unterpfad NICHT mit ab).
 	resendVerifyLimiter := authmw.NewIPRateLimiter(5, time.Hour)
+	// Issue #2404 — Rate-Limit auf Bestaetigungsmails aus Profil-Update und
+	// Resend-Verification: je 10/h pro User-ID und pro Zieladresse, verhindert
+	// Mail-Bombing ueber wiederholte Adresswechsel. EINE Instanz fuer beide
+	// Endpunkte, damit das Adress-Limit endpointuebergreifend gilt.
+	mailFloodLimiter := handler.NewMailFloodLimiter(10, time.Hour)
 	r.Post("/api/auth/verify-email/resend",
-		resendVerifyLimiter.Middleware(handler.ResendVerificationHandler(deps.Store, *deps.Config)).ServeHTTP,
+		resendVerifyLimiter.Middleware(handler.ResendVerificationHandler(deps.Store, *deps.Config, mailFloodLimiter)).ServeHTTP,
 	)
 	// Issue #2304 — staging-only Testweg (Muster #830 unten): gibt das
 	// Verifikations-Token ohne Mailversand heraus. ANMELDEPFLICHTIG — bewusst
@@ -87,7 +92,7 @@ func New(deps Deps) chi.Router {
 	// NICHT in der Public-Allowlist von AuthMiddleware.
 	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
-	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config))
+	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config, mailFloodLimiter))
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret))
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
 	r.Post("/api/auth/tier-change-request", handler.RequestTierChangeHandler(deps.Store, *deps.Config))

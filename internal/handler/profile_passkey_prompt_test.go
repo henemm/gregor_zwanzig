@@ -97,7 +97,7 @@ func TestUpdateProfilePasskeyPromptDismissedPreservesNeighbours(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), uid))
 	w := httptest.NewRecorder()
-	UpdateProfileHandler(s, config.Config{}).ServeHTTP(w, req)
+	UpdateProfileHandler(s, config.Config{}, weitMailLimiter).ServeHTTP(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("PUT /api/auth/profile: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
