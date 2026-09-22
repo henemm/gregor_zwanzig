@@ -85,7 +85,7 @@
   .attr { position: absolute; bottom: 6px; right: 6px; font-family: var(--g-font-mono); font-size: 9px; color: var(--g-ink-3); background: rgba(255,255,255,0.7); padding: 1px 5px; border-radius: var(--g-r-1); }
 
   /* ── ProfileSheetEmbedded (unter der Karte, Snaps) ────────── */
-  .sheet { margin: var(--g-s-3) var(--g-s-4) 0; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-4); box-shadow: var(--g-shadow-2); overflow: hidden; transition: height 200ms ease-out; height: 92px; }
+  .sheet { margin: var(--g-s-3) var(--g-s-4) 0; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-4); box-shadow: var(--g-shadow-2); overflow: hidden; transition: height 200ms ease-out; height: 88px; }
   .sheet.half { height: 260px; }
   .sheet-handle { display: flex; justify-content: center; padding-top: var(--g-s-2); padding-bottom: var(--g-s-1); cursor: pointer; }
   .sheet-handle span { width: 36px; height: 4px; border-radius: var(--g-r-pill); background: var(--g-rule); }
@@ -129,6 +129,34 @@
   .mbtn-primary { background: var(--g-accent); border: 1px solid var(--g-accent); color: var(--g-paper); }
   .mbtn-ghost { background: transparent; border: 1px solid var(--g-rule); color: var(--g-ink-2); }
 
+  /* ── Varianten-Umschalter A/B (Mockup-Steuerelement, kein Produkt-UI) ── */
+  .variant-toggle { position: absolute; top: var(--g-s-2); right: var(--g-s-3); z-index: 60; display: inline-flex; gap: 2px; padding: 3px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-pill); box-shadow: var(--g-shadow-2); }
+  .variant-toggle button { min-height: 32px; padding: 0 var(--g-s-3); border: none; border-radius: var(--g-r-pill); background: transparent; color: var(--g-ink-3); font-family: var(--g-font-mono); font-size: var(--g-text-xs); font-weight: 600; letter-spacing: var(--g-track-wide); cursor: pointer; }
+  .variant-toggle button.on { background: var(--g-accent); color: var(--g-paper); }
+
+  /* ── Variante B: Hinweis-Banner + read-only Thumbnail ─────── */
+  .banner-note { display: flex; gap: var(--g-s-3); align-items: flex-start; margin: var(--g-s-3) var(--g-s-4) 0; padding: var(--g-s-3); background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-1); font-size: var(--g-text-sm); color: var(--g-ink-2); line-height: 1.45; }
+  .mapcard.thumb { height: 160px; }
+  .thumb-tag { position: absolute; bottom: 6px; left: 6px; font-family: var(--g-font-mono); font-size: 9px; font-weight: 600; letter-spacing: var(--g-track-wide); text-transform: uppercase; color: var(--g-ink-3); background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: var(--g-r-1); }
+  .popover { position: absolute; z-index: 3; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-2); padding: var(--g-s-2) var(--g-s-3); min-width: 150px; }
+  .popover::after { content: ""; position: absolute; bottom: -6px; left: 24px; width: 10px; height: 10px; background: var(--g-card); border-right: 1px solid var(--g-rule); border-bottom: 1px solid var(--g-rule); transform: rotate(45deg); }
+  .popover-title { font-size: var(--g-text-sm); font-weight: 600; }
+  .popover-meta { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-3); margin-top: 2px; }
+  .popover-actions { display: flex; gap: var(--g-s-1); margin-top: var(--g-s-2); }
+  .pbtn { min-height: 32px; padding: 0 var(--g-s-2); border: 1px solid var(--g-rule); border-radius: var(--g-r-2); background: transparent; color: var(--g-ink-2); font-size: var(--g-text-xs); font-weight: 600; cursor: pointer; }
+
+  /* ── Wegpunkt-Zeilen (Variante B, aufklappbar in StageCardM) ── */
+  .wp-rows { display: none; margin-top: var(--g-s-2); border-top: 1px solid var(--g-rule-soft); }
+  .mode-b .wp-rows.open { display: block; }
+  .wp-row { display: flex; align-items: center; gap: var(--g-s-2); min-height: 44px; padding: 6px 0; border-bottom: 1px solid var(--g-rule-soft); }
+  .wp-row:last-child { border-bottom: none; }
+  .wp-num { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; background: var(--g-card); border: 2px solid var(--g-accent); display: flex; align-items: center; justify-content: center; font-family: var(--g-font-mono); font-size: 10px; font-weight: 700; color: var(--g-accent-deep); }
+  .wp-row.sel .wp-num { background: var(--g-accent); color: var(--g-paper); }
+  .wp-name { flex: 1; min-width: 0; font-size: var(--g-text-sm); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wp-meta { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-3); flex-shrink: 0; }
+  .scard-chevron { flex-shrink: 0; display: none; align-items: center; padding: 0 var(--g-s-3) var(--g-s-3) 0; color: var(--g-ink-4); }
+  .mode-b .scard-chevron { display: flex; }
+
   /* ── Legend ───────────────────────────────────────────────── */
   .legend { width: 340px; font-size: var(--g-text-sm); color: var(--g-ink-2); line-height: 1.6; }
   .legend h2 { font-size: var(--g-text-xl); margin: 0 0 var(--g-s-2); color: var(--g-ink); }
@@ -140,6 +168,10 @@
 <div class="canvas">
 
   <div class="phone">
+    <div class="variant-toggle" role="group" aria-label="Varianten">
+      <button id="va" class="on" onclick="setVariant('a')">A · Karte + Profil</button>
+      <button id="vb" onclick="setVariant('b')">B · Liste only</button>
+    </div>
     <div class="scroll" id="scroll">
 
       <!-- PageHeader: Titel via Token-Skala (20px), min-width:0, Stift 44px -->
@@ -190,7 +222,11 @@
       <!-- Panel: stages — Soll-Zustand -->
       <div id="panel-stages">
 
-        <!-- MapCard: feste Höhe max(240px, 40dvh); Mock zeigt Floor 240px -->
+        <!-- ══ Variante A: Karte (240px) + Profil-Sheet peek + Liste ══ -->
+      <div id="variant-a">
+
+        <!-- MapCard: feste Höhe max(240px, 40dvh); Mock zeigt Floor 240px.
+             Wegpunkte: nummerierte Marker, 44px Hit-Fläche, Tap → Popover -->
         <div class="mapcard">
           <div class="map-note">Karte · max(240px, 40dvh) · hier Floor</div>
           <svg viewBox="0 0 390 240" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style="position:absolute; inset:0">
@@ -204,13 +240,26 @@
             <path d="M0 195 Q80 175 150 192 T390 185 L390 240 L0 240 Z" fill="rgba(74,122,184,0.15)"/>
             <path d="M30 210 L70 170 L115 150 L160 105 L205 90 L245 60 L290 45 L340 25"
                   stroke="var(--g-accent)" stroke-width="3" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
-            <g font-family="var(--g-font-mono)" font-weight="700" fill="var(--g-accent-deep)">
-              <g><circle cx="30" cy="210" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="30" y="214" text-anchor="middle" font-size="11">1</text></g>
-              <g><circle cx="115" cy="150" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="115" y="154" text-anchor="middle" font-size="11">2</text></g>
-              <g><circle cx="205" cy="90" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="205" y="94" text-anchor="middle" font-size="11">3</text></g>
-              <g><circle cx="290" cy="45" r="16" fill="#fff" stroke="var(--g-accent)" stroke-width="3"/><text x="290" y="49" text-anchor="middle" font-size="12">4</text></g>
+            <g font-family="var(--g-font-mono)" font-weight="700">
+              <!-- 44px Hit-Flächen (transparent) -->
+              <circle cx="30" cy="210" r="22" fill="transparent"/><circle cx="115" cy="150" r="22" fill="transparent"/>
+              <circle cx="205" cy="90" r="22" fill="transparent"/><circle cx="290" cy="45" r="22" fill="transparent"/>
+              <!-- sichtbare Marker: nummeriert, ausgewählter (WP 3) accent-gefüllt -->
+              <g><circle cx="30" cy="210" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="30" y="214" text-anchor="middle" font-size="11" fill="var(--g-accent-deep)">1</text></g>
+              <g><circle cx="115" cy="150" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="115" y="154" text-anchor="middle" font-size="11" fill="var(--g-accent-deep)">2</text></g>
+              <g><circle cx="205" cy="90" r="14" fill="var(--g-accent)" stroke="var(--g-accent)" stroke-width="2"/><text x="205" y="94" text-anchor="middle" font-size="12" fill="#fff">3</text></g>
+              <g><circle cx="290" cy="45" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="290" y="49" text-anchor="middle" font-size="11" fill="var(--g-accent-deep)">4</text></g>
             </g>
           </svg>
+          <!-- Popover am ausgewählten Marker (WP 3) -->
+          <div class="popover" style="left: 130px; top: 8px">
+            <div class="popover-title">WP 3 · Talkammer</div>
+            <div class="popover-meta">2440 m · ETA 11:05</div>
+            <div class="popover-actions">
+              <button class="pbtn">Umbenennen</button>
+              <button class="pbtn">Löschen</button>
+            </div>
+          </div>
           <button class="stage-pill">1 / 4 · KHW_00a · Birnlücke → Clarahütte</button>
           <div class="mapcontrols">
             <button class="mapcontrol" aria-label="Wegpunkt hinzufügen" title="Wegpunkt hinzufügen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -220,27 +269,66 @@
           <div class="attr">© OpenStreetMap</div>
         </div>
 
-        <!-- ProfileSheetEmbedded: unter der Karte, Snap peek (Klick = half) -->
+        <!-- ProfileSheetEmbedded (Variante A): Peek 88px, Griff → half, WP-Dots nummeriert -->
         <div class="sheet" id="sheet">
           <div class="sheet-handle" onclick="document.getElementById('sheet').classList.toggle('half')" title="Snap wechseln"><span></span></div>
           <div class="sheet-head">
             <div>
               <div class="eyebrow">Wegpunkte · Etappe 1</div>
-              <div class="sheet-title">WP #2 · Birnlücke</div>
-              <div class="sheet-meta">2667 m · ETA 10:42</div>
+              <div class="sheet-title">WP #3 · Talkammer <span class="pill" style="border:1px solid var(--g-accent); color: var(--g-accent-deep); margin-left:4px">Snap · peek 88</span></div>
+              <div class="sheet-meta">2440 m · ETA 11:05</div>
             </div>
-            <span class="pill pill-good">Snap · peek</span>
           </div>
           <div class="sheet-body">
-            <svg viewBox="0 0 326 48" width="100%" height="48" style="display:block">
-              <path d="M0,36 L45,28 L90,32 L135,16 L180,22 L225,8 L270,14 L326,6 L326,48 L0,48 Z" fill="rgba(196,90,42,0.1)"/>
-              <path d="M0,36 L45,28 L90,32 L135,16 L180,22 L225,8 L270,14 L326,6" fill="none" stroke="var(--g-accent)" stroke-width="1.5"/>
-              <circle cx="45" cy="28" r="3.5" fill="#fff" stroke="var(--g-accent)" stroke-width="1.5"/>
-              <circle cx="135" cy="16" r="5" fill="var(--g-accent)" stroke="var(--g-accent)" stroke-width="1.5"/>
-              <circle cx="225" cy="8" r="3.5" fill="#fff" stroke="var(--g-accent)" stroke-width="1.5"/>
+            <svg viewBox="0 0 1000 120" width="100%" height="56" preserveAspectRatio="none" style="display:block">
+              <path d="M0,86 L140,66 L280,76 L420,38 L560,50 L700,18 L840,30 L1000,12 L1000,120 L0,120 Z" fill="rgba(196,90,42,0.1)"/>
+              <path d="M0,86 L140,66 L280,76 L420,38 L560,50 L700,18 L840,30 L1000,12" fill="none" stroke="var(--g-accent)" stroke-width="3"/>
+              <!-- Dots: 44px Hit-Fläche (r=26), sichtbar 12px, WP 3 ausgewählt -->
+              <g font-family="var(--g-font-mono)" font-weight="700">
+                <circle cx="140" cy="66" r="26" fill="transparent"/><circle cx="420" cy="38" r="26" fill="transparent"/>
+                <circle cx="700" cy="18" r="26" fill="transparent"/><circle cx="1000" cy="12" r="26" fill="transparent"/>
+                <circle cx="140" cy="66" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="3"/><text x="140" y="70" text-anchor="middle" font-size="18" fill="var(--g-accent-deep)">1</text>
+                <circle cx="420" cy="38" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="3"/><text x="420" y="42" text-anchor="middle" font-size="18" fill="var(--g-accent-deep)">2</text>
+                <circle cx="700" cy="18" r="14" fill="var(--g-accent)" stroke="var(--g-accent)" stroke-width="3"/><text x="700" y="23" text-anchor="middle" font-size="20" fill="#fff">3</text>
+                <circle cx="985" cy="12" r="12" fill="#fff" stroke="var(--g-accent)" stroke-width="3"/><text x="985" y="16" text-anchor="middle" font-size="18" fill="var(--g-accent-deep)">4</text>
+              </g>
             </svg>
           </div>
         </div>
+      </div>
+
+      <!-- ══ Variante B: Hinweis-Banner + read-only Thumbnail + Liste ══ -->
+      <div id="variant-b" hidden>
+        <div class="banner-note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g-accent)" stroke-width="2" stroke-linecap="round" style="flex-shrink:0; margin-top:2px"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+          <div><strong>Karte &amp; Höhenprofil:</strong> am Desktop in diesem Tab verfügbar — Wegpunkte setzen und verschieben ist dort am besten machbar. Das Gesamt-Profil bleibt im Übersichts-Tab.</div>
+        </div>
+        <!-- read-only Thumbnail: keine Werkzeuge, Marker tippbar → Popover (nur Info) -->
+        <div class="mapcard thumb">
+          <svg viewBox="0 0 390 160" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style="position:absolute; inset:0">
+            <rect width="390" height="160" fill="#d9dec9"/>
+            <g stroke="rgba(26,26,24,0.08)" stroke-width="0.7" fill="none">
+              <path d="M-10 30 Q90 15 190 35 T400 25"/><path d="M-10 60 Q90 45 190 65 T400 55"/>
+              <path d="M-10 90 Q90 75 190 95 T400 85"/><path d="M-10 120 Q90 105 190 125 T400 115"/>
+            </g>
+            <path d="M0 130 Q80 115 150 128 T390 122 L390 160 L0 160 Z" fill="rgba(74,122,184,0.15)"/>
+            <path d="M30 135 L85 110 L140 95 L200 70 L255 55 L315 35 L360 20"
+                  stroke="var(--g-accent)" stroke-width="3" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+            <g font-family="var(--g-font-mono)" font-weight="700">
+              <circle cx="85" cy="110" r="22" fill="transparent"/><circle cx="200" cy="70" r="22" fill="transparent"/><circle cx="315" cy="35" r="22" fill="transparent"/>
+              <g><circle cx="85" cy="110" r="11" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="85" y="114" text-anchor="middle" font-size="10" fill="var(--g-accent-deep)">1</text></g>
+              <g><circle cx="200" cy="70" r="11" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="200" y="74" text-anchor="middle" font-size="10" fill="var(--g-accent-deep)">2</text></g>
+              <g><circle cx="315" cy="35" r="11" fill="#fff" stroke="var(--g-accent)" stroke-width="2"/><text x="315" y="39" text-anchor="middle" font-size="10" fill="var(--g-accent-deep)">3</text></g>
+            </g>
+          </svg>
+          <div class="popover" style="left: 160px; top: 6px; min-width: 130px">
+            <div class="popover-title">WP 2 · Birnlücke</div>
+            <div class="popover-meta">2667 m · ETA 10:42</div>
+          </div>
+          <div class="thumb-tag">Read-only · Etappe 1</div>
+          <div class="attr">© OpenStreetMap</div>
+        </div>
+      </div>
 
         <!-- Vertikale StageCardM-Liste -->
         <div class="listhead">
@@ -254,8 +342,16 @@
               <div class="scard-top"><span class="scard-code">01 · KHW_00a</span><span class="scard-date">23.09.</span></div>
               <div class="scard-title">Birnlücke → Clarahütte</div>
               <div class="scard-meta">12,4 km · ↑890 ↓420 · 5 WP</div>
+              <!-- Variante B: aufklappbare Wegpunkt-Zeilen (Tap auf Karte) -->
+              <div class="wp-rows open">
+                <div class="wp-row sel"><span class="wp-num">1</span><span class="wp-name">Start · Birnlücke</span><span class="wp-meta">1988 m · ETA 08:15</span></div>
+                <div class="wp-row"><span class="wp-num">2</span><span class="wp-name">Birnlücke</span><span class="wp-meta">2667 m · ETA 10:42</span></div>
+                <div class="wp-row"><span class="wp-num">3</span><span class="wp-name">Talkammer</span><span class="wp-meta">2440 m · ETA 11:05</span></div>
+                <div class="wp-row"><span class="wp-num">4</span><span class="wp-name">Clarahütte</span><span class="wp-meta">2038 m · ETA 12:30</span></div>
+              </div>
             </div>
             <div class="scard-risk"><span class="pill pill-warn">med</span></div>
+            <span class="scard-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
           </div>
           <div class="scard">
             <span class="grip" title="Ziehen zum Sortieren" aria-label="Ziehen zum Sortieren">⋮⋮</span>
@@ -304,15 +400,17 @@
 
   <div class="legend">
     <h2>Etappen-Tab · Soll (390×844)</h2>
+    <p style="margin: 0 0 var(--g-s-3); font-size: var(--g-text-sm); color: var(--g-ink-2)">Varianten-Umschalter oben rechts im Frame (PO-Entscheidungsvorlage, Doc §4):<br><strong>A</strong> = Karte + Profil konkret gestaltet · <strong>B</strong> = Karte/Profil entfallen, Liste + Desktop-Hinweis (+ read-only-Thumbnail in B+).</p>
     <ul style="padding-left: 18px; margin: 0">
       <li><strong>Titel-Zeile:</strong> <code>--g-text-xl</code> (20px) statt 38px, <code>min-width:0</code> + Ellipsis, Stift 44px — keine Überstehung.</li>
-      <li><strong>Karte:</strong> feste Höhe <code>max(240px, 40dvh)</code> per CSS — kein JS-Measuring, kein 34px-Clip. <code>MapControl</code> oben rechts (AP-012-Ausnahme).</li>
-      <li><strong>Profil-Sheet:</strong> unter der Karte, Snaps peek/half/full (Klick auf Griff in dieser Demo).</li>
+      <li><strong>Variante A · Karte:</strong> <code>max(240px, 40dvh)</code> per CSS, nummerierte Marker mit 44px Hit-Fläche, Tap → Popover (WP 3 geöffnet), <code>MapControl</code> neutral (AP-012). Kein JS-Measuring, kein 34px-Clip.</li>
+      <li><strong>Variante A · Profil:</strong> Sheet im Scrollfluss, Peek 88px, Griff → half/full; Wegpunkt-Dots nummeriert + tippbar (44px Hit), SVG als 1000er-viewBox skalierbar statt fix 343px.</li>
+      <li><strong>Variante B:</strong> Hinweis-Banner (Desktop-Verweis, ein Satz), keine Edit-Werkzeuge; Wegpunkt-Zeilen aufklappbar in <code>StageCardM</code> (erste Karte geöffnet). Gesamt-Profil bleibt im Übersichts-Tab.</li>
       <li><strong>Vertikale Liste</strong> statt 916px-Strip: <code>StageCardM</code> mit Drag-Griff 44px (griff-only, #1272), Pause-Karte, „+ Etappe". Skaliert auf 13+ Etappen — <code>StageSelectSheet</code> entfällt auf Mobile.</li>
       <li><strong>Mini-Texte:</strong> nichts unter 11px (AP-017); Attribution ist die eine Ausnahme.</li>
       <li><strong>Tab-Leiste:</strong> siehe <code>mobile-usability-tabs-soll.html</code> (Paket 2).</li>
     </ul>
-    <p style="margin-top: var(--g-s-4); color: var(--g-ink-3); font-size: var(--g-text-xs)">Interaktiv: Tab-Klick wechselt Übersicht/stages. Mockup-Konvention: keine Statusleiste, kein Home-Indicator, dicht am Rand (mobile_shell_ohne_topbar.md §2a-3). Token-Werte 1:1 aus frontend/src/app.css :root.</p>
+    <p style="margin-top: var(--g-s-4); color: var(--g-ink-3); font-size: var(--g-text-xs)">Empfehlung Doc §4.4: <strong>B+</strong> (read-only-Thumbnail + Profil streichen + Wegpunkt-Zeilen in Liste). Interaktiv: Tab-Klick wechselt Übersicht/stages, Griff klappt Profil auf. Mockup-Konvention: keine Statusleiste, kein Home-Indicator, dicht am Rand (mobile_shell_ohne_topbar.md §2a-3). Token-Werte 1:1 aus frontend/src/app.css :root.</p>
   </div>
 
 </div>
@@ -329,6 +427,17 @@
     pU.hidden = id !== 'uebersicht';
     pS.hidden = id !== 'stages';
   }));
+
+  // Varianten-Umschalter A/B (PO-Entscheidungsvorlage, siehe mobile_usability_stages_soll.md §4)
+  const vA = document.getElementById('variant-a');
+  const vB = document.getElementById('variant-b');
+  function setVariant(v) {
+    vA.hidden = v !== 'a';
+    vB.hidden = v !== 'b';
+    pS.classList.toggle('mode-b', v === 'b');
+    document.getElementById('va').classList.toggle('on', v === 'a');
+    document.getElementById('vb').classList.toggle('on', v === 'b');
+  }
 </script>
 </body>
 </html>
