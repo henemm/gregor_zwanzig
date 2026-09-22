@@ -15,16 +15,20 @@ also nichts bewachen. Die drei Zusicherungen treffen die drei Stellen einzeln:
    das Attribut existiert nicht.
 2. `"alert_metric_channels" not in trip.extra` — bewacht den
    `KNOWN_TOP_LEVEL`-Eintrag. Heute rot: der Key landet im `extra`-Auffangnetz.
-3. Datei-Roundtrip — bewacht die Rueckschreibe-Zeile in `_trip_to_dict`.
-   Wird mutations-empfindlich, sobald (2) gesetzt ist: dann traegt `extra` den
-   Wert nicht mehr, und ohne Rueckschreiben geht der Bestandswert verloren
-   (Falle `src/app/loader.py:657-658`, in der Spec ausdruecklich benannt).
+3. `_trip_to_dict(trip)` direkt — bewacht die Rueckschreibe-Zeile. Diese
+   Zusicherung muss den Serialisierer DIREKT befragen: `save_trip` schreibt
+   die Datei nicht wholesale, sondern merged auf den Vorzustand
+   (`_deep_merge_preserve_unknown`, `src/app/loader.py:1857`). Ein reiner
+   Datei-Roundtrip wuerde den alten Wert also auch dann wiederfinden, wenn
+   die Rueckschreibe-Zeile fehlt — er waere gegen genau diese Mutation blind.
+4. Datei-Roundtrip ueber `save_trip` — belegt zusaetzlich den echten
+   End-zu-End-Weg (Falle `src/app/loader.py:657-658`, in der Spec benannt).
 """
 from __future__ import annotations
 
 import json
 
-from app.loader import load_trip, save_trip
+from app.loader import _trip_to_dict, load_trip, save_trip
 
 USER_ID = "user-1895-a"
 TRIP_ID = "trip-1895-ac6"
@@ -79,7 +83,16 @@ def test_alert_metric_channels_survives_python_load_save_roundtrip(tmp_path):
         "KNOWN_TOP_LEVEL-Eintrag fehlt"
     )
 
-    # (3) Rueckschreiben ueber den echten Speicherpfad, danach Datei erneut lesen
+    # (3) Serialisierer DIREKT befragen — der Datei-Roundtrip unten kann die
+    #     fehlende Rueckschreibe-Zeile nicht sehen, weil save_trip auf den
+    #     Vorzustand der Datei merged statt sie zu ersetzen.
+    assert _trip_to_dict(trip).get("alert_metric_channels") == BESTANDSWERT, (
+        "_trip_to_dict schreibt alert_metric_channels nicht zurueck — "
+        "ohne diese Zeile geht der Wert verloren, sobald er nicht mehr im "
+        "extra-Auffangnetz liegt"
+    )
+
+    # (4) Rueckschreiben ueber den echten Speicherpfad, danach Datei erneut lesen
     save_trip(trip, USER_ID, data_dir=tmp_path)
     wieder_gelesen = json.loads(trip_file.read_text(encoding="utf-8"))
     assert wieder_gelesen.get("alert_metric_channels") == BESTANDSWERT, (
