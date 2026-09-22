@@ -224,6 +224,11 @@ class Trip:
     # Meldung diesen Kanal erreichen darf. Fehlender Kanal-Key -> Startwert
     # "LOW" (services.alert_channel_threshold.split_by_threshold).
     alert_channel_thresholds: Optional[dict] = None
+    # Issue #1895 S1 (Epic #1230, ADR-0077): metrik-genaue Kanal-Schicht --
+    # Schluessel = Metrikname, Wert = Kanal-Repraesentation, in S1 unvalidiert.
+    # None bzw. fehlender Metrik-Eintrag = die Metrik erbt den Abo-weiten
+    # Kanal-Satz. S1 hat KEINEN Leser (reine Verrohrung/Persistenz).
+    alert_metric_channels: Optional[dict] = None
     extra: Dict[str, Any] = field(default_factory=dict)  # #991: unmodellierte Top-Level-Keys, roundtrip-erhalten
     # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder, beim Laden aus
     # `report_config` ABGELEITET (Dual-Read, s. app.loader._parse_trip). Nicht

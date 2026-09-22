@@ -287,6 +287,9 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         # (auch als None -> Default 4/19 in day_window.resolve_configured_window).
         day_window_start_hour=data.get("day_window_start_hour"),
         day_window_end_hour=data.get("day_window_end_hour"),
+        # Issue #1895 S1: explizit durchreichen (auch als None) — Paritaet zu
+        # _parse_trip; ohne diese Zeile bliebe das benannte Feld dauerhaft None.
+        alert_metric_channels=data.get("alert_metric_channels"),
         raw=dict(data),
     )
 
@@ -652,6 +655,10 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         "alert_channels",
         # Issue #1461 S3b-2a: additives Geschwisterfeld, None = Startwert LOW.
         "alert_channel_thresholds",
+        # Issue #1895 S1: metrik-genaue Kanal-Schicht (ADR-0077), None = erbt
+        # den Abo-weiten Kanal-Satz. Ohne diesen Eintrag landet der Key im
+        # generischen extra-Auffangnetz und das benannte Feld bliebe leer.
+        "alert_metric_channels",
         # Issue #1250 Scheibe 4 Fix-Loop F002 (Adversary BROKEN): diese Top-
         # Level-Keys sind ABGELEITET (nicht autoritativ). Fehlten sie in
         # KNOWN_TOP_LEVEL, wuerde ein zuvor persistierter Alt-Wert ueber den
@@ -696,6 +703,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         # Issue #1461 S3b-2a: explizit durchreichen (auch als None) -> None
         # bleibt Startwert "LOW" je Kanal (s. Trip.alert_channel_thresholds).
         alert_channel_thresholds=data.get("alert_channel_thresholds"),
+        # Issue #1895 S1: explizit durchreichen (auch als None) -> None bleibt
+        # "erbt den Abo-weiten Kanal-Satz" (s. Trip.alert_metric_channels).
+        alert_metric_channels=data.get("alert_metric_channels"),
         extra=extra,  # Issue #991: unmodellierte Top-Level-Keys
         # Issue #1250 Scheibe 4: abgeleitete flache Slot-/Kanal-Felder (Dual-Read)
         morning_time=morning_time,
@@ -1628,6 +1638,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     # Issue #1461 S3b-2a: additiv, RMW — None (Startwert LOW) bleibt ungeschrieben.
     if trip.alert_channel_thresholds is not None:
         data["alert_channel_thresholds"] = trip.alert_channel_thresholds
+
+    # Issue #1895 S1: additiv, RMW — None (keine metrik-genaue Zuordnung) bleibt
+    # ungeschrieben, damit Bestandstrips byte-gleich bleiben (Pendant zu
+    # omitempty auf der Go-Seite).
+    if trip.alert_metric_channels is not None:
+        data["alert_metric_channels"] = trip.alert_metric_channels
 
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:

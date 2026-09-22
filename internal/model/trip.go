@@ -155,6 +155,16 @@ type Trip struct {
 	// "LOW" je Kanal), gesetzt = Feld-Level-Merge innerhalb des Unterobjekts
 	// (Pflicht, s. internal/handler/trip.go).
 	AlertChannelThresholds *AlertChannelThresholdsConfig `json:"alert_channel_thresholds,omitempty"`
+	// AlertMetricChannels — Issue #1895 Scheibe S1 (Epic #1230), metrik-genaue
+	// Kanal-Schicht neben AlertChannels (je Abo) und AlertChannelThresholds
+	// (je Kanal). Schluessel = Metrikname, Wert = Kanal-Repraesentation, in S1
+	// bewusst unvalidiert (ADR-0077). nil / fehlender Metrik-Eintrag = die
+	// Metrik erbt den Abo-weiten Kanal-Satz — S1 hat keinen Leser, das Feld
+	// ist damit verhaltensneutral. Typ map[string]interface{} (nicht Struct),
+	// damit der Teil-PUT ueber mergeConfigMap eine Ebene tief mergt und nicht
+	// alle uebrigen Metriken blind ersetzt (Muster DisplayConfig,
+	// internal/handler/trip.go).
+	AlertMetricChannels map[string]interface{} `json:"alert_metric_channels,omitempty"`
 	// Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder + EndDate,
 	// ABGELEITET aus ReportConfig/Stages bei jedem Load (store.normalizeTrip)
 	// — nicht autoritativ, ReportConfig bleibt die einzige Wahrheit fuer den
