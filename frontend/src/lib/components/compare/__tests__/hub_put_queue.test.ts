@@ -1,53 +1,49 @@
-// TDD — Issue #1256 Scheibe 7 Fix-Loop 1 (F002, Adversary CRITICAL).
+// TDD — Hub-PUT-Queue: ALLE Schreibpfade des Ortsvergleich-Hubs laufen
+// serialisiert über EINE Kette (`createPutQueue`, compareHubWizardBridge.ts).
 //
-// Spec: docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 7.
-// Reproduktion des urspruenglichen Bugs: zwei unsynchronisierte Hub-PUT-Pfade
-// (Versand-Aenderung + Aktivieren/Pausieren-Klick) im selben Versand-Tab
-// konnten parallel laufen und einander mit einer veralteten `currentPreset`-
-// Baseline still ueberschreiben (siehe
-// scratchpad/probe_race.mjs des Adversary-Fix-Loops).
+// Ursprung: Issue #1256 Scheibe 7 Fix-Loop 1 (F002/F003, Adversary CRITICAL) —
+// zwei unsynchronisierte Hub-PUT-Pfade (Versand-Änderung + Aktivieren/
+// Pausieren-Klick) konnten parallel laufen und einander mit einer veralteten
+// `currentPreset`-Baseline still überschreiben.
 //
-// `createPutQueue()` (compareHubWizardBridge.ts) serialisiert ALLE
-// Hub-PUT-Pfade auf eine gemeinsame Kette. Reine Funktionstests, kein Mock,
-// kein DOM/Browser — lauffaehig unter node --experimental-strip-types.
+// 🔴 REWORK für Issue #2276 Scheibe S5 (Epic #2345), kein Import-Swap: die
+// F002-/F003-Blöcke bauten `handleVersandCommit`/`lastPersistedVersand-
+// Snapshot` aus CompareTabs.svelte INTERN nach (eigene `commit()`-Hülle mit
+// eigenem try/catch). Mit S5 speichert der Versand-Reiter selbst; diese
+// Mechanik gibt es nicht mehr. Beide Regressionen sind deshalb auf die echte
+// Orchestrierung `erstelleVersandVergleichSpeicherung()` samt echtem
+// Speicher-Controller umgestellt — sonst prüfte der Test seine eigene Hülle
+// statt des Prüflings. Die Fehlerbehandlung wandert damit dorthin, wo sie im
+// Produktivpfad liegt: die SaveFn wirft weiter, der Controller fängt.
+//
+// Spec: docs/specs/modules/rework_2276_s5_versand.md — AC-1, AC-3
+//
+// Zielschnittstelle (existiert noch NICHT → RED per ERR_MODULE_NOT_FOUND):
+//   shared/versandVergleichSpeicherung.ts → erstelleVersandVergleichSpeicherung
+//
+// Reine Funktions-/Transporttests gegen `fakeTripServer.ts`, kein Mock, kein
+// DOM/Browser — lauffähig unter node --experimental-strip-types.
+//
+// Ausführen:
+//   cd frontend && npm test -- src/lib/components/compare/__tests__/hub_put_queue.test.ts
 
-import { describe, test } from 'node:test';
+import { describe, test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import type { ComparePreset } from '../../../types.ts';
-import {
-	createPutQueue,
-	hydrateVersandFieldsFromPreset,
-	flushPendingVersandSave,
-	buildToggleActivePutPayload
-} from '../compareHubWizardBridge.ts';
 
-function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
-	return {
-		id: 'cmp-42',
-		name: 'Skigebiete Tirol',
-		location_ids: ['loc-1', 'loc-2', 'loc-3'],
-		schedule: 'daily',
-		weekday: 0,
-		profil: 'wintersport',
-		hour_from: 6,
-		hour_to: 9,
-		empfaenger: ['urlauber@example.com'],
-		forecast_hours: 48,
-		letzter_versand: undefined,
-		top_ort_letzter_versand: null,
-		created_at: '2026-01-01T00:00:00Z',
-		corridors: [],
-		send_telegram: true,
-		send_sms: false,
-		morning_enabled: true,
-		morning_time: '06:30:00',
-		evening_enabled: true,
-		evening_time: '19:15:00',
-		end_date: '2026-08-01',
-		display_config: {},
-		...overrides
-	};
-}
+import { api } from '../../../api.ts';
+import { clearEtagRegistry } from '../../../etagRegistry.ts';
+import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
+import type { ComparePreset } from '../../../types.ts';
+import type { PutClient } from '../../shared/tripSpeicherung.ts';
+import { createPutQueue, buildToggleActivePutPayload } from '../compareHubWizardBridge.ts';
+import { erstelleVersandVergleichSpeicherung } from '../../shared/versandVergleichSpeicherung.ts';
+import {
+	createController,
+	hydrierterWiz,
+	makePreset
+} from '../../shared/__tests__/versandVergleichPruefstand.ts';
+
+const PRESET_ID = 'cmp-42';
 
 describe('createPutQueue: Serialisierung', () => {
 	test('zwei ueberlappend enqueuete fns laufen strikt sequenziell (Beweis per Zeitfolge)', async () => {
@@ -103,133 +99,130 @@ describe('createPutQueue: Serialisierung', () => {
 	});
 });
 
-describe('F002-Integration: Versand-Flush + nachfolgender Toggle-Payload-Bau', () => {
+let server: FakeTripServer;
+
+beforeEach(() => {
+	clearEtagRegistry();
+	server = createFakeTripServer();
+	server.install();
+});
+
+afterEach(() => server.restore());
+
+const puts = () => server.calls.filter((c) => c.method === 'PUT');
+
+describe('F002-Integration: Versand-Speicherung + nachfolgender Toggle-Active-PUT', () => {
 	test('Toggle-PUT nach Versand-PUT sieht den aktualisierten currentPreset-Stand — kein stiller Datenverlust', async () => {
+		let currentPreset: ComparePreset = makePreset(PRESET_ID);
+		const wiz = hydrierterWiz(currentPreset);
+		const ctl = createController(PRESET_ID);
 		const queue = createPutQueue();
-		// Server-Zustand mit gesetztem End-Datum.
-		let serverPreset: ComparePreset = makePreset({ end_date: '2026-08-01' });
-		// Simulierter PUT-Responder (kein Mock-Framework): merged den Body wie
-		// das echte Backend und liefert das gespeicherte Preset zurueck.
-		async function simulatedPut(body: ComparePreset): Promise<ComparePreset> {
-			serverPreset = { ...serverPreset, ...body };
-			return serverPreset;
-		}
-
-		let currentPreset = serverPreset;
-
-		// 1) Nutzer klickt "Bis auf Weiteres" im Laufzeit-Control -> wizardState.endDate = null.
-		const before = hydrateVersandFieldsFromPreset(currentPreset);
-		const currentVersand = { ...before, endDate: null };
-
-		// 2) handleVersandCommit() — Payload-Bau MUSS innerhalb des enqueueten
-		// fn passieren (erst dort currentPreset lesen), analog CompareTabs.svelte.
-		currentPreset = await queue.enqueue(async () => {
-			const payload = flushPendingVersandSave(currentPreset, currentVersand, before);
-			assert.ok(payload, 'End-Datum-Aenderung muss einen PUT-Payload liefern');
-			return simulatedPut(payload.body);
+		const versand = erstelleVersandVergleichSpeicherung({
+			client: api,
+			wiz,
+			preset: () => currentPreset,
+			enqueueHubWrite: (fn) => queue.enqueue(fn),
+			onCompareUpdate: (p: ComparePreset) => {
+				currentPreset = p;
+			},
+			saveController: ctl
 		});
 
-		// 3) Direkt danach klickt der Nutzer "Pausieren" — Payload-Bau ebenfalls
-		// innerhalb des enqueueten fn, sieht dadurch den bereits aktualisierten
-		// currentPreset aus Schritt 2 (nicht mehr den Stand vor dem Versand-PUT).
+		// 1) Nutzer klickt „Bis auf Weiteres" im Laufzeit-Control → wiz.endDate = null.
+		wiz.endDate = null;
+		versand.aenderungMelden();
+		await ctl.flush();
+		assert.strictEqual(puts().length, 1, 'Vorbedingung: der Versand-PUT ist raus');
+
+		// 2) Direkt danach klickt der Nutzer „Pausieren" — der Payload-Bau passiert
+		// innerhalb des enqueueten fn und sieht dadurch den bereits über
+		// onCompareUpdate aufgefrischten currentPreset aus Schritt 1.
 		currentPreset = await queue.enqueue(async () => {
-			const { body } = buildToggleActivePutPayload(currentPreset, 'manual', 'daily');
-			return simulatedPut(body);
+			const { url, body } = buildToggleActivePutPayload(currentPreset, 'manual', 'daily');
+			return api.put<ComparePreset>(url, body);
 		});
 
 		assert.strictEqual(
 			currentPreset.end_date,
 			'',
-			'End-Datum-Loeschung ("Bis auf Weiteres") ueberlebt den nachfolgenden Toggle-PUT'
+			'End-Datum-Loeschung („Bis auf Weiteres") ueberlebt den nachfolgenden Toggle-PUT'
 		);
-		assert.strictEqual(serverPreset.end_date, '', 'Server-Zustand darf die Versand-Aenderung nicht verlieren');
+		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		assert.strictEqual(stand.end_date, '', 'Server-Zustand darf die Versand-Aenderung nicht verlieren');
+		assert.strictEqual(stand.schedule, 'manual');
 	});
 });
 
-describe('F003-Regression: Rollback-Baseline muss bei Queue-AUSFUEHRUNG erfasst werden, nicht beim Funktionsaufruf', () => {
-	test('Edit A erfolgreich, Edit B (waehrend A noch offen) schlaegt fehl — Rollback von B darf Edit A nicht verlieren', async () => {
+describe('F003-Regression: die Rollback-Baseline wird bei Queue-AUSFUEHRUNG erfasst, nicht beim Planen', () => {
+	test('Edit A erfolgreich, Edit B (waehrend A noch offen) schlaegt fehl — der Rollback von B darf Edit A nicht verlieren', async () => {
+		let currentPreset: ComparePreset = makePreset(PRESET_ID, { morning_time: '06:00:00', send_sms: false });
+		const wiz = hydrierterWiz(currentPreset);
+		const ctl = createController(PRESET_ID);
 		const queue = createPutQueue();
-		let serverPreset: ComparePreset = makePreset({ morning_time: '06:00:00', send_sms: false });
 
-		// Deterministische Steuerung statt Zeit-basiertem Race (kein setTimeout-
-		// Timing-Flake): A haengt bewusst in einem Gate fest, bis der Test B
-		// bereits enqueued hat — reproduziert damit exakt den vom Adversary
-		// beschriebenen Ablauf (probe_rollback_stale.mjs): zwei GANZ NORMALE,
-		// aufeinanderfolgende Versand-Edits, beide angestossen BEVOR Edit A
-		// abgeschlossen ist.
-		// Definite-Assignment (`!`): beide werden synchron im Promise-Executor
-		// zugewiesen, bevor sie verwendet werden — TS kann das ueber die
-		// Executor-Callback-Grenze hinweg nicht selbst ableiten.
-		let resolveAStarted!: () => void;
-		const aStarted = new Promise<void>((r) => {
-			resolveAStarted = r;
+		// Deterministische Steuerung statt zeit-basiertem Race: der erste PUT
+		// haengt in einem Tor fest, bis der Test Edit B bereits angestossen hat.
+		// Jeder weitere PUT scheitert — das ist Edit B.
+		let torOeffnen!: () => void;
+		const tor = new Promise<void>((r) => {
+			torOeffnen = r;
 		});
-		let releaseA!: () => void;
-		const aGate = new Promise<void>((r) => {
-			releaseA = r;
+		let aGestartet!: () => void;
+		const gestartet = new Promise<void>((r) => {
+			aGestartet = r;
 		});
-
-		async function simulatedPutA(body: ComparePreset): Promise<ComparePreset> {
-			resolveAStarted();
-			await aGate;
-			serverPreset = { ...serverPreset, ...body };
-			return { ...serverPreset };
-		}
-		async function simulatedPutB(): Promise<ComparePreset> {
-			throw new Error('Netzwerkfehler (simuliert)');
-		}
-
-		let currentPreset = serverPreset;
-		// wizardState-Simulation: EIN gemeinsames Objekt, wie im echten Component-Code.
-		let lastPersistedVersandSnapshot = hydrateVersandFieldsFromPreset(currentPreset);
-		let wiz = { ...lastPersistedVersandSnapshot };
-
-		// Nachbau der GEFIXTEN handleVersandCommit-Struktur aus CompareTabs.svelte:
-		// current/before werden ERST innerhalb der enqueueten Closure gelesen.
-		async function commit(putFn: (body: ComparePreset) => Promise<ComparePreset>): Promise<void> {
-			const updated = await queue.enqueue(async () => {
-				const current = { ...lastPersistedVersandSnapshot, ...wiz };
-				const before = lastPersistedVersandSnapshot;
-				const payload = flushPendingVersandSave(currentPreset, current, lastPersistedVersandSnapshot);
-				if (!payload) return null;
-				try {
-					const result = await putFn(payload.body);
-					lastPersistedVersandSnapshot = current;
-					return result;
-				} catch {
-					wiz = { ...wiz, ...before };
-					return null;
+		let nr = 0;
+		const client: PutClient = {
+			put: async (url: string, body: unknown, init?: RequestInit) => {
+				nr += 1;
+				if (nr === 1) {
+					aGestartet();
+					await tor;
+					return api.put(url, body as ComparePreset, init);
 				}
-			});
-			if (updated) currentPreset = updated;
-		}
+				throw Object.assign(new Error('Netzwerkfehler (simuliert)'), { status: 500 });
+			}
+		} as PutClient;
+
+		const versand = erstelleVersandVergleichSpeicherung({
+			client,
+			wiz,
+			preset: () => currentPreset,
+			enqueueHubWrite: (fn) => queue.enqueue(fn),
+			onCompareUpdate: (p: ComparePreset) => {
+				currentPreset = p;
+			},
+			saveController: ctl
+		});
 
 		// Edit A: Morgen-Uhrzeit aendern.
 		wiz.morningTime = '07:30';
-		const editA = commit(simulatedPutA);
+		versand.aenderungMelden();
+		const lauf = ctl.flush();
+		await gestartet;
 
-		// Warten, bis Edit A ihren Snapshot bereits gezogen und den Request
-		// gestartet hat (haengt bewusst in aGate fest).
-		await aStarted;
-
-		// Edit B: SOFORT danach SMS togglen, WAEHREND Edit A noch offen ist —
-		// B wird durch die Queue erst NACH A ausgefuehrt und schlaegt dann fehl.
+		// Edit B: SOFORT danach SMS umschalten, WAEHREND Edit A noch offen ist.
 		wiz.sendSms = true;
-		const editB = commit(simulatedPutB);
+		versand.aenderungMelden();
 
-		releaseA();
-		await Promise.all([editA, editB]);
+		torOeffnen();
+		await lauf.catch(() => {
+			/* der Fehlschlag von Edit B ist Teil des Szenarios */
+		});
+
+		assert.strictEqual(ctl.state, 'error', 'der gescheiterte Edit B muss am Controller sichtbar werden');
+		ctl.cancel(); // etwaigen Rest-Eintrag im Speicher-Platz räumen
 
 		assert.strictEqual(
-			serverPreset.morning_time,
+			(server.storedBody(PRESET_ID) as Record<string, unknown>).morning_time,
 			'07:30:00',
 			'Edit A muss trotz spaeter fehlschlagendem Edit B auf dem Server persistiert bleiben'
 		);
 		assert.strictEqual(
 			wiz.morningTime,
 			'07:30',
-			'F003-Regression: Rollback von Edit B darf Edit A NICHT aus der UI-Anzeige entfernen'
+			'F003-Regression: der Rollback von Edit B darf Edit A NICHT aus der Anzeige entfernen'
 		);
-		assert.strictEqual(wiz.sendSms, false, 'Edit B selbst wird korrekt auf den (Edit-A-)Stand zurueckgerollt');
+		assert.strictEqual(wiz.sendSms, false, 'Edit B selbst wird auf den (Edit-A-)Stand zurueckgerollt');
 	});
 });

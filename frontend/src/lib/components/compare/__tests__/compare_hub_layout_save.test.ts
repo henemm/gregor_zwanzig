@@ -24,7 +24,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { flushPendingLayoutSave, type LayoutSnapshot } from '../compareHubWizardBridge.ts';
+import { flushPendingLayoutSave, type LayoutSnapshot } from '../../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import type { ComparePreset } from '../../../types.ts';
 
 /** Preset-Fixture mit allen fuenf AC-3-relevanten Feldern befuellt, PLUS

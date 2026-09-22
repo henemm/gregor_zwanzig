@@ -42,7 +42,9 @@ NAMED_COMPONENTS = [
     # frontend/src/lib/components/shared/__tests__/legacy_wizard_removed.test.ts.
     "AlertRulesEditor",
     "AlertRuleRow",
-    "ModeCard",
+    # "ModeCard" entfernt (Issue #1895): die Komponente ist mit dem Rueckbau der
+    # Modus-Auswahl im Alarmregel-Editor geloescht,
+    # `find frontend/src -iname "*ModeCard*"` liefert keinen Treffer mehr.
     "Wordmark",
 ]
 

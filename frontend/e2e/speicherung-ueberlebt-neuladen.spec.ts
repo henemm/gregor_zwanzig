@@ -336,17 +336,15 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 	//
 	// Mobil gibt es KEIN Freitextfeld — Wertebereiche werden per Zieh-Griff
 	// (`.cem-handle` im `[data-testid="corridor-mobile-band-<metric>"]`-Track)
-	// oder per Stepper-Knopf gesetzt. Ein Knopf-Klick bubbelt sofort zum
-	// `.hub-corridor-wrap`-Wrapper (onclick -> handleCorridorCommit()) und laesst
-	// sich nicht deterministisch vor einem Reload schlagen — das entspricht NICHT
-	// der Luecke aus AC-9 (dort: getippt, noch nicht committet).
+	// oder per Stepper-Knopf gesetzt. (Seit #2276 S3 speichert der Reiter ueber
+	// EINEN Weg — Speicher-Takt des Controllers; der fruehere Wrapper
+	// `.hub-corridor-wrap` und der fensterweite pointerup-Auffang sind entfallen.)
 	//
 	// Die echte Mobil-Entsprechung von "getippt, noch nicht verlassen" ist eine
 	// LAUFENDE Ziehgeste: `pointerdown` + `pointermove` haben `patchBound()`
-	// bereits ausgeloest (Wert im Wizard-Zustand geaendert), aber `pointerup`
-	// (die tatsaechliche Commit-Geste, s. CompareTabs.svelte handleWindowPointerUp)
-	// ist noch NICHT gefeuert. Genau dort greift (oder greift eben NICHT) der
-	// geteilte beforeNavigate-Waechter.
+	// bereits ausgeloest (Wert im Wizard-Zustand geaendert und als ausstehender
+	// Speichervorgang eingeplant), die Geste ist aber noch NICHT beendet. Genau
+	// dort greift (oder greift eben NICHT) der geteilte beforeNavigate-Waechter.
 	test('AC-9-Mobil (/compare/[id]): Idealwert per Ziehgeste ändern, mitten in der Geste neu laden → Änderung ist gespeichert', async ({
 		page
 	}) => {

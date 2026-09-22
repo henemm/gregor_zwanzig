@@ -25,8 +25,25 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.DataDir != "data" {
 		t.Errorf("expected default data dir, got %s", cfg.DataDir)
 	}
-	if cfg.UserID != "default" {
-		t.Errorf("expected default user ID, got %s", cfg.UserID)
+	if cfg.UserID != "" {
+		t.Errorf("expected empty user ID (Issue #2151 Scheibe B, kein stiller default-Rueckfall), got %q", cfg.UserID)
+	}
+}
+
+// TestConfigUserIDDefaultsEmpty prueft AC-4 gezielt und unabhaengig von
+// TestLoadDefaults: ohne gesetzte GZ_USER_ID ist cfg.UserID ein leerer Text,
+// nicht mehr automatisch "default" (Issue #2151 Scheibe B).
+func TestConfigUserIDDefaultsEmpty(t *testing.T) {
+	os.Clearenv()
+	t.Setenv("GZ_AUTH_PASS", "irrelevant-fuer-diesen-test")
+	os.Unsetenv("GZ_USER_ID")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.UserID != "" {
+		t.Errorf("erwartet leere Nutzerkennung ohne GZ_USER_ID, bekommen: %q", cfg.UserID)
 	}
 }
 

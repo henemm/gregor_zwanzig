@@ -126,8 +126,12 @@ jobs:
     env:
       # Abgesenkt 2026-08-04 (#1196): 70/171 -> 36/141 nach Typ-Drift-Bereinigung
       # der Compare-Editor-Tests + Entfernung toter CSS-Regeln in CompareTabs.
+      # Abgesenkt 2026-09-19 (#2276 S4): 141 -> 132 Warnings (Wegfall der zwei
+      # historischen Wrapper-Divs im Wetter-Metriken-Reiter, Errors unveraendert
+      # bei 36 — die zwei neuen Kern-Test-Fehler kamen von einem fehlenden
+      # `as unknown as`-Bruecken-Cast, gefixt statt die Baseline anzuheben).
       BASELINE_ERRORS: 36
-      BASELINE_WARNINGS: 141
+      BASELINE_WARNINGS: 132
     defaults:
       run:
         working-directory: frontend
@@ -274,8 +278,8 @@ jobs:
       # bug-703 selbst haengt an KEINEM Vorlauf (sein Kopfkommentar fordert
       # nur AC-3 vor AC-2 INNERHALB der Datei, per test.describe.serial) --
       # er muss nur ZULETZT laufen.
-      E2E_MIN_SPECS: 52     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test). 52 = 48 + mobile-bottom-nav-floating (Mobile-Shell S1) + mobile-konto-sheet (S2) + compare-alarme-speichert-selbst (#2276 S2) + systemhinweise-unter-konto-sheet (#2370)
-      E2E_MIN_EXECUTED_HAUPT: 261      # Hauptlauf: 51 Dateien + global.setup -- exakt belegt, kein Puffer. 261 = 255 (Stand #2276 S2: 252 + 3) + 6 (systemhinweise-unter-konto-sheet, #2370: 4 Faelle + AC-2 x2 Viewports), per `npx playwright test --list` ueber die Positivliste gemessen 2026-09-19. #2276 S2 lokal gegen den isolierten Stack 3 Zyklen gruen (docs/artifacts/rework-2276-s2-alarme/e2e-output.txt).
+      E2E_MIN_SPECS: 57     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test). 57 = 48 + mobile-bottom-nav-floating (Mobile-Shell S1) + mobile-konto-sheet (S2) + compare-alarme-speichert-selbst (#2276 S2) + compare-wertebereiche-speichert-selbst (#2276 S3) + compare-wetter-metriken-speichert-selbst (#2276 S4) + compare-versand-speichert-selbst (#2276 S5) + compare-stundenverlauf-wertprops (#2276 S6b) + compare-alarme-wertprops (#2276 S6c) + systemhinweise-unter-konto-sheet (#2370). Zusammenfuehrung der Ratschen aus #2373 und #2276-Kette beim Merge-Konflikt: 51 (Merge-Basis vor beiden Straengen) + 1 (#2370) + 5 (#2276 S3-S6c) = 57, per direkter Zeilenzaehlung der Positivliste gegengeprueft.
+      E2E_MIN_EXECUTED_HAUPT: 287      # Hauptlauf: 56 Dateien + global.setup -- exakt belegt, kein Puffer. 287 = 255 (Merge-Basis, Stand #2276 S2: 252 + 3) + 6 (systemhinweise-unter-konto-sheet, #2370: 4 Faelle + AC-2 x2 Viewports) + 26 (#2276 S3-S6c: 281 - 255, aus den beiden Zweig-Endstaenden 261/#2370 bzw. 281/#2276-S6c hergeleitet). Zusammenfuehrung der Ratschen aus #2373 und #2276-Kette beim Merge-Konflikt 2026-09-22 -- erste Bestaetigung durch den CI-Hauptlauf auf diesem PR: weicht die Zahl ab, meldet `e2e` das rot, bevor etwas nach `main` geht.
       E2E_MIN_EXECUTED_PWA: 61         # Zweitlauf: 60 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu; Issue #2317: +1 Fall AC-6 dort, statisch aus --list abgeleitet) + global.setup -- kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:

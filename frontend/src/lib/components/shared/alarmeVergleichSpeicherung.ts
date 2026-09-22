@@ -69,7 +69,7 @@ export function alarmSnapshotAus(wiz: AlarmHydrationTarget): AlarmSnapshot {
  * EINZIGE Erzeugerin der Alarm-Nutzlast (Nahtstelle für #2293 `alert_channels`):
  * Voll-Spread über `preset` via `buildComparePresetSavePayload`, die Alarmfelder
  * aus `current`. Die Nicht-Alarmfelder laufen durch DIESELBEN Rückfälle wie
- * `buildHubPutPayload` (Lesenormalisierung #1373, sonst Datenverlust an der
+ * der abgeschaffte Hub-PUT-Pfad (Lesenormalisierung #1373, sonst Datenverlust an der
  * Metrik-Auswahl). `officialWarnings` trägt NIEMALS `sources` (F001, S4).
  */
 export function baueAlarmNutzlast(
@@ -159,9 +159,47 @@ export function rollbackAlarmSnapshot(
 	}
 }
 
+/**
+ * Issue #2276 S6c: Bruecke zwischen den WERTPROPS des Alarme-Organismus und
+ * diesem (unveraenderten) Speicherweg. Seit S6c haelt `AlarmeTab` keine
+ * Wizard-Referenz mehr — es reicht seine Props herein, und HIER, an genau
+ * einer Stelle, treffen die beiden Namensraeume aufeinander.
+ *
+ * Gelesen wird IMMER frisch (`werte()` je Zugriff): ein einmal gebautes Objekt
+ * saehe nach der ersten Aenderung veraltete Werte, und der Diff-Gate-Vergleich
+ * fiele dann stumm aus. Geschrieben wird ausschliesslich vom diff-basierten
+ * Rollback (`rollbackAlarmSnapshot`) — `setzen` meldet das an den Halter des
+ * Zustands weiter; kein Bedienelement schreibt hierueber.
+ */
+const PROP_JE_FELD: Record<string, string> = {
+	// Persistenzwert OHNE Bedienelement im Alarme-Reiter: der Schalter dafuer
+	// steht im Inhalt-Bereich (#1301 D2). Er muss trotzdem durch den Snapshot
+	// laufen, sonst faellt er beim naechsten Alarm-PUT aus der Nutzlast.
+	officialAlertsEnabled: 'amtlicheWarnungenImBericht',
+	alertCooldownMinutes: 'cooldownMinutes',
+	alertQuietFrom: 'quietFrom',
+	alertQuietTo: 'quietTo'
+};
+
+export function alarmZustandsBruecke(
+	werte: () => Record<string, unknown>,
+	setzen?: (feld: string, wert: unknown) => void
+): AlarmHydrationTarget {
+	return new Proxy({} as AlarmHydrationTarget, {
+		get: (_ziel, feld) => werte()[PROP_JE_FELD[feld as string] ?? (feld as string)],
+		set: (_ziel, feld, wert) => {
+			setzen?.(feld as string, wert);
+			return true;
+		}
+	});
+}
+
 export interface AlarmeVergleichSpeicherungOptionen {
 	client: PutClient;
-	wiz: AlarmHydrationTarget;
+	/** Issue #2276 S6c: der gehaltene Alarmstand. Frueher `wiz` — der
+	 *  Alarme-Organismus reicht seit S6c eine Bruecke ueber seine Wertprops
+	 *  herein, kein Wizard-Objekt mehr. */
+	zustand: AlarmHydrationTarget;
 	/** Basis — als Getter, damit sie ERST bei Ausführung in der Queue gelesen wird (AC-3). */
 	preset: () => ComparePreset;
 	/** Hub-Queue (`hubPutQueue.enqueue`) — Serialisierung mit den Nachbar-Reitern. */
@@ -173,7 +211,7 @@ export interface AlarmeVergleichSpeicherungOptionen {
 
 /**
  * Orchestrierung des Alarm-Speicherns im Ortsvergleich. Anfangs-Baseline =
- * Alarmstand von `wiz` beim Erzeugen (nach der Hydration).
+ * Alarmstand von `zustand` beim Erzeugen (nach der Hydration).
  *
  * `aenderungMelden()`: ohne Unterschied zur Baseline wird ein eigener, noch
  * ausstehender Vorgang verworfen (`cancel` + `markPristine`, AC-5) — sonst
@@ -185,8 +223,8 @@ export interface AlarmeVergleichSpeicherungOptionen {
 export function erstelleAlarmeVergleichSpeicherung(opt: AlarmeVergleichSpeicherungOptionen): {
 	aenderungMelden(): void;
 } {
-	const { client, wiz, enqueueHubWrite, saveController } = opt;
-	let zuletztGespeichert: AlarmSnapshot = alarmSnapshotAus(wiz);
+	const { client, zustand, enqueueHubWrite, saveController } = opt;
+	let zuletztGespeichert: AlarmSnapshot = alarmSnapshotAus(zustand);
 	// Nur einen EIGENEN, noch nicht gestarteten Vorgang verwerfen — ein
 	// ausstehender Speichervorgang eines anderen Reiters bleibt unangetastet.
 	let eigenerVorgangAussteht = false;
@@ -199,7 +237,7 @@ export function erstelleAlarmeVergleichSpeicherung(opt: AlarmeVergleichSpeicheru
 			// Rücknahme fand gegen die alte Baseline keinen Unterschied. Nachschieben
 			// im selben Vorgang, damit „Gespeichert" erst bei Server == UI erscheint.
 			for (;;) {
-				const current = alarmSnapshotAus(wiz);
+				const current = alarmSnapshotAus(zustand);
 				const before = zuletztGespeichert;
 				const payload = flushPendingAlarmSave(opt.preset(), current, before);
 				if (!payload) return;
@@ -209,7 +247,7 @@ export function erstelleAlarmeVergleichSpeicherung(opt: AlarmeVergleichSpeicheru
 					opt.onCompareUpdate(antwort);
 				} catch (e) {
 					if ((e as { status?: number })?.status !== 412) {
-						rollbackAlarmSnapshot(wiz, before, current);
+						rollbackAlarmSnapshot(zustand, before, current);
 					}
 					throw e;
 				}
@@ -219,7 +257,7 @@ export function erstelleAlarmeVergleichSpeicherung(opt: AlarmeVergleichSpeicheru
 
 	return {
 		aenderungMelden(): void {
-			const current = alarmSnapshotAus(wiz);
+			const current = alarmSnapshotAus(zustand);
 			if (JSON.stringify(current) === JSON.stringify(zuletztGespeichert)) {
 				if (eigenerVorgangAussteht) {
 					eigenerVorgangAussteht = false;
@@ -232,17 +270,4 @@ export function erstelleAlarmeVergleichSpeicherung(opt: AlarmeVergleichSpeicheru
 			saveController.schedule(saveFn);
 		}
 	};
-}
-
-/**
- * AC-6: beim Verlassen des Reiters „alarme" die ausstehende Alarm-Änderung
- * sichern, BEVOR der Wechsel freigegeben wird (TripTabs-Muster).
- */
-export async function sichereAlarmeVorReiterwechsel(
-	aktiverReiter: string,
-	zielReiter: string,
-	saveController?: SaveStatus
-): Promise<void> {
-	if (aktiverReiter !== 'alarme' || zielReiter === aktiverReiter || !saveController) return;
-	await saveController.flush();
 }

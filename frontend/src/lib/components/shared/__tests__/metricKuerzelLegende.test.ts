@@ -1086,9 +1086,12 @@ const EINBETTUNGEN = [
 		datei: () => join(SHARED, 'CompareHourlyLayoutControls.svelte'),
 		waehle: () => true,
 		// #2232: s. Ausblick oben — Marken als Prop, nicht selbst geladen.
+		// #2276 S6b: die Flaeche arbeitet auf Wertprops statt auf `wiz` —
+		// `metricKeys: null` ist dasselbe „nie eingestellt", nur ohne
+		// Zustandsobjekt.
 		saat: () => ({
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
-			wiz: { hourlyMetricKeys: null },
+			metricKeys: null,
 			smsSymbols: tripKuerzelById()
 		})
 	}

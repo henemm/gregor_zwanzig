@@ -303,7 +303,7 @@ def active_trip_for(user_id: str, data_dir: str = "data") -> Optional[object]:
             raw = json.loads(briefing_file.read_text(encoding="utf-8"))
             if raw.get("kind") == "vergleich":
                 continue
-            trip = load_trip(raw)
+            trip = load_trip(raw, user_id=user_id)
             if trip is None:
                 continue
             if trip.start_date <= today <= trip.end_date:

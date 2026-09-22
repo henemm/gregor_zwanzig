@@ -238,7 +238,7 @@ class _MitschnittNotifier(NotificationService):
     Egress-Waechter der Kernschicht)."""
 
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(user_id="default")
         self.gesendet: list[tuple[str, str]] = []
 
     def send_telegram_message(self, *, chat_id, subject, body, settings,

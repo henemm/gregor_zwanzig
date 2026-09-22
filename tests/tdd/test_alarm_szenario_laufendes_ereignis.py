@@ -930,11 +930,12 @@ def test_ac15b_briefing_kette_stellt_die_laufend_zeile_wirklich_zu(monkeypatch):
     _echte_get_nowcast = RadarNowcastService.get_nowcast
 
     def _kette(quelle):
-        def _mit_frames(self, lat, lon, elevation_m=None, priority="user_briefing"):
+        def _mit_frames(self, lat, lon, elevation_m=None, priority="user_briefing",
+                        user_id=None):
             reset_shared_radar_cache_for_tests()
             return _echte_get_nowcast(
                 RadarNowcastService(frame_source=quelle), lat, lon,
-                elevation_m=elevation_m, priority=priority,
+                elevation_m=elevation_m, priority=priority, user_id=user_id,
             )
         return _mit_frames
 

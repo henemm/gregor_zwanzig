@@ -139,7 +139,7 @@ def test_ac1_timeline_zeigt_ortszeit_nicht_die_rohe_utc_zeit():
 
     with freeze_time(MITTAGS_UTC):
         trip = _trip("ac1-uhrzeit", [D20], WP_KORSIKA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         _save_snapshot(trip.id, [_seg(ankunft, WP_KORSIKA)])
 
         body = _befehl(trip, "### query: timeline_heute", MITTAGS_UTC).confirmation_body
@@ -175,7 +175,7 @@ def test_ac2_vier_kommandos_folgen_dem_ortstag(query_key, body_cmd, erwartete_ta
     with freeze_time(NACHTS_UTC):
         _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
         trip = _trip(f"ac2-{query_key}", [D21, D22], WP_KORSIKA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         _save_snapshot(trip.id, [
             _seg(datetime(2026, 8, 21, 10, 0, tzinfo=timezone.utc), WP_KORSIKA, seg_id=1),
             _seg(datetime(2026, 8, 22, 10, 0, tzinfo=timezone.utc), WP_KORSIKA, seg_id=2),
@@ -258,7 +258,7 @@ def test_ac3_timeline_heute_koppelt_datum_und_uhrzeit():
 
         _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
         trip = _trip("ac3-kopplung", [D21, D22], WP_KORSIKA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         _save_snapshot(trip.id, [
             _seg(ankunft_heute, WP_KORSIKA, seg_id=1),
             _seg(ankunft_morgen, WP_KORSIKA, seg_id=2),
@@ -355,7 +355,7 @@ def test_ac4_glance_nutzt_je_tag_die_eigene_zone():
         )
 
         trip = trip_two_zones(ortstag_heute, trip_id="ac4-mehrzonen")
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         _save_snapshot(trip.id, [
             _seg(heute_zeit, WP_NZ, seg_id=1),
             _seg(morgen_zeit, WP_KORSIKA, seg_id=2),
@@ -471,7 +471,7 @@ def test_f005_alle_vier_kommandos_nutzen_die_zone_ihrer_eigenen_etappe(query_key
 
     with freeze_time(_F005_ABFRAGE):
         trip = trip_two_zones(ortstag_heute, trip_id=f"f005-{query_key}")
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         _save_snapshot(trip.id, [
             _seg(_F005_HEUTE_ZEIT, WP_NZ, seg_id=1, wind_max_kmh=45.0),
             _seg(_F005_MORGEN_ZEIT, WP_KORSIKA, seg_id=2, wind_max_kmh=45.0),
@@ -574,7 +574,7 @@ def test_f002_rest_glance_morgen_internen_utc_ruckfall():
 
         _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
         trip = _trip("f002-rest-glance-morgen", [D21, D22], WP_KORSIKA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         _save_snapshot(trip.id, [
             _seg(heute_zeit, WP_KORSIKA, seg_id=1),
             _seg(morgen_zeit, WP_KORSIKA, seg_id=2),
@@ -639,7 +639,7 @@ def test_ac5_sommerzeit_wechseltage_zeigen_die_korrekte_ortsstunde(
             f"Wechsel liegen (zwei UTC-Offsets), gesehen: {offsets}"
         )
         trip = _trip(f"ac5-{wechseltag.isoformat()}", [wechseltag], WP_KORSIKA)
-        save_trip(trip)
+        save_trip(trip, user_id="default")
         _save_snapshot(trip.id, [_seg(t, WP_KORSIKA, seg_id=i) for i, t in enumerate(punkte_utc)])
 
         body = _befehl(trip, "### query: timeline_heute", abfrage_utc).confirmation_body
@@ -677,7 +677,7 @@ _AC6_SYSTEMUHR = datetime(2026, 8, 18, 12, 0, tzinfo=timezone.utc)   # Ortstag K
 
 def _ac6_setup_und_frage(trip_id: str, body_cmd: str) -> "frozenset[str]":
     trip = _trip(trip_id, [D20, D21, D22, D23], WP_KORSIKA)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     _save_snapshot(trip.id, [
         _seg(datetime(2026, 8, 21, 10, 0, tzinfo=timezone.utc), WP_KORSIKA, seg_id=1),
         _seg(datetime(2026, 8, 22, 10, 0, tzinfo=timezone.utc), WP_KORSIKA, seg_id=2),
@@ -812,7 +812,7 @@ def test_ac7_fehlertext_nennt_den_tatsaechlich_benutzten_zieltag():
     )
 
     trip = _trip("ac7-zieltag", [D20], WP_KORSIKA)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
 
     with freeze_time(verarbeitet):
         assert datetime.now(tz=timezone.utc) == verarbeitet, (
@@ -876,7 +876,7 @@ def test_ac8_anker_traegt_den_ortstag_und_ist_als_geometrie_ladbar():
             _stage_mit_zwei_wegpunkten("S1", D21, WP_KORSIKA),
             _stage_mit_zwei_wegpunkten("S2", D22, WP_KORSIKA),
         ])
-        save_trip(trip)
+        save_trip(trip, user_id="default")
 
         ergebnis = _befehl(trip, "### query: glance", NACHTS_UTC)
         assert ergebnis.success is True, ergebnis.confirmation_body

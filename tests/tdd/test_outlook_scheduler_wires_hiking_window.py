@@ -56,7 +56,7 @@ class _SchedulerWithFixedSegments:
             def _enrich_ensemble_for_trip(self, trip, weather_data):
                 return None
 
-        return _Fixed()
+        return _Fixed(user_id="default")
 
 
 def _trip_with_stage(stage_date: date):

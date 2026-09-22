@@ -130,7 +130,7 @@ class _RecordingNotificationService(NotificationService):
     TelegramOutput bis an die gefakte HTTP-Grenze."""
 
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(user_id="default")
         self.addressed: list[str] = []
 
     def send_telegram_message(self, *, chat_id, subject, body, settings, reply_markup=None):

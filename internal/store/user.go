@@ -16,6 +16,7 @@ import (
 // ListUserIDs returns the IDs of all registered users.
 // A valid user directory must contain a user.json file.
 // Returns an empty slice if the users directory does not exist.
+// gz-store-scope-exempt: listet alle Konten, kontouebergreifend und damit nicht nutzergebunden
 func (s *Store) ListUserIDs() ([]string, error) {
 	usersDir := filepath.Join(s.DataDir, "users")
 	entries, err := os.ReadDir(usersDir)
@@ -48,6 +49,7 @@ func (s *Store) UserDir(id string) string {
 	return filepath.Join(s.DataDir, "users", id)
 }
 
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
 func (s *Store) LoadUser(id string) (*model.User, error) {
 	if !ValidUserID(id) {
 		return nil, ErrInvalidUserID
@@ -70,6 +72,7 @@ func (s *Store) LoadUser(id string) (*model.User, error) {
 	return &user, nil
 }
 
+// gz-store-scope-exempt: die Kennung steckt im uebergebenen Nutzer-Objekt, nicht in s.UserID
 func (s *Store) SaveUser(user model.User) error {
 	if !ValidUserID(user.ID) {
 		return ErrInvalidUserID
@@ -88,6 +91,7 @@ func (s *Store) SaveUser(user model.User) error {
 }
 
 // ProvisionUserDirs creates the standard subdirectories for a new user.
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, legt das Konto erst an
 func (s *Store) ProvisionUserDirs(id string) error {
 	if !ValidUserID(id) {
 		return ErrInvalidUserID
@@ -101,6 +105,7 @@ func (s *Store) ProvisionUserDirs(id string) error {
 	return nil
 }
 
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) SaveResetToken(userId string, token model.PasswordResetToken) error {
 	if !ValidUserID(userId) {
 		return ErrInvalidUserID
@@ -116,6 +121,7 @@ func (s *Store) SaveResetToken(userId string, token model.PasswordResetToken) er
 	return writeFileLogged(filepath.Join(dir, "password_reset.json"), data)
 }
 
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) LoadResetToken(userId string) (*model.PasswordResetToken, error) {
 	if !ValidUserID(userId) {
 		return nil, ErrInvalidUserID
@@ -135,6 +141,7 @@ func (s *Store) LoadResetToken(userId string) (*model.PasswordResetToken, error)
 	return &token, nil
 }
 
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) DeleteResetToken(userId string) error {
 	if !ValidUserID(userId) {
 		return ErrInvalidUserID
@@ -151,6 +158,7 @@ func (s *Store) DeleteResetToken(userId string) error {
 // Premium-SMS-Rueckkanal (Issue #2154 Scheibe A) — eigene Datei je Nutzer,
 // Vorbild SaveResetToken. Erneuern ersetzt die Datei vollstaendig und entwertet
 // damit den vorigen Code (Spec D3: Replace, kein Anhaengen).
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) SaveLinkCode(userId string, c model.PremiumSmsLinkCode) error {
 	if !ValidUserID(userId) {
 		return ErrInvalidUserID
@@ -168,6 +176,7 @@ func (s *Store) SaveLinkCode(userId string, c model.PremiumSmsLinkCode) error {
 
 // LoadLinkCode liest den gespeicherten Verknuepfungs-Code. "Nicht vorhanden"
 // ist kein Fehler, sondern (nil, nil) — wie LoadResetToken.
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) LoadLinkCode(userId string) (*model.PremiumSmsLinkCode, error) {
 	if !ValidUserID(userId) {
 		return nil, ErrInvalidUserID
@@ -191,6 +200,7 @@ func (s *Store) LoadLinkCode(userId string) (*model.PremiumSmsLinkCode, error) {
 // Scheibe 2a-i) under data/users/<id>/email_verification.json. Mirrors
 // SaveResetToken. Overwrites an existing file without warning — a second
 // address change intentionally invalidates the first token (AC-7).
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) SaveVerificationToken(userId string, token model.EmailVerificationToken) error {
 	if !ValidUserID(userId) {
 		return ErrInvalidUserID
@@ -206,6 +216,7 @@ func (s *Store) SaveVerificationToken(userId string, token model.EmailVerificati
 	return writeFileLogged(filepath.Join(dir, "email_verification.json"), data)
 }
 
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) LoadVerificationToken(userId string) (*model.EmailVerificationToken, error) {
 	if !ValidUserID(userId) {
 		return nil, ErrInvalidUserID
@@ -225,6 +236,7 @@ func (s *Store) LoadVerificationToken(userId string) (*model.EmailVerificationTo
 	return &token, nil
 }
 
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) DeleteVerificationToken(userId string) error {
 	if !ValidUserID(userId) {
 		return ErrInvalidUserID
@@ -240,6 +252,7 @@ func (s *Store) DeleteVerificationToken(userId string) error {
 // DeleteUser ist die schaerfste Stelle des Pfadbaus (os.RemoveAll): ohne die
 // Kennungspruefung wuerde eine Traversal-Kennung hier ein FREMDES Verzeichnis
 // loeschen.
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein und wird dort selbst geprueft
 func (s *Store) DeleteUser(id string) error {
 	if !ValidUserID(id) {
 		return ErrInvalidUserID
@@ -306,8 +319,9 @@ var exportGeheimnisFelder = []string{"password_hash", "passkey_credentials"}
 // vorgetaeuschter Vollstaendigkeit vorgezogen.
 //
 // id ist die Kennung aus dem Auth-Kontext, nicht s.UserID: der Aufrufer haelt
-// den Wurzel-Store (Voreinstellung "default"), UserDir(id) ist die eine
-// Pfad-Engstelle.
+// den Wurzel-Store (Kennung aus GZ_USER_ID, ohne Variable leer — Issue #2151
+// Scheibe B), UserDir(id) ist die eine Pfad-Engstelle.
+// gz-store-scope-exempt: die Kennung kommt als Parameter id aus dem Auth-Kontext, nicht aus s.UserID
 func (s *Store) ExportUser(id string, w io.Writer) error {
 	if !ValidUserID(id) {
 		return ErrInvalidUserID
@@ -435,6 +449,7 @@ func exportFilterUserJSON(raw []byte) ([]byte, error) {
 	return json.MarshalIndent(felder, "", "  ")
 }
 
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
 func (s *Store) UserExists(id string) bool {
 	if !ValidUserID(id) {
 		return false
@@ -446,6 +461,7 @@ func (s *Store) UserExists(id string) bool {
 
 // FindUserByOAuthSub searches for a user matching both OAuthProvider and OAuthSub.
 // Returns (nil, nil) when no matching user exists.
+// gz-store-scope-exempt: sucht kontouebergreifend, die Kennung ist erst das Ergebnis
 func (s *Store) FindUserByOAuthSub(provider, sub string) (*model.User, error) {
 	ids, err := s.ListUserIDs()
 	if err != nil {
@@ -471,6 +487,7 @@ func (s *Store) FindUserByOAuthSub(provider, sub string) (*model.User, error) {
 // fest, dass ein echter Nutzer gegen die Fixture gewinnt, sonst könnte sich
 // der PO auf Staging nicht mehr verbinden, sobald tg-live-e2e dieselbe
 // Chat-ID trägt. Issue #2141.
+// gz-store-scope-exempt: sucht kontouebergreifend, die Kennung ist erst das Ergebnis
 func (s *Store) FindUserByTelegramChatID(chatID string) (*model.User, error) {
 	if strings.TrimSpace(chatID) == "" {
 		return nil, nil

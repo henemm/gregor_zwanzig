@@ -109,7 +109,7 @@ def test_alert_threshold_respects_weather_tab_enabled_state(
     metrics = [MetricConfig(metric_id=cid, enabled=weather_tab_enabled) for cid in catalog_ids]
     trip = _trip(metric_alert_levels={alert_metric_key: "standard"}, metrics=metrics)
 
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     thresholds = _thresholds(detector)
 
@@ -140,7 +140,7 @@ def test_visibility_crossing_rule_respects_weather_tab_enabled_state(case_id, we
     metrics = [MetricConfig(metric_id="visibility", enabled=weather_tab_enabled)]
     trip = _trip(metric_alert_levels={"visibility": "standard"}, metrics=metrics)
 
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     crossing = _crossing_metrics(detector)
 
@@ -175,7 +175,7 @@ def test_reproduces_lottis_abschiedfahrradtour_incident():
         metrics=metrics,
     )
 
-    service = TripAlertService()
+    service = TripAlertService(user_id="default")
     detector = service._select_change_detector(trip)
     thresholds = _thresholds(detector)
 

@@ -223,7 +223,7 @@ def _run_both_paths(monkeypatch, tmp_path, *, show_night_block: bool):
     # "morning": Zieltag ist HEUTE, in beiden Pfaden identisch, und der
     # Mehrtages-Ausblick ist aus (multi_day_trend_reports=["evening"]) --
     # damit greift in beiden Pfaden derselbe Bauweg.
-    scheduler = TripReportSchedulerService()
+    scheduler = TripReportSchedulerService(user_id="default")
     # #1724: Zieltag haengt am Trip (dessen Ortszeit) und am Zeitpunkt.
     _probe_trip = _trip(show_night_block=show_night_block)
     assert scheduler._get_target_date(
@@ -329,7 +329,7 @@ def test_ac3_nacht_angabe_und_nacht_tabelle_nennen_dieselbe_stunde():
     row = build_outlook_row(summary, quiet_points, "So", _UTC)
     row["date"] = date(2026, 7, 12)
 
-    forecast = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    forecast = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         None, target, datetime.now(timezone.utc), _UTC,
         multi_day_trend=[row], night_weather=night,
     )

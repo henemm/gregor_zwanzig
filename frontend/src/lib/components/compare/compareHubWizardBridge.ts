@@ -231,56 +231,6 @@ export function snapshotForRollback<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
 }
 
-/** Plain-Snapshot der 4 persistenzrelevanten CorridorEditor-Felder (Teilmenge
- * von HubWizardFields ohne isEditMode/activityProfile, die der Idealwerte-Tab
- * nicht schreibt). */
-export interface CorridorSnapshot {
-	corridors: Corridor[];
-	idealRanges: Record<string, IdealRange>;
-	activeMetricKeys: string[];
-	metricAlertLevels: Record<string, string>;
-}
-
-/**
- * Issue #1256 Scheibe 6 Fix-Loop 1 (F002, Adversary HIGH): reine
- * Diff-/Payload-Entscheidung fuer den Idealwerte-Tab-Commit, entkoppelt vom
- * DOM-Event, das ihn ausloest (Wrapper-Bubbling ODER Fenster-Ebene) — beide
- * Aufrufer rufen dieselbe Funktion, damit ein Pointer-Release ausserhalb des
- * Wrapper-Subtrees (z. B. bei einem Band-Handle-Drag) nicht mehr zu einem
- * uebersehenen Commit fuehrt.
- * Liefert `null`, wenn sich der persistenzrelevante Ausschnitt seit dem
- * letzten persistierten Snapshot NICHT veraendert hat (Waechter gegen
- * unnoetige PUTs, #1234-Kontext) — sonst den fertigen PUT-Payload.
- */
-export function flushPendingCorridorSave(
-	preset: ComparePreset,
-	current: CorridorSnapshot,
-	before: CorridorSnapshot | null
-): { url: string; body: ComparePreset } | null {
-	const baseline = before ?? current;
-	if (JSON.stringify(current) === JSON.stringify(baseline)) return null;
-	return buildHubPutPayload(preset, {
-		corridors: current.corridors,
-		idealRanges: current.idealRanges,
-		activeMetricKeys: current.activeMetricKeys,
-		metricAlertLevels: current.metricAlertLevels
-	});
-}
-
-/**
- * Issue #1256 Scheibe 6 Fix-Loop 2 (F006, Adversary MEDIUM): reine
- * Entscheidungslogik fuer den fenster-weiten Pointerup-Flush-Guard
- * (`<svelte:window onpointerup>` in CompareTabs.svelte, F002-Fix aus Fix-Loop 1)
- * — herausgezogen aus dem Svelte-Handler, damit sie ohne DOM/Browser testbar
- * ist. Der Svelte-Handler `handleWindowPointerUp` wird dadurch zu einer
- * 1-Zeilen-Delegation; die untestbare Flaeche schrumpft auf diese Zeile.
- * Flush nur, wenn der Idealwerte-Tab aktiv UND bereits hydratisiert ist
- * (sonst gibt es keinen sinnvollen `wizardState`-Stand zum Speichern).
- */
-export function shouldFlushOnWindowPointerUp(activeTab: string, idealwerteHydrated: boolean): boolean {
-	return activeTab === 'idealwerte' && idealwerteHydrated;
-}
-
 /**
  * Issue #1256 Scheibe 6 Fix-Loop 3 (F007, Adversary CRITICAL): reine
  * Payload-Konstruktion fuer den Uebersicht-Tab-Pausieren/Aktivieren-Pfad
@@ -288,7 +238,7 @@ export function shouldFlushOnWindowPointerUp(activeTab: string, idealwerteHydrat
  * drei Hub-PUT-Pfade, der noch die eingefrorene `preset`-Prop statt der
  * laufend aktuellen `currentPreset`-Baseline spread'te (identischer Bug wie
  * F005 fuer die Orte-/Idealwerte-Pfade, hier fuer einen dritten,
- * vorbestehenden Pfad). Analog `flushPendingCorridorSave`: reine Funktion,
+ * vorbestehenden Pfad). Reine Funktion,
  * kein DOM/Browser-Bezug, der Svelte-Handler bleibt eine duenne Delegation.
  */
 export function buildToggleActivePutPayload(
@@ -324,73 +274,12 @@ export async function buildFreshTogglePutPayload(
 	);
 }
 
-/** Plain-Snapshot der 10 persistenzrelevanten Versand-Felder (OHNE sendEmail —
- * `ComparePreset` kennt kein `send_email`-Feld, s. `hydrateVersandFieldsFromPreset`). */
-export interface VersandSnapshot {
-	sendTelegram: boolean;
-	sendSms: boolean;
-	morningEnabled: boolean;
-	morningTime: string;
-	eveningEnabled: boolean;
-	eveningTime: string;
-	endDate: string | null;
-	alertCooldownMinutes?: number;
-	alertQuietFrom?: string;
-	alertQuietTo?: string;
-}
-
-/**
- * Issue #1256 Scheibe 7 (AC-35/36): Hydration der Versand-Felder, die der
- * eingebettete `VersandTab context="vergleich"` im Hub aus `wizardState.*`
- * liest. Defaults identisch zur Edit-Routen-Hydration
- * (routes/compare/[id]/edit/+page.svelte:44-61). `sendEmail` ist IMMER true —
- * ComparePreset hat kein `send_email`-Feld (vorbestehende Luecke, Known
- * Limitation der S7-Freigabe).
- */
-export function hydrateVersandFieldsFromPreset(preset: ComparePreset): VersandSnapshot & { sendEmail: true } {
-	return {
-		sendEmail: true,
-		sendTelegram: preset.send_telegram ?? false,
-		sendSms: preset.send_sms ?? false,
-		morningEnabled: preset.morning_enabled ?? true,
-		morningTime: (preset.morning_time ?? '06:00').slice(0, 5),
-		eveningEnabled: preset.evening_enabled ?? false,
-		eveningTime: (preset.evening_time ?? '18:00').slice(0, 5),
-		endDate: preset.end_date ?? null,
-		alertCooldownMinutes: preset.alert_cooldown_minutes ?? undefined,
-		alertQuietFrom: preset.alert_quiet_from ?? undefined,
-		alertQuietTo: preset.alert_quiet_to ?? undefined
-	};
-}
-
-/**
- * Issue #1256 Scheibe 7 (AC-35/36): Event-diskretisierte PUT-Persistenz fuer
- * den Hub-Versand-Tab, analog `flushPendingCorridorSave` — liefert `null`,
- * wenn sich der Versand-Snapshot seit dem letzten persistierten Stand NICHT
- * veraendert hat (Waechter gegen unnoetige PUTs, #1234-Kontext), sonst den
- * fertigen PUT-Payload via `buildHubPutPayload` (Read-Modify-Write: alle
- * nicht-Versand-Felder unveraendert aus `preset`, #1257-Kontext).
- */
-export function flushPendingVersandSave(
-	preset: ComparePreset,
-	current: VersandSnapshot,
-	before: VersandSnapshot | null
-): { url: string; body: ComparePreset } | null {
-	const baseline = before ?? current;
-	if (JSON.stringify(current) === JSON.stringify(baseline)) return null;
-	return buildHubPutPayload(preset, {
-		sendTelegram: current.sendTelegram,
-		sendSms: current.sendSms,
-		morningEnabled: current.morningEnabled,
-		morningTime: current.morningTime,
-		eveningEnabled: current.eveningEnabled,
-		eveningTime: current.eveningTime,
-		endDate: current.endDate,
-		alertCooldownMinutes: current.alertCooldownMinutes,
-		alertQuietFrom: current.alertQuietFrom,
-		alertQuietTo: current.alertQuietTo
-	});
-}
+// Issue #2276 Scheibe S5 (Epic #2345): `VersandSnapshot`,
+// `hydrateVersandFieldsFromPreset` und `flushPendingVersandSave` sind in den
+// geteilten Baustein `shared/versandVergleichSpeicherung.ts` umgezogen — der
+// Versand-Reiter speichert selbst und laedt die Klebeschicht zur Laufzeit
+// nicht mehr (AC-8). `buildHubPutPayload` bleibt hier: die Orte- und
+// Aktivieren/Pausieren-Pfade brauchen ihn weiterhin.
 
 /** Modell der Hub-Aktivierungs-Karte (Soll: `screen-compare-detail.jsx:273-277`
  * + `:313-325`). Die JSX-active-Copy "im konfigurierten Rhythmus" ist eine
@@ -557,127 +446,10 @@ export function hydrateAlarmFieldsFromPreset(
 // Issue #2276 S2: AlarmSnapshot / flushPendingAlarmSave / rollbackAlarmSnapshot
 // zogen nach shared/alarmeVergleichSpeicherung.ts (Speicherpfad des Reiters);
 // die Hydration oben bleibt hier (setzt auch corridors/activeMetricKeys).
-
-/** Plain-Snapshot der beiden persistenzrelevanten Layout-Tab-Felder (analog
- * `VersandSnapshot`). Issue #1299/#1291/#1287 (Scheibe C2 von Epic #1301). */
-export interface LayoutSnapshot {
-	// Issue #1366 F001: `null` = „nie eingestellt" (Feld fehlt im Preset),
-	// `[]` = bewusste Leerauswahl -- beide muessen unterscheidbar bleiben
-	// (vorher kollabierte `?? []` beides zu derselben leeren Liste).
-	hourlyMetricKeys: string[] | null;
-	hourlyEnabled: boolean;
-	// Issue #1361 Befund 2/#1368: der 3-Tages-Ausblick teilt sich diesen
-	// Speicherpfad mit dem Stundenverlauf (beide liegen im Reiter
-	// "Wetter-Metriken", derselbe Commit-Wrapper). `null`/`[]` tragen dieselbe
-	// Unterscheidung wie oben.
-	outlookMetricKeys: string[] | null;
-	// Issue #2049: Roh/Einfach je Ausblick-Groesse -- `null` = nie eingestellt.
-	// OPTIONAL, anders als die Felder darueber: `undefined` (Aufrufer kennt das
-	// Feld nicht) und `null` (nie eingestellt) bedeuten hier dasselbe, es gibt
-	// also nichts zu unterscheiden. Ein Pflichtfeld haette jeden bestehenden
-	// Snapshot-Aufrufer bruchreif gemacht, ohne dafuer etwas zu bewachen.
-	outlookMetricFormats?: Record<string, boolean> | null;
-	outlookEnabled: boolean;
-}
-
-/**
- * Issue #1299/C2: Erst-Oeffnungs-Hydration fuer den Hub-Layout-Tab, analog
- * `hydrateVersandFieldsFromPreset` — liest die Stundenverlauf-Felder aus
- * `preset.display_config.hourly_metrics` bzw. `preset.hourly_enabled`.
- */
-export function hydrateLayoutFieldsFromPreset(
-	preset: ComparePreset,
-	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
-): LayoutSnapshot {
-	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	return {
-		hourlyMetricKeys: (displayConfig.hourly_metrics as string[] | null | undefined) ?? null,
-		hourlyEnabled: preset.hourly_enabled ?? true,
-		// Issue #1361/#1368: `outlook_metrics` liegt im NEUFORMAT (Groesse +
-		// Auswertung) -- dieselbe Lesenormalisierung wie `active_metrics`
-		// (#1373), damit die Bedienflaeche Auswahl-Schluessel sieht. Der
-		// Aufrufer muss die Katalogantwort abwarten (sonst Rohform, s.
-		// hydrateWeatherMetricsFromPreset).
-		outlookMetricKeys: normalizeStoredOutlookMetrics(displayConfig.outlook_metrics, catalog),
-		// Issue #2049: bereits nach Kennungen geschluesselt -- keine
-		// Katalog-Uebersetzung noetig, anders als bei der Auswahl darueber.
-		outlookMetricFormats:
-			(displayConfig.outlook_metric_formats as Record<string, boolean> | undefined) ?? null,
-		outlookEnabled: preset.outlook_enabled ?? true
-	};
-}
-
-/**
- * Issue #1299/C2: Event-diskretisierte PUT-Persistenz fuer den Hub-Layout-Tab,
- * analog `flushPendingVersandSave` — liefert `null`, wenn sich der Snapshot
- * seit dem letzten persistierten Stand NICHT veraendert hat (Waechter gegen
- * unnoetige PUTs), sonst den fertigen PUT-Payload via `buildHubPutPayload`
- * (Read-Modify-Write: alle nicht-Layout-Felder unveraendert aus `preset`).
- *
- * Issue #1361 (S1-Rest von Epic #1372, Adversary-Fund BROKEN, loest die
- * #1299-Altregel ab): `hourlyMetricKeys` wurde HIER frueher sortiert
- * verglichen ("Array-Reihenfolge darf den Diff-Waechter nicht faelschlich
- * dirty melden"). Das war richtig, SOLANGE die Reihenfolge bedeutungslos war.
- * Seit #1335 Scheibe 1 folgt der Renderer (`_visible_hour_metrics`,
- * compare_html.py:610-623) exakt der gespeicherten Reihenfolge — eine reine
- * Ziehgeste (gleiche Menge an Keys, neue Reihenfolge) MUSS also als Aenderung
- * zaehlen. Mit sortiertem Vergleich lieferte diese Funktion bei einer
- * Umsortierung `null`, `CompareTabs.svelte` sendete keinen PUT, meldete aber
- * trotzdem "gespeichert" — die neue Reihenfolge ging beim naechsten Reload
- * verloren. Deshalb jetzt positionssensitiver Vergleich (KEIN `sort()` mehr
- * auf `hourlyMetricKeys`); "identischer Snapshot -> null" bleibt fuer echte
- * Identitaet richtig, nur die Gleichsetzung "umsortiert = identisch" entfaellt.
- */
-export function flushPendingLayoutSave(
-	preset: ComparePreset,
-	current: LayoutSnapshot,
-	before: LayoutSnapshot | null
-): { url: string; body: ComparePreset } | null {
-	const baseline = before ?? current;
-	const norm = (s: LayoutSnapshot) => ({
-		hourlyMetricKeys: s.hourlyMetricKeys === null ? null : [...s.hourlyMetricKeys],
-		hourlyEnabled: s.hourlyEnabled,
-		// Issue #1361/#1368: MUSS im Diff stehen — ein Waechter, der die neuen
-		// Felder nicht kennt, meldet "nichts geaendert" und der Ausblick bliebe
-		// unspeicherbar (bekannte Falle, s. Dirty-Check-Erfahrung #1373).
-		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
-		// Issue #2049: aus demselben Grund wie die Zeile darueber -- ohne das
-		// Feld im Diff meldete der Waechter "nichts geaendert" und eine reine
-		// Roh/Einfach-Umschaltung waere unspeicherbar.
-		outlookMetricFormats: s.outlookMetricFormats == null ? null : { ...s.outlookMetricFormats },
-		outlookEnabled: s.outlookEnabled
-	});
-	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
-	return buildHubPutPayload(preset, {
-		hourlyMetricKeys: current.hourlyMetricKeys,
-		hourlyEnabled: current.hourlyEnabled,
-		outlookMetricKeys: current.outlookMetricKeys,
-		outlookMetricFormats: current.outlookMetricFormats,
-		outlookEnabled: current.outlookEnabled
-	});
-}
-
-/**
- * Issue #1299/C2 (AC-6): Rollback fuer den Hub-Layout-Commit-Fehlerpfad.
- * `hourlyMetricKeys`/`hourlyEnabled` sind EXKLUSIV Layout-Tab-Eigentum (anders
- * als die H3-Kreuzeffekt-Felder im Alarme-Snapshot) — direkte Zuweisung
- * genuegt, kein diff-basierter Rollback noetig.
- */
-export function rollbackLayoutSnapshot(
-	state: {
-		hourlyMetricKeys?: string[] | null;
-		hourlyEnabled?: boolean;
-		outlookMetricKeys?: string[] | null;
-		outlookMetricFormats?: Record<string, boolean> | null;
-		outlookEnabled?: boolean;
-	},
-	before: LayoutSnapshot
-): void {
-	state.hourlyMetricKeys = before.hourlyMetricKeys;
-	state.hourlyEnabled = before.hourlyEnabled;
-	state.outlookMetricKeys = before.outlookMetricKeys ?? null;
-	// Issue #2049: gehoert wie die Auswahl in den Rollback -- sonst bliebe nach
-	// einem fehlgeschlagenen PUT eine Umschaltung sichtbar, die nie ankam.
-	state.outlookMetricFormats = before.outlookMetricFormats ?? null;
-	state.outlookEnabled = before.outlookEnabled ?? true;
-}
+//
+// Issue #2276 S4: LayoutSnapshot/hydrateLayoutFieldsFromPreset/
+// flushPendingLayoutSave/rollbackLayoutSnapshot sind nach
+// shared/weather-metrics-tab/weatherMetricsCompareSave.ts umgezogen — dort
+// leben sie jetzt neben der kombinierten Wetter-Metriken/Layout-Orchestrierung
+// (AC-9: dieses Modul importiert `buildComparePresetSavePayload`, keine
+// Bridge-Funktion mehr).

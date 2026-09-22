@@ -126,7 +126,7 @@ def test_ac18_kein_standort_ist_wortidentisch_zu_show_now():
 
     prozessor = TripCommandProcessor()
     strecke_ergebnis = prozessor._show_strecke(trip, None, now_utc, trip_id, _KANAL)
-    now_ergebnis = prozessor._show_now(trip, now_utc)
+    now_ergebnis = prozessor._show_now(trip, now_utc, trip_id)
 
     assert now_ergebnis.success is False, (
         "Testvoraussetzung: _show_now muss in dieser Situation ebenfalls "

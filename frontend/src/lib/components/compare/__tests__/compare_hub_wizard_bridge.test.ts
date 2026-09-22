@@ -61,11 +61,14 @@ import {
 	hydrateWizardStateFromPreset,
 	buildHubPutPayload,
 	snapshotForRollback,
-	flushPendingCorridorSave,
-	shouldFlushOnWindowPointerUp,
-	buildToggleActivePutPayload,
-	type CorridorSnapshot
+	buildToggleActivePutPayload
 } from '../compareHubWizardBridge.ts';
+// Issue #2276 S3: Diff-/Payload-Entscheidung des Wertebereiche-Reiters ist aus
+// der Bridge in das geteilte Speichermodul umgezogen — Zusicherungen unveraendert.
+import {
+	flushPendingCorridorSave,
+	type CorridorSnapshot
+} from '../../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 // Issue #1703 Scheibe 8 (Bearbeiten-Pfad) — s. letztes describe dieser Datei.
 import type { CompareChannelActiveMetrics } from '../../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 import { toCompareSelectionEntries } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
@@ -238,7 +241,7 @@ describe('Fix-Loop 1 (F002, Adversary HIGH): flushPendingCorridorSave — reine 
 		const preset = makePreset();
 		const current = makeSnapshot();
 		const result = flushPendingCorridorSave(preset, current, null);
-		assert.strictEqual(result, null, 'ohne vorherigen persistierten Stand ist der aktuelle Snapshot selbst die Baseline (analog handleCorridorCommit)');
+		assert.strictEqual(result, null, 'ohne vorherigen persistierten Stand ist der aktuelle Snapshot selbst die Baseline (analog erstelleWertebereicheVergleichSpeicherung)');
 	});
 
 	test('Regressions-Beweis F002: der ALTE, wrapper-gebundene Mechanismus haette diesen Fall verpasst — der neue Fenster-Handler ruft dieselbe Funktion unabhaengig vom Ereignisziel auf', () => {
@@ -336,23 +339,9 @@ describe('Fix-Loop 2 (F005, Adversary CRITICAL): Cross-Tab-Sequenz — Baseline 
 	});
 });
 
-describe('Fix-Loop 2 (F006, Adversary MEDIUM): shouldFlushOnWindowPointerUp — reine Guard-Entscheidung fuer den Fenster-Handler', () => {
-	test('aktiver Idealwerte-Tab + hydratisiert -> true (flush)', () => {
-		assert.strictEqual(shouldFlushOnWindowPointerUp('idealwerte', true), true);
-	});
-
-	test('anderer aktiver Tab (z.B. orte), auch wenn hydratisiert -> false (kein flush)', () => {
-		assert.strictEqual(shouldFlushOnWindowPointerUp('orte', true), false);
-	});
-
-	test('Idealwerte-Tab aktiv, aber noch nicht hydratisiert -> false (kein flush)', () => {
-		assert.strictEqual(shouldFlushOnWindowPointerUp('idealwerte', false), false);
-	});
-
-	test('weder aktiver Idealwerte-Tab noch hydratisiert -> false', () => {
-		assert.strictEqual(shouldFlushOnWindowPointerUp('uebersicht', false), false);
-	});
-});
+// Issue #2276 S3: der Block „F006 shouldFlushOnWindowPointerUp" entfiel mit dem
+// fensterweiten pointerup-Auffang (CompareTabs.svelte) — es gibt nur noch EINEN
+// Speicherweg (CorridorEditor -> wertebereicheVergleichSpeicherung.ts).
 
 describe('Fix-Loop 3 (F007, Adversary CRITICAL): buildToggleActivePutPayload — dritter PUT-Pfad (Pausieren/Aktivieren) muss die frische Baseline nutzen, nicht die eingefrorene preset-Prop', () => {
 	test('S6-Edit (Orte-Reorder) -> Toggle: Toggle-Payload enthaelt die frischen location_ids/corridors/metric_alert_levels UND das getoggelte schedule-Feld', () => {

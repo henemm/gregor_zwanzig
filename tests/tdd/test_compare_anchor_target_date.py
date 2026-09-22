@@ -66,7 +66,8 @@ class SpionierendeQuelle(CompareLocationWeatherSource):
         self.aufrufe: list[dict] = []
 
     def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
-              target_date=None, tage_ab_ortstag=None, elevation_m=None):
+              target_date=None, tage_ab_ortstag=None, elevation_m=None,
+              user_id=None):
         self.aufrufe.append({
             "point_id": point_id,
             "start_hour": start_hour,
@@ -597,6 +598,7 @@ def test_f002_absoluter_tag_und_versatz_zugleich_scheitern_laut(monkeypatch, tmp
         quelle.fetch(
             sz.location_id, sz.lat, sz.lon, 4, 19,
             target_date=sz.basis_tag, tage_ab_ortstag=1,
+            user_id="nutzer_anchor_target",
         )
     assert "tage_ab_ortstag" in str(fehler.value), (
         "Die Meldung muss beide Wege benennen, sonst sucht der naechste "

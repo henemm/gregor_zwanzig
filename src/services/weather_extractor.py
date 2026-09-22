@@ -74,7 +74,7 @@ class DrilldownResult:
 # ---------------------------------------------------------------------------
 
 class WeatherExtractor:
-    def __init__(self, user_id: str = "default") -> None:
+    def __init__(self, user_id: str) -> None:
         self._snapshots = WeatherSnapshotService(user_id)
 
     def timeline(

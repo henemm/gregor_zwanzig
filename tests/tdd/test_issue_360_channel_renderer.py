@@ -285,7 +285,7 @@ def test_ac7_legacy_roundtrip_assigns_bucket_order_without_diff(tmp_path: Path):
     legacy_path.write_text(json.dumps(legacy, indent=2), encoding="utf-8")
 
     # Load (migrate) -> save -> load again.
-    loaded = load_trip(legacy_path)
+    loaded = load_trip(legacy_path, user_id="default")
     for mc in loaded.display_config.metrics:
         assert mc.bucket in ("primary", "secondary"), (
             f"Migration muss gültiges bucket setzen, war: {mc.bucket!r}"
@@ -298,7 +298,7 @@ def test_ac7_legacy_roundtrip_assigns_bucket_order_without_diff(tmp_path: Path):
     saved_path.write_text(
         json.dumps(_trip_to_dict(loaded), indent=2), encoding="utf-8",
     )
-    reloaded = load_trip(saved_path)
+    reloaded = load_trip(saved_path, user_id="default")
 
     # Roundtrip ohne Daten-Diff: alle bisherigen Felder unverändert.
     orig_by_id = {mc.metric_id: mc for mc in loaded.display_config.metrics}
@@ -373,7 +373,7 @@ def test_ac7b_partial_migration_keeps_active_metric_primary(tmp_path: Path):
     path = tmp_path / "partial-360.json"
     path.write_text(json.dumps(partial, indent=2), encoding="utf-8")
 
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     by_id = {mc.metric_id: mc for mc in loaded.display_config.metrics}
 
     # temperature: explizit gesetzt, bleibt primary.

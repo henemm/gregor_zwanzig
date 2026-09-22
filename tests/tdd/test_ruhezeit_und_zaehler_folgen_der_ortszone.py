@@ -1777,7 +1777,7 @@ class _OrtsWetterQuelle:
 
     def fetch(self, point_id: str, lat: float, lon: float,
               start_hour: int | None = None, end_hour: int | None = None,
-              elevation_m: int | None = None):
+              elevation_m: int | None = None, user_id: str | None = None):
         from app.models import SegmentWeatherSummary
         from services.point_weather import PointWeatherData
 

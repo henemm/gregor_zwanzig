@@ -152,7 +152,7 @@ def scheduler_single_segment_level(segment: SegmentWeatherData) -> ThunderLevel:
     der falschen Datengrundlage (das Gewitter liegt an einem anderen Waypoint
     der morgigen Etappe, der in diesem Einzelsegment gar nicht enthalten ist).
     """
-    fc = TripReportSchedulerService()._build_thunder_forecast(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(
         segment, _TODAY, tz=_UTC,
     )
     entry = (fc or {}).get("+1")
@@ -196,7 +196,7 @@ class TestThunderForecastReflectsActualNextStage:
         # weil das Gewitter an einem anderen Waypoint der morgigen Etappe liegt.
         assert scheduler_single_segment_level(today_last_segment) == ThunderLevel.NONE
 
-        scheduler = TripReportSchedulerService()
+        scheduler = TripReportSchedulerService(user_id="default")
         thunder_forecast = scheduler._build_thunder_forecast(
             next_stage_segments, _TODAY, tz=_UTC,
         )
@@ -244,7 +244,7 @@ class TestPeakTimeIndependentOfSegmentOrder:
         seg_b = _segment(11, 47.32, 11.65, seg_b_points,
                          thunder_level_max=ThunderLevel.HIGH)
 
-        fc = TripReportSchedulerService()._build_thunder_forecast(
+        fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(
             [seg_a, seg_b], _TODAY, tz=_UTC,
         )
 
@@ -297,7 +297,7 @@ class TestAC1RenderedOutputsAgree:
                  hourly_thunder=()),
         ]
 
-        scheduler = TripReportSchedulerService()
+        scheduler = TripReportSchedulerService(user_id="default")
         thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
             None, _TODAY, now_utc=datetime.now(timezone.utc), tz=_UTC,
             multi_day_trend=trend,

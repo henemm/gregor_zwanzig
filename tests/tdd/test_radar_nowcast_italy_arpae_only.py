@@ -48,15 +48,6 @@ for _p in (str(_ROOT), str(_ROOT / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-# Vizzavona (GR20, Korsika) -- liegt sowohl in der Italien-Radar-Box
-# (lat 36.0-47.5 / lon 6.5-19.0) als auch in der AROME-FR-Box
-# (lat 41.0-51.5 / lon -5.5-10.0). Die Italien-Box wird in der Kette ZUERST
-# geprueft. ARPAE ICON-2I liefert dort echte (nicht-None) Werte -- am
-# 2026-08-11 gegen die Live-API nachgemessen (elevation 992 m,
-# precipitation-Reihe vollstaendig belegt), der All-None-Guard in
-# `_fetch_openmeteo_15` greift also nicht.
-_VIZZAVONA_LAT, _VIZZAVONA_LON = 42.1244, 9.1339
-
 # Karnischer Hoehenweg (Spec-Koordinate fuer AC-2).
 # ⚠️ Gemessen am Stand 4e5098a7: dieser Punkt liegt NICHT in der INCA-Box
 # (_INCA_LAT_MIN = 46.3 > 46.20) -- die Spec bezeichnet ihn als
@@ -74,6 +65,13 @@ _KHW_IT_LAT, _KHW_IT_LON = 46.7248, 12.2254
 # Rom -- in der Italien-Radar-Box, aber ausserhalb AROME-FR (lon 12.5 > 10.0)
 # und ausserhalb ICON-D2 (lat 41.9 < 44.0). Faellt bei ARPAE-Ausfall direkt
 # auf den globalen `minutely_15`-Fallback durch.
+# Seit Issue #1761 traegt Rom AUCH AC-1: die vormalige AC-1-Koordinate
+# Vizzavona (42.1244/9.1339) liegt in der neuen Korsika-Box und laeuft
+# seither bewusst auf AROME-FR -- sie kann den Italien-Zweig nicht mehr
+# belegen. Rom liegt ausserhalb JEDER vorgelagerten Box (Korsika, INCA,
+# RADOLAN, AROME-FR, ICON-D2), die Kette landet dort zwingend bei ARPAE.
+# Am 2026-09-20 live nachgemessen: source=ARPAE-2I, 96 Frames, 95 davon
+# in der Zukunft -- der All-None-Guard in `_fetch_openmeteo_15` greift nicht.
 _ROME_LAT, _ROME_LON = 41.90, 12.50
 
 
@@ -94,29 +92,33 @@ def _assert_has_future_frame(result, label: str) -> None:
 
 
 # ===========================================================================
-# AC-1: GR20/Vizzavona -- die Kette landet ohne jede DI bei ARPAE-2I
+# AC-1: Italien-Festland -- die Kette landet ohne jede DI bei ARPAE-2I
 # ===========================================================================
 
 @pytest.mark.live
-def test_ac1_gr20_vizzavona_uses_arpae_with_future_frames():
-    """AC-1: reale GR20-Koordinate (Vizzavona), `get_nowcast()` OHNE
+def test_ac1_italy_mainland_uses_arpae_with_future_frames():
+    """AC-1: reale Italien-Festland-Koordinate (Rom), `get_nowcast()` OHNE
     Dependency-Injection -- die produktive Quellenkette muss `ARPAE-2I`
     liefern, mindestens einen Frame, und mindestens einen davon in der
     Zukunft.
 
-    RED: heute greift `_within_dpc` zuerst, `_fetch_radar_dpc` liefert genau
-    ein Vergangenheitsbild -> `result.source == "DPC"`, und kein einziger
-    Frame liegt in der Zukunft.
+    Die Zusicherung von #1648 ist unveraendert: der Italien-Zweig laeuft
+    direkt auf ARPAE und erfuellt den NowCast-Vertrag (Zukunfts-Frames statt
+    einer einzelnen DPC-Vergangenheitsaufnahme). Nur die Messkoordinate hat
+    sich geaendert -- Vizzavona lief hier bis Issue #1761 ausschliesslich
+    deshalb auf ARPAE, weil die Italien-Box vor der AROME-FR-Box geprueft
+    wurde; seit #1761 hat Korsika einen eigenen, vorgeschalteten Zweig und
+    kann den Italien-Zweig nicht mehr belegen.
     """
     from services.radar_service import RadarNowcastService
 
-    result = RadarNowcastService().get_nowcast(_VIZZAVONA_LAT, _VIZZAVONA_LON)
+    result = RadarNowcastService().get_nowcast(_ROME_LAT, _ROME_LON)
 
     assert result.source == "ARPAE-2I", (
-        f"Vizzavona muss ueber ARPAE ICON-2I laufen (war: {result.source})"
+        f"Italien-Festland muss ueber ARPAE ICON-2I laufen (war: {result.source})"
     )
     assert len(result.frames) >= 1, "ARPAE muss mindestens ein Frame liefern"
-    _assert_has_future_frame(result, "AC-1 Vizzavona")
+    _assert_has_future_frame(result, "AC-1 Rom")
 
     for frame in result.frames:
         assert isinstance(frame.precip_mm_h, (int, float)), (

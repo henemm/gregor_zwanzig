@@ -100,7 +100,7 @@ class TestSendTestReportAPI:
         """GIVEN TripReportSchedulerService,
         THEN send_test_report() method exists."""
         from services.trip_report_scheduler import TripReportSchedulerService
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         assert hasattr(service, "send_test_report")
         assert callable(service.send_test_report)
 
@@ -109,7 +109,7 @@ class TestSendTestReportAPI:
         WHEN send_test_report() called,
         THEN raises ValueError."""
         from services.trip_report_scheduler import TripReportSchedulerService
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         stage = Stage(
             id="T1", name="Test", date=date(2026, 3, 1),
             waypoints=[Waypoint(id="G1", name="S", lat=47.0, lon=11.0, elevation_m=1000)],

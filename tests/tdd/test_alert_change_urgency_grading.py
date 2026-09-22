@@ -450,7 +450,7 @@ class _ScriptedSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
-        elevation_m: int | None = None,
+        elevation_m: int | None = None, user_id: str | None = None,
     ):
         from services.point_weather import PointWeatherData
 
@@ -578,7 +578,7 @@ def test_ac11_persistierte_regel_dringlichkeit_bestimmt_nichts_mehr():
     )
     save_trip(_trip("trip-ac11", {"wind_gust": "standard"}, ["gust"], [info_regel]), user_id=uid)
 
-    geladen = load_trip(get_briefings_dir(uid) / "trip-ac11.json")
+    geladen = load_trip(get_briefings_dir(uid) / "trip-ac11.json", user_id="default")
     assert geladen is not None, "Voraussetzung: der Trip muss ladbar sein."
     assert [str(getattr(r.severity, "value", r.severity)) for r in (geladen.alert_rules or [])] == ["info"], (
         "Voraussetzung: die persistierte Regel muss die Dringlichkeit 'info' "

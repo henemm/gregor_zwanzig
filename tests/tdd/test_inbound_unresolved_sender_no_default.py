@@ -122,7 +122,7 @@ class _CountingProcessor(TripCommandProcessor):
 
 class _RecordingNotificationService(NotificationService):
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(user_id="default")
         self.replies: list = []
 
     def send_command_reply_email(self, result, settings):

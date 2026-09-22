@@ -87,7 +87,7 @@ class TestThunderEntryFromTrendRowLow:
                 HourlyValue(hour=16, value=1.0),
             ),
         }
-        entry = TripReportSchedulerService()._thunder_entry_from_trend_row(row, _TARGET)
+        entry = TripReportSchedulerService(user_id="default")._thunder_entry_from_trend_row(row, _TARGET)
 
         assert entry["level"] == ThunderLevel.LOW
         assert entry["hour"] == 14, f"Erwartet fruehste Stunde 14, war {entry!r}"
@@ -103,7 +103,7 @@ class TestThunderEntryFromTrendRowLow:
             "thunder": "HIGH",
             "hourly_thunder": (HourlyValue(hour=9, value=3.0),),
         }
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
 
         med_entry = svc._thunder_entry_from_trend_row(med_row, _TARGET)
         high_entry = svc._thunder_entry_from_trend_row(high_row, _TARGET)
@@ -132,7 +132,7 @@ class TestBuildThunderForecastLow:
         ]
         seg = _segment(1, points, thunder_level_max=ThunderLevel.LOW)
 
-        fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TARGET, tz=_UTC)
+        fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TARGET, tz=_UTC)
 
         assert fc is not None and "+1" in fc, f"Kein +1-Eintrag: {fc!r}"
         entry = fc["+1"]
@@ -163,7 +163,7 @@ class TestBuildThunderForecastLow:
                 thunder=ThunderLevel.HIGH if h == 9 else ThunderLevel.NONE)
             for h in range(0, 24)
         ]
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
 
         med_fc = svc._build_thunder_forecast(
             _segment(1, med_points, thunder_level_max=ThunderLevel.MED), _TARGET, tz=_UTC,
@@ -188,7 +188,7 @@ class TestBuildThunderForecastLow:
         ]
         seg = _segment(1, points, thunder_level_max=ThunderLevel.LOW)
 
-        fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TARGET, tz=_UTC)
+        fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TARGET, tz=_UTC)
 
         assert fc["+1"]["level"] == ThunderLevel.LOW, (
             f"LOW muss gegen NONE gewinnen, nicht gleichrangig verloren gehen: {fc!r}"

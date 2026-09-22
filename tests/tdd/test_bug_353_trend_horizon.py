@@ -148,7 +148,7 @@ class TestFarStagesSkippedNoCall:
         from services.trip_report_scheduler import TripReportSchedulerService
 
         trip = _make_far_future_trip()
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
 
         result = service._build_stage_trend(
             trip, date.today(), now_utc=datetime.now(timezone.utc), tz=None,
@@ -168,7 +168,7 @@ class TestFarStagesSkippedNoCall:
         from services.trip_report_scheduler import TripReportSchedulerService
 
         trip = _make_far_future_trip()
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
 
         before = _count_trend_calls()
         service._build_stage_trend(
@@ -194,7 +194,7 @@ class TestNoErrorLogOnSkip:
         from services.trip_report_scheduler import TripReportSchedulerService
 
         trip = _make_far_future_trip()
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
 
         with caplog.at_level(logging.ERROR, logger="trip_report_scheduler"):
             service._build_stage_trend(

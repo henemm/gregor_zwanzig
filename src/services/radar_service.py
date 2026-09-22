@@ -48,6 +48,14 @@ _AROME_FR_LAT_MAX = 51.5
 _AROME_FR_LON_MIN = -5.5
 _AROME_FR_LON_MAX = 10.0
 
+# Korsika bounding box (real gemessene AROME-FR-Ausdehnung, Issue #1761).
+# Eigenstaendig -- NICHT durch Verkleinern von _ITALY_RADAR_* geloest,
+# wegen der Kopplung zu DpcSource.covers() (official_alerts/dpc.py).
+_CORSICA_LAT_MIN = 41.30
+_CORSICA_LAT_MAX = 43.11
+_CORSICA_LON_MIN = 8.39
+_CORSICA_LON_MAX = 9.60
+
 # Italien-Radar bounding box (IT — Zustaendigkeitsgebiet, kein Anbietername:
 # Werte aus #1162 uebernommen, seit #1648 bedient von ARPAE ICON-2I)
 _ITALY_RADAR_LAT_MIN = 36.0
@@ -476,7 +484,7 @@ class RadarNowcastService:
 
     def get_nowcast(
         self, lat: float, lon: float, elevation_m: Optional[int] = None,
-        priority: str = "user_briefing",
+        priority: str = "user_briefing", user_id: Optional[str] = None,
     ) -> NowcastResult:
         """
         Fetch frames (cache-first) and derive nowcast result.
@@ -487,7 +495,11 @@ class RadarNowcastService:
         Issue #1329 C2: `priority` steuert die Drosselung des internen
         open-meteo-Funnels ueber den geteilten `ForecastBudgetGate`
         ("polling" fuer Scheduler-Checks, "user_briefing" -- Default, nie
-        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`). Der Cache-Lookup
+        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`).
+
+        Issue #2387: `user_id` bucht den Verbrauch zusaetzlich in den
+        Budget-Topf DIESES Nutzers und entscheidet damit im Band zwischen
+        Schwelle und 100%, ob dieser Aufruf gedrosselt wird. Der Cache-Lookup
         selbst ist von `priority` unabhaengig; die Ableitung
         (`_derive_result`) laeuft bei Cache-Hit UND -Miss immer frisch
         relativ zur aktuellen (bzw. injizierten) Zeit -- der Cache liefert
@@ -499,7 +511,11 @@ class RadarNowcastService:
         self._inca_unavailable_this_call = False
         self._priority = priority
         from services.forecast_budget import ForecastBudgetGate
-        self._budget_gate = ForecastBudgetGate()
+        # Issue #2387: die Kennung entscheidet, WEN eine erreichte Schwelle
+        # trifft. `None` heisst ausdruecklich "unattributiert" (bewusst
+        # nutzerfreie Provider-Schicht, ADR-0075 Punkt 4) -- dann gilt das
+        # Bestandsverhalten: drosseln ab Schwelle, nie eine Befreiung.
+        self._budget_gate = ForecastBudgetGate(user_id)
         now = self._now_fn()
 
         # Adversary-Fund F001 (Issue #1329 C2, BROKEN-Verdict behoben): der
@@ -715,6 +731,11 @@ class RadarNowcastService:
             if frames:
                 return frames, "INCA"
 
+        if _within_corsica(lat, lon):
+            frames = self._fetch_corsica_arome_fr(lat, lon, elevation_m)
+            if frames:
+                return frames, "AROME-FR"
+
         if _within_italy_radar(lat, lon):
             frames = self._fetch_italy_arpae(lat, lon, elevation_m)
             if frames:
@@ -779,6 +800,29 @@ class RadarNowcastService:
             logger.warning(f"GeoSphere INCA failed, falling back: {e}")
             self._inca_unavailable_this_call = True
             return []
+
+    def _fetch_corsica_arome_fr(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
+        """AROME-FR-Niederschlag (1,5 km) fuer Korsika, Gewitter/Hagel per
+        ARPAE-Sidecar. AROME-FR liefert an Korsika-Koordinaten strukturell
+        KEINEN weather_code (Live-Befund 2026-09-20, Issue #1761) -- ohne
+        Sidecar waere is_convective/hail fuer JEDEN Frame False, obwohl
+        Niederschlag korrekt anliegt. ARPAE deckt denselben Punkt geometrisch
+        ab und fuehrt weather_code nativ; hier NUR als Sidecar genutzt, NICHT
+        als Fallback-Quelle (PO-Entscheidung 2026-09-20).
+        """
+        frames = self._fetch_arome_france_hd(lat, lon, elevation_m)
+        if not frames:
+            return frames
+        sidecar = self._fetch_italy_arpae(lat, lon, elevation_m)
+        if sidecar:
+            self._merge_convective(frames, sidecar)
+        else:
+            # ADR-0018 / Muster aus _fetch_geosphere_inca: ein gescheiterter
+            # Sidecar-Call darf NIE lautlos als "kein Gewitter" gelten.
+            self._convective_checked = False
+        return frames
 
     def _merge_convective(self, inca_frames: list, sidecar_frames: list) -> None:
         """Merge is_convective from nearest sidecar frame (<=5 min) into INCA frames."""
@@ -1185,6 +1229,13 @@ def _within_italy_radar(lat: float, lon: float) -> bool:
     )
 
 
+def _within_corsica(lat: float, lon: float) -> bool:
+    return (
+        _CORSICA_LAT_MIN <= lat <= _CORSICA_LAT_MAX
+        and _CORSICA_LON_MIN <= lon <= _CORSICA_LON_MAX
+    )
+
+
 def _within_arome_france(lat: float, lon: float) -> bool:
     return (
         _AROME_FR_LAT_MIN <= lat <= _AROME_FR_LAT_MAX
@@ -1222,6 +1273,8 @@ def _region_bucket(lat: float, lon: float) -> str:
         return "radolan"
     if _within_inca(lat, lon):
         return "inca"
+    if _within_corsica(lat, lon):
+        return "corsica"
     if _within_italy_radar(lat, lon):
         return "italy_radar"
     if _within_arome_france(lat, lon):

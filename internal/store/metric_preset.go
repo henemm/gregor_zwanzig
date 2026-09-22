@@ -23,6 +23,9 @@ func (s *Store) PresetsFile() string {
 // das neue Schema ([]DisplayMetric mit horizons-Defaults) ueberfuehrt; das
 // JSON auf der Platte bleibt unveraendert bis zum naechsten Save.
 func (s *Store) LoadMetricPresets() ([]model.MetricPreset, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	data, err := os.ReadFile(s.PresetsFile())
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -128,6 +131,9 @@ func migrateMetricPreset(rp map[string]interface{}) model.MetricPreset {
 
 // SaveMetricPresets schreibt alle Presets atomar.
 func (s *Store) SaveMetricPresets(presets []model.MetricPreset) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	dir := filepath.Join(s.DataDir, "users", s.UserID)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err

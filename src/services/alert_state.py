@@ -47,7 +47,7 @@ EVENT_IDENTITY_KEY_PREFIX = "event_identity:"
 class AlertStateService:
     """Lädt/speichert/löscht das Alert-Melde-Gedächtnis pro Trip (mandantengetrennt)."""
 
-    def __init__(self, user_id: str = "default") -> None:
+    def __init__(self, user_id: str) -> None:
         self._user_id = user_id
         # Issue #1265: get_data_dir() statt hartkodiertem "data/users/..." --
         # respektiert die pytest-Isolation (tests/conftest.py, #1133).

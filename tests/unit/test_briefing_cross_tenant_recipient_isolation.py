@@ -134,7 +134,7 @@ def _versenden(user_id: str, trip_id: str):
     from app.loader import get_briefings_dir, load_trip
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json")
+    trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json", user_id=user_id)
     service = TripReportSchedulerService(user_id=user_id)
     return service.send_test_report_outcome(trip, "morning")
 

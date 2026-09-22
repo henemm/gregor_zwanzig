@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
-**Version:** 1.11
+**Updated:** 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Version:** 1.12
 
 ## Overview
 
@@ -666,14 +666,32 @@ von Trip-Editor und Trip-Detail-Ansicht:
 
 Liste-basierter Editor für `Trip.alert_rules` (Issue #223/#179):
 
+Seit Issue #1895 Schritt 1 (2026-09-21) kennt der Editor nur noch den
+Änderungs-Modus (`kind: 'delta'`); die Modus-Auswahl (Absolut/Änderung/Beides),
+die Komponente `ModeCard` und das Absolut-Feld `alert-rule-threshold-abs` sind
+entfernt. Schritt 2 (2026-09-21) hat zusätzlich die Δ-Schwelle
+(`alert-rule-threshold`), das Zeitfenster (`alert-rule-delta-window`), den
+Wert-Text der Ansichtszeile und die Modus-Pille aus **beiden** Ansichten der
+Karte genommen: sie lösen keinen Alarm aus (ADR-0043 — die Empfindlichkeitsstufe
+ist der einzige Regler). Die Datenfelder `threshold` und `delta_window` bleiben
+im Modell und in der Persistenz unberührt.
+
 - **`AlertRulesEditor.svelte`** — Container: Empty-State, Liste, Add-Button;
-  `updateRules(index, updated[])` ersetzt eine Regel durch 1 oder 2 (Modus
-  „Beides").
+  `updateRules(index, updated[])` ersetzt eine Regel durch die von der Zeile
+  gelieferte Regelliste (seit #1895 genau eine Regel).
 - **`AlertRuleRow.svelte`** — eine Zeile pro `AlertRule` mit View- und
-  Edit-Modus (Modus-Toggle Δ/Absolut/Beides, Metric-Select, Severity,
-  Kanäle).
-- **`ModeCard.svelte`** — eine anklickbare Radio-Karte je Modus
-  (`'absolute' | 'delta' | 'both'`), Eyebrow/Titel/Beschreibung/Beispiel.
+  Edit-Modus. Die Karte zeigt in beiden Ansichten **Metrik · Kanäle · aktiv**:
+  View-Modus Metrik-Name, Kanal-Chips, Aktiv-Haken und Kebab-Menü; Edit-Modus
+  Metric-Select, Kanal-Chips, Aktiv-Checkbox sowie Speichern/Abbrechen. Kein
+  Eingabefeld für Schwelle oder Zeitfenster, kein Zahlenwert und keine Pille in
+  der Ansichtszeile.
+- **`alertRuleDefaults.ts`** — `newDefaultRule()` liefert `kind: 'delta'`,
+  `threshold: 20`, `delta_window: '6h'`; `expandRules(rule)` nimmt genau ein
+  Argument und liefert je Eingaberegel genau eine Regel mit `kind: 'delta'` und
+  ohne `pair_id` (kein Regelpaar mehr). `threshold` und `delta_window` werden
+  dabei **unverändert durchgereicht** — `'6h'` greift nur als Rückfall für eine
+  Regel ohne Zeitfenster (ein fester Wert würde Bestandsdaten still
+  überschreiben).
 
 ## Compare Components (`compare/`)
 

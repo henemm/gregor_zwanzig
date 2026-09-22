@@ -117,7 +117,7 @@ Verifikation läuft **nach** dem Push gegen Staging (`https://staging.gregor20.h
 |---|---|
 | 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`) |
 | 1b | PR eröffnen (`gh pr create --fill`), CI-Ampel abwarten — **alle 6 Checks grün** auf dem letzten Stand |
-| 1c | Mergen (`gh pr merge --merge`) — erst damit ist `main` aktualisiert |
+| 1c | Mergen (`gh pr merge --merge --delete-branch`) — erst damit ist `main` aktualisiert. `--delete-branch` räumt den Arbeitsbranch lokal **und** auf GitHub weg; ohne ihn wächst der Branch-Haufen wieder (20.09.: 312 lokale Branches, 278 davon Karteileichen, #1199) |
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
 | 3 | Staging-Validierung |
 | 4 | Prod-Deploy: `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |

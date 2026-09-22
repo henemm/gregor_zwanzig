@@ -172,7 +172,7 @@ def recording_radar_service_type(calls: list, *, script) -> type:
         def __init__(self, *_a, **_kw) -> None:
             pass  # kein echter Unterbau noetig -- get_nowcast() ist ueberschrieben
 
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
             idx = len(calls)
             calls.append({
                 "lat": lat, "lon": lon,
@@ -203,7 +203,7 @@ def wrapping_radar_service_type(calls: list, frame_source) -> type:
                 frame_source=frame_source, cache=RadarNowcastCacheService(),
             )
 
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
             eintrag = {
                 "lat": lat, "lon": lon,
                 "elevation_m": elevation_m, "priority": priority,

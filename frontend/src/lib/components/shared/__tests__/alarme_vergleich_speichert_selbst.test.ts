@@ -122,7 +122,7 @@ function aufbau(preset = makePreset()) {
 	const rueckmeldungen: ComparePreset[] = [];
 	const speicherung = erstelleAlarmeVergleichSpeicherung({
 		client: api,
-		wiz,
+		zustand: wiz,
 		preset: () => basis,
 		enqueueHubWrite: (fn) => queue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {

@@ -110,7 +110,8 @@ class CompareRadarAlertService:
     def __init__(
         self,
         settings: Optional[Settings] = None,
-        user_id: str = "default",
+        *,
+        user_id: str,
         radar_service: Optional[object] = None,
         mail_sink: Optional[object] = None,
     ) -> None:
@@ -472,7 +473,8 @@ class CompareRadarAlertService:
                 # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
                 # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
                 result = radar_service.get_nowcast(
-                    loc.lat, loc.lon, elevation_m=loc.elevation_m, priority="polling"
+                    loc.lat, loc.lon, elevation_m=loc.elevation_m, priority="polling",
+                    user_id=self._user_id,
                 )
             except Exception as e:
                 logger.error(f"Compare-Radar-Alert nowcast failed for {preset_id}/{location_id}: {e}")

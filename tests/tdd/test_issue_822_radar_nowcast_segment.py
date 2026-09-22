@@ -317,7 +317,7 @@ def test_ac1_segment_helper_roundtrip_bit_identical():
     trip = Trip(id="tdd-822-ac1-trip", name="AC1 Trip", stages=[stage])
     target_date = stage_date(lat, lon)
 
-    svc = TripReportSchedulerService(settings=Settings())
+    svc = TripReportSchedulerService(settings=Settings(), user_id="default")
     expected = svc._convert_trip_to_segments(trip, target_date)
     actual = convert_trip_to_segments(trip, target_date)
 
@@ -1140,7 +1140,7 @@ def _aufzeichnender_radar_dienst(frame_source):
             super().__init__(frame_source=fs)
             self.calls: list[dict] = []
 
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
             self.calls.append({
                 "lat": lat, "lon": lon, "elevation_m": elevation_m,
                 "priority": priority,

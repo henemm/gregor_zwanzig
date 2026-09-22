@@ -243,7 +243,7 @@ class TestRealLegacyTripKeepsItsTokens:
         S2-Editor gespeichert wird (dort einzeln abwaehlbar).
         """
         assert GR221.exists(), f"Bestandsdatei fehlt: {GR221}"
-        trip = load_trip(GR221)
+        trip = load_trip(GR221, user_id="default")
         assert trip is not None
         sms = _sms(trip.display_config)
 

@@ -22,7 +22,7 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 | Name | Zweck |
 |---|---|
 | `geosphere` | GeoSphere Austria (Direktanbindung, AT-Fallback-Basis) |
-| `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) — liefert seit #1457 S2a zusätzlich zu Temperatur/Wind/Niederschlag die erwartete Blitzdichte (`lightning_density_per_km2_3h`, nur Frankreich/Korsika; eigenes Feld, nicht mit dem DWD-Blitzpotenzial vermischt); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
+| `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) — liefert seit #1457 S2a zusätzlich zu Temperatur/Wind/Niederschlag die erwartete Blitzdichte (`lightning_density_per_km2_3h`, nur Frankreich/Korsika; eigenes Feld, nicht mit dem DWD-Blitzpotenzial vermischt); seit #1507 S5c zusätzlich einen Hagel-Rohwert (`hail_potential_mf`, Coverage `HAIL__GROUND_OR_WATER_SURFACE`, Massenanteil `kg kg-1`; eigenes Feld, nicht mit `hail_potential_grau_gsp` (DWD) vermischt, **kein** Einfluss auf `hail_flag`); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
 | `de_direct` | DWD ICON-D2 Open Data (GRIB2-Direktanbindung, DE-Fallback, #1144) — liefert seit #1457 S2b zusätzlich zu Temperatur/Wind/Niederschlag Blitzpotenzial und Hagel-Potenzial (`lightning_potential_lpi_jkg` und `hail_potential_grau_gsp`, nur Deutschland/Alpen/Österreich; eigene Felder, nicht mit der Météo-France Blitzdichte vermischt); seit #1531 zusätzlich sieben Gewitter-**Roh**größen ohne Einstufung (`supercell_index_sdi2_1s`, `convective_inhibition_jkg`, `cape_ml_jkg`, `lightning_potential_max_lpi_jkg`, `updraft_helicity_max_m2s2`/`_med_m2s2`/`_low_m2s2` — Details `docs/reference/api_contract.md`); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
 | `eu_direct` | DWD ICON-EU Open Data (GRIB2-Direktanbindung, ~6,5 km Maschenweite, `src/providers/dwd_eu.py`) — **nur** Gewittersignale, kein `fetch_forecast`. Liefert seit #1457 S2c Blitzpotenzial (`lightning_potential_lpi_jkg`, externer Abrufname `lpi_con_max`) als Lückenfüller für alle europäischen Orte außerhalb von FR/Korsika (`fr_direct`) und DE/Alpen/Österreich (`de_direct`); kein Hagel-Signal (ICON-EU liefert kein Pendant zu `grau_gsp`, beabsichtigt). Seit #1531 zusätzlich `cape_ml_jkg` und `convective_inhibition_jkg` (Rohgrößen, keine Einstufung); `cape_con` wird providerintern mitabgerufen, bekommt aber bewusst **kein** eigenes Modellfeld. Gewitter-Zuständigkeit läuft über die eigene Tabelle, s. u. — Catch-all, letzte Zeile. |
 | `brightsky` | DWD-Daten via BrightSky — genutzt im Radar-Pfad (`src/services/radar_service.py`) |
@@ -36,10 +36,11 @@ Direktanbieter `de_direct` (DWD-GRIB2), `eu_direct` (DWD-EU), `geosphere` (Zeitr
 Regelbetrieb nur Gewitter-/Schneesignale liefern, keine Temperatur; die Asymmetrie greift nur beim
 in ADR-0018 bereits abgesicherten Cross-Provider-Totalausfall.
 
-Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm, DPC, Vigilance,
-Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle — sie sind kein
-Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
-länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`.
+Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm (IT/AT/DE),
+DPC, Vigilance, Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle —
+sie sind kein Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
+länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`
+(AT/IT) sowie Issue #1681 (DE, `docs/specs/modules/feat_1681_meteoalarm_de.md`).
 
 ## 🔴 Abrufnamen IMMER gegen das Angebot des Dienstes prüfen (Lehre aus #1457, 2026-08-03)
 
@@ -63,6 +64,14 @@ unverifizierte Konzept-Kurzform geführt).
 Dieselbe Prüfung hat nebenbei geklärt, dass Hagel regulär verfügbar ist
 (`HAIL__GROUND_OR_WATER_SURFACE`, `GRAUPEL__GROUND_OR_WATER_SURFACE`) — die als
 ungeklärt geführte Kurzform `DIAG_GRELE` existiert dort ebenfalls nicht (#1475).
+
+**`HAIL__GROUND_OR_WATER_SURFACE` (Météo-France WCS, #1507 S5c): VERIFIZIERT.**
+Live-Test `tests/tdd/test_hail_coverage_name_live.py` gegen die echte
+`GetCapabilities`-Antwort bestanden (2026-09-20); `DescribeCoverage` bestätigt
+`<ows:Title>Total hail precipitation</ows:Title>`, uom `kg kg-1` (Massenanteil).
+**Bewusst NICHT** `GRAUPEL__GROUND_OR_WATER_SURFACE` verwendet — der Dienst führt
+diesen Namen ebenfalls, aber als `Total graupel precipitation`, eine andere
+Niederschlagsform.
 
 Für Météo-France erledigt das ab jetzt automatisch der Live-Test
 `tests/tdd/test_thunder_coverage_name_live.py` (Marker `live`): Er liest den Namen
@@ -151,8 +160,11 @@ Gewitter-Einstufung im Provider bauen.**
 Wettercode/Blitzpotenzial dockt Hagel **nicht** als fünfte Zeile an diese Tabelle an —
 es ist ein eigenständiges, rein deskriptives Kennzeichen (`hail_flag: Optional[bool]`,
 `True`=ja/`None`=unbekannt) neben `thunder_level`, nicht Teil von `max_thunder()`. S5a
-liest ausschließlich den bereits vorhandenen `wmo_code` (96/99 → `True`). Details, inkl.
-der beiden noch offenen Folgescheiben S5b (DWD `grau_gsp`) und S5c (Météo-France):
+liest ausschließlich den bereits vorhandenen `wmo_code` (96/99 → `True`). **S5c
+(Météo-France, `hail_potential_mf`) ist seit #1507 LIVE** — ebenfalls ein reiner,
+unverbundener Rohwert ohne Kombination mit `hail_flag` (Known Limitation, s.
+`docs/specs/modules/feat_1507_s5c_hagel_mf_fr.md`). Offen bleibt nur noch S5b (DWD
+`grau_gsp`, `status:deferred`, #1506). Details:
 `docs/specs/modules/feat_1475_s5a_hagel_wmo_flag.md`.
 
 **`None` ≠ `NONE`:** Liegt **kein** Signal vor, liefert die Fusion `None` („keine
@@ -181,7 +193,7 @@ Seit #1457 S2a gibt es **zwei** Zuständigkeitstabellen, und das ist Absicht:
 | Tabelle | Zweck | Datei |
 |---|---|---|
 | `region_routing.direct_provider_for` | Zuständigkeit für die **Grundvorhersage** (Temperatur/Wind/Schnee) im Cross-Provider-Fallback | `src/providers/region_routing.py` |
-| `thunder_routing.thunder_provider_for` | Zuständigkeit für **Gewittersignale** (`lightning_density_per_km2_3h`, `lightning_potential_lpi_jkg`, `hail_potential_grau_gsp`) | `src/providers/thunder_routing.py` |
+| `thunder_routing.thunder_provider_for` | Zuständigkeit für **Gewittersignale** (`lightning_density_per_km2_3h`, `lightning_potential_lpi_jkg`, `hail_potential_grau_gsp`, `hail_potential_mf`) | `src/providers/thunder_routing.py` |
 
 Grund für die Trennung: Die Zuständigkeit ist **größenabhängig** — ein Dienst
 kann für Temperatur/Wind/Schnee die beste Quelle sein und trotzdem kein

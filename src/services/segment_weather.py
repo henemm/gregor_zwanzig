@@ -80,6 +80,7 @@ class SegmentWeatherService:
         enrich_ensemble: bool = True,
         enrich_snow: bool = True,
         priority: str = "user_briefing",
+        user_id: Optional[str] = None,
     ) -> SegmentWeatherData:
         """
         Fetch weather forecast for a trip segment.
@@ -108,6 +109,10 @@ class SegmentWeatherService:
             enrich_snow: If True (default), let provider fill-only-enrich
                 Alpen-Orte with SNOWGRID-Schnee (Epic #1301 A3); if False,
                 skip the SNOWGRID call (alert-checks).
+            user_id: Nutzerkennung fuer den Budget-Topf je Nutzer (Issue
+                #2387). `None` = unattributiert: der Aufruf zaehlt nur in
+                den globalen Topf und wird ab der Schwelle seiner
+                Prioritaet gedrosselt wie vor #2387.
             priority: Verbrauchsbudget-Prioritaet (Issue #1329):
                 "user_briefing" (default, NIE gedrosselt), "alert_check"
                 (gedrosselt ab 95% Tagesbudget) oder "polling" (ab 80%).
@@ -127,7 +132,10 @@ class SegmentWeatherService:
         """
         from services.forecast_budget import ForecastBudgetGate
 
-        budget_gate = ForecastBudgetGate()
+        # Issue #2387: die Kennung entscheidet, WEN eine erreichte Schwelle
+        # trifft. `None` heisst ausdruecklich "unattributiert" -- dann gilt
+        # das Bestandsverhalten (drosseln ab Schwelle), nie eine Befreiung.
+        budget_gate = ForecastBudgetGate(user_id)
 
         # Step -1: Modellkennung VOR dem Cache-Zugriff bestimmen (Issue
         # #1329): der Cache-Schluessel muss das Modell einschliessen, sonst
@@ -475,6 +483,8 @@ def night_weather_needed(dc) -> bool:
 def fetch_night_weather(
     last_segment: SegmentWeatherData,
     provider: "Optional[WeatherProvider]" = None,
+    *,
+    user_id: Optional[str],
 ) -> "Optional[NormalizedTimeseries]":
     """
     Fetch night weather from arrival until 06:00 next morning.
@@ -488,6 +498,11 @@ def fetch_night_weather(
 
     Args:
         last_segment: Weather data for the last segment of the day
+        user_id: Nutzerkennung fuer den Budget-Topf je Nutzer (Issue #2387).
+            Schluesselwort-PFLICHT ohne Default -- ein vergessenes Argument
+            bricht laut, statt still auf ein fremdes Konto zu buchen
+            (ADR-0003). `None` ist ausdruecklich erlaubt, wo der Aufrufer
+            selbst keine Kennung fuehrt (Vorschau ohne Nutzer, #2151).
         provider: Optionaler Provider (Adversary-Fix #1315 F001, Issue #483).
             Wenn gesetzt (Demo-Vorschau -> FixtureProvider), wird DIESER
             genutzt statt live open-meteo -- die Vorschau bleibt so
@@ -530,7 +545,9 @@ def fetch_night_weather(
         service = SegmentWeatherService(active_provider)
         # Bug #288: night fetch is part of the per-stage data; ensemble
         # is added once per trip via _enrich_ensemble_for_trip().
-        night_data = service.fetch_segment_weather(night_segment, enrich_ensemble=False)
+        night_data = service.fetch_segment_weather(
+            night_segment, enrich_ensemble=False, user_id=user_id,
+        )
         return night_data.timeseries
     except Exception as e:
         logger.warning(f"Failed to fetch night weather: {e}")

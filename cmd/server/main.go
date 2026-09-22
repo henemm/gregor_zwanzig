@@ -69,25 +69,9 @@ func main() {
 	// waere wirkungslos bzw. missbrauchbar (Spec D5).
 	premiumSmsRateLimiter := handler.NewPremiumSmsRateLimiter(handler.DefaultPremiumSmsLinkCodeBudget)
 
-	// Seed default user from ENV credentials on first run
-	if !s.UserExists(cfg.UserID) && cfg.AuthPass != "" {
-		hash, _ := bcrypt.GenerateFromPassword([]byte(cfg.AuthPass), bcrypt.DefaultCost)
-		now := time.Now()
-		s.SaveUser(model.User{
-			ID:           cfg.UserID,
-			PasswordHash: string(hash),
-			CreatedAt:    now,
-			// Issue #2271: seit der Scharfschaltung stellt issueSession nur noch
-			// fuer bestaetigte Adressen ein Merkmal aus. Dieses Konto entsteht
-			// aus ENV-Zugangsdaten des Betreibers, hat gar keine per Mail
-			// erhobene Adresse und koennte sich deshalb NIE bestaetigen — ohne
-			// diesen Zeitstempel sperrt ein frischer Stack (CI-Wegwerfwurzel,
-			// Neuinstallation) seinen eigenen Admin aus. Gemessen: ohne die
-			// Zeile antwortet POST /api/auth/login mit 403 email_not_verified.
-			EmailVerifiedAt: &now,
-		})
-		log.Printf("Seed user '%s' created", cfg.UserID)
-	}
+	// Seed-Konto aus ENV-Zugangsdaten beim ersten Start. Fehler sind in
+	// seedAdminUser bereits geloggt; der Start laeuft bewusst weiter (#2151 B).
+	_ = seedAdminUser(s, cfg)
 
 	var weatherProvider provider.WeatherProvider
 	if cfg.TestFixtureDir != "" {
@@ -140,4 +124,36 @@ func main() {
 
 	log.Printf("Go API listening on %s:%s, proxying to %s", cfg.Host, cfg.Port, cfg.PythonCoreURL)
 	http.ListenAndServe(cfg.Host+":"+cfg.Port, r)
+}
+
+// seedAdminUser legt beim ersten Start das Betreiber-Konto aus den
+// ENV-Zugangsdaten an (Issue #2151 Scheibe B). Reihenfolge bewusst: nur bei
+// gesetzter Kennung (GZ_USER_ID), gesetztem Passwort und noch nicht
+// existierendem Konto — ohne GZ_USER_ID entsteht kein Konto mehr (kein
+// stiller Rueckfall auf "default"). Ein Fehlschlag von SaveUser wird geloggt
+// und zurueckgegeben, beendet den Server aber nicht.
+func seedAdminUser(s *store.Store, cfg *config.Config) error {
+	if cfg.UserID == "" || cfg.AuthPass == "" || s.UserExists(cfg.UserID) {
+		return nil
+	}
+	hash, _ := bcrypt.GenerateFromPassword([]byte(cfg.AuthPass), bcrypt.DefaultCost)
+	now := time.Now()
+	if err := s.SaveUser(model.User{
+		ID:           cfg.UserID,
+		PasswordHash: string(hash),
+		CreatedAt:    now,
+		// Issue #2271: seit der Scharfschaltung stellt issueSession nur noch
+		// fuer bestaetigte Adressen ein Merkmal aus. Dieses Konto entsteht
+		// aus ENV-Zugangsdaten des Betreibers, hat gar keine per Mail
+		// erhobene Adresse und koennte sich deshalb NIE bestaetigen — ohne
+		// diesen Zeitstempel sperrt ein frischer Stack (CI-Wegwerfwurzel,
+		// Neuinstallation) seinen eigenen Admin aus. Gemessen: ohne die
+		// Zeile antwortet POST /api/auth/login mit 403 email_not_verified.
+		EmailVerifiedAt: &now,
+	}); err != nil {
+		log.Printf("Seed user '%s' failed: %v", cfg.UserID, err)
+		return err
+	}
+	log.Printf("Seed user '%s' created", cfg.UserID)
+	return nil
 }

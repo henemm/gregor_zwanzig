@@ -899,7 +899,7 @@ class TestF003BriefingLogOmitsTelegramOnLoopAbort:
         from services.trip_report_scheduler import TripReportSchedulerService
 
         trip_path, log_path = _f003_trip_and_log
-        trip = load_trip(trip_path)
+        trip = load_trip(trip_path, user_id="default")
         assert trip is not None, "F003-Fixture-Trip konnte nicht geladen werden"
 
         bad_settings = Settings(

@@ -35,6 +35,9 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+// Issue #2276 S6c: der geteilte Organismus liest im Vergleich reine Wertprops —
+// das Buendel baut dieselbe Funktion wie die drei Produktiv-Mounts.
+import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // __tests__ -> shared -> components -> lib -> src -> frontend
@@ -99,7 +102,7 @@ function renderVergleich(): string {
 	return render(AlarmeTab, {
 		props: {
 			context: 'vergleich',
-			wiz: wizStub(),
+			...alarmePropsAus(wizStub()),
 			catalog: [],
 			profileOverride: PROFIL
 		}

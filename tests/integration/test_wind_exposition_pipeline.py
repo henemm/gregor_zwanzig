@@ -544,7 +544,7 @@ class TestReportOptionsMigration:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(trip_json, f)
             f.flush()
-            trip = load_trip(Path(f.name))
+            trip = load_trip(Path(f.name), user_id="default")
 
         assert trip.report_config is not None
         assert trip.report_config.show_compact_summary is False, \
@@ -613,7 +613,7 @@ class TestReportOptionsMigration:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(trip_json, f)
             f.flush()
-            trip = load_trip(Path(f.name))
+            trip = load_trip(Path(f.name), user_id="default")
 
         assert trip.report_config is not None
         assert trip.report_config.show_compact_summary is False, \
@@ -671,7 +671,7 @@ class TestReportOptionsMigration:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(trip_json, f)
             f.flush()
-            trip = load_trip(Path(f.name))
+            trip = load_trip(Path(f.name), user_id="default")
 
         assert trip.report_config.show_compact_summary is False, \
             "report_config value should take precedence"

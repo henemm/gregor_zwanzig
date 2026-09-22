@@ -51,7 +51,7 @@ class PreviewService:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or Settings()
 
-    def _load_trip(self, trip_id: str, user_id: str = "default") -> "Trip":
+    def _load_trip(self, trip_id: str, user_id: str) -> "Trip":
         """Lädt einen Trip aus `data/users/<user>/briefings/<id>.json`
         (Issue #1250 Scheibe 7a Cutover, ADR-0023 -- war `trips/<id>.json`).
 
@@ -239,7 +239,9 @@ class PreviewService:
         from services.segment_weather import fetch_night_weather, night_weather_needed
         night_weather = None
         if segment_weather and night_weather_needed(trip.display_config):
-            night_weather = fetch_night_weather(segment_weather[-1], provider=provider)
+            night_weather = fetch_night_weather(
+                segment_weather[-1], provider=provider, user_id=user_id,
+            )
 
         multi_day_trend = None
         outlook_state = None
@@ -351,7 +353,7 @@ class PreviewService:
         self,
         trip_id: str,
         *,
-        user_id: str = "default",
+        user_id: str,
         report_type: str = "morning",
         target_date: str | None = None,
         demo: bool = False,
@@ -375,7 +377,7 @@ class PreviewService:
         self,
         trip_id: str,
         *,
-        user_id: str = "default",
+        user_id: str,
         report_type: str = "morning",
         target_date: str | None = None,
         demo: bool = False,
@@ -401,7 +403,7 @@ class PreviewService:
         self,
         trip_id: str,
         *,
-        user_id: str = "default",
+        user_id: str,
         report_type: str = "morning",
         target_date: str | None = None,
         demo: bool = False,

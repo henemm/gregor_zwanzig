@@ -155,6 +155,11 @@ Genau daran blockierte das Gate am 2026-08-08 **jede** Frontend-Auslieferung.
 | Anmeldung der Anwendung, Ziel **Staging** | `GZ_AUTH_*` | `/home/hem/gregor_zwanzig_staging/.env` |
 | Anmeldung der Anwendung, sonst | `GZ_AUTH_*` | lokale `.env` |
 
+**`GZ_USER_ID` ist davon unabhängig und hat seit #2151 Scheibe B keine Voreinstellung mehr**
+(vorher automatisch `"default"`). Ohne gesetzte `GZ_USER_ID` legt der Go-Server beim Start kein
+Seed-Konto an — bereits existierende Nutzerordner unter `data/users/` bleiben davon unberührt.
+Gesetzt wird sie aktuell nur in `frontend/e2e/ci-stack.sh` (Wert `admin`, aus `ci.yml`).
+
 Der Staging-Pfad steht als Modul-Attribut `e2e_frontend_browser_gate.STAGING_ENV_PATH`
 und ist per Umgebungsvariable **`GZ_STAGING_ENV_PATH`** überschreibbar. Rangfolge:
 bereits gesetzte Umgebungsvariable > Staging-`.env` (nur bei Staging-Ziel) >

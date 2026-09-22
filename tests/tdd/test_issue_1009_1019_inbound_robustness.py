@@ -584,7 +584,7 @@ class _RecordingNotificationService(NotificationService):
     """Echte Subklasse (KEIN Mock): schneidet den Body mit, sendet real via super()."""
 
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(user_id="default")
         self.sent_bodies: list[str] = []
 
     def send_telegram_message(self, *, chat_id, subject, body, settings, reply_markup=None):

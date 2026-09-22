@@ -1,7 +1,11 @@
 // Helper fuer neue AlertRules im AlertRulesEditor.
 // Spec: docs/specs/modules/issue_223_alert_rules_editor.md §2.
+// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md (#1895 Schritt 1)
 //
-// Default = haeufigster Use-Case (Wind-Boeen 50 km/h, Warning, enabled).
+// Default = Aenderungsregel auf Wind-Boeen (Δ 20 km/h ueber 6 h, Warning, enabled).
+// Seit #1895 Schritt 1 gibt es nur noch Aenderungsregeln, darum kind='delta'
+// (Variante A der zweiten Annahme der Spec: Δ 20 / 6h sind die Werte, die der
+// Editor bisher schon im Modus „Aenderung" vorbelegt hat).
 // Separate Funktion ist unit-testbar.
 
 import type { AlertMetric, AlertRule } from '$lib/types';
@@ -9,9 +13,10 @@ import type { AlertMetric, AlertRule } from '$lib/types';
 export function newDefaultRule(): AlertRule {
 	return {
 		id: crypto.randomUUID(),
-		kind: 'absolute',
+		kind: 'delta',
 		metric: 'wind_gust',
-		threshold: 50,
+		threshold: 20,
+		delta_window: '6h',
 		unit: 'km/h',
 		severity: 'warning',
 		enabled: true
@@ -19,30 +24,31 @@ export function newDefaultRule(): AlertRule {
 }
 
 // =============================================================================
-// Issue #179 — Modus-Toggle: expandRules()
-// Issue #297 — Erweiterung: separate absThreshold / deltaThreshold / deltaWindow
+// #1895 Schritt 1 + 2 — expandRules() kennt weder Modus noch Zusatzparameter
 // =============================================================================
-// Spec: docs/specs/modules/issue_179_alert_konfigurator_modus_toggle.md
-// Spec: docs/specs/modules/issue_297_alert_beides_mode.md
+// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md (Schritt 1)
+// Spec: docs/specs/modules/fix_1895_s2_alarmkarte_rueckbau.md (Schritt 2, E-2)
 //
-// Pure-Function-Extraktion der saveEdit()-Logik aus AlertRuleRow.svelte.
-// Nimmt eine Rule + den gewaehlten UI-Modus ('absolute' | 'delta' | 'both')
-// und liefert das Array, das an AlertRulesEditor.updateRules(index, ...)
-// weitergereicht wird.
+// Bis #1895 nahm expandRules() den im Editor gewaehlten Modus
+// ('absolute' | 'delta' | 'both') und lieferte je nachdem eine oder zwei Regeln.
+// Der Absolut-Modus loest seit #946 nie mehr einen Alarm aus, und der Go-Store
+// schreibt jede Absolut-Regel bei jedem Laden und Speichern still nach
+// kind='delta' um (SyncAlertRules). Die Modus-Auswahl ist deshalb aus der
+// Bedienflaeche gefallen; hier bleibt der Δ-Zweig als einziger uebrig.
 //
-//   mode='absolute' (Standard-Metrik) -> [rule mit kind='absolute', threshold=absThreshold]
-//   mode='absolute' (Delta-only)     -> [rule mit kind='delta'] (Guard greift, #1488)
-//   mode='delta'                     -> [rule mit kind='delta', threshold=deltaThreshold,
-//                                        delta_window=deltaWindow]
-//   mode='both' (Standard-Metrik)    -> [absolute (orig-ID, pair_id),
-//                                        delta (neue UUID, pair_id, delta_window)]
-//   mode='both' (Delta-only Metrik)  -> [rule mit kind='delta'] (Guard greift, kein pair_id)
+// Schritt 2 nimmt auch Δ-Schwelle und Zeitfenster aus der Karte. Damit fallen
+// die beiden Zusatzparameter weg: expandRules() REICHT `rule.threshold` und
+// `rule.delta_window` DURCH. Ein fest einprogrammiertes '6h' wuerde jede
+// Bestandsregel mit z.B. '12h' beim ersten Speichern still umschreiben (Klasse
+// BUG-DATALOSS-GR221, Verstoss gegen „Read-Modify-Write, kein Replace"); der
+// Rueckfall '6h' gilt darum ausschliesslich fuer eine Regel OHNE Zeitfenster.
 //
-// Delta-only-Metriken (AC-6/AC-8): semantisch keine 'absolute'-Rule moeglich.
-//
-// Default-Parameter (absThreshold/deltaThreshold/deltaWindow) erhalten die
-// Rueckwaertskompatibilitaet: bestehende 2-Param-Aufrufe (`expandRules(rule, mode)`)
-// fallen auf `rule.threshold` und das Default-Zeitfenster '6h' zurueck.
+// Zusicherung: IMMER genau eine Regel — nie zwei (das alte „Beides" erzeugte ein
+// Regel-Paar), nie null. `pair_id` faellt weg, alle uebrigen Felder (`id`,
+// `metric`, `enabled`, `channels`, `severity`, `unit`, `threshold`,
+// `delta_window`) werden unveraendert durchgereicht. `channels` traegt die
+// einzige verbliebene Wirkung der Regel und darf hier weder erfunden noch
+// verworfen werden.
 
 export const DELTA_ONLY_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>([
 	'temperature_change',
@@ -51,58 +57,16 @@ export const DELTA_ONLY_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>
 	'thunder_level'
 ]);
 
-export type AlertRuleMode = 'absolute' | 'delta' | 'both';
-
-export function expandRules(
-	rule: AlertRule,
-	mode: AlertRuleMode,
-	absThreshold: number = rule.threshold,
-	deltaThreshold: number = rule.threshold,
-	deltaWindow: string = '6h'
-): AlertRule[] {
-	if (mode === 'absolute') {
-		if (DELTA_ONLY_METRICS.has(rule.metric)) {
-			// #1488 Scheibe A (AC-3): dieselbe Behandlung wie im 'both'-Zweig — eine
-			// Delta-only-Metrik darf nie als kind='absolute' persistiert werden, weil
-			// der Alarm-Dienst deren absolute Schwelle nie auswertet.
-			const { pair_id: _pid, ...rest } = rule;
-			return [{ ...rest, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }];
-		}
-		// F001: pair_id + delta_window explizit entfernen — beim Mode-Wechsel von
-		// 'both'/'delta' nach 'absolute' duerfen diese Felder nicht ueberleben.
-		const { pair_id: _pid, delta_window: _dw, ...rest } = rule;
-		return [{ ...rest, kind: 'absolute', threshold: absThreshold }];
-	}
-	if (mode === 'delta') {
-		// F001: pair_id entfernen — beim Mode-Wechsel von 'both' nach 'delta'
-		// darf die Paar-Markierung nicht zurueckbleiben.
-		const { pair_id: _pid, ...rest } = rule;
-		return [
-			{ ...rest, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }
-		];
-	}
-	// mode === 'both'
-	if (DELTA_ONLY_METRICS.has(rule.metric)) {
-		// AC-6/AC-8: Delta-only-Metrik bei 'both' fallback auf nur delta.
-		// pair_id explizit entfernen — base rule koennte schon eine haben.
-		const { pair_id: _pid, ...rest } = rule;
-		return [{ ...rest, kind: 'delta', threshold: deltaThreshold, delta_window: deltaWindow }];
-	}
-	// AC-5/AC-7: zwei Rules mit gemeinsamer pair_id.
-	// F005: base rule koennte bereits pair_id / delta_window tragen (z.B. aus
-	// frueherer Delta-Speicherung). Diese muessen via Destructuring entfernt
-	// werden, damit die Absolute-Rule kein altes delta_window erbt (AC-7).
-	const pairId = crypto.randomUUID();
-	const { pair_id: _pid, delta_window: _dw, ...rest } = rule;
+export function expandRules(rule: AlertRule): AlertRule[] {
+	// pair_id explizit entfernen: eine Alt-Regel aus dem frueheren „Beides"-Modus
+	// darf die Paar-Markierung nicht ueber den Rueckbau hinweg mitschleppen.
+	const { pair_id: _pid, ...rest } = rule;
 	return [
-		{ ...rest, kind: 'absolute', threshold: absThreshold, pair_id: pairId },
 		{
 			...rest,
-			id: crypto.randomUUID(),
 			kind: 'delta',
-			threshold: deltaThreshold,
-			delta_window: deltaWindow,
-			pair_id: pairId
+			threshold: rule.threshold,
+			delta_window: rule.delta_window ?? '6h'
 		}
 	];
 }

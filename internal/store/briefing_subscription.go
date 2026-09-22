@@ -29,6 +29,9 @@ func (s *Store) BriefingsDir() string {
 // LoadBriefing loads a single briefings/<id>.json file. Returns nil, nil if
 // the file does not exist (mirrors LoadTrip).
 func (s *Store) LoadBriefing(id string) (*model.BriefingSubscription, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
 	data, err := os.ReadFile(path)
@@ -51,6 +54,9 @@ func (s *Store) LoadBriefing(id string) (*model.BriefingSubscription, error) {
 // MarshalJSON round-trips every field via the raw catch-all (Issue #1250
 // Scheibe 5, ADR-0023).
 func (s *Store) SaveBriefing(b *model.BriefingSubscription) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	dir := s.briefingsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err

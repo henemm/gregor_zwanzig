@@ -15,14 +15,17 @@
 	// NICHT ein Auswertungs-Schluessel wie `temp_max_c`, den der Stunden-
 	// Aufloeser gar nicht kennt.
 	//
-	// Der Commit-Wrapper (.hub-layout-hourly-wrap mit onchange/onclick am
-	// Hub-PUT-Queue bzw. der lokale saveNewPreset-Pfad der Anlege-Seite) bleibt
-	// AUSSERHALB dieser Komponente — hier wird nur der reine wiz-State mutiert,
-	// die Persistenz-Kopplung liegt beim jeweiligen Aufrufer (Trip/Compare-
-	// Teilungs-Invariante: geteilt ist die Steuerung, nicht der Speicher-Weg).
-	// AUSNAHME (Issue #1361): eine Ziehgeste unterdrueckt im Browser oft das
-	// nachfolgende click/change, der Bubble-Wrapper wuerde dann NIE feuern --
-	// deshalb loest onDndReorder zusaetzlich `onHourlyCommit` direkt aus.
+	// Issue #2276 S6b: reine WERTPROPS statt `CompareWizardState`-Bindung —
+	// dasselbe Muster, das der strukturelle Zwilling
+	// CompareOutlookLayoutControls seit #1720 S1 fuehrt. Die Flaeche haelt
+	// keinen Zustand und kennt kein Zustandsobjekt mehr: sie bekommt die
+	// Auswahl (`metricKeys`) und den Schalterstand (`enabled`) gereicht und
+	// MELDET Aenderungen nach oben (`onMetricKeys`, `onEnabledChange`). Der
+	// Speicher-Weg bleibt damit wie bisher AUSSERHALB (Trip/Compare-Teilungs-
+	// Invariante: geteilt ist die Steuerung, nicht der Speicher-Weg); seit
+	// #2276 S4 speichert der Ortsvergleichs-Zweig von WeatherMetricsTab selbst
+	// — der fruehere direkte Ziehgesten-Ausloeser `onHourlyCommit` hat deshalb
+	// keinen Aufrufer mehr und entfaellt.
 	// Safari-Factory-Pattern für alle Handler (CLAUDE.md).
 
 	import { SectionH, Card } from '$lib/components/atoms';
@@ -39,10 +42,12 @@
 		orderableHourlyMetricKeys,
 		applyHourlyReorder
 	} from '../compare/compareHourlyMetricDefs.ts';
-	import type { CompareWizardState } from '../compare/compareWizardState.svelte';
 
 	interface Props {
-		wiz: CompareWizardState;
+		/** `null` = nie eingestellt (Katalog-Vorgabe), `[]` = bewusst leer. */
+		metricKeys: string[] | null;
+		/** Neue Auswahl (Umschalten ODER Reihenfolge) nach oben melden. */
+		onMetricKeys: (keys: string[]) => void;
 		/** Bereits geladene Antwort von GET /api/compare/metrics — dieselbe
 		 *  Liste wie Uebersichts-Grundauswahl und Ausblick (kein zweiter Abruf,
 		 *  kein zweites Vokabular). Leer/nicht geladen: der Auswahl-Block bleibt
@@ -53,12 +58,17 @@
 		// auch der Trip-Editor seine Marke speist. Diese Flaeche laedt den
 		// Endpoint bewusst NICHT selbst: zwei Ladewege waeren zwei Quellen.
 		smsSymbols?: Record<string, string[]>;
-		/** Issue #1361 Befund 4: direkter Speicherausloeser nach einer
-		 *  Ziehgeste in der Reihenfolge-Liste. Ohne Uebergabe (Anlege-Seite)
-		 *  bleibt die Mutation lokal im wiz-State. */
-		onHourlyCommit?: () => void;
+		/** Ein/Aus-Schalter — Kunstgriff „Prop da -> Bedienelement da"
+		 *  (Vorbild CompareOutlookLayoutControls, #1720 S1 AC-13): OHNE
+		 *  `onEnabledChange` erscheint KEIN Schalter. Eine Flaeche, die den
+		 *  Zustand nicht melden kann, darf ihn auch nicht anbieten. */
+		enabled?: boolean;
+		onEnabledChange?: (checked: boolean) => void;
 	}
-	let { wiz, onHourlyCommit, catalog = [], smsSymbols = {} }: Props = $props();
+	let {
+		metricKeys, onMetricKeys, catalog = [], smsSymbols = {},
+		enabled = true, onEnabledChange
+	}: Props = $props();
 
 	const hourlyGroups = $derived(groupCompareCatalog(catalog));
 
@@ -79,7 +89,7 @@
 	// (`[]`) bleibt leer — Issue #1366 F001: Anzeige UND Umschalt-Handler nutzen
 	// ZWINGEND dieselbe Materialisierung, sonst driften beide auseinander.
 	const materializedHourlyKeys = $derived(
-		materializeHourlyMetricKeys(wiz.hourlyMetricKeys, defaultHourlyKeys)
+		materializeHourlyMetricKeys(metricKeys, defaultHourlyKeys)
 	);
 
 	/** AC-4 (Bestandsschutz): ein vor #1406 B gespeicherter Kurzschluessel
@@ -94,18 +104,20 @@
 
 	function makeHourlyMetricHandler(group: CompareAggregationGroup) {
 		return function handleHourlyMetric(): void {
-			wiz.hourlyMetricKeys = applyHourlyMetricToggleFromState(
-				wiz.hourlyMetricKeys,
-				group.metric_id,
-				!isHourlyMetricActive(group),
-				defaultHourlyKeys,
-				group.hourly_legacy_keys
+			onMetricKeys(
+				applyHourlyMetricToggleFromState(
+					metricKeys,
+					group.metric_id,
+					!isHourlyMetricActive(group),
+					defaultHourlyKeys,
+					group.hourly_legacy_keys
+				)
 			);
 		};
 	}
 
 	function handleEnabledToggle(checked: boolean): void {
-		wiz.hourlyEnabled = checked;
+		onEnabledChange?.(checked);
 	}
 
 	// ── Issue #1361 Befund 4: Reihenfolge-Block ──────────────────────────────
@@ -169,16 +181,10 @@
 		);
 		if (!group) return;
 		makeHourlyMetricHandler(group)();
-		onHourlyCommit?.();
 	}
 
 	function handleHourlyDndReorder(newOrder: string[]): void {
-		wiz.hourlyMetricKeys = applyHourlyReorder(
-			materializedHourlyKeys,
-			newOrder,
-			mergeOnlyHourlyKeys
-		);
-		onHourlyCommit?.();
+		onMetricKeys(applyHourlyReorder(materializedHourlyKeys, newOrder, mergeOnlyHourlyKeys));
 	}
 
 	// Roh/Einfach-Umschalter gibt es im Stundenverlauf nicht (indicatorCapable()
@@ -189,12 +195,16 @@
 </script>
 
 <SectionH title="Stundenverlauf" />
-<ChannelToggle
-	label="Stundenverlauf"
-	checked={wiz.hourlyEnabled}
-	onchange={handleEnabledToggle}
-	testid="compare-layout-hourly-enabled-toggle"
-/>
+<!-- Issue #2276 S6b (wie #1720 S1 AC-13 beim Ausblick): der Schalter erscheint
+     NUR, wenn der Aufrufer ihn fuehrt. -->
+{#if onEnabledChange}
+	<ChannelToggle
+		label="Stundenverlauf"
+		checked={enabled}
+		onchange={handleEnabledToggle}
+		testid="compare-layout-hourly-enabled-toggle"
+	/>
+{/if}
 <div
 	data-testid="compare-layout-hourly-metrics"
 	style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px"

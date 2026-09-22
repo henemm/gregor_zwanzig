@@ -113,7 +113,7 @@ describe('F005: Rücknahme einer Alarm-Änderung, während deren PUT noch unterw
 		const hubPutQueue = createPutQueue();
 		const speicherung = erstelleAlarmeVergleichSpeicherung({
 			client: api,
-			wiz,
+			zustand: wiz,
 			preset: () => currentPreset,
 			enqueueHubWrite: (fn) => hubPutQueue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {
@@ -159,7 +159,7 @@ describe('F005: Rücknahme einer Alarm-Änderung, während deren PUT noch unterw
 		const hubPutQueue = createPutQueue();
 		const speicherung = erstelleAlarmeVergleichSpeicherung({
 			client: api,
-			wiz,
+			zustand: wiz,
 			preset: () => currentPreset,
 			enqueueHubWrite: (fn) => hubPutQueue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {

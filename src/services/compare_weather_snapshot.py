@@ -39,7 +39,7 @@ class CompareWeatherSnapshotService:
     einzige Quelle dieser Datei ist (kein Client-editierbares Schema).
     """
 
-    def __init__(self, user_id: str = "default") -> None:
+    def __init__(self, user_id: str) -> None:
         self._user_id = user_id
         self._dir = get_data_dir(user_id) / "compare_weather_snapshots"
 

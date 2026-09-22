@@ -141,7 +141,7 @@ class _ZeitplanerOhneNetz(TripReportSchedulerService):
     """Produktiver Zeitplaner, einzig der Netzabruf liefert fertige Segmente."""
 
     def __init__(self, segmente: list[SegmentWeatherData]) -> None:
-        super().__init__()
+        super().__init__(user_id="default")
         self._segmente = list(segmente)
 
     def _collect_future_stage_weather(self, trip, target_date, now_utc,

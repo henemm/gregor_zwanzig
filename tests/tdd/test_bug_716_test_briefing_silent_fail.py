@@ -298,7 +298,7 @@ class TestAC3RealImapVerification:
 
         # Trip laden
         trip_path = REPO_ROOT / "data" / "users" / user_id / "briefings" / f"{trip_id}.json"
-        trip = load_trip(trip_path)
+        trip = load_trip(trip_path, user_id=user_id)
 
         # Unique Marker im Trip-Namen damit wir die Mail im IMAP finden
         unique_marker = uuid.uuid4().hex[:8]

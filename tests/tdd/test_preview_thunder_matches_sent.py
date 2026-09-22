@@ -152,7 +152,7 @@ def _thunder_forecast_from_scheduler(trend: list[dict]) -> dict:
     aufruft (trip_report_scheduler.py:846) — beweist AC-3 funktional: eine
     Quelle, kein Nachbau. trip=None ist sicher, weil der Trend beide Offsets
     abdeckt (kein Fetch)."""
-    return TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    return TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         None, _TARGET, now_utc=datetime.now(timezone.utc), tz=_UTC,
         multi_day_trend=trend,
     )
@@ -235,7 +235,7 @@ def preview_report(trip, segment_weather, trend, thunder_forecast, render_option
     from src.services.preview_service import PreviewService
 
     return PreviewService()._render_email(
-        scheduler=TripReportSchedulerService(),
+        scheduler=TripReportSchedulerService(user_id="default"),
         segment_weather=segment_weather,
         trip=trip,
         report_type="evening",

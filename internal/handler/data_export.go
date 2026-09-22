@@ -18,10 +18,11 @@ import (
 //
 // Die ausdrueckliche Leer-Pruefung ist keine Formalie: UserIDFromContext
 // liefert bei fehlendem Kontext den leeren String (middleware/auth.go:151-154),
-// WithUser("") ist im Store ein No-Op (store/store.go:21-24) und die
-// Store-Voreinstellung ist "default" (config/config.go:10). Ein Handler, der
-// die Kennung nur durchreicht, lieferte also den fremden Sammelordner
-// "default" aus.
+// WithUser("") ist im Store ein No-Op (store/store.go) und liefert den
+// Basis-Store, dessen Kennung aus GZ_USER_ID stammt (ohne Variable leer, seit
+// Issue #2151 Scheibe B kein Config-Default "default" mehr). Ist GZ_USER_ID
+// gesetzt, lieferte ein Handler, der die Kennung nur durchreicht, dieses fremde
+// Konto aus — die Leer-Pruefung bleibt deshalb Pflicht.
 func ExportUserDataHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())

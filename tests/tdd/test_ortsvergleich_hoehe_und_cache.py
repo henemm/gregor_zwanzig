@@ -146,7 +146,7 @@ def test_ac6_ortsvergleich_ort_traegt_seine_hoehe_fuer_zwei_nutzer(monkeypatch, 
         source = CompareLocationWeatherSource()
         source.fetch(
             loc.id, loc.lat, loc.lon,
-            elevation_m=loc.elevation_m,
+            elevation_m=loc.elevation_m, user_id=user_id,
         )
 
         main = [r for r in seen if r.url.host == "api.open-meteo.com"]

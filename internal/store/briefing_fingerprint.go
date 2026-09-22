@@ -25,6 +25,9 @@ import (
 // unterscheiden damit "kein Dokument" von "Dokument mit Stand X", ohne
 // os.IsNotExist selbst auswerten zu muessen.
 func (s *Store) BriefingFingerprint(id string) (string, error) {
+	if err := s.requireUser(); err != nil {
+		return "", err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Join.
 	if !ValidEntityID(id) {
 		return "", ErrInvalidEntityID

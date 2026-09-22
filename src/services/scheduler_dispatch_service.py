@@ -163,7 +163,7 @@ def _dispatch_due_preset(
 
 
 def run_compare_presets_daily(
-    user_id: str = "default",
+    user_id: str,
     data_root: str | None = None,
     hour: int | None = None,
 ) -> tuple[int, int]:
@@ -772,6 +772,7 @@ def _write_compare_alert_snapshots(
             zusatz = {
                 "tage_ab_ortstag": tage_ab_ortstag,
                 "elevation_m": loc.elevation_m,
+                "user_id": user_id,  # Issue #2387 -- Budget-Topf je Nutzer
             }
             point = source.fetch(
                 loc.id, loc.lat, loc.lon, start_hour, end_hour, **zusatz

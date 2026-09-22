@@ -118,6 +118,7 @@ func (s *Store) HasSession(userId, sessionId string) (bool, error) {
 // AddSession traegt eine neue Anmeldung ein. Lesen-Aendern-Schreiben laeuft
 // unter der Pro-Nutzer-Sperre, damit zwei gleichzeitige Anmeldungen desselben
 // Kontos einander nicht verdraengen.
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) AddSession(userId, sessionId string) error {
 	unlock := lockSessions(userId)
 	defer unlock()
@@ -136,6 +137,7 @@ func (s *Store) AddSession(userId, sessionId string) error {
 }
 
 // RemoveSession entfernt genau eine Anmeldung ("dieses Geraet abmelden").
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) RemoveSession(userId, sessionId string) error {
 	unlock := lockSessions(userId)
 	defer unlock()
@@ -159,6 +161,7 @@ func (s *Store) RemoveSession(userId, sessionId string) error {
 
 // ClearSessions leert die Gaesteliste ("auf allen Geraeten abmelden", ebenso
 // Passwortwechsel und Passwort-Zuruecksetzen).
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
 func (s *Store) ClearSessions(userId string) error {
 	unlock := lockSessions(userId)
 	defer unlock()

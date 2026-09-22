@@ -41,12 +41,18 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ComparePreset } from '../../../types.ts';
+// Issue #2276 Scheibe S5 (Epic #2345): Hydration, Diff-Wächter, Nutzlast und
+// der NEUE diff-basierte Rollback des Versand-Reiters sind aus der
+// Compare-Klebeschicht in den geteilten Baustein umgezogen (AC-8).
+// `hubActivationBanner` bleibt in der Klebeschicht — die Aktivierungs-Karte
+// gehört dem Hub, nicht dem Versand-Reiter.
+import { hubActivationBanner } from '../compareHubWizardBridge.ts';
 import {
 	hydrateVersandFieldsFromPreset,
 	flushPendingVersandSave,
-	hubActivationBanner,
+	rollbackVersandSnapshot,
 	type VersandSnapshot
-} from '../compareHubWizardBridge.ts';
+} from '../../shared/versandVergleichSpeicherung.ts';
 
 function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	return {
@@ -210,6 +216,53 @@ describe('AC-35/AC-36: flushPendingVersandSave — Event-diskretisierte PUT-Pers
 		);
 		assert.deepStrictEqual(payload.body.empfaenger, preset.empfaenger);
 		assert.strictEqual(payload.body.schedule, preset.schedule);
+	});
+});
+
+// Issue #2276 Scheibe S5 (Epic #2345), AC-3: der Rollback nach einem
+// gescheiterten Versand-PUT ist diff-basiert statt unbedingt. Bisher setzte
+// `handleVersandCommit` ALLE 10 Felder bedingungslos auf den Vor-Zustand
+// zurück — weil `sendTelegram`/`sendSms` auch vom Alarme-Reiter geschrieben
+// werden, konnte das eine zwischenzeitlich erfolgreich gespeicherte
+// Nachbar-Änderung still zurücknehmen (Klasse BUG-DATALOSS-GR221).
+//
+// Mutations-Gegenprobe (Spec AC-3): unbedingter Full-Overwrite-Rollback ⇒ rot.
+describe('S5-AC-3: rollbackVersandSnapshot setzt nur Felder zurück, die noch den GESENDETEN Wert tragen', () => {
+	test('ein vom Nachbar-Reiter geänderter Kanal-Schalter überlebt den Rollback', () => {
+		const before = makeSnapshot({ sendTelegram: false, morningTime: '06:30' });
+		const attempted = makeSnapshot({ sendTelegram: false, morningTime: '07:15' });
+		// Zustand NACH dem gescheiterten PUT: der Alarme-Reiter hat Telegram
+		// zwischenzeitlich eingeschaltet und erfolgreich gespeichert.
+		const state: Record<string, unknown> = { ...attempted, sendTelegram: true };
+
+		rollbackVersandSnapshot(state as unknown as VersandSnapshot, before, attempted);
+
+		assert.strictEqual(state.sendTelegram, true, 'der Wert stammt nicht aus diesem Vorgang — er darf nicht zurückgesetzt werden');
+		assert.strictEqual(state.morningTime, '06:30', 'das eigene, gescheiterte Feld MUSS zurückgesetzt werden');
+	});
+
+	test('unveränderte Felder bleiben unangetastet', () => {
+		const before = makeSnapshot();
+		const attempted = makeSnapshot({ eveningTime: '20:00' });
+		const state: Record<string, unknown> = { ...attempted };
+
+		rollbackVersandSnapshot(state as unknown as VersandSnapshot, before, attempted);
+
+		assert.strictEqual(state.eveningTime, '19:15', 'das geänderte Feld wird zurückgesetzt');
+		assert.strictEqual(state.sendTelegram, before.sendTelegram);
+		assert.strictEqual(state.morningTime, before.morningTime);
+		assert.strictEqual(state.endDate, before.endDate);
+	});
+
+	test('auch die drei Legacy-Restfelder werden nur bei Übereinstimmung zurückgesetzt', () => {
+		const before = makeSnapshot({ alertCooldownMinutes: 90 });
+		const attempted = makeSnapshot({ alertCooldownMinutes: 90 });
+		// Der Alarme-Reiter hat den Cooldown währenddessen auf 30 gesetzt.
+		const state: Record<string, unknown> = { ...attempted, alertCooldownMinutes: 30 };
+
+		rollbackVersandSnapshot(state as unknown as VersandSnapshot, before, attempted);
+
+		assert.strictEqual(state.alertCooldownMinutes, 30, 'der Versand-Rollback darf keine Alarm-Zustellungsfelder zurückdrehen');
 	});
 });
 

@@ -107,7 +107,7 @@ def _sent_report(trip, segment_weather, stage_name, trip_tz):
     from services.report_config_resolver import resolve_report_render_options
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    scheduler = TripReportSchedulerService()
+    scheduler = TripReportSchedulerService(user_id="default")
     stage = trip.get_stage_for_date(_TARGET)
     jetzt_utc = datetime.now(timezone.utc)
     trend_result = scheduler._build_stage_trend(

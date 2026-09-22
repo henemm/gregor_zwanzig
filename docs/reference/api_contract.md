@@ -316,6 +316,7 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 | Feld                          | Typ           | Beschreibung                                   |
 |-------------------------------|---------------|-------------------------------------------------|
 | lightning_density_per_km2_3h  | float \| None | Erwartete Blitzdichte [Blitze/km²/3h], Météo-France AROME, Coverage `AVERAGE_LIGHTNING_STRIKE_DENSITY_OVER_3HOURS__GROUND_OR_WATER_SURFACE` (Konstante `providers.meteofrance.LIGHTNING_COVERAGE`; die Kurzform `LITOTA3` existiert beim Dienst **nicht** — sie war bis `c33e7b28` eingetragen und ließ jeden Abruf lautlos in 404 laufen, s. #1457). Der GRIB-Lauf wird mit **eigenem** Sicherheitsabstand von 6 h gewählt (`THUNDER_RUN_SAFETY_HOURS`) und fällt bei 404 auf bis zu zwei ältere Läufe zurück; der Nullpunkt der Stunden-Offsets bleibt der 3-h-Lauf der Grundvorhersage, sonst driftete die Blitzdichte-Zeitachse gegen sie. Befüllt über den **gemeinsamen** Anreicherungsweg `providers/thunder_enrichment.py::enrich_thunder`, der im regulären Rückgabeweg von `OpenMeteoProvider.fetch_forecast` hängt (nicht nur bei Totalausfall der Hauptquelle) — kennt keinen Providernamen, sondern schlägt die zuständige Quelle in der **eigenen** Zuständigkeitstabelle `providers/thunder_routing.py` nach (getrennt von der Grundvorhersage-Tabelle `providers/region_routing.py`, weil die Zuständigkeit **größenabhängig** ist, s. `docs/reference/decision_matrix.md`) und ruft sie über das optionale Protokoll `ThunderSignalProvider` (`providers/base.py`). Heute trägt nur `fr_direct` (Frankreich/Korsika) diese Tabelle ein; ein zweiter Dienst wird wirksam, indem er das Protokoll erfüllt und eine Zeile in `thunder_routing.py` bekommt — ohne dass diese Anreicherungsstelle angefasst wird. Orte außerhalb des geladenen Abfragefensters bekommen `None` (verworfen), nicht den Randwert eines fremden Ortes. **Bewusst eigenes Feld** — NICHT zusammengelegt mit dem DWD-Blitzpotenzial (`cape_jkg`/`thunder_level`): Météo-France liefert eine **Dichte** (Blitze je Fläche/3h, Messwerte ~0,1–0,2), DWD ein **Potenzial** (Energiegröße in J/kg, Messwerte ~88) — verschiedene Größen, verschiedene Skalen, ein gemeinsames Feld mit einer Schwelle wäre ein stiller Fehler. `None` heißt **„keine Aussage"**, nie „kein Gewitter". |
+| hail_potential_mf             | float \| None | Hagel-**Rohwert** Météo-France AROME (#1507 S5c), nur Frankreich/Korsika (`fr_direct`, dieselbe Zuständigkeitstabelle `thunder_routing.py` wie oben). Coverage `HAIL__GROUND_OR_WATER_SURFACE` (Konstante `providers.meteofrance.HAIL_COVERAGE`, Periodensuffix `_PT1H` in `HAIL_COVERAGE_SUFFIX`) — live gegen `GetCapabilities`/`DescribeCoverage` verifiziert (`tests/tdd/test_hail_coverage_name_live.py`): `<ows:Title>Total hail precipitation</ows:Title>`, uom `kg kg-1` (Massenanteil, **keine** Dichte wie die Blitzdichte oben). Bewusst **nicht** `GRAUPEL__GROUND_OR_WATER_SURFACE` — anderer Titel (`Total graupel precipitation`), andere Niederschlagsform. Abruf über `fetch_hail_signals_multi()`, dünner Wrapper um dieselbe parametrisierte Sammelabruf-Funktion wie `lightning_density_per_km2_3h` — teilt sich **dasselbe** Zeitbudget (`FETCH_DEADLINE_SECONDS`), kein zweites unabhängiges Budget. Fail-soft: `None` bei Fehler/Zeitüberschreitung/außerhalb Modellgebiet, **niemals** `0`. **Bewusst eigenes Feld** — NICHT zusammengelegt mit `hail_potential_grau_gsp` (DWD, andere Quelle/Größe/Skala) und **keine** Kombination mit `hail_flag` (#1475 S5a, WMO-Code-basiert): `MeteoFranceDirectProvider` setzt strukturell keinen `wmo_code`, eine Cross-Provider-Feldfusion existiert architektonisch nicht (Known Limitation, s. Spec). Reiner Rohwert, kein Renderer-Anschluss in dieser Scheibe. `None` heißt **„keine Aussage"**. Details: `docs/specs/modules/feat_1507_s5c_hagel_mf_fr.md`. |
 | thunder_probability_pct  | integer \| None | Gewitter-**Wahrscheinlichkeit** 0–100 % — die zweite, von der Stärke unabhängige Achse (PO-Vorgabe 2026-08-03: *Der bisherige Wert beschreibt die Stärke*). `None` heißt **keine Aussage**, nie 0 %. **Seit Issue #1983 (2026-09-19, ADR-0073) im Trip-Briefing-Pfad befüllt:** Anteil der gültigen Open-Meteo-Ensemble-Member (ICON-EPS + GEFS inkl. Kontrollläufe, ohne ECMWF) mit Gewittercode (95/96/99) je Stunde, `None` bei < 20 gültigen Werten. Der Wert speist ausschließlich die interne Fusion (`app.thunder_scale`, ADR-0073) — ≥ 60 % hebt die fusionierte Stufe auf `HIGH` (Signal `modelllauf`), < 10 % dämpft sie um eine Stufe (außer bei Radar-Bestätigung), 10–59 % neutral. **Weiterhin kein eigener Renderer-Anschluss als Prozentzahl** — das Feld erscheint in keiner Ausgabe als Zahl, nur indirekt über die davon beeinflusste Stufe `thunder_level`. Der `fetch_forecast(enrich_ensemble=True)`-interne Pfad (`trip_forecast.py`, `services/forecast.py`) bekommt nur die Typanpassung auf `EnsembleHourStats`, keine `modelllauf`-Semantik (Known Limitation, Spec `docs/specs/modules/feat_1983_gewitter_modelllauf_mehrheit.md`). Ursprüngliche Messung (2026-08-02, GR20, ohne die ≥20-Member-Regel): 19 von 40 = 47 %. |
 
 #### Gewitter-Zusatzfelder DWD (optional, Issue #1457 S2b + S2c)
@@ -1417,7 +1418,19 @@ Fetches normalized weather forecast for a given coordinate.
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"invalid_coords"}` | lat/lon out of range or missing |
+| 401 | `{"error":"unauthorized","detail":"authentication required"}` | Kein Nutzerkontext (Issue #2391 — geprüft VOR Parametervalidierung, damit die Kontingent-Reservierung nie auf ein leeres/fremdes Konto bucht) |
+| 429 | `{"error":"budget_exceeded","detail":"daily forecast budget exhausted for this user"}`, Header `Retry-After` (Sekunden, 1..86400 geklemmt) | Tageskontingent des Nutzers erschöpft (Issue #2391, ADR-0076) |
 | 503 | `{"error":"provider_unavailable"}` | Weather provider API unreachable |
+
+**Note (Issue #2391, ADR-0076):** Vor dem eigentlichen Abruf reserviert der Go-Handler das
+Tageskontingent beim Python-Core über den neuen internen Endpunkt `POST
+/api/_internal/forecast-budget/reserve?user_id=...&priority=polling` (`api/routers/internal.py`,
+Section 23-Muster — kein Go-Proxy, `X-GZ-Core-Auth`-geschützt). Antwort `{"allowed": bool,
+"retry_after_s"?: int}` — `retry_after_s` ist nur bei `allowed: false` gesetzt. Ein Erfolg bucht
+2 Einheiten (ein Forecast-Abruf kostet Vorhersage- **und** UV-Abruf) gegen dieselbe
+`ForecastBudgetGate`-Zählung wie der reguläre Python-Pfad. Ist der Core nicht erreichbar oder
+antwortet fehlerhaft, gilt **fail-open** (Abruf läuft durch, WARNING-Log) — unverändertes
+Verhalten wie vor #2391.
 
 ---
 
@@ -1496,7 +1509,10 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 - `user_id` query parameter determines which user's data (trip, email config) is used
 - Trip must exist in `data/users/{user_id}/briefings/` directory (seit ADR-0023 / #1250 S7a; `trips/` ist toter Bestand, Issue #1708)
 - Email sent to `settings.mail_to` for that user (set via `/api/auth/profile`)
-- Default `user_id="default"` provided for backwards compatibility (e.g. test-mode without auth)
+- `user_id` is a mandatory query parameter (HTTP 422 if missing/empty, see table above, Issue #2151
+  Scheibe A) — there is no implicit default anymore. The account named `default` remains a valid,
+  explicitly-passable value (`?user_id=default`), it is simply never assumed silently
+  (2026-09-19, Issue #2151 Scheibe C).
 
 **Bug #716 Fix (2026-06-10):**
 - Prior: silent failure (HTTP 200 even when no email sent) when stages missing for target date
@@ -4270,6 +4286,22 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-21: Issue #2391 (Scheibe S3 von #2150, Epic #2138) — `GET /api/forecast` (Go) bucht
+  vor dem Abruf das Tageskontingent beim Python-Core, statt es zu umgehen: neuer interner
+  Endpunkt `POST /api/_internal/forecast-budget/reserve` (`api/routers/internal.py`) prüft und
+  bucht in einem Aufruf gegen `ForecastBudgetGate`; neue Fehlerantworten `401` (fehlender
+  Nutzerkontext, geprüft vor der Parametervalidierung) und `429` mit `Retry-After`-Header bei
+  erschöpftem Kontingent. Fail-open bei unerreichbarem Core (unverändertes Verhalten). Details
+  Section 13, ADR-0076, `docs/specs/modules/forecast_go_pfad_kontingent.md`.
+- 2026-09-20: Issue #1507 Scheibe S5c (Block C von #2257, Epic #1419) — neues optionales Feld
+  `hail_potential_mf` auf `ForecastDataPoint`: Hagel-**Rohwert** von Météo-France AROME für
+  Frankreich/Korsika (`fr_direct`), Coverage `HAIL__GROUND_OR_WATER_SURFACE`, live gegen
+  `GetCapabilities`/`DescribeCoverage` verifiziert (uom `kg kg-1`). Teilt sich denselben
+  Sammelabruf-Mechanismus und dasselbe Zeitbudget wie die bestehende Blitzdichte
+  (`lightning_density_per_km2_3h`, #1457 S2a); fail-soft, `None` nie `0`. **Bewusst
+  unverbunden** von `hail_flag` (#1475 S5a) und `hail_potential_grau_gsp` (DWD) — keine
+  Kombination, keine Schwellen-/Flag-Ableitung, kein Renderer-Anschluss (Known Limitation).
+  Details: `docs/specs/modules/feat_1507_s5c_hagel_mf_fr.md`.
 - 2026-09-19: Issue #2151 Scheibe A — `user_id` wird in den Routen `POST /api/scheduler/trips/{trip_id}/send` und `POST /api/scheduler/compare-presets/{preset_id}/send` zur Pflicht (kein Default mehr); fehlender Parameter → HTTP 422. Details: `docs/specs/modules/fix_2151_default_fallbacks_scheibe_a.md`.
 - 2026-09-15: Issue #2136/ADR-0068 — **kein neues Feld**, Korrektur einer Aussage in Section 19:
   die Spaltenköpfe des 3-Tages-Ausblicks (Trip UND Ortsvergleich, HTML + Klartext) kommen jetzt

@@ -229,32 +229,28 @@ describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
 		);
 	});
 
-	test('im Hub liegt die Steuerung im Wetter-Metriken-Panel — MIT ihrem Bubble-Wrapper', () => {
-		// Das ist die eigentliche Umzugs-Falle (Spec § Implementation Details 3):
-		// wandert `.hub-layout-hourly-wrap` nicht mit, speichert die Steuerung
-		// stumm nicht mehr — im selben Tab sieht alles korrekt aus.
+	test('im Hub liegt die Steuerung im Wetter-Metriken-Panel — WeatherMetricsTab speichert seit #2276 S4 selbst', () => {
+		// Issue #2276 S4: der Bubble-Wrapper `.hub-layout-hourly-wrap` ist
+		// entfallen — WeatherMetricsTab erzeugt seine kombinierte Wetter-
+		// Metriken/Layout-Speicherung selbst (analog AlarmeTab/CorridorEditor,
+		// reaktiver $effect statt Wrapper-Bubble). Der Speicherweg (jetzt
+		// `erstelleWetterMetrikenVergleichSpeicherung` → `baueWetterMetrikenNutzlast`
+		// → `buildComparePresetSavePayload`, Round-Trip-Spread) haengt nicht
+		// mehr an diesem Markup-Wrapper, sondern ist Kern-getestet in
+		// wetter_metriken_*.test.ts.
 		const panel = findTabPanelFragment(ast(HUB), 'wetter-metriken');
 		assert.notEqual(panel, null, "Panel `activeTab === 'wetter-metriken'` nicht gefunden");
 
-		const wrappers = findElementsWithClass(panel, 'hub-layout-hourly-wrap');
 		assert.equal(
-			wrappers.length,
-			1,
-			'Im Wetter-Metriken-Panel muss genau EIN `.hub-layout-hourly-wrap` liegen — ' +
-				'der Speicherweg des Stundenverlaufs (flushPendingLayoutSave → ' +
-				'buildComparePresetSavePayload, Round-Trip-Spread) haengt daran'
+			findElementsWithClass(panel, 'hub-layout-hourly-wrap').length,
+			0,
+			'Der alte Bubble-Wrapper `.hub-layout-hourly-wrap` haette mit S4 verschwinden muessen'
 		);
-
-		const handlers = (wrappers[0].attributes ?? [])
-			.filter((a: any) => a.type === 'Attribute')
-			.map((a: any) => a.name);
-		for (const evt of ['onchange', 'onfocusout', 'onclick']) {
-			assert.ok(
-				handlers.includes(evt),
-				`Der Wrapper braucht ${evt} in der Bubble-Phase (SF-1-Erkenntnis): ` +
-					`vorhanden ${JSON.stringify(handlers)}`
-			);
-		}
+		assert.equal(
+			findElementsWithClass(panel, 'hub-wetter-metriken-wrap').length,
+			0,
+			'Der alte Bubble-Wrapper `.hub-wetter-metriken-wrap` haette mit S4 verschwinden muessen'
+		);
 
 		// Und die Steuerung muss innerhalb dieses Panels tatsächlich gemountet
 		// werden — über den geteilten WeatherMetricsTab.

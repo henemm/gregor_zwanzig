@@ -111,6 +111,9 @@ func deriveFlatFields(trip *model.Trip) {
 }
 
 func (s *Store) LoadTrips() ([]model.Trip, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	// briefingsDir() traegt sowohl route- als auch vergleich-Eintraege (S5-
 	// Migration) -- nur kind=="route" (bzw. leer bei unmigriertem Altbestand)
@@ -172,6 +175,9 @@ func (s *Store) LoadTrips() ([]model.Trip, error) {
 }
 
 func (s *Store) LoadTrip(id string) (*model.Trip, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
 	if !ValidEntityID(id) {
 		return nil, ErrInvalidEntityID
@@ -220,6 +226,9 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 // pointer parameter makes the normalization visible to every caller that
 // holds the same trip afterwards.
 func (s *Store) SaveTrip(trip *model.Trip) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join. Ohne sie
 	// ueberschreibt eine Kennung wie "../../bob/user" die user.json eines
 	// fremden Kontos (briefingsDir liegt zwei Ebenen unter data/users/).
@@ -269,6 +278,9 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 }
 
 func (s *Store) DeleteTrip(id string) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
 	if !ValidEntityID(id) {
 		return ErrInvalidEntityID

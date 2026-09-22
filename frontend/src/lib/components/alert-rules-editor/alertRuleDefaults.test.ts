@@ -1,22 +1,24 @@
 // Unit-Tests fuer Issue #223 — newDefaultRule() Helper.
 //
 // Spec: docs/specs/modules/issue_223_alert_rules_editor.md (Section 2)
+// Spec: docs/specs/modules/fix_1895_alarm_modus_rueckbau.md (#1895 Schritt 1)
+// Spec: docs/specs/modules/fix_1895_s2_alarmkarte_rueckbau.md (#1895 Schritt 2, AC-3/AC-7)
 //
 // Ausfuehrung:
-//   cd frontend && node --experimental-strip-types --test \
-//     src/lib/components/alert-rules-editor/alertRuleDefaults.test.ts
+//   cd frontend && npm test -- src/lib/components/alert-rules-editor/alertRuleDefaults.test.ts
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { newDefaultRule, expandRules } from './alertRuleDefaults.ts';
+import { newDefaultRule, expandRules, DELTA_ONLY_METRICS } from './alertRuleDefaults.ts';
 import type { AlertMetric, AlertRule } from '$lib/types';
 
-test('newDefaultRule: liefert AlertRule mit Wizard-Default-Werten (AC-3)', () => {
+test('newDefaultRule: liefert AlertRule mit den Vorgabe-Werten (#1895 Variante A)', () => {
 	const rule = newDefaultRule();
-	assert.equal(rule.kind, 'absolute');
+	assert.equal(rule.kind, 'delta');
 	assert.equal(rule.metric, 'wind_gust');
-	assert.equal(rule.threshold, 50);
+	assert.equal(rule.threshold, 20);
+	assert.equal(rule.delta_window, '6h');
 	assert.equal(rule.unit, 'km/h');
 	assert.equal(rule.severity, 'warning');
 	assert.equal(rule.enabled, true);
@@ -39,232 +41,147 @@ test('newDefaultRule: erzeugt keine geteilten Referenzen (frische Objekte)', () 
 	const a = newDefaultRule();
 	const b = newDefaultRule();
 	a.threshold = 999;
-	assert.equal(b.threshold, 50, 'Mutation an a darf b nicht beeinflussen');
+	assert.equal(b.threshold, 20, 'Mutation an a darf b nicht beeinflussen');
 });
 
 // =============================================================================
-// Issue #179 — Modus-Toggle: expandRules() Logik
+// #1895 Schritt 2 — expandRules(rule) reicht threshold und delta_window durch
 // =============================================================================
-// Spec: docs/specs/modules/issue_179_alert_konfigurator_modus_toggle.md
+// Spec: docs/specs/modules/fix_1895_s2_alarmkarte_rueckbau.md (E-2, AC-3)
 //
-// expandRules(rule, mode) ist die Pure-Function-Extraktion der saveEdit()-Logik
-// aus AlertRuleRow.svelte. Sie nimmt eine Rule + den gewaehlten UI-Modus
-// ('absolute' | 'delta' | 'both') und liefert das Array, das an
-// AlertRulesEditor.updateRules(index, ...) weitergereicht wird.
+// Schritt 1 liess expandRules() noch zwei Zusatzargumente nehmen, weil der Editor
+// Δ-Schwelle und Zeitfenster als Eingabefelder anbot und sie explizit uebergab.
+// Schritt 2 nimmt beide Eingaben aus der Karte. Damit wird aus dem bis dahin
+// toten Signatur-Vorgabewert `deltaWindow = '6h'` der EINZIGE Pfad — und der
+// erste Speichervorgang wuerde jede Bestandsregel mit z.B. '12h' still auf '6h'
+// umschreiben (Klasse BUG-DATALOSS-GR221). Darum reicht die Funktion ab jetzt
+// `rule.threshold` und `rule.delta_window` durch; '6h' gilt nur noch als
+// Rueckfall fuer eine Regel OHNE Zeitfenster.
 //
-//   mode='absolute'                  -> [rule mit kind='absolute']
-//   mode='delta'                     -> [rule mit kind='delta']
-//   mode='both' (Standard-Metrik)    -> [absolute, delta] (zwei Rules, gleiche
-//                                       metric/threshold/severity, verschiedene IDs)
-//   mode='both' (Delta-only Metrik)  -> [rule mit kind='delta'] (Guard greift)
+// Die Breitenabdeckung (jede Metrik, jedes Zeitfenster, channels, enabled, id)
+// liegt in `__tests__/alertRegelNurAenderung.test.ts`. Hier stehen die
+// Zusicherungen, die dort NICHT gemessen werden: Reinheit, Kollaps der Zweige
+// und der Fortbestand von DELTA_ONLY_METRICS.
 
-const DELTA_ONLY_METRICS: AlertMetric[] = [
-	'temperature_change',
-	'wind_change',
-	'precipitation_change'
-];
+const basis = (over: Partial<AlertRule> = {}): AlertRule =>
+	({
+		id: 'regel-basis',
+		kind: 'absolute',
+		metric: 'wind_gust',
+		threshold: 50,
+		unit: 'km/h',
+		severity: 'warning',
+		enabled: true,
+		...over
+	}) as AlertRule;
 
-test('expandRules > mode=absolute → eine Rule, kind=absolute (AC-4)', () => {
-	const base = newDefaultRule(); // metric='wind_gust' (nicht delta-only)
-	const result = expandRules(base, 'absolute');
+// ex „mode=absolute → eine Rule, kind=absolute (AC-4)" — der Absolut-Zweig ist weg:
+// eine Alt-Regel mit kind='absolute' kommt als Aenderungsregel zurueck.
+test('expandRules > eine Alt-Regel mit kind=absolute wird zur Aenderungsregel', () => {
+	const result = expandRules(basis());
 	assert.ok(Array.isArray(result), 'Rueckgabe muss Array sein');
-	assert.equal(result.length, 1, 'Genau eine Rule erwartet');
-	assert.equal(result[0].kind, 'absolute');
-	assert.equal(result[0].metric, base.metric);
-	assert.equal(result[0].threshold, base.threshold);
-	assert.equal(result[0].severity, base.severity);
-	// F002: pair_id + delta_window duerfen bei mode=absolute nicht gesetzt sein.
-	assert.equal(result[0].pair_id, undefined, 'Absolute-Rule darf kein pair_id haben');
-	assert.equal(result[0].delta_window, undefined, 'Absolute-Rule darf kein delta_window haben');
+	assert.equal(result.length, 1, 'genau eine Regel');
+	assert.equal(result[0].kind, 'delta', 'es gibt keinen Absolut-Zweig mehr');
+	assert.equal(
+		result[0].delta_window,
+		'6h',
+		'eine Eingangsregel ohne delta_window bekommt eines — eine Δ-Regel ohne Zeitfenster waere unvollstaendig'
+	);
 });
 
-test('expandRules > mode=delta → eine Rule, kind=delta (AC-4)', () => {
-	const base = newDefaultRule();
-	const result = expandRules(base, 'delta');
-	assert.ok(Array.isArray(result));
+// UMGEDREHT gegenueber Schritt 1 („der uebergebene Δ-Wert gewinnt gegen
+// rule.threshold"): es gibt keinen uebergebenen Wert mehr. Die Schwelle der
+// Eingangsregel wird unveraendert durchgereicht — das ist E-3 als Test.
+// Ein Ueberschreiben auf 20 waere aktive Datenaenderung ohne Nutzerhandlung.
+test('expandRules > rule.threshold wird unveraendert durchgereicht (E-3)', () => {
+	const result = expandRules(basis({ threshold: 50 }));
 	assert.equal(result.length, 1);
-	assert.equal(result[0].kind, 'delta');
-	assert.equal(result[0].metric, base.metric);
-	assert.equal(result[0].threshold, base.threshold);
-	// F002: pair_id darf bei mode=delta (aus single-mode) nicht gesetzt sein.
-	// delta_window kommt aus Default-Param ('6h'), wenn nicht uebergeben.
-	assert.equal(result[0].pair_id, undefined, 'Delta-Rule aus mode=delta darf kein pair_id haben');
-	assert.equal(result[0].delta_window, '6h', 'Delta-Rule muss delta_window aus Default-Param haben');
+	assert.equal(
+		result[0].threshold,
+		50,
+		'die Schwelle der Eingangsregel darf nicht auf den Vorgabewert 20 zurueckgesetzt werden'
+	);
 });
 
-test('expandRules > mode=both → zwei Rules (AC-5)', () => {
-	const base = newDefaultRule(); // wind_gust ist NICHT delta-only
-	const result = expandRules(base, 'both');
-	assert.ok(Array.isArray(result));
-	assert.equal(result.length, 2, 'Modus "Beides" muss zwei Rules erzeugen');
+// UMGEDREHT gegenueber Schritt 1 („das uebergebene Zeitfenster wird
+// durchgereicht"): durchgereicht wird jetzt das Fenster DER REGEL.
+test('expandRules > das Zeitfenster der Regel wird durchgereicht, nicht auf 6h festgenagelt', () => {
+	const result = expandRules(basis({ kind: 'delta', delta_window: '3h' }));
+	assert.equal(result.length, 1);
+	assert.equal(result[0].delta_window, '3h', 'nicht auf die Konstante 6h festgenagelt');
 });
 
-test('expandRules > mode=both → erste Rule absolute, zweite delta (AC-5)', () => {
-	const base: AlertRule = { ...newDefaultRule(), metric: 'wind_gust' };
-	const result = expandRules(base, 'both');
-	assert.equal(result.length, 2);
+// GESTRICHEN, nicht vergessen: der Fall „expandRules F005 > ein vorhandenes
+// delta_window der Regel ueberstimmt den Parameter nicht" (Schritt 1,
+// alertRuleDefaults.test.ts:104-115) ist GEGENSTANDSLOS — es gibt keinen
+// Parameter mehr, den das Feld ueberstimmen koennte. Seine Zusicherung ist in
+// ihr Gegenteil verkehrt und steht als „das Zeitfenster der Regel wird
+// durchgereicht" direkt darueber. Bewusst gestrichen (Spec-Tabelle
+// „Bestandstests, die sich umdrehen"), nicht stillschweigend geloescht.
 
-	// AC-5: erste hat kind='absolute' (original-ID), zweite hat kind='delta' (neue UUID)
-	assert.equal(result[0].kind, 'absolute');
-	assert.equal(result[1].kind, 'delta');
-
-	// Original-ID bleibt an der absoluten Rule
-	assert.equal(result[0].id, base.id, 'Erste Rule behaelt original-ID');
-
-	// Zweite Rule hat neue, eindeutige ID
-	assert.notEqual(result[1].id, base.id, 'Zweite Rule muss neue ID haben');
-	assert.notEqual(result[0].id, result[1].id, 'IDs muessen verschieden sein');
-	assert.equal(typeof result[1].id, 'string');
-	assert.ok(result[1].id.length > 0);
-
-	// metric, threshold, severity sind identisch zwischen beiden Rules
-	assert.equal(result[0].metric, result[1].metric);
-	assert.equal(result[0].threshold, result[1].threshold);
-	assert.equal(result[0].severity, result[1].severity);
+// UMGEDREHT gegenueber Schritt 1 („ohne Zusatzargumente gelten rule.threshold
+// und die Konstante 6h"): der Signatur-Vorgabewert '6h' ist fort. Wortwoertliches
+// Beispiel aus AC-3 der Spec.
+test('expandRules > Bestandsregel mit 17/12h behaelt 17 und 12h (AC-3, Spec-Beispiel)', () => {
+	const result = expandRules(basis({ kind: 'delta', threshold: 17, delta_window: '12h' }));
+	assert.equal(result.length, 1);
+	assert.equal(result[0].threshold, 17, 'die Schwelle 17 der Bestandsregel wird durchgereicht');
+	assert.equal(
+		result[0].delta_window,
+		'12h',
+		'das Zeitfenster 12h der Bestandsregel wird durchgereicht — NICHT auf die Konstante 6h zurueckgesetzt'
+	);
 });
 
-test('expandRules > mode=both, delta-only-Metrik → nur eine delta-Rule (AC-6)', () => {
-	for (const metric of DELTA_ONLY_METRICS) {
-		const base: AlertRule = { ...newDefaultRule(), metric };
-		const result = expandRules(base, 'both');
-		assert.equal(
-			result.length,
-			1,
-			`Delta-only-Metrik "${metric}" darf bei mode=both nur EINE Rule liefern`
+// ex „mode=both → zwei Rules (AC-5)" / „AC-10 pair-indicator": der Paar-Zweig ist
+// fort — es gibt keine Eingabe mehr, die zwei Regeln oder ein pair_id erzeugt.
+test('expandRules > kein Eingang erzeugt mehr zwei Regeln oder ein pair_id', () => {
+	const eingaben: AlertRule[] = [
+		basis(),
+		basis({ kind: 'delta' }),
+		basis({ pair_id: 'paar-1' }),
+		basis({ metric: 'temperature_change' }),
+		basis({ metric: 'thunder_level', threshold: 1 }),
+		basis({ metric: 'temperature_change', pair_id: 'paar-2' })
+	];
+	// Anti-Vakuum: eine leergelaufene Liste wuerde die Schleife ueberspringen.
+	assert.ok(eingaben.length >= 6, 'Eingabeliste unerwartet kurz — Schleife misst nichts');
+
+	for (const eingabe of eingaben) {
+		const result = expandRules(eingabe);
+		assert.equal(result.length, 1, `"${eingabe.metric}": genau eine Regel, nie ein Paar`);
+		assert.equal(result[0].kind, 'delta', `"${eingabe.metric}": nur noch Aenderungsregeln`);
+		assert.strictEqual(
+			result[0].pair_id,
+			undefined,
+			`"${eingabe.metric}": pair_id darf den Rueckbau nicht ueberleben`
 		);
-		assert.equal(
-			result[0].kind,
-			'delta',
-			`Einzige Rule muss kind='delta' haben (Metrik=${metric})`
-		);
-		assert.equal(result[0].metric, metric);
+		assert.equal(result[0].id, eingabe.id, `"${eingabe.metric}": die id der Eingangsregel ueberlebt`);
 	}
 });
 
-test('expandRules > bestehende Rule mit kind=delta → [rule] unveraendert bei mode=delta (AC-8)', () => {
-	// Legacy-Rule (z.B. aus report_config.change_threshold_*-Migration) hat bereits kind='delta'.
-	// expandRules mit mode='delta' muss das Array mit genau einer delta-Rule liefern.
-	const legacyDeltaRule: AlertRule = {
-		id: 'legacy-uuid-123',
-		kind: 'delta',
-		metric: 'wind_gust',
-		threshold: 20,
-		unit: 'km/h',
-		severity: 'warning',
-		enabled: true
-	};
-
-	const result = expandRules(legacyDeltaRule, 'delta');
-	assert.equal(result.length, 1);
-	assert.equal(result[0].kind, 'delta');
-	assert.equal(result[0].id, legacyDeltaRule.id, 'ID bleibt erhalten');
-	assert.equal(result[0].metric, legacyDeltaRule.metric);
-	assert.equal(result[0].threshold, legacyDeltaRule.threshold);
-	assert.equal(result[0].severity, legacyDeltaRule.severity);
+// ex „mode=both, delta-only-Metrik → Guard greift (AC-6/AC-8)": der Guard ist
+// gegenstandslos, aber die Konstante bleibt exportiert — `alerts-tab/`
+// (alertMetricTable.ts, AlertMetricRow.svelte) liest sie weiter.
+test('expandRules > DELTA_ONLY_METRICS bleibt exportiert und unveraendert bestueckt', () => {
+	const erwartet: AlertMetric[] = [
+		'temperature_change',
+		'wind_change',
+		'precipitation_change',
+		'thunder_level'
+	];
+	assert.equal(DELTA_ONLY_METRICS.size, erwartet.length, 'Umfang der Konstante unveraendert');
+	for (const m of erwartet) {
+		assert.ok(DELTA_ONLY_METRICS.has(m), `"${m}" muss in DELTA_ONLY_METRICS bleiben`);
+	}
+	assert.equal(DELTA_ONLY_METRICS.has('wind_gust'), false, 'Boeen sind keine Delta-only-Metrik');
 });
 
-// =============================================================================
-// Issue #297 — ZWEI Threshold-Felder bei mode='both'
-// =============================================================================
-// Diese Tests sind TDD RED — sie schlagen fehl bis expandRules() die neue
-// Signatur (base, mode, absThreshold, deltaThreshold, deltaWindow) erhält.
-
-test('expandRules #297 > mode=both → zwei Rules mit gleicher pair_id (AC-5)', () => {
-	const base = newDefaultRule(); // wind_gust — nicht delta-only
-	// Neue Signatur: expandRules(base, mode, absThreshold, deltaThreshold, deltaWindow)
-	const result = expandRules(base, 'both', 80, 30, '3h');
-	assert.equal(result.length, 2, 'mode=both muss 2 Rules erzeugen');
-	// Beide Rules müssen dasselbe pair_id tragen
-	assert.ok(result[0].pair_id, 'Erste Rule muss pair_id haben');
-	assert.ok(result[1].pair_id, 'Zweite Rule muss pair_id haben');
-	assert.equal(result[0].pair_id, result[1].pair_id, 'Beide pair_ids müssen identisch sein');
-});
-
-test('expandRules #297 > mode=both → korrekte absThreshold / deltaThreshold (AC-6)', () => {
-	const base = newDefaultRule();
-	const result = expandRules(base, 'both', 80, 30, '6h');
-	assert.equal(result.length, 2);
-	assert.equal(result[0].kind, 'absolute');
-	assert.equal(result[0].threshold, 80, 'Erste Rule muss absThreshold=80 haben');
-	assert.equal(result[1].kind, 'delta');
-	assert.equal(result[1].threshold, 30, 'Zweite Rule muss deltaThreshold=30 haben');
-});
-
-test('expandRules #297 > mode=both → delta-Rule trägt delta_window (AC-7)', () => {
-	const base = newDefaultRule();
-	const result = expandRules(base, 'both', 80, 30, '3h');
-	const deltaRule = result.find((r) => r.kind === 'delta');
-	assert.ok(deltaRule, 'Delta-Rule muss existieren');
-	assert.equal(deltaRule!.delta_window, '3h', 'delta_window muss aus Parameter kommen');
-	const absRule = result.find((r) => r.kind === 'absolute');
-	assert.ok(absRule, 'Absolute-Rule muss existieren');
-	assert.equal(absRule!.delta_window, undefined, 'Absolute-Rule darf kein delta_window haben');
-});
-
-test('expandRules #297 > mode=both + delta-only Metrik → nur delta, kein pair_id (AC-8)', () => {
-	const base: AlertRule = { ...newDefaultRule(), metric: 'temperature_change' };
-	const result = expandRules(base, 'both', 80, 5, '6h');
-	assert.equal(result.length, 1, 'delta-only Metrik muss nur 1 Rule erzeugen');
-	assert.equal(result[0].kind, 'delta');
-	// Bei delta-only kein pair_id (nur ein Objekt im Paar)
-	assert.ok(!result[0].pair_id, 'delta-only Rule bei mode=both darf kein pair_id haben');
-});
-
-test('expandRules #297 F004 > mode=both + delta-only + base hat pair_id → pair_id entfernt', () => {
-	// F004-Regression: Wenn die Base-Rule bereits eine pair_id traegt (z.B. aus
-	// einem frueheren both-Modus mit anderer Metrik) UND die Metrik delta-only ist,
-	// muss der DELTA_ONLY-Guard pair_id aktiv entfernen — nicht via Spread durchreichen.
-	const base: AlertRule = {
-		...newDefaultRule(),
-		metric: 'temperature_change',
-		pair_id: 'legacy-pair-id-from-previous-state'
-	};
-	const result = expandRules(base, 'both', 80, 5, '6h');
-	assert.equal(result.length, 1, 'delta-only Metrik muss nur 1 Rule erzeugen');
-	assert.equal(result[0].kind, 'delta');
-	assert.strictEqual(result[0].pair_id, undefined, 'F004: pair_id muss entfernt sein');
-});
-
-test('expandRules #297 > mode=both + thunder_level → nur delta-Rule, kein pair_id (diskrete Ordinal-Metrik)', () => {
-	// thunder_level ist eine diskrete Ordinal-Metrik (MITTEL/HOCH) — ein
-	// Δ-Alarm ergibt semantisch keinen Sinn. Deshalb wurde thunder_level zu
-	// DELTA_ONLY_METRICS hinzugefuegt (Issue #297). Bei mode='both' muss der
-	// DELTA_ONLY-Guard greifen: genau 1 delta-Rule, ohne pair_id.
-	const base: AlertRule = { ...newDefaultRule(), metric: 'thunder_level', threshold: 1 };
-	const result = expandRules(base, 'both', 80, 20, '6h');
-	assert.equal(result.length, 1, 'thunder_level bei mode=both muss nur 1 Rule erzeugen');
-	assert.equal(result[0].kind, 'delta', 'Einzige Rule muss kind=delta haben');
-	assert.strictEqual(result[0].pair_id, undefined, 'thunder_level Rule darf kein pair_id haben');
-});
-
-test('expandRules #297 F005 > mode=both + base mit kind=delta + delta_window → Absolute-Rule darf kein delta_window erben (AC-7)', () => {
-	// F005-Regression: Wenn die Base-Rule bereits kind='delta' + delta_window
-	// traegt (z.B. aus einer frueheren Delta-Speicherung) und der User auf
-	// mode='both' wechselt, darf die neu erzeugte Absolute-Rule das alte
-	// delta_window NICHT via Spread uebernehmen. AC-7: Absolute-Rule hat
-	// niemals delta_window.
-	const base: AlertRule = {
-		...newDefaultRule(),
-		kind: 'delta',
-		metric: 'wind_gust', // Standard-Metrik (nicht delta-only) → both-Pfad
-		delta_window: '12h'
-	};
-	const result = expandRules(base, 'both', 80, 30, '3h');
-	assert.equal(result.length, 2, 'mode=both muss 2 Rules erzeugen');
-
-	const absRule = result.find((r) => r.kind === 'absolute');
-	assert.ok(absRule, 'Absolute-Rule muss existieren');
-	assert.strictEqual(
-		absRule!.delta_window,
-		undefined,
-		'F005: Absolute-Rule darf kein delta_window aus base erben (AC-7)'
-	);
-
-	const deltaRule = result.find((r) => r.kind === 'delta');
-	assert.ok(deltaRule, 'Delta-Rule muss existieren');
-	assert.equal(
-		deltaRule!.delta_window,
-		'3h',
-		'F005: Delta-Rule muss den neuen deltaWindow-Parameter haben, nicht den alten Wert aus base'
-	);
+// Reinheit: die Eingangsregel bleibt unberuehrt. `AlertRulesEditor` reicht dieselbe
+// Regel aus `bind:rules` herein — eine Mutation waere ein stiller Datenschaden.
+test('expandRules > mutiert die Eingangsregel nicht', () => {
+	const eingabe = basis({ pair_id: 'paar-1', channels: ['email'], delta_window: '3h' });
+	const vorher = JSON.stringify(eingabe);
+	expandRules(eingabe);
+	assert.equal(JSON.stringify(eingabe), vorher, 'die Eingangsregel darf nicht veraendert werden');
 });

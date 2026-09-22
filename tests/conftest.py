@@ -343,6 +343,105 @@ def _snapshot_repo_data_users() -> dict[str, int]:
     return {"file_count": file_count, "max_mtime_ns": max_mtime_ns, "total_size": total_size}
 
 
+_BUDGET_SPUR_MUSTER = "*/diagnostics/forecast_budget.json*"
+
+
+@pytest.fixture(autouse=True)
+def _raeume_budget_spur_bei_real_data_root(request):
+    """Issue #2387: `ForecastBudgetGate` legt seit dem Kontingent je Nutzer
+    einen Tageszaehler unter
+    ``data/users/<user_id>/diagnostics/forecast_budget.json`` an -- also
+    INNERHALB des von ``_guard_repo_data_users_session`` bewachten Baums
+    (der globale Topf liegt weiterhin unter ``data/diagnostics/``, also
+    ausserhalb). Ein ``real_data_root``-Test, der einen echten Wetterabruf
+    ausloest (gemessen: ``test_issue_363_signal_telegram_preview.py``,
+    51 Abrufe), hinterlaesst damit eine Spur, die der Waechter zu Recht
+    meldet -- und die vor #2387 nicht entstehen konnte.
+
+    Der Waechter nennt genau diesen Fall selbst als erwartete Ursache
+    ("ein real_data_root-Test hat seine Spur nicht vollstaendig
+    entfernt"). Die Spur wird deshalb hier zentral entfernt, statt den
+    Waechter aufzuweichen: er misst jede Trip-, Briefing-, GPX- und
+    Settings-Datei unveraendert scharf, und auch den Zaehler selbst, wenn
+    ihn ein Test NICHT selbst angelegt hat.
+
+    Zentral statt je Testdatei, weil es keine Eigenheit von #363 ist: JEDER
+    kuenftige ``real_data_root``-Test mit Wetterabruf traefe dasselbe.
+
+    Zwei Faelle, beide eng gefuehrt (Adversary Fix-Loop 1, F005):
+
+    * Der Pfad entstand WAEHREND des Tests -> er wird entfernt.
+    * Der Pfad bestand schon VOR dem Test (Rest einer abgebrochenen
+      ``real_data_root``-Session) -> sein Byte-Inhalt wird vorher gemerkt
+      und danach exakt wiederhergestellt -- samt ``mtime`` (der
+      Fingerprint misst neben Inhalt und Groesse auch ``max_mtime_ns``,
+      also genuegt das Zurueckschreiben des Inhalts allein nicht). Ohne
+      das schlaegt der Waechter trotz aktiver Fixture an, weil der Test
+      die Datei in-place ueberschreibt: der Pfad ist bekannt, der Inhalt
+      und der Zeitstempel nicht.
+
+    Beides gilt AUSSCHLIESSLICH fuer ``diagnostics/forecast_budget.json``
+    (und deren Sidecar-Lock). Jede Trip-, Briefing-, GPX- und
+    Settings-Datei faellt dem Waechter unveraendert auf.
+
+    Verzeichnisse zaehlen im Fingerprint nicht
+    (``_snapshot_repo_data_users`` laeuft nur ueber ``filenames``), ein
+    leer zurueckbleibendes ``diagnostics/`` wird trotzdem aufgeraeumt.
+    """
+    if not request.node.get_closest_marker("real_data_root"):
+        yield
+        return
+    vorher: dict[Path, tuple[bytes, int, int] | None] = {}
+    if _REPO_DATA_USERS.exists():
+        for pfad in _REPO_DATA_USERS.glob(_BUDGET_SPUR_MUSTER):
+            try:
+                st = pfad.stat()
+                vorher[pfad.resolve()] = (
+                    pfad.read_bytes(), st.st_atime_ns, st.st_mtime_ns,
+                )
+            except OSError:
+                vorher[pfad.resolve()] = None
+    yield
+    if not _REPO_DATA_USERS.exists():
+        return
+    for pfad in list(_REPO_DATA_USERS.glob(_BUDGET_SPUR_MUSTER)):
+        aufgeloest = pfad.resolve()
+        if aufgeloest in vorher:
+            # Adversary Fix-Loop 1 (F005): eine VORBESTEHENDE Zaehlerdatei
+            # (Rest einer abgebrochenen `real_data_root`-Session) wird vom
+            # Test in-place ueberschrieben -- ihr Pfad ist dann in `vorher`,
+            # ihr INHALT aber veraendert, und der Waechter schlaegt trotz
+            # aktiver Fixture an. Deshalb wird der Byte-Inhalt gemerkt und
+            # exakt wiederhergestellt, statt nur die Existenz zu pruefen.
+            # Ausschliesslich diese eine Datei; alles andere bleibt dem
+            # Waechter ueberlassen.
+            zustand = vorher[aufgeloest]
+            if zustand is None:
+                continue
+            inhalt, atime_ns, mtime_ns = zustand
+            try:
+                if pfad.read_bytes() != inhalt:
+                    pfad.write_bytes(inhalt)
+                # Der Fingerprint misst NEBEN Inhalt und Groesse auch
+                # `max_mtime_ns` -- ein blosses Zurueckschreiben des Inhalts
+                # laesst den Waechter weiterhin anschlagen, weil der
+                # Schreibvorgang selbst die mtime hebt.
+                os.utime(pfad, ns=(atime_ns, mtime_ns))
+            except OSError:
+                pass
+            continue
+        try:
+            pfad.unlink()
+        except OSError:
+            continue
+        elternteil = pfad.parent
+        if elternteil.name == "diagnostics" and not any(elternteil.iterdir()):
+            try:
+                elternteil.rmdir()
+            except OSError:
+                pass
+
+
 @pytest.fixture(autouse=True)
 def _isolate_data_root(request, tmp_path_factory):
     """Redirect ``app.loader._DATA_ROOT`` to an isolated temp root for every

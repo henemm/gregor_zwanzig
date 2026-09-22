@@ -376,7 +376,7 @@ class TestT6DemoMode:
 
         from services.trip_report_scheduler import TripReportSchedulerService
         from app.config import Settings
-        scheduler = TripReportSchedulerService(Settings())
+        scheduler = TripReportSchedulerService(Settings(), user_id="default")
         trip = service._load_trip("gr221-mallorca", user_id="default")
         from datetime import date
         target = date.today()

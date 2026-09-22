@@ -168,6 +168,79 @@
 # VERMESSUNGSMODUS (ci.yml) grept den Pfad jedoch pauschal und wuerde die Datei
 # dort nicht auffuehren.
 #
+# Aufnahme 2026-09-19 (#2276 S4): compare-wetter-metriken-speichert-selbst.spec.ts
+# — analog S2/S3-Praezedenz (compare-alarme-speichert-selbst.spec.ts,
+# compare-wertebereiche-speichert-selbst.spec.ts) wird NUR die eine neue,
+# eigene Spec dieser Scheibe geratscht (Scope-Disziplin, Spec § Known
+# Limitations). Die fuenf begleitenden, bereits bestehenden Compare-E2E-
+# Specs (compare-metric-order, compare-hourly-metric-order,
+# compare-layout-tab-dissolution, compare-hub-fidelity-s8c,
+# compare-editor-fidelity-s8d) bleiben bewusst aussen vor.
+#
+# Aufnahme 2026-09-20 (#2276 S5): compare-versand-speichert-selbst.spec.ts
+# — analog S2/S3/S4-Praezedenz wird NUR die eine neue, eigene Spec dieser
+# Scheibe geratscht (Scope-Disziplin, Spec § Known Limitations). Die
+# vorbestehende compare-hub-versand-inline.spec.ts bleibt bewusst AUSSEN VOR:
+# sie braucht einen eigenen storageState aus einem dateispezifischen
+# Staging-Setup (ENOENT im geteilten global.setup.ts, dieselbe Fehlerklasse
+# wie issue-579-home-fidelity, s. Befund oben). Sie laeuft stattdessen
+# manuell gegen Staging, bevor die Scheibe abgeschlossen wird.
+#
+# Aufnahme 2026-09-21 (#2276 S6c): compare-alarme-wertprops.spec.ts
+# — analog S2/S3/S4/S5/S6b-Praezedenz wird NUR die eine neue, eigene Spec
+# dieser Scheibe geratscht (Scope-Disziplin). Sie traegt AC-2 der Spec
+# rework_2276_s6c_alarme.md: die Umstellung der Alarme-Flaeche des
+# Ortsvergleichs auf Wertprops wirkt in Prop-Verdrahtung und `$effect` — Orte,
+# die der SSR-Harness (`generate: 'server'`, kein DOM) nicht sieht. Ohne
+# diesen Eintrag liefe der Browser-Nachweis nie in der CI-Ampel
+# (`e2e` ist positivgelistet).
+#   Filter A: keine Treffer fuer waitForTimeout/test.skip/test.fixme/
+#             describe.skip, kein Hauptrepo-Pfad, kein __dirname.
+#   Filter B: 🔴 NICHT GEFAHREN. Fallzahl der neuen Datei per
+#             `npx playwright test --list` gemessen (2026-09-21): 5 gelistet
+#             minus global.setup = 4 eigene Faelle, 277 + 4 = 281. Ein
+#             lokaler Zielverbund-Zyklus wurde bewusst NICHT gefahren — der
+#             lokale Stack hat vier dokumentierte Fallen (Vite-Proxy zeigt per
+#             Default auf Staging, `.env`-Secret, belegte Ports, veralteter
+#             `admin.json`, der die Kontrollmessung ueberlebt), eine dort
+#             gewonnene Zahl waere unzuverlaessiger als die CI-Ampel selbst.
+#             ERSTE BESTAETIGUNG DURCH DEN CI-HAUPTLAUF AUF DEM PR: weicht die
+#             Zahl ab, meldet `e2e` das rot, bevor etwas nach `main` geht.
+#   Filter C: der Arbeitsbaum zeigt nur die erwarteten Quelldateien — die Spec
+#             veraendert keine versionierte Datei.
+
+# Aufnahme 2026-09-21 (#2276 S6b): compare-stundenverlauf-wertprops.spec.ts
+# — analog S2/S3/S4/S5-Praezedenz wird NUR die eine neue, eigene Spec dieser
+# Scheibe geratscht (Scope-Disziplin). Sie traegt AC-2 und AC-4 der Spec
+# rework_2276_s6b_wetter_metriken.md: die Umstellung der Stundenverlauf-
+# Bedienflaeche auf Wertprops wirkt an Orten, die der SSR-Harness
+# (`generate: 'server'`, kein DOM) nicht sieht — Prop-Verdrahtung im Browser
+# und $effect-Speicherpfad. Ohne diesen Eintrag liefe der Nachweis nie in der
+# CI-Ampel (`e2e` ist positivgelistet).
+#   Filter A: keine Treffer fuer waitForTimeout/test.skip/test.fixme/
+#             describe.skip, kein Hauptrepo-Pfad, kein __dirname.
+#   Filter B: ZIELVERBUND (54 Dateien = Positivliste ohne bug-703 + Kandidat),
+#             isolierter Stack auf 8098/8006, je Zyklus frischer Stack und
+#             frische Datenwurzel — 3 Zyklen hintereinander identisch
+#               expected=277  unexpected=0  flaky=0  skipped=0
+#             Fallzahl der neuen Datei per `npx playwright test --list`:
+#             5 gelistet minus global.setup = 4 eigene Faelle; 273 + 4 = 277,
+#             durch die drei Vollzyklen unabhaengig bestaetigt.
+#   Filter C: der Arbeitsbaum zeigt nach den drei Laeufen nur die erwarteten
+#             Quelldateien — die Spec veraendert keine versionierte Datei.
+#   🔴 LOKALER MESSWEG: ohne `rm -f frontend/playwright/.auth/admin.json` vor
+#   JEDEM Zyklus ist die Messung strukturell FALSCH-ROT (gemessen 2026-09-21:
+#   42 von 55 Dateien rot, expected=72 unexpected=202). global.setup.ts prueft
+#   in `isAuthFileValid()` nur die ABLAUFZEIT des gz_session-Cookies, nicht
+#   seine Gueltigkeit gegen den laufenden Go-Server; der Stack setzt
+#   GZ_SESSION_SECRET bewusst nicht (ci-stack.sh), jeder Neustart erzeugt also
+#   ein neues Secret und macht jedes Alt-Cookie ungueltig. Es faellt STILL
+#   aus: global.setup bleibt gruen (es ueberspringt den Login), alle Tests mit
+#   storageState laufen in 401. In CI existiert die Datei nie vorher, lokal
+#   schon — eine zweidateiige Kontrollmessung ueberlebt den Fehler, weil er
+#   erst beim Stack-Neustart zwischen Kontroll- und Hauptlauf zuschlaegt.
+#   Ursache und Fix: Issue #2390.
+#
 # Aufnahme 2026-09-19 (#2370, Systemhinweise-Ausblendung unter dem
 # Konto-Sheet). Neue Datei systemhinweise-unter-konto-sheet.spec.ts (kein
 # Kandidatenpool-Vermessungslauf noetig -- eigens fuer den Bugfix als
@@ -191,6 +264,7 @@ e2e/bug-274-safe-area-insets.spec.ts
 e2e/bug-703-login-ratelimit.spec.ts
 e2e/bug-708-stage-delete-confirm.spec.ts
 e2e/compare-alarme-speichert-selbst.spec.ts
+e2e/compare-alarme-wertprops.spec.ts
 e2e/compare-cross-user-write-block.spec.ts
 e2e/compare-detail-edit-entry.spec.ts
 e2e/compare-editor-autosave-user-isolation.spec.ts
@@ -199,6 +273,10 @@ e2e/compare-editor-slice3.spec.ts
 e2e/compare-hub-inline-edit.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
+e2e/compare-stundenverlauf-wertprops.spec.ts
+e2e/compare-versand-speichert-selbst.spec.ts
+e2e/compare-wertebereiche-speichert-selbst.spec.ts
+e2e/compare-wetter-metriken-speichert-selbst.spec.ts
 e2e/design-compliance-group-a.spec.ts
 e2e/design-system-lauf-a.spec.ts
 e2e/dnd-helper-finalize-wait.spec.ts

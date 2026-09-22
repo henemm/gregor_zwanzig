@@ -436,10 +436,30 @@ def _official_source_url_for(dto_notices: list) -> str | None:
 class NotificationService:
     """Wählt Renderer und Transporte für Trip-Briefings und Service-Hinweise."""
 
-    def __init__(self, settings: Optional[Settings] = None, user_id: str = "default") -> None:
+    def __init__(
+        self, settings: Optional[Settings] = None, user_id: Optional[str] = None,
+    ) -> None:
+        # #2151 Scheibe C (ADR-0003): kein stiller Rueckfall auf das Konto
+        # "default". Ohne settings UND ohne user_id gibt es kein Profil, das
+        # geladen werden duerfte; mit settings allein ist der Dienst fuer die
+        # Versandwege nutzbar, jede Operation mit Nutzerbezug scheitert aber
+        # in _require_user() (Vorbild Go `requireUser`, Scheibe B).
+        if settings is None and not user_id:
+            raise ValueError(
+                "NotificationService: weder settings noch user_id angegeben (#2151)"
+            )
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._formatter = TripReportFormatter()
         self._user_id = user_id
+
+    def _require_user(self) -> str:
+        """Nutzerkennung fuer nutzerbezogene Datenzugriffe -- fail-closed."""
+        if not self._user_id:
+            raise ValueError(
+                "NotificationService: Operation braucht user_id, der Dienst "
+                "wurde ohne Nutzerkennung konstruiert (#2151)"
+            )
+        return self._user_id
 
     # ------------------------------------------------------------------
     # Öffentliche API
@@ -470,7 +490,7 @@ class NotificationService:
         from services.alert_briefing_anchor import undelivered_since_last_briefing
 
         undelivered = undelivered_since_last_briefing(
-            user_id=self._user_id, entity_id=request.trip.id, entity_type="trip",
+            user_id=self._require_user(), entity_id=request.trip.id, entity_type="trip",
         )
 
         # Issue #1439: Starkregen-Kurzfristhinweis — der Scheduler liefert nur
@@ -679,7 +699,7 @@ class NotificationService:
             from services.alert_briefing_anchor import record_briefing_dispatch_failure
 
             record_briefing_dispatch_failure(
-                user_id=self._user_id, kind="route",
+                user_id=self._require_user(), kind="route",
                 entity_id=request.trip.id, error=email_error,
             )
 
@@ -1036,7 +1056,7 @@ class NotificationService:
 
         now_utc = datetime.now(timezone.utc)
         local_today = trip_local_today(trip, now_utc)
-        snap_svc = WeatherSnapshotService(user_id=self._user_id)
+        snap_svc = WeatherSnapshotService(user_id=self._require_user())
         anchor_date = None
         for channel in sorted(effective_channels):
             anchor_date = snap_svc.alarm_anchor_target_date(trip.id, channel)
