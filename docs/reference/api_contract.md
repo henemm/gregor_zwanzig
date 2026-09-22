@@ -1,7 +1,24 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-09-18 (Issue #2285, `fix-2285-compare-put-merge-kernel` —
+**Updated:** 2026-09-22 (Issue #1895 Scheibe S2, `feat-1895-s2-kanal-leser` —
+`alert_metric_channels` (S1, s. Abschnitt unten) bekommt seinen ersten Leser: Δ-Änderungsalarme
+lösen den Versand-Kanalsatz jetzt je AUSGELÖSTER Metrik auf (roher Summary-Key → Katalog-
+`metric_id` über `metric_catalog.metric_and_aggregation_for_field`, Wählbarkeits-Tie-Break),
+Vereinigung über alle ausgelösten Metriken einer Meldung; eine eintragslose oder mehrdeutig
+aufgelöste Metrik erbt weiterhin den bisherigen Kanalsatz (Regel-Union bzw. Abo-weit) statt die
+Vereinigung zu verkleinern. Beim Ortsvergleich geschieht das je Ort in der Ortsschleife — zwei
+Orte desselben Alarmlaufs können dadurch unterschiedliche Kanalsätze bekommen. Regen-/Nowcast-
+Alarme und amtliche Warnungen bleiben strukturell metrikfrei und unverändert (Abo-weiter Satz
+bzw. Regel-Union, je nachdem, was vor dieser Scheibe galt). Migration beim Laden (Python) kopiert
+`alert_rules[].channels` aktivierter Regeln mit nicht-leerer Kanalliste in
+`alert_metric_channels` (Read-Modify-Write mit Merge — ein bereits persistierter Eintrag gewinnt,
+`alert_rules` selbst bleibt unverändert bestehen). **Verhaltensänderung für Bestandsnutzer**
+(bewusst, PO-freigegeben): ein Alarm, der nach der Migration nur eine migrierte Metrik auslöst,
+erreicht danach nur noch deren Regel-Kanäle statt der bisherigen regelübergreifenden Union.
+Details Abschnitt „alert_metric_channels" unten, ADR-0077, Spec
+`docs/specs/modules/alert_metric_channels.md`);
+2026-09-18 (Issue #2285, `fix-2285-compare-put-merge-kernel` —
 ein Merge-Kernel `applyComparePresetPatch` (`internal/handler/compare_preset.go`)
 ersetzt die beiden bisher unabhängigen Merge-Implementierungen von
 `PUT /api/compare/presets/{id}` (dediziert, ~170 Zeilen Feldrettung entfallen)
@@ -922,7 +939,7 @@ Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md` (Trip), `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md` (Ortsvergleich).
 
-### alert_metric_channels (Issue #1895 S1 · Epic #1230)
+### alert_metric_channels (Issue #1895 S1 · S2 · Epic #1230)
 
 Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_channel_thresholds` („je Kanal", ADR-0046): **je Metrik** die Kanal-Zuordnung. Identischer Vertrag auf `Trip` **und** `ComparePreset` (Go jeweils `map[string]interface{}`, Python `Optional[dict]`), Parität ab S1.
 
