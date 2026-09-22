@@ -20,6 +20,8 @@
 	import { afterNavigate } from '$app/navigation';
 	import { initOfflineStand, standAnwenden } from '$lib/pwa/offlineStand';
 	import OfflineSperre from '$lib/components/shared/OfflineSperre.svelte';
+	// Issue #2268 — app-weiter Footer mit „Impressum" und „Datenschutz".
+	import AppFooter from '$lib/components/shared/AppFooter.svelte';
 	// Issue #2248 — einmaliges, geraeteuebergreifend abweisbares Passkey-Angebot.
 	import { ANGEBOT_MARKER, passkeyAngebotFaellig } from '$lib/passkeyAngebot.js';
 	import { isWebAuthnSupported, registerPasskey } from '$lib/passkey';
@@ -231,8 +233,15 @@
 	}
 </script>
 
-{#if isLogin || isShowcase}
+{#if isShowcase}
+	<!-- Showcase-Route (#370): hier steht BEWUSST kein Footer (#2268), damit die
+	     Brand-Demos die einzigen App-Bausteine auf der Seite bleiben. -->
 	{@render children()}
+{:else if isLogin}
+	{@render children()}
+	<!-- Issue #2268 — oeffentlicher Zweig: Footer unter dem min-h-screen-
+	     zentrierten Anmelde-/Registrier-Block, ohne Sidebar und BottomNav. -->
+	<AppFooter />
 {:else}
 	<!-- Issue #2131 — sichtbare Begruendung der Bearbeitungssperre; sperrt
 	     zugleich die Bedienelemente der Ansicht (ADR-0034: gesperrt und
@@ -248,6 +257,10 @@
 		/>
 		<main class="mobile-scroll-pad flex-1 overflow-auto px-4 desktop:p-6 desktop:pt-6">
 			{@render children()}
+			<!-- Issue #2268 — letztes Kind INNERHALB <main>, nicht Geschwister
+			     daneben: so scrollt der Footer mit dem Inhalt und erbt die
+			     BottomNav-Freihaltung .mobile-scroll-pad. -->
+			<AppFooter />
 		</main>
 	</div>
 	{#if !isWizard}

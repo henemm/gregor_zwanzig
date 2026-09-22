@@ -71,6 +71,19 @@
 				Konto erstellen
 			</button>
 		</form>
+		<!-- Issue #2268 (AC-8/AC-9) — Hinweissatz als Geschwister NACH dem Formular
+		     und VOR dem „oder"-Trenner, damit ihn auch Google-Registrierer sieht.
+		     Wortlaut und Ziel sind PO-Vorgabe, der Link liegt nur auf dem letzten
+		     Wort. KEINE Zustimmungs-Checkbox (#2269 gestrichen): Rechtsgrundlage
+		     ist Art. 6 Abs. 1 lit. b DSGVO. -->
+		<p class="text-center text-xs text-muted-foreground">
+			Hinweise zum Umgang mit deinen Daten: <a
+				href="https://www.henemm.com/legal/gregor-zwanzig/privacy-policy/"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="underline hover:no-underline">Datenschutz</a
+			>
+		</p>
 		{#if data.googleEnabled}
 			<div class="relative">
 				<div class="absolute inset-0 flex items-center">
