@@ -922,6 +922,23 @@ Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md` (Trip), `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md` (Ortsvergleich).
 
+### alert_metric_channels (Issue #1895 S1 · Epic #1230)
+
+Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_channel_thresholds` („je Kanal", ADR-0046): **je Metrik** die Kanal-Zuordnung. Identischer Vertrag auf `Trip` **und** `ComparePreset` (Go jeweils `map[string]interface{}`, Python `Optional[dict]`), Parität ab S1.
+
+```json
+{"alert_metric_channels": {"rain": {"telegram": true, "email": false}, "wind": {"email": true}}}
+```
+
+| Feld | Typ | Semantik |
+|------|-----|----------|
+| `alert_metric_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend:** keine metrik-genaue Abweichung — jede Metrik erbt den Abo-weiten Kanal-Satz. Dank `omitempty` liefert die API den Schlüssel für solche Trips/Vergleiche gar nicht erst aus (Bestandsdaten bleiben byte-gleich). **Gesetzt:** Objekt, Schlüssel = Metrikname |
+| `alert_metric_channels.<metrik>` | beliebige Kanal-Repräsentation | in S1 **bewusst unvalidiert** (weder Metrik-Schlüssel noch Kanalwerte, ADR-0077 Punkt 3). Ein im PUT-Body fehlender Metrik-Schlüssel behält seinen Bestandswert → **Feld-Level-Merge** je Metrik (`mergeConfigMap` im Trip-PUT, generischer `mergeBriefingPatch` im Vergleich-PUT); ein GANZ fehlendes `alert_metric_channels` im Body bewahrt das ganze Objekt (Top-Level-Erbe) |
+
+**Wirkung in S1: keine.** Die Scheibe ist reine Verrohrung (Feld, Persistenz, Roundtrip) — es gibt noch keinen Leser im Alarm-Pfad und keine Bedienfläche. Der Leser folgt in S2, die Editor-Spalte erst danach (Reihenfolge-Zwang aus ADR-0043, festgeschrieben in ADR-0077 Punkt 5). `alert_rules[].channels` bleibt in S1 unverändert die wirksame per-Regel-Präzedenz.
+
+Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertMetricChannels`), ADR-0077 (schreibt ADR-0046 fort), Spec `docs/specs/modules/alert_metric_channels.md`.
+
 ### official_warnings (Issue #1258)
 
 Löst `official_alert_triggers_enabled` (#1088) funktional ab: `official_warnings.enabled`

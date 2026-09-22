@@ -1354,6 +1354,12 @@ class ComparePreset:
     # scripts/migrate_1361_drop_compare_hour_from_to.py sie entfernt.
     day_window_start_hour: Optional[int] = None
     day_window_end_hour: Optional[int] = None
+    # Issue #1895 S1 (ADR-0077): metrik-genaue Kanal-Schicht, Paritaet zum
+    # gleichnamigen Trip-Feld (app.trip.Trip.alert_metric_channels). Fuer die
+    # Persistenz nicht erforderlich (compare_preset_to_dict liefert `raw`
+    # unveraendert zurueck) -- das Feld ist der benannte Leser fuer S2, damit
+    # der Alarm-Pfad nicht am anonymen `raw`-Dict vorbeigreifen muss.
+    alert_metric_channels: Optional[dict] = None
     raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
 
 

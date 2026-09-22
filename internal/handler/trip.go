@@ -257,6 +257,12 @@ type tripUpdateRequest struct {
 	// (analog OfficialWarnings.Sources) -- fehlt im Body nur ein Kanal,
 	// bleibt dessen Bestandswert erhalten.
 	AlertChannelThresholds *model.AlertChannelThresholdsConfig `json:"alert_channel_thresholds,omitempty"`
+	// AlertMetricChannels — Issue #1895 Scheibe S1 (Epic #1230), RMW-Kontrakt
+	// analog DisplayConfig: nil = im Body nicht gesendet -> bestehende
+	// Zuordnungen bleiben erhalten; gesetzt = Feld-Level-Merge je Metrik
+	// (mergeConfigMap), eine im Body fehlende Metrik behaelt ihren
+	// Bestandswert statt geloescht zu werden.
+	AlertMetricChannels *map[string]interface{} `json:"alert_metric_channels,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
@@ -334,6 +340,11 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 		if req.DisplayConfig != nil {
 			existing.DisplayConfig = mergeConfigMap(existing.DisplayConfig, *req.DisplayConfig)
+		}
+		if req.AlertMetricChannels != nil {
+			// Issue #1895 S1: Feld-Level-Merge je Metrik statt Blind-Replace —
+			// ein PUT mit nur einer Metrik darf die uebrigen nicht loeschen.
+			existing.AlertMetricChannels = mergeConfigMap(existing.AlertMetricChannels, *req.AlertMetricChannels)
 		}
 		if req.ReportConfig != nil {
 			// Issue #1103: Feld-Level-Merge statt Blind-Replace — Teil-Updates
