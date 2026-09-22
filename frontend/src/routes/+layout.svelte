@@ -118,6 +118,11 @@
 	// Mobile-Shell S2 — Konto-Sheet; schliesst bei jeder Navigation.
 	let kontoOpen = $state(false);
 	const kontoInitialen = $derived(initialen(data.displayName, data.userId));
+	// Issue #2370 — bei offenem Konto-Sheet duerfen die Rand-Hinweise (iOS-
+	// Install, Update, Passkey) nicht rendern: sie lagen ueber den
+	// Sheet-Zeilen "Dunkles Design"/"Datenexport" und fingen deren Klicks ab.
+	// Eine Stelle fuer alle drei Hinweise statt drei Einzelregeln.
+	const hinweiseErlaubt = $derived(!kontoOpen);
 
 	function applyDarkMode(dark: boolean) {
 		const el = document.documentElement;
@@ -280,14 +285,14 @@
 <!-- Issue #2128 — Systemhinweise, app-weit und ausserhalb des Chrome-Blocks.
      Der feste Rahmen ist nur der Bezugspunkt fuer die absolut positionierte
      Toast-Optik; er hat selbst keine Hoehe und faengt daher keine Klicks ab. -->
-{#if updateHinweisSichtbar}
+{#if updateHinweisSichtbar && hinweiseErlaubt}
 	<!-- Issue #2316 — Zweiknopf-Hinweis nach Vorlage des Passkey-Banners
 	     (Muster unten): "Aktualisieren"/"Später" statt der frueheren
 	     Einknopf-Toast-Variante (#2128). -->
 	<div
 		data-testid="update-hinweis"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 60;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 59;
 		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
@@ -320,11 +325,13 @@
 	</div>
 {/if}
 
-{#if iosHinweisSichtbar}
+{#if iosHinweisSichtbar && hinweiseErlaubt}
+	<!-- z-index 59 (Issue #2370): unter dem Sheet-Backdrop (60), ueber der
+	     bottom-shell (50). Vorher 61 — lag ueber dem Konto-Sheet-Panel. -->
 	<div
 		data-testid="ios-install-hint"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 61;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 59;
 		       display: flex; align-items: center; gap: 12px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
@@ -346,11 +353,11 @@
 <!-- Issue #2248 — Passkey-Angebot nach der Passwort-Anmeldung. Gleiche Bauart
      wie der iOS-Hinweis daneben, aber mit ZWEI Aktionen; der Toast-Baustein
      kennt nur eine. -->
-{#if passkeyAngebotSichtbar}
+{#if passkeyAngebotSichtbar && hinweiseErlaubt}
 	<div
 		data-testid="passkey-angebot"
 		role="status"
-		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 62;
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 59;
 		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
 		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
 		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));

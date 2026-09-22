@@ -241,6 +241,22 @@
 #   erst beim Stack-Neustart zwischen Kontroll- und Hauptlauf zuschlaegt.
 #   Ursache und Fix: Issue #2390.
 #
+# Aufnahme 2026-09-19 (#2370, Systemhinweise-Ausblendung unter dem
+# Konto-Sheet). Neue Datei systemhinweise-unter-konto-sheet.spec.ts (kein
+# Kandidatenpool-Vermessungslauf noetig -- eigens fuer den Bugfix als
+# TDD-RED/GREEN-Nachweis geschrieben, nicht aus dem Bestand gezogen).
+# Filter A: kein waitForTimeout/test.skip/test.fixme/describe.skip, kein
+# `path:`-Schreibziel (Filter C entfaellt strukturell).
+# Filter B (isolierter Stack, Ports 8091/8000, `frontend/e2e/ci-stack.sh`),
+# 3 Zyklen direkt hintereinander, `--project=tests` (Datei passt nicht auf
+# /pwa-.*\.spec\.ts/, Service Worker geblockt reicht dem iOS-Hinweis):
+#   Zyklus 1: 7 expected / 0 unexpected / 0 skipped (davon 6 eigene Faelle +
+#             1x global.setup, vgl. F008 oben)
+#   Zyklus 2: 7 expected / 0 unexpected / 0 skipped
+#   Zyklus 3: 7 expected / 0 unexpected / 0 skipped
+# Regressions-Nachbarn im selben Lauf gruen: mobile-konto-sheet.spec.ts
+# (bereits gelistet) + mobile-bottom-nav-floating.spec.ts (bereits gelistet).
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -296,6 +312,7 @@ e2e/mobile-bottom-nav-floating.spec.ts
 e2e/mobile-konto-sheet.spec.ts
 e2e/mobile-editor-controls-viewport.spec.ts
 e2e/speicherung-ueberlebt-neuladen.spec.ts
+e2e/systemhinweise-unter-konto-sheet.spec.ts
 e2e/tokens-and-topo.spec.ts
 e2e/trip-detail-actions.spec.ts
 e2e/versand-tab.spec.ts
