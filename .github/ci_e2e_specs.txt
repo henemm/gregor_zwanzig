@@ -209,6 +209,24 @@
 #   Filter C: der Arbeitsbaum zeigt nur die erwarteten Quelldateien — die Spec
 #             veraendert keine versionierte Datei.
 
+# Aufnahme 2026-09-22 (#2276 S6d): compare-wertebereiche-wertprops.spec.ts
+# — analog S2/S3/S4/S5/S6b/S6c-Praezedenz wird NUR die eine neue, eigene Spec
+# dieser Scheibe geratscht (Scope-Disziplin). Sie traegt AC-4 bis AC-7 der Spec
+# rework_2276_s6d_wertebereiche.md: die Umstellung der Wertebereiche-Flaeche
+# des Ortsvergleichs auf Wertprops wirkt in der Prop-Verdrahtung und im
+# DOM-Event-Handler `maybeSchedule()` — Orte, die der SSR-Harness
+# (`generate: 'server'`, kein DOM) nicht sieht. Ohne diesen Eintrag liefe der
+# Browser-Nachweis nie in der CI-Ampel (`e2e` ist positivgelistet).
+#   Filter A: keine Treffer fuer waitForTimeout/test.skip/test.fixme/
+#             describe.skip, kein Hauptrepo-Pfad, kein __dirname.
+#   Filter B: 🔴 NICHT GEFAHREN. Fallzahl der neuen Datei per
+#             `npx playwright test --list` gemessen (2026-09-22): 5 gelistet
+#             minus global.setup = 4 eigene Faelle, 281 + 4 = 285. Ein
+#             lokaler Zielverbund-Zyklus wurde bewusst NICHT gefahren (siehe
+#             die vier dokumentierten Fallen des lokalen Stacks oben).
+#             ERSTE BESTAETIGUNG DURCH DEN CI-HAUPTLAUF AUF DEM PR.
+#   Filter C: kein `page.screenshot({path: ...})` in der Datei.
+
 # Aufnahme 2026-09-21 (#2276 S6b): compare-stundenverlauf-wertprops.spec.ts
 # — analog S2/S3/S4/S5-Praezedenz wird NUR die eine neue, eigene Spec dieser
 # Scheibe geratscht (Scope-Disziplin). Sie traegt AC-2 und AC-4 der Spec
@@ -276,6 +294,7 @@ e2e/compare-radar-toggle.spec.ts
 e2e/compare-stundenverlauf-wertprops.spec.ts
 e2e/compare-versand-speichert-selbst.spec.ts
 e2e/compare-wertebereiche-speichert-selbst.spec.ts
+e2e/compare-wertebereiche-wertprops.spec.ts
 e2e/compare-wetter-metriken-speichert-selbst.spec.ts
 e2e/design-compliance-group-a.spec.ts
 e2e/design-system-lauf-a.spec.ts

@@ -24,19 +24,19 @@
 	//  - Issue #1371: das "Warnen"-Bedienelement (Effekt-Buttons) ist entfernt —
 	//    der Reiter markiert nur noch, die Alarm-Empfindlichkeit setzt
 	//    ausschliesslich der Reiter Alarme.
-	import { getContext, untrack } from 'svelte';
+	import { untrack } from 'svelte';
 	import { Eyebrow, Dot } from '$lib/components/atoms';
 	import ScreenScroll from '$lib/components/mobile/ScreenScroll.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import { api } from '$lib/api';
 	import { baueTripSpeicherung } from '../tripSpeicherung.ts';
-	import { toCompareProfile, type Trip, type SensLevel, type Corridor, type ComparePreset } from '$lib/types';
+	import { toCompareProfile, type ActivityProfile, type Trip, type SensLevel, type Corridor, type ComparePreset } from '$lib/types';
 	import {
+		corridorZustandsBruecke,
 		erstelleWertebereicheVergleichSpeicherung,
 		wertebereicheVergleichSpeicherungAktiv
 	} from './wertebereicheVergleichSpeicherung.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import { corridorFmt } from './corridorMatch.ts';
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
@@ -44,10 +44,10 @@
 		saveGateDecision, openBoundValue, supportsMark, countEffectiveMarks, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
-		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
+		type RouteMetricDef, type CompareMetricDef, type ProfileKey, type IdealRange,
 	} from './corridorEditorState.ts';
 	import { loadCompareMetricCatalog, loadRouteExtraMetricDefs } from './compareMetricCatalogLoader.ts';
-	// Issue #1366 F002: `ws.activeMetricKeys` ist jetzt `string[] | null` ("nie
+	// Issue #1366 F002: `activeMetricKeys` ist `string[] | null` ("nie
 	// eingestellt" vs. "bewusst leer") -- materialisiert lesen, NIE roh
 	// spreaden/an buildCompareCorridorSavePayload durchreichen (das wuerde
 	// `null` still zu `[]` = "bewusst leer" machen).
@@ -63,20 +63,66 @@
 		preset?: ComparePreset;
 		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
 		onCompareUpdate?: (updated: ComparePreset) => void;
+		/** Issue #2276 S6d: der vergleich-Zweig bekommt seinen Stand als WERTPROPS
+		 *  statt aus `getContext('compare-wizard-state')`. Das Buendel baut
+		 *  `compare/corridorPropsAus.ts`; alle drei Vergleichs-Mounts speisen es
+		 *  identisch ein, der route-Zweig laesst es weg. */
+		corridors?: Corridor[];
+		idealRanges?: Record<string, IdealRange>;
+		/** `null` = nie eingestellt (Vorgabemenge), `[]` = bewusst leer (#1366 F002). */
+		activeMetricKeys?: string[] | null;
+		metricAlertLevels?: Record<string, string>;
+		/** Anlege-Merkmale des Wizards — sie steuern allein den Profil-Prefill. */
+		isEditMode?: boolean;
+		activityProfile?: ActivityProfile | null;
+		onCorridorsChange?: (v: Corridor[]) => void;
+		onIdealRangesChange?: (v: Record<string, IdealRange>) => void;
+		onActiveMetricKeysChange?: (v: string[] | null) => void;
+		onMetricAlertLevelsChange?: (v: Record<string, string>) => void;
 	}
-	let { context = 'route', trip, onTripUpdate, saveController, preset, enqueueHubWrite, onCompareUpdate }: Props =
-		$props();
+	let {
+		context = 'route',
+		trip,
+		onTripUpdate,
+		saveController,
+		preset,
+		enqueueHubWrite,
+		onCompareUpdate,
+		corridors,
+		idealRanges,
+		activeMetricKeys,
+		metricAlertLevels,
+		isEditMode,
+		activityProfile,
+		onCorridorsChange,
+		onIdealRangesChange,
+		onActiveMetricKeysChange,
+		onMetricAlertLevelsChange
+	}: Props = $props();
 
-	const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+	// Issue #2276 S6d: der Speicherweg braucht eine lebendige, mutierbare
+	// Referenz — das Diff-Gate liest bei jedem Melden frisch, der Rollback
+	// schreibt feldweise zurueck. Die Bruecke bildet genau das aus den Wertprops
+	// nach, ohne den Wizard-Zustand zu kennen.
+	const corridorZustand = corridorZustandsBruecke(
+		() => ({ corridors, idealRanges, activeMetricKeys, metricAlertLevels }),
+		(feld, wert) => {
+			if (feld === 'corridors') onCorridorsChange?.(wert as Corridor[]);
+			else if (feld === 'idealRanges') onIdealRangesChange?.(wert as Record<string, IdealRange>);
+			else if (feld === 'activeMetricKeys') onActiveMetricKeysChange?.(wert as string[] | null);
+			else if (feld === 'metricAlertLevels')
+				onMetricAlertLevelsChange?.(wert as Record<string, string>);
+		}
+	);
 
 	// Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
 	// AlarmeTab, S2). Baseline beim Mount — CompareTabs mountet erst nach der
 	// Hydration (Design Punkt 6). Anlege-Seite/Trip: inaktiv (AC-9, AC-12).
 	const vergleichSpeicherung = untrack(() =>
-		wertebereicheVergleichSpeicherungAktiv({ context, ws, preset, saveController })
+		wertebereicheVergleichSpeicherungAktiv({ context, zustand: corridorZustand, preset, saveController })
 			? erstelleWertebereicheVergleichSpeicherung({
 					client: api,
-					ws: ws!,
+					zustand: corridorZustand,
 					preset: () => preset!,
 					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
 					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
@@ -87,18 +133,18 @@
 
 	// AC-10: "zuletzt bekannte Stufe" bezieht sich auf den beim Mount geladenen
 	// Stand — analog Desktop (CorridorEditor.svelte), gilt fuer beide Kontexte.
-	const originalLevels = (
-		context === 'vergleich'
-			? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
-			: trip?.display_config?.metric_alert_levels
-	) ?? {} as Record<string, SensLevel>;
-	const originalActiveMetricKeys: string[] =
-		context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+	const originalLevels: Record<string, SensLevel> =
+		(metricAlertLevels as Record<string, SensLevel> | undefined) ??
+		trip?.display_config?.metric_alert_levels ??
+		{};
+	const originalActiveMetricKeys: string[] = [
+		...materializeActiveMetricKeys(activeMetricKeys ?? null)
+	];
 
-	const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+	const isFreshCompareCreate = context === 'vergleich' && !isEditMode && (corridors ?? []).length === 0;
 	function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
-		if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? [], defs);
-		const profileKey = ws?.activityProfile ? (toCompareProfile(ws.activityProfile) as ProfileKey) : 'ALLGEMEIN';
+		if (!isFreshCompareCreate) return buildComparePool(corridors ?? [], defs);
+		const profileKey = activityProfile ? (toCompareProfile(activityProfile) as ProfileKey) : 'ALLGEMEIN';
 		const prefillRows = buildComparePrefillRows(profileKey, defs);
 		const poolLeft = defs.filter((d) => !prefillRows.some((r) => r.metric === d.metric));
 		return { rows: prefillRows, poolLeft, unknownCorridors: [] };
@@ -189,16 +235,15 @@
 		);
 	}
 	function syncToWizard() {
-		if (!ws) return;
 		const payload = buildCompareCorridorSavePayload(rows, removedMetrics, {
-			idealRanges: ws.idealRanges,
-			activeMetricKeys: materializeActiveMetricKeys(ws.activeMetricKeys),
-			metricAlertLevels: ws.metricAlertLevels as Record<string, SensLevel | undefined>,
+			idealRanges: idealRanges ?? {},
+			activeMetricKeys: materializeActiveMetricKeys(activeMetricKeys ?? null),
+			metricAlertLevels: metricAlertLevels as Record<string, SensLevel | undefined>,
 		}, unknownCorridors);
-		ws.corridors = payload.corridors;
-		ws.idealRanges = payload.idealRanges;
-		ws.activeMetricKeys = payload.activeMetricKeys;
-		ws.metricAlertLevels = payload.metricAlertLevels;
+		onCorridorsChange?.(payload.corridors);
+		onIdealRangesChange?.(payload.idealRanges);
+		onActiveMetricKeysChange?.(payload.activeMetricKeys);
+		onMetricAlertLevelsChange?.(payload.metricAlertLevels);
 	}
 	// Issue #1350 Teil 3: Fresh-Create-Prefill fuer 'vergleich' laeuft jetzt im
 	// $effect oben (nach erfolgreichem Katalog-Laden) — vorher synchron hier.

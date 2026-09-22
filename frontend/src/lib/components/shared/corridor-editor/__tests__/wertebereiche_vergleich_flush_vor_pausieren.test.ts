@@ -56,7 +56,7 @@ function hub() {
 	const hubPutQueue = createPutQueue();
 	const speicherung = erstelleWertebereicheVergleichSpeicherung({
 		client: api,
-		ws,
+		zustand: ws,
 		preset: () => currentPreset,
 		enqueueHubWrite: (fn) => hubPutQueue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {

@@ -121,7 +121,7 @@ export function rollbackCorridorSnapshot(
 
 export interface WertebereicheVergleichSpeicherungOptionen {
 	client: PutClient;
-	ws: WertebereicheZustand;
+	zustand: WertebereicheZustand;
 	/** Basis — als Getter, damit sie ERST bei Ausführung in der Queue gelesen wird. */
 	preset: () => ComparePreset;
 	/** Hub-Queue (`hubPutQueue.enqueue`) — Serialisierung mit den Nachbar-Reitern. */
@@ -133,8 +133,8 @@ export interface WertebereicheVergleichSpeicherungOptionen {
 
 /**
  * Orchestrierung des Wertebereiche-Speicherns im Ortsvergleich (Muster
- * `erstelleAlarmeVergleichSpeicherung`, S2). Anfangs-Baseline = Stand von `ws`
- * beim Erzeugen (nach der Hydration, Design Punkt 6).
+ * `erstelleAlarmeVergleichSpeicherung`, S2). Anfangs-Baseline = der Stand von
+ * `zustand` beim Erzeugen (nach der Hydration, Design Punkt 6).
  *
  * `aenderungMelden()`: ohne Unterschied zur Baseline wird ein eigener, noch
  * ausstehender Vorgang verworfen — sonst `schedule(SaveFn)`. Die SaveFn liest
@@ -145,8 +145,8 @@ export interface WertebereicheVergleichSpeicherungOptionen {
 export function erstelleWertebereicheVergleichSpeicherung(opt: WertebereicheVergleichSpeicherungOptionen): {
 	aenderungMelden(): void;
 } {
-	const { client, ws, enqueueHubWrite, saveController } = opt;
-	let zuletztGespeichert: CorridorSnapshot = corridorSnapshotAus(ws);
+	const { client, zustand, enqueueHubWrite, saveController } = opt;
+	let zuletztGespeichert: CorridorSnapshot = corridorSnapshotAus(zustand);
 	let eigenerVorgangAussteht = false;
 
 	const saveFn: SaveFn = async (init) => {
@@ -154,7 +154,7 @@ export function erstelleWertebereicheVergleichSpeicherung(opt: WertebereicheVerg
 		await enqueueHubWrite(async () => {
 			// Nachschieben im selben Vorgang (S2 F005): „Gespeichert" erst bei Server == UI.
 			for (;;) {
-				const current = corridorSnapshotAus(ws);
+				const current = corridorSnapshotAus(zustand);
 				const before = zuletztGespeichert;
 				const payload = flushPendingCorridorSave(opt.preset(), current, before);
 				if (!payload) return;
@@ -164,7 +164,7 @@ export function erstelleWertebereicheVergleichSpeicherung(opt: WertebereicheVerg
 					opt.onCompareUpdate(antwort);
 				} catch (e) {
 					if ((e as { status?: number })?.status !== 412) {
-						rollbackCorridorSnapshot(ws, before, current);
+						rollbackCorridorSnapshot(zustand, before, current);
 					}
 					throw e;
 				}
@@ -174,7 +174,7 @@ export function erstelleWertebereicheVergleichSpeicherung(opt: WertebereicheVerg
 
 	return {
 		aenderungMelden(): void {
-			const current = corridorSnapshotAus(ws);
+			const current = corridorSnapshotAus(zustand);
 			if (JSON.stringify(current) === JSON.stringify(zuletztGespeichert)) {
 				if (eigenerVorgangAussteht) {
 					eigenerVorgangAussteht = false;
@@ -193,11 +193,46 @@ export function erstelleWertebereicheVergleichSpeicherung(opt: WertebereicheVerg
  *  nur im Ortsvergleich-Hub (vergleich + Zustand + Basis + Controller). */
 export function wertebereicheVergleichSpeicherungAktiv(p: {
 	context: string;
-	ws: unknown;
+	zustand: unknown;
 	preset: unknown;
 	saveController: unknown;
 }): boolean {
-	return p.context === 'vergleich' && !!p.ws && !!p.preset && !!p.saveController;
+	return p.context === 'vergleich' && !!p.zustand && !!p.preset && !!p.saveController;
+}
+
+/**
+ * Issue #2276 S6d: Bruecke zwischen den WERTPROPS der Wertebereiche-Organismen
+ * und diesem (unveraenderten) Speicherweg. Seit S6d halten
+ * `CorridorEditor(Mobile).svelte` keine Wizard-Referenz mehr — sie reichen ihre
+ * Props herein, und HIER, an genau einer Stelle, treffen Wertprops und
+ * Speicherweg aufeinander.
+ *
+ * Gelesen wird IMMER frisch (`werte()` je Zugriff): ein einmal gebautes Objekt
+ * saehe nach der ersten Aenderung veraltete Werte, und der Diff-Gate-Vergleich
+ * fiele dann stumm aus — der Hub speicherte die vorletzte Fassung.
+ * Geschrieben wird ausschliesslich vom diff-basierten Rollback
+ * (`rollbackCorridorSnapshot`) — `setzen` meldet das an den Halter des Zustands
+ * weiter; kein Bedienelement schreibt hierueber.
+ *
+ * Anders als `alarmZustandsBruecke` (S6c) braucht es hier KEINE Namensumleitung:
+ * die vier Felder heissen im Speicherweg genauso wie die Wertprops
+ * (`corridors`, `idealRanges`, `activeMetricKeys`, `metricAlertLevels`).
+ *
+ * PLATZIERUNG unterhalb Zeile 200 ist Pflicht, keine Vorliebe (Spec, Auflage
+ * A2): weiter oben verschoebe sie den eingefrorenen Ratschen-Eintrag
+ * `wertebereicheVergleichSpeicherung.ts:200` nach unten.
+ */
+export function corridorZustandsBruecke(
+	werte: () => Record<string, unknown>,
+	setzen?: (feld: string, wert: unknown) => void
+): WertebereicheZustand {
+	return new Proxy({} as WertebereicheZustand, {
+		get: (_ziel, feld) => werte()[feld as string],
+		set: (_ziel, feld, wert) => {
+			setzen?.(feld as string, wert);
+			return true;
+		}
+	});
 }
 
 /** Reiter des Ortsvergleich-Hubs, die SELBST über den einen Speicher-Platz des

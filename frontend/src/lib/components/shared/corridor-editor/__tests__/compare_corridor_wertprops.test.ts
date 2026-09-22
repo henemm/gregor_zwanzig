@@ -605,3 +605,87 @@ describe('AC-3: alle Vergleichs-Mounts speisen dasselbe Buendel ein', () => {
 		});
 	}
 });
+
+// ── Anlege-Merkmale (Nachtrag F001 der Adversary-Pruefung) ──────────────────
+//
+// 🔴 Diese ZWEI Felder stehen bewusst UEBER den acht in AC-1 woertlich
+// freigegebenen Namen (vier `WERTPROPS` + vier `RUECKRUFE`) — deshalb bleiben
+// jene Konstanten unveraendert und bekommen diese beiden hier eine EIGENE
+// Fesselung.
+//
+// Warum es sie ueberhaupt gibt: `isFreshCompareCreate` in beiden
+// Corridor-Bausteinen (`CorridorEditor.svelte:141`,
+// `CorridorEditorMobile.svelte:144`) entscheidet aus
+// `context === 'vergleich' && !isEditMode && corridors.length === 0`, ob die
+// Anlege-Seite ihren Profil-Prefill aufbaut; `activityProfile` waehlt dann den
+// Profil-Topf (`:144` bzw. `:147`). Ohne diese beiden Felder im Buendel haette
+// der Prefill des Create-Flusses KEINE Datenquelle mehr: jeder neue Vergleich
+// startete mit leerer statt profilgerechter Vorauswahl.
+//
+// Warum eine eigene Zusicherung noetig ist: AC-1 prueft, dass die acht
+// freigegebenen Namen gebunden SIND, AC-3, dass keiner der acht im Buendel
+// FEHLT. Beide Waechter sind Positiv-Listen — ein Feld DARUEBER HINAUS ist
+// fuer sie strukturell unsichtbar. Und der Wirkort `/compare/new` ist laut
+// Spec von keiner E2E-Spec beruehrt. Gemessen (2026-09-22): streicht man
+// `activityProfile` aus dem Rueckgabe-Objekt von `corridorPropsAus`, blieben
+// ohne diesen Block alle Tests gruen; dasselbe fuer `isEditMode`.
+//
+// Gemessen wird an den beiden Stellen, an denen die Felder WIRKEN: (a) das
+// echte, im Markup gestreute Buendel jedes Vergleichs-Mounts traegt sie
+// unveraendert aus dem Wizard-Zustand, (b) beide Bausteine binden sie
+// tatsaechlich als Prop — ein Buendel, das sie traegt, waehrend die Komponente
+// sie nicht destrukturiert, liefe genauso ins Leere.
+const ANLEGE_MERKMALE = ['isEditMode', 'activityProfile'] as const;
+
+describe('Anlege-Merkmale: der Profil-Prefill des Create-Flusses behaelt seine Datenquelle', () => {
+	for (const [was, datei, komponente] of MOUNTS) {
+		test(`${was}: das gestreute Buendel traegt \`isEditMode\` und \`activityProfile\``, async () => {
+			const { quelle, treffer } = einbettungen(datei, komponente);
+			const s = treffer.length === 1 ? streuung(treffer[0], quelle) : null;
+			assert.ok(s, `Anlege-Merkmale FAIL (${was}): keine Streuung — siehe AC-3.`);
+
+			const wiz = wizStand();
+			const { u } = await umgebungFuer(datei, {
+				[s!.zustand]: wiz,
+				untrack: (fn: () => unknown) => fn()
+			});
+			let buendel: Knoten;
+			try {
+				buendel = werte(s!.ausdruck, u) as Knoten;
+			} catch (e) {
+				return assert.fail(
+					`Anlege-Merkmale FAIL (${was}): \`${s!.ausdruck}\` liess sich nicht ` +
+						`auswerten: ${(e as Error).message}`
+				);
+			}
+
+			for (const merkmal of ANLEGE_MERKMALE) {
+				assert.deepStrictEqual(
+					buendel[merkmal],
+					wiz[merkmal],
+					`Anlege-Merkmale FAIL (${was}): das Buendel traegt \`${merkmal}\` nicht ` +
+						'unveraendert aus dem Wizard-Zustand. Dieses Feld steht bewusst UEBER den ' +
+						'acht freigegebenen Namen und speist `isFreshCompareCreate` — faellt es ' +
+						'aus dem Buendel, startet jeder neue Vergleich mit leerer statt ' +
+						'profilgerechter Vorauswahl, ohne dass AC-1 oder AC-3 etwas merken.'
+				);
+			}
+		});
+	}
+
+	for (const [was, datei] of DATEIEN) {
+		test(`${was}: die Prop-Schnittstelle bindet \`isEditMode\` und \`activityProfile\``, async () => {
+			const { ast, quelle } = await umgebungFuer(datei, saatVergleich());
+			const namen = gebundeneProps(ast, quelle);
+			for (const merkmal of ANLEGE_MERKMALE) {
+				assert.ok(
+					namen.includes(merkmal),
+					`Anlege-Merkmale FAIL (${was}): die Komponente bindet kein \`${merkmal}\`. ` +
+						'Dann kaeme das Feld zwar im Buendel an, die Herleitung von ' +
+						'`isFreshCompareCreate` saehe es aber nie. ' +
+						`Gebunden: ${[...namen].sort().join(', ')}`
+				);
+			}
+		});
+	}
+});
