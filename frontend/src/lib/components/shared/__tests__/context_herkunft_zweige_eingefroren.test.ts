@@ -30,6 +30,22 @@
 // gestrichen und 22 auf neue Zeilennummern nachgefuehrt, per
 // `BLEIBT_MIT_INHALT` inhaltlich gefesselt.
 //
+// 🔴 STAND S6e (Issue #2276, Spec `rework_2276_s6e_versand.md`,
+// Design-Entscheidung 5): die Ausnahme gilt ZUSAETZLICH fuer
+// `VersandTab.svelte` — mit ANDERER Bilanz als S6c/S6d: 0 Eintraege werden
+// gestrichen, genau die drei heute unter `VersandTab.svelte:284/294/330`
+// gefuehrten Eintraege (die Markup-Weiche `{#if context === 'route'} …
+// {:else if context === 'vergleich'}` selbst) werden auf ihre in GREEN
+// gemessenen neuen Zeilennummern nachgefuehrt und per `BLEIBT_MIT_INHALT`
+// inhaltlich gefesselt. Grund: der Umbau auf Wertprops fuegt im SCRIPT-Teil
+// (acht Wertprops + drei Legacy-Lesewerte + neun Rueckrufe) mehr Zeilen hinzu,
+// als er entfernt — die drei Zeilennummern verschieben sich nach unten, ohne
+// dass sich an der Bedingung selbst etwas aendert. TDD RED (diese Scheibe)
+// setzt NUR diese Vertragserweiterung; die neu gemessenen Zeilennummern samt
+// `BLEIBT_MIT_INHALT`-Eintraegen traegt GREEN nach (Muster S6d). Deshalb bleibt
+// `EINGEFROREN_SOLL_ANZAHL` unveraendert bei 47 — anders als bei S6c/S6d
+// aendert S6e die Gesamtzahl nicht.
+//
 // TDD RED (Stand `73f504c9`)
 // -------------------------
 // Beim Stand vor S6a liefert der Zaehlbefehl 69 Fundstellen. Die eingefrorene
@@ -118,9 +134,23 @@ const ZAEHLBEFEHL =
  *     IHRER ZEILE; fuer sie gilt weiterhin der alte, positionsbasierte
  *     Vertrag. Die Textaenderung an :200 (`!!p.ws` -> `!!p.zustand`) bekommt
  *     bewusst KEINE Fesselung (Spec, Design-Entscheidung 3).
- * Fuer alle Dateien AUSSERHALB von `AlarmeTab.svelte` und den beiden
- * Corridor-Bausteinen gilt der alte Vertrag unveraendert weiter: verschobene
- * Zeilennummer = Befund, kein Nachtrag.
+ * 🔴 VERTRAG AN S6e /50 (Spec `rework_2276_s6e_versand.md`, Design-Entscheidung
+ * 5): der Zeilenzahl-Vertrag gilt ZUSAETZLICH NICHT fuer `VersandTab.svelte`.
+ * Anders als S6c (14/4) und S6d (6/22) aendert sich hier die Gesamtzahl NICHT:
+ *   * 0 Eintraege werden gestrichen,
+ *   * die drei bestehenden Eintraege (`VersandTab.svelte:284/294/330`, die
+ *     Markup-Weiche `{#if context === 'route'} … {:else if context ===
+ *     'vergleich'}` selbst) werden auf ihre neu gemessenen Zeilennummern
+ *     nachgefuehrt und in `BLEIBT_MIT_INHALT` gefesselt — geprueft wird der
+ *     Bedingungstext, nicht die Position,
+ *   * `versandVergleichSpeicherung.ts:221` bleibt AUF SEINER ZEILE; fuer sie
+ *     gilt weiterhin der alte, positionsbasierte Vertrag. Die Textaenderung an
+ *     :221 (`!!p.wiz` -> `!!p.zustand`) bekommt bewusst KEINE Fesselung (Spec,
+ *     Design-Entscheidung 4/6).
+ *
+ * Fuer alle Dateien AUSSERHALB von `AlarmeTab.svelte`, den beiden
+ * Corridor-Bausteinen UND `VersandTab.svelte` gilt der alte Vertrag
+ * unveraendert weiter: verschobene Zeilennummer = Befund, kein Nachtrag.
  */
 const EINGEFROREN: readonly string[] = [
 	// S6c: von 18 AlarmeTab-Eintraegen bleiben genau diese VIER (Schicksals-
