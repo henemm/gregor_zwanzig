@@ -3223,6 +3223,7 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 | 400 | `{"error":"bad_request"}` | JSON not decodable |
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
 | 409 | `{"error":"email_taken"}` | changed `email`/`mail_to` already belongs to another real account (Issue #2147 Scheibe B1) — entire update discarded, nothing saved |
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Issue #2404: das interne `MailFloodLimiter`-Kontingent (10 Bestätigungsmails/Stunde je User-ID UND je Zieladresse, unabhängig gezählt) ist ausgeschöpft, wenn diese Anfrage eine wirksame Adressänderung auslösen würde — der **gesamte** Request wird verworfen, `SaveUser` läuft nicht, auch harmlose Felder im selben Request (z. B. `display_name`) bleiben unverändert |
 | 500 | `{"error":"internal error"}` | Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed, Issue #2147 Scheibe B1) |
 
 #### POST /api/internal/telegram-connect
@@ -3459,6 +3460,14 @@ Registrierungsflow, kein neuer Codepfad.
 **Notes:**
 - Mail-Versand ist "fire and forget" (Goroutine + 20s-Timeout, wie bei `ForgotPasswordHandler`
   und `POST /api/auth/tier-change-request`).
+- **Issue #2404 — zusätzliches, unsichtbares Adress-Limit:** Ist das `MailFloodLimiter`-Kontingent
+  der Zieladresse (10/Stunde, geteilt mit `PUT /api/auth/profile`) bereits ausgeschöpft, bleibt die
+  Antwort unverändert `200 {"status":"ok"}` (Privacy-Invariante bleibt gewahrt), aber
+  `dispatchVerificationMail` wird nicht aufgerufen — keine Mail wird verschickt. Dieser Pfad
+  konsumiert bewusst **nur** den Adress-Bucket (`AllowAddressOnly`), nie den User-Bucket des per
+  `username` benannten Kontos, damit ein Angreifer nicht über wiederholte Resend-Aufrufe das
+  Mail-Kontingent eines fremden Opfer-Kontos leerlaufen lassen kann. Details:
+  `docs/specs/bugfix/profile_mail_ratelimit.md`.
 - Details, Enumerationsschutz-AC, Nachweisführung ohne Live-Mailversand:
   `docs/specs/modules/email_verify_vorbereitung_2304.md`.
 
@@ -4303,6 +4312,16 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-22: Issue #2404 (Scheibe S2 von #2153, Epic #2138) — neuer schlüsselbasierter
+  `MailFloodLimiter` (Token-Bucket, Vorbild `IPRateLimiter`) begrenzt Bestätigungsmails aus `PUT
+  /api/auth/profile` und `POST /api/auth/verify-email/resend` auf 10/Stunde je User-ID UND je
+  Zieladresse, unabhängig gezählt. `PUT /api/auth/profile` bekommt neu `429
+  {"error":"rate_limit_exceeded"}` mit `Retry-After`-Header bei ausgeschöpftem Kontingent, gesamter
+  Request wird verworfen (kein Teil-Save). `POST /api/auth/verify-email/resend` bleibt aus
+  Privacy-Gründen immer `200`, unterdrückt bei ausgeschöpftem Adress-Kontingent nur den
+  Mailversand, und konsumiert dabei bewusst ausschließlich den Adress-Bucket, nie das
+  User-Kontingent des per `username` benannten (potenziell fremden) Kontos. Details:
+  `docs/specs/bugfix/profile_mail_ratelimit.md`.
 - 2026-09-21: Issue #2391 (Scheibe S3 von #2150, Epic #2138) — `GET /api/forecast` (Go) bucht
   vor dem Abruf das Tageskontingent beim Python-Core, statt es zu umgehen: neuer interner
   Endpunkt `POST /api/_internal/forecast-budget/reserve` (`api/routers/internal.py`) prüft und
