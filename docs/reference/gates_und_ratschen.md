@@ -310,15 +310,20 @@ bekannten Grenzen (kein interprozeduraler Fluss, keine Zweig-Analyse):
 ## HERKUNFT-Zweig-Ratsche (#2276 Scheibe S6a, seit 2026-09-20)
 
 **Befristetes Messwerkzeug, kein Dauer-Gate.** `frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts`
-hält eine **eingefrorene** `Datei:Zeile`-Liste (47 Einträge — nach S6d; der Spec-Anhang misst
-noch 69 auf dem Vor-S6a-Stand `73f504c9`, eine davon, `WeatherMetricsTab.svelte:577`, ist die
-per S6a AC-1 entfernte tote Bedingung, `WeatherMetricsTab.svelte:1273` wurde per S6b
-AC-4/AC-5 **bewusst gestrichen**, nachdem der Guard dort zeilentreu auf
-`if (!vergleichSpeicherung) return;` verkürzt war, S6c hat 14 der 18 `AlarmeTab.svelte`-Einträge
-gestrichen (`:256`, `:514`, `:533`, `:566` bleiben, Zeilennummern nach dem Umbau), und S6d hat
-6 der 28 `CorridorEditor.svelte`/`CorridorEditorMobile.svelte`-Einträge gestrichen (3 Zeilen-Paare;
-die übrigen 22 auf neue Zeilennummern nachgeführt, in `BLEIBT_MIT_INHALT` inhaltlich gefesselt) — jeweils
-gestrichen, nicht nachgezogen) aller produktiven
+hält eine **eingefrorene** `Datei:Zeile`-Liste (47 Einträge — unverändert seit S6d, auch nach
+S6e; der Spec-Anhang misst noch 69 auf dem Vor-S6a-Stand `73f504c9`, eine davon,
+`WeatherMetricsTab.svelte:577`, ist die per S6a AC-1 entfernte tote Bedingung,
+`WeatherMetricsTab.svelte:1273` wurde per S6b AC-4/AC-5 **bewusst gestrichen**, nachdem der Guard
+dort zeilentreu auf `if (!vergleichSpeicherung) return;` verkürzt war, S6c hat 14 der 18
+`AlarmeTab.svelte`-Einträge gestrichen (`:256`, `:514`, `:533`, `:566` bleiben, Zeilennummern nach
+dem Umbau), S6d hat 6 der 28 `CorridorEditor.svelte`/`CorridorEditorMobile.svelte`-Einträge
+gestrichen (3 Zeilen-Paare; die übrigen 22 auf neue Zeilennummern nachgeführt, in
+`BLEIBT_MIT_INHALT` inhaltlich gefesselt), und **S6e (GREEN `9d151ded`) hat 0 der drei
+`VersandTab.svelte`-Einträge gestrichen** (alle drei sind Darstellungs-Zweige der
+Route/Vergleich-Markup-Weiche, kein `wiz`-Symptom) — die drei wurden von `:284`/`:294`/`:330` auf
+die neu gemessenen Zeilen `:348`/`:358`/`:394` nachgeführt und in `BLEIBT_MIT_INHALT` inhaltlich
+gefesselt; `versandVergleichSpeicherung.ts:221` blieb dabei unverändert an Position, ohne neue
+Fesselung (alter, positionsbasierter Vertrag)) aller produktiven
 `context ===`/`context !==`-Verzweigungen unter `shared/` und vergleicht sie zur Testlaufzeit
 gegen den eingefrorenen Zählbefehl (`grep -rn 'context ===\|context !=='`, ohne Tests und
 Kommentare). Die Liste ist **nicht** aus dem Verzeichnis abgeleitet, sondern als Array im
