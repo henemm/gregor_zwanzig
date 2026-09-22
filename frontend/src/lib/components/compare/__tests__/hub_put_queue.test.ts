@@ -119,7 +119,7 @@ describe('F002-Integration: Versand-Speicherung + nachfolgender Toggle-Active-PU
 		const queue = createPutQueue();
 		const versand = erstelleVersandVergleichSpeicherung({
 			client: api,
-			wiz,
+			zustand: wiz,
 			preset: () => currentPreset,
 			enqueueHubWrite: (fn) => queue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {
@@ -186,7 +186,7 @@ describe('F003-Regression: die Rollback-Baseline wird bei Queue-AUSFUEHRUNG erfa
 
 		const versand = erstelleVersandVergleichSpeicherung({
 			client,
-			wiz,
+			zustand: wiz,
 			preset: () => currentPreset,
 			enqueueHubWrite: (fn) => queue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {

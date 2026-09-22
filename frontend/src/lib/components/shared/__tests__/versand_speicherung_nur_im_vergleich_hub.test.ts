@@ -19,7 +19,7 @@
 // die `untrack`-Zeile wäre kein Verhaltensnachweis). S4-Präzedenz übernommen.
 //
 // Zielschnittstelle (existiert noch NICHT → RED per fehlendem Modul):
-//   versandVergleichSpeicherungAktiv({ context, wiz, preset, saveController }): boolean
+//   versandVergleichSpeicherungAktiv({ context, zustand, preset, saveController }): boolean
 //
 // Mutations-Gegenprobe (Spec AC-9): Aktivierungs-Bedingung entfernen ⇒ die
 // Anlege-Seite (ohne preset/saveController) würde einen PUT auslösen ⇒ rot.
@@ -41,7 +41,7 @@ const saveController = createController('cp-2276-s5-kontext');
 
 describe('Positivfall: Ortsvergleich-Hub', () => {
 	test('vergleich + Wizard-Zustand + preset + saveController → Versand-Speicherung aktiv', () => {
-		assert.equal(versandVergleichSpeicherungAktiv({ context: 'vergleich', wiz, preset, saveController }), true);
+		assert.equal(versandVergleichSpeicherungAktiv({ context: 'vergleich', zustand: wiz, preset, saveController }), true);
 	});
 });
 
@@ -50,7 +50,7 @@ describe('AC-9: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', () 
 		assert.equal(
 			versandVergleichSpeicherungAktiv({
 				context: 'vergleich',
-				wiz,
+				zustand: wiz,
 				preset: undefined,
 				saveController: undefined
 			}),
@@ -61,14 +61,14 @@ describe('AC-9: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', () 
 
 	test('vergleich mit saveController, aber ohne preset → inaktiv (keine Basis für einen PUT)', () => {
 		assert.equal(
-			versandVergleichSpeicherungAktiv({ context: 'vergleich', wiz, preset: undefined, saveController }),
+			versandVergleichSpeicherungAktiv({ context: 'vergleich', zustand: wiz, preset: undefined, saveController }),
 			false
 		);
 	});
 
 	test('vergleich mit preset, aber ohne Wizard-Zustand → inaktiv', () => {
 		assert.equal(
-			versandVergleichSpeicherungAktiv({ context: 'vergleich', wiz: undefined, preset, saveController }),
+			versandVergleichSpeicherungAktiv({ context: 'vergleich', zustand: undefined, preset, saveController }),
 			false
 		);
 	});
@@ -77,7 +77,7 @@ describe('AC-9: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', () 
 describe('AC-12: Trip-Seite (route) — Vergleichs-Speicherung wird nie ausgelöst', () => {
 	test('route-Kontext mit sonst VOLLSTÄNDIGEN Props → inaktiv (die Kontext-Prüfung allein entscheidet)', () => {
 		assert.equal(
-			versandVergleichSpeicherungAktiv({ context: 'route', wiz, preset, saveController }),
+			versandVergleichSpeicherungAktiv({ context: 'route', zustand: wiz, preset, saveController }),
 			false,
 			'der route-Zweig darf die Vergleichs-Orchestrierung nicht auslösen — er speichert über scheduleAutoSave/scheduleReportConfigOnlySave'
 		);
@@ -85,7 +85,7 @@ describe('AC-12: Trip-Seite (route) — Vergleichs-Speicherung wird nie ausgelö
 
 	test('route-Kontext wie in BriefingScheduleTab gemountet (ohne wiz/preset) → inaktiv', () => {
 		assert.equal(
-			versandVergleichSpeicherungAktiv({ context: 'route', wiz: undefined, preset: undefined, saveController }),
+			versandVergleichSpeicherungAktiv({ context: 'route', zustand: undefined, preset: undefined, saveController }),
 			false
 		);
 	});

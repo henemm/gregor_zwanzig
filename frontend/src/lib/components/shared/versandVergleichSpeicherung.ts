@@ -214,16 +214,19 @@ export function rollbackVersandSnapshot(
  *  nur im Ortsvergleich-Hub (vergleich + Zustand + Basis + Controller). */
 export function versandVergleichSpeicherungAktiv(p: {
 	context: string;
-	wiz: unknown;
+	zustand: unknown;
 	preset: unknown;
 	saveController: unknown;
 }): boolean {
-	return p.context === 'vergleich' && !!p.wiz && !!p.preset && !!p.saveController;
+	return p.context === 'vergleich' && !!p.zustand && !!p.preset && !!p.saveController;
 }
 
 export interface VersandVergleichSpeicherungOptionen {
 	client: PutClient;
-	wiz: VersandHydrationTarget;
+	/** Issue #2276 S6e: der gehaltene Versandstand. Frueher `wiz` — der
+	 *  Versand-Organismus reicht seit S6e eine Bruecke ueber seine Wertprops
+	 *  herein, kein Wizard-Objekt mehr. */
+	zustand: VersandHydrationTarget;
 	/** Basis — als Getter, damit sie ERST bei Ausführung in der Queue gelesen wird. */
 	preset: () => ComparePreset;
 	/** Hub-Queue (`hubPutQueue.enqueue`) — Serialisierung mit den Nachbar-Reitern. */
@@ -235,13 +238,13 @@ export interface VersandVergleichSpeicherungOptionen {
 
 /**
  * Orchestrierung des Versand-Speicherns im Ortsvergleich (S2-Muster, EINE
- * Domäne). Anfangs-Baseline = Versandstand von `wiz` beim Erzeugen (nach der
+ * Domäne). Anfangs-Baseline = Versandstand von `zustand` beim Erzeugen (nach der
  * Hydration).
  *
  * `aenderungMelden()`: ohne Unterschied zur Baseline wird ein eigener, noch
  * ausstehender Vorgang verworfen (`cancel` + `markPristine`) — sonst
  * `schedule(SaveFn)`. Die SaveFn liest Basis und Versandstand erst bei
- * Ausführung in der Queue (AC-2: `sendTelegram`/`sendSms` live aus `wiz`,
+ * Ausführung in der Queue (AC-2: `sendTelegram`/`sendSms` live aus dem gehaltenen Zustand,
  * nie aus einer eingefrorenen Kopie), reicht `init` (keepalive) an den PUT
  * durch (AC-10), rollt nur bei Nicht-412 zurück (AC-6) und wirft den Fehler
  * weiter, damit der Controller `conflict`/`error` anzeigt.
@@ -249,8 +252,8 @@ export interface VersandVergleichSpeicherungOptionen {
 export function erstelleVersandVergleichSpeicherung(
 	opt: VersandVergleichSpeicherungOptionen
 ): { aenderungMelden(): void } {
-	const { client, wiz, enqueueHubWrite, saveController } = opt;
-	let zuletztGespeichert: VersandSnapshot = versandSnapshotAus(wiz);
+	const { client, zustand, enqueueHubWrite, saveController } = opt;
+	let zuletztGespeichert: VersandSnapshot = versandSnapshotAus(zustand);
 	// Nur einen EIGENEN, noch nicht gestarteten Vorgang verwerfen — ein
 	// ausstehender Speichervorgang eines anderen Reiters bleibt unangetastet.
 	let eigenerVorgangAussteht = false;
@@ -264,7 +267,7 @@ export function erstelleVersandVergleichSpeicherung(
 			// Nachschieben im selben Vorgang, damit „Gespeichert" erst bei
 			// Server == UI erscheint.
 			for (;;) {
-				const current = versandSnapshotAus(wiz);
+				const current = versandSnapshotAus(zustand);
 				const before = zuletztGespeichert;
 				const payload = flushPendingVersandSave(opt.preset(), current, before);
 				if (!payload) return;
@@ -274,7 +277,7 @@ export function erstelleVersandVergleichSpeicherung(
 					opt.onCompareUpdate(antwort);
 				} catch (e) {
 					if ((e as { status?: number })?.status !== 412) {
-						rollbackVersandSnapshot(wiz, before, current);
+						rollbackVersandSnapshot(zustand, before, current);
 					}
 					throw e;
 				}
@@ -284,7 +287,7 @@ export function erstelleVersandVergleichSpeicherung(
 
 	return {
 		aenderungMelden(): void {
-			const current = versandSnapshotAus(wiz);
+			const current = versandSnapshotAus(zustand);
 			if (JSON.stringify(current) === JSON.stringify(zuletztGespeichert)) {
 				if (eigenerVorgangAussteht) {
 					eigenerVorgangAussteht = false;
@@ -297,4 +300,43 @@ export function erstelleVersandVergleichSpeicherung(
 			saveController.schedule(saveFn);
 		}
 	};
+}
+
+/**
+ * Issue #2276 S6e: Bruecke zwischen den WERTPROPS des Versand-Organismus und
+ * diesem (unveraenderten) Speicherweg. Seit S6e haelt `VersandTab.svelte` keine
+ * Wizard-Referenz mehr — der Baustein reicht seine Props herein, und HIER, an
+ * genau einer Stelle, treffen Wertprops und Speicherweg aufeinander.
+ *
+ * Gelesen wird IMMER frisch (`werte()` je Zugriff): ein einmal gebautes Objekt
+ * saehe nach der ersten Aenderung veraltete Werte, und der Diff-Gate-Vergleich
+ * fiele dann stumm aus — der Hub speicherte die vorletzte Fassung.
+ * Geschrieben wird ausschliesslich vom diff-basierten Rollback
+ * (`rollbackVersandSnapshot`) — `setzen` meldet das an den Halter des Zustands
+ * weiter; kein Bedienelement schreibt hierueber.
+ *
+ * Wie `corridorZustandsBruecke` (S6d) und anders als `alarmZustandsBruecke`
+ * (S6c) braucht es hier KEINE Namensumleitung: die zehn Felder heissen im
+ * Speicherweg genauso wie die Wertprops.
+ *
+ * 🔴 `werte()` fuehrt GENAU ZEHN Felder — die sieben Snapshot-Felder und die
+ * drei toten Legacy-Restfelder. `sendEmail` gehoert bewusst NICHT dazu (Spec,
+ * Design-Entscheidung 2): `VersandSnapshot` kennt das Feld nicht und
+ * `baueVersandNutzlast` sendet es nie.
+ *
+ * PLATZIERUNG unterhalb Zeile 221 ist Pflicht, keine Vorliebe (Spec, Auflage
+ * A1): weiter oben verschoebe sie den eingefrorenen Ratschen-Eintrag
+ * `versandVergleichSpeicherung.ts:221` nach unten.
+ */
+export function versandZustandsBruecke(
+	werte: () => Record<string, unknown>,
+	setzen?: (feld: string, wert: unknown) => void
+): VersandHydrationTarget {
+	return new Proxy({} as VersandHydrationTarget, {
+		get: (_ziel, feld) => werte()[feld as string],
+		set: (_ziel, feld, wert) => {
+			setzen?.(feld as string, wert);
+			return true;
+		}
+	});
 }

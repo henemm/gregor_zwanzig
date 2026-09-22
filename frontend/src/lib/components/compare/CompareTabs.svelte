@@ -52,6 +52,7 @@
 	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
 	import { alarmePropsAus } from './alarmePropsAus.ts';
 	import { corridorPropsAus } from './corridorPropsAus.ts';
+	import { versandPropsAus } from './versandPropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
 	// vergleich-Kontext) — analog Alarme-/Versand-Bridge oben.
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
@@ -1069,7 +1070,7 @@
 				     Wrapper-`onclick` fuer „Bis auf Weiteres" (F001). -->
 				<VersandTab
 					context="vergleich"
-					wiz={wizardState}
+					{...versandPropsAus(wizardState)}
 					activation={hubActivationCard}
 					preset={currentPreset}
 					{saveController}

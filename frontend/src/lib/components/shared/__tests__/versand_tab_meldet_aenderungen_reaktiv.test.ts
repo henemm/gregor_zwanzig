@@ -121,19 +121,23 @@ describe('AC-1/AC-5: VersandTab meldet Versand-Änderungen über einen reaktiven
 		meldenderEffect(instanceAst(VERSAND_TAB));
 	});
 
-	test('der Effekt liest den vollständigen Versandstand über versandSnapshotAus(wiz)', () => {
+	test('der Effekt liest den vollständigen Versandstand über versandSnapshotAus(versandZustand)', () => {
 		const effect = meldenderEffect(instanceAst(VERSAND_TAB));
 		const lesungen = findeAufrufe(effect, 'versandSnapshotAus');
 
 		assert.equal(
 			lesungen.length,
 			1,
-			'der Effekt muss GENAU EINE Lesequelle haben: versandSnapshotAus(wiz) liest alle 10 Versandfelder — eine engere Leseliste ließe „Bis auf Weiteres" (endDate) wieder unsichtbar werden (AC-5)'
+			'der Effekt muss GENAU EINE Lesequelle haben: versandSnapshotAus(versandZustand) liest alle 10 Versandfelder — eine engere Leseliste ließe „Bis auf Weiteres" (endDate) wieder unsichtbar werden (AC-5)'
 		);
 		assert.equal(
 			lesungen[0].arguments[0]?.name,
-			'wiz',
-			'gelesen werden muss der Wizard-Zustand des Ortsvergleichs, nicht eine eingefrorene Kopie'
+			// Issue #2276 S6e: seit dem Wertprop-Umbau ist die Lesequelle die
+			// Bruecke `versandZustand` (Proxy ueber die zehn Wertprops), nicht mehr
+			// der Wizard-Zustand `wiz`. Die Zusicherung bleibt dieselbe: gelesen
+			// wird die LEBENDE Quelle, nie eine eingefrorene Kopie.
+			'versandZustand',
+			'gelesen werden muss der lebende Versandstand des Ortsvergleichs, nicht eine eingefrorene Kopie'
 		);
 	});
 

@@ -55,7 +55,7 @@ function hub() {
 	const hubPutQueue = createPutQueue();
 	const speicherung = erstelleVersandVergleichSpeicherung({
 		client: api,
-		wiz,
+		zustand: wiz,
 		preset: () => currentPreset,
 		enqueueHubWrite: (fn) => hubPutQueue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {

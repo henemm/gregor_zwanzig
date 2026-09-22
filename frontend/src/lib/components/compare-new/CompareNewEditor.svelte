@@ -45,6 +45,7 @@
 	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
 	import { alarmePropsAus } from '../compare/alarmePropsAus.ts';
 	import { corridorPropsAus } from '../compare/corridorPropsAus.ts';
+	import { versandPropsAus } from '../compare/versandPropsAus.ts';
 	// #1435 E1a-2: der Alarme-Reiter leitet seine Zeilen aus dem Register-Katalog
 	// ab — die Anlege-Seite muss ihn deshalb ebenfalls laden (geteilter
 	// Promise-Cache, kein zweiter Netzwerk-Request) und durchreichen.
@@ -404,7 +405,7 @@
 			</div>
 		</div>
 	{:else if activeTab === 'versand'}
-		<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
+		<VersandTab context="vergleich" {...versandPropsAus(wiz)} activation={versandActivationBanner} />
 	{/if}
 </div><!-- /.cm-desktop -->
 
@@ -490,7 +491,7 @@
 				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} />
 			{/if}
 		{:else if activeTab === 'versand'}
-			<VersandTab context="vergleich" {wiz} activation={versandActivationBanner} />
+			<VersandTab context="vergleich" {...versandPropsAus(wiz)} activation={versandActivationBanner} />
 		{/if}
 	</div>
 

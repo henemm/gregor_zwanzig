@@ -15,7 +15,6 @@
 	import { toHHMMSS } from '$lib/utils/time';
 	import type { Trip, ReportConfig, ComparePreset } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import VTBriefingChannels from './versand-tab/VTBriefingChannels.svelte';
 	import VTSchedulePlan from './versand-tab/VTSchedulePlan.svelte';
 	import VTLaufzeitRoute from './versand-tab/VTLaufzeitRoute.svelte';
@@ -29,7 +28,8 @@
 	import {
 		erstelleVersandVergleichSpeicherung,
 		versandSnapshotAus,
-		versandVergleichSpeicherungAktiv
+		versandVergleichSpeicherungAktiv,
+		versandZustandsBruecke
 	} from './versandVergleichSpeicherung.ts';
 	// Issue #1258 Scheibe S4 (E5): die komplette Alert-Zustellungs-Sektion des
 	// vergleich-Zweigs (Cooldown-/Quiet-Karten + Beispiel-Warnung) zog atomar
@@ -48,11 +48,40 @@
 		onChannelChange?: (channel: 'email' | 'telegram' | 'sms', value: boolean) => void;
 		/** Tab-Wechsel (analog HubOverview onJump) — "Etappen öffnen →" springt in 'stages'. Nur route. */
 		onJump?: (tab: string) => void;
-		/** Issue #1232 Scheibe 2b: geteilter Compare-Wizard-State (context="vergleich").
-		 * KEIN Self-Save — alle Controls binden direkt an wiz.*, Persistenz bleibt
-		 * zentral in CompareEditor.handleSave()/wiz.saveNewPreset() (Doppel-Mount
-		 * Desktop+Mobile, Create ohne Preset-ID). */
-		wiz?: CompareWizardState;
+		/** Issue #2276 S6e: der Vergleichs-Zweig arbeitet auf reinen WERTPROPS +
+		 * Aenderungs-Rueckrufen statt auf dem Compare-Wizard-Zustand. Das Buendel
+		 * baut `compare/versandPropsAus.ts`; alle drei Vergleichs-Mounts streuen
+		 * es im Markup-Ausdruck. Klasse A (sieben Snapshot-Felder) und Klasse B
+		 * (`sendEmail`, persistenzlos) haben je einen eigenen Rueckruf. */
+		sendEmail?: boolean;
+		sendTelegram?: boolean;
+		sendSms?: boolean;
+		morningEnabled?: boolean;
+		morningTime?: string;
+		eveningEnabled?: boolean;
+		eveningTime?: string;
+		endDate?: string | null;
+		/** Klasse C — die drei toten Legacy-Restfelder. Kein Bedienelement im
+		 * Versand-Reiter (die Alert-Zustellung zog in #1258 S4 nach AlarmeTab.svelte
+		 * ab), aber sie MUESSEN durch Snapshot und Nutzlast laufen: ein Weglassen
+		 * nullt beim naechsten Versand-PUT die Alarm-Zustellungsfelder (S5 AC-11,
+		 * Datenverlust-Klasse BUG-DATALOSS-GR221). */
+		alertCooldownMinutes?: number;
+		alertQuietFrom?: string;
+		alertQuietTo?: string;
+		onSendEmailChange?: (an: boolean) => void;
+		onSendTelegramChange?: (an: boolean) => void;
+		onSendSmsChange?: (an: boolean) => void;
+		onMorningEnabledChange?: (an: boolean) => void;
+		onMorningTimeChange?: (zeit: string) => void;
+		onEveningEnabledChange?: (an: boolean) => void;
+		onEveningTimeChange?: (zeit: string) => void;
+		onEndDateChange?: (datum: string | null) => void;
+		/** Rollback-Senke des Vergleichs-Speicherwegs: `rollbackVersandSnapshot`
+		 * setzt nach einem gescheiterten PUT feldweise zurueck — auch die drei
+		 * Legacy-Restfelder, fuer die es keinen eigenen Rueckruf gibt. KEIN
+		 * Bedienelement schreibt hierueber. */
+		onVersandFeldSetzen?: (feld: string, wert: unknown) => void;
 		/** Issue #1232 Scheibe 2b: Create-Aktivierungs-Banner (1:1 JSX-Slot), nur vergleich. */
 		activation?: Snippet;
 		// Issue #2276 S5: der vergleich-Zweig speichert selbst (Hub). Ohne `preset`
@@ -69,7 +98,26 @@
 		reportConfig = $bindable(),
 		onChannelChange,
 		onJump,
-		wiz,
+		sendEmail,
+		sendTelegram,
+		sendSms,
+		morningEnabled,
+		morningTime,
+		eveningEnabled,
+		eveningTime,
+		endDate,
+		alertCooldownMinutes,
+		alertQuietFrom,
+		alertQuietTo,
+		onSendEmailChange,
+		onSendTelegramChange,
+		onSendSmsChange,
+		onMorningEnabledChange,
+		onMorningTimeChange,
+		onEveningEnabledChange,
+		onEveningTimeChange,
+		onEndDateChange,
+		onVersandFeldSetzen,
 		activation,
 		preset,
 		onCompareUpdate,
@@ -188,10 +236,11 @@
 		[send_email, send_telegram, send_sms, send_premium_sms].filter(Boolean).length
 	);
 
-	// Issue #1232 Scheibe 2b: vergleich-Zweig — Kanal-Zähler direkt aus wiz.*
-	// (kein lokaler $state, kein Self-Save).
+	// Issue #2276 S6e: vergleich-Zweig — Kanal-Zähler direkt aus den Wertprops
+	// (kein lokaler $state). `sendEmail` zählt mit: der Schalter ist voll
+	// bedienbar, auch wenn er (vorbestehend) nicht persistiert wird.
 	const vergleichActiveChannelCount = $derived(
-		wiz ? [wiz.sendEmail, wiz.sendTelegram, wiz.sendSms].filter(Boolean).length : 0
+		[sendEmail, sendTelegram, sendSms].filter(Boolean).length
 	);
 
 	// Factory-Pattern (Safari-Closure-Schutz, CLAUDE.md).
@@ -213,14 +262,10 @@
 			send_premium_sms = (e.target as HTMLInputElement).checked;
 		};
 	}
-	// Issue #1232 Scheibe 2b: vergleich-Zweig — schreibt direkt in wiz.* statt
-	// in lokale $state-Variablen (kein Self-Save, siehe Modul-Kommentar oben).
-	function makeWizChannelHandler(field: 'sendEmail' | 'sendTelegram' | 'sendSms') {
-		return function doChange(e: Event) {
-			if (!wiz) return;
-			wiz[field] = (e.target as HTMLInputElement).checked;
-		};
-	}
+	// Issue #2276 S6e: der vergleich-Zweig schreibt über die Aenderungs-Rueckrufe
+	// seiner Wertprops — `makeWizChannelHandler` (Schreibzugriff auf den
+	// Wizard-Zustand) ist damit ersatzlos entfallen; die Kanal-Schalter nutzen
+	// denselben `makeToggleHandler` wie der Zeitplan.
 	function makeToggleHandler(setter: (v: boolean) => void) {
 		return function doToggle(e: Event) {
 			setter((e.target as HTMLInputElement).checked);
@@ -259,8 +304,8 @@
 	// Beispiel-Warnung + der EINE konsolidierte $effect dafür) zog atomar in
 	// AlarmeScheduleTab.svelte/AlarmeTab.svelte um (kein Zwischenzustand mit
 	// zwei Schreibpfaden auf dieselben Trip-Felder, F002-Race-Lektion). Der
-	// vergleich-Zweig unten ist unverändert (eigene wiz.*-Bindung, kein
-	// Self-Save, S4-Thema).
+	// vergleich-Zweig unten liest und schreibt seit #2276 S6e ausschliesslich
+	// Wertprops und Rueckrufe.
 
 	// ── Issue #2276 S5: vergleich-Zweig speichert selbst (analog Alarme-Reiter) ─
 	// Diff-Gate gegen die zuletzt gespeicherte Baseline, Queue, Basis-Rueckmeldung
@@ -268,11 +313,30 @@
 	// $effect delegiert. Die Baseline entsteht beim Mount — CompareTabs mountet
 	// erst nach der Hydration. Anlege-Seite (ohne preset/saveController): Zweig
 	// inaktiv (AC-9), Trip-Zweig ebenso (AC-12).
+	// Issue #2276 S6e: der Speicherweg bleibt unveraendert — er bekommt den
+	// Versandstand jetzt ueber die Bruecke aus den Wertprops. `werte()` fuehrt
+	// GENAU die zehn Felder, die Snapshot und Nutzlast kennen; `sendEmail`
+	// gehoert bewusst NICHT dazu (kein `send_email` auf ComparePreset).
+	const versandZustand = versandZustandsBruecke(
+		() => ({
+			sendTelegram,
+			sendSms,
+			morningEnabled,
+			morningTime,
+			eveningEnabled,
+			eveningTime,
+			endDate,
+			alertCooldownMinutes,
+			alertQuietFrom,
+			alertQuietTo
+		}),
+		(feld, wert) => onVersandFeldSetzen?.(feld, wert)
+	);
 	const vergleichSpeicherung = untrack(() =>
-		versandVergleichSpeicherungAktiv({ context, wiz, preset, saveController })
+		versandVergleichSpeicherungAktiv({ context, zustand: versandZustand, preset, saveController })
 			? erstelleVersandVergleichSpeicherung({
 					client: api,
-					wiz: wiz!,
+					zustand: versandZustand,
 					preset: () => preset!,
 					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
 					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
@@ -281,12 +345,12 @@
 			: null
 	);
 	$effect(() => {
-		if (context !== 'vergleich' || !wiz || !vergleichSpeicherung) return;
+		if (context !== 'vergleich' || !vergleichSpeicherung) return;
 		// Liest ALLE 10 Versandfelder (Abhaengigkeiten) — `endDate` eingeschlossen,
 		// damit „Bis auf Weiteres" ohne change-/focusout-Ereignis wirkt (AC-5).
 		// Das Melden selbst ohne Tracking, damit Zustandswechsel des Controllers
 		// keinen Neulauf ausloesen.
-		versandSnapshotAus(wiz);
+		versandSnapshotAus(versandZustand);
 		untrack(() => vergleichSpeicherung.aenderungMelden());
 	});
 </script>
@@ -332,13 +396,13 @@
 		<VTBriefingChannels
 			{context}
 			channels={{
-				email: wiz?.sendEmail ?? false,
-				telegram: wiz?.sendTelegram ?? false,
-				sms: wiz?.sendSms ?? false
+				email: sendEmail ?? false,
+				telegram: sendTelegram ?? false,
+				sms: sendSms ?? false
 			}}
-			onEmailChange={makeWizChannelHandler('sendEmail')}
-			onTelegramChange={makeWizChannelHandler('sendTelegram')}
-			onSmsChange={makeWizChannelHandler('sendSms')}
+			onEmailChange={makeToggleHandler((v) => onSendEmailChange?.(v))}
+			onTelegramChange={makeToggleHandler((v) => onSendTelegramChange?.(v))}
+			onSmsChange={makeToggleHandler((v) => onSendSmsChange?.(v))}
 			emailTestid="compare-step5-channel-email"
 			telegramTestid="compare-step5-channel-telegram"
 			smsTestid="compare-step5-channel-sms"
@@ -347,30 +411,17 @@
 		<VTSchedulePlan
 			context="vergleich"
 			hasActiveChannel={vergleichActiveChannelCount > 0}
-			morning_enabled={wiz?.morningEnabled ?? true}
-			morning_time={wiz?.morningTime ?? '07:00'}
-			evening_enabled={wiz?.eveningEnabled ?? false}
-			evening_time={wiz?.eveningTime ?? '18:00'}
-			onMorningToggle={makeToggleHandler((v) => {
-				if (wiz) wiz.morningEnabled = v;
-			})}
-			onEveningToggle={makeToggleHandler((v) => {
-				if (wiz) wiz.eveningEnabled = v;
-			})}
-			onMorningTime={makeTimeHandler((v) => {
-				if (wiz) wiz.morningTime = v;
-			})}
-			onEveningTime={makeTimeHandler((v) => {
-				if (wiz) wiz.eveningTime = v;
-			})}
+			morning_enabled={morningEnabled ?? true}
+			morning_time={morningTime ?? '07:00'}
+			evening_enabled={eveningEnabled ?? false}
+			evening_time={eveningTime ?? '18:00'}
+			onMorningToggle={makeToggleHandler((v) => onMorningEnabledChange?.(v))}
+			onEveningToggle={makeToggleHandler((v) => onEveningEnabledChange?.(v))}
+			onMorningTime={makeTimeHandler((v) => onMorningTimeChange?.(v))}
+			onEveningTime={makeTimeHandler((v) => onEveningTimeChange?.(v))}
 		/>
 
-		<VTLaufzeitVergleich
-			value={wiz?.endDate ?? null}
-			onChange={(v) => {
-				if (wiz) wiz.endDate = v;
-			}}
-		/>
+		<VTLaufzeitVergleich value={endDate ?? null} onChange={(v) => onEndDateChange?.(v)} />
 
 		<!-- Issue #1258 Scheibe S4 (E5, AC-18): die Alert-Zustellungs-Sektion
 		     (Cooldown, Stille Stunden, Beispiel-Warnung) rendert seither
