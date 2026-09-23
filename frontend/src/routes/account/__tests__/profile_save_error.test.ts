@@ -54,3 +54,31 @@ describe('#2147 Scheibe B1 AC-16 — Profil-Speicherfehler verstaendlich ueberse
 		assert.equal(meldung, 'Speichern fehlgeschlagen');
 	});
 });
+
+// Issue #2406 (AC-13, PO-Entscheid 2026-09-23): `invalid_code` trifft ZWEI
+// Faelle, die serverseitig nicht unterscheidbar sind (nur EIN Hash wird
+// persistiert, Spec §4 / AC-16): den Tippfehler UND den abgeloesten Code nach
+// Neuanforderung oder Nummernwechsel. Der Anzeigetext muss deshalb beide
+// erklaeren. Geprueft werden die tragenden Aussagen, nicht der Satz byteweise —
+// der Wortlaut darf redaktionell wandern, die Aussage nicht.
+describe('#2406 AC-13 — invalid_code erklaert auch den abgeloesten Code', () => {
+	test('invalid_code_nennt_exklusivitaet_verfall_und_ausloeser', () => {
+		const meldung = profileSaveErrorMessage(400, { error: 'invalid_code' });
+
+		assert.match(
+			meldung,
+			/nur der zuletzt angeforderte/i,
+			`AC-13: die Meldung muss sagen, dass NUR der zuletzt angeforderte Code gilt, bekommen: „${meldung}"`
+		);
+		assert.match(
+			meldung,
+			/verfallen|verfällt|verfaellt|ungültig|ungueltig|entwertet/i,
+			`AC-13: die Meldung muss sagen, dass aeltere Codes ihre Gueltigkeit verlieren, bekommen: „${meldung}"`
+		);
+		assert.match(
+			meldung,
+			/neuen anforderst|nummer änderst|nummer aenderst/i,
+			`AC-13: die Meldung muss die beiden Ausloeser der Abloesung nennen (Neuanforderung, Nummernwechsel), bekommen: „${meldung}"`
+		);
+	});
+});

@@ -24,6 +24,12 @@ import (
 // Schleifen und Goroutinen.
 var weitMailLimiter = NewMailFloodLimiter(1_000_000, time.Hour)
 
+// weitSmsLimiter ist das Gegenstueck fuer die zweite, eigenstaendige
+// SMS-Code-Bremse (Issue #2406). Bewusst eine ANDERE Instanz als
+// weitMailLimiter: die Trennung der beiden Kontingente ist Teil der
+// Zusicherung (AC-6), ein geteilter Test-Limiter verwischte sie.
+var weitSmsLimiter = NewMailFloodLimiter(1_000_000, time.Hour)
+
 // testRegisterCfg liefert eine Config, deren SMTPHost gesetzt ist, damit der
 // (nicht-Test-User-)Dispatch-Zweig in RegisterHandler betreten wird. Der
 // tatsächliche SMTP-Dial wird in Dispatch-beobachtenden Tests über

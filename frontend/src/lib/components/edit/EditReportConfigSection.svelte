@@ -116,7 +116,11 @@
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,
 		telegram: !!profile?.telegram_chat_id,
-		sms: !!profile?.sms_to && profile?.sms_allowed !== false
+		// Issue #2406: dieselbe Bedingung wie im geteilten Baustein
+		// (VTBriefingChannels) — nur eine per Code BEWIESENE Nummer ist
+		// schaltbar, sonst versprich der Schalter einen Versand, den die
+		// Sperre in config.py ohnehin verwirft.
+		sms: !!profile?.sms_to && profile?.sms_allowed !== false && !!profile?.sms_verified
 	});
 
 	// Issue #1510: ehrlicher Verbindungsstatus + geteilte Kontakt-Beschriftung
@@ -419,6 +423,10 @@
 				{#if profile?.sms_allowed === false}
 					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
 						SMS ab Level Standard verfügbar
+					</div>
+				{:else if profile?.sms_to && !profile?.sms_verified}
+					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
+						Nummer noch nicht bestätigt — <a href="/account" style="color:var(--g-accent);text-decoration:underline;text-underline-offset:2px">Code im Account eingeben</a>
 					</div>
 				{:else if !availableChannels.sms}
 					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">

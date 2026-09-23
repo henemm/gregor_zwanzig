@@ -26,6 +26,14 @@ export interface ConnectionProfile {
 	telegram_chat_id?: string;
 	sms_to?: string;
 	sms_allowed?: boolean;
+	/** Issue #2406 — die eingetragene Nummer ist per Code bewiesen. Die
+	 * Profil-Antwort liefert das Feld IMMER (kein omitempty, Go
+	 * `profileResponse.SmsVerified`); fehlt es, gilt die Nummer hier als
+	 * unbewiesen — dieselbe fail-closed-Richtung wie die Sperre in
+	 * `src/app/config.py::with_user_profile`. */
+	sms_verified?: boolean;
+	/** Ausstehende, noch nicht bewiesene Nummer (#2406). */
+	pending_sms_to?: string;
 	/** Issue #1717 S3 — Premium-SMS (Garmin inReach). Vier lesende Felder aus
 	 * GET /api/auth/profile (Go: profileResponse). Hier und NICHT in den lokalen
 	 * `interface Profile`-Kopien der Komponenten, damit es eine kanonische
@@ -56,8 +64,18 @@ export function channelConnectionStatus(
 		? { tone: 'good', label: 'verbunden' }
 		: NOT_CONNECTED;
 
-	const sms: ChannelConnectionInfo =
-		p.sms_to && p.sms_allowed !== false ? { tone: 'good', label: 'hinterlegt' } : NOT_CONNECTED;
+	// Issue #2406: "eingetragen" ist nicht "sendebereit". Eine unbewiesene
+	// Nummer wird vom Versand ohnehin fail-closed verworfen (config.py) — sie
+	// hier als "hinterlegt" zu zeigen, verspräche einen Versand, der nie
+	// stattfindet.
+	let sms: ChannelConnectionInfo;
+	if (!p.sms_to || p.sms_allowed === false) {
+		sms = NOT_CONNECTED;
+	} else if (p.sms_verified) {
+		sms = { tone: 'good', label: 'hinterlegt' };
+	} else {
+		sms = { tone: 'neutral', label: 'eingetragen, unbestätigt' };
+	}
 
 	return { email, telegram, sms };
 }

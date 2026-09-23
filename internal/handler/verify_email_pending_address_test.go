@@ -314,7 +314,7 @@ func TestAC9_EinloesenGegenGleichzeitigesProfilUpdateErgibtGenauEinenInhaber(t *
 
 	bFertig := make(chan struct{})
 	go func() {
-		UpdateProfileHandler(s, cfg, weitMailLimiter).ServeHTTP(wB, reqB)
+		UpdateProfileHandler(s, cfg, weitMailLimiter, weitSmsLimiter).ServeHTTP(wB, reqB)
 		close(bFertig)
 	}()
 	for _, ch := range []chan struct{}{bFertig, aFertig} {

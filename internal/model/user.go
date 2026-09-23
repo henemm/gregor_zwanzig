@@ -54,6 +54,28 @@ type User struct {
 	// (IsTestAccount); ersetzt die "test"/"tdd"-Namens-Heuristik. omitempty:
 	// Bestandsprofile ohne das Feld laden unveraendert als echte Nutzer.
 	IsTestUser bool `json:"is_test_user,omitempty"`
+	// Issue #2406 (S3 aus #2153) — SMS-Nummer-Verifikation. SmsVerifiedNumber
+	// ist die BEWIESENE Nummer, nicht bloss ein Zeitstempel: nur wenn sie mit
+	// SmsTo uebereinstimmt, darf eine SMS an das Konto gehen (Wirkstelle
+	// src/app/config.py::with_user_profile). PendingSmsTo haelt eine neue
+	// Nummer, solange das Konto eine bestaetigte hat — sie wird erst beim
+	// Einloesen des Codes nach SmsTo befoerdert. Alle drei omitempty:
+	// Bestandsdaten laden unveraendert. SmsVerifiedAt ist ein Pointer aus
+	// demselben Grund wie EmailVerifiedAt.
+	SmsVerifiedNumber string     `json:"sms_verified_number,omitempty"`
+	SmsVerifiedAt     *time.Time `json:"sms_verified_at,omitempty"`
+	PendingSmsTo      string     `json:"pending_sms_to,omitempty"`
+}
+
+// SmsVerificationCode — Issue #2406. Struktureller Klon von
+// EmailVerificationToken: nur der bcrypt-Hash liegt auf Platte, mit Ablauf und
+// an die zu beweisende Nummer gebunden. FailedAttempts riegelt Brute-Force auf
+// den kurzen Zahlencode ab.
+type SmsVerificationCode struct {
+	CodeHash       string    `json:"code_hash"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	Number         string    `json:"number"`
+	FailedAttempts int       `json:"failed_attempts,omitempty"`
 }
 
 type PasswordResetToken struct {

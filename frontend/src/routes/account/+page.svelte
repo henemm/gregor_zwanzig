@@ -219,6 +219,48 @@
 		}
 	}
 
+	// Issue #2406 (AC-13) — SMS-Nummer bestaetigen. Die Nummer, um die es geht,
+	// ist die ausstehende; ohne ausstehende die eingetragene, solange sie
+	// unbestaetigt ist. Ist die wirksame Nummer bewiesen und nichts ausstehend,
+	// gibt es nichts zu bestaetigen (kein Hinweis, keine Code-Eingabe).
+	let smsZuBestaetigen = $derived(
+		data.profile?.pending_sms_to || (data.profile?.sms_verified ? '' : (data.profile?.sms_to ?? ''))
+	);
+	let smsCode = $state('');
+	let smsVerifyStatus = $state<TestStatus>('idle');
+	let smsVerifyError = $state<string | null>(null);
+	let smsResendStatus = $state<TestStatus>('idle');
+
+	async function verifySmsCode() {
+		smsVerifyStatus = 'loading';
+		smsVerifyError = null;
+		try {
+			await api.post('/api/auth/sms/verify', { code: smsCode });
+			smsCode = '';
+			smsVerifyStatus = 'ok';
+			// Der Pending-Hinweis haengt an `data.profile` — ohne Neuladen bliebe
+			// er stehen, obwohl die Nummer bereits bewiesen ist.
+			await invalidateAll();
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string; status?: number };
+			smsVerifyError = profileSaveErrorMessage(body?.status ?? 0, body);
+			smsVerifyStatus = 'error';
+		}
+	}
+
+	async function resendSmsCode() {
+		smsResendStatus = 'loading';
+		smsVerifyError = null;
+		try {
+			await api.post('/api/auth/sms/resend', {});
+			smsResendStatus = 'ok';
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string; status?: number };
+			smsVerifyError = profileSaveErrorMessage(body?.status ?? 0, body);
+			smsResendStatus = 'error';
+		}
+	}
+
 	async function sendTest(channel: string) {
 		testStatus[channel] = 'loading';
 		testError[channel] = null;
@@ -622,6 +664,53 @@
 					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
 				<p class="mt-1 text-xs text-gray-500">Internationales Format, z.B. +49151XXXXXXXX</p>
+				<!-- Issue #2406 (AC-13): solange die Nummer nicht per Code bewiesen ist,
+				     geht an sie keine SMS raus (Sperre in config.py). Der Hinweis macht
+				     das sichtbar und traegt den einzigen Weg heraus. -->
+				{#if smsZuBestaetigen}
+					<div
+						data-testid="sms-pending-notice"
+						class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+					>
+						<p>
+							Bestätigung ausstehend für <strong>{smsZuBestaetigen}</strong> — bis dahin geht an
+							diese Nummer keine SMS. Den per SMS zugestellten Code hier eintragen:
+						</p>
+						<input
+							data-testid="sms-code-input"
+							name="sms_code"
+							inputmode="numeric"
+							autocomplete="one-time-code"
+							bind:value={smsCode}
+							placeholder="6-stelliger Code"
+							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						/>
+						<div class="flex flex-wrap items-center gap-4">
+							<button
+								type="button"
+								onclick={verifySmsCode}
+								disabled={smsVerifyStatus === 'loading'}
+								class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+							>
+								Code bestätigen
+							</button>
+							<button
+								type="button"
+								onclick={resendSmsCode}
+								disabled={smsResendStatus === 'loading'}
+								class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+							>
+								Code erneut senden
+							</button>
+						</div>
+						{#if smsResendStatus === 'ok'}
+							<span class="text-sm text-green-700">Neuer Code verschickt</span>
+						{/if}
+						{#if smsVerifyError}
+							<span class="text-sm text-red-700">{smsVerifyError}</span>
+						{/if}
+					</div>
+				{/if}
 			</div>
 
 			<div class="space-y-2">

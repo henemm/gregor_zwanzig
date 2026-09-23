@@ -136,6 +136,13 @@ class AlarmPruefstrecke:
             profile = {"id": user_id}
         profile.setdefault("mail_to", base.mail_to)
         profile.setdefault("sms_to", base.sms_to)
+        # Issue #2406: seit der Fail-closed-Sperre in `with_user_profile()`
+        # erreicht eine Nummer `Settings.sms_to` nur mit passendem
+        # `sms_verified_number`. Die Pruefstrecke simuliert einen Nutzer mit
+        # vollstaendig konfigurierten Kanaelen — die Nummer gilt hier also als
+        # bewiesen, sonst verschwaende der SMS-Zweig strukturell.
+        if profile.get("sms_to"):
+            profile.setdefault("sms_verified_number", profile["sms_to"])
         profile.setdefault("telegram_chat_id", base.telegram_chat_id)
         profile_path.parent.mkdir(parents=True, exist_ok=True)
         profile_path.write_text(json.dumps(profile))

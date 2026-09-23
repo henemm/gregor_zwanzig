@@ -36,7 +36,7 @@ test.describe('Issue #609 — SMS-Profilfeld + Kanalauswahl', () => {
 		await expect(smsInput).toHaveValue('+4915199997777');
 	});
 
-	test('AC-5: Trip-Report-Editor zeigt SMS-Checkbox (aktivierbar bei gespeicherter Nummer)', async ({
+	test('AC-5: Trip-Report-Editor zeigt SMS-Checkbox (seit #2406 gesperrt, solange die Nummer unbestaetigt ist)', async ({
 		page
 	}) => {
 		// Trip-Detail-Seite mit Report-Konfig oeffnen.
@@ -49,9 +49,13 @@ test.describe('Issue #609 — SMS-Profilfeld + Kanalauswahl', () => {
 			'[data-testid="channel-sms"], [data-testid="report-channel-sms"]'
 		);
 		await expect(smsChannel).toBeVisible({ timeout: 10_000 });
-		// Bei gespeicherter Nummer: NICHT disabled
+		// Issue #2406: eine bloss GESPEICHERTE Nummer ist seither nicht mehr
+		// schaltbar — erst der bestaetigte Code macht sie sendebereit. Das
+		// beforeEach oben traegt die Nummer nur ein, es bestaetigt sie nicht;
+		// der Schalter muss deshalb gesperrt bleiben, sonst versprach die
+		// Oberflaeche einen Versand, den die Sperre in config.py verwirft.
 		const smsCheckbox = smsChannel.locator('input[type="checkbox"]');
-		await expect(smsCheckbox).toBeEnabled();
+		await expect(smsCheckbox).toBeDisabled();
 	});
 
 	test('AC-6: Vergleichs-Wizard Step 5 zeigt SMS-Toggle', async ({ page }) => {

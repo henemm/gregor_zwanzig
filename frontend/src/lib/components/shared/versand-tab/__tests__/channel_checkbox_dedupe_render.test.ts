@@ -70,6 +70,7 @@ interface Profile {
 	email_verified?: boolean;
 	telegram_chat_id?: string;
 	sms_to?: string;
+	sms_verified?: boolean;
 	sms_allowed?: boolean;
 }
 
@@ -227,7 +228,10 @@ describe('AC-5: Telegram-/SMS-Checkbox-Sperre bleibt unverändert (Regression)',
 	];
 	const SMS_FAELLE: Array<{ name: string; profile: Profile; erwartetDisabled: boolean }> = [
 		{ name: 'keine sms_to', profile: {}, erwartetDisabled: true },
-		{ name: 'sms_to gesetzt, sms_allowed: true', profile: { sms_to: SMS, sms_allowed: true }, erwartetDisabled: false },
+		// Issue #2406: schaltbar ist nur eine BEWIESENE Nummer — `sms_verified` gehoert
+		// deshalb zum Fall "Nummer vorhanden, Tarif erlaubt". Die Sperre bei
+		// unbewiesener Nummer prueft sms_unbestaetigt_kanalstatus.test.ts (AC-14).
+		{ name: 'sms_to gesetzt, sms_allowed: true, bestaetigt', profile: { sms_to: SMS, sms_allowed: true, sms_verified: true }, erwartetDisabled: false },
 		{ name: 'sms_to gesetzt, sms_allowed: false', profile: { sms_to: SMS, sms_allowed: false }, erwartetDisabled: true }
 	];
 

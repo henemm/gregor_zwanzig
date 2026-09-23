@@ -58,7 +58,7 @@ func TestUpdateProfileRejectsForeignTelegramChatID(t *testing.T) {
 	mustSaveUser(t, s, model.User{ID: "anna", TelegramChatID: victimChatID})
 	mustSaveUser(t, s, model.User{ID: "bertram"})
 
-	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 
 	body := `{"telegram_chat_id":"` + victimChatID + `"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
@@ -93,7 +93,7 @@ func TestUpdateProfileClearsOwnTelegramChatID(t *testing.T) {
 	s := newTestStore(t)
 	mustSaveUser(t, s, model.User{ID: "bertram", TelegramChatID: ownChatID})
 
-	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(`{"telegram_chat_id":""}`))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "bertram"))
@@ -120,7 +120,7 @@ func TestUpdateProfileKeepsOwnTelegramChatIDAndSavesOtherFields(t *testing.T) {
 	s := newTestStore(t)
 	mustSaveUser(t, s, model.User{ID: "bertram", TelegramChatID: ownChatID})
 
-	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter)
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 
 	body := `{"telegram_chat_id":"` + ownChatID + `","mail_to":"bertram@example.com"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))

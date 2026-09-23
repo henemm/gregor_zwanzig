@@ -92,7 +92,22 @@ func New(deps Deps) chi.Router {
 	// NICHT in der Public-Allowlist von AuthMiddleware.
 	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
-	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config, mailFloodLimiter))
+	// Issue #2406 — EIGENES Kontingent fuer SMS-Bestaetigungscodes (3/h je
+	// Nutzer und je Zielnummer, Retry-After 1200). Bewusst eine zweite,
+	// eigenstaendige Instanz: SMS kostet Geld, und ein Angriff auf den einen
+	// Kanal darf das Kontingent des anderen nicht leerlaufen lassen.
+	smsFloodLimiter := handler.NewMailFloodLimiter(3, time.Hour)
+	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config, mailFloodLimiter, smsFloodLimiter))
+	// Issue #2406 — Bestaetigungscode einloesen / erneut anfordern.
+	// Anmeldepflichtig (nicht in der Public-Allowlist): die Kennung kommt aus
+	// der Sitzung, nie aus dem Rumpf.
+	r.Post("/api/auth/sms/verify", handler.PostSmsVerifyHandler(deps.Store))
+	r.Post("/api/auth/sms/resend", handler.PostSmsResendHandler(deps.Store, *deps.Config, smsFloodLimiter))
+	// Staging-only Testweg (Muster verify-email/staging-token): gibt den
+	// Klartext-Code des EIGENEN Kontos heraus, ohne Sendeversuch.
+	if os.Getenv("GZ_ENV") == "staging" {
+		r.Post("/api/auth/sms/staging-code", handler.StagingSmsCodeHandler(deps.Store))
+	}
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret))
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
 	r.Post("/api/auth/tier-change-request", handler.RequestTierChangeHandler(deps.Store, *deps.Config))
