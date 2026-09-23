@@ -24,7 +24,7 @@
 	// Schreibern statt zweimal im jeweiligen Effect-Rumpf.
 	import { mergeReportConfig } from './versand-tab/mergeReportConfig.ts';
 	// Issue #2276 S5: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import aus
-	// compare/compareHubWizardBridge.ts, AC-8).
+	// der Compare-Hub-Klebeschicht, aufgeloest in S6f, AC-8).
 	import {
 		erstelleVersandVergleichSpeicherung,
 		versandSnapshotAus,

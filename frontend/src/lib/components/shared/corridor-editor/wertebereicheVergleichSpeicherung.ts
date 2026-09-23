@@ -6,8 +6,8 @@
 //
 // Spec: docs/specs/modules/rework_2276_s3_wertebereiche.md
 //
-// AC-7: dieses Modul lädt zur Laufzeit NICHT die Compare-Klebeschicht
-// (`compare/compareHubWizardBridge.ts`) — aus `compare/` kommen nur Typen.
+// AC-7: dieses Modul lädt zur Laufzeit NICHT die Compare-Hub-Klebeschicht
+// (aufgeloest in Issue #2276 S6f) — aus `compare/` kommen nur Typen.
 // Nutzlast-Baustein ist `buildComparePresetSavePayload` (Design Punkt 2 + 9).
 //
 // Kein Browser-/SvelteKit-Import — lauffähig unter node --experimental-strip-types.

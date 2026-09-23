@@ -1,74 +1,33 @@
-// Issue #1256 Scheibe 6 — Hub-Wizard-Bridge fuer den eingebetteten
-// CorridorEditor (context="vergleich") im Hub-Idealwerte-Tab.
+// Issue #2276 Scheibe S6f (Epic #2345) — Persistenz-Haelfte der aufgeloesten
+// Compare-Hub-Klebeschicht (Issue #1256 Scheibe 6/7). Alles, was einen
+// Hub-PUT baut oder serialisiert: Orte-/Idealwerte-Teil-Edit
+// (`buildHubPutPayload`), Toggle-Active (Hub UND Liste), Rollback-Snapshot,
+// Aktivierungs-Banner-Text und die geteilte Schreibschlange `hubPutQueue`
+// (F1: Payload-Bau bleibt im `enqueue()`-Closure, s. Spec
+// Design-Entscheidung 4).
 //
-// Spec: docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 6
-//   (AC-16, AC-33, AC-34), Edge Case Z.1020 (PUT-Fehler -> Rollback).
-// Context: docs/context/feat-1256-s6-hub-idealwerte-inline.md § Entscheidung 1+3.
+// Spec: docs/specs/modules/rework_2276_s6f_bridge_umzug.md — AC-1
 //
-// `CorridorEditor.svelte` liest im vergleich-Kontext GENAU 6 Felder aus
-// `getContext('compare-wizard-state')` (Z.41-113). Diese Datei extrahiert die
-// Teil-Hydration + Persistenz-Uebersetzung, die bislang nur inline in
-// routes/compare/[id]/edit/+page.svelte existierte — 0 Zeilen Diff im
-// Organism selbst (C0).
+// Funktionskoerper/JSDoc byte-identisch aus der aufgeloesten Bridge
+// uebernommen — reiner Umzug, kein Verhalten geaendert.
 //
 // Kein Browser-/SvelteKit-Import — lauffaehig unter node --experimental-strip-types.
+//
+// gz-eigenstaendig: Compare-Hub-Orchestrierung (ComparePreset-PUT/-Hydration fuer CompareTabs.svelte), reiner Umzug der aufgeloesten Compare-Klebeschicht; kein Trip-Pendant (Spec rework_2276_s6f_bridge_umzug.md)
 
 import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { buildComparePresetSavePayload } from './compareEditorSave.ts';
-import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
 // Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle.
 import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 // Issue #1373 (S2 Scheibe B, AC-12): dieselbe Lesenormalisierung wie im
 // Lade-Pfad — Alt- UND Neuformat der gespeicherten Metrik-Auswahl.
 import {
 	normalizeStoredActiveMetrics,
-	normalizeStoredOutlookMetrics,
-	registeredCompareMetricCatalog,
-	type CompareSelectionEntry
+	normalizeStoredOutlookMetrics
 } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
 import type { CompareStatus } from './subscriptionHelpers.ts';
 import { computePauseToggle } from './subscriptionHelpers.ts';
-import { hydrateWeatherMetricsFromPreset } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
-
-/** Plain-Objekt mit GENAU den 6 Feldern, die CorridorEditor.svelte im
- * vergleich-Kontext aus dem Wizard-State liest. Die Bridge-Komponente
- * (CompareTabs.svelte) uebertraegt dies auf eine echte CompareWizardState-
- * Instanz und ruft setContext(...). */
-export interface HubWizardFields {
-	isEditMode: true;
-	corridors: Corridor[];
-	activityProfile: ActivityProfile | null;
-	idealRanges: Record<string, IdealRange>;
-	// #1191-Semantik (rehydrateActiveMetrics): null = "Feld fehlte im Preset"
-	// (Signal fuer Profil-Default-Pfad), NIEMALS still als [] getarnt.
-	activeMetricKeys: string[] | null;
-	metricAlertLevels: Record<string, string>;
-}
-
-/**
- * Teil-Hydration der 6 CorridorEditor-Felder aus einem ComparePreset.
- * isEditMode ist immer true — der Hub mountet den Organism wie den Editor.
- */
-export function hydrateWizardStateFromPreset(
-	preset: ComparePreset,
-	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geladene Katalogantwort — ohne sie
-	// bliebe eine im Format Größe + Auswertung gespeicherte Auswahl unaufgelöst,
-	// und das ✕-Entfernen einer Metrik-Zeile im Idealwerte-Reiter träfe sie nicht
-	// mehr (`activeSet.delete(key)` in buildCompareCorridorSavePayload).
-	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
-): HubWizardFields {
-	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	const rehydrated = rehydrateActiveMetrics(displayConfig.active_metrics, catalog);
-	return {
-		isEditMode: true,
-		corridors: preset.corridors ?? [],
-		activityProfile: (preset.profil as ActivityProfile) ?? null,
-		idealRanges: (displayConfig.ideal_ranges as Record<string, IdealRange>) ?? {},
-		activeMetricKeys: rehydrated ? rehydrated.activeMetricKeys : null,
-		metricAlertLevels: (displayConfig.metric_alert_levels as Record<string, string>) ?? {}
-	};
-}
 
 /** Teil-Edit fuer den Hub: nur die Felder, die eine Nutzeraktion tatsaechlich
  * veraendert hat, werden geliefert — alle anderen kommen per Read-Modify-Write
@@ -274,13 +233,6 @@ export async function buildFreshTogglePutPayload(
 	);
 }
 
-// Issue #2276 Scheibe S5 (Epic #2345): `VersandSnapshot`,
-// `hydrateVersandFieldsFromPreset` und `flushPendingVersandSave` sind in den
-// geteilten Baustein `shared/versandVergleichSpeicherung.ts` umgezogen — der
-// Versand-Reiter speichert selbst und laedt die Klebeschicht zur Laufzeit
-// nicht mehr (AC-8). `buildHubPutPayload` bleibt hier: die Orte- und
-// Aktivieren/Pausieren-Pfade brauchen ihn weiterhin.
-
 /** Modell der Hub-Aktivierungs-Karte (Soll: `screen-compare-detail.jsx:273-277`
  * + `:313-325`). Die JSX-active-Copy "im konfigurierten Rhythmus" ist eine
  * timeWindow-Stale-Spur (Spec § Umsetzungsregel) und wird NICHT mitkopiert —
@@ -350,106 +302,3 @@ export function createPutQueue(): PutQueue {
 		}
 	};
 }
-
-/** Ziel-Objekt fuer `hydrateAlarmFieldsFromPreset`: ALLE Felder optional, damit
- * sowohl ein frischer Plain-Objekt-Stub (Kern-Test) als auch die reale
- * `CompareWizardState`-Instanz (CompareTabs.svelte) strukturell passen —
- * eine `Record<string, unknown>`-Signatur waere fuer die Klasseninstanz NICHT
- * zuweisbar (kein Index-Signature), waehrend optionale benannte Felder in
- * beide Richtungen kompatibel sind. */
-export interface AlarmHydrationTarget {
-	officialAlertsEnabled?: boolean;
-	officialWarningsEnabled?: boolean;
-	radarAlertEnabled?: boolean;
-	metricAlertLevels?: Record<string, string>;
-	alertCooldownMinutes?: number;
-	alertQuietFrom?: string;
-	alertQuietTo?: string;
-	corridors?: Corridor[];
-	// Issue #1260: Telegram-Kurzstil-Toggle im Hub-Alarme-Tab
-	// (display_config.telegram_style). Default "rich".
-	telegramStyle?: 'rich' | 'kurzform';
-	// Issue #1461 S3b-2b (bestaetigter Speicher-Fehler, s. Spec „Implementation
-	// Details"): sendTelegram/sendSms fehlten hier bisher komplett -- eine
-	// Kanal-Umschaltung im Alarme-Reiter war deshalb weder als Snapshot-Differenz
-	// erkennbar noch im PUT-Body enthalten (der Server-Bestand wurde beim
-	// naechsten Alarme-Save aktiv zurueckgeschrieben). Analog channelThresholds.
-	sendTelegram?: boolean;
-	sendSms?: boolean;
-	// Issue #1745 A: der vierte Kanal muss aus demselben Grund mit-hydriert
-	// werden — sonst ist eine Aenderung im Alarme-Reiter weder als
-	// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
-	sendPremiumSms?: boolean;
-	channelThresholds?: Record<string, string>;
-	// Issue #1320: activeMetricKeys wird sonst nur von den Hydrations-Effekten
-	// der Tabs "wetter-metriken"/"idealwerte" befuellt — fehlt Alarme als
-	// Erst-Tab (Deep-Link), zeigt AlarmeTab.svelte faelschlich "keine Metriken".
-	// Issue #1366 F002: `string[] | null`, damit `wizardState` (jetzt nullable)
-	// strukturell zuweisbar bleibt -- hydrateAlarmFieldsFromPreset schreibt hier
-	// ohnehin immer einen konkreten Wert (Zeile unten), nie `null`.
-	activeMetricKeys?: string[] | null;
-}
-
-/**
- * Issue #1258 Scheibe 5 (AC-19, AC-29): Erst-Oeffnungs-Hydration fuer den
- * Hub-Alarme-Tab — mutiert `state` DIREKT (analog dem lazy `alarme`-Effekt in
- * CompareTabs.svelte, H3), OHNE eine vorherige `hydrateWizardStateFromPreset`-
- * oder `hydrateVersandFieldsFromPreset`-Hydration vorauszusetzen. Der Alarme-
- * Tab kann als ERSTER Tab geoeffnet werden (Deep-Link `?tab=alarme`) — deshalb
- * hydriert diese Funktion ALLE alarm-relevanten Felder eigenstaendig, inkl.
- * `corridors` (H4: der Idealwerte-Tab braucht bereits geladene Korridore,
- * falls er NACH Alarme als zweiter Tab geoeffnet wird).
- *
- * Fallbacks 1:1 analog `AlarmeTab.svelte:80-90` bzw. Trip-Pipeline
- * (trip_alert.py): `officialWarningsEnabled` faellt auf
- * `official_alert_triggers_enabled !== false` zurueck, wenn `official_warnings`
- * fehlt (Legacy-Kompatibilitaet).
- */
-export function hydrateAlarmFieldsFromPreset(
-	state: AlarmHydrationTarget,
-	preset: ComparePreset,
-	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): geladene Katalogantwort, nötig zum
-	// Auflösen des Speicherformats der Metrik-Auswahl (Größe + Auswertung) in
-	// der Zeile unten. Default = bereits registrierter Katalog.
-	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
-): void {
-	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	state.officialAlertsEnabled = preset.official_alerts_enabled ?? true;
-	state.officialWarningsEnabled =
-		preset.official_warnings?.enabled ?? preset.official_alert_triggers_enabled !== false;
-	state.radarAlertEnabled = preset.radar_alert_enabled ?? false;
-	state.metricAlertLevels = (displayConfig.metric_alert_levels as Record<string, string>) ?? {};
-	// Issue #1461 S3b-2b (Speicher-Bugfix): sendTelegram/sendSms UND die
-	// Kanal-Schwelle mit-hydrieren, damit eine Aenderung im Alarme-Reiter als
-	// Snapshot-Differenz erkennbar wird (s. AlarmHydrationTarget-Kommentar).
-	state.sendTelegram = preset.send_telegram ?? false;
-	state.sendSms = preset.send_sms ?? false;
-	// Issue #1745 A (D1): fehlt das Feld im Preset, ist der Kostenkanal AUS.
-	state.sendPremiumSms = preset.send_premium_sms ?? false;
-	state.channelThresholds = (preset.alert_channel_thresholds as Record<string, string>) ?? {};
-	state.alertCooldownMinutes = preset.alert_cooldown_minutes;
-	state.alertQuietFrom = preset.alert_quiet_from;
-	state.alertQuietTo = preset.alert_quiet_to;
-	state.corridors = preset.corridors ?? [];
-	// Issue #1320: Alarme kann als ERSTER Tab geoeffnet werden — dann hat
-	// activeMetricKeys noch keinen Hydrations-Durchlauf vom Wetter-Metriken-/
-	// Idealwerte-Tab gesehen. Ohne diese Zeile zeigt die Empfindlichkeits-
-	// Tabelle faelschlich "keine Metriken", obwohl das Preset aktive Metriken hat.
-	state.activeMetricKeys = hydrateWeatherMetricsFromPreset(preset, catalog);
-	// Issue #1260: Kurzstil-Toggle aus display_config.telegram_style hydrieren,
-	// Default "rich" (analog CompareEditor). Ohne diese Zeile bliebe der Toggle
-	// im Hub-Alarme-Tab dauerhaft auf dem Klasse-Default stehen und ein
-	// gespeicherter "kurzform"-Wert waere unsichtbar.
-	state.telegramStyle = (displayConfig.telegram_style as 'rich' | 'kurzform') ?? 'rich';
-}
-
-// Issue #2276 S2: AlarmSnapshot / flushPendingAlarmSave / rollbackAlarmSnapshot
-// zogen nach shared/alarmeVergleichSpeicherung.ts (Speicherpfad des Reiters);
-// die Hydration oben bleibt hier (setzt auch corridors/activeMetricKeys).
-//
-// Issue #2276 S4: LayoutSnapshot/hydrateLayoutFieldsFromPreset/
-// flushPendingLayoutSave/rollbackLayoutSnapshot sind nach
-// shared/weather-metrics-tab/weatherMetricsCompareSave.ts umgezogen — dort
-// leben sie jetzt neben der kombinierten Wetter-Metriken/Layout-Orchestrierung
-// (AC-9: dieses Modul importiert `buildComparePresetSavePayload`, keine
-// Bridge-Funktion mehr).
