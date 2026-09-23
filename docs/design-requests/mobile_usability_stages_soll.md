@@ -1,6 +1,6 @@
 # Mobile Usability · Paket 1 — Trip-Detail-Tab „Etappen & Wegpunkte" (stages)
 
-**Status:** Soll-Entwurf, Karten-/Profil-Frage **entschieden (F5, PO 2026-09-22: Variante B)** — offen: F1, F3, F7 · **Mockup:** `docs/design-requests/mobile-usability-stages-soll.html` (zeigt Zustand B)
+**Status:** **PO-Entscheide vollständig (F1–F7), bereit für Spec** · 2026-09-22 · **Mockup:** `docs/design-requests/mobile-usability-stages-soll.html` (zeigt Zustand B)
 **Bezug:** Mobile-Usability-Audit (WebKit, iPhone 13, 390×844) · #503 (Option B, verbindlich; Mobile-Präzisierung §4.4) · #585 (Editor live 1:1) · #1272 (Sortierung griff-only) · #963 (Map-First-Reorder — Mobile-Zweig entfällt mit F5) · ADR-0024 (geteilte SortableList) · Leitplanke 1 (mobile_shell_ohne_topbar.md §2a)
 
 ---
@@ -204,15 +204,15 @@ AP-Konformität: AP-006 (keine lokalen Kopien — `StageCardM` kommt als Katalog
 - Leaflet/Tile-Caching.
 - Änderung am Übersichts-Tab (`HubOverview`/`FullProfile`) — er bleibt der Ort des Gesamt-Profils; mit B gibt es im stages-Tab mobil keine Karten-/Profil-Reste (auch kein Thumbnail).
 
-## 7. Offene Fragen an PO — Stand nach Entscheid F5 (2026-09-22)
+## 7. PO-Entscheide — ALLE ENTSCHIEDEN (2026-09-22)
 
-- **F1 (offen):** Trip-Titel Mobile: `--g-text-xl` (20 px, Vorschlag) oder `--g-text-lg` (17 px, TOKENS.md-Annotation „Mobile Page-Titles")? — Unberührt von F5; Entscheidung gehört ggf. nach TOKENS.md zurück.
-- **F2 (offen, entschärft):** Cascade-Banner („Etappen lückenlos neu datieren?") — mit B gibt es keine fixierte Karte mehr: **Vorschlag als Arbeitsstand:** Banner erscheint mobil inline, direkt über der betroffenen Etappen-Karte in der Liste (statt `position:fixed` + Platzierungs-Effekt). Damit entfällt die gesamte #1375-Platzierungslogik mobil. Nur noch abzunicken.
-- **F3 (offen):** Pause einfügen: als Wahl am „+ Etappe"-Button (Mockup-Variante) oder als Inline-Aktion zwischen zwei Etappen-Karten?
-- **F4 (mit F5 entschieden):** `StageSelectSheet` auf Mobile entfällt — mit B gibt es keinen Karten-/Editor-Kontext mehr, in dem ein Stage-Switcher gebraucht wird; die Liste ist die einzige Etappen-Auswahl. Desktop-Entfernung separat.
-- **F5 (ENTSCHIEDEN 2026-09-22):** **Variante B** — Karte und Höhenprofil entfallen auf Mobile komplett. Begründung PO, wörtlich: *„Beides spielt unterwegs keine Rolle und niemand will das unterwegs auf dem Smartphone editieren."* — Varianten A und B+ verworfen (§4.3); #503-Präzisierung als Vorschlag in §4.4.
-- **F6 (weitgehend obsolet):** Das Nummernsystem (Etappen vs. Wegpunkte auf Karte/Profil) ist mit B hinfällig; einzig verbleibend: Nummern-Kreise in den aufklappbaren Wegpunkt-Zeilen (1…N je Etappe, unabhängig nummeriert — kein Konflikt mehr). **Vorschlag als Default:** beibehalten, keine erneute Rückfrage nötig.
-- **F7 (offen, Arbeitsstand):** Wegpunkt-Zeilen direkt in der StageCardM aufklappbar (Vorschlag, so im Mockup) oder separater „Wegpunkte"-Block unter der Liste?
+- **F1 (ENTSCHIEDEN):** Trip-Titel Mobile = **`--g-text-xl` (20 px)** mit `min-width:0` + Ellipsis (Vorschlag angenommen). TOKENS.md-Annotation „Mobile Page-Titles → `--g-text-lg`" wird bei Gelegenheit präzisiert.
+- **F2 (ENTSCHIEDEN):** Cascade-Banner mobil **inline über der betroffenen Etappen-Karte** (Vorschlag angenommen) — kein `position:fixed`, keine Platzierungs-Effekte; die #1375-Logik entfällt mobil.
+- **F3 (ENTSCHIEDEN):** Pause einfügen = **Wahl am „+ Etappe"-Button** (Mockup-Variante angenommen): Ghost-Button öffnet kleine Wahl „Etappe / Pausentag".
+- **F4 (ENTSCHIEDEN):** `StageSelectSheet` entfällt auf Mobile (Liste ist die einzige Etappen-Auswahl). Desktop-Entfernung separat.
+- **F5 (ENTSCHIEDEN):** **Variante B** — Karte und Höhenprofil entfallen auf Mobile komplett. Begründung PO, wörtlich: *„Beides spielt unterwegs keine Rolle und niemand will das unterwegs auf dem Smartphone editieren."* — Varianten A und B+ verworfen (§4.3); #503-Präzisierung als Vorschlag in §4.4.
+- **F6 (ENTSCHIEDEN):** Nummern-Kreise in den Wegpunkt-Zeilen bleiben **nummeriert je Etappe (1…N)** (Default angenommen); keine Etappen-Nummerierung nötig (Karte entfällt).
+- **F7 (ENTSCHIEDEN):** Wegpunkt-Zeilen **direkt in der StageCardM aufklappbar** (Vorschlag/Mockup angenommen), Chevron als Zustands-Indikator; kein separater „Wegpunkte"-Block.
 
 ## 8. Abnahmekriterien (Vorschlag, Stand Entscheid F5 / Variante B)
 
