@@ -3,7 +3,7 @@ entity_id: fix_2028_gewitter_satzvorlagen
 type: bugfix
 created: 2026-09-24
 updated: 2026-09-24
-status: implementiert
+status: draft
 version: "1.0"
 workflow: fix-2028-gewitter-satzvorlagen
 tags: [gewitter, satzvorlagen, thunder_scale, issue-2028, issue-1480]
