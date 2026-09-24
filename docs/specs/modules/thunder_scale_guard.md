@@ -188,7 +188,7 @@ nutzersichtbare Defekte sind (#2010, #2011).
    konstruierte Kopie in einer kanonischen Datei unter anderem Symbolnamen **muss** gemeldet
    werden.
 2. **Benannte Altlasten-Basislinie** (`ALTLASTEN` im Backend-Wächter, ursprünglich 9 Einträge,
-   seit #2010/#2011 noch 3): die bekannten Kopien aus #1474. **Symbolgeschlüsselt** über
+   nach #2010/#2011 noch 3, seit #2028 leer): die bekannten Kopien aus #1474. **Symbolgeschlüsselt** über
    `(Datei, Symbol-/Funktionsname, Regel)` —
    **niemals** über Zeilennummern (#1466); jeder Eintrag trägt Grund und Tracking-Issue. Die Liste
    darf nur schrumpfen. Gegen Verrotten schützt ein **Nicht-Leerlauf-Test**: erzeugt ein Eintrag
@@ -629,3 +629,10 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
   `thunder_ampel_band()` auf (Regel B und C). Verbleibende drei Einträge (`day_window.py`,
   zwei `trip_report_scheduler.py`-Symbole) unverändert. Details:
   `docs/specs/modules/fix_2010_2011_gewitter_stufenwoerter.md`.
+- 2026-09-24: `ALTLASTEN` auf die letzten drei Einträge saniert (#2028) — 3 → 0, die
+  Basislinie ist jetzt leer. `day_window.py::_NIGHT_ADDENDUM_WORD` entfällt,
+  `trip_report_scheduler.py::_thunder_entry_from_trend_row`/`_build_thunder_forecast`
+  bauen den Gewitter-Satzkopf über die neue kanonische Funktion
+  `thunder_scale.py::thunder_headline_sentence()` (+ Tabelle `THUNDER_NIGHT_ADJECTIVE_DE`).
+  Der Ratschen-Mechanismus bleibt bestehen: jede neue lokale Kopie ist ab jetzt ein
+  „unbekannter" Fund. Details: `docs/specs/modules/fix_2028_gewitter_satzvorlagen.md`.

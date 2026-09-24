@@ -350,3 +350,35 @@ def thunder_low_statement_sentence(
     """
     text = thunder_low_statement(form, carriers, cape_jkg)
     return text[:1].upper() + text[1:]
+
+
+# Nacht-Adjektive des Nacht-Halbsatzes (#1651, kanonisiert #2028). Eigene
+# Groesse statt Flexion von THUNDER_LABEL_DE: dort heisst HIGH "hoch", der
+# Halbsatz braucht "starkes". LOW hat eine eigene ereignisfreie Aussage (#2176).
+THUNDER_NIGHT_ADJECTIVE_DE: dict[ThunderLevel, str] = {
+    ThunderLevel.MED: "mittleres",
+    ThunderLevel.HIGH: "starkes",
+}
+
+
+def thunder_headline_sentence(
+    level: ThunderLevel,
+    when: Optional[str],
+    carriers: Optional[Iterable[str]],
+) -> str:
+    """Satzkopf der Gewitter-Tagesaussage (#2028) -- EINE Quelle fuer den
+    Trend-Weg und den Fetch-Weg des Schedulers.
+
+    ``when`` ist die bereits formatierte Uhrzeit (``None`` = unbekannt, dann
+    ohne " ab ..."-Anhang). NONE traegt nie eine Uhrzeit. LOW delegiert an
+    ``thunder_low_statement_sentence("kurz", carriers)`` (#2176).
+    """
+    if level == ThunderLevel.NONE:
+        return "Kein Gewitter erwartet"
+    if level == ThunderLevel.LOW:
+        kern = thunder_low_statement_sentence("kurz", carriers)
+    elif level == ThunderLevel.MED:
+        kern = "Gewitter möglich"
+    else:
+        kern = "Starkes Gewitter erwartet"
+    return f"{kern} ab {when}" if when else kern

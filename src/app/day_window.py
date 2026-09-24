@@ -250,16 +250,6 @@ def night_addendum(
     return level, hour, hail
 
 
-# Wortschatz des Nacht-Zusatzes (#1651). Bewusste Abweichung vom Tagestext,
-# wo MED kein Adjektiv traegt („Gewitter moeglich ab HH:MM"): der Halbsatz
-# muss fuer sich lesbar sein -- ein „nachts Gewitter" ohne Stufe waere von
-# „Stufe unbekannt" nicht unterscheidbar.
-_NIGHT_ADDENDUM_WORD = {
-    "MED": "mittleres",
-    "HIGH": "starkes",
-}
-
-
 def format_night_addendum(level, hour: int, hail=None) -> str:
     """Der angehaengte Halbsatz zu einem ``night_addendum()``-Treffer.
 
@@ -288,7 +278,13 @@ def format_night_addendum(level, hour: int, hail=None) -> str:
         # Luftmasse (Spec AC-4), der Baustein entscheidet das selbst.
         return (f", nachts {thunder_low_statement('kurz', None)} "
                 f"ab {int(hour):02d}:00{_suffix}")
-    word = _NIGHT_ADDENDUM_WORD.get(name)
+    # Wortschatz des Nacht-Zusatzes (#1651), kanonisch seit #2028. Bewusste
+    # Abweichung vom Tagestext, wo MED kein Adjektiv traegt: der Halbsatz muss
+    # fuer sich lesbar sein. ThunderLevel ist ein str-Enum -- der Name trifft
+    # den Schluessel.
+    from app.thunder_scale import THUNDER_NIGHT_ADJECTIVE_DE
+
+    word = THUNDER_NIGHT_ADJECTIVE_DE.get(name)
     if word is None:
         return ""
     return f", nachts {word} Gewitter ab {int(hour):02d}:00{_suffix}"
