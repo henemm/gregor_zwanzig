@@ -81,8 +81,9 @@ Rohdaten der Messung liegen im Kontext-Dokument `docs/context/feat-1758-geospher
   archiviert AROME nicht rückwirkend (`GET /v1/datasets`), eine Eichung ist heute nicht
   herstellbar — Projektprinzip "keine Aussage statt geratener Schwelle".
 - **Keine Behebung der Modellnamen-Kollision** `model="AROME"` → `meteofrance_arome`
-  (`model_registry.py:43`). Das ist ein bestehender, latenter Nebenbefund, gebucht in #1199.
-  Diese Spec umgeht ihn nur durch eigene Felder (Invariante 3 unten), behebt ihn nicht.
+  (`model_registry.py:43`) in dieser Spec. Die Kollision ist inzwischen behoben in #2225:
+  `"AROME"` bildet jetzt auf den eigenen Schlüssel `geosphere_arome` ab (ohne Eichung). Diese
+  Spec umgeht sie weiterhin durch eigene Felder (Invariante 3 unten).
 - Kein neuer Vertretungs-Eintrag für GeoSphere-Ausfall in `_VERTRETUNG`
   (`thunder_routing.py:105-109`, ADR-0047) — GeoSphere bleibt bei echtem Ausfall einfach leer,
   fail-soft, wie jede Quelle ohne Eintrag dort heute auch.
@@ -425,9 +426,10 @@ additiv erlaubt." Grenzt sich ab von:
   Trip-Vorschau überhaupt hat (30 s, #1839). Bei einem System mit bestehenden
   Timeout-Problemen (#1839, #1539) bleibt das dennoch ein eigenständiges Ausfallrisiko, das
   AC-13 absichert, aber nicht beseitigt.
-- **Modellnamen-Kollision bleibt bestehen.** `geosphere.py:501` setzt weiterhin
-  `model="AROME"`; diese Spec umgeht die Kollision nur durch eigene Feldnamen (Invariante 3),
-  behebt sie nicht. Nebenbefund bleibt in #1199 gebucht.
+- **Modellnamen-Kollision ist behoben in #2225.** `geosphere.py:501` setzt weiterhin
+  `model="AROME"`, das jetzt auf den eigenen Schlüssel `geosphere_arome` abbildet statt auf
+  `meteofrance_arome`. Die eigenen Feldnamen dieser Spec (Invariante 3) bleiben unabhängig
+  davon bestehen.
 - **Fill-only-Umbau ist ein gemeinsamer Anschlusspunkt.** Die Umstellung von global auf je
   Quelle wirkt auch auf FR/DE_ALPEN/EU_REST, auch wenn diese Gebiete (noch) nur eine Quelle
   haben — Regressionsrisiko, deshalb ist AC-7 als Mutationstest Pflicht, nicht Kür.

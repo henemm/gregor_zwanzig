@@ -8,7 +8,9 @@ kein Modell wirklich belegt (Spec Befund A). Dieses Modul buendelt:
 1. ``normalize_model_id()`` -- das uneinheitliche Roh-Vokabular
    (Open-Meteo-Technikschluessel, DWD-/Meteo-France-/GeoSphere-Direktworte,
    kuenstliche Werte wie "aggregate"/"snapshot") auf einen kanonischen
-   Schluessel je Modellwelt.
+   Schluessel je Modellwelt. Meteo-France meldet ``AROME-HIGHRES``
+   (-> ``meteofrance_arome``); GeoSphere meldet ``AROME`` und bekommt einen
+   eigenen Schluessel (-> ``geosphere_arome``, Issue #2225).
 2. ``effective_cape_model_id()`` -- die Fallback-Vorrang-Regel fuer CAPE
    EINMAL fuer beide Nutzstellen (C0 Aggregat-Befuellung, C1 Fusion).
 3. ``CAPE_THRESHOLDS_JKG`` / ``cape_threshold_jkg()`` -- die statische,
@@ -35,12 +37,15 @@ _KEINE_HERKUNFT = frozenset({"aggregate", "snapshot", "fixture"})
 # Technikschluessel, s. `providers.openmeteo.REGIONAL_MODELS`). Jede
 # Schreibweise derselben Modellwelt MUSS auf denselben Wert abbilden --
 # sonst haette die Eichtabelle (unten) zwei Eintraege fuer dieselbe Welt.
+# Umgekehrt gilt: "arome" (GeoSphere) und "arome-highres" (Meteo-France)
+# sind VERSCHIEDENE Modellwelten, die nur zufaellig aehnlich heissen --
+# deshalb zwei Ziel-Schluessel, kein gemeinsamer (Issue #2225).
 _MODEL_ALIASES: Dict[str, str] = {
     "icon_d2": "icon_d2",
     "icon-d2": "icon_d2",
     "meteofrance_arome": "meteofrance_arome",
     "arome-highres": "meteofrance_arome",
-    "arome": "meteofrance_arome",
+    "arome": "geosphere_arome",
     "icon_eu": "icon_eu",
     "metno_nordic": "metno_nordic",
     "ecmwf_ifs04": "ecmwf_ifs04",
