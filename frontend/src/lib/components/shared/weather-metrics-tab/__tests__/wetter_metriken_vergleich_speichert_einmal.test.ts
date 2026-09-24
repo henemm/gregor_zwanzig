@@ -61,7 +61,7 @@ function aufbau(preset = makePreset(PRESET_ID)) {
 	const rueckmeldungen: ComparePreset[] = [];
 	const speicherung = erstelleWetterMetrikenVergleichSpeicherung({
 		client: api,
-		wiz: ws,
+		zustand: ws,
 		preset: () => basis,
 		enqueueHubWrite: (fn) => queue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {

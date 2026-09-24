@@ -37,7 +37,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { toCompareSelectionEntries } from '../weather-metrics-tab/compareMetricSelection.ts';
 import {
 	umgebungFuer,
@@ -53,6 +53,14 @@ const HIER = dirname(fileURLToPath(import.meta.url));
 const SHARED = join(HIER, '..');
 const KIND = join(SHARED, 'CompareHourlyLayoutControls.svelte');
 const TAB = join(SHARED, 'WeatherMetricsTab.svelte');
+// Issue #2276 S6g: WeatherMetricsTab bekommt im Vergleich Wertprops aus dem
+// Buendel `compare/wetterMetrikenPropsAus.ts` statt `wiz`. Dynamisch geladen,
+// damit ein fehlendes Modul nur die Mount-Tests trifft, nicht die ganze Datei.
+const BUENDEL_MODUL = join(SHARED, '..', 'compare', 'wetterMetrikenPropsAus.ts');
+async function wetterMetrikenPropsAus(zustand: Knoten): Promise<Knoten> {
+	const mod = (await import(pathToFileURL(BUENDEL_MODUL).href)) as Knoten;
+	return mod.wetterMetrikenPropsAus(zustand) as Knoten;
+}
 // __tests__ -> shared -> components -> lib -> src -> frontend -> repo
 const REPO = resolve(HIER, '..', '..', '..', '..', '..', '..');
 
@@ -298,18 +306,20 @@ describe('AC-1: CompareHourlyLayoutControls leitet alles aus Wertprops her', () 
 });
 
 describe('AC-1/AC-3 Wirkort: der Mount-Block in WeatherMetricsTab reicht die Wertprops durch', () => {
-	/** Saat fuer das ELTERNTEIL — der Zustand, den der Ortsvergleich wirklich haelt. */
-	function saatTab(wiz: Knoten): Knoten {
+	/** Saat fuer das ELTERNTEIL — der Zustand, den der Ortsvergleich wirklich haelt,
+	 *  #2276 S6g: als Wertprop-Buendel `wetterMetrikenPropsAus(wiz)` wie an den
+	 *  echten Vergleichs-Mounts (Rueckrufe schreiben in `wiz` zurueck). */
+	async function saatTab(wiz: Knoten): Promise<Knoten> {
 		return {
 			context: 'vergleich',
-			wiz,
+			...(await wetterMetrikenPropsAus(wiz)),
 			compareCatalog: katalog(),
 			metricSymbols: {}
 		};
 	}
 
 	async function mount(wiz: Knoten) {
-		const { ast, quelle, u } = await umgebungFuer(TAB, saatTab(wiz));
+		const { ast, quelle, u } = await umgebungFuer(TAB, await saatTab(wiz));
 		const treffer = findeKomponenten(ast, 'CompareHourlyLayoutControls');
 		assert.strictEqual(
 			treffer.length,
@@ -434,12 +444,38 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 	function saatEffekt(zusatz: Knoten, spion: (...a: unknown[]) => void): Knoten {
 		return {
 			context: 'route',
-			wiz: { hourlyMetricKeys: null, hourlyEnabled: true },
+			// #2276 S6g: Wertprops statt `wiz` (alle zehn + neun Rueckrufe gesetzt,
+			// damit die Wahl des Praesenz-Guards die Messung nicht beeinflusst).
+			...wertpropsVergleich(),
 			preset: null,
 			saveController: null,
 			untrack: (fn: () => unknown) => fn(),
 			wetterMetrikenSnapshotAus: spion,
 			...zusatz
+		};
+	}
+
+	function wertpropsVergleich(): Knoten {
+		return {
+			activeMetricKeys: null,
+			channelActiveMetricKeys: { email: null, telegram: null, sms: null },
+			officialAlertsEnabled: true,
+			dayWindowStartHour: 4,
+			dayWindowEndHour: 19,
+			hourlyMetricKeys: null,
+			hourlyEnabled: true,
+			outlookMetricKeys: null,
+			outlookMetricFormats: null,
+			outlookEnabled: true,
+			onVergleichsMetrikenChange: () => {},
+			onOfficialAlertsEnabledChange: () => {},
+			onDayWindowStartHourChange: () => {},
+			onDayWindowEndHourChange: () => {},
+			onHourlyMetricKeysChange: () => {},
+			onHourlyEnabledChange: () => {},
+			onOutlookMetricKeysChange: () => {},
+			onOutlookMetricFormatsChange: () => {},
+			onOutlookEnabledChange: () => {}
 		};
 	}
 
@@ -524,10 +560,10 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 	test('Gegenprobe: MIT Vergleichs-Speicherung laeuft derselbe Rumpf und meldet die Aenderung', async () => {
 		// Ohne diese Richtung misst der Block oben nur „der Effekt laeuft nie".
 		const geplant: unknown[] = [];
-		const wiz: Knoten = { hourlyMetricKeys: null, hourlyEnabled: true };
 		const { u, rueckruf, aufrufe } = await effektAufbauen({
 			context: 'vergleich',
-			wiz,
+			hourlyMetricKeys: null,
+			hourlyEnabled: true,
 			preset: { id: 'p1' },
 			api: { put: async () => ({}) },
 			saveController: {
@@ -543,7 +579,9 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 		);
 		// Der Stand weicht jetzt von der beim Erzeugen genommenen Baseline ab —
 		// `aenderungMelden()` muss deshalb einen Speichervorgang einplanen.
-		wiz.hourlyEnabled = false;
+		// #2276 S6g: die Wertprop aendert sich (so, wie der Eltern-Zustand sie
+		// nach dem Rueckruf neu einspeist) — die Bruecke liest sie frisch.
+		u.hourlyEnabled = false;
 
 		rueckruf();
 

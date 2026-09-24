@@ -39,7 +39,7 @@ const saveController = createController('cp-2276-s4-kontext');
 
 describe('Positivfall: Ortsvergleich-Hub', () => {
 	test('vergleich + Wizard-Zustand + preset + saveController → Vergleichs-Speicherung aktiv', () => {
-		assert.equal(wetterMetrikenVergleichSpeicherungAktiv({ context: 'vergleich', wiz, preset, saveController }), true);
+		assert.equal(wetterMetrikenVergleichSpeicherungAktiv({ context: 'vergleich', zustand: wiz, preset, saveController }), true);
 	});
 });
 
@@ -48,7 +48,7 @@ describe('AC-10: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', ()
 		assert.equal(
 			wetterMetrikenVergleichSpeicherungAktiv({
 				context: 'vergleich',
-				wiz,
+				zustand: wiz,
 				preset: undefined,
 				saveController: undefined
 			}),
@@ -59,14 +59,14 @@ describe('AC-10: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', ()
 
 	test('vergleich mit saveController, aber ohne preset → inaktiv (keine Basis für einen PUT)', () => {
 		assert.equal(
-			wetterMetrikenVergleichSpeicherungAktiv({ context: 'vergleich', wiz, preset: undefined, saveController }),
+			wetterMetrikenVergleichSpeicherungAktiv({ context: 'vergleich', zustand: wiz, preset: undefined, saveController }),
 			false
 		);
 	});
 
 	test('vergleich mit preset, aber ohne Wizard-Zustand → inaktiv', () => {
 		assert.equal(
-			wetterMetrikenVergleichSpeicherungAktiv({ context: 'vergleich', wiz: undefined, preset, saveController }),
+			wetterMetrikenVergleichSpeicherungAktiv({ context: 'vergleich', zustand: undefined, preset, saveController }),
 			false
 		);
 	});
@@ -75,7 +75,7 @@ describe('AC-10: Anlege-Seite (/compare/new) — neuer Zweig bleibt inaktiv', ()
 describe('AC-13: Trip-Seite (route) — Vergleichs-Speicherung wird nie ausgelöst', () => {
 	test('route-Kontext mit sonst VOLLSTÄNDIGEN Props → inaktiv (die Kontext-Prüfung allein entscheidet)', () => {
 		assert.equal(
-			wetterMetrikenVergleichSpeicherungAktiv({ context: 'route', wiz, preset, saveController }),
+			wetterMetrikenVergleichSpeicherungAktiv({ context: 'route', zustand: wiz, preset, saveController }),
 			false,
 			'der route-Zweig darf die Vergleichs-Orchestrierung nicht auslösen — er speichert über scheduleAutoSave/scheduleReportConfigOnlySave'
 		);
@@ -83,7 +83,7 @@ describe('AC-13: Trip-Seite (route) — Vergleichs-Speicherung wird nie ausgelö
 
 	test('route-Kontext wie im Trip-Hub gemountet (ohne wiz/preset) → inaktiv', () => {
 		assert.equal(
-			wetterMetrikenVergleichSpeicherungAktiv({ context: 'route', wiz: undefined, preset: undefined, saveController }),
+			wetterMetrikenVergleichSpeicherungAktiv({ context: 'route', zustand: undefined, preset: undefined, saveController }),
 			false
 		);
 	});

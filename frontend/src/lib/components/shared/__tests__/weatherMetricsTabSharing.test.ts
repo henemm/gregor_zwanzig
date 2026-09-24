@@ -64,9 +64,17 @@ describe('AC-1/AC-8: WeatherMetricsTab existiert unter shared/ (Verschiebung aus
 		}
 	);
 
-	test('hat eine wiz-Prop fuer den Compare-Kontext (analog AlarmeTab.svelte)', { skip: !sharedExists() }, () => {
+	// Issue #2276 S6g: der Compare-Kontext bekommt Wertprops + Rueckrufe statt
+	// `wiz?: CompareWizardState` (Spec rework_2276_s6g_wetter_metriken_wertprops.md,
+	// AC-1). Geprueft wird NUR der `interface Props { … }`-Block — `activeMetricKeys`
+	// steht als Wort schon heute an vielen Stellen der Datei.
+	test('hat Wertprops + gekoppelten Rueckruf fuer den Compare-Kontext statt einer wiz-Prop (analog AlarmeTab.svelte)', { skip: !sharedExists() }, () => {
 		const code = readFileSync(SHARED_FILE, 'utf-8');
-		assert.match(code, /wiz\??\s*:\s*CompareWizardState/, 'AC-1 FAIL: keine wiz-Prop (CompareWizardState) gefunden');
+		const props = code.match(/interface Props\s*\{[\s\S]*?\n\t\}/)?.[0] ?? '';
+		assert.ok(props, 'AC-1 FAIL: kein `interface Props { … }`-Block gefunden');
+		assert.match(props, /onVergleichsMetrikenChange\??\s*:/, 'AC-1 FAIL: kein Rueckruf `onVergleichsMetrikenChange` in den Props');
+		assert.match(props, /activeMetricKeys\??\s*:/, 'AC-1 FAIL: keine Wertprop `activeMetricKeys` in den Props');
+		assert.doesNotMatch(props, /\bwiz\??\s*:/, 'AC-1 FAIL: die Props fuehren weiterhin eine `wiz`-Prop');
 	});
 
 	test(

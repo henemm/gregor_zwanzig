@@ -1044,7 +1044,9 @@ const EINBETTUNGEN = [
 			compareCatalog: toCompareSelectionEntries({ metrics: live().compare } as never),
 			buckets: { primary: gerendertRoute(SECHS), secondary: [], off: [] },
 			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
-			friendlyMap: {}, highlight: null, wiz: undefined, trip: undefined
+			friendlyMap: {}, highlight: null, trip: undefined,
+			// #2276 S6g: die Trip-Einbettung bekommt keine Vergleichs-Wertprops.
+			activeMetricKeys: undefined, channelActiveMetricKeys: undefined
 		})
 	},
 	{
@@ -1058,7 +1060,8 @@ const EINBETTUNGEN = [
 			buckets: { primary: [], secondary: [], off: [] },
 			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
 			friendlyMap: {}, highlight: null,
-			wiz: { activeMetricKeys: gerendertVergleich(), channelActiveMetricKeys: {} }
+			// #2276 S6g: Wertprops statt `wiz` — derselbe Zustand, ohne Zustandsobjekt.
+			activeMetricKeys: gerendertVergleich(), channelActiveMetricKeys: {}
 		})
 	},
 	{

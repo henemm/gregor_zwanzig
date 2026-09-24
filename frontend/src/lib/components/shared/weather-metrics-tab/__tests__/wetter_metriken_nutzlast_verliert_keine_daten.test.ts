@@ -196,7 +196,7 @@ describe('AC-12 (Rueckfall via Orchestrierung): erstelleWetterMetrikenVergleichS
 		const queue = createPutQueue();
 		const speicherung = erstelleWetterMetrikenVergleichSpeicherung({
 			client: api,
-			wiz: ws,
+			zustand: ws,
 			preset: () => basis,
 			enqueueHubWrite: (fn) => queue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {
@@ -244,7 +244,7 @@ describe('AC-12 (Rundlauf): gespeichert und neu geladen — nur die Wetter-Metri
 		const queue = createPutQueue();
 		const speicherung = erstelleWetterMetrikenVergleichSpeicherung({
 			client: api,
-			wiz: ws,
+			zustand: ws,
 			preset: () => basis,
 			enqueueHubWrite: (fn) => queue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {

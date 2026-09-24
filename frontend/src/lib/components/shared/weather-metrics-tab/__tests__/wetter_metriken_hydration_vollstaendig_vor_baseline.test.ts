@@ -134,7 +134,7 @@ describe('AC-3 (Mechanismus): erst NACH bestandenem Gate erzeugt — die spät e
 
 		erstelleWetterMetrikenVergleichSpeicherung({
 			client: api,
-			wiz: ws,
+			zustand: ws,
 			preset: () => basis,
 			enqueueHubWrite: (fn) => queue.enqueue(fn),
 			onCompareUpdate: (p: ComparePreset) => {

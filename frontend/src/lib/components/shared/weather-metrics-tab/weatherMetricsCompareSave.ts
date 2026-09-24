@@ -287,7 +287,7 @@ export function rollbackLayoutSnapshot(
 // (saveStatusStore.svelte.ts:184-189) — deshalb EIN Snapshot-Typ, EINE
 // `aenderungMelden()`, EIN `schedule()`-Aufruf pro Geste.
 
-/** Kombinierter Snapshot ueber Wetter-Metriken- UND Layout-Domaene (9 Felder). */
+/** Kombinierter Snapshot ueber Wetter-Metriken- UND Layout-Domaene (10 Felder). */
 export interface WetterMetrikenLayoutSnapshot {
 	activeMetricKeys: string[];
 	channelActiveMetricKeys: CompareChannelActiveMetrics;
@@ -305,17 +305,17 @@ export interface WetterMetrikenLayoutSnapshot {
  *  (bewusst locker typisiert, kein Laufzeit-Import einer Compare-Klasse). */
 export type WetterMetrikenZustand = object;
 
-function felder(wiz: WetterMetrikenZustand): Record<string, unknown> {
-	return wiz as Record<string, unknown>;
+function felder(zustand: WetterMetrikenZustand): Record<string, unknown> {
+	return zustand as Record<string, unknown>;
 }
 
-/** Aktueller Wetter-Metriken/Layout-Stand von `wiz` als entkoppelte Kopie —
+/** Aktueller Wetter-Metriken/Layout-Stand von `zustand` als entkoppelte Kopie —
  *  `activeMetricKeys` materialisiert (#1366), alle Felder LIVE gelesen
  *  (E3-Pflicht, AC-4: `activeMetricKeys` teilt sich `display_config.
  *  active_metrics` mit dem Wertebereiche-Reiter — nur ein Live-Read beider
  *  Schreiber macht die Ueberschneidung sicher). */
-export function wetterMetrikenSnapshotAus(wiz: WetterMetrikenZustand): WetterMetrikenLayoutSnapshot {
-	const f = felder(wiz);
+export function wetterMetrikenSnapshotAus(zustand: WetterMetrikenZustand): WetterMetrikenLayoutSnapshot {
+	const f = felder(zustand);
 	return JSON.parse(
 		JSON.stringify({
 			activeMetricKeys: materializeActiveMetricKeys(
@@ -336,7 +336,7 @@ export function wetterMetrikenSnapshotAus(wiz: WetterMetrikenZustand): WetterMet
 
 /**
  * EINZIGE Erzeugerin der kombinierten Nutzlast: Voll-Spread über `preset`
- * (Go-Merge mergt `display_config` nur auf Ebene 1), die neun eigenen Felder
+ * (Go-Merge mergt `display_config` nur auf Ebene 1), die zehn eigenen Felder
  * aus `current` — `activeMetricKeys` LIVE aus dem Zustand (AC-4), nie aus
  * einer eingefrorenen Preset-Kopie. `hourlyMetricKeys`/`outlookMetricKeys`/
  * `outlookMetricFormats` fallen bei `null` ("nie eingestellt") auf den
@@ -406,16 +406,16 @@ export function flushPendingWetterMetrikenSave(
 
 /**
  * Diff-basierter Rollback (Design Punkt 7, analog Wertebereiche S3): ein Feld
- * wird nur zurueckgesetzt, wenn `wiz` noch exakt den Wert traegt, den DIESER
- * gescheiterte Vorgang gesendet hat.
+ * wird nur zurueckgesetzt, wenn `zustand` noch exakt den Wert traegt, den
+ * DIESER gescheiterte Vorgang gesendet hat.
  */
 export function rollbackWetterMetrikenSnapshot(
-	wiz: WetterMetrikenZustand,
+	zustand: WetterMetrikenZustand,
 	before: WetterMetrikenLayoutSnapshot,
 	attempted: WetterMetrikenLayoutSnapshot
 ): void {
-	const target = felder(wiz);
-	const aktuell = wetterMetrikenSnapshotAus(wiz);
+	const target = felder(zustand);
+	const aktuell = wetterMetrikenSnapshotAus(zustand);
 	const felderListe = [
 		'activeMetricKeys',
 		'channelActiveMetricKeys',
@@ -437,7 +437,7 @@ export function rollbackWetterMetrikenSnapshot(
 
 export interface WetterMetrikenVergleichSpeicherungOptionen {
 	client: PutClient;
-	wiz: WetterMetrikenZustand;
+	zustand: WetterMetrikenZustand;
 	/** Basis — als Getter, damit sie ERST bei Ausführung in der Queue gelesen wird. */
 	preset: () => ComparePreset;
 	/** Hub-Queue (`hubPutQueue.enqueue`) — Serialisierung mit den Nachbar-Reitern. */
@@ -451,8 +451,8 @@ export interface WetterMetrikenVergleichSpeicherungOptionen {
  * Orchestrierung des Wetter-Metriken/Layout-Speicherns im Ortsvergleich
  * (Muster `erstelleAlarmeVergleichSpeicherung`/`erstelleWertebereicheVergleichSpeicherung`,
  * S2/S3) — anders als dort ueber EINEN kombinierten Snapshot beider Domaenen
- * (Design-Entscheidung 1). Anfangs-Baseline = Stand von `wiz` beim Erzeugen
- * (nach BEIDEN Hydrationen, AC-3 — der Aufrufer MUSS erst nach
+ * (Design-Entscheidung 1). Anfangs-Baseline = Stand von `zustand` beim
+ * Erzeugen (nach BEIDEN Hydrationen, AC-3 — der Aufrufer MUSS erst nach
  * `wetterMetrikenHydrationAbgeschlossen()` erzeugen).
  *
  * `aenderungMelden()`: ohne Unterschied zur Baseline wird ein eigener, noch
@@ -465,15 +465,15 @@ export interface WetterMetrikenVergleichSpeicherungOptionen {
 export function erstelleWetterMetrikenVergleichSpeicherung(
 	opt: WetterMetrikenVergleichSpeicherungOptionen
 ): { aenderungMelden(): void } {
-	const { client, wiz, enqueueHubWrite, saveController } = opt;
-	let zuletztGespeichert: WetterMetrikenLayoutSnapshot = wetterMetrikenSnapshotAus(wiz);
+	const { client, zustand, enqueueHubWrite, saveController } = opt;
+	let zuletztGespeichert: WetterMetrikenLayoutSnapshot = wetterMetrikenSnapshotAus(zustand);
 	let eigenerVorgangAussteht = false;
 
 	const saveFn: SaveFn = async (init) => {
 		eigenerVorgangAussteht = false;
 		await enqueueHubWrite(async () => {
 			for (;;) {
-				const current = wetterMetrikenSnapshotAus(wiz);
+				const current = wetterMetrikenSnapshotAus(zustand);
 				const before = zuletztGespeichert;
 				const payload = flushPendingWetterMetrikenSave(opt.preset(), current, before);
 				if (!payload) return;
@@ -483,7 +483,7 @@ export function erstelleWetterMetrikenVergleichSpeicherung(
 					opt.onCompareUpdate(antwort);
 				} catch (e) {
 					if ((e as { status?: number })?.status !== 412) {
-						rollbackWetterMetrikenSnapshot(wiz, before, current);
+						rollbackWetterMetrikenSnapshot(zustand, before, current);
 					}
 					throw e;
 				}
@@ -493,7 +493,7 @@ export function erstelleWetterMetrikenVergleichSpeicherung(
 
 	return {
 		aenderungMelden(): void {
-			const current = wetterMetrikenSnapshotAus(wiz);
+			const current = wetterMetrikenSnapshotAus(zustand);
 			if (JSON.stringify(current) === JSON.stringify(zuletztGespeichert)) {
 				if (eigenerVorgangAussteht) {
 					eigenerVorgangAussteht = false;
@@ -527,9 +527,44 @@ export function wetterMetrikenHydrationAbgeschlossen(p: {
  *  `scheduleAutoSave`/`scheduleReportConfigOnlySave`. */
 export function wetterMetrikenVergleichSpeicherungAktiv(p: {
 	context: string;
-	wiz: unknown;
+	zustand: unknown;
 	preset: unknown;
 	saveController: unknown;
 }): boolean {
-	return p.context === 'vergleich' && !!p.wiz && !!p.preset && !!p.saveController;
+	return p.context === 'vergleich' && !!p.zustand && !!p.preset && !!p.saveController;
+}
+
+/**
+ * Issue #2276 S6g: Bruecke zwischen den WERTPROPS des Wetter-Metriken-
+ * Organismus und diesem (unveraenderten) Speicherweg. Seit S6g haelt
+ * `WeatherMetricsTab.svelte` keine Wizard-Referenz mehr — der Baustein reicht
+ * seine Props herein, und HIER, an genau einer Stelle, treffen Wertprops und
+ * Speicherweg aufeinander.
+ *
+ * Gelesen wird IMMER frisch (`werte()` je Zugriff): ein einmal gebautes Objekt
+ * saehe nach der ersten Aenderung veraltete Werte, und der Diff-Gate-Vergleich
+ * fiele dann stumm aus — der Hub speicherte die vorletzte Fassung.
+ * Geschrieben wird ausschliesslich vom diff-basierten Rollback
+ * (`rollbackWetterMetrikenSnapshot`) — `setzen` meldet das an den Halter des
+ * Zustands weiter; kein Bedienelement schreibt hierueber.
+ *
+ * Wie `corridorZustandsBruecke`/`versandZustandsBruecke` braucht es hier KEINE
+ * Namensumleitung: die zehn Felder heissen im Speicherweg genauso wie die
+ * Wertprops.
+ *
+ * PLATZIERUNG unterhalb Zeile 534 ist Pflicht, keine Vorliebe (Spec, Auflage
+ * A1): weiter oben verschoebe sie den eingefrorenen Ratschen-Eintrag
+ * `weather-metrics-tab/weatherMetricsCompareSave.ts:534` nach unten.
+ */
+export function wetterMetrikenZustandsBruecke(
+	werte: () => Record<string, unknown>,
+	setzen?: (feld: string, wert: unknown) => void
+): WetterMetrikenZustand {
+	return new Proxy({} as WetterMetrikenZustand, {
+		get: (_ziel, feld) => werte()[feld as string],
+		set: (_ziel, feld, wert) => {
+			setzen?.(feld as string, wert);
+			return true;
+		}
+	});
 }

@@ -41,7 +41,7 @@ function aufbau() {
 	const queue = createPutQueue();
 	const speicherung = erstelleWetterMetrikenVergleichSpeicherung({
 		client: api,
-		wiz: ws,
+		zustand: ws,
 		preset: () => basis,
 		enqueueHubWrite: (fn) => queue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {

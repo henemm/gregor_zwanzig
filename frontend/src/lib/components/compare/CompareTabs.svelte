@@ -53,6 +53,7 @@
 	import { alarmePropsAus } from './alarmePropsAus.ts';
 	import { corridorPropsAus } from './corridorPropsAus.ts';
 	import { versandPropsAus } from './versandPropsAus.ts';
+	import { wetterMetrikenPropsAus } from './wetterMetrikenPropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
 	// vergleich-Kontext) — analog Alarme-/Versand-Bridge oben.
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
@@ -159,6 +160,11 @@
 
 	// Tab-Daten ──────────────────────────────────────────────────────────────────
 
+	// Issue #2276 S6g (svelte-check-Fund, AC-10): VOR ihrer ersten Nutzung in
+	// `status` unten deklariert (Nutzung-vor-Deklaration im Modul-Scope der
+	// Instanz) — Verhalten von `status`/`statusInfo` bleibt unveraendert, reine
+	// Reihenfolge-Korrektur. Issue #527/#558 + #631: Pause/Aktivieren-Zustand.
+	let localSchedule = $state<string>(preset.schedule ?? 'manual');
 	const status = $derived(deriveStatusWithScheduleOverride(preset, localSchedule));
 	const statusInfo = $derived(STATUS_MAP[status]);
 
@@ -627,7 +633,6 @@
 	let previousSchedule = $state<string>(
 		preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
 	);
-	let localSchedule = $state<string>(preset.schedule ?? 'manual');
 
 	// Liefert true/false statt zu werfen — der Hub-eigene CTA-Klick ignoriert
 	// den Rueckgabewert (fire-and-forget wie bisher), der Kebab-Delegations-
@@ -1003,7 +1008,7 @@
 				     entsteht. -->
 				<WeatherMetricsTab
 					context="vergleich"
-					wiz={wizardState}
+					{...wetterMetrikenPropsAus(wizardState)}
 					preset={currentPreset}
 					{saveController}
 					enqueueHubWrite={reiheHubSchreibvorgangEin}

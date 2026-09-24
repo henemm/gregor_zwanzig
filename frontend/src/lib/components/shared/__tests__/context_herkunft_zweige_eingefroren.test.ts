@@ -47,6 +47,23 @@
 // `EINGEFROREN_SOLL_ANZAHL` unveraendert bei 47 — anders als bei S6c/S6d
 // aendert S6e die Gesamtzahl nicht.
 //
+// 🔴 STAND S6g (Issue #2276, Spec `rework_2276_s6g_wetter_metriken_wertprops.md`,
+// Design-Entscheidung 8): die Ausnahme gilt ZUSAETZLICH fuer
+// `WeatherMetricsTab.svelte` — Bilanz wie S6e: 0 Eintraege werden gestrichen,
+// die fuenf bestehenden Eintraege `WeatherMetricsTab.svelte:545/560/589/602/1323`
+// (die `context === 'route'`/`context === 'vergleich'`-Bedingungen und die
+// Markup-Gabelung) werden in GREEN auf ihre neu gemessenen Zeilennummern
+// nachgefuehrt und per `BLEIBT_MIT_INHALT` mit wortgleichem Bedingungstext
+// inhaltlich gefesselt. Grund: die zehn Wertprops + neun Rueckrufe im
+// SCRIPT-Teil liegen alle OBERHALB dieser Zeilen — ihre Verschiebung nach
+// unten ist eine reine Positionsfolge, kein Verhaltensbefund. TDD RED (diese
+// Scheibe) setzt NUR diese Vertragserweiterung; die neuen Zeilennummern samt
+// `BLEIBT_MIT_INHALT`-Eintraegen traegt GREEN nach (Muster S6d/S6e).
+// `weather-metrics-tab/weatherMetricsCompareSave.ts:534` bleibt AUF SEINER
+// ZEILE (alter, positionsbasierter Vertrag); die Textaenderung dort
+// (`!!p.wiz` -> `!!p.zustand`) bekommt bewusst KEINE Fesselung (Spec,
+// Design-Entscheidung 6/9). `EINGEFROREN_SOLL_ANZAHL` bleibt bei 47.
+//
 // TDD RED (Stand `73f504c9`)
 // -------------------------
 // Beim Stand vor S6a liefert der Zaehlbefehl 69 Fundstellen. Die eingefrorene
@@ -149,10 +166,23 @@ const ZAEHLBEFEHL =
  *     gilt weiterhin der alte, positionsbasierte Vertrag. Die Textaenderung an
  *     :221 (`!!p.wiz` -> `!!p.zustand`) bekommt bewusst KEINE Fesselung (Spec,
  *     Design-Entscheidung 4/6).
+ * 🔴 VERTRAG AN S6g /50 (Spec `rework_2276_s6g_wetter_metriken_wertprops.md`,
+ * Design-Entscheidung 8): der Zeilenzahl-Vertrag gilt ZUSAETZLICH NICHT fuer
+ * `WeatherMetricsTab.svelte`. Bilanz wie S6e, die Gesamtzahl bleibt 47:
+ *   * 0 Eintraege werden gestrichen,
+ *   * die fuenf bestehenden Eintraege (in RED `WeatherMetricsTab.svelte:545/
+ *     560/589/602/1323`) werden auf ihre in GREEN neu gemessenen Zeilennummern
+ *     nachgefuehrt und in `BLEIBT_MIT_INHALT` mit wortgleichem Bedingungstext
+ *     gefesselt — geprueft wird der Bedingungstext, nicht die Position,
+ *   * `weather-metrics-tab/weatherMetricsCompareSave.ts:534` bleibt AUF SEINER
+ *     ZEILE; fuer sie gilt weiterhin der alte, positionsbasierte Vertrag. Die
+ *     Textaenderung an :534 (`!!p.wiz` -> `!!p.zustand`) bekommt bewusst KEINE
+ *     Fesselung (Spec, Design-Entscheidung 6/9).
  *
  * Fuer alle Dateien AUSSERHALB von `AlarmeTab.svelte`, den beiden
- * Corridor-Bausteinen UND `VersandTab.svelte` gilt der alte Vertrag
- * unveraendert weiter: verschobene Zeilennummer = Befund, kein Nachtrag.
+ * Corridor-Bausteinen, `VersandTab.svelte` UND `WeatherMetricsTab.svelte` gilt
+ * der alte Vertrag unveraendert weiter: verschobene Zeilennummer = Befund, kein
+ * Nachtrag.
  */
 const EINGEFROREN: readonly string[] = [
 	// S6c: von 18 AlarmeTab-Eintraegen bleiben genau diese VIER (Schicksals-
@@ -179,11 +209,11 @@ const EINGEFROREN: readonly string[] = [
 	'VersandTab.svelte:358',
 	'VersandTab.svelte:394',
 	'versandVergleichSpeicherung.ts:221',
-	'WeatherMetricsTab.svelte:545',
-	'WeatherMetricsTab.svelte:560',
-	'WeatherMetricsTab.svelte:589',
-	'WeatherMetricsTab.svelte:602',
-	'WeatherMetricsTab.svelte:1323',
+	'WeatherMetricsTab.svelte:590',
+	'WeatherMetricsTab.svelte:605',
+	'WeatherMetricsTab.svelte:634',
+	'WeatherMetricsTab.svelte:647',
+	'WeatherMetricsTab.svelte:1439',
 	'versand-tab/vtBriefingChannelsText.ts:21',
 	'versand-tab/vtBriefingChannelsText.ts:26',
 	// S6d: von 14 Corridor-Paaren bleiben elf (Schicksals-Tabelle der Spec).
@@ -398,6 +428,36 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		eintrag: 'VersandTab.svelte:394',
 		zeile: "{:else if context === 'vergleich'}",
 		folgt: 'email: sendEmail ?? false,'
+	},
+	// S6g (Issue #2276): die fuenf ueberlebenden WeatherMetricsTab-Eintraege —
+	// gemessen am Quelltext NACH dem Wertprop-Umbau. Alle fuenf tragen ihren
+	// Bedingungstext byte-identisch weiter (Spec Design-Entscheidung 8), nur
+	// ihre Position verschob sich nach unten (die zehn neuen Wertprop-Zeilen +
+	// neun Rueckruf-Zeilen im Script-Teil liegen oberhalb).
+	{
+		eintrag: 'WeatherMetricsTab.svelte:590',
+		zeile: "if (context === 'route' && trip && catalogLoaded && !isDirty) {",
+		folgt: 'normalizeStoredOutlookMetrics('
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:605',
+		zeile: "if (context === 'route' && Object.keys(catalog).length === 0) load();",
+		folgt: 'Issue #1350 Teil 2: analog dem Route-Guard oben'
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:634',
+		zeile: "if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();",
+		folgt: '#1401 Scheibe B: der Stundenverlauf beschriftet'
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:647',
+		zeile: "if (context === 'vergleich' && Object.keys(catalog).length === 0) {",
+		folgt: ".get<MetricCatalog>('/api/metrics')"
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:1439',
+		zeile: "{#if context === 'vergleich'}",
+		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	}
 ];
 
@@ -487,7 +547,7 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 	});
 });
 
-describe('S6c/S6d/S6e: jeder gefesselte Eintrag zeigt auf seine eigene Bedingung', () => {
+describe('S6c/S6d/S6e/S6g: jeder gefesselte Eintrag zeigt auf seine eigene Bedingung', () => {
 	for (const { eintrag, zeile, folgt } of BLEIBT_MIT_INHALT) {
 		test(`${eintrag} traegt weiterhin \`${zeile}\``, () => {
 			assert.ok(
