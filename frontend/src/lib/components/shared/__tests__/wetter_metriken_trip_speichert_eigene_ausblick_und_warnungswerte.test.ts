@@ -113,7 +113,7 @@ function saatRoute(zusatz: Knoten = {}): Knoten {
 describe('AC-6 (Trip, context=route): der echte Rueckschreibpfad traegt die ROUTE-Werte, nicht die (im Trip immer leere) Vergleichs-Wertprop', () => {
 	test('onOutlookMetricKeys/onOutlookMetricFormats/onToggleOfficialAlerts -> scheduleAutoSave() schickt die ROUTE-Werte in die echten PUT-Bodies', async () => {
 		const { client, puts } = aufzeichnenderClient();
-		let geplant: ((init?: RequestInit) => Promise<void>) | null = null;
+		let geplant = null as ((init?: RequestInit) => Promise<void>) | null;
 		const saveController = {
 			schedule: (fn: (init?: RequestInit) => Promise<void>) => { geplant = fn; },
 			setDirty: () => {},
