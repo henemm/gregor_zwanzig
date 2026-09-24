@@ -209,11 +209,11 @@ const EINGEFROREN: readonly string[] = [
 	'VersandTab.svelte:358',
 	'VersandTab.svelte:394',
 	'versandVergleichSpeicherung.ts:221',
-	'WeatherMetricsTab.svelte:545',
-	'WeatherMetricsTab.svelte:560',
-	'WeatherMetricsTab.svelte:589',
-	'WeatherMetricsTab.svelte:602',
-	'WeatherMetricsTab.svelte:1323',
+	'WeatherMetricsTab.svelte:590',
+	'WeatherMetricsTab.svelte:605',
+	'WeatherMetricsTab.svelte:634',
+	'WeatherMetricsTab.svelte:647',
+	'WeatherMetricsTab.svelte:1439',
 	'versand-tab/vtBriefingChannelsText.ts:21',
 	'versand-tab/vtBriefingChannelsText.ts:26',
 	// S6d: von 14 Corridor-Paaren bleiben elf (Schicksals-Tabelle der Spec).
@@ -428,6 +428,36 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		eintrag: 'VersandTab.svelte:394',
 		zeile: "{:else if context === 'vergleich'}",
 		folgt: 'email: sendEmail ?? false,'
+	},
+	// S6g (Issue #2276): die fuenf ueberlebenden WeatherMetricsTab-Eintraege —
+	// gemessen am Quelltext NACH dem Wertprop-Umbau. Alle fuenf tragen ihren
+	// Bedingungstext byte-identisch weiter (Spec Design-Entscheidung 8), nur
+	// ihre Position verschob sich nach unten (die zehn neuen Wertprop-Zeilen +
+	// neun Rueckruf-Zeilen im Script-Teil liegen oberhalb).
+	{
+		eintrag: 'WeatherMetricsTab.svelte:590',
+		zeile: "if (context === 'route' && trip && catalogLoaded && !isDirty) {",
+		folgt: 'normalizeStoredOutlookMetrics('
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:605',
+		zeile: "if (context === 'route' && Object.keys(catalog).length === 0) load();",
+		folgt: 'Issue #1350 Teil 2: analog dem Route-Guard oben'
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:634',
+		zeile: "if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();",
+		folgt: '#1401 Scheibe B: der Stundenverlauf beschriftet'
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:647',
+		zeile: "if (context === 'vergleich' && Object.keys(catalog).length === 0) {",
+		folgt: ".get<MetricCatalog>('/api/metrics')"
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:1439',
+		zeile: "{#if context === 'vergleich'}",
+		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	}
 ];
 
@@ -517,7 +547,7 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 	});
 });
 
-describe('S6c/S6d/S6e: jeder gefesselte Eintrag zeigt auf seine eigene Bedingung', () => {
+describe('S6c/S6d/S6e/S6g: jeder gefesselte Eintrag zeigt auf seine eigene Bedingung', () => {
 	for (const { eintrag, zeile, folgt } of BLEIBT_MIT_INHALT) {
 		test(`${eintrag} traegt weiterhin \`${zeile}\``, () => {
 			assert.ok(

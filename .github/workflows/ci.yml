@@ -130,9 +130,11 @@ jobs:
       # historischen Wrapper-Divs im Wetter-Metriken-Reiter, Errors unveraendert
       # bei 36 — die zwei neuen Kern-Test-Fehler kamen von einem fehlenden
       # `as unknown as`-Bruecken-Cast, gefixt statt die Baseline anzuheben).
-      # Abgesenkt 2026-09-24 (#2276 S6g, AC-10): 36 -> 35 Errors — `localSchedule`
-      # in CompareTabs.svelte wird vor seine erste Nutzung gezogen.
-      BASELINE_ERRORS: 35
+      # Abgesenkt 2026-09-24 (#2276 S6g, AC-10): 36 -> 34 Errors — `localSchedule`
+      # in CompareTabs.svelte wird vor seine erste Nutzung gezogen (behebt beide
+      # "used before its declaration"/"used before being assigned"-Fehler auf
+      # derselben Zeile in einem Aufwasch).
+      BASELINE_ERRORS: 34
       BASELINE_WARNINGS: 132
     defaults:
       run:

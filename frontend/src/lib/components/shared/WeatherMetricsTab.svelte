@@ -18,7 +18,8 @@
 	import {
 		erstelleWetterMetrikenVergleichSpeicherung,
 		wetterMetrikenSnapshotAus,
-		wetterMetrikenVergleichSpeicherungAktiv
+		wetterMetrikenVergleichSpeicherungAktiv,
+		wetterMetrikenZustandsBruecke
 	} from './weather-metrics-tab/weatherMetricsCompareSave.ts';
 	import { HORIZONS_ALL } from '$lib/types';
 	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
@@ -48,6 +49,7 @@
 	// sie ist bereits generisch ueber `string[]`, kein Compare-Eigenbau.
 	import {
 		COMPARE_CHANNEL_IDS, startCompareChannelOverride,
+		type CompareChannelActiveMetrics,
 	} from './weather-metrics-tab/compareChannelMetricLayouts.ts';
 	// Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (nur context="route").
 	// Issue #1719 Scheibe S3: splitChannelMetricsForDisplay (aktiv/Aus-Gruppe,
@@ -89,7 +91,9 @@
 	import { reportConfigChangedByUser } from '$lib/components/shared/reportConfigDirty';
 	// Issue #1311 (C1 von Epic #1301): geteilter Baustein Trip + Ortsvergleich
 	// (Vorbild AlarmeTab.svelte) — context-Dispatch + Vergleich-Grundauswahl.
-	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
+	// Issue #2276 S6g: kein Laufzeit- oder Typ-Import von `CompareWizardState`
+	// mehr — der Vergleichs-Zweig arbeitet nur noch auf Wertprops + Rueckrufen,
+	// das Buendel baut `compare/wetterMetrikenPropsAus.ts`.
 	import { weatherMetricsTabSections, type WeatherMetricsContext } from './weather-metrics-tab/weatherMetricsTabSections.ts';
 	// Issue #1360: geteilte Stundenverlauf-Steuerung (Hub + Anlege-Seite),
 	// unveraendert uebernommen aus dem aufgeloesten Layout-Reiter.
@@ -165,8 +169,34 @@
 		onTripUpdate?: (t: Trip) => void;
 		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der explizite Speichern-Button. */
 		saveController?: SaveStatus;
-		// vergleich (neu, Issue #1311)
-		wiz?: CompareWizardState;
+		// vergleich (Issue #2276 S6g: zehn Wertprops + neun Rueckrufe statt der
+		// frueheren Compare-Wizard-Zustandsprop — das Buendel `wetterMetrikenPropsAus(...)`
+		// baut compare/wetterMetrikenPropsAus.ts, alle drei Vergleichs-Mounts
+		// streuen es identisch. Defaults kommen aus dem Buendel, nicht von hier.)
+		activeMetricKeys?: string[] | null;
+		channelActiveMetricKeys?: CompareChannelActiveMetrics;
+		officialAlertsEnabled?: boolean;
+		dayWindowStartHour?: number;
+		dayWindowEndHour?: number;
+		hourlyMetricKeys?: string[] | null;
+		hourlyEnabled?: boolean;
+		outlookMetricKeys?: string[] | null;
+		outlookMetricFormats?: Record<string, boolean> | null;
+		outlookEnabled?: boolean;
+		/** Gekoppelter Rueckruf (Spec Design-Entscheidung 3): `toggleCompareMetric`
+		 *  schreibt `activeMetricKeys` UND (bei globaler Abwahl mit vorhandenen
+		 *  Kanal-Overrides) `channelActiveMetricKeys` in EINEM synchronen Aufruf —
+		 *  ein Snapshot zwischen zwei Einzel-Rueckrufen saehe sonst einen
+		 *  inkonsistenten Zwischenstand. */
+		onVergleichsMetrikenChange?: (active: string[] | null, channelActive: CompareChannelActiveMetrics) => void;
+		onOfficialAlertsEnabledChange?: (checked: boolean) => void;
+		onDayWindowStartHourChange?: (v: number) => void;
+		onDayWindowEndHourChange?: (v: number) => void;
+		onHourlyMetricKeysChange?: (keys: string[] | null) => void;
+		onHourlyEnabledChange?: (checked: boolean) => void;
+		onOutlookMetricKeysChange?: (keys: string[] | null) => void;
+		onOutlookMetricFormatsChange?: (formats: Record<string, boolean> | null) => void;
+		onOutlookEnabledChange?: (checked: boolean) => void;
 		// Issue #2276 S4: der vergleich-Zweig speichert selbst (Hub), analog
 		// AlarmeTab/CorridorEditor — ersetzt `onCompareCommit`/`onHourlyCommit`/
 		// `onOutlookCommit` (Wrapper-Bubble entfaellt). Ohne `preset` oder
@@ -175,7 +205,16 @@
 		onCompareUpdate?: (updated: ComparePreset) => void;
 		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
 	}
-	let { context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange, onTripUpdate, saveController, wiz, preset, onCompareUpdate, enqueueHubWrite }: Props = $props();
+	let {
+		context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange,
+		onTripUpdate, saveController,
+		activeMetricKeys, channelActiveMetricKeys, officialAlertsEnabled, dayWindowStartHour, dayWindowEndHour,
+		hourlyMetricKeys, hourlyEnabled, outlookMetricKeys, outlookMetricFormats, outlookEnabled,
+		onVergleichsMetrikenChange, onOfficialAlertsEnabledChange, onDayWindowStartHourChange, onDayWindowEndHourChange,
+		onHourlyMetricKeysChange, onHourlyEnabledChange, onOutlookMetricKeysChange, onOutlookMetricFormatsChange,
+		onOutlookEnabledChange,
+		preset, onCompareUpdate, enqueueHubWrite
+	}: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
@@ -234,7 +273,11 @@
 	let telegramKurzform = $state<boolean>(trip?.display_config?.telegram_kurzform ?? false);
 	// Issue #1117: Amtliche Warnungen im E-Mail-Briefing (zweiter Einstiegspunkt neben
 	// Alerts-Tab). Default true matcht den Backend-Default.
-	let officialAlertsEnabled = $state<boolean>(trip?.official_alerts_enabled ?? true);
+	// Issue #2276 S6g: `Route`-Suffix, weil der Vergleichs-Zweig seit dieser
+	// Scheibe eine gleichnamige Wertprop `officialAlertsEnabled` bindet — zwei
+	// `let`-Deklarationen desselben Namens im selben Instanz-Skript waeren ein
+	// Compile-Fehler (Svelte/JS erlauben keine Doppelbindung im selben Scope).
+	let officialAlertsEnabledRoute = $state<boolean>(trip?.official_alerts_enabled ?? true);
 	// Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
 	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
 	let smsThresholds = $state<Record<string, string>>({});
@@ -267,10 +310,12 @@
 	// (der Block entfaellt in der Mail ganz). Steht in snapshot()/isDirty UND
 	// handleDiscard() — fehlte es dort, bliebe der Reiter nach einer reinen
 	// Vorschau-Aenderung faelschlich „sauber" und der Speichern-Weg feuerte nie.
-	let outlookMetricKeys = $state<string[] | null>(null);
+	// Issue #2276 S6g: `Route`-Suffix — Namenskollision mit der gleichnamigen
+	// Vergleichs-Wertprop vermeiden (s. `officialAlertsEnabledRoute` oben).
+	let outlookMetricKeysRoute = $state<string[] | null>(null);
 
 	function onOutlookMetricKeys(keys: string[]): void {
-		outlookMetricKeys = keys;
+		outlookMetricKeysRoute = keys;
 		userTouched = true;
 		scheduleAutoSave();
 	}
@@ -279,10 +324,10 @@
 	// eingestellt (alles Roh). Gehoert — wie outlookMetricKeys — in
 	// snapshot()/isDirty UND handleDiscard(), sonst bliebe der Reiter nach einer
 	// reinen Umschaltung faelschlich „sauber" und der Speichern-Weg feuerte nie.
-	let outlookMetricFormats = $state<Record<string, boolean> | null>(null);
+	let outlookMetricFormatsRoute = $state<Record<string, boolean> | null>(null);
 
 	function onOutlookMetricFormats(formats: Record<string, boolean>): void {
-		outlookMetricFormats = formats;
+		outlookMetricFormatsRoute = formats;
 		userTouched = true;
 		scheduleAutoSave();
 	}
@@ -372,15 +417,15 @@
 	// Issue #1720 S1: outlookMetricKeys gehoert in Dirty-Vergleich UND Snapshot —
 	// sonst bleibt der Reiter nach einer reinen Vorschau-Aenderung „sauber".
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled, channelBuckets, outlookMetricKeys, outlookMetricFormats }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled: officialAlertsEnabledRoute, channelBuckets, outlookMetricKeys: outlookMetricKeysRoute, outlookMetricFormats: outlookMetricFormatsRoute }) !== savedSnapshot,
 	);
 
 	function snapshot(
 		b: Buckets, f: Record<string, boolean>, h: Record<string, Horizons>,
 		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean,
 		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets,
-		om: string[] | null = outlookMetricKeys,
-		ofm: Record<string, boolean> | null = outlookMetricFormats
+		om: string[] | null = outlookMetricKeysRoute,
+		ofm: Record<string, boolean> | null = outlookMetricFormatsRoute
 	): string {
 		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om, outlookMetricFormats: ofm });
 	}
@@ -472,13 +517,13 @@
 		// DIESELBE Umkehrung wie im Ortsvergleich, kein zweiter Lesepfad. Ein
 		// roher Cast auf string[] liesse die Haken nach dem Neuladen leer.
 		const om = normalizeStoredOutlookMetrics(trip!.display_config?.outlook_metrics, compareCatalog);
-		outlookMetricKeys = om;
+		outlookMetricKeysRoute = om;
 		// Issue #2049: Roh/Einfach der Vorschau — anders als die Auswahl braucht
 		// die Zuordnung keine Katalog-Uebersetzung (sie ist bereits nach
 		// Kennungen geschluesselt), haengt also nicht am compareCatalog-Fetch.
 		const ofm = trip!.display_config?.outlook_metric_formats ?? null;
-		outlookMetricFormats = ofm;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabled, cb, om, ofm);
+		outlookMetricFormatsRoute = ofm;
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabledRoute, cb, om, ofm);
 	}
 
 	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
@@ -543,11 +588,11 @@
 			// Picker zeigte keinen Haken. Baseline zieht mit, sonst gaelte der
 			// Reiter ohne jede Nutzergeste als geaendert.
 			if (context === 'route' && trip && catalogLoaded && !isDirty) {
-				outlookMetricKeys = normalizeStoredOutlookMetrics(
+				outlookMetricKeysRoute = normalizeStoredOutlookMetrics(
 					trip.display_config?.outlook_metrics, compareCatalog,
 				);
 				savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform,
-					smsThresholds, reportConfig, officialAlertsEnabled);
+					smsThresholds, reportConfig, officialAlertsEnabledRoute);
 			}
 		} catch (e: unknown) {
 			compareCatalogError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
@@ -788,7 +833,7 @@
 	// Safari-sicher), setzt State und triggert denselben debounce-Auto-Save.
 	function onToggleOfficialAlerts(e: Event) {
 		userTouched = true;
-		officialAlertsEnabled = (e.target as HTMLInputElement).checked;
+		officialAlertsEnabledRoute = (e.target as HTMLInputElement).checked;
 		scheduleAutoSave();
 	}
 
@@ -841,24 +886,24 @@
 			// Issue #774: reportConfig wiederherstellen (sonst bleibt Tab dirty nach Verwerfen).
 			reportConfig = snap.reportConfig ?? {};
 			// Issue #1117: officialAlertsEnabled wiederherstellen (Konsistenz-Vollständigkeit).
-			officialAlertsEnabled = snap.officialAlertsEnabled ?? true;
+			officialAlertsEnabledRoute = snap.officialAlertsEnabled ?? true;
 			// Issue #1575 Scheibe 3: Kanal-Eintraege mit zuruecknehmen, sonst bleibt
 			// der Tab nach dem Verwerfen dirty.
 			channelBuckets = snap.channelBuckets ?? { email: null, telegram: null, sms: null };
 			// Issue #1720 S1: Vorschau-Auswahl mit zuruecknehmen, sonst bleibt der
 			// Reiter nach dem Verwerfen dirty. `?? null` ist hier richtig: `null`
 			// heisst "nie eingestellt" und ist ein gueltiger Zustand.
-			outlookMetricKeys = snap.outlookMetricKeys ?? null;
+			outlookMetricKeysRoute = snap.outlookMetricKeys ?? null;
 			// Issue #2049: dieselbe Begruendung — ohne diese Zeile bliebe der
 			// Reiter nach dem Verwerfen einer Roh/Einfach-Aenderung dirty.
-			outlookMetricFormats = snap.outlookMetricFormats ?? null;
+			outlookMetricFormatsRoute = snap.outlookMetricFormats ?? null;
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
 			telegramKurzform = trip!.display_config?.telegram_kurzform ?? false;
 			smsThresholds = {};
 			reportConfig = trip!.report_config ? JSON.parse(JSON.stringify(trip!.report_config)) : {};
-			officialAlertsEnabled = trip!.official_alerts_enabled ?? true;
+			officialAlertsEnabledRoute = trip!.official_alerts_enabled ?? true;
 		}
 	}
 
@@ -911,16 +956,16 @@
 			// reicht den Altwert unveraendert durch.
 			// Issue #1848 A2: reine Kennungen, ungewandelt (wie hourly_metrics
 			// und wie der Ortsvergleich seit dieser Scheibe).
-			outlook_metrics: outlookMetricKeys === null
+			outlook_metrics: outlookMetricKeysRoute === null
 				? trip!.display_config?.outlook_metrics
-				: outlookMetricKeys,
+				: outlookMetricKeysRoute,
 			// Issue #2049: dieselbe RMW-Bauart wie `outlook_metrics` darueber —
 			// explizit statt nur ueber den Spread, damit ein bewusstes
 			// Zuruecksetzen auf Roh nicht vom Altwert verdeckt wird. `null` (nie
 			// eingestellt) reicht den Altwert unveraendert durch.
-			outlook_metric_formats: outlookMetricFormats === null
+			outlook_metric_formats: outlookMetricFormatsRoute === null
 				? trip!.display_config?.outlook_metric_formats
-				: outlookMetricFormats,
+				: outlookMetricFormatsRoute,
 		};
 	}
 
@@ -946,12 +991,12 @@
 				// Issue #776/#774: report_config separat persistieren (zweiter PUT, Read-Modify-Write im Backend).
 				// Issue #850: Server-Response enthält aktualisierte alert_rules (via SyncAlertRules) — nie manuell konstruieren.
 				// Issue #1117: official_alerts_enabled im selben zweiten PUT persistieren.
-				const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled });
+				const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabledRoute });
 				onTripUpdate?.(updated);
 			}
 			saveSuccess = true;
 			// Issue #736: channels aus snapshot entfernt (Conflict 4 entfällt).
-			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
+			savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabledRoute);
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			console.error(e);
@@ -978,7 +1023,7 @@
 			api,
 			trip!.id,
 			payload,
-			() => ({ report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled }),
+			() => ({ report_config: reportConfig, official_alerts_enabled: officialAlertsEnabledRoute }),
 			nachWetterSpeicherung
 		));
 	}
@@ -1000,7 +1045,7 @@
 		}
 		// #2317 Baustein 1: `init` (keepalive beim Entladen) erreicht den PUT.
 		saveController.schedule(async (init) => {
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabled }, init);
+			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabledRoute }, init);
 			nachWetterSpeicherung(updated);
 		});
 	}
@@ -1008,7 +1053,7 @@
 	/** Nebeneffekte nach erfolgreichem Auto-Save (beide Speicherpfade oben). */
 	function nachWetterSpeicherung(updated: Trip): void {
 		onTripUpdate?.(updated);
-		savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled);
+		savedSnapshot = snapshot(buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabledRoute);
 	}
 
 	// Issue #774: reportConfig-Änderungen (Checkboxen) triggern Auto-Save.
@@ -1087,15 +1132,19 @@
 	// im vergleich-Kontext anbietet — deckt sich mit dem Namensraum von
 	// display_config.active_metrics, s. compare_metric_ids.py). Persistenz
 	// macht CompareTabs.svelte (Hub-Hydrate/-Flush-Muster), diese Komponente
-	// mutiert nur wiz.activeMetricKeys direkt (kein Self-Save, analog
+	// meldet nur ueber den gekoppelten Rueckruf (kein Self-Save, analog
 	// AlarmeTab.svelte context="vergleich").
 	// Issue #1359: Set-Neuaufbau raus (zerstoerte die eingestellte Reihenfolge),
 	// Array-Filter/-Push rein — Logik in compareMetricOrder.ts, damit sie ohne
 	// Komponenten-Mount pruefbar ist (AC-2).
+	// Issue #2276 S6g (Design-Entscheidung 3): `activeMetricKeys` UND (bei
+	// globaler Abwahl mit vorhandenen Kanal-Overrides) `channelActiveMetricKeys`
+	// gehen ueber EINEN gemeinsamen Rueckruf `onVergleichsMetrikenChange` raus —
+	// niemals als zwei getrennte Aufrufe (ein dazwischen lesender Snapshot saehe
+	// sonst einen inkonsistenten Zwischenstand).
 	function toggleCompareMetric(metric: string) {
-		if (!wiz) return;
 		const wasOn = materializedActiveMetricKeys.includes(metric);
-		wiz.activeMetricKeys = toggleCompareMetricKeyFromState(wiz.activeMetricKeys, metric);
+		const nextActive = toggleCompareMetricKeyFromState(activeMetricKeys ?? null, metric);
 		// Issue #1703 S8 (ADR-0050 Regel 3, Trip-Vorbild onToggleMetric Z. 712-730):
 		// eine globale ABWAHL wirkt SOFORT in allen bereits vorhandenen
 		// Kanal-Overrides. Die EINWAHL-Richtung schreibt bewusst NICHT durch
@@ -1104,22 +1153,25 @@
 		// Ohne diese Durchschreibung bliebe die Anzeige zwar korrekt
 		// (splitChannelMetricsForDisplay filtert immer gegen die Grundauswahl),
 		// der GESPEICHERTE Kanal-Eintrag truege die Metrik aber weiter (M3).
-		if (!wasOn) return;
-		const next = { ...wiz.channelActiveMetricKeys };
-		let changed = false;
-		for (const ch of COMPARE_CHANNEL_IDS) {
-			const override = next[ch];
-			if (override === null || !override.includes(metric)) continue;
-			next[ch] = override.filter((id) => id !== metric);
-			changed = true;
+		let nextChannelActive = channelActiveMetricKeys;
+		if (wasOn && channelActiveMetricKeys) {
+			const next = { ...channelActiveMetricKeys };
+			let changed = false;
+			for (const ch of COMPARE_CHANNEL_IDS) {
+				const override = next[ch];
+				if (override === null || !override.includes(metric)) continue;
+				next[ch] = override.filter((id) => id !== metric);
+				changed = true;
+			}
+			if (changed) nextChannelActive = next;
 		}
-		if (changed) wiz.channelActiveMetricKeys = next;
+		onVergleichsMetrikenChange?.(nextActive, nextChannelActive as CompareChannelActiveMetrics);
 	}
 
 	// Issue #1366 F002: EINZIGE Materialisierungs-Quelle fuer Anzeige (Checkbox-
 	// Grundauswahl + Reihenfolge-Liste) -- muss mit dem Umschalt-Handler oben
 	// uebereinstimmen (F001-Regressionsmuster sonst).
-	const materializedActiveMetricKeys = $derived(materializeActiveMetricKeys(wiz?.activeMetricKeys ?? null));
+	const materializedActiveMetricKeys = $derived(materializeActiveMetricKeys(activeMetricKeys ?? null));
 
 	// ── Issue #1359 Scheibe 1: Reihenfolge-Block im Vergleich ────────────────
 	// Label/Einheit fuer WeatherV2Reihenfolge kommen aus dem BEREITS geladenen
@@ -1165,7 +1217,7 @@
 	// Effektive Kanal-Sicht: eigener Override, sonst die Grundauswahl
 	// (copy-on-write — der Override entsteht erst beim ersten Edit).
 	function compareChannelPrimary(ch: ChannelId): string[] {
-		return wiz?.channelActiveMetricKeys?.[ch] ?? materializedActiveMetricKeys;
+		return channelActiveMetricKeys?.[ch] ?? materializedActiveMetricKeys;
 	}
 
 	// "aktiv" (sortierbar) vs. "Aus in diesem Kanal" (wieder einschaltbar) —
@@ -1181,10 +1233,13 @@
 	// (Z. 677-691). Ohne bestehenden Override startet der Eintrag als Klon der
 	// globalen Reihenfolge, nicht leer.
 	function editCompareChannel(mutate: (view: string[]) => string[]) {
-		if (!wiz) return;
-		const base = wiz.channelActiveMetricKeys[compareChannel]
+		const base = channelActiveMetricKeys?.[compareChannel]
 			?? startCompareChannelOverride(materializedActiveMetricKeys);
-		wiz.channelActiveMetricKeys = { ...wiz.channelActiveMetricKeys, [compareChannel]: mutate(base) };
+		const next = { ...channelActiveMetricKeys, [compareChannel]: mutate(base) } as CompareChannelActiveMetrics;
+		// Design-Entscheidung 3: kanal-lokale Edits schreiben nur `channelActiveMetricKeys`,
+		// gehen aber ueber DENSELBEN gekoppelten Rueckruf — mit der unveraenderten
+		// Grundauswahl als erstem Argument (keine zweite Gelegenheit zur Drift).
+		onVergleichsMetrikenChange?.(activeMetricKeys ?? null, next);
 	}
 
 	// Ziehen = Reihenfolge des AKTIVEN KANALS setzen — der reaktive $effect
@@ -1217,25 +1272,25 @@
 	// (Safari-Factory-Muster).
 	function noopMode() {}
 
-	// Issue #1720 S1: der Ausblick-Block bekommt flache Props statt der frueheren
-	// `wiz`-Bindung (dasselbe Bauteil bedient jetzt auch den Trip). Diese beiden
-	// Handler schreiben exakt das, was die Komponente bis dahin selbst schrieb —
-	// Verhalten des Ortsvergleichs unveraendert. Named functions statt
-	// Inline-Closures (Safari-Factory-Muster).
+	// Issue #1720 S1: der Ausblick-Block bekommt flache Props (Issue #2276 S6g:
+	// jetzt Wertprops statt `wiz`-Bindung, dasselbe Bauteil bedient weiterhin
+	// auch den Trip). Diese Handler reichen exakt das weiter, was die Komponente
+	// bis dahin selbst schrieb — Verhalten des Ortsvergleichs unveraendert.
+	// Named functions statt Inline-Closures (Safari-Factory-Muster).
 	function onCompareOutlookMetricKeys(keys: string[]) {
-		if (wiz) wiz.outlookMetricKeys = keys;
+		onOutlookMetricKeysChange?.(keys);
 	}
 
 	// Issue #2049: Roh/Einfach der Ortsvergleichs-Vorschau — derselbe
-	// Speicherweg wie die Auswahl darueber (wiz-State, persistiert vom
-	// Commit-Wrapper in CompareTabs). Read-Modify-Write passiert bereits in
+	// Speicherweg wie die Auswahl darueber, persistiert vom Commit-Wrapper in
+	// CompareTabs. Read-Modify-Write passiert bereits in
 	// CompareOutlookLayoutControls; hier kommt die fertige Zuordnung an.
 	function onCompareOutlookMetricFormats(formats: Record<string, boolean>) {
-		if (wiz) wiz.outlookMetricFormats = formats;
+		onOutlookMetricFormatsChange?.(formats);
 	}
 
 	function onCompareOutlookEnabled(checked: boolean) {
-		if (wiz) wiz.outlookEnabled = checked;
+		onOutlookEnabledChange?.(checked);
 	}
 
 	// D2-Fix-Loop 2 (AC-6, Staging-Befund BROKEN): Amtliche-Warnungen-Toggle im
@@ -1244,11 +1299,10 @@
 	// via flushPendingWeatherMetricsSave. Spec: d2_1301_official_alerts_single_
 	// control.md § Punkt 6, AC-6.
 	function onToggleVergleichOfficialAlerts(e: Event) {
-		if (!wiz) return;
-		wiz.officialAlertsEnabled = (e.target as HTMLInputElement).checked;
+		onOfficialAlertsEnabledChange?.((e.target as HTMLInputElement).checked);
 	}
 
-	// ── Issue #2276 S4: vergleich-Zweig speichert selbst (analog AlarmeTab/
+	// ── Issue #2276 S4/S6g: vergleich-Zweig speichert selbst (analog AlarmeTab/
 	// CorridorEditor) ───────────────────────────────────────────────────────
 	// EINE kombinierte Orchestrierung ueber Wetter-Metriken- UND Layout-
 	// Domaene (Design-Entscheidung 1 — zwei unabhaengige Selbst-Speicherer auf
@@ -1257,11 +1311,73 @@
 	// diese Komponente erst NACH BEIDEN Katalog-Ladevorgaengen (AC-3). Auf der
 	// Anlege-Seite (ohne preset/saveController) und im Trip (`context ===
 	// 'route'`) bleibt der Zweig inaktiv (AC-10/AC-13).
+	//
+	// Issue #2276 S6g (Design-Entscheidung 5): seit dem Umstieg auf Wertprops
+	// haelt diese Komponente keine Wizard-Referenz mehr — der Speicherweg
+	// bekommt den Stand ueber `wetterMetrikenZustandsBruecke`, EINE lebendige
+	// Bruecke, die bei jedem Zugriff frisch aus den zehn aktuellen Props liest
+	// und Schreiben (Rollback) an den passenden Rueckruf weiterreicht.
+	const wetterMetrikenZustand = wetterMetrikenZustandsBruecke(
+		() => ({
+			activeMetricKeys,
+			channelActiveMetricKeys,
+			officialAlertsEnabled,
+			dayWindowStartHour,
+			dayWindowEndHour,
+			hourlyMetricKeys,
+			hourlyEnabled,
+			outlookMetricKeys,
+			outlookMetricFormats,
+			outlookEnabled
+		}),
+		(feld, wert) => {
+			switch (feld) {
+				case 'activeMetricKeys':
+					// Design-Entscheidung 5: ein Rollback-Schreiben eines der beiden
+					// gekoppelten Felder meldet ueber DENSELBEN Rueckruf, mit dem
+					// jeweils ANDEREN Feld frisch aus der Prop gelesen — so bleibt der
+					// Endzustand konsistent, auch wenn der Rollback beide Felder
+					// nacheinander zurueckschreibt.
+					onVergleichsMetrikenChange?.(
+						wert as string[] | null,
+						channelActiveMetricKeys ?? { email: null, telegram: null, sms: null }
+					);
+					break;
+				case 'channelActiveMetricKeys':
+					onVergleichsMetrikenChange?.(activeMetricKeys ?? null, wert as CompareChannelActiveMetrics);
+					break;
+				case 'officialAlertsEnabled':
+					onOfficialAlertsEnabledChange?.(wert as boolean);
+					break;
+				case 'dayWindowStartHour':
+					onDayWindowStartHourChange?.(wert as number);
+					break;
+				case 'dayWindowEndHour':
+					onDayWindowEndHourChange?.(wert as number);
+					break;
+				case 'hourlyMetricKeys':
+					onHourlyMetricKeysChange?.(wert as string[] | null);
+					break;
+				case 'hourlyEnabled':
+					onHourlyEnabledChange?.(wert as boolean);
+					break;
+				case 'outlookMetricKeys':
+					onOutlookMetricKeysChange?.(wert as string[] | null);
+					break;
+				case 'outlookMetricFormats':
+					onOutlookMetricFormatsChange?.(wert as Record<string, boolean> | null);
+					break;
+				case 'outlookEnabled':
+					onOutlookEnabledChange?.(wert as boolean);
+					break;
+			}
+		}
+	);
 	const vergleichSpeicherung = untrack(() =>
-		wetterMetrikenVergleichSpeicherungAktiv({ context, wiz, preset, saveController })
+		wetterMetrikenVergleichSpeicherungAktiv({ context, zustand: wetterMetrikenZustand, preset, saveController })
 			? erstelleWetterMetrikenVergleichSpeicherung({
 					client: api,
-					wiz: wiz!,
+					zustand: wetterMetrikenZustand,
 					preset: () => preset!,
 					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
 					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
@@ -1271,12 +1387,12 @@
 	);
 	$effect(() => {
 		if (!vergleichSpeicherung) return;
-		// Liest alle neun persistenzrelevanten Felder (Abhaengigkeiten) — deckt
+		// Liest alle zehn persistenzrelevanten Felder (Abhaengigkeiten) — deckt
 		// sowohl die drei bislang stillen Gesten (Metrik-Checkbox, Amtliche-
 		// Warnungen-Schalter, Tagesfenster, AC-5) als auch die drei Drag-Ende-
 		// Faelle ab. Das Melden selbst ohne Tracking, damit Zustandswechsel des
 		// Controllers keinen Neulauf ausloesen.
-		wetterMetrikenSnapshotAus(wiz!);
+		wetterMetrikenSnapshotAus(wetterMetrikenZustand);
 		untrack(() => vergleichSpeicherung.aenderungMelden());
 	});
 </script>
@@ -1285,7 +1401,7 @@
 	<!-- Issue #1117 (Trip) / #1301 D2-Fix-Loop 2 (Vergleich, AC-6): Amtliche-
 	     Warnungen — geteiltes Markup fuer beide Kontexte (ein Label, eine
 	     Optik), context-abhaengig nur verdrahtet (route: lokaler State + Trip-
-	     PUT; vergleich: wiz.officialAlertsEnabled + Compare-Hub-Save). -->
+	     PUT; vergleich: officialAlertsEnabled-Wertprop + Compare-Hub-Save). -->
 	<UiCard.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
 		<div class="text-sm">
 			<span data-testid="report-show-official-alerts" class="inline-flex items-center gap-2">
@@ -1393,7 +1509,7 @@
 			<!-- Issue #1359 Scheibe 1 (AC-1/AC-6): DERSELBE geteilte Reihenfolge-
 			     Baustein wie im Trip — WeatherV2Reihenfolge (SortableList +
 			     DragHandle + Positionsnummern), unveraendert, nur aus
-			     wiz.activeMetricKeys gespeist. Kein Compare-Eigenbau
+			     der Wertprop `activeMetricKeys` gespeist. Kein Compare-Eigenbau
 			     (Epic #1230 / Trip-Compare-Invariante).
 
 			     Issue #1703 Scheibe 8: der LayoutTab-Organism kommt JETZT dazu —
@@ -1442,13 +1558,19 @@
 		     Stundentabelle UND Vergleichswerte (day_window.resolve_configured_window()).
 		     Bewusst AUSSERHALB des Metrik-Katalog-Fetch-Zweigs (analog
 		     'stundenverlauf'/'official_alerts' unten). -->
-		{#if sections.includes('tagesfenster') && wiz}
+		{#if sections.includes('tagesfenster') && dayWindowStartHour !== undefined}
 			<div data-testid="weather-metrics-tagesfenster">
+				<!-- Issue #2276 S6g: der Guard oben prueft nur `dayWindowStartHour`
+				     (Spec DE-7, das fuer diesen Block einschlaegige Feld) — TS narrowt
+				     daraus nicht auch `dayWindowEndHour`. Beide Wertprops sind ueber
+				     `wetterMetrikenPropsAus` an jedem Vergleichs-Mount IMMER gemeinsam
+				     definiert; der `?? 19`-Fallback unten ist ein reiner TS-Satisfier,
+				     kein zweiter Default-Ursprung (identisch zu wetterMetrikenSnapshotAus). -->
 				<DayWindowCard
-					startHour={wiz.dayWindowStartHour}
-					endHour={wiz.dayWindowEndHour}
-					onStartHour={(v) => { if (wiz) wiz.dayWindowStartHour = v; }}
-					onEndHour={(v) => { if (wiz) wiz.dayWindowEndHour = v; }}
+					startHour={dayWindowStartHour}
+					endHour={dayWindowEndHour ?? 19}
+					onStartHour={(v) => onDayWindowStartHourChange?.(v)}
+					onEndHour={(v) => onDayWindowEndHourChange?.(v)}
 				/>
 			</div>
 		{/if}
@@ -1463,22 +1585,22 @@
 		     Bewusst — wie der Amtliche-Warnungen-Toggle — AUSSERHALB des
 		     Metrik-Katalog-Fetch-Zweigs: ein fehlgeschlagener Katalog-Abruf darf
 		     die Stundenverlauf-Steuerung nicht unerreichbar machen. -->
-		{#if sections.includes('stundenverlauf') && wiz}
+		{#if sections.includes('stundenverlauf') && hourlyMetricKeys !== undefined}
 			<div data-testid="weather-metrics-stundenverlauf">
 				<!-- #1406 B: dieselbe Katalogantwort (GET /api/compare/metrics) wie
 				     Uebersicht und Ausblick — bis dahin bekam der Block hier das
 				     Register-Objekt `metricById` (GET /api/metrics) und damit eine
 				     andere Datenform als die, ueber die groupCompareCatalog()
 				     gruppiert. -->
-				<!-- Issue #2276 S6b: flache Wertprops statt `wiz`-Bindung (dasselbe
+				<!-- Issue #2276 S6b/S6g: flache Wertprops statt `wiz`-Bindung (dasselbe
 				     Muster wie der Ausblick-Mount darunter, #1720 S1). Die beiden
 				     Adapter schreiben exakt das, was die Komponente bis dahin selbst
 				     schrieb — und NUR das eine Feld. -->
 				<CompareHourlyLayoutControls
-					metricKeys={wiz.hourlyMetricKeys}
-					onMetricKeys={(keys) => { if (wiz) wiz.hourlyMetricKeys = keys; }}
-					enabled={wiz.hourlyEnabled}
-					onEnabledChange={(checked) => { if (wiz) wiz.hourlyEnabled = checked; }}
+					metricKeys={hourlyMetricKeys}
+					onMetricKeys={(keys) => onHourlyMetricKeysChange?.(keys)}
+					enabled={hourlyEnabled}
+					onEnabledChange={(checked) => onHourlyEnabledChange?.(checked)}
 					catalog={compareCatalog}
 					smsSymbols={metricSymbols}
 				/>
@@ -1492,7 +1614,7 @@
 		     Stundenverlauf haengt der Block damit am Katalog-Fetch; ohne
 		     Katalog bleibt wenigstens der Schalter unerreichbar statt eine
 		     leere Liste zu zeigen (bewusst, s. Spec). -->
-		{#if sections.includes('ausblick') && wiz && compareCatalogLoaded}
+		{#if sections.includes('ausblick') && outlookMetricKeys !== undefined && compareCatalogLoaded}
 			<div data-testid="weather-metrics-ausblick">
 				<!-- Issue #1720 S1: dasselbe Bauteil, flach parametrisiert. Der
 				     Vergleich fuehrt zusaetzlich den Ein/Aus-Schalter
@@ -1501,13 +1623,13 @@
 				     Grundauswahl — DIESELBE Quelle wie die Uebersichts-Kopplung
 				     der Kanal-Reiter (`materializedActiveMetricKeys`, :1083). -->
 				<CompareOutlookLayoutControls
-					metricKeys={wiz.outlookMetricKeys}
+					metricKeys={outlookMetricKeys}
 					catalog={compareCatalog}
 					grundauswahl={materializedActiveMetricKeys}
 					onMetricKeys={onCompareOutlookMetricKeys}
-					metricFormats={wiz.outlookMetricFormats}
+					metricFormats={outlookMetricFormats}
 					onMetricFormats={onCompareOutlookMetricFormats}
-					enabled={wiz.outlookEnabled}
+					enabled={outlookEnabled}
 					onEnabledChange={onCompareOutlookEnabled}
 					smsSymbols={metricSymbols}
 				/>
@@ -1517,7 +1639,7 @@
 		     Metrik-Katalog-Fetch (Known Limitations: "nur die Auswahl-UI ist
 		     betroffen") — bleibt unabhaengig vom Lade-/Fehlerzustand sichtbar. -->
 		{#if sections.includes('official_alerts')}
-			{@render officialAlertsToggle(wiz?.officialAlertsEnabled ?? true, onToggleVergleichOfficialAlerts)}
+			{@render officialAlertsToggle(officialAlertsEnabled ?? true, onToggleVergleichOfficialAlerts)}
 		{/if}
 	</div>
 {:else if loadError}
@@ -1899,11 +2021,11 @@
 					     nur der Speicherweg unterscheidet sich (hier
 					     Trip-Auto-Save, dort der wiz-State + Commit-Wrapper). -->
 					<CompareOutlookLayoutControls
-						metricKeys={outlookMetricKeys}
+						metricKeys={outlookMetricKeysRoute}
 						catalog={compareCatalog}
 						grundauswahl={buckets.primary}
 						onMetricKeys={onOutlookMetricKeys}
-						metricFormats={outlookMetricFormats}
+						metricFormats={outlookMetricFormatsRoute}
 						onMetricFormats={onOutlookMetricFormats}
 						title="3-Tages-Vorschau"
 						showEmailOnlyHint={false}
@@ -1918,7 +2040,7 @@
 				<!-- 'official_alerts'-Abschnitt (D2-Fix-Loop 2), unabhaengig von       -->
 				<!-- 'report_config', damit derselbe Baustein auch im vergleich-        -->
 				<!-- Kontext (kein report_config dort) sichtbar sein kann.              -->
-				{@render officialAlertsToggle(officialAlertsEnabled, onToggleOfficialAlerts)}
+				{@render officialAlertsToggle(officialAlertsEnabledRoute, onToggleOfficialAlerts)}
 				{/if}
 			</div>
 		</div>

@@ -46,6 +46,7 @@
 	import { alarmePropsAus } from '../compare/alarmePropsAus.ts';
 	import { corridorPropsAus } from '../compare/corridorPropsAus.ts';
 	import { versandPropsAus } from '../compare/versandPropsAus.ts';
+	import { wetterMetrikenPropsAus } from '../compare/wetterMetrikenPropsAus.ts';
 	// #1435 E1a-2: der Alarme-Reiter leitet seine Zeilen aus dem Register-Katalog
 	// ab — die Anlege-Seite muss ihn deshalb ebenfalls laden (geteilter
 	// Promise-Cache, kein zweiter Netzwerk-Request) und durchreichen.
@@ -379,7 +380,7 @@
 		</div>
 	{:else if activeTab === 'metriken'}
 		{#if !isMobileViewport}
-			<WeatherMetricsTab context="vergleich" {wiz} />
+			<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1040px">
 			<div class="ce-cta-row">
@@ -480,7 +481,7 @@
 			<Step2Orte {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
 		{:else if activeTab === 'metriken'}
 			{#if isMobileViewport}
-				<WeatherMetricsTab context="vergleich" {wiz} />
+				<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} />
 			{/if}
 		{:else if activeTab === 'idealwerte'}
 			{#if isMobileViewport}
