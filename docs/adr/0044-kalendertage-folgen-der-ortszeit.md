@@ -45,7 +45,7 @@ Beschriftung — nicht in den Daten.
 `src/services/sms_daily_limit.py` taktet den täglichen Versand-Zähler je Nutzer an der
 UTC-Mitternacht, nicht an der Ortszeit der Tour. Dieser Zähler ist eine reine
 Kosten-Referenzgröße pro Nutzerkonto (Vorbild `forecast_budget._today_utc`,
-`meteoalarm_budget._today_utc` oben unter „Bewusst NICHT betroffen"), kein wetter- oder
+`meteoalarm_budget._today_utc` unten unter „Bewusst NICHT betroffen"), kein wetter- oder
 tourfachlicher Kalendertag — eine Ortszeit-Bindung würde bei mehreren Zonen dasselbe
 Kontingent mehrfach gewähren, den genau vermiedenen Effekt aus #1726s Tageszähler-Umstellung.
 `test_ruhezeit_und_zaehler_folgen_der_ortszone.py` bewacht den ANDEREN, weiterhin

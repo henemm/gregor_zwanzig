@@ -109,6 +109,14 @@ Die folgenden Komponenten leben im Python-Core:
      Kein eigener Render-Pfad — Text kommt unverändert aus `report.sms_text`. Frontend-Schalter
      im Versand-Reiter seit #1717 S3, im Alarme-Reiter (Trip UND Ortsvergleich) seit #1745
      Scheibe A. Details: ADR-0049, `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`.
+   - **SMS-/Premium-SMS-Tageslimit** (`src/services/sms_daily_limit.py`, seit Issue #2412 S4a,
+     2026-09-24) – kanal-eigener Kosten-Deckel, getrennt vom Alarm-Frequenz-Limit
+     (`alert_daily_limit.py` für Free/Standard bzw. dem Premium-Mindestabstand): je Nutzer
+     zwei UTC-getaktete Tageszähler (`sms`, `premium_sms`) mit fester Alarm-Reserve, geprüft/
+     reserviert an allen 12 Sendestellen in `notification_service.py`. Gesperrte Versuche
+     landen mit `reason_code="sms_daily_limit_exceeded"` in `NotificationResult.blocked_channels`/
+     `blocked_reason_codes`; E-Mail/Telegram bleiben unberührt. Sichtbarkeit im Konto (S4b) ist
+     noch offen. Details: `docs/specs/modules/sms_daily_limit.md`.
 
 ### Datenfluss (Produktiv)
 

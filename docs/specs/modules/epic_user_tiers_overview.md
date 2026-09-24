@@ -2,9 +2,9 @@
 entity_id: user_tiers_overview
 type: module
 created: 2026-07-07
-updated: 2026-07-07
+updated: 2026-09-24
 status: draft
-version: "1.1"
+version: "1.2"
 tags: [tiers, monetization, channels, alerts, epic]
 ---
 
@@ -183,6 +183,11 @@ eigenes Folge-Issue nach F9-Fahrplan.
 
 ## Changelog
 
+- 2026-09-24: Ergänzung #2412 S4a implementiert (`src/services/sms_daily_limit.py`,
+  `docs/specs/modules/sms_daily_limit.md`) — Premium-SMS-Kosten-Deckel wie oben unter
+  „Ergänzung #2412 S4a" beschrieben. Deploy/Staging-Verifikation stehen zum Zeitpunkt
+  dieses Eintrags noch aus. S4b (Sichtbarkeit im Konto) bleibt eigener Folge-Workflow;
+  Issue #2412 und Sammel-Issue #2153 bleiben bis dahin offen.
 - 2026-07-07: Slice 4 (#1071) implementiert und Adversary-verifiziert (Endpoint
   POST /api/auth/tier-change-request, RequestedTier/RequestedAt als Pointer-Typ, neues
   Config-Feld PoEmail/GZ_PO_EMAIL, Formular in Account-Karte). Epic #1067 damit VOLLSTÄNDIG
