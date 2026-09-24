@@ -2834,9 +2834,8 @@ class TripReportSchedulerService:
         )
         from app.models import ThunderLevel
         from app.thunder_scale import (
-            format_hail_note, thunder_label_value,
-            thunder_low_statement_sentence, thunder_ordinal,
-            thunder_signal_label, union_of_max_carriers,
+            format_hail_note, thunder_headline_sentence, thunder_label_value,
+            thunder_ordinal, thunder_signal_label, union_of_max_carriers,
         )
 
         win_start, win_end = resolve_configured_window(window_start, window_end)
@@ -2898,21 +2897,10 @@ class TripReportSchedulerService:
             if hours:
                 hour = min(hours)
                 when = f"{hour:02d}:00"
-        if level == ThunderLevel.NONE:
-            text = "Kein Gewitter erwartet"
-        elif level == ThunderLevel.LOW:
-            # Issue #2176: LOW verlaesst die Gewitterleiter -- die Aussage
-            # nennt die Luftmasse, kein Ereignis. Herkunft aus DERSELBEN
-            # `carriers`-Rechnung, die unten den ·-Zusatz speist.
-            _kern = thunder_low_statement_sentence("kurz", carriers)
-            text = f"{_kern} ab {when}" if when else _kern
-        elif level == ThunderLevel.MED:
-            text = f"Gewitter möglich ab {when}" if when else "Gewitter möglich"
-        else:
-            text = (
-                f"Starkes Gewitter erwartet ab {when}"
-                if when else "Starkes Gewitter erwartet"
-            )
+        # Issue #2028: Satzkopf aus der EINEN Quelle (Fetch-Weg nutzt dieselbe).
+        # LOW-Herkunft aus DERSELBEN `carriers`-Rechnung, die unten den
+        # ·-Zusatz speist (#2176).
+        text = thunder_headline_sentence(level, when, carriers)
         # Issue #1680 S5b: die Herkunft steht unmittelbar hinter der
         # Tagesaussage -- VOR dem Nacht-Halbsatz und (weil sie Teil von `text`
         # ist) auch vor dem Hagel-Zusatz, den erst der Renderer anhaengt.
@@ -3095,7 +3083,7 @@ class TripReportSchedulerService:
         """
         from app.models import ThunderLevel
         from app.thunder_scale import (
-            format_hail_note, thunder_low_statement_sentence, thunder_ordinal,
+            format_hail_note, thunder_headline_sentence, thunder_ordinal,
             thunder_signal_label,
         )
         # Issue #1475 Nachbesserung (Punkt 4a): das Hagel-Aggregat kommt ueber
@@ -3175,18 +3163,9 @@ class TripReportSchedulerService:
             # LOW-Aussage die Traegerliste selbst braucht (herkunftsabhaengig).
             summary = summarize_points(thunder_dps)
             carriers = getattr(summary, "thunder_level_max_signals", None)
-            if level == ThunderLevel.NONE:
-                text = "Kein Gewitter erwartet"
-            elif level == ThunderLevel.LOW:
-                # Issue #2176: LOW ist eine Luftmassen-, keine Ereignisaussage.
-                text = (
-                    f"{thunder_low_statement_sentence('kurz', carriers)} "
-                    f"ab {when}"
-                )
-            elif level == ThunderLevel.MED:
-                text = f"Gewitter möglich ab {when}"
-            else:
-                text = f"Starkes Gewitter erwartet ab {when}"
+            # Issue #2028: Satzkopf aus der EINEN Quelle (wortgleich zum
+            # Trend-Weg); `when` ist hier immer gesetzt.
+            text = thunder_headline_sentence(level, when, carriers)
             # Herkunft unmittelbar hinter der Tagesaussage, VOR dem
             # Nacht-Halbsatz (und damit vor dem Hagel-Zusatz des Renderers).
             # Level-Check am Wirkort (Spec AC-6), Traeger-Guard gegen den

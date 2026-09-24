@@ -136,6 +136,11 @@ _THUNDER_KWARGS = dict(
         # kanonische Quelle, nur eine Schicht tiefer; `metric_format`
         # re-exportiert sie.
         ("src/app/thunder_scale.py", "THUNDER_LABEL_DE"),
+        # #2028: Satzkopf der Tagesaussage (Trend- UND Fetch-Weg) und die
+        # Nacht-Adjektive -- vorher je eine lokale Kopie im Scheduler bzw. in
+        # `day_window.py`, jetzt EINE kanonische Quelle.
+        ("src/app/thunder_scale.py", "thunder_headline_sentence"),
+        ("src/app/thunder_scale.py", "THUNDER_NIGHT_ADJECTIVE_DE"),
         ("src/output/metric_format.py", "_THUNDER_AMPEL_BAND"),
     ),
 )
