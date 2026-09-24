@@ -241,7 +241,7 @@
 	let savedSnapshot = $state('');
 	let showSavePresetDialog = $state(false);
 	let pendingPreset: string | null = $state(null);
-	let profile = $state<{ mail_to?: string; telegram_chat_id?: string; sms_to?: string } | null>(null);
+	let profile = $state<{ mail_to?: string; telegram_chat_id?: string; sms_to?: string; sms_verified?: boolean; pending_sms_to?: string } | null>(null); // #2406
 	// Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
 	let reportConfig = $state<ReportConfig>(
 		trip?.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}

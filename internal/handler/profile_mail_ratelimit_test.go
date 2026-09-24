@@ -42,7 +42,7 @@ func flutProfilAktualisieren(s *store.Store, cfg config.Config, ml *MailFloodLim
 	req := httptest.NewRequest(http.MethodPut, "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), userID))
 	w := httptest.NewRecorder()
-	UpdateProfileHandler(s, cfg, ml).ServeHTTP(w, req)
+	UpdateProfileHandler(s, cfg, ml, weitSmsLimiter).ServeHTTP(w, req)
 	return w
 }
 

@@ -185,6 +185,9 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/profile` | GET, PUT |
 | `/api/auth/register` | POST |
 | `/api/auth/reset-password` | POST |
+| `/api/auth/sms/resend` | POST (Issue #2406 — stellt den Bestätigungscode für die ausstehende Nummer erneut zu; Mengenbremse 3/h je Nutzer, sonst 429 mit `Retry-After`) |
+| `/api/auth/sms/staging-code` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404; liefert den Klartext-Code der angemeldeten Sitzung, ignoriert den Body) |
+| `/api/auth/sms/verify` | POST (Issue #2406 — löst den Code ein; erst danach wandert die Nummer nach `sms_to`) |
 | `/api/auth/telegram-link` | GET |
 | `/api/auth/telegram-status` | GET |
 | `/api/auth/tier-change-request` | POST |

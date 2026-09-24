@@ -213,6 +213,10 @@ def _nutzer_anlegen(user_id: str, *, mail: str, chat_id: str,
         "mail_to": mail,
         "telegram_chat_id": chat_id,
         "sms_to": "+490000000001",
+        # Issue #2406: die Nummer ist bewiesen — ohne diesen Nachweis sperrt
+        # `with_user_profile` den SMS-Versand fail-closed (AC-1).
+        "sms_verified_number": "+490000000001",
+        "sms_verified_at": "2026-01-01T00:00:00Z",
         "premium_sms_reply_to": "+490000000002",
         "premium_sms_reply_at": datetime.now(timezone.utc).isoformat(),
     }))

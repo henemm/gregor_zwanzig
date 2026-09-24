@@ -759,6 +759,12 @@ type profileResponse struct {
 	// Kontaktadresse. Fehlt, solange nichts aussteht; mail_to/email zeigen
 	// bis zur Bestaetigung die alten, wirksamen Werte.
 	PendingContactAddress string `json:"pending_contact_address,omitempty"`
+	// Issue #2406 — SMS-Nummer-Verifikation. SmsVerified ist abgeleitet
+	// (bewiesene Nummer == wirksame Nummer) und IMMER vorhanden, kein
+	// omitempty: die Oberflaeche entscheidet an diesem Wert und darf "false"
+	// nicht von "Feld fehlt" unterscheiden muessen (Muster SmsAllowed).
+	SmsVerified  bool   `json:"sms_verified"`
+	PendingSmsTo string `json:"pending_sms_to,omitempty"`
 }
 
 // passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
@@ -814,6 +820,11 @@ func toProfileResponse(u *model.User) profileResponse {
 		// beim naechsten Laden.
 		PasskeyPromptDismissed: u.PasskeyPromptDismissed,
 		PendingContactAddress:  u.PendingContactAddress,
+		// Issue #2406: dieselbe Frage wie die Sperre in config.py stellt —
+		// eine Quelle (smsVerifiziert), damit Anzeige und Wirkung nicht
+		// auseinanderlaufen koennen.
+		SmsVerified:  smsVerifiziert(u),
+		PendingSmsTo: u.PendingSmsTo,
 	}
 }
 
@@ -850,7 +861,7 @@ var profileUpdateBeforeFreshReload func(userID string)
 // weiterlaufen laesst.
 var profileUpdateAfterFirstAddressLock func(userID string)
 
-func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFloodLimiter) http.HandlerFunc {
+func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFloodLimiter, smsLimiter *MailFloodLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
@@ -889,6 +900,21 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(400)
 				w.Write([]byte(`{"error":"invalid display_name"}`))
+				return
+			}
+		}
+
+		// Issue #2406: E.164-Formatpruefung VOR jedem Schreibzugriff (wie die
+		// Display-Name-Pruefung darueber) — bei einem ungueltigen Wert bleibt
+		// user.json byteidentisch, auch fuer gleichzeitig gesendete harmlose
+		// Felder. Der Leerstring bleibt erlaubt: er heisst "Nummer entfernen".
+		var newSmsTo string
+		if update.SmsTo != nil {
+			newSmsTo = strings.TrimSpace(*update.SmsTo)
+			if newSmsTo != "" && !store.IsValidE164(newSmsTo) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"invalid_sms_number"}`))
 				return
 			}
 		}
@@ -1064,9 +1090,47 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				user.MailTo = store.NormalizeEmailAddress(*update.MailTo)
 			}
 		}
-		if update.SmsTo != nil {
-			user.SmsTo = *update.SmsTo
+		// Issue #2406 — SMS-Nummernwechsel (Spec §2). Das Aenderungs-Praedikat
+		// vergleicht gegen BEIDE Felder: `account/+page.svelte` schickt
+		// `sms_to` bei JEDEM Speichern mit, auch bei einer reinen
+		// display_name-Aenderung. Ein blosses `update.SmsTo != nil` loeste
+		// einen bezahlten SMS-Versand pro Klick auf "Speichern" aus (AC-5);
+		// der Vergleich gegen PendingSmsTo macht zusaetzlich das erneute
+		// Absenden eines bereits ausstehenden Werts zum No-op.
+		smsCodeTarget := ""
+		deleteSmsVerification := false
+		// Der No-op-Vergleich gegen PendingSmsTo gilt NUR fuer eine echte
+		// Nummer: beim Leeren ("Nummer entfernen") ist PendingSmsTo haeufig
+		// selbst leer — eine unbedingte Gleichheitspruefung wuerde genau die
+		// Aufraeum-Aenderung aus AC-9 verschlucken.
+		if update.SmsTo != nil && newSmsTo != user.SmsTo &&
+			(newSmsTo == "" || newSmsTo != user.PendingSmsTo) {
+			switch {
+			case newSmsTo == "":
+				// AC-9: vollstaendig aufraeumen — keine ueberlebende
+				// Bestaetigung, kein ueberlebender Code.
+				user.SmsTo, user.PendingSmsTo = "", ""
+				user.SmsVerifiedNumber, user.SmsVerifiedAt = "", nil
+				deleteSmsVerification = true
+			case !smsVerifiziert(user):
+				// Keine wirksame bestaetigte Nummer (Erst-Eintrag oder
+				// Bestandskonto): direkt schreiben. Fuer den Versand bleibt
+				// sie bis zur Bestaetigung gesperrt — das entscheidet die
+				// Wirkstelle in config.py, nicht dieser Schreibweg.
+				user.SmsTo = newSmsTo
+				user.PendingSmsTo = ""
+				smsCodeTarget = newSmsTo
+			default:
+				// Bestaetigte Nummer bleibt wirksam, die neue wartet.
+				user.PendingSmsTo = newSmsTo
+				smsCodeTarget = newSmsTo
+			}
 		}
+		// Tier-Gate VOR jedem Code-Versand: ein Free-Konto darf die Nummer
+		// eintragen, loest aber keine kostenpflichtige SMS aus (AC-7). Der Weg
+		// zurueck nach einem Tarif-Upgrade ist der Resend-Knopf, nicht ein
+		// erneutes Speichern desselben Werts (das waere ein No-op).
+		sendSmsCode := smsCodeTarget != "" && model.SmsAllowed(model.EffectiveTier(user.Tier))
 		// Issue #2141: die Telegram-Chat-ID ist eine Identitätszuordnung, keine
 		// Einstellung — gesetzt wird sie ausschließlich über den
 		// localhost-gesperrten Einmal-Token-Flow (PostTelegramConnectHandler).
@@ -1103,6 +1167,18 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			return
 		}
 
+		// Issue #2406: eigenstaendige Mengenbremse (3/h je Nutzer UND je
+		// Zielnummer) — ein SMS-Angriff soll nicht das Mail-Kontingent
+		// verbrauchen und umgekehrt. Wie oben VOR SaveUser: bei Ablehnung
+		// bleibt kein Teilzustand zurueck (AC-6).
+		if sendSmsCode && !smsLimiter.Allow(userId, smsCodeTarget) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Retry-After", smsLimiter.RetryAfterHeader())
+			w.WriteHeader(429)
+			w.Write([]byte(`{"error":"rate_limit_exceeded"}`))
+			return
+		}
+
 		if err := s.SaveUser(*user); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
@@ -1110,8 +1186,16 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			return
 		}
 
+		if deleteSmsVerification {
+			if err := s.DeleteSmsVerification(userId); err != nil {
+				log.Printf("sms verification: cleanup after removal failed for %s: %v", userId, err)
+			}
+		}
 		if sendVerification {
 			dispatchVerificationMail(s, cfg, userId, user)
+		}
+		if sendSmsCode {
+			dispatchSmsVerificationCode(s, cfg, userId, smsCodeTarget)
 		}
 
 		w.Header().Set("Content-Type", "application/json")

@@ -249,6 +249,58 @@ func (s *Store) DeleteVerificationToken(userId string) error {
 	return err
 }
 
+// --- SMS-Bestaetigungscode (Issue #2406) ------------------------------------
+//
+// Ein-Datei-je-Konto-Muster wie beim E-Mail-Token: ein neuer Code ueberschreibt
+// die Datei vollstaendig und entwertet damit den alten samt Fehlversuchszaehler.
+
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
+func (s *Store) SaveSmsVerification(userId string, code model.SmsVerificationCode) error {
+	if !ValidUserID(userId) {
+		return ErrInvalidUserID
+	}
+	dir := s.UserDir(userId)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(code, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileLogged(filepath.Join(dir, "sms_verification.json"), data)
+}
+
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
+func (s *Store) LoadSmsVerification(userId string) (*model.SmsVerificationCode, error) {
+	if !ValidUserID(userId) {
+		return nil, ErrInvalidUserID
+	}
+	data, err := os.ReadFile(filepath.Join(s.UserDir(userId), "sms_verification.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var code model.SmsVerificationCode
+	if err := json.Unmarshal(data, &code); err != nil {
+		return nil, err
+	}
+	return &code, nil
+}
+
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
+func (s *Store) DeleteSmsVerification(userId string) error {
+	if !ValidUserID(userId) {
+		return ErrInvalidUserID
+	}
+	err := os.Remove(filepath.Join(s.UserDir(userId), "sms_verification.json"))
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
 // DeleteUser ist die schaerfste Stelle des Pfadbaus (os.RemoveAll): ohne die
 // Kennungspruefung wuerde eine Traversal-Kennung hier ein FREMDES Verzeichnis
 // loeschen.

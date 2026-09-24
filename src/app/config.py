@@ -424,9 +424,17 @@ class Settings(BaseSettings):
         # vorhandenem Profilwert zu ueberschreiben -- sonst bleibt bei einem
         # Nutzer ohne eigenen Empfaenger der globale .env-Fallback (Betreiber-
         # Adresse) auf base/self stehen (Cross-Tenant-Zustellung).
+        # Issue #2406: Fail-closed-Wirkstelle. `sms_to` erreicht Settings NUR,
+        # wenn die Nummer bewiesen ist -- `sms_verified_number` muss mit ihr
+        # uebereinstimmen. Beide Seiten werden identisch getrimmt (AC-12): das
+        # Backfill-Skript kopiert einen Altbestand mit Randleerzeichen
+        # byteidentisch, ein asymmetrischer Vergleich spaerrte danach genau das
+        # Konto aus, das der Nachtrag schuetzen sollte.
+        sms_verified_number = (profile.get("sms_verified_number") or "").strip()
+        raw_sms_to = (profile.get("sms_to") or "").strip()
         overrides = {
             "mail_to": profile.get("mail_to") or None,
-            "sms_to": profile.get("sms_to") or None,
+            "sms_to": raw_sms_to if (sms_verified_number and sms_verified_number == raw_sms_to) else None,
             "email_verified_at": profile.get("email_verified_at") or None,
         }
         if not force_test:

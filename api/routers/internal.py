@@ -17,6 +17,11 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from app.config import Settings
+from output.channels.base import OutputConfigError, OutputError
+from output.channels.sms import SMSOutput
 
 # Issue #1308: Frueher gab es hier ein echtes Modul-Duplikat -- der
 # /loaded-Endpoint importierte ``src.app.loader`` (eigenes Modul-Objekt,
@@ -156,3 +161,39 @@ def reserve_forecast_budget(user_id: str = Query(...), priority: str = Query(...
         # "calls". Absicht, kein Kopierfehler (Spec Z. 73-85).
         gate.record_call()
     return {"allowed": True}
+
+
+class SmsVerificationCodeRequest(BaseModel):
+    """Nutzlast des Go-Prozesses fuer den SMS-Bestaetigungscode (#2406, §8)."""
+
+    user_id: str
+    to: str
+    code: str
+
+
+@router.post("/api/_internal/sms/verification-code")
+def send_sms_verification_code(req: SmsVerificationCodeRequest):
+    """Verschickt EINE Bestaetigungs-SMS — Issue #2406, Spec §8.
+
+    Go erzeugt und prueft den Code, Python bleibt der einzige seven.io-Transport
+    (ADR-0062/ADR-0076); ein zweiter Client in Go waere die Abweichung.
+
+    Die Zielnummer kommt aus dem AUFRUF, nicht aus dem Profil: bei einer
+    ausstehenden Nummer (``pending_sms_to``) steht sie noch gar nicht als
+    ``sms_to`` in ``user.json``, und die Fail-closed-Sperre in
+    ``with_user_profile`` wuerde sie ohnehin verwerfen. Das
+    ``model_copy``-Override setzt sie deshalb NACH dem Profil-Aufbau — die
+    ``is_test_user``/``env == "staging"``-Sandbox-Weiche greift davor und bleibt
+    damit vollstaendig erhalten.
+    """
+    settings = Settings().with_user_profile(req.user_id).model_copy(
+        update={"sms_to": req.to}
+    )
+    if not settings.can_send_sms():
+        return JSONResponse(status_code=422, content={"error": "sms_not_configured"})
+    try:
+        SMSOutput(settings).send("", f"Dein Gregor20-Bestaetigungscode: {req.code}")
+    except (OutputConfigError, OutputError):
+        # Der Code bleibt in Go gueltig — der Nutzer kann "erneut senden".
+        return JSONResponse(status_code=502, content={"error": "sms_send_failed"})
+    return {"status": "sent"}
