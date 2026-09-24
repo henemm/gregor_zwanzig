@@ -38,7 +38,7 @@
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { setContext, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	// Issue #1256 Scheibe 6 (AC-14/15/16/31/32/33/34): Orte-Tab-Drag +
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
@@ -77,15 +77,14 @@
 	// Epic #1301 Scheibe F2a: Stundenverlauf-Steuerung als geteilte Komponente
 	// (Hub + Anlege-Seite /compare/new). Inline-Markup + Handler wanderten dorthin.
 	import { CompareWizardState } from './compareWizardState.svelte';
+	import { hydrateHubFieldsFromPreset, hydrateAlarmFieldsFromPreset } from './compareHubHydration.ts';
 	import {
-		hydrateWizardStateFromPreset,
 		buildHubPutPayload,
 		snapshotForRollback,
 		buildToggleActivePutPayload,
-		hydrateAlarmFieldsFromPreset,
 		hubActivationBanner,
 		createPutQueue
-	} from './compareHubWizardBridge.ts';
+	} from './compareHubPersistenz.ts';
 	// Issue #2276 S5: der Versand-Reiter speichert selbst — Snapshot, Diff-Gate,
 	// Nutzlast und Rollback liegen im geteilten Baustein; hier bleibt nur die
 	// Hydration des Wizard-Zustands vor dem Mount.
@@ -204,7 +203,7 @@
 	// verhindert, dass zwei schnell aufeinanderfolgende Aktionen (z. B. eine
 	// Versand-Aenderung gefolgt vom Aktivieren-Klick) zwei parallele
 	// api.put()-Aufrufe mit derselben, noch veralteten currentPreset-Baseline
-	// ausloesen (compareHubWizardBridge.ts: createPutQueue).
+	// ausloesen (compareHubPersistenz.ts: createPutQueue).
 	const hubPutQueue = createPutQueue();
 
 	// Issue #1256 Scheibe 6 (AC-14/15/31/32): lokaler, optimistischer Orte-Zustand.
@@ -327,7 +326,6 @@
 	// die der Organism im vergleich-Kontext aus dem Wizard-State liest
 	// (Entscheidung 1, C0: 0 Zeilen Diff im Organism selbst).
 	const wizardState = new CompareWizardState();
-	setContext('compare-wizard-state', wizardState);
 	let idealwerteHydrated = $state(false);
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): dritte Hydrationsstelle mit
 	// derselben Wurzel — auch hier wird die Katalogantwort abgewartet, BEVOR
@@ -339,7 +337,7 @@
 		const catalog = await loadCompareSelectionEntries().catch(() => []);
 		// Fix-Loop 2 (F005): aus currentPreset statt preset hydrieren, damit ein
 		// vorheriger Orte-Edit in derselben Sitzung nicht ueberschrieben wird.
-		const hydrated = hydrateWizardStateFromPreset(currentPreset, catalog);
+		const hydrated = hydrateHubFieldsFromPreset(currentPreset, catalog);
 		wizardState.isEditMode = hydrated.isEditMode;
 		wizardState.corridors = hydrated.corridors;
 		wizardState.activityProfile = hydrated.activityProfile;

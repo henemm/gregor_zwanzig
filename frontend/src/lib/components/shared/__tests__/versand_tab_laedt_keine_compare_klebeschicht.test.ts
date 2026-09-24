@@ -1,6 +1,8 @@
 // TDD RED — Issue #2276 Scheibe S5 (Epic #2345), AC-8: der geteilte
-// Versand-Organismus lädt zur Laufzeit NICHT die Compare-Klebeschicht
-// (`compare/compareHubWizardBridge.ts`); seine Versand-Helfer kommen aus
+// Versand-Organismus lädt zur Laufzeit NICHT die Compare-Hub-Klebeschicht
+// (`compare/compareHubPersistenz.ts`, `compare/compareHubHydration.ts` —
+// Issue #2276 S6f loeste die vormalige einteilige Bridge-Datei in diese
+// beiden Module auf); seine Versand-Helfer kommen aus
 // `shared/versandVergleichSpeicherung.ts`. `buildComparePresetSavePayload`
 // aus `compare/compareEditorSave.ts` bleibt ausdrücklich erlaubt.
 //
@@ -28,6 +30,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { register, registerHooks } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -83,7 +86,13 @@ function wizStub(): Record<string, unknown> {
 	};
 }
 
-const BRIDGE = '/src/lib/components/compare/compareHubWizardBridge.ts';
+// Issue #2276 S6f (Epic #2345): die Bridge wurde aufgeloest, ihre acht
+// Laufzeit-Exporte zogen byte-identisch in zwei neue Module — die
+// Abwesenheits-Pruefung erweitert sich auf BEIDE (AC-3).
+const BRIDGE_PFADE = [
+	'/src/lib/components/compare/compareHubPersistenz.ts',
+	'/src/lib/components/compare/compareHubHydration.ts'
+];
 const NEUES_MODUL = '/src/lib/components/shared/versandVergleichSpeicherung.ts';
 const NUTZLAST_BAUSTEIN = '/src/lib/components/compare/compareEditorSave.ts';
 
@@ -109,10 +118,20 @@ describe('AC-8: VersandTab lädt zur Laufzeit keine Compare-Klebeschicht', () =>
 			liste.some((u) => u.endsWith(NEUES_MODUL)),
 			'VersandTab muss seine Versand-Speicherhelfer aus shared/versandVergleichSpeicherung.ts laden'
 		);
+		// Vakuum-Schutz (Issue #2276 S6f): eine reine Abwesenheits-Pruefung waere
+		// gruen, solange die neuen Module gar nicht existieren — das bewiese nichts.
+		// Beide muessen auf der Platte stehen, bevor die Abwesenheit im Ladegraphen
+		// eines FREMDEN Organismus (VersandTab) etwas aussagt.
+		for (const pfad of BRIDGE_PFADE) {
+			assert.ok(
+				existsSync(path.join(FRONTEND, pfad)),
+				`Vakuum-Schutz: ${pfad} muss existieren — sonst ist die Abwesenheits-Pruefung unten wirkungslos`
+			);
+		}
 		assert.deepEqual(
-			liste.filter((u) => u.endsWith(BRIDGE)),
+			liste.filter((u) => BRIDGE_PFADE.some((pfad) => u.endsWith(pfad))),
 			[],
-			'VersandTab (oder ein von ihm geladenes Modul) lädt compare/compareHubWizardBridge.ts zur Laufzeit'
+			'VersandTab (oder ein von ihm geladenes Modul) lädt compare/compareHubPersistenz.ts oder compare/compareHubHydration.ts zur Laufzeit'
 		);
 		assert.ok(
 			liste.some((u) => u.endsWith(NUTZLAST_BAUSTEIN)),

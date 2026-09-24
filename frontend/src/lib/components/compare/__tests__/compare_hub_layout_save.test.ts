@@ -5,15 +5,16 @@
 //
 // Reine Verhaltenstests auf der (noch nicht existierenden) Pure-Function
 // `flushPendingLayoutSave` — analog `flushPendingVersandSave`/
-// `flushPendingCorridorSave` in `compareHubWizardBridge.ts`. Echte
+// `flushPendingCorridorSave` in der damaligen Compare-Hub-Klebeschicht (inzwischen aufgeloest, Issue #2276 S6f). Echte
 // `ComparePreset`-Objekte, KEIN Mock. `flushPendingLayoutSave` ruft intern
 // `buildHubPutPayload` → `buildComparePresetSavePayload` auf (Read-Modify-
 // Write-Kern), damit ist AC-3 (Datenerhalt) automatisch mitgeprueft, sobald
 // die Funktion existiert und `HubEdit` die Stundenverlauf-Felder durchreicht.
 //
 // RED-Erwartung (vor Implementierung):
-//   `flushPendingLayoutSave` und der Typ `LayoutSnapshot` existieren in
-//   `compareHubWizardBridge.ts` noch NICHT — der Import selbst schlaegt fehl
+//   `flushPendingLayoutSave` und der Typ `LayoutSnapshot` existieren in der
+//   damaligen Compare-Hub-Klebeschicht (inzwischen aufgeloest, Issue #2276
+//   S6f) noch NICHT — der Import selbst schlaegt fehl
 //   (Node meldet "does not provide an export named ..."), das gesamte File
 //   kann nicht laufen. Das IST der RED-Beweis fuer AC-2/AC-3/AC-5.
 //

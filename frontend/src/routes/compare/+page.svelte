@@ -23,7 +23,7 @@
 		compareActions,
 		type CompareStatus
 	} from '$lib/components/compare/subscriptionHelpers.js';
-	import { buildFreshTogglePutPayload } from '$lib/components/compare/compareHubWizardBridge.js';
+	import { buildFreshTogglePutPayload } from '$lib/components/compare/compareHubPersistenz.js';
 	import { sendTargetLabel } from '$lib/components/shared/versand-tab/sendTargetLabel.js';
 	import MIcon from '$lib/components/mobile/MIcon.svelte';
 

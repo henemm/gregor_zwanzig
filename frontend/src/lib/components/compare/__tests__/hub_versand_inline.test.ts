@@ -11,7 +11,7 @@
 // (disabled Kanal-Switches, `goToEditVersand()`-Redirect). Der geteilte
 // `VersandTab context="vergleich"` mutiert ausschliesslich `wiz.*` (kein
 // Self-Save) — im Hub gibt es keinen Speichern-Button, also muss die in S6
-// etablierte Bridge (`compareHubWizardBridge.ts`) die Versand-Felder
+// etablierte Bridge (heute `compareHubPersistenz.ts`) die Versand-Felder
 // hydratisieren und Event-diskretisiert per PUT persistieren.
 //
 // Die hier importierten Exporte existieren noch NICHT — die named imports
@@ -46,7 +46,7 @@ import type { ComparePreset } from '../../../types.ts';
 // Compare-Klebeschicht in den geteilten Baustein umgezogen (AC-8).
 // `hubActivationBanner` bleibt in der Klebeschicht — die Aktivierungs-Karte
 // gehört dem Hub, nicht dem Versand-Reiter.
-import { hubActivationBanner } from '../compareHubWizardBridge.ts';
+import { hubActivationBanner } from '../compareHubPersistenz.ts';
 import {
 	hydrateVersandFieldsFromPreset,
 	flushPendingVersandSave,

@@ -2,14 +2,14 @@
 // geteilten Wetter-Metriken-Tab: schlankes an/aus, kein Zwei-PUT-Trip-Muster.
 //
 // Issue #2276 Scheibe S4 (Epic #2345): Die Layout-Haelfte (Stundenverlauf/
-// Ausblick) ist aus `compare/compareHubWizardBridge.ts` hierher umgezogen und
+// Ausblick) ist aus der ehemaligen Compare-Hub-Klebeschicht hierher umgezogen und
 // beide Domaenen sind zu EINER kombinierten Orchestrierung zusammengefuehrt
 // (Design-Entscheidung 1 — zwei unabhaengige Selbst-Speicherer auf demselben
 // Reiter wuerden sich in derselben Event-Tick gegenseitig ueberschreiben,
 // Kontext-Dokument Abschnitt 1.7). `flushPendingWeatherMetricsSave` ist auf
 // `buildComparePresetSavePayload` (Voll-Spread, Go-Merge-Kernel mergt
 // display_config nur auf Ebene 1) umgestellt — der Laufzeit-Import der
-// Hub-PUT-Erzeugerin aus `compare/compareHubWizardBridge.ts` entfaellt
+// Hub-PUT-Erzeugerin aus der ehemaligen Compare-Hub-Klebeschicht entfaellt
 // (AC-9: dieses Modul laedt zur Laufzeit KEIN Modul aus `compare/` mehr,
 // ausser Typen).
 //
@@ -126,7 +126,7 @@ export interface WeatherMetricsSnapshot {
 }
 
 /**
- * Diff-Guard analog `flushPendingVersandSave` (compareHubWizardBridge.ts):
+ * Diff-Guard analog `flushPendingVersandSave` (ehemalige Compare-Hub-Klebeschicht):
  * liefert `null`, wenn sich weder Metrik-Auswahl noch Amtliche-Warnungen-
  * Toggle noch Tagesfenster seit dem letzten persistierten Stand veraendert
  * haben (kein Schreiben ohne Nutzer-Geste, AC-4) — sonst den fertigen
@@ -181,7 +181,7 @@ export function flushPendingWeatherMetricsSave(
 }
 
 // ─── Issue #2276 S4: Layout-Haelfte (Stundenverlauf/Ausblick) — umgezogen aus
-// compare/compareHubWizardBridge.ts, auf buildComparePresetSavePayload umgestellt ──
+// der ehemaligen Compare-Hub-Klebeschicht, auf buildComparePresetSavePayload umgestellt ──
 
 /** Plain-Snapshot der beiden persistenzrelevanten Layout-Tab-Felder (analog
  * `VersandSnapshot`). Issue #1299/#1291/#1287 (Scheibe C2 von Epic #1301). */

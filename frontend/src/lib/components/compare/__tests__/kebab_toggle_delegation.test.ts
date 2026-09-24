@@ -25,7 +25,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ComparePreset, Corridor } from '../../../types.ts';
-import { createPutQueue, buildToggleActivePutPayload } from '../compareHubWizardBridge.ts';
+import { createPutQueue, buildToggleActivePutPayload } from '../compareHubPersistenz.ts';
 // Issue #2276 S3: der Wertebereiche-Diff lebt jetzt im geteilten Speichermodul.
 import {
 	flushPendingCorridorSave,

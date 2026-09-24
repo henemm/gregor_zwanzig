@@ -178,7 +178,8 @@ describe('AC-1 / Teil B: Typ-Alias, tote Bedingung und Kommentar-Leichen sind we
 
 describe('AC-1 / Teil B: die sechs dateiinternen Signaturtypen bleiben stehen', () => {
 	const signaturTypen: Array<[string[], string[]]> = [
-		[['compare', 'compareHubWizardBridge.ts'], ['HubWizardFields', 'HubEdit', 'PutQueue']],
+		[['compare', 'compareHubPersistenz.ts'], ['HubEdit', 'PutQueue']],
+		[['compare', 'compareHubHydration.ts'], ['HubFields']],
 		[['compare', 'compareEditorSave.ts'], ['CompareEditorEdits', 'NewComparePresetFields']],
 		[['compare', 'compareEditorLoad.ts'], ['RehydratedActiveMetrics']]
 	];
@@ -195,4 +196,37 @@ describe('AC-1 / Teil B: die sechs dateiinternen Signaturtypen bleiben stehen', 
 			}
 		});
 	}
+});
+
+// Issue #2276 Scheibe S6f (Epic #2345), AC-4: der tote
+// `setContext('compare-wizard-state', wizardState)`-Aufruf in
+// CompareTabs.svelte:330 hat im gesamten Hub-Baum keinen `getContext`-Leser
+// mehr (CorridorEditor(Mobile).svelte liest seit S6d aus
+// `corridorPropsAus(wizardState)`) und entfaellt samt seinem Import.
+// Die Hub-Klasseninstanz selbst (`new CompareWizardState()`, :329) UND
+// `onMount` (:140, unabhaengiger Verwendungszweck) bleiben unveraendert
+// bestehen — beide sind Positiv-Kontrollen, damit ein kaputter Import oder
+// eine leere Datei nicht faelschlich "Totcode entfernt" vortaeuscht.
+describe('AC-4 (S6f): toter setContext-Aufruf ist aus CompareTabs.svelte entfernt', () => {
+	test('setContext(\'compare-wizard-state\', …) ist weg, die Hub-Instanz und onMount bleiben', () => {
+		const quelle = lies('compare', 'CompareTabs.svelte');
+		assert.ok(
+			quelle.includes('new CompareWizardState()'),
+			'Positiv-Kontrolle: die Hub-Klasseninstanz muss bestehen bleiben (Spec „Nicht in dieser Scheibe")'
+		);
+		assert.ok(
+			/\bonMount\s*\(/.test(quelle),
+			'Positiv-Kontrolle: onMount() wird weiterhin gebraucht (:140) — nur setContext entfaellt'
+		);
+		assert.strictEqual(
+			/setContext\s*\(\s*['"]compare-wizard-state['"]/.test(quelle),
+			false,
+			'setContext(\'compare-wizard-state\', …) muss entfallen — kein getContext-Leser mehr im Hub-Baum'
+		);
+		assert.strictEqual(
+			/import\s*\{[^}]*\bsetContext\b[^}]*\}\s*from\s*['"]svelte['"]/.test(quelle),
+			false,
+			'der ungenutzte setContext-Import aus \'svelte\' muss ebenfalls entfallen'
+		);
+	});
 });

@@ -5,16 +5,15 @@
 //
 // Spec: docs/specs/modules/rework_2276_s2_alarme.md
 //
-// AC-9: dieses Modul lädt zur Laufzeit NICHT die Compare-Klebeschicht
-// (`compare/compareHubWizardBridge.ts`) — aus ihr kommen nur Typen
-// (`import type`, beim Übersetzen gelöscht). Nutzlast-Baustein ist
-// `buildComparePresetSavePayload` (Spec, Design Punkt 2: Voll-Spread).
+// AC-9: dieses Modul lädt zur Laufzeit NICHT die Compare-Hub-Klebeschicht
+// (aufgelöst in Issue #2276 S6f) — AlarmHydrationTarget ist seither lokal
+// definiert (s. u.), kein Typ-Import mehr aus compare/. Nutzlast-Baustein
+// ist `buildComparePresetSavePayload` (Spec, Design Punkt 2: Voll-Spread).
 //
 // Kein Browser-/SvelteKit-Import — lauffähig unter node --experimental-strip-types.
 
-import type { ActivityProfile, ComparePreset } from '../../types.ts';
+import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
 import type { IdealRange } from './corridor-editor/corridorEditorState.ts';
-import type { AlarmHydrationTarget } from '../compare/compareHubWizardBridge.ts';
 import type { SaveFn, SaveStatus } from '../../stores/saveStatusStore.svelte.ts';
 import type { PutClient } from './tripSpeicherung.ts';
 import { buildComparePresetSavePayload } from '../compare/compareEditorSave.ts';
@@ -42,6 +41,45 @@ export interface AlarmSnapshot {
 	sendSms?: boolean;
 	sendPremiumSms?: boolean;
 	channelThresholds?: Record<string, string>;
+}
+
+/** Ziel-Objekt fuer `hydrateAlarmFieldsFromPreset`: ALLE Felder optional, damit
+ * sowohl ein frischer Plain-Objekt-Stub (Kern-Test) als auch die reale
+ * `CompareWizardState`-Instanz (CompareTabs.svelte) strukturell passen —
+ * eine `Record<string, unknown>`-Signatur waere fuer die Klasseninstanz NICHT
+ * zuweisbar (kein Index-Signature), waehrend optionale benannte Felder in
+ * beide Richtungen kompatibel sind. */
+export interface AlarmHydrationTarget {
+	officialAlertsEnabled?: boolean;
+	officialWarningsEnabled?: boolean;
+	radarAlertEnabled?: boolean;
+	metricAlertLevels?: Record<string, string>;
+	alertCooldownMinutes?: number;
+	alertQuietFrom?: string;
+	alertQuietTo?: string;
+	corridors?: Corridor[];
+	// Issue #1260: Telegram-Kurzstil-Toggle im Hub-Alarme-Tab
+	// (display_config.telegram_style). Default "rich".
+	telegramStyle?: 'rich' | 'kurzform';
+	// Issue #1461 S3b-2b (bestaetigter Speicher-Fehler, s. Spec „Implementation
+	// Details"): sendTelegram/sendSms fehlten hier bisher komplett -- eine
+	// Kanal-Umschaltung im Alarme-Reiter war deshalb weder als Snapshot-Differenz
+	// erkennbar noch im PUT-Body enthalten (der Server-Bestand wurde beim
+	// naechsten Alarme-Save aktiv zurueckgeschrieben). Analog channelThresholds.
+	sendTelegram?: boolean;
+	sendSms?: boolean;
+	// Issue #1745 A: der vierte Kanal muss aus demselben Grund mit-hydriert
+	// werden — sonst ist eine Aenderung im Alarme-Reiter weder als
+	// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
+	sendPremiumSms?: boolean;
+	channelThresholds?: Record<string, string>;
+	// Issue #1320: activeMetricKeys wird sonst nur von den Hydrations-Effekten
+	// der Tabs "wetter-metriken"/"idealwerte" befuellt — fehlt Alarme als
+	// Erst-Tab (Deep-Link), zeigt AlarmeTab.svelte faelschlich "keine Metriken".
+	// Issue #1366 F002: `string[] | null`, damit `wizardState` (jetzt nullable)
+	// strukturell zuweisbar bleibt -- hydrateAlarmFieldsFromPreset schreibt hier
+	// ohnehin immer einen konkreten Wert (Zeile unten), nie `null`.
+	activeMetricKeys?: string[] | null;
 }
 
 /** Aktueller Alarmstand von `wiz` als entkoppelte Kopie (JSON-Rundreise löst

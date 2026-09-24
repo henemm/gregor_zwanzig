@@ -1,49 +1,17 @@
-// TDD RED — Issue #1256 Scheibe 6: Hub-Wizard-Bridge fuer den eingebetteten
-// CorridorEditor (context="vergleich") im Idealwerte-Tab (AC-16/AC-33/AC-34).
+// TDD RED — Issue #2276 Scheibe S6f (Epic #2345): Bridge-Umzug. Dieser Teil
+// der ehemaligen `compare_hub_wizard_bridge.test.ts` (Issue #1256 Scheibe 6/7,
+// AC-33/AC-34, Edge Case Z.1020, Issue #2276 S3/#1703 S8) testet
+// `buildHubPutPayload`/`snapshotForRollback`/`buildToggleActivePutPayload`,
+// jetzt aus `../compareHubPersistenz.ts`.
 //
-// Spec: docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 6
-//   (AC-16, AC-33, AC-34), Edge Case Z.1020 (PUT-Fehler -> Rollback).
-// Context: docs/context/feat-1256-s6-hub-idealwerte-inline.md § Entscheidung 1+3
-//   (State-Bruecke = eigene kleine Bridge-Datei, KEIN Debounce/#1234, Rollback
-//   neu bauen).
+// Spec: docs/specs/modules/rework_2276_s6f_bridge_umzug.md — AC-1 (Test-Plan:
+//   `compare_hub_wizard_bridge.test.ts` SPLIT + RENAME)
+// Vorgaenger-Spec (Funktions-API/Zusicherungen unveraendert):
+//   docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 6/7
 //
-// Ist: `CorridorEditor.svelte` liest im vergleich-Kontext
-// `getContext('compare-wizard-state')` und erwartet dort GENAU 6 Felder
-// (isEditMode, corridors, activityProfile, idealRanges, activeMetricKeys,
-// metricAlertLevels — CorridorEditor.svelte:41-113). Dieser Context wird
-// heute NUR inline in routes/compare/[id]/edit/+page.svelte:19-86 erzeugt —
-// es gibt keine extrahierte, im Hub wiederverwendbare Hydration-Funktion.
-//
-// `compareHubWizardBridge.ts` existiert noch NICHT — der Import schlaegt
-// heute fehl (RED), bis Phase 6 das Modul anlegt.
-//
-// API-Design (von dieser RED-Phase festgelegt, da noch keine Implementierung
-// existiert):
-//   - hydrateWizardStateFromPreset(preset): liefert ein PLAIN-Objekt mit
-//     GENAU den 6 Feldern, die CorridorEditor liest (kein echtes
-//     CompareWizardState-Klassen-Objekt noetig/moeglich, weil dessen
-//     $state-Runen ausserhalb eines Svelte-Kompilat-Kontexts nicht
-//     instanziierbar sind — Praezedenz: wizard_state_no_legacy_save.test.ts
-//     inspiziert nur den Prototype, instanziiert NIE `new CompareWizardState()`
-//     in einem node-Test). Die Bridge-Komponente selbst (nicht Teil dieser
-//     RED-Phase) uebertraegt dieses Plain-Objekt dann auf eine echte
-//     CompareWizardState-Instanz und ruft setContext(...).
-//     activeMetricKeys nutzt die #1191-Semantik aus
-//     rehydrateActiveMetrics() (compareEditorLoad.ts:23-30): ein VORHANDENES
-//     Array (auch []) bleibt exakt erhalten; FEHLT das Feld (undefined),
-//     liefert die Bridge `null` als explizites Signal "Profil-Default-Pfad"
-//     (kein stilles [] vortaeuschen, das faelschlich als "alles abgewaehlt"
-//     interpretiert wuerde).
-//   - buildHubPutPayload(preset, edit): duenner Adapter um das bestehende
-//     `buildComparePresetSavePayload(original, edits)` (compareEditorSave.ts)
-//     — uebernimmt aus `preset` alle Pflichtfelder, die `edit` NICHT liefert
-//     (Read-Modify-Write), damit ein Teil-Edit (nur corridors ODER nur
-//     pickedIds) niemals andere `display_config`-Felder wegwirft (#1257/#1234-
-//     Kontext: metric_alert_levels und active_metrics duerfen nie verloren
-//     gehen).
-//   - snapshotForRollback(value): Deep-Copy-Helfer fuer den Prae-Aktions-
-//     Zustand (Edge Case Z.1020) — Mutation des Arbeitszustands nach dem
-//     Snapshot darf den Snapshot nicht veraendern.
+// `compareHubPersistenz.ts` existiert noch NICHT — der Import schlaegt heute
+// fehl (RED), bis S6f das Modul anlegt (Umzug byte-identisch aus der
+// aufgeloesten Compare-Hub-Klebeschicht).
 //
 // Reine Verhaltenstests (echter Funktionsaufruf, KEIN Mock, KEINE
 // Datei-Inhalt-Pruefung, KEIN DOM-Rendering — Projekt-Idiom analog
@@ -51,18 +19,17 @@
 //
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
-//     src/lib/components/compare/__tests__/compare_hub_wizard_bridge.test.ts
+//     src/lib/components/compare/__tests__/compare_hub_orte_idealwerte_persistenz.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { ComparePreset } from '../../../types.ts';
 import {
-	hydrateWizardStateFromPreset,
 	buildHubPutPayload,
 	snapshotForRollback,
 	buildToggleActivePutPayload
-} from '../compareHubWizardBridge.ts';
+} from '../compareHubPersistenz.ts';
 // Issue #2276 S3: Diff-/Payload-Entscheidung des Wertebereiche-Reiters ist aus
 // der Bridge in das geteilte Speichermodul umgezogen — Zusicherungen unveraendert.
 import {
@@ -107,61 +74,6 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 		...overrides
 	};
 }
-
-describe('AC-16: hydrateWizardStateFromPreset — Teil-Hydration der 6 CorridorEditor-Felder', () => {
-	test('liefert ein Objekt mit GENAU den 6 erwarteten Feldern (keine mehr, keine weniger)', () => {
-		const hydrated = hydrateWizardStateFromPreset(makePreset());
-		assert.deepStrictEqual(
-			Object.keys(hydrated).sort(),
-			['activeMetricKeys', 'activityProfile', 'corridors', 'idealRanges', 'isEditMode', 'metricAlertLevels'].sort(),
-			`erwartet genau 6 Felder, gefunden: ${Object.keys(hydrated).join(', ')}`
-		);
-	});
-
-	test('isEditMode ist immer true (Hub mountet den Organism wie den Editor)', () => {
-		const hydrated = hydrateWizardStateFromPreset(makePreset());
-		assert.strictEqual(hydrated.isEditMode, true);
-	});
-
-	test('corridors kommt unveraendert vom Top-Level-Feld des Presets', () => {
-		const preset = makePreset();
-		const hydrated = hydrateWizardStateFromPreset(preset);
-		assert.deepStrictEqual(hydrated.corridors, preset.corridors);
-	});
-
-	test('activityProfile kommt aus preset.profil', () => {
-		const hydrated = hydrateWizardStateFromPreset(makePreset({ profil: 'wandern' }));
-		assert.strictEqual(hydrated.activityProfile, 'wandern');
-	});
-
-	test('idealRanges kommt aus display_config.ideal_ranges', () => {
-		const preset = makePreset();
-		const hydrated = hydrateWizardStateFromPreset(preset);
-		assert.deepStrictEqual(hydrated.idealRanges, preset.display_config!.ideal_ranges);
-	});
-
-	test('metricAlertLevels kommt aus display_config.metric_alert_levels', () => {
-		const preset = makePreset();
-		const hydrated = hydrateWizardStateFromPreset(preset);
-		assert.deepStrictEqual(hydrated.metricAlertLevels, preset.display_config!.metric_alert_levels);
-	});
-
-	test('#1191-Semantik: VORHANDENES leeres active_metrics-Array bleibt [] (keine Profil-Default-Ueberschreibung)', () => {
-		const preset = makePreset({ display_config: { active_metrics: [] } });
-		const hydrated = hydrateWizardStateFromPreset(preset);
-		assert.deepStrictEqual(hydrated.activeMetricKeys, []);
-	});
-
-	test('#1191-Semantik: FEHLENDES active_metrics-Feld liefert null (Signal fuer Profil-Default-Pfad, kein stilles [])', () => {
-		const preset = makePreset({ display_config: { region: 'Tirol' } });
-		const hydrated = hydrateWizardStateFromPreset(preset);
-		assert.strictEqual(
-			hydrated.activeMetricKeys,
-			null,
-			'fehlendes active_metrics darf NICHT als leeres Array getarnt werden (rehydrateActiveMetrics-Semantik #1191)'
-		);
-	});
-});
 
 describe('AC-33/AC-34 + #1257/#1234-Kontext: buildHubPutPayload — Teil-Edit verliert keine Nachbarfelder', () => {
 	test('Teil-Edit NUR corridors: metric_alert_levels und active_metrics bleiben byte-gleich aus dem Original', () => {

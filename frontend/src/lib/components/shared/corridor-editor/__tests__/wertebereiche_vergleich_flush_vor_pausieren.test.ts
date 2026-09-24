@@ -25,7 +25,7 @@ import { api } from '../../../../api.ts';
 import { clearEtagRegistry } from '../../../../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
 import type { ComparePreset } from '../../../../types.ts';
-import { buildToggleActivePutPayload, createPutQueue } from '../../../compare/compareHubWizardBridge.ts';
+import { buildToggleActivePutPayload, createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import { erstelleWertebereicheVergleichSpeicherung } from '../wertebereicheVergleichSpeicherung.ts';
 import {
 	createController,

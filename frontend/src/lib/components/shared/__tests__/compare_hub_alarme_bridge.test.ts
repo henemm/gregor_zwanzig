@@ -7,7 +7,7 @@
 //   Default-Clobber).
 // Context: docs/context/feat-1258-s5-hub-alarme.md § Entscheidungen H1-H5.
 //
-// Ist: `compareHubWizardBridge.ts` kennt drei fertige Snapshot-Pfade
+// Ist: die fruehere Compare-Hub-Klebeschicht kannte drei fertige Snapshot-Pfade
 // (Corridor/Idealwerte S6, Versand S7) — aber KEINEN fuer den Alarme-Tab.
 // `HubEdit`/`buildHubPutPayload` kennen `metricAlertLevels`/Cooldown/Quiet,
 // aber NICHT `officialAlertsEnabled`, `officialWarnings`, `radarAlertEnabled`
@@ -44,7 +44,8 @@ import assert from 'node:assert/strict';
 import type { ComparePreset } from '../../../types.ts';
 // Issue #2276 S2: Speicherpfad-Helfer zogen nach shared/alarmeVergleichSpeicherung.ts;
 // Hydration und Hub-Payload-Bau bleiben in der Compare-Klebeschicht.
-import { hydrateAlarmFieldsFromPreset, buildHubPutPayload } from '../../compare/compareHubWizardBridge.ts';
+import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
+import { buildHubPutPayload } from '../../compare/compareHubPersistenz.ts';
 import {
 	flushPendingAlarmSave,
 	rollbackAlarmSnapshot,
@@ -448,7 +449,7 @@ describe('#1260 Hub-Alarme Kurzstil-Toggle: Hydration + PUT-Persistenz (F001)', 
 //   docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md (AC-9, Landmine 3)
 //
 // Landmine 3: `buildHubPutPayload` kodiert die Feldliste ein ZWEITES Mal neben
-// `buildComparePresetSavePayload` (compareHubWizardBridge.ts:125-195). Eine
+// `buildComparePresetSavePayload` (frueher in der Compare-Hub-Klebeschicht:125-195, heute compareHubPersistenz.ts). Eine
 // vergessene Stelle erzeugt einen sichtbaren, aber wirkungslosen Haken — der
 // gemeldete Bug in neuer Form.
 //

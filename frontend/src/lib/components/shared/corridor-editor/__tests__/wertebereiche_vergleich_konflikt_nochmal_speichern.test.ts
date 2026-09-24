@@ -24,7 +24,7 @@ import { api } from '../../../../api.ts';
 import { clearEtagRegistry } from '../../../../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
 import type { ComparePreset } from '../../../../types.ts';
-import { createPutQueue } from '../../../compare/compareHubWizardBridge.ts';
+import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import type { PutClient } from '../../tripSpeicherung.ts';
 import { erstelleWertebereicheVergleichSpeicherung } from '../wertebereicheVergleichSpeicherung.ts';
 import {

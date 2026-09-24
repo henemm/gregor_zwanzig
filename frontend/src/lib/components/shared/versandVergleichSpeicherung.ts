@@ -6,8 +6,8 @@
 //
 // Spec: docs/specs/modules/rework_2276_s5_versand.md
 //
-// AC-8: dieses Modul lädt zur Laufzeit NICHT die Compare-Klebeschicht
-// (`compare/compareHubWizardBridge.ts`). Nutzlast-Baustein ist
+// AC-8: dieses Modul lädt zur Laufzeit NICHT die Compare-Hub-Klebeschicht
+// (aufgeloest in Issue #2276 S6f). Nutzlast-Baustein ist
 // `buildComparePresetSavePayload` (Spec, Design Punkt 5: Voll-Spread).
 //
 // Kein Browser-/SvelteKit-Import — lauffähig unter node --experimental-strip-types.

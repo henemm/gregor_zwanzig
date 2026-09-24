@@ -11,7 +11,7 @@
 // `wizardState`-Objekts unangetastet bleiben.
 //
 // RED-Erwartung (vor Implementierung):
-//   `rollbackLayoutSnapshot` existiert in `compareHubWizardBridge.ts` noch
+//   `rollbackLayoutSnapshot` existiert in der damaligen Compare-Hub-Klebeschicht (inzwischen aufgeloest, Issue #2276 S6f) noch
 //   NICHT — der Import schlaegt fehl ("does not provide an export named
 //   'rollbackLayoutSnapshot'"), das gesamte File kann nicht laufen. Das IST
 //   der RED-Beweis fuer AC-6.
