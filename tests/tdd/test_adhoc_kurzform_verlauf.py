@@ -43,6 +43,7 @@ deterministisch zu treffen, ohne von der realen Tageszeit abzuhaengen.
 """
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -50,6 +51,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.config import Settings
+from app.loader import get_data_dir
 from app.metric_catalog import get_metric
 from app.models import PrecipType, ThunderLevel
 from output.channels.premium_sms import PremiumSmsOutput
@@ -84,6 +86,18 @@ DAYMAX = get_metric("temperature_day_high")  # sms_code "" -> col_label "DayMax"
 WDIR = get_metric("wind_direction")       # sms_code "WD", nicht-numerisch (Grad -> Kuerzel)
 THDR = get_metric("thunder")              # sms_code "TH", is_level (Stufe -> Buchstabe)
 PTYPE = get_metric("precip_type")         # sms_code "PT", Enum-Wert (kein Zahlwert)
+
+
+def _nutzer_mit_tier(uid: str, tier: str = "premium") -> None:
+    """Nachbesserung #2412 S4a: `send_command_reply_premium_sms` hatte vor
+    dem SMS-Tageslimit-Gate keinen Tier-Check -- der User "default" hat hier
+    kein `user.json`, `user_tier._tier()` faellt seither auf "free" zurueck
+    (Cap 0). Premium-SMS ist laut #1676 D7 ein Premium-Merkmal, die Tests
+    stehen fuer einen Premium-Nutzer. Muster `test_sms_tageslimit.py::
+    _nutzer_anlegen`."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
 
 
 def _pt(stunde: int, wert, *, tag: int = TAG) -> DrilldownPoint:
@@ -213,6 +227,7 @@ def test_ac1_premium_sms_und_sms_erhalten_kurzform_am_draht(monkeypatch):
     # Draht-Messpunkt (nicht der Formatierer): echtes PremiumSmsOutput.send.
     gesendet = _stelle_gesendetes(monkeypatch)
     settings = _dummy_settings()
+    _nutzer_mit_tier("default")
     NotificationService(settings=settings, user_id="default").send_command_reply_premium_sms(
         result_premium, settings,
     )
@@ -613,6 +628,7 @@ def test_ac5_niederschlagsart_kurzform_ueber_kommandopfad_nennt_die_art(monkeypa
     # PremiumSmsOutput.send an.
     gesendet = _stelle_gesendetes(monkeypatch)
     settings = _dummy_settings()
+    _nutzer_mit_tier("default")
     NotificationService(settings=settings, user_id="default").send_command_reply_premium_sms(
         result, settings,
     )
@@ -892,6 +908,7 @@ def test_ac10_uebergrosser_verlauf_loest_genau_einen_sendeaufruf_aus(monkeypatch
 
         gesendet = _stelle_gesendetes(monkeypatch)
         settings = _dummy_settings()
+        _nutzer_mit_tier("default")
         NotificationService(settings=settings, user_id="default").send_command_reply_premium_sms(
             result, settings,
         )
@@ -1130,6 +1147,7 @@ def test_ac13_strukturierter_token_ohne_werte_meldet_no_data(monkeypatch):
     # PremiumSmsOutput.send an.
     gesendet = _stelle_gesendetes(monkeypatch)
     settings = _dummy_settings()
+    _nutzer_mit_tier("default")
     NotificationService(settings=settings, user_id="default").send_command_reply_premium_sms(
         result, settings,
     )

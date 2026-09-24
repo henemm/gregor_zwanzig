@@ -41,6 +41,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.config import Settings
+from app.loader import get_data_dir
 from app.trip import Stage, Trip, Waypoint
 from output.renderers.alert.official_alerts import (
     OfficialAlertNotice,
@@ -61,6 +62,17 @@ _WEEKDAY_BEFORE_HOUR = re.compile(r"(Mo|Di|Mi|Do|Fr|Sa|So)\d")
 # Alt-Format-Spuren, die nach S5 nirgends mehr stehen duerfen.
 _AMT_MARKER = re.compile(r"\bAMT\b")
 _LEVEL_WORD_POSITION = re.compile(r"(GELB|ORANGE|ROT|GRÜN)\d/3")
+
+
+def _nutzer_mit_tier(uid: str, tier: str = "standard") -> None:
+    """Issue #2412 S4a Nachbesserung: `NotificationService`-Konstruktion
+    allein reicht seit dem SMS-Tageslimit-Gate nicht mehr -- ohne `user.json`
+    faellt `user_tier._tier()` auf "free" (SMS-Cap 0) zurueck und der echte
+    Dispatch-Pfad dieses Tests wuerde faelschlich gesperrt. Selbes Muster wie
+    `tests/tdd/test_sms_tageslimit.py::_nutzer_anlegen`."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
 
 
 # ---------------------------------------------------------------------------
@@ -486,6 +498,7 @@ def test_ac10_trip_dispatch_versendet_die_neue_grammatik():
 
     gefangen: list[str] = []
     trip = _trip(name="KHW 403")
+    _nutzer_mit_tier("tdd-1948-s5-trip")
     svc = NotificationService(
         settings=_settings_mit_sms(), user_id="tdd-1948-s5-trip",
     )
@@ -544,6 +557,7 @@ def test_ac11_compare_dispatch_nutzt_dieselbe_token_grammatik_wie_der_trip():
     )
 
     gefangen: list[str] = []
+    _nutzer_mit_tier("tdd-1948-s5-compare")
     svc = NotificationService(
         settings=_settings_mit_sms(), user_id="tdd-1948-s5-compare",
     )

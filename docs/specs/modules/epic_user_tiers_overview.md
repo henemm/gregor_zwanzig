@@ -33,6 +33,16 @@ Tages-Obergrenzen mit Mitternachts-Reset, KEIN reiner Mindestabstand — ein Nut
 einem Tag maximal N Alerts/Updates, unabhängig vom zeitlichen Abstand dazwischen. Premium bleibt
 ein reiner Mindestabstand (Intervall-Semantik von „alle 15 Minuten"), ohne Tageszähler.
 
+**Ergänzung #2412 S4a (2026-09-24):** Die Zeile „Premium: kein Tageslimit" (PO 2026-07-07) gilt
+weiterhin für die Alarm-FREQUENZ — sie ist NICHT durch einen Kosten-Deckel abgelöst. Zusätzlich
+zu diesem Frequenz-Limit bekommt der Kanal Premium-SMS einen EIGENEN, kanal-spezifischen
+Tages-Kostendeckel (`src/services/sms_daily_limit.py`, `docs/specs/modules/sms_daily_limit.md`):
+Standard 10 SMS/Tag, Premium 10 SMS/Tag + 15 Premium-SMS/Tag, Free 0/0 — UTC-getaktet, nicht
+ortszonengebunden (ADR-0044, Zusatz „Nicht betroffen"). E-Mail und Telegram bleiben von diesem
+Deckel unberührt. Grund: Premium-SMS spricht ein Satellitengerät an und kostet real Geld pro
+Nachricht — ein reiner Frequenz-Mindestabstand begrenzt die Rate, nicht die Tageskosten bei
+vielen Trips/Alarmen gleichzeitig.
+
 **Ergänzung #1555 (2026-08-07):** Innerhalb der Free-/Standard-Obergrenze ist das Budget seit
 `fix_1555_nowcast_alert_priority.md` nicht mehr rein first-come-first-served — ein Anteil
 (Free 1 von 2, Standard 2 von 4) bleibt ausschließlich für akute NowCast-Gefahr

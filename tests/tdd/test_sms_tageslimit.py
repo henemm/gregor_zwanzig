@@ -322,11 +322,20 @@ def test_ac1_briefing_sms_wird_bei_erreichtem_briefing_kontingent_gesperrt(mitsc
     """AC-1. GIVEN Standard-Nutzer mit sms=8 (Briefing-Cap Standard = 8) /
     WHEN ein 9. Trip-Briefing ausgeloest wird / THEN bleibt die SMS aus
     (``blocked_channels["sms"]``, ``reason_code=sms_daily_limit_exceeded``),
-    E-Mail/Telegram desselben Laufs gehen unveraendert raus, Zaehler bleibt
+    E-Mail/Telegram desselben Laufs gehen UNVERAENDERT raus, Zaehler bleibt
     bei 8.
 
-    RED heute: kein Gate -> SMS wird tatsaechlich aufgezeichnet, kein
-    ``blocked_channels``-Eintrag.
+    Nachbesserung (PO/Tech-Lead 2026-09-24): "unveraendert" wird NICHT ueber
+    einen fest verdrahteten Zaehlwert (``== 1``) geprueft -- wie viele
+    Telegram-Bubbles ein rich-Briefing produziert, ist eine
+    Telegram-Rendering-Frage, keine SMS-Tageslimit-Frage, und war mit der
+    festen Erwartung strukturell nie erreichbar (rich-Style sendet fuer
+    diesen Fixture-Trip mehrere Bubbles). Stattdessen ein Kontrolllauf:
+    DERSELBE Trip wird fuer eine ZWEITE, eindeutige ``user_id`` mit vollem
+    (nicht gesperrtem) SMS-Kontingent versendet -- die Zustellzahlen fuer
+    E-Mail/Telegram muessen in beiden Laeufen IDENTISCH sein (und > 0). Das
+    beweist "die SMS-Sperre aendert nichts an E-Mail/Telegram", ohne eine
+    konkrete, hier irrelevante Bubble-Anzahl vorzuschreiben.
     """
     uid = _kennung("ac1")
     _nutzer_anlegen(uid, "standard")
@@ -347,8 +356,30 @@ def test_ac1_briefing_sms_wird_bei_erreichtem_briefing_kontingent_gesperrt(mitsc
         f"AC-1: SMS-Aufzeichner darf nicht aufgerufen worden sein, aber "
         f"{mitschrift!r}"
     )
-    assert mitschrift.anzahl("email") == 1, "AC-1: E-Mail muss trotzdem zugestellt werden"
-    assert mitschrift.anzahl("telegram") == 1, "AC-1: Telegram muss trotzdem zugestellt werden"
+    email_gesperrt = mitschrift.anzahl("email")
+    telegram_gesperrt = mitschrift.anzahl("telegram")
+
+    # Kontrolllauf: DERSELBE Trip (identischer Inhalt), freies SMS-Kontingent,
+    # zweite eindeutige user_id -- misst E-Mail/Telegram-Zustellung OHNE die
+    # SMS-Sperre als Vergleichsbasis.
+    uid_kontrolle = _kennung("ac1-kontrolle")
+    _nutzer_anlegen(uid_kontrolle, "standard")
+    svc_kontrolle = NotificationService(settings=_settings(), user_id=uid_kontrolle)
+    svc_kontrolle.send_trip_report(_report_request(trip, send_sms=True))
+
+    email_kontrolle = mitschrift.anzahl("email") - email_gesperrt
+    telegram_kontrolle = mitschrift.anzahl("telegram") - telegram_gesperrt
+
+    assert email_kontrolle > 0 and email_gesperrt == email_kontrolle, (
+        f"AC-1: E-Mail-Zustellung muss durch die SMS-Sperre unveraendert "
+        f"bleiben (gesperrter Lauf={email_gesperrt}, Kontrolllauf="
+        f"{email_kontrolle})"
+    )
+    assert telegram_kontrolle > 0 and telegram_gesperrt == telegram_kontrolle, (
+        f"AC-1: Telegram-Zustellung muss durch die SMS-Sperre unveraendert "
+        f"bleiben (gesperrter Lauf={telegram_gesperrt}, Kontrolllauf="
+        f"{telegram_kontrolle})"
+    )
     assert _zaehler_lesen(uid).get("sms") == 8, (
         f"AC-1: Zaehlerstand darf sich bei Sperre nicht aendern, gelesen "
         f"{_zaehler_lesen(uid)!r}"
@@ -831,6 +862,10 @@ _AC10_FAELLE = [
     "compare_briefing_sms",
     "compare_official_sms", "compare_official_premium_sms",
     "no_data_hint_sms", "no_data_hint_premium_sms",
+    # Nachbesserung (Tech-Lead 2026-09-24): der Premium-SMS-Zweig von
+    # send_official_alert (notification_service.py ~1155) war bislang durch
+    # KEINEN Test aus dieser Datei bewacht -- AC-2 deckt dort nur SMS ab.
+    "official_alert_premium_sms",
 ]
 
 
@@ -870,6 +905,12 @@ def test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt(
             trip=trip, request=request, source="Radar (DWD)",
             cooldown_display="1 Stunde", effective_channels={"email", kanal},
         )
+    elif fall == "official_alert_premium_sms":
+        trip = _official_trip(f"trip-{uid}")
+        ergebnis = svc.send_official_alert(
+            trip=trip, notices=[(_official_alert(), ["1"])],
+            effective_channels={"email", "premium_sms"},
+        )
     elif fall == "compare_briefing_sms":
         ergebnis = svc.send_compare_report(
             subject="Ortsvergleich", html_body="<p>H</p>", text_body="T",
@@ -903,4 +944,563 @@ def test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt(
         f"AC-10 ({fall}): der Sperrgrund muss im Ergebnis sichtbar sein "
         f"(blocked_channels ODER failed_channels beim Ortsvergleichs-Helfer), "
         f"blocked={blocked!r} failed={failed!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Adversary Fix-Loop 1 (2026-09-24) — F001..F006
+# ---------------------------------------------------------------------------
+
+
+def _fremder_wert_im_zaehlerfeld(uid: str) -> None:
+    pfad = _zaehler_pfad(uid)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text(json.dumps({"date": _heute_utc(), "sms": "abc", "premium_sms": 0}))
+
+
+def _nicht_json_zaehlerdatei(uid: str) -> None:
+    pfad = _zaehler_pfad(uid)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text("DAS IST KEIN JSON {{{")
+
+
+def _unendlicher_zaehlerwert(uid: str) -> None:
+    """Adversary F001c: `1e400` wird von Python/JSON als `inf` geparst --
+    `int(inf)` wirft `OverflowError`, NICHT `ValueError`."""
+    pfad = _zaehler_pfad(uid)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text(json.dumps({"date": _heute_utc(), "sms": 1e400, "premium_sms": 0}))
+
+
+def _user_json_als_liste(uid: str) -> None:
+    """Adversary F001b: gueltiges JSON, aber KEIN Objekt -- `profile.get(...)`
+    auf einer Liste wirft `AttributeError`."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps(["standard"]))
+
+
+def _user_json_als_skalar(uid: str) -> None:
+    """Adversary F001b: gueltiges JSON, aber ein Skalar -- `profile.get(...)`
+    auf einer Zahl wirft ebenfalls `AttributeError`."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps(42))
+
+
+def _user_json_tier_liste(uid: str) -> None:
+    """Adversary F009: ein VALIDES Dict-`user.json`, aber der `tier`-WERT
+    selbst ist kein String -- ungeprueft in `_DAILY_SMS_LIMIT.get(...)`
+    waere eine Liste `unhashable` (`TypeError`)."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"tier": ["hack"]}))
+
+
+def _user_json_tier_zahl(uid: str) -> None:
+    """Adversary F009: `tier` ist eine Zahl statt eines Strings."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"tier": 42}))
+
+
+def _user_json_tier_unbekannt(uid: str) -> None:
+    """Adversary F009: `tier` ist ein String, aber kein bekannter Tier-Wert."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"tier": "gold"}))
+
+
+@pytest.mark.parametrize(
+    "kaputt_machen, sms_erwartet",
+    [
+        (_fremder_wert_im_zaehlerfeld, True),
+        (_nicht_json_zaehlerdatei, True),
+        (_unendlicher_zaehlerwert, True),
+        (_user_json_als_liste, False),
+        (_user_json_als_skalar, False),
+        (_user_json_tier_liste, False),
+        (_user_json_tier_zahl, False),
+        (_user_json_tier_unbekannt, False),
+    ],
+    ids=[
+        "fremder-wert-im-feld",
+        "nicht-json",
+        "unendlicher-zaehlerwert-f001c",
+        "user-json-als-liste-f001b",
+        "user-json-als-skalar-f001b",
+        "tier-liste-f009",
+        "tier-zahl-f009",
+        "tier-unbekannt-f009",
+    ],
+)
+def test_f001_kaputte_zaehlerdatei_ist_fail_open(kaputt_machen, sms_erwartet, mitschrift):
+    """Adversary F001/F001b/F001c (CRITICAL/CRITICAL/MEDIUM). GIVEN eine
+    kaputte `sms_daily_count.json` (fremder Wertetyp, kein gueltiges JSON,
+    oder ein Zaehlerwert, der als `inf` geparst wird -- F001/F001c) ODER
+    eine `user.json`, die zwar gueltiges JSON, aber KEIN Objekt ist (Liste
+    oder Skalar -- F001b) / WHEN ein echtes Trip-Briefing ausgeloest wird /
+    THEN wirft das Gate NICHT (sonst erreicht E-Mail den Nutzer, Telegram
+    NIE -- die Ausnahme bricht `send_trip_report` vor dessen Versandbloecken
+    ab, der Scheduler haelt den Lauf faelschlich fuer einen Totalausfall und
+    liefert doppelt nach).
+
+    Zwei unterschiedliche, beide BEABSICHTIGTE Ergebnisse (kein Widerspruch):
+    - F001/F001c (Zaehlerdatei-Korruption): fail-OPEN -- der kaputte
+      Zaehlerwert gilt als leerer Tagesstand (0), SMS wird versendet.
+    - F001b/F009 (user.json ist kein Objekt ODER `tier` ist kein bekannter
+      Tier-String -- Liste, Zahl, unbekannter String wie "gold"): der
+      TIER-Lookup faellt bewusst fail-CLOSED auf "free" zurueck (identisch
+      zum bestehenden Verhalten bei fehlender/kaputter user.json, NUR die
+      neue Wurfquelle ist geschlossen) -- SMS bleibt fuer einen free-Nutzer
+      legitim gesperrt (Cap 0), aber OHNE Absturz. E-Mail/Telegram sind in
+      JEDEM Fall unberuehrt.
+    """
+    uid = _kennung("f001")
+    _nutzer_anlegen(uid, "standard")
+    kaputt_machen(uid)
+    trip = _trip(f"trip-{uid}")
+    svc = NotificationService(settings=_settings(), user_id=uid)
+
+    ergebnis = svc.send_trip_report(_report_request(trip, send_sms=True))
+
+    assert mitschrift.anzahl("email") == 1, (
+        "F001: E-Mail muss trotz kaputter Daten zugestellt werden"
+    )
+    assert mitschrift.anzahl("telegram") >= 1, (
+        "F001: Telegram muss trotz kaputter Daten zugestellt werden"
+    )
+    if sms_erwartet:
+        assert mitschrift.anzahl("sms") == 1, (
+            f"F001: SMS muss trotz kaputter Zaehlerdatei versendet werden "
+            f"(fail-open), aufgezeichnet: {mitschrift.anzahl('sms')}"
+        )
+        assert "sms" not in ergebnis.blocked_channels, (
+            f"F001: kein Sperrgrund erwartet, {ergebnis.blocked_channels!r}"
+        )
+    else:
+        assert mitschrift.anzahl("sms") == 0, (
+            f"F001b: kaputte user.json (kein Objekt) muss fail-CLOSED auf "
+            f"Tier 'free' zurueckfallen (SMS-Cap 0) -- legitim gesperrt, "
+            f"kein Absturz. Aufgezeichnet: {mitschrift.anzahl('sms')}"
+        )
+        assert "sms" in ergebnis.blocked_channels, (
+            f"F001b: Sperrgrund erwartet, {ergebnis.blocked_channels!r}"
+        )
+
+
+@pytest.mark.parametrize("fall", ["radar_sms", "official_alert_premium_sms"])
+def test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen(fall, mitschrift):
+    """Adversary F002 (MEDIUM). Erweiterung von AC-7 (die nur den
+    Rollback-Zweig von `send_trip_report`/SMS bewachte) auf zwei weitere
+    Sendestellen: Radar-SMS (`_dispatch_alert_message`) und den
+    Premium-SMS-Zweig von `send_official_alert`. GIVEN ein Zaehlerstand
+    unter dem Cap, der Transport schlaegt danach echt fehl / WHEN der
+    Versand endet / THEN ist der Zaehlerstand identisch zu vorher
+    (Reservierung zurueckgerollt) -- fehlt `release_reservation` an einer
+    dieser Stellen, bliebe der Zaehler faelschlich erhoeht.
+    """
+    uid = _kennung(f"f002{fall}")
+    kanal = "premium_sms" if fall == "official_alert_premium_sms" else "sms"
+    tier = "premium" if kanal == "premium_sms" else "standard"
+    _nutzer_anlegen(uid, tier)
+    _zaehler_schreiben(uid, **{kanal: 5})
+    trip = _official_trip(f"trip-{uid}")
+    svc = NotificationService(settings=_settings(), user_id=uid)
+    mitschrift.fehler[kanal] = RuntimeError("Transport kaputt")
+
+    if fall == "radar_sms":
+        request = RadarAlertRequest(
+            onset_minutes=15, onset_time="12:00", km_from=0.0, km_to=3.0,
+            is_convective=False, intensity_label="Regen",
+            source_label="Radar (DWD)", tz=ZoneInfo("UTC"), segment_id="1",
+        )
+        svc.send_radar_alert(
+            trip=trip, request=request, source="Radar (DWD)",
+            cooldown_display="1 Stunde", effective_channels={kanal},
+        )
+    else:  # official_alert_premium_sms
+        svc.send_official_alert(
+            trip=trip, notices=[(_official_alert(), ["1"])],
+            effective_channels={kanal},
+        )
+
+    assert kanal not in mitschrift.fehler, (
+        f"F002 ({fall}) Vorbedingung: der Transport muss tatsaechlich "
+        f"versucht worden sein (Fehler ausgeloest, nicht uebersprungen)"
+    )
+    assert _zaehler_lesen(uid).get(kanal) == 5, (
+        f"F002 ({fall}): ein fehlgeschlagener Transport muss die "
+        f"Reservierung zurueckrollen, Zaehlerstand ist "
+        f"{_zaehler_lesen(uid)!r}, erwartet 5"
+    )
+
+
+def test_f003_premium_sms_alarm_reserve_erlaubt_13_bis_15_sperrt_16(mitschrift):
+    """Adversary F003 (MEDIUM). AC-2 bewachte die Alarm-Reserve nur fuer den
+    Kanal SMS -- `PREMIUM_SMS_ALARM_RESERVE` (Cap 15, Briefing-Cap 12) blieb
+    unbewacht, ein Tippfehler 3->0 waere unbemerkt geblieben.
+
+    Teil A: GIVEN premium_sms=12 (Briefing-Cap erreicht) / WHEN ein
+    Trip-Briefing ausgeloest wird / THEN bleibt die Premium-SMS gesperrt.
+    Teil B: GIVEN premium_sms=12 (Briefing-Cap erreicht, Alarm-Reserve noch
+    offen bis Cap 15) / WHEN drei echte `send_official_alert`-Laeufe
+    nacheinander ausgeloest werden / THEN gehen der 13., 14. und 15. Alarm
+    noch heraus (Reserve), der 16. wird gesperrt.
+    """
+    # Teil A — Briefing bei Briefing-Cap (12) gesperrt.
+    uid_briefing = _kennung("f003-briefing")
+    _nutzer_anlegen(uid_briefing, "premium")
+    _zaehler_schreiben(uid_briefing, premium_sms=12)
+    trip_briefing = _trip(f"trip-{uid_briefing}")
+    svc_briefing = NotificationService(settings=_settings(), user_id=uid_briefing)
+    ergebnis_briefing = svc_briefing.send_trip_report(
+        _report_request(trip_briefing, send_premium_sms=True),
+    )
+    assert "premium_sms" in ergebnis_briefing.blocked_channels, (
+        f"F003 Teil A: 13. Briefing-Premium-SMS bei premium_sms=12 "
+        f"(Briefing-Cap) muss gesperrt sein: "
+        f"{ergebnis_briefing.blocked_channels!r}"
+    )
+    assert mitschrift.anzahl("premium_sms") == 0
+
+    # Teil B — Alarm-Reserve 13..15 geht raus, 16 gesperrt.
+    uid = _kennung("f003-alarm")
+    _nutzer_anlegen(uid, "premium")
+    _zaehler_schreiben(uid, premium_sms=12)
+    trip = _official_trip(f"trip-{uid}")
+    svc = NotificationService(settings=_settings(), user_id=uid)
+
+    e13 = svc.send_official_alert(
+        trip=trip, notices=[(_official_alert(), ["1"])],
+        effective_channels={"premium_sms"},
+    )
+    assert mitschrift.anzahl("premium_sms") == 1, "F003 Teil B: 13. Alarm-Premium-SMS (Reserve) muss rausgehen"
+    assert "premium_sms" not in e13.blocked_channels
+    assert _zaehler_lesen(uid).get("premium_sms") == 13
+
+    e14 = svc.send_official_alert(
+        trip=trip, notices=[(_official_alert(), ["1"])],
+        effective_channels={"premium_sms"},
+    )
+    assert mitschrift.anzahl("premium_sms") == 2, "F003 Teil B: 14. Alarm-Premium-SMS muss rausgehen"
+    assert _zaehler_lesen(uid).get("premium_sms") == 14
+
+    e15 = svc.send_official_alert(
+        trip=trip, notices=[(_official_alert(), ["1"])],
+        effective_channels={"premium_sms"},
+    )
+    assert mitschrift.anzahl("premium_sms") == 3, "F003 Teil B: 15. Alarm-Premium-SMS (volles Cap) muss rausgehen"
+    assert _zaehler_lesen(uid).get("premium_sms") == 15
+
+    e16 = svc.send_official_alert(
+        trip=trip, notices=[(_official_alert(), ["1"])],
+        effective_channels={"premium_sms"},
+    )
+    assert mitschrift.anzahl("premium_sms") == 3, (
+        f"F003 Teil B: 16. Alarm-Premium-SMS muss gesperrt bleiben, "
+        f"aufgezeichnet: {mitschrift.anzahl('premium_sms')}"
+    )
+    assert "premium_sms" in e16.blocked_channels, f"F003 Teil B: {e16.blocked_channels!r}"
+    assert _zaehler_lesen(uid).get("premium_sms") == 15, (
+        "F003 Teil B: Zaehler darf das Cap (15) nie ueberschreiten"
+    )
+
+
+_F004_ALERT_STELLEN = [
+    "radar_sms", "radar_premium_sms",
+    "compare_official_sms", "compare_official_premium_sms",
+    "official_alert_sms", "official_alert_premium_sms",
+]
+
+
+@pytest.mark.parametrize("fall", _F004_ALERT_STELLEN)
+def test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap(fall, mitschrift):
+    """Adversary F004 (MEDIUM). Ein Zweck-Flip `purpose="alert"` ->
+    `purpose="briefing"` an einer Alarm-Sendestelle bliebe unbemerkt, weil
+    AC-2/AC-3/AC-10 exakt auf dem ALARM-Cap seeden. Hier wird stattdessen
+    exakt auf dem BRIEFING-Cap geseedet (8 SMS / 12 Premium-SMS) -- ist die
+    Stelle korrekt mit `purpose="alert"` verdrahtet, MUSS der Versand trotz
+    erreichtem Briefing-Cap noch durchgehen (Alarm-Cap 10/15 ist hoeher).
+    Deckt alle sechs Alarm-Sendestellen ab: Radar (SMS/Premium),
+    Ortsvergleichs-Amtswarnung (SMS/Premium), `send_official_alert`
+    (SMS/Premium).
+    """
+    uid = _kennung(f"f004{fall}")
+    kanal = "premium_sms" if fall.endswith("premium_sms") else "sms"
+    tier = "premium" if kanal == "premium_sms" else "standard"
+    _nutzer_anlegen(uid, tier)
+    briefing_cap = 8 if kanal == "sms" else 12
+    _zaehler_schreiben(uid, **{kanal: briefing_cap})
+
+    svc = NotificationService(settings=_settings(), user_id=uid)
+    trip = _official_trip(f"trip-{uid}")
+
+    if fall in ("radar_sms", "radar_premium_sms"):
+        request = RadarAlertRequest(
+            onset_minutes=15, onset_time="12:00", km_from=0.0, km_to=3.0,
+            is_convective=False, intensity_label="Regen",
+            source_label="Radar (DWD)", tz=ZoneInfo("UTC"), segment_id="1",
+        )
+        svc.send_radar_alert(
+            trip=trip, request=request, source="Radar (DWD)",
+            cooldown_display="1 Stunde", effective_channels={kanal},
+        )
+    elif fall in ("compare_official_sms", "compare_official_premium_sms"):
+        loc = SavedLocation(id=f"loc-{uid}", name="Ort", lat=47.0, lon=11.0, elevation_m=1000)
+        svc.send_multi_location_official_alert(
+            "F004 Compare", [loc], [(_official_alert(), [f"loc-{uid}"])], {kanal},
+        )
+    else:  # official_alert_sms / official_alert_premium_sms
+        svc.send_official_alert(
+            trip=trip, notices=[(_official_alert(), ["1"])], effective_channels={kanal},
+        )
+
+    assert mitschrift.anzahl(kanal) == 1, (
+        f"F004 ({fall}): bei Stand=Briefing-Cap ({briefing_cap}) MUSS der "
+        f"Alarm-Versand trotzdem durchgehen (Alarm-Cap ist hoeher) -- "
+        f"sonst zaehlt diese Stelle faelschlich mit purpose='briefing'. "
+        f"Aufgezeichnet: {mitschrift.anzahl(kanal)}"
+    )
+    assert _zaehler_lesen(uid).get(kanal) == briefing_cap + 1, (
+        f"F004 ({fall}): Zaehler muss auf {briefing_cap + 1} stehen, "
+        f"gelesen {_zaehler_lesen(uid)!r}"
+    )
+
+
+def test_f005_vienna_zeit_kurz_nach_mitternacht_zaehlt_noch_zum_utc_vortag():
+    """Adversary F005 (LOW). `to_utc()` in `sms_daily_limit._today()` wurde
+    bislang nie mit einer NICHT-UTC-aware Zeit ausgefuehrt -- ein stiller
+    Rueckfall auf `now.date()` (ohne UTC-Umrechnung) waere unbemerkt
+    geblieben. Vienna 00:30 CET (15.1.) liegt noch im UTC-VORTAG (23:30 UTC
+    am 14.1., CET = UTC+1 im Winter) -- der Zaehler des UTC-Vortags muss
+    weiterhin gelten, kein stiller Reset auf einen "neuen" Tag.
+    """
+    from output.channels.base import ChannelBlockedError
+    from services import sms_daily_limit
+
+    uid = _kennung("f005")
+    _nutzer_anlegen(uid, "standard")
+    _zaehler_schreiben(uid, sms=10, datum="2026-01-14")
+
+    vienna_kurz_nach_mitternacht = datetime(
+        2026, 1, 15, 0, 30, tzinfo=ZoneInfo("Europe/Vienna"),
+    )
+
+    with pytest.raises(ChannelBlockedError):
+        sms_daily_limit.check_and_reserve(
+            uid, "sms", "alert", vienna_kurz_nach_mitternacht,
+        )
+    stand = _zaehler_lesen(uid)
+    assert stand.get("date") == "2026-01-14", (
+        f"F005: der UTC-Vortag muss weiterhin als 'heute' gelten (Vienna "
+        f"00:30 CET = 23:30 UTC des Vortags), gelesen {stand!r}"
+    )
+    assert stand.get("sms") == 10, "F005: eine Sperre darf den Zaehler nicht veraendern"
+
+
+def test_f006_standard_nutzer_bekommt_keine_garmin_antwort_per_premium_sms(mitschrift):
+    """Adversary F006 (LOW). Ein Standard-Nutzer hat KEIN Premium-SMS-
+    Kontingent (Reply-Cap 0) -- die erste Garmin-Antwort muss bereits
+    gesperrt sein, nicht erst nach einer Zusatzmenge."""
+    uid = _kennung("f006")
+    _nutzer_anlegen(uid, "standard")
+    svc = NotificationService(settings=_settings(), user_id=uid)
+    ergebnis = CommandResult(
+        success=True, command="report",
+        confirmation_subject="Bestaetigung", confirmation_body="OK",
+    )
+
+    svc.send_command_reply_premium_sms(ergebnis, _settings())
+
+    assert mitschrift.anzahl("premium_sms") == 0, (
+        f"F006: Standard-Nutzer darf KEINE Garmin-Antwort per Premium-SMS "
+        f"erhalten (Reply-Cap 0), aufgezeichnet: "
+        f"{mitschrift.anzahl('premium_sms')}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Adversary Fix-Loop 2 (2026-09-24) — F001b, F001c (oben, Parametrisierung
+# von test_f001), F008
+# ---------------------------------------------------------------------------
+
+
+_LOCK_SUFFIX_TESTKONST = ".lock"
+
+
+def test_f008_dauerhafter_oeffnungs_oder_schreibfehler_ist_fail_open(mitschrift, caplog):
+    """Adversary F008 (LOW). Die drei OSError-Fail-Open-Stellen in
+    ``sms_daily_limit`` -- Sperrdatei oeffnen, ``_write`` in
+    ``check_and_reserve``, ``_write`` in ``release_reservation`` -- waren
+    bislang durch KEINEN Test bewacht.
+
+    Bewusste Design-Entscheidung (F007, aus Fix-Loop 1, NICHT zu aendern):
+    ein DAUERHAFTER Schreib-/Oeffnungsfehler setzt das Tageslimit bewusst
+    ausser Kraft -- Zustellung geht vor Zaehltreue, exakt wie beim
+    bestehenden Lock-Timeout-Fail-Open (``throttle_store.py``/
+    ``forecast_budget.py``-Muster). Erwartet in allen drei Faellen: kein
+    Wurf, der Versand geht durch, eine WARNING wird geloggt.
+    """
+    import logging
+
+    from services import sms_daily_limit as sdl
+
+    caplog.set_level(logging.WARNING, logger="sms_daily_limit")
+
+    # --- Szenario A: Sperrdatei laesst sich nicht oeffnen -------------------
+    uid_a = _kennung("f008a")
+    _nutzer_anlegen(uid_a, "standard")
+    echtes_open = sdl.os.open
+
+    def _kaputtes_open(pfad, *args, **kwargs):
+        if str(pfad).endswith(_LOCK_SUFFIX_TESTKONST):
+            raise OSError("Simulierter Oeffnungsfehler (F008 Szenario A)")
+        return echtes_open(pfad, *args, **kwargs)
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(sdl.os, "open", _kaputtes_open)
+        svc_a = NotificationService(settings=_settings(), user_id=uid_a)
+        trip_a = _trip(f"trip-{uid_a}")
+        caplog.clear()
+        svc_a.send_trip_report(_report_request(trip_a, send_sms=True))
+
+    assert mitschrift.anzahl("sms") == 1, (
+        "F008 (Sperrdatei-Oeffnungsfehler): SMS muss trotzdem versendet "
+        "werden (fail-open)"
+    )
+    assert "nicht erreichbar" in caplog.text, (
+        f"F008 (Sperrdatei-Oeffnungsfehler): WARNING erwartet, geloggt: "
+        f"{caplog.text!r}"
+    )
+
+    # --- Szenario B: Schreibfehler beim Reservieren (check_and_reserve) ----
+    uid_b = _kennung("f008b")
+    _nutzer_anlegen(uid_b, "standard")
+
+    def _write_immer_kaputt(pfad, daten):
+        raise OSError("Simulierter Schreibfehler (F008 Szenario B)")
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(sdl, "_write", _write_immer_kaputt)
+        svc_b = NotificationService(settings=_settings(), user_id=uid_b)
+        trip_b = _trip(f"trip-{uid_b}")
+        caplog.clear()
+        svc_b.send_trip_report(_report_request(trip_b, send_sms=True))
+
+    assert mitschrift.anzahl("sms") == 2, (
+        "F008 (Reservierungs-Schreibfehler): SMS muss trotzdem versendet "
+        "werden (fail-open)"
+    )
+    assert "Schreiben von" in caplog.text, (
+        f"F008 (Reservierungs-Schreibfehler): WARNING erwartet, geloggt: "
+        f"{caplog.text!r}"
+    )
+
+    # --- Szenario C: Schreibfehler beim Rollback (release_reservation) -----
+    # Der eigentliche Transport schlaegt bewusst fehl (Aufzeichner wirft),
+    # damit der Rollback-Zweig ueberhaupt erreicht wird. NUR der ZWEITE
+    # `_write`-Aufruf (der Rollback) wird kaputt gemacht -- der erste (die
+    # Reservierung) bleibt echt, sonst waere Szenario C nicht von B zu
+    # unterscheiden.
+    uid_c = _kennung("f008c")
+    _nutzer_anlegen(uid_c, "standard")
+    echtes_write = sdl._write
+    aufrufe = {"n": 0}
+
+    def _zweiter_write_kaputt(pfad, daten):
+        aufrufe["n"] += 1
+        if aufrufe["n"] >= 2:
+            raise OSError("Simulierter Rollback-Schreibfehler (F008 Szenario C)")
+        return echtes_write(pfad, daten)
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(sdl, "_write", _zweiter_write_kaputt)
+        svc_c = NotificationService(settings=_settings(), user_id=uid_c)
+        trip_c = _trip(f"trip-{uid_c}")
+        mitschrift.fehler["sms"] = RuntimeError("Transport kaputt (F008 Szenario C)")
+        caplog.clear()
+        svc_c.send_trip_report(_report_request(trip_c, send_sms=True))  # darf NICHT werfen
+
+    assert "sms" not in mitschrift.fehler, (
+        "F008 (Rollback-Schreibfehler) Vorbedingung: der Transport muss "
+        "tatsaechlich versucht worden sein"
+    )
+    assert "Rollback-Schreiben" in caplog.text, (
+        f"F008 (Rollback-Schreibfehler): WARNING erwartet, geloggt: "
+        f"{caplog.text!r}"
+    )
+
+
+def test_f009a_tier_validierung_faellt_fail_closed_auf_free_zurueck():
+    """Adversary F009 (CRITICAL), Teil (a) -- direkter Nachweis auf
+    Modul-Ebene (``user_tier``), NICHT ueber ``send_trip_report``: dort
+    wuerde der zusaetzliche Fail-Closed-Fang in
+    ``sms_daily_limit.check_and_reserve`` (Teil (b) derselben Finding) den
+    unvalidierten Wert OHNEHIN abfangen (cap=0) und das Ergebnis am Ende
+    NICHT von einer echten Validierung unterscheidbar machen -- deshalb
+    bewacht dieser Test GEZIELT die ``_tier()``-Validierung selbst,
+    unabhaengig von der zweiten Fangstelle. GIVEN ``user.json`` enthaelt
+    ``{"tier": ["hack"]}`` (gueltiges Dict, aber der Tier-WERT ist kein
+    String) / WHEN ``_tier()``/``sms_allowed()``/``premium_sms_allowed()``/
+    ``daily_alert_limit()`` aufgerufen werden / THEN faellt jede Funktion
+    fail-CLOSED auf die free-Werte zurueck, kein Wurf.
+    """
+    from services import user_tier
+
+    uid = _kennung("f009a")
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"tier": ["hack"]}))
+
+    assert user_tier._tier(uid) == "free", (
+        f"F009a: ein Tier-Wert, der kein bekannter String ist, muss auf "
+        f"'free' zurueckfallen, erhalten {user_tier._tier(uid)!r}"
+    )
+    assert user_tier.sms_allowed(uid) is False, "F009a: sms_allowed muss free-Default liefern"
+    assert user_tier.premium_sms_allowed(uid) is False, (
+        "F009a: premium_sms_allowed muss free-Default liefern"
+    )
+    assert user_tier.daily_alert_limit(uid) == 2, (
+        "F009a: daily_alert_limit muss das free-Default (2) liefern"
+    )
+
+
+def test_f009b_werfender_tier_lookup_ist_fail_closed(mitschrift):
+    """Adversary F009 (CRITICAL), Teil (b). GIVEN der Tier-/Cap-Lookup
+    (``sms_daily_limit._cap``) wirft aus einem beliebigen Grund (hier per
+    Monkeypatch gezielt simuliert, unabhaengig von einer konkreten
+    Dateninkonsistenz) / WHEN ein echtes Trip-Briefing ausgeloest wird /
+    THEN wird NICHT fail-open durchgelassen (unbegrenzter SMS-Versand waere
+    ein Rechte-Problem, kein Infrastruktur-Problem), sondern fail-CLOSED
+    gesperrt (`cap=0` -> `ChannelBlockedError`, wie bei einem echten
+    free-Nutzer) -- kein Wurf verlaesst `send_trip_report`.
+    """
+    from services import sms_daily_limit as sdl
+
+    uid = _kennung("f009b")
+    _nutzer_anlegen(uid, "premium")  # eigentlich unbegrenzt -- der Lookup wirft trotzdem
+    trip = _trip(f"trip-{uid}")
+    svc = NotificationService(settings=_settings(), user_id=uid)
+
+    def _kaputter_cap(user_id, kind, purpose):
+        raise RuntimeError("Simulierter Tier-/Cap-Lookup-Fehler (F009b)")
+
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(sdl, "_cap", _kaputter_cap)
+        ergebnis = svc.send_trip_report(_report_request(trip, send_sms=True))
+
+    assert mitschrift.anzahl("sms") == 0, (
+        f"F009b: bei einem werfenden Tier-/Cap-Lookup muss die SMS "
+        f"fail-CLOSED gesperrt bleiben, aufgezeichnet: "
+        f"{mitschrift.anzahl('sms')}"
+    )
+    assert "sms" in ergebnis.blocked_channels, (
+        f"F009b: Sperrgrund erwartet, {ergebnis.blocked_channels!r}"
+    )
+    assert mitschrift.anzahl("email") == 1, (
+        "F009b: E-Mail muss trotz werfendem Tier-Lookup zugestellt werden"
+    )
+    assert mitschrift.anzahl("telegram") >= 1, (
+        "F009b: Telegram muss trotz werfendem Tier-Lookup zugestellt werden"
     )

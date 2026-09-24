@@ -27,7 +27,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from app.config import Settings  # noqa: E402
-from app.loader import get_briefings_dir, load_all_trips, save_trip  # noqa: E402
+from app.loader import get_briefings_dir, get_data_dir, load_all_trips, save_trip  # noqa: E402
 from app.models import TripReportConfig  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from services.trip_command_processor import (  # noqa: E402
@@ -43,6 +43,18 @@ def uid():
     u = f"tdd-2282-reg-{uuid.uuid4().hex[:8]}"
     yield u
     shutil.rmtree(get_briefings_dir(u).parent, ignore_errors=True)
+
+
+def _nutzer_mit_tier(uid: str, tier: str = "premium") -> None:
+    """Nachbesserung #2412 S4a: `send_command_reply_premium_sms` (via
+    `_via_premium_sms`) hatte vor dem SMS-Tageslimit-Gate keinen Tier-Check
+    -- ohne `user.json` faellt `user_tier._tier()` auf "free" zurueck (Cap
+    0). Premium-SMS ist laut #1676 D7 ein Premium-Merkmal, diese Tests
+    stehen fuer einen Premium-Nutzer. Muster `test_sms_tageslimit.py::
+    _nutzer_anlegen`."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
 
 
 def _trip(user_id: str, name: str, start_offset_days: int) -> Trip:
@@ -121,6 +133,7 @@ _KANAELE = {"telegram": _via_telegram, "premium_sms": _via_premium_sms}
 @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
 @pytest.mark.parametrize("vergleich", [None, "archiviert", "abgelaufen"])
 def test_ac1_ein_trip_ohne_aktiven_vergleich_pausiert_trip(monkeypatch, uid, kanal, vergleich):
+    _nutzer_mit_tier(uid)
     trip = _trip(uid, "Korsika", start_offset_days=-1)
     if vergleich == "archiviert":
         _preset(uid, "Alpenblick", archived_at="2026-09-01T00:00:00Z")
@@ -135,6 +148,7 @@ def test_ac1_ein_trip_ohne_aktiven_vergleich_pausiert_trip(monkeypatch, uid, kan
 
 @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
 def test_ac3_mehrere_trips_ohne_vergleich_pick_active_trip_entscheidet(monkeypatch, uid, kanal):
+    _nutzer_mit_tier(uid)
     aktuell = _trip(uid, "Korsika", start_offset_days=-1)
     zukunft = _trip(uid, "Dolomiten", start_offset_days=20)
 
