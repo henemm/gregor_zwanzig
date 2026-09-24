@@ -130,3 +130,8 @@ services → app ist bestehendes Importmuster (kein Zirkelbezug, kein Schichtbru
 
 ### Open Questions
 - keine (Nachtwort-Frage durch unveränderten Wortlaut + eigene Tabelle aufgelöst; #2011 ist geschlossen)
+
+## RED-Phase-Erkenntnisse (2026-09-24, für /50-implement)
+- **Testname-Korrektur zu AC-1/AC-6:** Die Spec nennt `test_altlasten_basislinie_hat_keinen_leerlauf_eintrag`. Bei leerer `ALTLASTEN` ist dieser Test strukturell grün (kein toter Eintrag möglich). Der Zweig „unbekannter Fund" steckt in **`test_altlasten_basislinie_deckt_nichts_zu_das_nicht_in_ihr_steht`** — das ist der Test, der zusammen mit `test_ac12_echter_backend_baum…` rot war und bei der Mutations-Gegenprobe (AC-6) rot werden muss.
+- LOW-Literal in `test_thunder_headline_sentence.py`: `carriers=["cape"]` → „Instabile Luftmasse (leicht)[ ab 14:00]".
+- RED-Stand: 15 rot (13 neue Tests + 2 Wächter mit genau den drei Fundstellen), 77 grün. Sicherung: Scratchpad `red_backup/`.

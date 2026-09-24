@@ -287,26 +287,12 @@ class Altlast:
 # behauptet ausdruecklich NICHT, die Kopien seien gerechtfertigt (mehrere sind
 # nutzersichtbare Defekte); sie sagt "bekannt, nachverfolgt, bewacht".
 # Gegen Verrotten schuetzt ``test_altlasten_basislinie_hat_keinen_leerlauf_eintrag``.
-ALTLASTEN = (
-    Altlast(
-        "src/app/day_window.py",
-        "_NIGHT_ADDENDUM_WORD",
-        "A",
-        "Nacht-Zusatz fuehrt LOW/MED/HIGH lokal, NONE absichtlich ausgelassen",
-    ),
-    Altlast(
-        "src/services/trip_report_scheduler.py",
-        "_thunder_entry_from_trend_row",
-        "B",
-        "eigene Satzvorlagen je Stufe",
-    ),
-    Altlast(
-        "src/services/trip_report_scheduler.py",
-        "_build_thunder_forecast",
-        "B",
-        "exaktes Duplikat derselben Satzvorlagen, unabhaengig gepflegt",
-    ),
-)
+# #2028: die letzten drei Eintraege (day_window.py::_NIGHT_ADDENDUM_WORD
+# Regel A, trip_report_scheduler.py::_thunder_entry_from_trend_row und
+# ::_build_thunder_forecast Regel B) sind saniert -- die Basislinie ist leer.
+# Der Ratschen-Mechanismus (``baseline``-Parameter des Scanners) bleibt
+# bestehen: jede neue lokale Kopie ist ab jetzt ein "unbekannter" Fund.
+ALTLASTEN = ()
 
 
 @dataclass(frozen=True)
@@ -1105,13 +1091,15 @@ def test_altlasten_basislinie_deckt_nichts_zu_das_nicht_in_ihr_steht(bestand_ohn
 
 
 def test_ac8_2010_2011_sechs_eintraege_sind_aus_altlasten_gestrichen():
-    """AC-8: Nach dem Fix sind exakt die drei NICHT von #2010/#2011
-    betroffenen Eintraege in ALTLASTEN uebrig -- die sechs sanierten
+    """AC-8: Nach dem Fix sind die sechs von #2010/#2011 sanierten
     Eintraege (html.py::_thunder_risk_level Regel B/C,
     trip_command_processor.py::_THUNDER_LABEL/_MAP_EMOJI/_MAP_PLAIN/
-    _handle_hours_drilldown) sind gestrichen. Struktureller Nachweis ueber
-    ALTLASTEN selbst (Laenge/Inhalt vor/nach dem Fix), keine neu erfundene
-    String-Pruefung."""
+    _handle_hours_drilldown) gestrichen. #2028 (Spec fix_2028 AC-2): auch
+    die drei damals verbleibenden Eintraege (day_window.py::
+    _NIGHT_ADDENDUM_WORD, trip_report_scheduler.py::
+    _thunder_entry_from_trend_row/_build_thunder_forecast) sind saniert --
+    ALTLASTEN ist leer. Struktureller Nachweis ueber ALTLASTEN selbst
+    (Laenge/Inhalt vor/nach dem Fix), keine neu erfundene String-Pruefung."""
     verbleibende = {e.key for e in ALTLASTEN}
     sanierte = {
         ("src/output/renderers/email/html.py", "_thunder_risk_level", "B"),
@@ -1126,13 +1114,10 @@ def test_ac8_2010_2011_sechs_eintraege_sind_aus_altlasten_gestrichen():
         "Sanierte #2010/#2011-Eintraege noch in ALTLASTEN vorhanden -- Zeile "
         f"streichen: {sorted(noch_vorhanden)}"
     )
-    erwartete_rest = {
-        ("src/app/day_window.py", "_NIGHT_ADDENDUM_WORD", "A"),
-        ("src/services/trip_report_scheduler.py", "_thunder_entry_from_trend_row", "B"),
-        ("src/services/trip_report_scheduler.py", "_build_thunder_forecast", "B"),
-    }
+    # #2028: die drei Satzvorlagen-/Nachtadjektiv-Eintraege sind saniert.
+    erwartete_rest = set()
     assert verbleibende == erwartete_rest, (
-        f"ALTLASTEN nach dem Fix: erwartet genau {sorted(erwartete_rest)}, "
+        "ALTLASTEN nach #2010/#2011/#2028: erwartet leer, "
         f"gefunden {sorted(verbleibende)}"
     )
 
