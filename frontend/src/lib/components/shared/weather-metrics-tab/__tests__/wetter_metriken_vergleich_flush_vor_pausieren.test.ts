@@ -48,7 +48,7 @@ function hub() {
 	const hubPutQueue = createPutQueue();
 	const speicherung = erstelleWetterMetrikenVergleichSpeicherung({
 		client: api,
-		wiz: ws,
+		zustand: ws,
 		preset: () => currentPreset,
 		enqueueHubWrite: (fn) => hubPutQueue.enqueue(fn),
 		onCompareUpdate: (p: ComparePreset) => {

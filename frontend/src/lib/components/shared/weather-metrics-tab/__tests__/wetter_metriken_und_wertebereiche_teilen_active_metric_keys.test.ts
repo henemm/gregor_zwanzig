@@ -75,7 +75,7 @@ function hub() {
 		saveController: ctl
 	};
 	const wertebereiche = erstelleWertebereicheVergleichSpeicherung({ ...gemeinsam, zustand: ws });
-	const wetterMetriken = erstelleWetterMetrikenVergleichSpeicherung({ ...gemeinsam, wiz: ws });
+	const wetterMetriken = erstelleWetterMetrikenVergleichSpeicherung({ ...gemeinsam, zustand: ws });
 	return { ws, ctl, wertebereiche, wetterMetriken, bedienung: wetterMetrikenBedienung(ws) };
 }
 

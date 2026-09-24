@@ -84,9 +84,9 @@ const PRESET = {
 	}
 };
 
-function wizStub(): Record<string, unknown> {
+// Issue #2276 S6g: die zehn Vergleichs-Wertprops statt eines `wiz`-Zustandsobjekts.
+function wertpropsStub(): Record<string, unknown> {
 	return {
-		activityProfile: 'wandern',
 		activeMetricKeys: ['wind_max_kmh'],
 		channelActiveMetricKeys: { email: null, telegram: null, sms: null },
 		officialAlertsEnabled: true,
@@ -124,7 +124,7 @@ function renderVergleich(): string {
 	const { body } = render(WeatherMetricsTab as never, {
 		props: {
 			context: 'vergleich',
-			wiz: wizStub(),
+			...wertpropsStub(),
 			saveController: controllerStub,
 			preset: PRESET,
 			enqueueHubWrite: <T>(fn: () => Promise<T>) => fn(),

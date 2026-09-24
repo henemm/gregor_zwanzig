@@ -47,6 +47,23 @@
 // `EINGEFROREN_SOLL_ANZAHL` unveraendert bei 47 — anders als bei S6c/S6d
 // aendert S6e die Gesamtzahl nicht.
 //
+// 🔴 STAND S6g (Issue #2276, Spec `rework_2276_s6g_wetter_metriken_wertprops.md`,
+// Design-Entscheidung 8): die Ausnahme gilt ZUSAETZLICH fuer
+// `WeatherMetricsTab.svelte` — Bilanz wie S6e: 0 Eintraege werden gestrichen,
+// die fuenf bestehenden Eintraege `WeatherMetricsTab.svelte:545/560/589/602/1323`
+// (die `context === 'route'`/`context === 'vergleich'`-Bedingungen und die
+// Markup-Gabelung) werden in GREEN auf ihre neu gemessenen Zeilennummern
+// nachgefuehrt und per `BLEIBT_MIT_INHALT` mit wortgleichem Bedingungstext
+// inhaltlich gefesselt. Grund: die zehn Wertprops + neun Rueckrufe im
+// SCRIPT-Teil liegen alle OBERHALB dieser Zeilen — ihre Verschiebung nach
+// unten ist eine reine Positionsfolge, kein Verhaltensbefund. TDD RED (diese
+// Scheibe) setzt NUR diese Vertragserweiterung; die neuen Zeilennummern samt
+// `BLEIBT_MIT_INHALT`-Eintraegen traegt GREEN nach (Muster S6d/S6e).
+// `weather-metrics-tab/weatherMetricsCompareSave.ts:534` bleibt AUF SEINER
+// ZEILE (alter, positionsbasierter Vertrag); die Textaenderung dort
+// (`!!p.wiz` -> `!!p.zustand`) bekommt bewusst KEINE Fesselung (Spec,
+// Design-Entscheidung 6/9). `EINGEFROREN_SOLL_ANZAHL` bleibt bei 47.
+//
 // TDD RED (Stand `73f504c9`)
 // -------------------------
 // Beim Stand vor S6a liefert der Zaehlbefehl 69 Fundstellen. Die eingefrorene
@@ -149,10 +166,23 @@ const ZAEHLBEFEHL =
  *     gilt weiterhin der alte, positionsbasierte Vertrag. Die Textaenderung an
  *     :221 (`!!p.wiz` -> `!!p.zustand`) bekommt bewusst KEINE Fesselung (Spec,
  *     Design-Entscheidung 4/6).
+ * 🔴 VERTRAG AN S6g /50 (Spec `rework_2276_s6g_wetter_metriken_wertprops.md`,
+ * Design-Entscheidung 8): der Zeilenzahl-Vertrag gilt ZUSAETZLICH NICHT fuer
+ * `WeatherMetricsTab.svelte`. Bilanz wie S6e, die Gesamtzahl bleibt 47:
+ *   * 0 Eintraege werden gestrichen,
+ *   * die fuenf bestehenden Eintraege (in RED `WeatherMetricsTab.svelte:545/
+ *     560/589/602/1323`) werden auf ihre in GREEN neu gemessenen Zeilennummern
+ *     nachgefuehrt und in `BLEIBT_MIT_INHALT` mit wortgleichem Bedingungstext
+ *     gefesselt — geprueft wird der Bedingungstext, nicht die Position,
+ *   * `weather-metrics-tab/weatherMetricsCompareSave.ts:534` bleibt AUF SEINER
+ *     ZEILE; fuer sie gilt weiterhin der alte, positionsbasierte Vertrag. Die
+ *     Textaenderung an :534 (`!!p.wiz` -> `!!p.zustand`) bekommt bewusst KEINE
+ *     Fesselung (Spec, Design-Entscheidung 6/9).
  *
  * Fuer alle Dateien AUSSERHALB von `AlarmeTab.svelte`, den beiden
- * Corridor-Bausteinen UND `VersandTab.svelte` gilt der alte Vertrag
- * unveraendert weiter: verschobene Zeilennummer = Befund, kein Nachtrag.
+ * Corridor-Bausteinen, `VersandTab.svelte` UND `WeatherMetricsTab.svelte` gilt
+ * der alte Vertrag unveraendert weiter: verschobene Zeilennummer = Befund, kein
+ * Nachtrag.
  */
 const EINGEFROREN: readonly string[] = [
 	// S6c: von 18 AlarmeTab-Eintraegen bleiben genau diese VIER (Schicksals-
