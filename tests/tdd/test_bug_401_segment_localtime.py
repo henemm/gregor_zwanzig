@@ -7,7 +7,7 @@ statt es zu UTC 06:00 zu konvertieren. Wetterdaten werden für das falsche 2h-Fe
 geladen.
 
 AC-1/AC-2/AC-3 MÜSSEN ROT sein — _convert_trip_to_segments hat noch tzinfo=timezone.utc.
-AC-5 (UTC-Tour) muss schon jetzt grün sein.
+AC-5 (UTC-Trip) muss schon jetzt grün sein.
 """
 from __future__ import annotations
 
@@ -203,14 +203,14 @@ def test_hourly_filter_selects_cest_correct_window():
 
 
 # ===========================================================================
-# AC-5: UTC-Touren bleiben unverändert (muss schon GRÜN sein vor dem Fix)
+# AC-5: UTC-Trips bleiben unverändert (muss schon GRÜN sein vor dem Fix)
 # ===========================================================================
 
 def test_utc_location_segment_unchanged():
-    """AC-5: GIVEN Tour in UTC-Zeitzone (Reykjavik: lat=64.1, lon=-21.9) /
+    """AC-5: GIVEN Trip in UTC-Zeitzone (Reykjavik: lat=64.1, lon=-21.9) /
     WHEN _convert_trip_to_segments / THEN start_time.hour = 8 (unverändert).
 
-    Dieser Test MUSS bereits VOR dem Fix grün sein — kein RED für UTC-Touren.
+    Dieser Test MUSS bereits VOR dem Fix grün sein — kein RED für UTC-Trips.
     """
     from app.trip import Stage, Trip, Waypoint, TimeWindow
 
@@ -230,5 +230,5 @@ def test_utc_location_segment_unchanged():
     start_utc = segments[0].start_time.astimezone(timezone.utc)
     # Reykjavik = UTC+0 (kein DST) → 08:00 lokal = 08:00 UTC
     assert start_utc.hour == 8, (
-        f"UTC-Tour: start_time.hour muss 8 bleiben, ist {start_utc.hour}"
+        f"UTC-Trip: start_time.hour muss 8 bleiben, ist {start_utc.hour}"
     )

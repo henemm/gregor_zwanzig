@@ -74,7 +74,7 @@ Schleife über bis zu `RADAR_ZONE_MAX_POINTS` Messpunkte entlang der Reststrecke
   — sie muss vor der Verdichtung abgegriffen werden. 🔴 **Vor dem Bauen zu prüfen:**
   `_zonen_ergebnisse` ist eine lokale Variable ab `:1524`; es ist nachzuweisen, dass **kein**
   Verzweigungspfad `:1680` erreicht, ohne sie gesetzt zu haben — sonst entsteht ein `NameError`
-  in einem Randfall, der auf Tour zuschlägt. Der Hinweisgeber hat Reihenfolge und Einrückung
+  in einem Randfall, der auf Trip zuschlägt. Der Hinweisgeber hat Reihenfolge und Einrückung
   verifiziert, ausdrücklich aber **nicht** jeden Pfad einzeln durchgespielt.
 - **Abgelöste Zusicherung beachten:** Die #2017-Invariante „genau **ein** `get_nowcast`-Aufruf je
   Trip" ist bewusst auf eine Obergrenze (`<=` gegen `RADAR_ZONE_MAX_POINTS`) abgelöst. In dieser

@@ -169,7 +169,7 @@ def test_ac20_reset_behaelt_die_amtlichen_eintraege():
     GIVEN ein Melde-Gedaechtnis mit einem Aenderungs-Eintrag
           ("gust_max_kmh:seg1") UND einem amtlichen Eintrag
           ("official_alert:region:X:thunderstorm:...")
-    WHEN  das Gedaechtnis der Tour zurueckgesetzt wird
+    WHEN  das Gedaechtnis der Trip zurueckgesetzt wird
     THEN  bleibt der amtliche Eintrag unveraendert erhalten und nur der
           Aenderungs-Eintrag verschwindet.
     """
@@ -241,7 +241,7 @@ def test_ac20b_reset_bleibt_ohne_amtliche_eintraege_ein_vollstaendiges_loeschen(
 def test_ac21_nach_dem_briefing_meldet_der_unveraenderte_wert_nicht_erneut():
     """AC-21 (nutzersichtbar).
 
-    GIVEN eine Tour mit einer bereits gemeldeten Wetter-Aenderung im
+    GIVEN eine Trip mit einer bereits gemeldeten Wetter-Aenderung im
           Melde-Gedaechtnis
     WHEN  danach das regulaere Briefing versendet wird (Gedaechtnis-Reset) und
           derselbe, unveraenderte Wert erneut geprueft wird

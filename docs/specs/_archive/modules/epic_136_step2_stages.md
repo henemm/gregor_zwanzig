@@ -167,7 +167,7 @@ get canAdvanceStep2(): boolean {
 }
 ```
 
-Pflicht: mindestens eine Etappe (kann auch ein Pausentag sein — Edge-Case bewusst akzeptiert; falls User „Trip ohne Tour" anlegen will, soll er das duerfen).
+Pflicht: mindestens eine Etappe (kann auch ein Pausentag sein — Edge-Case bewusst akzeptiert; falls User „Trip ohne Trip" anlegen will, soll er das duerfen).
 
 #### 3.2 `canAdvanceCurrent`-Switch-Getter (Refactor)
 

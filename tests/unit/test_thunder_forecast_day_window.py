@@ -201,7 +201,7 @@ class _StubTrip:
     """Echtes Datenobjekt (kein Mock): nur die Zugriffe, die
     _build_thunder_forecast_from_trend_or_fetch auf dem Trip macht.
 
-    #1727 S5b: seit der Rueckfall-Pfad den ORTSTAG der Tour bestimmt
+    #1727 S5b: seit der Rueckfall-Pfad den ORTSTAG der Trip bestimmt
     (`trip_local_today` -> `anchor_tz` -> `display_tz`), sind es drei statt
     zwei — `stages` und `get_stage_for_date` kommen dazu. Ohne Etappen faellt
     die Zonenaufloesung auf UTC (`trip_day.trip_tz`); dieser Test misst das

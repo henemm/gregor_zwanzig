@@ -174,7 +174,7 @@ als Konzept.
 
 ## Known Limitations
 
-- **Die Ausblick-Tabelle wird für bestehende Touren breiter.** Wer heute sieben feste Spalten sieht
+- **Die Ausblick-Tabelle wird für bestehende Trips breiter.** Wer heute sieben feste Spalten sieht
   und eine Grundauswahl mit mehr darstellbaren Größen hat, bekommt entsprechend mehr Spalten. Das
   ist die gewollte Folge von „exakt die Größen des Trips" (#2029) und über die „Aus"-Knöpfe
   jederzeit korrigierbar. **Kein Bestandsdatum geht verloren** — `outlook_metrics` ist auf Prod und
@@ -210,7 +210,7 @@ als Konzept.
 - 2026-08-21 (Implementierung, PO-Entscheide während der Umsetzung):
   - **Der Gewitter-Zellenbau wandert in einen geteilten Baustein.** Bis A3 trug ihn allein der
     feste Sieben-Spalten-Zweig; der konfigurierbare setzte nur `cells` zusammen und zeigte bloß
-    das Stufenwort. Da A3 den festen Zweig als Normalfall ablöst, hätte jede Tour Onset-Uhrzeit,
+    das Stufenwort. Da A3 den festen Zweig als Normalfall ablöst, hätte jede Trip Onset-Uhrzeit,
     tragende Zutat und Hagel-Zusatz verloren. Beide Zweige rufen jetzt je Ausgabeort **eine**
     Umsetzung (`thunder_branch.thunder_cell_html/_plain/_compact/_telegram`).
   - **Geliefert:** Prod (Commit `d3346218`). Löst ADR-0053 Punkt 1 ab (neues
@@ -219,7 +219,7 @@ als Konzept.
     Divergenz besteht seit dieser Scheibe nicht mehr) und löst **AC-13** aus
     `fix_1719_s3_aus_ist_ein_zustand.md` für den Ausblick-Mountpunkt ab (Übersicht
     und Stundenverlauf bleiben von AC-13 unverändert erfasst).
-  - **A3 dehnt den Entscheid „nur Tagesfenster" aus `fix_1841` AC-3 auf alle Touren aus** — mit
+  - **A3 dehnt den Entscheid „nur Tagesfenster" aus `fix_1841` AC-3 auf alle Trips aus** — mit
     demselben Grund: der feste Zweig entfällt als Normalfall. **Damit löst A3 #1653/#1671 für die
     3-Tages-Vorschau ab**: die Nachtangabe entfällt aus allen vier Ausblick-Darstellungen
     (HTML, Klartext, Kompakt, Telegram). Für Tages-Briefing, Stundenverlauf und Alarme gilt
@@ -235,4 +235,4 @@ als Konzept.
     statt des generischen Leerwert-Strichs — „gemessen, keine Stufe" statt „kein Wert". Erfüllt
     `fix_1841` AC-2 auch im festen Zweig und `#1514` AC-S2-4 ohne Teständerung.
   - Beifang derselben Ursache: der konfigurierbare Klartext-Zweig führte weder **Etappenname**
-    noch **Notizzeile**. Beides hätte ab A3 jede Tour verloren; beides ist ergänzt.
+    noch **Notizzeile**. Beides hätte ab A3 jede Trip verloren; beides ist ergänzt.

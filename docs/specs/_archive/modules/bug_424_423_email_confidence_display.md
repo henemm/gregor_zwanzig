@@ -94,10 +94,10 @@ assert "weniger verlässlich" in hint, f"Hint must say 'weniger verlässlich': {
 
 ## Acceptance Criteria
 
-**AC-1:** Given eine E-Mail für eine Tour mit WeatherTemplate „wandern" / When der HTML-Report gerendert wird / Then erscheint keine Spalte „Sicherheit" in der Tabelle
+**AC-1:** Given eine E-Mail für eine Trip mit WeatherTemplate „wandern" / When der HTML-Report gerendert wird / Then erscheint keine Spalte „Sicherheit" in der Tabelle
 - Test: `tests/tdd/test_bug_424_423_confidence_display.py::TestNoConfidenceInWandernTemplate`
 
-**AC-2:** Given eine E-Mail für eine Tour mit WeatherTemplate „alpen-trekking" / When der HTML-Report gerendert wird / Then erscheint keine Spalte „Sicherheit" in der Tabelle
+**AC-2:** Given eine E-Mail für eine Trip mit WeatherTemplate „alpen-trekking" / When der HTML-Report gerendert wird / Then erscheint keine Spalte „Sicherheit" in der Tabelle
 - Test: `tests/tdd/test_bug_424_423_confidence_display.py::TestNoConfidenceInAlpenTrekkingTemplate`
 
 **AC-3:** Given `build_confidence_hint()` mit einem Datenpunkt mit `confidence_pct=45` an T+48h (Mittwoch) / When der Hint-Text generiert wird / Then enthält er „Mittwoch" und „weniger verlässlich", aber keine Klammer mit °C

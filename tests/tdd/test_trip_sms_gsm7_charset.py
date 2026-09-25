@@ -250,11 +250,11 @@ def test_official_alert_sms_filters_gsm7_extension_char_in_scope(ext_char: str):
 
     FORTGESCHRIEBEN (#1948 S5): Eintrittstor ist der ORTSKOPF (``sms_scope``)
     statt des entfallenen Trip-Namens."""
-    sms = render_official_alert_sms([_notice("thunderstorm", 4, f"Tour{ext_char}Nord")])
+    sms = render_official_alert_sms([_notice("thunderstorm", 4, f"Trip{ext_char}Nord")])
     assert_gsm7_clean(sms, f"amtlicher Alarm (Extension-Zeichen {ext_char!r})")
 
 
-@pytest.mark.parametrize("ortsname", ["KHW [Test]", "Tour~Nord", "Weg|Nord"])
+@pytest.mark.parametrize("ortsname", ["KHW [Test]", "Trip~Nord", "Weg|Nord"])
 def test_official_alert_sms_with_gsm7_extension_char_in_scope(ortsname: str):
     """fix_1796 AC-3 (Bug-Nachweis): die drei in Issue #1796 gemessenen
     Beispiel-Namen, direkt aus dem Issue uebernommen -- reproduziert den

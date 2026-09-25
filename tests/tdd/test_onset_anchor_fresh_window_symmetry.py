@@ -4,7 +4,7 @@ SPEC: docs/specs/modules/feat_1468_onset_verschiebung_alarm.md (E2, AC-10)
 
 WAS HIER BEWACHT WIRD, und warum es eine eigene Datei verdient:
 
-Der Beginn-Alarm vergleicht zwei Staende derselben Tour — den Anker (vom
+Der Beginn-Alarm vergleicht zwei Staende derselben Trip — den Anker (vom
 Briefing-/Versandpfad geschrieben, `trip_report_scheduler._fetch_weather`)
 gegen den frischen Stand (vom Alarm-Pfad geholt,
 `trip_alert._fetch_fresh_weather`). Beide Seiten muessen ihre Onset-Stunde
@@ -128,7 +128,7 @@ def _trip(start: int | None, ende: int | None) -> Trip:
 
 def _segmente(start: int | None, ende: int | None):
     segmente = convert_trip_to_segments(_trip(start, ende), _tag())
-    assert segmente, "Vorbedingung: die Tour muss Segmente ergeben"
+    assert segmente, "Vorbedingung: die Trip muss Segmente ergeben"
     return segmente
 
 
@@ -181,7 +181,7 @@ def test_jedes_segment_der_tour_traegt_das_eingestellte_fenster():
     segmente = _segmente(*ENG)
     kennungen = [str(s.segment_id) for s in segmente]
     assert "Ziel" in kennungen, (
-        f"Vorbedingung: die Tour muss ein Ziel-Segment haben: {kennungen!r}"
+        f"Vorbedingung: die Trip muss ein Ziel-Segment haben: {kennungen!r}"
     )
     for s in segmente:
         assert (s.day_window_start_hour, s.day_window_end_hour) == ENG, (
@@ -207,7 +207,7 @@ def test_ohne_eingestelltes_fenster_bleiben_die_segmente_leer():
 # ==========================================================================
 
 def test_anker_und_frischer_stand_derselben_tour_erzeugen_keinen_alarm():
-    """Beide Vergleichsseiten stammen aus derselben Tour mit Fenster 8-16 und
+    """Beide Vergleichsseiten stammen aus derselben Trip mit Fenster 8-16 und
     DERSELBEN Stundenreihe — es hat sich am Wetter nichts geaendert, also darf
     kein Beginn-Alarm entstehen."""
     segment = _segmente(*ENG)[0]

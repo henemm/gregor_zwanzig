@@ -19,7 +19,7 @@ workflow: fix-2036-alarm-kilometer
 
 Alarm-Kurzmeldungen an Telegram-Kurzform, SMS und Premium-SMS zeigen heute als Ortsangabe eine
 Segmentnummer (`Seg 3`), die auf einem Garmin inReach nicht verortbar ist — der Nutzer kann nicht
-erkennen, wo Segmentgrenzen entlang der Tour liegen. Diese Spec ersetzt die Ortsangabe durch eine
+erkennen, wo Segmentgrenzen entlang der Trip liegen. Diese Spec ersetzt die Ortsangabe durch eine
 **gemessene** Kilometer-Spanne entlang der echten Wegstrecke (`km 12-20`), aber ausschließlich
 dort, wo eine belastbare, aus GPX-Trackdaten stammende Distanz vorliegt. Ohne belastbare Messung
 bleibt die heutige Segmentnummer unverändert stehen — eine aus Luftlinie erfundene
@@ -80,7 +80,7 @@ Kilometerangabe wäre glaubwürdig aussehender Unsinn und damit schlechter als d
 
 **Kilometerzählung je Etappe ab 0.** `convert_trip_to_segments` normiert die gemessene Distanz
 auf den Etappenstart (PO-Vorgabe: „jeder Tag zählt neu seine Kilometer"), unabhängig von der
-kumulierten Gesamtstrecke der Tour. Das Etappenziel behält die bestehende Sonderbehandlung
+kumulierten Gesamtstrecke der Trip. Das Etappenziel behält die bestehende Sonderbehandlung
 `🏁 Ziel` (`km_from == km_to`), auch wenn die Etappe vermessen ist — `km 20-20` wäre eine
 Verschlechterung gegenüber dem heutigen Symbol.
 
@@ -201,9 +201,9 @@ Gleichheits-Invariante oder verliert die Werte beim ersten Trip-Save.
     Plausibilitätsprüfung geschickt; das Ergebnis der Etappe ist „unvermessen", die
     Alarm-Ortsangabe zeigt weiterhin `Segment N`.
 
-- **AC-9:** Given eine mehrtägige Tour mit mehreren vermessenen Etappen / When die
+- **AC-9:** Given eine mehrtägige Trip mit mehreren vermessenen Etappen / When die
   Kilometer-Spanne für eine beliebige Etappe berechnet wird / Then beginnt die Zählung an diesem
-  Etappenstart wieder bei 0 km, unabhängig von der kumulierten Gesamtstrecke der Tour.
+  Etappenstart wieder bei 0 km, unabhängig von der kumulierten Gesamtstrecke der Trip.
   - Test: Für die dritte Etappe einer vermessenen Mehrtagestour wird die erste Kilometer-Spanne
     berechnet; ihr Startwert ist 0, nicht die Summe der Distanzen der vorherigen Etappen.
 
@@ -261,8 +261,8 @@ Gleichheits-Invariante oder verliert die Werte beim ersten Trip-Save.
   weiterhin auf Luftlinie, wodurch Ankunftszeiten um denselben Faktor zu früh ausfallen.
   Nutzersichtbar, aber eigenes Ticket → **#2042**.
 - **`official_alerts.py:2137-2147` `_trip_total_segment_ids()`** zählt Segmente über alle
-  Etappen einer Tour hinweg, obwohl Segmentnummern je Etappe vergeben werden — die
-  „gesamte Route"-Verdichtung greift dadurch bei mehrtägigen Touren nie. Vorbestehender
+  Etappen einer Trip hinweg, obwohl Segmentnummern je Etappe vergeben werden — die
+  „gesamte Route"-Verdichtung greift dadurch bei mehrtägigen Trips nie. Vorbestehender
   Nebenbefund, gehört ins Sammel-Issue → **#1199**.
 
 ## Bestandstests, die grün bleiben müssen

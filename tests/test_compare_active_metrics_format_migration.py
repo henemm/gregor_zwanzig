@@ -17,7 +17,7 @@ Read-Modify-Write-Merge (kein Replace, BUG-DATALOSS-GR221 / #102).
 
 Datenlayout (Issue #1250/#1265): Presets liegen unter
 `<root>/<uid>/briefings/<id>.json`; Vergleiche tragen `"kind": "vergleich"`,
-Touren `"kind": "route"`.
+Trips `"kind": "route"`.
 
 DIE FALLE (Verifikationsanker der Spec, gemessen am Produktionsbestand):
 `temp_max_c` und `temp_min_c` bilden auf dieselbe `metric_id` ("temperature")
@@ -111,13 +111,13 @@ def _compare_preset_with_legacy_metrics(
 
 
 def _trip_preset_with_legacy_metrics(trip_id: str, **extra) -> dict:
-    """Guard-Fixture: Tour (`kind=route`) -- traegt bewusst EBENFALLS
+    """Guard-Fixture: Trip (`kind=route`) -- traegt bewusst EBENFALLS
     `display_config.active_metrics` im Altformat. Die Compare-Umstellung darf
-    Touren NICHT anfassen (Spec: Filter `kind != "vergleich"` ->
+    Trips NICHT anfassen (Spec: Filter `kind != "vergleich"` ->
     uebersprungen)."""
     base: dict = {
         "id": trip_id,
-        "name": f"Tour {trip_id}",
+        "name": f"Trip {trip_id}",
         "kind": "route",
         "stages": [],
         "display_config": {
@@ -194,7 +194,7 @@ def test_execute_converts_three_metrics_into_three_distinct_pairs(tmp_path):
 
 
 def test_route_preset_with_active_metrics_stays_byte_identical(tmp_path):
-    """AC-6 Guard: eine Tour (`kind=route`), die ebenfalls
+    """AC-6 Guard: eine Trip (`kind=route`), die ebenfalls
     `display_config.active_metrics` traegt, bleibt bitgleich -- der
     Trip-Namensraum ist von dieser Umstellung nicht betroffen."""
     root = tmp_path / "users"
@@ -209,11 +209,11 @@ def test_route_preset_with_active_metrics_stays_byte_identical(tmp_path):
     )
     trip_after = trip_path.read_text(encoding="utf-8")
     assert trip_after == trip_before, (
-        "Tour-Preset (kind=route) darf durch die Compare-Umstellung NICHT "
+        "Trip-Preset (kind=route) darf durch die Compare-Umstellung NICHT "
         f"veraendert werden.\nvorher:\n{trip_before}\nnachher:\n{trip_after}"
     )
     assert _active_metrics(trip_path) == _AC6_KEYS, (
-        "Die Tour muss ihre Zeichenketten-Auswahl behalten"
+        "Die Trip muss ihre Zeichenketten-Auswahl behalten"
     )
     assert all(isinstance(e, dict) for e in _active_metrics(compare_path)), (
         "Der Vergleich im selben Baum haette umgestellt werden muessen"

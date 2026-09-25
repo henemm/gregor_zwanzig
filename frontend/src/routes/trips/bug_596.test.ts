@@ -29,7 +29,7 @@ test('AC-1: edit-breadcrumb enthält "Bearbeiten" im neuen mono-Format (Issue #5
 	);
 });
 
-test('AC-2: Keine Svelte-Komponente enthält noch "Touren" als Trip-Label (case-insensitiv)', () => {
+test('AC-2: Keine Svelte-Komponente enthält noch "Trips" als Trip-Label (case-insensitiv)', () => {
 	const result = execSync(
 		'grep -ri "meine touren" . --include="*.svelte" || true',
 		{ cwd: FRONTEND_SRC, encoding: 'utf-8' }
@@ -37,6 +37,6 @@ test('AC-2: Keine Svelte-Komponente enthält noch "Touren" als Trip-Label (case-
 	assert.strictEqual(
 		result.trim(),
 		'',
-		`Svelte-Dateien enthalten noch "Meine Touren" / "MEINE TOUREN":\n${result}`
+		`Svelte-Dateien enthalten noch "Meine Trips" / "MEINE TOUREN":\n${result}`
 	);
 });

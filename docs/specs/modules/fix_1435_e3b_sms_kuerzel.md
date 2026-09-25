@@ -9,7 +9,7 @@ tags: [metric-catalog, sms, trip, naming, register]
 workflow: fix-1435-e3b-sms-kuerzel
 ---
 
-# Fix #1435 Etappe E3b — Touren-SMS übernimmt die Register-Kürzel für Schnee
+# Fix #1435 Etappe E3b — Trips-SMS übernimmt die Register-Kürzel für Schnee
 
 ## Approval
 
@@ -17,7 +17,7 @@ workflow: fix-1435-e3b-sms-kuerzel
 
 ## Purpose
 
-Die Touren-SMS benennt drei Wettergrößen mit anderen Kürzeln als das zentrale
+Die Trips-SMS benennt drei Wettergrößen mit anderen Kürzeln als das zentrale
 Wetter-Namensregister (`metric_catalog.py`): Schneehöhe heißt dort `SN` statt
 `SD`, Schneefallgrenze `SFL` statt `SL`, Neuschnee `SN24+` statt `NS24+`.
 Dadurch bedeutet `SN` in derselben SMS-Zeile zwei verschiedene Dinge: die
@@ -152,7 +152,7 @@ Mitziehen der anderen auffällt.
 ## Expected Behavior
 
 - **Input:** Ein Nutzer mit aktiviertem Wintersport-Profil und den Metriken
-  Schneehöhe, Neuschnee, Schneefallgrenze erhält ein Touren-Briefing (morgens
+  Schneehöhe, Neuschnee, Schneefallgrenze erhält ein Trips-Briefing (morgens
   oder abends) per E-Mail/Telegram mit eingebetteter SMS-Kurzform.
 - **Output:** Die SMS-Zeile trägt `SD180` (statt `SN180`), `NS24+25` (statt
   `SN24+25`), `SL1800` (statt `SFL1800`). Eine in derselben Zeile vorhandene

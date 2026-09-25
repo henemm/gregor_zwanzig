@@ -48,7 +48,7 @@ from services.weather_snapshot import WeatherSnapshotService
 HEUTE = date(2026, 2, 14)
 MORGEN = date(2026, 2, 15)
 TRIP_ID = "tour-2186-adhoc"
-TRIP_NAME = "Tour 2186 Adhoc"
+TRIP_NAME = "Trip 2186 Adhoc"
 
 # London im Februar ist GMT — Ortszeit == UTC. Der Ortstag deckt sich damit
 # mit dem UTC-Tag; AC-12 prueft den entfernten Fall separat.
@@ -498,7 +498,7 @@ class TestEntfernteZeitzone:
         self, umgebung: Path,
     ) -> None:
         """
-        GIVEN eine Tour in Neuseeland und einen Abruf um 15:00 Ortszeit,
+        GIVEN eine Trip in Neuseeland und einen Abruf um 15:00 Ortszeit,
         WHEN die Tages-Aggregation laeuft,
         THEN bleibt die Zuordnung „heute" auf dem Ortstag 14.02., das
              vollstaendig vergangene Vormittags-Segment entfaellt, und der

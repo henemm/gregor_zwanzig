@@ -18,7 +18,7 @@ tags: [bugfix, frontend, sidebar, navigation, design-compliance, issue-320]
 
 ## Zweck
 
-CHARTER §2 schreibt exakt 4 Haupt-Nav-Bereiche vor: **Startseite · Touren · Orts-Vergleich · Archiv**. Das aktuelle 4. Item in `Sidebar.svelte` und `BottomNav.svelte` ist "Standorte" (`/locations`) — "Archiv" (`/archiv`) fehlt vollständig. Außerdem existiert die Route `/archiv` noch nicht.
+CHARTER §2 schreibt exakt 4 Haupt-Nav-Bereiche vor: **Startseite · Trips · Orts-Vergleich · Archiv**. Das aktuelle 4. Item in `Sidebar.svelte` und `BottomNav.svelte` ist "Standorte" (`/locations`) — "Archiv" (`/archiv`) fehlt vollständig. Außerdem existiert die Route `/archiv` noch nicht.
 
 Der Fix ersetzt `/locations` als 4. Nav-Item durch `/archiv` in beiden Navigationskomponenten und legt eine Placeholder-Seite für das Archiv an.
 
@@ -77,7 +77,7 @@ Neue Datei gemäß SCREENS.json (id: `archiv`):
 - Eyebrow: `ARCHIV · VERGANGENE TOUREN`
 - Title: `Archiv`
 - Layout: Kachel-Grid
-- Empty-State: Text "Noch keine abgeschlossenen Touren im Archiv." ohne CTA (Archiv befüllt sich automatisch)
+- Empty-State: Text "Noch keine abgeschlossenen Trips im Archiv." ohne CTA (Archiv befüllt sich automatisch)
 - Kein `+page.server.ts` nötig — Placeholder hat keinen API-Call
 
 ### 4. LoC-Budget
@@ -92,12 +92,12 @@ Neue Datei gemäß SCREENS.json (id: `archiv`):
 ## Expected Behavior
 
 - **Input:** Angemeldeter User ruft eine beliebige Seite der App auf
-- **Output:** Sidebar (Desktop) und BottomNav (Mobile) zeigen 4 Items: Startseite · Meine Touren · Orts-Vergleich · Archiv — in dieser Reihenfolge. Klick auf "Archiv" führt zu `/archiv` mit Empty-State.
+- **Output:** Sidebar (Desktop) und BottomNav (Mobile) zeigen 4 Items: Startseite · Meine Trips · Orts-Vergleich · Archiv — in dieser Reihenfolge. Klick auf "Archiv" führt zu `/archiv` mit Empty-State.
 - **Side effects:** `/locations` ist weiterhin über `/account`-Links und den Compare-Bereich erreichbar, erscheint aber nicht mehr in der Haupt-Navigation.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein angemeldeter User auf einer beliebigen Desktop-Seite / When er die Sidebar betrachtet / Then zeigt sie genau 4 Items in dieser Reihenfolge: Startseite, Meine Touren, Orts-Vergleich, Archiv — und kein Item namens "Standorte" oder "Locations"
+- **AC-1:** Given ein angemeldeter User auf einer beliebigen Desktop-Seite / When er die Sidebar betrachtet / Then zeigt sie genau 4 Items in dieser Reihenfolge: Startseite, Meine Trips, Orts-Vergleich, Archiv — und kein Item namens "Standorte" oder "Locations"
   - Test: (populated after /tdd-red)
 
 - **AC-2:** Given ein angemeldeter User auf einem Mobil-Viewport (<900px) / When er die BottomNav betrachtet / Then zeigt sie genau 4 Items: Übersicht, Trips, Vergleich, Archiv — und `data-testid="bottom-nav-item-archive"` existiert, `data-testid="bottom-nav-item-locations"` existiert nicht mehr

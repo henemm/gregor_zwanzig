@@ -81,7 +81,7 @@ describe('AC-5/AC-6: buildCreateTripPayload — Wegpunkte je Etappe persistiert 
 
 	test('AC-6: Etappe ganz ohne Wegpunkte bleibt leer (kein Crash)', () => {
 		const empty: CreateTripState = {
-			name: 'Leer-Tour',
+			name: 'Leer-Trip',
 			startDate: '2026-06-15',
 			stages: [{ id: 1, name: 'Etappe ohne GPX', waypoints: [] }],
 			channels: { email: true, telegram: false, sms: false },

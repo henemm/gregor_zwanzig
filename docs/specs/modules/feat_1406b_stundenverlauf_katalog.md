@@ -34,7 +34,7 @@ Renderer-Spaltenliste). Diese Lieferung stellt Bedienfläche UND
 Auflösungspfad in einem Zug auf den Katalog um und führt die vier Stellen
 auf eine zusammen — sonst wächst genau das Muster, gegen das Epic #1372/
 Ticket #1435 antritt. Nach der Umstellung wählt der Nutzer im Stundenverlauf
-aus demselben Vorrat wie bei einer Tour.
+aus demselben Vorrat wie bei einer Trip.
 
 ## Source
 
@@ -318,7 +318,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
     aktiv, um zu belegen, dass der Merge nicht durch die Erweiterung gestört
     wird.
 
-- **AC-7 (Trip unberührt):** Given eine Tour (kein Ortsvergleich) mit
+- **AC-7 (Trip unberührt):** Given eine Trip (kein Ortsvergleich) mit
   Stundenverlauf in der Mail / When sie nach dieser Änderung gerendert wird /
   Then ist sie zeichengleich zu einer Mail vor der Änderung — diese Scheibe
   ändert `email/helpers.py`/`trip_report.py` nicht, Compare ruft weiterhin nur
@@ -437,7 +437,7 @@ tatsächlich per IMAP zugestellte Mail liest, keine Vorschau-Antwort:
 1. Ein Test-Vergleich mit erweiterter Stundenverlauf-Auswahl (mindestens eine
    der 14 neuen Größen zusätzlich zu einer bestehenden) wird angelegt.
 2. **Ein** Testversand, Empfänger ausschließlich `gregor-test@henemm.com`
-   (kein Sammelversand über echte Touren — Kontingent-Schonung, #1329).
+   (kein Sammelversand über echte Trips — Kontingent-Schonung, #1329).
 3. IMAP-Abruf der zugestellten Mail.
 4. `.claude/hooks/email_spec_validator.py` gegen die zugestellte Mail —
    Exit 0 ist Pflichtbedingung für „E2E bestanden" (AC-9).
@@ -459,12 +459,12 @@ tatsächlich per IMAP zugestellte Mail liest, keine Vorschau-Antwort:
   Bildschirmen/in manchen Mail-Clients unhandlich werden. Kein Teil dieser
   Lieferung begrenzt die Anzahl aktiv gewählter Größen.
 - **Compare ruft `format_value`/`severity_for` nur AUF, importiert aber nicht
-  die Tour-Orchestrierung** (`dp_to_row`/`extract_hourly_rows` aus
+  die Trip-Orchestrierung** (`dp_to_row`/`extract_hourly_rows` aus
   `email/helpers.py`) — diese erwarten ein volles
   `UnifiedWeatherDisplayConfig`, das der Vergleich nicht hat. Geteilt ist die
   Formel, nicht die Aufrufsignatur. Ein künftiger Versuch, Compare direkt auf
   die Trip-Orchestrierung umzustellen, ist eine eigene, hier nicht
-  gelieferte Änderung mit Regressionsrisiko für die Tour-Mail.
+  gelieferte Änderung mit Regressionsrisiko für die Trip-Mail.
 - **`groupCompareCatalog()` entartet für den Stundenverlauf strukturell immer
   zum Ein-Options-Zweig** — der Baustein bringt hier keine funktionale
   Mehrfachauswahl (wie bei Temperatur im Ausblick), sondern ausschließlich

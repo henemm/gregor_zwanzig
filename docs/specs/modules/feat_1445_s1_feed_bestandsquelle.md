@@ -253,7 +253,7 @@ italienische Warnung seltener oder unvollständiger sieht als heute.
     AC-4) für den Fall „Punkt außerhalb Italiens".** Grund: die Zuständigkeit wurde in `covers()`
     über die grobe DPC-Radar-Bbox entschieden, in der auch Österreich, die Schweiz, Slowenien,
     Kroatien und offenes Meer liegen. Für diese Punkte war der Hinweis „nicht abrufbar" sachlich
-    falsch (Prod-Messung 2026-08-01: 39 Punkte einer einzigen Tour, fortlaufend). Seit S4 ist die
+    falsch (Prod-Messung 2026-08-01: 39 Punkte einer einzigen Trip, fortlaufend). Seit S4 ist die
     Zuständigkeit geometriebasiert: nicht einer der 187 Warnzonen zuordenbar ⇒ nicht zuständig ⇒
     schweigen, kein Hinweis, keine Diagnose-Zeile. **Unverändert gültig bleibt AC-5 für echte
     Ausfälle** eines tatsächlich zuständigen italienischen Orts (fehlgeschlagener Abruf,

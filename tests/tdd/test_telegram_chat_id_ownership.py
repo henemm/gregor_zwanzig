@@ -17,7 +17,7 @@ Deckt AC-7 bis AC-10 der Spec ``docs/specs/modules/telegram_chat_id_ownership.md
 Nachweisform (CLAUDE.md, Mock-Verbot):
 
 * Echtes Dateisystem (``tmp_path``) mit echten ``users/<id>/user.json``-Profilen
-  und einer ueber ``save_trip`` echt persistierten Tour.
+  und einer ueber ``save_trip`` echt persistierten Trip.
 * Gefakt wird AUSSCHLIESSLICH die aeussere Netzgrenze: ``httpx.post``. Beide
   betroffenen Aufrufer (``services.inbound_telegram_reader`` und
   ``output.channels.telegram``) rufen dasselbe Modulattribut auf, ein Recorder
@@ -68,7 +68,7 @@ def _write_user(
 
 
 def _make_active_trip(user_id: str, name: str) -> Trip:
-    """Echt persistierte, heute aktive Tour (drei Tage, damit die Ortstag-
+    """Echt persistierte, heute aktive Trip (drei Tage, damit die Ortstag-
     Rechnung an der Tagesgrenze nicht danebenliegt)."""
     today = date.today()
     waypoints = [
@@ -238,7 +238,7 @@ def test_lookup_still_prefers_real_user_over_test_users_sharing_the_chat_id(tmp_
 def test_incoming_message_from_ambiguous_chat_id_leaks_no_account_data(
     tmp_path, monkeypatch, caplog,
 ):
-    """AC-9: GIVEN "anna" (mit aktiver Tour) und "bertram" teilen sich die
+    """AC-9: GIVEN "anna" (mit aktiver Trip) und "bertram" teilen sich die
     Chat-ID 55501
     WHEN von dieser Chat-ID die Nachricht "status" eingeht
     THEN geht KEIN Trip und KEINE Einstellung eines der beiden Konten hinaus,

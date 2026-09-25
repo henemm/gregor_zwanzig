@@ -8,7 +8,7 @@ version: "1.0"
 tags: [copy, frontend, trips]
 ---
 
-# COPY-Fix: "Trip/Trips" → "Tour/Touren" in der Trips-Listenansicht
+# COPY-Fix: "Trip/Trips" → "Trip/Trips" in der Trips-Listenansicht
 
 ## Approval
 
@@ -38,20 +38,20 @@ Ausschließlich Textersetzungen in Template-HTML und String-Literals. Keine Logi
 
 | Zeile | Alt | Neu | Quelle |
 |-------|-----|-----|--------|
-| ~236 | `Alle aktiven Trips für` | `Alle aktiven Touren für` | §1 |
-| ~271 | `<h1 …>Trips</h1>` | `<h1 …>Meine Touren</h1>` | §6 Page-Title |
-| ~274 | `Neuer Trip` (Btn) | `+ Neue Tour` | §7 CTA + §9 |
-| ~302 | `Keine Trips vorhanden` | `Noch keine Tour.` | §7 Headline |
-| ~303 | `Erstelle deinen ersten Trip und konfiguriere Wetter-Reports.` | `Lege deine erste Tour an — Wizard in 4 Schritten.` | §7 Body |
-| ~304 | `Ersten Trip erstellen` (Btn) | `+ Neue Tour` | §7 CTA |
-| ~436 | `{n} von {n} Trips` | `{n} von {n} Touren` | §1 |
-| ~450 | `Trip löschen` (Dialog-Titel) | `Tour löschen` | §9 |
+| ~236 | `Alle aktiven Trips für` | `Alle aktiven Trips für` | §1 |
+| ~271 | `<h1 …>Trips</h1>` | `<h1 …>Meine Trips</h1>` | §6 Page-Title |
+| ~274 | `Neuer Trip` (Btn) | `+ Neue Trip` | §7 CTA + §9 |
+| ~302 | `Keine Trips vorhanden` | `Noch keine Trip.` | §7 Headline |
+| ~303 | `Erstelle deinen ersten Trip und konfiguriere Wetter-Reports.` | `Lege deine erste Trip an — Wizard in 4 Schritten.` | §7 Body |
+| ~304 | `Ersten Trip erstellen` (Btn) | `+ Neue Trip` | §7 CTA |
+| ~436 | `{n} von {n} Trips` | `{n} von {n} Trips` | §1 |
+| ~450 | `Trip löschen` (Dialog-Titel) | `Trip löschen` | §9 |
 
 ### `frontend/src/lib/components/ui/sidebar/BottomNav.svelte`
 
 | Zeile | Alt | Neu | Quelle |
 |-------|-----|-----|--------|
-| ~10 | `label: 'Trips'` | `label: 'Touren'` | §1 |
+| ~10 | `label: 'Trips'` | `label: 'Trips'` | §1 |
 
 ### Nicht ändern
 
@@ -62,24 +62,24 @@ Ausschließlich Textersetzungen in Template-HTML und String-Literals. Keine Logi
 ## Expected Behavior
 
 - **Input:** Nutzer ruft `/trips` auf
-- **Output:** Seite zeigt „Meine Touren" als H1, alle Buttons/Labels/Dialoge verwenden „Tour/Touren"
+- **Output:** Seite zeigt „Meine Trips" als H1, alle Buttons/Labels/Dialoge verwenden „Trip/Trips"
 - **Side effects:** keine
 
 ## Acceptance Criteria
 
-**AC-1:** Given die Trips-Listenansicht ist geöffnet / When die Seite lädt / Then lautet die H1-Überschrift „Meine Touren" (nicht „Trips")
+**AC-1:** Given die Trips-Listenansicht ist geöffnet / When die Seite lädt / Then lautet die H1-Überschrift „Meine Trips" (nicht „Trips")
 - Test: (populated after /tdd-red)
 
-**AC-2:** Given die Trips-Listenansicht ist leer / When keine Touren vorhanden sind / Then lautet die Empty-State-Headline „Noch keine Tour." und der Button „+ Neue Tour"
+**AC-2:** Given die Trips-Listenansicht ist leer / When keine Trips vorhanden sind / Then lautet die Empty-State-Headline „Noch keine Trip." und der Button „+ Neue Trip"
 - Test: (populated after /tdd-red)
 
-**AC-3:** Given die Trips-Listenansicht hat Einträge / When eine Tour gelöscht werden soll / Then lautet der Dialog-Titel „Tour löschen"
+**AC-3:** Given die Trips-Listenansicht hat Einträge / When eine Trip gelöscht werden soll / Then lautet der Dialog-Titel „Trip löschen"
 - Test: (populated after /tdd-red)
 
-**AC-4:** Given die mobile Bottom-Navigation ist sichtbar / When der Nutzer auf das Touren-Icon schaut / Then lautet das Label „Touren" (nicht „Trips")
+**AC-4:** Given die mobile Bottom-Navigation ist sichtbar / When der Nutzer auf das Trips-Icon schaut / Then lautet das Label „Trips" (nicht „Trips")
 - Test: (populated after /tdd-red)
 
-**AC-5:** Given die Trips-Listenansicht hat Einträge / When der primäre Anlegen-Button sichtbar ist / Then lautet er „+ Neue Tour"
+**AC-5:** Given die Trips-Listenansicht hat Einträge / When der primäre Anlegen-Button sichtbar ist / Then lautet er „+ Neue Trip"
 - Test: (populated after /tdd-red)
 
 ## Known Limitations

@@ -23,7 +23,7 @@ nichts um — sie schließt zwei belegte Lücken im Fundament, bevor die
 Folgescheiben darauf bauen: (1) für einen der beiden Compare-PUT-Wege fehlt
 der Test, der genau diese Zusicherung mit einem echten Minimal-Body belegt,
 (2) der bestehende Konflikt-Wiederholen-Mechanismus (`retryConflict`) ist fest
-auf Touren verdrahtet und wäre für einen Ortsvergleich nach einem
+auf Trips verdrahtet und wäre für einen Ortsvergleich nach einem
 Speicherkonflikt (412) wirkungslos. Zusätzlich nimmt diese Scheibe die
 bereits vorhandenen, aber nicht geratschten Ortsvergleich-Hub-Persistenztests
 in die CI-Ampel auf, damit die Folgescheiben nicht ohne Sicherheitsnetz
@@ -84,7 +84,7 @@ Anwendungscode.
 |--------|------|---------|
 | `applyComparePresetPatch` / `mergeBriefingPatch` / `mergeConfigMap` | function | gemeinsamer Merge-Kernel beider Compare-PUT-Wege (#2285), Prüfling von (1) |
 | `extractTripId` / `RESOURCE_PATH_RE` (`etagRegistry.ts:46-63`) | function | erkennt `/api/compare/presets/{id}` bereits korrekt — unverändert, nur als Fundament für (2) |
-| `enqueueTripWrite`, `getKnownEtag`/`setKnownEtag` (`etagRegistry.ts`) | function | Schreib-Serialisierung und ETag-Registry — unverändert, gilt für Touren wie Ortsvergleiche bereits gemeinsam |
+| `enqueueTripWrite`, `getKnownEtag`/`setKnownEtag` (`etagRegistry.ts`) | function | Schreib-Serialisierung und ETag-Registry — unverändert, gilt für Trips wie Ortsvergleiche bereits gemeinsam |
 | `createFakeTripServer` (`frontend/src/lib/__tests__/fakeTripServer.ts`) | test-double | bildet den S2-Server-Vertrag nach; matcht bereits BEIDE Ressourcenarten (`TRIP_PATH_RE` dort), kein neuer Fake nötig |
 | `NachladeKennung` (`frontend/src/lib/pwa/geraetespeicher.ts:104-105`) | type | bereits etablierter Diskriminierungstyp `{typ: 'trip'\|'vergleich'; id: string}` — wiederverwendet statt neu erfunden, s. Implementation Details (2) |
 | `.github/ci_e2e_specs.txt` + `tests/unit/test_e2e_positivliste_ratschen_bindung.py` | ratchet | erzwingt exakte Übereinstimmung von `E2E_MIN_SPECS`/`ci.yml`-Env mit der Zeilenzahl der Liste — jede Aufnahme MUSS beide Werte mitziehen |
@@ -157,7 +157,7 @@ schlechter als der Ist-Zustand und deshalb ausgeschlossen.
 über den bereits im Projekt etablierten Diskriminierungstyp.** Das Frontend
 hat dieses Problem bereits einmal gelöst: `NachladeKennung`
 (`frontend/src/lib/pwa/geraetespeicher.ts:104-105`, `{ typ: 'trip' |
-'vergleich'; id: string }`) unterscheidet Tour und Ortsvergleich exakt für
+'vergleich'; id: string }`) unterscheidet Trip und Ortsvergleich exakt für
 denselben Zweck (Entlade-/Nachlade-Mechanik, `sichereAusstehendeSpeicherung`,
 `starteNachladenNachEntladen`) und wird an beiden bestehenden Aufrufstellen
 bereits als Objektliteral direkt neben der `SaveStatus`-Erzeugung gebildet:
@@ -202,7 +202,7 @@ Das erfüllt die drei Zusicherungen strukturell, nicht nur per Konvention:
    bloße ID-Zeichenkette ist kein gültiges Argument mehr.
    `createSaveStatus(trip.id)` (die heutige Aufrufform) lässt sich nach
    diesem Umbau nicht mehr kompilieren; `svelte-check`/`tsc` weist es ab. Ein
-   Vorgabewert „Tour" (z. B. `typ: 'trip'` als Default) wird bewusst NICHT
+   Vorgabewert „Trip" (z. B. `typ: 'trip'` als Default) wird bewusst NICHT
    eingebaut — das reproduzierte exakt den Fehler, den diese Scheibe behebt.
    Bleibt die Kennung ganz weg (`createSaveStatus()`, heutiger Zustand des
    Compare-Hubs vor S2), degradiert der Konfliktschutz wie bisher zu einem
@@ -259,7 +259,7 @@ Promise<void>`. Die Umbenennung kostet keine zusätzlichen Änderungen
 gegenüber einem Namenserhalt — jeder Aufrufer (Produktivcode UND die drei
 Testfälle in `apiRefreshTripEtag.test.ts`, Zeilen 30, 45, 63) wird ohnehin
 angefasst, weil die Signatur sich ändert. Der alte Name wäre ab dieser
-Scheibe irreführend (er suggeriert „nur Touren"), und genau ein irreführender
+Scheibe irreführend (er suggeriert „nur Trips"), und genau ein irreführender
 Name in `etagRegistry.ts:42-44` hat den verworfenen Entwurf oben erst
 verursacht — derselbe Fehler soll hier nicht neu entstehen. Die Testdatei
 behält ihren Namen `apiRefreshTripEtag.test.ts` (Testdateien werden nach
@@ -267,7 +267,7 @@ Verhalten benannt, nicht nach dem exportierten Symbol; ihr geprüftes
 Verhalten — „ETag nach Konflikt aktualisieren" — ändert sich nicht).
 
 **Kommentarkorrektur `etagRegistry.ts:42-44` (Pflichtbestandteil):** Die
-Zusicherung „eine Verwechslung mit einer Tour-Kennung ist damit ausgeschlossen"
+Zusicherung „eine Verwechslung mit einer Trip-Kennung ist damit ausgeschlossen"
 ist am Bestand widerlegt und hat den verworfenen Entwurf verursacht. Sie wird
 auf den tatsächlichen Stand korrigiert (Präfix gilt nur für neu erzeugte
 Presets; Alt-Kennungen sind Slugs). Ohne diese Korrektur führt derselbe
@@ -361,7 +361,7 @@ kein Kandidat, unabhängig vom Staging-Setup-Befund.
   an `/api/trips/{id}` — unabhängig von der Form der ID, weil die Pfadwahl
   ausschließlich `typ` liest; der anschließende Retry-PUT trägt den frisch
   aufgefrischten ETag und gelingt unter denselben Bedingungen wie beim
-  bestehenden Touren-Fall.
+  bestehenden Trips-Fall.
 - **Side effects:** keine neuen. Der Merge-Kernel (1) bleibt eine reine
   Funktion; (2) fügt keinen neuen Zustand hinzu, nur eine explizit
   übergebene Fallunterscheidung.
@@ -416,7 +416,7 @@ kein Kandidat, unabhängig vom Staging-Setup-Befund.
     erreichen.
 
 - **AC-3 (Trip-Verhalten unverändert):** Given dieselbe
-  Konflikt-Wiederholen-Situation bei einer Tour / When Refresh und Retry
+  Konflikt-Wiederholen-Situation bei einer Trip / When Refresh und Retry
   laufen / Then bleibt das Verhalten exakt wie vor dieser Scheibe (Refresh
   gegen `/api/trips/{id}`, Retry gelingt).
   - Test: die bestehende Suite `saveStatusConflictRetry.test.ts` läuft
@@ -512,7 +512,7 @@ lokaler Ersatz dafür, dass die Ampel grün bleibt.
   im echten `e2e`-CI-Lauf nach dem Merge, nicht im lokalen Drei-Läufe-Protokoll
   allein — Konsequenz aus der Natur der Ratsche (sie bewacht den CI-Stand,
   nicht den lokalen).
-- **Gemeinsamer Namens- und Schlüsselraum von Touren und Ortsvergleichen —
+- **Gemeinsamer Namens- und Schlüsselraum von Trips und Ortsvergleichen —
   nicht Teil dieser Scheibe.** Beide Arten liegen in derselben Ablage
   (`briefings/<id>.json`, laut Befund der Team-Lead-Sitzung —
   `/var/lib/gregor/` ist aus diesem Worktree nicht lesbar, s. o.:
@@ -520,7 +520,7 @@ lokaler Ersatz dafür, dass die Ampel grün bleibt.
   `zillertal-t-glich.json` und `cp-eb6ba0b239d90e37.json`) und teilen sich in
   `etagRegistry.ts` **einen**
   Schlüsselraum. Die Begründung im dortigen Kommentar („Verwechslung
-  ausgeschlossen, weil `cp-`-Präfix") trägt am Bestand nicht. Trügen eine Tour
+  ausgeschlossen, weil `cp-`-Präfix") trägt am Bestand nicht. Trügen eine Trip
   und ein Ortsvergleich dieselbe Kennung, überschrieben sich ihre ETags
   gegenseitig — mögliche Folge: ein gemeldeter Konflikt ohne Anlass oder ein
   Schreibvorgang mit fremdem Stempel. Diese Scheibe korrigiert **nur den

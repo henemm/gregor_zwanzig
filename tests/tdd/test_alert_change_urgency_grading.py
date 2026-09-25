@@ -113,7 +113,7 @@ def _evaluate(levels: dict[str, str], alt: dict, neu: dict):
 
 def _trip(trip_id: str, levels: dict[str, str], catalog_ids: list[str],
           alert_rules: list | None = None) -> Trip:
-    """Tour, deren Alarmquelle ausschliesslich ``metric_alert_levels`` ist
+    """Trip, deren Alarmquelle ausschliesslich ``metric_alert_levels`` ist
     (der Zustand seit #946). ``catalog_ids`` sind die auf dem Wetter-Tab
     aktiven Katalog-Metriken -- ohne sie greift der #961-Deaktivieren-Filter
     und es entsteht gar keine Regel."""

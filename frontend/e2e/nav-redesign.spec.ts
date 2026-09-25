@@ -13,7 +13,7 @@ test.describe('F76 Phase A: Navigation Redesign', () => {
 		/**
 		 * GIVEN: User is logged in, Desktop-Viewport
 		 * WHEN: Sidebar is visible
-		 * THEN: Genau 4 sichtbare Workspace-Links (Startseite, Meine Touren, Orts-Vergleich, Standorte)
+		 * THEN: Genau 4 sichtbare Workspace-Links (Startseite, Meine Trips, Orts-Vergleich, Standorte)
 		 *       — Issue #267 ergänzt Locations als 4. NavItem.
 		 *       Footer-Konto-Links sind im Dropdown versteckt (display:none).
 		 */
@@ -33,12 +33,12 @@ test.describe('F76 Phase A: Navigation Redesign', () => {
 		await expect(link).toContainText('Startseite');
 	});
 
-	test('sidebar shows "Meine Touren" link to /trips', async ({ page }) => {
+	test('sidebar shows "Meine Trips" link to /trips', async ({ page }) => {
 		await page.goto('/');
 		const sidebar = page.getByTestId('desktop-sidebar');
 		const link = sidebar.locator('a[href="/trips"]');
 		await expect(link).toBeVisible();
-		await expect(link).toContainText('Meine Touren');
+		await expect(link).toContainText('Meine Trips');
 	});
 
 	test('sidebar shows "Orts-Vergleich" link to /compare', async ({ page }) => {
@@ -77,12 +77,12 @@ test.describe('F76 Phase A: Navigation Redesign', () => {
 		/**
 		 * GIVEN: User navigates to /trips
 		 * WHEN: Sidebar renders
-		 * THEN: "Meine Touren" link in der Sidebar hat die aktive Klasse
+		 * THEN: "Meine Trips" link in der Sidebar hat die aktive Klasse
 		 */
 		await page.goto('/trips');
 		const sidebar = page.getByTestId('desktop-sidebar');
 		const link = sidebar.locator('a[href="/trips"]');
 		await expect(link).toHaveClass(/bg-sidebar-accent/);
-		await expect(link).toContainText('Meine Touren');
+		await expect(link).toContainText('Meine Trips');
 	});
 });

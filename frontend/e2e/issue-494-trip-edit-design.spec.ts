@@ -49,7 +49,7 @@ test('AC-2: Breadcrumb sichtbar mit Text MEINE TOUREN', async ({ page }) => {
 	await expect(breadcrumb).toContainText('MEINE TOUREN');
 });
 
-test('AC-2: H1 zeigt Tour-Namen', async ({ page }) => {
+test('AC-2: H1 zeigt Trip-Namen', async ({ page }) => {
 	await page.goto(EDIT_URL);
 
 	const title = page.getByTestId('edit-trip-title');

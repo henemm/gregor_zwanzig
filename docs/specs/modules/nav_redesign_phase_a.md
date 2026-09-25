@@ -32,7 +32,7 @@ User-Menu (unveraendert): Konto (/account) | System-Status (/settings)
 ## Soll-Zustand
 
 ```
-Startseite (/), Meine Touren (/trips), Orts-Vergleich (/compare)
+Startseite (/), Meine Trips (/trips), Orts-Vergleich (/compare)
 ```
 
 User-Menu: Konto (/account) | System-Status (/settings) — bleibt wie es ist.
@@ -53,7 +53,7 @@ User-Menu: Konto (/account) | System-Status (/settings) — bleibt wie es ist.
 | Label | href | Icon | Mapping |
 |-------|------|------|---------|
 | Startseite | `/` | `LayoutDashboard` | war "Uebersicht" |
-| Meine Touren | `/trips` | `RouteIcon` | war "Trips" |
+| Meine Trips | `/trips` | `RouteIcon` | war "Trips" |
 | Orts-Vergleich | `/compare` | `GitCompare` | war "Vergleich" |
 
 ### 2. Icon-Imports aufraeumen (Z.61-70)
@@ -84,7 +84,7 @@ Gruppen-Schleife (`#each navGroups as group`) ersetzen durch flache Schleife (`#
 ## Expected Behavior
 
 - **Input:** User oeffnet die App
-- **Output:** Sidebar zeigt 3 Eintraege: Startseite, Meine Touren, Orts-Vergleich
+- **Output:** Sidebar zeigt 3 Eintraege: Startseite, Meine Trips, Orts-Vergleich
 - **Active-State:** Highlighting funktioniert wie bisher (pathname-Match)
 - **Side effects:** Keine — rein kosmetische Aenderung
 

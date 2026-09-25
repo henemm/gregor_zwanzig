@@ -148,12 +148,12 @@ let mobileMenuOpen = $state(false);
 let userMenuOpen = $state(false);
 ```
 
-**Nav-Items (KRITISCH: Label muss exakt 'Meine Touren' sein):**
+**Nav-Items (KRITISCH: Label muss exakt 'Meine Trips' sein):**
 
 ```typescript
 const navItems = [
   { href: '/',        label: 'Startseite',    icon: LayoutDashboard },
-  { href: '/trips',   label: 'Meine Touren',  icon: RouteIcon },
+  { href: '/trips',   label: 'Meine Trips',  icon: RouteIcon },
   { href: '/compare', label: 'Orts-Vergleich', icon: GitCompare },
 ];
 ```
@@ -193,7 +193,7 @@ export { default as Sidebar } from './Sidebar.svelte';
   - Schriftart der gesamten App ist Inter Tight (vorher system-ui)
   - Alle `--g-*`-CSS-Tokens sind global verfuegbar und koennen von beliebigen Komponenten genutzt werden
   - Sidebar rendert identisch zum Ist-Zustand (Mobile Top-Bar, Overlay, Nav, User-Menu)
-  - Nav-Label fuer `/trips` lautet 'Meine Touren' (Bug-Fix gegenueber bisherigem 'Meine Trips')
+  - Nav-Label fuer `/trips` lautet 'Meine Trips' (Bug-Fix gegenueber bisherigem 'Meine Trips')
 - **Active-State:** Highlighting des aktuellen Nav-Eintrags funktioniert unveraendert per pathname-Match
 - **Side effects:**
   - 7 E2E-Tests in `frontend/e2e/nav-redesign.spec.ts` muessen nach Extraktion gruen bleiben
@@ -213,7 +213,7 @@ export { default as Sidebar } from './Sidebar.svelte';
 |---|-----------|----------|--------|
 | 1 | `--g-accent`, `--g-paper`, `--g-ink` sind im Browser-DevTools unter `:root` sichtbar | DevTools → Computed → filter `--g-` | PASS (alle 30 Tokens sichtbar) |
 | 2 | Inter Tight wird als Schriftart geladen | DevTools → Network → Fonts | PASS (fonts.googleapis.com link vorhanden) |
-| 3 | Nav-Label `/trips` lautet 'Meine Touren' | Sidebar visuell + E2E | PASS (in Sidebar.svelte gesetzt) |
+| 3 | Nav-Label `/trips` lautet 'Meine Trips' | Sidebar visuell + E2E | PASS (in Sidebar.svelte gesetzt) |
 | 4 | E2E-Tests passen (nav-redesign + design-system) | `npx playwright test` | PASS (7 + 8 = 15 Tests gruen) |
 | 5 | Keine visuellen Regressionen auf Startseite, Trips, Orts-Vergleich | Screenshot-Vergleich | PASS (keine Regressionen) |
 

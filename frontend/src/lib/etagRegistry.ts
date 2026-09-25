@@ -1,12 +1,12 @@
-// Issue #1395 S3 — ETag-Registry und Schreib-Warteschlange je Tour.
+// Issue #1395 S3 — ETag-Registry und Schreib-Warteschlange je Trip.
 // Spec: docs/specs/modules/issue_1395_s3_etag_registry.md
 // Server-Vertrag: docs/specs/modules/issue_1395_s2_etag_ifmatch.md · ADR-0036
 //
 // Bewusst ein Modul-Singleton (anders als saveStatusStore.svelte.ts, das eine
 // Instanz je Editor-Oberflaeche verlangt): der Stempel ist ein Frischezustand
-// der RESSOURCE (der Tour), nicht der Editor-Instanz. Genau das braucht der
+// der RESSOURCE (der Trip), nicht der Editor-Instanz. Genau das braucht der
 // Kernfall — die zwei aufeinanderfolgenden Schreibvorgaenge des Wetter-Reiters
-// und der unabhaengige Auto-Save des Alarme-Reiters auf derselben Tour muessen
+// und der unabhaengige Auto-Save des Alarme-Reiters auf derselben Trip muessen
 // denselben Stand sehen. Zwei Browser-Tabs sind ohnehin getrennte JS-Realms mit
 // je eigener Registry; der Schutz zwischen ihnen kommt vollstaendig vom Server.
 
@@ -14,7 +14,7 @@ const knownEtags = new Map<string, string>();
 const writeQueues = new Map<string, Promise<unknown>>();
 
 /**
- * F001 — zaehlt JEDE Veraenderung des Eintrags einer Tour (Setzen wie Verwerfen).
+ * F001 — zaehlt JEDE Veraenderung des Eintrags einer Trip (Setzen wie Verwerfen).
  * Ein Vorgang ausserhalb der Warteschlange (Lesevorgang, Entlade-Flush) erkennt
  * damit beim Eintreffen, ob inzwischen ein juengerer Stand hinterlegt wurde, und
  * verwirft seinen eigenen, dann veralteten Stempel. Ohne das ueberschreibt eine
@@ -27,7 +27,7 @@ function bumpVersion(tripId: string): void {
 	etagVersions.set(tripId, (etagVersions.get(tripId) ?? 0) + 1);
 }
 
-/** Aktueller Aenderungszaehler dieser Tour (0 = noch nie beruehrt). */
+/** Aktueller Aenderungszaehler dieser Trip (0 = noch nie beruehrt). */
 export function etagVersion(tripId: string): number {
 	return etagVersions.get(tripId) ?? 0;
 }
@@ -45,8 +45,8 @@ export function etagVersion(tripId: string): number {
  * Issue #2276 S1 (Korrektur einer falschen Zusicherung): das Praefix `cp-`
  * (`newComparePresetID()`) tragen NUR NEU erzeugte Presets. Alt-Ortsvergleiche
  * im Bestand tragen Slug-Kennungen ohne Praefix (gemessen 2026-09-18:
- * `zillertal-t-glich`). Eine Verwechslung mit einer Tour-Kennung ist damit
- * NICHT ausgeschlossen: traegen eine Tour und ein Ortsvergleich dieselbe
+ * `zillertal-t-glich`). Eine Verwechslung mit einer Trip-Kennung ist damit
+ * NICHT ausgeschlossen: traegen eine Trip und ein Ortsvergleich dieselbe
  * Kennung, ueberschreiben sich ihre Stempel gegenseitig. Der Sachverhalt ist
  * als eigener Befund gebucht; ihn hier zu beheben ist nicht Teil von S1.
  * Konsequenz fuer Aufrufer: die Ressourcenart NIE aus der Kennung ableiten,
@@ -56,7 +56,7 @@ const RESOURCE_PATH_RE =
 	/^\/api\/(?:trips\/([^/?#]+)(?:\/weather-config)?|compare\/presets\/([^/?#]+))(?:[?#]|$)/;
 
 /**
- * Ressourcen-Kennung eines Pfades (Tour oder Ortsvergleich), oder `null` fuer
+ * Ressourcen-Kennung eines Pfades (Trip oder Ortsvergleich), oder `null` fuer
  * alle uebrigen Pfade. Der Name stammt aus S3 und bleibt bewusst unveraendert —
  * ein Umbenennen beruehrte alle Aufrufer ohne Verhaltensgewinn.
  */
@@ -71,7 +71,7 @@ export function extractTripId(path: string): string | null {
 	}
 }
 
-/** Zuletzt vom Server erhaltener Stand dieser Tour, oder `undefined`. */
+/** Zuletzt vom Server erhaltener Stand dieser Trip, oder `undefined`. */
 export function getKnownEtag(tripId: string): string | undefined {
 	return knownEtags.get(tripId);
 }
@@ -97,7 +97,7 @@ export function setKnownEtagIfUnchanged(tripId: string, etag: string, seenVersio
 }
 
 /**
- * Stempel aus dem Seitenaufbau (Server-Naht) — nur, wenn diese Tour in dieser
+ * Stempel aus dem Seitenaufbau (Server-Naht) — nur, wenn diese Trip in dieser
  * Sitzung noch nie einen gefuehrt hat. Auch der Seitenaufbau ist ein
  * Lesevorgang, und sein Startzeitpunkt ist im Browser nicht greifbar: laeuft
  * `load()` erneut (Invalidierung), waehrend ein Speichervorgang unterwegs ist,
@@ -126,7 +126,7 @@ export function discardEtag(tripId: string): void {
  * NICHT zur Laufzeit aufrufen, solange noch Anfragen unterwegs sein koennen:
  * der Zaehlerstand faengt danach wieder bei 0 an und wird also wiederverwendet.
  * Ein Nachzuegler, der sich vorher Stand 2 gemerkt hat, findet nach zwei
- * beliebigen weiteren Aenderungen an derselben Tour erneut Stand 2 vor — die
+ * beliebigen weiteren Aenderungen an derselben Trip erneut Stand 2 vor — die
  * Pruefung in `setKnownEtagIfUnchanged` kann ihn dann nicht mehr von einem
  * frischen Vorgang unterscheiden und uebernimmt seinen laengst veralteten
  * Stempel (F001 durch die Hintertuer).
@@ -144,8 +144,8 @@ export function clearEtagRegistry(): void {
 
 /**
  * Reiht einen Schreibvorgang hinter jeden bereits laufenden Schreibvorgang auf
- * DIESELBE Tour ein — unabhaengig davon, welche Komponente ihn ausgeloest hat.
- * Verschiedene Touren laufen weiterhin nebeneinander. Ein fehlgeschlagener
+ * DIESELBE Trip ein — unabhaengig davon, welche Komponente ihn ausgeloest hat.
+ * Verschiedene Trips laufen weiterhin nebeneinander. Ein fehlgeschlagener
  * Vorgaenger bricht die Kette NICHT ab (kein Domino).
  */
 export function enqueueTripWrite<T>(tripId: string, fn: () => Promise<T>): Promise<T> {

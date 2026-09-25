@@ -77,7 +77,7 @@ Then wird die Navigation nicht doppelt ausgelöst (kein Doppel-POST).
 
 **AC-7:** Given der Desktop-Save-Button auf `/trips/new`,
 When noch kein Trip gespeichert ist (`savedTripId === null`, `ready === true`),
-Then zeigt der Button den Text „Trip speichern" (statt bisher „Tour speichern").
+Then zeigt der Button den Text „Trip speichern" (statt bisher „Trip speichern").
 
 ## Implementation Details
 

@@ -66,7 +66,7 @@ _ETAPPE = "Test-Etappe"
 _TAG = date(2026, 8, 20)
 
 _TRIP_ID = "herkunft-trip-kommando"
-_TRIP_NAME = "Herkunft Trip Tour"
+_TRIP_NAME = "Herkunft Trip Trip"
 _USER = "default"
 
 

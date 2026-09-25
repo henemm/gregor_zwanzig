@@ -111,7 +111,7 @@ Der heutige Code in `evaluate_corridor_thresholds()` behandelt **jeden**
 `Enum`-Wert über `thunder_ordinal()`; für `PrecipType` (kein `ThunderLevel`)
 liefert das kein aussagekräftiges Ordinal, und das anschließende `float(value)`
 würde auf einem `PrecipType`-Wert eine `ValueError` werfen — ein Absturz des
-gesamten Alarm-Laufs für die betroffene Tour. Fix: die Enum-Prüfung wird auf
+gesamten Alarm-Laufs für die betroffene Trip. Fix: die Enum-Prüfung wird auf
 `ThunderLevel` verengt; jeder andere Enum-Wert überspringt den Korridor
 (`continue`, dieselbe R6-Semantik wie „unbekannte Metrik" oder „fehlender
 Wert" direkt daneben) statt in `float()` zu laufen.
@@ -164,7 +164,7 @@ aufgerufen wird.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine Tour mit dem Gewitter-Wertebereich `thunder_level_max`
+- **AC-1:** Given eine Trip mit dem Gewitter-Wertebereich `thunder_level_max`
   (Katalog-Namensraum, „höchstens keins") und einer Vorhersage, die im aktiven
   Etappenfenster Gewitter zeigt / When der Alarm-Lauf läuft / Then geht genau
   eine Sofort-Meldung raus, die Größe, Ist-Wert, Etappe und Zeitfenster nennt.
@@ -172,14 +172,14 @@ aufgerufen wird.
     (nicht `"thunder_level"`) — heute still übersprungen, da nur der alte
     Namensraum aufgelöst wird.
 
-- **AC-2:** Given eine Tour mit dem Regen-Wertebereich `precip_sum_mm`
+- **AC-2:** Given eine Trip mit dem Regen-Wertebereich `precip_sum_mm`
   (Katalog-Namensraum) und einer Vorhersage, die die Grenze reißt / When der
   Alarm-Lauf läuft / Then geht genau eine Sofort-Meldung raus, die Größe,
   Ist-Wert, Etappe und Zeitfenster nennt.
   - Test: `check_and_send_alerts()` mit einem Korridor `metric="precip_sum_mm"`
     (nicht `"precipitation_sum"`) — analog zu AC-1 für eine stetige Größe.
 
-- **AC-3:** Given eine Tour mit einem Wertebereich auf einer bisher
+- **AC-3:** Given eine Trip mit einem Wertebereich auf einer bisher
   unerreichbaren Größe, die NICHT `alarm_capable` ist (z.B. `snow_depth_cm`
   oder `sunny_hours_h`) und einer Vorhersage, die die Grenze reißt / When der
   Alarm-Lauf läuft / Then geht eine Sofort-Meldung raus.
@@ -187,7 +187,7 @@ aufgerufen wird.
     Korrektur an der Ticket-Skizze: `alarm_capable` ist NICHT die maßgebliche
     Bedingung, ein Zahlenwert je Etappe genügt.
 
-- **AC-4:** Given eine Tour mit Wertebereichen unter den alten
+- **AC-4:** Given eine Trip mit Wertebereichen unter den alten
   `AlertMetric`-Kennungen `snow_line` und `wind_gust` und einer Vorhersage, die
   deren Grenzen reißt / When der Alarm-Lauf läuft / Then melden sie unverändert
   weiter wie vor dieser Scheibe.
@@ -198,7 +198,7 @@ aufgerufen wird.
     Altbestand. Zusätzlich muss die gesamte S1-Testsuite
     (`tests/tdd/test_corridor_threshold_alert.py`) grün bleiben.
 
-- **AC-5:** Given eine Tour mit einem Wertebereich im Katalog-Namensraum
+- **AC-5:** Given eine Trip mit einem Wertebereich im Katalog-Namensraum
   (z.B. `thunder_level_max`) und einer Vorhersage, die die Grenze einhält /
   When der Alarm-Lauf läuft / Then geht keine Meldung raus.
   - Test: `check_and_send_alerts()` mit Wert innerhalb des Bereichs — kein
@@ -223,7 +223,7 @@ aufgerufen wird.
     Katalog-Eintrag sie, schlägt dieser Test an statt still das Verhalten zu
     verschieben.
 
-- **AC-7:** Given eine Tour mit einem Wertebereich auf `precip_type_dominant`
+- **AC-7:** Given eine Trip mit einem Wertebereich auf `precip_type_dominant`
   (Niederschlagsart, Aufzählung ohne Ordinalskala) / When der Alarm-Lauf läuft
   / Then bricht der Lauf nicht ab und es geht keine Meldung für diese Größe
   raus.
@@ -249,7 +249,7 @@ aufgerufen wird.
   (`compareMetricCatalogLoader.ts:38`) heraus. AC-7 sichert daher keinen über
   die Oberfläche erreichbaren Weg ab, sondern gespeicherte bzw. über die
   Schnittstelle gesetzte Korridore. Der Absturz wäre trotzdem real (kompletter
-  Alarm-Lauf der Tour), deshalb bleibt die Absicherung.
+  Alarm-Lauf der Trip), deshalb bleibt die Absicherung.
 - **Kein neues Capability-Feld.** Weil alle 23 Pool-Zeilen nach dieser Scheibe
   schwellenfähig sind, braucht Scheibe 2b weder ein zusätzliches Registerfeld
   noch eine Endpoint-Erweiterung noch eine `alarmCapable`-Durchreiche durch

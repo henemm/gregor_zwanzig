@@ -116,7 +116,7 @@ def _trip(
     trip_id: str, lat: float, lon: float, day: date, arrival_local: str,
     day_window: tuple[int, int] | None = None,
 ) -> Trip:
-    """Tour mit scharfer Gewitter-Empfindlichkeit, E-Mail als einzigem Kanal.
+    """Trip mit scharfer Gewitter-Empfindlichkeit, E-Mail als einzigem Kanal.
 
     ``day_window=None`` -> keine ``day_window_*``-Felder gesetzt, also Default
     4/19 (AC-1..AC-5). ``day_window=(start, end)`` setzt die Felder dort, wo

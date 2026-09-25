@@ -329,7 +329,7 @@ Endpunkts selbst ändert sich dadurch NICHT.
 
 `AlertQuietHoursCard.svelte` bekommt eine neue Prop (Text, nicht Zeitzonen-Berechnung — die
 Karte kennt keine `ZoneInfo`-Logik, das bleibt Backend-Domäne). `shared/AlarmeTab.svelte`
-(`:429`/`:431`) übergibt sie kontextabhängig: beim Trip „der Tour", beim Vergleich „des ersten
+(`:429`/`:431`) übergibt sie kontextabhängig: beim Trip „der Trip", beim Vergleich „des ersten
 Orts" — EIN geteilter Baustein (Trip/Compare-Teilungsregel), keine zweite Komponente.
 
 ### F. ADR-0044 Fortschreibung
@@ -476,7 +476,7 @@ Issue zeigen (AC-14).
 - **AC-11 (Oberfläche nennt die Zonen-Basis der Ruhezeit):** Given der Alarme-Reiter zeigt die
   Ruhezeit-Karte, einmal im Trip-Kontext und einmal im Ortsvergleichs-Kontext / When die Karte
   angezeigt wird / Then benennt sie die Ortszeit-Basis unterschiedlich — beim Trip „Ortszeit der
-  Tour", beim Vergleich „Ortszeit des ersten Orts" — statt wie bisher gar keine Zone zu nennen.
+  Trip", beim Vergleich „Ortszeit des ersten Orts" — statt wie bisher gar keine Zone zu nennen.
   Wirkt `AlertQuietHoursCard.svelte`, gemountet aus `shared/AlarmeTab.svelte:429/431` als EIN
   geteilter Baustein für beide Kontexte.
 
@@ -591,7 +591,7 @@ sieben Ruhezeit-Stellen stillschweigend ignorieren, Zähler-Migration durch Repl
   Orte), der „unauflösbare Zone"-Fall aber schon. Hier bewusst NICHT mitrepariert (die Kopfzeile
   ist Darstellung, nicht Alarm-Entscheidung, und ein UTC-Zeitstempel dort ist sichtbar falsch
   statt still wirksam). Zu buchen als eigener Eintrag für den Team-Lead.
-- **Die Oberfläche nennt einen Referenzpunkt, keinen konkreten Zonennamen.** „Ortszeit der Tour"/
+- **Die Oberfläche nennt einen Referenzpunkt, keinen konkreten Zonennamen.** „Ortszeit der Trip"/
   „Ortszeit des ersten Orts" sagt WOVON die Zeit abhängt, nicht WELCHE IANA-Zone konkret gilt
   (z. B. „Europe/Paris"). Eine genauere Beschriftung wäre möglich, ist aber nicht Teil dieser
   Scheibe (kein PO-Auftrag dafür vorliegend).

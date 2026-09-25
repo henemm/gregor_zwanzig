@@ -19,7 +19,7 @@ tags: [frontend, svelte, trip, etag, if-match, concurrency, save-status]
 ## Purpose
 
 S3 hat den `412`-Konflikt real gemacht — er wird ausgeloest, sobald zwei
-Schreibvorgaenge auf dieselbe Tour ohne Absprache aufeinandertreffen — aber
+Schreibvorgaenge auf dieselbe Trip ohne Absprache aufeinandertreffen — aber
 am Speicher-Anzeiger sieht ihn der Nutzer heute wie jeden anderen Fehler:
 `'error'` mit deutscher Servermeldung und sonst nichts. Es gibt keinen Weg
 zurueck ausser Seite neu laden und die Aenderung von Hand wiederholen. Diese
@@ -155,7 +155,7 @@ gesetzt, bliebe der Zustand waehrenddessen `'conflict'` und ein ungeduldiger
 Doppelklick koennte zwei Refresh-Anfragen und am Ende zwei Resend-Versuche
 mit demselben `saveFn` auslösen — mit unklarer Reihenfolge am Server.
 
-Schlaegt der Refresh selbst fehl (Netzwerk, Tour zwischenzeitlich geloescht),
+Schlaegt der Refresh selbst fehl (Netzwerk, Trip zwischenzeitlich geloescht),
 geht `_lastFailed` bewusst NICHT wiederhergestellt — der Zustand faellt auf
 `'error'`. Ein automatischer zweiter Retry-Versuch ist nicht vorgesehen (s.
 „Known Limitations"); der Nutzer muss die Aenderung erneut ausloesen (z. B.
@@ -232,7 +232,7 @@ Retry-Knopf dort waere irrefuehrend.
   scheitert mit `412`, `SaveStatus` wurde mit `tripId` erzeugt → Anzeiger
   wechselt von `'saving'` zu `'conflict'`, zeigt die deutsche Servermeldung
   und einen „Nochmal speichern"-Knopf
-- **Input:** Klick auf „Nochmal speichern" → GET auf dieselbe Tour (Refresh),
+- **Input:** Klick auf „Nochmal speichern" → GET auf dieselbe Trip (Refresh),
   danach automatisch derselbe `PUT` erneut, ohne dass der Nutzer etwas
   eingibt
 - **Output (Erfolgsfall):** Anzeiger zeigt „Gespeichert" mit aktuellem
@@ -284,13 +284,13 @@ Quelltext-Verhaltenspruefung (kein Svelte-5-Runen-Render-Harness im
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Speichervorgang wird mit `412` (ETag-Konflikt) abgelehnt und die `SaveStatus`-Instanz kennt die Tour-ID / When der Nutzer den „Nochmal speichern"-Button im Speicher-Anzeiger klickt / Then wird automatisch zuerst der ETag aufgefrischt und danach der urspruengliche Speichervorgang wiederholt, ohne dass der Nutzer Daten erneut eingeben muss
+- **AC-1:** Given ein Speichervorgang wird mit `412` (ETag-Konflikt) abgelehnt und die `SaveStatus`-Instanz kennt die Trip-ID / When der Nutzer den „Nochmal speichern"-Button im Speicher-Anzeiger klickt / Then wird automatisch zuerst der ETag aufgefrischt und danach der urspruengliche Speichervorgang wiederholt, ohne dass der Nutzer Daten erneut eingeben muss
   - Test: `test_doSave_412WithTripId_entersConflictState_remembersFailedSave`, `test_retryConflict_refreshesEtagThenResendsOriginalSaveFn_inOrder`, `test_conflictBranch_rendersRetryButtonCallingRetryConflict`
 
-- **AC-2:** Given ein Speichervorgang wurde mit `412` abgelehnt und seither hat niemand sonst die Tour geaendert / When der Nutzer „Nochmal speichern" klickt / Then gelingt der wiederholte Speichervorgang und der Anzeiger zeigt wieder „Gespeichert" mit aktuellem Zeitstempel
+- **AC-2:** Given ein Speichervorgang wurde mit `412` abgelehnt und seither hat niemand sonst die Trip geaendert / When der Nutzer „Nochmal speichern" klickt / Then gelingt der wiederholte Speichervorgang und der Anzeiger zeigt wieder „Gespeichert" mit aktuellem Zeitstempel
   - Test: `test_retryConflict_successfulRetry_transitionsToIdleWithSavedAt`
 
-- **AC-3:** Given ein Speichervorgang wurde mit `412` abgelehnt / When zwischen dem ETag-Refresh und dem erneuten Sendevorgang ein weiterer fremder Schreibvorgang auf dieselbe Tour eintrifft / Then scheitert der Retry erneut mit `412`, der Anzeiger bleibt im Konflikt-Zustand, und der Speichervorgang wird NICHT faelschlich als erfolgreich gemeldet
+- **AC-3:** Given ein Speichervorgang wurde mit `412` abgelehnt / When zwischen dem ETag-Refresh und dem erneuten Sendevorgang ein weiterer fremder Schreibvorgang auf dieselbe Trip eintrifft / Then scheitert der Retry erneut mit `412`, der Anzeiger bleibt im Konflikt-Zustand, und der Speichervorgang wird NICHT faelschlich als erfolgreich gemeldet
   - Test: `test_retryConflict_freshConflictDuringRetry_returnsToConflictState_notSaved`
 
 - **AC-4:** Given ein Speichervorgang schlaegt mit einem generischen Fehler fehl (z. B. `400` oder `500`, kein `412`) / When der Speicher-Anzeiger den Fehler zeigt / Then gibt es KEINEN „Nochmal speichern"-Button — der Zustand bleibt der einfache Fehlerzustand ohne Retry-Aktion wie vor dieser Scheibe
@@ -318,7 +318,7 @@ Quelltext-Verhaltenspruefung (kein Svelte-5-Runen-Render-Harness im
   `412` (AC-3), muss der Nutzer den Knopf ein weiteres Mal klicken — es gibt
   keine interne Schleife, die das von selbst mehrfach versucht.
 - **Kein Aufraeumen von `_lastFailed` beim Verlassen der Seite.** Verlaesst
-  der Nutzer die Tour-Seite waehrend eines offenen Konflikts, verfaellt der
+  der Nutzer die Trip-Seite waehrend eines offenen Konflikts, verfaellt der
   gemerkte Speichervorgang mit der `SaveStatus`-Instanz — unschaedlich, weil
   keine Instanz seitenuebergreifend weiterlebt.
 - **Der Ortsvergleich-Editor bekommt in dieser Scheibe keinen Konflikt-Schutz**

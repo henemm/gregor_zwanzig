@@ -60,13 +60,13 @@ test.describe('Issue #678: Compare-Editor Slice 1 (Desktop/Create)', () => {
 		await expect(
 			page.locator('[data-testid="compare-editor-progress-segment"]')
 		).toHaveCount(6);
-		await page.locator('[data-testid="compare-editor-name"]').fill('Tour A');
+		await page.locator('[data-testid="compare-editor-name"]').fill('Trip A');
 		await expect(progress).toContainText('1 / 6');
 	});
 
 	// ── AC-4: Profil-Auswahl bleibt nach Tab-Wechsel erhalten ────────────────
 	test('AC-4: Profil-Auswahl persistiert über Tab-Wechsel', async ({ page }) => {
-		await page.locator('[data-testid="compare-editor-name"]').fill('Tour A');
+		await page.locator('[data-testid="compare-editor-name"]').fill('Trip A');
 		const firstProfile = page.locator('[data-testid^="compare-editor-profile-"]').first();
 		await firstProfile.click();
 		await expect(firstProfile).toHaveAttribute('data-selected', 'true');
@@ -78,7 +78,7 @@ test.describe('Issue #678: Compare-Editor Slice 1 (Desktop/Create)', () => {
 
 	// ── AC-5: „Orte hinzufügen →" wechselt aktiv auf Tab „Orte" ──────────────
 	test('AC-5: Weiter-Button wechselt auf Tab "Orte"', async ({ page }) => {
-		await page.locator('[data-testid="compare-editor-name"]').fill('Tour A');
+		await page.locator('[data-testid="compare-editor-name"]').fill('Trip A');
 		await page.locator('[data-testid="compare-editor-continue-orte"]').click();
 		await expect(
 			page.locator('[data-testid="compare-editor-tab-orte"]')

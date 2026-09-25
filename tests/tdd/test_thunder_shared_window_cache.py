@@ -202,7 +202,7 @@ def test_f_adv4_anzahl_deckel_verdraengt_den_aeltesten_eintrag():
     weicht der aelteste und die Anzahl bleibt unter der Grenze.
 
     Warum das bewacht sein muss: Der Speicher ist ein Prozess-Singleton, der
-    ueber alle Touren und Ortsvergleiche eines Serverlaufs hinweg gefuellt wird.
+    ueber alle Trips und Ortsvergleiche eines Serverlaufs hinweg gefuellt wird.
     Ohne wirksame Verdraengung waechst er unbegrenzt — im Dauerbetrieb bedeutet
     das einen langsam vollaufenden Prozess. Beide Schranken werden getrennt
     geprueft, weil eine allein nicht traegt: ein Fenster kostet je nach

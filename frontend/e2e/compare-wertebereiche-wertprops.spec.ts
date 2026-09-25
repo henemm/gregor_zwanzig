@@ -1,14 +1,14 @@
 // TDD RED (E2E) — Issue #2276 Scheibe S6d (Epic #2345): der Reiter
 // „Wertebereiche" verhaelt sich nach der Umstellung von `getContext`/`ws` auf
 // reine Wertprops + Rueckrufe (`corridorPropsAus` + `corridorZustandsBruecke`)
-// im Browser UNVERAENDERT — am Ortsvergleichs-Hub (Flaeche B) wie an der Tour
+// im Browser UNVERAENDERT — am Ortsvergleichs-Hub (Flaeche B) wie an der Trip
 // (Flaeche A).
 //
 // Spec: docs/specs/modules/rework_2276_s6d_wertebereiche.md
 //   AC-4  Verhaltensgleichheit am Hub, Desktop (Grenze setzen -> genau EIN PUT,
 //         ueberlebt Neuladen)
 //   AC-5  Verhaltensgleichheit am Hub, Mobil (Band-Drag, Dual-Handle)
-//   AC-6  Tour: beidseitig offene Grenze -> Fehlerbanner UND der Indikator
+//   AC-6  Trip: beidseitig offene Grenze -> Fehlerbanner UND der Indikator
 //         zeigt NICHT „Gespeichert"
 //   AC-7  Vergleich: dieselbe beidseitig offene Grenze -> kein PUT, der
 //         Serverstand bleibt unveraendert
@@ -19,7 +19,7 @@
 // nicht, weil die Weiche kein eigenstaendiger `$effect` ist (Spec,
 // Design-Entscheidung 4). AC-6 und AC-7 stehen BEWUSST in derselben Datei:
 // die zentrale Zusicherung dieser Scheibe ist der KONTRAST zwischen den beiden
-// Flaechen — Tour setzt „Nicht gespeichert", Vergleich tut bewusst nichts
+// Flaechen — Trip setzt „Nicht gespeichert", Vergleich tut bewusst nichts
 // (F001/F005 aus S3). Nebeneinander ist der Unterschied sichtbar, ueber zwei
 // Dateien verteilt waere er es nicht.
 //
@@ -72,7 +72,7 @@ async function legeVergleichAn(
 	return body.id as string;
 }
 
-/** Tour mit genau EINER Wertebereichs-Zeile, Von offen / Bis gesetzt. */
+/** Trip mit genau EINER Wertebereichs-Zeile, Von offen / Bis gesetzt. */
 async function legeTripAn(page: Page, kennung: string): Promise<string> {
 	const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 	const tripId = `e2e-gz-2276-s6d-${kennung}-${suffix}`;
@@ -221,10 +221,10 @@ test.describe('Issue #2276 S6d: Wertebereiche auf Wertprops — Verhalten im Bro
 		).toHaveText(angezeigt!.trim(), { timeout: 10_000 });
 	});
 
-	// AC-6 — faengt (Mutation `if (true)` in maybeSchedule): die Tour nimmt
+	// AC-6 — faengt (Mutation `if (true)` in maybeSchedule): die Trip nimmt
 	// faelschlich den Vergleichs-Pfad, der Indikator bliebe auf „Gespeichert"
 	// neben einem sichtbaren Fehlerbanner.
-	test('AC-6 (Tour, Desktop): beidseitig offene Grenze → Fehlerbanner UND nicht „Gespeichert"', async ({
+	test('AC-6 (Trip, Desktop): beidseitig offene Grenze → Fehlerbanner UND nicht „Gespeichert"', async ({
 		page
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 900 });

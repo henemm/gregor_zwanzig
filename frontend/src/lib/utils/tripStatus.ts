@@ -77,9 +77,9 @@ export function tripStatus(trip: Trip, now: Date = new Date()): HomeTripStatus {
 }
 
 /**
- * Wählt die Hero-Tour fürs Cockpit:
- *   1. heute aktive Tour (erste in Eingabereihenfolge), sonst
- *   2. nächste anstehende Tour (kleinstes Etappen-Startdatum ≥ heute), sonst
+ * Wählt die Hero-Trip fürs Cockpit:
+ *   1. heute aktive Trip (erste in Eingabereihenfolge), sonst
+ *   2. nächste anstehende Trip (kleinstes Etappen-Startdatum ≥ heute), sonst
  *   3. null (alle abgeschlossen oder Liste leer).
  */
 export function activeOrNextTrip(trips: Trip[], now: Date = new Date()): Trip | null {

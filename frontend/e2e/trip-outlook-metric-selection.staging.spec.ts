@@ -245,7 +245,7 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 	// ⚠️ #1848 A3: die Zusicherung "der PICKER bietet jede Katalog-Groesse an"
 	// ist ERSATZLOS entfallen — es gibt keinen Picker mehr (Block A, #2029).
 	// Welche Groessen der Ausblick zeigt, entscheidet seit A3 die Grundauswahl
-	// der Tour, nicht der Katalog; das deckt
+	// der Trip, nicht der Katalog; das deckt
 	// ausblick-erbt-grundauswahl.staging.spec.ts::AC-5 ab ("eine Groesse
 	// ausserhalb der Grundauswahl erscheint weder aktiv noch in der
 	// Aus-Gruppe").

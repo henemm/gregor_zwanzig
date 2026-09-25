@@ -57,7 +57,7 @@
 					body: JSON.stringify({ archived: false })
 				});
 				if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
-				// Issue #1395 S3: nur Touren fuehren einen Stempel — der
+				// Issue #1395 S3: nur Trips fuehren einen Stempel — der
 				// Orts-Vergleich folgt erst mit S6 und bleibt unberuehrt.
 				if (item.type === 'trip') discardEtag(item.id);
 				await invalidateAll();

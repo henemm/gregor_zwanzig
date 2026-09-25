@@ -169,7 +169,7 @@ def test_ac12_ortsvergleich_protokolliert_alle_drei_ausloeser():
         )
         assert all(e.get("entity_type") == "compare" for e in entries), (
             "Vergleichs-Eintraege muessen den Typ 'compare' tragen, sonst "
-            f"zaehlt die Archiv-Statistik sie als Tour-Alarme: {entries!r}"
+            f"zaehlt die Archiv-Statistik sie als Trip-Alarme: {entries!r}"
         )
         assert all(e.get("entity_id") == _PRESET_ID for e in entries), (
             f"entity_id fehlt oder ist falsch: {entries!r}"

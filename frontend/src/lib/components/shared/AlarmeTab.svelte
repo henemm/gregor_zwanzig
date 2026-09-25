@@ -170,7 +170,7 @@
 		onQuietHoursChange,
 		radarAlertEnabled,
 		onRadarAlertChange,
-		zonenBezug = 'der Tour',
+		zonenBezug = 'der Trip',
 		onAlarmFeldSetzen,
 		catalog,
 		preset,

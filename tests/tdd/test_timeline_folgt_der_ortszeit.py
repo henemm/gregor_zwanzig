@@ -1,4 +1,4 @@
-"""TDD RED — Fix #1795: Timeline und Query-Familie folgen der Ortszeit der Tour.
+"""TDD RED — Fix #1795: Timeline und Query-Familie folgen der Ortszeit der Trip.
 
 SPEC: docs/specs/modules/fix_1795_timeline_ortszeit.md (AC-1 bis AC-8, AC-11)
 KONTEXT: docs/context/fix-1795-timeline-ortszeit.md
@@ -6,7 +6,7 @@ KONTEXT: docs/context/fix-1795-timeline-ortszeit.md
 Deckt die Query-Familie (`glance`, `heute_gewitter`, `timeline_heute`,
 `timeline_morgen`, `heute`, `morgen`) ab: `_handle_query` bestimmt heute den
 Kalendertag ueber den UTC-Tag der Nachricht (`received_at.date()`) statt ueber
-den Ortstag der Tour (ADR-0044), und `_fmt_timeline` formatiert Ankunftszeiten
+den Ortstag der Trip (ADR-0044), und `_fmt_timeline` formatiert Ankunftszeiten
 roh in UTC statt in der Ortszeit des Wegpunkts.
 
 Testpolitik (CLAUDE.md "Test-Politik: Zwei Schichten"): Kern-Schicht, kein
@@ -166,7 +166,7 @@ def test_ac1_timeline_zeigt_ortszeit_nicht_die_rohe_utc_zeit():
 def test_ac2_vier_kommandos_folgen_dem_ortstag(query_key, body_cmd, erwartete_tage):
     """AC-2.
 
-    GIVEN eine Korsika-Tour mit Etappen fuer den Ortstag D+1/D+2,
+    GIVEN eine Korsika-Trip mit Etappen fuer den Ortstag D+1/D+2,
     WHEN  eine Nachricht zu NACHTS_UTC (22:30 UTC = 00:30 Ortszeit des
           Folgetags, Mismatch-Fenster) fuer eines der vier Kommandos kommt,
     THEN  bezieht sich "heute"/"morgen" auf den ORTSTAG (D+1/D+2) -- vor dem
@@ -281,7 +281,7 @@ def test_ac3_timeline_heute_koppelt_datum_und_uhrzeit():
 def test_ac4_glance_nutzt_je_tag_die_eigene_zone():
     """AC-4.
 
-    GIVEN eine Tour hat die heutige Etappe in Neuseeland (Pacific/Auckland,
+    GIVEN eine Trip hat die heutige Etappe in Neuseeland (Pacific/Auckland,
           UTC+12) und die morgige auf Korsika (Europe/Paris, UTC+2),
     WHEN  ``glance`` abgefragt wird,
     THEN  beschriftet/filtert ``_fmt_glance`` den heutigen Abschnitt in der
@@ -384,13 +384,13 @@ def test_ac4_glance_nutzt_je_tag_die_eigene_zone():
 # fuer morgen, EIN Aufruf `_fmt_glance(..., tz_heute, tz_morgen)`),
 # `heute_gewitter` EINES, `timeline_heute` ZWEI (Text via `_fmt_timeline`,
 # Buttons via `_timeline_buttons`), `timeline_morgen` ebenfalls ZWEI.
-# AC-2/AC-3 nutzen einzonige Korsika-Touren (`tz_heute == tz_morgen` dort),
+# AC-2/AC-3 nutzen einzonige Korsika-Trips (`tz_heute == tz_morgen` dort),
 # AC-4 deckt nur `glance` ab -- ein Zonentausch an JEDEM der sechs
 # UEBRIGEN Punkte blieb dadurch fuer sich genommen unsichtbar (F002/F004,
 # beide inzwischen geschlossen -- s. Bericht).
 #
 # EIN parametrisierter Test statt vier/fuenf Einzeltests, auf EINER
-# Mehrzonen-Tour (`trip_two_zones`: heute Wellington, morgen Korsika):
+# Mehrzonen-Trip (`trip_two_zones`: heute Wellington, morgen Korsika):
 # fuer jedes der vier Kommandos ein Wegpunkt, dessen Ortszeit unter der
 # EIGENEN Zone einen ANDEREN Tag/eine andere Uhrzeit ergibt als unter der
 # Zone des jeweils ANDEREN Tages. Wo ein `reply_markup` existiert
@@ -414,7 +414,7 @@ _F005_MORGEN_ZEIT = datetime(2026, 8, 20, 18, 0, tzinfo=timezone.utc)   # 20:00 
 def test_f005_alle_vier_kommandos_nutzen_die_zone_ihrer_eigenen_etappe(query_key, body_cmd):
     """Adversary-Fix F005.
 
-    GIVEN eine Mehrzonen-Tour hat die heutige Etappe in Neuseeland
+    GIVEN eine Mehrzonen-Trip hat die heutige Etappe in Neuseeland
           (Pacific/Auckland) und die morgige auf Korsika (Europe/Paris), je
           ein Wegpunkt liegt so, dass seine Ortszeit unter der EIGENEN Zone
           einen anderen Tag/eine andere Uhrzeit ergibt als unter der Zone
@@ -548,7 +548,7 @@ def test_f005_alle_vier_kommandos_nutzen_die_zone_ihrer_eigenen_etappe(query_key
 # also zwangslaeufig AUCH unter Wellington auf T -- ein Wellington/Korsika-
 # Tausch (F004/F005s Fehlerklasse) waere an genau diesem Punkt dann NICHT
 # mehr diskriminierbar. Beide Eigenschaften gleichzeitig sind fuer EINEN
-# Wegpunkt auf dieser Zweizonen-Tour unerreichbar -- deshalb bleibt dieser
+# Wegpunkt auf dieser Zweizonen-Trip unerreichbar -- deshalb bleibt dieser
 # EINE Fall als eigener, einzoniger Test stehen (Mismatch-Fenster-Muster,
 # unveraendert aus F002 uebernommen) statt in der Matrix aufzugehen.
 
@@ -557,7 +557,7 @@ def test_f002_rest_glance_morgen_internen_utc_ruckfall():
     """Adversary-Fix F002, Rest-Fall (s. Beweis oben): der MORGEN-Zweig von
     ``_fmt_glance`` muss ``tz_morgen`` tatsaechlich verwenden -- nicht nur
     einen ANDEREN Zonenwert (das deckt F005), sondern auch nicht intern auf
-    UTC zurueckfallen. Einzonige Korsika-Tour, Wegpunkt im Mismatch-Fenster.
+    UTC zurueckfallen. Einzonige Korsika-Trip, Wegpunkt im Mismatch-Fenster.
     """
     morgen_zeit = datetime(2026, 8, 21, 22, 30, tzinfo=timezone.utc)  # 00:30 Korsika am 22.08
     heute_zeit = datetime(2026, 8, 21, 10, 0, tzinfo=timezone.utc)    # unauffaellig, kein Mismatch
@@ -623,7 +623,7 @@ def test_ac5_sommerzeit_wechseltage_zeigen_die_korrekte_ortsstunde(
 ):
     """AC-5.
 
-    GIVEN eine Korsika-Tour (Europe/Paris) hat Wegpunkte rund um einen
+    GIVEN eine Korsika-Trip (Europe/Paris) hat Wegpunkte rund um einen
           Sommerzeit-Wechseltag -- 29.03. (Luecke, Ortstag 23h) oder 25.10.
           (Doppelstunde, Ortstag 25h),
     WHEN  ``timeline_heute`` abgefragt wird,
@@ -851,14 +851,14 @@ def test_ac7_fehlertext_nennt_den_tatsaechlich_benutzten_zieltag():
 def test_ac8_anker_traegt_den_ortstag_und_ist_als_geometrie_ladbar():
     """AC-8.
 
-    GIVEN eine Tour im Mismatch-Fenster hat noch keinen ladbaren
+    GIVEN eine Trip im Mismatch-Fenster hat noch keinen ladbaren
           Wetter-Snapshot,
     WHEN  ``_handle_query`` daraufhin ``_fetch_and_save_snapshot`` ausloest
           (echter Fetch ueber die autouse-``GZ_TEST_FIXTURE_DIR``, kein
           Mock),
     THEN  traegt die geschriebene Ankerdatei ``target_date`` = Ortstag D21
           (nicht UTC-Tag D20) -- und zwar genau den Tag, den der Alarm-Pfad
-          als "heute" dieser Tour ansieht --, und sie ist ladbar.
+          als "heute" dieser Trip ansieht --, und sie ist ladbar.
 
     Frueher indirekt gemessen ueber ``_get_cached_weather(...,
     tagesgleicher_anker_noetig=True) is not None``. Das traegt seit #1699
@@ -894,7 +894,7 @@ def test_ac8_anker_traegt_den_ortstag_und_ist_als_geometrie_ladbar():
     )
     assert ankertag == ortstag, (
         "AC-8: der Tagesbezug muss dem entsprechen, was der Alarm-Pfad als "
-        "'heute' dieser Tour ansieht -- sonst verwuerfe die #1661-Pruefung ihn "
+        "'heute' dieser Trip ansieht -- sonst verwuerfe die #1661-Pruefung ihn "
         f"mit reason=wrong_day. Anker {ankertag}, Ortstag {ortstag}"
     )
     assert geometrie is not None, (

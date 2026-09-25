@@ -1,4 +1,4 @@
-// Issue #1395 S3 — Registry (Stand je Tour) + Schreib-Warteschlange.
+// Issue #1395 S3 — Registry (Stand je Trip) + Schreib-Warteschlange.
 // Spec: docs/specs/modules/issue_1395_s3_etag_registry.md — AC-9,
 //   § "extractTripId(path) — welche Pfade zaehlen".
 
@@ -20,18 +20,18 @@ import {
 /** Laesst alle bereits geplanten Microtasks/Timer-Ticks durchlaufen. */
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
-describe('etagRegistry — Stand je Tour', () => {
+describe('etagRegistry — Stand je Trip', () => {
 	beforeEach(() => clearEtagRegistry());
 
 	test('test_getSetDiscard_roundtrip', () => {
-		// GIVEN: fuer eine Tour ist noch nichts bekannt
+		// GIVEN: fuer eine Trip ist noch nichts bekannt
 		assert.equal(getKnownEtag('gr20'), undefined);
 
 		// WHEN: ein Stand gemerkt wird
 		setKnownEtag('gr20', '"abc123"');
 
 		// THEN: liefert die Registry genau diesen Wert zurueck — und nur fuer
-		// diese Tour (der Stempel gehoert zur Tour, nicht zur Adresse).
+		// diese Trip (der Stempel gehoert zur Trip, nicht zur Adresse).
 		assert.equal(getKnownEtag('gr20'), '"abc123"');
 		assert.equal(getKnownEtag('jakobsweg'), undefined);
 
@@ -43,7 +43,7 @@ describe('etagRegistry — Stand je Tour', () => {
 	});
 
 	test('test_extractTripId_matchesOnlyTripAndWeatherConfigPaths', () => {
-		// GIVEN/WHEN/THEN: drei Pfadformen tragen einen ETag — die Tour und ihre
+		// GIVEN/WHEN/THEN: drei Pfadformen tragen einen ETag — die Trip und ihre
 		// Wetter-Konfiguration (S2), seit S6 zusaetzlich der Ortsvergleich.
 		assert.equal(extractTripId('/api/trips/gr20'), 'gr20');
 		assert.equal(extractTripId('/api/trips/gr20/weather-config'), 'gr20');
@@ -95,7 +95,7 @@ describe('etagRegistry — Stand je Tour', () => {
 	});
 
 	test('test_adoptEtagFromPageLoad_neverOverwritesAnExistingStamp', () => {
-		// GIVEN: fuer die Tour ist noch nichts bekannt → der Seitenaufbau darf setzen
+		// GIVEN: fuer die Trip ist noch nichts bekannt → der Seitenaufbau darf setzen
 		assert.equal(adoptEtagFromPageLoad('gr20', '"fp-1"'), true);
 		assert.equal(getKnownEtag('gr20'), '"fp-1"');
 
@@ -109,11 +109,11 @@ describe('etagRegistry — Stand je Tour', () => {
 	});
 });
 
-describe('enqueueTripWrite — Schreib-Warteschlange je Tour (AC-9)', () => {
+describe('enqueueTripWrite — Schreib-Warteschlange je Trip (AC-9)', () => {
 	beforeEach(() => clearEtagRegistry());
 
 	test('test_enqueueTripWrite_serializesSameTripId', async () => {
-		// GIVEN: zwei Schreibvorgaenge auf DIESELBE Tour, der erste haengt
+		// GIVEN: zwei Schreibvorgaenge auf DIESELBE Trip, der erste haengt
 		let firstStarted = false;
 		let secondStarted = false;
 		let releaseFirst!: () => void;
@@ -147,7 +147,7 @@ describe('enqueueTripWrite — Schreib-Warteschlange je Tour (AC-9)', () => {
 	});
 
 	test('test_enqueueTripWrite_differentTripIds_runConcurrently', async () => {
-		// GIVEN: ein haengender Schreibvorgang auf Tour A
+		// GIVEN: ein haengender Schreibvorgang auf Trip A
 		let bStarted = false;
 		let releaseA!: () => void;
 		const gate = new Promise<void>((r) => {
@@ -158,15 +158,15 @@ describe('enqueueTripWrite — Schreib-Warteschlange je Tour (AC-9)', () => {
 			return 'a';
 		});
 
-		// WHEN: ein Schreibvorgang auf Tour B eingereiht wird
+		// WHEN: ein Schreibvorgang auf Trip B eingereiht wird
 		const pB = enqueueTripWrite('jakobsweg', async () => {
 			bStarted = true;
 			return 'b';
 		});
 		await tick();
 
-		// THEN: laeuft B sofort — die Warteschlange trennt nach Tour
-		assert.equal(bStarted, true, 'Warteschlange darf nicht ueber Tour-Grenzen hinweg blockieren');
+		// THEN: laeuft B sofort — die Warteschlange trennt nach Trip
+		assert.equal(bStarted, true, 'Warteschlange darf nicht ueber Trip-Grenzen hinweg blockieren');
 		assert.equal(await pB, 'b');
 
 		releaseA();

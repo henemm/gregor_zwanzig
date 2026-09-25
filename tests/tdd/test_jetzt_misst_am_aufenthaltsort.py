@@ -264,7 +264,7 @@ def test_ac2_zielzeitpunkt_ist_now_utc_und_nicht_die_fenstermitte(monkeypatch):
 def test_ac3_messpunkt_wandert_mit_dem_zielwegpunkt(monkeypatch):
     """AC-3 (Nicht-Trivialitaet / Gegenprobe).
 
-    GIVEN zwei sonst gleiche Touren, deren ZIELwegpunkt verschoben ist,
+    GIVEN zwei sonst gleiche Trips, deren ZIELwegpunkt verschoben ist,
     WHEN  ``/jetzt`` jeweils zum selben Zeitpunkt laeuft,
     THEN  verschiebt sich der abgefragte Messpunkt mit — und er liegt in beiden
           Laeufen > 0.01° vom Etappenstart entfernt.

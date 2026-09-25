@@ -9,7 +9,7 @@ tags: [timezone, telegram, trip-command-processor, issue-1727, issue-1722, adr-0
 workflow: fix-1727-s5a-befehlspfade
 ---
 
-# Fix #1727 S5a — Befehlspfade folgen dem Ortstag der Tour
+# Fix #1727 S5a — Befehlspfade folgen dem Ortstag der Trip
 
 ## Approval
 
@@ -20,7 +20,7 @@ workflow: fix-1727-s5a-befehlspfade
 Die Befehlspfade `/status`, `/jetzt`, `### ruhetag` und die Tourauswahl `_find_active_trip`
 bestimmen „welcher Kalendertag gemeint ist" weiterhin über die Serveruhr (`date.today()`) bzw.
 den UTC-Tag der eingehenden Nachricht (`msg.received_at.date()`) statt über den Ortstag der
-Tour — ein Verstoß gegen die bereits akzeptierte ADR-0044. Diese Scheibe (S5a von #1727, Epic
+Trip — ein Verstoß gegen die bereits akzeptierte ADR-0044. Diese Scheibe (S5a von #1727, Epic
 #1722) schließt vier der dort namentlich als „noch nicht umgesetzt" gelisteten Stellen, indem
 sie an allen vieren den geteilten Baustein `trip_local_today(trip, now_utc)` aus
 `services/trip_day.py` einsetzt — keine eigene Kopie der Zonen-Auflösung.
@@ -50,7 +50,7 @@ sie an allen vieren den geteilten Baustein `trip_local_today(trip, now_utc)` aus
 | Datei | Änderung | Beschreibung |
 |---|---|---|
 | `src/services/trip_command_processor.py` | MODIFY | `command_date` (:429) über `trip_local_today`; `_show_status`/`_show_now` bekommen `now_utc: datetime` als Pflichtparameter, `today` über `trip_local_today(trip, now_utc)`. `_handle_query` bleibt unberührt (s. „Nicht in dieser Scheibe"). |
-| `src/services/inbound_telegram_reader.py` | MODIFY | `_find_active_trip` bekommt `now_utc: datetime` als Pflichtparameter, Ortstag-Auflösung wandert **in** die Schleife, je Tour. Beide Aufrufer (:187, :314) ziehen `datetime.now(tz=timezone.utc)` einmal vor den Aufruf und reichen denselben Wert später an `received_at` der `InboundMessage` weiter — bisher zwei potenziell verschiedene Zeitpunkte, künftig einer. |
+| `src/services/inbound_telegram_reader.py` | MODIFY | `_find_active_trip` bekommt `now_utc: datetime` als Pflichtparameter, Ortstag-Auflösung wandert **in** die Schleife, je Trip. Beide Aufrufer (:187, :314) ziehen `datetime.now(tz=timezone.utc)` einmal vor den Aufruf und reichen denselben Wert später an `received_at` der `InboundMessage` weiter — bisher zwei potenziell verschiedene Zeitpunkte, künftig einer. |
 | `tests/test_output_timezone_guard.py` | MODIFY | Drei `KNOWN_VIOLATIONS`-Einträge entfernen: `:619` `_find_active_trip`, `:627` `_show_now`, `:628` `_show_status` |
 | `tests/tdd/test_inbound_telegram_reader.py` | MODIFY | Drei Aufrufstellen `_find_active_trip()` (:78, :108, :130) auf neue Signatur |
 | `tests/tdd/test_bug_824_archived_trip_filter.py` | MODIFY | Aufrufstelle `_find_active_trip(two_trip_env)` (:198) auf neue Signatur |
@@ -92,7 +92,7 @@ display_tz` (Zeile 23) ergänzt.
 
 **`_find_active_trip`** bekommt `now_utc: datetime` als Pflichtparameter (vor `user_id`, analog
 `_get_active_trips(report_type, now_utc)`); die Tagesbestimmung wandert **in** die Schleife, je
-Tour über deren eigene Zone — wortgleiches Muster zu `_get_active_trips`
+Trip über deren eigene Zone — wortgleiches Muster zu `_get_active_trips`
 (`trip_report_scheduler.py:722-779`, Docstring `:729-740`), inklusive des Fallback-Zweigs
 „frühester zukünftiger Trip", der ebenfalls je Trip rechnet statt gegen einen einmal
 berechneten Wert. Beide Aufrufer (`inbound_telegram_reader.py:187`, `:314`) ziehen
@@ -116,7 +116,7 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
   S5b/S5c.
 - **Ein Koordinaten-Cache für `tz_for_coords`.** Bewusste Nicht-Entscheidung: `tz_for_coords`
   hat kein Ergebnis-Caching, nur der `TimezoneFinder` selbst ist ein Lazy-Singleton. Ein
-  `.timezone_at()` je Tour und Aufruf ist linear und billig. S5a ist eine Korrekturscheibe,
+  `.timezone_at()` je Trip und Aufruf ist linear und billig. S5a ist eine Korrekturscheibe,
   kein Ort für eine Optimierung ohne gemessenen Engpass.
 
 ## Expected Behavior
@@ -124,14 +124,14 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
 - **Input:** ein eingehender Telegram- oder Mail-Befehl (`msg.received_at`, ein UTC-Zeitpunkt)
   für `/status`, `/jetzt`, `### ruhetag` oder die vorgelagerte Tourauswahl.
 - **Output:** Der Tagesbezug (Etappenfilter, Etappenwahl, Tourauswahl, Idempotenzschlüssel)
-  entspricht dem **Ortstag der betroffenen Tour** zum Zeitpunkt `received_at` — nicht dem
+  entspricht dem **Ortstag der betroffenen Trip** zum Zeitpunkt `received_at` — nicht dem
   Servertag (`Etc/UTC`) und nicht dem rohen UTC-Datum der Nachricht.
 - **Side effects:** `command_log.json`-Einträge tragen künftig den Ortstag statt des
   UTC-Tages; Bestandseinträge (falls vorhanden) bleiben unangetastet, keine Migration.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine Tour liegt in einer Zone mit negativem UTC-Offset (z. B. US-Westküste,
+- **AC-1:** Given eine Trip liegt in einer Zone mit negativem UTC-Offset (z. B. US-Westküste,
   UTC−8) mit einer Etappe für den heutigen Ortstag / When `/status` zwischen 00:00 und 08:00
   UTC abgefragt wird — der Ortstag ist dort noch der Vortag des UTC-Kalendertages / Then bleibt
   die heutige Etappe in der Liste sichtbar; vor dem Fix fiel sie durch den Filter
@@ -139,7 +139,7 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
   - Test: `freeze_time` in diesem Fenster, Trip-Fixtur mit Wegpunkt in der Zielzone,
     Etappe datiert auf den Ortstag; Assertion auf die Etappe in `confirmation_body`.
 
-- **AC-2:** Given eine Tour liegt in einer Zone mit positivem UTC-Offset (z. B. Neuseeland,
+- **AC-2:** Given eine Trip liegt in einer Zone mit positivem UTC-Offset (z. B. Neuseeland,
   UTC+12) mit einer bereits lokal abgeschlossenen Etappe / When `/status` zwischen 12:00 und
   24:00 UTC abgefragt wird — der Ortstag ist dort schon der UTC-Folgetag / Then verschwindet die
   bereits abgeschlossene Etappe aus der Liste; vor dem Fix blieb sie sichtbar, weil der
@@ -147,7 +147,7 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
   - Test: `freeze_time` in diesem Fenster, Etappe auf den (aus Ortssicht) vergangenen Tag
     datiert; Assertion, dass sie NICHT mehr in `confirmation_body` erscheint.
 
-- **AC-3:** Given eine Tour steht kurz vor oder nach der Ortsmitternacht (z. B. Korsika,
+- **AC-3:** Given eine Trip steht kurz vor oder nach der Ortsmitternacht (z. B. Korsika,
   Nachricht 22:30 UTC = 00:30 Ortszeit des Folgetags) mit einer Etappe für heute und einer für
   morgen / When `/jetzt` abgefragt wird / Then bestimmt `_show_now` die Etappe des
   **Ortstages** für die Nowcast-Standortwahl (Wegpunkt der Folgetags-Etappe), nicht die des
@@ -156,7 +156,7 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
   - Test: Assertion auf die für `get_nowcast(lat, lon, ...)` übergebenen Koordinaten — sie
     müssen vom Wegpunkt der Ortstag-Etappe stammen, nicht vom Vortag.
 
-- **AC-4:** Given eine Tour auf Korsika (UTC+2) hat eine Etappe für den Ortstag D / When
+- **AC-4:** Given eine Trip auf Korsika (UTC+2) hat eine Etappe für den Ortstag D / When
   `### ruhetag` einmal um 00:30 Ortszeit (= 22:30 UTC am Vortag) und einmal um 14:00 Ortszeit
   desselben Ortstages (= 12:00 UTC) gesendet wird / Then bleibt die Etappe von D in **beiden**
   Fällen unverschoben — vor dem Fix wanderte sie um 00:30 Ortszeit mit, weil `command_date` noch
@@ -164,7 +164,7 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
   - Test: zwei `freeze_time`-Läufe gegen dieselbe Trip-Fixtur, Etappe D in `shifts` beider
     Antworten NICHT enthalten.
 
-- **AC-5:** Given eine Tour hat nur noch die heutige Etappe (Ortstag D, keine späteren
+- **AC-5:** Given eine Trip hat nur noch die heutige Etappe (Ortstag D, keine späteren
   Etappen) — der Randfall, in dem `shifts` nach dem Fix leer wird / When `### ruhetag`
   innerhalb des Mismatch-Fensters gesendet wird (z. B. 22:30 UTC am Vortag auf Korsika) / Then
   meldet die Antwort „Keine zukuenftigen Etappen zum Verschieben" (`success=False`) statt
@@ -187,24 +187,24 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
     Sekunde, aber gleichem Ortstag senden; zweiter Versuch liefert `success=False` „bereits
     eingetragen".
 
-- **AC-7:** Given zwei Touren liegen in unterschiedlichen Zonen und tragen zum selben `now_utc`
+- **AC-7:** Given zwei Trips liegen in unterschiedlichen Zonen und tragen zum selben `now_utc`
   unterschiedliche Ortstage (z. B. Wellington und Korsika, zwölf Stunden auseinander) — eine der
   beiden ist per Ortstag bereits beendet, die andere per Ortstag aktiv / When
-  `_find_active_trip(now_utc, user_id)` beide Touren prüft / Then liefert die Funktion die per
-  Ortstag aktive Tour. Das ist die Pflicht-Probe gegen die gemessene Nachweis-Lücke: eine
+  `_find_active_trip(now_utc, user_id)` beide Trips prüft / Then liefert die Funktion die per
+  Ortstag aktive Trip. Das ist die Pflicht-Probe gegen die gemessene Nachweis-Lücke: eine
   Mutation, die die Tagesbestimmung **vor** die Schleife zieht und einen einzigen, aus nur einer
-  Tour abgeleiteten Tag für alle wiederverwendet, muss diesen Test rot machen — genau diese
+  Trip abgeleiteten Tag für alle wiederverwendet, muss diesen Test rot machen — genau diese
   Regression hat #1724 bereits einmal in `_get_active_trips` behoben, und kein bestehender Test
   von `_find_active_trip` fängt sie.
-  - Test: Zwei-Touren-Fixtur mit den oben beschriebenen Eigenschaften; zusätzlich eine
+  - Test: Zwei-Trips-Fixtur mit den oben beschriebenen Eigenschaften; zusätzlich eine
     Mutationsprobe (Tagesbestimmung testweise vor die Schleife gezogen) im Bericht belegen, dass
     sie den Test bricht.
 
-- **AC-8:** Given zwei aneinandergrenzende Touren in Mitteleuropa (UTC+2) — Tour A endet an
-  Ortstag D, Tour B beginnt an Ortstag D+1 — der Blast-Radius-Grenzfall an der Tourgrenze / When
+- **AC-8:** Given zwei aneinandergrenzende Trips in Mitteleuropa (UTC+2) — Trip A endet an
+  Ortstag D, Trip B beginnt an Ortstag D+1 — der Blast-Radius-Grenzfall an der Tourgrenze / When
   eine Telegram-Nachricht um 22:30 UTC eintrifft (= 00:30 Ortszeit des Folgetags D+1) / Then
-  wählt `_find_active_trip` bereits Tour B, weil lokal schon D+1 ist — vor dem Fix hätte der
-  Servertag D noch Tour A gewählt, und ein bereits abgelaufener Trip hätte den Befehl fälschlich
+  wählt `_find_active_trip` bereits Trip B, weil lokal schon D+1 ist — vor dem Fix hätte der
+  Servertag D noch Trip A gewählt, und ein bereits abgelaufener Trip hätte den Befehl fälschlich
   beantwortet.
   - Test: `freeze_time` 22:30 UTC, Tourenliste [A endend D, B beginnend D+1], Assertion auf
     `_find_active_trip(...) is B`.
@@ -265,7 +265,7 @@ entsteht.
   Datenträger** — kein Datenverlust, keine still fehlschlagende Zusicherung, strukturell anders
   als die Persistenz-Kopplung, vor der #1697 warnt. Kein neuer Bruch: Drilldown (#1470,
   ortszonenrichtig) und `_handle_query` (UTC) nennen schon heute unterschiedliche Tage.
-- **Mehrzonen-Touren:** Restfehler = Zonendifferenz zweier benachbarter Etappen, wenn der
+- **Mehrzonen-Trips:** Restfehler = Zonendifferenz zweier benachbarter Etappen, wenn der
   Wanderer an genau dem betreffenden Tag die Zeitzone wechselt (ADR-0044, PO-Entscheidung,
   unverändert, bewusst offen).
 - **`command_log.json`:** Bestand nicht gemessen auf Prod/Staging (`/var/lib/gregor*`, kein

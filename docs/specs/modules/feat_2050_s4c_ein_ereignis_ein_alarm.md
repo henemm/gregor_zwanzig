@@ -73,7 +73,7 @@ kein Frontend-Anteil.
   Testdateien (1 CREATE, 2 MODIFY) + 1 ADR-Nachtrag
 - **Effort:** high
 - **Risiko:** HIGH — es entsteht eine neue Unterdrückungsregel im Abweichungs-Zweig, und die
-  Tour des PO läuft bereits (Start 2026-08-23)
+  Trip des PO läuft bereits (Start 2026-08-23)
 
 ## Dependencies
 
@@ -406,7 +406,7 @@ wurde (AC-16).
 ## Risks
 
 1. **🔴 Die gefährlichste Fehlerrichtung ist der ausbleibende Alarm.** Diese Scheibe baut eine
-   NEUE Unterdrückungsregel im Abweichungs-Zweig, während die Tour des PO bereits läuft (Start
+   NEUE Unterdrückungsregel im Abweichungs-Zweig, während die Trip des PO bereits läuft (Start
    2026-08-23). Jede AC dieser Spec sichert explizit eine Gegenrichtung mit ab (AC-4/AC-5/AC-6/
    AC-7/AC-8/AC-9/AC-10) — keine AC prüft nur die Unterdrückung ohne Positivkontrolle.
 2. **Signaturänderung an `check_event_identity_gate()`/`record_event_identity()`.** Der neue

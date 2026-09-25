@@ -497,7 +497,7 @@ unbekannte Identität erreicht die UI).
   korrekten Reiter-Namen „Wetter-Metriken" statt „Wertebereiche"; zusätzlich
   erscheint ein Erklärsatz, der namentlich aufzählt, welche gewählten Größen
   keinen Alarm auslösen können, statt sie kommentarlos wegzulassen. Im
-  Tour-Kontext bleibt die Funktionalität begrenzt (dort gibt es keine
+  Trip-Kontext bleibt die Funktionalität begrenzt (dort gibt es keine
   Metrik-Auswahl als Datengrundlage).
 
 ## Architektur-Entscheidung (ADR)

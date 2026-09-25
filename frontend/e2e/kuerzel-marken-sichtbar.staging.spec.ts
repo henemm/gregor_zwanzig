@@ -479,7 +479,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 		).toEqual([]);
 	});
 
-	// ── AC-10 / AC-11 / AC-12 (Touren-Editor) ───────────────────────────────
+	// ── AC-10 / AC-11 / AC-12 (Trips-Editor) ───────────────────────────────
 	test('AC-10/AC-11: in allen 14 Aufloesungen erfuellt jede Marke jeder Zeile alle Bedingungen', async ({
 		page,
 		request

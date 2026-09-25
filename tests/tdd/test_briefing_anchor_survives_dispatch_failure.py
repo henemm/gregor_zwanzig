@@ -21,7 +21,7 @@ Tages faellt ganztaegig aus (AC-9).
 Test-Politik (kein Mock-Theater):
 
 * Der Versandfehler wird **nicht** durch ein werfendes Double erzeugt, sondern
-  durch eine echte, unzulaessige Kanal-Konfiguration: E-Mail ist fuer die Tour
+  durch eine echte, unzulaessige Kanal-Konfiguration: E-Mail ist fuer die Trip
   eingeschaltet, die SMTP-Zugangsdaten sind aber unvollstaendig. Es laeuft der
   ECHTE Guard im echten `EmailOutput` und wirft den ECHTEN `OutputConfigError`
   — dieselbe Ausnahmeklasse, aus demselben Modul, auf demselben Weg wie am
@@ -179,10 +179,10 @@ def _data(segment_id: int | str = 1, *, segment: TripSegment | None = None,
 def _trip(trip_id: str, *, with_levels: bool = False,
           stage_offsets: tuple[int, ...] = (0,), send_email: bool = True,
           send_sms: bool = False, send_telegram: bool = False) -> Trip:
-    """Tour mit einer Etappe HEUTE und scharfem E-Mail-Kanal.
+    """Trip mit einer Etappe HEUTE und scharfem E-Mail-Kanal.
 
     `stage_offsets` (#1662 AC-4): zusaetzliche Etappentage relativ zu heute —
-    `(-1, 0)` ergibt eine Tour, die GESTERN schon lief. Nur damit laesst sich
+    `(-1, 0)` ergibt eine Trip, die GESTERN schon lief. Nur damit laesst sich
     ein Vermerk mit gestrigem Zieltag pruefen, ohne dass er schon an der
     bestehenden "keine Segmente"-Regel (`:392-395`) verfaellt.
     """
@@ -844,7 +844,7 @@ def test_ac10_fehler_vor_dem_versand_schreibt_keinen_anker():
 # SPEC: docs/specs/modules/fix_1662_versandfehler_nachliefern.md (AC-1..AC-13).
 # Fortsetzung von #1629: der Anker ueberlebt seither einen Versandfehler, das
 # Briefing selbst aber nicht — es wird nirgends vorgemerkt und nie nachgeholt
-# (07./08.08.2026: zwei verlorene Briefings derselben Tour).
+# (07./08.08.2026: zwei verlorene Briefings derselben Trip).
 #
 # Test-Politik wie oben: kein Mock-Theater. Der Fehlschlag entsteht am ECHTEN
 # Konfigurations-Guard des echten E-Mail-Kanals (`_settings_email_broken`),
@@ -1069,7 +1069,7 @@ def test_versandfehler_ohne_zweitkanal_wird_zur_nachlieferung_vorgemerkt():
         "Nachliefer-Vermerk — das Briefing ist ersatzlos verloren "
         f"(#1662 AC-1). Vorhanden: {_pending_markers(uid)!r}"
     )
-    assert marker.get("trip_id") == trip.id, f"Falsche Tour im Vermerk: {marker!r}"
+    assert marker.get("trip_id") == trip.id, f"Falsche Trip im Vermerk: {marker!r}"
     assert marker.get("failed_segment_ids") == [], (
         "Ein Versandfehler betrifft keinen Wetterabschnitt — die Liste muss "
         f"leer sein, sonst zieht der Vorlauf die Wetterdaten-Logik: {marker!r}"
@@ -1169,7 +1169,7 @@ def test_nachgeliefertes_briefing_nennt_den_gescheiterten_versand_als_grund(monk
 def test_vermerk_mit_vergangenem_zieltag_verfaellt_ohne_zustellversuch(monkeypatch):
     """#1662 AC-4.
 
-    GIVEN ein Versandfehler-Vermerk, dessen Zieltag GESTERN liegt (die Tour
+    GIVEN ein Versandfehler-Vermerk, dessen Zieltag GESTERN liegt (die Trip
           lief gestern schon, es gaebe also sehr wohl Etappen-Daten).
     WHEN  der stuendliche Vorlauf laeuft.
     THEN  verfaellt der Vermerk ohne weiteren Zustellversuch — ein
@@ -1206,7 +1206,7 @@ def test_vermerk_mit_vergangenem_zieltag_verfaellt_ohne_zustellversuch(monkeypat
 def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeypatch):
     """#1662 AC-5.
 
-    GIVEN ein Versandfehler-Vermerk und dieselbe Tour ist zur aktuellen Stunde
+    GIVEN ein Versandfehler-Vermerk und dieselbe Trip ist zur aktuellen Stunde
           regulaer faellig; der regulaere Versand gelingt.
     WHEN  der stuendliche Lauf (Vorlauf + regulaerer Slot) durch ist.
     THEN  erhielt der Nutzer GENAU EINE Nachricht, und der Vermerk ist weg.
@@ -1262,7 +1262,7 @@ def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeyp
 def test_erneut_gescheiterter_regulaerer_versand_haelt_den_vermerk_am_leben():
     """#1662 AC-6.
 
-    GIVEN ein Versandfehler-Vermerk, die Tour ist zur aktuellen Stunde regulaer
+    GIVEN ein Versandfehler-Vermerk, die Trip ist zur aktuellen Stunde regulaer
           faellig, und der regulaere Versand scheitert erneut.
     WHEN  der Lauf beendet ist.
     THEN  bleibt ein Versandfehler-Vermerk bestehen, sodass die naechste Stunde
@@ -1455,7 +1455,7 @@ def test_wetterfehler_vermerk_behaelt_die_segment_schnittmengen_regel(monkeypatc
     segment_ids = [
         str(s.segment_id) for s in scheduler._convert_trip_to_segments(trip, ortstag(LAT, LON))
     ]
-    assert segment_ids, "Vorbedingung: die Tour muss heute Abschnitte haben"
+    assert segment_ids, "Vorbedingung: die Trip muss heute Abschnitte haben"
     _seed_marker(uid, trip, reason=None, failed_segment_ids=segment_ids)
 
     zugestellt = _recording_email(monkeypatch)
@@ -1581,14 +1581,14 @@ def test_gescheiterte_email_neben_gelungener_sms_bleibt_in_der_diagnose(monkeypa
     zeilen = [z for z in journal.read_text(encoding="utf-8").splitlines() if z.strip()]
     import json as _json
     assert any(_json.loads(z).get("entity_id") == trip.id for z in zeilen), (
-        f"Kein Diagnose-Eintrag fuer diese Tour: {zeilen!r} (#1662 AC-13)"
+        f"Kein Diagnose-Eintrag fuer diese Trip: {zeilen!r} (#1662 AC-13)"
     )
 
 
 # ═════════════ #1662 AC-1, Zweitkanal-Luecke (Adversary-Befund F001) ══════════
 #
 # AC-1 sagt "kein einziger konfigurierter Kanal hat zugestellt" und nennt
-# E-Mail ausdruecklich nur als Beispiel ("z.B."). Ist E-Mail fuer eine Tour gar
+# E-Mail ausdruecklich nur als Beispiel ("z.B."). Ist E-Mail fuer eine Trip gar
 # nicht eingeschaltet und der EINZIGE konfigurierte Kanal scheitert, verlaesst
 # den Versand keine Ausnahme (SMS und Telegram sind fail-soft) — der Vermerk
 # haengt aber bis hierher allein am `except`-Zweig. Ergebnis: `sent_channels`
@@ -1622,7 +1622,7 @@ def _settings_nur_sms_scharf() -> Settings:
 def test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt():
     """#1662 AC-1 (Adversary F001) — SMS ist der einzige Kanal und scheitert.
 
-    GIVEN eine Tour ohne E-Mail-Versand, deren einziger konfigurierter Kanal
+    GIVEN eine Trip ohne E-Mail-Versand, deren einziger konfigurierter Kanal
           SMS ist, und der SMS-Gateway ist nicht erreichbar.
     WHEN  der Versandlauf beendet ist (er wirft dabei KEINE Ausnahme — SMS ist
           fail-soft, die Zustellbilanz bleibt leer).
@@ -1652,7 +1652,7 @@ def test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt():
         "Nachliefer-Vermerk fehlt und das Briefing ist ersatzlos verloren "
         f"(#1662 AC-1). Vorhanden: {_pending_markers(uid)!r}"
     )
-    assert marker.get("trip_id") == trip.id, f"Falsche Tour im Vermerk: {marker!r}"
+    assert marker.get("trip_id") == trip.id, f"Falsche Trip im Vermerk: {marker!r}"
     assert marker.get("failed_segment_ids") == [], (
         "Ein Versandfehler betrifft keinen Wetterabschnitt — die Liste muss "
         f"leer sein, sonst zieht der Vorlauf die Wetterdaten-Logik: {marker!r}"
@@ -1664,7 +1664,7 @@ def test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar(
 ):
     """#1662 AC-1 (Adversary F001) — Telegram ist der einzige Kanal.
 
-    GIVEN eine Tour ohne E-Mail- und ohne SMS-Versand, deren einziger
+    GIVEN eine Trip ohne E-Mail- und ohne SMS-Versand, deren einziger
           konfigurierter Kanal Telegram ist, und der Telegram-Transport
           scheitert bei jeder Nachricht.
     WHEN  der Versandlauf beendet ist.
@@ -1704,13 +1704,13 @@ def test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar(
         "Vermerk wird das Briefing nie nachgeholt "
         f"(#1662 AC-1). Vorhanden: {_pending_markers(uid)!r}"
     )
-    assert marker.get("trip_id") == trip.id, f"Falsche Tour im Vermerk: {marker!r}"
+    assert marker.get("trip_id") == trip.id, f"Falsche Trip im Vermerk: {marker!r}"
 
 
 def test_tour_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt():
     """#1662 AC-1, Gegenprobe zur Abgrenzung (Mutations-Fund M3).
 
-    GIVEN eine Tour, fuer die GAR KEIN Kanal eingeschaltet ist.
+    GIVEN eine Trip, fuer die GAR KEIN Kanal eingeschaltet ist.
     WHEN  der Versandlauf beendet ist.
     THEN  entsteht KEIN Vermerk — hier ist nichts ausgefallen, es war nichts
           vorgesehen; eine Nachlieferung haette kein Ziel und liesse den

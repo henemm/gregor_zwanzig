@@ -145,7 +145,7 @@ class TestSubscriptions:
         """TripSubscription stores file path and trigger."""
         sub = TripSubscription(
             id="sub-2",
-            name="Weekend Tour",
+            name="Weekend Trip",
             trip_file="trips/weekend.json",
             trigger=TriggerTiming.TWO_DAYS_BEFORE,
         )
@@ -174,7 +174,7 @@ class TestUser:
         )
         trip_sub = TripSubscription(
             id="sub-2",
-            name="Weekend Tour",
+            name="Weekend Trip",
             trip_file="trips/weekend.json",
             trigger=TriggerTiming.TWO_DAYS_BEFORE,
         )

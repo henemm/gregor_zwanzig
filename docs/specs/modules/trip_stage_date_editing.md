@@ -201,7 +201,7 @@ die bereits vorhandene `SaveStatus`-API (`hasPending`, `flush()`).
   Sicherheitsnetz wurde dafür bewusst nicht gewählt (PO-Entscheidung
   2026-07-25: still speichern, keine Verlassen-Warnung).
 - `keepalive`-Requests sind vom Browser auf **maximal 64 KB Nutzlast**
-  begrenzt (Fetch-Spezifikation). Bei sehr großen Touren (grob ab ~40 Etappen
+  begrenzt (Fetch-Spezifikation). Bei sehr großen Trips (grob ab ~40 Etappen
   mit vielen Wegpunkten) überschreitet der PUT-Payload dieses Limit, der
   Browser lehnt den Request ab, und die Zusicherung aus AC-5/AC-6 greift dann
   nicht mehr. Kein bekannter Fall im aktuellen Bestand, aber bewusst in Kauf

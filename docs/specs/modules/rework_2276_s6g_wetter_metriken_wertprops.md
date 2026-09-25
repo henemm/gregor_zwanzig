@@ -554,7 +554,7 @@ Die Scheibe bleibt unteilbar: die Brücke von den `WeatherMetricsTab.svelte`-
 
 - **AC-3 (Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Fläche B):**
   Automatisches Speichern beim Bearbeiten darf ausschließlich im
-  Ortsvergleich-Hub passieren — auf der Tour und beim Neuanlegen eines
+  Ortsvergleich-Hub passieren — auf der Trip und beim Neuanlegen eines
   Vergleichs darf nie im Hintergrund gespeichert werden. Given
   `vergleichSpeicherung` entsteht nur, wenn
   `wetterMetrikenVergleichSpeicherungAktiv({context, zustand, preset,
@@ -615,20 +615,20 @@ Die Scheibe bleibt unteilbar: die Brücke von den `WeatherMetricsTab.svelte`-
     Browser.
 
 - **AC-6 (Trip-Mounts bleiben vollständig unverändert):** Der
-  Wetter-Metriken-Reiter einer einzelnen Tour verhält sich exakt wie vorher
+  Wetter-Metriken-Reiter einer einzelnen Trip verhält sich exakt wie vorher
   — diese Scheibe betrifft ausschließlich den Ortsvergleich. Given
   `TripTabs.svelte:224`, `TripEditView.svelte:201`,
   `TripNewEditor.svelte:881/:1113` mounten `WeatherMetricsTab` heute ohne
   `wiz`, mit `context="route"` (Default) / When die zehn neuen Wertprops als
   optional deklariert werden, ohne dass ein Trip-Mount sie übergibt / Then
-  bleibt das Verhalten der Tour identisch — kein Trip-Mount wird angefasst.
+  bleibt das Verhalten der Trip identisch — kein Trip-Mount wird angefasst.
   - Test: bestehendes Trip-E2E-Regressionsnetz bleibt ohne Änderung grün +
     Kern (Typecheck bleibt grün, ohne dass Trip-Mounts angepasst werden
     müssen).
 
 - **AC-7 (Prädikat UND Fabrik umbenannt, S4-AC-13-Barriere bleibt scharf,
   kein Bezeichner `wiz` bleibt in `weatherMetricsCompareSave.ts`):** Die
-  Regel „automatisches Speichern nur im Ortsvergleich-Hub, nie auf der Tour"
+  Regel „automatisches Speichern nur im Ortsvergleich-Hub, nie auf der Trip"
   bleibt technisch genauso hart durchgesetzt wie vor dieser Scheibe — nur
   interne Namen ändern sich, und der Begriff der alten Klasseninstanz
   (`wiz`) verschwindet aus der gesamten Speicherweg-Datei. Given
@@ -676,7 +676,7 @@ Die Scheibe bleibt unteilbar: die Brücke von den `WeatherMetricsTab.svelte`-
 
 - **AC-8 (Ratsche bleibt bei 47, fünf Einträge bewusst nachgeführt):** Ein
   automatisierter Wächter, der zählt, wie viele Programmstellen noch
-  „Tour oder Vergleich?" unterscheiden, meldet nach dieser Scheibe weiterhin
+  „Trip oder Vergleich?" unterscheiden, meldet nach dieser Scheibe weiterhin
   dieselbe Zahl — die fünf betroffenen Stellen rutschen nur nach unten,
   keine verschwindet und keine neue kommt hinzu. Given
   `context_herkunft_zweige_eingefroren.test.ts` hält heute

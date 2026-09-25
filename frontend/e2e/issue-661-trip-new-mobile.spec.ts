@@ -55,7 +55,7 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/trips/new');
 
-		// "Etappen" ist ohne Tour-Name/Datum gesperrt.
+		// "Etappen" ist ohne Trip-Name/Datum gesperrt.
 		// Explizit den mobilen Tab ansteuern (Desktop-Tab ist ebenfalls im DOM, aber
 		// display:none — nutzt anderen Handler ohne Toast).
 		const mobileTabbar = page.getByTestId('tn-mobile-tabbar');

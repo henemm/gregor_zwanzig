@@ -66,7 +66,7 @@ davon, sondern zieht Scope und Acceptance Criteria daraus.
 | Datei | Änderungstyp | Beschreibung |
 |---|---|---|
 | `src/services/weather_snapshot.py` | MODIFY | Neue schlanke Methode `load_target_date(trip_id) -> Optional[date]` — liest nur das `target_date`-Feld der undatierten Datei, ohne Segmente zu rekonstruieren |
-| `src/services/trip_alert.py` | MODIFY | `_get_cached_weather` bekommt die Datums-/Alters-Prüfung (Teil A) und protokolliert/eskaliert einen verworfenen bzw. fehlenden Anker (Teil C). **Korrigiert 2026-08-10** (s. Abschnitt „🔴 Korrektur"): die Tages-/Altersprüfung gilt NUR dem Δ-Pfad (`:435`), NICHT dem amtliche-Warnungen-Pfad (`:1128`) — sonst verstummen Unwetterwarnungen für gebriefte, noch nicht gestartete Touren. Gesteuert über einen keyword-only Pflichtparameter ohne Default; zusätzlich musste das Tor `if not cached: continue` HINTER den amtlichen Check gezogen werden, sonst wirkt der Parameter nur im Test, nicht in Produktion |
+| `src/services/trip_alert.py` | MODIFY | `_get_cached_weather` bekommt die Datums-/Alters-Prüfung (Teil A) und protokolliert/eskaliert einen verworfenen bzw. fehlenden Anker (Teil C). **Korrigiert 2026-08-10** (s. Abschnitt „🔴 Korrektur"): die Tages-/Altersprüfung gilt NUR dem Δ-Pfad (`:435`), NICHT dem amtliche-Warnungen-Pfad (`:1128`) — sonst verstummen Unwetterwarnungen für gebriefte, noch nicht gestartete Trips. Gesteuert über einen keyword-only Pflichtparameter ohne Default; zusätzlich musste das Tor `if not cached: continue` HINTER den amtlichen Check gezogen werden, sonst wirkt der Parameter nur im Test, nicht in Produktion |
 | `src/services/scheduler_dispatch_service.py` | MODIFY | `_write_compare_alert_snapshots` bekommt einen Pflicht-Parameter `target_date`, gespeist aus dem bereits vorhandenen `target_date`-Parameter von `send_one_compare_preset` über die Closure `_anchor_and_reset()` |
 | `src/services/compare_location_weather_source.py` | MODIFY | `fetch()` bekommt einen optionalen `target_date`-Parameter; steuert bei Angabe den Kalendertag des Zeitfensters statt des tatsächlichen „heute" |
 | `src/services/point_weather.py` | MODIFY | `PointWeatherData` bekommt ein optionales Feld `target_date: Optional[date] = None` |
@@ -195,7 +195,7 @@ gegen einen veralteten Anker also **selbst abgesichert** — und laut #1460 P4
 prüft er bewusst die gesamte Restroute mit Tagen Vorlauf.
 
 Die zentrale Prüfung hätte deshalb **amtliche Warnungen stummgeschaltet** für
-Touren, die bereits gebrieft, aber noch nicht gestartet sind: deren undatierter
+Trips, die bereits gebrieft, aber noch nicht gestartet sind: deren undatierter
 Anker trägt `target_date = Starttag` (also „morgen"), würde als `wrong_day`
 verworfen, und `check_official_alert_triggers` gäbe sofort `[]` zurück — in
 genau den Tagen vor dem Aufbruch, in denen eine Unwetterwarnung am meisten zählt.

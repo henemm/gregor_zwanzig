@@ -14,7 +14,7 @@ Aufrufform): ``WeatherSnapshotService.save_alarm_anchor(...)``/
 ``.load_alarm_anchor(...)``/``.alarm_anchor_target_date(...)`` bekommen
 ``channel`` als Pflicht-Parameter; die Kanal-Aufloesung selbst passiert
 INNERHALB von ``TripAlertService._get_cached_weather()`` ueber die effektiven
-Alarmkanaele des Trips. Deshalb konfigurieren die Tests hier eine Tour mit
+Alarmkanaele des Trips. Deshalb konfigurieren die Tests hier eine Trip mit
 GENAU EINEM effektiven Kanal (``alert_channels={"email": True}``) — damit ist
 die AC-11-Aggregation (aeltester Kandidat) trivial und der Rueckgabewert von
 ``_get_cached_weather()`` ist exakt der Kandidat dieses einen Kanals. Aendert
@@ -113,7 +113,7 @@ def _vergleichsbasis(user_id: str, trip):
 
 
 def _nur_email_trip(trip_id: str):
-    """Tour mit GENAU EINEM effektiven Alarmkanal (E-Mail) — s. Modul-Docstring."""
+    """Trip mit GENAU EINEM effektiven Alarmkanal (E-Mail) — s. Modul-Docstring."""
     return gust_alert_trip(trip_id, alert_channels={"email": True})
 
 
@@ -144,7 +144,7 @@ def test_ac4_zu_alter_kanal_merker_faellt_auf_tier1_nicht_auf_fremden_kanal():
           Alterungs-Obergrenze ``_ALARM_ANCHOR_CEILING`` betraegt 4 h), ein
           taggleicher Tier-1-Briefing-Anker liegt vor, und der Kanal
           ``telegram`` hat einen FRISCHEN eigenen Merker.
-    WHEN  die Vergleichsbasis fuer die Tour aufgeloest wird, deren einziger
+    WHEN  die Vergleichsbasis fuer die Trip aufgeloest wird, deren einziger
           effektiver Alarmkanal ``email`` ist.
     THEN  wird gegen den Tier-1-Briefing-Anker verglichen — weder gegen den
           eigenen, zu alten Merker noch gegen den frischeren Merker des
@@ -196,10 +196,10 @@ def test_ac7_kanal_ohne_eigenen_merker_faellt_auf_tier1_und_bleibt_alarmfaehig()
           bekommen und es existiert auch keine kanallose Altdatei; ein
           taggleicher Tier-1-Briefing-Anker liegt vor, und der Kanal
           ``telegram`` hat einen eigenen, frischen Merker.
-    WHEN  die Vergleichsbasis fuer die Tour aufgeloest wird, deren einziger
+    WHEN  die Vergleichsbasis fuer die Trip aufgeloest wird, deren einziger
           effektiver Alarmkanal ``email`` ist.
     THEN  faellt sie auf den Tier-1-Briefing-Anker zurueck (NICHT ``None``,
-          die Tour bleibt alarmfaehig) und uebernimmt NICHT den Merker des
+          die Trip bleibt alarmfaehig) und uebernimmt NICHT den Merker des
           fremden Kanals — die groebere, aber gueltige Vergleichsbasis ist die
           dokumentierte Praezisionsgrenze von S1, kein Fehler.
 
@@ -248,7 +248,7 @@ def test_ac8_kanal_merker_vom_falschen_tag_wird_je_kanal_verworfen():
           gestern`` (#823/#1916 AC-10), der Merker des Kanals ``telegram``
           traegt korrekt HEUTE, und ein taggleicher Tier-1-Briefing-Anker
           liegt vor.
-    WHEN  die Vergleichsbasis fuer die Tour aufgeloest wird, deren einziger
+    WHEN  die Vergleichsbasis fuer die Trip aufgeloest wird, deren einziger
           effektiver Alarmkanal ``email`` ist.
     THEN  wird der Merker vom falschen Tag verworfen und die Kette faellt fuer
           DIESEN Kanal auf den Tier-1-Briefing-Anker zurueck — die

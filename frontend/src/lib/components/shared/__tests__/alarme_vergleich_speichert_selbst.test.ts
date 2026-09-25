@@ -1,6 +1,6 @@
 // TDD RED — Issue #2276 Scheibe S2 (Epic #2345): der Alarme-Reiter des
 // Ortsvergleichs speichert SELBST über den Speicher-Controller der Seite, wie
-// bei der Tour — nicht mehr über Wrapper + `handleAlarmeCommit` in CompareTabs.
+// bei der Trip — nicht mehr über Wrapper + `handleAlarmeCommit` in CompareTabs.
 //
 // Spec: docs/specs/modules/rework_2276_s2_alarme.md
 //   AC-1 (genau ein PUT, Endzustand gespeichert), AC-5 (No-Op stempelt kein

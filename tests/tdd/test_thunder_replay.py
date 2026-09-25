@@ -477,7 +477,7 @@ def test_messgrundlage_schneidet_auch_gueltige_tage_vor_tourbeginn_weg():
               + _zeilen("vorlauf_mehrsegment_24_08.json"))
     voll = tageswerte_je_teilmenge(zeilen)
 
-    # Fixture-Annahme: die beiden Vor-Tour-Tage sind KEINE Leerfaelle.
+    # Fixture-Annahme: die beiden Vor-Trip-Tage sind KEINE Leerfaelle.
     assert set(voll["alle_quellen"]) == {"2026-08-22", "2026-08-23", "2026-08-24"}
     for teilmenge in ("primaer", "alle_quellen", "nur_alarm"):
         for tag in ("2026-08-22", "2026-08-23"):

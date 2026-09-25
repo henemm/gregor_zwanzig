@@ -3,7 +3,7 @@
 // Spec: docs/specs/modules/rework_1467_s1_alarm_kennung.md (AC-9)
 //
 // Der Bestand filtert in +page.svelte:109 mit `a.trip_id === hero?.id`. Nach der
-// Zusammenlegung liegen Tour- und Ortsvergleichs-Kennungen im SELBEN Feld — ein
+// Zusammenlegung liegen Trip- und Ortsvergleichs-Kennungen im SELBEN Feld — ein
 // Gleichheits-Vergleich allein ist dann nicht mehr eindeutig. Der Filter zieht
 // deshalb in cockpitHelpers.ts um und prüft Kennung UND Typ.
 //
@@ -19,7 +19,7 @@ import { alertsForTrip } from '../_home/cockpitHelpers.ts';
 
 const base = { sent_at: '2026-08-03T06:00:00Z', changes_count: 1, severity: 'LOW' as const };
 
-test('AC-9: gleiche Kennung, anderer Typ — nur der Tour-Alarm erscheint', () => {
+test('AC-9: gleiche Kennung, anderer Typ — nur der Trip-Alarm erscheint', () => {
 	const alerts = [
 		{ ...base, entity_id: 'x1', entity_type: 'trip' },
 		{ ...base, entity_id: 'x1', entity_type: 'compare' }
@@ -27,11 +27,11 @@ test('AC-9: gleiche Kennung, anderer Typ — nur der Tour-Alarm erscheint', () =
 
 	const result = alertsForTrip(alerts, 'x1');
 
-	assert.equal(result.length, 1, 'nur der Tour-Eintrag darf durchkommen');
+	assert.equal(result.length, 1, 'nur der Trip-Eintrag darf durchkommen');
 	assert.equal(result[0].entity_type, 'trip');
 });
 
-test('AC-9: fremde Tour wird nicht mitgezählt', () => {
+test('AC-9: fremde Trip wird nicht mitgezählt', () => {
 	const alerts = [
 		{ ...base, entity_id: 'x1', entity_type: 'trip' },
 		{ ...base, entity_id: 'x2', entity_type: 'trip' }
@@ -40,7 +40,7 @@ test('AC-9: fremde Tour wird nicht mitgezählt', () => {
 	assert.equal(alertsForTrip(alerts, 'x1').length, 1);
 });
 
-test('AC-9: ohne Tour-Kennung bleibt die Liste leer statt alles durchzulassen', () => {
+test('AC-9: ohne Trip-Kennung bleibt die Liste leer statt alles durchzulassen', () => {
 	const alerts = [{ ...base, entity_id: 'x1', entity_type: 'trip' }];
 
 	assert.equal(alertsForTrip(alerts, undefined).length, 0);

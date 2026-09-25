@@ -52,7 +52,7 @@ def _trip_with_stage(today: date = TODAY) -> Trip:
     tomorrow = today + timedelta(days=1)
     return Trip(
         id="t704",
-        name="Tour 704",
+        name="Trip 704",
         stages=[
             Stage(id="S1", name="Heute", date=today, waypoints=[_waypoint("W1"), _waypoint("W2")]),
             Stage(id="S2", name="Morgen", date=tomorrow, waypoints=[_waypoint("W3")]),
@@ -64,7 +64,7 @@ def _trip_no_stage() -> Trip:
     """Trip ohne heutige Etappe (weit in der Zukunft)."""
     return Trip(
         id="t704-empty",
-        name="Tour 704 leer",
+        name="Trip 704 leer",
         stages=[
             Stage(id="S1", name="Fern", date=date(2026, 12, 1), waypoints=[_waypoint("W1")]),
         ],
@@ -135,7 +135,7 @@ def _save_snapshot_with_hourly(user_id: str = USER_ID, today: date = TODAY) -> N
 def _inbound(body: str, user_id: str = USER_ID) -> InboundMessage:
     return InboundMessage(
         channel="telegram",
-        trip_name="Tour 704",
+        trip_name="Trip 704",
         body=body,
         sender="12345",
         received_at=RECEIVED_AT,

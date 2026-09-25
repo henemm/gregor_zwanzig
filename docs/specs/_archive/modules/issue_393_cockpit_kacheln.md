@@ -300,16 +300,16 @@ Die "Was geht raus"-Kachel erhält `cockpitStatus?.briefings` als `sentLog`-Argu
 - **AC-3:** Given `GET /api/cockpit/status` wird aufgerufen / When `briefing_log.json` nicht existiert / Then gibt der Endpoint `{ briefings: [], alerts: [] }` zurück (kein 500-Error)
   - Test: (populated after /tdd-red)
 
-- **AC-4:** Given die Hero-Tour hat heute Morgen ein Briefing versendet (Eintrag in `briefing_log.json` mit `kind='morning'` und `sent_at` = heute) / When die Startseite lädt / Then zeigt die "Was geht raus"-Kachel den Morgen-Row mit grünem Dot und Text "gesendet"
+- **AC-4:** Given die Hero-Trip hat heute Morgen ein Briefing versendet (Eintrag in `briefing_log.json` mit `kind='morning'` und `sent_at` = heute) / When die Startseite lädt / Then zeigt die "Was geht raus"-Kachel den Morgen-Row mit grünem Dot und Text "gesendet"
   - Test: (populated after /tdd-red)
 
 - **AC-5:** Given kein Briefing wurde heute versendet (Log-File leer oder kein heutiger Eintrag) / When die Startseite lädt / Then zeigt die "Was geht raus"-Kachel alle konfigurierten Briefings mit grauem Dot und Text "geplant"
   - Test: (populated after /tdd-red)
 
-- **AC-6:** Given mindestens ein Alert-Event in `alert_log.json` in den letzten 24 h für die Hero-Tour / When die Startseite lädt / Then zeigt die "Alarme · letzte 24 h"-Kachel die Event-Zeilen statt des Leer-Zustands
+- **AC-6:** Given mindestens ein Alert-Event in `alert_log.json` in den letzten 24 h für die Hero-Trip / When die Startseite lädt / Then zeigt die "Alarme · letzte 24 h"-Kachel die Event-Zeilen statt des Leer-Zustands
   - Test: (populated after /tdd-red)
 
-- **AC-7:** Given kein Alert-Event in den letzten 24 h für die Hero-Tour / When die Startseite lädt / Then zeigt die "Alarme · letzte 24 h"-Kachel den sauberen Leer-Zustand (Text: "Keine Alarme in den letzten 24 Stunden")
+- **AC-7:** Given kein Alert-Event in den letzten 24 h für die Hero-Trip / When die Startseite lädt / Then zeigt die "Alarme · letzte 24 h"-Kachel den sauberen Leer-Zustand (Text: "Keine Alarme in den letzten 24 Stunden")
   - Test: (populated after /tdd-red)
 
 - **AC-8:** Given der `/api/cockpit/status`-Endpoint antwortet langsam oder gar nicht / When der SSR-Loader nach 3000ms kein Response erhält / Then wird `cockpitStatus: null` zurückgegeben, Seite lädt trotzdem (sauberer Leer-Zustand in beiden Kacheln)

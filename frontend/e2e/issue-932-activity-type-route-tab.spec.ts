@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 
 const DESKTOP = { width: 1280, height: 900 };
 
-// Bekannte Test-Touren auf Staging (werden auch in epic-138-metriken-editor.spec.ts genutzt)
+// Bekannte Test-Trips auf Staging (werden auch in epic-138-metriken-editor.spec.ts genutzt)
 const EDIT_TRIP_ID = 'e2e-trip-edit-target';
 
 test.describe('Issue #932 — Aktivitätstyp auf Route-Tab', () => {

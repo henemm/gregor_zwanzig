@@ -357,7 +357,7 @@ wird als Begleit-Änderung zu AC-1/AC-2 mitgeliefert.
 - **Pfad-Aggregation kennt keine Region.** `thunder` mischt DE- und FR-Abrufe (ADR-0047). Ein
   DE-Trip mit Erfolg hält `last_success_at` frisch, während ein FR-Trip dauerhaft auf
   `eu_direct` läuft — der Alarm bliebe in diesem Fall stumm. Bereits in Spec #1581 als
-  Nicht-Ziel dokumentiert („Ausfall sichtbar, nicht welche Quelle"); im Ein-Touren-Betrieb
+  Nicht-Ziel dokumentiert („Ausfall sichtbar, nicht welche Quelle"); im Ein-Trips-Betrieb
   irrelevant, für künftigen Multi-Region-Betrieb eine offene Grenze.
 - **`last_fallback_detail` ist die Ersatzquelle, nicht die ausgefallene Primärquelle.**
   `last_fallback_detail="eu_direct"` sagt „läuft auf DWD Europa", nicht ob `fr_direct` oder

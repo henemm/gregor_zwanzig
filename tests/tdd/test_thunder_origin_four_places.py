@@ -97,7 +97,7 @@ _ETAPPE = "Test-Etappe"
 _TAG = date(2026, 8, 20)
 
 _TRIP_ID = "herkunft-vier-orte"
-_TRIP_NAME = "Herkunft Vier Orte Tour"
+_TRIP_NAME = "Herkunft Vier Orte Trip"
 _USER = "default"
 
 _TD = re.compile(r"<td[^>]*>(.*?)</td>", re.S)

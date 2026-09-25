@@ -166,7 +166,7 @@ def _plain_kommandoblock() -> str:
     text = render_plain(
         segments=segmente(_JETZT, standard_felder),
         seg_tables=[[]],
-        trip_name="Adhoc AC-11 Tour",
+        trip_name="Adhoc AC-11 Trip",
         report_type="evening",
         dc=build_default_display_config(),
         night_rows=[],

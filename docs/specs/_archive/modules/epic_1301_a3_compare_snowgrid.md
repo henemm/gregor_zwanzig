@@ -8,7 +8,7 @@ version: "1.0"
 tags: [compare, trip, provider, snow, snowgrid, refactor, epic-1301]
 ---
 
-# A3 — Schnee vom Landesdienst als Ergänzung (gemeinsamer Weg + Touren-Bonus)
+# A3 — Schnee vom Landesdienst als Ergänzung (gemeinsamer Weg + Trips-Bonus)
 
 ## Approval
 
@@ -20,8 +20,8 @@ Nach A2 holen Vergleich und Trip Wetter über openmeteo, das keine Schneewerte
 liefert. A3 ergänzt für Orte im SNOWGRID-Abdeckungsgebiet (Alpen) die Werte
 `snow_depth_cm` und `swe_kgm2` über `GeoSphereProvider.fetch_snowgrid` und füllt
 sie **fill-only** in die openmeteo-Zeitreihe ein — am **gemeinsamen** Punkt
-`OpenMeteoProvider.fetch_forecast`, damit Vergleichs-Mail **und** Tour-Briefings
-Schnee zeigen (PO-Entscheid 2026-07-17: gemeinsamer Weg + Touren-Bonus). Der
+`OpenMeteoProvider.fetch_forecast`, damit Vergleichs-Mail **und** Trip-Briefings
+Schnee zeigen (PO-Entscheid 2026-07-17: gemeinsamer Weg + Trips-Bonus). Der
 15-Minuten-Alarm-Check bleibt über einen neuen Schalter `enrich_snow=False` von
 dem zusätzlichen Abruf ausgenommen (Bug #288-Klasse).
 
@@ -108,7 +108,7 @@ automatisch, sobald forecast.data Schneewerte trägt.
    (Schneefallgrenze) ist ein AROME-Feld, nicht SNOWGRID — außerhalb A3.
 2. **Ein SNOWGRID-Call pro Etappe/Ort** im Briefing (kein Cache); Region-gleich,
    für den ersten Wurf akzeptiert (Briefing läuft im Hintergrund, Cockpit parallel).
-3. **Touren-Bonus opt-in:** Schnee erscheint im Trip-Briefing nur, wenn der Nutzer
+3. **Trips-Bonus opt-in:** Schnee erscheint im Trip-Briefing nur, wenn der Nutzer
    die Metrik `snow_depth` aktiviert hat (bestehendes Verhalten `trip_report.py:214`).
 
 ## Acceptance Criteria

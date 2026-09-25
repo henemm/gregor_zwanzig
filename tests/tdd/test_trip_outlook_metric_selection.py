@@ -65,7 +65,7 @@ def _dc_altpfad():
     fehlendes ``outlook_metrics`` -- "nie eingestellt" hiess "sieben feste
     Spalten". Seither heisst es "nichts abgewaehlt", und der Ausblick erbt
     die Grundauswahl (Spec "Known Limitations": "Die Ausblick-Tabelle wird
-    fuer bestehende Touren breiter"). Der feste Zweig bleibt fuer Touren ganz
+    fuer bestehende Trips breiter"). Der feste Zweig bleibt fuer Trips ganz
     OHNE Grundauswahl in Kraft (ADR-0050 D4) -- genau dort bewacht die
     Aufzeichnung weiter, was sie immer bewacht hat: dass "Feld fehlt" nicht
     mit "bewusst geleert" verwechselt wird und der Block nicht still

@@ -40,7 +40,7 @@
 //   * massgeblich ist `gerenderteIds` — die Groessen, die der Reihenfolge-
 //     Block WIRKLICH zeigt (aktive Zeilen + Aus-Gruppe). Weder der volle
 //     Backend-Katalog (Adversary F001: 29 Katalog- gegen 9 gerenderte
-//     Groessen in einer frischen Tour) noch der rohe Kuerzel-Katalog
+//     Groessen in einer frischen Trip) noch der rohe Kuerzel-Katalog
 //     (Messung M1: `cape`/`CP` ist selectable=False und nie eine Marke).
 //   * je (Groesse, Kuerzel) ein Eintrag; Groessen ohne Kuerzel oder ohne Label
 //     entfallen.
@@ -147,7 +147,7 @@ function vergleichPaar(): { kuerzelById: Record<string, string[]>; metricById: R
 
 /** Die im Reihenfolge-Block gerenderte Menge des TRIPS. Genommen wird die
  *  Anlege-Vorbelegung (`trip_default_enabled`) — das ist die Auswahl, die eine
- *  frische Tour wirklich zeigt, und sie ist eine echte Teilmenge des Katalogs
+ *  frische Trip wirklich zeigt, und sie ist eine echte Teilmenge des Katalogs
  *  (Adversary F001). Nichts hier ist getippt: die Ids kommen aus /api/metrics. */
 function gerendertRoute(zusaetzlich: string[] = []): string[] {
 	const metricById = tripMetricById();
@@ -330,7 +330,7 @@ describe('AC-1: kein Kuerzel bleibt ohne Erklaertext', () => {
 			`AC-1 FAIL: die Legende erklaert ${JSON.stringify(fremd)} (Groesse ` +
 				`"${draussen}"), obwohl diese Groesse im Reihenfolge-Block nicht steht. ` +
 				`Genau so entsteht Rauschen: 20 von 29 Katalog-Groessen sind in einer ` +
-				`frischen Tour nicht gewaehlt (Adversary F001).`
+				`frischen Trip nicht gewaehlt (Adversary F001).`
 		);
 	});
 

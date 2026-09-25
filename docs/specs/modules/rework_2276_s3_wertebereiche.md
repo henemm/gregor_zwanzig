@@ -8,7 +8,7 @@ version: "1.0"
 tags: [compare, trips, wertebereiche, persistenz]
 ---
 
-# Wertebereiche-Reiter speichert selbst wie bei der Tour (Issue #2276, Scheibe S3, Epic #2345)
+# Wertebereiche-Reiter speichert selbst wie bei der Trip (Issue #2276, Scheibe S3, Epic #2345)
 
 ## Approval
 
@@ -27,7 +27,7 @@ Scheibe S2 (Alarme), aber zusätzlich mit dem Aufräumen des zweiten,
 überflüssigen Weges. Nutzersichtbarer Nebeneffekt: schlägt ein
 Speichervorgang wegen eines zwischenzeitlichen fremden Änderns fehl
 (Speicherkonflikt), zeigt der Ortsvergleich „Nochmal speichern" statt eines
-generischen Fehlers — genau wie bei Alarme und bei der Tour. Zusätzlich wird
+generischen Fehlers — genau wie bei Alarme und bei der Trip. Zusätzlich wird
 eine Lücke geschlossen, die durch S3 selbst erst entsteht: wechselt der
 Nutzer schnell zwischen Alarme- und Wertebereiche-Reiter, teilen sich beide
 künftig denselben Speicher-Platz — ohne Vorkehrung würde die zuerst

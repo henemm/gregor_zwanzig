@@ -86,7 +86,7 @@ def _trip_preset_with_hours(trip_id: str, **extra) -> dict:
     `kind=vergleich` an")."""
     base: dict = {
         "id": trip_id,
-        "name": f"Tour {trip_id}",
+        "name": f"Trip {trip_id}",
         "kind": "route",
         "stages": [],
         "hour_from": 10,

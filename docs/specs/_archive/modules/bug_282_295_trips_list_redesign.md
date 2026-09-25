@@ -82,7 +82,7 @@ Bestehenden Header-Block ersetzen:
     <Eyebrow>WORKSPACE · TOUREN</Eyebrow>
     <h1 class="text-3xl font-semibold tracking-tight">Trips</h1>
     <p class="text-muted-foreground mt-1">
-      Alle Touren auf einen Blick — Status, Zeitraum und Aktionen.
+      Alle Trips auf einen Blick — Status, Zeitraum und Aktionen.
     </p>
   </div>
   <Btn variant="accent" onclick={() => goto('/trips/new')}>Neuer Trip</Btn>

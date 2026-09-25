@@ -343,7 +343,7 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 		await expect(
 			reiter.locator('[data-testid="alert-quiet-hours-card"]'),
 			'AC-2 FAIL: die Stillen Stunden nennen nicht den Bezug des Ortsvergleichs — die ' +
-				'Prop `zonenBezug` fehlt oder traegt den Trip-Vorgabewert „der Tour".'
+				'Prop `zonenBezug` fehlt oder traegt den Trip-Vorgabewert „der Trip".'
 		).toContainText('des ersten Orts');
 	});
 

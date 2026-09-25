@@ -23,7 +23,7 @@ Rueckfall fuer ``outlook_metrics=None`` von "sieben feste Spalten" auf "volle
 Grundauswahl". Das widerspricht direkt
 ``test_trip_outlook_metric_selection.py::test_ac1_bestandstrip_html_ausblick_bleibt_byte_identisch``
 und ihren zwei Geschwistern (Legende/Klartext) -- Spec "Known Limitations"
-nennt das ausdruecklich ("Die Ausblick-Tabelle wird fuer bestehende Touren
+nennt das ausdruecklich ("Die Ausblick-Tabelle wird fuer bestehende Trips
 breiter"). Diese Datei fasst jene Tests NICHT an (RED-Phase-Auftrag: nur neue
 Tests, keine Implementierung/Aufraeumung bestehender Tests ausserhalb des
 explizit benannten AST-Waechters).

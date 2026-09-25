@@ -111,7 +111,7 @@ def test_ac6_rueckfall_1_erste_etappe_mit_wegpunkten():
 
 
 def test_ac6_rueckfall_2_utc_konstante_ohne_wegpunkte():
-    """Rueckfall 2: KEINE Etappe der Tour hat Wegpunkte -> die aus
+    """Rueckfall 2: KEINE Etappe der Trip hat Wegpunkte -> die aus
     ``utils.timezone`` importierte UTC-Konstante greift, nicht ein
     hartverdrahtetes ``ZoneInfo("UTC")``."""
     from services.trip_day import anchor_tz, trip_local_today
@@ -217,12 +217,12 @@ def test_ac8_trip_command_processor_verliert_die_privaten_methoden():
 
 
 def test_ac8_anchor_folgt_der_heutigen_etappe_nicht_der_ersten_der_tour():
-    """Adversary-Hinweis (kein CRITICAL-Finding, Bestandsschutz): eine Tour
+    """Adversary-Hinweis (kein CRITICAL-Finding, Bestandsschutz): eine Trip
     ueber ZWEI Zonen — erste Etappe Auckland, die Etappe des HEUTIGEN
     Weltzeit-Tages Wien — muss ``anchor_tz()`` aus der Zone der HEUTIGEN
     Etappe ziehen (``display_tz(trip, weltzeit_tag)``), NICHT aus der
-    ERSTEN Etappe der Tour (``trip_tz``) — genau das war die von #1470 mit
-    der Neuseeland->Korsika-Tour als "zehn Stunden daneben" VERWORFENE
+    ERSTEN Etappe der Trip (``trip_tz``) — genau das war die von #1470 mit
+    der Neuseeland->Korsika-Trip als "zehn Stunden daneben" VERWORFENE
     Alternative. AC-8 verlangt diesen Bestandsschutz; die geerbte
     #1470-Suite (``test_drilldown_day_window_local_date.py``) deckt ihn nur
     indirekt ueber ``TripCommandProcessor`` ab — hier direkt gegen
@@ -258,5 +258,5 @@ def test_ac8_anchor_folgt_der_heutigen_etappe_nicht_der_ersten_der_tour():
     assert result == vienna_zone, (
         f"AC-8: anchor_tz() lieferte {result!r}, erwartet die Zone der "
         f"HEUTIGEN Etappe (Wien) {vienna_zone!r} — nicht die der ERSTEN "
-        "Etappe der Tour (Auckland, #1470 verworfene Alternative)"
+        "Etappe der Trip (Auckland, #1470 verworfene Alternative)"
     )

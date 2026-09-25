@@ -185,7 +185,7 @@ interface Props {
 Kanonische Nav-Items (fest, in dieser Reihenfolge):
 ```
 { id: 'home',    label: 'Startseite',     icon: 'home'    }
-{ id: 'trips',   label: 'Meine Touren',   icon: 'trip'    }
+{ id: 'trips',   label: 'Meine Trips',   icon: 'trip'    }
 { id: 'compare', label: 'Orts-Vergleich', icon: 'compare' }
 { id: 'archive', label: 'Archiv',         icon: 'archive' }
 ```

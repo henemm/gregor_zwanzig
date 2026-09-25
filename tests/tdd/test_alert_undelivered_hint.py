@@ -227,7 +227,7 @@ def _seed(
 
 
 def _trip(trip_id: str, *, email_format: str = "full") -> Trip:
-    """Tour ohne scharfen Kanal: der Briefing-Pfad laeuft VOLLSTAENDIG durch
+    """Trip ohne scharfen Kanal: der Briefing-Pfad laeuft VOLLSTAENDIG durch
     (Ergebnis ``no_channels``) und rendert die Mail — versendet wird nichts.
     Muster aus ``test_trip_briefing_anchor_unchanged.py::_trip``."""
     # #1709: feste Ankunftszeiten statt Naismith-Self-Heal (trip_segments.py:

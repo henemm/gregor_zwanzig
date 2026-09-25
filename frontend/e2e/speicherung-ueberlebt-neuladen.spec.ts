@@ -94,7 +94,7 @@ type TripStand = {
 	report_config?: { day_window_start_hour?: number };
 };
 
-/** Aktueller Server-Stand der Tour (am Browser vorbei, eigene API-Anfrage). */
+/** Aktueller Server-Stand der Trip (am Browser vorbei, eigene API-Anfrage). */
 async function tripStand(page: Page, tripId: string): Promise<TripStand> {
 	const r = await page.request.get(`/api/trips/${tripId}`);
 	expect(r.ok(), `GET /api/trips/${tripId} HTTP ${r.status()}`).toBeTruthy();
@@ -106,7 +106,7 @@ async function windGustRange(page: Page, tripId: string): Promise<[number | null
 }
 
 /**
- * #2317: Test-Tour mit Böen-Wertebereich [null, 70] (dieselbe Anlage wie der
+ * #2317: Test-Trip mit Böen-Wertebereich [null, 70] (dieselbe Anlage wie der
  * AC-10-Fall); `extra` wird in den Anlage-Rumpf gemischt.
  */
 async function legeTripAn(page: Page, kennung: string, extra: Record<string, unknown> = {}): Promise<string> {
@@ -642,7 +642,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 			page.getByTestId('save-indicator'),
 			'#2317 AC-11: nach dem Speichern darf kein Konflikt-/Fehlerzustand angezeigt werden'
 		).toHaveAttribute('data-state', 'idle', { timeout: 5_000 });
-		expect(konflikte, '#2317 AC-11: kein PUT auf die Tour darf mit 412 abgelehnt worden sein').toEqual([]);
+		expect(konflikte, '#2317 AC-11: kein PUT auf die Trip darf mit 412 abgelehnt worden sein').toEqual([]);
 		expect(dialogs, '#2317 AC-16: beim Neuladen darf keine Verlassen-Rückfrage erscheinen').toEqual([]);
 	});
 });

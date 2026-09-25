@@ -9,7 +9,7 @@ version: "1.0"
 tags: [issue-1697, timezone, adr-0044, trip-alert, radar-alert, calendar-day]
 ---
 
-# Fix #1697 — Alarm-Pfad folgt dem Ortstag der Tour, nicht der Serveruhr
+# Fix #1697 — Alarm-Pfad folgt dem Ortstag der Trip, nicht der Serveruhr
 
 ## Approval
 
@@ -28,13 +28,13 @@ tags: [issue-1697, timezone, adr-0044, trip-alert, radar-alert, calendar-day]
   Begründung verworfen — er hätte um eine falsch gestellte Frage herumgebaut.
 - **#1697 vor #1667 S3.** Die Sicherheitslücke aus #1667 bleibt so lange offen;
   bewusst in Kauf genommen, um auf sauberer Grundlage aufzusetzen.
-- **Touren über mehrere Zeitzonen werden nicht gebaut** — als bekannte Grenze
+- **Trips über mehrere Zeitzonen werden nicht gebaut** — als bekannte Grenze
   dokumentiert (deckt sich mit ADR-0044, das den Restfehler als „in aller
   Regel null" einstuft).
 
 ## Purpose
 
-`src/services/trip_alert.py` bestimmt „welcher Tag der Tour ist jetzt" an vier
+`src/services/trip_alert.py` bestimmt „welcher Tag der Trip ist jetzt" an vier
 Stellen über `date.today()` — das Datum der **Serveruhr** (`Etc/UTC`). Eine
 Etappe trägt aber ein **Ortsdatum**. Fallen beide auseinander, findet
 `Trip.get_stage_for_date` (striktes `==`) keine Etappe mehr, und der Trip wird
@@ -65,7 +65,7 @@ Nacht-Etappe.
 ## Die Entwurfsfrage ist entschieden — nicht neu aufmachen
 
 `docs/adr/0044-kalendertage-folgen-der-ortszeit.md` (**Akzeptiert**, PO
-2026-08-03): „Kalendertage bestimmen sich nach der Ortszeit der Tour. Die Zone
+2026-08-03): „Kalendertage bestimmen sich nach der Ortszeit der Trip. Die Zone
 wird aus den Koordinaten des Wegpunkts aufgelöst, mit dreistufigem Rückfall:
 Etappe des Weltzeit-Tages → erste Etappe mit Wegpunkten → importierte
 UTC-Konstante."
@@ -86,10 +86,10 @@ Bestehender Code (unverändert übernommen, nur verschoben — s. Implementation
 Details): `src/services/trip_command_processor.py:775-824`
 (`_anchor_tz`/`_trip_tz`/`_display_tz`).
 
-### 🔴 Verworfene Alternative: Zone der ersten Etappe der Tour
+### 🔴 Verworfene Alternative: Zone der ersten Etappe der Trip
 
-Die ERSTE Fassung von #1470 ankerte an der ersten Etappe der Tour. Der
-Adversary hat mit einer Tour Neuseeland → Korsika **zehn Stunden** Abweichung
+Die ERSTE Fassung von #1470 ankerte an der ersten Etappe der Trip. Der
+Adversary hat mit einer Trip Neuseeland → Korsika **zehn Stunden** Abweichung
 nachgewiesen (12:00–22:00 UTC meldete bereits den Folgetag, während es am Ort
 erst 14:00–23:00 war). Diese Alternative ist verworfen und wird durch diese
 Spec nicht erneut erwogen.
@@ -203,7 +203,7 @@ importierten Bausteinen (`tz_for_coords`, aus `utils.timezone` zu ergänzen:
 Kette B (`trip_command_processor.py` `/jetzt`, `/status`, `_handle_query`,
 `command_date`; `inbound_telegram_reader.py`; `preview_service.py`;
 `api/routers/debug.py`; `tools/weather_validation.py`) — eigenes Folge-Issue.
-Mehr-Zonen-Touren — bewusst nicht gebaut (PO 2026-08-10, s. Known
+Mehr-Zonen-Trips — bewusst nicht gebaut (PO 2026-08-10, s. Known
 Limitations). `corridor_threshold.py` — kein Produktions-Aufrufer.
 `forecast_budget._today_utc`, `meteoalarm_budget._today_utc`,
 `alert_daily_limit.py:32`, `deviation_alert_engine.py:112` — feste Zone ist
@@ -267,7 +267,7 @@ importiert.
 ```python
 # src/services/trip_day.py
 def trip_tz(trip: "Trip") -> ZoneInfo:
-    """Ortszone der Tour OHNE Tagesbezug — erste Etappe mit Wegpunkten."""
+    """Ortszone der Trip OHNE Tagesbezug — erste Etappe mit Wegpunkten."""
     stage = next((s for s in trip.stages if s.waypoints), None)
     return tz_for_coords(stage.waypoints[0].lat, stage.waypoints[0].lon) \
         if stage else UTC
@@ -288,7 +288,7 @@ def anchor_tz(trip: "Trip", now_utc: datetime) -> ZoneInfo:
     return display_tz(trip, local_dt(now_utc, UTC).date())
 
 def trip_local_today(trip: "Trip", now_utc: datetime) -> date:
-    """Der Kalendertag „heute", gemessen an der Ortszeit der Tour (ADR-0044)."""
+    """Der Kalendertag „heute", gemessen an der Ortszeit der Trip (ADR-0044)."""
     return local_dt(now_utc, anchor_tz(trip, now_utc)).date()
 ```
 
@@ -397,7 +397,7 @@ erzwungen hat:
 | Fund | Wirkort | Was ohne den Wächter passiert wäre |
 |---|---|---|
 | **F001** (CRITICAL) | `trip_alert.py:584` (`_get_cached_weather`, Δ-Anker-Pfad) | Die Korrektur ließ sich auf `date.today()` zurückdrehen, **ohne dass einer von 218 Tests rot wurde** |
-| **F002** (HIGH) | `trip_alert.py:404` (`check_all_trips`, Filter `end_date < today`) | Dasselbe bei **266 Tests**. Wirkung: bei negativem UTC-Versatz (Los Angeles) gilt die Tour am letzten Ortstag zu früh als abgelaufen ⇒ übersprungen ⇒ keine Alarme — das ursprüngliche Fehlerbild an neuer Stelle |
+| **F002** (HIGH) | `trip_alert.py:404` (`check_all_trips`, Filter `end_date < today`) | Dasselbe bei **266 Tests**. Wirkung: bei negativem UTC-Versatz (Los Angeles) gilt die Trip am letzten Ortstag zu früh als abgelaufen ⇒ übersprungen ⇒ keine Alarme — das ursprüngliche Fehlerbild an neuer Stelle |
 | Nachbesserung AC-8 | `trip_day.py:71` (`anchor_tz`) | Der Anker ließ sich auf die bei #1470 mit zehn Stunden Abweichung verworfene Fassung zurückdrehen; gefangen hätte es nur die **geerbte** #1470-Suite, nicht der eigene Bestand |
 
 **Die Lehre, die über diese Scheibe hinausgeht:** Dreimal in Folge war der Produktivcode
@@ -490,10 +490,10 @@ sichtbar macht.
     ab (Koordinatennachweis). Die beiden gehören zusammen; keines von beiden
     genügt allein.
 
-- **AC-6 (Rückfallkette):** Given zwei Touren, von denen die eine keine
+- **AC-6 (Rückfallkette):** Given zwei Trips, von denen die eine keine
   Etappe am aufgelösten Tag hat, aber andere Etappen mit Wegpunkten trägt,
   und die andere überhaupt keine Etappe mit Wegpunkten besitzt / When
-  `trip_local_today` für beide Touren die Zeitzone bestimmen muss, um daraus
+  `trip_local_today` für beide Trips die Zeitzone bestimmen muss, um daraus
   den Ortstag abzuleiten / Then fällt die erste auf die Zone der ersten
   Etappe mit Wegpunkten zurück und die zweite auf die aus
   `src/utils/timezone.py` importierte UTC-Konstante — an keiner Stelle auf
@@ -534,7 +534,7 @@ sichtbar macht.
 
 ## Known Limitations
 
-- **Mehr-Zonen-Touren.** Wechselt der Wanderer an genau dem aufgelösten Tag
+- **Mehr-Zonen-Trips.** Wechselt der Wanderer an genau dem aufgelösten Tag
   die Zeitzone, kann die Etappe des Weltzeit-Tages eine andere Zone tragen
   als die des Ortstages. Der Restfehler ist die Differenz zweier
   benachbarter Etappen — **warum genau zwei:** der Anker nimmt die Etappe des

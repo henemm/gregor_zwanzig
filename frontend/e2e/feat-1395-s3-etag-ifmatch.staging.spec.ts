@@ -14,7 +14,7 @@
 //
 // Nachgewiesen wird ueber den ECHTEN Klickpfad plus den ECHTEN Netzwerkverkehr
 // (page.on('request') → allHeaders(), Antwort-Status und -ETag), zusaetzlich
-// gegengeprueft per GET /api/trips/{id}. Test-Touren tragen das reservierte
+// gegengeprueft per GET /api/trips/{id}. Test-Trips tragen das reservierte
 // Praefix `E2E-GZ-` und werden im finally-Block bzw. im afterAll-Netz geloescht.
 
 import { test, expect, type Page, type Request, type APIRequestContext } from '@playwright/test';
@@ -42,7 +42,7 @@ const SEED_METRICS = ['temperature', 'wind', 'precipitation', 'gust', 'uv_index'
 	order: i
 }));
 
-/** Alle in dieser Datei angelegten Test-Touren — Sicherheitsnetz fuer den Fall,
+/** Alle in dieser Datei angelegten Test-Trips — Sicherheitsnetz fuer den Fall,
  *  dass ein Test in eine Zeitschranke laeuft und sein `finally` den bereits
  *  geschlossenen Test-Kontext nicht mehr benutzen kann. */
 const createdTripIds: string[] = [];
@@ -275,8 +275,8 @@ test('#1395 S3 Fall 1 (AC-3/AC-2): Wetter-Reiter — beide Schreibvorgaenge geli
 // ─────────────────────────────────────────────────────────────────────────────
 // Fall 2 — AC-4 + AC-8 (der Zweck der ganzen Uebung) und anschliessend AC-7.
 //
-// Tour im Browser geoeffnet, dann AN DER OBERFLAECHE VORBEI eine Aenderung an
-// derselben Tour (PUT ohne If-Match — das nimmt der Server laut S2 an), danach
+// Trip im Browser geoeffnet, dann AN DER OBERFLAECHE VORBEI eine Aenderung an
+// derselben Trip (PUT ohne If-Match — das nimmt der Server laut S2 an), danach
 // im Browser speichern. Erwartung: 412, die fremde Aenderung bleibt erhalten,
 // und am Speicher-Anzeiger steht die deutsche Servermeldung.
 //
@@ -302,7 +302,7 @@ test('#1395 S3 Fall 2 (AC-4/AC-8/AC-7): fremde Aenderung -> 412 mit deutscher Me
 
 		const puts = recordBrowserTripPuts(page, trip.id);
 
-		// Der Browser laedt die Tour — ab hier fuehrt er ihren Stempel.
+		// Der Browser laedt die Trip — ab hier fuehrt er ihren Stempel.
 		await page.goto(`/trips/${trip.id}?tab=alarme`);
 		await expect(page.getByTestId('alarme-tab')).toBeVisible({ timeout: 30_000 });
 		const toggle = page
@@ -360,7 +360,7 @@ test('#1395 S3 Fall 2 (AC-4/AC-8/AC-7): fremde Aenderung -> 412 mit deutscher Me
 			/^"[0-9a-f]+"$/
 		);
 
-		// ── AC-7: der naechste Versuch. Fuer diese Tour ist jetzt kein Stand mehr
+		// ── AC-7: der naechste Versuch. Fuer diese Trip ist jetzt kein Stand mehr
 		// bekannt (nach 412 verworfen) — er geht ohne Vorbedingung raus und wird
 		// angenommen, also exakt wie vor dieser Scheibe.
 		const retry = page.waitForResponse(
@@ -410,11 +410,11 @@ test('#1395 S3 Fall 3 (AC-5): nach dem Pausieren gelingt das Speichern im Alarme
 		await page.getByRole('button', { name: 'Pausieren' }).click();
 		await expect(
 			page.getByRole('button', { name: 'Fortsetzen' }),
-			'Tour ist pausiert'
+			'Trip ist pausiert'
 		).toBeVisible({ timeout: 30_000 });
 		const nachPause = await fetchTrip(request, trip.id);
 		console.log(`[#1395 S3 Fall 3] paused_at=${JSON.stringify(nachPause.paused_at)}`);
-		expect(nachPause.paused_at, 'Vorbedingung: die Tour ist wirklich pausiert').toBeTruthy();
+		expect(nachPause.paused_at, 'Vorbedingung: die Trip ist wirklich pausiert').toBeTruthy();
 
 		// Danach im Editor-Reiter speichern — das MUSS gelingen.
 		const saved = page.waitForResponse(
@@ -436,7 +436,7 @@ test('#1395 S3 Fall 3 (AC-5): nach dem Pausieren gelingt das Speichern im Alarme
 
 		// Die im Browser vorgenommene Aenderung ist wirklich gespeichert. Geprueft
 		// wird gegen den TATSAECHLICH gesendeten Rumpf (Richtung des Schalters
-		// haengt am Ausgangszustand der Tour und ist hier nebensaechlich).
+		// haengt am Ausgangszustand der Trip und ist hier nebensaechlich).
 		const gesendet = puts[0].postDataJSON() as { official_warnings?: { enabled?: boolean } };
 		const danach = await fetchTrip(request, trip.id);
 		console.log(
@@ -475,11 +475,11 @@ test('#1395 S3 Fall 4 (AC-5): nach dem Archivieren gelingt das Speichern im Alar
 		await page.getByTestId('trip-detail-archive-confirm-yes').click();
 		await expect(
 			page.getByRole('button', { name: 'Reaktivieren' }),
-			'Tour ist archiviert'
+			'Trip ist archiviert'
 		).toBeVisible({ timeout: 30_000 });
 		const nachArchiv = await fetchTrip(request, trip.id);
 		console.log(`[#1395 S3 Fall 4] archived_at=${JSON.stringify(nachArchiv.archived_at)}`);
-		expect(nachArchiv.archived_at, 'Vorbedingung: die Tour ist wirklich archiviert').toBeTruthy();
+		expect(nachArchiv.archived_at, 'Vorbedingung: die Trip ist wirklich archiviert').toBeTruthy();
 
 		const saved = page.waitForResponse(
 			(r) =>
@@ -571,7 +571,7 @@ test('#1395 S3 Fall 5 (Regression): Etappen-Reiter speichert weiterhin, mit If-M
 // ─────────────────────────────────────────────────────────────────────────────
 // Fall 6 — Aufraeum-Kontrolle.
 // ─────────────────────────────────────────────────────────────────────────────
-test('#1395 S3 Aufraeum-Kontrolle: keine Test-Tour dieses Laufs bleibt liegen', async ({
+test('#1395 S3 Aufraeum-Kontrolle: keine Test-Trip dieses Laufs bleibt liegen', async ({
 	request
 }) => {
 	const res = await request.get('/api/trips');
@@ -581,5 +581,5 @@ test('#1395 S3 Aufraeum-Kontrolle: keine Test-Tour dieses Laufs bleibt liegen', 
 		.filter((t) => (t.name ?? '').startsWith(`${E2E_TEST_PREFIX}1395S3-`))
 		.map((t) => `${t.id} (${t.name})`);
 	console.log(`[#1395 S3 Aufraeumen] Reste: ${JSON.stringify(leftovers)}`);
-	expect(leftovers, 'keine Test-Tour dieses Laufs bleibt liegen').toEqual([]);
+	expect(leftovers, 'keine Test-Trip dieses Laufs bleibt liegen').toEqual([]);
 });

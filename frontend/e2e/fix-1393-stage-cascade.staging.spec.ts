@@ -16,7 +16,7 @@
 //
 // Nachweis ueber den ECHTEN Klickpfad (Datum im Feld aendern, Rueckfrage
 // abwarten, bestaetigen), danach Daten IM UI ablesen UND per GET /api/trips/{id}
-// gegenpruefen. Test-Tour traegt das reservierte Praefix `E2E-GZ-` und wird im
+// gegenpruefen. Test-Trip traegt das reservierte Praefix `E2E-GZ-` und wird im
 // finally-Block geloescht.
 
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
@@ -45,7 +45,7 @@ interface SeedStage {
 	waypoints: ReturnType<typeof wp>[];
 }
 
-/** Alle in dieser Datei angelegten Test-Touren — Sicherheitsnetz fuer den Fall,
+/** Alle in dieser Datei angelegten Test-Trips — Sicherheitsnetz fuer den Fall,
  *  dass ein Test in eine Zeitschranke laeuft und sein `finally` den bereits
  *  geschlossenen Test-Kontext nicht mehr benutzen kann. */
 const createdTripIds: string[] = [];
@@ -364,10 +364,10 @@ test('#1393 Fall B: Pausentag rueckt mit, Etappe ohne Datum verbraucht keinen Ta
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Fall C — Aufraeum-Kontrolle: nach den Faellen A/B liegt keine Test-Tour mit
+// Fall C — Aufraeum-Kontrolle: nach den Faellen A/B liegt keine Test-Trip mit
 // dem reservierten Praefix mehr auf Staging.
 // ─────────────────────────────────────────────────────────────────────────────
-test('#1393 Aufraeum-Kontrolle: keine E2E-GZ-1393-Tour bleibt zurueck', async ({ request }) => {
+test('#1393 Aufraeum-Kontrolle: keine E2E-GZ-1393-Trip bleibt zurueck', async ({ request }) => {
 	const res = await request.get('/api/trips');
 	expect(res.ok(), `GET /api/trips HTTP ${res.status()}`).toBeTruthy();
 	const trips = (await res.json()) as Array<{ id: string; name?: string }>;
@@ -375,5 +375,5 @@ test('#1393 Aufraeum-Kontrolle: keine E2E-GZ-1393-Tour bleibt zurueck', async ({
 		.filter((t) => (t.name ?? '').startsWith(`${E2E_TEST_PREFIX}1393-`))
 		.map((t) => `${t.id} (${t.name})`);
 	console.log(`[#1393 Aufraeumen] Reste: ${JSON.stringify(leftovers)}`);
-	expect(leftovers, 'keine Test-Tour dieses Laufs bleibt liegen').toEqual([]);
+	expect(leftovers, 'keine Test-Trip dieses Laufs bleibt liegen').toEqual([]);
 });

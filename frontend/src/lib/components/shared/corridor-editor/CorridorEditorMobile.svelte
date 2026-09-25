@@ -369,7 +369,7 @@
 			     keine Sofort-Meldung mehr versprechen, Verweis auf den Reiter Alarme. -->
 			<Eyebrow>Wertebereiche</Eyebrow>
 			<div class="cem-title">Sag mir, welche Werte für dich passen</div>
-			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Werte im Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im Reiter Alarme ein.</div>
+			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im Reiter Alarme ein.</div>
 		{/if}
 
 		{#if context === 'route' && routeDefsFailed}

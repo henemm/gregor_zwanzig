@@ -157,7 +157,7 @@ Frontend (folgt in S2/S3).
 last_seen_id-Kandidaten in Schritt 7 IMMER an, auch fuer eine erkannte
 Garmin-Nachricht, deren Lernaufruf fehlschlug — dann wanderte der Zeiger
 ueber die Nachricht hinweg und sie wurde nie wieder betrachtet. Da sich das
-Garmin-Geraet im Wesentlichen EINMAL pro Tour meldet, macht ein Fehlschlag
+Garmin-Geraet im Wesentlichen EINMAL pro Trip meldet, macht ein Fehlschlag
 in genau diesem 5-Minuten-Fenster (z.B. ein Deploy-Neustart der Go-API) die
 Rueckadresse DAUERHAFT verloren, ohne dass irgendwo eine Fehlermeldung
 entsteht (`trigger_inbound_sms()` antwortete bedingungslos `{"status": "ok"}`).
@@ -375,7 +375,7 @@ protokolliert.
 - 2026-08-10: v1.1 — AC-10 (Trockenlauf-Schalter `GZ_PREMIUM_SMS_POLL_DRYRUN`) ergänzt, Known Limitations zum Origin-Guard entsprechend angepasst (Team-Lead-Nachtrag: Totalsperre hätte den Reader bis zum Produktivlauf unbeobachtbar gemacht)
 - 2026-08-10: v1.2 — Fix F001 (Adversary-Fund): verlorene Rückadresse bei
   vorübergehendem Lernfehler (Deploy-Neustart der Go-API als realistischer
-  Auslöser, da sich das Garmin-Gerät im Wesentlichen einmal pro Tour meldet).
+  Auslöser, da sich das Garmin-Gerät im Wesentlichen einmal pro Trip meldet).
   Schritt 7/9/11 korrigiert — der Dedup-Zeiger wandert nur noch bei Erfolg
   oder bewusster Ablehnung (HTTP 4xx) über eine erkannte Garmin-Nachricht
   hinweg, nicht mehr bei einem vorübergehenden Fehlschlag (Netzwerk/Timeout/

@@ -751,7 +751,7 @@ def test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit(sauberer_nutzer, k
 def test_ac5_nicht_string_ruhezeitwert_bleibt_keine_ruhezeit(sauberer_nutzer):
     """AC-5, zweiter Teil (grüner Anker): ein Nicht-String (`int`) darf keine
     Ausnahme an den Aufrufer durchreichen — der gefährlichste Fehlerfall wäre
-    ein Alarm-Totalausfall für ALLE Touren des Kontos (#1467)."""
+    ein Alarm-Totalausfall für ALLE Trips des Kontos (#1467)."""
     user_id = sauberer_nutzer("ac5-nichtstring")
     dienst = trip_abweichungsdienst(user_id)
     trip = trip_mit_ruhezeit(user_id, "t-int", "Pacific/Auckland", ("22:00", "07:00"))

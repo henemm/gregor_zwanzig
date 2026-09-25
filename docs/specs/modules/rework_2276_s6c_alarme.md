@@ -79,7 +79,7 @@ dieser Scheibe.
 
 | File | Change Type | Description |
 |------|-------------|--------------|
-| `frontend/src/lib/components/shared/AlarmeTab.svelte` | MODIFY | 13 `wiz`-Felder an den 21 in der Analyse gemessenen Stellen (Lesen: `:171,186,199(bleibt),216,243,280,345(fällt zu `!trip`),450,460,468,475`; Schreiben: `:175,222,255-257,286-296,453,460,468,477`) → Wertprops + Rückrufe; 14 HERKUNFT-Zweige fallen (siehe Schicksals-Tabelle); 2 `bind:`-Stellen (Cooldown, Stille Stunden) → Funktions-Bindungen; neue Prop `zonenBezug` mit Vorgabewert `'der Tour'` |
+| `frontend/src/lib/components/shared/AlarmeTab.svelte` | MODIFY | 13 `wiz`-Felder an den 21 in der Analyse gemessenen Stellen (Lesen: `:171,186,199(bleibt),216,243,280,345(fällt zu `!trip`),450,460,468,475`; Schreiben: `:175,222,255-257,286-296,453,460,468,477`) → Wertprops + Rückrufe; 14 HERKUNFT-Zweige fallen (siehe Schicksals-Tabelle); 2 `bind:`-Stellen (Cooldown, Stille Stunden) → Funktions-Bindungen; neue Prop `zonenBezug` mit Vorgabewert `'der Trip'` |
 | `frontend/src/lib/components/compare/alarmePropsAus.ts` | CREATE | Eine Stelle, die aus `wiz` das komplette Prop-Bündel (13 Werte + zugehörige Rückrufe + `zonenBezug: 'des ersten Orts'`) für `AlarmeTab` baut — von allen drei Vergleichs-Mounts identisch benutzt |
 | `frontend/src/lib/components/compare/CompareTabs.svelte` | MODIFY | Mount (B) `:1044-1054` von `wiz={wizardState}` + Einzel-Props auf `{...alarmePropsAus(wizardState)}` im Markup-Ausdruck; `catalog`, `preset`, `saveController`, `enqueueHubWrite`, `onCompareUpdate` bleiben eigenständige Props (nicht Teil des Bündels) |
 | `frontend/src/lib/components/compare-new/CompareNewEditor.svelte` | MODIFY | Mounts (C) `:396` und (D) `:487` von `{wiz}` auf `{...alarmePropsAus(wiz)}` — **sonst verlieren sie ihre Bedienelemente** (Regel „Prop da → Bedienelement da", S6b-Muster); `catalog` bleibt eigenständige Prop |
@@ -168,7 +168,7 @@ Vergleichs-Pfad, keiner davon zwingend zu ändern — Prüfpflicht, nicht
    | `:424` | `{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}` | **BLEIBT** | Markup ohne eigenen `wiz`-Bezug; hängt an der fachlichen Zusicherung aus `:199` — solange `:199` fachlich bleibt, ist dieser Zweig ihr notwendiger Anzeige-Zwilling |
    | `:443` | `{#if context === 'vergleich'}` (Kurzstil-Schalter) | **BLEIBT** | DARSTELLUNG — im Trip steht derselbe Schalter im Versand-Reiter, nicht hier (#1260 S5) |
    | `:459` | `{#if context === 'vergleich'}` (Cooldown-Karte) | **FÄLLT** | beide Zweige rendern dieselbe Komponente mit demselben einzigen Attribut; einziger Unterschied ist das Bindungsziel — mit Wertprop + Funktions-Bindung bleibt ein Mount übrig, der Wächter hat nichts mehr zu unterscheiden |
-   | `:467` | `{#if context === 'vergleich'}` (Stille Stunden) | **FÄLLT** | dito; der einzige echte Unterschied `zonen_bezug` (`"des ersten Orts"` vs. `"der Tour"`) wandert an die Aufrufstelle als Prop `zonenBezug` mit Vorgabewert `'der Tour'` |
+   | `:467` | `{#if context === 'vergleich'}` (Stille Stunden) | **FÄLLT** | dito; der einzige echte Unterschied `zonen_bezug` (`"des ersten Orts"` vs. `"der Trip"`) wandert an die Aufrufstelle als Prop `zonenBezug` mit Vorgabewert `'der Trip'` |
    | `:482` | `{#if context === 'vergleich'}` (Beispielwarnung, `VTAlertSample` vs. `AlertPreviewCard`) | **BLEIBT** | FACHLICH — Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten, kein Quellenwahl-Fall |
 
    **Bilanz: 14 fallen, 4 bleiben (mit neuen Zeilennummern). Ratsche 67 → 53**
@@ -226,11 +226,11 @@ Vergleichs-Pfad, keiner davon zwingend zu ändern — Prüfpflicht, nicht
    **unverändert** — ihre `$bindable`-Props sehen von außen keinen Unterschied
    zwischen zweiwegiger State-Bindung und Funktions-Bindung.
 
-6. **Neue Prop `zonenBezug` mit Vorgabewert `'der Tour'`.** Der Trip-Mount
+6. **Neue Prop `zonenBezug` mit Vorgabewert `'der Trip'`.** Der Trip-Mount
    (`trip-detail/AlarmeScheduleTab.svelte:60-69`) übergibt heute **kein**
    `zonen_bezug` an `AlarmeTab` — der bisherige `context==='vergleich'`-Zweig
-   an `:467` setzt `zonen_bezug="der Tour"` nur für den `else`-Fall (Trip)
-   hart. Der Vorgabewert `'der Tour'` deckt dieses Verhalten vollständig ab,
+   an `:467` setzt `zonen_bezug="der Trip"` nur für den `else`-Fall (Trip)
+   hart. Der Vorgabewert `'der Trip'` deckt dieses Verhalten vollständig ab,
    ohne die Trip-Datei anzufassen. Die drei Vergleichs-Mounts liefern
    `zonenBezug: 'des ersten Orts'` über `alarmePropsAus(wiz)`.
 

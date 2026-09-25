@@ -7,7 +7,7 @@ die Daten) + Regel 3 (keine Umgebungsuhr).
 
 Sieben Fundstellen in fuenf Dateien bestimmen "welcher Kalendertag ist
 gemeint" ueber die Serveruhr (``date.today()``/``datetime.now()`` ohne Zone)
-statt ueber den Ortstag der Tour bzw. des ersten aufloesbaren Preset-Orts.
+statt ueber den Ortstag der Trip bzw. des ersten aufloesbaren Preset-Orts.
 Anders als S5b (Versandpfade) wirken sie primUER auf VORSCHAU-/ANZEIGE-Pfade,
 mit einer Ausnahme (F7, versendete Mail):
 
@@ -138,7 +138,7 @@ PARAM_UTC_STAGE_MATCH = datetime(2026, 8, 20, 20, 0, tzinfo=timezone.utc)
 
 
 def _preview_trip(trip_id: str, tage_und_koordinaten: list) -> Trip:
-    """Tour mit je einer RENDERBAREN (2-Wegpunkt-)Etappe pro Tag.
+    """Trip mit je einer RENDERBAREN (2-Wegpunkt-)Etappe pro Tag.
 
     ``trip_two_zones`` (conftest) baut nur 1-Wegpunkt-Etappen -- unterhalb
     von ``PreviewService._MIN_WAYPOINTS_FOR_RENDER`` (2) und damit fuer
@@ -179,7 +179,7 @@ def _uhr_eingefroren(now_utc: datetime) -> None:
 def test_ac1_resolve_target_date_folgt_dem_parameter_nicht_der_systemuhr(monkeypatch):
     """AC-1, erste Haelfte -- ``PreviewService._resolve_target_date`` (F1).
 
-    GIVEN eine Neuseeland-Tour (UTC+12) mit Etappen am 19.08. und 21.08.,
+    GIVEN eine Neuseeland-Trip (UTC+12) mit Etappen am 19.08. und 21.08.,
     WHEN  ``_resolve_target_date(trip, given_date=None, now_utc=Y)`` unter
           eingefrorener Systemuhr X aufgerufen wird, wobei X und Y auf
           verschiedene Ortstage derselben Zone fallen,

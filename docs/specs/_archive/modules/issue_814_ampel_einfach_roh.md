@@ -149,13 +149,13 @@ spiegelt die neue Quelle (`use_friendly_format`) wider, ohne den Bug zu zementie
 
 **AC-11:** Frontend — Sicht zeigt „nur Rohwert" ohne Roh/Einfach-Umschalter.
 Given der Trip-Editor (Metrik-Tab) als eingeloggter Nutzer
-When eine Tour mit aktivierter Sicht geöffnet wird
+When eine Trip mit aktivierter Sicht geöffnet wird
 Then zeigt die Sicht-Zeile **„nur Rohwert"** und **keinen** Roh/Einfach-Umschalter
 (visibility aus `INDICATOR_MAP` entfernt).
 
 **AC-12:** Frontend — Regen (precipitation) hat den Roh/Einfach-Umschalter.
 Given der Trip-Editor (Metrik-Tab)
-When eine Tour mit aktiviertem Regen (`precipitation`) geöffnet wird
+When eine Trip mit aktiviertem Regen (`precipitation`) geöffnet wird
 Then hat die Regen-Zeile den Roh/Einfach-Umschalter (precipitation zu `INDICATOR_MAP`
 ergänzt) — konsistent mit Wind/Böen/Regenwahrscheinlichkeit.
 

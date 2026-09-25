@@ -275,8 +275,8 @@ class TestEmailSubject:
         from datetime import date
         from services.scheduler_dispatch_service import build_compare_preset_subject
 
-        subject = build_compare_preset_subject("Alpen Tour", date(2026, 6, 6))
+        subject = build_compare_preset_subject("Alpen Trip", date(2026, 6, 6))
         assert "Wetter-Vergleich" in subject, f"Subject should contain 'Wetter-Vergleich', got: {subject}"
         assert "Ski" not in subject, f"Subject should not contain 'Ski', got: {subject}"
         # AC-3: verify the exact format matches the old inline f-string
-        assert subject == "Wetter-Vergleich: Alpen Tour (06.06.2026)", f"Unexpected format: {subject}"
+        assert subject == "Wetter-Vergleich: Alpen Trip (06.06.2026)", f"Unexpected format: {subject}"

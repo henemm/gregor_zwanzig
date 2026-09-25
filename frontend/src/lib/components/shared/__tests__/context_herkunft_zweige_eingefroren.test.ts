@@ -410,7 +410,7 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// Text veraendert weiter (`!wiz` faellt weg, `!vergleichSpeicherung` bleibt);
 	// die beiden Markup-Weichen sind byte-identisch, nur nach unten gerutscht.
 	// Die `folgt`-Anker unterscheiden die beiden Markup-Zweige bewusst an der
-	// E-Mail-Kanalquelle (`send_email` = Tour-$state gegen `sendEmail` =
+	// E-Mail-Kanalquelle (`send_email` = Trip-$state gegen `sendEmail` =
 	// Wertprop): der Rahmen darunter (`versand-tab`-Div, `VTBriefingChannels`)
 	// ist in beiden Zweigen gleich und taugte als Anker nicht — ein vertauschtes
 	// Paar faende dort seinen Anker und die Fesselung waere wertlos.

@@ -127,7 +127,7 @@ describe('Issue #2317 AC-17: reguläres Speichern — Wetter-Konfiguration, DANN
 
 		// THEN: genau ein weiterer PUT, auf den Trip
 		assert.equal(aufrufe.length, 2, 'nach Auflösung des ersten PUT muss genau ein zweiter folgen');
-		assert.equal(aufrufe[1].path, TRIP_PFAD, 'der zweite PUT muss auf die Tour gehen');
+		assert.equal(aufrufe[1].path, TRIP_PFAD, 'der zweite PUT muss auf die Trip gehen');
 		assert.deepEqual(aufrufe[1].body, TRIP_BODY);
 		assert.notEqual(aufrufe[1].init?.keepalive, true, 'regulär darf kein keepalive gesetzt sein');
 		assert.equal(antworten.length, 0, 'nachErfolg darf erst nach dem Trip-PUT laufen');
@@ -180,7 +180,7 @@ describe('Issue #2317 AC-4 (Unit-Anteil): Speichern beim Entladen — beide PUTs
 			'beim Entladen müssen BEIDE PUTs noch im selben Tick abgesetzt werden — die Antwort des ersten kommt nie an'
 		);
 		const pfade = aufrufe.map((a) => a.path).sort();
-		assert.deepEqual(pfade, [TRIP_PFAD, WETTER_PFAD].sort(), 'je ein PUT auf Wetter-Konfiguration und Tour erwartet');
+		assert.deepEqual(pfade, [TRIP_PFAD, WETTER_PFAD].sort(), 'je ein PUT auf Wetter-Konfiguration und Trip erwartet');
 		for (const a of aufrufe) {
 			assert.equal(a.init?.keepalive, true, `PUT ${a.path}: die Option keepalive:true des Wächters wurde verschluckt`);
 		}

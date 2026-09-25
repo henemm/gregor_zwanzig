@@ -81,7 +81,7 @@ Fehlzuordnung auf — wer „Wind" auswählt, sieht heute fälschlich die Zeile
 - **Invariante aus dem RED-Befund:** **jede** `<AlarmeTab context="vergleich">`-
   Einbettung muss den geladenen Katalog durchreichen — heute drei Stellen
   (`CompareTabs.svelte:1416`, `CompareNewEditor.svelte:386,471`). Der
-  Touren-Zweig (`AlarmeScheduleTab.svelte:46`) bleibt unberührt.
+  Trips-Zweig (`AlarmeScheduleTab.svelte:46`) bleibt unberührt.
 - **Effort:** medium.
 
 ## Dependencies
@@ -90,7 +90,7 @@ Fehlzuordnung auf — wer „Wind" auswählt, sieht heute fälschlich die Zeile
 |--------|------|---------|
 | `src/output/renderers/compare_metric_catalog.py::get_compare_metric_catalog()` | READ (bereits live seit E1a-1) | Liefert `alertMetric` je Katalog-Eintrag über `GET /api/compare/metrics` — diese Etappe konsumiert nur |
 | `frontend/src/lib/components/alerts-tab/alertMetricTable.ts::ALERTABLE_METRICS` | READ (Referenz-Vokabular) | Reihenfolge und Filter der Empfindlichkeits-Zeilen, unverändert |
-| `frontend/src/lib/components/alerts-tab/alertMetricTable.ts::CATALOG_TO_ALERT_METRICS` | UNVERÄNDERT | Touren-Zweig bleibt hartkodiert (E1a-1-Spec AC-3) — nicht Teil dieser Etappe |
+| `frontend/src/lib/components/alerts-tab/alertMetricTable.ts::CATALOG_TO_ALERT_METRICS` | UNVERÄNDERT | Trips-Zweig bleibt hartkodiert (E1a-1-Spec AC-3) — nicht Teil dieser Etappe |
 | `frontend/src/lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts::loadCompareSelectionEntries` (geteilter Promise-Cache) | READ | Bereits heute der Ladeweg, den `hydrateAlarmeTab()` nutzt — kein neuer Fetch nötig |
 | `src/services/compare_alert.py`, `src/services/weather_change_detection.py`, `src/services/alert_preset.py` | UNVERÄNDERT (Harte Auflage #1435) | Alarm-Auswertung; diese Etappe ist reine Anzeige-/Auswahl-Arbeit, keine Auswertungsänderung |
 | `docs/specs/modules/feat_1435_e1a_alarmfaehigkeit_register.md` | REFERENZ | Vorgänger-Etappe, liefert `alertMetric` aus, Beleg-/Teststil-Vorbild |
@@ -195,7 +195,7 @@ neue Funktion umgestellt. Der Kommentarverweis in
 `COMPARE_TO_ALERT_METRIC` als Muster) wird auf die neue Funktion umgeschrieben
 — reine Kommentarpflege, kein Verhaltensbezug.
 
-### 5. Touren-Zweig — unangetastet
+### 5. Trips-Zweig — unangetastet
 
 `context="route"` liest `activeMetrics` weiterhin ausschließlich aus der
 gleichnamigen Prop (Zeile ~110: `(activeMetrics ?? [])`), berührt weder
@@ -238,7 +238,7 @@ Stilbruch:
 | Temperaturänderung | **Temperatur (Änderung)** |
 | Niederschlagsänderung | **Niederschlag (Änderung)** |
 
-Das betrifft auch den **Touren**-Bereich, weil die Beschriftungen aus einer
+Das betrifft auch den **Trips**-Bereich, weil die Beschriftungen aus einer
 gemeinsamen Tabelle stammen (`alertMetricLabels.ts:26-28`). Dort ändert sich
 ausschließlich der Wortlaut — welche Zeilen erscheinen und was sie auslösen,
 bleibt unangetastet (s. AC-7). Der Grund für die Entscheidung gegen das
@@ -324,7 +324,7 @@ einen Sturm-Alarm suggeriert, den sie nicht liefert.
 - **AC-7:** Given ein Trip (kein Ortsvergleich) mit denselben aktiven
   Wetter-Metriken wie vor dieser Änderung / When der Reiter *Alarme* im
   Trip-Kontext gerendert wird / Then erscheinen exakt dieselben Alarm-Zeilen
-  wie zuvor und sie lösen dasselbe aus — für Touren ändert sich inhaltlich
+  wie zuvor und sie lösen dasselbe aus — für Trips ändert sich inhaltlich
   nichts; einzige Ausnahme ist der in AC-9 beschriebene Wortlaut der drei
   Änderungs-Alarme.
   - Test: bestehende Tests (`alertMetricTable.test.ts`,
@@ -346,7 +346,7 @@ einen Sturm-Alarm suggeriert, den sie nicht liefert.
     `AlarmeTab.svelte` keinen Import aus dieser Datei mehr enthält.
 
 - **AC-9:** Given ein Nutzer öffnet den Reiter *Alarme* — im Ortsvergleich
-  oder bei einer Tour / When er die Zeilen liest, die bei einer starken
+  oder bei einer Trip / When er die Zeilen liest, die bei einer starken
   Änderung des Wetters warnen / Then heißen sie „Wind (Änderung)",
   „Temperatur (Änderung)" und „Niederschlag (Änderung)" — einheitlich im
   selben Stil wie die bereits vorhandenen Zeilen „Temperatur (Minimum)" und
@@ -377,9 +377,9 @@ einen Sturm-Alarm suggeriert, den sie nicht liefert.
   Kältealarm-Eintrag bleibt bestehen; das sichtbare Register-Feld
   `alertMetric` sitzt auf der sichtbaren Größe `temperature` (beide
   Richtungen, min UND max) — unverändert zu E1a-1.
-- **Der Touren-Zweig bleibt hartkodiert.**
+- **Der Trips-Zweig bleibt hartkodiert.**
   `alertMetricTable.ts::CATALOG_TO_ALERT_METRICS` wird von dieser Etappe
-  nicht angefasst (E1a-1-Spec AC-3) — Konsolidierung des Touren-Zweigs ist
+  nicht angefasst (E1a-1-Spec AC-3) — Konsolidierung des Trips-Zweigs ist
   ausdrücklich nicht Teil von E1a-2.
 - **Die Beschriftungs-Dublette bleibt bestehen.**
   `AlertPresetSelector.svelte:22-23` führt die Alarm-Beschriftungen (samt

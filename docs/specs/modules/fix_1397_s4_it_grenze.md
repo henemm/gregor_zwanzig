@@ -47,7 +47,7 @@ bbox-basiert, damit der Hinweis nur noch dort erscheint, wo er einen echten Ausf
 | C | `base.py` sammelt dennoch alle Quellen | `base.py:118-146` | Es geht **keine Warnung verloren** (die AT-Quelle liefert korrekt) — der Schaden ist ausschließlich der grundlose „nicht abrufbar"-Hinweis |
 
 **Messung (Prod, 2026-08-01, alle Nutzer-Koordinaten gegen die eingecheckte Geometrie):** 55
-Punkte liegen in der DPC-Bbox, davon 39 in keiner der 187 Zonen — alle aus einer Tour (Karnischer
+Punkte liegen in der DPC-Bbox, davon 39 in keiner der 187 Zonen — alle aus einer Trip (Karnischer
 Höhenweg), die auf der Staatsgrenze IT/AT verläuft. Abstand dieser 39 Punkte zur nächsten
 italienischen Zonengrenze: min 0,05 / median 1,14 / max 5,37 km, 17 davon unter 1 km. Journal:
 durchgehend `{service: meteoalarm_feed, zone_code: null, has_warning: true, drift:
@@ -130,7 +130,7 @@ das 24h-Frischefenster läuft nie leer.
      Quelle registriert → die österreichischen Warnungen kommen normal an, kein
      Ausfallhinweis von keiner der beiden Quellen.
    - ein Punkt in einer echten, grenznahen italienischen Zone (z. B. `Friu-B`/`Tren-A`/`Vene-A1`,
-     dieselbe Tour) → `covers()` bleibt `True`, Warnungen kommen weiterhin an (Gegenprobe zu
+     dieselbe Trip) → `covers()` bleibt `True`, Warnungen kommen weiterhin an (Gegenprobe zu
      Invariante 4).
    - Fréjus (`FREJUS`, bestehende Konstante) bleibt unverändert ausgeschlossen — reiner
      Regressionslauf, kein neuer Test nötig.
@@ -185,7 +185,7 @@ Limitation.
   werden / Then bekommt dieser Ort weiterhin zuverlässig seine italienischen Warnungen — die
   Korrektur darf keinen bislang funktionierenden Ort verlieren.
   - Test: `tests/tdd/test_meteoalarm_feed_italien.py` — realer, grenznaher IT-Zonen-Punkt aus
-    derselben Tour, geprüft wird, dass Warnungen weiterhin ankommen.
+    derselben Trip, geprüft wird, dass Warnungen weiterhin ankommen.
 
 - **AC-4:** Given ein beobachteter Ort liegt an einer Stelle, die weder einem Land noch einer
   bekannten italienischen Warnzone eindeutig zuordenbar ist (z. B. offenes Meer weit von jeder

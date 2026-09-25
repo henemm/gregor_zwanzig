@@ -9,7 +9,7 @@ workflow: feat-2030-vorhersage-mitschnitt
 tags: [observability, diagnostics, adr-0018, forecast]
 ---
 
-<!-- Issue #2030 — PO-Entscheid 2026-08-21 aus der Analyse zu #2020, Milestone „Tour KHW 2026-08" -->
+<!-- Issue #2030 — PO-Entscheid 2026-08-21 aus der Analyse zu #2020, Milestone „Trip KHW 2026-08" -->
 
 # Feature #2030 — Vorhersage-Mitschnitt am Verbrauchspunkt
 
@@ -24,7 +24,7 @@ Bei #2020 war die Kernfrage „wann sprang die Vorhersage von 7,4 mm auf 29,4 mm
 im System vorhandenen Quelle beantwortbar — dadurch blieb unentscheidbar, ob die
 Auslöseschwelle zu hoch stand oder die Vorhersage zu spät hochkam. Dieses Feature zeichnet
 rollierend auf, **was das System zu einem gegebenen Zeitpunkt für welchen Ort und welches
-Zeitfenster erwartete**, damit ein künftiger Vorfall dieser Art nach der Tour anhand von
+Zeitfenster erwartete**, damit ein künftiger Vorfall dieser Art nach der Trip anhand von
 Daten statt Vermutung aufklärbar ist. Zeitbezug: Tourstart Karnischer Höhenweg ist
 2026-08-23 — die Lieferung liegt zwei Tage davor und muss den heißen Pfad von Briefing und
 Alarm unangetastet lassen.

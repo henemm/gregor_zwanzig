@@ -381,7 +381,7 @@
 		<Eyebrow>Wertebereiche</Eyebrow>
 		<h2 class="ce-h2">Sag mir, welche Werte für dich passen</h2>
 		<p class="ce-lead">
-			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Werte im
+			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im
 			Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im
 			Reiter Alarme ein.
 		</p>

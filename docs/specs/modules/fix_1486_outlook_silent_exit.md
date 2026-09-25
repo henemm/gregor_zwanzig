@@ -204,7 +204,7 @@ Changelog dort).
 
 ## Acceptance Criteria
 
-- **AC-1 (Klasse A — normaler Tourabschluss):** Given eine Tour ohne weitere Etappen nach dem
+- **AC-1 (Klasse A — normaler Tourabschluss):** Given eine Trip ohne weitere Etappen nach dem
   Zieldatum / When das Briefing (gleich welcher Kanal) gerendert wird / Then erscheint der Satz
   „Keine weiteren Etappen — kein Ausblick." ohne Warn-/Danger-Styling (kein Rahmen, kein `⚠️`), UND
   es entsteht KEIN WARNING-Log-Eintrag.

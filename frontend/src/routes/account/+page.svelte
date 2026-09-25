@@ -1236,7 +1236,7 @@
 		<Card.Content>
 			<p class="mb-4 text-sm text-muted-foreground">
 				Du kannst jederzeit alles herunterladen, was zu deinem Konto gespeichert ist — Orte,
-				Touren, Vergleiche, Einstellungen und die Versand-Protokolle. Du bekommst ein
+				Trips, Vergleiche, Einstellungen und die Versand-Protokolle. Du bekommst ein
 				ZIP-Archiv; Anmelde-Merkmale und technische Fehlersuch-Protokolle sind nicht dabei.
 			</p>
 			<Btn

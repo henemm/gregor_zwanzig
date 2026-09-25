@@ -112,7 +112,7 @@ const EINFELD_RUECKRUF: [string, string][] = [
 	['onOutlookEnabledChange', 'outlookEnabled']
 ];
 
-/** Unveraenderte Props — die Flaeche A (Tour) darf nichts verlieren (AC-6). */
+/** Unveraenderte Props — die Flaeche A (Trip) darf nichts verlieren (AC-6). */
 const UNVERAENDERTE_PROPS = [
 	'context',
 	'trip',
@@ -320,7 +320,7 @@ describe('AC-1: WeatherMetricsTab leitet den Vergleichs-Zweig aus Wertprops her'
 			assert.ok(
 				namen.includes(unveraendert),
 				`AC-1 FAIL: die unveraenderte Prop \`${unveraendert}\` ist verschwunden — diese Scheibe ` +
-					'tauscht nur die Wizard-Quelle aus, sie nimmt der Flaeche A (Tour) nichts weg (AC-6).'
+					'tauscht nur die Wizard-Quelle aus, sie nimmt der Flaeche A (Trip) nichts weg (AC-6).'
 			);
 		}
 		assert.ok(
@@ -649,11 +649,11 @@ describe('AC-3 Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Flaeche B 
 	const negativ: [string, Knoten][] = [
 		['Flaeche C/D (Anlegen: vergleich + Wertprops, OHNE preset/saveController)', {}],
 		[
-			'Flaeche A (Tour: context="route", sonst VOLLSTAENDIG — die Kontext-Barriere allein entscheidet)',
+			'Flaeche A (Trip: context="route", sonst VOLLSTAENDIG — die Kontext-Barriere allein entscheidet)',
 			{ context: 'route', trip: { id: 't-1' }, preset: PRESET, saveController: controller() }
 		],
 		[
-			'Flaeche A (Tour wie echt gemountet: context="route", keine Wertprops/Rueckrufe)',
+			'Flaeche A (Trip wie echt gemountet: context="route", keine Wertprops/Rueckrufe)',
 			{
 				context: 'route',
 				trip: { id: 't-1' },
@@ -671,7 +671,7 @@ describe('AC-3 Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Flaeche B 
 				optionen.length,
 				0,
 				`AC-3 FAIL: ${was}: die Vergleichs-Speicherung wird erzeugt — PUT auf einen Vergleich, ` +
-					'den es (noch) nicht gibt, bzw. die Tour laeuft in den Vergleichs-Speicherweg.'
+					'den es (noch) nicht gibt, bzw. die Trip laeuft in den Vergleichs-Speicherweg.'
 			);
 			assert.strictEqual(u.vergleichSpeicherung, null, `AC-3 FAIL: ${was}: \`vergleichSpeicherung\` ist gesetzt.`);
 			let fehler: unknown = null;

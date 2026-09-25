@@ -26,7 +26,7 @@ def _trip_dict(**stage_overrides) -> dict:
     """
     return {
         "id": "trip-1250-s4",
-        "name": "S4 Trip-Konvergenz Test-Tour",
+        "name": "S4 Trip-Konvergenz Test-Trip",
         "stages": [
             {
                 "id": "stage-1",

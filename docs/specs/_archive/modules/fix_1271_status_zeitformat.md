@@ -127,7 +127,7 @@ export function tripStatus(trip: Trip, now: Date = new Date()): HomeTripStatus {
 - **AC-7:** Given die Trips-Liste (mobile Filter-Pills, ≤899px) / When ein Nutzer die Filter-Leiste ansieht / Then existiert neben Alle/Aktiv/Geplant/Fertig ein fünfter Tab "Pausiert" mit korrekter Trefferzahl; ein Klick darauf filtert `mobileFiltered` auf Trips mit kanonischem Status `paused`
   - Test: Playwright/Component-Test klickt den "Pausiert"-Tab mit gemischten Trip-Fixtures und prüft, dass nur pausierte Trips in der gefilterten Liste erscheinen
 
-- **AC-8 (Regressionsschutz Hero-Auswahl):** Given eine Trip-Liste mit Trips in allen Zuständen (aktiv, geplant, fertig, draft, archiviert) aber OHNE pausierte Trips / When `activeOrNextTrip()` aufgerufen wird / Then liefert sie exakt denselben Trip wie vor der Konsolidierung — unveränderte "heute aktive Tour zuerst, sonst nächste anstehende Tour"-Logik
+- **AC-8 (Regressionsschutz Hero-Auswahl):** Given eine Trip-Liste mit Trips in allen Zuständen (aktiv, geplant, fertig, draft, archiviert) aber OHNE pausierte Trips / When `activeOrNextTrip()` aufgerufen wird / Then liefert sie exakt denselben Trip wie vor der Konsolidierung — unveränderte "heute aktive Trip zuerst, sonst nächste anstehende Trip"-Logik
   - Test: Bestehende Tests für `activeOrNextTrip()`/`tripStatus()` bleiben ohne Anpassung der Erwartungswerte grün für alle nicht-pausierten Fixtures; zusätzlicher Test mit gemischten Fixtures bestätigt unveränderte Auswahl
 
 ## Known Limitations

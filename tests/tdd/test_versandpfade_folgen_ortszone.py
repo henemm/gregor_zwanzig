@@ -1,4 +1,4 @@
-"""TDD RED — #1727 S5b: die Versandpfade folgen dem ORTSTAG der Tour.
+"""TDD RED — #1727 S5b: die Versandpfade folgen dem ORTSTAG der Trip.
 
 SPEC: docs/specs/modules/fix_1727_s5b_versandpfade_ortstag.md (AC-1 bis AC-9)
 KONTEXT: docs/context/fix-1727-s5b-versandpfade.md (neun Fundstellen, gemessen)
@@ -6,7 +6,7 @@ ADR-0044 (Kalendertage folgen der Ortszeit), ADR-0051 Regel 3 (keine
 Umgebungsuhr — „jetzt“ kommt vom Aufrufer).
 
 Neun Fundstellen bestimmen „welcher Kalendertag ist gemeint“ über die
-Serveruhr (``date.today()``) statt über den Ortstag der Tour bzw. des ersten
+Serveruhr (``date.today()``) statt über den Ortstag der Trip bzw. des ersten
 auflösbaren Preset-Orts. Anders als in der Vorgängerscheibe S5a wirken sie auf
 VERSENDETE Inhalte — Etappenwahl, Wetter-Input, Ausblick, Gewitter-Ausblick,
 Verfall eines Nachliefer-Vermerks, Auto-Pause eines Presets, Datum im
@@ -128,7 +128,7 @@ def _zone(coords: tuple[float, float]) -> str:
 
 
 def _trip(trip_id: str, tage: list[date], coords: tuple[float, float]) -> Trip:
-    """Tour mit je einer Zwei-Wegpunkt-Etappe pro Tag, alle in DERSELBEN Zone.
+    """Trip mit je einer Zwei-Wegpunkt-Etappe pro Tag, alle in DERSELBEN Zone.
 
     ``trip_stage`` ist der geteilte Etappen-Baustein (``tests/helpers/
     nowcast_gate_fixtures``) — zwei Wegpunkte mit Ankunftszeiten sind Pflicht,
@@ -224,7 +224,7 @@ def test_ac1_test_fallback_waehlt_und_klemmt_nach_dem_ortstag():
     """AC-1 — Fundstellen 1 (``select_test_stage``) und 3
     (``_clamp_segments_to_today``), die zusammen EINE Kette bilden.
 
-    GIVEN eine Neuseeland-Tour (UTC+12) mit Etappen am 18.08. und 20.08., und
+    GIVEN eine Neuseeland-Trip (UTC+12) mit Etappen am 18.08. und 20.08., und
           ein Zeitpunkt 14:00 UTC am 20.08. — ortszeitlich ist bereits der
           21.08., auf dem Server noch der 20.08.,
     WHEN  der Test-Versand über ``select_test_stage`` seine Ersatz-Etappe wählt
@@ -275,7 +275,7 @@ def test_ac1_test_fallback_waehlt_und_klemmt_nach_dem_ortstag():
 def test_ac2_klemm_zweig_greift_nicht_am_eigenen_ortstag():
     """AC-2 — Fundstelle 2 (``_send_trip_report_outcome``, Zeile 1103).
 
-    GIVEN eine Tour an der US-Westküste (UTC−7) mit Etappe am 20.08., ein
+    GIVEN eine Trip an der US-Westküste (UTC−7) mit Etappe am 20.08., ein
           Zeitpunkt 03:00 UTC am 21.08. — ortszeitlich noch der 20.08., auf dem
           Server bereits der 21.08. — und ein ``target_date``, das (wie aus
           ``_get_target_date`` → ``trip_local_today``) bereits ortsrichtig den
@@ -329,7 +329,7 @@ def test_ac2_klemm_zweig_greift_nicht_am_eigenen_ortstag():
 def test_ac3_ausblick_misst_den_horizont_am_ortstag():
     """AC-3, erste Hälfte — Fundstelle 4 (``_build_stage_trend``).
 
-    GIVEN eine Neuseeland-Tour (UTC+12) mit Zieltag 20.08. und einer künftigen
+    GIVEN eine Neuseeland-Trip (UTC+12) mit Zieltag 20.08. und einer künftigen
           Etappe GENAU auf der Horizont-Grenze des Ortstages (21.08. + 15 Tage
           = 05.09.), und ein Zeitpunkt 14:00 UTC am 20.08.,
     WHEN  der Ausblick prüft, welche künftigen Etappen im Vorhersage-Horizont
@@ -416,13 +416,13 @@ def _offene_vermerke(pfad: Path) -> list[str]:
 
 def _tour_ist_auffindbar(trip: Trip) -> None:
     """Vorbedingung, ohne die „Vermerk entfernt" mehrdeutig wäre: der Scheduler
-    räumt einen Vermerk AUCH weg, wenn er die zugehörige Tour nicht findet
+    räumt einen Vermerk AUCH weg, wenn er die zugehörige Trip nicht findet
     (``trip is None``). Ohne diesen Anker wäre der Test in beide Richtungen aus
     dem falschen Grund grün bzw. rot."""
     gefunden = [t.id for t in load_all_trips(user_id="default")]
     assert trip.id in gefunden, (
-        f"Testaufbau: der Scheduler findet die Tour {trip.id!r} nicht "
-        f"(geladen: {gefunden}) — er entfernte den Vermerk dann mangels Tour, "
+        f"Testaufbau: der Scheduler findet die Trip {trip.id!r} nicht "
+        f"(geladen: {gefunden}) — er entfernte den Vermerk dann mangels Trip, "
         "nicht wegen des Zieltages"
     )
 
@@ -431,7 +431,7 @@ def test_ac4_versandfehler_vermerk_verfaellt_nach_dem_ortstag():
     """AC-4 — Fundstelle 6 (``briefing_target_day_is_current`` und ihr
     Aufrufer in ``_process_pending_markers``).
 
-    GIVEN ein Versandfehler-Vermerk mit Zieltag 20.08. für eine Tour an der
+    GIVEN ein Versandfehler-Vermerk mit Zieltag 20.08. für eine Trip an der
           US-Westküste (UTC−7) und ein Zeitpunkt 03:00 UTC am 21.08. —
           ortszeitlich ist noch der 20.08., auf dem Server schon der 21.08.,
     WHEN  der Scheduler prüft, ob der Vermerk noch aktuell ist,
@@ -617,11 +617,11 @@ def test_ac6_praefix_datum_folgt_der_zone_des_trips():
     ``_apply_prefixes``, wo der Tag als TEXT beim Nutzer ankommt.
 
     GIVEN ein Trip-Report ohne verwertbare Segmente (reiner Fallback-Fall) für
-          eine Neuseeland-Tour, dessen Anfrage die Zone bereits als
+          eine Neuseeland-Trip, dessen Anfrage die Zone bereits als
           ``trip_tz`` trägt, und ein Zeitpunkt 14:00 UTC am 20.08. —
           ortszeitlich der 21.08.,
     WHEN  der Test-Präfix („Test-Vorschau für … am …“) gesetzt wird,
-    THEN  trägt er das Datum 21.08.2026 — den Ortstag der Tour.
+    THEN  trägt er das Datum 21.08.2026 — den Ortstag der Trip.
 
     Vor dem Fix lieferte ``_target_date_from_report`` ``date.today()``: der
     Nutzer las im Mail-/SMS-/Telegram-Präfix ein Datum, das einen Tag neben dem

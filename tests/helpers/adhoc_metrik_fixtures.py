@@ -187,7 +187,7 @@ def lege_trip_an(
     now = datetime.now(tz=timezone.utc)
     user_id = user_id or frische_kennung(praefix)
     trip_id = f"adhoc-{praefix}"
-    trip_name = f"Adhoc {praefix} Tour"
+    trip_name = f"Adhoc {praefix} Trip"
 
     trip = _trip(trip_id, trip_name, now.astimezone(TRIP_TZ).date())
     save_trip(trip, user_id)

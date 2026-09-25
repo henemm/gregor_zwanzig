@@ -50,7 +50,7 @@ TODAY = date(2026, 9, 10)
 RECEIVED_AT = datetime(2026, 9, 10, 8, 0, tzinfo=timezone.utc)
 
 _TRIP_ID = "test-654-drilldown"
-_TRIP_NAME = "Drilldown-Test-Tour"
+_TRIP_NAME = "Drilldown-Test-Trip"
 _USER_ID = "default"
 
 # Der Wegpunkt liegt auf Korsika -> Europe/Paris, also NIE UTC.

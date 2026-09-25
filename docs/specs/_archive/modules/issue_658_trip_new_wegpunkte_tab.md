@@ -8,7 +8,7 @@ version: "1.0"
 tags: [trips, editor, frontend, design-compliance]
 ---
 
-# Neue Tour — Wegpunkte-Tab (eingebetteter Waypoint-Editor) (#658)
+# Neue Trip — Wegpunkte-Tab (eingebetteter Waypoint-Editor) (#658)
 
 ## Approval
 
@@ -19,7 +19,7 @@ tags: [trips, editor, frontend, design-compliance]
 Der optionale Tab „Wegpunkte prüfen" im Anlege-Flow `/trips/new` (Slice 2 / AC-5 von #622)
 ersetzt seinen Slice-1-Platzhalter durch den eingebetteten Waypoint-Editor und stellt sicher,
 dass die aus den GPX-Dateien berechneten (und ggf. vom Nutzer bearbeiteten) Wegpunkte beim
-finalen Speichern der Tour persistiert werden. Aktuell verwirft der Anlege-Flow diese Wegpunkte
+finalen Speichern der Trip persistiert werden. Aktuell verwirft der Anlege-Flow diese Wegpunkte
 (`buildCreateTripPayload` setzt `waypoints: []`) — #658 schließt diese stille Datenlücke.
 
 ## Source
@@ -80,13 +80,13 @@ Backend-Schema (unverändert).
 ## Expected Behavior
 
 - **Input:** Eingeloggter Nutzer mit allen hochgeladenen GPX-Dateien öffnet den Wegpunkte-Tab in `/trips/new`; optional Wegpunkt-Bearbeitungen (umbenennen/verschieben/hinzufügen/löschen).
-- **Output:** Eingebetteter Editor zeigt die GPX-Wegpunkte je Etappe; beim Speichern (`POST /api/trips`) enthält die Tour genau diese (ggf. editierten) Wegpunkte — auch wenn der Tab übersprungen wurde.
+- **Output:** Eingebetteter Editor zeigt die GPX-Wegpunkte je Etappe; beim Speichern (`POST /api/trips`) enthält die Trip genau diese (ggf. editierten) Wegpunkte — auch wenn der Tab übersprungen wurde.
 - **Side effects:** **Kein** inkrementelles `PUT` während der Bearbeitung; Persistenz ausschließlich beim finalen POST.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given alle GPX einer neuen Tour sind hochgeladen und der Nutzer öffnet den Tab „Wegpunkte prüfen", When der Tab rendert, Then erscheint **kein** „Folgt in Slice 2"-Platzhalter mehr, sondern ein Info-Banner („Wegpunkte aus GPX berechnet — optional prüfen") oben, darunter der eingebettete Wegpunkt-Editor (Etappen-Strip + Karte + Höhenprofil + Wegpunkt-Liste) und unten ein Footer.
-  - Test: Playwright gegen Staging — Tour anlegen, GPX hochladen, Wegpunkte-Tab öffnen; Banner-Text, `data-testid="edit-stages-panel"` und Footer-Buttons sichtbar, Platzhalter-Text fehlt.
+- **AC-1:** Given alle GPX einer neuen Trip sind hochgeladen und der Nutzer öffnet den Tab „Wegpunkte prüfen", When der Tab rendert, Then erscheint **kein** „Folgt in Slice 2"-Platzhalter mehr, sondern ein Info-Banner („Wegpunkte aus GPX berechnet — optional prüfen") oben, darunter der eingebettete Wegpunkt-Editor (Etappen-Strip + Karte + Höhenprofil + Wegpunkt-Liste) und unten ein Footer.
+  - Test: Playwright gegen Staging — Trip anlegen, GPX hochladen, Wegpunkte-Tab öffnen; Banner-Text, `data-testid="edit-stages-panel"` und Footer-Buttons sichtbar, Platzhalter-Text fehlt.
 
 - **AC-2:** Given der Wegpunkte-Tab ist offen, When der Editor lädt, Then zeigt er für die hochgeladenen Etappen die aus den GPX-Dateien berechneten Wegpunkte (die `/api/gpx/parse`-Wegpunkte je Etappe), nicht eine leere Liste.
   - Test: Playwright — Wegpunkt-Sidebar zeigt `N insgesamt` mit N > 0 für die aktive Etappe.
@@ -97,10 +97,10 @@ Backend-Schema (unverändert).
 - **AC-4:** Given der Wegpunkte-Tab ist offen, When der Nutzer „Überspringen →" **oder** „Wegpunkte übernehmen →" (im Info-Banner oder im Footer) klickt, Then wechselt die Ansicht zum Wetter-Metriken-Tab.
   - Test: Playwright — jeder der vier Buttons führt zum Wetter-Tab (`WeatherMetricsTab` sichtbar).
 
-- **AC-5:** Given der Nutzer hat im Wegpunkte-Editor mindestens einen Wegpunkt bearbeitet (umbenannt, verschoben, hinzugefügt oder gelöscht), When er die Tour über „Tour speichern" anlegt (`POST /api/trips`), Then enthält die gespeicherte Tour genau diese bearbeiteten Wegpunkte je Etappe — nach dem Speichern sind sie in der Trip-Detail-Ansicht (`/trips/<id>`) sichtbar.
+- **AC-5:** Given der Nutzer hat im Wegpunkte-Editor mindestens einen Wegpunkt bearbeitet (umbenannt, verschoben, hinzugefügt oder gelöscht), When er die Trip über „Trip speichern" anlegt (`POST /api/trips`), Then enthält die gespeicherte Trip genau diese bearbeiteten Wegpunkte je Etappe — nach dem Speichern sind sie in der Trip-Detail-Ansicht (`/trips/<id>`) sichtbar.
   - Test: Playwright gegen Staging — Wegpunkt umbenennen → speichern → in `/trips/<id>` denselben Namen finden (echte DB-Persistenz).
 
-- **AC-6:** Given der Nutzer überspringt den Wegpunkte-Tab vollständig (ohne ihn zu öffnen), When er die Tour speichert, Then enthält die gespeicherte Tour dennoch die aus GPX berechneten Wegpunkte je Etappe (Überspringen = unveränderte GPX-Wegpunkte übernehmen, **nicht** leere Wegpunkte).
+- **AC-6:** Given der Nutzer überspringt den Wegpunkte-Tab vollständig (ohne ihn zu öffnen), When er die Trip speichert, Then enthält die gespeicherte Trip dennoch die aus GPX berechneten Wegpunkte je Etappe (Überspringen = unveränderte GPX-Wegpunkte übernehmen, **nicht** leere Wegpunkte).
   - Test: `node:test` — `buildCreateTripPayload` mit gefüllten Stage-`waypoints` erzeugt Payload mit denselben Wegpunkten (kein leeres Array).
 
 - **AC-7:** Given der Wegpunkte-Editor ist im Anlege-Flow eingebettet, When der Nutzer Wegpunkte bearbeitet, Then erfolgt **kein** Netzwerk-`PUT` (kein inkrementelles Speichern) — der gesamte State bleibt lokal bis zum finalen `POST /api/trips`; es gibt keine „Etappen speichern"-Schaltfläche im eingebetteten Editor.

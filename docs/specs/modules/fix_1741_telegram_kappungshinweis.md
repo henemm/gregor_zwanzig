@@ -38,8 +38,8 @@ würde, solange er im Code steht.
    umgesetzt — nur die zugehörige Spec (`feat_1001_telegram_redesign.md`) hat ihn nicht
    protokolliert, was #1741 als vermeintliche Regression erst erzeugt hat. Dieser Abschnitt
    holt die fehlende Dokumentation nach.
-4. #1741 bleibt im Milestone „Tour KHW 2026-08" — unabhängig davon, dass der Tour-Trip
-   `KHW 403` im `telegram_style=kurzform` fährt und den Bubble-Renderer damit auf der Tour
+4. #1741 bleibt im Milestone „Trip KHW 2026-08" — unabhängig davon, dass der Trip-Trip
+   `KHW 403` im `telegram_style=kurzform` fährt und den Bubble-Renderer damit auf der Trip
    selbst gar nicht durchläuft (siehe „Known Limitations").
 
 ## Source
@@ -216,8 +216,8 @@ berechnet; `layout.demoted_count` ist der einzige neue Lesezugriff. Keine neue B
 
 - Der Kappungshinweis erreicht nur den `rich`-Telegram-Stil. Im `telegram_style=kurzform`
   verwirft `notification_service.py:469-486` die Bubbles und sendet stattdessen
-  `report.sms_text`, das `render_telegram_bubbles()` gar nicht durchläuft. Der Tour-Trip
-  `KHW 403` fährt `kurzform` — auf der Tour selbst bleibt der Editor-Hinweis (Chip,
+  `report.sms_text`, das `render_telegram_bubbles()` gar nicht durchläuft. Der Trip-Trip
+  `KHW 403` fährt `kurzform` — auf der Trip selbst bleibt der Editor-Hinweis (Chip,
   Schnittlinie, Warntext) die einzige Warnung vor dem Versand. Der PO hat #1741 trotzdem im
   Milestone belassen (Entscheid 4, s. o.).
 - Der Hinweis nennt nur die Anzahl (`demoted_count`), nicht die betroffenen Metrik-IDs —

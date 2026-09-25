@@ -331,7 +331,7 @@ Golden-/Aufrufer-Tests lesen Token-Werte über diese gemeinsame Funktion.
 - **AC-17:** Given ein Trip, dessen SMS-Kürzel-Katalog über `/api/sms-symbols` abgefragt wird, mit
   Metrik „Temperatur" / When der Endpoint antwortet / Then enthält die Symbol-Liste für
   `temperature` unverändert BEIDE Kürzel `["K", "D"]`, analog `wind_chill` unverändert
-  `["FK", "FD", "WC"]` — Regressionsschutz (PO-Entscheid 2026-08-13): der Touren-Editor zeigt
+  `["FK", "FD", "WC"]` — Regressionsschutz (PO-Entscheid 2026-08-13): der Trips-Editor zeigt
   weiterhin sowohl die `K`- als auch die `D`-Badge, weil beide Kürzel real vorkommen können (je
   nach Auswertungswahl `K13`, `D27` oder gemeinsam als `D13/27`).
 

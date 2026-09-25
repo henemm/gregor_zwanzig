@@ -48,7 +48,7 @@ System soll für Mallorca das AROME-Modell (1.3km, Météo-France) nutzen
 
 **Business Impact:**
 - Wanderer bekommt falsche Wetterprognose (Sturm statt Sonne)
-- → Unnötige Tour-Absage oder gefährliche Fehleinschätzung
+- → Unnötige Trip-Absage oder gefährliche Fehleinschätzung
 - → Projektziel "Best regional model" wird nicht erreicht
 
 ## Root Cause

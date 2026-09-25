@@ -190,7 +190,7 @@ ohne Ortsbezug) und der Luftqualitäts-Endpunkt (`openmeteo.py:807`, kennt `elev
 - **Einmaliger Wertesprung beim Umschalten (bewusst hingenommen).** Der Abweichungsvergleich kann
   nicht zwischen „das Wetter hat sich geändert" und „wir fragen seit heute anders" unterscheiden.
   Die Anker werden **nicht** gelöscht: ohne Anker gäbe es gar keinen Abweichungsalarm mehr, bei
-  laufender Tour bis zu zwölf Stunden lang. Ein einmaliger Fehlalarm — vom Melde-Gedächtnis auf
+  laufender Trip bis zu zwölf Stunden lang. Ein einmaliger Fehlalarm — vom Melde-Gedächtnis auf
   einmal je Metrik und Etappe begrenzt — ist das kleinere Übel als eine blinde Wache.
 
 - **Höhe nur so gut wie ihre Quelle.** Trip-Höhen stammen aus der GPX-Datei, Ort-Höhen aus einem

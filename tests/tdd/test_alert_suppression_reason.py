@@ -219,7 +219,7 @@ def _budget_knapp_unter_limit(uid: str, zone, schritte: int, *, reason: str | No
 
 
 def _aenderungs_trip(trip_id: str):
-    """Tour mit scharfer Boeen-Regel — der Aufbau, den auch #1467 S3 fuer den
+    """Trip mit scharfer Boeen-Regel — der Aufbau, den auch #1467 S3 fuer den
     Aenderungspfad benutzt."""
     return gust_alert_trip(trip_id)
 

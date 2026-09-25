@@ -55,7 +55,7 @@ async function fetchStageDates(page: Page): Promise<Record<string, string>> {
 
 /** Bug #1393 F002: Etappenreihenfolge und Datumsfolge müssen zueinander passen.
  *  ECHT aufsteigend — zwei Etappen am selben Tag wären in einer durchdatierten
- *  Tour genauso falsch wie eine rückwärts laufende. Etappen ohne Datum werden
+ *  Trip genauso falsch wie eine rückwärts laufende. Etappen ohne Datum werden
  *  ausdrücklich benannt statt stillschweigend übergangen (sie verbrauchen keinen
  *  Tag und dürfen die Prüfung deshalb weder tragen noch aushebeln). */
 async function expectTimelineStrictlyAscending(
@@ -332,7 +332,7 @@ test('AC-8 (#1389): „Nur diese Etappe" persistiert die Etappe-1-Änderung', as
 // `cascade.done` wird erst NACH dem ersten `await` gesetzt. Zwei Tipps im
 // selben JS-Tick (auf dem Handy alltäglich) laufen deshalb beide durch die
 // Eingangsprüfung und verschieben die Folge-Etappen ZWEIMAL — Datenkorruption
-// an der echten Tour. Seit `await settle()` (F002) klafft dieses Fenster sogar
+// an der echten Trip. Seit `await settle()` (F002) klafft dieses Fenster sogar
 // bis zu 8 s auseinander statt nur die Dauer eines PUT.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -747,7 +747,7 @@ test('AC-19 (#1390): eine andere Etappe anklicken lässt die Rückfrage erreichb
 // greift dieses Gate nicht mehr: der Banner bleibt mit dem ALTEN Stand stehen
 // und rechnet nicht neu, während das neue Datum über den bedingungslosen Pfad
 // darunter sofort gespeichert wird. Die Bestätigung datierte die Folge-Etappen
-// danach ab dem veralteten Datum — die Tour ist in sich widersprüchlich (auf
+// danach ab dem veralteten Datum — die Trip ist in sich widersprüchlich (auf
 // Staging belegt: Tourstart +199, Folge-Etappen +163).
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -773,7 +773,7 @@ test('AC-20 (#1390 F001/F002): zweites Umdatieren NACH dem Umsortieren rechnet m
 	await page.getByRole('button', { name: /Lückenlos anschließen/ }).click();
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 
-	// Nach dem Neuladen muss die Tour in sich stimmig sein: lückenlos ab der
+	// Nach dem Neuladen muss die Trip in sich stimmig sein: lückenlos ab der
 	// zuletzt getroffenen Wahl. Bug #1393 F002: „Tag 2" steht seit dem Umsortieren
 	// VOR der bearbeiteten Etappe und bleibt deshalb unberührt; der Prüfgegenstand
 	// dieses Tests hängt an den Etappen DAHINTER — mit dem veralteten Anker (08-22)

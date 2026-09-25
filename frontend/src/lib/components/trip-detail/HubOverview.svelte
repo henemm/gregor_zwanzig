@@ -77,7 +77,7 @@
 	<!-- Right column -->
 	<div style="display: flex; flex-direction: column; gap: 20px;">
 		<!-- Feature #1435 Etappe E3a: Wetter-Metriken-Block — die inhaltlich
-		     wichtigste Einstellung einer Tour, deshalb erste Karte. Vier sich
+		     wichtigste Einstellung einer Trip, deshalb erste Karte. Vier sich
 		     ausschließende Zweige in dieser Prüfreihenfolge: Katalog-Fehler ->
 		     Altbestand -> Leerauswahl -> Auswahl (AC-4). -->
 		<Card padding={18}>

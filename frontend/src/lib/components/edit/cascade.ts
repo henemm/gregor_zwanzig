@@ -40,7 +40,7 @@ export function computeCascadeDelta(oldIso: string, newIso: string): number {
  * `followerIds` sind die Etappen HINTER der bearbeiteten, in Reihenfolge und
  * nur die MIT Datum: eine Etappe ohne Datum steht nicht in der Liste, bleibt
  * dadurch ohne Datum und verbraucht keinen Tag. Ein Pausentag hat ein Datum,
- * steht also drin und rückt mit — sonst verschöbe sich die Tour gegenüber der
+ * steht also drin und rückt mit — sonst verschöbe sich die Trip gegenüber der
  * Wirklichkeit.
  *
  * @example consecutiveDates('2026-07-26', ['b','c']) → { b: '2026-07-27', c: '2026-07-28' }

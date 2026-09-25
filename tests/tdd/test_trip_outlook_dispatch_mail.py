@@ -96,7 +96,7 @@ def _settings(user_id: str):
 def _trip(*, outlook_metrics, enabled_ids=None, leere_grundauswahl=False,
           email_layout_ids=None, report_overrides=None,
           trend_reports=("evening",), ohne_nachtblock=False):
-    """Tour mit fuenf Etappen ab heute: der Abendbericht zielt auf MORGEN
+    """Trip mit fuenf Etappen ab heute: der Abendbericht zielt auf MORGEN
     (``_get_target_date``), der Ausblick zeigt die drei Etappen danach.
 
     ``email_layout_ids``: setzt ein E-Mail-eigenes Kanal-Layout

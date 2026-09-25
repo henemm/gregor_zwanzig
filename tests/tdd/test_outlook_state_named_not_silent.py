@@ -126,7 +126,7 @@ def test_ac1_no_future_stages_reports_state_and_logs_nothing(caplog):
         )
 
     assert result.state is OutlookState.NO_STAGES, (
-        "Eine Tour ohne Folge-Etappe muss den Zustand NO_STAGES melden, "
+        "Eine Trip ohne Folge-Etappe muss den Zustand NO_STAGES melden, "
         f"bekam: {result!r}"
     )
     assert result.rows is None, (

@@ -72,7 +72,7 @@
 		mode === 'compare' ? activePresets.slice(1) : []
 	);
 
-	// --- Hero-Tour (aktiv) --------------------------------------------------
+	// --- Hero-Trip (aktiv) --------------------------------------------------
 	const hero = $derived(mode === 'trip' ? activeLiveTrip : null);
 	const heroIsActive = $derived(mode === 'trip');
 	const heroStages = $derived(hero?.stages ?? []);
@@ -157,7 +157,7 @@
 	<!-- Topbar — AC-7: kein sub-Text, beide Buttons ghost -->
 	<PageHeader
 		eyebrow="Übersicht · {todayPretty}"
-		title="Deine Touren & Vergleiche"
+		title="Deine Trips & Vergleiche"
 	>
 		{#snippet right()}
 			<Btn href="/trips/new" variant="ghost" size="sm">+ Neuer Trip</Btn>

@@ -458,10 +458,10 @@ def test_ac5_override_respects_quiet_hours():
     Der Override durchbricht nur die Briefing-Unterdrückung, nicht die Quiet Hours.
 
     🔴 Issue #1726: Dieser Test baute sein Ruhezeit-Fenster bis dahin über
-    `Europe/Vienna` — obwohl die Tour auf ISLAND liegt (`LAT`/`LON` = 64.0/
+    `Europe/Vienna` — obwohl die Trip auf ISLAND liegt (`LAT`/`LON` = 64.0/
     -22.0, `Atlantic/Reykjavik`, UTC+0). Er war nur deshalb grün, weil der
     Prüfling denselben falschen Bezug benutzte; das ist der Fehler dieses
-    Issues, im Test selbst. Das Fenster kommt jetzt aus der ORTSZONE der Tour
+    Issues, im Test selbst. Das Fenster kommt jetzt aus der ORTSZONE der Trip
     — abgeleitet aus ihren eigenen Koordinaten, nicht erneut angenommen. Die
     Zusicherung („der Override durchbricht die Nachtruhe nicht") ist
     unverändert; sie wird jetzt an der Zone gemessen, an der sie wirkt.

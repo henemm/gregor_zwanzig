@@ -81,7 +81,7 @@ Dispatcher prüft in dieser Reihenfolge — erste Übereinstimmung gewinnt:
 
 URL-Erkennung via Regex: `komoot\.com/[^/]+/(highlight)/(\d+)` → extrahiert Highlight-ID.
 
-Falls URL `tour` oder `collection` enthält statt `highlight`: sofortige `ResolveError{Code: "unsupported_url", Message: "Komoot-Touren und Sammlungen werden nicht unterstützt. Bitte einen Komoot Highlight-Link verwenden."}`.
+Falls URL `tour` oder `collection` enthält statt `highlight`: sofortige `ResolveError{Code: "unsupported_url", Message: "Komoot-Trips und Sammlungen werden nicht unterstützt. Bitte einen Komoot Highlight-Link verwenden."}`.
 
 Für Highlights: HTTP-GET `https://www.komoot.com/api/v007/highlights/{id}` mit `Accept: application/json`. Response-JSON hat die Felder:
 - `._embedded.coordinates.items[0]` → lat, lng (als `lng`, nicht `lon`)
@@ -212,7 +212,7 @@ LoC-Limit 250 → `workflow.py set-field loc_limit_override 500` vor Implementat
 - **AC-3:** Given ein unbekanntes Format (`"Gasthof Zum Löwen"`) / When aufgelöst / Then antwortet der Endpoint mit HTTP 422 und `code: "unknown_format"`.
   - Test: (populated after /tdd-red)
 
-- **AC-4:** Given eine Komoot-Tour-URL (`komoot.com/de-de/tour/12345`) / When aufgelöst / Then antwortet der Endpoint mit HTTP 422 und `code: "unsupported_url"` mit einer Nachricht die erklärt, dass nur Highlights unterstützt werden.
+- **AC-4:** Given eine Komoot-Trip-URL (`komoot.com/de-de/tour/12345`) / When aufgelöst / Then antwortet der Endpoint mit HTTP 422 und `code: "unsupported_url"` mit einer Nachricht die erklärt, dass nur Highlights unterstützt werden.
   - Test: (populated after /tdd-red)
 
 - **AC-5:** Given DMS-Koordinaten (`"47°04'44.0\"N 11°41'08.2\"E"`) / When aufgelöst / Then gibt der Endpoint HTTP 200 zurück mit lat ≈ 47.0789 und lon ≈ 11.6856 (Toleranz ±0.001), `source_type: "dms"`.

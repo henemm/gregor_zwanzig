@@ -102,7 +102,7 @@ Eigener Schluesselraum `corridor:<metrik>:<etappe>` — der Delta-Zweig
 
 ### 3. Einhaengen in den Lauf
 
-- Eine Tour, deren **einzige** Alarmquelle Wertebereiche mit `notify` sind, muss
+- Eine Trip, deren **einzige** Alarmquelle Wertebereiche mit `notify` sind, muss
   geprueft werden. Heute faellt sie durch `has_active_rules`
   (`trip_alert.py:342-355`) und wird nie angefasst.
 - Ruhezeiten, Zeit-Cooldown und Tages-Obergrenze gelten unveraendert auch fuer
@@ -119,9 +119,9 @@ Reaktivierung absoluter Regeln.
 
 ## Expected Behavior
 
-- **Input:** Tour mit `corridors[].notify == true`, frische Vorhersage fuer die
+- **Input:** Trip mit `corridors[].notify == true`, frische Vorhersage fuer die
   Etappen im aktiven Fenster, Melde-Gedaechtnis des letzten Laufs.
-- **Output:** Null oder eine Sofort-Meldung ueber die fuer die Tour geltenden
+- **Output:** Null oder eine Sofort-Meldung ueber die fuer die Trip geltenden
   Alarm-Kanaele (`_effective_alert_channels`), mit Groesse, Ist-Wert, gerissener
   Grenze, Etappe und Zeitfenster.
 - **Side effects:** Melde-Gedaechtnis fortgeschrieben; Zeit-Cooldown und
@@ -129,7 +129,7 @@ Reaktivierung absoluter Regeln.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine Tour mit der Gewitter-Grenze „hoechstens keins" und einer
+- **AC-1:** Given eine Trip mit der Gewitter-Grenze „hoechstens keins" und einer
   Vorhersage, die im aktiven Etappenfenster Gewitter zeigt, wobei sich die
   Vorhersage seit dem letzten Lauf **nicht** geaendert hat / When der Alarm-Lauf
   laeuft / Then geht genau eine Sofort-Meldung raus, die Groesse, Ist-Wert,
@@ -137,7 +137,7 @@ Reaktivierung absoluter Regeln.
   - Test: Lauf mit identischem Vorher-/Nachher-Wetterstand; geprueft wird die
     erzeugte Nachricht, nicht ein Zwischenzustand.
 
-- **AC-2:** Given dieselbe Tour und eine Vorhersage, die alle gesetzten Grenzen
+- **AC-2:** Given dieselbe Trip und eine Vorhersage, die alle gesetzten Grenzen
   einhaelt / When der Alarm-Lauf laeuft / Then geht keine Schwellen-Meldung raus.
   - Test: Lauf mit Werten innerhalb aller Bereiche — kein Versand.
 
@@ -154,11 +154,11 @@ Reaktivierung absoluter Regeln.
   - Test: Lauf-Folge steigend → erneuter Versand; Folge gerissen → eingehalten →
     gerissen → zwei Versendungen.
 
-- **AC-5:** Given eine Tour, deren einzige eingestellte Alarmquelle Wertebereiche
+- **AC-5:** Given eine Trip, deren einzige eingestellte Alarmquelle Wertebereiche
   mit Sofort-Meldung sind (keine Aenderungs-Empfindlichkeiten, keine Voreinstellung)
-  / When der Alarm-Lauf laeuft / Then wird diese Tour geprueft und meldet bei
+  / When der Alarm-Lauf laeuft / Then wird diese Trip geprueft und meldet bei
   gerissener Grenze — nachgewiesen fuer Gewitter (stufig) und Regen (stetig).
-  - Test: Tour ohne `metric_alert_levels`/`alert_preset`, nur mit Korridoren;
+  - Test: Trip ohne `metric_alert_levels`/`alert_preset`, nur mit Korridoren;
     beide Groessen einzeln nachgewiesen.
 
 - **AC-6:** Given ein Lauf, in dem sowohl eine Grenze gerissen ist als auch der
@@ -171,15 +171,15 @@ Reaktivierung absoluter Regeln.
 ## Known Limitations
 
 - **Ohne Vorhersage-Schnappschuss kein Schwellen-Alarm.** Der Lauf ueberspringt
-  eine Tour, solange kein Schnappschuss des Tages vorliegt
+  eine Trip, solange kein Schnappschuss des Tages vorliegt
   (`trip_alert.py:377`), weil die frische Vorhersage heute an dessen Etappen
-  haengt. Fuer Touren mit laufendem Briefing ist das erfuellt; die Entkopplung
+  haengt. Fuer Trips mit laufendem Briefing ist das erfuellt; die Entkopplung
   ist bewusst **nicht** Teil dieser Scheibe (Umbau von `_fetch_fresh_weather`).
 - **Tages-Summen und Aufzaehlungs-Groessen** (z.B. vorherrschende
   Niederschlagsart) bleiben aussen vor: fuer sie ist ein Zahlenvergleich gegen
   einen Wertebereich nicht definiert (dieselbe strukturelle Ausnahme wie in
   `build_trip_corridor_id_map()`).
-- **Nur Touren.** Der Ortsvergleich bekommt denselben Waechter spaeter; der
+- **Nur Trips.** Der Ortsvergleich bekommt denselben Waechter spaeter; der
   Auswertungs-Baustein ist bereits ohne Trip-Wissen geschnitten (ADR-0021).
 - Editor-Text (S2) und Ausweitung auf alle alarmfaehigen Groessen (S3) folgen in
   eigenen Arbeitsgaengen.

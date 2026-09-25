@@ -21,7 +21,7 @@ workflow: fix-1470-drilldown-ortszeit
 
 Im Telegram-Drilldown beginnt „morgen" heute um Mitternacht **Weltzeit**. Auf Korsika
 (UTC+2) zeigt das Fenster 02:00–02:00 Ortszeit: Die ersten zwei Stunden des Tages fehlen,
-die letzten zwei des Vortages sind dabei. Bei einer Tour in Neuseeland wären es zwölf
+die letzten zwei des Vortages sind dabei. Bei einer Trip in Neuseeland wären es zwölf
 Stunden — „morgen" zeigte dann überwiegend heute.
 
 **Auch „heute" ist betroffen** (im Ticket zunächst nicht benannt, beim Messen gefunden):
@@ -46,11 +46,11 @@ Nebenbefund aus #1465 — solange die Funktion abstürzte, kam niemand bis hierh
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Nutzer fragt im Drilldown „morgen" ab, während seine Tour in einer
+- **AC-1:** Given ein Nutzer fragt im Drilldown „morgen" ab, während seine Trip in einer
   anderen Zeitzone liegt als der Server / When das Tagesfenster gebildet wird / Then
-  beginnt es an der **Ortsmitternacht** der Tour und umfasst 24 Stunden dieses Ortstages —
+  beginnt es an der **Ortsmitternacht** der Trip und umfasst 24 Stunden dieses Ortstages —
   nicht die Weltzeit-Mitternacht.
-  - Test: Tour auf Korsika, erste Zeile der Stundentabelle ist `00:00` Ortszeit.
+  - Test: Trip auf Korsika, erste Zeile der Stundentabelle ist `00:00` Ortszeit.
 
 - **AC-2:** Given ein Nutzer fragt „heute" ab, nachdem am Ort bereits Mitternacht war,
   aber vor Mitternacht Weltzeit / When die Antwort erzeugt wird / Then trägt sie das
@@ -68,7 +68,7 @@ Nebenbefund aus #1465 — solange die Funktion abstürzte, kam niemand bis hierh
   - Test: keiner automatisierbar; im Bericht zu belegen, dass `tz` durchgereicht und nicht
     zweimal geholt wird.
 
-- **AC-5:** Given eine Tour hat keine Etappe mit Wegpunkten / When die Zone aufgelöst wird
+- **AC-5:** Given eine Trip hat keine Etappe mit Wegpunkten / When die Zone aufgelöst wird
   / Then fällt sie auf die **importierte UTC-Konstante** zurück, nicht auf ein
   hartverdrahtetes `ZoneInfo("UTC")` — dieselbe Regel, die der Zeitzonen-Wächter
   durchsetzt.
@@ -97,17 +97,17 @@ sonst eine Stunde. Rückfall unverändert: keine Etappe für den Tag ⇒ erste E
 Wegpunkten ⇒ importierte UTC-Konstante.
 
 **Entwicklung dieser Entscheidung (2026-08-03).** Die erste Fassung ankerte an der
-**ersten Etappe der Tour** und beschrieb den Randfall als „Sekunden bis Stunden um
+**ersten Etappe der Trip** und beschrieb den Randfall als „Sekunden bis Stunden um
 Mitternacht". Beides war falsch:
 
-- Der Adversary (F003) hat mit einer Tour Neuseeland → Korsika **zehn Stunden** Abweichung
+- Der Adversary (F003) hat mit einer Trip Neuseeland → Korsika **zehn Stunden** Abweichung
   vorgeführt — die Spanne entspricht der Zonendifferenz zwischen *erster* und *aktueller*
   Etappe, nicht einem Mitternachtsfenster.
 - Der Entwickler hat daraufhin den besseren Anker vorgeschlagen und beziffert
   (`_display_tz(trip, received_at.date())` statt `_trip_tz`): vier Messpunkte, davon zwei
   vorher falsch, alle vier danach richtig.
 
-Damit schrumpft der Fehler von „Zonenspanne der ganzen Tour" (bis 24 Stunden) auf
+Damit schrumpft der Fehler von „Zonenspanne der ganzen Trip" (bis 24 Stunden) auf
 „Zonenwechsel an genau diesem Tag" — eine Zeile Code für eine Größenordnung.
 
 ## Nachweisführung

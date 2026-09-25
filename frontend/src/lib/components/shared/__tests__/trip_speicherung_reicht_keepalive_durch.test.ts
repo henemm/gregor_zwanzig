@@ -77,7 +77,7 @@ afterEach(() => server.restore());
 
 describe('Issue #2317 Baustein 1: Trip-Speicherfunktion reicht die Entlade-Option an den PUT durch', () => {
 	test('AC-1/2/3: Flush beim Entladen (keepalive) → PUT noch im selben Tick, mit keepalive, OHNE If-Match', async () => {
-		// GIVEN: die Tour ist geladen (Stempel bekannt), eine Änderung wartet im 700-ms-Fenster
+		// GIVEN: die Trip ist geladen (Stempel bekannt), eine Änderung wartet im 700-ms-Fenster
 		await api.get(TRIP_PFAD);
 		assert.ok(getKnownEtag(TRIP_ID), 'Vorbedingung: ein Stand muss bekannt sein, sonst beweist „kein If-Match" nichts');
 		const ctl = createTestInstance(TRIP_ID);
@@ -97,7 +97,7 @@ describe('Issue #2317 Baustein 1: Trip-Speicherfunktion reicht die Entlade-Optio
 		);
 		const put = server.calls[server.calls.length - 1];
 		assert.equal(put.method, 'PUT');
-		assert.equal(put.path, TRIP_PFAD, 'der PUT muss auf die Tour-Ressource gehen');
+		assert.equal(put.path, TRIP_PFAD, 'der PUT muss auf die Trip-Ressource gehen');
 		assert.equal(put.keepalive, true, 'die Option keepalive:true des Wächters wurde verschluckt');
 		assert.equal(put.ifMatch, null, 'ein Entlade-Flush darf keinen If-Match tragen (unsichtbarer 412, #1395 S3 AC-6)');
 
@@ -147,7 +147,7 @@ describe('Issue #2317 Baustein 1: Trip-Speicherfunktion reicht die Entlade-Optio
 	});
 
 	test('scheitert der PUT (412), wird nachErfolg NICHT gerufen und der Fehler erreicht den Speicher-Takt', async () => {
-		// GIVEN: bekannter Stand, danach ändert „ein anderes Gerät" die Tour
+		// GIVEN: bekannter Stand, danach ändert „ein anderes Gerät" die Trip
 		await api.get(TRIP_PFAD);
 		await server.handler(TRIP_PFAD, { method: 'PUT', body: JSON.stringify({ name: 'fremd' }) });
 		const ctl = createTestInstance(TRIP_ID);

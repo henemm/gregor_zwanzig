@@ -70,13 +70,13 @@ def _diff(erwartet: list[str], ist: list[str]) -> str:
 
 
 def _altpfad_trip():
-    """Die Vorbedingung des AC-1-Bestandsschutzes: eine Tour, die den FESTEN
+    """Die Vorbedingung des AC-1-Bestandsschutzes: eine Trip, die den FESTEN
     Ausblick zeigt.
 
     ⚠️ #1848 A3 (PO-Freigabe 2026-08-21): dafuer genuegt ein fehlendes
     ``outlook_metrics`` nicht mehr -- "nie eingestellt" heisst seither
     "nichts abgewaehlt", und der Ausblick erbt die Grundauswahl. Der feste
-    Zweig bleibt fuer Touren OHNE Grundauswahl in Kraft (ADR-0050 D4); dort
+    Zweig bleibt fuer Trips OHNE Grundauswahl in Kraft (ADR-0050 D4); dort
     bewachen die beiden Aufzeichnungen unveraendert weiter, dass "Feld fehlt"
     nicht mit "bewusst geleert" verwechselt wird (Mutation 4). Die
     Referenzdateien werden NICHT nachgezogen."""
@@ -188,7 +188,7 @@ def test_ac4_leere_auswahl_entfernt_den_ausblick_in_beiden_kanaelen():
 
 
 def test_ac4_leere_auswahl_unterdrueckt_auch_den_zustands_fallback():
-    """AC-4 (zweiter Zweig): Given eine Tour, die mit dem Zieltag endet -- der
+    """AC-4 (zweiter Zweig): Given eine Trip, die mit dem Zieltag endet -- der
     Ausblick meldet dann den Zustand ``NO_STAGES`` statt Zeilen -- UND die
     Auswahl ist bewusst geleert / When beide Kanaele erzeugt werden / Then
     tritt AUCH der Zustands-Hinweis nicht an die Stelle des Blocks.

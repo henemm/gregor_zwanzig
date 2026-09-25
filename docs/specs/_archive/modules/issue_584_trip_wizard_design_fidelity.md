@@ -53,7 +53,7 @@ KEINE eigenen Design-Entscheidungen. KEINE Abweichungen vom JSX.
 
 **AC-12:** Given Step 5 Kanal-Chips pro Card, When sie gerendert werden, Then sind es `<span>`-Chips (kein Checkbox-Label) mit: aktiver Chip = `border: 1px solid var(--g-accent)`, `background: var(--g-accent-tint)`, `color: var(--g-accent-deep)`; inaktiver Chip = `border: 1px solid var(--g-rule)`, `color: var(--g-ink-4)`. Feste Kanalreihenfolge: Email, Signal, Telegram, SMS.
 
-**AC-13:** Given der Wizard-Footer, When er gerendert wird, Then ist er ein `grid` mit `gridTemplateColumns: "1fr auto 1fr"`, `gap: 12`, `paddingTop: 20`, `borderTop: 1px solid var(--g-rule)`, `marginTop: 36`. Zurück-Button (linke Spalte): `variant="ghost"`, Label „← Zurück". Extra-Slot (mittlere Spalte): in Step 2 ein „+ Pausentag einfügen"-Ghost-Button. Speichern-Label: „Tour speichern" (statt „Trip speichern").
+**AC-13:** Given der Wizard-Footer, When er gerendert wird, Then ist er ein `grid` mit `gridTemplateColumns: "1fr auto 1fr"`, `gap: 12`, `paddingTop: 20`, `borderTop: 1px solid var(--g-rule)`, `marginTop: 36`. Zurück-Button (linke Spalte): `variant="ghost"`, Label „← Zurück". Extra-Slot (mittlere Spalte): in Step 2 ein „+ Pausentag einfügen"-Ghost-Button. Speichern-Label: „Trip speichern" (statt „Trip speichern").
 
 **AC-14:** Given alle bestehenden Tests (node:test), When `uv run pytest` und Frontend-Tests laufen, Then sind alle grün (keine Regression).
 

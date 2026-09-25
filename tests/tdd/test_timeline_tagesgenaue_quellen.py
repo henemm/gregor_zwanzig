@@ -74,7 +74,7 @@ assert _PRUEFLING.is_relative_to(_BAUM), (
 )
 
 # ---------------------------------------------------------------------------
-# Fixe Tour-Daten. Vizzavona/Korsika (Europe/Paris, im August UTC+2); die
+# Fixe Trip-Daten. Vizzavona/Korsika (Europe/Paris, im August UTC+2); die
 # Uhrzeiten liegen bewusst AUSSERHALB des Ortstag-Mismatch-Fensters, damit
 # diese Suite ausschliesslich die QUELLENAUFLOESUNG prueft und nicht
 # versehentlich die Ortszeit-Umrechnung aus #1795.
@@ -657,7 +657,7 @@ def _platzhalter_segmente(tag: date, *, seg_id: int) -> list[SegmentWeatherData]
     anlegt (``trip_report_scheduler.py:2035-2044``): ``SegmentWeatherSummary()``
     ohne einen einzigen Messwert, ``has_error=True``, ``provider="unknown"``.
 
-    Auf Touren mit Kontingent-Limits (429) ist das kein Sonderfall, sondern
+    Auf Trips mit Kontingent-Limits (429) ist das kein Sonderfall, sondern
     Alltag: der Anker traegt den Tag dann technisch, inhaltlich aber nichts.
     """
     ankunft = datetime(tag.year, tag.month, tag.day, 8, 0, tzinfo=timezone.utc)

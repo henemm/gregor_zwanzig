@@ -69,7 +69,7 @@ def test_ac4_fetch_forecast_default_true_is_backward_compatible():
 <!-- vorher -->
 Deine Trips & Vergleiche
 <!-- nachher -->
-Deine Touren & Vergleiche
+Deine Trips & Vergleiche
 ```
 
 ### #538 — 5 neue Python-Tests (class TestMobileCompactHeader)
@@ -147,7 +147,7 @@ func TestStore_LoadMetricPresets_CorruptJSON(t *testing.T) {
 - **AC-1:** Given `uv run pytest` (ohne `-m live`) / When die Testsuite läuft / Then werden alle Signatur- und Logik-Tests aus `test_bug_288_ensemble_api_limit.py` ausgeführt (nicht mehr durch modul-weiten `live`-Marker blockiert)
   - Test: (populated after /tdd-red)
 
-- **AC-2:** Given `frontend/src/routes/+page.svelte` / When die Startseite gerendert wird / Then lautet der H1-Text `"Deine Touren & Vergleiche"` (nicht `"Trips"`)
+- **AC-2:** Given `frontend/src/routes/+page.svelte` / When die Startseite gerendert wird / Then lautet der H1-Text `"Deine Trips & Vergleiche"` (nicht `"Trips"`)
   - Test: (populated after /tdd-red)
 
 - **AC-3:** Given `_render_mobile_compact_rows` mit `include_header=True` und mindestens einer sichtbaren Spalte / When die Funktion aufgerufen wird / Then enthält der Rückgabe-String ein Header-Element mit dem Label `"Zeit"` vor den Daten-Rows

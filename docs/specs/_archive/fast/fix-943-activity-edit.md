@@ -11,9 +11,9 @@
 - Backend-Handler (`trip.go`) bleibt unberührt
 
 ## Manuelle Test-Schritte
-1. Tour im Edit-Modus öffnen
+1. Trip im Edit-Modus öffnen
 2. Aktivitätstyp auf „Fahrrad (20 km/h)" wechseln
-3. Speichern → Tour erneut öffnen → Dropdown zeigt „Fahrrad (20 km/h)"
+3. Speichern → Trip erneut öffnen → Dropdown zeigt „Fahrrad (20 km/h)"
 4. Auf Etappen-Tab wechseln → Ankunftszeiten zeigen Fahrrad-Geschwindigkeit
 
 ## Inline-Test
@@ -21,7 +21,7 @@
 
 ## Acceptance Criteria
 
-**AC-1:** Given eine bestehende Tour im Edit-Modus, When der Nutzer die Seite öffnet, Then ist ein Aktivitätstyp-Dropdown (`data-testid="edit-activity-dropdown"`) sichtbar mit dem aktuell gespeicherten Wert vorausgewählt.
+**AC-1:** Given eine bestehende Trip im Edit-Modus, When der Nutzer die Seite öffnet, Then ist ein Aktivitätstyp-Dropdown (`data-testid="edit-activity-dropdown"`) sichtbar mit dem aktuell gespeicherten Wert vorausgewählt.
 
 **AC-2:** Given das Aktivitätstyp-Dropdown im Edit-Modus, When der Nutzer einen anderen Aktivitätstyp wählt und auf Speichern klickt, Then wird der neue Wert persistiert und beim nächsten Öffnen der Edit-Seite korrekt vorausgewählt.
 

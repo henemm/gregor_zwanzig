@@ -83,7 +83,7 @@ async function send<T>(
 	// Issue #1395 S3: den Stand ERST HIER nachschlagen — innerhalb der
 	// Warteschlange, also zu dem Zeitpunkt, zu dem die Anfrage tatsaechlich
 	// losgeht. Vor dem Einreihen gelesen, haetten zwei kurz hintereinander
-	// ausgeloeste Schreibvorgaenge derselben Tour beide den alten Wert
+	// ausgeloeste Schreibvorgaenge derselben Trip beide den alten Wert
 	// eingefroren und der zweite scheiterte mit 412, obwohl er gewartet hat.
 	const ifMatch = serializedWrite && tripId ? getKnownEtag(tripId) : undefined;
 	// Stand der Registry beim Losschicken — Grundlage dafuer, einen verspaetet
@@ -145,7 +145,7 @@ async function send<T>(
 	//
 	// Bedingungslos darf das nur ein serialisierter Schreibvorgang: er ist der
 	// letzte, der die Datei angefasst hat, und kein anderer Schreibvorgang
-	// derselben Tour lief neben ihm. Jeder Vorgang AUSSERHALB der Warteschlange
+	// derselben Trip lief neben ihm. Jeder Vorgang AUSSERHALB der Warteschlange
 	// (Lesevorgang, Entlade-Flush) traegt dagegen den Stand von SEINEM
 	// Anfragezeitpunkt — kommt er verspaetet an, waere sein Stempel ein
 	// Rueckschritt und der naechste Schreibvorgang bekaeme 412, obwohl niemand
@@ -203,7 +203,7 @@ export interface AntwortFassung {
 /**
  * Issue #2317 Baustein 3: GET wie `api.get`, liefert zusaetzlich den ETag DIESER
  * Antwort und ob die Registry ihn uebernommen hat. `inRegistry === false` heisst:
- * waehrend der GET unterwegs war, hat ein anderer Vorgang den Eintrag der Tour
+ * waehrend der GET unterwegs war, hat ein anderer Vorgang den Eintrag der Trip
  * veraendert (F001-Regel in `send`) — der ETag passt dann nicht zum If-Match
  * der naechsten Speicherung.
  */
@@ -214,7 +214,7 @@ export async function getMitFassung<T>(path: string): Promise<{ daten: T } & Ant
 }
 
 /**
- * Issue #1395 S4: laedt eine Tour ODER einen Ortsvergleich ausschliesslich, um
+ * Issue #1395 S4: laedt eine Trip ODER einen Ortsvergleich ausschliesslich, um
  * den bestehenden ETag-Seiteneffekt von `send()` auszuloesen. Der Datensatz wird
  * bewusst NICHT zurueckgegeben — sonst entstuende die Versuchung, ihn dem
  * sichtbaren Seitenzustand zuzuweisen und ungespeicherte Aenderungen anderer

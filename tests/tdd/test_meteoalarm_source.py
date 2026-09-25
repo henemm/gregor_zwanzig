@@ -2322,7 +2322,7 @@ def test_covers_deckt_oesterreich_und_italien_weiterhin_ab():
 # die alte Erwartung faellt: ihre Begruendung ("folgenlos, da der exakte
 # Zonen-Filter nach dem Abruf laeuft") war falsch. Genau dieser Filter findet
 # fuer solche Punkte keine Zone und meldet ueber ``mark_fetch_incomplete()``
-# "nicht abrufbar" (Prod 2026-08-01: 39 Punkte EINER Tour, fortlaufend,
+# "nicht abrufbar" (Prod 2026-08-01: 39 Punkte EINER Trip, fortlaufend,
 # irrefuehrender Betriebszustand #1434). S4 stellt die IT-Zustaendigkeit auf
 # die echte Zonen-Geometrie um; SI/CH sind damit korrekt nicht mehr abgedeckt.
 

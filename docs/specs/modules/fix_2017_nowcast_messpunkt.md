@@ -120,7 +120,7 @@ Ablauf:
    iterativ weiter. Reicht der Tag nicht aus (letztes Segment des Tages endet vor `at`), wird
    `convert_trip_to_segments(trip, segment_date + timedelta(days=1))` nachgeladen und die Suche
    dort fortgesetzt.
-5. **Fail-soft** (kein Folgetag vorhanden — Tour zu Ende, Ruhetag ohne Stage, < 2 Wegpunkte,
+5. **Fail-soft** (kein Folgetag vorhanden — Trip zu Ende, Ruhetag ohne Stage, < 2 Wegpunkte,
    oder eine durch den bestehenden Zeitlücken-Guard übersprungene Segmentkette,
    `trip_segments.py:200-218`): auf den letzten bekannten `end_point` klemmen, ein
    `logger.debug`/`logger.warning`-Eintrag mit erkennbarem Grund, **keine Exception nach
@@ -226,7 +226,7 @@ Segment-Startpunkt.
     Folgetags-Etappe, Assert auf einen Punkt aus dem Folgetag.
 
 - **AC-7:** Given `at` liegt jenseits des letzten verfügbaren Segments UND es existiert kein
-  Folgetag (Tour zu Ende, Ruhetag ohne Stage, oder eine durch den bestehenden Zeitlücken-Guard
+  Folgetag (Trip zu Ende, Ruhetag ohne Stage, oder eine durch den bestehenden Zeitlücken-Guard
   entstandene Lücke) / When `position_at_time()` aufgerufen wird / Then wird auf den letzten
   bekannten `end_point` geklemmt, ein Log-Eintrag mit erkennbarem Grund geschrieben, und es wird
   **keine** Exception nach außen geworfen.
@@ -353,7 +353,7 @@ Segment-Startpunkt.
   `radar_service.py:170-241`). Bräuchte zwingend n Abrufe — unverhältnismäßig für ein
   55–180-Minuten-Fenster mit linearer Näherung.
 - **GPS/Live-Check-in als Alternative.** Kein technischer, sondern ein Produktentscheid (PO
-  2026-08-20): Der Wanderer ist auf der Tour offline oder nur über Satellit erreichbar — das ist
+  2026-08-20): Der Wanderer ist auf der Trip offline oder nur über Satellit erreichbar — das ist
   der Daseinszweck des Produkts. Online-Warnsysteme mit Live-Position existieren zahlreich und
   helfen im Gebirge nicht.
 - **`/jetzt`-Sofortabfrage (`trip_command_processor.py:1375`, `stage.waypoints[0]`).** Andere
@@ -425,7 +425,7 @@ Segment-Startpunkt.
 6. **Kein Tages-Überlauf in der Messgrundlage getroffen.** Bei der Wirksamkeitsmessung (Trip
    `5f534011`) trat in keiner Kombination aus Variante/Horizont ein Tagesüberlauf auf (0
    übersprungene Onset-Punkte). AC-6 (Tagesgrenzen-Überschreitung) ist damit durch Konstruktion
-   getestet, nicht durch reale Beobachtung auf dieser Tour bestätigt.
+   getestet, nicht durch reale Beobachtung auf dieser Trip bestätigt.
 
 ## Architektur-Entscheidung (ADR)
 

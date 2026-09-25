@@ -158,7 +158,7 @@ describe('AC-7: buildCreateTripPayload — vollständiger POST-Payload, kein Dat
 		assert.equal(p.alert_rules?.length, 1);
 	});
 
-	test('jede Tour bekommt eine id', () => {
+	test('jede Trip bekommt eine id', () => {
 		const p = buildCreateTripPayload(state);
 		assert.ok(typeof p.id === 'string' && p.id.length > 0);
 	});

@@ -1,4 +1,4 @@
-"""TDD RED — "heute" und "morgen" im Drilldown folgen der ORTSzeit der Tour.
+"""TDD RED — "heute" und "morgen" im Drilldown folgen der ORTSzeit der Trip.
 
 Issue #1470 (PO-Entscheidung 2026-08-03: "Ja, Ortszeit."). Nebenbefund aus
 #1465: seit der Absturz weg ist, ist das Tagesfenster in sich stimmig — aber
@@ -12,7 +12,7 @@ um die Zeitzonendifferenz verschoben. Beide Zweige haengen an der Weltzeit:
   — steht in der Stunden-Tabelle deshalb das Datum von GESTERN.
 
 Die Erwartungen hier sind bewusst NICHT aus dem Prueflingsweg gebildet,
-sondern aus der Ortszone der Tour (``Europe/Paris``) und einem festen
+sondern aus der Ortszone der Trip (``Europe/Paris``) und einem festen
 Zeitstempel. Drei Kalender sind unterscheidbar, und genau das ist der Sinn
 des Aufbaus:
 
@@ -22,7 +22,7 @@ Kalender                     "morgen" beginnt    "heute" am 22:30 UTC
 Weltzeit (Fehlerbild heute)  02:00 Ortszeit      20.08. (Vortag!)
 Prozess-Zone (conftest.py,   04:30 Ortszeit      20.08. (Vortag!)
 America/St_Johns, -2:30)     (Halbstunden-Rest)
-Ortszeit der Tour (Soll)     00:00 Ortszeit      21.08.
+Ortszeit der Trip (Soll)     00:00 Ortszeit      21.08.
 ===========================  ==================  =====================
 
 Der Halbstunden-Versatz der Prozess-Zone stammt aus ``conftest.py`` und wird
@@ -69,7 +69,7 @@ _WP_LAT, _WP_LON = 42.1, 9.0
 _TRIP_TZ = ZoneInfo("Europe/Paris")
 
 _TRIP_ID = "drilldown-tagesfenster"
-_TRIP_NAME = "Tagesfenster-Tour"
+_TRIP_NAME = "Tagesfenster-Trip"
 _USER_ID = "default"
 
 # Fester Ausgangstag. Die Etappen decken drei Tage ab, damit `_display_tz`
@@ -273,7 +273,7 @@ def _expected_rows(
 
 def test_tomorrow_window_starts_at_local_midnight(env):
     """
-    GIVEN eine Tour auf Korsika (Europe/Paris, im August UTC+2) und einen
+    GIVEN eine Trip auf Korsika (Europe/Paris, im August UTC+2) und einen
           luekenlosen Stundensatz ueber drei Tage,
     WHEN  der Nutzer vormittags den Regen-Drilldown fuer MORGEN oeffnet,
     THEN  zeigt die erste Zeile 00:00 Ortszeit UND den Messwert genau dieser
@@ -316,7 +316,7 @@ def test_tomorrow_window_starts_at_local_midnight(env):
 
 def test_tomorrow_window_covers_the_full_local_day(env):
     """
-    GIVEN dieselbe Tour,
+    GIVEN dieselbe Trip,
     WHEN  der Nutzer die Stunden-Tabelle fuer MORGEN oeffnet,
     THEN  stehen dort die 24 ORTSstunden 00..23 des Folgetages — vollstaendig
           und in Ortszeit, kein abgeschnittener Tagesanfang.
@@ -360,7 +360,7 @@ def test_tomorrow_window_matches_the_real_length_of_the_local_day(
     make_env, day0, press_utc, data_start, local_hours, missing, doubled,
 ):
     """
-    GIVEN eine Tour auf Korsika am Vorabend einer Zeitumstellung,
+    GIVEN eine Trip auf Korsika am Vorabend einer Zeitumstellung,
     WHEN  der Nutzer die Stunden-Tabelle fuer MORGEN oeffnet,
     THEN  deckt sie GENAU den Ortstag ab — 25 Zeilen an der Rueckstellung
           (02:00 doppelt), 23 an der Vorstellung (02:00 existiert nicht).
@@ -404,8 +404,8 @@ def test_tomorrow_window_matches_the_real_length_of_the_local_day(
 
 
 # ---------------------------------------------------------------------------
-# 1c) Tour ueber mehrere Zonen: der Tageswechsel haengt an der HEUTIGEN
-#     Etappe, nicht an der ersten der Tour
+# 1c) Trip ueber mehrere Zonen: der Tageswechsel haengt an der HEUTIGEN
+#     Etappe, nicht an der ersten der Trip
 # ---------------------------------------------------------------------------
 
 # Wellington und Vizzavona — zwoelf Stunden auseinander. Genau die Spanne,
@@ -424,7 +424,7 @@ def _trip_two_zones(day0: date) -> Trip:
     "press_hour_utc, expected_local_day",
     [
         # Messprotokoll aus dem #1470-Bericht. Der Nutzer steht auf Korsika
-        # (UTC+2); die Tour BEGANN in Neuseeland (UTC+12).
+        # (UTC+2); die Trip BEGANN in Neuseeland (UTC+12).
         pytest.param(9,  date(2026, 8, 21), id="11-uhr-ortszeit"),
         pytest.param(12, date(2026, 8, 21), id="14-uhr-ortszeit"),
         pytest.param(21, date(2026, 8, 21), id="23-uhr-ortszeit"),
@@ -435,14 +435,14 @@ def test_day_boundary_follows_todays_stage_not_the_first_of_the_trip(
     make_env, press_hour_utc, expected_local_day,
 ):
     """
-    GIVEN eine Tour, die in Neuseeland beginnt und deren heutige Etappe auf
+    GIVEN eine Trip, die in Neuseeland beginnt und deren heutige Etappe auf
           Korsika liegt,
     WHEN  der Nutzer die Stunden-Tabelle fuer HEUTE oeffnet,
     THEN  nennt die Kopfzeile den Tag, der AM ORT gilt — nicht den, der in
-          der Startzone der Tour schon angebrochen ist.
+          der Startzone der Trip schon angebrochen ist.
 
-    Adversary-Fund F003: mit dem Anker "erste Etappe der Tour" lag der
-    Tageswechsel bei dieser Tour zehn Stunden falsch (12:00-22:00 UTC meldete
+    Adversary-Fund F003: mit dem Anker "erste Etappe der Trip" lag der
+    Tageswechsel bei dieser Trip zehn Stunden falsch (12:00-22:00 UTC meldete
     bereits den Folgetag). Die vier Zeitpunkte stammen aus dem Messprotokoll;
     zwei davon (12:00 und 21:00) trennen alten und neuen Anker.
     """
@@ -471,7 +471,7 @@ def test_day_boundary_follows_todays_stage_not_the_first_of_the_trip(
 
 def test_today_after_local_midnight_shows_the_local_date(env):
     """
-    GIVEN dieselbe Tour und einen Knopfdruck um 00:30 ORTSzeit (22:30 UTC am
+    GIVEN dieselbe Trip und einen Knopfdruck um 00:30 ORTSzeit (22:30 UTC am
           Vortag) — nach der Ortsmitternacht, vor der Weltzeit-Mitternacht,
     WHEN  der Nutzer die Stunden-Tabelle fuer HEUTE oeffnet,
     THEN  steht in der Ueberschrift der ORTS-Tag (21.08.) und nicht der

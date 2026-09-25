@@ -30,9 +30,9 @@ Ersetzt das aktive Trip-Cockpit (Epic #134: `ActiveTripCard`, `StageStrip`, `Bri
 
 ```
 [Heute, DD. Monat YYYY]
-Deine Touren & Vergleiche
+Deine Trips & Vergleiche
 
-Meine Touren
+Meine Trips
 ┌─────────────┐ ┌─────────────┐
 │ Trip        │ │ Trip        │
 │ GR20        │ │ GR221       │
@@ -50,7 +50,7 @@ Orts-Vergleiche
 │ • aktiv     │
 └─────────────┘
 
-[+ Neue Tour]  [+ Neuer Vergleich]
+[+ Neue Trip]  [+ Neuer Vergleich]
 ```
 
 ## Source
@@ -200,7 +200,7 @@ Inhalt: Headline, Beschreibungstext, zwei CTAs (`<a href="/trips/new">` + `<a hr
   {:else}
     {#if trips.length > 0}
       <section>
-        <h2>Meine Touren</h2>
+        <h2>Meine Trips</h2>
         <div class="kachel-grid">
           {#each trips as trip (trip.id)}
             <TripKachel {trip} />
@@ -221,7 +221,7 @@ Inhalt: Headline, Beschreibungstext, zwei CTAs (`<a href="/trips/new">` + `<a hr
     {/if}
 
     <div class="flex gap-3">
-      <Btn href="/trips/new" variant="accent">+ Neue Tour</Btn>
+      <Btn href="/trips/new" variant="accent">+ Neue Trip</Btn>
       <Btn href="/compare" variant="outline">+ Neuer Vergleich</Btn>
     </div>
   {/if}
@@ -251,7 +251,7 @@ Inhalt: Headline, Beschreibungstext, zwei CTAs (`<a href="/trips/new">` + `<a hr
 
 | Situation | Verhalten |
 |-----------|-----------|
-| Trips vorhanden, keine Subscriptions | Nur "Meine Touren"-Sektion + CTAs |
+| Trips vorhanden, keine Subscriptions | Nur "Meine Trips"-Sektion + CTAs |
 | Subscriptions vorhanden, keine Trips | Nur "Orts-Vergleiche"-Sektion + CTAs |
 | Beides leer | EmptyKachel angezeigt (keine CTAs-Zeile) |
 | Trip ohne `stages` | Datum-Range leer, "0 Etappen", Status = draft |
@@ -276,7 +276,7 @@ Inhalt: Headline, Beschreibungstext, zwei CTAs (`<a href="/trips/new">` + `<a hr
 **AC-5:** Given eine Subscription-Kachel gerendert ist / When der User darauf klickt / Then navigiert der Browser zu `/compare`
 - Test: (populated after /tdd-red)
 
-**AC-6:** Given weder Trips noch Subscriptions vorhanden sind / When der User die URL `/` öffnet / Then wird ein Empty-State mit CTA-Links für "Neue Tour" und "Neuer Vergleich" angezeigt
+**AC-6:** Given weder Trips noch Subscriptions vorhanden sind / When der User die URL `/` öffnet / Then wird ein Empty-State mit CTA-Links für "Neue Trip" und "Neuer Vergleich" angezeigt
 - Test: (populated after /tdd-red)
 
 **AC-7:** Given die Home-Seite geladen ist / When der Netzwerk-Traffic beobachtet wird / Then erfolgt kein API-Call auf `/api/forecast` und kein Call auf `/api/scheduler/status`

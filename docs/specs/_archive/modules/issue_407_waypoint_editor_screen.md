@@ -21,7 +21,7 @@ Route, Etappen, Wetter, Alarmregeln, Reports) in einen dedizierten Vollbild-Wegp
 um, der die bestehende `WaypointsPanel`-Architektur wiederverwendet und als eigenständige
 Seite mit Speichern/Abbrechen-Footer präsentiert wird.
 
-Das Redesign ermöglicht dem User, Wegpunkte einer Tour vollständig in einem einzigen fokussierten
+Das Redesign ermöglicht dem User, Wegpunkte einer Trip vollständig in einem einzigen fokussierten
 Screen zu bearbeiten — auf Desktop mit SVG-Karte links und Sidebar-Liste rechts, auf Mobile
 mit Bottom-Sheet-Overlay und KI-Vorschlag-Bar — während Wetter-, Alarmregeln- und
 Briefing-Konfiguration weiterhin über die Tabs der Trip-Detail-Seite erreichbar bleiben.

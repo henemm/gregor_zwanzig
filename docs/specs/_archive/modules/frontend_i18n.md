@@ -140,7 +140,7 @@ Affected files: `compare.py`, `locations.py`, `trips.py`, `settings.py`, `dashbo
 | `"Noch keine Trips gespeichert."` | `"No trips saved yet."` |
 | `"{n} Etappe(n), {m} Wegpunkte"` | `"{n} stage(s), {m} waypoints"` |
 | `"'{name}' gelöscht"` | `"'{name}' deleted"` |
-| Placeholder: `"z.B. Stubaier Skitour"` | `"e.g. Stubai Ski Tour"` |
+| Placeholder: `"z.B. Stubaier Skitour"` | `"e.g. Stubai Ski Trip"` |
 | Placeholder: `"z.B. AT-7, AT-5"` | `"e.g. AT-7, AT-5"` |
 
 ### 6. compare.py (UI)

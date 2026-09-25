@@ -38,7 +38,7 @@ test.describe('Issue #294 — Home Kachel-Übersicht', () => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		const section = page.locator('section', { hasText: 'Meine Touren' });
+		const section = page.locator('section', { hasText: 'Meine Trips' });
 		await expect(section).toBeVisible();
 
 		const cards = section.locator('[data-testid="trip-card"]');
@@ -98,17 +98,17 @@ test.describe('Issue #294 — Home Kachel-Übersicht', () => {
 		expect(page.url()).toContain('/compare');
 	});
 
-	// AC-6: CTAs sichtbar (+ Neue Tour, + Neuer Vergleich)
-	test('AC-6: CTA-Links für neue Tour und neuen Vergleich sichtbar', async ({ page }) => {
+	// AC-6: CTAs sichtbar (+ Neue Trip, + Neuer Vergleich)
+	test('AC-6: CTA-Links für neue Trip und neuen Vergleich sichtbar', async ({ page }) => {
 		/**
 		 * GIVEN: User ist eingeloggt und hat Daten
 		 * WHEN: User öffnet /
-		 * THEN: "Neue Tour"- und "Neuer Vergleich"-Links sind sichtbar
+		 * THEN: "Neue Trip"- und "Neuer Vergleich"-Links sind sichtbar
 		 */
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('a', { hasText: /\+ Neue Tour/ })).toBeVisible();
+		await expect(page.locator('a', { hasText: /\+ Neue Trip/ })).toBeVisible();
 		await expect(page.locator('a', { hasText: /\+ Neuer Vergleich/ })).toBeVisible();
 	});
 

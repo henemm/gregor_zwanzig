@@ -326,7 +326,7 @@ class TestAC15Kuerzung:
 class TestF003Gsm7UnsichereZeichen:
     NAMEN = [
         "🏔 Gipfelblick Route",
-        "Кавказский хребет Tour",
+        "Кавказский хребет Trip",
         "Zürich Höhenweg",
     ]
 

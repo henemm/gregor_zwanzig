@@ -150,7 +150,7 @@ def test_ac5_email_plain_zeigt_hagel_hinweis_nur_bei_true_etappe():
 
 _WP_LAT, _WP_LON = 42.0, 9.0
 _TRIP_ID = "hail-flag-gewitter-kommando"
-_TRIP_NAME = "Hagel-Kommando-Tour"
+_TRIP_NAME = "Hagel-Kommando-Trip"
 _USER_ID = "default"
 
 

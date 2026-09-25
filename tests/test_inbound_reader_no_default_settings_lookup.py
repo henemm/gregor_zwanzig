@@ -213,7 +213,7 @@ def _konto_mit_chat_und_trip(user_id: str, chat_id: str) -> str:
     (ordner / "user.json").write_text(
         json.dumps({"id": user_id, "telegram_chat_id": chat_id}), encoding="utf-8",
     )
-    tripname = f"Tour-{user_id}-" + uuid.uuid4().hex[:6]
+    tripname = f"Trip-{user_id}-" + uuid.uuid4().hex[:6]
     (ordner / "briefings" / f"t-{user_id}.json").write_text(json.dumps({
         "id": f"t-{user_id}", "name": tripname, "stages": [],
     }))

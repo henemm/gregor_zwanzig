@@ -16,7 +16,7 @@ tags: [scheduler, monitoring, heartbeat, observability, go]
 
 ## Purpose
 
-Ein Totalausfall des stündlichen Trip-Briefing-Versands (alle Touren scheitern am
+Ein Totalausfall des stündlichen Trip-Briefing-Versands (alle Trips scheitern am
 Wetterabruf) muss aktiv alarmieren statt still zu bleiben. Heute pingt der einzige
 überwachte Heartbeat nur am Ortsvergleich-Erfolg und verdeckt so einen kompletten
 Briefing-Ausfall; es gibt keine Betreiber-Meldung.

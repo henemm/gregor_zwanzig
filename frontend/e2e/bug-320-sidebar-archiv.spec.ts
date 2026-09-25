@@ -39,7 +39,7 @@ test.describe('Bug #320: Sidebar + BottomNav — Archiv als 4. Nav-Item', () => 
 
 		// Pflicht-Links der ersten 3 Items (unverändert)
 		await expect(sidebar.locator('a[href="/"]').filter({ hasText: 'Startseite' })).toBeVisible();
-		await expect(sidebar.locator('a[href="/trips"]').filter({ hasText: 'Meine Touren' })).toBeVisible();
+		await expect(sidebar.locator('a[href="/trips"]').filter({ hasText: 'Meine Trips' })).toBeVisible();
 		await expect(sidebar.locator('a[href="/compare"]').filter({ hasText: 'Orts-Vergleich' })).toBeVisible();
 
 		// 4. Item MUSS /archiv sein

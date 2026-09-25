@@ -2,7 +2,7 @@
 //
 // KEIN Mock im verbotenen Sinn ("spiegelt die eigene Annahme zurueck"): bildet
 // den S2-Server-Vertrag nach (docs/specs/modules/issue_1395_s2_etag_ifmatch.md)
-// und ist der GEGENSPIELER der Tests. Fuehrt einen echten Fingerabdruck je Tour
+// und ist der GEGENSPIELER der Tests. Fuehrt einen echten Fingerabdruck je Trip
 // (aendert sich bei JEDEM erfolgreichen Schreibvorgang, S1/ADR-0036), prueft
 // `If-Match` mit derselben Parser-Logik wie `internal/handler/etag.go` und
 // antwortet mit echten `Response`/`Headers`/Statuscodes/JSON-Ruempfen. Ein Test
@@ -26,15 +26,15 @@ export interface FakeTripServer {
 	/** Ersatz fuer `globalThis.fetch` */
 	handler: (input: unknown, init?: RequestInit) => Promise<Response>;
 	calls: RequestRecord[];
-	/** aktueller ETag-Wert (inkl. Anfuehrungszeichen) einer Tour */
+	/** aktueller ETag-Wert (inkl. Anfuehrungszeichen) einer Trip */
 	etagOf(tripId: string): string;
-	/** zuletzt erfolgreich geschriebener Rumpf einer Tour */
+	/** zuletzt erfolgreich geschriebener Rumpf einer Trip */
 	storedBody(tripId: string): unknown;
 	install(): void;
 	restore(): void;
 }
 
-// Dieselbe Pfad-Definition wie der echte Server: Tour-Ressource, ihre
+// Dieselbe Pfad-Definition wie der echte Server: Trip-Ressource, ihre
 // Wetter-Konfiguration und (Issue #1395 S6) der Ortsvergleich-Preset tragen
 // einen ETag. `id` liefert match[1] (Trip) oder match[2] (Compare-Preset).
 const TRIP_PATH_RE =
@@ -152,7 +152,7 @@ export function createFakeTripServer(options: { latencyMs?: Latency } = {}): Fak
 				body = { id: tripId, ...(payload as object | undefined) };
 			}
 		} else {
-			// PATCH/DELETE auf die Tour-Ressource: veraendert die Datei (neuer
+			// PATCH/DELETE auf die Trip-Ressource: veraendert die Datei (neuer
 			// Fingerabdruck), liefert aber KEINEN ETag zurueck.
 			bump(tripId);
 			body = { id: tripId };

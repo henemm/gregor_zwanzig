@@ -16,7 +16,7 @@ tags: [frontend, archiv, go-api, wizard, briefing-history, template-copy, issue-
 
 ## Purpose
 
-Die Archiv-Seite (`/archiv`) hat drei sichtbare aber inaktive Funktionen aus Issue #388: den Briefing-Verlauf-Button, den Vorlage-kopieren-Button und die „Was passiert ist"-Spalte zeigt überall `—`. Dieses Modul verdrahtet alle drei: ein neuer Go-Handler liefert die Briefing-Historie pro Tour, der Wizard-New-Flow akzeptiert einen `?from=`-Parameter um eine archivierte Tour als Vorlage zu laden, und die Spalte berechnet sich automatisch aus den bereits geladenen `archiveStats`-Counts.
+Die Archiv-Seite (`/archiv`) hat drei sichtbare aber inaktive Funktionen aus Issue #388: den Briefing-Verlauf-Button, den Vorlage-kopieren-Button und die „Was passiert ist"-Spalte zeigt überall `—`. Dieses Modul verdrahtet alle drei: ein neuer Go-Handler liefert die Briefing-Historie pro Trip, der Wizard-New-Flow akzeptiert einen `?from=`-Parameter um eine archivierte Trip als Vorlage zu laden, und die Spalte berechnet sich automatisch aus den bereits geladenen `archiveStats`-Counts.
 
 > **Schicht-Hinweis:** AC-1 berührt Go-API (`internal/handler/`, `cmd/server/main.go`) und Frontend (`frontend/src/routes/archiv/`, `frontend/src/lib/components/briefing-history/`). AC-2 berührt ausschließlich Frontend (`frontend/src/routes/trips/new/`, `frontend/src/lib/components/trip-wizard/`). AC-3 ist rein Frontend (`frontend/src/routes/archiv/+page.svelte`). Python-Backend bleibt unverändert.
 
@@ -136,7 +136,7 @@ Props: `tripId: string`, `tripName: string`, `open: boolean`, `onclose: () => vo
 - Beim Öffnen (`open === true`): `GET /api/trips/{tripId}/briefing-history` via `fetch()`
 - Loading-State anzeigen während Fetch läuft
 - Ergebnis als chronologische Liste: Datum (`SentAt` formatiert als `DD.MM.YYYY HH:mm`), Kind (`morning` → „Morgen-Briefing", `evening` → „Abend-Briefing"), Channels als kommaseparierte Liste
-- Leer-State: „Für diese Tour wurden noch keine Briefings versendet."
+- Leer-State: „Für diese Trip wurden noch keine Briefings versendet."
 - Schließen via `onclose`-Callback oder Klick auf Hintergrund
 - Alle Farben via `--g-*` CSS-Tokens, kein Hex-Literal
 
@@ -277,7 +277,7 @@ Stilisierung: `--g-ink-3`, kleiner Font, kein prominentes Banner.
 
 ## Expected Behavior
 
-- **Input (AC-1):** Nutzer klickt History-Button in einer Archiv-Zeile → Modal öffnet sich, zeigt Briefing-Verlauf der Tour
+- **Input (AC-1):** Nutzer klickt History-Button in einer Archiv-Zeile → Modal öffnet sich, zeigt Briefing-Verlauf der Trip
 - **Input (AC-2):** Nutzer klickt Vorlage-kopieren-Button → Browser navigiert zu `/trips/new?from={tripId}` → Wizard startet mit kopierten Konfigurationsfeldern
 - **Input (AC-3):** Seite lädt → „Was passiert ist"-Spalte zeigt `"12 Briefings · 3 Alerts"` oder `"12 Briefings"` oder `—`
 - **Output (AC-1):** JSON-Array `[{sent_at, kind, channels}]` vom neuen Endpoint; Modal rendert chronologische Liste
@@ -290,15 +290,15 @@ Stilisierung: `--g-ink-3`, kleiner Font, kein prominentes Banner.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine archivierte Tour mit mindestens einem Briefing-Log-Eintrag / When der Nutzer auf den History-Button in der Archiv-Zeile klickt / Then öffnet sich `BriefingHistoryDialog` und zeigt eine Liste mit Datum, Briefing-Typ und Kanal(en) für jeden Eintrag; die Liste ist chronologisch absteigend sortiert; kein JS-Fehler
+- **AC-1:** Given eine archivierte Trip mit mindestens einem Briefing-Log-Eintrag / When der Nutzer auf den History-Button in der Archiv-Zeile klickt / Then öffnet sich `BriefingHistoryDialog` und zeigt eine Liste mit Datum, Briefing-Typ und Kanal(en) für jeden Eintrag; die Liste ist chronologisch absteigend sortiert; kein JS-Fehler
 
-- **AC-2:** Given eine archivierte Tour mit Konfigurationsfeldern (activity, alertRules, weatherMetrics) / When der Nutzer auf den Vorlage-kopieren-Button klickt und der Wizard-New-Flow unter `/trips/new?from={tripId}` geladen wird / Then sind Stages (nur Namen, keine Waypoints/Daten), Activity, AlertRules, WeatherMetrics und ChannelLayouts im Wizard vorausgefüllt; Name-Feld ist leer; ein Hinweistext zeigt den Vorlagen-Namen an; startDate und endDate sind nicht gesetzt
+- **AC-2:** Given eine archivierte Trip mit Konfigurationsfeldern (activity, alertRules, weatherMetrics) / When der Nutzer auf den Vorlage-kopieren-Button klickt und der Wizard-New-Flow unter `/trips/new?from={tripId}` geladen wird / Then sind Stages (nur Namen, keine Waypoints/Daten), Activity, AlertRules, WeatherMetrics und ChannelLayouts im Wizard vorausgefüllt; Name-Feld ist leer; ein Hinweistext zeigt den Vorlagen-Namen an; startDate und endDate sind nicht gesetzt
 
-- **AC-3:** Given die Archiv-Seite mit mindestens einer archivierten Tour, für die `archiveStats.briefings[trip.id] > 0` gilt / When die Seite geladen ist / Then zeigt die „Was passiert ist"-Spalte `"{n} Briefings · {m} Alerts"` wenn Alerts > 0, `"{n} Briefings"` wenn Alerts = 0, oder `—` wenn beide = 0; kein zusätzlicher API-Call für diese Spalte
+- **AC-3:** Given die Archiv-Seite mit mindestens einer archivierten Trip, für die `archiveStats.briefings[trip.id] > 0` gilt / When die Seite geladen ist / Then zeigt die „Was passiert ist"-Spalte `"{n} Briefings · {m} Alerts"` wenn Alerts > 0, `"{n} Briefings"` wenn Alerts = 0, oder `—` wenn beide = 0; kein zusätzlicher API-Call für diese Spalte
 
 - **AC-4:** Given ein unauthentifizierter Request an `GET /api/trips/{id}/briefing-history` / When der Handler aufgerufen wird / Then antwortet der Endpoint mit HTTP 401; kein Datenleck
 
-- **AC-5:** Given eine Tour-ID, für die keine Briefing-Log-Einträge vorhanden sind / When `GET /api/trips/{id}/briefing-history` aufgerufen wird / Then antwortet der Endpoint mit HTTP 200 und einem leeren JSON-Array `[]`; `BriefingHistoryDialog` zeigt den Leer-State-Text „Für diese Tour wurden noch keine Briefings versendet."
+- **AC-5:** Given eine Trip-ID, für die keine Briefing-Log-Einträge vorhanden sind / When `GET /api/trips/{id}/briefing-history` aufgerufen wird / Then antwortet der Endpoint mit HTTP 200 und einem leeren JSON-Array `[]`; `BriefingHistoryDialog` zeigt den Leer-State-Text „Für diese Trip wurden noch keine Briefings versendet."
 
 - **AC-6:** Given die Svelte-Dateien `BriefingHistoryDialog.svelte` und die geänderten Page-Komponenten / When `contrast-audit.test.ts` ausgeführt wird / Then sind alle Tests grün; kein Hex-Farbliteral in Svelte-Ausgabe, ausschließlich `--g-*` CSS-Tokens
 
@@ -311,7 +311,7 @@ Stilisierung: `--g-ink-3`, kleiner Font, kein prominentes Banner.
 
 ## Out of Scope
 
-- Löschen archivierter Touren (dritter Aktions-Button — eigenes Issue)
+- Löschen archivierter Trips (dritter Aktions-Button — eigenes Issue)
 - Sortierung „Genauigkeit" in der Archiv-Tabelle (kein Backend-Feld — aus Issue #388)
 - Mobile-optimierte Ansicht der Briefing-History (Folge-Issue)
 - Freitext-Feld für „Was passiert ist" (würde neues DB-Schema erfordern)

@@ -66,7 +66,7 @@ bereits geteilten `AlarmeTab.svelte`, keine neue Auswertung.
   `activeAlertMetricsFromCatalog.ts`), 2 Testdateien neu. **Keine**
   Änderung an `CompareTabs.svelte`, `CompareNewEditor.svelte` oder
   `AlarmeScheduleTab.svelte` — der Katalog fließt an allen drei
-  Vergleichs-Einbettungen bereits seit E1a-2 als Prop, der Tour-Container
+  Vergleichs-Einbettungen bereits seit E1a-2 als Prop, der Trip-Container
   bleibt unberührt (s. Known Limitations).
 - **Effort:** low.
 
@@ -79,7 +79,7 @@ bereits geteilten `AlarmeTab.svelte`, keine neue Auswertung.
 | `frontend/src/lib/components/shared/weather-metrics-tab/compareMetricOrder.ts::materializeActiveMetricKeys` | READ (unverändert) | Löst `null` („nie geöffnet") zu Vorgabemenge auf — dieselbe Materialisierung wie `effectiveActiveMetrics`, keine zweite |
 | `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (`.option-hint`, Zeilen 927/992/1537-1542) | REFERENZ | Vorbild-Muster für erklärende Hinweise unterhalb einer Auswahl-/Wertefläche |
 | `frontend/src/lib/components/compare/CompareTabs.svelte:1422`, `frontend/src/lib/components/compare-new/CompareNewEditor.svelte:412,499` | UNVERÄNDERT | Reichen `catalog` bereits seit E1a-2 durch — diese Etappe braucht dort keine Änderung |
-| `frontend/src/lib/components/trip-detail/AlarmeScheduleTab.svelte` | UNVERÄNDERT | Tour-Container; liefert weder Metrik-Auswahl noch Katalog — Erklärsatz bleibt dort aus (Known Limitations) |
+| `frontend/src/lib/components/trip-detail/AlarmeScheduleTab.svelte` | UNVERÄNDERT | Trip-Container; liefert weder Metrik-Auswahl noch Katalog — Erklärsatz bleibt dort aus (Known Limitations) |
 | `docs/specs/modules/feat_1435_e1a2_alarme_reiter_register.md` | REFERENZ | Direkter Vorgänger, Beleg-/Teststil-Vorbild |
 
 ## Implementation Details
@@ -89,7 +89,7 @@ bereits geteilten `AlarmeTab.svelte`, keine neue Auswertung.
 `AlarmeTab.svelte:253` ändert sich von „Wähle im Tab „Wertebereiche"
 Metriken aus…" zu „Wähle im Tab „Wetter-Metriken" Metriken aus, um
 Alarm-Schwellen zu konfigurieren." Reine Textkorrektur, keine
-Kontext-Weiche nötig — die Beschriftung des Reiters ist in Tour und
+Kontext-Weiche nötig — die Beschriftung des Reiters ist in Trip und
 Vergleich identisch (belegt: `compareTabsResolve.ts:13-14`,
 `TripTabs.svelte:80-81`).
 
@@ -168,8 +168,8 @@ const unalertableSelectedMetricNames = $derived(
 );
 ```
 
-Im Tour-Kontext liefert dieser `$derived` immer `[]` — deshalb bleibt der
-Tour-Kontext strukturell bei der bisherigen **Zwei**-Zustands-Logik
+Im Trip-Kontext liefert dieser `$derived` immer `[]` — deshalb bleibt der
+Trip-Kontext strukturell bei der bisherigen **Zwei**-Zustands-Logik
 (Leerzustand oder Tabelle): Zustand 2 aus Punkt 4 unten kann dort nie
 eintreten, ohne dass eine eigene Kontext-Sperre nötig wäre.
 
@@ -213,7 +213,7 @@ Zweige statt zwei:
 {/if}
 ```
 
-Drei Zustände (Vergleichs-Kontext; Tour bleibt strukturell bei den
+Drei Zustände (Vergleichs-Kontext; Trip bleibt strukturell bei den
 äußeren beiden, da `unalertableSelectedMetricNames` dort immer `[]` ist):
 
 1. **Nichts gewählt** (`effectiveActiveMetrics.length === 0` UND
@@ -252,13 +252,13 @@ Code-Änderung nötig. Der Nachweis muss trotzdem **jede** Einbettung
 einzeln treffen (s. Test-Plan, Fehlerklasse #1320/E1a-2-Adversary-Befund
 F001).
 
-### 6. Tour-Kontext — unangetastet
+### 6. Trip-Kontext — unangetastet
 
 `context="route"` liest weiterhin ausschließlich die `activeMetrics`-Prop
 (unverändert seit E1a-2 AC-7). `AlarmeScheduleTab.svelte` bekommt keine
 neue Prop, keinen Katalog, keine Metrik-Auswahl-Weitergabe — das ist eine
 bewusste Begrenzung dieser Etappe (s. Known Limitations), keine
-versehentliche Lücke. Der Tour-Zweig bleibt bei genau zwei sichtbaren
+versehentliche Lücke. Der Trip-Zweig bleibt bei genau zwei sichtbaren
 Zuständen (Leerzustand-Meldung oder Tabelle), da `unalertableSelectedMetricNames`
 dort strukturell immer `[]` ist.
 
@@ -292,7 +292,7 @@ dort strukturell immer `[]` ist.
   (Minimum)", mit Klammerzusatz — weil ihr `label` im Register
   mehrdeutig ist, unabhängig davon, ob die zweite Variante mitgewählt
   wurde (s. AC-10).
-- **Input D:** Ein Nutzer öffnet den Alarme-Reiter bei einer Tour, oder im
+- **Input D:** Ein Nutzer öffnet den Alarme-Reiter bei einer Trip, oder im
   Ortsvergleich ohne jede Metrik-Auswahl.
 - **Output D:** Er sieht ausschließlich die (jetzt korrekt beschriftete)
   Leerzustand-Meldung — nie einen der beiden Erklärsätze.
@@ -356,7 +356,7 @@ dort strukturell immer `[]` ist.
     Katalog-Reihenfolge.
 
 - **AC-6:** Given ein Nutzer öffnet den echten Leerzustand des
-  Alarme-Reiters — im Ortsvergleich oder bei einer Tour / When er den
+  Alarme-Reiters — im Ortsvergleich oder bei einer Trip / When er den
   Hinweistext liest, der ihn zur Metrik-Auswahl führt / Then nennt der
   Text den Reiter „Wetter-Metriken", nicht mehr „Wertebereiche" — an
   beiden Stellen der Oberfläche identisch formuliert.
@@ -365,13 +365,13 @@ dort strukturell immer `[]` ist.
     angezeigte Text „Wetter-Metriken" enthält und „Wertebereiche" nicht
     mehr vorkommt.
 
-- **AC-7:** Given eine Tour (kein Ortsvergleich) mit ausgewählten
+- **AC-7:** Given eine Trip (kein Ortsvergleich) mit ausgewählten
   Wetter-Metriken, von denen manche nicht alarmfähig wären / When der
-  Reiter *Alarme* im Tour-Kontext gerendert wird / Then erscheint dort zu
+  Reiter *Alarme* im Trip-Kontext gerendert wird / Then erscheint dort zu
   keinem Zeitpunkt einer der beiden Erklärsätze — diese Etappe ändert am
-  Tour-Kontext nichts außer dem in AC-6 beschriebenen Reiter-Namen; der
-  Tour-Kontext bleibt strukturell bei genau zwei sichtbaren Zuständen.
-  - Test: struktureller Nachweis, dass der Touren-Zweig (`context="route"`)
+  Trip-Kontext nichts außer dem in AC-6 beschriebenen Reiter-Namen; der
+  Trip-Kontext bleibt strukturell bei genau zwei sichtbaren Zuständen.
+  - Test: struktureller Nachweis, dass der Trips-Zweig (`context="route"`)
     im Template keinen Bezug auf `unalertableSelectedMetricNames`,
     `catalog` oder `deriveUnalertableSelectedMetricNames` enthält — analog
     zum bestehenden E1a-2-Regressionstest für `effectiveActiveMetrics`.
@@ -428,20 +428,20 @@ dort strukturell immer `[]` ist.
 
 ## Known Limitations
 
-- **Kein Erklärsatz im Tour-Kontext.** Die Alarm-Tabelle einer Tour speist
+- **Kein Erklärsatz im Trip-Kontext.** Die Alarm-Tabelle einer Trip speist
   sich aus `trip.display_config.metric_alert_levels` (bereits gesetzte
   Schwellen), nicht aus der Metrik-Auswahl des Nutzers
   (`AlarmeScheduleTab.svelte:36-39`) — es gibt dort schlicht keine wahre
   Datengrundlage für einen der beiden Erklärsätze. Das ist eine bewusste
   PO-Entscheidung für diese Etappe (2026-07-31), keine übersehene Lücke:
-  sie nachzuliefern erfordert, dass der Tour-Container zusätzlich zu den
+  sie nachzuliefern erfordert, dass der Trip-Container zusätzlich zu den
   Schwellen auch die Metrik-Auswahl und den Katalog durchreicht — ein
   eigener Eingriff mit eigenem Nachweis. Kandidat für eine spätere, noch
-  nicht benannte #1435-Etappe. Der Tour-Kontext bleibt deshalb bei der
+  nicht benannte #1435-Etappe. Der Trip-Kontext bleibt deshalb bei der
   ursprünglichen Zwei-Zustands-Logik (Leerzustand oder Tabelle), auch
   nach dieser Nachbesserung.
 - **Keine Kontext-Weiche für den Leerzustand-Text.** Die Korrektur „Wähle
-  im Tab „Wetter-Metriken"…" gilt identisch für Tour und Vergleich, weil
+  im Tab „Wetter-Metriken"…" gilt identisch für Trip und Vergleich, weil
   beide Reiter-Register denselben Namen verwenden
   (`compareTabsResolve.ts:13-14`, `TripTabs.svelte:80-81`). Ändert sich
   diese Benennung künftig auseinander, muss der Text erneut geprüft

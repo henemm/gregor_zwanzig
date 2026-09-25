@@ -63,7 +63,7 @@ _WP_LAT, _WP_LON = 42.1, 9.0
 _TRIP_TZ = ZoneInfo("Europe/Paris")
 
 _TRIP_ID = "drilldown-ortszeit"
-_TRIP_NAME = "Drilldown-Ortszeit-Tour"
+_TRIP_NAME = "Drilldown-Ortszeit-Trip"
 _USER_ID = "default"
 _HOURS = 12
 

@@ -156,7 +156,7 @@ theoretisch client-beeinflusst sein). Die Sperre wird trotzdem aufgenommen,
 nicht weil ein konkretes Race behoben wird, sondern fuer **strukturelle
 Parität**: jeder HTTP-Pfad, der `briefings/<id>.json` schreibt, nimmt die
 Sperre — die Lehre aus dem Loeschpfad-Nachtrag in S2 (dort fehlte sie an
-`DeleteTripHandler` und ermoeglichte ein Wiederauferstehen geloeschter Touren).
+`DeleteTripHandler` und ermoeglichte ein Wiederauferstehen geloeschter Trips).
 Kosten ist eine Zeile, der Nutzen ist eine geschlossene Invariante statt einer
 Ausnahme, die zukuenftig erneut uebersehen werden kann.
 

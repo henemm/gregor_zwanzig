@@ -80,7 +80,7 @@ def _settings_email_unconfigured_telegram_available():
 # ───────────────────────────────── AC-8 ────────────────────────────────────
 
 def test_ac8_abgeschaltete_kanaele_stehen_mit_begruendung_im_eintrag():
-    """AC-8 GIVEN eine Tour hat nur E-Mail fuer Alarme aktiv (Telegram/SMS aus)
+    """AC-8 GIVEN eine Trip hat nur E-Mail fuer Alarme aktiv (Telegram/SMS aus)
     und der Versand gelingt
     WHEN protokolliert wird
     THEN steht ``email`` in ``channels_sent``; ``telegram`` und ``sms`` stehen
@@ -148,7 +148,7 @@ def test_ac9_teil_erfolg_haelt_gescheiterten_kanal_getrennt_fest():
 # ───────────────────────────────── AC-10 ───────────────────────────────────
 
 def test_ac10_kein_konfigurierbarer_kanal_landet_in_not_delivered():
-    """AC-10 (Spec v1.4) GIVEN eine Tour hat E-Mail fuer Alarme eingeschaltet,
+    """AC-10 (Spec v1.4) GIVEN eine Trip hat E-Mail fuer Alarme eingeschaltet,
     fuer E-Mail gibt es aber KEINE funktionierende Konfiguration — kein
     einziger Kanal ist also konfigurierbar, obwohl der Nutzer einen wollte
     WHEN protokolliert wird
@@ -181,7 +181,7 @@ def test_ac10_kein_konfigurierbarer_kanal_landet_in_not_delivered():
         f"Kein Kanal kam an: {entry.get('channels_sent')!r}"
     )
     assert entry.get("entity_id") == "trip-ac10", (
-        "Die Nicht-Zustellung muss der Tour zuordenbar bleiben: "
+        "Die Nicht-Zustellung muss der Trip zuordenbar bleiben: "
         f"{entry.get('entity_id')!r}"
     )
 
@@ -218,18 +218,18 @@ def test_ac15_konfiguriert_aber_nichts_zugestellt_bleibt_in_entries():
             f"'delivery_failed', erhalten: {reason_for_channel(entry, kanal)!r}"
         )
     assert entry.get("entity_id") == "trip-ac15", (
-        f"Der Eintrag muss der Tour zuordenbar bleiben: {entry.get('entity_id')!r}"
+        f"Der Eintrag muss der Trip zuordenbar bleiben: {entry.get('entity_id')!r}"
     )
 
 
 # ───────────────────────────────── AC-11 ───────────────────────────────────
 
 def test_ac11_fehlgeschlagener_versand_veraendert_die_angezeigte_zahl_nicht():
-    """AC-11 GIVEN eine Tour hat bereits zwei erfolgreiche Eintraege in
+    """AC-11 GIVEN eine Trip hat bereits zwei erfolgreiche Eintraege in
     ``entries``
-    WHEN zusaetzlich ein komplett fehlgeschlagener Versand derselben Tour
+    WHEN zusaetzlich ein komplett fehlgeschlagener Versand derselben Trip
     protokolliert wird
-    THEN bleibt die Zahl der ``entries``-Eintraege dieser Tour bei zwei — das
+    THEN bleibt die Zahl der ``entries``-Eintraege dieser Trip bei zwei — das
     ist bit-genau das, was die Archiv-Statistik (``AlertCountByEntity``) und die
     Cockpit-Kachel lesen."""
     from services import alert_log
@@ -263,7 +263,7 @@ def test_ac11_fehlgeschlagener_versand_veraendert_die_angezeigte_zahl_nicht():
 
     assert vorher == 2, f"Voraussetzung: zwei Bestands-Eintraege, erhalten {vorher}."
     assert nachher == 2, (
-        f"Die fuer die Tour 'X' gezaehlten Eintraege sind von {vorher} auf "
+        f"Die fuer die Trip 'X' gezaehlten Eintraege sind von {vorher} auf "
         f"{nachher} gestiegen — Cockpit-Kachel und Archiv-Statistik wuerden "
         "sich fuer eine Bestandstour aendern (D4-Kernforderung)."
     )
@@ -278,7 +278,7 @@ _ALLE_KANAELE_AUS = {"email": False, "telegram": False, "sms": False}
 
 
 def test_ac16_abgeschaltete_alarme_erzeugen_gar_keinen_eintrag():
-    """AC-16 (Spec v1.5, aus Adversary-Finding F001) GIVEN eine Tour hat
+    """AC-16 (Spec v1.5, aus Adversary-Finding F001) GIVEN eine Trip hat
     KEINEN Kanal fuer Alarme eingeschaltet, es liegt aber ein ausloesender
     Befund vor
     WHEN der Protokoll-Aufruf erfolgt
@@ -315,7 +315,7 @@ def test_ac16_abgeschaltete_alarme_erzeugen_gar_keinen_eintrag():
 
     log = read_log(uid)
     assert log["entries"] == [] and log["not_delivered"] == [], (
-        "Der Nutzer hat Alarme fuer diese Tour komplett abgeschaltet — dafuer "
+        "Der Nutzer hat Alarme fuer diese Trip komplett abgeschaltet — dafuer "
         f"darf KEIN Protokoll-Eintrag entstehen: {log!r}"
     )
     assert not (get_data_dir(uid) / "alert_log.json").exists(), (

@@ -135,7 +135,7 @@ und `resendBlocked` bleiben unangetastet.
 |---|---|---|
 | `nominatim.openstreetmap.org` | TestAccess | kostenlos, nebenwirkungsfrei; Ortsanlage muss auf Staging funktionieren |
 | `api.open-elevation.com` | TestAccess | dito (Höhenabfrage) |
-| `www.komoot.com` | TestAccess | dito (Tour-Import) |
+| `www.komoot.com` | TestAccess | dito (Trip-Import) |
 | `maps.app.goo.gl`, `goo.gl`, `www.google.com`, `maps.google.com` | TestAccess | Auflösung geteilter Google-Maps-Links (`followGoogleMapsRedirect` folgt einer Nutzer-URL) |
 | `www.googleapis.com`, `oauth2.googleapis.com`, `accounts.google.com` | TestAccess | Google-Login auf Staging |
 | `uptime.betterstack.com` | **Blocked** | Staging darf keine Prod-Heartbeats grün pingen — das wäre Falsch-Grün im Monitoring |

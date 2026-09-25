@@ -41,7 +41,7 @@ from app.trip import Stage, Trip, Waypoint  # noqa: E402
 
 _HAGEL_HINWEIS = "Hagel: ja"
 _TRIP_ID = "hail-drilldown-1475"
-_TRIP_NAME = "Hagel-Drilldown-Tour"
+_TRIP_NAME = "Hagel-Drilldown-Trip"
 _USER_ID = "default"
 _WP_LAT, _WP_LON = 42.0, 9.0
 

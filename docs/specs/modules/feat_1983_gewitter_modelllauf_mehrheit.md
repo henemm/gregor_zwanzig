@@ -170,11 +170,11 @@ Files) — ein 2-Tupel-Entpacken (`s_t, s_p = spread`) bricht sonst mit `ValueEr
 
 ## Implementierung — Anker & Anwendung (`src/services/trip_report_scheduler.py`)
 
-**Anker je Etappe (statt Tour-Ende, `:2294-2330`):** Alle drei Aufrufer von
+**Anker je Etappe (statt Trip-Ende, `:2294-2330`):** Alle drei Aufrufer von
 `_enrich_ensemble_for_trip` (`:1432` Hauptlauf, `:2527` Ausblick, `:2996` Gewitter-Fallback)
 übergeben bereits ein etappen-spezifisches `weather_data` — der Anker selbst ist aber HEUTE
 bei allen drei identisch: `next((s.last_waypoint for s in reversed(trip.stages) if
-s.waypoints), None)` sucht immer den letzten Wegpunkt der **ganzen Tour**, unabhängig davon,
+s.waypoints), None)` sucht immer den letzten Wegpunkt der **ganzen Trip**, unabhängig davon,
 welche Etappe gerade übergeben wurde (Befund, widerspricht der Ticket-Annahme "Ausblick-Abrufe
 existieren bereits je Etappe" — nur der AUFRUF ist je Etappe, der ANKER nicht). Neue Regel:
 Anker = letzter Wegpunkt (`end_point`) des letzten Segments in `weather_data` (dasselbe
@@ -241,7 +241,7 @@ Typ-Anpassung, keine neue Semantik (Known Limitation, s.u.).
   `segment_weather.py:196`, `forecast_budget.py:40`) — Risiko, nicht in diesem Ticket zu
   fixen.
 - Prod-Status (`/api/scheduler/status`, 19.09.): 3 Nutzer gesamt, `forecast_budget.calls_today
-  = 0`, letzter Gewitterabruf 05.09. (KHW-Ende) — aktuell keine aktive Tour. Realistische
+  = 0`, letzter Gewitterabruf 05.09. (KHW-Ende) — aktuell keine aktive Trip. Realistische
   Spitzenlast laut Bestand: 1–3 gleichzeitig aktive Trips.
 
 **Inferenz (NICHT gemessen, kein Gewichts-Header in der API-Antwort):** Open-Meteo gewichtet
@@ -304,7 +304,7 @@ Domänenschicht, neben `union_of_max_carriers`).
 | `src/providers/openmeteo.py:722-807` | MODIFY | `weather_code` mitabrufen, Anteil je Stunde berechnen (≥20-Member-Regel, `ecmwf_ifs04` ausgeschlossen), Rückgabetyp auf benannte Struktur (`EnsembleHourStats`) umstellen; neue Konstante `ENSEMBLE_THUNDER_MIN_MEMBERS` |
 | `src/providers/openmeteo.py:1148-1178` | MODIFY | Entpacken des geänderten Rückgabetyps in `fetch_forecast(enrich_ensemble=True)` — nur Typanpassung, KEINE neue Semantik (s. Abgrenzung oben) |
 | `src/app/thunder_scale.py` | MODIFY | neue Konstanten `MODELLLAUF_ANHEBUNG_MIN_PCT`/`MODELLLAUF_DAEMPFUNG_MAX_PCT`, Ein-Stufen-Dämpfer, Anhebungs-Wrapper (nutzt `union_of_max_carriers`); Label `"modelllauf": "Modellläufe"` in `THUNDER_SIGNAL_LABEL_DE` |
-| `src/services/trip_report_scheduler.py:2294-2362` | MODIFY | Anker aus `weather_data` (letztes Segment) statt `trip.stages`-Tour-Ende |
+| `src/services/trip_report_scheduler.py:2294-2362` | MODIFY | Anker aus `weather_data` (letztes Segment) statt `trip.stages`-Trip-Ende |
 | `src/services/trip_report_scheduler.py:2362-2427` | MODIFY | `_apply_ensemble_spreads`: `dp.thunder_probability_pct` setzen, Anhebung/Dämpfung anwenden, Radar-Schutz |
 | `tests/tdd/test_thunder_probability_field_prepared_empty.py` | PRÜFEN, ggf. ERGÄNZEN | nutzt `FixtureProvider`, nicht den Ensemble-Pfad — bleibt nach heutigem Verständnis grün (Feld bleibt bei diesem Provider leer) und gilt WEITER für den Fixture-Pfad; in /40 verifizieren, NICHT annehmen, dass er bricht |
 | `tests/tdd/test_thunder_modelllauf_mehrheit.py` | CREATE | Kerntests zu allen ACs, aufgezeichnete Ensemble-Fixture (inkl. `weather_code`-Spalten) |
@@ -442,7 +442,7 @@ Domänenschicht, neben `union_of_max_carriers`).
 - **AC-11:** Given der Trip-Report-Hauptlauf für eine bestimmte Etappe / When
   `_enrich_ensemble_for_trip` den Ensemble-Anker bestimmt / Then liegt der Anker auf einem
   Wegpunkt DIESER Etappe (letztes Segment aus dem übergebenen `weather_data`), nicht mehr auf
-  dem letzten Wegpunkt der gesamten Tour.
+  dem letzten Wegpunkt der gesamten Trip.
   - Test: Trip mit ≥2 Etappen, `_enrich_ensemble_for_trip` für die erste Etappe aufgerufen ⇒
     die an `_fetch_ensemble_spread` übergebene `Location` entspricht einem Wegpunkt der
     ersten, nicht der letzten Etappe.

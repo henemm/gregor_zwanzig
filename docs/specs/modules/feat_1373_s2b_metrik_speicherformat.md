@@ -177,7 +177,7 @@ untypisiert, reicht den JSON-Blob blind durch), `api/routers/compare.py`.
   ob die zugrundeliegende Datei noch im Alt- oder bereits im Neuformat
   vorliegt.
 - **Side effects:** Nach erfolgreichem Migrationslauf liegen alle
-  Bestandsvergleiche im Neuformat vor; Touren (`kind=route`) sind davon
+  Bestandsvergleiche im Neuformat vor; Trips (`kind=route`) sind davon
   nicht betroffen. Ein künftiges doppeltes Größe-Auswertung-Paar im
   Vergleichs-Katalog lässt einen Test beim nächsten Lauf sichtbar
   fehlschlagen, statt zwei Zeilen unbemerkt auf denselben Auswahl-Eintrag
@@ -236,11 +236,11 @@ untypisiert, reicht den JSON-Blob blind durch), `api/routers/compare.py`.
   gefühlte Tiefsttemperatur ausgewählt, im alten Speicherformat / When das
   Migrationsskript im Ausführungsmodus über den Datenbestand läuft / Then
   liegen danach alle drei Größen im neuen Format vor, keine ist
-  verschwunden oder mit einer anderen verschmolzen, und eine Tour (kein
+  verschwunden oder mit einer anderen verschmolzen, und eine Trip (kein
   Vergleich) im selben Datenbestand bleibt unverändert.
   - Test: Migrations-Test mit echtem Dateisystem-Root (`tmp_path`), echtem
     Subprozessaufruf des Skripts — vor/nach-Vergleich der drei Größen plus
-    einer unveränderten Tour-Datei.
+    einer unveränderten Trip-Datei.
 
 - **AC-7:** Given das Migrationsskript wurde bereits einmal im
   Ausführungsmodus gegen einen Datenbestand gelaufen / When es ein

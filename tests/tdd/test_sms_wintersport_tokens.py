@@ -1,4 +1,4 @@
-"""Touren-SMS: Wintersport-Metriken folgen der normalen Metrik-Sichtbarkeit.
+"""Trips-SMS: Wintersport-Metriken folgen der normalen Metrik-Sichtbarkeit.
 
 SPEC: docs/specs/fast/fix-1450-sms-wintersport-tokens.md (#1450)
 

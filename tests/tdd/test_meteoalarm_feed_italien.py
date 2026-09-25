@@ -69,7 +69,7 @@ MILAN = (45.4642, 9.1900)  # Lomb-09 -> IT003 (Lombardia)
 MEER_UNMAPPED = (37.0, 13.5)  # in der DPC-Bbox, ausserhalb aller 187 Zonen-Polygone
 
 # Issue #1397 S4 (SPEC: docs/specs/modules/fix_1397_s4_it_grenze.md): reale
-# Punkte des Karnischen Hoehenwegs, einer Tour auf der Staatsgrenze IT/AT.
+# Punkte des Karnischen Hoehenwegs, einer Trip auf der Staatsgrenze IT/AT.
 # Zonen gegen die EINGECHECKTE Geometrie (``dpc._zone_at``) verifiziert,
 # Abstaende aus der Prod-Messung 2026-08-01 (Spec "Der Befund").
 AT_JENSEITS = (46.7061, 12.4063)  # Oesterreich, 2,08 km zur naechsten IT-Zonengrenze
@@ -310,7 +310,7 @@ def test_covers_ausschluss_loest_keinen_ausfallhinweis_fuer_frejus_aus():
 # EINER Frankreich-Ausnahme. AT/CH/SI/HR liegen ebenfalls weit in dieser Bbox
 # -- fuer einen Punkt dort galt die italienische Quelle als zustaendig, fand in
 # ``fetch()`` keine Zone und loeste ueber ``mark_fetch_incomplete()`` einen
-# falschen "nicht abrufbar"-Hinweis aus (Prod 2026-08-01: 39 Punkte EINER Tour).
+# falschen "nicht abrufbar"-Hinweis aus (Prod 2026-08-01: 39 Punkte EINER Trip).
 
 def _drift_zeilen_anzahl(warn_egress) -> int:
     """``point_unmapped``-Zeilen des Feed-Dienstes im (append-only)
@@ -401,7 +401,7 @@ def test_ac1_oesterreichischer_grenzpunkt_loest_keinen_ausfallhinweis_aus(monkey
 
 def test_ac3_grenznahe_italienische_orte_behalten_ihre_warnungen(monkeypatch):
     """AC-3 (wichtigste Gegenprobe): GIVEN drei reale, grenznahe Punkte
-    DERSELBEN Tour liegen tatsaechlich in italienischen Warnzonen (Vene-A1,
+    DERSELBEN Trip liegen tatsaechlich in italienischen Warnzonen (Vene-A1,
     Tren-A, Friu-B -- gegen die eingecheckte Geometrie belegt), WHEN
     ``covers()`` geprueft wird und fuer Tren-A/IT002 (die aufgezeichnete
     Fixture traegt dort eine echte Gewitterwarnung) zusaetzlich der volle

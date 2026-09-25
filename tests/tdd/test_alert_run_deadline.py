@@ -227,15 +227,15 @@ def _setup_slow_trips(
 
 
 # ---------------------------------------------------------------------------
-# AC-1 -- ueberschrittene Obergrenze stoppt weitere Touren, nachweislich ueber
+# AC-1 -- ueberschrittene Obergrenze stoppt weitere Trips, nachweislich ueber
 # Nicht-Aufruf der Pruef-Funktion (nicht nur ueber einen Zaehler).
 # ---------------------------------------------------------------------------
 
 def test_deadline_exceeded_stops_checking_remaining_trips(monkeypatch):
     """AC-1: Given der Lauf hat die Zeitobergrenze bereits ueberschritten,
     waehrend noch weitere Trips in der Liste stehen / When die Schleife die
-    naechste Tour erreichen wuerde / Then wird diese und jede weitere
-    verbleibende Tour NICHT mehr geprueft -- bewiesen ueber Nicht-Aufruf von
+    naechste Trip erreichen wuerde / Then wird diese und jede weitere
+    verbleibende Trip NICHT mehr geprueft -- bewiesen ueber Nicht-Aufruf von
     check_and_send_alerts fuer mindestens einen Trip.
 
     RED (heute): ``check_all_trips()`` hat keine Deadline-Pruefung, ruft
@@ -314,7 +314,7 @@ def test_full_run_matches_legacy_alert_count_with_zero_skipped():
     """AC-3: Given ein Alarm-Lauf fuer einen Nutzer schliesst innerhalb der
     Zeitobergrenze vollstaendig ab / When der Lauf endet / Then ist die
     Anzahl versendeter Alarme identisch zum heutigen ``int``-Rueckgabewert
-    UND keine Tour wird uebersprungen (``skipped: 0``).
+    UND keine Trip wird uebersprungen (``skipped: 0``).
 
     Regressions-Kontrolle: der eigentliche Alarm-Versand (2 echte,
     voneinander unabhaengige amtliche Alarme ueber die bestehende
@@ -365,7 +365,7 @@ def test_full_run_matches_legacy_alert_count_with_zero_skipped():
         f"{getattr(result, 'alerts_sent', '<fehlt>')!r} != {len(trips)}"
     )
     assert result.checked == len(trips)
-    assert result.skipped == 0, f"Vollstaendiger Lauf darf keine Tour uebersprungen haben: {getattr(result, 'skipped', '<fehlt>')!r}"
+    assert result.skipped == 0, f"Vollstaendiger Lauf darf keine Trip uebersprungen haben: {getattr(result, 'skipped', '<fehlt>')!r}"
     assert result.hit_deadline is False
 
 
@@ -376,7 +376,7 @@ def test_full_run_matches_legacy_alert_count_with_zero_skipped():
 def test_deadline_abort_logs_warning_with_threshold_checked_and_skipped(monkeypatch, caplog):
     """AC-4: Given ein Alarm-Lauf wird durch die Zeitobergrenze abgebrochen /
     When der Abbruch eintritt / Then wird eine WARNING-Zeile geschrieben, die
-    die Obergrenze, die Anzahl geprueft und die Anzahl uebersprungener Touren
+    die Obergrenze, die Anzahl geprueft und die Anzahl uebersprungener Trips
     nennt.
 
     RED (heute): es gibt keine Deadline-Pruefung, also auch keine

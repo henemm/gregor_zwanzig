@@ -1,6 +1,6 @@
 // TDD RED — Issue #2276 Scheibe S3 (Epic #2345): der Wertebereiche-Reiter des
 // Ortsvergleichs speichert über GENAU EINEN Weg — die eigene Orchestrierung im
-// Speicher-Takt des Controllers der Seite, wie Alarme (S2) und die Tour. Der
+// Speicher-Takt des Controllers der Seite, wie Alarme (S2) und die Trip. Der
 // zweite Weg (Wrapper `.hub-corridor-wrap` + `<svelte:window onpointerup>` →
 // alte Hub-Commit-Funktion) entfällt.
 //

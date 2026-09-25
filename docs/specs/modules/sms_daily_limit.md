@@ -344,7 +344,7 @@ abrechnet, ist aus dem Repo nicht belegbar — offen vermerkt, keine Annahme get
   Nutzer-State (`throttle_store.py`/`forecast_budget.py`: Sidecar-Lock + atomares `os.replace`,
   Fail-Open bei Lock-Timeout) — einziger Unterschied ist ein zweiter Zähler-Topf im selben
   Datenfile und eine feste UTC-Taktung statt einer zonenbezogenen. Es entsteht kein neuer
-  Architektur-Layer. **ADR-0044** („Heute"/„morgen" folgen der Ortszeit der Tour) bekommt einen
+  Architektur-Layer. **ADR-0044** („Heute"/„morgen" folgen der Ortszeit der Trip) bekommt einen
   additiven Zusatz „Nicht betroffen: der SMS-/Premium-SMS-Kostendeckel" nach der bestehenden
   Nicht-betroffen-Passage — dieser Zähler ist eine reine Kosten-Referenzgröße pro Nutzerkonto,
   kein wetter- oder tourfachlicher Kalendertag, analog zur bereits dokumentierten Ausnahme

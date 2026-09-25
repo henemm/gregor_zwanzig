@@ -793,7 +793,7 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
 # --------------------------------------------------------------------------
 
 def test_ac5_onset_time_in_tour_timezone():
-    """AC-5: format_now_text(result, tz=<TourTZ>) formatiert Onset-Zeit in Tour-TZ.
+    """AC-5: format_now_text(result, tz=<TourTZ>) formatiert Onset-Zeit in Trip-TZ.
 
     RED: format_now_text hat keinen `tz`-Parameter → TypeError (unexpected keyword).
 
@@ -816,13 +816,13 @@ def test_ac5_onset_time_in_tour_timezone():
     # RED: format_now_text() got unexpected keyword argument 'tz'
     text = svc.format_now_text(result, tz=tour_tz)
 
-    # Nach Implementierung: Onset-Zeit in Tour-TZ
+    # Nach Implementierung: Onset-Zeit in Trip-TZ
     now_utc = datetime.now(timezone.utc)
     expected_dt = (now_utc + timedelta(minutes=10)).astimezone(tour_tz)
     expected_hhmm = expected_dt.strftime("%H:%M")
 
     assert expected_hhmm in text, (
-        f"AC-5: Onset-Uhrzeit nicht in Tour-TZ formatiert. "
+        f"AC-5: Onset-Uhrzeit nicht in Trip-TZ formatiert. "
         f"Erwartet '{expected_hhmm}' (Europe/Berlin) im Text: '{text}'"
     )
 

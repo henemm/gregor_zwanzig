@@ -273,7 +273,7 @@ nicht als solche verbucht werden.
 
 ## Known Limitations
 
-- **Budget-Mehrkosten:** bis zu 7 zusätzliche Nowcast-Abrufe je Sperrfenster und Tour
+- **Budget-Mehrkosten:** bis zu 7 zusätzliche Nowcast-Abrufe je Sperrfenster und Trip
   (Prüftakt 15 Min, Sperrzeit-Vorgabe 2 h, Radar-Cache-TTL 300 s), gegen ein Tagesbudget von
   9000 (`forecast_budget.py:40`). Unkritisch in der Größenordnung, aber real und im PR zu
   nennen.

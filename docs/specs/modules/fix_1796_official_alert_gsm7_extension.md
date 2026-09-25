@@ -112,7 +112,7 @@ dort wird der reaktivierte, parametrisierte Test ergänzt (alle 9 Zeichen aus
 ## Expected Behavior
 
 - **Input:** Trip-Name mit mindestens einem GSM-7-Extension-Zeichen (z.B.
-  `"KHW [Test]"`, `"Tour~Nord"`, `"Weg|Nord"`), als `sms_prefix` an
+  `"KHW [Test]"`, `"Trip~Nord"`, `"Weg|Nord"`), als `sms_prefix` an
   `render_official_alert_sms()` übergeben.
 - **Output:** Gerenderte SMS enthält ausschließlich Zeichen aus dem
   GSM-7-Basisalphabet (GSM 03.38), geprüft über `assert_gsm7_clean()`
@@ -141,7 +141,7 @@ dort wird der reaktivierte, parametrisierte Test ergänzt (alle 9 Zeichen aus
     bleibt unverändert grün (keine Anpassung nötig).
 
 - **AC-3 (Bug-Nachweis aus dem Issue):** Given die drei im Issue #1796
-  genannten Beispiel-Trip-Namen (`"KHW [Test]"`, `"Tour~Nord"`,
+  genannten Beispiel-Trip-Namen (`"KHW [Test]"`, `"Trip~Nord"`,
   `"Weg|Nord"`) / When jeweils eine amtliche Alarm-SMS gerendert wird / Then
   ist das Ergebnis GSM-7-sauber (`assert_gsm7_clean()` besteht für alle
   drei).

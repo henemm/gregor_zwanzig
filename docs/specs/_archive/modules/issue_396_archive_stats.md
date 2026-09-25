@@ -8,9 +8,9 @@ version: "1.0"
 tags: [archive, stats, briefing-log, alert-log, go-api, frontend, issue-396]
 ---
 
-<!-- Issue #396 — Archiv-Statistiken: Briefings + Alarme pro Tour zählen -->
+<!-- Issue #396 — Archiv-Statistiken: Briefings + Alarme pro Trip zählen -->
 
-# Issue #396 — Archiv-Statistiken: Briefings + Alarme pro Tour
+# Issue #396 — Archiv-Statistiken: Briefings + Alarme pro Trip
 
 ## Approval
 
@@ -18,7 +18,7 @@ tags: [archive, stats, briefing-log, alert-log, go-api, frontend, issue-396]
 
 ## Zweck
 
-Der Archiv-Screen zeigt pro vergangener Tour `—` für "Briefings gesendet" und "Alarme
+Der Archiv-Screen zeigt pro vergangener Trip `—` für "Briefings gesendet" und "Alarme
 ausgelöst". Beide Zahlen liegen bereits in JSON-Logs vor (`briefing_log.json`,
 `alert_log.json`). Diese Spec beschreibt die Verkabelung: Python-Seitig die 48h-Bereinigung
 entfernen, Go-seitig Aggregation per trip_id, Frontend die Platzhalter anbinden.
@@ -96,17 +96,17 @@ Auth: gleiche Session-Auth wie alle anderen `/api/`-Endpoints.
 
 ## Expected Behavior
 
-- **Input:** Archiv-Seite wird geladen; User hat vergangene Touren mit gesendeten Briefings/Alarmen
+- **Input:** Archiv-Seite wird geladen; User hat vergangene Trips mit gesendeten Briefings/Alarmen
 - **Output:** Listenzeilen zeigen echte Zahlen ("12 Briefings · 1 Alarm"); Stats-Strip summiert korrekt
 - **Side effects:** `alert_log.json` wächst dauerhaft. Größe: ~200 Bytes pro Alert-Eintrag, realistisch <100 Einträge/Jahr pro User → vernachlässigbar.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine vergangene Tour mit 12 gesendeten Briefings / When der Archiv-Screen geladen wird / Then zeigt die Listenzeile "12" statt "—" im Briefings-Feld
+- **AC-1:** Given eine vergangene Trip mit 12 gesendeten Briefings / When der Archiv-Screen geladen wird / Then zeigt die Listenzeile "12" statt "—" im Briefings-Feld
   - Test: `tests/tdd/test_issue_396_archive_stats.py::test_briefing_count_per_trip`
   - Test: `tests/tdd/test_issue_396_archive_stats.py::test_store_go_has_briefing_count_by_trip`
 
-- **AC-2:** Given eine vergangene Tour mit 2 ausgelösten Alarmen (älter als 48h) / When der Archiv-Screen geladen wird / Then zeigt die Listenzeile "2" statt "—" (Retention-Entfernung wirkt)
+- **AC-2:** Given eine vergangene Trip mit 2 ausgelösten Alarmen (älter als 48h) / When der Archiv-Screen geladen wird / Then zeigt die Listenzeile "2" statt "—" (Retention-Entfernung wirkt)
   - Test: `tests/tdd/test_issue_396_archive_stats.py::test_alert_count_includes_old_entries`
   - Test: `tests/tdd/test_issue_396_archive_stats.py::test_alert_retention_code_removed`
 

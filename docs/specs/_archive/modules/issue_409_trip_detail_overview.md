@@ -51,7 +51,7 @@ Nicht geändert:
 
 | Abhängigkeit | Art | Zweck |
 |---|---|---|
-| `frontend/src/lib/components/trip-detail/FullProfile.svelte` | Svelte-Komponente (vorhanden) | Props: `{ trip, selectedStageId, onSelectStage, now? }` — SVG-Höhenprofil der gesamten Tour |
+| `frontend/src/lib/components/trip-detail/FullProfile.svelte` | Svelte-Komponente (vorhanden) | Props: `{ trip, selectedStageId, onSelectStage, now? }` — SVG-Höhenprofil der gesamten Trip |
 | `frontend/src/lib/components/trip-detail/StageList.svelte` | Svelte-Komponente (vorhanden) | Props: `{ trip, selectedStageId, onSelectStage, now? }` — Liste aller Etappen-Cards |
 | `frontend/src/lib/components/trip-detail/BriefingPreviewCard.svelte` | Svelte-Komponente (vorhanden) | `data-testid="right-card-briefings"` — rechte Spalte Karte 1 |
 | `frontend/src/lib/components/trip-detail/WeatherMetricsPreviewCard.svelte` | Svelte-Komponente (vorhanden) | `data-testid="right-card-weather"` — rechte Spalte Karte 2 |

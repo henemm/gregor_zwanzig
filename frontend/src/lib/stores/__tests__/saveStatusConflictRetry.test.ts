@@ -102,7 +102,7 @@ describe('AC-1 (Vorbedingung): ein 412 mit bekannter tripId wird als Konflikt er
 
 describe('AC-1: "Nochmal speichern" frischt den ETag zuerst auf und wiederholt danach denselben Speichervorgang', () => {
 	test('test_retryConflict_refreshesEtagThenResendsOriginalSaveFn_inOrder', async () => {
-		// GIVEN: die Tour ist geladen, dann schreibt jemand anderes vorbei an der
+		// GIVEN: die Trip ist geladen, dann schreibt jemand anderes vorbei an der
 		// Registry (server-seitig neuer Stand, unser Client weiß es noch nicht).
 		await api.get('/api/trips/gr20');
 		await server.handler('/api/trips/gr20', {
@@ -356,14 +356,14 @@ describe('AC-2/AC-5 (#2276 S1): "Nochmal speichern" frischt einen Ortsvergleich 
 		const c = await konfliktUndWiederholen(id);
 
 		// THEN (der eigentliche Prüfling): der Refresh-GET ging an die
-		// Ortsvergleich-Adresse, nicht an die Tour-Adresse.
+		// Ortsvergleich-Adresse, nicht an die Trip-Adresse.
 		const letzterGet = getCalls().at(-1);
 		assert.ok(letzterGet, 'Vorbedingung: der Retry muss überhaupt einen Refresh-GET ausgelöst haben');
 		assert.equal(
 			letzterGet.path,
 			`/api/compare/presets/${id}`,
 			'der Refresh eines Ortsvergleichs muss an /api/compare/presets/{id} gehen — ' +
-				'/api/trips/{id} ist die Adresse einer Tour und für eine Alt-Kennung ohne cp--Präfix ' +
+				'/api/trips/{id} ist die Adresse einer Trip und für eine Alt-Kennung ohne cp--Präfix ' +
 				'genauso falsch wie für jede andere'
 		);
 		assert.ok(

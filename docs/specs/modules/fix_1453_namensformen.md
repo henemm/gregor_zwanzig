@@ -47,7 +47,7 @@ Kurzform, die dort seit #1401 Scheibe A2b steht. Der Pflicht-Prüfer
 `email_spec_validator.py`, der seit #1404/#1420 beide Formen parallel
 akzeptiert (Übergangs-Union), wird auf genau die jetzt geltende Form
 zurückgebaut. Und die Konfigurationsoberfläche zeigt künftig in allen vier
-Editoren (Tour + drei Compare-Flächen) je Wettergröße alle drei Namensformen
+Editoren (Trip + drei Compare-Flächen) je Wettergröße alle drei Namensformen
 nebeneinander, damit ein Kürzel in einer Mail oder SMS immer an einer Stelle
 auflösbar ist.
 
@@ -104,7 +104,7 @@ auflösbar ist.
 | `src/output/renderers/email/compare_html.py::derive_row_labels()` | MODIFY | Einzige Beschriftungsquelle für Übersicht (Zeilenkopf) UND Stundentabelle (Spaltenkopf) — muss künftig zwei Formen liefern können, ohne die zweite Verwendung zu brechen |
 | `src/output/renderers/comparison.py::render_compare_plain()` | READ (Verbraucher, unverändert) | Importiert `derive_row_labels` bereits aus `compare_html.py` (Zeile 218/240) — Klartext folgt automatisch, wenn die Quelle korrekt ist; kein zweiter blinder Fleck |
 | `src/output/renderers/comparison.py::_PLAIN_ROWS`/`_DAILY_PLAIN_ROWS` | READ-only (NICHT als Quelle nutzen) | Bereits vorhandene deutsche Strings, aber Telegram/SMS-Vokabular — Risiko: eine dritte Namenskopie, wenn hieraus statt aus `label_de` gelesen wird |
-| `helpers.py::visible_cols()` (Tour) / `metric_catalog.get_col_defs()` | READ (unverändert) | Tour-Pfad ist komplett getrennt von Compare, bekommt die beiden `col_label`-Änderungen aber automatisch mit, weil er dieselbe Registerquelle liest |
+| `helpers.py::visible_cols()` (Trip) / `metric_catalog.get_col_defs()` | READ (unverändert) | Trip-Pfad ist komplett getrennt von Compare, bekommt die beiden `col_label`-Änderungen aber automatisch mit, weil er dieselbe Registerquelle liest |
 | `.claude/hooks/email_spec_validator.py` | MODIFY (geschützter Bereich) | Pflicht-Prüfer für Vergleichs-Mails; Änderung braucht ausdrückliche Nutzer-Freigabe (`override`), s. „Nachweisführung" |
 | `.claude/hooks/briefing_mail_validator.py` | READ (unverändert) | Leitet Spaltenlabels bereits dynamisch aus `col_label` ab (kein hartcodiertes `Cond°`/`hPa`) — zieht die zwei Kürzel-Änderungen ohne eigenen Eingriff mit |
 | `api/routers/config.py::GET /api/metrics` | READ (unverändert) | Liefert bereits `label` (=`label_de`), `col_label`, `sms_code` je Größe — Datenquelle für Punkt 4 existiert |
@@ -121,10 +121,10 @@ In `metric_catalog.py`: `dewpoint.col_label` von `"Cond°"` auf `"Dew"`,
 
 Diese Änderung trifft **eine** Registerspalte, die von zwei getrennten
 Pfaden gelesen wird (Befund 2 im Kontext): dem Compare-Stundenverlauf
-(`compare_html.HOUR_METRICS`) **und** dem Tour-Stundenverlauf
+(`compare_html.HOUR_METRICS`) **und** dem Trip-Stundenverlauf
 (`helpers.visible_cols` → `metric_catalog.get_col_defs()`). Beide Mails
 zeigen danach „Dew"/„Press" statt „Cond°"/„hPa" — das ist gewollt (ein
-schlechtes Kürzel ist in beiden Mails schlecht), heißt aber: Tour-Golden-
+schlechtes Kürzel ist in beiden Mails schlecht), heißt aber: Trip-Golden-
 Dateien unter `tests/golden/email/*` müssen geprüft und, falls die beiden
 Größen dort aktiv sind, mitgezogen werden.
 
@@ -206,7 +206,7 @@ kein Blocker, und sollte nicht überraschen.
 Alle drei Formen sind bereits ausgeliefert (`GET /api/metrics` führt
 `label`/`col_label`/`sms_code` je Größe, `api/routers/config.py:71-81`) —
 Punkt 4 ist eine **Darstellungs**-Aufgabe, keine Datenaufgabe. Heute zeigt
-nur `WeatherV2Reihenfolge.svelte` (Touren-Editor) den `col_label`-Wert als
+nur `WeatherV2Reihenfolge.svelte` (Trips-Editor) den `col_label`-Wert als
 Badge neben dem deutschen Namen; die drei Compare-Editoren
 (`WeatherMetricsTab.svelte` Übersicht, `CompareHourlyLayoutControls.svelte`,
 `CompareOutlookLayoutControls.svelte`) bauen ihre Zeilen-Einträge ohne
@@ -253,18 +253,18 @@ Regel „Form folgt Platz", nicht widersprüchlich.
 ## Acceptance Criteria
 
 - **AC-1 (Nicht-Regression Stundentabelle):** Given ein Nutzer öffnet eine
-  Vergleichs- oder Tour-Mail mit Stundentabelle / When er die
+  Vergleichs- oder Trip-Mail mit Stundentabelle / When er die
   Spaltenüberschriften ansieht / Then stehen dort weiterhin die englischen
   Kurzformen — unverändert bis auf die zwei in AC-2 genannten Spalten.
   - Test: Bestehende Golden-/Struktur-Tests der Stundentabelle laufen
     unverändert grün, bis auf die gezielt angepassten Dew/Press-Fälle.
 
-- **AC-2:** Given eine Vergleichs- oder Tour-Mail zeigt die
+- **AC-2:** Given eine Vergleichs- oder Trip-Mail zeigt die
   Taupunkt-Spalte bzw. die Luftdruck-Spalte im Stundenverlauf / When die
   Spaltenüberschrift gerendert wird / Then heißt sie „Dew" bzw. „Press"
   (nicht mehr „Cond°"/„hPa") — in beiden Mail-Typen gleich.
   - Test: echter Staging-Versand je Mail-Typ mit aktiver Taupunkt-/
-    Luftdruck-Spalte, IMAP-Abruf, Header-String geprüft; Tour-Golden-Dateien
+    Luftdruck-Spalte, IMAP-Abruf, Header-String geprüft; Trip-Golden-Dateien
     auf Betroffenheit geprüft und bei Bedarf mitgezogen.
 
 - **AC-3:** Given ein Nutzer öffnet die Übersichtstabelle einer
@@ -323,11 +323,11 @@ Regel „Form folgt Platz", nicht widersprüchlich.
   Lieferung.
 
 - **AC-7 (Konfiguration zeigt alle drei Formen):** Given ein Nutzer öffnet
-  den Reiter „Wetter-Metriken" — im Touren-Editor oder in einer der drei
+  den Reiter „Wetter-Metriken" — im Trips-Editor oder in einer der drei
   Compare-Flächen (Übersicht, Stundenverlauf, Ausblick) / When er eine
   Wettergröße betrachtet / Then findet er zu dieser Größe alle drei
   Namensformen (ausgeschriebener deutscher Name, englische Kurzform,
-  SMS-Kürzel) — nicht nur im Touren-Editor wie bisher.
+  SMS-Kürzel) — nicht nur im Trips-Editor wie bisher.
   - Test: Struktur-/Component-Test je der vier Editoren, der das
     Vorhandensein aller drei Werte an mindestens einer Zeile nachweist.
 
@@ -354,10 +354,10 @@ wird — Reihenfolge beachten:
    #1329), IMAP-Abruf.
 3. `.claude/hooks/email_spec_validator.py` gegen die zugestellte Mail —
    Exit 0 ist Pflichtbedingung für „E2E bestanden" (AC-6).
-4. Bei Punkt 1 (Dew/Press) zusätzlich prüfen, ob eine Tour-Mail mit aktiver
+4. Bei Punkt 1 (Dew/Press) zusätzlich prüfen, ob eine Trip-Mail mit aktiver
    Taupunkt- oder Luftdruck-Spalte betroffen ist — falls ja, eigener
-   Testversand über den Tour-Pfad (`briefing_mail_validator.py`) und
-   Abgleich der Tour-Golden-Dateien.
+   Testversand über den Trip-Pfad (`briefing_mail_validator.py`) und
+   Abgleich der Trip-Golden-Dateien.
 5. Zahl-für-Zahl-/Text-für-Text-Vergleich der Übersichtszeilen zwischen
    HTML- und Klartext-Teil derselben Mail (AC-3) — nicht nur „Feld hat sich
    geändert".
@@ -410,12 +410,12 @@ Kern-Schicht (deterministisch), Testdateien nach Verhalten benannt:
 | AC | Testfall |
 |----|----------|
 | AC-1 | bestehende Stundentabellen-Golden-/Struktur-Tests bleiben grün (außer Dew/Press) |
-| AC-2 | Staging-Versand (Compare + Tour) + IMAP + Header-Vergleich, s. „Nachweisführung" |
+| AC-2 | Staging-Versand (Compare + Trip) + IMAP + Header-Vergleich, s. „Nachweisführung" |
 | AC-3 | Staging-Versand + IMAP + HTML-vs-Klartext-Vergleich der Übersichtszeilen |
 | AC-4 | Fixture-Test: Temperatur max+min gleichzeitig sichtbar, Label-Ausgabe geprüft |
 | AC-5 | bestehende CAPE-Assertions unverändert grün |
 | AC-6 | zwei Validator-Läufe: Positivfall (neue Form, Exit 0), Negativfall (alte/erfundene Form, Exit ≠0) |
-| AC-7 | Struktur-/Component-Test je der vier Editoren (Tour, Compare-Übersicht, -Stundenverlauf, -Ausblick) |
+| AC-7 | Struktur-/Component-Test je der vier Editoren (Trip, Compare-Übersicht, -Stundenverlauf, -Ausblick) |
 | AC-8 | Register-Herkunfts-Test (Manipulation des Registerwerts schlägt sichtbar durch) |
 
 **Renderer-Commit-Gate (#811):** greift, sobald `compare_html.py` gestaged

@@ -203,7 +203,7 @@ lesen alle aus demselben `TimelineResult`, das `_punkte()` bereits gefenstert li
   abgesetzt werden, Then ist die Fensterung in beiden Kanälen identisch wirksam.
   - Test: `tests/tdd/test_adhoc_tageswert_ab_anfragezeit.py`
 
-- **AC-12:** Given eine Tour in einer weit von UTC entfernten Ortszeitzone (Neuseeland, wie in
+- **AC-12:** Given eine Trip in einer weit von UTC entfernten Ortszeitzone (Neuseeland, wie in
   `fix_1795` AC-4), When ein Ad-hoc-Abruf zu einem Ortszeitpunkt erfolgt, Then bleibt die
   Zuordnung „heute"/„morgen" korrekt und die Fensterung schneidet nicht in den falschen
   Ortstag.

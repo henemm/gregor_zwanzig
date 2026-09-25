@@ -1,5 +1,5 @@
 // Feature #1435 Etappe E3a — geteilte Drei-Zustands-Namensauflösung für den
-// neuen Wetter-Metriken-Block im Übersichts-Reiter einer Tour.
+// neuen Wetter-Metriken-Block im Übersichts-Reiter einer Trip.
 // Spec: docs/specs/modules/feat_1435_e3a_uebersicht_wetter_block.md
 // Implementation Details Punkt 1, Acceptance Criteria AC-1/AC-2/AC-3/AC-8/AC-11.
 //

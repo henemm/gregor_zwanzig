@@ -31,7 +31,7 @@ from services.trip_command_processor import (
     CommandResult, InboundMessage, TripCommandProcessor,
 )
 
-# Fixe Tour-Daten — bewusst Monat 08 / Werte ohne Datums-Kollision.
+# Fixe Trip-Daten — bewusst Monat 08 / Werte ohne Datums-Kollision.
 TODAY = date(2026, 8, 20)
 TOMORROW = date(2026, 8, 21)
 RECEIVED_AT = datetime(2026, 8, 20, 9, 0, tzinfo=timezone.utc)
