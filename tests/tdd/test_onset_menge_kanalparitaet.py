@@ -38,6 +38,7 @@ from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.project import to_multi_location_onset_alert_message
 from output.renderers.alert.render import render_sms
 from services.notification_service import NotificationService, RadarAlertRequest
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 from services.radar_service import NowcastResult
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
@@ -234,7 +235,7 @@ def test_ac7_sms_premium_sms_und_telegram_kurzstil_zeigen_dieselbe_menge(
     clean_uid(uid)
     try:
         settings = _drei_kanal_settings(seven_io_stub.port)
-        svc = NotificationService(settings, uid)
+        svc = NotificationService(settings, nutzer_mit_tier(uid, "premium"))
 
         svc.send_radar_alert(
             trip=make_trip("trip-2046-ac7"),

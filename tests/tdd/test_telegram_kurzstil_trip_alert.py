@@ -51,6 +51,7 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 from services.notification_service import NotificationService
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 from services.official_alerts.models import OfficialAlert
 from services.trip_alert import TripAlertService
 
@@ -302,7 +303,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-alert-c")
+            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-1260-alert-c"))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: send_deviation_alert kennt telegram_style noch nicht → TypeError.
@@ -341,7 +342,7 @@ class TestAC4OfficialAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-off-a")
+            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-1260-off-a"))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: send_official_alert kennt telegram_style noch nicht → TypeError.
@@ -512,7 +513,7 @@ class TestIssue2018AddendumReachesKurzstilTelegram:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-2018-b5")
+            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-2018-b5"))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: `RadarAlertRequest` kennt `addendum_reference` nicht.
@@ -566,7 +567,7 @@ class TestIssue2018AddendumReachesKurzstilTelegram:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-2018-b10")
+            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-2018-b10"))
 
             trip = _make_trip("kurzform", send_sms=True)
             svc.send_radar_alert(

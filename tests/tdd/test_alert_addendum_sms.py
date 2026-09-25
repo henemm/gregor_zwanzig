@@ -50,6 +50,7 @@ from output.renderers.alert.render import (
     render_email, render_sms, render_subject, render_telegram,
 )
 from services.notification_service import NotificationService, RadarAlertRequest
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 from utils.timezone import local_fmt
 
 from tests.helpers.nowcast_gate_fixtures import (
@@ -450,7 +451,7 @@ def test_ac_b6_premium_sms_traegt_dasselbe_praefix_wie_die_sms(seven_io_stub):
     RED heute: ``RadarAlertRequest`` kennt ``addendum_reference`` nicht
     (``TypeError``)."""
     settings = _sms_and_premium_settings(seven_io_stub.port)
-    svc = NotificationService(settings, fresh_uid("2018-b6"))
+    svc = NotificationService(settings, nutzer_mit_tier(fresh_uid("2018-b6"), "premium"))
     trip = make_trip("trip-2018-b6")
 
     svc.send_radar_alert(

@@ -131,6 +131,24 @@ def check_and_reserve(user_id: str, kind: str, purpose: str, now: datetime) -> N
     -- das Gate wirft NIE etwas ausser `ChannelBlockedError` bei einer
     tatsaechlichen Sperre.
     """
+    try:
+        cap = _cap(user_id, kind, purpose)
+    except Exception as e:  # noqa: BLE001 — Adversary F009 fail-CLOSED
+        # Ein nicht ermittelbarer Tarif ist PROJEKTWEIT fail-closed
+        # (Praezedenz `premium_sms_allowed`-Docstring, Issue #1676) --
+        # anders als operative Speicherfehler (F007, bewusst
+        # fail-open: Sperrdatei/Schreiben) ist eine kaputte/fremde
+        # Tarifangabe kein Infrastruktur-, sondern ein
+        # Rechte-Problem. Im Zweifel SPERREN (cap=0) wie bei free.
+        logger.warning(
+            "SMS-Tageslimit: Tier-/Cap-Ermittlung fuer %s fehlgeschlagen "
+            "(%s) -- fail-closed, Kontingent gilt als erschoepft",
+            user_id, e,
+        )
+        cap = 0
+    if cap <= 0:
+        # Kein Kontingent (free/fail-closed): sperren OHNE mkdir/Sperrdatei.
+        raise ChannelBlockedError(kind, "SMS-Tageslimit erreicht", reason_code=REASON_CODE)
     path = _path(user_id)
     lock_path = str(path) + _LOCK_SUFFIX
     try:
@@ -157,24 +175,6 @@ def check_and_reserve(user_id: str, kind: str, purpose: str, now: datetime) -> N
             if data.get("date") != today:
                 data = {"date": today, "sms": 0, "premium_sms": 0}
             current = _zaehlerwert(data, kind)
-            try:
-                cap = _cap(user_id, kind, purpose)
-            except Exception as e:  # noqa: BLE001 — Adversary F009 fail-CLOSED
-                # Ein nicht ermittelbarer Tarif ist PROJEKTWEIT fail-closed
-                # (Praezedenz `premium_sms_allowed`-Docstring, Issue #1676) --
-                # anders als operative Speicherfehler (F007, bewusst
-                # fail-open: Sperrdatei/Schreiben) ist eine kaputte/fremde
-                # Tarifangabe kein Infrastruktur-, sondern ein
-                # Rechte-Problem. Im Zweifel SPERREN (cap=0), nicht
-                # durchlassen -- der `if current >= cap`-Zweig unten wirft
-                # dann regulaer `ChannelBlockedError`, wie bei einem
-                # echten free-Nutzer.
-                logger.warning(
-                    "SMS-Tageslimit: Tier-/Cap-Ermittlung fuer %s fehlgeschlagen "
-                    "(%s) -- fail-closed, Kontingent gilt als erschoepft",
-                    user_id, e,
-                )
-                cap = 0
             if current >= cap:
                 raise ChannelBlockedError(
                     kind, "SMS-Tageslimit erreicht", reason_code=REASON_CODE,

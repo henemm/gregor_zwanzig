@@ -43,6 +43,7 @@ from datetime import datetime, timezone
 import output.channels.telegram as tg_module
 from app.config import Settings
 from services.notification_service import NotificationService
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 from services.official_alerts.models import OfficialAlert
 
 
@@ -191,7 +192,7 @@ class TestAC5CompareOfficialKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-cmp-off-a")
+            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-1260-cmp-off-a"))
 
             # RED: send_multi_location_official_alert kennt telegram_style noch
             # nicht → TypeError.

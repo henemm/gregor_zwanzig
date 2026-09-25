@@ -1504,3 +1504,45 @@ def test_f009b_werfender_tier_lookup_ist_fail_closed(mitschrift):
     assert mitschrift.anzahl("telegram") >= 1, (
         "F009b: Telegram muss trotz werfendem Tier-Lookup zugestellt werden"
     )
+
+
+@pytest.mark.parametrize("tier,kind", [("free", "sms"), ("free", "premium_sms"), ("standard", "premium_sms")])
+def test_kein_kontingent_sperrt_ohne_dateisystem_eingriff(tier, kind):
+    """Fix-Loop #2412 (CI rot, #2226): ein Nutzer OHNE Kontingent (Cap 0) wird
+    gesperrt, BEVOR `check_and_reserve` irgendetwas anlegt -- weder
+    Zaehlerdatei noch Sperrdatei. Sonst hinterliess jeder Dispatch fuer einen
+    Nutzer ohne Tarif eine `.lock`-Datei (im echten `data/users`-Baum, wenn
+    die Datenwurzel nicht isoliert ist)."""
+    from output.channels.base import ChannelBlockedError
+    from services import sms_daily_limit
+
+    uid = _kennung(f"cap0-{tier}")
+    _nutzer_anlegen(uid, tier)
+    vorher = sorted(p.name for p in get_data_dir(uid).iterdir())
+    with pytest.raises(ChannelBlockedError) as exc:
+        sms_daily_limit.check_and_reserve(uid, kind, "alert", datetime.now(timezone.utc))
+    assert exc.value.reason_code == sms_daily_limit.REASON_CODE
+    nachher = sorted(p.name for p in get_data_dir(uid).iterdir())
+    assert nachher == vorher == ["user.json"], (
+        f"Cap 0 darf keine Datei anlegen, vorher {vorher}, nachher {nachher}"
+    )
+
+
+@pytest.mark.parametrize("kind", ["sms", "premium_sms"])
+def test_kein_kontingent_ohne_nutzerordner_legt_keinen_ordner_an(kind):
+    """Adversary F010 (#2412): brandneue Kennung OHNE Nutzerordner (kein
+    user.json => Tarif free => Cap 0). `check_and_reserve` muss sperren,
+    OHNE den Nutzerordner anzulegen -- ein vorgezogenes
+    `_path(user_id).parent.mkdir(...)` bliebe sonst unbemerkt, weil der
+    Schwester-Test den Ordner vorher selbst anlegt."""
+    from output.channels.base import ChannelBlockedError
+    from services import sms_daily_limit
+
+    uid = _kennung(f"ohneordner-{kind}")
+    assert not get_data_dir(uid).exists(), "Vorbedingung: Nutzerordner fehlt"
+    with pytest.raises(ChannelBlockedError) as exc:
+        sms_daily_limit.check_and_reserve(uid, kind, "alert", datetime.now(timezone.utc))
+    assert exc.value.reason_code == sms_daily_limit.REASON_CODE
+    assert not get_data_dir(uid).exists(), (
+        f"Cap 0 darf den Nutzerordner nicht anlegen: {get_data_dir(uid)}"
+    )
