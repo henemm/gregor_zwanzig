@@ -145,6 +145,7 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | `<MField>` | `label`, `sub`, Children | Field-Wrapper Mobile. |
 | `<MBtn>` | `variant`, `size: "md" \| "lg" \| "xl"`, `block`, `icon`, `onClick` | Mobile-Button mit Min-Height 48 (lg). |
 | `<MTab>` | `items`, `active`, `onChange`, `scrollable: boolean` | Tab-Bar Mobile (scrollbar wenn nötig). |
+| `<StageCardM>` | `stage`, `index`, `risk?` | Vertikale Etappen-Karte der mobilen Listen-Ansicht (Etappen-Tab, Listen-only nach PO-Entscheid F5 2026-09-22). Reine Präsentation: DragHandle + SortableList verdrahtet der Aufrufer (ADR-0024). Physisch `mobile/StageCardM.svelte`. |
 | `<ScreenScroll>` | `padding`, `bg`, Children | Scrollbarer Mobile-Content-Bereich über der BottomNav. |
 
 ---
@@ -222,6 +223,7 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.4 | 2026-09-23 | `StageCardM` ergänzt (Mobile Usability Paket 1, Listen-only Etappen-Tab; Spec `mobile_stages_tab_listen_only`) |
 | v1.3 | 2026-09-19 | Mobile-Shell S2: `TopAppBar`/Hamburger-`Drawer` raus, `BottomNav` mit Konto-Kreis, `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, `Sheet snap="auto"` |
 | v1.2 | 2026-06-02 | MapControl, ProfileSheetEmbedded, EditorProfileSVG, EtappenStrip aus Wegpunkt-Editor-Handoff (#503) ergänzt |
 | v1.1 | 2026-05-31 | Molecules-Sektion (Epic #368/372) + ConfirmDialog (Issue #478) hinzugefügt; bestehende 10 Molecules dokumentiert |

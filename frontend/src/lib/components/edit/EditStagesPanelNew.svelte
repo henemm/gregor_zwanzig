@@ -33,6 +33,14 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
+	// Mobile Usability Paket 1 (Spec mobile_stages_tab_listen_only, Iteration 1):
+	// PO-Entscheid F5 (2026-09-22, Variante B) — Karte + Höhenprofil entfallen
+	// auf Mobile ersatzlos. Der Mobile-Zweig rendert Desktop-Hinweis + Liste.
+	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
+	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
+	import StageCardM from '$lib/components/mobile/StageCardM.svelte';
+	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
 
 	interface Props {
 		stages: Stage[];
@@ -56,6 +64,36 @@
 	let mobileSnap = $state<'collapsed' | 'peek' | 'half' | 'full'>('half');
 	let mobileSizeKey = $state(0);
 	let stageSheetOpen = $state(false);
+
+	// Mobile Usability Paket 1 — Viewport-Weiche für den Listen-only-Zweig.
+	// Muster: TripTabs.svelte (matchMedia 899px). Desktop-Zweig unverändert.
+	let isMobileViewport = $state(false);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		isMobileViewport = mq.matches;
+		const onChange = (e: MediaQueryListEvent) => { isMobileViewport = e.matches; };
+		mq.addEventListener('change', onChange);
+		return () => mq.removeEventListener('change', onChange);
+	});
+
+	// Risiko-Ampel je Etappe für die StageCardM (lazy, fail-soft) — gleiche
+	// Datenquelle wie HubOverview/TripStageRow (#1223), kein eigener Endpoint.
+	let stageRisk: Record<string, StageRisk> = $state({});
+	$effect(() => {
+		if (!tripId) return;
+		const id = tripId;
+		fetchStageRisk(id).then((m) => {
+			if (id === tripId) stageRisk = m;
+		});
+	});
+
+	// SortableList (ADR-0024) meldet ID-Reihenfolgen; der Streifen arbeitet
+	// mit Stage[]. Adapter — die Sortier-Logik selbst bleibt unverändert.
+	function handleMobileReorder(newOrder: string[]): void {
+		const byId = new Map(stages.map((s) => [s.id, s]));
+		const reordered = newOrder.map((id) => byId.get(id)).filter((s): s is Stage => !!s);
+		if (reordered.length === stages.length) handleStagesReorder(reordered);
+	}
 
 	// Issue #963 — Map-First-Reorder: `.mobile-editor` sitzt jetzt (per CSS `order`,
 	// s. Style-Block) direkt unter der Tab-Leiste. Seine Höhe wird zur Laufzeit
@@ -724,6 +762,40 @@
 {/snippet}
 
 <div data-testid="edit-stages-panel" class="flex flex-col gap-4">
+	{#if isMobileViewport}
+		<!-- Mobile Usability Paket 1 (PO-Entscheid F5, 2026-09-22): Listen-only.
+		     Karte/Profil/Sheet entfallen ersatzlos; Hinweis + vertikale Liste. -->
+		<div class="mobile-stages" data-testid="mobile-stages-list">
+			<div class="desktop-hint" data-testid="desktop-hint">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+				<p><strong>Karte &amp; Höhenprofil</strong> sind am Desktop verfügbar. Das Gesamt-Höhenprofil bleibt im Übersichts-Tab.</p>
+			</div>
+			<div class="mobile-list-head">
+				<span class="mobile-list-eyebrow">{stages.length} Etappen · ziehen zum Sortieren</span>
+				<button type="button" class="mobile-add-btn" data-testid="mobile-add-stage" onclick={handleAddStage} disabled={cascadeBusy}>
+					+ Etappe
+				</button>
+			</div>
+			<SortableList
+				items={stages.map((s) => s.id)}
+				onDndReorder={handleMobileReorder}
+				ariaLabel="Etappen, Reihenfolge"
+				itemLabel={(id, i) => `${i + 1}. ${stages.find((s) => s.id === id)?.name ?? id}`}
+				zoneClass="stage-cardm-zone"
+				flipDurationMs={150}
+			>
+				{#snippet row(id: string, i: number)}
+					{@const stage = stages.find((s) => s.id === id)}
+					{#if stage}
+						<div class="stage-cardm-row" data-testid="stage-cardm-row">
+							<DragHandle />
+							<StageCardM {stage} index={i} risk={stageRisk[stage.id]} />
+						</div>
+					{/if}
+				{/snippet}
+			</SortableList>
+		</div>
+	{:else}
 	<!-- EtappenStrip (volle Breite, eigene Navigations-Achse) -->
 	<EtappenStrip
 		{stages}
@@ -918,6 +990,7 @@
 			{#if saveSuccess}<span class="save-ok">Gespeichert ✓</span>{/if}
 			{#if saveError}<span class="save-err">{saveError}</span>{/if}
 		</div>
+	{/if}
 	{/if}
 </div>
 
@@ -1138,5 +1211,77 @@
 		line-height: 1;
 		color: var(--g-ink-3);
 		padding: 0 4px;
+	}
+
+	/* ── Mobile Usability Paket 1 — Listen-only-Mobile-Zweig ──
+	   Desktop-Hinweis bewusst NEUTRAL (--g-card-alt/--g-rule, kein Accent):
+	   reine Info ohne Call-to-Action (Charter §6, AP-015), statisch. */
+	.mobile-stages {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-3);
+		padding: var(--g-s-3) var(--g-s-4) var(--g-s-4);
+	}
+	.desktop-hint {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--g-s-3);
+		padding: var(--g-s-3);
+		background: var(--g-card-alt);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-3);
+		color: var(--g-ink-3);
+		font-size: var(--g-text-sm);
+		line-height: 1.45;
+	}
+	.desktop-hint p {
+		margin: 0;
+		color: var(--g-ink-2);
+	}
+	.mobile-list-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--g-s-3);
+	}
+	.mobile-list-eyebrow {
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
+		font-weight: 600;
+		letter-spacing: var(--g-track-caps);
+		text-transform: uppercase;
+		color: var(--g-ink-muted);
+	}
+	.mobile-add-btn {
+		min-height: 44px;
+		padding: 0 var(--g-s-4);
+		background: transparent;
+		border: 1px dashed var(--g-rule);
+		border-radius: var(--g-r-3);
+		color: var(--g-ink-3);
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
+		font-weight: 600;
+		letter-spacing: var(--g-track-wide);
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+	.mobile-add-btn:hover {
+		border-color: var(--g-accent);
+		color: var(--g-accent);
+	}
+	.stage-cardm-row {
+		display: flex;
+		align-items: stretch;
+		gap: var(--g-s-2);
+	}
+	.stage-cardm-row :global(.drag-handle) {
+		align-self: stretch;
+		min-width: 44px;
+		min-height: 44px;
+	}
+	.stage-cardm-row :global(.stage-cardm) {
+		flex: 1;
+		min-width: 0;
 	}
 </style>

@@ -175,7 +175,9 @@ async function resolveDetailRoutes(
 	page: import('@playwright/test').Page,
 	playwright: import('@playwright/test').Playwright
 ): Promise<{ trip: string | null; compare: string | null }> {
-	const base = 'https://staging.gregor20.henemm.com';
+	// GZ_AUDIT_BASE erlaubt einen lokalen Lauf gegen den Preview-Server
+	// (http://localhost:4173) — guards (prodUrlGuard) greifen unverändert.
+	const base = process.env.GZ_AUDIT_BASE ?? 'https://staging.gregor20.henemm.com';
 	const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
 	const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
 	let trip: string | null = null;
@@ -185,7 +187,7 @@ async function resolveDetailRoutes(
 			baseURL: base,
 			ignoreHTTPSErrors: true,
 			httpCredentials: { username: user, password: pass },
-			storageState: 'playwright/.auth/staging-mobile-usability.json',
+			storageState: process.env.GZ_AUDIT_STORAGE ?? 'playwright/.auth/staging-mobile-usability.json',
 		});
 		const tripsRes = await ctx.get('/api/trips');
 		if (tripsRes.ok()) {
