@@ -120,7 +120,8 @@ describe('F002: load()-Rückgabeobjekt enthält NIEMALS ein Code-Klartext-Feld',
 		'comparePresets',
 		'locations',
 		'metricPresets',
-		'premiumSmsLinkCodeExists'
+		'premiumSmsLinkCodeExists',
+		'smsDailyUsage'
 	].sort();
 
 	let allowlistFetch: typeof globalThis.fetch;

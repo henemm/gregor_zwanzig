@@ -115,8 +115,11 @@ Die folgenden Komponenten leben im Python-Core:
      zwei UTC-getaktete Tageszähler (`sms`, `premium_sms`) mit fester Alarm-Reserve, geprüft/
      reserviert an allen 12 Sendestellen in `notification_service.py`. Gesperrte Versuche
      landen mit `reason_code="sms_daily_limit_exceeded"` in `NotificationResult.blocked_channels`/
-     `blocked_reason_codes`; E-Mail/Telegram bleiben unberührt. Sichtbarkeit im Konto (S4b) ist
-     noch offen. Details: `docs/specs/modules/sms_daily_limit.md`.
+     `blocked_reason_codes`; E-Mail/Telegram bleiben unberührt. Sichtbarkeit im Konto (S4b, seit
+     Issue #2412, 2026-09-25) zeigt den Zählerstand je Kanal auf `/account` ("3 von 10") über
+     `GET /api/auth/sms-daily-usage` — reiner Lese-/Anzeige-Pfad, S4a bleibt alleinige
+     Durchsetzungsinstanz. Details: `docs/specs/modules/sms_daily_limit.md`,
+     `docs/specs/modules/sms_daily_usage_anzeige.md`.
 
 ### Datenfluss (Produktiv)
 

@@ -1,7 +1,19 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-09-22 (Issue #1895 Scheibe S2, `feat-1895-s2-kanal-leser` —
+**Updated:** 2026-09-25 (Issue #2412, Sammel-Issue #2153 Scheibe S4b,
+`feat-2153-s4b-sms-kontingent-anzeige` — macht den von S4a (Commit `fc6afefd`) durchgesetzten
+täglichen SMS-/Premium-SMS-Zählerstand erstmals für den Nutzer sichtbar. Neuer interner
+Lesepfad: Python-Core `GET /api/_internal/sms/daily-usage` (`api/routers/internal.py`, ruft
+neue Funktion `sms_daily_limit.get_daily_usage(user_id, now)` auf) hinter neuer Go-Proxy-Route
+`GET /api/auth/sms-daily-usage` (`internal/handler/sms_daily_usage.go`, `user_id` strikt aus
+Auth-Kontext, Fail-Soft `204` statt Fehler bei nicht erreichbarem Python-Core). `/account`
+zeigt daraufhin je Kanal (SMS/Premium-SMS) den Stand „3 von 10", Zeile bleibt bei `limit <= 0`
+ausgeblendet (`shouldShowSmsUsageRow`, `frontend/src/lib/utils/smsDailyUsageHelpers.ts`).
+Reiner Lese-/Anzeige-Pfad ohne neue Zähler-Semantik — S4a bleibt alleinige
+Durchsetzungsinstanz, kein neues ADR. Details Section 0.5 Endpunkt-Inventar, Spec
+`docs/specs/modules/sms_daily_usage_anzeige.md`);
+2026-09-22 (Issue #1895 Scheibe S2, `feat-1895-s2-kanal-leser` —
 `alert_metric_channels` (S1, s. Abschnitt unten) bekommt seinen ersten Leser: Δ-Änderungsalarme
 lösen den Versand-Kanalsatz jetzt je AUSGELÖSTER Metrik auf (roher Summary-Key → Katalog-
 `metric_id` über `metric_catalog.metric_and_aggregation_for_field`, Wählbarkeits-Tie-Break),
@@ -185,6 +197,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/profile` | GET, PUT |
 | `/api/auth/register` | POST |
 | `/api/auth/reset-password` | POST |
+| `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
 | `/api/auth/sms/resend` | POST (Issue #2406 — stellt den Bestätigungscode für die ausstehende Nummer erneut zu; Mengenbremse 3/h je Nutzer, sonst 429 mit `Retry-After`) |
 | `/api/auth/sms/staging-code` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404; liefert den Klartext-Code der angemeldeten Sitzung, ignoriert den Body) |
 | `/api/auth/sms/verify` | POST (Issue #2406 — löst den Code ein; erst danach wandert die Nummer nach `sms_to`) |

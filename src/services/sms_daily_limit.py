@@ -83,6 +83,14 @@ def _zaehlerwert(data: dict, kind: str) -> int:
         return 0
 
 
+def _tagesstand(data: dict, today: str) -> dict:
+    """Fremdes/fehlendes Datum gilt als frischer Nullstand -- EINE Regel fuer
+    Schreib- (`check_and_reserve`) und Lesepfad (`get_daily_usage`)."""
+    if data.get("date") != today:
+        return {"date": today, "sms": 0, "premium_sms": 0}
+    return data
+
+
 def _write(path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=".sms_daily_count_", suffix=".tmp")
@@ -171,9 +179,7 @@ def check_and_reserve(user_id: str, kind: str, purpose: str, now: datetime) -> N
             return
         try:
             today = _today(now)
-            data = _load(path)
-            if data.get("date") != today:
-                data = {"date": today, "sms": 0, "premium_sms": 0}
+            data = _tagesstand(_load(path), today)
             current = _zaehlerwert(data, kind)
             if current >= cap:
                 raise ChannelBlockedError(
@@ -251,3 +257,34 @@ def release_reservation(user_id: str, kind: str, now: datetime) -> None:
             fcntl.flock(fd, fcntl.LOCK_UN)
     finally:
         os.close(fd)
+
+
+def get_daily_usage(user_id: str, now: datetime) -> dict:
+    """Tagesstand fuer die Konto-Anzeige (S4b, Issue #2412). Rein lesend, KEIN
+    Lock: `_write` ersetzt atomar, ein Leser sieht nie einen Teilzustand.
+    Wirft nie -- kaputte Zaehlerdatei => used=0, kaputter Tarif => limit=0."""
+    data = _tagesstand(_load(_path(user_id)), _today(now))
+
+    def _limit(fn, kind: str) -> int:
+        try:
+            return fn(user_id)
+        except Exception as e:  # noqa: BLE001 -- Anzeige sperrt nichts, daher fail-open
+            logger.warning(
+                "SMS-Tageskontingent-Anzeige: Tier-Ermittlung (%s) fuer %s "
+                "fehlgeschlagen (%s) -- Limit als 0 angezeigt", kind, user_id, e,
+            )
+            return 0
+
+    return {
+        "sms": {
+            "used": _zaehlerwert(data, "sms"),
+            "limit": _limit(user_tier.daily_sms_limit, "sms"),
+            "reserve": user_tier.SMS_ALARM_RESERVE,
+        },
+        "premium_sms": {
+            "used": _zaehlerwert(data, "premium_sms"),
+            "limit": _limit(user_tier.daily_premium_sms_limit, "premium_sms"),
+            "reserve": user_tier.PREMIUM_SMS_ALARM_RESERVE,
+            "reply_overshoot": user_tier.PREMIUM_SMS_REPLY_OVERSHOOT,
+        },
+    }

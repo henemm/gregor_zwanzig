@@ -92,6 +92,8 @@ func New(deps Deps) chi.Router {
 	// NICHT in der Public-Allowlist von AuthMiddleware.
 	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
 	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
+	// Issue #2412 S4b — SMS-Tageskontingent-Anzeige, anmeldepflichtig.
+	r.Get("/api/auth/sms-daily-usage", handler.GetSmsDailyUsageHandler(*deps.Config))
 	// Issue #2406 — EIGENES Kontingent fuer SMS-Bestaetigungscodes (3/h je
 	// Nutzer und je Zielnummer, Retry-After 1200). Bewusst eine zweite,
 	// eigenstaendige Instanz: SMS kostet Geld, und ein Angriff auf den einen

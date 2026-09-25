@@ -23,6 +23,7 @@
 		resolveDialogAction,
 		errorMessageFrom
 	} from '$lib/utils/premiumSmsLinkCodeHelpers';
+	import { shouldShowSmsUsageRow } from '$lib/utils/smsDailyUsageHelpers';
 	let { data } = $props();
 
 	let displayName = $state(data.profile?.display_name ?? '');
@@ -1077,6 +1078,42 @@
 						<a href="/locations" class="font-medium hover:underline">{data.locations.length}</a>
 					</div>
 				</div>
+
+				<!-- SMS-/Premium-SMS-Tageskontingent (Issue #2412 S4b) -->
+				{#if data.smsDailyUsage && (shouldShowSmsUsageRow(data.smsDailyUsage.sms?.limit) || shouldShowSmsUsageRow(data.smsDailyUsage.premium_sms?.limit))}
+					<div data-testid="sms-daily-usage" class="mb-4">
+						<p class="text-sm font-medium mb-2">SMS-Kontingent (heute)</p>
+						{#if shouldShowSmsUsageRow(data.smsDailyUsage.sms?.limit)}
+							<div class="flex items-center justify-between text-sm">
+								<span>SMS</span>
+								<span class="font-medium">
+									{data.smsDailyUsage.sms.used} von {data.smsDailyUsage.sms.limit}
+								</span>
+							</div>
+							<p class="text-xs text-muted-foreground mb-2">
+								davon max. {data.smsDailyUsage.sms.limit - data.smsDailyUsage.sms.reserve} Briefings,
+								{data.smsDailyUsage.sms.reserve} Alarm-Reserve
+							</p>
+						{/if}
+						{#if shouldShowSmsUsageRow(data.smsDailyUsage.premium_sms?.limit)}
+							<div class="flex items-center justify-between text-sm">
+								<span>Premium-SMS</span>
+								<span class="font-medium">
+									{#if data.smsDailyUsage.premium_sms.used > data.smsDailyUsage.premium_sms.limit}
+										{data.smsDailyUsage.premium_sms.limit} von {data.smsDailyUsage.premium_sms.limit}
+										(+{data.smsDailyUsage.premium_sms.used - data.smsDailyUsage.premium_sms.limit} Antworten)
+									{:else}
+										{data.smsDailyUsage.premium_sms.used} von {data.smsDailyUsage.premium_sms.limit}
+									{/if}
+								</span>
+							</div>
+							<p class="text-xs text-muted-foreground">
+								davon max. {data.smsDailyUsage.premium_sms.limit - data.smsDailyUsage.premium_sms.reserve} Briefings,
+								{data.smsDailyUsage.premium_sms.reserve} Alarm-Reserve
+							</p>
+						{/if}
+					</div>
+				{/if}
 
 				<!-- Benachrichtigungskanäle -->
 				<div data-testid="channels" class="mb-4">

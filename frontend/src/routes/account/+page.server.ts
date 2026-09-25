@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const session = cookies.get('gz_session');
 	const h = { headers: { Cookie: `gz_session=${session}` } };
 
-	const [profile, scheduler, health, apiTemplates, trips, comparePresets, locations, presets, linkCodeResult] =
+	const [profile, scheduler, health, apiTemplates, trips, comparePresets, locations, presets, linkCodeResult, smsDailyUsage] =
 		await Promise.all([
 			fetch(`${API()}/api/auth/profile`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 			fetch(`${API()}/api/scheduler/status`, h).then(r => r.ok ? r.json() : null).catch(() => null),
@@ -33,11 +33,13 @@ export const load: PageServerLoad = async ({ cookies }) => {
 			// Issue #2154 Scheibe B (AC-10): fail-closed — null (Netzfehler/Non-200)
 			// normalisiert deriveLinkCodeExists() auf true.
 			fetch(`${API()}/api/auth/premium-sms-link-code`, h).then(r => r.ok ? r.json() : null).catch(() => null),
+			// Issue #2412 S4b: Fail-Soft — 204 ohne Rumpf laesst r.json() werfen, .catch liefert null.
+			fetch(`${API()}/api/auth/sms-daily-usage`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 		]);
 
 	const templates = Array.isArray(apiTemplates) ? apiTemplates : FALLBACK_TEMPLATES;
 	const metricPresets = Array.isArray(presets) ? presets : [];
 	const premiumSmsLinkCodeExists = deriveLinkCodeExists(linkCodeResult);
 
-	return { profile, scheduler, health, templates, trips, comparePresets, locations, metricPresets, premiumSmsLinkCodeExists };
+	return { profile, scheduler, health, templates, trips, comparePresets, locations, metricPresets, premiumSmsLinkCodeExists, smsDailyUsage };
 };
