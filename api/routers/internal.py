@@ -40,6 +40,7 @@ from providers.base import get_provider
 # DAILY_BUDGET trifft nur dann dieselbe Klasse, die dieser Endpunkt benutzt.
 from services.forecast_budget import ForecastBudgetGate
 from services.stage_weather import compute_stage_weather
+from services import sms_daily_limit
 
 router = APIRouter()
 
@@ -197,3 +198,10 @@ def send_sms_verification_code(req: SmsVerificationCodeRequest):
         # Der Code bleibt in Go gueltig — der Nutzer kann "erneut senden".
         return JSONResponse(status_code=502, content={"error": "sms_send_failed"})
     return {"status": "sent"}
+
+
+@router.get("/api/_internal/sms/daily-usage")
+def sms_daily_usage(user_id: str = Query(...)):
+    """Tageskontingent-Anzeige fuer /account (S4b, Issue #2412). `user_id` ohne
+    Default -- ein Ersatzwert wie "default" zeigte ein fremdes Konto."""
+    return sms_daily_limit.get_daily_usage(user_id, datetime.now(timezone.utc))
