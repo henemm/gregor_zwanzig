@@ -309,7 +309,7 @@ bekannten Grenzen (kein interprozeduraler Fluss, keine Zweig-Analyse):
 
 ## HERKUNFT-Zweig-Ratsche (#2276 Scheibe S6a, seit 2026-09-20)
 
-**Befristetes Messwerkzeug, kein Dauer-Gate.** `frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts`
+**Ursprünglich als befristetes Messwerkzeug angelegt, seit Abschluss von S6h (2026-09-25) Dauer-Gate** für die 14 final akzeptierten HERKUNFT-Einträge (siehe Prüfdatum-Absatz unten). `frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts`
 hält eine **eingefrorene** `Datei:Zeile`-Liste (47 Einträge — unverändert seit S6d, auch nach
 S6e; der Spec-Anhang misst noch 69 auf dem Vor-S6a-Stand `73f504c9`, eine davon,
 `WeatherMetricsTab.svelte:577`, ist die per S6a AC-1 entfernte tote Bedingung,
@@ -350,13 +350,22 @@ HERKUNFT-Zeilen entfernt — die AC-2-Endbilanz der verbleibenden Einträge (u. 
 Folgescheibe **S6h**, die #2276 schließt (`rework_2276_s6g_wetter_metriken_wertprops.md`,
 Abschnitt „Nicht in dieser Scheibe").
 
-**Regel-Budget: Prüfdatum 2026-12-19.** Kein Ersatz für eine bestehende Regel — ursprünglich war
-sie von Anfang an auf Abschaltung nach S6f angelegt; nach dem Re-Cut in S6g verschiebt sich das
-Ende auf S6h. Mit Abschluss von S6h sollen alle HERKUNFT-Zeilen aus der
-Liste entfernt, übrig bleiben nur die fachlichen und darstellenden Reste; ab dann liefert die
-Ratsche keinen Fang mehr, den nicht auch die verbleibenden Bausteintests der jeweiligen
-Tab-Organismen liefern würden, und wird zurückgebaut (oder, falls S6 sich verzögert, das
-Prüfdatum mit begründetem Zwischenstand verlängert).
+**S6h hat AC-2 nicht durch vollständige Entfernung erfüllt, sondern durch finale
+Kategorisierung der 47 Einträge:** 27 FACHLICH, 6 DARSTELLUNG (beide unproblematisch für AC-2)
+und 14 HERKUNFT. Anders als ursprünglich geplant werden diese 14 HERKUNFT-Einträge **nicht**
+entfernt, sondern vom PO als dauerhafte Abweichung von AC-2 akzeptiert — die Auflösung bräuchte
+eine neue Architekturentscheidung, deren Aufwand nicht im Verhältnis zum Nutzen steht
+(`docs/specs/modules/rework_2276_s6h_ac2_endbilanz.md`).
+
+**Regel-Budget: Prüfdatum 2026-12-19, Ratsche bleibt nach S6h dauerhaft bestehen.** Kein Ersatz
+für eine bestehende Regel — ursprünglich war sie von Anfang an auf Abschaltung nach S6f angelegt;
+nach dem Re-Cut in S6g verschob sich das Ende auf S6h. Da S6h 14 HERKUNFT-Einträge dauerhaft
+akzeptiert statt sie zu entfernen, entfällt die geplante Abschaltung: Die Ratsche bewacht diese 14
+Einträge weiter als Drift-Schutz gegen unbeabsichtigtes Verschieben oder Entfernen und wird **zum
+Prüfdatum nicht zurückgebaut** — abweichend von der generischen Regel-Budget-Regel (Fließtext
+oben in diesem Abschnitt), weil der Fang (Schutz der PO-freigegebenen Abweichung) mit Abschluss
+von S6h dauerhaft feststeht statt weiter offen zu sein. `EINGEFROREN_SOLL_ANZAHL` bleibt
+unverändert 47.
 
 ## Regel-Budget: Prüfdaten im Überblick
 
@@ -377,7 +386,7 @@ Prüfdatum mit begründetem Zwischenstand verlängert).
 | Gestellte-Uhr-Ratsche make_trip+save_trip (#2242) | 2026-12-08 | 3 Dateien in 3 Wochen nach #2050 ungeschützt (#2242) |
 | `user_id="default"`-Wächter — keine Defaults in `api/`, fixierte Bestandsliste in `src/` (#2151 Scheibe A); erweitert um Aufrufstellen-Prüfung (kein Literal `"default"` als `user_id`-Argument, `tests/test_user_id_default_guard.py`) und Test-Inventar `tests/test_test_suite_passes_user_id_explicitly.py` (#2151 Scheibe C) | 2026-12-18 | — |
 | Store-Scope-Call-Guard — Store-Aufruf ohne vorherige `WithUser`-Bindung (Go, `internal/handler/store_scope_call_guard_test.go`) und `user_id` als Pflichtparameter in `api/routers/` (Python, `tests/test_router_user_id_required.py`); Ausnahmen nur als begründeter Marker im Quelltext (#2156) | 2026-12-20 | offen — startet bewusst bei 0 Befunden (24 Marker gesetzt). Kriterium: ein Handler oder Endpunkt, der ohne Bindung bzw. mit optionalem `user_id` ausgeliefert worden wäre |
-| HERKUNFT-Zweig-Ratsche `context_herkunft_zweige_eingefroren.test.ts` (#2276 Scheibe S6a) — befristetes Messfundament für S6b–S6h, keine Positivliste zum Nachziehen | 2026-12-19 | offen — startet bei 68 Fundstellen (Stand `a789b4b5`, nach S6a), 67 nach dem S6b-Rückbau von `WeatherMetricsTab.svelte:1273`, 53 nach dem S6c-Rückbau von 14 der 18 `AlarmeTab.svelte`-Einträge, 47 nach dem S6d-Rückbau von 6 der 28 `CorridorEditor.svelte`/`CorridorEditorMobile.svelte`-Einträge, unverändert 47 durch S6e und S6g (beide streichen 0 Einträge, führen nur Zeilennummern nach). Kriterium: eine in S6b–S6h nur **verschobene** statt entfernte HERKUNFT-Verzweigung, die ohne die eingefrorene Liste als erledigt durchgegangen wäre |
+| HERKUNFT-Zweig-Ratsche `context_herkunft_zweige_eingefroren.test.ts` (#2276 Scheibe S6a) — seit S6h (2026-09-25) dauerhaftes Drift-Schutz-Gate für die final 14 akzeptierten HERKUNFT-Einträge, **kein Rückbau zum Prüfdatum** (Ausnahme von der generischen Regel-Budget-Regel, siehe Fließtext oben) | 2026-12-19 | offen — startet bei 68 Fundstellen (Stand `a789b4b5`, nach S6a), 67 nach dem S6b-Rückbau von `WeatherMetricsTab.svelte:1273`, 53 nach dem S6c-Rückbau von 14 der 18 `AlarmeTab.svelte`-Einträge, 47 nach dem S6d-Rückbau von 6 der 28 `CorridorEditor.svelte`/`CorridorEditorMobile.svelte`-Einträge, unverändert 47 durch S6e, S6g und S6h (S6h kategorisiert final: 27 FACHLICH, 6 DARSTELLUNG, 14 HERKUNFT dauerhaft akzeptiert). Kriterium: eine unbeabsichtigt **verschobene** oder entfernte der 14 dauerhaften HERKUNFT-Verzweigungen, die ohne die eingefrorene Liste unbemerkt bliebe |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.
