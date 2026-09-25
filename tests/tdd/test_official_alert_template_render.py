@@ -228,7 +228,10 @@ def test_ac5_sms_actually_dispatched():
     RED: `send_official_alert` kennt den Kwarg `sms_sink` noch nicht -> TypeError.
     """
     trip, notices = _dispatch_trip_and_notices()
+    import json
+
     from app.config import Settings
+    from app.loader import get_data_dir
     from services.notification_service import NotificationService
 
     settings = Settings(
@@ -237,7 +240,14 @@ def test_ac5_sms_actually_dispatched():
         sms_gateway_url="https://sms.test.invalid", seven_api_key="k",
         sms_to="+491700000000",
     )
-    svc = NotificationService(settings, "tdd-1216-ac5")
+    # Issue #2412 S4a Nachbesserung: ohne `user.json` faellt das neue
+    # SMS-Tageslimit-Gate auf Tier "free" (Cap 0) zurueck und wuerde diesen
+    # Dispatch faelschlich sperren -- Muster `test_sms_tageslimit.py::_nutzer_anlegen`.
+    _uid = "tdd-1216-ac5"
+    _d = get_data_dir(_uid)
+    _d.mkdir(parents=True, exist_ok=True)
+    (_d / "user.json").write_text(json.dumps({"id": _uid, "tier": "standard"}))
+    svc = NotificationService(settings, _uid)
     mail_calls: list = []
     sms_calls: list = []
     svc.send_official_alert(

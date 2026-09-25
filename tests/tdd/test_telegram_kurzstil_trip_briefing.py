@@ -227,7 +227,17 @@ class TestAC2KurzstilRedirectsSmsTextToTelegram:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
 
             settings = _settings(tg_stub.port, sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-briefing")
+            _uid = "tdd-1260-briefing"
+            # Issue #2412 S4a Nachbesserung: ohne `user.json` faellt das neue
+            # SMS-Tageslimit-Gate auf Tier "free" (Cap 0) zurueck und wuerde
+            # den SMS-Versand dieses Tests faelschlich sperren -- Muster
+            # `test_sms_tageslimit.py::_nutzer_anlegen`.
+            from app.loader import get_data_dir
+
+            _d = get_data_dir(_uid)
+            _d.mkdir(parents=True, exist_ok=True)
+            (_d / "user.json").write_text(json.dumps({"id": _uid, "tier": "standard"}))
+            svc = NotificationService(settings=settings, user_id=_uid)
 
             # RED: TripReportConfig(telegram_style="kurzform") wirft hier TypeError.
             trip = _make_trip(telegram_style="kurzform")

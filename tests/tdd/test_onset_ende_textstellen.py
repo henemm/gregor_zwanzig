@@ -54,6 +54,7 @@ from output.renderers.alert.render import (
     render_email, render_sms, render_subject, render_telegram,
 )
 from services.notification_service import NotificationService, RadarAlertRequest
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 
 from tests.helpers.nowcast_gate_fixtures import clean_uid, fresh_uid, make_trip
 from tests.helpers.tagesbezug import expected_day_and_time, extract_day_and_time
@@ -634,7 +635,7 @@ def test_ac12_sms_premium_sms_und_telegram_kurzstil_zeigen_dasselbe_ende(
     uid = fresh_uid("2051-ac12")
     clean_uid(uid)
     try:
-        svc = NotificationService(_drei_kanal_settings(seven_io_stub.port), uid)
+        svc = NotificationService(_drei_kanal_settings(seven_io_stub.port), nutzer_mit_tier(uid, "premium"))
 
         svc.send_radar_alert(
             trip=make_trip("trip-2051-ac12"),

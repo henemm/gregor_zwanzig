@@ -39,7 +39,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from app.config import Settings  # noqa: E402
-from app.loader import get_briefings_dir, load_all_trips, save_trip  # noqa: E402
+from app.loader import get_briefings_dir, get_data_dir, load_all_trips, save_trip  # noqa: E402
 from app.models import TripReportConfig  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from services.trip_command_processor import (  # noqa: E402
@@ -102,6 +102,18 @@ def _preset(user_id: str, name: str, **felder) -> dict:
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{pid}.json").write_text(json.dumps(entry, indent=2), encoding="utf-8")
     return entry
+
+
+def _nutzer_mit_tier(uid: str, tier: str = "premium") -> None:
+    """Nachbesserung #2412 S4a: `send_command_reply_premium_sms` (via
+    `_via_premium_sms`) hatte vor dem SMS-Tageslimit-Gate keinen Tier-Check
+    -- ohne `user.json` faellt `user_tier._tier()` auf "free" zurueck (Cap
+    0). Premium-SMS ist laut #1676 D7 ein Premium-Merkmal, diese Tests
+    stehen fuer einen Premium-Nutzer. Muster `test_sms_tageslimit.py::
+    _nutzer_anlegen`."""
+    d = get_data_dir(uid)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
 
 
 def _preset_file(user_id: str, preset_id: str) -> Path:
@@ -353,6 +365,7 @@ class TestF003Gsm7UnsichereZeichen:
 @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
 def test_ac2_weiter_ohne_namen_setzt_einzigen_vergleich_fort(monkeypatch, user_ids, kanal):
     uid = user_ids()
+    _nutzer_mit_tier(uid)
     _trip(uid, "Altetour", start_offset_days=-20)
     p = _preset(uid, "Alpenblick", schedule="manual", previous_schedule="weekly",
                 paused_at="2026-09-10T08:00:00Z")
@@ -373,6 +386,7 @@ def test_ac2_weiter_ohne_namen_setzt_einzigen_vergleich_fort(monkeypatch, user_i
 @pytest.mark.parametrize("lage", ["trip_plus_vergleich", "zwei_vergleiche"])
 def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal, lage):
     uid = user_ids()
+    _nutzer_mit_tier(uid)
     namen = ["Alpenblick"]
     trip = None
     if lage == "trip_plus_vergleich":
@@ -402,6 +416,7 @@ def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal,
 
 def test_ac5_kein_kandidat_gleicher_text_auf_beiden_kanaelen(monkeypatch, user_ids):
     uid = user_ids()
+    _nutzer_mit_tier(uid)
     _trip(uid, "Altetour", start_offset_days=-20)
     _preset(uid, "Archiv", archived_at="2026-09-01T00:00:00Z")
 
@@ -477,6 +492,7 @@ def test_ac6_email_nachricht_mit_vergleichsnamen_pausiert_vergleich(user_ids):
 @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
 def test_ac7_namensgleichheit_fragt_zurueck(monkeypatch, user_ids, kanal):
     uid = user_ids()
+    _nutzer_mit_tier(uid)
     trip = _trip(uid, "Dolomiten", start_offset_days=-1)
     p = _preset(uid, "Dolomiten")
     vorher_preset = _preset_file(uid, p["id"]).read_bytes()
@@ -525,6 +541,7 @@ def test_f002_trip_name_gleich_befehlswort_pausiert_trotzdem(monkeypatch, user_i
     blieb unpausiert. Fallback: die normale aktive Auswahl (genau ein
     Kandidat) muss den vollen Text "pause 2d" als Trip-Befehl verarbeiten."""
     uid = user_ids()
+    _nutzer_mit_tier(uid)
     trip = _trip(uid, "Pause", start_offset_days=-1)
 
     sent, calls = _KANAELE[kanal](monkeypatch, uid, "pause 2d")
@@ -590,6 +607,7 @@ def test_f004_gefalteter_rueckfragename_findet_den_vergleich(
     diesem angezeigten Namen ("<gefaltet> pause"), muss der Original-
     Vergleich pausiert werden, der Trip bleibt unberuehrt."""
     uid = user_ids()
+    _nutzer_mit_tier(uid)
     trip = _trip(uid, "Korsika", start_offset_days=-1)
     p = _preset(uid, name_original)
 

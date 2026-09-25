@@ -115,6 +115,7 @@ from services.notification_service import NotificationService, RadarAlertRequest
 from services.radar_service import NowcastResult
 
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 import pytest
 
 # Issue #2241: der modulweite `live`-Marker (vormals hier) war falsch belegt --
@@ -935,12 +936,24 @@ def test_k3_sms_token_binds_position_to_location_name_not_to_token_order():
 # AC-26 in `test_compare_alert_telegram_per_location.py`. Die Vergleichswerte
 # sind an HEAD 6b6ad80d GEMESSEN (lokaler seven.io-Stub), nicht geschaetzt.
 
-def test_regression_trip_deviation_alert_sms_text_unchanged():
+def _isolierter_standard_nutzer(monkeypatch, tmp_path, uid: str) -> str:
+    """Issue #2412 S4a: das SMS-Tageslimit sperrt Nutzer ohne Tarif (free).
+    Die drei Regressionstests brauchen den echten Baum nicht (kein
+    `write_compare_briefings`) -- trotz modulweitem `real_data_root` wird die
+    Datenwurzel hier auf `tmp_path` umgelenkt, damit weder `user.json` noch
+    die Tageszaehler-Sperrdatei im echten `data/users` landen (#2226)."""
+    from app import loader
+
+    monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
+    return nutzer_mit_tier(uid)
+
+
+def test_regression_trip_deviation_alert_sms_text_unchanged(monkeypatch, tmp_path):
     """Trip-Aenderungsalarm (`send_deviation_alert`) — SMS byte-identisch."""
     stub = _SMSStub()
     try:
         svc = NotificationService(
-            settings=_settings_sms_only(stub.port), user_id="tdd-ag3b-reg-trip",
+            settings=_settings_sms_only(stub.port), user_id=_isolierter_standard_nutzer(monkeypatch, tmp_path, "tdd-ag3b-reg-trip"),
         )
         svc.send_deviation_alert(
             trip=_trip(), weather=[_segment_weather_data()], changes=[_change()],
@@ -967,12 +980,12 @@ def test_regression_trip_deviation_alert_sms_text_unchanged():
         stub.stop()
 
 
-def test_regression_trip_radar_alert_sms_text_unchanged():
+def test_regression_trip_radar_alert_sms_text_unchanged(monkeypatch, tmp_path):
     """Trip-Radar-Alarm (`send_radar_alert`) — SMS byte-identisch."""
     stub = _SMSStub()
     try:
         svc = NotificationService(
-            settings=_settings_sms_only(stub.port), user_id="tdd-ag3b-reg-radar",
+            settings=_settings_sms_only(stub.port), user_id=_isolierter_standard_nutzer(monkeypatch, tmp_path, "tdd-ag3b-reg-radar"),
         )
         req = RadarAlertRequest(
             onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
@@ -996,7 +1009,7 @@ def test_regression_trip_radar_alert_sms_text_unchanged():
         stub.stop()
 
 
-def test_regression_compare_radar_alert_sms_text_unchanged():
+def test_regression_compare_radar_alert_sms_text_unchanged(monkeypatch, tmp_path):
     """Ortsvergleich-Radar-Alarm (`send_multi_location_radar_alert`) — SMS
     byte-identisch, obwohl MEHRERE Orte beteiligt sind. Die Positions-
     Kodierung aus AG3b gilt ausdruecklich nur fuer den Aenderungs-Pfad
@@ -1004,7 +1017,7 @@ def test_regression_compare_radar_alert_sms_text_unchanged():
     stub = _SMSStub()
     try:
         svc = NotificationService(
-            settings=_settings_sms_only(stub.port), user_id="tdd-ag3b-reg-cmp-radar",
+            settings=_settings_sms_only(stub.port), user_id=_isolierter_standard_nutzer(monkeypatch, tmp_path, "tdd-ag3b-reg-cmp-radar"),
         )
         loc_a = SavedLocation(id="loc-a", name="Zermatt", lat=46.02, lon=7.75, elevation_m=1600)
         loc_b = SavedLocation(id="loc-b", name="Chamonix", lat=45.92, lon=6.87, elevation_m=1000)

@@ -28,11 +28,12 @@ from output.renderers.email.compact import _ascii as _ascii_hint
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
-from output.channels.base import OutputConfigError
+from output.channels.base import ChannelBlockedError, OutputConfigError
 from output.channels.email import EmailOutput
 from output.channels.premium_sms import PremiumSmsOutput
 from output.channels.sms import SMSOutput
 from output.channels.telegram import TelegramOutput
+from services import sms_daily_limit
 from services.trip_command_processor import CommandResult
 from services.trip_day import trip_local_today
 from utils.timezone import local_dt, local_fmt
@@ -461,6 +462,26 @@ class NotificationService:
             )
         return self._user_id
 
+    def _sms_gate_reserve(
+        self, kind: str, purpose: str, now: datetime,
+        blocked_channels: dict[str, str], blocked_reason_codes: dict[str, str],
+    ) -> bool:
+        """Issue #2412 S4a: Tageslimit-Gate vor jedem SMS-/Premium-SMS-Versand.
+
+        Duenner Wrapper -- die 12 Sendestellen bleiben unkonsolidiert (Spec),
+        nur die Gate-Pruefung selbst ist geteilt. `True` = reserviert, der
+        Aufrufer darf senden. `False` = Sperre, `blocked_channels`/
+        `blocked_reason_codes` wurden befuellt -- kein Versand, kein
+        `sent_channels.append`.
+        """
+        try:
+            sms_daily_limit.check_and_reserve(self._require_user(), kind, purpose, now)
+        except ChannelBlockedError as e:
+            blocked_channels[kind] = str(e)
+            _record_block_reason_code(blocked_reason_codes, kind, e)
+            return False
+        return True
+
     # ------------------------------------------------------------------
     # Öffentliche API
     # ------------------------------------------------------------------
@@ -596,14 +617,19 @@ class NotificationService:
         # Weg fuer mehr Inhalt, nicht fuer einen neuen.
         telegram_fully_sent = True
         if request.send_sms and self._settings.can_send_sms():
-            try:
-                SMSOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.sms_text or report.email_plain,
-                )
-                sent_channels.append("sms")
-            except Exception as e:
-                logger.error(f"SMS send failed for {request.trip.name}: {e}")
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    SMSOutput(self._settings).send(
+                        subject=report.email_subject,
+                        body=report.sms_text or report.email_plain,
+                    )
+                    sent_channels.append("sms")
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    logger.error(f"SMS send failed for {request.trip.name}: {e}")
 
         # Premium-SMS (Garmin inReach, Issue #1676 S2a, ADR-0049).
         # Bewusst OHNE vorgeschaltete `can_send_*`-Bedingung: ob eine gelernte
@@ -614,18 +640,25 @@ class NotificationService:
         # Zum Rueckfall `sms_text or email_plain` s. den Hinweis beim
         # SMS-Block oben (Issue #1680 S2, Herkunft gehoert hier nicht hin).
         if request.send_premium_sms:
-            try:
-                PremiumSmsOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.sms_text or report.email_plain,
-                )
-                sent_channels.append("premium_sms")
-            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
-                blocked_channels["premium_sms"] = str(e)
-                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                logger.error(
-                    f"Premium-SMS nicht versendet für {request.trip.name}: {e}"
-                )
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    PremiumSmsOutput(self._settings).send(
+                        subject=report.email_subject,
+                        body=report.sms_text or report.email_plain,
+                    )
+                    sent_channels.append("premium_sms")
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    logger.error(
+                        f"Premium-SMS nicht versendet für {request.trip.name}: {e}"
+                    )
 
         # Telegram
         if request.send_telegram and self._settings.can_send_telegram():
@@ -765,20 +798,32 @@ class NotificationService:
                 logger.error(f"No-data hint email failed for {trip.name}: {e}")
 
         if send_sms and self._settings.can_send_sms():
-            try:
-                SMSOutput(self._settings).send(subject=subject, body=text)
-                sent_channels.append("sms")
-            except Exception as e:
-                logger.error(f"No-data hint SMS failed for {trip.name}: {e}")
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    SMSOutput(self._settings).send(subject=subject, body=text)
+                    sent_channels.append("sms")
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    logger.error(f"No-data hint SMS failed for {trip.name}: {e}")
 
         if send_premium_sms:
-            try:
-                PremiumSmsOutput(self._settings).send(subject=subject, body=text)
-                sent_channels.append("premium_sms")
-            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
-                blocked_channels["premium_sms"] = str(e)
-                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                logger.error(f"No-data hint Premium-SMS blockiert für {trip.name}: {e}")
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    PremiumSmsOutput(self._settings).send(subject=subject, body=text)
+                    sent_channels.append("premium_sms")
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    logger.error(f"No-data hint Premium-SMS blockiert für {trip.name}: {e}")
 
         if send_telegram and self._settings.can_send_telegram():
             try:
@@ -1137,31 +1182,43 @@ class NotificationService:
                 logger.error(f"Official alert telegram failed for {trip.name}: {e}")
 
         if "sms" in effective_channels and self._settings.can_send_sms():
-            sent_channels.append("sms")
-            try:
-                sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
-                if sms_sink is not None:
-                    sms_sink(sms_text)
-                else:
-                    SMSOutput(self._settings).send(subject="", body=sms_text)
-            except Exception as e:
-                failed_channels.append("sms")
-                logger.error(f"Official alert sms failed for {trip.name}: {e}")
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "alert", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                sent_channels.append("sms")
+                try:
+                    sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
+                    if sms_sink is not None:
+                        sms_sink(sms_text)
+                    else:
+                        SMSOutput(self._settings).send(subject="", body=sms_text)
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    failed_channels.append("sms")
+                    logger.error(f"Official alert sms failed for {trip.name}: {e}")
 
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # can_send_*()-Bereitschaftsfrage (D2), Sperrgrund geht nach
         # `blocked_channels`/`blocked_reason_codes` statt `failed_channels`
         # (kein Transportfehler, s. `_dispatch_alert_message`).
         if "premium_sms" in effective_channels:
-            sent_channels.append("premium_sms")
-            try:
-                premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
-                PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
-            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
-                blocked_channels["premium_sms"] = str(e)
-                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                failed_channels.append("premium_sms")
-                logger.error(f"Official alert premium-sms failed for {trip.name}: {e}")
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                sent_channels.append("premium_sms")
+                try:
+                    premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
+                    PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    failed_channels.append("premium_sms")
+                    logger.error(f"Official alert premium-sms failed for {trip.name}: {e}")
 
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
@@ -1211,6 +1268,10 @@ class NotificationService:
         (Vorbild `send_multi_location_official_alert`) — kein Netz, kein SMTP.
         """
         sent_channels: list[str] = []
+        # Issue #2412 S4a: existierten vorher nicht in dieser Methode (Spec:
+        # "send_compare_report (neue Ergebnisfelder)").
+        blocked_channels: dict[str, str] = {}
+        blocked_reason_codes: dict[str, str] = {}
 
         if "email" in effective_channels:
             if mail_sink is not None:
@@ -1250,16 +1311,24 @@ class NotificationService:
                 logger.error(f"Compare report telegram failed for {subject!r}: {e}")
 
         if "sms" in effective_channels and self._settings.can_send_sms():
-            try:
-                if sms_sink is not None:
-                    sms_sink(sms_text)
-                else:
-                    SMSOutput(self._settings).send(subject="", body=sms_text)
-                sent_channels.append("sms")
-            except Exception as e:
-                logger.error(f"Compare report sms failed for {subject!r}: {e}")
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    if sms_sink is not None:
+                        sms_sink(sms_text)
+                    else:
+                        SMSOutput(self._settings).send(subject="", body=sms_text)
+                    sent_channels.append("sms")
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    logger.error(f"Compare report sms failed for {subject!r}: {e}")
 
-        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+        return NotificationResult(
+            sent=bool(sent_channels), sent_channels=sent_channels,
+            blocked_channels=blocked_channels, blocked_reason_codes=blocked_reason_codes,
+        )
 
     def send_multi_location_official_alert(
         self,
@@ -1352,7 +1421,8 @@ class NotificationService:
             sent_channels.append("telegram")
         if "sms" in effective_channels and self._settings.can_send_sms():
             if not self._dispatch_compare_official_sms(
-                preset_name, dto_notices, alert_tz, sms_sink
+                preset_name, dto_notices, alert_tz, sms_sink,
+                blocked_channels, blocked_reason_codes,
             ):
                 failed_channels.append("sms")
             sent_channels.append("sms")
@@ -1436,10 +1506,21 @@ class NotificationService:
     def _dispatch_compare_official_sms(
         self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
         sms_sink: Optional[object],
+        blocked_channels: Optional[dict[str, str]] = None,
+        blocked_reason_codes: Optional[dict[str, str]] = None,
     ) -> bool:
-        """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
+        """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief.
+
+        Issue #2412 S4a: `False` auch bei Tageslimit-Sperre (kein
+        Transportversuch) — `blocked_channels`/`blocked_reason_codes` werden
+        dann befuellt (analog `_dispatch_compare_official_premium_sms`)."""
         from output.renderers.alert.official_alerts import render_official_alert_sms
 
+        _blocked = blocked_channels if blocked_channels is not None else {}
+        _codes = blocked_reason_codes if blocked_reason_codes is not None else {}
+        now = datetime.now(timezone.utc)
+        if not self._sms_gate_reserve("sms", "alert", now, _blocked, _codes):
+            return False
         try:
             sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
             if sms_sink is not None:
@@ -1447,6 +1528,7 @@ class NotificationService:
             else:
                 SMSOutput(self._settings).send(subject="", body=sms_text)
         except Exception as e:
+            sms_daily_limit.release_reservation(self._require_user(), "sms", now)
             logger.error(f"Compare official alert sms failed for {preset_name}: {e}")
             return False
         return True
@@ -1457,15 +1539,21 @@ class NotificationService:
     ) -> bool:
         """Issue #1701 (S2b, Vorbild `_dispatch_compare_official_sms`):
         `True`, wenn der Transport ohne Fehler durchlief. Eine bewusste
-        Sperre (keine/veraltete Rueckadresse) landet zusaetzlich in
-        `blocked_channels`/`blocked_reason_codes` (D5) — kein
-        Transportfehler."""
+        Sperre (keine/veraltete Rueckadresse ODER Issue #2412 S4a
+        Tageslimit) landet zusaetzlich in `blocked_channels`/
+        `blocked_reason_codes` (D5) — kein Transportfehler."""
         from output.renderers.alert.official_alerts import render_official_alert_sms
 
+        now = datetime.now(timezone.utc)
+        if not self._sms_gate_reserve(
+            "premium_sms", "alert", now, blocked_channels, blocked_reason_codes,
+        ):
+            return False
         try:
             premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
             PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
         except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+            sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
             blocked_channels["premium_sms"] = str(e)
             _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
             logger.error(f"Compare official alert premium-sms failed for {preset_name}: {e}")
@@ -1778,11 +1866,16 @@ class NotificationService:
 
         # SMS
         if "sms" in effective_channels and self._settings.can_send_sms():
-            sent_channels.append("sms")
-            try:
-                SMSOutput(self._settings).send(subject=subject, body=sms_body)
-            except Exception as e:
-                _log_error("sms", e)
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "alert", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                sent_channels.append("sms")
+                try:
+                    SMSOutput(self._settings).send(subject=subject, body=sms_body)
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    _log_error("sms", e)
 
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # vorgeschaltete can_send_*()-Bereitschaftsfrage (D2): die
@@ -1792,13 +1885,20 @@ class NotificationService:
         # `blocked_channels`/`blocked_reason_codes` statt in
         # `failed_channels` — sie ist kein Transportfehler.
         if "premium_sms" in effective_channels:
-            sent_channels.append("premium_sms")
-            try:
-                PremiumSmsOutput(self._settings).send(subject=subject, body=sms_body)
-            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
-                blocked_channels["premium_sms"] = str(e)
-                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                _log_error("premium_sms", e)
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                sent_channels.append("premium_sms")
+                try:
+                    PremiumSmsOutput(self._settings).send(subject=subject, body=sms_body)
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    _log_error("premium_sms", e)
 
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
@@ -1829,7 +1929,17 @@ class NotificationService:
     def send_command_reply_premium_sms(
         self, result: CommandResult, settings: Settings,
     ) -> None:
-        """Sendet eine Command-Bestätigung per Premium-SMS (Issue #2184)."""
+        """Sendet eine Command-Bestätigung per Premium-SMS (Issue #2184).
+
+        Issue #2412 S4a: `purpose="reply"` -- Garmin-Antworten duerfen die
+        Reply-Reserve ueber dem Premium-SMS-Grundlimit ausschoepfen. Kein
+        `NotificationResult` an dieser Stelle (`-> None`); eine Sperre bleibt
+        nur ueber die Aufzeichner-/Transport-Beobachtung sichtbar (Spec).
+        """
+        now = datetime.now(timezone.utc)
+        if not self._sms_gate_reserve("premium_sms", "reply", now, {}, {}):
+            logger.error("Premium-SMS confirmation blocked: SMS-Tageslimit erreicht")
+            return
         try:
             PremiumSmsOutput(settings).send(
                 subject=result.confirmation_subject,
@@ -1837,6 +1947,7 @@ class NotificationService:
             )
             logger.info(f"Premium-SMS confirmation sent: {result.confirmation_subject}")
         except Exception as e:
+            sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
             logger.error(f"Failed to send premium-sms confirmation: {e}")
 
     def send_command_reply_telegram(
