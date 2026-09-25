@@ -226,7 +226,8 @@ def test_ac6_no_snapshot_hint_with_buttons(env):
 
 @pytest.mark.parametrize("text,expected_key", [
     ("/s", "glance"),
-    ("/status", "glance"),     # AC-1: /status-Alias auf Glance
+    ("/status", "status"),     # AC-28 (#2417): /status-Alias auf Glance entfaellt,
+                               # /status fuehrt jetzt wie nacktes "status" die Etappenliste aus.
     ("/h", "heute"),
     ("/m", "morgen"),
     ("/hg", "heute_gewitter"),

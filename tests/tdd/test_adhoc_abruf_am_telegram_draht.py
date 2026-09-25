@@ -350,15 +350,18 @@ def test_f002_die_ueberschrift_bleibt_der_erste_weg(fix):
 
 #: Die vollstaendige Invarianten-Tafel des Reader-Parsers. Sie ist die
 #: Positivkontrolle dafuer, dass das Praefix-Streifen die Slash-Shortcuts
-#: nicht auffrisst: '/status' ist der Glance-Alias, nacktes 'status' die
+#: nicht auffrisst: '/s' ist der Glance-Alias, nacktes 'status' die
 #: Etappenliste — wuerde der Slash vor der Shortcut-Aufloesung fallen, faenden
 #: beide auf dieselbe Antwort zusammen und die Unterscheidung waere still weg.
+#: '/status' selbst ist SEIT AC-28 (#2417) KEIN Glance-Alias mehr — es fuehrt
+#: wie das nackte "status" die Etappenliste aus (der alte Alias verletzte die
+#: Kanalgleichheit mit E-Mail/Premium-SMS).
 _TAFEL: tuple[tuple[str, tuple[str | None, str | None]], ...] = (
     # Slash-Shortcuts behalten ihre Sonderbedeutung
     ("/th", ("timeline_heute", None)),
     ("/tm", ("timeline_morgen", None)),
     ("/s", ("glance", None)),
-    ("/status", ("glance", None)),
+    ("/status", ("status", None)),  # AC-28: kein Glance-Alias mehr
     ("/h", ("heute", None)),
     ("/m", ("morgen", None)),
     ("/hg", ("heute_gewitter", None)),
@@ -409,10 +412,10 @@ def test_reader_shortcut_tafel(text, erwartet):
 #: '>' davorgestellt.
 _KREUZUNG: tuple[tuple[str, tuple[str | None, str | None]], ...] = (
     # Zitat + Slash-Shortcut: die Sonderbedeutung muss das Zitat ueberleben.
-    # '/status' ist der Glance-Alias — ohne vorheriges Zitat-Streifen wird
-    # daraus die ETAPPENLISTE, eine andere Antwort auf dieselbe Frage.
-    ("> /status", ("glance", None)),
-    (">/status", ("glance", None)),  # Client setzt das '>' ohne Leerzeichen
+    # '/status' ist seit AC-28 (#2417) KEIN Glance-Alias mehr — es liefert wie
+    # das nackte "status" die Etappenliste, mit oder ohne vorangestelltes Zitat.
+    ("> /status", ("status", None)),
+    (">/status", ("status", None)),  # Client setzt das '>' ohne Leerzeichen
     ("> /s", ("glance", None)),
     ("> /th", ("timeline_heute", None)),
     ("> /tm", ("timeline_morgen", None)),
@@ -420,7 +423,7 @@ _KREUZUNG: tuple[tuple[str, tuple[str | None, str | None]], ...] = (
     ("> /m", ("morgen", None)),
     ("> /hg", ("heute_gewitter", None)),
     # Zitat + Shortcut + Argument: beide Stufen greifen hintereinander.
-    ("> /status 5", ("glance", "5")),
+    ("> /status 5", ("status", "5")),
     # Mehrfach zitiert (Antwort auf eine Antwort), mit und ohne Zwischenraum.
     (">> heute", ("heute", None)),
     ("> > heute", ("heute", None)),
@@ -441,8 +444,9 @@ def test_f004_zitat_und_slash_gekreuzt(text, erwartet):
 
     Die Kreuzung war unbewacht: das Zitat-Streifen liess sich vor der
     Shortcut-Aufloesung ersatzlos entfernen, ohne dass einer der 84 Tests rot
-    wurde. Produktiv haette der Nutzer dann auf '> /status' die Etappenliste
-    statt der Uebersicht bekommen — eine falsche Antwort, keine Fehlermeldung.
+    wurde. Produktiv haette der Nutzer dann auf '> /th' den Katalog-Treffer
+    'Gewitter' statt der Timeline-heute-Uebersicht bekommen — eine falsche
+    Antwort, keine Fehlermeldung.
     """
     erhalten = InboundTelegramReader()._parse_command(text)
     assert erhalten == erwartet, (
@@ -452,29 +456,35 @@ def test_f004_zitat_und_slash_gekreuzt(text, erwartet):
 
 
 def test_f004_zitat_verschiebt_die_bedeutung_nicht():
-    """F004 Positivkontrolle: '/status' und nacktes 'status' bedeuten
-    VERSCHIEDENES, und das Zitat aendert daran nichts.
+    """F004 Positivkontrolle: '/th' und nacktes 'th' bedeuten VERSCHIEDENES
+    (Timeline heute vs. Gewitter-Kuerzel aus dem Metrik-Katalog), und das
+    Zitat aendert daran nichts.
 
     Ohne diesen Gegensatz waere die Tafel oben auch dann erfuellt, wenn beide
     Schreibweisen auf denselben Schluessel zusammenfielen — genau der stille
     Bedeutungsverlust, den das Zitat-Streifen vor Schritt 1 verhindert.
+
+    AC-28 (#2417): '/status' und nacktes 'status' bedeuten seither ABSICHTLICH
+    dasselbe (der Glance-Alias auf '/status' ist entfallen) — das Beispiel ist
+    deshalb auf '/th'/'th' umgestellt, das einzige verbleibende Shortcut-Wort
+    mit kollidierender, aber unterschiedlicher Bare-Bedeutung.
     """
     reader = InboundTelegramReader()
-    zitiert_mit_slash = reader._parse_command("> /status")
-    zitiert_ohne_slash = reader._parse_command("> status")
+    zitiert_mit_slash = reader._parse_command("> /th")
+    zitiert_ohne_slash = reader._parse_command("> th")
 
     assert zitiert_mit_slash != zitiert_ohne_slash, (
-        f"F004: '> /status' und '> status' duerfen nicht dasselbe bedeuten, "
+        f"F004: '> /th' und '> th' duerfen nicht dasselbe bedeuten, "
         f"beide liefern {zitiert_mit_slash!r} — die Unterscheidung "
-        f"Uebersicht/Etappenliste ist still weg."
+        f"Timeline-heute/Gewitter-Kuerzel ist still weg."
     )
-    assert zitiert_ohne_slash == ("status", None), (
-        f"F004: zitiertes nacktes 'status' bleibt die Etappenliste, erhalten "
+    assert zitiert_ohne_slash == ("th", None), (
+        f"F004: zitiertes nacktes 'th' bleibt das Katalog-Kuerzel, erhalten "
         f"{zitiert_ohne_slash!r}"
     )
-    assert zitiert_mit_slash == reader._parse_command("/status"), (
-        f"F004: '> /status' muss dasselbe bedeuten wie '/status', erhalten "
-        f"{zitiert_mit_slash!r} vs. {reader._parse_command('/status')!r}"
+    assert zitiert_mit_slash == reader._parse_command("/th"), (
+        f"F004: '> /th' muss dasselbe bedeuten wie '/th', erhalten "
+        f"{zitiert_mit_slash!r} vs. {reader._parse_command('/th')!r}"
     )
 
 
@@ -503,11 +513,10 @@ def test_f004_zitiertes_shortcut_erreicht_den_prozessor():
 @pytest.mark.parametrize(
     "text,erwartet_key",
     [
-        # '/status' ist der Glance-Alias. Faellt die Erst-Token-Pruefung weg,
-        # rutscht die Zeile in den Bare-Keyword-Pfad und wird zur ETAPPENLISTE
-        # — dieselbe Verwechslung, die die Reihenfolge oben verhindert, nur
-        # ausgeloest durch ein angehaengtes Wort statt durch den Slash.
-        ("/status heute", "glance"),
+        # '/status' fuehrt seit AC-28 (#2417) ohnehin zur ETAPPENLISTE (kein
+        # Glance-Alias mehr) — der Shortcut muss diese Bedeutung trotz
+        # angehaengtem Wort behalten, statt in den Bare-Keyword-Pfad zu rutschen.
+        ("/status heute", "status"),
         # '/th' und '/hg' haben ueberhaupt kein nacktes Pendant: ohne die
         # Erst-Token-Pruefung landen sie im Katalog ('th' -> Gewitter) bzw.
         # im Nichts.
