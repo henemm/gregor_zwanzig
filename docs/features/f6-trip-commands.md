@@ -4,7 +4,12 @@
 drei Eingangskanäle auch am **Ortsvergleich** ansprechbar — Details im Abschnitt
 „Ortsvergleich per Nachricht" unten.
 
-**Updated:** 2026-09-17 (Issue #2282 Scheibe S1, Epic #2133/#1374 — Ortsvergleiche
+**Updated:** 2026-09-26 (Issue #2417 — bei aktivem Trip **und** Ortsvergleich(en)
+gehen alle Befehle außer `PAUSE`/`WEITER` jetzt direkt an den Trip statt in eine
+Rückfrage zu laufen, `HILFE` antwortet dabei sofort; neuer Hinweistext „kein
+aktives Ziel" für Trip-only-Befehle ohne aktiven Trip; Telegram-Bot-Menü zeigt
+jetzt alle 17 Befehle statt 7, `/status`-Alias auf `glance` entfernt); 2026-09-17
+(Issue #2282 Scheibe S1, Epic #2133/#1374 — Ortsvergleiche
 sind jetzt über alle drei Eingangskanäle für `PAUSE`/`WEITER`/`HILFE` ansprechbar;
 die aktive Auswahl ohne Namen und die `[Name]`-Erkennung im E-Mail-Betreff arbeiten
 kanaltyp-übergreifend); 2026-09-08 (Issue #2184, Epic #2133 Scheibe S4 — Premium-SMS ist jetzt
@@ -118,8 +123,8 @@ Zeigt die Regen-Ereignisflächen entlang der Reststrecke des **aktuell aktiven
 Wegabschnitts** (nicht der ganzen Tagesetappe — siehe Grenze unten). Erreichbar über
 Email (Freitext `STRECKE` in der ersten Zeile), Telegram (Freitext `strecke` oder
 Slash `/strecke`) und Premium-SMS (Freitext `STRECKE` vor dem Garmin-Kennzeichen, seit
-Issue #2184). Anders als die Kurzbefehle im Bot-Menü (Abschnitt „Telegram —
-Abfrage-Befehle" unten) taucht `/strecke` **nicht** im Telegram-Bot-Menü auf — es muss
+Issue #2184). Seit Issue #2417 steht `/strecke` auch im Telegram-Bot-Menü (Details:
+`docs/features/architecture.md`, Abschnitt Telegram-Bot-Menü) — davor musste es
 getippt werden.
 
 **Ohne Argument:** Ausgangspunkt ist die aktuelle Planposition.
@@ -224,14 +229,29 @@ Briefing-Reports sind wieder aktiv. Naechster Report kommt planmaessig.
 Premium-SMS) auch für einen **Ortsvergleich** ansprechbar, nicht nur für einen Trip.
 Alle übrigen Befehle bleiben trip-exklusiv.
 
-**Adressierung ohne Namen** (Telegram/Premium-SMS): Hat der Nutzer keinen aktiven
-Trip, aber genau einen aktiven (auch bereits pausierten) Ortsvergleich, wird dieser
-angesprochen. Sind sowohl ein Trip als auch mindestens ein Ortsvergleich aktiv, oder
-mehrere Ortsvergleiche gleichzeitig, fragt Gregor zurück und zählt alle Kandidaten
-auf — es wird **kein** Befehl ausgeführt, bis mit vorangestelltem Namen geantwortet
-wird (z. B. `Zermatt pause`). Gibt es weder einen aktiven Trip noch einen aktiven
-Ortsvergleich, lautet die Antwort auf allen Kanälen einheitlich „Kein aktiver Trip
-oder Ortsvergleich gefunden."
+**Adressierung ohne Namen** (Telegram/Premium-SMS) — seit Issue #2417 abgestuft nach
+Befehlsart (löst die vorherige pauschale Mehrdeutigkeits-Regel ab):
+
+- `HILFE` antwortet **immer sofort** mit der Befehlsübersicht, ganz ohne
+  Trip-/Vergleichs-Auflösung — auch wenn Trip und Ortsvergleiche gleichzeitig aktiv
+  sind.
+- Alle übrigen Abfrage- und Verwaltungsbefehle (`HEUTE`, `MORGEN`, `JETZT`,
+  `GEWITTER`, `STRECKE`, `RUHETAG`, `STATUS`, `SKIP`, `STOP`, Wetter-Kürzel,
+  Query-Keys) gehen bei einem aktiven Trip **immer direkt an diesen Trip** —
+  unabhängig davon, wie viele Ortsvergleiche daneben aktiv sind, und **ohne**
+  Rückfrage. Gibt es **keinen** aktiven Trip, aber ≥1 aktiven Ortsvergleich,
+  antwortet Gregor mit „Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht
+  für Ortsvergleiche." — bewusst unterscheidbar vom Fall „gar nichts aktiv" unten.
+- Nur `PAUSE`/`WEITER` bleiben mehrdeutig (unverändert): Sind sowohl ein Trip als
+  auch mindestens ein Ortsvergleich aktiv, oder mehrere Ortsvergleiche gleichzeitig,
+  fragt Gregor zurück und zählt alle Kandidaten auf — es wird **kein** Befehl
+  ausgeführt, bis mit vorangestelltem Namen geantwortet wird (z. B. `Zermatt
+  pause`). Hat der Nutzer keinen aktiven Trip, aber genau einen aktiven (auch
+  bereits pausierten) Ortsvergleich, wird dieser direkt angesprochen.
+
+Gibt es weder einen aktiven Trip noch einen aktiven Ortsvergleich, lautet die
+Antwort auf allen Kanälen einheitlich „Kein aktiver Trip oder Ortsvergleich
+gefunden."
 
 **Adressierung mit Namen:** Ein vorangestellter Name (Telegram/Premium-SMS) bzw. das
 `[Name]` im Email-Betreff wird gegen Trips **und** Ortsvergleiche geprüft. Tragen ein
@@ -341,6 +361,13 @@ Diese Befehle gibst du direkt als Telegram-Nachricht ein oder tappst sie aus dem
 
 **Wichtig:** Telegram sendet getappte Menü-Befehle immer mit führendem Slash (z.B. `/glance`). Gregor kennt sowohl die kurzen Varianten (`/s`) als auch die vollständigen Menü-Namen (`/glance`) — beide funktionieren.
 
+**Seit Issue #2417 (AC-21) ist das Bot-Menü vollständig:** Zusätzlich zu den oben
+gelisteten Abfrage-Befehlen enthält es `strecke`, `ruhetag`, `status`, `pause`,
+`skip`, `stop`, `weiter` (insgesamt 17 Einträge). `/status` löst dabei **nicht**
+mehr — wie früher — `glance` aus, sondern liefert wie das nackte Wort `status`
+die Etappenliste; der Wetter-Überblick bleibt über `/glance` erreichbar.
+Vollständige, aktuelle Liste: `docs/features/architecture.md`.
+
 ### Welcher Tag ist „heute"? (ADR-0044)
 
 **Kalendertage bestimmen sich nach der Ortszeit der Tour**, nicht nach Weltzeit. Wer um
@@ -432,6 +459,9 @@ Das Bot-Menü bietet zusätzlich strukturierte Abfragen (ähnlich Query-Keys), d
 | **hilfe** | ℹ️ Verfügbare Befehle |
 
 Klick den Button im Bot-Menü oder tippe `/glance`, `/heute_gewitter` etc.
+
+Seit Issue #2417 zeigt das Bot-Menü zusätzlich `strecke`, `ruhetag`, `status`,
+`pause`, `skip`, `stop`, `weiter` (siehe Hinweis oben unter „Telegram-Abfrage-Befehle").
 
 ### Wenn für einen Tag keine Wetterdaten vorliegen (Issue #1818)
 
