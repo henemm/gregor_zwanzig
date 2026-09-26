@@ -438,6 +438,7 @@ def send_one_compare_preset(
     sms_sink=None,
     telegram_sink=None,
     on_demand: bool = False,
+    premium_sms_sink=None,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
@@ -649,6 +650,7 @@ def send_one_compare_preset(
             mail_sink=mail_sink,
             sms_sink=sms_sink,
             telegram_sink=telegram_sink,
+            premium_sms_sink=premium_sms_sink,
         )
     except Exception as exc:
         record_briefing_dispatch_failure(
@@ -656,6 +658,14 @@ def send_one_compare_preset(
         )
         _anchor_and_reset()
         raise
+
+    # Issue #2275: gescheiterte/gesperrte Kanaele sichtbar machen (fail-soft).
+    for _kanal in dict.fromkeys([*send_result.failed_channels, *send_result.blocked_channels]):
+        logger.warning(
+            "Compare-Preset %s: Kanal %s nicht zugestellt (reason_code=%s, grund=%s)",
+            preset_id, _kanal, send_result.blocked_reason_codes.get(_kanal),
+            send_result.blocked_channels.get(_kanal),
+        )
 
     # Issue #1714: im Briefing gezeigte amtliche Warnungen als „gemeldet"
     # vermerken, damit der unabhaengige Checker sie nicht kurz darauf erneut
