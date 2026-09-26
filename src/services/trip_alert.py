@@ -1252,7 +1252,7 @@ class TripAlertService:
             )
             return
         logger.warning(
-            "Kein Alarm-Anker fuer Trip %s, obwohl die Tour laeuft (%s bis %s) — "
+            "Kein Alarm-Anker fuer Trip %s, obwohl der Trip laeuft (%s bis %s) — "
             "die Abweichungs-Wache ist blind bis zum naechsten Briefing-Versand.",
             trip.id, trip.start_date, trip.end_date,
         )

@@ -849,7 +849,7 @@ def test_f002_ablauf_filter_prueft_den_letzten_ortstag_noch(caplog):
 
     Hauptfall: Trip mit ``end_date == D`` (Ortstag, Los Angeles) unter einer
     gestellten Uhr, zu der ``date.today()`` bereits ``D+1`` waere -> der
-    Trip MUSS an D noch geprueft werden (WARNUNG "obwohl die Trip laeuft"
+    Trip MUSS an D noch geprueft werden (WARNUNG "obwohl der Trip laeuft"
     erscheint, statt eines stillen Ablauf-Skips).
 
     Gegenprobe im selben Test: ein Trip, dessen ``end_date`` D-1 ist (nach
@@ -894,15 +894,15 @@ def test_f002_ablauf_filter_prueft_den_letzten_ortstag_noch(caplog):
         return caplog.text
 
     log_heute = _lauf(end_date_ist_heute=True)
-    assert "obwohl die Trip laeuft" in log_heute, (
+    assert "obwohl der Trip laeuft" in log_heute, (
         "F002: Trip mit end_date == Ortstag D haette den Ablauf-Filter "
-        "passieren muessen (WARNUNG 'obwohl die Trip laeuft' erwartet). "
+        "passieren muessen (WARNUNG 'obwohl der Trip laeuft' erwartet). "
         f"Log:\n{log_heute}"
     )
     caplog.clear()
 
     log_abgelaufen = _lauf(end_date_ist_heute=False)
-    assert "obwohl die Trip laeuft" not in log_abgelaufen, (
+    assert "obwohl der Trip laeuft" not in log_abgelaufen, (
         "F002 (Gegenprobe): ein tatsaechlich abgelaufener Trip (end_date == "
         "D-1) darf NICHT als 'laufend' behandelt werden — sonst ist der "
         f"Ablauf-Filter selbst wirkungslos. Log:\n{log_abgelaufen}"
