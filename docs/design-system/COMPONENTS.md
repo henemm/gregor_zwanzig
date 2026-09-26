@@ -145,6 +145,7 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | `<MField>` | `label`, `sub`, Children | Field-Wrapper Mobile. |
 | `<MBtn>` | `variant`, `size: "md" \| "lg" \| "xl"`, `block`, `icon`, `onClick` | Mobile-Button mit Min-Height 48 (lg). |
 | `<MTab>` | `items`, `active`, `onChange`, `scrollable: boolean` | Tab-Bar Mobile (scrollbar wenn nötig). |
+| `<MTabBar>` | `items: {value, label, badge?, testid?}[]`, `active`, `onChange(v)`, `ariaLabel` | Geteilter Tab-Band (Mobile Usability Paket 2): Band + Fade <900px, `scrollIntoView` positioniert den aktiven Tab (Mount + Wechsel), WAI-ARIA (`tablist`/`tab`, `aria-selected`, roving `tabindex`, ←/→), Trigger ≥44px. Desktop ≥900px: Underline-Optik. Hält den `data-slot="segmented"`-Vertrag. Physisch `mobile/MTabBar.svelte`. |
 | `<StageCardM>` | `stage`, `index`, `risk?`, `open?`, `activityType?` | Vertikale Etappen-Karte der mobilen Listen-Ansicht (Etappen-Tab, Listen-only nach PO-Entscheid F5 2026-09-22). Reine Präsentation: DragHandle + SortableList verdrahtet der Aufrufer (ADR-0024); `open` klappt die Wegpunkt-Zeilen auf (F7). Physisch `mobile/StageCardM.svelte`. |
 | `<ScreenScroll>` | `padding`, `bg`, Children | Scrollbarer Mobile-Content-Bereich über der BottomNav. |
 
@@ -223,6 +224,7 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.5 | 2026-09-26 | `MTabBar` ergänzt (Mobile Usability Paket 2, geteilter Tab-Band mit scrollIntoView + A11y; Spec `mobile_tab_leisten_mtabbar`) |
 | v1.4 | 2026-09-23 | `StageCardM` ergänzt (Mobile Usability Paket 1, Listen-only Etappen-Tab; Spec `mobile_stages_tab_listen_only`) |
 | v1.3 | 2026-09-19 | Mobile-Shell S2: `TopAppBar`/Hamburger-`Drawer` raus, `BottomNav` mit Konto-Kreis, `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, `Sheet snap="auto"` |
 | v1.2 | 2026-06-02 | MapControl, ProfileSheetEmbedded, EditorProfileSVG, EtappenStrip aus Wegpunkt-Editor-Handoff (#503) ergänzt |
