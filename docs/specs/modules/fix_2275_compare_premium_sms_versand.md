@@ -159,6 +159,14 @@ Test-Preset, Versand an die Test-Empfänger, **zweite seven.io-Nummer als Empfan
 (sendet und empfängt); Ankunft und Kurzform-Text am Gerät prüfen. Nie Sammelversand über alle
 Presets, nie Produktiv-Empfänger.
 
+### Live-Nachweis (durchgeführt 2026-09-26, Merge 5de80678)
+
+- **Staging** (Validator-Konto, 1 Test-Preset mit 3 Orten): Einzelversand HTTP 200, Premium-Tageszähler 0→1, Compare-Mail-Validator Exit 0. Physische Zustellung dort `NOT_MEASURABLE_ON_STAGING` (nur Sandbox-Key).
+- **Produktion** (temporäres Test-Konto, 1 Test-Preset, Einzelversand): seven.io-Journal `dlr=DELIVERED` an der zweiten Nummer; Text 128 Zeichen, 1 Segment, GSM-7 (`Vergleich 26.09.: T1 Garmisch … +1 Orte`); Prod-Log „premium_sms … über seven.io gesendet" in derselben Sekunde.
+- **Fehlerpfad live:** ungültige Rückadresse → seven.io-Code 202 → Reservierung freigegeben, Warnzeile `reason_code=premium_sms_send_failed`, Versand lief weiter (fail-soft).
+- Testkonto, Preset, Orte und gelernte Rückadresse danach vollständig entfernt.
+- Nebenbefunde (nicht Teil dieser Spec, gebucht in #1199): Ortsvergleich-Versand bricht bei fehlgeschlagener E-Mail mit HTTP 500 ab, bevor Premium-SMS drankommt; Plus-Adressen scheitern an der Resend-Allowlist; numerischer seven.io-`from` wird zu „InfoSMS".
+
 ## Known Limitations
 
 - Konsolidierung der Premium-SMS-Zweig-Kopien (Trip ~Z.642/~Z.800, Alarm ~Z.1201,
