@@ -17,6 +17,25 @@ SPEC: docs/specs/modules/feat_2417_befehle_e2e_echter_eingang.md (AC-26)
 
 NICHT lokal ausfuehren -- nur ``--collect-only`` als Beleg (Team-Lead-Vorgabe).
 Pflichtschritt in ``/e2e-verify``, nicht optional.
+
+Issue #2417 Fix-Loop 2: ``pytestmark`` traegt jetzt ``real_data_root`` (sonst
+biegt ``tests/conftest.py:214-231`` ``app.loader._DATA_ROOT`` auf eine
+Temp-Wurzel um, waehrend ``_make_user``/``save_trip`` in den ECHTEN
+``data/users``-Baum schreiben -- der Absender wurde dadurch nie aufgeloest,
+"Unresolved/ambiguous sender", processed=0). AUSSERDEM darf ``poll_and_process``
+NICHT die gesamte UNSEEN-Queue des geteilten Postfachs ``gregor-test@henemm.com``
+anfassen (haette Fremdmails faelschlich \\Seen markiert und ggf. echte
+Antwortmails an fremde Absender ausgeloest). Deshalb bekommt die eigene
+Testmail einen eindeutigen Plus-Adress-``To:``-Header
+(``gregor-test+gz2417-<suffix>@henemm.com``), UND ``inbound_address`` wird in
+``_base_email_settings()`` auf genau diese Adresse gesetzt -- damit greift der
+bereits vorhandene TO-Filter in ``poll_and_process``
+(``src/services/inbound_email_reader.py:156-160``: ``inbound !=
+settings.smtp_user`` -> ``imap.search(None, "UNSEEN", "TO", inbound)``) und
+der Poll sieht NUR die eigene Mail. Envelope-RCPT-TO bleibt bewusst das
+bare Postfach (``gregor-test@henemm.com``) -- Zustellung haengt so nicht von
+Stalwart-Plus-Adressierung ab, nur der ``To:``-HEADER trägt die Plus-Adresse
+fuer den IMAP-Header-Suchfilter.
 """
 from __future__ import annotations
 
@@ -33,22 +52,22 @@ from pathlib import Path
 import pytest
 
 from app.config import Settings
-from app.loader import save_trip
+from app.loader import get_data_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.inbound_email_reader import InboundEmailReader
 from services.trip_command_processor import _COMMAND_SPECS
 
-pytestmark = [pytest.mark.live, pytest.mark.email]
+pytestmark = [pytest.mark.live, pytest.mark.email, pytest.mark.real_data_root]
 
 _TEST_MAILBOX = "gregor-test@henemm.com"
 _SYSTEM_FROM = "gregor_zwanzig@henemm.com"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_DATA_USERS = _REPO_ROOT / "data" / "users"
 LAT, LON = 47.2692, 11.4041
 
 _EMAIL_CREDS_PRESENT = bool(
     os.environ.get("GZ_TEST_IMAP_USER")
     and os.environ.get("GZ_TEST_IMAP_PASS")
+    and os.environ.get("GZ_TEST_SMTP_USER")
     and os.environ.get("GZ_TEST_SMTP_PASS")
 )
 _email_gate = pytest.mark.skipif(
@@ -58,10 +77,15 @@ _email_gate = pytest.mark.skipif(
 
 
 def _make_user(user_id: str, mail_to: str) -> None:
+    """Schreibt user.json ueber ``get_data_dir()`` (wie ``save_trip``/
+    ``lookup_user_by_email``) statt eines hartkodierten ``_REPO_ROOT``-Pfads --
+    beide MUESSEN auf dieselbe Wurzel zeigen, sonst loest
+    ``_resolve_settings_for_sender`` den Absender nie auf (#2417 Fix-Loop 2,
+    Befund 1)."""
     import json
     import shutil
 
-    udir = _DATA_USERS / user_id
+    udir = get_data_dir(user_id)
     if udir.exists():
         shutil.rmtree(udir)
     udir.mkdir(parents=True)
@@ -77,7 +101,7 @@ def _make_user(user_id: str, mail_to: str) -> None:
 def _cleanup_user(user_id: str) -> None:
     import shutil
 
-    udir = _DATA_USERS / user_id
+    udir = get_data_dir(user_id)
     if udir.exists():
         shutil.rmtree(udir)
 
@@ -96,18 +120,25 @@ def _make_trip(user_id: str, trip_id: str, name: str) -> Trip:
     return trip
 
 
-def _base_email_settings() -> Settings:
+def _base_email_settings(inbound_address: str = _TEST_MAILBOX) -> Settings:
     """Wie ``_base_email_settings`` in
     ``test_issue_1009_1019_inbound_robustness.py``: IMAP auf das Test-
     Postfach, SMTP-Antwort ueber die ``test_smtp_*``-Felder (Stalwart), damit
     die Herkunftssperre (#1476) die Antwort auf ``gregor-test@henemm.com``
-    umleitet, statt auf ein produktives Postfach."""
+    umleitet, statt auf ein produktives Postfach.
+
+    ``inbound_address`` ist per Default ``_TEST_MAILBOX`` (Fallback), wird von
+    ``test_apple_mail_hilfe_ueber_echte_stalwart_zustellung_wird_beantwortet``
+    aber auf eine eindeutige Plus-Adresse gesetzt (#2417 Fix-Loop 2, Befund
+    1): ``poll_and_process`` (src/services/inbound_email_reader.py:156-160)
+    filtert dann per IMAP-TO-Header-Suche NUR die eigene Mail, statt die
+    gesamte UNSEEN-Queue des GETEILTEN Postfachs zu verarbeiten."""
     return Settings(
         imap_host=os.environ.get("GZ_IMAP_HOST", "mail.henemm.com"),
         imap_port=int(os.environ.get("GZ_IMAP_PORT", "993")),
         imap_user=os.environ["GZ_TEST_IMAP_USER"],
         imap_pass=os.environ["GZ_TEST_IMAP_PASS"],
-        inbound_address=_TEST_MAILBOX,
+        inbound_address=inbound_address,
         smtp_user=_TEST_MAILBOX,
         mail_from=_SYSTEM_FROM,
         test_smtp_host=os.environ.get("GZ_TEST_SMTP_HOST", "mail.henemm.com"),
@@ -146,16 +177,22 @@ def _apple_html_only_body(befehl: str) -> tuple[str, bytes]:
 
 def _deliver_apple_html_mail_anonymous(
     envelope_from: str, header_from: str, subject: str, befehl: str,
+    *, to_header: str = _TEST_MAILBOX,
 ) -> None:
     """Liefert eine synthetische Apple-Mail-Antwort (nur ``text/html``) ueber
     die ECHTE anonyme Inbound-Pipeline (Port 25) ein -- nur auf diesem Weg
     prependt Stalwart einen ECHTEN ``Authentication-Results``-Header (#2143
     F003; die authentifizierte Submission auf Port 587 traegt strukturell
-    NIE einen)."""
+    NIE einen).
+
+    ``to_header`` traegt bewusst die Plus-Adresse fuer den TO-Filter in
+    ``poll_and_process`` (#2417 Fix-Loop 2, Befund 1) -- der Envelope-
+    Empfaenger (``sendmail``-Zielliste) bleibt IMMER das bare Postfach, damit
+    die Zustellung nicht von Stalwart-Plus-Adressierung abhaengt."""
     boundary, qp_payload = _apple_html_only_body(befehl)
     raw = (
         f"From: {header_from}\r\n"
-        f"To: {_TEST_MAILBOX}\r\n"
+        f"To: {to_header}\r\n"
         f"Subject: {subject}\r\n"
         "MIME-Version: 1.0\r\n"
         f'Content-Type: multipart/alternative; boundary="{boundary}"\r\n'
@@ -243,19 +280,34 @@ def test_apple_mail_hilfe_ueber_echte_stalwart_zustellung_wird_beantwortet():
     user_id = f"gz2417-live-{suffix}"
     sender = f"{user_id}@henemm.com"
     token = f"GZ2417LIVE-{suffix}"
+    # Eindeutige Plus-Adresse NUR fuer diesen Testlauf (#2417 Fix-Loop 2,
+    # Befund 1) -- damit greift der TO-Filter in poll_and_process
+    # (inbound_email_reader.py:156-160) und der Poll fasst NICHT die gesamte
+    # UNSEEN-Queue des geteilten Postfachs an.
+    own_inbound = f"gregor-test+gz2417-{suffix}@henemm.com"
     _make_user(user_id, mail_to=sender)
     _make_trip(user_id, trip_id=f"t{suffix}", name=token)
 
-    settings = _base_email_settings()
+    settings = _base_email_settings(inbound_address=own_inbound)
     baseline_uid = _hoechste_uid()
 
     _deliver_apple_html_mail_anonymous(
         envelope_from=sender, header_from=sender,
         subject=f"Re: [{token}] Etappe", befehl="Hilfe",
+        to_header=own_inbound,
     )
 
     try:
-        processed = InboundEmailReader().poll_and_process(settings)
+        # Port-25-Zustellung ist asynchron -- ein einzelner Poll direkt nach
+        # dem Versand waere ein Race. Bis zu 60s erneut pollen, bis die eigene
+        # (per TO-Filter isolierte) Mail verarbeitet wurde.
+        processed = 0
+        deadline = time_mod.time() + 60
+        while time_mod.time() < deadline:
+            processed = InboundEmailReader().poll_and_process(settings)
+            if processed >= 1:
+                break
+            time_mod.sleep(5)
         assert processed >= 1, (
             f"Apple-Mail-Antwort wurde nicht verarbeitet (processed={processed})."
         )
