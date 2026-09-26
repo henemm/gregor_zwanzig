@@ -17,7 +17,6 @@ from tests.tdd._befehl_e2e_fixtures import (
     install_transport_fakes,
     klicke_telegram_knopf,
     lege_lage_an,
-    lege_po_lage_nutzer_an,
     merkmal_fuer,
     sende_email,
     sende_premium_sms,

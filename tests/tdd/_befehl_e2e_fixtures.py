@@ -285,7 +285,7 @@ import pytest
 
 from app.config import Settings
 from app.loader import get_briefings_dir, get_data_dir, save_trip
-from app.metric_catalog import get_all_metrics, get_metric
+from app.metric_catalog import get_metric
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
@@ -529,6 +529,7 @@ def install_transport_fakes(monkeypatch: pytest.MonkeyPatch) -> Recorder:
     Zustands-Reset, globaler httpx- und smtplib-Sink. Gibt den Recorder
     zurueck, an dem jeder Test seine Zusicherungen misst."""
     pin_production_origins(monkeypatch)
+    pin_transport_env(monkeypatch)
     reset_telegram_process_state(monkeypatch)
     recorder = Recorder()
     monkeypatch.setattr(httpx, "post", recorder.httpx_post)
@@ -541,32 +542,72 @@ def install_transport_fakes(monkeypatch: pytest.MonkeyPatch) -> Recorder:
 # Settings-Aufbau -- jedes Transport-Feld ausdruecklich (#1477)
 # ---------------------------------------------------------------------------
 
+#: Transport-/Umgebungsfelder, die ein intern (OHNE ``settings=``-Kwarg)
+#: frisch gebautes ``Settings()`` NIE aus der lokalen, nicht versionierten
+#: ``.env`` lesen darf -- CI-Fix-Loop #2417 (PR #2431): der on-demand-Pfad
+#: (``heute``/``morgen``) baut in ``trip_command_processor.py:807,1343,2187``
+#: ``TripReportSchedulerService(user_id=user_id)`` OHNE ``settings=``, die
+#: Klasse konstruiert sich dort selbst ein ``Settings().with_user_profile(
+#: user_id)`` (``trip_report_scheduler.py:425``). Lokal liefert die ``.env``
+#: dabei ECHTE Zugangsdaten -> gruen, aber nicht hermetisch (Verstoss gegen
+#: #1477); in CI existiert keine ``.env`` -> alle drei Kanaele unkonfiguriert
+#: -> ``channels_unreachable``. EIN Wert je Feld hier, per
+#: ``monkeypatch.setenv`` in :func:`pin_transport_env` UND als
+#: ``Settings(**...)``-Kwarg in :func:`basis_settings` verwendet, damit beide
+#: Wege garantiert dieselben (unbrauchbaren) Werte sehen.
+#:
+#: ``env`` ist kein Transportfeld im engeren Sinn, wird aber mitgepinnt: ohne
+#: Pin faellt ein intern gebautes ``Settings()`` auf den Felddefault
+#: ``"production"`` zurueck (bzw. auf einen lokalen ``.env``-Wert wie
+#: ``GZ_ENV=staging``) -- ``with_user_profile()`` schaltet bei
+#: ``env=="staging"`` ``force_test=True`` (``config.py:408``) und liesse dann
+#: ``telegram_chat_id`` NICHT aus dem Profil setzen (``config.py:440-441``),
+#: was AC-12/AC-32 (Mandantentrennung je Kanal) unbemerkt entwerten wuerde.
+_TRANSPORT_ENV_DEFAULTS: dict[str, str] = dict(
+    env="development",
+    smtp_host=SMTP_HOST,
+    smtp_port="587",
+    smtp_user="unbrauchbar",
+    smtp_pass="unbrauchbar",
+    mail_from="gregor_zwanzig@henemm.com",
+    mail_to="globaler-rueckfall@henemm.com",
+    mail_server_hostname=TEST_AUTHSERV_ID,
+    imap_host=SMTP_HOST,
+    imap_user="unbrauchbar",
+    imap_pass="unbrauchbar",
+    telegram_bot_token="0000000:unbrauchbar",
+    telegram_chat_id="globaler-rueckfall-chat",
+    telegram_test_bot_token="",
+    telegram_test_chat_id="",
+    sms_gateway_url="https://gateway.seven.io/api/sms",
+    seven_api_key="unbrauchbar",
+    seven_sandbox_key=PREMIUM_SMS_SANDBOX_KEY,
+    sms_to="+490000000000",
+)
+
+
+def pin_transport_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Setzt ``GZ_<FELD>`` fuer jedes :data:`_TRANSPORT_ENV_DEFAULTS`-Feld in
+    der PROZESSUMGEBUNG (Prioritaet ueber ``.env`` -- ``config.py:115``,
+    ``"Priority: CLI args > Environment > .env file > defaults"``) UND
+    macht ``Settings()`` zusaetzlich hermetisch gegen die verbleibenden,
+    hier NICHT gepinnten ``GZ_``-Felder (``is_test_mode``, ``test_smtp_*``,
+    ``public_host``, Telegram-Rate-Limits, ...): ``monkeypatch.setitem(
+    Settings.model_config, "env_file", None)`` (Vorbild ``_ohne_dotenv``,
+    ``tests/test_public_host_links.py:387-400``). Ohne diesen zweiten Schritt
+    saehe ein intern frisch gebautes ``Settings()`` lokal (``.env`` vorhanden)
+    andere Werte fuer diese Restfelder als in CI (keine ``.env``) -- exakt
+    die Nicht-Hermetik-Klasse, die dieser Fix beheben soll."""
+    for feld, wert in _TRANSPORT_ENV_DEFAULTS.items():
+        monkeypatch.setenv(f"GZ_{feld.upper()}", str(wert))
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+
+
 def basis_settings(**overrides) -> Settings:
     """Basis-``Settings`` mit unbrauchbaren, aber VOLLSTAENDIGEN
     Zugangsdaten -- kein Feld faellt still auf die echte Prod-``.env``
     zurueck (#1477)."""
-    defaults = dict(
-        _env_file=None,
-        env="development",
-        smtp_host=SMTP_HOST,
-        smtp_port=587,
-        smtp_user="unbrauchbar",
-        smtp_pass="unbrauchbar",
-        mail_from="gregor_zwanzig@henemm.com",
-        mail_to="globaler-rueckfall@henemm.com",
-        mail_server_hostname=TEST_AUTHSERV_ID,
-        imap_host=SMTP_HOST,
-        imap_user="unbrauchbar",
-        imap_pass="unbrauchbar",
-        telegram_bot_token="0000000:unbrauchbar",
-        telegram_chat_id="globaler-rueckfall-chat",
-        telegram_test_bot_token="",
-        telegram_test_chat_id="",
-        sms_gateway_url="https://gateway.seven.io/api/sms",
-        seven_api_key="unbrauchbar",
-        seven_sandbox_key=PREMIUM_SMS_SANDBOX_KEY,
-        sms_to="+490000000000",
-    )
+    defaults = dict(_env_file=None, **_TRANSPORT_ENV_DEFAULTS)
     defaults.update(overrides)
     return Settings(**defaults)
 
