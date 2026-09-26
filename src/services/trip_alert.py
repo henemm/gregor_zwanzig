@@ -862,7 +862,7 @@ class TripAlertService:
         hit_deadline = False
         run_started_at = time.monotonic()
         deadline_at = run_started_at + ALERT_RUN_DEADLINE_SECONDS
-        trips = list(load_all_trips(user_id=self._user_id))
+        trips = sorted(load_all_trips(user_id=self._user_id), key=lambda t: t.id)
 
         for trip in trips:
             if time.monotonic() > deadline_at:

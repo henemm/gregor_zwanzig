@@ -3,7 +3,17 @@
 // (docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2.jsx).
 // Keine Seiteneffekte, keine Svelte-Imports — testbar mit node:test.
 
-import type { Trip, WeatherConfigMetric, ReportConfig, AlertRule, Waypoint, ActivityType } from '$lib/types';
+import type { Trip, WeatherConfigMetric, ReportConfig, Waypoint, ActivityType } from '$lib/types';
+import {
+	resolveAlertChannels,
+	resolveAlertChannelThresholds,
+	applyThresholdChange,
+	type AlertChannelState,
+	type AlertChannelThresholdState,
+	type ChannelKind,
+	type ChannelThreshold,
+} from '../shared/alarme-tab/alertChannelState.ts';
+import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryPayload.ts';
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
@@ -95,9 +105,55 @@ export interface CreateTripState {
 	weatherMetrics?: WeatherConfigMetric[];
 	channels: CreateTripChannels;
 	reportConfig?: ReportConfig;
-	alertRules?: AlertRule[];
+	// Issue #2277 S1 — Alarm-Schatten-State des geteilten AlarmeTab (createMode).
+	alarm?: CreateTripAlarmState;
 	// Issue #674 — Aktivitätstyp (Fahrrad/Wanderer) für Naismith-Berechnung.
 	activity?: ActivityType;
+}
+
+// ── Alarm-Schatten-State (Issue #2277 S1) ────────────────────────────────────
+// Gleicher Default + gleiche Deltalogik wie AlarmeTab.svelte intern (route-Zweig).
+
+export interface CreateTripAlarmState {
+	officialWarningsEnabled: boolean;
+	cooldownMinutes?: number;
+	quietFrom?: string;
+	quietTo?: string;
+	channels: AlertChannelState;
+	channelThresholds: AlertChannelThresholdState;
+	metricLevels: Record<string, string>;
+}
+
+export function initialCreateTripAlarmState(): CreateTripAlarmState {
+	return {
+		officialWarningsEnabled: false,
+		cooldownMinutes: undefined,
+		quietFrom: undefined,
+		quietTo: undefined,
+		channels: resolveAlertChannels(undefined),
+		channelThresholds: resolveAlertChannelThresholds(undefined),
+		metricLevels: {},
+	};
+}
+
+export function applyAlarmChannelToggle(state: CreateTripAlarmState, kind: ChannelKind): CreateTripAlarmState {
+	return { ...state, channels: { ...state.channels, [kind]: !state.channels[kind] } };
+}
+
+export function applyAlarmThresholdChange(
+	state: CreateTripAlarmState,
+	kind: ChannelKind,
+	level: ChannelThreshold
+): CreateTripAlarmState {
+	return { ...state, channelThresholds: applyThresholdChange(state.channelThresholds, kind, level) };
+}
+
+export function applyAlarmMetricLevelChange(
+	state: CreateTripAlarmState,
+	metric: string,
+	level: string
+): CreateTripAlarmState {
+	return { ...state, metricLevels: { ...state.metricLevels, [metric]: level } };
 }
 
 function newId(): string {
@@ -148,9 +204,24 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 		trip.report_config = state.reportConfig;
 	}
 
-	if (state.alertRules && state.alertRules.length > 0) {
-		trip.alert_rules = state.alertRules;
-	}
+	// Issue #2277 S1 — Alarm-Felder additiv mergen: Read-Modify-Write auf dem
+	// bereits gebauten display_config (channels/metrics bleiben erhalten).
+	const alarm = state.alarm ?? initialCreateTripAlarmState();
+	Object.assign(
+		trip,
+		buildAlarmeDeliveryPayload(
+			{
+				officialWarningsEnabled: alarm.officialWarningsEnabled,
+				cooldownMinutes: alarm.cooldownMinutes,
+				quietFrom: alarm.quietFrom,
+				quietTo: alarm.quietTo,
+				channels: alarm.channels,
+				channelThresholds: alarm.channelThresholds,
+				metricLevels: alarm.metricLevels,
+			},
+			trip.display_config as Record<string, unknown> | undefined
+		) as object
+	);
 
 	return trip;
 }

@@ -72,6 +72,7 @@ const TAB = join(SHARED, 'AlarmeTab.svelte');
 const HUB = join(COMPONENTS, 'compare', 'CompareTabs.svelte');
 const ANLEGE = join(COMPONENTS, 'compare-new', 'CompareNewEditor.svelte');
 const TRIP = join(COMPONENTS, 'trip-detail', 'AlarmeScheduleTab.svelte');
+const TRIPNEW = join(COMPONENTS, 'trip-new', 'TripNewEditor.svelte');
 // __tests__ -> shared -> components -> lib -> src -> frontend -> repo
 const REPO = resolve(HIER, '..', '..', '..', '..', '..', '..');
 const FRONTEND = join(REPO, 'frontend');
@@ -767,7 +768,7 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 // nicht, bleibt `:345` stehen und sie endet bei 54. Der Beweis besteht aus zwei
 // Teilen — der Praemisse an den ECHTEN Mounts und dem Wirkort-Test des Effekts.
 describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts gleichbedeutend', () => {
-	test('Praemisse: nur der Trip-Mount uebergibt `trip` — und es gibt keinen vierten Ort', () => {
+	test('Praemisse: nur die Trip-Mounts (Detail + Anlegen) uebergeben `trip` — und es gibt keinen weiteren Ort', () => {
 		const ausgabe = execSync("grep -rl '<AlarmeTab' src --include='*.svelte'", {
 			cwd: FRONTEND,
 			encoding: 'utf-8'
@@ -782,7 +783,8 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 			[
 				'src/lib/components/compare-new/CompareNewEditor.svelte',
 				'src/lib/components/compare/CompareTabs.svelte',
-				'src/lib/components/trip-detail/AlarmeScheduleTab.svelte'
+				'src/lib/components/trip-detail/AlarmeScheduleTab.svelte',
+				'src/lib/components/trip-new/TripNewEditor.svelte'
 			].sort(),
 			'AC-6 FAIL: die Menge der AlarmeTab-Einbettungen hat sich geaendert. Der ' +
 				'Aequivalenz-Beweis `context !== "route"` <=> `!trip` gilt nur fuer die hier ' +
@@ -792,7 +794,8 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 		for (const [datei, mitTrip] of [
 			[HUB, false],
 			[ANLEGE, false],
-			[TRIP, true]
+			[TRIP, true],
+			[TRIPNEW, true]
 		] as [string, boolean][]) {
 			const { treffer } = einbettungen(datei);
 			assert.ok(treffer.length > 0, `Messgrundlage weg: keine Einbettung in ${datei}.`);
@@ -909,7 +912,8 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 				gebaut.push(a);
 				return async () => {};
 			},
-			saveController: { schedule: (fn: unknown) => geplant.push(fn) }
+			saveController: { schedule: (fn: unknown) => geplant.push(fn) },
+			createMode: undefined
 		});
 		const rueckrufe = effekteVon(ast, quelle, u, '_prevAlarmeJson');
 		assert.strictEqual(rueckrufe.length, 1, 'Messaufbau kaputt: Trip-Effekt nicht registriert.');

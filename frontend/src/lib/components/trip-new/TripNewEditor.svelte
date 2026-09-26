@@ -15,7 +15,10 @@
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
-	import { AlertRulesEditor } from '$lib/components/organisms';
+	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
+	import type { ChannelKind, ChannelThreshold } from '$lib/components/shared/alarme-tab/alertChannelState';
+	import { deriveActiveAlertMetricsForTrip } from '$lib/components/shared/alarme-tab/tripAlertMetricsFromCatalog';
+	import type { MetricCatalog } from '$lib/components/trip-detail/metricsEditor';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import MInput from '$lib/components/mobile/MInput.svelte';
@@ -23,10 +26,15 @@
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import Select from '$lib/components/ui/select/Select.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import type { Trip, ReportConfig, AlertRule, WeatherConfigMetric, Stage, Waypoint, ActivityType } from '$lib/types';
+	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel } from '$lib/types';
 	import {
 		type TabId,
 		type CreateTripState,
+		type CreateTripAlarmState,
+		initialCreateTripAlarmState,
+		applyAlarmChannelToggle,
+		applyAlarmThresholdChange,
+		applyAlarmMetricLevelChange,
 		unlockedTabs,
 		doneTabs,
 		stageDate,
@@ -87,7 +95,15 @@
 	let weatherMetrics = $state<WeatherConfigMetric[]>([]);
 	let channels = $state(seed.channels ?? { email: true, telegram: true, sms: false });
 	let reportConfig = $state<ReportConfig | undefined>(seed.reportConfig);
-	let alertRules = $state<AlertRule[]>([]);
+	// Issue #2277 S1 — Alarm-Schatten-State fuer den geteilten AlarmeTab (createMode).
+	// Fliesst bewusst NICHT in stubTrip ein (neue trip-Referenz je Klick = Effekt-Schleife).
+	let alarm = $state<CreateTripAlarmState>(initialCreateTripAlarmState());
+	// Metrik-Katalog fuer die Alarm-Metrik-Zeilen (fail-soft, Muster WeatherMetricsTab).
+	let metricsCatalog = $state<MetricCatalog>({});
+	onMount(() => {
+		api.get<MetricCatalog>('/api/metrics').then((c) => { metricsCatalog = c; }).catch(() => {});
+	});
+	const activeAlertMetrics = $derived(deriveActiveAlertMetricsForTrip(weatherMetrics, metricsCatalog));
 	// Issue #674 — Aktivitätstyp aus WeatherMetricsTab übernehmen (Fahrrad/Wanderer).
 	let selectedActivity = $state<ActivityType | undefined>(undefined);
 
@@ -141,7 +157,6 @@
 	const ready = $derived(canSave(done));
 	const gpxCount = $derived(stages.filter(s => s.gpx !== null).length);
 	const progressN = $derived(progressCount(done));
-	const activeAlertChannels = $derived((['email', 'telegram', 'sms'] as const).filter((c) => channels[c]));
 
 	// Flash-State für gesperrte Tabs
 	let flashTab = $state<TabId | null>(null);
@@ -376,6 +391,15 @@
 		reportConfig = { ...(reportConfig ?? {}), ...w };
 	}
 
+	// ── Alarm-Rueckrufe aus AlarmeTab (Issue #2277 S1) ────────────────────────
+	// Delta-Logik liegt in tripNewLogic.ts (gleicher Code wie im Payload-Test).
+	function handleAlarmChannelToggle(kind: ChannelKind) { alarm = applyAlarmChannelToggle(alarm, kind); }
+	function handleAlarmThresholdChange(kind: ChannelKind, level: ChannelThreshold) { alarm = applyAlarmThresholdChange(alarm, kind, level); }
+	function handleAlarmMetricLevelChange(metric: AlertMetric, level: SensLevel) { alarm = applyAlarmMetricLevelChange(alarm, metric, level); }
+	function handleAlarmOfficialWarningsChange(an: boolean) { alarm = { ...alarm, officialWarningsEnabled: an }; }
+	function handleAlarmCooldownChange(minuten: number | undefined) { alarm = { ...alarm, cooldownMinutes: minuten }; }
+	function handleAlarmQuietHoursChange(von: string | undefined, bis: string | undefined) { alarm = { ...alarm, quietFrom: von, quietTo: bis }; }
+
 	// ── Speichern ─────────────────────────────────────────────────────────────
 	async function buildAndSave(): Promise<string | null> {
 		if (!ready || saving || savedTripId) return null;
@@ -392,7 +416,7 @@
 				weatherMetrics,
 				channels,
 				reportConfig,
-				alertRules: alertRules.length > 0 ? alertRules : undefined,
+				alarm,
 				activity: selectedActivity,
 			};
 			const payload = buildCreateTripPayload(state);
@@ -855,12 +879,6 @@
 				<EditReportConfigSection bind:reportConfig mode="create" showChannels={false} showSchedule={false} />
 			</div>
 			{/if}
-
-		{:else if activeTab === 'alerts'}
-			<!-- Alerts-Tab: reuse AlertRulesEditor mit bind:rules -->
-			<div style="padding: 32px 40px 60px;">
-				<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
-			</div>
 		{/if}
 
 		<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
@@ -879,6 +897,30 @@
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'metriken' ? '' : 'none'}>
 			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+		</div>
+		{/if}
+
+		<!-- Issue #2277 S1 — geteilter AlarmeTab (createMode, kein PUT), Muster
+		     WeatherMetricsTab: EINE dauerhafte Instanz (Desktop XOR Mobile),
+		     Sichtbarkeit ueber style:display, damit der interne State beim
+		     Tab-Wechsel erhalten bleibt. Kanal-Wertprops bewusst NICHT gesetzt. -->
+		{#if !isMobileViewport}
+		<div style:display={activeTab === 'alerts' ? '' : 'none'}>
+			<div style="padding: 32px 40px 60px;">
+				<AlarmeTab context="route" trip={stubTrip} createMode={true}
+					officialWarningsEnabled={alarm.officialWarningsEnabled}
+					onOfficialWarningsChange={handleAlarmOfficialWarningsChange}
+					cooldownMinutes={alarm.cooldownMinutes}
+					onCooldownChange={handleAlarmCooldownChange}
+					quietFrom={alarm.quietFrom}
+					quietTo={alarm.quietTo}
+					onQuietHoursChange={handleAlarmQuietHoursChange}
+					onChannelToggle={handleAlarmChannelToggle}
+					onThresholdChange={handleAlarmThresholdChange}
+					activeMetrics={activeAlertMetrics}
+					onMetricLevelChange={handleAlarmMetricLevelChange}
+				/>
+			</div>
 		</div>
 		{/if}
 		</div><!-- /.tn-desktop -->
@@ -1095,12 +1137,6 @@
 					<EditReportConfigSection bind:reportConfig mode="create" showChannels={false} showSchedule={false} />
 				</div>
 				{/if}
-
-			{:else if activeTab === 'alerts'}
-				<!-- Mobile Alerts-Tab: Wrapper mit mobilem Padding -->
-				<div style="padding: 16px 16px 60px;">
-					<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
-				</div>
 			{/if}
 
 			<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
@@ -1111,6 +1147,27 @@
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'metriken' ? '' : 'none'}>
 				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+			</div>
+			{/if}
+
+			<!-- Issue #2277 S1 — Mobile AlarmeTab, XOR zum Desktop-Mount oben. -->
+			{#if isMobileViewport}
+			<div style:display={activeTab === 'alerts' ? '' : 'none'}>
+				<div style="padding: 16px 16px 60px;">
+					<AlarmeTab context="route" trip={stubTrip} createMode={true}
+						officialWarningsEnabled={alarm.officialWarningsEnabled}
+						onOfficialWarningsChange={handleAlarmOfficialWarningsChange}
+						cooldownMinutes={alarm.cooldownMinutes}
+						onCooldownChange={handleAlarmCooldownChange}
+						quietFrom={alarm.quietFrom}
+						quietTo={alarm.quietTo}
+						onQuietHoursChange={handleAlarmQuietHoursChange}
+						onChannelToggle={handleAlarmChannelToggle}
+						onThresholdChange={handleAlarmThresholdChange}
+						activeMetrics={activeAlertMetrics}
+						onMetricLevelChange={handleAlarmMetricLevelChange}
+					/>
+				</div>
 			</div>
 			{/if}
 

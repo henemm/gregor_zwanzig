@@ -73,7 +73,7 @@
 	interface Props {
 		context?: AlarmeContext;
 		// route
-		trip?: Trip;
+		trip?: Trip; createMode?: boolean; // #2277 S1: Anlege-Seite, kein Selbst-Speichern (Muster WeatherMetricsTab)
 		onTripUpdate?: (updated: Trip) => void;
 		saveController?: SaveStatus;
 		activeMetrics?: AlertMetric[];
@@ -145,7 +145,7 @@
 	}
 	let {
 		context = 'route',
-		trip,
+		trip, createMode,
 		onTripUpdate,
 		saveController,
 		activeMetrics,
@@ -412,7 +412,7 @@
 		routeMetricLevels
 	});
 	$effect(() => {
-		if (!trip) return;
+		if (!trip || createMode) return;
 		const currentJson = JSON.stringify({
 			routeOfficialWarningsEnabled,
 			routeCooldownMinutes,
