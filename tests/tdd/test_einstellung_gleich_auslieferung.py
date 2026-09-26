@@ -36,9 +36,9 @@ from tests.helpers.einstellung_auslieferung_orakel import (
     erwartete_kaskade,
     hat_roh_einfach_dimension,
     KANAELE,
-    parse_email_html,
-    parse_email_plain,
+    parse_kanal,
     register_validieren,
+    roh_wert_der_metrik,
     rote_zellen_beide_goldens,
     rote_zellen_fuer_golden,
     veraltete_eintraege,
@@ -300,6 +300,30 @@ def test_ac7_veralteter_eintrag_wird_rot(monkeypatch):
     )
 
 
+def test_ac6_ac7_echtes_register_hat_keine_unbenutzten_eintraege(monkeypatch):
+    """AC-6/AC-7 (Finding F002 der Adversary-Pruefung): Gegenprobe gegen das
+    ECHTE ``AUSNAHMEN``-Register, nicht nur gegen eine lokale Kopie mit einem
+    testkoerper-eigenen Eintrag.
+
+    Given das ECHTE ``AUSNAHMEN``-Register laeuft ueber BEIDE Goldens.
+    When die tatsaechlich genutzten Eintraege gesammelt werden.
+    Then ist KEIN Eintrag unbenutzt -- ein zusaetzlicher, erfundener oder
+    laengst veralteter Eintrag im echten Register faellt sonst nie auf (die
+    Hauptmatrix wird nur an ungedeckten Abweichungen rot, nicht an
+    ueberschuessiger Deckung). Mutations-Gegenprobe (PFLICHT): ein Bogus-
+    Eintrag ins echte Register (z.B. eine gruene Zelle, die keine der beiden
+    Goldens ueberhaupt abweichen laesst) muss GENAU diesen Test rot faerben.
+    """
+    ga, mit_a, gb, mit_b = _render_beide(monkeypatch, monkeypatch)
+    _rot, genutzt = rote_zellen_beide_goldens(ga, mit_a, gb, mit_b, AUSNAHMEN)
+    veraltete = veraltete_eintraege(AUSNAHMEN, genutzt)
+    assert veraltete == set(), (
+        f"AC-6/AC-7: das ECHTE Register enthaelt unbenutzte Eintraege (weder "
+        f"durch Golden A noch Golden B ausgeloest): {veraltete} -- entweder "
+        f"bereits gefixt (veraltet) oder nie eine tatsaechliche Abweichung."
+    )
+
+
 # ═══════════════════════════ AC-8 ═══════════════════════════════════════════
 
 
@@ -334,6 +358,83 @@ def test_ac8_eintrag_ohne_begruendung_blockt_vor_der_matrix(monkeypatch):
         register_validieren([kaputt_ohne_befund])
 
 
+def test_ac8_f006_wildcard_metrik_ohne_kanalweiten_befund_blockt_vor_der_matrix(monkeypatch):
+    """AC-8 / Finding F006 (Adversary-Runde 4).
+
+    Given ein Register-Eintrag mit ``metrik="*"``, dessen ``befund`` NICHT
+    der kanalweite Befund B2 ist (laut Spec, Abschnitt "Ausnahme-Register",
+    ist ``metrik="*"`` ausschliesslich fuer B2 vorgesehen).
+    When das Register vor der Matrixpruefung validiert wird.
+    Then schlaegt die Validierung mit einer spezifischen Fehlermeldung fehl --
+    BEVOR irgendeine Zelle geprueft wurde. Ein metrikscharfer Eintrag (z.B.
+    der ``gust``-Eintrag fuer das Telegram-7er-Tabellenlimit) darf sich also
+    nicht unbemerkt auf ``metrik="*"`` verbreitern.
+    """
+    verbreiterter_gust_eintrag = AusnahmeEintrag(
+        metrik="*", kanal="telegram_rich", dimension="erscheint",
+        befund="Issue #360 (Telegram-7er-Tabellenlimit)",
+        grund="Mutation C: metrikscharfer gust-Eintrag auf '*' verbreitert.",
+        befristet=False,
+    )
+    with pytest.raises(RegisterValidierungsFehler, match="kanalweiten Befunde"):
+        register_validieren([verbreiterter_gust_eintrag])
+
+    # Das ECHTE Register darf keinen solchen Eintrag enthalten -- die
+    # Validierung des Produktions-Registers muss gruen bleiben.
+    register_validieren(AUSNAHMEN)
+
+    # Vollstaendiger Nachweis: der Hauptmatrix-Pfad ruft ``register_validieren``
+    # tatsaechlich mit dem ECHTEN Register auf (nicht nur isoliert getestet).
+    import tests.helpers.einstellung_auslieferung_orakel as orakel_mod
+
+    aufrufe: list = []
+    orig_validieren = orakel_mod.register_validieren
+
+    def _aufzeichnender_validieren(register):
+        aufrufe.append(list(register))
+        return orig_validieren(register)
+
+    monkeypatch.setattr(
+        orakel_mod, "register_validieren", _aufzeichnender_validieren, raising=True,
+    )
+    ga = golden_dict("golden_a")
+    mit_a, _ = render_golden(monkeypatch, "golden_a")
+    rote_zellen_fuer_golden(ga, mit_a, AUSNAHMEN)
+    assert any(aufruf == list(AUSNAHMEN) for aufruf in aufrufe), (
+        "F006-Nachweis: der Hauptmatrix-Pfad (abweichungen_fuer_golden) muss "
+        "register_validieren(AUSNAHMEN) tatsaechlich mit dem ECHTEN Register "
+        f"aufrufen, aufgezeichnete Aufrufe: {aufrufe!r}"
+    )
+
+
+def test_ac8_f007_wildcard_b2_ausserhalb_des_erlaubten_scopes_blockt(monkeypatch):
+    """AC-8 / Finding F007 (Adversary-Runde 5).
+
+    Given ein Register-Eintrag mit ``metrik="*"`` und dem kanalweiten Befund
+    ``B2`` (besteht damit den F006-Check), dessen (Kanal, Dimension) aber
+    NICHT im laut Spec fuer B2 erlaubten Scope liegt (nur sms/
+    telegram_kurzform/premium_sms x roh_einfach -- Umgehung aus Runde 5:
+    ``gust`` auf telegram_rich/erscheint mit befund="B2" verbreitert).
+    When das Register vor der Matrixpruefung validiert wird.
+    Then schlaegt die Validierung mit einer scope-spezifischen Fehlermeldung
+    fehl -- das reine befund-Label "B2" reicht nicht, der (Kanal, Dimension)-
+    Ort muss mitgeprueft werden. Das ECHTE Register bleibt gueltig.
+    """
+    verbreiterter_gust_b2 = AusnahmeEintrag(
+        metrik="*", kanal="telegram_rich", dimension="erscheint",
+        befund="B2",
+        grund="F007: gust-Umgehung -- B2-Label ohne passenden Scope.",
+        befristet=False,
+    )
+    with pytest.raises(RegisterValidierungsFehler, match="Scope"):
+        register_validieren([verbreiterter_gust_b2])
+
+    # Das ECHTE Register enthaelt ausschliesslich B2-Eintraege innerhalb des
+    # erlaubten Scopes (sms/telegram_kurzform/premium_sms x roh_einfach) --
+    # die Validierung des Produktions-Registers muss gruen bleiben.
+    register_validieren(AUSNAHMEN)
+
+
 # ═══════════════════════════ AC-9 ═══════════════════════════════════════════
 
 
@@ -357,19 +458,14 @@ def test_ac9_m1_sortkey_invertiert_wird_in_email_reihenfolge_rot(monkeypatch):
     -- die betroffene Zelle liegt daher bei E-Mail, nicht bei Telegram-rich
     (Abweichung von der urspruenglichen Erwartung, siehe Abschlussbericht).
 
-    Zugleich der Beleg fuer AC-3 (Orakel-Unabhaengigkeit): die Orakel-Funktion
-    importiert nichts aus ``app.models`` (Code-Review-Beleg unten) -- bliebe
-    sie heimlich an ``_sorted_by_layout`` gekoppelt, waere M1 unsichtbar,
-    weil beide Seiten gleich falsch wuerden.
+    Zugleich der VERHALTENS-Beleg fuer AC-3 (Orakel-Unabhaengigkeit, kein
+    AST-/``inspect.getsource``-Test -- der widerspraeche der Spec): bliebe die
+    Orakel-Funktion heimlich an ``_sorted_by_layout`` gekoppelt, waere M1
+    unsichtbar, weil beide Seiten (Erwartung UND tatsaechlicher Text) gleich
+    falsch wuerden. Genau das prueft dieser Test unten -- er wird rot, also
+    ist die Orakel-Erwartung unabhaengig von ``_sorted_by_layout``.
     """
     import app.models as models_mod
-    import inspect
-
-    from tests.helpers import einstellung_auslieferung_orakel as orakel_mod
-    quelle = inspect.getsource(orakel_mod)
-    assert "from app.models import" not in quelle and "import app.models" not in quelle, (
-        "AC-3: die Orakel-Funktion darf nichts aus app.models importieren."
-    )
 
     rot_basis = _rot_fuer_golden_b(monkeypatch)
 
@@ -563,65 +659,88 @@ def test_ac11_matrix_ist_vollstaendig(monkeypatch):
 # ═══════════════════════════ AC-12 ═══════════════════════════════════════════
 
 
+#: Dokumentierte, begruendete Ausnahmen (Finding F003): keine fehlende
+#: Rohdaten-Zelle, sondern eine bewusste Darstellungsentscheidung. ``thunder``
+#: zeigt in der E-Mail-HTML-Tabelle eine farbige Ampel-Punkt-Zelle statt Text
+#: (``trip_report.py`` ``_AMPEL_CAPABLE_METRIC_IDS``-Nachbarschaft) -- die
+#: zugrunde liegenden Rohdaten sind vorhanden (dieselbe Groesse steht
+#: textuell im Klartext-Teil derselben Mail, per ``parse_email_plain``
+#: separat geprueft).
+_AC12_ERLAUBTE_PLATZHALTER: set[tuple[str, str]] = {("thunder", "email_html")}
+
+
 def test_ac12_keine_rote_zelle_durch_fehlende_rohdaten(monkeypatch):
-    """AC-12 (synthetische Voll-Wetter-Fixture).
+    """AC-12 (synthetische Voll-Wetter-Fixture) -- Finding F003: ueber BEIDE
+    Goldens und ALLE sechs von ihnen jeweils erreichbaren Kanaele, nicht nur
+    golden_b/email_plain.
 
     Given die neue synthetische Voll-Wetter-Fixture belegt ALLE Felder, die
     den bestehenden ``openmeteo``-Fixtures fehlen (humidity, dewpoint,
     pressure, wind_chill_c, cloud_mid/high, precip_type, snow_new_24h).
-    When beide Goldens damit gerendert werden.
-    Then enthaelt die E-Mail-Klartext-Tabelle keinen Platzhalter fuer eine
-    Metrik, die dort laut Orakel aktiv sein soll -- AUSSER der bekannten
-    Telegram-Geisterspalte (B5, eigener roter Befund, keine Datenluecke) und
-    den erlaubten SMS-Nullformen (z.B. ``TH+:-``).
-
-    Bewusst NUR Klartext (nicht HTML): ``thunder`` traegt in der HTML-Tabelle
-    eine farbige Ampel-Punkt-Darstellung statt Text (``trip_report.py``
-    ``_AMPEL_CAPABLE_METRIC_IDS``-Nachbarschaft) -- das ist eine
-    Darstellungsentscheidung, keine fehlende Rohdaten-Zelle; die zugrunde
-    liegenden Rohdaten sind vorhanden (dieselbe Groesse steht textuell im
-    Klartext-Teil derselben Mail).
+    When beide Goldens damit ueber alle sechs Ausgabe-Formen gerendert
+    werden.
+    Then hat keine im jeweiligen Kanaltext TATSAECHLICH erscheinende Metrik
+    einen Platzhalter statt eines Wertes -- AUSSER der dokumentierten,
+    begruendeten Ausnahme oben. Eine erwartete, aber im Text FEHLENDE Metrik
+    ist eine "erscheint"-Abweichung (Register-Sache), nicht Gegenstand von
+    AC-12.
     """
-    gb = golden_dict("golden_b")
-    mit_b, _ = render_golden(monkeypatch, "golden_b")
+    ga, mit_a, gb, mit_b = _render_beide(monkeypatch, monkeypatch)
 
-    email_sendung = mit_b.sendungen("email")[0]
-    ids_plain, modi_plain = parse_email_plain(email_sendung["plain_text_body"])
-
-    erwartet_email = {mid for mid, _ in erwartete_kaskade(gb, "email_html", "evening")}
-    for mid in erwartet_email:
-        if mid in ids_plain:
-            assert modi_plain.get(mid) is not None, (
-                f"AC-12: {mid!r} zeigt in der E-Mail-Klartext-Tabelle einen "
-                f"Platzhalter statt eines Wertes."
-            )
+    for golden, mitschrift, golden_name in ((ga, mit_a, "golden_a"), (gb, mit_b, "golden_b")):
+        for kanal in erreichbare_kanaele(golden["report_config"]):
+            erwartet_ids = {mid for mid, _ in erwartete_kaskade(golden, kanal, "evening")}
+            ist_ids, ist_modi = parse_kanal(mitschrift, kanal)
+            for mid in erwartet_ids:
+                if mid not in ist_ids:
+                    continue  # "erscheint"-Abweichung, nicht Gegenstand von AC-12
+                if (mid, kanal) in _AC12_ERLAUBTE_PLATZHALTER:
+                    continue
+                assert ist_modi.get(mid) is not None, (
+                    f"AC-12: {mid!r} zeigt in Kanal {kanal!r} ({golden_name}) "
+                    f"einen Platzhalter statt eines Wertes."
+                )
 
 
 # ═══════════════════════════ AC-13 ═══════════════════════════════════════════
 
 
 def test_ac13_naht_liegt_nur_am_transport(monkeypatch):
-    """AC-13 (Naht nur am Transport).
+    """AC-13 (Naht nur am Transport) -- Finding F004: Zuordnung an der
+    GUST-STELLE pruefen (``roh_wert_der_metrik``), nicht nur ein Substring
+    ``"45"`` irgendwo im Text (der koennte zufaellig von anderswo stammen).
 
     Given ``EmailOutput``/``SMSOutput``/``PremiumSmsOutput``/``TelegramOutput``
     werden per ``monkeypatch.setattr`` durch den Aufzeichner ersetzt.
     When beide Goldens versendet werden.
     Then laufen Loader, Kaskade und Formatter unveraendert echt -- der
     Aufzeichner erfasst den vollstaendigen, durch echte Formatierung
-    erzeugten Text je Kanal (golden-spezifische Wetterwerte aus der
-    Voll-Wetter-Fixture, nicht nur Metrik-Labels -- ein vom Test selbst
-    vorgegebener Text kaeme ohne echten Formatter-Lauf nicht zustande).
+    erzeugten Text je Kanal, und der konkrete Boen-Wert (45 km/h) aus der
+    Voll-Wetter-Fixture steht GENAU an der ``gust``-Stelle (Spalte/Token),
+    nicht nur irgendwo im Text.
     """
     mit_b, _ = render_golden(monkeypatch, "golden_b")
-    email = mit_b.sendungen("email")[0]
-    assert "45" in email["plain_text_body"], (
-        "AC-13: der konkrete Boen-Wert (45 km/h) aus der Voll-Wetter-Fixture "
-        "muss im echt formatierten Klartext stehen."
+
+    assert roh_wert_der_metrik(mit_b, "email_plain", "gust") == "45", (
+        "AC-13: der Boen-Wert muss an der gust-Spalte im echt formatierten "
+        "Klartext stehen."
     )
-    assert "45" in email["body"], (
-        "AC-13: derselbe Wert muss auch im echt formatierten HTML stehen."
+    assert roh_wert_der_metrik(mit_b, "email_html", "gust") == "45", (
+        "AC-13: derselbe Wert muss an der gust-Spalte im echt formatierten "
+        "HTML stehen."
     )
-    sms = mit_b.sendungen("sms")[0]["body"]
-    assert "45" in sms, "AC-13: die SMS traegt denselben Boen-Wert."
-    telegram_texte = " ".join(s["body"] for s in mit_b.sendungen("telegram"))
-    assert "45" in telegram_texte, "AC-13: Telegram traegt denselben Boen-Wert."
+    sms_wert = roh_wert_der_metrik(mit_b, "sms", "gust")
+    # SMS-Token-Grammatik haengt einen Zeitstempel-Suffix an (z.B. "45@4") --
+    # derselbe Trenn-Trick wie in ``parse_sms_artig`` bei der Modus-Erkennung.
+    assert sms_wert is not None and sms_wert.split("@")[0].split("/")[0] == "45", (
+        f"AC-13: die SMS muss den Boen-Wert am gust-Kuerzel tragen, erhalten "
+        f"{sms_wert!r}."
+    )
+    # Telegram rich: gust wird wegen des Telegram-7er-Tabellenlimits (Issue
+    # #360, Register-Eintrag) aus der Stunden-Tabelle verdraengt und
+    # erscheint statt dessen in der begleitenden Kurzuebersicht-Bubble
+    # ("G 45") -- ``roh_wert_der_metrik`` sucht beide Fundstellen.
+    assert roh_wert_der_metrik(mit_b, "telegram_rich", "gust") == "45", (
+        "AC-13: Telegram muss den Boen-Wert an der gust-Stelle tragen "
+        "(Stunden-Tabelle oder Kurzuebersicht-Zeile)."
+    )

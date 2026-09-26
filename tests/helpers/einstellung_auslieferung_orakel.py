@@ -46,6 +46,23 @@ class RegisterValidierungsFehler(Exception):
     """AC-8: ein Register-Eintrag ohne befund/grund blockt VOR der Matrix."""
 
 
+#: F006/F007 (Adversary-Runde 4+5): ``metrik="*"`` ist laut Spec (Abschnitt
+#: "Ausnahme-Register") ausschliesslich fuer den kanalweiten Befund B2
+#: vorgesehen -- UND dort nur fuer den in der Spec benannten Scope
+#: (sms/telegram_kurzform/premium_sms x roh_einfach). Ein metrikscharfer
+#: Eintrag darf sich weder unbemerkt auf "*" verbreitern (F006) noch als
+#: Wildcard in einen fremden (Kanal, Dimension)-Scope hinein deklariert
+#: werden (F007) -- beides wuerde die Ausnahme fuer ALLE Metriken einer
+#: Stelle oeffnen statt fuer die eine begruendete.
+KANALWEITE_BEFUNDE: "dict[str, frozenset[tuple[str, str]]]" = {
+    "B2": frozenset({
+        ("sms", "roh_einfach"),
+        ("telegram_kurzform", "roh_einfach"),
+        ("premium_sms", "roh_einfach"),
+    }),
+}
+
+
 def register_validieren(register: "list[AusnahmeEintrag]") -> None:
     for eintrag in register:
         if not eintrag.befund or not eintrag.befund.strip():
@@ -56,12 +73,154 @@ def register_validieren(register: "list[AusnahmeEintrag]") -> None:
             raise RegisterValidierungsFehler(
                 f"Register-Eintrag ohne 'grund': {eintrag!r}"
             )
+        if eintrag.metrik == "*":
+            if eintrag.befund not in KANALWEITE_BEFUNDE:
+                raise RegisterValidierungsFehler(
+                    f"Register-Eintrag mit metrik='*' aber befund={eintrag.befund!r} "
+                    f"ist nicht erlaubt -- 'metrik=\"*\"' ist laut Spec ausschliesslich "
+                    f"fuer die kanalweiten Befunde {sorted(KANALWEITE_BEFUNDE)} "
+                    f"vorgesehen: {eintrag!r}"
+                )
+            scope = KANALWEITE_BEFUNDE[eintrag.befund]
+            if (eintrag.kanal, eintrag.dimension) not in scope:
+                raise RegisterValidierungsFehler(
+                    f"Register-Eintrag mit metrik='*' und befund={eintrag.befund!r} "
+                    f"liegt ausserhalb des fuer diesen Befund erlaubten Scopes "
+                    f"{sorted(scope)} -- (kanal, dimension)="
+                    f"{(eintrag.kanal, eintrag.dimension)!r} ist nicht abgedeckt: "
+                    f"{eintrag!r}"
+                )
 
 
-#: S1-Startbefuellung. LEER waehrend TDD RED (/40) -- /50 befuellt sie mit den
-#: durch die Goldens tatsaechlich ausgeloesten Befunden B1/B2/B3/B5 + der
-#: strukturellen Telegram-7er-Ausnahme (gust in Golden A/B).
-AUSNAHMEN: "list[AusnahmeEintrag]" = []
+#: S1-Startbefuellung (TDD GREEN, /50). Deckt exakt die durch die zwei
+#: Golden-Trip-Varianten tatsaechlich ausgeloesten Befunde B1/B2/B3/B5 sowie
+#: die strukturelle Telegram-7er-Tabellenlimit-Ausnahme (``gust``) ab --
+#: siehe ``docs/artifacts/fix-2422-konfig-auslieferung-testluecken/
+#: red-handoff.md``.
+AUSNAHMEN: "list[AusnahmeEintrag]" = [
+    # B1: wind_chill ohne SMS-Kuerzel faellt in Kurzform/SMS/Premium-SMS
+    # still weg (KHW 403). Variantenwahl (eigenes Kuerzel vs. Editor-Hinweis)
+    # ist explizit NICHT Teil von S1 -- eigene Fix-Scheibe S6+.
+    AusnahmeEintrag(
+        metrik="wind_chill", kanal="telegram_kurzform", dimension="erscheint",
+        befund="B1",
+        grund=(
+            "wind_chill hat kein Kuerzel in SMS_SYMBOL_BY_METRIC/"
+            "SMS_MULTI_SYMBOLS_BY_METRIC (#1887 E6) und faellt deshalb im "
+            "Kurzform-Text still weg, obwohl es im SMS-Kanal-Layout aktiv "
+            "ist (KHW 403, #2422). Fix-Scheibe S6+ (Variantenwahl V1/V2 "
+            "durch PO)."
+        ),
+        befristet=True,
+    ),
+    AusnahmeEintrag(
+        metrik="wind_chill", kanal="sms", dimension="erscheint",
+        befund="B1",
+        grund=(
+            "wind_chill hat kein Kuerzel in SMS_SYMBOL_BY_METRIC/"
+            "SMS_MULTI_SYMBOLS_BY_METRIC (#1887 E6) und faellt deshalb im "
+            "SMS-Text still weg, obwohl es im SMS-Kanal-Layout aktiv ist "
+            "(KHW 403, #2422). Fix-Scheibe S6+ (Variantenwahl V1/V2 durch "
+            "PO)."
+        ),
+        befristet=True,
+    ),
+    AusnahmeEintrag(
+        metrik="wind_chill", kanal="premium_sms", dimension="erscheint",
+        befund="B1",
+        grund=(
+            "wind_chill hat kein Kuerzel in SMS_SYMBOL_BY_METRIC/"
+            "SMS_MULTI_SYMBOLS_BY_METRIC (#1887 E6) und faellt deshalb im "
+            "Premium-SMS-Text still weg, obwohl es im SMS-Kanal-Layout aktiv "
+            "ist (KHW 403, #2422). Fix-Scheibe S6+ (Variantenwahl V1/V2 "
+            "durch PO)."
+        ),
+        befristet=True,
+    ),
+    # B2 (kanalweit, metrik="*"): Kurzform/SMS/Premium-SMS ignorieren
+    # Roh/Einfach, weil MetricSpec kein format_mode kennt. Eigene
+    # Fix-Scheibe S6+.
+    AusnahmeEintrag(
+        metrik="*", kanal="sms", dimension="roh_einfach",
+        befund="B2",
+        grund=(
+            "SMS-Zellbau kennt kein format_mode auf MetricSpec-Ebene -- "
+            "Roh/Einfach wird kanalweit ignoriert (z.B. cloud_total, "
+            "sunshine, #2422). Fix in eigener Scheibe S6+."
+        ),
+        befristet=True,
+    ),
+    AusnahmeEintrag(
+        metrik="*", kanal="telegram_kurzform", dimension="roh_einfach",
+        befund="B2",
+        grund=(
+            "Telegram-Kurzform-Zellbau kennt kein format_mode auf "
+            "MetricSpec-Ebene -- Roh/Einfach wird kanalweit ignoriert (z.B. "
+            "cloud_total, sunshine, #2422). Fix in eigener Scheibe S6+."
+        ),
+        befristet=True,
+    ),
+    AusnahmeEintrag(
+        metrik="*", kanal="premium_sms", dimension="roh_einfach",
+        befund="B2",
+        grund=(
+            "Premium-SMS-Zellbau kennt kein format_mode auf MetricSpec-"
+            "Ebene -- Roh/Einfach wird kanalweit ignoriert (z.B. "
+            "cloud_total, sunshine, #2422). Fix in eigener Scheibe S6+."
+        ),
+        befristet=True,
+    ),
+    # B3: Telegram rich erbt Roh/Einfach aus dem E-Mail-Layout statt dem
+    # eigenen (trip_report.py build_friendly_keys nach Email-Kollabierung).
+    # Nutzersichtbar + eigenstaendig -> eigenes GitHub-Issue #2429.
+    AusnahmeEintrag(
+        metrik="cloud_total", kanal="telegram_rich", dimension="roh_einfach",
+        befund="B3",
+        grund=(
+            "Telegram rich erbt seine Roh/Einfach-Entscheidung aus der "
+            "geteilten _friendly_keys-Instanz des E-Mail-Formatters "
+            "(trip_report.py:142 build_friendly_keys(dc) nach Email-"
+            "Kollabierung) statt aus dem eigenen Telegram-Layout. Eigenes "
+            "Issue #2429."
+        ),
+        befristet=True,
+    ),
+    # B5: wind_direction (Skalenmodus) + wind erzeugt eine Geisterspalte
+    # "WD" mit Platzhalter in Telegram rich. Eigene Fix-Scheibe S6+.
+    AusnahmeEintrag(
+        metrik="wind_direction", kanal="telegram_rich", dimension="erscheint",
+        befund="B5",
+        grund=(
+            "wind_direction im Skalenmodus zusammen mit wind erzeugt in "
+            "Telegram rich eine eigene Geisterspalte 'WD', deren Zelle nur "
+            "Platzhalter ('-') traegt (should_merge_wind_dir haengt den "
+            "Wert stattdessen an die wind-Zelle, #2422). Fix in eigener "
+            "Scheibe S6+."
+        ),
+        befristet=True,
+    ),
+    # Strukturell (kein Register-verfallendes Produktdefizit, sondern eine
+    # bewusste Design-Grenze): Telegram-Tabellen sind auf 8 Gesamtspalten
+    # begrenzt (Zeit + 7 Metriken, CHANNEL_LIMITS["telegram"]["max_table_cols"]
+    # = 8, src/output/renderers/channel_layout.py:46-55, eingefuehrt mit
+    # Issue #360 "kanal-bewusster Renderer fuer Signal/Telegram", Commit
+    # 5f9b57f9). gust liegt in den Goldens hinter der 7er-Grenze und wird in
+    # Telegram rich deshalb verdraengt (demoted), erscheint aber laut Orakel
+    # weiterhin als "aktiv" (AC-5: die Orakel-Regel kennt das Limit nicht).
+    AusnahmeEintrag(
+        metrik="gust", kanal="telegram_rich", dimension="erscheint",
+        befund="Issue #360 (Telegram-7er-Tabellenlimit)",
+        grund=(
+            "Telegram begrenzt Tabellen strukturell auf 8 Gesamtspalten "
+            "(Zeit + 7 Metriken, channel_layout.py:46-55, CHANNEL_LIMITS"
+            "['telegram']['max_table_cols']=8, eingefuehrt mit Issue #360, "
+            "Commit 5f9b57f9). gust wird deshalb ab der 8. Kandidaten-"
+            "Metrik verdraengt (demoted) -- bewusste Design-Grenze, kein "
+            "Konfigurations-Fehler, daher nicht befristet."
+        ),
+        befristet=False,
+    ),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +357,7 @@ def erwartete_kaskade(
         gefiltert.append(mc)
 
     gefiltert.sort(
-        key=lambda mc: (_BUCKET_RANK.get(mc.get("bucket", "secondary"), 2), mc.get("order", 0))
+        key=lambda mc: (_BUCKET_RANK.get(mc.get("bucket", "primary"), 2), mc.get("order", 0))
     )
     return [(mc["metric_id"], bool(mc.get("use_friendly_format", True))) for mc in gefiltert]
 
@@ -284,10 +443,10 @@ def _text_ohne_tags(html_fragment: str) -> str:
     return _TAG_RE.sub("", html_fragment).strip()
 
 
-def parse_email_html(html: str) -> tuple[list[str], dict[str, Optional[str]]]:
-    """(metric_ids in Spaltenreihenfolge, {metric_id: Modus|None}) aus der
-    ZWEITEN ``<table>`` (die erste ist der Mastkopf) -- deren ``<th>``-Zeile
-    traegt die Spalten-Labels, die naechste ``<tr>`` die erste Datenzeile."""
+def _email_html_kopf_und_werte(html: str) -> tuple[list[str], list[str]]:
+    """(Labels ohne 'Time', Werte ohne Zeit-Spalte) der ERSTEN Stunden-Tabelle
+    im HTML -- gemeinsame Grundlage fuer ``parse_email_html`` (Modus) und
+    ``roh_wert_der_metrik`` (Rohwert, AC-13)."""
     tabellen = [m.start() for m in re.finditer(r"<table", html)]
     assert len(tabellen) >= 2, "Keine zweite <table> (Stunden-Tabelle) im HTML gefunden"
     ausschnitt = html[tabellen[1]:tabellen[2] if len(tabellen) > 2 else tabellen[1] + 20000]
@@ -299,8 +458,16 @@ def parse_email_html(html: str) -> tuple[list[str], dict[str, Optional[str]]]:
     assert erste_zeile_match, "Keine Datenzeile in der Stunden-Tabelle gefunden"
     werte = [_text_ohne_tags(t) for t in _TD_RE.findall(erste_zeile_match.group(1))]
     assert len(labels) == len(werte), f"Kopf/Zeile-Laenge weicht ab: {labels!r} vs {werte!r}"
+    return labels[1:], werte[1:]  # erste Spalte = Zeit
+
+
+def parse_email_html(html: str) -> tuple[list[str], dict[str, Optional[str]]]:
+    """(metric_ids in Spaltenreihenfolge, {metric_id: Modus|None}) aus der
+    ZWEITEN ``<table>`` (die erste ist der Mastkopf) -- deren ``<th>``-Zeile
+    traegt die Spalten-Labels, die naechste ``<tr>`` die erste Datenzeile."""
+    labels, werte = _email_html_kopf_und_werte(html)
     ids, modi = [], {}
-    for label, wert in zip(labels[1:], werte[1:]):  # erste Spalte = Zeit
+    for label, wert in zip(labels, werte):
         mid = _COL_LABEL_TO_ID.get(label)
         if mid is None:
             continue
@@ -351,10 +518,10 @@ _VALUE_GRAMMAR = (
 )
 
 
-def parse_sms_artig(text: str) -> tuple[list[str], dict[str, Optional[str]]]:
-    """(metric_ids in Token-Reihenfolge, {metric_id: Modus|None}) aus einem
-    SMS-/Kurzform-/Premium-SMS-Text -- Kuerzel-Register NUR zum Parsen
-    (AC-4), niemals zur Erwartungsbildung."""
+def _sms_treffer(text: str) -> list[tuple[int, str, str]]:
+    """(index, metric_id, roher Wert) je erkanntem Kuerzel-Token in
+    Token-Reihenfolge -- gemeinsame Grundlage fuer ``parse_sms_artig``
+    (Modus) und ``roh_wert_der_metrik`` (Rohwert, AC-13)."""
     rumpf = text.split(": ", 1)[1] if ": " in text else text
     tokens = rumpf.split(" ")
     treffer: list[tuple[int, str, str]] = []  # (index, metric_id, wert)
@@ -365,6 +532,14 @@ def parse_sms_artig(text: str) -> tuple[list[str], dict[str, Optional[str]]]:
                 treffer.append((i, mid, m.group(1)))
                 break
     treffer.sort(key=lambda t: t[0])
+    return treffer
+
+
+def parse_sms_artig(text: str) -> tuple[list[str], dict[str, Optional[str]]]:
+    """(metric_ids in Token-Reihenfolge, {metric_id: Modus|None}) aus einem
+    SMS-/Kurzform-/Premium-SMS-Text -- Kuerzel-Register NUR zum Parsen
+    (AC-4), niemals zur Erwartungsbildung."""
+    treffer = _sms_treffer(text)
     ids: list[str] = []
     modi: dict[str, Optional[str]] = {}
     for _, mid, wert in treffer:
@@ -415,6 +590,57 @@ def parse_kanal(mitschrift, kanal: str) -> tuple[list[str], dict[str, Optional[s
     if kanal == "email_plain":
         return parse_email_plain(text)
     return parse_sms_artig(text)
+
+
+def _kurzuebersicht_wert(bodies: list[str], compact_label: str) -> Optional[str]:
+    """Sucht in ALLEN Bubble-Texten eine Kurzuebersicht-Zeile "<Kuerzel>
+    <Wert>" (z.B. "G 45") -- Format der Telegram-rich-Kurzuebersicht-Bubble,
+    die zusaetzlich zur Stunden-Tabelle mitgesendet wird. Fuer eine wegen des
+    Telegram-7er-Tabellenlimits (Issue #360) aus der Stunden-Tabelle
+    verdraengte Metrik (z.B. ``gust``) ist dies die einzige Fundstelle."""
+    muster = re.compile(rf"^{re.escape(compact_label)}\s+(\S.*)$")
+    for body in bodies:
+        for zeile in body.splitlines():
+            m = muster.match(zeile.strip())
+            if m:
+                return m.group(1).strip()
+    return None
+
+
+def roh_wert_der_metrik(mitschrift, kanal: str, metric_id: str) -> Optional[str]:
+    """Roher Zellwert (String) an der Stelle von ``metric_id`` im tatsaechlich
+    gesendeten Text von ``kanal`` -- fuer punktuelle Wert-Zuordnungs-
+    Pruefungen (AC-13), damit ein Substring-Treffer nicht zufaellig von einer
+    anderen Stelle im Text stammt. ``None``, wenn die Metrik in diesem
+    Kanaltext nicht auffindbar ist."""
+    bodies, text = _kanal_texte(mitschrift, kanal)
+    if kanal == "telegram_rich":
+        assert bodies, f"Kanal {kanal!r}: keine aufgezeichnete Sendung"
+        for body in bodies:
+            zeilen = body.splitlines()
+            for i, zeile in enumerate(zeilen):
+                if zeile.startswith("Zt "):
+                    kopf = zeile.split()
+                    daten = _tabellen_tokens_mit_richtungs_merge(zeilen[i + 1], len(kopf))
+                    for label, wert in zip(kopf[1:], daten[1:]):
+                        if _COMPACT_LABEL_TO_ID.get(label) == metric_id:
+                            return wert
+        metric = get_metric(metric_id)
+        return _kurzuebersicht_wert(bodies, metric.compact_label)
+    assert text, f"Kanal {kanal!r}: keine aufgezeichnete Sendung"
+    if kanal == "email_html":
+        labels, werte = _email_html_kopf_und_werte(text)
+    elif kanal == "email_plain":
+        labels, werte = _email_tabellen_kopf_und_zeile(text)
+    else:
+        for _, mid, wert in _sms_treffer(text):
+            if mid == metric_id:
+                return wert
+        return None
+    for label, wert in zip(labels, werte):
+        if _COL_LABEL_TO_ID.get(label) == metric_id:
+            return wert
+    return None
 
 
 def vorbedingung_pruefen(mitschrift, kanaele: tuple[str, ...]) -> None:
