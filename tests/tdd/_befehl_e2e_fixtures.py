@@ -276,7 +276,7 @@ import shutil
 import smtplib
 import uuid
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -653,12 +653,62 @@ STANDARD_STUNDENWERT: dict = dict(
 )
 
 
+def _ortstag_jetzt() -> date:
+    """Der Kalendertag "jetzt" in der Ortszeit der Fixture-Tour (Innsbruck,
+    Europe/Vienna) -- MUSS mit ``trip_local_today()``/``trip_local_now()``
+    (``services/trip_day.py``, ADR-0044) uebereinstimmen, sonst faellt die
+    per ``date.today()`` (Server-/UTC-Tag) gebaute "heute"-Etappe ab
+    22:00 UTC (Sommerzeit) bzw. 23:00 UTC (Winterzeit) auf einen ANDEREN
+    Kalendertag als die Produktlogik -- ``get_stage_for_date()`` findet dann
+    z. B. fuer "heute" nur noch die Etappe "Morgen" (Issue #2435)."""
+    from zoneinfo import ZoneInfo
+
+    return datetime.now(ZoneInfo("Europe/Vienna")).date()
+
+
+def _ortsmitternacht_utc(tag: date) -> datetime:
+    """Ortsmitternacht (Innsbruck, Europe/Vienna) des Kalendertags ``tag``,
+    als UTC-Zeitstempel -- EINE Aufloesung fuer Segment-Start/-Ende
+    (Issue #2435), damit beide ueber ``zoneinfo`` denselben DST-Versatz
+    (+1/+2) sehen, statt je eine eigene feste Stundenzahl zu pflegen."""
+    from zoneinfo import ZoneInfo
+
+    lokal = datetime.combine(tag, time(0, 0), tzinfo=ZoneInfo("Europe/Vienna"))
+    return lokal.astimezone(timezone.utc)
+
+
 def _segment_fuer_stage(stage: Stage) -> SegmentWeatherData:
-    """EIN Segment fuer GENAU eine Etappe, mit Stundenpunkten aus
-    ``STANDARD_STUNDENWERT``, deren ``arrival_time`` (= ``end_time``, s.
-    ``app/day_window.py::display_end_time``) SICHER auf ``stage.date``
-    faellt (06:00-17:00 UTC -- bei Innsbruck (UTC+1/+2) niemals ueber
-    Mitternacht hinaus in den naechsten Kalendertag rutschend).
+    """EIN Segment fuer GENAU eine Etappe, mit STUENDLICHEN Datenpunkten
+    ueber den GESAMTEN Ortstag (Innsbruck) von ``stage.date`` -- Ortsmitter-
+    nacht bis (exklusiv) der naechsten Ortsmitternacht. ``arrival_time``
+    (= ``segment.end_time``, s. ``app/day_window.py::display_end_time``)
+    liegt eine Minute VOR dieser Grenze und faellt damit SICHER auf
+    ``stage.date`` (niemals ueber Mitternacht hinaus in den naechsten
+    Kalendertag rutschend).
+
+    Issue #2435 (zwei unabhaengige Zeitfenster-Luecken behoben, beide vorher
+    an die Uhrzeit 06:00-17:00 UTC des Vortagsstands gebunden):
+
+    1. ``segment.end_time`` lag vorher auf dem LETZTEN Stundenpunkt (17:00
+       UTC). ``WeatherExtractor._restfenster_aggregat()`` wertet ein Segment
+       ab ``from_time >= end_time`` als "vollstaendig vergangen" (-> ``None``,
+       faellt aus den Timeline-Wegpunkten) -- ab 17:00 UTC riss so JEDE
+       ``timeline_heute``/``glance``/``heute_gewitter``-Abfrage ab, UNABHAENGIG
+       von der tatsaechlichen Uhrzeit des Testlaufs. Die neue Grenze (eine
+       Minute vor Ortsmitternacht) deckt den REST des Ortstags: liegt
+       ``from_time`` nach dem letzten echten Punkt, liefert
+       ``segment_window_points()`` zwar keine Treffer, ``_restfenster_
+       aggregat()`` faellt dann auf ``seg.aggregated`` zurueck (kein ``None``
+       mehr).
+    2. ``drilldown()`` (bares Metrik-Wort, z. B. ``temp``/``wind``) filtert
+       die ROHEN Stundenpunkte direkt auf ``[from_time, from_time+12h)`` --
+       endeten die Punkte eines Tages um 17:00 UTC und begannen die des
+       naechsten erst um 06:00 UTC, war das 12h-Fenster fuer JEDEN
+       Anfragezeitpunkt zwischen 17:00 und 18:00 UTC leer ("no data",
+       unabhaengig von Frage 1). Stuendliche Punkte ueber den GANZEN Ortstag
+       je Etappe schliessen diese Luecke: der letzte Punkt eines Tages und
+       der erste des naechsten liegen jetzt genau eine Stunde auseinander,
+       nie mehr als elf.
 
     WICHTIG (Team-Lead-Fund 2026-09-25, Regression bei ``heute_gewitter``):
     ein EINZELNES Mega-Segment ueber mehrere Tage (Vorbild
@@ -675,19 +725,21 @@ def _segment_fuer_stage(stage: Stage) -> SegmentWeatherData:
     ``_convert_trip_to_segments(trip, today)``/``(trip, tomorrow)`` baut)
     behebt das, ohne den Ad-hoc-``drilldown()``-Pfad zu beeintraechtigen
     (der iteriert die Zeitreihe direkt, unabhaengig von Segmentgrenzen)."""
-    tag_start = datetime(
-        stage.date.year, stage.date.month, stage.date.day, 6, tzinfo=timezone.utc,
-    )
+    tag_start = _ortsmitternacht_utc(stage.date)
+    tag_ende_exklusiv = _ortsmitternacht_utc(stage.date + timedelta(days=1))
+    stunden = int((tag_ende_exklusiv - tag_start).total_seconds() // 3600)
     punkte = [
         ForecastDataPoint(ts=tag_start + timedelta(hours=i), **STANDARD_STUNDENWERT)
-        for i in range(12)
+        for i in range(stunden)
     ]
+    tag_ende = tag_ende_exklusiv - timedelta(minutes=1)
     segment = TripSegment(
         segment_id=f"seg-2417-{stage.id}",
         start_point=GPXPoint(lat=INNSBRUCK_LAT, lon=INNSBRUCK_LON, elevation_m=600),
         end_point=GPXPoint(lat=INNSBRUCK_LAT + 0.02, lon=INNSBRUCK_LON + 0.02, elevation_m=900),
-        start_time=tag_start, end_time=punkte[-1].ts,
-        duration_hours=11.0, distance_km=10.0, ascent_m=300.0, descent_m=300.0,
+        start_time=tag_start, end_time=tag_ende,
+        duration_hours=(tag_ende - tag_start).total_seconds() / 3600,
+        distance_km=10.0, ascent_m=300.0, descent_m=300.0,
     )
     return SegmentWeatherData(
         segment=segment,
@@ -717,7 +769,7 @@ def _speichere_snapshot_fuer_trip(trip: Trip, user_id: str) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
     segments = [_segment_fuer_stage(stage) for stage in trip.stages]
-    WeatherSnapshotService(user_id).save(trip.id, segments, date.today())
+    WeatherSnapshotService(user_id).save(trip.id, segments, _ortstag_jetzt())
 
 
 def _trip(user_id: str, name: str, *, tag: date | None = None) -> Trip:
@@ -732,7 +784,7 @@ def _trip(user_id: str, name: str, *, tag: date | None = None) -> Trip:
     Metrik-Abrufe (bares Katalogwort/-kuerzel per Telegram/Premium-SMS)
     liefern dadurch echte Werte statt strukturell "no data"/"nicht
     verfuegbar", unabhaengig von der jeweiligen Lage (L2/L3/L6)."""
-    heute = tag or date.today()
+    heute = tag or _ortstag_jetzt()
     trip_id = f"gz2417-{uuid.uuid4().hex[:8]}"
     stages = [
         Stage(
@@ -751,6 +803,14 @@ def _trip(user_id: str, name: str, *, tag: date | None = None) -> Trip:
         report_config=TripReportConfig(
             trip_id=trip_id, send_email=True, send_sms=True,
             send_premium_sms=True, send_telegram=True,
+            # Issue #2435: volles Tagesfenster (0-23 Ortszeit) statt des
+            # Default-Fensters 4-19 -- ``resolve_current_segment()``
+            # (``services/trip_segments.py``, genutzt von ``/jetzt``/
+            # ``/strecke``) baut das Ziel-Segment nur bis
+            # ``day_window_end_hour + 1`` Ortszeit; mit dem Default endete es
+            # um 18:00 UTC und "Keine heutige Etappe gefunden" wurde ab dort
+            # (unabhaengig vom Wetter-Snapshot oben) zur Tageszeit-Falle.
+            day_window_start_hour=0, day_window_end_hour=23,
         ),
     )
     save_trip(trip, user_id)
@@ -889,8 +949,8 @@ def lege_lage_an(new_user_id: Callable[[], str], lage: str) -> BefehlNutzer:
         nutzer.presets = [_preset(user_id, "Vergleich A"), _preset(user_id, "Vergleich B")]
         return nutzer
     if lage == "L6":
-        nutzer.trip = _trip(user_id, "Erster Trip", tag=date.today())
-        _trip(user_id, "Zweiter Trip", tag=date.today() + timedelta(days=30))
+        nutzer.trip = _trip(user_id, "Erster Trip", tag=_ortstag_jetzt())
+        _trip(user_id, "Zweiter Trip", tag=_ortstag_jetzt() + timedelta(days=30))
         return nutzer
     raise ValueError(f"Unbekannte Lage {lage!r} -- erwartet L1..L6.")
 
