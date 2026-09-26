@@ -267,8 +267,26 @@ def test_ac3_tageslimit_sperre_steht_nur_in_blocked_und_sendet_nichts(env):
     assert "email" in ergebnis.sent_channels
 
 
+def test_ac3_briefing_darf_die_alarm_reserve_nicht_verbrauchen(env):
+    from services import user_tier
+
+    uid = _nutzer(_kennung())
+    # Briefing-Cap = Limit - Alarm-Reserve; Zaehler genau dort => Briefing gesperrt,
+    # obwohl ein Alarm (Cap = Limit) noch durchginge.
+    grenze = (user_tier.daily_premium_sms_limit(uid)
+              - user_tier.PREMIUM_SMS_ALARM_RESERVE)
+    _zaehler_schreiben(uid, premium_sms=grenze)
+
+    ergebnis = _senden(uid, {"email", "premium_sms"})
+
+    assert "premium_sms" in ergebnis.blocked_channels, ergebnis
+    assert "premium_sms" not in ergebnis.sent_channels
+    assert env.anzahl("premium_sms") == 0
+    assert _zaehler(uid) == grenze, "Zaehler darf nicht steigen"
+
+
 # ---------------------------------------------------------------------------
-# AC-4 — Vollstaendigkeits-Waechter ueber ALLE aufloesbaren Kanaele
+# AC-4— Vollstaendigkeits-Waechter ueber ALLE aufloesbaren Kanaele
 # ---------------------------------------------------------------------------
 
 

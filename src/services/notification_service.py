@@ -1242,6 +1242,7 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
         telegram_sink: Optional[object] = None,
+        premium_sms_sink: Optional[object] = None,
     ) -> NotificationResult:
         """Versendet ein Vergleichs-Briefing ueber die aufgeloesten Kanaele
         (Issue #1270, Scheibe S5).
@@ -1272,6 +1273,7 @@ class NotificationService:
         # "send_compare_report (neue Ergebnisfelder)").
         blocked_channels: dict[str, str] = {}
         blocked_reason_codes: dict[str, str] = {}
+        failed_channels: list[str] = []  # Issue #2275
 
         if "email" in effective_channels:
             if mail_sink is not None:
@@ -1325,8 +1327,36 @@ class NotificationService:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
                     logger.error(f"Compare report sms failed for {subject!r}: {e}")
 
+        # Premium-SMS (Issue #2275, ADR-0049): kein `can_send_*` davor — die
+        # Freigabe steckt im Aufloeser, Rueckadresse/Frist prueft der Kanal.
+        # Fail-soft: Fehler wird gebucht, E-Mail-Erfolg bleibt gueltig.
+        if "premium_sms" in effective_channels:
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    if premium_sms_sink is not None:
+                        premium_sms_sink(sms_text)
+                    else:
+                        PremiumSmsOutput(self._settings).send(subject="", body=sms_text)
+                    sent_channels.append("premium_sms")
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    # AC-2: auch ein Transportfehler traegt einen Code (der
+                    # Ortsvergleich hat keinen Nachhol-Weg, der Fehlschlag muss
+                    # maschinenlesbar sein); Sperrgruende behalten ihren Code.
+                    blocked_reason_codes.setdefault("premium_sms", "premium_sms_send_failed")
+                    failed_channels.append("premium_sms")
+                    logger.error(f"Compare report premium_sms failed for {subject!r}: {e}")
+
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
+            failed_channels=failed_channels,
             blocked_channels=blocked_channels, blocked_reason_codes=blocked_reason_codes,
         )
 
