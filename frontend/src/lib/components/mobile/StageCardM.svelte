@@ -1,29 +1,40 @@
 <script lang="ts">
 	// StageCardM — vertikale Etappen-Karte der mobilen Listen-Ansicht
-	// (Spec: docs/specs/modules/mobile_stages_tab_listen_only.md, Iteration 1).
+	// (Spec: docs/specs/modules/mobile_stages_tab_listen_only.md).
 	// Muster: docs/design/mobile/screen-trip-detail-mobile.jsx:208-234
 	// (StageCardM im Trip-Detail-Mock). Katalog: COMPONENTS.md §7 (Mobile-Shell).
 	//
 	// Reine Präsentations-Komponente: DragHandle und SortableList verdrahtet
 	// der Aufrufer (EditStagesPanelNew), analog CompareLocationRow im
 	// Orte-Tab (ADR-0024 — Sortier-Infrastruktur wird geteilt, nicht kopiert).
-	// Wegpunkt-Zeilen (F7) folgen in Iteration 2.
+	// F7: Tap auf die Karte klappt die Wegpunkt-Zeilen auf (auf/zu via `open`).
 	import { Pill } from '$lib/components/atoms';
 	import { isPauseStage, formatStageNumber } from '$lib/components/shared/wizardHelpers';
 	import { riskToPill, type StageRisk } from '$lib/utils/stageRisk';
-	import type { Stage } from '$lib/types';
+	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
+	import type { Stage, ActivityType } from '$lib/types';
 
 	interface Props {
 		stage: Stage;
 		index: number;
 		/** Wetter-Risiko (lazy via fetchStageRisk geladen, fail-soft null). */
 		risk?: StageRisk | undefined;
+		/** F7: aufgeklappt → Wegpunkt-Zeilen sichtbar. */
+		open?: boolean;
+		/** Aktivität für die ETA-Berechnung der Wegpunkt-Zeilen. */
+		activityType?: ActivityType | undefined;
 	}
-	let { stage, index, risk = undefined }: Props = $props();
+	let { stage, index, risk = undefined, open = false, activityType = undefined }: Props = $props();
 
 	const isPause = $derived(isPauseStage(stage));
 	const stageLabel = $derived(formatStageNumber(index));
 	const riskPill = $derived(riskToPill(risk));
+
+	// ETAs der Wegpunkt-Zeilen (F7) — dieselbe Naismith-Quelle wie die
+	// Desktop-Sidebar; pro Etappe ab deren Startzeit.
+	const arrivals = $derived(
+		computeArrivalTimes(stage, stage.start_time, activityToSpeed(activityType))
+	);
 
 	const stats = $derived(
 		(() => {
@@ -50,7 +61,12 @@
 	);
 </script>
 
-<div class="stage-cardm" data-testid="stage-cardm" data-pause={isPause ? 'true' : undefined}>
+<div
+	class="stage-cardm"
+	data-testid="stage-cardm"
+	data-pause={isPause ? 'true' : undefined}
+	data-open={open ? 'true' : undefined}
+>
 	<div class="body">
 		<div class="top">
 			<span class="code">{stageLabel}{#if stage.code} · {stage.code}{/if}</span>
@@ -66,10 +82,27 @@
 				{#if stats.wpCount > 0} · {stats.wpCount} WP{/if}
 			</div>
 		{/if}
+		{#if open && !isPause && stage.waypoints.length > 0}
+			<div class="wp-rows" data-testid="stage-cardm-wp-rows">
+				{#each stage.waypoints as wp, i (wp.id)}
+					<div class="wp-row" data-testid="stage-cardm-wp-row">
+						<span class="wp-num">{i + 1}</span>
+						<span class="wp-name">{wp.name ?? `Wegpunkt ${i + 1}`}</span>
+						<span class="wp-meta">
+							{#if wp.elevation_m != null}{Math.round(wp.elevation_m)} m{/if}
+							{#if arrivals[i]} · ETA {arrivals[i]}{/if}
+						</span>
+					</div>
+				{/each}
+			</div>
+		{/if}
 	</div>
 	{#if !isPause}
 		<div class="risk"><Pill tone={riskPill.tone}>{riskPill.label}</Pill></div>
 	{/if}
+	<span class="chevron" data-testid="stage-cardm-chevron" class:open aria-hidden="true">
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+	</span>
 </div>
 
 <style>
@@ -132,5 +165,61 @@
 	.risk {
 		flex-shrink: 0;
 		padding-top: var(--g-s-1);
+	}
+	.chevron {
+		flex-shrink: 0;
+		align-self: center;
+		color: var(--g-ink-4);
+		transition: transform 200ms ease-out;
+	}
+	.chevron.open {
+		transform: rotate(180deg);
+	}
+	/* F7 — aufklappbare Wegpunkt-Zeilen (Muster: #503-Sheet-Liste,
+	   screen-waypoint-editor-mobile.jsx:356-379) */
+	.wp-rows {
+		margin-top: var(--g-s-2);
+		border-top: 1px solid var(--g-rule-soft);
+	}
+	.wp-row {
+		display: flex;
+		align-items: center;
+		gap: var(--g-s-2);
+		min-height: 44px;
+		padding: var(--g-s-1) 0;
+		border-bottom: 1px solid var(--g-rule-soft);
+	}
+	.wp-row:last-child {
+		border-bottom: none;
+	}
+	.wp-num {
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--g-card);
+		border: 2px solid var(--g-accent);
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
+		font-weight: 700;
+		color: var(--g-accent-deep);
+	}
+	.wp-name {
+		flex: 1;
+		min-width: 0;
+		font-size: var(--g-text-sm);
+		font-weight: 500;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.wp-meta {
+		flex-shrink: 0;
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
+		color: var(--g-ink-3);
 	}
 </style>

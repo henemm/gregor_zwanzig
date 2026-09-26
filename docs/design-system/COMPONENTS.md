@@ -145,7 +145,7 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | `<MField>` | `label`, `sub`, Children | Field-Wrapper Mobile. |
 | `<MBtn>` | `variant`, `size: "md" \| "lg" \| "xl"`, `block`, `icon`, `onClick` | Mobile-Button mit Min-Height 48 (lg). |
 | `<MTab>` | `items`, `active`, `onChange`, `scrollable: boolean` | Tab-Bar Mobile (scrollbar wenn nötig). |
-| `<StageCardM>` | `stage`, `index`, `risk?` | Vertikale Etappen-Karte der mobilen Listen-Ansicht (Etappen-Tab, Listen-only nach PO-Entscheid F5 2026-09-22). Reine Präsentation: DragHandle + SortableList verdrahtet der Aufrufer (ADR-0024). Physisch `mobile/StageCardM.svelte`. |
+| `<StageCardM>` | `stage`, `index`, `risk?`, `open?`, `activityType?` | Vertikale Etappen-Karte der mobilen Listen-Ansicht (Etappen-Tab, Listen-only nach PO-Entscheid F5 2026-09-22). Reine Präsentation: DragHandle + SortableList verdrahtet der Aufrufer (ADR-0024); `open` klappt die Wegpunkt-Zeilen auf (F7). Physisch `mobile/StageCardM.svelte`. |
 | `<ScreenScroll>` | `padding`, `bg`, Children | Scrollbarer Mobile-Content-Bereich über der BottomNav. |
 
 ---

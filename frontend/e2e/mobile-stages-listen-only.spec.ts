@@ -71,14 +71,76 @@ test('Mobile: langer Trip-Titel steht einzeilig in 20px mit Ellipsis', async ({ 
 });
 
 // =============================================================================
+// Iteration 2 — F7: aufklappbare Wegpunkt-Zeilen, F3: Pause-Wahl, F2: Cascade inline
+// =============================================================================
+
+test('Mobile: Tap auf Etappen-Karte klappt Wegpunkt-Zeilen auf und zu', async ({ page }) => {
+	await openStagesTab(page, 390, 844);
+
+	const firstCard = page.getByTestId('stage-cardm').first();
+	// Standard: zu — keine Wegpunkt-Zeilen im DOM-Bereich sichtbar
+	await expect(page.getByTestId('stage-cardm-wp-row')).toHaveCount(0);
+	await expect(firstCard.getByTestId('stage-cardm-chevron')).toBeVisible();
+
+	// Tap → aufgeklappt: Zeilen der ersten Etappe (Seed: 2 Wegpunkte 'Start'/'Zwischenstopp')
+	await firstCard.click();
+	await expect(firstCard.getByTestId('stage-cardm-wp-row')).toHaveCount(2);
+	await expect(firstCard.getByTestId('stage-cardm-wp-row').first()).toContainText('Start');
+	await expect(firstCard.getByTestId('stage-cardm-wp-row').first()).toContainText('800');
+	const expanded = await firstCard.getAttribute('data-open');
+	expect(expanded).toBe('true');
+
+	// Zweiter Tap → wieder zu
+	await firstCard.click();
+	await expect(page.getByTestId('stage-cardm-wp-row')).toHaveCount(0);
+});
+
+test('Mobile: + Etappe bietet Wahl Etappe/Pausentag; Pausentag landet in der Liste', async ({ page }) => {
+	await openStagesTab(page, 390, 844);
+	const countBefore = await page.getByTestId('stage-cardm').count();
+
+	await page.getByTestId('mobile-add-stage').click();
+	const choice = page.getByTestId('mobile-add-choice');
+	await expect(choice).toBeVisible();
+	await expect(choice.getByRole('menuitem', { name: 'Etappe' })).toBeVisible();
+	await expect(choice.getByRole('menuitem', { name: 'Pausentag' })).toBeVisible();
+
+	await choice.getByRole('menuitem', { name: 'Pausentag' }).click();
+	await expect(page.getByTestId('stage-cardm')).toHaveCount(countBefore + 1);
+	await expect(page.locator('[data-testid="stage-cardm"][data-pause="true"]')).toHaveCount(1);
+});
+
+test('Mobile: Cascade-Banner steht inline vor der Liste, nicht fixiert', async ({ page }) => {
+	// Kaskade nur über das Datumsfeld auslösbar (Desktop-Zweig) — Zustand
+	// überlebt den Wechsel in den Mobile-Zweig und muss dort INLINE stehen.
+	await openStagesTab(page, 1280, 900);
+	const dateInput = page.getByTestId('stage-date-field').first().locator('input[type="date"]');
+	await expect(dateInput).toBeVisible({ timeout: 10_000 });
+	const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+	await dateInput.fill(nextWeek);
+	await expect(page.getByTestId('cascade-strip')).toBeVisible({ timeout: 10_000 });
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	const strip = page.getByTestId('cascade-strip');
+	await expect(strip).toBeVisible();
+	const position = await strip.evaluate((el) => getComputedStyle(el).position);
+	expect(position).not.toBe('fixed');
+	// Inline = im Panel-Dokumentenfluss: Oberkante unterhalb der Listen-Kopfzeile
+	const hintBox = await page.getByTestId('mobile-stages-list').boundingBox();
+	const stripBox = await strip.boundingBox();
+	expect(stripBox).not.toBeNull();
+	expect(hintBox).not.toBeNull();
+	expect(stripBox!.y).toBeGreaterThan(hintBox!.y);
+});
+
+// =============================================================================
 // Desktop (>=900px): Editor unverändert (Karte + Profil + Strip vorhanden)
 // =============================================================================
 
 test('Desktop: Editor bleibt 1:1 — Karte, Profil, Strip vorhanden', async ({ page }) => {
 	await openStagesTab(page, 1280, 900);
 
-	// Desktop-Karte ist die im editor-grid (map-card); der (CSS-versteckte)
-	// mobile-editor-Zweig existiert auf Desktop ebenfalls im DOM.
+	// Desktop-Karte ist die im editor-grid (map-card).
 	const DESKTOP_MAP_CANVAS = '[data-testid="map-card"] [data-testid="map-canvas"]';
 	await expect(page.locator(DESKTOP_MAP_CANVAS)).toBeVisible({ timeout: 10_000 });
 	await expect(page.getByTestId('profile-editor')).toBeVisible();

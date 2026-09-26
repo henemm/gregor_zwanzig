@@ -148,6 +148,16 @@ Nicht-Teilung eine dokumentierte Begründung.
 
 ## Changelog
 
+- **2026-09-25 (Ergänzung `onDndReorderEnd`):** Optionaler Prop
+  `onDndReorderEnd?: () => void`, feuert direkt nach `onDndReorder` beim
+  Loslassen (`finalize`). Anlass: `mobile_stages_tab_listen_only` (Iteration 2,
+  F5/PO 2026-09-22) — die mobile Etappenliste (`SortableList`) braucht das
+  Kaskaden-Settling (`handleReorderEnd`/`settleMootCascade`), das der
+  Desktop-`EtappenStrip` über sein `onReorderEnd` hat. Bestands-Konsumenten
+  unverändert (Prop optional, bestehende Aufrufe identisch). Die doppelte
+  Verdrahtung des Settlings (Strip-`onReorderEnd` + List-`onDndReorderEnd`)
+  bleibt bewusst bis zur Streifen-Ablösung; kein Verhaltenswechsel am Desktop.
+
 - **2026-07-16 (initial):** ADR erstellt und mit der Spec zu #1272 vom PO freigegeben.
 - **2026-07-16 (Korrektur Entscheidung 5):** Die Festlegung auf `dragHandleZone`/`dragHandle`
   war sachlich falsch und wurde vor der Umsetzung zurückgenommen. Der Fehler entstand beim

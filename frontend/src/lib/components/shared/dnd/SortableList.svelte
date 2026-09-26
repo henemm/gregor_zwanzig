@@ -22,6 +22,9 @@
 		items: string[];
 		/** Feuert NUR bei finalize mit der vollständigen neuen Reihenfolge. */
 		onDndReorder: (newOrder: string[]) => void;
+		/** Optional: feuert DIREKT nach onDndReorder beim Loslassen (finalize) —
+		 *  z.B. Kaskaden-Settling, das erst auf die FERTIGE Reihenfolge reagiert. */
+		onDndReorderEnd?: () => void;
 		/** Zeileninhalt. Parameter: (id, index) — erlaubt bedingtes Markup im Wrapper. */
 		row: Snippet<[string, number]>;
 		/** Beschriftung der Zone für Screenreader (Folgepflicht ADR-0024). */
@@ -39,6 +42,7 @@
 	let {
 		items,
 		onDndReorder,
+		onDndReorderEnd = undefined,
 		row,
 		ariaLabel,
 		itemLabel,
@@ -66,6 +70,7 @@
 	function handleDndFinalize(e: CustomEvent<DndEvent<{ id: string }>>) {
 		dndItems = e.detail.items;
 		onDndReorder(dndItems.map((x) => x.id));
+		onDndReorderEnd?.();
 	}
 </script>
 

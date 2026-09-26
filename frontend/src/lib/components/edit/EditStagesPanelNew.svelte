@@ -17,9 +17,6 @@
 	import ProfileEditor from '$lib/components/trip-detail/waypoints/ProfileEditor.svelte';
 	import WaypointCard from '$lib/components/trip-detail/waypoints/WaypointCard.svelte';
 	import PauseStageView from '$lib/components/trip-detail/waypoints/PauseStageView.svelte';
-	import MapControl from './MapControl.svelte';
-	import ProfileSheetEmbedded from './ProfileSheetEmbedded.svelte';
-	import StageSelectSheet from './StageSelectSheet.svelte';
 	import StageDateField from './StageDateField.svelte';
 	import StageTimeField from './StageTimeField.svelte';
 	import { computeCascadeDelta, consecutiveDates, formatDeDate } from './cascade.ts';
@@ -32,7 +29,6 @@
 	import { merkeNutzlast } from '$lib/stores/nutzlastStand';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	// Mobile Usability Paket 1 (Spec mobile_stages_tab_listen_only, Iteration 1):
 	// PO-Entscheid F5 (2026-09-22, Variante B) — Karte + Höhenprofil entfallen
@@ -61,9 +57,6 @@
 	let addModeHint = $state(false);
 	// Bug #708 — Etappen-Löschen mit Bestätigungs-Dialog (kein sofortiges Löschen)
 	let pendingRemoveStageId = $state<string | null>(null);
-	let mobileSnap = $state<'collapsed' | 'peek' | 'half' | 'full'>('half');
-	let mobileSizeKey = $state(0);
-	let stageSheetOpen = $state(false);
 
 	// Mobile Usability Paket 1 — Viewport-Weiche für den Listen-only-Zweig.
 	// Muster: TripTabs.svelte (matchMedia 899px). Desktop-Zweig unverändert.
@@ -75,6 +68,24 @@
 		mq.addEventListener('change', onChange);
 		return () => mq.removeEventListener('change', onChange);
 	});
+
+	// F7: pro Etappen-Karte aufklappbare Wegpunkt-Zeilen — eine Karte offen,
+	// Tap auf dieselbe klappt wieder zu.
+	let expandedStageId = $state<string | null>(null);
+	function toggleStageExpanded(stageId: string): void {
+		expandedStageId = expandedStageId === stageId ? null : stageId;
+	}
+
+	// F3: „+ Etappe" öffnet die Wahl Etappe/Pausentag (ersetzt den
+	// Desktop-Hover-Gap PauseInsertGap, der mobil nicht bedienbar war).
+	// Der Pausentag bekommt bewusst KEINEN Namen: isPauseStage() erkennt
+	// „leer + keine Wegpunkte" als Pause, einen Namen wie 'Pausentag'
+	// dagegen nicht (#559-Ausnahme) — die Karte rendert den Titel selbst.
+	let addChoiceOpen = $state(false);
+	function handleMobileAddPause(): void {
+		if (cascadeBusy) return;
+		stages = [...stages, { id: newId(), name: '', date: '', waypoints: [] }];
+	}
 
 	// Risiko-Ampel je Etappe für die StageCardM (lazy, fail-soft) — gleiche
 	// Datenquelle wie HubOverview/TripStageRow (#1223), kein eigener Endpoint.
@@ -95,107 +106,6 @@
 		if (reordered.length === stages.length) handleStagesReorder(reordered);
 	}
 
-	// Issue #963 — Map-First-Reorder: `.mobile-editor` sitzt jetzt (per CSS `order`,
-	// s. Style-Block) direkt unter der Tab-Leiste. Seine Höhe wird zur Laufzeit
-	// berechnet (Mount + resize/orientationchange) aus der gemessenen Oberkante
-	// (Breadcrumb/TripHeader/Tab-Leiste davor) UND der reservierten BottomNav-Zone
-	// (64px + Safe-Area) darunter.
-	//
-	// Adversary-Fund F004 (Fix-Loop 3, CRITICAL): ein simples CSS
-	// `max(FLOOR, calc(100dvh - offset - BottomNav))` schießt über die BottomNav-
-	// Zone hinaus, sobald `calc(...)` positiv, aber kleiner als FLOOR ist — das
-	// passiert bereits im STANDARD-Viewport 390×844 bei langen Trip-Namen (kein
-	// Rand-Fall!), weil ein längerer TripHeader-Titel die Oberkante weiter nach
-	// unten schiebt. Deshalb wird die Höhe hier bewusst in JS bedingt berechnet
-	// statt blind zu clampen:
-	//   - Ist genug Platz da (available > 0): exakt diesen Wert nutzen — er endet
-	//     per Definition an der BottomNav-Oberkante, kann sie also nie überdecken.
-	//   - Ist gar kein Platz da (available ≤ 0, z.B. Querformat auf schmalen
-	//     Handys/sehr kurzer Portrait-Viewport, F001/F002): Fallback auf
-	//     MOBILE_EDITOR_MIN_HEIGHT_PX — dort ist die BottomNav wegen des riesigen
-	//     Chrome-Offsets ohnehin schon nicht ohne Scrollen erreichbar (Known
-	//     Limitations in der Spec), ein Floor macht das nicht schlimmer.
-	let mobileEditorEl = $state<HTMLDivElement | null>(null);
-	let mobileEditorHeightPx = $state(400);
-	// F002: 45% Freiraum oberhalb des 'half'-Sheets (Default-Snap) = 90px bei
-	// 200px Floor, komfortabel über der `add-waypoint`-Unterkante (56px, +34px Marge).
-	const MOBILE_EDITOR_MIN_HEIGHT_PX = 200;
-	const BOTTOM_NAV_HEIGHT_PX = 70; // app.css --g-nav-h (64) + --g-nav-gap (6): Oberkante der schwebenden Leiste (ohne Safe-Area)
-	const bottomReserve = $derived(bottomReservePx ?? BOTTOM_NAV_HEIGHT_PX);
-
-	// Liest `env(safe-area-inset-bottom)` als px-Zahl aus (Notch-Geräte) — CSS
-	// `env()` ist in JS nicht direkt abfragbar, daher kurzzeitige Mess-Sonde.
-	function getSafeAreaPx(seite: 'top' | 'bottom'): number {
-		const probe = document.createElement('div');
-		probe.style.cssText =
-			`position:fixed;${seite}:0;left:0;height:env(safe-area-inset-${seite});width:0;visibility:hidden;pointer-events:none;`;
-		document.body.appendChild(probe);
-		const h = probe.getBoundingClientRect().height;
-		probe.remove();
-		return h;
-	}
-	const getSafeAreaBottomPx = () => getSafeAreaPx('bottom');
-	const getSafeAreaTopPx = () => getSafeAreaPx('top');
-
-	$effect(() => {
-		if (!browser || !mobileEditorEl) return;
-		const el = mobileEditorEl;
-		function measure(): void {
-			const offset = el.getBoundingClientRect().top;
-			const available = window.innerHeight - offset - bottomReserve - getSafeAreaBottomPx();
-			mobileEditorHeightPx = available > 0 ? available : MOBILE_EDITOR_MIN_HEIGHT_PX;
-		}
-		measure();
-		window.addEventListener('resize', measure);
-		window.addEventListener('orientationchange', measure);
-		return () => {
-			window.removeEventListener('resize', measure);
-			window.removeEventListener('orientationchange', measure);
-		};
-	});
-
-	// Bug #1375 Fix-Loop 1 (Staging-Befund): der auf Mobil fixierte Kaskaden-Banner
-	// darf die Kartensteuerelemente (#963: `top:12px` im Kartenblock) NIE verdecken.
-	// Auf Staging steht mehr Chrome über der Karte, dadurch rutschten Pille und
-	// Wegpunkt-Button genau in das Band am unteren Rand, das der Banner belegte —
-	// beide lagen formal im Ausschnitt, waren real aber unklickbar.
-	// Regel: passt der Banner ÜBER die Steuerelemente (Unterkante 8px über deren
-	// Oberkante, Oberkante noch unter dem Seitenanfang), wird er dort verankert; sonst
-	// bleibt er unten über der BottomNav — dann liegt der Kartenblock nämlich im
-	// oberen Bildschirmbereich und die Steuerelemente sind weit vom unteren Rand
-	// entfernt. Damit ist Überlappungsfreiheit in beiden Fällen konstruktiv
-	// garantiert, unabhängig von Chrome-Höhe und Scrollposition.
-	const MAP_CONTROLS_TOP_PX = 12; // .stage-switcher-pill / .map-control: top:12px
-	const CASCADE_GAP_PX = 8;
-	// Mobile-Shell S2: kein fixer Balken oben mehr — der Inhalt beginnt unter der
-	// Safe-Area plus --g-s-3 (app.css `.mobile-scroll-pad` padding-top).
-	const CONTENT_TOP_GAP_PX = 12;
-	let cascadeEl = $state<HTMLDivElement | null>(null);
-	let cascadeBottomPx = $state(BOTTOM_NAV_HEIGHT_PX + CASCADE_GAP_PX);
-
-	$effect(() => {
-		if (!browser || !mobileEditorEl || !cascadeEl) return;
-		const mapEl = mobileEditorEl;
-		const bannerEl = cascadeEl;
-		function place(): void {
-			const controlsTop = mapEl.getBoundingClientRect().top + MAP_CONTROLS_TOP_PX;
-			const bannerBottomY = controlsTop - CASCADE_GAP_PX;
-			const fitsAbove = bannerBottomY - bannerEl.offsetHeight >= getSafeAreaTopPx() + CONTENT_TOP_GAP_PX;
-			cascadeBottomPx = fitsAbove
-				? window.innerHeight - bannerBottomY
-				: bottomReserve + CASCADE_GAP_PX + getSafeAreaBottomPx();
-		}
-		place();
-		window.addEventListener('resize', place);
-		window.addEventListener('orientationchange', place);
-		// Capture-Phase: fängt auch das Scrollen des `main`-Containers (nicht window).
-		window.addEventListener('scroll', place, true);
-		return () => {
-			window.removeEventListener('resize', place);
-			window.removeEventListener('orientationchange', place);
-			window.removeEventListener('scroll', place, true);
-		};
-	});
 
 	// Bug #1393 R4: `payload` erlaubt applyCascade(), einen NOCH NICHT übernommenen
 	// Stand zu schreiben und ihn erst nach Bestätigung in `stages` zu heben.
@@ -665,19 +575,6 @@
 		activeWaypointId = waypointId;
 	}
 
-	function handleMapClick(lat: number, lon: number): void {
-		if (!activeStage || activeIsPause) return;
-		const stage = activeStage;
-		const newWp: Waypoint = { id: newId(), name: '', lat, lon, elevation_m: 0 };
-		stages = stages.map((s) =>
-			s.id !== stage.id ? s : { ...s, waypoints: [...s.waypoints, newWp] }
-		);
-		activeWaypointId = newWp.id;
-		// Bug #1194 — fehlender Save-Trigger: ohne dies wird ein per Kartentipp
-		// angelegter Wegpunkt nie gespeichert und geht bei Reload verloren.
-		if (saveController) scheduleSave(); else void save();
-	}
-
 	// Waypoint-Mutations (Factory-Pattern fuer WaypointCard-Callbacks).
 	// Issue #503: nur noch Umbenennen + Löschen — kein Confirm/Reject mehr.
 	function makeActivateHandler(waypointId: string) {
@@ -725,8 +622,6 @@
 			<div
 				class="cascade-prompt"
 				data-testid="cascade-strip"
-				bind:this={cascadeEl}
-				style="--gz-cascade-bottom: {cascadeBottomPx}px"
 			>
 				<!-- Bug #1393: kein „Trip-Start" mehr (es kann jede Etappe sein) und kein
 				     „derselbe Betrag" (es wird lückenlos durchdatiert). -->
@@ -748,8 +643,6 @@
 			<div
 				class="cascade-done"
 				data-testid="cascade-done"
-				bind:this={cascadeEl}
-				style="--gz-cascade-bottom: {cascadeBottomPx}px"
 			>
 				<Dot tone="success" />
 				<span>
@@ -764,7 +657,9 @@
 <div data-testid="edit-stages-panel" class="flex flex-col gap-4">
 	{#if isMobileViewport}
 		<!-- Mobile Usability Paket 1 (PO-Entscheid F5, 2026-09-22): Listen-only.
-		     Karte/Profil/Sheet entfallen ersatzlos; Hinweis + vertikale Liste. -->
+		     Karte/Profil/Sheet entfallen ersatzlos; Hinweis + vertikale Liste.
+		     F2: Kaskaden-Banner rendert als normale Zeile über der Liste —
+		     kein position:fixed mehr (Karten-Viewport existiert nicht mehr). -->
 		<div class="mobile-stages" data-testid="mobile-stages-list">
 			<div class="desktop-hint" data-testid="desktop-hint">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
@@ -772,24 +667,58 @@
 			</div>
 			<div class="mobile-list-head">
 				<span class="mobile-list-eyebrow">{stages.length} Etappen · ziehen zum Sortieren</span>
-				<button type="button" class="mobile-add-btn" data-testid="mobile-add-stage" onclick={handleAddStage} disabled={cascadeBusy}>
+				<!-- F3: „+ Etappe" öffnet die Wahl Etappe/Pausentag (ersetzt den
+				     Desktop-Hover-Gap, der mobil nicht bedienbar war). Die Wahl
+				     steht als eigene Zeile im Fluss — nichts überlappt, keine
+				     Koordinaten-Races beim Tap. -->
+				<button
+					type="button"
+					class="mobile-add-btn"
+					data-testid="mobile-add-stage"
+					aria-expanded={addChoiceOpen}
+					onclick={() => { addChoiceOpen = !addChoiceOpen; }}
+					disabled={cascadeBusy}
+				>
 					+ Etappe
 				</button>
 			</div>
+			{#if addChoiceOpen}
+				<div class="mobile-add-choice" data-testid="mobile-add-choice" role="menu">
+					<button type="button" role="menuitem" onclick={() => { handleAddStage(); addChoiceOpen = false; }}>Etappe</button>
+					<button type="button" role="menuitem" onclick={() => { handleMobileAddPause(); addChoiceOpen = false; }}>Pausentag</button>
+				</div>
+			{/if}
+			{@render cascadeBanner()}
 			<SortableList
 				items={stages.map((s) => s.id)}
 				onDndReorder={handleMobileReorder}
+				onDndReorderEnd={handleReorderEnd}
 				ariaLabel="Etappen, Reihenfolge"
-				itemLabel={(id, i) => `${i + 1}. ${stages.find((s) => s.id === id)?.name ?? id}`}
+				itemLabel={(id, i) => `${i + 1}. ${stages.find((s) => s.id === id)?.name || 'Pausentag'}`}
 				zoneClass="stage-cardm-zone"
 				flipDurationMs={150}
 			>
 				{#snippet row(id: string, i: number)}
 					{@const stage = stages.find((s) => s.id === id)}
 					{#if stage}
-						<div class="stage-cardm-row" data-testid="stage-cardm-row">
+						<!-- F7: Tap auf die Karte klappt die Wegpunkt-Zeilen auf/zu. -->
+						<div
+							class="stage-cardm-row"
+							data-testid="stage-cardm-row"
+							role="button"
+							tabindex="0"
+							aria-expanded={expandedStageId === stage.id}
+							onclick={() => toggleStageExpanded(stage.id)}
+							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStageExpanded(stage.id); } }}
+						>
 							<DragHandle />
-							<StageCardM {stage} index={i} risk={stageRisk[stage.id]} />
+							<StageCardM
+								{stage}
+								index={i}
+								risk={stageRisk[stage.id]}
+								open={expandedStageId === stage.id}
+								{activityType}
+							/>
 						</div>
 					{/if}
 				{/snippet}
@@ -808,60 +737,6 @@
 		onRemoveStage={(id) => { if (!cascadeBusy) pendingRemoveStageId = id; }}
 		onAddStage={handleAddStage}
 	/>
-
-	{#if activeStage && !activeIsPause}
-		<!-- Issue #963: Map-First-Reorder — auf Mobil per CSS `order` (Style-Block)
-		     direkt unter die Tab-Leiste vorgezogen, vor EtappenStrip/Etappen-Header/
-		     Cascade-Strip. Höhe = JS-berechnet aus gemessener Oberkante + BottomNav-
-		     Reservierung, siehe $effect + MOBILE_EDITOR_MIN_HEIGHT_PX/BOTTOM_NAV_HEIGHT_PX
-		     (F001/F002/F004). -->
-		<div
-			class="mobile-editor"
-			data-testid="mobile-editor"
-			bind:this={mobileEditorEl}
-			style="height: {mobileEditorHeightPx}px"
-		>
-			<div class="mobile-map-wrap" style="position:relative;width:100%;height:100%;z-index:0">
-				{#key activeStageId}
-					<MapCanvas
-						stage={activeStage}
-						{activeWaypointId}
-						onWaypointActivate={handleWaypointActivate}
-						onMapClick={handleMapClick}
-						sizeKey={mobileSizeKey}
-						fillHeight={true}
-					/>
-				{/key}
-				<!-- EtappenSwitcher-Pill oben links (AC-3/AC-4) -->
-				<button
-					type="button"
-					class="stage-switcher-pill"
-					data-testid="stage-switcher-pill"
-					onclick={() => { stageSheetOpen = true; }}
-				>
-					{activeStageIndex + 1} / {stages.length} · {activeStage.name}
-				</button>
-				<MapControl onAddWaypoint={() => { addModeHint = true; }} />
-			</div>
-			<ProfileSheetEmbedded
-				stage={activeStage}
-				{activeWaypointId}
-				snapPosition={mobileSnap}
-				onWaypointActivate={handleWaypointActivate}
-				onProfileAdd={handleProfileAdd}
-				onSnapChange={(snap) => { mobileSnap = snap; mobileSizeKey++; }}
-			/>
-			{#if stageSheetOpen}
-				<StageSelectSheet
-					{stages}
-					activeIndex={activeStageIndex}
-					open={true}
-					onSelect={(i) => { handleStageActivate(stages[i].id); stageSheetOpen = false; }}
-					onClose={() => { stageSheetOpen = false; }}
-				/>
-			{/if}
-		</div>
-	{/if}
 
 	{#if activeStage}
 		{#if activeIsPause}
@@ -1113,68 +988,6 @@
 		margin: 0;
 	}
 
-	/* Issue #542: Mobile-Editor — Vollbild-Karte + Bottom-Sheet */
-	.mobile-editor {
-		display: none;
-		position: relative;
-	}
-
-	.stage-switcher-pill {
-		position: absolute;
-		top: 12px;
-		left: 12px;
-		z-index: 20;
-		padding: 6px 14px;
-		background: var(--g-card);
-		border: 1px solid var(--g-rule);
-		border-radius: 20px;
-		box-shadow: var(--g-shadow-2, 0 2px 6px rgba(26, 26, 24, 0.12));
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--g-ink);
-		cursor: pointer;
-		white-space: nowrap;
-		font-family: var(--g-font-mono, 'JetBrains Mono', monospace);
-	}
-
-	/* Mobile: zeige Mobile-Editor, verstecke Desktop-Grid.
-	   Issue #963 — Map-First-Reorder: `order:-1` zieht `.mobile-editor` innerhalb
-	   des flex-col-Containers (`edit-stages-panel`) vor EtappenStrip/Etappen-Header/
-	   Cascade-Strip, ohne die DOM-Reihenfolge (und damit die Desktop-Darstellung)
-	   zu verändern — auf Desktop bleibt `.mobile-editor` ohnehin `display:none`. */
-	@media (max-width: 899px) {
-		.mobile-editor {
-			display: block;
-			order: -1;
-		}
-		.editor-grid {
-			display: none;
-		}
-		/* Bug #1375 — Kaskaden-Rückfrage auf Mobil sichtbar halten.
-		   Der Streifen steckt im Inhalts-Wrapper (padding 20/40/60), der als
-		   regulärer Flex-Block hinter der per `order:-1` vorgezogenen Karte
-		   einsortiert wird — er landete dadurch bei y≈1300px, weit unter dem
-		   844px-Viewport, und wurde nie gesehen. Statt den DOM umzubauen (das
-		   verschöbe den Desktop-Ort) wird er auf Mobil zum fixen Banner:
-		   unabhängig von der Scrollposition im Bildschirmausschnitt.
-		   Fix-Loop 1 (Staging-Befund): die Unterkante liefert `--gz-cascade-bottom`
-		   aus dem Platzierungs-$effect oben — der Banner weicht den Karten-
-		   steuerelementen (#963, top:12px) nach oben aus, statt sie zu verdecken.
-		   Der Fallback-Wert gilt nur, falls das Skript (noch) nicht gemessen hat. */
-		.cascade-prompt,
-		.cascade-done {
-			position: fixed;
-			left: 8px;
-			right: 8px;
-			bottom: var(--gz-cascade-bottom, calc(72px + env(safe-area-inset-bottom)));
-			z-index: 62; /* über Bottom-Sheet (61) und BottomNav (50) */
-			flex-direction: column;
-			align-items: stretch;
-			/* --g-accent-tint ist transluzent (8%) — über der Karte unlesbar. */
-			background: var(--g-card);
-			box-shadow: 0 6px 20px rgba(26, 26, 24, 0.18);
-		}
-	}
 	.save-bar {
 		display: flex;
 		align-items: center;
@@ -1267,6 +1080,28 @@
 		cursor: pointer;
 	}
 	.mobile-add-btn:hover {
+		border-color: var(--g-accent);
+		color: var(--g-accent);
+	}
+	/* F3 — Wahl Etappe/Pausentag als eigene Zeile im Fluss (nicht überlappend). */
+	.mobile-add-choice {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--g-s-2);
+	}
+	.mobile-add-choice button {
+		min-height: 44px;
+		padding: 0 var(--g-s-4);
+		background: var(--g-card);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-3);
+		text-align: center;
+		font-size: var(--g-text-sm);
+		font-weight: 500;
+		color: var(--g-ink);
+		cursor: pointer;
+	}
+	.mobile-add-choice button:hover {
 		border-color: var(--g-accent);
 		color: var(--g-accent);
 	}
