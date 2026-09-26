@@ -67,14 +67,21 @@ from services.trip_command_processor import (  # noqa: E402
 )
 from services.trip_report_scheduler import TripReportSchedulerService  # noqa: E402
 from utils.timezone import tz_for_coords  # noqa: E402
+from tests.helpers.transport_mitschrift import (  # noqa: E402
+    ALLE_KANAELE as _ALLE_KANAELE_GETEILT,
+    Kanalmitschrift,
+    aufzeichner_installieren as _aufzeichner_installieren,
+)
 
 #: Exakter Standort aus ``providers/fixture.py::_FIXTURE_LOCATIONS`` — so
 #: trifft der Nearest-Neighbour-Zuordner garantiert ``innsbruck.json``.
 INNSBRUCK = (47.2692, 11.4041)
 
 #: Versand-Reihenfolge in ``NotificationService.send_trip_report`` — dieselbe
-#: Reihenfolge steht in ``briefing_log.channels``.
-ALLE_KANAELE = ("email", "sms", "premium_sms", "telegram")
+#: Reihenfolge steht in ``briefing_log.channels``. Geteilt mit dem
+#: Transport-Aufzeichner (#2422 S1) -- lokaler Alias, damit alle bestehenden
+#: Verweise in dieser Datei unveraendert bleiben.
+ALLE_KANAELE = _ALLE_KANAELE_GETEILT
 
 VIER_KANAELE_AN = {
     "send_email": True, "send_sms": True,
@@ -109,80 +116,11 @@ _TRANSPORT_ENV = {
 
 # ---------------------------------------------------------------------------
 # Aufzeichner an den vier Kanal-Ausgaengen
+#
+# Issue #2422 S1: nach ``tests/helpers/transport_mitschrift.py`` extrahiert
+# (dort um ``body``/``plain_text_body``/``parse_mode`` erweitert) -- geteilter
+# Baustein mit ``test_einstellung_gleich_auslieferung.py``. Import oben.
 # ---------------------------------------------------------------------------
-
-
-class Kanalmitschrift:
-    """Was tatsaechlich hinausging — je Kanal Empfaenger und Betreff."""
-
-    def __init__(self) -> None:
-        self.je_kanal: dict[str, list[dict]] = {k: [] for k in ALLE_KANAELE}
-
-    @property
-    def kanaele(self) -> list[str]:
-        """Bediente Kanaele in der Versand-Reihenfolge des Produktivcodes."""
-        return [k for k in ALLE_KANAELE if self.je_kanal[k]]
-
-    def empfaenger(self, kanal: str) -> list[str]:
-        return [e["empfaenger"] for e in self.je_kanal[kanal]]
-
-    def leeren(self) -> None:
-        self.je_kanal = {k: [] for k in ALLE_KANAELE}
-
-    def __repr__(self) -> str:  # erscheint in jeder Fehlermeldung
-        return f"Kanalmitschrift({({k: v for k, v in self.je_kanal.items() if v})})"
-
-
-def _aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
-    """Echte Klassen mit den echten ``send()``-Signaturen ersetzen die vier
-    Ausgaenge. Sie ersetzen die Naht zum Netz, NICHT die Entscheidung darueber,
-    wer bedient wird — die faellt weiter im Produktivcode."""
-    from services import notification_service as ns
-
-    mit = Kanalmitschrift()
-
-    def _buchen(kanal: str, empfaenger, subject: str) -> None:
-        mit.je_kanal[kanal].append({"empfaenger": empfaenger, "subject": subject})
-
-    class _EmailAufzeichner:
-        def __init__(self, settings) -> None:
-            self._s = settings
-
-        def send(self, subject, body, html=True, plain_text_body=None, to=None,
-                 mail_type=None, mail_format=None, compare_hourly_enabled=None):
-            # Ohne `to=` faellt `EmailOutput` auf `settings.mail_to` zurueck
-            # (email.py:647-650) — genau die Aufloesung, die AC-7 prueft.
-            ziel = to if to else self._s.mail_to
-            _buchen("email", ziel if isinstance(ziel, str) else list(ziel)[0], subject)
-
-    class _SmsAufzeichner:
-        def __init__(self, settings) -> None:
-            self._s = settings
-
-        def send(self, subject, body) -> None:
-            _buchen("sms", self._s.sms_to, subject)
-
-    class _PremiumSmsAufzeichner:
-        def __init__(self, settings) -> None:
-            self._s = settings
-
-        def send(self, subject, body) -> None:
-            _buchen("premium_sms", self._s.premium_sms_reply_to, subject)
-
-    class _TelegramAufzeichner:
-        def __init__(self, settings) -> None:
-            self._s = settings
-
-        def send(self, subject, body, reply_markup=None, *, parse_mode=None,
-                 suppress_subject_line=False) -> int:
-            _buchen("telegram", self._s.telegram_chat_id, subject)
-            return 1
-
-    monkeypatch.setattr(ns, "EmailOutput", _EmailAufzeichner)
-    monkeypatch.setattr(ns, "SMSOutput", _SmsAufzeichner)
-    monkeypatch.setattr(ns, "PremiumSmsOutput", _PremiumSmsAufzeichner)
-    monkeypatch.setattr(ns, "TelegramOutput", _TelegramAufzeichner)
-    return mit
 
 
 @pytest.fixture
