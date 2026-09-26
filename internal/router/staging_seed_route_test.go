@@ -317,6 +317,8 @@ func TestStagingSeedValidierungLehntFehlfaelleAb(t *testing.T) {
 		{"negativ", `{"sms":-1}`, "validation_error"},
 		{"ueber_grenze", `{"sms":1001}`, "validation_error"},
 		{"nicht_ganzzahl", `{"premium_sms":2.5}`, "validation_error"},
+		{"sms_null", `{"sms":null}`, "validation_error"},
+		{"premium_sms_null", `{"premium_sms":null}`, "validation_error"},
 		{"gueltiger_tarif_plus_ungueltiger_zaehler", `{"tier":"premium","sms":-1}`, "validation_error"},
 	}
 	for _, c := range cases {
@@ -407,5 +409,54 @@ func TestStagingSeedCoreFehlerantwortLiefert502(t *testing.T) {
 	}
 	if got := tierOf(t, s, "seedA"); got != "free" {
 		t.Errorf("AC-11: Tarif darf nicht geaendert sein, ist %q", got)
+	}
+}
+
+// F004: reiner Tarif-Aufruf liefert den Zaehlerstand des EINGELOGGTEN Nutzers,
+// nie den eines anderen und nie einen Default.
+func TestStagingSeedNurTarifTraegtZaehlerstandDesEigenenNutzers(t *testing.T) {
+	r, _, secret, core := newSeedRouter(t, "staging", nil)
+	core.mu.Lock()
+	core.counters["seedA"] = [2]int{4, 2}
+	core.counters["seedB"] = [2]int{9, 8}
+	core.mu.Unlock()
+	for uid, want := range map[string][2]float64{"seedA": {4, 2}, "seedB": {9, 8}} {
+		rr := postSeed(t, r, uid, secret, `{"tier":"premium"}`)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("F004 %s: erwartet 200, bekam %d body=%s", uid, rr.Code, rr.Body.String())
+		}
+		var resp map[string]any
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("F004 %s: Antwort nicht JSON: %v", uid, err)
+		}
+		if resp["tier"] != "premium" || resp["sms"] != want[0] || resp["premium_sms"] != want[1] {
+			t.Errorf("F004 %s: erwartet tier=premium sms=%v premium_sms=%v, war %v", uid, want[0], want[1], resp)
+		}
+	}
+}
+
+// F004: Core-Ausfall bei reinem Tarif-Aufruf ist kein Fehler: 200, Tarif gesetzt,
+// keine Zaehlerfelder.
+func TestStagingSeedNurTarifBeiCoreAusfallLiefert200OhneZaehlerfelder(t *testing.T) {
+	r, s, secret, _ := newSeedRouter(t, "staging", func(*fakeCore) string { return "http://127.0.0.1:1" })
+	rr := postSeed(t, r, "seedA", secret, `{"tier":"standard"}`)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("F004: erwartet 200, bekam %d body=%s", rr.Code, rr.Body.String())
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Antwort nicht JSON: %v", err)
+	}
+	if resp["tier"] != "standard" {
+		t.Errorf("F004: tier erwartet standard, war %v", resp)
+	}
+	if _, ok := resp["sms"]; ok {
+		t.Errorf("F004: sms darf ohne Core fehlen, war %v", resp)
+	}
+	if _, ok := resp["premium_sms"]; ok {
+		t.Errorf("F004: premium_sms darf ohne Core fehlen, war %v", resp)
+	}
+	if got := tierOf(t, s, "seedA"); got != "standard" {
+		t.Errorf("F004: Tarif muss gesetzt sein, ist %q", got)
 	}
 }

@@ -170,3 +170,54 @@ def test_internal_route_liefert_in_staging_200_und_schreibt(monkeypatch):
     assert antwort.status_code == 200, f"AC-10 Positivkontrolle: {antwort.status_code} {antwort.text}"
     assert antwort.json() == {"sms": 5, "premium_sms": 0}
     assert sms_daily_limit.get_daily_usage(uid, _jetzt())["sms"]["used"] == 5
+
+
+# --- Nachbesserung Adversary (F001, F002, F003) -------------------------------
+
+
+def test_overshoot_sms_ueber_limit_wird_am_leseweg_nicht_gekappt():
+    """F001: Tarif standard (SMS-Limit 10), seed sms=12 -> Leseweg used == 12."""
+    uid = _kennung("oversms")
+    _nutzer(uid, "standard")
+    sms_daily_limit.seed_daily_usage(uid, 12, None, _jetzt())
+    u = sms_daily_limit.get_daily_usage(uid, _jetzt())
+    assert u["sms"]["limit"] == 10, f"F001: Limit 10 erwartet, war {u['sms']}"
+    assert u["sms"]["used"] == 12, f"F001: used darf nicht gekappt werden, war {u['sms']}"
+
+
+def test_seed_wartet_auf_fremd_gehaltene_sperre_und_wirft_timeout(monkeypatch):
+    """F002: Haelt ein anderer Halter die Sidecar-Sperre, darf seed_daily_usage
+    weder schreiben noch die Sperre ignorieren -> TimeoutError, Datei unveraendert."""
+    import fcntl
+    import os
+
+    uid = _kennung("lock")
+    _nutzer(uid, "standard")
+    sms_daily_limit.seed_daily_usage(uid, 3, 1, _jetzt())
+    pfad = get_data_dir(uid) / "sms_daily_count.json"
+    vorher = pfad.read_bytes()
+    monkeypatch.setattr(sms_daily_limit, "LOCK_TIMEOUT_SECONDS", 0.1)
+    fd = os.open(str(pfad) + ".lock", os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        with pytest.raises(TimeoutError):
+            sms_daily_limit.seed_daily_usage(uid, 9, 9, _jetzt())
+    finally:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+    assert pfad.read_bytes() == vorher, "F002: unter fremder Sperre darf nichts geschrieben werden"
+    # Nach Freigabe funktioniert das Seeden wieder.
+    assert sms_daily_limit.seed_daily_usage(uid, 9, 9, _jetzt()) == {"sms": 9, "premium_sms": 9}
+
+
+@pytest.mark.parametrize("feld,wert", [("sms", 1001), ("sms", -1), ("premium_sms", 1001), ("premium_sms", -1)])
+def test_internal_route_lehnt_ungueltige_zaehlerwerte_mit_422_ab(monkeypatch, feld, wert):
+    """F003: Grenzen 0..1000 gelten auch an der Python-Route; Zaehler unveraendert."""
+    monkeypatch.setenv("GZ_ENV", "staging")
+    uid = _kennung("val")
+    _nutzer(uid, "standard")
+    sms_daily_limit.seed_daily_usage(uid, 2, 1, _jetzt())
+    vorher = (get_data_dir(uid) / "sms_daily_count.json").read_bytes()
+    antwort = _client().post(PFAD, json={"user_id": uid, feld: wert})
+    assert antwort.status_code == 422, f"F003: {feld}={wert} erwartet 422, war {antwort.status_code}"
+    assert (get_data_dir(uid) / "sms_daily_count.json").read_bytes() == vorher, "F003: Zaehler veraendert"

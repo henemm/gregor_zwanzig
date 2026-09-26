@@ -109,6 +109,8 @@ func New(deps Deps) chi.Router {
 	// Klartext-Code des EIGENEN Kontos heraus, ohne Sendeversuch.
 	if os.Getenv("GZ_ENV") == "staging" {
 		r.Post("/api/auth/sms/staging-code", handler.StagingSmsCodeHandler(deps.Store))
+		// Issue #2423 — Tarif/SMS-Tageszaehler des EIGENEN Kontos setzen.
+		r.Post("/api/auth/staging-seed", handler.StagingSeedHandler(deps.Store, *deps.Config))
 	}
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret))
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
