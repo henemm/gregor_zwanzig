@@ -66,7 +66,7 @@ SEG_END = RECEIVED_AT + timedelta(hours=4)    # 12:00
 N_HOURS = 12                                  # volle Stundenreihe 08:00..19:00
 
 _TRIP_ID = "test-667-clip"
-_TRIP_NAME = "Clip-Test-Tour"
+_TRIP_NAME = "Clip-Test-Trip"
 _USER_ID = "default"
 
 _THUNDER_SEQ = [

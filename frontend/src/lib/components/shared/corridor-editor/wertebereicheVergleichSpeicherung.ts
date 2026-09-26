@@ -1,6 +1,6 @@
 // Issue #2276 Scheibe S3 (Epic #2345) — Speicherweg des Wertebereiche-Reiters
 // im Ortsvergleich-Hub. Der Reiter speichert SELBST über den Speicher-Controller
-// der Seite (schedule/flush/retryConflict), wie Alarme (S2) und die Tour — der
+// der Seite (schedule/flush/retryConflict), wie Alarme (S2) und die Trip — der
 // zweite Weg (Wrapper `.hub-corridor-wrap` + `<svelte:window onpointerup>` →
 // alte Hub-Commit-Funktion) ist entfallen.
 //

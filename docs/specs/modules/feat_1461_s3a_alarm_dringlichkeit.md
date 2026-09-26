@@ -252,7 +252,7 @@ die Farbe des Punkts im Cockpit wechselt von falsch auf richtig.
 
 ### E7 — D4 aus #1459 bleibt gewahrt
 
-Die Cockpit-Kachel „Alarme · letzte 24h" und die Archiv-Statistik „Alarme je Tour"
+Die Cockpit-Kachel „Alarme · letzte 24h" und die Archiv-Statistik „Alarme je Trip"
 zählen ausschließlich `entries` (`internal/store/log.go:100 AlertCountByTrip()`,
 `internal/handler/cockpit.go:36-42`). Diese Scheibe ändert an keiner der sechs
 Aufrufstellen, **ob** oder **wohin** (`entries` vs. `not_delivered`) ein Eintrag
@@ -261,7 +261,7 @@ ohnehin entstehenden Eintrags ändert sich.
 
 ## Expected Behavior
 
-- **Input:** ein Alarm-Versandversuch (Tour oder Ortsvergleich) einer der drei
+- **Input:** ein Alarm-Versandversuch (Trip oder Ortsvergleich) einer der drei
   Meldungsarten, inklusive der zugrundeliegenden Rohdaten (amtliche Stufe,
   Radar-Kennzahlen, Δ-Änderungsliste).
 - **Output:** derselbe Protokoll-Eintrag wie vor dieser Scheibe (Ziel-Liste, Anzahl,
@@ -301,7 +301,7 @@ ohnehin entstehenden Eintrags ändert sich.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine rote amtliche Warnung (`level=4`) löst für eine Tour einen
+- **AC-1:** Given eine rote amtliche Warnung (`level=4`) löst für eine Trip einen
   Standalone-Alarm aus / When der Eintrag geschrieben wird / Then steht `"HIGH"` im
   neuesten `entries`-Eintrag — vorher stand dort fest `"MODERATE"`.
   - Test: `_send_official_alert_only(trip, [(OfficialAlert(level=4, ...), segment_ids)])`
@@ -330,20 +330,20 @@ ohnehin entstehenden Eintrags ändert sich.
     denselben Standalone-Alarm mit `level=3` durchlaufen lassen, Eintrag vor/nach dem
     Patch vergleichen (`"MODERATE"` → `"LOW"`).
 
-- **AC-5:** Given ein Radar-Alarm mit `is_convective=True` für eine Tour / When
+- **AC-5:** Given ein Radar-Alarm mit `is_convective=True` für eine Trip / When
   protokolliert wird / Then steht `"HIGH"` im Eintrag (weiterhin — aber jetzt aus
   `is_convective` abgeleitet statt aus einer Konstante).
   - Test: `check_radar_alerts()` mit einem konstruierten `NowcastResult`
     (`is_convective=True`) als Eingangsdatum, Eintrag prüfen.
 
 - **AC-6:** Given ein Radar-Alarm mit `is_convective=False` und Label „mäßiger Regen"
-  (Trip-Kleinschreibung, `trip_alert.py:826-827`) für eine Tour / When protokolliert
+  (Trip-Kleinschreibung, `trip_alert.py:826-827`) für eine Trip / When protokolliert
   wird / Then steht `"MODERATE"` im Eintrag — vorher stand dort fest `"HIGH"`.
   - Test: ein konstruiertes `NowcastResult` mit `intensity_label="Mäßiger Regen"`,
     `is_convective=False` als Eingangsdatum, Eintrag prüfen.
 
 - **AC-7:** Given ein Radar-Alarm mit Label „leichter Regen" (leichter Nieselregen,
-  `is_convective=False`) für eine Tour / When protokolliert wird / Then steht `"LOW"`
+  `is_convective=False`) für eine Trip / When protokolliert wird / Then steht `"LOW"`
   im Eintrag — exakt der in der Analyse benannte Fall (Nieselregen in 19 Minuten, bisher
   fälschlich `HIGH`).
   - Test: ein konstruiertes `NowcastResult` mit `intensity_label="Leichter Regen"` als
@@ -415,7 +415,7 @@ ohnehin entstehenden Eintrags ändert sich.
   - Test: zwei getaggte `OfficialAlert`-Objekte unterschiedlicher Stufe, Eintrag prüfen.
 
 - **AC-14 (E6, Verhaltensneutralität des Versands, Nachbesserung Team-Lead-Review):**
-  Given eine Tour mit aktivem E-Mail- und Telegram-Kanal und einer Δ-Änderung, die einen
+  Given eine Trip mit aktivem E-Mail- und Telegram-Kanal und einer Δ-Änderung, die einen
   Alarm auslöst / When der Alarm läuft / Then wird die E-Mail-Senke **genau einmal** und
   die Telegram-Senke **genau einmal** aufgerufen, die SMS-Senke **kein Mal**, und
   `NotificationResult.sent_channels` ist exakt `{"email", "telegram"}`.
@@ -428,7 +428,7 @@ ohnehin entstehenden Eintrags ändert sich.
     eines Vergleichs mit „dem Stand vor dieser Scheibe" — Letzterer ist nach dem Umbau
     nicht mehr herstellbar und könnte deshalb nie rot werden.
 
-- **AC-15 (E7, D4 — Eintragszahl und Ziel-Liste unverändert):** Given eine Tour hat vor
+- **AC-15 (E7, D4 — Eintragszahl und Ziel-Liste unverändert):** Given eine Trip hat vor
   dieser Scheibe N Einträge in `entries` / When zusätzlich ein amtlicher Alarm
   (`level=4`) protokolliert wird, der vor dieser Scheibe als `"MODERATE"` in `entries`
   gelandet wäre / Then liegt der neue Eintrag weiterhin in `entries` (nicht
@@ -439,11 +439,11 @@ ohnehin entstehenden Eintrags ändert sich.
     in `entries` liegt.
 
 - **AC-16 (Mandantentrennung, zwei Nutzer):** Given zwei Nutzer A und B, jeweils mit
-  einer eigenen Tour und je einer roten amtlichen Warnung (`level=4`) im selben
+  einer eigenen Trip und je einer roten amtlichen Warnung (`level=4`) im selben
   Testlauf, isoliert über `app.loader.get_data_dir` (kein gemeinsamer `data_dir`) / When
   beide Alarme protokolliert werden / Then trägt Nutzer As `alert_log.json` einen Eintrag
-  mit `severity="HIGH"` für seine eigene Tour, Nutzer Bs eigene, getrennt gescopte Datei
-  trägt ebenfalls `"HIGH"` für seine eigene Tour — keine Vermischung von Werten oder
+  mit `severity="HIGH"` für seine eigene Trip, Nutzer Bs eigene, getrennt gescopte Datei
+  trägt ebenfalls `"HIGH"` für seine eigene Trip — keine Vermischung von Werten oder
   Dateien zwischen den beiden `data/users/<user_id>/`-Verzeichnissen, kein Rückfall auf
   `"default"`.
   - Test: zwei `TripAlertService(user_id=...)`-Instanzen mit unterschiedlichem

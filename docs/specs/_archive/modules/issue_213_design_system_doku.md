@@ -46,7 +46,7 @@ markiert.
 | Tracking | `--g-track-tight/normal/wide/caps` | identisch | unverändert ✓ |
 | Elevation | `--g-shadow-1/2/3` (Hairline + Drop) | `--g-elev-1/2/3` (einfache Schatten) | Ist (Naming + Werte) |
 | Btn-Variants | `primary`, `accent`, `ghost`, `quiet` (4) | `primary`, `accent`, `outline`, `ghost`, `secondary`, `destructive`, `link` (7) | Ist (alle 7) |
-| Sidebar-Labels | „Heute", „Trips" | „Startseite", „Meine Touren", „Einstellungen" | Ist (3 Items) |
+| Sidebar-Labels | „Heute", „Trips" | „Startseite", „Meine Trips", „Einstellungen" | Ist (3 Items) |
 
 ## Quelle / Source
 

@@ -211,7 +211,7 @@ def _gewitterfeld(zeile: str) -> str:
     🔴 #1848 A3: das Gewitterfeld ist nicht mehr zwangslaeufig das LETZTE der
     Zeile. Seit der Ausblick die Grundauswahl erbt, rendert der Trip ueber den
     konfigurierbaren Zweig (``Thdr Tleicht@16  Cloud -  …``); der
-    feste Zweig (``… 25    Tleicht@16``) bleibt fuer Touren ohne Grundauswahl
+    feste Zweig (``… 25    Tleicht@16``) bleibt fuer Trips ohne Grundauswahl
     in Kraft. Beide Formen werden hier auf DASSELBE Feld reduziert, damit die
     Zusicherungen unveraendert am Zellentext haengen und nicht an dessen
     Position.
@@ -266,7 +266,7 @@ def test_kein_tagesgewitter_trotz_aggregat_high():
     #1848 A3): bis dahin folgte hier '- nachts hoch @2'. Die 3-Tages-Vorschau
     zeigt seither ausschliesslich das TAGESFENSTER -- der Entscheid galt
     vorher nur fuer den Metrik-Zweig (fix_1841 AC-3) und gilt seit A3 fuer
-    alle Touren, weil der feste Zweig als Normalfall entfaellt. Die hier
+    alle Trips, weil der feste Zweig als Normalfall entfaellt. Die hier
     bewachte Fehlerklasse ist unveraendert: das 24h-Aggregat darf kein
     Tagesgewitter erfinden.
     """

@@ -18,7 +18,7 @@ tags: [frontend, svelte, trip, save-status, cleanup, cascade]
 
 ## Purpose
 
-S3 hat `api.ts` eine zentrale Schreib-Warteschlange je Tour gegeben
+S3 hat `api.ts` eine zentrale Schreib-Warteschlange je Trip gegeben
 (`enqueueTripWrite`): jeder `PUT /api/trips/{id}` — egal ob Auto-Save
 (`buildStagesSave()`) oder Kaskaden-Schreibvorgang (`applyCascade()`) —
 läuft durch denselben Trichter, ein späterer Aufruf wartet dort automatisch
@@ -172,7 +172,7 @@ die Fehlerbehandlung danach (ab Z. 428).
 ## Expected Behavior
 
 - **Input:** Nutzer löst „Alle mitverschieben" im Etappen-Editor aus, während
-  im Hintergrund noch ein Auto-Save derselben Tour läuft
+  im Hintergrund noch ein Auto-Save derselben Trip läuft
 - **Output:** genau ein Kaskaden-`PUT` auf `/api/trips/{id}`, das den
   vorherigen Auto-Save-`PUT` nicht überholt — Garantie kommt jetzt
   ausschliesslich aus `enqueueTripWrite` (`api.ts`/`etagRegistry.ts`), nicht
@@ -204,8 +204,8 @@ bestehende Suite.
   (insbesondere die `cascade-done`-Assertions); ergänzend: `saveStatus.test.ts`
   bleibt vollständig grün nach Entfernen der drei `settle()`-Tests
 
-- **AC-2:** Given ein Auto-Save derselben Tour läuft noch im Netz / When
-  parallel ein Kaskaden-Schreibvorgang für dieselbe Tour ausgelöst wird /
+- **AC-2:** Given ein Auto-Save derselben Trip läuft noch im Netz / When
+  parallel ein Kaskaden-Schreibvorgang für dieselbe Trip ausgelöst wird /
   Then bleiben Auto-Save und Kaskaden-Schreibvorgang serialisiert (der
   spätere wartet auf den früheren) — ausschliesslich getragen von
   `enqueueTripWrite` in `api.ts`/`etagRegistry.ts`, ohne lokalen Wartschritt
@@ -214,7 +214,7 @@ bestehende Suite.
   `frontend/src/lib/__tests__/etagRegistryQueue.test.ts` (bestehend, S3,
   unverändert grün)
 
-- **AC-3:** Given ein vorheriger Schreibvorgang derselben Tour hängt
+- **AC-3:** Given ein vorheriger Schreibvorgang derselben Trip hängt
   ungewöhnlich lange in der Warteschlange / When der Kaskaden-Schreibvorgang
   darauf wartet / Then bricht er spätestens nach `CASCADE_WRITE_TIMEOUT_MS`
   (15 s) mit einer verständlichen Fehlermeldung ab, statt unbegrenzt zu

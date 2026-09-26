@@ -5,7 +5,7 @@ SPEC: docs/specs/modules/feat_2051_s1_dauer_und_ende.md — AC-17.
 
 Produkt-Grundsatz (PO, mehrfach bekraeftigt): Gregor Zwanzig liefert Daten,
 keine Ratschlaege. Der Nutzer ist Profi und entscheidet selbst, was ein
-Regenende fuer seine Tour bedeutet. Eine Ende-Angabe verfuehrt genau dazu,
+Regenende fuer seine Trip bedeutet. Eine Ende-Angabe verfuehrt genau dazu,
 den naechsten Schritt gleich mitzurechnen — "bei Planzeit bist du um 20:10
 bei km 14, also …". Das waere eine Konsequenz aus dem Datum, nicht das Datum,
 und zoege eine Nachfuehrpflicht nach sich, sobald sich die Planung aendert.
@@ -230,7 +230,7 @@ def test_ac17_die_ende_angabe_bleibt_ein_reines_datum():
     """AC-17 (Kern) GIVEN dieselben Textstellen
     WHEN die Umgebung der Ende-Angabe betrachtet wird
     THEN steht dort die Uhrzeit allein — keine daraus abgeleitete Aussage
-    ueber Streckenposition, Restzeit des Nutzers oder Tourverlauf.
+    ueber Streckenposition, Restzeit des Nutzers oder Trip-Verlauf.
 
     Geprueft wird der Satz, in dem die Ende-Angabe steht: er darf keine
     Anrede in der zweiten Person tragen.

@@ -13,7 +13,7 @@ test.describe('F76 Phase B: Startseite Kachel-Übersicht', () => {
 		 * THEN: Trip cards are shown with name and "N Etappen"
 		 */
 		await page.goto('/');
-		const section = page.locator('section', { hasText: 'Meine Touren' });
+		const section = page.locator('section', { hasText: 'Meine Trips' });
 		await expect(section).toBeVisible();
 		const cards = section.locator('[data-testid="trip-card"]');
 		await expect(cards.first()).toBeVisible();
@@ -47,14 +47,14 @@ test.describe('F76 Phase B: Startseite Kachel-Übersicht', () => {
 		await expect(page.locator('[data-testid="stat-health"]')).toHaveCount(0);
 	});
 
-	test('shows CTA buttons for new tour and new comparison', async ({ page }) => {
+	test('shows CTA buttons for new trip and new comparison', async ({ page }) => {
 		/**
 		 * GIVEN: User is logged in and has data
 		 * WHEN: Startseite loads
-		 * THEN: CTA buttons "Neue Tour" and "Neuer Vergleich" are visible
+		 * THEN: CTA buttons "Neue Trip" and "Neuer Vergleich" are visible
 		 */
 		await page.goto('/');
-		await expect(page.locator('a', { hasText: 'Neue Tour' })).toBeVisible();
+		await expect(page.locator('a', { hasText: 'Neue Trip' })).toBeVisible();
 		await expect(page.locator('a', { hasText: 'Neuer Vergleich' })).toBeVisible();
 	});
 

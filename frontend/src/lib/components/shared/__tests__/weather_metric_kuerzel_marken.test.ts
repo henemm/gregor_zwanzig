@@ -204,9 +204,9 @@ function pruefeBeideMarken(pfade: string[], kontext: string, ac: string): void {
 // AC-5 — zwei beschriftete Marken je Zeile
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-5: die Zeile des Touren-Editors traegt zwei beschriftete Marken', () => {
+describe('AC-5: die Zeile des Trips-Editors traegt zwei beschriftete Marken', () => {
 	test('beide Marken sind auffindbar und sichtbar beschriftet', () => {
-		pruefeBeideMarken([REIHENFOLGE], 'der Touren-Editor', 'AC-5');
+		pruefeBeideMarken([REIHENFOLGE], 'der Trips-Editor', 'AC-5');
 	});
 });
 
@@ -276,7 +276,7 @@ describe('AC-9: eine Groesse ohne Kuerzel bekommt gar keine Marke', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // AC-6 / AC-7 — die Quelle richtet sich nach der Flaeche
 //
-// Spec Abschnitt 3: der Touren-Editor zeigt die TRIP-SMS-Kuerzel
+// Spec Abschnitt 3: der Trips-Editor zeigt die TRIP-SMS-Kuerzel
 // (/api/sms-symbols, deckt Mehrfach-Token und Grammatik ab), die drei
 // Vergleichs-Editoren das Register-Kuerzel (`sms_code`) — die Vergleichs-SMS
 // rendert aus `get_sms_code()`. Eine flaechenblinde Korrektur wuerde den
@@ -287,12 +287,12 @@ describe('AC-9: eine Groesse ohne Kuerzel bekommt gar keine Marke', () => {
 // Wie dieser Waechter die beiden Einbettungen AUSEINANDERHAELT
 //
 // WeatherMetricsTab.svelte bindet `WeatherV2Reihenfolge` ZWEIMAL ein: einmal
-// fuer die Tour, einmal fuer die Vergleichs-Uebersicht. Beide muessen sicher
+// fuer die Trip, einmal fuer die Vergleichs-Uebersicht. Beide muessen sicher
 // unterscheidbar sein, denn sie speisen die Kurzform-Marke aus VERSCHIEDENEN
 // Quellen (Trip: /api/sms-symbols · Vergleich: Register-`sms_code`) — genau
 // diese Verwechslung bewachen die Tests weiter unten.
 //
-// FRUEHER diente `offColumns` als Merkmal ("die Touren-Einbettung ist die
+// FRUEHER diente `offColumns` als Merkmal ("die Trips-Einbettung ist die
 // einzige mit offColumns" — #1719 S3: 'Aus in diesem Kanal' gab es nur im
 // Trip-Kanal-Reiter). Das gilt seit Issue #1703 Scheibe 8 NICHT MEHR: dort
 // bekommt die Vergleichs-Uebersicht ausdruecklich ebenfalls `offColumns` und
@@ -380,8 +380,8 @@ function erreichteNamen(datei: string, waehle: (eltern: Knoten[]) => boolean): S
 	return alle;
 }
 
-describe('AC-6: der Touren-Editor speist die Kurzform-Marke aus /api/sms-symbols', () => {
-	test('die Touren-Einbettung erreicht den Kuerzel-Katalog des Backends', () => {
+describe('AC-6: der Trips-Editor speist die Kurzform-Marke aus /api/sms-symbols', () => {
+	test('die Trips-Einbettung erreicht den Kuerzel-Katalog des Backends', () => {
 		// Erkennungsmerkmal: LayoutTab context="route". Bis #1703 S8 stand hier
 		// `attrs.has('offColumns')` — warum das nicht mehr traegt, steht im
 		// Kommentar ueber layoutKontext().
@@ -389,11 +389,11 @@ describe('AC-6: der Touren-Editor speist die Kurzform-Marke aus /api/sms-symbols
 			join(SHARED, 'WeatherMetricsTab.svelte'),
 			imKontext('route')
 		);
-		assert.ok(erreicht, 'Touren-Einbettung von WeatherV2Reihenfolge nicht gefunden');
+		assert.ok(erreicht, 'Trips-Einbettung von WeatherV2Reihenfolge nicht gefunden');
 		const quellen = ['metricSymbols', 'smsSymbols', 'sms_symbols'];
 		assert.ok(
 			quellen.some((q) => erreicht!.has(q)),
-			`AC-6 FAIL (RED): die Touren-Einbettung erreicht keine der Quellen ` +
+			`AC-6 FAIL (RED): die Trips-Einbettung erreicht keine der Quellen ` +
 				`${quellen.join('/')} — der Editor zeigt also weiter die ALARM-Stammdaten ` +
 				`(sms_code) statt der Kuerzel, die die Trip-SMS wirklich sendet. ` +
 				`WeatherMetricsTab.svelte laedt /api/sms-symbols bereits und haelt das ` +
@@ -423,7 +423,7 @@ const VERGLEICHSFLAECHEN = [
 describe('AC-7: die drei Vergleichs-Editoren tragen ebenfalls beide Marken', () => {
 	for (const [name, datei] of VERGLEICHSFLAECHEN) {
 		test(`${name}: die Zeile traegt beide beschrifteten Marken`, () => {
-			// Dieselbe Zusicherung wie AC-5 fuer den Touren-Editor — angewandt auf
+			// Dieselbe Zusicherung wie AC-5 fuer den Trips-Editor — angewandt auf
 			// die Bauteile, die GENAU DIESE Flaeche rendert.
 			pruefeBeideMarken(anzeigeflaechen(datei), name, 'AC-7');
 		});
@@ -479,12 +479,12 @@ function kuerzelQuelle(
 }
 
 describe('AC-6/AC-7: die Kurzform-Marke wird je Flaeche aus der RICHTIGEN Quelle gespeist', () => {
-	test('Touren-Editor: aus /api/sms-symbols, NICHT aus dem Register', () => {
+	test('Trips-Editor: aus /api/sms-symbols, NICHT aus dem Register', () => {
 		const quelle = kuerzelQuelle('WeatherMetricsTab.svelte', imKontext('route'));
-		assert.ok(quelle, 'AC-6 FAIL: die Touren-Einbettung uebergibt kein `kuerzelById`.');
+		assert.ok(quelle, 'AC-6 FAIL: die Trips-Einbettung uebergibt kein `kuerzelById`.');
 		assert.ok(
 			TRIP_QUELLEN.some((q) => quelle!.has(q)),
-			`AC-6 FAIL: die Kurzform-Marke des Touren-Editors wird nicht aus ` +
+			`AC-6 FAIL: die Kurzform-Marke des Trips-Editors wird nicht aus ` +
 				`${TRIP_QUELLEN.join('/')} gespeist. Der Editor zeigte dann die ` +
 				`ALARM-Stammdaten statt der Kuerzel, die die Trip-SMS wirklich sendet — ` +
 				`bei "Gefuehlte Temperatur" ein "TF" statt "FK FD WC", bei ` +
@@ -493,7 +493,7 @@ describe('AC-6/AC-7: die Kurzform-Marke wird je Flaeche aus der RICHTIGEN Quelle
 		);
 		assert.ok(
 			!quelle!.has(REGISTER_QUELLE),
-			`AC-6 FAIL: die Kurzform-Marke des Touren-Editors wird (auch) aus ` +
+			`AC-6 FAIL: die Kurzform-Marke des Trips-Editors wird (auch) aus ` +
 				`\`${REGISTER_QUELLE}\` gespeist. Das ist die Quelle des VERGLEICHS; ` +
 				`die Trip-SMS rendert aus SMS_MULTI_SYMBOLS_BY_METRIC / ` +
 				`SMS_SYMBOL_BY_METRIC. Erreichbar: ${JSON.stringify([...quelle!].sort())}`

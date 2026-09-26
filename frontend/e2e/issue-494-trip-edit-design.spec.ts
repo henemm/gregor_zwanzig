@@ -41,15 +41,15 @@ test('AC-1: /edit zeigt TripEditView mit Tabs, nicht WaypointEditorPage', async 
 // AC-2: Breadcrumb, H1, Buttons oben rechts, 5 horizontale Tabs, kein Footer
 // =============================================================================
 
-test('AC-2: Breadcrumb sichtbar mit Text MEINE TOUREN', async ({ page }) => {
+test('AC-2: Breadcrumb sichtbar mit Text MEINE TRIPS', async ({ page }) => {
 	await page.goto(EDIT_URL);
 
 	const breadcrumb = page.getByTestId('edit-breadcrumb');
 	await expect(breadcrumb).toBeVisible();
-	await expect(breadcrumb).toContainText('MEINE TOUREN');
+	await expect(breadcrumb).toContainText('MEINE TRIPS');
 });
 
-test('AC-2: H1 zeigt Tour-Namen', async ({ page }) => {
+test('AC-2: H1 zeigt Trip-Namen', async ({ page }) => {
 	await page.goto(EDIT_URL);
 
 	const title = page.getByTestId('edit-trip-title');

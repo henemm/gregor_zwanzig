@@ -792,8 +792,8 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
 # AC-5: format_now_text mit tz-Parameter (RED: TypeError)
 # --------------------------------------------------------------------------
 
-def test_ac5_onset_time_in_tour_timezone():
-    """AC-5: format_now_text(result, tz=<TourTZ>) formatiert Onset-Zeit in Tour-TZ.
+def test_ac5_onset_time_in_trip_timezone():
+    """AC-5: format_now_text(result, tz=<TripTZ>) formatiert Onset-Zeit in Trip-TZ.
 
     RED: format_now_text hat keinen `tz`-Parameter → TypeError (unexpected keyword).
 
@@ -801,7 +801,7 @@ def test_ac5_onset_time_in_tour_timezone():
     """
     from services.radar_service import RadarNowcastService, NowcastResult
 
-    tour_tz = ZoneInfo("Europe/Berlin")
+    trip_tz = ZoneInfo("Europe/Berlin")
 
     result = NowcastResult(
         onset_minutes=10,
@@ -814,15 +814,15 @@ def test_ac5_onset_time_in_tour_timezone():
     svc = RadarNowcastService()
 
     # RED: format_now_text() got unexpected keyword argument 'tz'
-    text = svc.format_now_text(result, tz=tour_tz)
+    text = svc.format_now_text(result, tz=trip_tz)
 
-    # Nach Implementierung: Onset-Zeit in Tour-TZ
+    # Nach Implementierung: Onset-Zeit in Trip-TZ
     now_utc = datetime.now(timezone.utc)
-    expected_dt = (now_utc + timedelta(minutes=10)).astimezone(tour_tz)
+    expected_dt = (now_utc + timedelta(minutes=10)).astimezone(trip_tz)
     expected_hhmm = expected_dt.strftime("%H:%M")
 
     assert expected_hhmm in text, (
-        f"AC-5: Onset-Uhrzeit nicht in Tour-TZ formatiert. "
+        f"AC-5: Onset-Uhrzeit nicht in Trip-TZ formatiert. "
         f"Erwartet '{expected_hhmm}' (Europe/Berlin) im Text: '{text}'"
     )
 

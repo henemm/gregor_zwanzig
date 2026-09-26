@@ -9,7 +9,7 @@ tags: [metric-catalog, trip-detail, overview, trip-compare-sharing, dead-code-re
 workflow: fix-1435-e3-namensfehler
 ---
 
-# Feature #1435 Etappe E3a — Der Übersichts-Reiter einer Tour bekommt einen Wetter-Metriken-Block
+# Feature #1435 Etappe E3a — Der Übersichts-Reiter einer Trip bekommt einen Wetter-Metriken-Block
 
 ## Approval
 
@@ -20,10 +20,10 @@ workflow: fix-1435-e3-namensfehler
 
 ## Purpose
 
-Der Übersichts-Reiter einer Tour (`HubOverview.svelte`) zeigt heute vier
+Der Übersichts-Reiter einer Trip (`HubOverview.svelte`) zeigt heute vier
 Blöcke — Etappen/Profil, Briefings, Alerts, Vorschau — aber **nicht**, welche
-Wettergrößen die Tour überhaupt versendet, obwohl das die inhaltlich
-wichtigste Einstellung einer Tour ist. Die Recherche zu #1435 E3 hat
+Wettergrößen die Trip überhaupt versendet, obwohl das die inhaltlich
+wichtigste Einstellung einer Trip ist. Die Recherche zu #1435 E3 hat
 außerdem gezeigt, dass die im Ticket genannte „Reparatur" (angeblich
 englische Kennungen statt Namen) an totem Code ansetzen würde: die dafür
 verantwortlich gemachten Bauteile (`WeatherMetricsPreviewCard.svelte`,
@@ -168,7 +168,7 @@ wie im Compare-Katalog.
 
 Der neue Block wird als **erste** Karte der rechten Spalte eingefügt (vor
 „Briefings laufen") — Begründung: es ist laut PO die inhaltlich wichtigste
-Einstellung einer Tour, die anderen drei Karten sind organisatorisch
+Einstellung einer Trip, die anderen drei Karten sind organisatorisch
 (Zeitplan, Alerts-Historie, Vorschau).
 
 ```svelte
@@ -259,18 +259,18 @@ der übergebene `catalog`-Parameter.
 
 ## Expected Behavior
 
-- **Input A:** Eine Tour hat `display_config.metrics = [{metric_id:
+- **Input A:** Eine Trip hat `display_config.metrics = [{metric_id:
   'temperature', enabled: true}, {metric_id: 'wind', enabled: true},
   {metric_id: 'gust', enabled: false}]`. Der Nutzer öffnet den Reiter
   „Übersicht".
 - **Output A:** Der neue Block zeigt „Temperatur, Wind" (Register-
   Reihenfolge, nicht Einfüge-Reihenfolge; „Böen" fehlt, weil `enabled:
   false`) plus den Sprung-Link in den Reiter „Wetter-Metriken".
-- **Input B:** Eine alte Tour hat `display_config.metrics` nicht gesetzt
+- **Input B:** Eine alte Trip hat `display_config.metrics` nicht gesetzt
   (bzw. `[]`).
 - **Output B:** Der Block zeigt „Noch nicht eingestellt — es gilt der
   Standardsatz." — **keine** Aufzählung der sieben Standard-Größen.
-- **Input C:** Eine Tour hat `display_config.metrics` mit Einträgen, aber
+- **Input C:** Eine Trip hat `display_config.metrics` mit Einträgen, aber
   alle `enabled: false` (Nutzer hat bewusst alles abgewählt).
 - **Output C:** Der Block zeigt „Keine Wettergrößen ausgewählt — das
   Briefing enthält keine Wettertabelle." — unterscheidbar von Output B.
@@ -286,7 +286,7 @@ der übergebene `catalog`-Parameter.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine Tour hat im Wetter-Metriken-Tab mehrere Größen
+- **AC-1:** Given eine Trip hat im Wetter-Metriken-Tab mehrere Größen
   aktiviert / When der Nutzer den Reiter „Übersicht" öffnet / Then zeigt
   der neue Block die deutschen Namen genau der aktivierten Größen, in der
   Reihenfolge des zentralen Registers — nicht in der Reihenfolge, in der
@@ -296,7 +296,7 @@ der übergebene `catalog`-Parameter.
     Register-Reihenfolge → Ergebnis `{kind:'selected', names:[...]}` in
     Register-Reihenfolge.
 
-- **AC-2:** Given eine Tour hat `display_config.metrics` nicht gesetzt oder
+- **AC-2:** Given eine Trip hat `display_config.metrics` nicht gesetzt oder
   als leeres Array / When der Reiter „Übersicht" geöffnet wird / Then zeigt
   der Block den Satz „Noch nicht eingestellt — es gilt der Standardsatz."
   — ohne die sieben Standard-Größen namentlich aufzuzählen.
@@ -306,7 +306,7 @@ der übergebene `catalog`-Parameter.
     Template-Zweig (Testid `hub-metrics-altbestand`) keine `names`-Liste
     rendert.
 
-- **AC-3:** Given eine Tour hat `display_config.metrics` mit Einträgen, bei
+- **AC-3:** Given eine Trip hat `display_config.metrics` mit Einträgen, bei
   denen alle `enabled: false` sind (bewusste Leerauswahl) / When der
   Reiter „Übersicht" geöffnet wird / Then zeigt der Block den Satz „Keine
   Wettergrößen ausgewählt — das Briefing enthält keine Wettertabelle." —
@@ -330,7 +330,7 @@ der übergebene `catalog`-Parameter.
     struktureller Nachweis in `HubOverview.svelte`, dass `!metricsCatalog`
     als eigener, erster Zweig vor den drei Zustands-Zweigen geprüft wird.
 
-- **AC-5:** Given eine Tour mit aktiven Wetter-Metriken / When die
+- **AC-5:** Given eine Trip mit aktiven Wetter-Metriken / When die
   Übersichtsseite zum ersten Mal rendert (SSR + Hydration) / Then zeigt der
   Block zu keinem Zeitpunkt fälschlich „Noch nicht eingestellt", obwohl
   tatsächlich eine Auswahl existiert — kein Ladefenster wie in
@@ -394,7 +394,7 @@ der übergebene `catalog`-Parameter.
     `makeJumpHandler('weather')` aufruft — dieselbe Funktion, die die
     bestehenden vier Karten bereits für ihre jeweiligen Ziel-Tabs nutzen.
 
-- **AC-11:** Given eine Tour hat eine Größe gespeichert, die das zentrale
+- **AC-11:** Given eine Trip hat eine Größe gespeichert, die das zentrale
   Register nicht (mehr) kennt — etwa nach einer Umbenennung / When der
   Reiter „Übersicht" geöffnet wird / Then verschwindet diese Größe **nicht
   still**: der Block zeigt die bekannten Namen und weist die unbekannten

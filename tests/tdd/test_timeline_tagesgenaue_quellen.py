@@ -9,7 +9,7 @@ Tag: ``_write_briefing_anchor`` (``trip_report_scheduler.py:1505-1512``) ruft
 ``target_date`` auf und ueberschreibt die Datei dabei vollstaendig. Die vier
 Formatierer in ``trip_command_processor.py`` (``_fmt_timeline:1007``,
 ``_fmt_glance:929/:933``, ``_fmt_gewitter:944``) melden den dadurch fehlenden
-Tag als **„Keine Etappe geplant"** — eine Aussage ueber die TOURPLANUNG,
+Tag als **„Keine Etappe geplant"** — eine Aussage ueber die TRIP-PLANUNG,
 obwohl das System nur etwas ueber den DATENBESTAND weiss.
 
 🔴 Warum diese Datei NEBEN den Bestandstests noetig ist
@@ -74,7 +74,7 @@ assert _PRUEFLING.is_relative_to(_BAUM), (
 )
 
 # ---------------------------------------------------------------------------
-# Fixe Tour-Daten. Vizzavona/Korsika (Europe/Paris, im August UTC+2); die
+# Fixe Trip-Daten. Vizzavona/Korsika (Europe/Paris, im August UTC+2); die
 # Uhrzeiten liegen bewusst AUSSERHALB des Ortstag-Mismatch-Fensters, damit
 # diese Suite ausschliesslich die QUELLENAUFLOESUNG prueft und nicht
 # versehentlich die Ortszeit-Umrechnung aus #1795.
@@ -106,7 +106,7 @@ def _isolationsnachweis():
 
 
 # ---------------------------------------------------------------------------
-# Helfer — echte Tourdaten
+# Helfer — echte Trip-Daten
 # ---------------------------------------------------------------------------
 
 def _stage(stage_id: str, tag: date) -> Stage:
@@ -303,7 +303,7 @@ def test_fehlender_folgetag_meldet_datenluecke_statt_fehlender_etappe():
     body = ergebnis.confirmation_body
     assert ergebnis.success is True, body
     assert FALSCHAUSSAGE not in body, (
-        f"AC-1: die Antwort behauptet etwas ueber die TOURPLANUNG "
+        f"AC-1: die Antwort behauptet etwas ueber die TRIP-PLANUNG "
         f"({FALSCHAUSSAGE!r}), obwohl fuer morgen eine Etappe existiert und "
         f"nur die Wetterdaten fehlen:\n{body}"
     )
@@ -327,7 +327,7 @@ def test_tag_ohne_etappe_bleibt_bei_keine_etappe_geplant():
     fangbar zu machen: ohne diesen Test bliebe sie unsichtbar.
     """
     with freeze_time(EMPFANGEN_UTC):
-        trip = _trip("ac2-tourende-heute", [HEUTE - timedelta(days=1), HEUTE])
+        trip = _trip("ac2-tripende-heute", [HEUTE - timedelta(days=1), HEUTE])
         _briefing_lauf_ohne_datierten(
             trip.id,
             _tages_segmente(HEUTE - timedelta(days=1), seg_id=0,
@@ -389,7 +389,7 @@ def test_datierter_snapshot_deckt_den_tag_den_der_anker_verloren_hat():
     assert ergebnis.success is True, body
     assert FALSCHAUSSAGE not in body, (
         f"AC-3: der Anker hat heute verloren, der datierte Snapshot traegt ihn "
-        f"aber noch — statt der Werte kommt eine Tourplanungs-Aussage:\n{body}"
+        f"aber noch — statt der Werte kommt eine Trip-Planungs-Aussage:\n{body}"
     )
     assert "🕐 10:00" in body, (
         "AC-3: erwartete Stundenzeile '🕐 10:00' (Ankunft 08:00 UTC, Korsika "
@@ -657,7 +657,7 @@ def _platzhalter_segmente(tag: date, *, seg_id: int) -> list[SegmentWeatherData]
     anlegt (``trip_report_scheduler.py:2035-2044``): ``SegmentWeatherSummary()``
     ohne einen einzigen Messwert, ``has_error=True``, ``provider="unknown"``.
 
-    Auf Touren mit Kontingent-Limits (429) ist das kein Sonderfall, sondern
+    Auf Trips mit Kontingent-Limits (429) ist das kein Sonderfall, sondern
     Alltag: der Anker traegt den Tag dann technisch, inhaltlich aber nichts.
     """
     ankunft = datetime(tag.year, tag.month, tag.day, 8, 0, tzinfo=timezone.utc)
@@ -729,7 +729,7 @@ def test_ohne_brauchbare_werte_ueberall_erscheint_die_ehrliche_datenluecke():
           diesem Tag eine Etappe hat,
     WHEN  der Nutzer ``timeline_morgen`` abfragt,
     THEN  erscheint die ehrliche Datenluecken-Meldung — weder „🌡 ?–? °C"
-          noch die Tourplanungs-Aussage „Keine Etappe geplant".
+          noch die Trip-Planungs-Aussage „Keine Etappe geplant".
 
     Prueft beide Haelften der Nutzbarkeitsregel an EINEM Fall: der Platzhalter
     des Ankers muss verworfen werden UND der Platzhalter des datierten

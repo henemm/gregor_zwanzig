@@ -578,7 +578,7 @@ def render_trip_briefing_html(official_alerts: list) -> str:
         official_alerts=list(official_alerts),
     )
     return render_html(
-        segments=[seg_daten], seg_tables=[[]], trip_name="Vorlauf-Testtour",
+        segments=[seg_daten], seg_tables=[[]], trip_name="Vorlauf-Test-Trip",
         report_type="morning", dc=build_default_display_config(), night_rows=[],
         thunder_forecast=None, changes=None, stage_name="Etappe 1",
         stage_stats={"distance_km": 14.5, "ascent_m": 820}, multi_day_trend=None,

@@ -84,7 +84,7 @@ Quelle stumm überdeckt werden.
    überflüssig — die eingecheckte DWD-Kreisgeometrie trägt `WARNCELLID` bereits als Feld.
 2. **Dieselbe Zonenfunktion in `covers()` und `fetch()`.** Genau die Divergenz zwischen grober
    Bbox in `covers()` und echter Geometrie in `fetch()` hatte bei Italien 39 falsche „nicht
-   abrufbar"-Meldungen auf einer Tour erzeugt (#1397 S4). `_zone_for_point_de` wird als eine
+   abrufbar"-Meldungen auf einer Trip erzeugt (#1397 S4). `_zone_for_point_de` wird als eine
    Funktion für beide Aufrufer verwendet.
 3. **Küstenzellen bewusst ausgenommen.** 8 der 290 Feed-Zellen (`WARNCELLID`-Präfix `501…`)
    liegen nicht im Kreis-Layer. Alle Info-Einträge ohne `expires` tragen ausschließlich diesen

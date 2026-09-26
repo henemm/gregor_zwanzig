@@ -66,7 +66,7 @@ allein noch nicht erreicht hat.
 | `tests/tdd/test_meteoalarm_feed_oesterreich.py` | CREATE | Fetch-Mapping AT, Drei-Zustands-Unterscheidung, Verbrauchsdisziplin (inkl. Null-Zusatzabrufe gegen ZAMG), Äquivalenznachweis, Isolation |
 | `tests/fixtures/meteoalarm_feed/feed_austria_sample.json` | CREATE | Kuratierter Ausschnitt (reale, unveränderte Einträge) aus dem AT-Feed, analog `feed_italy_sample.json` |
 | `tests/fixtures/meteoalarm_feed/edr_snapshot_at.json` | CREATE | Zur selben Minute aufgezeichneter EDR-Ausschnitt (AT) für den Äquivalenztest — **Pflicht-Gate, s. Test Plan zur Zeitfenster-Abhängigkeit** |
-| `tests/fixtures/meteoalarm_feed/zamg_snapshot_at.json` | CREATE | Adversary-Fund F2 (S3 Fix-Loop): dritte, zur SELBEN Minute wie `edr_snapshot_at.json` gezogene Aufzeichnung — die echte ZAMG-Antwort je Tourpunkt, damit `test_ac5_...` über `_ZamgServer` läuft statt gegen das echte `warnungen.zamg.at` — **ebenfalls Teil des AC-5-Pflicht-Gates** |
+| `tests/fixtures/meteoalarm_feed/zamg_snapshot_at.json` | CREATE | Adversary-Fund F2 (S3 Fix-Loop): dritte, zur SELBEN Minute wie `edr_snapshot_at.json` gezogene Aufzeichnung — die echte ZAMG-Antwort je Trip-Punkt, damit `test_ac5_...` über `_ZamgServer` läuft statt gegen das echte `warnungen.zamg.at` — **ebenfalls Teil des AC-5-Pflicht-Gates** |
 | `tests/fixtures/meteoalarm_feed/README.md` | MODIFY | Abschnitt für die neuen AT-Fixtures, analog dem bestehenden IT-Abschnitt |
 
 ## Dependencies
@@ -206,9 +206,9 @@ allein noch nicht erreicht hat.
   UND im Diagnose-Journal taucht kein Eintrag mit `host=api.meteoalarm.org` auf.
 - [ ] Test 5 (`tests/tdd/test_meteoalarm_feed_oesterreich.py`, Äquivalenz-Pflicht-Gate): GIVEN
   die DREI zur selben Minute aufgezeichneten Fixtures (EDR-Ausschnitt AT, Feed-Ausschnitt AT,
-  UND — Adversary-Fund F2, S3 Fix-Loop — ZAMG-Ausschnitt AT je Tourpunkt, damit der Test über
+  UND — Adversary-Fund F2, S3 Fix-Loop — ZAMG-Ausschnitt AT je Trip-Punkt, damit der Test über
   `_ZamgServer` läuft statt gegen das echte `warnungen.zamg.at`) für eine Liste realer
-  Tourpunkte inkl. des Karnischen Höhenwegs auf österreichischer Seite WHEN beide
+  Trip-Punkte inkl. des Karnischen Höhenwegs auf österreichischer Seite WHEN beide
   Ergebnismengen für dieselben Punkte gebildet werden THEN ist die Feed-Ergebnismenge eine
   Obermenge der EDR-Ergebnismenge. Fehlt eine der drei Aufzeichnungen, bleibt der Test rot mit
   einer Meldung, die benennt, welche fehlt (s. `tests/fixtures/meteoalarm_feed/README.md`).
@@ -262,7 +262,7 @@ allein noch nicht erreicht hat.
 
 - **AC-5:** Given ein zur selben Minute aufgezeichneter Vergleichsabruf über den bisherigen
   kontingentierten Weg und die neue Quelle liegen für eine Liste realer österreichischer
-  Tourpunkte vor, When beide Ergebnismengen gegenübergestellt werden, Then enthält die neue
+  Trip-Punkte vor, When beide Ergebnismengen gegenübergestellt werden, Then enthält die neue
   Quelle mindestens alle Warnungen, die der bisherige Weg für dieselben Punkte lieferte.
   - Test: Test 5 oben — Obermengen-Vergleich gegen aufgezeichnete Fixtures (Pflicht-Gate).
   - **✅ NACHGEZOGEN 2026-08-01, 16:19:43 UTC — AC-5 ist erfüllt.** Nach Ablauf der
@@ -278,7 +278,7 @@ allein noch nicht erreicht hat.
   - **Historie (überholt):** Die Auslieferung war zuvor auf Basis eines Kreuzvergleichs gegen
     GeoSphere Austria freigegeben worden. Dieser Ersatznachweis ist abgelöst.
   - **Ehrlich zur Aussagekraft:** Sillian (`gemeindenr` 70728) und Lienz (70716) fallen beide
-    auf EMMA-Zone `AT707` und liefern identische Mengen — die acht Tourpunkte sind **sieben
+    auf EMMA-Zone `AT707` und liefern identische Mengen — die acht Trip-Punkte sind **sieben
     unabhängige Zonen**, nicht acht unabhängige Prüfungen.
   - **Warum roh statt zeitgefiltert verglichen wird:** 24 der 118 EDR-Warnungen waren zum
     Aufnahmezeitpunkt bereits abgelaufen. Eine einseitige `now`-Filterung der Feed-Seite hätte

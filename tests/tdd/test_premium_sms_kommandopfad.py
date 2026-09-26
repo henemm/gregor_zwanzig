@@ -804,10 +804,10 @@ def test_ac7_zwei_nutzer_erhalten_je_ihre_eigene_antwort(monkeypatch, mitschrift
     """AC-7 — Mandantentrennung.
 
     GIVEN zwei Premium-Nutzer mit je eigener gelernter Rueckadresse und je
-          eigener aktiver Tour.
+          eigener aktiver Trip.
     WHEN  beide unabhaengig voneinander eine Garmin-Nachricht ("status")
           senden und derselbe Poll beide verarbeitet.
-    THEN  erhaelt jeder Nutzer die Antwort auf SEINE Tour an SEINE gelernte
+    THEN  erhaelt jeder Nutzer die Antwort auf SEINE Trip an SEINE gelernte
           Nummer — keine Kreuzung, kein Rueckfall auf einen gemeinsamen Wert.
 
     Zwei Nutzer sind Pflicht: ein Ein-Nutzer-Test bliebe auch dann gruen, wenn
@@ -819,8 +819,8 @@ def test_ac7_zwei_nutzer_erhalten_je_ihre_eigene_antwort(monkeypatch, mitschrift
     uid_a, uid_b = _kennung("ac7a"), _kennung("ac7b")
     _nutzer_anlegen(uid_a, rueckadresse=RUECKADRESSE_A)
     _nutzer_anlegen(uid_b, rueckadresse=RUECKADRESSE_B)
-    trip_a = _trip_anlegen(uid_a, name="Tour Anna AC7")
-    trip_b = _trip_anlegen(uid_b, name="Tour Bert AC7")
+    trip_a = _trip_anlegen(uid_a, name="Trip Anna AC7")
+    trip_b = _trip_anlegen(uid_b, name="Trip Bert AC7")
 
     _poll(monkeypatch,
           journal=_Journal([[_garmin(1008, NUMMER_A, "status"),
@@ -841,10 +841,10 @@ def test_ac7_zwei_nutzer_erhalten_je_ihre_eigene_antwort(monkeypatch, mitschrift
         f"AC-7: die Antwort an {RUECKADRESSE_B} muss sich auf {trip_b.name!r} "
         f"beziehen, Betreff war {je_nummer[RUECKADRESSE_B]['subject']!r}")
     assert trip_b.name not in je_nummer[RUECKADRESSE_A]["body"], (
-        f"AC-7: die Antwort an {RUECKADRESSE_A} darf die fremde Tour nicht "
+        f"AC-7: die Antwort an {RUECKADRESSE_A} darf die fremde Trip nicht "
         f"nennen: {je_nummer[RUECKADRESSE_A]['body']!r}")
     assert trip_a.name not in je_nummer[RUECKADRESSE_B]["body"], (
-        f"AC-7: die Antwort an {RUECKADRESSE_B} darf die fremde Tour nicht "
+        f"AC-7: die Antwort an {RUECKADRESSE_B} darf die fremde Trip nicht "
         f"nennen: {je_nummer[RUECKADRESSE_B]['body']!r}")
 
 
@@ -868,12 +868,12 @@ def test_ac9_200er_ohne_user_id_verarbeitet_nichts_und_faellt_nicht_zurueck(
           den Mandanten "default" vorgenommen.
 
     Der Mandant "default" existiert in diesem Test vollstaendig — mit eigener
-    Tour, Premium-Tier und eigener gelernter Rueckadresse. Faellt der Reader
+    Trip, Premium-Tier und eigener gelernter Rueckadresse. Faellt der Reader
     still auf ihn zurueck, ginge eine Antwort an ``RUECKADRESSE_DEFAULT``
     hinaus; genau das misst die Zusicherung.
     """
     _nutzer_anlegen("default", rueckadresse=RUECKADRESSE_DEFAULT)
-    _trip_anlegen("default", name="Tour Default AC9")
+    _trip_anlegen("default", name="Trip Default AC9")
 
     lernen = _LernEndpunkt(antwort=antwort)
     _poll(monkeypatch,

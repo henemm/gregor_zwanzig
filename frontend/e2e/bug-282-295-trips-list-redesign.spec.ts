@@ -17,13 +17,13 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 	});
 
 	// ─── AC-1: Eyebrow + H1-Typografie + Subtitle ───────────────────────────
-	test('AC-1: Eyebrow "WORKSPACE · TOUREN" über H1 mit text-3xl und Subtitle sichtbar', async ({
+	test('AC-1: Eyebrow "WORKSPACE · TRIPS" über H1 mit text-3xl und Subtitle sichtbar', async ({
 		page
 	}) => {
 		/**
 		 * GIVEN: Desktop-Viewport (≥ 900px), /trips geladen, User eingeloggt
 		 * WHEN:  Seite wird gerendert
-		 * THEN:  [data-slot="eyebrow"] mit Text "WORKSPACE · TOUREN" ist sichtbar,
+		 * THEN:  [data-slot="eyebrow"] mit Text "WORKSPACE · TRIPS" ist sichtbar,
 		 *        H1 enthält "Trips" und hat Klassen text-3xl + font-semibold,
 		 *        Subtitle-Text ist sichtbar
 		 */
@@ -32,7 +32,7 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 
 		const eyebrow = page.locator('[data-slot="eyebrow"]').first();
 		await expect(eyebrow).toBeVisible({ timeout: 5000 });
-		await expect(eyebrow).toContainText('TOUREN');
+		await expect(eyebrow).toContainText('TRIPS');
 
 		const h1 = page.locator('h1').first();
 		await expect(h1).toBeVisible();

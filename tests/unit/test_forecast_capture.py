@@ -613,7 +613,7 @@ def test_dedup_schluessel_trennt_tag_und_beide_koordinaten(monkeypatch):
     erzeugt eine eigene Zeile. Die identischen Werte sind der Kern der Probe:
     bei abweichenden Werten schriebe auch ein kollidierender Schluessel, die
     Zusicherung waere trivial wahr. Der Tages-Fall ist Henningss Alltag — die
-    Tour ist mehrtaegig, dieselbe Uhrzeit kommt an jedem Tag vor."""
+    Trip ist mehrtaegig, dieselbe Uhrzeit kommt an jedem Tag vor."""
     modul = _uhr(monkeypatch, ANKER)
     grundlinie = _segment(lat=46.6, lon=12.9, start=ANKER)
     varianten = [

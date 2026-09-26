@@ -207,7 +207,7 @@ async function loadDerivations(): Promise<{ alarmfaehig: Fn; ohneAlarm: Fn }> {
 }
 
 describe('#1435 E1b AC-6: der Leerzustand nennt den richtigen Reiter', () => {
-	test('Der echte Leerzustand fuehrt zum Reiter „Wetter-Metriken" — in Tour wie Vergleich', () => {
+	test('Der echte Leerzustand fuehrt zum Reiter „Wetter-Metriken" — in Trip wie Vergleich', () => {
 		const vergleich = screen();
 		assert.deepEqual(vergleich.testids, ['alarme-no-metrics']);
 		assert.ok(
@@ -224,7 +224,7 @@ describe('#1435 E1b AC-6: der Leerzustand nennt den richtigen Reiter', () => {
 		assert.equal(
 			screen({ context: 'route' }).text.trim(),
 			vergleich.text.trim(),
-			'Tour und Vergleich zeigen unterschiedliche Leerzustands-Texte — die Reiter heissen ' +
+			'Trip und Vergleich zeigen unterschiedliche Leerzustands-Texte — die Reiter heissen ' +
 				'in beiden Kontexten gleich, der Satz muss identisch sein (AC-6).'
 		);
 	});
@@ -299,8 +299,8 @@ describe('#1435 E1b AC-9: nur nicht alarmfaehige Groessen gewaehlt', () => {
 	});
 });
 
-describe('#1435 E1b AC-7: der Tour-Kontext bleibt bei zwei Zustaenden', () => {
-	test('Die neue Ableitung liefert im Tour-Kontext strukturell immer eine leere Liste', () => {
+describe('#1435 E1b AC-7: der Trip-Kontext bleibt bei zwei Zustaenden', () => {
+	test('Die neue Ableitung liefert im Trip-Kontext strukturell immer eine leere Liste', () => {
 		const cond = derivedInit('unalertableSelectedMetricNames');
 		assert.equal(cond.type, 'ConditionalExpression');
 		assert.ok(identifiers(cond.test).has('context'));
@@ -314,32 +314,32 @@ describe('#1435 E1b AC-7: der Tour-Kontext bleibt bei zwei Zustaenden', () => {
 		assert.deepEqual(
 			cond.alternate.elements,
 			[],
-			'Der Tour-Zweig liefert nicht die leere Liste — dort gibt es keine Metrik-Auswahl, ' +
+			'Der Trip-Zweig liefert nicht die leere Liste — dort gibt es keine Metrik-Auswahl, ' +
 				'jeder daraus gebildete Satz waere sachlich falsch (AC-7).'
 		);
 	});
 
-	test('Im Tour-Kontext rendert nie einer der beiden Erklaersaetze', () => {
+	test('Im Trip-Kontext rendert nie einer der beiden Erklaersaetze', () => {
 		for (const id of ['alarme-only-unalertable-hint', 'alarme-unalertable-metrics-hint']) {
 			assert.ok(
 				elementByTestid(id),
 				`Der Zweig „${id}" fehlt im Template — solange es ihn nicht gibt, ist AC-7 nicht ` +
-					'nachweisbar (es gaebe nichts, was im Tour-Kontext ausbleiben koennte).'
+					'nachweisbar (es gaebe nichts, was im Trip-Kontext ausbleiben koennte).'
 			);
 		}
 		for (const metrics of [[], ['wind_change']]) {
 			const s = screen({ context: 'route', metrics });
 			for (const id of ['alarme-only-unalertable-hint', 'alarme-unalertable-metrics-hint']) {
-				assert.equal(s.testids.includes(id), false, `Tour-Kontext zeigt „${id}" (AC-7).`);
+				assert.equal(s.testids.includes(id), false, `Trip-Kontext zeigt „${id}" (AC-7).`);
 			}
 		}
 	});
 
 	test('Die Absicherung des Fussnoten-Satzes haelt auch bei nicht-leerer Namensliste', () => {
-		// Adversary-Befund F001 (E1b): der Test oben beweist den Tour-Kontext nur
+		// Adversary-Befund F001 (E1b): der Test oben beweist den Trip-Kontext nur
 		// MITTELBAR — ueber den $derived, der fuer context="route" strukturell []
 		// liefert. Faellt diese Eigenschaft (die Spec nennt als Known Limitation
-		// genau den Nachfolger, der den Katalog doch in den Tour-Container reicht),
+		// genau den Nachfolger, der den Katalog doch in den Trip-Container reicht),
 		// haelt allein die Template-Absicherung `context === 'vergleich' && …`.
 		// Hier wird sie direkt geprueft: Namensliste absichtlich nicht leer.
 		const s = screen({ context: 'route', metrics: ['wind_change'], unalertable: NUR_UNALERTABLE });
@@ -351,10 +351,10 @@ describe('#1435 E1b AC-7: der Tour-Kontext bleibt bei zwei Zustaenden', () => {
 		assert.equal(
 			s.testids.includes('alarme-unalertable-metrics-hint'),
 			false,
-			'Der Fussnoten-Satz haengt allein daran, dass der $derived im Tour-Kontext leer ' +
+			'Der Fussnoten-Satz haengt allein daran, dass der $derived im Trip-Kontext leer ' +
 				'bleibt — die zweite Absicherung im Template (`context === \'vergleich\'`) fehlt ' +
-				'oder wirkt nicht. Reicht eine spaetere Etappe den Katalog in den Tour-Container, ' +
-				'erschiene dort ein Satz ueber eine Auswahl, die es bei Touren nicht gibt ' +
+				'oder wirkt nicht. Reicht eine spaetere Etappe den Katalog in den Trip-Container, ' +
+				'erschiene dort ein Satz ueber eine Auswahl, die es bei Trips nicht gibt ' +
 				'(AC-7, Fehlerklasse F001).'
 		);
 		assert.equal(s.text.includes('Für diese Größen gibt es keinen Alarm'), false);

@@ -16,14 +16,14 @@ tags: [alert, radar, nowcast, segment, trip-alert, tz, mandantentrennung]
 
 ## Purpose
 
-Ersetzt den Einzelpunkt-Check (`stage.waypoints[0]`) in `TripAlertService.check_radar_alerts` durch eine segmentbewusste Auswahl: Die Methode leitet nach derselben Logik wie das Briefing das **aktuelle oder nächste Segment** ab und prüft den Nowcast dort. Die Alert-Mail nennt anschließend Etappe, km-Bereich und Onset-Zeit in der Tour-Zeitzone — statt einer anonymen Standort-Warnung ohne Ortsbezug.
+Ersetzt den Einzelpunkt-Check (`stage.waypoints[0]`) in `TripAlertService.check_radar_alerts` durch eine segmentbewusste Auswahl: Die Methode leitet nach derselben Logik wie das Briefing das **aktuelle oder nächste Segment** ab und prüft den Nowcast dort. Die Alert-Mail nennt anschließend Etappe, km-Bereich und Onset-Zeit in der Trip-Zeitzone — statt einer anonymen Standort-Warnung ohne Ortsbezug.
 
 ## Source
 
 - **File:** `src/services/trip_alert.py` — `check_radar_alerts` segmentbewusst umbauen
 - **File:** `src/services/trip_segments.py` — NEU: gemeinsamer Segment-Helfer (Extraktion aus `TripReportSchedulerService._convert_trip_to_segments`)
 - **File:** `src/services/trip_report_scheduler.py` — Scheduler ruft neuen Helfer auf (Refactor, Verhalten unverändert)
-- **File:** `src/services/radar_service.py` — `format_now_text` bekommt optionalen `tz`-Parameter für Tour-TZ
+- **File:** `src/services/radar_service.py` — `format_now_text` bekommt optionalen `tz`-Parameter für Trip-TZ
 - **File:** `tests/tdd/test_issue_822_radar_nowcast_segment.py` — mock-freie TDD-Tests
 
 > **Schicht: Python-Backend.** Alle produktiven Dateien liegen in `src/`.
@@ -41,10 +41,10 @@ Ersetzt den Einzelpunkt-Check (`stage.waypoints[0]`) in `TripAlertService.check_
 |--------|------|---------|
 | `src/services/trip_report_scheduler.py` — `TripReportSchedulerService._convert_trip_to_segments(trip, target_date)` | upstream (Extraktion) | SSoT-Segmentlogik des Briefings — wird in neuen Helfer extrahiert |
 | `src/app/models.py` — `TripSegment`, `Trip`, `Stage` | upstream | Datenstrukturen für Segment-Ableitung |
-| `src/services/radar_service.py` — `RadarNowcastService.get_nowcast(lat, lon)`, `format_now_text(result, *, tz=None)` | upstream | Nowcast-Abruf + Onset-Text mit Tour-TZ |
+| `src/services/radar_service.py` — `RadarNowcastService.get_nowcast(lat, lon)`, `format_now_text(result, *, tz=None)` | upstream | Nowcast-Abruf + Onset-Text mit Trip-TZ |
 | `src/services/radar_service.py` — `radar_alert_due(result, threshold_min=20)` | upstream | Auslöse-Entscheidung — unverändert |
 | `src/output/renderers/email/helpers.py` — `build_segment_label(change_like, segments, *, tz)` | upstream | Erzeugt „Etappe N, km X–Y, HH:MM–HH:MM" (oder Fallback) |
-| `src/utils/timezone.py` — `tz_for_coords(lat, lon) -> ZoneInfo` | upstream | Tour-Zeitzone aus den Koordinaten des ersten Segment-Startpunkts |
+| `src/utils/timezone.py` — `tz_for_coords(lat, lon) -> ZoneInfo` | upstream | Trip-Zeitzone aus den Koordinaten des ersten Segment-Startpunkts |
 | `src/services/trip_alert.py` — `get_time_until_next_alert(trip.id)`, Throttle/Recording-Semantik (#773) | internal | Cooldown-Wert auslesen; Recording-Semantik bleibt unverändert |
 | `src/outputs/email.py` — `EmailOutput` | downstream | E-Mail-Versand |
 | `src/outputs/telegram.py` — `TelegramOutput` | downstream | Telegram-Versand |
@@ -112,14 +112,14 @@ Nutzwert für den Wanderer. Das Ziel ist eine handlungsrelevante Warnung; ein Al
 Etappen-Ende würde Nutzer irritieren. Wenn morgen wieder Segmente bestehen, greift der
 nächste Lauf des 15-Minuten-Jobs. Diese Entscheidung ist als Known Limitation dokumentiert.
 
-### C — Nowcast an Segment-Koordinaten + Ort-Label + Tour-TZ
+### C — Nowcast an Segment-Koordinaten + Ort-Label + Trip-TZ
 
 Nach Segment-Auswahl:
 
 ```python
 lat = active.start_point.lat
 lon = active.start_point.lon
-tz = tz_for_coords(lat, lon)   # Tour-Zeitzone
+tz = tz_for_coords(lat, lon)   # Trip-Zeitzone
 
 result = radar_service.get_nowcast(lat, lon)   # EIN Call pro Trip
 
@@ -130,7 +130,7 @@ if not radar_alert_due(result):
 change_like = SimpleNamespace(segment_id=active.segment_id)
 label = build_segment_label(change_like, segments, tz=tz)
 
-# Onset-Zeit in Tour-TZ
+# Onset-Zeit in Trip-TZ
 onset_text = format_now_text(result, tz=tz)
 ```
 
@@ -177,7 +177,7 @@ bei Best-Effort-Versandfehlern (wie nach #773 F001 festgelegt). Mandantentrennun
 - **Output:**
   - Kein Alert wenn: kein Segment aktiv/nächstes (Etappe vorbei), leere Segmentliste,
     Throttle aktiv, `radar_alert_due` = False.
-  - Alert-Mail + Telegram (konfigurierte Kanäle) mit Segment-Label, Onset-Zeit in Tour-TZ
+  - Alert-Mail + Telegram (konfigurierte Kanäle) mit Segment-Label, Onset-Zeit in Trip-TZ
     und dynamischem Cooldown-Text wenn: aktives/nächstes Segment vorhanden UND `radar_alert_due` = True
     UND nicht throttled.
 - **Side effects:**
@@ -195,7 +195,7 @@ bei Best-Effort-Versandfehlern (wie nach #773 F001 festgelegt). Mandantentrennun
 
 **AC-4:** Given ein Alert wird ausgelöst und `radar_alert_due = True` für das aktuelle Segment / When die Mail verschickt wird / Then enthält der Mail-Body das Segment-Label „Etappe N, km X–Y" (aus `build_segment_label`) mit echten km-Werten aus `distance_from_start_km`, sowie den Cooldown-Text „Du erhältst diese Warnung höchstens einmal in N Stunde(n)" mit dem tatsächlichen effektiven Cooldown-Wert (nicht einem Platzhalter). Test: `build_mime_message`-Aufruf mit kontrolliertem Segment (bekannter km-Bereich) + deterministische Regen-Frames via DI-Seam → MIME-Body auslesen, Segment-Label und Cooldown-String per Substring prüfen. Kein Mock auf Mail-/Label-Logik.
 
-**AC-5:** Given `format_now_text` erhält einen `tz`-Parameter (Tour-Zeitzone aus `tz_for_coords`) / When der Onset-Text generiert wird / Then ist die Onset-Uhrzeit in der Tour-TZ formatiert, nicht in der Server-Zeitzone. Test: Trip mit Koordinaten in einer TZ die sich um ≥2 Stunden von UTC unterscheidet (z.B. CEST UTC+2); `onset_minutes = 10`; assert angezeigte Uhrzeit entspricht `now + 10 min` in der Tour-TZ, nicht in UTC oder Server-TZ. Kein Mock auf `tz_for_coords`.
+**AC-5:** Given `format_now_text` erhält einen `tz`-Parameter (Trip-Zeitzone aus `tz_for_coords`) / When der Onset-Text generiert wird / Then ist die Onset-Uhrzeit in der Trip-TZ formatiert, nicht in der Server-Zeitzone. Test: Trip mit Koordinaten in einer TZ die sich um ≥2 Stunden von UTC unterscheidet (z.B. CEST UTC+2); `onset_minutes = 10`; assert angezeigte Uhrzeit entspricht `now + 10 min` in der Trip-TZ, nicht in UTC oder Server-TZ. Kein Mock auf `tz_for_coords`.
 
 **AC-6:** Given der effektive Cooldown eines Trips beträgt `trip.alert_cooldown_minutes = 90` (überschreibt den Default) / When ein Alert gesendet wird / Then nennt der Mail-Body „höchstens einmal in 90 Minuten" (nicht „2 Stunden"). Test: Trip mit explizit gesetztem `alert_cooldown_minutes = 90` → MIME-Body enthält „90 Minuten"; Trip ohne `alert_cooldown_minutes` (None, Default 120 min = 2 h) → Body enthält „2 Stunden". Kein Mock auf Cooldown-Logik.
 
@@ -229,4 +229,4 @@ Testdatei: `tests/tdd/test_issue_822_radar_nowcast_segment.py` (mock-frei).
 
 ## Changelog
 
-- 2026-06-15: v1.0 Initial spec created (Issue #822). Radar-/Regen-Nowcast-Alert segmentbewusst machen: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Tour-TZ via tz_for_coords, dynamischer Cooldown-Text.
+- 2026-06-15: v1.0 Initial spec created (Issue #822). Radar-/Regen-Nowcast-Alert segmentbewusst machen: gemeinsamer Segment-Helfer, aktives/nächstes Segment nach Tageszeit, Ort-Label via build_segment_label, Trip-TZ via tz_for_coords, dynamischer Cooldown-Text.

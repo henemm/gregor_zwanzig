@@ -303,11 +303,11 @@ class TestAC4TriggerNewPeriodFiresIndependently:
             period_b_from = period_a_to + timedelta(hours=1)
             period_b_to = period_b_from + timedelta(hours=24)
 
-            # Issue #1460 (P4): Die Tour muss BEIDE Perioden ueberhaupt
+            # Issue #1460 (P4): Die Trip muss BEIDE Perioden ueberhaupt
             # abdecken -- seit dem Etappen-Zeitfenster gehoert eine Warnung
             # zu der Etappe, auf der der Nutzer zu ihrer Gueltigkeitszeit
             # steht. Eine Zwei-Tages-Hitzewelle braucht deshalb auch eine
-            # zweitaegige Tour; mit nur einer heute endenden Etappe waere
+            # zweitaegige Trip; mit nur einer heute endenden Etappe waere
             # Periode B (ab morgen) zu Recht nicht mehr zu melden.
             _save_cached(user_id, trip.id, [
                 _data(1, precip_sum_mm=2.0),

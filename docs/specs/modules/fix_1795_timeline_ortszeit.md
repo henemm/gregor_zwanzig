@@ -9,7 +9,7 @@ tags: [bug, zeitzonen, telegram, adr-0044]
 workflow: fix-1795-timeline-ortszeit
 ---
 
-# Fix #1795 — Timeline und Query-Familie folgen der Ortszeit der Tour
+# Fix #1795 — Timeline und Query-Familie folgen der Ortszeit der Trip
 
 ## Approval
 
@@ -19,7 +19,7 @@ workflow: fix-1795-timeline-ortszeit
 
 Die Query-Familie (`glance`, `heute_gewitter`, `timeline_heute`, `timeline_morgen`, `heute`,
 `morgen`) bestimmt ihren Kalendertag über den **UTC-Tag** der eingehenden Nachricht
-(`trip_command_processor.py:503-504`, `received_at.date()`) statt über den Ortstag der Tour
+(`trip_command_processor.py:503-504`, `received_at.date()`) statt über den Ortstag der Trip
 (ADR-0044), und die Timeline zeigt Ankunftszeiten **roh in UTC** (`:948`, `:950`) statt in der
 Ortszeit des jeweiligen Wegpunkts. Diese Scheibe stellt **beides gemeinsam** um, weil Filter und
 Anzeige heute konsistent UTC sind — ein halber Fix erzeugt zwei widersprüchliche Zeitbegriffe in
@@ -173,7 +173,7 @@ dem Ortstag als `target_date`-Schlüssel (Grundlage AC-8).
 - **S5b/S5c-Dateien:** `preview_service.py`, `comparison_engine.py`, `gpx_processing.py`,
   `openmeteo.py`, `api/routers/debug.py`, `tools/weather_validation.py`.
 - **Koordinaten-Cache für `tz_for_coords`.** Bewusste Nicht-Entscheidung aus S5a: `.timezone_at()`
-  je Tour und Aufruf ist linear und billig; keine Optimierung ohne gemessenen Engpass.
+  je Trip und Aufruf ist linear und billig; keine Optimierung ohne gemessenen Engpass.
 - **Die Go-Seite.**
 
 ## Expected Behavior
@@ -188,7 +188,7 @@ dem Ortstag als `target_date`-Schlüssel (Grundlage AC-8).
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine Tour auf Korsika (Europe/Paris, im August UTC+2) hat eine Etappe mit einem
+- **AC-1:** Given eine Trip auf Korsika (Europe/Paris, im August UTC+2) hat eine Etappe mit einem
   Wegpunkt, dessen `arrival_time` auf `06:00 UTC` steht (= 08:00 Ortszeit) / When `timeline_heute`
   zu `MITTAGS_UTC` (14:00 UTC, bewusst AUSSERHALB des Mismatch-Fensters) abgefragt wird / Then
   zeigt die Timeline-Zeile `🕐 08:00`, nicht `🕐 06:00`.
@@ -196,7 +196,7 @@ dem Ortstag als `target_date`-Schlüssel (Grundlage AC-8).
     Uhrzeitumrechnung geprüft wird, nicht ein Tageswechsel; Assertion, dass `🕐 08:00` in
     `confirmation_body` steht und `🕐 06:00` nicht.
 
-- **AC-2:** Given eine Tour auf Korsika mit einer Etappe für den Ortstag D+1 / When eine
+- **AC-2:** Given eine Trip auf Korsika mit einer Etappe für den Ortstag D+1 / When eine
   Nachricht zu `NACHTS_UTC` (22:30 UTC = 00:30 Ortszeit des Folgetags, Mismatch-Fenster) für
   `glance`, `heute_gewitter`, `timeline_heute` und `timeline_morgen` gesendet wird / Then beziehen
   sich „heute"/„morgen" bei allen VIER Kommandos auf den Ortstag (D+1/D+2), erkennbar an der
@@ -216,7 +216,7 @@ dem Ortstag als `target_date`-Schlüssel (Grundlage AC-8).
     Vorhandensein/Wert einer `🕐`-Zeile) — ein Test, der nur eines von beidem prüft, lässt einen
     Halb-Fix durch.
 
-- **AC-4:** Given eine Tour hat die heutige Etappe in Neuseeland (Pacific/Auckland, im August
+- **AC-4:** Given eine Trip hat die heutige Etappe in Neuseeland (Pacific/Auckland, im August
   UTC+12) und die morgige auf Korsika (Europe/Paris, UTC+2) — Fixtur `trip_two_zones`
   (`tests/tdd/conftest.py:55-76`) / When `glance` abgefragt wird / Then beschriftet und filtert
   `_fmt_glance` den heutigen Abschnitt in der neuseeländischen Zone und den morgigen Abschnitt in
@@ -226,7 +226,7 @@ dem Ortstag als `target_date`-Schlüssel (Grundlage AC-8).
     Ortsuhrzeit/das erwartete Datum; eine gemeinsame Zone für beide Tage ist die bequeme falsche
     Abkürzung, die dieser Test fangen muss.
 
-- **AC-5:** Given eine Tour in Europe/Paris hat Wegpunkte mit `arrival_time`-Werten rund um beide
+- **AC-5:** Given eine Trip in Europe/Paris hat Wegpunkte mit `arrival_time`-Werten rund um beide
   Sommerzeit-Wechseltage 2026 — 29.03. (Lücke, Ortstag hat 23 Stunden) und 25.10. (Doppelstunde,
   Ortstag hat 25 Stunden) / When `timeline_heute`/`timeline_morgen` an beiden Tagen abgefragt wird
   / Then zeigt jede `🕐`-Zeile die korrekte Ortsstunde des jeweiligen Wegpunkts — geprüft auf die
@@ -236,7 +236,7 @@ dem Ortstag als `target_date`-Schlüssel (Grundlage AC-8).
     nur auf die Zeilenzahl.
 
 - **AC-6:** Given `freeze_time(X)` ist aktiv UND gleichzeitig wird `received_at = Y` übergeben, X
-  und Y liegen auf verschiedenen Ortstagen der Tour / When eine der vier Query-Kommandos
+  und Y liegen auf verschiedenen Ortstagen der Trip / When eine der vier Query-Kommandos
   verarbeitet wird / Then folgt das Ergebnis (Kopfzeilen-Datum, gefilterte Etappe) `Y`, nicht der
   eingefrorenen Systemuhr `X` — Vorlage `tests/tdd/test_befehlspfade_folgen_ortszone.py:517-670`
   (Adversary-Befund F001 aus S5a: „Parameter behalten, im Rumpf ignorieren").
@@ -254,7 +254,7 @@ dem Ortstag als `target_date`-Schlüssel (Grundlage AC-8).
     Aufrufer lokal berechneten `today`/`tomorrow` abweicht; Assertion, dass der Fehlertext den
     `OnDemandErgebnis.zieltag`-Wert trägt.
 
-- **AC-8:** Given eine Tour im Mismatch-Fenster hat noch keinen ladbaren Wetter-Snapshot
+- **AC-8:** Given eine Trip im Mismatch-Fenster hat noch keinen ladbaren Wetter-Snapshot
   (`timeline.available is False`) / When `_handle_query` daraufhin `_fetch_and_save_snapshot`
   auslöst / Then trägt die geschriebene Ankerdatei `target_date` = Ortstag (nicht UTC-Tag), und
   ein anschließender Aufruf von `trip_alert._get_cached_weather` verwirft sie NICHT MEHR mit
@@ -320,7 +320,7 @@ Neue Suite `tests/tdd/test_timeline_folgt_der_ortszeit.py` — nach Verhalten be
 
 - **Mehrzonen-Restfehler** (ADR-0044, bewusst offen, PO-Entscheidung): Wechselt der Wanderer an
   genau dem betreffenden Tag die Zeitzone, bleibt die Differenz zweier benachbarter Etappen als
-  Restfehler — eine Tour dieser Spannweite hat ohnehin keinen eindeutigen „Kalendertag".
+  Restfehler — eine Trip dieser Spannweite hat ohnehin keinen eindeutigen „Kalendertag".
 - **Das Mismatch-Fenster ist jahreszeitabhängig:** für Europe/Vienna im Sommer (CEST, UTC+2) 2
   Stunden breit, im Winter (CET, UTC+1) nur 1 Stunde. Die Breite ist stets |UTC-Offset| Stunden.
 - **`WeatherSnapshotService.save()` schreibt nicht atomar** (`filepath.write_text(...)`, kein

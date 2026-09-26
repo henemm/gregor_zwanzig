@@ -24,7 +24,7 @@
 	let trip = $state<Trip>(data.trip);
 
 	// Issue #1395 S3: den Stempel aus der Server-Naht in die Registry uebernehmen.
-	// Ab hier traegt jeder Schreibvorgang auf diese Tour automatisch `If-Match`.
+	// Ab hier traegt jeder Schreibvorgang auf diese Trip automatisch `If-Match`.
 	// Fehlt er, bleibt die Registry leer und alles laeuft wie vor dieser Scheibe.
 	//
 	// ACHTUNG: bewusst NUR von `data` abhaengig (`data.trip.id`, nicht das lokale
@@ -32,7 +32,7 @@
 	// der Effekt daran, liefe er direkt NACH dem discardEtag() dort erneut und
 	// legte den laengst veralteten Stempel aus dem Seitenaufbau wieder ab. Genau
 	// den selbstgebauten Konflikt soll AC-5 verhindern. `adoptEtagFromPageLoad`
-	// setzt zusaetzlich nur, solange fuer diese Tour noch nichts bekannt ist —
+	// setzt zusaetzlich nur, solange fuer diese Trip noch nichts bekannt ist —
 	// ein erneutes `load()` neben einem laufenden Speichervorgang duerfte sonst
 	// einen aelteren Stand zurueckschreiben (dieselbe Klasse wie F001).
 	$effect(() => {
@@ -130,7 +130,7 @@
 				}
 				return;
 			}
-			// Issue #1395 S3: der erfolgreiche PATCH hat die Tourdatei veraendert,
+			// Issue #1395 S3: der erfolgreiche PATCH hat die Trip-Datei veraendert,
 			// liefert aber keinen neuen Stempel (S2 AC-15). Der gemerkte Stand ist
 			// damit veraltet — ohne Verwerfen wuerde sich die Anwendung selbst
 			// einen Konflikt bauen.

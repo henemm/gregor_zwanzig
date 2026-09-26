@@ -5,12 +5,12 @@ Spec: docs/specs/modules/bug_691_autosave_trip_new.md
 Workflow: bug-691-autosave-trip-new
 
 Verhaltenstests gegen Staging (einmaliger Login via shared browser context):
-- AC-7: Playwright → Button heißt "Trip speichern" (nicht "Tour speichern")
+- AC-7: Playwright → Button heißt "Trip speichern" (nicht "Trip speichern")
 - AC-1: Playwright → Navigation weg → Trip wird auto-gespeichert (erscheint in Liste)
 - AC-4: Playwright → Abbrechen löst keinen Auto-Save aus
 
 RED-Ursache:
-- AC-7: Button-Text ist "Tour speichern" statt "Trip speichern"
+- AC-7: Button-Text ist "Trip speichern" statt "Trip speichern"
 - AC-1: beforeNavigate-Hook fehlt → kein Auto-Save → Trip erscheint NICHT in Liste
 - AC-4: tbd nach AC-1-Fix (aktuell: kein Auto-Save beim Cancel ebenfalls nicht)
 
@@ -132,9 +132,9 @@ def _trip_count_via_api(username: str = TEST_USER, password: str = TEST_PASS) ->
 
 class TestAC7_SaveButtonLabel:
     """
-    AC-7: Desktop-Button soll "Trip speichern" heißen (nicht "Tour speichern").
+    AC-7: Desktop-Button soll "Trip speichern" heißen (nicht "Trip speichern").
 
-    RED: Button-Text ist aktuell "Tour speichern".
+    RED: Button-Text ist aktuell "Trip speichern".
     """
 
     def test_save_button_heisst_trip_speichern(self, pw_session):
@@ -143,7 +143,7 @@ class TestAC7_SaveButtonLabel:
         WHEN: Desktop-Save-Button gerendert (ohne Aktion)
         THEN: Button-Text ist "Trip speichern"
 
-        RED: Schlägt fehl weil Button aktuell "Tour speichern" zeigt.
+        RED: Schlägt fehl weil Button aktuell "Trip speichern" zeigt.
         """
         page = pw_session
         page.goto(f"{STAGING_BASE}/trips/new")

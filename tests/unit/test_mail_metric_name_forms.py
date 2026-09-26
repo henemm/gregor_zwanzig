@@ -6,7 +6,7 @@ Name.** Konkret heisst das drei Dinge, die diese Datei nachweist:
 
 * Die **Stundentabelle** (bis 22 Spalten, harte Platzgrenze) bleibt bei der
   englischen Kurzform ``MetricDefinition.col_label`` -- in der Vergleichs-Mail
-  UND in der Tour-Mail (AC-1). Das ist ein Nicht-Regressions-Nachweis: er ist
+  UND in der Trip-Mail (AC-1). Das ist ein Nicht-Regressions-Nachweis: er ist
   heute gruen und muss gruen bleiben. Er steht hier, weil Uebersichts- und
   Stundentabelle des Vergleichs aus DERSELBEN Funktion beschriftet werden
   (``compare_html.derive_row_labels``) -- die Umstellung der Uebersicht auf
@@ -181,8 +181,8 @@ def _html_hour_header(html: str) -> list[str]:
     return []
 
 
-def _tour_hour_header(html: str) -> list[str]:
-    """Spaltenkopf der TOUR-Stundentabelle (erste Spalte "Time", letzte
+def _trip_hour_header(html: str) -> list[str]:
+    """Spaltenkopf der TRIP-Stundentabelle (erste Spalte "Time", letzte
     "Risk" -- beides feste Nicht-Metrik-Spalten)."""
     head = re.search(r"<thead>(.*?)</thead>", html, re.S)
     cols = [
@@ -206,10 +206,10 @@ def _plain_overview_labels(text: str) -> list[str]:
     return labels
 
 
-def _tour_rows() -> list[dict]:
-    """Eine Tour-Stundenzeile mit Taupunkt- UND Luftdruck-Spalte. Die
-    Spaltenmenge der Tour ergibt sich allein aus den Schluesseln der Zeile
-    (``helpers.visible_cols``, der Beschriftungsweg der Tour)."""
+def _trip_rows() -> list[dict]:
+    """Eine Trip-Stundenzeile mit Taupunkt- UND Luftdruck-Spalte. Die
+    Spaltenmenge der Trip ergibt sich allein aus den Schluesseln der Zeile
+    (``helpers.visible_cols``, der Beschriftungsweg der Trip)."""
     return [{
         "time": "08", "temp": 14.0, "wind": 12.0, "gust": 22.0, "precip": 0.0,
         "dewpoint": 8.0, "pressure": 1013.0, "cape": 300.0,
@@ -262,25 +262,25 @@ def test_compare_hour_table_keeps_the_english_short_forms():
         assert kurz in header, f"Kurzform '{kurz}' fehlt im Stundenkopf: {header}"
 
 
-def test_tour_hour_table_keeps_the_english_short_forms():
-    """AC-1 (zweiter Mail-Typ): dieselbe Aussage fuer die Tour-Stundentabelle.
+def test_trip_hour_table_keeps_the_english_short_forms():
+    """AC-1 (zweiter Mail-Typ): dieselbe Aussage fuer die Trip-Stundentabelle.
 
-    Der Tour-Pfad ist vollstaendig getrennt (``helpers.visible_cols`` ->
+    Der Trip-Pfad ist vollstaendig getrennt (``helpers.visible_cols`` ->
     ``metric_catalog.get_col_defs``), liest aber dieselbe Registerspalte -- er
     muss von der Umstellung der Vergleichs-Uebersicht unberuehrt bleiben."""
-    html = _render_html_table(_tour_rows(), friendly_keys=set())
-    header = _tour_hour_header(html)
+    html = _render_html_table(_trip_rows(), friendly_keys=set())
+    header = _trip_hour_header(html)
 
-    assert header, f"Keine Spaltenkoepfe in der Tour-Stundentabelle: {html[:200]}"
+    assert header, f"Keine Spaltenkoepfe in der Trip-Stundentabelle: {html[:200]}"
     for kurz, ausgeschrieben in (
         ("Temp", "Temperatur"), ("Wind", "Wind"), ("Gust", "Böen"),
         ("Rain", "Niederschlag"), ("CAPE", "Gewitterenergie (CAPE)"),
     ):
-        assert kurz in header, f"Kurzform '{kurz}' fehlt im Tour-Stundenkopf: {header}"
+        assert kurz in header, f"Kurzform '{kurz}' fehlt im Trip-Stundenkopf: {header}"
         if ausgeschrieben != kurz:
             assert ausgeschrieben not in header, (
-                f"Ausgeschriebener Name '{ausgeschrieben}' im Tour-Stundenkopf "
-                f"-- die Tour-Stundentabelle bleibt bei der Kurzform: {header}"
+                f"Ausgeschriebener Name '{ausgeschrieben}' im Trip-Stundenkopf "
+                f"-- die Trip-Stundentabelle bleibt bei der Kurzform: {header}"
             )
 
 
@@ -312,16 +312,16 @@ def test_compare_hour_table_shows_dew_and_press():
     )
 
 
-def test_tour_hour_table_shows_dew_and_press():
-    """AC-2 (zweiter Mail-Typ): dieselben zwei Spalten in der Tour-Mail. Das
+def test_trip_hour_table_shows_dew_and_press():
+    """AC-2 (zweiter Mail-Typ): dieselben zwei Spalten in der Trip-Mail. Das
     ist gewollt -- ein schlechtes Kuerzel ist in beiden Mails schlecht."""
-    header = _tour_hour_header(_render_html_table(_tour_rows(), friendly_keys=set()))
+    header = _trip_hour_header(_render_html_table(_trip_rows(), friendly_keys=set()))
 
     assert "Dew" in header and "Press" in header, (
-        f"Tour-Stundenkopf zeigt nicht 'Dew'/'Press': {header}"
+        f"Trip-Stundenkopf zeigt nicht 'Dew'/'Press': {header}"
     )
     assert "Cond°" not in header and "hPa" not in header, (
-        f"Die alten Kuerzel stehen weiterhin im Tour-Stundenkopf: {header}"
+        f"Die alten Kuerzel stehen weiterhin im Trip-Stundenkopf: {header}"
     )
 
 

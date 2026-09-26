@@ -16,7 +16,7 @@ tags: [gewitter, alarm-regeln, trip-new, frontend]
 
 ## Purpose
 
-Beim Anlegen einer Tour (`/trips/new` → Alarmregeln) kann ein Nutzer für die Metrik
+Beim Anlegen einer Trip (`/trips/new` → Alarmregeln) kann ein Nutzer für die Metrik
 „Gewitter" eine Regel im Modus „Absolut" mit Schwelle „MITTEL"/„HOCH" anlegen. Diese
 Einstellung wird gespeichert, aber vom Alarm-Dienst **nie ausgewertet** — für Gewitter
 zählt ausschließlich die Empfindlichkeitsstufe (`?tab=alarme`). Die Bedienfläche

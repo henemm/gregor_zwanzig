@@ -53,7 +53,7 @@
 		/** Issue #1719 S4: ALLE Kürzel, die der Kanal DIESER Fläche für eine
 		 *  Größe sendet (metric_id -> Kürzel-Liste). Die Quelle richtet sich
 		 *  nach der Fläche und wird deshalb von der Einbettung geliefert, nicht
-		 *  hier bestimmt: der Touren-Editor reicht `/api/sms-symbols` durch
+		 *  hier bestimmt: der Trips-Editor reicht `/api/sms-symbols` durch
 		 *  (Mehrfach-Token `FK FD WC`, Grammatikformen), die drei
 		 *  Vergleichs-Editoren das Register-Kürzel `sms_code` — die
 		 *  Vergleichs-SMS rendert aus `get_sms_code()` (comparison.py). Eine

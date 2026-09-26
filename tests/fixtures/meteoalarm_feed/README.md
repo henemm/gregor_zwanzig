@@ -27,20 +27,20 @@
 
 - **Herkunft:** `https://api.meteoalarm.org` (der bisherige, kontingentierte
   EDR-Weg), abgerufen über den echten Produktivcode
-  (`MeteoAlarmSource.fetch()` je Tourpunkt) — kein nachbearbeitetes Ergebnis.
+  (`MeteoAlarmSource.fetch()` je Trip-Punkt) — kein nachbearbeitetes Ergebnis.
 - **Aufgezeichnet:** 2026-08-01, **16:06:28 UTC**. Die Feed-Seite derselben
   Minute liegt als `feed_italy_equivalence.json` daneben; nur weil beide Seiten
   zeitgleich gezogen wurden, ist der Vergleich überhaupt aussagekräftig.
-- **Umfang:** 8 Tourpunkte, zusammen 62 Warnungs-Einträge (Rohausgabe inklusive
+- **Umfang:** 8 Trip-Punkte, zusammen 62 Warnungs-Einträge (Rohausgabe inklusive
   der von der Quelle mehrfach gelieferten identischen Einträge — bewusst nicht
   entdoppelt), ~14 KB.
 - **Auswahl der 8 Punkte** (je eine andere EMMA-Zone, Nord/Mitte/Süd/Insel):
 
   | Punkt | Koordinate | DPC-Zone | EMMA | Warum |
   |---|---|---|---|---|
-  | Trentino (Karnischer Höhenweg) | 46.7248, 12.2254 | Tren-A | IT002 | grenznaher Tourpunkt aus #1397 S4 |
-  | Veneto (Karnischer Höhenweg) | 46.6508, 12.6476 | Vene-A1 | IT006 | grenznaher Tourpunkt aus #1397 S4 |
-  | Friaul (Karnischer Höhenweg) | 46.6283, 12.8023 | Friu-B | IT020 | grenznaher Tourpunkt aus #1397 S4 |
+  | Trentino (Karnischer Höhenweg) | 46.7248, 12.2254 | Tren-A | IT002 | grenznaher Trip-Punkt aus #1397 S4 |
+  | Veneto (Karnischer Höhenweg) | 46.6508, 12.6476 | Vene-A1 | IT006 | grenznaher Trip-Punkt aus #1397 S4 |
+  | Friaul (Karnischer Höhenweg) | 46.6283, 12.8023 | Friu-B | IT020 | grenznaher Trip-Punkt aus #1397 S4 |
   | Rom | 41.9028, 12.4964 | Lazi-D | IT012 | Referenzpunkt der übrigen Tests |
   | Mailand | 45.4642, 9.1900 | Lomb-09 | IT003 | Referenzpunkt der übrigen Tests |
   | Florenz | 43.7696, 11.2558 | Tosc-A3 | IT009 | Mittelitalien |
@@ -69,7 +69,7 @@
 - **Aufgezeichnet:** 2026-08-01, **16:06:28 UTC** — dieselbe Minute wie
   `edr_snapshot_it.json`.
 - **Auswahl:** 205 von 433 Einträgen des Vollabrufs. Kriterium ist rein
-  mechanisch: **alle** Einträge der 8 von den Tourpunkten betroffenen
+  mechanisch: **alle** Einträge der 8 von den Trip-Punkten betroffenen
   EMMA-Zonen (IT002: 16, IT003: 34, IT006: 25, IT009: 26, IT012: 32, IT016: 27,
   IT018: 33, IT020: 12). Keine inhaltliche Vorauswahl — sonst wäre die
   Obermengen-Aussage wertlos.
@@ -153,7 +153,7 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
 
 - **Herkunft:** `https://api.meteoalarm.org` (der bisherige, kontingentierte
   EDR-Weg), abgerufen über den echten Produktivcode
-  (`MeteoAlarmSource.fetch()` je Tourpunkt) — kein nachbearbeitetes Ergebnis.
+  (`MeteoAlarmSource.fetch()` je Trip-Punkt) — kein nachbearbeitetes Ergebnis.
 - **Aufgezeichnet:** 2026-08-01, **16:19:43 UTC**. Die Feed-Seite
   (`feed_austria_equivalence.json`) und die Zonenzuordnung
   (`zamg_snapshot_at.json`) derselben Minute liegen daneben; nur weil alle drei
@@ -163,15 +163,15 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
   1–38** geblättert — 3678 Roheinträge, nach Entduplizierung 1536. Ein
   Teilabruf hätte die Obermengen-Aussage wertlos gemacht: fehlende EDR-Einträge
   können im Vergleich nicht als Lücke auffallen.
-- **Umfang:** 8 Tourpunkte, zusammen 118 Warnungs-Einträge (Rohausgabe
+- **Umfang:** 8 Trip-Punkte, zusammen 118 Warnungs-Einträge (Rohausgabe
   inklusive der von der Quelle mehrfach gelieferten identischen Einträge —
   bewusst nicht entdoppelt), ~25 KB.
 - **Auswahl der 8 Punkte:**
 
   | Punkt | Koordinate | `gemeindenr` | EMMA | Warnungen | Warum |
   |---|---|---|---|---|---|
-  | Sillian (Karnischer Höhenweg) | 46.7597, 12.4177 | 70728 | AT707 | 20 | Tourpunkt des Nutzerbefunds #1397 S4 |
-  | Lienz | 46.8296, 12.7698 | 70716 | AT707 | 20 | zweiter Punkt derselben Tour |
+  | Sillian (Karnischer Höhenweg) | 46.7597, 12.4177 | 70728 | AT707 | 20 | Trip-Punkt des Nutzerbefunds #1397 S4 |
+  | Lienz | 46.8296, 12.7698 | 70716 | AT707 | 20 | zweiter Punkt desselben Trips |
   | Zell am See | 47.3230, 12.7951 | 50628 | AT506 | 20 | Alpen/Salzburg, hohe Warndichte |
   | Wien | 48.2082, 16.3738 | 90101 | AT901 | 12 | Referenzpunkt der übrigen Tests |
   | Innsbruck | 47.2692, 11.4041 | 70101 | AT701 | 18 | Referenzpunkt der übrigen Tests |
@@ -217,7 +217,7 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
 - **Aufgezeichnet:** 2026-08-01, **16:19:43 UTC** — dieselbe Minute wie
   `edr_snapshot_at.json` und `zamg_snapshot_at.json`.
 - **Auswahl:** 90 von 1358 Einträgen des Vollabrufs. Kriterium ist rein
-  mechanisch: **alle** Einträge der 7 von den Tourpunkten betroffenen
+  mechanisch: **alle** Einträge der 7 von den Trip-Punkten betroffenen
   EMMA-Zonen (AT101: 9, AT302: 9, AT506: 16, AT601: 10, AT701: 16, AT707: 20,
   AT901: 10). Keine inhaltliche Vorauswahl — sonst wäre die Obermengen-Aussage
   wertlos.
@@ -227,12 +227,12 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
 - **Nur für das AC-5-Gate.** Alle übrigen Tests benutzen weiterhin
   `feed_austria_sample.json`; diese kuratierte 6-Einträge-Auswahl kann
   strukturell nie Obermenge eines vollständigen EDR-Index sein — gemessen
-  2026-08-01 meldete das Gate mit ihr an allen 8 Tourpunkten Abweichungen.
+  2026-08-01 meldete das Gate mit ihr an allen 8 Trip-Punkten Abweichungen.
 
 ## `zamg_snapshot_at.json` — Äquivalenz-Aufzeichnung, Zonenzuordnung (Adversary-Fund F2, S3 Fix-Loop)
 
 - **Herkunft:** `https://warnungen.zamg.at/wsapp/api/getWarningsForCoords`, die
-  vollständige, unveränderte Antwort je Tourpunkt.
+  vollständige, unveränderte Antwort je Trip-Punkt.
 - **Aufgezeichnet:** 2026-08-01, **16:19:43 UTC** — dieselbe Minute wie die
   beiden anderen Seiten. Das ist zwingend: Österreichs Punkt→Zone-Auflösung
   läuft über ZAMG, eine später gezogene Zuordnung vergliche gegen einen anderen
@@ -246,16 +246,16 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
   gegen `warnungen.zamg.at` zu greifen (verletzt die Kern-Testschicht-Regel
   „kein Netz“; eine Störung oder Ratenbremse dort erzeugte irreführende
   Fehlschläge). Der Test speist damit einen lokalen `_ZamgServer` und prüft
-  zusätzlich, dass die Aufzeichnung **jeden** Tourpunkt abdeckt — ein fehlender
+  zusätzlich, dass die Aufzeichnung **jeden** Trip-Punkt abdeckt — ein fehlender
   Punkt liefe sonst still in den 404-Zweig und gälte fälschlich als „nicht
   zuständig“.
 
-**Format:** eine JSON-Liste, ein Eintrag je Tourpunkt (`lat`, `lon` identisch zu den
+**Format:** eine JSON-Liste, ein Eintrag je Trip-Punkt (`lat`, `lon` identisch zu den
 Koordinaten in `edr_snapshot_at.json`), plus GENAU eines von:
 - `"response"`: die vollständige, unveränderte ZAMG-JSON-Antwort (Erfolgsfall, Form wie
   `_zamg_body()` in den Tests — `properties.location.properties.gemeindenr` als Ganzzahl).
 - `"status"`: der HTTP-Statuscode als Ganzzahl (z. B. `404` für „nicht zuständig“, kein
-  österreichischer Tourpunkt).
+  österreichischer Trip-Punkt).
 
 ```json
 [

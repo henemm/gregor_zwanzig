@@ -1,4 +1,4 @@
-"""TDD RED — Issue #2122: die Etappen-Nummer der Tour als Praefix in jeder
+"""TDD RED — Issue #2122: die Etappen-Nummer der Trip als Praefix in jeder
 Alarm-Kurzform (SMS, Premium-SMS, Telegram-Kurzform) der Trip-Flaeche.
 
 SPEC:    docs/specs/modules/fix_2122_etappen_praefix_kurzform.md (AC-1..AC-12)
@@ -776,12 +776,12 @@ _F001_D21 = date(2026, 8, 21)
 
 def test_f001_deviation_alert_prefix_follows_trip_local_day_not_server_clock():
     """Adversary F001 (CRITICAL): die Etappen-Nummer MUSS aus dem ORTSTAG der
-    Tour (ADR-0044, `services.trip_day.trip_local_today`) abgeleitet werden,
+    Trip (ADR-0044, `services.trip_day.trip_local_today`) abgeleitet werden,
     nicht aus der Server-/Weltzeit-Wanduhr (`date.today()` waere ein
     `ambient_clock`-Rueckfall, Issue #1402 -- Waechter:
     `tests/test_output_timezone_guard.py`).
 
-    GIVEN eine Zwei-Zonen-Tour (Etappe 0 Neuseeland 20.08., Etappe 1 Korsika
+    GIVEN eine Zwei-Zonen-Trip (Etappe 0 Neuseeland 20.08., Etappe 1 Korsika
           21.08.) und ein Sendezeitpunkt 22:30 UTC am 20.08. = 00:30 Ortszeit
           auf Korsika am 21.08. -- nach der Orts-, vor der Weltzeit-
           Mitternacht,

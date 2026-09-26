@@ -143,7 +143,7 @@ Folge-Scheibe verifiziert ist).
 Freischalt-Kette entspricht der heutigen Kette aus `compareEditorLogic.ts` (Name → ≥2 Orte →
 visited-Kaskade), erweitert um den neuen Wetter-Metriken-Tab zwischen Orte und Wertebereiche (schließt
 die C1-Lücke: der heutige Create-Modus mountet `WeatherMetricsTab` gar nicht). „Briefing aktivieren"
-ist erst aktiv, wenn `versandVisited` — analog zum Trip-Vorbild, wo „Tour speichern" erst nach
+ist erst aktiv, wenn `versandVisited` — analog zum Trip-Vorbild, wo „Trip speichern" erst nach
 Zeitplan-Besuch aktiv wird.
 
 ### `compareNewLogic.ts` — Signaturen

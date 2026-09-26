@@ -129,9 +129,9 @@ class TestE2EVerifyCommand:
         )
 
     def test_e2e_verify_no_bulk_send(self, e2e_verify_text):
-        """AC-2/AC-3: kein Versand ueber alle Touren (send_reports/send_report)."""
+        """AC-2/AC-3: kein Versand ueber alle Trips (send_reports/send_report)."""
         assert "send_reports(" not in e2e_verify_text, (
-            "e2e-verify.md darf send_reports( (alle Touren) nicht enthalten"
+            "e2e-verify.md darf send_reports( (alle Trips) nicht enthalten"
         )
         assert "send_report(" not in e2e_verify_text, (
             "e2e-verify.md darf send_report( nicht enthalten"

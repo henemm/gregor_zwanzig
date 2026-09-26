@@ -20,7 +20,7 @@ AP-017 („Drift in der Schrift-Skala") verbietet `font-size`-Werte, die nicht a
 
 > **Hinweis zur Anti-Pattern-Nummer:** Issue #327 referenziert „AP-010". In `docs/design-system/ANTI-PATTERNS.md` ist AP-010 jedoch „Cockpit-Style Startseite". Der inhaltlich einschlägige Pattern ist **AP-017 „Drift in der Schrift-Skala"** (Z. 317–323). Diese Spec verwendet die korrekte Nummer.
 
-> **Scope-Korrektur (v1.1):** Issue #327 nennt nur `TripHero.svelte`. Dieses Bauteil ist jedoch **toter Code** — es wird seit dem Trip-Detail-Redesign (Issue #302) von keiner Route/Komponente mehr gerendert, nur noch im Barrel `index.ts` re-exportiert. Der **tatsächlich auf `/trips/[id]` sichtbare** Tour-Kopf ist `TripHeader.svelte` (gerendert in `routes/trips/[id]/+page.svelte:110`) und enthält dieselbe Art von Verstößen (4 freie font-sizes). Auf PO-Entscheidung werden **beide** Komponenten in diesem Bugfix gemappt. (`TripHero.svelte` als toter Code → Kandidat für separates Cleanup-Issue, nicht Teil von #327.)
+> **Scope-Korrektur (v1.1):** Issue #327 nennt nur `TripHero.svelte`. Dieses Bauteil ist jedoch **toter Code** — es wird seit dem Trip-Detail-Redesign (Issue #302) von keiner Route/Komponente mehr gerendert, nur noch im Barrel `index.ts` re-exportiert. Der **tatsächlich auf `/trips/[id]` sichtbare** Trip-Kopf ist `TripHeader.svelte` (gerendert in `routes/trips/[id]/+page.svelte:110`) und enthält dieselbe Art von Verstößen (4 freie font-sizes). Auf PO-Entscheidung werden **beide** Komponenten in diesem Bugfix gemappt. (`TripHero.svelte` als toter Code → Kandidat für separates Cleanup-Issue, nicht Teil von #327.)
 
 ## Source
 
@@ -85,7 +85,7 @@ Jede Ersetzung folgt der Mapping-Tabelle. Tokens werden **ohne** px-/rem-Fallbac
 
 **AC-1:** Given die beiden Dateien `TripHero.svelte` und `TripHeader.svelte` / When man `grep -nE 'font-size:\s*[0-9]'` gegen jede der beiden ausführt / Then liefert der Befehl in beiden Dateien keine Treffer mehr.
 
-**AC-2:** Given `TripHeader.svelte` wird auf `/trips/[id]` (live, sichtbarer Tour-Kopf) gerendert / When man Tourname-H1, Status-Zeile, Meta-/Zeitraum-Zeile und Briefing-Hinweis visuell mit dem Vorzustand vergleicht / Then sehen alle Elemente gleichwertig aus (keine Layout-Brüche, kein Umbruch; akzeptabler Schrift-Delta von je −1px bei Meta-Zeile und Briefing-Hinweis durch Snap an die Token-Skala). `TripHero.svelte` ist toter Code und hat keine Live-Oberfläche — für dieses Bauteil entfällt die visuelle Prüfung; nur AC-1 + AC-3 gelten.
+**AC-2:** Given `TripHeader.svelte` wird auf `/trips/[id]` (live, sichtbarer Trip-Kopf) gerendert / When man Tourname-H1, Status-Zeile, Meta-/Zeitraum-Zeile und Briefing-Hinweis visuell mit dem Vorzustand vergleicht / Then sehen alle Elemente gleichwertig aus (keine Layout-Brüche, kein Umbruch; akzeptabler Schrift-Delta von je −1px bei Meta-Zeile und Briefing-Hinweis durch Snap an die Token-Skala). `TripHero.svelte` ist toter Code und hat keine Live-Oberfläche — für dieses Bauteil entfällt die visuelle Prüfung; nur AC-1 + AC-3 gelten.
 
 **AC-3:** Given die `--g-text-*` Tokens werden referenziert / When der Browser die CSS auswertet / Then werden keine px-/rem-Fallbacks im `var()`-Aufruf verwendet (z. B. `var(--g-text-sm)`, nicht `var(--g-text-sm, 0.875rem)`).
 

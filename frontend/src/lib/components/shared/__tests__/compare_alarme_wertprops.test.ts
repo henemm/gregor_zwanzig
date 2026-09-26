@@ -502,8 +502,8 @@ describe('AC-3: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () =>
 					buendel.zonenBezug,
 					'des ersten Orts',
 					`AC-3 FAIL: Vergleichs-Mount ${i + 1} liefert nicht den Bezug „des ersten Orts" ` +
-						'fuer die Stillen Stunden (#1378 AC-4) — der Vorgabewert „der Tour" gilt nur ' +
-						'fuer die Tour.'
+						'fuer die Stillen Stunden (#1378 AC-4) — der Vorgabewert „der Trip" gilt nur ' +
+						'fuer die Trip.'
 				);
 
 				// Rueckschreiben: jeder Rueckruf trifft GENAU sein Feld im Zustand.
@@ -824,7 +824,7 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 	// weiter, bricht aber in `buildAlarmeSaveFn()` an `trip!.id` mit TypeError
 	// ab, BEVOR der Spion `baueTripSpeicherung` je gerufen wird — der Zaehler
 	// bleibt also in JEDEM Fall 0. Der Fang laeuft deshalb ausschliesslich ueber
-	// `fehler === null`: ohne Tour muss der Rumpf SAUBER zurueckkehren, statt
+	// `fehler === null`: ohne Trip muss der Rumpf SAUBER zurueckkehren, statt
 	// unterwegs zu scheitern. Beide moeglichen Fehlerarten (ReferenceError aus
 	// einer nicht gesaeten Deklaration, TypeError aus `trip!.id`) werden davon
 	// erfasst; der Fang ist deterministisch, aber er sitzt in der ZWEITEN
@@ -855,7 +855,7 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 			'Messaufbau kaputt: `baueTripSpeicherung` ist nicht der Spion — der Zaehler bliebe ' +
 				'immer 0 und der Test waere vakuum-gruen.'
 		);
-		assert.strictEqual(u.trip, undefined, 'Messaufbau kaputt: hier darf es keine Tour geben.');
+		assert.strictEqual(u.trip, undefined, 'Messaufbau kaputt: hier darf es keine Trip geben.');
 
 		const rueckrufe = effekteVon(ast, quelle, u, '_prevAlarmeJson');
 		assert.strictEqual(
@@ -881,16 +881,16 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 		assert.deepStrictEqual(
 			{ gebaut: gebaut.length, geplant: geplant.length },
 			{ gebaut: 0, geplant: 0 },
-			'AC-6 FAIL: der Trip-Speicherweg arbeitet, obwohl keine Tour uebergeben wurde. ' +
+			'AC-6 FAIL: der Trip-Speicherweg arbeitet, obwohl keine Trip uebergeben wurde. ' +
 				'Genau das waere die Folge, wenn der Guard (`AlarmeTab.svelte:345`) ersatzlos ' +
 				'entfiele — der Vergleichs-Mount liefe in `buildAlarmeSaveFn()`, das `trip!.id` liest.'
 		);
-		// DER TRAGENDE FANG: ohne Tour muss der Rumpf sauber zurueckkehren.
+		// DER TRAGENDE FANG: ohne Trip muss der Rumpf sauber zurueckkehren.
 		// Faellt der Guard, scheitert er unterwegs — und genau das wird hier rot.
 		assert.strictEqual(
 			fehler,
 			null,
-			'AC-6 FAIL: der Trip-Speicher-Effekt ist ohne Tour nicht sauber zurueckgekehrt, ' +
+			'AC-6 FAIL: der Trip-Speicher-Effekt ist ohne Trip nicht sauber zurueckgekehrt, ' +
 				`sondern unterwegs gescheitert: ${(fehler as Error)?.message}. Der Guard ` +
 				'`if (!trip) return;` ist damit weg oder wirkungslos.'
 		);
@@ -926,7 +926,7 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 		assert.strictEqual(
 			geplant.length,
 			1,
-			'AC-6 FAIL: mit Tour und geaendertem Stand muss der Trip-Speicherweg genau einen ' +
+			'AC-6 FAIL: mit Trip und geaendertem Stand muss der Trip-Speicherweg genau einen ' +
 				'Vorgang einplanen — sonst misst der Test darueber nur „der Effekt laeuft nie".'
 		);
 		assert.strictEqual(

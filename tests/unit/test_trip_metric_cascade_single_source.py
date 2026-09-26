@@ -80,7 +80,7 @@ def _dc(*, grundauswahl, kanal_layout=None, ausblick=None):
         MetricConfig(metric_id=kennung, order=i, **felder)
         for i, (kennung, felder) in enumerate(grundauswahl)
     ]
-    dc = UnifiedWeatherDisplayConfig(trip_id="tour-1848", metrics=metrics)
+    dc = UnifiedWeatherDisplayConfig(trip_id="trip-1848", metrics=metrics)
     if kanal_layout is not None:
         dc.per_channel_layouts = {
             KANAL: [

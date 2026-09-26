@@ -8,7 +8,7 @@ version: "1.0"
 tags: [telegram, timeline, snapshot, bug]
 ---
 
-# Timeline-Tagesaufloesung: Datenluecke statt Tourplanungs-Aussage
+# Timeline-Tagesaufloesung: Datenluecke statt Trip-Planungs-Aussage
 
 ## Approval
 
@@ -18,7 +18,7 @@ tags: [telegram, timeline, snapshot, bug]
 
 Die Telegram-Abfragen `timeline_heute`, `timeline_morgen`, `glance` und `heute_gewitter` melden
 heute eine fehlende Wetterlage fuer einen Tag faelschlich als **„Keine Etappe geplant"** — eine
-Aussage ueber die Tourplanung, obwohl das System nur etwas ueber den Datenbestand weiss. Diese
+Aussage ueber die Trip-Planung, obwohl das System nur etwas ueber den Datenbestand weiss. Diese
 Spec aendert die vier betroffenen Formatierer so, dass sie (a) einen fehlenden Tag zuerst aus
 bereits vorhandenen datierten Snapshots decken, bevor sie aufgeben, und (b) im verbleibenden
 Fall ehrlich zwischen „keine Daten" und „keine Etappe" unterscheiden.
@@ -60,7 +60,7 @@ keine Daten.
 
 **Aussage von Datenverfuegbarkeit trennen.** Nur wenn beide Quellen leer sind, entscheidet
 `services.trip_segments.convert_trip_to_segments(trip, target_date)` — eine netzfreie,
-rein tourplan-basierte Segmentbildung ohne Wetterdaten — ob an diesem Tag ueberhaupt eine Etappe
+rein trip-plan-basierte Segmentbildung ohne Wetterdaten — ob an diesem Tag ueberhaupt eine Etappe
 existiert:
 - Etappe vorhanden, aber keine Wetterdaten → ehrliche Fehlanzeige „noch keine Wetterdaten fuer
   {label} ({datum})" mit Verweis auf das Kommando, das fuer diesen Tag ein Briefing zustellt.
@@ -123,9 +123,9 @@ vorhandene datierte Snapshots ist dagegen kostenlos und veraendert keinen Schrei
   morgen noch keine Wetterdaten vorliegen, und behauptet NICHT „Keine Etappe geplant".
   - Test: Zwei aufeinanderfolgende, einander ueberschreibende Briefing-Schreibvorgaenge bauen
     einen Anker auf, der nur „heute" traegt; der Nutzer fragt per Telegram-Kommando
-    `timeline_morgen` ab und liest eine Datenluecken-Meldung statt einer Tourplanungs-Aussage.
+    `timeline_morgen` ab und liest eine Datenluecken-Meldung statt einer Trip-Planungs-Aussage.
 
-- **AC-2:** Given ein Trip hat für morgen KEINE Etappe (Ruhetag oder Tag nach Tourende) / When
+- **AC-2:** Given ein Trip hat für morgen KEINE Etappe (Ruhetag oder Tag nach Trip-Ende) / When
   der Nutzer `timeline_morgen` abfragt / Then bleibt die Antwort „Keine Etappe geplant" — diese
   Aussage ist dann zutreffend.
   - Test: Ein Trip, dessen letzte Etappe heute endet, wird per `timeline_morgen` abgefragt; der

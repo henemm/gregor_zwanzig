@@ -69,11 +69,11 @@ export type StageStripState = 'done' | 'active' | 'future';
 
 /**
  * Zustand einer Etappe im Hero-Etappen-Streifen (strikt datumsbasiert, AC-4).
- *   - `todayIdx < 0` (Hero ist "Nächste Tour", keine Etappe ist heute) →
+ *   - `todayIdx < 0` (Hero ist "Nächster Trip", keine Etappe ist heute) →
  *     ALLE Etappen liegen in der Zukunft → immer 'future'.
  *   - sonst: i < todayIdx → 'done', i === todayIdx → 'active', i > todayIdx → 'future'.
  *
- * 'active' bedeutet ausschließlich "läuft heute" — bei geplanten Touren darf
+ * 'active' bedeutet ausschließlich "läuft heute" — bei geplanten Trips darf
  * daher keine Etappe 'active' sein (Fix Adversary-Finding F001, Issue #386).
  */
 export function stageStripState(todayIdx: number, i: number): StageStripState {
@@ -168,12 +168,12 @@ export function plannedBriefings(
 }
 
 /**
- * Alarm-Einträge EINER Tour (Issue #1467 S1).
+ * Alarm-Einträge EINES Trips (Issue #1467 S1).
  *
- * Seit der Zusammenlegung von `trip_id`/`preset_id` liegen Tour- und
+ * Seit der Zusammenlegung von `trip_id`/`preset_id` liegen Trip- und
  * Ortsvergleichs-Kennungen im selben Feld `entity_id` — ein Gleichheits-
  * Vergleich allein wäre nicht mehr eindeutig, deshalb zählt der Typ mit.
- * Ohne Alarm-Liste oder ohne Tour-Kennung: leere Liste (fail-soft), nicht
+ * Ohne Alarm-Liste oder ohne Trip-Kennung: leere Liste (fail-soft), nicht
  * „alles durchlassen".
  */
 export function alertsForTrip(
@@ -267,8 +267,8 @@ export function homeCompareTimeline(preset: ComparePreset, now: Date): CompareTi
 }
 
 /**
- * Abgeschlossene/archivierte Touren (Status 'fertig'), bis zu `limit`.
- * Hero-Tour ist per Definition nie 'fertig', daher keine Sonderbehandlung nötig.
+ * Abgeschlossene/archivierte Trips (Status 'fertig'), bis zu `limit`.
+ * Hero-Trip ist per Definition nie 'fertig', daher keine Sonderbehandlung nötig.
  */
 export function archivedTrips(trips: Trip[], now: Date = new Date(), limit = 4): ArchiveCard[] {
 	return (trips ?? [])

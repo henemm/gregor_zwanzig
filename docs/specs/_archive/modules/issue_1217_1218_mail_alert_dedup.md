@@ -97,7 +97,7 @@ rendern. PO-Entscheidungen 2026-07-10: (a) Segment-Bezug wie #1200, (b) eine gem
   - Test: bestehende Suiten grün.
 
 - **AC-7:** Given dieselbe Massiv-Sperre (`hazard=access_ban`, `region_label=None`), deren Stufe
-  während der Tour eskaliert (z.B. Niveau 3 „eingeschränkt" → Niveau 4 „gesperrt", also mit
+  während der Trip eskaliert (z.B. Niveau 3 „eingeschränkt" → Niveau 4 „gesperrt", also mit
   UNTERSCHIEDLICHEM `label`-Text über zwei Segmente) / When Trip-Briefing bzw. Compare gerendert
   werden / Then erscheint die Sperre **genau einmal** (höchste Stufe). Der Dedup muss eine
   **stufen-unabhängige, stabile Massiv-Identität** nutzen, nicht den level-behafteten Label-Text.

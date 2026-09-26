@@ -131,7 +131,7 @@ def resolve_active_target(
 
 **Kandidatenbildung:**
 - Trip-Kandidat: `pick_active_trip(trips, now_utc)` — liefert 0 oder 1 Trip
-  (Etappen-Overlap am Ortstag der Tour, sonst frühester zukünftiger Trip; unverändert).
+  (Etappen-Overlap am Ortstag der Trip, sonst frühester zukünftiger Trip; unverändert).
 - Vergleichs-Kandidaten: alle `presets`, für die gilt: `archived_at` ist leer **und**
   (`end_date` ist leer **oder** `end_date` ≥ heutiger Tag). Referenzzeitpunkt für
   „heutiger Tag" ist hier bewusst der **UTC-Kalendertag von `now_utc`**, NICHT die

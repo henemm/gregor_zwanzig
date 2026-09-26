@@ -43,7 +43,7 @@ TODAY = date(2026, 9, 10)
 RECEIVED_AT = datetime(2026, 9, 10, 8, 0, tzinfo=timezone.utc)
 
 _TRIP_ID = "test-1222-channel-emoji"
-_TRIP_NAME = "Channel-Emoji-Test-Tour"
+_TRIP_NAME = "Channel-Emoji-Test-Trip"
 _USER_ID = "default"
 
 _CIRCLE_EMOJI_RE = re.compile("[🟢🟡🟠🔴⚪]")

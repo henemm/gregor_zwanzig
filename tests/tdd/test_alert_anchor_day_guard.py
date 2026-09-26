@@ -1,4 +1,4 @@
-"""TDD RED — Issue #1661 Teil A + C: der Abweichungs-Alarm einer Tour vergleicht
+"""TDD RED — Issue #1661 Teil A + C: der Abweichungs-Alarm einer Trip vergleicht
 gegen einen Anker vom FALSCHEN TAG, ohne es zu bemerken oder zu melden.
 
 SPEC: docs/specs/modules/fix_1661_anker_vom_falschen_tag.md — AC-1..AC-6,
@@ -9,7 +9,7 @@ Der Defekt in einem Satz: ``TripAlertService._get_cached_weather``
 (``src/services/trip_alert.py:509``) gibt den undatierten Rueckfall-Anker
 ``svc.load(trip.id)`` UNGEPRUEFT zurueck — obwohl in der Datei steht, fuer
 welchen Tag sie gilt (``target_date``). Am 08.08.2026 stammte sie vom Vortag;
-die Wache der Tour „KHW 403" lief 16 h ins Leere (~28 stille Laeufe).
+die Wache der Trip „KHW 403" lief 16 h ins Leere (~28 stille Laeufe).
 
 Kern-Schicht, deterministisch (kein Netz, kein Versand), mock-frei: echte
 JSON-Dateien unter der pytest-isolierten ``get_data_dir()``-Basis (#1133),
@@ -109,7 +109,7 @@ def _wetter(boe_kmh: float) -> SegmentWeatherData:
 
 
 def boeen_trip(trip_id: str, tage: list[date]) -> Trip:
-    """Tour mit scharfer Boeen-Delta-Regel (Standard-Schwelle 20 km/h), Aufbau
+    """Trip mit scharfer Boeen-Delta-Regel (Standard-Schwelle 20 km/h), Aufbau
     wie ``alert_log_fixtures.gust_alert_trip`` — nur mit frei waehlbaren
     Etappentagen (AC-13/AC-14 unterscheiden sich genau darin)."""
     stages = [
@@ -119,7 +119,7 @@ def boeen_trip(trip_id: str, tage: list[date]) -> Trip:
         for i, tag in enumerate(tage, start=1)
     ]
     trip = Trip(
-        id=trip_id, name="Anker-Tour", stages=stages,
+        id=trip_id, name="Anker-Trip", stages=stages,
         official_warnings=None, corridors=[],
         display_config=UnifiedWeatherDisplayConfig(
             trip_id=trip_id,
@@ -220,9 +220,9 @@ def test_ac1_anker_vom_vortag_wird_verworfen_und_gemeldet(caplog):
 
     GIVEN kein datierter Anker fuer heute und ein undatierter Rueckfall mit
     ``target_date`` von GESTERN
-    WHEN der Abweichungs-Alarm-Lauf fuer diese Tour startet
+    WHEN der Abweichungs-Alarm-Lauf fuer diese Trip startet
     THEN wird der Anker verworfen (``None``) UND es erscheint eine WARNUNG mit
-    Tour-Kennung und Grund „falscher Tag" statt eines stillen Durchlaufs.
+    Trip-Kennung und Grund „falscher Tag" statt eines stillen Durchlaufs.
 
     HEUTE ROT: ``trip_alert.py:509`` gibt ``svc.load()`` ungeprueft zurueck.
     """
@@ -242,7 +242,7 @@ def test_ac1_anker_vom_vortag_wird_verworfen_und_gemeldet(caplog):
     )
     treffer = warnungen_zu(caplog, trip_id)
     assert any(GRUND_FALSCHER_TAG in m or "falscher tag" in m.lower() for m in treffer), (
-        f"AC-1: Das Verwerfen muss SICHTBAR sein — WARNUNG mit Tour-Kennung "
+        f"AC-1: Das Verwerfen muss SICHTBAR sein — WARNUNG mit Trip-Kennung "
         f"({trip_id}) und Grund '{GRUND_FALSCHER_TAG}'. Gefunden: {treffer}"
     )
 
@@ -366,7 +366,7 @@ def test_ac4_fehlendes_datum_ueber_26_stunden_wird_verworfen(caplog):
     )
     treffer = warnungen_zu(caplog, trip_id)
     assert any(GRUND_ZU_ALT in m or "zu alt" in m.lower() for m in treffer), (
-        f"AC-4: WARNUNG mit Tour-Kennung ({trip_id}) und Grund "
+        f"AC-4: WARNUNG mit Trip-Kennung ({trip_id}) und Grund "
         f"'{GRUND_ZU_ALT}' erwartet. Gefunden: {treffer}"
     )
     gruende = [z.get("reason") for z in diagnose_zeilen(user_id)]
@@ -477,7 +477,7 @@ def test_ac11_verworfener_anker_erzeugt_diagnose_eintrag():
     GIVEN ein Anker wird verworfen (Fall „falscher Tag", AC-1)
     WHEN das passiert
     THEN entsteht in ``diagnostics/alert_anchor_rejected.jsonl`` eine Zeile mit
-    ``ts``, Tour-Kennung und Grund — nicht nur eine Logzeile, die im
+    ``ts``, Trip-Kennung und Grund — nicht nur eine Logzeile, die im
     Dauerrauschen untergeht (R5: ein Signal ohne Leser versandet).
 
     HEUTE ROT: ``record_alert_anchor_rejected`` gibt es noch nicht.
@@ -512,16 +512,16 @@ def test_ac11_verworfener_anker_erzeugt_diagnose_eintrag():
 
 # ════════════════════════════════ AC-13 ══════════════════════════════════════
 
-def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
-    """AC-13 (Teil C — laufende Tour ohne jeden Anker eskaliert).
+def test_ac13_laufender_trip_ohne_jeden_anker_eskaliert(caplog):
+    """AC-13 (Teil C — laufende Trip ohne jeden Anker eskaliert).
 
-    GIVEN eine Tour mit ``start_date <= heute <= end_date``, aber weder
+    GIVEN eine Trip mit ``start_date <= heute <= end_date``, aber weder
     datierter noch undatierter Anker-Datei
     WHEN der Alarm-Lauf sie prueft
     THEN ist das ein Eskalationsfall: WARNUNG UND Diagnose-Eintrag mit
     ``reason="missing"`` — nicht nur eine leise Logzeile.
 
-    HEUTE ROT: es passiert gar nichts. Eine laufende Tour ohne jedes Briefing
+    HEUTE ROT: es passiert gar nichts. Eine laufende Trip ohne jedes Briefing
     bliebe komplett unsichtbar blind.
     """
     user_id, trip_id = nutzer(), "trip-1661-ac13"
@@ -535,8 +535,8 @@ def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
     assert ergebnis is None, "Fixtur-Schutz: es darf gar kein Anker da sein."
     treffer = warnungen_zu(caplog, trip_id)
     assert treffer, (
-        "AC-13: Eine LAUFENDE Tour ohne jeden Anker muss eine WARNUNG mit "
-        f"Tour-Kennung ({trip_id}) erzeugen — die Wache ist dort komplett "
+        "AC-13: Eine LAUFENDE Trip ohne jeden Anker muss eine WARNUNG mit "
+        f"Trip-Kennung ({trip_id}) erzeugen — die Wache ist dort komplett "
         "blind, und genau das soll auffallen."
     )
     gruende = [z.get("reason") for z in diagnose_zeilen(user_id)]
@@ -548,10 +548,10 @@ def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
 
 # ════════════════════════════════ AC-14 ══════════════════════════════════════
 
-def test_ac14_noch_nicht_gestartete_tour_ohne_anker_bleibt_leise(caplog):
-    """AC-14 (Teil C — noch nicht gestartete Tour ist der harmlose Normalfall).
+def test_ac14_noch_nicht_gestarteter_trip_ohne_anker_bleibt_leise(caplog):
+    """AC-14 (Teil C — noch nicht gestartete Trip ist der harmlose Normalfall).
 
-    GIVEN eine Tour mit ``start_date > heute`` und weder datierter noch
+    GIVEN eine Trip mit ``start_date > heute`` und weder datierter noch
     undatierter Anker-Datei
     WHEN der Alarm-Lauf sie prueft
     THEN erscheint NUR eine sichtbare Logzeile (DEBUG-Ebene) — KEIN
@@ -562,7 +562,7 @@ def test_ac14_noch_nicht_gestartete_tour_ohne_anker_bleibt_leise(caplog):
     ``caplog``, nicht ueber Dateiinhalt-String-Suche.
 
     Scheitert bei zu aggressiver Eskalation: ohne diese Unterscheidung wuerde
-    JEDE noch nicht gestartete Tour taeglich Dauerrauschen erzeugen (#1199).
+    JEDE noch nicht gestartete Trip taeglich Dauerrauschen erzeugen (#1199).
     """
     user_id, trip_id = nutzer(), "trip-1661-ac14"
     trip = boeen_trip(trip_id, [ortstag(LAT, LON) + timedelta(days=2)])
@@ -573,13 +573,13 @@ def test_ac14_noch_nicht_gestartete_tour_ohne_anker_bleibt_leise(caplog):
 
     assert ergebnis is None, "Fixtur-Schutz: es darf gar kein Anker da sein."
     assert not diagnose_zeilen(user_id), (
-        "AC-14: Eine noch nicht gestartete Tour ohne Anker ist der harmlose "
+        "AC-14: Eine noch nicht gestartete Trip ohne Anker ist der harmlose "
         "Normalfall und darf KEINEN Diagnose-Eintrag erzeugen."
     )
     eigene = [r.getMessage() for r in caplog.records if r.name == "trip_alert"]
     assert [m for m in eigene if trip_id in m], (
         "AC-14: Der Fall muss trotzdem SICHTBAR sein — eine Logzeile des "
-        f"trip_alert-Loggers mit der Tour-Kennung ({trip_id}). Alle "
+        f"trip_alert-Loggers mit der Trip-Kennung ({trip_id}). Alle "
         f"trip_alert-Zeilen: {eigene}"
     )
     assert not warnungen_zu(caplog, trip_id), (
@@ -695,12 +695,12 @@ def test_altersnetz_grenze_26h10_wird_verworfen(caplog):
     )
 
 
-# ═══════ Abgelaufene Tour im Meldepfad (Korrekturrunde 2026-08-10) ═══════════
+# ═══════ Abgelaufene Trip im Meldepfad (Korrekturrunde 2026-08-10) ═══════════
 
-def test_abgelaufene_tour_ohne_anker_bleibt_leise(caplog):
-    """AC-14-Schwester: eine ABGELAUFENE Tour ohne Anker eskaliert nicht.
+def test_abgelaufener_trip_ohne_anker_bleibt_leise(caplog):
+    """AC-14-Schwester: eine ABGELAUFENE Trip ohne Anker eskaliert nicht.
 
-    GIVEN eine Tour, deren Laufzeitraum vorbei ist (``end_date < heute``), und
+    GIVEN eine Trip, deren Laufzeitraum vorbei ist (``end_date < heute``), und
     weder datierte noch undatierte Anker-Datei
     WHEN der Alarm-Lauf sie prueft
     THEN bleibt es leise: KEIN Diagnose-Eintrag, KEINE WARNUNG — nur die
@@ -709,19 +709,19 @@ def test_abgelaufene_tour_ohne_anker_bleibt_leise(caplog):
     AC-14 bewacht bisher nur die eine Seite (``start_date > heute``). Ein
     verdrehter Vergleich in ``_report_missing_anchor`` (z.B. ``today <=
     end_date`` zu ``today <= start_date``) bliebe sonst unbemerkt und wuerde
-    jede laengst beendete Tour zur Dauer-Eskalation machen.
+    jede laengst beendete Trip zur Dauer-Eskalation machen.
     """
     user_id, trip_id = nutzer(), "trip-1661-abgelaufen"
     trip = boeen_trip(trip_id, [ortstag(LAT, LON) - timedelta(days=5),
                                 ortstag(LAT, LON) - timedelta(days=4)])
-    assert trip.end_date < ortstag(LAT, LON), "Fixtur-Schutz: die Tour muss vorbei sein."
+    assert trip.end_date < ortstag(LAT, LON), "Fixtur-Schutz: die Trip muss vorbei sein."
 
     with caplog.at_level(logging.DEBUG):
         ergebnis = cached_weather(user_id, trip)
 
     assert ergebnis is None, "Fixtur-Schutz: es darf gar kein Anker da sein."
     assert not diagnose_zeilen(user_id), (
-        "Eine abgelaufene Tour ohne Anker ist genauso harmlos wie eine noch "
+        "Eine abgelaufene Trip ohne Anker ist genauso harmlos wie eine noch "
         "nicht gestartete (es laeuft dort schlicht keine Wache mehr) und darf "
         f"KEINEN Diagnose-Eintrag erzeugen: {diagnose_zeilen(user_id)}"
     )
@@ -756,9 +756,9 @@ class _FesteAmtlicheQuelle:
 def test_verworfener_delta_anker_schaltet_amtliche_warnung_NICHT_stumm(caplog):
     """Spec-Korrektur 2026-08-10 — gemessen am Wirkort ``check_all_trips()``.
 
-    GIVEN eine Tour mit amtlichem Trigger und einem Rueckfall-Anker vom
+    GIVEN eine Trip mit amtlichem Trigger und einem Rueckfall-Anker vom
     FALSCHEN TAG (genau die Lage einer bereits gebrieften, aber noch nicht
-    gestarteten Tour: ihr undatierter Anker traegt den Starttag)
+    gestarteten Trip: ihr undatierter Anker traegt den Starttag)
     WHEN der vollstaendige Alarm-Lauf laeuft
     THEN geht die amtliche Warnung trotzdem raus — verworfen wird NUR der
     Abweichungs-Vergleich.
@@ -880,7 +880,7 @@ def geometrie_weather(user_id: str, trip: Trip):
 def test_ac1_abfrage_anker_ohne_briefing_ist_keine_vergleichsbasis(caplog):
     """AC-1 (Bug-Nachweis am echten Abfrage-Pfad).
 
-    GIVEN eine Tour ohne jeden Snapshot (es lief nie ein Briefing) / WHEN der
+    GIVEN eine Trip ohne jeden Snapshot (es lief nie ein Briefing) / WHEN der
     Nutzer ``/glance`` sendet und danach der Abweichungs-Alarm laeuft / THEN
     wird der dabei entstandene Anker verworfen (``None``), sichtbar als WARNUNG.
     Vor dem Fix gruen durchgelaufen: er traegt ``target_date = heute`` und
@@ -921,7 +921,7 @@ def test_ac1_abfrage_anker_ohne_briefing_ist_keine_vergleichsbasis(caplog):
     )
     treffer = warnungen_zu(caplog, trip_id)
     assert any(GRUND_OHNE_BRIEFING in m or "briefing" in m.lower() for m in treffer), (
-        f"AC-1: WARNUNG mit Tour-Kennung ({trip_id}) und Grund "
+        f"AC-1: WARNUNG mit Trip-Kennung ({trip_id}) und Grund "
         f"'{GRUND_OHNE_BRIEFING}' erwartet. Gefunden: {treffer}"
     )
 
@@ -1014,7 +1014,7 @@ def _amtlicher_lauf_mit_anker_ohne_briefing(user_id: str, trip_id: str):
 def test_ac3_amtliche_warnung_geht_trotz_anker_ohne_briefing_raus():
     """AC-3 (ZENTRALE NICHT-REGRESSION — heute schon korrekt, GRUEN).
 
-    GIVEN eine Tour mit amtlichem Trigger, deren einziger Anker NICHT
+    GIVEN eine Trip mit amtlichem Trigger, deren einziger Anker NICHT
     briefing-gestuetzt ist / WHEN der volle Alarm-Lauf laeuft / THEN geht die
     amtliche Warnung raus: fuer sie zaehlt nur die GEOMETRIE, und die ist bei
     einem Abfrage-Anker einwandfrei (``trip_alert.py:630-632``).
@@ -1045,7 +1045,7 @@ def test_ac3_amtliche_warnung_ueberlebt_auch_die_stufe_2_weiche():
     Ausstieg von Stufe 2 (``trip_alert.py:667-669``) gehaengte Herkunftspruefung
     bleibt unbemerkt.
 
-    GIVEN eine Tour mit amtlichem Trigger, einem GUELTIGEN rollierenden Anker
+    GIVEN eine Trip mit amtlichem Trigger, einem GUELTIGEN rollierenden Anker
     von heute (Stufe 2 greift) und einem undatierten Rueckfall mit
     ``briefing_backed=False`` / WHEN der amtliche Pfad die Geometrie holt /
     THEN liefert er sie — die amtliche Warnung wird ausgeloest.
@@ -1098,7 +1098,7 @@ def test_ac3_amtliche_warnung_ueberlebt_auch_die_stufe_2_weiche():
     assert meldungen, (
         "AC-3: Fuer amtliche Warnungen zaehlt allein die GEOMETRIE — die "
         "liefert bei gueltigem rollierendem Anker die Stufe 2. Eine dort "
-        "angehaengte Herkunftspruefung wuerde jede Tour mit rollierendem Anker "
+        "angehaengte Herkunftspruefung wuerde jede Trip mit rollierendem Anker "
         "UND Abfrage-Rueckfall verstummen lassen (#1701)."
     )
 
@@ -1190,7 +1190,7 @@ def test_ac5_altbestand_ohne_herkunftsfeld_bleibt_gueltiger_anker(caplog):
 def test_ac6_anzeigepfade_nach_abfrage_ohne_briefing_bleiben_vollstaendig():
     """AC-6 (REGRESSIONSSCHUTZ — Anzeige und Ankerwirkung sind getrennt, GRUEN).
 
-    GIVEN eine Tour ohne jeden Snapshot / WHEN der Nutzer ``/glance`` sendet /
+    GIVEN eine Trip ohne jeden Snapshot / WHEN der Nutzer ``/glance`` sendet /
     THEN antwortet das Kommando mit Daten UND ``WeatherExtractor.timeline()``
     zeigt denselben Snapshot (``available=True``) — obwohl der Alarm ihn
     verwirft. Bewacht die Trennung: die Herkunftspruefung gehoert in den
@@ -1269,7 +1269,7 @@ def rollierender_anker_pfad(user_id: str, trip_id: str) -> Path:
 
 
 def _ac10_lauf(user_id: str, trip_id: str, *, herkunft):
-    """Tour, deren EINZIGE Basis der undatierte Anker ist (kein datierter, kein
+    """Trip, deren EINZIGE Basis der undatierte Anker ist (kein datierter, kein
     rollierender) — ``herkunft=False`` macht sie zum Abfrage-Anker."""
     herkunft_setzen(
         undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)),
@@ -1299,7 +1299,7 @@ def test_ac10_positivkontrolle_gueltige_basis_schreibt_rollierenden_anker():
 
 
 def test_ac10_verworfene_basis_erzeugt_keinen_rollierenden_alarm_anker():
-    """AC-10 (Naht zu #1916): GIVEN eine Tour, deren einzige Vergleichsbasis in
+    """AC-10 (Naht zu #1916): GIVEN eine Trip, deren einzige Vergleichsbasis in
     Stufe 3 wegen ``not_briefing_backed`` faellt (kein Briefing-Anker, kein
     rollierender) / WHEN ``check_all_trips()`` laeuft / THEN entsteht KEIN
     rollierender Alarm-Anker — weder ueber Trigger (a) noch (b).
@@ -1329,9 +1329,9 @@ def _dienst_mit_aufrufzaehler(user_id: str, mails: list):
     ueberschriebenen Methoden reichen unveraendert an ihre Originalfassung weiter,
     der Lauf bleibt der echte (kein Mock, keine Rueckgabe-Attrappe).
 
-    ``besucht`` haelt die REIHENFOLGE fest, in der der Lauf die Touren erreicht
+    ``besucht`` haelt die REIHENFOLGE fest, in der der Lauf die Trips erreicht
     (nur der Δ-Aufruf, nicht der amtliche) — ohne sie waere eine Aussage ueber
-    „laeuft nach einer verworfenen Tour weiter" von der zufaelligen Sortierung
+    „laeuft nach einer verworfenen Trip weiter" von der zufaelligen Sortierung
     aus ``load_all_trips()`` abhaengig."""
     from services.trip_alert import TripAlertService
 
@@ -1372,17 +1372,17 @@ def test_ac10_verworfene_basis_ruft_check_and_send_alerts_gar_nicht_erst_auf():
     ``cached_weather or []`` liesse die Zusicherung lautlos kippen, im
     Extremfall mit einem Alarm gegen eine LEERE Basis.
 
-    GIVEN zwei Touren im selben Lauf — die VERWORFENE zuerst, danach eine mit
+    GIVEN zwei Trips im selben Lauf — die VERWORFENE zuerst, danach eine mit
     gueltiger Basis / WHEN ``check_all_trips()`` laeuft / THEN steht nur die
     gueltige im Aufrufprotokoll, und der Lauf erreicht sie ueberhaupt. Die
-    zweite Tour ist die Positivkontrolle: ohne sie waere das Protokoll auch dann
+    zweite Trip ist die Positivkontrolle: ohne sie waere das Protokoll auch dann
     leer, wenn es ueberhaupt nichts mehr aufzeichnet.
 
     Die Reihenfolge ist die eigentliche Zusicherung (Fix-Loop F006): das
-    Verwerfen darf den Lauf nur fuer DIESE Tour beenden (``continue``), nicht
-    fuer alle folgenden (``break``). Kaeme die verworfene Tour zuletzt, waere
+    Verwerfen darf den Lauf nur fuer DIESE Trip beenden (``continue``), nicht
+    fuer alle folgenden (``break``). Kaeme die verworfene Trip zuletzt, waere
     ein Abbruch von einem Weiterlaufen nicht unterscheidbar. ``load_all_trips()``
-    liefert die Touren UNSORTIERT (``Path.glob()``, ``loader.py:1403``): die
+    liefert die Trips UNSORTIERT (``Path.glob()``, ``loader.py:1403``): die
     Reihenfolge ist umgebungsabhaengig und aus den Namen NICHT vorhersagbar —
     auch nicht alphabetisch. Die Namenswahl stellt sie hier guenstig, aber
     verlassen darf sich der Test darauf nicht: ``besucht[:1]`` prueft sie bei
@@ -1403,17 +1403,17 @@ def test_ac10_verworfene_basis_ruft_check_and_send_alerts_gar_nicht_erst_auf():
     dienst.check_all_trips()
 
     assert dienst.besucht[:1] == [verworfen], (
-        "Fixtur-Schutz (F006): die VERWORFENE Tour muss zuerst drankommen, "
+        "Fixtur-Schutz (F006): die VERWORFENE Trip muss zuerst drankommen, "
         "sonst kann dieser Test einen Schleifen-Abbruch danach gar nicht sehen. "
         f"Besuchte Reihenfolge: {dienst.besucht}"
     )
     assert gueltig in dienst.besucht, (
-        "F006: Ein verworfener Anker legt NUR die betroffene Tour stumm — der "
+        "F006: Ein verworfener Anker legt NUR die betroffene Trip stumm — der "
         "Lauf muss mit der naechsten weitermachen (``continue``, nicht "
         f"``break``). Besuchte Reihenfolge: {dienst.besucht}"
     )
     assert gueltig in dienst.aufrufe, (
-        "Positivkontrolle: fuer die Tour mit gueltiger Basis MUSS "
+        "Positivkontrolle: fuer die Trip mit gueltiger Basis MUSS "
         f"check_and_send_alerts() laufen — sonst zaehlt das Protokoll nichts. "
         f"Aufgezeichnet: {dienst.aufrufe}"
     )
@@ -1449,7 +1449,7 @@ def test_ac10_abgelaufener_rollierender_anker_bleibt_unveraendert():
 
     assert pfad.read_text() == vorher, (
         "AC-10: Der abgelaufene rollierende Anker darf aus einer verworfenen "
-        "Basis heraus nicht fortgeschrieben werden — sonst waere die Tour ab "
+        "Basis heraus nicht fortgeschrieben werden — sonst waere die Trip ab "
         "sofort dauerhaft gegen einen erfundenen Vergleichspunkt bewacht."
     )
 
@@ -1498,7 +1498,7 @@ def _amtliche_quelle(aktiv: bool):
 def test_torbedingung_matrix_basis_mal_amtliche_warnung(basis_gueltig, amtlich):
     """Die Torbedingung ueber BEIDE Achsen (Fix-Loop F002 + F005).
 
-    GIVEN eine Tour, deren Δ-Basis entweder briefing-gestuetzt oder wegen
+    GIVEN eine Trip, deren Δ-Basis entweder briefing-gestuetzt oder wegen
     ``not_briefing_backed`` verworfen ist, mit oder ohne vorliegende amtliche
     Warnung / WHEN ``check_all_trips()`` laeuft / THEN gilt fuer jede der vier
     Kombinationen:

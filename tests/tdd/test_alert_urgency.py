@@ -78,7 +78,7 @@ def _official_alert(*, level: int, region_label: str = "Testregion"):
 # ═══════════════════════════ E2 — Amtliche Warnung ═══════════════════════
 
 def test_official_red_level_logs_high():
-    """AC-1 GIVEN eine rote amtliche Warnung (level=4) loest fuer eine Tour
+    """AC-1 GIVEN eine rote amtliche Warnung (level=4) loest fuer eine Trip
     einen Standalone-Alarm aus WHEN protokolliert wird THEN steht 'HIGH' im
     neuesten Eintrag -- vorher stand dort fest 'MODERATE'."""
     uid = fresh_user("ac1461-1")
@@ -222,7 +222,7 @@ def _run_radar(uid: str, *, frame_source) -> dict:
 
 
 def test_convective_radar_logs_high():
-    """AC-5 GIVEN ein Radar-Alarm mit is_convective=True fuer eine Tour WHEN
+    """AC-5 GIVEN ein Radar-Alarm mit is_convective=True fuer eine Trip WHEN
     protokolliert wird THEN steht 'HIGH' im Eintrag -- weiterhin, aber jetzt
     aus is_convective abgeleitet statt aus einer Konstante.
 
@@ -237,7 +237,7 @@ def test_convective_radar_logs_high():
 
 def test_moderate_rain_radar_logs_moderate():
     """AC-6 GIVEN ein Radar-Alarm mit is_convective=False und Label
-    'Maessiger Regen' (2.5 mm/h) fuer eine Tour WHEN protokolliert wird THEN
+    'Maessiger Regen' (2.5 mm/h) fuer eine Trip WHEN protokolliert wird THEN
     steht 'MODERATE' im Eintrag -- vorher stand dort fest 'HIGH'."""
     entry = _run_radar(fresh_user("ac1461-6"), frame_source=_frames_with_rate(2.5, is_convective=False))
     assert entry.get("severity") == "MODERATE", (
@@ -248,7 +248,7 @@ def test_moderate_rain_radar_logs_moderate():
 
 def test_light_rain_radar_logs_low():
     """AC-7 GIVEN ein Radar-Alarm mit Label 'Leichter Regen' (0.5 mm/h,
-    is_convective=False) fuer eine Tour WHEN protokolliert wird THEN steht
+    is_convective=False) fuer eine Trip WHEN protokolliert wird THEN steht
     'LOW' im Eintrag -- exakt der in der Analyse benannte Fall (Nieselregen
     in 19 Minuten, bisher faelschlich HIGH)."""
     entry = _run_radar(fresh_user("ac1461-7"), frame_source=_frames_with_rate(0.5, is_convective=False))
@@ -686,7 +686,7 @@ def _telegram_trip(trip_id: str) -> Trip:
 
 
 def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
-    """AC-14 (E6, Verhaltensneutralitaet des Versands) GIVEN eine Tour mit
+    """AC-14 (E6, Verhaltensneutralitaet des Versands) GIVEN eine Trip mit
     aktivem E-Mail- und Telegram-Kanal und einer Δ-Aenderung, die einen
     Alarm ausloest WHEN der Alarm laeuft THEN wird die E-Mail-Senke GENAU
     EINMAL und die Telegram-Senke GENAU EINMAL aufgerufen, die SMS-Senke
@@ -760,7 +760,7 @@ def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
 
 def test_entries_count_and_target_list_unchanged_when_severity_changes():
     """AC-15 (E7, D4 -- Eintragszahl und Ziel-Liste unveraendert) GIVEN eine
-    Tour hat vor dieser Scheibe N Eintraege in 'entries' WHEN zusaetzlich ein
+    Trip hat vor dieser Scheibe N Eintraege in 'entries' WHEN zusaetzlich ein
     amtlicher Alarm (level=4) protokolliert wird, der vor dieser Scheibe als
     'MODERATE' in 'entries' gelandet waere THEN liegt der neue Eintrag
     weiterhin in 'entries' (nicht 'not_delivered'), die Anzahl steigt um
@@ -811,12 +811,12 @@ def test_entries_count_and_target_list_unchanged_when_severity_changes():
 
 def test_two_users_official_alert_severity_isolated():
     """AC-16 (Mandantentrennung, zwei Nutzer) GIVEN zwei Nutzer A und B,
-    jeweils mit einer eigenen Tour und je einer roten amtlichen Warnung
+    jeweils mit einer eigenen Trip und je einer roten amtlichen Warnung
     (level=4) im selben Testlauf, isoliert ueber app.loader.get_data_dir
     (kein gemeinsamer data_dir) WHEN beide Alarme protokolliert werden THEN
     traegt Nutzer As alert_log.json einen Eintrag mit severity='HIGH' fuer
-    seine eigene Tour, Nutzer Bs eigene, getrennt gescopte Datei traegt
-    ebenfalls 'HIGH' fuer seine eigene Tour -- keine Vermischung von Werten
+    seine eigene Trip, Nutzer Bs eigene, getrennt gescopte Datei traegt
+    ebenfalls 'HIGH' fuer seine eigene Trip -- keine Vermischung von Werten
     oder Dateien zwischen den beiden data/users/<user_id>/-Verzeichnissen,
     kein Rueckfall auf 'default'."""
     alice, bob = fresh_user("ac1461-16-alice"), fresh_user("ac1461-16-bob")
@@ -840,10 +840,10 @@ def test_two_users_official_alert_severity_isolated():
         f"Je Nutzer genau ein Eintrag erwartet: alice={log_alice}, bob={log_bob}"
     )
     assert log_alice["entries"][0].get("entity_id") == "trip-alice", (
-        f"Alice' Protokoll muss nur ihre eigene Tour zeigen: {log_alice!r}"
+        f"Alice' Protokoll muss nur ihre eigene Trip zeigen: {log_alice!r}"
     )
     assert log_bob["entries"][0].get("entity_id") == "trip-bob", (
-        f"Bobs Protokoll muss nur seine eigene Tour zeigen: {log_bob!r}"
+        f"Bobs Protokoll muss nur seine eigene Trip zeigen: {log_bob!r}"
     )
     assert log_alice["entries"][0].get("severity") == "HIGH", (
         f"Alice' Eintrag muss 'HIGH' tragen: {log_alice!r}"

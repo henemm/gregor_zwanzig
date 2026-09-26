@@ -32,7 +32,7 @@ zusammenfallen: **Fall A** (Altbestand — `display_config.metrics` fehlt
 ganz, `dc.metrics == []`) und **Fall B** (bewusste Leerauswahl —
 `dc.metrics` hat Einträge, alle mit `enabled=False`). Gemessen am
 Produktivdatenstand 2026-07-31: 13 von 19 Briefings sind Fall A (davon 5
-echte Nutzer-Touren) — diese dürfen sich unter keinen Umständen ändern.
+echte Nutzer-Trips) — diese dürfen sich unter keinen Umständen ändern.
 
 ## Kritischer Befund: Warum die vier gemeldeten Fundstellen allein nicht reichen
 
@@ -299,7 +299,7 @@ Datenwirkung, rein vorbeugend.
 Sechs Eigenschaften, die dieser Eingriff nicht brechen darf:
 
 1. **Fall A bleibt exakt wie heute** — die zentrale Invariante. 13 von 19
-   Bestandsbriefings (davon 5 echte Nutzer-Touren) dürfen ihren
+   Bestandsbriefings (davon 5 echte Nutzer-Trips) dürfen ihren
    Metriken-Überblick nicht verlieren.
 2. **Roundtrip-Verhalten von `loader.py`** (schema-relevant, CLAUDE.md) —
    T4 betrifft 0 Bestandstrips; ein Roundtrip-Test sichert das ab.

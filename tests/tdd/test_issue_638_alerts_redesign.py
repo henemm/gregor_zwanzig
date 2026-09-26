@@ -287,7 +287,7 @@ def _briefing_config(trip_id: str) -> TripReportConfig:
     Regeln mit explizitem Kanal-Override — die einzigen, die diese
     Konfiguration bekommen — ist beides ohnehin gleichwertig.
 
-    Die Uhrzeiten setzt :func:`_trip` selbst, in der Zone der Tour
+    Die Uhrzeiten setzt :func:`_trip` selbst, in der Zone der Trip
     (``anchor_tz``) — hier waere jede feste Zone geraten.
     """
     return TripReportConfig(

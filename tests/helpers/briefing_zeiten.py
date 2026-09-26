@@ -61,7 +61,7 @@ def briefing_zeiten_fuer_trip(trip) -> tuple[time, time]:
     ``anchor_tz`` ist dieselbe Aufloesung, die ``trip_alert._is_briefing_
     imminent()`` benutzt. Wer hier stattdessen eine feste Zone (oder die
     Serverzone) einsetzt, rechnet am Wirkort vorbei: die Stunde saehe sicher
-    aus und laege bei einer Tour in einer anderen Zone trotzdem im Fenster.
+    aus und laege bei einer Trip in einer anderen Zone trotzdem im Fenster.
     """
     from services.trip_day import anchor_tz
 

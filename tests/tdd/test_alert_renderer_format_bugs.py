@@ -99,7 +99,7 @@ class TestSmsTripNameTruncation:
     """Bug 2: SMS-Tripname darf nicht mit offener Klammer enden."""
 
     def test_sms_no_dangling_paren(self):
-        msg = _make_msg("GR221 Mallorca (Test-Tour)")
+        msg = _make_msg("GR221 Mallorca (Test-Trip)")
         sms = render_sms(msg)
         # Trip-Teil endet vor dem " km"-Spann-Abschnitt
         trip_part = sms.split(" km")[0].rstrip()

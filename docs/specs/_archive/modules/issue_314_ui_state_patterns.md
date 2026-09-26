@@ -129,10 +129,10 @@ Alle fünf Seiten ersetzen ihr identisches Inline-Muster durch `<EmptyState ...>
 
 | Seite | icon | title | description | children |
 |-------|------|-------|-------------|----------|
-| `routes/trips/+page.svelte` | `RouteIcon` | "Noch keine Tour." | "Lege deine erste Tour an — Wizard in 4 Schritten." | `<Btn variant="outline" onclick={goto('/trips/new')}>Neue Tour</Btn>` |
+| `routes/trips/+page.svelte` | `RouteIcon` | "Noch keine Trip." | "Lege deine erste Trip an — Wizard in 4 Schritten." | `<Btn variant="outline" onclick={goto('/trips/new')}>Neue Trip</Btn>` |
 | `routes/locations/+page.svelte` | `MapPinIcon` | "Keine Locations vorhanden" | "Fuege Orte hinzu, um Wetter-Daten abzurufen und zu vergleichen." | `<Btn variant="outline" onclick={openCreate()}>Ort hinzufügen</Btn>` |
 | `routes/subscriptions/+page.svelte` | `BellIcon` | "Keine Abos vorhanden" | "Erstelle dein erstes Abo fuer automatische Wetter-Vergleiche." | `<Btn variant="outline" onclick={openCreate()}>Abo erstellen</Btn>` |
-| `routes/archiv/+page.svelte` | — | "Noch keine abgeschlossenen Touren im Archiv." | — | — |
+| `routes/archiv/+page.svelte` | — | "Noch keine abgeschlossenen Trips im Archiv." | — | — |
 | `routes/compare/+page.svelte` | `MapPinIcon` | "Keine Orte konfiguriert" | "Füge zuerst einen Ort hinzu, um einen Vergleich zu starten." | `<Btn variant="outline" href="/locations">Zu Locations</Btn>` |
 
 ### 5. `EmptyKachel.svelte` (Home)
@@ -141,8 +141,8 @@ Bestehenden Rumpf durch EmptyState ersetzen:
 ```svelte
 <EmptyState
   title="Willkommen bei Gregor 20"
-  description="Leg deine erste Tour an oder starte einen Orts-Vergleich.">
-  <Btn variant="accent" href="/trips/new">+ Neue Tour</Btn>
+  description="Leg deine erste Trip an oder starte einen Orts-Vergleich.">
+  <Btn variant="accent" href="/trips/new">+ Neue Trip</Btn>
   <Btn variant="outline" href="/compare">+ Neuer Vergleich</Btn>
 </EmptyState>
 ```
@@ -179,7 +179,7 @@ AC-5 und AC-5b nutzen heute `page.once('dialog', d => d.accept())`. Diese Listen
 - **AC-2:** Given die 5 Routes `trips`, `locations`, `subscriptions`, `archiv`, `compare` / When eine leere Liste vorliegt / Then rendert jede Seite `<EmptyState>` mit dem korrekten `title`, `description` und CTA-Inhalt gemäß Migrations-Tabelle; kein dupliziertes Inline-`data-testid` mehr im Seiten-HTML.
   - Test: `e2e/issue-314-empty-state.spec.ts` → AC-2a (trips), AC-2b (locations), AC-2c (subscriptions), AC-2d (compare) — prüfen auf `[data-slot="empty-state"]` wenn kein Datenbestand
 
-- **AC-3:** Given `routes/_home/EmptyKachel.svelte` / When die Home-Seite gerendert wird und keine Tour/Vergleich vorhanden ist / Then zeigt `EmptyKachel` den Text "Willkommen bei Gregor 20" sowie die zwei Buttons "Neue Tour" und "Neuer Vergleich" via `EmptyState`; der alte `<style>`-Block existiert nicht mehr in der Datei.
+- **AC-3:** Given `routes/_home/EmptyKachel.svelte` / When die Home-Seite gerendert wird und keine Trip/Vergleich vorhanden ist / Then zeigt `EmptyKachel` den Text "Willkommen bei Gregor 20" sowie die zwei Buttons "Neue Trip" und "Neuer Vergleich" via `EmptyState`; der alte `<style>`-Block existiert nicht mehr in der Datei.
   - Test: `e2e/issue-314-empty-state.spec.ts` → AC-3 — statisch verifiziert: EmptyKachel.svelte hat keinen `<style>`-Block mehr, nutzt EmptyState (Adversary VERIFIED)
 
 - **AC-4:** Given die drei bestehenden E2E-Suites `trips.spec.ts`, `locations.spec.ts`, `issue-321-copy-fix-deine-touren.spec.ts` / When sie nach der Migration laufen / Then finden alle `page.getByTestId('empty-state')`-Selektoren ihr Element ohne Anpassung dieser Testdateien.

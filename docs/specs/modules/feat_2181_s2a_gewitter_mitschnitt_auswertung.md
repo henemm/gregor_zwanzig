@@ -257,13 +257,13 @@ kennen weder Segmente noch Vorlauf, damit jede Zuständigkeit einzeln testbar bl
   ausschließlich die übergebenen Tage (ein Tag außerhalb fällt heraus, auch wenn er gültige Werte
   trägt; ein genannter Tag ohne Vorhersage wird nicht erfunden). Gegen den KHW-Mitschnitt liefert
   die Auswertung ohne `etappentage` **15** Tage (2026-08-22 bis 2026-09-05), weil der Mitschnitt
-  zwei Tage vor Tourbeginn ansetzt — der 22. und 23.08. tragen volle, gültige Werte in allen drei
+  zwei Tage vor Trip-Beginn ansetzt — der 22. und 23.08. tragen volle, gültige Werte in allen drei
   Teilmengen (22.08.: 40 J/kg primär bzw. 50 sonst, NONE; 23.08.: 100 bzw. 90, NONE). **Maßgeblich
-  für die Auswertung von T2 und T5 sind jedoch die 13 Tourtage 2026-08-24 bis 2026-09-05**
+  für die Auswertung von T2 und T5 sind jedoch die 13 Trip-Tage 2026-08-24 bis 2026-09-05**
   (PO-Entscheid vom 2026-09-07), weil nur dieser Nenner mit dem S1-Maßstab „2:13" zusammenpasst.
   Das Auswertungsmodul kennt diesen Zeitraum bewusst nicht; er wird beim Aufruf übergeben.
 - **`keine_aussage` feuert gegen den echten KHW-Bestand nie.** In jeder Teilmenge und für jede
-  Sprosse ist die Kennzahl exakt 0 — an allen 13 Tourtagen lag mindestens eine gültige Vorhersage
+  Sprosse ist die Kennzahl exakt 0 — an allen 13 Trip-Tagen lag mindestens eine gültige Vorhersage
   mit Wert vor. Die Dreiwertigkeit (AC-4/AC-5) ist umgesetzt und fixture-geprüft, sie schlägt gegen
   diese Daten aber nicht an. Das ist eine Eigenschaft der Daten, keine Lücke der Umsetzung.
 

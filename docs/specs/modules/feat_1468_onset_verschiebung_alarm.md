@@ -360,12 +360,12 @@ eine mm/h-Rate.
     Ortsvergleichs-Pfad aus demselben Alarm-Lauf, Beginn-Alarm-Inhalt in
     jedem einzeln nachgewiesen.
 
-- **AC-10:** Given eine Tour, für die ein vom Standard abweichendes Tagesfenster
+- **AC-10:** Given eine Trip, für die ein vom Standard abweichendes Tagesfenster
   konfiguriert ist (weiter, enger oder über Mitternacht) / When der Nutzer den
-  Beginn-Alarm für diese Tour erhält / Then bezieht sich der Alarm auf dieselbe
-  Beginn-Uhrzeit, die im Briefing dieser Tour steht — und nicht auf eine mit dem
+  Beginn-Alarm für diese Trip erhält / Then bezieht sich der Alarm auf dieselbe
+  Beginn-Uhrzeit, die im Briefing dieser Trip steht — und nicht auf eine mit dem
   Standardfenster 4–19 gerechnete andere Stunde. Fehlt die Konfiguration
-  (Alt-Tour), gilt weiterhin der Standard, und Briefing wie Alarm bleiben
+  (Alt-Trip), gilt weiterhin der Standard, und Briefing wie Alarm bleiben
   unverändert.
   - Test: `tests/tdd/test_onset_respects_configured_day_window.py` —
     Gleichheitsprüfung Briefing-Onset == Vergleichsbasis aus derselben Fixture,
@@ -374,8 +374,8 @@ eine mm/h-Rate.
 
 > ✅ **PO-freigegeben 2026-08-18 (Nachtrag).** Ursprünglich sah die Umsetzung nur
 > das Standard-Tagesfenster vor; die Analyse hatte offengelassen, ob die
-> Tour-Konfiguration bis zur Aggregation durchgereicht wird. Belegt wurde: das
-> Fenster ist pro Tour einstellbar (`DayWindowCard.svelte`, Go-Handler
+> Trip-Konfiguration bis zur Aggregation durchgereicht wird. Belegt wurde: das
+> Fenster ist pro Trip einstellbar (`DayWindowCard.svelte`, Go-Handler
 > `trip.go:316`, `loader.py:99` `_clamped_day_window`), die Vorschnitt-Logik fängt
 > die Abweichung NICHT ab, und bei abweichendem Fenster driften Briefing-Anzeige
 > und Alarm-Bezug in beide Richtungen auseinander — also genau der Bruch der

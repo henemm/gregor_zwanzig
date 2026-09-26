@@ -1,8 +1,8 @@
-// TDD RED: Issue #345 (Wetter-Editor-Konsolidierung, Touren-Teil).
+// TDD RED: Issue #345 (Wetter-Editor-Konsolidierung, Trips-Teil).
 //
 // Spec: docs/specs/modules/issue_345_weather_editor_consolidation.md (AC-1).
 //
-// Die Tour-Bearbeiten-Maske zeigt künftig eine read-only Wetter-Zusammenfassung
+// Die Trip-Bearbeiten-Maske zeigt künftig eine read-only Wetter-Zusammenfassung
 // (Profilname/Preset + Anzahl Spalten/Detail/aktive Metriken aus display_config).
 // Die reine Funktion summarizeTripWeather() aggregiert diese Zahlen aus dem
 // gespeicherten display_config — bucket-bewusst (#360/#364) UND legacy-fähig.

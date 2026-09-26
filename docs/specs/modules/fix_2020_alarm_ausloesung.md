@@ -449,7 +449,7 @@ Produktionscode) statt des geteilten Singletons.
   `alert_log`-Eintrag. `deviation_alert_engine.py` und die übrigen ~zehn
   Unterdrückungsstufen bleiben unprotokolliert (volle O3-Lücke, nicht Teil dieser Scheibe).
 - **Alarmaufkommen steigt**, Betrag vorab nicht messbar (Basislinie unbeobachtbar, siehe
-  Analyse). Zwei Tage vor Tourstart bewusst in Kauf genommen (PO-Entscheid 2026-08-21).
+  Analyse). Zwei Tage vor Trip-Start bewusst in Kauf genommen (PO-Entscheid 2026-08-21).
 - **Absolute Regeln und Empfindlichkeitsstufen bleiben unangetastet** — beide durch die
   Analyse als wirkungslos bzw. architektonisch gesperrt identifiziert (W1/W2), nicht Teil
   dieser Scheibe.

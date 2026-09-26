@@ -225,7 +225,7 @@ def test_ac7a_nie_gewaehlte_auswahl_bleibt_abwesend_und_bleibt_von_gewaehlter_tr
     """AC-7 (a): Given ein Trip, der nie eine Ausblick-Auswahl gespeichert hat
     / When der Nutzer eine ANDERE Einstellung aendert und speichert / Then
     bleibt ``outlook_metrics`` in der Datei abwesend, und der Ausblick zeigt
-    die Grundauswahl der Tour.
+    die Grundauswahl der Trip.
 
     ⚠️ NACHGEZOGEN durch #1848 A3 (AC-3, PO-Freigabe 2026-08-21): das
     Rueckfall-Ziel von "nie gewaehlt" war bis dahin ``None`` (die sieben

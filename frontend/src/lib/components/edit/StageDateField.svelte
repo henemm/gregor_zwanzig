@@ -5,7 +5,7 @@
 	// Dünner Wrapper um native <input type="date"> mit:
 	//   - kleinem "DATUM"-Label (uppercase, muted, mono)
 	//   - Wochentag-Chip (Mo/Di/…/So) aus ISO-Datum abgeleitet
-	//   - optional "· TOURSTART"-Marker für die erste Etappe
+	//   - optional "· TRIP-START"-Marker für die erste Etappe
 	//
 	// Svelte-5: $props, $bindable, $derived. Kein Legacy-Event-Handler-Syntax.
 	//
@@ -33,7 +33,7 @@
 
 <div class="stage-date" data-testid="stage-date-field">
 	<span class="label">
-		Datum{#if isFirst} · <em>Tourstart</em>{/if}
+		Datum{#if isFirst} · <em>Trip-Start</em>{/if}
 	</span>
 	<label class="box">
 		<span class="wd">{wd}</span>

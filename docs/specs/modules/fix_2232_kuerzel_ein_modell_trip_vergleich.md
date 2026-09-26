@@ -156,14 +156,14 @@ Details siehe „Implementation Details" unten.
    `CompareHourlyLayoutControls.svelte:139-146,241`,
    `CompareOutlookLayoutControls.svelte:114-122,255`) schlagen die Marke in
    `/api/sms-symbols` unter dieser Kennung nach — dieselbe Quelle wie der
-   Touren-Editor; `compareKuerzelById`/`hourlyKuerzelById`/`outlookKuerzelById` aus
+   Trips-Editor; `compareKuerzelById`/`hourlyKuerzelById`/`outlookKuerzelById` aus
    `sms_code` entfallen. Frontend-Test `weather_metric_kuerzel_marken.test.ts:446-500`
    wird umgedreht (beide Flächen lesen aus `/api/sms-symbols`). `/api/sms-symbols`
    (`api/routers/config.py:30-69`) muss jede Größe des Vergleichs-Katalogs führen; sonst
    Fallback auf `sms_code` **im Endpoint** (nicht im Client) — kein zweiter Helfer, kein
    zweites Vokabular im Client.
 
-4. **Label-Entscheid REVIDIERT: „(Gehzeit)" bleibt.** Im Touren-Editor stehen
+4. **Label-Entscheid REVIDIERT: „(Gehzeit)" bleibt.** Im Trips-Editor stehen
    `temperature` (Fenster 04–19, Auswertung max/min) und `temperature_day_high/low`
    (Gehzeit) nebeneinander — ohne Zusatz nicht unterscheidbar; der Wächter aus B1
    (`test_gehzeit_metriken_bleiben_trip_exklusiv.py`, PO-Entscheid 2026-08-19) verlangt
@@ -237,7 +237,7 @@ Details siehe „Implementation Details" unten.
 ## Expected Behavior
 
 - **Input:** Ortsvergleich mit ausgewählten Metriken Tageshöchst-/Tagestiefsttemperatur
-  und/oder gefühlter Höchst-/Tiefsttemperatur; Touren- und Vergleichs-Editor mit
+  und/oder gefühlter Höchst-/Tiefsttemperatur; Trips- und Vergleichs-Editor mit
   geöffnetem Reiter „Wetter-Metriken" bzw. den Layout-Reglern für Stundenverlauf/Ausblick.
 - **Output:** Vergleichs-SMS trägt für diese Größen dieselben Kürzel wie die Trip-SMS
   (`D`, `L`, `FD`, `FL`, ohne `+`/`-`-Vorzeichen); alle Editor-Flächen zeigen dieselbe
@@ -278,7 +278,7 @@ Details siehe „Implementation Details" unten.
 - **AC-4:** Given der Ortsvergleichs-Editor mit geöffnetem Reiter „Wetter-Metriken" /
   When der Nutzer die Zeilen Tageshöchst- und Tagestiefsttemperatur ansieht / Then trägt
   die Zeile Tageshöchst die Marke `D` und die Zeile Tagestiefst die Marke `L`, beide
-  gespeist aus `/api/sms-symbols` wie im Touren-Editor.
+  gespeist aus `/api/sms-symbols` wie im Trips-Editor.
   - Test: Frontend-Test per Svelte-AST
     (`weather_metric_kuerzel_marken.test.ts`, Erwartung umgedreht: beide Flächen lesen
     aus `/api/sms-symbols`) plus erweiterter Staging-Klickpfad
@@ -287,9 +287,9 @@ Details siehe „Implementation Details" unten.
 
 - **AC-5:** Given die drei Vergleichs-Editoren Übersicht, Stundenverlauf und Ausblick /
   When dieselbe Größe (z.B. Tageshöchsttemperatur) in jedem der drei angezeigt wird /
-  Then zeigen alle drei dieselbe Marke wie der Touren-Editor für dieselbe Größe.
+  Then zeigen alle drei dieselbe Marke wie der Trips-Editor für dieselbe Größe.
   - Test: Staging-Klickpfad, der nacheinander durch die drei Editor-Flächen navigiert
-    und den angezeigten Markentext gegen den Touren-Editor vergleicht.
+    und den angezeigten Markentext gegen den Trips-Editor vergleicht.
 
 - **AC-6:** Given ein Ortsvergleich mit einem konfigurierten Alarm auf
   Tageshöchsttemperatur / When die Wetterdaten den konfigurierten Schwellwert

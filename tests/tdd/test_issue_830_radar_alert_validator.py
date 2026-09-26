@@ -187,7 +187,7 @@ def test_ac2_validator_exit1_for_missing_segment_label():
         "plain",
         "utf-8",
     )
-    msg["Subject"] = "[Tour] Regen zieht auf"
+    msg["Subject"] = "[Trip] Regen zieht auf"
     msg["X-GZ-Mail-Type"] = "radar-alert"
 
     ok, errors = mod.validate_message(msg)

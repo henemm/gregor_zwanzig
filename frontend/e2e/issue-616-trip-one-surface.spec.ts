@@ -183,13 +183,13 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 	});
 
 	// ─── AC-8: Terminologie Trip · Etappe · Wegpunkt ───
-	test('AC-8: keine "Tour"/"Waypoint"-Terminologie auf der Trip-Oberfläche sichtbar', async ({
+	test('AC-8: keine "Trip"/"Waypoint"-Terminologie auf der Trip-Oberfläche sichtbar', async ({
 		page
 	}) => {
 		/**
 		 * GIVEN: die kanonische Trip-Oberfläche (alle Tabs)
 		 * WHEN:  der sichtbare Text gelesen wird
-		 * THEN:  kein "Tour"/"Reise"/"Waypoint" im sichtbaren UI.
+		 * THEN:  kein "Trip"/"Reise"/"Waypoint" im sichtbaren UI.
 		 */
 		await page.goto(DETAIL_URL);
 		await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();

@@ -232,7 +232,7 @@ def _run_trip(
     uid: str, trip_id: str, *, quiet: bool = False, throttled: bool = False,
     daily_limit_reached: bool = False,
 ) -> int:
-    # Issue #1726: Ruhezeit und Zaehler laufen in der Ortszone der TOUR —
+    # Issue #1726: Ruhezeit und Zaehler laufen in der Ortszone des TRIPS —
     # `make_trip()` legt ihre Wegpunkte nach Island (TRIP_ZONE), nicht nach Wien.
     quiet_from, quiet_to = (
         quiet_window_now(zone=TRIP_ZONE) if quiet

@@ -29,7 +29,7 @@ Chronologie der bestehenden Teil-Schutzmaßnahmen:
 - `for_testing()` (2) lenkt `smtp_host` nicht um → Test-Mails landen im Wächter und
   **schlagen fehl** statt lokal über Stalwart zugestellt zu werden. Der Test-/E2E-Mail-Pfad
   ist faktisch kaputt.
-- **Staging hat keine eigene Bremse:** Eine echte (nicht test-getaggte) Tour auf Staging
+- **Staging hat keine eigene Bremse:** Eine echte (nicht test-getaggte) Trip auf Staging
   würde ein echtes Briefing über Resend an einen echten Empfänger senden und still das
   Produktivkontingent belasten.
 

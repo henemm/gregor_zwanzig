@@ -24,7 +24,7 @@ def test_ac7_inbound_message_ohne_user_id_wirft_typeerror():
     ``TypeError`` -- kein stiller Rueckfall auf ``"default"``."""
     with pytest.raises(TypeError):
         InboundMessage(  # type: ignore[call-arg]
-            trip_name="TourA",
+            trip_name="TripA",
             body="status",
             sender="wanderer-a@example.com",
             channel="email",
@@ -36,7 +36,7 @@ def test_ac9_inbound_message_mit_explizitem_user_id_default_funktioniert_weiter(
     """AC-9 (Regression): das Konto ``"default"`` bleibt gueltig, wenn es
     EXPLIZIT uebergeben wird (Scheibe-A-Entscheid, nicht erneut vorzulegen)."""
     inbound = InboundMessage(
-        trip_name="TourA",
+        trip_name="TripA",
         body="status",
         sender="wanderer-a@example.com",
         channel="email",

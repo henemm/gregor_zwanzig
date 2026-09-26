@@ -19,7 +19,7 @@ workflow: fix-1727-s5c-vorschau-anzeige
 
 Sieben Fundstellen in fünf Dateien bestimmen den Kalendertag der Trip- und Compare-Vorschau
 sowie des Sofort-Vergleichs (`GET /api/compare`) weiterhin über die Serveruhr
-(`date.today()`/`datetime.now()` ohne Zone) statt über den Ortstag der Tour bzw. des
+(`date.today()`/`datetime.now()` ohne Zone) statt über den Ortstag der Trip bzw. des
 Preset-Orts — ein Verstoß gegen die bereits akzeptierte ADR-0044. Anders als S5b (Versandpfade)
 wirken die Fundstellen dieser Scheibe primär auf **Vorschau- und Anzeige-Pfade** — mit einer
 Ausnahme: `compare_html.py::_compute_next_send` sitzt im Footer einer tatsächlich versendeten
@@ -257,7 +257,7 @@ das ist Absicht, keine Inkonsistenz:
 
 - `trip_local_today(trip, now_utc)` (über `anchor_tz`, `trip_day.py:55-71`) beantwortet „welcher
   Kalendertag ist gerade?" — Zone ist die der Etappe am **Weltzeit**-Tag. Das ist der bewusst
-  gewählte Anker, weil die naive Alternative „erste Etappe der Tour" bei einer Tour über mehrere
+  gewählte Anker, weil die naive Alternative „erste Etappe der Trip" bei einer Trip über mehrere
   Zonen bis zu zehn Stunden danebenlag (`anchor_tz`-Docstring). Restfehler: die Zonendifferenz
   zweier **benachbarter** Etappen an einem Wechseltag — „Known Limitation, PO 2026-08-10",
   unverändert akzeptiert.
@@ -314,7 +314,7 @@ Fundstellen; eine Aufteilung je Fundstelle ist ebenso zulässig.
 
 ## Expected Behavior
 
-Beispiel: Eine Tour in Neuseeland (`Pacific/Auckland`, UTC+12), Server auf Weltzeit,
+Beispiel: Eine Trip in Neuseeland (`Pacific/Auckland`, UTC+12), Server auf Weltzeit,
 Abruf am 20.08.2026 um 14:00 UTC — am Ort ist es bereits der 21.08., 02:00 Uhr.
 
 | Was der Nutzer tut | Bisher | Nach dieser Scheibe |
@@ -331,7 +331,7 @@ genau dieses — der `given is not None`-Zweig wird nicht angefasst.
 
 - **AC-1:** Given eine Trip-Vorschau (`render_email_preview`/`render_sms_preview`/
   `render_telegram_preview`, `preview_service.py`) wird OHNE explizites `target_date` für eine
-  Tour in einer Zone mit deutlichem UTC-Offset aufgerufen (Fixtur `trip_two_zones`, Wellington
+  Trip in einer Zone mit deutlichem UTC-Offset aufgerufen (Fixtur `trip_two_zones`, Wellington
   UTC+12), sodass Ortstag und Servertag zum Aufrufzeitpunkt auseinanderfallen / When
   `_resolve_target_date(trip, given_date=None, now_utc)` (`:84`) die Etappe wählt und
   anschließend `_build_report(trip, target, report_type, now_utc, ...)` (`:120`) denselben
@@ -450,7 +450,7 @@ genau dieses — der `given is not None`-Zweig wird nicht angefasst.
 - **Der Wächter bleibt blind für `datetime.utcnow()`.** Für die fünf Dateien dieser Scheibe
   nachgemessen: keine `utcnow()`-Stelle vorhanden. Der Detektor selbst (`_AMBIENT_CLOCK_ATTRS`)
   wird nicht erweitert — S5e.
-- **Mehrzonen-Touren:** Restfehler = Zonendifferenz zweier benachbarter Etappen an einem
+- **Mehrzonen-Trips:** Restfehler = Zonendifferenz zweier benachbarter Etappen an einem
   Wechseltag. Unverändert bewusst offen (ADR-0044, PO-Entscheidung 2026-08-10, s. „Zwei
   Zonen-Auflösungen" oben).
 - **`send_on_demand_report`** (`trip_report_scheduler.py:966`) und die Go-Seite (225 ×

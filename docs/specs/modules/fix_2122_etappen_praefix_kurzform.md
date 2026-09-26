@@ -18,7 +18,7 @@ workflow: fix_2122_etappen_praefix_kurzform
 Die Alarm-Kurzform (SMS, Premium-SMS, Telegram-Kurzform) nennt heute keine Etappen-Nummer.
 Köpfe wie `Ziel: R2->42@16 Rest0` oder `km 10-14: TH:L->M` sind bei verzögertem Empfang —
 dem Normalfall auf Satellitenstrecke — nicht mehr zuordenbar. Dieser Fix stellt jeder
-Alarm-Kurzform der Trip-Fläche die Etappen-Nummer der Tour als Präfix voran (`S5 Ziel: …`),
+Alarm-Kurzform der Trip-Fläche die Etappen-Nummer der Trip als Präfix voran (`S5 Ziel: …`),
 abgeleitet aus dem Datum, dem die betroffenen Segmente tatsächlich entstammen. Der
 Ortsvergleich und Alarme ohne auflösbare Etappe bleiben byte-identisch zum Bestand.
 

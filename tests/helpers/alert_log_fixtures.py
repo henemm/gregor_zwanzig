@@ -123,11 +123,11 @@ def gust_alert_trip(
     trip_id: str, *, corridors: list | None = None, alert_channels: dict | None = None,
     with_thunder: bool = False,
 ) -> Trip:
-    """Tour, deren Boeen-Delta-Regel scharf ist (Standard-Schwelle 20 km/h).
+    """Trip, deren Boeen-Delta-Regel scharf ist (Standard-Schwelle 20 km/h).
 
     ``with_thunder`` schaltet zusaetzlich die Gewitter-Empfindlichkeit scharf --
     seit Issue #1460 (P1b) meldet die Stufe "standard" das Erreichen der
-    hoechsten Gefahrenstufe, sodass eine Tour ZWEI gleichzeitige Ausloeser
+    hoechsten Gefahrenstufe, sodass eine Trip ZWEI gleichzeitige Ausloeser
     haben kann (gebraucht fuer AC-7: mehrere Ausloeser, EIN Protokoll-Eintrag).
     """
     stage = Stage(

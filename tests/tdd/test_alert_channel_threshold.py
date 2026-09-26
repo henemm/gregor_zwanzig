@@ -164,7 +164,7 @@ def _change(severity: ChangeSeverity) -> WeatherChange:
 
 
 def _telegram_trip(trip_id: str) -> Trip:
-    """Tour mit scharfer Boeen-Delta-Regel (gust_alert_trip) UND
+    """Trip mit scharfer Boeen-Delta-Regel (gust_alert_trip) UND
     eingeschaltetem Telegram-Kanal — Vorbild
     ``test_alert_urgency.py::_telegram_trip``."""
     trip = gust_alert_trip(trip_id)
@@ -181,7 +181,7 @@ def _telegram_trip(trip_id: str) -> Trip:
 
 
 def _ac4_trip(trip_id: str) -> Trip:
-    """Tour mit ZWEI Wegpunkten (fuer den echten Briefing-Renderpfad, Vorbild
+    """Trip mit ZWEI Wegpunkten (fuer den echten Briefing-Renderpfad, Vorbild
     ``test_alert_undelivered_hint.py::_trip``) UND scharfer Boeen-Delta-Regel
     (fuer den echten Alarm-Auslosepfad, Vorbild ``gust_alert_trip``).
 
@@ -221,7 +221,7 @@ def _ac4_trip(trip_id: str) -> Trip:
 
 
 def _radar_trip(trip_id: str) -> Trip:
-    """Tour im aktiven Segmentfenster JETZT — Vorbild
+    """Trip im aktiven Segmentfenster JETZT — Vorbild
     ``test_issue_827_radar_throttle_recording.py::_make_trip``."""
     # #1667 S1: wanduhr-robustes Ankunftsfenster statt roher now+Nh-Arithmetik
     # (ab 22:00 UTC lief die +2h/+4h-Folge steigend ueber Mitternacht).

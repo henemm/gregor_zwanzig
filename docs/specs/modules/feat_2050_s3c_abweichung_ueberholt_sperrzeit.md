@@ -47,7 +47,7 @@ Schicht: ausschließlich Python-Core (`src/services/`). Kein Go-, kein Frontend-
   Testdateien (1 MODIFY, 1 CREATE) + 2 Dokudateien (ADR-0021-Nachtrag, diese Spec)
 - **Effort:** high
 - **Risiko:** HIGH — kritischer Alarmpfad, öffnet eine bislang harte Sperre, Rollout während
-  laufender Tour (KHW-Start 2026-08-23)
+  laufender Trip (KHW-Start 2026-08-23)
 
 ## Dependencies
 
@@ -330,7 +330,7 @@ Tagesbudget mehrfach aufreißen — genau das Risiko, gegen das der Deckel in S3
   Sättigungsproblem im Radar-Zweig und löste es mit einem zusätzlichen mm-Kanal
   (`alert_gate.py:746-760`) — dafür fehlt hier die Normierung über heterogene Metriken (°C,
   km/h, mm). Bewusst nicht in dieser Scheibe gefangen.
-- **7 zusätzliche Wetter-Abrufe je Sperrfenster und Tour** (Takt `*/15`, Default-Sperrzeit
+- **7 zusätzliche Wetter-Abrufe je Sperrfenster und Trip** (Takt `*/15`, Default-Sperrzeit
   120 Min) gegenüber heute 0, weil der Abruf jetzt auch bei offener Sperrzeit läuft. Bei
   Tagesbudget 9000 unkritisch, aber real und im PR zu nennen (deckungsgleich mit der
   #2065-Zahl für den Radar-Zweig).

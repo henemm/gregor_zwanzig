@@ -143,8 +143,8 @@ def test_ac6_email_reader_loest_default_nie_fuer_ein_nicht_angefragtes_konto(mon
     """
     _write_profile("nutzer_a", mail_to="nutzer-a@example.com", email_verified_at=VERIFIED)
     _write_profile("nutzer_b", mail_to="nutzer-b@example.com", email_verified_at=VERIFIED)
-    _make_trip("nutzer_a", "t-a", "TourA")
-    _make_trip("nutzer_b", "t-b", "TourB")
+    _make_trip("nutzer_a", "t-a", "TripA")
+    _make_trip("nutzer_b", "t-b", "TripB")
 
     aufrufe = _with_user_profile_zaehler(monkeypatch)
 
@@ -152,8 +152,8 @@ def test_ac6_email_reader_loest_default_nie_fuer_ein_nicht_angefragtes_konto(mon
     reader._notification_service = _RecordingNotificationService()
 
     for sender, trip_name in (
-        ("nutzer-a@example.com", "TourA"),
-        ("nutzer-b@example.com", "TourB"),
+        ("nutzer-a@example.com", "TripA"),
+        ("nutzer-b@example.com", "TripB"),
     ):
         imap = _FakeImap(_msg(sender, trip_name).as_bytes())
         reader._process_single(imap, b"1", _valid_base_settings(sender))
@@ -213,7 +213,7 @@ def _konto_mit_chat_und_trip(user_id: str, chat_id: str) -> str:
     (ordner / "user.json").write_text(
         json.dumps({"id": user_id, "telegram_chat_id": chat_id}), encoding="utf-8",
     )
-    tripname = f"Tour-{user_id}-" + uuid.uuid4().hex[:6]
+    tripname = f"Trip-{user_id}-" + uuid.uuid4().hex[:6]
     (ordner / "briefings" / f"t-{user_id}.json").write_text(json.dumps({
         "id": f"t-{user_id}", "name": tripname, "stages": [],
     }))

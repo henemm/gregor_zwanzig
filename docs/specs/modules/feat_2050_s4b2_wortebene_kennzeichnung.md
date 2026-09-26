@@ -59,7 +59,7 @@ Frontend-Anteil.
   ohne Puffer knapp am 250er-Standardlimit — `loc_limit_override 500` vorsorglich setzen.
 - **Files:** 6 MODIFY (Produktivcode) + neue Testdatei(en)
 - **Effort:** medium
-- **Risiko:** MEDIUM–HIGH — Alarmtext auf allen vier Kanälen, laufende Tour (Karnischer
+- **Risiko:** MEDIUM–HIGH — Alarmtext auf allen vier Kanälen, laufende Trip (Karnischer
   Höhenweg, Start 2026-08-23); additiv, keine Signaturänderung an bestehenden Pflichtfeldern
 
 ## Dependencies

@@ -323,7 +323,7 @@ verifiziert:
 2. **Zu grobe Körnung.** Der Mitschnitt-`source_key` ist der konstante Dienstname
    (`warn_egress.py:394`, z.B. immer `"vigilance"`), während der eigentliche
    Zwischenspeicher-`cache_key` provider-spezifisch pro Koordinate gerundet ist. Liegen zwei
-   Touren im selben 15-Minuten-Prüftakt bei derselben Quelle (z.B. zwei GeoSphere-Orte), teilen
+   Trips im selben 15-Minuten-Prüftakt bei derselben Quelle (z.B. zwei GeoSphere-Orte), teilen
    sich ihre Mitschnitte denselben `source_key` — ein Zeitfenster-Lookup fände beide und müsste
    den jüngeren wählen, in rund der Hälfte der Fälle den FREMDEN. Das verletzt die
    Randbedingung „falsche Zuordnung ist schlimmer als keine" im Regelbetrieb, nicht nur

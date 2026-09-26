@@ -389,12 +389,12 @@ Zwischenstand.
   - Test: Live-E2E — `frontend/e2e/compare-versand-speichert-selbst.spec.ts` (bereits in
     `.github/ci_e2e_specs.txt`), keine neue Datei.
 
-- **AC-8 (Fläche A bleibt vollständig unverändert):** Given die Tour (`/trips/[id]`) hat heute
+- **AC-8 (Fläche A bleibt vollständig unverändert):** Given die Trip (`/trips/[id]`) hat heute
   keinen `compare-wizard-state`-Context, `wiz` ist dort nie gesetzt, der Speicherweg läuft über
   `saveController` / When `VersandTab` auf Wertprops umgestellt wird, ohne dass sich an Mount (A)
   etwas ändert (`BriefingScheduleTab.svelte:130` reicht weiterhin nur
   `trip`/`onTripUpdate`/`saveController`/`reportConfig`/`onJump` durch) / Then bleibt das
-  Verhalten der Tour identisch.
+  Verhalten der Trip identisch.
   - Test: bestehende E2E `frontend/e2e/versand-tab.spec.ts` bleibt ohne Änderung grün — reiner
     Regressionsnachweis, keine neue Spec nötig.
 

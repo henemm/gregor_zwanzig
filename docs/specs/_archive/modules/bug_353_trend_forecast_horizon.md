@@ -117,7 +117,7 @@ for stage in future_stages:
 
 - Etappen jenseits `today+15` bekommen **keine** Vorschau — das ist eine physikalische Grenze
   numerischer Wettervorhersage (kein Modell reicht weiter), kein behebbares Defizit. Sobald die
-  Tour näher rückt, fällt die Etappe automatisch in den Horizont und erscheint im Trend.
+  Trip näher rückt, fällt die Etappe automatisch in den Horizont und erscheint im Trend.
 - Die Grenze `OPENMETEO_MAX_FORECAST_DAYS = 15` ist konservativ gegen die empirische
   Open-Meteo-Obergrenze gesetzt. Sollte Open-Meteo den Horizont künftig ändern, ist nur die
   Konstante anzupassen.

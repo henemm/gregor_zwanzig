@@ -15,7 +15,7 @@ Grund: `display: none` auf `<table>` nimmt den kompletten Teilbaum aus dem Layou
 
 - Desktop-Darstellung (>899px) — unverändert, keine Regel in der Media Query betrifft sie
 - `AlertMetricLevelRow.svelte` — bleibt unangetastet, ihre Mobil-Darstellung existiert bereits
-- Kein neuer Compare-eigener oder Trip-eigener Sonderpfad — die Komponente ist geteilt (Touren + Ortsvergleich), der Fix gilt automatisch für beide
+- Kein neuer Compare-eigener oder Trip-eigener Sonderpfad — die Komponente ist geteilt (Trips + Ortsvergleich), der Fix gilt automatisch für beide
 
 ## Manuelle Test-Schritte
 

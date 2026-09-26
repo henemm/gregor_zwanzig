@@ -46,8 +46,8 @@ test('AC-7: buildPreviewUrl(sms, gr20, evening, 2026-05-20) → date als Query',
 
 test('AC-7: buildPreviewUrl encodet trip_id mit Sonderzeichen', () => {
 	assert.equal(
-		buildPreviewUrl('email', 'tour/2026', 'morning'),
-		'/api/preview/tour%2F2026/email?type=morning'
+		buildPreviewUrl('email', 'trip/2026', 'morning'),
+		'/api/preview/trip%2F2026/email?type=morning'
 	);
 });
 
@@ -75,8 +75,8 @@ test('AC-6: buildPreviewUrl(telegram, gr20, evening, 2026-05-25) → telegram + 
 
 test('AC-6: buildPreviewUrl encodet trip_id für telegram-Kanal', () => {
 	assert.equal(
-		buildPreviewUrl('telegram', 'tour/2026', 'morning'),
-		'/api/preview/tour%2F2026/telegram?type=morning'
+		buildPreviewUrl('telegram', 'trip/2026', 'morning'),
+		'/api/preview/trip%2F2026/telegram?type=morning'
 	);
 });
 

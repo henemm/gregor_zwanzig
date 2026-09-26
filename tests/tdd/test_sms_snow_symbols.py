@@ -1,4 +1,4 @@
-"""Touren-SMS: die drei Schnee-Kuerzel folgen dem zentralen Wetter-Register.
+"""Trips-SMS: die drei Schnee-Kuerzel folgen dem zentralen Wetter-Register.
 
 SPEC: docs/specs/modules/fix_1435_e3b_sms_kuerzel.md (#1435 Etappe E3b).
 

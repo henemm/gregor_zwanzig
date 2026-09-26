@@ -26,7 +26,7 @@ aufwärts (Verschärfung) noch abwärts (Entwarnung); beide Richtungen melden k�
 je Stufe. (P2) Das
 Melde-Gedächtnis wird beim Briefing-Versand nicht mehr vollständig gelöscht — nur der
 Änderungs-Raum, nicht der Raum der amtlichen Warnungen, die dadurch heute jedes Mal ihre Entprellung
-verlieren. (P4) Amtliche Warnungen bekommen für Tour UND Ortsvergleich einen echten Zeit-**und**-
+verlieren. (P4) Amtliche Warnungen bekommen für Trip UND Ortsvergleich einen echten Zeit-**und**-
 Ort-Bezug, statt wie heute jede irgendwann gültige Warnung an jeder Etappen-Koordinate sofort zu
 melden — unabhängig davon, ob der Nutzer zur Gültigkeitszeit dort überhaupt ist. Diese Scheibe ist
 reiner Python-Kern-Code (kein Go, kein Frontend) und bereitet die Zusammenführung der vier
@@ -249,7 +249,7 @@ wird nicht angefasst.
 | P1a | **Weniger Alarme** — beabsichtigt (Wertebereich war ohnehin nie eine legitime Alarm-Quelle laut ADR-0009), aber ein Trip, der bisher ausschließlich über Korridore alarmiert wurde, alarmiert nach dieser Scheibe **gar nicht mehr**. AC-1 macht das explizit sichtbar statt es stillschweigend geschehen zu lassen. |
 | P1b | **Mehr Alarme** bei Gewitter — in BEIDEN Richtungen (heute stumm bei genau einem Stufensprung, aufwärts wie abwärts). Harmlos, das ist der Zweck der Reparatur (B4). Die zusätzlichen Entwarnungs-Meldungen (PO-go 2026-08-03) sind gewollt und beim Nutzer nie mehr als eine je Stufenwechsel; das Tageslimit (`alert_daily_limit`) bleibt die Obergrenze. Kein Risiko für andere Metriken (AC-18 sichert die stetigen Größen ausdrücklich ab). |
 | P2 | Falsch geschnitten → **Alarm-Stau** (ein amtlicher Zustand wird als „neu" erneut gemeldet, obwohl er es nicht ist) — harmlos im Vergleich zur heutigen Lage, aber sichtbar in AC-22. |
-| P4 | **Alarm-Verlust** — die gefährlichste Richtung, und der Punkt, an dem eine frühere Fassung dieser Spec selbst zu eng geschnitten war (auf ein einzelnes Segment verengt, Team-Lead-Korrektur 2026-08-02). AC-25 ist das entscheidende Gegen-Beispiel: eine relevante Warnung für ein SPÄTERES Segment darf nicht verloren gehen. AC-24/AC-26 beweisen die Fenster-Grenzfälle am aktiven Segment, AC-27/AC-28 dass ein Ruhetag bzw. eine Etappen-Pause spätere Segmente NICHT ausschließt, AC-29 den vollständigen Touren-Abschluss, AC-31/AC-32 die Ortsvergleichs-Fenstergrenzen. |
+| P4 | **Alarm-Verlust** — die gefährlichste Richtung, und der Punkt, an dem eine frühere Fassung dieser Spec selbst zu eng geschnitten war (auf ein einzelnes Segment verengt, Team-Lead-Korrektur 2026-08-02). AC-25 ist das entscheidende Gegen-Beispiel: eine relevante Warnung für ein SPÄTERES Segment darf nicht verloren gehen. AC-24/AC-26 beweisen die Fenster-Grenzfälle am aktiven Segment, AC-27/AC-28 dass ein Ruhetag bzw. eine Etappen-Pause spätere Segmente NICHT ausschließt, AC-29 den vollständigen Trips-Abschluss, AC-31/AC-32 die Ortsvergleichs-Fenstergrenzen. |
 
 ## Prüfung mit zwei Nutzern
 
@@ -378,7 +378,7 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   erhalten, der Änderungs-Eintrag wird gelöscht.
   - Test: `alert_state.json` mit beiden Schlüsseln vorab schreiben, `reset()` aufrufen, danach `load()` prüfen: amtlicher Schlüssel vorhanden mit unveränderten Werten, Änderungs-Schlüssel fehlt.
 
-- **AC-21 (nutzersichtbar):** Given eine Tour mit einer bereits gemeldeten Wetter-Änderung, When
+- **AC-21 (nutzersichtbar):** Given eine Trip mit einer bereits gemeldeten Wetter-Änderung, When
   danach das reguläre Briefing versendet wird und derselbe (unveränderte) Wert erneut geprüft
   wird, Then wird KEINE erneute Meldung ausgelöst — der Briefing-Snapshot selbst ist jetzt der
   Vergleichsanker, nicht der gelöschte Alt-Zustand. Die früher beobachtete zweimal-täglich-
@@ -431,7 +431,7 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   gewollt, s. Implementation Details).
   - Test: Segment 1 endet vor `jetzt`, Segment 2 beginnt nach `jetzt`; Warnung an Segment-2-Koordinaten innerhalb von dessen Fenster → Treffer, trotz der Lücke.
 
-- **AC-29 (letzter Tourtag):** Given der letzte Tourtag, das letzte Segment ist bereits beendet
+- **AC-29 (letzter Trip-Tag):** Given der letzte Trip-Tag, das letzte Segment ist bereits beendet
   (`end_time < jetzt`) und kein weiteres Segment existiert, When der Check läuft, Then wird kein
   amtlicher Alarm mehr ausgewertet — Ergebnis leer.
   - Test: Trip mit `end_date`=gestern bzw. letztes Segment `end_time` in der Vergangenheit, `[]` erwartet.

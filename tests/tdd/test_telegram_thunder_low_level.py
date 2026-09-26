@@ -49,7 +49,7 @@ from services.weather_snapshot import WeatherSnapshotService
 
 _WP_LAT, _WP_LON = 42.1, 9.0
 _TRIP_ID = "telegram-thunder-low"
-_TRIP_NAME = "Telegram-LOW-Tour"
+_TRIP_NAME = "Telegram-LOW-Trip"
 _USER_ID = "default"
 _HOURS = 12
 

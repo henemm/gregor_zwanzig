@@ -14,7 +14,7 @@ RED-Ursache (heute, vor der Implementierung):
   Wertebereich (AC-1 rot: es geht eine Mail raus und `check_and_send_alerts()`
   liefert True).
 - `has_corridors` (`trip_alert.py:188`/`:485`) zaehlt Wertebereiche als eigene
-  aktive Alarmquelle, sodass eine Tour ohne jede Empfindlichkeitsstufe
+  aktive Alarmquelle, sodass eine Trip ohne jede Empfindlichkeitsstufe
   trotzdem geprueft und alarmiert wird (AC-1 rot auch ueber `check_all_trips()`).
 
 Keine Mocks: echte `TripAlertService`-Laeufe, echte Trip-/Snapshot-Persistenz,
@@ -94,7 +94,7 @@ def _data(segment_id: int | str = 1, **summary_kwargs) -> SegmentWeatherData:
 
 
 def _corridor_only_trip(trip_id: str) -> Trip:
-    """Tour, deren EINZIGE eingestellte Alarmquelle ein Wertebereich ist:
+    """Trip, deren EINZIGE eingestellte Alarmquelle ein Wertebereich ist:
     keine Empfindlichkeitsstufen, keine Voreinstellung, keine Regeln,
     `alert_on_changes=False`."""
     stage = Stage(
@@ -115,7 +115,7 @@ def _corridor_only_trip(trip_id: str) -> Trip:
 
 
 def _corridor_plus_level_trip(trip_id: str) -> Trip:
-    """Dieselbe Tour, zusaetzlich mit Empfindlichkeitsstufe fuer Boeen."""
+    """Dieselbe Trip, zusaetzlich mit Empfindlichkeitsstufe fuer Boeen."""
     trip = _corridor_only_trip(trip_id)
     trip.display_config = UnifiedWeatherDisplayConfig(
         trip_id=trip_id,
@@ -178,11 +178,11 @@ def _read_alert_log(user_id: str) -> list:
 def test_ac1_wertebereich_als_einzige_quelle_loest_keinen_alarm_aus():
     """AC-1.
 
-    GIVEN eine Tour, deren EINZIGE eingestellte Alarmquelle ein Wertebereich
+    GIVEN eine Trip, deren EINZIGE eingestellte Alarmquelle ein Wertebereich
           mit "melden" ist (Boeen hoechstens 20 km/h)
     WHEN  die Vorhersage mit 25 km/h diese Grenze reisst und der Alarm-Lauf
-          die Tour prueft
-    THEN  geht KEINE Meldung raus — die Tour gilt als "keine aktive
+          die Trip prueft
+    THEN  geht KEINE Meldung raus — die Trip gilt als "keine aktive
           Alarmquelle" (Zustand vor Issue #1444 S1).
     """
     user_id = _fresh_user("ac1")
@@ -211,11 +211,11 @@ def test_ac1_wertebereich_als_einzige_quelle_loest_keinen_alarm_aus():
         _clean_user(user_id)
 
 
-def test_ac1b_tour_mit_nur_wertebereich_wird_im_gesamtlauf_nicht_alarmiert():
+def test_ac1b_trip_mit_nur_wertebereich_wird_im_gesamtlauf_nicht_alarmiert():
     """AC-1 (Gesamtlauf).
 
-    GIVEN dieselbe Tour, gespeichert auf Platte
-    WHEN  der regulaere Alarm-Lauf ueber alle Touren laeuft
+    GIVEN dieselbe Trip, gespeichert auf Platte
+    WHEN  der regulaere Alarm-Lauf ueber alle Trips laeuft
     THEN  wird kein Alarm versendet — der Wertebereich zaehlt nicht mehr als
           aktive Alarmquelle.
     """
@@ -246,7 +246,7 @@ def test_ac1b_tour_mit_nur_wertebereich_wird_im_gesamtlauf_nicht_alarmiert():
 def test_ac2_empfindlichkeitsstufe_feuert_weiterhin_neben_dem_wertebereich():
     """AC-2 (Regressionsschutz).
 
-    GIVEN dieselbe Tour zusaetzlich mit Empfindlichkeitsstufe "standard" fuer
+    GIVEN dieselbe Trip zusaetzlich mit Empfindlichkeitsstufe "standard" fuer
           Boeen (Schwelle 20 km/h)
     WHEN  sich die Boeen seit dem Briefing-Stand um 25 km/h aendern
     THEN  feuert der Alarm wie vor dieser Scheibe — die Stufe ist vom
@@ -277,8 +277,8 @@ def test_ac2_empfindlichkeitsstufe_feuert_weiterhin_neben_dem_wertebereich():
 def test_ac3_gespeicherter_wertebereich_ueberlebt_laden_und_erneutes_speichern(tmp_path):
     """AC-3.
 
-    GIVEN eine Bestands-Tour mit gespeichertem Wertebereich ("melden" gesetzt)
-    WHEN  die Tour geladen und ohne Aenderung an den Wertebereichen erneut
+    GIVEN eine Bestands-Trip mit gespeichertem Wertebereich ("melden" gesetzt)
+    WHEN  die Trip geladen und ohne Aenderung an den Wertebereichen erneut
           gespeichert wird
     THEN  steht das Feld unveraendert in der Datei — kein Datenverlust trotz
           Wirkungslosigkeit (Read-Modify-Write).

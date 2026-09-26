@@ -284,7 +284,7 @@ def test_ac3_unaufloesbare_auswahl_zeigt_die_grundauswahl_und_warnt(caplog):
 
     ⚠️ NACHGEZOGEN durch #1848 A3 (AC-10, PO-Freigabe 2026-08-21): das
     Rueckfall-ZIEL sind nicht mehr die sieben festen Standardspalten, sondern
-    die Grundauswahl der Tour. Der Rueckfall selbst — und die Warnung — sind
+    die Grundauswahl der Trip. Der Rueckfall selbst — und die Warnung — sind
     unveraendert Gegenstand dieses Tests.
     """
     from tests.helpers.trip_outlook_selection import (
@@ -305,7 +305,7 @@ def test_ac3_unaufloesbare_auswahl_zeigt_die_grundauswahl_und_warnt(caplog):
         "(AC-3, R-A2-3/M5)."
     )
     kopf = html_outlook_headers(html)
-    # #1848 A3: Rueckfall-Ziel ist die Grundauswahl der Tour. Gegen die
+    # #1848 A3: Rueckfall-Ziel ist die Grundauswahl der Trip. Gegen die
     # DARSTELLBAREN Kennungen der Grundauswahl geprueft, nicht gegen eine
     # getippte Spaltenliste -- so zieht die Erwartung mit dem Katalog mit.
     from output.renderers.compare_outlook_metric_ids import (

@@ -81,7 +81,7 @@ class ActivityProfile(str, Enum):
 
     WINTERSPORT     = "wintersport"      # Schnee/Lawinen
     WANDERN         = "wandern"          # Tieflagen-Wanderung (Scoring-Semantik)
-    SUMMER_TREKKING = "summer_trekking"  # Alpine Mehrtagestour (Aggregations-Semantik)
+    SUMMER_TREKKING = "summer_trekking"  # Alpine Mehrtages-Trip (Aggregations-Semantik)
     ALLGEMEIN       = "allgemein"        # Generischer Default
 ```
 

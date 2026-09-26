@@ -9,7 +9,7 @@ tags: [sms, premium, garmin, seven-io, verification]
 ---
 
 <!-- Issue #1533 (Scheibe S4 des Epics #1676) -- Generalprobe Premium-SMS am
-     echten Garmin-inReach-Geraet, letzte Scheibe vor der KHW-Tour ab 20.8.
+     echten Garmin-inReach-Geraet, letzte Scheibe vor der KHW-Trip ab 20.8.
      Vorgaenger: S1 (feat_1676_s1_premium_sms_rueckkanal.md, live),
      S2a (feat_1676_s2a_premium_sms_versand.md, live). ADR-0049 legt den
      Kanalnamen `premium_sms` fest. -->
@@ -24,7 +24,7 @@ tags: [sms, premium, garmin, seven-io, verification]
 
 Diese Scheibe liefert den finalen Nachweis, dass das Trip-Briefing als
 Premium-SMS zuverlässig auf dem echten Garmin-inReach-Gerät ankommt — die
-letzte offene Bedingung vor der KHW-Tour (ab 2026-08-20). Sie trennt zwei
+letzte offene Bedingung vor der KHW-Trip (ab 2026-08-20). Sie trennt zwei
 Dinge, die im Issue-Text vermischt waren: (a) Prüfungen, die **kostenlos**
 und **ohne PO-Aktivierung** automatisiert laufen (Zeichenbudget, Zeichensatz,
 ein GSM-7-Wächter für zwei bisher unbewachte SMS-Pfade), und (b) einen
@@ -80,7 +80,7 @@ bestätigt** (das ist Aufgabe der RED-Phase):
    Extension-Tabelle (`^{}[]~|\€`, s. `_GSM7_EXTENDED_TWO_SEPTET_CHARS` in
    `test_compare_sms_gsm7_charset.py`) sind bereits ASCII und keine
    „Buchstaben" — sie durchlaufen `_ascii()`/`fold_ascii()` unverändert. Ein
-   Trip-Name wie `"KHW [Test]"` oder `"Tour~Nord"` würde das eckige-Klammer-
+   Trip-Name wie `"KHW [Test]"` oder `"Trip~Nord"` würde das eckige-Klammer-
    bzw. Tilde-Zeichen unverändert in den amtlichen-Alarm-SMS-Text tragen —
    dieselbe Fehlerklasse wie der historische `°`-Fund im Compare-Pfad
    (Segment-Kosten-Verdopplung), nur über den Trip-Namen statt über einen
@@ -90,7 +90,7 @@ bestätigt** (das ist Aufgabe der RED-Phase):
    gefaltet, s. Kommentar `official_alerts.py:1890-1892`), trifft dieses
    eigene Ziel bei Extension-Zeichen nur nicht vollständig.
    **BESTÄTIGT in der RED-Phase (2026-08-12):** der Test ging bei allen drei
-   Parametrisierungen (`"KHW [Test]"`, `"Tour~Nord"`, `"Weg|Nord"`) rot —
+   Parametrisierungen (`"KHW [Test]"`, `"Trip~Nord"`, `"Weg|Nord"`) rot —
    echter Fund, kein falscher Alarm. PO-Entscheidung 2026-08-12: **eigenes
    Issue #1796**, nicht in dieser Scheibe fixen. Der ursprüngliche AC-3-Test
    ist deshalb **aus dieser Scheibe entfernt** (Reproduktion + Messwerte

@@ -186,7 +186,7 @@ aufgelösten Leiter. Geprüft wird die entstehende Stufe, **nie** der Tabellenin
    andere Quelle als die, die `_REGIONS` für die Koordinate nennt — die Leiterwahl folgt seither
    der tatsächlich liefernden Quelle (`app.model_registry.lpi_schluessel_fuer_quelle()`), nicht
    mehr der Region allein.
-5. **Keine der beiden Haupttouren ist betroffen:** Karnischer Höhenweg (≈46,6 N / 12,8 O)
+5. **Keine der beiden Haupt-Trips ist betroffen:** Karnischer Höhenweg (≈46,6 N / 12,8 O)
    liegt in `DE_ALPEN`, GR20/Korsika (≈42,2 N / 9,07 O) in `FR`. `EU_REST` betrifft Nord-,
    Ost- und Südeuropa.
 

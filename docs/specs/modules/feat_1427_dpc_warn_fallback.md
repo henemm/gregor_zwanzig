@@ -50,7 +50,7 @@ wäre eine Rücknahme des Hinweises „amtliche Warnungen nicht abrufbar" bei
 greifendem Fallback sachlich falsch gewesen, weil Hitze-/Windwarnungen bei
 MeteoAlarm-Ausfall trotzdem fehlen würden — Details dazu bei AC-7.
 
-Betroffen sind reale Touren mit Punkten auf italienischem Boden (z.B. KHW 403,
+Betroffen sind reale Trips mit Punkten auf italienischem Boden (z.B. KHW 403,
 Karnischer Höhenweg), für die GeoSphere Austria live mit HTTP 404 ablehnt —
 Italien hat sonst nur eine amtliche Quelle. DPC deckt dabei nur drei
 Risikoarten ab (Gewitter, Hochwasser, Erdrutsch) und liefert nur „heute +

@@ -345,7 +345,7 @@ assert len(forecast.data) == 48  # 48 Stunden
 
 3. **Zielgruppen-Nutzen:**
    - Weitwanderer auf GR20 (Korsika) → AROME 1.3km statt ECMWF 40km
-   - Skandinavien-Touren → MetNo Nordic 1km
+   - Skandinavien-Trips → MetNo Nordic 1km
 
 ### Genehmigte Parameter (Antrag)
 

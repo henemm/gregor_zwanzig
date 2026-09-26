@@ -1,5 +1,5 @@
 // TDD RED — Feature #1435 Etappe E3a: neuer fünfter Block "Wetter-Metriken"
-// in `HubOverview.svelte` (Übersichts-Reiter einer Tour).
+// in `HubOverview.svelte` (Übersichts-Reiter einer Trip).
 // Spec: docs/specs/modules/feat_1435_e3a_uebersicht_wetter_block.md
 // Belegt: AC-4 (Frontend-Teil), AC-5 (Frontend-Teil), AC-9, AC-10,
 // AC-12 (struktureller Teil).

@@ -25,7 +25,7 @@ tags: [sms, premium, garmin, seven-io, channel, frontend, go-api]
 
 Premium-SMS (Garmin inReach), seit S2a ein vollwertiger vierter Versandkanal, wird für den
 Nutzer im Trip-Editor sichtbar und selbst schaltbar — inklusive der von S1 gelernten
-Rückadresse und ihres Alters. Auf Tour soll nicht länger rätselhaft bleiben, ob der Kanal aus
+Rückadresse und ihres Alters. Auf Trip soll nicht länger rätselhaft bleiben, ob der Kanal aus
 ist, noch keine Rückadresse gelernt wurde oder sie verfallen ist — das Backend unterscheidet
 diese drei Fälle bereits (S2a, `ChannelBlockedError.reason_code`), die Oberfläche zeigt sie
 bislang nirgends.

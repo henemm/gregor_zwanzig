@@ -223,7 +223,7 @@ describe('AC-1: VersandTab leitet den Vergleichs-Zweig aus Wertprops her', () =>
 			assert.ok(
 				namen.includes(unveraendert),
 				`AC-1 FAIL: die unveraenderte Prop \`${unveraendert}\` ist verschwunden — diese ` +
-					'Scheibe tauscht nur die Wizard-Quelle aus, sie nimmt der Flaeche A (Tour) nichts weg.'
+					'Scheibe tauscht nur die Wizard-Quelle aus, sie nimmt der Flaeche A (Trip) nichts weg.'
 			);
 		}
 		assert.ok(
@@ -336,7 +336,7 @@ describe('AC-2 Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Flaeche B 
 		);
 	});
 
-	test('Flaeche A (Tour, context="route"): kein Versandstand gemeldet, keine Vergleichs-Speicherung', async () => {
+	test('Flaeche A (Trip, context="route"): kein Versandstand gemeldet, keine Vergleichs-Speicherung', async () => {
 		const { u, rueckruf, gesehen } = await effektAufbauen({
 			context: 'route',
 			trip: { id: 't-1' }
@@ -345,13 +345,13 @@ describe('AC-2 Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Flaeche B 
 		assert.strictEqual(
 			gesehen.length,
 			0,
-			'AC-2 FAIL: der Tour-Zweig meldet einen Versandstand an den Vergleichs-Speicherweg. ' +
-				'Faellt der Guard weg, laeuft die Tour in den Vergleichs-Speicherweg.'
+			'AC-2 FAIL: der Trip-Zweig meldet einen Versandstand an den Vergleichs-Speicherweg. ' +
+				'Faellt der Guard weg, laeuft die Trip in den Vergleichs-Speicherweg.'
 		);
 		assert.strictEqual(
 			u.vergleichSpeicherung,
 			null,
-			'AC-2 FAIL: an der Tour darf es keine Vergleichs-Speicherung geben.'
+			'AC-2 FAIL: an der Trip darf es keine Vergleichs-Speicherung geben.'
 		);
 	});
 

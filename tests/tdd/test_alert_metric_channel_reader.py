@@ -190,7 +190,7 @@ class _VergleichVersandRekorder:
 # ───────────────────────────── Trip-Bausteine ───────────────────────────────
 
 def _trip(trip_id: str, *, eintrag=None, geerbt=("email", "telegram")):
-    """Tour mit scharfer Boeen-Regel (geteilter Baustein
+    """Trip mit scharfer Boeen-Regel (geteilter Baustein
     `tests/helpers/alert_log_fixtures.gust_alert_trip`), gesetztem
     Briefing-Kanalsatz (= geerbter Anteil) und optionalem
     `alert_metric_channels`-Eintrag. KEINE `alert_rules` — diese Datei misst
@@ -998,7 +998,7 @@ def test_ac24_aufloesung_traegt_je_nutzer_ausschliesslich_eigene_eintraege(
 # ────────────────── Bausteine fuer den Trip-Radar-Pfad ──────────────────────
 
 def _radar_trip(trip_id: str):
-    """Tour mit garantiert JETZT aktivem Segment (Vorbild
+    """Trip mit garantiert JETZT aktivem Segment (Vorbild
     `test_issue_1069_tier_channel_gating.py::_make_radar_trip`) und
     abo-weitem Kanalsatz `{email}`."""
     from datetime import time as time_type

@@ -47,7 +47,7 @@ viele Deps (SMTP, Provider). Geprüft wird der relevante Quelltext + eine echte 
 | `segment_start_time_is_true_utc_for_cest_location` | AC-4 | `_convert_trip_to_segments` gibt UTC 06:00 zurück (nicht 08:00) für CEST 08:00-Eingabe |
 | `segment_header_shows_configured_local_departure_time` | AC-4 | `render_plain`-Header zeigt "08:00" nach korrekter UTC-Konvertierung |
 | `hourly_filter_selects_cest_correct_window` | AC-4 | `_extract_hourly_rows` selektiert UTC 6–8 (= CEST 8–10), nicht UTC 8–10 |
-| `utc_location_segment_unchanged` | AC-4 | UTC-Tour (Reykjavik): `start_time.hour = 8` — keine Regression |
+| `utc_location_segment_unchanged` | AC-4 | UTC-Trip (Reykjavik): `start_time.hour = 8` — keine Regression |
 
 ## Test-Ausführung
 

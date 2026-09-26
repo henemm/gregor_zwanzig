@@ -232,7 +232,7 @@ nicht verlangt.
 ## Expected Behavior
 
 - **Input:** Ein Nutzer mit aktivierten Größen Tages-Tief/-Hoch,
-  Nacht-Tiefsttemperatur (gemessen oder gefühlt) erhält ein Touren-Briefing
+  Nacht-Tiefsttemperatur (gemessen oder gefühlt) erhält ein Trips-Briefing
   (morgens oder abends) mit eingebetteter SMS-Kurzform.
 - **Output:** Die SMS-Zeile trägt weiterhin `K`/`D`/`N`/`FK`/`FD`/`FN` an
   denselben Positionen — **außer** dass ein zuvor vorhandener `WC`-Token

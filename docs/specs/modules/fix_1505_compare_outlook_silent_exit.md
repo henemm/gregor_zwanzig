@@ -59,7 +59,7 @@ Zwei-Zustands-Modell statt Trips Vier-Zustands-Modell.
 
 ### 1. Zwei-Zustands-Modell statt Trips Vier-Zustands-Modell (bewusste Vereinfachung)
 
-Compare hat kein „Tour zu Ende"-Konzept (kein `NO_STAGES`-Äquivalent aus #1486) und `target_date`
+Compare hat kein „Trip zu Ende"-Konzept (kein `NO_STAGES`-Äquivalent aus #1486) und `target_date`
 ist bei Scheduler-Versand `date.today()` mit festem 96h-Fetch-Fenster (`COMPARE_FORECAST_HOURS`,
 `comparison_engine.py:40`) — ein `BEYOND_HORIZON`-Fall ist im Regelbetrieb praktisch ausgeschlossen
 (nur im interaktiven Preview-Pfad mit frei wählbarem `target_date` theoretisch möglich, dort aber

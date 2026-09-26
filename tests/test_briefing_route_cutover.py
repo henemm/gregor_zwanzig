@@ -1,4 +1,4 @@
-"""TDD RED — Issue #1250 Scheibe 7a (feat-1250-s7-cutover): Touren-Cutover
+"""TDD RED — Issue #1250 Scheibe 7a (feat-1250-s7-cutover): Trips-Cutover
 route -> `briefings/<id>.json` (Python-Lesen+Schreiben) + Migrations-Wipe-
 Refresh.
 
@@ -41,7 +41,7 @@ def _run_migrate(root: Path, extra_args: list[str] | None = None) -> subprocess.
     return subprocess.run(args, capture_output=True, text=True, timeout=90, cwd=REPO_ROOT)
 
 
-def _full_trip_dict(trip_id: str, name: str = "Test-Tour", kind: str | None = "route") -> dict:
+def _full_trip_dict(trip_id: str, name: str = "Test-Trip", kind: str | None = "route") -> dict:
     """Realistischer Trip-Dict mit genesteten Maps (report_config/
     display_config), Corridors, AlertRules + einem unbekannten Top-Level-Feld
     -- Grundlage fuer AC-29 (kein Feldverlust ueber briefings/)."""

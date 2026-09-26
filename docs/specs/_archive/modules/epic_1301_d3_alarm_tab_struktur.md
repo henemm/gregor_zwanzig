@@ -85,5 +85,5 @@ Der geteilte Alarm-Tab benennt seine Auslöser-Schalter irreführend („Wann Wa
 
 ## Known Limitations
 
-- Die Überschrift „Amtliche & Radar-Warnungen" gilt nur im Vergleich; im Trip fehlt Radar bauartbedingt (kein Radar-Alarm für Touren) → dort „Amtliche Warnungen". Das ist gewollt, keine Inkonsistenz.
+- Die Überschrift „Amtliche & Radar-Warnungen" gilt nur im Vergleich; im Trip fehlt Radar bauartbedingt (kein Radar-Alarm für Trips) → dort „Amtliche Warnungen". Das ist gewollt, keine Inkonsistenz.
 - `official-warnings` und `radar` bleiben zwei getrennte `.alarme-section`-Blöcke (Testid-Invariante bleibt erhalten); sie werden visuell unter eine Überschrift gruppiert, nicht technisch zu einem Feld verschmolzen.

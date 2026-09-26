@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Issue #559 — Briefing-Verlauf Modal für eine archivierte Tour (AC-1, AC-5, AC-6).
+	// Issue #559 — Briefing-Verlauf Modal für eine archivierte Trip (AC-1, AC-5, AC-6).
 	// Spec: docs/specs/modules/issue_559_archiv_fertigstellen.md
 
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -67,7 +67,7 @@
 	<Dialog.Content style="max-width:540px;max-height:80vh;overflow-y:auto">
 		<Dialog.Header>
 			<Dialog.Title>Briefing-Verlauf — {tripName}</Dialog.Title>
-			<Dialog.Description>Alle versendeten Briefings für diese Tour, neueste zuerst.</Dialog.Description>
+			<Dialog.Description>Alle versendeten Briefings für diese Trip, neueste zuerst.</Dialog.Description>
 		</Dialog.Header>
 
 		{#if loading}
@@ -76,7 +76,7 @@
 			<p style="padding:20px 0;font-size:13px;color:var(--g-accent-deep)">{error}</p>
 		{:else if entries.length === 0}
 			<p style="padding:20px 0;font-size:13px;color:var(--g-ink-3)">
-				Für diese Tour wurden noch keine Briefings versendet.
+				Für diese Trip wurden noch keine Briefings versendet.
 			</p>
 		{:else}
 			<div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">

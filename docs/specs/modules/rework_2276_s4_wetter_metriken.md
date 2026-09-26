@@ -8,7 +8,7 @@ version: "1.0"
 tags: [compare, trips, wetter-metriken, layout, persistenz]
 ---
 
-# Wetter-Metriken/Layout-Reiter speichert selbst wie bei der Tour (Issue #2276, Scheibe S4, Epic #2345)
+# Wetter-Metriken/Layout-Reiter speichert selbst wie bei der Trip (Issue #2276, Scheibe S4, Epic #2345)
 
 ## Approval
 

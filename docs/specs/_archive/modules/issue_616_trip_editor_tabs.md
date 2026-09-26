@@ -64,7 +64,7 @@ separater Bearbeiten-Modus-Screen"). Löst gemeinsam #503 (zwei Seiten) und #505
 
 - **AC-7:** Given die Editor-Tabs `Etappen & Wegpunkte`, `Wetter-Metriken`, `Alerts` / When der Nutzer sie öffnet / Then funktionieren ihre bestehenden Pro-Tab-Speicher-Wege unverändert (keine Regression durch die Konsolidierung).
 
-- **AC-8:** Given die gesamte Trip-Oberfläche / When Texte rendern / Then ist die Terminologie durchgängig `Trip · Etappe · Wegpunkt` (kein „Tour"/„Reise"/„Waypoint" sichtbar).
+- **AC-8:** Given die gesamte Trip-Oberfläche / When Texte rendern / Then ist die Terminologie durchgängig `Trip · Etappe · Wegpunkt` (kein „Trip"/„Reise"/„Waypoint" sichtbar).
 
 ## Expected Behavior
 
@@ -87,7 +87,7 @@ separater Bearbeiten-Modus-Screen"). Löst gemeinsam #503 (zwei Seiten) und #505
 - Visueller 1:1-Pixel-Abgleich der einzelnen Tab-Inhalte → Folge-Slices 2/4–4/4 (#587/#617/#618).
 - Kanal-Verkettungs-Logik (Briefing-Zeitplan zeigt nur aktive Kanäle, Alerts erben Vorbelegung) → #617.
 - Mobile-Adaption der Oberfläche → #618.
-- Create-Flow „Neue Tour als Tab-Editor" → #622.
+- Create-Flow „Neue Trip als Tab-Editor" → #622.
 
 ## Test Strategy
 

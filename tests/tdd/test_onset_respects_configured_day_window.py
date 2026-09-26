@@ -119,7 +119,7 @@ def _reihe(punkte) -> NormalizedTimeseries:
 
 
 def _ganztags_segment(start: int | None = None, ende: int | None = None) -> TripSegment:
-    """Segment ueber den vollen Tag, mit dem Auswertungsfenster der Tour.
+    """Segment ueber den vollen Tag, mit dem Auswertungsfenster der Trip.
 
     Voller Tag, damit der Segment-Vorschnitt in `_aggregate_for_segment`
     nichts wegnimmt -- sonst liessen sich Fenster-Wirkung und

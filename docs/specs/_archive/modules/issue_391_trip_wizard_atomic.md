@@ -8,7 +8,7 @@ version: "1.0"
 tags: [frontend, atomic-design, trip-wizard, epic-368, phase-2, svelte, issue-391]
 ---
 
-<!-- Issue #391 — Epic #368 Phase 2 (6/6): Touren-Assistent /trips/new auf Atomic-Bibliothek migrieren -->
+<!-- Issue #391 — Epic #368 Phase 2 (6/6): Trips-Assistent /trips/new auf Atomic-Bibliothek migrieren -->
 
 # Issue #391 — Trip-Wizard Atomic-Migration (`/trips/new`)
 
@@ -18,7 +18,7 @@ tags: [frontend, atomic-design, trip-wizard, epic-368, phase-2, svelte, issue-39
 
 ## Zweck
 
-Der Touren-Assistent (`/trips/new`) nutzt an sieben Stellen noch Inline-Stile und Ad-hoc-HTML-Elemente statt der Atomic-Design-Bibliothek. Diese Migration bringt Stepper, Etappen-Liste, Formulareingaben und Shell-Texte auf die etablierten Atome und Molecules (`Pill`, `Btn`, `Field`, `CheckIcon`), die in Epic #368 Phase 1 aufgebaut wurden. Ergebnis: konsistentes Erscheinungsbild mit dem Rest der Anwendung, keine Drift-Risiken bei Token-Änderungen und ein vollständig testbarer Komponentenbaum ohne Code-Duplizierung.
+Der Trips-Assistent (`/trips/new`) nutzt an sieben Stellen noch Inline-Stile und Ad-hoc-HTML-Elemente statt der Atomic-Design-Bibliothek. Diese Migration bringt Stepper, Etappen-Liste, Formulareingaben und Shell-Texte auf die etablierten Atome und Molecules (`Pill`, `Btn`, `Field`, `CheckIcon`), die in Epic #368 Phase 1 aufgebaut wurden. Ergebnis: konsistentes Erscheinungsbild mit dem Rest der Anwendung, keine Drift-Risiken bei Token-Änderungen und ein vollständig testbarer Komponentenbaum ohne Code-Duplizierung.
 
 ## Quelle / Source
 
@@ -249,7 +249,7 @@ const stepHints: Record<number, string | null> = {
 
 ## Expected Behavior
 
-- **Input:** Nutzer navigiert durch die 4 Schritte des Touren-Assistenten (`/trips/new`)
+- **Input:** Nutzer navigiert durch die 4 Schritte des Trips-Assistenten (`/trips/new`)
 - **Output:**
   - Stepper zeigt für abgeschlossene Schritte ein `CheckIcon` statt eines Dots
   - Etappen mit Wegpunkten zeigen einen WP-Count-Badge (ghost-Pill)

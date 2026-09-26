@@ -19,7 +19,7 @@
 // dann außerhalb des reaktiven Renderns registriert.
 //
 // 🔴 Diskriminator-Regel des Organismus (deshalb hier KEIN `undefined`):
-// `AlarmeTab` unterscheidet Vergleich und Tour an etwas, das dieses Bündel
+// `AlarmeTab` unterscheidet Vergleich und Trip an etwas, das dieses Bündel
 // IMMER liefert und der Trip-Mount NIE übergibt. Für `officialWarningsEnabled`,
 // `metricAlertLevels`, `sendTelegram`/`sendSms`/`sendPremiumSms`,
 // `channelThresholds`, `radarAlertEnabled` und `activeMetricKeys` ist das der

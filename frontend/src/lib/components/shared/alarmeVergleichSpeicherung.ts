@@ -1,6 +1,6 @@
 // Issue #2276 Scheibe S2 (Epic #2345) — Speicherweg des Alarme-Reiters im
 // Ortsvergleich-Hub. Der Reiter speichert SELBST über den Speicher-Controller
-// der Seite (schedule/flush/retryConflict), wie bei der Tour — nicht mehr über
+// der Seite (schedule/flush/retryConflict), wie bei der Trip — nicht mehr über
 // Wrapper + `handleAlarmeCommit` in CompareTabs.svelte.
 //
 // Spec: docs/specs/modules/rework_2276_s2_alarme.md

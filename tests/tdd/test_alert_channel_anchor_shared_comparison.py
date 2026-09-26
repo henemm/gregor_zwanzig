@@ -175,7 +175,7 @@ def test_ac11_wirkung_aenderung_die_nur_der_aeltere_kanal_kennt_wird_gemeldet(mo
 
     GIVEN dieselbe Ausgangslage wie oben, und die frische Vorhersage liegt bei
           50 km/h.
-    WHEN  der regulaere Alarm-Lauf ``check_all_trips()`` fuer diese Tour
+    WHEN  der regulaere Alarm-Lauf ``check_all_trips()`` fuer diese Trip
           durchlaeuft.
     THEN  geht ein Alarm raus — denn gegen den SMS-Merker von "06:00"
           (10 km/h) betraegt das Delta 40 km/h. Gegen den E-Mail-Merker

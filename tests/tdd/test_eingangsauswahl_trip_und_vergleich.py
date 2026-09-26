@@ -326,7 +326,7 @@ class TestAC15Kuerzung:
 class TestF003Gsm7UnsichereZeichen:
     NAMEN = [
         "🏔 Gipfelblick Route",
-        "Кавказский хребет Tour",
+        "Кавказский хребет Trip",
         "Zürich Höhenweg",
     ]
 
@@ -366,7 +366,7 @@ class TestF003Gsm7UnsichereZeichen:
 def test_ac2_weiter_ohne_namen_setzt_einzigen_vergleich_fort(monkeypatch, user_ids, kanal):
     uid = user_ids()
     _nutzer_mit_tier(uid)
-    _trip(uid, "Altetour", start_offset_days=-20)
+    _trip(uid, "Alter-Trip", start_offset_days=-20)
     p = _preset(uid, "Alpenblick", schedule="manual", previous_schedule="weekly",
                 paused_at="2026-09-10T08:00:00Z")
 
@@ -417,7 +417,7 @@ def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal,
 def test_ac5_kein_kandidat_gleicher_text_auf_beiden_kanaelen(monkeypatch, user_ids):
     uid = user_ids()
     _nutzer_mit_tier(uid)
-    _trip(uid, "Altetour", start_offset_days=-20)
+    _trip(uid, "Alter-Trip", start_offset_days=-20)
     _preset(uid, "Archiv", archived_at="2026-09-01T00:00:00Z")
 
     tg_sent, tg_calls = _via_telegram(monkeypatch, uid, "pause")

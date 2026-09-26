@@ -31,7 +31,7 @@ from app import loader
 from app.loader import _trip_to_dict, load_all_trips, load_trip
 
 
-def _flat_metrics_trip(trip_id: str, name: str = "Flat-Metrics-Tour") -> dict:
+def _flat_metrics_trip(trip_id: str, name: str = "Flat-Metrics-Trip") -> dict:
     """Trip-Dict mit Legacy-Flach-String-`display_config.metrics`."""
     return {
         "id": trip_id,
@@ -120,7 +120,7 @@ def test_dict_metrics_roundtrip_field_identical():
     trip_id = "vanoise-dict"
     source = {
         "id": trip_id,
-        "name": "Dict-Metrics-Tour",
+        "name": "Dict-Metrics-Trip",
         "kind": "route",
         "stages": [],
         "display_config": {

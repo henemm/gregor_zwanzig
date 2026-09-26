@@ -398,7 +398,7 @@ einen Test rot machen MUSS:
 ## Known Limitations
 
 - **Die 30-Tage-Frist ist eine begründete Setzung, kein Messwert (D6).**
-  Widerlegt durch: (a) reale Touren länger als 30 Tage — dann müsste die
+  Widerlegt durch: (a) reale Trips länger als 30 Tage — dann müsste die
   Frist trip-gebunden statt fix sein; (b) ein Messwert, dass seven.io/Garmin
   die Rufnummer schneller (oder deutlich langsamer) neu vergibt als
   angenommen. Ohne eine solche Messung bleibt 30 Tage der PO-entschiedene

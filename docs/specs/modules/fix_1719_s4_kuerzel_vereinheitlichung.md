@@ -141,7 +141,7 @@ Je Zeile im Bereich „Reihenfolge" stehen beschriftete Marken:
 > Messung: `docs/specs/modules/fix_2232_kuerzel_ein_modell_trip_vergleich.md`,
 > ADR-0011 Nachtrag 2026-09-09.
 
-~~**Die Quelle richtet sich nach der Fläche** — der Touren-Editor zeigt die Trip-SMS-Kürzel
+~~**Die Quelle richtet sich nach der Fläche** — der Trips-Editor zeigt die Trip-SMS-Kürzel
 (`/api/sms-symbols`, deckt Mehrfach-Token und Grammatik ab), die drei Vergleichs-Editoren
 das Register-Kürzel, weil die Vergleichs-SMS aus `get_sms_code()` rendert
 (`comparison.py:625`). Eine flächenblinde Korrektur würde den Vergleich falsch machen.~~
@@ -276,14 +276,14 @@ PO-Entscheid 2026-08-12: ausliefern, beide Fälle in #1791. **Beim Schließen ge
   - Test: Kern-Test gegen `format_sms_trip()` mit Änderungsdaten; Token-Kürzel gegen das
     Register gerechnet.
 
-- **AC-5:** Given der Touren-Editor mit geöffnetem Reiter „Wetter-Metriken" / When der
+- **AC-5:** Given der Trips-Editor mit geöffnetem Reiter „Wetter-Metriken" / When der
   Nutzer den Bereich „Reihenfolge" ansieht / Then trägt jede Zeile zwei beschriftete
   Marken — „Mail" mit der englischen Fachkurzform und „Kurzform" mit **allen** Kürzeln,
   die SMS und Telegram für diese Größe senden.
   - Test: Playwright-Klickpfad gegen Staging; für „Gefühlte Temperatur" enthält die
     Kurzform-Marke `FK`, `FD` **und** `WC`, für „Nacht-Tiefsttemperatur" genau `N`.
 
-- **AC-6:** Given der Touren-Editor / When eine Größe mit mehreren SMS-Kürzeln angezeigt
+- **AC-6:** Given der Trips-Editor / When eine Größe mit mehreren SMS-Kürzeln angezeigt
   wird / Then erscheinen alle ihre Kürzel, nicht nur das erste.
   - Test: derselbe Klickpfad; zusätzlich Kern-Wächter, der die angezeigte Kürzelmenge je
     Größe gegen `/api/sms-symbols` prüft — die Anzeige darf keine eigene Liste führen.
@@ -305,7 +305,7 @@ PO-Entscheid 2026-08-12: ausliefern, beide Fälle in #1791. **Beim Schließen ge
   erscheint keine leere oder erfundene Kurzform-Marke, sondern gar keine.
   - Test: Kern-Wächter mit einer Größe ohne Registereintrag.
 
-- **AC-10:** Given der Touren-Editor mit einer Metrik-Liste, die „Gefühlte
+- **AC-10:** Given der Trips-Editor mit einer Metrik-Liste, die „Gefühlte
   Nacht-Tiefsttemperatur" und „Gefühlte Temperatur" enthält / When der Bereich
   „Reihenfolge" in **jeder** der vierzehn Auflösungen der Matrix geladen wird / Then
   erfüllt **jede** Marke **jeder** sichtbaren Zeile alle fünf Sichtbarkeits-Bedingungen.

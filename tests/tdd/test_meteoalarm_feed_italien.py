@@ -69,7 +69,7 @@ MILAN = (45.4642, 9.1900)  # Lomb-09 -> IT003 (Lombardia)
 MEER_UNMAPPED = (37.0, 13.5)  # in der DPC-Bbox, ausserhalb aller 187 Zonen-Polygone
 
 # Issue #1397 S4 (SPEC: docs/specs/modules/fix_1397_s4_it_grenze.md): reale
-# Punkte des Karnischen Hoehenwegs, einer Tour auf der Staatsgrenze IT/AT.
+# Punkte des Karnischen Hoehenwegs, einer Trip auf der Staatsgrenze IT/AT.
 # Zonen gegen die EINGECHECKTE Geometrie (``dpc._zone_at``) verifiziert,
 # Abstaende aus der Prod-Messung 2026-08-01 (Spec "Der Befund").
 AT_JENSEITS = (46.7061, 12.4063)  # Oesterreich, 2,08 km zur naechsten IT-Zonengrenze
@@ -147,7 +147,7 @@ def _load_equivalence_feed() -> dict:
     dem Vollabruf. ``feed_italy_sample.json`` taugt dafuer NICHT -- das ist eine
     fuer Testabdeckung kuratierte Auswahl von 10 aus 457 Eintraegen, und ein
     Bruchteil kann strukturell nie Obermenge eines vollstaendigen EDR-Index sein
-    (gemessen 2026-08-01: alle 8 Tourpunkte meldeten Abweichungen)."""
+    (gemessen 2026-08-01: alle 8 Trip-Punkte meldeten Abweichungen)."""
     return json.loads((_FIXTURES / "feed_italy_equivalence.json").read_text(encoding="utf-8"))
 
 
@@ -310,7 +310,7 @@ def test_covers_ausschluss_loest_keinen_ausfallhinweis_fuer_frejus_aus():
 # EINER Frankreich-Ausnahme. AT/CH/SI/HR liegen ebenfalls weit in dieser Bbox
 # -- fuer einen Punkt dort galt die italienische Quelle als zustaendig, fand in
 # ``fetch()`` keine Zone und loeste ueber ``mark_fetch_incomplete()`` einen
-# falschen "nicht abrufbar"-Hinweis aus (Prod 2026-08-01: 39 Punkte EINER Tour).
+# falschen "nicht abrufbar"-Hinweis aus (Prod 2026-08-01: 39 Punkte EINER Trip).
 
 def _drift_zeilen_anzahl(warn_egress) -> int:
     """``point_unmapped``-Zeilen des Feed-Dienstes im (append-only)
@@ -401,7 +401,7 @@ def test_ac1_oesterreichischer_grenzpunkt_loest_keinen_ausfallhinweis_aus(monkey
 
 def test_ac3_grenznahe_italienische_orte_behalten_ihre_warnungen(monkeypatch):
     """AC-3 (wichtigste Gegenprobe): GIVEN drei reale, grenznahe Punkte
-    DERSELBEN Tour liegen tatsaechlich in italienischen Warnzonen (Vene-A1,
+    DERSELBEN Trip liegen tatsaechlich in italienischen Warnzonen (Vene-A1,
     Tren-A, Friu-B -- gegen die eingecheckte Geometrie belegt), WHEN
     ``covers()`` geprueft wird und fuer Tren-A/IT002 (die aufgezeichnete
     Fixture traegt dort eine echte Gewitterwarnung) zusaetzlich der volle
@@ -570,22 +570,22 @@ def _alert_identitaet(alert: "OfficialAlert") -> tuple:
 
 
 def _pruefe_obermenge(
-    tourpunkte: list[tuple[float, float]],
+    trippunkte: list[tuple[float, float]],
     feed_je_punkt: dict,
     edr_je_punkt: dict,
 ) -> list[str]:
-    """Vergleicht je Tourpunkt die Feed- gegen die EDR-Warnungsmenge (ueber
+    """Vergleicht je Trip-Punkt die Feed- gegen die EDR-Warnungsmenge (ueber
     ``_alert_identitaet``). Liefert eine Liste menschenlesbarer Abweichungen
-    -- leer bedeutet: die Feed-Menge ist fuer JEDEN Tourpunkt eine Obermenge
+    -- leer bedeutet: die Feed-Menge ist fuer JEDEN Trip-Punkt eine Obermenge
     der EDR-Menge (AC-3)."""
     abweichungen: list[str] = []
-    for punkt in tourpunkte:
+    for punkt in trippunkte:
         feed_ids = {_alert_identitaet(a) for a in feed_je_punkt.get(punkt, [])}
         edr_ids = {_alert_identitaet(a) for a in edr_je_punkt.get(punkt, [])}
         fehlend = edr_ids - feed_ids
         if fehlend:
             abweichungen.append(
-                f"Tourpunkt {punkt}: im EDR-Snapshot, aber NICHT im Feed: {sorted(fehlend)}"
+                f"Trip-Punkt {punkt}: im EDR-Snapshot, aber NICHT im Feed: {sorted(fehlend)}"
             )
     return abweichungen
 
@@ -609,7 +609,7 @@ def _lade_alert_liste_aus_json(eintraege: list[dict]) -> dict:
                 # es hier verschwiegen, trug JEDE EDR-Warnung ``None``, jede
                 # Feed-Warnung ihren echten Wert -- dieselbe Warnung galt dann
                 # als fehlend und das Aequivalenz-Gate meldete flaechendeckend
-                # falsche Abweichungen (gemessen 2026-08-01: alle 8 Tourpunkte).
+                # falsche Abweichungen (gemessen 2026-08-01: alle 8 Trip-Punkte).
                 region_label=a.get("region_label"),
                 valid_from=datetime.fromisoformat(a["valid_from"]) if a.get("valid_from") else None,
                 valid_to=datetime.fromisoformat(a["valid_to"]) if a.get("valid_to") else None,
@@ -738,18 +738,18 @@ def test_pruefe_obermenge_erkennt_fehlende_edr_warnung_im_feed(tmp_path):
     assert "extreme_heat" in abweichungen[0]
 
 
-def test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkeypatch):
+def test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_trippunkte(monkeypatch):
     """AC-3 (Pflicht-Gate vor Freigabe, Spec Implementation Details Punkt 3 /
     Randbedingung 1): GIVEN ein zur selben Minute aufgezeichneter EDR-Ausschnitt
-    und der Feed-Ausschnitt fuer dieselbe Liste realer Tourpunkte, WHEN beide
+    und der Feed-Ausschnitt fuer dieselbe Liste realer Trip-Punkte, WHEN beide
     Ergebnismengen ueber ``_pruefe_obermenge`` gegenuebergestellt werden, THEN
-    ist die Feed-Menge fuer JEDEN Tourpunkt eine Obermenge der EDR-Menge
+    ist die Feed-Menge fuer JEDEN Trip-Punkt eine Obermenge der EDR-Menge
     (Vergleichs-Kennung: ``_alert_identitaet`` -- Gefahrenart + Stufe +
     Region + Gueltigkeitszeitraum, s. Docstring dort).
 
     Aufzeichnung: ``AUFNAHME_UTC`` (2026-08-01T16:06:28Z), beide Seiten zur
     selben Minute ueber den Produktivcode gezogen --
-    ``edr_snapshot_it.json`` (8 reale Tourpunkte) gegen
+    ``edr_snapshot_it.json`` (8 reale Trip-Punkte) gegen
     ``feed_italy_equivalence.json`` (Feed-Bestand derselben Minute). Herkunft
     und Auswahlkriterium: README im Fixture-Verzeichnis."""
     edr_path = _FIXTURES / "edr_snapshot_it.json"
@@ -767,12 +767,12 @@ def test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
 
     _assert_pruefling_aus_diesem_baum()
     edr_je_punkt = _lade_alert_liste_aus_json(json.loads(edr_path.read_text(encoding="utf-8")))
-    tourpunkte = list(edr_je_punkt.keys())
-    assert len(tourpunkte) == 8 and all(edr_je_punkt[p] for p in tourpunkte), (
-        f"Aufbaupruefung: die Aufzeichnung muss 8 Tourpunkte mit JE mindestens "
+    trippunkte = list(edr_je_punkt.keys())
+    assert len(trippunkte) == 8 and all(edr_je_punkt[p] for p in trippunkte), (
+        f"Aufbaupruefung: die Aufzeichnung muss 8 Trip-Punkte mit JE mindestens "
         f"einer EDR-Warnung tragen -- gegen leere EDR-Mengen ist jede "
         f"Obermengen-Pruefung trivial erfuellt und beweist nichts. Erhalten: "
-        f"{[(p, len(edr_je_punkt[p])) for p in tourpunkte]}"
+        f"{[(p, len(edr_je_punkt[p])) for p in trippunkte]}"
     )
 
     # Gleichbehandlung beider Seiten (sonst misst das Gate nur die eigene
@@ -796,7 +796,7 @@ def test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
     # EDR-Seite nichts (sie traegt keine dort bereits abgelaufene Warnung), auf
     # der Feed-Seite dagegen schon -- die Aufzeichnungen sind also zeitgleich,
     # und der Rohvergleich ist die strengere der beiden Varianten.
-    alle_edr = [a for punkt in tourpunkte for a in edr_je_punkt[punkt]]
+    alle_edr = [a for punkt in trippunkte for a in edr_je_punkt[punkt]]
     assert len(oa_base.filter_alerts_to_window(alle_edr, AUFNAHME_UTC, None)) == len(alle_edr), (
         "Aufbaupruefung: die EDR-Aufzeichnung darf zum Aufnahmezeitpunkt keine "
         "bereits abgelaufene Warnung enthalten -- sonst waeren die beiden Seiten "
@@ -809,7 +809,7 @@ def test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
         quelle = meteoalarm_feed.MeteoAlarmFeedSource("IT")
 
         feed_je_punkt = {}
-        for punkt in tourpunkte:
+        for punkt in trippunkte:
             assert quelle.covers(*punkt) is True, (
                 f"Aufbaupruefung: {punkt} muss von der Feed-Quelle abgedeckt sein "
                 f"-- sonst vergleicht das Gate einen Punkt, den die Quelle in "
@@ -817,7 +817,7 @@ def test_ac3_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
             )
             feed_je_punkt[punkt] = quelle.fetch(*punkt)
 
-        abweichungen = _pruefe_obermenge(tourpunkte, feed_je_punkt, edr_je_punkt)
+        abweichungen = _pruefe_obermenge(trippunkte, feed_je_punkt, edr_je_punkt)
         assert not abweichungen, "\n".join(abweichungen)
     finally:
         server.shutdown()

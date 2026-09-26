@@ -1,11 +1,11 @@
-"""TDD RED — #1727 S5a: die Befehlspfade folgen dem ORTSTAG der Tour.
+"""TDD RED — #1727 S5a: die Befehlspfade folgen dem ORTSTAG der Trip.
 
 SPEC: docs/specs/modules/fix_1727_s5a_befehlspfade_ortstag.md (AC-1 bis AC-9)
 
 Vier Fundstellen bestimmen "welcher Kalendertag ist gemeint" heute ueber die
-Serveruhr bzw. den UTC-Tag der Nachricht statt ueber den Ortstag der Tour
+Serveruhr bzw. den UTC-Tag der Nachricht statt ueber den Ortstag der Trip
 (ADR-0044): ``_show_status``, ``_show_now``, ``command_date`` fuer
-``### ruhetag`` und die vorgelagerte Tourauswahl ``_find_active_trip``.
+``### ruhetag`` und die vorgelagerte Trip-Auswahl ``_find_active_trip``.
 
 RED-Gruende (gemessen, nicht vermutet):
 * ``_show_status``/``_show_now`` rechnen mit ``date.today()`` — unter
@@ -50,7 +50,7 @@ WELLINGTON_ZONE = "Pacific/Auckland"   # im August UTC+12
 LA = (34.05, -118.24)                  # America/Los_Angeles, im August UTC-7
 LA_ZONE = "America/Los_Angeles"
 # Die beiden Enden der bewohnten Zonenskala -- 25 Stunden auseinander. Nur mit
-# ihnen tragen zwei Touren zum selben Augenblick DREI verschiedene Kalendertage
+# ihnen tragen zwei Trips zum selben Augenblick DREI verschiedene Kalendertage
 # (D19 / Weltzeit D20 / D21); mit zwei benachbarten Zonen ist der
 # Zukunfts-Rueckfall nicht falsifizierbar (Begruendung am Test).
 PAGO = (-14.28, -170.70)               # Pacific/Pago_Pago,  UTC-11
@@ -64,7 +64,7 @@ D19, D20, D21, D22, D23 = (date(2026, 8, d) for d in (19, 20, 21, 22, 23))
 # vor der Weltzeit-Mitternacht. Das Mismatch-Fenster.
 NACHTS_UTC = datetime(2026, 8, 20, 22, 30, tzinfo=timezone.utc)
 # 14:00 UTC am 20.08. = 02:00 Ortszeit am 21.08. in Wellington (UTC+12),
-# gleichzeitig 16:00 Ortszeit am 20.08. auf Korsika. Zwei Touren, zwei Ortstage.
+# gleichzeitig 16:00 Ortszeit am 20.08. auf Korsika. Zwei Trips, zwei Ortstage.
 MITTAGS_UTC = datetime(2026, 8, 20, 14, 0, tzinfo=timezone.utc)
 # 10:30 UTC am 20.08.: 23:30 am 19.08. in Pago Pago, 00:30 am 21.08. auf
 # Kiritimati, dazwischen der Weltzeit-Tag 20.08. Das einzige Zeitfenster, in dem
@@ -137,7 +137,7 @@ def test_ac1_ac2_status_filtert_gegen_den_ortstag(
     """AC-1 (negativer Offset) und AC-2 (positiver Offset) — Spiegelfaelle
     DERSELBEN Regel, deshalb ein parametrisierter Test.
 
-    GIVEN eine Tour in einer Zone, deren Ortstag zum Abfragezeitpunkt sowohl vom
+    GIVEN eine Trip in einer Zone, deren Ortstag zum Abfragezeitpunkt sowohl vom
           Weltzeit- als auch vom Servertag abweicht — einmal nach hinten
           (US-Westkueste, im August PDT/UTC-7, Abfrage 03:00 UTC), einmal nach
           vorne (Neuseeland, NZST/UTC+12, Abfrage 14:00 UTC),
@@ -157,7 +157,7 @@ def test_ac1_ac2_status_filtert_gegen_den_ortstag(
 
     with freeze_time(now_utc):
         _anker(now_utc, zone, ortstag)
-        # Tourname traegt die Zone: der ausgegebene Body identifiziert im
+        # Trip-Name traegt die Zone: der ausgegebene Body identifiziert im
         # Fehlerfall selbst, welcher der beiden Faelle gebrochen ist.
         trip = _trip(f"status-{zone.split('/')[-1].lower()}", etappen, coords)
         save_trip(trip, user_id="default")
@@ -188,7 +188,7 @@ def test_ac1_ac2_status_filtert_gegen_den_ortstag(
 def test_ac3_jetzt_nimmt_den_wegpunkt_der_ortstag_etappe(monkeypatch):
     """AC-3.
 
-    GIVEN die Zwei-Zonen-Tour (Etappe 20.08. Wellington, ab 21.08. Korsika),
+    GIVEN die Zwei-Zonen-Trip (Etappe 20.08. Wellington, ab 21.08. Korsika),
     WHEN  ``/jetzt`` um 22:30 UTC am 20.08. = 00:30 Ortszeit am 21.08. laeuft,
     THEN  holt der Nowcast die Koordinaten des Wegpunkts der ORTSTAG-Etappe
           (Korsika), nicht die der Servertag-Etappe (Wellington). #1402 hatte
@@ -250,7 +250,7 @@ def test_ac4_ruhetag_verschiebt_im_ganzen_ortstag_dieselben_etappen(
 ):
     """AC-4.
 
-    GIVEN eine Korsika-Tour mit Etappen 21./22./23.08., Ortstag D = 21.08.,
+    GIVEN eine Korsika-Trip mit Etappen 21./22./23.08., Ortstag D = 21.08.,
     WHEN  ``### ruhetag`` einmal um 00:30 und einmal um 14:00 Ortszeit
           DESSELBEN Ortstages gesendet wird,
     THEN  bleibt die Etappe von D in BEIDEN Faellen liegen und es wandern beide
@@ -284,7 +284,7 @@ def test_ac4_ruhetag_verschiebt_im_ganzen_ortstag_dieselben_etappen(
 def test_ac5_ruhetag_ohne_zukuenftige_etappe_meldet_nichts_zu_verschieben():
     """AC-5.
 
-    GIVEN eine Korsika-Tour mit NUR der heutigen Etappe (Ortstag 21.08.),
+    GIVEN eine Korsika-Trip mit NUR der heutigen Etappe (Ortstag 21.08.),
     WHEN  ``### ruhetag`` um 00:30 Ortszeit im Mismatch-Fenster kommt,
     THEN  meldet die Antwort "Keine zukuenftigen Etappen zum Verschieben"
           (success=False) und die Etappe bleibt auf dem 21.08. Vor dem Fix galt
@@ -292,7 +292,7 @@ def test_ac5_ruhetag_ohne_zukuenftige_etappe_meldet_nichts_zu_verschieben():
     """
     with freeze_time(NACHTS_UTC):
         _anker(NACHTS_UTC, KORSIKA_ZONE, D21)
-        trip = _trip("ein-etappen-tour", [D21], WP_KORSIKA)
+        trip = _trip("ein-etappen-trip", [D21], WP_KORSIKA)
         save_trip(trip, user_id="default")
 
         ergebnis = _befehl(trip, "### ruhetag", NACHTS_UTC)
@@ -314,7 +314,7 @@ def test_ac5_ruhetag_ohne_zukuenftige_etappe_meldet_nichts_zu_verschieben():
 def test_ac6_command_log_traegt_den_ortstag_und_sperrt_die_zweitausfuehrung():
     """AC-6.
 
-    GIVEN eine Korsika-Tour (Etappen 21./22.08.),
+    GIVEN eine Korsika-Trip (Etappen 21./22.08.),
     WHEN  ``### ruhetag`` zweimal im SELBEN Ortstag kommt, aber an verschiedenen
           Weltzeit-Tagen (22:30 UTC am 20.08. = 00:30 Ortszeit, dann 06:00 UTC
           am 21.08. = 08:00 Ortszeit),
@@ -356,30 +356,30 @@ def test_ac6_command_log_traegt_den_ortstag_und_sperrt_die_zweitausfuehrung():
     )
 
 
-# ══════════════════════ AC-7/AC-8: Tourauswahl ══════════════════════
+# ══════════════════════ AC-7/AC-8: Trip-Auswahl ══════════════════════
 
 
-def test_ac7_find_active_trip_rechnet_je_tour_in_deren_eigener_zone(monkeypatch):
+def test_ac7_find_active_trip_rechnet_je_trip_in_deren_eigener_zone(monkeypatch):
     """AC-7 — die Pflicht-Probe gegen die gemessene Nachweis-Luecke.
 
-    GIVEN zwei Touren mit identischen Etappendaten (19./20.08.), eine in
+    GIVEN zwei Trips mit identischen Etappendaten (19./20.08.), eine in
           Wellington (Ortstag 21.08., lokal also beendet), eine auf Korsika
           (Ortstag 20.08., lokal aktiv),
     WHEN  ``_find_active_trip(now_utc, user_id)`` um 14:00 UTC am 20.08. laeuft,
-    THEN  liefert sie die Korsika-Tour.
+    THEN  liefert sie die Korsika-Trip.
 
     Der Aufbau ist so gewaehlt, dass JEDE Tagesbestimmung VOR der Schleife
     scheitert — genau die Regression, die #1724 in ``_get_active_trips`` behoben
     hat: mit einem einzigen Tag 20.08. gewinnt die zuerst gepruefte
-    Wellington-Tour, mit einem einzigen Tag 21.08. passt keine Tour mehr und
+    Wellington-Trip, mit einem einzigen Tag 21.08. passt keine Trip mehr und
     auch der Zukunfts-Rueckfall greift nicht (Ergebnis ``None``).
 
     ``load_all_trips`` wird durch eine feste Liste ECHTER Trips ersetzt, weil
     die Pruefreihenfolge Teil der Zusicherung ist — die Glob-Reihenfolge des
     Loaders waere dateisystemabhaengig.
     """
-    wellington = _trip("wellington-tour", [D19, D20], WP_NZ)
-    korsika = _trip("korsika-tour", [D19, D20], WP_KORSIKA)
+    wellington = _trip("wellington-trip", [D19, D20], WP_NZ)
+    korsika = _trip("korsika-trip", [D19, D20], WP_KORSIKA)
     monkeypatch.setattr(
         "services.inbound_telegram_reader.load_all_trips",
         lambda user_id="default", include_archived=False: [wellington, korsika],
@@ -388,49 +388,49 @@ def test_ac7_find_active_trip_rechnet_je_tour_in_deren_eigener_zone(monkeypatch)
     with freeze_time(MITTAGS_UTC):
         _anker(MITTAGS_UTC, WELLINGTON_ZONE, D21)
         assert MITTAGS_UTC.astimezone(ZoneInfo(KORSIKA_ZONE)).date() == D20, (
-            "Testaufbau: die Korsika-Tour muss zum selben Augenblick einen "
-            "ANDEREN Ortstag tragen als die Wellington-Tour"
+            "Testaufbau: die Korsika-Trip muss zum selben Augenblick einen "
+            "ANDEREN Ortstag tragen als die Wellington-Trip"
         )
         reader = InboundTelegramReader.__new__(InboundTelegramReader)
         gewaehlt = reader._find_active_trip(MITTAGS_UTC, "default")
 
     assert gewaehlt is korsika, (
         "AC-7: _find_active_trip() lieferte "
-        f"{getattr(gewaehlt, 'id', None)!r}, erwartet 'korsika-tour' — die "
-        "Wellington-Tour ist an ihrem eigenen Ortstag (21.08.) bereits vorbei, "
-        "die Korsika-Tour an ihrem (20.08.) aktiv"
+        f"{getattr(gewaehlt, 'id', None)!r}, erwartet 'korsika-trip' — die "
+        "Wellington-Trip ist an ihrem eigenen Ortstag (21.08.) bereits vorbei, "
+        "die Korsika-Trip an ihrem (20.08.) aktiv"
     )
 
 
-def test_ac7_zukunfts_rueckfall_rechnet_ebenfalls_je_tour(monkeypatch):
+def test_ac7_zukunfts_rueckfall_rechnet_ebenfalls_je_trip(monkeypatch):
     """AC-7, zweite Haelfte — der Zukunfts-Rueckfall, nicht die Overlap-Schleife.
 
-    GIVEN keine Tour ist an ihrem eigenen Ortstag aktiv, aber zwei Touren liegen
+    GIVEN keine Trip ist an ihrem eigenen Ortstag aktiv, aber zwei Trips liegen
           in Zonen an den ENDEN der bewohnten Skala: Pago Pago (UTC-11, Ortstag
           19.08.) mit Etappen ab dem 21.08. -- aus ihrer Sicht zukuenftig -- und
           Kiritimati (UTC+14, Ortstag 21.08.) mit einer einzigen Etappe am
           20.08. -- aus ihrer Sicht bereits VORBEI,
     WHEN  ``_find_active_trip(now_utc, user_id)`` um 10:30 UTC am 20.08. laeuft,
-    THEN  liefert sie die Pago-Pago-Tour. Die Kiritimati-Tour darf nicht in die
+    THEN  liefert sie die Pago-Pago-Trip. Die Kiritimati-Trip darf nicht in die
           Zukunfts-Auswahl geraten, obwohl ihr Startdatum (20.08.) das FRUEHERE
           ist -- ``min(...)`` wuerde sie sonst gewinnen lassen.
 
-    Warum dieser Test zusaetzlich zu ``test_ac7_...je_tour_in_deren_eigener_zone``
+    Warum dieser Test zusaetzlich zu ``test_ac7_...je_trip_in_deren_eigener_zone``
     noetig ist: jener prueft die Overlap-SCHLEIFE. Der Rueckfall darunter ist ein
     zweiter, eigener Rechenweg -- eine Verfaelschung, die NUR dort den Ortstag
     hebt (klassisch: die Schleifenvariable ``today`` nach der Schleife
-    weiterbenutzen, statt je Tour neu zu rechnen), liess jener Test gruen.
+    weiterbenutzen, statt je Trip neu zu rechnen), liess jener Test gruen.
 
     Warum die exotischen Zonen: der Rueckfall ist nur falsifizierbar, wenn eine
-    Tour existiert, die an IHREM Ortstag vergangen ist, an einem gehievten Tag
+    Trip existiert, die an IHREM Ortstag vergangen ist, an einem gehievten Tag
     aber als zukuenftig durchgeht -- und deren Start zugleich vor dem der echten
     Siegerin liegt. Zwischen zwei benachbarten Zonen (ein Tag Unterschied) ist
     das rechnerisch unmoeglich: das dafuer noetige Startdatum liegt in einem
     leeren Intervall. Erst drei Kalendertage zum selben Augenblick machen die
     Luecke sichtbar, und die gibt es nur zwischen UTC-11 und UTC+14.
     """
-    pago = _trip("pago-tour", [D21, D22], PAGO)
-    kiritimati = _trip("kiritimati-tour", [D20], KIRITIMATI)
+    pago = _trip("pago-trip", [D21, D22], PAGO)
+    kiritimati = _trip("kiritimati-trip", [D20], KIRITIMATI)
     monkeypatch.setattr(
         "services.inbound_telegram_reader.load_all_trips",
         lambda user_id="default", include_archived=False: [pago, kiritimati],
@@ -439,16 +439,16 @@ def test_ac7_zukunfts_rueckfall_rechnet_ebenfalls_je_tour(monkeypatch):
     with freeze_time(DREI_TAGE_UTC):
         _anker(DREI_TAGE_UTC, PAGO_ZONE, D19)
         _anker(DREI_TAGE_UTC, KIRITIMATI_ZONE, D21)
-        # Vorbedingung 1: KEINE Tour ist an ihrem Ortstag aktiv -- sonst greift
+        # Vorbedingung 1: KEINE Trip ist an ihrem Ortstag aktiv -- sonst greift
         # die Overlap-Schleife und der Rueckfall wird nie erreicht.
         assert pago.stages[0].date > D19 and kiritimati.stages[-1].date < D21, (
-            "Testaufbau: beide Touren muessen an ihrem eigenen Ortstag "
+            "Testaufbau: beide Trips muessen an ihrem eigenen Ortstag "
             "AUSSERHALB liegen, damit der Zukunfts-Rueckfall ueberhaupt laeuft"
         )
-        # Vorbedingung 2: die falsche Tour startet FRUEHER -- ohne das koennte
+        # Vorbedingung 2: die falsche Trip startet FRUEHER -- ohne das koennte
         # `min(...)` sie auch bei fehlerhafter Filterung nie waehlen.
         assert kiritimati.stages[0].date < pago.stages[0].date, (
-            "Testaufbau nicht diskriminierend: die vergangene Tour muss das "
+            "Testaufbau nicht diskriminierend: die vergangene Trip muss das "
             "fruehere Startdatum tragen, sonst gewinnt die richtige zufaellig"
         )
         reader = InboundTelegramReader.__new__(InboundTelegramReader)
@@ -456,29 +456,29 @@ def test_ac7_zukunfts_rueckfall_rechnet_ebenfalls_je_tour(monkeypatch):
 
     assert gewaehlt is pago, (
         "AC-7 (Rueckfall): _find_active_trip() lieferte "
-        f"{getattr(gewaehlt, 'id', None)!r}, erwartet 'pago-tour'. "
-        "'kiritimati-tour' heisst: der Rueckfall hat den Ortstag EINER Tour "
-        "(21.08.) fuer alle benutzt und die am 20.08. endende Tour faelschlich "
+        f"{getattr(gewaehlt, 'id', None)!r}, erwartet 'pago-trip'. "
+        "'kiritimati-trip' heisst: der Rueckfall hat den Ortstag EINER Trip "
+        "(21.08.) fuer alle benutzt und die am 20.08. endende Trip faelschlich "
         "als zukuenftig gezaehlt. 'None' heisst dasselbe mit dem anderen "
         "Ortstag (19.08.) -- dann fiel die echte Siegerin aus der Auswahl."
     )
 
 
-def test_ac8_find_active_trip_waehlt_an_der_tourgrenze_die_folgetour(monkeypatch):
+def test_ac8_find_active_trip_waehlt_an_der_tripgrenze_die_folgetrip(monkeypatch):
     """AC-8 — der Blast-Radius-Grenzfall vor JEDEM Telegram-Befehl.
 
-    GIVEN zwei aneinandergrenzende Touren in Mitteleuropa (UTC+2): A endet am
+    GIVEN zwei aneinandergrenzende Trips in Mitteleuropa (UTC+2): A endet am
           Ortstag 20.08., B beginnt am 21.08.,
     WHEN  eine Nachricht um 22:30 UTC = 00:30 Ortszeit des 21.08. eintrifft,
-    THEN  waehlt ``_find_active_trip`` bereits Tour B. Vor dem Fix haette der
-          Servertag Tour A gewaehlt — eine abgelaufene Tour haette den Befehl
+    THEN  waehlt ``_find_active_trip`` bereits Trip B. Vor dem Fix haette der
+          Servertag Trip A gewaehlt — eine abgelaufene Trip haette den Befehl
           beantwortet.
     """
-    tour_a = _trip("tour-a-endet", [D19, D20], WP_KORSIKA)
-    tour_b = _trip("tour-b-beginnt", [D21, D22], WP_KORSIKA)
+    trip_a = _trip("trip-a-endet", [D19, D20], WP_KORSIKA)
+    trip_b = _trip("trip-b-beginnt", [D21, D22], WP_KORSIKA)
     monkeypatch.setattr(
         "services.inbound_telegram_reader.load_all_trips",
-        lambda user_id="default", include_archived=False: [tour_a, tour_b],
+        lambda user_id="default", include_archived=False: [trip_a, trip_b],
     )
 
     with freeze_time(NACHTS_UTC):
@@ -486,10 +486,10 @@ def test_ac8_find_active_trip_waehlt_an_der_tourgrenze_die_folgetour(monkeypatch
         reader = InboundTelegramReader.__new__(InboundTelegramReader)
         gewaehlt = reader._find_active_trip(NACHTS_UTC, "default")
 
-    assert gewaehlt is tour_b, (
+    assert gewaehlt is trip_b, (
         "AC-8: _find_active_trip() lieferte "
-        f"{getattr(gewaehlt, 'id', None)!r}, erwartet 'tour-b-beginnt' — lokal "
-        f"ist bereits {D21}, Tour A endete am {D20}"
+        f"{getattr(gewaehlt, 'id', None)!r}, erwartet 'trip-b-beginnt' — lokal "
+        f"ist bereits {D21}, Trip A endete am {D20}"
     )
 
 
@@ -559,7 +559,7 @@ def _fall_ruhetag(monkeypatch):
     return frozenset(s.old_date for s in (ergebnis.shifts or []))
 
 
-def _tourauswahl(monkeypatch, trips: list[Trip]):
+def _tripauswahl(monkeypatch, trips: list[Trip]):
     monkeypatch.setattr(
         "services.inbound_telegram_reader.load_all_trips",
         lambda user_id="default", include_archived=False: trips,
@@ -568,21 +568,21 @@ def _tourauswahl(monkeypatch, trips: list[Trip]):
     return getattr(reader._find_active_trip(PARAM_UTC, "default"), "id", None)
 
 
-def _fall_tourauswahl_overlap(monkeypatch):
-    """`_find_active_trip`, Overlap-Schleife — welche laufende Tour gewinnt?"""
-    return _tourauswahl(monkeypatch, [
+def _fall_tripauswahl_overlap(monkeypatch):
+    """`_find_active_trip`, Overlap-Schleife — welche laufende Trip gewinnt?"""
+    return _tripauswahl(monkeypatch, [
         _trip("laeuft-am-20-08", [D20], WP_KORSIKA),
         _trip("laeuft-am-22-08", [D22], WP_KORSIKA),
     ])
 
 
-def _fall_tourauswahl_rueckfall(monkeypatch):
-    """`_find_active_trip`, Zukunfts-Rueckfall — welche Tour gilt als kuenftig?
+def _fall_tripauswahl_rueckfall(monkeypatch):
+    """`_find_active_trip`, Zukunfts-Rueckfall — welche Trip gilt als kuenftig?
 
     Keine der beiden laeuft: am 20.08. liegen beide in der Zukunft, am 22.08.
     ist die erste bereits vorbei. Der Rueckfall entscheidet.
     """
-    return _tourauswahl(monkeypatch, [
+    return _tripauswahl(monkeypatch, [
         _trip("startet-am-21-08", [D21], WP_KORSIKA),
         _trip("startet-am-23-08", [D23], WP_KORSIKA),
     ])
@@ -594,10 +594,10 @@ def _fall_tourauswahl_rueckfall(monkeypatch):
     pytest.param(_fall_jetzt, (WP_KORSIKA_NORD,), (WP_KORSIKA,), id="jetzt"),
     pytest.param(_fall_ruhetag, frozenset({D23}), frozenset({D21, D22, D23}),
                  id="ruhetag"),
-    pytest.param(_fall_tourauswahl_overlap, "laeuft-am-22-08", "laeuft-am-20-08",
-                 id="tourauswahl-overlap"),
-    pytest.param(_fall_tourauswahl_rueckfall, "startet-am-23-08",
-                 "startet-am-21-08", id="tourauswahl-rueckfall"),
+    pytest.param(_fall_tripauswahl_overlap, "laeuft-am-22-08", "laeuft-am-20-08",
+                 id="tripauswahl-overlap"),
+    pytest.param(_fall_tripauswahl_rueckfall, "startet-am-23-08",
+                 "startet-am-21-08", id="tripauswahl-rueckfall"),
 ])
 def test_befehlspfade_folgen_dem_parameter_nicht_der_systemuhr(
     fall, erwartet_parameter, erwartet_systemuhr, monkeypatch,

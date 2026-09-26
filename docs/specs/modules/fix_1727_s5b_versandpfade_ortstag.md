@@ -9,7 +9,7 @@ tags: [timezone, trip-report-scheduler, scheduler-dispatch-service, compare-pres
 workflow: fix-1727-s5b-versandpfade
 ---
 
-# Fix #1727 S5b — Versandpfade folgen dem Ortstag der Tour
+# Fix #1727 S5b — Versandpfade folgen dem Ortstag der Trip
 
 ## Approval
 
@@ -18,7 +18,7 @@ workflow: fix-1727-s5b-versandpfade
 ## Purpose
 
 Neun Fundstellen im Trip- und Ortsvergleichs-Versand bestimmen den Kalendertag weiterhin
-über die Serveruhr (`date.today()`) statt über den Ortstag der Tour bzw. des Preset-Orts —
+über die Serveruhr (`date.today()`) statt über den Ortstag der Trip bzw. des Preset-Orts —
 ein Verstoß gegen die bereits akzeptierte ADR-0044. Anders als die vorangegangene Scheibe S5a
 (Anzeige-/Befehlspfade) wirken alle neun Stellen dieser Scheibe auf **versendete Inhalte**:
 Etappenwahl im Test-Fallback, Wetter-Input, Ausblicks- und Gewitter-Ausblickszeilen, ob ein
@@ -242,7 +242,7 @@ relativ zur Orte-Prüfung ändert sich damit **nicht**, nur die Orte-Auflösung 
 - **Output:** Etappenwahl (Test-Fallback), Wetter-Abruf-Fenster, Ausblicks-/
   Gewitter-Ausblickszeilen, Verfall eines Nachliefer-Vermerks, Auto-Pause eines
   Compare-Presets, das Datum im Mail-/SMS-/Telegram-Präfix sowie Zieltag und Δ-Anker des
-  Compare-Einzelversands richten sich nach dem **Ortstag der betroffenen Tour bzw. des ersten
+  Compare-Einzelversands richten sich nach dem **Ortstag der betroffenen Trip bzw. des ersten
   auflösbaren Preset-Orts** — nicht nach dem Servertag (`Etc/UTC`).
 - **Side effects:** `briefings/<id>.json`-Pause-Einträge (Fundstelle 7) werden weiterhin per
   Read-Modify-Write mit Merge geschrieben, kein Replace (BUG-DATALOSS-GR221). Keine Migration
@@ -250,7 +250,7 @@ relativ zur Orte-Prüfung ändert sich damit **nicht**, nur die Orte-Auflösung 
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Trip-Test-Versand (`allow_test_fallback=True`) für eine Tour in einer
+- **AC-1:** Given ein Trip-Test-Versand (`allow_test_fallback=True`) für eine Trip in einer
   Zone mit positivem UTC-Offset (z. B. Neuseeland), deren einzige Etappe auf den Servertag D
   fällt, während der ORTSTAG bereits D+1 ist (Mismatch-Fenster 00:00–12:00 UTC) / When
   `select_test_stage` (`trip_report_scheduler.py:849`) die Fallback-Etappe wählt und
@@ -267,7 +267,7 @@ relativ zur Orte-Prüfung ändert sich damit **nicht**, nur die Orte-Auflösung 
     anderen Delta liefert als mit dem (falschen) Servertag.
 
 - **AC-2:** Given `_send_trip_report_outcome` (`trip_report_scheduler.py:1001`) läuft für eine
-  Tour in einer Zone mit negativem UTC-Offset (z. B. Los Angeles, im August UTC−7), deren
+  Trip in einer Zone mit negativem UTC-Offset (z. B. Los Angeles, im August UTC−7), deren
   `target_date` bereits ortsrichtig aus `_get_target_date` → `trip_local_today` stammt, während
   der SERVERTAG dem Ortstag bereits einen Tag VORAUS ist (Mismatch-Fenster 00:00–07:00 UTC) /
   When die Zeile 1103 prüft, ob der
@@ -305,12 +305,12 @@ relativ zur Orte-Prüfung ändert sich damit **nicht**, nur die Orte-Auflösung 
 
 - **AC-4:** Given ein Versandfehler-Vermerk (`reason == "dispatch_error"`) mit Zieltag D
   wartet in `_process_pending_markers` (`trip_report_scheduler.py:495`) auf Nachlieferung, und
-  die betroffene Tour liegt in einer Zone, in der Ortstag und Servertag zum Prüfzeitpunkt
+  die betroffene Trip liegt in einer Zone, in der Ortstag und Servertag zum Prüfzeitpunkt
   auseinanderfallen / When `briefing_target_day_is_current` (`alert_briefing_anchor.py:144`)
   an Zeile 538 prüft, ob der Vermerk noch aktuell ist / Then erhält die Funktion
   `today=trip_local_today(trip, now_utc)` explizit vom Aufrufer statt intern `heute = today or
   date.today()` aufzulösen — ein Vermerk verfällt (bzw. bleibt gültig) nach dem ORTSTAG der
-  Tour; vor dem Fix konnte er im Mismatch-Fenster einen Tag zu früh verfallen oder einen Tag
+  Trip; vor dem Fix konnte er im Mismatch-Fenster einen Tag zu früh verfallen oder einen Tag
   zu spät weitergeschleppt werden.
   - Test: `freeze_time` im Mismatch-Fenster, Vermerk mit Zieltag = wahrer Ortstag − 1 (aus
     Ortssicht bereits abgelaufen, aus Serversicht noch aktuell); Assertion auf
@@ -417,7 +417,7 @@ S5a fünf von sechs Aufrufstellen blind waren.
 An den Fundstellen **2, 8 und 9** ist sie strukturell **nicht** möglich, weil „jetzt" dort
 funktionsintern aufgelöst bleibt (bewusst, s. Known Limitations) — es gibt keinen Parameter,
 den man der Uhr entgegenstellen könnte. Geprüft wird dort ausschließlich (a): unter
-`freeze_time` liefert eine Tour bzw. ein Preset-Ort in einer Zone mit deutlichem Offset einen
+`freeze_time` liefert eine Trip bzw. ein Preset-Ort in einer Zone mit deutlichem Offset einen
 anderen Ortstag als den Servertag. Das ist falsifizierbar und ausreichend für die Zusicherung,
 die diese Scheibe an diesen drei Stellen macht.
 
@@ -440,7 +440,7 @@ ebenso zulässig.
   zugehörigen ~90 Test-Aufrufstellen bei den betroffenen Funktionen) keinen messbaren
   Sicherheitsgewinn brächte. Zusammen mit `send_on_demand_report` bildet diese Lücke die
   (b)-Folgescheibe im bestehenden Ticket #1727 — kein eigenes Issue.
-- **Mehrzonen-Touren:** Restfehler = Zonendifferenz zweier benachbarter Etappen an einem
+- **Mehrzonen-Trips:** Restfehler = Zonendifferenz zweier benachbarter Etappen an einem
   Wechseltag. Unverändert bewusst offen (ADR-0044, PO-Entscheidung).
 - **Ungezählte Menge:** ob unter den 67 Aufrufstellen von `send_one_compare_preset` welche den
   Servertag im `target_date=None`-Pfad ausdrücklich behaupten (z. B. eine Golden-Datei mit

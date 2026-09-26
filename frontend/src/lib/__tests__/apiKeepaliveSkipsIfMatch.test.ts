@@ -34,7 +34,7 @@ afterEach(() => server.restore());
 
 describe('AC-6: Abschluss-Speichervorgang beim Entladen', () => {
 	test('test_keepaliveFlush_omitsIfMatch_evenWithKnownStamp', async () => {
-		// GIVEN: die Tour ist geladen, ein Stand ist bekannt
+		// GIVEN: die Trip ist geladen, ein Stand ist bekannt
 		await api.get('/api/trips/gr20');
 		assert.ok(getKnownEtag('gr20'), 'Vorbedingung: ein Stand muss bekannt sein');
 
@@ -52,7 +52,7 @@ describe('AC-6: Abschluss-Speichervorgang beim Entladen', () => {
 	});
 
 	test('test_keepaliveFlush_notQueued_startsImmediatelyDuringRunningWrite', async () => {
-		// GIVEN: ein normaler Schreibvorgang auf dieselbe Tour ist WIRKLICH schon
+		// GIVEN: ein normaler Schreibvorgang auf dieselbe Trip ist WIRKLICH schon
 		// unterwegs (der kurze Wartetakt ist noetig: das Einreihen laeuft ueber
 		// einen Microtask, vorher ist beim Server noch nichts angekommen)
 		boot(40);

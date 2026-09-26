@@ -28,7 +28,7 @@ body.From` mit `PremiumSmsStateFresh` haben — die Sammelschleife
 (`premium_sms_connect.go:69-83`) überschreibt `storedMatch` dann
 kommentarlos mit dem zuletzt geladenen Nutzer. Es gibt keinen Log-Eintrag,
 keinen Fehler, keine Möglichkeit für den verdrängten Nutzer, das zu
-bemerken: seine Tourdaten würden für den anderen Nutzer beantwortet, sein
+bemerken: seine Trip-Daten würden für den anderen Nutzer beantwortet, sein
 Datensatz mit dessen Nummer überschrieben (Cross-User-Datenleck). Diese
 Spec führt eine Freshness-gefilterte Mehrfachtreffer-Prüfung ein, die bei
 ≥2 frischen Kandidaten nicht sofort ablehnt, sondern zum bestehenden

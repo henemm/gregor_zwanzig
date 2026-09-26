@@ -18,7 +18,7 @@ tags: [frontend, trip-wizard, channels, svelte, issue-412, issue-422, epic-404, 
 
 ## Zweck
 
-Die letzte Seite des Tour-Assistenten (Schritt 4 „Reports/Briefings") bringt die Versandkanäle
+Die letzte Seite des Trip-Assistenten (Schritt 4 „Reports/Briefings") bringt die Versandkanäle
 auf das SOLL-Design des #404-Phase-3-Audits: Statt kleiner, in jeder Karte wiederholter Kanal-Tags
 gibt es **eine dedizierte Karte „DEINE KANÄLE"** mit je einer Zeile pro Kanal
 (E-Mail / Signal / Telegram / SMS), die die **hinterlegte Kontaktangabe** aus dem Nutzerprofil zeigt
@@ -108,7 +108,7 @@ und per Schalter (`Switch`) an-/abschaltbar ist. Zusätzlich wird die Uhrzeit-An
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein eingeloggter Nutzer mit hinterlegten Kontaktdaten / When er den Tour-Assistenten bis
+- **AC-1:** Given ein eingeloggter Nutzer mit hinterlegten Kontaktdaten / When er den Trip-Assistenten bis
   Schritt 4 öffnet / Then erscheint eine Karte „DEINE KANÄLE" mit genau vier Zeilen (E-Mail, Signal,
   Telegram, SMS), jede mit Kanal-Label, Kontaktangabe und einem `Switch`-Schalter.
   - Test: `frontend/src/lib/components/trip-wizard/__tests__/issue_412_422_step4.test.ts` (node:test, RED-Artefakt: `docs/artifacts/issue_412_422_wizard_step4/test-red-output.txt`)

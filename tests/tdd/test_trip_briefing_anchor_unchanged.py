@@ -194,13 +194,13 @@ def _trip_anchor_gust(user_id: str, trip_id: str) -> float | None:
 def test_ac27_geplantes_briefing_setzt_genau_eine_kennung_zurueck(monkeypatch):
     """AC-27 (Wirkung, Bestandsverhalten).
 
-    GIVEN eine Tour mit einem Melde-Gedaechtnis, das einen amtlichen UND einen
+    GIVEN eine Trip mit einem Melde-Gedaechtnis, das einen amtlichen UND einen
           Aenderungs-Eintrag traegt, und drei weitere, FREMDE Zustandsdateien
-          (eine zweite Tour sowie zwei Ortsvergleichs-Kennungen desselben
+          (eine zweite Trip sowie zwei Ortsvergleichs-Kennungen desselben
           Nutzers).
     WHEN  das geplante Briefing laeuft (`on_demand=False`).
     THEN  wird der Reset GENAU EINMAL und GENAU fuer `trip.id` gerufen; der
-          amtliche Eintrag der Tour ueberlebt, ihr Aenderungs-Eintrag
+          amtliche Eintrag der Trip ueberlebt, ihr Aenderungs-Eintrag
           verschwindet, und keine der drei fremden Zustandsdateien wird
           angefasst.
 
@@ -240,12 +240,12 @@ def test_ac27_geplantes_briefing_setzt_genau_eine_kennung_zurueck(monkeypatch):
     )
     assert recorder.calls == [trip.id], (
         "Das geplante Briefing muss den Reset GENAU EINMAL und GENAU fuer die "
-        f"Tour-Kennung ausloesen, erhalten: {recorder.calls!r} (AC-27)"
+        f"Trip-Kennung ausloesen, erhalten: {recorder.calls!r} (AC-27)"
     )
 
     after = AlertStateService(user_id=uid).load(trip.id)
     assert after == {official_key: official_value}, (
-        "Nach dem Briefing darf nur noch der amtliche Eintrag der Tour stehen, "
+        "Nach dem Briefing darf nur noch der amtliche Eintrag der Trip stehen, "
         f"gefunden: {after!r} (AC-27)"
     )
     for entity_id, payload in fremde.items():
@@ -258,7 +258,7 @@ def test_ac27_geplantes_briefing_setzt_genau_eine_kennung_zurueck(monkeypatch):
 def test_ac27_anker_wird_vor_dem_reset_geschrieben(monkeypatch):
     """AC-27 (Reihenfolge, Bestandsverhalten).
 
-    GIVEN eine Tour ohne vorhandenen Δ-Anker fuer heute.
+    GIVEN eine Trip ohne vorhandenen Δ-Anker fuer heute.
     WHEN  das geplante Briefing laeuft.
     THEN  lag der frische Δ-Anker bereits auf Platte, ALS der Reset lief — und
           traegt danach den Briefing-Stand.
@@ -297,7 +297,7 @@ def test_ac27_anker_wird_vor_dem_reset_geschrieben(monkeypatch):
 def test_ac27_ad_hoc_abruf_laesst_anker_und_gedaechtnis_unberuehrt(monkeypatch):
     """AC-27 (Ad-hoc-Haelfte, Bestandsverhalten, Issue #1007).
 
-    GIVEN eine Tour mit einem bestehenden Δ-Anker (20 km/h) und einem
+    GIVEN eine Trip mit einem bestehenden Δ-Anker (20 km/h) und einem
           Melde-Gedaechtnis mit amtlichem UND Aenderungs-Eintrag.
     WHEN  ein Ad-hoc-Abruf laeuft (`on_demand=True`) und dabei ein deutlich
           anderes Wetter (48 km/h) sieht.

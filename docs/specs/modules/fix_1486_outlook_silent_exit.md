@@ -20,7 +20,7 @@ extends: multi_day_trend, trip_report_scheduler, output_channel_renderers, warn_
 Der Mehrtages-Ausblick-Block ("Nächste Etappen") im Trip-Briefing verschwindet heute an fünf
 Stellen in `_build_stage_trend()` wortlos — für den Empfänger sind alle fünf identisch: eine leere
 Stelle im Briefing. Dieser Fix ersetzt das stille Verwerfen durch einen sichtbaren, nach Ursache
-unterscheidbaren Zustand (normaler Tourabschluss / außerhalb Vorhersagehorizont / Störung) über
+unterscheidbaren Zustand (normaler Trip-Abschluss / außerhalb Vorhersagehorizont / Störung) über
 alle vier Ausgabewege (HTML-, Klartext-, Compact-Mail, Telegram), und protokolliert die beiden
 Störfälle als WARNING statt bisher DEBUG.
 
@@ -126,7 +126,7 @@ _OUTLOOK_STATE_TEXT = {
 
 def outlook_state_should_warn(state: OutlookState) -> bool:
     """Klasse A (NO_STAGES) ist kein Logging-wuerdiges Ereignis — normaler
-    Tourabschluss. B und C bekommen ein WARNING (vorher DEBUG bzw. teilweise
+    Trip-Abschluss. B und C bekommen ein WARNING (vorher DEBUG bzw. teilweise
     schon WARNING bei der Exception-Ursache)."""
     return state in (OutlookState.BEYOND_HORIZON, OutlookState.UNAVAILABLE)
 
@@ -138,7 +138,7 @@ def render_outlook_state_plain(state: OutlookState, horizon_days: Optional[int] 
 - `FOUND` → kein Text, Standard-Tabelle wie bisher.
 - `NO_STAGES` (Klasse A) → schlichter Fließtext, `G_INK_MUTED` (NICHT `G_INK_FAINT` —
   Design-Leitprinzip Lesbarkeit; NICHT `G_INK_FAINT`, weil das laut CLAUDE.md strikt nur für
-  Placeholder/Disabled reserviert ist), kein Rahmen, kein Icon — ein normaler Tourabschluss ist
+  Placeholder/Disabled reserviert ist), kein Rahmen, kein Icon — ein normaler Trip-Abschluss ist
   keine Warnung.
 - `BEYOND_HORIZON` (Klasse B) → gleiche neutrale Optik wie A (Fließtext, `G_INK_MUTED`), reine
   Information, kein Alarm-Ton — auch wenn dieser Fall neu ein WARNING-Log auslöst, ist er für den
@@ -204,7 +204,7 @@ Changelog dort).
 
 ## Acceptance Criteria
 
-- **AC-1 (Klasse A — normaler Tourabschluss):** Given eine Tour ohne weitere Etappen nach dem
+- **AC-1 (Klasse A — normaler Trip-Abschluss):** Given eine Trip ohne weitere Etappen nach dem
   Zieldatum / When das Briefing (gleich welcher Kanal) gerendert wird / Then erscheint der Satz
   „Keine weiteren Etappen — kein Ausblick." ohne Warn-/Danger-Styling (kein Rahmen, kein `⚠️`), UND
   es entsteht KEIN WARNING-Log-Eintrag.

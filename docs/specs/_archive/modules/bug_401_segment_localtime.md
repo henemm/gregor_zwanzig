@@ -139,7 +139,7 @@ Gegeben: User konfiguriert Abfahrt "08:00" in Corsica (CEST = UTC+2, Sommer).
 | Wetterdaten für | UTC 08–10 = CEST 10–12 | UTC 06–08 = CEST 08–10 ✓ |
 | Night-Block ab | CEST 14:00 (acc.) | CEST 14:00 ✓ |
 
-Für UTC-Touren (tz = UTC): `tz_for_coords` liefert UTC, `.replace(tzinfo=utc)` und `local_hour(..., utc)` liefern exakt die gleichen Werte wie vorher → kein Verhaltensunterschied.
+Für UTC-Trips (tz = UTC): `tz_for_coords` liefert UTC, `.replace(tzinfo=utc)` und `local_hour(..., utc)` liefern exakt die gleichen Werte wie vorher → kein Verhaltensunterschied.
 
 ## Acceptance Criteria
 
@@ -152,7 +152,7 @@ Für UTC-Touren (tz = UTC): `tz_for_coords` liefert UTC, `.replace(tzinfo=utc)` 
 - **AC-3:** Given `trip_report_scheduler.py` / When die Datei nach dem #401-Fix gelesen wird / Then importiert sie `from utils.timezone import tz_for_coords` top-level
   - Test: `test_scheduler_imports_tz_for_coords` (in `tests/tdd/test_bug_401_segment_localtime.py`)
 
-- **AC-4:** Given User konfiguriert Abfahrt "08:00" für eine Tour in CEST (UTC+2) / When `_convert_trip_to_segments` ausgeführt wird / Then nutzt der Code `.replace(tzinfo=seg_tz).astimezone(timezone.utc)`, sodass `segment.start_time` UTC 06:00 statt UTC 08:00 ist
+- **AC-4:** Given User konfiguriert Abfahrt "08:00" für eine Trip in CEST (UTC+2) / When `_convert_trip_to_segments` ausgeführt wird / Then nutzt der Code `.replace(tzinfo=seg_tz).astimezone(timezone.utc)`, sodass `segment.start_time` UTC 06:00 statt UTC 08:00 ist
   - Test: `test_scheduler_uses_replace_astimezone` (in `tests/tdd/test_bug_401_segment_localtime.py`)
 
 - **AC-5:** Given die Konvertierungslogik / When CEST 08:00 (Europe/Paris, Sommer) konvertiert wird / Then ergibt die echte Konvertierung UTC 06:00

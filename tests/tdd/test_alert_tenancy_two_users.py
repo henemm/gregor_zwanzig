@@ -3,7 +3,7 @@ vier Pakete (P1a/P1b/P2/P4).
 
 SPEC: docs/specs/modules/rework_1460_t1_relevanzfilter.md (AC-34)
 
-Zwei Nutzer (`alice`, `bob`) mit strukturell identischen Touren/Vergleichen:
+Zwei Nutzer (`alice`, `bob`) mit strukturell identischen Trips/Vergleichen:
 gleiche Wertebereiche, gleiche Empfindlichkeitsstufen, gleiche amtliche Warnung
 an denselben Koordinaten. Jeder Melde-Gedaechtnis- und Protokoll-Effekt muss
 ausschliesslich im Verzeichnis des jeweiligen Nutzers landen.
@@ -107,7 +107,7 @@ def _data(**summary_kwargs) -> SegmentWeatherData:
 
 
 def _identical_trip() -> Trip:
-    """Strukturell identische Tour fuer beide Nutzer: gleicher Wertebereich
+    """Strukturell identische Trip fuer beide Nutzer: gleicher Wertebereich
     (P1a), gleiche Empfindlichkeitsstufen fuer Boeen und Gewitter (P1b),
     amtliche Warnungen aktiv (P4)."""
     stage = Stage(
@@ -189,7 +189,7 @@ def _sources_backup():
 def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
     """AC-34.
 
-    GIVEN zwei Nutzer (alice, bob) mit strukturell identischen Touren — gleiche
+    GIVEN zwei Nutzer (alice, bob) mit strukturell identischen Trips — gleiche
           Wertebereiche, gleiche Empfindlichkeitsstufen, dieselbe amtliche
           Warnung an denselben Koordinaten
     WHEN  die Auswertung (Wertebereich, Empfindlichkeitsstufe, amtliche Warnung,
@@ -290,7 +290,7 @@ def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
 def test_ac34b_wertebereich_wirkt_bei_beiden_nutzern_gleich_nicht():
     """AC-34 (P1a-Anteil).
 
-    GIVEN zwei Nutzer mit identischer Tour, deren EINZIGE eingestellte
+    GIVEN zwei Nutzer mit identischer Trip, deren EINZIGE eingestellte
           Alarmquelle ein gerissener Wertebereich ist
     WHEN  der Alarm-Lauf fuer beide Nutzer nacheinander laeuft
     THEN  bleibt es bei BEIDEN still und in KEINEM der beiden Verzeichnisse

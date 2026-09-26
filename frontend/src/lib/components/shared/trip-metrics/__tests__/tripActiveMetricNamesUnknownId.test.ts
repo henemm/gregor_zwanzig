@@ -22,7 +22,7 @@ import type { MetricCatalog } from '../../../trip-detail/metricsEditor.ts';
 import type { WeatherConfigMetric } from '$lib/types';
 
 // Katalog OHNE 'soil_temp' — simuliert eine umbenannte/entfernte Größe, deren
-// Kennung in einer alten Tour noch gespeichert ist.
+// Kennung in einer alten Trip noch gespeichert ist.
 const catalog: MetricCatalog = {
 	temperature: [
 		{

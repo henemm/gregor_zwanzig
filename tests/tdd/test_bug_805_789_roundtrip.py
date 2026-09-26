@@ -16,7 +16,7 @@ from app.loader import _parse_trip, save_trip
 
 _TRIP_FULL = {
     "id": "test-805-roundtrip",
-    "name": "Roundtrip-Test Tour",
+    "name": "Roundtrip-Test Trip",
     "region": "GR20",
     "archived_at": "2025-09-01T12:00:00Z",
     "stages": [

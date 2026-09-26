@@ -81,7 +81,7 @@ unbegrenzt blockierende Schritte (siehe „Known Limitations").
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `src/services/trip_alert.py` | MODIFY | Neue Modul-Konstante `ALERT_RUN_DEADLINE_SECONDS = 90.0`; `check_all_trips()` berechnet einmalig `deadline_at = time.monotonic() + ALERT_RUN_DEADLINE_SECONDS`, prüft sie **vor jeder Tour** in der Schleife, zählt `checked`/`skipped`, loggt INFO (Gesamtlaufzeit, jeder Lauf) und WARNING (bei Abbruch: Obergrenze, geprüfte/übersprungene Touren); Rückgabetyp wechselt von `int` auf ein kleines Ergebnis-Objekt (s. Implementation Details) |
+| `src/services/trip_alert.py` | MODIFY | Neue Modul-Konstante `ALERT_RUN_DEADLINE_SECONDS = 90.0`; `check_all_trips()` berechnet einmalig `deadline_at = time.monotonic() + ALERT_RUN_DEADLINE_SECONDS`, prüft sie **vor jeder Trip** in der Schleife, zählt `checked`/`skipped`, loggt INFO (Gesamtlaufzeit, jeder Lauf) und WARNING (bei Abbruch: Obergrenze, geprüfte/übersprungene Trips); Rückgabetyp wechselt von `int` auf ein kleines Ergebnis-Objekt (s. Implementation Details) |
 | `api/routers/scheduler.py` | MODIFY | `trigger_alert_checks()` leitet `status` (`ok`/`partial`), `count`, `checked`, `skipped`, `duration_s` und ggf. `reason: "deadline"` aus dem neuen Ergebnis-Objekt ab, statt `status` fest auf `"ok"` zu setzen |
 | `api/main.py` | MODIFY | Neue Funktion `configure_logging()`, konfiguriert den Root-Logger (Zeitstempel, Stufe, Modulname), Stufe aus `GZ_LOG_LEVEL` (Default `INFO`); Aufruf beim Modul-Import, vor `app = FastAPI(...)` |
 | `tests/tdd/test_alert_run_deadline.py` | CREATE | Nachweis Teil A: Obergrenze wird geprüft, bricht sichtbar ab, meldet Teilerfolg; vollständiger Lauf bleibt unverändert |
@@ -134,13 +134,13 @@ ALERT_RUN_DEADLINE_SECONDS = 90.0
 
 `check_all_trips()` berechnet `deadline_at = time.monotonic() +
 ALERT_RUN_DEADLINE_SECONDS` **einmal**, vor der Schleife über
-`load_all_trips(...)`. Vor jeder Tour (d. h. vor dem Betreten des
+`load_all_trips(...)`. Vor jeder Trip (d. h. vor dem Betreten des
 Schleifenrumpfs, nicht innerhalb eines bestehenden `try`) wird geprüft, ob
 `time.monotonic() > deadline_at`. Ist das der Fall: die Schleife wird
 **verlassen** (nicht `continue` — die restlichen Trips werden nicht mehr
 angefasst), die Anzahl noch nicht geprüfter Trips fließt in `skipped`.
 
-Jede tatsächlich geprüfte Tour (auch eine übersprungene wegen abgelaufenem
+Jede tatsächlich geprüfte Trip (auch eine übersprungene wegen abgelaufenem
 Trip oder fehlendem Cache, s. bestehende `continue`-Zweige) erhöht
 `checked` — die Deadline-Prüfung selbst zählt **nicht** als „geprüft".
 
@@ -338,8 +338,8 @@ Kein Mock-Theater. Kern-Schicht, deterministisch, kein echtes Warten.
 
 - **AC-1:** Given ein Nutzer-Lauf von `check_all_trips()` hat die
   Zeitobergrenze bereits überschritten, während noch weitere, ungeprüfte
-  Trips in der Liste stehen / When die Schleife die nächste Tour erreichen
-  würde / Then wird diese und jede weitere verbleibende Tour **nicht**
+  Trips in der Liste stehen / When die Schleife die nächste Trip erreichen
+  würde / Then wird diese und jede weitere verbleibende Trip **nicht**
   mehr geprüft, der Lauf endet stattdessen sofort.
   - Test: Mit künstlich verzögerter Prüfung und geschrumpfter Obergrenze
     (`monkeypatch`) bleiben nachweislich Trips hinter dem Abbruchpunkt
@@ -348,8 +348,8 @@ Kein Mock-Theater. Kern-Schicht, deterministisch, kein echtes Warten.
 - **AC-2:** Given der Alarm-Lauf für einen Nutzer wird durch die
   Zeitobergrenze abgebrochen / When der Scheduler-Endpunkt
   `/api/scheduler/alert-checks` antwortet / Then enthält die Antwort
-  `status: "partial"`, die Anzahl tatsächlich geprüfter Touren, die
-  Anzahl übersprungener Touren und einen erkennbaren Grund für den
+  `status: "partial"`, die Anzahl tatsächlich geprüfter Trips, die
+  Anzahl übersprungener Trips und einen erkennbaren Grund für den
   Abbruch.
   - Test: HTTP-Antwort des Endpunkts (TestClient) enthält alle genannten
     Felder mit plausiblen, aus dem Lauf abgeleiteten Werten.
@@ -357,7 +357,7 @@ Kein Mock-Theater. Kern-Schicht, deterministisch, kein echtes Warten.
 - **AC-3:** Given ein Alarm-Lauf für einen Nutzer schließt innerhalb der
   Zeitobergrenze vollständig ab / When der Scheduler-Endpunkt antwortet /
   Then meldet er `status: "ok"`, dieselbe Anzahl versendeter Alarme wie
-  vor dieser Änderung, und keine einzige übersprungene Tour — das
+  vor dieser Änderung, und keine einzige übersprungene Trip — das
   Verhalten unterscheidet sich für diesen Fall in nichts vom heutigen
   Stand.
   - Test: Ein vollständiger Durchlauf mit mehreren Trips und mindestens
@@ -367,7 +367,7 @@ Kein Mock-Theater. Kern-Schicht, deterministisch, kein echtes Warten.
 - **AC-4:** Given ein Alarm-Lauf wird durch die Zeitobergrenze
   abgebrochen / When der Abbruch eintritt / Then wird eine WARNING-Zeile
   geschrieben, die die Obergrenze, die Anzahl geprüfter und die Anzahl
-  übersprungener Touren nennt.
+  übersprungener Trips nennt.
   - Test: `caplog` fängt eine WARNING-Zeile mit den drei genannten Werten
     ab.
 
@@ -398,15 +398,15 @@ Kein Mock-Theater. Kern-Schicht, deterministisch, kein echtes Warten.
 
 ## Known Limitations
 
-- **Die Prüfung sitzt zwischen den Touren, nicht innerhalb einer Tour.**
-  Eine einzelne Tour, deren Prüfung selbst unbegrenzt hängen kann (allen
+- **Die Prüfung sitzt zwischen den Trips, nicht innerhalb einer Trip.**
+  Eine einzelne Trip, deren Prüfung selbst unbegrenzt hängen kann (allen
   voran der SMTP-Versand ohne `timeout=` in
   `src/output/channels/email.py:433`, dazu der garantierte 50s-Retry-Schlaf
   dort und der ebenso ungeschützte Ersatzweg; ferner die Telegram-Bremse
   `src/output/channels/telegram.py:210-250` und die globalen
   `fcntl.flock`-Dateisperren ohne Timeout, z. B.
   `src/services/forecast_budget.py:178`), wird durch diese Scheibe **nicht**
-  begrenzt — die Deadline-Prüfung wird für die hängende Tour selbst nie
+  begrenzt — die Deadline-Prüfung wird für die hängende Trip selbst nie
   wieder erreicht. Diese Scheibe begrenzt die **Summe** der Arbeit eines
   Laufs, nicht den Einzelfall. Der Einzelfall ist Issue **#1448**, bewusst
   nicht Teil dieser Scheibe.

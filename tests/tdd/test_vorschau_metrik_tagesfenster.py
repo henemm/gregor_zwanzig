@@ -217,7 +217,7 @@ def test_ac3_keine_nachtangabe_im_metrik_zweig():
     Zusatz in der Gewitterzelle (PO-Entscheid 2026-08-14, bewusste
     Abweichung von #1653/#1671).
 
-    #1848 A3: dieser Entscheid gilt seither fuer ALLE Touren, nicht mehr nur
+    #1848 A3: dieser Entscheid gilt seither fuer ALLE Trips, nicht mehr nur
     fuer den Metrik-Zweig -- der feste Zweig entfaellt als Normalfall, und die
     Nachtangabe ist aus allen VIER Ausblick-Darstellungen entfernt. DREIFACH
     bestaetigt (2026-08-14 · 2026-08-21 mit Kenntnis von Verwechslungsluecke

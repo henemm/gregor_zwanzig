@@ -51,7 +51,7 @@ assert _PRUEFLING.is_relative_to(_BAUM), (
 TODAY = date(2026, 9, 10)
 RECEIVED_AT = datetime(2026, 9, 10, 8, 0, tzinfo=timezone.utc)
 _TRIP_ID = "test-2220-gewitter-ampel"
-_TRIP_NAME = "Bandtreu-Test-Tour"
+_TRIP_NAME = "Bandtreu-Test-Trip"
 _USER_ID = "default"
 
 # Lokale Band->Symbol-Referenz fuer AC-2 -- bewusst NICHT aus `_BAND_EMOJI`

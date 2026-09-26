@@ -8,7 +8,7 @@ version: "1.0"
 tags: [compare, trips, alarme, persistenz]
 ---
 
-# Alarme-Reiter speichert selbst wie bei der Tour (Issue #2276, Scheibe S2, Epic #2345)
+# Alarme-Reiter speichert selbst wie bei der Trip (Issue #2276, Scheibe S2, Epic #2345)
 
 ## Approval
 
@@ -19,13 +19,13 @@ tags: [compare, trips, alarme, persistenz]
 Im Ortsvergleich-Hub speichert der Alarme-Reiter heute NICHT für sich selbst,
 sondern meldet jede Änderung an einen Sammel-Mechanismus der Seite
 („Wrapper" + `handleAlarmeCommit`), der die Änderung zusammen mit allen
-anderen Reitern verwaltet. Bei einer Tour speichert dagegen jeder Reiter
+anderen Reitern verwaltet. Bei einer Trip speichert dagegen jeder Reiter
 direkt und unabhängig — das ist das Zielbild, auf das der Ortsvergleich
 Schritt für Schritt umgestellt wird (Epic #2345). Diese Scheibe stellt den
 Alarme-Reiter als ersten von sechs Reitern um. Nutzersichtbarer Nebeneffekt:
 schlägt ein Speichervorgang wegen eines zwischenzeitlichen fremden Änderns
 fehl (Speicherkonflikt), zeigt der Ortsvergleich künftig „Nochmal speichern"
-statt eines generischen Fehlers — genau wie bei der Tour. Am Verhalten der
+statt eines generischen Fehlers — genau wie bei der Trip. Am Verhalten der
 Anlege-Seite (`/compare/new`) und der übrigen fünf Reiter ändert sich nichts.
 
 ## Source

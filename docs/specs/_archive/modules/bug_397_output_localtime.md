@@ -4,7 +4,7 @@
 **Created:** 2026-05-26
 **Issues:** #397 (hoch, user-gemeldet), #398 (Nacht-Sektion), #399 (Mitternacht-Filter)
 **Verwandte Spec:** `docs/specs/bugfix/utc_localtime_display.md` (Vorarbeit — diese Spec vollendet sie)
-**Schweregrad:** hoch — Wanderer treffen Tour-Entscheidungen anhand der angezeigten Zeiten.
+**Schweregrad:** hoch — Wanderer treffen Trip-Entscheidungen anhand der angezeigten Zeiten.
 
 ## Problem & Ursache
 

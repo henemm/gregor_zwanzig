@@ -19,11 +19,11 @@ tags: [email, trip-briefing, stage, formatter]
 ## Purpose
 
 Die Trip-Briefing-E-Mail (Betreff **und** Body-Header) zeigt aktuell nur den frei
-eingegebenen Etappennamen (`stage.name`). Bei mehrtägigen Touren fehlt damit jeder
-Hinweis, **welche** Etappe der Tour gemeint ist — der Wanderer kann das Briefing
+eingegebenen Etappennamen (`stage.name`). Bei mehrtägigen Trips fehlt damit jeder
+Hinweis, **welche** Etappe der Trip gemeint ist — der Wanderer kann das Briefing
 nicht zuverlässig seiner Planung zuordnen. Diese Spec stellt der Etappen-Bezeichnung
 **zwingend** die fortlaufende Etappen-Nummer voran (`Etappe N: <Name>`), abgeleitet
-aus der chronologischen Position der Etappe innerhalb der Tour.
+aus der chronologischen Position der Etappe innerhalb der Trip.
 
 ## Source
 
@@ -62,7 +62,7 @@ def numbered_stage_label(self, stage: Stage) -> str:
     """Etappen-Bezeichnung mit zwingender, dedupliziert vorangestellter Nummer.
 
     Die Nummer ist die 1-basierte chronologische Position der Etappe innerhalb
-    der Tour (Etappen nach Datum sortiert). Trägt der Name bereits ein
+    der Trip (Etappen nach Datum sortiert). Trägt der Name bereits ein
     'Etappe N'/'Tag N'-Präfix, wird dieses durch die korrekte 'Etappe N:'-Form
     ersetzt (keine doppelte Nummer).
     """

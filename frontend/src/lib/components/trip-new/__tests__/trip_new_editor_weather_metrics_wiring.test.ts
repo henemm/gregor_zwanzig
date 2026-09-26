@@ -138,7 +138,7 @@ describe('Test 4 (Ende-zu-Ende der Anlage): buildCreateTripPayload uebernimmt ei
 	// Auswahl unveraendert im POST-Payload -- nicht die anfaengliche [].
 	test('eine im Dialog abgewaehlte Groesse (enabled=false) bleibt im Payload erhalten', () => {
 		const state: CreateTripState = {
-			name: 'Testtour',
+			name: 'Test-Trip',
 			startDate: '2026-06-15',
 			stages: [{ id: 1, name: 'Etappe 1', waypoints: [] }],
 			weatherMetrics: [

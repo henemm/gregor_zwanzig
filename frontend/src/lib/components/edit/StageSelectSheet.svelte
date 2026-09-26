@@ -37,7 +37,7 @@
 	}
 </script>
 
-<Sheet {open} {onClose} snap="half" title="Etappe wählen" eyebrow="Touren-Navigation">
+<Sheet {open} {onClose} snap="half" title="Etappe wählen" eyebrow="Trips-Navigation">
 	<ul class="stage-list" data-testid="stage-select-list">
 		{#each stages as stage, i (stage.id)}
 			{@const active = i === activeIndex}

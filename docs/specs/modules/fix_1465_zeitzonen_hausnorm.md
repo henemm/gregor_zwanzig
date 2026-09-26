@@ -100,7 +100,7 @@ Vollständige Messung: `docs/context/fix-1465-zeitzonen-hausnorm.md`.
   Der Fix zieht `from_time` an der Grenze von `drilldown()` auf dieselbe Norm.
 
 - **AC-7 (Ortszeit):** Given der Drilldown zeigt Stundenzeilen / When er sie beschriftet /
-  Then stehen dort die Uhrzeiten **am Ort der Tour**, nicht die der Serverzeitzone.
+  Then stehen dort die Uhrzeiten **am Ort der Trip**, nicht die der Serverzeitzone.
   - Test: Trip auf Korsika, Erwartung unabhängig aus dem zeitzonenbehafteten `now`
     gebildet. Zuvor deutete `pt.ts.astimezone()` einen zeitzonenlosen Zeitstempel als
     Prozess-Zeitzone — auf diesem UTC-Server unauffällig, auf jedem anderen Host falsch.

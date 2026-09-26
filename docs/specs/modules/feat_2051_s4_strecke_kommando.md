@@ -234,7 +234,7 @@ E7 behebt **nicht** die zugrundeliegende Segment-Grenze selbst (die
 Antwort reicht weiterhin nur bis zum Ende des aktuell aktiven Segments,
 nicht bis zum Etappenziel) — das würde `points_along_remaining_route()`/
 `_remaining_km()` grundlegend ändern und damit den seit S2a **live**
-laufenden Alarm-Pfad kurz vor Tourstart anfassen. E7 macht die bestehende
+laufenden Alarm-Pfad kurz vor Trip-Start anfassen. E7 macht die bestehende
 Grenze für den Nutzer **sichtbar** statt sie zu verschweigen; ihre
 Aufhebung ist eine eigene, spätere Arbeit.
 
@@ -696,7 +696,7 @@ _SHORTCUT_MAP = {..., "/strecke": "strecke"}
   volle Resttagesetappe** (Bestandseigenschaft aus S2a — der Alarm-Pfad hat
   dieselbe Grenze, `_remaining_km()`/`points_along_remaining_route()`
   rechnen ausschließlich innerhalb von `active`). Diese Scheibe behebt die
-  Grenze **nicht** — der live laufende Alarm-Pfad wird kurz vor Tourstart
+  Grenze **nicht** — der live laufende Alarm-Pfad wird kurz vor Trip-Start
   bewusst nicht angefasst —, macht sie aber über E7 (`Geprüft: km ...`)
   für den Nutzer **sichtbar** statt sie zu verschweigen. Die Aufhebung
   dieser Grenze (mehrsegmentige Traversierung bis zum Etappenziel) ist

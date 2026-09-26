@@ -398,7 +398,7 @@ bleibt aber im Scope des Issues.
   `CompareLayoutRow`-Pfad). Die echten Compare-Budgets sind 7 Metrik-Zellen
   je Ort (Telegram) und 2 (SMS), nicht die 8 aus `CHANNEL_COL_BUDGET`.
   (2) `WeatherV2MailPreview` rendert hartcodierte Trip-Beispielwerte
-  („Beispiel-Tour · Etappe 1", Stundenspalten) und wäre im Vergleich eine
+  („Beispiel-Trip · Etappe 1", Stundenspalten) und wäre im Vergleich eine
   Attrappe — die echte Vergleichs-Mail-Vorschau ist der Hub-Reiter
   „Vorschau" (Server-Render), der bereits existiert.
   Der eigentlich geteilte Baustein `WeatherV2Reihenfolge` **ist**

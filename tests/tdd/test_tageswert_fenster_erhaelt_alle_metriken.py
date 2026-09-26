@@ -136,7 +136,7 @@ def _extractor(tmp_path: Path, user_id: str = "default"):
 def _speichere(tmp_path: Path, segmente: list[SegmentWeatherData]) -> None:
     svc = WeatherSnapshotService(user_id="default")
     svc._snapshots_dir = tmp_path
-    svc.save("tour-2186", segmente, TAG)
+    svc.save("trip-2186", segmente, TAG)
 
 
 def _um_zehn() -> datetime:
@@ -167,7 +167,7 @@ class TestBeschnittenesSegmentTraegtBeideRechenstufen:
                     + [_punkt(h, **SPAET) for h in (10, 11)],
         )])
 
-        ergebnis = _extractor(tmp_path).timeline("tour-2186", from_time=_um_zehn())
+        ergebnis = _extractor(tmp_path).timeline("trip-2186", from_time=_um_zehn())
 
         assert len(ergebnis.points) == 1
         m = ergebnis.points[0].metrics
@@ -208,7 +208,7 @@ class TestBeschnittenesSegmentTraegtBeideRechenstufen:
                     + [_punkt(h, **SPAET) for h in (10, 11)],
         )])
 
-        ergebnis = _extractor(tmp_path).timeline("tour-2186", from_time=_um_zehn())
+        ergebnis = _extractor(tmp_path).timeline("trip-2186", from_time=_um_zehn())
         m = ergebnis.points[0].metrics
 
         leer = [
@@ -245,8 +245,8 @@ class TestNochNichtBegonnenesSegment:
         )])
         extractor = _extractor(tmp_path)
 
-        gefenstert = extractor.timeline("tour-2186", from_time=_um_zehn())
-        ungefenstert = extractor.timeline("tour-2186")
+        gefenstert = extractor.timeline("trip-2186", from_time=_um_zehn())
+        ungefenstert = extractor.timeline("trip-2186")
 
         m = gefenstert.points[0].metrics
         for feld, erwartet in UNVERWECHSELBAR.items():
@@ -298,7 +298,7 @@ class TestFensterstundenWerdenDurchgereicht:
             day_window=day_window,
         )])
 
-        ergebnis = _extractor(tmp_path).timeline("tour-2186", from_time=_um_zehn())
+        ergebnis = _extractor(tmp_path).timeline("trip-2186", from_time=_um_zehn())
         m = ergebnis.points[0].metrics
 
         # Beweist, dass ueberhaupt neu gerechnet wurde — sonst waere die
@@ -330,7 +330,7 @@ class TestSegmentOhneStundenreihe:
             stunden=None,
         )])
 
-        ergebnis = _extractor(tmp_path).timeline("tour-2186", from_time=_um_zehn())
+        ergebnis = _extractor(tmp_path).timeline("trip-2186", from_time=_um_zehn())
 
         assert ergebnis.available is True
         assert len(ergebnis.points) == 1
@@ -372,7 +372,7 @@ class TestGleichheitsgrenzen:
             stunden=[_punkt(h, **SPAET) for h in (10, 11, 12, 13)],
         )])
 
-        ergebnis = _extractor(tmp_path).timeline("tour-2186", from_time=_um_zehn())
+        ergebnis = _extractor(tmp_path).timeline("trip-2186", from_time=_um_zehn())
 
         assert len(ergebnis.points) == 1, (
             "das Segment beginnt erst jetzt und darf nicht entfallen"
@@ -409,7 +409,7 @@ class TestGleichheitsgrenzen:
             ),
         ])
 
-        ergebnis = _extractor(tmp_path).timeline("tour-2186", from_time=_um_zehn())
+        ergebnis = _extractor(tmp_path).timeline("trip-2186", from_time=_um_zehn())
 
         assert [p.label for p in ergebnis.points] == ["6"], (
             f"das um 10:00 abgelaufene Segment steht noch in den Wegpunkten: "
@@ -451,7 +451,7 @@ class TestGewitterHerkunftUeberlebtDieNeuberechnung:
             ),
         )])
 
-        ergebnis = _extractor(tmp_path).timeline("tour-2186", from_time=_um_zehn())
+        ergebnis = _extractor(tmp_path).timeline("trip-2186", from_time=_um_zehn())
         m = ergebnis.points[0].metrics
 
         # Beweist, dass ueberhaupt neu gerechnet wurde.
@@ -497,7 +497,7 @@ class TestHagelKennzeichenUeberlebtDieNeuberechnung:
             ),
         )])
 
-        ergebnis = _extractor(tmp_path).timeline("tour-2186", from_time=_um_zehn())
+        ergebnis = _extractor(tmp_path).timeline("trip-2186", from_time=_um_zehn())
         m = ergebnis.points[0].metrics
 
         # Beweist, dass ueberhaupt neu gerechnet wurde -- sonst waere

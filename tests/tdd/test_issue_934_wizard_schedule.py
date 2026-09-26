@@ -5,7 +5,7 @@ Anforderungen (aus Issue #934):
   Bug 1: Wetter-Metriken-Tab und Briefing-Zeitplan-Tab zeigen dieselbe Zeitplan-UI
   Bug 2: Einstellungen gehen beim Tab-Wechsel verloren ("gleichen Inhalte")
   Bug 3: "Automatisch speichern scheint verloren gegangen" — Zeitplan-Config wird beim
-         Anlegen einer Tour nicht persistiert
+         Anlegen einer Trip nicht persistiert
 
 Technische Grundlage:
   - /trips/new Wizard: Zeitplan-Tab erfordert wtVisited=true → erfordert etDone=true (GPX)
@@ -177,7 +177,7 @@ class TestBug1KeineDoppelteUI:
 class TestBug3ZeitplanConfigGespeichert:
     """
     Bug 3: "Automatisch speichern scheint verloren gegangen" — der Nutzer konnte
-    nicht erkennen ob und wie Zeitplan-Einstellungen beim Anlegen einer Tour
+    nicht erkennen ob und wie Zeitplan-Einstellungen beim Anlegen einer Trip
     gespeichert werden.
 
     Der Code zeigt: reportConfig in buildAndSave() → POST /api/trips.
@@ -203,7 +203,7 @@ class TestBug3ZeitplanConfigGespeichert:
 
         payload = {
             "id": trip_id,
-            "name": f"934-Test-Tour {trip_id}",
+            "name": f"934-Test-Trip {trip_id}",
             "stages": [],
             "report_config": report_config,
         }
@@ -251,7 +251,7 @@ class TestBug3ZeitplanConfigGespeichert:
 
         payload = {
             "id": trip_id,
-            "name": f"934-Default-Tour {trip_id}",
+            "name": f"934-Default-Trip {trip_id}",
             "stages": [],
         }
 
@@ -436,9 +436,9 @@ class TestManuellNotwendig:
     5. Zeitplan-Tab: Morgen-Report DEAKTIVIEREN
     6. Metriken-Tab wechseln
     7. Zurück zu Zeitplan-Tab: Morgen-Report noch deaktiviert? → Bug 2
-    8. "Tour anlegen" klicken
+    8. "Trip anlegen" klicken
     9. Erstellten Trip öffnen → Zeitplan-Tab: Morgen-Report deaktiviert? → Bug 3
-    10. Tour danach löschen
+    10. Trip danach löschen
     """
 
     @pytest.mark.skip(reason="Manuell: GPX-Upload im Wizard nicht automatisierbar")
@@ -447,6 +447,6 @@ class TestManuellNotwendig:
         pass
 
     @pytest.mark.skip(reason="Manuell: GPX-Upload im Wizard nicht automatisierbar")
-    def test_wizard_tour_anlegen_mit_zeitplan_config(self):
+    def test_wizard_trip_anlegen_mit_zeitplan_config(self):
         """Platzhalter — manuelle Verifikation erforderlich."""
         pass

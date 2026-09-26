@@ -1,6 +1,6 @@
 """
 A3 (Epic #1301) — Schnee vom Landesdienst als Ergaenzung (gemeinsamer Weg
-+ Touren-Bonus). Ergaenzt fuer Orte im SNOWGRID-Abdeckungsgebiet (Alpen)
++ Trips-Bonus). Ergaenzt fuer Orte im SNOWGRID-Abdeckungsgebiet (Alpen)
 die Werte snow_depth_cm/swe_kgm2 fill-only in die openmeteo-Zeitreihe,
 am gemeinsamen Punkt OpenMeteoProvider.fetch_forecast.
 

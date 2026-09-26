@@ -26,7 +26,7 @@ Tabellen-Format — klarer scanbar, direkt vergleichbar über Tage.
 
 ## Acceptance Criteria
 
-**AC-1:** Given ein Abendbericht für eine aktive Tour / When die Tour mindestens eine weitere
+**AC-1:** Given ein Abendbericht für eine aktive Trip / When die Trip mindestens eine weitere
 Etappe nach morgen hat / Then enthält der Bericht einen Block „Nächste Etappen" mit bis zu 3
 Folge-Etappen (niemals mehr als 3, egal wie viele existieren).
 
@@ -34,10 +34,10 @@ Folge-Etappen (niemals mehr als 3, egal wie viele existieren).
 Etappenname; Zeile 2 = fluchtende Spalten Temp (Lo–Hi °C) · Regen (mm oder –) · Wind (Richtung + km/h) ·
 Gewitter-Ampel (Farb-Quadrat + Wort: kein/MED/HIGH).
 
-**AC-3 (v5.0, ersetzt v4.0-Fassung — Fix #1486):** Given eine Tour deren letzte Etappe morgen ist
+**AC-3 (v5.0, ersetzt v4.0-Fassung — Fix #1486):** Given eine Trip deren letzte Etappe morgen ist
 (keine weiteren Etappen nach dem Zieldatum) / When das Briefing gerendert wird / Then erscheint
 statt des leeren, kommentarlosen Nichts der Hinweissatz „Keine weiteren Etappen — kein Ausblick."
-(neutraler Fließtext, KEIN Warn-/Danger-Styling, KEIN Logging — normaler Tourabschluss ist kein
+(neutraler Fließtext, KEIN Warn-/Danger-Styling, KEIN Logging — normaler Trip-Abschluss ist kein
 Fehler). Details, weitere Zustände (außerhalb Vorhersagehorizont / Störung) und die Herleitung:
 `docs/specs/modules/fix_1486_outlook_silent_exit.md`.
 

@@ -125,7 +125,7 @@ def _positivkontrolle_wert_wird_geschrieben(prefix: str) -> None:
 # ───────────────────────────────── AC-17 ───────────────────────────────────
 
 def test_ac17_boeen_aenderung_protokolliert_neuen_und_alten_wert():
-    """AC-17 GIVEN eine Tour-Vorhersage-Aenderung am Boeen-Feld
+    """AC-17 GIVEN eine Trip-Vorhersage-Aenderung am Boeen-Feld
     (``old_value=20.0`` -> ``new_value=60.0``)
     WHEN der Protokoll-Eintrag geschrieben wird
     THEN traegt das Register-Dict fuer ``("gust","max")`` zusaetzlich

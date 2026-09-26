@@ -788,7 +788,7 @@ def test_ac11_und_ac12_anker_auf_erster_etappe_und_genau_ein_abruf(monkeypatch, 
     `_enrich_ensemble_for_trip` aufgerufen wird / THEN liegt die an den
     Ensemble-Abruf uebergebene Koordinate auf dem `end_point` des letzten
     Segments aus `weather_data` (Etappe 1), NICHT auf dem letzten Wegpunkt
-    der GESAMTEN Tour (Etappe 2) -- UND es wird GENAU EIN Ensemble-Request
+    der GESAMTEN Trip (Etappe 2) -- UND es wird GENAU EIN Ensemble-Request
     abgesetzt (AC-12, Anker-Korrektur aendert die Koordinate, nicht die
     Aufrufzahl).
 

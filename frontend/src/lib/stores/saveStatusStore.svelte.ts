@@ -127,7 +127,7 @@ export class SaveStatus {
 				this.setSaved();
 			} catch (e) {
 				// Issue #1395 S4: nur ein echter Nebenlaeufigkeits-Konflikt auf einer
-				// bekannten Tour bekommt den eigenen Zustand mit Wiederholen-Knopf.
+				// bekannten Trip bekommt den eigenen Zustand mit Wiederholen-Knopf.
 				if ((e as ApiError)?.status === 412 && this._tripId) {
 					this._lastFailed = { fn: saveFn, init };
 					this.state = 'conflict';

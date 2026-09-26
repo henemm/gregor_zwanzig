@@ -1,5 +1,5 @@
 """TDD RED — Issue #1460 Teil 1, Paket P4: amtliche Warnungen bekommen Ort UND
-Zeit gemeinsam (Tour UND Ortsvergleich).
+Zeit gemeinsam (Trip UND Ortsvergleich).
 
 SPEC: docs/specs/modules/rework_1460_t1_relevanzfilter.md (AC-24 .. AC-33)
 
@@ -169,15 +169,15 @@ def _segments_for(result: list, label: str) -> list[str]:
     return []
 
 
-# ═══════════════════════════ Tour (AC-24 .. AC-30) ═══════════════════════════
+# ═══════════════════════════ Trip (AC-24 .. AC-30) ═══════════════════════════
 
 def test_ac24_warnung_in_drei_tagen_gilt_nicht_fuer_die_heutige_etappe():
     """AC-24.
 
-    GIVEN eine Tour mit einer Etappe, auf der der Nutzer HEUTE ist (endet in
+    GIVEN eine Trip mit einer Etappe, auf der der Nutzer HEUTE ist (endet in
           2 Stunden), und eine amtliche Warnung an DEREN Koordinate, die erst
           in 3 Tagen beginnt
-    WHEN  die amtlichen Warnungen der Tour geprueft werden
+    WHEN  die amtlichen Warnungen der Trip geprueft werden
     THEN  wird die Warnung fuer DIESE Etappe NICHT gemeldet — ihr Beginn liegt
           nach dem Ende von deren Zeitfenster.
     """
@@ -213,10 +213,10 @@ def test_ac24_warnung_in_drei_tagen_gilt_nicht_fuer_die_heutige_etappe():
 def test_ac25_warnung_fuer_eine_spaetere_etappe_geht_nicht_verloren():
     """AC-25 (wichtigstes AC dieses Pakets).
 
-    GIVEN dieselbe Tour hat eine SPAETERE Etappe, auf der der Nutzer in 3 Tagen
+    GIVEN dieselbe Trip hat eine SPAETERE Etappe, auf der der Nutzer in 3 Tagen
           sein wird, und die amtliche Warnung liegt an DEREN Koordinate
           innerhalb von deren Zeitfenster
-    WHEN  die amtlichen Warnungen der Tour geprueft werden
+    WHEN  die amtlichen Warnungen der Trip geprueft werden
     THEN  WIRD die Warnung gemeldet — zugeordnet zu dieser spaeteren Etappe.
     """
     from services.official_alerts import register_official_alert_source
@@ -260,7 +260,7 @@ def test_ac25b_gleiche_koordinate_an_zwei_tagen_faellt_nicht_zusammen():
     GIVEN ein Ort, der an ZWEI verschiedenen Tagen der Route liegt (gleiche
           Koordinate, verschiedene Zeitfenster), und eine amtliche Warnung, die
           nur im Fenster der SPAETEREN Etappe gueltig ist
-    WHEN  die amtlichen Warnungen der Tour geprueft werden
+    WHEN  die amtlichen Warnungen der Trip geprueft werden
     THEN  wird die Warnung genau der spaeteren Etappe zugeordnet — die beiden
           Segmente duerfen nicht ueber die blosse Koordinate zusammenfallen.
     """
@@ -304,7 +304,7 @@ def test_ac26_warnung_innerhalb_der_naechsten_zwei_stunden_wird_gemeldet():
 
     GIVEN dieselbe heutige Etappe (endet in 2 Stunden) und eine amtliche
           Warnung an deren Koordinate, die in 1 Stunde beginnt
-    WHEN  die amtlichen Warnungen der Tour geprueft werden
+    WHEN  die amtlichen Warnungen der Trip geprueft werden
     THEN  WIRD sie fuer diese Etappe gemeldet.
     """
     from services.official_alerts import register_official_alert_source
@@ -340,7 +340,7 @@ def test_ac27_ruhetag_schliesst_die_kuenftigen_etappen_nicht_aus():
 
     GIVEN ein Ruhetag ohne Etappe fuer HEUTE, aber mit regulaeren KUENFTIGEN
           Etappen (morgen und uebermorgen) im Schnappschuss
-    WHEN  die amtlichen Warnungen der Tour geprueft werden
+    WHEN  die amtlichen Warnungen der Trip geprueft werden
     THEN  werden die kuenftigen Etappen unveraendert mit ihren eigenen Fenstern
           geprueft — ein Ruhetag schliesst spaetere Etappen nicht aus.
     """
@@ -385,7 +385,7 @@ def test_ac28_etappen_pause_schliesst_spaetere_etappen_nicht_aus():
 
     GIVEN der aktuelle Zeitpunkt liegt zwischen dem Ende von Etappe 1 und dem
           Start von Etappe 2 desselben Tages (eine Pause)
-    WHEN  die amtlichen Warnungen der Tour geprueft werden
+    WHEN  die amtlichen Warnungen der Trip geprueft werden
     THEN  bleibt Etappe 2 mit ihrem eigenen Zeitfenster pruefbar — die Pause
           schliesst nachfolgende Etappen NICHT aus (anders als der
           Nowcast-Pfad, bewusste Abweichung).
@@ -421,12 +421,12 @@ def test_ac28_etappen_pause_schliesst_spaetere_etappen_nicht_aus():
         _clean_user(user_id)
 
 
-def test_ac29_beendete_tour_wertet_keine_amtliche_warnung_mehr_aus():
+def test_ac29_beendeter_trip_wertet_keine_amtliche_warnung_mehr_aus():
     """AC-29.
 
-    GIVEN der letzte Tourtag, die letzte Etappe ist bereits beendet und es gibt
+    GIVEN der letzte Trip-Tag, die letzte Etappe ist bereits beendet und es gibt
           keine weitere Etappe
-    WHEN  die amtlichen Warnungen der Tour geprueft werden
+    WHEN  die amtlichen Warnungen der Trip geprueft werden
     THEN  wird kein amtlicher Alarm mehr ausgewertet — das Ergebnis ist leer.
     """
     from services.official_alerts import register_official_alert_source
@@ -442,7 +442,7 @@ def test_ac29_beendete_tour_wertet_keine_amtliche_warnung_mehr_aus():
             _data("letzte", COORD_HEUTE, _now() - timedelta(hours=5), _now() - timedelta(hours=1)),
         ])
         register_official_alert_source(_PointSource(COORD_HEUTE, [
-            _alert("Warnung nach Tourende", _now() - timedelta(hours=1), _now() + timedelta(hours=6)),
+            _alert("Warnung nach Trip-Ende", _now() - timedelta(hours=1), _now() + timedelta(hours=6)),
         ]))
 
         result = TripAlertService(user_id=user_id).check_official_alert_triggers(trip)

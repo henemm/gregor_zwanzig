@@ -26,7 +26,7 @@ Anreicherungspunkt), den S2a (Météo-France, live seit 2026-08-03) bereits
 etabliert hat.
 
 Zweite Scheibe von S2 (#1457) aus dem Gewitter-Konzept #1419. Auslöser: die
-nächste Tour geht zum Karnischen Höhenweg (Grenze Österreich/Italien) — dort
+nächste Trip geht zum Karnischen Höhenweg (Grenze Österreich/Italien) — dort
 liefert die heutige Grundvorhersage-Zuständigkeit (GeoSphere, `at_direct`)
 kein Gewittersignal.
 

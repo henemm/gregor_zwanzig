@@ -150,7 +150,7 @@ def test_ac3_sms_referenz_zeitpunkt_haelt_160_zeichen_budget_ein():
     ]
 
     msg = to_alert_message(
-        changes, weather_data, "Sehr Langer Absurder Tournamensname",
+        changes, weather_data, "Sehr Langer Absurder Tripnamensname",
         tz=tz, stand_at="10:00", reference_at="18:03",
     )
     sms = render_sms(msg)
@@ -310,7 +310,7 @@ def test_ac5_regression_korridor_only_footer_bleibt_unveraendert():
         occurred_at="14:00", km_from=0.0, km_to=5.0,
     )
     msg = AlertMessage(
-        trip_short="Testtour", stand_at="14:00", events=(), source=None,
+        trip_short="Test-Trip", stand_at="14:00", events=(), source=None,
         corridor_events=(ce,),
     )
     _html, plain = render_email(msg)

@@ -53,7 +53,7 @@ Die Startseite (`/`) nutzt derzeit Inline-CSS-Konstrukte für Kacheln und Layout
 
 ```
 H1-Text ändern:
-  "Startseite" → "Deine Touren & Vergleiche"
+  "Startseite" → "Deine Trips & Vergleiche"
 
 Subtext-Block hinzufügen (unterhalb H1):
   "Was du jetzt vorbereitest, läuft unterwegs autark.
@@ -61,7 +61,7 @@ Subtext-Block hinzufügen (unterhalb H1):
   CSS: color: var(--g-ink-muted); font-size: 0.9375rem; line-height: 1.5;
 
 <h2>-Sektions-Header entfernen:
-  Soll-flow1A zeigt flaches Grid ohne "Aktive Touren" / "Vergleiche"-Header.
+  Soll-flow1A zeigt flaches Grid ohne "Aktive Trips" / "Vergleiche"-Header.
   Beide <section>-Header-Elemente ersatzlos entfernen.
 ```
 
@@ -146,12 +146,12 @@ als übergeordnete PO-Entscheidung.
 ## Expected Behavior
 
 - **Input:** Browser lädt Route `/`; Trip- und Compare-Daten kommen unverändert vom bestehenden API-Aufruf
-- **Output:** Seite zeigt Cockpit-Layout (Hero, Etappen-Streifen, Briefings, Archiv) PLUS Kachel-Grid mit `data-slot="g-card"`, H1-Text "Deine Touren & Vergleiche", kein Sektions-Header. Kacheln mit weißem Card-Hintergrund, `--g-ink-faint`-Border, `--g-elev-1`-Hover, "Reports ✓" wenn report_config aktiv
+- **Output:** Seite zeigt Cockpit-Layout (Hero, Etappen-Streifen, Briefings, Archiv) PLUS Kachel-Grid mit `data-slot="g-card"`, H1-Text "Deine Trips & Vergleiche", kein Sektions-Header. Kacheln mit weißem Card-Hintergrund, `--g-ink-faint`-Border, `--g-elev-1`-Hover, "Reports ✓" wenn report_config aktiv
 - **Side effects:** Keine Logik-Änderung; bestehende Navigation, API-Calls, Svelte-Store-Bindings bleiben byte-gleich; `tripStatus()` wird nicht neu importiert (bereits vorhanden in TripKachel)
 
 ## Acceptance Criteria
 
-- **AC-1:** Given die Startseite wird im Browser geöffnet / When der Seiteninhalt gerendert wird / Then lautet die H1-Überschrift "Deine Touren & Vergleiche" (nicht mehr "Startseite") und darunter erscheint der Subtext über autarke Briefings
+- **AC-1:** Given die Startseite wird im Browser geöffnet / When der Seiteninhalt gerendert wird / Then lautet die H1-Überschrift "Deine Trips & Vergleiche" (nicht mehr "Startseite") und darunter erscheint der Subtext über autarke Briefings
   - Test: (populated after /tdd-red)
 
 - **AC-2:** Given eine Trip-Kachel mit aktivem report_config (morning_enabled oder evening_enabled) / When die Kachel auf der Startseite gerendert wird / Then zeigt die Meta-Zeile "N Etappen · Reports ✓" mit korrekter Etappenanzahl
@@ -166,7 +166,7 @@ als übergeordnete PO-Entscheidung.
 - **AC-5:** Given die Startseite nach der Migration / When `svelte-check` und `contrast-audit.test.ts` ausgeführt werden / Then meldet svelte-check 0 Fehler und contrast-audit.test.ts ist vollständig grün (keine neuen Kontrast-Verstöße durch die Migration)
   - Test: `cd frontend && npx svelte-check` + `node --experimental-strip-types --test src/lib/contrast-audit.test.ts`
 
-- **AC-6:** Given die Startseite im Browser / When die Sektions-Header-Elemente gesucht werden / Then sind keine `<h2>`-Überschriften für "Aktive Touren" oder "Vergleiche" vorhanden; das Grid ist flach ohne visuelle Trennüberschriften zwischen Trip- und Compare-Kacheln
+- **AC-6:** Given die Startseite im Browser / When die Sektions-Header-Elemente gesucht werden / Then sind keine `<h2>`-Überschriften für "Aktive Trips" oder "Vergleiche" vorhanden; das Grid ist flach ohne visuelle Trennüberschriften zwischen Trip- und Compare-Kacheln
   - Test: (populated after /tdd-red)
 
 - **AC-7:** Given eine Compare-Kachel mit `sub.enabled === true` / When die Kachel gerendert wird / Then zeigt die Statuszeile einen Dot in success-Farbe und den Text "AKTIV"; bei `sub.enabled === false` erscheint Dot in default-Farbe und "PAUSIERT"

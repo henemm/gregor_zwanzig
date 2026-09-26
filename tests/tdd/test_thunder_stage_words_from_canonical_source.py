@@ -106,7 +106,7 @@ def test_ac2_thunder_fmt_emoji_behaelt_symbol_und_korrigiert_wort(level, expecte
 TODAY = date(2026, 9, 10)
 RECEIVED_AT = datetime(2026, 9, 10, 8, 0, tzinfo=timezone.utc)
 _TRIP_ID = "test-2010-2011-hours-drilldown"
-_TRIP_NAME = "Stufenwoerter-Test-Tour"
+_TRIP_NAME = "Stufenwoerter-Test-Trip"
 _USER_ID = "default"
 
 

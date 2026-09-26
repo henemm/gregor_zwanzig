@@ -82,7 +82,7 @@ def _konto_default_mit_chat_und_trip(chat_id: str | None) -> str:
     if chat_id is not None:
         profil["telegram_chat_id"] = chat_id
     (ordner / "user.json").write_text(json.dumps(profil))
-    tripname = "Geheimtour-" + uuid.uuid4().hex[:6]
+    tripname = "Geheim-Trip-" + uuid.uuid4().hex[:6]
     (ordner / "briefings" / "t-geheim.json").write_text(json.dumps({
         "id": "t-geheim", "name": tripname, "stages": [],
     }))

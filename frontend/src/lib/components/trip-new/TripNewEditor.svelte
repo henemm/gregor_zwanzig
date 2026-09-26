@@ -68,7 +68,7 @@
 	// ── Tab-Definitionen (1:1 TN_TAB_DEFS) ──────────────────────────────────
 	const TAB_DEFS: { id: TabId; label: string; lockHint: string | null; optional: boolean }[] = [
 		{ id: 'route',     label: 'Route',            lockHint: null,                             optional: false },
-		{ id: 'etappen',   label: 'Etappen & GPX',    lockHint: 'erst Tour-Name + Startdatum',    optional: false },
+		{ id: 'etappen',   label: 'Etappen & GPX',    lockHint: 'erst Trip-Name + Startdatum',    optional: false },
 		{ id: 'wegpunkte', label: 'Wegpunkte prüfen', lockHint: 'erst alle GPX hochladen',        optional: true  },
 		{ id: 'metriken',  label: 'Wetter-Metriken',  lockHint: 'erst alle GPX hochladen',        optional: false },
 		{ id: 'zeitplan',  label: 'Briefing-Zeitplan',lockHint: 'erst Wetter-Metriken öffnen',    optional: false },
@@ -136,7 +136,7 @@
 	// Jahr und ist dafür unbrauchbar.
 	const stubTrip = $derived<Trip>({
 		id: '__new__',
-		name: name || 'Neue Tour',
+		name: name || 'Neue Trip',
 		stages: buildEditorStages(),
 		activity: selectedActivity,
 		display_config: { channels, metrics: weatherMetrics } as unknown as Trip['display_config'],
@@ -466,7 +466,7 @@
 			<div class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
 				<span style="opacity: 0.6;">Trips</span>
 				<span style="margin: 0 8px;">/</span>
-				<span style="color: var(--g-ink);">Neue Tour</span>
+				<span style="color: var(--g-ink);">Neue Trip</span>
 			</div>
 			<div style="display: flex; gap: 8px; align-items: center;">
 				{#if !ready}
@@ -496,7 +496,7 @@
 			<!-- Titel-Gruppe -->
 			<div style="flex: 1; min-width: 0; padding: 0 8px; display: flex; flex-direction: column; justify-content: center;">
 				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-					{name.trim() || 'Neue Tour'}
+					{name.trim() || 'Neue Trip'}
 				</div>
 				<div style="font-size: 15px; font-weight: 600; color: var(--g-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
 					{TAB_DEFS.find(t => t.id === activeTab)?.label ?? 'Route'}
@@ -513,7 +513,7 @@
 
 		<!-- Hero (Desktop only) -->
 		<div class="tn-desktop" style="position: relative; padding: 20px 40px 14px;">
-			<Eyebrow>Neue Tour anlegen</Eyebrow>
+			<Eyebrow>Neue Trip anlegen</Eyebrow>
 			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 0; line-height: 1.1; color: {name.trim() ? 'var(--g-ink)' : 'var(--g-ink-4)'};">
 				{name.trim() || 'Noch kein Name'}
 			</h1>
@@ -607,11 +607,11 @@
 			<div style="position: relative; padding: 28px 40px 60px;">
 				<TopoBg opacity={0.10} />
 				<div style="position: relative; max-width: 640px;">
-					<Eyebrow style="margin-bottom: 14px;">Tour-Grunddaten</Eyebrow>
+					<Eyebrow style="margin-bottom: 14px;">Trip-Grunddaten</Eyebrow>
 
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
-							Tour-Name <span style="color: var(--g-bad);">*</span>
+							Trip-Name <span style="color: var(--g-bad);">*</span>
 						</label>
 						<input type="text" value={name} oninput={makeNameHandler()}
 							placeholder="z.B. Karnischer Höhenweg 2026"
@@ -678,7 +678,7 @@
 
 					<div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
 						{#if !name.trim()}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">⊘ Tour-Name fehlt</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">⊘ Trip-Name fehlt</span>
 						{:else if !startDate}
 							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">⊘ Startdatum fehlt</span>
 						{/if}
@@ -934,7 +934,7 @@
 			{#if activeTab === 'route'}
 				<!-- Mobile Route-Tab (TNM_RouteTab) -->
 				<div style="position: relative; padding: 16px 16px 88px;">
-					<MField label="Tour-Name">
+					<MField label="Trip-Name">
 						<!-- data-testid geteilt: Desktop-Input im .tn-desktop ist display:none auf ≤899px,
 						     dieser hier ist sichtbar → Playwright findet genau diesen einen sichtbaren. -->
 						<div style="display: flex; align-items: center; gap: 10px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 0 14px; min-height: 48px;">
@@ -987,7 +987,7 @@
 					<div data-testid="tn-mobile-route-cta" style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10;">
 						<MBtn block variant={name.trim() && startDate ? 'primary' : 'quiet'} size="xl"
 							onclick={makeMobileRouteContinueHandler()}>
-							{name.trim() && startDate ? 'Etappen anlegen →' : (!name.trim() ? 'Tour-Name eingeben' : 'Startdatum wählen')}
+							{name.trim() && startDate ? 'Etappen anlegen →' : (!name.trim() ? 'Trip-Name eingeben' : 'Startdatum wählen')}
 						</MBtn>
 					</div>
 				</div>

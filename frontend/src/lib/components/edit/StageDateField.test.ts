@@ -80,12 +80,12 @@ test('AC-4: StageDateField nutzt Svelte-5 ($props/$derived), nicht Legacy', () =
 });
 
 // ---------------------------------------------------------------------------
-// AC-5: Label-Markup unterstützt "Tourstart" wenn isFirst=true
+// AC-5: Label-Markup unterstützt "Trip-Start" wenn isFirst=true
 // ---------------------------------------------------------------------------
 
-test('AC-5: StageDateField rendert "Tourstart" bedingt via isFirst', () => {
+test('AC-5: StageDateField rendert "Trip-Start" bedingt via isFirst', () => {
 	const src = read(COMPONENT);
-	assert.ok(src.includes('Tourstart'), 'Label muss "Tourstart"-Markup enthalten');
+	assert.ok(src.includes('Trip-Start'), 'Label muss "Trip-Start"-Markup enthalten');
 	assert.ok(
 		src.includes('isFirst'),
 		'isFirst-Prop muss im Template referenziert werden (z.B. {#if isFirst})'

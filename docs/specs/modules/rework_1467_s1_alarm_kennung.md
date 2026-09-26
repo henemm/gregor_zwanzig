@@ -18,7 +18,7 @@ tags: [alerts, trip, compare, epic-1458, issue-1467, schema]
 ## Purpose
 
 Das Alarm-Protokoll (`alert_log.json`) trägt seit #1459 **zwei** Kennungsfelder: `trip_id` für
-Touren und `preset_id` für Ortsvergleiche. Diese Trennung hat keinen fachlichen Grund — sie
+Trips und `preset_id` für Ortsvergleiche. Diese Trennung hat keinen fachlichen Grund — sie
 existiert allein, weil die Go-Zählung `AlertCountByTrip()` (`internal/store/log.go:94`) am Feld
 `trip_id` hängt und beim Einführen des Vergleichs-Protokolls nicht angefasst werden sollte.
 
@@ -87,7 +87,7 @@ Datei.
 ⚠️ Die Issue-Beschreibung sagt „220 Einträge, alle ausschließlich mit den vier Altfeldern" — das
 war am 2026-08-02 richtig, seither hat der Produktivbetrieb 2 Neuformat-Einträge erzeugt. Der
 Kern der Begründung bleibt gültig und wird durch die Messung sogar schärfer: zu migrieren ist
-ausschließlich „`trip_id` → Kennung, Typ = Tour".
+ausschließlich „`trip_id` → Kennung, Typ = Trip".
 
 ## Implementation Details
 
@@ -135,7 +135,7 @@ bleibt in jedem Fall vollständig.
 
 `AlertCountByTrip()` → `AlertCountByEntity()`, Schlüssel `"<typ>:<kennung>"`, z. B.
 `"trip:5f534011"` oder `"compare:abc123"`. Damit verschwindet der Sammel-Schlüssel `""`, und
-Touren und Presets sind unterscheidbar, ohne sich auf die Kollisionsfreiheit zweier unabhängiger
+Trips und Presets sind unterscheidbar, ohne sich auf die Kollisionsfreiheit zweier unabhängiger
 Kennungsräume zu verlassen.
 
 `/api/archive/stats` hat **keinen Frontend-Konsumenten** (gemessen: kein Treffer in
@@ -148,7 +148,7 @@ Antwortschema. Der Vertrag ist damit frei änderbar.
 
 `+page.svelte:109` filtert heute `a.trip_id === hero?.id`. Künftig:
 `a.entity_type === 'trip' && a.entity_id === hero?.id`. Der Typ-Vergleich ist kein Beiwerk: Nach
-der Vereinheitlichung liegen Tour- und Preset-Kennungen im selben Feld, eine Gleichheit allein
+der Vereinheitlichung liegen Trip- und Preset-Kennungen im selben Feld, eine Gleichheit allein
 wäre nicht mehr eindeutig.
 
 ## Nicht-Ziele / bewusst unverändert
@@ -158,7 +158,7 @@ wäre nicht mehr eindeutig.
 - **`BriefingLogEntry` bleibt unverändert** (`log.go:9-14`), obwohl es dasselbe Muster zeigt.
   Vergleichs-Briefings schreiben dort gar nicht; eigener Gegenstand, nicht Teil von #1467.
 - **`not_delivered` bleibt für Go unsichtbar** (D4 aus #1459) — Cockpit-Kachel und
-  Archiv-Statistik ändern sich für Bestandstouren um keine Zahl.
+  Archiv-Statistik ändern sich für Bestands-Trips um keine Zahl.
 - **D1 bleibt gültig** (#1459): EIN Eintrag je Meldung, Kanäle als Listen innerhalb des Eintrags.
 - Keine Änderung an Auslöse-Logik, Schwellen, Kanälen, Ruhezeiten oder Tages-Obergrenzen.
 
@@ -184,8 +184,8 @@ haben — kein Eintrag darf über die Nutzergrenze sichtbar werden. Vorbild:
 
 **Schreibpfad (Python)**
 
-- **AC-1:** Given ein Tour-Alarm wird ausgelöst, When `append_entry()` den Eintrag schreibt,
-  Then trägt der Eintrag `entity_id` = Tour-Kennung und `entity_type` = `"trip"` und **weder**
+- **AC-1:** Given ein Trip-Alarm wird ausgelöst, When `append_entry()` den Eintrag schreibt,
+  Then trägt der Eintrag `entity_id` = Trip-Kennung und `entity_type` = `"trip"` und **weder**
   `trip_id` **noch** `preset_id`.
   - Test: `append_entry(user, entity_id="t1", entity_type="trip", …)` aufrufen, geschriebene JSON
     laden, Feldbestand exakt prüfen (beide Altfelder abwesend).
@@ -220,21 +220,21 @@ haben — kein Eintrag darf über die Nutzergrenze sichtbar werden. Vorbild:
 
 **Zählung im Archiv (Go)**
 
-- **AC-7:** Given eine Protokolldatei mit drei Alarmen für Tour `A`, einem für Tour `B` und zwei
+- **AC-7:** Given eine Protokolldatei mit drei Alarmen für Trip `A`, einem für Trip `B` und zwei
   für Preset `P`, When `GET /api/archive/stats` aufgerufen wird, Then enthält die Antwort
   `{"trip:A": 3, "trip:B": 1, "compare:P": 2}` — insbesondere **kein** Schlüssel `""`.
   - Test: `seedAlertLog` mit sechs Einträgen, Antwort-Map exakt vergleichen.
 
-- **AC-8:** Given eine Tour und ein Preset mit **derselben Kennung** `"x1"`, When
+- **AC-8:** Given eine Trip und ein Preset mit **derselben Kennung** `"x1"`, When
   `GET /api/archive/stats` aufgerufen wird, Then werden beide getrennt gezählt
   (`"trip:x1"` und `"compare:x1"`), nicht addiert.
   - Test: zwei Einträge mit gleicher Kennung, unterschiedlichem Typ.
 
 **Frontend**
 
-- **AC-9:** Given die Startseite mit einer aktiven Tour `hero` und einem Protokoll, das sowohl
-  einen Alarm dieser Tour als auch einen Vergleichs-Alarm mit derselben Kennung enthält, When die
-  Alarm-Liste der Tour gerendert wird, Then erscheint **nur** der Tour-Alarm.
+- **AC-9:** Given die Startseite mit einer aktiven Trip `hero` und einem Protokoll, das sowohl
+  einen Alarm dieser Trip als auch einen Vergleichs-Alarm mit derselben Kennung enthält, When die
+  Alarm-Liste der Trip gerendert wird, Then erscheint **nur** der Trip-Alarm.
   - Test: Frontend-Unit-Test gegen die Filter-Ableitung mit beiden Einträgen.
 
 **Mandantentrennung**

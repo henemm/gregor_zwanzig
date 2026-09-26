@@ -185,7 +185,7 @@ class TestAC3DescentSegmentShowsDownArrow:
 
         text = render_plain(
             segments=[seg_data], seg_tables=[_SIMPLE_ROWS],
-            trip_name="Test-Tour", report_type="morning",
+            trip_name="Test-Trip", report_type="morning",
             dc=build_default_display_config(), night_rows=[],
             thunder_forecast=None, changes=None,
             stage_name=None, stage_stats=None, multi_day_trend=None,
@@ -231,7 +231,7 @@ class TestAC4AscentSegmentShowsUpArrow:
 
         text = render_plain(
             segments=[seg_data], seg_tables=[_SIMPLE_ROWS],
-            trip_name="Test-Tour", report_type="morning",
+            trip_name="Test-Trip", report_type="morning",
             dc=build_default_display_config(), night_rows=[],
             thunder_forecast=None, changes=None,
             stage_name=None, stage_stats=None, multi_day_trend=None,

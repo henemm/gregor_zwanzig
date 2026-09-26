@@ -85,7 +85,7 @@ die Auflösung sich entscheiden; nur bei wirklich abweichenden Ergebnissen bleib
 
 **Warum normierte statt roher Werte verglichen werden:** `distance_from_start_km` kumuliert ab dem
 Anfang des jeweiligen GPX-**Tracks** (`gpx_parser.py:155`), nicht ab dem Etappenstart. Eine
-Einzeletappen-GPX beginnt bei 0 km, eine durchlaufende Gesamt-Tour-GPX kann für dieselbe physische
+Einzeletappen-GPX beginnt bei 0 km, eine durchlaufende Gesamt-Trip-GPX kann für dieselbe physische
 Etappe bei z. B. 50 km beginnen. Roh verglichen wären beide „verschieden", obwohl sie dem Nutzer
 identische Kilometerwerte zeigen würden: `trip_segments.py:150-151` normiert ohnehin auf den
 Etappenstart, und die ausgelieferten Segmente tragen ausschließlich diese normierten Werte
@@ -150,7 +150,7 @@ Ergebnis alle drei Kandidaten gleichzeitig beschreibt.
     ohne ihn wäre „Ergebnisgleichheitsprüfung ersatzlos entfernt" ununterscheidbar vom alten
     Verhalten, da AC-1 mit byte-identischen Dateien auch bei einer entfernten Prüfung bestünde.
 
-- **AC-3:** Given eine Einzeletappen-GPX und eine durchlaufende Gesamt-Tour-GPX decken dieselbe
+- **AC-3:** Given eine Einzeletappen-GPX und eine durchlaufende Gesamt-Trip-GPX decken dieselbe
   Etappe ab, ihre rohen Distanzwerte unterscheiden sich aber um einen großen Offset (z. B. +50 km,
   weil die Gesamt-GPX nicht bei dieser Etappe beginnt) / When die Track-Auflösung läuft / Then
   liefert sie ein Ergebnis, weil die auf den Etappenstart normierten Werte je Wegpunkt innerhalb
@@ -254,7 +254,7 @@ Ergebnis alle drei Kandidaten gleichzeitig beschreibt.
 ## Nicht Teil dieser Spec
 
 - **Scheibe 2 (Sichtbarkeit des stillen Fehlschlags)** ist per PO-Entscheid 2026-08-22 auf nach der
-  KHW-Tour verschoben. Der Fehlschlag der Track-Auflösung bleibt in dieser Scheibe weiterhin still
+  KHW-Trip verschoben. Der Fehlschlag der Track-Auflösung bleibt in dieser Scheibe weiterhin still
   (`logger.warning` bei nicht lesbaren Dateien, sonst kein Signal nach außen).
 - **`_match_track()` / die Vollständigkeitsregel** wird nicht verändert — sie bleibt „alles oder
   nichts je Kandidat" (AC-12 aus #2036).
@@ -313,7 +313,7 @@ Wächter behält — sie darf nicht ersatzlos entfallen, nur ihr Auslöser ände
   `tests/tdd/test_alert_run_deadline.py`). Gemessener Bestand: 20 Dateien.
 - **Scheibe 2 ist NICHT Teil dieser Spec:** Der Fehlschlag der Track-Auflösung bleibt still.
   Sichtbarmachung am Trip (zweiter Teil von #2073) ist per PO-Entscheid 2026-08-22 auf nach der
-  KHW-Tour verschoben.
+  KHW-Trip verschoben.
 
 ## Architektur-Entscheidung (ADR)
 

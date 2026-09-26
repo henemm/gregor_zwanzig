@@ -151,7 +151,7 @@ def test_ac4_load_trip_mit_data_dir_ohne_user_id_wirft_valueerror_statt_default_
     falle = tmp_path / "users" / "default" / "briefings"
     falle.mkdir(parents=True)
     (falle / "t-geheim.json").write_text(
-        '{"id": "t-geheim", "name": "Geheimtour-Fuer-Default", "stages": []}',
+        '{"id": "t-geheim", "name": "Geheim-Trip-Fuer-Default", "stages": []}',
         encoding="utf-8",
     )
 

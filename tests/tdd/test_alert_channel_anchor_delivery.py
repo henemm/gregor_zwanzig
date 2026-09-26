@@ -153,7 +153,7 @@ def _alarm_service(user_id: str, mails: list):
 def test_ac1_nur_der_zugestellte_kanal_bekommt_einen_frischen_merker():
     """AC-1.
 
-    GIVEN eine Tour mit den Alarmkanaelen E-Mail und Telegram, beide mit einem
+    GIVEN eine Trip mit den Alarmkanaelen E-Mail und Telegram, beide mit einem
           eigenen, unterscheidbaren Tier-2-Merker.
     WHEN  ein Alarm laeuft, den nur E-Mail zustellt (Telegram scheitert am
           echten Transport-Guard).
@@ -161,7 +161,7 @@ def test_ac1_nur_der_zugestellte_kanal_bekommt_einen_frischen_merker():
           Telegram-Merker unveraendert auf seinem Altstand stehen bleibt.
 
     HEUTE ROT: ``save_alarm_anchor()`` kennt keinen ``channel``-Parameter
-    (TypeError) — es gibt genau EINEN kanallosen Merker je Tour, der nach
+    (TypeError) — es gibt genau EINEN kanallosen Merker je Trip, der nach
     jedem versendeten Alarm vorrueckt, gleichgueltig wer ihn bekommen hat.
 
     Mutations-Gegenprobe (Spec Nr. 1): iteriert der Schreibpfad ueber
@@ -208,7 +208,7 @@ def test_ac1_nur_der_zugestellte_kanal_bekommt_einen_frischen_merker():
 def test_ac2_ohne_jede_zustellung_rueckt_kein_einziger_kanal_vor():
     """AC-2.
 
-    GIVEN eine Tour, deren einziger Alarmkanal Telegram ist, mit vorbelegten
+    GIVEN eine Trip, deren einziger Alarmkanal Telegram ist, mit vorbelegten
           Tier-2-Merkern fuer ALLE vier Kanaele.
     WHEN  ein Alarm laeuft, den kein einziger Kanal zustellt (Telegram
           scheitert am echten Transport-Guard).
@@ -256,7 +256,7 @@ def test_ac2_ohne_jede_zustellung_rueckt_kein_einziger_kanal_vor():
 def test_ac6_schwellengefilterter_kanal_bekommt_keinen_frischen_merker():
     """AC-6.
 
-    GIVEN eine Tour mit den Alarmkanaelen E-Mail und Telegram, bei der
+    GIVEN eine Trip mit den Alarmkanaelen E-Mail und Telegram, bei der
           Telegram erst ab Dringlichkeit MODERATE gemeldet wird, und beide
           Kanaele haben einen eigenen Tier-2-Merker.
     WHEN  ein Alarm der Dringlichkeit LOW laeuft — ``split_by_threshold()``
@@ -320,7 +320,7 @@ def test_ac6_schwellengefilterter_kanal_bekommt_keinen_frischen_merker():
 def test_ac5_kanallose_altdatei_dient_jedem_kanal_als_rueckfall():
     """AC-5.
 
-    GIVEN eine Tour besitzt ausschliesslich die kanallose Altdatei
+    GIVEN eine Trip besitzt ausschliesslich die kanallose Altdatei
           ``{trip_id}_alarm_anchor.json`` (Bestand vor dieser Scheibe) und
           KEINE kanalspezifische Datei.
     WHEN  der erste Lesevorgang fuer beliebige Kanaele laeuft (hier
@@ -361,7 +361,7 @@ def test_ac5_kanallose_altdatei_dient_jedem_kanal_als_rueckfall():
         geladen = svc.load_alarm_anchor(trip_id, channel=channel)
         assert geladen, (
             f"AC-5: die kanallose Altdatei muss fuer {channel!r} weiterhin als "
-            "Vergleichsbasis dienen — sonst verlieren alle Bestandstouren beim "
+            "Vergleichsbasis dienen — sonst verlieren alle Bestands-Trips beim "
             "Deploy ihren rollierenden Anker."
         )
         assert geladen[0].aggregated.gust_max_kmh == pytest.approx(ALTBESTAND_BOE), (
@@ -407,7 +407,7 @@ def _briefing_lauf_ohne_zustellung(user_id: str):
     auch KEINE Ausnahme — der regulaere Pfad laeuft bis zum Ende durch und
     endet mit ``result.sent == False``.
 
-    Aufbau: E-Mail ist fuer die Tour aus, Telegram an und garantiert
+    Aufbau: E-Mail ist fuer die Trip aus, Telegram an und garantiert
     scheiternd (echter ``TelegramOutput``-Guard #1363, wirft VOR jedem
     Netzaufruf). Telegram ist fail-soft, die Ausnahme kommt also nie beim
     Scheduler an — genau der Unterschied zu Naht 1.
@@ -474,7 +474,7 @@ def test_ac3_briefing_ohne_jede_zustellung_schreibt_tier1_aber_keinen_kanal_merk
     from tests.helpers.alert_log_fixtures import settings_email_only
 
     user_id = _nutzer("ac3")
-    # Im Betrieb existiert die Nutzerablage laengst (der Nutzer hat Touren).
+    # Im Betrieb existiert die Nutzerablage laengst (der Nutzer hat Trips).
     # Hier legt sie sonst erst der Anker-Write selbst an — und dann scheitert
     # bei einer Mutation, die genau ihn ausschaltet, der nachfolgende
     # Nachliefer-Vermerk mit einem FileNotFoundError. Der Test waere zwar rot,

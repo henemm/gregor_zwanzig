@@ -21,9 +21,9 @@ tags: [frontend, svelte, trip, weather-config, concurrency, etag, if-match]
 S2 hat `ETag`/`If-Match` am Server verdrahtet, aber KEIN Client sendet
 `If-Match` — der Schutz ist scharf gestellt, aber unbenutzt. Diese Scheibe ist
 der Umschaltpunkt: Der zentrale Anfrage-Trichter des Frontends
-(`frontend/src/lib/api.ts`) merkt sich je Tour den zuletzt vom Server
+(`frontend/src/lib/api.ts`) merkt sich je Trip den zuletzt vom Server
 erhaltenen `ETag`, schickt ihn automatisch als `If-Match` bei jedem folgenden
-`PUT` auf dieselbe Tour mit und uebernimmt bei Erfolg sofort den neuen
+`PUT` auf dieselbe Trip mit und uebernimmt bei Erfolg sofort den neuen
 `ETag` aus der Antwort. Ab hier wird ein veralteter Schreibvorgang real mit
 `412` abgelehnt statt kommentarlos zu gewinnen — die in ADR-0036 beschriebene
 Fehlerklasse (#1389/#1390/#1393) bekommt erstmals einen echten, serverseitig
@@ -32,7 +32,7 @@ durchgesetzten Schutz, nicht mehr nur clientseitige Eigenkonstruktionen.
 ## Source
 
 - **File:** `frontend/src/lib/etagRegistry.ts` (NEU) — Registry (Stand je
-  Tour-ID) und Schreib-Warteschlange (je Tour-ID)
+  Trip-ID) und Schreib-Warteschlange (je Trip-ID)
 - **File:** `frontend/src/lib/api.ts` — `request()` faengt `ETag` aus
   GET/PUT-Antworten auf Trip-Pfade ab, haengt `If-Match` an PUT-Anfragen auf
   Trip-Pfade an, fuehrt Trip-PUTs durch die Warteschlange, reichert den
@@ -99,10 +99,10 @@ durchgesetzten Schutz, nicht mehr nur clientseitige Eigenkonstruktionen.
 `saveStatusStore.svelte.ts` verbietet ausdruecklich modul-globale
 `$state`-Exporte, weil dort jede Editor-Oberflaeche ihre EIGENE UI-Anzeige
 braucht. Die ETag-Registry hat einen anderen Zweck: Sie ist ein
-Daten-Frischezustand, der zur RESSOURCE gehoert (der Tour-ID), nicht zur
+Daten-Frischezustand, der zur RESSOURCE gehoert (der Trip-ID), nicht zur
 Editor-Instanz. Genau das braucht der Kernfall — `WeatherMetricsTab`s zwei
 aufeinanderfolgende PUTs MUESSEN denselben Stand sehen, und `AlarmeTab`s
-unabhaengiger Auto-Save auf DERSELBEN Tour-Seite ebenso. Ein Speicher je
+unabhaengiger Auto-Save auf DERSELBEN Trip-Seite ebenso. Ein Speicher je
 Komponente wuerde genau die Faelle verfehlen, die diese Scheibe loesen soll.
 Zwei Browser-Tabs/-Fenster sind ohnehin getrennte JS-Realms mit je eigener
 Registry-Instanz — der Schutz zwischen ihnen kommt vollstaendig vom Server
@@ -125,9 +125,9 @@ keinen liefert.
    Nicht-Trip-Pfade), laeuft alles unveraendert wie vor S3 — direkt zu
    Schritt 4.
 2. **Einreihen VOR dem Nachschlagen.** Bei `method === 'PUT'` UND ermittelter
-   Tour-ID UND `extra?.keepalive !== true` laeuft der GESAMTE Rest
+   Trip-ID UND `extra?.keepalive !== true` laeuft der GESAMTE Rest
    (Schritte 3–6) durch `enqueueTripWrite(tripId, () => ...)`. Er reiht sich
-   hinter jeden bereits laufenden Schreibvorgang auf dieselbe Tour-ID ein,
+   hinter jeden bereits laufenden Schreibvorgang auf dieselbe Trip-ID ein,
    unabhaengig davon, welche Komponente ihn ausgeloest hat. Ein
    fehlgeschlagener Vorgaenger bricht die Kette NICHT ab (kein Domino).
 3. **Erst INNERHALB der Warteschlange den Stand nachschlagen** und `If-Match`
@@ -147,7 +147,7 @@ keinen liefert.
    diese Falle explizit benannt: `extra` wird heute NACH `headers` gespreizt
    und wuerde den `Content-Type` mitreissen).
 4. `fetch` wie bisher.
-5. Bei `res.ok`: liefert die Antwort einen `ETag`-Header UND ist eine Tour-ID
+5. Bei `res.ok`: liefert die Antwort einen `ETag`-Header UND ist eine Trip-ID
    ermittelt: `setKnownEtag(tripId, wert)` — gilt fuer GET UND PUT
    gleichermassen. **Noch INNERHALB der Warteschlange**, damit der naechste
    wartende Vorgang den frischen Wert vorfindet.
@@ -157,7 +157,7 @@ keinen liefert.
    `saveStatusStore.svelte.ts` liest weiterhin `detail` zuerst und aendert
    sich nicht.
 
-   **Bei `412` zusaetzlich: den gemerkten Stand fuer diese Tour VERWERFEN.**
+   **Bei `412` zusaetzlich: den gemerkten Stand fuer diese Trip VERWERFEN.**
    Er ist nachweislich veraltet, und die `412`-Antwort traegt laut S2
    bewusst keinen neuen mit. Bliebe er stehen, scheiterte jeder weitere
    Versuch endlos am selben veralteten Wert — der Nutzer kaeme aus dem
@@ -207,7 +207,7 @@ an, am Trichter vorbei — nachgezaehlt am Code, nicht geschaetzt:
 | 5 | `routes/archiv/+page.svelte:53` | Archivseite, URL an `:50` — **nur der `item.type === 'trip'`-Zweig**; der Zwilling an `:51` betrifft Orts-Vergleiche und bleibt unberuehrt (S6) |
 
 Jeder erfolgreiche Aufruf veraendert die
-Tourdatei und damit den Fingerabdruck, liefert aber laut S2 (AC-15) KEINEN
+Trip-Datei und damit den Fingerabdruck, liefert aber laut S2 (AC-15) KEINEN
 `ETag` zurueck — ein zuvor gemerkter Stand wird dadurch still veraltet.
 
 **Gewaehlter Weg: expliziter `discardEtag(tripId)`-Aufruf nach Erfolg an
@@ -221,7 +221,7 @@ Scopes von #1395 liegt, und das Risiko einer Regression an einer Stelle
 schaffen, die mit ETag/If-Match nichts zu tun hat. Zwei Zeilen
 (`discardEtag(id)` nach `if (res.ok)`) pro Stelle sind der kleinere,
 risikoaermere Eingriff und erfuellen die Anforderung vollstaendig: Der
-naechste Schreibvorgang auf diese Tour findet keinen bekannten Stand mehr vor
+naechste Schreibvorgang auf diese Trip findet keinen bekannten Stand mehr vor
 und wird — wie in S2 spezifiziert — ohne `If-Match` angenommen.
 
 ### Server-Naht: `+page.server.ts` — uebernimmt nur beim ERSTEN Mal
@@ -234,7 +234,7 @@ einer verspaeteten Leseantwort, nur durch einen anderen Eingang. Heute nicht
 ausloesbar (die Detailseite ruft selbst kein `invalidateAll()`), aber ein
 Aktualisieren-Knopf liesse es still aufleben.
 
-`adoptEtagFromPageLoad(tripId, etag)` uebernimmt deshalb nur, solange die Tour
+`adoptEtagFromPageLoad(tripId, etag)` uebernimmt deshalb nur, solange die Trip
 in dieser Sitzung **noch nie** einen Stempel gefuehrt hat (Zaehlerstand 0). Ist
 bereits einer bekannt, ist er mindestens so jung wie der aus dem Ladevorgang.
 
@@ -255,7 +255,7 @@ return { trip, etag: etag ?? undefined };
 `routes/trips/[id]/+page.svelte` uebernimmt `data.etag` bei Mount
 (`$effect`, einmalig) in die Registry via `setKnownEtag(trip.id, data.etag)`
 — nur wenn `data.etag` vorhanden ist (Rueckfallposition: fehlt er, bleibt die
-Registry fuer diese Tour leer, naechster Schreibvorgang laeuft wie vor S3).
+Registry fuer diese Trip leer, naechster Schreibvorgang laeuft wie vor S3).
 
 ## Expected Behavior
 
@@ -263,7 +263,7 @@ Registry fuer diese Tour leer, naechster Schreibvorgang laeuft wie vor S3).
   merkt sich `<id> -> <stempel>` ohne sichtbaren Effekt fuer den Nutzer
 - **Input:** `PUT /api/trips/{id}` bzw. `.../weather-config`, Stand bekannt →
   Anfrage traegt automatisch `If-Match: "<stempel>"`
-- **Input:** zwei PUTs auf dieselbe Tour kurz hintereinander (gleiche
+- **Input:** zwei PUTs auf dieselbe Trip kurz hintereinander (gleiche
   Browser-Sitzung) → laufen serialisiert, der zweite verwendet automatisch
   den vom ersten zurueckgegebenen neuen Stempel
 - **Output:** eine `412`-Antwort erscheint am Speicher-Anzeiger als die vom
@@ -278,11 +278,11 @@ Alle 19 identifizierten Trip-Schreibstellen (17 auf `/api/trips/{id}`, 2 auf
 Ein Fehler in dieser Scheibe bricht nicht eine einzelne Funktion, sondern
 JEDES Speichern in der gesamten Anwendung — vom einzelnen Etappen-Edit bis
 zum Wetter-Reiter. Die eingebaute Rueckfallposition ist deshalb zentral fuer
-die Sicherheit dieser Scheibe: **Ist fuer eine Tour-ID kein Stand bekannt,
+die Sicherheit dieser Scheibe: **Ist fuer eine Trip-ID kein Stand bekannt,
 wird KEIN `If-Match` gesendet und der Schreibvorgang verhaelt sich exakt wie
 vor dieser Scheibe** (S2-Rollout-Politik: fehlender Header = angenommen).
 Jeder Fehler in der Capture-Logik (ETag wird nicht gemerkt) fuehrt also
-bestenfalls dazu, dass der Schutz fuer diese eine Tour nicht greift — nicht
+bestenfalls dazu, dass der Schutz fuer diese eine Trip nicht greift — nicht
 dazu, dass ein legitimer Schreibvorgang faelschlich blockiert wird. Die
 gefaehrliche Fehlerrichtung waere umgekehrt (ein falscher oder veralteter
 Stempel wird faelschlich gesendet und blockiert legitimes Speichern) — genau
@@ -304,7 +304,7 @@ ersten echten Tests dafuer). Namen nach Verhalten, nicht nach Issue-Nummer.
 | `test_getSetDiscard_roundtrip` | Grundfunktion der Registry |
 | `test_extractTripId_matchesOnlyTripAndWeatherConfigPaths` | Pfadfilter (State/Waypoints/Sub-Ressourcen matchen NICHT) |
 | `test_enqueueTripWrite_serializesSameTripId` | AC-9 — zweiter Aufruf startet nachweislich erst, wenn der erste aufgeloest ist |
-| `test_enqueueTripWrite_differentTripIds_runConcurrently` | Warteschlange blockiert NICHT ueber Tour-Grenzen hinweg |
+| `test_enqueueTripWrite_differentTripIds_runConcurrently` | Warteschlange blockiert NICHT ueber Trip-Grenzen hinweg |
 | `test_enqueueTripWrite_continuesAfterRejectedPredecessor` | kein Domino-Abbruch bei fehlgeschlagenem Vorgaenger |
 
 ### `frontend/src/lib/__tests__/apiTripEtagHeaders.test.ts`
@@ -328,7 +328,7 @@ Mock-Fetch simuliert den S2-Vertrag: `PUT` ohne/mit passendem `If-Match` →
 |---|---|
 | `test_weatherMetricsTab_sequentialDoublePut_bothSucceed` | AC-3 (Kernfall) — zwei `api.put`-Aufrufe hintereinander wie in `handleSave()`, zweiter uebernimmt automatisch den neuen Stempel des ersten |
 | `test_twoRealms_secondArrivalRejected_notOverwritten` | AC-4 — zwei unabhaengige Registry-Instanzen (simulieren zwei Tabs), der zeitlich zweite PUT beim Server bekommt `412` |
-| `test_concurrentAutoSaveAcrossTabs_sameTripId_bothSucceedSerialized` | AC-9 — zwei gleichzeitig ausgeloeste `api.put`-Aufrufe auf dieselbe Tour-ID gelingen beide, weil sie serialisiert ankommen |
+| `test_concurrentAutoSaveAcrossTabs_sameTripId_bothSucceedSerialized` | AC-9 — zwei gleichzeitig ausgeloeste `api.put`-Aufrufe auf dieselbe Trip-ID gelingen beide, weil sie serialisiert ankommen |
 | `test_withoutKnownStamp_writeSucceeds_asBefore` | AC-7 |
 
 ### `frontend/src/lib/__tests__/apiKeepaliveSkipsIfMatch.test.ts`
@@ -342,7 +342,7 @@ Mock-Fetch simuliert den S2-Vertrag: `PUT` ohne/mit passendem `If-Match` →
 
 Quelltext-Verhaltenspruefung (analog `weatherMetricsTabDayWindowSave.test.ts`):
 prueft je Aufrufer, dass nach dem `if (res.ok)`-Zweig ein `discardEtag(...)`-
-Aufruf mit der jeweils richtigen Tour-ID-Variable steht.
+Aufruf mit der jeweils richtigen Trip-ID-Variable steht.
 
 | Test | Deckt |
 |---|---|
@@ -359,34 +359,34 @@ Aufruf mit der jeweils richtigen Tour-ID-Variable steht.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine Tour-Seite wird erstmals in dieser Browsersitzung geladen / When der Server das Trip-Dokument liefert / Then merkt sich das Frontend den zugehoerigen Stand automatisch, ohne zusaetzlichen Request oder sichtbare Verzoegerung
+- **AC-1:** Given eine Trip-Seite wird erstmals in dieser Browsersitzung geladen / When der Server das Trip-Dokument liefert / Then merkt sich das Frontend den zugehoerigen Stand automatisch, ohne zusaetzlichen Request oder sichtbare Verzoegerung
   - Test: `test_get_capturesEtagFromResponse`, `test_load_passesEtagHeaderIntoPageData`
 
-- **AC-2:** Given eine Tour wurde bereits geladen / When der Nutzer eine Aenderung an ihr speichert / Then traegt die Speicher-Anfrage automatisch den zuletzt bekannten Stand, ohne dass eine einzelne Editor-Komponente dafuer Code enthalten muss
+- **AC-2:** Given eine Trip wurde bereits geladen / When der Nutzer eine Aenderung an ihr speichert / Then traegt die Speicher-Anfrage automatisch den zuletzt bekannten Stand, ohne dass eine einzelne Editor-Komponente dafuer Code enthalten muss
   - Test: `test_put_attachesIfMatch_whenStampKnown`
 
-- **AC-3 (Kernfall):** Given der Wetter-Reiter loest beim Speichern zwei aufeinanderfolgende Schreibvorgaenge derselben Tour aus / When beide nacheinander abgeschickt werden / Then gelingen beide — der zweite verwendet automatisch den durch den ersten aktualisierten Stand
+- **AC-3 (Kernfall):** Given der Wetter-Reiter loest beim Speichern zwei aufeinanderfolgende Schreibvorgaenge derselben Trip aus / When beide nacheinander abgeschickt werden / Then gelingen beide — der zweite verwendet automatisch den durch den ersten aktualisierten Stand
   - Test: `test_weatherMetricsTab_sequentialDoublePut_bothSucceed`
 
-- **AC-4:** Given zwei Browser-Reiter oder -Fenster haben dieselbe Tour geladen / When beide unabhaengig voneinander speichern und die Aenderung des einen zuerst beim Server ankommt / Then wird der zeitlich zweite, jetzt veraltete Schreibvorgang abgelehnt statt die bereits gespeicherte Aenderung zu ueberschreiben
+- **AC-4:** Given zwei Browser-Reiter oder -Fenster haben dieselbe Trip geladen / When beide unabhaengig voneinander speichern und die Aenderung des einen zuerst beim Server ankommt / Then wird der zeitlich zweite, jetzt veraltete Schreibvorgang abgelehnt statt die bereits gespeicherte Aenderung zu ueberschreiben
   - Test: `test_twoRealms_secondArrivalRejected_notOverwritten`
 
-- **AC-5:** Given eine Tour wurde soeben pausiert oder archiviert / When der Nutzer danach in einem Editor-Reiter derselben Tour speichert / Then gelingt dieses Speichern, ohne dass die eigene Anwendung sich selbst einen Konflikt erzeugt hat
+- **AC-5:** Given eine Trip wurde soeben pausiert oder archiviert / When der Nutzer danach in einem Editor-Reiter derselben Trip speichert / Then gelingt dieses Speichern, ohne dass die eigene Anwendung sich selbst einen Konflikt erzeugt hat
   - Test: `test_tripDetailPage_sendStateUpdate_discardsEtagOnSuccess`, `test_tripsListPage_allThreeStateCallers_discardEtagOnSuccess`
 
 - **AC-6:** Given der Nutzer verlaesst die Seite mit einer noch ausstehenden Aenderung / When der Browser den Abschluss-Speichervorgang beim Entladen abschickt / Then geht dieser Vorgang unabhaengig vom zuletzt bekannten Stand durch — kein unsichtbarer `412` verhindert das letzte Sicherheitsnetz
   - Test: `test_keepaliveFlush_omitsIfMatch_evenWithKnownStamp`
 
-- **AC-7:** Given fuer eine Tour ist in dieser Browsersitzung noch kein Stand bekannt / When eine Aenderung an ihr gespeichert wird / Then verhaelt sich der Schreibvorgang exakt wie vor dieser Scheibe — er wird unabhaengig vom tatsaechlichen Dateizustand angenommen
+- **AC-7:** Given fuer eine Trip ist in dieser Browsersitzung noch kein Stand bekannt / When eine Aenderung an ihr gespeichert wird / Then verhaelt sich der Schreibvorgang exakt wie vor dieser Scheibe — er wird unabhaengig vom tatsaechlichen Dateizustand angenommen
   - Test: `test_put_omitsIfMatch_whenStampUnknown`, `test_withoutKnownStamp_writeSucceeds_asBefore`, `test_load_missingEtagHeader_dataEtagIsUndefined`
 
 - **AC-8:** Given ein Speichervorgang wird wegen eines veralteten Standes vom Server abgelehnt / When die Ablehnung am Speicher-Anzeiger erscheint / Then zeigt sie die vom Server gelieferte deutsche Meldung — nicht die generische „Fehler beim Speichern"-Meldung und nicht den rohen Statuscode
   - Test: `test_thrownError_carriesStatusAlongsideExistingFields`, `test_extractMessage_unaffectedByNewStatusField`
 
-- **AC-9:** Given zwei Editor-Reiter derselben Tour-Seite loesen unabhaengig voneinander (je eigener Auto-Save-Debounce) nahezu gleichzeitig einen eigenen Schreibvorgang auf dieselbe Tour aus / When beide abgeschickt werden / Then laufen sie serialisiert nacheinander statt gleichzeitig beim Server anzukommen, und beide gelingen
+- **AC-9:** Given zwei Editor-Reiter derselben Trip-Seite loesen unabhaengig voneinander (je eigener Auto-Save-Debounce) nahezu gleichzeitig einen eigenen Schreibvorgang auf dieselbe Trip aus / When beide abgeschickt werden / Then laufen sie serialisiert nacheinander statt gleichzeitig beim Server anzukommen, und beide gelingen
   - Test: `test_enqueueTripWrite_serializesSameTripId`, `test_concurrentAutoSaveAcrossTabs_sameTripId_bothSucceedSerialized`
 
-- **AC-10:** Given eine Tour wurde ausschliesslich ueber die Listen- oder Archiv-Seite pausiert/archiviert, aber nie ueber die Detailseite geladen / When danach ein Schreibvorgang auf sie ausgeloest wird / Then wird er nicht blockiert — die Tour hat nie einen Stand in der Registry gehabt, das Verhalten entspricht AC-7
+- **AC-10:** Given eine Trip wurde ausschliesslich ueber die Listen- oder Archiv-Seite pausiert/archiviert, aber nie ueber die Detailseite geladen / When danach ein Schreibvorgang auf sie ausgeloest wird / Then wird er nicht blockiert — die Trip hat nie einen Stand in der Registry gehabt, das Verhalten entspricht AC-7
   - Test: `test_archivPage_tripStateCaller_discardsEtag_compareUnaffected`, `test_tripsListPage_allThreeStateCallers_discardEtagOnSuccess`
 
 ## Was nicht kaputtgehen darf
@@ -416,7 +416,7 @@ interne Logik ergaenzt:
 
 - **Ein nicht-serialisierter Vorgang kann einen juengeren Stempel nie durch
   einen aelteren ersetzen — das ist eine Invariante, kein Zufall.** Umgesetzt
-  ueber einen Aenderungszaehler je Tour (`etagVersion`), der bei JEDER
+  ueber einen Aenderungszaehler je Trip (`etagVersion`), der bei JEDER
   Veraenderung hochzaehlt, Setzen wie Verwerfen. `send()` merkt sich den Stand
   beim Losschicken; **bedingungslos** setzen darf nur ein serialisierter
   Schreibvorgang, alles andere (Lesevorgang, Entlade-Flush, Server-Naht) geht
@@ -432,7 +432,7 @@ interne Logik ergaenzt:
 
 - **`clearEtagRegistry()` darf zur Laufzeit nicht aufgerufen werden**, solange
   noch Anfragen unterwegs sein koennen. Sie setzt den Zaehler auf 0 zurueck;
-  passieren an derselben Tour danach zufaellig wieder genau so viele
+  passieren an derselben Trip danach zufaellig wieder genau so viele
   Aenderungen wie zuvor, haelt ein Nachzuegler seinen laengst veralteten Stand
   fuer aktuell und kommt durch. Heute folgenlos — die Funktion hat **keinen
   Aufrufer im Produktivcode** und dient nur der Testisolation. Wer einen
@@ -459,9 +459,9 @@ interne Logik ergaenzt:
   `'idle' | 'dirty' | 'saving' | 'error'` — eine `412`-Ablehnung erscheint wie
   jeder andere Fehler als `'error'` mit deutschem Text. Eine dedizierte
   „Konflikt, bitte neu laden"-UI mit Wiederholungs-Aktion ist S4.
-- **Kein Aufraeumen der Registry beim Loeschen einer Tour.** Ein geloeschter
-  Tour-Eintrag bleibt bis zum Reload des Tabs in der Registry stehen —
-  harmlos, weil eine geloeschte Tour-ID praktisch nie wiederverwendet wird und
+- **Kein Aufraeumen der Registry beim Loeschen einer Trip.** Ein geloeschter
+  Trip-Eintrag bleibt bis zum Reload des Tabs in der Registry stehen —
+  harmlos, weil eine geloeschte Trip-ID praktisch nie wiederverwendet wird und
   kein GET/PUT mehr auf sie folgt.
 - **Kein Rueckbau von `settle()`/`SETTLE_TIMEOUT_MS`/dem Wartblock in
   `applyCascade`** (`EditStagesPanelNew.svelte:423`) — bleibt in dieser

@@ -54,7 +54,7 @@ export interface KuerzelLegende {
  * Massgeblich ist `gerenderteIds` — die Liste, die der Block tatsaechlich
  * zeigt (aktive Zeilen UND die Aus-Gruppe), NICHT der volle Backend-Katalog:
  *
- *   * Adversary F001: von 29 Katalog-Groessen stehen in einer frischen Tour
+ *   * Adversary F001: von 29 Katalog-Groessen stehen in einer frischen Trip
  *     nur 9 im Block. Eine Legende aus dem vollen Katalog erklaerte 20
  *     Zeichen, die nirgends auf dem Schirm stehen — Rauschen in einem
  *     Werkzeug, das unter Zeitdruck gelesen wird.

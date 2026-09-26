@@ -72,7 +72,7 @@ def _jetzt() -> datetime:
 
 
 def _briefingfaehiger_alarm_trip():
-    """Tour, die BEIDES kann: einen Boeen-Aenderungsalarm ausloesen (scharfe
+    """Trip, die BEIDES kann: einen Boeen-Aenderungsalarm ausloesen (scharfe
     Regel aus ``gust_alert_trip``) UND ein Briefing rendern (zweiter Wegpunkt
     mit festen Ankunftszeiten, sonst haengt die Etappe am Naismith-Self-Heal).
 

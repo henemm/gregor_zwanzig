@@ -74,7 +74,7 @@ LAT, LON = 47.2692, 11.4041
 
 
 def _heute_lokal() -> date:
-    """Der Ortstag JETZT fuer die Testtour (Europe/Vienna) -- dieselbe
+    """Der Ortstag JETZT fuer den Test-Trip (Europe/Vienna) -- dieselbe
     Berechnung, die ``_handle_query`` seit Fix #1795 benutzt
     (``trip_local_now``), NICHT ``date.today()`` (roher UTC-Tag).
 

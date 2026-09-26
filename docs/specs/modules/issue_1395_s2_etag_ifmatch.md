@@ -162,7 +162,7 @@ Status `412`, Rumpf `{"error":"precondition_failed","detail":detail}` — KEIN
 ## Expected Behavior
 
 - **Input:** `GET /api/trips/{id}` → Antwort traegt `ETag: "<64-stelliger Hex-Wert>"`,
-  sofern die Tour existiert und der Fingerabdruck lesbar ist
+  sofern die Trip existiert und der Fingerabdruck lesbar ist
 - **Input:** `PUT /api/trips/{id}` ohne `If-Match` → wie bisher angenommen
 - **Input:** `PUT /api/trips/{id}` mit `If-Match: "<veralteter Stempel>"` →
   `412 {"error":"precondition_failed","detail":"..."}`, Datei auf Platte
@@ -260,7 +260,7 @@ Aus der Adversary-Runde: `DeleteTripHandler` veraenderte dieselbe Datei wie alle
 Schreibpfade, ohne die Sperre zu nehmen. Damit war die Zusage „jeder HTTP-Pfad,
 der `briefings/<id>.json` veraendert, nimmt die Sperre" schlicht falsch, und es
 blieb genau die Luecke offen, um die es in #1395 geht: Ein `DELETE` mitten in
-einem laufenden `PUT` laesst die geloeschte Tour wieder auferstehen (der `PUT`
+einem laufenden `PUT` laesst die geloeschte Trip wieder auferstehen (der `PUT`
 schreibt sie aus seinem bereits geladenen Stand zurueck). Mit Sperre sind nur die
 beiden unbedenklichen Reihenfolgen moeglich. `DeleteTripHandler` hat weiterhin
 **keine** `If-Match`-Pruefung — analog zu den PATCH-Pfaden (AC-15).
@@ -281,10 +281,10 @@ das steht so im Testkommentar und ist ausdruecklich kein Beweis.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine gespeicherte Tour existiert / When `GET /api/trips/{id}` aufgerufen wird / Then traegt die Antwort einen `ETag`-Header mit dem Fingerabdruck des aktuellen Standes
+- **AC-1:** Given eine gespeicherte Trip existiert / When `GET /api/trips/{id}` aufgerufen wird / Then traegt die Antwort einen `ETag`-Header mit dem Fingerabdruck des aktuellen Standes
   - Test: `TestTripHandler_ReturnsETag` — echter HTTP-Response-Header wird gelesen, nicht der Store-Rueckgabewert
 
-- **AC-2:** Given eine Tour wurde seit dem letzten Lesen nicht veraendert / When zweimal hintereinander `GET /api/trips/{id}` aufgerufen wird / Then sind beide `ETag`-Werte identisch
+- **AC-2:** Given eine Trip wurde seit dem letzten Lesen nicht veraendert / When zweimal hintereinander `GET /api/trips/{id}` aufgerufen wird / Then sind beide `ETag`-Werte identisch
   - Test: `TestTripHandler_ETagStableAcrossReads`
 
 - **AC-3:** Given ein Client sendet KEINEN `If-Match`-Header / When er `PUT /api/trips/{id}` aufruft / Then wird der Schreibvorgang wie bisher angenommen und die Aenderung ist danach per `GET` sichtbar
@@ -305,16 +305,16 @@ das steht so im Testkommentar und ist ausdruecklich kein Beweis.
 - **AC-8:** Given dieselbe Vorbedingungs-Logik gilt fuer `/api/trips/{id}/weather-config` / When `GET` einen `ETag` liefert und `PUT` mit passendem, fehlendem oder veraltetem `If-Match` aufgerufen wird / Then verhaelt sich der Pfad analog zu AC-1/AC-3/AC-5/AC-6
   - Test: `TestGetTripWeatherConfigHandler_ReturnsETag`, `TestPutTripWeatherConfigHandler_NoIfMatch_Accepted`, `TestPutTripWeatherConfigHandler_StaleIfMatch_Returns412_FileUnchanged`, `TestPutTripWeatherConfigHandler_ReturnsNewETag`
 
-- **AC-9:** Given zwei verschiedene Nutzer haben je eine eigene Tour mit derselben Trip-ID / When Nutzer A einen `ETag` fuer seine Tour erhaelt und diesen als `If-Match` gegen die Tour von Nutzer B sendet / Then greift die Pruefung nicht ueber die Mandantengrenze — Nutzer B's Schreibvorgang wird ausschliesslich gegen Nutzer B's eigenen Stand geprueft
+- **AC-9:** Given zwei verschiedene Nutzer haben je eine eigene Trip mit derselben Trip-ID / When Nutzer A einen `ETag` fuer seine Trip erhaelt und diesen als `If-Match` gegen die Trip von Nutzer B sendet / Then greift die Pruefung nicht ueber die Mandantengrenze — Nutzer B's Schreibvorgang wird ausschliesslich gegen Nutzer B's eigenen Stand geprueft
   - Test: `TestUpdateTripHandler_TenantIsolation_ETagNotSharedAcrossUsers` — zwei `Store`-Instanzen mit unterschiedlicher `UserID`
 
-- **AC-10:** Given eine Tour existiert / When ein Client `If-Match: *` sendet / Then wird der Schreibvorgang unabhaengig vom konkreten Fingerabdruck angenommen
+- **AC-10:** Given eine Trip existiert / When ein Client `If-Match: *` sendet / Then wird der Schreibvorgang unabhaengig vom konkreten Fingerabdruck angenommen
   - Test: `TestUpdateTripHandler_IfMatchWildcard_Accepted`
 
 - **AC-11:** Given alle bestehenden Trip-Schreibtests senden heute keinen `If-Match`-Header / When diese Scheibe implementiert ist / Then bleiben alle diese Tests unveraendert gruen (siehe „Was nicht kaputtgehen darf")
   - Test: bestehende Suiten laufen unveraendert; kein neuer Testkoerper noetig, wird im CI-Lauf der Scheibe mitgeprueft
 
-- **AC-12:** Given ein Client legt eine neue Tour an / When `POST /api/trips` antwortet / Then traegt die Antwort KEINEN `ETag`-Header
+- **AC-12:** Given ein Client legt eine neue Trip an / When `POST /api/trips` antwortet / Then traegt die Antwort KEINEN `ETag`-Header
   - Test: `TestCreateTripHandler_NoETagInResponse`
 
 - **AC-13:** Given ein `PUT` wird wegen veraltetem `If-Match` abgelehnt / When die `412`-Antwort ausgewertet wird / Then enthaelt sie KEINEN `ETag`-Header und im Rumpf ein `detail`-Feld mit einer nutzerlesbaren, deutschen Fehlermeldung
@@ -323,7 +323,7 @@ das steht so im Testkommentar und ist ausdruecklich kein Beweis.
 - **AC-14:** Given ein Client sendet mehrere `If-Match`-Werte durch Komma getrennt / When mindestens einer davon dem aktuellen Stand entspricht / Then wird der Schreibvorgang angenommen
   - Test: `TestUpdateTripHandler_MultipleIfMatchValues_AnyMatchAccepted`
 
-- **AC-15:** Given `PATCH /api/trips/{id}/state` und `PATCH /api/trips/{id}/waypoints/{waypointId}/confirm` nehmen dieselbe Sperre wie die PUT-Pfade / When ein Client dort einen `If-Match`-Header mitschickt / Then wird dieser ignoriert — die Anfrage wird unabhaengig vom Header-Wert angenommen, solange die Tour existiert
+- **AC-15:** Given `PATCH /api/trips/{id}/state` und `PATCH /api/trips/{id}/waypoints/{waypointId}/confirm` nehmen dieselbe Sperre wie die PUT-Pfade / When ein Client dort einen `If-Match`-Header mitschickt / Then wird dieser ignoriert — die Anfrage wird unabhaengig vom Header-Wert angenommen, solange die Trip existiert
   - Test: `TestUpdateTripStateHandler_NoIfMatchCheck_LockOnly`, `TestConfirmWaypointHandler_NoIfMatchCheck_LockOnly`
 
 - **AC-16:** Given ein `PUT` speichert erfolgreich, aber das anschliessende Lesen des neuen Fingerabdrucks schlaegt fehl / When die Antwort ausgeliefert wird / Then ist der Status `200` (nicht `500`) und der `ETag`-Header fehlt schlicht — ein geglueckter Schreibvorgang wird nicht nachtraeglich zum Fehler
@@ -380,7 +380,7 @@ Header = angenommen"):
   setzen — `PutTripWeatherConfigHandler` und `ConfirmWaypointHandler`. Da
   `store.SaveTrip` nach `briefings/<trip.ID>.json` schreibt, landete der
   Schreibvorgang bei einer Datei mit abweichender innerer Kennung in einer
-  **fremden Tour**: `PUT /api/trips/aussen/weather-config` antwortete `200`,
+  **fremden Trip**: `PUT /api/trips/aussen/weather-config` antwortete `200`,
   `aussen.json` blieb byte-identisch, und `briefings/innen-anders.json` wurde mit
   dem kompletten Datensatz von `aussen` ueberschrieben.
 
@@ -396,7 +396,7 @@ Header = angenommen"):
   „zurueckgegebener `ETag` passt zum Fingerabdruck der angefragten Datei"
   **nicht** an — der Stempel war korrekt, weil die Datei unveraendert blieb. Ein
   Test, der nur den Stempel prueft, laesst diesen Schaden durch. Gefangen wird er
-  erst von „die Aenderung ist bei der angefragten Tour angekommen" UND „es wurde
+  erst von „die Aenderung ist bei der angefragten Trip angekommen" UND „es wurde
   keine fremde Datei angelegt".
 
   Ungeprueft geblieben: Dasselbe Muster steht in

@@ -340,7 +340,7 @@ async function pruefeTextgleichheit(
 // Navigation
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function oeffneTourenEditor(page: Page): Promise<Locator> {
+async function oeffneTripEditor(page: Page): Promise<Locator> {
 	await page.goto(`/trips/${TRIP_ID}?tab=weather`);
 	const reiter = page.getByTestId('trip-detail-tab-weather');
 	await expect(reiter).toBeVisible({ timeout: 15_000 });
@@ -435,7 +435,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 		const mail = await mailKurzformAusBackend(request);
 
 		await page.setViewportSize({ width: 1440, height: 900 });
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 
 		const abweichungen: string[] = [];
 		for (const metricId of TRIP_METRIKEN) {
@@ -479,13 +479,13 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 		).toEqual([]);
 	});
 
-	// ── AC-10 / AC-11 / AC-12 (Touren-Editor) ───────────────────────────────
+	// ── AC-10 / AC-11 / AC-12 (Trips-Editor) ───────────────────────────────
 	test('AC-10/AC-11: in allen 14 Aufloesungen erfuellt jede Marke jeder Zeile alle Bedingungen', async ({
 		page,
 		request
 	}) => {
 		await createTrip(request);
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 
 		const alleBefunde: string[] = [];
 		for (const { klasse, width, height } of AUFLOESUNGEN) {
@@ -545,7 +545,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 	// erlaubt dem NAMEN ausdruecklich, gekuerzt zu sein.
 	test('AC-12: in der Bruchzone kuerzt der Name, nie eine Marke', async ({ page, request }) => {
 		await createTrip(request);
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 
 		const befunde: string[] = [];
 		let irgendeinNameGekuerzt = false;
@@ -699,7 +699,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 		// Unit-Tests haben das nicht gesehen.
 		await createTrip(request);
 		await page.setViewportSize({ width: 1440, height: 900 });
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 
 		const zeilen = tab.locator('[data-testid="wm2-reihenfolge-row"]');
 		await expect(zeilen).toHaveCount(TRIP_METRIKEN.length);

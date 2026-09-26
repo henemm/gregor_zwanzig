@@ -360,7 +360,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
 
 - **Input:** Im Reiter „Wertebereiche" des Ortsvergleichs (Hub
   `/compare/[id]` sowie Anlege-Desktop/-Mobil `/compare/new`) und im Reiter
-  „Wertebereiche" der Tour (`/trips/[id]`) werden Von/Bis-Grenzen je Metrik
+  „Wertebereiche" der Trip (`/trips/[id]`) werden Von/Bis-Grenzen je Metrik
   per Zahlenfeld, Band-Drag oder Ordinal-Stufen gesetzt, Metriken
   hinzugefügt/entfernt, Marken gesetzt — wie heute.
 - **Output:** Dieselbe sichtbare Auswahl, derselbe Speicherweg im Hub (ein
@@ -456,7 +456,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
   Ungültig-Fall der Weiche `maybeSchedule` (`:240`/`:207`) setzt im
   Trip-Kontext aktiv `setDirty()`, damit der Indikator nicht fälschlich
   „Gespeichert ✓" neben einem sichtbaren Fehlerbanner zeigt / When im
-  Wertebereiche-Reiter der Tour eine beidseitig offene Grenze hergestellt
+  Wertebereiche-Reiter der Trip eine beidseitig offene Grenze hergestellt
   wird (weder Von noch Bis gesetzt) / Then zeigt der Fehlerbanner den
   Validierungsfehler UND der Speicher-Indikator zeigt NICHT „Gespeichert
   ✓" für diese Änderung.
@@ -521,13 +521,13 @@ hinterließe einen nicht kompilierenden Zwischenstand.
     Bedingungstext anzupassen ⇒ die `zeile`-Prüfung schlägt fehl, weil an
     der neuen Position eine andere Bedingung steht.
 
-- **AC-10 (Fläche A bleibt vollständig unverändert):** Given die Tour
+- **AC-10 (Fläche A bleibt vollständig unverändert):** Given die Trip
   (`/trips/[id]`) hat heute keinen `compare-wizard-state`-Context, `ws` ist
   dort stets `undefined`, der Speicherweg läuft über `saveController` /
   When beide Corridor-Dateien auf Wertprops umgestellt werden, ohne dass
   sich an Mount (A) etwas ändert (`TripTabs.svelte:227/229` reichen
   weiterhin nur `trip`/`onTripUpdate`/`saveController` durch, `context`
-  bleibt implizit/`'route'`) / Then bleibt das Verhalten der Tour
+  bleibt implizit/`'route'`) / Then bleibt das Verhalten der Trip
   identisch: Zahlenfeld-/Band-Drag-Änderungen speichern sofort per PUT,
   überstehen Reload.
   - Test: bestehende E2E `frontend/e2e/speicherung-ueberlebt-neuladen.spec.ts`

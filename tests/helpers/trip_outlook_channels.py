@@ -93,10 +93,10 @@ def _settings(user_id: str):
 def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
          stage_count: int = 5, email_format: str = "compact",
          outlook_metric_formats=None):
-    """Tour ab heute: der Abendbericht zielt auf MORGEN, der Ausblick zeigt
+    """Trip ab heute: der Abendbericht zielt auf MORGEN, der Ausblick zeigt
     die drei Etappen danach.
 
-    ``stage_count=2`` laesst die Tour mit dem Zieltag enden -- dann liefert
+    ``stage_count=2`` laesst die Trip mit dem Zieltag enden -- dann liefert
     ``_build_stage_trend()`` ``rows=None``/``state=NO_STAGES``, also den
     Zustands-Fallback-Zweig (AC-4, zweiter Fall).
     ``telegram_layout_ids`` setzt ``per_channel_layouts["telegram"]`` (AC-5).

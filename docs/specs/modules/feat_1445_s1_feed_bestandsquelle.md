@@ -58,7 +58,7 @@ italienische Warnung seltener oder unvollständiger sieht als heute.
 | `src/services/official_alerts/meteoalarm.py` | MODIFY | `_extract_alerts_from_cap` in „Info-Einträge sammeln" (bleibt XML-spezifisch) und „gruppieren/mappen" (wird geteilt genutzt) aufgeteilt; Länderliste in `fetch()` von `("AT", "IT")` auf `("AT",)`; `covers()` verliert die IT-Bbox-Prüfung |
 | `src/services/official_alerts/__init__.py` | MODIFY | Registrierung von `MeteoAlarmFeedSource` zwischen `MeteoAlarmSource` und `DpcSource` |
 | `tests/tdd/test_meteoalarm_feed_source.py` | CREATE | Fetch-Mapping, Verbrauchsdisziplin, Ausfall-/Zonen-Ehrlichkeit, Äquivalenznachweis gegen aufgezeichnete EDR-Fixture |
-| `tests/fixtures/meteoalarm/feed_italy_equivalence_snapshot.json` | CREATE | Aufgezeichneter Feed-Ausschnitt (reale Tourpunkte, Italien) für den Äquivalenztest |
+| `tests/fixtures/meteoalarm/feed_italy_equivalence_snapshot.json` | CREATE | Aufgezeichneter Feed-Ausschnitt (reale Trip-Punkte, Italien) für den Äquivalenztest |
 | `tests/fixtures/meteoalarm/edr_italy_equivalence_snapshot.json` | CREATE | Zur selben Minute aufgezeichneter EDR-Ausschnitt für dieselben Punkte — Referenzmenge des Äquivalenztests |
 
 ## Dependencies
@@ -171,7 +171,7 @@ italienische Warnung seltener oder unvollständiger sieht als heute.
   einen echten Netz-Call aus, alle weiteren werden aus dem Cache bedient.
 - [ ] Test 3 (`tests/tdd/test_meteoalarm_feed_source.py`, Äquivalenz-Pflicht-Gate): GIVEN die
   beiden zur selben Minute aufgezeichneten Fixtures (EDR-Ausschnitt, Feed-Ausschnitt) für eine
-  Liste realer Tourpunkte WHEN beide Ergebnismengen für dieselben Punkte gebildet werden THEN
+  Liste realer Trip-Punkte WHEN beide Ergebnismengen für dieselben Punkte gebildet werden THEN
   ist die Feed-Ergebnismenge eine Obermenge der EDR-Ergebnismenge (jede EDR-Warnung erscheint
   auch im Feed-Ergebnis desselben Punkts).
 - [ ] Test 4 (`tests/tdd/test_meteoalarm_feed_source.py`): GIVEN der Feed-Abruf schlägt fehl
@@ -213,7 +213,7 @@ italienische Warnung seltener oder unvollständiger sieht als heute.
   - Test: Test 2 oben — Zählung echter `request_fn`-Aufrufe über mehrere Abfragen.
 
 - **AC-3:** Given ein zur selben Minute aufgezeichneter Vergleichsabruf über den bisherigen
-  kontingentierten Weg und die neue Quelle liegen für eine Liste realer Tourpunkte vor, When
+  kontingentierten Weg und die neue Quelle liegen für eine Liste realer Trip-Punkte vor, When
   beide Ergebnismengen gegenübergestellt werden, Then enthält die neue Quelle mindestens alle
   Warnungen, die der bisherige Weg für dieselben Punkte lieferte.
   - Test: Test 3 oben — Obermengen-Vergleich gegen die aufgezeichneten Fixtures (Pflicht-Gate
@@ -221,7 +221,7 @@ italienische Warnung seltener oder unvollständiger sieht als heute.
   - **✅ NACHGEZOGEN 2026-08-01, 16:06:28 UTC — AC-3 ist erfüllt.** Nach Ablauf der
     Anbieter-Tagessperre (Reset 15:45 UTC) wurden beide Seiten im selben Skriptlauf und
     damit zur selben Minute aufgezeichnet: `edr_snapshot_it.json` (EDR-Weg über den echten
-    Produktivcode, 8 reale Tourpunkte) und `feed_italy_equivalence.json` (Feed-Bestand
+    Produktivcode, 8 reale Trip-Punkte) und `feed_italy_equivalence.json` (Feed-Bestand
     derselben Minute, unverändert, reduziert auf die 8 betroffenen EMMA-Zonen).
     **Ergebnis: null fehlende Warnungen**, der Feed ist für jeden Punkt eine echte Obermenge
     und trägt an zwei Punkten sogar eine zusätzliche Warnung. Die `xfail`-Markierung ist
@@ -253,7 +253,7 @@ italienische Warnung seltener oder unvollständiger sieht als heute.
     AC-4) für den Fall „Punkt außerhalb Italiens".** Grund: die Zuständigkeit wurde in `covers()`
     über die grobe DPC-Radar-Bbox entschieden, in der auch Österreich, die Schweiz, Slowenien,
     Kroatien und offenes Meer liegen. Für diese Punkte war der Hinweis „nicht abrufbar" sachlich
-    falsch (Prod-Messung 2026-08-01: 39 Punkte einer einzigen Tour, fortlaufend). Seit S4 ist die
+    falsch (Prod-Messung 2026-08-01: 39 Punkte einer einzigen Trip, fortlaufend). Seit S4 ist die
     Zuständigkeit geometriebasiert: nicht einer der 187 Warnzonen zuordenbar ⇒ nicht zuständig ⇒
     schweigen, kein Hinweis, keine Diagnose-Zeile. **Unverändert gültig bleibt AC-5 für echte
     Ausfälle** eines tatsächlich zuständigen italienischen Orts (fehlgeschlagener Abruf,

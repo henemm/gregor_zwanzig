@@ -105,7 +105,7 @@ Produktions-Aufrufer), `src/services/trip_alert.py:518 ff.`
 | `src/services/weather_snapshot.py::WeatherSnapshotService.load_dated` | method | Schnappschuss-Leser; muss ab S3 das **Segment-Datum** statt `today` bekommen, sonst wird ein frisch gewonnener Alarm still unterdrückt |
 | `tests/helpers/nowcast_gate_fixtures.py` | fixture | `make_trip`/`trip_stage`/`CountingFrameSource`/`reset_radar_cache` — bereits für mehrstufige Trips mit exakten Ankunftszeiten erweitert (#1697), keine Duplizierung nötig |
 | `tests/tdd/test_radar_alert_follows_ortstag.py` | test | Nachbarwächter (28 Tests, CI-laufend) und Ablageort der neuen ACs; Kollisionsprüfung zeigt: kein bestehender Test dort exerziert den S3-Kernfall (alle Ein-Etappen-Trips oder AC-3, das strukturell nicht kollidiert) |
-| `docs/adr/0044-kalendertage-folgen-der-ortszeit.md` | adr | „heute"/„gestern" bestimmen sich nach der Ortszeit der Tour — Grundlage für `today`/`yesterday` in der Vorrangkette |
+| `docs/adr/0044-kalendertage-folgen-der-ortszeit.md` | adr | „heute"/„gestern" bestimmen sich nach der Ortszeit der Trip — Grundlage für `today`/`yesterday` in der Vorrangkette |
 | `docs/specs/modules/fix_1584_alarm_zeitfenster.md:310-323` | spec | Abgrenzung: ein *konfiguriertes* Tagesfenster über Mitternacht ist am Ziel-Segment bewusst nicht abgebildet — nicht derselbe Fall wie eine *Etappe* mit Ankunft nach Mitternacht; `test_mitternachtsfenster_22_2_klemmt_auf_mindestfenster` bleibt unverändert grün |
 
 ## Implementation Details
@@ -374,7 +374,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
 
 - **ADR-Nr.:** keine (wendet ADR-0044 an, führt keine neue Entscheidung ein)
 - **Rationale:** ADR-0044 hat bereits akzeptiert, dass „heute"/„morgen" sich
-  nach der Ortszeit der Tour bestimmen. S3 fügt dem Alarm-Pfad, der ADR-0044
+  nach der Ortszeit der Trip bestimmen. S3 fügt dem Alarm-Pfad, der ADR-0044
   seit #1697 bereits anwendet, lediglich einen zusätzlichen, additiven
   Rückgriff auf den unmittelbaren Vortag hinzu — keine neue Zeitquelle, kein
   geänderter Kalendertag-Begriff, keine neue Zone-Auflösung. Die

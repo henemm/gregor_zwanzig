@@ -145,7 +145,7 @@ async function createVergleich(request: APIRequestContext): Promise<string> {
 // verkleinert — bei 320 px existiert der Reiter-Knopf teils gar nicht (gemessen
 // in #1719 S4, dort derselbe Umweg).
 
-async function oeffneTourenEditor(page: Page): Promise<Locator> {
+async function oeffneTripEditor(page: Page): Promise<Locator> {
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto(`/trips/${TRIP_ID}?tab=weather`);
 	const reiter = page.getByTestId('trip-detail-tab-weather');
@@ -463,7 +463,7 @@ test.describe('Issue #1888: die Kuerzel-Legende ist auf dem Handy lesbar', () =>
 		request
 	}) => {
 		await createTrip(request);
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 		const befunde = await messeBlockDeckung(tab);
 		expect(
 			befunde,
@@ -496,7 +496,7 @@ test.describe('Issue #1888: die Kuerzel-Legende ist auf dem Handy lesbar', () =>
 		request
 	}) => {
 		await createTrip(request);
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 		const legende = tab.locator(LEGENDE).first();
 
 		const befunde: string[] = [];
@@ -597,7 +597,7 @@ test.describe('Issue #1888: die Kuerzel-Legende ist auf dem Handy lesbar', () =>
 		request
 	}) => {
 		await createTrip(request);
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 		const legende = tab.locator(LEGENDE).first();
 
 		const zuSchwach: string[] = [];

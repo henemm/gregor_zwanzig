@@ -26,7 +26,7 @@ export function dayProgress(dayX: number, dayY: number): number {
 }
 
 /**
- * Sortiert die Stage-Datumsstrings einer Tour aufsteigend (ISO-Datum =
+ * Sortiert die Stage-Datumsstrings einer Trip aufsteigend (ISO-Datum =
  * lexikographisch == chronologisch). Leerer Output, wenn nichts gesetzt.
  */
 function stageDates(trip: Trip): string[] {
@@ -130,7 +130,7 @@ function isoDay(now: Date): string {
 }
 
 /**
- * Nächste geplante Tour: erster Trip mit Status != 'aktiv' und Start-Datum
+ * Nächste geplante Trip: erster Trip mit Status != 'aktiv' und Start-Datum
  * ≥ heute, sortiert nach frühestem Startdatum. Null, wenn nichts passt.
  */
 export function nextPlannedTrip(trips: Trip[], now: Date): Trip | null {

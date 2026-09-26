@@ -8,7 +8,7 @@ version: "1.0"
 tags: [compare, trips, versand, persistenz]
 ---
 
-# Versand-Reiter speichert selbst wie bei der Tour (Issue #2276, Scheibe S5, Epic #2345)
+# Versand-Reiter speichert selbst wie bei der Trip (Issue #2276, Scheibe S5, Epic #2345)
 
 ## Approval
 
@@ -19,7 +19,7 @@ tags: [compare, trips, versand, persistenz]
 Im Ortsvergleich-Hub speichert der Versand-Reiter heute nicht für sich
 selbst, sondern meldet jede Änderung an einen Sammel-Mechanismus der Seite
 (Wrapper-Div `.hub-versand-wrap` + `handleVersandCommit`), der die Änderung
-zusammen mit allen anderen Reitern verwaltet. Bei einer Tour speichert
+zusammen mit allen anderen Reitern verwaltet. Bei einer Trip speichert
 dagegen jeder Reiter direkt und unabhängig — das ist das Zielbild, auf das
 der Ortsvergleich Schritt für Schritt umgestellt wird (Epic #2345). Diese
 Scheibe stellt den Versand-Reiter als vierten von sechs Reitern um.
@@ -29,7 +29,7 @@ näher an S2 (Alarme) als an S4 (Wetter-Metriken/Layout, zwei kombinierte
 Domänen). Nutzersichtbarer Nebeneffekt: schlägt ein Speichervorgang wegen
 eines zwischenzeitlichen fremden Änderns fehl (Speicherkonflikt), zeigt der
 Ortsvergleich künftig „Nochmal speichern" statt eines generischen Fehlers —
-genau wie bei der Tour. Zusätzlich wird der bisher unbedingte
+genau wie bei der Trip. Zusätzlich wird der bisher unbedingte
 („unconditioned") Rollback bei einem fehlgeschlagenen Versand-PUT durch einen
 diff-basierten Rollback ersetzt (Abschnitt „Implementation Details", Punkt
 3) — eine bewusste Verhaltensänderung, kein reines Verschieben von Code. Am

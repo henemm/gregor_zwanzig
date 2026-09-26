@@ -72,7 +72,7 @@ CENTRAL_METRICS_COVERED_ELSEWHERE: dict[str, str] = {
     #
     # KEIN Rueckbaupfad -- die vier bleiben trip-exklusiv (PO-Entscheid
     # 2026-08-19 zu #1848, Scheibe C). Die frueher hier angekuendigte
-    # Zusammenfuehrung auf EIN Vokabular umfasst diese vier NICHT: auf Tour
+    # Zusammenfuehrung auf EIN Vokabular umfasst diese vier NICHT: auf Trip
     # zaehlt das Wetter, WAEHREND man geht -- die vier fenstern ueber die
     # Gehzeit entlang der Route. Der Ortsvergleich hat keine Route und damit
     # keine Gehzeit; er nutzt ein konfiguriertes Tagesfenster (Vorgabe 04-19).

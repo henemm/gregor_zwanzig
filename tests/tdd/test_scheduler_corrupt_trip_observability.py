@@ -46,7 +46,7 @@ def _corrupt_trip(trip_id: str) -> dict:
     crasht beim Parsen (`date.fromisoformat('kaputt')` -> ValueError)."""
     return {
         "id": trip_id,
-        "name": "Kaputte-Tour",
+        "name": "Kaputte-Trip",
         "kind": "route",
         "stages": [
             {

@@ -8,7 +8,7 @@ version: "1.0"
 tags: [sveltekit, frontend, trip-detail, design-compliance, ux]
 ---
 
-# Issue #336 — Doppelte Status-Anzeige im Tour-Kopf bereinigen
+# Issue #336 — Doppelte Status-Anzeige im Trip-Kopf bereinigen
 
 ## Approval
 
@@ -16,7 +16,7 @@ tags: [sveltekit, frontend, trip-detail, design-compliance, ux]
 
 ## Purpose
 
-Im Tour-Kopf auf `/trips/[id]` erscheint der Status doppelt: als Versalien-Text-Präfix
+Im Trip-Kopf auf `/trips/[id]` erscheint der Status doppelt: als Versalien-Text-Präfix
 ("**AKTIV** · läuft seit Tag 3") **und** als farbige Pill ("Aktiv"). Diese Spec entfernt
 das nicht-konforme Versalien-Präfix und behält die Pill als alleinige Statusdarstellung.
 Grundlage: Design-System `COPY.md §3` + `ANTI-PATTERNS AP-020` definieren Status
@@ -72,7 +72,7 @@ Kein Backend, keine Daten-Schema-Berührung, keine geteilten Utils geändert.
 
 ## Expected Behavior
 
-- **Input:** User öffnet `/trips/[id]` einer Tour (Status active/planned/paused/archived).
+- **Input:** User öffnet `/trips/[id]` einer Trip (Status active/planned/paused/archived).
 - **Output:** Die Status-Zeile zeigt den Status **genau einmal** — als farbige Pill —
   gefolgt vom dezenten, grau gedämpften Zusatz (z. B. "läuft seit Tag 3"). Kein
   Versalien-Präfix mehr.
@@ -80,16 +80,16 @@ Kein Backend, keine Daten-Schema-Berührung, keine geteilten Utils geändert.
 
 ## Acceptance Criteria
 
-**AC-1:** Given eine aktive Tour wird auf `/trips/[id]` geöffnet / When die Status-Zeile gerendert wird / Then enthält `[data-testid="trip-detail-status-supplement"]` den Zusatztext (z. B. "läuft seit Tag") und **nicht** das Versalien-Präfix "AKTIV"
+**AC-1:** Given eine aktive Trip wird auf `/trips/[id]` geöffnet / When die Status-Zeile gerendert wird / Then enthält `[data-testid="trip-detail-status-supplement"]` den Zusatztext (z. B. "läuft seit Tag") und **nicht** das Versalien-Präfix "AKTIV"
 - Test: (populated after /tdd-red)
 
-**AC-2:** Given eine aktive Tour wird auf `/trips/[id]` geöffnet / When der Tour-Kopf gerendert wird / Then ist die Pill `[data-testid="trip-detail-status-badge"]` weiterhin sichtbar und enthält das deutsche Label "Aktiv" (Status wird genau einmal angezeigt)
+**AC-2:** Given eine aktive Trip wird auf `/trips/[id]` geöffnet / When der Trip-Kopf gerendert wird / Then ist die Pill `[data-testid="trip-detail-status-badge"]` weiterhin sichtbar und enthält das deutsche Label "Aktiv" (Status wird genau einmal angezeigt)
 - Test: (populated after /tdd-red)
 
-**AC-3:** Given eine pausierte Tour wird auf `/trips/[id]` geöffnet / When der Tour-Kopf gerendert wird / Then enthält die Pill `[data-testid="trip-detail-status-badge"]` "Pausiert" (Regressions-Guard für die 9 bestehenden Pill-Assertions in `trip-detail-actions.spec.ts`)
+**AC-3:** Given eine pausierte Trip wird auf `/trips/[id]` geöffnet / When der Trip-Kopf gerendert wird / Then enthält die Pill `[data-testid="trip-detail-status-badge"]` "Pausiert" (Regressions-Guard für die 9 bestehenden Pill-Assertions in `trip-detail-actions.spec.ts`)
 - Test: (populated after /tdd-red)
 
-**AC-4:** Given der Tour-Kopf wird gerendert / When der Zusatztext-Span dargestellt wird / Then verwendet `[data-testid="trip-detail-status-supplement"]` die gedämpfte Sekundärfarbe `var(--g-ink-muted)` und **nicht** eine Status-Accent-Farbe (die Farbe lebt allein in der Pill)
+**AC-4:** Given der Trip-Kopf wird gerendert / When der Zusatztext-Span dargestellt wird / Then verwendet `[data-testid="trip-detail-status-supplement"]` die gedämpfte Sekundärfarbe `var(--g-ink-muted)` und **nicht** eine Status-Accent-Farbe (die Farbe lebt allein in der Pill)
 - Test: (populated after /tdd-red)
 
 ## Known Limitations

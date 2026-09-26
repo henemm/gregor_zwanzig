@@ -1,4 +1,4 @@
-// TDD RED: Bug #335 — fehlendes Leerzeichen vor Tourname in der H1.
+// TDD RED: Bug #335 — fehlendes Leerzeichen vor Trip-Name in der H1.
 //
 // Spec: docs/specs/modules/issue_335_h1_spacing.md
 //

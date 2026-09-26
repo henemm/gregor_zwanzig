@@ -110,7 +110,7 @@ def _warnings(caplog):
 
 
 # ---------------------------------------------------------------------------
-# AC-1 — Klasse A: keine weiteren Etappen (normaler Tourabschluss, KEIN WARNING)
+# AC-1 — Klasse A: keine weiteren Etappen (normaler Trip-Abschluss, KEIN WARNING)
 # ---------------------------------------------------------------------------
 
 def test_ac1_no_future_stages_reports_state_and_logs_nothing(caplog):
@@ -126,14 +126,14 @@ def test_ac1_no_future_stages_reports_state_and_logs_nothing(caplog):
         )
 
     assert result.state is OutlookState.NO_STAGES, (
-        "Eine Tour ohne Folge-Etappe muss den Zustand NO_STAGES melden, "
+        "Eine Trip ohne Folge-Etappe muss den Zustand NO_STAGES melden, "
         f"bekam: {result!r}"
     )
     assert result.rows is None, (
         f"Ohne Folge-Etappe darf es keine Ausblick-Zeilen geben: {result!r}"
     )
     assert _warnings(caplog) == [], (
-        "Der normale Tourabschluss ist kein Stoerfall und darf NICHT als "
+        "Der normale Trip-Abschluss ist kein Stoerfall und darf NICHT als "
         f"WARNING protokolliert werden: {[r.getMessage() for r in _warnings(caplog)]}"
     )
 
