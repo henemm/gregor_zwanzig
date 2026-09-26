@@ -302,7 +302,7 @@ Trip-Briefing-only, davon unberührt. Details:
 aus `BOT_COMMANDS` gesetzt und verifiziert:
 
 - **Startup-Hook** (`api/main.py`, Lifespan): ruft `TelegramOutput.set_my_commands()` auf
-- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (8 Befehle: glance, heute, morgen, now, heute_gewitter, timeline_heute, timeline_morgen, hilfe)
+- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (17 Befehle: glance, heute, morgen, now, heute_gewitter, timeline_heute, timeline_morgen, hilfe, jetzt, gewitter, strecke, ruhetag, status, pause, skip, stop, weiter) — seit #2417 AC-21 Vereinigung mit allen `_COMMAND_SPECS`-Wörtern
 - **Idempotent:** jeder Deploy/Restart stellt das Menü sicher
 - **Fail-soft:** fehlender Bot-Token blockt den Service-Start nicht
 - **Live-Verifikation (Post-Deploy):** Der Selftest prüft via `getMyCommands` gegen den Prod-Bot,

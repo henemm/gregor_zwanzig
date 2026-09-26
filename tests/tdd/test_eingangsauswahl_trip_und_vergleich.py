@@ -291,6 +291,35 @@ class TestEntscheidungstabelle:
 
 
 # ---------------------------------------------------------------------------
+# Finding F002 (Adversary #2417, Runde 2): resolve_command_target darf einen
+# ziellos-Schluessel NIE in die alte Mehrdeutigkeits-Rueckfrage laufen lassen
+# -- auch dann nicht, wenn ein (hypothetischer) Aufrufer den in der
+# Docstring vorgeschriebenen vorgelagerten ZIELLOS_SCHLUESSEL-Filter
+# vergisst. Direkter Test gegen die geteilte Funktion selbst, nicht nur
+# gegen ihre beiden heutigen Aufrufer (Telegram/Premium-SMS-Reader).
+# ---------------------------------------------------------------------------
+
+class TestF002ResolveCommandTargetZiellosGuard:
+    @pytest.mark.parametrize("key", ["hilfe", "columns"])
+    def test_ziellos_schluessel_bleibt_eindeutig_bei_trip_plus_vergleich(self, key):
+        """PO-Lage (1 Trip + 1 aktiver Vergleich): ohne den Reader-seitigen
+        ZIELLOS_SCHLUESSEL-Filter wuerde ``_BEIDE_KINDS`` hier mehrdeutig
+        antworten (s. ``test_trip_plus_ein_vergleich_ist_mehrdeutig`` oben).
+        ``resolve_command_target`` muss ``key in ZIELLOS_SCHLUESSEL`` selbst
+        abfangen und stattdessen eindeutig auf den Trip auflösen."""
+        from services.trip_selection import resolve_command_target
+
+        trip = _trip_obj("Korsika", 0)
+        erg = resolve_command_target(
+            key, [trip], [_preset_dict("Alpenblick")], _now(), channel="telegram",
+        )
+        assert erg.kind == "route" and erg.target is trip and erg.text is None, (
+            f"resolve_command_target({key!r}, ...) lief in die Mehrdeutigkeit "
+            f"statt eindeutig auf den Trip aufzuloesen: {erg!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # AC-15: Premium-SMS-Rückfrage passt in 160 GSM-7-Zeichen, Telegram ungekürzt
 # ---------------------------------------------------------------------------
 
@@ -380,11 +409,19 @@ def test_ac2_weiter_ohne_namen_setzt_einzigen_vergleich_fort(monkeypatch, user_i
 
 # ---------------------------------------------------------------------------
 # AC-4: Mehrdeutigkeit -> Rückfrage direkt vom Reader, process() NIE aufgerufen
+#
+# AC-14 (#2417) verengt diese Erwartung: die Zeile testete bislang implizit
+# JEDEN Befehl ohne Namen (hier stellvertretend "pause"), weil der Reader
+# `resolve_active_target` bisher UNKLASSIFIZIERT fuer jedes Wort aufrief. Nach
+# #2417 bleibt das nur noch fuer die `_BEIDE_KINDS`-Befehle (`pause`/`weiter`)
+# so — deshalb jetzt ausdruecklich ueber beide parametrisiert, statt nur ueber
+# "pause" stellvertretend fuer "jeden Befehl".
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
 @pytest.mark.parametrize("lage", ["trip_plus_vergleich", "zwei_vergleiche"])
-def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal, lage):
+@pytest.mark.parametrize("befehl", ["pause", "weiter"])
+def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal, lage, befehl):
     uid = user_ids()
     _nutzer_mit_tier(uid)
     namen = ["Alpenblick"]
@@ -398,7 +435,7 @@ def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal,
     p = _preset(uid, "Alpenblick")
     vorher_preset = _preset_file(uid, p["id"]).read_bytes()
 
-    sent, calls = _KANAELE[kanal](monkeypatch, uid, "pause")
+    sent, calls = _KANAELE[kanal](monkeypatch, uid, befehl)
 
     assert calls == [], "Mutation 6: process() darf bei Mehrdeutigkeit nicht laufen"
     assert len(sent) == 1
@@ -408,6 +445,36 @@ def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal,
     if trip is not None:
         geladen = next(t for t in load_all_trips(uid) if t.id == trip.id)
         assert geladen.report_config.paused_until is None
+
+
+# ---------------------------------------------------------------------------
+# AC-14 (#2417): Befehle ausserhalb `_BEIDE_KINDS` (hier stellvertretend
+# "status", `_ROUTE_ONLY`) werden bei Trip+Vergleich (L3) NICHT MEHR
+# mehrdeutig -- sie erreichen den einzigen aktiven Trip, der Ortsvergleich
+# wird ignoriert (Matrix-Zeile `_ROUTE_ONLY`/L3: "Antwort an Trip (NEU)").
+# Loest die alte, hier zuvor mitprazierte Erwartung ab, dass JEDER Befehl
+# ohne Namen bei Trip+Vergleich in die Rueckfrage laeuft.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+def test_ac14_route_only_befehl_erreicht_bei_trip_plus_vergleich_den_trip(monkeypatch, user_ids, kanal):
+    uid = user_ids()
+    _nutzer_mit_tier(uid)
+    trip = _trip(uid, "Korsika", start_offset_days=-1)
+    _preset(uid, "Alpenblick")
+
+    sent, calls = _KANAELE[kanal](monkeypatch, uid, "status")
+
+    assert calls, "AC-14: 'status' muss den Trip erreichen, nicht mehrdeutig bleiben"
+    assert calls[0].trip_name == trip.name, (
+        f"AC-14: 'status' muss an den Trip {trip.name!r} adressiert sein, "
+        f"erhalten {calls[0].trip_name!r}"
+    )
+    assert len(sent) == 1
+    assert "Mehrdeutig" not in sent[0] and "Alpenblick" not in sent[0], (
+        f"AC-14: 'status' darf keine Rueckfrage mehr ausloesen: {sent[0]!r}"
+    )
+    assert trip.name in sent[0], f"AC-14: Antwort muss den Trip nennen: {sent[0]!r}"
 
 
 # ---------------------------------------------------------------------------

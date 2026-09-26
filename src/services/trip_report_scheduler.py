@@ -1325,6 +1325,25 @@ class TripReportSchedulerService:
             weather_segments = self._clamp_segments_to_today(
                 segments, target_date, today=heute_am_ort,
             )
+        elif on_demand and report_type == "morning":
+            # Issue #2417 AC-31 (Epic #2133 S2/#2186-Zusage): der On-Demand-
+            # "heute"-Abruf mitten am Tag beginnt "ab jetzt", nicht an der
+            # geplanten Gehzeit-Startstunde -- sonst zeigt die Stundentabelle
+            # bereits vergangene Stunden (Vorbild: WeatherExtractor.
+            # _restfenster_aggregat, dieselbe Zusage fuer den Einzelmetrik-
+            # Abruf). NUR "morning"/"heute": "morgen" fragt einen noch
+            # bevorstehenden Tag ab, an dem es keine vergangenen Stunden
+            # gibt. `on_demand` ist ausschliesslich in send_on_demand_report()
+            # True (s. Docstring dort) -- der geplante Morgen-Report VOR
+            # Tagesbeginn (on_demand=False) bleibt unveraendert, weil dieser
+            # Zweig dann gar nicht erst greift.
+            _geklemmt = self._clamp_segments_to_now(segments, now_utc)
+            # Adversary-Vorgriff: ist die geplante Gehzeit bereits VOLLSTAENDIG
+            # vorbei (Abruf abends nach Etappenende), liefert die Klemme eine
+            # leere Liste -- das darf NIE als "keine Wetterdaten" (erfundene
+            # Provider-Stoerung) beim Nutzer ankommen. Fail-soft aufs
+            # Altverhalten (ganzer Tag), statt "no_weather" vorzutaeuschen.
+            weather_segments = _geklemmt if _geklemmt else segments
 
         # 1b. Compute local timezone from coordinates for display
         # (tz_for_coords now imported top-level — Bug #401)
@@ -2163,6 +2182,32 @@ class TripReportSchedulerService:
             )
             for seg in segments
         ]
+
+    def _clamp_segments_to_now(
+        self, segments: List[TripSegment], now_utc: datetime,
+    ) -> List[TripSegment]:
+        """Kappt das Wetter-Abruf-Fenster auf "ab jetzt" (Issue #2417 AC-31).
+
+        Analog zu ``WeatherExtractor._restfenster_aggregat`` (Issue #2186):
+        ein bereits vollstaendig vergangenes Segment entfaellt, ein
+        angebrochenes bekommt ``now_utc`` als neuen ``start_time`` -- der
+        bereits verstrichene Teil der geplanten Gehzeit taucht dann weder in
+        der Stundentabelle noch in der Kurzuebersicht auf. Liegt ``now_utc``
+        noch VOR dem Segmentbeginn (z. B. ein frueher On-Demand-Abruf), bleibt
+        das Segment unveraendert -- reines No-Op fuer diesen Fall.
+
+        Nur fuer den Wetter-Abruf-INPUT (analog ``_clamp_segments_to_today``);
+        ``target_date`` (Stage-Header, Marker, Snapshot) bleibt unberuehrt.
+        """
+        result: List[TripSegment] = []
+        for seg in segments:
+            if now_utc >= seg.end_time:
+                continue
+            if now_utc > seg.start_time:
+                result.append(dataclasses.replace(seg, start_time=now_utc))
+            else:
+                result.append(seg)
+        return result
 
     def _fetch_weather(
         self,

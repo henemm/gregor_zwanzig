@@ -16,6 +16,16 @@ Ortsvergleiche — EINE Funktion fuer Auswahl UND alle drei Ergebnistexte
 (SPEC: docs/specs/modules/feat_2282_ortsvergleich_eingangskanaele.md,
 Abschnitt 1). Sie laedt selbst nichts, aus demselben Grund wie oben.
 
+Issue #2417 (loest #2282 AC-4 fuer alle Befehle ausser `pause`/`weiter` ab):
+``resolve_active_target`` wird nur noch fuer die `_BEIDE_KINDS`-Befehle
+aufgerufen (Mehrdeutigkeit bleibt dort bestehen). Jeder andere Befehl ohne
+vorangestellten Namen (`_ROUTE_ONLY`, Metrik-Kuerzel, Query-Keys) adressiert
+ueber ``resolve_trip_only_target`` ausschliesslich den aktiven Trip —
+aktive Ortsvergleiche werden dabei ignoriert, statt eine Rueckfrage
+auszuloesen. ``resolve_command_target`` buendelt diese Weiche fuer beide
+Reader (Telegram, Premium-SMS) an EINER Stelle (AC-18).
+
+SPEC: docs/specs/modules/feat_2417_befehle_e2e_echter_eingang.md
 SPEC: docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md
 """
 from __future__ import annotations
@@ -32,7 +42,24 @@ if TYPE_CHECKING:
 
 KEIN_KANDIDAT_TEXT = "Kein aktiver Trip oder Ortsvergleich gefunden."
 
+# Issue #2417 AC-4/AC-17: bewusst ANDERER Text als KEIN_KANDIDAT_TEXT — hier
+# existiert etwas (mindestens ein Ortsvergleich), nur adressiert dieser
+# Befehl ausschliesslich Trips. Kanalgleich (kein kanalspezifischer Zusatz).
+KEIN_AKTIVES_ZIEL_TEXT = (
+    "Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht für "
+    "Ortsvergleiche."
+)
+
 _LABEL = {"route": "Trip", "vergleich": "Vergleich"}
+
+# Issue #2417 Implementation Details: Befehlsklassen, die der Reader VOR der
+# Zielaufloesung erkennt (interne Reader-Schluessel nach Bare-Keyword-/
+# Shortcut-Aufloesung). "hilfe" braucht keine Zielaufloesung (ziellos, sofort
+# beantwortet); "columns" ebenso (nur ueber den Telegram-Callback "act_columns"
+# erreichbar, kein Bare-Text-Pendant). "pause"/"weiter" bleiben die einzige
+# verbleibende Mehrdeutigkeits-Lage aus #2282 AC-4.
+ZIELLOS_SCHLUESSEL = frozenset({"hilfe", "columns"})
+_BEIDE_KINDS_ONLY_SCHLUESSEL = frozenset({"pause", "weiter"})
 
 
 def pick_active_trip(trips: list["Trip"], now_utc: datetime) -> "Trip | None":
@@ -190,3 +217,55 @@ def resolve_active_target(
         kandidaten.append(("route", trip.name))
     kandidaten += [("vergleich", p.get("name", "")) for p in vergleiche]
     return ZielErgebnis(kind=None, target=None, text=_rueckfrage_text(kandidaten, channel))
+
+
+def resolve_trip_only_target(
+    trips: "list[Trip]", presets: list[dict], now_utc: datetime,
+) -> ZielErgebnis:
+    """Zielaufloesung fuer Befehle, die NUR einen Trip adressieren koennen
+    (Issue #2417 Implementation Details Punkt 4: `_ROUTE_ONLY`, Metrik-
+    Kuerzel, Query-Keys). Aktive Ortsvergleiche werden bewusst IGNORIERT —
+    ihre blosse Existenz entscheidet nur zwischen den beiden Fehlfaellen:
+
+      Trip aktiv                          -> eindeutig Trip
+      kein Trip, >=1 aktiver Vergleich    -> KEIN_AKTIVES_ZIEL_TEXT (AC-17)
+      kein Trip, kein Vergleich           -> KEIN_KANDIDAT_TEXT (unveraendert)
+    """
+    trip = pick_active_trip(trips, now_utc)
+    if trip is not None:
+        return ZielErgebnis(kind="route", target=trip, text=None)
+
+    heute = now_utc.date()
+    vergleiche = [p for p in presets if _vergleich_ist_aktiv(p, heute)]
+    if vergleiche:
+        return ZielErgebnis(kind=None, target=None, text=KEIN_AKTIVES_ZIEL_TEXT)
+    return ZielErgebnis(kind=None, target=None, text=KEIN_KANDIDAT_TEXT)
+
+
+def resolve_command_target(
+    key: str | None, trips: "list[Trip]", presets: list[dict], now_utc: datetime,
+    *, channel: str,
+) -> ZielErgebnis:
+    """Geteilte Klassifizierungs-/Auflösungsfunktion fuer Telegram- UND
+    Premium-SMS-Reader (Issue #2417 AC-18): ``key`` ist der bereits
+    aufgeloeste interne Reader-Schluessel (Bare-Keyword-/Shortcut-Form, z.B.
+    ``"status"``, ``"now"``, ein Metrik-/Query-Wort oder ``None``).
+
+    Der Aufrufer MUSS ``key in ZIELLOS_SCHLUESSEL`` selbst VOR diesem Aufruf
+    behandeln (AC-15: ``hilfe``/``columns`` brauchen ueberhaupt keine
+    Trip-/Vergleichsladung) — diese Funktion geht deshalb nie in den
+    ziellosen Zweig.
+
+    Beobachtbarkeit (Issue #2417 Finding F002): ``ZIELLOS_SCHLUESSEL`` und
+    ``_BEIDE_KINDS_ONLY_SCHLUESSEL`` sind disjunkt — ein Schluessel aus
+    ``ZIELLOS_SCHLUESSEL`` faellt deshalb bereits heute auf den
+    Trip-only-Zweig zurueck (nie auf ``resolve_active_target``/die
+    Mehrdeutigkeits-Rueckfrage), AUCH wenn ein kuenftiger Aufrufer den in
+    der Docstring vorgeschriebenen vorgelagerten Filter vergisst. Direkt
+    gegen diese Disjunktheit abgesichert durch
+    ``TestF002ResolveCommandTargetZiellosGuard`` (test_eingangsauswahl_
+    trip_und_vergleich.py) statt nur ueber die beiden heutigen Aufrufer.
+    """
+    if key in _BEIDE_KINDS_ONLY_SCHLUESSEL:
+        return resolve_active_target(trips, presets, now_utc, channel=channel)
+    return resolve_trip_only_target(trips, presets, now_utc)

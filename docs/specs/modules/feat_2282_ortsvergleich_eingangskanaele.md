@@ -2,7 +2,7 @@
 entity_id: feat_2282_ortsvergleich_eingangskanaele
 type: module
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-09-26
 status: draft
 version: "1.1"
 tags: [ortsvergleich, inbound, trip-command-processor, trip-selection, epic-2133, epic-1374, issue-2282]
@@ -318,6 +318,9 @@ handgepflegte Liste (Konsistenz mit der bestehenden #2134-Regel).
     Vergleich+Vergleich ohne Trip); Rückfrage-Text UND ausbleibende Wirkung
     (keine Schreiboperation an Trip oder Preset, `TripCommandProcessor.process` wird
     nicht aufgerufen) prüfen.
+  - **Status:** Abgelöst durch `feat_2417_befehle_e2e_echter_eingang.md`
+    (Befehls-×-Lagen-Matrix): Nur `pause`/`weiter` fragen bei Trip+Ortsvergleich noch
+    nach — jeder andere Befehl (inkl. `hilfe`) erreicht sein Ziel ohne Rückfrage.
 
 - **AC-5:** Given ein Nutzer hat weder einen aktiven Trip noch einen aktiven
   Ortsvergleich / When er per Telegram oder Premium-SMS einen Befehl ohne Namen sendet /

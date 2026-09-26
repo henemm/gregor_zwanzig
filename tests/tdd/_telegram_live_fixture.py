@@ -313,77 +313,169 @@ def active_trip_for(user_id: str, data_dir: str = "data") -> Optional[object]:
     return None
 
 
+# ---------------------------------------------------------------------------
+# AC-24 (#2417): echter Ortsvergleich für den Live-Testnutzer -- NUR über die
+# Staging-API anlegbar, `hem` hat keinen Dateizugriff auf Staging-
+# Nutzerdaten (s. reference_staging_hat_keinen_dateizugriff_fuer_hem).
+# ---------------------------------------------------------------------------
+
+_STAGING_API_BASE = "https://staging.gregor20.henemm.com"
+#: Wiedererkennbarer, stabiler Name -- macht die Anlage idempotent (kein
+#: Duplikat bei wiederholten Testläufen), ohne die Preset-ID zu kennen.
+_COMPARE_FIXTURE_NAME = "GZ2417 Live E2E Vergleich"
+
+
+def ensure_test_user_has_active_compare(chat_id: str) -> str:
+    """Legt idempotent einen echten, aktiven Ortsvergleich für `tg-live-e2e`
+    über die Staging-HTTP-API an (Pflichtfelder `id` + `schedule`, s.
+    reference_staging_api_anlage_pflichtfelder) -- die PO-Lage aus #2417
+    (Trip UND Vergleich gleichzeitig aktiv), die B1 auf Staging reproduziert.
+
+    Login-Weg wie `tests/tdd/test_stage_reorder.py::_login`: Zugangsdaten des
+    Live-Testnutzers kommen aus `GZ_TG_LIVE_E2E_PASS` (niemals im Testtext),
+    Username ist `TEST_USER_ID` ("tg-live-e2e").
+
+    Returns:
+        Preset-ID des (neu angelegten oder bereits vorhandenen) Vergleichs.
+    """
+    password = os.environ.get("GZ_TG_LIVE_E2E_PASS")
+    if not password:
+        raise RuntimeError(
+            "GZ_TG_LIVE_E2E_PASS nicht gesetzt -- ohne Staging-Passwort des "
+            "Live-Testnutzers kann kein echter Ortsvergleich über die "
+            "Staging-API angelegt werden (AC-24)."
+        )
+
+    with _httpx.Client(base_url=_STAGING_API_BASE, timeout=15.0) as client:
+        resp = client.post(
+            "/api/auth/login",
+            json={"username": TEST_USER_ID, "password": password},
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"Staging-Login für {TEST_USER_ID!r} fehlgeschlagen: "
+                f"HTTP {resp.status_code}, body={resp.text!r}"
+            )
+
+        existing = client.get("/api/compare/presets")
+        if existing.status_code == 200:
+            for preset in existing.json() or []:
+                if preset.get("name") == _COMPARE_FIXTURE_NAME:
+                    return preset["id"]
+
+        preset_id = f"gz2417-live-{TEST_USER_ID}"
+        create = client.post(
+            "/api/compare/presets",
+            json={
+                "id": preset_id,
+                "name": _COMPARE_FIXTURE_NAME,
+                "schedule": "manual",
+                "profil": "wandern",
+                "hour_from": 7,
+                "hour_to": 18,
+                "forecast_hours": 48,
+                "location_ids": [],
+            },
+        )
+        if create.status_code not in (200, 201, 409):
+            raise RuntimeError(
+                f"Anlage des Live-Ortsvergleichs fehlgeschlagen: "
+                f"HTTP {create.status_code}, body={create.text!r}"
+            )
+        return preset_id
+
+
+_ON_DEMAND_COMMANDS = ("heute", "morgen")
+
+
 def run_command_through_pipeline(
     command: str,
     chat_id: str,
     data_dir: str = "data",
 ) -> str:
-    """Fährt die echte Pipeline für einen Menü-Befehl ohne an Telegram zu senden.
+    """Fährt den ECHTEN Webhook-Eintrittspunkt (`_process_update`) für einen
+    Menü-Befehl und liefert den tatsächlich erzeugten Bestätigungstext.
 
-    Replicates the body-encoding from inbound_telegram_reader._process_update
-    (Z.164-182): query-keys → "### query: <key>", sonst "### <key>" / "### <key>: <value>".
+    AC-24 (#2417): ersetzt die vorherige NACHGEBAUTE Pipeline (manuell
+    zusammengesetztes ``InboundMessage`` + direkter
+    ``TripCommandProcessor().process()``-Aufruf, der `_find_active_trip`
+    benutzte statt der echten Reader-Zielauflösung/-Klassifizierung). Diese
+    ältere Fassung lief NIE durch `resolve_active_target`/die
+    Befehlsklassifizierung des Readers und konnte B1 (#2417: "hilfe"
+    antwortet bei Trip+Vergleich nicht sofort) deshalb strukturell nicht
+    reproduzieren — genau der Fehler, den die Spec ausdrücklich ausschließt.
+
+    Sendet wie `deliver_and_cleanup()` ECHT an den Test-Chat (`_process_update`)
+    und räumt die Zustellung(en) danach wieder auf. Der Bestätigungstext wird
+    über einen AUFZEICHNENDEN Wrapper um `TripCommandProcessor.process`
+    sichtbar gemacht -- er ruft das Original unverändert auf (kein Fake),
+    Vorbild `tests/tdd/test_eingangsauswahl_trip_und_vergleich.py::_process_recorder`.
+
+    `data_dir` bleibt Teil der Signatur (Rückwärtskompatibilität mit
+    bestehenden Aufrufern), wirkt aber wie bei `deliver_and_cleanup()` nicht
+    mehr: der echte `_process_update`-Pfad ist CWD-relativ (`app.loader.
+    get_data_dir`), es gibt keinen produktiven Einhängepunkt für ein
+    alternatives Datenverzeichnis mehr.
 
     Returns:
-        CommandResult.confirmation_body (echter Pipeline-Output)
+        CommandResult.confirmation_body des tatsächlich dispatchten Befehls,
+        oder "" wenn der Reader nichts verarbeitet hat.
     """
     from datetime import datetime, timezone
 
+    import services.trip_command_processor as tcp_mod
+    from app.config import Settings
+    from output.channels.telegram import TelegramOutput
     from services.inbound_telegram_reader import InboundTelegramReader
-    from services.trip_command_processor import (
-        InboundMessage,
-        TripCommandProcessor,
-        _QUERY_KEYS,
-    )
 
-    # Führenden Slash entfernen
+    _ensure_paced_telegram_post()
+    settings = Settings()
     cmd = command.lstrip("/")
+    cmd_text = f"/{cmd}"
 
-    import app.loader as _loader
-    _orig_get_data_dir = _loader.get_data_dir
+    captured: list = []
+    original_process = tcp_mod.TripCommandProcessor.process
 
-    if data_dir != "data":
-        _loader.get_data_dir = lambda uid="default": Path(data_dir) / "users" / uid
+    def _recording_process(self, msg):
+        result = original_process(self, msg)
+        captured.append(result)
+        return result
 
+    tcp_mod.TripCommandProcessor.process = _recording_process
     try:
+        update = {
+            "update_id": 1,
+            "message": {
+                "message_id": 1,
+                "from": {"id": int(chat_id), "is_bot": False, "first_name": "Test"},
+                "chat": {"id": int(chat_id), "type": "private"},
+                "date": int(datetime.now(tz=timezone.utc).timestamp()),
+                "text": cmd_text,
+            },
+        }
+        is_on_demand = cmd in _ON_DEMAND_COMMANDS
+        baseline_ids = list(TelegramOutput.recent_message_ids) if is_on_demand else None
+
         reader = InboundTelegramReader()
-        from app.loader import lookup_user_by_telegram_chat_id
+        try:
+            reader._process_update(update, settings)
+        except Exception:
+            return ""
 
-        user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir) or "default"
-        # #1727 S5a: EIN Zeitpunkt fuer Trip-Auswahl UND received_at -- exakt
-        # wie im echten _process_update.
-        now_utc = datetime.now(tz=timezone.utc)
-        trip = reader._find_active_trip(now_utc, user_id)
-        if trip is None:
-            return "Kein aktiver Trip"
-
-        key, value = reader._parse_command(cmd)
-        if key is None:
-            return "Unbekannter Befehl"
-
-        # Body kodieren (exakt wie _process_update)
-        if key in _QUERY_KEYS:
-            body = f"### query: {key}"
-        elif value:
-            body = f"### {key}: {value}"
-        else:
-            body = f"### {key}"
-
-        inbound = InboundMessage(
-            channel="telegram",
-            trip_name=trip.name,
-            body=body,
-            sender=chat_id,
-            received_at=now_utc,
-            user_id=user_id,
+        out = TelegramOutput(settings.model_copy(update={"telegram_chat_id": str(chat_id)}))
+        cleanup_ids = (
+            [mid for mid in TelegramOutput.recent_message_ids if mid not in baseline_ids]
+            if is_on_demand else list(reader.sent_message_ids)
         )
-        result = TripCommandProcessor().process(inbound)
-        return result.confirmation_body
+        for mid in cleanup_ids:
+            try:
+                out.delete_message(chat_id=chat_id, message_id=mid)
+            except Exception:
+                pass
     finally:
-        if data_dir != "data":
-            _loader.get_data_dir = _orig_get_data_dir
+        tcp_mod.TripCommandProcessor.process = original_process
 
-
-_ON_DEMAND_COMMANDS = ("heute", "morgen")
+    return captured[-1].confirmation_body if captured else ""
 
 
 def deliver_and_cleanup(

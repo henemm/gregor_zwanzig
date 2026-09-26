@@ -395,3 +395,103 @@ def test_ac5_write_verdict_blocks_telegram_scope_without_chat_id(tmp_path, monke
     rc_pass = gate_mod.write_verdict("VERIFIED: test", findings_path, e2e_path=out_path)
     assert rc_pass == 0, "mit gesetzter Test-Chat-ID muss das Verdict geschrieben werden (rc=0)"
     assert out_path.exists(), "Verdict-Artefakt muss bei bestandenem Gate existieren"
+
+
+# ---------------------------------------------------------------------------
+# AC-25 (#2417) — getMyCommands gegen den Staging-Bot muss der VOLLSTAENDIGEN
+# AC-21-Menueliste entsprechen (bestehende 8 Eintraege OHNE 1:1-Pendant in
+# _COMMAND_SPECS UNION alle 12 _COMMAND_SPECS-Woerter), nicht nur der
+# (moeglicherweise noch unvollstaendigen) BOT_COMMANDS-Konstante selbst --
+# sonst waere der Test tautologisch (vgl.
+# test_issue_671_bot_menu_autoset.py::test_ac3_live_set_then_get_matches_bot_commands,
+# der genau gegen BOT_COMMANDS prueft und B3 deshalb nicht faengt).
+# ---------------------------------------------------------------------------
+
+#: Bestehende Menue-Eintraege OHNE 1:1-Pendant in _COMMAND_SPECS (Spec-
+#: Abschnitt "BOT_COMMANDS — Merge, nicht Ersatz") -- statisches Domainwissen
+#: aus der freigegebenen Spec, bewusst NICHT aus BOT_COMMANDS selbst
+#: abgeleitet (sonst tautologisch, s.o.). `heute`/`morgen`/`hilfe` fehlen hier
+#: absichtlich -- sie haben ein 1:1-Pendant und kommen bereits ueber
+#: _COMMAND_SPECS in die Referenzmenge.
+_MENU_ONLY_OHNE_COMMAND_SPECS_PENDANT = frozenset(
+    {"glance", "now", "heute_gewitter", "timeline_heute", "timeline_morgen"}
+)
+
+
+def _ac21_erwartete_menueliste() -> set[str]:
+    from services.trip_command_processor import _COMMAND_SPECS
+
+    return _MENU_ONLY_OHNE_COMMAND_SPECS_PENDANT | {w for w, _a, _b, _k in _COMMAND_SPECS}
+
+
+@pytest.mark.skipif(
+    not live_telegram_enabled(),
+    reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
+)
+def test_ac25_live_menu_entspricht_der_vollstaendigen_ac21_liste():
+    """
+    GIVEN: der Staging-Bot
+    WHEN: getMyCommands gegen ihn aufgerufen wird
+    THEN: die zurueckgegebene Menueliste enthaelt GENAU die AC-21-Referenzmenge
+          (bestehende 8 ∪ alle 12 _COMMAND_SPECS-Woerter, u.a. jetzt/gewitter/
+          status) -- unabhaengig davon, ob BOT_COMMANDS selbst schon
+          vollstaendig ist (Reproduktion B3 vor dem Fix).
+    """
+    from output.channels.telegram import TelegramOutput
+    from tests.tdd._telegram_live_fixture import staging_live_settings
+
+    out = TelegramOutput(staging_live_settings())
+    out.set_my_commands()
+    live = out.get_my_commands()
+
+    assert isinstance(live, list) and live, f"getMyCommands lieferte keine Liste: {live!r}"
+    live_names = {c["command"] for c in live}
+    erwartet = _ac21_erwartete_menueliste()
+
+    fehlend = erwartet - live_names
+    assert not fehlend, (
+        f"Live-Menue fehlen {sorted(fehlend)} aus der AC-21-Referenzmenge (B3) "
+        f"-- Live-Menue: {sorted(live_names)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# B1 (#2417, Teil von AC-24) — "hilfe" antwortet bei Trip+Vergleich SOFORT,
+# echt auf Staging nachgewiesen (nicht nur im Kern).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.real_data_root
+@pytest.mark.timeout(60)
+@pytest.mark.skipif(
+    not live_telegram_enabled(),
+    reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
+)
+def test_ac24_hilfe_bei_trip_und_vergleich_antwortet_sofort_live():
+    """
+    GIVEN: der Live-Testnutzer tg-live-e2e mit aktivem Trip UND aktivem
+           Ortsvergleich (AC-24 PO-Lage, echter Vergleich ueber die
+           Staging-API angelegt)
+    WHEN: 'hilfe' ueber den echten `_process_update`-Pfad gesendet wird
+    THEN: die Antwort ist die Befehlsuebersicht -- keine Rueckfrage, kein
+          Fehler (Reproduktion von B1 auf Staging vor dem Fix).
+    """
+    from services.trip_command_processor import _COMMAND_SPECS
+    from tests.tdd._telegram_live_fixture import (
+        ensure_test_user_has_active_compare,
+        ensure_test_user_with_active_trip,
+        run_command_through_pipeline,
+    )
+
+    chat_id = os.environ["GZ_TELEGRAM_TEST_CHAT_ID"]
+    ensure_test_user_with_active_trip(chat_id=chat_id)
+    ensure_test_user_has_active_compare(chat_id=chat_id)
+
+    body = run_command_through_pipeline(command="hilfe", chat_id=chat_id)
+
+    assert body, "B1: 'hilfe' lieferte keine Antwort"
+    assert "Mehrdeutig" not in body, (
+        f"B1: 'hilfe' fragt bei Trip+Vergleich zurueck statt sofort zu "
+        f"antworten: {body[:120]!r}"
+    )
+    fehlend = [w for w, _a, _b, _k in _COMMAND_SPECS if w.upper() not in body.upper()]
+    assert not fehlend, f"B1: Befehlsuebersicht nennt nicht alle Befehle, fehlen: {fehlend}"

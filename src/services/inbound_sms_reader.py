@@ -64,7 +64,13 @@ from services.trip_command_processor import (
     TripCommandProcessor,
     match_leading_name,
 )
-from services.trip_selection import resolve_active_target
+# Eigener, NICHT durch Tests ersetzbarer Name fuer die zustandslose
+# Klassifizierung (Issue #2417): `TripCommandProcessor` selbst wird in
+# Tests durch einen Recorder ersetzt, der laut eigenem Vertrag nur
+# `.process()` abfaengt und keine Parse-Logik nachbildet
+# (tests/unit/test_inbound_sms_reply_learning.py::_CommandProcessorRecorder).
+from services.trip_command_processor import TripCommandProcessor as _ParseNurProcessor
+from services.trip_selection import ZIELLOS_SCHLUESSEL, resolve_command_target
 
 logger = logging.getLogger(__name__)
 
@@ -349,30 +355,62 @@ class InboundSmsReader:
                 resolved_kind=resolved_kind, resolved_preset_id=resolved_preset_id,
             ))
         else:
-            ziel = resolve_active_target(trips, presets, now_utc, channel="premium_sms")
-            if ziel.kind is None:
-                # AC-5: identischer Text wie Telegram, kein `process()`-Aufruf.
-                hinweis = CommandResult(
-                    success=False, command="mehrdeutig",
-                    confirmation_subject="Hinweis", confirmation_body=ziel.text,
+            # Issue #2417 (AC-18): dieselbe klassifizierte Zielaufloesung wie
+            # der Telegram-Reader -- die Befehlsklasse entscheidet VOR jeder
+            # Trip-/Vergleichsauswahl, ob ueberhaupt eine noetig ist. Vorher
+            # rief dieser Zweig `resolve_active_target` unklassifiziert fuer
+            # JEDEN Befehl auf und blockierte z.B. "hilfe" bei Trip+Vergleich
+            # mit einer Rueckfrage (B1).
+            key, _value = _ParseNurProcessor()._parse_command(befehl)
+            if key == "hilfe":
+                # AC-23: Premium-SMS bekommt die dedizierte GSM-7-Kurzhilfe
+                # statt der Langhilfe -- braucht keine Trip-/Vergleichsladung
+                # (AC-15). `premium_sms_kurzhilfe` wird PARALLEL in
+                # `trip_command_processor.py` gebaut (#2417); der Import
+                # bleibt bewusst lokal, damit dieses Modul weiter importierbar
+                # ist, solange sie dort noch fehlt.
+                from services.trip_command_processor import premium_sms_kurzhilfe
+
+                result = CommandResult(
+                    success=True, command="hilfe",
+                    confirmation_subject="Hilfe",
+                    confirmation_body=premium_sms_kurzhilfe(),
                 )
-                NotificationService(
-                    user_settings, user_id=user_id,
-                ).send_command_reply_premium_sms(hinweis, user_settings)
-                return
-            if ziel.kind == "route":
-                inbound = InboundMessage(
-                    trip_name=ziel.target.name, body=befehl, sender=sender,
+            elif key in ZIELLOS_SCHLUESSEL:
+                # "columns" -- kein Bare-Text-Pendant, aber Symmetrie mit dem
+                # Telegram-Reader (AC-15): keine Zielaufloesung noetig.
+                result = TripCommandProcessor().process(InboundMessage(
+                    trip_name="", body=befehl, sender=sender,
                     channel="premium_sms", received_at=now_utc, user_id=user_id,
-                )
+                ))
             else:
-                preset = ziel.target
-                inbound = InboundMessage(
-                    trip_name=preset.get("name", ""), body=befehl, sender=sender,
-                    channel="premium_sms", received_at=now_utc, user_id=user_id,
-                    resolved_kind="vergleich", resolved_preset_id=preset.get("id"),
+                ziel = resolve_command_target(
+                    key, trips, presets, now_utc, channel="premium_sms",
                 )
-            result = TripCommandProcessor().process(inbound)
+                if ziel.kind is None:
+                    # AC-5/AC-17: identischer Text wie Telegram, kein
+                    # `process()`-Aufruf.
+                    hinweis = CommandResult(
+                        success=False, command="mehrdeutig",
+                        confirmation_subject="Hinweis", confirmation_body=ziel.text,
+                    )
+                    NotificationService(
+                        user_settings, user_id=user_id,
+                    ).send_command_reply_premium_sms(hinweis, user_settings)
+                    return
+                if ziel.kind == "route":
+                    inbound = InboundMessage(
+                        trip_name=ziel.target.name, body=befehl, sender=sender,
+                        channel="premium_sms", received_at=now_utc, user_id=user_id,
+                    )
+                else:
+                    preset = ziel.target
+                    inbound = InboundMessage(
+                        trip_name=preset.get("name", ""), body=befehl, sender=sender,
+                        channel="premium_sms", received_at=now_utc, user_id=user_id,
+                        resolved_kind="vergleich", resolved_preset_id=preset.get("id"),
+                    )
+                result = TripCommandProcessor().process(inbound)
 
         # `heute`/`morgen` haben das Briefing selbst schon per Premium-SMS
         # verschickt -- eine zweite, kostenpflichtige Satelliten-SMS daneben

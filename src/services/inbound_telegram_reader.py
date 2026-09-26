@@ -33,7 +33,13 @@ from services.trip_command_processor import (
     match_leading_name,
     unknown_command_body,
 )
-from services.trip_selection import pick_active_trip, resolve_active_target
+from services.trip_selection import (
+    ZIELLOS_SCHLUESSEL,
+    pick_active_trip,
+    resolve_active_target,
+    resolve_command_target,
+    resolve_trip_only_target,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +59,11 @@ _VALID_COMMANDS = _PROCESSOR_COMMANDS | _QUERY_KEYS
 
 _SHORTCUT_MAP = {
     "/s": "glance",
-    "/status": "glance",  # AC-1: /status (mit Slash) ist Glance-Alias; nacktes "status" bleibt Etappenliste
+    # Issue #2417 AC-28: der fruehere "/status"->"glance"-Alias entfaellt --
+    # /status fuehrt jetzt wie das nackte "status" die Etappenliste aus
+    # (Tech-Lead-Entscheidung, Spec-Abschnitt "BOT_COMMANDS — Merge, nicht
+    # Ersatz"). Ohne eigenen Eintrag faellt "/status" durch _ohne_praefix auf
+    # "status" zurueck, das direkt in _BARE_KEYWORD_MAP steht.
     "/h": "heute",
     "/m": "morgen",
     "/hg": "heute_gewitter",
@@ -97,6 +107,33 @@ _CALLBACK_QUERY_MAP = {
 }
 
 _CALLBACK_DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip|hours)_(today|tomorrow)$")
+
+# Issue #2417 AC-20: unsichtbare Zeichen, die ein Befehlswort umgeben koennen
+# (BOM am Anfang eines Copy-Paste-Texts, Zero-Width-Space als App-Artefakt) --
+# ``str.strip()`` faengt bereits NBSP und regulaeren Leerraum (beide zaehlen
+# als ``str.isspace()``), aber NICHT diese beiden Zeichen (kein Leerraum im
+# Unicode-Sinn).
+_UNSICHTBARE_ZEICHEN = ("﻿", "​")
+#: Satzzeichen UNMITTELBAR am Befehlswort (".", "!", "?", ",") — bewusst NUR
+#: diese vier, kein pauschales alphanumerisches Trimmen: sonst wuerde ein
+#: echtes Fremdwort wie "Hilfen" faelschlich zu "Hilfe" (Praefix-Ausartung,
+#: Gegenprobe der Spec).
+_BEFEHLSWORT_SATZZEICHEN = ".!?,"
+
+
+def _ohne_unsichtbare_zeichen(text: str) -> str:
+    """Entfernt BOM/ZWSP ueberall im Text (AC-20) — beide sind unsichtbar,
+    ihre Position im Freitext ist deshalb ohne Belang."""
+    for zeichen in _UNSICHTBARE_ZEICHEN:
+        text = text.replace(zeichen, "")
+    return text
+
+
+def _ohne_satzzeichen_am_wortende(word: str) -> str:
+    """Streift Satzzeichen, die UNMITTELBAR am Ende eines Befehlsworts
+    haengen (AC-20, z.B. 'hilfe.', 'pause!') — ``rstrip`` nur mit den vier
+    definierten Zeichen, kein generisches alphanumerisches Trimmen."""
+    return word.rstrip(_BEFEHLSWORT_SATZZEICHEN)
 
 
 class InboundTelegramReader:
@@ -251,30 +288,40 @@ class InboundTelegramReader:
             )
             return True
 
-        ziel = resolve_active_target(trips, presets, now_utc, channel="telegram")
-        if ziel.kind is None:
-            # Issue #2282 AC-5: identischer Text wie Premium-SMS, kein
-            # Host-Zusatz mehr (der wuerde die Kanalgleichheit brechen).
-            mid = self._notification_service.send_telegram_message(
-                chat_id=chat_id, subject="Fehler", body=ziel.text, settings=user_settings,
-            )
-            if mid is not None:
-                self.sent_message_ids.append(mid)
-            return True
-
-        if ziel.kind == "route":
-            trip_name, resolved_kind, resolved_preset_id = ziel.target.name, None, None
-        else:
-            preset = ziel.target
-            trip_name = preset.get("name", "")
-            resolved_kind, resolved_preset_id = "vergleich", preset.get("id")
-
         # Befehl parsen UND kodieren — ein Einstieg, damit ein Test denselben
-        # Weg nimmt wie der Produktivpfad (Issue #2134).
+        # Weg nimmt wie der Produktivpfad (Issue #2134). Issue #2417: die
+        # Klassifizierung entscheidet VOR jeder Zielaufloesung, ob ueberhaupt
+        # ein Trip/Vergleich geladen werden muss (AC-15/AC-16/AC-17) — vorher
+        # lief `resolve_active_target` unklassifiziert fuer JEDEN Befehl und
+        # blockierte z.B. "hilfe" bei Trip+Vergleich mit einer Rueckfrage (B1).
         key, body = self._command_body(text)
         if key is None:
             self._send_unknown_command(chat_id, user_settings)
             return True
+
+        if key in ZIELLOS_SCHLUESSEL:
+            # AC-15: "hilfe"/"columns" brauchen keine Trip-/Vergleichswahl.
+            trip_name, resolved_kind, resolved_preset_id = "", None, None
+            ladehinweis_erlaubt = False
+        else:
+            ziel = resolve_command_target(key, trips, presets, now_utc, channel="telegram")
+            if ziel.kind is None:
+                # Issue #2282 AC-5: identischer Text wie Premium-SMS, kein
+                # Host-Zusatz mehr (der wuerde die Kanalgleichheit brechen).
+                mid = self._notification_service.send_telegram_message(
+                    chat_id=chat_id, subject="Fehler", body=ziel.text, settings=user_settings,
+                )
+                if mid is not None:
+                    self.sent_message_ids.append(mid)
+                return True
+
+            if ziel.kind == "route":
+                trip_name, resolved_kind, resolved_preset_id = ziel.target.name, None, None
+            else:
+                preset = ziel.target
+                trip_name = preset.get("name", "")
+                resolved_kind, resolved_preset_id = "vergleich", preset.get("id")
+            ladehinweis_erlaubt = (ziel.kind == "route")
 
         inbound = InboundMessage(
             channel="telegram",
@@ -288,7 +335,7 @@ class InboundTelegramReader:
         )
         self._dispatch_and_reply(
             key, inbound, chat_id, user_settings,
-            ladehinweis_erlaubt=(ziel.kind == "route"),
+            ladehinweis_erlaubt=ladehinweis_erlaubt,
         )
         return True
 
@@ -408,28 +455,9 @@ class InboundTelegramReader:
             if body and message_id is not None and chat_id:
                 # #1727 S5a: ein Zeitpunkt fuer Auswahl und Stempel (s. oben).
                 now_utc = datetime.now(tz=timezone.utc)
-                trip = self._find_active_trip(now_utc, user_id)
-                if trip:
-                    inbound = InboundMessage(
-                        channel="telegram",
-                        trip_name=trip.name,
-                        body=body,
-                        sender=chat_id,
-                        received_at=now_utc,
-                        user_id=user_id,
-                    )
-                    result: CommandResult = TripCommandProcessor().process(inbound)
-                    # Issue #1007: heute/morgen per Button haben bereits das
-                    # volle Briefing per Bubbles verschickt — keine separate
-                    # Bestätigung mehr in die alte Nachricht editieren.
-                    if not result.suppress_email_reply:
-                        self._notification_service.edit_telegram_message_text(
-                            chat_id=chat_id,
-                            message_id=message_id,
-                            text=f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
-                            settings=user_settings,
-                            reply_markup=result.reply_markup,
-                        )
+                self._antworte_auf_knopf(
+                    data, body, now_utc, user_id, chat_id, message_id, user_settings,
+                )
         finally:
             if cq_id:
                 self._notification_service.answer_telegram_callback_query(
@@ -437,6 +465,70 @@ class InboundTelegramReader:
                     settings=user_settings,
                 )
         return True
+
+    def _antworte_auf_knopf(
+        self, data: str, body: str, now_utc: datetime, user_id: str,
+        chat_id: str, message_id: int, user_settings: Settings,
+    ) -> None:
+        """Issue #2417 (U4/AC-8/AC-9/AC-22): dieselbe klassifizierte
+        Zielaufloesung wie beim Text-Eingang, angewendet auf einen
+        Knopf-Klick — ersetzt die vergleichsblinde ``_find_active_trip``, die
+        bei "nur Vergleich aktiv" oder Mehrdeutigkeit stillschweigend gar
+        nichts tat (der Spinner endete ohne jeden sichtbaren Inhalt).
+
+        ``act_help``/``act_columns`` sind ziellos (AC-15, keine Trip-
+        /Vergleichsladung); ``act_pause`` bleibt die einzige verbleibende
+        Mehrdeutigkeits-Lage (``resolve_active_target``); alle anderen
+        Knoepfe (inkl. der ``dd_*``-Drilldowns) adressieren ausschliesslich
+        den aktiven Trip (``resolve_trip_only_target``).
+        """
+        if data in ("act_help", "act_columns"):
+            trip_name = ""
+        else:
+            trips = load_all_trips(user_id)
+            presets = [compare_preset_to_dict(p) for p in load_compare_presets(user_id)]
+            if data == "act_pause":
+                ziel = resolve_active_target(trips, presets, now_utc, channel="telegram")
+            else:
+                ziel = resolve_trip_only_target(trips, presets, now_utc)
+            if ziel.kind is None:
+                # AC-22: sichtbare Antwort statt stillem No-Op.
+                self._notification_service.edit_telegram_message_text(
+                    chat_id=chat_id, message_id=message_id, text=ziel.text,
+                    settings=user_settings,
+                )
+                return
+            trip_name = ziel.target.name if ziel.kind == "route" else ziel.target.get("name", "")
+
+        inbound = InboundMessage(
+            channel="telegram", trip_name=trip_name, body=body,
+            sender=chat_id, received_at=now_utc, user_id=user_id,
+        )
+        result: CommandResult = TripCommandProcessor().process(inbound)
+        # Issue #1007: heute/morgen per Button haben bereits das volle
+        # Briefing per Bubbles verschickt — keine separate Bestaetigung mehr
+        # in die alte Nachricht editieren.
+        if result.suppress_email_reply:
+            return
+        if data == "act_help":
+            # AC-9: NEUE Nachricht -- die Aktionen-Bubble (``message_id``)
+            # bleibt dadurch unveraendert und bedienbar, statt vom Hilfetext
+            # ueberschrieben zu werden.
+            mid = self._notification_service.send_telegram_message(
+                chat_id=chat_id, subject=result.confirmation_subject,
+                body=result.confirmation_body, settings=user_settings,
+                reply_markup=result.reply_markup,
+            )
+            if mid is not None:
+                self.sent_message_ids.append(mid)
+            return
+        self._notification_service.edit_telegram_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+            settings=user_settings,
+            reply_markup=result.reply_markup,
+        )
 
     def _callback_to_body(self, data: str) -> str | None:
         """Mappt callback_data auf einen Processor-Body. None bei unbekanntem Wert."""
@@ -575,13 +667,21 @@ class InboundTelegramReader:
           3. _VALID_COMMANDS-Fallback: startdatum, report (nicht in _BARE_KEYWORD_MAP).
         Kein '### ' Prefix nötig — Freitext.
 
-        Warum die Reihenfolge nicht umgestellt werden darf: fiele der Slash
-        vor Schritt 1, wuerde '/status' zu 'status' und verloere seine
-        Sonderbedeutung als Glance-Alias — die Etappenliste kaeme statt der
-        Uebersicht. Die Praefix-Behandlung selbst kommt aus DERSELBEN Quelle
-        wie im Prozessor (Issue #2134), nur in zwei Stufen aufgerufen.
+        Issue #2417 AC-28: '/status' ist KEIN Sondereintrag mehr in
+        _SHORTCUT_MAP -- es faellt durch Schritt 2 (Slash ab, dann Bare
+        Keyword) genauso wie das nackte 'status' auf die Etappenliste. Der
+        fruehere Glance-Alias verletzte die Kanalgleichheit (E-Mail/Premium-
+        SMS/nacktes Telegram-Wort STATUS lieferten die Etappenliste, nur
+        '/status' etwas anderes) und ist deshalb aufgeloest; der
+        Wetter-Ueberblick bleibt ueber '/glance' erreichbar. Die
+        Praefix-Behandlung selbst kommt aus DERSELBEN Quelle wie im
+        Prozessor (Issue #2134), nur in zwei Stufen aufgerufen.
         """
-        first_line = _ohne_zitat(_erste_zeile(text)).lower()
+        # AC-20: BOM/ZWSP sind unsichtbar und tragen keinen Leerraum-Status im
+        # Unicode-Sinn (anders als NBSP) — VOR dem Lowering entfernen, sonst
+        # bliebe z.B. "﻿hilfe" als eigenes, nie in einer Map stehendes
+        # Wort stehen.
+        first_line = _ohne_unsichtbare_zeichen(_ohne_zitat(_erste_zeile(text))).lower()
         if not first_line:
             return None, None
 
@@ -596,7 +696,10 @@ class InboundTelegramReader:
         parts = _ohne_praefix(first_line).split(None, 1)
         if not parts:
             return None, None
-        key = parts[0]
+        # AC-20: Satzzeichen UNMITTELBAR am Befehlswort tolerieren ("hilfe.",
+        # "pause!") — NUR am erkannten Schluesselwort, nie am Wert (sonst
+        # koennte z.B. eine Distanzangabe verstuemmelt werden).
+        key = _ohne_satzzeichen_am_wortende(parts[0])
         value = parts[1].strip() if len(parts) > 1 else None
 
         # Bare keyword → resolve via shared _BARE_KEYWORD_MAP (channel-agnostic)

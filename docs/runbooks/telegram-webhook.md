@@ -73,14 +73,15 @@ Telegram erlaubt **kein** Parallelbetrieb (ein Bot = eine URL; `getUpdates` lief
 
 ## Bot-Menü (Slash-Befehle)
 
-Telegram-Bots können ein Menü mit 6–7 Befehlen anzeigen, die Nutzer per Tap auswählen.
+Telegram-Bots zeigen ein Menü mit den per Tap auswählbaren Befehlen.
 Das Menü wird **automatisch beim Service-Start** aus `BOT_COMMANDS` gesetzt (Issue #671,
-2026-06-09).
+2026-06-09; seit Issue #2417 AC-21 vollständig alle `_COMMAND_SPECS`-Wörter, 17 Befehle
+statt vormals 7 — Details `docs/features/architecture.md`).
 
 **Automatisches Setup (Produktions-Standard):**
 
 - FastAPI-Lifespan-Hook (`api/main.py`) ruft beim Service-Start `TelegramOutput.set_my_commands()` auf
-- `setMyCommands`-Payload nutzt `BOT_COMMANDS` aus `src/outputs/telegram.py` (7 Befehle)
+- `setMyCommands`-Payload nutzt `BOT_COMMANDS` aus `src/output/channels/telegram.py` (17 Befehle)
 - Idempotent: jeder Deploy/Service-Restart stellt das Menü sicher
 - Fail-soft: fehlender Token blockt den Service-Start nicht
 
