@@ -28,6 +28,23 @@
 > stillschweigend größer wird. Ein vollständiger Abschnitt-2.1-Eintrag für alle
 > sechs Größen ist nicht Teil dieser Doku-Aktualisierung.
 
+> **Nachtrag 2026-09-26 (Issue #2422 Scheibe S1):** Neuer Invarianten-Test
+> `tests/tdd/test_einstellung_gleich_auslieferung.py` prüft für zwei
+> Golden-Trip-JSONs alle `selectable=true`-Metriken über sechs Ausgabeformen
+> (E-Mail HTML/Klartext, Telegram rich/Kurzstil, SMS, Premium-SMS) entlang
+> der drei Dimensionen erscheint/Reihenfolge/Roh-Einfach — Einstieg über das
+> Persistenzformat des Editors (`load_trip`), Naht ausschließlich am
+> Transport. Bekannte Abweichungen (B1 `wind_chill` ohne Kürzel, B2
+> `format_mode` fehlt kanalweit in sms/telegram_kurzform/premium_sms, B3
+> Telegram rich erbt Roh/Einfach von der E-Mail-Instanz, B5 Geisterspalte
+> `wind_direction`) stehen befristet im Ausnahme-Register in
+> `tests/helpers/einstellung_auslieferung_orakel.py`, kein Fix. **Deckt
+> NICHT ab:** Editor-Anzeige, Kanal an/aus, `email_format=compact`,
+> Alarm-Familie, Ortsvergleich (eigene Scheiben S2–S5, siehe Spec
+> `docs/specs/modules/fix_2422_einstellung_gleich_auslieferung.md`). Ersetzt
+> `tests/tdd/test_channel_metric_matrix.py` nicht — der bewacht andere
+> Zwischenschichten (`resolve_metric_col_order`, `get_metrics_for_channel`).
+
 ## 1. Zweck & Leitfrage
 
 Anlass ist #1475 (Hagel): drei Recherche-Runden waren nötig, um 12 Ausgabeorte
@@ -97,16 +114,16 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 
 | Ausgabeort | Datei:Zeile | Quelle | Wächter |
 |---|---|---|---|
-| E-Mail-Tabelle (Vollformat, HTML + Klartext) | `src/output/renderers/email/helpers.py:302` `resolve_metric_col_order()`; Aufrufe `email/html.py:1021`, `email/plain.py:144` | katalog-getrieben | `tests/tdd/test_channel_metric_matrix.py:81` (Auswahl/Abwahl/paarweise Reihenfolge) |
+| E-Mail-Tabelle (Vollformat, HTML + Klartext) | `src/output/renderers/email/helpers.py:302` `resolve_metric_col_order()`; Aufrufe `email/html.py:1021`, `email/plain.py:144` | katalog-getrieben | `tests/tdd/test_channel_metric_matrix.py:81` (Auswahl/Abwahl/paarweise Reihenfolge) + Ende-zu-Ende ab gespeichertem Trip-JSON: `tests/tdd/test_einstellung_gleich_auslieferung.py` (#2422 S1) |
 | E-Mail-Pillen („Metriken-Überblick") | `src/output/renderers/email/helpers.py:1815` `build_metrics_summary_pills()`; Metrik-Auflösung `src/output/renderers/trip_metric_ids.py:37` `resolve_trip_active_metrics()` | katalog-getrieben | **unbewacht** (keine Metrik×Ort-Prüfung) |
 | E-Mail mobile Kompaktzeilen (in der **Voll**mail) | `src/output/renderers/email/html.py:878` `_render_mobile_compact_rows()`; Aufrufe `:1206`, `:1264`, `:1290` (Nachtzeilen) | katalog-getrieben (erbt `col_order`) | **unbewacht** |
 | Kurzform-Mail (eigenes Format `compact`) | `src/output/renderers/email/compact.py:96` `render_compact()`; Pillen-Aufruf `:176` | katalog-getrieben über `resolve_trip_active_metrics` | **unbewacht** |
 | Kompakt-Zusammenfassung (Fließtext-Block **in** der Vollmail) | `src/output/renderers/compact_summary.py:567` `_format_thunder()`, Aufruf `:243`; aktiviert über `src/output/renderers/trip_report.py:173` `options.show_compact_summary`, Formatter-Einstieg `trip_report.py:942` | handgeschrieben — `thunder` ist die **einzige** Metrik mit eigener Formatier-Methode | nur metrikspezifisch: `tests/tdd/test_hail_compact_summary_thunder.py:75`, `:89`, `:107` (Gewitter/Hagel) und seit #1680 S2 `test_thunder_origin_trip.py` für den Herkunfts-Zusatz (beide Textzweige, bis `email_plain`). Als Metrik×Kanal-Ort weiterhin **unbewacht** |
 | Ausblick / 3-Tages-Tabelle (Trip-Mail) | `src/output/renderers/email/outlook.py` — **zwei** Renderpfade: Pfad 1 (Standardfall ohne Metrik-Auswahl) UND seit #1720 S1 der katalog-getriebene Metrik-Zweig (`build_outlook_row():564`, `row["cells"]`) | **teilweise** katalog-getrieben (KORRIGIERT 2026-08-15, #1841): setzt der Nutzer unter „Wertebereiche → 3-Tages-Vorschau" eine Auswahl, übergeben `email/html.py:1364` und `email/plain.py:344` sehr wohl `metrics=` — der Trip erreicht `outlook_columns()` seit #1720 S1. 🔴 **Korrektur (2026-09-15, #2136/ADR-0068):** die Zeile nannte Pfad 1 bisher „Altpfad mit festen Spalten Tag/N/D/R/PR/Wind/Böen/Gew (+ACC) — eine eigene, handgepflegte Namensliste". Diese Namensliste ist entfernt: Pfad 1 leitet seine Spaltenköpfe (HTML `_pfad1_labels`) und Klartext-Tokenpräfixe jetzt aus `MetricDefinition.col_label` desselben zentralen Registers ab, das auch die Etappentabelle speist (`get_metric(...).col_label`, plus `aggregation_label_de()` als Kollisionsauflösung für die beiden Temperatur-Spalten Tief/Hoch). Die Spaltenzahl/-reihenfolge bleibt fix acht (Pfad 1 wird dadurch nicht katalog-getrieben im Sinne dieser Spalte — eine neue Katalog-Metrik erscheint dort weiterhin nicht automatisch, nur die Beschriftung ist jetzt Register-Quelle statt Handschrift) | Altpfad: `tests/tdd/test_trip_outlook_parity.py` (Byte-Golden). Metrik-Zweig: `tests/tdd/test_trip_outlook_metric_selection.py`, Gewitterquelle `tests/tdd/test_vorschau_metrik_tagesfenster.py` (#1841) |
 | Ausblick: Gewitter-Sonderbehandlung | `email/outlook.py:38` `_THUNDER_TOKEN_RE`; Wortlaut-Map `:195–198` (dritte LOW/MED/HIGH-Übersetzung im Code) | handgeschrieben | teilbewacht über Gewitter-Tests, nicht über die Matrix |
-| Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `VISIBILITY_GATE_IDS` `channel_layout.py:75` (hieß bis #1728 S1 `_NIGHT_SCALAR_IDS` und führte 2 statt 6 Größen); seit #1856 E7 gewächtert in `tests/helpers/metrik_listen_scan.py` | `tests/tdd/test_channel_metric_matrix.py:114` |
+| Telegram rich (Bubbles) | `src/output/renderers/narrow.py:661` → `src/output/renderers/channel_layout.py:75` `render_for_channel()`; Limits `channel_layout.py:45` `CHANNEL_LIMITS` | gemischt — Ausnahme `VISIBILITY_GATE_IDS` `channel_layout.py:75` (hieß bis #1728 S1 `_NIGHT_SCALAR_IDS` und führte 2 statt 6 Größen); seit #1856 E7 gewächtert in `tests/helpers/metrik_listen_scan.py` | `tests/tdd/test_channel_metric_matrix.py:114` + Ende-zu-Ende ab gespeichertem Trip-JSON: `tests/tdd/test_einstellung_gleich_auslieferung.py` (#2422 S1; Roh/Einfach-Bug B3 dort befristet im Register, kein Fix) |
 | Telegram Kurzübersicht / Trendzeile | `narrow.py:346` (Zeilentupel), `narrow.py:528–532`, `narrow.py:586–597` (drei hartkodierte Gewitter-Zweige) | handgeschrieben | **unbewacht** als eigener Ausgabeort |
-| SMS Trip (Kurzform) | `src/output/renderers/sms_trip.py:606` `format_sms()`; Symbole `sms_trip.py:116` `SMS_SYMBOL_BY_METRIC` aus `metric_catalog.py:938` `get_sms_code()` | gemischt | `tests/tdd/test_channel_metric_matrix.py:210` (nur Auswahl/Reihenfolge) |
+| SMS Trip (Kurzform) | `src/output/renderers/sms_trip.py:606` `format_sms()`; Symbole `sms_trip.py:116` `SMS_SYMBOL_BY_METRIC` aus `metric_catalog.py:938` `get_sms_code()` | gemischt | `tests/tdd/test_channel_metric_matrix.py:210` (nur Auswahl/Reihenfolge) + Ende-zu-Ende ab gespeichertem Trip-JSON: `tests/tdd/test_einstellung_gleich_auslieferung.py` (#2422 S1; deckt denselben `sms_text` auch für Telegram-Kurzstil und Premium-SMS ab. B1 `wind_chill` ohne Kürzel und B2 `format_mode` kanalweit befristet im Register, kein Fix) |
 | SMS: Grammatik-Ausnahmen | `sms_trip.py:114` `_SMS_SYMBOL_GRAMMAR` (`thunder` → `TH:`, `fresh_snow` → `NS24+`) | handgeschrieben (2 benannte Fälle) | Ratsche in der SMS-Suite, nicht in der Matrix |
 | SMS: Token-Reihenfolge/Auffüllung | `src/output/tokens/builder.py:47` `PRIORITY` (40+ Symbole), `:78` `POSITIONAL` (33), `:112` `DEFAULTS` | handgeschrieben | **unbewacht** gegen den Katalog |
 | SMS: Kaskade | `sms_trip.py` liest **weder** `get_metrics_for_channel()` **noch** `cascade_source_for_channel()`; die kanalabhängige Position wird stattdessen in `src/output/renderers/trip_report.py:301` vorbereitet | Bruch | s. Fläche 10 |
@@ -146,7 +163,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 
 | Stelle | Datei:Zeile | Anmerkung |
 |---|---|---|
-| Kanal-Kaskade (drei Ebenen) | `src/app/models.py:649` `_cascade_source_for_channel()` (geteilte Bedingungsprüfung, #1677 DEC-2), `:762` `get_metrics_for_channel()`, `:802` `cascade_source_for_channel()` | **ein** Ableitungsweg; `per_report` → `per_channel` → `global` |
+| Kanal-Kaskade (drei Ebenen) | `src/app/models.py:649` `_cascade_source_for_channel()` (geteilte Bedingungsprüfung, #1677 DEC-2), `:762` `get_metrics_for_channel()`, `:802` `cascade_source_for_channel()` | **ein** Ableitungsweg; `per_report` → `per_channel` → `global`. Ende-zu-Ende gespeichertes Trip-JSON → Transport (nur `per_channel_layouts`, nicht die `per_report`-/`global`-Kaskadenstufe): `tests/tdd/test_einstellung_gleich_auslieferung.py` (#2422 S1) |
 | Persistenz | `src/app/loader.py:840` (`channel_layouts` lesen), `:872` (`channel_layouts_per_report`), `:914` | Lesen 1×, Schreiben 2× |
 | API Metrik-Liste | `api/routers/config.py:73` `get_metrics()` — filtert auf `selectable` | Nicht-wählbare Metriken sind für das Frontend unsichtbar |
 | API SMS-Symbole | `api/routers/config.py:31` `get_sms_symbols()`, Hazards `:46`/`:65` | zwei Symbolregister nebeneinander |
