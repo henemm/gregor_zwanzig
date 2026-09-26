@@ -170,8 +170,8 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
 
   | Punkt | Koordinate | `gemeindenr` | EMMA | Warnungen | Warum |
   |---|---|---|---|---|---|
-  | Sillian (Karnischer Höhenweg) | 46.7597, 12.4177 | 70728 | AT707 | 20 | Tourpunkt des Nutzerbefunds #1397 S4 |
-  | Lienz | 46.8296, 12.7698 | 70716 | AT707 | 20 | zweiter Punkt derselben Tour |
+  | Sillian (Karnischer Höhenweg) | 46.7597, 12.4177 | 70728 | AT707 | 20 | Trip-Punkt des Nutzerbefunds #1397 S4 |
+  | Lienz | 46.8296, 12.7698 | 70716 | AT707 | 20 | zweiter Punkt desselben Trips |
   | Zell am See | 47.3230, 12.7951 | 50628 | AT506 | 20 | Alpen/Salzburg, hohe Warndichte |
   | Wien | 48.2082, 16.3738 | 90101 | AT901 | 12 | Referenzpunkt der übrigen Tests |
   | Innsbruck | 47.2692, 11.4041 | 70101 | AT701 | 18 | Referenzpunkt der übrigen Tests |
