@@ -469,8 +469,8 @@ def test_ac25_live_menu_entspricht_der_vollstaendigen_ac21_liste():
 def test_ac24_hilfe_bei_trip_und_vergleich_antwortet_sofort_live():
     """
     GIVEN: der Live-Testnutzer tg-live-e2e mit aktivem Trip UND aktivem
-           Ortsvergleich (AC-24 PO-Lage, echter Vergleich ueber die
-           Staging-API angelegt)
+           Ortsvergleich (AC-24 PO-Lage, Vergleich lokal auf demselben Weg
+           wie der Trip angelegt -- s. _telegram_live_fixture.py Befund 2)
     WHEN: 'hilfe' ueber den echten `_process_update`-Pfad gesendet wird
     THEN: die Antwort ist die Befehlsuebersicht -- keine Rueckfrage, kein
           Fehler (Reproduktion von B1 auf Staging vor dem Fix).

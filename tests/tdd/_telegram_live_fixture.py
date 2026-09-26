@@ -314,75 +314,65 @@ def active_trip_for(user_id: str, data_dir: str = "data") -> Optional[object]:
 
 
 # ---------------------------------------------------------------------------
-# AC-24 (#2417): echter Ortsvergleich für den Live-Testnutzer -- NUR über die
-# Staging-API anlegbar, `hem` hat keinen Dateizugriff auf Staging-
-# Nutzerdaten (s. reference_staging_hat_keinen_dateizugriff_fuer_hem).
+# AC-24 (#2417): echter Ortsvergleich für den Live-Testnutzer -- lokal auf
+# GENAU DEMSELBEN Weg angelegt wie der Trip (Befund 2, Fix-Loop 2).
 # ---------------------------------------------------------------------------
+#
+# Der vorherige Weg legte den Vergleich über die Staging-HTTP-API an (anderer
+# Prozess). `run_command_through_pipeline`/`deliver_and_cleanup` rufen aber
+# `InboundTelegramReader._process_update()` DIREKT im Testprozess auf und
+# lesen/schreiben CWD-relativ ("data", wie `ensure_test_user_with_active_trip`
+# und `_create_active_trip` unten) -- ein über die Staging-API angelegter
+# Vergleich landet im Datenverzeichnis des STAGING-DIENSTES, das fuer den
+# Testprozess unsichtbar ist. Ausserdem existiert kein `GZ_TG_LIVE_E2E_PASS`-
+# Secret (kein neues Secret erfinden). Muster fuer den lokalen Schreibweg:
+# `tests/tdd/_befehl_e2e_fixtures.py::_preset` (kind="vergleich",
+# get_briefings_dir-Aequivalent).
 
-_STAGING_API_BASE = "https://staging.gregor20.henemm.com"
 #: Wiedererkennbarer, stabiler Name -- macht die Anlage idempotent (kein
 #: Duplikat bei wiederholten Testläufen), ohne die Preset-ID zu kennen.
 _COMPARE_FIXTURE_NAME = "GZ2417 Live E2E Vergleich"
 
 
-def ensure_test_user_has_active_compare(chat_id: str) -> str:
+def ensure_test_user_has_active_compare(chat_id: str, data_dir: str = "data") -> str:
     """Legt idempotent einen echten, aktiven Ortsvergleich für `tg-live-e2e`
-    über die Staging-HTTP-API an (Pflichtfelder `id` + `schedule`, s.
-    reference_staging_api_anlage_pflichtfelder) -- die PO-Lage aus #2417
-    (Trip UND Vergleich gleichzeitig aktiv), die B1 auf Staging reproduziert.
-
-    Login-Weg wie `tests/tdd/test_stage_reorder.py::_login`: Zugangsdaten des
-    Live-Testnutzers kommen aus `GZ_TG_LIVE_E2E_PASS` (niemals im Testtext),
-    Username ist `TEST_USER_ID` ("tg-live-e2e").
+    lokal an -- exakt derselbe Schreibweg (`briefings/<id>.json`,
+    CWD-relativ) wie `ensure_test_user_with_active_trip`/`_create_active_trip`
+    unten, damit der im selben Testprozess laufende Reader
+    (`InboundTelegramReader._process_update`) ihn auch tatsaechlich sieht --
+    die PO-Lage aus #2417 (Trip UND Vergleich gleichzeitig aktiv), die B1
+    reproduziert.
 
     Returns:
         Preset-ID des (neu angelegten oder bereits vorhandenen) Vergleichs.
     """
-    password = os.environ.get("GZ_TG_LIVE_E2E_PASS")
-    if not password:
-        raise RuntimeError(
-            "GZ_TG_LIVE_E2E_PASS nicht gesetzt -- ohne Staging-Passwort des "
-            "Live-Testnutzers kann kein echter Ortsvergleich über die "
-            "Staging-API angelegt werden (AC-24)."
-        )
+    user_id = TEST_USER_ID
+    briefings_dir = Path(data_dir) / "users" / user_id / "briefings"
+    briefings_dir.mkdir(parents=True, exist_ok=True)
 
-    with _httpx.Client(base_url=_STAGING_API_BASE, timeout=15.0) as client:
-        resp = client.post(
-            "/api/auth/login",
-            json={"username": TEST_USER_ID, "password": password},
-        )
-        if resp.status_code != 200:
-            raise RuntimeError(
-                f"Staging-Login für {TEST_USER_ID!r} fehlgeschlagen: "
-                f"HTTP {resp.status_code}, body={resp.text!r}"
-            )
+    for datei in briefings_dir.glob("*.json"):
+        try:
+            raw = json.loads(datei.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        if raw.get("kind") == "vergleich" and raw.get("name") == _COMPARE_FIXTURE_NAME:
+            return raw["id"]
 
-        existing = client.get("/api/compare/presets")
-        if existing.status_code == 200:
-            for preset in existing.json() or []:
-                if preset.get("name") == _COMPARE_FIXTURE_NAME:
-                    return preset["id"]
-
-        preset_id = f"gz2417-live-{TEST_USER_ID}"
-        create = client.post(
-            "/api/compare/presets",
-            json={
-                "id": preset_id,
-                "name": _COMPARE_FIXTURE_NAME,
-                "schedule": "manual",
-                "profil": "wandern",
-                "hour_from": 7,
-                "hour_to": 18,
-                "forecast_hours": 48,
-                "location_ids": [],
-            },
-        )
-        if create.status_code not in (200, 201, 409):
-            raise RuntimeError(
-                f"Anlage des Live-Ortsvergleichs fehlgeschlagen: "
-                f"HTTP {create.status_code}, body={create.text!r}"
-            )
-        return preset_id
+    preset_id = f"gz2417-live-{user_id}"
+    entry = {
+        "id": preset_id,
+        "name": _COMPARE_FIXTURE_NAME,
+        "kind": "vergleich",
+        "user_id": user_id,
+        "location_ids": ["loc-a", "loc-b"],
+        "schedule": "daily",
+        "previous_schedule": "",
+        "created_at": "2026-09-26T00:00:00Z",
+    }
+    (briefings_dir / f"{preset_id}.json").write_text(
+        json.dumps(entry, ensure_ascii=False, indent=2), encoding="utf-8",
+    )
+    return preset_id
 
 
 _ON_DEMAND_COMMANDS = ("heute", "morgen")
