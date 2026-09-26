@@ -181,8 +181,8 @@ def _html_hour_header(html: str) -> list[str]:
     return []
 
 
-def _tour_hour_header(html: str) -> list[str]:
-    """Spaltenkopf der TOUR-Stundentabelle (erste Spalte "Time", letzte
+def _trip_hour_header(html: str) -> list[str]:
+    """Spaltenkopf der TRIP-Stundentabelle (erste Spalte "Time", letzte
     "Risk" -- beides feste Nicht-Metrik-Spalten)."""
     head = re.search(r"<thead>(.*?)</thead>", html, re.S)
     cols = [
@@ -206,7 +206,7 @@ def _plain_overview_labels(text: str) -> list[str]:
     return labels
 
 
-def _tour_rows() -> list[dict]:
+def _trip_rows() -> list[dict]:
     """Eine Trip-Stundenzeile mit Taupunkt- UND Luftdruck-Spalte. Die
     Spaltenmenge der Trip ergibt sich allein aus den Schluesseln der Zeile
     (``helpers.visible_cols``, der Beschriftungsweg der Trip)."""
@@ -262,14 +262,14 @@ def test_compare_hour_table_keeps_the_english_short_forms():
         assert kurz in header, f"Kurzform '{kurz}' fehlt im Stundenkopf: {header}"
 
 
-def test_tour_hour_table_keeps_the_english_short_forms():
+def test_trip_hour_table_keeps_the_english_short_forms():
     """AC-1 (zweiter Mail-Typ): dieselbe Aussage fuer die Trip-Stundentabelle.
 
     Der Trip-Pfad ist vollstaendig getrennt (``helpers.visible_cols`` ->
     ``metric_catalog.get_col_defs``), liest aber dieselbe Registerspalte -- er
     muss von der Umstellung der Vergleichs-Uebersicht unberuehrt bleiben."""
-    html = _render_html_table(_tour_rows(), friendly_keys=set())
-    header = _tour_hour_header(html)
+    html = _render_html_table(_trip_rows(), friendly_keys=set())
+    header = _trip_hour_header(html)
 
     assert header, f"Keine Spaltenkoepfe in der Trip-Stundentabelle: {html[:200]}"
     for kurz, ausgeschrieben in (
@@ -312,10 +312,10 @@ def test_compare_hour_table_shows_dew_and_press():
     )
 
 
-def test_tour_hour_table_shows_dew_and_press():
+def test_trip_hour_table_shows_dew_and_press():
     """AC-2 (zweiter Mail-Typ): dieselben zwei Spalten in der Trip-Mail. Das
     ist gewollt -- ein schlechtes Kuerzel ist in beiden Mails schlecht."""
-    header = _tour_hour_header(_render_html_table(_tour_rows(), friendly_keys=set()))
+    header = _trip_hour_header(_render_html_table(_trip_rows(), friendly_keys=set()))
 
     assert "Dew" in header and "Press" in header, (
         f"Trip-Stundenkopf zeigt nicht 'Dew'/'Press': {header}"

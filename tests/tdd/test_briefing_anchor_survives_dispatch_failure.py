@@ -1707,7 +1707,7 @@ def test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar(
     assert marker.get("trip_id") == trip.id, f"Falsche Trip im Vermerk: {marker!r}"
 
 
-def test_tour_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt():
+def test_trip_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt():
     """#1662 AC-1, Gegenprobe zur Abgrenzung (Mutations-Fund M3).
 
     GIVEN eine Trip, fuer die GAR KEIN Kanal eingeschaltet ist.

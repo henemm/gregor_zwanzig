@@ -135,7 +135,7 @@ lesen alle aus demselben `TimelineResult`, das `_punkte()` bereits gefenstert li
 ## Expected Behavior
 
 - **Input:** Ad-hoc-Abruf (`glance`, `heute_gewitter`, `timeline_heute`) zu einem Zeitpunkt
-  `received_at`, der innerhalb oder nach Tourbeginn liegt.
+  `received_at`, der innerhalb oder nach Trip-Beginn liegt.
 - **Output:** Tages-Aggregat „heute" spiegelt nur `[max(received_at, Segmentstart) …
   Segmentende]`; vollständig vergangene Segmente entfallen aus den Wegpunkten. „morgen" bleibt
   identisch zu einem früheren Abruf am selben Tag.

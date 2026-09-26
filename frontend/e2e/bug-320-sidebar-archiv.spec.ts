@@ -86,8 +86,8 @@ test.describe('Bug #320: Sidebar + BottomNav — Archiv als 4. Nav-Item', () => 
 		 */
 		await page.goto('/archiv');
 
-		// Eyebrow: "ARCHIV · VERGANGENE TOUREN"
-		await expect(page.getByText('ARCHIV · VERGANGENE TOUREN')).toBeVisible();
+		// Eyebrow: "ARCHIV · VERGANGENE TRIPS"
+		await expect(page.getByText('ARCHIV · VERGANGENE TRIPS')).toBeVisible();
 
 		// Empty-State-Text
 		await expect(page.locator('text=/Archiv/i').first()).toBeVisible();

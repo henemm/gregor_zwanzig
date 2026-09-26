@@ -207,7 +207,7 @@ an, am Trichter vorbei — nachgezaehlt am Code, nicht geschaetzt:
 | 5 | `routes/archiv/+page.svelte:53` | Archivseite, URL an `:50` — **nur der `item.type === 'trip'`-Zweig**; der Zwilling an `:51` betrifft Orts-Vergleiche und bleibt unberuehrt (S6) |
 
 Jeder erfolgreiche Aufruf veraendert die
-Tourdatei und damit den Fingerabdruck, liefert aber laut S2 (AC-15) KEINEN
+Trip-Datei und damit den Fingerabdruck, liefert aber laut S2 (AC-15) KEINEN
 `ETag` zurueck — ein zuvor gemerkter Stand wird dadurch still veraltet.
 
 **Gewaehlter Weg: expliziter `discardEtag(tripId)`-Aufruf nach Erfolg an

@@ -474,7 +474,7 @@ keine neue Fehlerklasse — nur dieselbe Regel auf ein viertes Feld angewendet.
     (AC-8/AC-10 prüfen ausschließlich die Compare-Bridge). „Strukturell derselbe Code" gilt für
     die Komponente, **nicht** für den Speicherweg.
   - Begründung, warum das nicht als Known Limitation durchgehen darf: Der Trip ist der Fall, an dem
-    dieses Issue aufgefallen ist (KHW 403), und der einzige, der vor dem Tourtermin zählt. Eine
+    dieses Issue aufgefallen ist (KHW 403), und der einzige, der vor dem Trip-Termin zählt. Eine
     Scheibe, die den Compare-Weg beweist und den Trip-Weg annimmt, beweist das Falsche.
   - Test: `frontend/e2e/feat-1745-a-alarm-premium-sms.spec.ts::trip_premium_sms_haken_ueberlebt_speichern_und_reload`
   - Mutation: `buildAlarmeDeliveryPayload()` nimmt `premium_sms` entgegen, schreibt es aber nicht

@@ -47,7 +47,7 @@ test.describe('F76 Phase B: Startseite Kachel-Übersicht', () => {
 		await expect(page.locator('[data-testid="stat-health"]')).toHaveCount(0);
 	});
 
-	test('shows CTA buttons for new tour and new comparison', async ({ page }) => {
+	test('shows CTA buttons for new trip and new comparison', async ({ page }) => {
 		/**
 		 * GIVEN: User is logged in and has data
 		 * WHEN: Startseite loads

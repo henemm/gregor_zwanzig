@@ -312,7 +312,7 @@ def test_ac1_budget_erschoepft_blockiert_fetch_und_hinweis(monkeypatch):
     trip = _active_trip(f"trip-ac1-{uuid.uuid4().hex[:6]}")
 
     now = datetime.now(timezone.utc)
-    # Issue #1726: der Zaehler laeuft in der Ortszone der TOUR — `LAT`/`LON`
+    # Issue #1726: der Zaehler laeuft in der Ortszone des TRIPS — `LAT`/`LON`
     # liegen auf Island. Wer hier eine andere Zone belegt als der Pruefling
     # liest, erschoepft ein Kontingent, das nie geprueft wird.
     trip_zone = tz_for_coords(LAT, LON)

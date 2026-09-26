@@ -131,7 +131,7 @@ sondern zieht Scope und Acceptance Criteria daraus.
 Ein durch den Bug bereits entstandener Anker trägt kein `briefing_backed`-Feld und gilt
 deshalb — wie jeder Altbestand — als briefing-gestützt (`True`), bis das nächste reguläre
 Briefing ihn überschreibt. Bei laufenden Trips geschieht das binnen Stunden, bei noch
-nicht gestarteten Trips ggf. erst zum Tourstart.
+nicht gestarteten Trips ggf. erst zum Trip-Start.
 
 > **🔴 Diese Auslegung ist der freigabepflichtige Punkt dieser Spec.** Sie ist eine
 > Empfehlung aus der Analyse-Phase, noch keine PO-Entscheidung — mit der Freigabe der Spec

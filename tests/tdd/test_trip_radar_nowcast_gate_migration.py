@@ -53,7 +53,7 @@ def _run_trip_scenario(
     write_user_tier(uid, "free")  # Limit 2/Tag
     seed_daily_counter(uid, 2 if daily_limit_reached else 0, zone=TRIP_ZONE)
 
-    # Issue #1726: Ortszone der TOUR (Island), nicht Wien.
+    # Issue #1726: Ortszone des TRIPS (Island), nicht Wien.
     quiet_from, quiet_to = (
         quiet_window_now(zone=TRIP_ZONE) if quiet
         else quiet_window_elsewhere(zone=TRIP_ZONE)

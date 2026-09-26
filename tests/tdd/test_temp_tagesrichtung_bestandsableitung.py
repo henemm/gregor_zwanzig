@@ -277,11 +277,11 @@ class TestTwoUsersOppositeDayDirections:
                 {"metric_id": FELT_HIGH, "enabled": felt_high},
                 {"metric_id": "precipitation", "enabled": True},
             ]
-        _write_trip(tmp_path, "alpha", "tour", eintraege(False, True, True, False))
-        _write_trip(tmp_path, "beta", "tour", eintraege(True, False, False, True))
+        _write_trip(tmp_path, "alpha", "trip", eintraege(False, True, True, False))
+        _write_trip(tmp_path, "beta", "trip", eintraege(True, False, False, True))
 
-        sms_a = _sms(_load(tmp_path, "alpha", "tour").display_config)
-        sms_b = _sms(_load(tmp_path, "beta", "tour").display_config)
+        sms_a = _sms(_load(tmp_path, "alpha", "trip").display_config)
+        sms_b = _sms(_load(tmp_path, "beta", "trip").display_config)
 
         ist_a = F.present_symbols(sms_a, ("L", "D", "FL", "FD"))
         ist_b = F.present_symbols(sms_b, ("L", "D", "FL", "FD"))

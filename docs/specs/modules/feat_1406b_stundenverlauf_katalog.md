@@ -380,7 +380,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
   Fachliche Begründung der Ausnahme: Die Frage, die die stündliche
   Einstrahlung beantwortet (wie stark brennt die Sonne gerade), beantworten
   **Bewölkung** und **UV-Index** bereits — beide sind stündlich vorhanden und
-  für Tourenentscheidungen unmittelbar lesbar. Eine dritte Spalte mit
+  für Trip-Entscheidungen unmittelbar lesbar. Eine dritte Spalte mit
   „340 W/m²" brächte in einer Kurzübersicht keinen Zusatznutzen und schüfe
   eine Doppeldeutigkeit: dieselbe Größe hieße in der Tagesübersicht „Sonne
   in Stunden" und im Stundenverlauf „Watt pro Quadratmeter".

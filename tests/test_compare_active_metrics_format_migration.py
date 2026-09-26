@@ -199,7 +199,7 @@ def test_route_preset_with_active_metrics_stays_byte_identical(tmp_path):
     Trip-Namensraum ist von dieser Umstellung nicht betroffen."""
     root = tmp_path / "users"
     trip_path = _write_briefing(root, "henning", _trip_preset_with_legacy_metrics("trip-unberuehrt"))
-    compare_path = _write_briefing(root, "henning", _compare_preset_with_legacy_metrics("cp-neben-tour"))
+    compare_path = _write_briefing(root, "henning", _compare_preset_with_legacy_metrics("cp-neben-trip"))
     trip_before = trip_path.read_text(encoding="utf-8")
 
     result = _run_migrate(root, extra_args=["--execute"])

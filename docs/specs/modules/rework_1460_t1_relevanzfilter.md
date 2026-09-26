@@ -431,7 +431,7 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   gewollt, s. Implementation Details).
   - Test: Segment 1 endet vor `jetzt`, Segment 2 beginnt nach `jetzt`; Warnung an Segment-2-Koordinaten innerhalb von dessen Fenster → Treffer, trotz der Lücke.
 
-- **AC-29 (letzter Tourtag):** Given der letzte Tourtag, das letzte Segment ist bereits beendet
+- **AC-29 (letzter Trip-Tag):** Given der letzte Trip-Tag, das letzte Segment ist bereits beendet
   (`end_time < jetzt`) und kein weiteres Segment existiert, When der Check läuft, Then wird kein
   amtlicher Alarm mehr ausgewertet — Ergebnis leer.
   - Test: Trip mit `end_date`=gestern bzw. letztes Segment `end_time` in der Vergangenheit, `[]` erwartet.

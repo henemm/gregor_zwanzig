@@ -236,7 +236,7 @@ KEIN Mock, KEIN Dateiinhalt-Check als Verhaltensnachweis — jeder Fall prüft d
   vorhanden), Schlüssel `enrichment_health`.
 - **Output (Skript):** bei anhaltendem Rückfall auf die Vertretung oder anhaltendem Ausfall
   ohne Vertretung eine `FAIL[EXT]:`-Zeile im Cron-Log, `EXT_ERRORS` erhöht, der EXT-Heartbeat
-  bleibt aus → BetterStack schickt einen E-Mail-Alert an den PO. Bei gesundem oder tourlosem
+  bleibt aus → BetterStack schickt einen E-Mail-Alert an den PO. Bei gesundem oder triplosem
   Zustand keine Ausgabe, EXT-Heartbeat pingt wie bisher.
 - **Side effects:** keine auf den fachlichen Datenfluss — reine Leseseiten-/Monitoring-
   Erweiterung, kein Einfluss auf Briefing-Inhalte, keine neue Schreibseite.
@@ -305,7 +305,7 @@ wird als Begleit-Änderung zu AC-1/AC-2 mitgeliefert.
 
 - **AC-6:** Given `last_attempt_at` liegt >48h zurück (kein aktiver Trip), unabhängig davon, ob
   ein alter Fallback- oder Dauerausfall-Eintrag im Status steht / When Block `2e-e` läuft /
-  Then meldet das Skript keinen Fehler für diesen Pfad — ein tourloser Zeitraum darf niemals
+  Then meldet das Skript keinen Fehler für diesen Pfad — ein triploser Zeitraum darf niemals
   alarmieren.
   - Test: JSON mit `last_attempt_at` vor 60h und gleichzeitig altem `unavailable`/`fallback`-
     Verlauf einspeisen, `EXT_OK` erwarten — der Blindheits-Gegenbeweis zur eigentlichen
@@ -364,7 +364,7 @@ wird als Begleit-Änderung zu AC-1/AC-2 mitgeliefert.
   `de_direct` ausgefallen ist (`thunder_routing.py:176-186`). Reicht für den hier gebauten
   Alarm, beantwortet aber nicht „welche Direktquelle ist kaputt".
 - **Prod kann den Fall aktuell nicht live zeigen.** `thunder.last_attempt_at` stand am
-  17.09.2026 auf dem 05.09. (Tourende KHW, kein aktiver Trip). Der Nachweis ist deshalb rein
+  17.09.2026 auf dem 05.09. (Trip-Ende KHW, kein aktiver Trip). Der Nachweis ist deshalb rein
   synthetisch (Go-Testfixtures, JSON-Payload im Skript-Test) plus Mutationsprobe (AC-9), nicht
   durch einen beobachtbaren Prod-Vorfall.
 - **Die Auswerteregel liegt strukturell außerhalb des gregor-Repos.** Der infra-Commit

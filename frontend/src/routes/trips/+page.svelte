@@ -2,7 +2,7 @@
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	// Issue #1395 S3: PATCH /state laeuft am Trichter vorbei und veraendert die
-	// Tourdatei, ohne einen neuen Stempel zu liefern (S2 AC-15) — danach muss der
+	// Trip-Datei, ohne einen neuen Stempel zu liefern (S2 AC-15) — danach muss der
 	// gemerkte Stand verworfen werden.
 	import { discardEtag } from '$lib/etagRegistry';
 	import { goto } from '$app/navigation';

@@ -30,7 +30,7 @@ const DESKTOP = { width: 1280, height: 900 };
 // Auth-Rate-Limits bei parallelen Workern (Memory-Muster #586/#609).
 
 // Pflicht-Eingaben Route-Tab, um Etappen freizuschalten.
-async function fillRoute(page: Page, name = 'Mobile Testtour', date = '2026-07-01') {
+async function fillRoute(page: Page, name = 'Mobile Test-Trip', date = '2026-07-01') {
 	await page.getByTestId('trip-new-name-input-mobile').fill(name);
 	await page.getByTestId('trip-new-date-input').fill(date);
 }

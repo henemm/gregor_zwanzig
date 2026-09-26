@@ -414,7 +414,7 @@ def _offene_vermerke(pfad: Path) -> list[str]:
     return [e["date"] for e in json.loads(pfad.read_text()).get("entries", [])]
 
 
-def _tour_ist_auffindbar(trip: Trip) -> None:
+def _trip_ist_auffindbar(trip: Trip) -> None:
     """Vorbedingung, ohne die „Vermerk entfernt" mehrdeutig wäre: der Scheduler
     räumt einen Vermerk AUCH weg, wenn er die zugehörige Trip nicht findet
     (``trip is None``). Ohne diesen Anker wäre der Test in beide Richtungen aus
@@ -452,7 +452,7 @@ def test_ac4_versandfehler_vermerk_verfaellt_nach_dem_ortstag():
         servertag = date.today()
         trip = _trip("vermerk-westkueste", [D20], WP_LA)
         save_trip(trip, user_id="default")
-        _tour_ist_auffindbar(trip)
+        _trip_ist_auffindbar(trip)
         scheduler = _scheduler()
         pfad = _vermerk_schreiben(scheduler, trip, D20)
 
@@ -820,7 +820,7 @@ def _fall_pending_marker(tmp_path):
     """
     trip = _trip("param-vermerk", [D20], WP_KORSIKA)
     save_trip(trip, user_id="default")
-    _tour_ist_auffindbar(trip)
+    _trip_ist_auffindbar(trip)
     scheduler = _scheduler()
     pfad = _vermerk_schreiben(scheduler, trip, D20)
     scheduler._process_pending_markers(PARAM_UTC, {trip.id})

@@ -49,7 +49,7 @@ from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from services.inbound_telegram_reader import InboundTelegramReader  # noqa: E402
 
 #: Zwei Orte, zwoelf Stunden auseinander — nur so wird sichtbar, dass der
-#: Vergleichstag JE TOUR am eigenen Ort gemessen wird (ADR-0044) und nicht
+#: Vergleichstag JE TRIP am eigenen Ort gemessen wird (ADR-0044) und nicht
 #: einmal an der Serveruhr.
 AUCKLAND = (-36.8485, 174.7633)     # Pacific/Auckland, UTC+12
 KORSIKA = (42.1333, 9.1333)         # Europe/Paris, UTC+2
@@ -130,7 +130,7 @@ def _szenario_nur_vergangenheit(user_id: str) -> None:
     return None
 
 
-def _szenario_etappenlose_tour_wird_uebersprungen(user_id: str) -> str:
+def _szenario_etappenloser_trip_wird_uebersprungen(user_id: str) -> str:
     """Eine Trip ohne Etappen darf weder ueberlappen noch den Rueckfall
     besetzen — sie wird uebersprungen."""
     _trip_ohne_etappen(user_id, name="Leere Trip")
@@ -139,7 +139,7 @@ def _szenario_etappenlose_tour_wird_uebersprungen(user_id: str) -> str:
     return aktiv.id
 
 
-def _szenario_ohne_touren(user_id: str) -> None:
+def _szenario_ohne_trips(user_id: str) -> None:
     return None
 
 
@@ -147,15 +147,15 @@ SZENARIEN = {
     "overlap_am_ortstag": _szenario_overlap_am_ortstag,
     "zukunfts_rueckfall": _szenario_zukunfts_rueckfall,
     "nur_vergangenheit": _szenario_nur_vergangenheit,
-    "etappenlose_tour": _szenario_etappenlose_tour_wird_uebersprungen,
-    "ohne_touren": _szenario_ohne_touren,
+    "etappenloser_trip": _szenario_etappenloser_trip_wird_uebersprungen,
+    "ohne_trips": _szenario_ohne_trips,
 }
 
 
 # ═════════════════════ Die neue, geteilte Regel ═══════════════════════════
 
 
-def test_pick_active_trip_waehlt_die_tour_mit_overlap_am_eigenen_ortstag():
+def test_pick_active_trip_waehlt_den_trip_mit_overlap_am_eigenen_ortstag():
     """GIVEN eine Auckland-Trip, deren einzige Etappe auf dem 21.08. liegt,
     und ein Anfragezeitpunkt, der in Auckland bereits der 21.08. ist, in UTC
     aber noch der 20.08.
@@ -182,7 +182,7 @@ def test_pick_active_trip_waehlt_die_tour_mit_overlap_am_eigenen_ortstag():
     )
 
 
-def test_pick_active_trip_faellt_auf_die_frueheste_zukuenftige_tour_zurueck():
+def test_pick_active_trip_faellt_auf_den_fruehesten_zukuenftigen_trip_zurueck():
     """GIVEN keine Trip ueberlappt den heutigen Ortstag, es gibt aber zwei
     zukuenftige und eine vergangene.
     WHEN  ``pick_active_trip`` gefragt wird
@@ -204,7 +204,7 @@ def test_pick_active_trip_faellt_auf_die_frueheste_zukuenftige_tour_zurueck():
     )
 
 
-@pytest.mark.parametrize("szenario", ["nur_vergangenheit", "ohne_touren"])
+@pytest.mark.parametrize("szenario", ["nur_vergangenheit", "ohne_trips"])
 def test_pick_active_trip_liefert_none_wenn_es_nichts_zu_waehlen_gibt(szenario):
     """GIVEN entweder gar keine Trips oder ausschliesslich vergangene.
     WHEN  ``pick_active_trip`` gefragt wird
@@ -225,7 +225,7 @@ def test_pick_active_trip_liefert_none_wenn_es_nichts_zu_waehlen_gibt(szenario):
     )
 
 
-def test_pick_active_trip_ueberspringt_touren_ohne_etappen():
+def test_pick_active_trip_ueberspringt_trips_ohne_etappen():
     """GIVEN eine Trip ohne jede Etappe steht vor einer heute laufenden Trip.
     WHEN  ``pick_active_trip`` gefragt wird
     THEN  liefert sie die laufende Trip — die etappenlose wird uebersprungen
@@ -236,7 +236,7 @@ def test_pick_active_trip_ueberspringt_touren_ohne_etappen():
     from services.trip_selection import pick_active_trip
 
     uid = _kennung()
-    erwartet = _szenario_etappenlose_tour_wird_uebersprungen(uid)
+    erwartet = _szenario_etappenloser_trip_wird_uebersprungen(uid)
 
     gewaehlt = pick_active_trip(load_all_trips(uid), JETZT)
 
@@ -250,8 +250,8 @@ def test_pick_active_trip_ueberspringt_touren_ohne_etappen():
 
 
 @pytest.mark.parametrize("szenario", sorted(SZENARIEN))
-def test_beide_wege_waehlen_dieselbe_tour(szenario):
-    """GIVEN dieselbe Tourenlage auf derselben Datenwurzel.
+def test_beide_wege_waehlen_denselben_trip(szenario):
+    """GIVEN dieselbe Trip-Lage auf derselben Datenwurzel.
     WHEN  einmal ``InboundTelegramReader._find_active_trip(now_utc, user_id)``
           und einmal ``pick_active_trip(load_all_trips(user_id), now_utc)``
           gefragt wird
@@ -317,7 +317,7 @@ def test_bestand_find_active_trip_faellt_auf_frueheste_zukunft_zurueck():
     )
 
 
-def test_bestand_find_active_trip_ohne_touren_liefert_none():
+def test_bestand_find_active_trip_ohne_trips_liefert_none():
     """GIVEN der Mandant hat keine einzige Trip.
     WHEN  ``_find_active_trip`` gefragt wird
     THEN  liefert es ``None``. Heutiges Verhalten.
@@ -329,13 +329,13 @@ def test_bestand_find_active_trip_ohne_touren_liefert_none():
     )
 
 
-def test_bestand_find_active_trip_ueberspringt_touren_ohne_etappen():
+def test_bestand_find_active_trip_ueberspringt_trips_ohne_etappen():
     """GIVEN eine etappenlose Trip vor einer laufenden.
     WHEN  ``_find_active_trip`` gefragt wird
     THEN  liefert es die laufende. Heutiges Verhalten.
     """
     uid = _kennung()
-    erwartet = _szenario_etappenlose_tour_wird_uebersprungen(uid)
+    erwartet = _szenario_etappenloser_trip_wird_uebersprungen(uid)
 
     gewaehlt = InboundTelegramReader()._find_active_trip(JETZT, uid)
 

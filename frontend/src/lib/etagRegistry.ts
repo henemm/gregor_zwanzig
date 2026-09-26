@@ -109,7 +109,7 @@ export function adoptEtagFromPageLoad(tripId: string, etag: string): boolean {
 }
 
 /**
- * Verwirft den gemerkten Stand. Noetig nach jedem Vorgang, der die Tourdatei
+ * Verwirft den gemerkten Stand. Noetig nach jedem Vorgang, der die Trip-Datei
  * veraendert, ohne einen neuen Stempel zu liefern (`PATCH /state`), und nach
  * einer `412`-Ablehnung — die traegt laut S2 bewusst keinen neuen Stempel.
  * Ohne Verwerfen scheiterte jeder weitere Versuch endlos am selben Wert.

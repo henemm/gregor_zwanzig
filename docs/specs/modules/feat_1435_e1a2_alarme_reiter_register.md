@@ -243,7 +243,7 @@ gemeinsamen Tabelle stammen (`alertMetricLabels.ts:26-28`). Dort ändert sich
 ausschließlich der Wortlaut — welche Zeilen erscheinen und was sie auslösen,
 bleibt unangetastet (s. AC-7). Der Grund für die Entscheidung gegen das
 kürzere „Wind": diese Zeile warnt bei starker **Änderung** des Windes, nicht
-bei hohem Wind; „Wind" allein hätte in einem Werkzeug für Tourenentscheidungen
+bei hohem Wind; „Wind" allein hätte in einem Werkzeug für Trip-Entscheidungen
 einen Sturm-Alarm suggeriert, den sie nicht liefert.
 
 ## Acceptance Criteria

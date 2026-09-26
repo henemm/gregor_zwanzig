@@ -137,8 +137,8 @@ def two_accounts(tmp_path, monkeypatch):
                    email="wanderer-a-login@gmail.com", email_verified_at=VERIFIED)
     _write_profile(tmp_path, "wanderer-b", mail_to="wanderer-b-kontakt@gmail.com",
                    email_verified_at=VERIFIED)
-    _make_trip("wanderer-a", "t-a", "TourA")
-    _make_trip("wanderer-b", "t-b", "TourB")
+    _make_trip("wanderer-a", "t-a", "TripA")
+    _make_trip("wanderer-b", "t-b", "TripB")
     return tmp_path
 
 
@@ -174,22 +174,22 @@ def _assert_dropped_silently(label: str, result, imap, notifications) -> None:
 
 def test_ac14_unknown_sender_runs_no_command_sends_no_reply_marks_seen(two_accounts):
     """AC-14: unbekannte Absenderadresse (in keinem Profil)."""
-    result, imap, notifications = _run("unbekannt-absender@gmail.com", "TourA")
+    result, imap, notifications = _run("unbekannt-absender@gmail.com", "TripA")
     _assert_dropped_silently("unbekannt", result, imap, notifications)
 
 
 def test_ac14_unverified_sender_runs_no_command_sends_no_reply_marks_seen(two_accounts):
     """AC-14: Absender ist ``mail_to`` eines UNBESTAETIGTEN Kontos (mit Trip)."""
     _write_profile(two_accounts, "wanderer-u", mail_to="wanderer-u-kontakt@gmail.com")
-    _make_trip("wanderer-u", "t-u", "TourU")
-    result, imap, notifications = _run("wanderer-u-kontakt@gmail.com", "TourU")
+    _make_trip("wanderer-u", "t-u", "TripU")
+    result, imap, notifications = _run("wanderer-u-kontakt@gmail.com", "TripU")
     _assert_dropped_silently("unbestaetigt", result, imap, notifications)
 
 
 def test_ac14_sender_only_in_email_side_field_runs_no_command(two_accounts):
     """AC-14: Absender steht nur im Nebenfeld ``email`` von wanderer-a
     (``mail_to`` abweichend) -> nicht zuordenbar."""
-    result, imap, notifications = _run("wanderer-a-login@gmail.com", "TourA")
+    result, imap, notifications = _run("wanderer-a-login@gmail.com", "TripA")
     _assert_dropped_silently("nur Nebenfeld", result, imap, notifications)
 
 
@@ -197,7 +197,7 @@ def test_ac14_ambiguous_sender_runs_no_command(two_accounts):
     """AC-14: zwei echte bestaetigte Konten mit derselben wirksamen Adresse."""
     _write_profile(two_accounts, "wanderer-doppel", mail_to="wanderer-b-kontakt@gmail.com",
                    email_verified_at=VERIFIED)
-    result, imap, notifications = _run("wanderer-b-kontakt@gmail.com", "TourB")
+    result, imap, notifications = _run("wanderer-b-kontakt@gmail.com", "TripB")
     _assert_dropped_silently("mehrdeutig", result, imap, notifications)
 
 

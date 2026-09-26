@@ -391,7 +391,7 @@ test('#1395 S3 Fall 2 (AC-4/AC-8/AC-7): fremde Aenderung -> 412 mit deutscher Me
 // ─────────────────────────────────────────────────────────────────────────────
 // Fall 3 — AC-5: kein selbstverschuldeter Konflikt nach dem Pausieren.
 //
-// `PATCH /state` veraendert die Tourdatei, liefert aber keinen neuen Stempel.
+// `PATCH /state` veraendert die Trip-Datei, liefert aber keinen neuen Stempel.
 // Ohne die Vorkehrung (discardEtag) baut sich die Anwendung hier selbst einen
 // Konflikt — ein Fehler, den es vor S3 nicht gab.
 // ─────────────────────────────────────────────────────────────────────────────

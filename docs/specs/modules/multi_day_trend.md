@@ -37,7 +37,7 @@ Gewitter-Ampel (Farb-Quadrat + Wort: kein/MED/HIGH).
 **AC-3 (v5.0, ersetzt v4.0-Fassung — Fix #1486):** Given eine Trip deren letzte Etappe morgen ist
 (keine weiteren Etappen nach dem Zieldatum) / When das Briefing gerendert wird / Then erscheint
 statt des leeren, kommentarlosen Nichts der Hinweissatz „Keine weiteren Etappen — kein Ausblick."
-(neutraler Fließtext, KEIN Warn-/Danger-Styling, KEIN Logging — normaler Tourabschluss ist kein
+(neutraler Fließtext, KEIN Warn-/Danger-Styling, KEIN Logging — normaler Trip-Abschluss ist kein
 Fehler). Details, weitere Zustände (außerhalb Vorhersagehorizont / Störung) und die Herleitung:
 `docs/specs/modules/fix_1486_outlook_silent_exit.md`.
 

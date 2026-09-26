@@ -35,10 +35,10 @@ from src.providers.thunder_routing import thunder_region_for
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "khw_2026_08"
 
-# Der massgebliche Tourzeitraum 2026-08-24 bis 2026-09-05 (PO-Entscheid
+# Der massgebliche Trip-Zeitraum 2026-08-24 bis 2026-09-05 (PO-Entscheid
 # 2026-09-07). Er steht hier und NICHT im Auswertungsmodul: welche Kalendertage
 # die Messgrundlage bilden, entscheidet der Aufrufer, nicht die Daten.
-_TOURTAGE_KHW_2026 = frozenset(
+_TRIPTAGE_KHW_2026 = frozenset(
     (date(2026, 8, 24) + timedelta(days=abstand)).isoformat() for abstand in range(13)
 )
 
@@ -462,16 +462,16 @@ def test_messgrundlage_etappentage_grenzt_die_zaehlung_wirklich_ein():
         assert sprosse["ueber"] + sprosse["unter"] + sprosse["keine_aussage"] == 1
 
 
-def test_messgrundlage_schneidet_auch_gueltige_tage_vor_tourbeginn_weg():
+def test_messgrundlage_schneidet_auch_gueltige_tage_vor_tripbeginn_weg():
     """Der Parameter greift gegen VOLLWERTIGE Tage, nicht nur gegen ohnehin
-    leere. Der Mitschnitt setzt zwei Tage vor Tourbeginn an: der 22. und der
+    leere. Der Mitschnitt setzt zwei Tage vor Trip-Beginn an: der 22. und der
     23.08. tragen in allen drei Teilmengen gueltige Werte, gehoeren aber nicht
-    zum massgeblichen Tourzeitraum (PO-Entscheid 2026-09-07). Mit
+    zum massgeblichen Trip-Zeitraum (PO-Entscheid 2026-09-07). Mit
     ``etappentage`` verschwinden genau diese beiden Tage — samt Nenner.
     """
-    assert len(_TOURTAGE_KHW_2026) == 13
-    assert min(_TOURTAGE_KHW_2026) == "2026-08-24"
-    assert max(_TOURTAGE_KHW_2026) == "2026-09-05"
+    assert len(_TRIPTAGE_KHW_2026) == 13
+    assert min(_TRIPTAGE_KHW_2026) == "2026-08-24"
+    assert max(_TRIPTAGE_KHW_2026) == "2026-09-05"
 
     zeilen = (_zeilen("vor_tourbeginn_22_23_08.json")
               + _zeilen("vorlauf_mehrsegment_24_08.json"))
@@ -488,11 +488,11 @@ def test_messgrundlage_schneidet_auch_gueltige_tage_vor_tourbeginn_weg():
     assert voll["primaer"]["2026-08-22"]["cape_max_jkg"] == 40.0
     assert voll["primaer"]["2026-08-23"]["cape_max_jkg"] == 100.0
 
-    beschnitten = tageswerte_je_teilmenge(zeilen, etappentage=_TOURTAGE_KHW_2026)
+    beschnitten = tageswerte_je_teilmenge(zeilen, etappentage=_TRIPTAGE_KHW_2026)
 
     for teilmenge in ("primaer", "alle_quellen", "nur_alarm"):
         assert set(beschnitten[teilmenge]) == {"2026-08-24"}, (
-            f"{teilmenge}: gueltiger Tag vor Tourbeginn weiterhin gezaehlt"
+            f"{teilmenge}: gueltiger Tag vor Trip-Beginn weiterhin gezaehlt"
         )
     assert beschnitten["alle_quellen"]["2026-08-24"] == voll["alle_quellen"]["2026-08-24"]
 

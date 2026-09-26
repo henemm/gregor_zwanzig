@@ -103,9 +103,9 @@ class TestLoadDated:
 
         yesterday = date.today() - timedelta(days=1)
         original = _make_segment_weather()
-        service.save_dated("tour-abc", yesterday, [original])
+        service.save_dated("trip-abc", yesterday, [original])
 
-        loaded = service.load_dated("tour-abc", yesterday)
+        loaded = service.load_dated("trip-abc", yesterday)
 
         assert loaded is not None
         assert len(loaded) == 1

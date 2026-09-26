@@ -25,7 +25,7 @@ Wochen keine Gewitter-Warnung" belegbar, noch laesst sich der Erfolg der Folge-S
 Ortsvergleich heute **gar nicht** (B1-Befund, `docs/context/feat-1459-alert-protokoll.md`).
 
 **Harte Nebenbedingung (D4, PO-Entscheidung 2026-08-02):** Die Cockpit-Kachel „Alarme ·
-letzte 24 h" und die Archiv-Statistik „Alarme je Trip" duerfen sich fuer Bestandstouren
+letzte 24 h" und die Archiv-Statistik „Alarme je Trip" duerfen sich fuer Bestands-Trips
 durch diese Scheibe **um keine einzige Zahl** aendern. #1459 ist ein internes Protokoll,
 kein Anzeige-Feature.
 
@@ -194,7 +194,7 @@ woertlich: *„Send errors on a configured channel are logged but do NOT suppres
 
 Damit waren AC-10 (v1.3) und AC-11 **nicht gleichzeitig erfuellbar**: AC-10 haette einen
 Fall aus `entries` herausgenommen, der heute darin landet — die Cockpit-Zahl waere fuer
-Bestandstouren **gesunken**, genau der Effekt, den AC-11/D4 verhindern sollen. Belegt
+Bestands-Trips **gesunken**, genau der Effekt, den AC-11/D4 verhindern sollen. Belegt
 wurde der Widerspruch durch den Bestandstest
 `tests/tdd/test_914_slice4_alert_sms_dispatch.py::test_ac3_sms_http_error_logged_email_still_delivers`,
 der das heutige Kriterium seit #914 festschreibt.

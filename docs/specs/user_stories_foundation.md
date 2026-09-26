@@ -16,7 +16,7 @@ Diese drei User Stories bilden die **produktstrategische Grundlage** für alle F
 
 ## US-1: Geografische & Zeitliche Kontrolle (Der Workspace)
 
-> **Als Tourenplaner**
+> **Als Trip-Planer**
 > möchte ich meine GPX-Tracks importieren und die vom System errechneten Wegpunkte und Ankunftszeiten auf einer Karte kontrollieren, anpassen sowie Pausentage einschieben können,
 > damit das System mein exaktes Bewegungsprofil kennt und die späteren Wetterabfragen räumlich und zeitlich präzise mit meinem realen Standort auf dem Berg übereinstimmen.
 

@@ -86,7 +86,7 @@ describe('Trichter: Stempel aufnehmen und mitschicken', () => {
 	});
 
 	test('test_weatherConfigPath_sharesStampWithTripPath', async () => {
-		// GIVEN: der Stempel gehoert zur TOUR, nicht zur Adresse — beide Pfade
+		// GIVEN: der Stempel gehoert zum TRIP, nicht zur Adresse — beide Pfade
 		// beschreiben dieselbe Datei.
 		await api.get('/api/trips/gr20');
 

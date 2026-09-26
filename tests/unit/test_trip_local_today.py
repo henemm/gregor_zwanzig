@@ -216,7 +216,7 @@ def test_ac8_trip_command_processor_verliert_die_privaten_methoden():
         )
 
 
-def test_ac8_anchor_folgt_der_heutigen_etappe_nicht_der_ersten_der_tour():
+def test_ac8_anchor_folgt_der_heutigen_etappe_nicht_der_ersten_des_trips():
     """Adversary-Hinweis (kein CRITICAL-Finding, Bestandsschutz): eine Trip
     ueber ZWEI Zonen — erste Etappe Auckland, die Etappe des HEUTIGEN
     Weltzeit-Tages Wien — muss ``anchor_tz()`` aus der Zone der HEUTIGEN

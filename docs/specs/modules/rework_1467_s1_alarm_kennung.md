@@ -158,7 +158,7 @@ wäre nicht mehr eindeutig.
 - **`BriefingLogEntry` bleibt unverändert** (`log.go:9-14`), obwohl es dasselbe Muster zeigt.
   Vergleichs-Briefings schreiben dort gar nicht; eigener Gegenstand, nicht Teil von #1467.
 - **`not_delivered` bleibt für Go unsichtbar** (D4 aus #1459) — Cockpit-Kachel und
-  Archiv-Statistik ändern sich für Bestandstouren um keine Zahl.
+  Archiv-Statistik ändern sich für Bestands-Trips um keine Zahl.
 - **D1 bleibt gültig** (#1459): EIN Eintrag je Meldung, Kanäle als Listen innerhalb des Eintrags.
 - Keine Änderung an Auslöse-Logik, Schwellen, Kanälen, Ruhezeiten oder Tages-Obergrenzen.
 

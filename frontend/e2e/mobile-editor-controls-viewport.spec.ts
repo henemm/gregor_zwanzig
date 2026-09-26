@@ -178,7 +178,7 @@ test.describe('Mobile-Editor — Steuerelemente im Viewport (#963)', () => {
 		await seed(page, id, 'E2E #963 Cascade', 'Tag 1');
 		await openMobileStagesEditor(page, id);
 
-		// Cascade-Strip erzwingen: Tourstart-Datum der ersten Etappe verschieben.
+		// Cascade-Strip erzwingen: Trip-Start-Datum der ersten Etappe verschieben.
 		// handleDateChange(Δ≠0, Etappen mit Datum dahinter) setzt `cascade` → Strip erscheint.
 		const headerDate = page.locator('[data-testid="stage-date-field"] input[type="date"]').first();
 		await headerDate.fill('2026-08-05');
@@ -218,7 +218,7 @@ test.describe('Mobile-Editor — Steuerelemente im Viewport (#963)', () => {
 	// UND die beiden Schaltflächen der Rückfrage selbst.
 	for (const vp of [
 		{
-			// Trifft die Staging-Geometrie: der längere Tourname schiebt den
+			// Trifft die Staging-Geometrie: der längere Trip-Name schiebt den
 			// Kartenblock auf y≈644.8 — gemessen auf Staging: 644.8, add-waypoint
 			// dort 656.8–701.1, hier 656.8–700.8. Das alte, starr unten verankerte
 			// Banner-Band lag bei 670.6–772.0 und schnitt beide Steuerelemente.

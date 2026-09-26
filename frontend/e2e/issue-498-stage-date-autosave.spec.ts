@@ -75,7 +75,7 @@ async function expectTimelineStrictlyAscending(
 }
 
 /** Ersetzt die Etappen des Seed-Trips (Bug #1393: die Fälle brauchen andere
- *  Ausgangstouren als die lückenlose Vier-Tage-Vorlage oben — genau deren
+ *  Ausgangs-Trips als die lückenlose Vier-Tage-Vorlage oben — genau deren
  *  Lückenlosigkeit hat den Rechenfehler bisher unsichtbar gemacht). */
 async function reseedStages(page: Page, stages: unknown[]): Promise<void> {
 	const res = await page.request.put(`/api/trips/${TRIP_ID}`, { data: { stages } });
@@ -748,7 +748,7 @@ test('AC-19 (#1390): eine andere Etappe anklicken lässt die Rückfrage erreichb
 // und rechnet nicht neu, während das neue Datum über den bedingungslosen Pfad
 // darunter sofort gespeichert wird. Die Bestätigung datierte die Folge-Etappen
 // danach ab dem veralteten Datum — die Trip ist in sich widersprüchlich (auf
-// Staging belegt: Tourstart +199, Folge-Etappen +163).
+// Staging belegt: Trip-Start +199, Folge-Etappen +163).
 // ─────────────────────────────────────────────────────────────────────────────
 
 test('AC-20 (#1390 F001/F002): zweites Umdatieren NACH dem Umsortieren rechnet mit der neuen Wahl', async ({
@@ -964,7 +964,7 @@ test('AC-26 (#1393): die Rückfrage nennt die tatsächlich betroffene Anzahl', a
 	const strip = page.getByTestId('cascade-strip');
 	await expect(strip).toBeVisible();
 	await expect(strip).toContainText('die 3 folgenden Etappen');
-	await expect(strip).not.toContainText('Tourstart');
+	await expect(strip).not.toContainText('Trip-Start');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -94,7 +94,7 @@ def test_find_active_trip_next_future(monkeypatch):
     near_trip = _make_trip("gr20", "GR20", [
         _make_stage("T1", "Tag 1", today + timedelta(days=5)),
     ])
-    far_trip = _make_trip("tour2", "Alpentour", [
+    far_trip = _make_trip("trip2", "Alpentour", [
         _make_stage("T1", "Tag 1", today + timedelta(days=30)),
     ])
 

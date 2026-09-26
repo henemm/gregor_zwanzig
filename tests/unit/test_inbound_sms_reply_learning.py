@@ -155,7 +155,7 @@ def _fake_production_origin(monkeypatch, reader_mod) -> None:
     monkeypatch.setattr(reader_mod, "classify_origin", lambda root: "production")
 
 
-def _trip_mit_aktiver_etappe(user_id: str, name: str = "SMS Testtour") -> None:
+def _trip_mit_aktiver_etappe(user_id: str, name: str = "SMS Test-Trip") -> None:
     """Legt einen minimalen, HEUTE aktiven Trip fuer ``user_id`` an (Issue
     #2282 AC-5): der Reader bricht seit #2282 VOR ``TripCommandProcessor``
     ab, wenn ``resolve_active_target`` weder Trip noch Ortsvergleich als

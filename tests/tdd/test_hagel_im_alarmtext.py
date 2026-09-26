@@ -135,7 +135,7 @@ def stufen_aenderungsalarm(spitzen_code: int):
         f"Fixture-Fehler: genau eine Gewitter-Stufenaenderung erwartet, {changes!r}"
     )
     return to_alert_message(
-        changes, [frisch], "Testtour", tz=ALERT_TZ, stand_at="10:00",
+        changes, [frisch], "Test-Trip", tz=ALERT_TZ, stand_at="10:00",
     )
 
 

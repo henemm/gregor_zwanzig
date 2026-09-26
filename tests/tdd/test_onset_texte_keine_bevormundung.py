@@ -230,7 +230,7 @@ def test_ac17_die_ende_angabe_bleibt_ein_reines_datum():
     """AC-17 (Kern) GIVEN dieselben Textstellen
     WHEN die Umgebung der Ende-Angabe betrachtet wird
     THEN steht dort die Uhrzeit allein — keine daraus abgeleitete Aussage
-    ueber Streckenposition, Restzeit des Nutzers oder Tourverlauf.
+    ueber Streckenposition, Restzeit des Nutzers oder Trip-Verlauf.
 
     Geprueft wird der Satz, in dem die Ende-Angabe steht: er darf keine
     Anrede in der zweiten Person tragen.

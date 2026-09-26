@@ -211,7 +211,7 @@ describe('F001: ein Lesevorgang darf einen juengeren Stempel nie ueberschreiben'
 
 	test('test_slowRead_afterStateDiscard_doesNotResurrectStaleStamp', async () => {
 		// Derselbe Mechanismus deckt einen zweiten Weg ab: `PATCH /state`
-		// veraendert die Tourdatei und verwirft deshalb den Stempel. Kommt eine
+		// veraendert die Trip-Datei und verwirft deshalb den Stempel. Kommt eine
 		// vorher gestartete Leseantwort danach an, darf sie den verworfenen Stand
 		// nicht wieder ablegen — er beschreibt die Datei VOR dem PATCH.
 		boot((method) => (method === 'GET' ? 60 : 0));

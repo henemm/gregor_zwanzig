@@ -31,7 +31,7 @@ Konto (S4b) ist ein eigener Folge-Workflow.
 | # | Frage | Entscheidung |
 |---|---|---|
 | E1 | Premium-SMS trotz „Premium: kein Tageslimit" (PO 2026-07-07, Alarm-FREQUENZ) deckeln? | Ja — Kosten-Deckel NUR für den Kanal Premium-SMS; E-Mail/Telegram bleiben für Premium unbegrenzt. Die Entscheidung vom 07.07. bleibt bestehen (sie betrifft die Alarm-Häufigkeit, nicht Kosten). |
-| E2 | Tageswechsel | UTC-Mitternacht (= 02:00 MESZ / 01:00 MEZ) — reine Kosten-Referenzgröße pro Nutzerkonto, kein wetter-/tourfachlicher Kalendertag. |
+| E2 | Tageswechsel | UTC-Mitternacht (= 02:00 MESZ / 01:00 MEZ) — reine Kosten-Referenzgröße pro Nutzerkonto, kein wetter-/tripfachlicher Kalendertag. |
 | E3 | Limitwerte / Zähler | Zwei getrennte Zähler `sms` und `premium_sms`. `free` 0, `standard` 10 SMS/Tag, `premium` 10 SMS/Tag + 15 Premium-SMS/Tag. |
 | E4 | Garmin-Antwort bei erreichtem Premium-SMS-Limit | Kleine feste Zusatzmenge (3/Tag) über dem Grundlimit, danach gesperrt. |
 
@@ -347,7 +347,7 @@ abrechnet, ist aus dem Repo nicht belegbar — offen vermerkt, keine Annahme get
   Architektur-Layer. **ADR-0044** („Heute"/„morgen" folgen der Ortszeit der Trip) bekommt einen
   additiven Zusatz „Nicht betroffen: der SMS-/Premium-SMS-Kostendeckel" nach der bestehenden
   Nicht-betroffen-Passage — dieser Zähler ist eine reine Kosten-Referenzgröße pro Nutzerkonto,
-  kein wetter- oder tourfachlicher Kalendertag, analog zur bereits dokumentierten Ausnahme
+  kein wetter- oder tripfachlicher Kalendertag, analog zur bereits dokumentierten Ausnahme
   „Dauern" (Zeile 36). **ADR-0049** (Premium-SMS als 4. Kanal, Punkt 5 Tier-Gate) bleibt
   unberührt — dieser Deckel ist ein zusätzliches Mengen-Gate, kein Ersatz für das bestehende
   Tier-Gate. **ADR-0031** (Python schreibt Throttle-Dateien unter `data/users/<id>/`, Spannung zur

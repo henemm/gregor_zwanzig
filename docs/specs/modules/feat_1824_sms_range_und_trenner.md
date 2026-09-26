@@ -100,7 +100,7 @@ Changelog): eine erste Fassung dieser Spec schlug vor, bei „nur Tiefstwert gew
 Anker `D` wiederzuverwenden (`D13` statt `K13`), mit der Begründung, `K` verschwinde sonst
 konsistent als eigenständiges Symbol. Der PO hat dem widersprochen: `D` steht im Format an jeder
 anderen Stelle für den HÖCHSTWERT — ein `D13`, das in Wahrheit den Tiefstwert zeigt, ist auf einem
-tourenentscheidungs-relevanten Kanal **Falschinformation**, nicht nur überraschend. Die geltende
+tripentscheidungs-relevanten Kanal **Falschinformation**, nicht nur überraschend. Die geltende
 Regel ist die einfachere: `K`/`FK` bedeuten immer Tiefstwert, `D`/`FD` bedeuten Höchstwert ODER —
 nur wenn beide Auswertungen gewählt sind — den Bereich von Tiefst- bis Höchstwert.
 
@@ -387,7 +387,7 @@ Golden-/Aufrufer-Tests lesen Token-Werte über diese gemeinsame Funktion.
   der Erstfassung vorgeschlagen). `K`/`FK` bleiben eigenständige Kürzel für Einzelwerte; ein
   Bereichs-Token entsteht ausschließlich bei gleichzeitig gewähltem Tiefst- UND Höchstwert.
   Begründung des PO: `D` bedeutet im Format sonst immer Höchstwert — ein `D13` mit tatsächlichem
-  Tiefstwert wäre auf einem tourenentscheidungs-relevanten Kanal Falschinformation. Betrifft
+  Tiefstwert wäre auf einem tripentscheidungs-relevanten Kanal Falschinformation. Betrifft
   Implementation Details ((A), Konstanten-Liste, Vier-Zustände-Tabelle), Estimated Scope (LoC
   deutlich kleiner, weil `SMS_MULTI_SYMBOLS_BY_METRIC`/`PRIORITY`/`POSITIONAL`/
   `_AGG_GATE_SYMBOLS` jetzt unverändert bleiben), AC-3/AC-4/AC-16/AC-17, Known Limitations.

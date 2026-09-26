@@ -199,7 +199,7 @@ def test_ac4_leere_auswahl_unterdrueckt_auch_den_zustands_fallback():
     ganzen Abschnitt abgewaehlt, nicht nur die Spalten.
 
     Positivkontrolle voran: ohne sie waere die Abwesenheit unten kein Beweis,
-    sondern koennte heissen, dass diese Tourform gar keinen Fallback erzeugt.
+    sondern koennte heissen, dass diese Trip-Form gar keinen Fallback erzeugt.
     """
     body_alt, bubbles_alt = versendete_teile(
         trip(outlook_metrics=None, stage_count=2))

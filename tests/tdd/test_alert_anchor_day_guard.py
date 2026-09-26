@@ -512,7 +512,7 @@ def test_ac11_verworfener_anker_erzeugt_diagnose_eintrag():
 
 # ════════════════════════════════ AC-13 ══════════════════════════════════════
 
-def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
+def test_ac13_laufender_trip_ohne_jeden_anker_eskaliert(caplog):
     """AC-13 (Teil C — laufende Trip ohne jeden Anker eskaliert).
 
     GIVEN eine Trip mit ``start_date <= heute <= end_date``, aber weder
@@ -548,7 +548,7 @@ def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
 
 # ════════════════════════════════ AC-14 ══════════════════════════════════════
 
-def test_ac14_noch_nicht_gestartete_tour_ohne_anker_bleibt_leise(caplog):
+def test_ac14_noch_nicht_gestarteter_trip_ohne_anker_bleibt_leise(caplog):
     """AC-14 (Teil C — noch nicht gestartete Trip ist der harmlose Normalfall).
 
     GIVEN eine Trip mit ``start_date > heute`` und weder datierter noch
@@ -697,7 +697,7 @@ def test_altersnetz_grenze_26h10_wird_verworfen(caplog):
 
 # ═══════ Abgelaufene Trip im Meldepfad (Korrekturrunde 2026-08-10) ═══════════
 
-def test_abgelaufene_tour_ohne_anker_bleibt_leise(caplog):
+def test_abgelaufener_trip_ohne_anker_bleibt_leise(caplog):
     """AC-14-Schwester: eine ABGELAUFENE Trip ohne Anker eskaliert nicht.
 
     GIVEN eine Trip, deren Laufzeitraum vorbei ist (``end_date < heute``), und

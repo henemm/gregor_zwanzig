@@ -349,7 +349,7 @@ def test_ac2_quiet_hours_midnight_wrap_suppresses_alert(telegram_sink, clean_use
 
     # Teil 2: End-to-End über check_and_send_alerts(), Ruhezeitfenster dynamisch
     # um die echte aktuelle Uhrzeit gelegt (±1h), kein Zeit-Mock. Issue #1726:
-    # `is_quiet_hours` vergleicht in der ORTSZONE DER TOUR (vorher fest
+    # `is_quiet_hours` vergleicht in der ORTSZONE DES TRIPS (vorher fest
     # Europe/Vienna). Das Fenster wird deshalb um die Ortszeit ebendieser Trip
     # zentriert — aus DERSELBEN Auflösung, die der Prüfling benutzt, statt aus
     # einer im Test wiederholten Zonen-Annahme.

@@ -87,7 +87,7 @@ describe('etagRegistry — Stand je Trip', () => {
 		assert.equal(getKnownEtag('gr20'), '"fp-2"');
 
 		// UND: auch das VERWERFEN zaehlt als Veraenderung — ein `PATCH /state`
-		// hat die Tourdatei angefasst, jeder vorher erfasste Stempel ist veraltet.
+		// hat die Trip-Datei angefasst, jeder vorher erfasste Stempel ist veraltet.
 		const gesehen2 = etagVersion('gr20');
 		discardEtag('gr20');
 		assert.equal(setKnownEtagIfUnchanged('gr20', '"fp-2"', gesehen2), false);

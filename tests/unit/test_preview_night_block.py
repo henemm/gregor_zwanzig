@@ -77,7 +77,7 @@ def _trip(show_night_block: bool) -> Trip:
     dc = build_default_display_config()
     dc = dataclasses.replace(dc, show_night_block=show_night_block)
     return Trip(
-        id="t1", name="Testtour", stages=[],
+        id="t1", name="Test-Trip", stages=[],
         aggregation=AggregationConfig(),
         display_config=dc,
         report_config=None,

@@ -204,7 +204,7 @@ Gleichheits-Invariante oder verliert die Werte beim ersten Trip-Save.
 - **AC-9:** Given eine mehrtägige Trip mit mehreren vermessenen Etappen / When die
   Kilometer-Spanne für eine beliebige Etappe berechnet wird / Then beginnt die Zählung an diesem
   Etappenstart wieder bei 0 km, unabhängig von der kumulierten Gesamtstrecke der Trip.
-  - Test: Für die dritte Etappe einer vermessenen Mehrtagestour wird die erste Kilometer-Spanne
+  - Test: Für die dritte Etappe einer vermessenen Mehrtages-Trip wird die erste Kilometer-Spanne
     berechnet; ihr Startwert ist 0, nicht die Summe der Distanzen der vorherigen Etappen.
 
 - **AC-10:** Given ein Bestandstrip, für den sich kein passender GPX-Track im Bestand des

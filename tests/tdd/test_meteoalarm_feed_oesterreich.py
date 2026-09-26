@@ -132,7 +132,7 @@ def _load_equivalence_feed() -> dict:
     ``feed_austria_sample.json`` taugt dafuer NICHT -- das ist eine fuer
     Testabdeckung kuratierte Auswahl von 6 aus 1220 Eintraegen, und ein
     Bruchteil kann strukturell nie Obermenge eines vollstaendigen EDR-Index
-    sein (gemessen 2026-08-01 mit der Sample-Fixture: alle 8 Tourpunkte
+    sein (gemessen 2026-08-01 mit der Sample-Fixture: alle 8 Trip-Punkte
     meldeten Abweichungen). Alle uebrigen Tests dieser Datei benutzen
     weiterhin ``feed_austria_sample.json``."""
     return json.loads((_FIXTURES / "feed_austria_equivalence.json").read_text(encoding="utf-8"))
@@ -860,7 +860,7 @@ def test_ac4_mehrere_punkte_loesen_nur_einen_feedabruf_und_keine_zusaetzlichen_z
 # ``AUFNAHME_UTC`` (2026-08-01T16:19:43Z) vor -- alle drei Seiten zur selben
 # Minute ueber den Produktivcode gezogen: ``edr_snapshot_at.json`` (EDR-Index,
 # lueckenlos ueber 38 Seiten geblaettert), ``feed_austria_equivalence.json``
-# (Feed-Bestand) und ``zamg_snapshot_at.json`` (Zonenzuordnung je Tourpunkt),
+# (Feed-Bestand) und ``zamg_snapshot_at.json`` (Zonenzuordnung je Trip-Punkt),
 # Herkunft s. README im Fixture-Verzeichnis. Das Gate laeuft seither scharf,
 # die frueher noetige ``xfail``-Markierung ist ersatzlos entfallen.
 #
@@ -888,21 +888,21 @@ def _alert_identitaet(alert: "OfficialAlert") -> tuple:
 
 
 def _pruefe_obermenge(
-    tourpunkte: "list[tuple[float, float]]",
+    trippunkte: "list[tuple[float, float]]",
     feed_je_punkt: dict,
     edr_je_punkt: dict,
 ) -> "list[str]":
-    """Vergleicht je Tourpunkt die Feed- gegen die EDR-Warnungsmenge. Liefert
+    """Vergleicht je Trip-Punkt die Feed- gegen die EDR-Warnungsmenge. Liefert
     eine Liste menschenlesbarer Abweichungen -- leer bedeutet: die Feed-Menge
-    ist fuer JEDEN Tourpunkt eine Obermenge der EDR-Menge (AC-5)."""
+    ist fuer JEDEN Trip-Punkt eine Obermenge der EDR-Menge (AC-5)."""
     abweichungen: "list[str]" = []
-    for punkt in tourpunkte:
+    for punkt in trippunkte:
         feed_ids = {_alert_identitaet(a) for a in feed_je_punkt.get(punkt, [])}
         edr_ids = {_alert_identitaet(a) for a in edr_je_punkt.get(punkt, [])}
         fehlend = edr_ids - feed_ids
         if fehlend:
             abweichungen.append(
-                f"Tourpunkt {punkt}: im EDR-Snapshot, aber NICHT im Feed: {sorted(fehlend)}"
+                f"Trip-Punkt {punkt}: im EDR-Snapshot, aber NICHT im Feed: {sorted(fehlend)}"
             )
     return abweichungen
 
@@ -978,18 +978,18 @@ def test_pruefe_obermenge_erkennt_fehlende_edr_warnung_im_feed(tmp_path):
     assert "extreme_heat" in abweichungen[0]
 
 
-def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkeypatch):
+def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_trippunkte(monkeypatch):
     """AC-5 (Pflicht-Gate vor Freigabe): GIVEN ein zur selben Minute
     aufgezeichneter EDR-Ausschnitt, der Feed-Ausschnitt UND die ZAMG-Antwort
-    fuer dieselbe Liste realer oesterreichischer Tourpunkte (inkl. Karnischer
+    fuer dieselbe Liste realer oesterreichischer Trip-Punkte (inkl. Karnischer
     Hoehenweg), WHEN beide Ergebnismengen ueber ``_pruefe_obermenge``
-    gegenuebergestellt werden, THEN ist die Feed-Menge fuer JEDEN Tourpunkt
+    gegenuebergestellt werden, THEN ist die Feed-Menge fuer JEDEN Trip-Punkt
     eine Obermenge der EDR-Menge (Vergleichs-Kennung: ``_alert_identitaet`` --
     Gefahrenart + Stufe + Region + Gueltigkeitszeitraum, s. Docstring dort).
 
     Aufzeichnung: ``AUFNAHME_UTC`` (2026-08-01T16:19:43Z), alle drei Seiten
     zur selben Minute ueber den Produktivcode gezogen --
-    ``edr_snapshot_at.json`` (8 reale Tourpunkte, EDR-Index lueckenlos ueber
+    ``edr_snapshot_at.json`` (8 reale Trip-Punkte, EDR-Index lueckenlos ueber
     38 Seiten geblaettert) gegen ``feed_austria_equivalence.json``
     (Feed-Bestand derselben Minute), Zonenzuordnung aus
     ``zamg_snapshot_at.json``. Herkunft und Auswahlkriterium: README im
@@ -1017,12 +1017,12 @@ def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
 
     _assert_pruefling_aus_diesem_baum()
     edr_je_punkt = _lade_alert_liste_aus_json(json.loads(edr_path.read_text(encoding="utf-8")))
-    tourpunkte = list(edr_je_punkt.keys())
-    assert len(tourpunkte) == 8 and all(edr_je_punkt[p] for p in tourpunkte), (
-        f"Aufbaupruefung: die Aufzeichnung muss 8 Tourpunkte mit JE mindestens "
+    trippunkte = list(edr_je_punkt.keys())
+    assert len(trippunkte) == 8 and all(edr_je_punkt[p] for p in trippunkte), (
+        f"Aufbaupruefung: die Aufzeichnung muss 8 Trip-Punkte mit JE mindestens "
         f"einer EDR-Warnung tragen -- gegen leere EDR-Mengen ist jede "
         f"Obermengen-Pruefung trivial erfuellt und beweist nichts. Erhalten: "
-        f"{[(p, len(edr_je_punkt[p])) for p in tourpunkte]}"
+        f"{[(p, len(edr_je_punkt[p])) for p in trippunkte]}"
     )
     zamg_eintraege = json.loads(zamg_path.read_text(encoding="utf-8"))
     zamg_antworten = {
@@ -1031,12 +1031,12 @@ def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
         )
         for eintrag in zamg_eintraege
     }
-    assert all(_round4(*punkt) in zamg_antworten for punkt in tourpunkte), (
-        f"Aufbaupruefung: die ZAMG-Aufzeichnung muss JEDEN Tourpunkt des "
+    assert all(_round4(*punkt) in zamg_antworten for punkt in trippunkte), (
+        f"Aufbaupruefung: die ZAMG-Aufzeichnung muss JEDEN Trip-Punkt des "
         f"EDR-Snapshots abdecken -- ein fehlender Punkt liefe sonst in den "
         f"404-Zweig des lokalen Servers und meldete faelschlich 'nicht "
         f"zustaendig'. Fehlend: "
-        f"{[p for p in tourpunkte if _round4(*p) not in zamg_antworten]}"
+        f"{[p for p in trippunkte if _round4(*p) not in zamg_antworten]}"
     )
 
     # Gleichbehandlung beider Seiten -- dieselbe Entscheidung wie im
@@ -1065,7 +1065,7 @@ def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
     # die STRENGERE Variante -- er verlangt vom Feed auch die abgelaufenen
     # Warnungen, und der Feed liefert sie (er reicht weiter zurueck als der
     # EDR-Index).
-    alle_edr = [a for punkt in tourpunkte for a in edr_je_punkt[punkt]]
+    alle_edr = [a for punkt in trippunkte for a in edr_je_punkt[punkt]]
     gefiltert = oa_base.filter_alerts_to_window(alle_edr, AUFNAHME_UTC, None)
     assert len(gefiltert) < len(alle_edr), (
         f"Aufbaupruefung: die EDR-Aufzeichnung muss zum Aufnahmezeitpunkt "
@@ -1084,7 +1084,7 @@ def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
         quelle = meteoalarm_feed.MeteoAlarmFeedSource("AT")
 
         feed_je_punkt = {}
-        for punkt in tourpunkte:
+        for punkt in trippunkte:
             assert quelle.covers(*punkt) is True, (
                 f"Aufbaupruefung: {punkt} muss von der Feed-Quelle abgedeckt sein "
                 f"-- sonst vergleicht das Gate einen Punkt, den die Quelle in "
@@ -1092,7 +1092,7 @@ def test_ac5_feed_menge_ist_obermenge_der_edr_menge_fuer_reale_tourpunkte(monkey
             )
             feed_je_punkt[punkt] = quelle.fetch(*punkt)
 
-        abweichungen = _pruefe_obermenge(tourpunkte, feed_je_punkt, edr_je_punkt)
+        abweichungen = _pruefe_obermenge(trippunkte, feed_je_punkt, edr_je_punkt)
         assert not abweichungen, "\n".join(abweichungen)
     finally:
         server.shutdown()

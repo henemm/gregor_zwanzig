@@ -2,7 +2,7 @@
 // Spec: docs/specs/modules/issue_1395_s3_etag_registry.md — AC-5, AC-10.
 //
 // `PATCH /api/trips/{id}/state` laeuft an fuenf Stellen per rohem `fetch` am
-// Trichter vorbei. Jeder erfolgreiche Aufruf veraendert die Tourdatei und damit
+// Trichter vorbei. Jeder erfolgreiche Aufruf veraendert die Trip-Datei und damit
 // den Fingerabdruck, liefert aber laut S2 (AC-15) KEINEN neuen ETag. Ohne
 // Verwerfen wuerde die Anwendung sich selbst einen Konflikt bauen.
 //

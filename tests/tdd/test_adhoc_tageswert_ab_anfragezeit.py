@@ -47,7 +47,7 @@ from services.weather_snapshot import WeatherSnapshotService
 
 HEUTE = date(2026, 2, 14)
 MORGEN = date(2026, 2, 15)
-TRIP_ID = "tour-2186-adhoc"
+TRIP_ID = "trip-2186-adhoc"
 TRIP_NAME = "Trip 2186 Adhoc"
 
 # London im Februar ist GMT — Ortszeit == UTC. Der Ortstag deckt sich damit

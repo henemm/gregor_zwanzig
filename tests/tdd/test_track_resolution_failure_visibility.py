@@ -135,11 +135,11 @@ def _gpx_dir(user_id: str) -> Path:
     return d
 
 
-def _trip(user_id: str, waypoints, trip_id: str = "tour-2073-s2"):
+def _trip(user_id: str, waypoints, trip_id: str = "trip-2073-s2"):
     from app.trip import Stage, Trip
 
     stage = Stage(id="T1", name="Etappe 1", date=_ZIELDATUM, waypoints=waypoints)
-    return Trip(id=trip_id, name="Testtour 2073 S2", stages=[stage])
+    return Trip(id=trip_id, name="Test-Trip 2073 S2", stages=[stage])
 
 
 def _waypoints(versatz_je_index=None, distanzen=None):
@@ -419,15 +419,15 @@ def test_journale_zweier_nutzer_bleiben_getrennt():
     uid_a, uid_b = "tdd-2073-s2-ac7-anna", "tdd-2073-s2-ac7-bodo"
     _gpx_schreiben(_gpx_dir(uid_a) / "route.gpx", _gitter())
     _gpx_schreiben(_gpx_dir(uid_b) / "route.gpx", _gitter())
-    trip_a = _trip(uid_a, _waypoints({2: 111.0}), trip_id="tour-anna")
-    trip_b = _trip(uid_b, _waypoints({2: 111.0}), trip_id="tour-bodo")
+    trip_a = _trip(uid_a, _waypoints({2: 111.0}), trip_id="trip-anna")
+    trip_b = _trip(uid_b, _waypoints({2: 111.0}), trip_id="trip-bodo")
 
     _lauf(uid_a, trip_a)
     _lauf(uid_b, trip_b)
 
     zeilen_a, zeilen_b = _journal(uid_a), _journal(uid_b)
-    assert [z["trip_id"] for z in zeilen_a] == ["tour-anna"], zeilen_a
-    assert [z["trip_id"] for z in zeilen_b] == ["tour-bodo"], zeilen_b
+    assert [z["trip_id"] for z in zeilen_a] == ["trip-anna"], zeilen_a
+    assert [z["trip_id"] for z in zeilen_b] == ["trip-bodo"], zeilen_b
 
     from app.loader import get_data_root
 

@@ -674,7 +674,7 @@
 				bind:this={cascadeEl}
 				style="--gz-cascade-bottom: {cascadeBottomPx}px"
 			>
-				<!-- Bug #1393: kein „Tourstart" mehr (es kann jede Etappe sein) und kein
+				<!-- Bug #1393: kein „Trip-Start" mehr (es kann jede Etappe sein) und kein
 				     „derselbe Betrag" (es wird lückenlos durchdatiert). -->
 				<p>
 					<strong>Diese Etappe liegt jetzt am {formatDeDate(cascade.anchorDate)}.</strong>
@@ -932,7 +932,7 @@
 		gap: 8px;
 	}
 
-	/* Issue #498 — Cascade-Strip (Tourstart-Verschiebung Folge-Etappen?) */
+	/* Issue #498 — Cascade-Strip (Trip-Start-Verschiebung Folge-Etappen?) */
 	.cascade-prompt,
 	.cascade-done {
 		display: flex;

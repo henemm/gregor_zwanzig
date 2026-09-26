@@ -130,7 +130,7 @@
 				}
 				return;
 			}
-			// Issue #1395 S3: der erfolgreiche PATCH hat die Tourdatei veraendert,
+			// Issue #1395 S3: der erfolgreiche PATCH hat die Trip-Datei veraendert,
 			// liefert aber keinen neuen Stempel (S2 AC-15). Der gemerkte Stand ist
 			// damit veraltet — ohne Verwerfen wuerde sich die Anwendung selbst
 			// einen Konflikt bauen.

@@ -14,7 +14,7 @@ konfigurierten Kanal unterdrueckt ihn ausdruecklich NICHT (Best-Effort,
 Anti-Pattern #656). Nur wenn gar kein Kanal konfigurierbar ist — heute
 verschwindet die Meldung dann SPURLOS — landet der Eintrag im zweiten
 Top-Level-Schluessel ``not_delivered``. So aendern sich Cockpit-Kachel und
-Archiv-Statistik fuer Bestandstouren um keine Zahl (AC-11).
+Archiv-Statistik fuer Bestands-Trips um keine Zahl (AC-11).
 
 RED-Grund heute: ``_append_alert_log()`` kennt weder Kanal-Listen noch
 ``not_delivered``; ``services.alert_log.append_entry()`` existiert nicht.
@@ -158,7 +158,7 @@ def test_ac10_kein_konfigurierbarer_kanal_landet_in_not_delivered():
     Das ist der Fall, in dem die Meldung heute SPURLOS verschwindet: der
     Bestand schreibt hier gar keinen Eintrag. ``entries`` waechst dadurch
     nicht — die Zahl in Cockpit-Kachel und Archiv-Statistik bleibt fuer
-    Bestandstouren unveraendert (AC-11)."""
+    Bestands-Trips unveraendert (AC-11)."""
     uid = fresh_user("ac10")
     settings = _settings_email_unconfigured_telegram_available()
     assert settings.can_send_email() is False, (
@@ -265,7 +265,7 @@ def test_ac11_fehlgeschlagener_versand_veraendert_die_angezeigte_zahl_nicht():
     assert nachher == 2, (
         f"Die fuer die Trip 'X' gezaehlten Eintraege sind von {vorher} auf "
         f"{nachher} gestiegen — Cockpit-Kachel und Archiv-Statistik wuerden "
-        "sich fuer eine Bestandstour aendern (D4-Kernforderung)."
+        "sich fuer eine Bestands-Trip aendern (D4-Kernforderung)."
     )
     assert len(read_log(uid)["not_delivered"]) == 1, (
         "Der fehlgeschlagene Versand muss stattdessen in 'not_delivered' stehen."

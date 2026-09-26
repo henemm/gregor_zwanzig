@@ -211,7 +211,7 @@ def test_ac1_wertebereich_als_einzige_quelle_loest_keinen_alarm_aus():
         _clean_user(user_id)
 
 
-def test_ac1b_tour_mit_nur_wertebereich_wird_im_gesamtlauf_nicht_alarmiert():
+def test_ac1b_trip_mit_nur_wertebereich_wird_im_gesamtlauf_nicht_alarmiert():
     """AC-1 (Gesamtlauf).
 
     GIVEN dieselbe Trip, gespeichert auf Platte

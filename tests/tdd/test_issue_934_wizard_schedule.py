@@ -447,6 +447,6 @@ class TestManuellNotwendig:
         pass
 
     @pytest.mark.skip(reason="Manuell: GPX-Upload im Wizard nicht automatisierbar")
-    def test_wizard_tour_anlegen_mit_zeitplan_config(self):
+    def test_wizard_trip_anlegen_mit_zeitplan_config(self):
         """Platzhalter — manuelle Verifikation erforderlich."""
         pass

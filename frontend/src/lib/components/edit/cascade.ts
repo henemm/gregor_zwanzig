@@ -2,7 +2,7 @@
 //
 // Pure helpers — keine DOM-Abhängigkeit, keine Mocks. Werden von
 // EditStagesPanelNew.svelte verwendet, um:
-//   1. Folge-Etappen bei Tourstart-Verschiebung um N Tage zu verschieben (addDays)
+//   1. Folge-Etappen bei Trip-Start-Verschiebung um N Tage zu verschieben (addDays)
 //   2. Den Tage-Delta zwischen altem und neuem Datum zu berechnen (computeCascadeDelta)
 //
 // ISO-Format: "YYYY-MM-DD" (lokales Datum, ohne Timezone-Shift).
@@ -35,7 +35,7 @@ export function computeCascadeDelta(oldIso: string, newIso: string): number {
  * Bug #1393 — die Folge-Etappen werden LÜCKENLOS durchdatiert, nicht um
  * denselben Betrag verschoben. Legt der Nutzer eine Etappe auf den 26.7., wird
  * die nächste der 27.7., die übernächste der 28.7. — ungleiche Abstände der
- * Ausgangstour werden dabei bewusst eingeebnet (PO-Entscheidung).
+ * Ausgangs-Trip werden dabei bewusst eingeebnet (PO-Entscheidung).
  *
  * `followerIds` sind die Etappen HINTER der bearbeiteten, in Reihenfolge und
  * nur die MIT Datum: eine Etappe ohne Datum steht nicht in der Liste, bleibt

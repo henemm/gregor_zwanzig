@@ -19,7 +19,7 @@ tags: [frontend, mobile, trip-editor, cascade, autosave, data-loss]
 
 Zwei zusammenhängende Bugs auf derselben Oberfläche (Etappen-Datum-Bearbeitung,
 `/trips/{id}?tab=stages`) werden gemeinsam behoben: (1) der Kaskaden-Rückfrage-Dialog
-beim Verschieben des Tourstarts ist auf Mobilgeräten unsichtbar unterhalb des
+beim Verschieben des Trip-Starts ist auf Mobilgeräten unsichtbar unterhalb des
 Viewports (#1375), (2) eine Datumsänderung an einer mittleren Etappe oder einem
 Pausentag geht kommentarlos verloren, wenn die Seite innerhalb des 700ms-Auto-Save-
 Fensters verlassen oder neu geladen wird (#1376, Datenverlust-Risiko).
@@ -108,8 +108,8 @@ die bereits vorhandene `SaveStatus`-API (`hasPending`, `flush()`).
 ## Expected Behavior
 
 - **Input:** Nutzer ändert im Etappen-Tab (`?tab=stages`) das Datum einer Etappe
-  — Tourstart, mittlere Etappe oder Pausentag — auf Mobil oder Desktop.
-- **Output:** Bei Tourstart-Verschiebung erscheint die Kaskaden-Rückfrage
+  — Trip-Start, mittlere Etappe oder Pausentag — auf Mobil oder Desktop.
+- **Output:** Bei Trip-Start-Verschiebung erscheint die Kaskaden-Rückfrage
   sichtbar im Bildschirmausschnitt, unabhängig von Viewport-Größe. Bei jeder
   Datumsänderung bleibt die Änderung auch dann erhalten, wenn die Seite kurz
   danach verlassen/neu geladen wird — ohne Warn-Rückfrage, die Speicherung
@@ -122,7 +122,7 @@ die bereits vorhandene `SaveStatus`-API (`hasPending`, `flush()`).
 - **AC-1:** Given ein Trip mit mindestens zwei Etappen ist im Etappen-Tab auf
   einem mobilen Viewport (≤899px, z.B. 390×844) geöffnet und die erste Etappe
   ist aktiv / When der Nutzer das Datum der ersten Etappe im Etappen-Header
-  ändert / Then wird der Kaskaden-Dialog „Tourstart um ±N Tage verschoben. Sollen
+  ändert / Then wird der Kaskaden-Dialog „Trip-Start um ±N Tage verschoben. Sollen
   die N Folge-Etappen um denselben Betrag mitverschoben werden?" mit den
   Schaltflächen „Alle mitverschieben" und „Nur diese Etappe" vollständig
   sichtbar im Bildschirmausschnitt angezeigt, ohne dass manuell gescrollt werden muss.

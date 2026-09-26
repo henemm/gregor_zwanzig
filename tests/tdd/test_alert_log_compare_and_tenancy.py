@@ -208,9 +208,9 @@ def test_ac13_zwei_nutzer_protokollieren_streng_getrennt():
                               (bob, "trip-bob", "trip-alice")):
         log = read_log(uid)
         alle = log["entries"] + log["not_delivered"]
-        touren = {e.get("entity_id") for e in alle}
-        assert touren == {eigen}, (
-            f"Das Protokoll von {uid} enthaelt {touren!r} statt nur {eigen!r} — "
+        trips = {e.get("entity_id") for e in alle}
+        assert trips == {eigen}, (
+            f"Das Protokoll von {uid} enthaelt {trips!r} statt nur {eigen!r} — "
             f"Fremd-Eintrag {fremd!r} waere ein Datenleck zwischen Nutzern."
         )
         assert all(e.get("reason") == "forecast_change" for e in alle), (

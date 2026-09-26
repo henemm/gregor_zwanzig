@@ -421,10 +421,10 @@ def test_ac28_etappen_pause_schliesst_spaetere_etappen_nicht_aus():
         _clean_user(user_id)
 
 
-def test_ac29_beendete_tour_wertet_keine_amtliche_warnung_mehr_aus():
+def test_ac29_beendeter_trip_wertet_keine_amtliche_warnung_mehr_aus():
     """AC-29.
 
-    GIVEN der letzte Tourtag, die letzte Etappe ist bereits beendet und es gibt
+    GIVEN der letzte Trip-Tag, die letzte Etappe ist bereits beendet und es gibt
           keine weitere Etappe
     WHEN  die amtlichen Warnungen der Trip geprueft werden
     THEN  wird kein amtlicher Alarm mehr ausgewertet — das Ergebnis ist leer.
@@ -442,7 +442,7 @@ def test_ac29_beendete_tour_wertet_keine_amtliche_warnung_mehr_aus():
             _data("letzte", COORD_HEUTE, _now() - timedelta(hours=5), _now() - timedelta(hours=1)),
         ])
         register_official_alert_source(_PointSource(COORD_HEUTE, [
-            _alert("Warnung nach Tourende", _now() - timedelta(hours=1), _now() + timedelta(hours=6)),
+            _alert("Warnung nach Trip-Ende", _now() - timedelta(hours=1), _now() + timedelta(hours=6)),
         ]))
 
         result = TripAlertService(user_id=user_id).check_official_alert_triggers(trip)

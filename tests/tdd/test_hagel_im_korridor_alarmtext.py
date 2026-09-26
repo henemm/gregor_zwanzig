@@ -54,7 +54,7 @@ def korridor_alarm(spitzen_code: int):
     treffer = evaluate_corridor_thresholds([punkt], [grenze])
     assert len(treffer) == 1, f"Fixture-Fehler: genau ein Korridor-Treffer erwartet, {treffer!r}"
     msg = to_alert_message(
-        [], [punkt], "Testtour", tz=ALERT_TZ, stand_at="10:00",
+        [], [punkt], "Test-Trip", tz=ALERT_TZ, stand_at="10:00",
         corridor_hits=treffer,
     )
     assert len(msg.corridor_events) == 1 and not msg.events, (

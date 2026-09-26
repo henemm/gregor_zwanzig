@@ -17,7 +17,7 @@ workflow: fix-1727-s5a-befehlspfade
 
 ## Purpose
 
-Die Befehlspfade `/status`, `/jetzt`, `### ruhetag` und die Tourauswahl `_find_active_trip`
+Die Befehlspfade `/status`, `/jetzt`, `### ruhetag` und die Trip-Auswahl `_find_active_trip`
 bestimmen „welcher Kalendertag gemeint ist" weiterhin über die Serveruhr (`date.today()`) bzw.
 den UTC-Tag der eingehenden Nachricht (`msg.received_at.date()`) statt über den Ortstag der
 Trip — ein Verstoß gegen die bereits akzeptierte ADR-0044. Diese Scheibe (S5a von #1727, Epic
@@ -122,8 +122,8 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
 ## Expected Behavior
 
 - **Input:** ein eingehender Telegram- oder Mail-Befehl (`msg.received_at`, ein UTC-Zeitpunkt)
-  für `/status`, `/jetzt`, `### ruhetag` oder die vorgelagerte Tourauswahl.
-- **Output:** Der Tagesbezug (Etappenfilter, Etappenwahl, Tourauswahl, Idempotenzschlüssel)
+  für `/status`, `/jetzt`, `### ruhetag` oder die vorgelagerte Trip-Auswahl.
+- **Output:** Der Tagesbezug (Etappenfilter, Etappenwahl, Trip-Auswahl, Idempotenzschlüssel)
   entspricht dem **Ortstag der betroffenen Trip** zum Zeitpunkt `received_at` — nicht dem
   Servertag (`Etc/UTC`) und nicht dem rohen UTC-Datum der Nachricht.
 - **Side effects:** `command_log.json`-Einträge tragen künftig den Ortstag statt des
@@ -201,12 +201,12 @@ sich damit garantiert auf denselben Augenblick statt auf zwei knapp versetzte
     sie den Test bricht.
 
 - **AC-8:** Given zwei aneinandergrenzende Trips in Mitteleuropa (UTC+2) — Trip A endet an
-  Ortstag D, Trip B beginnt an Ortstag D+1 — der Blast-Radius-Grenzfall an der Tourgrenze / When
+  Ortstag D, Trip B beginnt an Ortstag D+1 — der Blast-Radius-Grenzfall an der Trip-Grenze / When
   eine Telegram-Nachricht um 22:30 UTC eintrifft (= 00:30 Ortszeit des Folgetags D+1) / Then
   wählt `_find_active_trip` bereits Trip B, weil lokal schon D+1 ist — vor dem Fix hätte der
   Servertag D noch Trip A gewählt, und ein bereits abgelaufener Trip hätte den Befehl fälschlich
   beantwortet.
-  - Test: `freeze_time` 22:30 UTC, Tourenliste [A endend D, B beginnend D+1], Assertion auf
+  - Test: `freeze_time` 22:30 UTC, Trip-Liste [A endend D, B beginnend D+1], Assertion auf
     `_find_active_trip(...) is B`.
 
 - **AC-9:** Given ein neuer Test für eine der vier Fundstellen dieser Scheibe wird geschrieben,

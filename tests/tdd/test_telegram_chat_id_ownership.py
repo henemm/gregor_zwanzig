@@ -250,7 +250,7 @@ def test_incoming_message_from_ambiguous_chat_id_leaks_no_account_data(
     monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
     _write_user(tmp_path, "anna", chat_id=AMBIGUOUS_CHAT_ID, mail_to="anna@example.com")
     _write_user(tmp_path, "bertram", chat_id=AMBIGUOUS_CHAT_ID, mail_to="bertram@example.com")
-    trip = _make_active_trip("anna", "Anna-Geheimtour")
+    trip = _make_active_trip("anna", "Anna-Geheim-Trip")
 
     recorder = _WireRecorder()
     monkeypatch.setattr(httpx, "post", recorder.post)

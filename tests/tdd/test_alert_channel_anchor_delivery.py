@@ -361,7 +361,7 @@ def test_ac5_kanallose_altdatei_dient_jedem_kanal_als_rueckfall():
         geladen = svc.load_alarm_anchor(trip_id, channel=channel)
         assert geladen, (
             f"AC-5: die kanallose Altdatei muss fuer {channel!r} weiterhin als "
-            "Vergleichsbasis dienen — sonst verlieren alle Bestandstouren beim "
+            "Vergleichsbasis dienen — sonst verlieren alle Bestands-Trips beim "
             "Deploy ihren rollierenden Anker."
         )
         assert geladen[0].aggregated.gust_max_kmh == pytest.approx(ALTBESTAND_BOE), (
