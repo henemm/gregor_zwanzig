@@ -24,7 +24,6 @@ from app.models import (
     ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
     SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripSegment,
 )
-from output.renderers.trip_report import TripReportFormatter
 from services.notification_service import NotificationService, TripReportRequest
 from tests.helpers.transport_mitschrift import Kanalmitschrift, aufzeichner_installieren
 
@@ -123,7 +122,7 @@ def golden_dict(name: str) -> dict:
 
 def golden_trip(name: str):
     """Golden-JSON ueber den ECHTEN ``load_trip``-Loader eingelesen."""
-    return load_trip(golden_dict(name))
+    return load_trip(golden_dict(name), user_id="default")
 
 
 # ---------------------------------------------------------------------------

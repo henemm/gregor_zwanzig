@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import pytest
 
-from app.models import UnifiedWeatherDisplayConfig
 from tests.helpers.einstellung_auslieferung_orakel import (
     AUSNAHMEN,
     AusnahmeEintrag,
@@ -95,7 +94,7 @@ def test_ac1_golden_trips_laden_unveraendert(monkeypatch):
 
     for name in ("golden_a", "golden_b"):
         data = golden_dict(name)
-        trip = load_trip(data)
+        trip = load_trip(data, user_id="default")
         dc = trip.display_config
         assert dc.per_channel_layouts is not None
         for kanal in ("email", "telegram", "sms"):
