@@ -286,7 +286,19 @@ import pytest
 from app.config import Settings
 from app.loader import get_briefings_dir, get_data_dir, save_trip
 from app.metric_catalog import get_all_metrics, get_metric
-from app.models import TripReportConfig
+from app.models import (
+    ForecastDataPoint,
+    ForecastMeta,
+    GPXPoint,
+    NormalizedTimeseries,
+    PrecipType,
+    Provider,
+    SegmentWeatherData,
+    SegmentWeatherSummary,
+    ThunderLevel,
+    TripReportConfig,
+    TripSegment,
+)
 from app.trip import Stage, Trip, Waypoint
 from output.channels.telegram import TelegramOutput
 from services.inbound_sms_reader import SERVICE_NUMBER
@@ -580,11 +592,105 @@ def user_ids():
         shutil.rmtree(get_briefings_dir(uid).parent, ignore_errors=True)
 
 
+#: Ein Wert je Stundenfeld, das mindestens eine waehlbare Katalog-Groesse
+#: fuehrt (Team-Lead-Vorgabe 2026-09-25, Fundament-Korrektur 4 -- Vorbild
+#: ``test_abruf_jede_metrik_e2e.py::STANDARD_STUNDENWERT``, HIER separat
+#: gepflegt, weil eine Testdatei nicht vom Fundament importieren darf und
+#: umgekehrt Doppelimport zwischen zwei gleichrangigen Modulen vermieden
+#: wird). ``uv_index`` bleibt ABSICHTLICH aussen vor -- sie ist die bewusst
+#: leer gelassene Groesse fuer AC-33 ("fehlende Groesse wird benannt");
+#: wuerde sie hier mitgefuellt, koennte kein Ad-hoc-Abruf mehr den
+#: "nicht verfuegbar"-Fall zeigen.
+STANDARD_STUNDENWERT: dict = dict(
+    t2m_c=12.0, wind10m_kmh=18.0, wind_direction_deg=225, gust_kmh=30.0,
+    precip_1h_mm=0.4, pop_pct=40, thunder_level=ThunderLevel.MED,
+    pressure_msl_hpa=1013.0, humidity_pct=55, dewpoint_c=6.0,
+    snow_depth_cm=12.0, snow_new_24h_cm=2.0, snowfall_limit_m=1800,
+    freezing_level_m=2200, wind_chill_c=9.0, visibility_m=8000,
+    cloud_total_pct=60, cloud_low_pct=40, cloud_mid_pct=20, cloud_high_pct=10,
+    dni_wm2=120.0, precip_type=PrecipType.RAIN,
+)
+
+
+def _segment_fuer_stage(stage: Stage) -> SegmentWeatherData:
+    """EIN Segment fuer GENAU eine Etappe, mit Stundenpunkten aus
+    ``STANDARD_STUNDENWERT``, deren ``arrival_time`` (= ``end_time``, s.
+    ``app/day_window.py::display_end_time``) SICHER auf ``stage.date``
+    faellt (06:00-17:00 UTC -- bei Innsbruck (UTC+1/+2) niemals ueber
+    Mitternacht hinaus in den naechsten Kalendertag rutschend).
+
+    WICHTIG (Team-Lead-Fund 2026-09-25, Regression bei ``heute_gewitter``):
+    ein EINZELNES Mega-Segment ueber mehrere Tage (Vorbild
+    ``tests/helpers/adhoc_metrik_fixtures.py``, dort nur fuer
+    ``drilldown()``-Ad-hoc-Abrufe genutzt) hat GENAU EINE ``arrival_time``
+    und landet damit nur in EINEM Kalendertag. ``WeatherExtractor.timeline()``
+    (genutzt von ``glance``/``heute_gewitter``/``timeline_heute``/
+    ``timeline_morgen`` sowie den Buttons ``act_overview``/``tl_*``)
+    aggregiert aber PRO SEGMENT-``arrival_time``/Kalendertag
+    (``_aggregate_day()``, ``trip_command_processor.py``) -- ein
+    Mega-Segment liefert deshalb fuer ALLE Tage ausser dem einen getroffenen
+    ``"noch keine Wetterdaten"`` statt eines echten Werts. Ein Segment JE
+    ETAPPE (wie der echte Fetch-Pfad ``_fetch_and_save_snapshot`` es via
+    ``_convert_trip_to_segments(trip, today)``/``(trip, tomorrow)`` baut)
+    behebt das, ohne den Ad-hoc-``drilldown()``-Pfad zu beeintraechtigen
+    (der iteriert die Zeitreihe direkt, unabhaengig von Segmentgrenzen)."""
+    tag_start = datetime(
+        stage.date.year, stage.date.month, stage.date.day, 6, tzinfo=timezone.utc,
+    )
+    punkte = [
+        ForecastDataPoint(ts=tag_start + timedelta(hours=i), **STANDARD_STUNDENWERT)
+        for i in range(12)
+    ]
+    segment = TripSegment(
+        segment_id=f"seg-2417-{stage.id}",
+        start_point=GPXPoint(lat=INNSBRUCK_LAT, lon=INNSBRUCK_LON, elevation_m=600),
+        end_point=GPXPoint(lat=INNSBRUCK_LAT + 0.02, lon=INNSBRUCK_LON + 0.02, elevation_m=900),
+        start_time=tag_start, end_time=punkte[-1].ts,
+        duration_hours=11.0, distance_km=10.0, ascent_m=300.0, descent_m=300.0,
+    )
+    return SegmentWeatherData(
+        segment=segment,
+        timeseries=NormalizedTimeseries(
+            meta=ForecastMeta(provider=Provider.OPENMETEO, model="test", grid_res_km=0.0),
+            data=punkte,
+        ),
+        aggregated=SegmentWeatherSummary(
+            temp_min_c=-10.0, temp_max_c=35.0, thunder_level_max=ThunderLevel.MED,
+            wind_max_kmh=40.0, precip_sum_mm=5.0, pop_max_pct=60,
+        ),
+        fetched_at=tag_start, provider=Provider.OPENMETEO.value,
+    )
+
+
+def _speichere_snapshot_fuer_trip(trip: Trip, user_id: str) -> None:
+    """Echter Stunden-Snapshot ueber ``WeatherSnapshotService`` -- EIN
+    Segment JE ETAPPE (s. ``_segment_fuer_stage``-Docstring). Vorbild
+    ``tests/helpers/adhoc_metrik_fixtures.py::lege_trip_an`` /
+    ``test_abruf_jede_metrik_e2e.py::_speichere_snapshot``. Noetig, weil
+    ``_handle_metric_drilldown()`` (bares Metrik-Wort) ueber
+    ``WeatherExtractor(...).drilldown()`` einen VORAB gespeicherten Snapshot
+    liest -- ohne ihn liefert JEDES Metrik-Kuerzel strukturell "no data",
+    unabhaengig davon, ob die Zielaufloesung/Formatierung korrekt ist
+    (Team-Lead-Fund 2026-09-25: das machte das Premium-SMS-``sms_code``-
+    Merkmal vakuum-gruen)."""
+    from services.weather_snapshot import WeatherSnapshotService
+
+    segments = [_segment_fuer_stage(stage) for stage in trip.stages]
+    WeatherSnapshotService(user_id).save(trip.id, segments, date.today())
+
+
 def _trip(user_id: str, name: str, *, tag: date | None = None) -> Trip:
     """Drei Etappen (gestern/heute/morgen, Ortstag) an der Innsbruck-Fixture-
     Koordinate -- Vorbild ``_trip_anlegen``
     (test_premium_sms_kommandopfad.py:350-378). ``official_alerts_enabled=
-    False``, sonst haengt der Alarmpfad ohne Fixture-Naht am Netz."""
+    False``, sonst haengt der Alarmpfad ohne Fixture-Naht am Netz.
+
+    Seedet seit der Fundament-Korrektur 4 (Team-Lead 2026-09-25) zusaetzlich
+    einen echten Wetter-Snapshot (``_speichere_snapshot_fuer_trip``/
+    ``STANDARD_STUNDENWERT``) fuer JEDEN so angelegten Trip -- Ad-hoc-
+    Metrik-Abrufe (bares Katalogwort/-kuerzel per Telegram/Premium-SMS)
+    liefern dadurch echte Werte statt strukturell "no data"/"nicht
+    verfuegbar", unabhaengig von der jeweiligen Lage (L2/L3/L6)."""
     heute = tag or date.today()
     trip_id = f"gz2417-{uuid.uuid4().hex[:8]}"
     stages = [
@@ -608,7 +714,9 @@ def _trip(user_id: str, name: str, *, tag: date | None = None) -> Trip:
     )
     save_trip(trip, user_id)
     from app.loader import load_all_trips
-    return next(t for t in load_all_trips(user_id) if t.id == trip_id)
+    geladen = next(t for t in load_all_trips(user_id) if t.id == trip_id)
+    _speichere_snapshot_fuer_trip(geladen, user_id)
+    return geladen
 
 
 def _preset(user_id: str, name: str, **felder) -> dict:
@@ -1130,7 +1238,113 @@ _CALLBACK_ALIAS_FUER_MERKMAL = {
 }
 
 
-def merkmal_fuer(fall: str, *, nutzer: BefehlNutzer, ziel_name: str | None = None):
+def _premium_sms_etappen_kuerzel(trip: Trip, index: int) -> str:
+    """``"E{n}"`` wie es der echte Premium-SMS-Versandpfad erzeugt -- die
+    1-basierte CHRONOLOGISCHE Position von ``trip.stages[index]`` (nach
+    Datum sortiert), nicht die Listenposition. Beleg (Nachmessung
+    2026-09-25): ``Trip.numbered_stage_label()`` (``app/trip.py:294-310``)
+    baut ``"Etappe {position}: {rest}"`` aus genau dieser Position und wird
+    als ``stage_name`` an ``SMSTripFormatter.format_sms()`` durchgereicht
+    (``trip_report_scheduler.py:1469``); ``_sms_stage_prefix()``
+    (``output/renderers/sms_trip.py:46-54``) liest daraus per Regex
+    ``^Etappe\\s+(\\d+)`` die Nummer heraus und baut ``"E{n}"``."""
+    ordered = sorted(trip.stages, key=lambda s: s.date)
+    ziel_stage = trip.stages[index]
+    position = ordered.index(ziel_stage) + 1
+    return f"E{position}"
+
+
+def _premium_sms_merkmal_fuer(fall: str, *, nutzer: BefehlNutzer):
+    """Premium-SMS-eigene Merkmal-Ausnahmen (PO-Feedback 2026-09-25,
+    Fundament-Korrektur 3).
+
+    ``PremiumSmsOutput.send(subject, body)`` IGNORIERT ``subject``
+    vollstaendig (``output/channels/seven_io_base.py::send`` -- "``subject``
+    wird ignoriert -- eine SMS hat kein Betreff-Feld"). Jedes Standard-
+    Merkmal, das nur im Telegram-/E-Mail-Betreff lebte
+    (``f"[{trip.name}] ..."``), FEHLT deshalb im tatsaechlich gesendeten
+    Premium-SMS-BODY komplett -- nachgemessen fuer alle 64 Faelle aus
+    ``tippbare_route_only_und_metrik_woerter()`` (9 ``_ROUTE_ONLY``-Woerter
+    minus die drei, die schon body-eigene Signale tragen -- ``gewitter``/
+    ``status``/``skip``/``stop`` funktionieren unveraendert --, plus alle 55
+    Metrik-Worte) UND fuer ``pause``/``weiter`` (``_BEIDE_KINDS``, ausserhalb
+    von ``tippbare_route_only_und_metrik_woerter()``, aber von den
+    E2E-Testdateien ebenfalls per Premium-SMS gepruefte Befehlsworte,
+    Nachmessung 2026-09-25): ``pause`` OHNE Dauer nennt das Ziel NUR im
+    Betreff ("[Solo-Trip] PAUSE: Dauer fehlt") und braucht deshalb eine
+    Ausnahme; ``weiter``/``skip``/``stop``/``status`` nennen das Ziel bereits
+    woertlich im Body und brauchen KEINE.
+
+    Gibt ``None`` zurueck, wenn die Standard-Ableitung schon body-taugliches
+    Merkmal liefert (kein Sonderfall noetig) -- der Aufrufer faellt dann auf
+    die generische Logik unten zurueck.
+
+    BEOBACHTUNGEN aus der Nachmessung (kein Fix-Auftrag dieses Fundaments,
+    an Team-Lead gemeldet):
+
+    - ``jetzt``/``now``: der Nowcast-Body traegt WEDER Trip- noch
+      Etappenbezug (``_show_now`` schreibt den Namen nur in
+      ``confirmation_subject``, nie in den Body) -- das Merkmal
+      (Radar-Quellenkennung) kann NICHT zwischen einer richtig und einer
+      FALSCH adressierten Antwort unterscheiden.
+    - ``strecke``: der Fixture-Trip hat keine echte Kilometrierung/kein
+      GPX-Hoehenprofil -- die Antwort ist deshalb IMMER der
+      "nicht verfuegbar"-Fallback, auf jedem Kanal. Das eigentliche
+      Inhaltsmerkmal ("Regen-Ereignisflaechen entlang der Reststrecke") ist
+      mit dieser Fixture nicht pruefbar.
+    - Metrik-Worte (BEHOBEN, Fundament-Korrektur 4, Team-Lead 2026-09-25):
+      ``_handle_metric_drilldown()`` liest ueber
+      ``WeatherExtractor(...).drilldown()`` einen vorab gespeicherten
+      Snapshot -- ohne ihn lieferte JEDES Metrik-Kuerzel strukturell
+      ``"<Kuerzel> no data"``, was das ``sms_code``-Merkmal vakuum-gruen
+      machte (traf auch auf den "no data"-Body zu). ``_trip()`` seedet seit
+      dieser Korrektur ueber ``_speichere_snapshot``/
+      ``STANDARD_STUNDENWERT`` einen echten Snapshot mit Werten fuer JEDE
+      selectable Katalog-Groesse ausser ``uv_index`` (bewusst leer fuer
+      AC-33) -- das Merkmal bleibt ``sms_code``/``col_label``, ist aber
+      jetzt kein vakuumer Treffer mehr: ein fehlerhaft aufgeloester oder
+      nicht gelieferter Wert zeigt sich als ``"<Kuerzel> no data"``, was das
+      Merkmal WEITERHIN erfuellen wuerde -- Testdateien, die "kein
+      no data" pruefen wollen, brauchen dafuer eine EIGENE, zusaetzliche
+      Zusicherung (``FEHLERTEXTE``/eigener String-Check), dieses Fundament
+      garantiert nur, dass ein echter Snapshot vorliegt.
+    """
+    if fall == "heute":
+        return _premium_sms_etappen_kuerzel(nutzer.trip, 1)
+    if fall == "morgen":
+        return _premium_sms_etappen_kuerzel(nutzer.trip, 2)
+    if fall in ("now", "jetzt"):
+        return "ARPAE ICON-2I"
+    if fall == "ruhetag":
+        # Body nennt die verschobene FOLGE-Etappe beim Namen (Nachmessung:
+        # "Verschobene Etappen:\n  Etappe Morgen: ... -> ...").
+        return _stufenname(nutzer.trip, 2)
+    if fall == "strecke":
+        return "Kilometrierung"
+    if fall == "pause":
+        # Nachmessung (Team-Lead-Anfrage 2026-09-25): "pause" OHNE Dauer
+        # liefert Body "Bitte Dauer angeben, z.B. PAUSE 2d oder PAUSE 12h.
+        # Format: N d (Tage) oder N h (Stunden)." -- der Trip-Name steht
+        # NUR im (bei Premium-SMS verworfenen) Betreff
+        # "[Solo-Trip] PAUSE: Dauer fehlt".
+        return "Dauer angeben"
+    # "weiter"/"skip"/"stop"/"status" brauchen KEINE Ausnahme (bestaetigt bei
+    # derselben Nachmessung): ihre Bodies nennen das Ziel bereits woertlich
+    # ("...fuer 'Solo-Trip'..." bzw. die Etappennamen) -- die generische
+    # Logik unten (return None) greift unveraendert.
+
+    from app.metric_catalog import metric_command_words
+
+    metric_id = metric_command_words().get(fall)
+    if metric_id is not None:
+        metric = get_metric(metric_id)
+        return metric.sms_code or metric.col_label
+
+    return None
+
+
+def merkmal_fuer(fall: str, *, nutzer: BefehlNutzer, ziel_name: str | None = None,
+                  kanal: str | None = None):
     """Woran die RICHTIGE Antwort fuer ``fall`` erkennbar ist, gemessen an
     den tatsaechlichen Fixture-Daten von ``nutzer`` (nicht am Produktcode).
 
@@ -1140,6 +1354,14 @@ def merkmal_fuer(fall: str, *, nutzer: BefehlNutzer, ziel_name: str | None = Non
     nicht mit Ausnahme der bewusst identischen Faelle (``"glance"``,
     ``"heute"``, ``"morgen"``, ``"now"`` sind sowohl Callback- als auch
     Reader-Schluessel und liefern dieselbe Antwort, nachgemessen).
+
+    ``kanal`` (optional, additiv -- PO-Feedback 2026-09-25, Fundament-
+    Korrektur 3): ``kanal="premium_sms"`` schaltet die Premium-SMS-eigenen
+    Ausnahmen aus :func:`_premium_sms_merkmal_fuer` VOR die generische Logik
+    -- ``PremiumSmsOutput.send()`` ignoriert ``subject`` komplett, jedes
+    Merkmal, das nur im Betreff lebte, muesste sonst im Body scheitern.
+    Bestehende Aufrufe OHNE ``kanal`` (Telegram/E-Mail, wo der Betreff Teil
+    des zusammengesetzten Texts ist) bleiben unveraendert.
 
     Gibt entweder einen einzelnen erwarteten Teilstring oder ein Tupel
     mehrerer Pflicht-Teilstrings zurueck (z.B. ``hilfe`` -> alle 12
@@ -1161,6 +1383,11 @@ def merkmal_fuer(fall: str, *, nutzer: BefehlNutzer, ziel_name: str | None = Non
     """
     fall = _CALLBACK_ALIAS_FUER_MERKMAL.get(fall, fall)
     ziel = ziel_name or (nutzer.trip.name if nutzer.trip else "")
+
+    if kanal == "premium_sms":
+        premium_merkmal = _premium_sms_merkmal_fuer(fall, nutzer=nutzer)
+        if premium_merkmal is not None:
+            return premium_merkmal
 
     if fall == "hilfe":
         return tuple(w.upper() for w, _a, _b, _k in _COMMAND_SPECS)

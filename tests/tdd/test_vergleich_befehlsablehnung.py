@@ -220,12 +220,17 @@ def _via_telegram(monkeypatch, user_id: str, text: str) -> list[str]:
 def test_f001_telegram_query_key_gegen_vergleich_zeigt_ac11_text_ohne_ladehinweis(
     monkeypatch, uid, befehl,
 ):
-    """Adversary F001 (#2282 Fix-Loop 1): Nutzer mit GENAU EINEM aktiven
-    Vergleich und KEINEM Trip sendet per Telegram "heute"/"glance"/"gewitter"
-    -- alle drei sind Query-Keys, die der Reader als "### query: <key>"
-    kodiert. Erwartet: genau eine Antwort, der korrekte AC-11-Text (nicht
-    "'query' gibt es beim Ortsvergleich nicht."), KEINE vorherige
-    "⏳ Wetter wird geladen..."-Nachricht, Preset-Datei unveraendert."""
+    """Adversary F001 (#2282 Fix-Loop 1), Text seit #2417 AC-4/AC-17
+    abgeloest: Nutzer mit GENAU EINEM aktiven Vergleich und KEINEM Trip
+    sendet per Telegram "heute"/"glance"/"gewitter" -- alle drei sind
+    `_ROUTE_ONLY`-/Query-Keys ohne vorangestellten Namen. #2417 loest
+    #2282 AC-4 ab: solche Befehle adressieren jetzt ausschliesslich
+    `resolve_trip_only_target`, das aktive Vergleiche fuer diese
+    Befehlsklasse bewusst ignoriert (KEIN_AKTIVES_ZIEL_TEXT statt der
+    alten vergleichsspezifischen AC-11-Uebergangsantwort). Erwartet:
+    genau eine Antwort, der neue "kein aktives Ziel"-Text (AC-4/AC-17),
+    KEINE vorherige "⏳ Wetter wird geladen..."-Nachricht, Preset-Datei
+    unveraendert."""
     _preset(uid)
     vorher = _dateien(uid)
 
@@ -236,11 +241,9 @@ def test_f001_telegram_query_key_gegen_vergleich_zeigt_ac11_text_ohne_ladehinwei
     assert "query" not in sent[0].lower(), (
         f"das falsche Wort 'query' darf nicht mehr erscheinen: {sent[0]!r}"
     )
-    if befehl == "heute":
-        assert NICHT_VERFUEGBAR in sent[0], sent[0]
-        assert "Web-App" in sent[0]
-    else:
-        assert "gibt es beim Ortsvergleich nicht" in sent[0], sent[0]
+    from services.trip_selection import KEIN_AKTIVES_ZIEL_TEXT
+
+    assert sent[0] == KEIN_AKTIVES_ZIEL_TEXT, sent[0]
     assert _dateien(uid) == vorher
 
 

@@ -291,6 +291,35 @@ class TestEntscheidungstabelle:
 
 
 # ---------------------------------------------------------------------------
+# Finding F002 (Adversary #2417, Runde 2): resolve_command_target darf einen
+# ziellos-Schluessel NIE in die alte Mehrdeutigkeits-Rueckfrage laufen lassen
+# -- auch dann nicht, wenn ein (hypothetischer) Aufrufer den in der
+# Docstring vorgeschriebenen vorgelagerten ZIELLOS_SCHLUESSEL-Filter
+# vergisst. Direkter Test gegen die geteilte Funktion selbst, nicht nur
+# gegen ihre beiden heutigen Aufrufer (Telegram/Premium-SMS-Reader).
+# ---------------------------------------------------------------------------
+
+class TestF002ResolveCommandTargetZiellosGuard:
+    @pytest.mark.parametrize("key", ["hilfe", "columns"])
+    def test_ziellos_schluessel_bleibt_eindeutig_bei_trip_plus_vergleich(self, key):
+        """PO-Lage (1 Trip + 1 aktiver Vergleich): ohne den Reader-seitigen
+        ZIELLOS_SCHLUESSEL-Filter wuerde ``_BEIDE_KINDS`` hier mehrdeutig
+        antworten (s. ``test_trip_plus_ein_vergleich_ist_mehrdeutig`` oben).
+        ``resolve_command_target`` muss ``key in ZIELLOS_SCHLUESSEL`` selbst
+        abfangen und stattdessen eindeutig auf den Trip auflösen."""
+        from services.trip_selection import resolve_command_target
+
+        trip = _trip_obj("Korsika", 0)
+        erg = resolve_command_target(
+            key, [trip], [_preset_dict("Alpenblick")], _now(), channel="telegram",
+        )
+        assert erg.kind == "route" and erg.target is trip and erg.text is None, (
+            f"resolve_command_target({key!r}, ...) lief in die Mehrdeutigkeit "
+            f"statt eindeutig auf den Trip aufzuloesen: {erg!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # AC-15: Premium-SMS-Rückfrage passt in 160 GSM-7-Zeichen, Telegram ungekürzt
 # ---------------------------------------------------------------------------
 
@@ -430,6 +459,7 @@ def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal,
 @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
 def test_ac14_route_only_befehl_erreicht_bei_trip_plus_vergleich_den_trip(monkeypatch, user_ids, kanal):
     uid = user_ids()
+    _nutzer_mit_tier(uid)
     trip = _trip(uid, "Korsika", start_offset_days=-1)
     _preset(uid, "Alpenblick")
 

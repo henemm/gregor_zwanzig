@@ -16,6 +16,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from email.header import decode_header, make_header
+from html.parser import HTMLParser
 
 from app.config import Settings
 from app.loader import load_all_trips
@@ -56,6 +57,59 @@ def parse_authentication_results(header_value: str) -> tuple[str | None, dict[st
         method, result = first_token.split("=", 1)
         results[method.strip().lower()] = result.strip().lower()
     return authserv_id, results
+
+
+class _BefehlsHtmlParser(HTMLParser):
+    """Reduziert eine Befehls-Antwortmail (nur ``text/html``) auf reinen
+    Text (AC-19, #2417) — bricht ENDGUELTIG ab, sobald das erste Zitat
+    (``<blockquote type="cite">``) oder die Signatur (Element mit
+    ``id="lineBreakAtBeginningOfSignature"``, ein leeres ``<br>`` bei Apple
+    Mail) beginnt. Reiner Stdlib-Parser, keine neue Abhaengigkeit.
+
+    Der Signatur-Marker ist ein LEERES ``<br>`` ohne Kinder — ein Handler,
+    der nur die Kinder dieses Tags unterdrueckt, schneidet nichts ab. Der
+    Abbruch muss deshalb JEDE weitere Ausgabe sperren, nicht nur innerhalb
+    des Marker-Elements.
+    """
+
+    _BLOCKTAGS = ("br", "div", "p")
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._teile: list[str] = []
+        self._abgebrochen = False
+
+    def _pruefe_marker(self, tag: str, attrs: dict[str, str | None]) -> None:
+        if tag == "blockquote" and attrs.get("type") == "cite":
+            self._abgebrochen = True
+        elif attrs.get("id") == "lineBreakAtBeginningOfSignature":
+            self._abgebrochen = True
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if self._abgebrochen:
+            return
+        self._pruefe_marker(tag, dict(attrs))
+        if not self._abgebrochen and tag in self._BLOCKTAGS:
+            self._teile.append("\n")
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+
+    def handle_data(self, data: str) -> None:
+        if not self._abgebrochen:
+            self._teile.append(data)
+
+    def text(self) -> str:
+        return "".join(self._teile)
+
+
+def _html_zu_befehlstext(html_text: str) -> str:
+    """Wandelt den ``text/html``-Teil einer Befehlsmail in Text (AC-19) —
+    Zitat/Signatur werden dabei abgeschnitten (s. ``_BefehlsHtmlParser``)."""
+    parser = _BefehlsHtmlParser()
+    parser.feed(html_text)
+    parser.close()
+    return parser.text()
 
 
 class InboundEmailReader:
@@ -272,18 +326,32 @@ class InboundEmailReader:
         )
 
     def _extract_plain_body(self, msg: email.message.Message) -> str:
-        """Extract plain-text body. Multipart: first text/plain part."""
+        """Extract plain-text body. Multipart: first text/plain part; fehlt
+        er, wird der erste text/html-Teil dekodiert und auf Text reduziert
+        (AC-19, #2417) -- ohne diesen Fallback liefert eine Apple-Mail-
+        Antwort (nur text/html, Standardstruktur beim Antworten auf dem
+        iPhone) IMMER "" und damit "Unbekannter Befehl" (B2)."""
         if msg.is_multipart():
+            html_teil = None
             for part in msg.walk():
                 if part.get_content_type() == "text/plain":
                     payload = part.get_payload(decode=True)
                     charset = part.get_content_charset() or "utf-8"
                     return payload.decode(charset, errors="replace")
+                if html_teil is None and part.get_content_type() == "text/html":
+                    html_teil = part
+            if html_teil is not None:
+                payload = html_teil.get_payload(decode=True)
+                charset = html_teil.get_content_charset() or "utf-8"
+                return _html_zu_befehlstext(payload.decode(charset, errors="replace"))
         else:
             payload = msg.get_payload(decode=True)
             if payload:
                 charset = msg.get_content_charset() or "utf-8"
-                return payload.decode(charset, errors="replace")
+                text = payload.decode(charset, errors="replace")
+                if msg.get_content_type() == "text/html":
+                    return _html_zu_befehlstext(text)
+                return text
         return ""
 
     def _resolve_settings_for_sender(

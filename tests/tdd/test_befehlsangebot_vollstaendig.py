@@ -18,10 +18,13 @@ Kein Mock/patch/MagicMock. Parametrisierung ausschliesslich aus
 """
 from __future__ import annotations
 
+import ast
 import re
+from pathlib import Path
 
 import pytest
 
+import output.channels.telegram as telegram_mod
 from app.metric_catalog import get_all_metrics
 from output.channels.telegram import BOT_COMMANDS
 from services.trip_command_processor import _COMMAND_SPECS, TripCommandProcessor
@@ -92,11 +95,19 @@ def test_ac10_langhilfe_enthaelt_alle_zwoelf_befehlswoerter_und_alle_metrik_kuer
 def test_ac10_kurzhilfe_enthaelt_alle_zwoelf_befehlswoerter_und_alle_metrik_kuerzel():
     text = _kurzhilfe_text_oder_fail()
     for wort in _COMMAND_SPECS_WOERTER:
-        assert wort.upper() in text, f"Kurzhilfe ohne Befehlswort {wort.upper()!r}: {text!r}"
-    for metric in get_all_metrics():
-        assert metric.col_label in text, (
-            f"Kurzhilfe ohne Metrik-Kuerzel {metric.col_label!r}: {text!r}"
+        assert wort.upper() in text.upper(), (
+            f"Kurzhilfe ohne Befehlswort {wort.upper()!r}: {text!r}"
         )
+    # GSM-7-Konflikt (Team-Lead-Befund): manche col_label enthalten ein
+    # nicht-GSM-7-Zeichen (z.B. freezing_level "0°Line") -- fuer die
+    # Kurzhilfe genuegt deshalb col_label ODER sms_code, case-insensitiv --
+    # dieselbe Regel wie test_befehle_premium_sms_e2e.py:338-342. Die
+    # Langhilfe-Pruefung oben bleibt unveraendert streng auf col_label.
+    for metric in get_all_metrics():
+        kuerzel_da = metric.col_label.upper() in text.upper() or (
+            bool(metric.sms_code) and metric.sms_code.upper() in text.upper()
+        )
+        assert kuerzel_da, f"Kurzhilfe fehlt Wetter-Kuerzel fuer {metric.id!r}: {text!r}"
 
 
 def test_ac10_kurzhilfe_verweist_auf_keinen_anderen_kanal():
@@ -136,6 +147,59 @@ def test_ac21_bot_commands_erfuellen_telegram_formregeln():
         assert len(eintrag["description"]) <= 256, (
             f"Beschreibung fuer {eintrag['command']!r} laenger als 256 Zeichen."
         )
+
+
+def test_ac21_menuebeschreibung_stammt_aus_command_specs():
+    """Team-Lead-Korrektur: NUR die NEU hinzukommenden ``_COMMAND_SPECS``-
+    Woerter (nicht Teil von ``_BESTEHENDE_ACHT``) muessen ihre Menue-
+    beschreibung aus ``_COMMAND_SPECS`` beziehen. Die 8 bestehenden Eintraege
+    (``heute``, ``morgen``, ``hilfe``, ...) bleiben laut Spec-Abschnitt
+    "BOT_COMMANDS -- Merge, nicht Ersatz" MIT IHREN HEUTIGEN Beschreibungen
+    unveraendert -- ``heute`` behaelt z.B. `"📅 Nur heute"`, nicht die
+    _COMMAND_SPECS-Beschreibung "Wetter der heutigen Etappe". Feld: die
+    dritte Tupel-Position (``b`` in ``(w, a, b, kinds)``) ist die
+    Beschreibung -- nachgelesen in ``trip_command_processor.py::command_rows``."""
+    beschreibung_je_neuem_wort = {
+        w: b for w, _a, b, _k in _COMMAND_SPECS if w not in _BESTEHENDE_ACHT
+    }
+    eintrag_je_name = {c["command"]: c["description"] for c in BOT_COMMANDS}
+    for wort, beschreibung in beschreibung_je_neuem_wort.items():
+        eintrag = eintrag_je_name.get(wort)
+        assert eintrag is not None, f"Kein Menueeintrag fuer {wort!r} gefunden."
+        assert beschreibung in eintrag, (
+            f"Menuebeschreibung fuer neuen Eintrag {wort!r} stammt nicht aus "
+            f"_COMMAND_SPECS (erwarteter Teilstring {beschreibung!r}): {eintrag!r}"
+        )
+
+
+def test_bot_commands_bleibt_ein_statisches_listen_literal_lesbar_per_ast():
+    """``prod_selftest.py`` liest ``BOT_COMMANDS`` per ``ast.literal_eval``
+    direkt aus dem Quelltext, ohne den Server-Prozess zu importieren --
+    ``BOT_COMMANDS`` MUSS deshalb ein reines Listen-Literal bleiben (keine
+    Funktionsaufrufe, keine Variablen-Referenzen, keine aus ``_COMMAND_SPECS``
+    berechnete Listcomprehension). Drift-Waechter: das statisch gelesene
+    Literal muss ausserdem exakt der tatsaechlich importierten Liste
+    entsprechen -- sonst laesen Selftest und Laufzeit-Produkt zwei
+    verschiedene Staende."""
+    quelldatei = Path(telegram_mod.__file__)
+    baum = ast.parse(quelldatei.read_text(encoding="utf-8"))
+    zuweisung = next(
+        (
+            knoten for knoten in ast.walk(baum)
+            if isinstance(knoten, ast.Assign)
+            and any(isinstance(t, ast.Name) and t.id == "BOT_COMMANDS" for t in knoten.targets)
+        ),
+        None,
+    )
+    assert zuweisung is not None, (
+        f"Keine BOT_COMMANDS-Zuweisung in {quelldatei} gefunden."
+    )
+    statisch = ast.literal_eval(zuweisung.value)
+    assert statisch == BOT_COMMANDS, (
+        "ast.literal_eval(BOT_COMMANDS) aus dem Quelltext weicht vom "
+        "tatsaechlich importierten BOT_COMMANDS ab -- prod_selftest.py "
+        "wuerde einen anderen Stand lesen als das laufende Produkt."
+    )
 
 
 # ---------------------------------------------------------------------------

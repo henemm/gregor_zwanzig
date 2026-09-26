@@ -277,6 +277,52 @@ def unknown_command_body(prefix: str) -> str:
     )
 
 
+#: Premium-SMS-Kurzhilfe (AC-10/AC-11/AC-23, #2417): kurze ENGLISCHE
+#: Bedeutung je Steuerbefehlswort — Premium-SMS-Kurznachrichten sind laut
+#: PO-Vorgabe englisch, die Befehlswoerter selbst (HEUTE, PAUSE, …) bleiben
+#: unveraendert, weil sie tatsaechlich gesendet werden muessen. Ein neues
+#: ``_COMMAND_SPECS``-Wort ohne Eintrag hier erscheint trotzdem (Wortlisten-
+#: Vollstaendigkeit bleibt aus ``_COMMAND_SPECS`` selbst), nur ohne
+#: Bedeutungszusatz.
+_KURZHILFE_ENGLISCH: dict[str, str] = {
+    "heute": "today", "morgen": "tomorrow", "jetzt": "now",
+    "gewitter": "storms", "strecke": "route", "ruhetag": "rest day",
+    "status": "stages", "pause": "pause", "skip": "skip stage",
+    "stop": "end", "weiter": "resume", "hilfe": "help",
+}
+
+
+def _kurz_arg_beispiel(arg_form: str) -> str:
+    """Erstes alnum-Fragment aus der ``_COMMAND_SPECS``-Argumentform (z. B.
+    ``"[2d / 12h]"`` -> ``"2D"``, ``"[N]"`` -> ``"N"``) — abgeleitet, keine
+    zweite handgepflegte Werteliste."""
+    treffer = re.search(r"[A-Za-z0-9]+", arg_form)
+    return treffer.group(0).upper() if treffer else ""
+
+
+def premium_sms_kurzhilfe() -> str:
+    """GSM-7-saubere Premium-SMS-Kurzhilfe (AC-10/AC-11/AC-23, #2417):
+    derselbe Inhalt wie die Langhilfe (alle 12 Steuerbefehle + alle
+    selectable Wetter-Kuerzel), aber knapp, englisch und ohne Verweis auf
+    einen anderen Kanal — wer nur Premium-SMS empfaengt, muss hiermit jeden
+    Befehl nutzen koennen (Spec "Premium-SMS-Kurzhilfe").
+
+    Wetter-Kuerzel nutzen ``sms_code``, wenn vorhanden, sonst ``col_label``:
+    ``col_label`` allein kann GSM-7-fremde Zeichen tragen (z. B. das
+    Gradzeichen bei ``freezing_level`` -> "0°Line"), was die
+    Segment-Zusicherung (AC-11, hoechstens 3 Segmente à 153 GSM-7-Zeichen)
+    sprengen wuerde — ``sms_code`` ist laut Katalog-Doku bereits ein
+    "GSM-7-tauglicher Token (1–2 Grossbuchstaben, ASCII)".
+    """
+    befehle = ", ".join(
+        f"{w.upper()}{f' {arg}' if (arg := _kurz_arg_beispiel(a)) else ''} "
+        f"{_KURZHILFE_ENGLISCH.get(w, '')}".strip()
+        for w, a, _b, _k in _COMMAND_SPECS
+    )
+    kuerzel = ",".join(m.sms_code or m.col_label for m in get_all_metrics())
+    return f"Commands: {befehle}. Codes: {kuerzel}"
+
+
 _PAUSE_DURATION_RE = re.compile(r"^(\d+)\s*([dh]?)$")
 
 _QUERY_KEYS = {"glance", "heute", "morgen", "heute_gewitter",
@@ -540,6 +586,27 @@ def _ohne_zitat(zeile: str) -> str:
     Zug erledigt, ginge diese Unterscheidung still verloren.
     """
     return re.sub(r"^[>\s]+", "", zeile)
+
+
+#: AC-20 (#2417): unsichtbare Zeichen, die ein Befehlswort umschliessen
+#: koennen, OHNE dass der Nutzer sie sieht -- BOM (Mail-Client haengt es
+#: gerne der ersten Zeile voran), Zero-Width-Space, Wortverbinder. Normaler
+#: Leerraum (inkl. NBSP) ist bereits durch ``str.split(None, ...)`` gedeckt
+#: (Python zaehlt NBSP als Leerraum), braucht also keinen Eintrag hier.
+_UNSICHTBARE_ZEICHEN = "﻿​⁠"
+#: Satzzeichen, die UNMITTELBAR ans Befehlswort angehaengt sein duerfen
+#: (z. B. "Heute.", "HILFE!", "hilfe?", "Hilfe,").
+_SATZZEICHEN_ENDE = ".,!?"
+
+
+def _bereinigtes_bare_keyword(token: str) -> str:
+    """Toleriert BOM/ZWSP/Wortverbinder sowie anhaengende Satzzeichen
+    UNMITTELBAR am Befehlswort (AC-20, #2417) -- ausschliesslich TILGEN,
+    danach muss das Restwort EXAKT ein bekanntes Schluesselwort sein. Kein
+    Praefix-Matching: "Hilfen"/"Heutegestern" bleiben deshalb unbekannt,
+    weil nach dem Tilgen kein Satzzeichen/keine Zeichen mehr uebrig sind, die
+    entfernt werden koennten."""
+    return token.strip(_UNSICHTBARE_ZEICHEN).rstrip(_SATZZEICHEN_ENDE)
 
 
 def _ohne_praefix(zeile: str) -> str:
@@ -944,7 +1011,7 @@ class TripCommandProcessor:
         # Bare-keyword: erstes Token (case-insensitiv), Rest = value
         parts = first_line.split(None, 1)
         if parts:
-            keyword = parts[0].lower()
+            keyword = _bereinigtes_bare_keyword(parts[0]).lower()
             internal = _BARE_KEYWORD_MAP.get(keyword)
             if internal is not None:
                 rest = parts[1].strip() if len(parts) > 1 else None
@@ -1027,7 +1094,7 @@ class TripCommandProcessor:
         if key in ("report", "heute", "morgen"):
             return self._compare_transitional(name)
         if key == "pause":
-            return self._apply_compare_pause(preset_id, msg.user_id, name)
+            return self._apply_compare_pause(preset_id, msg.user_id, name, bool(value))
         if key == "weiter":
             return self._resume_compare(preset_id, msg.user_id, name)
         wort = key if key is not None else (_erstes_wort(msg.body) or msg.body.strip())
@@ -1040,7 +1107,12 @@ class TripCommandProcessor:
         for w, a, b, kinds in _COMMAND_SPECS:
             if kind not in kinds:
                 continue
-            label = f"{w.upper()} {a}".strip()
+            # AC-29 (#2417): ein Ortsvergleich pausiert IMMER unbefristet
+            # (keine Dauerauswertung, s. ``_apply_compare_pause``) -- die
+            # Vergleichs-Hilfe darf PAUSE deshalb keine Dauer versprechen.
+            # Die Trip-Hilfe (kind="route") bleibt unveraendert bei "[2d / 12h]".
+            arg = "" if (kind == "vergleich" and w == "pause") else a
+            label = f"{w.upper()} {arg}".strip()
             zeilen.append(f"  {label:<21} – {b}")
         return CommandResult(
             success=True, command="hilfe",
@@ -1071,17 +1143,28 @@ class TripCommandProcessor:
             trip_name=name,
         )
 
-    def _apply_compare_pause(self, preset_id: str, user_id: str, name: str) -> CommandResult:
+    def _apply_compare_pause(
+        self, preset_id: str, user_id: str, name: str, hatte_dauer: bool = False,
+    ) -> CommandResult:
         """Pausiert einen Ortsvergleich unbefristet (AC-8) — ruft das
         unveraenderte RMW-Vorbild ``save_compare_preset_pause`` auf, eine
-        mitgegebene Dauer wird nicht ausgewertet."""
+        mitgegebene Dauer wird nicht ausgewertet. AC-29 (#2417): war eine
+        Dauer (z. B. "pause 2d") angegeben, sagt die Antwort das ausdruecklich
+        — sonst wuerde das Vergleichs-Angebot (PAUSE ohne Dauer, s.
+        ``_show_help_for_kind``) dem tatsaechlichen Verhalten widersprechen."""
         from services.scheduler_dispatch_service import save_compare_preset_pause
 
         save_compare_preset_pause(user_id, preset_id)
+        hinweis = (
+            " Eine angegebene Dauer wird nicht ausgewertet." if hatte_dauer else ""
+        )
         return CommandResult(
             success=True, command="pause",
             confirmation_subject=f"[{name}] Ortsvergleich pausiert",
-            confirmation_body=f"Ortsvergleich '{name}' pausiert, bis du 'weiter' sendest.",
+            confirmation_body=(
+                f"Ortsvergleich '{name}' pausiert unbefristet, bis du WEITER "
+                f"sendest.{hinweis}"
+            ),
             trip_name=name,
         )
 

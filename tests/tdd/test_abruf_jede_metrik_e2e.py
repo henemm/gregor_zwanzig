@@ -65,6 +65,7 @@ from app.models import (
     GPXPoint,
     MetricConfig,
     NormalizedTimeseries,
+    PrecipType,
     Provider,
     SegmentWeatherData,
     SegmentWeatherSummary,
@@ -192,7 +193,10 @@ def _speichere_snapshot(trip_id: str, user_id: str, punkte: list[ForecastDataPoi
 #: Ein Wert je Stundenfeld, das mindestens eine waehlbare Groesse fuehrt.
 #: Konstant ueber alle Stunden -- AC-30 prueft NUR, ob die richtige Groesse
 #: mit der richtigen Einheit ankommt, nicht ihren zeitlichen Verlauf (das ist
-#: Gegenstand von AC-31, s.u.).
+#: Gegenstand von AC-31, s.u.). ``precip_type`` NACHGEZOGEN (PO-Feedback):
+#: fehlte urspruenglich, wodurch der Snapshot fuer diese Groesse IMMER
+#: ``None`` trug und "nicht verfuegbar" faelschlich als Produktbefund
+#: erschien -- Fixture-Luecke, kein Bug in ``_handle_metric_drilldown``.
 STANDARD_STUNDENWERT: dict = dict(
     t2m_c=12.0, wind10m_kmh=18.0, wind_direction_deg=225, gust_kmh=30.0,
     precip_1h_mm=0.4, pop_pct=40, thunder_level=ThunderLevel.MED,
@@ -200,8 +204,30 @@ STANDARD_STUNDENWERT: dict = dict(
     snow_depth_cm=12.0, snow_new_24h_cm=2.0, snowfall_limit_m=1800,
     freezing_level_m=2200, wind_chill_c=9.0, visibility_m=8000,
     cloud_total_pct=60, cloud_low_pct=40, cloud_mid_pct=20, cloud_high_pct=10,
-    dni_wm2=120.0,
+    dni_wm2=120.0, precip_type=PrecipType.RAIN,
 )
+
+
+def test_standard_stundenwert_deckt_jede_selectable_groesse_ab():
+    """Vollstaendigkeits-Wache (PO-Feedback): jede waehlbare Katalog-Groesse
+    MUSS in ``STANDARD_STUNDENWERT`` einen Nicht-None-Wert haben, sonst
+    meldet ihr Ad-hoc-Abruf still 'nicht verfuegbar' und ein echter
+    Produktbefund liesse sich nicht mehr von einer Fixture-Luecke
+    unterscheiden (genau der ``precip_type``-Fehlschluss oben). ``uv_index``
+    ist bewusst AUSGENOMMEN -- er ist die vorsaetzlich leer gelassene
+    Groesse aus ``test_fehlende_groesse_wird_benannt`` (AC-33) und darf
+    hier NICHT zufaellig mitgefuellt werden."""
+    bewusst_leer_fuer_ac33 = {"uv_index"}
+    fehlend = [
+        m.id for m in get_all_metrics()
+        if m.id not in bewusst_leer_fuer_ac33
+        and STANDARD_STUNDENWERT.get(m.dp_field) is None
+    ]
+    assert not fehlend, (
+        f"STANDARD_STUNDENWERT fehlt fuer folgende selectable Groessen ein "
+        f"Wert -- ihr Ad-hoc-Abruf meldete deshalb faelschlich 'nicht "
+        f"verfuegbar' statt eines echten Wertes: {fehlend!r}"
+    )
 
 
 def _standard_punkte(anzahl: int = 24) -> list[ForecastDataPoint]:

@@ -37,7 +37,7 @@ import re
 
 import pytest
 
-from app.metric_catalog import get_all_metrics
+from app.metric_catalog import get_all_metrics, metric_command_words
 from services.trip_command_processor import TripCommandProcessor, _QUERY_KEYS
 from services.trip_selection import KEIN_KANDIDAT_TEXT
 
@@ -96,6 +96,26 @@ def _ohne_fehlertexte(text: str) -> None:
         )
 
 
+def _pruefe_merkmal_premium_sms(fall: str, text: str, *, nutzer) -> None:
+    """``merkmal_fuer(..., kanal="premium_sms")`` (das SMS-Merkmal steht im
+    Body -- ``PremiumSmsOutput.send()`` verwirft den Betreff komplett) PLUS
+    Team-Lead-Auflage: bei Metrik-Woertern zusaetzlich sicherstellen, dass
+    kein struktureller "no data"-Fallback als Treffer durchgeht -- AUSSER
+    bei ``uv_index`` (bewusst leer gelassene Katalog-Groesse fuer AC-33)."""
+    merkmal = merkmal_fuer(fall, nutzer=nutzer, kanal="premium_sms")
+    for teilstring in (merkmal if isinstance(merkmal, tuple) else (merkmal,)):
+        assert teilstring in text, (
+            f"Antwort auf {fall!r} enthaelt nicht das erwartete Merkmal "
+            f"{teilstring!r}: {text!r}"
+        )
+    metric_id = metric_command_words().get(fall)
+    if metric_id is not None and metric_id != "uv_index":
+        assert "no data" not in text, (
+            f"Antwort auf Metrik-Wort {fall!r} zeigt 'no data' statt eines "
+            f"echten Werts: {text!r}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # AC-5 (Premium-SMS-Anteil von AC-1): PO-Lage (1 Trip + mehrere aktive
 # Ortsvergleiche) -- jeder _ROUTE_ONLY-Befehl, jedes Metrik-Kuerzel und der
@@ -117,12 +137,7 @@ def test_ac5_route_only_und_metrik_am_trip_bei_vergleichen(monkeypatch, user_ids
     assert gesendet["to"] == nutzer.premium_sms_reply_to
     text = gesendet["text"]
     _ohne_fehlertexte(text)
-    merkmal = merkmal_fuer(fall, nutzer=nutzer)
-    for teilstring in (merkmal if isinstance(merkmal, tuple) else (merkmal,)):
-        assert teilstring in text, (
-            f"Antwort auf {fall!r} enthaelt nicht das erwartete Merkmal "
-            f"{teilstring!r}: {text!r}"
-        )
+    _pruefe_merkmal_premium_sms(fall, text, nutzer=nutzer)
 
 
 @pytest.mark.parametrize("fall", ["status", "temp", "glance"])
@@ -142,12 +157,7 @@ def test_ac5_mit_kartenlink_identisches_ergebnis(monkeypatch, user_ids, fall):
     assert gesendet["to"] == nutzer.premium_sms_reply_to
     text = gesendet["text"]
     _ohne_fehlertexte(text)
-    merkmal = merkmal_fuer(fall, nutzer=nutzer)
-    for teilstring in (merkmal if isinstance(merkmal, tuple) else (merkmal,)):
-        assert teilstring in text, (
-            f"Antwort auf {fall!r} MIT Kartenlink enthaelt nicht das "
-            f"erwartete Merkmal {teilstring!r}: {text!r}"
-        )
+    _pruefe_merkmal_premium_sms(fall, text, nutzer=nutzer)
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +254,7 @@ def test_matrix_vollabdeckung_premium_sms(monkeypatch, user_ids, klasse, lage, e
 
     if erwartet == ERGEBNIS_HILFE:
         _ohne_fehlertexte(text)
-        for wort in merkmal_fuer("hilfe", nutzer=nutzer):
+        for wort in merkmal_fuer("hilfe", nutzer=nutzer, kanal="premium_sms"):
             assert wort in text, (
                 f"Hilfe-Antwort in Lage {lage} fehlt Befehlswort {wort!r}: {text!r}"
             )
@@ -255,7 +265,7 @@ def test_matrix_vollabdeckung_premium_sms(monkeypatch, user_ids, klasse, lage, e
             # Wetterwerte) -- Fundament-Nachmessung: merkmal_fuer("glance")
             # prueft stattdessen auf echte Katalog-Einheiten. Bei L2/L6
             # gibt es ohnehin nur EIN moegliches Ziel.
-            for teilstring in merkmal_fuer(fall, nutzer=nutzer):
+            for teilstring in merkmal_fuer(fall, nutzer=nutzer, kanal="premium_sms"):
                 assert teilstring in text, (
                     f"Lage {lage}: Antwort fehlt Merkmal {teilstring!r} "
                     f"fuer {fall!r}: {text!r}"
@@ -333,7 +343,7 @@ def test_hilfe_premium_sms_verwendet_kurzhilfe_statt_langhilfe(monkeypatch, user
         "Premium-SMS-'hilfe' liefert weiterhin die unveraenderte Langhilfe "
         "statt einer dedizierten Kurzhilfe (AC-23)."
     )
-    for wort in merkmal_fuer("hilfe", nutzer=nutzer):
+    for wort in merkmal_fuer("hilfe", nutzer=nutzer, kanal="premium_sms"):
         assert wort in text.upper(), f"Kurzhilfe fehlt Befehlswort {wort!r}: {text!r}"
     for metric in get_all_metrics():
         kuerzel_da = metric.col_label.upper() in text.upper() or (

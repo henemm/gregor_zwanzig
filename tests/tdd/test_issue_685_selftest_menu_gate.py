@@ -10,8 +10,9 @@ zieht `sms → app.config → pydantic`, das fehlt → ModuleNotFoundError → N
 Fix: BOT_COMMANDS dependency-frei per `ast.literal_eval` aus der Quelldatei lesen.
 
 ACs:
-  - AC-1: _load_bot_commands() liefert die 7 Befehle auch wenn `pydantic` NICHT
-          importierbar ist (echte Deploy-Bedingung im Subprozess reproduziert).
+  - AC-1: _load_bot_commands() liefert alle Befehle (17 seit #2417 AC-21) auch
+          wenn `pydantic` NICHT importierbar ist (echte Deploy-Bedingung im
+          Subprozess reproduziert).
   - AC-2: Live-Menü == BOT_COMMANDS → check_bot_menu PASS (nicht SKIPPED).
   - AC-3: Abweichung → FAIL + Fazit-Text nennt FAIL statt „PARTIAL" (F001).
   - AC-4: Nicht-parsebare Quelle → None (fail-soft) → Menü-Check SKIPPED.
@@ -43,11 +44,6 @@ PS_PATH = (HOOKS_DIR / "prod_selftest.py").resolve()
 # festen Hauptrepo-Pfad -- REPO_DIR wird unten je Aufruf ueberschrieben.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-EXPECTED_COMMANDS = [
-    "glance", "heute", "morgen", "now", "heute_gewitter",
-    "timeline_heute", "timeline_morgen", "hilfe",
-]
-
 
 def _load_prod_selftest():
     """prod_selftest.py als Modul laden (Hooks-Dir auf sys.path für `import _e2e_paths`)."""
@@ -60,6 +56,18 @@ def _load_prod_selftest():
     # dieselbe Testdatei-relative Aufloesung, egal ob Haupt-Checkout oder Worktree.
     mod.REPO_DIR = REPO_ROOT
     return mod
+
+
+# #2417 AC-21: BOT_COMMANDS waechst von 8 auf 17 Eintraege (Merge mit den
+# _COMMAND_SPECS-Woertern, s. src/output/channels/telegram.py). Statt die
+# Namen hier ein zweites Mal handzutippen (die Liste wuerde bei der naechsten
+# Erweiterung stillschweigend veralten), wird sie per `_load_bot_commands()`
+# genau so geladen, wie es `prod_selftest.py` selbst tut (dependency-freies
+# `ast.literal_eval` direkt aus der Quelldatei, s. Docstring oben) -- dieser
+# Testlauf hat `pydantic` verfuegbar, prueft also einen ZWEITEN, unabhaengigen
+# Ladeweg (regulaerer Prozess) gegen den ersten (Subprozess ohne pydantic,
+# s. AC-1 unten), nicht denselben Wert gegen sich selbst.
+EXPECTED_COMMANDS = [c["command"] for c in _load_prod_selftest()._load_bot_commands()]
 
 
 # ---------------------------------------------------------------------------
@@ -107,8 +115,9 @@ def test_ac1_load_bot_commands_without_pydantic(tmp_path):
     GIVEN: ein Python-Interpreter, in dem `pydantic` NICHT importierbar ist
            (reproduziert den System-`python3` des Deploys via meta_path-Blocker)
     WHEN: _load_bot_commands() in diesem Subprozess läuft
-    THEN: es liefert die 7 BOT_COMMANDS (command-Namen), nicht None,
-          ohne ModuleNotFoundError — weil es per AST aus der Quelle liest.
+    THEN: es liefert alle BOT_COMMANDS (command-Namen, 17 seit #2417 AC-21),
+          nicht None, ohne ModuleNotFoundError — weil es per AST aus der
+          Quelle liest.
     """
     # sitecustomize blockiert pydantic-Import hart → echte gebrochene Umgebung.
     blocker_dir = tmp_path / "noenv"

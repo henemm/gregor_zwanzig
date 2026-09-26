@@ -108,6 +108,17 @@ def _truncate_html(message: str, max_len: int) -> str:
 
     return "".join(result_parts)
 
+# Issue #2417 (B3, "BOT_COMMANDS — Merge, nicht Ersatz"): die urspruenglich
+# 8 handgepflegten Eintraege bleiben unveraendert, dazu kommen die restlichen
+# 9 Woerter aus ``services.trip_command_processor._COMMAND_SPECS`` (heute,
+# morgen, hilfe stehen dort bereits oben). BEWUSST ein ausgeschriebenes
+# Listen-Literal statt einer Ableitung zur Laufzeit (Funktionsaufruf/Import):
+# `.claude/hooks/prod_selftest.py::_load_bot_commands()` liest BOT_COMMANDS
+# dependency-frei per `ast.literal_eval` direkt aus dieser Quelldatei (kein
+# Import der output-Pakete, kein pydantic noetig) — nur ein einziges,
+# literales `BOT_COMMANDS = [...]` ist dafuer auswertbar. Beschreibungen =
+# Kopie aus `_COMMAND_SPECS`, statisch wegen `prod_selftest.py`
+# (ast.literal_eval); Drift bewacht `test_befehlsangebot_vollstaendig.py`.
 BOT_COMMANDS = [
     {"command": "glance", "description": "🌤️ Wetter-Überblick (heute & morgen)"},
     {"command": "heute", "description": "📅 Nur heute"},
@@ -117,6 +128,15 @@ BOT_COMMANDS = [
     {"command": "timeline_heute", "description": "🕐 Timeline heute"},
     {"command": "timeline_morgen", "description": "🕐 Timeline morgen"},
     {"command": "hilfe", "description": "ℹ️ Verfügbare Befehle"},
+    {"command": "jetzt", "description": "Nowcast Regen/Gewitter nächste ~2h (auch NOW)"},
+    {"command": "gewitter", "description": "Gewittergefahr heutige Etappe"},
+    {"command": "strecke", "description": "Regen-Ereignisflächen entlang der Reststrecke"},
+    {"command": "ruhetag", "description": "Etappen um N Tage verschieben (Standard: 1)"},
+    {"command": "status", "description": "Heute und kommende Etappen"},
+    {"command": "pause", "description": "Briefings für Dauer unterbrechen"},
+    {"command": "skip", "description": "Nächstes Briefing überspringen"},
+    {"command": "stop", "description": "Briefings dauerhaft deaktivieren"},
+    {"command": "weiter", "description": "Briefings reaktivieren"},
 ]
 
 

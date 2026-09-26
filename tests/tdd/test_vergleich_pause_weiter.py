@@ -101,6 +101,13 @@ class TestAC8Pause:
         assert "STOP" not in res.confirmation_body
 
     def test_pause_mit_dauer_identisch_zu_ohne_dauer(self, uid):
+        """#2417 AC-29 löst die alte, byte-identische Text-Erwartung ab: das
+        VERHALTEN (Plattenzustand, unbefristete Pause) bleibt für `pause` und
+        `pause 2d` identisch, aber die `2d`-Variante sagt jetzt zusätzlich
+        ausdrücklich, dass die Pause unbefristet gilt (bis WEITER) und eine
+        angegebene Dauer nicht ausgewertet wird — sonst widerspräche die
+        Antwort dem Vergleichs-Hilfe-Angebot, das PAUSE dort ohne Dauer zeigt.
+        """
         p1 = _preset(uid, name="Alpenblick", schedule="weekly")
         p2 = _preset(uid, name="Seenblick", schedule="weekly")
         r1 = _send(uid, "pause", name="Alpenblick")
@@ -109,9 +116,22 @@ class TestAC8Pause:
         for k in ("schedule", "previous_schedule", "kind"):
             assert a[k] == b[k], k
         assert b.get("paused_at") and "paused_until" not in b
-        assert r1.confirmation_body.replace("Alpenblick", "X") == \
-            r2.confirmation_body.replace("Seenblick", "X")
-        assert "2d" not in r2.confirmation_body and "bis zum" not in r2.confirmation_body
+
+        text1 = r1.confirmation_body.replace("Alpenblick", "X")
+        text2 = r2.confirmation_body.replace("Seenblick", "X")
+        assert text2.startswith(text1), (
+            "AC-29: die 2d-Antwort muss die dauer-lose Antwort als Präfix "
+            f"tragen und den Hinweis nur ANHÄNGEN: {text1!r} vs. {text2!r}"
+        )
+        assert "unbefristet" in text2 and "WEITER" in text2
+        assert "nicht ausgewertet" in text2, (
+            f"AC-29: 'pause 2d' am Vergleich muss ausdrücklich sagen, dass "
+            f"die Dauer nicht ausgewertet wurde: {text2!r}"
+        )
+        assert "nicht ausgewertet" not in text1, (
+            f"AC-29: die dauer-lose Antwort darf den Dauer-Hinweis nicht "
+            f"tragen (es gab keine Dauer): {text1!r}"
+        )
 
     def test_pause_ueber_vorab_aufgeloeste_kennung(self, uid):
         """Reader hat bereits eindeutig aufgelöst (Spec Abschnitt 3)."""

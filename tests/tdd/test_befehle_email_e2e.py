@@ -107,6 +107,50 @@ def _mime_apple_html_zitat_und_signatur_mit_fremdem_befehl(
     return raw
 
 
+def _mime_gmail_html_leere_antwort_mit_zitiertem_fremdem_befehl(
+    from_addr: str, subject: str, fremder_befehl: str,
+) -> bytes:
+    """Gmail-/Outlook-Zitatstil (Adversary-Finding F003, #2417): eine
+    BUCHSTAEBLICH LEERE Antwort (kein eigener Text) zitiert ein fremdes
+    Befehlswort in EINEM ``<blockquote type="cite">``, OHNE den
+    Apple-Signatur-Marker (``id="lineBreakAtBeginningOfSignature"``) -- in
+    JEDER bisherigen Fixture steht der Signatur-Marker VOR dem Zitat und
+    faengt den Abbruch bereits ab, sodass der Blockquote-Zweig in
+    ``_BefehlsHtmlParser._pruefe_marker`` nie als EINZIGE Verteidigungslinie
+    geprueft wird.
+
+    Bewusst LEER statt mit einem eigenen sichtbaren Befehlswort davor: ein
+    vorangestelltes eigenes Wort (z.B. "Hilfe") wuerde bereits als erste
+    nicht-leere Zeile gelten, UNABHAENGIG davon, ob das Zitat dahinter
+    abgeschnitten wird -- die Mutation waere dann nur ueber ein zufaellig
+    verschmolzenes, unbekanntes Token beobachtbar (Team-Lead-Review nach
+    #2152, "WELCHER Test/welche Zusicherung rot wird, zaehlt"). Bei einer
+    leeren Antwort wird "Stop" bei fehlendem Abbruch zur ersten nicht-leeren
+    Zeile und damit zu einem ECHT ausgefuehrten Steuerbefehl (Trip wird
+    deaktiviert) -- mit Abbruch bleibt die Antwort "Unbekannter Befehl", der
+    Trip unangetastet. Das ist die scharfe, im Protokoll gemeinte Pruefung."""
+    html = '<div dir="ltr"><br></div>' f'<blockquote type="cite">{fremder_befehl}</blockquote>'
+    qp = quopri.encodestring(html.encode("utf-8")).decode("ascii")
+    boundary = "Gmail-Mail-F003=_GZ2417"
+    raw = (
+        f"From: {from_addr}\r\n"
+        "To: cmd@example.com\r\n"
+        f"Subject: {subject}\r\n"
+        f"Authentication-Results: {AR_PASS}\r\n"
+        "MIME-Version: 1.0\r\n"
+        f'Content-Type: multipart/alternative; boundary="{boundary}"\r\n'
+        "\r\n"
+        f"--{boundary}\r\n"
+        "Content-Type: text/html;\r\n"
+        "\tcharset=utf-8\r\n"
+        "Content-Transfer-Encoding: quoted-printable\r\n"
+        "\r\n"
+        f"{qp}\r\n"
+        f"--{boundary}--\r\n"
+    ).encode("utf-8")
+    return raw
+
+
 def _sende_rohe_mail(settings, raw: bytes) -> int:
     """Wie ``sende_email``, aber mit selbst gebauten Rohbytes (fuer die
     beiden lokalen MIME-Bauer oben) -- derselbe echte ``_process_single``-
@@ -280,6 +324,39 @@ def test_apple_mail_ignoriert_befehlswort_in_zitat_und_signatur(monkeypatch, use
     trip = next(t for t in load_all_trips(nutzer.user_id) if t.id == nutzer.trip.id)
     assert trip.report_config.enabled is True, (
         "Stop aus Zitat/Signatur hat den Trip trotzdem deaktiviert (RMW-Seiteneffekt)."
+    )
+
+
+def test_gmail_html_ignoriert_zitiertes_fremdes_befehlswort_in_leerer_antwort(monkeypatch, user_ids):
+    """AC-19, Adversary-Finding F003: eine buchstaeblich LEERE Gmail-/
+    Outlook-Antwort (kein eigener Text) zitiert das fremde Befehlswort
+    ``Stop`` in EINEM ``<blockquote type="cite">``, OHNE den Apple-Signatur-
+    Marker -- der Blockquote-Abbruch in ``_BefehlsHtmlParser`` ist hier die
+    EINZIGE Verteidigung. Fehlt der Abbruch, wird "Stop" zur ersten
+    nicht-leeren Zeile und damit zu einem ECHT ausgefuehrten Steuerbefehl
+    (Trip wird deaktiviert); mit Abbruch bleibt die Antwort "Unbekannter
+    Befehl" (kein eigener Text vorhanden), der Trip unangetastet."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    settings = basis_settings()
+    subject = f"Re: [{nutzer.trip.name}] Etappe"
+    raw = _mime_gmail_html_leere_antwort_mit_zitiertem_fremdem_befehl(
+        nutzer.mail_to, subject, fremder_befehl="Stop",
+    )
+
+    ergebnis = _sende_rohe_mail(settings, raw)
+
+    recorder.pruefe_keine_unbekannten_aufrufe()
+    assert ergebnis == 1, "Die Mail wurde nicht verarbeitet."
+    assert recorder.emails, f"Es wurde keine Antwortmail versendet: {recorder.emails!r}"
+    text = _gesendeter_email_text(recorder.emails[-1])
+    text_klein = text.lower()
+    assert "beendet" not in text_klein and "deaktiviert" not in text_klein, (
+        f"Das zitierte Befehlswort ('Stop') wurde trotz leerer Antwort ausgefuehrt: {text!r}"
+    )
+    trip = next(t for t in load_all_trips(nutzer.user_id) if t.id == nutzer.trip.id)
+    assert trip.report_config.enabled is True, (
+        "Stop aus dem Zitat hat den Trip trotz leerer Antwort deaktiviert (RMW-Seiteneffekt)."
     )
 
 
