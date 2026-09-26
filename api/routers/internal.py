@@ -13,11 +13,12 @@ Moduls liegen hinter ``X-GZ-Core-Auth`` (ADR-0062, Middleware in
 ``api/main.py``).
 """
 import math
+import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.config import Settings
 from output.channels.base import OutputConfigError, OutputError
@@ -205,3 +206,20 @@ def sms_daily_usage(user_id: str = Query(...)):
     """Tageskontingent-Anzeige fuer /account (S4b, Issue #2412). `user_id` ohne
     Default -- ein Ersatzwert wie "default" zeigte ein fremdes Konto."""
     return sms_daily_limit.get_daily_usage(user_id, datetime.now(timezone.utc))
+
+
+class _SeedDailyUsage(BaseModel):
+    user_id: str
+    sms: int | None = Field(default=None, ge=0, le=1000)
+    premium_sms: int | None = Field(default=None, ge=0, le=1000)
+
+
+@router.post("/api/_internal/sms/seed-daily-usage")
+def sms_seed_daily_usage(body: _SeedDailyUsage):
+    """Staging-Testwerkzeug (Issue #2423): Tageszaehler setzen. Ausserhalb
+    `GZ_ENV=staging` 404 -- zur Anfragezeit ausgewertet, nicht beim Import."""
+    if os.environ.get("GZ_ENV") != "staging":
+        raise HTTPException(status_code=404, detail="Not Found")
+    return sms_daily_limit.seed_daily_usage(
+        body.user_id, body.sms, body.premium_sms, datetime.now(timezone.utc)
+    )

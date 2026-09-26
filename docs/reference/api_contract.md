@@ -200,6 +200,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
 | `/api/auth/sms/resend` | POST (Issue #2406 — stellt den Bestätigungscode für die ausstehende Nummer erneut zu; Mengenbremse 3/h je Nutzer, sonst 429 mit `Retry-After`) |
 | `/api/auth/sms/staging-code` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404; liefert den Klartext-Code der angemeldeten Sitzung, ignoriert den Body) |
+| `/api/auth/staging-seed` | POST (Issue #2423 — nur `GZ_ENV=staging`, sonst nicht registriert → 404; setzt für das EIGENE Konto `tier` (`free`/`standard`/`premium`) und/oder `sms`/`premium_sms` (Ganzzahl 0..1000, Tageszähler); Nutzerfelder im Body werden ignoriert; 400 `nothing_to_set`/`validation_error`, 502 `core_unavailable`; Antwort `{tier, sms, premium_sms}`. Intern: Python `POST /api/_internal/sms/seed-daily-usage`, ebenfalls nur bei `GZ_ENV=staging`) |
 | `/api/auth/sms/verify` | POST (Issue #2406 — löst den Code ein; erst danach wandert die Nummer nach `sms_to`) |
 | `/api/auth/telegram-link` | GET |
 | `/api/auth/telegram-status` | GET |

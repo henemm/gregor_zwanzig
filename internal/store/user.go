@@ -90,6 +90,31 @@ func (s *Store) SaveUser(user model.User) error {
 	return writeFileLogged(filepath.Join(dir, "user.json"), data)
 }
 
+// SetUserTier setzt NUR "tier" in user.json (Merge auf Roh-Ebene, damit
+// Client-unbekannte Felder erhalten bleiben — ein SaveUser des typisierten
+// model.User wuerde sie verwerfen). Issue #2423 (Staging-Seed).
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) SetUserTier(id, tier string) error {
+	if !ValidUserID(id) {
+		return ErrInvalidUserID
+	}
+	path := filepath.Join(s.UserDir(id), "user.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	m["tier"], _ = json.Marshal(tier)
+	out, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileLogged(path, out)
+}
+
 // ProvisionUserDirs creates the standard subdirectories for a new user.
 // gz-store-scope-exempt: die Kennung kommt als Parameter id herein, legt das Konto erst an
 func (s *Store) ProvisionUserDirs(id string) error {

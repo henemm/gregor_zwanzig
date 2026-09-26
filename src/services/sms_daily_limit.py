@@ -259,6 +259,36 @@ def release_reservation(user_id: str, kind: str, now: datetime) -> None:
         os.close(fd)
 
 
+def seed_daily_usage(user_id: str, sms: int | None, premium_sms: int | None, now: datetime) -> dict:
+    """Staging-Testwerkzeug (Issue #2423): setzt den heutigen Tageszaehler.
+
+    Nicht gesetzte Felder (None) behalten den heutigen Stand (nach
+    Tageswechsel-Regel 0). Kein Kappen auf das Limit (Overshoot). Lock +
+    atomares Schreiben wie `check_and_reserve`; anders als dort KEIN
+    fail-open -- ein Testwerkzeug darf einen Fehler nicht verschweigen.
+    Rueckgabe: neuer Stand `{"sms": N, "premium_sms": M}`."""
+    path = _path(user_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(str(path) + _LOCK_SUFFIX, os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
+            raise TimeoutError(f"Dateisperre fuer {path} nicht erhalten")
+        try:
+            data = _tagesstand(_load(path), _today(now))
+            if sms is not None:
+                data["sms"] = sms
+            if premium_sms is not None:
+                data["premium_sms"] = premium_sms
+            data.setdefault("sms", 0)
+            data.setdefault("premium_sms", 0)
+            _write(path, data)
+            return {"sms": _zaehlerwert(data, "sms"), "premium_sms": _zaehlerwert(data, "premium_sms")}
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
 def get_daily_usage(user_id: str, now: datetime) -> dict:
     """Tagesstand fuer die Konto-Anzeige (S4b, Issue #2412). Rein lesend, KEIN
     Lock: `_write` ersetzt atomar, ein Leser sieht nie einen Teilzustand.
