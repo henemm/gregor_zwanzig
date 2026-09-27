@@ -4,7 +4,7 @@ type: module
 created: 2026-09-27
 updated: 2026-09-27
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [befehle, kurzform, premium-sms, telegram, metrik-katalog, englisch]
 ---
 
@@ -70,7 +70,7 @@ Dazu die **Gefahren-Kürzel** der Warn-SMS (`hazard_symbols.py:15-26`): `FL` (ha
 ## Gemessenes Längenbudget (GSM-7, `sms_segments()`)
 
 - HELP im verbindlichen Wortlaut unten: 402 Zeichen = **3 Segmente**
-- CODES im verbindlichen Wortlaut unten (Wetter + weitere Bausteine + Format + Alerts): 758 Zeichen = **5 Segmente** (Grenze 765). Eine vollständige Erklärung aller lesbaren Zeichen passt nicht in 4 Segmente; Vollständigkeit geht vor, weil wer nur Premium-SMS empfängt, keine andere Quelle für die Bedeutung hat.
+- CODES im verbindlichen Wortlaut unten (Wetter + weitere Bausteine + Format + Alerts): 763 Zeichen = **5 Segmente** (Grenze 765). Nachgemessen am 27.09.2026 nach Aufnahme von `MAX` (siehe Changelog v1.1). Eine vollständige Erklärung aller lesbaren Zeichen passt nicht in 4 Segmente; Vollständigkeit geht vor, weil wer nur Premium-SMS empfängt, keine andere Quelle für die Bedeutung hat.
 
 ### Verbindlicher Wortlaut (Trip, Kurzform-Kanal)
 
@@ -97,7 +97,7 @@ Send a code (e.g. R) for its values.
 CODES:
 ```
 Weather: T temp, D day max, N night, L day min, TF feels like, FD/FL/FN = D/L/N feels like, R rain mm, PR rain %, TH thunder, TH+ next stage, W wind km/h, G gusts, WD wind dir, HU humidity, DP dew point, CP storm energy, PT precip type, SL snow line m, NS24+ new snow 24h, CT/CL/CM/CH clouds total/low/mid/high, VS visibility, SU sun h, UV index, HP pressure, FZ 0C level m.
-More: SD snow depth, AV avalanche level, C forecast confidence, Z:/M: fire zones/massifs.
+More: SD snow depth, AV avalanche level, C confidence, Z:/MAX/M: fire zones/top level/massifs.
 Format: E4 stage 4, 23@5 over limit from 5h, (24@7) peak, D13/27 min/max, +HL hail, - none, ? no data.
 Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: Meteo-France rain/storm risk. X? no alert data.
 ```
@@ -108,13 +108,22 @@ Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, IC ice, HT 
 |---|---|
 | Jedes Kürzel einer Wettermetrik (alle Einträge in `_METRICS`, inklusive `snow_depth`=`SD`, `confidence`=`C` und beider Gewitter-Kürzel `TH`/`TH+`) | **`src/app/metric_catalog.py`**, im jeweiligen `MetricDefinition`-Eintrag, als neues Feld je Kürzel |
 | Warn-Kürzel (`TH`, `FL`, `HR`, … hinter `!`) | `src/output/tokens/hazard_symbols.py`, direkt bei `HAZARD_SMS_SYMBOLS`, wo das Kürzel selbst definiert ist. Das sind amtliche Warnarten, keine Wettermetriken. |
-| Übrige Bausteine ohne Katalog-Eintrag (`AV`, `Z:`, `M:`, `VR:`, `VT:`, `X?`) und Formatzeichen (`E<N>`, `@`, `(…)`, `/`, `+HL`, `-`, `?`) | `src/output/tokens/builder.py`, direkt bei der Konstante, die das Zeichen erzeugt |
+| Übrige Bausteine ohne Katalog-Eintrag (`AV`, `Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`) und Formatzeichen (`E<N>`, `@`, `(…)`, `/`, `+HL`, `-`, `?`) | `src/output/tokens/builder.py`, direkt bei der Konstante, die das Zeichen erzeugt |
 
 CODES/KUERZEL enthält **keinen einzigen** eigenen Bedeutungstext. Die Antwort wird zur Laufzeit aus diesen drei Stellen zusammengesetzt. Die Blöcke oben (englisch) und in AC-10 (deutsch) sind das **erwartete Ergebnis** dieser Ableitung zum Freigabezeitpunkt, keine zweite Definition. Ändert jemand eine Bedeutung im Katalog, ändert sich die CODES-Antwort, und der Wortlaut-Test wird rot. Das ist gewollt, weil der PO dann den neuen Wortlaut sieht.
 
-CODES erklärt damit **jedes** Zeichen, das in einer Kurzform-SMS erscheinen kann: die Wetter-Register, die übrigen Bausteine aus `src/output/tokens/builder.py` (`SD`, `AV`, `C`, `Z:`, `M:`, `VR:`, `VT:`, `X?`), die Formatzeichen und die Warn-Kürzel hinter `!`. Nicht erklärt wird nur `DBG` (erscheint ausschließlich im Test-/Debug-Modus, nie beim Nutzer).
+CODES erklärt damit **jedes** Zeichen, das in einer Kurzform-SMS erscheinen kann: die Wetter-Register, die übrigen Bausteine aus `src/output/tokens/builder.py` (`SD`, `AV`, `C`, `Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`; `MAX` = Brandzonen der höchsten Stufe), die Formatzeichen und die Warn-Kürzel hinter `!`. Nicht erklärt wird nur `DBG` (erscheint ausschließlich im Test-/Debug-Modus, nie beim Nutzer).
 
-Beim **Ortsvergleich** enthält HELP nur die Zeilen der dort erlaubten Befehle (laut `kinds`), in derselben Formulierung. Die Formatzeile entspricht der Kurzform-Grammatik in `docs/reference/sms_format.md` (`R0.2@6(1.4@16)` = über der Schwelle ab 6 Uhr, Spitze 1,4 um 16 Uhr; `D13/27` = Bereich Tiefst/Höchst; `+HL` = Hagel am Gewitter-Kürzel; `?` = Datenlücke).
+Beim **Ortsvergleich** enthält HELP nur die Zeilen der dort erlaubten Befehle (laut `kinds`). Weil ein Ortsvergleich unbefristet pausiert (Vorgänger-Spec AC-29, Test `test_ac29_vergleichshilfe_bietet_pause_ohne_dauerangabe` bleibt gültig), lautet die PAUSE-Zeile dort anders als beim Trip. Kürzel-Abfragen gibt es beim Ortsvergleich nicht, deshalb entfällt die Zeile „Send a code …". Verbindlicher Wortlaut (Ortsvergleich, Kurzform-Kanal):
+
+```
+Commands (German works too):
+PAUSE - no briefings until RESUME
+RESUME - restart briefings
+CODES - code meanings
+```
+
+Wie beim Trip fehlt eine HELP-Zeile, weil der Nutzer die Liste gerade liest. Die Wirkungstexte stehen in `_COMMAND_SPECS` (`wirkung_en`); PAUSE trägt dort zusätzlich eine eigene Vergleichs-Wirkung (Feldname legt `/50` fest). `CODES`/`KUERZEL` ist für Trip und Ortsvergleich erlaubt. Die Formatzeile entspricht der Kurzform-Grammatik in `docs/reference/sms_format.md` (`R0.2@6(1.4@16)` = über der Schwelle ab 6 Uhr, Spitze 1,4 um 16 Uhr; `D13/27` = Bereich Tiefst/Höchst; `+HL` = Hagel am Gewitter-Kürzel; `?` = Datenlücke).
 
 **Verbindlich: HELP höchstens 3 Segmente, CODES höchstens 5 Segmente** (153 GSM-7-Zeichen je Segment, gemessen mit dem bestehenden Test-Helfer `sms_segments()` aus `tests/tdd/_befehl_e2e_fixtures.py`).
 
@@ -140,7 +149,7 @@ Beim **Ortsvergleich** enthält HELP nur die Zeilen der dort erlaubten Befehle (
 ### B. Antwortsprache je Kanal
 
 - **AC-4:** Given eine Antwort geht über Premium-SMS hinaus / When sie versendet wird / Then ist ihr Text durchgehend englisch — unabhängig davon, ob der Nutzer deutsch oder englisch angefragt hat.
-  - Test: `test_kurzform_befehle_englisch.py::test_premium_sms_antwort_ist_immer_englisch`, prüft je erreichbaren Antworttyp (siehe Abschnitt D) auf Abwesenheit deutscher Signalwörter und Anwesenheit des erwarteten englischen Inhalts.
+  - Test: `test_kurzform_befehle_englisch.py::test_premium_sms_antwort_ist_immer_englisch`, prüft je erreichbaren Antworttyp (siehe Abschnitt H) auf Abwesenheit deutscher Signalwörter und Anwesenheit des erwarteten englischen Inhalts.
 
 - **AC-5:** Given das aufgelöste Ziel (Trip oder Ortsvergleich) hat `telegram_style == "kurzform"` (Trip: `report_config.telegram_style`, Vergleich: `display_config.telegram_style`) / When eine Antwort per Telegram an dieses Ziel geht / Then ist sie englisch; hat das Ziel keinen oder einen anderen `telegram_style`, bleibt die Antwort deutsch.
   - **Ziellose Befehle** (`HELP`/`HILFE`, `CODES`/`KUERZEL`) haben kein aufgelöstes Ziel. Für sie gilt auf Telegram deshalb: Die Sprache folgt dem **gesendeten Wort**. `HELP`/`CODES` antworten englisch, `HILFE`/`KUERZEL` deutsch, unabhängig davon, wie viele Trips oder Ortsvergleiche mit welchem Stil existieren. Auf Premium-SMS bleibt es immer englisch (AC-4), auf E-Mail immer deutsch (AC-6).
@@ -160,7 +169,7 @@ Beim **Ortsvergleich** enthält HELP nur die Zeilen der dort erlaubten Befehle (
 
 ### D. CODES
 
-- **AC-9:** Given die Antwort auf `CODES`/`KUERZEL` ist nach AC-4/AC-5 englisch (Premium-SMS immer, Telegram bei gesendetem englischem Wort `CODES`) / When die Antwort aufgebaut wird / Then enthält sie jedes Kürzel aus `SMS_SYMBOL_BY_METRIC` und `SMS_MULTI_SYMBOLS_BY_METRIC` (die tatsächlich gesendeten Ausgabe-Kürzel) mit einer kurzen englischen Bedeutung, dazu die übrigen Bausteine aus `builder.py` außer `DBG` (`SD`, `AV`, `C`, `Z:`, `M:`, `VR:`, `VT:`, `X?`), die Formatzeichen der Kurzform-Grammatik (Etappen-Präfix `E<N>`, Stunden-Marker `@`, Spitze `(…)`, Bereich `D13/27`, Hagel-Suffix `+HL`, Null-Form `-`, Lücken-Marker `?`) und einen eigenen Abschnitt „Alerts" mit den zehn Warn-Kürzeln aus `HAZARD_SMS_SYMBOLS` samt Stufen `L/M/H` — und braucht höchstens 5 Segmente.
+- **AC-9:** Given die Antwort auf `CODES`/`KUERZEL` ist nach AC-4/AC-5 englisch (Premium-SMS immer, Telegram bei gesendetem englischem Wort `CODES`) / When die Antwort aufgebaut wird / Then enthält sie jedes Kürzel aus `SMS_SYMBOL_BY_METRIC` und `SMS_MULTI_SYMBOLS_BY_METRIC` (die tatsächlich gesendeten Ausgabe-Kürzel) mit einer kurzen englischen Bedeutung, dazu die übrigen Bausteine aus `builder.py` außer `DBG` (`SD`, `AV`, `C`, `Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`), die Formatzeichen der Kurzform-Grammatik (Etappen-Präfix `E<N>`, Stunden-Marker `@`, Spitze `(…)`, Bereich `D13/27`, Hagel-Suffix `+HL`, Null-Form `-`, Lücken-Marker `?`) und einen eigenen Abschnitt „Alerts" mit den zehn Warn-Kürzeln aus `HAZARD_SMS_SYMBOLS` samt Stufen `L/M/H` — und braucht höchstens 5 Segmente.
   - Der Text entspricht **zeichengenau** dem „Verbindlichen Wortlaut" oben (`test_codes_ist_der_freigegebene_wortlaut`).
   - Test: `test_kuerzel_eindeutig.py::test_codes_vollstaendig_gegen_ausgabe_register` — leitet die Soll-Menge aus `SMS_SYMBOL_BY_METRIC`/`SMS_MULTI_SYMBOLS_BY_METRIC`/`HAZARD_SMS_SYMBOLS` ab (nicht aus einer zusätzlichen, handgepflegten Bedeutungs-Liste) und schlägt fehl, sobald ein Register-Kürzel in der CODES-Antwort fehlt oder ein Kürzel ohne Bedeutungstext auftaucht. Die Soll-Menge umfasst zusätzlich jedes Token-Symbol, das `builder.py` erzeugen kann (außer `DBG`). Segmentzahl ≤ 5 mit `sms_segments()`.
 
@@ -169,7 +178,7 @@ Beim **Ortsvergleich** enthält HELP nur die Zeilen der dort erlaubten Befehle (
     ```
     Kürzel
     Wetter: T Temperatur, D Tageshöchstwert, N Nacht, L Tagestiefstwert, TF gefühlt, FD/FL/FN = D/L/N gefühlt, R Regen mm, PR Regenwahrscheinlichkeit %, TH Gewitter, TH+ Gewitter Folge-Etappe, W Wind km/h, G Böen, WD Windrichtung, HU Luftfeuchte, DP Taupunkt, CP Gewitterenergie, PT Niederschlagsart, SL Schneefallgrenze m, NS24+ Neuschnee 24h, CT/CL/CM/CH Bewölkung gesamt/tief/mittel/hoch, VS Sicht, SU Sonnenstunden, UV UV-Index, HP Luftdruck, FZ Nullgradgrenze m.
-    Weitere: SD Schneehöhe, AV Lawinenstufe, C Vorhersage-Verlässlichkeit, Z:/M: Brandzonen/Massive.
+    Weitere: SD Schneehöhe, AV Lawinenstufe, C Vorhersage-Verlässlichkeit, Z:/MAX/M: Brandzonen/Höchststufe/Massive.
     Format: E4 Etappe 4, 23@5 über der Schwelle ab 5 Uhr, (24@7) Spitze, D13/27 Tiefst/Höchst, +HL Hagel, - nichts, ? keine Daten.
     Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN Schnee, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine Warndaten.
     ```
@@ -188,7 +197,7 @@ Beim **Ortsvergleich** enthält HELP nur die Zeilen der dort erlaubten Befehle (
 
 ### F. Temperatur-Bereinigung (Verhaltensänderung)
 
-- **AC-12:** Given `temperature` (Stundenverlauf) trägt heute `sms_code="D"`, obwohl `D` in der gesendeten SMS der Tageshöchstwert (`temperature_day_high`) ist / When der Katalog bereinigt wird / Then bekommt `temperature` im Katalog das Kürzel `T`, und `D` fragt danach eindeutig den Tageshöchstwert ab. `T` ist dabei nicht neu erfunden: Telegram zeigt die Temperatur schon heute als `T`, allerdings nur über die benannte Ausnahmeliste aus #1719 S4 (`docs/reference/metric_output_matrix.md` Abschnitt „Grundlage", Wächter `tests/unit/test_telegram_kuerzel_folgt_register.py`). Mit `sms_code="T"` entfällt der Ausnahme-Eintrag für `temperature`, weil Register und Telegram dann ohnehin übereinstimmen. Kein anderer Katalog-Eintrag trägt `T` als `sms_code`, `col_label` oder `sms_multi_symbols`.
+- **AC-12:** Given `temperature` (Stundenverlauf) trägt heute `sms_code="D"`, obwohl `D` in der gesendeten SMS der Tageshöchstwert (`temperature_day_high`) ist / When der Katalog bereinigt wird / Then bekommt `temperature` im Katalog das Kürzel `T`, und `D` fragt danach eindeutig den Tageshöchstwert ab. `T` ist dabei nicht neu erfunden: Telegram zeigt die Temperatur schon heute als `T`, allerdings nur über die benannte Ausnahmeliste aus #1719 S4 (`docs/reference/metric_output_matrix.md` Abschnitt „Grundlage", Wächter `tests/unit/test_telegram_kuerzel_folgt_register.py`). Mit `sms_code="T"` entfällt der Ausnahme-Eintrag für `temperature`, weil Register und Telegram dann ohnehin übereinstimmen. Kein anderer Katalog-Eintrag trägt `T` als `sms_code`, `col_label` oder `sms_multi_symbols` — einzige Ausnahme ist der nicht wählbare Kälte-Alarm `temperature_cold` (AC-28), der dieselbe Temperatur bewacht.
   - Test: `test_kuerzel_eindeutig.py::test_temperature_kuerzel_ist_t`, plus Mutations-Gegenprobe (siehe Abschnitt „Mutationen").
 
 - **AC-13:** Given `D` (Tageshöchstwert) und `N` (Nachtwert) sind heute nur lesbare Ausgabe-Kürzel, aber keine sendbaren Eingabe-Kürzel / When ein Nutzer `D` bzw. `N` als Kürzel-Abfrage sendet / Then liefert die Antwort den Tages-Einzelwert der heutigen Etappe für Tageshöchst- bzw. Nachtwert (denselben Wert und dieselbe Einheit, die das Trip-Briefing für diesen Tag zeigt) — **nicht** einen Stundenverlauf, weil diese Größen im Katalog keinen Stundenverlauf führen.
@@ -200,8 +209,14 @@ Beim **Ortsvergleich** enthält HELP nur die Zeilen der dort erlaubten Befehle (
 - **AC-15:** Given `fresh_snow` wird in der SMS als `NS24+` ausgewiesen, ist aber unter `sms_code="NS"` eingebbar / When ein Nutzer das gelesene Kürzel `NS24+` unverändert zurücksendet / Then wird es normalisiert (Suffix `24+` entfernt) und als dieselbe Abfrage wie `NS` erkannt.
   - Test: `test_kuerzel_eindeutig.py::test_ns24plus_wird_zu_ns_normalisiert`.
 
-- **AC-22:** Given ein Trip und ein Ortsvergleich mit der Metrik „Temperatur" (`temperature`) sowie ein Temperatur-Alarm / When nach der Umstellung automatisch Briefing, Ortsvergleich-SMS und Alarm-SMS erzeugt werden / Then bleibt die Kurzform-Zeile des **Trip-Briefings** zeichengleich (dort bedeutet `D` schon heute den Tageshöchstwert). An den beiden Stellen, die das Kürzel von `temperature` direkt aus dem Katalog lesen, steht künftig `T` statt `D`: in der **Temperatur-Alarm-SMS** (`alert/render.py:177`) und in der **Ortsvergleich-Kurzform** (`comparison.py`, Leser von `get_sms_code`). Das ist die sichtbare Folge von AC-12 in automatisch versendeten Nachrichten und hier ausdrücklich so gewollt: Ein Kürzel hat überall dieselbe Bedeutung.
-  - Test: `test_kuerzel_eindeutig.py::test_automatische_ausgaben_nach_t_umstellung` vergleicht die Trip-Briefing-Zeile vorher/nachher (gleich) und prüft Alarm- und Ortsvergleich-SMS auf `T` statt `D` für die Temperatur.
+- **AC-22:** Given ein Trip und ein Ortsvergleich mit der Metrik „Temperatur" (`temperature`) sowie ein Temperatur-Alarm / When nach der Umstellung automatisch Briefing, Ortsvergleich-SMS und Alarm-SMS erzeugt werden / Then bleibt die Kurzform-Zeile des **Trip-Briefings** zeichengleich (dort bedeutet `D` schon heute den Tageshöchstwert), und die **Ortsvergleich-Kurzform** bleibt ebenfalls zeichengleich: Sie liest für „Temperatur max/min" über `kuerzel_metric_id` die Größen `temperature_day_high`/`temperature_day_low` und zeigt daher weiterhin `D`/`L` (gemessen 27.09.2026 in `compare_metric_catalog.py:130,143`; die v1.0-Aussage „Ortsvergleich zeigt künftig `T`" war falsch). Künftig `T` statt `D` steht nur in der **Temperatur-Alarm-SMS** (`alert/render.py`). Das ist die sichtbare Folge von AC-12 in automatisch versendeten Nachrichten und hier ausdrücklich so gewollt: Ein Kürzel hat überall dieselbe Bedeutung.
+  - Test: `test_kuerzel_eindeutig.py::test_automatische_ausgaben_nach_t_umstellung` vergleicht die Trip-Briefing-Zeile und die Ortsvergleich-Zeile vorher/nachher (gleich, `D`/`L`) und prüft die Temperatur-Alarm-SMS auf `T` statt `D`.
+
+- **AC-28:** Given der nicht wählbare Kälte-Alarm `temperature_cold` trägt heute `sms_code="N"`, während `N` in der gesendeten SMS den Nachtwert (`temperature_night`) bedeutet / When eine Kälte-Alarm-SMS entsteht / Then trägt sie das Kürzel `T`, weil der Kälte-Alarm auf dieselbe Temperatur schaut wie `temperature` (analog zur schon bestehenden Ausnahme beim `alert_label` „Temp"). `N` bedeutet danach überall nur noch den Nachtwert. Der Doppelungs-Wächter (AC-25 Punkt 2) führt `temperature`/`temperature_cold` für das Kürzel `T` als **einzige** begründete Ausnahme; `temperature_cold` trägt keine eigene Kürzel-Bedeutung, CODES erklärt `T` einmal über `temperature`. Sichtbare Änderung in der Kälte-Alarm-SMS, hier ausdrücklich so beschlossen.
+  - Test: `test_kuerzel_eindeutig.py::test_kaelte_alarm_traegt_t_statt_n` (Rendertest der versendeten Kälte-Alarm-SMS) sowie `test_keine_doppelten_kennungen.py` Punkt 2 mit der Ausnahme.
+
+- **AC-29:** Given die Metrik-Auswahl des Ortsvergleichs (`compare_metric_catalog.py`) liefert heute als `sms_code` für „Temperatur max" (`temp_max_c`) und „Temperatur min" (`temp_min_c`) das Kürzel von `temperature` (heute beide `D`, nach AC-12 beide `T`), obwohl die Ortsvergleich-SMS dort `D` bzw. `L` zeigt / When die Auswahl ausgeliefert wird / Then trägt jeder Eintrag als `sms_code` das Kürzel, das die SMS für ihn wirklich zeigt (über `kuerzel_metric_id`, sonst `metric_id`): `temp_max_c` → `D`, `temp_min_c` → `L`. Die Kürzel-Legende im Ortsvergleich-Editor zeigt damit `D` und `L` je einmal und kein doppeltes Kürzel. Änderung nur im Python-Core, keine Frontend-Code-Änderung.
+  - Test: `test_kuerzel_eindeutig.py::test_vergleichsauswahl_zeigt_das_gesendete_kuerzel` sowie `metricKuerzelLegende.test.ts` (Soll: `D` einmal, `L` einmal, kein Kürzel doppelt).
 
 **Hinweis Renderer-Commit-Gate:** Die Änderung von `MetricDefinition.sms_code` für `temperature` (AC-12) wirkt über `SMS_SYMBOL_BY_METRIC` in den SMS-Renderer (`src/output/renderers/sms_trip.py`) — der Renderer-Commit-Gate und `briefing_mail_validator.py` sind vor „E2E bestanden" erneut frisch zu fahren.
 
@@ -231,10 +246,25 @@ Auf einem Kurzform-Kanal (Premium-SMS immer, Telegram bei `telegram_style="kurzf
 | STOP-Bestätigung (Trip) | `_cancel_trip()`, `trip_command_processor.py:2683-2695` |
 | RESUME(WEITER)-Bestätigung (Trip) | `_resume_trip()`, `trip_command_processor.py:2697-2709` |
 | RESTDAY(RUHETAG)-Bestätigung | `_apply_ruhetag()`, `trip_command_processor.py:2116-2169` |
-| STATUS-Kopf | `_show_status()`, `f"Status: {trip.name}"`, `trip_command_processor.py:2258-2268` |
+| STATUS | `_show_status()`, `trip_command_processor.py:2258-2268` — siehe AC-30 |
+| Nowcast ohne Niederschlag („Kein Niederschlag …") | `radar_service.py:152` (`INTENSITY_DRY`) und Nowcast-Antwort im Prozessor |
+| Gewitter-Antwort („Gewitter heute …") | `trip_command_processor.py:2013` |
+| Strecke ohne Kilometrierung | `trip_command_processor.py:2570` |
+| PAUSE ohne Dauer („Bitte Dauer angeben …") | `trip_command_processor.py:2345` |
+| Kein aktives Ziel / kein Kandidat | `KEIN_AKTIVES_ZIEL_TEXT`, `KEIN_KANDIDAT_TEXT` (`trip_selection.py:43,48`) |
+| Trip-Name nicht gefunden | `trip_command_processor.py:882,904,924` |
+| Ortsvergleich: Report/Heute/Morgen nicht verfügbar | `trip_command_processor.py:1130` |
+| Ortsvergleich: PAUSE-Hinweis „Dauer wird nicht ausgewertet" | `_apply_compare_pause()`, `trip_command_processor.py:1160` |
+| Ortsvergleich: RESUME-Bestätigung / „ist nicht pausiert" | `_resume_compare()`, `trip_command_processor.py:1171-1188` |
+
+Die Tabelle ist die Prüfliste des Tests, **nicht** die Grenze der Pflicht: Jede Antwort auf einem Kurzform-Kanal ist englisch (AC-4). Findet `/50` eine weitere deutsche Antwort auf einem Kurzform-Pfad, wird sie mit übersetzt und in den Test aufgenommen. Der englische Wortlaut dieser Texte ist nicht zeichengenau vorgegeben; er sagt dasselbe wie der deutsche und ist GSM-7-sauber.
 
 - **AC-19:** Given jede der oben gelisteten Textarten wird auf einem Kurzform-Kanal ausgelöst / When die Antwort tatsächlich versendet wird / Then ist ihr Text vollständig englisch (Kopf, Fließtext und ggf. Bestätigungssatz). Kein deutsches Wort wirbt mehr für einen deutschen Befehl in einer englischen Nachricht. **Einzige Ausnahme:** Auf einen unbekannten Befehl antwortet Telegram deutsch mit dem Zusatz „English: send HELP", weil es weder ein Ziel noch ein erkanntes Wort gibt, an dem sich die Sprache ablesen ließe (siehe Einleitung Abschnitt H). Für diese Zeile prüft der Test auf Telegram den deutschen Text samt Zusatz, auf Premium-SMS den englischen Text.
-  - Test: `test_kurzform_befehle_englisch.py::test_alle_erreichbaren_textarten_sind_englisch`, parametrisiert über die Tabelle oben, je Kanal Premium-SMS und Telegram-Kurzform.
+  - Der vom System erzeugte Text jeder Antwort über Premium-SMS ist außerdem **GSM-7-sauber** (kein `–`, `→`, `°`, `⛈`, keine Emojis), damit sie nicht in die teure Unicode-Kodierung kippt. Vom Nutzer vergebene Namen (Trip, Etappe, Ortsvergleich) werden unverändert übernommen.
+  - Test: `test_kurzform_befehle_englisch.py::test_alle_erreichbaren_textarten_sind_englisch`, parametrisiert über die Tabelle oben, je Kanal Premium-SMS und Telegram-Kurzform; auf Premium-SMS zusätzlich GSM-7-Prüfung.
+
+- **AC-30:** Given die STATUS-Antwort besteht heute aus `Status: <Trip>` und je Etappe einer Zeile `  TT.MM.JJJJ – <Etappe>` / When sie auf einem Kurzform-Kanal versendet wird / Then lautet sie `Status: <Trip>`, eine Leerzeile und je Etappe `  TT.MM.JJJJ - <Etappe>` (einfacher Bindestrich statt Gedankenstrich). Der Text ist damit sprachneutral und GSM-7-sauber. Auf E-Mail und Telegram ohne Kurzform bleibt er unverändert.
+  - Test: `test_kurzform_befehle_englisch.py::test_status_kurzform_ist_gsm7_und_sprachneutral` (zeichengenau je Kanal).
 
 ### I. Telegram-Menü
 
@@ -248,7 +278,8 @@ PO wörtlich: „Ich möchte einen permanenten Test, der sicherstellt, dass es n
 Gemessener Ist-Stand vom 27.09.2026 über alle 32 `_METRICS`-Einträge: `id`, `label_de`, `col_key`, `col_label`, `compact_label`, `sms_code` und `sms_multi_symbols` sind heute schon eindeutig. Doppelt vergeben sind:
 - `alert_label` „Schnee" für `snow_depth` **und** `fresh_snow`. Das ist ein echter Fehler: Eine Alarm-Nachricht sagt „Schnee", ohne dass man erkennt, ob die Schneehöhe oder der Neuschnee gemeint ist. Die Behebung ist Teil dieser Spec (AC-26).
 - `alert_label` „Temp" für `temperature` und `temperature_cold`. Das ist zulässig: `temperature_cold` ist keine eigene Größe, sondern der nicht wählbare Kälte-Alarm auf dieselbe Temperatur.
-- `D` ist heute zweimal belegt (`temperature` und `temperature_day_high`). Das behebt AC-12. Der Frontend-Test `metricKuerzelLegende.test.ts:399-410` schreibt diese Doppelung sogar als Soll fest („`D` genau zweimal"). Er wird auf „`D` einmal, `T` einmal" umgestellt.
+- `D` ist heute zweimal belegt (`temperature` und `temperature_day_high`). Das behebt AC-12. Der Frontend-Test `metricKuerzelLegende.test.ts:399-410` schreibt diese Doppelung sogar als Soll fest („`D` genau zweimal"). Die beiden `D`-Zeilen dort sind allerdings „Temperatur max" und „Temperatur min" der Ortsvergleich-Auswahl, nicht `temperature_day_high` (gemessen 27.09.2026). Er wird deshalb auf „`D` einmal, `L` einmal, kein Kürzel doppelt" umgestellt (AC-29).
+- `N` ist heute zweimal belegt (Kälte-Alarm `temperature_cold` und Nachtwert `temperature_night`). Das behebt AC-28.
 - Nicht als Kennung geprüft werden `friendly_label` (Deko-Symbol, von allen vier Bewölkungsgrößen bewusst geteilt) und `dp_field` (Datenquelle; mehrere Auswertungen lesen denselben Messwert). Beides steht mit Begründung im Test.
 
 - **AC-25:** Given der Metrik-Katalog, die Warn-Kürzel, die übrigen SMS-Bausteine, der Befehlssatz und das Telegram-Menü / When der Kern-Testlauf läuft (jeder Commit, CI-Job `test`) / Then scheitert ein **dauerhafter** Wächter, sobald eine dieser Doppelungen entsteht:
@@ -258,7 +289,7 @@ Gemessener Ist-Stand vom 27.09.2026 über alle 32 `_METRICS`-Einträge: `id`, `l
   4. Ein Wort löst zwei verschiedene Befehle aus oder gleicht einem Kürzel (AC-16). Dass ein Befehl in beiden Sprachen gleich geschrieben wird (`PAUSE`, `STATUS`, `SKIP`, `STOP`), ist keine Doppelung: Es ist ein Wort für einen Befehl.
   5. Ein Telegram-Menüeintrag (Slash-Name) kommt zweimal vor. Gleich geschriebene Befehle stehen deshalb nur einmal im Menü.
 
-  Erlaubte Doppelungen stehen in **einer** Ausnahmeliste im Test, jeweils mit Begründungssatz. Heute ist das nur `temperature`/`temperature_cold` für `alert_label`. Eine Ausnahme, die nicht mehr vorkommt, macht den Test ebenfalls rot, damit die Liste nicht veraltet. Der Wächter berechnet alle Soll-Mengen aus den Registern und tippt keine davon ab. Er meldet seine Trefferzahl (> 0), damit er nicht still grün ist, wenn er nichts findet.
+  Erlaubte Doppelungen stehen in **einer** Ausnahmeliste im Test, jeweils mit Begründungssatz. Nach dieser Spec sind das genau zwei Einträge, beide für das Paar `temperature`/`temperature_cold` (Kälte-Alarm auf dieselbe Temperatur): `alert_label` „Temp" und das Kürzel `T` (AC-28). Eine Ausnahme, die nicht mehr vorkommt, macht den Test ebenfalls rot, damit die Liste nicht veraltet. Der Wächter berechnet alle Soll-Mengen aus den Registern und tippt keine davon ab. Er meldet seine Trefferzahl (> 0), damit er nicht still grün ist, wenn er nichts findet.
   - Test: `tests/unit/test_keine_doppelten_kennungen.py` (dauerhaft, Kern-Schicht, ohne Netz). Pro Punkt 1–5 prüft eine Gegenprobe den Wächter mit einer verfälschten Katalogkopie und erwartet Rot. Er ergänzt die bestehenden Wächter und ersetzt keinen: `test_metrik_listen_register_ratchet.py` fängt Metrik-Listen außerhalb des Katalogs, `test_sms_token_symbol_register_ratchet.py` fängt SMS-Symbole, die vom Katalog abweichen. Zusammen decken die drei „doppelt im Katalog", „zweite Liste außerhalb" und „abweichendes Symbol" ab.
 
 - **AC-26:** Given `snow_depth` und `fresh_snow` tragen beide `alert_label="Schnee"` / When ein Alarm zu einer der beiden Größen versendet wird / Then heißt es für `snow_depth` „Schneehöhe" und für `fresh_snow` „Neuschnee". Die beiden Alarme sind damit unterscheidbar, und AC-25 Punkt 1 ist grün, ohne dass dafür eine Ausnahme nötig ist.
@@ -335,7 +366,7 @@ Jeder datenbewegende Pfad (mutierende Befehle über den Eingang) wird mit **zwei
 | `src/output/tokens/builder.py` | MODIFY | Bedeutung (en/de) der Bausteine ohne Katalog-Eintrag und der Formatzeichen direkt bei ihren Konstanten |
 | `tests/unit/test_telegram_kuerzel_folgt_register.py` | MODIFY | Ausnahme `temperature` entfällt |
 | `tests/unit/test_keine_doppelten_kennungen.py` | CREATE | dauerhafter Doppelungs-Wächter (AC-25) |
-| `frontend/src/lib/components/shared/__tests__/metricKuerzelLegende.test.ts` | MODIFY | Soll „`D` genau zweimal" wird „`D` einmal, `T` einmal" (Folge von AC-12) |
+| `frontend/src/lib/components/shared/__tests__/metricKuerzelLegende.test.ts` | MODIFY | Soll „`D` genau zweimal" wird „`D` einmal, `L` einmal, kein Kürzel doppelt" (Folge von AC-12/AC-29) |
 | `src/app/metric_catalog.py` (`snow_depth`, `fresh_snow`) | MODIFY | `alert_label` „Schneehöhe" / „Neuschnee" (AC-26) |
 | `docs/reference/metric_output_matrix.md` | MODIFY | CODES/KUERZEL (Kurzform + deutsch) als neuer Ausgabeort in Abschnitt 2 mit Wächter; Absatz „Grundlage" um das neue Bedeutungsfeld ergänzen, Ausnahme `temperature` (`T`) streichen |
 | `docs/reference/sms_format.md` | MODIFY | Verweis, dass die Bedeutung jedes Kürzels im Katalog steht und über CODES abrufbar ist |
@@ -348,7 +379,11 @@ Jeder datenbewegende Pfad (mutierende Befehle über den Eingang) wird mit **zwei
 | `tests/tdd/test_befehlsangebot_vollstaendig.py` | MODIFY | AC-20 Drift-Test, Feldnamen-Umstellung |
 | `tests/tdd/test_kommandoliste_einzelquelle.py`, `test_befehle_{email,telegram,premium_sms}_e2e.py`, `_befehl_e2e_fixtures.py` | MODIFY | Tupel-Entpacken → Feldnamen-Zugriff |
 | `docs/specs/modules/feat_2417_befehle_e2e_echter_eingang.md` | MODIFY | AC-10/AC-11/AC-23 als abgelöst vermerken |
+| `src/app/metric_catalog.py` (`temperature_cold`) | MODIFY | `sms_code` `N` → `T` (AC-28) |
+| `src/output/renderers/compare_metric_catalog.py` | MODIFY | `sms_code` der Auswahl folgt `kuerzel_metric_id` (AC-29) |
+| `src/services/radar_service.py`, `src/services/trip_selection.py` | MODIFY | englische Fassungen der in Abschnitt H ergänzten Texte |
 
 ## Changelog
 
 - 2026-09-27: Initial spec created (Issue #2417, PO-Entscheid 27.09.2026: Kurzform ist englisch, also auch ihre Befehle).
+- 2026-09-27 v1.1: Nachbesserung aus der RED-Phase (Tests gegen den Code gemessen). `MAX` (Brandzonen höchster Stufe) in CODES en/de ergänzt, dafür „C forecast confidence" → „C confidence" (763 Zeichen, weiter 5 Segmente). AC-22 korrigiert: Ortsvergleich-Kurzform bleibt bei `D`/`L`. Neu AC-28 (Kälte-Alarm `N` → `T`), AC-29 (Ortsvergleich-Auswahl zeigt das gesendete Kürzel), AC-30 (STATUS GSM-7-sauber). Ortsvergleich-HELP zeichengenau festgelegt (PAUSE unbefristet, keine Kürzel-Zeile). Abschnitt H um zehn weitere deutsche Kurzform-Antworten und die GSM-7-Pflicht ergänzt. AC-4 verweist jetzt richtig auf Abschnitt H.

@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/modules/feat_2417_kurzform_englisch.md
-spec_sha256: 3e5e114f168da2015bc83b2f4df4b2de372e26f357d0d14ae778087a53a98257
+spec_sha256: 71d686ff2edfd9a493006813ebb49e78d1b3b02ce99eb37759573af1c1673f13
 ---
 
 # PO-Briefing: feature-2417-kurzform-englisch
@@ -11,22 +11,22 @@ spec_sha256: 3e5e114f168da2015bc83b2f4df4b2de372e26f357d0d14ae778087a53a98257
 
 ## Was gebaut wird
 
-SMS/Telegram-Kurzform antworten englisch mit verständlichen Befehlserklärungen; ein neuer Befehl listet alle Kürzel-Bedeutungen.
+Premium-SMS und Telegram-Kurzform antworten jetzt vollständig Englisch, englische Befehlswörter wirken überall, plus neuer Kürzel-Erklärungsbefehl CODES.
 
 ## Definition of Done
 
-Fertig ist, wenn HELP und CODES auf Kurzform-Kanälen den freigegebenen Wortlaut liefern und alle Befehle deutsch wie englisch funktionieren.
+PO erkennt Erfolg daran, dass Premium-SMS/Garmin und Telegram-Kurzform durchgehend Englisch antworten, englische und deutsche Befehle überall gleich wirken.
 
 ## Wie geprüft wird
 
-Tests prüfen Wortlaut, Sprache je Kanal, Kürzel-Eindeutigkeit; ob HELP per echter Premium-SMS ankommt, zeigt erst Ihr Handytest danach.
+Automatisierte Tests prüfen Wortlaut, Sprache und Kürzel-Eindeutigkeit exakt; Premium-SMS läuft im Test über den echten Eingang, der Handy-Check folgt erst nach Auslieferung.
 
 ## Kritische Anmerkungen
 
-- Fünf Warn-Kürzel ändern sich (Gewitter, Hochwasser, Starkregen, Sturmböen, Sperrung); die Analyse hatte das noch ausgeschlossen.
-- Warn- und Format-Kürzel liegen in zwei weiteren Dateien, nicht der Metrik-Tabelle; passt das zu „ein zentraler Ort"?
-- Temperatur-Kürzel wechselt von D auf T, auch in Alarm- und Ortsvergleich-SMS; wer D sendet, bekommt künftig den Tageshöchstwert.
+- Kälte-Alarm-SMS zeigt künftig T statt N, eine automatische Nachricht ändert sich sichtbar für Nutzer.
+- Ortsvergleich bleibt bei D und L statt wie ursprünglich freigegeben auf T umzustellen, weniger Änderung als zuerst geplant.
+- STATUS-Antwort in Kurzform nutzt künftig einen einfachen Bindestrich statt Gedankenstrich, CODES erklärt neu auch MAX.
 
 ## Freigabe-Frage
 
-Sollen die neuen Warn-Kürzel und die verteilte Kürzel-Dokumentation so freigegeben werden?
+Stimmen Sie diesen Nachträgen zu: Kälte-Alarm zeigt T statt N, Ortsvergleich bleibt bei D/L, STATUS nutzt einfachen Bindestrich?

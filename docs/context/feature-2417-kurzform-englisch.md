@@ -103,3 +103,65 @@ Ziel: **Ein Kürzel = eine Bedeutung, und was man liest, kann man senden.** Das 
 ## Hinweis für /40-tdd-red (Arbeitsstand bei Freigabe)
 - Dieser Worktree steht auf Branch `tools/seven-journal-reader` (PR #2440, Lese-Werkzeug, noch OPEN). Die Feature-Arbeit gehört NICHT auf diesen Branch: vor dem ersten Test einen eigenen Branch ab `origin/main` anlegen (z. B. `feat/2417-kurzform-englisch`) und Spec, Kontext und Briefing (derzeit untracked) mitnehmen.
 - Verbindlicher HELP-/CODES-Wortlaut steht in der Spec. Das Messskript mit `sms_segments()` liegt nur im Sitzungs-Scratchpad und kann aus der Spec nachgebaut werden (HELP 402 Zeichen/3 Segmente, CODES 758/5).
+
+## Für /50-implement: bestehende Tests mit alten Kürzeln (Stand RED)
+
+Ermittelt per grep am 27.09.2026 (Agent B, /40-tdd-red). Diese Dateien erwarten die alten Warn-/Météo-France-Kürzel oder `temperature` → `D` und müssen in GREEN mitgezogen werden (erwarteter Wechsel: `TH`→`TS`, `FL`→`FO`, `HR`→`RA`, `W`→`WG`, `CL`→`AB` für Warnungen; `HR:`/`TH:` → `VR:`/`VT:` für Météo-France; `temperature.sms_code` `D`→`T`).
+
+**Produktivcode mit den alten Kürzeln:** `src/output/tokens/hazard_symbols.py`, `src/output/tokens/builder.py` (`VIGI_TH`/`VIGI_HR`, `PRIORITY`, `POSITIONAL`), `src/output/renderers/alert/official_alerts.py` (`_HAZARD_DISPLAY`), `src/app/metric_catalog.py` (`temperature.sms_code`, `COMPACT_LABEL_EXCEPTIONS["temperature"]`), Doku `docs/reference/sms_format.md`.
+
+**Tests, die `HAZARD_SMS_SYMBOLS`/`VIGI_HR`/`VIGI_TH` nennen:**
+- `tests/tdd/test_hazard_symbols.py`
+- `tests/tdd/test_sms_official_alert_tokens.py`
+- `tests/tdd/test_official_alert_sms_ortskopf.py`
+- `tests/tdd/test_alert_preview_official_render.py`
+- `tests/tdd/test_issue_917_alert_renderer.py`
+- `tests/tdd/test_compare_sms_gsm7_charset.py`
+- `tests/tdd/test_trip_sms_gsm7_charset.py`
+- `tests/tdd/test_sms_snow_symbols.py`
+- `tests/unit/test_metrik_listen_register_ratchet.py`
+- `tests/unit/test_sms_symbol_grammar_classes.py`
+- `tests/helpers/metrik_listen_scan.py`
+- `frontend/src/lib/components/shared/__tests__/officialAlertLegend.test.ts`
+
+**Tests mit alten Warn-Token-Literalen (`!TH:`, `FL:`, `HR:`, `W:`, `CL`):**
+- `tests/golden/test_subject_golden.py`, `tests/unit/test_subject_filter.py`
+- `tests/tdd/test_alert_channel_threshold.py`, `tests/tdd/test_compare_alert_channel_threshold.py`
+- `tests/tdd/test_compare_local_time_basis.py`, `tests/tdd/test_compare_sms_official_alerts.py`, `tests/tdd/test_compare_telegram_official_alerts.py`
+- `tests/tdd/test_official_alert_channel_scope.py`, `tests/tdd/test_official_alert_sms_marker.py`
+- `tests/tdd/test_sms_user_metric_order.py`
+
+**Tests/Fixtures mit dem Météo-France-Baustein `HR:` (bzw. `TH:` als Vigilance):**
+- `tests/golden/test_sms_golden.py` + `tests/golden/sms/corsica-vigilance.txt`, `gr20-summer-evening.txt`, `gr20-spring-morning.txt`
+- `tests/unit/test_token_builder.py`, `tests/tdd/test_sms_letter_value_separator.py`, `tests/tdd/test_briefing_mail_inhalt.py`
+- `frontend/src/lib/components/shared/__tests__/weather_metric_kuerzel_marken.test.ts`
+
+**Tests, die `temperature` → `D` festschreiben:**
+- `tests/tdd/test_issue_917_alert_renderer.py:493` (`get_sms_code("temperature")`)
+- `tests/tdd/test_adhoc_kurzform_verlauf.py:83` (Kommentar/Erwartung `sms_code "D"`)
+- `tests/tdd/test_compare_outlook_metric_selection.py:52` (Kommentar „bisher D" — prüfen)
+- `tests/unit/test_telegram_kuerzel_folgt_register.py` (in RED bereits umgestellt: Ausnahme `temperature` entfällt)
+- `frontend/src/lib/components/shared/__tests__/metricKuerzelLegende.test.ts` (in RED umgestellt, siehe Befund unten)
+
+**Befunde aus RED, die GREEN blockieren (Spec-Klärung nötig, Details im Agent-B-Report):**
+1. `builder.POSITIONAL` erzeugt `MAX` (Brandzonen „max"), der freigegebene CODES-Wortlaut erklärt `MAX` nicht → `test_codes_vollstaendig_gegen_ausgabe_register` und der zeichengenaue Wortlaut-Test können nicht beide grün werden.
+2. `N` gehört zu zwei Metriken: `temperature_cold.sms_code="N"` und `temperature_night.sms_multi_symbols=("N",)` → AC-25 Punkt 2 bleibt rot, die Spec sieht dafür keine Ausnahme vor.
+3. AC-22 „Ortsvergleich zeigt T statt D": die Vergleichs-SMS liest für `temp_max`/`temp_min` über `kuerzel_metric_id` die Größen `temperature_day_high`/`temperature_day_low` (D/L), nicht `temperature` — die Stelle ist nicht beobachtbar.
+4. Frontend-Legende: die beiden `D`-Zeilen sind `temp_max_c` und `temp_min_c` (beide `metric_id="temperature"`, `sms_code` aus `temperature`), nicht `temperature`/`temperature_day_high`. Nach AC-12 würden beide `T` → „D einmal, T einmal" ist mit der heutigen Vergleichs-Katalogableitung nicht erreichbar.
+
+→ **Aufgelöst in Spec v1.1 (27.09.2026):** 1 = `MAX` in CODES aufgenommen; 2 = AC-28 (Kälte-Alarm `T`); 3 = AC-22 korrigiert; 4 = AC-29 (Vergleichsauswahl folgt `kuerzel_metric_id`, Legende „D einmal, L einmal").
+
+## Für /50-implement: Hinweise aus RED (Agent A, Befehle & Sprache)
+
+1. **Sprachentscheidung — vier Telegram-Pfade:** unbekannter Befehl vor Zielauflösung (`_send_unknown_command`: deutsch + „English: send HELP"); ziellos (`ZIELLOS_SCHLUESSEL`: Sprache folgt Wort); `ziel.kind is None` (`ziel.text` wird ohne `process()` gesendet: Sprache folgt Wort, gleich lautende Wörter englisch); Ziel aufgelöst (Sprache folgt `telegram_style`).
+2. **Premium-SMS-Mehrdeutigkeit** geht an `process()` vorbei (`send_command_reply_premium_sms(hinweis)` in `inbound_sms_reader.py`) — Übersetzung nur im Prozessor reicht nicht. `inbound_sms_reader.py` importiert `premium_sms_kurzhilfe` lokal für `hilfe`.
+3. `ZIELLOS_SCHLUESSEL` (`trip_selection.py`) um `codes`/`kuerzel` ergänzen.
+4. **`FEHLERTEXTE`** in `tests/tdd/_befehl_e2e_fixtures.py` ist nur deutsch — englische Fehlertexte (unbekannter Befehl, Mehrdeutigkeit, kein Ziel) dort ergänzen, sonst prüfen die Fehlertext-Checks auf Premium-SMS-Pfaden nichts mehr.
+5. **Übergangs-Shim `spec_feld()`** in `_befehl_e2e_fixtures.py` (Zweig für das alte Tupel-Layout) nach GREEN löschen.
+6. **4-Tupel-Leser außerhalb der RED-Dateien:** `tests/tdd/test_befehle_email_live.py:325`, `tests/tdd/test_issue_686_telegram_functional_live.py:424,496`; prüfen: `tests/tdd/test_issue_882_pause_skip.py`, `tests/helpers/adhoc_metrik_fixtures.py::wort_von`. Produktiv-Leser auf Feldnamen umstellen: `command_rows`, `command_overview`, `_show_help_for_kind`, E-Mail-Fußzeilen `email/plain.py`, `email/html.py`.
+7. **Menüzahl** in `prod_selftest.py` und `test_issue_685_selftest_menu_gate.py` mitziehen (BOT_COMMANDS wächst).
+8. **`api/routers/config.py:70,88`** liest `HAZARD_SMS_SYMBOLS` (`/api/sms-symbols`) — Umbenennung der Warn-Kürzel wirkt dort mit.
+9. Premium-SMS-Matrixzweig `ERGEBNIS_ANTWORT_VERGLEICH` (L4, „pause 2d") erwartet den Vergleichsnamen in der englischen Antwort.
+10. AC-3 per E-Mail ist nicht unterscheidend (Betreff nennt immer den Trip).
+11. **Frontend-`node_modules`** im Worktree ist ein Symlink auf den Hauptcheckout — kein `npm install`/`npm ci` hier; entfernen nur mit `rm frontend/node_modules` (ohne `/`, ohne `-rf`).
+12. **Premium-SMS im Test:** pro Test genau ein Recorder (Journal-IDs starten sonst neu bei 1).
