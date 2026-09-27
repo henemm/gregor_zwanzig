@@ -20,16 +20,28 @@ Punkt 4 der Spec) -- AC-4 faehrt deshalb genau diese Ebene direkt.
 
 AC-Zuordnung (Kopf-Kommentar UND Rueckmeldung):
 - AC-1: test_ac1_sms_channel_layout_order_wins_over_default            -> RED
-- AC-2: test_ac2_default_order_byte_identical_without_sms_layout       -> GRUEN (Charakterisierung, Bestand)
+- AC-2: test_ac2_default_order_byte_identical_without_sms_layout       -> RED (Issue #2422 S2a AC-13/B9-Fix loest DEC-2 ab -- s.u.)
 - AC-3: test_ac3_per_report_layout_overrides_per_channel_layout        -> RED
 - AC-4: test_ac4_vigilance_block_stays_behind_forecast_and_fused       -> RED (TypeError: MetricSpec.position fehlt)
 - AC-5: test_ac5_position_applies_per_metric_anchor_not_per_symbol     -> RED
 - AC-6: test_ac6_drop_order_ignores_display_position_...               -> RED
 - AC-7: test_ac7_wintersport_metric_can_precede_forecast_metric_...    -> RED
 - AC-8: siehe Kopf-Kommentar unten (kein neuer Testcode -- Bestand deckt ab)
-- AC-9: test_ac9_cascade_source_helper_matches_validator_...           -> RED (AttributeError: cascade_source_for_channel fehlt)
+- AC-9: test_ac9_cascade_source_helper_matches_validator_...           -> RED (Issue #2422 S2a: dc_global-Zweig neu erwartet order_matches_user=True -- s.u.)
 - AC-10: test_ac10_two_permutations_same_metric_set_different_order    -> RED
 - AC-11: test_ac11_sms_and_telegram_kurzform_share_one_token_line      -> RED
+
+Issue #2422 S2a (``docs/specs/modules/fix_2422_s2a_editor_gleich_gespeichert.md``,
+AC-13, PO-Entscheid 2026-09-27): der B9-Fix entfernt das Aktivierungs-Gate in
+``trip_report.py:337-346`` -- ``position`` wirkt jetzt IMMER, auch bei
+Kaskadenquelle 'global'. Das loest DEC-2 dieser Spec (Byte-Identitaet bei
+'global', dortige AC-2) BEWUSST ab: ``test_ac2_default_order_byte_identical_
+without_sms_layout`` erwartet nicht mehr den alten POSITIONAL-Referenzstring,
+sondern die neue, positionsbasierte Reihenfolge; ``test_ac9_...`` erwartet
+fuer ``dc_global`` jetzt ``expected_order_effect=True`` statt ``False``. Der
+neue, eigenstaendige AC-13-Nachweis (zwei Permutationen derselben globalen
+Menge ergeben zwei unterschiedliche SMS-Reihenfolgen) steht in
+``tests/tdd/test_sms_reihenfolge_gilt_auch_bei_globaler_kaskade.py``.
 
 AC-8 (Compare-Kurzform-Regression): ``tests/unit/test_compare_metric_order.py
 ::TestAC10SmsFollowsUserOrder`` deckt ``render_compare_sms`` bereits mit
@@ -174,21 +186,41 @@ def test_ac1_sms_channel_layout_order_wins_over_default():
 
 
 # ---------------------------------------------------------------------------
-# AC-2 -- GRUEN (Bestand-Charakterisierung, dokumentierte Ausnahme)
+# AC-2 -- Issue #2422 S2a (B9-Fix) LOEST DEC-2 AB: nicht mehr byte-identisch
 # ---------------------------------------------------------------------------
 
 
 def test_ac2_default_order_byte_identical_without_sms_layout():
-    """Ohne SMS-Kanal-Layout (nur globale Auswahl) bleibt die Reihenfolge
-    exakt die heutige POSITIONAL-Reihenfolge -- fuer morning UND evening.
-    Referenzstring am 2026-08-10 empirisch vom UNVERAENDERTEN Code
-    abgenommen (uv run python3 -c "..." gegen HEAD 21da0d50) und eingefroren.
-    Diese Ausnahme ist bewusst GRUEN: der Test beweist Byte-Identitaet des
-    Ist-Zustands, nicht das neue Verhalten."""
+    """DEC-2 aus ``fix_1677_sms_reihenfolge.md`` ABGELOEST durch
+    ``fix_2422_s2a_editor_gleich_gespeichert.md`` AC-13 (PO-Entscheid
+    2026-09-27, B9-Fix): Ohne SMS-Kanal-Layout (Kaskadenquelle 'global')
+    bleibt die Reihenfolge NICHT mehr die feste POSITIONAL-Reihenfolge --
+    ``position`` wird jetzt IMMER aus der globalen Editor-Reihenfolge
+    abgeleitet, unabhaengig von der Kaskadenquelle (Aktivierungs-Gate in
+    ``trip_report.py:337-346`` entfaellt).
+
+    Referenzstring per Simulation ermittelt (``cascade_source_for_channel``
+    fuer 'sms' auf 'per_channel' erzwungen, um das Verhalten NACH dem B9-Fix
+    vorwegzunehmen -- Scratchpad-Lauf 2026-09-27); /50 bestaetigt ihn gegen
+    den echten Fix. Die globale Auswahl ist hier ["gust","wind",
+    "precipitation"] -> Editor-Reihenfolge G,W,R -- GENAU diese Reihenfolge
+    muss jetzt in der SMS erscheinen, fuer morning UND evening (statt der
+    alten festen R,W,G-Reihenfolge).
+
+    RED heute (Aktivierungs-Gate noch vorhanden): die SMS faellt weiterhin
+    auf die alte POSITIONAL-Reihenfolge (R,W,G) zurueck."""
     dc = F.dc("gust", "wind", "precipitation")
-    expected = "E7: R0.5@5(8.4@11) W12@4(45@10) G22@4(70@10)"
-    assert _render_sms(dc, "evening") == expected, "Abend-SMS weicht vom eingefrorenen Referenzstring ab"
-    assert _render_sms(dc, "morning") == expected, "Morgen-SMS weicht vom eingefrorenen Referenzstring ab"
+    expected = "E7: G22@4(70@10) W12@4(45@10) R0.5@5(8.4@11)"
+    assert _render_sms(dc, "evening") == expected, (
+        "AC-13/B9-Fix: Abend-SMS muss bei Kaskadenquelle 'global' jetzt der "
+        "globalen Editor-Reihenfolge (G,W,R) folgen, nicht mehr der alten "
+        "festen POSITIONAL-Reihenfolge (R,W,G)."
+    )
+    assert _render_sms(dc, "morning") == expected, (
+        "AC-13/B9-Fix: Morgen-SMS muss bei Kaskadenquelle 'global' jetzt "
+        "der globalen Editor-Reihenfolge (G,W,R) folgen, nicht mehr der "
+        "alten festen POSITIONAL-Reihenfolge (R,W,G)."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -408,11 +440,20 @@ def test_ac9_cascade_source_helper_matches_validator_and_couples_to_order_effect
     noch nicht existent -> AttributeError = RED) muss dieselbe Antwort geben
     wie der Validator-Spiegel ``_determine_cascade_source`` UND diese
     Antwort muss mit der tatsaechlichen Reihenfolge-Wirkung gekoppelt sein
-    (Adversary-Hinweis 4: kein Test, der nur EINEN der beiden Pfade prueft)."""
+    (Adversary-Hinweis 4: kein Test, der nur EINEN der beiden Pfade prueft).
+
+    Issue #2422 S2a AC-13 (B9-Fix, loest DEC-2 ab, PO-Entscheid 2026-09-27):
+    ``dc_global`` (Kaskadenquelle 'global', kein eigenes SMS-Kanal-Layout)
+    erwartet jetzt ebenfalls ``expected_order_effect=True`` -- die
+    Kopplung "Meldung 'global' -> KEINE Reihenfolgen-Wirkung" (DEC-2) ist
+    mit dem B9-Fix aufgehoben, ``position`` wirkt jetzt unabhaengig von der
+    gemeldeten Kaskadenquelle. Der ``model_source == validator_source``-
+    Vergleich bleibt unveraendert (die KLASSIFIZIERUNG 'global' selbst
+    aendert sich durch den B9-Fix nicht, nur ihre Wirkung auf die Position)."""
     dc_layout = _sms_layout_dc(["gust", "wind", "precipitation"])
     dc_global = F.dc("gust", "wind", "precipitation")
 
-    for dc, expected_order_effect in ((dc_layout, True), (dc_global, False)):
+    for dc, expected_order_effect in ((dc_layout, True), (dc_global, True)):
         validator_source = _determine_cascade_source(dc, "sms", "evening")
         model_source = dc.cascade_source_for_channel("sms", "evening")  # type: ignore[attr-defined]
         assert model_source == validator_source, (

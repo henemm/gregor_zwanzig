@@ -209,11 +209,16 @@ const EINGEFROREN: readonly string[] = [
 	'VersandTab.svelte:358',
 	'VersandTab.svelte:394',
 	'versandVergleichSpeicherung.ts:221',
-	'WeatherMetricsTab.svelte:590',
-	'WeatherMetricsTab.svelte:605',
-	'WeatherMetricsTab.svelte:634',
-	'WeatherMetricsTab.svelte:647',
-	'WeatherMetricsTab.svelte:1439',
+	// #2422 S2a: vier Eintraege um 7 Zeilen verschoben durch den
+	// Read-Modify-Write-Umbau, der fuenfte (Markup-Weiche weiter unten) um
+	// zusaetzliche 6 Zeilen durch das Auslagern des untrackten
+	// Bestandslesens in bestandDisplayConfigUngetrackt() (17 insgesamt).
+	// Bedingungstext in allen fuenf Faellen unveraendert.
+	'WeatherMetricsTab.svelte:597',
+	'WeatherMetricsTab.svelte:612',
+	'WeatherMetricsTab.svelte:641',
+	'WeatherMetricsTab.svelte:654',
+	'WeatherMetricsTab.svelte:1456',
 	'versand-tab/vtBriefingChannelsText.ts:21',
 	'versand-tab/vtBriefingChannelsText.ts:26',
 	// S6d: von 14 Corridor-Paaren bleiben elf (Schicksals-Tabelle der Spec).
@@ -434,28 +439,32 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// Bedingungstext byte-identisch weiter (Spec Design-Entscheidung 8), nur
 	// ihre Position verschob sich nach unten (die zehn neuen Wertprop-Zeilen +
 	// neun Rueckruf-Zeilen im Script-Teil liegen oberhalb).
+	// #2422 S2a: vier Eintraege um 7 Zeilen verschoben durch den
+	// Read-Modify-Write-Umbau, der fuenfte (letzter Eintrag unten) um
+	// zusaetzliche 6 Zeilen durch bestandDisplayConfigUngetrackt() (17
+	// insgesamt). Text in allen fuenf Faellen unveraendert.
 	{
-		eintrag: 'WeatherMetricsTab.svelte:590',
+		eintrag: 'WeatherMetricsTab.svelte:597',
 		zeile: "if (context === 'route' && trip && catalogLoaded && !isDirty) {",
 		folgt: 'normalizeStoredOutlookMetrics('
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:605',
+		eintrag: 'WeatherMetricsTab.svelte:612',
 		zeile: "if (context === 'route' && Object.keys(catalog).length === 0) load();",
 		folgt: 'Issue #1350 Teil 2: analog dem Route-Guard oben'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:634',
+		eintrag: 'WeatherMetricsTab.svelte:641',
 		zeile: "if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();",
 		folgt: '#1401 Scheibe B: der Stundenverlauf beschriftet'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:647',
+		eintrag: 'WeatherMetricsTab.svelte:654',
 		zeile: "if (context === 'vergleich' && Object.keys(catalog).length === 0) {",
 		folgt: ".get<MetricCatalog>('/api/metrics')"
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1439',
+		eintrag: 'WeatherMetricsTab.svelte:1456',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	}

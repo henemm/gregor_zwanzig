@@ -80,6 +80,46 @@ describe('AC-1/AC-2/AC-3 (Test 3): onWeatherMetricsChange-Rückkanal im Anlege-M
 				'getrackte Abhaengigkeit des Rueckkanal-Effects (Fix-Loop-2-Regression)'
 		);
 	});
+
+	test('von buildWeatherMetricsList() aufgerufene lokale Hilfsfunktionen lesen trip nur innerhalb untrack() (#2422 S2a)', () => {
+		// #2422 S2a hat das Bestandslesen in die Hilfsfunktion
+		// bestandDisplayConfigUngetrackt() ausgelagert. Der Test oben sieht nur
+		// den Rumpf von buildWeatherMetricsList() -- die Mutation
+		// `return untrack(() => trip?.display_config);` -> `return trip?.display_config;`
+		// liess alle Tests gruen, obwohl `trip` damit wieder getrackte
+		// Abhaengigkeit des Rueckkanal-Effects waere (Issue #1552,
+		// effect_update_depth_exceeded auf Staging). Daher: jede lokal definierte
+		// Funktion, die buildWeatherMetricsList() aufruft, darf `trip` nur
+		// innerhalb eines untrack(() => ...)-Ausdrucks lesen.
+		const fnMatch = code.match(/function buildWeatherMetricsList\(\)\s*\{[\s\S]*?\n\t\}/);
+		assert.ok(fnMatch, 'buildWeatherMetricsList() nicht gefunden');
+		const calledNames = new Set(
+			[...fnMatch[0].matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1])
+		);
+		calledNames.delete('buildWeatherMetricsList');
+		const checked: string[] = [];
+		for (const name of calledNames) {
+			const helper = code.match(
+				new RegExp(`function ${name.replace(/\$/g, '\\$')}\\([^)]*\\)\\s*\\{[\\s\\S]*?\\n\\t\\}`)
+			);
+			if (!helper) continue; // importiert / kein lokales function-Statement
+			checked.push(name);
+			const rest = helper[0].replace(/untrack\(\(\)\s*=>[^;]*\)/g, '');
+			assert.doesNotMatch(
+				rest,
+				/trip[!?.]/,
+				`Hilfsfunktion ${name}() (aufgerufen aus buildWeatherMetricsList()) liest trip ` +
+					'ausserhalb von untrack() -- damit waere trip wieder getrackte Abhaengigkeit ' +
+					'des Rueckkanal-Effects (Issue #1552 / #2422 S2a)'
+			);
+		}
+		assert.ok(
+			checked.includes('bestandDisplayConfigUngetrackt'),
+			'bestandDisplayConfigUngetrackt() wurde nicht als von buildWeatherMetricsList() ' +
+				`aufgerufene lokale Hilfsfunktion gefunden und geprueft (geprueft: ${checked.join(', ') || 'keine'}) ` +
+				'-- Test waere sonst vakuum-gruen'
+		);
+	});
 });
 
 describe('AC-1/AC-2/AC-3 (Test 1-3, Issue #1775): onDayWindowChange-Rückkanal im Anlege-Modus', () => {

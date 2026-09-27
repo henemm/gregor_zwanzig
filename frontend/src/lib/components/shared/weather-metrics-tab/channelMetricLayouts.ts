@@ -117,13 +117,13 @@ export function splitChannelMetricsForDisplay(
 export function mergeAllChannelLayoutsForSave(
 	prevLayouts: ChannelLayouts | undefined,
 	channelBuckets: Record<ChannelId, ChannelOverride | null>,
-	buildMetrics: (override: ChannelOverride) => WeatherConfigMetric[]
+	buildMetrics: (override: ChannelOverride, channel: ChannelId) => WeatherConfigMetric[]
 ): ChannelLayouts {
 	let next: ChannelLayouts = { ...(prevLayouts ?? {}) };
 	for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
 		const override = channelBuckets[ch];
 		if (override === null) continue;
-		next = { ...next, [ch]: buildMetrics(override) };
+		next = { ...next, [ch]: buildMetrics(override, ch) };
 	}
 	return next;
 }

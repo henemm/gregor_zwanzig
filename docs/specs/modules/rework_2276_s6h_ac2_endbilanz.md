@@ -109,7 +109,7 @@ Diese Scheibe:
 | `AlarmeTab.svelte:566` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:358` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:394` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, kein Premium-SMS) — zwei komplette, unterschiedliche Komponenten-Bäume |
-| `WeatherMetricsTab.svelte:1439` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
+| `WeatherMetricsTab.svelte:1456` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
 | `versand-tab/vtBriefingChannelsText.ts:21` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:26` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `versand-tab/VTSchedulePlan.svelte:55` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
@@ -157,10 +157,10 @@ Diese Scheibe:
 | `corridor-editor/CorridorEditor.svelte:304` | `maybeSchedule()`: wählt zwischen `vergleichSpeicherung.aenderungMelden()` und `saveController.schedule(buildSaveFn())` | Genau der in AC-2 benannte Beispielfall „Vergleichs-Speicherweg vs. `saveController.schedule`" — Auflösung bräuchte eine injizierte `SaveFn`, eigene Architekturentscheidung |
 | `corridor-editor/CorridorEditorMobile.svelte:252` | Mobil-Zwilling von `:304` | dito |
 | `VersandTab.svelte:348` | Wirkort-Guard des Selbst-Speicher-Effekts — läuft nur im Vergleich | Effekt existiert nur für den Compare-Speicherweg; Trip speichert über einen anderen Mechanismus außerhalb dieser Datei |
-| `WeatherMetricsTab.svelte:590` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
-| `WeatherMetricsTab.svelte:605` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
-| `WeatherMetricsTab.svelte:634` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
-| `WeatherMetricsTab.svelte:647` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
+| `WeatherMetricsTab.svelte:597` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
+| `WeatherMetricsTab.svelte:612` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
+| `WeatherMetricsTab.svelte:641` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
+| `WeatherMetricsTab.svelte:654` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
 
 **Summe:** 27 FACHLICH + 6 DARSTELLUNG + 14 HERKUNFT = **47**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL`.
