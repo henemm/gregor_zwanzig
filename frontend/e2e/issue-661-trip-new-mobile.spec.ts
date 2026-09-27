@@ -22,6 +22,7 @@
 // Breakpoints: Mobile ≤ 899px · Desktop ≥ 900px (app.css @custom-variant).
 
 import { test, expect, type Page } from '@playwright/test';
+import * as path from 'node:path';
 
 const MOBILE = { width: 375, height: 667 };
 const DESKTOP = { width: 1280, height: 900 };
@@ -133,5 +134,52 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 
 		await expect(page.getByTestId('tn-desktop-breadcrumb')).toBeVisible();
 		await expect(page.getByTestId('tn-mobile-appbar')).toBeHidden();
+	});
+
+	// Issue #2277 S2b, AC-5 (docs/specs/modules/fix_2277_s2b_mobile_rahmen_angleichung.md):
+	// Zurück-Tap in der PageHeader-Kopfleiste navigiert zu /trips, OHNE Autosave.
+	// Der Autosave in beforeNavigate greift nur bei `ready` (Zeitplan-Reiter
+	// besucht) — ohne diesen Zustand wäre der Test auch bei der Mutation
+	// „<a href> statt onclick" grün. Gespeichert wird per POST /api/trips (nicht
+	// PUT …/__new__, wie die Spec vermutet), daher wird JEDER schreibende
+	// Request auf /api/trips abgefangen.
+	test('S2b AC-5: Zurück-Tap mobil navigiert zu /trips ohne Autosave-Request', async ({ page }) => {
+		await page.setViewportSize(MOBILE);
+		await page.goto('/trips/new');
+		await fillRoute(page, 'S2b Zurück ohne Autosave', new Date().toISOString().slice(0, 10));
+
+		const tabbar = page.getByTestId('tn-mobile-tabbar');
+		await tabbar.getByRole('tab', { name: /Etappen/ }).click({ force: true });
+		const gpx = path.resolve('./e2e/fixtures/test-trip.gpx');
+		const gpxInputs = page.locator('.tn-mobile input[type="file"][accept=".gpx"]');
+		const stageCount = await gpxInputs.count();
+		for (let i = 0; i < stageCount; i++) {
+			await Promise.all([
+				page.waitForResponse((r) => r.url().includes('/api/gpx/parse'), { timeout: 30_000 }).catch(() => null),
+				gpxInputs.first().setInputFiles(gpx),
+			]);
+			await page.waitForTimeout(600);
+		}
+		for (const reiter of ['Wetter-Metriken', 'Wertebereiche', 'Briefing-Zeitplan']) {
+			await tabbar.getByRole('tab', { name: new RegExp(reiter) }).click({ force: true });
+		}
+		// Positivkontrolle: `ready` ist erreicht — sonst gäbe es gar keinen Autosave zu vermeiden.
+		await expect(page.getByTestId('tn-mobile-save')).toBeEnabled();
+
+		const schreibend: string[] = [];
+		page.on('request', (req) => {
+			const url = new URL(req.url());
+			if (['POST', 'PUT', 'PATCH'].includes(req.method()) && url.pathname.startsWith('/api/trips')) {
+				schreibend.push(`${req.method()} ${url.pathname}`);
+			}
+		});
+
+		const zurueck = page.getByTestId('tn-mobile-appbar').getByTestId('back-link');
+		await expect(zurueck).toBeVisible();
+		expect(await zurueck.evaluate((el) => el.tagName)).toBe('BUTTON');
+		await zurueck.click();
+
+		await expect(page).toHaveURL(/\/trips$/);
+		expect(schreibend, `Autosave beim bewussten Zurück ausgelöst: ${schreibend.join(', ')}`).toEqual([]);
 	});
 });
