@@ -303,15 +303,6 @@ def _load_resend_allowlist(data_dir: str | None = None) -> frozenset[str]:
     return frozenset(allowed)
 
 
-def _mask_addr_for_log(raw: str) -> str:
-    """Issue #1219 AC-6: reduziert eine Adresse auf die Domain für Log-/
-    Fehlermeldungen — verhindert, dass eine volle Empfängeradresse im
-    Klartext geloggt bzw. in einer Exception-Message ausgegeben wird."""
-    addr = _extract_addr(raw)
-    _, sep, domain = addr.partition("@")
-    return f"***@{domain.lower()}" if sep else "***"
-
-
 def build_mime_message(
     subject: str,
     body: str,
@@ -645,6 +636,11 @@ class EmailOutput:
         Raises:
             OutputError: If sending fails after all retry attempts
         """
+        # Issue #2157: lokaler Import (analog get_data_root() weiter unten) --
+        # utils.pii_masking importiert seinerseits _extract_addr aus diesem
+        # Modul, ein Import auf Modulebene wuerde einen Zirkelimport erzeugen.
+        from utils.pii_masking import mask_addr_for_pii_log
+
         # Issue #2144: kein Empfaenger bekannt (weder Profil-mail_to noch
         # per-Aufruf-Override) -- sauber abbrechen statt an [None] zu senden.
         # Muss VOR jedem Verbindungsaufbau greifen (Vorbild premium_sms.py
@@ -680,7 +676,7 @@ class EmailOutput:
             logger.warning(
                 "Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- "
                 "E-Mail-Empfaenger von %s auf %s umgeschaltet.",
-                [_mask_addr_for_log(r) for r in recipients], _ORIGIN_GUARD_TEST_RECIPIENT,
+                [mask_addr_for_pii_log(r) for r in recipients], _ORIGIN_GUARD_TEST_RECIPIENT,
             )
             recipients = [_ORIGIN_GUARD_TEST_RECIPIENT]
         to_header = ", ".join(recipients)
@@ -742,7 +738,7 @@ class EmailOutput:
                 ):
                     blocked.append(r)
             if blocked:
-                masked = [_mask_addr_for_log(r) for r in blocked]
+                masked = [mask_addr_for_pii_log(r) for r in blocked]
                 logger.warning(
                     "Resend-Allowlist-Guard blockiert %d Empfänger, die "
                     "keinem echten Nutzerprofil zugeordnet werden konnten "
@@ -782,7 +778,7 @@ class EmailOutput:
                 ):
                     blocked.append(r)
             if blocked:
-                masked = [_mask_addr_for_log(r) for r in blocked]
+                masked = [mask_addr_for_pii_log(r) for r in blocked]
                 logger.warning(
                     "Lokal-Guard blockiert %d Empfaenger ausserhalb von "
                     "LOCAL_MAIL_DOMAINS bzw. mit reservierter Test-Domain "

@@ -86,7 +86,7 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 
 		// Dispatch e-mail in background goroutine with 10s timeout.
 		if cfg.SMTPHost == "" {
-			log.Printf("magic-link: SMTP not configured, skipping email to %s", normalizedEmail)
+			log.Printf("magic-link: SMTP not configured, skipping email to %s", mail.MaskAddrForLog(normalizedEmail))
 		} else {
 			mailCfg := mail.MailConfig{
 				Host: cfg.SMTPHost,
@@ -106,10 +106,10 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 				select {
 				case err := <-done:
 					if err != nil {
-						log.Printf("magic-link: mail send failed for %s: %v", to, err)
+						log.Printf("magic-link: mail send failed for %s: %v", mail.MaskAddrForLog(to), err)
 					}
 				case <-time.After(20 * time.Second):
-					log.Printf("magic-link: mail send timeout (20s) for %s", to)
+					log.Printf("magic-link: mail send timeout (20s) for %s", mail.MaskAddrForLog(to))
 				}
 			}(normalizedEmail, msg, mailCfg)
 		}

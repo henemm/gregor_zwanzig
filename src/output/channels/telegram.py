@@ -11,6 +11,7 @@ import httpx
 from app.config import Settings
 from app.origin_guard import running_origin
 from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
+from output.channels.seven_io_base import mask_number
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +211,7 @@ class TelegramOutput:
             logger.warning(
                 "Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt "
                 "-- Ziel-Chat von %r auf Test-Chat-ID %r umgeschaltet.",
-                chat_id, test_chat_id,
+                mask_number(chat_id), test_chat_id,
             )
         return test_chat_id
 

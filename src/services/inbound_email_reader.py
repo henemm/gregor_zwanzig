@@ -20,6 +20,7 @@ from html.parser import HTMLParser
 
 from app.config import Settings
 from app.loader import load_all_trips
+from utils.pii_masking import mask_addr_for_pii_log
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
     CommandResult,
@@ -192,7 +193,7 @@ class InboundEmailReader:
         from_addr = self._parse_sender(msg.get("From", ""))
         _user_id, user_settings = self._resolve_settings_for_sender(from_addr, settings)
         if _user_id is None:
-            logger.warning(f"Unresolved/ambiguous sender: {from_addr!r}")
+            logger.warning(f"Unresolved/ambiguous sender: {mask_addr_for_pii_log(from_addr)!r}")
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
         if not self._authorize(from_addr, user_settings, msg):
@@ -296,14 +297,14 @@ class InboundEmailReader:
             allowed.add(inbound.lower())
         authorized = sender in allowed
         if not authorized:
-            logger.debug(f"Ignoring email from: {sender!r}")
+            logger.debug(f"Ignoring email from: {mask_addr_for_pii_log(sender)!r}")
             return False
 
         if not settings.email_verified_at:
-            logger.warning(f"Sender not verified: {sender!r}")
+            logger.warning(f"Sender not verified: {mask_addr_for_pii_log(sender)!r}")
             return False
         if not self._spf_dkim_pass(msg, settings.mail_server_hostname):
-            logger.warning(f"SPF/DKIM check failed: {sender!r}")
+            logger.warning(f"SPF/DKIM check failed: {mask_addr_for_pii_log(sender)!r}")
             return False
         return True
 

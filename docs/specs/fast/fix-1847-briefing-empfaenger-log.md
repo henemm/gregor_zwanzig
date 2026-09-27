@@ -3,6 +3,11 @@
 Issue: [#1847](https://github.com/henemm/gregor_zwanzig/issues/1847) · Fast Track
 Kontext & Beweisführung: `docs/context/fix-1847-briefing-versand-ohne-zustellung.md`
 
+**Status:** Abgelöst durch #2157 (verengt auf bekannte Betriebsadressen) — „Der Empfänger
+wird nicht maskiert" gilt nur noch für `gregor-test@henemm.com` und
+`gregor-staging@henemm.com`; jede andere Adresse wird domain-maskiert
+(`docs/specs/modules/pii_log_masking.md`).
+
 ## Approval
 
 - [x] Approved — PO Henning, 2026-08-15 („gogogo"). Freigegeben sind AC-1 bis AC-4 samt

@@ -18,6 +18,7 @@ import httpx
 from app.config import Settings, resolve_public_host
 from app.loader import compare_preset_to_dict, load_all_trips, load_compare_presets
 from app.trip import Trip
+from output.channels.seven_io_base import mask_number
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
     CommandResult,
@@ -591,7 +592,7 @@ class InboundTelegramReader:
                 timeout=5,
             )
             if resp.status_code == 200:
-                logger.info(f"Telegram chat_id {chat_id} via token registriert")
+                logger.info(f"Telegram chat_id {mask_number(chat_id)} via token registriert")
                 try:
                     confirm_settings = settings.model_copy(update={"telegram_chat_id": chat_id})
                     self._notification_service.send_telegram_message(
@@ -606,7 +607,7 @@ class InboundTelegramReader:
                 # Issue #2141: die Chat-ID gehört bereits einem anderen Konto.
                 # Ohne Rückmeldung wäre das aus Nutzersicht ein Stillstand.
                 logger.warning(
-                    f"telegram-connect: chat_id {chat_id} bereits mit einem anderen Konto verknüpft"
+                    f"telegram-connect: chat_id {mask_number(chat_id)} bereits mit einem anderen Konto verknüpft"
                 )
                 try:
                     conflict_settings = settings.model_copy(update={"telegram_chat_id": chat_id})
