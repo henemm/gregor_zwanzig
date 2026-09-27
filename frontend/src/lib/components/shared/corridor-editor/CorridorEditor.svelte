@@ -42,6 +42,10 @@
 
 	interface Props {
 		context?: 'route' | 'vergleich';
+		/** Issue #2277 S2a: Anlege-Modus fuer context="route" (/trips/new) —
+		 *  schaltet den Selbst-Speicher-Pfad (PUT via saveController) ab, meldet
+		 *  Aenderungen stattdessen ausschliesslich ueber onCorridorsChange. */
+		createMode?: boolean;
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
@@ -69,6 +73,7 @@
 	}
 	let {
 		context = 'route',
+		createMode = false,
 		trip,
 		onTripUpdate,
 		saveController,
@@ -233,6 +238,20 @@
 			});
 	});
 
+	// Issue #2277 S2a (AC-7): im Anlege-Modus ist der Reiter dauerhaft gemountet,
+	// bevor der Nutzer den Wetter-Metriken-Reiter je besucht hat — der einmalige
+	// Lade-Effekt oben wuerde das "+ Metrik"-Angebot sonst auf dem Zufalls-
+	// Zeitpunkt des ersten Katalog-Ladens einfrieren. Dieser Effekt rechnet
+	// `poolLeft` bei jeder Aenderung der Metriken-Auswahl neu — mit dem
+	// AKTUELLEN `rows`-Stand (NICHT trip?.corridors, der bleibt im Anlege-Modus
+	// immer leer), damit bereits eingestellte Zeilen erhalten bleiben.
+	$effect(() => {
+		if (!createMode || routeExtraDefs === null) return;
+		const corridorsNow = buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors).corridors;
+		const rebuilt = buildRoutePool(corridorsNow, trip?.display_config?.metrics, routeExtraDefs);
+		poolLeft = rebuilt.poolLeft;
+	});
+
 	const validation = $derived(validateCorridorRows(rows));
 	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): zaehlt nur Marken, deren Schalter
 	// im aktuellen Kontext ueberhaupt sichtbar ist (geteilte Entscheidung
@@ -290,6 +309,15 @@
 			if (saveGateDecision(rows) === 'schedule') {
 				syncToWizard();
 				vergleichSpeicherung?.aenderungMelden();
+			}
+			return;
+		}
+		// Issue #2277 S2a: Anlege-Modus (/trips/new) — kein PUT auf eine noch
+		// nicht existierende Trip-ID. Aenderungen fliessen ausschliesslich ueber
+		// onCorridorsChange nach oben in CreateTripState.corridors.
+		if (createMode) {
+			if (saveGateDecision(rows) === 'schedule') {
+				onCorridorsChange?.(buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors).corridors);
 			}
 			return;
 		}

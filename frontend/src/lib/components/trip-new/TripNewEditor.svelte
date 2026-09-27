@@ -16,6 +16,7 @@
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
+	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import type { ChannelKind, ChannelThreshold } from '$lib/components/shared/alarme-tab/alertChannelState';
 	import { deriveActiveAlertMetricsForTrip } from '$lib/components/shared/alarme-tab/tripAlertMetricsFromCatalog';
 	import type { MetricCatalog } from '$lib/components/trip-detail/metricsEditor';
@@ -26,7 +27,7 @@
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import Select from '$lib/components/ui/select/Select.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel } from '$lib/types';
+	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel, Corridor } from '$lib/types';
 	import {
 		type TabId,
 		type CreateTripState,
@@ -71,7 +72,8 @@
 		{ id: 'etappen',   label: 'Etappen & GPX',    lockHint: 'erst Trip-Name + Startdatum',    optional: false },
 		{ id: 'wegpunkte', label: 'Wegpunkte prüfen', lockHint: 'erst alle GPX hochladen',        optional: true  },
 		{ id: 'metriken',  label: 'Wetter-Metriken',  lockHint: 'erst alle GPX hochladen',        optional: false },
-		{ id: 'zeitplan',  label: 'Briefing-Zeitplan',lockHint: 'erst Wetter-Metriken öffnen',    optional: false },
+		{ id: 'wertebereiche', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen',   optional: false },
+		{ id: 'zeitplan',  label: 'Briefing-Zeitplan',lockHint: 'erst Wertebereiche öffnen',      optional: false },
 		{ id: 'alerts',    label: 'Alerts',            lockHint: 'erst Zeitplan öffnen',           optional: false },
 	];
 
@@ -98,6 +100,10 @@
 	// Issue #2277 S1 — Alarm-Schatten-State fuer den geteilten AlarmeTab (createMode).
 	// Fliesst bewusst NICHT in stubTrip ein (neue trip-Referenz je Klick = Effekt-Schleife).
 	let alarm = $state<CreateTripAlarmState>(initialCreateTripAlarmState());
+	// Issue #2277 S2a — Wertebereiche-Schatten-State fuer den geteilten
+	// CorridorEditor (createMode). Fliesst bewusst NICHT in stubTrip ein
+	// (dieselbe Effekt-Schleifen-Gefahr wie beim Alarm-Schatten-State oben).
+	let corridors = $state<Corridor[]>([]);
 	// Metrik-Katalog fuer die Alarm-Metrik-Zeilen (fail-soft, Muster WeatherMetricsTab).
 	let metricsCatalog = $state<MetricCatalog>({});
 	onMount(() => {
@@ -109,6 +115,7 @@
 
 	// Visited-Flags (Tab-Besuch setzt done)
 	let wtVisited = $state(false);
+	let wbVisited = $state(false);
 	let ztVisited = $state(false);
 
 	let activeTab = $state<TabId>(seed.activeTab ?? 'route');
@@ -152,8 +159,8 @@
 
 	// ── Abgeleitete Zustandsgrößen ────────────────────────────────────────────
 	const etDone = $derived(stages.length > 0 && stages.every(s => s.gpx !== null));
-	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, ztVisited));
-	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, ztVisited));
+	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, ztVisited));
+	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, ztVisited));
 	const ready = $derived(canSave(done));
 	const gpxCount = $derived(stages.filter(s => s.gpx !== null).length);
 	const progressN = $derived(progressCount(done));
@@ -238,6 +245,7 @@
 		// Wegpunkt-Edits verwirft.
 		if (id === 'wegpunkte' && prev !== 'wegpunkte') editorStages = buildEditorStages();
 		if (id === 'metriken') wtVisited = true;
+		if (id === 'wertebereiche') wbVisited = true;
 		if (id === 'zeitplan') ztVisited = true;
 	}
 
@@ -391,6 +399,11 @@
 		reportConfig = { ...(reportConfig ?? {}), ...w };
 	}
 
+	// ── Wertebereiche-Rueckruf aus CorridorEditor (Issue #2277 S2a) ───────────
+	// Muster handleChannelsChange: reine Uebernahme, kein Inhaltsgleichheits-
+	// Guard noetig (corridors fliesst nicht in stubTrip zurueck).
+	function handleCorridorsChange(c: Corridor[]) { corridors = [...c]; }
+
 	// ── Alarm-Rueckrufe aus AlarmeTab (Issue #2277 S1) ────────────────────────
 	// Delta-Logik liegt in tripNewLogic.ts (gleicher Code wie im Payload-Test).
 	function handleAlarmChannelToggle(kind: ChannelKind) { alarm = applyAlarmChannelToggle(alarm, kind); }
@@ -417,6 +430,7 @@
 				channels,
 				reportConfig,
 				alarm,
+				corridors,
 				activity: selectedActivity,
 			};
 			const payload = buildCreateTripPayload(state);
@@ -900,6 +914,15 @@
 		</div>
 		{/if}
 
+		<!-- Issue #2277 S2a — geteilter CorridorEditor (createMode, kein PUT),
+		     Muster WeatherMetricsTab/AlarmeTab: EINE dauerhafte Instanz (Desktop
+		     XOR Mobile), Sichtbarkeit ueber style:display. -->
+		{#if !isMobileViewport}
+		<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
+			<CorridorEditor context="route" trip={stubTrip} createMode={true} onCorridorsChange={handleCorridorsChange} />
+		</div>
+		{/if}
+
 		<!-- Issue #2277 S1 — geteilter AlarmeTab (createMode, kein PUT), Muster
 		     WeatherMetricsTab: EINE dauerhafte Instanz (Desktop XOR Mobile),
 		     Sichtbarkeit ueber style:display, damit der interne State beim
@@ -1147,6 +1170,13 @@
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'metriken' ? '' : 'none'}>
 				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+			</div>
+			{/if}
+
+			<!-- Issue #2277 S2a — Mobile CorridorEditor, XOR zum Desktop-Mount oben. -->
+			{#if isMobileViewport}
+			<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
+				<CorridorEditor context="route" trip={stubTrip} createMode={true} onCorridorsChange={handleCorridorsChange} />
 			</div>
 			{/if}
 

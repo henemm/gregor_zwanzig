@@ -117,28 +117,28 @@ Diese Scheibe:
 | `corridor-editor/corridorEditorState.ts:297` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
 | `weather-metrics-tab/weatherMetricsTabSections.ts:72` | SMS-Schwellen/Report-Config nur im Trip |
 | `weather-metrics-tab/weatherMetricsTabSections.ts:73` | Stundenverlauf-Abschnitt nur im Vergleich |
-| `corridor-editor/CorridorEditor.svelte:141` | `isFreshCompareCreate` — Profil-Prefill nur bei frischer Vergleichs-Anlage, kein Trip-Äquivalent |
-| `corridor-editor/CorridorEditor.svelte:313` | `add()` — `addCompareRow`/`addRow` unterscheiden sich strukturell (CompareMetricDef vs. RouteMetricDef) |
-| `corridor-editor/CorridorEditor.svelte:347` | Ladefehler-Banner, gebunden an den Compare-Katalog-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:360` | Ladezustand „Lade Metriken…", gebunden an den Compare-Katalog-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:363` | Ladezustand „Lade Metriken…", gebunden an den Route-Zusatzmetriken-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:390` | Rückfall-Warnung auf die 6 Standardmetriken, nur route-spezifisch |
-| `corridor-editor/CorridorEditor.svelte:519` | AC-13-Neutralitäts-Hinweis — Ranking-Konzept existiert nur im Vergleich |
-| `corridor-editor/CorridorEditorMobile.svelte:144` | Mobil-Zwilling von `CorridorEditor.svelte:141` |
-| `corridor-editor/CorridorEditorMobile.svelte:279` | Mobil-Zwilling von `CorridorEditor.svelte:313` |
-| `corridor-editor/CorridorEditorMobile.svelte:342` | Mobil-Zwilling von `CorridorEditor.svelte:347` |
-| `corridor-editor/CorridorEditorMobile.svelte:355` | Mobil-Zwilling von `CorridorEditor.svelte:360` |
-| `corridor-editor/CorridorEditorMobile.svelte:358` | Mobil-Zwilling von `CorridorEditor.svelte:363` |
-| `corridor-editor/CorridorEditorMobile.svelte:375` | Mobil-Zwilling von `CorridorEditor.svelte:390` |
-| `corridor-editor/CorridorEditorMobile.svelte:496` | Mobil-Zwilling von `CorridorEditor.svelte:519` |
+| `corridor-editor/CorridorEditor.svelte:146` | `isFreshCompareCreate` — Profil-Prefill nur bei frischer Vergleichs-Anlage, kein Trip-Äquivalent |
+| `corridor-editor/CorridorEditor.svelte:341` | `add()` — `addCompareRow`/`addRow` unterscheiden sich strukturell (CompareMetricDef vs. RouteMetricDef) |
+| `corridor-editor/CorridorEditor.svelte:375` | Ladefehler-Banner, gebunden an den Compare-Katalog-Ladepfad |
+| `corridor-editor/CorridorEditor.svelte:388` | Ladezustand „Lade Metriken…", gebunden an den Compare-Katalog-Ladepfad |
+| `corridor-editor/CorridorEditor.svelte:391` | Ladezustand „Lade Metriken…", gebunden an den Route-Zusatzmetriken-Ladepfad |
+| `corridor-editor/CorridorEditor.svelte:418` | Rückfall-Warnung auf die 6 Standardmetriken, nur route-spezifisch |
+| `corridor-editor/CorridorEditor.svelte:547` | AC-13-Neutralitäts-Hinweis — Ranking-Konzept existiert nur im Vergleich |
+| `corridor-editor/CorridorEditorMobile.svelte:144` | Mobil-Zwilling von `CorridorEditor.svelte:146` |
+| `corridor-editor/CorridorEditorMobile.svelte:279` | Mobil-Zwilling von `CorridorEditor.svelte:341` |
+| `corridor-editor/CorridorEditorMobile.svelte:342` | Mobil-Zwilling von `CorridorEditor.svelte:375` |
+| `corridor-editor/CorridorEditorMobile.svelte:355` | Mobil-Zwilling von `CorridorEditor.svelte:388` |
+| `corridor-editor/CorridorEditorMobile.svelte:358` | Mobil-Zwilling von `CorridorEditor.svelte:391` |
+| `corridor-editor/CorridorEditorMobile.svelte:375` | Mobil-Zwilling von `CorridorEditor.svelte:418` |
+| `corridor-editor/CorridorEditorMobile.svelte:496` | Mobil-Zwilling von `CorridorEditor.svelte:547` |
 
 ### DARSTELLUNG (6 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
 
 | Datei:Zeile | Grund |
 |---|---|
 | `AlarmeTab.svelte:533` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
-| `corridor-editor/CorridorEditor.svelte:369` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
-| `corridor-editor/CorridorEditorMobile.svelte:363` | Mobil-Zwilling von `CorridorEditor.svelte:369` |
+| `corridor-editor/CorridorEditor.svelte:397` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
+| `corridor-editor/CorridorEditorMobile.svelte:363` | Mobil-Zwilling von `CorridorEditor.svelte:397` |
 | `versand-tab/VTSchedulePlan.svelte:83` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 | `alarme-tab/alarmeTabSections.ts:42` | nur DOM-/Tab-Id |
@@ -150,12 +150,12 @@ Diese Scheibe:
 | `versandVergleichSpeicherung.ts:221` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
 | `corridor-editor/wertebereicheVergleichSpeicherung.ts:200` | dito für Wertebereiche | dito |
 | `weather-metrics-tab/weatherMetricsCompareSave.ts:534` | dito für Wetter-Metriken | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
-| `corridor-editor/CorridorEditor.svelte:184` | Katalog-Guard: lädt `loadCompareMetricCatalog()` nur im Vergleich | Mirror-Guard zu `:216`; Auflösung bräuchte injizierte Lade-Funktion statt `context`-Schalter |
-| `corridor-editor/CorridorEditor.svelte:216` | Katalog-Guard: lädt `loadRouteExtraMetricDefs()` nur im Trip | dito, Kehrseite von `:184` |
-| `corridor-editor/CorridorEditorMobile.svelte:172` | Mobil-Zwilling von `:184` | dito |
-| `corridor-editor/CorridorEditorMobile.svelte:197` | Mobil-Zwilling von `:216` | dito |
-| `corridor-editor/CorridorEditor.svelte:285` | `maybeSchedule()`: wählt zwischen `vergleichSpeicherung.aenderungMelden()` und `saveController.schedule(buildSaveFn())` | Genau der in AC-2 benannte Beispielfall „Vergleichs-Speicherweg vs. `saveController.schedule`" — Auflösung bräuchte eine injizierte `SaveFn`, eigene Architekturentscheidung |
-| `corridor-editor/CorridorEditorMobile.svelte:252` | Mobil-Zwilling von `:285` | dito |
+| `corridor-editor/CorridorEditor.svelte:189` | Katalog-Guard: lädt `loadCompareMetricCatalog()` nur im Vergleich | Mirror-Guard zu `:221`; Auflösung bräuchte injizierte Lade-Funktion statt `context`-Schalter |
+| `corridor-editor/CorridorEditor.svelte:221` | Katalog-Guard: lädt `loadRouteExtraMetricDefs()` nur im Trip | dito, Kehrseite von `:189` |
+| `corridor-editor/CorridorEditorMobile.svelte:172` | Mobil-Zwilling von `:189` | dito |
+| `corridor-editor/CorridorEditorMobile.svelte:197` | Mobil-Zwilling von `:221` | dito |
+| `corridor-editor/CorridorEditor.svelte:304` | `maybeSchedule()`: wählt zwischen `vergleichSpeicherung.aenderungMelden()` und `saveController.schedule(buildSaveFn())` | Genau der in AC-2 benannte Beispielfall „Vergleichs-Speicherweg vs. `saveController.schedule`" — Auflösung bräuchte eine injizierte `SaveFn`, eigene Architekturentscheidung |
+| `corridor-editor/CorridorEditorMobile.svelte:252` | Mobil-Zwilling von `:304` | dito |
 | `VersandTab.svelte:348` | Wirkort-Guard des Selbst-Speicher-Effekts — läuft nur im Vergleich | Effekt existiert nur für den Compare-Speicherweg; Trip speichert über einen anderen Mechanismus außerhalb dieser Datei |
 | `WeatherMetricsTab.svelte:590` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
 | `WeatherMetricsTab.svelte:605` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |

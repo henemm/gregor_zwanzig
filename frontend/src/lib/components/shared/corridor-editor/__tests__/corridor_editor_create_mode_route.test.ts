@@ -26,7 +26,7 @@ import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { umgebungFuer, effekteVon, type Knoten } from '../../__tests__/svelteInstanzPruefstand.ts';
-import { buildRoutePool, type CorridorRowState } from '../corridorEditorState.ts';
+import { buildRoutePool, buildCorridorSavePayload, type CorridorRowState } from '../corridorEditorState.ts';
 import { buildCreateTripPayload, type CreateTripState } from '../../../trip-new/tripNewLogic.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
@@ -47,15 +47,24 @@ interface Spione {
 	gebaut: unknown[][];
 }
 
+/** Sentinel: `createMode` fehlt in der Saat GANZ — Aequivalent zum Trip-Hub-
+ *  Mount (`TripTabs.svelte:229`), der die Prop gar nicht setzt. Unterscheidet
+ *  sich bewusst von einer expliziten `createMode: undefined`-Bindung: nur bei
+ *  einem GANZ fehlenden Schluessel bindet `umgebungFuer()` den echten
+ *  Quelltext-Default `createMode = false` (Adversary F001-Fix,
+ *  `svelteInstanzPruefstand.ts`). */
+const CREATE_MODE_FEHLT = Symbol('createMode-fehlt-in-der-saat');
+
 /** Saat des route-Zweigs, wie TripNewEditor ihn mountet. JEDE Prop steht
  *  explizit in der Saat (auch als `undefined`): eine fehlende Bindung laesst
  *  `with(u)` mit ReferenceError scheitern, und `umgebungFuer()` schluckt
- *  Deklarationsfehler still — `originalLevels` fehlte dann unbemerkt. */
+ *  Deklarationsfehler still — `originalLevels` fehlte dann unbemerkt.
+ *  AUSNAHME `createMode`: steht NUR in der Saat, wenn der Aufrufer nicht
+ *  `CREATE_MODE_FEHLT` uebergibt — siehe Sentinel oben. */
 function baueSaat(createMode: unknown, spione: Spione, metrics: unknown[] = NUR_BOEEN): Knoten {
-	return {
+	const saat: Knoten = {
 		context: 'route',
 		trip: { id: '__new__', display_config: { metrics } },
-		createMode,
 		onTripUpdate: undefined,
 		saveController: {
 			schedule: (...a: unknown[]) => spione.schedule.push(a),
@@ -83,6 +92,8 @@ function baueSaat(createMode: unknown, spione: Spione, metrics: unknown[] = NUR_
 			return async () => {};
 		}
 	};
+	if (createMode !== CREATE_MODE_FEHLT) saat.createMode = createMode;
+	return saat;
 }
 
 function neueSpione(): Spione {
@@ -151,8 +162,15 @@ describe('AC-3: im Anlege-Modus bereitet der Editor NIE einen PUT vor', () => {
 		);
 	});
 
-	test('Positiv-Gegenprobe (AC-4): OHNE createMode bleibt der Hub-Speicherweg — schedule 1× je Aenderung, setDirty 1× bei ungueltig', async () => {
-		const { u, spione } = await baueEditor(undefined);
+	test('Positiv-Gegenprobe (AC-4): OHNE createMode-Prop (Trip-Hub-Mount-Aequivalent) bleibt der Hub-Speicherweg — schedule 1× je Aenderung, setDirty 1× bei ungueltig', async () => {
+		const { u, spione } = await baueEditor(CREATE_MODE_FEHLT);
+		assert.equal(
+			u.createMode,
+			false,
+			'Messaufbau kaputt: `createMode` fehlte in der Saat, aber `umgebungFuer()` hat den ' +
+				'Quelltext-Default `createMode = false` nicht gebunden — dieser Test misst dann ' +
+				'nichts ueber den echten Default (F001).'
+		);
 		u.add('wind_gust');
 		assert.equal(
 			spione.schedule.length,
@@ -259,5 +277,71 @@ describe('AC-7: Pool folgt der Wetter-Metriken-Auswahl, ohne eingestellte Zeilen
 			'AC-7 FAIL: ohne createMode (Trip-Hub) veraendert der neue Effekt den Pool.'
 		);
 		assert.deepEqual(u.rows, rowsVorher, 'AC-7 FAIL: ohne createMode veraendert der neue Effekt rows.');
+	});
+
+	// Adversary F002 (Fix-Loop 1): die obige Zeile (`wind_gust`) uebersteht den
+	// Roundtrip rows -> corridorsNow -> rebuilt.rows verlustfrei bit-identisch
+	// (buildRoutePool baut sie aus dem PRAESENTEN Katalog-Eintrag neu auf) — die
+	// Mutation `rows = rebuilt.rows` war dort ein struktureller Nulleffekt.
+	// Eine Zeile, deren Metrik-ID im (Basis- + Zusatz-)Katalog dieses
+	// Messaufbaus GAR NICHT vorkommt (`u.routeExtraDefs` ist hier bewusst leer,
+	// wie es das Rezept oben schon seed­et), landet beim Rebuild dagegen in
+	// `unknownCorridors` statt in `rows` — der Roundtrip ist fuer sie NICHT
+	// verlustfrei. Der korrekte Effekt (nur `poolLeft` ueberschreiben) laesst
+	// `u.rows` unangetastet; der mutierte Effekt (`rows = rebuilt.rows`) wuerde
+	// sie stillschweigend aus `u.rows` entfernen.
+	test('createMode=true: Zeile mit einer Metrik-ID ausserhalb des (Basis- + Zusatz-)Katalogs bleibt in u.rows erhalten', async () => {
+		const { u, ast, quelle } = await baueEditor(true, NUR_BOEEN);
+		const unbekannteZeile: CorridorRowState = {
+			metric: 'thunder_level_max',
+			label: 'Gewitter',
+			unit: '',
+			scale: [0, 2],
+			step: 1,
+			min: 1,
+			max: 2,
+			notify: true,
+			mark: false,
+			kind: 'ordinal'
+		};
+		u.rows = [unbekannteZeile];
+		u.poolLeft = [];
+		const rowsVorher: CorridorRowState[] = structuredClone(u.rows as CorridorRowState[]);
+
+		// Vorbedingung (Nachweis, dass dieser Test nicht leer laeuft): der reine
+		// Roundtrip ueber buildRoutePool() verliert die Zeile TATSAECHLICH aus
+		// `rows` (sie landet in `unknownCorridors`) — ohne diesen Beleg waere
+		// jede weitere Assertion unten bedeutungslos (Mutation 6 aus Runde 2
+		// blieb genau deshalb unbemerkt: die dort gesaete Zeile ueberstand den
+		// Roundtrip verlustfrei).
+		const corridorsNowVorab = buildCorridorSavePayload(u.rows as CorridorRowState[], {}, []).corridors;
+		const probe = buildRoutePool(corridorsNowVorab, NUR_BOEEN as never, []);
+		assert.notDeepEqual(
+			probe.rows,
+			rowsVorher,
+			'Messaufbau kaputt: der reine Roundtrip verliert die Zeile NICHT — die Vorbedingung fuer ' +
+				'diesen Test greift nicht (die Katalog-Annahme "unbekannte Metrik-ID" stimmt hier nicht), ' +
+				'jede weitere Assertion liefe leer.'
+		);
+		assert.ok(
+			probe.unknownCorridors.some((c) => c.metric === 'thunder_level_max'),
+			'Messaufbau kaputt: die Zeile landet nicht wie erwartet in unknownCorridors.'
+		);
+
+		const effekte = effekteVon(ast, quelle, u, 'createMode');
+		assert.equal(
+			effekte.length,
+			1,
+			`AC-7 FAIL: ${effekte.length} $effect-Ruempfe nennen \`createMode\` (erwartet: genau einer).`
+		);
+		(u.trip as Knoten).display_config = { metrics: BOEEN_UND_REGEN };
+		effekte[0]();
+
+		assert.deepEqual(
+			u.rows,
+			rowsVorher,
+			'AC-7 FAIL (Datenverlust): der Pool-Refresh hat die Zeile mit der katalogfremden Metrik-ID ' +
+				'aus u.rows verloren — ein reiner Ueberschreib-Effekt darf NUR poolLeft neu berechnen.'
+		);
 	});
 });

@@ -3,7 +3,7 @@
 // (docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2.jsx).
 // Keine Seiteneffekte, keine Svelte-Imports — testbar mit node:test.
 
-import type { Trip, WeatherConfigMetric, ReportConfig, Waypoint, ActivityType } from '$lib/types';
+import type { Trip, WeatherConfigMetric, ReportConfig, Waypoint, ActivityType, Corridor } from '$lib/types';
 import {
 	resolveAlertChannels,
 	resolveAlertChannelThresholds,
@@ -17,21 +17,26 @@ import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryP
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
-export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'metriken' | 'zeitplan' | 'alerts';
+export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'metriken' | 'wertebereiche' | 'zeitplan' | 'alerts';
 
 // ── Freischalt-Logik (TN_unlocked) ──────────────────────────────────────────
+// Issue #2277 S2a: neuer Parameter `wbVisited` (Wertebereiche besucht) an
+// Position 5 — die Kette laeuft jetzt ueber Wetter-Metriken -> Wertebereiche
+// -> Zeitplan (Muster Compare `compareNewLogic.ts`).
 
 export function unlockedTabs(
 	name: string,
 	startDate: string,
 	etDone: boolean,
 	wtVisited: boolean,
+	wbVisited: boolean,
 	ztVisited: boolean
 ): Set<TabId> {
 	const s = new Set<TabId>(['route']);
 	if (name.trim() && startDate) s.add('etappen');
 	if (etDone) { s.add('wegpunkte'); s.add('metriken'); }
-	if (wtVisited) s.add('zeitplan');
+	if (wtVisited) s.add('wertebereiche');
+	if (wbVisited) s.add('zeitplan');
 	if (ztVisited) s.add('alerts');
 	return s;
 }
@@ -43,12 +48,14 @@ export function doneTabs(
 	startDate: string,
 	etDone: boolean,
 	wtVisited: boolean,
+	wbVisited: boolean,
 	ztVisited: boolean
 ): Set<TabId> {
 	const s = new Set<TabId>();
 	if (name.trim() && startDate) s.add('route');
 	if (etDone) s.add('etappen');
 	if (wtVisited) s.add('metriken');
+	if (wbVisited) s.add('wertebereiche');
 	if (ztVisited) s.add('zeitplan');
 	return s;
 }
@@ -109,6 +116,11 @@ export interface CreateTripState {
 	alarm?: CreateTripAlarmState;
 	// Issue #674 — Aktivitätstyp (Fahrrad/Wanderer) für Naismith-Berechnung.
 	activity?: ActivityType;
+	// Issue #2277 S2a — Wertebereiche-Schatten-State des geteilten CorridorEditor
+	// (createMode, context="route"). `undefined` solange der Reiter nie eine
+	// gültige Zeile gemeldet hat; buildCreateTripPayload() setzt trotzdem immer
+	// `trip.corridors = state.corridors ?? []` (AC-6, kein `null` im POST-Body).
+	corridors?: Corridor[];
 }
 
 // ── Alarm-Schatten-State (Issue #2277 S1) ────────────────────────────────────
@@ -203,6 +215,11 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 	if (state.reportConfig) {
 		trip.report_config = state.reportConfig;
 	}
+
+	// Issue #2277 S2a (AC-6) — immer gesetzt, nie undefined im POST-Body: ein
+	// frisch angelegter Trip ohne Wertebereiche-Interaktion liefert per GET
+	// "corridors": [], nie null.
+	trip.corridors = state.corridors ?? [];
 
 	// Issue #2277 S1 — Alarm-Felder additiv mergen: Read-Modify-Write auf dem
 	// bereits gebauten display_config (channels/metrics bleiben erhalten).
