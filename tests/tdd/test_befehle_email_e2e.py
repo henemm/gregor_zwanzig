@@ -34,6 +34,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     lege_lage_an,
     merkmal_fuer,
     sende_email,
+    spec_feld,
     user_ids,
 )
 
@@ -226,14 +227,16 @@ def test_apple_mail_nur_html_wird_erkannt(monkeypatch, user_ids):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("form", sorted(MAIL_FORMEN))
-@pytest.mark.parametrize("spec", _COMMAND_SPECS, ids=[s[0] for s in _COMMAND_SPECS])
+@pytest.mark.parametrize(
+    "spec", _COMMAND_SPECS, ids=[spec_feld(s, "wort") for s in _COMMAND_SPECS],
+)
 def test_jeder_befehl_in_allen_mailformen(monkeypatch, user_ids, spec, form):
     """AC-7: jeder angebotene Steuerbefehl wird in allen drei Mailformen
     korrekt ausgefuehrt -- die tatsaechlich versendete Antwortmail traegt das
     fuer diesen Befehl festgelegte Inhaltsmerkmal. ``apple_html`` ist VOR dem
     Fix (fehlender HTML-Fallback, AC-19) fuer JEDEN Befehl rot -- das ist der
     Beweis fuer B2, nicht ein Defekt dieses Tests."""
-    wort, _arg, _beschreibung, _kinds = spec
+    wort = spec_feld(spec, "wort")
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L2")
     settings = basis_settings()
@@ -246,7 +249,7 @@ def test_jeder_befehl_in_allen_mailformen(monkeypatch, user_ids, spec, form):
     assert recorder.emails, f"Keine Antwortmail fuer {wort!r}/{form!r}: {recorder.emails!r}"
     text = _gesendeter_email_text(recorder.emails[-1])
     _assert_frei_von_fehlertexten(text, kontext=f"AC-7 {wort!r}/{form!r}")
-    merkmal = merkmal_fuer(wort, nutzer=nutzer)
+    merkmal = merkmal_fuer(wort, nutzer=nutzer, kanal="email")
     erwartete_teile = merkmal if isinstance(merkmal, tuple) else (merkmal,)
     for teil in erwartete_teile:
         assert teil in text, (

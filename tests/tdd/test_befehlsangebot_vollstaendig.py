@@ -30,19 +30,30 @@ from output.channels.telegram import BOT_COMMANDS
 from services.trip_command_processor import _COMMAND_SPECS, TripCommandProcessor
 
 from tests.tdd._befehl_e2e_fixtures import (
+    BEFEHL_EN_ZU_DE,
     FEHLERTEXTE,
+    NUR_DEUTSCHE_BEFEHLSWOERTER,
     basis_settings,
     install_transport_fakes,
     lege_lage_an,
     merkmal_fuer,
-    premium_sms_kurzhilfe_funktion,
+    sende_premium_sms,
     sende_telegram_text,
+    spec_feld,
     user_ids,
 )
 
 __all__ = ["user_ids"]  # pytest muss die importierte Fixture im Modul finden
 
-_COMMAND_SPECS_WOERTER = tuple(w for w, _a, _b, _k in _COMMAND_SPECS)
+# AC-1 (#2417 Kurzform englisch): Feldnamen-Zugriff statt Tupel-Entpacken.
+_COMMAND_SPECS_WOERTER = tuple(spec_feld(s, "wort") for s in _COMMAND_SPECS)
+
+#: AC-20 (Spec feat_2417_kurzform_englisch.md, woertlich): die NEUEN
+#: englischen Slash-Befehle im Telegram-Menue.
+_NEUE_ENGLISCHE_SLASH_BEFEHLE = frozenset({
+    "today", "tomorrow", "now", "storms", "route", "restday", "status",
+    "pause", "skip", "stop", "resume", "help", "codes", "kuerzel",
+})
 
 # Spec-Text ("BOT_COMMANDS -- Merge, nicht Ersatz"): woertlich die heute
 # bestehenden 8 Eintraege -- Regressionsanker, damit ein Merge sie nicht
@@ -61,14 +72,17 @@ def _langhilfe_text() -> str:
     return f"{ergebnis.confirmation_subject}\n\n{ergebnis.confirmation_body}"
 
 
-def _kurzhilfe_text_oder_fail() -> str:
-    fn = premium_sms_kurzhilfe_funktion()
-    assert fn is not None, (
-        "services.trip_command_processor.premium_sms_kurzhilfe existiert noch "
-        "nicht -- AC-10/AC-23 (Premium-SMS-Kurzhilfe) sind noch nicht "
-        "implementiert."
-    )
-    return fn()
+def _kurzhilfe_text_ueber_premium_sms(monkeypatch, new_user_id) -> str:
+    """Die HELP-Antwort, die der ECHTE Premium-SMS-Journal-Eingang
+    tatsaechlich versendet (#2417 Kurzform englisch: nicht mehr ueber die
+    Hilfsfunktion ``premium_sms_kurzhilfe()``, deren Name/Existenz die neue
+    Spec nicht festlegt)."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(new_user_id, "L2")
+    sende_premium_sms(basis_settings(), recorder, nutzer, "help")
+    recorder.pruefe_keine_unbekannten_aufrufe()
+    assert recorder.premium_sms_out, "Keine Premium-SMS auf 'help' versendet."
+    return recorder.premium_sms_out[-1]["text"]
 
 
 # ---------------------------------------------------------------------------
@@ -92,26 +106,35 @@ def test_ac10_langhilfe_enthaelt_alle_zwoelf_befehlswoerter_und_alle_metrik_kuer
         )
 
 
-def test_ac10_kurzhilfe_enthaelt_alle_zwoelf_befehlswoerter_und_alle_metrik_kuerzel():
-    text = _kurzhilfe_text_oder_fail()
-    for wort in _COMMAND_SPECS_WOERTER:
-        assert wort.upper() in text.upper(), (
-            f"Kurzhilfe ohne Befehlswort {wort.upper()!r}: {text!r}"
+def test_kurzhilfe_nennt_alle_englischen_befehlswoerter_und_kein_deutsches(monkeypatch, user_ids):
+    """Vorgaenger-AC-10 (Kurzhilfe-Teil) -- ABGELOEST durch
+    ``feat_2417_kurzform_englisch.md`` AC-1/AC-8: die Premium-SMS-Hilfe nennt
+    JEDES ``wort_en`` aus ``_COMMAND_SPECS`` (ausser HELP selbst) und kein
+    nur-deutsches Befehlswort. Die fruehere Pflicht "alle Metrik-Kuerzel"
+    entfaellt (die erklaert jetzt CODES)."""
+    englisch = [spec_feld(s, "wort_en") for s in _COMMAND_SPECS]
+    assert all(englisch), (
+        "_COMMAND_SPECS traegt noch kein Feld wort_en fuer jeden Eintrag "
+        f"(AC-1): {englisch!r}"
+    )
+    text = _kurzhilfe_text_ueber_premium_sms(monkeypatch, user_ids)
+    for wort in englisch:
+        if wort == "help":
+            continue
+        assert re.search(rf"^{re.escape(wort.upper())}\b", text, re.MULTILINE), (
+            f"Kurzhilfe ohne englisches Befehlswort {wort.upper()!r}: {text!r}"
         )
-    # GSM-7-Konflikt (Team-Lead-Befund): manche col_label enthalten ein
-    # nicht-GSM-7-Zeichen (z.B. freezing_level "0°Line") -- fuer die
-    # Kurzhilfe genuegt deshalb col_label ODER sms_code, case-insensitiv --
-    # dieselbe Regel wie test_befehle_premium_sms_e2e.py:338-342. Die
-    # Langhilfe-Pruefung oben bleibt unveraendert streng auf col_label.
-    for metric in get_all_metrics():
-        kuerzel_da = metric.col_label.upper() in text.upper() or (
-            bool(metric.sms_code) and metric.sms_code.upper() in text.upper()
+    for deutsch in sorted(NUR_DEUTSCHE_BEFEHLSWOERTER):
+        assert not re.search(rf"\b{re.escape(deutsch.upper())}\b", text), (
+            f"Kurzhilfe wirbt mit deutschem Befehlswort {deutsch.upper()!r}: {text!r}"
         )
-        assert kuerzel_da, f"Kurzhilfe fehlt Wetter-Kuerzel fuer {metric.id!r}: {text!r}"
 
 
-def test_ac10_kurzhilfe_verweist_auf_keinen_anderen_kanal():
-    text = _kurzhilfe_text_oder_fail()
+def test_ac10_kurzhilfe_verweist_auf_keinen_anderen_kanal(monkeypatch, user_ids):
+    """Regressionswaechter (bleibt gueltig): die ueber Premium-SMS versendete
+    Hilfe verweist auf keinen anderen Kanal -- wer nur Premium-SMS
+    empfaengt, hat keinen anderen."""
+    text = _kurzhilfe_text_ueber_premium_sms(monkeypatch, user_ids)
     for verboten in ("email", "Telegram", "Mail"):
         assert verboten not in text, f"Kurzhilfe erwaehnt {verboten!r}: {text!r}"
 
@@ -159,8 +182,12 @@ def test_ac21_menuebeschreibung_stammt_aus_command_specs():
     _COMMAND_SPECS-Beschreibung "Wetter der heutigen Etappe". Feld: die
     dritte Tupel-Position (``b`` in ``(w, a, b, kinds)``) ist die
     Beschreibung -- nachgelesen in ``trip_command_processor.py::command_rows``."""
+    # #2417 Kurzform englisch AC-1/AC-20: Feldnamen-Zugriff; nur die
+    # DEUTSCHEN Woerter (``wort``) -- fuer die englischen Menueeintraege legt
+    # die Spec keine Beschreibung fest.
     beschreibung_je_neuem_wort = {
-        w: b for w, _a, b, _k in _COMMAND_SPECS if w not in _BESTEHENDE_ACHT
+        spec_feld(s, "wort"): spec_feld(s, "beschreibung_de")
+        for s in _COMMAND_SPECS if spec_feld(s, "wort") not in _BESTEHENDE_ACHT
     }
     eintrag_je_name = {c["command"]: c["description"] for c in BOT_COMMANDS}
     for wort, beschreibung in beschreibung_je_neuem_wort.items():
@@ -170,6 +197,50 @@ def test_ac21_menuebeschreibung_stammt_aus_command_specs():
             f"Menuebeschreibung fuer neuen Eintrag {wort!r} stammt nicht aus "
             f"_COMMAND_SPECS (erwarteter Teilstring {beschreibung!r}): {eintrag!r}"
         )
+
+
+def test_ac20_bot_commands_drift_gegen_wort_und_wort_en():
+    """AC-20 (#2417 Kurzform englisch): ``BOT_COMMANDS`` enthaelt jedes Wort
+    aus ``_COMMAND_SPECS`` in BEIDEN Sprachen (``wort`` UND ``wort_en``) als
+    eigenen Slash-Befehl, dazu woertlich die neuen englischen Befehle der
+    Spec; kein Slash-Name doppelt (gleich geschriebene Befehle nur einmal),
+    alle im Namensraum ``[a-z0-9_]{1,32}``, weniger als 100 Eintraege."""
+    namen = [c["command"] for c in BOT_COMMANDS]
+    assert len(namen) == len(set(namen)), (
+        f"BOT_COMMANDS fuehrt Slash-Namen doppelt: {sorted(n for n in namen if namen.count(n) > 1)!r}"
+    )
+    assert len(namen) < 100, f"BOT_COMMANDS hat {len(namen)} Eintraege (Limit 100)."
+    for name in namen:
+        assert _BOT_COMMAND_NAME_RE.match(name), f"Ungueltiger Slash-Name {name!r}"
+
+    englisch = {spec_feld(s, "wort_en") for s in _COMMAND_SPECS}
+    assert None not in englisch and "" not in englisch, (
+        "_COMMAND_SPECS traegt noch nicht fuer jeden Eintrag ein wort_en (AC-1) "
+        "-- der Drift-Abgleich BOT_COMMANDS gegen wort UND wort_en ist nicht "
+        "moeglich."
+    )
+    soll = set(_COMMAND_SPECS_WOERTER) | englisch
+    fehlend = sorted(soll - set(namen))
+    assert not fehlend, (
+        f"BOT_COMMANDS fehlen Woerter aus _COMMAND_SPECS (wort/wort_en): {fehlend!r}"
+    )
+    fehlend_spec = sorted(_NEUE_ENGLISCHE_SLASH_BEFEHLE - set(namen))
+    assert not fehlend_spec, (
+        f"BOT_COMMANDS fehlen die in AC-20 woertlich geforderten Slash-Befehle: "
+        f"{fehlend_spec!r}"
+    )
+
+
+def test_ac20_englische_woerter_der_spec_stimmen_mit_command_specs_ueberein():
+    """AC-2/AC-20 Drift-Waechter: die freigegebene Wortliste (EN -> DE) aus
+    der Spec entspricht genau den Paaren ``wort_en -> wort`` in
+    ``_COMMAND_SPECS`` -- sonst testeten die Befehls-Tests eine andere
+    Menge, als das Produkt anbietet."""
+    paare = {spec_feld(s, "wort_en"): spec_feld(s, "wort") for s in _COMMAND_SPECS}
+    assert paare == BEFEHL_EN_ZU_DE, (
+        f"_COMMAND_SPECS (wort_en -> wort) weicht von der freigegebenen "
+        f"Wortliste ab.\nProdukt: {paare!r}\nSpec:    {BEFEHL_EN_ZU_DE!r}"
+    )
 
 
 def test_bot_commands_bleibt_ein_statisches_listen_literal_lesbar_per_ast():

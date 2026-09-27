@@ -20,10 +20,12 @@ zwei Faelle sind der Kern des gemeldeten Defekts ("das Badge nennt ein Kuerzel,
 das in keiner Trip-SMS auftaucht"), sie duerfen also nicht wegdefiniert werden.
 Fuer die uebrigen 23 Groessen faellt beides zusammen.
 
-Zwei benannte Ausnahmen bleiben (Spec Abschnitt 1): ``temperature`` (``T``) und
-``wind_chill`` (``TF``). Das Register fuehrt dort TAGESAUSWERTUNGEN (``K``/``D``
-bzw. ``FK``/``FD``/``WC``); die Telegram-Zelle zeigt einen STUNDENWERT — ein
-Spaltenkopf "Tageshoechst" waere dort eine falsche Aussage.
+Eine benannte Ausnahme bleibt: ``wind_chill`` (``TF``). Das Register fuehrt
+dort TAGESAUSWERTUNGEN (``FK``/``FD``); die Telegram-Zelle zeigt einen
+STUNDENWERT — ein Spaltenkopf "Tageshoechst" waere dort eine falsche Aussage.
+Die fruehere Ausnahme ``temperature`` (``T``) entfaellt mit #2417 (Spec
+``feat_2417_kurzform_englisch.md`` AC-12): ``temperature`` traegt jetzt selbst
+``sms_code="T"``, Register und Telegram stimmen ohne Ausnahme ueberein.
 
 KEINE Mocks, KEIN Dateiinhalt-Check: echte Model-Objekte, echter Renderaufruf
 (``render_telegram_bubbles``), Nutzersicht auf den Bubble-Text. Die Erwartung
@@ -285,11 +287,15 @@ def test_temperatur_und_gefuehlte_behalten_das_stundenkuerzel():
     )
 
 
-def test_ausnahmeliste_nennt_beide_temperaturen_mit_begruendung():
-    """AC-3 Gegenprobe / AC-2: die beiden Ausnahmen stehen NAMENTLICH und mit
-    Begruendung in einer Liste im Katalog — nicht als stiller Sonderfall im
+def test_ausnahmeliste_nennt_nur_noch_die_gefuehlte_temperatur():
+    """AC-3 Gegenprobe / AC-2: die Ausnahme ``wind_chill`` steht NAMENTLICH und
+    mit Begruendung in einer Liste im Katalog — nicht als stiller Sonderfall im
     Renderer. Ohne diese Liste ist "compact_label darf nicht wegdriften"
-    (Spec Abschnitt 2) nicht pruefbar."""
+    (Spec Abschnitt 2) nicht pruefbar.
+
+    #2417 AC-12: ``temperature`` steht NICHT mehr darin — mit
+    ``sms_code="T"`` stimmen Register und Telegram ohnehin ueberein; eine
+    Ausnahme ohne Abweichung waere ein toter Eintrag."""
     ausnahmen = _ausnahmeliste()
     assert ausnahmen is not None, (
         "AC-2/AC-3 FAIL: `app.metric_catalog` fuehrt keine benannte "
@@ -298,7 +304,12 @@ def test_ausnahmeliste_nennt_beide_temperaturen_mit_begruendung():
         "SMS-Kuerzel ununterscheidbar von einem Fluechtigkeitsfehler — genau "
         "so ist der heutige Zustand entstanden."
     )
-    for metric_id in ("temperature", "wind_chill"):
+    assert "temperature" not in ausnahmen, (
+        "#2417 AC-12 FAIL: 'temperature' steht weiter in der Ausnahmeliste, "
+        "obwohl sie mit sms_code='T' keine Abweichung mehr braucht "
+        f"(enthalten: {sorted(ausnahmen)})."
+    )
+    for metric_id in ("wind_chill",):
         assert metric_id in ausnahmen, (
             f"AC-3 FAIL: '{metric_id}' fehlt in der Ausnahmeliste "
             f"(enthalten: {sorted(ausnahmen)})."

@@ -37,7 +37,7 @@ import re
 
 import pytest
 
-from app.metric_catalog import get_all_metrics, metric_command_words
+from app.metric_catalog import metric_command_words
 from services.trip_command_processor import TripCommandProcessor, _QUERY_KEYS
 from services.trip_selection import KEIN_KANDIDAT_TEXT
 
@@ -53,6 +53,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     KLASSE_METRIK_QUERY,
     KLASSE_ROUTE_ONLY,
     KLASSE_ZIELLOS,
+    NUR_DEUTSCHE_BEFEHLSWOERTER,
     SOLL_MATRIX,
     _read,
     basis_settings,
@@ -61,6 +62,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     lege_lage_an,
     lege_po_lage_nutzer_an,
     merkmal_fuer,
+    pruefe_premium_sms_englisch_und_gsm7,
     sende_premium_sms,
     sms_segments,
     tippbare_route_only_und_metrik_woerter,
@@ -108,12 +110,28 @@ def _pruefe_merkmal_premium_sms(fall: str, text: str, *, nutzer) -> None:
             f"Antwort auf {fall!r} enthaelt nicht das erwartete Merkmal "
             f"{teilstring!r}: {text!r}"
         )
+    # #2417 Kurzform englisch v1.1 (AC-4/AC-19): jede Premium-SMS-Antwort ist
+    # englisch und GSM-7-sauber -- traegt auch die Faelle, deren Merkmal
+    # mangels festgelegtem englischem Wortlaut ein leeres Tupel ist.
+    pruefe_premium_sms_englisch_und_gsm7(text, nutzer, kontext=f"Premium-SMS {fall!r}")
     metric_id = metric_command_words().get(fall)
     if metric_id is not None and metric_id != "uv_index":
         assert "no data" not in text, (
             f"Antwort auf Metrik-Wort {fall!r} zeigt 'no data' statt eines "
             f"echten Werts: {text!r}"
         )
+
+
+def _pruefe_kein_aktives_ziel_englisch(text: str, *, nutzer, kontext: str) -> None:
+    """#2417 Kurzform englisch v1.1 (Abschnitt H "Kein aktives Ziel / kein
+    Kandidat"): auf Premium-SMS kommt der Hinweis ENGLISCH (Wortlaut nicht
+    zeichengenau vorgegeben) -- der deutsche ``KEIN_AKTIVES_ZIEL_TEXT``/
+    ``KEIN_KANDIDAT_TEXT`` darf nicht mehr erscheinen, der Text muss englisch
+    und GSM-7-sauber sein, und er darf keine Trip-Antwort/Hilfe sein."""
+    for deutsch in (kein_aktives_ziel_text(), KEIN_KANDIDAT_TEXT):
+        assert deutsch not in text, f"{kontext}: deutscher Hinweis {deutsch!r}: {text!r}"
+    pruefe_premium_sms_englisch_und_gsm7(text, nutzer, kontext=kontext)
+    assert "Commands (German works too)" not in text, f"{kontext}: Hilfe statt Hinweis: {text!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -188,10 +206,7 @@ def test_ac4_kein_aktives_ziel_bei_l4(monkeypatch, user_ids, fall):
     gesendet = _letzte_sms(recorder)
     assert gesendet["to"] == nutzer.premium_sms_reply_to
     _ohne_fehlertexte(gesendet["text"])
-    assert hinweis in gesendet["text"], (
-        f"Antwort auf {fall!r} in L4 enthaelt nicht den Hinweis 'kein "
-        f"aktives Ziel': {gesendet['text']!r}"
-    )
+    _pruefe_kein_aktives_ziel_englisch(gesendet["text"], nutzer=nutzer, kontext=f"L4 {fall!r}")
 
 
 @pytest.mark.parametrize("fall", ["status", "skip", "temp", "wind", "glance"])
@@ -210,10 +225,7 @@ def test_ac4_kein_aktives_ziel_bei_l5(monkeypatch, user_ids, fall):
     recorder.pruefe_keine_unbekannten_aufrufe()
     gesendet = _letzte_sms(recorder)
     _ohne_fehlertexte(gesendet["text"])
-    assert hinweis in gesendet["text"], (
-        f"Antwort auf {fall!r} in L5 enthaelt nicht den Hinweis 'kein "
-        f"aktives Ziel': {gesendet['text']!r}"
-    )
+    _pruefe_kein_aktives_ziel_englisch(gesendet["text"], nutzer=nutzer, kontext=f"L5 {fall!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -254,12 +266,14 @@ def test_matrix_vollabdeckung_premium_sms(monkeypatch, user_ids, klasse, lage, e
 
     if erwartet == ERGEBNIS_HILFE:
         _ohne_fehlertexte(text)
+        pruefe_premium_sms_englisch_und_gsm7(text, nutzer, kontext=f"Hilfe {lage}")
         for wort in merkmal_fuer("hilfe", nutzer=nutzer, kanal="premium_sms"):
             assert wort in text, (
                 f"Hilfe-Antwort in Lage {lage} fehlt Befehlswort {wort!r}: {text!r}"
             )
     elif erwartet == ERGEBNIS_ANTWORT_TRIP:
         _ohne_fehlertexte(text)
+        pruefe_premium_sms_englisch_und_gsm7(text, nutzer, kontext=f"{fall!r} {lage}")
         if klasse == KLASSE_METRIK_QUERY:
             # "glance" traegt den Trip-Namen NICHT im Antworttext (nur die
             # Wetterwerte) -- Fundament-Nachmessung: merkmal_fuer("glance")
@@ -276,21 +290,30 @@ def test_matrix_vollabdeckung_premium_sms(monkeypatch, user_ids, klasse, lage, e
             )
     elif erwartet == ERGEBNIS_ANTWORT_VERGLEICH:
         _ohne_fehlertexte(text)
+        pruefe_premium_sms_englisch_und_gsm7(text, nutzer, kontext=f"Vergleich {lage}")
         assert nutzer.presets and nutzer.presets[0]["name"] in text, (
             f"Lage {lage}: Antwort adressiert nicht den Vergleich: {text!r}"
         )
     elif erwartet == ERGEBNIS_KEIN_KANDIDAT:
-        assert KEIN_KANDIDAT_TEXT in text
+        # #2417 v1.1: Premium-SMS englisch -- nicht mehr der deutsche Text.
+        _pruefe_kein_aktives_ziel_englisch(text, nutzer=nutzer, kontext=f"kein Kandidat {lage}")
     elif erwartet == ERGEBNIS_KEIN_AKTIVES_ZIEL:
         hinweis = kein_aktives_ziel_text()
         assert isinstance(hinweis, str) and hinweis and hinweis != KEIN_KANDIDAT_TEXT
-        # Team-Lead-Befund: unknown_command_body()/die Mehrdeutig-Rueckfrage
-        # koennten sonst zufaellig als "kein aktives Ziel" durchgewunken
-        # werden, wenn der Hinweis-Text zufaellig als Teilstring vorkaeme.
         _ohne_fehlertexte(text)
-        assert hinweis in text, f"Lage {lage}: 'kein aktives Ziel' fehlt: {text!r}"
+        _pruefe_kein_aktives_ziel_englisch(text, nutzer=nutzer, kontext=f"kein aktives Ziel {lage}")
     elif erwartet == ERGEBNIS_RUECKFRAGE:
-        assert "Mehrdeutig" in text
+        # #2417 Kurzform englisch AC-4/AC-19: Premium-SMS ist immer englisch
+        # -- das deutsche "Mehrdeutig" ist kein Merkmal mehr; sprachneutral
+        # ist die Kandidatenliste (alle Ziele benannt, ggf. GSM-7-gekuerzt,
+        # deshalb nur die ersten 4 Zeichen, Boden laut trip_selection).
+        kandidaten = ([nutzer.trip.name] if nutzer.trip else []) + [
+            p["name"] for p in nutzer.presets
+        ]
+        pruefe_premium_sms_englisch_und_gsm7(text, nutzer, kontext=f"Rueckfrage {lage}")
+        assert len(kandidaten) >= 2, f"Testaufbau: keine Mehrdeutigkeits-Lage: {kandidaten!r}"
+        for name in kandidaten:
+            assert name[:4] in text, f"Rueckfrage nennt Kandidat {name!r} nicht: {text!r}"
     else:
         raise AssertionError(f"Unbekanntes SOLL_MATRIX-Ergebnis {erwartet!r}")
 
@@ -322,9 +345,13 @@ def test_kurzhilfe_hoechstens_drei_segmente(monkeypatch, user_ids):
 
 
 def test_hilfe_premium_sms_verwendet_kurzhilfe_statt_langhilfe(monkeypatch, user_ids):
-    """AC-23: 'hilfe' liefert per Premium-SMS eine dedizierte Kurzform mit
-    vollem Inhalt (alle 12 Befehlswoerter + alle Wetter-Kuerzel), nicht die
-    unveraenderte Langhilfe, und ohne Verweis auf einen anderen Kanal."""
+    """Vorgaenger-AC-23 -- ABGELOEST durch ``feat_2417_kurzform_englisch.md``
+    AC-4/AC-8: 'hilfe' liefert per Premium-SMS die englische HELP-Kurzform
+    (nur englische Befehlswoerter mit Wirkung, CODES-Verweis), nicht die
+    Langhilfe, ohne Verweis auf einen anderen Kanal. Die fruehere Pflicht
+    "alle Wetter-Kuerzel in der Kurzhilfe" entfaellt: die Kuerzel erklaert
+    jetzt CODES (der zeichengenaue Wortlaut steht in
+    ``test_kurzform_befehle_englisch.py``)."""
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L2")
     settings = basis_settings()
@@ -344,12 +371,12 @@ def test_hilfe_premium_sms_verwendet_kurzhilfe_statt_langhilfe(monkeypatch, user
         "statt einer dedizierten Kurzhilfe (AC-23)."
     )
     for wort in merkmal_fuer("hilfe", nutzer=nutzer, kanal="premium_sms"):
-        assert wort in text.upper(), f"Kurzhilfe fehlt Befehlswort {wort!r}: {text!r}"
-    for metric in get_all_metrics():
-        kuerzel_da = metric.col_label.upper() in text.upper() or (
-            bool(metric.sms_code) and metric.sms_code.upper() in text.upper()
+        assert wort in text, f"Kurzhilfe fehlt {wort!r}: {text!r}"
+    for deutsch in sorted(NUR_DEUTSCHE_BEFEHLSWOERTER):
+        assert not re.search(rf"\b{re.escape(deutsch.upper())}\b", text), (
+            f"Englische Kurzhilfe wirbt mit deutschem Befehlswort "
+            f"{deutsch.upper()!r}: {text!r}"
         )
-        assert kuerzel_da, f"Kurzhilfe fehlt Wetter-Kuerzel fuer {metric.id!r}: {text!r}"
     for verboten in ("EMAIL", "E-MAIL", "TELEGRAM", "MAIL"):
         assert verboten not in text.upper(), (
             f"Kurzhilfe verweist auf einen anderen Kanal ({verboten}): {text!r}"
@@ -399,13 +426,11 @@ def test_ac29_vergleich_pause_ist_unbefristet_und_wertet_dauer_nicht_aus(
     recorder.pruefe_keine_unbekannten_aufrufe()
     text = _letzte_sms(recorder)["text"]
     _ohne_fehlertexte(text)
-    assert re.search(r"unbefristet", text, re.IGNORECASE), (
-        f"Antwort auf Vergleichs-PAUSE nennt nicht ausdruecklich "
-        f"'unbefristet': {text!r}"
-    )
-    assert re.search(r"nicht ausgewertet", text, re.IGNORECASE), (
-        f"Antwort nennt nicht, dass die Dauer nicht ausgewertet wurde: {text!r}"
-    )
+    # #2417 Kurzform englisch AC-4/AC-19: die Premium-SMS-Antwort ist jetzt
+    # englisch -- die frueheren deutschen Wortpruefungen ("unbefristet",
+    # "nicht ausgewertet") entfallen hier; der englische Wortlaut dieser
+    # Bestaetigung ist in der Spec nicht festgelegt. Die Wirkung bleibt
+    # unten am Plattenzustand bewacht, die deutsche Fassung im Telegram-Test.
 
     entry = _read(nutzer.user_id, preset["id"])
     assert entry["schedule"] == "manual"
