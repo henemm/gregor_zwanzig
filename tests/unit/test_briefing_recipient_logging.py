@@ -139,7 +139,8 @@ def netzrand(monkeypatch) -> Netzrand:
     return rand
 
 
-def _trip_anlegen(user_id: str, trip_id: str, report_config: dict) -> None:
+def _trip_anlegen(user_id: str, trip_id: str, report_config: dict,
+                  empfaenger: str = EMPFAENGER) -> None:
     """Legt Nutzerprofil (mit mail_to) und Trip im isolierten Datenbaum an."""
     from app.loader import get_briefings_dir, get_data_dir
 
@@ -147,7 +148,7 @@ def _trip_anlegen(user_id: str, trip_id: str, report_config: dict) -> None:
     profil.parent.mkdir(parents=True, exist_ok=True)
     # Issue #2152: Testkonto-Status ueber das Profilfeld — sonst nimmt
     # with_user_profile() die Prod-Credentials statt for_testing().
-    profil.write_text(json.dumps({"mail_to": EMPFAENGER, "is_test_user": True}))
+    profil.write_text(json.dumps({"mail_to": empfaenger, "is_test_user": True}))
 
     briefings_dir = get_briefings_dir(user_id)
     briefings_dir.mkdir(parents=True, exist_ok=True)
@@ -366,4 +367,51 @@ class TestAC4FehlgeschlagenerVersand:
             "Kein briefing_log-Eintrag ohne Zustellung -- ein Eintrag mit "
             "channels=[] taeuschte der Cockpit-Kachel (#393/#1007) einen "
             "Versand vor."
+        )
+
+
+# ---------------------------------------------------------------------------
+# #2157 AC-b: eine echte Fremdadresse wird domain-maskiert protokolliert
+# Spec: docs/specs/modules/pii_log_masking.md
+# ---------------------------------------------------------------------------
+
+FREMDADRESSE = "finder@example.org"
+FREMDADRESSE_MASKIERT = "***@example.org"
+
+
+class TestPii2157FremdadresseWirdMaskiert:
+    """AC-b: bekannte Ops-Postfaecher (AC-1 oben) bleiben Klartext, jede
+    andere Adresse erscheint in Erfolgszeile UND briefing_log.json nur als
+    ``***@domain``. Positiv geprueft (maskierte Form steht drin), damit ein
+    Pfad, der die Adresse gar nicht mehr nennt, nicht vakuum-gruen wird.
+    Der SMTP-Empfaenger selbst wird bewusst NICHT geprueft: die
+    Herkunftssperre (#1476) schaltet ihn im Worktree auf gregor-test@ um."""
+
+    def test_fremdadresse_erscheint_nur_maskiert(self, netzrand, caplog):
+        user_id, trip_id = "tdd-2157-fremd", "tdd-2157-fremd-trip"
+        _trip_anlegen(user_id, trip_id, {
+            "send_email": True, "send_telegram": False, "send_sms": False,
+        }, empfaenger=FREMDADRESSE)
+
+        with caplog.at_level(logging.INFO):
+            outcome = _versenden(user_id, trip_id)
+
+        assert outcome == "sent", f"Erwartet 'sent', bekommen {outcome!r}"
+        assert netzrand.smtp, "SMTP-Steckdose wurde nie erreicht (Pruefort != Wirkort)"
+
+        zeilen = _erfolgszeilen(caplog)
+        assert len(zeilen) == 1, f"Erwartet genau eine Erfolgszeile: {zeilen}"
+        assert FREMDADRESSE not in zeilen[0], (
+            "#2157 AC-b: die Erfolgszeile nennt die Fremdadresse im Klartext: "
+            + zeilen[0]
+        )
+        assert FREMDADRESSE_MASKIERT in zeilen[0], (
+            f"#2157 AC-b: maskierte Form {FREMDADRESSE_MASKIERT!r} fehlt: {zeilen[0]}"
+        )
+
+        eintraege = _log_eintraege(user_id)
+        assert len(eintraege) == 1, f"Erwartet genau einen Eintrag: {eintraege}"
+        assert eintraege[0].get("mail_to") == FREMDADRESSE_MASKIERT, (
+            "#2157 AC-b: briefing_log.json speichert die Fremdadresse nicht "
+            f"maskiert: {eintraege[0]}"
         )
