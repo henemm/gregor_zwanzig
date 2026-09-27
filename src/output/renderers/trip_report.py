@@ -334,16 +334,16 @@ class TripReportFormatter:
         # metric_id -> Index-Zuordnung fuer die Nutzer-Position abgeleitet.
         _sms_metrics_ordered = _dc_uncollapsed.get_metrics_for_channel("sms", report_type)
         sms_metric_ids = {m.metric_id for m in _sms_metrics_ordered}
-        # Aktivierungs-Gate (DEC-2): position wird NUR gesetzt, wenn eine
-        # SMS-spezifische Kaskadenebene antwortet -- bei 'global' bleibt
-        # jede Spec ohne position, der Builder faellt vollstaendig auf die
-        # bisherige POSITIONAL-Sortierung zurueck (Byte-Identitaet, AC-2).
-        _sms_cascade_source = _dc_uncollapsed.cascade_source_for_channel("sms", report_type)
-        _sms_position_by_metric: dict[str, int] = (
-            {m.metric_id: i for i, m in enumerate(_sms_metrics_ordered)}
-            if _sms_cascade_source in ("per_report", "per_channel")
-            else {}
-        )
+        # Fix #2422 S2a (B9): das fruehere Aktivierungs-Gate (DEC-2 aus
+        # fix_1677_sms_reihenfolge.md) hat position NUR gesetzt, wenn eine
+        # SMS-spezifische Kaskadenebene antwortet -- bei 'global' fiel die
+        # Ausgabe auf die feste POSITIONAL-Sortierung zurueck, obwohl der
+        # Editor die globale Reihenfolge zeigte. PO-Entscheid 2026-09-27:
+        # die Editor-Reihenfolge wirkt IMMER, unabhaengig von der Kaskaden-
+        # quelle -- DEC-2 gilt als abgeloest.
+        _sms_position_by_metric: dict[str, int] = {
+            m.metric_id: i for i, m in enumerate(_sms_metrics_ordered)
+        }
         _global_metrics = {m.metric_id: m for m in _dc_uncollapsed.metrics}
         # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
         _sms_thr = {

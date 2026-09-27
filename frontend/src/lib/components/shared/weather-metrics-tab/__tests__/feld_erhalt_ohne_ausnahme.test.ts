@@ -50,6 +50,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 import { baueSpeichernPayload, ladeInEditorState, type GoldenTrip, type MinimalCatalog } from './_editor_kette.ts';
+import { buildWeatherConfigMetrics, type MetricCatalog } from '../../../trip-detail/metricsEditor.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(__dirname, '../../../../../../../tests/fixtures/einstellung_auslieferung');
@@ -118,6 +119,46 @@ describe('AC-7: Feld-Erhalt ohne Ausnahme (K8-Fix)', () => {
 				`${JSON.stringify(thunderNachher!.format_mode)} -- mergeAllChannelLayoutsForSave ` +
 				`muss den Kanal an buildMetrics durchreichen, damit der Bestand je Kanal ` +
 				`nachschlagbar ist (K8-Fix, Read-Modify-Write statt Replace).`,
+		);
+	});
+
+	// Fix #2422 S2a (K8-Nebenwirkung, Advisor-Fund /50): ein stehen gebliebener
+	// `format_mode` aus dem Bestand hat laut Issue #435
+	// (`src/app/loader.py::_resolve_format_mode`) VORRANG vor
+	// `use_friendly_format` -- ein Roh/Einfach-WECHSEL (anders als die
+	// No-Op-Faelle oben) darf deshalb NICHT den alten, jetzt widersprechenden
+	// `format_mode` mitschleppen, sonst bleibt der Wechsel beim Lesen wirkungslos.
+	test('widersprechender Bestands-format_mode wird bei einem Roh/Einfach-Wechsel verworfen', () => {
+		const buckets = { primary: ['thunder'], secondary: [], off: [] };
+		const bestandNichtRoh = [{ metric_id: 'thunder', format_mode: 'symbol' }];
+
+		// Wechsel EINFACH -> ROH: friendlyMap sagt jetzt false, der Bestand
+		// traegt noch den alten nicht-rohen Modus -- der muss weg.
+		const nachRohWechsel = buildWeatherConfigMetrics(
+			buckets, { thunder: false }, {}, catalog as unknown as MetricCatalog, bestandNichtRoh,
+		);
+		const thunderRoh = nachRohWechsel.find((m) => m.metric_id === 'thunder');
+		assert.ok(thunderRoh, 'thunder fehlt im gebauten Payload');
+		assert.equal(
+			(thunderRoh as unknown as Record<string, unknown>).format_mode,
+			undefined,
+			`Nach dem Wechsel auf Roh (use_friendly_format=false) darf kein ` +
+				`widersprechender Bestands-format_mode ("symbol") mehr stehen -- ` +
+				`gefunden: ${JSON.stringify((thunderRoh as unknown as Record<string, unknown>).format_mode)}.`,
+		);
+
+		// Gegenprobe: KEIN Widerspruch (friendly bleibt true) -- format_mode
+		// bleibt erhalten (das ist bereits durch die No-Op-Tests oben gedeckt,
+		// hier als direkte Gegenprobe zur selben Eingabe).
+		const bestandBleibtEinfach = [{ metric_id: 'thunder', format_mode: 'symbol' }];
+		const ohneWechsel = buildWeatherConfigMetrics(
+			buckets, { thunder: true }, {}, catalog as unknown as MetricCatalog, bestandBleibtEinfach,
+		);
+		const thunderEinfach = ohneWechsel.find((m) => m.metric_id === 'thunder');
+		assert.equal(
+			(thunderEinfach as unknown as Record<string, unknown>).format_mode,
+			'symbol',
+			'Ohne Widerspruch (friendly bleibt true) muss format_mode erhalten bleiben.',
 		);
 	});
 });

@@ -68,4 +68,36 @@ describe('AC-8: Speicherweg ohne Auswertungswahl', () => {
 				'das Feld ist mit #1728 S3 aus Typ und Speicherweg entfernt (DEC-4/DEC-5).',
 		);
 	});
+
+	// Fix #2422 S2a (K8, DEC-5-Nachtrag /50): der heutige Test oben ruft OHNE
+	// `bestand` auf -- er kann also nicht zeigen, dass der K8-Read-Modify-
+	// Write-Merge ein `aggregations`-Feld aus einem Bestands-Eintrag NICHT
+	// wieder in den Speicherweg zurücktraegt. Dieser Fall ruft MIT `bestand`
+	// auf, das ein Legacy-`aggregations`-Feld fuehrt.
+	test('bestand mit aggregations-Feld ueberlebt den Read-Modify-Write-Merge NICHT', () => {
+		const buckets = {
+			primary: ['temperature'],
+			secondary: [],
+			off: [],
+		};
+		const bestand = [
+			{
+				metric_id: 'temperature',
+				enabled: true,
+				bucket: 'primary',
+				order: 0,
+				aggregations: ['min', 'max'],
+			},
+		];
+		const out = buildWeatherConfigMetrics(buckets, {}, {}, catalog, bestand);
+
+		const eintrag = out.find((m) => m.metric_id === 'temperature');
+		assert.ok(eintrag, 'temperature-Eintrag fehlt im Ergebnis');
+		assert.ok(
+			!('aggregations' in (eintrag as unknown as Record<string, unknown>)),
+			`Legacy-Feld aggregations aus dem Bestand wurde wieder in den Speicherweg ` +
+				`getragen: ${JSON.stringify(eintrag)} -- #1728 S3 DEC-5 verlangt den ` +
+				'Ausschluss auch beim K8-Read-Modify-Write-Merge.',
+		);
+	});
 });

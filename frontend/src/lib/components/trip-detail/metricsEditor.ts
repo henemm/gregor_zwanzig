@@ -332,17 +332,42 @@ export function channelOverflow(
  *
  * Reihenfolge der Ausgabe folgt der Katalog-Reihenfolge, damit kein Metrik
  * verloren geht (alle Katalog-IDs erscheinen genau einmal).
+ *
+ * Fix #2422 S2a (K8): optionaler 5. Parameter `bestand` — die Original-
+ * Metrik-Eintraege des geladenen Trips (bzw. eines Kanal-Layouts). Jeder
+ * gebaute Eintrag startet als Read-Modify-Write ueber dem passenden
+ * Bestands-Eintrag (`{...original, <bekannte Felder>}`, CLAUDE.md-Pflicht
+ * „Read-Modify-Write, niemals Replace", #102) — dem Frontend unbekannte
+ * Felder (`morning_enabled`, `evening_enabled`, `format_mode`, ...) wandern
+ * dadurch unveraendert mit. Ausnahme: `aggregations` wird IMMER entfernt
+ * (#1728 S3 DEC-5 — Legacy-Feld, bewusst nicht ueber den Editor-Speicherweg
+ * zurueckgetragen). `bucket` wird nach dem Merge explizit neu gesetzt/
+ * entfernt, damit ein Bestands-`bucket` aus einer frueheren Zuordnung nicht
+ * stehen bleibt, wenn die Metrik jetzt in einem anderen Bucket steht (oder
+ * `off` ist). `format_mode` wird nach demselben Prinzip verworfen, wenn er
+ * dem NEUEN `use_friendly_format` widerspricht (Issue #435: `format_mode`
+ * ist das explizite Feld und hat beim Lesen VORRANG vor
+ * `use_friendly_format`, ``src/app/loader.py::_resolve_format_mode`` —
+ * ein stehen gebliebener, widersprechender Bestandswert wuerde einen
+ * Roh/Einfach-Wechsel sonst unwirksam machen).
  */
 export function buildWeatherConfigMetrics(
 	buckets: Buckets,
 	friendlyMap: Record<string, boolean>,
 	horizonsMap: Record<string, Horizons>,
 	catalog: MetricCatalog,
+	bestand?: ReadonlyArray<{ metric_id: string }>,
 ): BucketWeatherConfigMetric[] {
 	const orderOf: Record<string, number> = {};
 	const bucketOf: Record<string, 'primary' | 'secondary'> = {};
 	buckets.primary.forEach((id, i) => { orderOf[id] = i; bucketOf[id] = 'primary'; });
 	buckets.secondary.forEach((id, i) => { orderOf[id] = i; bucketOf[id] = 'secondary'; });
+
+	const bestandById: Record<string, Record<string, unknown>> = {};
+	for (const eintrag of bestand ?? []) {
+		const mid = eintrag.metric_id;
+		if (typeof mid === 'string') bestandById[mid] = eintrag as unknown as Record<string, unknown>;
+	}
 
 	const seen = new Set<string>();
 	const out: BucketWeatherConfigMetric[] = [];
@@ -351,14 +376,23 @@ export function buildWeatherConfigMetrics(
 		if (seen.has(id)) return;
 		seen.add(id);
 		const bucket = bucketOf[id];
-		out.push({
+		const merged: Record<string, unknown> = { ...(bestandById[id] ?? {}) };
+		delete merged.aggregations;
+		delete merged.bucket;
+		const neuFriendly = friendlyMap[id] ?? true;
+		if (typeof merged.format_mode === 'string') {
+			const staleRaw = merged.format_mode === 'raw';
+			if (staleRaw === neuFriendly) delete merged.format_mode;
+		}
+		Object.assign(merged, {
 			metric_id: id,
 			enabled: bucket !== undefined,
-			use_friendly_format: friendlyMap[id] ?? true,
+			use_friendly_format: neuFriendly,
 			horizons: horizonsMap[id] ?? { ...HORIZONS_ALL },
-			...(bucket ? { bucket } : {}),
 			order: orderOf[id] ?? 0,
+			...(bucket ? { bucket } : {}),
 		});
+		out.push(merged as unknown as BucketWeatherConfigMetric);
 	};
 
 	// Erst alle Katalog-Metriken in Katalog-Reihenfolge, dann etwaige

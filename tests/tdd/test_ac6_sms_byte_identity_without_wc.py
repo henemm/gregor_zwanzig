@@ -12,13 +12,26 @@ jede Verschiebung eines anderen Tokens waere damit sichtbar, nicht nur das
 Verschwinden von 'WC' selbst.
 
 Alte Referenz eingefroren per echtem Lauf (Muster tests/golden/): mit dem
-heutigen (RED-)Stand liefert ``format_email().sms_text`` fuer die unten
+damaligen Stand liefert ``format_email().sms_text`` fuer die unten
 gebaute Fixture exakt
 ``"E7: N11 D3/20 FN9 FD1/18 WC1"`` -- Werte aus
 ``tests/tdd/_min_temp_felt_fixtures.py`` (K/FK ohne eigenstaendiges Kuerzel,
 weil Tages-Tief UND -Hoch gewaehlt sind -> Bereichs-Token D3/20 bzw. FD1/18,
 Issue #1824 A). 'WC1' traegt den Gehzeit-Tiefstwert (FELT_HIKE_MIN_C=1.0)
 als Tages-Einzelwert (Bug-#1450-Verhalten).
+
+Issue #2422 S2a AC-13 (B9-Fix, PO-Entscheid 2026-09-27) LOEST hier
+ZUSAETZLICH die alte Token-REIHENFOLGE-Erwartung ab: die Fixture (``F.dc``)
+setzt kein eigenes SMS-Kanal-Layout, die Kaskadenquelle ist also 'global'.
+Vor dem B9-Fix (Aktivierungs-Gate aus DEC-2, ``fix_1677_sms_reihenfolge.md``)
+fiel die Ausgabe bei 'global' auf die feste POSITIONAL-Sortierung zurueck;
+nach dem B9-Fix folgt sie IMMER der (hier globalen) Editor-Reihenfolge der
+Metrikliste in ``F.dc(...)`` (Reihenfolge von ``_METRIC_IDS`` gruppiert nach
+Metrik-Familie: Tag-Bereich vor Nacht-Einzelwert). Die TOKEN-MENGE bleibt
+unveraendert (dieselben sechs Werte minus 'WC1'), nur ihre Position
+vertauscht sich paarweise (E7:D3/20 N11 FD1/18 FN9 statt E7:N11 D3/20 FN9
+FD1/18) -- exakt die in AC-13 beschriebene, PO-freigegebene
+Verhaltensaenderung, kein neuer Befund.
 
 Kein Mock — echte SegmentWeatherData/NormalizedTimeseries, echter
 TripReportFormatter, echter Aufrufpfad ueber format_email().sms_text.
@@ -37,8 +50,11 @@ _METRIC_IDS = (
 
 # Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC1' entfaellt ERSATZLOS
 # (verdoppelte nachweislich 'FK1', den Tiefstwert von FD1/18) -- alle
-# uebrigen sechs Token bleiben ZEICHENGLEICH und an derselben Position.
-_ERWARTET_OHNE_WC = "E7: N11 D3/20 FN9 FD1/18"
+# uebrigen sechs Token bleiben als MENGE erhalten. Fix #2422 S2a AC-13
+# (B9-Fix) aendert ZUSAETZLICH ihre POSITION (s. Docstring oben): die
+# Reihenfolge folgt jetzt der globalen Editor-Liste statt der alten
+# POSITIONAL-Sortierung.
+_ERWARTET_OHNE_WC = "E7: D3/20 N11 FD1/18 FN9"
 
 
 def _sms() -> str:

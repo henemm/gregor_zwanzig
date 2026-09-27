@@ -28,13 +28,16 @@
 // telegram,sms}`, `wm2-reihenfolge-row`/`wm2-aus-row` mit `data-metric-id`,
 // `wm2-grundauswahl` mit `.toggle-btn[title=...]`, `save-indicator`).
 //
-// SCHREIBT NUR — wird in dieser RED-Phase NICHT ausgeführt (Testauflage PO,
-// Vorbild metrik-abwahl-schreibt-alle-kanaele-durch.staging.spec.ts). Braucht
-// die von /50 erzeugten eingefrorenen Dateien (`erwartung_golden_c.json` --
-// bereits vorhanden; `nach_speichern_golden_c.json`,
-// `nach_aenderung_fall4_sms_erstbearbeitung.json` -- werden erst in /50 aus
-// der TS-Kette erzeugt) UND den B9-/K8-Fix selbst. NICHT in
-// `ci_e2e_specs.txt` aufgenommen (Spec-Vorgabe: erst nach GREEN).
+// GREEN erreicht (B9-/K8-Fix produktiv, alle eingefrorenen Dateien aus /50
+// erzeugt: `erwartung_golden_c.json`, `nach_speichern_golden_c.json`,
+// `nach_aenderung_fall4_sms_erstbearbeitung.json`). Lauf ueber eine EIGENE
+// Playwright-Staging-Config (`playwright.editor-gleich-gespeichert.staging.config.ts`,
+// eigene `.staging.setup.ts`) statt Aufnahme in `.github/ci_e2e_specs.txt` --
+// Filter A dort schliesst `.staging.spec.ts`-Dateien strukturell aus (die
+// CI-Positivliste laeuft gegen den isolierten LOKALEN Stack, nicht gegen
+// Staging; Tech-Lead-Entscheid, Spec erlaubt ausdruecklich "eigene
+// `*.staging.spec.ts`"). Ausgefuehrt in `/e2e-verify` nach dem Merge, nicht
+// in der CI-Ampel.
 //
 // report_config.enabled=false im Seed (unten): Golden C hat send_sms/
 // send_premium_sms=true -- ohne diese Sperre koennte ein echter Staging-
@@ -42,9 +45,9 @@
 // Testnummer ausloesen (#1477-Nachbarschaft). Der Editor selbst rendert alle
 // drei Kanal-Reiter unabhaengig von `enabled`.
 //
-// Ausführen (gegen Staging, aus frontend/, NACH GREEN):
+// Ausführen (gegen Staging, aus frontend/):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
-//   npx playwright test --config=<eigene playwright.*.staging.config.ts> \
+//   npx playwright test --config=e2e/playwright.editor-gleich-gespeichert.staging.config.ts \
 //     e2e/editor-gleich-gespeichert.staging.spec.ts
 
 import { readFileSync } from 'node:fs';

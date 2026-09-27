@@ -61,6 +61,13 @@
 		splitChannelMetricsForDisplay, mergeAllChannelLayoutsForSave,
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
+	// Fix #2422 S2a Fix-Loop 1 (Adversary-Funde F003/F004): Bestand-Auswahl
+	// (display_config.metrics / channel_layouts[channel]) + sms_threshold-
+	// Bereinigung sind reine, exportierte Funktionen — per node:test bewacht,
+	// statt unbewachter Inline-Logik in dieser Komponente.
+	import {
+		buildGlobalMetricsForSave, buildChannelMetricsForSave,
+	} from './weather-metrics-tab/weatherMetricsSavePayload.ts';
 	// Issue #1888 (E6 Scheibe B): die Kuerzel-Legende sitzt seit dem
 	// Staging-Befund IN der Marken-Komponente (WeatherV2Reihenfolge) — jeder
 	// Marken-Block bringt sie mit, aus denselben Props wie die Marken. Hier
@@ -79,7 +86,7 @@
 	import * as UiCard from '$lib/components/ui/card/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import {
-		autoAssign, bucketsToColumns, move, buildWeatherConfigMetrics,
+		autoAssign, bucketsToColumns, move,
 		diffHighlight,
 		CATEGORY_LABELS, CATEGORY_ORDER, indicatorCapable,
 		type Buckets, type MetricEntry, type MetricCatalog, type Highlight, type WeatherSnapshot,
@@ -915,16 +922,17 @@
 	// Metrik-Liste war der trip-Read nie noetig, nur ein zufaelliges
 	// Abhaengigkeits-Nebenprodukt).
 	function buildWeatherMetricsList() {
-		const baseMetrics = buildWeatherConfigMetrics(buckets, friendlyMap, horizonsMap, catalog);
-		return baseMetrics.map((m) => {
-			if (!SMS_THRESHOLD_METRIC_IDS.includes(m.metric_id)) return m;
-			const rawThr = smsThresholds[m.metric_id];
-			const parsed = rawThr !== undefined && rawThr !== '' ? parseFloat(rawThr) : null;
-			if (parsed !== null && !isNaN(parsed)) {
-				return { ...m, sms_threshold: parsed };
-			}
-			return m;
-		});
+		// Fix #2422 S2a (K8) + Fix-Loop 1 (F003/F004): Bestand-Auswahl UND
+		// sms_threshold-Bereinigung sind jetzt in `buildGlobalMetricsForSave`
+		// (reine, per node:test bewachte Funktion). `untrack()` bleibt PFLICHT
+		// (Issue #1552 Fix-Loop 2, Kommentar oben #687-696): diese Funktion darf
+		// `trip` NICHT zur getrackten Abhaengigkeit des Rueckkanal-Effects machen,
+		// sonst effect_update_depth_exceeded (Staging-Regression).
+		const displayConfig = untrack(() => trip!.display_config);
+		return buildGlobalMetricsForSave(
+			displayConfig, buckets, friendlyMap, horizonsMap, catalog,
+			smsThresholds, SMS_THRESHOLD_METRIC_IDS,
+		);
 	}
 
 	function buildWeatherPayload() {
@@ -939,8 +947,11 @@
 		const nextLayouts = mergeAllChannelLayoutsForSave(
 			trip!.display_config?.channel_layouts,
 			channelBuckets,
-			(override) => buildWeatherConfigMetrics(
-				override.buckets, override.friendlyMap, horizonsMap, catalog,
+			// Fix #2422 S2a (K8) + Fix-Loop 1 (F003): Bestand je Kanal =
+			// `buildChannelMetricsForSave` (reine, per node:test bewachte
+			// Funktion) statt Inline-Nachschlag.
+			(override, channel) => buildChannelMetricsForSave(
+				trip!.display_config, channel, override, horizonsMap, catalog,
 			),
 		);
 		return {

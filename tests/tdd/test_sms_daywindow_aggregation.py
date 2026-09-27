@@ -800,7 +800,12 @@ class TestAC4TargetWindowGapShowsUnknownInSms:
         )
         sms = report.sms_text
 
-        assert "E7: D15/15 R? PR? W? G? TH:? TH+:-" in sms, (
+        # Reihenfolge W/G vor R/PR seit Issue #2422 S2a AC-13 (B9-Fix): ohne
+        # eigenes SMS-Kanal-Layout (Kaskadenquelle 'global') folgt die Ausgabe
+        # jetzt der globalen display_config.metrics-Reihenfolge statt der
+        # alten POSITIONAL-Sortierung -- die Symbol-MENGE (R/PR/W/G/TH:) und
+        # ihr `?`/`-`-Zustand bleiben davon unberuehrt, nur ihre Position.
+        assert "E7: D15/15 W? G? R? PR? TH:? TH+:-" in sms, (
             f"Erwartet, dass die Ziel-Datenluecke (Ankunft 12:00, "
             f"night_weather=None, Fenster 12-19 unbeobachtet) alle fuenf "
             f"Fenster-Symbole R/PR/W/G/TH: von `-` auf `?` umstellt -- "
@@ -914,7 +919,9 @@ class TestAC5FoundValueStaysVisibleDespiteGap:
         )
         sms = report.sms_text
 
-        assert "E7: D15/15 R0.5@10 PR? W? G? TH:? TH+:-" in sms, (
+        # Reihenfolge W/G vor R/PR seit Issue #2422 S2a AC-13 (B9-Fix, s.
+        # Kommentar bei test_sms_shows_unknown_for_all_five_window_symbols).
+        assert "E7: D15/15 W? G? R0.5@10 PR? TH:? TH+:-" in sms, (
             f"Erwartet: gefundener Regen (10:00, vor Ankunft) bleibt "
             f"sichtbar (`R0.5@10`), waehrend PR/W/G/TH: ohne Fund im "
             f"unbeobachteten Zielfenster auf `?` wechseln.\nSMS: {sms}"
@@ -990,7 +997,9 @@ class TestAC6ArrivalAfter19NoOverFlagging:
             f"Tagesfenster-Ende 19:00, es sind keine Nach-Ankunft-Stunden "
             f"im Fenster erwartet (Ueber-Flagging-Schutz).\nSMS: {sms}"
         )
-        assert "E7: D15/15 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+        # Reihenfolge W/G vor R/PR seit Issue #2422 S2a AC-13 (B9-Fix, s.
+        # Kommentar bei test_sms_shows_unknown_for_all_five_window_symbols).
+        assert "E7: D15/15 W- G- R- PR- TH:- TH+:-" in sms, f"SMS: {sms}"
 
     def test_no_channel_shows_unknown_marker_when_arrival_after_window_end(self):
         segments = [_segment(day=20, start_h=15, end_h=20)]  # Ankunft 20:00
@@ -1021,7 +1030,9 @@ class TestAC7CompleteDataNoNewUnknown:
             f"Kein `?` erwartet -- night_weather ist vollstaendig vorhanden "
             f"(nur ereignislos), keine Datenluecke.\nSMS: {sms}"
         )
-        assert "E7: D15/15 R- PR- W- G- TH:- TH+:-" in sms, f"SMS: {sms}"
+        # Reihenfolge W/G vor R/PR seit Issue #2422 S2a AC-13 (B9-Fix, s.
+        # Kommentar bei test_sms_shows_unknown_for_all_five_window_symbols).
+        assert "E7: D15/15 W- G- R- PR- TH:- TH+:-" in sms, f"SMS: {sms}"
 
     def test_no_channel_shows_unknown_marker_with_complete_night_weather(self):
         segments = [_segment(day=20)]
