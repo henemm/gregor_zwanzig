@@ -35,38 +35,45 @@ import {
 	resolveAlertChannelThresholds,
 } from '../../shared/alarme-tab/alertChannelState.ts';
 import { reconstructTripAlertChannels } from '../../shared/alarme-tab/tripChannelReconstruction.ts';
+// Issue #2277 S2a — echte Editor-Zeilenlogik (kein Hand-Fixture fuer corridors).
+import {
+	buildRoutePool,
+	addRow,
+	patchRow,
+	buildCorridorSavePayload,
+} from '../../shared/corridor-editor/corridorEditorState.ts';
 
 // ── AC-2/AC-3: Progressiver Lock-State (TN_unlocked) ────────────────────────
 
 describe('AC-2/3: unlockedTabs — progressive Freischaltung', () => {
 	test('Leerzustand: nur Route offen', () => {
-		const u = unlockedTabs('', '', false, false, false);
+		const u = unlockedTabs('', '', false, false, false, false);
 		assert.deepEqual([...u].sort(), ['route']);
 	});
 
 	test('Name + Startdatum → Etappen schaltet frei', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', false, false, false);
+		const u = unlockedTabs('GR20', '2026-06-15', false, false, false, false);
 		assert.ok(u.has('etappen'), 'Etappen muss frei sein');
 		assert.ok(!u.has('metriken'), 'Wetter noch gesperrt');
 	});
 
 	test('Name ohne Startdatum schaltet Etappen NICHT frei', () => {
-		const u = unlockedTabs('GR20', '', false, false, false);
+		const u = unlockedTabs('GR20', '', false, false, false, false);
 		assert.ok(!u.has('etappen'));
 	});
 
 	test('etDone → Wegpunkte UND Wetter schalten gleichzeitig frei', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', true, false, false);
+		const u = unlockedTabs('GR20', '2026-06-15', true, false, false, false);
 		assert.ok(u.has('wegpunkte'), 'Wegpunkte frei');
 		assert.ok(u.has('metriken'), 'Wetter frei');
 		assert.ok(!u.has('zeitplan'), 'Zeitplan noch gesperrt');
 	});
 
-	test('Wetter besucht → Zeitplan frei; Zeitplan besucht → Alerts frei', () => {
-		const u1 = unlockedTabs('GR20', '2026-06-15', true, true, false);
+	test('Wetter + Wertebereiche besucht → Zeitplan frei; Zeitplan besucht → Alerts frei', () => {
+		const u1 = unlockedTabs('GR20', '2026-06-15', true, true, true, false);
 		assert.ok(u1.has('zeitplan'));
 		assert.ok(!u1.has('alerts'));
-		const u2 = unlockedTabs('GR20', '2026-06-15', true, true, true);
+		const u2 = unlockedTabs('GR20', '2026-06-15', true, true, true, true);
 		assert.ok(u2.has('alerts'));
 	});
 });
@@ -75,14 +82,14 @@ describe('AC-2/3: unlockedTabs — progressive Freischaltung', () => {
 
 describe('doneTabs — Done-Zustand', () => {
 	test('Name+Datum → route done; etDone → etappen done', () => {
-		const d = doneTabs('GR20', '2026-06-15', true, false, false);
+		const d = doneTabs('GR20', '2026-06-15', true, false, false, false);
 		assert.ok(d.has('route'));
 		assert.ok(d.has('etappen'));
 		assert.ok(!d.has('metriken'));
 	});
 
 	test('wtVisited → metriken done; ztVisited → zeitplan done', () => {
-		const d = doneTabs('GR20', '2026-06-15', true, true, true);
+		const d = doneTabs('GR20', '2026-06-15', true, true, true, true);
 		assert.ok(d.has('metriken'));
 		assert.ok(d.has('zeitplan'));
 	});
@@ -92,11 +99,11 @@ describe('doneTabs — Done-Zustand', () => {
 
 describe('AC-1: progressCount — 4 Segmente (kein Wegpunkte-Segment)', () => {
 	test('zählt nur route/etappen/metriken/zeitplan', () => {
-		const done = doneTabs('GR20', '2026-06-15', true, true, true);
+		const done = doneTabs('GR20', '2026-06-15', true, true, true, true);
 		assert.equal(progressCount(done), 4);
 	});
 	test('Leerzustand = 0', () => {
-		assert.equal(progressCount(doneTabs('', '', false, false, false)), 0);
+		assert.equal(progressCount(doneTabs('', '', false, false, false, false)), 0);
 	});
 });
 
@@ -121,10 +128,10 @@ describe('AC-4: stageDate — Startdatum + Index-Tage', () => {
 
 describe('AC-7: canSave — erst nach Zeitplan-Besuch', () => {
 	test('Zeitplan nicht besucht → false', () => {
-		assert.equal(canSave(doneTabs('GR20', '2026-06-15', true, true, false)), false);
+		assert.equal(canSave(doneTabs('GR20', '2026-06-15', true, true, true, false)), false);
 	});
 	test('Zeitplan besucht → true', () => {
-		assert.equal(canSave(doneTabs('GR20', '2026-06-15', true, true, true)), true);
+		assert.equal(canSave(doneTabs('GR20', '2026-06-15', true, true, true, true)), true);
 	});
 });
 
@@ -295,5 +302,78 @@ describe('AC-5 Zusatz: official_warnings/Cooldown/Stille-Stunden landen im Paylo
 		assert.equal(payload.alert_cooldown_minutes, 30);
 		assert.equal(payload.alert_quiet_from, '22:00');
 		assert.equal(payload.alert_quiet_to, '07:00');
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Issue #2277 Scheibe S2a — Reiter „Wertebereiche" in /trips/new
+// Spec: docs/specs/modules/fix_2277_s2a_wertebereiche_trip_anlegen.md
+// Signatur: unlockedTabs/doneTabs(name, startDate, etDone, wtVisited, wbVisited, ztVisited)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('AC-1 (S2a): Freischalt-Kette Wetter-Metriken → Wertebereiche → Zeitplan', () => {
+	test('etDone, Wetter noch nicht besucht → Wertebereiche gesperrt', () => {
+		const u = unlockedTabs('GR20', '2026-06-15', true, false, false, false);
+		assert.ok(!u.has('wertebereiche' as never), 'Wertebereiche darf vor dem Wetter-Besuch nicht frei sein');
+	});
+
+	test('Wetter besucht → Wertebereiche frei, Zeitplan NOCH gesperrt', () => {
+		const u = unlockedTabs('GR20', '2026-06-15', true, true, false, false);
+		assert.ok(u.has('wertebereiche' as never), 'AC-1 FAIL: Wertebereiche nach Wetter-Besuch nicht frei');
+		assert.ok(
+			!u.has('zeitplan'),
+			'AC-1 FAIL: Zeitplan ist schon nach dem Wetter-Reiter frei — die Kette muss ueber Wertebereiche laufen'
+		);
+	});
+
+	test('Wertebereiche besucht → Zeitplan frei', () => {
+		const u = unlockedTabs('GR20', '2026-06-15', true, true, true, false);
+		assert.ok(u.has('zeitplan'), 'AC-1 FAIL: Zeitplan nach Wertebereiche-Besuch nicht frei');
+		assert.ok(!u.has('alerts'), 'Alerts erst nach Zeitplan-Besuch');
+	});
+
+	test('doneTabs markiert wertebereiche erst bei wbVisited', () => {
+		assert.ok(!doneTabs('GR20', '2026-06-15', true, true, false, false).has('wertebereiche' as never));
+		assert.ok(
+			doneTabs('GR20', '2026-06-15', true, true, true, false).has('wertebereiche' as never),
+			'AC-1 FAIL: doneTabs markiert den besuchten Wertebereiche-Reiter nicht als erledigt'
+		);
+	});
+
+	test('progressCount bleibt bei 4 Segmenten (Wertebereiche ist kein eigenes Segment)', () => {
+		assert.equal(progressCount(doneTabs('GR20', '2026-06-15', true, true, true, true)), 4);
+	});
+});
+
+describe('AC-2/AC-6 (S2a): buildCreateTripPayload traegt corridors', () => {
+	test('AC-6: ohne corridors im State → payload.corridors ist exakt [] (nie undefined/null)', () => {
+		const p = buildCreateTripPayload(baseTripState()) as { corridors?: unknown };
+		assert.ok('corridors' in p, 'AC-6 FAIL: payload hat kein corridors-Feld — der POST-Body liesse es weg');
+		assert.deepEqual(p.corridors, [], 'AC-6 FAIL: payload.corridors ist nicht []');
+	});
+
+	test('AC-2: corridors aus der echten Editor-Zeilenlogik landen unveraendert im Payload', () => {
+		// Zeilen ueber die ECHTEN Editor-Funktionen (addRow/patchRow/buildCorridorSavePayload),
+		// kein von Hand gebautes Corridor-Array.
+		const pool = buildRoutePool([], [{ metric_id: 'gust', enabled: true }] as never, []);
+		let rows = addRow(pool.rows, pool.poolLeft, 'wind_gust').rows;
+		rows = patchRow(rows, 'wind_gust', { max: 80 });
+		const corridors = buildCorridorSavePayload(rows, {}).corridors;
+		const p = buildCreateTripPayload({ ...baseTripState(), corridors } as CreateTripState) as {
+			corridors?: unknown;
+		};
+		assert.deepEqual(
+			p.corridors,
+			[{ metric: 'wind_gust', range: [null, 80], notify: true, mark: false }],
+			'AC-2 FAIL: der eingestellte Wertebereich steht nicht exakt im POST-Payload'
+		);
+	});
+
+	test('corridors ist additiv — display_config/report_config bleiben erhalten', () => {
+		const corridors = [{ metric: 'wind_gust', range: [null, 80], notify: true, mark: false }];
+		const p = buildCreateTripPayload({ ...baseTripState(), corridors } as CreateTripState);
+		assert.deepEqual(p.display_config!.channels, { email: true, telegram: true, sms: false });
+		assert.equal(p.report_config!.enabled, true);
+		assert.deepEqual((p as { corridors?: unknown }).corridors, corridors);
 	});
 });

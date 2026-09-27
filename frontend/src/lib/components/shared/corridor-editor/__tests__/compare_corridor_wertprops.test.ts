@@ -132,6 +132,11 @@ function saatVergleich(zusatz: Knoten = {}): Knoten {
 		context: 'vergleich',
 		// Alt-Bezeichner, solange er im Quelltext steht (Kopf, Vakuum-Falle c).
 		ws: undefined,
+		// Issue #2277 S2a: `createMode` wird jetzt im Instanz-Skript genannt
+		// (Anlege-Modus fuer context="route") — ohne diese explizite Saat-Bindung
+		// scheiterte `maybeSchedule()` mit ReferenceError statt zu messen (Muster
+		// `compare_alarme_wertprops.test.ts:916`).
+		createMode: undefined,
 		untrack: (fn: () => unknown) => fn(),
 		// gesaet, weil `$lib/api` unter node nicht aufloest — ohne diese Bindung
 		// scheiterte die `vergleichSpeicherung`-Deklaration still.
@@ -614,11 +619,11 @@ describe('AC-3: alle Vergleichs-Mounts speisen dasselbe Buendel ein', () => {
 // Fesselung.
 //
 // Warum es sie ueberhaupt gibt: `isFreshCompareCreate` in beiden
-// Corridor-Bausteinen (`CorridorEditor.svelte:141`,
+// Corridor-Bausteinen (`CorridorEditor.svelte:146`,
 // `CorridorEditorMobile.svelte:144`) entscheidet aus
 // `context === 'vergleich' && !isEditMode && corridors.length === 0`, ob die
 // Anlege-Seite ihren Profil-Prefill aufbaut; `activityProfile` waehlt dann den
-// Profil-Topf (`:144` bzw. `:147`). Ohne diese beiden Felder im Buendel haette
+// Profil-Topf (`:149` bzw. `:147`). Ohne diese beiden Felder im Buendel haette
 // der Prefill des Create-Flusses KEINE Datenquelle mehr: jeder neue Vergleich
 // startete mit leerer statt profilgerechter Vorauswahl.
 //

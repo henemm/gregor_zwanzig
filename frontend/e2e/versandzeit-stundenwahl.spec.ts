@@ -135,6 +135,9 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 		}
 
 		await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
+		// Issue #2277 S2a: Zeitplan ist erst nach Besuch von „Wertebereiche"
+		// freigeschaltet (Sperrkette Wetter-Metriken → Wertebereiche → Zeitplan).
+		await tabbar.getByRole('tab', { name: /Wertebereiche/ }).click({ force: true });
 		await tabbar.getByRole('tab', { name: /Zeitplan/ }).click({ force: true });
 
 		const morning = page.locator('.tn-mobile [data-testid="report-morning-time"]').first();

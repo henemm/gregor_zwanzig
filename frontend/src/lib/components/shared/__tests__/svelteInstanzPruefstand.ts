@@ -138,6 +138,38 @@ export async function umgebungFuer(
 			if (her in mod) u[lokal] = mod[her];
 		}
 	}
+	// `$props()`-Destrukturierung mit Default-Werten (Issue #2277 S2a Fix-Loop 1,
+	// Adversary F001; Semantik korrigiert Fix-Loop 2, Adversary F004):
+	// `let { foo = defaultExpr, ... } = $props();` ist ein VariableDeclaration
+	// mit ObjectPattern-Id — die dritte Schleife unten ueberspringt sie
+	// komplett (`d.id.type !== 'Identifier'`), der echte Quelltext-Default
+	// eines Props wird deshalb nie ausgewertet. Echte JS-/Svelte-5-Semantik:
+	// der Default greift, wenn der Wert `undefined` ist — ob der Schluessel in
+	// der Saat GANZ FEHLT (Mount ohne diese Prop, z. B. ein Aufrufer, der
+	// `createMode` gar nicht setzt) ODER explizit auf `undefined` gesetzt ist,
+	// macht dafuer keinen Unterschied. Empirisch gegengeprueft (Adversary F004,
+	// voller `npm test`): keine bestehende Saat verlaesst sich auf ein
+	// abweichendes Verhalten bei explizitem `undefined` — die fruehere
+	// Beschraenkung auf den fehlenden Schluessel war eine unbelegte Annahme,
+	// keine gemessene Notwendigkeit.
+	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		if (stmt.type !== 'VariableDeclaration') continue;
+		for (const d of stmt.declarations as Knoten[]) {
+			if (d.id?.type !== 'ObjectPattern' || !d.init) continue;
+			if (!quelle.slice(d.init.start, d.init.end).includes('$props()')) continue;
+			for (const p of (d.id.properties as Knoten[]) ?? []) {
+				if (p.type === 'RestElement') continue;
+				const name = p.key?.name as string | undefined;
+				if (!name || (name in u && u[name] !== undefined)) continue;
+				if (p.value?.type !== 'AssignmentPattern') continue;
+				try {
+					u[name] = werte(ohneTypen(quelle, p.value.right), u);
+				} catch {
+					/* s.o. */
+				}
+			}
+		}
+	}
 	// Funktionsdeklarationen zuerst — sie werden in JS gehoben, und die
 	// Herleitungen rufen sie auf.
 	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {

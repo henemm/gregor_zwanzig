@@ -1,7 +1,7 @@
 # Frontend Components Reference
 
-**Updated:** 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
-**Version:** 1.12
+**Updated:** 2026-09-27 (Issue #2277 Scheibe S2a — `/trips/new` bekommt den Reiter „Wertebereiche", geteilter `CorridorEditor` mit `createMode`; Anlege-Editoren-Abschnitt zusätzlich korrigiert: kein Auto-Save, sondern EIN finaler `POST`); 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Version:** 1.13
 
 ## Overview
 
@@ -637,8 +637,22 @@ Bausteinen — **kein** Multi-Step-Wizard mit Stepper (abgeschafft, PO-bekräfti
 | `/compare/new` | `compare-new/CompareNewEditor.svelte` (#1301 F2) | `compare-new/compareNewLogic.ts` |
 
 Beide nutzen die geteilten Tab-Organismen aus `shared/` (`context="route"|"vergleich"`).
-Persistenz: Auto-Save gegen `/api/trips` bzw. `/api/compare/presets` — nicht
-`/api/subscriptions` (entfernt, liefert 404).
+Persistenz: **kein** Auto-Save wie im Detail-Hub — beide sammeln Änderungen nur
+lokal im Editor-State und lösen genau EINEN `POST /api/trips` bzw.
+`POST /api/compare/presets` beim finalen Klick aus (`TripNewEditor.svelte::buildAndSave`,
+`CompareNewEditor.svelte::handleActivate`) — nicht `/api/subscriptions` (entfernt,
+liefert 404).
+
+`/trips/new` hat seit Issue #2277 Scheibe S2a einen eigenen Reiter
+**„Wertebereiche"** zwischen „Wetter-Metriken" und „Briefing-Zeitplan"
+(Sperrkette Wetter-Metriken → Wertebereiche → Zeitplan). Gemountet wird darin
+derselbe geteilte `shared/corridor-editor/CorridorEditor.svelte`, den Trip-Hub
+und Ortsvergleich bereits nutzen — mit neuem Prop `createMode` (Default
+`false`), der den Selbst-Speicher-PUT abschaltet; Änderungen fließen stattdessen
+über den Rückruf `onCorridorsChange` in `CreateTripState.corridors` und mit dem
+einen `POST /api/trips` in den neuen Trip. Gleiches `createMode`-Muster nutzen
+dort bereits `WeatherMetricsTab` und `AlarmeTab` (S1, #2426). Details:
+`docs/specs/modules/fix_2277_s2a_wertebereiche_trip_anlegen.md`.
 
 ---
 
