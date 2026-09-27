@@ -914,21 +914,27 @@
 		}
 	}
 
+	// #2422 S2a: Bestand fuer Read-Modify-Write -- bewusst ungetrackt (Issue #1552).
+	function bestandDisplayConfigUngetrackt() {
+		return untrack(() => trip?.display_config);
+	}
+
 	// Issue #1552 Fix-Loop 2 (Staging-Befund, effect_update_depth_exceeded):
 	// aus buildWeatherPayload() herausgezogen, damit der Rueckkanal-Effect
 	// unten NUR von der Metrik-Auswahl abhaengt, nicht vom `trip`-Prop. Liest
-	// bewusst NICHT `trip!.display_config` (das speiste im Payload ohnehin nur
+	// den Trip bewusst nicht direkt (das speiste im Payload ohnehin nur
 	// Felder AUSSER `metrics`, die hier ueberschrieben werden -- fuer die
-	// Metrik-Liste war der trip-Read nie noetig, nur ein zufaelliges
+	// Metrik-Liste war der Bestandsread nie noetig, nur ein zufaelliges
 	// Abhaengigkeits-Nebenprodukt).
 	function buildWeatherMetricsList() {
 		// Fix #2422 S2a (K8) + Fix-Loop 1 (F003/F004): Bestand-Auswahl UND
 		// sms_threshold-Bereinigung sind jetzt in `buildGlobalMetricsForSave`
-		// (reine, per node:test bewachte Funktion). `untrack()` bleibt PFLICHT
-		// (Issue #1552 Fix-Loop 2, Kommentar oben #687-696): diese Funktion darf
-		// `trip` NICHT zur getrackten Abhaengigkeit des Rueckkanal-Effects machen,
-		// sonst effect_update_depth_exceeded (Staging-Regression).
-		const displayConfig = untrack(() => trip!.display_config);
+		// (reine, per node:test bewachte Funktion). Das Bestandslesen bleibt
+		// PFLICHT ungetrackt (Issue #1552 Fix-Loop 2, Kommentar oben #687-696):
+		// diese Funktion darf den Bestand NICHT zur getrackten Abhaengigkeit des
+		// Rueckkanal-Effects machen, sonst effect_update_depth_exceeded
+		// (Staging-Regression).
+		const displayConfig = bestandDisplayConfigUngetrackt();
 		return buildGlobalMetricsForSave(
 			displayConfig, buckets, friendlyMap, horizonsMap, catalog,
 			smsThresholds, SMS_THRESHOLD_METRIC_IDS,
