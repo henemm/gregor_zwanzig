@@ -107,8 +107,15 @@ async function fetchWeatherConfig(request: APIRequestContext, id: string) {
 /** Liest die Reihenfolge-Zeilen EINES Reiters in DOM-Reihenfolge -- prueft
  * damit auch die REIHENFOLGE (nicht nur "ist irgendwo sichtbar"), was der
  * eigentliche B9-Anzeige-Nachweis ist (AC-10). */
+// Scope auf den Kanal-Reiter-Block: `wm2-aus-gruppe`/`wm2-aus-row`/`wm2-reihenfolge-row`
+// gibt es auf der Seite ZWEIMAL (Kanal-Reiter + 3-Tages-Vorschau), siehe
+// WeatherMetricsTab.svelte:1741-1745 (Anker `weather-metrics-kanal-reihenfolge`).
+function kanalBlock(tab: Locator): Locator {
+	return tab.getByTestId('weather-metrics-kanal-reihenfolge');
+}
+
 async function geleseneReihenfolge(tab: Locator): Promise<string[]> {
-	return tab.locator('[data-testid="wm2-reihenfolge-row"]').evaluateAll((rows) =>
+	return kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"]').evaluateAll((rows) =>
 		rows.map((r) => r.getAttribute('data-metric-id') ?? ''),
 	);
 }
@@ -212,12 +219,12 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 		// Speicherpfad (buildWeatherPayload -> PUT /weather-config) laeuft
 		// also echt, mit dem GLEICHEN Ergebnis wie "nichts angefasst".
 		await tab.getByTestId('channel-tab-email').click();
-		const uvOffToggle = tab.locator(
+		const uvOffToggle = kanalBlock(tab).locator(
 			'[data-testid="wm2-aus-gruppe"] [data-testid="wm2-aus-row"][data-metric-id="uv_index"] button',
 		);
 		await expect(uvOffToggle).toBeVisible();
 		await uvOffToggle.click();
-		const uvOnRow = tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="uv_index"]');
+		const uvOnRow = kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="uv_index"]');
 		await expect(uvOnRow).toBeVisible();
 		const [putResponse] = await Promise.all([
 			page.waitForResponse(
@@ -259,13 +266,13 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 		// nicht-benachbartes Paar wie gust/wind wuerde bei einem einzelnen Drag
 		// eine ANDERE Zielreihenfolge ergeben als der Tausch-Nachbau im TS-Kern)
 		// tauschen -- dieselbe Bedienung wie in `_editor_kette.ts::wendeAenderungAn`.
-		const cloudTotalRow = tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="cloud_total"]');
+		const cloudTotalRow = kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="cloud_total"]');
 		await expect(cloudTotalRow).toBeVisible();
 		await cloudTotalRow.getByRole('button', { name: 'Aus' }).click();
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
-		const gustRow = tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]');
-		const precipRow = tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]');
+		const gustRow = kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]');
+		const precipRow = kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]');
 		const [putResponse] = await Promise.all([
 			page.waitForResponse(
 				(r) => r.url().includes(`/api/trips/${TRIP_ID}/weather-config`) && r.request().method() === 'PUT',
