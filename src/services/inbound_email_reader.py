@@ -20,7 +20,7 @@ from html.parser import HTMLParser
 
 from app.config import Settings
 from app.loader import load_all_trips
-from output.channels.email import mask_addr_for_pii_log
+from utils.pii_masking import mask_addr_for_pii_log
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
     CommandResult,

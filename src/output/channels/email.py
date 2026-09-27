@@ -303,34 +303,6 @@ def _load_resend_allowlist(data_dir: str | None = None) -> frozenset[str]:
     return frozenset(allowed)
 
 
-def _mask_addr_for_log(raw: str) -> str:
-    """Issue #1219 AC-6: reduziert eine Adresse auf die Domain für Log-/
-    Fehlermeldungen — verhindert, dass eine volle Empfängeradresse im
-    Klartext geloggt bzw. in einer Exception-Message ausgegeben wird."""
-    addr = _extract_addr(raw)
-    _, sep, domain = addr.partition("@")
-    return f"***@{domain.lower()}" if sep else "***"
-
-
-_KNOWN_OPS_MAILBOXES = frozenset({
-    "gregor-test@henemm.com",
-    "gregor-staging@henemm.com",
-})
-
-
-def mask_addr_for_pii_log(raw: str) -> str:
-    """PII-Maskierung fuer echte Nutzeradressen (#2157) -- bekannte
-    Betriebs-/Test-Postfaecher bleiben unmaskiert, damit die #1847-Diagnose
-    (gregor-test@ vs. gregor-staging@, gleiche Domain) erhalten bleibt."""
-    teile = [addr for _, addr in getaddresses([raw]) if addr]
-    if len(teile) > 1:
-        return ", ".join(mask_addr_for_pii_log(addr) for addr in teile)
-    addr = _extract_addr(raw).strip().lower()
-    if addr in _KNOWN_OPS_MAILBOXES:
-        return raw
-    return _mask_addr_for_log(raw)
-
-
 def build_mime_message(
     subject: str,
     body: str,
@@ -664,6 +636,11 @@ class EmailOutput:
         Raises:
             OutputError: If sending fails after all retry attempts
         """
+        # Issue #2157: lokaler Import (analog get_data_root() weiter unten) --
+        # utils.pii_masking importiert seinerseits _extract_addr aus diesem
+        # Modul, ein Import auf Modulebene wuerde einen Zirkelimport erzeugen.
+        from utils.pii_masking import mask_addr_for_pii_log
+
         # Issue #2144: kein Empfaenger bekannt (weder Profil-mail_to noch
         # per-Aufruf-Override) -- sauber abbrechen statt an [None] zu senden.
         # Muss VOR jedem Verbindungsaufbau greifen (Vorbild premium_sms.py

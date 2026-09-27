@@ -64,9 +64,12 @@ zweiter Code-Pfad.
 
 ## Source
 
-- **Python-Core, neue Funktion:** `src/output/channels/email.py` — Konstante
-  `_KNOWN_OPS_MAILBOXES` und Funktion `mask_addr_for_pii_log()`, direkt neben
-  der bestehenden `_mask_addr_for_log()` (`:306-312`).
+- **Python-Core, neue Funktion:** `src/utils/pii_masking.py` — Konstante
+  `_KNOWN_OPS_MAILBOXES` und Funktionen `_mask_addr_for_log()` sowie
+  `mask_addr_for_pii_log()`. **Nicht mehr** in `src/output/channels/email.py`
+  — dorthin ursprünglich geplant, während der Validierungsphase wegen eines
+  Architektur-Wächter-Konflikts verschoben, s. „Nachtrag (Validierungsphase,
+  2026-09-27) — Relocation nach `src/utils/pii_masking.py`" unten.
 - **Go-API, neue Funktion:** `internal/mail/sender.go` — exportierter Wrapper
   `MaskAddrForLog()`, direkt neben der bestehenden privaten `maskAddrForLog()`
   (`:251-260`).
@@ -79,19 +82,20 @@ zweiter Code-Pfad.
 
 | File | Change Type | Description |
 |------|-------------|--------------|
-| `src/output/channels/email.py` | MODIFY | neu: `_KNOWN_OPS_MAILBOXES` + `mask_addr_for_pii_log()` neben `_mask_addr_for_log()` (`:306-312`) |
-| `src/services/trip_report_scheduler.py:1674-1687,2095-2096` | MODIFY | Erfolgszeile + `_append_briefing_log()`-Aufruf: bekannte Ops-Mailbox unverändert, sonst Domain-Maskierung |
-| `src/services/scheduler_dispatch_service.py:687` | MODIFY | Ortsvergleich-Erfolgszeile, dieselbe Regel |
+| `src/utils/pii_masking.py` | CREATE | Nachtrag Validierungsphase: neue neutrale Utility-Datei, enthält `_KNOWN_OPS_MAILBOXES` + `_mask_addr_for_log()` + `mask_addr_for_pii_log()` (aus `email.py` unverändert verschoben, s. Nachtrag unten) |
+| `src/output/channels/email.py` | MODIFY | neu: `_KNOWN_OPS_MAILBOXES` + `mask_addr_for_pii_log()` neben `_mask_addr_for_log()` (`:306-312`); Nachtrag Validierungsphase: beide wieder entfernt, `send()` importiert `mask_addr_for_pii_log` jetzt lokal aus `utils.pii_masking` |
+| `src/services/trip_report_scheduler.py:1674-1687,2095-2096` | MODIFY | Erfolgszeile + `_append_briefing_log()`-Aufruf: bekannte Ops-Mailbox unverändert, sonst Domain-Maskierung; Import jetzt aus `utils.pii_masking` (Nachtrag Validierungsphase) |
+| `src/services/scheduler_dispatch_service.py:687` | MODIFY | Ortsvergleich-Erfolgszeile, dieselbe Regel; Import jetzt aus `utils.pii_masking` (Nachtrag Validierungsphase) |
 | `src/services/notification_service.py:1999,2018,2041,2057,2072` | MODIFY | `chat_id`/`callback_query_id` per `mask_number()` maskiert (fünf Stellen) |
 | `src/services/inbound_telegram_reader.py:594` | MODIFY | Registrierungs-Log: `chat_id` maskiert |
-| `src/services/inbound_email_reader.py:195,299,303,306` | MODIFY | Absenderadresse per `mask_addr_for_pii_log()` maskiert |
+| `src/services/inbound_email_reader.py:195,299,303,306` | MODIFY | Absenderadresse per `mask_addr_for_pii_log()` maskiert; Import jetzt aus `utils.pii_masking` (Nachtrag Validierungsphase) |
 | `internal/mail/sender.go` | MODIFY | neu: exportierter Wrapper `MaskAddrForLog()` neben der privaten `maskAddrForLog()` (`:251-260`) — s. „Technische Korrektur" |
 | `internal/handler/auth_magic.go:89,109,112` | MODIFY | E-Mail in Magic-Link-Logs via `mail.MaskAddrForLog()` |
 | `docs/specs/fast/fix-1847-briefing-empfaenger-log.md` | MODIFY | Status-Zeile „Abgelöst durch #2157 (verengt auf bekannte Betriebsadressen)" |
 | `tests/unit/test_briefing_recipient_logging.py` | MODIFY | neuer Test: Fremdadresse wird maskiert (AC-2 (b)); bestehender AC-1-Test (#1847) bleibt unverändert grün (AC-1 (a)) |
 | `tests/test_pii_log_guard.py` | CREATE | AST-Struktur-Ratsche (Python, Scope `src/`) — AC-6 (f) |
 | `internal/handler/pii_log_guard_test.go` oder gleichwertiger Log-Capture-Test | CREATE | Verhaltensnachweis Magic-Link-Maskierung — AC-5 (e) (kein Go-AST-Pendant, s. Known Limitations) |
-| `scripts/migrate_briefing_log_mail_to_mask.py` | CREATE | einmalige Bestandsmigration, Dry-Run-Flag, `.bak` — AC-7 (g) |
+| `scripts/migrate_briefing_log_mail_to_mask.py` | CREATE | einmalige Bestandsmigration, Dry-Run-Flag, `.bak` — AC-7 (g); Import jetzt aus `utils.pii_masking` (Nachtrag Validierungsphase) |
 | `src/app/loader.py:1425` | MODIFY | Nachtrag RED-Phase: `chat_id`-Mehrdeutigkeits-Fehlerzeile, per `mask_number()` |
 | `src/output/channels/telegram.py:210` | MODIFY | Nachtrag RED-Phase: Herkunftssperre-Warnung (#1476), `chat_id` per `mask_number()` |
 | `src/services/inbound_telegram_reader.py:608` | MODIFY | Nachtrag RED-Phase: 409-Konflikt-Zeile, `chat_id` per `mask_number()` |
@@ -517,6 +521,40 @@ korrekt, wodurch als Nebeneffekt bekannte Ops-Mailboxen an dieser Stelle
 zusätzlich lesbar bleiben (konsistent mit dem Zweck dieser Spec). Kein neues
 AC — Vervollständigung von AC-2 (b) über eine zweite Fundstelle.
 
+## Nachtrag (Validierungsphase, 2026-09-27) — Relocation nach `src/utils/pii_masking.py`
+
+Während der Validierungsphase deckte der bestehende Architektur-Wächter
+`tests/unit/test_notification_service.py::test_scheduler_has_no_output_imports`
+(Epic #1301 B4) einen Regressionsfund auf: Dieser Wächter verbietet
+`src/services/trip_report_scheduler.py`, aus `output.*` zu importieren.
+Der in dieser Spec ursprünglich vorgegebene Import
+`from output.channels.email import mask_addr_for_pii_log` in
+`trip_report_scheduler.py` verletzt genau diese Regel — der Wächter existierte
+schon vor #2157, wurde aber in der Analyse-/Spec-Phase nicht gegen den neu
+geplanten Import geprüft.
+
+**Fix (reine Verschiebung, keine Logikänderung):** `_KNOWN_OPS_MAILBOXES`,
+`_mask_addr_for_log()` und `mask_addr_for_pii_log()` sind unverändert aus
+`src/output/channels/email.py` in eine neue, neutrale Utility-Datei
+`src/utils/pii_masking.py` umgezogen. `src/utils/pii_masking.py` importiert
+seinerseits `_extract_addr` aus `output.channels.email` (dieser Import bleibt
+zulässig — nur der Scheduler selbst darf nicht aus `output.*` importieren).
+`email.py` importiert `mask_addr_for_pii_log` jetzt nur noch lokal innerhalb
+der `send()`-Methode (kein Modul-Top-Level-Import mehr nötig, da die Funktion
+dort verwendet, aber nicht mehr definiert wird).
+
+Alle Verbraucher wurden auf den neuen Ort umgestellt:
+`src/services/trip_report_scheduler.py`,
+`src/services/scheduler_dispatch_service.py`,
+`src/services/inbound_email_reader.py` und
+`scripts/migrate_briefing_log_mail_to_mask.py` importieren jetzt
+`from utils.pii_masking import mask_addr_for_pii_log`.
+
+Kein neues AC, keine neue Grundsatzentscheidung — reiner
+Implementierungsdetail-Nachtrag zur Fundstelle der Funktion, die
+Maskierungsregel selbst (Positivliste + Domain-Maskierung, Listen-Zerlegung)
+bleibt unverändert. Daher keine erneute PO-Freigabe nötig.
+
 ## Known Limitations
 
 - **Namensbasierter Wächter fängt keine Aliase.** `tests/test_pii_log_guard.py`
@@ -574,3 +612,7 @@ AC — Vervollständigung von AC-2 (b) über eine zweite Fundstelle.
 ## Changelog
 
 - 2026-09-27: Initial spec created
+- 2026-09-27: Nachtrag Validierungsphase — Maskierungsfunktionen aus
+  `src/output/channels/email.py` nach `src/utils/pii_masking.py` verschoben
+  (Architektur-Wächter `test_scheduler_has_no_output_imports`, Epic #1301 B4);
+  „Source" und „Scope — Affected Files" entsprechend aktualisiert

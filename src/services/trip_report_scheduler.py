@@ -23,7 +23,7 @@ import httpx
 
 from app.config import Settings, resolve_public_url
 from app.loader import get_data_dir, load_all_trips, save_trip
-from output.channels.email import mask_addr_for_pii_log
+from utils.pii_masking import mask_addr_for_pii_log
 from app.models import (
     NormalizedTimeseries,
     SegmentWeatherData,

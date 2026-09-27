@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from output.channels.email import mask_addr_for_pii_log  # noqa: E402
+from utils.pii_masking import mask_addr_for_pii_log  # noqa: E402
 
 
 def _migriere_datei(pfad: Path, dry_run: bool) -> tuple[int, int]:

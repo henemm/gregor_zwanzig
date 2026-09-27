@@ -21,7 +21,7 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
-from output.channels.email import mask_addr_for_pii_log
+from utils.pii_masking import mask_addr_for_pii_log
 from services.alert_briefing_anchor import (
     record_briefing_dispatch_failure,
     undelivered_since_last_briefing,
