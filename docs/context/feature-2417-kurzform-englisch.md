@@ -143,7 +143,9 @@ Ermittelt per grep am 27.09.2026 (Agent B, /40-tdd-red). Diese Dateien erwarten 
 - `tests/unit/test_telegram_kuerzel_folgt_register.py` (in RED bereits umgestellt: Ausnahme `temperature` entfällt)
 - `frontend/src/lib/components/shared/__tests__/metricKuerzelLegende.test.ts` (in RED umgestellt, siehe Befund unten)
 
-**Befunde aus RED, die GREEN blockieren (Spec-Klärung nötig, Details im Agent-B-Report):**
+**Nachtrag Spec v1.1 (Commit 8d5a14d3):** Die vier Befunde unten sind aufgelöst: `MAX` steht im CODES-/KUERZEL-Wortlaut, AC-28 (`temperature_cold` → `T`, Ausnahme im Doppelungs-Wächter), AC-22 korrigiert (Ortsvergleich bleibt `D`/`L`), AC-29 (Vergleichsauswahl-`sms_code` folgt `kuerzel_metric_id`). Folge für GREEN: Mit AC-29 wechseln auch die Vergleichszeilen „Gefühlt min/max" (`wind_chill_min_c`/`wind_chill_max_c`) von `TF` auf `FL`/`FD`; Tests, die `sms_code` der Vergleichsauswahl lesen, mitziehen.
+
+**Befunde aus RED v1.0 (mit v1.1 erledigt, nur zur Nachvollziehbarkeit):**
 1. `builder.POSITIONAL` erzeugt `MAX` (Brandzonen „max"), der freigegebene CODES-Wortlaut erklärt `MAX` nicht → `test_codes_vollstaendig_gegen_ausgabe_register` und der zeichengenaue Wortlaut-Test können nicht beide grün werden.
 2. `N` gehört zu zwei Metriken: `temperature_cold.sms_code="N"` und `temperature_night.sms_multi_symbols=("N",)` → AC-25 Punkt 2 bleibt rot, die Spec sieht dafür keine Ausnahme vor.
 3. AC-22 „Ortsvergleich zeigt T statt D": die Vergleichs-SMS liest für `temp_max`/`temp_min` über `kuerzel_metric_id` die Größen `temperature_day_high`/`temperature_day_low` (D/L), nicht `temperature` — die Stelle ist nicht beobachtbar.
@@ -165,3 +167,14 @@ Ermittelt per grep am 27.09.2026 (Agent B, /40-tdd-red). Diese Dateien erwarten 
 10. AC-3 per E-Mail ist nicht unterscheidend (Betreff nennt immer den Trip).
 11. **Frontend-`node_modules`** im Worktree ist ein Symlink auf den Hauptcheckout — kein `npm install`/`npm ci` hier; entfernen nur mit `rm frontend/node_modules` (ohne `/`, ohne `-rf`).
 12. **Premium-SMS im Test:** pro Test genau ein Recorder (Journal-IDs starten sonst neu bei 1).
+
+**AC-29-Folge (RED v1.1, Agent B):** Dieselbe Regel gibt auch `wind_chill_min_c`/`wind_chill_max_c` in der Vergleichsauswahl `FL`/`FD` statt `TF` — gewollt (Editor zeigt dann dasselbe Kürzel wie die Vergleichs-SMS). Für GREEN prüfen (grobe grep-Treffer, nicht einzeln verifiziert): `tests/tdd/test_compare_sms_kuerzel.py`, `tests/tdd/test_channel_metric_matrix.py`, `tests/unit/test_compare_metric_order.py`, `tests/unit/test_sms_symbols_endpoint_deckt_vergleich.py`, `tests/unit/test_kurzform_kuerzel_rangfolge.py`, `frontend/.../weather_metric_kuerzel_marken.test.ts`.
+
+## Für /50-implement: Nachträge aus RED v1.1 (Agent A)
+
+- **A. „Trip-Name nicht gefunden" (`trip_command_processor.py:882,904,924`) ist über keinen Kurzform-Eingang erreichbar** (11 Eingaben auf Premium-SMS/Telegram geprüft) — nur per E-Mail, die deutsch bleibt. Die Zeile der Tabelle H ist daher im Test nicht aufgenommen; kein Nutzer sieht den Text auf einem Kurzform-Kanal. Wird er doch erreichbar, gilt AC-4 (englisch).
+- **B. Glance/Timeline-Antwort auf Premium-SMS** ist heute deutsch und nicht GSM-7-sauber (🗓, 🌡, „–", ⛈) — als Zusatzzeile in AC-19 aufgenommen (Spec: „Prüfliste, nicht Grenze").
+- **C. Nowcast:** englische Fassung muss den Quellennamen „ARPAE ICON-2I" behalten.
+- **D.** SKIP/STOP-Antworten nennen weiter den Trip-Namen, PAUSE am Ortsvergleich (L4, „pause 2d") weiter den Vergleichsnamen — englischer Wortlaut muss die Namen behalten.
+- **E.** `FEHLERTEXTE` um die englischen Fehlertexte ergänzen (siehe oben Punkt 4).
+- Neue Fixture-Helfer: `deutsche_signale`, `gsm7_befunde_systemtext`, `pruefe_premium_sms_englisch_und_gsm7`.
