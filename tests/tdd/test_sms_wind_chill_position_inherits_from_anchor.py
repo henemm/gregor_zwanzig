@@ -162,13 +162,27 @@ def test_temperature_family_inherits_parent_position_from_sms_channel_layout(tmp
 # ---------------------------------------------------------------------------
 
 
-def test_unrelated_trip_without_derived_families_stays_byte_identical(tmp_path):
+def test_unrelated_trip_without_derived_families_follows_global_order(tmp_path):
     """Ein Trip OHNE wind_chill/temperature (keine abgeleiteten Groessen
     beteiligt) und OHNE SMS-Kanal-Reihenfolge (globaler Fallback) darf durch
-    den Fix in keiner Weise veraendert werden -- Referenzstring identisch zum
-    eingefrorenen AC-2-String aus test_sms_user_metric_order.py (derselbe
-    Fixture-Baustein F.segment(), zeigt: der Fix ist auf die beiden
-    betroffenen Familien beschraenkt)."""
+    DIESEN Fix (#1947, Positionsvererbung an abgeleitete Kind-Metriken) in
+    keiner Weise veraendert werden.
+
+    Issue #2422 S2a AC-13 (B9-Fix, PO-Entscheid 2026-09-27) LOEST hier
+    ZUSAETZLICH die alte Byte-Identitaets-Erwartung ab: DEC-2 aus
+    ``fix_1677_sms_reihenfolge.md`` garantierte bislang, dass Kaskadenquelle
+    'global' IMMER auf die feste POSITIONAL-Reihenfolge (R,W,G) faellt. Der
+    B9-Fix entfernt dieses Gate -- die SMS folgt jetzt der globalen
+    Editor-Reihenfolge (wind order=0, gust order=1, precipitation order=2 ->
+    W,G,R), genau wie bei ``per_channel``/``per_report``. Referenzstring per
+    Simulation ermittelt (``cascade_source_for_channel`` fuer 'sms' auf
+    'per_channel' erzwungen, Scratchpad-Lauf 2026-09-27); /50 bestaetigt ihn
+    gegen den echten Fix. Der eigentliche Pruefzweck dieser Datei (#1947:
+    abgeleitete Kind-Metriken bleiben unbeteiligt) ist davon unberuehrt --
+    hier stehen ohnehin keine Kind-Metriken.
+
+    RED heute (Aktivierungs-Gate aus DEC-2 noch vorhanden): die SMS faellt
+    weiterhin auf die alte feste POSITIONAL-Reihenfolge (R,W,G) zurueck."""
     metrics = [
         {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 0},
         {"metric_id": "gust", "enabled": True, "bucket": "primary", "order": 1},
@@ -178,7 +192,9 @@ def test_unrelated_trip_without_derived_families_stays_byte_identical(tmp_path):
 
     source, sms = _render_sms(tmp_path, "unrelated")
     assert source == "global", f"Vorbedingung verletzt (source={source!r})"
-    assert sms == "E7: R0.5@5(8.4@11) W12@4(45@10) G22@4(70@10)", (
-        f"Unbeteiligte Konfiguration muss byte-identisch zum eingefrorenen "
-        f"Referenzstring bleiben: {sms!r}"
+    assert sms == "E7: W12@4(45@10) G22@4(70@10) R0.5@5(8.4@11)", (
+        f"AC-13/B9-Fix: bei Kaskadenquelle 'global' muss die SMS jetzt der "
+        f"globalen Editor-Reihenfolge (wind,gust,precipitation -> W,G,R) "
+        f"folgen, nicht mehr der alten festen POSITIONAL-Reihenfolge "
+        f"(R,W,G): {sms!r}"
     )

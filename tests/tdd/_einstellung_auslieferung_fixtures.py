@@ -166,7 +166,9 @@ TRANSPORT_ENV = {
 }
 
 
-def render_golden(monkeypatch, name: str) -> tuple[Kanalmitschrift, object]:
+def render_golden(
+    monkeypatch, name: str, *, report_type: str = "evening",
+) -> tuple[Kanalmitschrift, object]:
     """Ein Golden-Trip-JSON ueber den ECHTEN Loader/Kaskade/Formatter senden.
 
     Naht ausschliesslich am Transport (AC-13): ``EmailOutput``/``SMSOutput``/
@@ -175,6 +177,11 @@ def render_golden(monkeypatch, name: str) -> tuple[Kanalmitschrift, object]:
     konstruiert (kein Scheduler, keine Provider-Naht noetig) -- die
     Versand-Flags kommen aus dem GELADENEN ``report_config`` (echte
     Einstellung), nie hartcodiert.
+
+    ``report_type`` (Issue #2422 S2a, AC-1/K8): Default bleibt ``"evening"``
+    (S1-Konvention, A/B unveraendert) -- ``"morning"`` optional fuer G4
+    (``morning_enabled``), damit dieselbe Golden ueber beide Report-Typen
+    gepruefte werden kann, ohne den Aufbau zu duplizieren.
 
     Gibt (Mitschrift, geladener Trip) zurueck. Jeder Aufruf nutzt ein
     FRISCHES Nutzerprofil.
@@ -189,7 +196,7 @@ def render_golden(monkeypatch, name: str) -> tuple[Kanalmitschrift, object]:
 
     rc = trip.report_config
     request = TripReportRequest(
-        trip=trip, report_type="evening", segment_weather=[segment()],
+        trip=trip, report_type=report_type, segment_weather=[segment()],
         trip_tz=TZ, night_weather=night_weather(), stage_name=STAGE_NAME,
         report_config=rc, display_config=trip.display_config,
         send_email=rc.send_email, send_sms=rc.send_sms,

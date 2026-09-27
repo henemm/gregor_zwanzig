@@ -1,0 +1,127 @@
+{
+  "report_type": "anzeige",
+  "channels": {
+    "email": [
+      {
+        "metric_id": "wind",
+        "friendly": false
+      },
+      {
+        "metric_id": "gust",
+        "friendly": false
+      },
+      {
+        "metric_id": "precipitation",
+        "friendly": false
+      },
+      {
+        "metric_id": "rain_probability",
+        "friendly": false
+      },
+      {
+        "metric_id": "thunder",
+        "friendly": true
+      },
+      {
+        "metric_id": "cloud_total",
+        "friendly": false
+      },
+      {
+        "metric_id": "humidity",
+        "friendly": false
+      }
+    ],
+    "telegram": [
+      {
+        "metric_id": "gust",
+        "friendly": false
+      },
+      {
+        "metric_id": "precipitation",
+        "friendly": false
+      },
+      {
+        "metric_id": "wind",
+        "friendly": false
+      },
+      {
+        "metric_id": "rain_probability",
+        "friendly": false
+      },
+      {
+        "metric_id": "thunder",
+        "friendly": true
+      },
+      {
+        "metric_id": "cloud_total",
+        "friendly": true
+      },
+      {
+        "metric_id": "cloud_low",
+        "friendly": true
+      },
+      {
+        "metric_id": "uv_index",
+        "friendly": false
+      },
+      {
+        "metric_id": "humidity",
+        "friendly": false
+      },
+      {
+        "metric_id": "sunshine",
+        "friendly": true
+      },
+      {
+        "metric_id": "wind_chill",
+        "friendly": true
+      }
+    ],
+    "sms": [
+      {
+        "metric_id": "gust",
+        "friendly": false
+      },
+      {
+        "metric_id": "precipitation",
+        "friendly": false
+      },
+      {
+        "metric_id": "wind",
+        "friendly": false
+      },
+      {
+        "metric_id": "rain_probability",
+        "friendly": false
+      },
+      {
+        "metric_id": "thunder",
+        "friendly": true
+      },
+      {
+        "metric_id": "cloud_total",
+        "friendly": true
+      },
+      {
+        "metric_id": "cloud_low",
+        "friendly": true
+      },
+      {
+        "metric_id": "uv_index",
+        "friendly": false
+      },
+      {
+        "metric_id": "humidity",
+        "friendly": false
+      },
+      {
+        "metric_id": "sunshine",
+        "friendly": true
+      },
+      {
+        "metric_id": "wind_chill",
+        "friendly": true
+      }
+    ]
+  }
+}

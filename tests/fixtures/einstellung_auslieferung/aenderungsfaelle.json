@@ -1,0 +1,35 @@
+{
+  "fall1_metrik_abwaehlen": {
+    "beschreibung": "Golden A, Kanal email: cloud_low wird abgewaehlt (aktiv -> inaktiv).",
+    "golden": "golden_a",
+    "channel": "email",
+    "kind": "deselect",
+    "metric_id": "cloud_low"
+  },
+  "fall2_reihenfolge_tauschen": {
+    "beschreibung": "Golden A, Kanal email: wind und rain_probability tauschen ihre Position.",
+    "golden": "golden_a",
+    "channel": "email",
+    "kind": "swap",
+    "metric_a": "wind",
+    "metric_b": "rain_probability"
+  },
+  "fall3_roh_einfach_umschalten": {
+    "beschreibung": "Golden A, Kanal email: cloud_total wechselt von Roh (false) auf Einfach (true).",
+    "golden": "golden_a",
+    "channel": "email",
+    "kind": "format_toggle",
+    "metric_id": "cloud_total",
+    "from_friendly": false,
+    "to_friendly": true
+  },
+  "fall4_sms_erstbearbeitung": {
+    "beschreibung": "Golden C, Kanal sms (bislang nie bearbeitet, Kaskadenquelle 'global'): cloud_total wird abgewaehlt UND gust/precipitation (im SMS-Reiter benachbart: Position 0/1) tauschen ihre Position -- benachbartes Paar, damit ein einzelner Drag-Schritt im E2E-Bein (AC-17) die Vertauschung eindeutig auf genau diese zwei Metriken abbildet. Kaskadenquelle fuer sms wechselt danach auf 'per_channel'. E-Mail und Telegram bleiben gegenueber Golden C unveraendert.",
+    "golden": "golden_c",
+    "channel": "sms",
+    "kind": "deselect_and_swap",
+    "deselect_metric_id": "cloud_total",
+    "metric_a": "gust",
+    "metric_b": "precipitation"
+  }
+}

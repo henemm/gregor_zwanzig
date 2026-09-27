@@ -1,0 +1,244 @@
+{
+  "temperature": [
+    {
+      "id": "temperature",
+      "label": "Temperatur",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "temperature_night",
+      "label": "Nacht-Tiefsttemperatur",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "temperature_day_low",
+      "label": "Tages-Tiefsttemperatur (Gehzeit)",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "temperature_day_high",
+      "label": "Tages-Höchsttemperatur (Gehzeit)",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "wind_chill",
+      "label": "Gefühlte Temperatur",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "wind_chill_night",
+      "label": "Gefühlte Nacht-Tiefsttemperatur",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "wind_chill_day_low",
+      "label": "Gefühlte Tages-Tiefsttemperatur (Gehzeit)",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "wind_chill_day_high",
+      "label": "Gefühlte Tages-Höchsttemperatur (Gehzeit)",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "humidity",
+      "label": "Luftfeuchtigkeit",
+      "unit": "%",
+      "category": "temperature",
+      "default_enabled": false,
+      "has_friendly_format": false
+    },
+    {
+      "id": "dewpoint",
+      "label": "Taupunkt",
+      "unit": "°C",
+      "category": "temperature",
+      "default_enabled": false,
+      "has_friendly_format": false
+    }
+  ],
+  "wind": [
+    {
+      "id": "wind",
+      "label": "Wind",
+      "unit": "km/h",
+      "category": "wind",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "gust",
+      "label": "Böen",
+      "unit": "km/h",
+      "category": "wind",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "wind_direction",
+      "label": "Windrichtung",
+      "unit": "°",
+      "category": "wind",
+      "default_enabled": false,
+      "has_friendly_format": true
+    }
+  ],
+  "precipitation": [
+    {
+      "id": "precipitation",
+      "label": "Niederschlag",
+      "unit": "mm",
+      "category": "precipitation",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "rain_probability",
+      "label": "Regenwahrscheinlichkeit",
+      "unit": "%",
+      "category": "precipitation",
+      "default_enabled": false,
+      "has_friendly_format": false
+    },
+    {
+      "id": "thunder",
+      "label": "Gewitter",
+      "unit": "",
+      "category": "precipitation",
+      "default_enabled": true,
+      "has_friendly_format": true
+    },
+    {
+      "id": "snowfall_limit",
+      "label": "Schneefallgrenze",
+      "unit": "m",
+      "category": "precipitation",
+      "default_enabled": true,
+      "has_friendly_format": false
+    },
+    {
+      "id": "precip_type",
+      "label": "Niederschlagsart",
+      "unit": "",
+      "category": "precipitation",
+      "default_enabled": false,
+      "has_friendly_format": false
+    }
+  ],
+  "atmosphere": [
+    {
+      "id": "cloud_total",
+      "label": "Bewölkung",
+      "unit": "%",
+      "category": "atmosphere",
+      "default_enabled": true,
+      "has_friendly_format": true
+    },
+    {
+      "id": "cloud_low",
+      "label": "Tiefe Wolken",
+      "unit": "%",
+      "category": "atmosphere",
+      "default_enabled": false,
+      "has_friendly_format": true
+    },
+    {
+      "id": "cloud_mid",
+      "label": "Mittelhohe Wolken",
+      "unit": "%",
+      "category": "atmosphere",
+      "default_enabled": false,
+      "has_friendly_format": true
+    },
+    {
+      "id": "cloud_high",
+      "label": "Hohe Wolken",
+      "unit": "%",
+      "category": "atmosphere",
+      "default_enabled": false,
+      "has_friendly_format": true
+    },
+    {
+      "id": "visibility",
+      "label": "Sichtweite",
+      "unit": "km",
+      "category": "atmosphere",
+      "default_enabled": false,
+      "has_friendly_format": false
+    },
+    {
+      "id": "sunshine",
+      "label": "Sonnenstunden",
+      "unit": "h",
+      "category": "atmosphere",
+      "default_enabled": true,
+      "has_friendly_format": true
+    },
+    {
+      "id": "uv_index",
+      "label": "UV-Index",
+      "unit": "",
+      "category": "atmosphere",
+      "default_enabled": false,
+      "has_friendly_format": false
+    },
+    {
+      "id": "pressure",
+      "label": "Luftdruck",
+      "unit": "hPa",
+      "category": "atmosphere",
+      "default_enabled": false,
+      "has_friendly_format": false
+    }
+  ],
+  "winter": [
+    {
+      "id": "freezing_level",
+      "label": "Nullgradgrenze",
+      "unit": "m",
+      "category": "winter",
+      "default_enabled": false,
+      "has_friendly_format": false
+    },
+    {
+      "id": "snow_depth",
+      "label": "Schneehöhe",
+      "unit": "cm",
+      "category": "winter",
+      "default_enabled": false,
+      "has_friendly_format": false
+    },
+    {
+      "id": "fresh_snow",
+      "label": "Neuschnee",
+      "unit": "cm",
+      "category": "winter",
+      "default_enabled": false,
+      "has_friendly_format": false
+    }
+  ]
+}
