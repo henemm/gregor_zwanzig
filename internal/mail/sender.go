@@ -259,6 +259,14 @@ func maskAddrForLog(raw string) string {
 	return "***"
 }
 
+// MaskAddrForLog exportiert maskAddrForLog fuer Aufrufer ausserhalb dieses
+// Pakets (#2157) -- die private Funktion selbst bleibt unveraendert, damit
+// die Guard-Region-Namensliste in recipient_parity_test.go (":353") nicht
+// beruehrt wird.
+func MaskAddrForLog(raw string) string {
+	return maskAddrForLog(raw)
+}
+
 // Fix-Loop 4 (F005): rohes, PARSER-UNABHÄNGIGES Fangnetz (Symmetrie zu
 // src/output/channels/email.py::_raw_contains_test_mailbox). Statt jeden
 // Zerlege-/Normalisierungs-Trick einzeln zu stopfen, scannt dieser Layer

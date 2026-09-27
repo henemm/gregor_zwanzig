@@ -23,6 +23,7 @@ import httpx
 
 from app.config import Settings, resolve_public_url
 from app.loader import get_data_dir, load_all_trips, save_trip
+from output.channels.email import mask_addr_for_pii_log
 from app.models import (
     NormalizedTimeseries,
     SegmentWeatherData,
@@ -1668,22 +1669,24 @@ class TripReportSchedulerService:
             # (scheduler_dispatch_service.py:571, "Compare preset %s sent to
             # %s"): dort war "Versand gemeldet, Postfach leer" in einer Minute
             # aufgeklaert, hier kostete dieselbe Falle eine Stunde (vierte
-            # Wiederholung: #1351, #1403, #1782, #1847). Bewusst UNMASKIERT —
-            # eine Maskierung machte gregor-test@ und gregor-staging@
-            # ununterscheidbar und verfehlte genau den Zweck.
+            # Wiederholung: #1351, #1403, #1782, #1847). #2157: nur die beiden
+            # Betriebspostfaecher bleiben unmaskiert (mask_addr_for_pii_log).
             mail_empfaenger = (
                 self._settings.mail_to if "email" in result.sent_channels else None
             )
+            mail_empfaenger_fuer_log = (
+                mask_addr_for_pii_log(mail_empfaenger) if mail_empfaenger else None
+            )
             self._append_briefing_log(
                 trip.id, report_type, result.sent_channels,
-                angefordert=angefordert, mail_empfaenger=mail_empfaenger,
+                angefordert=angefordert, mail_empfaenger=mail_empfaenger_fuer_log,
             )
             logger.info(
                 "Trip report sent: %s (%s) via %s%s",
                 trip.name,
                 report_type,
                 ",".join(result.sent_channels),
-                f" to {mail_empfaenger}" if mail_empfaenger else "",
+                f" to {mail_empfaenger_fuer_log}" if mail_empfaenger_fuer_log else "",
             )
 
         # 8c. Issue #1662 AC-5: Der gelungene Versand macht einen offenen

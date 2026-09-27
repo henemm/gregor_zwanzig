@@ -312,6 +312,25 @@ def _mask_addr_for_log(raw: str) -> str:
     return f"***@{domain.lower()}" if sep else "***"
 
 
+_KNOWN_OPS_MAILBOXES = frozenset({
+    "gregor-test@henemm.com",
+    "gregor-staging@henemm.com",
+})
+
+
+def mask_addr_for_pii_log(raw: str) -> str:
+    """PII-Maskierung fuer echte Nutzeradressen (#2157) -- bekannte
+    Betriebs-/Test-Postfaecher bleiben unmaskiert, damit die #1847-Diagnose
+    (gregor-test@ vs. gregor-staging@, gleiche Domain) erhalten bleibt."""
+    teile = [addr for _, addr in getaddresses([raw]) if addr]
+    if len(teile) > 1:
+        return ", ".join(mask_addr_for_pii_log(addr) for addr in teile)
+    addr = _extract_addr(raw).strip().lower()
+    if addr in _KNOWN_OPS_MAILBOXES:
+        return raw
+    return _mask_addr_for_log(raw)
+
+
 def build_mime_message(
     subject: str,
     body: str,
@@ -680,7 +699,7 @@ class EmailOutput:
             logger.warning(
                 "Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- "
                 "E-Mail-Empfaenger von %s auf %s umgeschaltet.",
-                [_mask_addr_for_log(r) for r in recipients], _ORIGIN_GUARD_TEST_RECIPIENT,
+                [mask_addr_for_pii_log(r) for r in recipients], _ORIGIN_GUARD_TEST_RECIPIENT,
             )
             recipients = [_ORIGIN_GUARD_TEST_RECIPIENT]
         to_header = ", ".join(recipients)
@@ -742,7 +761,7 @@ class EmailOutput:
                 ):
                     blocked.append(r)
             if blocked:
-                masked = [_mask_addr_for_log(r) for r in blocked]
+                masked = [mask_addr_for_pii_log(r) for r in blocked]
                 logger.warning(
                     "Resend-Allowlist-Guard blockiert %d Empfänger, die "
                     "keinem echten Nutzerprofil zugeordnet werden konnten "
@@ -782,7 +801,7 @@ class EmailOutput:
                 ):
                     blocked.append(r)
             if blocked:
-                masked = [_mask_addr_for_log(r) for r in blocked]
+                masked = [mask_addr_for_pii_log(r) for r in blocked]
                 logger.warning(
                     "Lokal-Guard blockiert %d Empfaenger ausserhalb von "
                     "LOCAL_MAIL_DOMAINS bzw. mit reservierter Test-Domain "

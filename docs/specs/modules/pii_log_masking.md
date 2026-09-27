@@ -88,13 +88,15 @@ zweiter Code-Pfad.
 | `internal/mail/sender.go` | MODIFY | neu: exportierter Wrapper `MaskAddrForLog()` neben der privaten `maskAddrForLog()` (`:251-260`) — s. „Technische Korrektur" |
 | `internal/handler/auth_magic.go:89,109,112` | MODIFY | E-Mail in Magic-Link-Logs via `mail.MaskAddrForLog()` |
 | `docs/specs/fast/fix-1847-briefing-empfaenger-log.md` | MODIFY | Status-Zeile „Abgelöst durch #2157 (verengt auf bekannte Betriebsadressen)" |
-| `tests/unit/test_briefing_recipient_logging.py` | MODIFY | neuer Test: Fremdadresse wird maskiert (AC-b); bestehender AC-1-Test (#1847) bleibt unverändert grün (AC-a) |
-| `tests/test_pii_log_guard.py` | CREATE | AST-Struktur-Ratsche (Python, Scope `src/`) — AC-f |
-| `internal/handler/pii_log_guard_test.go` oder gleichwertiger Log-Capture-Test | CREATE | Verhaltensnachweis Magic-Link-Maskierung — AC-e (kein Go-AST-Pendant, s. Known Limitations) |
-| `scripts/migrate_briefing_log_mail_to_mask.py` | CREATE | einmalige Bestandsmigration, Dry-Run-Flag, `.bak` — AC-g |
+| `tests/unit/test_briefing_recipient_logging.py` | MODIFY | neuer Test: Fremdadresse wird maskiert (AC-2 (b)); bestehender AC-1-Test (#1847) bleibt unverändert grün (AC-1 (a)) |
+| `tests/test_pii_log_guard.py` | CREATE | AST-Struktur-Ratsche (Python, Scope `src/`) — AC-6 (f) |
+| `internal/handler/pii_log_guard_test.go` oder gleichwertiger Log-Capture-Test | CREATE | Verhaltensnachweis Magic-Link-Maskierung — AC-5 (e) (kein Go-AST-Pendant, s. Known Limitations) |
+| `scripts/migrate_briefing_log_mail_to_mask.py` | CREATE | einmalige Bestandsmigration, Dry-Run-Flag, `.bak` — AC-7 (g) |
 | `src/app/loader.py:1425` | MODIFY | Nachtrag RED-Phase: `chat_id`-Mehrdeutigkeits-Fehlerzeile, per `mask_number()` |
 | `src/output/channels/telegram.py:210` | MODIFY | Nachtrag RED-Phase: Herkunftssperre-Warnung (#1476), `chat_id` per `mask_number()` |
 | `src/services/inbound_telegram_reader.py:608` | MODIFY | Nachtrag RED-Phase: 409-Konflikt-Zeile, `chat_id` per `mask_number()` |
+| `src/output/channels/email.py:~700,764,804` | MODIFY | Nachtrag Implementierungsphase: Herkunftssperre-Warnung (#1476), Resend-Allowlist-Guard und Lokal-Guard nutzten `_mask_addr_for_log(r)` pro Listeneintrag statt `mask_addr_for_pii_log(r)` — dieselbe Erstadresse-Lücke wie in AC-2 (b), jetzt an allen drei Stellen behoben (Adversary-Runde 1, F001) |
+| `tests/unit/test_inbound_email_reader*.py` (oder gleichwertig) | MODIFY | Nachtrag Adversary-Runde 1 (F003): zwei ergänzende `caplog`-Tests für `inbound_email_reader.py:195` und `:306` |
 
 ## Estimated Scope
 
@@ -324,7 +326,7 @@ Limitations).
 
 ## Acceptance Criteria
 
-- **AC-a:** Given ein Trip mit `mail_to = "gregor-test@henemm.com"` (bekannte
+- **AC-1 (a):** Given ein Trip mit `mail_to = "gregor-test@henemm.com"` (bekannte
   Ops-Adresse) / When das Briefing erfolgreich versendet wird / Then enthält
   sowohl die Erfolgszeile als auch der `briefing_log.json`-Eintrag die
   Adresse `gregor-test@henemm.com` unmaskiert im Klartext.
@@ -332,15 +334,20 @@ Limitations).
     `test_erfolgszeile_enthaelt_die_empfaengeradresse` (bestehend, #1847) —
     bleibt unter dieser Spec unverändert grün.
 
-- **AC-b:** Given ein Trip mit `mail_to = "finder@example.org"` (echte,
+- **AC-2 (b):** Given ein Trip mit `mail_to = "finder@example.org"` (echte,
   unbekannte Fremdadresse) / When das Briefing erfolgreich versendet wird /
   Then enthält weder die Erfolgszeile noch der `briefing_log.json`-Eintrag
-  die volle Adresse — beide zeigen `***@example.org`.
+  die volle Adresse — beide zeigen `***@example.org`. Dasselbe gilt, wenn
+  `mail_to` eine kommagetrennte Liste ist (z. B.
+  `"gregor-test@henemm.com, finder@example.org"`) — jede Adresse der Liste
+  wird einzeln gegen die Positivliste geprüft, nicht nur die erste (Nachtrag
+  Implementierungsphase, s. u.).
   - Test: neuer Test in `tests/unit/test_briefing_recipient_logging.py`
     (`caplog` + gelesene `briefing_log.json`, echter Versandpfad wie im
-    Bestandstest, nur `EMPFAENGER = "finder@example.org"`).
+    Bestandstest, nur `EMPFAENGER = "finder@example.org"`), plus ein
+    Listen-Test mit gemischter Ops-/Fremdadresse.
 
-- **AC-c:** Given ein Telegram-Sendefehler oder eine Registrierung mit
+- **AC-3 (c):** Given ein Telegram-Sendefehler oder eine Registrierung mit
   `chat_id = "123456789"` / When die entsprechende Fehler- bzw.
   Registrierungszeile protokolliert wird / Then enthält die Zeile nicht die
   volle `chat_id`, sondern nur die letzten drei Ziffern mit `…`-Präfix.
@@ -350,7 +357,7 @@ Limitations).
     künstlich fehlschlagenden/erfolgreichen Telegram-Antwort, kein Mock der
     Maskierungsfunktion selbst.
 
-- **AC-d:** Given eine E-Mail von einer nicht autorisierten oder nicht
+- **AC-4 (d):** Given eine E-Mail von einer nicht autorisierten oder nicht
   verifizierten Absenderadresse / When `inbound_email_reader` die Nachricht
   verarbeitet und ablehnt / Then nennt die resultierende `warning`/`debug`-
   Zeile die Absenderadresse nur maskiert (`***@domain.tld`).
@@ -358,7 +365,7 @@ Limitations).
     für `inbound_email_reader._authorize()`/`_resolve_settings_for_sender()`
     mit einer echten Fremdadresse als Absender.
 
-- **AC-e:** Given ein Magic-Link-Login-Versuch (SMTP nicht konfiguriert,
+- **AC-5 (e):** Given ein Magic-Link-Login-Versuch (SMTP nicht konfiguriert,
   Versand fehlgeschlagen, oder Versand-Timeout) / When `auth_magic.go` die
   jeweilige Zeile protokolliert / Then erscheint die E-Mail-Adresse nur als
   `***@domain.tld`.
@@ -368,7 +375,7 @@ Limitations).
     Abwesenheit der vollen Adresse in der Ausgabe nachweist, für mindestens
     den Zeitüberschreitungs- oder Fehlerfall (:109/:112).
 
-- **AC-f:** Given der bestehende Code-Bestand nach Umsetzung dieser Spec /
+- **AC-6 (f):** Given der bestehende Code-Bestand nach Umsetzung dieser Spec /
   When der AST-Struktur-Wächter über `src/` läuft / Then meldet er keine
   Fundstelle. Given danach eine neue, unmaskierte `logger.*`-Zeile mit einem
   bare `chat_id`- oder `empfaenger`-Argument künstlich in einen isolierten
@@ -379,7 +386,7 @@ Limitations).
     gegen einen gepflanzten `tmp_path`-Baum, plus ein Ist-Stand-Test gegen
     `src/`).
 
-- **AC-g:** Given `briefing_log.json`-Bestandsdateien mit Klartext-`mail_to`
+- **AC-7 (g):** Given `briefing_log.json`-Bestandsdateien mit Klartext-`mail_to`
   aus der Zeit vor dieser Spec / When `scripts/migrate_briefing_log_mail_to_mask.py`
   zuerst mit `--dry-run` und danach ohne `--dry-run` läuft / Then meldet der
   Dry-Run dieselbe Anzahl zu ändernder Einträge wie der echte Lauf tatsächlich
@@ -395,16 +402,21 @@ Limitations).
 Drei benannte Verfälschungen, die die Implementierung aktiv brechen müssen:
 
 1. **Positivlisten-Check entfernen** (`if addr in _KNOWN_OPS_MAILBOXES: return raw` streichen) →
-   AC-a muss rot werden (`gregor-test@henemm.com` erscheint plötzlich maskiert,
+   AC-1 (a) muss rot werden (`gregor-test@henemm.com` erscheint plötzlich maskiert,
    #1847-Diagnose bricht wieder).
 2. **Alles maskieren, auch Listeneinträge** (Positivlisten-Prüfung durch
    `False` ersetzen) → der bestehende `test_erfolgszeile_enthaelt_die_empfaengeradresse`
    (#1847, AC-1) muss rot werden.
 3. **Nichts maskieren** (`mask_addr_for_pii_log()`/`mask_number()`/
    `MaskAddrForLog()` durch Identitätsfunktion ersetzen) → der neue
-   AC-b-Gegentest (Fremdadresse) muss rot werden.
+   AC-2 (b)-Gegentest (Fremdadresse) muss rot werden.
+4. **Listen-Zerlegung entfernen** (in `mask_addr_for_pii_log()` wieder auf
+   den unzerlegten Rohstring statt auf `getaddresses(...)` pro Einzeladresse
+   prüfen) → der neue AC-2 (b)-Listentest (gemischte Ops-/Fremdadresse, z. B.
+   `"gregor-test@henemm.com, finder@example.org"`) muss rot werden — die
+   Fremdadresse in der Liste erscheint sonst wieder im Klartext.
 
-Jede dieser drei Mutationen muss vom `implementation-validator` tatsächlich
+Jede dieser vier Mutationen muss vom `implementation-validator` tatsächlich
 eingespielt und das Testergebnis dokumentiert werden — ein grüner Lauf ohne
 diese Gegenprobe beweist nur, dass die Tests durchlaufen, nicht dass sie die
 Zusicherung bewachen.
@@ -428,10 +440,82 @@ Issue #1476), `src/services/inbound_telegram_reader.py:608` (409-Konflikt,
 Issue #2141). Alle drei sind reine Telegram-`chat_id`-Werte (kein E-Mail-Bezug,
 keine Berührung des #1847-Konflikts) und werden mit derselben, bereits
 freigegebenen `mask_number()`-Regel behoben wie die übrigen `chat_id`-Stellen.
-Das ist eine Vervollständigung der bereits freigegebenen Zusicherung AC-f
+Das ist eine Vervollständigung der bereits freigegebenen Zusicherung AC-6 (f)
 („Wächter über den gesamten `src/`-Baum meldet keine Fundstelle") um die drei
 oben in „Scope — Affected Files" nachgetragenen Zeilen — keine neue
 Grundsatzentscheidung, daher keine erneute PO-Freigabe nötig.
+
+## Nachtrag (Implementierungsphase, 2026-09-27) — drei Korrekturen
+
+**1. AC-Format auf `AC-N` umgestellt.** Die ursprüngliche Fassung nummerierte
+mit Buchstaben (`AC-a` … `AC-g`). Das erfüllt nicht das seit 2026-05-11
+verbindliche Format (`workflow_gate`/`edit_gate` Phase 6, CLAUDE.md „Jede
+Spec `created >= 2026-05-11` braucht … `AC-1: Given/When/Then`") und wurde in
+Phase 3 versehentlich durchgewinkt. Nachträglich umbenannt zu `AC-1 (a)` …
+`AC-7 (g)` — reine Formkorrektur, keine inhaltliche Änderung der einzelnen
+Kriterien. Nebenwirkung des Fehlers: `adversary_dialog.py parse` fand vor der
+Korrektur 0 AC-Einträge und wäre in Phase 6b nur mit den drei generischen
+„Expected Behavior"-Punkten statt den sieben konkreten ACs gelaufen.
+
+**2. Mehrfach-Adressen-Lücke in `mask_addr_for_pii_log()` geschlossen.** Der
+in dieser Spec ursprünglich wörtlich vorgegebene Code prüft `mail_to` als
+Ganzes gegen die Positivliste und maskiert danach nur bis zum ersten `@`. Bei
+einer kommagetrennten Empfängerliste (`mail_to` unterstützt das laut
+bestehendem Empfänger-Guard, `email.py:136-160`, `getaddresses`/Split an
+`,`/`;`) blieb dadurch jede Adresse ab der zweiten im Klartext — z. B.
+`"gregor-test@henemm.com, finder@example.org"` → `"***@henemm.com,
+finder@example.org"`. Das trifft die Kernfunktion dieses Tickets direkt und
+landet über das Migrationsscript dauerhaft in `briefing_log.json` auf Prod —
+kein separates Folge-Ticket (CLAUDE.md „Bekannte Abweichung im selben Ticket
+fixen"), sondern Vervollständigung von AC-2 (b) oben. Fix: `mail_to` über
+`email.utils.getaddresses(...)` in Einzeladressen zerlegen, jede Adresse
+einzeln gegen `_KNOWN_OPS_MAILBOXES` prüfen bzw. `_mask_addr_for_log()`
+anwenden, dann mit `", "` wieder zusammensetzen. Vierte Pflicht-Mutation
+siehe oben.
+
+**Korrektur (Adversary-Runde 1, F001):** Die vorherige Fassung dieses
+Punktes behauptete „Betroffen ist ausschließlich `mask_addr_for_pii_log()`".
+Das war falsch — der Adversary hat empirisch nachgewiesen, dass `send()`
+(`email.py`) `_mask_addr_for_log()` an ZWEI weiteren Stellen im selben
+Versandpfad auf potenziell listenartige `recipients`-Elemente anwendet, mit
+identischem Symptom (`_mask_addr_for_log("gregor-test@henemm.com,
+finder@example.org")` → `"***@henemm.com, finder@example.org"`):
+- `email.py:764` (Resend-Allowlist-Guard, `masked = [_mask_addr_for_log(r) for r in blocked]` — landet sowohl im `logger.warning` als auch im Text der geworfenen `OutputConfigError`)
+- `email.py:804` (Lokal-Guard, dieselbe Zeilenform)
+
+Beide sind dieselbe Bug-Klasse, dieselbe Datei, derselbe Implementierungs-
+Durchlauf — kein Folge-Ticket-Kandidat (CLAUDE.md „im selben Ticket fixen").
+Fix an beiden Stellen: `_mask_addr_for_log(r)` → `mask_addr_for_pii_log(r)`,
+identisch zum bereits gefixten Aufruf in der Herkunftssperren-Warnung
+(`email.py:~700`, Punkt 3 oben). Damit ist `_mask_addr_for_log()` ab jetzt
+wirklich nur noch dort in Verwendung, wo sie laut #1219 gedacht war: interne
+Fehlermeldungen mit einer einzelnen, bereits über den Empfänger-Guard
+aufgelösten Adresse — nicht mehr auf potenziell listenartige Werte. Kein
+neues AC, weitere Vervollständigung von AC-2 (b).
+
+**Ergänzung (Adversary-Runde 1, F003):** `inbound_email_reader.py:195` und
+`:306` sind im Code korrekt auf `mask_addr_for_pii_log()` umgestellt, hatten
+aber keinen dedizierten Verhaltenstest (nur `:299`/`:303` waren getestet) —
+eine stille Rückabwicklung an diesen zwei Stellen wäre von keinem Test
+gefangen worden. Ergänzt um zwei `caplog`-Tests analog zu den bestehenden
+für `:299`/`:303`.
+
+**3. Zweite Fundstelle derselben Lücke — Herkunftssperre-Warnung in
+`email.py` (#1476).** Beim Implementieren von Punkt 2 fiel auf, dass
+`send()` (`email.py:~700`) bei Testlauf-Herkunft dieselbe Erstadresse-Lücke
+über einen anderen Aufrufpfad reproduziert: `[_mask_addr_for_log(r) for r in
+recipients]` maskiert jedes Element von `recipients`, aber `recipients` kann
+selbst ein Roh-`mail_to`-String mit Komma sein (kein pro-Adresse-Split an
+dieser Stelle) — identisches Symptom wie in Punkt 2. Das ist das E-Mail-
+Pendant zur bereits in „Scope — Affected Files" geführten Telegram-
+Herkunftssperre-Warnung (`telegram.py:210`, dort mit `mask_number()`
+behoben) und fällt aus demselben Grund unter „Bekannte Abweichung im selben
+Ticket fixen": gleiche Bug-Klasse, gleiche Datei, gleicher Implementierungs-
+Durchlauf. Fix: `_mask_addr_for_log(r)` durch `mask_addr_for_pii_log(r)`
+ersetzen — dank Punkt 2 zerlegt diese Funktion jetzt auch Listen-Einträge
+korrekt, wodurch als Nebeneffekt bekannte Ops-Mailboxen an dieser Stelle
+zusätzlich lesbar bleiben (konsistent mit dem Zweck dieser Spec). Kein neues
+AC — Vervollständigung von AC-2 (b) über eine zweite Fundstelle.
 
 ## Known Limitations
 
@@ -443,7 +527,7 @@ Grundsatzentscheidung, daher keine erneute PO-Freigabe nötig.
   `normalizedEmail`, `callback_query_id` — alle in dieser Spec bereits fix
   code-review-geprüft) entgeht dem Wächter strukturell. Der tatsächliche
   Schutz für die sieben in dieser Spec behobenen Fundstellen kommt aus dem
-  Code selbst plus den Verhaltenstests (AC-b bis AC-e), nicht aus dem
+  Code selbst plus den Verhaltenstests (AC-2 (b) bis AC-5 (e)), nicht aus dem
   Namens-Wächter — der Wächter ist ausschließlich eine Regression-Bremse für
   **künftigen** Code, der diese drei kanonischen Namen wieder unmaskiert
   verwendet.
@@ -451,7 +535,7 @@ Grundsatzentscheidung, daher keine erneute PO-Freigabe nötig.
   AST-Werkzeug.** Für `internal/handler/auth_magic.go` gibt es keinen im
   Projekt etablierten Go-AST-Scanner (das Python-Vorbild `ast`-Modul kann kein
   Go parsen). Diese Spec deckt die drei bekannten Zeilen über den
-  Verhaltenstest AC-e ab; ein strukturelles Pendant zum Python-Wächter für
+  Verhaltenstest AC-5 (e) ab; ein strukturelles Pendant zum Python-Wächter für
   künftige neue Go-Fundstellen ist **nicht** Teil dieser Spec (Scope wäre ein
   eigenständiges Werkzeug über `go/parser`/`go/ast`) — bei Bedarf eigenes
   Ticket, kein Blocker hier, da `auth_magic.go` der einzige bestätigte

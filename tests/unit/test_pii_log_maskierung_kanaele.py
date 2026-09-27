@@ -184,3 +184,81 @@ def test_ac_d_unverifizierter_absender_erscheint_nur_maskiert(caplog):
 
     assert erlaubt is False
     _pruefe_absenderzeile(caplog, "Sender not verified")
+
+
+def test_ac_d_spf_dkim_fehlschlag_erscheint_nur_maskiert(caplog):
+    from services.inbound_email_reader import InboundEmailReader
+
+    settings = Settings(
+        mail_to=FREMDABSENDER, mail_from="gregor@henemm.com",
+        email_verified_at="2026-09-01T00:00:00Z", mail_server_hostname=None,
+    )
+    with caplog.at_level(logging.DEBUG):
+        erlaubt = InboundEmailReader()._authorize(FREMDABSENDER, settings, _mail())
+
+    assert erlaubt is False
+    _pruefe_absenderzeile(caplog, "SPF/DKIM check failed")
+
+
+class _ImapPostfach:
+    """Netzrand: liefert genau eine Mail, merkt sich gesetzte Flags."""
+
+    def __init__(self, mail: email.message.Message) -> None:
+        self._roh = mail.as_bytes()
+        self.flags: list[tuple] = []
+
+    def fetch(self, uid, teile):
+        return "OK", [(uid, self._roh)]
+
+    def store(self, uid, modus, flag):
+        self.flags.append((uid, modus, flag))
+        return "OK", [b""]
+
+
+def test_ac_d_unaufgeloester_absender_erscheint_nur_maskiert(caplog):
+    from services.inbound_email_reader import InboundEmailReader
+
+    settings = Settings(mail_to="konto-inhaber@beispiel.de", mail_from="gregor@henemm.com")
+    postfach = _ImapPostfach(_mail())
+    with caplog.at_level(logging.DEBUG):
+        verarbeitet = InboundEmailReader()._process_single(postfach, b"1", settings)
+
+    assert verarbeitet == 0
+    assert postfach.flags == [(b"1", "+FLAGS", "\\Seen")]
+    _pruefe_absenderzeile(caplog, "Unresolved/ambiguous sender")
+
+
+# ═══════════════════ AC-b: Empfaenger-Guards in email.py (Listen) ════════════
+
+LISTE = f"gregor-test@henemm.com, {FREMDABSENDER}"
+LISTE_MASKIERT = f"gregor-test@henemm.com, {FREMDABSENDER_MASKIERT}"
+
+
+def _guard_block(monkeypatch, caplog, host: str) -> Exception:
+    from output.channels import email as email_module
+    from output.channels.base import OutputConfigError
+
+    monkeypatch.setattr(email_module, "running_origin", lambda module_file: "production")
+    s = Settings(
+        smtp_host="mail.henemm.com", smtp_port=587, smtp_user="resend",
+        smtp_pass="re_2157_test_invalid_key", mail_to=FREMDABSENDER,
+        mail_from="bot@henemm.com", _env_file=None,
+    ).model_copy(update={"smtp_host": host, "is_test_mode": False})
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(OutputConfigError) as exc:
+            email_module.EmailOutput(s).send("GZ #2157", "Koerper", to=[LISTE])
+    return exc.value
+
+
+@pytest.mark.parametrize("host, merkmal", [
+    ("smtp.resend.com", "Resend-Allowlist-Guard blockiert"),
+    ("mail.henemm.com", "Lokal-Guard blockiert"),
+])
+def test_ac_b_guard_maskiert_jede_listenadresse(monkeypatch, caplog, host, merkmal):
+    fehler = _guard_block(monkeypatch, caplog, host)
+
+    zeilen = _zeilen(caplog, merkmal)
+    assert len(zeilen) == 1, f"Erwartet genau eine Zeile {merkmal!r}: {zeilen}"
+    assert FREMDABSENDER not in zeilen[0], f"#2157 AC-b: Klartext im Log: {zeilen[0]}"
+    assert LISTE_MASKIERT in zeilen[0], f"#2157 AC-b: {LISTE_MASKIERT!r} fehlt: {zeilen[0]}"
+    assert FREMDABSENDER not in str(fehler), f"#2157 AC-b: Klartext im Fehler: {fehler}"

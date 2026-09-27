@@ -415,3 +415,35 @@ class TestPii2157FremdadresseWirdMaskiert:
             "#2157 AC-b: briefing_log.json speichert die Fremdadresse nicht "
             f"maskiert: {eintraege[0]}"
         )
+
+    def test_liste_prueft_jede_adresse_einzeln(self, netzrand, caplog):
+        user_id, trip_id = "tdd-2157-liste", "tdd-2157-liste-trip"
+        liste = f"gregor-test@henemm.com, {FREMDADRESSE}"
+        erwartet = f"gregor-test@henemm.com, {FREMDADRESSE_MASKIERT}"
+        _trip_anlegen(user_id, trip_id, {
+            "send_email": True, "send_telegram": False, "send_sms": False,
+        }, empfaenger=liste)
+
+        with caplog.at_level(logging.INFO):
+            outcome = _versenden(user_id, trip_id)
+
+        assert outcome == "sent", f"Erwartet 'sent', bekommen {outcome!r}"
+        assert netzrand.smtp, "SMTP-Steckdose wurde nie erreicht (Pruefort != Wirkort)"
+
+        zeilen = _erfolgszeilen(caplog)
+        assert len(zeilen) == 1, f"Erwartet genau eine Erfolgszeile: {zeilen}"
+        assert FREMDADRESSE not in zeilen[0], (
+            "#2157 AC-b: Fremdadresse an zweiter Listenposition im Klartext: "
+            + zeilen[0]
+        )
+        assert erwartet in zeilen[0], f"#2157 AC-b: {erwartet!r} fehlt: {zeilen[0]}"
+        assert FREMDADRESSE not in caplog.text, (
+            "#2157 AC-b: eine Logzeile (z.B. Herkunftssperre #1476) nennt die "
+            "Fremdadresse im Klartext:\n" + caplog.text
+        )
+
+        eintraege = _log_eintraege(user_id)
+        assert len(eintraege) == 1, f"Erwartet genau einen Eintrag: {eintraege}"
+        assert eintraege[0].get("mail_to") == erwartet, (
+            f"#2157 AC-b: briefing_log.json mail_to falsch: {eintraege[0]}"
+        )

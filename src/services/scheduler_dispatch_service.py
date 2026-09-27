@@ -21,6 +21,7 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
+from output.channels.email import mask_addr_for_pii_log
 from services.alert_briefing_anchor import (
     record_briefing_dispatch_failure,
     undelivered_since_last_briefing,
@@ -684,7 +685,11 @@ def send_one_compare_preset(
     _anchor_and_reset()
 
     save_compare_preset_status(user_id, preset_id, top_ort, data_root=data_root)
-    logger.info("Compare preset %s sent to %s (top_ort=%s)", preset_id, empfaenger, top_ort)
+    logger.info(
+        "Compare preset %s sent to %s (top_ort=%s)",
+        preset_id, mask_addr_for_pii_log(empfaenger) if empfaenger else empfaenger,
+        top_ort,
+    )
     return top_ort, empfaenger
 
 

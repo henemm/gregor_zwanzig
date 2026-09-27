@@ -31,6 +31,7 @@ from output.renderers.email.design_tokens import (
 from output.channels.base import ChannelBlockedError, OutputConfigError
 from output.channels.email import EmailOutput
 from output.channels.premium_sms import PremiumSmsOutput
+from output.channels.seven_io_base import mask_number
 from output.channels.sms import SMSOutput
 from output.channels.telegram import TelegramOutput
 from services import sms_daily_limit
@@ -1996,7 +1997,7 @@ class NotificationService:
                 kwargs["reply_markup"] = result.reply_markup
             return TelegramOutput(settings).send(**kwargs)
         except Exception as e:
-            logger.error(f"Telegram command reply failed for {chat_id}: {e}")
+            logger.error(f"Telegram command reply failed for {mask_number(chat_id)}: {e}")
             return None
 
     def send_telegram_message(
@@ -2015,7 +2016,7 @@ class NotificationService:
                 kwargs["reply_markup"] = reply_markup
             return TelegramOutput(settings).send(**kwargs)
         except Exception as e:
-            logger.error(f"Telegram message failed for {chat_id}: {e}")
+            logger.error(f"Telegram message failed for {mask_number(chat_id)}: {e}")
             return None
 
     def edit_telegram_message_text(
@@ -2038,7 +2039,7 @@ class NotificationService:
             )
             return True
         except Exception as e:
-            logger.error(f"Telegram edit_message_text failed for {chat_id}/{message_id}: {e}")
+            logger.error(f"Telegram edit_message_text failed for {mask_number(chat_id)}/{message_id}: {e}")
             return False
 
     def delete_telegram_message(
@@ -2054,7 +2055,7 @@ class NotificationService:
             TelegramOutput(settings).delete_message(chat_id, message_id)
             return True
         except Exception as e:
-            logger.error(f"Telegram delete_message failed for {chat_id}/{message_id}: {e}")
+            logger.error(f"Telegram delete_message failed for {mask_number(chat_id)}/{message_id}: {e}")
             return False
 
     def answer_telegram_callback_query(
@@ -2069,7 +2070,7 @@ class NotificationService:
             TelegramOutput(settings).answer_callback_query(callback_query_id)
             return True
         except Exception as e:
-            logger.error(f"Telegram answer_callback_query failed for {callback_query_id}: {e}")
+            logger.error(f"Telegram answer_callback_query failed for {mask_number(callback_query_id)}: {e}")
             return False
 
     # ------------------------------------------------------------------

@@ -15,6 +15,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from output.channels.seven_io_base import mask_number
 from app.metric_catalog import (
     normalize_outlook_metric_formats, normalize_outlook_metric_ids,
 )
@@ -1425,7 +1426,7 @@ def lookup_user_by_telegram_chat_id(chat_id: str, data_dir: str | None = None) -
         logger.error(
             "Telegram-Chat-ID %s ist mehrdeutig — keine Zuordnung. "
             "Kollidierende Nutzer: %s (Issue #2141)",
-            chat_id,
+            mask_number(chat_id),
             ", ".join(real_matches),
         )
         return None
