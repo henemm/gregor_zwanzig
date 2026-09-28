@@ -14,7 +14,8 @@
 		// Mobile-Shell S2 — Rücksprung-Link ÜBER dem Eyebrow (ersetzt `leftIcon:
 		// back` + backHref der abgeschafften TopAppBar). Ein Baustein statt
 		// Store-Magie: docs/design-requests/mobile_shell_ohne_topbar.md §3.
-		back?: { href: string; label: string };
+		// `onclick` gesetzt ⇒ BackLink rendert einen Button statt eines Links.
+		back?: { href: string; label: string } & { onclick?: () => void };
 		// Dichte Variante fuer Editoren (Progress/Tabbar folgen direkt).
 		compact?: boolean;
 	}
@@ -34,7 +35,7 @@
 >
 	<div>
 		{#if back}
-			<div style:margin-bottom="var(--g-s-2)"><BackLink href={back.href} label={back.label} /></div>
+			<div style:margin-bottom="var(--g-s-2)"><BackLink href={back.href} label={back.label} onclick={back.onclick} /></div>
 		{/if}
 		{#if eyebrow}<Eyebrow>{eyebrow}</Eyebrow>{/if}
 		{#if title}

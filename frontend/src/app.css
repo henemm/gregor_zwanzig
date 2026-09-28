@@ -256,6 +256,12 @@
     padding-top: calc(env(safe-area-inset-top) + var(--g-s-3));
     padding-bottom: calc(var(--g-nav-clearance) + var(--g-s-4));
   }
+  /* Anlege-Seiten blenden die BottomNav aus — unten bleibt nur die Safe-Area. */
+  @media (max-width: 899px) {
+    .mobile-scroll-pad.mobile-scroll-pad--ohne-nav {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
   @media (min-width: 900px) {
     .mobile-scroll-pad {
       padding-top: 0;

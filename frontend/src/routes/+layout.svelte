@@ -209,7 +209,6 @@
 
 	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 	const isLogin = $derived(publicPages.includes(page.url.pathname));
-	const isWizard = $derived(page.url.pathname.startsWith('/trips/new'));
 	// Showcase-Route (#370): ohne App-Chrome (Sidebar/BottomNav), damit
 	// die Brand-Demos die einzigen App-Bausteine auf der Seite sind.
 	const isShowcase = $derived(page.url.pathname === '/_design');
@@ -260,7 +259,10 @@
 			{darkMode}
 			ontoggleDark={toggleDark}
 		/>
-		<main class="mobile-scroll-pad flex-1 overflow-auto px-4 desktop:p-6 desktop:pt-6">
+		<main
+			class="mobile-scroll-pad flex-1 overflow-auto px-4 desktop:p-6 desktop:pt-6"
+			class:mobile-scroll-pad--ohne-nav={istAnlegeSeite}
+		>
 			{@render children()}
 			<!-- Issue #2268 — letztes Kind INNERHALB <main>, nicht Geschwister
 			     daneben: so scrollt der Footer mit dem Inhalt und erbt die
@@ -268,7 +270,7 @@
 			<AppFooter />
 		</main>
 	</div>
-	{#if !isWizard}
+	{#if !istAnlegeSeite}
 		<BottomNav initials={kontoInitialen} {kontoOpen} onKonto={() => (kontoOpen = true)} />
 		<KontoSheet
 			open={kontoOpen}

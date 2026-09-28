@@ -8,20 +8,39 @@
 		href: string;
 		label: string;
 		ariaLabel?: string;
+		// Gesetzt ⇒ <button> ohne href: der Aufrufer steuert die Navigation selbst
+		// (z.B. Abbruch ohne Autosave in /trips/new).
+		onclick?: () => void;
 	}
 
-	let { href, label, ariaLabel = undefined }: Props = $props();
+	let { href, label, ariaLabel = undefined, onclick = undefined }: Props = $props();
 </script>
 
-<a
-	{href}
-	data-testid="back-link"
-	class="mono back-link"
-	aria-label={ariaLabel ?? `Zurück: ${label}`}
->
+{#snippet inhalt()}
 	<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
 	{label}
-</a>
+{/snippet}
+
+{#if onclick}
+	<button
+		type="button"
+		data-testid="back-link"
+		class="mono back-link"
+		aria-label={ariaLabel ?? `Zurück: ${label}`}
+		{onclick}
+	>
+		{@render inhalt()}
+	</button>
+{:else}
+	<a
+		{href}
+		data-testid="back-link"
+		class="mono back-link"
+		aria-label={ariaLabel ?? `Zurück: ${label}`}
+	>
+		{@render inhalt()}
+	</a>
+{/if}
 
 <style>
 	.back-link {
@@ -39,6 +58,12 @@
 		font-weight: 500;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
+	}
+	button.back-link {
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		font-family: inherit;
 	}
 	.back-link:hover,
 	.back-link:focus-visible {

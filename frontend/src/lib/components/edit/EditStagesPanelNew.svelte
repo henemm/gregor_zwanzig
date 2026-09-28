@@ -40,8 +40,10 @@
 		onTripUpdate?: (updated: Trip) => void;
 		/** Issue #758: SaveStatus controller from +page.svelte. When provided, removes explicit save button. */
 		saveController?: SaveStatus;
+		/** Unten belegte Hoehe (px, ohne Safe-Area); fehlt ⇒ schwebende BottomNav. */
+		bottomReservePx?: number;
 	}
-	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController, bottomReservePx }: Props = $props();
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -79,6 +81,7 @@
 	// 200px Floor, komfortabel über der `add-waypoint`-Unterkante (56px, +34px Marge).
 	const MOBILE_EDITOR_MIN_HEIGHT_PX = 200;
 	const BOTTOM_NAV_HEIGHT_PX = 70; // app.css --g-nav-h (64) + --g-nav-gap (6): Oberkante der schwebenden Leiste (ohne Safe-Area)
+	const bottomReserve = $derived(bottomReservePx ?? BOTTOM_NAV_HEIGHT_PX);
 
 	// Liest `env(safe-area-inset-bottom)` als px-Zahl aus (Notch-Geräte) — CSS
 	// `env()` ist in JS nicht direkt abfragbar, daher kurzzeitige Mess-Sonde.
@@ -99,7 +102,7 @@
 		const el = mobileEditorEl;
 		function measure(): void {
 			const offset = el.getBoundingClientRect().top;
-			const available = window.innerHeight - offset - BOTTOM_NAV_HEIGHT_PX - getSafeAreaBottomPx();
+			const available = window.innerHeight - offset - bottomReserve - getSafeAreaBottomPx();
 			mobileEditorHeightPx = available > 0 ? available : MOBILE_EDITOR_MIN_HEIGHT_PX;
 		}
 		measure();
@@ -140,7 +143,7 @@
 			const fitsAbove = bannerBottomY - bannerEl.offsetHeight >= getSafeAreaTopPx() + CONTENT_TOP_GAP_PX;
 			cascadeBottomPx = fitsAbove
 				? window.innerHeight - bannerBottomY
-				: BOTTOM_NAV_HEIGHT_PX + CASCADE_GAP_PX + getSafeAreaBottomPx();
+				: bottomReserve + CASCADE_GAP_PX + getSafeAreaBottomPx();
 		}
 		place();
 		window.addEventListener('resize', place);

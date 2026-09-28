@@ -139,7 +139,7 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | `<MobileShell>` | `active`, `onChange`, `showBottomNav`, `background`, Children, `drawer`, `sheet`, `toast` | Mobile Page-Wrapper: Content + BottomNav. **Kein Top-Balken** (Mobile-Shell S2). |
 | `<BottomNav>` | `active`, `onChange`, `initials`, `onKonto`, `kontoOpen` | Schwebende Glas-Bottom-Nav (Tokens `--g-nav-*`). Fix 4 Items + **Konto-Kreis** (User-Badge, 64 × 64 Glas, Avatar 36 px Akzent) rechts daneben, wenn `onKonto` gesetzt. Kein FAB (AP-012). |
 | `<KontoSheet>` | `open`, `onClose`, `initials`, `displayName`, `userId`, `darkMode`, `ontoggleDark` | Konto-Sheet aus `<Sheet snap="auto">`: Kopf (Avatar 44 px, Name, Schließen) · Kanäle & Empfänger · Einstellungen · System-Status · Dunkles Design (Switch) · Datenexport · Fuß mit Version + Abmelden. Ersetzt den Hamburger-Drawer. |
-| `<PageHeader>` | `eyebrow`, `title`, `sub`, `right`, `back: {href,label}`, `compact` | Seitenkopf (Atom, AP-011). `back` rendert einen `<BackLink>` (Mono-Caps, 36 px Touch) **über** dem Eyebrow — Rücksprung im Inhalt statt Balken. |
+| `<PageHeader>` | `eyebrow`, `title`, `sub`, `right`, `back: {href,label,onclick?}`, `compact` | Seitenkopf (Atom, AP-011). `back` rendert einen `<BackLink>` (Mono-Caps, 36 px Touch) **über** dem Eyebrow — Rücksprung im Inhalt statt Balken. |
 | `<EditorStickyFooter>` | `context: "route" \| "vergleich"`, `testid`, `navClearance`, Children | Geteilter Sticky-Footer der Anlege-Editoren (Weiter/Aktivieren); hält über der schwebenden Tabbar. |
 | `<MInput>` | `type`, `placeholder`, `value`, `leftIcon`, `onChange` | Mobile-Input mit Min-Height 48, Body 16 px. |
 | `<MField>` | `label`, `sub`, Children | Field-Wrapper Mobile. |

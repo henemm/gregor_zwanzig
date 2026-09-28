@@ -10,7 +10,8 @@
 	import { onMount, untrack } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { api } from '$lib/api.js';
-	import { Eyebrow, Btn, Input, TopoBg } from '$lib/components/atoms';
+	import { Eyebrow, Btn, Input, TopoBg, PageHeader } from '$lib/components/atoms';
+	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
@@ -469,60 +470,38 @@
 
 	const onSave = makeSaveHandler();
 	const onCancel = makeCancelHandler();
+
+	// Die Karte im Wegpunkte-Reiter muss ueber dem Speichern-Footer enden (Attribution).
+	let mobileTreeEl = $state<HTMLDivElement | null>(null);
+	let mobileFooterHeightPx = $state(0);
+	$effect(() => {
+		const footer = mobileTreeEl?.querySelector<HTMLElement>('[data-testid="tn-mobile-footer"]');
+		if (!footer) return;
+		const ro = new ResizeObserver(() => { mobileFooterHeightPx = footer.offsetHeight; });
+		ro.observe(footer);
+		return () => ro.disconnect();
+	});
 </script>
 
 <div data-testid="trip-new-editor" style="display: flex; min-height: 100%; background: var(--g-paper);">
-	<main style="flex: 1; position: relative; overflow-y: auto; overflow-x: hidden;">
+	<!-- Kein eigener Scroll-Container (clip statt hidden/auto): sonst greift das
+	     sticky des Speichern-Footers nie, weil dieses main mit dem Inhalt waechst. -->
+	<main style="flex: 1; min-width: 0; position: relative; overflow-x: clip; display: flex; flex-direction: column;">
 		<TopoBg opacity={0.12} />
 
-		<!-- Breadcrumb + Aktionen (Desktop only) -->
-		<div class="tn-desktop" data-testid="tn-desktop-breadcrumb" style="position: relative; padding: 14px 40px; border-bottom: 1px solid var(--g-rule-soft); display: flex; justify-content: space-between; align-items: center;">
-			<div class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
-				<span style="opacity: 0.6;">Trips</span>
-				<span style="margin: 0 8px;">/</span>
-				<span style="color: var(--g-ink);">Neue Trip</span>
-			</div>
-			<div style="display: flex; gap: 8px; align-items: center;">
-				{#if !ready}
-					<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4);">Zeitplan einrichten zum Speichern</span>
-				{/if}
-				<button type="button" onclick={onCancel}
-					style="padding: 6px 12px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
-					Abbrechen
-				</button>
-				<button type="button" onclick={onSave} disabled={!ready || saving}
-					data-testid="trip-new-save-btn"
-					style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-ink); color: var(--g-paper); font-size: 13px; font-weight: 500; cursor: {ready && !saving ? 'pointer' : 'not-allowed'}; opacity: {ready && !saving ? 1 : 0.4};">
-					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Trip speichern'}
-				</button>
-			</div>
+		<!-- Kopfleiste Desktop: Zurück über den geteilten PageHeader (onCancel ⇒ kein Autosave) -->
+		<div class="tn-desktop" data-testid="tn-desktop-breadcrumb" style="position: relative; padding: 0 40px;">
+			<PageHeader back={{ href: '/trips', label: 'Trips', onclick: onCancel }} compact />
 		</div>
 
-		<!-- Mobile App-Leiste (Mobile only, Issue #661) -->
-		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-appbar" style="position: relative; align-items: center; height: 52px; padding: 0 4px; border-bottom: 1px solid var(--g-rule-soft); background: var(--g-paper); flex-shrink: 0; z-index: 10;">
-			<!-- Back-Button -->
-			<button type="button" onclick={makeCancelHandler()}
-				style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); flex-shrink: 0;">
-				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M19 12H5M12 5l-7 7 7 7"/>
-				</svg>
-			</button>
-			<!-- Titel-Gruppe -->
-			<div style="flex: 1; min-width: 0; padding: 0 8px; display: flex; flex-direction: column; justify-content: center;">
-				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-					{name.trim() || 'Neue Trip'}
-				</div>
-				<div style="font-size: 15px; font-weight: 600; color: var(--g-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-					{TAB_DEFS.find(t => t.id === activeTab)?.label ?? 'Route'}
-				</div>
-			</div>
-			<!-- Speichern-Button -->
-			<button type="button" onclick={makeSaveHandler()}
-				data-testid="tn-mobile-save"
-				disabled={!ready || saving}
-				style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {ready ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {ready ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;">
-				{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Speichern'}
-			</button>
+		<!-- Kopfleiste Mobile (Issue #661): gleiche Bauart wie /compare/new -->
+		<div class="tn-mobile" data-testid="tn-mobile-appbar" style="position: relative; padding: 0 16px; background: var(--g-paper); flex-shrink: 0; z-index: 10;">
+			<PageHeader
+				back={{ href: '/trips', label: 'Trips', onclick: onCancel }}
+				eyebrow={name.trim() || 'Neue Trip'}
+				title={TAB_DEFS.find(t => t.id === activeTab)?.label ?? 'Route'}
+				compact
+			/>
 		</div>
 
 		<!-- Hero (Desktop only) -->
@@ -583,7 +562,7 @@
 		</div>
 
 		<!-- Mobile Tab-Bar (TNM_TabBar, Issue #661) -->
-		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0;">
+		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
 			{#each TAB_DEFS as t}
 				{@const isActive = t.id === activeTab}
 				{@const isOpen = unlocked.has(t.id)}
@@ -615,7 +594,8 @@
 		<!-- ══════════════════════════════════════════════════════
 		     Desktop Tab-Inhalt (Issue #622, Slice 1)
 		     ══════════════════════════════════════════════════════ -->
-		<div class="tn-desktop">
+		<div class="tn-desktop" style="flex: 1 0 auto; display: flex; flex-direction: column;">
+		<div style="flex: 1 0 auto;">
 		{#if activeTab === 'route'}
 			<!-- Route-Tab (TN_RouteTab) -->
 			<div style="position: relative; padding: 28px 40px 60px;">
@@ -946,13 +926,29 @@
 			</div>
 		</div>
 		{/if}
+		</div>
+
+		<!-- Speichern (geteilter Sticky-Footer; BottomNav ist auf Anlege-Seiten ausgeblendet) -->
+		<EditorStickyFooter context="route" navClearance={false} testid="tn-desktop-footer">
+			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+				{#if !ready}
+					<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4);">Zeitplan einrichten zum Speichern</span>
+				{/if}
+				<button type="button" onclick={onSave} disabled={!ready || saving}
+					data-testid="trip-new-save-btn"
+					style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-ink); color: var(--g-paper); font-size: 13px; font-weight: 500; cursor: {ready && !saving ? 'pointer' : 'not-allowed'}; opacity: {ready && !saving ? 1 : 0.4};">
+					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Trip speichern'}
+				</button>
+			</div>
+		</EditorStickyFooter>
 		</div><!-- /.tn-desktop -->
 
 		<!-- ══════════════════════════════════════════════════════
 		     Mobile Tab-Inhalt (Issue #661, AC-9)
 		     CSS-only Switch: .tn-mobile sichtbar bei ≤899px.
 		     ══════════════════════════════════════════════════════ -->
-		<div class="tn-mobile" style="position: relative; min-height: 100vh;">
+		<div class="tn-mobile tn-mobile-flex" bind:this={mobileTreeEl} style="position: relative; min-height: 100vh; flex: 1 0 auto; flex-direction: column;">
+		<div style="flex: 1 0 auto;">
 
 			{#if activeTab === 'route'}
 				<!-- Mobile Route-Tab (TNM_RouteTab) -->
@@ -1143,7 +1139,7 @@
 							Wegpunkte automatisch berechnet. Namen anpassen oder überspringen.
 						</div>
 					</div>
-					<EditStagesPanelNew bind:stages={editorStages} showSave={false} />
+					<EditStagesPanelNew bind:stages={editorStages} showSave={false} bottomReservePx={mobileFooterHeightPx || undefined} />
 					<!-- Floating CTAs -->
 					<div style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
 						<MBtn block variant="primary" size="xl" onclick={makeMobileWegpunkteContinueHandler()}>Wegpunkte übernehmen →</MBtn>
@@ -1207,7 +1203,14 @@
 					<Toast kind="info" msg={lockToastMsg} />
 				</div>
 			{/if}
+		</div>
 
+			<!-- Speichern (geteilter Sticky-Footer; BottomNav ist auf Anlege-Seiten ausgeblendet) -->
+			<EditorStickyFooter context="route" navClearance={false} testid="tn-mobile-footer">
+				<MBtn block variant={ready ? 'primary' : 'quiet'} size="xl" disabled={!ready || saving} onclick={onSave} testid="tn-mobile-save">
+					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Speichern'}
+				</MBtn>
+			</EditorStickyFooter>
 		</div><!-- /.tn-mobile -->
 
 	</main>

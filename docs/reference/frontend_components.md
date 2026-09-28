@@ -514,7 +514,7 @@ Entscheide §8). Ersatz:
 |---|---|
 | Wordmark | Erste Zeile der Übersicht (`routes/+page.svelte`, `data-testid="home-wordmark-row"`, mit Datum als Mono-Caption) |
 | Seitentitel/Eyebrow via `topAppBarStore` | `<PageHeader eyebrow title>` der Seite (AP-011); Store gelöscht |
-| `leftIcon: back` + `backHref` | `<PageHeader back={{ href, label }}>` — rendert `<BackLink>` (Atom) über dem Eyebrow; auch allein nutzbar (Compare-Hub) |
+| `leftIcon: back` + `backHref` | `<PageHeader back={{ href, label, onclick? }}>` — rendert `<BackLink>` (Atom) über dem Eyebrow (mit `onclick` als `<button>` statt `<a href>`, z. B. Abbrechen-Wächter in `/trips/new`); auch allein nutzbar (Compare-Hub) |
 | Rechts-Slot („Neuer Vergleich", „Aktivieren") | Rechts-Slot des `<PageHeader>` bzw. `<EditorStickyFooter context="vergleich">` (geteilter Sticky-Footer, `shared/`) |
 | Hamburger → Drawer | **Konto-Kreis** in `BottomNav` → `<KontoSheet>` |
 | Glocke / Plus | entfallen (AP-004/AP-012) |
@@ -610,6 +610,7 @@ The shell is orchestrated in `frontend/src/routes/+layout.svelte`:
 **Responsive Breakpoint:** 900px (custom `@custom-variant` in `app.css`)
 - **< 900px:** BottomNav + Konto-Kreis visible, kein Balken oben, Sidebar hidden
 - **>= 900px:** BottomNav hidden, Sidebar full sidebar (unchanged)
+- **Anlege-Seiten `/trips/new` + `/compare/new`:** BottomNav mobil ausgeblendet (`istAnlegeSeite` in `+layout.svelte`); Speichern/Abbrechen im `EditorStickyFooter`, `<main>` mit `mobile-scroll-pad--ohne-nav` (#2277 S2b)
 
 **CSS Utilities:**
 - `--g-nav-*` — Geometrie und Glas der schwebenden Leiste (`docs/design-system/TOKENS.md`)
