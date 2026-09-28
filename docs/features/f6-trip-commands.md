@@ -4,7 +4,11 @@
 drei Eingangskanäle auch am **Ortsvergleich** ansprechbar — Details im Abschnitt
 „Ortsvergleich per Nachricht" unten.
 
-**Updated:** 2026-09-26 (Issue #2417 — bei aktivem Trip **und** Ortsvergleich(en)
+**Updated:** 2026-09-28 (Issue #2417, Kurzform englisch — jeder Befehl bekommt ein
+englisches Wort (`TODAY`, `TOMORROW`, `STORMS`, `ROUTE`, `RESTDAY`, `RESUME`, `HELP`
+waren teils schon da, neu `CODES`/`KUERZEL`); die Antwortsprache folgt Kanal/Ziel statt
+der Eingabesprache (Premium-SMS immer englisch, E-Mail immer deutsch, Telegram nach
+`telegram_style`) — Details im neuen Abschnitt „Antwortsprache" unten); 2026-09-26 (Issue #2417 — bei aktivem Trip **und** Ortsvergleich(en)
 gehen alle Befehle außer `PAUSE`/`WEITER` jetzt direkt an den Trip statt in eine
 Rückfrage zu laufen, `HILFE` antwortet dabei sofort; neuer Hinweistext „kein
 aktives Ziel" für Trip-only-Befehle ohne aktiven Trip; Telegram-Bot-Menü zeigt
@@ -92,6 +96,20 @@ Gross-/Kleinschreibung ist egal. Der Befehl muss in der **ersten nicht-leeren Ze
 
 ---
 
+## Antwortsprache (seit Issue #2417)
+
+Jeder Befehl hat seit Issue #2417 ein englisches Wort, das auf allen drei Kanälen wirkt — deutsch funktioniert weiterhin. Die **Antwortsprache** folgt aber nicht der Eingabesprache, sondern dem Kanal/Ziel:
+
+- **E-Mail** antwortet immer deutsch.
+- **Premium-SMS** antwortet immer englisch.
+- **Telegram** folgt dem `telegram_style` des aufgelösten Ziels (Trip oder Ortsvergleich): `kurzform` → englisch, sonst deutsch.
+- Bei **zielosen Befehlen** (`HILFE`/`HELP`, `KUERZEL`/`CODES`, ohne aufgelösten Trip/Ortsvergleich) folgt Telegram dem gesendeten Wort: `HELP`/`CODES` antworten englisch, `HILFE`/`KUERZEL` deutsch.
+- Ein **unbekannter Befehl** bekommt auf Telegram deutschen Text mit dem Zusatz „English: send HELP"; auf Premium-SMS ist er immer englisch.
+
+Details und Wortlaut: `docs/specs/modules/feat_2417_kurzform_englisch.md`.
+
+---
+
 ## Verfuegbare Befehle
 
 ### Abfrage-Befehle (Abruf-zentriert)
@@ -100,13 +118,14 @@ Diese Befehle zeigen Wetter-Informationen **ohne** Trip-State zu veraendern.
 
 | Befehl | Wirkung |
 |--------|--------|
-| `HEUTE` | Wetter der heutigen Etappe |
-| `MORGEN` | Wetter der morgigen Etappe |
+| `HEUTE` / `TODAY` | Wetter der heutigen Etappe |
+| `MORGEN` / `TOMORROW` | Wetter der morgigen Etappe |
 | `JETZT` / `NOW` | Nowcast (Regen/Gewitter naechste ~2h) |
-| `GEWITTER` | Gewittergefahr heutige Etappe (stuendlich) |
+| `GEWITTER` / `STORMS` | Gewittergefahr heutige Etappe (stuendlich) |
 | `STATUS` | Heute + kommende Etappen (ohne vergangene) |
-| `STRECKE` / `STRECKE <km>` | Regen-Ereignisflächen entlang der Reststrecke des aktuell aktiven Wegabschnitts (Issue #2051 S4) |
+| `STRECKE` / `ROUTE` (auch `STRECKE <km>` / `ROUTE <km>`) | Regen-Ereignisflächen entlang der Reststrecke des aktuell aktiven Wegabschnitts (Issue #2051 S4) |
 | `HILFE` / `HELP` | Verfuegbare Befehle anzeigen |
+| `KUERZEL` / `CODES` | Kürzel-Legende (Wetter-Register, Warn-Kürzel, Format) — seit Issue #2417, siehe Abschnitt „Antwortsprache" unten |
 
 **Beispiel:**
 ```
@@ -175,9 +194,9 @@ Diese Befehle veraendern den Trip-Status.
 
 | Befehl | Syntax | Wirkung |
 |--------|--------|---------|
-| `RUHETAG` | `RUHETAG` oder `RUHETAG: 2` | Verschiebt zukuenftige Etappen um N Tage |
+| `RUHETAG` / `RESTDAY` | `RUHETAG` / `RESTDAY` oder `RUHETAG: 2` / `RESTDAY 2` | Verschiebt zukuenftige Etappen um N Tage |
 | `STOP` | `STOP` | Deaktiviert den Versand (Reporter pausieren) |
-| `WEITER` | `WEITER` | Reaktiviert den Versand (nach STOP) |
+| `WEITER` / `RESUME` | `WEITER` / `RESUME` | Reaktiviert den Versand (nach STOP) |
 
 **Beispiel — RUHETAG:**
 ```
@@ -225,15 +244,17 @@ Briefing-Reports sind wieder aktiv. Naechster Report kommt planmaessig.
 
 ## Ortsvergleich per Nachricht (seit Issue #2282, Scheibe S1)
 
-`PAUSE`, `WEITER` und `HILFE` sind über alle drei Eingangskanäle (Email, Telegram,
-Premium-SMS) auch für einen **Ortsvergleich** ansprechbar, nicht nur für einen Trip.
-Alle übrigen Befehle bleiben trip-exklusiv.
+`PAUSE`, `WEITER`/`RESUME`, `HILFE`/`HELP` und (seit Issue #2417) `KUERZEL`/`CODES`
+sind über alle drei Eingangskanäle (Email, Telegram, Premium-SMS) auch für einen
+**Ortsvergleich** ansprechbar, nicht nur für einen Trip. Alle übrigen Befehle
+bleiben trip-exklusiv.
 
 **Adressierung ohne Namen** (Telegram/Premium-SMS) — seit Issue #2417 abgestuft nach
 Befehlsart (löst die vorherige pauschale Mehrdeutigkeits-Regel ab):
 
-- `HILFE` antwortet **immer sofort** mit der Befehlsübersicht, ganz ohne
-  Trip-/Vergleichs-Auflösung — auch wenn Trip und Ortsvergleiche gleichzeitig aktiv
+- `HILFE`/`HELP` antwortet **immer sofort** mit der Befehlsübersicht, `KUERZEL`/`CODES`
+  (seit Issue #2417) ebenso sofort mit der Kürzel-Legende — beide ganz ohne
+  Trip-/Vergleichs-Auflösung, auch wenn Trip und Ortsvergleiche gleichzeitig aktiv
   sind.
 - Alle übrigen Abfrage- und Verwaltungsbefehle (`HEUTE`, `MORGEN`, `JETZT`,
   `GEWITTER`, `STRECKE`, `RUHETAG`, `STATUS`, `SKIP`, `STOP`, Wetter-Kürzel,
@@ -264,7 +285,8 @@ ebenfalls zurück, statt still den Trip zu bevorzugen.
 |--------|---------|
 | `PAUSE` | Pausiert den Ortsvergleich unbefristet (eine mitgegebene Dauer wie `PAUSE 2d` wird ignoriert) — Antwort: „... pausiert, bis du 'weiter' sendest." |
 | `WEITER` | Setzt einen pausierten Ortsvergleich fort — Antwort: „... wieder aktiv." War der Vergleich nicht pausiert: „... ist nicht pausiert." (keine Änderung) |
-| `HILFE` | Zeigt nur die am Ortsvergleich verfügbaren Befehle (`PAUSE`, `WEITER`, `HILFE`) — nicht die volle Trip-Befehlsliste |
+| `HILFE` / `HELP` | Zeigt nur die am Ortsvergleich verfügbaren Befehle (`PAUSE`, `WEITER`/`RESUME`, `HILFE`/`HELP`, `KUERZEL`/`CODES`) — nicht die volle Trip-Befehlsliste |
+| `KUERZEL` / `CODES` | Kürzel-Legende (seit Issue #2417) — dieselbe Antwort wie am Trip |
 | `REPORT`, `HEUTE`, `MORGEN` | Übergangsantwort: „... noch nicht verfügbar — bitte nutze die Web-App." (kein Versand) |
 | alle übrigen (`STRECKE`, `SKIP`, `RUHETAG`, `STARTDATUM`, `STOP`, `JETZT`/`NOW`, `STATUS`, `GEWITTER`, Drilldowns, Metrikwörter) | „'<befehl>' gibt es beim Ortsvergleich nicht." |
 
@@ -414,13 +436,14 @@ Diese Zoom-Navigation ersetzt die Nachricht in-place — kein Nachrichten-Spam. 
 Seit Issue #731 kannst du den Telegram-Bot mit den gleichen **bare Keywords** wie Email ansprechen:
 
 ```
-HEUTE
-MORGEN
+HEUTE (oder TODAY)
+MORGEN (oder TOMORROW)
 JETZT (oder NOW)
-GEWITTER
+GEWITTER (oder STORMS)
 STATUS
-STRECKE (auch STRECKE <km>, oder /strecke)
-HILFE
+STRECKE (auch STRECKE <km>, oder /strecke, oder ROUTE)
+HILFE (oder HELP)
+KUERZEL (oder CODES) — seit Issue #2417
 ```
 
 Der Bot antwortet direkt — kein Reload nötig.
@@ -434,10 +457,10 @@ Der Bot antwortet direkt — kein Reload nötig.
 Wie Email:
 
 ```
-RUHETAG
-RUHETAG: 2
+RUHETAG (oder RESTDAY)
+RUHETAG: 2 (oder RESTDAY 2)
 STOP
-WEITER
+WEITER (oder RESUME)
 ```
 
 Keine `###`-Präfixe nötig — Telegram erkennt die Befehle direkt.
