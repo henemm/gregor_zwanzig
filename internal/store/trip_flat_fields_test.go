@@ -68,11 +68,17 @@ func TestLoadTrip_DerivesFlatSlotChannelFieldsFromReportConfig(t *testing.T) {
 	if loaded.SendTelegram == nil || *loaded.SendTelegram != false {
 		t.Errorf("SendTelegram = %v, want false", loaded.SendTelegram)
 	}
+	// Issue #2422 S3 (AC-27, bewusste Abloesung): "flache Felder = enabled" war
+	// die alte Alleinregel. Sie gilt hier nur noch als BESTANDSSCHUTZ-Fall: ein
+	// Trip OHNE Per-Slot-Schluessel faellt auf `enabled` zurueck. Die neue Regel
+	// (Per-Slot-Schluessel schalten nur ihren Slot) steht in
+	// TestLoadTrip_FlatEnabledFieldsFollowPerSlotSwitches und in
+	// trip_slot_flat_fields_test.go (geteilte Tabelle).
 	if loaded.MorningEnabled == nil || *loaded.MorningEnabled != true {
-		t.Errorf("MorningEnabled = %v, want true (aus report_config.enabled)", loaded.MorningEnabled)
+		t.Errorf("MorningEnabled = %v, want true (Bestandsschutz: ohne Per-Slot-Schluessel aus report_config.enabled)", loaded.MorningEnabled)
 	}
 	if loaded.EveningEnabled == nil || *loaded.EveningEnabled != true {
-		t.Errorf("EveningEnabled = %v, want true (aus report_config.enabled)", loaded.EveningEnabled)
+		t.Errorf("EveningEnabled = %v, want true (Bestandsschutz: ohne Per-Slot-Schluessel aus report_config.enabled)", loaded.EveningEnabled)
 	}
 
 	// AC-14: EndDate == max(stage.date) trotz unsortiert einliefernder Stages.
@@ -334,5 +340,48 @@ func TestLoadTrip_SendPremiumSmsResetToNilWhenReportConfigMissing(t *testing.T) 
 	if reloaded.SendPremiumSms != nil {
 		t.Errorf("SendPremiumSms nach Reload = %v, want nil (stale von Platte gelesen!)",
 			*reloaded.SendPremiumSms)
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Issue #2422 S3 (AC-27): bewusste Abloesung der alten Ableitung
+// "flache Felder = enabled". Bestandsschutz-Faelle (ohne Per-Slot-Schluessel)
+// bleiben erhalten; neue Faelle mit Per-Slot-Schluesseln folgen der neuen Regel.
+// Spec: docs/specs/modules/fix_2422_s3_kanal_an_aus_kette.md.
+// ══════════════════════════════════════════════════════════════════════════════
+
+func TestLoadTrip_FlatEnabledFieldsFollowPerSlotSwitches(t *testing.T) {
+	ptr := func(b bool) *bool { return &b }
+	faelle := []struct {
+		name        string
+		rc          map[string]interface{}
+		wantMorning *bool
+		wantEvening *bool
+	}{
+		{"bestand_enabled_true_ohne_per_slot", map[string]interface{}{"enabled": true}, ptr(true), ptr(true)},
+		{"bestand_enabled_false_ohne_per_slot", map[string]interface{}{"enabled": false}, ptr(false), ptr(false)},
+		{"abend_aus", map[string]interface{}{"enabled": true, "morning_enabled": true, "evening_enabled": false}, ptr(true), ptr(false)},
+		{"morgen_aus", map[string]interface{}{"enabled": true, "morning_enabled": false, "evening_enabled": true}, ptr(false), ptr(true)},
+		{"gesamtschalter_aus_ist_master", map[string]interface{}{"enabled": false, "morning_enabled": true, "evening_enabled": true}, ptr(false), ptr(false)},
+	}
+	for _, f := range faelle {
+		f := f
+		t.Run(f.name, func(t *testing.T) {
+			s := New(t.TempDir(), "flat-slot-nutzer")
+			trip := model.Trip{ID: "flat-slot-" + f.name, Name: f.name, ReportConfig: f.rc}
+			if err := s.SaveTrip(&trip); err != nil {
+				t.Fatalf("SaveTrip: %v", err)
+			}
+			loaded, err := s.LoadTrip(trip.ID)
+			if err != nil || loaded == nil {
+				t.Fatalf("LoadTrip: trip=%v err=%v", loaded, err)
+			}
+			if loaded.MorningEnabled == nil || *loaded.MorningEnabled != *f.wantMorning {
+				t.Errorf("MorningEnabled = %v, want %v (Per-Slot-Schluessel schaltet nur seinen Slot, enabled=false ist Master)", loaded.MorningEnabled, *f.wantMorning)
+			}
+			if loaded.EveningEnabled == nil || *loaded.EveningEnabled != *f.wantEvening {
+				t.Errorf("EveningEnabled = %v, want %v (Per-Slot-Schluessel schaltet nur seinen Slot, enabled=false ist Master)", loaded.EveningEnabled, *f.wantEvening)
+			}
+		})
 	}
 }

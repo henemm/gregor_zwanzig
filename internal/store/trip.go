@@ -47,9 +47,8 @@ func normalizeTrip(trip *model.Trip) {
 
 // deriveFlatFields leitet additive, nicht-autoritative flache Slot-/Kanal-
 // Felder aus trip.ReportConfig sowie EndDate aus max(stage.date) ab
-// (Dual-Read, Issue #1250 Scheibe 4). trip.ReportConfig.enabled ist der
-// EINZIGE Schalter (kein getrenntes morning/evening-Flag) -> steuert beide
-// abgeleiteten *Enabled-Felder.
+// (Dual-Read, Issue #1250 Scheibe 4). MorningEnabled/EveningEnabled folgen
+// slotAktiv (Issue #2422 S3).
 func deriveFlatFields(trip *model.Trip) {
 	// Fix-Loop F001 (Adversary BROKEN): erst ALLE abgeleiteten Pointer-Felder
 	// unbedingt zuruecksetzen, DANN neu ableiten (nur wenn Quelle vorhanden).
@@ -89,10 +88,12 @@ func deriveFlatFields(trip *model.Trip) {
 		if v, ok := rc["send_premium_sms"].(bool); ok {
 			trip.SendPremiumSms = &v
 		}
-		if v, ok := rc["enabled"].(bool); ok {
-			trip.MorningEnabled = &v
-			trip.EveningEnabled = &v
-		}
+		// Issue #2422 S3 (AC-20): EINE Regel, gleich wie Python slot_aktiv
+		// (Tabelle tests/fixtures/report_config_slot_faelle.json).
+		morning := slotAktiv(rc, "morning_enabled")
+		evening := slotAktiv(rc, "evening_enabled")
+		trip.MorningEnabled = &morning
+		trip.EveningEnabled = &evening
 	}
 
 	if len(trip.Stages) == 0 {
@@ -108,6 +109,19 @@ func deriveFlatFields(trip *model.Trip) {
 	if maxDate != "" {
 		trip.EndDate = &maxDate
 	}
+}
+
+// slotAktiv: Gesamtschalter report_config.enabled (fehlend => an) ist Master —
+// explizit false schaltet beide Slots ab. Sonst entscheidet der Per-Slot-bool
+// (key), fehlend oder kein bool => Rueckfall an.
+func slotAktiv(rc map[string]interface{}, key string) bool {
+	if enabled, ok := rc["enabled"].(bool); ok && !enabled {
+		return false
+	}
+	if v, ok := rc[key].(bool); ok {
+		return v
+	}
+	return true
 }
 
 func (s *Store) LoadTrips() ([]model.Trip, error) {

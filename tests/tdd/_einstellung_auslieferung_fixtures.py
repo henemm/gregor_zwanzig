@@ -25,6 +25,7 @@ from app.models import (
     SegmentWeatherData, SegmentWeatherSummary, ThunderLevel, TripSegment,
 )
 from services.notification_service import NotificationService, TripReportRequest
+from tests.helpers.ortstag import ortstag
 from tests.helpers.transport_mitschrift import Kanalmitschrift, aufzeichner_installieren
 
 TZ = ZoneInfo("Europe/Paris")
@@ -110,13 +111,21 @@ def night_weather(day: int = DAY) -> NormalizedTimeseries:
 
 def golden_dict(name: str) -> dict:
     """Rohes ``json.load``-Dict des Golden-Trip-JSON (``"golden_a"``/
-    ``"golden_b"``) -- NUR die Stage-Daten werden relativ zu heute
+    ``"golden_b"``/``"golden_c"``/``"golden_d"``) -- NUR die Stage-Daten werden relativ zu heute
     nachgezogen (einzige Nachbearbeitung, sonst 1:1 der Datei-Inhalt)."""
     pfad = GOLDEN_DIR / f"{name}.json"
     data = json.loads(pfad.read_text())
-    heute = date.today()
+    if name == "golden_d":
+        # #2422 S3 (D-4): Etappe 0 = HEUTE, Etappe 1 = MORGEN -- gemessen am
+        # Ortstag der ersten Koordinate (ADR-0044), nicht am Prozesstag.
+        wp = data["stages"][0]["waypoints"][0]
+        heute = ortstag(wp["lat"], wp["lon"])
+        versatz = 0
+    else:
+        heute = date.today()
+        versatz = -1
     for i, s in enumerate(data["stages"]):
-        s["date"] = (heute + timedelta(days=i - 1)).isoformat()
+        s["date"] = (heute + timedelta(days=i + versatz)).isoformat()
     return data
 
 

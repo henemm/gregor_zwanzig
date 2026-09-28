@@ -1708,7 +1708,7 @@ def _pill_for_metric(
         vals = [(v, ts) for v, ts in vals if v is not None]
         if not vals:
             return None
-        thr = _sms_mention_threshold(metric_id)
+        thr = _sms_mention_threshold(metric_id, sms_mention_thresholds)
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(peak_val,
                                 get_metric(metric_id).display_thresholds)
@@ -1732,7 +1732,7 @@ def _pill_for_metric(
         vals = [(dp.precip_1h_mm or 0.0, dp.ts) for dp in all_dps]
         if not vals:
             return None
-        thr = _sms_mention_threshold("precipitation")
+        thr = _sms_mention_threshold("precipitation", sms_mention_thresholds)
         total = sum(v for v, _ in vals)
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(peak_val,
@@ -1757,7 +1757,7 @@ def _pill_for_metric(
                 if dp.pop_pct is not None]
         if not vals:
             return None
-        thr = _sms_mention_threshold("rain_probability")
+        thr = _sms_mention_threshold("rain_probability", sms_mention_thresholds)
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(
             peak_val, get_metric("rain_probability").display_thresholds)
@@ -1957,9 +1957,10 @@ def build_metrics_summary_pills(
         die Katalogordnung sie.
     sms_mention_thresholds: dict[metric_id -> float] (Issue #1474b) —
         pro Trip eingestellte Erwaehnungsschwellen (aus `MetricConfig.
-        sms_threshold`), im `metric_id`-Raum. Nur der `"thunder"`-Zweig in
-        `_pill_for_metric` liest sie derzeit; die uebrigen Metriken bleiben
-        auf `_sms_mention_threshold`s `DEFAULTS`-Fallback (Known Limitation).
+        sms_threshold`), im `metric_id`-Raum. Gelesen von den Zweigen
+        Wind/Boeen/Regen/Regenwahrsch./Gewitter in `_pill_for_metric` (Issue
+        #2422 S3: vorher nur Gewitter); ohne Eintrag gilt der `DEFAULTS`-
+        Fallback aus `_sms_mention_threshold`.
     tz: local timezone for hour formatting.
     night_weather: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00 am Ziel;
         None = fail-soft, reine Segment-Fensterung (AC-9). Nur die Wert-Pillen

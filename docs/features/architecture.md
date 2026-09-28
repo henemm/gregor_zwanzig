@@ -162,6 +162,17 @@ stellt zusätzlich Preview- und Compare-Pfad auf einen parallelen
 `CompareRenderOptions`-Resolver um und ergänzt ein src-weites Struktur-Gate gegen 
 Direktzugriffe auf render-wirksame Felder.
 
+**Slot-Regel (Issue #2422 S3, 2026-09-28):** Ob ein Trip-Briefing-Slot (Morgen/Abend)
+ausgeliefert wird, entscheidet EINE Regel `slot_aktiv(rc, report_type)`
+(`src/app/models.py`): ohne `report_config` aktiv; `enabled=false` = Master über
+beide Slots; sonst der Einzel-Schalter `morning_enabled`/`evening_enabled`, fehlend =
+aktiv. Sie wirkt im Scheduler (`_get_active_trips`), im Alarm-Vorlauf
+(`trip_briefing_due_at`), in der abgeleiteten flachen Ableitung (Python-Loader,
+Go `deriveFlatFields`) und im Frontend (`reportSlotAktiv`, Editor-Startzustand und
+Trip-Übersicht). Die drei Fassungen prüft eine geteilte Fallzeilen-Tabelle
+(`tests/fixtures/report_config_slot_faelle.json`). Spec:
+`docs/specs/modules/fix_2422_s3_kanal_an_aus_kette.md`.
+
 ### Datenfluss (Legacy-CLI)
 
 Für lokale Entwicklung und Debugging existiert weiterhin die CLI in `src/app/cli.py`

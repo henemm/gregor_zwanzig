@@ -19,6 +19,10 @@ import type {
 import { computeHeaderStats } from '../../lib/components/email-preview/headerStats.ts';
 import { tripStatus } from '../../lib/utils/tripStatus.ts';
 import { deriveNextSend } from '../../lib/utils/cockpitHelpers568.ts';
+import { reportSlotAktiv } from '../../lib/utils/reportSlotAktiv.ts';
+// Issue #2422 S3: Kanal-Defaults (E-Mail fehlend => an, Rest fehlend => aus)
+// aus derselben Ladefunktion wie der Editor — keine dritte Fassung.
+import { ladeReportZustand } from '../../lib/components/shared/versand-tab/reportConfigPayload.ts';
 import {
 	formatNextSend,
 	presetChannels
@@ -114,12 +118,30 @@ export interface BriefingReport {
 	etappe?: string;
 }
 
-/** Aktive Kanäle aus report_config (email/telegram/sms). Signal ist entfernt (#610). */
+/** Aktive Kanäle aus report_config (email/telegram/sms/premium-sms). Signal ist
+ *  entfernt (#610). Issue #2422 S3: Defaults wie Editor und Versand — ein
+ *  fehlendes `send_email` (auch ganz ohne report_config) heisst E-Mail an. */
 export function reportChannels(rc: ReportConfig | undefined): string[] {
+	const z = ladeReportZustand(rc as Record<string, unknown> | undefined);
 	const out: string[] = [];
-	if (rc?.send_email) out.push('email');
-	if (rc?.send_telegram) out.push('telegram');
-	if (rc?.send_sms) out.push('sms');
+	if (z.send_email) out.push('email');
+	if (z.send_telegram) out.push('telegram');
+	if (z.send_sms) out.push('sms');
+	if (z.send_premium_sms) out.push('premium-sms');
+	return out;
+}
+
+/** Kanal-Dots der Startseite (Hero-Trip): Beschriftung je aktivem Briefing-Kanal,
+ *  leer wenn kein Slot aktiv ist. Issue #2422 S3: Slot-Regel wie der Versand
+ *  (reportSlotAktiv), Kanal-Defaults wie der Editor, alle vier Kanaele. */
+export function heroKanaele(rc: ReportConfig | undefined): string[] {
+	if (!reportSlotAktiv(rc, 'morning') && !reportSlotAktiv(rc, 'evening')) return [];
+	const z = ladeReportZustand(rc as Record<string, unknown> | undefined);
+	const out: string[] = [];
+	if (z.send_email) out.push('Email');
+	if (z.send_telegram) out.push('Telegram');
+	if (z.send_sms) out.push('SMS');
+	if (z.send_premium_sms) out.push('Premium-SMS');
 	return out;
 }
 
@@ -136,7 +158,8 @@ export function plannedBriefings(
 	sentLog?: BriefingLogEntry[],
 	tripId?: string
 ): BriefingReport[] {
-	if (!rc) return [];
+	// Issue #2422 S3 (N2): auch ohne report_config plant der Versand beide
+	// Slots (Standardzeiten) — die Zeilen folgen derselben Slot-Regel.
 	const channels = reportChannels(rc);
 	const todayPrefix = new Date().toISOString().slice(0, 10);
 
@@ -148,17 +171,17 @@ export function plannedBriefings(
 	};
 
 	const rows: BriefingReport[] = [];
-	if (rc.morning_enabled) {
+	if (reportSlotAktiv(rc, 'morning')) {
 		rows.push({
-			when: (rc.morning_time || '07:00').slice(0, 5),
+			when: (rc?.morning_time || '07:00').slice(0, 5),
 			kind: 'morgen',
 			channels,
 			status: isSent('morning') ? 'sent' : 'planned'
 		});
 	}
-	if (rc.evening_enabled) {
+	if (reportSlotAktiv(rc, 'evening')) {
 		rows.push({
-			when: (rc.evening_time || '18:00').slice(0, 5),
+			when: (rc?.evening_time || '18:00').slice(0, 5),
 			kind: 'abend',
 			channels,
 			status: isSent('evening') ? 'sent' : 'planned'

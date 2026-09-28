@@ -135,7 +135,20 @@ class TripReportFormatter:
             # Issue #434: kanal-bewusste Auflösung (per_report > per_channel > global).
             active_metrics = dc.get_metrics_for_channel("email", report_type)
             # Force enabled=True on all active metrics so downstream guards don't skip them
-            active_metrics = [dataclasses.replace(mc, enabled=True) for mc in active_metrics]
+            # Issue #2422 S3 (AC-16): Layout-Eintraege tragen keine
+            # Erwaehnungsschwelle -- die globale (KL-4, wie in der SMS) wird
+            # uebernommen; ein am Layout-Eintrag gesetzter Wert gewinnt.
+            _globale_schwelle = {
+                mc.metric_id: mc.sms_threshold for mc in _dc_uncollapsed.metrics
+            }
+            active_metrics = [
+                dataclasses.replace(
+                    mc, enabled=True,
+                    sms_threshold=(mc.sms_threshold if mc.sms_threshold is not None
+                                   else _globale_schwelle.get(mc.metric_id)),
+                )
+                for mc in active_metrics
+            ]
             dc = dataclasses.replace(dc, metrics=active_metrics)
         self._tz = tz or ZoneInfo("UTC")
         self._exposed_sections = exposed_sections

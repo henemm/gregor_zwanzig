@@ -57,6 +57,9 @@ RENDER_NEUTRAL: dict[str, str] = {
     "enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     "paused_until": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     "skip_next": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
+    # Issue #2422 S3: Einzel-Slot-Schalter, ausgewertet ueber slot_aktiv().
+    "morning_enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
+    "evening_enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     # Zeitplanung
     "morning_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",
     "evening_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",

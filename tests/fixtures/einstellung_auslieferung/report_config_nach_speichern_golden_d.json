@@ -1,0 +1,18 @@
+{
+  "trip_id": "golden-d-einstellung",
+  "enabled": true,
+  "morning_enabled": true,
+  "evening_enabled": false,
+  "morning_time": "06:00:00",
+  "evening_time": "20:00:00",
+  "send_email": true,
+  "send_sms": true,
+  "send_telegram": true,
+  "send_premium_sms": true,
+  "telegram_style": "kurzform",
+  "email_format": "compact",
+  "change_threshold_wind_kmh": 25,
+  "multi_day_trend_morning": false,
+  "multi_day_trend_evening": false,
+  "multi_day_trend_reports": []
+}

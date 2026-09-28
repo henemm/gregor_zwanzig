@@ -104,8 +104,10 @@ test('getReportSchedule > AC-15a: voll konfiguriert → strukturiertes Schedule-
 		enabled: true,
 		morning: '06:00:00',
 		evening: '18:00:00',
-		morning_enabled: false,
-		evening_enabled: false,
+		// Issue #2422 S3 (Verdikt N2): Altdaten ohne Per-Slot-Schluessel bei
+		// enabled=true werden geliefert — die Anzeige folgt der Versand-Regel.
+		morning_enabled: true,
+		evening_enabled: true,
 		alertOnChanges: true
 	});
 });
@@ -121,10 +123,14 @@ test('getReportSchedule > enabled: false → enabled=false, alertOnChanges=false
 	assert.equal(schedule.evening, undefined);
 });
 
-test('getReportSchedule > AC-15b: kein report_config → enabled=false, alertOnChanges=false, morning/evening undefined', () => {
+test('getReportSchedule > AC-15b: kein report_config → Slots aktiv (Versand-Regel), alertOnChanges=false, morning/evening undefined', () => {
 	const trip = tripWith({});
 	const schedule = getReportSchedule(trip);
-	assert.equal(schedule.enabled, false);
+	// Issue #2422 S3 (Verdikt N2): ein Trip ohne report_config bekommt sein
+	// Briefing (Standardzeiten) — die Anzeige folgt derselben Regel.
+	assert.equal(schedule.enabled, true);
+	assert.equal(schedule.morning_enabled, true);
+	assert.equal(schedule.evening_enabled, true);
 	assert.equal(schedule.alertOnChanges, false);
 	assert.equal(schedule.morning, undefined);
 	assert.equal(schedule.evening, undefined);

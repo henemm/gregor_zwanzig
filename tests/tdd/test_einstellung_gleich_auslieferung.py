@@ -911,6 +911,20 @@ def test_ac18_keine_neuen_register_eintraege():
     verbotene_befunde = {"B4", "B6", "B7", "B8", "B9", "K8", "K9"}
     erlaubte_befunde = {"B1", "B2", "B3", "B5", "Issue #360 (Telegram-7er-Tabellenlimit)"}
 
+    # #2422 S3 (AC-28): auch nach S3 bleibt das Register beim S1-Bestand --
+    # gleiche ZAHL und keine Kennung dieser Spec (``S3-...``). Eine in /40//50
+    # entdeckte Abweichung wird produktiv gefixt oder dem PO vorgelegt, nie
+    # befristet eingetragen. Charakterisierung: heute gruen.
+    S1_BESTAND_ANZAHL = 9
+    assert len(AUSNAHMEN) == S1_BESTAND_ANZAHL, (
+        f"AC-28: das Register hat {len(AUSNAHMEN)} Eintraege, der S1-Bestand "
+        f"ist {S1_BESTAND_ANZAHL} -- S3 legt KEINE neuen Eintraege an."
+    )
+    for eintrag in AUSNAHMEN:
+        assert not str(eintrag.befund).upper().startswith("S3"), (
+            f"AC-28: Register-Eintrag mit S3-Kennung {eintrag.befund!r} -- "
+            f"S3 fixt produktiv statt zu registrieren."
+        )
     for eintrag in AUSNAHMEN:
         assert eintrag.befund not in verbotene_befunde, (
             f"AC-18: Register-Eintrag mit verbotenem Befund {eintrag.befund!r} "

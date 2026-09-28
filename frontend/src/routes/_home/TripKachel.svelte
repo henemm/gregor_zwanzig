@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Trip, Stage } from '$lib/types.js';
 	import { tripStatus } from '$lib/utils/tripStatus.js';
+	import { reportSlotAktiv } from '$lib/utils/reportSlotAktiv.js';
 
 	let { trip }: { trip: Trip } = $props();
 
@@ -15,6 +16,10 @@
 	const status = $derived(tripStatus(trip));
 	const range = $derived(computeRange(trip));
 	const stageCount = $derived(trip.stages?.length ?? 0);
+	// Issue #2422 S3 (N2): dieselbe Slot-Regel wie der Versand.
+	const reportsAktiv = $derived(
+		reportSlotAktiv(trip.report_config, 'morning') || reportSlotAktiv(trip.report_config, 'evening')
+	);
 
 	const statusColors: Record<string, string> = {
 		aktiv: 'var(--g-accent-deep)',
@@ -36,7 +41,7 @@
 	{#if range}
 		<div class="kachel__when">{range}</div>
 	{/if}
-	<div class="kachel__meta">{stageCount} {stageCount === 1 ? 'Etappe' : 'Etappen'}{#if trip.report_config?.morning_enabled || trip.report_config?.evening_enabled} · Reports ✓{/if}</div>
+	<div class="kachel__meta">{stageCount} {stageCount === 1 ? 'Etappe' : 'Etappen'}{#if reportsAktiv} · Reports ✓{/if}</div>
 </a>
 
 <style>

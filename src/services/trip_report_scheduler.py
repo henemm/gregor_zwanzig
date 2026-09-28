@@ -30,6 +30,7 @@ from app.models import (
     SegmentWeatherSummary,
     StabilityResult,
     TripSegment,
+    slot_aktiv,
 )
 from services import alert_daily_limit
 from services.alert_briefing_anchor import (
@@ -96,6 +97,13 @@ _TRANSIENT_FETCH_ERROR_MARKERS = (
 # die Nachlieferung bereits abdeckt.
 VERMERK_AUSGAENGE = frozenset({"sent", "no_stage", "no_weather", "no_channels"})
 
+# Issue #2422 S3 (AC-6): Ausgang eines per `skip_next` uebersprungenen Slots.
+# Bewusst NICHT in VERMERK_AUSGAENGE -- das sind Ausgaenge eines
+# Versandversuchs, und hier findet keiner statt. Er schliesst den Slot trotzdem
+# ab (`is_recorded*` zaehlt jeden gesetzten Ausgang): sonst kaeme das
+# uebersprungene Briefing im naechsten Stundentakt des Nachhol-Fensters doch.
+AUSGANG_UEBERSPRUNGEN = "skipped"
+
 # Issue #1725: Breite des Faelligkeitsfensters in Ortsstunden.
 # `konfigurierte_stunde <= ortsstunde < konfigurierte_stunde + 3`. Drei
 # Stunden decken den an Umstellungstagen ausfallenden Cron-Tick (1 Stunde,
@@ -150,16 +158,16 @@ def trip_briefing_due_at(
     (Aktiv-Filter + Faelligkeits-Fenster + Vermerk), aber SEITENEFFEKTFREI und
     fuer EINEN Trip: kein `save_trip()`, kein Versand, keine Reservierung.
 
-    🔴 Ohne den ``skip_next``-Zweig aus ``_get_active_trips()``: der konsumiert
-    das Nutzer-Kennzeichen „naechstes Briefing ueberspringen" per
-    Read-Modify-Write MIT ``save_trip()`` bei JEDEM Aufruf. Wuerde die
-    Vorlauf-Sperre jene Methode mitbenutzen, verbrauchte sie den Wunsch im
-    15-Minuten-Alarmtakt, bevor der Briefing-Scheduler ihn je saehe — das
-    Briefing kaeme trotzdem. Fuer die Faelligkeit ist der Unterschied
-    folgenlos: ein uebersprungenes Briefing bleibt ein geplantes Briefing.
+    🔴 Ohne ``skip_next``-Verbrauch (``_skip_next_verbrauchen``, Read-Modify-
+    Write MIT ``save_trip()``): wuerde die Vorlauf-Sperre ihn mitbenutzen,
+    verbrauchte sie den Wunsch im 15-Minuten-Alarmtakt, bevor der
+    Briefing-Scheduler ihn je saehe — das Briefing kaeme trotzdem. Fuer die
+    Faelligkeit ist der Unterschied folgenlos: ein uebersprungenes Briefing
+    bleibt ein geplantes Briefing.
 
     Alle uebrigen Aktiv-Filter sind zwingend enthalten (AC-8): Etappe am
-    Zieltag, ``paused_at``, ``report_config.enabled``, ``paused_until``. Fehlt
+    Zieltag, ``paused_at``, ``slot_aktiv`` (Issue #2422 S3: Gesamtschalter
+    UND Einzel-Slot-Schalter), ``paused_until``. Fehlt
     einer, schwiege der Alarm fuer einen Trip OHNE geplantes Briefing — ohne
     Ersatz, also verschluckt statt ersetzt (Fehlerklasse #1555/#1584).
 
@@ -175,15 +183,12 @@ def trip_briefing_due_at(
     if trip.paused_at is not None:
         return False
     rc = trip.report_config
-    if rc is not None:
-        if rc.enabled is False:
+    if rc is not None and rc.paused_until is not None:
+        pu = rc.paused_until
+        if pu.tzinfo is None:
+            pu = pu.replace(tzinfo=timezone.utc)
+        if moment < pu:
             return False
-        if rc.paused_until is not None:
-            pu = rc.paused_until
-            if pu.tzinfo is None:
-                pu = pu.replace(tzinfo=timezone.utc)
-            if moment < pu:
-                return False
 
     vor_ort = trip_local_now(trip, moment)
     store = BriefingSlotStore(user_id)
@@ -191,6 +196,10 @@ def trip_briefing_due_at(
         ("morning", vor_ort.date()),
         ("evening", vor_ort.date() + timedelta(days=1)),
     ):
+        # Issue #2422 S3 (AC-5): Slot-genau, dieselbe Regel wie der Versand
+        # -- sonst schwiege der Alarm fuer ein abgeschaltetes Briefing.
+        if not slot_aktiv(rc, report_type):
+            continue
         if trip.get_stage_for_date(zieltag) is None:
             continue
         stunde = _slot_stunde(trip, report_type)
@@ -453,7 +462,10 @@ class TripReportSchedulerService:
         # Issue #1724 AC-9: EIN "Jetzt" fuer den ganzen Lauf -- kein Trip
         # darf eine andere Sekunde sehen als der naechste.
         now_utc = datetime.now(timezone.utc)
-        active_trips = self._get_active_trips(report_type, now_utc)
+        active_trips = [
+            t for t in self._get_active_trips(report_type, now_utc)
+            if not self._skip_next_verbrauchen(t)
+        ]
         logger.info(f"Found {len(active_trips)} active trips for {report_type} reports")
 
         sent_count = 0
@@ -561,10 +573,13 @@ class TripReportSchedulerService:
         Der Vermerk-Filter sitzt HIER und nicht erst im Versand (Pruefort =
         Wirkort): `_process_pending_markers` raeumt den #1012-Nachliefer-Marker
         weg, sobald der Trip in `due_trip_ids_now` steht -- eine unehrlich
-        lange Liste legte den Nachliefermechanismus lautlos still. Und er sitzt
-        NACH `_get_active_trips`, weil dort `skip_next` bei jedem Sammellauf
-        konsumiert wird (RMW auf `report_config`), unabhaengig von der
-        Faelligkeit.
+        lange Liste legte den Nachliefermechanismus lautlos still.
+
+        Issue #2422 S3 (AC-6): `skip_next` wird erst NACH Fenster und Vermerk
+        verbraucht -- nur ein Slot, der jetzt tatsaechlich ginge, loest den
+        Nutzerwunsch ein (bis dahin geschah das in `_get_active_trips` bei
+        jedem Sammellauf, unabhaengig von der Faelligkeit) und wird mit
+        `AUSGANG_UEBERSPRUNGEN` vermerkt, damit er im Fenster nicht nachkommt.
         """
         from services.trip_day import trip_local_now
 
@@ -587,6 +602,14 @@ class TripReportSchedulerService:
                     trip.id, report_type, ortstag, zone=vor_ort.tzinfo,
                     moment=now_utc,
                 ):
+                    continue
+                # Issue #2422 S3 (AC-6): erst hier ginge das Briefing wirklich
+                # raus -- nur dieser Slot darf `skip_next` verbrauchen. Der
+                # Vermerk schliesst das Nachhol-Fenster fuer diesen Slot.
+                if self._skip_next_verbrauchen(trip):
+                    store.record_outcome(
+                        trip.id, report_type, ortstag, AUSGANG_UEBERSPRUNGEN,
+                    )
                     continue
                 due.append((trip, report_type, ortstag))
         return due
@@ -929,26 +952,40 @@ class TripReportSchedulerService:
             if trip.paused_at is not None:
                 continue
             rc = trip.report_config
-            if rc is not None:
-                if rc.enabled is False:
+            # Issue #2422 S3: Slot-genau statt nur `enabled` -- dieselbe Regel
+            # wie trip_briefing_due_at und die flache Ableitung im Loader.
+            if not slot_aktiv(rc, report_type):
+                continue
+            if rc is not None and rc.paused_until is not None:
+                # Ensure tz-aware comparison
+                pu = rc.paused_until
+                if pu.tzinfo is None:
+                    pu = pu.replace(tzinfo=timezone.utc)
+                if now_utc < pu:
                     continue
-                if rc.paused_until is not None:
-                    # Ensure tz-aware comparison
-                    pu = rc.paused_until
-                    if pu.tzinfo is None:
-                        pu = pu.replace(tzinfo=timezone.utc)
-                    if now_utc < pu:
-                        continue
-                if rc.skip_next is True:
-                    # Consume the flag: RMW
-                    new_rc = dataclasses.replace(rc, skip_next=False)
-                    new_trip = dataclasses.replace(trip, report_config=new_rc)
-                    save_trip(new_trip, user_id=self._user_id)
-                    continue
+            # Issue #2422 S3 (AC-6): `skip_next` wird NICHT mehr hier verbraucht
+            # (das geschah bei jedem Stundenlauf, unabhaengig von der
+            # Faelligkeit), sondern erst vom tatsaechlich faelligen Slot, s.
+            # `_skip_next_verbrauchen`.
             active.append(trip)
 
         logger.debug(f"Active trips ({report_type}): {[t.id for t in active]}")
         return active
+
+    def _skip_next_verbrauchen(self, trip: "Trip") -> bool:
+        """Verbraucht den Nutzerwunsch „naechstes Briefing ueberspringen"
+        (Read-Modify-Write) und meldet, ob dieses Briefing entfaellt.
+
+        Issue #2422 S3 (AC-6): nur fuer ein Briefing aufrufen, das JETZT
+        tatsaechlich ginge -- sonst verbraucht ein nicht faelliger oder
+        abgeschalteter Slot den Wunsch, und das naechste Briefing kommt doch.
+        """
+        rc = trip.report_config
+        if rc is None or rc.skip_next is not True:
+            return False
+        new_rc = dataclasses.replace(rc, skip_next=False)
+        save_trip(dataclasses.replace(trip, report_config=new_rc), user_id=self._user_id)
+        return True
 
     def _get_target_date(self, report_type: str, trip: "Trip", now_utc: datetime) -> date:
         """
