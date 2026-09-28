@@ -56,7 +56,7 @@ func TestProfileHandler_KnownAAGUID_ReturnsAuthenticatorName(t *testing.T) {
 	// GIVEN: User mit einem iCloud-Keychain-Passkey (bekannte AAGUID)
 	s := newTestStore(t)
 	seedUserWithPasskey(t, s, "aaguid-user", iCloudKeychainAAGUID, "")
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	// WHEN: Profil abgerufen wird
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
@@ -88,7 +88,7 @@ func TestProfileHandler_ZeroAAGUID_AuthenticatorNameAbsent(t *testing.T) {
 	// GIVEN: User mit einem Passkey mit Zero-AAGUID (alle Bytes = 0x00)
 	s := newTestStore(t)
 	seedUserWithPasskey(t, s, "zero-aaguid-user", make([]byte, 16), "Mein Gerät")
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	// WHEN: Profil abgerufen wird
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
@@ -120,7 +120,7 @@ func TestProfileHandler_BothAAGUIDAndLabel(t *testing.T) {
 	// GIVEN: User mit iCloud-Keychain-Passkey UND User-Label "Büro-Mac"
 	s := newTestStore(t)
 	seedUserWithPasskey(t, s, "both-fields-user", iCloudKeychainAAGUID, "Büro-Mac")
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	// WHEN: Profil abgerufen wird
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
@@ -155,7 +155,7 @@ func TestProfileHandler_NilAAGUID_NoError(t *testing.T) {
 	// GIVEN: User mit Passkey der nil AAGUID hat (z.B. alter Datensatz)
 	s := newTestStore(t)
 	seedUserWithPasskey(t, s, "nil-aaguid-user", nil, "Altes Gerät")
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	// WHEN: Profil abgerufen wird
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)

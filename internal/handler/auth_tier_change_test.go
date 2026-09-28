@@ -36,7 +36,7 @@ func TestRequestTierChange_Success(t *testing.T) {
 	}
 
 	// AC-1 + AC-6: Profile-Response enthaelt requested_tier/requested_at danach.
-	profileH := GetProfileHandler(s)
+	profileH := GetProfileHandler(s, nil)
 	preq := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	preq = preq.WithContext(middleware.ContextWithUserID(preq.Context(), "alice"))
 	pw := httptest.NewRecorder()
@@ -256,7 +256,7 @@ func TestGetProfile_NoRequestedTierFieldsWhenNoRequestMade(t *testing.T) {
 	if err := s.SaveUser(model.User{ID: "bob", Tier: "free"}); err != nil {
 		t.Fatalf("SaveUser failed: %v", err)
 	}
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "bob"))
 	w := httptest.NewRecorder()

@@ -51,6 +51,23 @@ func TestParseAdminUserIDs_EmptyOrOnlySeparators_NobodyIsAdmin(t *testing.T) {
 	}
 }
 
+// AC-5 exakter Vergleich mit gemischter Schreibweise: die Liste wird nicht
+// normalisiert. "Alice" in der Liste ist nicht "alice" und umgekehrt.
+func TestParseAdminUserIDs_MixedCase_IsExact(t *testing.T) {
+	gross := ParseAdminUserIDs("Alice")
+	if !istAdmin(gross, "Alice") {
+		t.Errorf("Liste \"Alice\": \"Alice\" muss Admin sein, Menge %v", gross)
+	}
+	if istAdmin(gross, "alice") {
+		t.Errorf("Liste \"Alice\": \"alice\" darf KEIN Admin sein, Menge %v", gross)
+	}
+
+	klein := ParseAdminUserIDs("alice")
+	if istAdmin(klein, "Alice") {
+		t.Errorf("Liste \"alice\": \"Alice\" darf KEIN Admin sein, Menge %v", klein)
+	}
+}
+
 // Ein einzelner Eintrag ohne Komma funktioniert.
 func TestParseAdminUserIDs_SingleEntry(t *testing.T) {
 	admins := ParseAdminUserIDs("henning")

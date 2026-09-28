@@ -15,6 +15,7 @@ package router
 // im verdrahteten Router, nicht nur in der Middleware.
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -267,5 +268,54 @@ func TestAdminTrigger_NormalUser_StatusAndTripSendUnchanged(t *testing.T) {
 		if got := ziel.n(pfad); got != 0 {
 			t.Errorf("/send darf %s nicht aufrufen, Zaehler=%d", pfad, got)
 		}
+	}
+}
+
+// profilRolle liest das Feld "role" aus GET /api/auth/profile des echten Routers.
+func profilRolle(t *testing.T, r http.Handler, secret, userID string) string {
+	t.Helper()
+	w := trigger(t, r, secret, http.MethodGet, "/api/auth/profile", userID)
+	if w.Code != http.StatusOK {
+		t.Fatalf("%s GET /api/auth/profile: erwartet 200, bekommen %d: %s", userID, w.Code, w.Body.String())
+	}
+	var body struct {
+		Role *string `json:"role"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("%s: Profil-Antwort ist kein JSON: %v — %s", userID, err, w.Body.String())
+	}
+	if body.Role == nil {
+		t.Fatalf("%s: Profil-Antwort muss das Feld role tragen, bekommen %s", userID, w.Body.String())
+	}
+	return *body.Role
+}
+
+// AC-8 im verdrahteten Router: die Admin-Menge erreicht GetProfileHandler.
+// Zwei Nutzer im selben Lauf — alice (Admin) sieht "admin", bob sieht "user".
+func TestAdminProfile_RoleReachesRouter_TwoUsers(t *testing.T) {
+	r, _, secret, _ := adminTestRouter(t, "alice")
+
+	if got := profilRolle(t, r, secret, "alice"); got != "admin" {
+		t.Errorf("alice (Admin): role erwartet %q, bekommen %q", "admin", got)
+	}
+	if got := profilRolle(t, r, secret, "bob"); got != "user" {
+		t.Errorf("bob (kein Admin): role erwartet %q, bekommen %q", "user", got)
+	}
+}
+
+// AC-5 exakter Vergleich im Router: Liste "Alice" macht den Nutzer "alice"
+// NICHT zum Admin — Trigger 403, Profil-Rolle "user".
+func TestAdminTrigger_CaseMismatch_Forbidden(t *testing.T) {
+	r, _, secret, ziel := adminTestRouter(t, "Alice")
+
+	pfad := triggerPfade[0]
+	if w := trigger(t, r, secret, http.MethodPost, pfad, "alice"); w.Code != http.StatusForbidden {
+		t.Errorf("Liste=\"Alice\", Nutzer alice: erwartet 403, bekommen %d", w.Code)
+	}
+	if got := ziel.gesamt(); got != 0 {
+		t.Errorf("Python-Ziel darf nicht erreicht werden, Zaehler=%d", got)
+	}
+	if got := profilRolle(t, r, secret, "alice"); got != "user" {
+		t.Errorf("Liste=\"Alice\", Nutzer alice: role erwartet %q, bekommen %q", "user", got)
 	}
 }

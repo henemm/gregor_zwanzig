@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Trip } from '$lib/types.js';
 	import { api } from '$lib/api.js';
+	import { sendTripTestReport } from './tripListSend';
 	// Issue #1395 S3: PATCH /state laeuft am Trichter vorbei und veraendert die
 	// Trip-Datei, ohne einen neuen Stempel zu liefern (S2 AC-15) — danach muss der
 	// gemerkte Stand verworfen werden.
@@ -324,16 +325,11 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 		testReportRunning = true;
 		testReportResult = null;
 		testReportError = null;
-		try {
-			await api.post(`/api/scheduler/trip-reports?hour=${hour}`, {});
-			testReportResult = `Test-Report (${hour === 7 ? 'Morning' : 'Evening'}) wurde ausgelöst. Alle aktiven Trips für ${hour}:00 Uhr werden verarbeitet.`;
-		} catch (e: unknown) {
-			testReportError = (e as { error?: string; detail?: string })?.detail
-				?? (e as { error?: string })?.error
-				?? 'Fehler beim Auslösen des Test-Reports';
-		} finally {
-			testReportRunning = false;
-		}
+		// Issue #2155 S1: genau dieser Trip, nicht der Sammel-Trigger (nur Admin).
+		const { result, error } = await sendTripTestReport(trip.id, hour);
+		testReportResult = result;
+		testReportError = error;
+		testReportRunning = false;
 	}
 
 </script>

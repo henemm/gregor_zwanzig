@@ -262,7 +262,7 @@ func ausstehendLogin(s *store.Store, uid string) *httptest.ResponseRecorder {
 func ausstehendProfilLesen(s *store.Store, uid string) *httptest.ResponseRecorder {
 	req := withUserCtx(httptest.NewRequest(http.MethodGet, "/api/auth/profile", nil), uid)
 	w := httptest.NewRecorder()
-	GetProfileHandler(s).ServeHTTP(w, req)
+	GetProfileHandler(s, nil).ServeHTTP(w, req)
 	return w
 }
 

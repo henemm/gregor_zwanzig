@@ -238,10 +238,10 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/preview/{trip_id}/signal` | GET | — **tote Route** (Python-Core kennt Signal nicht mehr, #610; Abbau → Sammel-Issue #1199)
 | `/api/preview/{trip_id}/sms` | GET |
 | `/api/preview/{trip_id}/telegram` | GET |
-| `/api/scheduler/alert-checks` | POST |
-| `/api/scheduler/inbound-commands` | POST |
+| `/api/scheduler/alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
+| `/api/scheduler/inbound-commands` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/scheduler/status` | GET |
-| `/api/scheduler/trip-reports` | POST |
+| `/api/scheduler/trip-reports` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/sms-symbols` | GET |
 | `/api/templates` | GET |
 | `/api/trips` | GET, POST |
@@ -1501,6 +1501,11 @@ Manually triggers briefing generation for immediate test/delivery.
 
 ### POST /api/scheduler/trip-reports
 
+> **Nur Admin (Issue #2155 S1, ADR-0078):** über die Go-API nur für Nutzer, deren
+> Kennung in `GZ_ADMIN_USER_IDS` steht; sonst 403 `{"error":"forbidden"}` (ohne
+> Sitzung weiterhin 401). Der Cron-Scheduler ruft den Python-Core direkt und ist
+> nicht betroffen. Einzel-Trip-Versand für jeden Nutzer: `POST /api/trips/{id}/send`.
+
 Enqueues immediate trip report (morning/evening/alert) generation and send for active trip.
 
 **Request Body:** `{}` (empty, report type inferred from scheduler config)
@@ -1592,6 +1597,11 @@ completed fully or was cut off by that budget.
 **Handler:** `api/routers/scheduler.py::trigger_alert_checks`
 
 ### POST /api/scheduler/alert-checks
+
+> **Nur Admin (Issue #2155 S1, ADR-0078):** über die Go-API nur für Nutzer, deren
+> Kennung in `GZ_ADMIN_USER_IDS` steht; sonst 403 `{"error":"forbidden"}` (ohne
+> Sitzung weiterhin 401). Gilt ebenso für `POST /api/scheduler/inbound-commands`.
+> Der Cron-Scheduler ruft den Python-Core direkt und ist nicht betroffen.
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
@@ -3162,7 +3172,8 @@ Returns authenticated user profile (requires valid session cookie).
       "last_used_at": "2026-05-29T08:15:00Z"
     }
   ],
-  "passkey_prompt_dismissed": false
+  "passkey_prompt_dismissed": false,
+  "role": "user"
 }
 ```
 
@@ -3187,6 +3198,7 @@ Returns authenticated user profile (requires valid session cookie).
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
 | passkey_prompt_dismissed | bool | Whether the user has declined the one-time passkey setup offer (Issue #2248); **always present**. Persisted server-side so the dismissal holds across devices; absent/`false` on the underlying `user.json` both mean "not dismissed" |
 | pending_contact_address | string | Issue #2147 Scheibe B2: eine noch nicht bestätigte, ausstehende neue Kontaktadresse; `omitempty` — fehlt, solange keine Änderung aussteht. `email`/`mail_to` zeigen bis zur Bestätigung weiterhin die alten, wirksamen Werte; `email_verified` bleibt in dieser Zeit `true`. Wird erst über `POST /api/auth/verify-email` bestätigt (dann verschwindet dieses Feld und `mail_to`/`email` übernehmen den Wert) |
+| role | string | Issue #2155 S1 (ADR-0078): abgeleitete Rolle `admin`\|`user`; **always present** in `GET`. `admin` genau dann, wenn die Kennung in `GZ_ADMIN_USER_IDS` steht, sonst `user`. Nicht schreibbar: wird nie aus `user.json` gelesen oder dorthin geschrieben, ein mitgesendetes `role` in `PUT /api/auth/profile` wird ignoriert |
 
 **Error Responses:**
 
@@ -4354,6 +4366,15 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-28: Issue #2155 Scheibe S1 (Epic #2138, ADR-0078) — Admin-Rolle über die
+  ENV-Liste `GZ_ADMIN_USER_IDS` (komma-getrennt, leer = niemand ist Admin). Neue
+  Go-Middleware `RequireAdmin` schützt `POST /api/scheduler/trip-reports`,
+  `/api/scheduler/alert-checks` und `/api/scheduler/inbound-commands`: Nicht-Admins
+  erhalten 403 `{"error":"forbidden"}`, ohne Sitzung bleibt es 401. Der Cron-Scheduler ist
+  nicht betroffen. `GET /api/auth/profile` liefert neu `role` (`admin`|`user`, abgeleitet,
+  nicht schreibbar). Der Knopf „Briefing senden" der Trip-Liste nutzt nun
+  `POST /api/trips/{id}/send?report_type=morning|evening` für genau den gewählten Trip.
+  `GET /api/scheduler/status` und `/api/debug/` unverändert (S2).
 - 2026-09-22: Issue #2404 (Scheibe S2 von #2153, Epic #2138) — neuer schlüsselbasierter
   `MailFloodLimiter` (Token-Bucket, Vorbild `IPRateLimiter`) begrenzt Bestätigungsmails aus `PUT
   /api/auth/profile` und `POST /api/auth/verify-email/resend` auf 10/Stunde je User-ID UND je

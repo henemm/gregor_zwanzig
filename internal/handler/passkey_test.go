@@ -317,7 +317,7 @@ func TestPasskeyRegisterRoundtrip_Success(t *testing.T) {
 
 	// F001 / AC-1: Profile endpoint must report has_passkey:true with one
 	// entry — and MUST NOT leak the public_key material.
-	profileH := GetProfileHandler(s)
+	profileH := GetProfileHandler(s, nil)
 	profileReq := authedRequest("GET", "/api/auth/profile", "alice", nil)
 	profileW := httptest.NewRecorder()
 	profileH.ServeHTTP(profileW, profileReq)
@@ -756,7 +756,7 @@ func TestPasskeyDeleteCredentialPreservesPassword(t *testing.T) {
 
 	// F001 / AC-6: Profile endpoint must now report has_passkey:false and an
 	// empty (or absent) passkeys[] array.
-	profileH := GetProfileHandler(s)
+	profileH := GetProfileHandler(s, nil)
 	profileReq := authedRequest("GET", "/api/auth/profile", "alice", nil)
 	profileW := httptest.NewRecorder()
 	profileH.ServeHTTP(profileW, profileReq)

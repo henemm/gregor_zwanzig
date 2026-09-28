@@ -69,6 +69,9 @@ type Config struct {
 	// Issue #1329 — Staging-Scheduler-Gate: GZ_ENV=staging deaktiviert den
 	// autonomen Cron-Scheduler (open-meteo-Kontingent-Schutz).
 	Env string `envconfig:"ENV" default:""`
+	// Issue #2155 S1 (ADR-0078) — komma-getrennte Nutzerkennungen mit
+	// Admin-Rolle (GZ_ADMIN_USER_IDS). Leer = niemand ist Admin (fail-closed).
+	AdminUserIDs string `envconfig:"ADMIN_USER_IDS" default:""`
 }
 
 func Load() (*Config, error) {
