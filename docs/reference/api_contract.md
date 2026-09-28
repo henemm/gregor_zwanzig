@@ -714,7 +714,9 @@ Epochensekunden**; die lesbare Aufbereitung dort ist als Nebenbefund in #1199 no
 | Feld                            | Typ         | Beschreibung                                          |
 |---------------------------------|-------------|-------------------------------------------------------|
 | trip_id                         | str         | Trip-Identifier                                        |
-| enabled                         | bool        | Reports aktiv? (default: true)                         |
+| enabled                         | bool        | Reports aktiv? (default: true) — Gesamtschalter, Master über beide Slots |
+| morning_enabled                 | bool \| None | Einzel-Schalter „Morgen aktiv" (Issue #2422 S3). Fehlt/`null`/kein bool ⇒ None ⇒ Rückfall auf `enabled`. Wird nur geschrieben, wenn gesetzt (additiv). |
+| evening_enabled                 | bool \| None | Einzel-Schalter „Abend aktiv" (Issue #2422 S3), Semantik wie `morning_enabled`. Regel `slot_aktiv(rc, slot)` (`src/app/models.py`): kein `report_config` ⇒ aktiv; `enabled=false` ⇒ aus; sonst Einzel-Schalter, fehlend ⇒ aktiv. Dieselbe Regel steuert Versand (`_get_active_trips`), Alarm-Vorlauf (`trip_briefing_due_at`) und die abgeleiteten flachen Trip-Felder `morning_enabled`/`evening_enabled`. |
 | morning_time                    | time        | Morgen-Report Zeit (default: 07:00)                    |
 | evening_time                    | time        | Abend-Report Zeit (default: 18:00)                     |
 | timezone                        | str         | Zeitzone (default: "Europe/Vienna")                    |

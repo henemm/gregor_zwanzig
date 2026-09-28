@@ -240,16 +240,44 @@ _LAYOUT_KEY_JE_KANAL = {
     "telegram_kurzform": "sms", "sms": "sms", "premium_sms": "sms",
 }
 
-#: Welche Kanaele ein Golden je nach Versand-Schaltern tatsaechlich erreicht.
-def erreichbare_kanaele(report_config: dict) -> tuple[str, ...]:
-    kanaele = ["email_html", "email_plain"]
-    if report_config.get("telegram_style") == "kurzform":
-        kanaele.append("telegram_kurzform")
-    else:
-        kanaele.append("telegram_rich")
-    if report_config.get("send_sms"):
+#: Tiers, die eine Berechtigung fuer SMS bzw. Premium-SMS haben (Berechtigung
+#: ist etwas anderes als die Einstellung: ein Schalter an ohne Berechtigung
+#: liefert nichts aus).
+_TIER_SMS = ("standard", "premium")
+_TIER_PREMIUM_SMS = ("premium",)
+
+
+def erreichbare_kanaele(
+    report_config: Optional[dict], *, tier: str = "premium",
+) -> tuple[str, ...]:
+    """Welche Kanaele ein Trip tatsaechlich erreicht -- gelesen aus dem ROHEN
+    ``report_config``-JSON, mit den Standardwerten des Editors (#2422 S3):
+
+    - kein ``report_config`` -> nur E-Mail (Rueckfall des Schedulers).
+    - ``send_email`` fehlt -> an; ``send_telegram``/``send_sms``/
+      ``send_premium_sms`` fehlen -> aus.
+    - Berechtigung: SMS nur Tier ``standard``/``premium``, Premium-SMS nur
+      ``premium`` (Einstellung != Berechtigung).
+    - E-Mail-HTML und -Klartext sind EINE Nachricht (zwei Teile).
+    - Telegram-Form folgt ``telegram_style`` (``kurzform`` sonst ``rich``).
+
+    ``tier`` hat den Default ``premium``: bestehende Aufrufer ohne das
+    Argument (S1-Tests, Golden A/B/C) sehen unveraendert alle Kanaele, deren
+    Schalter an sind.
+    """
+    if not report_config:
+        return ("email_html", "email_plain")
+    kanaele: list[str] = []
+    if report_config.get("send_email", True):
+        kanaele += ["email_html", "email_plain"]
+    if report_config.get("send_telegram", False):
+        if report_config.get("telegram_style") == "kurzform":
+            kanaele.append("telegram_kurzform")
+        else:
+            kanaele.append("telegram_rich")
+    if report_config.get("send_sms", False) and tier in _TIER_SMS:
         kanaele.append("sms")
-    if report_config.get("send_premium_sms"):
+    if report_config.get("send_premium_sms", False) and tier in _TIER_PREMIUM_SMS:
         kanaele.append("premium_sms")
     return tuple(kanaele)
 
@@ -331,14 +359,21 @@ def erwartete_kaskade(
     Kernregeln (nicht ausnahmefaehig, direkt in der Regel -- B6/B4):
     - Kanal-Layout ist Teilmenge des globalen Maximums (``display_config.
       metrics``), nie eine Ergaenzung.
-    - sms/telegram_kurzform/premium_sms lesen IMMER ``channel_layouts.sms``.
+    - sms/telegram_kurzform/premium_sms lesen IMMER ``channel_layouts.sms``
+      (bzw. ``channel_layouts_per_report[report_type].sms``, das gewinnt).
     """
     layout_key = _LAYOUT_KEY_JE_KANAL[kanal]
     dc = golden["display_config"]
     global_erlaubt = _global_erlaubte_ids(golden, report_type)
     layouts = dc.get("channel_layouts") or {}
+    # #2422 S3: Vorrang per_report > per_channel > global (wie die Produktkaskade,
+    # aber eigenstaendig aus dem rohen JSON gelesen).
+    je_report = (dc.get("channel_layouts_per_report") or {}).get(report_type) or {}
 
-    if layout_key in layouts:
+    if layout_key in je_report:
+        kandidaten = je_report[layout_key]
+        schneiden = True
+    elif layout_key in layouts:
         kandidaten = layouts[layout_key]
         schneiden = True
     else:

@@ -1130,6 +1130,11 @@ class TripReportConfig:
     """
     trip_id: str = ""
     enabled: bool = True
+    # Issue #2422 S3: Einzel-Slot-Schalter „Morgen/Abend aktiv" aus dem Editor.
+    # None = Schluessel fehlt (Altdaten) -> Rueckfall auf `enabled`. Auswertung
+    # ausschliesslich ueber `slot_aktiv()`.
+    morning_enabled: Optional[bool] = None
+    evening_enabled: Optional[bool] = None
 
     # Schedule
     morning_time: time = field(default_factory=lambda: time(7, 0))
@@ -1191,6 +1196,22 @@ class TripReportConfig:
 
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+def slot_aktiv(rc: Optional[TripReportConfig], report_type: str) -> bool:
+    """Issue #2422 S3: ist der Briefing-Slot ``report_type`` eingeschaltet?
+
+    Die EINE Regel fuer Versand, Alarm-Vorlauf und flache Ableitung:
+    ohne report_config aktiv (Bestandsverhalten); ``enabled=False`` ist Master
+    und schaltet beide Slots ab; sonst entscheidet der Einzel-Schalter, fehlt
+    er (None), gilt der Slot als aktiv.
+    """
+    if rc is None:
+        return True
+    if rc.enabled is False:
+        return False
+    per_slot = rc.morning_enabled if report_type == "morning" else rc.evening_enabled
+    return per_slot if isinstance(per_slot, bool) else True
 
 
 # --- Alert Rules (Issue #205) ----------------------------------------------

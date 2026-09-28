@@ -18,6 +18,7 @@
 	import { tripStatus, activeOrNextTrip, todayStageIndex } from '$lib/utils/tripStatus.js';
 	import {
 		plannedBriefings,
+		heroKanaele,
 		archivedTrips,
 		homeCompareTimeline,
 		alertsForTrip
@@ -120,17 +121,9 @@
 	const otherTrips = $derived(trips.filter((t) => t.id !== hero?.id && tripStatus(t, now) !== 'fertig'));
 
 	// Aktive Kanäle aus report_config — für die Kanal-Gesundheits-Dots.
-	const heroChannels = $derived.by(() => {
-		const rc = hero?.report_config;
-		if (!rc) return [] as string[];
-		const out: string[] = [];
-		if (rc.morning_enabled || rc.evening_enabled) {
-			if (rc.send_email !== false) out.push('Email');
-			if (rc.send_telegram) out.push('Telegram');
-			if (rc.send_sms) out.push('SMS');
-		}
-		return out;
-	});
+	// Issue #2422 S3: reiner Helfer (Slot-Regel wie der Versand, alle vier
+	// Kanaele) — node:testbar in report_slot_aktiv.test.ts.
+	const heroChannels = $derived(hero ? heroKanaele(hero.report_config) : ([] as string[]));
 
 	// Datum-Range für den Fortschrittsbalken
 	const heroDateRange = $derived.by(() => {

@@ -53,10 +53,15 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
     mit = Kanalmitschrift()
 
     def _buchen(kanal: str, empfaenger, subject: str, *, body=None,
-                plain_text_body=None, parse_mode=None) -> None:
+                plain_text_body=None, parse_mode=None, mail_type=None,
+                mail_format=None) -> None:
+        # ``mail_type``/``mail_format`` (nur E-Mail) machen z.B.
+        # ``email_format=compact`` an der Naht beobachtbar (#2422 S3):
+        # ``mit.sendungen("email")[i]["mail_format"]``.
         mit.je_kanal[kanal].append({
             "empfaenger": empfaenger, "subject": subject, "body": body,
             "plain_text_body": plain_text_body, "parse_mode": parse_mode,
+            "mail_type": mail_type, "mail_format": mail_format,
         })
 
     class _EmailAufzeichner:
@@ -70,7 +75,8 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
             # prueft.
             ziel = to if to else self._s.mail_to
             _buchen("email", ziel if isinstance(ziel, str) else list(ziel)[0],
-                    subject, body=body, plain_text_body=plain_text_body)
+                    subject, body=body, plain_text_body=plain_text_body,
+                    mail_type=mail_type, mail_format=mail_format)
 
     class _SmsAufzeichner:
         def __init__(self, settings) -> None:

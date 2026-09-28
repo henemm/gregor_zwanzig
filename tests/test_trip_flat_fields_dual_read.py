@@ -6,12 +6,24 @@ materialisiert zusätzlich `end_date` (`max(stage.date)`).
 Spec: docs/specs/modules/issue_1250_briefing_subscription.md, AC-13/AC-14.
 
 NO MOCKS — echte Dicts, echter Trip-Roundtrip über den Loader.
+
+#2422 S3 (AC-27): Die alte Regel „flache Felder `morning_enabled`/
+`evening_enabled` = `report_config.enabled`" ist bewusst abgelöst. Neu gilt die
+Slot-Regel (Spec `fix_2422_s3_kanal_an_aus_kette.md`): `enabled=false` ist
+Master (beide Slots aus), sonst entscheidet der Per-Slot-`bool` NUR seinen Slot,
+fehlend/`null`/Nicht-`bool` fällt auf `enabled` zurück. Der Bestandsschutz für
+Trips OHNE Per-Slot-Schlüssel bleibt als Fall erhalten (AC-13 unten sowie
+`test_ac27_bestandsschutz_...`); die neuen Fälle mit Per-Slot-Schlüsseln lesen
+dieselbe geteilte Fallzeilen-Tabelle wie Go und TS
+(`tests/fixtures/report_config_slot_faelle.json`).
 """
 from __future__ import annotations
 
 import dataclasses
 import json
+from pathlib import Path
 
+import pytest
 
 from app.loader import _trip_to_dict, load_trip, load_trip_from_dict, save_trip
 
@@ -114,6 +126,10 @@ def test_ac13_flat_slot_channel_fields_derived_from_report_config():
     assert trip.evening_time == rc["evening_time"]
     assert trip.send_sms == rc["send_sms"]
     assert trip.send_telegram == rc["send_telegram"]
+    # #2422 S3 (AC-27) Bestandsschutz: das Fixture trägt KEINE Per-Slot-
+    # Schlüssel -> beide flachen Slot-Felder folgen weiter `enabled`.
+    assert trip.morning_enabled == rc["enabled"]
+    assert trip.evening_enabled == rc["enabled"]
 
 
 def test_report_config_roundtrip_loses_nothing_and_adds_only_absence():
@@ -423,3 +439,85 @@ def test_trip_alert_check_all_trips_handles_stageless_trip_without_crash(tmp_pat
     # TypeError: '<' not supported between instances of 'NoneType' and 'date').
     result = service.check_all_trips()
     assert result.alerts_sent == 0
+
+
+# --- #2422 S3 / AC-27: bewusste Ablösung der Regel „flache Felder = enabled" --
+
+_TABELLE = Path(__file__).resolve().parent / "fixtures" / "report_config_slot_faelle.json"
+_FAELLE = json.loads(_TABELLE.read_text(encoding="utf-8"))["faelle"]
+
+
+def test_ac27_geteilte_fallzeilen_tabelle_ist_vollstaendig():
+    """Adversary F004: leere/gekuerzte Tabelle darf die parametrisierten Faelle
+    nicht still SKIPPEN (Exit 0) -- Laengenwaechter wie Go/TS (>= 12)."""
+    assert len(_FAELLE) >= 12, (
+        f"report_config_slot_faelle.json hat {len(_FAELLE)} Faelle, erwartet >= 12 "
+        f"(Datei gekuerzt?)"
+    )
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_ac27_bestandsschutz_ohne_per_slot_schluessel_folgen_flache_felder_enabled(enabled):
+    """AC-27 (Bestandsschutz, bleibt als Fall erhalten — heute UND nach dem
+    Fix grün): ein Trip mit `enabled=true|false` und OHNE Per-Slot-Schlüssel
+    trägt beide flachen Slot-Felder gleich `enabled`."""
+    d = _trip_dict()
+    d["report_config"]["enabled"] = enabled
+    assert "morning_enabled" not in d["report_config"]
+    assert "evening_enabled" not in d["report_config"]
+
+    trip = load_trip_from_dict(d)
+
+    assert trip.morning_enabled is enabled
+    assert trip.evening_enabled is enabled
+
+
+@pytest.mark.parametrize(
+    "report_config, morgen, abend",
+    [
+        ({"enabled": True, "morning_enabled": True, "evening_enabled": False}, True, False),
+        ({"enabled": True, "morning_enabled": False, "evening_enabled": True}, False, True),
+        ({"enabled": True, "morning_enabled": False, "evening_enabled": False}, False, False),
+        # Gesamtschalter ist Master: überstimmt ein Per-Slot-`true`.
+        ({"enabled": False, "morning_enabled": True, "evening_enabled": True}, False, False),
+    ],
+    ids=["abend_aus", "morgen_aus", "beide_aus", "gesamtschalter_aus_ist_master"],
+)
+def test_ac27_flache_felder_folgen_den_per_slot_schluesseln(report_config, morgen, abend):
+    """AC-27 (neue Regel, RED vor dem Fix): mit Per-Slot-Schlüsseln folgen die
+    flachen Felder dem jeweiligen Slot, nicht mehr beide `enabled` — z. B.
+    `{"enabled": true, "morning_enabled": true, "evening_enabled": false}` ⇒
+    Morgen True / Abend False."""
+    d = _trip_dict()
+    d["report_config"].update(report_config)
+
+    trip = load_trip_from_dict(d)
+
+    assert (trip.morning_enabled, trip.evening_enabled) == (morgen, abend), (
+        f"report_config={report_config!r}: flache Felder sind "
+        f"({trip.morning_enabled!r}, {trip.evening_enabled!r}), erwartet "
+        f"({morgen!r}, {abend!r}) — die alte Regel 'flache Felder = enabled' "
+        f"gilt nicht mehr (Spec AC-27)."
+    )
+
+
+@pytest.mark.parametrize("fall", _FAELLE, ids=[f["name"] for f in _FAELLE])
+def test_ac27_flache_felder_folgen_der_geteilten_tabelle(fall):
+    """AC-27: dieselbe Fallzeilen-Tabelle wie Go (`TestDeriveFlatFields_SlotFaelle`)
+    und TS — `flat_morning`/`flat_evening` je Zeile (bei `null`: `None`, weil
+    ohne `report_config` nichts abgeleitet wird)."""
+    d = _trip_dict()
+    if fall["report_config"] is None:
+        del d["report_config"]
+    else:
+        d["report_config"] = dict(fall["report_config"])
+
+    trip = load_trip_from_dict(d)
+
+    assert (trip.morning_enabled, trip.evening_enabled) == (
+        fall["flat_morning"], fall["flat_evening"],
+    ), (
+        f"[{fall['name']}] report_config={fall['report_config']!r}: flache "
+        f"Felder ({trip.morning_enabled!r}, {trip.evening_enabled!r}), "
+        f"erwartet ({fall['flat_morning']!r}, {fall['flat_evening']!r})"
+    )

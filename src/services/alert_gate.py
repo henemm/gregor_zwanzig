@@ -330,8 +330,8 @@ def check_briefing_imminent(
     Sperrzeit (`ThrottleStore`), kein Tageszaehler, kein `alert_log`-Eintrag —
     dieselbe Eigenschaft, die #1233 fuer die Ruhezeit-Unterdrueckung
     zusichert. Und insbesondere kein Verbrauch von `report_config.skip_next`:
-    `briefing_due_at` MUSS seiteneffektfrei sein (der Trip-Sammellauf
-    `_get_active_trips()` ist es NICHT, er konsumiert `skip_next` per
+    `briefing_due_at` MUSS seiteneffektfrei sein (der Trip-Sammellauf ist es
+    NICHT, `_skip_next_verbrauchen()` konsumiert `skip_next` per
     Read-Modify-Write mit `save_trip()`).
 
     Args:

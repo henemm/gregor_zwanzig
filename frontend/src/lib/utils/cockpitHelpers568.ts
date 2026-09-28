@@ -13,6 +13,7 @@
 
 import type { Trip, ComparePreset } from '../types.ts';
 import { tripStatus } from './tripStatus.ts';
+import { reportSlotAktiv } from './reportSlotAktiv.ts';
 
 export type SetupStep = { label: string; done: boolean };
 
@@ -57,9 +58,9 @@ export function setupStepTrip(trip: Trip): SetupStep[] {
 	const hasLayout =
 		dc.preset_name != null || dc.channel_layouts != null || dc.channel_layouts_per_report != null;
 
-	const rc = trip.report_config ?? {};
-	const morning = rc.morning_enabled === true;
-	const evening = rc.evening_enabled === true;
+	// Issue #2422 S3 (N2): dieselbe Slot-Regel wie der Versand.
+	const morning = reportSlotAktiv(trip.report_config, 'morning');
+	const evening = reportSlotAktiv(trip.report_config, 'evening');
 
 	return [
 		{ label: 'Route', done: stages.length >= 1 },

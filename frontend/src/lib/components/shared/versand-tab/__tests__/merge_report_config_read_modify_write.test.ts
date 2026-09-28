@@ -32,6 +32,10 @@ import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 
 import { mergeReportConfig } from '../mergeReportConfig.ts';
+// Issue #2422 S3: beide Schreiber rufen mergeReportConfig ueber den Payload-
+// Baustein auf; die Zeitplan-/Kanal-Gruppen stehen dort (nicht mehr als
+// Literal an der Aufrufstelle).
+import { baueReportConfigPayload, ladeReportZustand } from '../reportConfigPayload.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const versandTabCode = readFileSync(join(HERE, '..', '..', 'VersandTab.svelte'), 'utf-8');
@@ -235,8 +239,8 @@ describe('/trips/new — zwei Schreiber auf demselben report_config (AC-3, AC-6)
 // exakt der Fehler F001 in neuem Gewand.
 describe('Verdrahtung: beide Schreiber uebergeben den lebenden Blob', () => {
 	test('VersandTab.svelte liest reportConfig live (untrack), nicht den Schnappschuss', () => {
-		const call = versandTabCode.match(/mergeReportConfig\(\{[\s\S]*?\n\t\t\}\)/);
-		assert.ok(call, 'VersandTab.svelte ruft mergeReportConfig nicht auf');
+		const call = versandTabCode.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
+		assert.ok(call, 'VersandTab.svelte ruft baueReportConfigPayload nicht auf');
 		assert.match(
 			call[0],
 			/live:\s*untrack\(\(\)\s*=>\s*reportConfig\)/,
@@ -247,8 +251,8 @@ describe('Verdrahtung: beide Schreiber uebergeben den lebenden Blob', () => {
 	});
 
 	test('EditReportConfigSection.svelte liest reportConfig live (untrack)', () => {
-		const call = mailInhaltCode.match(/mergeReportConfig\(\{[\s\S]*?\n\t\t\}\)/);
-		assert.ok(call, 'EditReportConfigSection.svelte ruft mergeReportConfig nicht auf');
+		const call = mailInhaltCode.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
+		assert.ok(call, 'EditReportConfigSection.svelte ruft baueReportConfigPayload nicht auf');
 		assert.match(
 			call[0],
 			/live:\s*untrack\(\(\)\s*=>\s*reportConfig\)/,
@@ -258,8 +262,8 @@ describe('Verdrahtung: beide Schreiber uebergeben den lebenden Blob', () => {
 	});
 
 	test('EditReportConfigSection reicht die echten Sichtbarkeits-Flags durch', () => {
-		const call = mailInhaltCode.match(/mergeReportConfig\(\{[\s\S]*?\n\t\t\}\)/);
-		assert.ok(call, 'EditReportConfigSection.svelte ruft mergeReportConfig nicht auf');
+		const call = mailInhaltCode.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
+		assert.ok(call, 'EditReportConfigSection.svelte ruft baueReportConfigPayload nicht auf');
 		// Kurzschreibweise `showSchedule,` / `showChannels,` = die Props selbst.
 		// Ein fest verdrahtetes `true` waere der zweite Schreibpfad auf fremde
 		// Felder, den der Guard gerade verhindern soll (Mutation M2).
@@ -329,9 +333,50 @@ function groupKeys(callText: string, group: string): string[] {
 }
 
 function mergeCall(code: string, label: string): string {
-	const call = code.match(/mergeReportConfig\(\{[\s\S]*?\n\t\t\}\)/);
-	assert.ok(call, `${label} ruft mergeReportConfig nicht auf`);
+	const call = code.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
+	assert.ok(call, `${label} ruft baueReportConfigPayload nicht auf`);
 	return call[0];
+}
+
+// Issue #2422 S3: dieselbe F001-Zusicherung durch den Payload-Baustein, den
+// beide Komponenten seit S3 tatsaechlich aufrufen (Argumentform wie dort):
+// der LEBENDE Blob gewinnt gegen den veralteten Mount-Schnappschuss.
+describe('baueReportConfigPayload — lebender Blob schlaegt veralteten Schnappschuss (F001)', () => {
+	test('VersandTab-Pfad: Mail-Inhalt-Aenderung des Nachbarn bleibt erhalten', () => {
+		const snapshot = { email_format: 'full', send_email: true };
+		const live = { email_format: 'compact', send_email: true };
+		const nach = baueReportConfigPayload({ snapshot, live, zustand: ladeReportZustand(snapshot) });
+		assert.equal(nach.email_format, 'compact', 'veralteter Schnappschuss ueberschreibt den Nachbarn');
+	});
+
+	test('Edit-Pfad ohne Zeitplan/Kanaele: Premium-SMS des Nachbarn bleibt gesetzt', () => {
+		const snapshot = { send_premium_sms: false, morning_time: '07:00:00' };
+		const live = { send_premium_sms: true, morning_time: '09:00:00' };
+		const zustand = ladeReportZustand(snapshot, { multi_day_trend_evening: true });
+		delete zustand.telegram_style;
+		const nach = baueReportConfigPayload({
+			snapshot,
+			live,
+			eigene: { email_format: 'compact' },
+			showSchedule: false,
+			showChannels: false,
+			zustand
+		});
+		assert.equal(nach.send_premium_sms, true, 'Premium-SMS des Nachbarn still zurueckgesetzt');
+		assert.equal(nach.morning_time, '09:00:00', 'Zeitplan des Nachbarn still zurueckgesetzt');
+		assert.equal(nach.email_format, 'compact');
+	});
+});
+
+/** Schluessel, die der Baustein NUR unter showSchedule bzw. showChannels
+ *  schreibt — per Laufzeit aus der echten Funktion ermittelt (Differenz mit/ohne
+ *  Flag), nicht aus einer Nachbildung. */
+function bedingteGruppe(flag: 'showSchedule' | 'showChannels'): string[] {
+	const zustand = ladeReportZustand({});
+	delete zustand.telegram_style;
+	const mit = baueReportConfigPayload({ live: {}, zustand, showSchedule: false, showChannels: false, [flag]: true });
+	const ohne = baueReportConfigPayload({ live: {}, zustand, showSchedule: false, showChannels: false });
+	return Object.keys(mit).filter((k) => !(k in ohne));
 }
 
 describe('F003: unbedingte und bedingte Feldgruppen bleiben disjunkt', () => {
@@ -340,46 +385,48 @@ describe('F003: unbedingte und bedingte Feldgruppen bleiben disjunkt', () => {
 		// gruen, wenn der Extraktor nichts findet — eine leere Menge ist mit
 		// jeder anderen disjunkt.
 		const call = mergeCall(mailInhaltCode, 'EditReportConfigSection.svelte');
-		const own = groupKeys(call, 'own');
-		const schedule = groupKeys(call, 'schedule');
-		const channels = groupKeys(call, 'channels');
-		assert.ok(own.includes('email_format'), `own-Gruppe nicht erkannt: ${own.join(',')}`);
-		assert.ok(
-			schedule.includes('morning_time'),
-			`schedule-Gruppe nicht erkannt: ${schedule.join(',')}`
-		);
-		assert.ok(
-			channels.includes('send_email'),
-			`channels-Gruppe nicht erkannt: ${channels.join(',')}`
-		);
+		const eigene = groupKeys(call, 'eigene');
+		assert.ok(eigene.includes('email_format'), `eigene-Gruppe nicht erkannt: ${eigene.join(',')}`);
+		const schedule = bedingteGruppe('showSchedule');
+		const channels = bedingteGruppe('showChannels');
+		assert.ok(schedule.includes('morning_time'), `schedule-Gruppe nicht erkannt: ${schedule.join(',')}`);
+		assert.ok(channels.includes('send_email'), `channels-Gruppe nicht erkannt: ${channels.join(',')}`);
 	});
 
-	test('EditReportConfigSection: kein Feld steht gleichzeitig in own und einer bedingten Gruppe', () => {
+	test('EditReportConfigSection: kein Feld steht gleichzeitig in eigene und einer bedingten Gruppe', () => {
 		const call = mergeCall(mailInhaltCode, 'EditReportConfigSection.svelte');
-		const own = new Set(groupKeys(call, 'own'));
-		for (const group of ['schedule', 'channels']) {
-			const doppelt = groupKeys(call, group).filter((k) => own.has(k));
+		const eigene = new Set(groupKeys(call, 'eigene'));
+		for (const flag of ['showSchedule', 'showChannels'] as const) {
+			const doppelt = bedingteGruppe(flag).filter((k) => eigene.has(k));
 			assert.deepEqual(
 				doppelt,
 				[],
-				`Feld(er) ${doppelt.join(', ')} stehen in own UND in ${group}. own wird immer ` +
-					`geschrieben — damit landet das Feld auch dann im Blob, wenn diese Instanz die ` +
+				`Feld(er) ${doppelt.join(', ')} stehen in eigene UND in der ${flag}-Gruppe. eigene wird ` +
+					`immer geschrieben — damit landet das Feld auch dann im Blob, wenn diese Instanz die ` +
 					`zugehoerigen Bedienelemente gar nicht zeigt, und ueberschreibt den Nachbarn (F001/F003).`
 			);
 		}
 	});
 
-	test('VersandTab: kein Feld steht gleichzeitig in own und einer bedingten Gruppe', () => {
-		const call = mergeCall(versandTabCode, 'VersandTab.svelte');
-		const own = new Set(groupKeys(call, 'own'));
-		assert.ok(own.has('send_email'), `own-Gruppe nicht erkannt: ${[...own].join(',')}`);
-		for (const group of ['schedule', 'channels']) {
-			const doppelt = groupKeys(call, group).filter((k) => own.has(k));
-			assert.deepEqual(
-				doppelt,
-				[],
-				`Feld(er) ${doppelt.join(', ')} stehen in own UND in ${group} (F003).`
-			);
+	test('EditReportConfigSection schreibt kein telegram_style (Schalter gehoert VersandTab)', () => {
+		const call = mergeCall(mailInhaltCode, 'EditReportConfigSection.svelte');
+		assert.ok(!/telegram_style/.test(call), 'EditReportConfigSection reicht telegram_style in den Payload (#1738 FL4)');
+	});
+
+	test('Baustein: ohne telegram_style im Zustand bleibt der Wert des Nachbarn stehen', () => {
+		// Der EditReportConfigSection-Pfad reicht keinen telegram_style durch; der
+		// Baustein darf dann keinen Default ('rich') ueber den Wert von VersandTab legen.
+		const zustand = ladeReportZustand({});
+		delete zustand.telegram_style;
+		const nach = baueReportConfigPayload({ live: { telegram_style: 'kurzform' }, zustand });
+		assert.equal(nach.telegram_style, 'kurzform', 'Kurzstil des Nachbarn ueberschrieben (#1738 FL4)');
+		const leer = baueReportConfigPayload({ live: {}, zustand });
+		assert.ok(!('telegram_style' in leer), 'telegram_style ohne Besitzer in den Blob geschrieben');
+	});
+
+	test('Baustein: telegram_style (unbedingt) steht in keiner bedingten Gruppe', () => {
+		for (const flag of ['showSchedule', 'showChannels'] as const) {
+			assert.ok(!bedingteGruppe(flag).includes('telegram_style'), `telegram_style in ${flag}-Gruppe (F003)`);
 		}
 	});
 });

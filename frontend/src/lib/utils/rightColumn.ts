@@ -10,6 +10,7 @@
 // (Non-String, Non-Boolean) reinkippen, um Fallback-Pfade zu beweisen.
 
 import type { Trip } from '$lib/types';
+import { reportSlotAktiv } from './reportSlotAktiv.ts';
 
 const TEMPLATE_LABELS: Record<string, string> = {
 	wandern: 'Wandern',
@@ -61,17 +62,21 @@ export interface ReportSchedule {
 
 export function getReportSchedule(trip: Trip): ReportSchedule {
 	const rc = trip.report_config;
-	if (!rc) return { enabled: false, morning_enabled: false, evening_enabled: false, alertOnChanges: false };
+	// Issue #2422 S3 (N2): Slot-Zustand nach DERSELBEN Regel wie der Versand —
+	// auch ohne report_config (Trip bekommt sein Briefing) und bei Altdaten
+	// ohne Per-Slot-Schluessel. `enabled` = mindestens ein Slot aktiv.
+	const morning_enabled = reportSlotAktiv(rc, 'morning');
+	const evening_enabled = reportSlotAktiv(rc, 'evening');
 	// Defensive Runtime-Checks: Backend kann Off-Spec-Werte liefern.
-	const morningTime: unknown = rc.morning_time;
-	const eveningTime: unknown = rc.evening_time;
+	const morningTime: unknown = rc?.morning_time;
+	const eveningTime: unknown = rc?.evening_time;
 	return {
-		enabled: rc.enabled === true,
-		morning_enabled: rc.morning_enabled === true,
-		evening_enabled: rc.evening_enabled === true,
+		enabled: morning_enabled || evening_enabled,
+		morning_enabled,
+		evening_enabled,
 		morning: typeof morningTime === 'string' ? morningTime : undefined,
 		evening: typeof eveningTime === 'string' ? eveningTime : undefined,
-		alertOnChanges: rc.alert_on_changes === true
+		alertOnChanges: rc?.alert_on_changes === true
 	};
 }
 

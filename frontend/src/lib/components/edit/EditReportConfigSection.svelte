@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import type { ReportConfig } from '$lib/types';
-	import { toHHMMSS } from '$lib/utils/time';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import VTSchedulePlan from '../shared/versand-tab/VTSchedulePlan.svelte';
@@ -14,7 +13,13 @@
 	// Issue #1738 Fix-Loop 1 (F001/F002): die Read-Modify-Write-Regel des
 	// report_config-Blobs steht als reine, pruefbare Funktion neben beiden
 	// Schreibern statt zweimal im jeweiligen Effect-Rumpf.
-	import { mergeReportConfig } from '../shared/versand-tab/mergeReportConfig.ts';
+	// Issue #2422 S3 (AC-22/AC-24): Startzustand und Payload-Bau stehen als
+	// reine Funktionen in reportConfigPayload.ts (Slot-Regel reportSlotAktiv,
+	// Read-Modify-Write ueber mergeReportConfig) — dieselben wie in VersandTab.svelte.
+	import {
+		baueReportConfigPayload,
+		ladeReportZustand
+	} from '../shared/versand-tab/reportConfigPayload.ts';
 	import { Dot } from '$lib/components/atoms';
 	import {
 		DEFAULT_DAILY_SUMMARY_METRICS,
@@ -61,8 +66,15 @@
 	let originalReportConfig: ReportConfig = {};
 
 	// --- UI-State pro Sektion ---------------------------------------------------
-	let morning_enabled = $state(true);
-	let evening_enabled = $state(true);
+	// Trend-Default dieser Instanz: Abend an (Altbestand), VersandTab: beide aus.
+	const TREND_VORGABEN = { multi_day_trend_evening: true };
+	// Issue #2422 S3 (AC-24): Slot-Haekchen BEIM ERZEUGEN nach derselben Regel
+	// wie der Versand (reportSlotAktiv), ohne die fruehere Zeitbedingung.
+	const startZustand = untrack(() =>
+		ladeReportZustand(reportConfig as Record<string, unknown> | undefined, TREND_VORGABEN)
+	);
+	let morning_enabled = $state(startZustand.morning_enabled);
+	let evening_enabled = $state(startZustand.evening_enabled);
 	let morning_time = $state('07:00');
 	let evening_time = $state('18:00');
 	let multi_day_trend_morning = $state(false);
@@ -159,47 +171,26 @@
 			originalReportConfig = { ...reportConfig };
 			const c = originalReportConfig;
 
-			// Master-Switch-Migration: bevorzugt morning_enabled/evening_enabled,
-			// sonst Fallback auf enabled + gesetzte Zeit.
-			const globallyEnabled = typeof c.enabled === 'boolean' ? c.enabled : true;
-			if (typeof c.morning_enabled === 'boolean') {
-				morning_enabled = c.morning_enabled;
-			} else {
-				morning_enabled = globallyEnabled && typeof c.morning_time === 'string';
-			}
-			if (typeof c.evening_enabled === 'boolean') {
-				evening_enabled = c.evening_enabled;
-			} else {
-				evening_enabled = globallyEnabled && typeof c.evening_time === 'string';
-			}
-
-			if (typeof c.morning_time === 'string') morning_time = c.morning_time.slice(0, 5);
-			if (typeof c.evening_time === 'string') evening_time = c.evening_time.slice(0, 5);
-
-			if (typeof c.send_email === 'boolean') send_email = c.send_email;
-			if (typeof c.send_telegram === 'boolean') send_telegram = c.send_telegram;
-			if (typeof c.send_sms === 'boolean') send_sms = c.send_sms;
-			// Issue #1717 S3: zusaetzlich zur Initialisierung beim Erzeugen (oben) —
-			// deckt den Fall ab, dass reportConfig erst nach dem Erzeugen der
-			// Komponente eintrifft.
-			if (typeof c.send_premium_sms === 'boolean') send_premium_sms = c.send_premium_sms;
+			// Issue #2422 S3: Slots, Zeiten, Kanaele und Trends aus derselben
+			// reinen Funktion wie VersandTab (Slot-Regel reportSlotAktiv). Deckt
+			// zusaetzlich den Fall ab, dass reportConfig erst nach dem Erzeugen
+			// der Komponente eintrifft.
+			const z = ladeReportZustand(c as Record<string, unknown>, TREND_VORGABEN);
+			morning_enabled = z.morning_enabled;
+			evening_enabled = z.evening_enabled;
+			morning_time = z.morning_time;
+			evening_time = z.evening_time;
+			send_email = z.send_email;
+			send_telegram = z.send_telegram;
+			send_sms = z.send_sms;
+			send_premium_sms = z.send_premium_sms;
+			multi_day_trend_morning = z.multi_day_trend_morning;
+			multi_day_trend_evening = z.multi_day_trend_evening;
 
 			if (typeof c.show_compact_summary === 'boolean') show_compact_summary = c.show_compact_summary;
 			wind_exposition_min_elevation_m = typeof c.wind_exposition_min_elevation_m === 'number'
 				? c.wind_exposition_min_elevation_m
 				: null;
-
-			// Trend-Migration: erst neue Bool-Felder, dann Legacy-Array
-			if (typeof c.multi_day_trend_morning === 'boolean') {
-				multi_day_trend_morning = c.multi_day_trend_morning;
-			} else if (Array.isArray(c.multi_day_trend_reports)) {
-				multi_day_trend_morning = c.multi_day_trend_reports.includes('morning');
-			}
-			if (typeof c.multi_day_trend_evening === 'boolean') {
-				multi_day_trend_evening = c.multi_day_trend_evening;
-			} else if (Array.isArray(c.multi_day_trend_reports)) {
-				multi_day_trend_evening = c.multi_day_trend_reports.includes('evening');
-			}
 
 			// Issue #619: E-Mail-Elemente
 			if (typeof c.show_stage_stats === 'boolean') show_stage_stats = c.show_stage_stats;
@@ -230,10 +221,6 @@
 
 	// --- Write-Back: Read-Modify-Write -----------------------------------------
 	$effect(() => {
-		const multi_day_trend_reports: string[] = [];
-		if (multi_day_trend_morning) multi_day_trend_reports.push('morning');
-		if (multi_day_trend_evening) multi_day_trend_reports.push('evening');
-
 		// Original-Blob als Basis -> UI-Felder darueber mergen.
 		// So bleiben change_threshold_* und alle anderen unbekannten Felder erhalten.
 		// Issue #1738: Basis ist der LEBENDE Blob (untrack -> kein Selbst-Trigger),
@@ -251,10 +238,14 @@
 		// Schreibpfad auf fremde Felder (Fehlerklasse Fix-Loop 4) und setzt z.B.
 		// einen frisch gesetzten Premium-SMS-Schalter beim naechsten
 		// Mail-Inhalt-Klick still zurueck.
-		const merged = mergeReportConfig({
+		// Issue #2422 S3 (AC-22): Zeitplan- und Kanal-Gruppe baut
+		// reportConfigPayload.ts (enabled = morning || evening, toHHMMSS,
+		// multi_day_trend_reports). `zustand` traegt bewusst KEIN telegram_style —
+		// den Schalter besitzt nur VersandTab.
+		const merged = baueReportConfigPayload({
 			snapshot: originalReportConfig as Record<string, unknown>,
 			live: untrack(() => reportConfig) as Record<string, unknown> | undefined,
-			own: {
+			eigene: {
 				show_compact_summary,
 				wind_exposition_min_elevation_m,
 				// Issue #619: E-Mail-Elemente
@@ -273,18 +264,14 @@
 				show_yesterday_comparison,
 			},
 			showSchedule,
-			schedule: {
-				enabled: morning_enabled || evening_enabled,
+			showChannels,
+			zustand: {
 				morning_enabled,
 				evening_enabled,
-				morning_time: toHHMMSS(morning_time),
-				evening_time: toHHMMSS(evening_time),
+				morning_time,
+				evening_time,
 				multi_day_trend_morning,
 				multi_day_trend_evening,
-				multi_day_trend_reports,
-			},
-			showChannels,
-			channels: {
 				send_email,
 				send_telegram,
 				send_sms,

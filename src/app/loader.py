@@ -100,6 +100,12 @@ def _friendly_from_mode(mode: str) -> bool:
     return mode != "raw"
 
 
+def _bool_oder_none(wert: object) -> Optional[bool]:
+    """Issue #2422 S3 (AC-21): nur ein echtes JSON-bool gilt als gesetzt —
+    null, Zeichenkette oder Zahl fallen fail-safe auf "nicht gesetzt"."""
+    return wert if isinstance(wert, bool) else None
+
+
 def _clamped_day_window(
     start_hour: Optional[int], end_hour: Optional[int],
 ) -> tuple[Optional[int], Optional[int]]:
@@ -582,6 +588,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         report_config = TripReportConfig(
             trip_id=rc_data.get("trip_id", data["id"]),
             enabled=rc_data.get("enabled", True),
+            # Issue #2422 S3: nur echte bool, alles andere = "nicht gesetzt".
+            morning_enabled=_bool_oder_none(rc_data.get("morning_enabled")),
+            evening_enabled=_bool_oder_none(rc_data.get("evening_enabled")),
             morning_time=time.fromisoformat(rc_data.get("morning_time", "07:00:00")),
             evening_time=time.fromisoformat(rc_data.get("evening_time", "18:00:00")),
             send_email=rc_data.get("send_email", True),
@@ -638,15 +647,16 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     corridors = [_corridor_from_dict(c) for c in (data.get("corridors") or [])]
 
     # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder aus dem bereits
-    # geparsten `report_config` ABLEITEN (Dual-Read). `report_config.enabled`
-    # ist der EINZIGE Schalter (kein getrenntes morning/evening-Flag) -> steuert
-    # beide abgeleiteten *_enabled-Felder, verifiziert gegen
-    # trip_report_scheduler._get_active_trips (rc.enabled gated dort ebenfalls
-    # morning UND evening gleichermassen). report_config bleibt Single Source.
+    # geparsten `report_config` ABLEITEN (Dual-Read). Issue #2422 S3: die
+    # *_enabled-Felder folgen `slot_aktiv()` — derselben Regel, mit der
+    # trip_report_scheduler den Versand je Slot entscheidet (`enabled` ist
+    # Master, sonst der Einzel-Schalter, fehlt er: aktiv). Ohne report_config
+    # bleiben sie None. report_config bleibt Single Source.
+    from app.models import slot_aktiv
     morning_time = report_config.morning_time.isoformat() if report_config else None
     evening_time = report_config.evening_time.isoformat() if report_config else None
-    morning_enabled = report_config.enabled if report_config else None
-    evening_enabled = report_config.enabled if report_config else None
+    morning_enabled = slot_aktiv(report_config, "morning") if report_config else None
+    evening_enabled = slot_aktiv(report_config, "evening") if report_config else None
     send_email = report_config.send_email if report_config else None
     send_sms = report_config.send_sms if report_config else None
     send_telegram = report_config.send_telegram if report_config else None
@@ -1855,6 +1865,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "skip_next": trip.report_config.skip_next,
             "updated_at": trip.report_config.updated_at.isoformat(),
         }
+        # Issue #2422 S3: Einzel-Slot-Schalter nur schreiben wenn gesetzt
+        # (additiv wie sms_threshold #624) — fehlend bleibt fehlend, kein null.
+        for _slot_key in ("morning_enabled", "evening_enabled"):
+            _slot_wert = getattr(trip.report_config, _slot_key)
+            if _slot_wert is not None:
+                data["report_config"][_slot_key] = _slot_wert
 
     # Issue #1250 Scheibe 4 Fix-Loop F002 (Adversary BROKEN): flache Slot-/
     # Kanal-Felder + end_date werden IMMER emittiert (auch als None), NICHT

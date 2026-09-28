@@ -12,7 +12,6 @@
 
 	import { onMount, untrack, type Snippet } from 'svelte';
 	import { api } from '$lib/api.js';
-	import { toHHMMSS } from '$lib/utils/time';
 	import type { Trip, ReportConfig, ComparePreset } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import VTBriefingChannels from './versand-tab/VTBriefingChannels.svelte';
@@ -22,7 +21,11 @@
 	// Issue #1738 Fix-Loop 1 (F001/F002): die Read-Modify-Write-Regel des
 	// report_config-Blobs steht als reine, pruefbare Funktion neben beiden
 	// Schreibern statt zweimal im jeweiligen Effect-Rumpf.
-	import { mergeReportConfig } from './versand-tab/mergeReportConfig.ts';
+	// Issue #2422 S3 (AC-22/AC-24): Startzustand und Payload-Bau stehen als
+	// reine Funktionen in reportConfigPayload.ts (Slot-Regel reportSlotAktiv,
+	// Read-Modify-Write ueber mergeReportConfig) — dieselben wie in
+	// EditReportConfigSection.svelte.
+	import { baueReportConfigPayload, ladeReportZustand } from './versand-tab/reportConfigPayload.ts';
 	// Issue #2276 S5: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import aus
 	// der Compare-Hub-Klebeschicht, aufgeloest in S6f, AC-8).
 	import {
@@ -126,8 +129,14 @@
 
 	// ── Sektion 1+2: Briefing-Kanäle + Zeitplan (report_config) ────────────────
 	let originalReportConfig: ReportConfig = {};
-	let morning_enabled = $state(true);
-	let evening_enabled = $state(true);
+	// Issue #2422 S3 (AC-24): die Slot-Haekchen stehen schon BEIM ERZEUGEN
+	// nach derselben Regel wie der Versand (reportSlotAktiv) — nicht erst in
+	// onMount, und ohne die fruehere Zeitbedingung.
+	const startZustand = untrack(() =>
+		ladeReportZustand(reportConfig as Record<string, unknown> | undefined)
+	);
+	let morning_enabled = $state(startZustand.morning_enabled);
+	let evening_enabled = $state(startZustand.evening_enabled);
 	let morning_time = $state('07:00');
 	let evening_time = $state('18:00');
 	let multi_day_trend_morning = $state(false);
@@ -158,42 +167,28 @@
 	onMount(() => {
 		if (reportConfig) {
 			originalReportConfig = { ...reportConfig };
-			const c = originalReportConfig;
-			const globallyEnabled = typeof c.enabled === 'boolean' ? c.enabled : true;
-			morning_enabled =
-				typeof c.morning_enabled === 'boolean'
-					? c.morning_enabled
-					: globallyEnabled && typeof c.morning_time === 'string';
-			evening_enabled =
-				typeof c.evening_enabled === 'boolean'
-					? c.evening_enabled
-					: globallyEnabled && typeof c.evening_time === 'string';
-			if (typeof c.morning_time === 'string') morning_time = c.morning_time.slice(0, 5);
-			if (typeof c.evening_time === 'string') evening_time = c.evening_time.slice(0, 5);
-			if (typeof c.send_email === 'boolean') send_email = c.send_email;
-			if (typeof c.send_telegram === 'boolean') send_telegram = c.send_telegram;
-			if (typeof c.send_sms === 'boolean') send_sms = c.send_sms;
-			if (typeof c.send_premium_sms === 'boolean') send_premium_sms = c.send_premium_sms;
-			if (c.telegram_style === 'kurzform' || c.telegram_style === 'rich') {
-				telegram_style = c.telegram_style;
-			}
-			if (typeof c.multi_day_trend_morning === 'boolean') {
-				multi_day_trend_morning = c.multi_day_trend_morning;
-			} else if (Array.isArray(c.multi_day_trend_reports)) {
-				multi_day_trend_morning = c.multi_day_trend_reports.includes('morning');
-			}
-			if (typeof c.multi_day_trend_evening === 'boolean') {
-				multi_day_trend_evening = c.multi_day_trend_evening;
-			} else if (Array.isArray(c.multi_day_trend_reports)) {
-				multi_day_trend_evening = c.multi_day_trend_reports.includes('evening');
-			}
+			// Issue #2422 S3: EINE Ladefunktion fuer alle Felder (Nachladen, falls
+			// reportConfig erst nach dem Erzeugen eintrifft). Gewollte Aenderung
+			// gegenueber frueher: ein Trip mit enabled=true ohne Per-Slot-Schluessel
+			// und ohne Zeitfelder zeigt beide Slots AN — der Versand liefert ihn
+			// mit den Standardzeiten ja auch aus (Verdikt N2). enabled=false zeigt
+			// beide aus, gesetzte Per-Slot-Schluessel gelten wie gespeichert.
+			const z = ladeReportZustand(originalReportConfig as Record<string, unknown>);
+			morning_enabled = z.morning_enabled;
+			evening_enabled = z.evening_enabled;
+			morning_time = z.morning_time;
+			evening_time = z.evening_time;
+			send_email = z.send_email;
+			send_telegram = z.send_telegram;
+			send_sms = z.send_sms;
+			send_premium_sms = z.send_premium_sms;
+			telegram_style = z.telegram_style ?? 'rich';
+			multi_day_trend_morning = z.multi_day_trend_morning;
+			multi_day_trend_evening = z.multi_day_trend_evening;
 		}
 	});
 
 	$effect(() => {
-		const multi_day_trend_reports: string[] = [];
-		if (multi_day_trend_morning) multi_day_trend_reports.push('morning');
-		if (multi_day_trend_evening) multi_day_trend_reports.push('evening');
 		// Issue #1738: Read-Modify-Write ueber den geteilten Helfer, Basis ist der
 		// LEBENDE Blob (untrack -> kein Selbst-Trigger) und nicht mehr nur der
 		// Mount-Schnappschuss. Seit /trips/new diese Komponente neben
@@ -202,15 +197,21 @@
 		// Einstellung des Nachbarn (email_format, show_outlook, ...) und jedes
 		// unbekannte Bestandsfeld (change_threshold_*) still loeschen.
 		// originalReportConfig bleibt Rueckfall fuer den ersten Lauf vor onMount.
-		const merged = mergeReportConfig({
+		// Issue #2422 S3 (AC-22): Bau in reportConfigPayload.ts (enabled =
+		// morning || evening, toHHMMSS, multi_day_trend_reports). Der
+		// Bausteintest (versand-tab/__tests__/
+		// report_config_serialisierung_golden.test.ts) prueft die reine
+		// Funktion — DASS dieser Effect sie mit dem echten Zustand aufruft,
+		// beweist nur der Staging-E2E kanal-an-aus-kette.staging.spec.ts
+		// (AC-26, Mutation M14): kein Feld hier weglassen oder umbenennen.
+		const merged = baueReportConfigPayload({
 			snapshot: originalReportConfig as Record<string, unknown>,
 			live: untrack(() => reportConfig) as Record<string, unknown> | undefined,
-			own: {
-				enabled: morning_enabled || evening_enabled,
+			zustand: {
 				morning_enabled,
 				evening_enabled,
-				morning_time: toHHMMSS(morning_time),
-				evening_time: toHHMMSS(evening_time),
+				morning_time,
+				evening_time,
 				send_email,
 				send_telegram,
 				send_sms,
@@ -218,8 +219,7 @@
 				send_premium_sms,
 				telegram_style,
 				multi_day_trend_morning,
-				multi_day_trend_evening,
-				multi_day_trend_reports
+				multi_day_trend_evening
 			}
 		});
 		reportConfig = merged as ReportConfig;
