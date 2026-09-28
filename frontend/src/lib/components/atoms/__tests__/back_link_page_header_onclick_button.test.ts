@@ -38,7 +38,7 @@ const PageHeader = (await import(pathToFileURL(path.join(HERE, '..', 'PageHeader
 	.default;
 
 function html(component: unknown, props: Record<string, unknown>): string {
-	return render(component as never, { props }).body.replace(/<!--[\s\S]*?-->/g, '');
+	return render(component as never, { props: props as never }).body.replace(/<!--[\s\S]*?-->/g, '');
 }
 
 /** Alle öffnenden Tags mit data-testid="back-link". */
