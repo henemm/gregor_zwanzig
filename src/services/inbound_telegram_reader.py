@@ -389,10 +389,17 @@ class InboundTelegramReader:
         if key in _QUERY_KEYS and ladehinweis_erlaubt:
             # Loading-Message senden, dann Wetterdaten on-demand holen,
             # dann in-place ersetzen (AC-4)
+            # #2417 AC-4/AC-19: die Sprache ist bereits ermittelt
+            # (inbound.englisch) -- auf Kurzform-Kanaelen ist JEDE Antwort
+            # englisch, auch diese Zwischennachricht.
+            loading_body = (
+                "⏳ Loading weather..." if inbound.englisch
+                else "⏳ Wetter wird geladen..."
+            )
             loading_mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
                 subject="⏳",
-                body="⏳ Wetter wird geladen...",
+                body=loading_body,
                 settings=user_settings,
             )
             result: CommandResult = TripCommandProcessor().process(inbound)
