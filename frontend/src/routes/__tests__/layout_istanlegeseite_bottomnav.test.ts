@@ -67,6 +67,34 @@ describe('AC-6: BottomNav auf beiden Anlege-Seiten ausgeblendet, sonst sichtbar'
 		assert.ok(!/bottom-?nav/i.test(html), 'AC-6 FAIL: auf /trips/new rendert eine BottomNav.');
 	});
 
+	// Der Leerraum entsteht am <main>-Padding (.mobile-scroll-pad reserviert die
+	// Nav-Hoehe); auf Anlege-Seiten hebt der Modifikator das auf, padding-top bleibt.
+	function mainKlassen(html: string): string[] {
+		const m = /<main\b[^>]*\bclass="([^"]*)"/.exec(html);
+		assert.ok(m, 'Messaufbau kaputt: kein <main class> im Layout.');
+		return m![1].split(/\s+/);
+	}
+
+	for (const pfad of ['/trips/new', '/compare/new']) {
+		test(`${pfad}: <main> hebt die BottomNav-Reservierung auf, behält mobile-scroll-pad (padding-top)`, () => {
+			const klassen = mainKlassen(layoutHtml(pfad));
+			assert.ok(klassen.includes('mobile-scroll-pad'), `${pfad}: mobile-scroll-pad fehlt — Safe-Area oben ginge verloren.`);
+			assert.ok(
+				klassen.includes('mobile-scroll-pad--ohne-nav'),
+				`${pfad}: <main> reserviert unten weiter Platz für die ausgeblendete BottomNav.`
+			);
+		});
+	}
+
+	test('/trips: <main> behält die BottomNav-Reservierung', () => {
+		const klassen = mainKlassen(layoutHtml('/trips'));
+		assert.ok(klassen.includes('mobile-scroll-pad'));
+		assert.ok(
+			!klassen.includes('mobile-scroll-pad--ohne-nav'),
+			'/trips: Reservierung aufgehoben, obwohl die BottomNav dort sichtbar ist.'
+		);
+	});
+
 	test('/trips (Kontrollroute): weiterhin EINE BottomNav', () => {
 		const html = layoutHtml('/trips');
 		assert.ok(

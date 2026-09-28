@@ -161,6 +161,26 @@ describe('AC-4: Speichern wandert in je einen EditorStickyFooter (context="route
 	});
 });
 
+describe('AC-4: Speichern ist gesperrt, solange der Trip nicht speicherbereit ist', () => {
+	function tagMitTestid(html: string, testid: string): string {
+		const m = new RegExp(`<[a-zA-Z]+\\b[^>]*data-testid="${testid}"[^>]*>`).exec(html);
+		assert.ok(m, `Testid "${testid}" fehlt im gerenderten Dokument.`);
+		return m![0];
+	}
+
+	for (const testid of ['trip-new-save-btn', 'tn-mobile-save']) {
+		test(`${testid} trägt im Anfangszustand das Attribut disabled`, () => {
+			const tag = tagMitTestid(renderTripNew(DESKTOP), testid);
+			assert.match(tag, /^<button\b/, `${testid} ist kein <button>: ${tag}`);
+			assert.match(
+				tag,
+				/\sdisabled(?:=""|\s|>|$)/,
+				`${testid}: Speichern wirkt aktiv, obwohl der Zeitplan fehlt (disabled fehlt): ${tag}`
+			);
+		});
+	}
+});
+
 describe('AC-8: Fade-Maske auf tn-mobile-tabbar (wörtlich wie cm-mobile-tabbar)', () => {
 	const GRADIENT =
 		'linear-gradient\\(to right, transparent, black 16px, black calc\\(100% - 16px\\), transparent\\)';

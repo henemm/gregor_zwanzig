@@ -498,7 +498,7 @@
 
 	<!-- Sticky-Footer (geteilter Baustein): Weiter-Aktion des Reiters, auf
 	     Versand „Briefing aktivieren" (Mobile-Shell S2, vorher App-Leiste). -->
-	<EditorStickyFooter context="vergleich" testid="cm-mobile-cta">
+	<EditorStickyFooter context="vergleich" testid="cm-mobile-cta" navClearance={false}>
 			{#if activeTab === 'versand'}
 				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? 'Speichere…' : canActivateNow ? 'Briefing aktivieren' : 'Versand einrichten zum Aktivieren'}</MBtn>
 			{:else if activeTab === 'vergleich'}
