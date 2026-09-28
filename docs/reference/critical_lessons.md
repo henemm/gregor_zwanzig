@@ -37,9 +37,12 @@ Weil die Vorgabezeiten 07:00/18:00 Ortszeit bei drei Stunden Fälligkeitsfenster
 gelten, hängt das Ergebnis sonst an der Wanduhr: rot von 07–10 und 18–21 Uhr
 Ortszeit, grün dazwischen.
 
-Praktisch: `report_config.enabled = False` setzen (wird produktiv nur in
-`trip_report_scheduler.py:171` und `:891` gelesen, beide im Briefing-Pfad, nie
-im Alarmpfad). **Vor jeder solchen „Aus"-Flagge zählen, wo sie gelesen wird** —
+Praktisch: `report_config.enabled = False` setzen (seit #2422 S3 (2026-09-28)
+produktiv nur in `slot_aktiv` in `src/app/models.py` gelesen, aufgerufen aus
+`trip_report_scheduler.py` `_get_active_trips` und `trip_briefing_due_at` —
+beide im Briefing-Pfad, nie im Alarmpfad; `enabled=False` bleibt Master über
+beide Slots, die Einzel-Schalter `morning_enabled`/`evening_enabled` schalten
+nur ihren Slot ab). **Vor jeder solchen „Aus"-Flagge zählen, wo sie gelesen wird** —
 sonst macht der Fix den Test grün, indem er ihn entkernt.
 
 Gegenprobe, die etwas taugt: die Bedingung **herstellen** statt abwarten — eine
