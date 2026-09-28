@@ -1,6 +1,14 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-09-14 (Issue #2317 — Speichern beim Entladen/„Aktualisieren"/Anzeige nach
+**Updated:** 2026-09-28 (Issue #2293 Scheibe S2, Epic #1374/#2345 — Ortsvergleich bekommt
+ein eigenes, persistiertes `alert_channels`-Objekt für den Alarm-Versand, entkoppelt von
+den Briefing-Flags `send_telegram`/`send_sms`/`send_premium_sms`; neuer eigener
+Premium-SMS-Schalter im Versand-Reiter des Ortsvergleichs, löst die stille Kopplung
+„Alarm-Premium-SMS-Klick schaltet Briefing-Premium-SMS mit" (#2448) auf; Alt-Bestand ohne
+`alert_channels` wird beim Laden in-memory materialisiert (kein Write-Back), ein Legacy
+`send_premium_sms=true` wird dabei als Alarm-Absicht gedeutet und das Briefing-Flag beim
+nächsten Speichern bereinigt; siehe „Premium-SMS als Versandkanal" unten, Spec
+`docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`); 2026-09-14 (Issue #2317 — Speichern beim Entladen/„Aktualisieren"/Anzeige nach
 Neuladen: Trip-Reiter reichen `init` (keepalive) über `shared/tripSpeicherung.ts` durch statt es zu
 verschlucken; `+layout.svelte` stellt per Svelte-Context (`stores/aktiveSpeicherung.ts`) eine
 Anmeldestelle bereit, an der `serviceWorkerUpdate.ts` vor `SKIP_WAITING` eine ausstehende
@@ -24,11 +32,15 @@ Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und 
 - **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, Scheduler, Alerts, Inbound-Handler (FastAPI, Port 8000)
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
 - **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io), Premium-SMS (seven.io, Garmin
-  inReach) — als **Versandkanal** seit Issue #1676 S2a weiterhin **nur im Trip-Briefing**
-  (kein Ortsvergleich-Versand); als **Alarm-Kanal** seit #1701 (Backend) und #1745 Scheibe A
-  (Oberfläche, Alarme-Reiter) in **beiden** Flächen verdrahtet — Trip UND Ortsvergleich,
-  für Gewitter-, Änderungs- und amtliche Alarme, **nicht** für Regen-/Radar-Alarme (Scheibe
-  B, #1752, offen); siehe ADR-0049
+  inReach) — als **Versandkanal** seit Issue #1676 S2a im Trip-Briefing UND seit #2275
+  (Backend) bzw. #2293 S2 (eigener Versand-Reiter-Schalter) im Ortsvergleich-Briefing
+  verdrahtet — zwei getrennte Felder (`Trip.report_config.send_premium_sms`,
+  `ComparePreset.SendPremiumSms`); als **Alarm-Kanal** seit #1701 (Backend) und #1745
+  Scheibe A (Oberfläche, Alarme-Reiter) in **beiden** Flächen verdrahtet — Trip UND
+  Ortsvergleich, für Gewitter-, Änderungs- und amtliche Alarme; seit #1752 (Scheibe B)
+  auch für Regen-/Radar-Alarme. Seit #2293 S2 ist der Alarm-Kanal (`alert_channels`) am
+  Ortsvergleich vom Briefing-Kanal (`send_premium_sms`) vollständig entkoppelt, identisch
+  zum Trip; siehe ADR-0049
 - **Abo-Objekte:** Briefing-Subscriptions für Trips (ADR-0023) und Compare-Presets für Orts-Vergleiche — getrennte Domänenobjekte, keine gemeinsame „Subscription“-Abstraktion mehr
 
 Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zuständigkeitsgrenze.
@@ -94,9 +106,11 @@ Die folgenden Komponenten leben im Python-Core:
      Spec: `docs/specs/modules/telegram_send_pacing.md`.
    - **SMS** (`src/output/channels/sms.py`) – SMS-Versand via seven.io
    - **Premium-SMS** (`src/output/channels/premium_sms.py`, `PremiumSmsOutput`,
-     `name == "premium_sms"`, seit Issue #1676 S2a) – als **Versandkanal** weiterhin **nur
-     Trip-Briefing**, kein Ortsvergleich-Versand. Als **Alarm-Kanal** seit #1701 (Backend)
-     für Gewitter-, Änderungs- und amtliche Alarme verdrahtet, in Trip **und** Ortsvergleich;
+     `name == "premium_sms"`, seit Issue #1676 S2a) – als **Versandkanal** im
+     **Trip-Briefing** (seit #1676 S2a) UND im **Ortsvergleich-Briefing** (Backend seit
+     #2275, eigener Versand-Reiter-Schalter seit #2293 S2) verdrahtet — getrennte Felder,
+     kein gemeinsamer Schalter. Als **Alarm-Kanal** seit #1701 (Backend) für Gewitter-,
+     Änderungs- und amtliche Alarme verdrahtet, in Trip **und** Ortsvergleich;
      seit #1752 (Scheibe B) gilt das auch für **Regen-/Radar-Alarme** — sie lösen ihre Kanäle
      über denselben `_effective_alert_channels()` auf wie alle anderen Alarmtypen. Die frühere
      Sonderfassung `_radar_effective_channels()`, die ausschließlich die Briefing-Flags las, ist
@@ -107,8 +121,10 @@ Die folgenden Komponenten leben im Python-Core:
      ausschließlich Tier `premium`). Teilt sich mit `SMSOutput` die Basisklasse
      `SevenIoChannelBase` (Sicherheitssperren + HTTP-Transport genau einmal statt zweimal).
      Kein eigener Render-Pfad — Text kommt unverändert aus `report.sms_text`. Frontend-Schalter
-     im Versand-Reiter seit #1717 S3, im Alarme-Reiter (Trip UND Ortsvergleich) seit #1745
-     Scheibe A. Details: ADR-0049, `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`.
+     im Versand-Reiter seit #1717 S3 (Trip) bzw. #2293 S2 (Ortsvergleich, eigener Schalter,
+     löst #2448 ab), im Alarme-Reiter (Trip UND Ortsvergleich) seit #1745 Scheibe A. Details:
+     ADR-0049, `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`,
+     `docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`.
    - **SMS-/Premium-SMS-Tageslimit** (`src/services/sms_daily_limit.py`, seit Issue #2412 S4a,
      2026-09-24) – kanal-eigener Kosten-Deckel, getrennt vom Alarm-Frequenz-Limit
      (`alert_daily_limit.py` für Free/Standard bzw. dem Premium-Mindestabstand): je Nutzer
@@ -145,7 +161,7 @@ Channel Renderers
   ├─→ render_sms() → Wire-Format ≤160 Zeichen
   └─→ DebugBuffer
   ↓
-Channel (E-Mail / Telegram / SMS / Premium-SMS [nur Trip-Briefing] / Console)
+Channel (E-Mail / Telegram / SMS / Premium-SMS / Console)
 ```
 
 **Report-Config-Resolver (Issue #1208, Scheibe A):** Für Trip-Briefings löst
@@ -282,7 +298,7 @@ S3/#2126). Kein Frontend weiterhin, aber Befehlsausführung ja. Details:
 `docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md`,
 `docs/specs/modules/inbound_command_channels.md`.
 
-### Premium-SMS als Versandkanal (Issue #1676, Scheibe S2a — nur Trip-Briefing)
+### Premium-SMS als Versandkanal (Issue #1676 Scheibe S2a; Ortsvergleich seit #2275/#2293 S2)
 
 Aufbauend auf der gelernten Rückadresse aus S1 ist Premium-SMS seit S2a ein
 vierter, eigenständiger Versandkanal `premium_sms` (s. „Channels" oben und
@@ -301,11 +317,29 @@ Sonderfassung `_radar_effective_channels()`, die ausschließlich die Briefing-Fl
 ersatzlos entfallen; das Kanal-Set wird einmal über `_effective_alert_channels()` aufgelöst
 und im ganzen Radar-Pfad geteilt (Unterdrückungs-Protokoll, Leer-Check, Versand). Damit gibt
 es **einen** Auflösungsweg für alle Alarmtypen — die zwei konkurrierenden Wege waren die
-Ursache von #1745. Der Versand-Pfad selbst (dieser Abschnitt) bleibt unverändert
-Trip-Briefing-only, davon unberührt. Details:
+Ursache von #1745. Der Versand-Pfad selbst (dieser Abschnitt) blieb bis #2275 unverändert
+Trip-Briefing-only. Details:
 `docs/specs/modules/feat_1701_alarm_premium_sms.md`,
 `docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md`,
 `docs/specs/modules/fix_1752_radar_folgt_alarm_kanaelen.md`.
+
+🔴 **Nachtrag 2 (2026-09-28, Issue #2293 Scheibe S2 — aktueller Stand; der Versand-Satz im
+Nachtrag oben ist damit überholt):** Der
+Versand-Pfad ist seit **#2275** (Backend) und **#2293 S2** (eigener Schalter im
+Versand-Reiter des Ortsvergleichs, löst #2448 ab) **kein** Trip-Briefing-only mehr —
+Premium-SMS ist jetzt Versandkanal in **beiden** Flächen, über getrennte, nicht mehr
+gekoppelte Felder: `ComparePreset.SendPremiumSms` (Briefing) und
+`ComparePreset.AlertChannels.PremiumSms` (Alarm, identischer Typ wie beim Trip). Vor
+#2293 S2 gab es am Ortsvergleich nur den Alarme-Reiter-Schalter, der still auch
+`send_premium_sms` (Briefing) mitsetzte; das ist mit dieser Scheibe aufgehoben.
+Alt-Bestand ohne `alert_channels` wird beim Laden deterministisch materialisiert
+(reine In-Memory-Auflösung, kein Write-Back durch ein GET) — ein Legacy
+`send_premium_sms=true` ohne vorhandenes `alert_channels` wird dabei als Alarm-Absicht
+gedeutet: `alert_channels.premium_sms` wird `true`, `send_premium_sms` wird beim ersten
+Go-Schreibzugriff auf `false` zurückgesetzt (Python-seitig deckt derselbe Zeitraum ein
+Guard in `effective_compare_briefing_channels`, `src/services/compare_alert_channels.py`,
+ab). Details: `docs/specs/modules/fix_2275_compare_premium_sms_versand.md`,
+`docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`.
 
 ### Telegram Bot-Menü (Automatisches Setup)
 

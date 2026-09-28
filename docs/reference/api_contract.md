@@ -943,7 +943,7 @@ Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versa
 
 ### alert_channel_thresholds (Issue #1461 S3b-2a Trip · S3b-2b Ortsvergleich · #1701 S2b vierter Kanal)
 
-Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms`+`send_premium_sms`: je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf. Identischer Vertrag auf `Trip` **und** `ComparePreset` — derselbe Go-Typ (`AlertChannelThresholdsConfig`), kein zweiter.
+Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms`+`send_premium_sms`: je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf. Identischer Vertrag auf `Trip` **und** `ComparePreset` — derselbe Go-Typ (`AlertChannelThresholdsConfig`), kein zweiter. Beim `ComparePreset` ist `alert_channels` seit #2293 (S2) vom Alarm-Versand her die maßgebliche Menge, `send_telegram`/`send_sms`/`send_premium_sms` steuern dort ausschließlich das Briefing — beide Felder bleiben nur beim `Trip` legacy-verkoppelt (Erb-Fallback bei `alert_channels == nil`, s. „alert_channels" oben).
 
 ```json
 {"alert_channel_thresholds": {"email": "LOW", "telegram": "HIGH", "sms": "MODERATE", "premium_sms": "HIGH"}}
@@ -2224,7 +2224,7 @@ type ComparePreset struct {
     SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Briefing-Kanal-Opt-in (Default falsy = E-Mail-only); steuert NUR das planmäßige Briefing, nicht den Alarm-Versand (s. AlertChannels)
     SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b — Briefing-Kanal, s. SendTelegram
     SendPremiumSms       *bool                  `json:"send_premium_sms,omitempty"`            // Issue #1701 S2b (D8); Versand-Reiter (#2293 S2/#2448) — Briefing-Kanal, s. SendTelegram
-    AlertChannels        *AlertChannelsConfig   `json:"alert_channels,omitempty"`              // Issue #2293 S2: eigenes Alarm-Kanal-Sub-Objekt, identischer Typ wie beim Trip (s. „alert_channels" oben). nil = beim Laden materialisiert (email=true, übrige aus SendTelegram/SendSms/SendPremiumSms abgeleitet); steuert AUSSCHLIESSLICH den Alarm-Versand, nie das Briefing
+    AlertChannels        *AlertChannelsConfig   `json:"alert_channels,omitempty"`              // Issue #2293 S2: eigenes Alarm-Kanal-Sub-Objekt, identischer Typ wie beim Trip (s. „alert_channels" oben). nil = beim Laden materialisiert (email=true, übrige aus SendTelegram/SendSms/SendPremiumSms abgeleitet); steuert AUSSCHLIESSLICH den Alarm-Versand, nie das Briefing. Alt-Bestand ohne alert_channels UND SendPremiumSms=true: die Materialisierung deutet das als Alarm-Absicht (alert_channels.premium_sms=true) und setzt SendPremiumSms bei diesem Ladevorgang zusätzlich auf false zurück — reine In-Memory-Auflösung (kein Write-Back durch ein GET), persistiert erst mit dem nächsten PUT
     Kind                 string                 `json:"kind,omitempty"`                        // ADR-0023-Diskriminator ("vergleich"); nur Migration schreibt ihn
     CreatedAt            time.Time              `json:"created_at"`
 }
@@ -4439,6 +4439,20 @@ function corridorInside(value, min, max) {
   `RequireAdmin` (401 ohne Sitzung, 403 Nicht-Admin, 200 Admin); ein mitgeschickter
   fremder `user_id`-Query-Parameter wird durch die Admin-Kennung aus dem
   Auth-Kontext ersetzt.
+- 2026-09-28: Issue #2293 Scheibe S2 (Epic #1374/#2345) — `ComparePreset` bekommt das Feld
+  `AlertChannels *AlertChannelsConfig` (identischer Typ wie beim Trip), materialisiert beim
+  Laden über `store.NormalizeComparePreset`/`normalizeLoadedComparePreset` (reine
+  In-Memory-Auflösung, kein Write-Back durch ein GET). Alarm- (`alert_channels`) und
+  Briefing-Kanäle (`send_telegram`/`send_sms`/`send_premium_sms`) sind am Ortsvergleich damit
+  vollständig entkoppelt — identisch zum Trip, s. „alert_channels" oben. Neuer eigener
+  Premium-SMS-Schalter im Versand-Reiter (`send_premium_sms`) löst die bisherige stille
+  Kopplung „Alarme-Reiter-Premium-SMS-Klick setzt auch das Briefing-Flag" (#2448) auf.
+  Alt-Bestand ohne `alert_channels` mit `send_premium_sms=true`: die Materialisierung deutet
+  das als Alarm-Absicht (`alert_channels.premium_sms=true`) und setzt `send_premium_sms` beim
+  Laden zusätzlich auf `false` (persistiert mit dem nächsten PUT); Python-seitiger Guard in
+  `effective_compare_briefing_channels` (`src/services/compare_alert_channels.py`) deckt
+  dasselbe Zeitfenster vor dem ersten Go-Schreibzugriff ab. Details:
+  `docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`.
 - 2026-09-28: Issue #2155 Scheibe S1 (Epic #2138, ADR-0078) — Admin-Rolle über die
   ENV-Liste `GZ_ADMIN_USER_IDS` (komma-getrennt, leer = niemand ist Admin). Neue
   Go-Middleware `RequireAdmin` schützt `POST /api/scheduler/trip-reports`,

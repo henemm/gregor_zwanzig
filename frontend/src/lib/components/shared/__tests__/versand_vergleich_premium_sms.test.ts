@@ -149,7 +149,7 @@ describe('AC-8/AC-14 (Persistenz): sendPremiumSms laeuft durch den ganzen Versan
 		assert.ok(
 			!('alert_channels' in body),
 			'AC-14/Abschnitt 4: die Versand-Nutzlast darf alert_channels (Alarm-Feld) NIE enthalten — ' +
-				`gefunden: ${JSON.stringify((body as Record<string, unknown>).alert_channels)}`
+				`gefunden: ${JSON.stringify((body as unknown as Record<string, unknown>).alert_channels)}`
 		);
 	});
 });
