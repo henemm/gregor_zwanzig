@@ -453,12 +453,15 @@ describe('#1260 Hub-Alarme Kurzstil-Toggle: Hydration + PUT-Persistenz (F001)', 
 // vergessene Stelle erzeugt einen sichtbaren, aber wirkungslosen Haken — der
 // gemeldete Bug in neuer Form.
 //
-// RED HEUTE: `sendPremiumSms` ist weder in `AlarmHydrationTarget`, noch in
-// `HubEdit`, noch in `AlarmSnapshot`, noch in der Rollback-Feldliste bekannt.
-// Mutation (Spec): buildHubPutPayload() reicht `edit.sendPremiumSms` nicht an
-// buildComparePresetSavePayload durch.
+// 🔴 Issue #2293 Scheibe S2 (AC-9 Entkopplung): `send_premium_sms` traegt seit
+// dieser Scheibe die BRIEFING-Absicht (Versand-Reiter, #2448), nicht mehr die
+// ALARM-Absicht. Glied 1/1b/3/3b/4/4b unten testeten urspruenglich den
+// ALARM-Pfad ueber `send_premium_sms` — sie sind auf `channels`
+// (alert_channels) umgestellt, nicht geloescht. Glied 2/2b (buildHubPutPayload)
+// bleiben unveraendert: `sendPremiumSms` ist dort weiterhin das korrekte
+// BRIEFING-Feld.
 // ─────────────────────────────────────────────────────────────────────────────
-describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', () => {
+describe('#1745 AC-9 / #2293 S2: Alarm-Kanal-Bestand durchlaeuft Hydration, Flush und Rollback', () => {
 	function makeAlarmSnapshot(overrides: Record<string, unknown> = {}): AlarmSnapshot {
 		return {
 			officialAlertsEnabled: true,
@@ -468,21 +471,19 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 			alertCooldownMinutes: 30,
 			alertQuietFrom: '22:00',
 			alertQuietTo: '07:00',
-			sendTelegram: true,
-			sendSms: false,
-			sendPremiumSms: false,
+			channels: { email: true, telegram: false, sms: false, premium_sms: false },
 			...overrides
 		} as AlarmSnapshot;
 	}
 
-	test('Glied 1 — Hydration: send_premium_sms aus dem Preset landet in state.sendPremiumSms', () => {
+	test('Glied 1 — Hydration: send_premium_sms (Defense-in-Depth-Rueckfall ohne alert_channels) landet in state.channels.premium_sms', () => {
 		const preset = makePreset({ send_premium_sms: true } as Partial<ComparePreset>);
 		const state: Record<string, unknown> = {};
 
 		hydrateAlarmFieldsFromPreset(state, preset);
 
 		assert.strictEqual(
-			state.sendPremiumSms,
+			(state.channels as Record<string, boolean>).premium_sms,
 			true,
 			'Ohne diese Hydration zeigte der Alarme-Reiter einen gespeicherten Premium-SMS-Haken ' +
 				'dauerhaft als „aus" — und der nächste Alarme-Save schriebe den Server-Bestand aktiv ' +
@@ -496,7 +497,11 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 
 		hydrateAlarmFieldsFromPreset(state, preset);
 
-		assert.strictEqual(state.sendPremiumSms, false, 'Kostenkanal — Default ist AUS, nicht undefined.');
+		assert.strictEqual(
+			(state.channels as Record<string, boolean>).premium_sms,
+			false,
+			'Kostenkanal — Default ist AUS, nicht undefined.'
+		);
 	});
 
 	test('Glied 2 — buildHubPutPayload: der Teil-Edit landet als send_premium_sms im Body (Landmine 3)', () => {
@@ -525,10 +530,14 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 		);
 	});
 
-	test('Glied 3 — flushPendingAlarmSave: ein reiner Premium-SMS-Klick löst einen PUT MIT dem Feld aus', () => {
+	test('Glied 3 — flushPendingAlarmSave: ein reiner Premium-SMS-ALARM-Klick löst einen PUT MIT dem Feld aus', () => {
 		const preset = makePreset({ send_premium_sms: false } as Partial<ComparePreset>);
-		const before = makeAlarmSnapshot({ sendPremiumSms: false });
-		const current = makeAlarmSnapshot({ sendPremiumSms: true });
+		const before = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: false }
+		});
+		const current = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: true }
+		});
 
 		const result = flushPendingAlarmSave(preset, current, before);
 
@@ -538,35 +547,45 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 				'PUT liefern (nicht null) — sonst bleibt der Klick folgenlos.'
 		);
 		assert.strictEqual(
-			(result!.body as unknown as Record<string, unknown>).send_premium_sms,
+			(result!.body as unknown as { alert_channels: Record<string, boolean> }).alert_channels.premium_sms,
 			true,
-			`der geklickte Kanal muss im PUT-Body stehen — erhalten: ${JSON.stringify(result!.body.send_premium_sms)}`
+			`der geklickte Kanal muss im PUT-Body stehen — erhalten: ${JSON.stringify((result!.body as unknown as Record<string, unknown>).alert_channels)}`
 		);
 	});
 
-	test('Glied 3b — ein Save aus einem anderen Grund sendet den Premium-SMS-Stand unverändert mit', () => {
+	test('Glied 3b — ein Save aus einem anderen Grund sendet den Premium-SMS-ALARM-Stand unverändert mit', () => {
 		// Ohne dieses Mitsenden schriebe der nächste Cooldown-Save den
 		// Server-Bestand still zurück (der bestätigte #1461-S3b-2b-Fehler).
 		const preset = makePreset({ send_premium_sms: true } as Partial<ComparePreset>);
+		const kanaele = { email: true, telegram: false, sms: false, premium_sms: true };
 		const result = flushPendingAlarmSave(
 			preset,
-			makeAlarmSnapshot({ sendPremiumSms: true, alertCooldownMinutes: 60 }),
-			makeAlarmSnapshot({ sendPremiumSms: true, alertCooldownMinutes: 30 })
+			makeAlarmSnapshot({ channels: kanaele, alertCooldownMinutes: 60 }),
+			makeAlarmSnapshot({ channels: kanaele, alertCooldownMinutes: 30 })
 		);
 
 		assert.ok(result);
-		assert.strictEqual((result!.body as unknown as Record<string, unknown>).send_premium_sms, true);
+		assert.strictEqual(
+			(result!.body as unknown as { alert_channels: Record<string, boolean> }).alert_channels.premium_sms,
+			true
+		);
 	});
 
 	test('Glied 4 — rollbackAlarmSnapshot: der eigene gescheiterte Klick rollt zurück', () => {
-		const before = makeAlarmSnapshot({ sendPremiumSms: false });
-		const attempted = makeAlarmSnapshot({ sendPremiumSms: true });
-		const state: Record<string, unknown> = { ...makeAlarmSnapshot({ sendPremiumSms: true }) };
+		const before = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: false }
+		});
+		const attempted = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: true }
+		});
+		const state: Record<string, unknown> = {
+			...makeAlarmSnapshot({ channels: { email: true, telegram: false, sms: false, premium_sms: true } })
+		};
 
 		rollbackAlarmSnapshot(state, before, attempted);
 
 		assert.strictEqual(
-			state.sendPremiumSms,
+			(state.channels as Record<string, boolean>).premium_sms,
 			false,
 			'Nach einem fehlgeschlagenen PUT muss die Oberfläche wieder deckungsgleich mit dem Server ' +
 				'sein — sonst zeigt sie einen Haken, den niemand gespeichert hat.'
@@ -578,16 +597,25 @@ describe('#1745 AC-9: sendPremiumSms_durchlaeuft_hydration_flush_und_rollback', 
 		// den ein Nachbar-Reiter WÄHREND des in-flight PUTs gemacht hat, still
 		// überschreiben. Beide Aussagen in EINEM Lauf, damit der neue vierte
 		// Kanal nicht versehentlich als Pauschal-Rollback nachgezogen wird.
-		const before = makeAlarmSnapshot({ sendPremiumSms: false, alertCooldownMinutes: 30 });
-		const attempted = makeAlarmSnapshot({ sendPremiumSms: true, alertCooldownMinutes: 30 });
+		const before = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: false },
+			alertCooldownMinutes: 30
+		});
+		const attempted = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: true },
+			alertCooldownMinutes: 30
+		});
 		const state: Record<string, unknown> = {
-			...makeAlarmSnapshot({ sendPremiumSms: true, alertCooldownMinutes: 60 })
+			...makeAlarmSnapshot({
+				channels: { email: true, telegram: false, sms: false, premium_sms: true },
+				alertCooldownMinutes: 60
+			})
 		};
 
 		rollbackAlarmSnapshot(state, before, attempted);
 
 		assert.strictEqual(
-			state.sendPremiumSms,
+			(state.channels as Record<string, boolean>).premium_sms,
 			false,
 			'der eigene, gescheiterte Premium-SMS-Klick muss zurückgerollt werden'
 		);

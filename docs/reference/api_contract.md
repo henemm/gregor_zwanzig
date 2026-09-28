@@ -926,9 +926,9 @@ type AlertChannelThresholdsConfig struct {
 }
 ```
 
-### alert_channels (Issue #1258, seit #1701 S2b vier Kanäle)
+### alert_channels (Issue #1258, seit #1701 S2b vier Kanäle; seit #2293 S2 Trip UND Ortsvergleich)
 
-Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche Sofort-Alerts), Pointer-Feld analog `official_warnings`:
+Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche Sofort-Alerts), Pointer-Feld analog `official_warnings`. Identischer Go-Typ (`AlertChannelsConfig`) auf **Trip UND ComparePreset** — seit Issue #2293 (S2) trägt auch der Ortsvergleich ein eigenes `alert_channels`-Sub-Objekt statt flacher Top-Level-Felder:
 
 ```json
 {"alert_channels": {"email": true, "telegram": false, "sms": false, "premium_sms": true}}
@@ -936,10 +936,10 @@ Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche So
 
 | Feld | Typ | Semantik |
 |------|-----|----------|
-| `alert_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend (Legacy-Verhalten):** Alert-Kanäle erben die aktiven Briefing-Kanäle aus `report_config` (`send_email`/`send_telegram`/`send_sms`/`send_premium_sms`) — kein Verhaltenswechsel für Bestand. **Gesetzt:** ersetzt beim Alert-Versand den geerbten Briefing-Anteil, seit #1701 (D3) mit **Feld-Level-Merge**: ein PUT, das ein Feld nicht mitschickt (z. B. ein älterer Frontend-Build ohne `premium_sms`), lässt dessen Bestandswert unverändert statt ihn auf `false` zurückzusetzen |
-| `alert_channels.email`/`.telegram`/`.sms`/`.premium_sms` | bool | einzelne Kanal-Flags; `premium_sms` gated zusätzlich über `premium_sms_allowed()` (Tier-Gate, NICHT `sms_allowed()`) |
+| `alert_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend (Legacy-Verhalten):** beim **Trip** erben die Alert-Kanäle die aktiven Briefing-Kanäle aus `report_config` (`send_email`/`send_telegram`/`send_sms`/`send_premium_sms`) — kein Verhaltenswechsel für Bestand. Beim **ComparePreset** wird `alert_channels` seit #2293 (S2) bei jedem Laden deterministisch materialisiert (`store.NormalizeComparePreset`/`normalizeLoadedComparePreset`): `email=true`, `telegram`/`sms`/`premium_sms` aus den flachen Top-Level-Feldern `send_telegram`/`send_sms`/`send_premium_sms` abgeleitet — reine In-Memory-Auflösung, kein Write-Back durch ein GET. **Gesetzt:** ersetzt beim Alert-Versand den geerbten/materialisierten Anteil, seit #1701 (D3) mit **Feld-Level-Merge**: ein PUT, das ein Feld nicht mitschickt (z. B. ein älterer Frontend-Build ohne `premium_sms`), lässt dessen Bestandswert unverändert statt ihn auf `false` zurückzusetzen |
+| `alert_channels.email`/`.telegram`/`.sms`/`.premium_sms` | bool | einzelne Kanal-Flags; `premium_sms` gated zusätzlich über `premium_sms_allowed()` (Tier-Gate, NICHT `sms_allowed()`); steuert beim ComparePreset ausschließlich den Alarm-Versand — die Briefing-Kanäle laufen weiterhin über `send_telegram`/`send_sms`/`send_premium_sms` |
 
-Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-/Premium-SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9, Spec `docs/specs/modules/feat_1701_alarm_premium_sms.md` (vierter Kanal, D3).
+Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten bzw. materialisierten Anteil; das SMS-/Premium-SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9, Spec `docs/specs/modules/feat_1701_alarm_premium_sms.md` (vierter Kanal, D3), Spec `docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md` (ComparePreset-Materialisierung).
 
 ### alert_channel_thresholds (Issue #1461 S3b-2a Trip · S3b-2b Ortsvergleich · #1701 S2b vierter Kanal)
 
@@ -2221,9 +2221,10 @@ type ComparePreset struct {
     AlertCooldownMinutes *int                   `json:"alert_cooldown_minutes,omitempty"`      // Issue #1170: nil = Default in compare_alert.py
     AlertQuietFrom       *string                `json:"alert_quiet_from,omitempty"`            // Issue #1170
     AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`              // Issue #1170
-    SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Alarm-Kanal-Opt-in (Default falsy = E-Mail-only)
-    SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b
-    SendPremiumSms       *bool                  `json:"send_premium_sms,omitempty"`            // Issue #1701 S2b (D8): eigenes Feld statt alert_channels-Sub-Objekt (Ortsvergleich hat keins)
+    SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Briefing-Kanal-Opt-in (Default falsy = E-Mail-only); steuert NUR das planmäßige Briefing, nicht den Alarm-Versand (s. AlertChannels)
+    SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b — Briefing-Kanal, s. SendTelegram
+    SendPremiumSms       *bool                  `json:"send_premium_sms,omitempty"`            // Issue #1701 S2b (D8); Versand-Reiter (#2293 S2/#2448) — Briefing-Kanal, s. SendTelegram
+    AlertChannels        *AlertChannelsConfig   `json:"alert_channels,omitempty"`              // Issue #2293 S2: eigenes Alarm-Kanal-Sub-Objekt, identischer Typ wie beim Trip (s. „alert_channels" oben). nil = beim Laden materialisiert (email=true, übrige aus SendTelegram/SendSms/SendPremiumSms abgeleitet); steuert AUSSCHLIESSLICH den Alarm-Versand, nie das Briefing
     Kind                 string                 `json:"kind,omitempty"`                        // ADR-0023-Diskriminator ("vergleich"); nur Migration schreibt ihn
     CreatedAt            time.Time              `json:"created_at"`
 }

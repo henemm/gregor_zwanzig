@@ -59,32 +59,42 @@ function makeAlarmSnapshot(overrides: Partial<AlarmSnapshot> = {}): AlarmSnapsho
 		officialWarningsEnabled: true,
 		radarAlertEnabled: false,
 		metricAlertLevels: {},
-		sendTelegram: false,
-		sendSms: false,
 		channelThresholds: {},
+		channels: { email: true, telegram: false, sms: false, premium_sms: false },
 		...overrides
 	};
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// AC-15: der bestaetigte Speicher-Bug — sendTelegram/sendSms im Alarme-Reiter
+// AC-15: der bestaetigte Speicher-Bug — Kanal-Umschaltung im Alarme-Reiter
+//
+// 🔴 Issue #2293 Scheibe S2 (AC-9 Entkopplung): der urspruengliche Fix (#1461
+// S3b-2b) fuehrte sendTelegram/sendSms im AlarmSnapshot als ALARM-Kanal-
+// Traeger ein -- exakt das Feld, das #2293 S2 als Briefing-Feld reklamiert.
+// Der Alarm-Kanal-Bestand laeuft seither als EIN Objekt `channels` (statt der
+// zwei Flach-Felder); dieselbe Zusicherung (eine Kanal-Umschaltung ist als
+// Snapshot-Differenz erkennbar UND landet im PUT-Body), nur am neuen Feld
+// gemessen -- nicht geloescht, umgestellt.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe('AC-15: Alarme-Reiter-Kanalumschaltung (sendTelegram/sendSms) ist jetzt Teil des Snapshots', () => {
-	test('hydrateAlarmFieldsFromPreset uebernimmt send_telegram/send_sms aus dem Preset', () => {
+describe('AC-15: Alarme-Reiter-Kanalumschaltung (channels) ist Teil des Snapshots', () => {
+	test('hydrateAlarmFieldsFromPreset uebernimmt den Alarm-Kanal-Bestand aus dem Preset', () => {
 		const preset = makePreset({ send_telegram: true, send_sms: true });
 		const state: Record<string, unknown> = {};
 
 		hydrateAlarmFieldsFromPreset(state, preset);
 
-		assert.strictEqual(state.sendTelegram, true);
-		assert.strictEqual(state.sendSms, true);
+		assert.deepStrictEqual(state.channels, { email: true, telegram: true, sms: true, premium_sms: false });
 	});
 
-	test('eine Telegram-Umschaltung (false -> true) erzeugt einen PUT-Payload mit send_telegram=true', () => {
+	test('eine Telegram-Umschaltung (false -> true) erzeugt einen PUT-Payload mit alert_channels.telegram=true', () => {
 		const preset = makePreset({ send_telegram: false });
-		const before = makeAlarmSnapshot({ sendTelegram: false });
-		const current = makeAlarmSnapshot({ sendTelegram: true });
+		const before = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: false }
+		});
+		const current = makeAlarmSnapshot({
+			channels: { email: true, telegram: true, sms: false, premium_sms: false }
+		});
 
 		const result = flushPendingAlarmSave(preset, current, before);
 
@@ -94,43 +104,55 @@ describe('AC-15: Alarme-Reiter-Kanalumschaltung (sendTelegram/sendSms) ist jetzt
 				'Snapshot-Differenz erkannt -- flushPendingAlarmSave lieferte null'
 		);
 		assert.strictEqual(
-			result!.body.send_telegram,
+			(result!.body as unknown as { alert_channels: { telegram: boolean } }).alert_channels.telegram,
 			true,
-			'REPRO: ohne den Fix fehlte send_telegram im PUT-Body -- der Server-Bestand ' +
-				'(false) wurde beim naechsten Alarme-Save aktiv zurueckgeschrieben'
+			'REPRO: ohne den Fix fehlte der Alarm-Kanal im PUT-Body'
 		);
 	});
 
-	test('eine SMS-Umschaltung (false -> true) erzeugt einen PUT-Payload mit send_sms=true', () => {
+	test('eine SMS-Umschaltung (false -> true) erzeugt einen PUT-Payload mit alert_channels.sms=true', () => {
 		const preset = makePreset({ send_sms: false });
-		const before = makeAlarmSnapshot({ sendSms: false });
-		const current = makeAlarmSnapshot({ sendSms: true });
+		const before = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: false }
+		});
+		const current = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: true, premium_sms: false }
+		});
 
 		const result = flushPendingAlarmSave(preset, current, before);
 
 		assert.ok(result);
-		assert.strictEqual(result!.body.send_sms, true);
+		assert.strictEqual(
+			(result!.body as unknown as { alert_channels: { sms: boolean } }).alert_channels.sms,
+			true
+		);
 	});
 
 	test('Rollback bei PUT-Fehler: die alten Kanal-Werte werden wiederhergestellt', () => {
-		const before = makeAlarmSnapshot({ sendTelegram: false, sendSms: false });
-		const attempted = makeAlarmSnapshot({ sendTelegram: true, sendSms: false });
+		const before = makeAlarmSnapshot({
+			channels: { email: true, telegram: false, sms: false, premium_sms: false }
+		});
+		const attempted = makeAlarmSnapshot({
+			channels: { email: true, telegram: true, sms: false, premium_sms: false }
+		});
 		const state: Record<string, unknown> = {
-			...makeAlarmSnapshot({ sendTelegram: true, sendSms: false })
+			...makeAlarmSnapshot({ channels: { email: true, telegram: true, sms: false, premium_sms: false } })
 		};
 
 		rollbackAlarmSnapshot(state, before, attempted);
 
-		assert.strictEqual(state.sendTelegram, false, 'der gescheiterte Edit muss zurueckgerollt werden');
+		assert.deepStrictEqual(
+			state.channels,
+			{ email: true, telegram: false, sms: false, premium_sms: false },
+			'der gescheiterte Edit muss zurueckgerollt werden'
+		);
 	});
 
 	test('ohne Aenderung (identischer Snapshot inkl. Kanaele) bleibt der Waechter gegen unnoetige PUTs intakt', () => {
 		const preset = makePreset();
-		const snap = makeAlarmSnapshot({ sendTelegram: true, sendSms: true });
-		assert.strictEqual(
-			flushPendingAlarmSave(preset, snap, makeAlarmSnapshot({ sendTelegram: true, sendSms: true })),
-			null
-		);
+		const kanaele = { email: true, telegram: true, sms: true, premium_sms: false };
+		const snap = makeAlarmSnapshot({ channels: kanaele });
+		assert.strictEqual(flushPendingAlarmSave(preset, snap, makeAlarmSnapshot({ channels: kanaele })), null);
 	});
 });
 

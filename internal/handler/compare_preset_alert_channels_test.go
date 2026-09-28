@@ -474,6 +474,66 @@ func TestCreateComparePresetHandler_AlertChannelsMaterializedInResponse(t *testi
 	}
 }
 
+// AC-6 Adversary-Nachtrag (F002): eine Neuanlage MIT send_premium_sms=true
+// und OHNE mitgeschicktes alert_channels behaelt send_premium_sms=true —
+// sowohl in der Server-Antwort als auch in der persistierten Datei — und
+// materialisiert zusaetzlich alert_channels.premium_sms=true. Die
+// Altbestand-Bereinigung (send_premium_sms -> false) darf HIER NICHT greifen:
+// sie ist ausschliesslich dem Lade-Pfad einer Bestandsdatei vorbehalten
+// (normalizeLoadedComparePreset -> materializeAlertChannels(p, true)), nicht
+// dem Create-Pfad (NormalizeComparePreset -> materializeAlertChannels(p,
+// false)). Verfaelscht man dieses `false` zu `true`, faengt das kein anderer
+// Test in dieser Datei: AC-6 selbst schickt kein send_premium_sms mit, AC-15/
+// 16/17 pruefen ausschliesslich den Lade+PUT-Pfad einer bereits auf der
+// Platte liegenden Datei, nie den frischen Create-Pfad.
+func TestCreateComparePresetHandler_SendPremiumSmsWithoutAlertChannelsSurvivesCreate(t *testing.T) {
+	s := newTestStore(t)
+
+	body := map[string]interface{}{
+		"name": "Neuanlage-2293-PremiumSms", "schedule": "manual", "profil": "SUMMER_TREKKING",
+		"hour_from": 8, "hour_to": 17, "location_ids": []string{"loc-a"},
+		"empfaenger": []string{"a@example.com"}, "send_premium_sms": true,
+	}
+	buf, _ := json.Marshal(body)
+
+	r := chi.NewRouter()
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+	req := httptest.NewRequest(http.MethodPost, "/api/compare/presets", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req = addUserToContext(req, "test")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp model.ComparePreset
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.SendPremiumSms == nil || *resp.SendPremiumSms != true {
+		t.Errorf(
+			"F002: expected send_premium_sms=true to survive Create ohne alert_channels im Body, got %+v",
+			resp.SendPremiumSms,
+		)
+	}
+	if resp.AlertChannels == nil || resp.AlertChannels.PremiumSms == nil || *resp.AlertChannels.PremiumSms != true {
+		t.Errorf("F002: expected alert_channels.premium_sms=true in der Create-Response, got %+v", resp.AlertChannels)
+	}
+
+	loaded := loadPresetOrFail(t, s, resp.ID)
+	if loaded.SendPremiumSms == nil || *loaded.SendPremiumSms != true {
+		t.Errorf(
+			"F002: expected persisted send_premium_sms=true (Create-Pfad darf NIE bereinigen), got %+v",
+			loaded.SendPremiumSms,
+		)
+	}
+	if loaded.AlertChannels == nil || loaded.AlertChannels.PremiumSms == nil || *loaded.AlertChannels.PremiumSms != true {
+		t.Errorf("F002: expected persisted alert_channels.premium_sms=true, got %+v", loaded.AlertChannels)
+	}
+}
+
 // ═══════════════════ AC-7: Legacy-GET materialisiert ohne Write-Back ══════
 
 // AC-7: eine Legacy-Preset-Datei ohne alert_channels-Schluessel liefert per

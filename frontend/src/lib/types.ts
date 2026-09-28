@@ -664,10 +664,18 @@ export interface ComparePreset {
 	official_alert_triggers_enabled?: boolean;
 	send_telegram?: boolean;
 	send_sms?: boolean;
-	// Issue #1745 A — Premium-SMS als vierter ALARM-Kanal des Ortsvergleichs
-	// (Go-Pendant model.ComparePreset.SendPremiumSms, #1701 AC-4). Anders als
-	// beim Trip ist das hier das Alarm-Opt-in, kein abgeleitetes Briefing-Flag.
+	// Issue #1745 A / #2293 S2 — Premium-SMS-Opt-in fuer das planmaessige
+	// BRIEFING des Ortsvergleichs (Versand-Reiter). Seit #2293 S2 steuert
+	// dieses Feld NICHT mehr den Alarm-Kanal (die fruehere Praemisse "das ist
+	// hier das Alarm-Opt-in" ist ueberholt) — der Alarm-Kanal lebt seither in
+	// alert_channels.premium_sms, s.u.
 	send_premium_sms?: boolean;
+	// Issue #2293 Scheibe S2 (Epic #1374/#2345) — eigenes Kanal-Sub-Objekt fuer
+	// den ALARM-Versand (Abweichung, amtliche Warnung, Regenradar), Go-Pendant
+	// model.ComparePreset.AlertChannels. Unabhaengig von send_telegram/
+	// send_sms/send_premium_sms (Briefing-Felder oben). Jedes GET liefert ab
+	// dieser Scheibe ein materialisiertes Objekt (auch fuer Alt-Presets).
+	alert_channels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
 	// Issue #1232 Scheibe 2a/2b — Zwei-Slot-Zeitplan + editierbare Laufzeit
 	// (docs/specs/modules/compare_preset_zeitplan.md, versand_tab_vergleich.md).
 	// morning_time/evening_time im Format "HH:MM:SS", end_date "YYYY-MM-DD".

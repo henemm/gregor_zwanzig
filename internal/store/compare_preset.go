@@ -39,6 +39,33 @@ func NormalizeComparePreset(p *model.ComparePreset) {
 	if p.Schedule != "manual" {
 		p.PausedAt = nil
 	}
+	materializeAlertChannels(p, false)
+}
+
+// materializeAlertChannels ist der EINE Regelort fuer die AlertChannels-
+// Materialisierung (Issue #2293 S2). cleanupLegacyPremiumSms=true nur beim
+// Lesen einer Bestandsdatei (normalizeLoadedComparePreset): vor dieser
+// Scheibe war der Alarme-Reiter der einzige UI-Weg, der send_premium_sms
+// schreiben konnte -- ein gesetztes send_premium_sms ohne vorhandenes
+// alert_channels traegt also eine Alarm-, keine Briefing-Absicht.
+// cleanupLegacyPremiumSms=false bei Create und beim PUT-Merge-Nachlauf
+// (NormalizeComparePreset direkt): dort kann send_premium_sms aus dem NEUEN
+// Versand-Schalter stammen und muss unangetastet bleiben.
+func materializeAlertChannels(p *model.ComparePreset, cleanupLegacyPremiumSms bool) {
+	if p.AlertChannels != nil {
+		return
+	}
+	email := true
+	telegram := p.SendTelegram != nil && *p.SendTelegram
+	sms := p.SendSms != nil && *p.SendSms
+	premiumSms := p.SendPremiumSms != nil && *p.SendPremiumSms
+	p.AlertChannels = &model.AlertChannelsConfig{
+		Email: &email, Telegram: &telegram, Sms: &sms, PremiumSms: &premiumSms,
+	}
+	if cleanupLegacyPremiumSms && premiumSms {
+		falseVal := false
+		p.SendPremiumSms = &falseVal
+	}
 }
 
 // MaterializePausedAt setzt paused_at beim SCHREIBEN (nicht beim Laden),
@@ -72,6 +99,11 @@ func normalizeLoadedComparePreset(p *model.ComparePreset) {
 		p.ForecastHours = 48
 	}
 	migrateComparePresetSlots(p)
+	// Issue #2293 S2: Altbestand-Bereinigung VOR dem generischen
+	// NormalizeComparePreset-Aufruf (der materialisiert mit cleanup=false,
+	// no-op sobald AlertChannels != nil) -- nur der Lade-Pfad einer
+	// Bestandsdatei darf ein verwaistes send_premium_sms=true zuruecksetzen.
+	materializeAlertChannels(p, true)
 	// Issue #1244 F002: Read-Path-Coercion symmetrisch zu SaveComparePreset —
 	// sonst liefert GET auf eine unmigrierte Legacy-Datei weiterhin
 	// "corridors":null.

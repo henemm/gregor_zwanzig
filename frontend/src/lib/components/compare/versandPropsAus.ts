@@ -44,6 +44,10 @@ export interface VersandZustandsQuelle {
 	sendEmail?: boolean;
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	// Issue #2293 Scheibe S2 (#2448): neuntes Klasse-A-Feld — eigener
+	// Premium-SMS-Schalter im Versand-Reiter des Ortsvergleichs (Briefing-Opt-in,
+	// unabhaengig vom Alarm-Kanal alert_channels.premium_sms).
+	sendPremiumSms?: boolean;
 	morningEnabled?: boolean;
 	morningTime?: string;
 	eveningEnabled?: boolean;
@@ -65,6 +69,7 @@ export function versandPropsAus(wiz: VersandZustandsQuelle) {
 		sendEmail: wiz.sendEmail ?? false,
 		sendTelegram: wiz.sendTelegram ?? false,
 		sendSms: wiz.sendSms ?? false,
+		sendPremiumSms: wiz.sendPremiumSms ?? false,
 		morningEnabled: wiz.morningEnabled ?? true,
 		morningTime: wiz.morningTime ?? '07:00',
 		eveningEnabled: wiz.eveningEnabled ?? false,
@@ -84,6 +89,9 @@ export function versandPropsAus(wiz: VersandZustandsQuelle) {
 		},
 		onSendSmsChange: (an: boolean) => {
 			wiz.sendSms = an;
+		},
+		onSendPremiumSmsChange: (an: boolean) => {
+			wiz.sendPremiumSms = an;
 		},
 		onMorningEnabledChange: (an: boolean) => {
 			wiz.morningEnabled = an;

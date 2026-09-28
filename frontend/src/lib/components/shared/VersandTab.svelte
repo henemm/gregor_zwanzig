@@ -59,6 +59,9 @@
 		sendEmail?: boolean;
 		sendTelegram?: boolean;
 		sendSms?: boolean;
+		/** Issue #2293 Scheibe S2 (#2448): neuntes Klasse-A-Feld — eigener
+		 * Premium-SMS-Briefing-Schalter im Versand-Reiter des Ortsvergleichs. */
+		sendPremiumSms?: boolean;
 		morningEnabled?: boolean;
 		morningTime?: string;
 		eveningEnabled?: boolean;
@@ -75,6 +78,7 @@
 		onSendEmailChange?: (an: boolean) => void;
 		onSendTelegramChange?: (an: boolean) => void;
 		onSendSmsChange?: (an: boolean) => void;
+		onSendPremiumSmsChange?: (an: boolean) => void;
 		onMorningEnabledChange?: (an: boolean) => void;
 		onMorningTimeChange?: (zeit: string) => void;
 		onEveningEnabledChange?: (an: boolean) => void;
@@ -104,6 +108,7 @@
 		sendEmail,
 		sendTelegram,
 		sendSms,
+		sendPremiumSms,
 		morningEnabled,
 		morningTime,
 		eveningEnabled,
@@ -115,6 +120,7 @@
 		onSendEmailChange,
 		onSendTelegramChange,
 		onSendSmsChange,
+		onSendPremiumSmsChange,
 		onMorningEnabledChange,
 		onMorningTimeChange,
 		onEveningEnabledChange,
@@ -240,7 +246,7 @@
 	// (kein lokaler $state). `sendEmail` zählt mit: der Schalter ist voll
 	// bedienbar, auch wenn er (vorbestehend) nicht persistiert wird.
 	const vergleichActiveChannelCount = $derived(
-		[sendEmail, sendTelegram, sendSms].filter(Boolean).length
+		[sendEmail, sendTelegram, sendSms, sendPremiumSms].filter(Boolean).length
 	);
 
 	// Factory-Pattern (Safari-Closure-Schutz, CLAUDE.md).
@@ -315,12 +321,14 @@
 	// inaktiv (AC-9), Trip-Zweig ebenso (AC-12).
 	// Issue #2276 S6e: der Speicherweg bleibt unveraendert — er bekommt den
 	// Versandstand jetzt ueber die Bruecke aus den Wertprops. `werte()` fuehrt
-	// GENAU die zehn Felder, die Snapshot und Nutzlast kennen; `sendEmail`
-	// gehoert bewusst NICHT dazu (kein `send_email` auf ComparePreset).
+	// GENAU die elf Felder (Issue #2293 S2 ergaenzt sendPremiumSms), die
+	// Snapshot und Nutzlast kennen; `sendEmail` gehoert bewusst NICHT dazu
+	// (kein `send_email` auf ComparePreset).
 	const versandZustand = versandZustandsBruecke(
 		() => ({
 			sendTelegram,
 			sendSms,
+			sendPremiumSms,
 			morningEnabled,
 			morningTime,
 			eveningEnabled,
@@ -398,11 +406,13 @@
 			channels={{
 				email: sendEmail ?? false,
 				telegram: sendTelegram ?? false,
-				sms: sendSms ?? false
+				sms: sendSms ?? false,
+				premium_sms: sendPremiumSms ?? false
 			}}
 			onEmailChange={makeToggleHandler((v) => onSendEmailChange?.(v))}
 			onTelegramChange={makeToggleHandler((v) => onSendTelegramChange?.(v))}
 			onSmsChange={makeToggleHandler((v) => onSendSmsChange?.(v))}
+			onPremiumSmsChange={makeToggleHandler((v) => onSendPremiumSmsChange?.(v))}
 			emailTestid="compare-step5-channel-email"
 			telegramTestid="compare-step5-channel-telegram"
 			smsTestid="compare-step5-channel-sms"

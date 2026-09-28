@@ -22,7 +22,7 @@ import {
 	normalizeStoredOutlookMetrics
 } from './weather-metrics-tab/compareMetricSelection.ts';
 
-/** Plain-Snapshot der 10 persistenzrelevanten Versand-Felder (OHNE sendEmail —
+/** Plain-Snapshot der 11 persistenzrelevanten Versand-Felder (OHNE sendEmail —
  * `ComparePreset` kennt kein `send_email`-Feld, s. `hydrateVersandFieldsFromPreset`).
  *
  * `alertCooldownMinutes`/`alertQuietFrom`/`alertQuietTo` sind die drei toten
@@ -35,6 +35,11 @@ import {
 export interface VersandSnapshot {
 	sendTelegram: boolean;
 	sendSms: boolean;
+	// Issue #2293 Scheibe S2 (#2448): eigener Premium-SMS-Briefing-Schalter im
+	// Versand-Reiter, unabhängig vom Alarm-Kanal (alert_channels.premium_sms).
+	// Optional, damit ältere Snapshot-Literale ohne dieses Feld typkompatibel
+	// bleiben (Vorbild alertCooldownMinutes u.a. weiter unten).
+	sendPremiumSms?: boolean;
 	morningEnabled: boolean;
 	morningTime: string;
 	eveningEnabled: boolean;
@@ -52,6 +57,7 @@ export interface VersandSnapshot {
 export interface VersandHydrationTarget {
 	sendTelegram?: boolean;
 	sendSms?: boolean;
+	sendPremiumSms?: boolean;
 	morningEnabled?: boolean;
 	morningTime?: string;
 	eveningEnabled?: boolean;
@@ -80,6 +86,7 @@ export function hydrateVersandFieldsFromPreset(
 		sendEmail: true,
 		sendTelegram: preset.send_telegram ?? false,
 		sendSms: preset.send_sms ?? false,
+		sendPremiumSms: preset.send_premium_sms ?? false,
 		morningEnabled: preset.morning_enabled ?? true,
 		morningTime: (preset.morning_time ?? '06:00').slice(0, 5),
 		eveningEnabled: preset.evening_enabled ?? false,
@@ -100,6 +107,7 @@ export function versandSnapshotAus(wiz: VersandHydrationTarget): VersandSnapshot
 		JSON.stringify({
 			sendTelegram: wiz.sendTelegram,
 			sendSms: wiz.sendSms,
+			sendPremiumSms: wiz.sendPremiumSms,
 			morningEnabled: wiz.morningEnabled,
 			morningTime: wiz.morningTime,
 			eveningEnabled: wiz.eveningEnabled,
@@ -119,15 +127,19 @@ export function versandSnapshotAus(wiz: VersandHydrationTarget): VersandSnapshot
  * (Lesenormalisierung #1373, sonst Datenverlust an der Metrik-Auswahl).
  * `officialWarnings` bleibt undefined — der Bestand round-trippt über
  * `...original`, ein Echo würde `sources` clobbern (F001, S4).
- * `sendPremiumSms` ist KEIN Versand-Feld im Ortsvergleich (ADR-0049) und
- * round-trippt ebenfalls.
+ *
+ * Issue #2293 S2 (Implementation Details Abschnitt 4/5, AC-8/AC-10/AC-14):
+ * `sendPremiumSms` ist seit dieser Scheibe ein eigener Versand-Schalter
+ * (#2448) und läuft als `send_premium_sms` mit; `alert_channels` (Alarm-Feld
+ * eines Nachbar-Reiters) wird nach dem Payload-Bau explizit aus dem Body
+ * entfernt (Same-Tab-Race-Schutz).
  */
 export function baueVersandNutzlast(
 	preset: ComparePreset,
 	current: VersandSnapshot
 ): { url: string; body: ComparePreset } {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	return buildComparePresetSavePayload(preset, {
+	const { url, body } = buildComparePresetSavePayload(preset, {
 		name: preset.name,
 		activityProfile: (preset.profil as ActivityProfile) ?? null,
 		pickedIds: preset.location_ids ?? [],
@@ -140,6 +152,7 @@ export function baueVersandNutzlast(
 		corridors: preset.corridors,
 		sendTelegram: current.sendTelegram,
 		sendSms: current.sendSms,
+		sendPremiumSms: current.sendPremiumSms,
 		morningEnabled: current.morningEnabled,
 		morningTime: current.morningTime,
 		eveningEnabled: current.eveningEnabled,
@@ -159,6 +172,8 @@ export function baueVersandNutzlast(
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined
 	});
+	delete (body as unknown as Record<string, unknown>).alert_channels;
+	return { url, body };
 }
 
 /**
@@ -193,6 +208,7 @@ export function rollbackVersandSnapshot(
 	const fields: (keyof VersandSnapshot)[] = [
 		'sendTelegram',
 		'sendSms',
+		'sendPremiumSms',
 		'morningEnabled',
 		'morningTime',
 		'eveningEnabled',
@@ -316,17 +332,18 @@ export function erstelleVersandVergleichSpeicherung(
  * weiter; kein Bedienelement schreibt hierueber.
  *
  * Wie `corridorZustandsBruecke` (S6d) und anders als `alarmZustandsBruecke`
- * (S6c) braucht es hier KEINE Namensumleitung: die zehn Felder heissen im
+ * (S6c) braucht es hier KEINE Namensumleitung: die Felder heissen im
  * Speicherweg genauso wie die Wertprops.
  *
- * 🔴 `werte()` fuehrt GENAU ZEHN Felder — die sieben Snapshot-Felder und die
- * drei toten Legacy-Restfelder. `sendEmail` gehoert bewusst NICHT dazu (Spec,
- * Design-Entscheidung 2): `VersandSnapshot` kennt das Feld nicht und
- * `baueVersandNutzlast` sendet es nie.
+ * 🔴 `werte()` fuehrt GENAU ELF Felder — die acht Snapshot-Felder (Issue #2293
+ * S2 ergaenzt `sendPremiumSms`, #2448) und die drei toten Legacy-Restfelder.
+ * `sendEmail` gehoert bewusst NICHT dazu (Spec, Design-Entscheidung 2):
+ * `VersandSnapshot` kennt das Feld nicht und `baueVersandNutzlast` sendet es nie.
  *
- * PLATZIERUNG unterhalb Zeile 221 ist Pflicht, keine Vorliebe (Spec, Auflage
- * A1): weiter oben verschoebe sie den eingefrorenen Ratschen-Eintrag
- * `versandVergleichSpeicherung.ts:221` nach unten.
+ * PLATZIERUNG unterhalb des `context === 'vergleich'`-Ratschen-Eintrags ist
+ * Pflicht, keine Vorliebe (Spec, Auflage A1): weiter oben verschoebe sie den
+ * eingefrorenen Eintrag `versandVergleichSpeicherung.ts` (Zeilennummer in
+ * `context_herkunft_zweige_eingefroren.test.ts` gepflegt) nach unten.
  */
 export function versandZustandsBruecke(
 	werte: () => Record<string, unknown>,

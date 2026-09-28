@@ -236,20 +236,27 @@ describe('AC-10: die Entlade-Option (keepalive) erreicht den PUT', () => {
 		const { wiz, ctl, speicherung } = aufbau();
 		await api.get(PRESET_PFAD); // Stand bekannt, wie nach dem Laden der Seite
 
-		wiz.sendSms = true;
+		// Issue #2293 S2: der Alarme-Reiter schreibt `wiz.channels`, nicht mehr
+		// `wiz.sendSms` — dasselbe Szenario, neues Feld.
+		wiz.channels = { ...(wiz.channels as Record<string, boolean>), sms: true };
 		speicherung.aenderungMelden();
 		await ctl.flush({ keepalive: true });
 
 		assert.equal(puts().length, 1, 'genau ein PUT erwartet');
 		assert.equal(puts()[0].path, PRESET_PFAD);
 		assert.equal(puts()[0].keepalive, true, 'die Option keepalive:true des Wächters wurde verschluckt');
-		assert.equal((server.storedBody(PRESET_ID) as Record<string, unknown>).send_sms, true);
+		assert.equal(
+			(
+				(server.storedBody(PRESET_ID) as Record<string, unknown>).alert_channels as Record<string, boolean>
+			).sms,
+			true
+		);
 	});
 
 	test('Gegenprobe: regulärer Flush → PUT ohne keepalive', async () => {
 		const { wiz, ctl, speicherung } = aufbau();
 
-		wiz.sendSms = true;
+		wiz.channels = { ...(wiz.channels as Record<string, boolean>), sms: true };
 		speicherung.aenderungMelden();
 		await ctl.flush();
 

@@ -16,6 +16,7 @@ import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
 import type { IdealRange } from './corridor-editor/corridorEditorState.ts';
 import type { SaveFn, SaveStatus } from '../../stores/saveStatusStore.svelte.ts';
 import type { PutClient } from './tripSpeicherung.ts';
+import type { AlertChannelState } from './alarme-tab/alertChannelState.ts';
 import { buildComparePresetSavePayload } from '../compare/compareEditorSave.ts';
 import {
 	normalizeStoredActiveMetrics,
@@ -36,11 +37,19 @@ export interface AlarmSnapshot {
 	alertQuietTo?: string;
 	// Issue #1260: ein reiner Kurzstil-Klick muss als Differenz erkannt werden.
 	telegramStyle?: 'rich' | 'kurzform';
-	// Issue #1461 S3b-2b / #1745 A: Kanal-Schalter + Kanal-Schwellen.
+	// Issue #1461 S3b-2b: Kanal-Schwellen.
+	// Issue #2293 S2 (Entkopplung, AC-9): sendTelegram/sendSms/sendPremiumSms sind
+	// NICHT mehr die Alarm-Kanal-Quelle -- das uebernimmt `channels` (s.u.). Die
+	// drei Felder bleiben nur optional stehen, weil aeltere Testliterale sie noch
+	// setzen (kein Schreiber/Leser mehr in diesem Modul).
 	sendTelegram?: boolean;
 	sendSms?: boolean;
 	sendPremiumSms?: boolean;
 	channelThresholds?: Record<string, string>;
+	// Issue #2293 Scheibe S2 (Implementation Details Abschnitt 3): alle vier
+	// Alarm-Kanaele als EIN Objekt statt der drei Flach-Felder oben -- Vorbild
+	// `buildAlarmeDeliveryPayload` (Trip).
+	channels?: AlertChannelState;
 }
 
 /** Ziel-Objekt fuer `hydrateAlarmFieldsFromPreset`: ALLE Felder optional, damit
@@ -61,18 +70,16 @@ export interface AlarmHydrationTarget {
 	// Issue #1260: Telegram-Kurzstil-Toggle im Hub-Alarme-Tab
 	// (display_config.telegram_style). Default "rich".
 	telegramStyle?: 'rich' | 'kurzform';
-	// Issue #1461 S3b-2b (bestaetigter Speicher-Fehler, s. Spec „Implementation
-	// Details"): sendTelegram/sendSms fehlten hier bisher komplett -- eine
-	// Kanal-Umschaltung im Alarme-Reiter war deshalb weder als Snapshot-Differenz
-	// erkennbar noch im PUT-Body enthalten (der Server-Bestand wurde beim
-	// naechsten Alarme-Save aktiv zurueckgeschrieben). Analog channelThresholds.
+	// Issue #2293 S2 (AC-9): sendTelegram/sendSms/sendPremiumSms sind seit dieser
+	// Scheibe reine Briefing-Felder (versandVergleichSpeicherung.ts) -- kein
+	// Schreiber/Leser mehr hier. `channels` (s.u.) uebernimmt die Alarm-Seite.
 	sendTelegram?: boolean;
 	sendSms?: boolean;
-	// Issue #1745 A: der vierte Kanal muss aus demselben Grund mit-hydriert
-	// werden — sonst ist eine Aenderung im Alarme-Reiter weder als
-	// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
 	sendPremiumSms?: boolean;
 	channelThresholds?: Record<string, string>;
+	// Issue #2293 Scheibe S2: Alarm-Kanal-Bestand (vier Booleans) statt der drei
+	// Flach-Felder oben -- Quelle der Hydration ist reconstructCompareAlertChannels.
+	channels?: AlertChannelState;
 	// Issue #1320: activeMetricKeys wird sonst nur von den Hydrations-Effekten
 	// der Tabs "wetter-metriken"/"idealwerte" befuellt — fehlt Alarme als
 	// Erst-Tab (Deep-Link), zeigt AlarmeTab.svelte faelschlich "keine Metriken".
@@ -95,27 +102,31 @@ export function alarmSnapshotAus(wiz: AlarmHydrationTarget): AlarmSnapshot {
 			alertQuietFrom: wiz.alertQuietFrom,
 			alertQuietTo: wiz.alertQuietTo,
 			telegramStyle: wiz.telegramStyle,
-			sendTelegram: wiz.sendTelegram,
-			sendSms: wiz.sendSms,
-			sendPremiumSms: wiz.sendPremiumSms,
-			channelThresholds: wiz.channelThresholds
+			channelThresholds: wiz.channelThresholds,
+			channels: wiz.channels
 		})
 	) as AlarmSnapshot;
 }
 
 /**
- * EINZIGE Erzeugerin der Alarm-Nutzlast (Nahtstelle für #2293 `alert_channels`):
- * Voll-Spread über `preset` via `buildComparePresetSavePayload`, die Alarmfelder
- * aus `current`. Die Nicht-Alarmfelder laufen durch DIESELBEN Rückfälle wie
- * der abgeschaffte Hub-PUT-Pfad (Lesenormalisierung #1373, sonst Datenverlust an der
+ * EINZIGE Erzeugerin der Alarm-Nutzlast: Voll-Spread über `preset` via
+ * `buildComparePresetSavePayload`, die Alarmfelder aus `current`. Die
+ * Nicht-Alarmfelder laufen durch DIESELBEN Rückfälle wie der abgeschaffte
+ * Hub-PUT-Pfad (Lesenormalisierung #1373, sonst Datenverlust an der
  * Metrik-Auswahl). `officialWarnings` trägt NIEMALS `sources` (F001, S4).
+ *
+ * Issue #2293 S2 (Implementation Details Abschnitt 4, AC-9/AC-10): der Alarm-
+ * Kanal-Bestand läuft als `alert_channels` (`current.channels`) — die Alarm-
+ * Nutzlast trägt NIE `send_telegram`/`send_sms`/`send_premium_sms` (Briefing-
+ * Felder eines Nachbar-Reiters, Same-Tab-Race-Schutz), darum werden sie nach
+ * dem Payload-Bau explizit aus dem Body entfernt.
  */
 export function baueAlarmNutzlast(
 	preset: ComparePreset,
 	current: AlarmSnapshot
 ): { url: string; body: ComparePreset } {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	return buildComparePresetSavePayload(preset, {
+	const { url, body } = buildComparePresetSavePayload(preset, {
 		name: preset.name,
 		activityProfile: (preset.profil as ActivityProfile) ?? null,
 		pickedIds: preset.location_ids ?? [],
@@ -128,9 +139,7 @@ export function baueAlarmNutzlast(
 		channelThresholds:
 			current.channelThresholds ?? (preset.alert_channel_thresholds as Record<string, string> | undefined),
 		corridors: preset.corridors,
-		sendTelegram: current.sendTelegram,
-		sendSms: current.sendSms,
-		sendPremiumSms: current.sendPremiumSms,
+		alertChannels: current.channels,
 		alertCooldownMinutes: current.alertCooldownMinutes,
 		alertQuietFrom: current.alertQuietFrom,
 		alertQuietTo: current.alertQuietTo,
@@ -147,6 +156,11 @@ export function baueAlarmNutzlast(
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined
 	});
+	const b = body as unknown as Record<string, unknown>;
+	delete b.send_telegram;
+	delete b.send_sms;
+	delete b.send_premium_sms;
+	return { url, body };
 }
 
 /**
@@ -184,10 +198,10 @@ export function rollbackAlarmSnapshot(
 		'alertQuietFrom',
 		'alertQuietTo',
 		'telegramStyle',
-		'sendTelegram',
-		'sendSms',
-		'sendPremiumSms',
-		'channelThresholds'
+		'channelThresholds',
+		// Issue #2293 S2: channels ersetzt die drei Flach-Felder in der
+		// Rollback-Feldliste (Alarm-Kanal-Quelle, s. AlarmSnapshot).
+		'channels'
 	];
 	const target = state as Record<string, unknown>;
 	for (const field of fields) {

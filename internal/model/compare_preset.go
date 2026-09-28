@@ -91,10 +91,20 @@ type ComparePreset struct {
 	SendTelegram     *bool                   `json:"send_telegram,omitempty"`
 	SendSms          *bool                   `json:"send_sms,omitempty"`
 	// SendPremiumSms — Issue #1701 (S2b, D8): Premium-SMS-Kanal-Opt-in fuer
-	// den Ortsvergleich, eigenes Feld statt Wiederverwendung (der Ortsvergleich
-	// hat kein alert_channels-Sub-Objekt wie der Trip, die Kanaele sind flache
-	// Top-Level-Felder). Pointer-Pattern wie SendTelegram/SendSms daneben.
+	// das planmaessige Briefing des Ortsvergleichs (Versand-Reiter). Seit
+	// Issue #2293 (S2) existiert daneben AlertChannels als eigenes
+	// Sub-Objekt fuer den Alarm-Versand (Trip-identisches Pointer-Pattern) —
+	// die fruehere Praemisse "der Ortsvergleich hat kein alert_channels-
+	// Sub-Objekt wie der Trip" gilt ab dieser Scheibe nicht mehr.
 	SendPremiumSms *bool `json:"send_premium_sms,omitempty"`
+	// AlertChannels — Issue #2293 Scheibe S2 (Epic #1374/#2345): eigenes,
+	// persistiertes Kanal-Sub-Objekt fuer den ALARM-Versand (Abweichung,
+	// amtliche Warnung, Regenradar) des Ortsvergleichs, unabhaengig von den
+	// Briefing-Feldern SendTelegram/SendSms/SendPremiumSms. Wiederverwendeter
+	// Typ, identisch zum Trip (internal/model/trip.go:214-219). nil = noch
+	// nicht materialisiert (Altbestand) — store.materializeAlertChannels
+	// leitet den Wert deterministisch aus den flachen Feldern ab.
+	AlertChannels *AlertChannelsConfig `json:"alert_channels,omitempty"`
 	// AlertChannelThresholds — Issue #1461 S3b-2b, additives Geschwisterfeld
 	// (bewusst NICHT in AlertChannels/OfficialWarnings) fuer die je Kanal
 	// eingestellte Dringlichkeits-Schwelle. Bestehender Typ, selbes Package

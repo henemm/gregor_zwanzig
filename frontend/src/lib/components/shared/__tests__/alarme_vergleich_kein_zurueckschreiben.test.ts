@@ -1,17 +1,24 @@
 // TDD — Alarme- und Versand-Reiter des Ortsvergleichs schreiben einander
-// nicht zurück. Zwei Reiter, EIN Wizard-Zustand, zwei geteilte Felder
-// (`sendTelegram`/`sendSms`).
+// nicht zurück.
 //
 // Issue #2276 Scheibe S2 (Epic #2345): S2-AC-2 (kein Zurückschreiben alter
 //   Alarmwerte durch den Nachbar-Reiter), S2-AC-3 (Basis erst bei Ausführung
 //   in der Hub-Queue lesen).
-// Issue #2276 Scheibe S5: S5-AC-2 (`sendTelegram`/`sendSms` werden LIVE aus
-//   `wiz` gelesen, auch wenn der Alarme-Reiter sie zwischenzeitlich auf
-//   DEMSELBEN Feld geändert hat), S5-AC-3 (diff-basierter Rollback schützt
-//   die Nachbar-Änderung an einem geteilten Feld).
+// Issue #2276 Scheibe S5: S5-AC-11 (Legacy-Restfelder live aus wiz).
+//
+// 🔴 Issue #2293 Scheibe S2 (Nachtrag, Abschnitt 4 "Payload-Trennung"): S5-AC-2
+//   und S5-AC-3 testeten ursprünglich EIN geteiltes Feld (`wiz.sendTelegram`/
+//   `wiz.sendSms`), das sich Alarme (Schreiber) und Versand (Briefing-Snapshot)
+//   teilten — genau die stille Kopplung, die #2293 S2 auflöst. Seit der
+//   Payload-Trennung schreibt der Alarme-Reiter `wiz.channels` (Alarm-Kanäle),
+//   der Versand-Reiter weiterhin `wiz.sendTelegram`/`sendSms` (Briefing-Kanäle)
+//   — zwei disjunkte Felder. Beide Tests unten sind auf die NEUE Zusicherung
+//   umgestellt (Gegenrichtung: ein Alarm-Kanal-Klick darf den Briefing-Kanal
+//   NICHT beeinflussen), nicht gelöscht.
 //
 // Spec: docs/specs/modules/rework_2276_s2_alarme.md — AC-2, AC-3
-//       docs/specs/modules/rework_2276_s5_versand.md — AC-2, AC-3
+//       docs/specs/modules/rework_2276_s5_versand.md — AC-11
+//       docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md — Abschnitt 4
 //
 // 🔴 REWORK statt Import-Swap (S5): diese Datei baute den Versand-Zweig bisher
 // intern nach (`flushPendingVersandSave` + eigener `hubPutQueue.enqueue`-
@@ -212,8 +219,12 @@ describe('S2-AC-3: die Basis wird bei AUSFÜHRUNG in der Queue gelesen, nicht be
 		const erster = ctl.flush();
 		while (gesendet.length < 1) await new Promise((r) => setImmediate(r));
 
-		// Zweiter Alarm-Vorgang wird eingereiht, während der erste noch läuft
-		wiz.sendSms = true;
+		// Zweiter Alarm-Vorgang wird eingereiht, während der erste noch läuft.
+		// Issue #2293 S2 (AC-9 Entkopplung): der Alarme-Reiter schreibt seit
+		// dieser Scheibe `wiz.channels` statt der Briefing-Felder
+		// sendTelegram/sendSms/sendPremiumSms — dieselbe Zusicherung (zweite
+		// Alarm-Änderung erreicht den zweiten PUT), nur am neuen Feld gemessen.
+		wiz.channels = { ...(wiz.channels as Record<string, boolean>), sms: true };
 		speicherung.aenderungMelden();
 		const zweiter = ctl.flush();
 
@@ -230,13 +241,26 @@ describe('S2-AC-3: die Basis wird bei AUSFÜHRUNG in der Queue gelesen, nicht be
 		assert.equal(zweiterPut.name, 'Neuer Name', 'der zweite PUT hat die Basis beim Einreihen eingefroren');
 		assert.equal(zweiterPut.morning_time, '08:00:00', 'der zweite PUT hat die Basis beim Einreihen eingefroren');
 		assert.equal(zweiterPut.radar_alert_enabled, true, 'die erste Alarm-Änderung muss erhalten bleiben');
-		assert.equal(zweiterPut.send_sms, true, 'die zweite Alarm-Änderung muss im PUT stehen');
+		assert.equal(
+			(zweiterPut.alert_channels as Record<string, boolean>).sms,
+			true,
+			'die zweite Alarm-Änderung muss im PUT stehen'
+		);
 		assert.equal(ctl.state, 'idle');
 	});
 });
 
-describe('S5-AC-2: der Versand-Speicherer liest `sendSms` LIVE aus wiz — auf DEMSELBEN Feld wie der Alarme-Reiter', () => {
-	test('Alarme schaltet SMS an, danach ändert Versand nur die Morgen-Uhrzeit → der Versand-PUT trägt send_sms:true', async () => {
+describe('S5-AC-2 (Issue #2293 S2 aktualisiert): Alarme-SMS-Kanal und Versand-`sendSms` sind ENTKOPPELTE Felder', () => {
+	// Vor #2293 S2 teilten sich Alarme- und Versand-Reiter dasselbe Feld
+	// `wiz.sendSms` — dieser Test prüfte damals, dass der Versand-Speicherer es
+	// LIVE liest (sonst überschriebe ein eingefrorener Snapshot die
+	// Alarme-Änderung). Mit der Payload-Trennung (Implementation Details
+	// Abschnitt 4) gibt es dieses geteilte Feld nicht mehr: der Alarme-Reiter
+	// schreibt `wiz.channels.sms` (Alarm-Kanal), der Versand-Reiter liest
+	// weiterhin `wiz.sendSms` (Briefing-Kanal) — beide völlig unabhängig. Die
+	// NEUE Zusicherung ist deshalb die Gegenrichtung: ein Alarme-Klick auf den
+	// SMS-ALARM-Kanal darf `send_sms` (Briefing) im Versand-PUT NICHT ändern.
+	test('Alarme schaltet den SMS-ALARM-Kanal an, danach ändert Versand nur die Morgen-Uhrzeit → der Versand-PUT trägt weiterhin send_sms:false', async () => {
 		let currentPreset = makePreset({ send_sms: false });
 		const wiz = hubZustand(currentPreset);
 		const ctl = createController();
@@ -251,23 +275,23 @@ describe('S5-AC-2: der Versand-Speicherer liest `sendSms` LIVE aus wiz — auf D
 			},
 			saveController: ctl
 		};
-		// Reihenfolge bewusst: die Versand-Orchestrierung entsteht ZUERST, ihre
-		// Anfangs-Baseline friert `sendSms:false` ein. Genau hier greift die
-		// Mutations-Gegenprobe — würde der Versand-Snapshot `sendSms` aus dieser
-		// eingefrorenen Kopie statt live aus `wiz` befüllen, ginge die
-		// Alarme-Änderung im zweiten PUT verloren.
 		const versand = erstelleVersandVergleichSpeicherung(gemeinsam);
 		const alarme = erstelleAlarmeVergleichSpeicherung({ ...gemeinsam, zustand: wiz });
-		assert.equal(wiz.sendSms, false, 'Vorbedingung: der SMS-Kanal ist aus');
+		assert.equal(wiz.sendSms, false, 'Vorbedingung: der Briefing-SMS-Kanal ist aus');
 
-		// 1) Alarme-Reiter: SMS-Kanal an (AlarmeTab.handleChannelToggle mutiert wiz direkt)
-		wiz.sendSms = true;
+		// 1) Alarme-Reiter: SMS-ALARM-Kanal an (AlarmeTab.handleChannelToggle
+		// mutiert seit #2293 S2 `wiz.channels`, NICHT mehr `wiz.sendSms`).
+		wiz.channels = { ...(wiz.channels as Record<string, boolean>), sms: true };
 		alarme.aenderungMelden();
 		await ctl.flush();
 		assert.equal(gesendet.length, 1, 'Vorbedingung: der Alarm-PUT ist raus');
-		assert.equal(gesendet[0].send_sms, true, 'Vorbedingung: der Alarm-PUT trägt den eingeschalteten SMS-Kanal');
+		assert.equal(
+			(gesendet[0].alert_channels as Record<string, boolean>).sms,
+			true,
+			'Vorbedingung: der Alarm-PUT trägt den eingeschalteten SMS-ALARM-Kanal'
+		);
 
-		// 2) Versand-Reiter: NUR die Morgen-Uhrzeit, der Kanal-Schalter bleibt unberührt
+		// 2) Versand-Reiter: NUR die Morgen-Uhrzeit, der Briefing-Kanal bleibt unberührt
 		wiz.morningTime = '07:15';
 		versand.aenderungMelden();
 		await ctl.flush();
@@ -277,10 +301,14 @@ describe('S5-AC-2: der Versand-Speicherer liest `sendSms` LIVE aus wiz — auf D
 		assert.equal(versandPut.morning_time, '07:15:00', 'Vorbedingung: der zweite PUT ist der Versand-PUT');
 		assert.equal(
 			versandPut.send_sms,
-			true,
-			'der Versand-PUT überschreibt den vom Alarme-Reiter gesetzten SMS-Kanal mit einem eingefrorenen Wert'
+			false,
+			'der Versand-PUT darf den Briefing-Kanal NICHT vom Alarm-Kanal-Klick übernehmen (Entkopplung, AC-9)'
 		);
-		assert.equal(wiz.sendSms, true, 'der Kanal-Schalter der Oberfläche darf nicht zurückspringen');
+		assert.equal(
+			(wiz.channels as Record<string, boolean>).sms,
+			true,
+			'der Alarm-Kanal-Schalter der Oberfläche darf nicht zurückspringen'
+		);
 	});
 });
 
@@ -344,11 +372,23 @@ describe('S5-AC-11: der Versand-PUT traegt die LIVE in wiz stehenden Legacy-Rest
 	});
 });
 
-describe('S5-AC-3: diff-basierter Rollback nach einem gescheiterten Versand-PUT schützt die Alarme-Änderung', () => {
-	test('Alarme setzt sendTelegram während des Versand-PUT → der Rollback lässt den Wert stehen, nimmt aber die eigene Uhrzeit zurück', async () => {
+describe('S5-AC-3 (Issue #2293 S2 aktualisiert): Rollback des Versand-PUT rührt den Alarm-Kanal-Bestand NICHT an', () => {
+	// Vor #2293 S2 teilte sich `wiz.sendTelegram` zwischen Alarme (Schreiber)
+	// und Versand (VersandSnapshot-Feld) — ein Rollback des Versand-PUT hätte
+	// die Alarme-Änderung an genau diesem Feld treffen können, wäre der
+	// Rollback NICHT diff-basiert. Seit der Payload-Trennung (Implementation
+	// Details Abschnitt 4) schreibt der Alarme-Reiter `wiz.channels`, ein Feld,
+	// das `VersandSnapshot`/`rollbackVersandSnapshot` gar nicht kennen — die
+	// Zusicherung ist jetzt strukturell statt diff-basiert erzwungen. Dieser
+	// Test bewacht, dass sie es auch bleibt.
+	test('Alarme setzt den Telegram-ALARM-Kanal während des Versand-PUT → der Rollback lässt ihn unangetastet, nimmt aber die eigene Uhrzeit zurück', async () => {
 		let basis = makePreset({ send_telegram: false });
 		const wiz = hubZustand(basis);
-		assert.equal(wiz.sendTelegram, false, 'Vorbedingung: Telegram ist aus (Versand-Baseline)');
+		assert.equal(
+			(wiz.channels as Record<string, boolean>).telegram,
+			false,
+			'Vorbedingung: der Telegram-ALARM-Kanal ist aus (materialisiert aus send_telegram)'
+		);
 
 		// Der Versand-PUT hängt an einem Tor fest und scheitert dann mit 500 —
 		// deterministisch statt zeitabhängig.
@@ -403,11 +443,16 @@ describe('S5-AC-3: diff-basierter Rollback nach einem gescheiterten Versand-PUT 
 		const versandLauf = versandCtl.flush();
 		await gestartet;
 
-		// 2) Währenddessen: Alarme-Reiter schaltet Telegram AN und speichert erfolgreich
-		wiz.sendTelegram = true;
+		// 2) Währenddessen: Alarme-Reiter schaltet den Telegram-ALARM-Kanal AN
+		// und speichert erfolgreich (wiz.channels statt wiz.sendTelegram, AC-9).
+		wiz.channels = { ...(wiz.channels as Record<string, boolean>), telegram: true };
 		alarme.aenderungMelden();
 		await alarmCtl.flush();
-		assert.equal(gesendet.at(-1)?.send_telegram, true, 'Vorbedingung: die Alarme-Änderung ist gespeichert');
+		assert.equal(
+			(gesendet.at(-1)?.alert_channels as Record<string, boolean> | undefined)?.telegram,
+			true,
+			'Vorbedingung: die Alarme-Änderung ist gespeichert'
+		);
 
 		// 3) Jetzt scheitert der Versand-PUT → Rollback
 		torOeffnen();
@@ -415,9 +460,9 @@ describe('S5-AC-3: diff-basierter Rollback nach einem gescheiterten Versand-PUT 
 
 		assert.equal(versandCtl.state, 'error', 'Vorbedingung: der Versand-PUT ist gescheitert');
 		assert.equal(
-			wiz.sendTelegram,
+			(wiz.channels as Record<string, boolean>).telegram,
 			true,
-			'ein unbedingter Rollback nimmt die erfolgreich gespeicherte Alarme-Änderung an sendTelegram zurück (Datenverlust)'
+			'der Versand-Rollback darf den Alarm-Kanal-Bestand NICHT anfassen — er kennt `channels` gar nicht (strukturelle Trennung, AC-9)'
 		);
 		assert.equal(wiz.morningTime, '06:30', 'das eigene, gescheiterte Feld MUSS zurückgerollt werden');
 	});
