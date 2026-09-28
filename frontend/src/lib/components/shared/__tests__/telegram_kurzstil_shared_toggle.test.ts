@@ -27,8 +27,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
+import { register } from 'node:module';
+// Issue #2293 S2 (AC-11, Mutations-Gegenprobe (e)): der geteilte Organismus
+// liest im Vergleich reine Wertprops — dasselbe Buendel wie die Produktiv-
+// Mounts (Vorbild alarme_tab_premium_sms_channel_row_render.test.ts).
+import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // __tests__ -> shared
@@ -109,6 +114,106 @@ describe('AC-11: kein unabhaengig gepflegter Compare-Nachbau', () => {
 			short,
 			['lib/components/shared/TelegramKurzstilToggle.svelte'],
 			`Erwartet genau die geteilte Komponente als Traeger der Beschriftung, gefunden: ${short.join(', ')}`
+		);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Issue #2293 Scheibe S2 (AC-11, Mutations-Gegenprobe (e)) — VERHALTENS-
+// Nachweis (kein Datei-Grep): im Vergleichs-Kontext muss der `disabled`-
+// Zustand des Kurzstil-Schalters am ALARM-Telegram-Zustand haengen
+// (`displayChannelState.telegram` bzw. dessen Nachfolger), NICHT an
+// `sendTelegram` (ab dieser Scheibe ein reines Briefing-Feld, das mit dem
+// Alarm-Kanal auseinanderlaufen kann, Implementation Details Abschnitt 3).
+//
+// Echtes SSR-Rendering (svelte/server) statt Quelltext-Muster: ein Text-Grep
+// auf `sendTelegram` vs. `displayChannelState` würde nur eine Umbenennung
+// verlangen, nicht die tatsächliche Entkopplung — Mutation (e) der Spec
+// bleibt an einer reinen Textpruefung strukturell unbeobachtbar. Vorbild
+// (SSR-Setup, `existingChannels`-Prop, `profileOverride`-Testhaken):
+// alarme_tab_premium_sms_channel_row_render.test.ts.
+//
+// RED-Grund heute (gemessen): AlarmeTab.svelte leitet `displayChannelState`
+// im vergleich-Zweig als `sendTelegram === undefined ? routeChannelState :
+// {telegram: sendTelegram, ...}` her (Zeile ~296) — ist `sendTelegram`
+// gesetzt (Normalfall), gewinnt IMMER der Briefing-Wert, `existingChannels`
+// wird vollständig ignoriert. Die Tests unten setzen genau diese beiden
+// Werte auseinander.
+
+const HERE_SSR = dirname(fileURLToPath(import.meta.url));
+// __tests__ -> shared -> components -> lib -> src -> frontend
+const FRONTEND_SSR = resolve(HERE_SSR, '../../../../..');
+
+register(
+	pathToFileURL(join(FRONTEND_SSR, 'test-svelte-ssr-hooks.mjs')).href,
+	pathToFileURL(FRONTEND_SSR + '/').href
+);
+
+const { render: renderSsr } = await import('svelte/server');
+const AlarmeTabSsr = (
+	await import(pathToFileURL(join(FRONTEND_SSR, 'src/lib/components/shared/AlarmeTab.svelte')).href)
+).default;
+
+/** Wizard-Stellvertreter mit den Feldern, die `alarmePropsAus` liest —
+ *  identisch zum Vorbild (alarme_tab_premium_sms_channel_row_render.test.ts). */
+function wizStubSsr(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+	return {
+		officialWarningsEnabled: true,
+		radarAlertEnabled: false,
+		activeMetricKeys: null,
+		metricAlertLevels: {},
+		sendTelegram: true,
+		sendSms: false,
+		sendPremiumSms: false,
+		channelThresholds: {},
+		telegramStyle: 'rich',
+		alertCooldownMinutes: 30,
+		alertQuietFrom: '22:00',
+		alertQuietTo: '07:00',
+		...overrides
+	};
+}
+
+function renderVergleichMitAlarmKanaelen(
+	existingChannels: { telegram: boolean; sms: boolean; email: boolean; premium_sms: boolean },
+	wizOverrides: Record<string, unknown> = {}
+): string {
+	return renderSsr(AlarmeTabSsr, {
+		props: {
+			context: 'vergleich',
+			...alarmePropsAus(wizStubSsr(wizOverrides)),
+			// Design Entscheidung 5: dieselbe Bestands-Prop wie der Trip-Zweig —
+			// der Vergleich muss sie ab dieser Scheibe ebenfalls auswerten.
+			existingChannels,
+			catalog: [],
+			profileOverride: {}
+		}
+	}).body;
+}
+
+describe('AC-11 (Mutations-Gegenprobe e): Kurzstil-`disabled` folgt dem ALARM-Telegram-Zustand', () => {
+	test('Alarm-Telegram AUS, Briefing-Telegram AN → Kurzstil-Schalter ist deaktiviert', () => {
+		const html = renderVergleichMitAlarmKanaelen(
+			{ telegram: false, sms: true, email: true, premium_sms: false },
+			{ sendTelegram: true }
+		);
+		assert.ok(
+			html.includes('tks-disabled'),
+			'AC-11: der Kurzstil-Schalter muss deaktiviert sein, wenn der ALARM-Telegram-Kanal aus ist ' +
+				'(existingChannels.telegram=false) — unabhängig vom Briefing-Telegram-Zustand (sendTelegram=true).'
+		);
+	});
+
+	test('Alarm-Telegram AN, Briefing-Telegram AUS → Kurzstil-Schalter ist aktiv (Gegenprobe)', () => {
+		const html = renderVergleichMitAlarmKanaelen(
+			{ telegram: true, sms: false, email: true, premium_sms: false },
+			{ sendTelegram: false }
+		);
+		assert.ok(
+			!html.includes('tks-disabled'),
+			'AC-11 (Gegenprobe): der Kurzstil-Schalter muss aktiv sein, wenn der ALARM-Telegram-Kanal an ist ' +
+				'(existingChannels.telegram=true) — auch wenn der Briefing-Telegram-Zustand aus ist (sendTelegram=false). ' +
+				'Ohne diese Gegenprobe wäre "immer deaktiviert" ein falsches Grün für den Test oben.'
 		);
 	});
 });
