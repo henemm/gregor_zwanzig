@@ -765,6 +765,19 @@ type profileResponse struct {
 	// nicht von "Feld fehlt" unterscheiden muessen (Muster SmsAllowed).
 	SmsVerified  bool   `json:"sms_verified"`
 	PendingSmsTo string `json:"pending_sms_to,omitempty"`
+	// Issue #2155 S1 (ADR-0078) — abgeleitete Rolle "admin"|"user", NIE aus
+	// user.json oder Nutzereingabe: "admin" genau dann, wenn die Kennung in
+	// GZ_ADMIN_USER_IDS steht. GET /api/auth/profile setzt sie immer; Antworten
+	// ohne Admin-Menge (PUT, SMS-Bestaetigung) lassen sie weg statt zu raten.
+	Role string `json:"role,omitempty"`
+}
+
+// profileRole leitet die Rolle aus der Admin-Menge ab (Issue #2155 S1).
+func profileRole(userID string, admins map[string]struct{}) string {
+	if _, ok := admins[userID]; ok && userID != "" {
+		return "admin"
+	}
+	return "user"
 }
 
 // passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
@@ -828,7 +841,7 @@ func toProfileResponse(u *model.User) profileResponse {
 	}
 }
 
-func GetProfileHandler(s *store.Store) http.HandlerFunc {
+func GetProfileHandler(s *store.Store, admins map[string]struct{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
@@ -839,8 +852,10 @@ func GetProfileHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		resp := toProfileResponse(user)
+		resp.Role = profileRole(userId, admins)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(toProfileResponse(user))
+		json.NewEncoder(w).Encode(resp)
 	}
 }
 

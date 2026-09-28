@@ -28,7 +28,7 @@ func TestGetProfileHandler(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"alice","password_hash":"`+string(hash)+`","mail_to":"alice@example.com","telegram_chat_id":"999"}`), 0644)
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	// WHEN: Alice requests her profile
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
@@ -60,7 +60,7 @@ func TestGetProfileHandler(t *testing.T) {
 
 func TestGetProfileHandlerNotFound(t *testing.T) {
 	s := newTestStore(t)
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	ctx := middleware.ContextWithUserID(req.Context(), "nobody")
@@ -200,7 +200,7 @@ func TestGetProfileReturnsSmsTo(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"erika","password_hash":"`+string(hash)+`","sms_to":"+4915199998888"}`), 0644)
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	ctx := middleware.ContextWithUserID(req.Context(), "erika")
 	req = req.WithContext(ctx)
@@ -254,7 +254,7 @@ func TestGetProfileWorksWithoutSmsToField(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"greta","password_hash":"`+string(hash)+`","mail_to":"greta@example.com"}`), 0644)
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	ctx := middleware.ContextWithUserID(req.Context(), "greta")
 	req = req.WithContext(ctx)
@@ -291,7 +291,7 @@ func TestGetProfileDefaultsTierToFree(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"hilde","password_hash":"`+string(hash)+`"}`), 0644)
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	ctx := middleware.ContextWithUserID(req.Context(), "hilde")
 	req = req.WithContext(ctx)
@@ -324,7 +324,7 @@ func TestGetProfileTierTwoUsersNoCrossLeak(t *testing.T) {
 	os.WriteFile(filepath.Join(stdDir, "user.json"),
 		[]byte(`{"id":"jonas","password_hash":"`+string(hash)+`","tier":"standard"}`), 0644)
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	getTier := func(userID string) interface{} {
 		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
@@ -364,7 +364,7 @@ func TestGetProfileDoesNotRewriteUserJsonWhenTierMissing(t *testing.T) {
 		t.Fatalf("cannot read user.json before: %v", err)
 	}
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	ctx := middleware.ContextWithUserID(req.Context(), "klara")
 	req = req.WithContext(ctx)
@@ -417,7 +417,7 @@ func TestRegisterCreatesUserDirs(t *testing.T) {
 
 func TestGetProfileNormalizesInvalidTierToFree(t *testing.T) {
 	s := newTestStore(t)
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	for _, invalidTier := range []string{"gremlin", "premiumx", "FREE", "Standard"} {
 		dir := filepath.Join(s.DataDir, "users", "tier-"+invalidTier)
@@ -444,7 +444,7 @@ func TestGetProfileNormalizesInvalidTierToFree(t *testing.T) {
 
 func TestGetProfilePreservesValidTiers(t *testing.T) {
 	s := newTestStore(t)
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	for _, validTier := range []string{"free", "standard", "premium"} {
 		dir := filepath.Join(s.DataDir, "users", "tier-"+validTier)
@@ -488,7 +488,7 @@ func TestGetProfileHandlerSmsAllowedField(t *testing.T) {
 	}
 
 	getProfile := func(id string) map[string]interface{} {
-		h := GetProfileHandler(s)
+		h := GetProfileHandler(s, nil)
 		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 		ctx := middleware.ContextWithUserID(req.Context(), id)
 		req = req.WithContext(ctx)
@@ -541,7 +541,7 @@ func TestGetProfileHandlerEmailVerifiedField_AC20(t *testing.T) {
 	os.WriteFile(filepath.Join(unverifiedDir, "user.json"),
 		[]byte(`{"id":"moritz","mail_to":"moritz@example.com"}`), 0644)
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	getRaw := func(userID string) (map[string]interface{}, string) {
 		req := httptest.NewRequest("GET", "/api/auth/profile", nil)
@@ -607,7 +607,7 @@ const (
 // die Deckungsgleichheit der Zahl bewacht tests/test_premium_sms_ttl_drift.py.
 func TestGetProfileHandlerPremiumSmsFields(t *testing.T) {
 	s := newTestStore(t)
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 
 	now := time.Now().UTC()
 	frisch := now.Add(-model.PremiumSmsReplyTTL / 2).Format(time.RFC3339)
@@ -803,7 +803,7 @@ func TestUpdateProfileHandlerIgnoresPremiumSmsReplyFields(t *testing.T) {
 	getReq := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	getReq = getReq.WithContext(middleware.ContextWithUserID(getReq.Context(), "nora"))
 	getW := httptest.NewRecorder()
-	GetProfileHandler(s).ServeHTTP(getW, getReq)
+	GetProfileHandler(s, nil).ServeHTTP(getW, getReq)
 	if getW.Code != 200 {
 		t.Fatalf("GET expected 200, got %d: %s", getW.Code, getW.Body.String())
 	}

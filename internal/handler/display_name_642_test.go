@@ -73,7 +73,7 @@ func TestGetProfileReturnsDisplayName(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	writeUser642(t, s, "iris", `{"id":"iris","password_hash":"`+string(hash)+`","display_name":"Iris vom Berg"}`)
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "iris"))
 	w := httptest.NewRecorder()
@@ -134,7 +134,7 @@ func TestUpdateProfileClearsDisplayName(t *testing.T) {
 		t.Errorf("expected display_name cleared, old value still present: %s", string(data))
 	}
 	// GET liefert keinen/leeren display_name
-	g := GetProfileHandler(s)
+	g := GetProfileHandler(s, nil)
 	gr := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	gr = gr.WithContext(middleware.ContextWithUserID(gr.Context(), "kara"))
 	gw := httptest.NewRecorder()
@@ -173,7 +173,7 @@ func TestUpdateProfileDisplayNameIsolatedPerUser(t *testing.T) {
 	}
 
 	// B via GET unverändert
-	g := GetProfileHandler(s)
+	g := GetProfileHandler(s, nil)
 	gr := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	gr = gr.WithContext(middleware.ContextWithUserID(gr.Context(), "userB"))
 	gw := httptest.NewRecorder()

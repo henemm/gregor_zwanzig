@@ -39,6 +39,9 @@ func New(deps Deps) chi.Router {
 	r.Use(chimw.Logger)
 	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret, deps.Store))
 
+	// Issue #2155 S1 (ADR-0078): Admin-Menge einmal aus GZ_ADMIN_USER_IDS.
+	admins := config.ParseAdminUserIDs(deps.Config.AdminUserIDs)
+
 	// Auth endpoints (register/login exempt from AuthMiddleware)
 	// Rate-limit register: 5 attempts per IP per hour (Issue #117).
 	registerLimiter := authmw.NewIPRateLimiter(5, time.Hour)
@@ -91,7 +94,7 @@ func New(deps Deps) chi.Router {
 	// Issue #2270: Datenexport nach DSGVO Art. 20 — authentifiziert, bewusst
 	// NICHT in der Public-Allowlist von AuthMiddleware.
 	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
-	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
+	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store, admins))
 	// Issue #2412 S4b — SMS-Tageskontingent-Anzeige, anmeldepflichtig.
 	r.Get("/api/auth/sms-daily-usage", handler.GetSmsDailyUsageHandler(*deps.Config))
 	// Issue #2406 — EIGENES Kontingent fuer SMS-Bestaetigungscodes (3/h je
@@ -270,9 +273,12 @@ func New(deps Deps) chi.Router {
 	}
 
 	// Scheduler trigger proxies (frontend → Go → Python)
-	r.Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/trip-reports"))
-	r.Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/alert-checks"))
-	r.Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/inbound-commands"))
+	// Issue #2155 S1: nur Admins (GZ_ADMIN_USER_IDS), sonst 403. Der
+	// Cron-Scheduler ruft Python direkt und haengt nicht an dieser Sperre.
+	requireAdmin := authmw.RequireAdmin(admins)
+	r.With(requireAdmin).Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/trip-reports"))
+	r.With(requireAdmin).Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/alert-checks"))
+	r.With(requireAdmin).Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/inbound-commands"))
 
 	return r
 }
