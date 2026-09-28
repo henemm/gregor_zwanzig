@@ -16,10 +16,12 @@
 // Aufbau (jede Entscheidung hat einen Grund)
 //
 // * WEGWERF-NUTZER, genau ein Trip. Der Sammellauf betrifft nur diesen Nutzer:
-//   `POST /api/scheduler/trip-reports` laeuft ueber den Go-Proxy
-//   (router.go, ProxyPostHandler) und ersetzt jedes vom Client gesendete
-//   `user_id` durch den ANGEMELDETEN Nutzer (proxy.go, appendUserID —
-//   Anti-Spoofing #200). Kein Sammel-Versand ueber alle Nutzer/Trips.
+//   ausgeloest wird am Python-Kern von Staging (127.0.0.1:8001), dessen Route
+//   `POST /api/scheduler/trip-reports?user_id=<id>` den Lauf per Pflicht-
+//   Parameter auf einen Nutzer begrenzt. Der Go-Weg gleichen Namens ist seit
+//   #2155 (ADR-0078, RequireAdmin) nur fuer Admins offen — auf Staging gibt es
+//   keinen (GZ_ADMIN_USER_IDS leer), ein Wegwerf-Nutzer bekommt dort 403.
+//   Kein Sammel-Versand ueber alle Nutzer/Trips.
 //   Ein vorhandenes Konto (admin, Validator) haette weitere Trips.
 //
 // * SAMMELLAUF, nicht Einzelversand. Der Einzelversand
@@ -318,7 +320,10 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 		// Empfaenger-Vorbedingung: sonst waere "keine Mail" ohne Aussage.
 		const profil = await gast.get('/api/auth/profile');
 		expect(profil.ok(), `GET profile HTTP ${profil.status()}`).toBeTruthy();
-		expect((await profil.json()).mail_to, 'mail_to des Wegwerf-Nutzers').toBe(empfaenger);
+		const profilJson = (await profil.json()) as { id?: string; mail_to?: string };
+		expect(profilJson.mail_to, 'mail_to des Wegwerf-Nutzers').toBe(empfaenger);
+		const nutzerId = profilJson.id ?? '';
+		expect(nutzerId, 'Profil des Wegwerf-Nutzers traegt eine Kennung').not.toBe('');
 
 		// --- Genau EIN Trip: Etappen heute + morgen, beide Slots gleiche Stunde ---
 		const zeit = `${String(plan.stunde).padStart(2, '0')}:00:00`;
@@ -419,12 +424,36 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 		expect(rc.send_telegram, 'Telegram bleibt aus').not.toBe(true);
 		expect(String(rc.morning_time).slice(0, 2), 'Versandzeit unveraendert').toBe(String(plan.stunde).padStart(2, '0'));
 
-		// --- EIN Sammellauf, nur fuer diesen Nutzer (Go-Proxy erzwingt user_id) ---
-		const lauf = await gast.post(`/api/scheduler/trip-reports?at=${encodeURIComponent(plan.at)}`, {
-			timeout: 150_000
+		// --- EIN Sammellauf, nur fuer diesen Nutzer --------------------------------
+		// Der Go-Weg `/api/scheduler/trip-reports` ist seit #2155 (ADR-0078) nur
+		// fuer Admins offen (RequireAdmin, fail-closed) und Staging kennt keinen
+		// Admin. Ausgeloest wird deshalb direkt am Python-Kern von Staging — genau
+		// die Route, die der Go-Proxy weiterreicht. `user_id` ist dort Pflicht-
+		// Parameter und begrenzt den Lauf auf diesen einen Nutzer. Der Fix sitzt in
+		// `send_due_reports`/`_get_active_trips` und wird damit an seinem Wirkort
+		// gemessen; Klick, PUT und Speicherung davor liefen ueber den echten Go-Weg.
+		const kernUrl = process.env.GZ_STAGING_CORE_URL ?? 'http://127.0.0.1:8001';
+		// Prod-Sperre: der Produktiv-Kern liegt auf Port 8000, Staging auf 8001.
+		expect(new URL(kernUrl).port, 'Kern-URL darf nicht der Produktiv-Kern (8000) sein').not.toBe('8000');
+		// Der Kern verlangt das gemeinsame Geheimnis (api/main.py, CORE_AUTH_HEADER);
+		// es kommt aus der Staging-Umgebung, wird nie ausgegeben oder geschrieben.
+		const kernGeheimnis = process.env.GZ_CORE_SHARED_SECRET ?? '';
+		expect(kernGeheimnis, 'GZ_CORE_SHARED_SECRET (Staging-.env) fehlt').not.toBe('');
+		const kern = await apiRequest.newContext({
+			baseURL: kernUrl,
+			extraHTTPHeaders: { 'X-GZ-Core-Auth': kernGeheimnis }
 		});
-		expect(lauf.ok(), `Sammellauf HTTP ${lauf.status()}`).toBeTruthy();
-		const ergebnis = (await lauf.json()) as { status: string; count: number; failed: number };
+		const lauf = await kern.post(
+			`/api/scheduler/trip-reports?user_id=${encodeURIComponent(nutzerId)}&at=${encodeURIComponent(plan.at)}`,
+			{ timeout: 150_000 }
+		);
+		const laufStatus = lauf.status();
+		const laufOk = lauf.ok();
+		// Antwort VOR dem Schliessen des Kontexts lesen (danach ist sie entsorgt).
+		const laufText = await lauf.text();
+		await kern.dispose();
+		expect(laufOk, `Sammellauf HTTP ${laufStatus}: ${laufText.slice(0, 200)}`).toBeTruthy();
+		const ergebnis = JSON.parse(laufText) as { status: string; count: number; failed: number };
 		expect(ergebnis.failed, `Sammellauf meldet Fehlschlaege: ${JSON.stringify(ergebnis)}`).toBe(0);
 		// Kernaussage: nur der Morgen-Slot war faellig. Ohne Fix: count == 2.
 		expect(ergebnis.count, `Sammellauf: genau EIN Versand (Morgen) — ${JSON.stringify(ergebnis)}`).toBe(1);
