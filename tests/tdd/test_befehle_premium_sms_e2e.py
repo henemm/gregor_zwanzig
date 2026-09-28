@@ -115,6 +115,12 @@ def _pruefe_merkmal_premium_sms(fall: str, text: str, *, nutzer) -> None:
     # mangels festgelegtem englischem Wortlaut ein leeres Tupel ist.
     pruefe_premium_sms_englisch_und_gsm7(text, nutzer, kontext=f"Premium-SMS {fall!r}")
     metric_id = metric_command_words().get(fall)
+    if metric_id is not None:
+        # #2417 AC-13/AC-15: das Kuerzel steht VORN (``D28``, ``N 12@9``) --
+        # ein Teilstring-Treffer auf ein einzelnes ``D``/``N`` waere vakuum.
+        assert text.startswith(merkmal), (
+            f"Antwort auf {fall!r} beginnt nicht mit ihrem Kuerzel {merkmal!r}: {text!r}"
+        )
     if metric_id is not None and metric_id != "uv_index":
         assert "no data" not in text, (
             f"Antwort auf Metrik-Wort {fall!r} zeigt 'no data' statt eines "

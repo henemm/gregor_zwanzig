@@ -669,10 +669,10 @@ def test_ac12_kurznachricht_zeigt_gelbe_amtliche_warnung_bei_startschwelle():
         stage_name="Etappe 1",
     )
 
-    assert "W:L" in out, (
+    assert "WG:L" in out, (
         "AC-12: Beim Startwert 'gering' (Stufe 2, gelb) muss die amtliche "
-        f"Warnung jetzt in der Trip-Kurznachricht erscheinen (Kuerzel 'W:L' "
-        f"-- Wind-Symbol 'W', Stufenbuchstabe 'L' fuer Stufe 2). War: {out!r}"
+        f"Warnung jetzt in der Trip-Kurznachricht erscheinen (Kuerzel 'WG:L' "
+        f"-- Wind-Symbol 'WG', Stufenbuchstabe 'L' fuer Stufe 2). War: {out!r}"
     )
 
 

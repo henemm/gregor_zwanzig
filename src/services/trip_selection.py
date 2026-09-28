@@ -52,13 +52,22 @@ KEIN_AKTIVES_ZIEL_TEXT = (
 
 _LABEL = {"route": "Trip", "vergleich": "Vergleich"}
 
+# #2417 Kurzform englisch (Abschnitt H): englische Fassungen fuer
+# Premium-SMS (immer) und Telegram im Kurzform-Stil.
+KEIN_KANDIDAT_TEXT_EN = "No active trip or location comparison found."
+KEIN_AKTIVES_ZIEL_TEXT_EN = (
+    "No active trip. This command only works for trips, not for location "
+    "comparisons."
+)
+_LABEL_EN = {"route": "Trip", "vergleich": "comparison"}
+
 # Issue #2417 Implementation Details: Befehlsklassen, die der Reader VOR der
 # Zielaufloesung erkennt (interne Reader-Schluessel nach Bare-Keyword-/
 # Shortcut-Aufloesung). "hilfe" braucht keine Zielaufloesung (ziellos, sofort
 # beantwortet); "columns" ebenso (nur ueber den Telegram-Callback "act_columns"
 # erreichbar, kein Bare-Text-Pendant). "pause"/"weiter" bleiben die einzige
 # verbleibende Mehrdeutigkeits-Lage aus #2282 AC-4.
-ZIELLOS_SCHLUESSEL = frozenset({"hilfe", "columns"})
+ZIELLOS_SCHLUESSEL = frozenset({"hilfe", "columns", "kuerzel"})  # #2417 AC-3
 _BEIDE_KINDS_ONLY_SCHLUESSEL = frozenset({"pause", "weiter"})
 
 
@@ -159,36 +168,42 @@ def _gsm7_sicher(text: str) -> str:
     return folded
 
 
-def _rueckfrage_text(kandidaten: list[tuple[str, str]], channel: str) -> str:
+def _rueckfrage_text(kandidaten: list[tuple[str, str]], channel: str,
+                     en: bool = False) -> str:
     """Rueckfrage-Text bei Mehrdeutigkeit (Issue #2282 Abschnitt 1). Fuer
     ``channel == "premium_sms"`` werden die NAMEN zuerst GSM-7-sicher
     gefaltet (F003) und dann gekuerzt (Boden 4 Zeichen), nie die Anzahl der
     Kandidaten oder die Woerter Trip/Vergleich (AC-15). Telegram bleibt
     unveraendert (kein 160-Zeichen-Limit, volle Namen)."""
     if channel != "premium_sms":
-        return _rueckfrage_mit_laenge(kandidaten, None)
+        return _rueckfrage_mit_laenge(kandidaten, None, en)
 
     sicher = [(k, _gsm7_sicher(n)) for k, n in kandidaten]
     laengen = [len(n) for _, n in sicher if n]
     max_laenge = max(laengen, default=4)
     for laenge in range(max_laenge, 3, -1):
-        text = _rueckfrage_mit_laenge(sicher, laenge)
+        text = _rueckfrage_mit_laenge(sicher, laenge, en)
         if len(text) <= 160:
             return text
-    return _rueckfrage_mit_laenge(sicher, 4)
+    return _rueckfrage_mit_laenge(sicher, 4, en)
 
 
-def _rueckfrage_mit_laenge(kandidaten: list[tuple[str, str]], laenge: int | None) -> str:
+def _rueckfrage_mit_laenge(kandidaten: list[tuple[str, str]], laenge: int | None,
+                           en: bool = False) -> str:
     def _kuerzen(n: str) -> str:
         return n if laenge is None else n[:laenge]
 
-    liste = ", ".join(f"{_kuerzen(n)} ({_LABEL[k]})" for k, n in kandidaten)
+    label = _LABEL_EN if en else _LABEL
+    liste = ", ".join(f"{_kuerzen(n)} ({label[k]})" for k, n in kandidaten)
     beispiel = _kuerzen(kandidaten[0][1]) if kandidaten else ""
+    if en:
+        return f"Ambiguous: {liste}. Reply with name, e.g. '{beispiel} pause'."
     return f"Mehrdeutig: {liste}. Mit Namen antworten, z.B. '{beispiel} pause'."
 
 
 def resolve_active_target(
     trips: "list[Trip]", presets: list[dict], now_utc: datetime, *, channel: str,
+    englisch: bool = False,
 ) -> ZielErgebnis:
     """Kind-neutrale Auswahl UND alle drei Ergebnistexte in einer Funktion
     (Issue #2282 Abschnitt 1). Laedt selbst nichts — ``trips``/``presets``
@@ -201,6 +216,7 @@ def resolve_active_target(
       0 Trip, >=2 Vergleiche      -> mehrdeutig
       0 Trip, 0 Vergleiche        -> keiner
     """
+    en = englisch or channel == "premium_sms"
     trip = pick_active_trip(trips, now_utc)
     heute = now_utc.date()
     vergleiche = [p for p in presets if _vergleich_ist_aktiv(p, heute)]
@@ -210,17 +226,19 @@ def resolve_active_target(
     if not trip and len(vergleiche) == 1:
         return ZielErgebnis(kind="vergleich", target=vergleiche[0], text=None)
     if not trip and not vergleiche:
-        return ZielErgebnis(kind=None, target=None, text=KEIN_KANDIDAT_TEXT)
+        return ZielErgebnis(kind=None, target=None,
+                            text=KEIN_KANDIDAT_TEXT_EN if en else KEIN_KANDIDAT_TEXT)
 
     kandidaten: list[tuple[str, str]] = []
     if trip:
         kandidaten.append(("route", trip.name))
     kandidaten += [("vergleich", p.get("name", "")) for p in vergleiche]
-    return ZielErgebnis(kind=None, target=None, text=_rueckfrage_text(kandidaten, channel))
+    return ZielErgebnis(kind=None, target=None, text=_rueckfrage_text(kandidaten, channel, en))
 
 
 def resolve_trip_only_target(
     trips: "list[Trip]", presets: list[dict], now_utc: datetime,
+    *, channel: str = "", englisch: bool = False,
 ) -> ZielErgebnis:
     """Zielaufloesung fuer Befehle, die NUR einen Trip adressieren koennen
     (Issue #2417 Implementation Details Punkt 4: `_ROUTE_ONLY`, Metrik-
@@ -231,6 +249,7 @@ def resolve_trip_only_target(
       kein Trip, >=1 aktiver Vergleich    -> KEIN_AKTIVES_ZIEL_TEXT (AC-17)
       kein Trip, kein Vergleich           -> KEIN_KANDIDAT_TEXT (unveraendert)
     """
+    en = englisch or channel == "premium_sms"
     trip = pick_active_trip(trips, now_utc)
     if trip is not None:
         return ZielErgebnis(kind="route", target=trip, text=None)
@@ -238,13 +257,15 @@ def resolve_trip_only_target(
     heute = now_utc.date()
     vergleiche = [p for p in presets if _vergleich_ist_aktiv(p, heute)]
     if vergleiche:
-        return ZielErgebnis(kind=None, target=None, text=KEIN_AKTIVES_ZIEL_TEXT)
-    return ZielErgebnis(kind=None, target=None, text=KEIN_KANDIDAT_TEXT)
+        return ZielErgebnis(kind=None, target=None,
+                            text=KEIN_AKTIVES_ZIEL_TEXT_EN if en else KEIN_AKTIVES_ZIEL_TEXT)
+    return ZielErgebnis(kind=None, target=None,
+                        text=KEIN_KANDIDAT_TEXT_EN if en else KEIN_KANDIDAT_TEXT)
 
 
 def resolve_command_target(
     key: str | None, trips: "list[Trip]", presets: list[dict], now_utc: datetime,
-    *, channel: str,
+    *, channel: str, englisch: bool = False,
 ) -> ZielErgebnis:
     """Geteilte Klassifizierungs-/Auflösungsfunktion fuer Telegram- UND
     Premium-SMS-Reader (Issue #2417 AC-18): ``key`` ist der bereits
@@ -267,5 +288,7 @@ def resolve_command_target(
     trip_und_vergleich.py) statt nur ueber die beiden heutigen Aufrufer.
     """
     if key in _BEIDE_KINDS_ONLY_SCHLUESSEL:
-        return resolve_active_target(trips, presets, now_utc, channel=channel)
-    return resolve_trip_only_target(trips, presets, now_utc)
+        return resolve_active_target(trips, presets, now_utc, channel=channel,
+                                     englisch=englisch)
+    return resolve_trip_only_target(trips, presets, now_utc, channel=channel,
+                                    englisch=englisch)

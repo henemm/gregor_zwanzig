@@ -56,14 +56,14 @@ def test_golden_gr20_spring_evening_vigilance():
             _tok("D", "18"),
             _tok("W", "30@14"),
             _tok("G", "55@15"),
-            _tok("HR", ":M@13", category="vigilance", priority=1),
-            _tok("TH", ":H@14", category="vigilance", priority=1),
+            _tok("VR", ":M@13", category="vigilance", priority=1),
+            _tok("VT", ":H@14", category="vigilance", priority=1),
         ),
         main_risk="Storm",
         trip_name="GR20",
     )
     subject = build_email_subject(line)
-    assert subject == "[GR20] Étape 7: Vizzavona — Abend — Sturm D18 W30@14 G55@15 HR:M@13TH:H@14"
+    assert subject == "[GR20] Étape 7: Vizzavona — Abend — Sturm D18 W30@14 G55@15 VR:M@13VT:H@14"
 
 
 def test_golden_arlberg_wintersport_update():
@@ -92,14 +92,14 @@ def test_golden_corsica_fr_vigilance_morning():
             _tok("D", "32"),
             _tok("W", "30"),
             _tok("G", "45"),
-            _tok("HR", ":M@14", category="vigilance", priority=1),
-            _tok("TH", ":H@17", category="vigilance", priority=1),
+            _tok("VR", ":M@14", category="vigilance", priority=1),
+            _tok("VT", ":H@17", category="vigilance", priority=1),
         ),
         main_risk="Thunder",
         trip_name="Corsica",
     )
     subject = build_email_subject(line)
-    assert subject == "[Corsica] E5: Vizzavona — Morgen — Gewitter D32 W30 G45 HR:M@14TH:H@17"
+    assert subject == "[Corsica] E5: Vizzavona — Morgen — Gewitter D32 W30 G45 VR:M@14VT:H@17"
 
 
 def test_golden_gr221_short_update():

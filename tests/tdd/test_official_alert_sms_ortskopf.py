@@ -7,9 +7,9 @@ SPEC: docs/specs/modules/fix_1948_s5_amtliche_sms_zielbild.md (AC-1 bis AC-17)
 PO-Zielbild-Tabelle (woertlich, nicht verhandelbar):
 
     heute (Ist)              KHW403 AMT GELB1/3: TH Do12-22, ges.Route
-    nach S5                  Seg 4: !TH:L 12-22
-    zweite Warnung dazu      Seg 4: !TH:L 12-22 HT:L
-    Ziel-Segment, orange     Ziel: !TH:M 15-21
+    nach S5                  Seg 4: !TS:L 12-22
+    zweite Warnung dazu      Seg 4: !TS:L 12-22 HT:L
+    Ziel-Segment, orange     Ziel: !TS:M 15-21
 
 Kein Mock, keine Dateiinhalt-Asserts: echte ``OfficialAlert``-Objekte durch
 die echten Builder (``build_official_alert_notices`` /
@@ -169,7 +169,7 @@ def _trip(name: str = "KHW 403", waypoints: int = 7) -> Trip:
 
 def _zwei_warnungen_segment_4(trip: Trip) -> list:
     """Zwei gelbe Warnungen auf demselben Segment 4 — der Fall der
-    PO-Zielbild-Zeile ``Seg 4: !TH:L 12-22 HT:L``.
+    PO-Zielbild-Zeile ``Seg 4: !TS:L 12-22 HT:L``.
 
     Zwei statt einer Warnung, damit ``build_official_alert_notices`` den
     ``"nur "``-Zusatz NICHT setzt (er greift nur bei genau einer Warnung)."""
@@ -282,13 +282,13 @@ def test_ac3_zwei_warnungen_tragen_genau_ein_ausrufezeichen():
         f"AC-3: genau EIN '!' erwartet (nur vor dem ersten Token), "
         f"bekam {sms.count('!')} in {sms!r}"
     )
-    assert re.search(r": !TH:", sms), (
+    assert re.search(r": !TS:", sms), (
         f"AC-3: das '!' muss unmittelbar vor dem ERSTEN Kuerzel-Token stehen "
-        f"('<Ort>: !TH:...'), bekam {sms!r}"
+        f"('<Ort>: !TS:...'), bekam {sms!r}"
     )
     assert " + " not in sms, (
         f"AC-3: Tokens werden mit einem Leerzeichen verbunden, nicht mit "
-        f"' + ' (PO-Zielbild 'Seg 4: !TH:L 12-22 HT:L'): {sms!r}"
+        f"' + ' (PO-Zielbild 'Seg 4: !TS:L 12-22 HT:L'): {sms!r}"
     )
     assert re.search(r"\bHT:L\b", sms), (
         f"AC-3: die zweite Warnung muss als eigener Token 'HT:L' erscheinen: "
@@ -309,8 +309,8 @@ def test_ac4_warnstufe_erscheint_als_buchstabe_hinter_dem_doppelpunkt(
     exakt L, M bzw. H direkt hinter dem Doppelpunkt."""
     sms = _render([_notice(_alert(level=level, von=_heute(15), bis=_heute(21)))])
 
-    assert f"TH:{buchstabe}" in sms, (
-        f"AC-4: Stufe {level} muss als 'TH:{buchstabe}' erscheinen, "
+    assert f"TS:{buchstabe}" in sms, (
+        f"AC-4: Stufe {level} muss als 'TS:{buchstabe}' erscheinen, "
         f"bekam {sms!r}"
     )
     assert not _LEVEL_WORD_POSITION.search(sms), (
@@ -344,8 +344,8 @@ def test_ac5_gruene_stufe_zeigt_minus_und_urgency_bleibt_absturzfrei():
     from services.alert_urgency import urgency_from_official_level
 
     sms = _render([_notice(_alert(level=1, von=_heute(12), bis=_heute(22)))])
-    assert "TH:-" in sms, (
-        f"AC-5: Stufe GRÜN (1) muss als 'TH:-' erscheinen, bekam {sms!r}"
+    assert "TS:-" in sms, (
+        f"AC-5: Stufe GRÜN (1) muss als 'TS:-' erscheinen, bekam {sms!r}"
     )
 
     assert 1 not in hazard_symbols.LEVEL_LETTERS, (
@@ -369,7 +369,7 @@ def test_ac5_gruene_stufe_zeigt_minus_und_urgency_bleibt_absturzfrei():
 @pytest.mark.parametrize("level", [2, 3, 4])
 def test_ac6_access_ban_bleibt_blankes_kuerzel_ohne_stufe_und_zeit(level: int):
     """AC-6: Given eine Warnung mit ``hazard="access_ban"`` / When sie gerendert
-    wird / Then erscheint "CL" blank — ohne Doppelpunkt, ohne Stufenbuchstaben
+    wird / Then erscheint "AB" blank — ohne Doppelpunkt, ohne Stufenbuchstaben
     und ohne Zeitangabe, unabhaengig von der Stufe."""
     sms = _render([
         _notice(_alert(
@@ -378,9 +378,9 @@ def test_ac6_access_ban_bleibt_blankes_kuerzel_ohne_stufe_und_zeit(level: int):
         )),
     ])
 
-    assert re.search(r"\bCL\b", sms), f"AC-6: Kuerzel 'CL' fehlt: {sms!r}"
-    assert "CL:" not in sms, (
-        f"AC-6: 'CL' ist stufenlos (LEVELLESS_HAZARDS) und darf keinen "
+    assert re.search(r"\bAB\b", sms), f"AC-6: Kuerzel 'AB' fehlt: {sms!r}"
+    assert "AB:" not in sms, (
+        f"AC-6: 'AB' ist stufenlos (LEVELLESS_HAZARDS) und darf keinen "
         f"Doppelpunkt tragen: {sms!r}"
     )
     assert "12-22" not in sms, (
@@ -409,8 +409,8 @@ def test_ac7_anderer_tag_zeigt_fenster_mit_wochentagspraefix():
     )
 
     sms = _render([_notice(alert)])
-    assert f"TH:L {tag}12-22" in sms, (
-        f"AC-7: der Token muss '{f'TH:L {tag}12-22'}' lauten (Kuerzel, Stufe, "
+    assert f"TS:L {tag}12-22" in sms, (
+        f"AC-7: der Token muss '{f'TS:L {tag}12-22'}' lauten (Kuerzel, Stufe, "
         f"volles Fenster mit Wochentag), bekam {sms!r}"
     )
     assert "@" not in sms, (
@@ -432,8 +432,8 @@ def test_ac8_heutiger_tag_laesst_das_wochentagspraefix_weg():
     ``datetime.now(TZ)``, kein eingefrorenes Wochentagskuerzel."""
     sms = _render([_notice(_alert(von=_heute(12), bis=_heute(22)))])
 
-    assert "TH:L 12-22" in sms, (
-        f"AC-8: am heutigen Tag lautet der Token 'TH:L 12-22' ohne "
+    assert "TS:L 12-22" in sms, (
+        f"AC-8: am heutigen Tag lautet der Token 'TS:L 12-22' ohne "
         f"Wochentag, bekam {sms!r}"
     )
     assert not _WEEKDAY_BEFORE_HOUR.search(sms), (
@@ -446,7 +446,7 @@ def test_ac8_minuten_bleiben_zweistellig_wenn_sie_nicht_voll_sind():
     ungleich ":00" sind — auch ohne Wochentag-Praefix."""
     sms = _render([_notice(_alert(von=_heute(15, 20), bis=_heute(21, 40)))])
 
-    assert "TH:L 15:20-21:40" in sms, (
+    assert "TS:L 15:20-21:40" in sms, (
         f"AC-8: ungerade Minuten bleiben erhalten ('15:20-21:40'), "
         f"bekam {sms!r}"
     )
@@ -523,8 +523,8 @@ def test_ac10_trip_dispatch_versendet_die_neue_grammatik():
         f"AC-10: der Ortskopf muss exakt 'Seg 4' lauten (kein Zusatz davor), "
         f"bekam Kopf {_kopf(sms)!r} aus {sms!r}"
     )
-    assert _rumpf(sms).startswith("!TH:M "), (
-        f"AC-10: der Rumpf muss mit '!TH:M ' beginnen (Marker, Kuerzel, "
+    assert _rumpf(sms).startswith("!TS:M "), (
+        f"AC-10: der Rumpf muss mit '!TS:M ' beginnen (Marker, Kuerzel, "
         f"Stufe orange), bekam {_rumpf(sms)!r}"
     )
 
@@ -583,8 +583,8 @@ def test_ac11_compare_dispatch_nutzt_dieselbe_token_grammatik_wie_der_trip():
         "denselben Token-Teil liefern (nur der Ortskopf unterscheidet sich).\n"
         f"  Trip   ={trip_sms!r}\n  Compare={compare_sms!r}"
     )
-    assert _rumpf(compare_sms).startswith("!TH:M "), (
-        f"AC-11: Token-Grammatik '!TH:M <Fenster>' erwartet, bekam "
+    assert _rumpf(compare_sms).startswith("!TS:M "), (
+        f"AC-11: Token-Grammatik '!TS:M <Fenster>' erwartet, bekam "
         f"{_rumpf(compare_sms)!r}"
     )
 
@@ -912,8 +912,8 @@ def test_ac17_unbekannte_gefahrenart_behaelt_den_stufenbuchstaben():
         f"AC-17: das Fallback-Kuerzel '{kuerzel}' muss den Stufenbuchstaben "
         f"'M' tragen, bekam {sms!r}"
     )
-    assert "TH:" not in sms, (
-        f"AC-17: das Fallback darf nicht mit 'TH' (thunderstorm) kollidieren: "
+    assert "TS:" not in sms, (
+        f"AC-17: das Fallback darf nicht mit 'TS' (thunderstorm) kollidieren: "
         f"{sms!r}"
     )
 
@@ -967,7 +967,7 @@ def test_n3_kopf_faellt_bevor_das_zeitfenster_geopfert_wird():
     kopf, token = voll.split(": ", 1)
     kopflaenge = len(kopf) + len(": ")
     # Vorbedingung des Divergenzfalls -- ohne sie waere der Test trivial gruen.
-    assert kopflaenge + len(token) > 140 >= kopflaenge + len("!TH:M"), (
+    assert kopflaenge + len(token) > 140 >= kopflaenge + len("!TS:M"), (
         f"Fixture trifft den Divergenzfall nicht: Kopf {kopflaenge} Zeichen, "
         f"Token {token!r}"
     )
@@ -999,7 +999,7 @@ def test_n3_abbau_reihenfolge_ueber_alle_budgets(limit: int):
     Reihenfolge verdreht: vertauschte Schleifen, weggefallene Kopf-Stufe,
     Kopf-Stufe vor der reichen Variante."""
     head = "Seg 4: "
-    varianten = ["!TH:M Sa15-21 AAA", "!TH:M Sa15-21", "!TH"]
+    varianten = ["!TS:M Sa15-21 AAA", "!TS:M Sa15-21", "!TS"]
     reichste = next(v for v in varianten if len(v) <= limit)
     erwartet = head + reichste if len(head + reichste) <= limit else reichste
 

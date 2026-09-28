@@ -26,8 +26,10 @@ FORECAST_THP = "TH+:"
 # amtlichen Warn-Katalogs (`tokens/hazard_symbols.py`).
 # Issue #1475 Nachbesserung AC-1: umbenannt `+HG` -> `+HL` (Konsistenz-Fix).
 FORECAST_TH_HAIL_SUFFIX = "+HL"
-VIGI_TH = "TH:"
-VIGI_HR = "HR:"
+# Issue #2417 AC-27: Meteo-France-Risiko VR:/VT: statt HR:/TH: -- 'TH:' ist
+# das Gewitter-Kuerzel der Vorhersage, 'HR' war die Starkregen-Warnung.
+VIGI_TH = "VT:"
+VIGI_HR = "VR:"
 
 # sms_format.md §1/§3.1: stage_name max 10 chars, Umlaut-/Akzent-Faltung vor
 # Truncation, via die geteilte Quelle fold_ascii() (#1253).
@@ -59,7 +61,7 @@ PRIORITY = {
     # `PRIORITY[sym]` ungeschuetzt liest.
     "FD": 4, "FL": 4, "FN": 4,
     "D": 6, "N": 6, "L": 6, "R": 7,
-    "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, FORECAST_TH: 10,
+    "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, VIGI_TH: 10, FORECAST_TH: 10,
     # Issue #1660 Scheibe B: 14 waehlbare Metriken ohne bisherigen SMS-Token,
     # gleiche Prioritaetsstufe wie die Wintersport-Token (DEC-4). Pflicht,
     # weil `PRIORITY[sym]` an mehreren Stellen ungeschuetzt gelesen wird.
@@ -118,6 +120,32 @@ POS_INDEX = {key: i for i, key in enumerate(POSITIONAL)}
 # §2: der Warn-Block steht nach dem Vigilance-Block, vor Fire/Wintersport/DBG.
 OFFICIAL_ALERT_POS = POS_INDEX[(VIGI_TH, "vigilance")] + 0.5
 STD_SYMBOLS = {s for s, _ in POSITIONAL}
+
+# Issue #2417 AC-23: EINZIGE Definitionsstelle der Bedeutung der Bausteine
+# ohne Katalog-Eintrag (Wetter-Kuerzel wie SD/C stehen im Metrik-Katalog,
+# DBG erscheint nie beim Nutzer). CODES (en) und KUERZEL (de) lesen hier.
+BAUSTEIN_BEDEUTUNG_EN: dict[str, str] = {
+    "AV": "avalanche level", "Z:": "fire zones", "MAX": "top level",
+    "M:": "massifs", VIGI_HR: "Meteo-France rain risk",
+    VIGI_TH: "Meteo-France storm risk", UNAVAILABLE_SYMBOL: "no alert data",
+}
+BAUSTEIN_BEDEUTUNG_DE: dict[str, str] = {
+    "AV": "Lawinenstufe", "Z:": "Brandzonen", "MAX": "Höchststufe",
+    "M:": "Massive", VIGI_HR: "Météo-France-Risiko Regen",
+    VIGI_TH: "Météo-France-Risiko Gewitter", UNAVAILABLE_SYMBOL: "keine Warndaten",
+}
+# Formatzeichen der Kurzform-Grammatik (sms_format.md): Beispiel -> Bedeutung.
+# Etappen-Praefix, Stunden-Marker '@', Spitze '(...)', Bereich '/',
+# Hagel-Suffix (FORECAST_TH_HAIL_SUFFIX), Null-Form '-', Luecken-Marker '?'.
+FORMAT_BEDEUTUNG_EN: dict[str, str] = {
+    "E4": "stage 4", "23@5": "over limit from 5h", "(24@7)": "peak",
+    "D13/27": "min/max", FORECAST_TH_HAIL_SUFFIX: "hail", "-": "none", "?": "no data",
+}
+FORMAT_BEDEUTUNG_DE: dict[str, str] = {
+    "E4": "Etappe 4", "23@5": "über der Schwelle ab 5 Uhr", "(24@7)": "Spitze",
+    "D13/27": "Tiefst/Höchst", FORECAST_TH_HAIL_SUFFIX: "Hagel", "-": "nichts",
+    "?": "keine Daten",
+}
 
 # Issue #1677 DEC-4/Known Limitation 2: nur diese beiden Kategorien gehoeren
 # zur waehlbaren Metrik-Kaskade und duerfen ueber MetricSpec.position sortiert

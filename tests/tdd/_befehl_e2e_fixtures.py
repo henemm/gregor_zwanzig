@@ -332,29 +332,11 @@ PREMIUM_SMS_SANDBOX_KEY = "sandbox-fake-2417"
 _SENTINEL = object()
 
 
-#: Feldnamen eines ``_COMMAND_SPECS``-Eintrags (Spec
-#: ``feat_2417_kurzform_englisch.md`` AC-1: benannte Struktur statt Tupel).
-_SPEC_FELDER_ALT = ("wort", "arg", "beschreibung_de", "kinds")
-
-
 def spec_feld(spec, name: str):
     """Feldzugriff auf einen ``_COMMAND_SPECS``-Eintrag per NAMEN (AC-1,
     #2417 Kurzform englisch) -- der EINE Weg, auf dem Test-Helfer ein Feld
-    lesen, statt ein Tupel mit fester Laenge zu entpacken.
-
-    UEBERGANGS-SHIM (nach GREEN loeschen): solange ``_COMMAND_SPECS`` noch
-    das alte 4er-Tupel ``(wort, arg, beschreibung, kinds)`` ohne
-    ``_fields`` ist, werden die vier alten Namen positionsweise gelesen und
-    die neuen Felder (``wort_en``/``wirkung_en``) liefern ``None``. Ohne
-    diesen Shim fielen die Befehls-E2E-Dateien, die ihre Parametrisierung
-    zur SAMMELZEIT aus ``_COMMAND_SPECS`` ableiten, VOR GREEN komplett auf
-    Collection-ERROR statt auf sprechende Einzel-Fehlschlaege. Es entsteht
-    kein vakuumes Gruen: wer ``wort_en``/``wirkung_en`` braucht, prueft
-    ``None`` selbst und wird rot."""
-    if not hasattr(spec, "_fields"):
-        if name in _SPEC_FELDER_ALT:
-            return spec[_SPEC_FELDER_ALT.index(name)]
-        return None
+    lesen, statt ein Tupel mit fester Laenge zu entpacken. (Der Uebergangs-
+    Shim fuer das alte 4er-Tupel ist mit GREEN entfallen.)"""
     return getattr(spec, name)
 
 
@@ -1606,8 +1588,12 @@ def _premium_sms_merkmal_fuer(fall: str, *, nutzer: BefehlNutzer):
 
     metric_id = metric_command_words().get(fall)
     if metric_id is not None:
+        # #2417 AC-13/AC-15: die Kurzform nennt das GESENDETE Kuerzel
+        # (``D``/``N`` statt ``DayMax``/``Night``) -- dieselbe Quelle wie die SMS.
+        from app.metric_catalog import kurzform_kuerzel
+
         metric = get_metric(metric_id)
-        return metric.sms_code or metric.col_label
+        return kurzform_kuerzel(metric_id) or metric.col_label
 
     return None
 
@@ -1727,4 +1713,9 @@ FEHLERTEXTE = (
     "Mehrdeutig",
     "Unbekannter Befehl",
     KEIN_KANDIDAT_TEXT,
+    # #2417 Kurzform englisch (Abschnitt H): die englischen Fassungen, die
+    # Premium-SMS und Telegram-Kurzform seither senden.
+    "Ambiguous",
+    "Unknown command",
+    "No active trip or location comparison found.",
 )

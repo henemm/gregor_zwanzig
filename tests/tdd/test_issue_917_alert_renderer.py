@@ -485,23 +485,22 @@ class TestAC5SMS:
 # ---------------------------------------------------------------------------
 
 class TestAC6CatalogSmsCodes:
-    """AC-6: temperature→'D', temperature_cold→'N'; alle sms_code global eindeutig + ASCII."""
+    """AC-6, abgeloest durch #2417 AC-12/AC-28: temperature und der Kaelte-Alarm
+    temperature_cold tragen beide 'T' ('D' = Tageshoechst, 'N' = Nachtwert
+    gehoeren allein temperature_day_high/temperature_night); sonst alle
+    sms_code global eindeutig + ASCII."""
 
-    def test_temperature_sms_code_is_D(self):
-        """get_sms_code('temperature') == 'D' (Tageshoch, aktuell T → RED erwartet)."""
+    def test_temperature_sms_code_is_T(self):
+        """#2417 AC-12: get_sms_code('temperature') == 'T'."""
         from app.metric_catalog import get_sms_code
         result = get_sms_code("temperature")
-        assert result == "D", (
-            f"erwartet 'D' (Tageshoch), bekommen '{result}' — dies ist RED bis Katalog geändert"
-        )
+        assert result == "T", f"erwartet 'T' (#2417 AC-12), bekommen '{result}'"
 
-    def test_temperature_cold_sms_code_is_N(self):
-        """get_sms_code('temperature_cold') == 'N' (Nachttief, aktuell TN → RED erwartet)."""
+    def test_temperature_cold_sms_code_is_T(self):
+        """#2417 AC-28: get_sms_code('temperature_cold') == 'T' (nicht 'N')."""
         from app.metric_catalog import get_sms_code
         result = get_sms_code("temperature_cold")
-        assert result == "N", (
-            f"erwartet 'N' (Nachttief), bekommen '{result}' — dies ist RED bis Katalog geändert"
-        )
+        assert result == "T", f"erwartet 'T' (#2417 AC-28), bekommen '{result}'"
 
     def test_all_sms_codes_ascii(self):
         """Alle sms_code im Katalog sind ASCII."""
@@ -513,9 +512,12 @@ class TestAC6CatalogSmsCodes:
                 )
 
     def test_all_sms_codes_globally_unique(self):
-        """Alle gesetzten sms_code sind global eindeutig."""
+        """Alle gesetzten sms_code sind global eindeutig -- einzige Ausnahme
+        (#2417 AC-28): der Kaelte-Alarm temperature_cold teilt 'T' mit
+        temperature, weil er dieselbe Temperatur bewacht."""
         from app.metric_catalog import _METRICS
-        codes = [m.sms_code for m in _METRICS if m.sms_code]
+        codes = [m.sms_code for m in _METRICS if m.sms_code and m.id != "temperature_cold"]
+        assert len(codes) > 20, f"nur {len(codes)} sms_code -- Waechter blind?"
         assert len(codes) == len(set(codes)), (
             f"Doppelte sms_code: {[c for c in codes if codes.count(c) > 1]}"
         )

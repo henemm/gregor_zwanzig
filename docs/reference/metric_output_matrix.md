@@ -79,9 +79,11 @@ Ausgabeform definieren: `col_key`/`col_label`, `compact_label`, `sms_code`,
 > **🔴 Seit #1719 S4 (2026-08-13) ist `compact_label` KEIN unabhängig gepflegtes
 > Feld mehr**, sondern wird aus dem Register-Kürzel (`sms_code`) **abgeleitet**.
 > Abweichen darf nur, was in einer benannten Ausnahmeliste mit Begründung steht
-> — heute `temperature` (`T`) und `wind_chill` (`TF`), weil deren Register-Kürzel
-> eine *Tagesauswertung* bezeichnen (`D`/`K` bzw. `FK`/`FD`), die
-> Telegram-Zelle aber einen *Stundenwert* zeigt. Ein Wächter
+> — heute nur noch `wind_chill` (`TF`), weil dessen Register-Kürzel
+> eine *Tagesauswertung* bezeichnen (`FL`/`FD`), die
+> Telegram-Zelle aber einen *Stundenwert* zeigt. Die frühere Ausnahme für die
+> Temperatur entfällt seit #2417 (AC-12): ihr Register-Kürzel ist jetzt selbst
+> `T`. Ein Wächter
 > (`tests/unit/test_telegram_kuerzel_folgt_register.py`) macht jeden neuen
 > Alleingang rot.
 >
@@ -90,6 +92,16 @@ Ausgabeform definieren: `col_key`/`col_label`, `compact_label`, `sms_code`,
 > als in der SMS, ohne fachlichen Grund (Luftdruck `P` vs. `HP`, Bewölkung `C`
 > vs. `CT`, Nacht-Tiefsttemperatur `TN` vs. `N`). Wer hier ein Kürzel ändern
 > will, ändert `sms_code` — nicht `compact_label`.
+>
+> **Seit #2417 (AC-23) trägt jede `MetricDefinition` auch die Bedeutung ihrer
+> Kürzel:** `kuerzel_bedeutung_en` und `kuerzel_bedeutung_de` (dict Kürzel →
+> Bedeutung, Schlüssel wie in der SMS, z. B. `NS24+`, `TH`/`TH+`). Das ist die
+> einzige Definitionsstelle der Bedeutung eines Wetter-Kürzels; CODES/KUERZEL
+> setzen ihre Antwort zur Laufzeit daraus zusammen. Warn-Kürzel stehen in
+> `output/tokens/hazard_symbols.py` (`HAZARD_BEDEUTUNG_EN/_DE`), Bausteine ohne
+> Katalog-Eintrag und Formatzeichen in `output/tokens/builder.py`
+> (`BAUSTEIN_BEDEUTUNG_*`, `FORMAT_BEDEUTUNG_*`). Doppelungs-Wächter:
+> `tests/unit/test_keine_doppelten_kennungen.py`.
 
 Gemessen am oben genannten Commit:
 
@@ -128,6 +140,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | SMS: Token-Reihenfolge/Auffüllung | `src/output/tokens/builder.py:47` `PRIORITY` (40+ Symbole), `:78` `POSITIONAL` (33), `:112` `DEFAULTS` | handgeschrieben | **unbewacht** gegen den Katalog |
 | SMS: Kaskade | `sms_trip.py` liest **weder** `get_metrics_for_channel()` **noch** `cascade_source_for_channel()`; die kanalabhängige Position wird stattdessen in `src/output/renderers/trip_report.py:335–346` vorbereitet | Bruch | s. Fläche 10. 🔴 **Korrektur 2026-09-27 (Fix #2422 S2a, B9):** das frühere Aktivierungs-Gate — `position` nur bei Kaskadenquelle `per_report`/`per_channel`, bei `global` fiel die Ausgabe auf die feste `POSITIONAL`-Sortierung zurück (#1677 DEC-2, Byte-Identität) — ist entfernt. `position` wird jetzt **immer** aus der SMS-Kaskade abgeleitet, unabhängig von der Quelle; DEC-2 gilt ab dieser Scheibe als abgelöst (`docs/specs/modules/fix_2422_s2a_editor_gleich_gespeichert.md`) |
 | Telegram-Drilldown / Kommandos | ✅ **Erledigt (2026-09-06, Issue #2134, Epic #2133 S1).** Getipptes Abrufwort (alle 29 `selectable`-Größen): `trip_command_processor.py` `_metrik_antwort()` löst über `metric_catalog.py` `metric_command_words()` auf, Formatierer folgt aus dem Katalogeintrag (`is_level`/`dp_field`), nicht aus einer dritten Liste. Steuerbefehle: `_COMMAND_SPECS` als Einzelquelle für Hilfe, beide Fehlertexte, beide E-Mail-Fußzeilen. Die Button-Callback-Route `dd_(thunder\|wind\|precip)_(today\|tomorrow)` (`_DRILLDOWN_PATTERN`) bleibt bewusst auf drei Größen begrenzt (kuratierte Buttons, s. `docs/specs/modules/telegram_tier3_drilldown.md`), löst den Formatierer aber ebenfalls über den Katalog auf | katalog-getrieben (Abrufwort + Steuerbefehle); Button-Callbacks weiterhin handgeschrieben (drei feste Buttons) | `tests/tdd/test_adhoc_metrik_vokabular.py` (Kollisionswächter AC-18, Mutations-Gegenprobe AC-19, Disjunktheit Steuerbefehle/Metrikwörter AC-20) |
+| CODES/KUERZEL-Antwort (Kürzel-Legende; englisch auf Premium-SMS und Telegram-Kurzform bzw. bei gesendetem `CODES`, deutsch per E-Mail und bei `KUERZEL`; #2417) | `src/services/trip_command_processor.py:381` `codes_text()`, Einstieg `trip_command_processor.py:1258` `_show_codes()`; Bedeutungen aus `MetricDefinition.kuerzel_bedeutung_en/_de`, `output/tokens/builder.py` (`BAUSTEIN_BEDEUTUNG_*`, `FORMAT_BEDEUTUNG_*`) und `output/tokens/hazard_symbols.py` (`HAZARD_BEDEUTUNG_*`, `STUFE_BEDEUTUNG_*`) | katalog-getrieben (nur Reihenfolge/Gruppierung `_CODES_WETTER`/`_CODES_WEITERE` ist handgeschrieben; ein Katalog-Kürzel, das dort fehlt, wird hinten an „Weather" angehängt) | `tests/tdd/test_kuerzel_eindeutig.py` (Vollständigkeit gegen die Ausgabe-Register, Bedeutung nur aus dem Katalog, deutscher Wortlaut) + `tests/tdd/test_kurzform_befehle_englisch.py` (englischer Wortlaut zeichengenau) |
 
 ### 2.2 Compare (Ortsvergleich)
 

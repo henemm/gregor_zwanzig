@@ -119,6 +119,8 @@ def _ist_unbekannt_antwort(text: str) -> bool:
         or "Befehlsformat: ### key: value" in text
         or "ist kein gueltiger Befehl" in text
         or "ist kein gültiger Befehl" in text
+        # #2417 AC-4: Premium-SMS antwortet englisch.
+        or "Unknown command." in text
     )
 
 

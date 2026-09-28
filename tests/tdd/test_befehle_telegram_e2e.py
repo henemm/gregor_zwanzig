@@ -19,6 +19,7 @@ from app.loader import get_briefings_dir
 from services.trip_command_processor import _QUERY_KEYS
 
 from tests.tdd._befehl_e2e_fixtures import (
+    BEFEHL_EN_ZU_DE,
     ERGEBNIS_ANTWORT_TRIP,
     ERGEBNIS_ANTWORT_VERGLEICH,
     ERGEBNIS_HILFE,
@@ -139,8 +140,15 @@ def _pruefe_matrix_ergebnis(ergebnis, *, recorder, chat_id, nutzer, fall, ziel_n
         _ohne_fehlertexte(text)
         return
     if ergebnis == ERGEBNIS_KEIN_KANDIDAT:
-        assert KEIN_KANDIDAT_TEXT in text, (
-            f"Erwarte KEIN_KANDIDAT_TEXT, bekam: {text!r}"
+        # #2417 Kurzform englisch (Spec Abschnitt H): ohne Ziel folgt die
+        # Sprache dem gesendeten Wort -- ein englisches bzw. in beiden
+        # Sprachen gleiches Wort (``pause``/``status``) wird englisch
+        # beantwortet, ein nur deutsches deutsch.
+        from services.trip_selection import KEIN_KANDIDAT_TEXT_EN
+
+        erwartet = KEIN_KANDIDAT_TEXT_EN if fall in BEFEHL_EN_ZU_DE else KEIN_KANDIDAT_TEXT
+        assert erwartet in text, (
+            f"Erwarte {erwartet!r} fuer {fall!r}, bekam: {text!r}"
         )
         return
     if ergebnis == ERGEBNIS_KEIN_AKTIVES_ZIEL:

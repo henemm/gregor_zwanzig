@@ -926,3 +926,153 @@ def test_status_kurzform_ist_gsm7_und_sprachneutral(monkeypatch, user_ids, kanal
             f"AC-30 email: STATUS nicht unveraendert.\n--- erwartet ---\n"
             f"{erwartet}\n--- versendet ---\n{text}"
         )
+
+
+# ===========================================================================
+# AC-19 "Pruefliste, nicht Grenze" -- drei weitere Kurzform-Pfade (/50, PO-go)
+# ===========================================================================
+
+def test_knopf_antwort_folgt_dem_kurzform_stil(monkeypatch, user_ids):
+    """(a) GIVEN ein Trip im Telegram-Stil ``kurzform`` WHEN der Nutzer einen
+    Knopf der Aktionen-Blase klickt (``act_skip``, echter Callback-Eingang)
+    THEN ist die Antwort englisch und die Wirkung unveraendert."""
+    from tests.tdd._befehl_e2e_fixtures import klicke_telegram_knopf
+
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = _nutzer_fuer_lage(user_ids, "trip", stil="kurzform")
+    vorher = _stand(recorder)
+
+    klicke_telegram_knopf(basis_settings(), nutzer, "act_skip")
+
+    text = "\n".join(_antworten(recorder, "telegram", nutzer, vorher))
+    assert text, "Auf den Knopf act_skip kam keine sichtbare Antwort."
+    _assert_englisch(text, nutzer, kontext="Knopf act_skip (kurzform)")
+    assert _geladener_trip(nutzer).report_config.skip_next is True
+
+
+def test_metrik_abruf_telegram_kurzform_ohne_deutschen_betreff(monkeypatch, user_ids):
+    """(b) GIVEN ein Trip im Telegram-Stil ``kurzform`` WHEN ein Wetter-Kuerzel
+    (``R``) per Telegram abgefragt wird THEN tragen Betreff und Text keine
+    deutschen Woerter (frueher "[Trip] Niederschlag stündlich")."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = _nutzer_fuer_lage(user_ids, "trip", stil="kurzform")
+
+    text = _sende("telegram", basis_settings(), recorder, nutzer, "R")
+
+    _assert_englisch(text, nutzer, kontext="Metrik-Abruf R (Telegram-Kurzform)")
+    assert "stündlich" not in text and "Verlauf" not in text, text
+    assert "\n\nR " in text, f"Kurzform-Zeile mit Kuerzel R fehlt:\n{text}"
+
+
+@pytest.mark.parametrize("outcome", [
+    "no_stage", "no_weather", "no_channels", "channels_unreachable", "already_in_progress",
+])
+def test_on_demand_fehlschlag_englisch_und_gsm7(outcome):
+    """(c) GIVEN ein On-Demand-Briefing (TODAY/TOMORROW) scheitert WHEN die
+    Antwort auf einem Kurzform-Kanal entsteht (``en=True``) THEN ist sie
+    englisch und GSM-7-sauber. Direktaufruf der reinen Textfunktion: die
+    Fehlschlaege (kein Kanal, Lock belegt, Wetterabruf gescheitert) lassen
+    sich am echten Eingang ohne Eingriff in den Scheduler nicht herstellen;
+    die Verdrahtung ``en=self._en`` sitzt in ``_trigger_on_demand``."""
+    from datetime import date
+
+    from services.trip_command_processor import _on_demand_failure_body
+    from tests.tdd._befehl_e2e_fixtures import DEUTSCHE_SIGNALWOERTER
+
+    text = _on_demand_failure_body(outcome, "Today", date(2026, 9, 28), en=True)
+
+    deutsch = [w for w in DEUTSCHE_SIGNALWOERTER if re.search(rf"\b{re.escape(w)}\b", text)]
+    assert not deutsch, f"{outcome}: deutsche Woerter {deutsch} in {text!r}"
+    assert_gsm7_clean(text, context=f"On-Demand-Fehlschlag {outcome}")
+    deutsch_text = _on_demand_failure_body(outcome, "Heute", date(2026, 9, 28))
+    assert text != deutsch_text
+
+
+@pytest.mark.parametrize("knopf", ["tl_today", "dd_hours_today", "dd_wind_today"])
+def test_drilldown_knoepfe_folgen_dem_kurzform_stil(monkeypatch, user_ids, knopf):
+    """AC-5/AC-19 GIVEN ein Trip im Telegram-Stil ``kurzform`` WHEN der Nutzer
+    einen Timeline-/Stunden-/Metrik-Knopf klickt (echter Callback-Eingang)
+    THEN sind Kopf, Beschriftungen und Betreff englisch."""
+    from tests.tdd._befehl_e2e_fixtures import klicke_telegram_knopf
+
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = _nutzer_fuer_lage(user_ids, "trip", stil="kurzform")
+    vorher = _stand(recorder)
+
+    klicke_telegram_knopf(basis_settings(), nutzer, knopf)
+
+    text = "\n".join(_antworten(recorder, "telegram", nutzer, vorher))
+    assert text, f"Auf den Knopf {knopf} kam keine sichtbare Antwort."
+    _assert_englisch(text, nutzer, kontext=f"Knopf {knopf} (kurzform)")
+    for deutsch in ("stündlich", "Stunden", "Verlauf", "Temperatur", "heute"):
+        assert deutsch not in text, f"{knopf}: {deutsch!r} in {text!r}"
+
+
+def test_strecke_regenzonen_englisch():
+    """AC-19 GIVEN Regenzonen entlang der Reststrecke WHEN die Kurzform-
+    Antwort (Telegram-Kurzform/Premium-SMS) gebaut wird THEN ist die
+    Intensitaet englisch; Zahlen und Layout bleiben (echte Formatierer-
+    Funktion mit echter ``RainZone``, echter Intensitaets-Konstante)."""
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+
+    from services.radar_service import INTENSITY_LIGHT
+    from services.rain_extent import RainZone
+    from services.trip_command_processor import _fmt_strecke_telegram
+
+    zone = RainZone(km_from=3.0, km_to=7.4, onset_minutes=30,
+                    event_end_minutes=90, intensity_label=INTENSITY_LIGHT)
+    jetzt = datetime(2026, 9, 28, 10, 0, tzinfo=timezone.utc)
+    tz = ZoneInfo("Europe/Vienna")
+
+    en = _fmt_strecke_telegram((zone,), tz, jetzt, en=True)
+    de = _fmt_strecke_telegram((zone,), tz, jetzt)
+
+    assert en == "km 3-7: 12:30-13:30, Light rain", en
+    assert de == f"km 3-7: 12:30-13:30, {INTENSITY_LIGHT}", de
+
+
+def _on_demand_scheitert(monkeypatch, outcome: str) -> None:
+    """Nur die Scheduler-Grenze liefert einen Fehlschlag (aeussere
+    Abhaengigkeit: Kanal-Konfiguration/Wetterabruf) -- Zielauflosung,
+    Sprachwahl, Texterzeugung und Versand laufen echt."""
+    from services.trip_report_scheduler import OnDemandErgebnis, TripReportSchedulerService
+
+    def _gescheitert(self, trip, report_type, restrict_to_channel=None):
+        return OnDemandErgebnis(outcome=outcome, zieltag=_ortstag_jetzt())
+
+    monkeypatch.setattr(TripReportSchedulerService, "send_on_demand_report", _gescheitert)
+
+
+@pytest.mark.parametrize("outcome", ["no_channels", "no_weather"])
+@pytest.mark.parametrize("kanal,wort,stil,sprache", [
+    ("premium_sms", "heute", None, "en"),
+    ("premium_sms", "today", None, "en"),
+    ("telegram", "heute", "kurzform", "en"),
+    ("telegram", "today", "kurzform", "en"),
+    ("telegram", "heute", None, "de"),
+])
+def test_on_demand_fehlschlag_am_echten_eingang(monkeypatch, user_ids, outcome,
+                                                  kanal, wort, stil, sprache):
+    """AC-4/AC-5/AC-19 (Adversary F001): GIVEN das On-Demand-Briefing scheitert
+    an der Scheduler-Grenze WHEN ``heute``/``today`` ueber den ECHTEN Eingang
+    (Premium-SMS bzw. Telegram an einen Trip im Stil ``kurzform``) kommt THEN
+    ist die versendete Antwort englisch und GSM-7-sauber; Gegenfall: Telegram
+    ohne Kurzform-Stil bekommt die deutsche Antwort."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = _nutzer_fuer_lage(user_ids, "trip", stil=stil)
+    _on_demand_scheitert(monkeypatch, outcome)
+
+    text = _sende(kanal, basis_settings(), recorder, nutzer, wort)
+
+    if sprache == "de":
+        _assert_deutsch(text, nutzer, kontext=f"On-Demand {outcome} Telegram ohne Stil")
+        return
+    _assert_englisch(text, nutzer, kontext=f"On-Demand {outcome} {kanal}/{wort}")
+    gsm = gsm7_befunde_systemtext(text, nutzer) if kanal == "premium_sms" else []
+    assert not gsm, f"On-Demand {outcome}: nicht GSM-7-sauber {gsm!r}:\n{text}"
+    if kanal == "telegram":
+        # Telegram-Kopf/Knopfbeschriftungen (Emoji) sind nicht Teil der
+        # Pruefung; der Antworttext selbst muss GSM-7-tauglich sein.
+        koerper = text.split("\n\n", 1)[-1]
+        assert not gsm7_befunde_systemtext(koerper, nutzer), koerper

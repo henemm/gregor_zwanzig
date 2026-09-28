@@ -26,12 +26,14 @@ from services.trip_command_processor import (
     TripCommandProcessor,
     _BARE_KEYWORD_MAP,
     _erste_zeile,
+    _erstes_wort,
     _metric_id_for_word,
     _ohne_praefix,
     _ohne_zitat,
     _QUERY_KEYS,
     _VALID_COMMANDS as _PROCESSOR_COMMANDS,
     match_leading_name,
+    telegram_englisch,
     unknown_command_body,
 )
 from services.trip_selection import (
@@ -282,6 +284,9 @@ class InboundTelegramReader:
                 channel="telegram", trip_name=name_prefix, body=body,
                 sender=chat_id, received_at=now_utc, user_id=user_id,
                 resolved_kind=resolved_kind, resolved_preset_id=resolved_preset_id,
+                # #2417 AC-5: Stil des benannten Ziels; bei Namensgleichheit
+                # (kein eindeutiges Ziel) das gesendete Wort.
+                englisch=telegram_englisch(ziel=name_ziel, wort=_erstes_wort(rest)),
             )
             self._dispatch_and_reply(
                 key, inbound, chat_id, user_settings,
@@ -300,22 +305,29 @@ class InboundTelegramReader:
             self._send_unknown_command(chat_id, user_settings)
             return True
 
+        # #2417 AC-5/Abschnitt H: ohne eindeutiges Ziel folgt die Sprache dem
+        # gesendeten Wort, mit Ziel dessen telegram_style.
+        englisch = telegram_englisch(wort=_erstes_wort(text))
         if key in ZIELLOS_SCHLUESSEL:
-            # AC-15: "hilfe"/"columns" brauchen keine Trip-/Vergleichswahl.
+            # AC-15: "hilfe"/"columns"/"kuerzel" brauchen keine Trip-/Vergleichswahl.
             trip_name, resolved_kind, resolved_preset_id = "", None, None
             ladehinweis_erlaubt = False
         else:
-            ziel = resolve_command_target(key, trips, presets, now_utc, channel="telegram")
+            ziel = resolve_command_target(
+                key, trips, presets, now_utc, channel="telegram", englisch=englisch,
+            )
             if ziel.kind is None:
                 # Issue #2282 AC-5: identischer Text wie Premium-SMS, kein
                 # Host-Zusatz mehr (der wuerde die Kanalgleichheit brechen).
                 mid = self._notification_service.send_telegram_message(
-                    chat_id=chat_id, subject="Fehler", body=ziel.text, settings=user_settings,
+                    chat_id=chat_id, subject="Error" if englisch else "Fehler",
+                    body=ziel.text, settings=user_settings,
                 )
                 if mid is not None:
                     self.sent_message_ids.append(mid)
                 return True
 
+            englisch = telegram_englisch(ziel=ziel.target)
             if ziel.kind == "route":
                 trip_name, resolved_kind, resolved_preset_id = ziel.target.name, None, None
             else:
@@ -333,6 +345,7 @@ class InboundTelegramReader:
             user_id=user_id,
             resolved_kind=resolved_kind,
             resolved_preset_id=resolved_preset_id,
+            englisch=englisch,
         )
         self._dispatch_and_reply(
             key, inbound, chat_id, user_settings,
@@ -346,7 +359,9 @@ class InboundTelegramReader:
             subject="Unbekannter Befehl",
             # Issue #2134: derselbe abgeleitete Text wie im Prozessor —
             # vorher war das die achte, eigenstaendig gepflegte Liste.
-            body=unknown_command_body("Das war kein bekannter Befehl."),
+            # #2417 AC-19: weder Ziel noch Wort -> deutsch mit englischem Hinweis.
+            body=unknown_command_body("Das war kein bekannter Befehl.")
+            + "\nEnglish: send HELP",
             settings=user_settings,
         )
         if mid is not None:
@@ -483,6 +498,7 @@ class InboundTelegramReader:
         Knoepfe (inkl. der ``dd_*``-Drilldowns) adressieren ausschliesslich
         den aktiven Trip (``resolve_trip_only_target``).
         """
+        englisch = False
         if data in ("act_help", "act_columns"):
             trip_name = ""
         else:
@@ -500,10 +516,12 @@ class InboundTelegramReader:
                 )
                 return
             trip_name = ziel.target.name if ziel.kind == "route" else ziel.target.get("name", "")
+            # #2417 Abschnitt H: Knopf-Antworten folgen dem Stil des Ziels.
+            englisch = telegram_englisch(ziel=ziel.target)
 
         inbound = InboundMessage(
             channel="telegram", trip_name=trip_name, body=body,
-            sender=chat_id, received_at=now_utc, user_id=user_id,
+            sender=chat_id, received_at=now_utc, user_id=user_id, englisch=englisch,
         )
         result: CommandResult = TripCommandProcessor().process(inbound)
         # Issue #1007: heute/morgen per Button haben bereits das volle

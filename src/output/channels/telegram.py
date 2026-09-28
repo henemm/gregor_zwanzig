@@ -138,6 +138,17 @@ BOT_COMMANDS = [
     {"command": "skip", "description": "Nächstes Briefing überspringen"},
     {"command": "stop", "description": "Briefings dauerhaft deaktivieren"},
     {"command": "weiter", "description": "Briefings reaktivieren"},
+    # #2417 Kurzform englisch AC-20: KUERZEL + englische Slash-Befehle
+    # (gleich geschriebene now/status/pause/skip/stop stehen oben schon).
+    {"command": "kuerzel", "description": "Kürzel-Bedeutungen anzeigen (auch CODES)"},
+    {"command": "today", "description": "today's stage weather"},
+    {"command": "tomorrow", "description": "tomorrow's stage weather"},
+    {"command": "storms", "description": "storm risk today"},
+    {"command": "route", "description": "rain areas ahead"},
+    {"command": "restday", "description": "shift stages n days"},
+    {"command": "resume", "description": "restart briefings"},
+    {"command": "help", "description": "command list"},
+    {"command": "codes", "description": "code meanings"},
 ]
 
 
