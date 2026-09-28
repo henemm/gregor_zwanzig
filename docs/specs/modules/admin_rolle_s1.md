@@ -90,8 +90,10 @@ r.With(admin).Post("/api/scheduler/alert-checks", ProxyPostHandler(...))
 r.With(admin).Post("/api/scheduler/inbound-commands", ProxyPostHandler(...))
 ```
 
-Exakt diese drei Routen. NICHT in S1: `GET /api/scheduler/status` (bleibt öffentlich, S2),
-`/api/debug/` (S2), Admin-API/Tier setzen/Sperren (S3), `/admin`-UI (S4).
+Exakt diese drei Routen. NICHT in S1: `GET /api/scheduler/status` und `/api/debug/`
+(beide seit S2 umgesetzt — Maschinen-Token bzw. `RequireAdmin`, siehe
+`docs/specs/modules/admin_rolle_s2_status_token.md`, ADR-0079), Admin-API/Tier
+setzen/Sperren (S3), `/admin`-UI (S4).
 
 **4. Cron-Betrieb.** Der Go-Scheduler ruft den Python-Core direkt (`scheduler.go:629/663/740`),
 nicht über den Router. `RequireAdmin` wird nirgends im Scheduler verdrahtet; der geplante
@@ -187,6 +189,8 @@ sonst)"; Changelog-Eintrag am Ende. `.env.example`: `GZ_ADMIN_USER_IDS` mit Erkl
 - **AC-7:** Given ein normaler Nutzer (kein Admin) / When er `GET /api/scheduler/status`
   und `POST /api/trips/{id}/send` für einen eigenen Trip aufruft / Then werden beide wie
   bisher bedient (S1 ändert nur die drei Trigger).
+  - *Überholt für `status` durch #2155 S2 (ADR-0079): `GET /api/scheduler/status` ist
+    seither token-pflichtig ⇒ 401 für Nutzer-Sitzungen; `/send` unverändert.*
   - Test: `internal/router/admin_trigger_test.go` → `status` 200 ohne 403, `/send`
     erreicht das Proxy-Ziel
 
@@ -233,7 +237,9 @@ sonst)"; Changelog-Eintrag am Ende. `.env.example`: `GZ_ADMIN_USER_IDS` mit Erkl
   `.github`), und `.claude/hooks/prod_send_gate.py` blockt Prod-Aufrufe zusätzlich.
 - Adminvergabe bleibt Betreiber-Aufgabe (`.env` + Neustart); spätere Scheiben (S3
   Admin-API) ändern die Liste nicht.
-- `GET /api/scheduler/status` und `/api/debug/` bleiben öffentlich, bis S2 sie schützt.
+- `GET /api/scheduler/status` und `/api/debug/` waren zum Zeitpunkt dieser Scheibe (S1)
+  noch öffentlich — S2 hat beide inzwischen geschützt (Maschinen-Token bzw.
+  `RequireAdmin`, `docs/specs/modules/admin_rolle_s2_status_token.md`, ADR-0079).
 - Die mobile Action-Sheet der Trip-Liste ruft keinen Trigger auf und ist nicht betroffen.
 - Das ungenutzte `AuthUser` (`config.go:41`, Default `admin`) bleibt unangetastet und
   begründet KEINE Admin-Rolle.
@@ -250,3 +256,6 @@ sonst)"; Changelog-Eintrag am Ende. `.env.example`: `GZ_ADMIN_USER_IDS` mit Erkl
 ## Changelog
 
 - 2026-09-28: Initial spec created (#2155 S1)
+- 2026-09-28: Nachtrag (docs-updater) — Known Limitations korrigiert: `GET
+  /api/scheduler/status` und `/api/debug/` sind mit S2 geschützt worden, siehe
+  `docs/specs/modules/admin_rolle_s2_status_token.md`, ADR-0079.

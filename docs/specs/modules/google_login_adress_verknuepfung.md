@@ -216,7 +216,8 @@ Kontrast mindestens WCAG-AA.
 
 - Auflösung bestehender Adress-Duplikate im Datenbestand (nur Messung via Kollisionszähler).
 - Eine Konto-Oberfläche zum Entkoppeln einer Google-Verknüpfung.
-- Ein Feld für den Kollisionszähler im öffentlichen Status-Endpoint (`/api/scheduler/status`).
+- Ein Feld für den Kollisionszähler im Status-Endpoint (`/api/scheduler/status`; seit
+  #2155 S2 kein öffentlicher Endpoint mehr, sondern hinter `X-GZ-Status-Token`).
 - Refactoring von `internal/handler/auth_magic.go` (Dopplung von ~15 Zeilen wird bewusst in Kauf
   genommen, da die Datei live und sicherheitskritisch ist).
 - Datenmigration von Bestandsdaten (z. B. rückwirkendes Normalisieren roh gespeicherter
