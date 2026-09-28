@@ -75,7 +75,10 @@ involvieren. `/compare/new` bleibt bei reinem `href` (kein Verhaltenswechsel dor
   Tab-Streifen-Fade-Maske) wird angeglichen.
 - **`CorridorEditor`/`AlarmeTab`/`WeatherMetricsTab`-Mounts (S1/S2a, #2426/#2442,
   bereits live) werden nicht angefasst.** Diese Scheibe berührt ausschließlich die
-  Kopf-/Fußleisten-Bausteine und `+layout.svelte`.
+  Kopf-/Fußleisten-Bausteine und `+layout.svelte`. *(Nachtrag v1.2: Ausnahme —
+  `EditStagesPanelNew.svelte` (`bottomReservePx`) und `app.css`
+  (`mobile-scroll-pad--ohne-nav`), siehe „Affected Files"; beide rein additiv und
+  default-transparent, in der Umsetzung als Folge von AC-4/AC-6 nötig geworden.)*
 - **`?from=`-Vorlage (`/trips/new?from=`, `/compare/new?from=`) — Scheibe S2c.**
   Ein Query-Parameter berührt den Pathname-Check von `istAnlegeSeite` nicht — kein
   Konflikt mit dieser Scheibe.
@@ -107,6 +110,8 @@ involvieren. `/compare/new` bleibt bei reinem `href` (kein Verhaltenswechsel dor
 | `frontend/src/lib/components/trip-new/TripNewEditor.svelte` | MODIFY | Desktop-Breadcrumb (`:479-499`, `data-testid="tn-desktop-breadcrumb"`) und Mobile-App-Leiste (`:502-526`, `data-testid="tn-mobile-appbar"`) werden JEWEILS durch einen `<PageHeader back={{ href: '/trips', label: 'Trips', onclick: onCancel }} .../>`-Mount ersetzt — testid-Attribut bleibt auf dem jeweiligen `.tn-desktop`/`.tn-mobile`-Wrapper-`<div>` erhalten (1:1, nicht auf `PageHeader` selbst). Die bisherigen Aktions-Buttons dieser beiden Blöcke (Desktop „Abbrechen"+„Trip speichern" `:489-497`, Mobile „Speichern" `:520-525`) wandern in **zwei neue** `<EditorStickyFooter context="route" navClearance={false} testid="...">`-Mounts (einer je `.tn-desktop`/`.tn-mobile`-Zweig, analog zum bestehenden CSS-Umschaltmuster der Datei) — Desktop behält `data-testid="trip-new-save-btn"` auf dem Speichern-Button, Mobile behält `data-testid="tn-mobile-save"`. `onCancel`/`onSave` (`:470-471`, unverändert) werden an die neuen Mounts durchgereicht, `makeCancelHandler()` (`:466-468`) bleibt unverändert (kein neuer Delta-Code). Mobile Tab-Bar (`:586`, `data-testid="tn-mobile-tabbar"`) bekommt zusätzlich `mask-image`/`-webkit-mask-image` (16px Fade beidseitig, wörtlich identisch zu `CompareNewEditor.svelte:434`). |
 | `frontend/src/routes/+layout.svelte` | MODIFY | `isWizard` (`:212`, `$derived(page.url.pathname.startsWith('/trips/new'))`) wird durch das bereits vorhandene `istAnlegeSeite`-Derived (`:220-222`, prüft `/trips/new` UND `/compare/new`) ersetzt; alle drei Verwendungsstellen von `isWizard` (`:271` `{#if !isWizard}` vor `BottomNav`) zeigen danach auf `istAnlegeSeite`. Keine neue Variable, keine doppelte Pflege zweier paralleler Flags. |
 | `frontend/src/lib/components/compare-new/CompareNewEditor.svelte` | MODIFY (klein) | `EditorStickyFooter`-Mount (`:501`, `context="vergleich" testid="cm-mobile-cta"`) bekommt zusätzlich `navClearance={false}` — die Komponente reserviert danach keinen Leerraum mehr für eine (nun überall ausgeblendete) `BottomNav` auf `/compare/new`. Einzige Änderung an dieser Datei in S2b. |
+| `frontend/src/app.css` | MODIFY (Nachtrag v1.2) | Neue Regel `.mobile-scroll-pad.mobile-scroll-pad--ohne-nav` (nur `max-width: 899px`): `padding-bottom: env(safe-area-inset-bottom)` statt Reservierung für die auf Anlege-Seiten ausgeblendete `BottomNav`. Wird von `+layout.svelte` per `class:mobile-scroll-pad--ohne-nav={istAnlegeSeite}` gesetzt. Folge von AC-6 (kein Leerraum mehr unter dem Speichern-Footer). |
+| `frontend/src/lib/components/edit/EditStagesPanelNew.svelte` | MODIFY (Nachtrag v1.2) | Neuer optionaler Prop `bottomReservePx?: number` (Fallback `BOTTOM_NAV_HEIGHT_PX = 70`, alle anderen Aufrufer bitgleich). `TripNewEditor.svelte` reicht die per `ResizeObserver` gemessene Höhe des mobilen Speichern-Footers durch, damit die Wegpunkte-Karte samt Attribution über dem Footer endet (Folge von AC-4). Berührt nur die Höhenberechnung, keine Editor-Logik. |
 | `frontend/src/lib/components/atoms/__tests__/back_link_page_header_onclick_button.test.ts` *(neu)* | CREATE | Echtes SSR-Rendering (`svelte/server`) von `BackLink.svelte` und `PageHeader.svelte` direkt (kein Umweg über `TripNewEditor`) — beweist die Grundbaustein-Regel isoliert vom Trip-Kontext. |
 | `frontend/src/lib/components/trip-new/__tests__/trip_new_mobile_rahmen_angleichung.test.ts` *(neu)* | CREATE | Echtes SSR-Rendering über die bestehende Harness `tripNewSsr.ts` (Issue #1738) — Testid-Erhalt, Button-statt-Anchor-Struktur in beiden Viewport-Zweigen, Fade-Maske auf `tn-mobile-tabbar`. |
 | `frontend/src/routes/__tests__/layout_istanlegeseite_bottomnav.test.ts` *(neu)* | CREATE | Echtes SSR-Rendering von `+layout.svelte` über die bestehende Harness `layout-ssr-hooks.mjs` (Issue #2268, Vorbild `app_footer_je_route.test.ts`) — BottomNav-Sichtbarkeit je Route. |
@@ -469,3 +474,7 @@ involvieren. `/compare/new` bleibt bei reinem `href` (kein Verhaltenswechsel dor
   über AC-3 miterledigt, jetzt einzeln mit konkretem, verifiziertem Text
   (`"Zurück: Trips"`, `BackLink.svelte:20`-Default) nachgewiesen. „Wirkort je
   Zusicherung" um den entsprechenden Eintrag ergänzt.
+- 2026-09-28 (v1.2, Validierungs-Nachtrag, Adversary-Finding G003): `app.css` und
+  `EditStagesPanelNew.svelte` in „Affected Files" nachgetragen (Implementierungs-
+  Realität, keine neuen ACs). Beide Änderungen sind durch die E2E-Fälle
+  „S2b AC-4 (mobil)" in `issue-661-trip-new-mobile.spec.ts` gedeckt.
