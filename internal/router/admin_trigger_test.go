@@ -246,14 +246,16 @@ func TestAdminTrigger_ListParsingReachesRouter(t *testing.T) {
 }
 
 // AC-7: S1 aendert NUR die drei Trigger. Ein normaler Nutzer bekommt weiterhin
-// GET /api/scheduler/status und POST /api/trips/{id}/send fuer den eigenen Trip.
+// POST /api/trips/{id}/send fuer den eigenen Trip.
+// Issue #2155 S2: GET /api/scheduler/status verlangt jetzt das Maschinen-Token —
+// eine Sitzung allein (bob) ergibt 401 statt 200.
 func TestAdminTrigger_NormalUser_StatusAndTripSendUnchanged(t *testing.T) {
 	r, s, secret, ziel := adminTestRouter(t, "alice")
 	seedRouteTrip(t, s, "bob", "t1")
 
 	status := trigger(t, r, secret, http.MethodGet, "/api/scheduler/status", "bob")
-	if status.Code != http.StatusOK {
-		t.Errorf("bob GET /api/scheduler/status: erwartet 200, bekommen %d", status.Code)
+	if status.Code != http.StatusUnauthorized {
+		t.Errorf("bob GET /api/scheduler/status ohne Token: erwartet 401 (#2155 S2), bekommen %d", status.Code)
 	}
 
 	send := trigger(t, r, secret, http.MethodPost, "/api/trips/t1/send?report_type=morning", "bob")

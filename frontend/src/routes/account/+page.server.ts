@@ -21,7 +21,8 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const [profile, scheduler, health, apiTemplates, trips, comparePresets, locations, presets, linkCodeResult, smsDailyUsage] =
 		await Promise.all([
 			fetch(`${API()}/api/auth/profile`, h).then(r => r.ok ? r.json() : null).catch(() => null),
-			fetch(`${API()}/api/scheduler/status`, h).then(r => r.ok ? r.json() : null).catch(() => null),
+			// Issue #2155 S2: eigener Laufzustand; der volle Status braucht das Maschinen-Token.
+			fetch(`${API()}/api/scheduler/status/me`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 			fetch(`${API()}/api/health`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 			fetch(`${API()}/api/templates`, h).then(r => r.ok ? r.json() : null).catch(() => null),
 			fetch(`${API()}/api/trips`, h).then(r => r.ok ? r.json() : []).catch(() => []),

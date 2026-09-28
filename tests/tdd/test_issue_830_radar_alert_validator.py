@@ -31,6 +31,10 @@ import httpx
 import pytest
 
 from tests.helpers.staging_auth import httpx_auth  # Bündel H #987: Staging-Basic-Auth
+# Issue #2155 S2 (AC-12): /api/debug/ steht hinter RequireAdmin — echte
+# Staging-Admin-App-Sitzung statt ?user_id=default. Helper existiert erst nach
+# /50-implement (RED: ImportError).
+from tests.helpers.staging_admin_session import admin_session_cookies
 
 # Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
 pytestmark = pytest.mark.staging
@@ -53,15 +57,15 @@ TRIGGER_PATH = "/api/debug/trigger-radar-alert"
 def test_ac1_trigger_endpoint_exists_on_staging():
     """
     GIVEN ein laufendes Staging-System (GZ_ENV=staging)
-    WHEN  POST /api/debug/trigger-radar-alert?user_id=default aufgerufen wird
+    WHEN  POST /api/debug/trigger-radar-alert mit Staging-Admin-Sitzung aufgerufen wird
     THEN  antwortet der Endpoint mit HTTP 200 (nicht 404/405).
 
     RED: Endpoint existiert noch nicht → 404.
     """
     resp = httpx.post(
         f"{STAGING_BASE}{TRIGGER_PATH}",
-        params={"user_id": "default"},
         auth=httpx_auth(),
+        cookies=admin_session_cookies(),
         timeout=30.0,
     )
     assert resp.status_code == 200, (
@@ -71,6 +75,23 @@ def test_ac1_trigger_endpoint_exists_on_staging():
     body = resp.json()
     assert body.get("status") in ("sent", "no_trips", "no_segment"), (
         f"Unerwarteter Status: {body}"
+    )
+
+
+def test_trigger_without_app_session_is_401():
+    """
+    Issue #2155 S2 (AC-6/AC-11): nur Nginx-Basic-Auth, KEINE App-Sitzung
+    ⇒ 401 — /api/debug/ ist nicht mehr öffentlich.
+    """
+    resp = httpx.post(
+        f"{STAGING_BASE}{TRIGGER_PATH}",
+        params={"user_id": "default"},
+        auth=httpx_auth(),
+        timeout=30.0,
+    )
+    assert resp.status_code == 401, (
+        f"Debug-Trigger ohne App-Sitzung antwortet {resp.status_code} statt 401. "
+        f"Body: {resp.text[:300]}"
     )
 
 
@@ -84,8 +105,8 @@ def test_ac1_trigger_response_contains_trip_info():
     """
     resp = httpx.post(
         f"{STAGING_BASE}{TRIGGER_PATH}",
-        params={"user_id": "default"},
         auth=httpx_auth(),
+        cookies=admin_session_cookies(),
         timeout=30.0,
     )
     assert resp.status_code == 200, f"Status: {resp.status_code}"

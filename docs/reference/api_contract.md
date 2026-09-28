@@ -218,7 +218,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/compare/presets/{id}/send` | POST |
 | `/api/compare/presets/{id}/state` | PATCH |
 | `/api/config` | GET |
-| `/api/debug/trigger-radar-alert` | POST |
+| `/api/debug/trigger-radar-alert` | POST | — nur `GZ_ENV=staging`, nur Admin (401 ohne Sitzung, 403 Nicht-Admin, #2155 S2)
 | `/api/forecast` | GET |
 | `/api/gpx/parse` | POST |
 | `/api/groups` | GET, POST |
@@ -240,7 +240,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/preview/{trip_id}/telegram` | GET |
 | `/api/scheduler/alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/scheduler/inbound-commands` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
-| `/api/scheduler/status` | GET |
+| `/api/scheduler/status` | GET | — nur mit Header `X-GZ-Status-Token` (Maschinen-Token, keine Session, #2155 S2)
+| `/api/scheduler/status/me` | GET | — Session-Pflicht, liefert nur den eigenen Lauf-Status (#2155 S2)
 | `/api/scheduler/trip-reports` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/sms-symbols` | GET |
 | `/api/templates` | GET |
@@ -255,7 +256,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/trips/{id}/weather-config` | GET, PUT |
 | `/api/webhooks/telegram/{secret}` | POST |
 
-(76 Pfade, 96 Routen-Registrierungen.)
+(77 Pfade, 97 Routen-Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
+hinzu, ein neuer Pfad mit einer neuen Registrierung.)
 
 ---
 
@@ -1290,13 +1292,24 @@ null
 
 ## 12) Scheduler Status Endpoint (Epic #134)
 
-Exposes scheduler job metadata for dashboard display (BriefingsTimeline component).
+Exposes scheduler job metadata. Since #2155 S2 (ADR-0079) the global aggregate
+`GET /api/scheduler/status` is token-gated and consumed only by the external
+monitor `check-gregor20.sh` — the account page (formerly BriefingsTimeline) now
+reads its own run status via the session-authenticated `GET
+/api/scheduler/status/me` (see below).
 
 **Handler:** `internal/handler/scheduler_status.go` | **Routing:** `internal/router/router.go`
 
 ### GET /api/scheduler/status
 
 Returns current scheduler state with per-job metadata (next_run, last_run).
+
+**Auth (since #2155 S2, ADR-0079):** requires header `X-GZ-Status-Token` matching the
+configured `GZ_STATUS_TOKEN` (machine secret for the external monitor
+`check-gregor20.sh`, constant-time comparison, both sides sha256-hashed first). A
+valid session cookie does **not** substitute for the token. An empty/unset
+`GZ_STATUS_TOKEN` fails closed — the endpoint then rejects **every** request. For a
+session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 
 **Response 200:**
 
@@ -1419,7 +1432,7 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 | enrichment_health.\<path\>.last_fallback_detail | string \| null | The named substitute source (e.g. `eu_direct`) of the most recent `"fallback"` outcome — the youngest fallback wins, including its own detail if empty, decided by timestamp not file position (Issue #1647, AC-1). `null` without a fallback line. `check-gregor20.sh` block `2e-e` names this source in its alert text. |
 | enrichment_health.\<path\>.self_throttled | bool | `true` if the journal contains at least one `"self_throttled"` outcome for this path — the call was skipped by our own budget gate rather than failing against the remote source. |
 | enrichment_health.journal_read_error | bool (present only on error) | `true` when `data/diagnostics/enrichment_calls.jsonl` exists but could not be read (e.g. path is a directory) — our own fault, distinct from a missing journal (fresh deploy, silently empty map). |
-| tier_request_health | object (Issue #1555) | Privacy-safe aggregate of open tier-change requests (`POST /api/auth/tier-change-request`, Issue #1071) across ALL users. Purely numeric — the endpoint is public, so no `user_id`, `display_name` or e-mail ever appears here (#252). A request counts as **done** when `requested_tier` is empty OR equals the effective `tier`; only otherwise it is **open**. |
+| tier_request_health | object (Issue #1555) | Privacy-safe aggregate of open tier-change requests (`POST /api/auth/tier-change-request`, Issue #1071) across ALL users. Purely numeric — no `user_id`, `display_name` or e-mail ever appears here (#252), independent of the token gate added in #2155 S2. A request counts as **done** when `requested_tier` is empty OR equals the effective `tier`; only otherwise it is **open**. |
 | tier_request_health.open_count | int | Number of currently open tier-change requests across all users. `0` when none are pending. |
 | tier_request_health.oldest_open_age_hours | float | Age in hours of the **oldest** open request (from its `requested_at`); `0.0` when `open_count` is 0 or no open request carries a `requested_at`. Raw hours only — the 7-day overdue threshold is evaluated by the external monitor (`check-gregor20.sh`), not here. |
 
@@ -1427,7 +1440,48 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 
 | Status | Body | Scenario |
 |--------|------|----------|
+| 401 | `{"error":"unauthorized"}` | Missing/wrong/empty `X-GZ-Status-Token` header, or `GZ_STATUS_TOKEN` not configured server-side (fail-closed), even with a valid session cookie (#2155 S2) |
 | 503 | `{"error":"scheduler_unavailable"}` | Scheduler process not reachable |
+
+### GET /api/scheduler/status/me (Issue #2155 S2, ADR-0079)
+
+Session-authenticated counterpart to `GET /api/scheduler/status`, used by the account
+page. Returns only the calling user's own run status for job `trip_reports_hourly` —
+never the global fan-out aggregate, never another user's data.
+
+**Auth:** normal session cookie via `AuthMiddleware` — not on the public allowlist, not
+token-gated. No session → 401.
+
+**Response 200:**
+
+```json
+{
+  "jobs": [
+    {
+      "id": "trip_reports_hourly",
+      "name": "Trip Reports (hourly check)",
+      "next_run": "2026-09-28T09:00:00Z",
+      "last_run": {
+        "time": "2026-09-28T08:00:00Z",
+        "status": "ok",
+        "error": ""
+      }
+    }
+  ]
+}
+```
+
+`next_run` is resolved the same way as in `Status()` (shared cron-entry lookup, no
+second code path). `last_run` comes from a per-`(jobID, userID)` getter on
+`userRunState`, returned by value — never the global fan-out record, so the response
+never leaks another user's error text. No recorded run for the caller yet →
+`"last_run": null` (a valid state, not an error).
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | `{"error":"unauthorized"}` | No session cookie |
 
 ---
 
@@ -3537,8 +3591,11 @@ Route nicht registriert und liefert den normalen Chi-404 (kein Handler-Body). Re
 
 **Anmeldepflichtig** (Session-Cookie via `AuthMiddleware`) — bewusst **nicht** in der Public-
 Allowlist und bewusst **nicht** unter einem der pauschal freigeschalteten Präfixe
-(`/api/debug/`, `/api/internal/`, `/api/webhooks/telegram/`), da diese die Anmeldepflicht
-aufheben würden.
+(`/api/internal/`, `/api/webhooks/telegram/`), da diese die Anmeldepflicht aufheben
+würden. `/api/debug/` gehörte früher ebenfalls zu diesen pauschal freigeschalteten
+Präfixen, ist seit #2155 S2 aber selbst anmeldepflichtig und zusätzlich hinter
+`RequireAdmin` — kein Sonderfall mehr, unter dem sich diese Route hätte verstecken
+können.
 
 Zweck: Auf Staging sind Auth-Mails strukturell nicht zustellbar (Egress-Sperre #1337,
 Resend-Sperre), zur Laufzeit angelegte E2E-Test-Konten brauchen aber einen Weg an ihr
@@ -4370,6 +4427,17 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-09-28: Issue #2155 Scheibe S2 (Epic #2138, ADR-0079) — `GET
+  /api/scheduler/status` ist nicht mehr öffentlich: Header `X-GZ-Status-Token`
+  (Env `GZ_STATUS_TOKEN`, konstantzeitiger sha256-Vergleich) ist Pflicht, leeres/nicht
+  gesetztes Token sperrt den Endpunkt fail-closed für jede Anfrage, auch mit gültiger
+  Sitzung; Fehlerfall 401 `{"error":"unauthorized"}`. Neu: `GET
+  /api/scheduler/status/me` (Session-Pflicht) liefert nur den eigenen Lauf-Status
+  von `trip_reports_hourly`, genutzt von der Konto-Seite. `/api/debug/` ist nicht mehr
+  in der Public-Allowlist, sondern zusätzlich anmeldepflichtig und hinter
+  `RequireAdmin` (401 ohne Sitzung, 403 Nicht-Admin, 200 Admin); ein mitgeschickter
+  fremder `user_id`-Query-Parameter wird durch die Admin-Kennung aus dem
+  Auth-Kontext ersetzt.
 - 2026-09-28: Issue #2155 Scheibe S1 (Epic #2138, ADR-0078) — Admin-Rolle über die
   ENV-Liste `GZ_ADMIN_USER_IDS` (komma-getrennt, leer = niemand ist Admin). Neue
   Go-Middleware `RequireAdmin` schützt `POST /api/scheduler/trip-reports`,
@@ -4378,7 +4446,8 @@ function corridorInside(value, min, max) {
   nicht betroffen. `GET /api/auth/profile` liefert neu `role` (`admin`|`user`, abgeleitet,
   nicht schreibbar). Der Knopf „Briefing senden" der Trip-Liste nutzt nun
   `POST /api/trips/{id}/send?report_type=morning|evening` für genau den gewählten Trip.
-  `GET /api/scheduler/status` und `/api/debug/` unverändert (S2).
+  `GET /api/scheduler/status` und `/api/debug/` zu diesem Zeitpunkt noch unverändert
+  (folgte mit S2, siehe Eintrag oben).
 - 2026-09-22: Issue #2404 (Scheibe S2 von #2153, Epic #2138) — neuer schlüsselbasierter
   `MailFloodLimiter` (Token-Bucket, Vorbild `IPRateLimiter`) begrenzt Bestätigungsmails aus `PUT
   /api/auth/profile` und `POST /api/auth/verify-email/resend` auf 10/Stunde je User-ID UND je

@@ -758,6 +758,8 @@ starten. Damit entfallen Dateizugriff und Health-Eintrag vollständig; ohne die 
 Mitschnitt **an**. Das ist die Rückzugsoption, wenn der Mitschnitt in Produktion auffällt.
 
 **Ausfall sehen:** `/api/scheduler/status.enrichment_health` führt den Pfad `forecast_capture`
-(höchstens eine Meldung je 15 Minuten). Wächst der Abstand `now − last_success_at`, während
+(höchstens eine Meldung je 15 Minuten). Der Endpunkt ist seit #2155 S2 nur noch mit
+Header `X-GZ-Status-Token` (Env `GZ_STATUS_TOKEN`) abrufbar — `check-gregor20.sh` muss
+ihn mitsenden (Rollout-Reihenfolge: ADR-0079). Wächst der Abstand `now − last_success_at`, während
 Briefings weiterlaufen, schreibt der Mitschnitt nicht mehr — die Wetterausgabe ist davon
 unberührt, der Mitschnitt ist durchgehend fail-soft.

@@ -278,6 +278,19 @@ func (u *userRunState) RecordLate(jobID, userID, outcome, errText string) {
 	rec.LastError = errText
 }
 
+// UserRecord liefert den Zustand eines einzelnen (jobID, userID)-Paars PER
+// WERT (keine geteilten Zeiger) fuer die Nutzer-Sicht /api/scheduler/status/me
+// (Issue #2155 S2). ok == false: kein Eintrag fuer diesen Nutzer.
+func (u *userRunState) UserRecord(jobID, userID string) (userJobRecord, bool) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	rec, ok := u.state[jobID][userID]
+	if !ok || rec == nil {
+		return userJobRecord{}, false
+	}
+	return *rec, true
+}
+
 // Prune entfernt geloeschte/Test-Nutzer aus dem Zustand des Jobs und
 // persistiert danach.
 func (u *userRunState) Prune(jobID string, keepUserIDs []string) {

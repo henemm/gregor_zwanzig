@@ -16,6 +16,7 @@
 	import { ABMELDE_MERKMAL, merkeAbmeldung, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, registerPasskey, deletePasskey, type RegisteredPasskey } from '$lib/passkey';
 	import { profileSaveErrorMessage } from './profileSaveError';
+	import { lastRunDot } from './schedulerLastRun';
 	import PremiumSmsLinkCard from '$lib/components/account/PremiumSmsLinkCard.svelte';
 	import {
 		shouldShowPremiumSmsLinkCard,
@@ -990,12 +991,15 @@
 				{:else if data.scheduler?.jobs && data.scheduler.jobs.length > 0}
 					<div class="space-y-3">
 						{#each data.scheduler.jobs.filter((j: any) => j.id in userJobs) as job}
+							{@const dot = lastRunDot(job.last_run)}
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
 									<span class="inline-block size-2 rounded-full"
-										class:bg-green-500={job.last_run?.status === 'ok'}
-										class:bg-red-500={job.last_run?.status === 'error'}
-										class:bg-gray-300={!job.last_run?.time}
+										data-last-run-dot={dot}
+										class:bg-green-500={dot === 'ok'}
+										class:bg-red-500={dot === 'error'}
+										class:bg-slate-500={dot === 'neutral'}
+										class:bg-gray-300={dot === 'none'}
 									></span>
 									<span class="font-medium">{userJobs[job.id]}</span>
 								</div>

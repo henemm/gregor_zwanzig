@@ -65,7 +65,7 @@ if [ -n "$COOKIE" ]; then
 
 Auth-Cookie fuer /api/*-Routen: ${COOKIE}
 Verwende fuer eingeloggte API-Calls: curl -H \"Cookie: ${COOKIE}\" ...
-Public-Routen (/, /api/health, /api/scheduler/status, /api/auth/login) brauchen kein Cookie."
+Public-Routen (/, /api/health, /api/auth/login) brauchen kein Cookie. /api/scheduler/status braucht seit #2155 S2 einen Maschinen-Token (X-GZ-Status-Token), keine Sitzung ersetzt ihn — fuer Validator-Zwecke nicht ohne Token pruefbar."
 fi
 
 # Fester Prompt — nicht vom Implementierer beeinflussbar
