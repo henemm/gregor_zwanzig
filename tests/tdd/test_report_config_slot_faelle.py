@@ -194,7 +194,7 @@ def test_loader_roundtrip_und_flache_felder_folgen_der_tabelle(tmp_path, fall):
 
     # ── (a) frisches data_dir: schreibt der Writer die Werte selbst? ──────
     d_a = _trip_dict(trip_id, rc_roh)
-    trip_a = load_trip(d_a)
+    trip_a = load_trip(d_a, user_id=user_id)
     assert trip_a is not None
     assert (trip_a.morning_enabled, trip_a.evening_enabled) == flach, (
         f"AC-21 [{fall['name']}] (a): flache Felder des geladenen Trips sind "
