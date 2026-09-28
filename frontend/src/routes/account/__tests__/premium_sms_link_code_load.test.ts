@@ -135,7 +135,7 @@ describe('F002: load()-Rückgabeobjekt enthält NIEMALS ein Code-Klartext-Feld',
 			if (url.includes('/api/auth/profile')) {
 				return { ok: true, status: 200, json: async () => ({ id: 'u1', email: 'a@b.de' }) };
 			}
-			if (url.includes('/api/scheduler/status')) {
+			if (new URL(url, 'http://localhost').pathname === '/api/scheduler/status/me') {
 				return { ok: true, status: 200, json: async () => ({ jobs: [] }) };
 			}
 			if (url.includes('/api/health')) {

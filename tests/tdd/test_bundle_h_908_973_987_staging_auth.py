@@ -133,12 +133,20 @@ class TestAC3RadarTriggerNoLonger401:
 
     def test_trigger_call_with_helper_auth_is_not_401(self):
         from tests.helpers.staging_auth import httpx_auth  # noqa: PLC0415
+        # Issue #2155 S2 (AC-12): /api/debug/ verlangt eine Admin-App-Sitzung.
+        from tests.helpers.staging_admin_session import (  # noqa: PLC0415
+            admin_session_cookies,
+        )
 
         resp = httpx.post(
             f"{STAGING_BASE}{TRIGGER_PATH}",
-            params={"user_id": "default"},
             auth=httpx_auth(),
+            cookies=admin_session_cookies(),
             timeout=30.0,
+        )
+        assert resp.status_code != 403, (
+            f"Trigger-Call als Staging-Admin ist 403 — Admin-Konto fehlt in "
+            f"GZ_ADMIN_USER_IDS der Staging-.env. Body: {resp.text[:300]}"
         )
         assert resp.status_code != 401, (
             f"Trigger-Call ist weiterhin 401 trotz Helper-Auth — Basic-Auth-Fix "
