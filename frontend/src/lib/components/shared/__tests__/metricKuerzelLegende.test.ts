@@ -392,36 +392,43 @@ describe('AC-2: der Trip-Editor erklaert die sechs Temperatur-/Windchill-Groesse
 });
 
 describe('AC-2a: der Ortsvergleich entdoppelt nicht nach Kuerzel', () => {
-	test('`D` und `TF` bekommen je zwei Zeilen, unterschieden durch die Auswertung', async () => {
+	test('`D` und `L` je einmal, kein Kuerzel doppelt (#2417 AC-12/AC-29)', async () => {
 		const { kuerzelById, metricById } = vergleichPaar();
 		const gerendert = gerendertVergleich();
 		const eintraege = await baue(gerendert, kuerzelById, metricById);
-		for (const kuerzel of ['D', 'TF']) {
+		// #2417 AC-29 (Spec feat_2417_kurzform_englisch.md v1.1): die Auswahl
+		// traegt als `sms_code` das Kuerzel, das die Ortsvergleich-SMS wirklich
+		// zeigt (ueber `kuerzel_metric_id`) — „Temperatur max" `D`, „Temperatur
+		// min" `L`. Frueher standen beide auf dem Kuerzel von `temperature`
+		// (Messung M2: `D` zweimal); diese Doppelung entfaellt.
+		for (const kuerzel of ['D', 'L']) {
 			const zeilen = gerendert.filter((k) => (kuerzelById[k] ?? []).includes(kuerzel));
-			// Positivkontrolle zu Messung M2 — ohne Doppelbelegung prueft der Rest nichts.
 			assert.equal(
-				zeilen.length, 2,
-				`Messung M2 gilt nicht mehr: "${kuerzel}" steht auf ${zeilen.length} ` +
-					`Katalogzeilen (${zeilen.join(', ')}). AC-2a neu fassen, nicht den Test.`
+				zeilen.length, 1,
+				`#2417 AC-29 FAIL: "${kuerzel}" steht auf ${zeilen.length} statt genau einer ` +
+					`Katalogzeile (${zeilen.join(', ')}).`
 			);
-			const treffer = eintraege.filter((e) => e.kuerzel === kuerzel);
 			assert.equal(
-				treffer.length, 2,
-				`AC-2a FAIL: "${kuerzel}" erscheint ${treffer.length}-mal statt zweimal. ` +
-					`Eine Entdopplung nach Kuerzel bricht die Zusicherung „dieselbe Quelle wie ` +
-					`die Marken" — die Marken zeigen das Kuerzel an BEIDEN Zeilen.`
+				eintraege.filter((e) => e.kuerzel === kuerzel).length, 1,
+				`#2417 AC-29 FAIL: "${kuerzel}" erscheint nicht genau einmal in der Legende.`
 			);
-			for (const key of zeilen) {
-				const auswertung = String(metricById[key].aggregation_label ?? '');
-				assert.equal(
-					treffer.filter((t) => t.bedeutung.includes(auswertung)).length, 1,
-					`AC-2a FAIL: die Auswertung ${JSON.stringify(auswertung)} (${key}) ist in ` +
-						`der Legende nicht genau einmal ablesbar. Ohne sie sind die beiden ` +
-						`"${kuerzel}"-Zeilen nicht unterscheidbar: ` +
-						`${JSON.stringify(treffer.map((t) => t.bedeutung))}`
-				);
+		}
+		const zeilenJeKuerzel = new Map<string, string[]>();
+		for (const id of Object.keys(kuerzelById)) {
+			for (const k of kuerzelById[id] ?? []) {
+				zeilenJeKuerzel.set(k, [...(zeilenJeKuerzel.get(k) ?? []), id]);
 			}
 		}
+		assert.deepEqual(
+			[...zeilenJeKuerzel].filter(([, ids]) => ids.length > 1), [],
+			'#2417 AC-29 FAIL: dasselbe Kuerzel auf mehreren Vergleichszeilen.'
+		);
+		const legendeZaehler = new Map<string, number>();
+		for (const e of eintraege) legendeZaehler.set(e.kuerzel, (legendeZaehler.get(e.kuerzel) ?? 0) + 1);
+		assert.deepEqual(
+			[...legendeZaehler].filter(([, n]) => n > 1), [],
+			'#2417 AC-29 FAIL: Kuerzel mehrfach in der Vergleichs-Legende.'
+		);
 		// Der Editor zeigt das ROHE Kuerzel; erst die zugestellte SMS haengt das
 		// Auswertungszeichen an (comparison.py:647-650, Messung M2b). Die Legende
 		// bildet das Editor-Vokabular ab — `D`, nicht `D+`/`D-`.

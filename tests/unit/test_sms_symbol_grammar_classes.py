@@ -58,7 +58,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # Systemzeichen ohne Katalog-Metrik (Debug/Lawine/Vigilance/Fire) — die
 # EINZIGE handgepflegte Liste dieser Datei, benannt und begruendet
 # (Implementation Details der Spec, Gleichungspaar 30 Katalog + 6 System = 36).
-_SYSTEM_SYMBOLS = {"DBG", "AV", "HR:", "M:", "MAX", "Z:"}
+# #2417 AC-27: Meteo-France 'HR:'/'TH:' heissen 'VR:'/'VT:' -- 'VT:' teilt sich
+# kein Symbol mehr mit dem Gewitter-Kuerzel 'TH:' und steht deshalb selbst hier.
+_SYSTEM_SYMBOLS = {"DBG", "AV", "VR:", "VT:", "M:", "MAX", "Z:"}
 
 
 def _katalog_union() -> set[str]:
@@ -125,21 +127,16 @@ def test_ac_s6_1_priority_positional_bidirectional_completeness():
 
 
 def test_ac_s6_2_th_double_entry_is_deliberate_and_protected():
-    """'TH:' erscheint zweimal in POSITIONAL (forecast + vigilance) — beide
-    Tupel sind eigenstaendige POS_INDEX-Schluessel; 'vigilance' ist NICHT
-    sortierbar."""
+    """#2417 AC-27 (loest den frueheren 'TH:'-Doppeleintrag ab): 'TH:' steht
+    genau einmal in POSITIONAL (forecast); der Meteo-France-Baustein traegt
+    ein eigenes Symbol 'VT:' (vigilance) -- 'vigilance' ist NICHT sortierbar."""
     th_entries = [(symbol, category) for symbol, category in POSITIONAL if symbol == "TH:"]
-    assert set(th_entries) == {("TH:", "forecast"), ("TH:", "vigilance")}, (
-        f"'TH:' sollte GENAU zweimal in POSITIONAL stehen (forecast + "
-        f"vigilance), gefunden: {th_entries!r}"
+    assert th_entries == [("TH:", "forecast")], (
+        f"'TH:' sollte GENAU einmal (forecast) in POSITIONAL stehen, gefunden: {th_entries!r}"
     )
-
-    assert ("TH:", "forecast") in POS_INDEX, "POS_INDEX fehlt ('TH:', 'forecast')."
-    assert ("TH:", "vigilance") in POS_INDEX, "POS_INDEX fehlt ('TH:', 'vigilance')."
-    assert POS_INDEX[("TH:", "forecast")] != POS_INDEX[("TH:", "vigilance")], (
-        "Beide 'TH:'-Tupel muessen unterschiedliche POS_INDEX-Positionen "
-        "haben — sonst waeren sie im Dict nicht unterscheidbar."
-    )
+    vigi = sorted(symbol for symbol, category in POSITIONAL if category == "vigilance")
+    assert vigi == ["VR:", "VT:"], f"Meteo-France-Bausteine erwartet VR:/VT:, gefunden {vigi!r}"
+    assert ("VT:", "vigilance") in POS_INDEX, "POS_INDEX fehlt ('VT:', 'vigilance')."
 
     assert "vigilance" not in _POSITION_SORTABLE_CATEGORIES, (
         "_POSITION_SORTABLE_CATEGORIES darf 'vigilance' NICHT enthalten — "
@@ -192,9 +189,9 @@ def test_ac_s6_4_system_exception_list_is_closed_and_disjoint():
     benannten Ausnahmeliste, keine dritte, unerklaerte Kategorie."""
     katalog_union = _katalog_union()
 
-    assert len(_SYSTEM_SYMBOLS) == 6, (
+    assert len(_SYSTEM_SYMBOLS) == 7, (
         f"Die Systemzeichen-Ausnahmeliste hat {len(_SYSTEM_SYMBOLS)} "
-        f"Eintraege, erwartet 6: {sorted(_SYSTEM_SYMBOLS)!r}"
+        f"Eintraege, erwartet 7: {sorted(_SYSTEM_SYMBOLS)!r}"
     )
 
     unexplained = set(PRIORITY.keys()) - (katalog_union | _SYSTEM_SYMBOLS)
@@ -212,7 +209,7 @@ def test_ac_s6_4_system_exception_list_is_closed_and_disjoint():
 
     assert set(PRIORITY.keys()) == (katalog_union | _SYSTEM_SYMBOLS), (
         "PRIORITY.keys() sollte exakt der Vereinigung aus Katalog-Union "
-        f"(30) und Systemzeichen-Ausnahmeliste (6) entsprechen: "
+        f"und Systemzeichen-Ausnahmeliste (7) entsprechen: "
         f"PRIORITY hat {len(PRIORITY)} Schluessel."
     )
 

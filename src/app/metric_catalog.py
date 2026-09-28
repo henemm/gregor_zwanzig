@@ -95,6 +95,11 @@ class MetricDefinition:
     # Gesetzt auf genau 7 Groessen mit expliziter Rangfolge (Reihenfolge der
     # Sieben-ID-Liste in DEFAULT_TRIP_METRIC_IDS, trip_metric_ids.py).
     trip_default_rank: Optional[int] = None
+    # Issue #2417 AC-23: EINZIGE Definitionsstelle der Bedeutung jedes
+    # Wetter-Kuerzels (Schluessel = Kuerzel wie in der SMS, ohne Grammatik-
+    # Doppelpunkt). CODES (en) und KUERZEL (de) lesen sie zur Laufzeit.
+    kuerzel_bedeutung_en: dict[str, str] = field(default_factory=dict)
+    kuerzel_bedeutung_de: dict[str, str] = field(default_factory=dict)
 
     @property
     def has_friendly_format(self) -> bool:
@@ -114,6 +119,7 @@ _METRICS: list[MetricDefinition] = [
     # === TEMPERATURE ===
     MetricDefinition(
         id="temperature", label_de="Temperatur", unit="°C",
+        kuerzel_bedeutung_en={"T": "temp"}, kuerzel_bedeutung_de={"T": "Temperatur"},
         dp_field="t2m_c", category="temperature",
         default_aggregations=("min", "max", "avg"),
         compact_label="T", col_key="temp", col_label="Temp",
@@ -131,7 +137,9 @@ _METRICS: list[MetricDefinition] = [
             "yellow": 28.0, "orange": 31.0, "red": 34.0,
             "yellow_lt": 0.0, "orange_lt": -5.0, "red_lt": -15.0,
         },
-        sms_code="D", decimals=0, cmp="über", alert_label="Temp",
+        # #2417 AC-12: "T" statt "D" -- "D" bedeutet in der SMS allein den
+        # Tageshoechstwert (temperature_day_high).
+        sms_code="T", decimals=0, cmp="über", alert_label="Temp",
         trip_default_rank=1,  # Issue #1552: Trip-Anlege-Standard, Rang 1
     ),
     # Issue #914: Internal-only entry for AlertMetric.TEMPERATURE_MIN (Kältealarm).
@@ -145,7 +153,9 @@ _METRICS: list[MetricDefinition] = [
         compact_label="TN", col_key="temp_cold", col_label="TmpMin",
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "temp_min_c"},
-        sms_code="N", decimals=0, cmp="unter", alert_label="Temp",
+        # #2417 AC-28: "T" statt "N" (N = Nachtwert). Dieselbe Temperatur wie
+        # "temperature"; eigene Kuerzel-Bedeutung entfaellt bewusst.
+        sms_code="T", decimals=0, cmp="unter", alert_label="Temp",
         selectable=False,
     ),
     # Issue #1484: Nacht-Tiefsttemperatur am Etappenziel als EIGENE waehlbare
@@ -159,6 +169,7 @@ _METRICS: list[MetricDefinition] = [
     # bleibt temperature_cold).
     MetricDefinition(
         id="temperature_night", label_de="Nacht-Tiefsttemperatur", unit="°C",
+        kuerzel_bedeutung_en={"N": "night"}, kuerzel_bedeutung_de={"N": "Nacht"},
         dp_field="t2m_c", category="temperature",
         default_aggregations=("min",),
         compact_label="TN", col_key="temp_night", col_label="Night",
@@ -185,6 +196,7 @@ _METRICS: list[MetricDefinition] = [
     # Dinge mit aehnlichem Namen, in getrennten Namensraeumen.
     MetricDefinition(
         id="temperature_day_low", label_de="Tages-Tiefsttemperatur (Gehzeit)",
+        kuerzel_bedeutung_en={"L": "day min"}, kuerzel_bedeutung_de={"L": "Tagestiefstwert"},
         unit="°C", dp_field="t2m_c", category="temperature",
         default_aggregations=("min",),
         compact_label="L", col_key="temp_day_low", col_label="DayMin",
@@ -213,6 +225,7 @@ _METRICS: list[MetricDefinition] = [
     # (#1848 Scheibe C).
     MetricDefinition(
         id="temperature_day_high", label_de="Tages-Höchsttemperatur (Gehzeit)",
+        kuerzel_bedeutung_en={"D": "day max"}, kuerzel_bedeutung_de={"D": "Tageshöchstwert"},
         unit="°C", dp_field="t2m_c", category="temperature",
         default_aggregations=("max",),
         compact_label="D", col_key="temp_day_high", col_label="DayMax",
@@ -224,6 +237,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="wind_chill", label_de="Gefühlte Temperatur", unit="°C",
+        kuerzel_bedeutung_en={"TF": "feels like"}, kuerzel_bedeutung_de={"TF": "gefühlt"},
         dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min", "max"),
         compact_label="TF", col_key="felt", col_label="Feels",
@@ -259,6 +273,7 @@ _METRICS: list[MetricDefinition] = [
     # "wind_chill") entfaellt ERSATZLOS -- verdoppelte nachweislich "FK".
     MetricDefinition(
         id="wind_chill_night", label_de="Gefühlte Nacht-Tiefsttemperatur",
+        kuerzel_bedeutung_en={"FN": "N feels like"}, kuerzel_bedeutung_de={"FN": "N gefühlt"},
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min",),
         compact_label="TFN", col_key="felt_night", col_label="NightF",
@@ -282,6 +297,7 @@ _METRICS: list[MetricDefinition] = [
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
         id="wind_chill_day_low",
+        kuerzel_bedeutung_en={"FL": "L feels like"}, kuerzel_bedeutung_de={"FL": "L gefühlt"},
         label_de="Gefühlte Tages-Tiefsttemperatur (Gehzeit)",
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min",),
@@ -293,6 +309,7 @@ _METRICS: list[MetricDefinition] = [
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
         id="wind_chill_day_high",
+        kuerzel_bedeutung_en={"FD": "D feels like"}, kuerzel_bedeutung_de={"FD": "D gefühlt"},
         label_de="Gefühlte Tages-Höchsttemperatur (Gehzeit)",
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("max",),
@@ -302,6 +319,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
+        kuerzel_bedeutung_en={"HU": "humidity"}, kuerzel_bedeutung_de={"HU": "Luftfeuchte"},
         dp_field="humidity_pct", category="temperature",
         default_aggregations=("avg",),
         compact_label="H", col_key="humidity", col_label="Humid",
@@ -315,6 +333,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="dewpoint", label_de="Taupunkt", unit="°C",
+        kuerzel_bedeutung_en={"DP": "dew point"}, kuerzel_bedeutung_de={"DP": "Taupunkt"},
         dp_field="dewpoint_c", category="temperature",
         default_aggregations=("avg",),
         # Issue #1453: "Cond°" benannte keine Groesse (Taupunkt ist kein
@@ -331,6 +350,7 @@ _METRICS: list[MetricDefinition] = [
     # === WIND ===
     MetricDefinition(
         id="wind", label_de="Wind", unit="km/h",
+        kuerzel_bedeutung_en={"W": "wind km/h"}, kuerzel_bedeutung_de={"W": "Wind km/h"},
         dp_field="wind10m_kmh", category="wind",
         default_aggregations=("max",),
         compact_label="W", col_key="wind", col_label="Wind",
@@ -351,6 +371,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="gust", label_de="Böen", unit="km/h",
+        kuerzel_bedeutung_en={"G": "gusts"}, kuerzel_bedeutung_de={"G": "Böen"},
         dp_field="gust_kmh", category="wind",
         default_aggregations=("max",),
         compact_label="G", col_key="gust", col_label="Gust",
@@ -372,6 +393,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="wind_direction", label_de="Windrichtung", unit="°",
+        kuerzel_bedeutung_en={"WD": "wind dir"}, kuerzel_bedeutung_de={"WD": "Windrichtung"},
         dp_field="wind_direction_deg", category="wind",
         default_aggregations=("avg",),
         compact_label="WD", col_key="wind_dir", col_label="WDir",
@@ -388,6 +410,7 @@ _METRICS: list[MetricDefinition] = [
     # === PRECIPITATION ===
     MetricDefinition(
         id="precipitation", label_de="Niederschlag", unit="mm",
+        kuerzel_bedeutung_en={"R": "rain mm"}, kuerzel_bedeutung_de={"R": "Regen mm"},
         dp_field="precip_1h_mm", category="precipitation",
         default_aggregations=("sum",),
         compact_label="R", col_key="precip", col_label="Rain",
@@ -407,6 +430,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
+        kuerzel_bedeutung_en={"PR": "rain %"},
+        kuerzel_bedeutung_de={"PR": "Regenwahrscheinlichkeit %"},
         dp_field="pop_pct", category="precipitation",
         default_aggregations=("max",),
         compact_label="P%", col_key="pop", col_label="Rain%",
@@ -429,6 +454,8 @@ _METRICS: list[MetricDefinition] = [
     # Aggregation/Vorhersage-Hinweis (build_confidence_hint, SMS-Symbol) erhalten.
     MetricDefinition(
         id="confidence", label_de="Sicherheit", unit="%",
+        kuerzel_bedeutung_en={"C": "confidence"},
+        kuerzel_bedeutung_de={"C": "Vorhersage-Verlässlichkeit"},
         dp_field="confidence_pct", category="atmosphere",
         default_aggregations=("min",),
         compact_label="Conf", col_key="confidence", col_label="Conf",
@@ -439,6 +466,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="thunder", label_de="Gewitter", unit="",
+        kuerzel_bedeutung_en={"TH": "thunder", "TH+": "next stage"},
+        kuerzel_bedeutung_de={"TH": "Gewitter", "TH+": "Gewitter Folge-Etappe"},
         dp_field="thunder_level", category="precipitation",
         default_aggregations=("max",),
         compact_label="⚡", col_key="thunder", col_label="Thdr",
@@ -461,6 +490,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
+        kuerzel_bedeutung_en={"CP": "storm energy"},
+        kuerzel_bedeutung_de={"CP": "Gewitterenergie"},
         dp_field="cape_jkg", category="precipitation",
         default_aggregations=("max",),
         compact_label="CP", col_key="cape", col_label="CAPE",
@@ -494,6 +525,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
+        kuerzel_bedeutung_en={"SL": "snow line m"},
+        kuerzel_bedeutung_de={"SL": "Schneefallgrenze m"},
         dp_field="snowfall_limit_m", category="precipitation",
         default_aggregations=("min", "max"),
         compact_label="SL", col_key="snow_limit", col_label="SnowL",
@@ -506,6 +539,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="precip_type", label_de="Niederschlagsart", unit="",
+        kuerzel_bedeutung_en={"PT": "precip type"},
+        kuerzel_bedeutung_de={"PT": "Niederschlagsart"},
         dp_field="precip_type", category="precipitation",
         default_aggregations=("max",),
         compact_label="PT", col_key="precip_type", col_label="PType",
@@ -519,6 +554,8 @@ _METRICS: list[MetricDefinition] = [
     # === ATMOSPHERE ===
     MetricDefinition(
         id="cloud_total", label_de="Bewölkung", unit="%",
+        kuerzel_bedeutung_en={"CT": "clouds total"},
+        kuerzel_bedeutung_de={"CT": "Bewölkung gesamt"},
         dp_field="cloud_total_pct", category="atmosphere",
         default_aggregations=("avg",),
         compact_label="C", col_key="cloud", col_label="Cloud",
@@ -536,6 +573,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="cloud_low", label_de="Tiefe Wolken", unit="%",
+        kuerzel_bedeutung_en={"CL": "clouds low"}, kuerzel_bedeutung_de={"CL": "Bewölkung tief"},
         dp_field="cloud_low_pct", category="atmosphere",
         default_aggregations=("avg",),
         compact_label="CL", col_key="cloud_low", col_label="CldLow",
@@ -551,6 +589,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="cloud_mid", label_de="Mittelhohe Wolken", unit="%",
+        kuerzel_bedeutung_en={"CM": "clouds mid"}, kuerzel_bedeutung_de={"CM": "Bewölkung mittel"},
         dp_field="cloud_mid_pct", category="atmosphere",
         default_aggregations=("avg",),
         compact_label="CM", col_key="cloud_mid", col_label="CldMid",
@@ -566,6 +605,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="cloud_high", label_de="Hohe Wolken", unit="%",
+        kuerzel_bedeutung_en={"CH": "clouds high"}, kuerzel_bedeutung_de={"CH": "Bewölkung hoch"},
         dp_field="cloud_high_pct", category="atmosphere",
         default_aggregations=("avg",),
         compact_label="CH", col_key="cloud_high", col_label="CldHi",
@@ -581,6 +621,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="visibility", label_de="Sichtweite", unit="m",
+        kuerzel_bedeutung_en={"VS": "visibility"}, kuerzel_bedeutung_de={"VS": "Sicht"},
         dp_field="visibility_m", category="atmosphere",
         default_aggregations=("min",),
         compact_label="V", col_key="visibility", col_label="Visib",
@@ -606,6 +647,7 @@ _METRICS: list[MetricDefinition] = [
     MetricDefinition(
         # #1401 A1: "Sonnenstunden" benennt die Einheit (h) korrekt (PO-Freigabe).
         id="sunshine", label_de="Sonnenstunden", unit="h",
+        kuerzel_bedeutung_en={"SU": "sun h"}, kuerzel_bedeutung_de={"SU": "Sonnenstunden"},
         dp_field="dni_wm2", category="atmosphere",
         default_aggregations=("sum",),
         compact_label="☀", col_key="sunshine", col_label="Sun",
@@ -625,6 +667,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="uv_index", label_de="UV-Index", unit="",
+        kuerzel_bedeutung_en={"UV": "index"}, kuerzel_bedeutung_de={"UV": "UV-Index"},
         dp_field="uv_index", category="atmosphere",
         default_aggregations=("max",),
         compact_label="UV", col_key="uv", col_label="UV",
@@ -640,6 +683,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="pressure", label_de="Luftdruck", unit="hPa",
+        kuerzel_bedeutung_en={"HP": "pressure"}, kuerzel_bedeutung_de={"HP": "Luftdruck"},
         dp_field="pressure_msl_hpa", category="atmosphere",
         default_aggregations=("avg",),
         # Issue #1453: "hPa" war die Einheit, nicht der Name der Groesse.
@@ -657,6 +701,7 @@ _METRICS: list[MetricDefinition] = [
     # === WINTER ===
     MetricDefinition(
         id="freezing_level", label_de="Nullgradgrenze", unit="m",
+        kuerzel_bedeutung_en={"FZ": "0C level m"}, kuerzel_bedeutung_de={"FZ": "Nullgradgrenze m"},
         dp_field="freezing_level_m", category="winter",
         default_aggregations=("min", "max"),
         compact_label="FZ", col_key="freeze_lvl", col_label="0°Line",
@@ -671,6 +716,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="snow_depth", label_de="Schneehöhe", unit="cm",
+        kuerzel_bedeutung_en={"SD": "snow depth"}, kuerzel_bedeutung_de={"SD": "Schneehöhe"},
         dp_field="snow_depth_cm", category="winter",
         default_aggregations=("max",),
         compact_label="SD", col_key="snow_depth", col_label="SnowH",
@@ -678,10 +724,12 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"max": "snow_depth_cm"},
         default_change_threshold=10.0,
-        sms_code="SD", decimals=0, cmp="über", alert_label="Schnee",
+        sms_code="SD", decimals=0, cmp="über", alert_label="Schneehöhe",  # #2417 AC-26
     ),
     MetricDefinition(
         id="fresh_snow", label_de="Neuschnee", unit="cm",
+        kuerzel_bedeutung_en={"NS24+": "new snow 24h"},
+        kuerzel_bedeutung_de={"NS24+": "Neuschnee 24h"},
         dp_field="snow_new_24h_cm", category="winter",
         default_aggregations=("sum",),
         compact_label="NS", col_key="fresh_snow", col_label="NewSn",
@@ -696,7 +744,7 @@ _METRICS: list[MetricDefinition] = [
         # nicht ueber get_sms_code()). Neuschnee != Altschnee fuer eine
         # Tourenentscheidung. "NS" = derselbe Wert wie der bestehende
         # compact_label dieser Metrik (kollisionsfrei, mnemonisch).
-        sms_code="NS", decimals=0, cmp="über", alert_label="Schnee",
+        sms_code="NS", decimals=0, cmp="über", alert_label="Neuschnee",  # #2417 AC-26
         # Issue #1927 v1.1: erstmals display_thresholds fuer Neuschnee,
         # abgeleitet aus den SLF/EAWS "kritischen Neuschneemengen" (europ.
         # Lawinen-Gefahrenskala): 10-20 cm/24h (unguenstig), 20-30 cm
@@ -846,15 +894,11 @@ SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
 # `gz-eigenstaendig` aus #1481 B). Ein Eintrag ohne Satz ist keine Ausnahme --
 # der Wächter tests/unit/test_telegram_kuerzel_folgt_register.py besteht auf
 # einer lesbaren Begründung.
+# #2417 AC-12: "temperature" entfaellt -- mit sms_code "T" stimmen Register
+# und Telegram-Kuerzel ueberein.
 COMPACT_LABEL_EXCEPTIONS: dict[str, str] = {
-    "temperature": (
-        "Die Telegram-Zelle zeigt einen STUNDENWERT. Das Register führt für "
-        "diese Größe Tagesauswertungen ('K' Tagestiefst, 'D' Tageshöchst) — "
-        "ein Spaltenkopf 'Tageshöchst' wäre über einem Stundenwert eine "
-        "falsche Aussage."
-    ),
     "wind_chill": (
-        "Wie 'temperature': die Zelle zeigt einen Stundenwert, das Register "
+        "Die Telegram-Zelle zeigt einen Stundenwert, das Register "
         "führt Tagesauswertungen ('FK'/'FD' Tiefst/Höchst der gefühlten "
         "Temperatur). Fix #1887 E6 Scheibe A: das frühere Wintersport-"
         "Kürzel 'WC' entfällt ersatzlos (verdoppelte 'FK')."
@@ -1106,6 +1150,14 @@ def metric_command_words() -> dict[str, str]:
         wort = normalize_command_word(metric.sms_code)
         if wort:
             woerter.setdefault(wort, metric.id)
+    # #2417 AC-13/AC-15: was man in der SMS liest, kann man zuruecksenden --
+    # dritte Schreibweise sind die gesendeten Symbole (``D``, ``N``, ``NS24+``).
+    for metric in get_all_metrics():
+        gesendet = (*metric.sms_multi_symbols, SMS_SYMBOL_GRAMMAR.get(metric.id, ""))
+        for symbol in gesendet:
+            wort = normalize_command_word(symbol)
+            if wort:
+                woerter.setdefault(wort, metric.id)
     return woerter
 
 

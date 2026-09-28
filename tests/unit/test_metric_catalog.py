@@ -37,10 +37,13 @@ def test_ac4_temperature_night_sms_code_ist_jetzt_leer():
     )
 
 
-def test_ac4_temperature_cold_bleibt_unveraendert_n():
-    """Known Limitation: ``temperature_cold`` (interne Alarm-Pseudogroesse)
-    behaelt weiterhin ``sms_code="N"`` -- unveraendert durch diese Scheibe,
-    trotz aehnlichem Kuerzel-Praefix-Muster wie ``temperature_night``."""
+def test_ac4_temperature_cold_traegt_jetzt_t():
+    """#2417 AC-28 (loest AC-3 von fix_1887_e6a_sms_kuerzel_register.md ab):
+    ``temperature_cold`` (interne Kaelte-Alarm-Pseudogroesse) traegt jetzt
+    ``sms_code="T"`` statt ``"N"`` -- ``N`` bedeutet in der gesendeten SMS
+    eindeutig den Nachtwert ``temperature_night``. ``temperature`` und
+    ``temperature_cold`` teilen sich ``T`` als einzige begruendete Ausnahme
+    des Doppelungs-Waechters (sie bewachen dieselbe Temperatur)."""
     from app.metric_catalog import get_sms_code
 
-    assert get_sms_code("temperature_cold") == "N"
+    assert get_sms_code("temperature_cold") == "T"

@@ -47,7 +47,7 @@ der fachliche Grund hinter Issue #1317.
 Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 
 ```
-{Name}: N L D FN FL FD R PR W G TH: TH+: C  HR:TH:  Z: M:  [SD NS24+ SL AV]  DBG
+{Name}: N L D FN FL FD R PR W G TH: TH+: C  VR:VT:  Z: M:  [SD NS24+ SL AV]  DBG
 ```
 
 | Kürzel | Bedeutung | Wert-Format | Immer da? |
@@ -66,7 +66,7 @@ Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 | `TH:` | Gewitter am **berichteten Tag** (Morgen-Briefing = heute, Abend-Briefing = morgen) | `TH:M@16(H@18)` / `TH:-` | ja |
 | `TH+:` | Gewitter am **Tag danach** (Morgen-Briefing → morgen, Abend-Briefing → übermorgen) | `TH+:M@14(H@17)` / `TH+:-` | ja |
 | `C` | Vorhersage-Verlässlichkeit | `C+` / `C~` / `C?` | nur wenn Provider Konfidenz liefert |
-| `HR:` `TH:` | Amtliche Warnungen Frankreich (Starkregen / Gewitter) | `HR:M@17TH:H@17` | nur FR-Provider |
+| `VR:` `VT:` | Amtliche Warnungen Frankreich (Starkregen / Gewitter) — seit #2417 (vorher `HR:`/`TH:`) | `VR:M@17VT:H@17` | nur FR-Provider |
 | `Z:` `M:` | Feuerzonen / gesperrte Masslive (Korsika) | `Z:HIGH208 M:24` | nur Korsika |
 | `SD NS24+ SL AV` | Wintersport (Schneehöhe, Neuschnee, Schneefallgrenze, Lawine) — Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`; das fünfte Token `WC` (Wind Chill) ist mit Fix #1887 (2026-08-16) ersatzlos entfallen — es verdoppelte den Wert von `FK` | `SD180 …` | nur Wintersport-Profil |
 | `DBG[...]` | Debug (Provider, Konfidenz) | `DBG[MET MED]` | nur Testlauf |

@@ -421,7 +421,7 @@ _MENU_ONLY_OHNE_COMMAND_SPECS_PENDANT = frozenset(
 def _ac21_erwartete_menueliste() -> set[str]:
     from services.trip_command_processor import _COMMAND_SPECS
 
-    return _MENU_ONLY_OHNE_COMMAND_SPECS_PENDANT | {w for w, _a, _b, _k in _COMMAND_SPECS}
+    return _MENU_ONLY_OHNE_COMMAND_SPECS_PENDANT | {s.wort for s in _COMMAND_SPECS}
 
 
 @pytest.mark.skipif(
@@ -493,5 +493,5 @@ def test_ac24_hilfe_bei_trip_und_vergleich_antwortet_sofort_live():
         f"B1: 'hilfe' fragt bei Trip+Vergleich zurueck statt sofort zu "
         f"antworten: {body[:120]!r}"
     )
-    fehlend = [w for w, _a, _b, _k in _COMMAND_SPECS if w.upper() not in body.upper()]
+    fehlend = [s.wort for s in _COMMAND_SPECS if s.wort.upper() not in body.upper()]
     assert not fehlend, f"B1: Befehlsuebersicht nennt nicht alle Befehle, fehlen: {fehlend}"

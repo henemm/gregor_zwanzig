@@ -37,9 +37,10 @@ def _fuse(tokens: list[Token]) -> list[str]:
             parts.append(f"{prefix}{t.render()}")
             i += 1
             continue
-        if (t.symbol == "HR:" and t.category == "vigilance"
+        # Issue #2417 AC-27: Meteo-France-Paar VR:/VT: (builder.VIGI_HR/VIGI_TH).
+        if (t.symbol == "VR:" and t.category == "vigilance"
                 and i + 1 < len(tokens)
-                and tokens[i + 1].symbol == "TH:"
+                and tokens[i + 1].symbol == "VT:"
                 and tokens[i + 1].category == "vigilance"):
             parts.append(f"{t.render()}{tokens[i + 1].render()}")
             i += 2

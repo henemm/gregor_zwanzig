@@ -362,23 +362,10 @@ class InboundSmsReader:
             # JEDEN Befehl auf und blockierte z.B. "hilfe" bei Trip+Vergleich
             # mit einer Rueckfrage (B1).
             key, _value = _ParseNurProcessor()._parse_command(befehl)
-            if key == "hilfe":
-                # AC-23: Premium-SMS bekommt die dedizierte GSM-7-Kurzhilfe
-                # statt der Langhilfe -- braucht keine Trip-/Vergleichsladung
-                # (AC-15). `premium_sms_kurzhilfe` wird PARALLEL in
-                # `trip_command_processor.py` gebaut (#2417); der Import
-                # bleibt bewusst lokal, damit dieses Modul weiter importierbar
-                # ist, solange sie dort noch fehlt.
-                from services.trip_command_processor import premium_sms_kurzhilfe
-
-                result = CommandResult(
-                    success=True, command="hilfe",
-                    confirmation_subject="Hilfe",
-                    confirmation_body=premium_sms_kurzhilfe(),
-                )
-            elif key in ZIELLOS_SCHLUESSEL:
-                # "columns" -- kein Bare-Text-Pendant, aber Symmetrie mit dem
-                # Telegram-Reader (AC-15): keine Zielaufloesung noetig.
+            if key in ZIELLOS_SCHLUESSEL:
+                # hilfe/kuerzel/columns (AC-15, #2417 AC-3): keine
+                # Zielaufloesung noetig. Die englische HELP-/CODES-Kurzform
+                # waehlt `process()` selbst (Kanal premium_sms, AC-4).
                 result = TripCommandProcessor().process(InboundMessage(
                     trip_name="", body=befehl, sender=sender,
                     channel="premium_sms", received_at=now_utc, user_id=user_id,

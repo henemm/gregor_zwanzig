@@ -308,3 +308,47 @@ def test_ac12_telegram_und_prozessor_fehlertext_tragen_dieselbe_befehlsmenge():
         f"nur Prozessor: {sorted((woerter_pr - woerter_tg) & vokabular)!r}\n"
         f"Telegram:\n{text_telegram}\nProzessor:\n{text_prozessor}"
     )
+
+
+# ===========================================================================
+# #2417 Kurzform englisch, AC-1 — benannte Felder statt Tupel
+# (SPEC: docs/specs/modules/feat_2417_kurzform_englisch.md)
+# ===========================================================================
+
+_AC1_FELDER = ("wort", "wort_en", "arg", "beschreibung_de", "wirkung_en", "kinds")
+
+
+def test_ac1_command_specs_tragen_benannte_felder():
+    """AC-1 GIVEN ``_COMMAND_SPECS`` WHEN ein Leser ein Feld braucht THEN
+    greift er ueber den Feldnamen zu — jeder Eintrag ist eine benannte
+    Struktur mit genau den Feldern ``wort``, ``wort_en``, ``arg``,
+    ``beschreibung_de``, ``wirkung_en``, ``kinds`` (statt eines 4er-Tupels,
+    das jede Spaltenerweiterung beim Entpacken bricht)."""
+    from services import trip_command_processor as tcp
+
+    for spec in tcp._COMMAND_SPECS:
+        felder = getattr(spec, "_fields", None)
+        assert felder is not None, (
+            f"AC-1: _COMMAND_SPECS-Eintrag ist keine benannte Struktur "
+            f"(kein _fields): {spec!r}"
+        )
+        fehlend = [f for f in _AC1_FELDER if f not in felder]
+        assert not fehlend, f"AC-1: Eintrag {spec!r} fehlen die Felder {fehlend!r}"
+
+
+def test_ac1_jeder_eintrag_traegt_englisches_wort_und_wirkung():
+    """AC-1 GIVEN der Befehlssatz WHEN er um Englisch erweitert ist THEN traegt
+    JEDER Eintrag ein nicht leeres ``wort_en`` und eine nicht leere
+    ``wirkung_en`` — ein neuer Befehl ohne englische Wirkung faellt sofort
+    auf, statt in der HELP-Kurzform ohne Wirkungstext zu erscheinen."""
+    from services import trip_command_processor as tcp
+
+    ohne = [
+        spec for spec in tcp._COMMAND_SPECS
+        if not (getattr(spec, "wort_en", None) or "").strip()
+        or not (getattr(spec, "wirkung_en", None) or "").strip()
+    ]
+    assert not ohne, (
+        f"AC-1: {len(ohne)} von {len(tcp._COMMAND_SPECS)} Eintraegen fehlt "
+        f"wort_en oder wirkung_en: {ohne!r}"
+    )

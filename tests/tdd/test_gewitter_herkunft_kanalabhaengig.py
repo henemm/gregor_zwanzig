@@ -74,6 +74,21 @@ from services.trip_command_processor import (  # noqa: E402
 from services.weather_metrics import WeatherMetricsService  # noqa: E402
 from services.weather_snapshot import WeatherSnapshotService  # noqa: E402
 
+# #2417 AC-4/AC-19, bewusst Literal -- Oracle darf nicht aus dem Pruefling
+# kommen (Adversary Runde 5, Finding F002, BROKEN): eine aus derselben
+# Produktivfunktion (`TripCommandProcessor._stufe_en()`/
+# `hazard_symbols.STUFE_BEDEUTUNG_EN`) ABGELEITETE Abbildung liesse eine
+# Mutation dort (Stufe vertauscht, "Hagel" statt "hail") unentdeckt, weil
+# Pruefling und Oracle identisch waeren. Deutsche Woerter nachgemessen aus
+# `_thunder_words()` (THUNDER_LABEL_DE), englische aus der tatsaechlichen
+# heutigen Ausgabe von `_stufe_en()` -- beides Literal, kein Aufruf.
+_DE_ZU_EN_STUFE = {
+    "kein": "none",
+    "leicht": "low",
+    "mittel": "mid",
+    "hoch": "high",
+}
+
 #: Die vier Zutat-Beschriftungen aus ``metric_format.THUNDER_SIGNAL_LABEL_DE``.
 #: Keine davon darf in einer SMS-/Premium-SMS-Antwort auftauchen.
 ALLE_ZUTATEN = ("Wettercode", "Blitzdichte", "CAPE", "Blitzpotenzial")
@@ -187,10 +202,16 @@ def _abschnitte(antwort: str, formatierer: str) -> list[str]:
     GLANCE:   "heute (20.08): ... ⛈ Gewitter: hoch · CAPE" -> "hoch · CAPE"
     GEWITTER: "⛈ Gewitter heute (20.08): hoch · CAPE"      -> "hoch · CAPE"
     Timeline: "   🌡 … ⛈ hoch · CAPE" (je Wegpunkt)         -> "hoch · CAPE"
+
+    #2417 AC-4: auf Kurzform-Kanaelen (sms/premium_sms) ist die GLANCE-Zeile
+    englisch und traegt keinen "⛈ Gewitter: "-Marker, sondern
+    "..., storms <stufe>" (``_fmt_day_agg`` englischer Zweig). Beide Marker
+    werden erkannt, damit die Vorbedingung auf allen Kanaelen greift.
     """
     if formatierer == "glance":
-        teile = [ln.split("⛈ Gewitter: ", 1)[1].strip()
-                 for ln in antwort.splitlines() if "⛈ Gewitter: " in ln]
+        _marker = "⛈ Gewitter: " if "⛈ Gewitter: " in antwort else ", storms "
+        teile = [ln.split(_marker, 1)[1].strip()
+                 for ln in antwort.splitlines() if _marker in ln]
     elif formatierer == "gewitter":
         teile = [antwort.split("): ", 1)[1].strip()] if "): " in antwort else []
     else:
@@ -254,10 +275,15 @@ def test_ac8_sms_und_premium_sms_zeigen_keine_gewitter_herkunft(
         f"Gewitter-Herkunft nennen (PO-Abwahl), gefunden wurden "
         f"{sorted(_genannte_zutaten(ohne))} in {ohne!r}")
 
-    assert _stufenwoerter(ohne) == _stufenwoerter(mit), (
+    # #2417 AC-4/AC-19: sms/premium_sms antworten englisch, die Gewitterstufe
+    # entspricht inhaltlich der E-Mail -- Abbildung ueber das Literal-Oracle
+    # `_DE_ZU_EN_STUFE` (s.o., bewusst kein Aufruf des Pruefungscodes).
+    mit_uebersetzt = [_DE_ZU_EN_STUFE.get(w, w) for w in _stufenwoerter(mit)]
+    assert _stufenwoerter(ohne) == mit_uebersetzt, (
         f"AC-8: nur die Herkunft faellt weg — die Gewitterstufe bleibt auf "
-        f"{kanal!r} zeichengleich zur E-Mail. {formatierer!r}: "
-        f"{_stufenwoerter(ohne)!r} vs. {_stufenwoerter(mit)!r}")
+        f"{kanal!r} inhaltsgleich (uebersetzt) zur E-Mail. {formatierer!r}: "
+        f"{_stufenwoerter(ohne)!r} vs. {mit_uebersetzt!r} "
+        f"(E-Mail-Original: {_stufenwoerter(mit)!r})")
 
 
 # ═══════ AC-8 (Gegenrichtung): E-Mail und Telegram behalten die Herkunft ════

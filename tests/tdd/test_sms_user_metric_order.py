@@ -254,7 +254,7 @@ def test_ac3_per_report_layout_overrides_per_channel_layout():
 
 def test_ac4_vigilance_block_stays_behind_forecast_and_fused():
     """Vorhersage-Gewitter (TH:, category='forecast') an Nutzer-Position 0
-    steht VOR dem Vigilance-Block, waehrend HR:/TH: (category='vigilance')
+    steht VOR dem Vigilance-Block, waehrend VR:/VT: (category='vigilance')
     unveraendert fusioniert bleiben -- die Symbol-Kollision (beide Kategorien
     teilen sich das Zeichen 'TH:') darf die Vigilance-Adjazenz nicht brechen
     (Implementation Details Punkt 4 + Adversary-Hinweis 2).
@@ -279,7 +279,7 @@ def test_ac4_vigilance_block_stays_behind_forecast_and_fused():
 
     i_th_forecast = body.index("TH:M@11")
     i_w = body.index("W25@10")
-    i_vigi = body.index("HR:M@14TH:H@17")
+    i_vigi = body.index("VR:M@14VT:H@17")
     assert i_th_forecast < i_w < i_vigi, (
         f"Erwartet: Vorhersage-TH: (Position 0) vor W vor dem fusionierten "
         f"Vigilance-Block: {body!r}"

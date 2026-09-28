@@ -150,6 +150,12 @@ INTENSITY_HEAVY = "Starker Regen"
 INTENSITY_MODERATE = "Mäßiger Regen"
 INTENSITY_LIGHT = "Leichter Regen"
 INTENSITY_DRY = "Kein Niederschlag"
+# #2417 Kurzform englisch: englische Fassung derselben Stufen.
+_INTENSITY_EN = {
+    INTENSITY_CONVECTIVE: "Heavy hail/storm", INTENSITY_CONVECTIVE_NO_HAIL: "Storm",
+    INTENSITY_HEAVY: "Heavy rain", INTENSITY_MODERATE: "Moderate rain",
+    INTENSITY_LIGHT: "Light rain", INTENSITY_DRY: "No precipitation",
+}
 
 HTTPX_TIMEOUT = 8.0
 
@@ -594,8 +600,10 @@ class RadarNowcastService:
         *,
         tz: Optional[ZoneInfo] = None,
         include_source: bool = True,
+        englisch: bool = False,
     ) -> str:
-        """Format nowcast result as German text.
+        """Format nowcast result as German text (``englisch``: #2417,
+        Kurzform-Kanaele, GSM-7-sauber).
 
         Issue #822: optionaler ``tz``-Parameter (Tour-Zeitzone aus tz_for_coords).
         Wenn gesetzt, wird die Onset-Zeit in dieser TZ formatiert statt in der
@@ -607,6 +615,8 @@ class RadarNowcastService:
         Verhalten, alle anderen Caller bleiben unberührt.
         """
         lines: list[str] = []
+        if englisch:
+            return self._format_now_text_en(result, tz=tz, include_source=include_source)
 
         # Issue #2050 S2b: ein bereits laufendes Ereignis geht in den Zweig
         # unten, auch wenn kein kuenftiger Beginn bestimmbar ist -- sonst
@@ -711,6 +721,46 @@ class RadarNowcastService:
         if include_source:
             lines.append(f"Quelle: {self.source_label(result.source)}.")
 
+        return "\n".join(lines)
+
+    def _format_now_text_en(
+        self, result: NowcastResult, *, tz: Optional[ZoneInfo], include_source: bool,
+    ) -> str:
+        """Englische, GSM-7-saubere Fassung von ``format_now_text`` (#2417
+        Abschnitt H) -- dieselben Aussagen, ohne ``·``/``~``."""
+        from utils.timezone import local_dt
+
+        now = datetime.now(tz=timezone.utc)
+        label = _INTENSITY_EN.get(result.intensity_label, result.intensity_label)
+
+        def _hhmm(minuten: int) -> str:
+            moment = now + timedelta(minutes=minuten)
+            return (local_dt(moment, tz) if tz is not None else moment).strftime("%H:%M")
+
+        lines: list[str] = []
+        laeuft = getattr(result, "already_running", False)
+        if result.onset_minutes is None and not laeuft:
+            if result.data_unavailable:
+                lines += ["Short-term rain check not possible right now.",
+                          "Please watch the sky yourself."]
+            else:
+                lines += [f"{label}.", "No rain expected in the next "
+                          f"{_NOWCAST_HORIZON_MIN // 60} hours."]
+        else:
+            satz = (f"{label} ongoing" if laeuft else
+                    f"{label} from about {_hhmm(result.onset_minutes)} "
+                    f"(in {result.onset_minutes} min)")
+            if result.event_end_minutes is not None:
+                ende = _hhmm(result.event_end_minutes)
+                satz += (f", rain at least until {ende}"
+                         if result.event_ongoing_beyond_horizon
+                         else f", last rain around {ende}")
+            lines.append(satz + ".")
+        if result.convective_checked is False:
+            lines.append("Storm check not available.")
+        if include_source:
+            quelle = self.source_label(result.source).replace("Italien", "Italy")
+            lines.append(f"Source: {quelle}.")
         return "\n".join(lines)
 
     # ------------------------------------------------------------------

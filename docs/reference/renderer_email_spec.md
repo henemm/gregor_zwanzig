@@ -146,7 +146,7 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Format-Definition:** siehe [`docs/reference/sms_format.md`](sms_format.md) (v2.0) — Single Source of Truth.
 - Beispiel (mit Vigilance-Block und Fire-Block für Korsika):
   ```
-  Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) HR:M@17TH:H@17 Z:HIGH208 M:24
+  Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) VR:M@17VT:H@17 Z:HIGH208 M:24
   ```
 - Beispiel (ohne Vigilance/Fire, internationaler Trip):
   ```

@@ -1368,9 +1368,9 @@ def test_ac17_gelbe_amtliche_warnung_erscheint_jetzt_in_sms_und_telegram():
     sms = render_compare_sms(result)
     telegram = render_compare_telegram(result)
 
-    assert "!W:L" in sms, (
+    assert "!WG:L" in sms, (
         "AC-17: bei Startschwelle 'gering' muss die gelbe amtliche Warnung "
-        f"(Stufe 2, Kürzel 'W:L') jetzt im Compare-SMS-Kürzel-Marker "
+        f"(Stufe 2, Kürzel 'WG:L') jetzt im Compare-SMS-Kürzel-Marker "
         f"erscheinen, gefunden: {sms!r}"
     )
     assert "Warnstufe GELB" in telegram, (

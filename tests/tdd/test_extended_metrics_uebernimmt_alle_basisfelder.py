@@ -595,19 +595,30 @@ def test_ac8_sms_und_premium_sms_zeigen_hagel_aber_keine_traeger():
     kommando.speichere([seg])
     stufe = _thunder_words()[ThunderLevel.HIGH.name]
     hagel = format_hail_note(True)
+    # #2417 AC-6: E-Mail bleibt deutsch -- unveraenderter Wortlaut.
+    # #2417 AC-4/AC-19: sms/premium_sms sind Kurzform-Kanaele und antworten
+    # seitdem englisch (``_fmt_gewitter`` englischer Zweig).
+    # Runde 5 Finding F002 (Adversary, BROKEN): die Erwartung darf NICHT aus
+    # derselben Produktivfunktion (``TripCommandProcessor._stufe_en``)
+    # berechnet werden, die auch die Antwort baut -- eine Mutation dort
+    # (Stufe vertauscht, "Hagel" statt "hail") blieb sonst unentdeckt, weil
+    # Pruefling und Oracle identisch waren. Deshalb hartes Literal, aus der
+    # tatsaechlichen heutigen Ausgabe nachgemessen.
+    stufe_hagel_en = "high, hail"
 
     for kanal in ("sms", "premium_sms"):
         antwort = kommando.frage("GEWITTER", kanal=kanal)
-        assert antwort == f"⛈ Gewitter heute ({_HEUTE:%d.%m}): {stufe} · {hagel}", (
+        assert antwort == f"Storm risk today ({_HEUTE:%d.%m}): {stufe_hagel_en}", (
             f"AC-8: auf {kanal!r} gehoert der Hagel-Zusatz in die Antwort, die "
             f"Herkunft nicht: {antwort!r}")
         assert not [z for z in ALLE_ZUTATEN if z in antwort], (
             f"AC-8: {kanal!r} darf keine Gewitter-Herkunft nennen: {antwort!r}")
 
     mit = kommando.frage("GEWITTER", kanal="email")
-    assert thunder_signal_label("cape") in mit, (
-        f"Gegenprobe: dieselbe Fixture ueber E-Mail muss die Herkunft nennen, "
-        f"sonst beweist ihre Abwesenheit auf SMS nichts: {mit!r}")
+    assert mit == f"⛈ Gewitter heute ({_HEUTE:%d.%m}): {stufe} · {thunder_signal_label('cape')} · {hagel}", (
+        f"Gegenprobe: dieselbe Fixture ueber E-Mail muss deutsch, mit Stufe, "
+        f"Herkunft und Hagel-Zusatz antworten, sonst beweist die Abwesenheit "
+        f"der Herkunft auf SMS nichts: {mit!r}")
 
 
 # ═════════════ AC-9: #2186-Neuberechnung behaelt beide Felder ═════════════

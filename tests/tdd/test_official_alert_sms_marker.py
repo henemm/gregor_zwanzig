@@ -87,8 +87,8 @@ def test_trip_sms_traegt_genau_ein_fuehrendes_ausrufezeichen_vor_dem_warnblock()
     assert sms.count("!") == 1, (
         f"Erwartet genau EIN '!' im gesamten SMS-Text, gefunden {sms.count('!')}: {sms!r}"
     )
-    assert "!TH:" in sms, f"Das '!' muss unmittelbar vor dem ersten Warnblock-Token stehen: {sms!r}"
-    assert "FL:" in sms and "!FL:" not in sms, (
+    assert "!TS:" in sms, f"Das '!' muss unmittelbar vor dem ersten Warnblock-Token stehen: {sms!r}"
+    assert "FO:" in sms and "!FO:" not in sms, (
         f"Das zweite Token desselben Blocks darf KEIN eigenes '!' tragen: {sms!r}"
     )
 
@@ -115,8 +115,8 @@ def test_compare_sms_traegt_denselben_ausrufezeichen_marker():
         f"Erwartet genau EIN '!' im gesamten Compare-SMS-Text, gefunden "
         f"{sms.count('!')}: {sms!r}"
     )
-    assert "!TH:" in sms, f"Das '!' muss unmittelbar vor dem ersten Warnblock-Token stehen: {sms!r}"
-    assert "FL:" in sms and "!FL:" not in sms, (
+    assert "!TS:" in sms, f"Das '!' muss unmittelbar vor dem ersten Warnblock-Token stehen: {sms!r}"
+    assert "FO:" in sms and "!FO:" not in sms, (
         f"Das zweite Token desselben Blocks darf KEIN eigenes '!' tragen: {sms!r}"
     )
 

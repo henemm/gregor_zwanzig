@@ -89,7 +89,7 @@ def test_only_location_at_or_above_threshold_carries_marker():
     part_c = _location_part(sms, "Chur")
     part_d = _location_part(sms, "Dorf")
 
-    assert "!TH:H" in part_a, (
+    assert "!TS:H" in part_a, (
         f"Ort mit roter amtlicher Warnung traegt keinen `!`-Kuerzel-Marker: "
         f"{sms!r} (Ortsteil: {part_a!r})"
     )
@@ -125,8 +125,8 @@ def test_multiple_hazards_above_orange_appear_deduplicated():
     )
     sms = render_compare_sms(_result([ort]))
 
-    assert "!TH:H" in sms, f"Gewitter-Kuerzel fehlt: {sms!r}"
-    assert "W:M" in sms, f"Wind-Kuerzel fehlt: {sms!r}"
-    assert sms.count("TH:H") == 1, (
+    assert "!TS:H" in sms, f"Gewitter-Kuerzel fehlt: {sms!r}"
+    assert "WG:M" in sms, f"Wind-Kuerzel fehlt: {sms!r}"
+    assert sms.count("TS:H") == 1, (
         f"Gewitterwarnung darf nach Dedup nur einmal erscheinen: {sms!r}"
     )

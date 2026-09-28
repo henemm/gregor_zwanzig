@@ -302,8 +302,11 @@ def _pruefe_metrik_antwort(kanal: str, text: str, metric) -> None:
         f"der Snapshot dafuer einen Wert traegt: {text!r}"
     )
     if kanal == "premium_sms":
-        kuerzel = metric.sms_code or metric.col_label
-        assert kuerzel in text, (
+        # #2417 AC-13/AC-15: die Kurzform nennt das GESENDETE Kuerzel.
+        from app.metric_catalog import kurzform_kuerzel
+
+        kuerzel = kurzform_kuerzel(metric.id) or metric.col_label
+        assert text.startswith(kuerzel), (  # am Anfang verankert (#2417)
             f"[premium_sms] Antwort auf {metric.id!r} nennt nicht ihr "
             f"Kuerzel {kuerzel!r}: {text!r}"
         )

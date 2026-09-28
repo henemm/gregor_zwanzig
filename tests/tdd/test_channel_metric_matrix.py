@@ -2307,6 +2307,13 @@ def test_ac_s1_7_gleichnamige_groessen_trennt_nur_die_kurznachricht(label, metri
             f"Vorbedingung: genau ein Token erwartet fuer {mid!r}, erkannt: {codes}"
         )
         kuerzel.append(codes[0])
+    # #2417 AC-28 (PO-Beschluss): die Kurznachricht trennt das Paar
+    # temperature/temperature_cold bewusst NICHT mehr -- der Kaelte-Alarm
+    # bewacht dieselbe Temperatur und traegt deshalb dasselbe 'T' ('N' ist
+    # allein der Nachtwert). Jedes andere gleichnamige Paar muss sie trennen.
+    if set(metric_ids) == {"temperature", "temperature_cold"}:
+        assert kuerzel == ["T", "T"], f"#2417 AC-28: beide Alarme tragen 'T': {kuerzel}"
+        return
     assert len(set(kuerzel)) == len(kuerzel), (
         f"AC-S1-7: allein die Kurznachricht trennt die gleichnamigen Groessen "
         f"{list(metric_ids)} -- hier tut sie es nicht: {kuerzel}"

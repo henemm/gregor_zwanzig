@@ -35,8 +35,8 @@ _RISK_DE: dict[str, str] = {
 
 # A4: Whitelist for subject (in display order).
 _WHITELIST_FORECAST: tuple[str, ...] = ("D", "W", "G")
-_VIGILANCE_HR = "HR"
-_VIGILANCE_TH = "TH"
+_VIGILANCE_HR = "VR"  # #2417 AC-27 (Meteo-France-Regenrisiko)
+_VIGILANCE_TH = "VT"  # #2417 AC-27 (Meteo-France-Gewitterrisiko)
 
 DEFAULT_MAX_LENGTH = 78
 _DASH = "—"  # em dash separator

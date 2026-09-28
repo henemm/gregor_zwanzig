@@ -272,6 +272,7 @@ zusaetzlich ``recorder.unbekannt == []`` pruefen (bzw. den Helfer
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import smtplib
 import uuid
@@ -329,6 +330,145 @@ PREMIUM_SMS_SANDBOX_KEY = "sandbox-fake-2417"
 #: Auflage: NIE top-level importieren, sonst bricht der Collect ganzer
 #: Testdateien, solange die Fixes aus #2417 nicht implementiert sind).
 _SENTINEL = object()
+
+
+def spec_feld(spec, name: str):
+    """Feldzugriff auf einen ``_COMMAND_SPECS``-Eintrag per NAMEN (AC-1,
+    #2417 Kurzform englisch) -- der EINE Weg, auf dem Test-Helfer ein Feld
+    lesen, statt ein Tupel mit fester Laenge zu entpacken. (Der Uebergangs-
+    Shim fuer das alte 4er-Tupel ist mit GREEN entfallen.)"""
+    return getattr(spec, name)
+
+
+#: Spec ``feat_2417_kurzform_englisch.md`` AC-2/AC-3/AC-20 (freigegebener
+#: Wortlaut, NICHT aus dem Produkt abgeleitet): englisches Befehlswort ->
+#: deutsches Pendant. Ein Test gleicht diese Liste gegen ``wort_en``/``wort``
+#: aus ``_COMMAND_SPECS`` ab (Drift-Waechter).
+BEFEHL_EN_ZU_DE: dict[str, str] = {
+    "today": "heute",
+    "tomorrow": "morgen",
+    "now": "jetzt",
+    "storms": "gewitter",
+    "route": "strecke",
+    "restday": "ruhetag",
+    "status": "status",
+    "pause": "pause",
+    "skip": "skip",
+    "stop": "stop",
+    "resume": "weiter",
+    "help": "hilfe",
+    "codes": "kuerzel",
+}
+
+#: Deutsche Befehlswoerter, die es NUR auf Deutsch gibt (in einer englischen
+#: Antwort verboten, AC-19) -- gleich geschriebene (PAUSE/STATUS/SKIP/STOP)
+#: sind keine deutschen Woerter.
+NUR_DEUTSCHE_BEFEHLSWOERTER: frozenset[str] = frozenset(
+    de for en, de in BEFEHL_EN_ZU_DE.items() if en != de
+) | {"kürzel"}
+
+#: Kopfzeile des freigegebenen HELP-Wortlauts (Spec "Verbindlicher Wortlaut").
+HELP_KOPF_EN = "Commands (German works too):"
+#: Abschnittsanfang des freigegebenen CODES-Wortlauts (englisch / deutsch).
+CODES_MARKER_EN = "Weather: "
+CODES_MARKER_DE = "Wetter: "
+
+
+#: Deutsche Signalwoerter (#2417 Kurzform englisch, AC-4/AC-19) -- geerntet
+#: aus den HEUTIGEN deutschen Antworten der Textarten aus Spec-Abschnitt H
+#: (Nachmessung 27.09.2026 am echten Eingang). Keines kommt im freigegebenen
+#: englischen HELP-/CODES-Wortlaut vor.
+DEUTSCHE_SIGNALWOERTER = (
+    "Unbekannter", "bekannter", "Befehl", "Befehle", "Verfügbar", "Verfügbare",
+    "Befehlsformat", "Wetter", "Größen", "Stundenverlauf", "Kürzel", "zeigt",
+    "alle", "gibt", "beim", "Ortsvergleich", "Ortsvergleiche", "nicht",
+    "Mehrdeutig", "Namen", "antworten", "Vergleich", "pausiert", "unbefristet",
+    "sendest", "angegebene", "Dauer", "wird", "ausgewertet", "für", "fuer",
+    "Fortsetzen", "dauerhaft", "oder", "warte", "abläuft", "nächste",
+    "nächsten", "Nächster", "Naechster", "übersprungen", "Danach", "läuft",
+    "Zeitplan", "wieder", "deaktiviert", "Heimreise", "aktiviert",
+    "reaktiviert", "Erfolg", "Ruhetag", "eingetragen", "Tage", "Verschobene",
+    "Etappe", "Etappen", "kommt", "planmaessig", "bestaetigt", "Bitte",
+    "angeben", "Stunden", "Fehler", "Hinweis", "Versand", "beendet", "Hilfe",
+    "bis", "der", "die", "das", "und", "mit", "Kein", "kein", "keine",
+    "Niederschlag", "Regen", "erwartet", "Quelle", "Italien", "Gewitter",
+    "heute", "Heute", "morgen", "mittel", "Kilometrierung", "heutige", "verfügbar",
+    "Streckenangabe", "möglich", "aktiver", "gilt", "nur", "gefunden",
+    "Noch", "noch", "nutze", "Nachricht", "Eine", "aktiv", "ist",
+    # Runde 5 Finding F002 (Adversary, BROKEN): naheliegende deutsche
+    # Wetter-Vokabeln, die in Kurzform-Antworten vorkommen koennten und
+    # keine gueltigen englischen Woerter/Kuerzel sind. "Wind"/"Regen" sind
+    # zugleich gueltige englische Woerter (erscheinen z.B. in "wind 8 km/h")
+    # und bleiben deshalb bewusst NICHT ergaenzt ("Regen" stand schon vorher
+    # in der Liste und ist ein Restrisiko, s. Report).
+    "Hagel", "niedrig", "hoch",
+)
+_SIGNAL_RE = re.compile(
+    r"\b(" + "|".join(re.escape(w) for w in DEUTSCHE_SIGNALWOERTER) + r")\b",
+)
+
+
+def namen_des_nutzers(nutzer: "BefehlNutzer") -> list[str]:
+    """Alle vom Nutzer vergebenen Namen (Trips, Etappen, Ortsvergleiche) --
+    laengste zuerst, damit "Vergleich 1" vor "Vergleich" entfernt wird."""
+    from app.loader import load_all_trips
+
+    namen: list[str] = []
+    for trip in load_all_trips(nutzer.user_id):
+        namen.append(trip.name)
+        namen.extend(stage.name for stage in trip.stages)
+    namen.extend(p["name"] for p in nutzer.presets)
+    return sorted({n for n in namen if n}, key=len, reverse=True)
+
+
+def ohne_nutzernamen(text: str, nutzer: "BefehlNutzer") -> str:
+    for name in namen_des_nutzers(nutzer):
+        text = text.replace(name, " ")
+    return text
+
+
+def deutsche_signale(text: str, nutzer: "BefehlNutzer") -> list[str]:
+    """Deutsche Signalwoerter UND nur-deutsche Befehlswoerter (GROSS) im
+    vom PRODUKT formulierten Text -- Nutzer-Namen vorher entfernt."""
+    rein = ohne_nutzernamen(text, nutzer)
+    treffer = [m.group(0) for m in _SIGNAL_RE.finditer(rein)]
+    for wort in sorted(NUR_DEUTSCHE_BEFEHLSWOERTER):
+        if re.search(rf"\b{re.escape(wort.upper())}\b", rein):
+            treffer.append(wort.upper())
+    return treffer
+
+
+_VERBOTENE_SMS_ZEICHEN = ("–", "→", "°", "⛈")
+_EMOJI_RE = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF]")
+
+
+def gsm7_befunde_systemtext(text: str, nutzer: "BefehlNutzer") -> list[str]:
+    """AC-19 v1.1: der vom SYSTEM erzeugte Premium-SMS-Text ist GSM-7-sauber
+    (kein ``–``/``→``/``°``/``⛈``, keine Emojis). Nutzer-Namen sind
+    ausgenommen und werden vorher entfernt."""
+    from tests.tdd._gsm7_charset import _first_non_gsm7_char
+
+    rein = ohne_nutzernamen(text, nutzer)
+    befunde = [z for z in _VERBOTENE_SMS_ZEICHEN if z in rein]
+    befunde += _EMOJI_RE.findall(rein)
+    fremd = _first_non_gsm7_char(rein)
+    if fremd is not None:
+        befunde.append(fremd)
+    return sorted(set(befunde))
+
+
+def pruefe_premium_sms_englisch_und_gsm7(text: str, nutzer: "BefehlNutzer", *,
+                                          kontext: str) -> None:
+    """AC-4 + AC-19 (v1.1): jede Premium-SMS-Antwort ist durchgehend englisch
+    und ihr Systemtext GSM-7-sauber."""
+    assert text.strip(), f"{kontext}: leere Premium-SMS."
+    deutsch = deutsche_signale(text, nutzer)
+    assert not deutsch, (
+        f"{kontext}: Premium-SMS nicht durchgehend englisch -- deutsche Woerter "
+        f"{sorted(set(deutsch))!r}:\n{text}"
+    )
+    gsm = gsm7_befunde_systemtext(text, nutzer)
+    assert not gsm, f"{kontext}: Systemtext nicht GSM-7-sauber {gsm!r}:\n{text}"
 
 
 def kein_aktives_ziel_text():
@@ -1206,6 +1346,11 @@ SOLL_MATRIX: dict[str, dict[str, str]] = {
 #: andere Achse und muss ``hilfe`` deshalb VORAB herausnehmen, sonst
 #: landete es faelschlich in der `_BEIDE_KINDS`-Rueckfrage-Zeile.
 ZIELLOSE_WOERTER = frozenset({"hilfe"})
+#: #2417 Kurzform englisch AC-3: ``kuerzel``/``codes`` sind ziellos wie
+#: ``hilfe`` (der interne Schluessel ist nicht festgelegt, deshalb beide).
+#: Bewusst NICHT in ``ZIELLOSE_WOERTER``: dessen erstes sortiertes Element
+#: ist der Matrix-Repraesentant (``hilfe``) der E2E-Dateien.
+_ZIELLOS_KUERZEL_SCHLUESSEL = frozenset({"kuerzel", "codes"})
 ZIELLOSE_CALLBACKS = frozenset({"act_help", "act_columns"})
 
 
@@ -1213,20 +1358,27 @@ def _route_only_reader_woerter() -> frozenset[str]:
     """Reader-seitige Schluesselworte der ``_ROUTE_ONLY``-Zeile, UEBER
     ``_BARE_KEYWORD_MAP`` auf ihre internen Schluessel abgebildet (z.B.
     ``gewitter`` -> ``heute_gewitter``, ``jetzt``/``now`` -> ``now``)."""
-    woerter = {w for w, _a, _b, k in _COMMAND_SPECS if k == _ROUTE_ONLY}
+    woerter = {
+        spec_feld(s, "wort") for s in _COMMAND_SPECS if spec_feld(s, "kinds") == _ROUTE_ONLY
+    }
     return frozenset(_BARE_KEYWORD_MAP.get(w, w) for w in woerter) | {"now"}
 
 
 def _beide_kinds_reader_woerter() -> frozenset[str]:
-    woerter = {w for w, _a, _b, k in _COMMAND_SPECS if k == _BEIDE_KINDS}
-    return frozenset(_BARE_KEYWORD_MAP.get(w, w) for w in woerter) - ZIELLOSE_WOERTER
+    woerter = {
+        spec_feld(s, "wort") for s in _COMMAND_SPECS if spec_feld(s, "kinds") == _BEIDE_KINDS
+    }
+    return (
+        frozenset(_BARE_KEYWORD_MAP.get(w, w) for w in woerter)
+        - ZIELLOSE_WOERTER - _ZIELLOS_KUERZEL_SCHLUESSEL
+    )
 
 
 def klassifiziere_wort(reader_schluessel: str) -> str:
     """Ordnet ein READER-Schluesselwort (nach ``_BARE_KEYWORD_MAP``-
     Aufloesung, also z.B. ``"now"``, ``"heute_gewitter"``, ``"pause"``) einer
     Befehlsklasse der Matrix zu."""
-    if reader_schluessel in ZIELLOSE_WOERTER:
+    if reader_schluessel in ZIELLOSE_WOERTER | _ZIELLOS_KUERZEL_SCHLUESSEL:
         return KLASSE_ZIELLOS
     if reader_schluessel in _route_only_reader_woerter():
         return KLASSE_ROUTE_ONLY
@@ -1305,8 +1457,8 @@ def tippbare_route_only_und_metrik_woerter() -> list[tuple[str, str]]:
     from app.metric_catalog import metric_command_words
 
     faelle: list[tuple[str, str]] = [
-        (wort, KLASSE_ROUTE_ONLY) for wort, _arg, _beschreibung, kind in _COMMAND_SPECS
-        if kind == _ROUTE_ONLY
+        (spec_feld(s, "wort"), KLASSE_ROUTE_ONLY) for s in _COMMAND_SPECS
+        if spec_feld(s, "kinds") == _ROUTE_ONLY
     ]
     faelle += [(wort, KLASSE_METRIK_QUERY) for wort in sorted(_QUERY_KEYS)]
     faelle += [(wort, KLASSE_METRIK_QUERY) for wort in sorted(metric_command_words())]
@@ -1420,15 +1572,20 @@ def _premium_sms_merkmal_fuer(fall: str, *, nutzer: BefehlNutzer):
         # Body nennt die verschobene FOLGE-Etappe beim Namen (Nachmessung:
         # "Verschobene Etappen:\n  Etappe Morgen: ... -> ...").
         return _stufenname(nutzer.trip, 2)
-    if fall == "strecke":
-        return "Kilometrierung"
-    if fall == "pause":
-        # Nachmessung (Team-Lead-Anfrage 2026-09-25): "pause" OHNE Dauer
-        # liefert Body "Bitte Dauer angeben, z.B. PAUSE 2d oder PAUSE 12h.
-        # Format: N d (Tage) oder N h (Stunden)." -- der Trip-Name steht
-        # NUR im (bei Premium-SMS verworfenen) Betreff
-        # "[Solo-Trip] PAUSE: Dauer fehlt".
-        return "Dauer angeben"
+    # #2417 Kurzform englisch v1.1 (AC-4/AC-19, Abschnitt H): Premium-SMS
+    # antwortet IMMER englisch, der englische Wortlaut von Strecke-ohne-
+    # Kilometrierung, PAUSE-ohne-Dauer und Gewitter-Antwort ist aber NICHT
+    # zeichengenau vorgegeben. Frueher standen hier die deutschen Stichwoerter
+    # "Kilometrierung"/"Dauer angeben"/"Gewitter" -- sie widerspraechen der
+    # Spec nach GREEN. Leeres Tupel = kein Teilstring-Merkmal; der Aufrufer
+    # MUSS dann ``pruefe_premium_sms_englisch_und_gsm7`` anwenden (tut
+    # ``_pruefe_merkmal_premium_sms`` bzw. der Matrix-Zweig).
+    if fall in ("strecke", "pause", "gewitter", "heute_gewitter"):
+        return ()
+    if fall in ("glance", "timeline_heute", "timeline_morgen"):
+        # "°C" ist nicht GSM-7 und entfaellt auf Premium-SMS (AC-19);
+        # sprachneutral bleibt die Wind-Einheit.
+        return (get_metric("wind").unit,)
     # "weiter"/"skip"/"stop"/"status" brauchen KEINE Ausnahme (bestaetigt bei
     # derselben Nachmessung): ihre Bodies nennen das Ziel bereits woertlich
     # ("...fuer 'Solo-Trip'..." bzw. die Etappennamen) -- die generische
@@ -1438,8 +1595,12 @@ def _premium_sms_merkmal_fuer(fall: str, *, nutzer: BefehlNutzer):
 
     metric_id = metric_command_words().get(fall)
     if metric_id is not None:
+        # #2417 AC-13/AC-15: die Kurzform nennt das GESENDETE Kuerzel
+        # (``D``/``N`` statt ``DayMax``/``Night``) -- dieselbe Quelle wie die SMS.
+        from app.metric_catalog import kurzform_kuerzel
+
         metric = get_metric(metric_id)
-        return metric.sms_code or metric.col_label
+        return kurzform_kuerzel(metric_id) or metric.col_label
 
     return None
 
@@ -1485,13 +1646,28 @@ def merkmal_fuer(fall: str, *, nutzer: BefehlNutzer, ziel_name: str | None = Non
     fall = _CALLBACK_ALIAS_FUER_MERKMAL.get(fall, fall)
     ziel = ziel_name or (nutzer.trip.name if nutzer.trip else "")
 
+    # #2417 Kurzform englisch (AC-4/AC-5/AC-6/AC-8/AC-9): HELP/CODES haengen
+    # an der Antwortsprache -- Premium-SMS immer englisch, E-Mail immer
+    # deutsch, Telegram (ziellos) nach dem gesendeten Wort.
+    if fall in ("hilfe", "help"):
+        englisch = kanal == "premium_sms" or (fall == "help" and kanal != "email")
+        if englisch:
+            return (HELP_KOPF_EN,) + tuple(
+                en.upper() for en in BEFEHL_EN_ZU_DE if en != "help"
+            )
+        return tuple(spec_feld(s, "wort").upper() for s in _COMMAND_SPECS)
+    if fall in ("codes", "kuerzel", "kürzel"):
+        englisch = kanal == "premium_sms" or (fall == "codes" and kanal != "email")
+        return CODES_MARKER_EN if englisch else CODES_MARKER_DE
+    # Englisches Befehlswort -> Merkmal seines deutschen Pendants (AC-2:
+    # "wirkt identisch zum deutschen Wort").
+    if fall in BEFEHL_EN_ZU_DE and fall not in ("now",):
+        fall = BEFEHL_EN_ZU_DE[fall]
+
     if kanal == "premium_sms":
         premium_merkmal = _premium_sms_merkmal_fuer(fall, nutzer=nutzer)
         if premium_merkmal is not None:
             return premium_merkmal
-
-    if fall == "hilfe":
-        return tuple(w.upper() for w, _a, _b, _k in _COMMAND_SPECS)
     if fall == "heute":
         return _stufenname(nutzer.trip, 1)
     if fall == "morgen":
@@ -1544,4 +1720,9 @@ FEHLERTEXTE = (
     "Mehrdeutig",
     "Unbekannter Befehl",
     KEIN_KANDIDAT_TEXT,
+    # #2417 Kurzform englisch (Abschnitt H): die englischen Fassungen, die
+    # Premium-SMS und Telegram-Kurzform seither senden.
+    "Ambiguous",
+    "Unknown command",
+    "No active trip or location comparison found.",
 )

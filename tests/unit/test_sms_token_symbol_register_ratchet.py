@@ -492,7 +492,13 @@ def test_register_kuerzel_bezeichnen_je_genau_eine_groesse():
     from app.metric_catalog import _METRICS
     from tests.helpers.metrik_listen_scan import finde_kuerzel_kollisionen
 
-    kuerzel = {m.id: m.sms_code for m in _METRICS if m.sms_code}
+    # #2417 AC-28: einzige Ausnahme -- der nicht waehlbare Kaelte-Alarm
+    # temperature_cold bewacht dieselbe Temperatur wie temperature und traegt
+    # deshalb dasselbe 'T' (Ausnahmeliste: test_keine_doppelten_kennungen.py).
+    kuerzel = {
+        m.id: m.sms_code for m in _METRICS
+        if m.sms_code and m.id != "temperature_cold"
+    }
     assert len(kuerzel) >= 25, (
         f"Nur {len(kuerzel)} Register-Kuerzel geprueft — zu wenig. Gemessen "
         f"zum Stand der Spec: 27 von 28 Groessen ({kuerzel!r})"

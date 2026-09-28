@@ -213,10 +213,10 @@ inbound_telegram_reader.py:
 - **AC-9:** Given `act_help` wird auf eine Aktionen-Bubble mit Knöpfen geklickt / When die Hilfeantwort ankommt / Then ist sie eine **neue** Nachricht, und die ursprüngliche Aktionen-Bubble samt ihrer Knöpfe bleibt unverändert im Chat bestehen und weiterhin bedienbar.
   - Test: `test_befehle_telegram_e2e.py::test_act_help_ueberschreibt_die_aktionen_bubble_nicht` — prüft, dass `editMessageText` auf die ursprüngliche `message_id` NICHT aufgerufen wird und stattdessen `sendMessage` mit neuem Text erfolgt.
 
-- **AC-10:** Given `_COMMAND_SPECS` gilt als Angebotsquelle / When das Telegram-Menü (`BOT_COMMANDS`) und die Langhilfe (E-Mail/Telegram) sowie die Premium-SMS-Kurzhilfe geprüft werden / Then enthalten Menü, Langhilfe und Kurzhilfe alle 12 Befehlswörter, ohne Ausnahme. Lang- und Kurzhilfe enthalten zusätzlich jedes Wetter-Kürzel aus `get_all_metrics()` (selectable), und die Kurzhilfe enthält keinen Verweis auf einen anderen Kanal.
+- **AC-10 (ABGELÖST durch `feat_2417_kurzform_englisch.md` AC-8/AC-9, 27.09.2026 — der Kurzhilfe-Teil verlangte eine Wortübersetzung statt einer Wirkungsaussage):** Given `_COMMAND_SPECS` gilt als Angebotsquelle / When das Telegram-Menü (`BOT_COMMANDS`) und die Langhilfe (E-Mail/Telegram) sowie die Premium-SMS-Kurzhilfe geprüft werden / Then enthalten Menü, Langhilfe und Kurzhilfe alle 12 Befehlswörter, ohne Ausnahme. Lang- und Kurzhilfe enthalten zusätzlich jedes Wetter-Kürzel aus `get_all_metrics()` (selectable), und die Kurzhilfe enthält keinen Verweis auf einen anderen Kanal.
   - Test: `test_befehlsangebot_vollstaendig.py`, drei Teilprüfungen (Menü, Langhilfe, Kurzhilfe) gegen `_COMMAND_SPECS` ∪ Metrik-Kürzel als Referenzmenge, dazu die Negativprüfung „kein `email`/`Telegram`/`Mail` in der Kurzhilfe".
 
-- **AC-11:** Given die Premium-SMS-Kurzhilfe aus AC-10 / When sie über den echten seven.io-Fake versendet wird / Then ist sie GSM-7-sauber (kein `–`, `→`, `°`, keine Emojis) und benötigt höchstens 3 Segmente, gemessen mit `sms_segments()` auf dem tatsächlich übergebenen Text.
+- **AC-11 (ABGELÖST durch `feat_2417_kurzform_englisch.md` AC-8/AC-9, 27.09.2026):** Given die Premium-SMS-Kurzhilfe aus AC-10 / When sie über den echten seven.io-Fake versendet wird / Then ist sie GSM-7-sauber (kein `–`, `→`, `°`, keine Emojis) und benötigt höchstens 3 Segmente, gemessen mit `sms_segments()` auf dem tatsächlich übergebenen Text.
   - Test: `test_befehle_premium_sms_e2e.py::test_kurzhilfe_hoechstens_drei_segmente` (Schwelle 3, gemessen mit `sms_segments()`).
 
 - **AC-12:** Given zwei verschiedene Nutzer A und B mit je eigenem Trip/Vergleichen und eigener `telegram_chat_id` / When Nutzer A per Telegram einen Befehl sendet / Then trifft die Ausführung ausschließlich Trips/Vergleiche von A, und die Antwort geht ausschließlich an A's `chat_id` — B's Daten werden weder gelesen noch beantwortet.
@@ -266,7 +266,7 @@ Epic #2133 ist geschlossen, alle Scheiben (S1 #2134, S2 #2185/#2186, S3 #2168/#2
 
 - **AC-22:** Given ein Knopf wird geklickt, während nur ein Ortsvergleich (kein Trip) aktiv ist, oder während eine Mehrdeutigkeits-Lage besteht / When `_process_callback_query` läuft / Then erhält der Nutzer eine sichtbare Antwort (Ziel-Antwort, Hinweis oder Rückfrage) statt eines stillen No-Ops.
 
-- **AC-23:** Given Premium-SMS-Kanal / When `hilfe` gesendet wird / Then wird die neue Kurzhilfe (≤ 3 Segmente, voller Inhalt, siehe oben) verschickt statt der bisherigen Langhilfe.
+- **AC-23 (ABGELÖST durch `feat_2417_kurzform_englisch.md` AC-4/AC-8, 27.09.2026 — Premium-SMS bekommt die englische HELP-Kurzform):** Given Premium-SMS-Kanal / When `hilfe` gesendet wird / Then wird die neue Kurzhilfe (≤ 3 Segmente, voller Inhalt, siehe oben) verschickt statt der bisherigen Langhilfe.
 
 ### Live-Schicht (Staging, Marker `live`/`staging`)
 

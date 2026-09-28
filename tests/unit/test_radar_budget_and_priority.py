@@ -285,11 +285,19 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
                 source="radar", frames=[],
             )
 
-        def format_now_text(self, result, *, tz=None, include_source: bool = True) -> str:
+        def format_now_text(
+            self, result, *, tz=None, include_source: bool = True,
+            englisch: bool = False,
+        ) -> str:
             # Issue #1402: der echte Aufrufer (_show_now) uebergibt jetzt
             # immer eine echte Ortszeit statt des stillen Defaults.
+            # #2417: die Attrappe muss denselben Parameter wie die echte
+            # ``format_now_text`` annehmen (Kurzform-Kanaele antworten
+            # englisch) -- die hier bewachte Zusicherung (Briefing-Prioritaet
+            # explizit) bleibt unveraendert.
             self.last_tz = tz
-            return "Kein Niederschlag."
+            self.last_englisch = englisch
+            return "Kein Niederschlag." if not englisch else "No precipitation."
 
     import services.radar_service as radar_service_module
     monkeypatch.setattr(radar_service_module, "RadarNowcastService", _CapturingRadarServiceClass)

@@ -333,7 +333,9 @@ class TestAC4TelegramProseUsesConfiguredHost:
              AC-5 aus #2282 hat den Host-Zusatz hier bewusst entfernt.
         """
         from services.inbound_telegram_reader import InboundTelegramReader
-        from services.trip_selection import KEIN_KANDIDAT_TEXT
+        # #2417 Abschnitt H: "status" (in beiden Sprachen gleich) ohne Ziel
+        # wird englisch beantwortet.
+        from services.trip_selection import KEIN_KANDIDAT_TEXT_EN as KEIN_KANDIDAT_TEXT
 
         chat_id = "777000208"
         _register_user("gz2272regchat208", chat_id)
@@ -468,7 +470,8 @@ class TestAC5FailClosedWithoutPublicHost:
         behafteten Degradations-Text an dieser Stelle durch den
         kanalneutralen Text aus `services.trip_selection` ersetzt)."""
         from services.inbound_telegram_reader import InboundTelegramReader
-        from services.trip_selection import KEIN_KANDIDAT_TEXT
+        # #2417 Abschnitt H: "status" ohne Ziel -> englisch.
+        from services.trip_selection import KEIN_KANDIDAT_TEXT_EN as KEIN_KANDIDAT_TEXT
 
         chat_id = "777100208"
         _register_user("gz2272regchat208b", chat_id)

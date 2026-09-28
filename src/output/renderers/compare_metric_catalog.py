@@ -63,7 +63,9 @@ im Resolver, schlaegt der Import fehl.
 """
 from __future__ import annotations
 
-from app.metric_catalog import aggregation_label_de, alert_metric_for, get_metric
+from app.metric_catalog import (
+    aggregation_label_de, alert_metric_for, get_metric, kurzform_kuerzel,
+)
 from app.models import ThunderLevel
 from output.metric_format import THUNDER_LABEL_DE, thunder_ordinal
 from output.renderers.compare_hourly_metric_ids import (
@@ -418,7 +420,9 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
             **entry,
             "label": label,
             "col_label": metric.col_label,
-            "sms_code": metric.sms_code,
+            # #2417 AC-29: das Kuerzel, das die Vergleichs-SMS fuer diesen
+            # Eintrag wirklich zeigt (temp_max_c -> D, temp_min_c -> L).
+            "sms_code": kurzform_kuerzel(kuerzel_metric_id_for(entry)),
             # #2232: die Kennung, unter der die Editor-Marke in
             # /api/sms-symbols nachzuschlagen ist. Sie reist HIER mit, damit
             # der Browser keine zweite Kuerzel-Quelle und keine eigene

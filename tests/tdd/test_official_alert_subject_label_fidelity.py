@@ -239,8 +239,11 @@ def test_ac6_sms_unchanged():
     # F002 ergaenzte den Monat) -- bewusst geaendertes Ausgabeformat, kein
     # aufgeweichter Wachhund: der Pin bleibt eine exakte Volltext-Gleichheit.
     # #1948 S5: gemeinsamer Ortskopf statt Trip-Name + AMT, Stufe als
-    # Buchstabe am Token, `CL` bleibt stufen- UND zeitlos (LEVELLESS_HAZARDS).
-    assert sms == "ges.Route: !HT:M Fr10.07. CL", (
+    # Buchstabe am Token, das Kuerzel bleibt stufen- UND zeitlos
+    # (LEVELLESS_HAZARDS).
+    # #2417 AC-27: Warn-Kuerzel "CL" (access_ban) -> "AB", weil "CL" mit der
+    # Metrik `cloud_low` kollidierte.
+    assert sms == "ges.Route: !HT:M Fr10.07. AB", (
         f"SMS hat sich veraendert: {sms!r}"
     )
 

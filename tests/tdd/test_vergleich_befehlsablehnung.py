@@ -173,7 +173,8 @@ def test_ac12_hilfe_am_vergleich_nur_pause_weiter_hilfe(uid):
     vergleich = _befehlszeilen(_send(uid, "hilfe").confirmation_body)
     trip_hilfe = _befehlszeilen(_send(uid, "hilfe", name="Korsika").confirmation_body)
 
-    assert vergleich == {"PAUSE", "WEITER", "HILFE"}, vergleich
+    # #2417 AC-3: KUERZEL ist auch beim Ortsvergleich erlaubt.
+    assert vergleich == {"PAUSE", "WEITER", "HILFE", "KUERZEL"}, vergleich
     assert vergleich < trip_hilfe
     assert {"RUHETAG", "SKIP", "STRECKE"} <= trip_hilfe
 

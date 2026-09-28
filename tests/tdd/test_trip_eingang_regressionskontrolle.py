@@ -143,7 +143,9 @@ def test_ac1_ein_trip_ohne_aktiven_vergleich_pausiert_trip(monkeypatch, uid, kan
     sent = _KANAELE[kanal](monkeypatch, uid, "pause 2d")
 
     assert _geladen(uid, trip.id).report_config.paused_until is not None
-    assert sent and TRIP_PAUSE_HINWEIS in sent[-1], sent
+    # #2417 AC-4: Premium-SMS bestaetigt englisch.
+    hinweis = "The pause ends by itself" if kanal == "premium_sms" else TRIP_PAUSE_HINWEIS
+    assert sent and hinweis in sent[-1], sent
 
 
 @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])

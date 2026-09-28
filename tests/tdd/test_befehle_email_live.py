@@ -322,7 +322,7 @@ def test_apple_mail_hilfe_ueber_echte_stalwart_zustellung_wird_beantwortet():
             p.get_payload(decode=True).decode(p.get_content_charset() or "utf-8", errors="replace")
             for p in antwort.walk() if p.get_content_maintype() == "text"
         )
-        for wort, _arg, _beschreibung, _kinds in _COMMAND_SPECS:
+        for wort in (s.wort for s in _COMMAND_SPECS):  # #2417 AC-1: Feldnamen
             assert wort.upper() in body, f"Antwort fehlt Befehlswort {wort.upper()!r}: {body!r}"
     finally:
         _cleanup_user(user_id)

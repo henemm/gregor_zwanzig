@@ -19,6 +19,7 @@ from app.loader import get_briefings_dir
 from services.trip_command_processor import _QUERY_KEYS
 
 from tests.tdd._befehl_e2e_fixtures import (
+    BEFEHL_EN_ZU_DE,
     ERGEBNIS_ANTWORT_TRIP,
     ERGEBNIS_ANTWORT_VERGLEICH,
     ERGEBNIS_HILFE,
@@ -139,8 +140,15 @@ def _pruefe_matrix_ergebnis(ergebnis, *, recorder, chat_id, nutzer, fall, ziel_n
         _ohne_fehlertexte(text)
         return
     if ergebnis == ERGEBNIS_KEIN_KANDIDAT:
-        assert KEIN_KANDIDAT_TEXT in text, (
-            f"Erwarte KEIN_KANDIDAT_TEXT, bekam: {text!r}"
+        # #2417 Kurzform englisch (Spec Abschnitt H): ohne Ziel folgt die
+        # Sprache dem gesendeten Wort -- ein englisches bzw. in beiden
+        # Sprachen gleiches Wort (``pause``/``status``) wird englisch
+        # beantwortet, ein nur deutsches deutsch.
+        from services.trip_selection import KEIN_KANDIDAT_TEXT_EN
+
+        erwartet = KEIN_KANDIDAT_TEXT_EN if fall in BEFEHL_EN_ZU_DE else KEIN_KANDIDAT_TEXT
+        assert erwartet in text, (
+            f"Erwarte {erwartet!r} fuer {fall!r}, bekam: {text!r}"
         )
         return
     if ergebnis == ERGEBNIS_KEIN_AKTIVES_ZIEL:
@@ -150,7 +158,17 @@ def _pruefe_matrix_ergebnis(ergebnis, *, recorder, chat_id, nutzer, fall, ziel_n
         )
         return
     if ergebnis == ERGEBNIS_RUECKFRAGE:
-        assert "Mehrdeutig" in text, f"Erwarte Rueckfrage, bekam: {text!r}"
+        # #2417 Kurzform englisch (Spec Abschnitt H): ohne eindeutiges Ziel
+        # folgt die Sprache dem gesendeten Wort -- der Repraesentant "pause"
+        # ist in beiden Sprachen gleich und wird ENGLISCH beantwortet. Das
+        # deutsche Wort "Mehrdeutig" ist deshalb kein tragfaehiges Merkmal
+        # mehr; sprachneutral ist die Kandidatenliste (alle Ziele benannt).
+        kandidaten = ([nutzer.trip.name] if nutzer.trip else []) + [
+            p["name"] for p in nutzer.presets
+        ]
+        assert len(kandidaten) >= 2, f"Testaufbau: keine Mehrdeutigkeits-Lage: {kandidaten!r}"
+        for name in kandidaten:
+            assert name in text, f"Rueckfrage nennt Kandidat {name!r} nicht: {text!r}"
         return
     if ergebnis == ERGEBNIS_ANTWORT_TRIP:
         merkmal = merkmal_fuer(fall, nutzer=nutzer)
@@ -299,9 +317,13 @@ def test_pause_weiter_bleiben_mehrdeutig(monkeypatch, user_ids):
     recorder.pruefe_keine_unbekannten_aufrufe()
     inhalte = recorder.telegram_inhalte(nutzer.telegram_chat_id)
     assert len(inhalte) == 2, f"Erwarte 2 Antworten, bekam {len(inhalte)}: {inhalte!r}"
-    for eintrag in inhalte:
+    for wort, eintrag in zip(("pause", "weiter"), inhalte):
         text = eintrag["payload"].get("text", "")
-        assert "Mehrdeutig" in text, text
+        # #2417 Kurzform englisch (Spec Abschnitt H): ohne eindeutiges Ziel
+        # folgt die Sprache dem gesendeten Wort -- WEITER bleibt deutsch,
+        # PAUSE (in beiden Sprachen gleich) wird englisch beantwortet.
+        if wort == "weiter":
+            assert "Mehrdeutig" in text, text
         assert nutzer.trip.name in text, text
         for preset in nutzer.presets:
             assert preset["name"] in text, text

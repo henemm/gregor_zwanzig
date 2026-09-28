@@ -80,7 +80,7 @@ TZ = ZoneInfo("Europe/Paris")
 TAG = 10  # 2026-09-10, Europe/Paris (CEST) -- beliebig, nur fest
 
 VIS = get_metric("visibility")            # sms_code "VS", decimals=1, km
-TEMP = get_metric("temperature")          # sms_code "D", decimals=0, °C
+TEMP = get_metric("temperature")          # sms_code "T" (#2417 AC-12), decimals=0, °C
 NIGHT = get_metric("temperature_night")   # sms_code "" -> col_label "Night"
 DAYMAX = get_metric("temperature_day_high")  # sms_code "" -> col_label "DayMax"
 WDIR = get_metric("wind_direction")       # sms_code "WD", nicht-numerisch (Grad -> Kuerzel)
@@ -406,8 +406,10 @@ def test_ac3_kuerzel_ist_sms_code_oder_bei_leerem_sms_code_col_label():
     kuerzel_day = _kuerzel(_kurzform(res_day, DAYMAX))
 
     assert kuerzel_vis == "VS", f"Erwartet 'VS', erhalten {kuerzel_vis!r}"
-    assert kuerzel_night == "Night", f"Erwartet 'Night', erhalten {kuerzel_night!r}"
-    assert kuerzel_day == "DayMax", f"Erwartet 'DayMax', erhalten {kuerzel_day!r}"
+    # #2417 AC-13/AC-15: das GESENDETE Kuerzel (sms_multi_symbols) hat
+    # Vorrang vor col_label -- was man in der SMS liest, kann man senden.
+    assert kuerzel_night == "N", f"Erwartet 'N', erhalten {kuerzel_night!r}"
+    assert kuerzel_day == "D", f"Erwartet 'D', erhalten {kuerzel_day!r}"
 
 
 # ═══════════════════════════ AC-4 ════════════════════════════════════════
@@ -457,7 +459,8 @@ def test_ac5_werte_ohne_einheit_stunde_ohne_fuehrende_null_rundung_nach_katalog(
 
     res_temp = _res_paare([(8, 9.7)], metric_field="t2m_c")
     body_temp = _kurzform(res_temp, TEMP)
-    assert body_temp == "D 10@8", f"Erwartet 'D 10@8', erhalten {body_temp!r}"
+    # #2417 AC-14: der Temperatur-Stundenverlauf traegt "T" ("D" = Tageshoechst).
+    assert body_temp == "T 10@8", f"Erwartet 'T 10@8', erhalten {body_temp!r}"
 
 
 def test_ac5_windrichtung_kurzform_zeigt_himmelsrichtung_langform_unveraendert():
@@ -739,6 +742,11 @@ def test_ac7_grenze_misst_den_gefalteten_text_nicht_den_rohen(monkeypatch):
 
     stunden = list(range(24))
     werte = [10.0 + i for i in stunden]
+    # #2417 AC-13/AC-15: das gesendete Kuerzel ('N') hat Vorrang vor
+    # col_label -- fuer den col_label-Rueckfall muss es hier fehlen.
+    from app import metric_catalog
+
+    monkeypatch.delitem(metric_catalog.SMS_MULTI_SYMBOLS_BY_METRIC, "temperature_night")
 
     with katalog_eintrag_ersetzt(
         monkeypatch, "temperature_night",
