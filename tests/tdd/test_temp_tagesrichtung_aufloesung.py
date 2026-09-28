@@ -315,7 +315,13 @@ class TestCatalogSmsCodesStayUnique:
             f"{_METRICS_BY_ID[TEMP_HIGH].sms_code!r} statt '' — der tote "
             f"DEC-8-Wert 'TD' muss entfernt sein (AC-3)."
         )
-        codes = [m.sms_code for m in _METRICS if m.sms_code]
+        # #2417 AC-28: temperature_cold traegt jetzt "T" wie temperature --
+        # einzige begruendete Ausnahme (derselbe Kaelte-Alarm auf dieselbe
+        # Temperatur), analog zur Ratsche in
+        # test_issue_917_alert_renderer.py::TestAC6CatalogSmsCodes.
+        codes = [m.sms_code for m in _METRICS
+                 if m.sms_code and m.id != "temperature_cold"]
+        assert len(codes) > 20, f"nur {len(codes)} sms_code -- Waechter blind?"
         doppelt = sorted({c for c in codes if codes.count(c) > 1})
         assert not doppelt, (
             f"sms_code nicht mehr global eindeutig: {doppelt} — die Ratsche "

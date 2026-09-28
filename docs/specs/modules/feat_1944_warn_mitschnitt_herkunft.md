@@ -264,6 +264,10 @@ werden strukturell (geladen + Feldvergleich) statt per String-Suche geprüft.
   - Test: bestehende Renderer-Fixture-Läufe (unverändert, da `official_alerts.py:1896-2104`
     nicht angefasst wird) vor/nach der Implementierung strukturell vergleichen (Diff auf dem
     gerenderten String, nicht auf dem Vorhandensein einer Teilzeichenkette).
+  (abgelöst durch #2417 AC-27, 28.09.2026: Warn-Kürzel `W` (wind_gust) wird zu `WG`,
+  weil `W` mit dem Wetter-Kürzel `wind` kollidierte — sichtbare, gewollte Änderung des
+  Snapshot-Fixtures `tests/fixtures/official_alert_render_snapshot_1944.json`
+  `trip_sms`/`compare_sms`, alle übrigen Kanäle bleiben byte-identisch.)
 
 - **AC-9:** Given die bestehenden Sonderpfade von `cached_fetch()` (Netzwerk-Ausnahme,
   gecachter Fehlschlag mit `data=None`, `not_covered_statuses`, `self_throttled`-Rückzug),

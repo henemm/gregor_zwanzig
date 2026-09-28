@@ -196,7 +196,13 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # zusammenhaengenden Bereich innerhalb der Kommando-Tabelle (Spalte 809 bis
 # -228 der einzigen geaenderten Zeile 55, Zeilenzahl unveraendert). Kein
 # Unterschied ausserhalb des Blocks. Alter Digest 66997d04…, neuer 3fc03b40….
-_EXPECTED_SHA256 = "3fc03b40ca53578fbc244d86fe3b367ba613c0645fd9d4102c849d4e41407a05"
+# #2417 AC-10/AC-6 (2026-09-28): Fussz.-Block "Antwort-Kommandos" traegt neu
+# eine KUERZEL-Zeile (deutscher Befehl fuer CODES, E-Mail bleibt deutsch).
+# NACHGEMESSEN gegen alle 5 Golden-Fixtures (tests/golden/email/regenerate.py,
+# vorher/nachher-Diff): einziger Unterschied ist genau diese eine zusaetzliche
+# Kommando-Zeile im Fussz.-Block, identisch fuer HTML und Klartext. Alter
+# Digest 3fc03b40…, neuer ea35bc56….
+_EXPECTED_SHA256 = "ea35bc56b77cb19f0acd64b980de47022b69974694f750e5f1b3d96449aedc4f"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

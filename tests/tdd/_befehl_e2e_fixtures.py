@@ -395,6 +395,13 @@ DEUTSCHE_SIGNALWOERTER = (
     "heute", "Heute", "morgen", "mittel", "Kilometrierung", "heutige", "verfügbar",
     "Streckenangabe", "möglich", "aktiver", "gilt", "nur", "gefunden",
     "Noch", "noch", "nutze", "Nachricht", "Eine", "aktiv", "ist",
+    # Runde 5 Finding F002 (Adversary, BROKEN): naheliegende deutsche
+    # Wetter-Vokabeln, die in Kurzform-Antworten vorkommen koennten und
+    # keine gueltigen englischen Woerter/Kuerzel sind. "Wind"/"Regen" sind
+    # zugleich gueltige englische Woerter (erscheinen z.B. in "wind 8 km/h")
+    # und bleiben deshalb bewusst NICHT ergaenzt ("Regen" stand schon vorher
+    # in der Liste und ist ein Restrisiko, s. Report).
+    "Hagel", "niedrig", "hoch",
 )
 _SIGNAL_RE = re.compile(
     r"\b(" + "|".join(re.escape(w) for w in DEUTSCHE_SIGNALWOERTER) + r")\b",

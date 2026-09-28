@@ -280,6 +280,12 @@ nicht verlangt.
   Katalog-IDs lesen (gemessen 2026-08-16, s. „Zu messen, nicht zu raten"
   Punkt 1) — die globale Eindeutigkeit von `sms_code` bleibt erhalten (jetzt
   ohne die beiden toten Duplikate) und ist per Test belegt.
+  (abgelöst durch #2417 AC-28, 28.09.2026: `temperature_cold` bekommt
+  `sms_code="T"` statt `"N"`, weil `N` in der gesendeten SMS eindeutig den
+  Nachtwert `temperature_night` bedeutet — `temperature`/`temperature_cold`
+  teilen sich seither `T` als einzige begründete Ausnahme des
+  Doppelungs-Wächters. `temperature`/`wind_chill` bleiben von dieser Spec
+  unberührt.)
   - Test: `tests/tdd/test_issue_917_alert_renderer.py::TestAC6CatalogSmsCodes::
     test_all_sms_codes_globally_unique` bleibt grün; die zwei umgeschriebenen
     Pinning-Tests (`test_temp_tagesrichtung_aufloesung.py:309-313`,

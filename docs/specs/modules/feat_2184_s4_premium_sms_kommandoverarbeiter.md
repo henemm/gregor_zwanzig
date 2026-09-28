@@ -241,6 +241,10 @@ Begründung im Code stehen.
   Telegram-Antwort den Herkunftszusatz unverändert, während die Premium-SMS-/SMS-Antwort ihn
   über **alle drei** Formatierer hinweg nicht enthält — ein Guard nur in einem der drei
   Formatierer genügt nicht.
+  (abgelöst durch #2417 AC-4/AC-19, 28.09.2026: Premium-SMS/SMS antworten seither
+  durchgehend englisch. Die Gewitterstufe bleibt inhaltlich zur E-Mail zeichengleich —
+  nur uebersetzt, ueber dieselbe Produktivquelle wie `TripCommandProcessor._stufe_en()`
+  — die Herkunft-Abwahl selbst ist unveraendert.)
 
 - **AC-9:** Given der Lernaufruf antwortet mit HTTP 200, aber ohne verwertbaren
   `user_id`-Schlüssel im Body (fehlt oder leer) / When der Poll läuft / Then wird **keine**
