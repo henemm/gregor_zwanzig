@@ -1091,6 +1091,65 @@ func (s *Scheduler) usersField(jobID string) map[string]any {
 }
 
 // Status returns current scheduler state for API exposure.
+// entryJobsLocked liefert die logischen Jobs eines Cron-Eintrags: bei einem
+// unified entry (Issue #1250 Scheibe 7c) die Sub-Jobs, sonst den Job selbst.
+// ok == false: Eintrag ohne bekannte Job-Identitaet. Aufrufer haelt s.mu.
+// Gemeinsame Aufloesung fuer Status() und StatusForUser() (#2155 S2).
+func (s *Scheduler) entryJobsLocked(id cron.EntryID) ([]jobMeta, bool) {
+	meta, ok := s.entryMap[id]
+	if !ok {
+		return nil, false
+	}
+	if len(meta.subs) > 0 {
+		return meta.subs, true
+	}
+	return []jobMeta{meta}, true
+}
+
+// statusForUserJobID ist der einzige Job, den /api/scheduler/status/me zeigt
+// (Issue #2155 S2).
+const statusForUserJobID = "trip_reports_hourly"
+
+// StatusForUser liefert die Nutzer-Sicht des Scheduler-Status (Issue #2155
+// S2): nur trip_reports_hourly, next_run aus derselben Cron-Aufloesung wie
+// Status(), last_run ausschliesslich aus dem Pro-Nutzer-Zustand -- nie aus
+// s.lastRuns (globaler Fan-out-Text). Kein Eintrag => last_run null.
+func (s *Scheduler) StatusForUser(userID string) map[string]any {
+	s.mu.RLock()
+	var job map[string]any
+	for _, e := range s.cron.Entries() {
+		metas, ok := s.entryJobsLocked(e.ID)
+		if !ok {
+			continue
+		}
+		for _, meta := range metas {
+			if meta.id == statusForUserJobID {
+				job = map[string]any{
+					"id":       meta.id,
+					"name":     meta.name,
+					"next_run": e.Next.Format(time.RFC3339),
+				}
+			}
+		}
+	}
+	s.mu.RUnlock()
+
+	jobs := make([]map[string]any, 0, 1)
+	if job != nil {
+		if rec, ok := s.userState.UserRecord(statusForUserJobID, userID); ok {
+			job["last_run"] = map[string]any{
+				"time":   rec.LastRun.Format(time.RFC3339),
+				"status": rec.LastStatus,
+				"error":  rec.LastError,
+			}
+		} else {
+			job["last_run"] = nil
+		}
+		jobs = append(jobs, job)
+	}
+	return map[string]any{"jobs": jobs}
+}
+
 func (s *Scheduler) Status() map[string]any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -1099,44 +1158,25 @@ func (s *Scheduler) Status() map[string]any {
 	jobs := make([]map[string]any, 0, len(entries))
 	for _, e := range entries {
 		nextRun := e.Next.Format(time.RFC3339)
-		meta, ok := s.entryMap[e.ID]
-		if ok && len(meta.subs) > 0 {
-			// Issue #1250 Scheibe 7c: ein unified cron entry (z.B.
-			// briefing_dispatch) expandiert zu einer Zeile PRO Sub-Job, damit
-			// die externe Beobachtbarkeit (Job-Anzahl, ids, last_run je Job)
-			// unverändert bleibt.
-			for _, sub := range meta.subs {
-				subJob := map[string]any{
-					"next_run": nextRun,
-					"id":       sub.id,
-					"name":     sub.name,
-				}
-				if lr, ok := s.lastRuns[sub.id]; ok {
-					subJob["last_run"] = map[string]any{
-						"time":   lr.Time.Format(time.RFC3339),
-						"status": lr.Status,
-						"error":  lr.Error,
-					}
-				} else {
-					subJob["last_run"] = nil
-				}
-				if overlap := s.overlapField(sub.id); overlap != nil {
-					subJob["overlap"] = overlap
-				}
-				if users := s.usersField(sub.id); users != nil {
-					subJob["users"] = users
-				}
-				jobs = append(jobs, subJob)
-			}
+		metas, ok := s.entryJobsLocked(e.ID)
+		if !ok {
+			jobs = append(jobs, map[string]any{
+				"next_run": nextRun,
+				"id":       int(e.ID),
+				"last_run": nil,
+			})
 			continue
 		}
-
-		job := map[string]any{
-			"next_run": nextRun,
-		}
-		if ok {
-			job["id"] = meta.id
-			job["name"] = meta.name
+		// Issue #1250 Scheibe 7c: ein unified cron entry (z.B.
+		// briefing_dispatch) expandiert zu einer Zeile PRO Sub-Job, damit
+		// die externe Beobachtbarkeit (Job-Anzahl, ids, last_run je Job)
+		// unverändert bleibt.
+		for _, meta := range metas {
+			job := map[string]any{
+				"next_run": nextRun,
+				"id":       meta.id,
+				"name":     meta.name,
+			}
 			if lr, ok := s.lastRuns[meta.id]; ok {
 				job["last_run"] = map[string]any{
 					"time":   lr.Time.Format(time.RFC3339),
@@ -1152,11 +1192,8 @@ func (s *Scheduler) Status() map[string]any {
 			if users := s.usersField(meta.id); users != nil {
 				job["users"] = users
 			}
-		} else {
-			job["id"] = int(e.ID)
-			job["last_run"] = nil
+			jobs = append(jobs, job)
 		}
-		jobs = append(jobs, job)
 	}
 	return map[string]any{
 		"running":             true,

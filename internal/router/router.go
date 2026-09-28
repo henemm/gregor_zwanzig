@@ -265,17 +265,26 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/archive/stats", handler.ArchiveStatsHandler(deps.Store))
 
 	// Scheduler status endpoints
-	r.Get("/api/scheduler/status", handler.SchedulerStatusHandler(deps.Scheduler))
+	// Issue #2155 S2: voller Status nur mit Maschinen-Token (Header
+	// X-GZ-Status-Token); die Route bleibt auf der Public-Allowlist, der
+	// Schutz haengt ausschliesslich an der Route. Nutzer-Sicht: /status/me
+	// (Session-Pflicht ueber die AuthMiddleware, nur eigener Laufzustand).
+	statusGuard := authmw.RequireStatusToken(deps.Config.StatusToken)
+	r.With(statusGuard).Get("/api/scheduler/status", handler.SchedulerStatusHandler(deps.Scheduler))
+	r.Get("/api/scheduler/status/me", handler.SchedulerStatusMeHandler(deps.Scheduler))
 
-	// Issue #830 — Staging-only: Debug-Trigger-Endpoint fuer Radar-Alert-Mail-Tests
+	// Issue #2155 S1: nur Admins (GZ_ADMIN_USER_IDS), sonst 403.
+	requireAdmin := authmw.RequireAdmin(admins)
+
+	// Issue #830 — Staging-only: Debug-Trigger-Endpoint fuer Radar-Alert-Mail-Tests.
+	// Issue #2155 S2: nicht mehr oeffentlich — Session + RequireAdmin;
+	// ProxyPostHandler ersetzt user_id durch die Session-Kennung.
 	if os.Getenv("GZ_ENV") == "staging" {
-		r.Post("/api/debug/trigger-radar-alert", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/debug/trigger-radar-alert"))
+		r.With(requireAdmin).Post("/api/debug/trigger-radar-alert", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/debug/trigger-radar-alert"))
 	}
 
 	// Scheduler trigger proxies (frontend → Go → Python)
-	// Issue #2155 S1: nur Admins (GZ_ADMIN_USER_IDS), sonst 403. Der
-	// Cron-Scheduler ruft Python direkt und haengt nicht an dieser Sperre.
-	requireAdmin := authmw.RequireAdmin(admins)
+	// Der Cron-Scheduler ruft Python direkt und haengt nicht an dieser Sperre.
 	r.With(requireAdmin).Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/trip-reports"))
 	r.With(requireAdmin).Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/alert-checks"))
 	r.With(requireAdmin).Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/inbound-commands"))
