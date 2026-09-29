@@ -1,0 +1,25 @@
+{
+  "id": "golden-amtlich-fall1",
+  "name": "Golden Amtliche Warnung Fall 1 (aktueller Schalter hat Vorrang)",
+  "stages": [
+    {
+      "id": "T0",
+      "name": "Etappe 1",
+      "date": "2026-01-01",
+      "waypoints": [
+        {"id": "G0", "name": "Start", "lat": 47.2692, "lon": 11.4041, "elevation_m": 600}
+      ]
+    }
+  ],
+  "official_warnings": {"enabled": true},
+  "official_alert_triggers_enabled": false,
+  "report_config": {
+    "trip_id": "golden-amtlich-fall1",
+    "enabled": true,
+    "send_email": true,
+    "send_telegram": true,
+    "send_sms": false,
+    "send_premium_sms": false,
+    "alert_on_changes": false
+  }
+}

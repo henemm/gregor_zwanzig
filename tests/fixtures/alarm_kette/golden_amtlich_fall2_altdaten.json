@@ -1,0 +1,24 @@
+{
+  "id": "golden-amtlich-fall2-altdaten",
+  "name": "Golden Amtliche Warnung Fall 2 (Alt-Daten, nur Legacy-Feld, KEIN official_warnings-Block)",
+  "stages": [
+    {
+      "id": "T0",
+      "name": "Etappe 1",
+      "date": "2026-01-01",
+      "waypoints": [
+        {"id": "G0", "name": "Start", "lat": 47.2692, "lon": 11.4041, "elevation_m": 600}
+      ]
+    }
+  ],
+  "official_alert_triggers_enabled": true,
+  "report_config": {
+    "trip_id": "golden-amtlich-fall2-altdaten",
+    "enabled": true,
+    "send_email": true,
+    "send_telegram": true,
+    "send_sms": false,
+    "send_premium_sms": false,
+    "alert_on_changes": false
+  }
+}
