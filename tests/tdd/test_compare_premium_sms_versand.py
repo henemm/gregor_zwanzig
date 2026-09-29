@@ -398,8 +398,18 @@ def _preset_senden(uid, tmp_path, **kw):
     from services.scheduler_dispatch_service import send_one_compare_preset
 
     mails: list = []
+    # Issue #2293 S2 (Altbestand-Bereinigung): send_premium_sms=True allein
+    # zaehlt seit dieser Scheibe nur noch als Briefing-Opt-in, wenn
+    # alert_channels im Preset gesetzt ist (sonst gilt es als reine
+    # Alarm-Absicht, siehe effective_compare_briefing_channels). Diese Tests
+    # pruefen ausdruecklich den Versand-Opt-in-Pfad (AC-5), darum hier explizit
+    # mitgeben.
     return send_one_compare_preset(
-        _preset(uid, send_premium_sms=True), Settings(), uid, str(tmp_path),
+        _preset(
+            uid, send_premium_sms=True,
+            alert_channels={"email": True, "telegram": False, "sms": False, "premium_sms": True},
+        ),
+        Settings(), uid, str(tmp_path),
         all_locations_cache=_orte(), target_date=TARGET_DATE, tage_ab_ortstag=0,
         mail_sink=lambda **k: mails.append(k), **kw,
     ), mails

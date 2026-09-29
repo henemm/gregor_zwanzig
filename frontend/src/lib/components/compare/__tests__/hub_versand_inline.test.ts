@@ -95,6 +95,8 @@ function makeSnapshot(overrides: Partial<VersandSnapshot> = {}): VersandSnapshot
 	return {
 		sendTelegram: true,
 		sendSms: false,
+		// Issue #2293 Scheibe S2 (#2448): neuntes Klasse-A-Feld im Snapshot.
+		sendPremiumSms: false,
 		morningEnabled: true,
 		morningTime: '06:30',
 		eveningEnabled: true,

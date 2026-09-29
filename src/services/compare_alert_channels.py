@@ -48,7 +48,16 @@ def effective_compare_briefing_channels(preset: dict, settings: Settings, user_i
         channels.add("telegram")
     if preset.get("send_sms") and settings.can_send_sms() and sms_allowed(user_id):
         channels.add("sms")
-    if preset.get("send_premium_sms") and premium_sms_allowed(user_id):
+    # Issue #2293 Scheibe S2 (Nachtrag, Altbestand-Bereinigung): vor dieser
+    # Scheibe war der Alarme-Reiter der einzige UI-Weg, der send_premium_sms
+    # schreiben konnte -- ein gesetztes send_premium_sms OHNE vorhandenes
+    # alert_channels traegt also eine Alarm-, keine Briefing-Absicht (siehe
+    # Modul-Docstring test_compare_premium_sms_legacy_cleanup.py, AC-15/16).
+    if (
+        preset.get("send_premium_sms")
+        and preset.get("alert_channels") is not None
+        and premium_sms_allowed(user_id)
+    ):
         channels.add("premium_sms")
     return channels
 

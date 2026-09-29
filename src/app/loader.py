@@ -281,6 +281,10 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         official_warnings=data.get("official_warnings"),
         send_telegram=data.get("send_telegram"),
         send_sms=data.get("send_sms"),
+        # Issue #2293 Scheibe S2: explizit durchreichen (auch als None) —
+        # Modellparitaet zu Go, kein neuer Leser (siehe models.py).
+        send_premium_sms=data.get("send_premium_sms"),
+        alert_channels=data.get("alert_channels"),
         morning_enabled=data.get("morning_enabled"),
         morning_time=data.get("morning_time"),
         evening_enabled=data.get("evening_enabled"),

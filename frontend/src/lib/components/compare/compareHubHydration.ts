@@ -27,6 +27,7 @@ import {
 } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
 import { hydrateWeatherMetricsFromPreset } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import type { AlarmHydrationTarget } from '../shared/alarmeVergleichSpeicherung.ts';
+import { reconstructCompareAlertChannels } from './alarmePropsAus.ts';
 
 /** Plain-Objekt mit GENAU den 6 Feldern, die CorridorEditor.svelte im
  * vergleich-Kontext aus dem Wizard-State liest. Die Bridge-Komponente
@@ -96,13 +97,14 @@ export function hydrateAlarmFieldsFromPreset(
 		preset.official_warnings?.enabled ?? preset.official_alert_triggers_enabled !== false;
 	state.radarAlertEnabled = preset.radar_alert_enabled ?? false;
 	state.metricAlertLevels = (displayConfig.metric_alert_levels as Record<string, string>) ?? {};
-	// Issue #1461 S3b-2b (Speicher-Bugfix): sendTelegram/sendSms UND die
-	// Kanal-Schwelle mit-hydrieren, damit eine Aenderung im Alarme-Reiter als
-	// Snapshot-Differenz erkennbar wird (s. AlarmHydrationTarget-Kommentar).
-	state.sendTelegram = preset.send_telegram ?? false;
-	state.sendSms = preset.send_sms ?? false;
-	// Issue #1745 A (D1): fehlt das Feld im Preset, ist der Kostenkanal AUS.
-	state.sendPremiumSms = preset.send_premium_sms ?? false;
+	// Issue #2293 Scheibe S2 (AC-9/AC-11 Entkopplung): der Alarm-Kanal-Bestand
+	// hydriert ab jetzt aus `alert_channels` (Defense-in-Depth-Rueckfall auf
+	// die flachen Felder in reconstructCompareAlertChannels) statt aus
+	// send_telegram/send_sms/send_premium_sms — diese drei sind seit dieser
+	// Scheibe reine Briefing-Felder (hydrateVersandFieldsFromPreset) und
+	// duerfen die Alarm-Anzeige nicht mehr beeinflussen (sonst gewinnt je nach
+	// zuletzt besuchtem Reiter mal die Alarm-, mal die Briefing-Bedeutung).
+	state.channels = reconstructCompareAlertChannels(preset);
 	state.channelThresholds = (preset.alert_channel_thresholds as Record<string, string>) ?? {};
 	state.alertCooldownMinutes = preset.alert_cooldown_minutes;
 	state.alertQuietFrom = preset.alert_quiet_from;

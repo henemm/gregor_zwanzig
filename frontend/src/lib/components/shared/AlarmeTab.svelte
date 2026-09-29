@@ -97,9 +97,6 @@
 		onOfficialWarningsChange?: (an: boolean) => void;
 		metricAlertLevels?: Record<string, string>;
 		activeMetricKeys?: string[] | null;
-		sendTelegram?: boolean;
-		sendSms?: boolean;
-		sendPremiumSms?: boolean;
 		channelThresholds?: Record<string, string>;
 		onThresholdChange?: (kind: ChannelKind, level: ChannelThreshold) => void;
 		telegramStyle?: 'rich' | 'kurzform';
@@ -156,9 +153,6 @@
 		onOfficialWarningsChange,
 		metricAlertLevels,
 		activeMetricKeys,
-		sendTelegram,
-		sendSms,
-		sendPremiumSms,
 		channelThresholds,
 		onThresholdChange,
 		telegramStyle,
@@ -282,9 +276,16 @@
 	// ── (d) Kanaele ───────────────────────────────────────────────────────────
 	// route: lokaler State, Bestand kommt ueber existingChannels-Prop (S3
 	// rekonstruiert Ist-Zustand, AC-15) — ohne Prop greift der Neuanlage-
-	// Default (AC-11). vergleich: bindet an bestehende send_telegram/send_sms
-	// (Implementation Details Abschnitt 5) — E-Mail bleibt implizit
-	// (compare_official_alert.py:161-169), daher hier kein Toggle fuer E-Mail.
+	// Default (AC-11). Issue #2293 S2 (AC-1/AC-9/AC-11): der vergleich-Zweig
+	// bindet ab jetzt an DIESELBE existingChannels-Prop (E-Mail nicht mehr
+	// hart auf true) — reconstructCompareAlertChannels(preset) liefert sie
+	// (alarmePropsAus.ts). Discriminator ist `trip` (route-Mounts uebergeben
+	// immer ein Objekt, vergleich-Mounts NIE, Muster Zeile 415 `!trip`) statt
+	// eines Vergleichs-eigenen `context===`-Zweigs (Ratsche
+	// context_herkunft_zweige_eingefroren.test.ts). Fuer vergleich wird die
+	// Anzeige bei JEDER Prop-Aenderung frisch aus `existingChannels`
+	// hergeleitet (kein once-initialisierter lokaler State) — sonst saehe ein
+	// Rollback (`onAlarmFeldSetzen('channels', ...)`) NIE eine Wirkung.
 	//
 	// Adversary Fix-Loop 1, F001: onChannelToggle ist nur noch ein
 	// informativer Callback (API-Kompatibilitaet fuer AlarmeScheduleTab) —
@@ -293,18 +294,10 @@
 	// schedule()-Aufruf im Container.
 	let routeChannelState = $state<AlertChannelState>(resolveAlertChannels(existingChannels));
 	const displayChannelState = $derived<AlertChannelState>(
-		sendTelegram === undefined
-			? routeChannelState
-			: {
-					telegram: sendTelegram,
-					sms: sendSms ?? false,
-					premium_sms: sendPremiumSms ?? false,
-					// E-Mail bleibt implizit — kein Toggle im vergleich-Zweig.
-					email: true
-				}
+		trip ? routeChannelState : resolveAlertChannels(existingChannels)
 	);
 	function handleChannelToggle(kind: ChannelKind) {
-		if (sendTelegram === undefined) {
+		if (trip) {
 			routeChannelState = { ...routeChannelState, [kind]: !routeChannelState[kind] };
 		}
 		onChannelToggle?.(kind);
@@ -446,10 +439,17 @@
 			quietFrom,
 			quietTo,
 			telegramStyle,
-			sendTelegram,
-			sendSms,
-			sendPremiumSms,
-			channelThresholds
+			channelThresholds,
+			// Issue #2293 S2: der Alarm-Kanal-Bestand laeuft als EIN Objekt statt
+			// der drei Flach-Felder — der Feldname stimmt 1:1 mit
+			// AlarmSnapshot.channels ueberein, keine PROP_JE_FELD-Umleitung
+			// noetig. Bewusst NICHT ueber die $derived-Variable
+			// `displayChannelState` gelesen, sondern dieselbe Herleitung inline
+			// wiederholt — `werte()` muss jedes Feld bei JEDEM Zugriff frisch aus
+			// den Props lesen (Kommentar an alarmZustandsBruecke), eine
+			// zwischengespeicherte `$derived`-Variable waere hier die Landmine,
+			// vor der sich der Bausteintest (F001/F003) schuetzt.
+			channels: trip ? routeChannelState : resolveAlertChannels(existingChannels)
 		}),
 		(feld, wert) => onAlarmFeldSetzen?.(feld, wert)
 	);
@@ -538,7 +538,7 @@
 						<TelegramKurzstilToggle
 							context="vergleich"
 							style={telegramStyle ?? 'rich'}
-							disabled={!(sendTelegram ?? false)}
+							disabled={!(displayChannelState.telegram ?? false)}
 							onchange={(s) => onTelegramStyleChange?.(s)}
 						/>
 					</div>

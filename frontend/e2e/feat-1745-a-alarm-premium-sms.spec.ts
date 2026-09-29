@@ -2,7 +2,12 @@
 // vierter Kanal in der Alarm-Kanal-Auswahl.
 // Spec: docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md
 //   AC-8  — Ortsvergleichs-Hub: Dringlichkeits-Schwelle überlebt Speichern+Reload
-//   AC-10 — Ortsvergleichs-Hub: Haken überlebt Speichern+Reload, PUT trägt send_premium_sms
+//   AC-10 — Ortsvergleichs-Hub: Haken überlebt Speichern+Reload, PUT trägt
+//           alert_channels.premium_sms (Issue #2293 S2 hat die urspruengliche
+//           Zusicherung "PUT traegt send_premium_sms" abgeloest: der
+//           Alarme-Reiter-Klick schreibt seither AUSSCHLIESSLICH
+//           alert_channels.premium_sms, send_premium_sms ist ein reines
+//           Briefing-Feld des Versand-Reiters und bleibt unangetastet, AC-9)
 //   AC-14 — TRIP: Haken überlebt Speichern+Reload, PUT trägt alert_channels.premium_sms
 //
 // 🔴 WARUM DREI KLICKPFADE UND NICHT EINER: Trip und Ortsvergleich teilen die
@@ -138,9 +143,13 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 	});
 
 	// ── AC-10: Ortsvergleichs-Hub — Haken ────────────────────────────────────
-	// Mutation (Spec): alarmSnapshotAus() (shared/alarmeVergleichSpeicherung.ts) liest
-	// `sendPremiumSms` nicht aus `wizardState` — der Klick wäre sichtbar, käme
-	// aber nie im PUT-Body an.
+	// Issue #2293 S2 (AC-9 Entkopplung): der Alarme-Reiter schreibt seither
+	// `alert_channels.premium_sms`, NIE `send_premium_sms` (Briefing-Feld des
+	// Versand-Reiters, Same-Tab-Race-Schutz). Mutation (Spec #2293 S2,
+	// Mutations-Gegenprobe (f)): der Alarme-Reiter setzt zusaetzlich
+	// `send_premium_sms` — dann wuerde ein reiner Alarm-Kanal-Klick das
+	// Briefing-Premium-SMS mitschalten (die urspruengliche, jetzt behobene
+	// stille Kopplung aus #2448).
 	test('AC-10: hub_premium_sms_haken_ueberlebt_speichern_und_reload', async ({ page }) => {
 		const errors = trackConsoleErrors(page);
 		const suffix = Date.now() + 1;
@@ -171,12 +180,24 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 		const putRes = await putPromise;
 		expect(putRes.ok(), `PUT nach Premium-SMS-Schalter fehlgeschlagen: ${putRes.status()}`).toBeTruthy();
 
-		const body = putRes.request().postDataJSON() as { send_premium_sms?: boolean };
+		// Issue #2293 S2 (AC-9/AC-10): der Alarme-Reiter-Klick trägt
+		// `alert_channels.premium_sms`, NIE `send_premium_sms` (Briefing-Feld,
+		// bleibt vom reinen Alarm-Klick unangetastet).
+		const body = putRes.request().postDataJSON() as {
+			alert_channels?: Record<string, boolean>;
+			send_premium_sms?: boolean;
+		};
+		expect(body.alert_channels, 'PUT-Body ohne alert_channels').toBeTruthy();
+		expect(
+			body.alert_channels![KIND],
+			'Der PUT-Body trägt alert_channels.premium_sms nicht — der Haken wäre sichtbar und ' +
+				'wirkungslos (alarmePropsAus.ts::onChannelToggle/baueAlarmNutzlast).'
+		).toBe(true);
 		expect(
 			body.send_premium_sms,
-			'PUT-Body enthält kein send_premium_sms — der Haken wäre sichtbar und wirkungslos ' +
-				'(alarmSnapshotAus()/baueAlarmNutzlast, Landmine 3).'
-		).toBe(true);
+			'#2293 S2 AC-9 FAIL: der Alarm-Kanal-Klick hat send_premium_sms (Briefing-Feld) ' +
+				'mitgeschrieben — die Entkopplung ist verletzt.'
+		).toBeUndefined();
 
 		// ── Der eigentliche Beweis: neu laden ────────────────────────────────
 		await page.reload();
@@ -188,10 +209,20 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 			fullPage: true
 		});
 
-		// Gegenprobe am Server, nicht nur an der Oberfläche.
+		// Gegenprobe am Server, nicht nur an der Oberfläche (#2293 S2: alert_channels
+		// ist der Bestand, send_premium_sms bleibt das unbeteiligte Briefing-Feld).
 		const getRes = await page.request.get(`/api/compare/presets/${preset.id}`);
 		expect(getRes.ok()).toBeTruthy();
-		expect((await getRes.json()).send_premium_sms).toBe(true);
+		const gespeichert = (await getRes.json()) as {
+			alert_channels?: Record<string, boolean>;
+			send_premium_sms?: boolean;
+		};
+		expect(gespeichert.alert_channels?.premium_sms).toBe(true);
+		expect(
+			gespeichert.send_premium_sms,
+			'#2293 S2 AC-9 FAIL: send_premium_sms wurde vom Alarm-Kanal-Klick auf true gesetzt (bzw. ' +
+				'ist entgegen der Serialisierung `*bool` mit omitempty ueberhaupt im JSON aufgetaucht).'
+		).toBeUndefined();
 
 		expect(errors, `Konsolenfehler während AC-10-Lauf: ${JSON.stringify(errors)}`).toEqual([]);
 	});

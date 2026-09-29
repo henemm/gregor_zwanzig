@@ -207,11 +207,22 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 			'AC-2 FAIL: der Telegram-Schalter nimmt die Geste nicht an.'
 		).toHaveAttribute('aria-checked', 'true');
 		await warteAufGespeichert(page);
+		// Issue #2293 S2: der Alarme-Reiter schreibt seit der Entkopplung
+		// `alert_channels.telegram`, NICHT mehr `send_telegram` (das ist ab jetzt
+		// ein reines Briefing-Feld des Versand-Reiters, AC-1/AC-9).
 		await expect
-			.poll(async () => (await serverStand(page, id)).send_telegram, {
-				timeout: 15_000,
-				message: 'AC-2 FAIL: der Telegram-Kanal wurde nicht gespeichert.'
-			})
+			.poll(
+				async () =>
+					(
+						(await serverStand(page, id)).alert_channels as
+							| Record<string, boolean>
+							| undefined
+					)?.telegram,
+				{
+					timeout: 15_000,
+					message: 'AC-2 FAIL: der Telegram-Kanal wurde nicht gespeichert.'
+				}
+			)
 			.toBe(true);
 
 		// Kanal-Schwelle: die Stufen-Auswahl steht in derselben Zeile. Die Stufen

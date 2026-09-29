@@ -197,7 +197,13 @@ const EINGEFROREN: readonly string[] = [
 	//         (DARSTELLUNG: im Trip steht derselbe Schalter im Versand-Reiter, #1260 S5)
 	//   :566  `{#if context === 'vergleich'}` — Beispielwarnung
 	//         (FACHLICH: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten)
-	'AlarmeTab.svelte:256',
+	// 🔴 Issue #2293 Scheibe S2: `AlarmeTab.svelte:256` verschob sich auf `:250`
+	// (netto -6 Zeilen VOR dieser Stelle: drei entfallene Props + drei
+	// entfallene Destrukturierungs-Zeilen sendTelegram/sendSms/sendPremiumSms,
+	// s. Implementation Details Abschnitt 3) — die drei ANDEREN AlarmeTab-
+	// Eintraege bleiben auf ihrer Zeile (ein kompensierender Kommentarblock
+	// gleicht die Zeilenzahl VOR ihnen wieder aus, Datei bleibt bei 631 Zeilen).
+	'AlarmeTab.svelte:250',
 	'AlarmeTab.svelte:514',
 	'AlarmeTab.svelte:533',
 	'AlarmeTab.svelte:566',
@@ -205,10 +211,18 @@ const EINGEFROREN: readonly string[] = [
 	// Wirkort-/Darstellungs-Weichen, kein `wiz`-Symptom. Ihre Zeilennummern
 	// verschoben sich durch die elf neuen Prop-Zeilen im Skript-Teil; die neuen
 	// sind gemessen und unten in BLEIBT_MIT_INHALT inhaltlich gefesselt.
-	'VersandTab.svelte:348',
-	'VersandTab.svelte:358',
-	'VersandTab.svelte:394',
-	'versandVergleichSpeicherung.ts:221',
+	// 🔴 Issue #2293 Scheibe S2 (#2448): zusaetzliche Verschiebung um 8 Zeilen
+	// durch den neunten Klasse-A-Prop `sendPremiumSms` (Prop-Deklaration,
+	// Destrukturierung, `werte()`-Bruecke) — `:348/:358/:394` -> `:356/:366/:402`.
+	'VersandTab.svelte:356',
+	'VersandTab.svelte:366',
+	'VersandTab.svelte:402',
+	// 🔴 Issue #2293 Scheibe S2: `versandVergleichSpeicherung.ts:221` verschob
+	// sich auf `:235` (+14 Zeilen VOR dieser Stelle: `sendPremiumSms` in zwei
+	// Interfaces, zwei Snapshot-/Hydrations-Funktionen und der Payload-Trennung
+	// in `baueVersandNutzlast`, s. Implementation Details Abschnitt 4/5) — fuer
+	// sie gilt AB JETZT der neue positionsbasierte Vertrag auf `:235`.
+	'versandVergleichSpeicherung.ts:237',
 	// #2422 S2a: vier Eintraege um 7 Zeilen verschoben durch den
 	// Read-Modify-Write-Umbau, der fuenfte (Markup-Weiche weiter unten) um
 	// zusaetzliche 6 Zeilen durch das Auslagern des untrackten
@@ -276,7 +290,7 @@ const EINGEFROREN_SOLL_ANZAHL = 47;
  */
 const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: string }[] = [
 	{
-		eintrag: 'AlarmeTab.svelte:256',
+		eintrag: 'AlarmeTab.svelte:250',
 		zeile: "context === 'vergleich'",
 		folgt: 'deriveUnalertableSelectedMetricNames('
 	},
@@ -420,17 +434,17 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// ist in beiden Zweigen gleich und taugte als Anker nicht — ein vertauschtes
 	// Paar faende dort seinen Anker und die Fesselung waere wertlos.
 	{
-		eintrag: 'VersandTab.svelte:348',
+		eintrag: 'VersandTab.svelte:356',
 		zeile: "if (context !== 'vergleich' || !vergleichSpeicherung) return;",
 		folgt: 'versandSnapshotAus(versandZustand);'
 	},
 	{
-		eintrag: 'VersandTab.svelte:358',
+		eintrag: 'VersandTab.svelte:366',
 		zeile: "{#if context === 'route'}",
 		folgt: 'email: send_email,'
 	},
 	{
-		eintrag: 'VersandTab.svelte:394',
+		eintrag: 'VersandTab.svelte:402',
 		zeile: "{:else if context === 'vergleich'}",
 		folgt: 'email: sendEmail ?? false,'
 	},

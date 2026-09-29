@@ -1356,6 +1356,14 @@ class ComparePreset:
     official_warnings: Optional[dict] = field(default_factory=lambda: {"enabled": False})
     send_telegram: Optional[bool] = None
     send_sms: Optional[bool] = None
+    # Issue #2293 Scheibe S2 — Modellparität zu Go (internal/model/compare_preset.go),
+    # 1:1 analog zu alert_metric_channels weiter unten. send_premium_sms steuert
+    # ausschliesslich das planmaessige Briefing (Versand-Reiter); alert_channels
+    # ist das eigene Kanal-Sub-Objekt fuer den Alarm-Versand. Kein neuer Leser:
+    # _compare_channel_inputs (src/services/alert_channels.py) liest weiterhin
+    # ueber das Roh-Dict.
+    send_premium_sms: Optional[bool] = None
+    alert_channels: Optional[dict] = None
     morning_enabled: Optional[bool] = None
     morning_time: Optional[str] = None
     evening_enabled: Optional[bool] = None

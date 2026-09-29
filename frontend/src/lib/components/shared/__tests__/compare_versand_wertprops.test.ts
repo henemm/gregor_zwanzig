@@ -119,6 +119,8 @@ const WERTPROPS = [
 	'sendEmail',
 	'sendTelegram',
 	'sendSms',
+	// Issue #2293 Scheibe S2 (#2448): neuntes Klasse-A-Feld.
+	'sendPremiumSms',
 	'morningEnabled',
 	'morningTime',
 	'eveningEnabled',
@@ -134,6 +136,7 @@ const RUECKRUFE = [
 	'onSendEmailChange',
 	'onSendTelegramChange',
 	'onSendSmsChange',
+	'onSendPremiumSmsChange',
 	'onMorningEnabledChange',
 	'onMorningTimeChange',
 	'onEveningEnabledChange',
@@ -168,10 +171,11 @@ function saatVergleich(zusatz: Knoten = {}): Knoten {
 		wiz: undefined,
 		untrack: (fn: () => unknown) => fn(),
 		api: { put: async () => ({}) },
-		// acht Wertprops
+		// neun Wertprops (Issue #2293 S2 ergaenzt sendPremiumSms)
 		sendEmail: false,
 		sendTelegram: false,
 		sendSms: false,
+		sendPremiumSms: false,
 		morningEnabled: true,
 		morningTime: '07:00',
 		eveningEnabled: false,
@@ -181,10 +185,11 @@ function saatVergleich(zusatz: Knoten = {}): Knoten {
 		alertCooldownMinutes: undefined,
 		alertQuietFrom: undefined,
 		alertQuietTo: undefined,
-		// neun Rueckrufe — vom Aufrufer ueberschrieben
+		// zehn Rueckrufe — vom Aufrufer ueberschrieben
 		onSendEmailChange: () => {},
 		onSendTelegramChange: () => {},
 		onSendSmsChange: () => {},
+		onSendPremiumSmsChange: () => {},
 		onMorningEnabledChange: () => {},
 		onMorningTimeChange: () => {},
 		onEveningEnabledChange: () => {},
@@ -481,6 +486,7 @@ function wizStand(): Knoten {
 		sendEmail: true,
 		sendTelegram: true,
 		sendSms: false,
+		sendPremiumSms: true,
 		morningEnabled: true,
 		morningTime: '06:30',
 		eveningEnabled: true,
@@ -526,7 +532,7 @@ describe('AC-3: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () =>
 			}
 		});
 
-		test(`${was}: das gestreute Buendel traegt alle elf Werte/Lesewerte und alle acht Rueckrufe`, async () => {
+		test(`${was}: das gestreute Buendel traegt alle zwoelf Werte/Lesewerte und alle neun Rueckrufe`, async () => {
 			const { quelle: q0, treffer } = einbettungen(datei);
 			const gestreut = treffer.map((e) => streuung(e, q0));
 			assert.ok(

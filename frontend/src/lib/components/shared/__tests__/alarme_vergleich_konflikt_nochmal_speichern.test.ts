@@ -111,9 +111,11 @@ describe('AC-4: Speicherkonflikt beim Alarm-Speichern → „Nochmal speichern" 
 		await server.handler(PRESET_PFAD, { method: 'PUT', body: JSON.stringify({ name: 'fremd' }) });
 		const { wiz, ctl, speicherung } = aufbau();
 
-		// WHEN: Nutzer schaltet Radar und SMS an
+		// WHEN: Nutzer schaltet Radar und den SMS-ALARM-Kanal an (Issue #2293 S2:
+		// der Alarme-Reiter schreibt seit dieser Scheibe `wiz.channels`, nicht
+		// mehr `wiz.sendSms` — dasselbe Szenario, neues Feld).
 		wiz.radarAlertEnabled = true;
-		wiz.sendSms = true;
+		wiz.channels = { ...(wiz.channels as Record<string, boolean>), sms: true };
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
@@ -121,7 +123,11 @@ describe('AC-4: Speicherkonflikt beim Alarm-Speichern → „Nochmal speichern" 
 		assert.equal(puts().at(-1)?.status, 412, 'Vorbedingung: der Server muss den veralteten Stand ablehnen');
 		assert.equal(ctl.state, 'conflict', 'ein 412 muss „Nochmal speichern" auslösen, nicht einen generischen Fehler');
 		assert.equal(wiz.radarAlertEnabled, true, 'bei 412 darf NICHT zurückgerollt werden — die Änderung bleibt sichtbar');
-		assert.equal(wiz.sendSms, true, 'bei 412 darf NICHT zurückgerollt werden — die Änderung bleibt sichtbar');
+		assert.equal(
+			(wiz.channels as Record<string, boolean>).sms,
+			true,
+			'bei 412 darf NICHT zurückgerollt werden — die Änderung bleibt sichtbar'
+		);
 
 		// WHEN: „Nochmal speichern"
 		await ctl.retryConflict();
@@ -131,7 +137,11 @@ describe('AC-4: Speicherkonflikt beim Alarm-Speichern → „Nochmal speichern" 
 		assert.equal(letzter.status, 200, 'der Wiederholungs-PUT muss durchgehen');
 		const body = server.storedBody(PRESET_ID) as Record<string, unknown>;
 		assert.equal(body.radar_alert_enabled, true, 'der Wiederholungs-PUT muss den geänderten Radar-Wert tragen');
-		assert.equal(body.send_sms, true, 'der Wiederholungs-PUT muss den geänderten SMS-Kanal tragen');
+		assert.equal(
+			(body.alert_channels as Record<string, boolean>).sms,
+			true,
+			'der Wiederholungs-PUT muss den geänderten SMS-ALARM-Kanal tragen'
+		);
 		assert.equal(ctl.state, 'idle', 'Endzustand „Gespeichert"');
 		assert.ok(ctl.savedAt instanceof Date);
 		assert.equal(wiz.radarAlertEnabled, true, 'die Oberfläche springt nicht auf den alten Stand zurück');

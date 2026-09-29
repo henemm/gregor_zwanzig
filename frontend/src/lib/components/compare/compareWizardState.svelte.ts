@@ -7,6 +7,7 @@
 import type { ActivityProfile, Corridor } from '$lib/types';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState';
 import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/compareChannelMetricLayouts';
+import type { AlertChannelState } from '../shared/alarme-tab/alertChannelState';
 import { buildNewComparePresetPayload } from './compareEditorSave';
 
 export class CompareWizardState {
@@ -59,9 +60,15 @@ export class CompareWizardState {
 	sendEmail = $state(true);
 	sendTelegram = $state(false);
 	sendSms = $state(false);
-	// Issue #1745 A (D1): vierter ALARM-Kanal des Ortsvergleichs (Premium-SMS,
-	// Go-Pendant ComparePreset.SendPremiumSms). Default AUS — Kostenkanal.
+	// Issue #1745 A / #2293 S2: Premium-SMS-BRIEFING-Opt-in (Versand-Reiter).
+	// Default AUS — Kostenkanal.
 	sendPremiumSms = $state(false);
+	// Issue #2293 Scheibe S2 (Epic #1374/#2345): Alarm-Kanal-Bestand des
+	// Alarme-Reiters (alle vier Kanaele inkl. E-Mail), unabhaengig von
+	// sendTelegram/sendSms/sendPremiumSms oben (AC-9 Entkopplung). `undefined`
+	// = noch nie umgeschaltet -- alarmePropsAus() faellt dann auf den
+	// AC-6-Standard-Default zurueck.
+	channels = $state<AlertChannelState | undefined>(undefined);
 	// Issue #1268: timeWindowStart/timeWindowEnd/forecastHours entfallen — die
 	// Felder sind aus dem Editor entfernt; der Dispatch nutzt fest 0–23 Uhr / 48 h.
 	// Issue #1040: amtliche Warnungen ein/aus (Default true).
@@ -137,7 +144,8 @@ export class CompareWizardState {
 			officialAlertTriggersEnabled: this.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
 			sendTelegram: this.sendTelegram,
 			sendSms: this.sendSms,
-			sendPremiumSms: this.sendPremiumSms, // Issue #1745 A (AC-11)
+			sendPremiumSms: this.sendPremiumSms, // Issue #1745 A (AC-11) / #2293 S2
+			alertChannels: this.channels, // Issue #2293 Scheibe S2 (Abschnitt 1/7)
 			officialWarningsEnabled: this.officialWarningsEnabled, // Issue #1258 S4
 			morningEnabled: this.morningEnabled, // Issue #1232 Scheibe 2b
 			morningTime: this.morningTime,

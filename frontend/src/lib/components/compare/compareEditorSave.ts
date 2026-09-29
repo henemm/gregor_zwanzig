@@ -77,9 +77,13 @@ export interface CompareEditorEdits {
 	officialAlertTriggersEnabled?: boolean;
 	sendTelegram?: boolean;
 	sendSms?: boolean;
-	// Issue #1745 A: vierter Alarm-Kanal (Premium-SMS). Optional →
-	// rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
+	// Issue #1745 A / #2293 S2: Premium-SMS-BRIEFING-Opt-in (Versand-Reiter).
+	// Optional → rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
 	sendPremiumSms?: boolean;
+	// Issue #2293 Scheibe S2 (Epic #1374/#2345): ALARM-Kanal-Objekt (Alarme-
+	// Reiter), unabhängig von sendTelegram/sendSms/sendPremiumSms oben. Optional
+	// → rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
+	alertChannels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
 	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + editierbare Laufzeit
 	// (VersandTab context="vergleich"). Optional → rückwärtskompatibel.
 	// endDate: undefined = unangetastet (Round-Trip), null = "bis auf Weiteres"
@@ -235,8 +239,12 @@ export function buildComparePresetSavePayload(
 			: {}),
 		...(edits.sendTelegram !== undefined ? { send_telegram: edits.sendTelegram } : {}),
 		...(edits.sendSms !== undefined ? { send_sms: edits.sendSms } : {}),
-		// Issue #1745 A: analoges Round-Trip-Prinzip für den vierten Alarm-Kanal.
+		// Issue #1745 A / #2293 S2: analoges Round-Trip-Prinzip für das Premium-SMS-
+		// Briefing-Opt-in.
 		...(edits.sendPremiumSms !== undefined ? { send_premium_sms: edits.sendPremiumSms } : {}),
+		// Issue #2293 Scheibe S2: analoges Round-Trip-Prinzip für den Alarm-
+		// Kanal-Bestand (Alarme-Reiter) — unabhängig von den drei Feldern oben.
+		...(edits.alertChannels !== undefined ? { alert_channels: edits.alertChannels } : {}),
 		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + End-Datum-Lösch-Sentinel.
 		...(edits.morningEnabled !== undefined ? { morning_enabled: edits.morningEnabled } : {}),
 		...(edits.morningTime !== undefined ? { morning_time: toHHMMSS(edits.morningTime) } : {}),
@@ -293,9 +301,17 @@ export interface NewComparePresetFields {
 	officialAlertTriggersEnabled: boolean;
 	sendTelegram: boolean;
 	sendSms: boolean;
-	// Issue #1745 A (AC-11): Pflichtfeld wie seine beiden Geschwister-Booleans —
-	// ein weggelassener Schlüssel überliesse den Default dem Server.
+	// Issue #1745 A (AC-11) / #2293 S2: Premium-SMS-BRIEFING-Opt-in. Pflichtfeld
+	// wie seine beiden Geschwister-Booleans — ein weggelassener Schlüssel
+	// überliesse den Default dem Server.
 	sendPremiumSms: boolean;
+	// Issue #2293 Scheibe S2 (Implementation Details Abschnitt 1/7, AC-6):
+	// ALARM-Kanal-Bestand des Alarme-Reiters bei der Neuanlage. Optional — ohne
+	// Wert wird er 1:1 wie die Go-Materialisierung aus den drei Booleans oben
+	// abgeleitet (`{email:true, telegram:sendTelegram, sms:sendSms,
+	// premium_sms:sendPremiumSms}`), damit `AlertChannels` beim Create nie
+	// `nil` ist.
+	alertChannels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
 	officialWarningsEnabled: boolean;
 	morningEnabled: boolean;
 	morningTime: string;
@@ -382,8 +398,18 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		official_alert_triggers_enabled: fields.officialAlertTriggersEnabled,
 		send_telegram: fields.sendTelegram,
 		send_sms: fields.sendSms,
-		// Issue #1745 A (AC-11): unconditional wie die beiden Geschwister oben.
+		// Issue #1745 A (AC-11) / #2293 S2: unconditional wie die beiden Geschwister oben.
 		send_premium_sms: fields.sendPremiumSms,
+		// Issue #2293 Scheibe S2 (AC-1/Abschnitt 1): IMMER gesendet (nie
+		// weggelassen), damit `AlertChannels` beim Create nie `nil` ist — Vorgabe
+		// aus den drei Booleans oben, sofern der Alarme-Reiter keinen eigenen
+		// Bestand liefert.
+		alert_channels: fields.alertChannels ?? {
+			email: true,
+			telegram: fields.sendTelegram,
+			sms: fields.sendSms,
+			premium_sms: fields.sendPremiumSms
+		},
 		// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
 		// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
 		// false), kein sources-Feld (FE schreibt sources nie).

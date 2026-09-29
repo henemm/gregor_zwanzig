@@ -130,12 +130,15 @@ function gebundeneProps(ast: Knoten, quelle: string): string[] {
 }
 
 /** Die in AC-1 woertlich freigegebenen Wertprops. */
+// 🔴 Issue #2293 Scheibe S2 (AC-1/AC-9/AC-11): sendTelegram/sendSms/
+// sendPremiumSms sind hier ENTFALLEN — AlarmeTab bindet sie im vergleich-Zweig
+// nicht mehr (reine Briefing-Felder seit dieser Scheibe, versandPropsAus.ts).
+// `existingChannels` ersetzt sie als Alarm-Kanal-Quelle -- DIESELBE Prop wie
+// beim Trip (Design Entscheidung 5 der Spec).
 const WERTPROPS = [
 	'officialWarningsEnabled',
 	'metricAlertLevels',
-	'sendTelegram',
-	'sendSms',
-	'sendPremiumSms',
+	'existingChannels',
 	'channelThresholds',
 	'telegramStyle',
 	'cooldownMinutes',
@@ -167,9 +170,7 @@ function saatVergleich(zusatz: Knoten = {}): Knoten {
 		untrack: (fn: () => unknown) => fn(),
 		officialWarningsEnabled: true,
 		metricAlertLevels: { wind_max_kmh: 'hoch' },
-		sendTelegram: true,
-		sendSms: false,
-		sendPremiumSms: false,
+		existingChannels: { email: false, telegram: true, sms: false, premium_sms: false },
 		channelThresholds: { telegram: 'mittel' },
 		telegramStyle: 'kurzform',
 		cooldownMinutes: 30,
@@ -185,7 +186,6 @@ function saatVergleich(zusatz: Knoten = {}): Knoten {
 		// Trip-Speicher-Guard mit ReferenceError statt sauber abzubrechen —
 		// die Abwesenheits-Zusicherung von AC-6 waere dann unmessbar.
 		trip: undefined,
-		existingChannels: null,
 		existingChannelThresholds: null,
 		...zusatz
 	};
@@ -278,8 +278,7 @@ describe('AC-1: AlarmeTab leitet den Vergleichs-Zweig aus Wertprops her', () => 
 		assert.deepStrictEqual(
 			{ telegram: kanaele.telegram, sms: kanaele.sms, premium_sms: kanaele.premium_sms },
 			{ telegram: true, sms: false, premium_sms: false },
-			'AC-1 FAIL: die Kanal-Schalter lesen nicht die Props ' +
-				'`sendTelegram`/`sendSms`/`sendPremiumSms`.'
+			'AC-1 FAIL (Issue #2293 S2): die Kanal-Schalter lesen nicht die Prop `existingChannels`.'
 		);
 		const schwellen = holeAusdruck(
 			u,
@@ -521,9 +520,10 @@ describe('AC-3: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () =>
 				);
 				(buendel.onChannelToggle as (k: string) => void)('telegram');
 				assert.strictEqual(
-					wiz.sendTelegram,
-					false,
-					'AC-3 FAIL: `onChannelToggle("telegram")` schaltet `sendTelegram` nicht um.'
+					(wiz.channels as Record<string, boolean>).telegram,
+					true,
+					'AC-3 FAIL (Issue #2293 S2): `onChannelToggle("telegram")` schaltet ' +
+						'`wiz.channels.telegram` nicht um.'
 				);
 				(buendel.onThresholdChange as (k: string, s: string) => void)('sms', 'hoch');
 				assert.strictEqual(
@@ -706,9 +706,8 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 			alertQuietFrom: '22:00',
 			alertQuietTo: '07:00',
 			telegramStyle: 'kurzform',
-			sendTelegram: true,
-			sendSms: false,
-			sendPremiumSms: true,
+			// Issue #2293 S2: der Alarm-Kanal-Bestand laeuft als EIN Objekt.
+			channels: { email: false, telegram: true, sms: false, premium_sms: true },
 			channelThresholds: { telegram: 'mittel' },
 			activeMetricKeys: ['wind_max_kmh']
 		};
@@ -983,9 +982,9 @@ function alarmAusgangsstand(): Knoten {
 		alertQuietFrom: '22:00',
 		alertQuietTo: '07:00',
 		telegramStyle: 'rich',
-		sendTelegram: true,
-		sendSms: false,
-		sendPremiumSms: false,
+		// Issue #2293 Scheibe S2: der Alarm-Kanal-Bestand laeuft als EIN Objekt
+		// `channels` statt der drei Flach-Felder sendTelegram/sendSms/sendPremiumSms.
+		channels: { email: true, telegram: true, sms: false, premium_sms: false },
 		channelThresholds: { telegram: 'MODERATE' },
 		activeMetricKeys: ['wind_max_kmh']
 	};
@@ -1006,16 +1005,19 @@ const FELD_AM_ORGANISMUS: Record<string, { prop: string; neu: unknown }> = {
 	alertQuietFrom: { prop: 'quietFrom', neu: '23:00' },
 	alertQuietTo: { prop: 'quietTo', neu: '06:00' },
 	telegramStyle: { prop: 'telegramStyle', neu: 'kurzform' },
-	sendTelegram: { prop: 'sendTelegram', neu: false },
-	sendSms: { prop: 'sendSms', neu: true },
-	sendPremiumSms: { prop: 'sendPremiumSms', neu: true },
+	// Issue #2293 Scheibe S2: EIN Feld `channels` statt der drei Flach-Felder —
+	// Prop ist `existingChannels` (dieselbe Prop wie beim Trip, AlarmeTab.svelte).
+	channels: {
+		prop: 'existingChannels',
+		neu: { email: true, telegram: false, sms: true, premium_sms: true }
+	},
 	channelThresholds: { prop: 'channelThresholds', neu: { telegram: 'HIGH' } }
 };
 
 /** Eingefrorene Maechtigkeit der Snapshot-Feldmenge. Waechst oder schrumpft
  *  `alarmSnapshotAus`, wird dieser Test rot — die Schleife darf NICHT still
  *  ueber weniger Felder laufen. */
-const SNAPSHOT_FELDER_SOLL = 12;
+const SNAPSHOT_FELDER_SOLL = 10;
 
 describe('F001/F003 Frische-Garantie: die Bruecke liest JEDES Feld bei JEDEM Zugriff neu', () => {
 	/** Das Buendel des Hub-Mounts — einmal gebaut, als Saat wiederverwendet.
@@ -1173,7 +1175,7 @@ describe('F001/F003 Frische-Garantie: die Bruecke liest JEDES Feld bei JEDEM Zug
 		rueckrufe[0]();
 		assert.strictEqual(geplant.length, 1, 'F001 FAIL: die ERSTE Aenderung verpufft.');
 
-		u.sendSms = true;
+		u.existingChannels = { email: true, telegram: false, sms: true, premium_sms: false };
 		rueckrufe[0]();
 		assert.strictEqual(
 			geplant.length,

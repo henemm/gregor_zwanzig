@@ -32,6 +32,7 @@
 import {
 	applyThresholdChange,
 	resolveAlertChannelThresholds,
+	type AlertChannelState,
 	type AlertChannelThresholdState,
 	type ChannelKind,
 	type ChannelThreshold
@@ -39,7 +40,12 @@ import {
 
 /** Strukturelle Sicht auf die Alarmfelder des Compare-Wizard-Zustands —
  *  absichtlich nicht `CompareWizardState` selbst, damit diese Funktion auch
- *  gegen einen hydrierten Plain-Zustand (Hub-Bridge) arbeitet. */
+ *  gegen einen hydrierten Plain-Zustand (Hub-Bridge) arbeitet.
+ *
+ *  Issue #2293 Scheibe S2 (AC-9 Entkopplung): `sendTelegram`/`sendSms`/
+ *  `sendPremiumSms` sind hier ENTFALLEN — sie sind seit dieser Scheibe reine
+ *  Briefing-Felder (`versandPropsAus.ts`) und duerfen die Alarm-Kanal-Quelle
+ *  nicht mehr beeinflussen. `channels` uebernimmt die Alarm-Seite komplett. */
 export interface AlarmeZustandsQuelle {
 	officialAlertsEnabled?: boolean;
 	officialWarningsEnabled?: boolean;
@@ -50,10 +56,40 @@ export interface AlarmeZustandsQuelle {
 	alertCooldownMinutes?: number;
 	alertQuietFrom?: string;
 	alertQuietTo?: string;
-	sendTelegram?: boolean;
-	sendSms?: boolean;
-	sendPremiumSms?: boolean;
+	channels?: AlertChannelState;
 	activeMetricKeys?: string[] | null;
+}
+
+/**
+ * Issue #2293 Scheibe S2 (Implementation Details Abschnitt 3) — Vorbild
+ * `shared/alarme-tab/tripChannelReconstruction.ts::reconstructTripAlertChannels`.
+ * Vorrang `preset.alert_channels` (seit der Go-Materialisierung bei JEDEM
+ * geladenen Preset gesetzt) — 1:1 uebernommen, KEIN hartes `email:true`.
+ * Defense-in-Depth-Rueckfall auf die flachen `send_telegram`/`send_sms`/
+ * `send_premium_sms`-Felder (E-Mail dabei immer `true`) fuer den nur noch
+ * theoretischen Fall eines Rohobjekts ohne `alert_channels`.
+ */
+export function reconstructCompareAlertChannels(preset: {
+	alert_channels?: { email?: boolean; telegram?: boolean; sms?: boolean; premium_sms?: boolean } | null;
+	send_telegram?: boolean;
+	send_sms?: boolean;
+	send_premium_sms?: boolean;
+}): AlertChannelState {
+	const ac = preset.alert_channels;
+	if (ac) {
+		return {
+			email: ac.email ?? false,
+			telegram: ac.telegram ?? false,
+			sms: ac.sms ?? false,
+			premium_sms: ac.premium_sms ?? false
+		};
+	}
+	return {
+		email: true,
+		telegram: preset.send_telegram ?? false,
+		sms: preset.send_sms ?? false,
+		premium_sms: preset.send_premium_sms ?? false
+	};
 }
 
 /** Vollständige Kanal-Schwellen OHNE stillen Wertverlust: die Vorgabe „gering"
@@ -65,11 +101,20 @@ function vollstaendigeSchwellen(bestand: Record<string, string>): AlertChannelTh
 }
 
 /**
- * Das Prop-Bündel für `AlarmeTab context="vergleich"`: 13 Werte, 8
+ * Das Prop-Bündel für `AlarmeTab context="vergleich"`: 12 Werte, 8
  * Gesten-Rückrufe, der Zonen-Bezug der Stillen Stunden (#1378 AC-4) und die
  * Rollback-Senke des unveränderten Vergleichs-Speicherwegs.
+ *
+ * Issue #2293 Scheibe S2: `existingChannels` (Wert) + `onChannelToggle`
+ * (Rückruf, alle vier Kanäle inkl. E-Mail) ersetzen die frühere Sonderableitung
+ * mit hartem `email:true` und den drei Flach-Feldern — dieselbe `existingChannels`-
+ * Prop wie beim Trip (AlarmeTab.svelte bindet sie kontextunabhängig).
  */
 export function alarmePropsAus(wiz: AlarmeZustandsQuelle) {
+	// Solange der Alarme-Reiter noch nie einen Kanal umgeschaltet hat
+	// (`wiz.channels` unbesetzt), gilt der AC-6-Standard-Default — dieselbe
+	// Materialisierung wie beim Go-Create (email:true, Rest aus).
+	const aktuelleKanaele = wiz.channels ?? reconstructCompareAlertChannels({});
 	return {
 		amtlicheWarnungenImBericht: wiz.officialAlertsEnabled ?? true,
 		officialWarningsEnabled: wiz.officialWarningsEnabled ?? false,
@@ -77,9 +122,7 @@ export function alarmePropsAus(wiz: AlarmeZustandsQuelle) {
 		metricAlertLevels: wiz.metricAlertLevels ?? {},
 		channelThresholds: wiz.channelThresholds ?? {},
 		telegramStyle: wiz.telegramStyle ?? 'rich',
-		sendTelegram: wiz.sendTelegram ?? false,
-		sendSms: wiz.sendSms ?? false,
-		sendPremiumSms: wiz.sendPremiumSms ?? false,
+		existingChannels: aktuelleKanaele,
 		activeMetricKeys: wiz.activeMetricKeys ?? null,
 		// `undefined` ist hier ein gültiger Wert — siehe Diskriminator-Regel oben.
 		cooldownMinutes: wiz.alertCooldownMinutes,
@@ -93,11 +136,11 @@ export function alarmePropsAus(wiz: AlarmeZustandsQuelle) {
 			wiz.metricAlertLevels = { ...(wiz.metricAlertLevels ?? {}), [metrik]: stufe };
 		},
 		onChannelToggle: (kanal: ChannelKind) => {
-			// E-Mail bleibt implizit (compare_official_alert.py:161-169) — dafür
-			// gibt es im Vergleich keinen Schalter.
-			if (kanal === 'telegram') wiz.sendTelegram = !wiz.sendTelegram;
-			else if (kanal === 'sms') wiz.sendSms = !wiz.sendSms;
-			else if (kanal === 'premium_sms') wiz.sendPremiumSms = !wiz.sendPremiumSms;
+			// Issue #2293 S2 (AC-1/AC-9): schreibt EIN Alarm-Kanal-Objekt (alle
+			// vier Kanäle inkl. E-Mail) auf `wiz.channels` — NIE auf
+			// sendTelegram/sendSms/sendPremiumSms (Briefing-Felder, Entkopplung).
+			const basis = wiz.channels ?? aktuelleKanaele;
+			wiz.channels = { ...basis, [kanal]: !basis[kanal] };
 		},
 		onThresholdChange: (kanal: ChannelKind, stufe: ChannelThreshold) => {
 			// Issue #1745 A (Landmine 1): die VOLLE Struktur durchreichen statt
