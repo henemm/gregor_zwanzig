@@ -31,6 +31,8 @@ import { createPutQueue } from '../../compare/compareHubPersistenz.ts';
 import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
 import type { PutClient } from '../tripSpeicherung.ts';
 import { erstelleAlarmeVergleichSpeicherung } from '../alarmeVergleichSpeicherung.ts';
+import { EIGENFELDER, schluessel } from './goMergeServerPruefstand.ts';
+import { konfliktMitFremdemNamen } from './compareReiterAufbauPruefstand.ts';
 
 const PRESET_ID = 'cp-2276-konflikt';
 const PRESET_PFAD = `/api/compare/presets/${PRESET_ID}`;
@@ -162,5 +164,38 @@ describe('AC-4: Speicherkonflikt beim Alarm-Speichern → „Nochmal speichern" 
 
 		assert.equal(ctl.state, 'error', 'ein 500 ist kein Konflikt');
 		assert.equal(wiz.radarAlertEnabled, false, 'bei einem Nicht-412-Fehler muss die Änderung zurückgerollt werden');
+	});
+});
+
+// ── Issue #2375 (Test 6): „Nochmal speichern" sendet NUR die Eigenfelder ────
+// Spec: docs/specs/bugfix/compare_konfliktschutz_teilfelder.md — Test 6, AC-2/AC-3/AC-7.
+// Bis #2375 schickte der Wiederholungs-PUT den Voll-Spread der lokalen,
+// veralteten Basis — der Name, den ein anderer Tab inzwischen gespeichert
+// hatte, wurde still zurückgeschrieben. Der Ersatz-Server mergt hier wie Go
+// (fehlende Felder bleiben), deshalb zeigt sich das am Server-Stand.
+describe('Issue #2375: „Nochmal speichern" nach 412 — nur Eigenfelder, fremde Änderung überlebt', () => {
+	test('Wiederholungs-PUT trägt exakt die Eigenfelder des Reiters (kein Fremdfeld)', async () => {
+		const { erster, retryRumpf, zustandNach412, server } = await konfliktMitFremdemNamen('alarme', 'cp-2375-retry-alarme');
+		assert.ok(erster?.ifMatch, 'Vorbedingung: der erste PUT muss If-Match tragen');
+		assert.equal(erster.status, 412, 'Vorbedingung: der erste PUT muss am veralteten Stand scheitern');
+		assert.equal(zustandNach412, 'conflict', 'Vorbedingung: „Nochmal speichern" wird angeboten');
+		assert.equal(server.mitschnitt.filter((e) => e.method === 'PUT').at(-1)?.status, 200);
+		assert.deepEqual(
+			schluessel(retryRumpf),
+			[...EIGENFELDER.alarme.top].sort(),
+			`der Wiederholungs-PUT darf nur Eigenfelder tragen, gesendet: ${JSON.stringify(schluessel(retryRumpf))}`
+		);
+		assert.deepEqual(
+			schluessel(retryRumpf.display_config),
+			[...(EIGENFELDER.alarme.display ?? [])].sort(),
+			'display_config des Wiederholungs-PUT darf nur die eigenen Schlüssel tragen'
+		);
+	});
+
+	test('Fremdfeld überlebt den Retry: danach stehen der Name von A UND die Änderung von B auf dem Server', async () => {
+		const { server } = await konfliktMitFremdemNamen('alarme', 'cp-2375-retry-alarme');
+		const stand = server.stand('cp-2375-retry-alarme');
+		assert.equal(stand.radar_alert_enabled, true, 'die Alarme-Änderung von B muss auf dem Server stehen');
+		assert.equal(stand.name, 'Fremd von A', '„Nochmal speichern" hat den fremd gespeicherten Namen überschrieben');
 	});
 });

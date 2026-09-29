@@ -110,6 +110,33 @@ test.describe('Issue #2276 S2: Reiter „Alarme" im Vergleich speichert selbst',
 		expect((await serverStand(page, id)).radar_alert_enabled).toBe(true);
 	});
 
+	// Issue #2375 Test 13 / AC-8 — fängt: ein Eigenfeld fällt beim Umstieg auf
+	// Teilfeld-Nutzlasten aus dem Alarm-Rumpf (wird dann nicht mehr gespeichert).
+	test('#2375 Roundtrip: Radar-Alarm an → nach Neuladen steht er weiter an, der Rumpf trägt keine Fremdfelder', async ({
+		page
+	}) => {
+		const id = await legeVergleichAn(page);
+		const { puts, beantwortet } = zaehlePuts(page, id);
+		await oeffneAlarme(page, id);
+
+		await radarSchalter(page).click();
+		await expect(radarSchalter(page)).toBeChecked();
+		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
+		await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', {
+			timeout: 10_000
+		});
+		const rumpf = puts[0].postDataJSON() as Record<string, unknown>;
+		for (const fremd of ['name', 'location_ids', 'schedule', 'send_telegram', 'official_alerts_enabled']) {
+			expect(Object.keys(rumpf), `der Alarm-Rumpf darf \`${fremd}\` nicht tragen`).not.toContain(fremd);
+		}
+
+		await page.reload();
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-detail-tab-alarme"]').click();
+		await expect(radarSchalter(page)).toBeChecked({ timeout: 10_000 });
+		expect((await serverStand(page, id)).radar_alert_enabled).toBe(true);
+	});
+
 	// AC-6 — fängt: sichereSelbstSpeichererVorReiterwechsel in handleValueChange
 	test('AC-6: Alarm ändern und sofort zu „Versand" wechseln → PUT ist beim Wechsel schon beantwortet', async ({
 		page
@@ -155,9 +182,15 @@ test.describe('Issue #2276 S2: Reiter „Alarme" im Vergleich speichert selbst',
 
 		const [erster, zweiter] = puts.map((r) => r.postDataJSON());
 		expect(erster.radar_alert_enabled, 'erster PUT muss die Alarm-Änderung sein').toBe(true);
-		expect(erster.schedule, 'erster PUT darf noch nicht pausieren').toBe('daily');
+		// #2375: der Alarm-PUT trägt `schedule` gar nicht mehr (Teilfeld-Nutzlast)
+		expect(Object.keys(erster), 'erster PUT darf noch nicht pausieren').not.toContain('schedule');
 		expect(zweiter.schedule).toBe('manual');
-		expect(zweiter.radar_alert_enabled, 'Pausieren-PUT schreibt den alten Alarmwert zurück').toBe(true);
+		// Issue #2375 (AC-6/AC-9): der Pausieren-PUT trägt nur den Status — er
+		// kann den Alarmwert weder mitschicken noch zurückschreiben.
+		expect(Object.keys(zweiter).sort(), 'Pausieren-PUT trägt nur { schedule, previous_schedule }').toEqual([
+			'previous_schedule',
+			'schedule'
+		]);
 
 		const stand = await serverStand(page, id);
 		expect(stand.radar_alert_enabled).toBe(true);

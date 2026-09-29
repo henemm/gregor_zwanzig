@@ -34,6 +34,8 @@ import {
 	makePreset,
 	wertebereicheBedienung
 } from './wertebereicheVergleichPruefstand.ts';
+import { EIGENFELDER, schluessel } from '../../__tests__/goMergeServerPruefstand.ts';
+import { konfliktMitFremdemNamen } from '../../__tests__/compareReiterAufbauPruefstand.ts';
 
 const PRESET_ID = 'cp-2276-s3-konflikt';
 const PRESET_PFAD = `/api/compare/presets/${PRESET_ID}`;
@@ -151,5 +153,42 @@ describe('AC-5: Speicherkonflikt beim Wertebereiche-Speichern → „Nochmal spe
 			'sensibel',
 			'der Rollback hat eine zwischenzeitliche Alarm-Änderung am geteilten Feld überschrieben'
 		);
+	});
+});
+
+// ── Issue #2375 (Test 6): „Nochmal speichern" sendet NUR die Eigenfelder ────
+// Spec: docs/specs/bugfix/compare_konfliktschutz_teilfelder.md — Test 6, AC-2/AC-3/AC-7.
+// Bis #2375 schickte der Wiederholungs-PUT den Voll-Spread der lokalen,
+// veralteten Basis — der Name, den ein anderer Tab inzwischen gespeichert
+// hatte, wurde still zurückgeschrieben. Der Ersatz-Server mergt hier wie Go
+// (fehlende Felder bleiben), deshalb zeigt sich das am Server-Stand.
+describe('Issue #2375: „Nochmal speichern" nach 412 — nur Eigenfelder, fremde Änderung überlebt', () => {
+	test('Wiederholungs-PUT trägt exakt die Eigenfelder des Reiters (kein Fremdfeld)', async () => {
+		const { erster, retryRumpf, zustandNach412, server } = await konfliktMitFremdemNamen('wertebereiche', 'cp-2375-retry-wertebereiche');
+		assert.ok(erster?.ifMatch, 'Vorbedingung: der erste PUT muss If-Match tragen');
+		assert.equal(erster.status, 412, 'Vorbedingung: der erste PUT muss am veralteten Stand scheitern');
+		assert.equal(zustandNach412, 'conflict', 'Vorbedingung: „Nochmal speichern" wird angeboten');
+		assert.equal(server.mitschnitt.filter((e) => e.method === 'PUT').at(-1)?.status, 200);
+		assert.deepEqual(
+			schluessel(retryRumpf),
+			[...EIGENFELDER.wertebereiche.top].sort(),
+			`der Wiederholungs-PUT darf nur Eigenfelder tragen, gesendet: ${JSON.stringify(schluessel(retryRumpf))}`
+		);
+		assert.deepEqual(
+			schluessel(retryRumpf.display_config),
+			[...(EIGENFELDER.wertebereiche.display ?? [])].sort(),
+			'display_config des Wiederholungs-PUT darf nur die eigenen Schlüssel tragen'
+		);
+	});
+
+	test('Fremdfeld überlebt den Retry: danach stehen der Name von A UND die Änderung von B auf dem Server', async () => {
+		const { server } = await konfliktMitFremdemNamen('wertebereiche', 'cp-2375-retry-wertebereiche');
+		const stand = server.stand('cp-2375-retry-wertebereiche');
+		assert.deepEqual(
+			(stand.corridors as Array<{ metric: string; range: unknown }>).find((c) => c.metric === 'wind_max_kmh')?.range,
+			[0, 55],
+			'die Wertebereiche-Änderung von B muss auf dem Server stehen'
+		);
+		assert.equal(stand.name, 'Fremd von A', '„Nochmal speichern" hat den fremd gespeicherten Namen überschrieben');
 	});
 });

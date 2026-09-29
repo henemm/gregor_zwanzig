@@ -98,7 +98,7 @@ async function mikrotasksAbwarten(runden = 10): Promise<void> {
 }
 
 describe('#2276 S6f F001: der Orte-Schreibweg liest die Baseline erst BEIM Ausfuehren in der Schlange', () => {
-	test('zwei sofort aufeinanderfolgende persistPickedIds-Aufrufe: der zweite PUT-Body traegt die Antwort des ERSTEN PUT, beide laufen seriell', async () => {
+	test('zwei sofort aufeinanderfolgende persistPickedIds-Aufrufe laufen seriell, jeder PUT-Body ist exakt { location_ids }', async () => {
 		const preset = basisPreset();
 		const saveController = saveControllerAufzeichner();
 		const { api, putCalls, events, loeseErstenAuf } = gesteuerteApi();
@@ -136,10 +136,12 @@ describe('#2276 S6f F001: der Orte-Schreibweg liest die Baseline erst BEIM Ausfu
 			`Messaufbau/Regression: es sind bereits ${putCalls.length} PUTs gestartet, bevor der erste ` +
 				'aufgeloest wurde — dann liefen die beiden Aufrufe nicht seriell durch dieselbe Schlange.'
 		);
-		assert.strictEqual(
-			putCalls[0].body.name,
-			'Start',
-			'Messaufbau kaputt: der erste PUT-Body traegt nicht den Ausgangs-Namen.'
+		// Issue #2375 (Test 4 / AC-9): der Orte-PUT traegt NUR `location_ids` —
+		// kein Voll-Spread der Basis mehr (vorher: `name: 'Start'` aus currentPreset).
+		assert.deepStrictEqual(
+			putCalls[0].body,
+			{ location_ids: ['a', 'b'] },
+			'#2375: der erste Orte-PUT-Body muss exakt { location_ids } sein.'
 		);
 
 		// Der erste PUT loest auf — mit einem erkennbar AUFGEFRISCHTEN Preset.
@@ -159,23 +161,18 @@ describe('#2276 S6f F001: der Orte-Schreibweg liest die Baseline erst BEIM Ausfu
 			`F001 FAIL: die Aufrufreihenfolge (${events.join(', ')}) belegt keine Serialisierung — der ` +
 				'zweite PUT muss erst NACH dem Aufloesen des ersten starten.'
 		);
-		assert.strictEqual(
-			putCalls[1].body.name,
-			'Aufgefrischt',
-			`F001 FAIL: der zweite PUT-Body traegt \`name\` = ${JSON.stringify(putCalls[1].body.name)} ` +
-				"statt der aufgefrischten Antwort des ersten PUT ('Aufgefrischt'). Das ist genau die " +
-				'Mutation, die den Payload-Bau aus dem `enqueue()`-Closure herauszieht: dann liest ' +
-				'`persistPickedIds` `currentPreset` bereits beim Aufruf statt bei der tatsaechlichen ' +
-				'Ausfuehrung in der Schlange.'
-		);
+		// Issue #2375 (Test 4 / AC-9): seit den Teilfeld-Nutzlasten traegt der
+		// Orte-PUT keinen Basis-Spread mehr — die frueher hier geprüfte
+		// `name`-Baseline (F001) ist gegenstandslos; es bleibt die Serialisierung
+		// (oben) und der exakte Rumpf.
 		assert.deepStrictEqual(
-			putCalls[1].body.location_ids,
-			['a', 'b', 'c'],
-			'F001 FAIL: der zweite PUT-Body traegt nicht die zweite Orte-Auswahl.'
+			putCalls[1].body,
+			{ location_ids: ['a', 'b', 'c'] },
+			'#2375: der zweite Orte-PUT-Body muss exakt { location_ids } mit der zweiten Auswahl sein.'
 		);
 	});
 
-	test('persistPickedIds gefolgt von handleToggleActive: der Toggle-PUT-Body traegt ebenfalls die aufgefrischte Baseline', async () => {
+	test('persistPickedIds gefolgt von handleToggleActive: beide laufen seriell, der Toggle-PUT-Body traegt nur den Status', async () => {
 		const preset = basisPreset();
 		const saveController = saveControllerAufzeichner();
 		const { api, putCalls, events, loeseErstenAuf } = gesteuerteApi();
@@ -218,18 +215,11 @@ describe('#2276 S6f F001: der Orte-Schreibweg liest die Baseline erst BEIM Ausfu
 			['put1-gestartet', 'erster-put-aufgeloest', 'put2-gestartet'],
 			`Serialisierung ueber zwei VERSCHIEDENE Schreibpfade (Orte + Toggle-Active) verletzt: ${events.join(', ')}.`
 		);
-		assert.strictEqual(
-			putCalls[1].body.name,
-			'Aufgefrischt',
-			`Toggle-PUT-Body traegt \`name\` = ${JSON.stringify(putCalls[1].body.name)} statt der ` +
-				"aufgefrischten Antwort des vorangegangenen Orte-PUT ('Aufgefrischt') — dieselbe " +
-				'Baseline-Lehre wie F001, hier fuer den Toggle-Active-Schreibweg.'
-		);
-		assert.strictEqual(putCalls[1].body.schedule, 'manual', 'Toggle-PUT-Body muss `schedule: manual` tragen.');
-		assert.strictEqual(
-			putCalls[1].body.previous_schedule,
-			'daily',
-			'Toggle-PUT-Body muss `previous_schedule` unveraendert mitfuehren.'
+		// Issue #2375 (Test 4 / AC-9): der Toggle-PUT traegt nur den Status.
+		assert.deepStrictEqual(
+			putCalls[1].body,
+			{ schedule: 'manual', previous_schedule: 'daily' },
+			'#2375: der Toggle-PUT-Body muss exakt { schedule, previous_schedule } sein (kein Basis-Spread, kein paused_at).'
 		);
 	});
 });

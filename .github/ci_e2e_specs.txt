@@ -275,6 +275,24 @@
 # Regressions-Nachbarn im selben Lauf gruen: mobile-konto-sheet.spec.ts
 # (bereits gelistet) + mobile-bottom-nav-floating.spec.ts (bereits gelistet).
 #
+# Aufnahme 2026-09-29 (#2375, loest #2381 mit): compare-konfliktschutz-zwei-
+# kontexte.spec.ts — traegt Test 9/10/11 bzw. AC-1 bis AC-6 und AC-14 der Spec
+# docs/specs/bugfix/compare_konfliktschutz_teilfelder.md: „die fremde Aenderung
+# ueberlebt" wirkt erst im Zusammenspiel von Seitenaufbau-ETag, Teilfeld-
+# Nutzlast, 412-Pfad und Go-Merge, nur mit zwei Browser-Kontexten messbar.
+# Zweiter Kontext = weiterer Kontext mit DEMSELBEN storageState (kein zweiter
+# Login, keine 429-Sperre wie bei den Zwei-Nutzer-Specs). Ohne diesen Eintrag
+# liefe der Nachweis nie in der CI-Ampel (`e2e` ist positivgelistet).
+#   Filter A: keine Treffer fuer waitForTimeout/test.skip/test.fixme/
+#             describe.skip (grep leer, auch im Kopfkommentar), kein
+#             Hauptrepo-Pfad, kein __dirname.
+#   Filter B: 🔴 NICHT GEFAHREN. Fallzahl der neuen Datei per
+#             `npx playwright test --list` gemessen (2026-09-29): 8 eigene
+#             Faelle. Ein lokaler Zielverbund-Zyklus wurde bewusst NICHT
+#             gefahren (vier dokumentierte Fallen des lokalen Stacks, s. o.).
+#             ERSTE BESTAETIGUNG DURCH DEN CI-HAUPTLAUF AUF DEM PR.
+#   Filter C: kein `page.screenshot({path: ...})` in der Datei.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -289,6 +307,7 @@ e2e/compare-editor-autosave-user-isolation.spec.ts
 e2e/compare-editor-slice1.spec.ts
 e2e/compare-editor-slice3.spec.ts
 e2e/compare-hub-inline-edit.spec.ts
+e2e/compare-konfliktschutz-zwei-kontexte.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
 e2e/compare-stundenverlauf-wertprops.spec.ts

@@ -20,9 +20,12 @@
 // Modul-Zusicherungen stehen in
 // src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_*.test.ts.
 //
-// #2375: der erste PUT nach SSR-Laden geht ohne If-Match durch — für den
-// 412-Fall (AC-7) speichert dieser Test deshalb ZUERST selbst, bevor er den
-// Konflikt provoziert (Muster compare-wertebereiche-speichert-selbst.spec.ts).
+// AC-7 speichert ZUERST selbst, bevor er den Konflikt provoziert (bis #2375
+// ging der erste PUT nach SSR-Laden ohne If-Match durch). Seit #2375 wäre der
+// Umweg nicht mehr nötig; er bleibt hier bewusst stehen, damit auch der Fall
+// „Konflikt NACH einer eigenen Speicherung" (ETag aus der PUT-Antwort) bewacht
+// ist — der Fall „erster PUT nach dem Laden" steht in
+// compare-wertebereiche-speichert-selbst.spec.ts AC-5.
 //
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh), Anmeldung über den
 // gespeicherten storageState aus global.setup.ts. Presets tragen das Präfix
@@ -243,8 +246,9 @@ test.describe('Issue #2276 S4: Reiter „Wetter-Metriken" im Vergleich speichert
 
 		// An der Oberfläche vorbei: fremde Änderung ohne If-Match (anderes Gerät)
 		const vorher = await serverStand(page, id);
+		const fremderName = `${vorher.name} (fremd)`;
 		const fremd = await page.request.put(`/api/compare/presets/${id}`, {
-			data: { ...vorher, name: `${vorher.name} (fremd)` }
+			data: { ...vorher, name: fremderName }
 		});
 		expect(fremd.status(), 'fremder Schreibvorgang ohne If-Match wird angenommen').toBe(200);
 
@@ -267,6 +271,15 @@ test.describe('Issue #2276 S4: Reiter „Wetter-Metriken" im Vergleich speichert
 
 		const stand = await serverStand(page, id);
 		expect(stand.official_alerts_enabled, 'der Wiederholungs-PUT muss die Änderung tragen').toBe(false);
+		// Issue #2375 (Test 12 / AC-13): bis #2375 bewusst nicht zugesichert — der
+		// Wiederholungs-PUT war ein Voll-Spread der lokalen Basis und schrieb den
+		// fremden Namen zurück. Mit Teilfeld-Nutzlasten überlebt er.
+		expect(Object.keys(puts[2].postDataJSON()), 'der Wiederholungs-PUT darf `name` nicht tragen').not.toContain(
+			'name'
+		);
+		expect(stand.name, '„Nochmal speichern" darf den fremd gespeicherten Namen nicht überschreiben (#2375)').toBe(
+			fremderName
+		);
 	});
 
 	// AC-12 — fängt: Teil-Nutzlast / fehlendes Bestandsfeld im Wetter-Metriken-PUT.
@@ -298,5 +311,34 @@ test.describe('Issue #2276 S4: Reiter „Wetter-Metriken" im Vergleich speichert
 			expect(ndc[key], `display_config.${key} hat sich verändert`).toEqual(vdc[key]);
 		}
 		expect((ndc.active_metrics as string[]).includes('snow_depth_cm'), 'nur die Metrikauswahl weicht ab').toBe(false);
+	});
+
+	// Issue #2375 Test 13 / AC-8 — fängt: ein Eigenfeld (hier die Leerauswahl
+	// der Metriken) fällt beim Umstieg auf Teilfeld-Nutzlasten aus dem Rumpf.
+	test('#2375 Roundtrip: alle Metriken abgewählt → PUT trägt active_metrics [] → nach Neuladen bleibt die Auswahl leer', async ({
+		page
+	}) => {
+		const id = await legeVergleichAn(page);
+		const { puts, beantwortet } = zaehlePuts(page, id);
+		const tab = await oeffneWetterMetriken(page, id);
+		const snow = tab.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]');
+		await expect(snow, 'Vorbedingung: die einzige aktive Metrik ist angehakt').toBeChecked();
+
+		await snow.click();
+		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
+		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+
+		const rumpf = puts.at(-1)!.postDataJSON() as Record<string, unknown>;
+		expect(dc(rumpf).active_metrics, 'Leerauswahl muss als [] gesendet werden').toEqual([]);
+		expect(Object.keys(rumpf), 'der Wetter-Metriken-Rumpf darf `name` nicht tragen').not.toContain('name');
+		expect(dc(await serverStand(page, id)).active_metrics, 'die Leerauswahl hat den Server nicht erreicht').toEqual([]);
+
+		await page.reload();
+		await page.waitForLoadState('networkidle');
+		const neu = await oeffneWetterMetriken(page, id);
+		await expect(
+			neu.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]'),
+			'nach Neuladen muss die Leerauswahl stehen'
+		).not.toBeChecked();
 	});
 });
