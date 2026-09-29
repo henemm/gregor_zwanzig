@@ -87,3 +87,66 @@ def test_sms_enthaelt_hinweis_auf_amtliche_warnung_bei_gebuendeltem_alarm():
         )
     finally:
         _clean_user(uid)
+
+
+#: Anzahl Segmente fuer den Viel-Ereignisse-Testfall unten. Genug Ereignisse,
+#: damit der UNGEKUERZTE Kern (`render_alert_sms(..., limit=140)`, also ohne
+#: die Budget-Reservierung um `_AMTL_HINWEIS_SMS_SUFFIX`) bereits nahe an das
+#: 140-Zeichen-Limit heranreicht -- der greedy Kuerzungsalgorithmus in
+#: `_render_sms_body()` fuellt das Limit so weit wie moeglich mit Tokens, ein
+#: einzelnes Ereignis-Token liegt bei diesem Szenario bei knapp 10-15 Zeichen.
+_VIELE_SEGMENTE = 20
+
+
+def test_sms_hinweis_haelt_140_zeichen_limit_bei_langem_kern_ein():
+    """AC-7-Ergaenzung (Fix-Loop F001, Adversary-Finding HIGH). GIVEN ein
+    Abweichungsalarm mit VIELEN ausgeloesten Segmenten (der ungekuerzte
+    SMS-Kern reicht dadurch nahe an das 140-Zeichen-Limit heran) UND einem
+    eingebetteten amtlichen Zusatzblock (`official_notices`) / WHEN die SMS
+    gerendert wird / THEN traegt sie weiterhin den Hinweistext UND bleibt
+    TROTZDEM innerhalb von 140 Zeichen.
+
+    Fängt die Mutation, die die Budget-Reservierung
+    (`notification_service.py`: `sms_limit -= len(_AMTL_HINWEIS_SMS_SUFFIX)`)
+    entfernt: ohne Reservierung wird `render_alert_sms()` mit dem VOLLEN
+    Limit=140 aufgerufen, füllt es (viele Ereignisse) nahe aus, und der
+    danach angehängte Hinweistext (`_AMTL_HINWEIS_SMS_SUFFIX`, ~36 Zeichen)
+    sprengt das 140-Zeichen-Limit — anders als beim einzigen anderen Testfall
+    dieser Datei (1 Segment, 13-Zeichen-Kern), bei dem das Limit so viel Luft
+    hat, dass die entfernte Reservierung unbeobachtbar bliebe.
+    """
+    uid = _uid("ac7-lang")
+    try:
+        trip = _abweichungs_trip(uid, alert_channels={"sms": True, "email": True})
+        strecke = _strecke(uid)
+        alert = amtliche_warnung(3, von=_AT - timedelta(hours=1), bis=_AT + timedelta(hours=6))
+
+        cached_weather = [
+            _wd(seg_id, precip_sum_mm=2.0) for seg_id in range(1, _VIELE_SEGMENTE + 1)
+        ]
+        fresh_weather = [
+            _wd(seg_id, precip_sum_mm=20.0) for seg_id in range(1, _VIELE_SEGMENTE + 1)
+        ]
+
+        lauf = strecke.lauf(
+            at=_AT, zweig="deviation", trip=trip,
+            cached_weather=cached_weather,
+            fresh_weather=fresh_weather,
+            official_notices=[(alert, ["1"])],
+        )
+
+        assert lauf.triggered_count == 1, "Vorbedingung: der Alarm muss auslösen."
+        assert len(lauf.sms) == 1, f"Vorbedingung: SMS muss bedient werden: {lauf.sms!r}"
+
+        sms_text = lauf.sms[0]
+        assert _AMTL_HINWEIS_TOKEN in sms_text, (
+            f"Der lange Kern darf den Hinweistext nicht verdraengen "
+            f"({_AMTL_HINWEIS_TOKEN!r} fehlt): {sms_text!r}"
+        )
+        assert len(sms_text) <= 140, (
+            f"Das 140-Zeichen-Limit darf auch bei einem langen, fast "
+            f"ausgereizten Kern mit Hinweis nicht ueberschritten werden "
+            f"(war {len(sms_text)} Zeichen): {sms_text!r}"
+        )
+    finally:
+        _clean_user(uid)

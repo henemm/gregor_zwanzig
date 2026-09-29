@@ -831,6 +831,26 @@ class TripAlertService:
         )
         return DeviationAlertEngine._select_detector(config)
 
+    @staticmethod
+    def _official_trigger_possible(trip: "Trip") -> bool:
+        """Issue #2422 S4 (Fix): geteilte Drei-Zustand-Vorrangregel fuer den
+        amtlichen Alarm-Trigger — dieselbe Logik, die vorher nur in
+        `check_official_alert_triggers()` galt, jetzt AUCH im Vorab-Filter
+        von `check_all_trips()` (vorher Bug: der Vorab-Filter kannte nur das
+        veraltete Feld `official_alert_triggers_enabled` und ueberspringt den
+        Trip, obwohl `official_warnings.enabled=true` gesetzt ist -> die
+        korrekte Pruefung unten wurde nie erreicht, #2422 S4 AC-5).
+
+        Issue #1258: `official_warnings.enabled` loest das Legacy-Feld ab,
+        wenn gesetzt. `official_warnings` ist ein `dict` (kein Objekt) —
+        `trip.official_warnings is None` bedeutet "noch nicht migriert",
+        ein leeres `{}` (kein "enabled"-Schluessel) zaehlt ebenfalls NICHT
+        als migriert (Fix-Loop F003) -> in beiden Faellen Legacy-Fallback.
+        """
+        if isinstance(trip.official_warnings, dict) and "enabled" in trip.official_warnings:
+            return bool(trip.official_warnings.get("enabled", True))
+        return trip.official_alert_triggers_enabled is not False
+
     def check_all_trips(self) -> AlertCheckRunResult:
         """
         Check all active trips for weather changes and send alerts.
@@ -902,7 +922,11 @@ class TripAlertService:
             # ohne aktive Wetter-Delta-Regel darf NICHT komplett übersprungen werden,
             # solange der amtliche Trigger nicht explizit deaktiviert ist — sonst
             # wird check_official_alert_triggers() unten nie erreicht.
-            official_trigger_possible = trip.official_alert_triggers_enabled is not False
+            # Issue #2422 S4 (Fix): dieselbe Drei-Zustand-Vorrangregel wie in
+            # check_official_alert_triggers() — vorher prüfte dieser Vorab-Filter
+            # NUR das veraltete Legacy-Feld und übersprang den Trip trotz
+            # official_warnings.enabled=true (Bug, AC-5).
+            official_trigger_possible = self._official_trigger_possible(trip)
             if (
                 not has_active_rules
                 and (not trip.report_config or not trip.report_config.alert_on_changes)
@@ -2580,10 +2604,9 @@ class TripAlertService:
         # Fix-Loop F003: ein leeres {} (kein "enabled"-Schluessel, z.B.
         # Datenmuell/nicht abgeschlossene Migration) zaehlt NICHT als
         # migriert -> ebenfalls Legacy-Fallback statt stillem Default True.
-        if isinstance(trip.official_warnings, dict) and "enabled" in trip.official_warnings:
-            if not trip.official_warnings.get("enabled", True):
-                return []
-        elif trip.official_alert_triggers_enabled is False:
+        # Issue #2422 S4 (Fix): dieselbe Regel wie im Vorab-Filter von
+        # check_all_trips() — geteilt über _official_trigger_possible().
+        if not self._official_trigger_possible(trip):
             return []
         from services.alert_state import AlertStateService
         from services.official_alerts import get_official_alerts_for_location

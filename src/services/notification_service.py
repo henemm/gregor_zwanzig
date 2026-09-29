@@ -57,6 +57,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: Issue #2422 S4 (Fix #1088): kurzer SMS-Hinweistext, wenn eine gebündelte
+#: Abweichungs-/Radar-Alarm-Mail einen eingebetteten amtlichen Zusatzblock
+#: trägt — die SMS bekommt statt des kompletten Zusatzblocks nur diesen
+#: knappen Hinweis (Zeichen-Budget SMS). Vertrag geteilt mit
+#: `tests/tdd/test_alarm_sms_paritaet_amtlicher_zusatz.py::_AMTL_HINWEIS_TOKEN`.
+_AMTL_HINWEIS_SMS_TOKEN = "+ amtl. Warnung s. E-Mail/Telegram"
+_AMTL_HINWEIS_SMS_SUFFIX = " " + _AMTL_HINWEIS_SMS_TOKEN
+
 
 @dataclass
 class TripReportRequest:
@@ -1703,9 +1711,17 @@ class NotificationService:
         Nachricht (PO-Entscheidung 2026-08-04) — die Ortsnummern ergeben nur
         im gemeinsamen Text Sinn.
 
-        Issue #1088: liegen `official_notices` vor, wird ein Text-Block an
-        html/plain/telegram_body angehängt — SMS bewusst OHNE Zusatz
-        (Nicht-Parität, analog Slice-3-AC-6).
+        Issue #1088 / #2422 S4 (Fix): liegen `official_notices` vor, wird ein
+        Text-Block an html/plain/telegram_body angehängt UND `sms_body` bekommt
+        mindestens den kurzen Hinweistext `_AMTL_HINWEIS_SMS_TOKEN` angehängt
+        (Epic #2133: „jeder Kanal muss jede Frage beantworten können" — ein
+        sang- und klangloses Weglassen ist keine akzeptable Abweichung mehr).
+        Das Limit wird VOR dem Rendern um die Hinweislänge reduziert (gleiches
+        Muster wie der `addendum`-Zweig in `render_sms()`), damit das
+        140-Zeichen-Alarm-SMS-Limit auch mit Hinweis nie überschritten wird.
+        `sms_body` wird auch für Telegram-Kurzform und Premium-SMS
+        wiederverwendet — beide bekommen den Hinweis dann ebenfalls (im
+        Sinne der Kanal-Parität kein Fehlverhalten).
 
         Issue #1467 S2 AG3a: `telegram_groups` (`list[(location_name,
         changes, point)]`) ist ein NEUER, defaultierter Parameter —
@@ -1723,9 +1739,18 @@ class NotificationService:
         subject = render_alert_subject(alert_msg)
         html, plain = render_alert_email(alert_msg)
         telegram_body = render_alert_telegram(alert_msg)
+        # Issue #2422 S4 (Fix #1088): liegt ein amtlicher Zusatzblock vor,
+        # wird das SMS-Limit VOR dem Rendern um die Hinweislänge reduziert,
+        # damit der angehängte Hinweistext das 140-Zeichen-Limit nicht
+        # sprengt (gleiches Muster wie der `addendum`-Zweig in `render_sms`).
+        sms_limit = 140
+        if official_notices:
+            sms_limit -= len(_AMTL_HINWEIS_SMS_SUFFIX)
         sms_body = render_alert_sms(
-            alert_msg, location_positions=sms_location_positions,
+            alert_msg, limit=sms_limit, location_positions=sms_location_positions,
         )
+        if official_notices:
+            sms_body += _AMTL_HINWEIS_SMS_SUFFIX
 
         if official_notices:
             from output.renderers.alert.official_alerts import (

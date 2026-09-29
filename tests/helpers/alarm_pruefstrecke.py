@@ -38,13 +38,7 @@ from services.radar_cache import reset_shared_radar_cache_for_tests
 from services.trip_alert import TripAlertService
 from services.weather_cache import reset_shared_weather_cache_for_tests
 
-#: "official_trigger"/"sammellauf" (Issue #2422 S4): zusaetzlich zu den drei
-#: urspruenglichen Zweigen (#2050 S1) -- pruefen die Drei-Zustand-Vorrang-
-#: pruefung amtlicher Warnungen ueber die OEFFENTLICHEN Einstiegspunkte
-#: (`check_official_alert_triggers`/`check_all_trips`) statt der privaten
-#: `_send_official_alert_only` direkt zu fuettern. Rein additiv -- die drei
-#: Bestandszweige (insb. "official") sind unveraendert.
-Zweig = Literal["deviation", "official", "radar", "official_trigger", "sammellauf"]
+Zweig = Literal["deviation", "official", "radar"]
 
 
 @dataclass
@@ -208,30 +202,6 @@ class AlarmPruefstrecke:
                     raw = svc._send_official_alert_only(trip, official_notices or [])
                 elif zweig == "radar":
                     raw = svc.check_radar_alerts()
-                elif zweig == "official_trigger":
-                    # Issue #2422 S4: ruft den OEFFENTLICHEN Einstiegspunkt
-                    # auf (Drei-Zustand-Vorrangpruefung amtliche Warnungen,
-                    # trip_alert.py:2577-2587) statt der privaten
-                    # `_send_official_alert_only` direkt zu fuettern -- neuer,
-                    # ADDITIVER Zweig, der bestehende "official"-Aufrufer
-                    # (die vorgefertigte `official_notices` durchreichen)
-                    # unangetastet laesst. `now_utc=` bleibt aus denselben
-                    # Gruenden wie beim "official"-Zweig aussen vor
-                    # (verworfen, s. Moduldoku); Zeitsteuerung laeuft ueber
-                    # `freeze_time(at)`.
-                    notices = svc.check_official_alert_triggers(trip)
-                    raw = svc._send_official_alert_only(trip, notices) if notices else False
-                elif zweig == "sammellauf":
-                    # Issue #2422 S4 (AC-5): der REGULAERE Sammellauf-Einstieg
-                    # (`check_all_trips()`, enthaelt den Vorab-Filter
-                    # trip_alert.py:895-911). Liest Trips WIE IN PRODUKTION
-                    # von der Platte (`load_all_trips(user_id)`) -- `trip`
-                    # muss deshalb VOR dem Aufruf per `app.loader.save_trip()`
-                    # geschrieben sein (dasselbe Muster wie beim
-                    # "radar"-Zweig, der ebenfalls nicht das uebergebene
-                    # `trip`-Objekt, sondern den Datentraeger liest).
-                    ergebnis = svc.check_all_trips()
-                    raw = ergebnis.alerts_sent
                 else:
                     raise ValueError(f"Unbekannter Zweig: {zweig!r}")
         finally:
