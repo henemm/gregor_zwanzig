@@ -108,7 +108,7 @@ describe('AC-9: die Alarm-Nutzlast selbst enthaelt niemals send_premium_sms', ()
 		assert.ok(
 			!('send_premium_sms' in body),
 			'AC-9/Abschnitt 4: die Alarm-Nutzlast darf send_premium_sms (Briefing-Feld) NIE enthalten — ' +
-				`gefunden: ${JSON.stringify((body as Record<string, unknown>).send_premium_sms)}`
+				`gefunden: ${JSON.stringify((body as unknown as Record<string, unknown>).send_premium_sms)}`
 		);
 	});
 });

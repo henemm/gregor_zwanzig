@@ -125,6 +125,11 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 	});
 
 	// ── AC-15: Telegram/SMS-Schalter im Hub — Speicher-Bugfix ──────────────────
+	// Issue #2293 S2 (AC-4/AC-10 Entkopplung): der Alarme-Reiter-Klick schreibt
+	// seither `alert_channels.{telegram,sms}`, NIE mehr `send_telegram`/
+	// `send_sms` (Briefing-Felder des Versand-Reiters, Payload-Trennung gegen
+	// den Same-Tab-Race, Beleg-Kern-Test
+	// compare_alarm_versand_nutzlast_trennung.test.ts AC-10).
 	test('AC-15: Hub — Telegram- und SMS-Schalter speichern jetzt wirklich, Reload behält Stellung (vorher: Rücksprung-Bug)', async ({
 		page
 	}) => {
@@ -154,9 +159,18 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		await telegramSwitch.click();
 		const putRes1 = await putPromise1;
 		expect(putRes1.ok(), `PUT nach Telegram-Switch fehlgeschlagen: ${putRes1.status()}`).toBeTruthy();
-		const body1 = putRes1.request().postDataJSON() as { send_telegram?: boolean };
-		expect(body1.send_telegram, 'PUT-Body enthält kein send_telegram — der bestätigte Speicher-Bug wäre noch da').toBeDefined();
-		expect(body1.send_telegram).toBe(telegramBefore === 'false');
+		// #2293 S2: der Alarme-Reiter-Klick trägt `alert_channels.telegram`, NIE
+		// mehr `send_telegram` (Briefing-Feld, bleibt vom Alarm-Klick unangetastet).
+		const body1 = putRes1.request().postDataJSON() as {
+			alert_channels?: Record<string, boolean>;
+			send_telegram?: boolean;
+		};
+		expect(body1.alert_channels, 'PUT-Body ohne alert_channels — der bestätigte Speicher-Bug wäre noch da').toBeTruthy();
+		expect(body1.alert_channels!.telegram).toBe(telegramBefore === 'false');
+		expect(
+			body1.send_telegram,
+			'#2293 S2 AC-4 FAIL: der Alarm-Kanal-Klick hat send_telegram (Briefing-Feld) mitgeschrieben.'
+		).toBeUndefined();
 		await expect(telegramSwitch).toHaveAttribute('aria-checked', telegramBefore === 'false' ? 'true' : 'false', {
 			timeout: 5_000
 		});
@@ -168,9 +182,16 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		await smsSwitch.click();
 		const putRes2 = await putPromise2;
 		expect(putRes2.ok(), `PUT nach SMS-Switch fehlgeschlagen: ${putRes2.status()}`).toBeTruthy();
-		const body2 = putRes2.request().postDataJSON() as { send_sms?: boolean };
-		expect(body2.send_sms, 'PUT-Body enthält kein send_sms').toBeDefined();
-		expect(body2.send_sms).toBe(smsBefore === 'false');
+		const body2 = putRes2.request().postDataJSON() as {
+			alert_channels?: Record<string, boolean>;
+			send_sms?: boolean;
+		};
+		expect(body2.alert_channels, 'PUT-Body ohne alert_channels (sms)').toBeTruthy();
+		expect(body2.alert_channels!.sms).toBe(smsBefore === 'false');
+		expect(
+			body2.send_sms,
+			'#2293 S2 AC-4 FAIL: der Alarm-Kanal-Klick hat send_sms (Briefing-Feld) mitgeschrieben.'
+		).toBeUndefined();
 
 		// ── Reload — der eigentliche Beweis, kein Rücksprung ────────────────
 		await page.reload();
