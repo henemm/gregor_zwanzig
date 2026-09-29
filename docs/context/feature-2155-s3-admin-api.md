@@ -206,3 +206,8 @@ Zusicherungen, die die Implementierung erfüllen muss:
 
 Werkzeug: Go liegt nur unter `/usr/local/go/bin` (nicht im PATH). Der Worktree-Wächter lehnt Inline-Befehle mit `|` im
 `-run`-Muster oder `PATH=`-Präfix ab ⇒ solche Aufrufe über ein Skript im Scratchpad fahren.
+
+**Commit-Hinweis:** Die vier Go-Testdateien (`internal/router/admin_users_test.go`, `internal/scheduler/disabled_users_filter_test.go`,
+`internal/handler/premium_sms_connect_test.go`, `internal/handler/session_issuance_test.go`) liegen UNCOMMITTET im Worktree:
+`touched_tests_gate.py` blockt jeden Commit mit neu roten Go-Tests (keine RED-Ausnahme). Sie werden in /50 zusammen mit der
+Implementierung committet (dann grün). Nicht löschen, nicht zurücksetzen.
