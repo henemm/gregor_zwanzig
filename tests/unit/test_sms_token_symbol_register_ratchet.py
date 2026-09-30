@@ -619,10 +619,19 @@ def test_sms_multi_symbols_by_metric_ableitung_stimmt_mit_ac9_erwartung_ueberein
         "AC-9-Erwartungstabelle ab:\n" + "\n".join(abweichungen)
     )
 
-    assert "wind_chill" not in SMS_MULTI_SYMBOLS_BY_METRIC, (
-        "'wind_chill' fuehrt weiterhin einen Eintrag in "
-        "SMS_MULTI_SYMBOLS_BY_METRIC — 'WC' sollte ersatzlos entfallen "
-        f"(PO-Entscheid): {SMS_MULTI_SYMBOLS_BY_METRIC.get('wind_chill')!r}"
+    # #2422 S6 (B1, PO-Entscheid V1): 'WC' bleibt ersatzlos entfallen (#1887 E6a),
+    # ABER ``wind_chill`` traegt jetzt das Stundenwert-Kuerzel 'TF' (Trip-Kurzform,
+    # Klasse (b)). Gepinnt wird die KUERZEL-Aussage, nicht der Ort der Ablage:
+    # 'WC' steht nirgends, 'TF' steht fuer wind_chill im Register (Einzel- oder
+    # Mehrfach-Tabelle).
+    from app.metric_catalog import SMS_SYMBOL_BY_METRIC as _einzel
+    register_symbole = (
+        set(SMS_MULTI_SYMBOLS_BY_METRIC.get("wind_chill", ()))
+        | ({_einzel["wind_chill"]} if "wind_chill" in _einzel else set())
+    )
+    assert register_symbole == {"TF"}, (
+        "#2422 S6: 'wind_chill' muss im Register genau das Kuerzel 'TF' fuehren "
+        f"('WC' bleibt entfallen): {register_symbole!r}"
     )
 
 
@@ -692,22 +701,24 @@ def test_sms_multi_symbols_by_metric_ist_ableitung_kein_literal_fuer_die_sechs_g
     )
 
 
-def test_sms_symbols_endpoint_fuehrt_wind_chill_nicht_mehr():
-    """AC-4: /api/sms-symbols serialisiert SMS_MULTI_SYMBOLS_BY_METRIC
-    generisch (kein eigener Code-Pfad, s. Spec) — nach dem Wegfall von 'WC'
-    verschwindet 'wind_chill' vollstaendig aus der Metrik-Liste statt mit
-    leerem sms_symbols-Eintrag zu erscheinen (AC-4, Spec Punkt 7)."""
+def test_sms_symbols_endpoint_fuehrt_wind_chill_mit_tf_aber_ohne_wc():
+    """AC-4 (umgeschrieben mit #2422 S6, B1 / PO-Entscheid V1): /api/sms-symbols
+    serialisiert die Register generisch. Vorher (#1887 E6a) verschwand
+    'wind_chill' vollstaendig aus der Metrik-Liste (AC-4, Spec Punkt 7); jetzt
+    fuehrt der Endpoint 'wind_chill' mit dem Kuerzel 'TF' (Stundenwert der
+    gefuehlten Temperatur, Editor-Kuerzelmarke) -- 'WC' bleibt ersatzlos
+    entfallen."""
     from api.routers.config import get_sms_symbols
 
     antwort = get_sms_symbols()
-    metrik_ids = {eintrag["metric_id"] for eintrag in antwort["metrics"]}
+    je_metrik = {e["metric_id"]: e["sms_symbols"] for e in antwort["metrics"]}
     alle_symbole = {
         symbol for eintrag in antwort["metrics"] for symbol in eintrag["sms_symbols"]
     }
 
-    assert "wind_chill" not in metrik_ids, (
-        "'wind_chill' erscheint weiterhin in /api/sms-symbols, obwohl 'WC' "
-        f"ersatzlos entfallen ist: {sorted(metrik_ids)!r}"
+    assert je_metrik.get("wind_chill") == ["TF"], (
+        "'wind_chill' muss in /api/sms-symbols mit ['TF'] erscheinen (#2422 S6): "
+        f"{je_metrik.get('wind_chill')!r}"
     )
     assert "WC" not in alle_symbole, (
         f"Kuerzel 'WC' erscheint weiterhin in /api/sms-symbols: "

@@ -124,9 +124,13 @@ def _render_sms(dc: UnifiedWeatherDisplayConfig, report_type: str = "evening") -
 # Issue #1824 (A): zusaetzlich die Bereichsform ('D3/20', 'FD-12/-4', 'D-/-',
 # 'D?/?') -- zwei Haelften, durch '/' getrennt.
 _RANGE_HALF = r"-?\d+|-|\?"
+# #2422 S6: Einfach-Stufen mit Doppelpunkt im Kuerzel (``CT:SCT@4``) und optionales
+# Minus vor Zahlen (``TF-3@6``) -- siehe test_channel_metric_matrix.py.
+_STUFE = r"(?:CLR|FEW|SCT|BKN|OVC|[LMH]|-)"
 _VALUE_GRAMMAR = re.compile(
     rf"(?:(?:{_RANGE_HALF})/(?:{_RANGE_HALF})"
-    r"|(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
+    rf"|:{_STUFE}(?:@\d+(?:\({_STUFE}@\d+\))?)?"
+    r"|(?:-?\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:-?\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
 )
 
 

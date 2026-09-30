@@ -670,10 +670,12 @@ def test_ac1_wind_chill_reports_three_symbols_without_wc():
         f"AC-1: die gefuehlten Tages-Kuerzel haengen falsch: {ist} statt "
         f"{erwartet}"
     )
-    assert "wind_chill" not in by_id, (
-        "AC-4: 'wind_chill' fuehrt weiterhin einen Eintrag in "
-        f"/api/sms-symbols, obwohl 'WC' ersatzlos entfallen ist: "
-        f"{by_id.get('wind_chill')!r}"
+    # #2422 S6 (B1, PO-Entscheid V1): 'WC' bleibt entfallen, aber ``wind_chill``
+    # traegt das Stundenwert-Kuerzel 'TF' (Trip-Kurzform) und steht deshalb
+    # WIEDER in /api/sms-symbols -- mit genau diesem einen Kuerzel.
+    assert by_id.get("wind_chill") == ["TF"], (
+        "AC-4 (S6): 'wind_chill' muss in /api/sms-symbols mit ['TF'] stehen "
+        f"('WC' bleibt entfallen): {by_id.get('wind_chill')!r}"
     )
 
     night_entries = [m for m in metrics if m["metric_id"] == "wind_chill_night"]

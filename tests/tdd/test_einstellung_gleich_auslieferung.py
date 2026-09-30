@@ -132,69 +132,67 @@ def test_ac1_golden_trips_laden_unveraendert(monkeypatch):
 # ═══════════════════════════ AC-2 ═══════════════════════════════════════════
 
 
-_B1_ZELLE_KURZFORM = ("wind_chill", "telegram_kurzform", "erscheint")
+#: #2422 S6: das Register fuehrt nur noch ``gust`` -- die Isolations-Gegenprobe
+#: haengt deshalb an DIESER Zelle (vormals B1 ``wind_chill``/Kurzform).
+_GUST_ZELLE = ("gust", "telegram_rich", "erscheint")
 
 
-def test_ac2_fehlender_register_eintrag_wind_chill_telegram_kurzform_wird_rot(monkeypatch):
-    """AC-2 (Bug-Nachweis aus Nutzersicht).
+def test_ac2_fehlender_register_eintrag_gust_telegram_rich_wird_rot(monkeypatch):
+    """AC-2 (Bug-Nachweis aus Nutzersicht), #2422 S6 neu aufgebaut um den
+    verbleibenden ``gust``-Eintrag (B1 ist behoben, sein Eintrag entfaellt).
 
-    Given der Register-Eintrag fuer ``wind_chill x telegram_kurzform x
-    erscheint`` wird aus einer LOKALEN Kopie von ``AUSNAHMEN`` entfernt.
-    When der Invarianten-Test auf Golden A laeuft.
+    Given der Register-Eintrag fuer ``gust x telegram_rich x erscheint`` wird
+    aus einer LOKALEN Kopie von ``AUSNAHMEN`` entfernt.
+    When der Invarianten-Test auf Golden B laeuft.
     Then wird GENAU diese eine Zelle rot -- nicht ihre Reihenfolge- oder
-    Roh/Einfach-Zelle (die entfallen laut Orakel-Regel bei einer im Text
-    fehlenden Metrik).
-
-    RED heute: ``AUSNAHMEN`` ist leer, es gibt nichts zu entfernen -- die
-    Golden-A-Matrix wird an ALLEN drei tatsaechlichen Abweichungen rot statt
-    an genau dieser einen (die anderen zwei fehlen als Deckung).
+    Roh/Einfach-Zelle und keine zweite Zelle (alle anderen Golden-B-
+    Abweichungen sind im Produkt behoben, nicht mehr registriert).
     """
-    ga = golden_dict("golden_a")
-    mit_a, _ = render_golden(monkeypatch, "golden_a")
+    gb = golden_dict("golden_b")
+    mit_b, _ = render_golden(monkeypatch, "golden_b")
     register = [
         e for e in AUSNAHMEN
-        if (e.metrik, e.kanal, e.dimension) != _B1_ZELLE_KURZFORM
+        if (e.metrik, e.kanal, e.dimension) != _GUST_ZELLE
     ]
-    rot, _genutzt = rote_zellen_fuer_golden(ga, mit_a, register)
-    assert rot == {_B1_ZELLE_KURZFORM}, (
-        f"AC-2: erwartet GENAU {{{_B1_ZELLE_KURZFORM}}}, erhalten {sorted(rot)} "
-        f"-- AUSNAHMEN muss ausser dieser Zelle alle anderen Golden-A-"
-        f"Abweichungen bereits abdecken, damit die Isolation sichtbar wird."
+    assert len(register) == len(AUSNAHMEN) - 1, (
+        "Testaufbau: der gust-Eintrag muss im Register stehen (AC-14)."
+    )
+    rot, _genutzt = rote_zellen_fuer_golden(gb, mit_b, register)
+    assert rot == {_GUST_ZELLE}, (
+        f"AC-2: erwartet GENAU {{{_GUST_ZELLE}}}, erhalten {sorted(rot)} "
+        f"-- ausser der Telegram-7er-Grenze darf Golden B keine Abweichung "
+        f"mehr zeigen (B1/B2/B3/B5 sind im Produkt behoben)."
     )
 
 
 # ═══════════════════════════ AC-4 ═══════════════════════════════════════════
 
 
-def test_ac4_fehlendes_kuerzel_aendert_die_erwartung_nicht(monkeypatch):
-    """AC-4 (Kuerzel-Register nur zum Parsen).
+def test_ac4_kuerzel_register_aendert_die_erwartung_nicht(monkeypatch):
+    """AC-4 (Kuerzel-Register nur zum Parsen), #2422 S6 umgestellt.
 
-    Given ``wind_chill`` ist im SMS-Kanal-Layout aktiv, traegt aber seit
-    #1887 E6 KEIN Kuerzel in ``SMS_SYMBOL_BY_METRIC``/
-    ``SMS_MULTI_SYMBOLS_BY_METRIC``.
+    Given ``wind_chill`` ist im SMS-Kanal-Layout aktiv.
     When die Orakel-Erwartung fuer Golden B / Kanal 'sms' gebildet wird.
     Then bleibt ``wind_chill`` in der Erwartung "aktiv" -- unabhaengig vom
-    Kuerzel-Register. Die tatsaechliche Abwesenheit im gesendeten Text wird
-    NUR ueber einen begruendeten Register-Eintrag (B1) toleriert, niemals
-    dadurch, dass der Parser kein Kuerzel findet.
+    Kuerzel-Register. Seit S6 (B1, PO-Entscheid V1) sendet das Produkt ``TF``;
+    die Zelle ``wind_chill x sms x erscheint`` muss deshalb OHNE jeden
+    Register-Eintrag gruen sein (vormals ueber B1 toleriert).
     """
     gb = golden_dict("golden_b")
     erwartet = erwartete_kaskade(gb, "sms", "evening")
     erwartet_ids = [mid for mid, _ in erwartet]
     assert "wind_chill" in erwartet_ids, (
         "AC-4 Teil 1 (muss gruen sein): die Orakel-Erwartung fuer 'sms' muss "
-        "wind_chill weiterhin als aktiv fuehren, unabhaengig vom fehlenden "
-        "SMS-Kuerzel."
+        "wind_chill weiterhin als aktiv fuehren, unabhaengig vom SMS-Kuerzel."
     )
 
-    # Toleranzteil (haengt am befuellten Register -- RED solange AUSNAHMEN leer ist).
     mit_b, _ = render_golden(monkeypatch, "golden_b")
-    rot, _genutzt = rote_zellen_fuer_golden(gb, mit_b, AUSNAHMEN)
-    assert ("wind_chill", "sms", "erscheint") not in rot, (
-        "AC-4 Teil 2: die B1-Abweichung muss ueber einen begruendeten "
-        "Register-Eintrag toleriert sein, nicht als ungedeckte rote Zelle "
-        "auftauchen."
-    )
+    rot, _genutzt = rote_zellen_fuer_golden(gb, mit_b, [])
+    for kanal in ("sms", "premium_sms"):
+        assert ("wind_chill", kanal, "erscheint") not in rot, (
+            f"AC-4 Teil 2 (B1 behoben): wind_chill muss in {kanal!r} OHNE "
+            f"Register-Eintrag erscheinen (TF). Rote Zellen: {sorted(rot)}"
+        )
 
 
 # ═══════════════════════════ AC-5 ═══════════════════════════════════════════
@@ -520,6 +518,12 @@ def test_ac9_m3_friendly_keys_liest_falsche_dc_wird_bei_telegram_rich_rot(monkey
     """AC-9 M3: ``build_friendly_keys`` liefert eine falsche (hier: leere)
     Menge statt der aus der uebergebenen ``dc`` abgeleiteten.
 
+    #2422 S6 (B3/#2429): die Prämisse "Telegram haengt am geteilten
+    ``self._friendly_keys`` der E-Mail" gilt NICHT mehr -- Telegram rich
+    bildet seine ``friendly_keys`` aus der EIGENEN ``dc`` (``_dc_telegram``).
+    Die Mutation trifft weiterhin ``tr_mod.build_friendly_keys`` (jetzt der
+    Telegram-eigene Aufruf) und bleibt bei Telegram rich sichtbar.
+
     Abweichung von der urspruenglichen Spec-Annahme, mit Code-Beleg (siehe
     Abschlussbericht): E-Mail ist strukturell IMMUN gegen diese Mutation --
     ``render_email()`` berechnet sich ``format_modes`` JEDE Sekunde selbst
@@ -581,26 +585,19 @@ def test_ac9_m4_formatter_liest_globale_liste_wird_bei_uv_index_rot(monkeypatch)
 
 
 def test_ac10_register_deckt_exakt_die_ausgeloesten_befunde_ab(monkeypatch):
-    """AC-10 (Register-Startbefuellung).
+    """AC-10 (Register-Endzustand nach #2422 S6, AC-14 der S6-Spec).
 
-    Given die durch die zwei Golden-Varianten tatsaechlich ausgeloesten
-    Befunde B1, B2, B3, B5 sowie die ausgeloeste strukturelle Ausnahme.
-    When Scheibe S1 abgeschlossen wird.
-    Then hat jede daraus resultierende rote Zelle genau einen Register-
-    Eintrag mit Befund-Referenz und Grund -- und fuer B4/B6/B7/B8/B9
-    existiert bewusst KEIN Eintrag.
-
-    RED heute: ``AUSNAHMEN`` ist leer -- weder die B1/B2/B3/B5-Eintraege
-    noch die strukturelle Ausnahme existieren.
+    Given die S1-Befunde B1, B2, B3, B5 sind im Produkt behoben.
+    When Scheibe S6 abgeschlossen wird.
+    Then enthaelt ``AUSNAHMEN`` NUR noch den strukturellen ``gust``-Eintrag
+    (Telegram-7er-Limit, ``befristet=False``), und der Lauf ueber beide
+    Goldens ist ohne weitere Deckung gruen. Fuer B1/B2/B3/B5 und B4/B6/B7/B8/
+    B9 existiert bewusst KEIN Eintrag.
     """
-    for befund in ("B1", "B2", "B3", "B5"):
-        assert any(e.befund == befund for e in AUSNAHMEN), (
-            f"AC-10: erwartet mindestens einen Register-Eintrag fuer "
-            f"{befund!r}, AUSNAHMEN={AUSNAHMEN!r}"
-        )
-    for verbotener_befund in ("B4", "B6", "B7", "B8", "B9"):
-        assert not any(e.befund == verbotener_befund for e in AUSNAHMEN), (
-            f"AC-10: kein Register-Eintrag fuer {verbotener_befund!r} erlaubt"
+    for befund in ("B1", "B2", "B3", "B5", "B4", "B6", "B7", "B8", "B9"):
+        assert not any(e.befund == befund for e in AUSNAHMEN), (
+            f"AC-10/S6: kein Register-Eintrag fuer {befund!r} erlaubt -- "
+            f"{[e for e in AUSNAHMEN if e.befund == befund]!r}"
         )
     for e in AUSNAHMEN:
         assert e.befund and e.befund.strip()
@@ -609,8 +606,8 @@ def test_ac10_register_deckt_exakt_die_ausgeloesten_befunde_ab(monkeypatch):
     ga, mit_a, gb, mit_b = _render_beide(monkeypatch, monkeypatch)
     rot, _ = rote_zellen_beide_goldens(ga, mit_a, gb, mit_b, AUSNAHMEN)
     assert rot == set(), (
-        f"AC-10: mit dem vollstaendig befuellten Register muss der Lauf "
-        f"ueber beide Goldens gruen sein, rot war {sorted(rot)}"
+        f"AC-10: mit dem Register (nur gust) muss der Lauf ueber beide "
+        f"Goldens gruen sein, rot war {sorted(rot)}"
     )
 
 
@@ -746,7 +743,10 @@ def test_ac13_naht_liegt_nur_am_transport(monkeypatch):
         f"{sms_wert!r}."
     )
     # Telegram rich: gust wird wegen des Telegram-7er-Tabellenlimits (Issue
-    # #360, Register-Eintrag) aus der Stunden-Tabelle verdraengt und
+    # #360, Register-Eintrag) aus der Stunden-Tabelle verdraengt -- seit S6
+    # (B5: ``wind_direction`` ist in die Windzelle verschmolzen und belegt keine
+    # Spalte mehr) traegt das golden_b-Telegram-Layout mit ``humidity`` eine
+    # weitere aktive Metrik, damit gust WEITERHIN die 8. Kandidatin ist -- und
     # erscheint statt dessen in der begleitenden Kurzuebersicht-Bubble
     # ("G 45") -- ``roh_wert_der_metrik`` sucht beide Fundstellen.
     assert roh_wert_der_metrik(mit_b, "telegram_rich", "gust") == "45", (
@@ -858,15 +858,14 @@ def test_hauptmatrix_golden_c_b9_reihenfolge_wird_rot(monkeypatch, report_type):
     mit_c, _ = render_golden(monkeypatch, "golden_c", report_type=report_type)
     rot, _genutzt = rote_zellen_fuer_golden(gc, mit_c, AUSNAHMEN, report_type=report_type)
 
-    # B1 (wind_chill ohne SMS-Kuerzel) und B2 (Roh/Einfach kanalweit) bleiben
-    # ueber das UNVERAENDERTE Register gedeckt -- Golden C darf daran nichts
-    # Neues ausloesen (Kategorie (b) der Abschlussbericht-Einsortierung).
-    # Dieser Teil ist bereits heute gruen (Bestandsschutz-Beleg).
+    # #2422 S6: B1 (wind_chill ohne SMS-Kuerzel) ist im Produkt behoben, der
+    # Register-Eintrag entfernt -- ``wind_chill`` (global aktiv, Kaskadenquelle
+    # 'global') muss in SMS/Premium-SMS/Kurzform als ``TF`` ERSCHEINEN, ohne
+    # jede Deckung.
     for kanal in ("sms", "premium_sms", "telegram_kurzform"):
         assert ("wind_chill", kanal, "erscheint") not in rot, (
-            f"Golden C darf B1 (wind_chill ohne SMS-Kuerzel) in {kanal!r} "
-            f"nicht neu ausloesen -- das S1-Register deckt diese Zelle "
-            f"bereits golden-unabhaengig ab."
+            f"Golden C: wind_chill muss in {kanal!r} als TF erscheinen "
+            f"(S6/B1 behoben, kein Register-Eintrag mehr)."
         )
 
     # Charakterisierung des heutigen (kaputten) Standes -- verschwindet mit
@@ -909,13 +908,15 @@ def test_ac18_keine_neuen_register_eintraege():
     Eintrag traegt einen der bereits aus S1 bekannten Befunde.
     """
     verbotene_befunde = {"B4", "B6", "B7", "B8", "B9", "K8", "K9"}
-    erlaubte_befunde = {"B1", "B2", "B3", "B5", "Issue #360 (Telegram-7er-Tabellenlimit)"}
+    # #2422 S6: B1/B2/B3/B5 sind produktiv behoben und aus dem Register
+    # entfernt -- erlaubt ist nur noch die strukturelle Telegram-7er-Grenze.
+    erlaubte_befunde = {"Issue #360 (Telegram-7er-Tabellenlimit)"}
 
     # #2422 S3 (AC-28): auch nach S3 bleibt das Register beim S1-Bestand --
     # gleiche ZAHL und keine Kennung dieser Spec (``S3-...``). Eine in /40//50
     # entdeckte Abweichung wird produktiv gefixt oder dem PO vorgelegt, nie
     # befristet eingetragen. Charakterisierung: heute gruen.
-    S1_BESTAND_ANZAHL = 9
+    S1_BESTAND_ANZAHL = 1  # #2422 S6: nur noch der gust-Eintrag (AC-14)
     assert len(AUSNAHMEN) == S1_BESTAND_ANZAHL, (
         f"AC-28: das Register hat {len(AUSNAHMEN)} Eintraege, der S1-Bestand "
         f"ist {S1_BESTAND_ANZAHL} -- S3 legt KEINE neuen Eintraege an."
@@ -1166,3 +1167,80 @@ def test_ac16_aenderung_hat_tatsaechlich_gewirkt(fall: str) -> None:
             f"Original-Golden unveraendert bleiben (nur {reiter!r} wurde "
             f"bearbeitet) -- vorher={v}, nachher={n}"
         )
+
+
+# ═══════════ #2422 S6 — AC-14 (Register-Endzustand) / AC-15 (Einfrieren) ═════════
+#
+# SPEC: docs/specs/modules/fix_2422_s6_register_leeren.md (AC-14, AC-15).
+
+
+def test_s6_ac14_register_endzustand_nur_gust():
+    """S6 AC-14: ``AUSNAHMEN`` enthaelt AUSSCHLIESSLICH den ``gust``-Eintrag
+    (``befristet=False``, Telegram-7er-Limit). Kein B1/B2/B3/B5-Eintrag, keine
+    Wildcard-Ausnahme (``metrik="*"``).
+
+    Mutation: ein alter Eintrag (z.B. B3) zurueck ins Register -> rot."""
+    assert len(AUSNAHMEN) == 1, (
+        f"AC-14: das Register muss genau den gust-Eintrag fuehren, hat "
+        f"{len(AUSNAHMEN)}: {[(e.metrik, e.kanal, e.dimension, e.befund) for e in AUSNAHMEN]}"
+    )
+    (eintrag,) = AUSNAHMEN
+    assert (eintrag.metrik, eintrag.kanal, eintrag.dimension) == _GUST_ZELLE
+    assert eintrag.befristet is False, "AC-14: gust ist eine Design-Grenze, nicht befristet."
+    assert eintrag.befund == "Issue #360 (Telegram-7er-Tabellenlimit)"
+
+
+def test_s6_ac14_golden_b_telegram_layout_verdraengt_gust_real():
+    """S6 AC-14: Damit das 7er-Limit nach dem B5-Fix (``wind_direction`` ist in
+    die Windzelle verschmolzen und belegt KEINE Spalte mehr) weiterhin real
+    ``gust`` verdraengt, traegt das golden_b-Telegram-Layout eine weitere
+    aktive Metrik. Gemessen an der Erwartung (Layout-JSON) und an der
+    Produktgrenze ``CHANNEL_LIMITS["telegram"]["max_table_cols"]`` -- nicht an
+    einer getippten Zahl.
+
+    Mutation: die zusaetzliche Metrik aus golden_b.json entfernen -> rot."""
+    from output.renderers.channel_layout import CHANNEL_LIMITS
+
+    tabellen_metriken = CHANNEL_LIMITS["telegram"]["max_table_cols"] - 1  # minus Zeitspalte
+    gb = golden_dict("golden_b")
+    erwartet = erwartete_kaskade(gb, "telegram_rich", "evening")
+    ids = [mid for mid, _ in erwartet]
+    assert "wind_direction" in ids and "wind" in ids, "Testaufbau: WD+Wind aktiv (Merge-Fall)."
+    ohne_merge = [m for m in ids if m != "wind_direction"]
+    assert "gust" in ohne_merge
+    assert ohne_merge.index("gust") >= tabellen_metriken, (
+        f"AC-14: ohne die verschmolzene Windrichtung rutscht gust auf Slot "
+        f"{ohne_merge.index('gust') + 1} und wuerde NICHT mehr verdraengt "
+        f"(Grenze: {tabellen_metriken} Metriken) -- golden_b braucht eine "
+        f"weitere aktive Telegram-Metrik. Reihenfolge: {ohne_merge}"
+    )
+
+
+def test_s6_ac15_erwartung_golden_b_handgeschrieben_mit_begruendung():
+    """S6 AC-15 (kein stilles Einfrieren): ``erwartung_golden_b.json`` ist die
+    report-typ-neutrale ANZEIGE-Wahrheit aus dem Layout-JSON -- sie aendert sich
+    in S6 AUSSCHLIESSLICH durch die zusaetzliche Telegram-Metrik ``humidity``
+    (Begruendung: AC-14, 7er-Limit). ``TF`` (SMS), Wolken-Stufen und der Wegfall
+    der Telegram-Spalte ``WD`` sind PRODUKT-Ausgabe und stehen in KEINER
+    Erwartungsdatei. Die Soll-Liste ist hier HANDGESCHRIEBEN, nicht aus dem
+    Orakel abgeleitet (sonst Selbstvergleich).
+
+    Rueckdreh-Gegenprobe: Erwartungsdatei auf den alten Stand (ohne humidity) ->
+    rot. Der Drift-Test (``test_erwartungsdatei_drift_einstellung_gleich_
+    auslieferung.py``) bleibt unveraendert scharf."""
+    eingefroren = json.loads((GOLDEN_DIR / "erwartung_golden_b.json").read_text())
+    telegram = [(m["metric_id"], m["friendly"]) for m in eingefroren["channels"]["telegram"]]
+    assert telegram == [
+        ("precipitation", False), ("wind", False), ("rain_probability", False),
+        ("thunder", True), ("cloud_total", True), ("cloud_low", True),
+        ("wind_direction", True), ("humidity", False), ("gust", False),
+    ], f"AC-15: erwartung_golden_b.json/telegram weicht von der Soll-Liste ab: {telegram}"
+    # E-Mail und SMS bleiben unveraendert (S6 fasst sie nicht an).
+    assert [m["metric_id"] for m in eingefroren["channels"]["sms"]] == [
+        "wind_chill", "wind", "precipitation", "rain_probability", "gust",
+        "thunder", "cloud_total", "sunshine",
+    ]
+    assert [m["metric_id"] for m in eingefroren["channels"]["email"]] == [
+        "wind", "gust", "precipitation", "rain_probability", "thunder",
+        "cloud_total", "cloud_low", "humidity",
+    ]

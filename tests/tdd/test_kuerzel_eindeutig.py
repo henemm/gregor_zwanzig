@@ -78,14 +78,15 @@ HAZARD_FELD_DE = "HAZARD_BEDEUTUNG_DE"
 BAUSTEIN_FELD_EN = "BAUSTEIN_BEDEUTUNG_EN"
 BAUSTEIN_FELD_DE = "BAUSTEIN_BEDEUTUNG_DE"
 
-#: Deutscher KUERZEL-Wortlaut, zeichengenau aus der Spec (AC-10). Bug #2454
-#: AC-6: "TF" entfaellt im TRIP-Kontext (wird im Trip nie versendet, seit
-#: #1887 E6 hat wind_chill selbst kein Kurzform-Kuerzel mehr) -- im
-#: Ortsvergleich-Kontext bleibt "TF" unveraendert (AC-7).
+#: Deutscher KUERZEL-Wortlaut, zeichengenau aus der Spec (AC-10). #2422 S6 (B1,
+#: PO-Entscheid V1): "TF" (gefuehlte Temperatur, Stundenwert) steht WIEDER auch im
+#: TRIP-Kontext -- es loest Bug #2454 AC-6 ("TF entfaellt im Trip") ab, weil der
+#: Trip ``TF<Tiefstwert>@<Stunde>`` jetzt versendet. Der Wortlaut ist der des
+#: Ortsvergleich-Kontexts (AC-7, unveraendert).
 KUERZEL_WORTLAUT_DE = "\n".join([
     "Kürzel",
     "Wetter: T Temperatur, D Tageshöchstwert, N Nacht, L Tagestiefstwert, "
-    "FD/FL/FN = D/L/N gefühlt, R Regen mm, PR "
+    "TF gefühlt, FD/FL/FN = D/L/N gefühlt, R Regen mm, PR "
     "Regenwahrscheinlichkeit %, TH Gewitter, TH+ Gewitter Folge-Etappe, W Wind "
     "km/h, G Böen, WD Windrichtung, HU Luftfeuchte, DP Taupunkt, CP "
     "Gewitterenergie, PT Niederschlagsart, SL Schneefallgrenze m, NS24+ "
@@ -364,21 +365,18 @@ def test_codes_deutsch_auf_langform_kanaelen(monkeypatch, user_ids, kanal):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Bug #2454 AC-6/AC-7 — "TF" nur im Ortsvergleich-Kontext
+# #2422 S6 löst #2454 AC-6 ab: "TF" steht im Trip UND im Ortsvergleich (AC-7)
 # ═══════════════════════════════════════════════════════════════════════════
 
-def test_ac6_trip_kuerzel_enthaelt_kein_tf(monkeypatch, user_ids):
-    """AC-6: Given ein Nutzer sendet 'kuerzel' im Trip-Kontext (kein
-    aufgeloester Ortsvergleich) / When die Antwort gebaut wird / Then enthaelt
-    sie in keiner Sprache das Kuerzel 'TF' -- weder in der geordneten
-    Wetter-Gruppe noch im Nachtrag unbekannter Kuerzel am Ende des
-    Wetter-Blocks. 'TF' wird im Trip nie versendet (wind_chill hat seit
-    #1887 E6 kein eigenes Kurzform-Kuerzel), die Werbung dafuer ist deshalb
-    irrefuehrend.
+def test_ac6_trip_kuerzel_enthaelt_tf(monkeypatch, user_ids):
+    """#2454 AC-6 ABGELOEST durch #2422 S6 (B1, PO-Entscheid V1): Given ein Nutzer
+    sendet 'kuerzel'/'codes' im Trip-Kontext (kein aufgeloester Ortsvergleich) /
+    When die Antwort gebaut wird / Then enthaelt sie in jeder Sprache das Kuerzel
+    'TF' MIT Bedeutung -- der Trip versendet ``TF<Tiefstwert>@<Stunde>`` jetzt
+    (``wind_chill``, Klasse (b) Invers-Min), die Kuerzel-Antwort muss es erklaeren.
+    Vorher (#2454) entfiel 'TF' dort, weil der Trip es nie sendete.
 
-    RED heute: codes_text()/_show_codes() kennen keinen Trip/Vergleich-
-    Kontext -- 'TF' steht in _CODES_WETTER fest verdrahtet und erscheint in
-    JEDER Antwort."""
+    RED heute: ``codes_text(vergleich=False)`` entfernt 'TF' im Trip-Kontext."""
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_po_lage_nutzer_an(user_ids)
     settings = basis_settings()
@@ -387,9 +385,13 @@ def test_ac6_trip_kuerzel_enthaelt_kein_tf(monkeypatch, user_ids):
     text_en = _premium_antwort(settings, recorder, nutzer, "codes")
 
     for sprache, text in (("de", text_de), ("en", text_en)):
-        assert _code_match(text, "TF") is None, (
-            f"AC-6 FAIL ({sprache}): die Trip-CODES/KUERZEL-Antwort enthaelt "
-            f"'TF', obwohl der Trip diesen Code nie versendet.\nAntwort: {text}"
+        assert _code_match(text, "TF") is not None, (
+            f"AC-6 (S6) FAIL ({sprache}): die Trip-CODES/KUERZEL-Antwort nennt "
+            f"'TF' nicht, obwohl der Trip diesen Code jetzt versendet.\n"
+            f"Antwort: {text}"
+        )
+        assert _hat_bedeutung_im_text(text, "TF", _soll_codes_ac9() | {"T", "TF", "C"}), (
+            f"AC-6 (S6) FAIL ({sprache}): 'TF' steht ohne Bedeutungstext:\n{text}"
         )
 
 

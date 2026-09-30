@@ -151,7 +151,14 @@ class TestAC2SegmentBubbleTable:
         header_match = re.search(r"(?m)^Zt\s+(.+)$", joined)
         assert header_match, f"Tabellen-Header 'Zt ...' nicht gefunden (AC-2):\n{joined}"
         header_cols = header_match.group(1).split()
-        expected_labels = [_compact_label(m) for m in metric_ids]
+        # #2422 S6 (B5): ``wind_direction`` im Skalenmodus (Default) zusammen mit
+        # ``wind`` ist in die Windzelle verschmolzen ("20 W") und belegt KEINE
+        # eigene Spalte -- die Geisterspalte 'WD' entfaellt. Erwartet sind also die
+        # konfigurierten Spalten OHNE die verschmolzene Windrichtung.
+        expected_labels = [_compact_label(m) for m in metric_ids if m != "wind_direction"]
+        assert _compact_label("wind_direction") not in header_cols, (
+            f"Geisterspalte {_compact_label('wind_direction')!r} im Kopf: {header_cols}"
+        )
         assert header_cols == expected_labels, (
             f"Tabellen-Spalten stimmen nicht mit konfigurierten Metriken überein: "
             f"{header_cols} != {expected_labels}"

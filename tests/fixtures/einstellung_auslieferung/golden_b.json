@@ -298,7 +298,7 @@
           "metric_id": "gust",
           "enabled": true,
           "bucket": "primary",
-          "order": 8,
+          "order": 9,
           "use_friendly_format": false
         },
         {
@@ -380,9 +380,9 @@
         },
         {
           "metric_id": "humidity",
-          "enabled": false,
-          "bucket": "secondary",
-          "order": 0,
+          "enabled": true,
+          "bucket": "primary",
+          "order": 8,
           "use_friendly_format": false
         },
         {

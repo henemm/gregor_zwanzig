@@ -365,10 +365,11 @@ class TestAC17SmsSymbolCatalogUnchanged:
             f"Ein Temperatur-Kuerzel ist aus /api/sms-symbols verschwunden "
             f"oder haengt an der falschen Groesse: {ist} statt {erwartet}"
         )
-        assert "wind_chill" not in by_metric, (
-            "'wind_chill' fuehrt weiterhin einen Eintrag in "
-            "/api/sms-symbols, obwohl 'WC' ersatzlos entfallen ist "
-            f"(PO-Entscheid): {by_metric.get('wind_chill')!r}"
+        # #2422 S6 (B1, PO-Entscheid V1): 'WC' bleibt entfallen, ``wind_chill``
+        # fuehrt jetzt das Stundenwert-Kuerzel 'TF' (Trip-Kurzform).
+        assert by_metric.get("wind_chill") == ["TF"], (
+            "'wind_chill' muss in /api/sms-symbols mit ['TF'] stehen (#2422 S6, "
+            f"'WC' bleibt entfallen): {by_metric.get('wind_chill')!r}"
         )
 
 
