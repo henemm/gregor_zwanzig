@@ -623,9 +623,18 @@ class TestF001OfficialTriggerViaCheckAllTrips:
 
 class TestAC7SmsWithoutParity:
     def test_sms_render_unaffected_email_gets_official_notice_appended(self):
-        """AC-7: SMS bleibt ohne Zusatztext für die amtliche Warnung (bewusste
-        Nicht-Parität, analog Slice-3-AC-6); die E-Mail (via mail_sink-DI-Seam,
-        kein echter Netzwerk-Call) enthält den Zusatz.
+        """AC-7: der reine Renderer `render_sms()`/`render_alert_sms()` bleibt
+        durch `official_notices` unangetastet — Aufruf ohne den Umweg über
+        `_dispatch_alert_message()` liefert byte-identische Ausgabe vor/nach
+        dem Dispatch-Aufruf; die E-Mail (via mail_sink-DI-Seam, kein echter
+        Netzwerk-Call) enthält den Zusatz.
+
+        Seit Issue #2422 S4 (Fix #1088) hängt `_dispatch_alert_message()`
+        selbst der von ihr gerenderten SMS einen kurzen Hinweistext an, wenn
+        `official_notices` vorliegt (s. `tests/tdd/
+        test_alarm_sms_paritaet_amtlicher_zusatz.py`) — das prüft dieser Test
+        NICHT, weil er den Renderer direkt aufruft statt den `sms_body`
+        auszulesen, den `_dispatch_alert_message()` tatsächlich versendet.
 
         RED: `_dispatch_alert_message()` kennt den Kwarg `official_notices`
         noch nicht -> TypeError.
