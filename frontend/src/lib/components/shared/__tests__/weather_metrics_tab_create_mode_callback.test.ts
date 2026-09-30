@@ -21,6 +21,16 @@ import { join, dirname } from 'node:path';
 const FILE = join(dirname(fileURLToPath(import.meta.url)), '..', 'WeatherMetricsTab.svelte');
 const code = readFileSync(FILE, 'utf-8');
 
+// Bug #2454 Fix-Loop 1 (Finding F001): die if/else-if/else-Kette aus
+// initFromTrip() (inkl. des trip_default_enabled-Fallbacks, Test 5/AC-6
+// unten) lebt seitdem als reine, exportierte Funktion `computeInitialBuckets()`
+// in metricsEditor.ts -- WeatherMetricsTab.svelte enthaelt die Kette selbst
+// nicht mehr woertlich. Die beiden Guards unten lesen deshalb ab jetzt DORT.
+const METRICS_EDITOR_FILE = join(
+	dirname(fileURLToPath(import.meta.url)), '..', '..', 'trip-detail', 'metricsEditor.ts',
+);
+const metricsEditorCode = readFileSync(METRICS_EDITOR_FILE, 'utf-8');
+
 describe('AC-1/AC-2/AC-3 (Test 3): onWeatherMetricsChange-Rückkanal im Anlege-Modus', () => {
 	test('Props-Interface hat eine onWeatherMetricsChange-Prop mit WeatherConfigMetric[]-Callback', () => {
 		assert.match(
@@ -214,14 +224,17 @@ describe('AC-1/AC-2/AC-3 (Test 1-3, Issue #1775): onDayWindowChange-Rückkanal i
 });
 
 describe('Test 5: Vorbelegungs-Fallback liest trip_default_enabled statt default_enabled', () => {
+	// Bug #2454 Fix-Loop 1: der else-Zweig lebt jetzt in
+	// metricsEditor.ts::computeInitialBuckets(), nicht mehr woertlich in
+	// WeatherMetricsTab.svelte::initFromTrip() -- Guard liest deshalb dort.
 	test('der createMode-Fallback-Zweig (keine gespeicherten Metriken) filtert nach trip_default_enabled', () => {
-		// Zielt gezielt auf den else-Zweig in initFromTrip() (Fall "savedMetrics
-		// fehlt/leer") -- NICHT auf irgendeine Stelle im File, sonst faengt der
-		// Test einen Treffer im falschen Zweig (AC-6 Regression) nicht.
+		// Fix-Loop 1 (Advisor-Befund): der Filter liest jetzt `allIds` (expliziter
+		// Parameter, Ordering-Fidelity zu WeatherMetricsTab.svelte::allCatalogIds())
+		// statt der privaten `allCatalogIds(catalog)` aus metricsEditor.ts.
 		assert.match(
-			code,
-			/\}\s*else\s*\{\s*\/\/[^\n]*\n(?:\s*\/\/[^\n]*\n)*\s*const activeIds = allCatalogIds\(\)\.filter\(\(id\) => metricById\[id\]\?\.trip_default_enabled\);/,
-			'Der Vorbelegungs-Fallback (initFromTrip, else-Zweig) liest noch ' +
+			metricsEditorCode,
+			/\}\s*else\s*\{\s*const activeIds = allIds\.filter\(\(id\) => metricById\[id\]\?\.trip_default_enabled\);/,
+			'Der Vorbelegungs-Fallback (computeInitialBuckets, else-Zweig) liest noch ' +
 				'default_enabled statt trip_default_enabled — die Anzeige im Anlege-' +
 				'Dialog würde weiterhin von der Orte/Abo-Vorbelegung abweichen'
 		);
@@ -230,11 +243,19 @@ describe('Test 5: Vorbelegungs-Fallback liest trip_default_enabled statt default
 	test('kein direkter Zugriff auf metricById[id]?.default_enabled bleibt uebrig', () => {
 		// Regressionsschutz: die Ersetzung soll gezielt sein (nur der eine
 		// Fallback-Zweig), nicht bloss ein zweites Vorkommen daneben stehen
-		// lassen, das denselben Bug an anderer Stelle weiterleben liesse.
+		// lassen, das denselben Bug an anderer Stelle weiterleben liesse. Bug
+		// #2454 Fix-Loop 1 (Advisor-Befund): BEIDE Dateien pruefen, nicht nur
+		// die, in der die Kette heute lebt -- sonst koennte WeatherMetricsTab.svelte
+		// den Bug unbemerkt wieder einfuehren.
 		assert.doesNotMatch(
 			code,
 			/metricById\[id\]\?\.default_enabled(?!\s*\??:)/,
-			'default_enabled wird an unerwarteter Stelle noch direkt gelesen'
+			'default_enabled wird in WeatherMetricsTab.svelte an unerwarteter Stelle noch direkt gelesen'
+		);
+		assert.doesNotMatch(
+			metricsEditorCode,
+			/metricById\[id\]\?\.default_enabled(?!\s*\??:)/,
+			'default_enabled wird in metricsEditor.ts an unerwarteter Stelle noch direkt gelesen'
 		);
 	});
 });
@@ -249,11 +270,13 @@ describe('AC-6 (Adversary-Befund F002, Fix-Loop 1, HIGH): die vollstaendige if/e
 	// Komplett-Abwahl faellt still auf die 7 Standardgroessen zurueck, AC-6-
 	// Regression) -- alle Tests oben blieben dabei gruen, weil sie nur den
 	// unveraenderten else-Zweig-KOERPER matchen, nicht die Kette drumherum.
-	// Kein Mount-/DOM-Test moeglich (kein jsdom); dieser Test haelt daher die
-	// GESAMTE Kette (alle drei Bedingungen + der bekannte Fallback-Ausdruck im
-	// dritten Zweig) als EINEN zusammenhaengenden Treffer fest.
+	// Bug #2454 Fix-Loop 1: die Kette zieht mit computeInitialBuckets() nach
+	// metricsEditor.ts um -- Guard liest dort. Kein Mount-/DOM-Test moeglich
+	// (kein jsdom); dieser Test haelt daher die GESAMTE Kette (alle drei
+	// Bedingungen + der bekannte Fallback-Ausdruck im dritten Zweig) als EINEN
+	// zusammenhaengenden Treffer fest.
 	test('if (savedMetrics && hasBuckets) / else if (savedMetrics && savedMetrics.length) / else {...trip_default_enabled...} bilden EINE zusammenhaengende Kette', () => {
-		const chainMatch = code.match(
+		const chainMatch = metricsEditorCode.match(
 			/if\s*\(savedMetrics\s*&&\s*hasBuckets\)\s*\{[\s\S]*?\}\s*else if\s*\(savedMetrics\s*&&\s*savedMetrics\.length\)\s*\{[\s\S]*?\}\s*else\s*\{[\s\S]*?metricById\[id\]\?\.trip_default_enabled[\s\S]*?\}/
 		);
 		assert.ok(
@@ -267,7 +290,7 @@ describe('AC-6 (Adversary-Befund F002, Fix-Loop 1, HIGH): die vollstaendige if/e
 	});
 
 	test('genau EINE Kette dieser Form existiert (kein zweites, abweichendes Duplikat)', () => {
-		const matches = code.match(
+		const matches = metricsEditorCode.match(
 			/if\s*\(savedMetrics\s*&&\s*hasBuckets\)\s*\{[\s\S]*?\}\s*else if\s*\(savedMetrics\s*&&\s*savedMetrics\.length\)\s*\{[\s\S]*?\}\s*else\s*\{[\s\S]*?metricById\[id\]\?\.trip_default_enabled[\s\S]*?\}/g
 		) ?? [];
 		assert.equal(matches.length, 1, `Erwartet genau 1 Treffer, gefunden: ${matches.length}`);

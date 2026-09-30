@@ -57,6 +57,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     _ortstag_jetzt,
     basis_settings,
     install_transport_fakes,
+    lege_lage_an,
     lege_po_lage_nutzer_an,
     sende_email,
     sende_premium_sms,
@@ -77,11 +78,14 @@ HAZARD_FELD_DE = "HAZARD_BEDEUTUNG_DE"
 BAUSTEIN_FELD_EN = "BAUSTEIN_BEDEUTUNG_EN"
 BAUSTEIN_FELD_DE = "BAUSTEIN_BEDEUTUNG_DE"
 
-#: Deutscher KUERZEL-Wortlaut, zeichengenau aus der Spec (AC-10).
+#: Deutscher KUERZEL-Wortlaut, zeichengenau aus der Spec (AC-10). Bug #2454
+#: AC-6: "TF" entfaellt im TRIP-Kontext (wird im Trip nie versendet, seit
+#: #1887 E6 hat wind_chill selbst kein Kurzform-Kuerzel mehr) -- im
+#: Ortsvergleich-Kontext bleibt "TF" unveraendert (AC-7).
 KUERZEL_WORTLAUT_DE = "\n".join([
     "Kürzel",
     "Wetter: T Temperatur, D Tageshöchstwert, N Nacht, L Tagestiefstwert, "
-    "TF gefühlt, FD/FL/FN = D/L/N gefühlt, R Regen mm, PR "
+    "FD/FL/FN = D/L/N gefühlt, R Regen mm, PR "
     "Regenwahrscheinlichkeit %, TH Gewitter, TH+ Gewitter Folge-Etappe, W Wind "
     "km/h, G Böen, WD Windrichtung, HU Luftfeuchte, DP Taupunkt, CP "
     "Gewitterenergie, PT Niederschlagsart, SL Schneefallgrenze m, NS24+ "
@@ -356,6 +360,57 @@ def test_codes_deutsch_auf_langform_kanaelen(monkeypatch, user_ids, kanal):
         f"AC-10 FAIL ({kanal}): die Antwort auf 'kuerzel' enthaelt den "
         f"freigegebenen deutschen Wortlaut nicht zeichengenau.\n"
         f"Soll:\n{KUERZEL_WORTLAUT_DE}\n\nIst:\n{text}"
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Bug #2454 AC-6/AC-7 — "TF" nur im Ortsvergleich-Kontext
+# ═══════════════════════════════════════════════════════════════════════════
+
+def test_ac6_trip_kuerzel_enthaelt_kein_tf(monkeypatch, user_ids):
+    """AC-6: Given ein Nutzer sendet 'kuerzel' im Trip-Kontext (kein
+    aufgeloester Ortsvergleich) / When die Antwort gebaut wird / Then enthaelt
+    sie in keiner Sprache das Kuerzel 'TF' -- weder in der geordneten
+    Wetter-Gruppe noch im Nachtrag unbekannter Kuerzel am Ende des
+    Wetter-Blocks. 'TF' wird im Trip nie versendet (wind_chill hat seit
+    #1887 E6 kein eigenes Kurzform-Kuerzel), die Werbung dafuer ist deshalb
+    irrefuehrend.
+
+    RED heute: codes_text()/_show_codes() kennen keinen Trip/Vergleich-
+    Kontext -- 'TF' steht in _CODES_WETTER fest verdrahtet und erscheint in
+    JEDER Antwort."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = lege_po_lage_nutzer_an(user_ids)
+    settings = basis_settings()
+
+    text_de = _premium_antwort(settings, recorder, nutzer, "kürzel")
+    text_en = _premium_antwort(settings, recorder, nutzer, "codes")
+
+    for sprache, text in (("de", text_de), ("en", text_en)):
+        assert _code_match(text, "TF") is None, (
+            f"AC-6 FAIL ({sprache}): die Trip-CODES/KUERZEL-Antwort enthaelt "
+            f"'TF', obwohl der Trip diesen Code nie versendet.\nAntwort: {text}"
+        )
+
+
+def test_ac7_ortsvergleich_kuerzel_behaelt_tf(monkeypatch, user_ids):
+    """AC-7: Given ein Ortsvergleich-Nutzer sendet 'kuerzel' im aufgeloesten
+    Vergleichs-Kontext (per Namen adressiert, ``_dispatch_compare`` erreicht)
+    / When die Antwort gebaut wird / Then bleibt 'TF' unveraendert enthalten
+    -- der Ortsvergleich versendet 'TF' tatsaechlich (comparison.py:636).
+
+    Heute bereits gruen (Regressionswaechter fuer AC-6: die Trip-Aenderung
+    darf den Ortsvergleich nicht mittreffen)."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L4")
+    name = nutzer.presets[0]["name"]
+    settings = basis_settings()
+
+    text = _premium_antwort(settings, recorder, nutzer, f"{name} kuerzel")
+
+    assert _code_match(text, "TF") is not None, (
+        f"AC-7 FAIL: im aufgeloesten Ortsvergleich-Kontext muss 'TF' erhalten "
+        f"bleiben (unveraendertes Bestandsverhalten).\nAntwort: {text}"
     )
 
 

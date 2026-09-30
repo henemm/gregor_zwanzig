@@ -5,7 +5,7 @@
 
 import type { ChannelLayouts, WeatherConfigMetric } from '$lib/types';
 import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
-import type { Buckets } from '$lib/components/trip-detail/metricsEditor';
+import { deriveMissingChildMetrics, moveWithDerivedChildren, type Buckets } from '$lib/components/trip-detail/metricsEditor';
 
 export interface ChannelOverride {
 	buckets: Buckets;
@@ -44,13 +44,17 @@ export function channelOverrideFromMetrics(
 	catalogIds: string[],
 	fallbackFriendly: Record<string, boolean>
 ): ChannelOverride {
-	const active = metrics
+	// Bug #2454 Abschnitt 1: fehlende Kind-Eintraege VOR dem Bucket-Aufbau
+	// ableiten — Elter-Referenz ist der Elter-Eintrag in DIESER Kanal-Liste,
+	// nicht die globale (mirrort loader.py::_append_derived_metrics je Kanal).
+	const derived = deriveMissingChildMetrics(metrics);
+	const active = derived
 		.filter((m) => m.enabled)
 		.slice()
 		.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 	const activeIds = new Set(active.map((m) => m.metric_id));
 	const friendlyMap = { ...fallbackFriendly };
-	for (const m of metrics) {
+	for (const m of derived) {
 		if (m.use_friendly_format !== undefined) friendlyMap[m.metric_id] = m.use_friendly_format;
 	}
 	return {
@@ -76,6 +80,45 @@ export function startChannelOverride(
 		},
 		friendlyMap: { ...friendlyMap }
 	};
+}
+
+/**
+ * Bug #2454 Fix-Loop 1 (Finding F001, Abschnitt 2/AC-2): globales Ein-/
+ * Ausschalten von `id` (`temperature`/`wind_chill` nehmen ihre mitgelaufenen
+ * Kinder mit — fuer alle anderen IDs ist `moveWithDerivedChildren` deckungs-
+ * gleich mit einem einfachen Verschieben, da ihr Kind-Set leer ist) UND, bei
+ * einer Abwahl (`wasOn=true`), der bestehenden Durchschreibung in alle Kanal-
+ * Overrides, die `id` aktiv fuehren (Issue #1719 S3 / ADR-0050 Regel 3) — die
+ * Kind-Mitnahme greift dort identisch, sonst blieben Kind-Zeilen im Kanal-
+ * Override aktiv stehen, waehrend der Elter global gerade abgewaehlt wurde.
+ * DIESELBE Funktion wird von `WeatherMetricsTab.svelte::onToggleMetric()` UND
+ * vom Test-Nachbau aufgerufen (kein zweiter Nachbau der Verdrahtung, F001).
+ * Referenz-Identitaet: `from === to` (No-Op) liefert exakt `buckets`/
+ * `channelBuckets` unveraendert zurueck (Aufrufer erkennt No-Op daran).
+ */
+export function toggleGlobalMetric(
+	buckets: Buckets,
+	channelBuckets: Record<ChannelId, ChannelOverride | null>,
+	id: string,
+	wasOn: boolean
+): { buckets: Buckets; channelBuckets: Record<ChannelId, ChannelOverride | null> } {
+	const from: keyof Buckets = buckets.primary.includes(id) ? 'primary' : 'off';
+	const to: keyof Buckets = wasOn ? 'off' : 'primary';
+	if (from === to) return { buckets, channelBuckets };
+
+	const newBuckets = moveWithDerivedChildren(buckets, id, from, to);
+	if (!wasOn) return { buckets: newBuckets, channelBuckets };
+
+	const newChannelBuckets = { ...channelBuckets };
+	for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
+		const override = newChannelBuckets[ch];
+		if (override === null || !override.buckets.primary.includes(id)) continue;
+		newChannelBuckets[ch] = {
+			buckets: moveWithDerivedChildren(override.buckets, id, 'primary', 'off'),
+			friendlyMap: override.friendlyMap
+		};
+	}
+	return { buckets: newBuckets, channelBuckets: newChannelBuckets };
 }
 
 /**

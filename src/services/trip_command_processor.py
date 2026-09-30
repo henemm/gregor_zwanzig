@@ -378,9 +378,17 @@ def _codes_gruppe(codes: tuple, bedeutung: dict) -> str:
     return f"{kopf}{' = ' if s and not p else ' '}{' '.join(x for x in rand if x)}"
 
 
-def codes_text(en: bool) -> str:
+def codes_text(en: bool, vergleich: bool = False) -> str:
     """CODES (englisch) bzw. KUERZEL (deutsch) -- jedes Zeichen, das eine
-    Kurzform-SMS tragen kann, mit Bedeutung aus der jeweils EINEN Quelle."""
+    Kurzform-SMS tragen kann, mit Bedeutung aus der jeweils EINEN Quelle.
+
+    Bug #2454 AC-6/AC-7: "TF" wird im TRIP nie versendet (`wind_chill` hat
+    seit #1887 E6 kein eigenes Kurzform-Kuerzel) -- im Trip-Kontext
+    (``vergleich=False``, Default) wird "TF" deshalb sowohl aus der
+    geordneten Wetter-Gruppe als auch aus dem Nachtrags-Fallback (``bed``)
+    entfernt, sonst haengt Zeile ~392 es unbeworben wieder an. Im
+    Ortsvergleich-Kontext (``vergleich=True``) bleibt "TF" unveraendert
+    (der Ortsvergleich versendet es tatsaechlich, comparison.py:636)."""
     from app.metric_catalog import _METRICS
     from output.tokens import builder
     from output.tokens import hazard_symbols as hz
@@ -388,8 +396,12 @@ def codes_text(en: bool) -> str:
     bed: dict[str, str] = {}
     for m in _METRICS:
         bed.update(m.kuerzel_bedeutung_en if en else m.kuerzel_bedeutung_de)
-    geordnet = {c for g in _CODES_WETTER + _CODES_WEITERE for c in g}
-    wetter = _CODES_WETTER + tuple((c,) for c in bed if c not in geordnet)
+    wetter_codes = _CODES_WETTER
+    if not vergleich:
+        wetter_codes = tuple(g for g in wetter_codes if g != ("TF",))
+        bed.pop("TF", None)
+    geordnet = {c for g in wetter_codes + _CODES_WEITERE for c in g}
+    wetter = wetter_codes + tuple((c,) for c in bed if c not in geordnet)
     bed.update(builder.BAUSTEIN_BEDEUTUNG_EN if en else builder.BAUSTEIN_BEDEUTUNG_DE)
     formate = builder.FORMAT_BEDEUTUNG_EN if en else builder.FORMAT_BEDEUTUNG_DE
     warn = hz.HAZARD_BEDEUTUNG_EN if en else hz.HAZARD_BEDEUTUNG_DE
@@ -1220,7 +1232,7 @@ class TripCommandProcessor:
         if key == "hilfe":
             return self._show_help_for_kind("vergleich")
         if key == "kuerzel":
-            return self._show_codes()
+            return self._show_codes(kind="vergleich")
         if key in ("report", "heute", "morgen"):
             return self._compare_transitional(name)
         if key == "pause":
@@ -1255,13 +1267,15 @@ class TripCommandProcessor:
             confirmation_body="\n".join(zeilen),
         )
 
-    def _show_codes(self) -> CommandResult:
+    def _show_codes(self, kind: str = "route") -> CommandResult:
         """CODES/KUERZEL (#2417 AC-3/AC-9/AC-10) -- ziellos, Sprache laut
-        Kanal/Wort, Text vollstaendig aus ``codes_text``."""
+        Kanal/Wort, Text vollstaendig aus ``codes_text``. Bug #2454 AC-6/AC-7:
+        ``kind`` steuert, ob "TF" erscheint (nur im aufgeloesten
+        Ortsvergleich, ``kind="vergleich"``)."""
         return CommandResult(
             success=True, command="kuerzel",
             confirmation_subject=self._t("Kürzel", "Codes"),
-            confirmation_body=codes_text(self._en),
+            confirmation_body=codes_text(self._en, vergleich=(kind == "vergleich")),
         )
 
     def _compare_transitional(self, name: str) -> CommandResult:

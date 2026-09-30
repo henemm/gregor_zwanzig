@@ -1,0 +1,520 @@
+{
+  "id": "fic00001",
+  "name": "Testtrip Eingefroren",
+  "stages": [
+    {
+      "id": "fic-stage-1",
+      "name": "01: Fantasieort A nach Fantasieort B",
+      "date": "2026-11-02",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 47.0001,
+          "lon": 11.0001,
+          "elevation_m": 1000,
+          "time_window": "08:00-08:00",
+          "arrival_calculated": "08:00",
+          "distance_from_start_km": 0
+        },
+        {
+          "id": "G2",
+          "name": "Ziel",
+          "lat": 47.0501,
+          "lon": 11.0501,
+          "elevation_m": 1400,
+          "time_window": "12:00-12:00",
+          "arrival_calculated": "12:15",
+          "distance_from_start_km": 9.4
+        }
+      ],
+      "start_time": "08:00"
+    },
+    {
+      "id": "fic-stage-2",
+      "name": "02: Fantasieort B nach Fantasiehuette C",
+      "date": "2026-11-03",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 47.0501,
+          "lon": 11.0501,
+          "elevation_m": 1400,
+          "time_window": "08:00-08:00",
+          "arrival_calculated": "08:00",
+          "distance_from_start_km": 0
+        },
+        {
+          "id": "G2",
+          "name": "Gipfel",
+          "lat": 47.09,
+          "lon": 11.09,
+          "elevation_m": 2000,
+          "time_window": "10:30-10:30",
+          "arrival_calculated": "10:40",
+          "distance_from_start_km": 6.2
+        },
+        {
+          "id": "G3",
+          "name": "Ziel",
+          "lat": 47.11,
+          "lon": 11.13,
+          "elevation_m": 1850,
+          "time_window": "13:00-13:00",
+          "arrival_calculated": "13:20",
+          "distance_from_start_km": 11.8
+        }
+      ],
+      "start_time": "08:00"
+    },
+    {
+      "id": "fic-stage-3",
+      "name": "03: Fantasiehuette C nach Fantasieort D",
+      "date": "2026-11-04",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 47.11,
+          "lon": 11.13,
+          "elevation_m": 1850,
+          "time_window": "08:00-08:00",
+          "arrival_calculated": "08:00",
+          "distance_from_start_km": 0
+        },
+        {
+          "id": "G2",
+          "name": "Ziel",
+          "lat": 47.15,
+          "lon": 11.17,
+          "elevation_m": 1300,
+          "time_window": "12:00-12:00",
+          "arrival_calculated": "12:10",
+          "distance_from_start_km": 8.0
+        }
+      ],
+      "start_time": "08:00"
+    }
+  ],
+  "aggregation": {
+    "profile": "allgemein"
+  },
+  "display_config": {
+    "trip_id": "",
+    "metrics": [
+      {
+        "metric_id": "temperature",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "temperature_night",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "temperature_day_low",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "temperature_day_high",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "wind_chill",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 12,
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "wind_chill_night",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "wind_chill_day_low",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "wind_chill_day_high",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "wind",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "gust",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 1,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "precipitation",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 2,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "humidity",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "cape",
+        "enabled": false,
+        "horizons": {
+          "today": true,
+          "tomorrow": true,
+          "day_after": true
+        },
+        "use_friendly_format": true
+      }
+    ],
+    "channel_layouts": {
+      "email": [
+        {
+          "metric_id": "wind_chill",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0,
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_night",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_day_low",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_day_high",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "precipitation",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 1,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        }
+      ],
+      "sms": [
+        {
+          "metric_id": "wind_chill",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0,
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_night",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_day_low",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_day_high",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "precipitation",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 1,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        }
+      ],
+      "telegram": [
+        {
+          "metric_id": "wind_chill",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0,
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_night",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_day_low",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind_chill_day_high",
+          "enabled": false,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "wind",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        },
+        {
+          "metric_id": "precipitation",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 1,
+          "horizons": {
+            "today": true,
+            "tomorrow": true,
+            "day_after": true
+          },
+          "use_friendly_format": true
+        }
+      ]
+    },
+    "alert_preset": null,
+    "channels": {
+      "email": true,
+      "sms": true,
+      "telegram": true
+    },
+    "metric_alert_levels": {
+      "wind": "standard",
+      "precipitation": "standard"
+    },
+    "multi_day_trend_reports": [
+      "evening"
+    ],
+    "night_interval_hours": 2,
+    "outlook_metrics": [
+      "wind_chill",
+      "wind",
+      "precipitation"
+    ],
+    "show_night_block": true,
+    "sms_metrics": [],
+    "telegram_kurzform": false,
+    "thunder_forecast_days": 2,
+    "updated_at": "2026-01-01T00:00:00.000000+00:00",
+    "erfundenes_zukunftsfeld": "muss beim Migrieren unveraendert erhalten bleiben"
+  },
+  "report_config": {
+    "alert_on_changes": true,
+    "change_threshold_precip_mm": 10,
+    "change_threshold_temp_c": 5,
+    "change_threshold_wind_kmh": 20,
+    "daily_summary_metrics": [
+      "precipitation",
+      "wind"
+    ]
+  },
+  "alert_rules": [
+    {
+      "id": "fic-rule-1",
+      "kind": "delta",
+      "metric": "wind_gust",
+      "threshold": 20,
+      "unit": "km/h",
+      "severity": "warning",
+      "enabled": true
+    }
+  ],
+  "corridors": [
+    {
+      "metric": "wind_gust",
+      "range": [
+        null,
+        20
+      ],
+      "notify": true,
+      "mark": true
+    }
+  ],
+  "alert_cooldown_minutes": 30,
+  "alert_quiet_from": "20:00",
+  "alert_quiet_to": "06:00",
+  "activity": "wandern",
+  "official_alerts_enabled": true,
+  "official_warnings": {
+    "enabled": true
+  },
+  "alert_channels": {
+    "email": true,
+    "telegram": true,
+    "sms": false,
+    "premium_sms": false
+  },
+  "alert_channel_thresholds": {
+    "email": "LOW",
+    "telegram": "LOW",
+    "sms": "MODERATE",
+    "premium_sms": "HIGH"
+  },
+  "morning_time": "06:00:00",
+  "evening_time": "17:00:00",
+  "morning_enabled": true,
+  "evening_enabled": true,
+  "send_email": true,
+  "send_sms": false,
+  "send_telegram": true,
+  "send_premium_sms": false,
+  "end_date": "2026-11-10",
+  "kind": "route",
+  "erfundenes_top_level_feld": 42
+}

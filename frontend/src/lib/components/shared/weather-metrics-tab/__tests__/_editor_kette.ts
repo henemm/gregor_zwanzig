@@ -20,10 +20,11 @@
 // existieren heute noch nicht (K8-Fix-Ort fuer /50), deshalb Aufruf per Cast.
 
 import {
-	bucketsToColumns,
 	buildWeatherConfigMetrics,
+	computeInitialBuckets,
 	type Buckets,
 	type Horizons,
+	type MetricCatalog,
 } from '../../../trip-detail/metricsEditor.ts';
 import {
 	channelOverrideFromMetrics,
@@ -79,37 +80,31 @@ export interface EditorState {
 	channelBuckets: Record<ChannelId, ChannelOverride | null>;
 }
 
-/** Nachbau von initFromTrip() (WeatherMetricsTab.svelte:452-486): globale
- * Bucket-Zerlegung nach ROHEM `enabled` (Editor ist NICHT report-typ-
+/** Nachbau von initFromTrip() (WeatherMetricsTab.svelte::initFromTrip()):
+ * globale Bucket-Zerlegung nach ROHEM `enabled` (Editor ist NICHT report-typ-
  * gesplittet -- morning_enabled/evening_enabled wirken erst bei der
- * AUSLIEFERUNG, siehe erwartungsdateien_erzeugen.py-Docstring), #587-
- * Migration (secondary -> primary via bucketsToColumns), sowie je Reiter
- * `channelOverrideFromMetrics`, falls ein eigenes Kanal-Layout existiert. */
+ * AUSLIEFERUNG, siehe erwartungsdateien_erzeugen.py-Docstring), sowie je
+ * Reiter `channelOverrideFromMetrics`, falls ein eigenes Kanal-Layout
+ * existiert.
+ *
+ * Bug #2454 Fix-Loop 1 (Finding F001): ruft ab jetzt DIESELBE exportierte
+ * Funktion `computeInitialBuckets()` auf, die auch
+ * `WeatherMetricsTab.svelte::initFromTrip()` verwendet (inkl. fehlender-
+ * Kind-Ableitung UND aller drei initFromTrip()-Zweige: hasBuckets /
+ * autoAssign / trip_default_enabled) -- kein zweiter, potenziell
+ * abweichender Nachbau mehr. `metricById` bleibt hier leer: keiner der
+ * Goldens dieser Kette nutzt den `metrics: []`-Defaultzweig mit einem
+ * Katalog, der `trip_default_enabled` traegt (s. Fix-Loop-1-Analyse). */
 export function ladeInEditorState(golden: GoldenTrip, catalog: MinimalCatalog): EditorState {
-	const saved = golden.display_config.metrics ?? [];
-	const prim = saved
-		.filter((m) => m.enabled && m.bucket === 'primary')
-		.slice()
-		.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-		.map((m) => m.metric_id);
-	const sec = saved
-		.filter((m) => m.enabled && m.bucket === 'secondary')
-		.slice()
-		.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-		.map((m) => m.metric_id);
-	// looseActive: aktive Metriken ohne bucket-Feld (Alt-Bestand) -- wie
-	// initFromTrip() haengt WeatherMetricsTab sie ans Ende von secondary an,
-	// bevor bucketsToColumns() migriert.
-	const looseActive = saved
-		.filter((m) => m.enabled && m.bucket !== 'primary' && m.bucket !== 'secondary')
-		.map((m) => m.metric_id);
-	// off = ALLE Katalog-IDs minus aktive (nicht nur Golden-eigene IDs) --
-	// exakt initFromTrip() (WeatherMetricsTab.svelte:463-466).
-	const activeIds = new Set([...prim, ...sec, ...looseActive]);
-	const off = alleCatalogIds(catalog).filter((id) => !activeIds.has(id));
-
-	const mergedPrimary = bucketsToColumns({ primary: prim, secondary: [...sec, ...looseActive], off });
-	const buckets: Buckets = { primary: mergedPrimary, secondary: [], off };
+	const buckets = computeInitialBuckets(
+		catalog as unknown as MetricCatalog,
+		{},
+		golden.display_config.metrics as ReadonlyArray<
+			{ metric_id: string; enabled: boolean; bucket?: string; order?: number }
+		> | undefined,
+		alleCatalogIds(catalog),
+	);
+	const saved = (golden.display_config.metrics ?? []) as GoldenMetric[];
 
 	const friendlyMap: Record<string, boolean> = {};
 	const horizonsMap: Record<string, Horizons> = {};

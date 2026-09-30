@@ -286,7 +286,7 @@ ebenfalls zurück, statt still den Trip zu bevorzugen.
 | `PAUSE` | Pausiert den Ortsvergleich unbefristet (eine mitgegebene Dauer wie `PAUSE 2d` wird ignoriert) — Antwort: „... pausiert, bis du 'weiter' sendest." |
 | `WEITER` | Setzt einen pausierten Ortsvergleich fort — Antwort: „... wieder aktiv." War der Vergleich nicht pausiert: „... ist nicht pausiert." (keine Änderung) |
 | `HILFE` / `HELP` | Zeigt nur die am Ortsvergleich verfügbaren Befehle (`PAUSE`, `WEITER`/`RESUME`, `HILFE`/`HELP`, `KUERZEL`/`CODES`) — nicht die volle Trip-Befehlsliste |
-| `KUERZEL` / `CODES` | Kürzel-Legende (seit Issue #2417) — dieselbe Antwort wie am Trip |
+| `KUERZEL` / `CODES` | Kürzel-Legende (seit Issue #2417) — wie am Trip, mit einer Ausnahme: „TF" (gefühlte Temperatur) bleibt hier enthalten, während die Trip-Antwort es seit Issue #2454 nicht mehr zeigt (im Trip nie versendetes Kürzel) |
 | `REPORT`, `HEUTE`, `MORGEN` | Übergangsantwort: „... noch nicht verfügbar — bitte nutze die Web-App." (kein Versand) |
 | alle übrigen (`STRECKE`, `SKIP`, `RUHETAG`, `STARTDATUM`, `STOP`, `JETZT`/`NOW`, `STATUS`, `GEWITTER`, Drilldowns, Metrikwörter) | „'<befehl>' gibt es beim Ortsvergleich nicht." |
 
