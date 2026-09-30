@@ -1,0 +1,41 @@
+TAP version 13
+# node:internal/modules/run_main:123
+#     triggerUncaughtException(
+#     ^
+# Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/agile-crunching-swan/frontend/src/lib/components/compare-new/compareNewVorlage.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/agile-crunching-swan/frontend/src/lib/components/compare-new/__tests__/compareNewVorlage.test.ts
+#     at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+#     at moduleResolve (node:internal/modules/esm/resolve:861:10)
+#     at defaultResolve (node:internal/modules/esm/resolve:985:11)
+#     at nextResolve (node:internal/modules/esm/hooks:748:28)
+#     at resolve (file:///home/hem/gregor_zwanzig/.claude/worktrees/agile-crunching-swan/frontend/test-lib-hooks.mjs:19:16)
+#     at nextResolve (node:internal/modules/esm/hooks:748:28)
+#     at resolve (data:text/javascript,%0Aexport%20async%20function%20resolve(specifier%2C%20context%2C%20nextResolve)%20%7B%0A%09if%20(specifier%20%3D%3D%3D%20'%24app%2Fnavigation')%20%7B%0A%09%09return%20%7B%20url%3A%20'data%3Atext%2Fjavascript%2Cexport%20function%20goto()%7B%7D'%2C%20shortCircuit%3A%20true%20%7D%3B%0A%09%7D%0A%09return%20nextResolve(specifier%2C%20context)%3B%0A%7D%0A:6:9)
+#     at nextResolve (node:internal/modules/esm/hooks:748:28)
+#     at Hooks.resolve (node:internal/modules/esm/hooks:240:30)
+#     at handleMessage (node:internal/modules/esm/worker:199:24) {
+#   code: 'ERR_MODULE_NOT_FOUND',
+#   url: 'file:///home/hem/gregor_zwanzig/.claude/worktrees/agile-crunching-swan/frontend/src/lib/components/compare-new/compareNewVorlage.ts'
+# }
+# Node.js v22.22.2
+# Subtest: src/lib/components/compare-new/__tests__/compareNewVorlage.test.ts
+not ok 1 - src/lib/components/compare-new/__tests__/compareNewVorlage.test.ts
+  ---
+  duration_ms: 159.58948
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/agile-crunching-swan/frontend/src/lib/components/compare-new/__tests__/compareNewVorlage.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 166.24453
+--- E2E-Spec erst nach Deploy gegen Staging lauffaehig; Kern-Test RED per ERR_MODULE_NOT_FOUND ---
