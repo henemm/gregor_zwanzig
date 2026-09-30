@@ -28,7 +28,7 @@ import assert from 'node:assert/strict';
 
 import { api } from '../../../api.ts';
 import { clearEtagRegistry } from '../../../etagRegistry.ts';
-import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
+import { createGoMergeServer, type GoMergeServer } from './goMergeServerPruefstand.ts';
 import type { ComparePreset } from '../../../types.ts';
 import { createPutQueue } from '../../compare/compareHubPersistenz.ts';
 import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
@@ -42,19 +42,21 @@ import { createController, hydrierterWiz, makePreset, versandBedienung } from '.
 
 const PRESET_ID = 'cp-2276-s5-reiter';
 
-let server: FakeTripServer;
+// Seit #2375 sendet jeder Reiter nur seine Eigenfelder — dass BEIDE Änderungen
+// auf dem Server stehen, entscheidet der Server-Abgleich; darum der Ersatz-Server,
+// der wie der Go-Handler zusammenführt (der fakeTripServer ersetzt den Rumpf komplett).
+let server: GoMergeServer;
 
 beforeEach(() => {
 	clearEtagRegistry();
-	// Server-Laufzeit > 0: „vor dem Wechsel" heißt, der PUT ist ABGESCHLOSSEN,
-	// wenn der Helfer zurückkehrt — nicht nur losgeschickt.
-	server = createFakeTripServer({ latencyMs: 20 });
+	server = createGoMergeServer({ [PRESET_ID]: makePreset(PRESET_ID) as unknown as Record<string, unknown> });
 	server.install();
 });
 
 afterEach(() => server.restore());
 
-const puts = () => server.calls.filter((c) => c.method === 'PUT');
+const puts = () =>
+	server.mitschnitt.filter((e) => e.method === 'PUT').map((e) => ({ status: e.status, body: e.anfrage }));
 
 /** EIN Wizard-Zustand, EIN Controller, EINE Queue — wie im Hub: beide Reiter
  *  teilen sich denselben Speicher-Platz des Controllers. */
@@ -110,7 +112,7 @@ describe('AC-4: Reiterwechsel weg von „versand" sendet die ausstehende Änderu
 		await ctl.flush();
 
 		assert.equal(puts().length, 2, 'zwei unabhängige Änderungen → zwei PUTs');
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		const stand = server.stand(PRESET_ID);
 		assert.equal(stand.morning_time, '07:15:00', 'die Versand-Änderung ging beim Reiterwechsel verloren');
 		assert.equal(stand.radar_alert_enabled, true, 'die Alarm-Änderung muss ebenfalls gespeichert sein');
 		assert.equal(ctl.state, 'idle');

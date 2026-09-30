@@ -177,15 +177,11 @@ describe('S2-AC-2: ein Nachbar-Reiter schreibt die gerade gespeicherten Alarmwer
 		const zweiter = gesendet[1];
 		assert.equal(server.calls.filter((c) => c.method === 'PUT')[1].path, PRESET_PFAD);
 		assert.equal(zweiter.morning_time, '07:15:00', 'Vorbedingung: der zweite PUT ist der Versand-PUT');
-		assert.equal(zweiter.radar_alert_enabled, true, 'der Versand-PUT schreibt den alten Radar-Wert zurück');
-		const dc = zweiter.display_config as Record<string, unknown>;
-		assert.equal(dc.telegram_style, 'kurzform', 'der Versand-PUT schreibt den alten Kurzstil zurück');
-		assert.deepEqual(dc.metric_alert_levels, { wind_gust: 'alarm' }, 'der Versand-PUT schreibt alte Metrik-Stufen zurück');
-		assert.equal(
-			(zweiter.alert_channel_thresholds as Record<string, string>).telegram,
-			'hoch',
-			'der Versand-PUT schreibt die alte Telegram-Schwelle zurück'
-		);
+		// Seit #2375 trägt der Versand-PUT gar keine Alarmfelder mehr — der Server
+		// behält die soeben gespeicherten Alarmwerte, weil nichts sie überschreibt.
+		for (const k of ['radar_alert_enabled', 'display_config', 'alert_channel_thresholds', 'alert_channels']) {
+			assert.ok(!(k in zweiter), `der Versand-PUT darf das Alarm-Feld ${k} nicht senden (würde den Alarm-Wert zurückschreiben)`);
+		}
 	});
 });
 
@@ -236,10 +232,12 @@ describe('S2-AC-3: die Basis wird bei AUSFÜHRUNG in der Queue gelesen, nicht be
 		await Promise.all([erster, zweiter]);
 
 		assert.equal(gesendet.length, 2, 'zwei Alarm-Vorgänge mit je eigener Änderung → zwei PUTs');
-		assert.equal(gesendet[0].name, 'Ortsvergleich Basis', 'Vorbedingung: der erste PUT lief vor der Basis-Änderung');
+		assert.equal(gesendet[0].radar_alert_enabled, true, 'Vorbedingung: der erste PUT trägt die erste Alarm-Änderung');
 		const zweiterPut = gesendet[1];
-		assert.equal(zweiterPut.name, 'Neuer Name', 'der zweite PUT hat die Basis beim Einreihen eingefroren');
-		assert.equal(zweiterPut.morning_time, '08:00:00', 'der zweite PUT hat die Basis beim Einreihen eingefroren');
+		// Seit #2375 fließt die Basis gar nicht mehr in die Alarm-Nutzlast — weder
+		// eine eingefrorene noch eine frische: Name und Uhrzeit stehen nicht im Body.
+		assert.ok(!('name' in zweiterPut), 'die Alarm-Nutzlast darf den Namen der Basis nicht senden');
+		assert.ok(!('morning_time' in zweiterPut), 'die Alarm-Nutzlast darf die Versandzeit der Basis nicht senden');
 		assert.equal(zweiterPut.radar_alert_enabled, true, 'die erste Alarm-Änderung muss erhalten bleiben');
 		assert.equal(
 			(zweiterPut.alert_channels as Record<string, boolean>).sms,
@@ -362,13 +360,11 @@ describe('S5-AC-11: der Versand-PUT traegt die LIVE in wiz stehenden Legacy-Rest
 		assert.equal(gesendet.length, 1, 'genau ein PUT erwartet (der Versand-PUT)');
 		const versandPut = gesendet[0];
 		assert.equal(versandPut.morning_time, '07:15:00', 'Vorbedingung: der PUT ist der Versand-PUT');
-		assert.equal(
-			versandPut.alert_cooldown_minutes,
-			30,
-			'der Versand-PUT schreibt den Cooldown auf den alten Preset-Stand zurueck (Datenverlust an einem Alarm-Zustellungsfeld)'
-		);
-		assert.equal(versandPut.alert_quiet_from, '23:30', 'Stille Stunden (von) fallen auf den Preset-Stand zurueck');
-		assert.equal(versandPut.alert_quiet_to, '05:45', 'Stille Stunden (bis) fallen auf den Preset-Stand zurueck');
+		// Seit #2375 gehören die drei Felder dem Alarme-Reiter: der Versand-PUT
+		// sendet sie überhaupt nicht — weder den Preset-Stand noch den Live-Wert.
+		for (const k of ['alert_cooldown_minutes', 'alert_quiet_from', 'alert_quiet_to']) {
+			assert.ok(!(k in versandPut), `der Versand-PUT darf ${k} nicht senden (Besitzer: Alarme)`);
+		}
 	});
 });
 

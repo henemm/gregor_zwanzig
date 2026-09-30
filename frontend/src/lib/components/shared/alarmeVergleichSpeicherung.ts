@@ -17,7 +17,7 @@ import type { IdealRange } from './corridor-editor/corridorEditorState.ts';
 import type { SaveFn, SaveStatus } from '../../stores/saveStatusStore.svelte.ts';
 import type { PutClient } from './tripSpeicherung.ts';
 import type { AlertChannelState } from './alarme-tab/alertChannelState.ts';
-import { buildComparePresetSavePayload } from '../compare/compareEditorSave.ts';
+import { buildComparePresetSavePayload, waehleEigenfelder } from '../compare/compareEditorSave.ts';
 import {
 	normalizeStoredActiveMetrics,
 	normalizeStoredOutlookMetrics
@@ -108,25 +108,38 @@ export function alarmSnapshotAus(wiz: AlarmHydrationTarget): AlarmSnapshot {
 	) as AlarmSnapshot;
 }
 
+// Issue #2375: Feld-Besitz des Alarme-Reiters (Spec compare_konfliktschutz_teilfelder.md
+// §2). `official_alerts_enabled` gehört NICHT dazu (Wetter-Metriken), ebenso keine
+// `send_*`-Felder (Versand).
+const ALARM_TOP = [
+	'alert_channels',
+	'alert_channel_thresholds',
+	'alert_cooldown_minutes',
+	'alert_quiet_from',
+	'alert_quiet_to',
+	'official_warnings',
+	'radar_alert_enabled'
+] as const;
+const ALARM_DISPLAY = ['metric_alert_levels', 'telegram_style'] as const;
+
 /**
- * EINZIGE Erzeugerin der Alarm-Nutzlast: Voll-Spread über `preset` via
- * `buildComparePresetSavePayload`, die Alarmfelder aus `current`. Die
- * Nicht-Alarmfelder laufen durch DIESELBEN Rückfälle wie der abgeschaffte
- * Hub-PUT-Pfad (Lesenormalisierung #1373, sonst Datenverlust an der
- * Metrik-Auswahl). `officialWarnings` trägt NIEMALS `sources` (F001, S4).
+ * EINZIGE Erzeugerin der Alarm-Nutzlast (Issue #2375: Teilfeld-Nutzlast). Die
+ * Alarmfelder kommen aus `current` (Live-Zustand, nie aus der Basis); die
+ * Übersetzungen laufen weiter über `buildComparePresetSavePayload`, gesendet
+ * werden aber nur die Eigenfelder — der Server mergt fehlende Felder als
+ * „unverändert". `officialWarnings` trägt NIEMALS `sources` (F001, S4).
  *
- * Issue #2293 S2 (Implementation Details Abschnitt 4, AC-9/AC-10): der Alarm-
- * Kanal-Bestand läuft als `alert_channels` (`current.channels`) — die Alarm-
- * Nutzlast trägt NIE `send_telegram`/`send_sms`/`send_premium_sms` (Briefing-
- * Felder eines Nachbar-Reiters, Same-Tab-Race-Schutz), darum werden sie nach
- * dem Payload-Bau explizit aus dem Body entfernt.
+ * Issue #2293 S2 (AC-9/AC-10): der Alarm-Kanal-Bestand läuft als
+ * `alert_channels` (`current.channels`); `send_telegram`/`send_sms`/
+ * `send_premium_sms` sind Briefing-Felder des Versand-Reiters und stehen nie im
+ * Alarm-Body.
  */
 export function baueAlarmNutzlast(
 	preset: ComparePreset,
 	current: AlarmSnapshot
 ): { url: string; body: ComparePreset } {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	const { url, body } = buildComparePresetSavePayload(preset, {
+	const voll = buildComparePresetSavePayload(preset, {
 		name: preset.name,
 		activityProfile: (preset.profil as ActivityProfile) ?? null,
 		pickedIds: preset.location_ids ?? [],
@@ -156,11 +169,9 @@ export function baueAlarmNutzlast(
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined
 	});
-	const b = body as unknown as Record<string, unknown>;
-	delete b.send_telegram;
-	delete b.send_sms;
-	delete b.send_premium_sms;
-	return { url, body };
+	// Issue #2375: NUR die Alarm-Eigenfelder senden (Feld-Besitz-Tabelle) — kein
+	// official_alerts_enabled (Wetter-Metriken), keine send_* (Versand).
+	return waehleEigenfelder(voll, ALARM_TOP, ALARM_DISPLAY);
 }
 
 /**

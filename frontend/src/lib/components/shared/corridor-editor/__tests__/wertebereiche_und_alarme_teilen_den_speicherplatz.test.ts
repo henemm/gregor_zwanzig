@@ -40,7 +40,7 @@ import assert from 'node:assert/strict';
 
 import { api } from '../../../../api.ts';
 import { clearEtagRegistry } from '../../../../etagRegistry.ts';
-import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
+import { createGoMergeServer, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
 import type { ComparePreset } from '../../../../types.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import { erstelleAlarmeVergleichSpeicherung } from '../../alarmeVergleichSpeicherung.ts';
@@ -59,19 +59,22 @@ import {
 
 const PRESET_ID = 'cp-2276-s3-slot';
 
-let server: FakeTripServer;
+// Seit #2375 sendet jeder Reiter nur seine Eigenfelder — was auf dem Server
+// steht, entscheidet der Server-Abgleich; darum der Ersatz-Server, der wie der
+// Go-Handler zusammenführt (der fakeTripServer ersetzt den Rumpf komplett).
+let server: GoMergeServer;
 
 beforeEach(() => {
 	clearEtagRegistry();
-	// Server-Laufzeit > 0: „vor dem Wechsel" heißt, der PUT ist ABGESCHLOSSEN.
-	server = createFakeTripServer({ latencyMs: 15 });
+	server = createGoMergeServer({ [PRESET_ID]: makePreset(PRESET_ID) as unknown as Record<string, unknown> });
 	server.install();
 });
 
 afterEach(() => server.restore());
 
-const puts = () => server.calls.filter((c) => c.method === 'PUT');
-const gespeichert = () => server.storedBody(PRESET_ID) as Record<string, unknown>;
+const puts = () =>
+	server.mitschnitt.filter((e) => e.method === 'PUT').map((e) => ({ status: e.status, body: e.anfrage as Record<string, unknown> }));
+const gespeichert = () => server.stand(PRESET_ID);
 const dc = (body: Record<string, unknown>) => body.display_config as Record<string, unknown>;
 
 /** Der Hub: ein Wizard-Zustand, ein Controller, eine Queue, zwei Selbst-Speicherer. */

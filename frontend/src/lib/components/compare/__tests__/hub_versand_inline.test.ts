@@ -199,7 +199,7 @@ describe('AC-35/AC-36: flushPendingVersandSave — Event-diskretisierte PUT-Pers
 		assert.strictEqual(payload.body.end_date, '');
 	});
 
-	test('Read-Modify-Write (#1257-Kontext): Nicht-Versand-Felder bleiben unveraendert aus dem Preset', () => {
+	test('Teilfeld (#1257-Kontext, seit #2375): Nicht-Versand-Felder stehen NICHT im Body — der Server bewahrt sie', () => {
 		const preset = makePreset();
 		const payload = flushPendingVersandSave(
 			preset,
@@ -207,17 +207,11 @@ describe('AC-35/AC-36: flushPendingVersandSave — Event-diskretisierte PUT-Pers
 			makeSnapshot()
 		);
 		assert.ok(payload);
-		assert.deepStrictEqual(payload.body.corridors, preset.corridors);
-		assert.deepStrictEqual(
-			payload.body.display_config?.metric_alert_levels,
-			preset.display_config!.metric_alert_levels
-		);
-		assert.deepStrictEqual(
-			payload.body.display_config?.active_metrics,
-			preset.display_config!.active_metrics
-		);
-		assert.deepStrictEqual(payload.body.empfaenger, preset.empfaenger);
-		assert.strictEqual(payload.body.schedule, preset.schedule);
+		const body = payload.body as unknown as Record<string, unknown>;
+		for (const fremd of ['corridors', 'display_config', 'empfaenger', 'schedule', 'name', 'location_ids']) {
+			assert.ok(!(fremd in body), `Fremdfeld ${fremd} darf im Versand-PUT nicht stehen`);
+		}
+		assert.strictEqual(body.send_sms, true);
 	});
 });
 

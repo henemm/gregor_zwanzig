@@ -21,7 +21,7 @@
 import type { ActivityProfile, ComparePreset } from '../../../types.ts';
 import type { SaveFn, SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import type { PutClient } from '../tripSpeicherung.ts';
-import { buildComparePresetSavePayload } from '../../compare/compareEditorSave.ts';
+import { buildComparePresetSavePayload, waehleEigenfelder } from '../../compare/compareEditorSave.ts';
 import { rehydrateActiveMetrics } from '../../compare/compareEditorLoad.ts';
 import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
 // Issue #1373 (S2 Scheibe B): Übersetzungsquelle für das Speicherformat der
@@ -166,7 +166,7 @@ export function flushPendingWeatherMetricsSave(
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	return buildComparePresetSavePayload(preset, {
+	const voll = buildComparePresetSavePayload(preset, {
 		name: preset.name,
 		activityProfile: (preset.profil as ActivityProfile) ?? null,
 		pickedIds: preset.location_ids ?? [],
@@ -178,6 +178,8 @@ export function flushPendingWeatherMetricsSave(
 		dayWindowStartHour: current.dayWindowStartHour,
 		dayWindowEndHour: current.dayWindowEndHour
 	});
+	// Issue #2375: nur die Eigenfelder dieser Geste.
+	return waehleEigenfelder(voll, ['official_alerts_enabled', 'day_window_start_hour', 'day_window_end_hour'], ['active_metrics', 'channel_active_metrics']);
 }
 
 // ─── Issue #2276 S4: Layout-Haelfte (Stundenverlauf/Ausblick) — umgezogen aus
@@ -243,7 +245,7 @@ export function flushPendingLayoutSave(
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	return buildComparePresetSavePayload(preset, {
+	const voll = buildComparePresetSavePayload(preset, {
 		name: preset.name,
 		activityProfile: (preset.profil as ActivityProfile) ?? null,
 		pickedIds: preset.location_ids ?? [],
@@ -255,6 +257,8 @@ export function flushPendingLayoutSave(
 		outlookMetricFormats: current.outlookMetricFormats,
 		outlookEnabled: current.outlookEnabled
 	});
+	// Issue #2375: nur die Layout-Eigenfelder.
+	return waehleEigenfelder(voll, ['hourly_enabled', 'outlook_enabled'], ['hourly_metrics', 'outlook_metrics', 'outlook_metric_formats']);
 }
 
 /**
@@ -334,22 +338,40 @@ export function wetterMetrikenSnapshotAus(zustand: WetterMetrikenZustand): Wette
 	) as WetterMetrikenLayoutSnapshot;
 }
 
+// Issue #2375: Feld-Besitz des Wetter-Metriken-Reiters (Spec
+// compare_konfliktschutz_teilfelder.md §2) — inklusive `official_alerts_enabled`
+// (Bedienelement sitzt hier, nicht im Alarme-Reiter).
+const WETTER_TOP = [
+	'official_alerts_enabled',
+	'day_window_start_hour',
+	'day_window_end_hour',
+	'hourly_enabled',
+	'outlook_enabled'
+] as const;
+const WETTER_DISPLAY = [
+	'active_metrics',
+	'channel_active_metrics',
+	'hourly_metrics',
+	'outlook_metrics',
+	'outlook_metric_formats'
+] as const;
+
 /**
- * EINZIGE Erzeugerin der kombinierten Nutzlast: Voll-Spread über `preset`
- * (Go-Merge mergt `display_config` nur auf Ebene 1), die zehn eigenen Felder
- * aus `current` — `activeMetricKeys` LIVE aus dem Zustand (AC-4), nie aus
- * einer eingefrorenen Preset-Kopie. `hourlyMetricKeys`/`outlookMetricKeys`/
- * `outlookMetricFormats` fallen bei `null` ("nie eingestellt") auf den
- * bereits gespeicherten Preset-Stand zurueck (Rundlauf-Sicherung, analog dem
- * fruehreren Hub-PUT-Bestandsrueckfall) — eine bewusste
- * Leerauswahl (`[]`) bleibt davon unberuehrt (nur `??`, kein `||`).
+ * EINZIGE Erzeugerin der kombinierten Nutzlast (Issue #2375: Teilfeld-Nutzlast):
+ * die zehn eigenen Felder aus `current` — `activeMetricKeys` LIVE aus dem
+ * Zustand (AC-4), nie aus einer eingefrorenen Preset-Kopie; gesendet werden nur
+ * diese Eigenfelder, der Server mergt fehlende Felder als „unverändert".
+ * `hourlyMetricKeys`/`outlookMetricKeys`/`outlookMetricFormats` fallen bei
+ * `null` ("nie eingestellt") auf den bereits gespeicherten Preset-Stand zurueck
+ * (Rundlauf-Sicherung) — eine bewusste Leerauswahl (`[]`) bleibt davon
+ * unberuehrt (nur `??`, kein `||`).
  */
 export function baueWetterMetrikenNutzlast(
 	preset: ComparePreset,
 	current: WetterMetrikenLayoutSnapshot
 ): { url: string; body: ComparePreset } {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	return buildComparePresetSavePayload(preset, {
+	const voll = buildComparePresetSavePayload(preset, {
 		name: preset.name,
 		activityProfile: (preset.profil as ActivityProfile) ?? null,
 		pickedIds: preset.location_ids ?? [],
@@ -368,6 +390,8 @@ export function baueWetterMetrikenNutzlast(
 		dayWindowStartHour: current.dayWindowStartHour,
 		dayWindowEndHour: current.dayWindowEndHour
 	});
+	// Issue #2375: nur die Wetter-Metriken-Eigenfelder (Feld-Besitz-Tabelle).
+	return waehleEigenfelder(voll, WETTER_TOP, WETTER_DISPLAY);
 }
 
 /**

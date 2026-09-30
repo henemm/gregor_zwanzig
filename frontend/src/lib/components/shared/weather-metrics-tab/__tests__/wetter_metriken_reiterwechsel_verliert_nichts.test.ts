@@ -21,7 +21,7 @@ import assert from 'node:assert/strict';
 
 import { api } from '../../../../api.ts';
 import { clearEtagRegistry } from '../../../../etagRegistry.ts';
-import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
+import { createGoMergeServer, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
 import type { ComparePreset } from '../../../../types.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import {
@@ -36,17 +36,21 @@ import { createController, dc, hydrierterWs, makePreset, wetterMetrikenBedienung
 
 const PRESET_ID = 'cp-2276-s4-reiterwechsel';
 
-let server: FakeTripServer;
+// Seit #2375 sendet jeder Reiter nur seine Eigenfelder — dass BEIDE Änderungen
+// auf dem Server stehen, entscheidet der Server-Abgleich; darum der Ersatz-Server,
+// der wie der Go-Handler zusammenführt (der fakeTripServer ersetzt den Rumpf komplett).
+let server: GoMergeServer;
 
 beforeEach(() => {
 	clearEtagRegistry();
-	server = createFakeTripServer({ latencyMs: 15 });
+	server = createGoMergeServer({ [PRESET_ID]: makePreset(PRESET_ID) as unknown as Record<string, unknown> });
 	server.install();
 });
 
 afterEach(() => server.restore());
 
-const puts = () => server.calls.filter((c) => c.method === 'PUT');
+const puts = () =>
+	server.mitschnitt.filter((e) => e.method === 'PUT').map((e) => ({ status: e.status, body: e.anfrage }));
 
 describe('die Liste der Selbst-Speicherer enthält „wetter-metriken"', () => {
 	test('SELBST_SPEICHERNDE_VERGLEICH_REITER.includes("wetter-metriken")', () => {
@@ -99,7 +103,7 @@ describe('AC-6: Reiterwechsel „wetter-metriken" → „alarme" im Entprell-Fen
 		await ctl.flush();
 
 		assert.equal(puts().length, 2, 'zwei Reiter, zwei Änderungen, zwei PUTs');
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		const stand = server.stand(PRESET_ID);
 		assert.ok(
 			(dc(stand).active_metrics as string[]).includes('gust_max_kmh'),
 			'die Wetter-Metriken-Änderung darf vom Alarm-Speichern nicht überschrieben werden'
@@ -119,7 +123,7 @@ describe('AC-6: Reiterwechsel „wetter-metriken" → „alarme" im Entprell-Fen
 
 		assert.equal(puts().length, 1, 'der zweite schedule() überschreibt den ersten — nur ein PUT');
 		assert.ok(
-			!(dc(server.storedBody(PRESET_ID)).active_metrics as string[]).includes('gust_max_kmh'),
+			!(dc(server.stand(PRESET_ID)).active_metrics as string[]).includes('gust_max_kmh'),
 			'ohne Guard geht die Wetter-Metriken-Änderung verloren — genau das verhindert der Flush beim Wechsel'
 		);
 	});

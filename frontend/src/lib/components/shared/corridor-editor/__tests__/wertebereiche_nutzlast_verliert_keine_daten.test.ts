@@ -24,7 +24,7 @@ import assert from 'node:assert/strict';
 
 import { api } from '../../../../api.ts';
 import { clearEtagRegistry } from '../../../../etagRegistry.ts';
-import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
+import { createGoMergeServer, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
 import type { ComparePreset } from '../../../../types.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import {
@@ -98,8 +98,8 @@ function assertNurKorridorFelderGeaendert(vorher: ComparePreset, nachher: Record
 	}
 }
 
-describe('AC-11 (Kern): baueWertebereichNutzlast — Voll-Spread, nur Korridor-Felder neu', () => {
-	test('geänderter Korridor → alle Bestandsfelder aus dem Preset bleiben, der Korridor ist neu', () => {
+describe('AC-11 (Kern, seit #2375 Teilfeld): baueWertebereichNutzlast — nur Korridor-Felder im Rumpf', () => {
+	test('geänderter Korridor → der Rumpf trägt NUR corridors + die eigenen display_config-Schlüssel', () => {
 		const preset = reicherVergleich();
 		const ws = hydrierterWs(preset);
 		wertebereicheBedienung(ws).patch('wind_max_kmh', { max: 65 });
@@ -107,7 +107,13 @@ describe('AC-11 (Kern): baueWertebereichNutzlast — Voll-Spread, nur Korridor-F
 		const { url, body } = baueWertebereichNutzlast(preset, corridorSnapshotAus(ws));
 
 		assert.equal(url, `/api/compare/presets/${PRESET_ID}`);
-		assertNurKorridorFelderGeaendert(preset, body as unknown as Record<string, unknown>);
+		const roh = body as unknown as Record<string, unknown>;
+		assert.deepEqual(Object.keys(roh).sort(), ['corridors', 'display_config'], 'kein Fremdfeld im Rumpf');
+		assert.deepEqual(
+			Object.keys(roh.display_config as Record<string, unknown>).sort(),
+			[...KORRIDOR_FELDER_DC].sort(),
+			'display_config trägt genau die drei Wertebereiche-Schlüssel'
+		);
 		assert.deepEqual(korridor(body, 'wind_max_kmh')?.range, [0, 65], 'der geänderte Korridor muss im Rumpf stehen');
 		assert.deepEqual(
 			(body.display_config as Record<string, unknown>).ideal_ranges,
@@ -132,11 +138,13 @@ describe('AC-11 (Kern): baueWertebereichNutzlast — Voll-Spread, nur Korridor-F
 });
 
 describe('AC-11 (Rundlauf): gespeichert und neu geladen — nur der Wertebereich weicht ab', () => {
-	let server: FakeTripServer;
+	// Seit #2375 laeuft der Rundlauf gegen den Ersatz-Server, der wie der Go-Handler
+	// zusammenfuehrt — der fakeTripServer ersetzt den gespeicherten Rumpf komplett.
+	let server: GoMergeServer;
 
 	beforeEach(() => {
 		clearEtagRegistry();
-		server = createFakeTripServer();
+		server = createGoMergeServer({ [PRESET_ID]: reicherVergleich() as unknown as Record<string, unknown> });
 		server.install();
 	});
 
@@ -163,7 +171,7 @@ describe('AC-11 (Rundlauf): gespeichert und neu geladen — nur der Wertebereich
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		const stand = server.stand(PRESET_ID);
 		assertNurKorridorFelderGeaendert(preset, stand);
 		assert.deepEqual(korridor(stand, 'snow_depth_cm')?.range, [30, 250]);
 		assert.deepEqual(korridor(stand, 'wind_max_kmh')?.range, [0, 40], 'ein nicht bedienter Korridor bleibt unverändert');
