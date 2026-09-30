@@ -63,8 +63,15 @@ function vorlage(over: Partial<ComparePreset> = {}): ComparePreset {
 			outlook_metrics: ['temp_max_c'],
 			outlook_metric_formats: { temp_max_c: true },
 			telegram_style: 'kurzform',
-			metric_alert_levels: { wind_kmh: 'hoch' }
+			metric_alert_levels: { wind_kmh: 'hoch' },
+			active_metrics: ['wind_kmh', 'temp_max_c'],
+			ideal_ranges: { wind_kmh: { min: 0, max: 20 } },
+			channel_active_metrics: { telegram: ['wind_kmh'] }
 		},
+		alert_channels: { email: false, telegram: true, sms: false, premium_sms: true },
+		alert_channel_thresholds: { telegram: 'hoch' },
+		official_warnings: { enabled: true },
+		official_alert_triggers_enabled: false,
 		hourly_enabled: false,
 		outlook_enabled: false,
 		send_telegram: true,
@@ -180,7 +187,10 @@ test('AC-3 Create-Payload enthaelt keine id, keinen letzter_versand, keinen Paus
 		corridors: s.corridors,
 		region: s.region,
 		hourlyMetricKeys: s.hourlyMetricKeys,
-		outlookMetricKeys: s.outlookMetricKeys
+		outlookMetricKeys: s.outlookMetricKeys,
+		idealRanges: s.idealRanges,
+		activeMetricKeys: s.activeMetricKeys,
+		metricAlertLevels: s.metricAlertLevels
 	} as never);
 	for (const verboten of ['id', 'letzter_versand', 'paused_at', 'created_at', 'archived_at']) {
 		assert.ok(!(verboten in payload), `Create-Payload darf "${verboten}" nicht tragen`);
@@ -250,4 +260,124 @@ test('AC-9 fehlendes end_date => endDate null (nicht "" und nicht undefined)', (
 	const p = vorlage();
 	delete (p as { end_date?: string }).end_date;
 	assert.strictEqual(belegt(p).endDate, null);
+});
+
+// ── AC-1 (Adversary F001): Felder, deren Vorlagenwert vom Standard abweicht ──
+
+test('AC-1 Alarm-Kanaele (alert_channels) werden uebernommen', () => {
+	assert.deepEqual(belegt(vorlage()).channels, {
+		email: false,
+		telegram: true,
+		sms: false,
+		premium_sms: true
+	});
+});
+test('AC-1 Kanal-Schwellen (alert_channel_thresholds) werden uebernommen', () => {
+	assert.deepEqual(belegt(vorlage()).channelThresholds, { telegram: 'hoch' });
+});
+test('AC-1 amtliche Warnungen (official_warnings.enabled) werden uebernommen', () => {
+	assert.equal(belegt(vorlage()).officialWarningsEnabled, true);
+});
+test('AC-1 official_alert_triggers_enabled=false wird uebernommen', () => {
+	assert.equal(belegt(vorlage()).officialAlertTriggersEnabled, false);
+});
+test('AC-1 aktive Metriken werden uebernommen, fehlend bleibt null', () => {
+	assert.deepEqual(belegt(vorlage()).activeMetricKeys, ['wind_kmh', 'temp_max_c']);
+	const p = vorlage();
+	delete (p.display_config as Record<string, unknown>).active_metrics;
+	assert.strictEqual(belegt(p).activeMetricKeys, null);
+});
+test('AC-1 Idealwerte (ideal_ranges) werden uebernommen', () => {
+	assert.deepEqual(belegt(vorlage()).idealRanges, { wind_kmh: { min: 0, max: 20 } });
+});
+test('AC-1 Kanal-Metriken (channel_active_metrics) werden uebernommen', () => {
+	assert.deepEqual(belegt(vorlage()).channelActiveMetricKeys, {
+		email: null,
+		telegram: ['wind_kmh'],
+		sms: null
+	});
+});
+test('AC-9 outlook_metric_formats: fehlend bleibt null, {} bleibt {}', () => {
+	const fehlt = vorlage();
+	delete (fehlt.display_config as Record<string, unknown>).outlook_metric_formats;
+	assert.strictEqual(belegt(fehlt).outlookMetricFormats, null);
+	const leer = vorlage();
+	(leer.display_config as Record<string, unknown>).outlook_metric_formats = {};
+	assert.deepEqual(belegt(leer).outlookMetricFormats, {});
+});
+
+// ── Adversary F002: minimale Vorlage => keine erfundenen Werte ──────────────
+
+test('F002 minimale Vorlage (nur name + location_ids): Standardwerte bleiben', () => {
+	const s = belegt({ name: 'Mini', location_ids: ['a', 'x'] } as unknown as ComparePreset);
+	const frisch = new CompareWizardState();
+	assert.equal(s.name, 'Mini (Kopie)');
+	assert.deepEqual(s.pickedIds, ['a']);
+	assert.equal(s.region, '');
+	assert.strictEqual(s.activeMetricKeys, null);
+	assert.strictEqual(s.hourlyMetricKeys, null);
+	assert.strictEqual(s.outlookMetricKeys, null);
+	assert.strictEqual(s.outlookMetricFormats, null);
+	assert.strictEqual(s.endDate, null);
+	assert.equal(s.officialAlertsEnabled, frisch.officialAlertsEnabled);
+	assert.equal(s.radarAlertEnabled, frisch.radarAlertEnabled);
+	assert.equal(s.officialAlertTriggersEnabled, frisch.officialAlertTriggersEnabled);
+	assert.equal(s.telegramStyle, frisch.telegramStyle);
+	assert.equal(s.schedule, frisch.schedule);
+	assert.equal(s.weekday, frisch.weekday);
+	assert.deepEqual(s.metricAlertLevels, {});
+	assert.deepEqual(s.channelThresholds, {});
+	assert.deepEqual(s.idealRanges, {});
+	assert.deepEqual(s.corridors, []);
+	assert.equal(s.isEditMode, false);
+});
+
+// ── AC-3 (Adversary F004): echter Create-Request ueber saveNewPreset() ───────
+// Ersatz-fetch nur an der Netzgrenze; den Request baut das ECHTE saveNewPreset()
+// aus ALLEN Zustandsfeldern (kein handverlesener Feldsatz).
+
+test('AC-3 Create-Request traegt Vorlagenwerte, aber keine Identitaet und kein If-Match', async () => {
+	const p = vorlage({ etag: 'W/"orig-etag"' } as unknown as Partial<ComparePreset>);
+	const s = belegt(p);
+	const aufrufe: { url: string; init: RequestInit }[] = [];
+	const echtesFetch = globalThis.fetch;
+	globalThis.fetch = (async (url: string, init: RequestInit) => {
+		aufrufe.push({ url: String(url), init });
+		return new Response(JSON.stringify({ id: 'cmp-neu' }), {
+			status: 201,
+			headers: { 'Content-Type': 'application/json' }
+		});
+	}) as typeof fetch;
+	try {
+		await s.saveNewPreset();
+	} finally {
+		globalThis.fetch = echtesFetch;
+	}
+	assert.equal(s.saveStatus, 'ok', `saveError: ${s.saveError}`);
+	assert.equal(aufrufe.length, 1);
+	const { url, init } = aufrufe[0];
+	assert.equal(url, '/api/compare/presets');
+	assert.equal(init.method, 'POST');
+	const kopf = init.headers as Record<string, string>;
+	assert.ok(!('If-Match' in kopf), 'Create-Request darf kein If-Match tragen');
+	const roh = String(init.body);
+	const body = JSON.parse(roh) as Record<string, unknown>;
+	for (const verboten of ['id', 'etag', 'letzter_versand', 'paused_at', 'created_at', 'archived_at']) {
+		assert.ok(!(verboten in body), `Create-Request darf "${verboten}" nicht tragen`);
+	}
+	assert.ok(!roh.includes('cmp-original'), 'Vorlagen-ID darf nirgends im Request stehen');
+	assert.ok(!roh.includes('orig-etag'), 'Vorlagen-ETag darf nirgends im Request stehen');
+	assert.equal(body.name, 'Korsika Nord (Kopie)');
+	assert.deepEqual(body.location_ids, ['a', 'b', 'c']);
+	assert.equal(body.official_alert_triggers_enabled, false);
+	assert.deepEqual(body.alert_channels, {
+		email: false,
+		telegram: true,
+		sms: false,
+		premium_sms: true
+	});
+	const dc = body.display_config as Record<string, unknown>;
+	assert.equal(dc.region, 'Korsika');
+	const kanal = dc.channel_active_metrics as Record<string, unknown> | undefined;
+	assert.ok(kanal && 'telegram' in kanal, 'Telegram-Kanalauswahl der Vorlage muss im Request stehen');
 });

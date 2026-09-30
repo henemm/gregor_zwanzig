@@ -1,0 +1,305 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test --test-reporter=tap src/lib/components/compare-new/__tests__/compareNewVorlage.test.ts src/routes/compare/new/__tests__/ladeVorlage.test.ts
+
+TAP version 13
+# Subtest: AC-1 Region wird uebernommen
+ok 1 - AC-1 Region wird uebernommen
+  ---
+  duration_ms: 1.455924
+  type: 'test'
+  ...
+# Subtest: AC-1 Aktivitaetsprofil wird uebernommen
+ok 2 - AC-1 Aktivitaetsprofil wird uebernommen
+  ---
+  duration_ms: 0.15377
+  type: 'test'
+  ...
+# Subtest: AC-1 Orte (pickedIds) werden uebernommen
+ok 3 - AC-1 Orte (pickedIds) werden uebernommen
+  ---
+  duration_ms: 0.527721
+  type: 'test'
+  ...
+# Subtest: AC-1 Korridore werden uebernommen
+ok 4 - AC-1 Korridore werden uebernommen
+  ---
+  duration_ms: 0.19952
+  type: 'test'
+  ...
+# Subtest: AC-1 Alarmstufen je Metrik werden uebernommen
+ok 5 - AC-1 Alarmstufen je Metrik werden uebernommen
+  ---
+  duration_ms: 0.15394
+  type: 'test'
+  ...
+# Subtest: AC-1 Zeitplan: weekly + Wochentag werden uebernommen
+ok 6 - AC-1 Zeitplan: weekly + Wochentag werden uebernommen
+  ---
+  duration_ms: 0.121791
+  type: 'test'
+  ...
+# Subtest: AC-1 Versand-Kanaele (Telegram/SMS/Premium-SMS) werden uebernommen
+ok 7 - AC-1 Versand-Kanaele (Telegram/SMS/Premium-SMS) werden uebernommen
+  ---
+  duration_ms: 0.16475
+  type: 'test'
+  ...
+# Subtest: AC-1 Zwei-Slot-Zeitplan wird uebernommen (HH:MM)
+ok 8 - AC-1 Zwei-Slot-Zeitplan wird uebernommen (HH:MM)
+  ---
+  duration_ms: 0.11444
+  type: 'test'
+  ...
+# Subtest: AC-1 Enddatum wird uebernommen
+ok 9 - AC-1 Enddatum wird uebernommen
+  ---
+  duration_ms: 0.31526
+  type: 'test'
+  ...
+# Subtest: AC-1 Tagesfenster wird uebernommen
+ok 10 - AC-1 Tagesfenster wird uebernommen
+  ---
+  duration_ms: 0.377312
+  type: 'test'
+  ...
+# Subtest: AC-1 Stundenverlauf: Schalter + Metriken werden uebernommen
+ok 11 - AC-1 Stundenverlauf: Schalter + Metriken werden uebernommen
+  ---
+  duration_ms: 0.12518
+  type: 'test'
+  ...
+# Subtest: AC-1 Ausblick: Schalter + Metriken + Formate werden uebernommen
+ok 12 - AC-1 Ausblick: Schalter + Metriken + Formate werden uebernommen
+  ---
+  duration_ms: 0.1158
+  type: 'test'
+  ...
+# Subtest: AC-1 Kurzform (telegram_style) wird uebernommen
+ok 13 - AC-1 Kurzform (telegram_style) wird uebernommen
+  ---
+  duration_ms: 0.084449
+  type: 'test'
+  ...
+# Subtest: AC-1 Alarm-Felder (Cooldown, Ruhezeit, Amtlich, Radar) werden uebernommen
+ok 14 - AC-1 Alarm-Felder (Cooldown, Ruhezeit, Amtlich, Radar) werden uebernommen
+  ---
+  duration_ms: 0.16935
+  type: 'test'
+  ...
+# Subtest: AC-2 Name lautet "<Name> (Kopie)"
+ok 15 - AC-2 Name lautet "<Name> (Kopie)"
+  ---
+  duration_ms: 0.09789
+  type: 'test'
+  ...
+# Subtest: AC-3 isEditMode bleibt false (Anlege-Modus)
+ok 16 - AC-3 isEditMode bleibt false (Anlege-Modus)
+  ---
+  duration_ms: 0.079199
+  type: 'test'
+  ...
+# Subtest: AC-3 Create-Payload enthaelt keine id, keinen letzter_versand, keinen Pausenstatus
+ok 17 - AC-3 Create-Payload enthaelt keine id, keinen letzter_versand, keinen Pausenstatus
+  ---
+  duration_ms: 0.368371
+  type: 'test'
+  ...
+# Subtest: AC-4 geloeschter Ort erscheint nicht in pickedIds
+ok 18 - AC-4 geloeschter Ort erscheint nicht in pickedIds
+  ---
+  duration_ms: 0.1057
+  type: 'test'
+  ...
+# Subtest: AC-5 bei nur einem vorhandenen Ort bleibt der Reiter nach Orte gesperrt, Orte offen
+ok 19 - AC-5 bei nur einem vorhandenen Ort bleibt der Reiter nach Orte gesperrt, Orte offen
+  ---
+  duration_ms: 0.1486
+  type: 'test'
+  ...
+# Subtest: AC-5 keine Platzhalter-IDs: null vorhandene Orte => pickedIds leer
+ok 20 - AC-5 keine Platzhalter-IDs: null vorhandene Orte => pickedIds leer
+  ---
+  duration_ms: 0.14596
+  type: 'test'
+  ...
+# Subtest: AC-8 ohne Aufruf von vorlageInZustand entspricht der Zustand dem Standard (kein Suffix)
+ok 21 - AC-8 ohne Aufruf von vorlageInZustand entspricht der Zustand dem Standard (kein Suffix)
+  ---
+  duration_ms: 0.081901
+  type: 'test'
+  ...
+# Subtest: AC-9 bewusst leeres hourly_metrics [] bleibt []
+ok 22 - AC-9 bewusst leeres hourly_metrics [] bleibt []
+  ---
+  duration_ms: 0.092621
+  type: 'test'
+  ...
+# Subtest: AC-9 fehlendes hourly_metrics bleibt null (nie eingestellt)
+ok 23 - AC-9 fehlendes hourly_metrics bleibt null (nie eingestellt)
+  ---
+  duration_ms: 0.088641
+  type: 'test'
+  ...
+# Subtest: AC-9 bewusst leere outlook_metrics [] bleibt [], fehlende bleibt null
+ok 24 - AC-9 bewusst leere outlook_metrics [] bleibt [], fehlende bleibt null
+  ---
+  duration_ms: 0.10683
+  type: 'test'
+  ...
+# Subtest: AC-9 fehlendes end_date => endDate null (nicht "" und nicht undefined)
+ok 25 - AC-9 fehlendes end_date => endDate null (nicht "" und nicht undefined)
+  ---
+  duration_ms: 0.09462
+  type: 'test'
+  ...
+# Subtest: AC-1 Alarm-Kanaele (alert_channels) werden uebernommen
+ok 26 - AC-1 Alarm-Kanaele (alert_channels) werden uebernommen
+  ---
+  duration_ms: 0.087421
+  type: 'test'
+  ...
+# Subtest: AC-1 Kanal-Schwellen (alert_channel_thresholds) werden uebernommen
+ok 27 - AC-1 Kanal-Schwellen (alert_channel_thresholds) werden uebernommen
+  ---
+  duration_ms: 0.079122
+  type: 'test'
+  ...
+# Subtest: AC-1 amtliche Warnungen (official_warnings.enabled) werden uebernommen
+ok 28 - AC-1 amtliche Warnungen (official_warnings.enabled) werden uebernommen
+  ---
+  duration_ms: 0.088041
+  type: 'test'
+  ...
+# Subtest: AC-1 official_alert_triggers_enabled=false wird uebernommen
+ok 29 - AC-1 official_alert_triggers_enabled=false wird uebernommen
+  ---
+  duration_ms: 0.07403
+  type: 'test'
+  ...
+# Subtest: AC-1 aktive Metriken werden uebernommen, fehlend bleibt null
+ok 30 - AC-1 aktive Metriken werden uebernommen, fehlend bleibt null
+  ---
+  duration_ms: 0.10514
+  type: 'test'
+  ...
+# Subtest: AC-1 Idealwerte (ideal_ranges) werden uebernommen
+ok 31 - AC-1 Idealwerte (ideal_ranges) werden uebernommen
+  ---
+  duration_ms: 0.087221
+  type: 'test'
+  ...
+# Subtest: AC-1 Kanal-Metriken (channel_active_metrics) werden uebernommen
+ok 32 - AC-1 Kanal-Metriken (channel_active_metrics) werden uebernommen
+  ---
+  duration_ms: 0.08172
+  type: 'test'
+  ...
+# Subtest: AC-9 outlook_metric_formats: fehlend bleibt null, {} bleibt {}
+ok 33 - AC-9 outlook_metric_formats: fehlend bleibt null, {} bleibt {}
+  ---
+  duration_ms: 0.101411
+  type: 'test'
+  ...
+# Subtest: F002 minimale Vorlage (nur name + location_ids): Standardwerte bleiben
+ok 34 - F002 minimale Vorlage (nur name + location_ids): Standardwerte bleiben
+  ---
+  duration_ms: 0.15213
+  type: 'test'
+  ...
+# Subtest: AC-3 Create-Request traegt Vorlagenwerte, aber keine Identitaet und kein If-Match
+ok 35 - AC-3 Create-Request traegt Vorlagenwerte, aber keine Identitaet und kein If-Match
+  ---
+  duration_ms: 35.833505
+  type: 'test'
+  ...
+# Subtest: AC-6 eigene Vorlage: exakte URL, Session-Cookie des Nutzers durchgereicht
+ok 36 - AC-6 eigene Vorlage: exakte URL, Session-Cookie des Nutzers durchgereicht
+  ---
+  duration_ms: 33.007836
+  type: 'test'
+  ...
+# Subtest: AC-6 zweiter Nutzer: dessen eigenes Cookie wird gesendet, nie ein fremdes
+ok 37 - AC-6 zweiter Nutzer: dessen eigenes Cookie wird gesendet, nie ein fremdes
+  ---
+  duration_ms: 0.839573
+  type: 'test'
+  ...
+# Subtest: AC-6 Antwort 404 (fremde/unbekannte ID) => vorlage null, keine Fehlerseite
+ok 38 - AC-6 Antwort 404 (fremde/unbekannte ID) => vorlage null, keine Fehlerseite
+  ---
+  duration_ms: 1.140574
+  type: 'test'
+  ...
+# Subtest: AC-6 Antwort 403 (fremde/unbekannte ID) => vorlage null, keine Fehlerseite
+ok 39 - AC-6 Antwort 403 (fremde/unbekannte ID) => vorlage null, keine Fehlerseite
+  ---
+  duration_ms: 0.960153
+  type: 'test'
+  ...
+# Subtest: AC-6 Antwort 500 (fremde/unbekannte ID) => vorlage null, keine Fehlerseite
+ok 40 - AC-6 Antwort 500 (fremde/unbekannte ID) => vorlage null, keine Fehlerseite
+  ---
+  duration_ms: 0.501032
+  type: 'test'
+  ...
+# Subtest: AC-6 Antwort 403 MIT gueltigem Vorlagen-Body => vorlage null (Status entscheidet)
+ok 41 - AC-6 Antwort 403 MIT gueltigem Vorlagen-Body => vorlage null (Status entscheidet)
+  ---
+  duration_ms: 0.445271
+  type: 'test'
+  ...
+# Subtest: AC-6 Antwort 404 MIT gueltigem Vorlagen-Body => vorlage null (Status entscheidet)
+ok 42 - AC-6 Antwort 404 MIT gueltigem Vorlagen-Body => vorlage null (Status entscheidet)
+  ---
+  duration_ms: 0.452492
+  type: 'test'
+  ...
+# Subtest: AC-6 Netzfehler beim Vorlagen-Abruf => vorlage null, Orte trotzdem geladen
+ok 43 - AC-6 Netzfehler beim Vorlagen-Abruf => vorlage null, Orte trotzdem geladen
+  ---
+  duration_ms: 0.525132
+  type: 'test'
+  ...
+# Subtest: AC-6 HTML statt JSON (200) => vorlage null
+ok 44 - AC-6 HTML statt JSON (200) => vorlage null
+  ---
+  duration_ms: 0.933833
+  type: 'test'
+  ...
+# Subtest: AC-6 ungueltiges Format (null / ohne location_ids) => vorlage null
+ok 45 - AC-6 ungueltiges Format (null / ohne location_ids) => vorlage null
+  ---
+  duration_ms: 0.916691
+  type: 'test'
+  ...
+# Subtest: AC-8 ohne from: kein Vorlagen-Request, vorlage null
+ok 46 - AC-8 ohne from: kein Vorlagen-Request, vorlage null
+  ---
+  duration_ms: 0.418161
+  type: 'test'
+  ...
+# Subtest: AC-8 leeres from: kein Vorlagen-Request, vorlage null
+ok 47 - AC-8 leeres from: kein Vorlagen-Request, vorlage null
+  ---
+  duration_ms: 0.34834
+  type: 'test'
+  ...
+# Subtest: from mit "/" und "?" wird als EIN Pfadsegment kodiert
+ok 48 - from mit "/" und "?" wird als EIN Pfadsegment kodiert
+  ---
+  duration_ms: 0.467841
+  type: 'test'
+  ...
+1..48
+# tests 48
+# suites 0
+# pass 48
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 309.904532
+
+# Zusammenfassung (aus den TAP-Zaehlern oben: tests 48, pass 48, fail 0)
+48 passed in 0.3s
