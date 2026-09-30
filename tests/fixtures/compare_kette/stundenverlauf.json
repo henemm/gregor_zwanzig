@@ -1,0 +1,73 @@
+{
+  "id": "kette-stundenverlauf",
+  "name": "Kette Stundenverlauf",
+  "kind": "vergleich",
+  "location_ids": [
+    "loc-ibk",
+    "loc-bz"
+  ],
+  "schedule": "daily",
+  "profil": "ALLGEMEIN",
+  "hour_from": 9,
+  "hour_to": 16,
+  "forecast_hours": 48,
+  "empfaenger": [],
+  "created_at": "2026-09-01T00:00:00Z",
+  "morning_enabled": true,
+  "morning_time": "07:00:00",
+  "evening_enabled": false,
+  "evening_time": "18:00:00",
+  "send_telegram": false,
+  "send_sms": false,
+  "send_premium_sms": false,
+  "corridors": [],
+  "display_config": {
+    "active_metrics": [
+      {
+        "metric_id": "temperature",
+        "aggregation": "max"
+      },
+      {
+        "metric_id": "wind",
+        "aggregation": "max"
+      },
+      {
+        "metric_id": "gust",
+        "aggregation": "max"
+      },
+      {
+        "metric_id": "cloud_total",
+        "aggregation": "avg"
+      },
+      {
+        "metric_id": "sunshine",
+        "aggregation": "sum"
+      }
+    ],
+    "hourly_metrics": [
+      "wind",
+      "temperature"
+    ],
+    "channel_active_metrics": {
+      "email": [
+        {
+          "metric_id": "temperature",
+          "aggregation": "max"
+        },
+        {
+          "metric_id": "gust",
+          "aggregation": "max"
+        },
+        {
+          "metric_id": "cloud_total",
+          "aggregation": "avg"
+        },
+        {
+          "metric_id": "sunshine",
+          "aggregation": "sum"
+        }
+      ]
+    }
+  },
+  "hourly_enabled": true
+}

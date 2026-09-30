@@ -1,0 +1,58 @@
+{
+  "id": "kette-alarm",
+  "name": "Kette Alarm",
+  "kind": "vergleich",
+  "location_ids": [
+    "loc-ibk",
+    "loc-bz"
+  ],
+  "schedule": "daily",
+  "profil": "ALLGEMEIN",
+  "hour_from": 9,
+  "hour_to": 16,
+  "forecast_hours": 48,
+  "empfaenger": [],
+  "created_at": "2026-09-01T00:00:00Z",
+  "morning_enabled": true,
+  "morning_time": "07:00:00",
+  "evening_enabled": false,
+  "evening_time": "18:00:00",
+  "send_telegram": true,
+  "send_sms": false,
+  "send_premium_sms": false,
+  "corridors": [],
+  "display_config": {
+    "active_metrics": [
+      {
+        "metric_id": "temperature",
+        "aggregation": "max"
+      },
+      {
+        "metric_id": "wind",
+        "aggregation": "max"
+      },
+      {
+        "metric_id": "precipitation",
+        "aggregation": "sum"
+      }
+    ],
+    "hourly_metrics": []
+  },
+  "alert_channels": {
+    "email": true,
+    "telegram": false,
+    "sms": true,
+    "premium_sms": true
+  },
+  "alert_channel_thresholds": {
+    "email": "LOW",
+    "telegram": "LOW",
+    "sms": "HIGH",
+    "premium_sms": "LOW"
+  },
+  "radar_alert_enabled": true,
+  "official_warnings": {
+    "enabled": true
+  },
+  "alert_cooldown_minutes": 60
+}

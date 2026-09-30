@@ -783,3 +783,268 @@ def veraltete_eintraege(
     register: "list[AusnahmeEintrag]", genutzt: set["AusnahmeEintrag"],
 ) -> set["AusnahmeEintrag"]:
     return set(register) - genutzt
+
+
+# ===========================================================================
+# Vergleichs-Orakel (Issue #2422 S5, Ortsvergleich)
+# ===========================================================================
+#
+# **Orakel-Unabhaengigkeit (PFLICHT):** Die Erwartung wird hier aus dem ROHEN
+# ``json.load`` des Presets, dem Tarif und der Sendefaehigkeit gebildet --
+# nie aus ``resolve_channel_enabled_metrics``,
+# ``effective_compare_briefing_channels`` oder ``effective_alert_channels``.
+# Die Text-Zuordnung (Label/Kuerzel) ist statisches Register-Wissen, einmal
+# gegen den gesendeten Text abgelesen; sie ist KEINE Entscheidungsfunktion.
+#
+# Die Vergleichs-Kanaele haben eigene Textformen, die Trip-Parser oben passen
+# nicht: Telegram geht mit ``parse_mode=None`` und Zellen ``Label Wert`` mit
+# `` · `` verbunden je Ort; die E-Mail ist je Ort ein Block ``   Label: Wert``;
+# die SMS ist EINE Zeile ``Vergleich TT.MM.: Ort K1 W1 K2 W2; Ort2 ...``.
+
+#: Gespeicherte Auswahl-Schluessel (Frontend-Vokabular, wie der Editor sie
+#: schreibt) -> (metric_id, aggregation, E-Mail-Label, Telegram-Label, SMS-Kuerzel)
+COMPARE_METRIKEN: dict[str, tuple[str, str, str, str, str]] = {
+    "temp_max_c": ("temperature", "max", "Temperatur", "Temp max", "D"),
+    "temp_min_c": ("temperature", "min", "Temperatur", "Temp min", "L"),
+    "wind_max_kmh": ("wind", "max", "Wind", "Wind", "W"),
+    "gust_max_kmh": ("gust", "max", "Böen", "Böen", "G"),
+    "cloud_avg_pct": ("cloud_total", "avg", "Bewölkung", "Wolken", "CT"),
+    "sunny_hours_h": ("sunshine", "sum", "Sonnenstunden", "Sonne", "SU"),
+    "snow_depth_cm": ("snow_depth", "max", "Schneehöhe", "Schneehöhe", "SD"),
+    "snow_new_sum_cm": ("fresh_snow", "sum", "Neuschnee", "Neuschnee", "NS"),
+    "precip_sum_mm": ("precipitation", "sum", "Niederschlag", "Regen", "R"),
+    "pop_max_pct": ("rain_probability", "max", "Regenwahrscheinlichkeit",
+                    "Regenwahrscheinlichkeit", "PR"),
+}
+_COMPARE_PAAR_ZU_KEY = {(v[0], v[1]): k for k, v in COMPARE_METRIKEN.items()}
+
+#: Sieben Werte je Ort im Telegram-Vergleich (Spec S5, Abschnitt Testinfrastruktur).
+COMPARE_TELEGRAM_ZELLEN_JE_ORT = 7
+
+COMPARE_KANAELE = ("email", "telegram", "sms", "premium_sms")
+
+
+def compare_erreichbare_kanaele(
+    preset_json: dict, tier: str, *, kann_telegram: bool, kann_sms: bool,
+) -> tuple[str, ...]:
+    """Kanalmenge des Vergleichs-BRIEFINGS aus rohem JSON + Tarif + globaler
+    Sendefaehigkeit (Spec AC-7/AC-8/AC-9). Reihenfolge = Versandreihenfolge
+    (``ALLE_KANAELE``-Muster: email, sms, premium_sms, telegram).
+
+    * E-Mail: immer (der Ortsvergleich speichert kein ``send_email``).
+    * Telegram: Opt-in UND sendefaehig.
+    * SMS: Opt-in UND sendefaehig UND Tarif standard/premium.
+    * Premium-SMS: Opt-in UND ``alert_channels`` vorhanden (sonst Alarm-Absicht
+      des Altbestands) UND Tarif premium.
+    """
+    kanaele = ["email"]
+    if preset_json.get("send_sms") and kann_sms and tier in _TIER_SMS:
+        kanaele.append("sms")
+    if (
+        preset_json.get("send_premium_sms")
+        and preset_json.get("alert_channels") is not None
+        and tier in _TIER_PREMIUM_SMS
+    ):
+        kanaele.append("premium_sms")
+    if preset_json.get("send_telegram") and kann_telegram:
+        kanaele.append("telegram")
+    return tuple(kanaele)
+
+
+def _compare_auswahl_keys(rohliste) -> Optional[list[str]]:
+    """Gespeicherte Auswahl (Strings ODER ``{metric_id, aggregation}``) -> Liste
+    der Schluessel in Speicherreihenfolge; ``None`` wenn das Feld fehlt."""
+    if not isinstance(rohliste, list):
+        return None
+    keys: list[str] = []
+    for eintrag in rohliste:
+        if isinstance(eintrag, str):
+            key = eintrag if eintrag in COMPARE_METRIKEN else None
+        elif isinstance(eintrag, dict):
+            key = _COMPARE_PAAR_ZU_KEY.get((eintrag.get("metric_id"), eintrag.get("aggregation")))
+        else:
+            key = None
+        if key is not None and key not in keys:
+            keys.append(key)
+    return keys
+
+
+def compare_erwartete_metriken(preset_json: dict, kanal: str) -> Optional[list[str]]:
+    """Erwartete Uebersichts-Auswahl je Kanal (Reihenfolge = Kanal-Liste), aus
+    rohem JSON: Grundauswahl ``display_config.active_metrics`` ist das MAXIMUM,
+    ein Kanal-Eintrag darf nur abwaehlen (ADR-0050). ``None`` = kein Filter
+    (Grundauswahl fehlt, kein Kanal-Eintrag). Premium-SMS traegt den Inhalt der
+    SMS (Spec AC-6) -- ein Eintrag ``premium_sms`` gilt NICHT."""
+    dc = preset_json.get("display_config") or {}
+    basis = _compare_auswahl_keys(dc.get("active_metrics"))
+    kanal_key = "sms" if kanal == "premium_sms" else kanal
+    cam = dc.get("channel_active_metrics")
+    if not isinstance(cam, dict) or kanal_key not in cam:
+        return basis
+    eintrag = _compare_auswahl_keys(cam[kanal_key])
+    if eintrag is None:
+        return basis
+    if basis is None:
+        return eintrag
+    return [k for k in eintrag if k in set(basis)]
+
+
+def compare_telegram_erwartung(erwartet: Optional[list[str]]) -> tuple[list[str], int]:
+    """(Zellen je Ort, Anzahl verdraengter Groessen) unter der 7er-Grenze."""
+    if erwartet is None:
+        return [], 0
+    return (
+        erwartet[:COMPARE_TELEGRAM_ZELLEN_JE_ORT],
+        max(0, len(erwartet) - COMPARE_TELEGRAM_ZELLEN_JE_ORT),
+    )
+
+
+# --- Parser ---------------------------------------------------------------
+
+_EMAIL_LABEL_KEY = {
+    "Temperatur Maximum": "temp_max_c", "Temperatur Minimum": "temp_min_c",
+    # Nur EINE Temperatur-Groesse gewaehlt: der Renderer laesst die Auswertung weg.
+    # Die Fixtures der E-Mail-Pruefungen kombinieren nie beide -> Zuordnung eindeutig.
+    "Temperatur": "temp_max_c",
+    "Wind": "wind_max_kmh", "Böen": "gust_max_kmh", "Bewölkung": "cloud_avg_pct",
+    "Sonnenstunden": "sunny_hours_h", "Schneehöhe": "snow_depth_cm",
+    "Neuschnee": "snow_new_sum_cm", "Niederschlag": "precip_sum_mm",
+    "Regenwahrscheinlichkeit": "pop_max_pct",
+}
+_TELEGRAM_LABELS = sorted(
+    ((v[3], k) for k, v in COMPARE_METRIKEN.items()), key=lambda p: -len(p[0]),
+)
+
+
+def compare_parse_email_plain(text: str, orte: list[str]) -> dict[str, list[str]]:
+    """Klartext der Vergleichs-Mail -> {Ort: [Schluessel in Zeilenfolge]}.
+    Nur der Uebersichtsteil (vor ``STUNDENVERLAUF``/``AUSBLICK``); Ortsblock =
+    unverrueckte Zeile mit dem Ortsnamen, Metrikzeilen ``   Label: Wert``."""
+    ergebnis: dict[str, list[str]] = {}
+    aktuell: Optional[str] = None
+    for zeile in text.splitlines():
+        if zeile.startswith(("STUNDENVERLAUF", "AUSBLICK")):
+            break
+        if zeile in orte:
+            aktuell = zeile
+            ergebnis.setdefault(aktuell, [])
+            continue
+        m = re.match(r"^   ([^:]+): ", zeile)
+        if aktuell is not None and m and m.group(1) in _EMAIL_LABEL_KEY:
+            ergebnis[aktuell].append(_EMAIL_LABEL_KEY[m.group(1)])
+    return ergebnis
+
+
+def compare_parse_telegram(text: str, orte: list[str]) -> tuple[dict[str, list[str]], Optional[int]]:
+    """Telegram-Vergleichstext -> ({Ort: [Schluessel in Zellenfolge]},
+    Anzahl im Ueberlauf-Hinweis genannter verdraengter Groessen oder ``None``)."""
+    ergebnis: dict[str, list[str]] = {}
+    hinweis: Optional[int] = None
+    aktuell: Optional[str] = None
+    for zeile in text.splitlines():
+        if zeile in orte:
+            aktuell = zeile
+            ergebnis.setdefault(aktuell, [])
+            continue
+        if aktuell is None or not zeile.startswith("   "):
+            continue
+        inhalt = zeile.strip()
+        m = re.match(r"^… \+(\d+) weitere Wettergrößen", inhalt)
+        if m:
+            hinweis = int(m.group(1))
+            continue
+        if inhalt.startswith("…") or inhalt == "keine Werte":
+            continue
+        for zelle in inhalt.split(" · "):
+            for label, key in _TELEGRAM_LABELS:
+                if zelle.startswith(label + " "):
+                    ergebnis[aktuell].append(key)
+                    break
+    return ergebnis, hinweis
+
+
+_SMS_KUERZEL_KEY = {v[4]: k for k, v in COMPARE_METRIKEN.items()}
+
+
+def compare_parse_sms(text: str, orte: list[str]) -> dict[str, list[str]]:
+    """SMS-Vergleichstext ``Vergleich TT.MM.: Ort K W; Ort2 K W`` ->
+    {Ort: [Schluessel in Zellenfolge]}. Ein Ort, den das Zeichenbudget
+    verdraengt hat (``+N Orte``), fehlt im Ergebnis."""
+    _, _, rest = text.partition(": ")
+    ergebnis: dict[str, list[str]] = {}
+    for segment in rest.split("; "):
+        for ort in orte:
+            if segment == ort or segment.startswith(ort + " "):
+                ergebnis[ort] = [
+                    _SMS_KUERZEL_KEY[k]
+                    for k in re.findall(r"(?:^|\s)([A-Z]{1,2}) -?\d", segment[len(ort):])
+                    if k in _SMS_KUERZEL_KEY
+                ]
+    return ergebnis
+
+
+def compare_vorbedingung_pruefen(mitschrift, kanaele: tuple[str, ...]) -> None:
+    """Vor JEDER Zusicherung (Spec AC-30): jeder erwartete Vergleichs-Kanal hat
+    mindestens eine aufgezeichnete Sendung mit nicht-leerem Text -- null
+    Sendungen sind nie gruen."""
+    for kanal in kanaele:
+        sendungen = mitschrift.sendungen(kanal)
+        assert sendungen, (
+            f"Vorbedingung verletzt: Kanal {kanal!r} hat KEINE aufgezeichnete Sendung "
+            f"(Aufzeichner nicht am Laufzeit-Import installiert?) -- {mitschrift!r}"
+        )
+        if kanal == "email":
+            text = sendungen[-1].get("plain_text_body") or sendungen[-1].get("body")
+        else:
+            text = sendungen[-1].get("body")
+        assert text, f"Vorbedingung verletzt: leerer Text fuer Kanal {kanal!r}"
+
+
+# --- Alarm-Kanaele des Ortsvergleichs (Block D) -----------------------------
+
+_STUFE_RANG = {"LOW": 0, "MODERATE": 1, "HIGH": 2}
+
+
+def compare_alarm_kanaele(
+    preset_json: dict, tier: str, dringlichkeit: str, *, metric_id: Optional[str] = None,
+) -> tuple[set[str], set[str]]:
+    """(zugestellte Kanaele, unter der Kanal-Schwelle unterdrueckte Kanaele) eines
+    Ortsvergleich-ALARMS -- aus rohem JSON + Tarif + Dringlichkeit, unabhaengig von
+    ``effective_alert_channels``/``split_by_threshold``.
+
+    Regel (ADR-0021/0046/0049/0077):
+    1. Basis: die truthy Kanaele in ``alert_channels`` (auch wenn leer); fehlt das
+       Sub-Objekt: E-Mail plus die ``send_*``-Opt-ins des Briefings.
+    2. Nur beim Abweichungsalarm (``metric_id`` gesetzt): ein NICHT-leerer Eintrag
+       ``alert_metric_channels[metric_id]`` ersetzt die Basis; ein leerer/fehlender
+       Eintrag erbt sie.
+    3. Tarif: SMS nur standard/premium, Premium-SMS nur premium.
+    4. Schwelle je Kanal (Startwert LOW): der Kanal wird nur bedient, wenn die
+       Dringlichkeit sie erreicht -- die Schwelle regelt das WIE, nie das OB des
+       Eintrags im Protokoll.
+    """
+    ac = preset_json.get("alert_channels")
+    if isinstance(ac, dict):
+        basis = {k for k in COMPARE_KANAELE if ac.get(k)}
+    else:
+        basis = {"email"} | {k for k in ("telegram", "sms", "premium_sms") if preset_json.get(f"send_{k}")}
+    if metric_id is not None:
+        eintrag = (preset_json.get("alert_metric_channels") or {}).get(metric_id)
+        if isinstance(eintrag, dict):
+            ersatz = {k for k in COMPARE_KANAELE if eintrag.get(k)}
+            if ersatz:
+                basis = ersatz
+    if tier not in _TIER_SMS:
+        basis.discard("sms")
+    if tier not in _TIER_PREMIUM_SMS:
+        basis.discard("premium_sms")
+    schwellen = preset_json.get("alert_channel_thresholds") or {}
+    zugestellt: set[str] = set()
+    unterdrueckt: set[str] = set()
+    for kanal in basis:
+        schwelle = schwellen.get(kanal) or "LOW"
+        if _STUFE_RANG[dringlichkeit] >= _STUFE_RANG.get(schwelle, 0):
+            zugestellt.add(kanal)
+        else:
+            unterdrueckt.add(kanal)
+    return zugestellt, unterdrueckt

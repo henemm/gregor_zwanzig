@@ -54,7 +54,7 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
 
     def _buchen(kanal: str, empfaenger, subject: str, *, body=None,
                 plain_text_body=None, parse_mode=None, mail_type=None,
-                mail_format=None) -> None:
+                mail_format=None, compare_hourly_enabled=None) -> None:
         # ``mail_type``/``mail_format`` (nur E-Mail) machen z.B.
         # ``email_format=compact`` an der Naht beobachtbar (#2422 S3):
         # ``mit.sendungen("email")[i]["mail_format"]``.
@@ -62,6 +62,9 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
             "empfaenger": empfaenger, "subject": subject, "body": body,
             "plain_text_body": plain_text_body, "parse_mode": parse_mode,
             "mail_type": mail_type, "mail_format": mail_format,
+            # #2422 S5 (AC-29): nur die Vergleichs-Mail reicht das Kennzeichen
+            # durch (``send_compare_report``); sonst bleibt es ``None``.
+            "compare_hourly_enabled": compare_hourly_enabled,
         })
 
     class _EmailAufzeichner:
@@ -76,7 +79,8 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
             ziel = to if to else self._s.mail_to
             _buchen("email", ziel if isinstance(ziel, str) else list(ziel)[0],
                     subject, body=body, plain_text_body=plain_text_body,
-                    mail_type=mail_type, mail_format=mail_format)
+                    mail_type=mail_type, mail_format=mail_format,
+                    compare_hourly_enabled=compare_hourly_enabled)
 
     class _SmsAufzeichner:
         def __init__(self, settings) -> None:
@@ -103,6 +107,15 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
             return 1
 
     monkeypatch.setattr(ns, "EmailOutput", _EmailAufzeichner)
+    # #2422 S5 (Mitschrift-Falle): ``send_compare_report`` importiert
+    # ``EmailOutput`` ERST BEIM AUFRUF aus ``output.channels.email``
+    # (notification_service.py:1294). Der Patch auf ``ns.EmailOutput`` sieht die
+    # Vergleichs-Mail nie -- ohne diese Zeile waeren Tests gegen den Aufzeichner
+    # gruen mit null Sendungen. Der Import passiert erst beim Aufruf, deshalb
+    # wirkt ``setattr`` auf das Modulattribut.
+    import output.channels.email as email_mod
+
+    monkeypatch.setattr(email_mod, "EmailOutput", _EmailAufzeichner)
     monkeypatch.setattr(ns, "SMSOutput", _SmsAufzeichner)
     monkeypatch.setattr(ns, "PremiumSmsOutput", _PremiumSmsAufzeichner)
     monkeypatch.setattr(ns, "TelegramOutput", _TelegramAufzeichner)
