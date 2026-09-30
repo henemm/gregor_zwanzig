@@ -139,6 +139,23 @@ _patch_testclient_with_core_auth()
 
 
 @pytest.fixture(autouse=True)
+def _dwd_raster_cache_leeren():
+    """#2465: `providers.dwd._RASTER_CACHE` ist ein PROZESSWEITER Cache, keyed
+    nach URL (Lauf/Parameter/Zeitschritt, also zeitabhaengig). Ohne Reset lesen
+    zwei Tests mit unterschiedlichen Fake-Rastern zur selben URL je nach
+    Reihenfolge und Stunde die Werte des anderen. Nur wenn das Modul ohnehin
+    schon geladen ist — kein Import fuer Tests, die DWD nie beruehren."""
+    def _leeren():
+        modul = sys.modules.get("providers.dwd")
+        cache = getattr(modul, "_RASTER_CACHE", None)
+        if cache is not None:
+            cache.clear()
+    _leeren()
+    yield
+    _leeren()
+
+
+@pytest.fixture(autouse=True)
 def _core_auth_secret_configured():
     """Stellt fuer jeden Test sicher, dass ein Geheimnis konfiguriert ist.
 
