@@ -1245,6 +1245,15 @@ betroffen.
   Merge-Kernel** (`applyComparePresetPatch` in `compare_preset.go`) — identisches
   Verhalten bei Server-Feld-Faelschung und denselben Legacy-Sentinels auf
   beiden Wegen, statt zweier unabhaengiger Implementierungen.
+- **Ortsvergleich-Hub sendet Teilfeld-Nutzlasten und traegt den Seitenaufbau-ETag**
+  (Issue #2375, 2026-09-30, reine Frontend-Aenderung, Go unveraendert): Der
+  Seitenaufbau von `/compare/[id]` uebernimmt den `ETag` des Presets, sodass schon
+  der erste Reiter-`PUT` `If-Match` traegt (`412` → „Nochmal speichern" statt
+  stillem Ueberschreiben). Jeder Speicherweg (Reiter Alarme/Wertebereiche/Versand/
+  Wetter-Metriken, Kopf Name/Region/Profil, Orte, Pausieren/Aktivieren in Hub und
+  Liste) sendet nur seine Eigenfelder (`buildComparePresetPartialPayload`:
+  `undefined` wird weggelassen, `[]`/`{}`/`""` bleiben); der Server merged wie
+  bisher (#2285). Der Gesamt-Payload-Builder `buildHubPutPayload` ist entfernt.
 - **`GET /api/briefings/{id}?kind=route` traegt seit Issue #2285 Sperre und
   `ETag`**, symmetrisch zum `vergleich`-Zweig und zu `GET /api/trips/{id}`. Der
   zugehoerige `PUT`-Weg prueft `If-Match` unveraendert ueber die Delegation an
