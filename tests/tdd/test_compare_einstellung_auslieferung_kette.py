@@ -38,7 +38,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.loader import get_data_dir, load_compare_presets, save_location
+from app.loader import load_compare_presets, save_location
 from app.user import SavedLocation
 from services.compare_slot_scheduler import presets_due_for_hour
 from tests.helpers.einstellung_auslieferung_orakel import (
@@ -54,7 +54,6 @@ from tests.helpers.einstellung_auslieferung_orakel import (
 from tests.helpers.transport_mitschrift import Kanalmitschrift, aufzeichner_installieren
 from tests.tdd._compare_kette_fixtures import (
     ORTSNAMEN,
-    TARGET_DATE,
     alle_orte,
     briefing_senden,
     engine_naht,
