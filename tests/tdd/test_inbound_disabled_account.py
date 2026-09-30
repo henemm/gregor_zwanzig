@@ -339,3 +339,30 @@ def test_ac13_telegram_knopfdruck_eines_gesperrten_chats_liefert_keine_daten(
         f"AC-13: ein Knopfdruck aus einem gesperrten Chat darf keine Daten und "
         f"keinen Hinweis liefern, aufgezeichnet: {_sendungen(telegram_mitschrift)!r}"
     )
+    # Der Lade-Spinner muss trotzdem enden: der Answer-Aufruf kommt beim
+    # Kanal an (ein falscher Aufruf wuerde still geschluckt, Spinner liefe ewig).
+    assert [m for m in telegram_mitschrift if m["art"] == "answer"], (
+        f"AC-13: der Callback-Answer (Spinner beenden) fehlt: {telegram_mitschrift!r}"
+    )
+
+
+# ═══════════════════════════ is_user_disabled (fail-soft) ════════════════════
+
+
+@pytest.mark.parametrize("inhalt, erwartet", [
+    (None, False),                       # Datei fehlt
+    ("{kaputt", False),                  # kein gueltiges JSON
+    ('{"id": "x"}', False),              # Key fehlt
+    ('{"disabled": true}', True),
+    ('{"disabled": "true"}', False),     # String zaehlt nicht
+    ('{"disabled": false}', False),
+])
+def test_is_user_disabled_fail_soft_und_strikt(inhalt, erwartet):
+    from app.loader import is_user_disabled
+
+    user_id = "sperrflag-" + uuid.uuid4().hex[:8]
+    ordner = get_data_dir(user_id)
+    ordner.mkdir(parents=True, exist_ok=True)
+    if inhalt is not None:
+        (ordner / "user.json").write_text(inhalt, encoding="utf-8")
+    assert is_user_disabled(user_id) is erwartet

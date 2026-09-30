@@ -283,6 +283,11 @@ func New(deps Deps) chi.Router {
 		r.With(requireAdmin).Post("/api/debug/trigger-radar-alert", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/debug/trigger-radar-alert"))
 	}
 
+	// Issue #2155 S3: Admin-API (Nutzerliste, Tier setzen, Konto sperren).
+	r.With(requireAdmin).Get("/api/admin/users", handler.AdminListUsersHandler(deps.Store, deps.Scheduler))
+	r.With(requireAdmin).Put("/api/admin/users/{id}/tier", handler.AdminSetUserTierHandler(deps.Store, deps.Scheduler))
+	r.With(requireAdmin).Put("/api/admin/users/{id}/disabled", handler.AdminSetUserDisabledHandler(deps.Store, deps.Scheduler))
+
 	// Scheduler trigger proxies (frontend → Go → Python)
 	// Der Cron-Scheduler ruft Python direkt und haengt nicht an dieser Sperre.
 	r.With(requireAdmin).Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/trip-reports"))

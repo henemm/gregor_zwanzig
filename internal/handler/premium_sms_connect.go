@@ -83,6 +83,10 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 			if model.EffectiveTier(user.Tier) != "premium" {
 				continue
 			}
+			// Issue #2155 S3 (ADR-0080): gesperrte Konten sind keine Kandidaten.
+			if user.Disabled {
+				continue
+			}
 			candidates = append(candidates, user)
 			if user.PremiumSmsReplyTo == body.From {
 				storedMatches = append(storedMatches, user)

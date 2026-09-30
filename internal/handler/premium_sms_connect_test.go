@@ -357,3 +357,79 @@ func TestLearnDryRunNeverCallsSaveUser(t *testing.T) {
 		}
 	})
 }
+
+// ---------------------------------------------------------------------------
+// #2155 S3 AC-12: ein gesperrtes Konto ist kein Lernkandidat.
+// Spec: docs/specs/modules/admin_rolle_s3_admin_api.md
+//
+// Das Flag wird ROH in user.json gesetzt (setzeGesperrtRoh aus
+// session_issuance_test.go) — kein noch nicht existierendes Symbol. Zwei
+// Wege fuehren heute zum Ziel: der frische gespeicherte Treffer (ohne Code)
+// und der Verknuepfungs-Code. Beide muessen das gesperrte Konto auslassen;
+// das aktive Konto wird im selben Lauf weiter bedient (Zwei-Nutzer-Muster).
+// ---------------------------------------------------------------------------
+
+func TestLearnSkipsDisabledAccount_FreshStoredMatch(t *testing.T) {
+	s := learnTestStore(t)
+	frisch := time.Now().Add(-5 * time.Minute).UTC()
+	mustSaveUser(t, s, model.User{
+		ID: "premium-gesperrt", Tier: "premium",
+		PremiumSmsReplyTo: garminFromA, PremiumSmsReplyAt: &frisch,
+	})
+	mustSaveUser(t, s, model.User{ID: "premium-aktiv", Tier: "premium"})
+	setzeGesperrtRoh(t, s, "premium-gesperrt")
+
+	h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
+
+	// Trockenlauf: das gesperrte Konto darf nicht einmal als Ziel erscheinen.
+	dry := httptest.NewRecorder()
+	h(dry, newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA, "dry_run": true}))
+	var dryBody map[string]string
+	_ = json.Unmarshal(dry.Body.Bytes(), &dryBody)
+	if dryBody["user_id"] == "premium-gesperrt" || dryBody["outcome"] == "would_learn" {
+		t.Errorf("AC-12: Trockenlauf ordnet den Absender dem gesperrten Konto zu: %s", dry.Body.String())
+	}
+
+	rr := httptest.NewRecorder()
+	h(rr, newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA}))
+	if rr.Code == http.StatusOK {
+		t.Errorf("AC-12: gesperrtes Konto mit frischem gespeicherten Treffer darf nicht zugeordnet werden, "+
+			"bekommen 200: %s", rr.Body.String())
+	}
+	if got := mustLoadUser(t, s, "premium-gesperrt"); got.PremiumSmsReplyAt == nil || !got.PremiumSmsReplyAt.Equal(frisch) {
+		t.Errorf("AC-12: Zeitstempel des gesperrten Kontos wurde fortgeschrieben (alt=%v, neu=%v)", frisch, got.PremiumSmsReplyAt)
+	}
+	if got := mustLoadUser(t, s, "premium-aktiv"); got.PremiumSmsReplyTo != "" {
+		t.Errorf("AC-12: das aktive Konto ohne Code darf nicht stellvertretend zugeordnet werden, hat %q", got.PremiumSmsReplyTo)
+	}
+}
+
+func TestLearnSkipsDisabledAccount_LinkCode_ActiveUserStillLearns(t *testing.T) {
+	s := learnTestStore(t)
+	mustSaveUser(t, s, model.User{ID: "premium-gesperrt", Tier: "premium"})
+	mustSaveUser(t, s, model.User{ID: "premium-aktiv", Tier: "premium"})
+	mustSaveLinkCode(t, s, "premium-gesperrt", linkCodeAnna)
+	mustSaveLinkCode(t, s, "premium-aktiv", linkCodeBert)
+	setzeGesperrtRoh(t, s, "premium-gesperrt")
+
+	h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(5))
+
+	rr := httptest.NewRecorder()
+	h(rr, newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromA, "code": linkCodeAnna}))
+	if rr.Code == http.StatusOK {
+		t.Errorf("AC-12: der Code des gesperrten Kontos darf nicht zur Zuordnung fuehren, bekommen 200: %s", rr.Body.String())
+	}
+	if got := mustLoadUser(t, s, "premium-gesperrt"); got.PremiumSmsReplyTo != "" {
+		t.Errorf("AC-12: gesperrtes Konto hat die Rueckadresse %q gelernt", got.PremiumSmsReplyTo)
+	}
+
+	// Gegenprobe im selben Bestand (heute schon gruen): das aktive Konto lernt normal.
+	rr2 := httptest.NewRecorder()
+	h(rr2, newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromB, "code": linkCodeBert}))
+	if rr2.Code != http.StatusOK {
+		t.Fatalf("AC-12: aktives Konto mit eigenem Code erwartet 200, bekommen %d: %s", rr2.Code, rr2.Body.String())
+	}
+	if got := mustLoadUser(t, s, "premium-aktiv"); got.PremiumSmsReplyTo != garminFromB {
+		t.Errorf("AC-12: aktives Konto erwartet PremiumSmsReplyTo=%q, hat %q", garminFromB, got.PremiumSmsReplyTo)
+	}
+}
