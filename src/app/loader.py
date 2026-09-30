@@ -1331,6 +1331,22 @@ def list_all_user_ids(data_dir: str | None = None) -> list[str]:
     return real + test
 
 
+def is_user_disabled(user_id: str, data_dir: str | None = None) -> bool:
+    """True, wenn das Konto gesperrt ist (``"disabled": true`` in user.json).
+
+    Liest die Datei bei jedem Aufruf frisch (Issue #2155 S3, AC-13): eine
+    Sperre wirkt sofort, ohne Neustart. Python schreibt das Flag nie (Go-Modell
+    ``json:"disabled,omitempty"``). Fehlt Key oder Datei, ist das Konto nicht
+    gesperrt (fail-soft wie ``is_test_user_id``).
+    """
+    root = Path(data_dir) if data_dir is not None else get_data_root()
+    try:
+        profile = json.loads((root / "users" / user_id / "user.json").read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return isinstance(profile, dict) and profile.get("disabled") is True
+
+
 def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
     """Find user_id whose CONFIRMED EFFECTIVE contact address matches (case-insensitive).
 

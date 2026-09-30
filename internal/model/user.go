@@ -65,6 +65,11 @@ type User struct {
 	SmsVerifiedNumber string     `json:"sms_verified_number,omitempty"`
 	SmsVerifiedAt     *time.Time `json:"sms_verified_at,omitempty"`
 	PendingSmsTo      string     `json:"pending_sms_to,omitempty"`
+	// Issue #2155 S3 (ADR-0080) — Kontosperre durch einen Admin. TYPISIERT,
+	// weil fast alle Schreiber (Profil, Passkey, Magic-Link ...) per SaveUser
+	// komplett zurueckschreiben: ein nur roh gesetztes Feld verschwaende dort.
+	// omitempty: Bestandsprofile laden unveraendert als nicht gesperrt.
+	Disabled bool `json:"disabled,omitempty"`
 }
 
 // SmsVerificationCode — Issue #2406. Struktureller Klon von

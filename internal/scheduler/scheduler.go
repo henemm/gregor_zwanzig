@@ -504,7 +504,7 @@ func (s *Scheduler) callUserWithBudget(jobID, path, uid string, wait, callCap ti
 // dann sauber, was mit dem Konto nicht stimmt.
 func (s *Scheduler) filterOutTestUsers(jobID string, allUserIDs []string) []string {
 	userIDs := make([]string, 0, len(allUserIDs))
-	var skipped []string
+	var skipped, disabled []string
 	for _, uid := range allUserIDs {
 		u, err := s.store.LoadUser(uid)
 		if err != nil {
@@ -514,7 +514,15 @@ func (s *Scheduler) filterOutTestUsers(jobID string, allUserIDs []string) []stri
 			skipped = append(skipped, uid)
 			continue
 		}
+		// Issue #2155 S3 (ADR-0080): gesperrte Konten bekommen nichts.
+		if u != nil && u.Disabled {
+			disabled = append(disabled, uid)
+			continue
+		}
 		userIDs = append(userIDs, uid)
+	}
+	if len(disabled) > 0 {
+		log.Printf("[scheduler] %s: skipping %d disabled (gesperrt) account(s): %v", jobID, len(disabled), disabled)
 	}
 	if len(skipped) > 0 {
 		log.Printf("[scheduler] %s: skipping %d test-user account(s): %v", jobID, len(skipped), skipped)
@@ -1148,6 +1156,20 @@ func (s *Scheduler) StatusForUser(userID string) map[string]any {
 		jobs = append(jobs, job)
 	}
 	return map[string]any{"jobs": jobs}
+}
+
+// LastTripReportRun liefert den letzten Lauf von trip_reports_hourly fuer
+// einen Nutzer (Issue #2155 S3, Admin-Liste); nil ohne Eintrag.
+func (s *Scheduler) LastTripReportRun(userID string) map[string]any {
+	rec, ok := s.userState.UserRecord(statusForUserJobID, userID)
+	if !ok {
+		return nil
+	}
+	return map[string]any{
+		"time":   rec.LastRun.Format(time.RFC3339),
+		"status": rec.LastStatus,
+		"error":  rec.LastError,
+	}
 }
 
 func (s *Scheduler) Status() map[string]any {

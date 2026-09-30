@@ -196,6 +196,12 @@ class InboundEmailReader:
             logger.warning(f"Unresolved/ambiguous sender: {mask_addr_for_pii_log(from_addr)!r}")
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0
+        from app.loader import is_user_disabled
+        if is_user_disabled(_user_id):
+            # Issue #2155 S3 (AC-13): gesperrtes Konto -- stumm verwerfen.
+            logger.warning(f"Konto gesperrt (disabled), Mail verworfen: {mask_addr_for_pii_log(from_addr)!r}")
+            imap.store(uid, "+FLAGS", "\\Seen")
+            return 0
         if not self._authorize(from_addr, user_settings, msg):
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0

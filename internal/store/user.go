@@ -115,6 +115,54 @@ func (s *Store) SetUserTier(id, tier string) error {
 	return writeFileLogged(path, out)
 }
 
+// mergeUserJSON liest user.json als Roh-Map, wendet mutate an und schreibt
+// zurueck (Read-Modify-Write mit Merge: unbekannte Felder bleiben erhalten).
+func (s *Store) mergeUserJSON(id string, mutate func(m map[string]json.RawMessage)) error {
+	if !ValidUserID(id) {
+		return ErrInvalidUserID
+	}
+	path := filepath.Join(s.UserDir(id), "user.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	mutate(m)
+	out, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileLogged(path, out)
+}
+
+// SetUserDisabled setzt bzw. entfernt NUR "disabled" in user.json (Issue #2155
+// S3, ADR-0080). Entsperren entfernt den Schluessel (omitempty-Form).
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) SetUserDisabled(id string, disabled bool) error {
+	return s.mergeUserJSON(id, func(m map[string]json.RawMessage) {
+		if disabled {
+			m["disabled"] = json.RawMessage("true")
+		} else {
+			delete(m, "disabled")
+		}
+	})
+}
+
+// SetUserTierAdmin setzt "tier" und loescht einen offenen Antrag
+// (requested_tier UND requested_at), sonst zeigt die Konto-Seite weiter einen
+// Antrag und TierRequestHealth zaehlt falsch (Issue #2155 S3).
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) SetUserTierAdmin(id, tier string) error {
+	return s.mergeUserJSON(id, func(m map[string]json.RawMessage) {
+		m["tier"], _ = json.Marshal(tier)
+		delete(m, "requested_tier")
+		delete(m, "requested_at")
+	})
+}
+
 // ProvisionUserDirs creates the standard subdirectories for a new user.
 // gz-store-scope-exempt: die Kennung kommt als Parameter id herein, legt das Konto erst an
 func (s *Store) ProvisionUserDirs(id string) error {

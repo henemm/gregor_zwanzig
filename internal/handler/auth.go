@@ -206,6 +206,21 @@ func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId
 //
 // Liefert false, wenn bereits geantwortet wurde (Fehlerfall).
 func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret string) bool {
+	// Issue #2155 S3 (ADR-0080): gesperrte Konten bekommen keine Sitzung.
+	// Ladefehler => fail-closed. Nach der Credential-Pruefung, damit ein
+	// falsches Passwort weiter 401 liefert (kein Existenz-Leak).
+	if u, err := s.LoadUser(userId); err != nil {
+		log.Printf("session issue: load user failed for %s: %v", userId, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"store_error"}`))
+		return false
+	} else if u != nil && u.Disabled {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(403)
+		w.Write([]byte(`{"error":"account_disabled"}`))
+		return false
+	}
 	sessionId, err := middleware.NewSessionID()
 	if err != nil {
 		log.Printf("session issue: id generation failed for %s: %v", userId, err)

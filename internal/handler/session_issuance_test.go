@@ -11,6 +11,16 @@ package handler
 // Gruppen wanderte; er ist deshalb durch drei ersetzt, nicht gestrichen.
 // Die Zusicherung "alle sechs stellen aus" nimmt ADR-0066 dokumentiert zurück.
 //
+// Fortgeschrieben für Issue #2155 S3 (Kontosperre), Spec
+// docs/specs/modules/admin_rolle_s3_admin_api.md — AC-10: eine VIERTE Gruppe
+// mit eigenem Zähler, "gesperrtes Konto × Ausgabewege". Die fünf Wege der
+// Spec (Passwort, Magic-Link, Passkey, OAuth, Passwort ändern) sind sechs
+// Einträge, weil Passkey in beiden Varianten (mit/ohne Kennungseingabe)
+// läuft — 6 verweigern wegen Sperre. Die Minter der Gruppe 1 sind dafür in
+// einen Kern `anmeldenViaX(t, gesperrt)` und die unveränderte Zusicherung
+// aufgeteilt: dieselbe Fixture bedient beide Gruppen, eine Sperr-Gruppe mit
+// eigener Fixture könnte an einer Fixture-Abweichung grün werden.
+//
 // Das ist der Test mit dem größten Selbstschadens-Schutz: wird beim Umbau auch
 // nur EINE der ausstellenden Stellen vergessen, sperrt dieser Anmeldeweg alle
 // seine Nutzer aus — und ohne diesen Test fiele das erst in Produktion auf.
@@ -33,6 +43,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -58,6 +70,77 @@ type issued struct {
 	cookie  *http.Cookie
 	dataDir string
 	userID  string
+}
+
+// anmeldeVersuch bündelt, was ein Anmeldeaufruf hinterlässt, bevor über
+// Erfolg oder Verweigerung geurteilt wird (#2155 S3).
+type anmeldeVersuch struct {
+	w   *httptest.ResponseRecorder
+	s   *store.Store
+	uid string
+}
+
+// setzeGesperrtRoh setzt "disabled": true ROH in user.json — ohne das
+// typisierte Modell, damit dieser Test kein noch nicht existierendes Symbol
+// braucht. Aufruf NACH dem letzten typisierten SaveUser der Fixture.
+func setzeGesperrtRoh(t *testing.T, s *store.Store, uid string) {
+	t.Helper()
+	pfad := filepath.Join(s.UserDir(uid), "user.json")
+	daten, err := os.ReadFile(pfad)
+	if err != nil {
+		t.Fatalf("user.json von %s lesen: %v", uid, err)
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(daten, &m); err != nil {
+		t.Fatalf("user.json von %s parsen: %v", uid, err)
+	}
+	m["disabled"] = json.RawMessage("true")
+	out, _ := json.MarshalIndent(m, "", "  ")
+	if err := os.WriteFile(pfad, out, 0644); err != nil {
+		t.Fatalf("user.json von %s schreiben: %v", uid, err)
+	}
+}
+
+// istGesperrtRoh liest "disabled" roh aus user.json (fehlt == false).
+func istGesperrtRoh(t *testing.T, s *store.Store, uid string) bool {
+	t.Helper()
+	daten, err := os.ReadFile(filepath.Join(s.UserDir(uid), "user.json"))
+	if err != nil {
+		t.Fatalf("user.json von %s lesen: %v", uid, err)
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(daten, &m); err != nil {
+		t.Fatalf("user.json von %s parsen: %v", uid, err)
+	}
+	return string(m["disabled"]) == "true"
+}
+
+// anmeldenViaPasswortAendern: der fünfte Ausgabeweg (ChangePasswordHandler,
+// umgeht das Bestätigungs-Gate). Konto mit Passwort und einer bestehenden
+// Sitzung; gesperrt=true setzt das Flag roh vor dem Aufruf.
+func anmeldenViaPasswortAendern(t *testing.T, gesperrt bool) anmeldeVersuch {
+	t.Helper()
+	s := newTestStore(t)
+	const uid = "alice"
+	hash, _ := bcrypt.GenerateFromPassword([]byte("altespw123"), bcrypt.MinCost)
+	verifiziert := time.Now().UTC()
+	if err := s.SaveUser(model.User{
+		ID: uid, PasswordHash: string(hash), EmailVerifiedAt: &verifiziert, CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("SaveUser: %v", err)
+	}
+	if err := s.AddSession(uid, "sess-vorher"); err != nil {
+		t.Fatalf("AddSession: %v", err)
+	}
+	if gesperrt {
+		setzeGesperrtRoh(t, s, uid)
+	}
+	req := httptest.NewRequest(http.MethodPut, "/api/auth/password",
+		strings.NewReader(`{"old_password":"altespw123","new_password":"neuespw456"}`))
+	req = addUserToContext(req, uid)
+	w := httptest.NewRecorder()
+	ChangePasswordHandler(s, bcrypt.MinCost, issuanceSecret)(w, req)
+	return anmeldeVersuch{w: w, s: s, uid: uid}
 }
 
 func sessionCookieFrom(t *testing.T, w *httptest.ResponseRecorder, way string) *http.Cookie {
@@ -102,6 +185,18 @@ func probeIssuedCookie(t *testing.T, dataDir, cookieValue string) int {
 
 func mintViaPassword(t *testing.T) issued {
 	t.Helper()
+	v := anmeldenViaPassword(t, false)
+	if v.w.Code != 200 {
+		t.Fatalf("Passwort-Anmeldung: erwartet 200, bekommen %d: %s", v.w.Code, v.w.Body.String())
+	}
+	return issued{cookie: sessionCookieFrom(t, v.w, "Passwort"), dataDir: v.s.DataDir, userID: v.uid}
+}
+
+// anmeldenViaPassword ist der Kern von mintViaPassword; gesperrt=true setzt
+// das Sperr-Flag roh in user.json, unmittelbar vor dem Anmeldeaufruf
+// (#2155 S3 AC-10).
+func anmeldenViaPassword(t *testing.T, gesperrt bool) anmeldeVersuch {
+	t.Helper()
 	s := newTestStore(t)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	verifiziert := time.Now().UTC()
@@ -112,17 +207,27 @@ func mintViaPassword(t *testing.T) issued {
 		t.Fatalf("SaveUser: %v", err)
 	}
 
+	if gesperrt {
+		setzeGesperrtRoh(t, s, "alice")
+	}
+
 	req := httptest.NewRequest("POST", "/api/auth/login",
 		strings.NewReader(`{"username":"alice","password":"geheim123"}`))
 	w := httptest.NewRecorder()
 	LoginHandler(s, issuanceSecret).ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Fatalf("Passwort-Anmeldung: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
-	}
-	return issued{cookie: sessionCookieFrom(t, w, "Passwort"), dataDir: s.DataDir, userID: "alice"}
+	return anmeldeVersuch{w: w, s: s, uid: "alice"}
 }
 
 func mintViaMagicLink(t *testing.T) issued {
+	t.Helper()
+	v := anmeldenViaMagicLink(t, false)
+	if v.w.Code != 200 {
+		t.Fatalf("Magic-Link: erwartet 200, bekommen %d: %s", v.w.Code, v.w.Body.String())
+	}
+	return issued{cookie: sessionCookieFrom(t, v.w, "Magic-Link"), dataDir: v.s.DataDir, userID: v.uid}
+}
+
+func anmeldenViaMagicLink(t *testing.T, gesperrt bool) anmeldeVersuch {
 	t.Helper()
 	t.Cleanup(ResetOTPStoreForTest)
 
@@ -138,19 +243,29 @@ func mintViaMagicLink(t *testing.T) issued {
 		expiresAt: time.Now().Add(15 * time.Minute),
 	})
 
+	if gesperrt {
+		setzeGesperrtRoh(t, s, uid)
+	}
+
 	cfg := &config.Config{SessionSecret: issuanceSecret}
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/magic-link/verify",
 		strings.NewReader(`{"email":"magic@example.com","code":"123456"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	MagicLinkVerifyHandler(s, cfg).ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Fatalf("Magic-Link: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
-	}
-	return issued{cookie: sessionCookieFrom(t, w, "Magic-Link"), dataDir: s.DataDir, userID: uid}
+	return anmeldeVersuch{w: w, s: s, uid: uid}
 }
 
 func mintViaGoogle(t *testing.T) issued {
+	t.Helper()
+	v := anmeldenViaGoogle(t, false)
+	if v.w.Code != http.StatusFound {
+		t.Fatalf("Google: erwartet 302, bekommen %d: %s", v.w.Code, v.w.Body.String())
+	}
+	return issued{cookie: sessionCookieFrom(t, v.w, "Google"), dataDir: v.s.DataDir, userID: v.uid}
+}
+
+func anmeldenViaGoogle(t *testing.T, gesperrt bool) anmeldeVersuch {
 	t.Helper()
 	s := newTestStore(t)
 
@@ -164,6 +279,10 @@ func mintViaGoogle(t *testing.T) issued {
 		EmailVerifiedAt: &verified, CreatedAt: time.Now(),
 	}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
+	}
+
+	if gesperrt {
+		setzeGesperrtRoh(t, s, uid)
 	}
 
 	userinfoURL, tokenURL := oauthFakeServers(t, "sub-2129", "google@example.com")
@@ -180,13 +299,19 @@ func mintViaGoogle(t *testing.T) issued {
 	req.AddCookie(&http.Cookie{Name: "gz_oauth_state", Value: state})
 	w := httptest.NewRecorder()
 	GoogleOAuthCallbackHandlerWithEndpoints(cfg, s, userinfoURL, tokenURL).ServeHTTP(w, req)
-	if w.Code != http.StatusFound {
-		t.Fatalf("Google: erwartet 302, bekommen %d: %s", w.Code, w.Body.String())
-	}
-	return issued{cookie: sessionCookieFrom(t, w, "Google"), dataDir: s.DataDir, userID: uid}
+	return anmeldeVersuch{w: w, s: s, uid: uid}
 }
 
 func mintViaPasskeyLogin(t *testing.T) issued {
+	t.Helper()
+	v := anmeldenViaPasskeyLogin(t, false)
+	if v.w.Code != 200 {
+		t.Fatalf("Passkey-Login finish: erwartet 200, bekommen %d: %s", v.w.Code, v.w.Body.String())
+	}
+	return issued{cookie: sessionCookieFrom(t, v.w, "Passkey-Login"), dataDir: v.s.DataDir, userID: v.uid}
+}
+
+func anmeldenViaPasskeyLogin(t *testing.T, gesperrt bool) anmeldeVersuch {
 	t.Helper()
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
@@ -197,6 +322,10 @@ func mintViaPasskeyLogin(t *testing.T) issued {
 	// ein vorgeschaltetes SaveUser gewinnt, ohne den Helfer anzufassen.
 	seedeKonto2271(t, s, "alice", true)
 	auth := registerForUser(t, s, wa, cs, "alice")
+	if gesperrt {
+		// NACH registerForUser: der Helfer schreibt typisiert zurueck.
+		setzeGesperrtRoh(t, s, "alice")
+	}
 
 	beginW := httptest.NewRecorder()
 	PasskeyLoginBeginHandler(s, wa, cs).ServeHTTP(beginW,
@@ -218,13 +347,19 @@ func mintViaPasskeyLogin(t *testing.T) issued {
 	PasskeyLoginFinishHandler(s, wa, cs, issuanceSecret).ServeHTTP(finishW,
 		httptest.NewRequest("POST", "/api/auth/passkey/login/finish",
 			bytes.NewReader(auth.makeAssertionResponse(t, beginResp.PublicKey.Challenge, 1))))
-	if finishW.Code != 200 {
-		t.Fatalf("Passkey-Login finish: erwartet 200, bekommen %d: %s", finishW.Code, finishW.Body.String())
-	}
-	return issued{cookie: sessionCookieFrom(t, finishW, "Passkey-Login"), dataDir: s.DataDir, userID: "alice"}
+	return anmeldeVersuch{w: finishW, s: s, uid: "alice"}
 }
 
 func mintViaPasskeyDiscoverable(t *testing.T) issued {
+	t.Helper()
+	v := anmeldenViaPasskeyDiscoverable(t, false)
+	if v.w.Code != http.StatusOK {
+		t.Fatalf("Passkey-discoverable finish: erwartet 200, bekommen %d: %s", v.w.Code, v.w.Body.String())
+	}
+	return issued{cookie: sessionCookieFrom(t, v.w, "Passkey-discoverable"), dataDir: v.s.DataDir, userID: v.uid}
+}
+
+func anmeldenViaPasskeyDiscoverable(t *testing.T, gesperrt bool) anmeldeVersuch {
 	t.Helper()
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
@@ -233,6 +368,9 @@ func mintViaPasskeyDiscoverable(t *testing.T) issued {
 	const uid = "alice"
 	seedeKonto2271(t, s, uid, true) // #2271: siehe mintViaPasskeyLogin
 	auth := registerForUser(t, s, wa, cs, uid)
+	if gesperrt {
+		setzeGesperrtRoh(t, s, uid)
+	}
 
 	beginW := httptest.NewRecorder()
 	PasskeyLoginDiscoverableBeginHandler(wa, cs).ServeHTTP(beginW,
@@ -250,10 +388,7 @@ func mintViaPasskeyDiscoverable(t *testing.T) issued {
 	finishReq.Header.Set("Content-Type", "application/json")
 	finishW := httptest.NewRecorder()
 	PasskeyLoginDiscoverableFinishHandler(s, wa, cs, issuanceSecret).ServeHTTP(finishW, finishReq)
-	if finishW.Code != http.StatusOK {
-		t.Fatalf("Passkey-discoverable finish: erwartet 200, bekommen %d: %s", finishW.Code, finishW.Body.String())
-	}
-	return issued{cookie: sessionCookieFrom(t, finishW, "Passkey-discoverable"), dataDir: s.DataDir, userID: uid}
+	return anmeldeVersuch{w: finishW, s: s, uid: uid}
 }
 
 // --- Gruppe 2: die vier verweigernden Anmeldewege (#2271) ------------------
@@ -682,5 +817,80 @@ func TestGoogleOAuth_SelfHealRunsBeforeGate(t *testing.T) {
 	}
 	if nutzer.EmailVerifiedAt == nil {
 		t.Error("AC-5: die Selbstheilung muss email_verified_at gesetzt haben — es ist nil")
+	}
+}
+
+// --- #2155 S3 AC-10: Gruppe 4 — gesperrtes Konto × Ausgabewege --------------
+
+// AC-10: Jeder Ausgabeweg verweigert einem GESPERRTEN Konto die Sitzung mit
+// 403 {"error":"account_disabled"} — kein Cookie, keine neue Sitzung im
+// Store. Alle Wege laufen über issueSessionWithoutVerificationGate; wird die
+// Sperrprüfung dort entfernt oder ruft eine Stelle AddSession an ihr vorbei
+// auf, wird dieser Test rot.
+//
+// Auch der OAuth-Redirect-Fluss antwortet laut Spec mit 403 account_disabled
+// (die Prüfung sitzt in der gemeinsamen Ausgabestelle, nicht in einer
+// eigenen Vorprüfung wie bei email_not_verified).
+//
+// Zusätzlich: das Flag steht NACH dem Versuch noch in user.json. Magic-Link,
+// Passkey und Passwort-Ändern schreiben das Nutzerobjekt typisiert zurück —
+// ein nur roh bekanntes Flag ginge dabei verloren.
+func TestDisabledAccount_AllIssuancePaths_Refuse403(t *testing.T) {
+	gesperrteWege := []struct {
+		name     string
+		anmelden func(*testing.T, bool) anmeldeVersuch
+	}{
+		{"Passwort", anmeldenViaPassword},
+		{"Magic-Link", anmeldenViaMagicLink},
+		{"Google-OAuth", anmeldenViaGoogle},
+		{"Passkey-Login", anmeldenViaPasskeyLogin},
+		{"Passkey-ohne-Kennungseingabe", anmeldenViaPasskeyDiscoverable},
+		{"Passwort-aendern", anmeldenViaPasswortAendern},
+	}
+
+	if len(gesperrteWege) != 6 {
+		t.Fatalf("#2155 S3 AC-10 verlangt fünf Ausgabewege (Passkey in zwei Varianten = 6 Einträge), abgedeckt sind %d",
+			len(gesperrteWege))
+	}
+
+	// Positivkontrolle zum fünften Weg (Gruppe 1 kennt Passwort-Ändern nicht):
+	// ohne Sperre stellt er aus (200 + Cookie). Sonst könnte ein 403 unten auch
+	// aus einer kaputten Fixture stammen (falsches altes Passwort => 403).
+	if v := anmeldenViaPasswortAendern(t, false); v.w.Code != http.StatusOK || sessionCookieOderNil(v.w) == nil {
+		t.Fatalf("Positivkontrolle Passwort-Ändern ohne Sperre: erwartet 200 + Cookie, bekommen %d: %s",
+			v.w.Code, v.w.Body.String())
+	}
+
+	for _, way := range gesperrteWege {
+		t.Run(way.name, func(t *testing.T) {
+			v := way.anmelden(t, true)
+
+			if v.w.Code != http.StatusForbidden {
+				t.Errorf("AC-10/%s: gesperrtes Konto erwartet 403, bekommen %d: %s",
+					way.name, v.w.Code, v.w.Body.String())
+			}
+			if got := strings.TrimSpace(v.w.Body.String()); got != `{"error":"account_disabled"}` {
+				t.Errorf("AC-10/%s: Antwortkörper erwartet %s, bekommen %q",
+					way.name, `{"error":"account_disabled"}`, got)
+			}
+			if c := sessionCookieOderNil(v.w); c != nil && c.Value != "" && c.MaxAge >= 0 {
+				t.Errorf("AC-10/%s: gesperrtes Konto darf kein gz_session-Cookie bekommen, bekommen %q",
+					way.name, c.Value)
+			}
+			sitzungen, err := v.s.LoadSessions(v.uid)
+			if err != nil {
+				t.Fatalf("AC-10/%s: Gästeliste nicht lesbar: %v", way.name, err)
+			}
+			for _, sess := range sitzungen {
+				if sess.ID != "sess-vorher" {
+					t.Errorf("AC-10/%s: gesperrtes Konto hat eine neue Sitzung %q in der Gästeliste",
+						way.name, sess.ID)
+				}
+			}
+			if !istGesperrtRoh(t, v.s, v.uid) {
+				t.Errorf("AC-10/%s: das Sperr-Flag ist nach dem Versuch aus user.json verschwunden "+
+					"(typisiertes Zurückschreiben verliert es)", way.name)
+			}
+		})
 	}
 }

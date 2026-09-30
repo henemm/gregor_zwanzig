@@ -232,6 +232,8 @@ class InboundTelegramReader:
 
         # Resolve user-scoped settings for this chat_id
         user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
+        if self._ist_gesperrt(user_id, chat_id):
+            return True
 
         # #1019: unbekannter Absender (kein User-Match) erhaelt Registrierungs-Hinweis,
         # KEINE Trip-/Wetterdaten. Betreiber-Account faellt hier nie hinein, da
@@ -454,6 +456,16 @@ class InboundTelegramReader:
         message_id = msg.get("message_id")
 
         user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
+        if self._ist_gesperrt(user_id, chat_id):
+            # Nur den Lade-Spinner beenden, nichts editieren/senden.
+            try:
+                if cq_id:
+                    self._notification_service.answer_telegram_callback_query(
+                        callback_query_id=cq_id, settings=settings,
+                    )
+            except Exception as e:
+                logger.warning(f"answerCallbackQuery fehlgeschlagen: {e}")
+            return True
         try:
             # #1019: unbekannter Absender (kein User-Match) erhaelt auch beim
             # Button-Klick nur den Registrierungs-Hinweis, KEINE Trip-/Wetter-
@@ -583,6 +595,15 @@ class InboundTelegramReader:
         """
         trips = load_all_trips(user_id)
         return pick_active_trip(trips, now_utc)
+
+    @staticmethod
+    def _ist_gesperrt(user_id: str | None, chat_id: str) -> bool:
+        """Issue #2155 S3 (AC-13): gesperrtes Konto -- stumm verwerfen (loggen)."""
+        from app.loader import is_user_disabled
+        if user_id is None or not is_user_disabled(user_id):
+            return False
+        logger.warning(f"Konto gesperrt (disabled), Update verworfen: chat {mask_number(chat_id)}")
+        return True
 
     def _resolve_user_for_chat(
         self, chat_id: str, base_settings: Settings, data_dir: str | None = None

@@ -172,6 +172,9 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/_validator/format-metric` | GET |
 | `/api/_validator/metrics-for-channel` | GET |
 | `/api/_validator/sms-fidelity-preview` | POST |
+| `/api/admin/users` | GET — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S3) |
+| `/api/admin/users/{id}/disabled` | PUT — nur Admin, Konto sperren/entsperren (#2155 S3) |
+| `/api/admin/users/{id}/tier` | PUT — nur Admin, Tier setzen (#2155 S3) |
 | `/api/archive/stats` | GET |
 | `/api/auth/account` | DELETE |
 | `/api/auth/export` | GET |
@@ -256,8 +259,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/trips/{id}/weather-config` | GET, PUT |
 | `/api/webhooks/telegram/{secret}` | POST |
 
-(77 Pfade, 97 Routen-Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
-hinzu, ein neuer Pfad mit einer neuen Registrierung.)
+(80 Pfade, 100 Routen-Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
+hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`.)
 
 ---
 
@@ -1487,6 +1490,32 @@ never leaks another user's error text. No recorded run for the caller yet →
 | Status | Body | Scenario |
 |--------|------|----------|
 | 401 | `{"error":"unauthorized"}` | No session cookie |
+
+---
+
+### Admin-API Nutzerverwaltung (Issue #2155 S3, ADR-0080)
+
+Alle drei Routen: ohne Session 401, ohne Admin 403 `{"error":"forbidden"}`.
+
+**`GET /api/admin/users`** -> 200 `{"users":[AdminUser]}`. `AdminUser` (alle Felder immer
+vorhanden, kein `omitempty`): `id`, `email`, `display_name`, `tier`, `requested_tier`,
+`requested_at`, `email_verified_at`, `created_at`, `disabled` (bool), `is_test_user` (bool),
+`last_trip_report_run` (`{"time","status","error"}` oder `null`). Nie `password_hash`,
+Passkey- oder Token-/Code-Felder.
+
+**`PUT /api/admin/users/{id}/tier`**, Body `{"tier":"free|standard|premium"}` -> 200 mit
+`AdminUser`. Setzt `tier` und loescht `requested_tier` und `requested_at`. 400 bei ungueltigem
+Tier (`{"error":"invalid_tier"}`) bzw. JSON (`{"error":"invalid_request"}`), 404
+`{"error":"not_found"}` bei unbekannter oder ungueltiger ID, 500 `{"error":"store_error"}`.
+
+**`PUT /api/admin/users/{id}/disabled`**, Body `{"disabled":true|false}` -> 200 mit
+`AdminUser`. Sperren setzt das Flag und leert danach alle Sitzungen des Kontos. 400
+`{"error":"invalid_request"}` bei fehlendem `disabled`/ungueltigem JSON, 404 unbekannt,
+409 `{"error":"cannot_disable_self"}` bei Selbstsperre, 500 wenn das Leeren der Sitzungen
+scheitert (Flag bleibt gesetzt, Wiederholung idempotent).
+
+**Login-Verweigerung:** Auf allen Wegen der Session-Ausgabe 403 `{"error":"account_disabled"}`
+fuer gesperrte Konten (nach erfolgreicher Credential-Pruefung; falsches Passwort bleibt 401).
 
 ---
 
