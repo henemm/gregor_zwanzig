@@ -1007,7 +1007,12 @@ für Trip UND ComparePreset (Go `*OfficialWarningsConfig`, Python `Optional[dict
 fällt fail-soft auf das Legacy-Feld `official_alert_triggers_enabled` zurück (`nil`/`true` →
 Alarm aktiv, `false` → kein Alarm). Ein `{}`-Wert (Key vorhanden, `enabled` fehlt) wird wie
 `nil` behandelt (Legacy-Fallback), nicht wie `enabled=false` — Go und Python sind hierin
-identisch (Fix-Loop F003, s. Changelog #1258).
+identisch (Fix-Loop F003, s. Changelog #1258). **Fix Issue #2422 S4:** Der Vorab-Filter in
+`trip_alert.py:895-911` (Sammellauf-Einstieg) prüft jetzt parallel **beide** Felder mit
+Vorranglogik: Ist `official_warnings.enabled` gesetzt (nicht `nil`/`{}`), bestimmt es allein die
+Auslöseentscheidung; fehlt es, nimmt der Filter wie bisher das Legacy-Feld `official_alert_triggers_enabled`
+als Fallback. Damit ist die Sammelauf-Prüfung identisch mit der öffentlichen Auslösefunktion
+`check_official_alert_triggers()` — beide verwenden dieselbe Drei-Zustands-Vorranglogik.
 
 **Neuanlage-Default:** `enabled: false` — bewusster Verhaltenswechsel gegenüber Bestand (der per
 Migration den alten Ist-Zustand behält, s.u.).
