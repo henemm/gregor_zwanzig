@@ -131,7 +131,8 @@ def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime) 
         # deshalb dieselbe, einzige Fassung (AC-28). `paused_at` kommt damit
         # neu hinzu; ein pausiertes Preset war hier ohnehin nie faellig
         # gemeint.
-        if is_silenced(preset):
+        # end_date wertet dieser Scheduler unten selbst aus (Ortstag).
+        if is_silenced(preset, ohne_end_date=True):
             continue
 
         preset_id = preset.get("id", "?")

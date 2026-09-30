@@ -538,6 +538,10 @@ def test_api_contract_beschreibt_end_date_sentinel():
     assert "KL-7" not in zeilen[0]
     assert '""' in zeilen[0] and "400" in zeilen[0], (
         "die end_date-Zeile muss den Sentinel (`\"\"` loescht) und das 400 bei ungueltigem Datum nennen")
+    assert '`end_date: ""` löscht das Enddatum' in zeilen[0], "Sentinel-Aussage: leerer String loescht"
+    assert "compare_preset.go" in zeilen[0], "Verweis auf den Handler fehlt"
+    assert "ungültiges Datum ergibt 400" in zeilen[0], "400 bei ungueltigem Datum fehlt"
+    assert "fehlendes Feld erhält den gespeicherten Wert" in zeilen[0]
 
 
 # ---------------------------------------------------------------------------

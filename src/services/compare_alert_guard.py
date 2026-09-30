@@ -5,12 +5,14 @@ PO-Vorgabe woertlich: "Pausierte und archivierte Ortsvergleiche duerfen
 grundsaetzlich nichts senden. Sie sollen sich so verhalten, als wuerde es sie
 im System nicht geben."
 
-Ein Preset ist stillgelegt, wenn EINES dieser drei Merkmale zutrifft
+Ein Preset ist stillgelegt, wenn EINES dieser vier Merkmale zutrifft
 (ODER-verknuepft, jedes fuer sich genuegend):
 
 1. ``paused_at`` ist gesetzt (ausdrueckliches Pausieren per Knopf),
 2. ``schedule == "manual"`` (Alt-Semantik "kein Zeitplan" = pausiert),
-3. ``archived_at`` ist gesetzt (Bestands-Riegel aus #1233).
+3. ``archived_at`` ist gesetzt (Bestands-Riegel aus #1233),
+4. ``end_date`` liegt vor heute (Europe/Vienna; heute oder Zukunft = aktiv,
+   fehlend/leer/ungueltig = nicht abgelaufen; Issue #2422 S5, AC-21).
 
 Verbindliche Vorlage ist die Oberflaechen-Logik
 ``frontend/src/lib/components/compare/subscriptionHelpers.ts:83-88``
@@ -31,19 +33,25 @@ SPEC: docs/specs/modules/rework_1467_s2_aenderungsalarm.md, Abschnitt "AG6".
 """
 from __future__ import annotations
 
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
 # Alt-Semantik: genau dieser eine Zeitplan-Wert bedeutet "pausiert". Jeder
 # andere Wert ("daily", "weekly", ...) ist ein aktiver Zeitplan.
 _PAUSED_SCHEDULE = "manual"
 
 
-def is_silenced(preset: dict) -> bool:
-    """True, wenn der Ortsvergleich pausiert oder archiviert ist.
+def is_silenced(preset: dict, *, ohne_end_date: bool = False) -> bool:
+    """True, wenn der Ortsvergleich pausiert, archiviert oder abgelaufen ist.
 
     Rein und ohne Seiteneffekte. Gelesen wird ausschliesslich per ``.get()``,
     ein fehlender Schluessel gilt nie als stillgelegt. Leere Werte
     (``None``, ``""``) zaehlen ebenfalls nicht als gesetzt — ein leeres Feld
     aus einem Formular-Roundtrip darf keinen aktiven Ortsvergleich dauerhaft
     stummschalten.
+
+    ``ohne_end_date=True`` blendet Merkmal 4 aus: der Slot-Scheduler wertet
+    ``end_date`` selbst gegen den Ortstag (injizierte Uhr, Orts-Zeitzone) aus.
     """
     if preset.get("paused_at"):
         return True
@@ -51,4 +59,14 @@ def is_silenced(preset: dict) -> bool:
         return True
     if preset.get("archived_at"):
         return True
-    return False
+    return not ohne_end_date and _end_date_passed(preset.get("end_date"))
+
+
+def _end_date_passed(end_date) -> bool:
+    """Merkmal 4: True nur bei gueltigem ``end_date`` < heute (Wien)."""
+    if not end_date:
+        return False
+    try:
+        return date.fromisoformat(end_date) < datetime.now(ZoneInfo("Europe/Vienna")).date()
+    except (ValueError, TypeError):
+        return False
