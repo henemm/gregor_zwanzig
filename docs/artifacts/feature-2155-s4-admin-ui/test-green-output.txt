@@ -1,0 +1,90 @@
+✔ Keine direkten ui/-Atom-Importe außerhalb von ui/ und atoms/ (19.147434ms)
+(node:557668) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ layout.server load: isAdmin folgt der Rolle (fail-closed)
+  ✔ Admin-Profil => isAdmin true (0.773552ms)
+  ✔ Nutzer-Profil => isAdmin false (0.15599ms)
+  ✔ Profil ohne role-Feld => isAdmin false (0.18679ms)
+  ✔ Profil-Abruf scheitert (401) => isAdmin false (0.118551ms)
+  ✔ nicht angemeldet => isAdmin false, kein Abruf noetig (0.09622ms)
+✔ layout.server load: isAdmin folgt der Rolle (fail-closed) (1.828976ms)
+▶ +layout.svelte reicht isAdmin an Sidebar/KontoSheet durch
+  ✔ Nicht-Admin: kein Admin-Link irgendwo im Layout (4.582763ms)
+  ✔ isAdmin fehlt in data => kein Admin-Link (0.766321ms)
+  ✔ Admin: Admin-Link in der Sidebar vorhanden (0.717452ms)
+✔ +layout.svelte reicht isAdmin an Sidebar/KontoSheet durch (6.412969ms)
+▶ Sidebar: Admin-Eintrag nur bei isAdmin
+  ✔ Nicht-Admin: kein nav-admin, keine Admin-Beschriftung (0.385451ms)
+  ✔ Default (Prop fehlt): kein Admin-Eintrag (0.245ms)
+  ✔ Admin: genau ein Eintrag nav-admin -> /admin, Basis-Eintraege bleiben (0.348871ms)
+✔ Sidebar: Admin-Eintrag nur bei isAdmin (1.132734ms)
+▶ KontoSheet: Admin-Zeile nur bei isAdmin
+  ✔ Nicht-Admin: keine Zeile konto-sheet-admin (1.061953ms)
+  ✔ Default (Prop fehlt): keine Admin-Zeile (0.41933ms)
+  ✔ Admin: Zeile konto-sheet-admin -> /admin vorhanden (0.597773ms)
+✔ KontoSheet: Admin-Zeile nur bei isAdmin (2.207755ms)
+▶ AC-4: Antwort ersetzt NUR die Zeile des betroffenen Nutzers
+  ✔ X wird ersetzt, Y bleibt identisch (gleiches Objekt, gleiche Reihenfolge) (0.884442ms)
+  ✔ mutiert die Eingabeliste nicht und haengt keine unbekannte Zeile an (0.591523ms)
+✔ AC-4: Antwort ersetzt NUR die Zeile des betroffenen Nutzers (2.388956ms)
+▶ AC-6: Fehlertexte — je Fall eigener Klartext, nie der rohe Code
+  ✔ jeder Fall liefert nicht-leeren Text ohne rohen Fehlercode (1.539284ms)
+  ✔ 403, 404 und 409 sind voneinander verschieden, mit den Spec-Texten (0.20435ms)
+  ✔ unbekannter Status/Code faellt auf eine allgemeine Meldung zurueck (0.09084ms)
+✔ AC-6: Fehlertexte — je Fall eigener Klartext, nie der rohe Code (2.023896ms)
+▶ AC-7: EINE zentrale Tier-Konstante
+  ✔ Bezeichnungen sind die bisherigen der Konto-Seite (0.16169ms)
+  ✔ account/+page.svelte importiert TIER_LABELS aus lib/admin und definiert keine eigene (0.651652ms)
+✔ AC-7: EINE zentrale Tier-Konstante (1.011253ms)
+▶ Admin-Seite (SSR): Selbstschutz, Sperrstatus, offener Antrag
+  ✔ eigene Zeile: Sperren-Button ist deaktiviert (0.712923ms)
+  ✔ fremde Zeile: Sperren-Button ist aktiv (0.15729ms)
+  ✔ selfId leer: niemand ist selbst-gesperrt (kein Zufallstreffer auf leere ID) (0.718652ms)
+  ✔ gesperrter Nutzer: Badge und Entsperren statt Sperren (0.22811ms)
+  ✔ offener Antrag ist nur an der Antrag-Zeile hervorgehoben, mit Ziel-Tier (0.109861ms)
+  ✔ keine Fehlerzeile im Ausgangszustand (0.06894ms)
+✔ Admin-Seite (SSR): Selbstschutz, Sperrstatus, offener Antrag (2.610378ms)
+▶ +page.server load: selfId und fail-closed
+  ✔ selfId kommt aus profile.id (0.400912ms)
+  ✔ Profil ohne id => selfId leer (nie undefined/null) (0.22235ms)
+  ✔ Admin-Profil, Go antwortet auf der Liste 403 => 403 (0.395331ms)
+  ✔ Admin-Profil, Go antwortet auf der Liste 401 => 401 (0.14438ms)
+  ✔ Liste 500 => 502, kein Durchlassen (0.11304ms)
+  ✔ Profil-Abruf scheitert (Antwort nicht ok) => 401, Liste wird nicht gezeigt (0.092681ms)
+  ✔ Profil-Abruf wirft (Netz) => 401 (0.134591ms)
+  ✔ Profil liefert leere Antwort (null) => 401 (0.09288ms)
+✔ +page.server load: selfId und fail-closed (1.947545ms)
+▶ Sperr-Dialog: erst die Bestaetigung sendet
+  ✔ Sperren anklicken oeffnet nur die Auswahl, erzeugt keine Sende-Aktion (0.14912ms)
+  ✔ Bestaetigen sendet genau {"disabled":true} fuer die gewaehlte ID (0.500682ms)
+  ✔ Abbrechen verwirft die Auswahl; danach gibt es nichts zu bestaetigen (0.08013ms)
+  ✔ Entsperren sendet {"disabled":false} direkt, ohne Dialog (0.07682ms)
+  ✔ Sperren ist fuer das eigene Konto und bei laufender Aktion blockiert (0.058911ms)
+✔ Sperr-Dialog: erst die Bestaetigung sendet (1.061753ms)
+▶ sendAdminUpdate: Payload, Pfad, Fehler => Klartext ohne Zeilenaenderung
+  ✔ Erfolg: PUT auf /api/admin/users/<id>/disabled mit JSON-Body, liefert die Zeile (0.301801ms)
+  ✔ Tier-Pfad /tier mit {"tier":...} (0.11522ms)
+  ✔ Fehler 409 cannot_disable_self => Klartext, kein Nutzer, kein Rohcode (0.120689ms)
+  ✔ Netzfehler => Klartext, kein Nutzer (0.14032ms)
+  ✔ Fehler lassen die Liste unveraendert (Seite ersetzt nur bei ok) (0.11768ms)
+  ✔ applySendResult: Fehler => Liste identisch, Klartext NUR an dieser Zeile (0.217971ms)
+  ✔ applySendResult: Erfolg => nur diese Zeile ersetzt, ihr Fehler geloescht (0.127811ms)
+  ✔ Tier-Select springt nach Fehler auf den alten Wert zurueck, nach Erfolg bleibt die Wahl (0.06502ms)
+✔ sendAdminUpdate: Payload, Pfad, Fehler => Klartext ohne Zeilenaenderung (1.377964ms)
+▶ AC-2: Nicht-Admin wird serverseitig abgewiesen, Admin sieht die Liste
+  ✔ Nicht-Admin: load() wirft 403 und ruft die Nutzerliste NICHT ab (1.316984ms)
+  ✔ Admin: load() liefert die Nutzerliste (0.678541ms)
+  ✔ ohne Sitzung: abgewiesen, keine Liste (0.149721ms)
+✔ AC-2: Nicht-Admin wird serverseitig abgewiesen, Admin sieht die Liste (2.652208ms)
+▶ AC-3: Datenform — nur DTO-Felder, offener Antrag bleibt erkennbar
+  ✔ Zeilen tragen exakt die DTO-Felder, nichts darueber hinaus (0.238ms)
+  ✔ offener Antrag (requested_tier) und `null`-Lauf kommen unveraendert an (0.15011ms)
+✔ AC-3: Datenform — nur DTO-Felder, offener Antrag bleibt erkennbar (0.506592ms)
+ℹ tests 54
+ℹ suites 13
+ℹ pass 54
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2978.673197

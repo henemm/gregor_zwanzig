@@ -14,12 +14,13 @@
 	interface SidebarProps {
 		userId: string | null | undefined;
 		displayName?: string | null | undefined;
+		isAdmin?: boolean;
 		currentPath: string;
 		darkMode: boolean;
 		ontoggleDark: () => void;
 	}
 
-	let { userId, displayName, currentPath, darkMode, ontoggleDark }: SidebarProps = $props();
+	let { userId, displayName, isAdmin = false, currentPath, darkMode, ontoggleDark }: SidebarProps = $props();
 
 	// Issue #642 — Anzeigename hat Vorrang vor dem Login-Namen.
 	const shownName = $derived((displayName && displayName.trim()) || userId || '');
@@ -27,12 +28,18 @@
 	let userMenuOpen = $state(false);
 
 	// Nav-Items fest nach JSX BRAND_NAV_ITEMS (brand-kit.jsx Zeile 259–264).
-	const navItems = [
+	const baseNavItems = [
 		{ id: 'home',    href: '/',        label: 'Startseite',     icon: 'home'    },
 		{ id: 'trips',   href: '/trips',   label: 'Meine Trips',    icon: 'trip'    },
 		{ id: 'compare', href: '/compare', label: 'Orts-Vergleich', icon: 'compare' },
 		{ id: 'archive', href: '/archiv',  label: 'Archiv',         icon: 'archive' },
 	];
+	// Issue #2155 S4 — Eintrag nur fuer Admins (Komfort; Go bleibt die Sperre).
+	const navItems = $derived(
+		isAdmin
+			? [...baseNavItems, { id: 'admin', href: '/admin', label: 'Admin', icon: 'admin' }]
+			: baseNavItems
+	);
 
 	// Bestimme aktives Item per href-Match (wie bisher currentPath).
 	function isActive(href: string): boolean {
@@ -77,6 +84,7 @@
 			{@const active = isActive(item.href)}
 			<a
 				href={item.href}
+				data-testid="nav-{item.id}"
 				style="
 					display: flex;
 					align-items: center;
@@ -119,6 +127,12 @@
 						stroke-width="1.7" stroke-linejoin="round">
 						<rect x="3" y="5" width="18" height="4" rx="1"/>
 						<path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>
+					</svg>
+				{:else if item.icon === 'admin'}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+						stroke={active ? 'var(--g-accent)' : 'var(--g-ink-3)'}
+						stroke-width="1.7" stroke-linejoin="round">
+						<path d="M12 3l8 3v6c0 4.5-3.2 8.3-8 9-4.8-.7-8-4.5-8-9V6z"/>
 					</svg>
 				{/if}
 				<span style="flex: 1;">{item.label}</span>

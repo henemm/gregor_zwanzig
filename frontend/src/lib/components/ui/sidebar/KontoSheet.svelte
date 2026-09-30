@@ -14,6 +14,7 @@
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import LogOut from '@lucide/svelte/icons/log-out';
+	import ShieldIcon from '@lucide/svelte/icons/shield';
 	import XIcon from '@lucide/svelte/icons/x';
 
 	interface Props {
@@ -22,11 +23,12 @@
 		initials: string;
 		displayName?: string | null;
 		userId?: string | null;
+		isAdmin?: boolean;
 		darkMode: boolean;
 		ontoggleDark: () => void;
 	}
 
-	let { open, onClose, initials, displayName, userId, darkMode, ontoggleDark }: Props = $props();
+	let { open, onClose, initials, displayName, userId, isAdmin = false, darkMode, ontoggleDark }: Props = $props();
 
 	// Anzeigename hat Vorrang (#642); die Login-Kennung steht darunter, wenn sie
 	// etwas anderes sagt.
@@ -66,6 +68,13 @@
 				<span class="konto__label">Dunkles Design</span>
 				<Switch checked={darkMode} size="lg" tone="accent" aria-label="Dunkles Design" onchange={ontoggleDark} />
 			</div>
+			{#if isAdmin}
+				<a href="/admin" data-testid="konto-sheet-admin" class="konto__zeile" onclick={onClose}>
+					<ShieldIcon class="size-[22px] shrink-0" />
+					<span class="konto__label">Admin</span>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+				</a>
+			{/if}
 			<a href="/account#datenexport" data-testid="konto-sheet-export" class="konto__zeile" onclick={onClose}>
 				<DownloadIcon class="size-[22px] shrink-0" />
 				<span class="konto__label">Datenexport</span>

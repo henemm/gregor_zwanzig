@@ -8,6 +8,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	// Issue #2248 — beides aus DEMSELBEN Profil-Abruf, kein Zusatzabruf.
 	let hasPasskey = false;
 	let passkeyPromptDismissed = false;
+	// Issue #2155 S4 — Sichtbarkeit des Admin-Eintrags; fail-closed, Go bleibt die Sperre.
+	let isAdmin = false;
 	if (locals.userId) {
 		const session = cookies.get('gz_session');
 		const profile = await fetch(`${API()}/api/auth/profile`, {
@@ -18,12 +20,14 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		displayName = profile?.display_name ?? null;
 		hasPasskey = profile?.has_passkey === true;
 		passkeyPromptDismissed = profile?.passkey_prompt_dismissed === true;
+		isAdmin = profile?.role === 'admin';
 	}
 
 	return {
 		userId: locals.userId,
 		displayName,
 		hasPasskey,
-		passkeyPromptDismissed
+		passkeyPromptDismissed,
+		isAdmin
 	};
 };

@@ -1,0 +1,427 @@
+TAP version 13
+# Subtest: Keine direkten ui/-Atom-Importe außerhalb von ui/ und atoms/
+ok 1 - Keine direkten ui/-Atom-Importe außerhalb von ui/ und atoms/
+  ---
+  duration_ms: 20.110677
+  type: 'test'
+  ...
+# (node:574571) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: layout.server load: isAdmin folgt der Rolle (fail-closed)
+    # Subtest: Admin-Profil => isAdmin true
+    ok 1 - Admin-Profil => isAdmin true
+      ---
+      duration_ms: 0.792443
+      type: 'test'
+      ...
+    # Subtest: Nutzer-Profil => isAdmin false
+    ok 2 - Nutzer-Profil => isAdmin false
+      ---
+      duration_ms: 0.144751
+      type: 'test'
+      ...
+    # Subtest: Profil ohne role-Feld => isAdmin false
+    ok 3 - Profil ohne role-Feld => isAdmin false
+      ---
+      duration_ms: 0.170659
+      type: 'test'
+      ...
+    # Subtest: Profil-Abruf scheitert (401) => isAdmin false
+    ok 4 - Profil-Abruf scheitert (401) => isAdmin false
+      ---
+      duration_ms: 0.1367
+      type: 'test'
+      ...
+    # Subtest: nicht angemeldet => isAdmin false, kein Abruf noetig
+    ok 5 - nicht angemeldet => isAdmin false, kein Abruf noetig
+      ---
+      duration_ms: 0.10247
+      type: 'test'
+      ...
+    1..5
+ok 2 - layout.server load: isAdmin folgt der Rolle (fail-closed)
+  ---
+  duration_ms: 1.862995
+  type: 'suite'
+  ...
+# Subtest: +layout.svelte reicht isAdmin an Sidebar/KontoSheet durch
+    # Subtest: Nicht-Admin: kein Admin-Link irgendwo im Layout
+    ok 1 - Nicht-Admin: kein Admin-Link irgendwo im Layout
+      ---
+      duration_ms: 4.641542
+      type: 'test'
+      ...
+    # Subtest: isAdmin fehlt in data => kein Admin-Link
+    ok 2 - isAdmin fehlt in data => kein Admin-Link
+      ---
+      duration_ms: 0.730682
+      type: 'test'
+      ...
+    # Subtest: Admin: Admin-Link in der Sidebar vorhanden
+    ok 3 - Admin: Admin-Link in der Sidebar vorhanden
+      ---
+      duration_ms: 1.005852
+      type: 'test'
+      ...
+    1..3
+ok 3 - +layout.svelte reicht isAdmin an Sidebar/KontoSheet durch
+  ---
+  duration_ms: 6.84427
+  type: 'suite'
+  ...
+# Subtest: Sidebar: Admin-Eintrag nur bei isAdmin
+    # Subtest: Nicht-Admin: kein nav-admin, keine Admin-Beschriftung
+    ok 1 - Nicht-Admin: kein nav-admin, keine Admin-Beschriftung
+      ---
+      duration_ms: 0.521341
+      type: 'test'
+      ...
+    # Subtest: Default (Prop fehlt): kein Admin-Eintrag
+    ok 2 - Default (Prop fehlt): kein Admin-Eintrag
+      ---
+      duration_ms: 0.40201
+      type: 'test'
+      ...
+    # Subtest: Admin: genau ein Eintrag nav-admin -> /admin, Basis-Eintraege bleiben
+    ok 3 - Admin: genau ein Eintrag nav-admin -> /admin, Basis-Eintraege bleiben
+      ---
+      duration_ms: 0.350971
+      type: 'test'
+      ...
+    1..3
+ok 4 - Sidebar: Admin-Eintrag nur bei isAdmin
+  ---
+  duration_ms: 1.461685
+  type: 'suite'
+  ...
+# Subtest: KontoSheet: Admin-Zeile nur bei isAdmin
+    # Subtest: Nicht-Admin: keine Zeile konto-sheet-admin
+    ok 1 - Nicht-Admin: keine Zeile konto-sheet-admin
+      ---
+      duration_ms: 1.081402
+      type: 'test'
+      ...
+    # Subtest: Default (Prop fehlt): keine Admin-Zeile
+    ok 2 - Default (Prop fehlt): keine Admin-Zeile
+      ---
+      duration_ms: 0.446811
+      type: 'test'
+      ...
+    # Subtest: Admin: Zeile konto-sheet-admin -> /admin vorhanden
+    ok 3 - Admin: Zeile konto-sheet-admin -> /admin vorhanden
+      ---
+      duration_ms: 0.566762
+      type: 'test'
+      ...
+    1..3
+ok 5 - KontoSheet: Admin-Zeile nur bei isAdmin
+  ---
+  duration_ms: 2.245746
+  type: 'suite'
+  ...
+# Subtest: AC-4: Antwort ersetzt NUR die Zeile des betroffenen Nutzers
+    # Subtest: X wird ersetzt, Y bleibt identisch (gleiches Objekt, gleiche Reihenfolge)
+    ok 1 - X wird ersetzt, Y bleibt identisch (gleiches Objekt, gleiche Reihenfolge)
+      ---
+      duration_ms: 0.755963
+      type: 'test'
+      ...
+    # Subtest: mutiert die Eingabeliste nicht und haengt keine unbekannte Zeile an
+    ok 2 - mutiert die Eingabeliste nicht und haengt keine unbekannte Zeile an
+      ---
+      duration_ms: 0.473942
+      type: 'test'
+      ...
+    1..2
+ok 6 - AC-4: Antwort ersetzt NUR die Zeile des betroffenen Nutzers
+  ---
+  duration_ms: 1.940506
+  type: 'suite'
+  ...
+# Subtest: AC-6: Fehlertexte — je Fall eigener Klartext, nie der rohe Code
+    # Subtest: jeder Fall liefert nicht-leeren Text ohne rohen Fehlercode
+    ok 1 - jeder Fall liefert nicht-leeren Text ohne rohen Fehlercode
+      ---
+      duration_ms: 0.897873
+      type: 'test'
+      ...
+    # Subtest: 403, 404 und 409 sind voneinander verschieden, mit den Spec-Texten
+    ok 2 - 403, 404 und 409 sind voneinander verschieden, mit den Spec-Texten
+      ---
+      duration_ms: 0.173382
+      type: 'test'
+      ...
+    # Subtest: unbekannter Status/Code faellt auf eine allgemeine Meldung zurueck
+    ok 3 - unbekannter Status/Code faellt auf eine allgemeine Meldung zurueck
+      ---
+      duration_ms: 0.085101
+      type: 'test'
+      ...
+    1..3
+ok 7 - AC-6: Fehlertexte — je Fall eigener Klartext, nie der rohe Code
+  ---
+  duration_ms: 1.311334
+  type: 'suite'
+  ...
+# Subtest: AC-7: EINE zentrale Tier-Konstante
+    # Subtest: Bezeichnungen sind die bisherigen der Konto-Seite
+    ok 1 - Bezeichnungen sind die bisherigen der Konto-Seite
+      ---
+      duration_ms: 0.20513
+      type: 'test'
+      ...
+    # Subtest: account/+page.svelte importiert TIER_LABELS aus lib/admin und definiert keine eigene
+    ok 2 - account/+page.svelte importiert TIER_LABELS aus lib/admin und definiert keine eigene
+      ---
+      duration_ms: 0.511482
+      type: 'test'
+      ...
+    1..2
+ok 8 - AC-7: EINE zentrale Tier-Konstante
+  ---
+  duration_ms: 0.878583
+  type: 'suite'
+  ...
+# Subtest: Admin-Seite (SSR): Selbstschutz, Sperrstatus, offener Antrag
+    # Subtest: eigene Zeile: Sperren-Button ist deaktiviert
+    ok 1 - eigene Zeile: Sperren-Button ist deaktiviert
+      ---
+      duration_ms: 0.777242
+      type: 'test'
+      ...
+    # Subtest: fremde Zeile: Sperren-Button ist aktiv
+    ok 2 - fremde Zeile: Sperren-Button ist aktiv
+      ---
+      duration_ms: 0.169931
+      type: 'test'
+      ...
+    # Subtest: selfId leer: niemand ist selbst-gesperrt (kein Zufallstreffer auf leere ID)
+    ok 3 - selfId leer: niemand ist selbst-gesperrt (kein Zufallstreffer auf leere ID)
+      ---
+      duration_ms: 0.826182
+      type: 'test'
+      ...
+    # Subtest: gesperrter Nutzer: Badge und Entsperren statt Sperren
+    ok 4 - gesperrter Nutzer: Badge und Entsperren statt Sperren
+      ---
+      duration_ms: 0.198221
+      type: 'test'
+      ...
+    # Subtest: offener Antrag ist nur an der Antrag-Zeile hervorgehoben, mit Ziel-Tier
+    ok 5 - offener Antrag ist nur an der Antrag-Zeile hervorgehoben, mit Ziel-Tier
+      ---
+      duration_ms: 0.104101
+      type: 'test'
+      ...
+    # Subtest: keine Fehlerzeile im Ausgangszustand
+    ok 6 - keine Fehlerzeile im Ausgangszustand
+      ---
+      duration_ms: 0.06796
+      type: 'test'
+      ...
+    1..6
+ok 9 - Admin-Seite (SSR): Selbstschutz, Sperrstatus, offener Antrag
+  ---
+  duration_ms: 2.787079
+  type: 'suite'
+  ...
+# Subtest: +page.server load: selfId und fail-closed
+    # Subtest: selfId kommt aus profile.id
+    ok 1 - selfId kommt aus profile.id
+      ---
+      duration_ms: 0.39602
+      type: 'test'
+      ...
+    # Subtest: Profil ohne id => selfId leer (nie undefined/null)
+    ok 2 - Profil ohne id => selfId leer (nie undefined/null)
+      ---
+      duration_ms: 0.26458
+      type: 'test'
+      ...
+    # Subtest: Admin-Profil, Go antwortet auf der Liste 403 => 403
+    ok 3 - Admin-Profil, Go antwortet auf der Liste 403 => 403
+      ---
+      duration_ms: 0.425061
+      type: 'test'
+      ...
+    # Subtest: Admin-Profil, Go antwortet auf der Liste 401 => 401
+    ok 4 - Admin-Profil, Go antwortet auf der Liste 401 => 401
+      ---
+      duration_ms: 0.14309
+      type: 'test'
+      ...
+    # Subtest: Liste 500 => 502, kein Durchlassen
+    ok 5 - Liste 500 => 502, kein Durchlassen
+      ---
+      duration_ms: 0.109761
+      type: 'test'
+      ...
+    # Subtest: Profil-Abruf scheitert (Antwort nicht ok) => 401, Liste wird nicht gezeigt
+    ok 6 - Profil-Abruf scheitert (Antwort nicht ok) => 401, Liste wird nicht gezeigt
+      ---
+      duration_ms: 0.09538
+      type: 'test'
+      ...
+    # Subtest: Profil-Abruf wirft (Netz) => 401
+    ok 7 - Profil-Abruf wirft (Netz) => 401
+      ---
+      duration_ms: 0.173661
+      type: 'test'
+      ...
+    # Subtest: Profil liefert leere Antwort (null) => 401
+    ok 8 - Profil liefert leere Antwort (null) => 401
+      ---
+      duration_ms: 0.11084
+      type: 'test'
+      ...
+    1..8
+ok 10 - +page.server load: selfId und fail-closed
+  ---
+  duration_ms: 2.116675
+  type: 'suite'
+  ...
+# Subtest: Sperr-Dialog: erst die Bestaetigung sendet
+    # Subtest: Sperren anklicken oeffnet nur die Auswahl, erzeugt keine Sende-Aktion
+    ok 1 - Sperren anklicken oeffnet nur die Auswahl, erzeugt keine Sende-Aktion
+      ---
+      duration_ms: 0.152989
+      type: 'test'
+      ...
+    # Subtest: Bestaetigen sendet genau {"disabled":true} fuer die gewaehlte ID
+    ok 2 - Bestaetigen sendet genau {"disabled":true} fuer die gewaehlte ID
+      ---
+      duration_ms: 0.537102
+      type: 'test'
+      ...
+    # Subtest: Abbrechen verwirft die Auswahl; danach gibt es nichts zu bestaetigen
+    ok 3 - Abbrechen verwirft die Auswahl; danach gibt es nichts zu bestaetigen
+      ---
+      duration_ms: 0.077271
+      type: 'test'
+      ...
+    # Subtest: Entsperren sendet {"disabled":false} direkt, ohne Dialog
+    ok 4 - Entsperren sendet {"disabled":false} direkt, ohne Dialog
+      ---
+      duration_ms: 0.078061
+      type: 'test'
+      ...
+    # Subtest: Sperren ist fuer das eigene Konto und bei laufender Aktion blockiert
+    ok 5 - Sperren ist fuer das eigene Konto und bei laufender Aktion blockiert
+      ---
+      duration_ms: 0.05837
+      type: 'test'
+      ...
+    1..5
+ok 11 - Sperr-Dialog: erst die Bestaetigung sendet
+  ---
+  duration_ms: 1.117652
+  type: 'suite'
+  ...
+# Subtest: sendAdminUpdate: Payload, Pfad, Fehler => Klartext ohne Zeilenaenderung
+    # Subtest: Erfolg: PUT auf /api/admin/users/<id>/disabled mit JSON-Body, liefert die Zeile
+    ok 1 - Erfolg: PUT auf /api/admin/users/<id>/disabled mit JSON-Body, liefert die Zeile
+      ---
+      duration_ms: 0.296561
+      type: 'test'
+      ...
+    # Subtest: Tier-Pfad /tier mit {"tier":...}
+    ok 2 - Tier-Pfad /tier mit {"tier":...}
+      ---
+      duration_ms: 0.11085
+      type: 'test'
+      ...
+    # Subtest: Fehler 409 cannot_disable_self => Klartext, kein Nutzer, kein Rohcode
+    ok 3 - Fehler 409 cannot_disable_self => Klartext, kein Nutzer, kein Rohcode
+      ---
+      duration_ms: 0.160141
+      type: 'test'
+      ...
+    # Subtest: Netzfehler => Klartext, kein Nutzer
+    ok 4 - Netzfehler => Klartext, kein Nutzer
+      ---
+      duration_ms: 0.17326
+      type: 'test'
+      ...
+    # Subtest: Fehler lassen die Liste unveraendert (Seite ersetzt nur bei ok)
+    ok 5 - Fehler lassen die Liste unveraendert (Seite ersetzt nur bei ok)
+      ---
+      duration_ms: 0.129881
+      type: 'test'
+      ...
+    # Subtest: applySendResult: Fehler => Liste identisch, Klartext NUR an dieser Zeile
+    ok 6 - applySendResult: Fehler => Liste identisch, Klartext NUR an dieser Zeile
+      ---
+      duration_ms: 0.18018
+      type: 'test'
+      ...
+    # Subtest: applySendResult: Erfolg => nur diese Zeile ersetzt, ihr Fehler geloescht
+    ok 7 - applySendResult: Erfolg => nur diese Zeile ersetzt, ihr Fehler geloescht
+      ---
+      duration_ms: 0.132901
+      type: 'test'
+      ...
+    # Subtest: Tier-Select springt nach Fehler auf den alten Wert zurueck, nach Erfolg bleibt die Wahl
+    ok 8 - Tier-Select springt nach Fehler auf den alten Wert zurueck, nach Erfolg bleibt die Wahl
+      ---
+      duration_ms: 0.06921
+      type: 'test'
+      ...
+    1..8
+ok 12 - sendAdminUpdate: Payload, Pfad, Fehler => Klartext ohne Zeilenaenderung
+  ---
+  duration_ms: 1.451884
+  type: 'suite'
+  ...
+# Subtest: AC-2: Nicht-Admin wird serverseitig abgewiesen, Admin sieht die Liste
+    # Subtest: Nicht-Admin: load() wirft 403 und ruft die Nutzerliste NICHT ab
+    ok 1 - Nicht-Admin: load() wirft 403 und ruft die Nutzerliste NICHT ab
+      ---
+      duration_ms: 0.726034
+      type: 'test'
+      ...
+    # Subtest: Admin: load() liefert die Nutzerliste
+    ok 2 - Admin: load() liefert die Nutzerliste
+      ---
+      duration_ms: 0.593252
+      type: 'test'
+      ...
+    # Subtest: ohne Sitzung: abgewiesen, keine Liste
+    ok 3 - ohne Sitzung: abgewiesen, keine Liste
+      ---
+      duration_ms: 0.140171
+      type: 'test'
+      ...
+    1..3
+ok 13 - AC-2: Nicht-Admin wird serverseitig abgewiesen, Admin sieht die Liste
+  ---
+  duration_ms: 1.991387
+  type: 'suite'
+  ...
+# Subtest: AC-3: Datenform — nur DTO-Felder, offener Antrag bleibt erkennbar
+    # Subtest: Zeilen tragen exakt die DTO-Felder, nichts darueber hinaus
+    ok 1 - Zeilen tragen exakt die DTO-Felder, nichts darueber hinaus
+      ---
+      duration_ms: 0.235571
+      type: 'test'
+      ...
+    # Subtest: offener Antrag (requested_tier) und `null`-Lauf kommen unveraendert an
+    ok 2 - offener Antrag (requested_tier) und `null`-Lauf kommen unveraendert an
+      ---
+      duration_ms: 0.147611
+      type: 'test'
+      ...
+    1..2
+ok 14 - AC-3: Datenform — nur DTO-Felder, offener Antrag bleibt erkennbar
+  ---
+  duration_ms: 0.494191
+  type: 'suite'
+  ...
+1..14
+# tests 54
+# suites 13
+# pass 54
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3339.68453

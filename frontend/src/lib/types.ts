@@ -710,3 +710,18 @@ export interface ComparePreset {
 // Spiegelt das serverseitige User.Tier-Feld (internal/model/user.go).
 // Default "free" wird am Lesezeitpunkt in toProfileResponse() gesetzt.
 export type UserTier = 'free' | 'standard' | 'premium';
+
+// Issue #2155 S4 — DTO der Admin-API (GET /api/admin/users), nur diese Felder.
+export interface AdminUser {
+	id: string;
+	email: string;
+	display_name: string;
+	tier: UserTier;
+	requested_tier: string;
+	requested_at: string;
+	email_verified_at: string;
+	created_at: string;
+	disabled: boolean;
+	is_test_user: boolean;
+	last_trip_report_run: { time: string; status: string; error: string } | null;
+}
