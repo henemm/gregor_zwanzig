@@ -40,6 +40,10 @@ from zoneinfo import ZoneInfo
 # andere Wert ("daily", "weekly", ...) ist ein aktiver Zeitplan.
 _PAUSED_SCHEDULE = "manual"
 
+# ``end_date`` ist ein Kalendertag ohne Ortsbezug (Ortsvergleich = mehrere Orte,
+# freigegebene AC #2422 S5): er wird gegen den Wiener Kalendertag geprueft.
+_END_DATE_REFERENCE_ZONE = "Europe/Vienna"
+
 
 def is_silenced(preset: dict, *, ohne_end_date: bool = False) -> bool:
     """True, wenn der Ortsvergleich pausiert, archiviert oder abgelaufen ist.
@@ -67,6 +71,6 @@ def _end_date_passed(end_date) -> bool:
     if not end_date:
         return False
     try:
-        return date.fromisoformat(end_date) < datetime.now(ZoneInfo("Europe/Vienna")).date()
+        return date.fromisoformat(end_date) < datetime.now(ZoneInfo(_END_DATE_REFERENCE_ZONE)).date()
     except (ValueError, TypeError):
         return False
