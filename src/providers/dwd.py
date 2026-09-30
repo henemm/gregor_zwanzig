@@ -33,12 +33,18 @@ from __future__ import annotations
 import bz2
 import logging
 import math
+import threading
 import time
+from collections import OrderedDict
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import httpx
+import numpy as np
 from rasterio.io import MemoryFile
+from rasterio.transform import rowcol
+from rasterio.windows import Window
 from tenacity import (
     before_sleep_log,
     retry,
@@ -235,19 +241,175 @@ def _read_point_value(
             row = min(max(row, 0), dataset.height - 1)
             col = min(max(col, 0), dataset.width - 1)
             wert = float(dataset.read(1)[row, col])
-            sentinel = (
-                float(dataset.nodata)
-                if dataset.nodata is not None
-                else THUNDER_FILL_VALUE
-            )
-            if wert >= sentinel:
-                return None
-            if param == "cin_ml" and wert <= CIN_ML_LOWER_SENTINEL:
-                return None
-            return wert
+            return _filtere_fuellwert(wert, _sentinel_of(dataset), param)
     except Exception:
         logger.warning("GRIB2-Parsing fehlgeschlagen", exc_info=True)
         return None
+
+
+def _sentinel_of(dataset) -> float:
+    """Fuellwert-Grenze: `dataset.nodata`, sonst der bekannte Sentinel (#1354)."""
+    return float(dataset.nodata) if dataset.nodata is not None else THUNDER_FILL_VALUE
+
+
+def _filtere_fuellwert(wert: float, sentinel: float, param: Optional[str]) -> Optional[float]:
+    """Gemeinsame Fuellwert-Regeln fuer Direkt- und Fenster-Lesen (#1354, #1531):
+    ein Fuellwert wird ZENTRAL zu `None`, nie als Messwert durchgereicht."""
+    if wert >= sentinel:
+        return None
+    if param == "cin_ml" and wert <= CIN_ML_LOWER_SENTINEL:
+        return None
+    return wert
+
+
+# --- Punkt-Fenster-Cache (#2465) ---------------------------------------------
+# Jede ICON-D2-Rasterdatei deckt das GANZE Modellgebiet ab; die Segmente eines
+# Trips unterscheiden sich nur im Pixel. Ohne Cache lud und entpackte jedes
+# Segment dieselben ~217 Dateien erneut (gemessen 2026-09-30: 1302 GETs / 866 MB
+# je Trip-Lauf bei 217 eindeutigen URLs) — der Alarmlauf riss sein 90-s-Budget
+# und pruefte stundenlang nur 2 von 4 Trips.
+#
+# Gecacht wird NICHT die Datei (komprimiert bis 665 kB, entpackt 7 MB: 217 Stueck
+# waeren 144 MB bzw. 1,6 GB), sondern je URL nur ein kleiner Pixel-Ausschnitt
+# um den angefragten Punkt (41x41 Pixel float64 = 13,4 kB, gemessen; Obergrenze
+# 512 URLs x 8 Ausschnitte = ca. 55 MB). Die URL haengt NICHT vom Standort ab
+# (Lauf/Parameter/Zeitschritt), 512 reichen also fuer ~2 Modelllaeufe; die
+# Ausschnitte je URL fangen raeumlich getrennte Trips ab (ein Ausschnitt deckt
+# ~0,8 Grad, ~90 km). Bei mehr als 8 weit entfernten Gruppen je URL arbeitet der
+# Cache gegen die LRU (zyklischer Zugriff) — dann laeuft es wie vor dem Fix.
+# float64 bleibt bewusst: nur so sind
+# die Werte bit-identisch zum Direktlesen. Das spart Download UND
+# Entpacken (gemessen ~59 ms je Datei). Alle Segmente eines Trips liegen im
+# selben Gebiet und bedienen sich aus demselben Ausschnitt; ein weit entfernter
+# Punkt legt einen zweiten Ausschnitt an. Werte sind bit-identisch zum
+# Direktlesen (`_read_point_value`) — dieselben Pixel, dieselben Fuellwert-Regeln.
+#
+# Nur ERFOLGE werden gecacht (Fehlschlaege/404 nie: ein noch nicht veroeffent-
+# lichter Lauf kann spaeter erscheinen). Die URL kodiert Lauf, Parameter und
+# Zeitschritt; eine veroeffentlichte Datei aendert sich nicht -> kein TTL noetig,
+# alte Laeufe altern ueber die LRU-Begrenzung aus.
+_RASTER_WINDOW_HALF = 20
+_RASTER_CACHE_MAX_URLS = 512
+_RASTER_CACHE_MAX_WINDOWS_PER_URL = 8
+
+
+@dataclass(frozen=True, eq=False)
+class _RasterWindow:
+    """Pixel-Ausschnitt einer Rasterdatei samt Georeferenz. `eq=False`: Identitaet
+    statt Feldvergleich — ein `==` ueber die numpy-Arrays wirft bei unter-
+    schiedlichen Formen einen ValueError."""
+
+    array: "np.ndarray"
+    row0: int
+    col0: int
+    transform: object
+    height: int
+    width: int
+    sentinel: float
+
+    def _cell(self, lat: float, lon: float) -> Optional[Tuple[int, int]]:
+        """Index im Ausschnitt oder None, wenn der Punkt ausserhalb liegt.
+        Gleiche Zuordnung und Randklemmung wie `_read_point_value`."""
+        row, col = rowcol(self.transform, lon, lat)
+        row = min(max(int(row), 0), self.height - 1)
+        col = min(max(int(col), 0), self.width - 1)
+        i, j = row - self.row0, col - self.col0
+        if 0 <= i < self.array.shape[0] and 0 <= j < self.array.shape[1]:
+            return i, j
+        return None
+
+    def contains(self, lat: float, lon: float) -> bool:
+        return self._cell(lat, lon) is not None
+
+    def value_at(self, lat: float, lon: float, param: Optional[str]) -> Optional[float]:
+        cell = self._cell(lat, lon)
+        if cell is None:
+            return None
+        return _filtere_fuellwert(float(self.array[cell]), self.sentinel, param)
+
+
+def _decode_window(
+    compressed: bytes, lat: float, lon: float,
+) -> Optional[_RasterWindow]:
+    """Entpackt die Datei EINMAL und behaelt nur den Ausschnitt um (lat, lon).
+    Parsing-Fehler -> None (nicht cachebar), wie `_read_point_value`."""
+    try:
+        raw = bz2.decompress(compressed)
+        with MemoryFile(raw) as memfile, memfile.open() as dataset:
+            row, col = dataset.index(lon, lat)
+            row = min(max(row, 0), dataset.height - 1)
+            col = min(max(col, 0), dataset.width - 1)
+            row0 = max(row - _RASTER_WINDOW_HALF, 0)
+            col0 = max(col - _RASTER_WINDOW_HALF, 0)
+            row1 = min(row + _RASTER_WINDOW_HALF + 1, dataset.height)
+            col1 = min(col + _RASTER_WINDOW_HALF + 1, dataset.width)
+            array = dataset.read(
+                1, window=Window(col0, row0, col1 - col0, row1 - row0)
+            )
+            return _RasterWindow(
+                array=array, row0=row0, col0=col0, transform=dataset.transform,
+                height=dataset.height, width=dataset.width,
+                sentinel=_sentinel_of(dataset),
+            )
+    except Exception:
+        logger.warning("GRIB2-Parsing fehlgeschlagen", exc_info=True)
+        return None
+
+
+class _PointWindowCache:
+    """Prozessweiter, begrenzter LRU-Cache: URL -> Pixel-Ausschnitte (#2465).
+    Thread-sicher (Briefing- und Alarm-Lauf teilen sich den Prozess)."""
+
+    def __init__(
+        self,
+        max_urls: int = _RASTER_CACHE_MAX_URLS,
+        max_windows_per_url: int = _RASTER_CACHE_MAX_WINDOWS_PER_URL,
+    ) -> None:
+        self._max_urls = max_urls
+        self._max_windows = max_windows_per_url
+        self._lock = threading.Lock()
+        self._data: "OrderedDict[str, List[_RasterWindow]]" = OrderedDict()
+
+    def find(self, url: str, lat: float, lon: float) -> Optional[_RasterWindow]:
+        with self._lock:
+            fenster = self._data.get(url)
+            if fenster is None:
+                return None
+            self._data.move_to_end(url)
+            for index, kandidat in enumerate(fenster):
+                if kandidat.contains(lat, lon):
+                    # Treffer = juengst benutzt: ans Ende, damit die Verdraengung
+                    # innerhalb einer URL LRU ist und nicht FIFO.
+                    fenster.append(fenster.pop(index))
+                    return kandidat
+            return None
+
+    def put(self, url: str, window: _RasterWindow) -> None:
+        with self._lock:
+            liste = self._data.setdefault(url, [])
+            # Zwei Laeufe, die gleichzeitig danebengreifen (Briefing + Alarm um
+            # :00), legen sonst denselben Ausschnitt doppelt ab und verbrauchen
+            # zwei der wenigen Plaetze je URL.
+            if any(w.row0 == window.row0 and w.col0 == window.col0 for w in liste):
+                self._data.move_to_end(url)
+                return
+            liste.append(window)
+            if len(liste) > self._max_windows:
+                del liste[0]
+            self._data.move_to_end(url)
+            while len(self._data) > self._max_urls:
+                self._data.popitem(last=False)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._data.clear()
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._data)
+
+
+_RASTER_CACHE = _PointWindowCache()
 
 
 def _precip_series_from_cumulative(
@@ -407,10 +569,16 @@ class DwdDirectProvider:
             if ttt < 0 or ttt > THUNDER_MAX_TIMESTEP:
                 return None
             zustand["versucht"] = int(zustand["versucht"]) + 1
+            url = _build_url(lauf, ttt, param)
+            # #2465: Treffer im Punkt-Fenster-Cache — kein Download, kein
+            # Entpacken. Die Datei existiert (sonst laege kein Fenster vor),
+            # der Lauf gilt damit als bestaetigt.
+            gecacht = _RASTER_CACHE.find(url, lat, lon)
+            if gecacht is not None:
+                zustand["bestaetigt"] = True
+                return gecacht.value_at(lat, lon, param)
             try:
-                raw = self._request(
-                    _build_url(lauf, ttt, param), deadline_at=deadline_at
-                )
+                raw = self._request(url, deadline_at=deadline_at)
             except httpx.HTTPStatusError as e:
                 weiterer_kandidat = (
                     e.response.status_code == 404
@@ -438,13 +606,14 @@ class DwdDirectProvider:
                 )
                 return None
             zustand["bestaetigt"] = True
-            wert = _read_point_value(raw, lat, lon, param)
             # AC-2: "keine Aussage" ist nicht "keine Gefahr" — der Fuellwert
             # ausserhalb des Modellgebiets wird NIE durchgereicht und NIE 0.
-            # Seit #1354 filtert ihn `_read_point_value` zentral zu None.
-            if wert is None:
-                return None
-            return wert
+            # Seit #1354 filtert ihn `_filtere_fuellwert` zentral zu None.
+            fenster = _decode_window(raw, lat, lon)
+            if fenster is None:
+                return None  # Parsing-Fehler: nicht cachen
+            _RASTER_CACHE.put(url, fenster)
+            return fenster.value_at(lat, lon, param)
 
     def fetch_thunder_signals_named(
         self,
