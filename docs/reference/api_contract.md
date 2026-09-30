@@ -1505,10 +1505,12 @@ Passkey- oder Token-/Code-Felder.
 
 **`PUT /api/admin/users/{id}/tier`**, Body `{"tier":"free|standard|premium"}` -> 200 mit
 `AdminUser`. Setzt `tier` und loescht `requested_tier` und `requested_at`. 400 bei ungueltigem
-Tier/JSON, 404 bei unbekannter oder ungueltiger ID.
+Tier (`{"error":"invalid_tier"}`) bzw. JSON (`{"error":"invalid_request"}`), 404
+`{"error":"not_found"}` bei unbekannter oder ungueltiger ID, 500 `{"error":"store_error"}`.
 
 **`PUT /api/admin/users/{id}/disabled`**, Body `{"disabled":true|false}` -> 200 mit
-`AdminUser`. Sperren setzt das Flag und leert danach alle Sitzungen des Kontos. 404 unbekannt,
+`AdminUser`. Sperren setzt das Flag und leert danach alle Sitzungen des Kontos. 400
+`{"error":"invalid_request"}` bei fehlendem `disabled`/ungueltigem JSON, 404 unbekannt,
 409 `{"error":"cannot_disable_self"}` bei Selbstsperre, 500 wenn das Leeren der Sitzungen
 scheitert (Flag bleibt gesetzt, Wiederholung idempotent).
 
