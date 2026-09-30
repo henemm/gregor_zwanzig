@@ -27,7 +27,10 @@ from services.alert_briefing_anchor import (
     undelivered_since_last_briefing,
     write_anchor_and_reset_memory,
 )
-from services.compare_alert_channels import effective_compare_briefing_channels
+from services.compare_alert_channels import (
+    effective_compare_briefing_channels,
+    effective_compare_telegram_style,
+)
 
 logger = logging.getLogger("scheduler.dispatch")
 
@@ -629,6 +632,19 @@ def send_one_compare_preset(
     # ausschliesslich den Versandaufruf (AC-10), danach fliegt die Ausnahme
     # unveraendert weiter.
     try:
+        # Issue #2422 S5 (AC-28): Telegram-Stil "kurzform" = derselbe Text wie
+        # die SMS; sonst der bisherige Telegram-Renderer.
+        _sms_text = render_compare_sms(
+            result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
+        )
+        if effective_compare_telegram_style(preset) == "kurzform":
+            _telegram_text = _sms_text
+        else:
+            _telegram_text = render_compare_telegram(
+                result,
+                enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
+                preset_name=name,
+            )
         send_result = NotificationService(settings, user_id).send_compare_report(
             subject=subject,
             html_body=html_body,
@@ -637,14 +653,8 @@ def send_one_compare_preset(
             # Beide Render-Aufrufe bleiben bewusst INNERHALB des try-Blocks --
             # ihr Fehlerpfad gehoert wie bisher zu `record_briefing_dispatch_
             # failure` + `_anchor_and_reset()` (#1629).
-            telegram_text=render_compare_telegram(
-                result,
-                enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
-                preset_name=name,
-            ),
-            sms_text=render_compare_sms(
-                result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
-            ),
+            telegram_text=_telegram_text,
+            sms_text=_sms_text,
             recipients=empfaenger,
             effective_channels=_effective_compare_briefing_channels(preset, settings, user_id),
             compare_hourly_enabled=opts.hourly_enabled,
