@@ -94,8 +94,11 @@ HELP_WORTLAUT_ORTSVERGLEICH = (
     "CODES - code meanings"
 )
 
+#: Bug #2454 AC-6: "TF" entfaellt im Trip-Kontext (Premium-SMS ist immer
+#: Trip-Kontext oder ein namentlich adressierter Ortsvergleich -- dieser
+#: Wortlaut gilt fuer den Trip-Pfad, s. Test unten).
 CODES_WORTLAUT = (
-    "Weather: T temp, D day max, N night, L day min, TF feels like, "
+    "Weather: T temp, D day max, N night, L day min, "
     "FD/FL/FN = D/L/N feels like, R rain mm, PR rain %, TH thunder, "
     "TH+ next stage, W wind km/h, G gusts, WD wind dir, HU humidity, "
     "DP dew point, CP storm energy, PT precip type, SL snow line m, "

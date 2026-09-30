@@ -307,6 +307,121 @@ export function move(b: Buckets, id: string, from: keyof Buckets, to: keyof Buck
 	return next;
 }
 
+// =============================================================================
+// Bug #2454 — Elter->Kind-Ableitung (Editor), gespiegelt aus
+// src/app/loader.py::_DERIVED_METRIC_RULES. Spec:
+// docs/specs/bugfix/bug_2454_kurzform_gefuehlte_temperatur.md, Abschnitt 1+2.
+// =============================================================================
+
+export const DERIVED_METRIC_RULES: ReadonlyArray<{ child: string; parent: string }> = [
+	{ child: 'temperature_night',    parent: 'temperature' },
+	{ child: 'wind_chill_night',     parent: 'wind_chill' },
+	{ child: 'temperature_day_low',  parent: 'temperature' },
+	{ child: 'temperature_day_high', parent: 'temperature' },
+	{ child: 'wind_chill_day_low',   parent: 'wind_chill' },
+	{ child: 'wind_chill_day_high',  parent: 'wind_chill' },
+];
+
+/**
+ * AC-1: Ergaenzt fehlende Kind-Eintraege einer Metrik-Liste (global ODER eine
+ * einzelne Kanal-Liste). Ein FEHLENDES Kind uebernimmt enabled/bucket/order
+ * vom Elter DERSELBEN Liste; ein bereits vorhandener expliziter Eintrag
+ * (auch enabled:false) bleibt BYTE-IDENTISCH stehen (DEC-6). Ohne Elter in
+ * der Liste wird nichts erfunden (Roundtrip-Invarianz).
+ */
+export function deriveMissingChildMetrics<
+	T extends { metric_id: string; enabled: boolean; bucket?: string; order?: number },
+>(metrics: ReadonlyArray<T>): T[] {
+	const byId = new Set(metrics.map((m) => m.metric_id));
+	const parentById = new Map(metrics.map((m) => [m.metric_id, m]));
+	const extra: T[] = [];
+	for (const { child, parent } of DERIVED_METRIC_RULES) {
+		if (byId.has(child)) continue;
+		const p = parentById.get(parent);
+		if (!p) continue;
+		extra.push({ metric_id: child, enabled: p.enabled, bucket: p.bucket, order: p.order } as T);
+	}
+	return [...metrics, ...extra];
+}
+
+/**
+ * AC-2: Verschiebt `id` (temperature/wind_chill) samt seiner "mitgelaufenen"
+ * Kinder — Kinder, die VOR der Verschiebung im selben Bucket standen wie der
+ * Elter — in denselben Ziel-Bucket, direkt hinter dem Elter einsortiert
+ * (verhindert eine Wiederholung von #1947). Ein Kind, dessen Bucket VOR der
+ * Verschiebung vom Elter abweicht (individuell umgezogen), bleibt unangetastet
+ * (DEC-6). Iteriert bewusst ueber `b[from]` (die ORIGINAL-Reihenfolge vor der
+ * Verschiebung), damit die Kinder in genau der Reihenfolge folgen, in der sie
+ * dort bereits standen.
+ */
+export function moveWithDerivedChildren(
+	b: Buckets, id: string, from: keyof Buckets, to: keyof Buckets,
+): Buckets {
+	let next = move(b, id, from, to);
+	const childIds = new Set(
+		DERIVED_METRIC_RULES.filter((r) => r.parent === id).map((r) => r.child),
+	);
+	for (const candidate of b[from]) {
+		if (childIds.has(candidate)) next = move(next, candidate, from, to);
+	}
+	return next;
+}
+
+/**
+ * Bug #2454 Fix-Loop 1 (Finding F001): Ableitung von
+ * `WeatherMetricsTab.svelte::initFromTrip()` (globale Bucket-Zerlegung aus
+ * `display_config.metrics`) als reine, exportierte Funktion — DIESELBE
+ * Funktion, die die Komponente UND der Test-Nachbau `_editor_kette.ts`
+ * aufrufen (kein zweiter, leicht abweichender Nachbau mehr, s. F001-
+ * Remediation). Drei Zweige wie im Original: (1) mindestens ein Eintrag
+ * traegt `bucket`/`order` -> Bucket-Zuordnung direkt aus den Feldern, (2)
+ * Eintraege ohne Bucket-Feld (Alt-Bestand) -> `autoAssign` nach Prioritaet,
+ * (3) kein Bestand -> Vorbelegung nach `trip_default_enabled` (#1552).
+ * Fehlende Kind-Eintraege werden VOR der Zerlegung ergaenzt (Abschnitt 1).
+ */
+export function computeInitialBuckets<
+	T extends { metric_id: string; enabled: boolean; bucket?: string; order?: number },
+>(
+	catalog: MetricCatalog,
+	metricById: Record<string, { trip_default_enabled?: boolean }>,
+	savedMetricsRaw: ReadonlyArray<T> | undefined,
+	allIds: string[],
+): Buckets {
+	const savedMetrics = savedMetricsRaw ? deriveMissingChildMetrics(savedMetricsRaw) : savedMetricsRaw;
+	let b: Buckets;
+	const hasBuckets = savedMetrics?.some((m) => m.bucket || m.order !== undefined);
+
+	if (savedMetrics && hasBuckets) {
+		const prim = savedMetrics
+			.filter((m) => m.enabled && m.bucket === 'primary')
+			.slice()
+			.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0));
+		const sec = savedMetrics
+			.filter((m) => m.enabled && m.bucket === 'secondary')
+			.slice()
+			.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0));
+		const looseActive = savedMetrics.filter(
+			(m) => m.enabled && m.bucket !== 'primary' && m.bucket !== 'secondary',
+		);
+		const activeIds = new Set([...prim, ...sec, ...looseActive].map((m) => m.metric_id));
+		b = {
+			primary: prim.map((m) => m.metric_id),
+			secondary: [...sec.map((m) => m.metric_id), ...looseActive.map((m) => m.metric_id)],
+			off: allIds.filter((id) => !activeIds.has(id)),
+		};
+	} else if (savedMetrics && savedMetrics.length) {
+		const activeIds = savedMetrics.filter((m) => m.enabled).map((m) => m.metric_id);
+		b = autoAssign(activeIds, catalog);
+	} else {
+		const activeIds = allIds.filter((id) => metricById[id]?.trip_default_enabled);
+		b = autoAssign(activeIds, catalog);
+	}
+
+	// Issue #587: kein Detail-Bucket mehr — secondary migriert verlustfrei nach primary.
+	const mergedColumns = bucketsToColumns(b);
+	return { primary: mergedColumns, secondary: [], off: b.off };
+}
+
 /**
  * AC-5: Liefert je Kanal, ob die primary-Spaltenzahl das Budget ueberschreitet.
  * `> budget` (nicht `>=`) — exakt am Budget ist noch ok. Signal entfernt (#610).

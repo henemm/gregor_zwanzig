@@ -59,6 +59,10 @@
 	import {
 		startChannelOverride, channelOverrideFromMetrics,
 		splitChannelMetricsForDisplay, mergeAllChannelLayoutsForSave,
+		// Bug #2454 Fix-Loop 1 (Finding F001): globales Toggle inkl. Kind-
+		// Mitnahme UND Kanal-Durchschreibung als EINE geteilte, exportierte
+		// Funktion (Test-Nachbau ruft dieselbe Funktion, kein zweiter Nachbau).
+		toggleGlobalMetric,
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
 	// Fix #2422 S2a Fix-Loop 1 (Adversary-Funde F003/F004): Bestand-Auswahl
@@ -86,9 +90,15 @@
 	import * as UiCard from '$lib/components/ui/card/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import {
-		autoAssign, bucketsToColumns, move,
+		autoAssign, bucketsToColumns,
 		diffHighlight,
 		CATEGORY_LABELS, CATEGORY_ORDER, indicatorCapable,
+		// Bug #2454 Fix-Loop 1 (Finding F001): initFromTrip()s Bucket-Zerlegung
+		// (inkl. fehlender-Kind-Ableitung) UND das Elter-Umschalten (inkl.
+		// Kind-Mitnahme) sind jetzt reine, exportierte Funktionen — DIESELBEN
+		// Funktionen, die der Test-Nachbau `_editor_kette.ts` aufruft (route-only,
+		// s. Spec Abschnitt 3 — nur aus dem route-Zweig aufgerufen).
+		computeInitialBuckets, moveWithDerivedChildren,
 		type Buckets, type MetricEntry, type MetricCatalog, type Highlight, type WeatherSnapshot,
 	} from '../trip-detail/metricsEditor.ts';
 	// Issue #1234: Daten-/Absichts-Gate gegen stillen Metrik-Leerungs-Autosave.
@@ -454,40 +464,18 @@
 		// initFromTrip() ist ausschliesslich ueber load() (route-only, s.
 		// $effect-Guard) oder handleDiscard() (route-only Button) erreichbar —
 		// trip! ist hier sicher (Issue #1311, Fix-Loop 1: context-Prop optional).
-		const savedMetrics = trip!.display_config?.metrics;
-		let b: Buckets;
-		const hasBuckets = savedMetrics?.some((m) => m.bucket || m.order !== undefined);
-
-		if (savedMetrics && hasBuckets) {
-			const prim = savedMetrics
-				.filter((m) => m.enabled && m.bucket === 'primary')
-				.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0));
-			const sec = savedMetrics
-				.filter((m) => m.enabled && m.bucket === 'secondary')
-				.sort((a, b2) => (a.order ?? 0) - (b2.order ?? 0));
-			const looseActive = savedMetrics.filter(
-				(m) => m.enabled && m.bucket !== 'primary' && m.bucket !== 'secondary',
-			);
-			const activeIds = new Set([...prim, ...sec, ...looseActive].map((m) => m.metric_id));
-			b = {
-				primary: prim.map((m) => m.metric_id),
-				secondary: [...sec.map((m) => m.metric_id), ...looseActive.map((m) => m.metric_id)],
-				off: allCatalogIds().filter((id) => !activeIds.has(id)),
-			};
-		} else if (savedMetrics && savedMetrics.length) {
-			const activeIds = savedMetrics.filter((m) => m.enabled).map((m) => m.metric_id);
-			b = autoAssign(activeIds, catalog);
-		} else {
-			// Issue #1552: Vorbelegung im Anlege-Dialog folgt dem wirksamen
-			// Siebener-Satz (trip_default_enabled), nicht mehr default_enabled
-			// (das speist weiterhin Orte/Abonnements, AC-7 unberührt).
-			const activeIds = allCatalogIds().filter((id) => metricById[id]?.trip_default_enabled);
-			b = autoAssign(activeIds, catalog);
-		}
+		// Bug #2454 Fix-Loop 1 (Finding F001): die gesamte Bucket-Zerlegung
+		// (inkl. fehlender-Kind-Ableitung, Abschnitt 1) lebt jetzt als reine,
+		// exportierte Funktion in metricsEditor.ts — DIESELBE Funktion, die der
+		// Test-Nachbau `_editor_kette.ts::ladeInEditorState()` aufruft. Ein
+		// `undefined` (kein display_config.metrics) bleibt `undefined`
+		// (unterscheidet weiterhin Neuanlage von "existiert, ist leer").
+		const rawSavedMetrics = trip!.display_config?.metrics;
+		const b = computeInitialBuckets(catalog, metricById, rawSavedMetrics, allCatalogIds());
 
 		const thrMap: Record<string, string> = {};
-		if (savedMetrics) {
-			for (const m of savedMetrics) {
+		if (rawSavedMetrics) {
+			for (const m of rawSavedMetrics) {
 				fMap[m.metric_id] = m.use_friendly_format ?? true;
 				hMap[m.metric_id] = m.horizons ? { ...m.horizons } : { ...HORIZONS_ALL };
 				// Issue #624: sms_threshold laden (nur threshold-fähige Metriken).
@@ -496,11 +484,6 @@
 				}
 			}
 		}
-
-		// Issue #587: WeatherMetricsTab arbeitet ohne Detail-Bucket (hideDetailBucket=true).
-		// Bestehende secondary-Metriken werden verlustfrei nach primary migriert.
-		const mergedColumns = bucketsToColumns(b);
-		b = { primary: mergedColumns, secondary: [], off: b.off };
 
 		const savedPreset = trip!.display_config?.preset_name;
 		selectedTemplate = savedPreset ?? '';
@@ -804,34 +787,20 @@
 
 	// Toggle: Metrik aktivieren (→ primary) oder deaktivieren (→ off).
 	// secondary ist nach #587 immer leer — kein secondary-Zweig nötig (F002).
+	// Bug #2454 Fix-Loop 1 (Finding F001, Abschnitt 2/AC-2): das globale
+	// Umschalten inkl. Kind-Mitnahme UND der Durchschreibung in Kanal-Overrides
+	// (Issue #1719 S3, ADR-0050 Regel 3) lebt jetzt als EINE reine, exportierte
+	// Funktion `toggleGlobalMetric()` in channelMetricLayouts.ts — dieselbe
+	// Funktion, die der Test-Nachbau aufruft. `wasOn`/EINWAHL bleibt weiterhin
+	// bewusst ohne Durchschreibung (Grundsatz "keine Bevormundung", Abschnitt 4).
 	function onToggleMetric(id: string, wasOn: boolean) {
 		userTouched = true;
-		const from: keyof Buckets = buckets.primary.includes(id) ? 'primary' : 'off';
-		const to: keyof Buckets = wasOn ? 'off' : 'primary';
-		if (from !== to) {
-			const newBuckets = move(buckets, id, from, to);
-			applyDiff(newBuckets.primary, friendlyMap, selectedTemplate);
-			buckets = newBuckets;
-			// Issue #1719 S3 (ADR-0050 Regel 3): eine globale ABWAHL wirkt SOFORT
-			// in allen bereits vorhandenen Kanal-Overrides — die Zeile verschwindet
-			// dort aus der aktiven Liste. Die EINWAHL-Richtung schreibt bewusst
-			// NICHT durch (Grundsatz "keine Bevormundung", Spec Abschnitt 4): die
-			// Zeile ist ab S3 im Kanal-Reiter selbst sichtbar (Aus-Gruppe), der
-			// Nutzer entscheidet dort, ob er sie dort auch wieder aktiviert.
-			if (wasOn) {
-				const nextChannelBuckets = { ...channelBuckets };
-				for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
-					const override = nextChannelBuckets[ch];
-					if (override === null || !override.buckets.primary.includes(id)) continue;
-					const updatedOverride: ChannelOverride = {
-						buckets: move(override.buckets, id, 'primary', 'off'),
-						friendlyMap: override.friendlyMap,
-					};
-					nextChannelBuckets[ch] = updatedOverride;
-				}
-				channelBuckets = nextChannelBuckets;
-			}
+		const result = toggleGlobalMetric(buckets, channelBuckets, id, wasOn);
+		if (result.buckets !== buckets) {
+			applyDiff(result.buckets.primary, friendlyMap, selectedTemplate);
 		}
+		buckets = result.buckets;
+		channelBuckets = result.channelBuckets;
 		if (selectedTemplate) selectedTemplate = '';
 		scheduleAutoSave();
 	}
@@ -848,7 +817,7 @@
 	function onRemove(id: string) {
 		userTouched = true;
 		editActiveChannel((view) => ({
-			buckets: move(view.buckets, id, 'primary', 'off'),
+			buckets: moveWithDerivedChildren(view.buckets, id, 'primary', 'off'),
 			friendlyMap: view.friendlyMap,
 		}));
 		if (selectedTemplate) selectedTemplate = '';
@@ -862,7 +831,7 @@
 	function onRestoreMetric(id: string) {
 		userTouched = true;
 		editActiveChannel((view) => ({
-			buckets: move(view.buckets, id, 'off', 'primary'),
+			buckets: moveWithDerivedChildren(view.buckets, id, 'off', 'primary'),
 			friendlyMap: view.friendlyMap,
 		}));
 		if (selectedTemplate) selectedTemplate = '';

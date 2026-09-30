@@ -603,6 +603,61 @@ Details (Read-Modify-Write-Prinzip, Restrisiken R1/R2, AC-Zuordnung): Spec
 
 ---
 
+## Eingefrorene Kurzform-Kind-Metriken bereinigen (#2454)
+
+Bestandsdateien, die vor dem Editor-Fix in Issue #2454 gespeichert wurden, können
+`wind_chill_day_low`/`_day_high`/`_night` bzw. `temperature_day_low`/`_day_high`/`_night`
+(die abgeleiteten Kurzform-Kind-Größen hinter FD/FL/FN) noch **explizit `enabled:false`**
+tragen, obwohl der Elter (`wind_chill`/`temperature`) aktiv ist — der Editor hatte fehlende
+Kind-Einträge beim Speichern unbemerkt als `enabled:false` festgeschrieben und damit die
+Elter→Kind-Ableitung des Loaders (`_append_derived_metrics`) dauerhaft blockiert: die
+gewählte „Gefühlte Temperatur" wirkte in SMS/Premium-SMS/Telegram-Kurzform still ins Leere.
+
+**Rollout-Reihenfolge (zwingend):** Erst der Editor-Fix per `deploy-gregor-prod.sh`
+ausliefern, **ERST DANACH** die Migration gegen den Bestand fahren — würde die Migration
+vor dem Editor-Fix laufen, friert ein Speichern im noch alten Editor die gerade bereinigten
+Kind-Einträge sofort wieder ein. Läuft **je Host** (zuerst Staging, danach Produktion), als
+User `claude-gregor`, gegen `data/users`, immer zuerst der Dry-Run:
+
+```bash
+uv run python3 scripts/migrate_2454_derived_children.py --root data/users              # Dry-Run (Default)
+uv run python3 scripts/migrate_2454_derived_children.py --root data/users --execute    # Backup + Schreiben
+```
+
+**Immer zuerst den Dry-Run lesen.** Das Script ist idempotent — ein zweiter Lauf über
+bereits migrierte Daten erzeugt einen leeren Plan und schreibt nichts; tritt das
+eingefrorene Muster nach der Nachmessung erneut auf (z. B. ein Browser-Tab mit altem,
+noch ungeladenem Editor-Code speichert zwischen Deploy und Migrationslauf), ist ein
+erneuter Migrationslauf gefahrlos. Backup: tar.gz nach `.backups/migrate-2454-<timestamp>.tar.gz`
+vor jedem `--execute`-Lauf. Read-Modify-Write: entfernt werden AUSSCHLIESSLICH die drei
+Kind-Einträge einer Elterngröße, und auch nur, wenn ALLE DREI vollständig eingefroren sind
+(explizit `enabled:false`, kein `bucket`, `order` fehlend/`0`) UND der Elter `enabled:true`
+ist — weicht auch nur eines der drei Kinder ab (echte Einzelabwahl), bleibt die GESAMTE
+Liste unverändert (kein Teil-Abbau). Geprüft werden alle drei Fundstellen je Trip-Datei
+(`kind != "vergleich"`): global (`display_config.metrics`), jede
+`display_config.channel_layouts.<kanal>`, jede
+`display_config.channel_layouts_per_report.<report>.<kanal>`. Ortsvergleiche
+(`kind="vergleich"`) werden nie angefasst. Alle anderen Felder — auch dem Skript
+unbekannte Zukunftsfelder — bleiben erhalten.
+
+**Exit-Codes:**
+
+| Code | Bedeutung |
+|------|-----------|
+| 0 | Erfolg — inkl. leerem Plan beim idempotenten Wiederholungslauf und beim reinen Dry-Run |
+| 1 | `--root` existiert nicht/kein Verzeichnis, Backup fehlgeschlagen, oder mindestens eine Datei konnte nicht geschrieben werden (Details in den `Error:`-Zeilen der Ausgabe) |
+
+**Nachmessung vor Issue-Close:** struktureller Diff der betroffenen Produktions-Datei
+(z. B. KHW 403, `/var/lib/gregor/users/henning/briefings/5f534011.json`) vorher/nachher —
+es dürfen sich ausschließlich die eingefrorenen Kind-Einträge je betroffener Liste
+unterscheiden, sonst nichts; anschließend erzeugte Kurzform (SMS/Premium-SMS) für den
+betroffenen Trip muss FD/FL bzw. FN enthalten.
+
+Details (Regeltabelle, Adversary-Findings, AC-Zuordnung): Spec
+`docs/specs/bugfix/bug_2454_kurzform_gefuehlte_temperatur.md`.
+
+---
+
 ## E-Mail-Bestätigung rückwirkend nachtragen (#2304, S1 aus #2271/#2146)
 
 Einmaliger Nachtrag-Lauf, der Bestandskonten ohne `email_verified_at` (angelegt, bevor der
