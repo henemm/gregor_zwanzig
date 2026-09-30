@@ -28,7 +28,7 @@ import assert from 'node:assert/strict';
 
 import { api } from '../../../api.ts';
 import { clearEtagRegistry } from '../../../etagRegistry.ts';
-import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
+import { createGoMergeServer, type GoMergeServer } from './goMergeServerPruefstand.ts';
 import type { ComparePreset } from '../../../types.ts';
 import { buildToggleActivePutPayload, createPutQueue } from '../../compare/compareHubPersistenz.ts';
 import { erstelleVersandVergleichSpeicherung } from '../versandVergleichSpeicherung.ts';
@@ -36,17 +36,21 @@ import { createController, hydrierterWiz, makePreset, versandBedienung } from '.
 
 const PRESET_ID = 'cp-2276-s5-pause';
 
-let server: FakeTripServer;
+// Seit #2375 sendet der Pausier-PUT nur { schedule, previous_schedule } — dass die
+// Versand-Änderung überlebt, entscheidet der Server-Abgleich; darum der
+// Ersatz-Server, der wie der Go-Handler zusammenführt (nicht der ersetzende
+// fakeTripServer) und die ANFRAGE-Rümpfe mitschneidet.
+let server: GoMergeServer;
 
 beforeEach(() => {
 	clearEtagRegistry();
-	server = createFakeTripServer({ latencyMs: 10 });
+	server = createGoMergeServer({ [PRESET_ID]: makePreset(PRESET_ID) as unknown as Record<string, unknown> });
 	server.install();
 });
 
 afterEach(() => server.restore());
 
-const puts = () => server.calls.filter((c) => c.method === 'PUT');
+const puts = () => server.putRuempfe();
 
 function hub() {
 	let currentPreset: ComparePreset = makePreset(PRESET_ID);
@@ -87,16 +91,11 @@ describe('AC-7: Pausieren direkt nach einer Versand-Änderung verliert sie nicht
 		await pausieren();
 
 		assert.equal(puts().length, 2, 'erst die Versand-Änderung, dann das Pausieren');
-		const [erster, zweiter] = puts().map((p) => p.body as Record<string, unknown>);
+		const [erster, zweiter] = puts();
 		assert.equal(erster.morning_time, '07:15:00', 'erster PUT = Versand-Änderung');
-		assert.equal(erster.schedule, 'daily', 'erster PUT darf noch nicht pausieren');
-		assert.equal(zweiter.schedule, 'manual');
-		assert.equal(
-			zweiter.morning_time,
-			'07:15:00',
-			'der Pausier-PUT muss die bereits gespeicherte Uhrzeit übernehmen'
-		);
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		assert.ok(!('schedule' in erster), 'erster PUT darf den Zeitplan nicht senden (also auch nicht pausieren)');
+		assert.deepEqual(zweiter, { schedule: 'manual', previous_schedule: 'daily' });
+		const stand = server.stand(PRESET_ID);
 		assert.equal(stand.schedule, 'manual');
 		assert.equal(stand.morning_time, '07:15:00', 'die Versand-Änderung überlebt das Pausieren');
 		assert.equal(ctl.hasPending, false, 'nach dem Pausieren darf nichts mehr ausstehen');
@@ -109,7 +108,7 @@ describe('AC-7: Pausieren direkt nach einer Versand-Änderung verliert sie nicht
 		speicherung.aenderungMelden();
 		await pausieren();
 
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		const stand = server.stand(PRESET_ID);
 		assert.equal(stand.end_date, '', 'die Enddatum-Löschung darf der Pausier-PUT nicht zurückdrehen');
 		assert.equal(stand.schedule, 'manual');
 	});

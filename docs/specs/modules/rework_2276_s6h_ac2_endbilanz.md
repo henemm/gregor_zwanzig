@@ -147,9 +147,9 @@ Diese Scheibe:
 
 | Datei:Zeile | Warum es (noch) eine HERKUNFT-Verzweigung ist | Warum sie bleibt |
 |---|---|---|
-| `versandVergleichSpeicherung.ts:237` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
-| `corridor-editor/wertebereicheVergleichSpeicherung.ts:200` | dito für Wertebereiche | dito |
-| `weather-metrics-tab/weatherMetricsCompareSave.ts:534` | dito für Wetter-Metriken | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
+| `versandVergleichSpeicherung.ts:243` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
+| `corridor-editor/wertebereicheVergleichSpeicherung.ts:206` | dito für Wertebereiche | dito |
+| `weather-metrics-tab/weatherMetricsCompareSave.ts:558` | dito für Wetter-Metriken | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
 | `corridor-editor/CorridorEditor.svelte:189` | Katalog-Guard: lädt `loadCompareMetricCatalog()` nur im Vergleich | Mirror-Guard zu `:221`; Auflösung bräuchte injizierte Lade-Funktion statt `context`-Schalter |
 | `corridor-editor/CorridorEditor.svelte:221` | Katalog-Guard: lädt `loadRouteExtraMetricDefs()` nur im Trip | dito, Kehrseite von `:189` |
 | `corridor-editor/CorridorEditorMobile.svelte:172` | Mobil-Zwilling von `:189` | dito |

@@ -29,6 +29,7 @@
 		vergleichNachladeQuelle
 	} from '$lib/stores/nachEntladenNachladen';
 	import { api } from '$lib/api';
+	import { adoptEtagFromPageLoad } from '$lib/etagRegistry';
 	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type ComparePreset } from '$lib/types';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
@@ -47,6 +48,12 @@
 	// $state-Spiegel, exakt das Muster aus CompareTabs.svelte (`currentPreset
 	// = $state<ComparePreset>(preset)` + Resync-$effect auf Prop-Referenz).
 	let currentPreset = $state(data.preset);
+	// Issue #2375: Seitenaufbau-ETag uebernehmen (Trip-Muster trips/[id]/+page.svelte),
+	// damit schon der ERSTE Schreibvorgang nach dem Laden `If-Match` traegt.
+	// Bewusst nur von `data` abhaengig, nicht vom lokalen `currentPreset`.
+	$effect(() => {
+		if (data.etag) adoptEtagFromPageLoad(data.preset.id, data.etag);
+	});
 	$effect(() => {
 		currentPreset = data.preset;
 	});
@@ -130,9 +137,10 @@
 
 	// Epic #1273 S2 — Inline-Edit für Name/Region/Aktivitätsprofil im Hub
 	// (Feature-Parität zum alten CompareEditor). Muster: TripHeader.svelte:33-54.
-	// KRITISCH: Round-Trip-Spread beim PUT ({ ...currentPreset, <feld> }), sonst
-	// setzt der Go-Handler (compare_preset.go:259-297) location_ids/empfaenger/
-	// schedule/profil auf Zero-Value zurück (BUG-DATALOSS). Und: nach Erfolg
+	// KRITISCH (#2375/#2381): NUR das eigene Feld senden ({ name } / { profil } /
+	// { display_config: { region } }), KEIN Spread von currentPreset — der Go-Handler
+	// mergt fehlende Felder als „unveraendert"; ein Spread der (hier veralteten)
+	// Seiten-Kopie schriebe Reiter-Werte anderer Tabs/desselben Tabs zurueck. Und: nach Erfolg
 	// currentPreset MIT NEUER OBJEKT-REFERENZ ersetzen, damit der defensive
 	// $effect in CompareTabs.svelte:821-826 currentPreset resynct (Cross-Tab-
 	// Datenverlust-Schutz, AC-5). NIE ein Feld in-place mutieren.
@@ -164,7 +172,6 @@
 		nameSaveError = null;
 		try {
 			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				...currentPreset,
 				name: editName
 			});
 			currentPreset = updated;
@@ -191,8 +198,7 @@
 		regionSaveError = null;
 		try {
 			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				...currentPreset,
-				display_config: { ...currentPreset.display_config, region: editRegion }
+				display_config: { region: editRegion }
 			});
 			currentPreset = updated;
 			isEditingRegion = false;
@@ -208,7 +214,6 @@
 		profilSaveError = null;
 		try {
 			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				...currentPreset,
 				profil: value
 			});
 			currentPreset = updated;

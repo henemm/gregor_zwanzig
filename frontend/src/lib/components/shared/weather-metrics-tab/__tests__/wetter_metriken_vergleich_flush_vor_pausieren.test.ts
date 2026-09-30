@@ -21,7 +21,7 @@ import assert from 'node:assert/strict';
 
 import { api } from '../../../../api.ts';
 import { clearEtagRegistry } from '../../../../etagRegistry.ts';
-import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
+import { createGoMergeServer, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
 import type { ComparePreset } from '../../../../types.ts';
 import { buildToggleActivePutPayload, createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import { erstelleWetterMetrikenVergleichSpeicherung } from '../weatherMetricsCompareSave.ts';
@@ -29,17 +29,20 @@ import { createController, dc, hydrierterWs, makePreset, wetterMetrikenBedienung
 
 const PRESET_ID = 'cp-2276-s4-pause';
 
-let server: FakeTripServer;
+// Seit #2375 sendet der Pausier-PUT nur { schedule, previous_schedule } — dass die
+// Metrik-Änderung überlebt, entscheidet der Server-Abgleich; darum der
+// Ersatz-Server, der wie der Go-Handler zusammenführt und die ANFRAGE-Rümpfe mitschneidet.
+let server: GoMergeServer;
 
 beforeEach(() => {
 	clearEtagRegistry();
-	server = createFakeTripServer({ latencyMs: 10 });
+	server = createGoMergeServer({ [PRESET_ID]: makePreset(PRESET_ID) as unknown as Record<string, unknown> });
 	server.install();
 });
 
 afterEach(() => server.restore());
 
-const puts = () => server.calls.filter((c) => c.method === 'PUT');
+const puts = () => server.putRuempfe();
 
 function hub() {
 	let currentPreset: ComparePreset = makePreset(PRESET_ID);
@@ -80,15 +83,15 @@ describe('AC-8: Pausieren direkt nach einer Wetter-Metriken-Änderung verliert s
 		await pausieren();
 
 		assert.equal(puts().length, 2, 'erst die Wetter-Metriken-Änderung, dann das Pausieren');
-		const [erster, zweiter] = puts().map((p) => p.body as Record<string, unknown>);
+		const [erster, zweiter] = puts();
 		assert.ok((dc(erster).active_metrics as string[]).includes('gust_max_kmh'), 'erster PUT = Wetter-Metriken-Änderung');
-		assert.equal(erster.schedule, 'daily', 'erster PUT darf noch nicht pausieren');
-		assert.equal(zweiter.schedule, 'manual');
-		assert.ok(
-			(dc(zweiter).active_metrics as string[]).includes('gust_max_kmh'),
-			'der Pausier-PUT muss die bereits gespeicherte Metrikauswahl übernehmen'
+		assert.ok(!('schedule' in erster), 'erster PUT darf den Zeitplan nicht senden (also auch nicht pausieren)');
+		assert.deepEqual(
+			zweiter,
+			{ schedule: 'manual', previous_schedule: 'daily' },
+			'der Pausier-PUT trägt keine Metrikauswahl — er kann sie nicht zurückschreiben'
 		);
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		const stand = server.stand(PRESET_ID);
 		assert.equal(stand.schedule, 'manual');
 		assert.ok((dc(stand).active_metrics as string[]).includes('gust_max_kmh'));
 		assert.equal(ctl.hasPending, false, 'nach dem Pausieren darf nichts mehr ausstehen');

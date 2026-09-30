@@ -222,7 +222,7 @@ const EINGEFROREN: readonly string[] = [
 	// Interfaces, zwei Snapshot-/Hydrations-Funktionen und der Payload-Trennung
 	// in `baueVersandNutzlast`, s. Implementation Details Abschnitt 4/5) — fuer
 	// sie gilt AB JETZT der neue positionsbasierte Vertrag auf `:235`.
-	'versandVergleichSpeicherung.ts:237',
+	'versandVergleichSpeicherung.ts:243',
 	// #2422 S2a: vier Eintraege um 7 Zeilen verschoben durch den
 	// Read-Modify-Write-Umbau, der fuenfte (Markup-Weiche weiter unten) um
 	// zusaetzliche 6 Zeilen durch das Auslagern des untrackten
@@ -266,10 +266,10 @@ const EINGEFROREN: readonly string[] = [
 	'alarme-tab/alarmeTabSections.ts:27',
 	'alarme-tab/alarmeTabSections.ts:38',
 	'alarme-tab/alarmeTabSections.ts:42',
-	'corridor-editor/wertebereicheVergleichSpeicherung.ts:200',
+	'corridor-editor/wertebereicheVergleichSpeicherung.ts:206',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:72',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:73',
-	'weather-metrics-tab/weatherMetricsCompareSave.ts:534',
+	'weather-metrics-tab/weatherMetricsCompareSave.ts:558',
 ];
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein

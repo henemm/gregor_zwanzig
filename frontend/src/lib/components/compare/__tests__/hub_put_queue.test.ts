@@ -33,6 +33,7 @@ import assert from 'node:assert/strict';
 import { api } from '../../../api.ts';
 import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
+import { createGoMergeServer } from '../../shared/__tests__/goMergeServerPruefstand.ts';
 import type { ComparePreset } from '../../../types.ts';
 import type { PutClient } from '../../shared/tripSpeicherung.ts';
 import { createPutQueue, buildToggleActivePutPayload } from '../compareHubPersistenz.ts';
@@ -117,39 +118,49 @@ describe('F002-Integration: Versand-Speicherung + nachfolgender Toggle-Active-PU
 		const wiz = hydrierterWiz(currentPreset);
 		const ctl = createController(PRESET_ID);
 		const queue = createPutQueue();
-		const versand = erstelleVersandVergleichSpeicherung({
-			client: api,
-			zustand: wiz,
-			preset: () => currentPreset,
-			enqueueHubWrite: (fn) => queue.enqueue(fn),
-			onCompareUpdate: (p: ComparePreset) => {
-				currentPreset = p;
-			},
-			saveController: ctl
-		});
+		// Seit #2375 sendet der Toggle nur { schedule, previous_schedule } — das
+		// Ueberleben der Versand-Aenderung entscheidet der Server-Abgleich, also
+		// laeuft der Test gegen den Ersatz-Server, der wie der Go-Handler zusammenfuehrt
+		// (der fakeTripServer ersetzt den gespeicherten Rumpf komplett).
+		const goServer = createGoMergeServer({ [PRESET_ID]: currentPreset as unknown as Record<string, unknown> });
+		goServer.install();
+		try {
+			const versand = erstelleVersandVergleichSpeicherung({
+				client: api,
+				zustand: wiz,
+				preset: () => currentPreset,
+				enqueueHubWrite: (fn) => queue.enqueue(fn),
+				onCompareUpdate: (p: ComparePreset) => {
+					currentPreset = p;
+				},
+				saveController: ctl
+			});
 
-		// 1) Nutzer klickt „Bis auf Weiteres" im Laufzeit-Control → wiz.endDate = null.
-		wiz.endDate = null;
-		versand.aenderungMelden();
-		await ctl.flush();
-		assert.strictEqual(puts().length, 1, 'Vorbedingung: der Versand-PUT ist raus');
+			// 1) Nutzer klickt „Bis auf Weiteres" im Laufzeit-Control → wiz.endDate = null.
+			wiz.endDate = null;
+			versand.aenderungMelden();
+			await ctl.flush();
+			assert.strictEqual(goServer.putRuempfe().length, 1, 'Vorbedingung: der Versand-PUT ist raus');
 
-		// 2) Direkt danach klickt der Nutzer „Pausieren" — der Payload-Bau passiert
-		// innerhalb des enqueueten fn und sieht dadurch den bereits über
-		// onCompareUpdate aufgefrischten currentPreset aus Schritt 1.
-		currentPreset = await queue.enqueue(async () => {
-			const { url, body } = buildToggleActivePutPayload(currentPreset, 'manual', 'daily');
-			return api.put<ComparePreset>(url, body);
-		});
+			// 2) Direkt danach klickt der Nutzer „Pausieren" — der Payload-Bau passiert
+			// innerhalb des enqueueten fn.
+			currentPreset = await queue.enqueue(async () => {
+				const { url, body } = buildToggleActivePutPayload(currentPreset, 'manual', 'daily');
+				return api.put<ComparePreset>(url, body);
+			});
 
-		assert.strictEqual(
-			currentPreset.end_date,
-			'',
-			'End-Datum-Loeschung („Bis auf Weiteres") ueberlebt den nachfolgenden Toggle-PUT'
-		);
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
-		assert.strictEqual(stand.end_date, '', 'Server-Zustand darf die Versand-Aenderung nicht verlieren');
-		assert.strictEqual(stand.schedule, 'manual');
+			assert.deepStrictEqual(goServer.putRuempfe()[1], { schedule: 'manual', previous_schedule: 'daily' });
+			assert.strictEqual(
+				currentPreset.end_date,
+				'',
+				'End-Datum-Loeschung („Bis auf Weiteres") ueberlebt den nachfolgenden Toggle-PUT'
+			);
+			const stand = goServer.stand(PRESET_ID);
+			assert.strictEqual(stand.end_date, '', 'Server-Zustand darf die Versand-Aenderung nicht verlieren');
+			assert.strictEqual(stand.schedule, 'manual');
+		} finally {
+			goServer.restore();
+		}
 	});
 });
 

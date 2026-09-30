@@ -45,7 +45,7 @@ import type { ComparePreset } from '../../../types.ts';
 // Issue #2276 S2: Speicherpfad-Helfer zogen nach shared/alarmeVergleichSpeicherung.ts;
 // Hydration und Hub-Payload-Bau bleiben in der Compare-Klebeschicht.
 import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
-import { buildHubPutPayload } from '../../compare/compareHubPersistenz.ts';
+import { buildComparePresetPartialPayload } from '../../compare/compareEditorSave.ts';
 import {
 	flushPendingAlarmSave,
 	rollbackAlarmSnapshot,
@@ -197,7 +197,7 @@ describe('AC-29 No-Op-Guard: flushPendingAlarmSave', () => {
 		assert.strictEqual(result!.body.radar_alert_enabled, true);
 	});
 
-	test('Read-Modify-Write (#1257-Kontext): Nicht-Alarm-Felder (corridors, empfaenger, schedule) bleiben unveraendert aus dem Preset', () => {
+	test('Teilfeld (#1257-Kontext, seit #2375): Nicht-Alarm-Felder (corridors, empfaenger, schedule) stehen NICHT im Body — der Server bewahrt sie', () => {
 		const preset = makePreset();
 		const result = flushPendingAlarmSave(
 			preset,
@@ -206,9 +206,11 @@ describe('AC-29 No-Op-Guard: flushPendingAlarmSave', () => {
 		);
 
 		assert.ok(result);
-		assert.deepStrictEqual(result!.body.corridors, preset.corridors);
-		assert.deepStrictEqual(result!.body.empfaenger, preset.empfaenger);
-		assert.strictEqual(result!.body.schedule, preset.schedule);
+		const body = result!.body as unknown as Record<string, unknown>;
+		for (const fremd of ['corridors', 'empfaenger', 'schedule', 'name', 'location_ids']) {
+			assert.ok(!(fremd in body), `Fremdfeld ${fremd} darf im Alarme-PUT nicht stehen`);
+		}
+		assert.strictEqual(body.alert_cooldown_minutes, 60);
 	});
 });
 
@@ -316,41 +318,35 @@ describe('S5 Fix-Loop 1 (F001, Adversary CRITICAL): rollbackAlarmSnapshot ist di
 	});
 });
 
-describe('S4-Known-Gap schliessen: buildHubPutPayload kennt officialAlertsEnabled/officialWarnings/radarAlertEnabled', () => {
-	test('Teil-Edit mit allen drei bislang unbekannten Alarm-Feldern mappt korrekt auf die PUT-Keys (bei gegenteiligem Preset-Bestand)', () => {
-		const preset = makePreset({
-			official_alerts_enabled: false,
-			official_warnings: { enabled: false },
-			radar_alert_enabled: false
-		});
-
-		const { body } = buildHubPutPayload(preset, {
-			officialAlertsEnabled: true,
-			officialWarnings: { enabled: true },
-			radarAlertEnabled: true
-		});
-
-		assert.strictEqual(body.official_alerts_enabled, true, 'officialAlertsEnabled muss auf official_alerts_enabled gemappt werden');
-		assert.deepStrictEqual(
-			body.official_warnings,
-			{ enabled: true },
-			'officialWarnings.enabled muss auf official_warnings.enabled gemappt werden, ohne sources'
-		);
-		assert.strictEqual(body.radar_alert_enabled, true, 'radarAlertEnabled muss auf radar_alert_enabled gemappt werden');
-	});
-
-	test('ohne die drei Edit-Felder bleibt der Preset-Bestand unveraendert (Round-Trip)', () => {
+describe('S4-Known-Gap (seit #2375): der Alarme-Reiter sendet official_warnings/radar_alert_enabled, aber NICHT official_alerts_enabled', () => {
+	test('Alarm-Toggle: official_warnings NUR {enabled}, radar_alert_enabled gesetzt, official_alerts_enabled fehlt (Besitzer Wetter-Metriken)', () => {
 		const preset = makePreset({
 			official_alerts_enabled: false,
 			official_warnings: { enabled: false, sources: ['vigilance'] },
-			radar_alert_enabled: true
+			radar_alert_enabled: false
+		});
+		const snap = (over: Partial<AlarmSnapshot>): AlarmSnapshot => ({
+			officialAlertsEnabled: false,
+			officialWarningsEnabled: false,
+			radarAlertEnabled: false,
+			metricAlertLevels: {},
+			alertCooldownMinutes: 30,
+			alertQuietFrom: '22:00',
+			alertQuietTo: '07:00',
+			...over
 		});
 
-		const { body } = buildHubPutPayload(preset, { corridors: preset.corridors });
+		const result = flushPendingAlarmSave(
+			preset,
+			snap({ officialWarningsEnabled: true, radarAlertEnabled: true }),
+			snap({})
+		);
 
-		assert.strictEqual(body.official_alerts_enabled, false);
-		assert.deepStrictEqual(body.official_warnings, { enabled: false, sources: ['vigilance'] });
+		assert.ok(result);
+		const body = result!.body as unknown as Record<string, unknown>;
+		assert.deepStrictEqual(body.official_warnings, { enabled: true }, 'ohne sources');
 		assert.strictEqual(body.radar_alert_enabled, true);
+		assert.ok(!('official_alerts_enabled' in body), 'official_alerts_enabled gehoert dem Wetter-Metriken-Reiter');
 	});
 });
 
@@ -504,29 +500,12 @@ describe('#1745 AC-9 / #2293 S2: Alarm-Kanal-Bestand durchlaeuft Hydration, Flus
 		);
 	});
 
-	test('Glied 2 — buildHubPutPayload: der Teil-Edit landet als send_premium_sms im Body (Landmine 3)', () => {
-		const preset = makePreset({ send_premium_sms: false } as Partial<ComparePreset>);
-
-		const { body } = buildHubPutPayload(preset, {
-			sendPremiumSms: true
-		} as Parameters<typeof buildHubPutPayload>[1]);
-
-		assert.strictEqual(
-			(body as unknown as Record<string, unknown>).send_premium_sms,
-			true,
-			'buildHubPutPayload reicht sendPremiumSms nicht an buildComparePresetSavePayload durch — ' +
-				'der Haken ginge beim nächsten Hub-Speichern verloren (Landmine 3). Erhalten: ' +
-				JSON.stringify((body as unknown as Record<string, unknown>).send_premium_sms)
-		);
-	});
-
-	test('Glied 2b — Round-Trip: ohne Edit-Feld bleibt der Preset-Bestand unverändert', () => {
+	test('Glied 2 — Orte-Edit (seit #2375 Teilfeld): der Body traegt kein send_premium_sms', () => {
 		const preset = makePreset({ send_premium_sms: true } as Partial<ComparePreset>);
-		const { body } = buildHubPutPayload(preset, { corridors: preset.corridors });
-		assert.strictEqual(
-			(body as unknown as Record<string, unknown>).send_premium_sms,
-			true,
-			'Ein Edit an einem ANDEREN Reiter darf den gespeicherten Premium-SMS-Haken nicht löschen.'
+		const { body } = buildComparePresetPartialPayload(preset.id, { location_ids: ['loc-a'] });
+		assert.ok(
+			!('send_premium_sms' in (body as unknown as Record<string, unknown>)),
+			'Ein Edit an einem ANDEREN Reiter darf den gespeicherten Premium-SMS-Haken weder löschen noch zurücksetzen.'
 		);
 	});
 

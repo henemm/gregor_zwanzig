@@ -25,11 +25,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { ComparePreset } from '../../../types.ts';
-import {
-	buildHubPutPayload,
-	snapshotForRollback,
-	buildToggleActivePutPayload
-} from '../compareHubPersistenz.ts';
+import { snapshotForRollback, buildToggleActivePutPayload } from '../compareHubPersistenz.ts';
+import { buildComparePresetPartialPayload } from '../compareEditorSave.ts';
 // Issue #2276 S3: Diff-/Payload-Entscheidung des Wertebereiche-Reiters ist aus
 // der Bridge in das geteilte Speichermodul umgezogen — Zusicherungen unveraendert.
 import {
@@ -75,38 +72,33 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	};
 }
 
-describe('AC-33/AC-34 + #1257/#1234-Kontext: buildHubPutPayload — Teil-Edit verliert keine Nachbarfelder', () => {
-	test('Teil-Edit NUR corridors: metric_alert_levels und active_metrics bleiben byte-gleich aus dem Original', () => {
+describe('AC-33/AC-34 + #1257/#1234-Kontext (seit #2375): Orte-/Korridor-Edit senden nur Eigenfelder', () => {
+	test('Korridor-Edit (flushPendingCorridorSave): kein location_ids/name/schedule im Body', () => {
 		const preset = makePreset();
+		const dc = preset.display_config as Record<string, unknown>;
+		const before: CorridorSnapshot = {
+			corridors: preset.corridors!,
+			idealRanges: dc.ideal_ranges as CorridorSnapshot['idealRanges'],
+			activeMetricKeys: ['snow_depth_cm', 'wind_gust'],
+			metricAlertLevels: dc.metric_alert_levels as Record<string, string>
+		};
 		const newCorridors = [
 			{ metric: 'snow_depth_cm', range: [30, null] as [number | null, number | null], notify: true, mark: true, prio: 'hoch' as const }
 		];
-		const { body } = buildHubPutPayload(preset, { corridors: newCorridors });
-
-		assert.deepStrictEqual(
-			body.display_config!.metric_alert_levels,
-			preset.display_config!.metric_alert_levels,
-			'metric_alert_levels darf sich bei einem reinen Korridor-Edit nicht veraendern (#1257-Kontext: Alarm-Regeln nicht verlieren)'
-		);
-		assert.deepStrictEqual(
-			body.display_config!.active_metrics,
-			preset.display_config!.active_metrics,
-			'active_metrics darf sich bei einem reinen Korridor-Edit nicht veraendern'
-		);
+		const result = flushPendingCorridorSave(preset, { ...before, corridors: newCorridors }, before);
+		assert.notStrictEqual(result, null);
+		const body = result!.body as unknown as Record<string, unknown>;
 		assert.deepStrictEqual(body.corridors, newCorridors, 'corridors muss die editierte neue Zeile widerspiegeln');
+		for (const fremd of ['location_ids', 'name', 'schedule', 'profil']) {
+			assert.ok(!(fremd in body), `Fremdfeld ${fremd} darf nicht im Korridor-PUT stehen`);
+		}
 	});
 
-	test('Teil-Edit NUR pickedIds (Orte-Reorder/Entfernen): display_config bleibt komplett unangetastet', () => {
+	test('Orte-Edit (Reorder/Entfernen): Body ist exakt { location_ids } — display_config bleibt unangetastet', () => {
 		const preset = makePreset();
 		const newPickedIds = ['loc-3', 'loc-1', 'loc-2'];
-		const { body } = buildHubPutPayload(preset, { pickedIds: newPickedIds });
-
-		assert.deepStrictEqual(
-			body.display_config,
-			preset.display_config,
-			'display_config darf sich bei einem reinen Orte-Reorder nicht veraendern'
-		);
-		assert.deepStrictEqual(body.location_ids, newPickedIds, 'location_ids muss die neue Reihenfolge widerspiegeln');
+		const { body } = buildComparePresetPartialPayload(preset.id, { location_ids: newPickedIds });
+		assert.deepStrictEqual(body, { location_ids: newPickedIds });
 	});
 });
 
@@ -191,12 +183,14 @@ describe('Fix-Loop 2 (F005, Adversary CRITICAL): Cross-Tab-Sequenz — Baseline 
 	}
 
 	test('Orte-Edit ZUERST, dann Idealwerte-Edit: zweiter PUT-Payload enthaelt BEIDE Aenderungen', () => {
-		let baseline = makePreset();
+		// Seit #2375: die Basis bleibt ABSICHTLICH auf dem Lade-Stand — die
+		// Nutzlasten sind disjunkt, ein veralteter Stand kann nichts zurueckschreiben.
+		const baseline = makePreset();
 
-		// Edit A: Nutzer sortiert im Orte-Tab um -> PUT 1 -> Response wird zur neuen Baseline.
+		// Edit A: Nutzer sortiert im Orte-Tab um -> nur { location_ids }.
 		const newIds = ['loc-3', 'loc-1', 'loc-2'];
-		const payload1 = buildHubPutPayload(baseline, { pickedIds: newIds });
-		baseline = payload1.body;
+		const payload1 = buildComparePresetPartialPayload(baseline.id, { location_ids: newIds });
+		assert.deepStrictEqual(payload1.body, { location_ids: newIds });
 
 		// Edit B: Nutzer wechselt in den Idealwerte-Tab, verschiebt ein Band (min 20 -> 45).
 		const before = makeCorridorSnapshot(baseline);
@@ -207,10 +201,9 @@ describe('Fix-Loop 2 (F005, Adversary CRITICAL): Cross-Tab-Sequenz — Baseline 
 		const payload2 = flushPendingCorridorSave(baseline, current, before);
 
 		assert.notStrictEqual(payload2, null, 'geaenderter Corridor-Snapshot muss einen PUT-Payload liefern');
-		assert.deepStrictEqual(
-			payload2!.body.location_ids,
-			newIds,
-			'Payload 2 (Idealwerte) darf die bereits persistierte Orte-Reihenfolge aus Edit A NICHT auf den Lade-Stand zuruecksetzen'
+		assert.ok(
+			!('location_ids' in (payload2!.body as unknown as Record<string, unknown>)),
+			'Payload 2 (Idealwerte) darf die Orte-Liste nicht senden — sonst wuerde der Lade-Stand die Orte-Reihenfolge aus Edit A zuruecksetzen'
 		);
 		assert.deepStrictEqual(
 			payload2!.body.corridors,
@@ -220,7 +213,7 @@ describe('Fix-Loop 2 (F005, Adversary CRITICAL): Cross-Tab-Sequenz — Baseline 
 	});
 
 	test('Idealwerte-Edit ZUERST (inkl. metric_alert_levels), dann Orte-Edit: zweiter PUT-Payload enthaelt BEIDE Aenderungen (umgekehrte Richtung)', () => {
-		let baseline = makePreset();
+		const baseline = makePreset();
 
 		// Edit A: Nutzer setzt im Idealwerte-Tab eine Alarmstufe (#1257/#1234-relevant) und verschiebt ein Band.
 		const before = makeCorridorSnapshot(baseline);
@@ -231,22 +224,14 @@ describe('Fix-Loop 2 (F005, Adversary CRITICAL): Cross-Tab-Sequenz — Baseline 
 		};
 		const payload1 = flushPendingCorridorSave(baseline, current, before);
 		assert.notStrictEqual(payload1, null);
-		baseline = payload1!.body;
 
-		// Edit B: Nutzer wechselt in den Orte-Tab und entfernt einen Ort.
+		// Edit B: Nutzer wechselt in den Orte-Tab und entfernt einen Ort — die Basis
+		// ist bewusst veraltet; der Orte-Body darf davon nichts enthalten.
 		const newIds = ['loc-1', 'loc-2'];
-		const payload2 = buildHubPutPayload(baseline, { pickedIds: newIds });
+		const payload2 = buildComparePresetPartialPayload(baseline.id, { location_ids: newIds });
 
-		assert.deepStrictEqual(payload2.body.location_ids, newIds);
-		assert.deepStrictEqual(
-			payload2.body.corridors,
-			current.corridors,
-			'Payload 2 (Orte) darf die zuvor persistierte Idealwerte-Bandverschiebung aus Edit A nicht zuruecksetzen'
-		);
-		assert.deepStrictEqual(
-			payload2.body.display_config!.metric_alert_levels,
-			current.metricAlertLevels,
-			'#1257/#1234-Kontext: eine bereits gespeicherte Alarmstufen-Aenderung darf durch eine nachfolgende Orte-Aktion nicht verloren gehen'
+		assert.deepStrictEqual(payload2.body, { location_ids: newIds },
+			'Payload 2 (Orte) darf weder Korridore noch metric_alert_levels der (veralteten) Basis zurueckschreiben'
 		);
 	});
 });
@@ -265,70 +250,23 @@ describe('Fix-Loop 3 (F007, Adversary CRITICAL): buildToggleActivePutPayload —
 		// urspruengliche, eingefrorene `preset`-Prop -> der bereits persistierte
 		// Orte-Edit (UND metric_alert_levels/corridors) waeren im Toggle-PUT
 		// wieder auf den Lade-Zeitpunkt-Stand zurueckgefallen.
-		let baseline = makePreset();
-
-		// Edit A: Orte-Reorder (analog persistPickedIds) -> Baseline auffrischen.
-		const newIds = ['loc-3', 'loc-1', 'loc-2'];
-		const editPayload = buildHubPutPayload(baseline, { pickedIds: newIds });
-		baseline = editPayload.body;
-
-		// Edit B: Nutzer klickt "Aktivieren" (Uebersicht-Tab).
+		// Seit #2375: der Toggle-Body traegt NUR den Status — die (hier bewusst
+		// veraltete) Basis kann weder Orte noch Korridore noch Alarmstufen
+		// zurueckschreiben.
+		const baseline = makePreset();
 		const togglePayload = buildToggleActivePutPayload(baseline, 'daily', 'daily');
 
-		assert.deepStrictEqual(
-			togglePayload.body.location_ids,
-			newIds,
-			'Toggle-PUT darf den bereits persistierten Orte-Reorder aus Edit A nicht auf den Lade-Stand zuruecksetzen'
-		);
-		assert.deepStrictEqual(
-			togglePayload.body.corridors,
-			baseline.corridors,
-			'Toggle-PUT muss die (unveraenderten) Korridore aus der frischen Baseline widerspiegeln'
-		);
-		assert.deepStrictEqual(
-			togglePayload.body.display_config!.metric_alert_levels,
-			baseline.display_config!.metric_alert_levels,
-			'#1257/#1234-Kontext: metric_alert_levels darf durch einen nachfolgenden Toggle nicht verloren gehen'
-		);
-		assert.strictEqual(togglePayload.body.schedule, 'daily', 'Toggle-Payload muss das getoggelte schedule-Feld enthalten');
+		assert.deepStrictEqual(togglePayload.body, { schedule: 'daily', previous_schedule: 'daily' });
 		assert.strictEqual(togglePayload.url, `/api/compare/presets/${baseline.id}`);
 	});
 
 	test('S6-Edit (Idealwerte, inkl. metric_alert_levels) -> Toggle: Toggle-Payload enthaelt die frische Baseline (umgekehrte Reihenfolge)', () => {
-		let baseline = makePreset();
-
-		// Edit A: Idealwerte-Edit (Bandverschiebung + Alarmstufe) -> Baseline auffrischen.
-		const dc = baseline.display_config as Record<string, unknown>;
-		const before: CorridorSnapshot = {
-			corridors: baseline.corridors!,
-			idealRanges: dc.ideal_ranges as CorridorSnapshot['idealRanges'],
-			activeMetricKeys: dc.active_metrics as string[],
-			metricAlertLevels: dc.metric_alert_levels as Record<string, string>
-		};
-		const current: CorridorSnapshot = {
-			...before,
-			corridors: [{ metric: 'snow_depth_cm', range: [45, null], notify: true, mark: true, prio: 'hoch' }],
-			metricAlertLevels: { snow_depth_cm: 'mark', wind_gust: 'mark' }
-		};
-		const editPayload = flushPendingCorridorSave(baseline, current, before);
-		assert.notStrictEqual(editPayload, null);
-		baseline = editPayload!.body;
-
-		// Edit B: Nutzer klickt "Pausieren" (schedule -> manual).
+		// Seit #2375: Pausieren traegt nur { schedule, previous_schedule } — auch bei
+		// veralteter Basis kann es keine Bandverschiebung/Alarmstufe zuruecksetzen.
+		const baseline = makePreset();
 		const togglePayload = buildToggleActivePutPayload(baseline, 'manual', 'daily');
 
-		assert.deepStrictEqual(
-			togglePayload.body.corridors,
-			current.corridors,
-			'Toggle-PUT darf die bereits persistierte Bandverschiebung aus Edit A nicht zuruecksetzen'
-		);
-		assert.deepStrictEqual(
-			togglePayload.body.display_config!.metric_alert_levels,
-			current.metricAlertLevels,
-			'#1257/#1234-Kontext: eine bereits gespeicherte Alarmstufen-Aenderung darf durch einen nachfolgenden Toggle nicht verloren gehen'
-		);
-		assert.strictEqual(togglePayload.body.schedule, 'manual');
-		assert.strictEqual(togglePayload.body.previous_schedule, 'daily');
+		assert.deepStrictEqual(togglePayload.body, { schedule: 'manual', previous_schedule: 'daily' });
 	});
 });
 
@@ -349,7 +287,7 @@ describe('Edge Case Spec Z.1020: snapshotForRollback liefert einen echten Deep-C
 });
 
 // Issue #1703 Scheibe 8 — BEARBEITEN-Pfad (Hauptpfad: bestehenden Ortsvergleich
-// aendern). `buildHubPutPayload` (Z.161) reicht `channelActiveMetricKeys` an
+// aendern). Der Wetter-Metriken-Reiter reicht `channelActiveMetricKeys` an
 // `buildComparePresetSavePayload` weiter; bewacht waren bisher nur die reinen
 // Leaf-Funktionen (compareChannelMetricLayouts.test.ts) und der ANLEGE-Pfad
 // (compare_wizard_save_new_preset_channels.test.ts) — derselbe Fehlertyp

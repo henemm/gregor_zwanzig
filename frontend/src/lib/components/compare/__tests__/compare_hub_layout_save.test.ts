@@ -185,14 +185,15 @@ describe('C2 AC-3 (PFLICHT Datenerhalt): top_n/metric_alert_levels/forecast_hour
 		const body = payload!.body;
 		const displayConfig = body.display_config as Record<string, unknown>;
 
-		assert.equal(displayConfig.top_n, 7, 'display_config.top_n darf sich nicht veraendern');
-		assert.deepEqual(
-			displayConfig.metric_alert_levels,
-			{ wind_max_kmh: 'sensibel' },
-			'display_config.metric_alert_levels darf sich nicht veraendern'
-		);
-		assert.equal(body.forecast_hours, 72, 'forecast_hours darf sich nicht veraendern');
-		assert.equal(body.hour_from, 6, 'hour_from darf sich nicht veraendern');
-		assert.equal(body.hour_to, 20, 'hour_to darf sich nicht veraendern');
+		// Seit #2375 bleiben die Bestandsfelder erhalten, weil der Layout-Body sie
+		// GAR NICHT sendet (Server-Abgleich laesst fehlende Felder unveraendert) —
+		// ein mitgesendeter Wert koennte veraltet sein.
+		assert.ok(!('top_n' in displayConfig), 'display_config.top_n darf nicht mitgesendet werden');
+		assert.ok(!('metric_alert_levels' in displayConfig), 'display_config.metric_alert_levels darf nicht mitgesendet werden');
+		const roh = body as unknown as Record<string, unknown>;
+		for (const k of ['forecast_hours', 'hour_from', 'hour_to']) {
+			assert.ok(!(k in roh), `${k} darf nicht mitgesendet werden`);
+		}
+		assert.deepEqual(displayConfig.hourly_metrics, ['wind_kmh'], 'die Eigenfelder kommen an');
 	});
 });

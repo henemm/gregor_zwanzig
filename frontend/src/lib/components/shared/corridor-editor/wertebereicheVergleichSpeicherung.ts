@@ -16,7 +16,7 @@ import type { ActivityProfile, ComparePreset, Corridor } from '../../../types.ts
 import type { IdealRange } from './corridorEditorState.ts';
 import type { SaveFn, SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import type { PutClient } from '../tripSpeicherung.ts';
-import { buildComparePresetSavePayload } from '../../compare/compareEditorSave.ts';
+import { buildComparePresetSavePayload, waehleEigenfelder } from '../../compare/compareEditorSave.ts';
 import { normalizeStoredOutlookMetrics } from '../weather-metrics-tab/compareMetricSelection.ts';
 import { materializeActiveMetricKeys } from '../weather-metrics-tab/compareMetricOrder.ts';
 
@@ -62,7 +62,7 @@ export function baueWertebereichNutzlast(
 	current: CorridorSnapshot
 ): { url: string; body: ComparePreset } {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	return buildComparePresetSavePayload(preset, {
+	const voll = buildComparePresetSavePayload(preset, {
 		name: preset.name,
 		activityProfile: (preset.profil as ActivityProfile) ?? null,
 		pickedIds: preset.location_ids ?? [],
@@ -81,6 +81,12 @@ export function baueWertebereichNutzlast(
 		outlookEnabled: preset.outlook_enabled,
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined
+	});
+	// Issue #2375: NUR die Wertebereiche-Eigenfelder. `ideal_ranges` wird IMMER
+	// gesendet (auch `{}`) — buildComparePresetSavePayload lässt leere weg, ein
+	// weggelassener Schlüssel bliebe beim Go-Merge wirkungslos (Lösch-Semantik).
+	return waehleEigenfelder(voll, ['corridors'], ['active_metrics', 'metric_alert_levels'], {
+		ideal_ranges: current.idealRanges
 	});
 }
 

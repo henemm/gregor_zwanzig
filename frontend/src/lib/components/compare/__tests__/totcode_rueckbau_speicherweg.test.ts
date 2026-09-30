@@ -3,7 +3,7 @@
 // Spec: docs/specs/modules/rework_2276_s6a_totcode_und_ratsche.md
 //
 // AC-1 verlangt, dass der in Befund 5 der Analyse belegte Totcode verschwindet
-// UND dass die sechs dateiinternen Signaturtypen ausdruecklich stehenbleiben.
+// UND dass die fuenf dateiinternen Signaturtypen ausdruecklich stehenbleiben.
 // Beides wird hier auf ZWEI Ebenen gemessen, weil ein Teil des Totcodes zur
 // Laufzeit nicht existiert:
 //
@@ -176,9 +176,12 @@ describe('AC-1 / Teil B: Typ-Alias, tote Bedingung und Kommentar-Leichen sind we
 	}
 });
 
-describe('AC-1 / Teil B: die sechs dateiinternen Signaturtypen bleiben stehen', () => {
+describe('AC-1 / Teil B: die fuenf dateiinternen Signaturtypen bleiben stehen', () => {
 	const signaturTypen: Array<[string[], string[]]> = [
-		[['compare', 'compareHubPersistenz.ts'], ['HubEdit', 'PutQueue']],
+		// Issue #2375 (Spec compare_konfliktschutz_teilfelder.md §5, Risiko 6): `HubEdit`
+		// entfaellt bewusst mit `buildHubPutPayload` (kein Aufrufer mehr, zweiter
+		// Voll-Spread-Pfad) — die Ratsche traegt nur noch `PutQueue`.
+		[['compare', 'compareHubPersistenz.ts'], ['PutQueue']],
 		[['compare', 'compareHubHydration.ts'], ['HubFields']],
 		[['compare', 'compareEditorSave.ts'], ['CompareEditorEdits', 'NewComparePresetFields']],
 		[['compare', 'compareEditorLoad.ts'], ['RehydratedActiveMetrics']]

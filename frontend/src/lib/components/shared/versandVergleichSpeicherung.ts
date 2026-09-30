@@ -16,7 +16,7 @@ import type { ActivityProfile, ComparePreset } from '../../types.ts';
 import type { IdealRange } from './corridor-editor/corridorEditorState.ts';
 import type { SaveFn, SaveStatus } from '../../stores/saveStatusStore.svelte.ts';
 import type { PutClient } from './tripSpeicherung.ts';
-import { buildComparePresetSavePayload } from '../compare/compareEditorSave.ts';
+import { buildComparePresetSavePayload, waehleEigenfelder } from '../compare/compareEditorSave.ts';
 import {
 	normalizeStoredActiveMetrics,
 	normalizeStoredOutlookMetrics
@@ -120,26 +120,36 @@ export function versandSnapshotAus(wiz: VersandHydrationTarget): VersandSnapshot
 	) as VersandSnapshot;
 }
 
+// Issue #2375: Feld-Besitz des Versand-Reiters (Spec compare_konfliktschutz_teilfelder.md
+// §2). Keine `alert_*`-Felder (Besitzer: Alarme), keine display_config.
+const VERSAND_TOP = [
+	'send_telegram',
+	'send_sms',
+	'send_premium_sms',
+	'morning_enabled',
+	'morning_time',
+	'evening_enabled',
+	'evening_time',
+	'end_date'
+] as const;
+
 /**
- * EINZIGE Erzeugerin der Versand-Nutzlast: Voll-Spread über `preset` via
- * `buildComparePresetSavePayload`, die Versandfelder aus `current`. Die
- * Nicht-Versandfelder laufen durch DIESELBEN Rückfälle wie der abgeschaffte Hub-PUT-Pfad
- * (Lesenormalisierung #1373, sonst Datenverlust an der Metrik-Auswahl).
- * `officialWarnings` bleibt undefined — der Bestand round-trippt über
- * `...original`, ein Echo würde `sources` clobbern (F001, S4).
+ * EINZIGE Erzeugerin der Versand-Nutzlast (Issue #2375: Teilfeld-Nutzlast). Die
+ * Versandfelder kommen aus `current`; die Übersetzungen (`toHHMMSS`,
+ * `end_date: null → ""`) laufen weiter über `buildComparePresetSavePayload`,
+ * gesendet werden aber nur die Eigenfelder — der Server mergt fehlende Felder
+ * als „unverändert" (der frühere Zwang, die drei Legacy-Alarmfelder mitzusenden,
+ * ist mit dem Feld-Merge des Go-Handlers entfallen).
  *
- * Issue #2293 S2 (Implementation Details Abschnitt 4/5, AC-8/AC-10/AC-14):
- * `sendPremiumSms` ist seit dieser Scheibe ein eigener Versand-Schalter
- * (#2448) und läuft als `send_premium_sms` mit; `alert_channels` (Alarm-Feld
- * eines Nachbar-Reiters) wird nach dem Payload-Bau explizit aus dem Body
- * entfernt (Same-Tab-Race-Schutz).
+ * Issue #2293 S2 (AC-8/AC-10/AC-14): `sendPremiumSms` ist ein eigener
+ * Versand-Schalter (#2448) und läuft als `send_premium_sms` mit.
  */
 export function baueVersandNutzlast(
 	preset: ComparePreset,
 	current: VersandSnapshot
 ): { url: string; body: ComparePreset } {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	const { url, body } = buildComparePresetSavePayload(preset, {
+	const voll = buildComparePresetSavePayload(preset, {
 		name: preset.name,
 		activityProfile: (preset.profil as ActivityProfile) ?? null,
 		pickedIds: preset.location_ids ?? [],
@@ -158,11 +168,6 @@ export function baueVersandNutzlast(
 		eveningEnabled: current.eveningEnabled,
 		eveningTime: current.eveningTime,
 		endDate: current.endDate,
-		// Spec Punkt 6: die drei toten Legacy-Restfelder MÜSSEN mitgesendet
-		// werden, sonst nullt der Versand-PUT Alarm-Zustellungsfelder (AC-11).
-		alertCooldownMinutes: current.alertCooldownMinutes,
-		alertQuietFrom: current.alertQuietFrom,
-		alertQuietTo: current.alertQuietTo,
 		hourlyMetricKeys: displayConfig.hourly_metrics as string[] | null | undefined,
 		hourlyEnabled: preset.hourly_enabled,
 		outlookMetricKeys: normalizeStoredOutlookMetrics(displayConfig.outlook_metrics) ?? undefined,
@@ -172,8 +177,9 @@ export function baueVersandNutzlast(
 		dayWindowStartHour: preset.day_window_start_hour ?? undefined,
 		dayWindowEndHour: preset.day_window_end_hour ?? undefined
 	});
-	delete (body as unknown as Record<string, unknown>).alert_channels;
-	return { url, body };
+	// Issue #2375: NUR die Versand-Eigenfelder senden — keine alert_*-Felder
+	// (Besitzer Alarme), keine display_config.
+	return waehleEigenfelder(voll, VERSAND_TOP);
 }
 
 /**

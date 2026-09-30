@@ -25,5 +25,5 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 	const location_ids: string[] = preset.location_ids ?? [];
 	const locations = allLocations.filter((l) => location_ids.includes(l.id));
 
-	return { preset, locations };
+	return { preset, locations, etag: presetRes.headers.get('ETag') ?? undefined };
 };

@@ -22,6 +22,8 @@ import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import type { PutClient } from '../../tripSpeicherung.ts';
 import { erstelleWetterMetrikenVergleichSpeicherung } from '../weatherMetricsCompareSave.ts';
 import { createController, dc, hydrierterWs, makePreset, wetterMetrikenBedienung } from './wetterMetrikenVergleichPruefstand.ts';
+import { EIGENFELDER, schluessel } from '../../__tests__/goMergeServerPruefstand.ts';
+import { konfliktMitFremdemNamen } from '../../__tests__/compareReiterAufbauPruefstand.ts';
 
 const PRESET_ID = 'cp-2276-s4-konflikt';
 const PRESET_PFAD = `/api/compare/presets/${PRESET_ID}`;
@@ -116,5 +118,41 @@ describe('AC-7: Speicherkonflikt beim Wetter-Metriken-Speichern → „Nochmal s
 		await ctl.retryConflict();
 		assert.equal(ctl.state, 'idle');
 		assert.deepEqual(dc(server.storedBody(PRESET_ID)).hourly_metrics, ['temp_max_c', 'gust_max_kmh']);
+	});
+});
+
+// ── Issue #2375 (Test 6): „Nochmal speichern" sendet NUR die Eigenfelder ────
+// Spec: docs/specs/bugfix/compare_konfliktschutz_teilfelder.md — Test 6, AC-2/AC-3/AC-7.
+// Bis #2375 schickte der Wiederholungs-PUT den Voll-Spread der lokalen,
+// veralteten Basis — der Name, den ein anderer Tab inzwischen gespeichert
+// hatte, wurde still zurückgeschrieben. Der Ersatz-Server mergt hier wie Go
+// (fehlende Felder bleiben), deshalb zeigt sich das am Server-Stand.
+describe('Issue #2375: „Nochmal speichern" nach 412 — nur Eigenfelder, fremde Änderung überlebt', () => {
+	test('Wiederholungs-PUT trägt exakt die Eigenfelder des Reiters (kein Fremdfeld)', async () => {
+		const { erster, retryRumpf, zustandNach412, server } = await konfliktMitFremdemNamen('wetterMetriken', 'cp-2375-retry-wettermetriken');
+		assert.ok(erster?.ifMatch, 'Vorbedingung: der erste PUT muss If-Match tragen');
+		assert.equal(erster.status, 412, 'Vorbedingung: der erste PUT muss am veralteten Stand scheitern');
+		assert.equal(zustandNach412, 'conflict', 'Vorbedingung: „Nochmal speichern" wird angeboten');
+		assert.equal(server.mitschnitt.filter((e) => e.method === 'PUT').at(-1)?.status, 200);
+		assert.deepEqual(
+			schluessel(retryRumpf),
+			[...EIGENFELDER.wetterMetriken.top].sort(),
+			`der Wiederholungs-PUT darf nur Eigenfelder tragen, gesendet: ${JSON.stringify(schluessel(retryRumpf))}`
+		);
+		assert.deepEqual(
+			schluessel(retryRumpf.display_config),
+			[...(EIGENFELDER.wetterMetriken.display ?? [])].sort(),
+			'display_config des Wiederholungs-PUT darf nur die eigenen Schlüssel tragen'
+		);
+	});
+
+	test('Fremdfeld überlebt den Retry: danach stehen der Name von A UND die Änderung von B auf dem Server', async () => {
+		const { server } = await konfliktMitFremdemNamen('wetterMetriken', 'cp-2375-retry-wettermetriken');
+		const stand = server.stand('cp-2375-retry-wettermetriken');
+		assert.ok(
+			JSON.stringify((stand.display_config as Record<string, unknown>).active_metrics).includes('gust_max_kmh'),
+			'die Wetter-Metriken-Änderung von B muss auf dem Server stehen'
+		);
+		assert.equal(stand.name, 'Fremd von A', '„Nochmal speichern" hat den fremd gespeicherten Namen überschrieben');
 	});
 });

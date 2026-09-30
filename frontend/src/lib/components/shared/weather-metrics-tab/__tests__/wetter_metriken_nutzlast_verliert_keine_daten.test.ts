@@ -22,7 +22,7 @@ import assert from 'node:assert/strict';
 
 import { api } from '../../../../api.ts';
 import { clearEtagRegistry } from '../../../../etagRegistry.ts';
-import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__/fakeTripServer.ts';
+import { createGoMergeServer, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
 import type { ComparePreset } from '../../../../types.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import {
@@ -100,8 +100,22 @@ function assertNurWetterMetrikenFelderGeaendert(vorher: ComparePreset, nachher: 
 	}
 }
 
-describe('AC-12 (Kern): baueWetterMetrikenNutzlast — Voll-Spread, nur die zehn eigenen Felder neu', () => {
-	test('Metrik hinzugefügt → alle Bestandsfelder aus dem Preset bleiben, die Auswahl ist neu', () => {
+/** Seit #2375: der Rumpf trägt NUR Eigenfelder (Top-Level + display_config-Schlüssel). */
+function assertNurEigenfelderGesendet(body: unknown): void {
+	const roh = body as Record<string, unknown>;
+	for (const key of Object.keys(roh)) {
+		assert.ok(
+			key === 'display_config' || WETTER_METRIKEN_FELDER_TOP.has(key),
+			`Fremdfeld „${key}" im Wetter-Metriken-PUT`
+		);
+	}
+	for (const key of Object.keys((roh.display_config as Record<string, unknown>) ?? {})) {
+		assert.ok(WETTER_METRIKEN_FELDER_DC.has(key), `Fremder display_config-Schlüssel „${key}" im Wetter-Metriken-PUT`);
+	}
+}
+
+describe('AC-12 (Kern, seit #2375 Teilfeld): baueWetterMetrikenNutzlast — nur die eigenen Felder im Rumpf', () => {
+	test('Metrik hinzugefügt → der Rumpf trägt nur Eigenfelder, die Auswahl ist neu', () => {
 		const preset = reicherVergleich();
 		const ws = hydrierterWs(preset);
 		wetterMetrikenBedienung(ws).toggleMetric('gust_max_kmh');
@@ -109,21 +123,21 @@ describe('AC-12 (Kern): baueWetterMetrikenNutzlast — Voll-Spread, nur die zehn
 		const { url, body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
 
 		assert.equal(url, `/api/compare/presets/${PRESET_ID}`);
-		assertNurWetterMetrikenFelderGeaendert(preset, body as unknown as Record<string, unknown>);
+		assertNurEigenfelderGesendet(body);
 		assert.ok((dc(body).active_metrics as string[]).includes('gust_max_kmh'));
 	});
 
-	test('Tagesfenster geändert → Wertebereiche/Alarme/Versand bleiben unverändert', () => {
+	test('Tagesfenster geändert → Wertebereiche/Alarme/Versand stehen nicht im Rumpf', () => {
 		const preset = reicherVergleich();
 		const ws = hydrierterWs(preset);
 		wetterMetrikenBedienung(ws).setDayWindow(6, 21);
 
 		const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
 
-		assertNurWetterMetrikenFelderGeaendert(preset, body as unknown as Record<string, unknown>);
+		assertNurEigenfelderGesendet(body);
 		assert.equal((body as unknown as Record<string, unknown>).day_window_start_hour, 6);
 		assert.equal((body as unknown as Record<string, unknown>).day_window_end_hour, 21);
-		assert.deepEqual((dc(body).metric_alert_levels as Record<string, unknown>), { wind_max_kmh: 'standard' });
+		assert.equal(dc(body).metric_alert_levels, undefined, 'metric_alert_levels gehört dem Alarme-Reiter');
 	});
 });
 
@@ -175,11 +189,13 @@ describe('AC-12 (Rueckfall): current.<feld> == null faellt auf den Preset-Bestan
 });
 
 describe('AC-12 (Rueckfall via Orchestrierung): erstelleWetterMetrikenVergleichSpeicherung schreibt den echten Bestand, nicht null', () => {
-	let server: FakeTripServer;
+	// Seit #2375: Ersatz-Server, der wie der Go-Handler zusammenfuehrt (der
+	// fakeTripServer ersetzt den gespeicherten Rumpf komplett).
+	let server: GoMergeServer;
 
 	beforeEach(() => {
 		clearEtagRegistry();
-		server = createFakeTripServer();
+		server = createGoMergeServer({ [PRESET_ID]: reicherVergleich() as unknown as Record<string, unknown> });
 		server.install();
 	});
 
@@ -211,7 +227,7 @@ describe('AC-12 (Rueckfall via Orchestrierung): erstelleWetterMetrikenVergleichS
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		const stand = server.stand(PRESET_ID);
 		const vorherDc = preset.display_config as Record<string, unknown>;
 		assert.deepEqual(dc(stand).hourly_metrics, vorherDc.hourly_metrics, 'hourly_metrics darf im echten PUT nicht auf null fallen');
 		assert.deepEqual(dc(stand).outlook_metrics, vorherDc.outlook_metrics, 'outlook_metrics darf im echten PUT nicht auf null fallen');
@@ -224,17 +240,17 @@ describe('AC-12 (Rueckfall via Orchestrierung): erstelleWetterMetrikenVergleichS
 });
 
 describe('AC-12 (Rundlauf): gespeichert und neu geladen — nur die Wetter-Metriken/Layout-Felder weichen ab', () => {
-	let server: FakeTripServer;
+	let server: GoMergeServer;
 
 	beforeEach(() => {
 		clearEtagRegistry();
-		server = createFakeTripServer();
+		server = createGoMergeServer({ [PRESET_ID]: reicherVergleich() as unknown as Record<string, unknown> });
 		server.install();
 	});
 
 	afterEach(() => server.restore());
 
-	const puts = () => server.calls.filter((c) => c.method === 'PUT');
+	const puts = () => server.putRuempfe();
 
 	test('Stundenverlauf-Reihenfolge ändern → speichern → Server-Stand trägt alle übrigen Einstellungen unverändert', async () => {
 		const preset = reicherVergleich();
@@ -258,7 +274,7 @@ describe('AC-12 (Rundlauf): gespeichert und neu geladen — nur die Wetter-Metri
 		await ctl.flush();
 
 		assert.equal(puts().length, 1);
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
+		const stand = server.stand(PRESET_ID);
 		assertNurWetterMetrikenFelderGeaendert(preset, stand);
 		assert.deepEqual(dc(stand).hourly_metrics, ['temp_max_c', 'wind_max_kmh']);
 		assert.equal(stand.name, 'Dolomiten Vergleich', 'der Name darf nicht verloren gehen');

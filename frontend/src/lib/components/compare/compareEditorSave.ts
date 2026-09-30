@@ -278,6 +278,60 @@ export function buildComparePresetSavePayload(
 	return { url, body };
 }
 
+// ─── Teilfeld-Pfad (PUT, Issue #2375) ───────────────────────────────────────
+//
+// Jeder Schreibweg des Ortsvergleichs (Reiter, Kopf, Orte, Status) sendet NUR
+// seine Eigenfelder. Der Go-Handler mergt fehlende Felder als „unverändert"
+// (mergeBriefingPatch/mergeConfigMap) — ein Voll-Spread der lokalen, womöglich
+// veralteten Basis schriebe dagegen Fremdwerte zurück (#2375, #2381).
+// `buildComparePresetSavePayload` bleibt für die Neuanlage unverändert.
+
+/**
+ * PUT-Nutzlast mit ausschließlich den übergebenen Feldern. `felder` sind
+ * Top-Level-Schlüssel des Datensatzes (snake_case, bereits übersetzt);
+ * `displayConfigFelder` landen unter `display_config` — nur diese Schlüssel.
+ * `undefined`-Werte werden nicht gesendet; `[]`, `{}` und `""` schon (Lösch-Semantik).
+ */
+export function buildComparePresetPartialPayload(
+	id: string,
+	felder: Record<string, unknown>,
+	displayConfigFelder?: Record<string, unknown>
+): { url: string; body: ComparePreset } {
+	const body: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(felder)) {
+		if (v !== undefined) body[k] = v;
+	}
+	if (displayConfigFelder) {
+		const dc: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(displayConfigFelder)) {
+			if (v !== undefined) dc[k] = v;
+		}
+		if (Object.keys(dc).length > 0) body.display_config = dc;
+	}
+	return { url: '/api/compare/presets/' + id, body: body as unknown as ComparePreset };
+}
+
+/**
+ * Schneidet aus einer vollständig gebauten Nutzlast (die Leseübersetzungen wie
+ * `toStoredActiveMetrics`, `toHHMMSS`, `end_date: null → ""` schon angewendet
+ * hat) die Eigenfelder eines Reiters heraus.
+ */
+export function waehleEigenfelder(
+	voll: { url: string; body: ComparePreset },
+	topKeys: readonly string[],
+	displayKeys: readonly string[] = [],
+	displayConfigExtra: Record<string, unknown> = {}
+): { url: string; body: ComparePreset } {
+	const b = voll.body as unknown as Record<string, unknown>;
+	const dc = (b.display_config as Record<string, unknown> | undefined) ?? {};
+	const felder: Record<string, unknown> = {};
+	for (const k of topKeys) felder[k] = b[k];
+	const dcFelder: Record<string, unknown> = {};
+	for (const k of displayKeys) dcFelder[k] = dc[k];
+	Object.assign(dcFelder, displayConfigExtra);
+	return buildComparePresetPartialPayload(voll.url.slice('/api/compare/presets/'.length), felder, dcFelder);
+}
+
 // ─── Create-Pfad (POST /api/compare/presets) ──────────────────────────────
 //
 // Issue #1360 F002: Pure-Function-Gegenstueck zu buildComparePresetSavePayload

@@ -17,7 +17,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildComparePresetSavePayload, buildNewComparePresetPayload } from '../compareEditorSave.ts';
-import { buildHubPutPayload } from '../compareHubPersistenz.ts';
+import { buildComparePresetPartialPayload } from '../compareEditorSave.ts';
 import {
 	hydrateAlarmFieldsFromPreset,
 	hydrateHubFieldsFromPreset
@@ -252,62 +252,19 @@ describe('AC-3/AC-4/AC-5: der Lade-Pfad liest beide Speicherformate', () => {
 // AC-12 — Speichern eines ANDEREN Reiters beschaedigt die Auswahl nicht
 // ===========================================================================
 
-describe('AC-12: Bestandsrueckfall beim Speichern eines anderen Reiters', () => {
-	test('bereits umgestellte Auswahl bleibt beim Orte-Speichern unveraendert', () => {
-		loadCatalog();
-		const stored = [TEMP_MAX, TEMP_MIN, WIND_CHILL_MIN];
-		const preset = makePreset({ region: 'Korsika', active_metrics: stored });
-
-		const { body } = buildHubPutPayload(preset, { pickedIds: ['loc-a', 'loc-c'] });
-
-		assert.deepEqual(activeMetricsOf(body), stored,
-			'AC-12: die gespeicherte Metrik-Auswahl darf beim Speichern eines anderen ' +
-			'Reiters weder beschaedigt noch geleert noch doppelt umgewandelt werden'
-		);
-		assert.deepEqual(body.location_ids, ['loc-a', 'loc-c'], 'der eigentliche Edit muss ankommen');
-	});
-
-	test('Altformat-Bestand verliert beim Speichern eines anderen Reiters keine Groesse', () => {
+describe('AC-12 (seit #2375): Speichern eines ANDEREN Reiters beruehrt die Auswahl gar nicht', () => {
+	test('Orte-Speichern sendet nur { location_ids } — display_config/active_metrics stehen nicht im Body', () => {
 		loadCatalog();
 		const preset = makePreset({
 			region: 'Korsika',
 			active_metrics: ['temp_max_c', 'temp_min_c', 'wind_chill_min_c']
 		});
 
-		const { body } = buildHubPutPayload(preset, { pickedIds: ['loc-a'] });
+		const { body } = buildComparePresetPartialPayload(preset.id, { location_ids: ['loc-a', 'loc-c'] });
 
-		assert.deepEqual(activeMetricsOf(body), [TEMP_MAX, TEMP_MIN, WIND_CHILL_MIN],
-			'AC-12: dieselben drei Groessen, nur im neuen Format — keine verschwindet'
-		);
-	});
-
-	test('fehlendes active_metrics wird nicht als leere Auswahl getarnt (#1191)', () => {
-		loadCatalog();
-		const { body } = buildHubPutPayload(makePreset({ region: 'Korsika' }), {
-			pickedIds: ['loc-a']
-		});
-
-		assert.equal(
-			'active_metrics' in (body.display_config as Record<string, unknown>),
-			false,
-			'#1191: aus einem fehlenden Feld darf kein [] werden'
-		);
-	});
-
-	test('noch nicht geladener Katalog reicht die Auswahl unveraendert durch (verlustfrei)', () => {
-		// Zustand vor dem Eintreffen von GET /api/compare/metrics (leerer Index
-		// aus beforeEach, dieser Test laedt bewusst nicht). Selbst dann darf ein
-		// Speichervorgang die gespeicherte Auswahl nicht verlieren — sie wird
-		// unveraendert weitergereicht (der Backend-Aufloeser liest beide Formate).
-		const stored = [TEMP_MAX, WIND_MAX];
-		const { body } = buildHubPutPayload(
-			makePreset({ region: 'Korsika', active_metrics: stored }),
-			{ pickedIds: ['loc-b'] }
-		);
-
-		assert.deepEqual(activeMetricsOf(body), stored,
-			'Ohne geladenen Katalog muss die gespeicherte Auswahl unveraendert ' +
-			'durchlaufen — niemals verworfen oder geleert'
+		assert.deepEqual(body, { location_ids: ['loc-a', 'loc-c'] },
+			'AC-12: der Orte-Pfad darf die Metrik-Auswahl weder beschaedigen noch mitsenden — ' +
+			'der Server-Merge laesst nicht gesendete Felder unveraendert'
 		);
 	});
 

@@ -201,61 +201,60 @@ test.describe('Issue #2276 S3: Reiter „Wertebereiche" im Vergleich speichert �
 
 	// AC-5 — fängt: 412 als generischer Fehler (setError) bzw. Rollback auch bei 412.
 	//
-	// Wie entsteht der 412 im echten Betrieb? Der Ortsvergleich wird serverseitig
-	// geladen (+page.server.ts) und übernimmt dabei KEINEN ETag — die Seite kennt
-	// den Stand erst nach ihrem ersten eigenen Speichern (ETag der PUT-Antwort).
-	// Erst ab dann sendet sie If-Match, und erst dann lehnt der Server einen
-	// zwischenzeitlich fremd geänderten Stand mit 412 ab. Der Test legt deshalb
-	// zuerst eine eigene, gespeicherte Änderung an (CI-Befund PR #2374: ohne sie
-	// ging der PUT ohne If-Match durch und endete korrekt in „Gespeichert").
-	test('AC-5: fremde Änderung dazwischen → „Nochmal speichern" → gespeichert, Wert bleibt sichtbar', async ({
+	// Issue #2375 (Test 12 / AC-1 / AC-13): der Seitenaufbau übernimmt den ETag
+	// (+page.server.ts gibt `etag` zurück, +page.svelte ruft
+	// adoptEtagFromPageLoad). Deshalb trägt schon die ERSTE Speicherung nach dem
+	// Laden If-Match — der frühere Umweg „erst selbst speichern, um den ETag zu
+	// bekommen" (CI-Befund PR #2374) entfällt. Und weil der Reiter nur noch seine
+	// Eigenfelder sendet, überlebt die fremde Änderung (Name) das „Nochmal
+	// speichern" — bis #2375 bewusst nicht zugesichert, jetzt Zusicherung.
+	test('AC-5: fremde Änderung dazwischen → erster PUT 412 → „Nochmal speichern" → gespeichert, fremder Name bleibt', async ({
 		page
 	}) => {
 		const id = await legeVergleichAn(page);
 		const { puts, beantwortet } = zaehlePuts(page, id);
 		const editor = await oeffneWertebereiche(page, id);
 
-		// GIVEN: eigene erste Änderung gespeichert — die Seite kennt jetzt den ETag
-		await editor.locator('.ce-pool-btn').first().click();
-		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
-		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
-		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-
-		// An der Oberfläche vorbei: fremde Änderung ohne If-Match (anderes Gerät)
+		// GIVEN: Seite geladen, danach ändert ein anderes Gerät den Namen (ohne If-Match)
 		const vorher = await serverStand(page, id);
-		const fremd = await page.request.put(`/api/compare/presets/${id}`, {
-			data: { ...vorher, name: `${vorher.name} (fremd)` }
-		});
+		const fremderName = `${vorher.name} (fremd)`;
+		const fremd = await page.request.put(`/api/compare/presets/${id}`, { data: { name: fremderName } });
 		expect(fremd.status(), 'fremder Schreibvorgang ohne If-Match wird angenommen').toBe(200);
 
-		// WHEN: zweite Änderung auf dem jetzt veralteten Stand
+		// WHEN: erste eigene Änderung auf dem jetzt veralteten Stand
 		await editor.locator('.ce-pool-btn').first().click();
-		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(3, { timeout: 5_000 });
+		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
 
-		// THEN: echter 412 → „Nochmal speichern", keine Rücknahme in der Oberfläche
+		// THEN: echter 412 schon beim ERSTEN PUT → „Nochmal speichern", keine Rücknahme
 		await expect(anzeige(page)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
-		expect(puts.length, 'Vorbedingung: der zweite PUT wurde gesendet').toBe(2);
-		expect(await puts[1].headerValue('if-match'), 'der zweite PUT muss den bekannten Stand mitsenden').toBeTruthy();
-		expect((await puts[1].response())?.status(), 'der Server muss den veralteten Stand ablehnen').toBe(412);
+		expect(puts.length, 'Vorbedingung: der erste PUT wurde gesendet').toBe(1);
+		expect(
+			await puts[0].headerValue('if-match'),
+			'der erste PUT nach dem Laden muss If-Match aus dem Seitenaufbau tragen (#2375 Punkt 2)'
+		).toBeTruthy();
+		expect((await puts[0].response())?.status(), 'der Server muss den veralteten Stand ablehnen').toBe(412);
 		const nochmal = anzeige(page).getByRole('button', { name: 'Nochmal speichern' });
 		await expect(nochmal).toBeVisible();
-		await expect(editor.locator('[data-testid^="corridor-row-"]'), 'bei 412 kein Zurückspringen').toHaveCount(3);
+		await expect(editor.locator('[data-testid^="corridor-row-"]'), 'bei 412 kein Zurückspringen').toHaveCount(2);
 
-		// WHEN: „Nochmal speichern" → THEN: gespeichert, Wert bleibt sichtbar und auf dem Server
+		// WHEN: „Nochmal speichern" → THEN: gespeichert, beide Änderungen auf dem Server
 		await nochmal.click();
 		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 		await expect(anzeige(page)).toContainText('Gespeichert');
-		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(3);
-		expect(puts.length, 'der Wiederholungs-PUT wurde gesendet').toBe(3);
-		expect((await puts[2].response())?.status(), 'der Wiederholungs-PUT muss durchgehen').toBe(200);
+		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2);
+		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(2);
+		expect(puts.length, 'der Wiederholungs-PUT wurde gesendet').toBe(2);
+		expect((await puts[1].response())?.status(), 'der Wiederholungs-PUT muss durchgehen').toBe(200);
+		expect(Object.keys(puts[1].postDataJSON()).sort(), 'der Wiederholungs-PUT trägt nur Eigenfelder').toEqual([
+			'corridors',
+			'display_config'
+		]);
 
 		const stand = await serverStand(page, id);
-		expect(korridore(stand).length, 'der Wiederholungs-PUT muss die Änderung tragen').toBe(3);
-		// Bewusst NICHT zugesichert: dass die fremde Änderung (Name) das Wiederholen
-		// überlebt. „Nochmal speichern" frischt nur den ETag auf, die Nutzlast ist
-		// Voll-Spread über die lokale Basis — gemessen 19.09.: der fremde Name wird
-		// überschrieben (gleiches Verhalten wie Alarme/S2). Nicht Teil von AC-5,
-		// als Befund an den Orchestrator gemeldet.
+		expect(korridore(stand).length, 'der Wiederholungs-PUT muss die Änderung tragen').toBe(2);
+		expect(stand.name, '„Nochmal speichern" darf den fremd gespeicherten Namen nicht überschreiben (#2375)').toBe(
+			fremderName
+		);
 	});
 
 	// AC-6 — fängt: flush() vor handleToggleActive entfernt.
@@ -277,9 +276,15 @@ test.describe('Issue #2276 S3: Reiter „Wertebereiche" im Vergleich speichert �
 
 		const [erster, zweiter] = puts.map((r) => r.postDataJSON());
 		expect(korridore(erster).length, 'erster PUT muss die Wertebereich-Änderung sein').toBe(2);
-		expect(erster.schedule, 'erster PUT darf noch nicht pausieren').toBe('daily');
+		// #2375: der Wertebereiche-PUT trägt `schedule` gar nicht mehr (Teilfeld-Nutzlast)
+		expect(Object.keys(erster), 'erster PUT darf noch nicht pausieren').not.toContain('schedule');
 		expect(zweiter.schedule).toBe('manual');
-		expect(korridore(zweiter).length, 'Pausieren-PUT schreibt den alten Wertebereich zurück').toBe(2);
+		// Issue #2375 (AC-6/AC-9): der Pausieren-PUT trägt nur den Status — er
+		// kann den Wertebereich weder mitschicken noch zurückschreiben.
+		expect(Object.keys(zweiter).sort(), 'Pausieren-PUT trägt nur { schedule, previous_schedule }').toEqual([
+			'previous_schedule',
+			'schedule'
+		]);
 
 		const stand = await serverStand(page, id);
 		expect(stand.schedule).toBe('manual');
@@ -312,5 +317,42 @@ test.describe('Issue #2276 S3: Reiter „Wertebereiche" im Vergleich speichert �
 			expect(ndc[key], `display_config.${key} hat sich verändert`).toEqual(vdc[key]);
 		}
 		expect(korridore(nachher).length, 'nur der Wertebereich weicht ab').toBe(2);
+	});
+
+	// Issue #2375 Test 13 / AC-8 — fängt: Leerung erreicht den Server nicht, weil
+	// die Teilfeld-Nutzlast `corridors: []` bzw. `ideal_ranges: {}` weglässt
+	// (der Go-Merge ließe dann den alten Wert stehen).
+	test('#2375 Roundtrip: Korridor-Leerung → PUT trägt corridors [] und ideal_ranges {} → nach Neuladen leer', async ({
+		page
+	}) => {
+		const id = await legeVergleichAn(page);
+		const { puts, beantwortet } = zaehlePuts(page, id);
+		const editor = await oeffneWertebereiche(page, id);
+
+		await editor.locator('[data-testid="corridor-row-snow_depth_cm"] .ce-remove').click();
+		await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(0, { timeout: 5_000 });
+		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
+		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+
+		const rumpf = puts.at(-1)!.postDataJSON() as Record<string, unknown>;
+		expect(rumpf.corridors, 'Leerung muss als [] gesendet werden').toEqual([]);
+		expect(
+			(rumpf.display_config as Record<string, unknown>).ideal_ranges,
+			'geleerte Ideal-Ranges müssen als {} gesendet werden'
+		).toEqual({});
+
+		const stand = await serverStand(page, id);
+		expect(korridore(stand).length, 'die Korridor-Leerung hat den Server nicht erreicht').toBe(0);
+		expect(
+			Object.keys(((stand.display_config as Record<string, unknown>).ideal_ranges as object) ?? {}),
+			'die Ideal-Ranges wurden nicht geleert'
+		).toEqual([]);
+
+		await page.reload();
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-detail-tab-idealwerte"]:visible').click();
+		const neu = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
+		await expect(neu).toBeVisible({ timeout: 10_000 });
+		await expect(neu.locator('[data-testid^="corridor-row-"]'), 'nach Neuladen muss die Leerung stehen').toHaveCount(0);
 	});
 });

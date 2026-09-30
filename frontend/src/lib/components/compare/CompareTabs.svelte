@@ -79,8 +79,8 @@
 	// (Hub + Anlege-Seite /compare/new). Inline-Markup + Handler wanderten dorthin.
 	import { CompareWizardState } from './compareWizardState.svelte';
 	import { hydrateHubFieldsFromPreset, hydrateAlarmFieldsFromPreset } from './compareHubHydration.ts';
+	import { buildComparePresetPartialPayload } from './compareEditorSave.ts';
 	import {
-		buildHubPutPayload,
 		snapshotForRollback,
 		buildToggleActivePutPayload,
 		hubActivationBanner,
@@ -196,8 +196,8 @@
 	// eingefroren (aktualisiert nur nach togglePause()/invalidateAll() im
 	// Parent, routes/compare/[id]/+page.svelte:76) — ein zweiter S6-PUT im
 	// selben Seitenbesuch wuerde sonst den ersten Edit still rueckgaengig
-	// machen, weil buildHubPutPayload nicht-editierte Felder aus genau dieser
-	// Baseline defaultet. Wird nach JEDEM erfolgreichen S6-PUT aus dem
+	// machen, weil ein Voll-Spread nicht-editierte Felder aus genau dieser
+	// Baseline defaultet (seit #2375 senden Orte/Status nur ihre Eigenfelder). Wird nach JEDEM erfolgreichen S6-PUT aus dem
 	// Response-Body aufgefrischt (internal/handler/compare_preset.go:390
 	// liefert das gespeicherte Preset zurueck — writeJSON(w, 200, updated)).
 	// Uebersicht-/Vorschau-Tab lesen bewusst weiterhin `preset` direkt
@@ -269,7 +269,9 @@
 		// ebenfalls erst HIER lesen — s. Begruendung an der Deklaration oben.
 		const updated = await hubPutQueue.enqueue(async () => {
 			try {
-				const { url, body } = buildHubPutPayload(currentPreset, { pickedIds: newIds });
+				const { url, body } = buildComparePresetPartialPayload(currentPreset.id, {
+					location_ids: newIds
+				});
 				const result = await api.put<ComparePreset>(url, body);
 				// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen —
 				// der PUT-Handler liefert das tatsaechlich gespeicherte Preset zurueck.

@@ -153,7 +153,9 @@ describe('AC-1: eine Alarm-Änderung speichert über den Controller — genau ei
 		assert.equal(put.status, 200);
 		const body = server.storedBody(PRESET_ID) as Record<string, unknown>;
 		assert.equal(body.radar_alert_enabled, true, 'der geänderte Radar-Schalter muss im Rumpf stehen');
-		assert.equal(body.name, 'Ortsvergleich Alarme', 'Voll-Spread: Nicht-Alarmfelder bleiben im Rumpf erhalten');
+		// Issue #2375 (AC-7): kein Voll-Spread mehr — Nicht-Alarmfelder gehören
+		// NICHT in den Rumpf (der Go-Merge lässt fehlende Felder unverändert).
+		assert.ok(!('name' in body), 'Teilfeld-Nutzlast: der Alarm-Rumpf darf `name` nicht tragen (#2375)');
 		assert.equal(ctl.state, 'idle', 'Endzustand „Gespeichert"');
 		assert.ok(ctl.savedAt instanceof Date, 'savedAt muss nach echtem Erfolg gestempelt sein');
 		assert.equal(rueckmeldungen.length, 1, 'onCompareUpdate genau einmal mit der Server-Antwort');
