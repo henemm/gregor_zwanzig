@@ -169,7 +169,7 @@ Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN
 
 **Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor.** Als prüfbare Invariante:
 
-- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #1230).
+- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #2345, Etappe P7 — vormals #1230).
 - **Anlegen folgt dem Trip-Muster:** `/trips/new` = Progressive-Tab-Anlege-Seite aus geteilten Bausteinen (`TripNewEditor`, #622); der alte 5-Schritt-Wizard ist dort abgeschafft. `/compare/new` bekommt dieselbe Bauart; `CompareEditor.svelte` + Compare-Wizard sind Alt-Bestand und fallen ersatzlos. **Es gibt keine offene Designfrage dazu — nicht erneut vorlegen.**
 - **Compare-eigen dürfen NUR sein:** Orte-Tab (statt Etappen), transponierte Übersicht (Orte = Spalten), Compare-Mail-Template.
 - **Default-Fehler:** Eine neue Compare-Komponente, zu der ein Trip-Pendant existiert (oder umgekehrt), ist ein Verstoß — Ausnahme nur mit dokumentierter Begründung in der Spec. Anti-Pattern: #1170.
