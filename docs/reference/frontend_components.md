@@ -645,8 +645,10 @@ lokal im Editor-State und lösen genau EINEN `POST /api/trips` bzw.
 liefert 404).
 
 `/trips/new` hat seit Issue #2277 Scheibe S2a einen eigenen Reiter
-**„Wertebereiche"** zwischen „Wetter-Metriken" und „Briefing-Zeitplan"
-(Sperrkette Wetter-Metriken → Wertebereiche → Zeitplan). Gemountet wird darin
+**„Wertebereiche"**; seit S3 gleicht die Reiterleiste ab „Wetter-Metriken" der von
+`/compare/new` (… Wertebereiche → Alarme → Versand; IDs `alarme`/`versand`),
+Sperrkette Wertebereiche → Alarme → Versand, Anlegen erst nach Besuch von
+„Versand", Fortschritt `/4`. Gemountet wird darin
 derselbe geteilte `shared/corridor-editor/CorridorEditor.svelte`, den Trip-Hub
 und Ortsvergleich bereits nutzen — mit neuem Prop `createMode` (Default
 `false`), der den Selbst-Speicher-PUT abschaltet; Änderungen fließen stattdessen

@@ -700,9 +700,6 @@ frontend/
 │   │   │   │   │   ├── MapCanvas.svelte    # Leaflet-Karte mit OpenTopoMap-Tiles (Issue #495)
 │   │   │   │   │   └── ...
 │   │   │   │   └── index.ts       # Barrel (TripHeader re-exported in organisms/)
-│   │   │   ├── alert-rules-editor/  # Alert configuration
-│   │   │   │   ├── AlertRulesEditor.svelte
-│   │   │   │   └── components/
 │   │   │   ├── compare/           # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
 │   │   │   ├── shared/            # Geteilte Tab-Organismen route|vergleich (WeatherMetricsTab,
 │   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/, OutputLayoutEditor)
@@ -743,7 +740,7 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 |-------|----------|---------|----------|------|
 | **Atoms** | `components/atoms/` | Base UI primitives | Button, Label, Badge, Icon | #371 |
 | **Molecules** | `components/molecules/` | Combinations of atoms | FieldGroup, StatCard, Tabs | #372 |
-| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, AlertRulesEditor, ListTable, HomeHero* | #471 |
+| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, OutputLayoutEditor, ListTable, HomeHero* | #471 |
 
 **Import Rules:**
 - **Atoms** may import from `ui/` (shadcn + gregor primitives)
@@ -752,7 +749,7 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 - **Routes** should prefer importing from `organisms/` and `molecules/`, using `atoms/` only for rare custom layouts
 
 **Organism Barrel** (`components/organisms/index.ts`):
-Re-exportiert die Organisms (aktuell 19, u. a. `TripHeader`, `AlertRulesEditor`,
+Re-exportiert die Organisms (aktuell 19, u. a. `TripHeader`,
 `OutputLayoutEditor`, `WeatherMetricsTab`, `ListTable*`, `HomeHeroTrip/Compare`,
 `OutboxCard`, `AlertsCard`, `PresetRail`). Die Datei selbst ist die Wahrheit —
 Exporte hier nicht duplizieren.
