@@ -255,6 +255,7 @@
 		<Sidebar
 			userId={data.userId}
 			displayName={data.displayName}
+			isAdmin={data.isAdmin === true}
 			currentPath={page.url.pathname}
 			{darkMode}
 			ontoggleDark={toggleDark}
@@ -278,6 +279,7 @@
 			initials={kontoInitialen}
 			displayName={data.displayName}
 			userId={data.userId}
+			isAdmin={data.isAdmin === true}
 			{darkMode}
 			ontoggleDark={toggleDark}
 		/>

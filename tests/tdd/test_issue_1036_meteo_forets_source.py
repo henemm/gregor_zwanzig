@@ -31,6 +31,26 @@ from services.official_alerts.department_mapper import DEPARTMENT_CENTROIDS
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+@pytest.fixture
+def mitten_in_der_saison(monkeypatch):
+    """Systemuhr von `meteo_forets` auf 15. August festnageln.
+
+    Ohne das kippen `covers()`-Asserts ausserhalb Juni-September (1. Oktober
+    2026: CI rot, ohne Codeaenderung). Nur die Uhr dieses einen Moduls wird
+    ersetzt; die Saison-Logik selbst laeuft echt.
+    """
+    from datetime import datetime as _dt, timezone as _tz
+
+    import services.official_alerts.meteo_forets as mf
+
+    class _Aug15(_dt):
+        @classmethod
+        def now(cls, tz=None):
+            return _dt(2026, 8, 15, 12, 0, tzinfo=_tz.utc).astimezone(tz)
+
+    monkeypatch.setattr(mf, "datetime", _Aug15)
+
+
 # Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
 # COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown).
 # Autouse-Fixture fordert stattdessen die geteilte `dotenv_env`-Fixture aus
@@ -114,7 +134,7 @@ class TestIssue1036MeteoForetsSource:
         assert "Waldbrand-Gefahr — Stufe 4" in html
         assert G_DANGER in html
 
-    def test_ac2_saison_gate_pure_function_und_live_covers(self):
+    def test_ac2_saison_gate_pure_function_und_live_covers(self, mitten_in_der_saison):
         """AC-2: `_is_season(month)` wird mit ECHTEN Integer-Werten fuer alle
         12 Monate geprueft -- kein Mock der Systemuhr noetig, da eine reine
         Funktion mit explizitem Parameter getestet wird (Januar muss False
@@ -136,7 +156,7 @@ class TestIssue1036MeteoForetsSource:
             "einen franzoesischen Ort True liefern (reale Systemzeit)"
         )
 
-    def test_ac3_fail_soft_ohne_apikey(self):
+    def test_ac3_fail_soft_ohne_apikey(self, mitten_in_der_saison):
         """AC-3: fehlende/leere GZ_METEOFRANCE_APIKEY -> fetch() liefert [],
         kein Crash; ein voller ComparisonEngine-Lauf bleibt fehlerfrei."""
         from services.official_alerts.meteo_forets import MeteoForetsSource

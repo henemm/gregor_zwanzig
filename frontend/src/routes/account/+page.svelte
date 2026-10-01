@@ -11,6 +11,7 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { MetricPreset, UserTier } from '$lib/types';
+	import { TIER_LABELS } from '$lib/admin';
 	import { metricCountLabel, showDefaultBadge, isValidRename, applyRename, removePreset, isEmpty } from '$lib/utils/presetCardHelpers';
 	import { formatNextRun } from '$lib/utils/schedulerTime';
 	import { ABMELDE_MERKMAL, merkeAbmeldung, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
@@ -121,11 +122,6 @@
 
 	// Issue #1068 — Nutzerlevel-Badge (immer sichtbar). Der Wert kommt aus
 	// data.profile.tier (Response-Feld ist serverseitig immer gesetzt, Default "free").
-	const TIER_LABELS: Record<UserTier, string> = {
-		free: 'Free',
-		standard: 'Standard',
-		premium: 'Premium'
-	};
 	function tierLabel(tier: unknown): string {
 		return TIER_LABELS[(tier as UserTier)] ?? 'Free';
 	}

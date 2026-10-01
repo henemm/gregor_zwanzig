@@ -721,6 +721,7 @@ frontend/
 │       ├── trips/                 # Trip-Liste, Detail-Hub (?tab=), /trips/new (TripNewEditor)
 │       ├── compare/               # Vergleichs-Liste, Detail-Hub, /compare/new (CompareNewEditor)
 │       ├── locations/ · settings/ · subscriptions/ · archiv/ · gpx-upload/ · account/
+│       ├── admin/                 # Admin-Seite (#2155 S4): Nutzerliste, Tier, Konto sperren; Load antwortet 403 für Nicht-Admins
 │       ├── login/ · register/ · logout/ · magic-link/ · forgot-password/ · reset-password/ · verify-email/
 │       ├── _home/                 # Route-lokale Cockpit-Kacheln
 │       ├── _design/ · _design-system/  # Component showcases (dev-only)
