@@ -43,7 +43,7 @@ Erweitert den Radar-Nowcast (#656) um eine 5. Intensitätsstufe „Starker Hagel
 
 ### Konvektions-Indikator (Quelle)
 - **Primär: Open-Meteo `minutely_15=precipitation,weather_code`** (global, gleicher Endpunkt wie heute). Frame gilt als konvektiv, wenn `weather_code ∈ {95, 96, 99}` (WMO: 95 Gewitter, 96 Gewitter mit leichtem Hagel, 99 Gewitter mit starkem Hagel).
-- **BrightSky `plain`:** kein Konvektions-Feld → `is_convective` bleibt `False` (4-Stufen-Fallback, keine Falsch-Eskalation).
+- **BrightSky `plain`:** kein Konvektions-Feld im Provider selbst (`is_convective` bleibt dort `False`). Seit #2464 (2026-10-01) holt `_fetch_brightsky` wie INCA einen Open-Meteo-Konvektions-Sidecar (`best_match`=ICON-D2, Code 95/96/99 ⇒ `is_convective`, 96/99 zusätzlich `hail`) und mergt ihn in die Frames; kein Sidecar ohne BrightSky-Frames, Offline-Fixture bleibt netzfrei. Fällt der Sidecar aus (leer/Budget-Drossel/Fehler) ⇒ `convective_checked=False` ("Storm check not available."), Menge/Beginn bleiben erhalten. Spec: [fix_2464_brightsky_konvektions_sidecar.md](fix_2464_brightsky_konvektions_sidecar.md).
 - **GeoSphere INCA:** `pt`-Codes 0–4 enthalten keinen Gewitter-Typ → `is_convective` bleibt `False`.
 
 ### `RadarFrame` (`src/providers/brightsky.py`)
@@ -100,3 +100,4 @@ Testdatei: `tests/tdd/test_feature_660_convective_stage.py` (mock-frei).
 - 2026-06-07: Initial spec created (Issue #660)
 - 2026-06-08: Implementation complete; WMO-weather_code (95/96/99) integration in Open-Meteo `minutely_15`, `RadarFrame.is_convective` flag added, `intensity_to_text` escalation implemented, alert kennzeichnung (⚠️ Gewitter) aktiv
 - 2026-07-09: Known Limitation für GeoSphere-INCA (AT) geschlossen durch Issue #1161 (Open-Meteo-Sidecar für Konvektions-Flag im INCA-Pfad)
+- 2026-10-01: Known Limitation für BrightSky/RADOLAN (DE) geschlossen durch Issue #2464 (gleicher Sidecar im DE-Pfad, `convective_checked=False` bei Sidecar-Ausfall)

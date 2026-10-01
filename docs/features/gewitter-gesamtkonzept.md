@@ -710,7 +710,10 @@ Quellenkette je Gebiet (`radar_service.py:280-313`): RADOLAN/BrightSky für Deut
 Österreich, ARPAE ICON-2I für Italien **inklusive Korsika** (seit #1648 — der frühere Radar-DPC
 war ersatzlos zu streichen, er lieferte nur Vergangenheitsbilder), AROME-HD für Frankreich, ICON-D2 für die
 Alpen, `minutely_15` als globaler Rückfall. Ob es gewittert, kommt aus dem WMO-Code 95/96/99 je
-Einzelbild (`radar_service.py:151-153`).
+Einzelbild (`radar_service.py:151-153`). Auch der Deutschland-Zweig (BrightSky liefert nur Niederschlag) bezieht die
+Konvektion seit #2464 aus einem Open-Meteo-Sidecar (ICON-D2); fällt dieser aus, meldet der Nowcast
+„Storm check not available." statt „kein Gewitter". Der Radar-Cache führt `convective_checked` mit
+und liefert es bei Treffern für alle Regionen aus.
 
 🔴 **Diese Beobachtung fließt an keiner Stelle in die Gewitterstufe ein.**
 `thunder_level_from_signals()` hat gar keinen Parameter dafür (`metric_format.py:326-370`), und
