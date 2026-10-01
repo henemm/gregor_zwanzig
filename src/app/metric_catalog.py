@@ -782,6 +782,16 @@ _METRICS: list[MetricDefinition] = [
 # _SMS_SYMBOL_METRIC_IDS UND in trip_report.py's disabled-only-Schleife -- das
 # Auseinanderdriften war genau die Ursache des Fix-Loop-Bugs (Root-Cause:
 # aktive Metriken bekamen NIE eine MetricSpec, nur abgewaehlte).
+# Issue #2422 S6 (B2): EINE Quelle fuer "diese Groesse hat in SMS/Premium-SMS/
+# Telegram-Kurzform zwei Formen (Roh = Zahl, Einfach = GSM-7-Stufe)". Sie speist
+# den SMS-Builder (Einfachform nur hier), den SMS-Reiter im Editor
+# (`/api/metrics` Feld `sms_format_capable`) und das Test-Orakel. Alle anderen
+# Groessen haben in der SMS genau EINE Form (Gewitter 'TH:' ist bereits die
+# Stufe, 'WD:' der Sektor, 'SU' eine Tagessumme, Ampel-Groessen bleiben Zahl).
+SMS_FORMAT_MODE_METRIC_IDS: frozenset = frozenset({
+    "cloud_total", "cloud_low", "cloud_mid", "cloud_high", "cape",
+})
+
 SMS_NULLFORM_METRIC_IDS: tuple[str, ...] = (
     "humidity",
     "dewpoint",
@@ -808,6 +818,10 @@ _SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
     "snow_depth",
     "snowfall_limit",
     "fresh_snow",
+    # Issue #2422 S6 (B1, PO-Entscheid V1): die gefuehlte Temperatur traegt im
+    # Trip das Stundenwert-Kuerzel 'TF' (Klasse (b) Invers-Min, Tagesfenster).
+    # 'WC' bleibt ersatzlos entfallen (#1887 E6a).
+    "wind_chill",
     # Issue #1660 Scheibe B: 14 waehlbare Metriken, bisher ohne SMS-Token.
     # Alle 1:1 (kein Kuerzel-Mehrfach wie wind_chill) -> gehoeren in diese
     # Register-Ableitung, NICHT in SMS_MULTI_SYMBOLS_BY_METRIC (DEC-1).
@@ -896,14 +910,10 @@ SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
 # einer lesbaren Begründung.
 # #2417 AC-12: "temperature" entfaellt -- mit sms_code "T" stimmen Register
 # und Telegram-Kuerzel ueberein.
-COMPACT_LABEL_EXCEPTIONS: dict[str, str] = {
-    "wind_chill": (
-        "Die Telegram-Zelle zeigt einen Stundenwert, das Register "
-        "führt Tagesauswertungen ('FK'/'FD' Tiefst/Höchst der gefühlten "
-        "Temperatur). Fix #1887 E6 Scheibe A: das frühere Wintersport-"
-        "Kürzel 'WC' entfällt ersatzlos (verdoppelte 'FK')."
-    ),
-}
+# #2422 S6 (B1): ``wind_chill`` steht nicht mehr darin -- mit dem Trip-Kurzform-
+# Kuerzel 'TF' (SMS_SYMBOL_BY_METRIC) stimmen Register und Telegram-Spaltenkopf
+# ueberein. Die benannte Liste bleibt als (leere) Struktur bestehen.
+COMPACT_LABEL_EXCEPTIONS: dict[str, str] = {}
 
 
 def _kurzform_kuerzel(metric_id: str, sms_code: str) -> Optional[str]:

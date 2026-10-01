@@ -92,113 +92,15 @@ def register_validieren(register: "list[AusnahmeEintrag]") -> None:
                 )
 
 
-#: S1-Startbefuellung (TDD GREEN, /50). Deckt exakt die durch die zwei
-#: Golden-Trip-Varianten tatsaechlich ausgeloesten Befunde B1/B2/B3/B5 sowie
-#: die strukturelle Telegram-7er-Tabellenlimit-Ausnahme (``gust``) ab --
-#: siehe ``docs/artifacts/fix-2422-konfig-auslieferung-testluecken/
-#: red-handoff.md``.
+#: Register-Endzustand nach #2422 S6 (AC-14): NUR noch die strukturelle
+#: Design-Grenze ``gust`` (Telegram-7er-Tabellenlimit, #360, ``befristet=False``).
+#: Die vier S1-Produktabweichungen B1 (``wind_chill`` ohne Trip-Kuerzel), B2
+#: (Roh/Einfach in SMS/Premium-SMS/Kurzform), B3 (Telegram rich erbt die
+#: E-Mail-Wahl, #2429) und B5 (Geisterspalte ``WD``) sind im Produkt behoben --
+#: ihre Eintraege sind entfernt, der Unbenutzt-Waechter
+#: (``test_ac6_ac7_echtes_register_hat_keine_unbenutzten_eintraege``) erzwingt
+#: das mechanisch.
 AUSNAHMEN: "list[AusnahmeEintrag]" = [
-    # B1: wind_chill ohne SMS-Kuerzel faellt in Kurzform/SMS/Premium-SMS
-    # still weg (KHW 403). Variantenwahl (eigenes Kuerzel vs. Editor-Hinweis)
-    # ist explizit NICHT Teil von S1 -- eigene Fix-Scheibe S6+.
-    AusnahmeEintrag(
-        metrik="wind_chill", kanal="telegram_kurzform", dimension="erscheint",
-        befund="B1",
-        grund=(
-            "wind_chill hat kein Kuerzel in SMS_SYMBOL_BY_METRIC/"
-            "SMS_MULTI_SYMBOLS_BY_METRIC (#1887 E6) und faellt deshalb im "
-            "Kurzform-Text still weg, obwohl es im SMS-Kanal-Layout aktiv "
-            "ist (KHW 403, #2422). Fix-Scheibe S6+ (Variantenwahl V1/V2 "
-            "durch PO)."
-        ),
-        befristet=True,
-    ),
-    AusnahmeEintrag(
-        metrik="wind_chill", kanal="sms", dimension="erscheint",
-        befund="B1",
-        grund=(
-            "wind_chill hat kein Kuerzel in SMS_SYMBOL_BY_METRIC/"
-            "SMS_MULTI_SYMBOLS_BY_METRIC (#1887 E6) und faellt deshalb im "
-            "SMS-Text still weg, obwohl es im SMS-Kanal-Layout aktiv ist "
-            "(KHW 403, #2422). Fix-Scheibe S6+ (Variantenwahl V1/V2 durch "
-            "PO)."
-        ),
-        befristet=True,
-    ),
-    AusnahmeEintrag(
-        metrik="wind_chill", kanal="premium_sms", dimension="erscheint",
-        befund="B1",
-        grund=(
-            "wind_chill hat kein Kuerzel in SMS_SYMBOL_BY_METRIC/"
-            "SMS_MULTI_SYMBOLS_BY_METRIC (#1887 E6) und faellt deshalb im "
-            "Premium-SMS-Text still weg, obwohl es im SMS-Kanal-Layout aktiv "
-            "ist (KHW 403, #2422). Fix-Scheibe S6+ (Variantenwahl V1/V2 "
-            "durch PO)."
-        ),
-        befristet=True,
-    ),
-    # B2 (kanalweit, metrik="*"): Kurzform/SMS/Premium-SMS ignorieren
-    # Roh/Einfach, weil MetricSpec kein format_mode kennt. Eigene
-    # Fix-Scheibe S6+.
-    AusnahmeEintrag(
-        metrik="*", kanal="sms", dimension="roh_einfach",
-        befund="B2",
-        grund=(
-            "SMS-Zellbau kennt kein format_mode auf MetricSpec-Ebene -- "
-            "Roh/Einfach wird kanalweit ignoriert (z.B. cloud_total, "
-            "sunshine, #2422). Fix in eigener Scheibe S6+."
-        ),
-        befristet=True,
-    ),
-    AusnahmeEintrag(
-        metrik="*", kanal="telegram_kurzform", dimension="roh_einfach",
-        befund="B2",
-        grund=(
-            "Telegram-Kurzform-Zellbau kennt kein format_mode auf "
-            "MetricSpec-Ebene -- Roh/Einfach wird kanalweit ignoriert (z.B. "
-            "cloud_total, sunshine, #2422). Fix in eigener Scheibe S6+."
-        ),
-        befristet=True,
-    ),
-    AusnahmeEintrag(
-        metrik="*", kanal="premium_sms", dimension="roh_einfach",
-        befund="B2",
-        grund=(
-            "Premium-SMS-Zellbau kennt kein format_mode auf MetricSpec-"
-            "Ebene -- Roh/Einfach wird kanalweit ignoriert (z.B. "
-            "cloud_total, sunshine, #2422). Fix in eigener Scheibe S6+."
-        ),
-        befristet=True,
-    ),
-    # B3: Telegram rich erbt Roh/Einfach aus dem E-Mail-Layout statt dem
-    # eigenen (trip_report.py build_friendly_keys nach Email-Kollabierung).
-    # Nutzersichtbar + eigenstaendig -> eigenes GitHub-Issue #2429.
-    AusnahmeEintrag(
-        metrik="cloud_total", kanal="telegram_rich", dimension="roh_einfach",
-        befund="B3",
-        grund=(
-            "Telegram rich erbt seine Roh/Einfach-Entscheidung aus der "
-            "geteilten _friendly_keys-Instanz des E-Mail-Formatters "
-            "(trip_report.py:142 build_friendly_keys(dc) nach Email-"
-            "Kollabierung) statt aus dem eigenen Telegram-Layout. Eigenes "
-            "Issue #2429."
-        ),
-        befristet=True,
-    ),
-    # B5: wind_direction (Skalenmodus) + wind erzeugt eine Geisterspalte
-    # "WD" mit Platzhalter in Telegram rich. Eigene Fix-Scheibe S6+.
-    AusnahmeEintrag(
-        metrik="wind_direction", kanal="telegram_rich", dimension="erscheint",
-        befund="B5",
-        grund=(
-            "wind_direction im Skalenmodus zusammen mit wind erzeugt in "
-            "Telegram rich eine eigene Geisterspalte 'WD', deren Zelle nur "
-            "Platzhalter ('-') traegt (should_merge_wind_dir haengt den "
-            "Wert stattdessen an die wind-Zelle, #2422). Fix in eigener "
-            "Scheibe S6+."
-        ),
-        befristet=True,
-    ),
     # Strukturell (kein Register-verfallendes Produktdefizit, sondern eine
     # bewusste Design-Grenze): Telegram-Tabellen sind auf 8 Gesamtspalten
     # begrenzt (Zeit + 7 Metriken, CHANNEL_LIMITS["telegram"]["max_table_cols"]
@@ -306,7 +208,31 @@ def alle_waehlbaren_metrik_ids() -> tuple[str, ...]:
     return _SELECTABLE_IDS
 
 
-def hat_roh_einfach_dimension(metric_id: str) -> bool:
+_SMS_ARTIGE_KANAELE = ("sms", "premium_sms", "telegram_kurzform")
+
+
+def _sms_format_menge() -> frozenset:
+    """#2422 S6 (AC-8): die Groessen, die in SMS/Premium-SMS/Kurzform zwei
+    Formen (Roh/Einfach) haben -- gelesen zur AUFRUFZEIT aus der PRODUKT-
+    Konstante ``app.metric_catalog.SMS_FORMAT_MODE_METRIC_IDS`` (dieselbe Quelle
+    wie SMS-Builder und Editor, ``/api/metrics`` -> ``sms_format_capable``).
+    KEINE Oracle-eigene Liste. Fehlt die Konstante (RED-Zustand), ist die Menge
+    leer -- die klare Fehlermeldung traegt der dedizierte AC-8-Test, damit nicht
+    ~15 unbeteiligte S1-Waechter aus dem falschen Grund rot werden."""
+    import app.metric_catalog as katalog
+
+    return frozenset(getattr(katalog, "SMS_FORMAT_MODE_METRIC_IDS", ()))
+
+
+def hat_roh_einfach_dimension(metric_id: str, kanal: Optional[str] = None) -> bool:
+    """Hat ``metric_id`` im Kanal ``kanal`` eine Roh/Einfach-Dimension?
+
+    E-Mail/Telegram rich: jede Groesse mit ``has_friendly_format``. In den
+    SMS-artigen Kanaelen (``sms``/``premium_sms``/``telegram_kurzform``) nur
+    Groessen der Produktkonstante ``SMS_FORMAT_MODE_METRIC_IDS`` (#2422 S6).
+    Ohne ``kanal`` (Altaufrufer, AC-11): die Katalog-Aussage."""
+    if kanal in _SMS_ARTIGE_KANAELE:
+        return metric_id in _sms_format_menge()
     return _HAS_FRIENDLY.get(metric_id, False)
 
 
@@ -419,6 +345,12 @@ def _zell_modus(wert: str) -> Optional[str]:
     if wert in _PLATZHALTER:
         return None
     return "raw" if _ist_numerisch(wert) else "friendly"
+
+
+def _hat_richtungs_suffix(wert: str) -> bool:
+    """Endet die Zelle auf ein Himmelsrichtungs-Kuerzel ("20 W")?"""
+    teile = wert.split()
+    return len(teile) == 2 and teile[1] in _HIMMELSRICHTUNGEN
 
 
 def _tabellen_tokens_mit_richtungs_merge(zeile: str, spaltenzahl: int) -> list[str]:
@@ -541,15 +473,25 @@ def parse_telegram_rich(bodies: list[str]) -> tuple[list[str], dict[str, Optiona
                         continue  # Geisterspalte: zaehlt nicht als "erscheint"
                     ids.append(mid)
                     modi[mid] = modus
+                    # #2422 S6 (B5): ist die Windrichtung im Skalenmodus in die
+                    # Windzelle verschmolzen ("20 W"), ERSCHEINT sie -- als
+                    # Kompass-Sektor, also "friendly" -- direkt an der Windzelle.
+                    if mid == "wind" and _hat_richtungs_suffix(wert):
+                        ids.append("wind_direction")
+                        modi["wind_direction"] = "friendly"
                 return ids, modi
     raise AssertionError("Kein Telegram-Tabellenkopf ('Zt ...') in den Bubbles gefunden")
 
 
 #: Wert-Grammatik der SMS-/Kurzform-Tokens (Vorbild test_sms_user_metric_order.py).
 _RANGE_HALF = r"-?\d+|-|\?"
+#: #2422 S6: Einfach-Stufenwerte der SMS (Doppelpunkt gehoert ins Kuerzel, #1824 B:
+#: ``CT:SCT@4``) und optionales Minus vor Zahlen (``TF-3@6``).
+_STUFE = r"(?:CLR|FEW|SCT|BKN|OVC|[LMH]|-)"
 _VALUE_GRAMMAR = (
     rf"(?:(?:{_RANGE_HALF})/(?:{_RANGE_HALF})"
-    r"|(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)"
+    rf"|:{_STUFE}(?:@\d+(?:\({_STUFE}@\d+\))?)?"
+    r"|(?:-?\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:-?\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)"
 )
 
 
@@ -581,8 +523,10 @@ def parse_sms_artig(text: str) -> tuple[list[str], dict[str, Optional[str]]]:
         if mid in ids:
             continue  # Mehrfachsymbole (TH:/TH+:) -> erste Fundstelle zaehlt
         ids.append(mid)
-        if wert in ("-", "?"):
+        if wert in ("-", "?") or re.fullmatch(r":-(?:@\d+)?", wert):
             modi[mid] = None
+        elif wert.startswith(":"):
+            modi[mid] = "friendly"  # #2422 S6: Einfach-Stufe (CT:SCT@4)
         elif re.fullmatch(r"[LMH]", wert):
             modi[mid] = "friendly"
         else:
@@ -707,6 +651,23 @@ def _register_deckt(
     return False
 
 
+def _verschmolzene_windrichtung_an_die_windzelle(
+    erwartet_ids: "list[str]", erwartet_friendly: "dict[str, bool]",
+) -> "list[str]":
+    """#2422 S6 (B5): sind ``wind`` UND ``wind_direction`` (Skalenmodus =
+    ``friendly``) aktiv, steht die Richtung im Text in der Windzelle ("20 W")
+    -- ihre ERWARTETE Position ist die der Windzelle, nicht die eigene
+    Layout-Position. Reine Umordnung der Erwartung; ``erscheint`` bleibt
+    unberuehrt."""
+    if "wind" not in erwartet_ids or "wind_direction" not in erwartet_ids:
+        return erwartet_ids
+    if not erwartet_friendly.get("wind_direction", True):
+        return erwartet_ids
+    umgeordnet = [m for m in erwartet_ids if m != "wind_direction"]
+    umgeordnet.insert(umgeordnet.index("wind") + 1, "wind_direction")
+    return umgeordnet
+
+
 def abweichungen_fuer_golden(
     golden: dict, mitschrift, register: "list[AusnahmeEintrag]",
     *, report_type: str = "evening",
@@ -741,12 +702,16 @@ def abweichungen_fuer_golden(
             if e_da != i_da:
                 _pruefen((mid, kanal, "erscheint"))
 
+        if kanal == "telegram_rich":
+            erwartet_ids = _verschmolzene_windrichtung_an_die_windzelle(
+                erwartet_ids, erwartet_friendly,
+            )
         gemeinsame_erw = [m for m in erwartet_ids if m in ist_set]
         gemeinsame_ist = [m for m in ist_ids if m in erwartet_set]
         for mid in gemeinsame_erw:
             if gemeinsame_erw.index(mid) != gemeinsame_ist.index(mid):
                 _pruefen((mid, kanal, "reihenfolge"))
-            if not hat_roh_einfach_dimension(mid):
+            if not hat_roh_einfach_dimension(mid, kanal):
                 continue
             ist_modus = ist_modi.get(mid)
             if ist_modus is None:

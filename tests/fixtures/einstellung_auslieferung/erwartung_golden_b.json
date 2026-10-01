@@ -65,6 +65,10 @@
         "friendly": true
       },
       {
+        "metric_id": "humidity",
+        "friendly": false
+      },
+      {
         "metric_id": "gust",
         "friendly": false
       }

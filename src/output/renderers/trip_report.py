@@ -50,6 +50,7 @@ from output.renderers.compare_outlook_metric_ids import resolve_trip_outlook_met
 from output.renderers.email import render_email
 from output.renderers.email.helpers import (
     NO_HOURLY_COLUMN_METRIC_IDS,
+    _effective_format_mode,
     build_friendly_keys,
 )
 from output.tokens.dto import MetricSpec, TokenLine
@@ -311,7 +312,9 @@ class TripReportFormatter:
             report_type=report_type,
             tz=self._tz,
             trip_name=trip_name,
-            friendly_keys=self._friendly_keys,
+            # #2429 (B3): Telegram zeigt SEINE Roh/Einfach-Wahl, nicht die der
+            # (kollabierten) E-Mail.
+            friendly_keys=build_friendly_keys(_dc_telegram),
             stability_result=stability_result,
             multi_day_trend=effective_trend,
             outlook_state=outlook_state,
@@ -333,7 +336,8 @@ class TripReportFormatter:
         )
 
         from output.renderers.sms_trip import (
-            SMSTripFormatter, SMS_MULTI_SYMBOLS_BY_METRIC, SMS_NULLFORM_METRIC_IDS,
+            SMSTripFormatter, SMS_FORMAT_MODE_METRIC_IDS,
+            SMS_MULTI_SYMBOLS_BY_METRIC, SMS_NULLFORM_METRIC_IDS,
             SMS_SYMBOL_BY_METRIC, build_extended_metric_specs,
         )
         # Issue #1575 Scheibe 3: die MENGE der SMS-Metriken kommt aus der
@@ -410,8 +414,16 @@ class TripReportFormatter:
         # bekamen aktive der 14 Metriken KEINE Spec -> builder.py's
         # `if spec is None and not samples: continue` liess sie bei fehlenden
         # Daten komplett entfallen statt die Null-Form (§9) zu rendern.
+        # Issue #2422 S6 (B2): Roh/Einfach je SMS-Metrik -- aufgeloest ueber
+        # dieselbe Funktion wie die E-Mail (_effective_format_mode), aber aus
+        # der SMS-Kaskade; nur Groessen mit SMS-Einfachform (Katalog-Konstante).
+        _sms_format_by_metric = {
+            m.metric_id: _effective_format_mode(m)
+            for m in _sms_metrics_ordered
+            if m.metric_id in SMS_FORMAT_MODE_METRIC_IDS
+        }
         _disabled_sms_specs += build_extended_metric_specs(
-            active_metric_ids, _sms_position_by_metric,
+            active_metric_ids, _sms_position_by_metric, _sms_format_by_metric,
         )
         # Issue #1410 §6: die Temperatur-Token erscheinen NUR bei aktivierter
         # Metrik -- dasselbe Pruefmuster wie oben fuer SD/SL. Anders als dort

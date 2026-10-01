@@ -1725,6 +1725,10 @@
 							offColumns={activeChannelSections.off}
 							onRestore={onRestoreMetric}
 							kuerzelById={metricSymbols}
+							modeCapable={(id) =>
+								channel === 'sms'
+									? !!metricById[id]?.sms_format_capable
+									: indicatorCapable(id)}
 						/>
 					</Card>
 				{/snippet}

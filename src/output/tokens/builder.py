@@ -12,7 +12,7 @@ from output.tokens.dto import (
 )
 from output.tokens.metrics import (
     render_temperature, render_threshold_peak_value, render_int,
-    render_inverse_min_value,
+    render_inverse_min_value, STUFEN_FN,
 )
 
 FORECAST_TH = "TH:"
@@ -60,6 +60,9 @@ PRIORITY = {
     # Last-Resort-Pfad greift. Der Eintrag ist Pflicht, weil build_token_line()
     # `PRIORITY[sym]` ungeschuetzt liest.
     "FD": 4, "FL": 4, "FN": 4,
+    # Issue #2422 S6 (B1): 'TF' (Stundenwert der gefuehlten Temperatur) rangiert
+    # wie das gefuehlte Trio und faellt in render.py::_truncate() als Erstes.
+    "TF": 4,
     "D": 6, "N": 6, "L": 6, "R": 7,
     "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, VIGI_TH: 10, FORECAST_TH: 10,
     # Issue #1660 Scheibe B: 14 waehlbare Metriken ohne bisherigen SMS-Token,
@@ -97,6 +100,8 @@ POSITIONAL = [
     # N<->FN, K<->FK, D<->FD), dann die uebrigen Vorhersage-Token unveraendert.
     ("N", "forecast"), ("L", "forecast"), ("D", "forecast"),
     ("FN", "forecast"), ("FL", "forecast"), ("FD", "forecast"),
+    # Issue #2422 S6 (B1): Stundenwert der gefuehlten Temperatur (Klasse (b)).
+    ("TF", "forecast"),
     ("R", "forecast"),
     ("PR", "forecast"), ("W", "forecast"), ("G", "forecast"),
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
@@ -199,12 +204,17 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
                has_gap: bool = False, value_suffix: str = "") -> Optional[Token]:
     if not _visible(spec, rt):
         return None
-    if spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
+    stufe_fn = (STUFEN_FN.get(symbol)
+                if spec and _spec_uses_friendly_token(spec) else None)
+    if stufe_fn is None and spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
         value = f"\x00{spec.friendly_label}"
     else:
         thr = spec.threshold if (spec and spec.threshold is not None) \
             else DEFAULTS.get(symbol)
-        value = render_threshold_peak_value(symbol, samples, thr, is_level=is_level)
+        # Issue #2422 S6 (B2): Einfach = GSM-7-Stufe (``CT:SCT@4``) statt des
+        # Emoji-Labels -- nur fuer Groessen mit SMS-Einfachform (STUFEN_FN).
+        value = render_threshold_peak_value(
+            symbol, samples, thr, is_level=is_level, stufe_fn=stufe_fn)
         # Issue #1328 (verschaerft 2026-07-20, PO-Entscheidung): jede
         # Entwarnung "-" wird bei einer Datenluecke im Fenster zu "?"
         # ("unbekannt"), unabhaengig davon, ob unterschwellige Stichproben
@@ -454,12 +464,20 @@ def build_token_line(
             tokens.append(tok)
 
     # Issue #1660 Scheibe B, Klasse (b) Invers-Min — VS/NL (Tages-Tiefstwert).
+    # Issue #2422 S6 (B1): 'TF' -- Tiefstwert der gefuehlten Temperatur im
+    # Tagesfenster mit Uhrzeit (Eltern-Metrik wind_chill), neben den
+    # Gehzeit-Tagesauswertungen FL/FD/FN.
     for sym, samples, unit_factor, decimals in (
         ("VS", today.visibility_hourly, 0.001, 1),
         ("FZ", today.freezing_level_hourly, 1.0, 0),
+        ("TF", today.wind_chill_hourly, 1.0, 0),
     ):
         spec = by_sym.get(sym)
         if spec is None and not samples:
+            continue
+        # 'TF' nie ohne MetricSpec (needs_spec-Muster der gefuehlten Token): der
+        # Direktaufruf ohne Trip-Kontext darf es nicht aus Rohdaten erzeugen.
+        if sym == "TF" and spec is None:
             continue
         tok = _mk_inverse_min_metric(sym, samples, spec, report_type,
                                       has_gap=today.has_data_gap,

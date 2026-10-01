@@ -63,7 +63,13 @@ def _voller_datenpunkt(day: int, hour: int) -> ForecastDataPoint:
     """
     return ForecastDataPoint(
         ts=_local_to_utc(day, hour),
-        t2m_c=15.0, wind_chill_c=13.0,
+        # #2422 S6 (AC-1/AC-3): gefuehlte Temperatur -3 Grad um 6 Uhr (INNERHALB
+        # des Tagesfensters 04-19, AUSSERHALB des Gehzeit-Fensters 08-12), sonst
+        # 13 -- damit ``TF`` (Tagesfenster, Tiefst mit Uhrzeit) und ``FL``
+        # (Gehzeit-Tiefst) verschiedene Werte tragen und das Minus der Token-
+        # Grammatik (``TF-3@6``) echt vorkommt. CAPE 900 J/kg (Band orange,
+        # >= 300, AC-6 Vakuum-Schutz).
+        t2m_c=15.0, wind_chill_c=(-3.0 if hour == 6 else 13.0), cape_jkg=900.0,
         wind10m_kmh=20.0, gust_kmh=45.0,
         precip_1h_mm=2.0, pop_pct=60,
         cloud_total_pct=70, cloud_low_pct=40, cloud_mid_pct=30, cloud_high_pct=20,
@@ -195,12 +201,22 @@ def render_golden(
     Gibt (Mitschrift, geladener Trip) zurueck. Jeder Aufruf nutzt ein
     FRISCHES Nutzerprofil.
     """
+    return render_trip_dict(monkeypatch, golden_dict(name), report_type=report_type,
+                            name=name)
+
+
+def render_trip_dict(
+    monkeypatch, data: dict, *, report_type: str = "evening", name: str = "trip-dict",
+) -> tuple[Kanalmitschrift, object]:
+    """Wie ``render_golden``, aber fuer ein (in-Test veraendertes) Trip-JSON-Dict
+    (#2422 S6: Roh/Einfach-Varianten, Layout-Abwandlungen). Loader, Kaskade und
+    Formatter laufen echt; einzige Naht ist der Transport-Aufzeichner."""
     for k, v in TRANSPORT_ENV.items():
         monkeypatch.setenv(k, v)
     mitschrift = aufzeichner_installieren(monkeypatch)
 
     uid = frisches_profil()
-    trip = golden_trip(name)
+    trip = load_trip(data, user_id="default")
     assert trip is not None, f"Golden {name!r} liess sich nicht laden"
 
     rc = trip.report_config

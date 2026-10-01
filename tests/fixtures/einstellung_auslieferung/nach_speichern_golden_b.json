@@ -825,14 +825,15 @@
         },
         {
           "metric_id": "humidity",
-          "enabled": false,
-          "order": 0,
+          "enabled": true,
+          "order": 7,
           "use_friendly_format": false,
           "horizons": {
             "today": true,
             "tomorrow": true,
             "day_after": true
-          }
+          },
+          "bucket": "primary"
         },
         {
           "metric_id": "dewpoint",
@@ -860,7 +861,7 @@
         {
           "metric_id": "gust",
           "enabled": true,
-          "order": 7,
+          "order": 8,
           "use_friendly_format": false,
           "horizons": {
             "today": true,

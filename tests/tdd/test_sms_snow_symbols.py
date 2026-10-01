@@ -670,10 +670,12 @@ def test_ac1_wind_chill_reports_three_symbols_without_wc():
         f"AC-1: die gefuehlten Tages-Kuerzel haengen falsch: {ist} statt "
         f"{erwartet}"
     )
-    assert "wind_chill" not in by_id, (
-        "AC-4: 'wind_chill' fuehrt weiterhin einen Eintrag in "
-        f"/api/sms-symbols, obwohl 'WC' ersatzlos entfallen ist: "
-        f"{by_id.get('wind_chill')!r}"
+    # #2422 S6 (B1, PO-Entscheid V1): 'WC' bleibt entfallen, aber ``wind_chill``
+    # traegt das Stundenwert-Kuerzel 'TF' (Trip-Kurzform) und steht deshalb
+    # WIEDER in /api/sms-symbols -- mit genau diesem einen Kuerzel.
+    assert by_id.get("wind_chill") == ["TF"], (
+        "AC-4 (S6): 'wind_chill' muss in /api/sms-symbols mit ['TF'] stehen "
+        f"('WC' bleibt entfallen): {by_id.get('wind_chill')!r}"
     )
 
     night_entries = [m for m in metrics if m["metric_id"] == "wind_chill_night"]
@@ -773,10 +775,13 @@ def test_ac6_endpoint_reports_eleven_metrics_total():
     # fix_1887_e6a_sms_kuerzel_register.md): 29 -> 28. 'WC' entfaellt
     # ERSATZLOS (verdoppelte nachweislich 'FK') -- "wind_chill" fuehrt seither
     # wie "temperature" kein eigenes Kuerzel mehr: 29 - 1 = 28.
-    assert len(metrics) == 28, (
-        f"AC-6: erwarte 28 Metrik-Eintraege (8 Register + 14 neue + "
-        f"6 Kuerzel-Traeger der Temperatur-Familie, thunder nur einmal "
-        f"gezaehlt), gefunden {len(metrics)}: {metrics!r}"
+    # #2422 S6 (B1, PO-Entscheid V1): 28 -> 29. "wind_chill" fuehrt wieder ein
+    # Kuerzel ('TF', Stundenwert der gefuehlten Temperatur) und steht damit
+    # WIEDER im Endpoint (AC-4, siehe test_ac1_wind_chill_...): 28 + 1 = 29.
+    assert len(metrics) == 29, (
+        f"AC-6: erwarte 29 Metrik-Eintraege (8 Register + 14 neue + "
+        f"7 Kuerzel-Traeger der Temperatur-Familie inkl. wind_chill/TF, "
+        f"thunder nur einmal gezaehlt), gefunden {len(metrics)}: {metrics!r}"
     )
     by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}
     assert by_metric.get("temperature_day_low") == ["L"], (

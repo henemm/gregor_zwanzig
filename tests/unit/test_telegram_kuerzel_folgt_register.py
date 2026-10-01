@@ -287,36 +287,27 @@ def test_temperatur_und_gefuehlte_behalten_das_stundenkuerzel():
     )
 
 
-def test_ausnahmeliste_nennt_nur_noch_die_gefuehlte_temperatur():
-    """AC-3 Gegenprobe / AC-2: die Ausnahme ``wind_chill`` steht NAMENTLICH und
-    mit Begruendung in einer Liste im Katalog — nicht als stiller Sonderfall im
-    Renderer. Ohne diese Liste ist "compact_label darf nicht wegdriften"
-    (Spec Abschnitt 2) nicht pruefbar.
+def test_ausnahmeliste_ist_leer_seit_tf_im_trip_register_steht():
+    """AC-3 Gegenprobe / AC-2, umgeschrieben mit #2422 S6 (B1, PO-Entscheid V1):
+    die Ausnahmeliste im Katalog EXISTIERT weiter (benannt, nicht als stiller
+    Sonderfall im Renderer), fuehrt aber KEINE Groesse mehr. ``wind_chill`` steht
+    nicht mehr darin: mit dem Trip-Kurzform-Kuerzel ``TF`` (SMS_SYMBOL_BY_METRIC)
+    stimmen Register und Telegram-Spaltenkopf (``TF``) ueberein -- eine Ausnahme
+    ohne Abweichung waere ein toter Eintrag (dieselbe Regel wie #2417 AC-12 fuer
+    ``temperature``).
 
-    #2417 AC-12: ``temperature`` steht NICHT mehr darin — mit
-    ``sms_code="T"`` stimmen Register und Telegram ohnehin ueberein; eine
-    Ausnahme ohne Abweichung waere ein toter Eintrag."""
+    Ohne die Liste ist "compact_label darf nicht wegdriften" (Spec Abschnitt 2)
+    nicht pruefbar -- sie bleibt als (leere) Struktur im Katalog."""
     ausnahmen = _ausnahmeliste()
     assert ausnahmen is not None, (
         "AC-2/AC-3 FAIL: `app.metric_catalog` fuehrt keine benannte "
-        f"Ausnahmeliste (gesucht: {', '.join(_AUSNAHMELISTE_NAMEN)}). Solange "
-        "es sie nicht gibt, ist jede Abweichung zwischen Telegram- und "
-        "SMS-Kuerzel ununterscheidbar von einem Fluechtigkeitsfehler — genau "
-        "so ist der heutige Zustand entstanden."
+        f"Ausnahmeliste (gesucht: {', '.join(_AUSNAHMELISTE_NAMEN)})."
     )
-    assert "temperature" not in ausnahmen, (
-        "#2417 AC-12 FAIL: 'temperature' steht weiter in der Ausnahmeliste, "
-        "obwohl sie mit sms_code='T' keine Abweichung mehr braucht "
-        f"(enthalten: {sorted(ausnahmen)})."
-    )
-    for metric_id in ("wind_chill",):
-        assert metric_id in ausnahmen, (
-            f"AC-3 FAIL: '{metric_id}' fehlt in der Ausnahmeliste "
-            f"(enthalten: {sorted(ausnahmen)})."
-        )
-        assert len(str(ausnahmen[metric_id]).strip()) >= _MIN_BEGRUENDUNG, (
-            f"AC-3 FAIL: Ausnahme '{metric_id}' ohne Begruendung: "
-            f"{ausnahmen[metric_id]!r}"
+    for metric_id in ("temperature", "wind_chill"):
+        assert metric_id not in ausnahmen, (
+            f"#2422 S6 FAIL: '{metric_id}' steht weiter in der Ausnahmeliste, "
+            f"obwohl Register und Telegram-Kopf uebereinstimmen (toter Eintrag; "
+            f"enthalten: {sorted(ausnahmen)})."
         )
 
 

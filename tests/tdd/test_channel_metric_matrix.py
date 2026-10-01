@@ -185,7 +185,12 @@ def _partner_of(metric_id: str) -> str:
 # ``temperature`` kein eigenes Kurzform-Kuerzel mehr; 'FK'/'FD' haengen an
 # ``wind_chill_day_low``/``_high``, die als eigene Parametrisierungen
 # geprueft werden.
-_SMS_WITHOUT_OWN_SYMBOL = {"temperature", "wind_chill"}
+# #2422 S6 (B1, PO-Entscheid V1): ``wind_chill`` traegt seit S6 selbst ein Trip-
+# Kurzform-Kuerzel ('TF', Stundenwert der gefuehlten Temperatur) und gehoert damit
+# ZURUECK in diese Matrix (Auswahl/Abwahl/Reihenfolge) -- nur ``temperature``
+# bleibt ohne eigenes Kuerzel. Der Test unten sagt es selbst: "dann gehoert es
+# zurueck in diese Matrix statt in die Ausnahme".
+_SMS_WITHOUT_OWN_SYMBOL = {"temperature"}
 
 # Die zwei Groessen, deren Kuerzel bei gemeinsamer Auswahl zu EINEM
 # Bereichs-Token verschmelzen (#1824: 'K3 D20' -> 'D3/20'). Sie duerfen
@@ -341,7 +346,12 @@ def _representative_symbol(metric_id: str) -> str:
         return _RANGE_REPRESENTATIVE[metric_id]
     if metric_id in SMS_MULTI_SYMBOLS_BY_METRIC:
         return SMS_MULTI_SYMBOLS_BY_METRIC[metric_id][0]
-    return SMS_SYMBOL_BY_METRIC[metric_id]
+    symbol = SMS_SYMBOL_BY_METRIC.get(metric_id)
+    assert symbol is not None, (
+        f"{metric_id!r} fuehrt kein Kurzform-Kuerzel im Register (#2422 S6: "
+        f"wind_chill braucht 'TF' in SMS_SYMBOL_BY_METRIC)."
+    )
+    return symbol
 
 
 # sms_format.md §5: der Threshold+Peak-Block traegt '(' ')' und '%'
@@ -357,9 +367,15 @@ def _representative_symbol(metric_id: str) -> str:
 # Issue #1824 (A): zusaetzlich die Bereichsform ('D3/20', 'D-12/-4', 'D-/-',
 # 'D?/?') -- zwei Haelften, durch '/' getrennt.
 _RANGE_HALF = r"-?\d+|-|\?"
+# #2422 S6: zwei Erweiterungen der Wert-Grammatik -- (1) Einfach-Stufen mit
+# Doppelpunkt im Kuerzel (``CT:SCT@4``, ``CP:M@14``; Konvention #1824 B) -- die
+# Wolken-Groessen sind im Katalog-Default Einfach und erscheinen seit B2 als Stufe;
+# (2) optionales Minus vor Zahlen (``TF-3@6``, Invers-Min-Token mit negativem Wert).
+_STUFE = r"(?:CLR|FEW|SCT|BKN|OVC|[LMH]|-)"
 _GRAMMAR_SUFFIX = re.compile(
     rf"(?:(?:{_RANGE_HALF})/(?:{_RANGE_HALF})"
-    r"|(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
+    rf"|:{_STUFE}(?:@\d+(?:\({_STUFE}@\d+\))?)?"
+    r"|(?:-?\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:-?\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
 )
 
 
@@ -987,7 +1003,13 @@ def test_kaskade_ac6_wind_chill_contradiction_baseline_stays_green():
     # ())` haelt die Schleife wirkungslos statt mit KeyError abzustuerzen --
     # sie hat nichts mehr zu pruefen, weil die Groesse kein Kuerzel mehr
     # traegt, das trotz Abwahl auftauchen koennte.
-    for symbol in SMS_MULTI_SYMBOLS_BY_METRIC.get("wind_chill", ()):
+    # #2422 S6 (B1): ``wind_chill`` traegt jetzt 'TF' (SMS_SYMBOL_BY_METRIC) -- die
+    # Schleife hat wieder etwas zu pruefen: trotz globaler AN-Wahl darf 'TF' im SMS-
+    # Text NICHT stehen, wenn der SMS-Kanal die Groesse abgewaehlt hat.
+    wc_symbole = tuple(SMS_MULTI_SYMBOLS_BY_METRIC.get("wind_chill", ())) + tuple(
+        s for s in (SMS_SYMBOL_BY_METRIC.get("wind_chill"),) if s
+    )
+    for symbol in wc_symbole:
         assert _first_index_starting_with(sms, symbol) is None, (
             f"AC-6: wind_chill-Symbol {symbol!r} erscheint trotz enabled:false im SMS-Kanal-Layout: {sms!r}"
         )
@@ -4704,7 +4726,11 @@ def test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge(metric_id):
     """AC-S7-7: die Telegram-Kurzuebersicht-Bubble folgt der im
     Telegram-Kanal eingestellten Reihenfolge -- paarweise ueber alle
     waehlbaren Groessen."""
-    partner = "temperature" if metric_id == "wind" else "wind"
+    # #2422 S6 (B5): ``wind_direction`` neben ``wind`` ist in die Windzeile
+    # zusammengefuehrt und hat KEINE eigene Zeile (siehe
+    # test_telegram_windrichtung_ohne_geisterspalte.py). Seine Reihenfolge wird
+    # deshalb gegen einen Partner OHNE aktiven Wind geprueft (kein Merge).
+    partner = "temperature" if metric_id in ("wind", "wind_direction") else "wind"
     zeilen_a = _s4_kurzuebersicht(_s7_telegram_layout_dc([metric_id, partner]))
     zeilen_b = _s4_kurzuebersicht(_s7_telegram_layout_dc([partner, metric_id]))
     assert _s7_kurzuebersicht_index(zeilen_a, metric_id) < _s7_kurzuebersicht_index(

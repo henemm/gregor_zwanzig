@@ -127,6 +127,12 @@ def render_for_channel(
     # METRIC_PRIORITY noetig: die Auto-Verteilungs-Heuristik sieht sie dank
     # dieses Filters gar nicht erst.
     enabled = [m for m in enabled if m.metric_id not in VISIBILITY_GATE_IDS]
+    # #2422 S6 (B5): zusammengefuehrte Windrichtung hat keine eigene Spalte --
+    # die Windzelle traegt die Richtung (Lazy-Import: Importzyklus).
+    import dataclasses
+    from output.renderers.email.helpers import should_merge_wind_dir
+    if should_merge_wind_dir(dataclasses.replace(dc, metrics=enabled)):
+        enabled = [m for m in enabled if m.metric_id != "wind_direction"]
     primary = sorted(
         [m for m in enabled if m.bucket == "primary"], key=lambda m: m.order,
     )

@@ -79,11 +79,11 @@ Ausgabeform definieren: `col_key`/`col_label`, `compact_label`, `sms_code`,
 > **🔴 Seit #1719 S4 (2026-08-13) ist `compact_label` KEIN unabhängig gepflegtes
 > Feld mehr**, sondern wird aus dem Register-Kürzel (`sms_code`) **abgeleitet**.
 > Abweichen darf nur, was in einer benannten Ausnahmeliste mit Begründung steht
-> — heute nur noch `wind_chill` (`TF`), weil dessen Register-Kürzel
-> eine *Tagesauswertung* bezeichnen (`FL`/`FD`), die
-> Telegram-Zelle aber einen *Stundenwert* zeigt. Die frühere Ausnahme für die
+> — heute nur noch `gust`. Die frühere Ausnahme für die
 > Temperatur entfällt seit #2417 (AC-12): ihr Register-Kürzel ist jetzt selbst
-> `T`. Ein Wächter
+> `T`. Die Ausnahme für `wind_chill` (`TF`) entfällt seit #2422 S6 (2026-10-01):
+> `TF` ist jetzt auch im Trip ein echtes Kurzform-Token (Stundenwert-Tiefst,
+> `TF<°C>@<Stunde>`), Register-Kürzel und Telegram-Zelle stimmen überein. Ein Wächter
 > (`tests/unit/test_telegram_kuerzel_folgt_register.py`) macht jeden neuen
 > Alleingang rot.
 >

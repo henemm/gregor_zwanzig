@@ -7,11 +7,39 @@ Renderings:
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Callable, Optional
 
 from output.tokens.dto import HourlyValue
 
 LEVELS = {0: "-", 1: "L", 2: "M", 3: "H"}
+
+# Issue #2422 S6 (B2): GSM-7-Einfach-Stufen. Die Klassifikation kommt aus der
+# E-Mail (``metric_format.cloud_emoji`` / ``severity_for("cape")``), nur die
+# Darstellung ist ASCII -- die Baender werden ueber Band-Mittelpunkte auf die
+# Stufenwoerter abgebildet, nie als zweite Grenzliste gepflegt.
+_CLOUD_STUFEN = ((5.0, "CLR"), (20.0, "FEW"), (50.0, "SCT"), (80.0, "BKN"), (95.0, "OVC"))
+_AMPEL_STUFEN = {"green": "-", "yellow": "L", "orange": "M", "red": "H"}
+
+
+def cloud_stufe(pct: float) -> str:
+    """Wolken-Stufe CLR/FEW/SCT/BKN/OVC aus den Baendern von ``cloud_emoji``."""
+    from output.metric_format import cloud_emoji
+    emoji = cloud_emoji(float(pct))
+    return next(w for mitte, w in _CLOUD_STUFEN if cloud_emoji(mitte) == emoji)
+
+
+def cape_stufe(value: float) -> str:
+    """CAPE-Stufe -/L/M/H aus dem E-Mail-Ampelband ``severity_for("cape")``."""
+    from output.metric_format import severity_for
+    return _AMPEL_STUFEN.get(severity_for("cape", float(value)), "-")
+
+
+#: Kuerzel -> Stufen-Abbildung der Groessen mit SMS-Einfachform
+#: (Spiegel von ``metric_catalog.SMS_FORMAT_MODE_METRIC_IDS``; Drift-Test).
+STUFEN_FN: dict[str, Callable[[float], str]] = {
+    "CT": cloud_stufe, "CL": cloud_stufe, "CM": cloud_stufe, "CH": cloud_stufe,
+    "CP": cape_stufe,
+}
 
 
 def _fmt_num(symbol: str, value: float) -> str:
@@ -30,6 +58,7 @@ def render_threshold_peak_value(
     symbol: str, samples: tuple[HourlyValue, ...],
     threshold: Optional[float], *, is_level: bool = False,
     level_labels: Optional[dict] = None,
+    stufe_fn: Optional[Callable[[float], str]] = None,
 ) -> str:
     """Render value-tail per §5. '-' for null form.
 
@@ -43,6 +72,9 @@ def render_threshold_peak_value(
         level_labels: Optional override map int→str for is_level=True rendering.
                       Pass e.g. {1: 'MED', 2: 'HIGH'} to get trend-style labels.
                       Does NOT affect callers that omit this param (bit-identical).
+        stufe_fn:     Issue #2422 S6 (B2): Einfachform -- ersetzt die Zahl durch
+                      ihre Stufe; der Wert beginnt dann mit ':' (Konvention
+                      #1824 B). Schwellen-/Fensterlogik bleibt auf den Zahlen.
     """
     if not samples:
         return "-"
@@ -56,6 +88,11 @@ def render_threshold_peak_value(
                       if s.value >= threshold), None)
         if first is None:
             return "-"
+    if stufe_fn is not None:
+        f_str, p_str = stufe_fn(first.value), stufe_fn(peak.value)
+        if f_str == p_str and first.hour == peak.hour:
+            return f":{f_str}@{first.hour}"
+        return f":{f_str}@{first.hour}({p_str}@{peak.hour})"
     if is_level:
         _lmap = level_labels if level_labels is not None else LEVELS
         f_str = _lmap.get(int(round(first.value)), "-")
