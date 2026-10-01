@@ -535,6 +535,7 @@ class RadarNowcastService:
         if cached is not None:
             self._budget_gate.record_cache_hit()
             _capture_nowcast_frames(lat, lon, cached.frames, cached.source)
+            self._convective_checked = cached.convective_checked  # Issue #2464
             return self._derive_result(cached.frames, cached.source, now=now)
 
         self._budget_gate.record_cache_miss()
@@ -546,7 +547,10 @@ class RadarNowcastService:
             frames, source = self._fetch_frames_with_fallback(lat, lon, elevation_m)
 
         if frames:
-            self._cache.put(lat, lon, region, frames, source, now=now, elevation_m=elevation_m)
+            self._cache.put(
+                lat, lon, region, frames, source, now=now, elevation_m=elevation_m,
+                convective_checked=self._convective_checked,
+            )
 
         _capture_nowcast_frames(lat, lon, frames, source)
         result = self._derive_result(frames, source, now=now)
@@ -772,7 +776,7 @@ class RadarNowcastService:
     ) -> tuple[list, str]:
         """Try source chain; return (frames, source_label)."""
         if _within_radolan(lat, lon):
-            frames = self._fetch_brightsky(lat, lon)
+            frames = self._fetch_brightsky(lat, lon, elevation_m)
             if frames:
                 return frames, "radar"
 
@@ -804,17 +808,27 @@ class RadarNowcastService:
         frames = self._fetch_openmeteo_minutely15(lat, lon, elevation_m)
         return frames, "minutely_15"
 
-    def _fetch_brightsky(self, lat: float, lon: float) -> list:
+    def _fetch_brightsky(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         if _offline_fixture_active():
             # Issue #1329 C2 Abschnitt 8: kein Netz zu BrightSky im Offline-Modus.
             return []
         try:
             from providers.brightsky import BrightSkyProvider
-            provider = BrightSkyProvider()
-            return provider.fetch_radar(lat, lon)
+            frames = BrightSkyProvider().fetch_radar(lat, lon)
         except Exception as e:
             logger.warning(f"BrightSky failed, falling back: {e}")
             return []
+        if not frames:
+            return []  # Issue #2464: kein Sidecar ohne Frames
+        # Issue #2464: Konvektions-Sidecar wie INCA (Open-Meteo best_match = ICON-D2).
+        sidecar = self._fetch_openmeteo_15(lat, lon, elevation_m=elevation_m)
+        if sidecar:
+            self._merge_convective(frames, sidecar)
+        else:
+            self._convective_checked = False  # ADR-0018: nie als "kein Gewitter" kaschieren
+        return frames
 
     def _fetch_geosphere_inca(
         self, lat: float, lon: float, elevation_m: Optional[int] = None
@@ -932,6 +946,9 @@ class RadarNowcastService:
             return []
         if _offline_fixture_active():
             return self._load_radar_fixture_frames()
+        if self._budget_gate is None:  # Direktaufruf ausserhalb get_nowcast (Issue #2464)
+            from services.forecast_budget import ForecastBudgetGate
+            self._budget_gate = ForecastBudgetGate(None)
         if not self._budget_gate.allow(self._priority):
             self._budget_throttled_this_call = True
             self._openmeteo_unavailable_this_call = True

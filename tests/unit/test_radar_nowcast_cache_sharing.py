@@ -500,7 +500,7 @@ def test_boundary_coordinates_do_not_share_cache_across_region_change(monkeypatc
     """
     calls: list[tuple[str, float, float]] = []
 
-    def _fake_brightsky(self, lat, lon):
+    def _fake_brightsky(self, lat, lon, elevation_m=None):
         calls.append(("brightsky", lat, lon))
         now = datetime.now(timezone.utc)
         return [RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=0.0)]
@@ -535,7 +535,7 @@ def test_same_region_coordinates_rounding_to_identical_key_still_share_one_fetch
     weiterhin EINEN Fetch."""
     calls: list[tuple[float, float]] = []
 
-    def _fake_brightsky(self, lat, lon):
+    def _fake_brightsky(self, lat, lon, elevation_m=None):
         calls.append((lat, lon))
         now = datetime.now(timezone.utc)
         return [RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=0.0)]
