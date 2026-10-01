@@ -128,7 +128,9 @@ test.describe('#2155 S4 — Admin-Seite', () => {
 			await expect(erste).toContainText(/Free|Standard|Premium/);
 			await expect(erste).toContainText(/kein Lauf|\d{2}[.:]/);
 			const seite = await a.content();
-			expect(seite).not.toMatch(/password_hash|passkey|\$2[aby]\$/i);
+			// Nicht /passkey/: das Layout liefert legitim `hasPasskey` (Boolean) in den
+			// Hydrations-Daten. Geprueft werden die echten Geheimnis-Felder/-Formen.
+			expect(seite).not.toMatch(/password_hash|"passkeys"|passkey_credential|\$2[aby]\$/i);
 			// Offener Antrag deutlich hervorgehoben (nur pruefbar, wenn Staging einen hat)
 			const mitAntrag = liste.find((u) => u.requested_tier);
 			if (mitAntrag) {
