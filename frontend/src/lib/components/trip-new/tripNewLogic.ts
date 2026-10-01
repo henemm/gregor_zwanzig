@@ -17,12 +17,12 @@ import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryP
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
-export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'metriken' | 'wertebereiche' | 'zeitplan' | 'alerts';
+export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'metriken' | 'wertebereiche' | 'alarme' | 'versand';
 
 // ── Freischalt-Logik (TN_unlocked) ──────────────────────────────────────────
 // Issue #2277 S2a: neuer Parameter `wbVisited` (Wertebereiche besucht) an
 // Position 5 — die Kette laeuft jetzt ueber Wetter-Metriken -> Wertebereiche
-// -> Zeitplan (Muster Compare `compareNewLogic.ts`).
+// -> Alarme -> Versand (Muster Compare `compareNewLogic.ts`).
 
 export function unlockedTabs(
 	name: string,
@@ -30,14 +30,15 @@ export function unlockedTabs(
 	etDone: boolean,
 	wtVisited: boolean,
 	wbVisited: boolean,
-	ztVisited: boolean
+	alVisited: boolean,
+	vsVisited: boolean
 ): Set<TabId> {
 	const s = new Set<TabId>(['route']);
 	if (name.trim() && startDate) s.add('etappen');
 	if (etDone) { s.add('wegpunkte'); s.add('metriken'); }
 	if (wtVisited) s.add('wertebereiche');
-	if (wbVisited) s.add('zeitplan');
-	if (ztVisited) s.add('alerts');
+	if (wbVisited) s.add('alarme');
+	if (alVisited) s.add('versand');
 	return s;
 }
 
@@ -49,14 +50,16 @@ export function doneTabs(
 	etDone: boolean,
 	wtVisited: boolean,
 	wbVisited: boolean,
-	ztVisited: boolean
+	alVisited: boolean,
+	vsVisited: boolean
 ): Set<TabId> {
 	const s = new Set<TabId>();
 	if (name.trim() && startDate) s.add('route');
 	if (etDone) s.add('etappen');
 	if (wtVisited) s.add('metriken');
 	if (wbVisited) s.add('wertebereiche');
-	if (ztVisited) s.add('zeitplan');
+	if (alVisited) s.add('alarme');
+	if (vsVisited) s.add('versand');
 	return s;
 }
 
@@ -76,14 +79,14 @@ export function stageDate(startDate: string, offset: number): string | null {
 // ── Fortschrittsbalken (TN_Progress) ────────────────────────────────────────
 
 export function progressCount(done: Set<TabId>): number {
-	const steps: TabId[] = ['route', 'etappen', 'metriken', 'zeitplan'];
+	const steps: TabId[] = ['route', 'etappen', 'metriken', 'versand'];
 	return steps.filter(s => done.has(s)).length;
 }
 
 // ── Speichern-Gate ────────────────────────────────────────────────────────────
 
 export function canSave(done: Set<TabId>): boolean {
-	return done.has('zeitplan');
+	return done.has('versand');
 }
 
 // ── State + Payload-Builder ──────────────────────────────────────────────────

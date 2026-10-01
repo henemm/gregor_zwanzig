@@ -74,8 +74,8 @@
 		{ id: 'wegpunkte', label: 'Wegpunkte prüfen', lockHint: 'erst alle GPX hochladen',        optional: true  },
 		{ id: 'metriken',  label: 'Wetter-Metriken',  lockHint: 'erst alle GPX hochladen',        optional: false },
 		{ id: 'wertebereiche', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen',   optional: false },
-		{ id: 'zeitplan',  label: 'Briefing-Zeitplan',lockHint: 'erst Wertebereiche öffnen',      optional: false },
-		{ id: 'alerts',    label: 'Alerts',            lockHint: 'erst Zeitplan öffnen',           optional: false },
+		{ id: 'alarme',    label: 'Alarme',           lockHint: 'erst Wertebereiche öffnen',      optional: false },
+		{ id: 'versand',   label: 'Versand',          lockHint: 'erst Alarme öffnen',             optional: false },
 	];
 
 	// ── Lokaler Anlege-State ──────────────────────────────────────────────────
@@ -117,7 +117,8 @@
 	// Visited-Flags (Tab-Besuch setzt done)
 	let wtVisited = $state(false);
 	let wbVisited = $state(false);
-	let ztVisited = $state(false);
+	let alVisited = $state(false);
+	let vsVisited = $state(false);
 
 	let activeTab = $state<TabId>(seed.activeTab ?? 'route');
 
@@ -160,8 +161,8 @@
 
 	// ── Abgeleitete Zustandsgrößen ────────────────────────────────────────────
 	const etDone = $derived(stages.length > 0 && stages.every(s => s.gpx !== null));
-	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, ztVisited));
-	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, ztVisited));
+	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited));
+	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited));
 	const ready = $derived(canSave(done));
 	const gpxCount = $derived(stages.filter(s => s.gpx !== null).length);
 	const progressN = $derived(progressCount(done));
@@ -247,7 +248,8 @@
 		if (id === 'wegpunkte' && prev !== 'wegpunkte') editorStages = buildEditorStages();
 		if (id === 'metriken') wtVisited = true;
 		if (id === 'wertebereiche') wbVisited = true;
-		if (id === 'zeitplan') ztVisited = true;
+		if (id === 'alarme') alVisited = true;
+		if (id === 'versand') vsVisited = true;
 	}
 
 	// ── Stage-Brücke: lokaler Create-State ⇄ EditStagesPanelNew (Issue #658) ──
@@ -513,7 +515,7 @@
 			<!-- Fortschrittsbalken (TN_Progress) -->
 			<div style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
 				<div style="display: flex; gap: 3px;">
-					{#each ['route', 'etappen', 'metriken', 'zeitplan'] as step}
+					{#each ['route', 'etappen', 'metriken', 'versand'] as step}
 						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 					{/each}
 				</div>
@@ -526,7 +528,7 @@
 		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
 		<div class="tn-mobile tn-mobile-flex" style="align-items: center; gap: 8px; padding: 8px 16px 0;">
 			<div style="display: flex; gap: 3px; flex: 1;">
-				{#each ['route', 'etappen', 'metriken', 'zeitplan'] as step}
+				{#each ['route', 'etappen', 'metriken', 'versand'] as step}
 					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 				{/each}
 			</div>
@@ -857,7 +859,7 @@
 				</div>
 			</div>
 
-		{:else if activeTab === 'zeitplan'}
+		{:else if activeTab === 'versand'}
 			<!-- Zeitplan-Tab — Issue #1738: Kanäle + Zeitplan + Laufzeit kommen aus
 			     dem geteilten VersandTab (context="route", Teilungsregel/Epic #1230).
 			     EditReportConfigSection bleibt nur noch für die Mail-Inhalt-Karte
@@ -908,7 +910,7 @@
 		     Sichtbarkeit ueber style:display, damit der interne State beim
 		     Tab-Wechsel erhalten bleibt. Kanal-Wertprops bewusst NICHT gesetzt. -->
 		{#if !isMobileViewport}
-		<div style:display={activeTab === 'alerts' ? '' : 'none'}>
+		<div style:display={activeTab === 'alarme' ? '' : 'none'}>
 			<div style="padding: 32px 40px 60px;">
 				<AlarmeTab context="route" trip={stubTrip} createMode={true}
 					officialWarningsEnabled={alarm.officialWarningsEnabled}
@@ -932,7 +934,7 @@
 		<EditorStickyFooter context="route" navClearance={false} testid="tn-desktop-footer">
 			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
 				{#if !ready}
-					<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4);">Zeitplan einrichten zum Speichern</span>
+					<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4);">Versand einrichten zum Speichern</span>
 				{/if}
 				<button type="button" onclick={onSave} disabled={!ready || saving}
 					data-testid="trip-new-save-btn"
@@ -1147,7 +1149,7 @@
 					</div>
 				</div>
 
-			{:else if activeTab === 'zeitplan'}
+			{:else if activeTab === 'versand'}
 				<!-- Mobile Zeitplan-Tab: Wrapper mit mobilem Padding.
 				     Issue #1738 — geteilter VersandTab, XOR zum Desktop-Mount oben. -->
 				{#if isMobileViewport}
@@ -1178,7 +1180,7 @@
 
 			<!-- Issue #2277 S1 — Mobile AlarmeTab, XOR zum Desktop-Mount oben. -->
 			{#if isMobileViewport}
-			<div style:display={activeTab === 'alerts' ? '' : 'none'}>
+			<div style:display={activeTab === 'alarme' ? '' : 'none'}>
 				<div style="padding: 16px 16px 60px;">
 					<AlarmeTab context="route" trip={stubTrip} createMode={true}
 						officialWarningsEnabled={alarm.officialWarningsEnabled}
