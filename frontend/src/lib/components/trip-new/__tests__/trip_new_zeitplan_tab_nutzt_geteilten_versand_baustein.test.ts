@@ -38,12 +38,12 @@ const ALLE_AN = { email: true, telegram: true, sms: true };
 
 function zeitplan(extra: TripNewStateOverride = {}): string {
 	const html = renderTripNew({
-		activeTab: 'zeitplan',
+		activeTab: 'versand',
 		isMobileViewport: false,
 		channels: ALLE_AN,
 		...extra
 	});
-	assertTabOffen(html, 'zeitplan');
+	assertTabOffen(html, 'versand');
 	return html;
 }
 

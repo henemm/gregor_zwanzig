@@ -110,7 +110,7 @@ describe('AC-7: rightColumn.ts hat die vier aufruferlosen Helfer verloren, getRe
 	test('getReportSchedule und der Typ ReportSchedule sind weiterhin exportiert', () => {
 		const { src } = parseRightColumn();
 		// doc-compliance-test: Export-Vertrag der beiden weiter benötigten Symbole
-		// (BriefingPreviewCard.svelte, TripHeader.svelte, TripEditView.svelte).
+		// (BriefingPreviewCard.svelte, TripHeader.svelte).
 		assert.match(src, /export\s+function\s+getReportSchedule\s*\(/, 'export function getReportSchedule fehlt');
 		assert.match(src, /export\s+interface\s+ReportSchedule\b/, 'export interface ReportSchedule fehlt');
 	});

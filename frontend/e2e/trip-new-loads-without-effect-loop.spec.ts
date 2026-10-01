@@ -154,9 +154,10 @@ test('Staging-Befund #1552 Fix-Loop 4: ein Checkbox-Klick im Wetter-Reiter darf 
 	// dauerhaft deaktiviert"): Zeitplan-Tab besuchen (setzt ztVisited, s.
 	// tripNewLogic.ts canSave()), danach muss der Speichern-Button bedienbar
 	// sein.
-	// Issue #2277 S2a: Zeitplan ist erst nach Besuch von „Wertebereiche"
-	// freigeschaltet (Sperrkette Wetter-Metriken → Wertebereiche → Zeitplan).
+	// Issue #2277 S3: canSave() haengt jetzt am Besuch von Versand, der erst nach
+	// Alarme frei ist (Sperrkette Wetter-Metriken → Wertebereiche → Alarme → Versand).
 	await tabbar.getByRole('tab', { name: /Wertebereiche/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Zeitplan/ }).click({ force: true });
+	await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
+	await tabbar.getByRole('tab', { name: /Versand/ }).click({ force: true });
 	await expect(page.getByTestId('tn-mobile-save')).toBeEnabled({ timeout: 5000 });
 });

@@ -20,7 +20,6 @@ import { dirname, join } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 
 // Pfade
-const TRIP_EDIT_VIEW = join(here, 'TripEditView.svelte');
 const EDIT_STAGES_PANEL = join(here, 'EditStagesPanelNew.svelte');
 const WAYPOINT_EDITOR_PAGE = join(here, 'WaypointEditorPage.svelte');
 const AI_SUGGESTION_BAR = join(here, 'AISuggestionBar.svelte');
@@ -29,37 +28,6 @@ const STAGE_NAV_DROPDOWN = join(here, 'StageNavDropdown.svelte');
 // Issue #522 — Wegpunkt-Karte Visual-Redesign
 const WAYPOINT_CARD = join(here, '..', 'trip-detail', 'waypoints', 'WaypointCard.svelte');
 const WAYPOINT_PIN = join(here, '..', 'trip-detail', 'waypoints', 'WaypointPin.svelte');
-
-// ────────────────────────────────────────────────────────────────────────────
-// Tab-Umbenennung (TripEditView)
-// ────────────────────────────────────────────────────────────────────────────
-
-describe('#503 Tab-Umbenennung', () => {
-	test('TripEditView Tab-Label heißt „Etappen & Wegpunkte"', () => {
-		const src = readFileSync(TRIP_EDIT_VIEW, 'utf-8');
-		assert.ok(
-			src.includes('Etappen & Wegpunkte'),
-			'TripEditView.svelte muss den Tab-Label "Etappen & Wegpunkte" enthalten'
-		);
-	});
-
-	test('TripEditView Tab heißt nicht mehr nur „Etappen <N>"', () => {
-		const src = readFileSync(TRIP_EDIT_VIEW, 'utf-8');
-		// Der reine "Etappen ${stats.stages}"-Label ist Vergangenheit.
-		assert.ok(
-			!/label:\s*`Etappen\s+\$\{stats\.stages\}`/.test(src),
-			'TripEditView.svelte darf nicht mehr `Etappen ${stats.stages}` als Label haben'
-		);
-	});
-
-	test('TripEditView bindet den Editor-Tab an EtappenStrip (Issue #581 AC-7)', () => {
-		const src = readFileSync(TRIP_EDIT_VIEW, 'utf-8');
-		assert.ok(
-			src.includes('EtappenStrip'),
-			'TripEditView.svelte muss EtappenStrip als Tab-Inhalt rendern (EditStagesPanelNew durch #581 abgelöst)'
-		);
-	});
-});
 
 // ────────────────────────────────────────────────────────────────────────────
 // EditStagesPanelNew: Karte + Grid + keine KI/Suggested-Branches

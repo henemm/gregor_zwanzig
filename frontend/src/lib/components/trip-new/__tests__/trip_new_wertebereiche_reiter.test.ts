@@ -18,7 +18,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
-import { renderTripNew, countTestid, visibleText, FRONTEND } from './tripNewSsr.ts';
+import { renderTripNew, countTestid, desktopTabs, mobilTabLabels, FRONTEND } from './tripNewSsr.ts';
 import {
 	umgebungFuer,
 	findeKomponenten,
@@ -28,51 +28,21 @@ import {
 
 const EDITOR = join(FRONTEND, 'src/lib/components/trip-new/TripNewEditor.svelte');
 
-/** Die role="tab"-Elemente der DESKTOP-Tab-Leiste (alles vor der Mobil-Leiste),
- *  je als { label, title }. */
-function desktopTabs(html: string): { label: string; title: string | null }[] {
-	const ende = html.indexOf('data-testid="tn-mobile-tabbar"');
-	assert.notEqual(ende, -1, 'Messaufbau kaputt: Mobil-Tab-Leiste nicht gefunden.');
-	const bereich = html.slice(0, ende);
-	const tabs: { label: string; title: string | null }[] = [];
-	const re = /<div([^>]*\brole="tab"[^>]*)>([\s\S]*?)<\/div>/g;
-	let m: RegExpExecArray | null;
-	while ((m = re.exec(bereich))) {
-		const title = /\btitle="([^"]*)"/.exec(m[1])?.[1] ?? null;
-		const label = visibleText(m[2]).replace(/&amp;/g, '&').replace(/[⊘✓]/g, '').replace(/\bOPTIONAL\b|\boptional\b/g, '').trim();
-		tabs.push({ label, title });
-	}
-	return tabs;
-}
-
-/** Labels der MOBIL-Tab-Leiste in Reihenfolge. */
-function mobilTabLabels(html: string): string[] {
-	const start = html.indexOf('data-testid="tn-mobile-tabbar"');
-	assert.notEqual(start, -1, 'Messaufbau kaputt: Mobil-Tab-Leiste nicht gefunden.');
-	const labels: string[] = [];
-	const re = /<button[^>]*\brole="tab"[^>]*>([\s\S]*?)<\/button>/g;
-	re.lastIndex = start;
-	let m: RegExpExecArray | null;
-	let n = 0;
-	while ((m = re.exec(html)) && n < 20) {
-		labels.push(visibleText(m[1]).replace(/&amp;/g, '&').replace(/[⊘✓]/g, '').replace(/\bopt\b/g, '').trim());
-		n++;
-	}
-	return labels;
-}
-
+// Issue #2277 S3 (Spec feat_2277_s3_reiter_angleichung_rueckbau.md, AC-1/AC-2):
+// die S2a-Folge „…, Wertebereiche, Briefing-Zeitplan, Alerts" ist abgeloest —
+// die letzten Reiter heissen jetzt wie beim Ortsvergleich „Alarme · Versand".
 const ERWARTETE_FOLGE = [
 	'Route',
 	'Etappen & GPX',
 	'Wegpunkte prüfen',
 	'Wetter-Metriken',
 	'Wertebereiche',
-	'Briefing-Zeitplan',
-	'Alerts'
+	'Alarme',
+	'Versand'
 ];
 
-describe('AC-1: Reiter „Wertebereiche" zwischen Wetter-Metriken und Briefing-Zeitplan', () => {
-	test('Desktop: Reiterfolge …, Wetter-Metriken, Wertebereiche, Briefing-Zeitplan, Alerts', () => {
+describe('AC-1: Reiter „Wertebereiche" zwischen Wetter-Metriken und Alarme', () => {
+	test('Desktop: Reiterfolge …, Wetter-Metriken, Wertebereiche, Alarme, Versand', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: false });
 		const labels = desktopTabs(html).map((t) => t.label);
 		assert.ok(labels.length >= 6, `Messaufbau kaputt: nur ${labels.length} Desktop-Tabs gelesen.`);
@@ -88,7 +58,7 @@ describe('AC-1: Reiter „Wertebereiche" zwischen Wetter-Metriken und Briefing-Z
 		);
 	});
 
-	test('Sperrhinweise: Wertebereiche wartet auf Wetter-Metriken, Briefing-Zeitplan auf Wertebereiche', () => {
+	test('Sperrhinweise: Wertebereiche → Wetter-Metriken, Alarme → Wertebereiche, Versand → Alarme', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: false });
 		const tabs = desktopTabs(html);
 		const wb = tabs.find((t) => t.label === 'Wertebereiche');
@@ -98,12 +68,19 @@ describe('AC-1: Reiter „Wertebereiche" zwischen Wetter-Metriken und Briefing-Z
 			'Gesperrt — erst Wetter-Metriken öffnen',
 			'AC-1 FAIL: Wertebereiche ist im Leerzustand nicht mit dem Hinweis auf Wetter-Metriken gesperrt.'
 		);
-		const zp = tabs.find((t) => t.label === 'Briefing-Zeitplan');
-		assert.ok(zp, 'Messaufbau kaputt: kein Desktop-Reiter „Briefing-Zeitplan".');
+		const al = tabs.find((t) => t.label === 'Alarme');
+		assert.ok(al, 'AC-1 FAIL: kein Desktop-Reiter „Alarme".');
 		assert.equal(
-			zp!.title,
+			al!.title,
 			'Gesperrt — erst Wertebereiche öffnen',
-			'AC-1 FAIL: Briefing-Zeitplan verweist nicht auf den Wertebereiche-Reiter als Vorstufe.'
+			'AC-2 FAIL: Alarme verweist nicht auf den Wertebereiche-Reiter als Vorstufe.'
+		);
+		const vs = tabs.find((t) => t.label === 'Versand');
+		assert.ok(vs, 'AC-1 FAIL: kein Desktop-Reiter „Versand".');
+		assert.equal(
+			vs!.title,
+			'Gesperrt — erst Alarme öffnen',
+			'AC-2 FAIL: Versand verweist nicht auf den Alarme-Reiter als Vorstufe.'
 		);
 	});
 });
@@ -152,7 +129,7 @@ describe('AC-2 (Verdrahtung): CorridorEditor-Rueckruf → CreateTripState → PO
 			saving: false,
 			savedTripId: null,
 			saveError: null,
-			activeTab: 'zeitplan',
+			activeTab: 'versand',
 			name: 'Karnischer Höhenweg',
 			region: '',
 			startDate: '2026-06-15',

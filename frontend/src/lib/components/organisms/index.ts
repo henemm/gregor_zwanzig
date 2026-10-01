@@ -1,7 +1,7 @@
 // Epic #471 — Organisms-Schicht: kanonische Re-Export-Barrel.
 //
 // Eine Quelle fuer alle Organisms:
-//   import { TripHeader, AlertRulesEditor, OutputLayoutEditor,
+//   import { TripHeader, OutputLayoutEditor,
 //            WeatherMetricsTab, MetricGroup, MetricCheckbox }
 //     from '$lib/components/organisms';
 //
@@ -12,7 +12,6 @@
 //       docs/specs/modules/issue_520_organisms_barrel_completeness.md
 
 export { default as TripHeader } from '../trip-detail/TripHeader.svelte';
-export { default as AlertRulesEditor } from '../alert-rules-editor/AlertRulesEditor.svelte';
 export { default as OutputLayoutEditor } from '../shared/OutputLayoutEditor.svelte';
 
 // Issue #520 — trip-detail Organisms aufnehmen

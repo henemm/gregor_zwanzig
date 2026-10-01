@@ -22,8 +22,8 @@ import { join } from 'node:path';
 import { renderTripNew, countTestid, outerHtml, FRONTEND } from './tripNewSsr.ts';
 
 describe('AC-1: Mount-Ersetzung — AlarmeTab statt AlertRulesEditor (schließt #2229)', () => {
-	test('Desktop, Tab "alerts": genau 1 alarme-tab, 0 alert-rules-editor, 1 Premium-SMS-Kanalzeile', () => {
-		const html = renderTripNew({ activeTab: 'alerts', isMobileViewport: false });
+	test('Desktop, Tab "alarme": genau 1 alarme-tab, 0 alert-rules-editor, 1 Premium-SMS-Kanalzeile', () => {
+		const html = renderTripNew({ activeTab: 'alarme', isMobileViewport: false });
 		assert.equal(
 			countTestid(html, 'alarme-tab'),
 			1,
@@ -41,8 +41,8 @@ describe('AC-1: Mount-Ersetzung — AlarmeTab statt AlertRulesEditor (schließt 
 		);
 	});
 
-	test('Mobile, Tab "alerts": genau 1 alarme-tab, 0 alert-rules-editor, 1 Premium-SMS-Kanalzeile', () => {
-		const html = renderTripNew({ activeTab: 'alerts', isMobileViewport: true });
+	test('Mobile, Tab "alarme": genau 1 alarme-tab, 0 alert-rules-editor, 1 Premium-SMS-Kanalzeile', () => {
+		const html = renderTripNew({ activeTab: 'alarme', isMobileViewport: true });
 		assert.equal(
 			countTestid(html, 'alarme-tab'),
 			1,
@@ -63,7 +63,7 @@ describe('AC-1: Mount-Ersetzung — AlarmeTab statt AlertRulesEditor (schließt 
 
 describe('AC-3: E-Mail-Kanal zeigt den internen route-Default (aus) — kein fest verdrahtetes "true"', () => {
 	test('alert-channel-toggle-email ist im UNCHECKED-Zustand (aria-checked="false")', () => {
-		const html = renderTripNew({ activeTab: 'alerts', isMobileViewport: false });
+		const html = renderTripNew({ activeTab: 'alarme', isMobileViewport: false });
 		const email = outerHtml(html, 'alert-channel-toggle-email');
 		assert.match(
 			email,
@@ -77,8 +77,8 @@ describe('AC-3: E-Mail-Kanal zeigt den internen route-Default (aus) — kein fes
 
 describe('AC-6: AlarmeTab bleibt dauerhaft gemountet (Muster WeatherMetricsTab, isMobileViewport-Gate)', () => {
 	const kombinationen: { activeTab: string; isMobileViewport: boolean }[] = [
-		{ activeTab: 'alerts', isMobileViewport: false },
-		{ activeTab: 'alerts', isMobileViewport: true },
+		{ activeTab: 'alarme', isMobileViewport: false },
+		{ activeTab: 'alarme', isMobileViewport: true },
 		{ activeTab: 'route', isMobileViewport: false },
 	];
 
@@ -141,16 +141,16 @@ describe('AC-7 (Strukturwächter): Alt-Modell-Code ist entfernt (kein Verhaltens
 		);
 	});
 
-	test('AlertRulesEditor.svelte bleibt als Datei bestehen (kein Löschen)', () => {
-		assert.doesNotThrow(
+	// Issue #2277 S3 (feat_2277_s3, AC-7) ersetzt S1-AC-7 „AlertRulesEditor.svelte
+	// bleibt bestehen": der tote Strang wird jetzt geloescht.
+	test('AlertRulesEditor.svelte ist gelöscht (#2277 S3 ersetzt S1-AC-7)', () => {
+		assert.throws(
 			() =>
 				readFileSync(
 					join(FRONTEND, 'src/lib/components/alert-rules-editor/AlertRulesEditor.svelte'),
 					'utf-8'
 				),
-			'AC-7 FAIL: AlertRulesEditor.svelte wurde gelöscht — die Spec verlangt nur die ' +
-				'Entfernung des Mounts, nicht der Komponente (legacy_wizard_removed.test.ts haelt ' +
-				'sie auf der keep-Liste).'
+			'AC-7 (S3) FAIL: AlertRulesEditor.svelte existiert noch — der tote Strang muss weg.'
 		);
 	});
 });

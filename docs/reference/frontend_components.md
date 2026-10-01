@@ -40,7 +40,7 @@ frontend/src/lib/components/
 ├── edit/                 # Trip-Bearbeitungs-Sektionen
 ├── organisms/            # Barrel: lib/components/organisms/index.ts (Exporte = Wahrheit)
 ├── atoms/ · molecules/ · mobile/  # Atomic-Design-Bibliothek (Epic #368, s.u.)
-└── alert-rules-editor/ · alerts-tab/ · briefings-tab/ · briefing-history/ · preview/ · email-preview/
+└── alerts-tab/ · briefings-tab/ · briefing-history/ · preview/ · email-preview/
 ```
 
 **Wizards existieren nicht mehr.** `trip-wizard/` und `CompareWizard.svelte` wurden
@@ -645,8 +645,10 @@ lokal im Editor-State und lösen genau EINEN `POST /api/trips` bzw.
 liefert 404).
 
 `/trips/new` hat seit Issue #2277 Scheibe S2a einen eigenen Reiter
-**„Wertebereiche"** zwischen „Wetter-Metriken" und „Briefing-Zeitplan"
-(Sperrkette Wetter-Metriken → Wertebereiche → Zeitplan). Gemountet wird darin
+**„Wertebereiche"**; seit S3 gleicht die Reiterleiste ab „Wetter-Metriken" der von
+`/compare/new` (… Wertebereiche → Alarme → Versand; IDs `alarme`/`versand`),
+Sperrkette Wertebereiche → Alarme → Versand, Anlegen erst nach Besuch von
+„Versand", Fortschritt `/4`. Gemountet wird darin
 derselbe geteilte `shared/corridor-editor/CorridorEditor.svelte`, den Trip-Hub
 und Ortsvergleich bereits nutzen — mit neuem Prop `createMode` (Default
 `false`), der den Selbst-Speicher-PUT abschaltet; Änderungen fließen stattdessen
@@ -677,36 +679,11 @@ von Trip-Editor und Trip-Detail-Ansicht:
 - **`PauseStageView.svelte`** — Ansicht für einen Pausentag (editierbares
   Datum via `StageDateField`, Standort aus Vorgänger-/Folge-Etappe).
 
-## Alert-Rules-Editor (`alert-rules-editor/`)
+## Alert-Rules-Editor (entfernt)
 
-Liste-basierter Editor für `Trip.alert_rules` (Issue #223/#179):
-
-Seit Issue #1895 Schritt 1 (2026-09-21) kennt der Editor nur noch den
-Änderungs-Modus (`kind: 'delta'`); die Modus-Auswahl (Absolut/Änderung/Beides),
-die Komponente `ModeCard` und das Absolut-Feld `alert-rule-threshold-abs` sind
-entfernt. Schritt 2 (2026-09-21) hat zusätzlich die Δ-Schwelle
-(`alert-rule-threshold`), das Zeitfenster (`alert-rule-delta-window`), den
-Wert-Text der Ansichtszeile und die Modus-Pille aus **beiden** Ansichten der
-Karte genommen: sie lösen keinen Alarm aus (ADR-0043 — die Empfindlichkeitsstufe
-ist der einzige Regler). Die Datenfelder `threshold` und `delta_window` bleiben
-im Modell und in der Persistenz unberührt.
-
-- **`AlertRulesEditor.svelte`** — Container: Empty-State, Liste, Add-Button;
-  `updateRules(index, updated[])` ersetzt eine Regel durch die von der Zeile
-  gelieferte Regelliste (seit #1895 genau eine Regel).
-- **`AlertRuleRow.svelte`** — eine Zeile pro `AlertRule` mit View- und
-  Edit-Modus. Die Karte zeigt in beiden Ansichten **Metrik · Kanäle · aktiv**:
-  View-Modus Metrik-Name, Kanal-Chips, Aktiv-Haken und Kebab-Menü; Edit-Modus
-  Metric-Select, Kanal-Chips, Aktiv-Checkbox sowie Speichern/Abbrechen. Kein
-  Eingabefeld für Schwelle oder Zeitfenster, kein Zahlenwert und keine Pille in
-  der Ansichtszeile.
-- **`alertRuleDefaults.ts`** — `newDefaultRule()` liefert `kind: 'delta'`,
-  `threshold: 20`, `delta_window: '6h'`; `expandRules(rule)` nimmt genau ein
-  Argument und liefert je Eingaberegel genau eine Regel mit `kind: 'delta'` und
-  ohne `pair_id` (kein Regelpaar mehr). `threshold` und `delta_window` werden
-  dabei **unverändert durchgereicht** — `'6h'` greift nur als Rückfall für eine
-  Regel ohne Zeitfenster (ein fester Wert würde Bestandsdaten still
-  überschreiben).
+`alert-rules-editor/` (`AlertRulesEditor`, `AlertRuleRow`, `alertChannels`, `alertRuleDefaults`) und
+`edit/TripEditView.svelte` sind mit #2277 S3 gelöscht; `/trips/[id]/edit` leitet nur noch um.
+`DELTA_ONLY_METRICS` lebt in `alerts-tab/alertMetricTable.ts`; Alarme bedient der geteilte `AlarmeTab`.
 
 ## Compare Components (`compare/`)
 

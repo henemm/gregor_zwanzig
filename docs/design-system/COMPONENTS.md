@@ -16,7 +16,7 @@ Die Datei ist in 10 Kategorien gegliedert, von Brand → Atoms → Molecules →
 5. **Feedback** — Toast, Dialog
 6. **Overlay** — DropdownMenu, Sheet, Tooltip
 7. **Mobile-Shell** — PhoneFrame, BottomNav (+ Konto-Kreis), KontoSheet, MInput, MBtn
-8. **Organisms** — TripHeader, TripWizardShell, AlertRulesEditor (Atomic Design Level 3, Epic #471)
+8. **Organisms** — TripHeader, TripWizardShell (Atomic Design Level 3, Epic #471)
 9. **Domain-Komponenten** — App-spezifische Bausteine (Trip-, Compare-, Email-Komponenten)
 
 ## Tabellen-Konvention
@@ -157,7 +157,6 @@ Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/compo
 |---|---|---|---|
 | `<TripHeader>` | `$lib/components/organisms` | `trip`, `onEdit` | Trip-Kopfzeile mit Trip-Name, Statistiken (Etappen, Wegpunkte, Distanz), Edit-Button. Physisch in `trip-detail/TripHeader.svelte`. |
 | `<TripWizardShell>` | `$lib/components/organisms` | `step: 1-4`, `onNext`, `onPrev`, `onClose`, Children | Wizard-Hülle für Trip-Erstellung/Bearbeitung (Stepper + Step-Content + Footer-Navigation). Physisch in `trip-wizard/TripWizardShell.svelte`. |
-| `<AlertRulesEditor>` | `$lib/components/organisms` | `rules: AlertRule[]`, `onChange`, `onAdd`, `onRemove` | Alert-Konfiguration: Alerttyp (Lightning, Rain, Terrain, etc.), Schwellwert, Aktivierung. Physisch in `alert-rules-editor/AlertRulesEditor.svelte`. |
 | `<OutputLayoutEditor>` | `$lib/components/organisms` | `layout: OutputLayout`, `onChange` | Konfigurationsoberfläche für die Briefing-Ausgabe-Formatierung (Kanal-Reihenfolge, Metrik-Anzahl pro Kanal). Physisch in `shared/OutputLayoutEditor.svelte` (Issue #475). |
 | `<WeatherMetricsTab>` | `$lib/components/organisms` | `trip`, `stage?` | Tab-Inhalt mit Wetter-Metrik-Auswahl. Physisch in `shared/WeatherMetricsTab.svelte` (geteilt Trip/Compare). Bis #1719 S3 (2026-08-11) lief die Kanal-Vorschau (E-Mail/Telegram/SMS) über die eingebettete `WeatherV2MailPreview.svelte` — diese Live-Vorschau ist auf PO-Entscheid ersatzlos entfernt; der Tab zeigt seither nur noch Kanal-Wähler + Reihenfolge ohne Vorschau-Spalte (`docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md`). |
 | `<MetricGroup>` | `$lib/components/organisms` | `group`, `metrics`, `onChange` | Gruppen-Sektion in der Metrik-Auswahl. Physisch in `trip-detail/MetricGroup.svelte`. |

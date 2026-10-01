@@ -97,15 +97,7 @@ test('WaypointCard.svelte hat keine deprecated onReject-Prop mehr', () => {
 	);
 });
 
-// Aufrufstellen: kein stripSuggested-Aufruf in den 3 Edit-Komponenten
-test('TripEditView.svelte ruft kein stripSuggested mehr auf', () => {
-	const src = read('frontend/src/lib/components/edit/TripEditView.svelte');
-	assert.ok(
-		!src.includes('stripSuggested'),
-		'TripEditView.svelte darf stripSuggested nicht mehr aufrufen'
-	);
-});
-
+// Aufrufstellen: kein stripSuggested-Aufruf in den Edit-Komponenten
 test('WaypointsPanel.svelte ruft kein stripSuggested mehr auf', () => {
 	const src = read('frontend/src/lib/components/trip-detail/WaypointsPanel.svelte');
 	assert.ok(

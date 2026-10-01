@@ -48,10 +48,11 @@ async function openNewTripZeitplan(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	// Issue #2277 S2a: Zeitplan ist erst nach Besuch von „Wertebereiche"
-	// freigeschaltet (Sperrkette Wetter-Metriken → Wertebereiche → Zeitplan).
+	// Issue #2277 S3: Versand ist erst nach Besuch von „Alarme" freigeschaltet
+	// (Sperrkette Wetter-Metriken → Wertebereiche → Alarme → Versand).
 	await tabbar.getByRole('tab', { name: /Wertebereiche/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Zeitplan/ }).click({ force: true });
+	await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
+	await tabbar.getByRole('tab', { name: /Versand/ }).click({ force: true });
 
 	// EditReportConfigSection wird sowohl im .tn-desktop- als auch im .tn-mobile-Baum
 	// gemountet (CSS-Media-Query-Toggle statt {#if}) — beide Instanzen stehen

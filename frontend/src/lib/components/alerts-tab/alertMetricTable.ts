@@ -13,11 +13,19 @@
 //  - rowStateToAlertRules(): mappt Row-State -> AlertRule[] (Save-Pfad).
 
 import type { AlertMetric, AlertRule, AlertSeverity, SensLevel } from '../../types.ts';
-import { DELTA_ONLY_METRICS } from '../alert-rules-editor/alertRuleDefaults.ts';
 import { ALERT_METRIC_LABELS } from '../../utils/alertMetricLabels.ts';
 // Fix #1435 Etappe E4: einzige Quelle der Preset-Schwellwerte, erzeugt von
 // scripts/generate_alert_preset_table.py aus src/services/alert_preset.py.
 import rawPresetThresholds from '../../generated/alertPresetThresholds.generated.json' with { type: 'json' };
+
+// Delta-only-Metriken (kein Absolut-Schwellwert). Frueher in
+// alert-rules-editor/alertRuleDefaults.ts (#2277 S3: Rueckbau, hierher umgezogen).
+export const DELTA_ONLY_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>([
+	'temperature_change',
+	'wind_change',
+	'precipitation_change',
+	'thunder_level'
+]);
 
 export const METRIC_DEFAULTS: Record<AlertMetric, number> = {
 	wind_gust: 50,
