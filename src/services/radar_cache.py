@@ -32,6 +32,7 @@ class RadarCacheEntry:
     frames: list
     source: str
     cached_at: datetime
+    convective_checked: bool = True  # Issue #2464
 
 
 class RadarNowcastCacheService:
@@ -101,13 +102,16 @@ class RadarNowcastCacheService:
 
     def put(
         self, lat: float, lon: float, region: str, frames: list, source: str, now: datetime,
-        elevation_m: Optional[float] = None,
+        elevation_m: Optional[float] = None, convective_checked: bool = True,
     ) -> None:
         if not frames:
             return  # Negativ-Ergebnisse werden NIE gecacht (Alarm-Blindheit vermeiden)
         key = self._key(lat, lon, region, elevation_m)
         with self._lock:
-            self._cache[key] = RadarCacheEntry(frames=frames, source=source, cached_at=now)
+            self._cache[key] = RadarCacheEntry(
+                frames=frames, source=source, cached_at=now,
+                convective_checked=convective_checked,
+            )
 
     def clear(self) -> None:
         with self._lock:

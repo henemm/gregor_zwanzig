@@ -99,7 +99,7 @@ def _install_http(monkeypatch, sidecar, brightsky="fixture"):
     """
     import httpx
 
-    zaehler = {"brightsky": 0, "openmeteo": 0}
+    zaehler = {"brightsky": 0, "openmeteo": 0, "openmeteo_urls": []}
     fixture_payload = json.loads(FIXTURE.read_text())
 
     class _Client:
@@ -121,6 +121,7 @@ def _install_http(monkeypatch, sidecar, brightsky="fixture"):
                     return _Resp({"radar": [], "latlon_position": {"x": 0, "y": 0}})
                 return _Resp(fixture_payload)
             zaehler["openmeteo"] += 1
+            zaehler["openmeteo_urls"].append(url)
             if sidecar == "fehler":
                 raise httpx.ConnectError("open-meteo down")
             if sidecar == "leer":
@@ -228,8 +229,10 @@ def _ac2_pruefen(result, referenz):
     assert result.throttled is False
     assert result.onset_minutes == referenz.onset_minutes
     assert result.window_precip_mm == pytest.approx(referenz.window_precip_mm)
-    text = _service().format_now_text(result)
+    text = _service().format_now_text(result, englisch=True)
+    text_de = _service().format_now_text(result)
     assert "Storm check not available." in text
+    assert "Gewitter-Check nicht verfügbar." in text_de
 
 
 @pytest.fixture
@@ -264,6 +267,21 @@ def test_ac2_sidecar_vom_budget_gate_gedrosselt(monkeypatch, _referenz):
     _ac2_pruefen(result, _referenz)
 
 
+def test_ac1_hoehe_erreicht_den_sidecar_request(monkeypatch):
+    """Die Hoehe aus get_nowcast() muss als elevation=1800 im Open-Meteo-
+    Sidecar-Request stehen; ohne Hoehe kein elevation-Parameter."""
+    zaehler = _install_http(monkeypatch, _SIDECAR_CODES)
+    _service().get_nowcast(_DE_LAT, _DE_LON, elevation_m=1800)
+    assert zaehler["openmeteo"] == 1
+    assert "elevation=1800" in zaehler["openmeteo_urls"][0]
+
+    reset_shared_radar_cache_for_tests()
+    ohne = _install_http(monkeypatch, _SIDECAR_CODES)
+    _service().get_nowcast(_DE_LAT, _DE_LON)
+    assert ohne["openmeteo"] == 1
+    assert "elevation" not in ohne["openmeteo_urls"][0]
+
+
 # ===========================================================================
 # AC-3: kein Sidecar ohne Frames; Offline-Modus bleibt netzfrei
 # ===========================================================================
@@ -284,7 +302,7 @@ def test_ac3_offline_modus_netzfrei(monkeypatch):
     monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", str(ROOT / "tests" / "fixtures"))
     zaehler = _install_http(monkeypatch, _SIDECAR_CODES)
     assert _service()._fetch_brightsky(_DE_LAT, _DE_LON) == []
-    assert zaehler == {"brightsky": 0, "openmeteo": 0}
+    assert (zaehler["brightsky"], zaehler["openmeteo"]) == (0, 0)
 
 
 # ===========================================================================
@@ -400,14 +418,17 @@ def test_ac5_gewitter_und_marker_aus_demselben_ergebnis(monkeypatch):
     assert ergebnis.is_convective is True
     assert radar_alert_due(ergebnis, 240) is True
     # Renderer: bei geprueft-Ergebnis KEIN Marker, reine Daten.
-    text = _service().format_now_text(ergebnis)
+    text = _service().format_now_text(ergebnis, englisch=True)
+    text_de = _service().format_now_text(ergebnis)
     assert "Storm check not available." not in text
+    assert "Gewitter-Check nicht verfügbar." not in text_de
 
     reset_shared_radar_cache_for_tests()
     _install_http(monkeypatch, "fehler")
     ungeprueft = _service().get_nowcast(_DE_LAT, _DE_LON)
     assert ungeprueft.convective_checked is False
-    assert "Storm check not available." in _service().format_now_text(ungeprueft)
+    assert "Storm check not available." in _service().format_now_text(ungeprueft, englisch=True)
+    assert "Gewitter-Check nicht verfügbar." in _service().format_now_text(ungeprueft)
 
 
 # ===========================================================================
