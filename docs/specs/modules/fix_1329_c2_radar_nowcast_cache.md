@@ -229,6 +229,8 @@ def __init__(
 (Produktionscode ruft weiterhin die echte Uhr), Tests können eine
 kontrollierte Zeitquelle injizieren.
 
+> Nachtrag 2026-10-01 (#2464): `RadarCacheEntry`/`put` speichern zusätzlich `convective_checked`; ein Cache-Treffer liefert den gespeicherten Wert aus (vorher immer `True`, alle Regionen).
+
 ### 3. `get_nowcast` — Cache- und Budget-Einbindung
 
 ```python
