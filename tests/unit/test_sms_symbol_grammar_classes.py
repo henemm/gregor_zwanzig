@@ -164,9 +164,12 @@ def test_ac_s6_3_catalog_union_is_complete_subset_of_priority():
     # fix_1887_e6a_sms_kuerzel_register.md): 30 -> 29. 'WC' entfaellt
     # ERSATZLOS (verdoppelte nachweislich 'FK') -- ein Multi-Wert weniger:
     # 22 Single + 8 Multi - 1 Ueberschneidung 'TH:' = 29.
-    assert len(katalog_union) == 29, (
+    # #2422 S6 (B1, PO-Entscheid V1): 29 -> 30. 'TF' (Stundenwert der gefuehlten
+    # Temperatur, wind_chill) steht wieder als Einzel-Symbol im Register:
+    # 23 Single + 8 Multi - 1 Ueberschneidung 'TH:' = 30.
+    assert len(katalog_union) == 30, (
         f"Katalog-Union hat {len(katalog_union)} eindeutige Symbole, "
-        f"erwartet 29 (22 Single + 8 Multi - 1 Ueberschneidung 'TH:'): "
+        f"erwartet 30 (23 Single + 8 Multi - 1 Ueberschneidung 'TH:'): "
         f"{sorted(katalog_union)!r}"
     )
 

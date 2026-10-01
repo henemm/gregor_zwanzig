@@ -779,7 +779,13 @@ def render_telegram_bubbles(
     # gefuehlte Nacht-Untergrenze -- "wind_chill_night" statt unbedingt
     # "wind_chill".
     _felt_night_selected = "wind_chill_night" in _enabled_ids
+    # #2422 S6 (B5): zusammengefuehrte Windrichtung hat keine eigene Zeile --
+    # die Richtung steckt in der Windzeile (geteilter Helfer wie Tabelle/Mail).
+    from output.renderers.email.helpers import should_merge_wind_dir
+    _merge_wind_dir = should_merge_wind_dir(dc)
     for mid in dc.get_enabled_metric_ids():
+        if mid == "wind_direction" and _merge_wind_dir:
+            continue
         if mid == "temperature_night":
             if ("temperature" in _enabled_ids or report_type != "evening"
                     or _night_min_c is None):

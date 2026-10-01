@@ -179,6 +179,12 @@ export interface MetricEntry {
 	 *  aendert (CI-Regression svelte-check 36->94, #1554 Fix-Loop). */
 	trip_default_enabled?: boolean;
 	has_friendly_format: boolean;
+	/** Issue #2422 S6 (B2): hat die Größe in SMS/Premium-SMS/Telegram-Kurzform
+	 *  zwei Formen (Roh/Einfach)? Quelle: Backend-Konstante
+	 *  SMS_FORMAT_MODE_METRIC_IDS — der SMS-Reiter bietet den Umschalter nur dafür.
+	 *  Optional, weil bestehende Test-/Mock-Kataloge MetricEntry-Literale ohne
+	 *  das Feld bauen (Muster trip_default_enabled). */
+	sms_format_capable?: boolean;
 	/** Issue #435: erlaubte Format-Modi pro Metrik (raw/scale/simplified/symbol). */
 	format_modes?: string[];
 	/** Issue #435: Default-Format-Modus dieser Metrik. */

@@ -93,7 +93,8 @@ def get_sms_symbols():
 @router.get("/metrics")
 def get_metrics():
     from app.metric_catalog import (
-        aggregation_label_de, available_aggregations, get_all_metrics,
+        SMS_FORMAT_MODE_METRIC_IDS, aggregation_label_de,
+        available_aggregations, get_all_metrics,
     )
     metrics = get_all_metrics()
     result = {}
@@ -111,6 +112,10 @@ def get_metrics():
             # default_enabled (das Orte/Abonnements weiter versorgt).
             "trip_default_enabled": m.trip_default_rank is not None,
             "has_friendly_format": m.has_friendly_format,
+            # Issue #2422 S6 (B2): hat die Groesse in SMS/Premium-SMS/Telegram-
+            # Kurzform zwei Formen (Roh/Einfach)? Dieselbe Quelle wie der
+            # SMS-Builder -- der SMS-Reiter im Editor bietet den Umschalter nur dafuer.
+            "sms_format_capable": m.id in SMS_FORMAT_MODE_METRIC_IDS,
             # Issue #435: Format-Modi pro Metrik (raw/scale/simplified/symbol)
             "format_modes": list(m.format_modes),
             "default_format_mode": m.default_format_mode,

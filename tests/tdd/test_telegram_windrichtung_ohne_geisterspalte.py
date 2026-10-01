@@ -82,11 +82,14 @@ def test_ac13_verdraengte_metrik_rueckt_in_die_tabelle_nach(monkeypatch):
     assert _G not in kopf, f"AC-13: gust wird vom 7er-Limit weiter verdraengt: {kopf}"
     bodies, _ = _kanal_texte(mit, "telegram_rich")
     hinweis = telegram_metric_notice(1, context="route")
-    assert any(hinweis in b for b in bodies), (
+    # Der Hinweis ist 60 Zeichen lang und wird in der Kurzuebersicht bei 56
+    # Zeichen umbrochen (narrow._wrap) -- Umbruch-unabhaengig vergleichen.
+    flach = [" ".join(b.split()) for b in bodies]
+    assert any(hinweis in b for b in flach), (
         f"AC-13: der Hinweis auf EINE verdraengte Groesse ({hinweis!r}) fehlt -- "
         f"wind_direction darf nicht mitgezaehlt werden."
     )
-    assert not any(telegram_metric_notice(2, context="route") in b for b in bodies)
+    assert not any(telegram_metric_notice(2, context="route") in b for b in flach)
 
 
 def test_ac13_render_for_channel_table_columns_und_demoted_count():
@@ -147,4 +150,22 @@ def test_ac13_guard_ohne_aktiven_wind_bleibt_die_spalte():
     layout = render_for_channel("telegram", trip.display_config, "evening")
     assert "wind_direction" in layout.table_columns, (
         f"GUARD: ohne Wind keine Verschmelzung: {layout.table_columns}"
+    )
+
+
+def test_ac13_kurzuebersicht_hat_keine_eigene_wd_zeile_richtung_steckt_in_der_windzeile(monkeypatch):
+    """AC-13 (Kurzuebersicht, #2422 S6): dieselbe Geisterspalte in anderer Form --
+    bei zusammengefuehrter Windrichtung steht in der Telegram-Kurzuebersicht KEINE
+    eigene Zeile ``WD -``; die Richtung steckt in der Windzeile (``W 20 W``).
+
+    Mutation (Filter in ``narrow.py`` entfernt) -> ``WD –`` steht wieder da -> rot."""
+    mit, _ = render_golden(monkeypatch, "golden_b")
+    bodies, _ = _kanal_texte(mit, "telegram_rich")
+    uebersicht = next(b for b in bodies if b.startswith("Kurzübersicht"))
+    zeilen = uebersicht.splitlines()
+    assert not any(z.split()[:1] == [_WD] for z in zeilen if z.strip()), (
+        f"AC-13: eigene {_WD!r}-Zeile in der Kurzuebersicht: {zeilen}"
+    )
+    assert any(re.match(r"W 20 W\b", z) for z in zeilen), (
+        f"AC-13: die Windzeile muss die Richtung tragen: {zeilen}"
     )

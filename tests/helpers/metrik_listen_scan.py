@@ -318,6 +318,11 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # Roh/Einfach-Umschalter im 3-Tages-Ausblick -- geteilte Quelle mit dem
     # Frontend (Drift-Test gegen outlookFriendlyCapability.ts).
     ("src/app/metric_catalog.py", "OUTLOOK_FRIENDLY_CAPABLE", "element"),
+    # Issue #2422 S6 (B2): SMS_FORMAT_MODE_METRIC_IDS ist die EINE Quelle fuer
+    # "diese Groesse hat in der SMS zwei Formen (Roh/Einfach)" -- speist
+    # SMS-Builder, SMS-Reiter im Editor (/api/metrics sms_format_capable) und das
+    # Orakel (Drift-Test test_sms_einfach_roh_je_metrik.py).
+    ("src/app/metric_catalog.py", "SMS_FORMAT_MODE_METRIC_IDS", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['alpen-trekking']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['wandern']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['skitouren']['metrics']", "element"),

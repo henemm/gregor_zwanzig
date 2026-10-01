@@ -224,7 +224,10 @@ class TestAC3KurzuebersichtAlleMetriken:
             # Bubble-Reihenfolge lt. Spec: [0]=Kopf, [1]=Kurzübersicht.
             overview_text = bubbles[1].text
             missing = [
-                m for m in metric_ids if _compact_label(m) not in overview_text
+                # #2422 S6 (B5): wind_direction (Skalenmodus) neben wind ist in die
+                # Windzeile verschmolzen -- keine eigene Kurzuebersicht-Zeile mehr.
+                m for m in metric_ids
+                if m != "wind_direction" and _compact_label(m) not in overview_text
             ]
             assert not missing, (
                 f"Kurzübersicht-Bubble (kurzform={kurzform_flag}) fehlt Kürzel für: "

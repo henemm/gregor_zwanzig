@@ -382,13 +382,11 @@ def codes_text(en: bool, vergleich: bool = False) -> str:
     """CODES (englisch) bzw. KUERZEL (deutsch) -- jedes Zeichen, das eine
     Kurzform-SMS tragen kann, mit Bedeutung aus der jeweils EINEN Quelle.
 
-    Bug #2454 AC-6/AC-7: "TF" wird im TRIP nie versendet (`wind_chill` hat
-    seit #1887 E6 kein eigenes Kurzform-Kuerzel) -- im Trip-Kontext
-    (``vergleich=False``, Default) wird "TF" deshalb sowohl aus der
-    geordneten Wetter-Gruppe als auch aus dem Nachtrags-Fallback (``bed``)
-    entfernt, sonst haengt Zeile ~392 es unbeworben wieder an. Im
-    Ortsvergleich-Kontext (``vergleich=True``) bleibt "TF" unveraendert
-    (der Ortsvergleich versendet es tatsaechlich, comparison.py:636)."""
+    Issue #2422 S6 (B1): "TF" (gefuehlte Temperatur, Stundenwert) steht in
+    Trip UND Ortsvergleich -- der Trip versendet ``TF<Tiefstwert>@<Stunde>``
+    jetzt ebenfalls und loest damit Bug #2454 AC-6/AC-7 ("TF entfaellt im
+    Trip") ab. ``vergleich`` bleibt als Parameter erhalten (Aufrufer), ohne
+    den Text noch zu veraendern."""
     from app.metric_catalog import _METRICS
     from output.tokens import builder
     from output.tokens import hazard_symbols as hz
@@ -397,9 +395,6 @@ def codes_text(en: bool, vergleich: bool = False) -> str:
     for m in _METRICS:
         bed.update(m.kuerzel_bedeutung_en if en else m.kuerzel_bedeutung_de)
     wetter_codes = _CODES_WETTER
-    if not vergleich:
-        wetter_codes = tuple(g for g in wetter_codes if g != ("TF",))
-        bed.pop("TF", None)
     geordnet = {c for g in wetter_codes + _CODES_WEITERE for c in g}
     wetter = wetter_codes + tuple((c,) for c in bed if c not in geordnet)
     bed.update(builder.BAUSTEIN_BEDEUTUNG_EN if en else builder.BAUSTEIN_BEDEUTUNG_DE)

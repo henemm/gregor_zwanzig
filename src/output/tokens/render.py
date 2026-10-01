@@ -87,7 +87,9 @@ def _truncate(tokens: list[Token], stage: str, mx: int) -> tuple[list[Token], bo
     # Issue #1410 §3b: die gefuehlte Temperatur ist eine Komfort-Zusatzangabe
     # und faellt deshalb noch VOR PR -- die sicherheitsrelevanten
     # Planungsgroessen (R/PR/W/G/TH) bleiben laenger stehen.
-    for sym in ("FN", "FL", "FD"):
+    # Issue #2422 S6 (B1): 'TF' (Stundenwert) ist das am ehesten redundante
+    # der vier gefuehlten Token und faellt als allererstes.
+    for sym in ("TF", "FN", "FL", "FD"):
         if _drop_first(tokens, sym):
             truncated = True
             if len(_draw(stage, tokens)) <= mx:

@@ -54,7 +54,12 @@ _METRIC_IDS = (
 # (B9-Fix) aendert ZUSAETZLICH ihre POSITION (s. Docstring oben): die
 # Reihenfolge folgt jetzt der globalen Editor-Liste statt der alten
 # POSITIONAL-Sortierung.
-_ERWARTET_OHNE_WC = "E7: D3/20 N11 FD1/18 FN9"
+#
+# #2422 S6 (B1, PO-Entscheid V1): die aktive Eltern-Metrik ``wind_chill`` traegt
+# jetzt das EIGENE Stundenwert-Kuerzel 'TF' (Tiefstwert im Tagesfenster mit
+# Uhrzeit) am Ende der Liste -- 'WC' bleibt entfallen, die sechs uebrigen Token
+# stehen unveraendert (Positionsvergleich gilt weiter).
+_ERWARTET_OHNE_WC = "E7: D3/20 N11 FD1/18 FN9 TF1@8"
 
 
 def _sms() -> str:

@@ -4726,7 +4726,11 @@ def test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge(metric_id):
     """AC-S7-7: die Telegram-Kurzuebersicht-Bubble folgt der im
     Telegram-Kanal eingestellten Reihenfolge -- paarweise ueber alle
     waehlbaren Groessen."""
-    partner = "temperature" if metric_id == "wind" else "wind"
+    # #2422 S6 (B5): ``wind_direction`` neben ``wind`` ist in die Windzeile
+    # zusammengefuehrt und hat KEINE eigene Zeile (siehe
+    # test_telegram_windrichtung_ohne_geisterspalte.py). Seine Reihenfolge wird
+    # deshalb gegen einen Partner OHNE aktiven Wind geprueft (kein Merge).
+    partner = "temperature" if metric_id in ("wind", "wind_direction") else "wind"
     zeilen_a = _s4_kurzuebersicht(_s7_telegram_layout_dc([metric_id, partner]))
     zeilen_b = _s4_kurzuebersicht(_s7_telegram_layout_dc([partner, metric_id]))
     assert _s7_kurzuebersicht_index(zeilen_a, metric_id) < _s7_kurzuebersicht_index(

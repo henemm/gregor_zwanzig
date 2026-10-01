@@ -152,6 +152,24 @@ zu Recht ausgenommen hatte.
 Status unverändert **Akzeptiert**. Spec:
 `docs/specs/modules/fix_2232_kuerzel_ein_modell_trip_vergleich.md`.
 
+## Nachtrag 2026-09-30 (#2422 S6) — `TF` ist auch im Trip der Stundenwert der gefühlten Temperatur
+
+`TF` ist die Stunden-Extrem-Größe der Eltern-Metrik `wind_chill` und wird jetzt **auch von
+der Trip-Kurzform** gesendet (SMS, Premium-SMS, Telegram-Kurzform): Klasse (b) „Invers-Min",
+`TF<Tiefstwert in ganzen °C>@<Stunde>` über das Tagesfenster (`day_window_start_hour`–
+`end_hour`), Nullform `TF-`, Datenlücke `TF?`. Der Wert entsteht aus der neuen Laufzeit-Serie
+`DailyForecast.wind_chill_hourly` (Tagesfenster-Zeitreihe wie Regen/Wind, ohne `> 0`-Filter,
+Dedup je Stunde mit Tiefstwert). `TF` fällt beim Kürzen als Erstes der Komfort-Zusatzangaben
+(`("TF", "FN", "FL", "FD")`).
+
+**Löst ab:** „`TF` entfällt im Trip-Kontext" (#2454 AC-6/AC-7, `codes_text(vergleich=False)`)
+und den Satz aus Nachtrag E7 „Trip-SMS sendet `FK`/`FD`/`WC`, Vergleichs-/Alarm-SMS `TF`" —
+die Trip-SMS sendet zusätzlich `TF` (Stundenwert). `WC` bleibt ersatzlos entfallen
+(#1887 E6a). `TF` und `FL` messen dieselbe physikalische Größe über **verschiedene Fenster**
+(Tagesfenster mit Uhrzeit gegen Gehzeit-Fenster); sind beide gewählt, werden beide gesendet,
+keines wird unterdrückt. Die Ortsvergleichs-SMS ist unverändert. Status von ADR-0011
+unverändert „Akzeptiert".
+
 ## Nachtrag 2026-08-06 (#923)
 
 Der im Kontext-Abschnitt genannte dritte Fall der dreifachen SMS-Kürzel-Kopie
