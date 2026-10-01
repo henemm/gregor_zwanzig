@@ -71,6 +71,17 @@ describe('AC-6: Fehlertexte — je Fall eigener Klartext, nie der rohe Code', ()
 		assert.equal(adminErrorText(400, 'invalid_tier'), 'Ungültige Eingabe');
 	});
 
+	// Adversary F004: der Selbstsperr-Text gilt NUR fuer 409 + cannot_disable_self.
+	test('409 mit anderem oder ohne Code => allgemeine Meldung, NICHT der Selbstsperr-Text', () => {
+		const allgemein = 'Aktion fehlgeschlagen. Bitte erneut versuchen.';
+		const selbst = 'Das eigene Konto kann nicht gesperrt werden';
+		for (const code of ['conflict', 'tier_request_pending', undefined]) {
+			const text: string = adminErrorText(409, code);
+			assert.notEqual(text, selbst, `409/${code}: faelschlich Selbstsperr-Text`);
+			assert.equal(text, allgemein, `409/${code}: keine allgemeine Meldung`);
+		}
+	});
+
 	test('unbekannter Status/Code faellt auf eine allgemeine Meldung zurueck', () => {
 		const text: string = adminErrorText(500, 'store_error');
 		assert.ok(text.length > 5 && !text.includes('store_error'));

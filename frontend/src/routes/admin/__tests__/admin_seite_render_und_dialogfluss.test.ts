@@ -117,6 +117,71 @@ describe('Admin-Seite (SSR): Selbstschutz, Sperrstatus, offener Antrag', () => {
 	});
 });
 
+// ─── Render der Zeilenfelder (AC-3) — Adversary F003 ─────────────────────────
+// Jede Zeile hat eigene E-Mail, eigenes Tier und eigenen Lauf, damit eine
+// Assertion nicht zufaellig an der Nachbarzeile gruen wird.
+describe('Admin-Seite (SSR): E-Mail, Tier, Select-Wert, letzter Lauf je Zeile', () => {
+	const users = [
+		user({ id: 'ohne-lauf', email: 'ohne-lauf@example.org', tier: 'free', last_trip_report_run: null }),
+		user({
+			id: 'mit-lauf',
+			email: 'mit-lauf@example.org',
+			tier: 'standard',
+			last_trip_report_run: { time: '2026-09-29T12:00:00Z', status: 'zugestellt', error: '' }
+		}),
+		user({ id: 'premium', email: 'premium@example.org', tier: 'premium' }),
+		user({ id: 'gold', email: 'gold@example.org', tier: 'gold' })
+	];
+	const html = seite(users, 'admin-x');
+
+	/** Die <option>, die im <select> der Zeile als ausgewaehlt gerendert ist. */
+	function gewaehlt(z: string): string[] {
+		const sel = /<select[^>]*data-testid="admin-tier-select"[^>]*>([\s\S]*?)<\/select>/.exec(z);
+		assert.ok(sel, 'Zeile hat kein Tier-Select (Messaufbau)');
+		return [...sel![1].matchAll(/<option([^>]*)>/g)]
+			.filter((m) => /\bselected\b/.test(m[1]))
+			.map((m) => /value="([^"]*)"/.exec(m[1])?.[1] ?? '?');
+	}
+
+	test('E-Mail steht in der eigenen Zeile, nicht in der fremden', () => {
+		const a = zeile(html, 'ohne-lauf');
+		const b = zeile(html, 'mit-lauf');
+		assert.ok(a.includes('ohne-lauf@example.org'), 'E-Mail fehlt in der Zeile');
+		assert.ok(b.includes('mit-lauf@example.org'), 'E-Mail fehlt in der Zeile');
+		assert.ok(!a.includes('mit-lauf@example.org'), 'fremde E-Mail in der Zeile');
+	});
+
+	test('last_trip_report_run = null => "kein Lauf"', () => {
+		assert.ok(
+			zeile(html, 'ohne-lauf').includes('Letzter Trip-Report: kein Lauf'),
+			'null-Lauf zeigt nicht "kein Lauf"'
+		);
+	});
+
+	test('vorhandener Lauf => formatierte Zeit und Status, nicht "kein Lauf"', () => {
+		const z = zeile(html, 'mit-lauf');
+		assert.match(z, /Letzter Trip-Report: 29\.9\.2026, \d{1,2}:\d{2}:\d{2} \(zugestellt\)/);
+		assert.ok(!z.includes('kein Lauf'), 'Zeile mit Lauf zeigt "kein Lauf"');
+		assert.ok(!z.includes('2026-09-29T12:00:00Z'), 'Zeit roh statt formatiert');
+	});
+
+	test('Tier-Select zeigt das Tier der Zeile (nicht nur die erste Option)', () => {
+		assert.deepEqual(gewaehlt(zeile(html, 'ohne-lauf')), ['free']);
+		assert.deepEqual(gewaehlt(zeile(html, 'mit-lauf')), ['standard']);
+		assert.deepEqual(gewaehlt(zeile(html, 'premium')), ['premium']);
+	});
+
+	test('Tier-Bezeichnung aus TIER_LABELS, unbekanntes Tier faellt auf den Rohwert zurueck', () => {
+		assert.ok(zeile(html, 'premium').includes('Tier: <strong>Premium</strong>'));
+		assert.ok(zeile(html, 'gold').includes('Tier: <strong>gold</strong>'), 'Fallback auf Rohwert fehlt');
+	});
+});
+
+// Grenze (Adversary F003 f): der Hinweis "alle Sitzungen dieses Kontos enden"
+// steht im ConfirmDialog. Dessen Inhalt liegt in einem bits-ui-Portal, das im
+// SSR-Render NICHTS ausgibt (Probe: ConfirmDialog mit open=true liefert nur
+// Kommentar-Marker). Nur in der Staging-Playwright-Spec messbar.
+
 // ─── Load: selfId und fail-closed-Zweige ─────────────────────────────────────
 type Antwort = { ok: boolean; status: number; body?: unknown };
 let profil: Antwort | 'wirft';
