@@ -346,7 +346,7 @@ describe('AC-5 Zusatz: official_warnings/Cooldown/Stille-Stunden landen im Paylo
 // ═══════════════════════════════════════════════════════════════════════════
 // Issue #2277 Scheibe S2a — Reiter „Wertebereiche" in /trips/new
 // Spec: docs/specs/modules/fix_2277_s2a_wertebereiche_trip_anlegen.md
-// Signatur: unlockedTabs/doneTabs(name, startDate, etDone, wtVisited, wbVisited, ztVisited)
+// Signatur seit #2277 S3: unlockedTabs/doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited)
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Issue #2277 S3: die S2a-Kette „Wertebereiche → Zeitplan" ist abgeloest
