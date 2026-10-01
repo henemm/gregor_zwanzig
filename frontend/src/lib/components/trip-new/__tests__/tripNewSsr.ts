@@ -134,3 +134,39 @@ export function bereichVon(html: string, testid: string): 'desktop' | 'mobil' {
 	assert.notEqual(mobileStart, -1, 'Mobil-Inhaltsbaum (.tn-mobile) nicht gefunden.');
 	return mi < mobileStart ? 'desktop' : 'mobil';
 }
+
+/** Die role="tab"-Elemente der DESKTOP-Tab-Leiste (alles vor der Mobil-Leiste),
+ *  je als { label, title }. Im Leerzustand sind die Reiter gesperrt, ihr
+ *  Lock-Hinweis steht dann im `title` („Gesperrt — <Hinweis>").
+ *  (Aus trip_new_wertebereiche_reiter.test.ts hierher gezogen, Issue #2277 S3 —
+ *  der Paritaetstest in shared/__tests__ liest dieselbe Leiste.) */
+export function desktopTabs(html: string): { label: string; title: string | null }[] {
+	const ende = html.indexOf('data-testid="tn-mobile-tabbar"');
+	assert.notEqual(ende, -1, 'Messaufbau kaputt: Mobil-Tab-Leiste nicht gefunden.');
+	const bereich = html.slice(0, ende);
+	const tabs: { label: string; title: string | null }[] = [];
+	const re = /<div([^>]*\brole="tab"[^>]*)>([\s\S]*?)<\/div>/g;
+	let m: RegExpExecArray | null;
+	while ((m = re.exec(bereich))) {
+		const title = /\btitle="([^"]*)"/.exec(m[1])?.[1] ?? null;
+		const label = visibleText(m[2]).replace(/&amp;/g, '&').replace(/[⊘✓]/g, '').replace(/\bOPTIONAL\b|\boptional\b/g, '').trim();
+		tabs.push({ label, title });
+	}
+	return tabs;
+}
+
+/** Labels der MOBIL-Tab-Leiste in Reihenfolge. */
+export function mobilTabLabels(html: string): string[] {
+	const start = html.indexOf('data-testid="tn-mobile-tabbar"');
+	assert.notEqual(start, -1, 'Messaufbau kaputt: Mobil-Tab-Leiste nicht gefunden.');
+	const labels: string[] = [];
+	const re = /<button[^>]*\brole="tab"[^>]*>([\s\S]*?)<\/button>/g;
+	re.lastIndex = start;
+	let m: RegExpExecArray | null;
+	let n = 0;
+	while ((m = re.exec(html)) && n < 20) {
+		labels.push(visibleText(m[1]).replace(/&amp;/g, '&').replace(/[⊘✓]/g, '').replace(/\bopt\b/g, '').trim());
+		n++;
+	}
+	return labels;
+}

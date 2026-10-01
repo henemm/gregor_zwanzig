@@ -41,12 +41,12 @@ const KANAL_TESTIDS = ['channel-email', 'channel-telegram', 'channel-sms', 'chan
 /** /trips/new mit offenem Zeitplan-Tab, breite Ansicht. */
 function zeitplan(channels: WetterKanaele, reportConfig?: Record<string, unknown>): string {
 	const html = renderTripNew({
-		activeTab: 'zeitplan',
+		activeTab: 'versand',
 		isMobileViewport: false,
 		channels,
 		reportConfig
 	});
-	assertTabOffen(html, 'zeitplan');
+	assertTabOffen(html, 'versand');
 	return html;
 }
 
