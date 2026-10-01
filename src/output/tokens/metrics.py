@@ -14,11 +14,10 @@ from output.tokens.dto import HourlyValue
 LEVELS = {0: "-", 1: "L", 2: "M", 3: "H"}
 
 # Issue #2422 S6 (B2): GSM-7-Einfach-Stufen. Die Klassifikation kommt aus der
-# E-Mail (``metric_format.cloud_emoji`` / ``severity_for("cape")``), nur die
+# E-Mail (``metric_format.cloud_emoji``), nur die
 # Darstellung ist ASCII -- die Baender werden ueber Band-Mittelpunkte auf die
 # Stufenwoerter abgebildet, nie als zweite Grenzliste gepflegt.
 _CLOUD_STUFEN = ((5.0, "CLR"), (20.0, "FEW"), (50.0, "SCT"), (80.0, "BKN"), (95.0, "OVC"))
-_AMPEL_STUFEN = {"green": "-", "yellow": "L", "orange": "M", "red": "H"}
 
 
 def cloud_stufe(pct: float) -> str:
@@ -28,17 +27,10 @@ def cloud_stufe(pct: float) -> str:
     return next(w for mitte, w in _CLOUD_STUFEN if cloud_emoji(mitte) == emoji)
 
 
-def cape_stufe(value: float) -> str:
-    """CAPE-Stufe -/L/M/H aus dem E-Mail-Ampelband ``severity_for("cape")``."""
-    from output.metric_format import severity_for
-    return _AMPEL_STUFEN.get(severity_for("cape", float(value)), "-")
-
-
 #: Kuerzel -> Stufen-Abbildung der Groessen mit SMS-Einfachform
 #: (Spiegel von ``metric_catalog.SMS_FORMAT_MODE_METRIC_IDS``; Drift-Test).
 STUFEN_FN: dict[str, Callable[[float], str]] = {
     "CT": cloud_stufe, "CL": cloud_stufe, "CM": cloud_stufe, "CH": cloud_stufe,
-    "CP": cape_stufe,
 }
 
 
