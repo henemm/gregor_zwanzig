@@ -192,15 +192,15 @@ def test_trip_briefing_sms_stays_gsm7_clean_with_dense_token_line():
 def test_trip_briefing_sms_einfach_modi_bleiben_gsm7_rein_und_tragen_stufen_token():
     """#2422 S6 (AC-9): der GSM-7-Waechter deckt auch die EINFACH-Modi ab.
 
-    Wolken (``CT``/``CL``/``CM``/``CH``) und CAPE (``CP``) tragen
+    Wolken (``CT``/``CL``/``CM``/``CH``) tragen
     ``format_mode="symbol"`` (Einfach) UND das Emoji-``friendly_label`` des Katalogs
     -- der bisherige Einfach-Zweig des Builders gaebe dieses Emoji aus (nicht GSM-7,
     UCS-2-Kostenverdopplung). Erwartet: ASCII-Stufe ``CT:BKN@...`` (Doppelpunkt im
     Kuerzel, #1824 B), weder Emoji noch Zahl.
 
     Vakuum-Schutz: die Einfach-Stufen MUESSEN im ungekuerzten Text stehen
-    (``CT:``/``CL:``/``CM:``/``CH:``/``CP:``) -- sonst prueft der Waechter nur
-    Zahlen. Bug-Nachweis: heute steht dort das Emoji-Label (oder die Zahl), der
+    (``CT:``/``CL:``/``CM:``/``CH:``) -- sonst prueft der Waechter nur
+    Zahlen. (#2422 S6b: CAPE hat keine Einfachform mehr.) Bug-Nachweis: heute steht dort das Emoji-Label (oder die Zahl), der
     Waechter wird ROT, sobald es im Text steht bzw. die Stufe fehlt."""
     from app.metric_catalog import get_metric
     from output.tokens.dto import MetricSpec
@@ -212,7 +212,7 @@ def test_trip_briefing_sms_einfach_modi_bleiben_gsm7_rein_und_tragen_stufen_toke
         )
         for sym, mid in (
             ("CT", "cloud_total"), ("CL", "cloud_low"), ("CM", "cloud_mid"),
-            ("CH", "cloud_high"), ("CP", "cape"),
+            ("CH", "cloud_high"),
         )
     ]
     formatter = SMSTripFormatter()
@@ -224,7 +224,7 @@ def test_trip_briefing_sms_einfach_modi_bleiben_gsm7_rein_und_tragen_stufen_toke
     sms = formatter.format_sms([_dense_segment()], **kwargs)
     full = formatter.format_sms([_dense_segment()], max_length=2000, **kwargs)
 
-    fehlend = [sym for sym in ("CT:", "CL:", "CM:", "CH:", "CP:") if sym not in full]
+    fehlend = [sym for sym in ("CT:", "CL:", "CM:", "CH:") if sym not in full]
     assert not fehlend, (
         f"AC-9 (S6): die Einfach-Stufen-Token {fehlend} stehen nicht im "
         f"ungekuerzten Text {full!r} -- der Waechter pruefte sonst nur Zahlen."

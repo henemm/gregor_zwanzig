@@ -15,13 +15,14 @@ from tests.tdd._einstellung_auslieferung_fixtures import golden_dict, render_tri
 
 #: Spec AC-8 WORTGLEICH (nicht aus der Produktkonstante gelesen, damit die
 #: Mutation "Id aus der Konstante streichen" den Testfall nicht mitloescht).
-SPEC_SMS_FORMAT_IDS = ("cloud_total", "cloud_low", "cloud_mid", "cloud_high", "cape")
+#: #2422 S6b (PO-Entscheid 2026-10-01): ``cape`` gestrichen -- nur waehlbare Groessen.
+SPEC_SMS_FORMAT_IDS = ("cloud_total", "cloud_low", "cloud_mid", "cloud_high")
 SPEC_OHNE_SMS_FORM = (
     "thunder", "wind_direction", "sunshine", "wind", "gust",
     "rain_probability", "precipitation",
 )
 #: ``cape`` ist im Katalog ``selectable=False`` (#1585) und erreicht deshalb
-#: KEINEN Kanaltext ueber Layout/Kaskade -- nur auf Builder-Ebene pruefbar.
+#: KEINEN Kanaltext ueber Layout/Kaskade -- seit S6b auch keine Roh/Einfach-Groesse.
 WOLKEN = ("cloud_total", "cloud_low", "cloud_mid", "cloud_high")
 WOLKEN_SYMBOL = {"cloud_total": "CT", "cloud_low": "CL", "cloud_mid": "CM", "cloud_high": "CH"}
 #: Stufenwoerter der Wolken-Einfachform, niedrig -> hoch (Spec AC-5).
@@ -123,7 +124,7 @@ def stufe_aus_email_band(pct: float) -> str:
 
 
 #: Band-Vokabular der E-Mail-Ampel in aufsteigender Schwere und die SMS-Stufe je
-#: Band (AC-6/AC-7: gruen -> ``-``, gelb -> ``L``, orange -> ``M``, rot -> ``H``).
+#: Band (Gewitter ``TH:``, AC-7: gruen -> ``-``, gelb -> ``L``, orange -> ``M``, rot -> ``H``).
 AMPEL_REIHENFOLGE = ("green", "yellow", "orange", "red")
 AMPEL_ZU_STUFE = dict(zip(AMPEL_REIHENFOLGE, ("-", "L", "M", "H")))
 

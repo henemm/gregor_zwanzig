@@ -12,6 +12,8 @@ issues: ["#2422", "#2429"]
 
 # Fix #2422 (Scheibe S6): Ausnahme-Register „Einstellung ≠ Auslieferung" leeren (B1, B2, B3, B5)
 
+> **Abgelöst durch S6b** (`fix_2422_s6b_cape_aus_roh_einfach`): AC-6 und die cape-Teile von AC-7/AC-8 gelten nicht mehr; `cape` ist aus `SMS_FORMAT_MODE_METRIC_IDS` gestrichen.
+
 ## Approval
 
 - [ ] Approved

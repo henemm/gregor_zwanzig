@@ -788,8 +788,10 @@ _METRICS: list[MetricDefinition] = [
 # (`/api/metrics` Feld `sms_format_capable`) und das Test-Orakel. Alle anderen
 # Groessen haben in der SMS genau EINE Form (Gewitter 'TH:' ist bereits die
 # Stufe, 'WD:' der Sektor, 'SU' eine Tagessumme, Ampel-Groessen bleiben Zahl).
+# Issue #2422 S6b: NUR waehlbare Groessen -- `cape` ist seit #1585
+# selectable=False und im Editor/Layout nicht erreichbar, daher hier nicht gefuehrt.
 SMS_FORMAT_MODE_METRIC_IDS: frozenset = frozenset({
-    "cloud_total", "cloud_low", "cloud_mid", "cloud_high", "cape",
+    "cloud_total", "cloud_low", "cloud_mid", "cloud_high",
 })
 
 SMS_NULLFORM_METRIC_IDS: tuple[str, ...] = (

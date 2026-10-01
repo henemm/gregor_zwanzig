@@ -6,19 +6,18 @@ SPEC: docs/specs/modules/fix_2422_s6_register_leeren.md (AC-5 bis AC-11)
 
 Erwartete Form: Roh = Zahl (``CT70@4``), Einfach = GSM-7-Stufe mit Doppelpunkt im
 Kuerzel (``CT:SCT@4``; Konvention #1824 B). Wolken: ``CLR FEW SCT BKN OVC``
-(Baender von ``metric_format.cloud_emoji``); CAPE: ``- L M H`` (Ampelband
-``severity_for("cape")``); ``thunder``/``wind_direction``/``sunshine`` und die
+(Baender von ``metric_format.cloud_emoji``); ``thunder``/``wind_direction``/``sunshine`` und die
 Ampel-Groessen haben in der SMS EINE Form (Roh == Einfach, byte-gleich).
 
-🔴 SPEC-WIDERSPRUCH (vom Test-Autor gemessen, im Bericht gemeldet): ``cape`` ist im
-Katalog ``selectable=False`` (#1585) und faellt in der Kaskade aus JEDEM
-Kanal-Layout (``models._is_selectable``) -- auch ``/api/metrics`` und das Orakel
-(``_SELECTABLE_IDS``) kennen es nicht. Ein Produkt-Durchlauf (Golden -> Versand)
-kann ``CP`` deshalb nie zeigen. CAPE (AC-6/AC-7) und ``cape`` in
-``SMS_FORMAT_MODE_METRIC_IDS`` sind hier nur auf BUILDER-Ebene pruefbar; die in
-der Spec geforderte "Voll-Wetter-Fixture mit CAPE >= 300, geprueft im Orakel"
-ist ueber Layout/Kaskade nicht erreichbar (die Fixture liefert trotzdem 900 J/kg).
-Ebenso stehen ``cloud_mid``/``cloud_high`` in keinem Golden-SMS-Layout -- der
+#2422 S6b (PO-Entscheid 2026-10-01, SPEC
+docs/specs/modules/fix_2422_s6b_cape_aus_roh_einfach.md): ``cape`` ist im Katalog
+``selectable=False`` (#1585) und faellt in der Kaskade aus JEDEM Kanal-Layout --
+sein Roh/Einfach-Modus konnte nie wirken (Staging-Befund S6, Verdict BROKEN).
+``cape`` ist deshalb aus ``SMS_FORMAT_MODE_METRIC_IDS`` gestrichen; AC-6, der
+CAPE-Teil von AC-7 und der cape-Teil von AC-8 sind abgeloest. Die Zusicherung
+steht jetzt an der Wirkstelle (Invariante "jede Id der Konstante ist waehlbar",
+Endpoint-Gleichheit, ``STUFEN_FN``-Drift, Bestands-Trip mit ``cape``).
+Zudem stehen ``cloud_mid``/``cloud_high`` in keinem Golden-SMS-Layout -- der
 Vakuum-Schutz laeuft ueber in-Test-Varianten der Goldens (``_sms_einfach_fixtures``),
 die Golden-Dateien bleiben unveraendert.
 
@@ -221,62 +220,148 @@ def test_ac10_bestandsnutzer_katalog_default_einfach_raw_bleibt_zahl(monkeypatch
         )
 
 
-# ═══════════════════════════ AC-6: CAPE (Builder) ═══════════════════════════
+# ═════════════ S6b: CAPE raus, Zusicherung an der Wirkstelle ═══════════════
+# SPEC: docs/specs/modules/fix_2422_s6b_cape_aus_roh_einfach.md (AC-1 bis AC-4).
+# Loest AC-6, den CAPE-Teil von AC-7 und den cape-Teil von AC-8 aus S6 ab.
 
 
-def test_ac6_cape_bandgrenzen_roh_und_einfach():
-    """AC-6: Spitzenwert ``v`` J/kg um 14 Uhr. Roh ``CP<v>@14``; Einfach
-    ``CP:<Stufe>@14`` mit dem E-Mail-Ampelband ``severity_for("cape", v)``
-    (Schwellen 300/800/1500): gruen -> ``-``, gelb -> ``L``, orange -> ``M``, rot
-    -> ``H`` (wie ``TH:``). Geprueft an den Bandgrenzen 299/300, 799/800,
-    1499/1500 sowie 900 (Spec-Beispiel ``CP900@14`` / ``CP:M@14``).
+def test_s6b_ac1_jede_roh_einfach_groesse_ist_waehlbar():
+    """S6b AC-1 (Invariante): jede Id in ``SMS_FORMAT_MODE_METRIC_IDS`` ist im
+    echten Katalog ``selectable=True`` UND besteht ``models._is_selectable`` --
+    sonst filtert die Kanal-Kaskade sie aus jedem Layout und ihr Roh/Einfach-Modus
+    kann nie wirken (Staging-Befund S6: ``cape``).
 
-    Builder-Ebene, weil ``cape`` (``selectable=False``) nie im Kanaltext steht."""
-    from output.metric_format import severity_for
+    Mutation: ``"cape"`` zurueck in die Konstante -> rot."""
+    from app.metric_catalog import SMS_FORMAT_MODE_METRIC_IDS, get_metric
+    from app.models import _is_selectable
 
-    falsch: list[str] = []
-    for v in (1, 299, 300, 799, 800, 900, 1499, 1500, 2500):
-        band = severity_for("cape", float(v))
-        stufe = AMPEL_ZU_STUFE[band]
-        roh = zeile({"cape_hourly": (_hv(14, v),)}, [spec("CP", "raw", "cape")])
-        einfach = zeile({"cape_hourly": (_hv(14, v),)}, [spec("CP", "symbol", "cape")])
-        if f"CP{v}@14" not in tokens_von(roh):
-            falsch.append(f"v={v} roh: {roh!r}")
-        if f"CP:{stufe}@14" not in tokens_von(einfach):
-            falsch.append(f"v={v} einfach: erwartet CP:{stufe}@14 in {einfach!r}")
-    assert not falsch, "AC-6: " + "; ".join(falsch)
-    assert "CP:M@14" in tokens_von(
-        zeile({"cape_hourly": (_hv(14, 900),)}, [spec("CP", "symbol", "cape")])
+    nicht_waehlbar = sorted(
+        mid for mid in SMS_FORMAT_MODE_METRIC_IDS
+        if not (get_metric(mid).selectable and _is_selectable(mid))
     )
-    # die Bandgrenzen selbst kommen aus dem Katalog: 299 gruen, 300 gelb
-    assert severity_for("cape", 299.0) == "green" and severity_for("cape", 300.0) == "yellow"
+    assert not nicht_waehlbar, (
+        f"S6b AC-1: nicht waehlbare Groessen in SMS_FORMAT_MODE_METRIC_IDS: "
+        f"{nicht_waehlbar} -- ihr Roh/Einfach-Modus erreicht nie einen Kanaltext"
+    )
 
 
-def test_ac6_fixture_liefert_cape_ab_300():
-    """AC-6 (Vakuum-Schutz, GUARD): die Voll-Wetter-Fixture traegt CAPE >= 300
-    J/kg (Band gelb oder hoeher), damit "friendly" nicht auf dem ungeprueften ``-``
-    beruht. (Der Kanaltext kann ``CP`` wegen ``selectable=False`` nie zeigen --
-    siehe Modul-Docstring.)"""
-    from output.metric_format import severity_for
+def test_s6b_ac2_endpoint_sms_format_capable_genau_die_konstante_und_die_wolken():
+    """S6b AC-2 (Wirkstelle Endpoint): ``GET /api/metrics`` meldet
+    ``sms_format_capable=true`` fuer GENAU die Ids der Konstante -- ohne
+    Schnittmenge mit der Antwort: eine Id der Konstante, die der Endpoint nicht
+    fuehrt (nicht waehlbar), ist eine Abweichung. Und die Menge sind genau die vier
+    Wolken-Groessen (wortgleich aus der Spec).
 
+    Mutation: ``"cape"`` zurueck in die Konstante -> rot (Konstante != Endpoint)."""
+    import app.metric_catalog as katalog
+    from api.routers.config import get_metrics
+
+    eintraege = [m for gruppe in get_metrics().values() for m in gruppe]
+    wahr = {m["id"] for m in eintraege if m.get("sms_format_capable") is True}
+    assert wahr == {"cloud_total", "cloud_low", "cloud_mid", "cloud_high"}, (
+        f"S6b AC-2: sms_format_capable=true fuer {sorted(wahr)}"
+    )
+    assert wahr == set(katalog.SMS_FORMAT_MODE_METRIC_IDS), (
+        f"S6b AC-2: Konstante {sorted(katalog.SMS_FORMAT_MODE_METRIC_IDS)} verspricht "
+        f"mehr, als der Endpoint anbietet ({sorted(wahr)})"
+    )
+
+
+def test_s6b_ac3_stufen_fn_spiegelt_die_konstante_ohne_cp():
+    """S6b AC-3 (Drift): die Kuerzel von ``STUFEN_FN`` sind genau die SMS-Kuerzel
+    der Ids in ``SMS_FORMAT_MODE_METRIC_IDS`` (``CT``/``CL``/``CM``/``CH``); fuer
+    ``CP`` gibt es keine Stufenabbildung -- eine spaetere Freischaltung von
+    ``cape`` erbt keine ungeprueften Baender.
+
+    Mutation: ``STUFEN_FN["CP"]`` wieder einfuegen -> rot."""
+    from app.metric_catalog import SMS_FORMAT_MODE_METRIC_IDS, SMS_SYMBOL_BY_METRIC
+    from output.tokens.metrics import STUFEN_FN
+
+    soll = {SMS_SYMBOL_BY_METRIC[mid] for mid in SMS_FORMAT_MODE_METRIC_IDS}
+    assert "CP" not in STUFEN_FN, "S6b AC-3: STUFEN_FN fuehrt noch eine CAPE-Stufe"
+    assert set(STUFEN_FN) == soll == {"CT", "CL", "CM", "CH"}, (
+        f"S6b AC-3: STUFEN_FN={sorted(STUFEN_FN)}, Kuerzel der Konstante={sorted(soll)}"
+    )
+
+
+def _mit_cape(golden: str, modus: str | None) -> dict:
+    """Golden-Variante (alles Roh); bei ``modus`` zusaetzlich ein Bestands-Eintrag
+    ``cape`` im SMS-Layout und im globalen Maximum, mit ``format_mode`` UND
+    ``use_friendly_format`` (Altbestand aus S6)."""
+    d = variante(golden)
+    if modus is None:
+        return d
+    dc = d["display_config"]
+    dc["channel_layouts"]["sms"].append({
+        "metric_id": "cape", "enabled": True, "bucket": "primary", "order": 99,
+        "format_mode": modus, "use_friendly_format": modus == "symbol",
+    })
+    dc["metrics"].append({"metric_id": "cape", "enabled": True, "order": 99})
+    return d
+
+
+def _drei_texte(monkeypatch, modus: str | None) -> dict:
+    mit_b, _ = render_trip_dict(monkeypatch, _mit_cape("golden_b", modus), name="s6b-b")
+    mit_a, _ = render_trip_dict(monkeypatch, _mit_cape("golden_a", modus), name="s6b-a")
+    kurz = [s for s in mit_a.sendungen("telegram") if s["parse_mode"] is None]
+    assert kurz, "Vorbedingung: golden_a muss die Telegram-Kurzform senden"
+    return {
+        "sms": mit_b.sendungen("sms")[0]["body"],
+        "premium_sms": mit_b.sendungen("premium_sms")[0]["body"],
+        "telegram_kurzform": kurz[0]["body"],
+    }
+
+
+@pytest.mark.parametrize("modus", ["raw", "symbol"])
+def test_s6b_ac4_bestandstrip_mit_cape_format_mode_bleibt_byte_gleich(monkeypatch, modus):
+    """S6b AC-4 (GUARD, Produktpfad): ein Bestands-Trip mit gespeichertem
+    ``cape``-Eintrag inklusive ``format_mode`` im SMS-Layout laeuft ohne Fehler
+    durch Loader/Kaskade/Formatter; SMS, Premium-SMS und Telegram-Kurzform tragen
+    kein ``CP``-Token und sind BYTE-GLEICH zum selben Trip ohne ``cape``-Eintrag
+    (``cape`` bleibt wie seit #1585 ausgefiltert). Vakuum-Schutz: die Fixture
+    liefert CAPE >= 300 J/kg, ein durchgerutschtes ``CP`` waere also sichtbar."""
     dp = _voller_datenpunkt(20, 6)
-    assert dp.cape_jkg is not None and dp.cape_jkg >= 300.0
-    assert severity_for("cape", dp.cape_jkg) != "green"
+    assert dp.cape_jkg is not None and dp.cape_jkg >= 300.0, "Testaufbau: CAPE fehlt"
+    ohne = _drei_texte(monkeypatch, None)
+    mit = _drei_texte(monkeypatch, modus)
+    for kanal in ohne:
+        assert token(mit[kanal], "CP") is None, f"S6b AC-4 ({kanal}): CP im Text {mit[kanal]!r}"
+        assert mit[kanal] == ohne[kanal], (
+            f"S6b AC-4 ({kanal}, cape={modus}): Bestandseintrag veraendert den Text.\n"
+            f"ohne={ohne[kanal]!r}\nmit ={mit[kanal]!r}"
+        )
+
+
+def test_s6b_ac4_vorschau_kennt_keine_cape_einfachform():
+    """S6b AC-4 (Vorschau, Builder-Naht ``build_sms_fidelity_specs``): auch ein
+    ``format_by_metric`` mit ``cape: "symbol"`` (Altbestand) erzeugt keine
+    CAPE-Stufe ``CP:`` -- cape hat keine Roh/Einfach-Form mehr, Roh und Einfach
+    rendern denselben Text.
+
+    Hinweis: Steht ``cape`` in ``metric_ids``, zeigt die Editor-Vorschau ``CP<n>``
+    als Zahl -- unveraendertes Vor-S6-Verhalten; der Editor bietet ``cape`` nicht
+    an (``/api/metrics`` filtert ``selectable=False``)."""
+    from output.renderers.sms_trip import _segments_to_normalized_forecast
+    from output.tokens.builder import build_token_line
+    from output.tokens.render import render_line
+    from services.validator_render_service import build_sms_fidelity_specs
+
+    forecast = _segments_to_normalized_forecast(
+        [segment()], tz=TZ, night_weather=night_weather(),
+    )
+
+    def vorschau(fm: str) -> str:
+        specs = build_sms_fidelity_specs(["cloud_total", "cape"], format_by_metric={"cape": fm})
+        return render_line(
+            build_token_line(forecast, specs, report_type="evening", stage_name="E1"), 160,
+        )
+
+    einfach, roh = vorschau("symbol"), vorschau("raw")
+    assert "CP:" not in einfach, f"S6b AC-4: Vorschau zeigt eine CAPE-Stufe: {einfach!r}"
+    assert einfach == roh, f"S6b AC-4: cape Roh/Einfach unterscheiden sich: {roh!r} vs {einfach!r}"
 
 
 # ═══════════════════════════ AC-7: Kanalgleichheit ══════════════════════════
-
-
-@pytest.mark.parametrize("wert", [100, 500, 1000, 2000])
-def test_ac7_cape_stufe_entspricht_dem_email_ampelband(wert):
-    """AC-7: SMS-Stufe == E-Mail-Klassifikation. CAPE-Band-Mittelpunkte: die
-    Zuordnung Band -> Stufe wird aus ``severity_for`` ABGELEITET."""
-    from output.metric_format import severity_for
-
-    band = severity_for("cape", float(wert))
-    erwartet = f"CP:{AMPEL_ZU_STUFE[band]}@14"
-    text = zeile({"cape_hourly": (_hv(14, wert),)}, [spec("CP", "symbol", "cape")])
-    assert erwartet in tokens_von(text), f"AC-7: erwartet {erwartet!r} in {text!r}"
 
 
 @pytest.mark.parametrize("stufe_name", ["LOW", "MED", "HIGH"])
@@ -328,8 +413,8 @@ def test_ac7_wolken_produktpfad_sms_stufe_gleich_email_emoji_band(monkeypatch):
 
 def test_ac8_konstante_ist_die_spec_menge():
     """AC-8: ``app.metric_catalog.SMS_FORMAT_MODE_METRIC_IDS`` (Muster
-    ``SMS_NULLFORM_METRIC_IDS``) = {cloud_total, cloud_low, cloud_mid, cloud_high,
-    cape}. Gegen die WORTGLEICHE Spec-Menge, nicht gegen eine aus dem Produkt
+    ``SMS_NULLFORM_METRIC_IDS``) = {cloud_total, cloud_low, cloud_mid, cloud_high}
+    (S6b: ``cape`` gestrichen). Gegen die WORTGLEICHE Spec-Menge, nicht gegen eine aus dem Produkt
     gelesene."""
     import app.metric_catalog as katalog
 
@@ -378,8 +463,7 @@ def _text_fuer(monkeypatch, mid: str, modus: str) -> str:
 def test_ac8_groesse_in_der_konstante_roh_und_einfach_text_verschieden(monkeypatch, mid):
     """AC-8 (Produkttest, Haelfte 1): Groesse IN der Konstante -> Roh- und
     Einfach-Text unterscheiden sich, und zwar genau am Token dieser Groesse.
-    Parametrisiert ueber die WORTGLEICHE Spec-Menge. (``cape``: Builder-Ebene,
-    ``test_ac6_...``.)"""
+    Parametrisiert ueber die WORTGLEICHE Spec-Menge."""
     roh, einfach = _text_fuer(monkeypatch, mid, "raw"), _text_fuer(monkeypatch, mid, "einfach")
     assert roh != einfach, f"AC-8: {mid} hat in der SMS keine Einfachform: {roh!r}"
     sym = WOLKEN_SYMBOL[mid]
@@ -467,7 +551,7 @@ def test_ac8_orakel_prueft_echte_konstante_in_den_sms_kanaelen():
 
 
 def test_ac8_vakuum_schutz_jede_produkterreichbare_groesse_hat_einen_geprueften_modus(monkeypatch):
-    """AC-8/AC-6 (Vakuum-Schutz): fuer jede Groesse der Konstante, die einen
+    """AC-8 (Vakuum-Schutz): fuer jede Groesse der Konstante, die einen
     Kanaltext erreichen kann (die vier Wolken-Groessen), liest das Orakel in der
     Roh-Variante "raw" und in der Einfach-Variante "friendly" -- nie ``None``
     (ungeprueft). Varianten der Goldens, weil ``cloud_mid``/``cloud_high`` in

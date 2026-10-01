@@ -48,7 +48,8 @@ const HIER = dirname(fileURLToPath(import.meta.url));
 const TAB = join(HIER, '..', '..', 'WeatherMetricsTab.svelte');
 
 /** Spec AC-8 WORTGLEICH (nicht aus dem Produkt gelesen). */
-const SMS_MIT_FORM = ['cloud_total', 'cloud_low', 'cloud_mid', 'cloud_high', 'cape'];
+// #2422 S6b: `cape` ist nicht waehlbar (#1585) und keine Roh/Einfach-Groesse mehr.
+const SMS_MIT_FORM = ['cloud_total', 'cloud_low', 'cloud_mid', 'cloud_high'];
 const SMS_OHNE_FORM = [
 	'thunder',
 	'wind_direction',
