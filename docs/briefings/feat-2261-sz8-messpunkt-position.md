@@ -1,27 +1,31 @@
 ---
 spec_file: docs/specs/modules/feat_2261_sz8_messpunkt_position.md
-spec_sha256: bddb5c8edbbb1581cf46c0ce840fe990d3664201782ba6c6cc0fe8d6f1249363
+spec_sha256: 23db8c269225de085b99fd4965577b675eab416a886ca1cec7bfab38b7d45f53
 ---
 
 # PO-Briefing: Radar-Alarm misst dort, wo der Nutzer sein wird (feat-2261-sz8-messpunkt-position)
 
+- **Spec:** docs/specs/modules/feat_2261_sz8_messpunkt_position.md
+- **Issue:** #2261
+- **Erstellt:** 2026-10-02
+
 ## Was gebaut wird
 
-Ein Prüf-Test, kein neues Verhalten. Er beweist, dass der Radar-Alarm dort misst, wo der Nutzer laut Plan zum Regenzeitpunkt sein wird, und dass ein verschobener Wegpunkt den Messpunkt mitverschiebt. Produktivcode wird voraussichtlich nicht angefasst.
+Ein Prüf-Test beweist, dass der Radar-Alarm dort misst, wo der Nutzer laut Plan zum Regenzeitpunkt sein wird.
 
 ## Definition of Done
 
-Der Test ist grün, und vier gezielte Verfälschungen des Codes machen jeweils den passenden Test rot. Zwei Doku-Nachträge zu #2017 stehen; das Restrisiko hat das eigene Issue #2480.
+Der Test ist grün, und fünf gezielte Verfälschungen des Codes machen jeweils den passenden Test rot; das Restrisiko hat Issue #2480.
 
 ## Wie geprüft wird
 
-Der echte Radar-Alarm läuft zweimal, mit normaler und verschobener Etappe. Verglichen werden die abgefragten Koordinaten und die Höhe.
-
-## Was sich für dich sichtbar ändert
-
-Nichts. Du bekommst nur Absicherung gegen ein stilles Zurückfallen auf den Etappenstart.
+Der echte Radar-Alarm läuft mit normaler und verschobener Etappe; verglichen werden abgefragte Koordinaten und Höhe, nicht die Wirkung auf echte Nutzer.
 
 ## Kritische Anmerkungen
 
-1. Der Test ist voraussichtlich sofort grün; seinen Wert beweisen erst die Verfälschungen.
-2. Ein Hilfsbaustein wird aus der #822-Testdatei verschoben; unveränderter Lauf belegt gleiches Verhalten.
+- Test ist voraussichtlich sofort grün; seinen Wert beweisen erst die fünf Verfälschungen, einschliesslich der Obergrenze der Messpunkte.
+- Ein Hilfsbaustein wird aus einer anderen Testdatei verschoben; unveränderter Lauf soll gleiches Verhalten belegen.
+
+## Freigabe-Frage
+
+Gibst du diese reine Nachweis-Scheibe ohne Änderung am Produktivverhalten frei?

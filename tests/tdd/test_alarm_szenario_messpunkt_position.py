@@ -52,7 +52,7 @@ def _km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
-def _lauf(zweck: str, *, verschoben: bool):
+def _lauf(zweck: str, *, verschoben: bool, end_lat: float | None = None):
     """Ein echter `check_radar_alerts()`-Lauf unter gestellter Uhr.
 
     Liefert `(abrufe, start, ende)`; `start`/`ende` sind die Wegpunkte der
@@ -73,6 +73,9 @@ def _lauf(zweck: str, *, verschoben: bool):
                 wps0[1] = dataclasses.replace(
                     wps0[1], lon=_B_END_LON, elevation_m=_B_END_HOEHE,
                 )
+            if end_lat is not None:
+                wps0 = trip.stages[0].waypoints
+                wps0[1] = dataclasses.replace(wps0[1], lat=end_lat)
             save_trip(trip, uid)
             geladen = next(t for t in load_all_trips(user_id=uid) if t.id == trip_id)
             wps = geladen.stages[0].waypoints
@@ -187,3 +190,18 @@ def test_sz8_hoehe_wandert_mit_dem_messpunkt():
         f"und Ende ({_B_END_HOEHE})"
     )
     assert hb > ha, f"AC-4: Hoehe in B ({hb}) muss ueber der in A ({ha}) liegen"
+
+
+def test_sz8_obergrenze_der_messpunkte():
+    """AC-3 (Obergrenze): Etappe ~45 km, Reststrecke ab Fenstermitte weit ueber
+    der Obergrenze bei 2-km-Abstand — es erfolgen genau RADAR_ZONE_MAX_POINTS
+    Abrufe (die Fixture-Etappe liefert nur ~4 und beweist die Grenze nicht)."""
+    from services.trip_segments import RADAR_ZONE_MAX_POINTS
+
+    abrufe, start, ende = _lauf("lang", verschoben=False, end_lat=64.53)
+    assert _km(start.lat, start.lon, ende.lat, ende.lon) > 40.0, (
+        "Testvoraussetzung: lange Etappe muss ueber 40 km sein"
+    )
+    assert len(abrufe) == RADAR_ZONE_MAX_POINTS, (
+        f"AC-3: {len(abrufe)} Abrufe; erwartet genau {RADAR_ZONE_MAX_POINTS}"
+    )

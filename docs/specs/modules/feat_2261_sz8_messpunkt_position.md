@@ -136,13 +136,16 @@ das ein Finding.
 | # | Datei / Ersetzung | Muss rot werden |
 |---|---|---|
 | M1 | `src/services/trip_alert.py:1845` `_pos = _punkte[0]` → `_pos = active.start_point` (Messpunkt auf den Segmentstart zurückgedreht) | `test_sz8_messpunkt_ist_nicht_der_startpunkt` |
-| M2 | `src/services/trip_segments.py:711` in `position_at_time` `active.end_point,` → `active.start_point,` (Wegpunkt-Verschiebung wird ignoriert: Interpolation kennt den Endwegpunkt nicht) | `test_sz8_messpunkt_wandert_mit_dem_wegpunkt` |
-| M3 | `src/services/trip_segments.py:739` `_lerp_point(start, active.end_point,` → `_lerp_point(start, active.start_point,` (Folgepunkte folgen dem Endwegpunkt nicht) | `test_sz8_folgepunkte_wandern_mit_dem_wegpunkt` |
+| M2 | `src/services/trip_segments.py:542` in `_interpolate_point` (von `position_at_time` genutzt) `a, b = seg.start_point, seg.end_point` → `a, b = seg.start_point, seg.start_point` (Wegpunkt-Verschiebung wird ignoriert: Interpolation kennt den Endwegpunkt nicht) | `test_sz8_messpunkt_wandert_mit_dem_wegpunkt` |
+| M3 | `src/services/trip_segments.py:711` in `points_along_remaining_route` `start, active.end_point,` → `start, active.start_point,` (Folgepunkte folgen dem Endwegpunkt nicht; Zeile 739 in `points_from_km` ist NICHT der Radar-Pfad) | `test_sz8_folgepunkte_wandern_mit_dem_wegpunkt` |
 | M4 | `src/services/trip_alert.py:1867` `int(round(_pos.elevation_m))` → `int(round(active.start_point.elevation_m))` (Höhe wandert nicht mit) | `test_sz8_hoehe_wandert_mit_dem_messpunkt` |
+| M5 | `src/services/trip_segments.py:37` `RADAR_ZONE_MAX_POINTS = 6` → `= 60` (Obergrenze wirkungslos) | `test_sz8_obergrenze_der_messpunkte` (Etappe ~45 km, genau `RADAR_ZONE_MAX_POINTS` Abrufe) |
+
+Hinweis: Zeilennummern per `grep` verifizieren; bei M2/M3 werden zusätzlich weitere Wächter-Tests rot (Adversary-Beleg), der benannte Test MUSS dabei sein.
 
 Leitfrage (CLAUDE.md): Ist die Zusicherung an der Stelle geprüft, an der sie WIRKT? Hier: an den
 Argumenten von `get_nowcast` im echten `check_radar_alerts()`, nicht in `position_at_time` selbst.
-Wird M2 nur von `test_position_at_time.py` gefangen, aber von keinem Test dieser Datei, ist der
+Wird M2 (bzw. M3) nur von `test_position_at_time.py` gefangen, aber von keinem Test dieser Datei, ist der
 Wächter wertlos.
 
 ### Eventualfall: Wächter wird gegen den Ist-Stand ROT
@@ -190,7 +193,9 @@ kein Eventualfall, sondern wird im Test behoben.
   ein und höchstens `RADAR_ZONE_MAX_POINTS` Abrufe, und jeder Folgepunkt wandert mit dem
   verschobenen Endwegpunkt (in A östlich, in B westlich des ersten Punkts), nicht nur der erste.
   - Test: `test_sz8_folgepunkte_wandern_mit_dem_wegpunkt`; alle aufgezeichneten Punkte beider
-    Läufe, Anzahl gegen die Obergrenze, Richtungsvorzeichen je Folgepunkt.
+    Läufe, Anzahl gegen die Obergrenze, Richtungsvorzeichen je Folgepunkt. Die Obergrenze selbst
+    bewacht `test_sz8_obergrenze_der_messpunkte` (Etappe ~45 km, genau `RADAR_ZONE_MAX_POINTS`
+    Abrufe — die ~12-km-Etappe erreicht die Obergrenze nicht).
 
 - **AC-4:** Given Endwegpunkte unterschiedlicher Höhe in Lauf A (600 m) und Lauf B (900 m), When
   `check_radar_alerts()` den Nowcast abfragt, Then wandert die an `get_nowcast` übergebene Höhe
@@ -210,9 +215,9 @@ kein Eventualfall, sondern wird im Test behoben.
     liest den Abschnitt „Known Limitations" der #2017-Spec und prüft per `gh issue view <N> --json number,title,state`, dass das
     Restrisiko-Issue existiert und in der #2017-Spec verlinkt ist.
 
-- **AC-6:** Given der neue Wächter ist grün gegen den Ist-Stand, When die Mutationen M1 bis M4
+- **AC-6:** Given der neue Wächter ist grün gegen den Ist-Stand, When die Mutationen M1 bis M5
   (Messpunkt auf Startpunkt zurückdrehen, Wegpunkt-Verschiebung ignorieren in der Interpolation
-  und in den Folgepunkten, Höhe vom Startpunkt nehmen) einzeln per String-Ersetzung mit externer
+  und in den Folgepunkten, Höhe vom Startpunkt nehmen, Obergrenze der Messpunkte anheben) einzeln per String-Ersetzung mit externer
   Sicherungskopie eingespielt werden, Then wird bei jeder Mutation der in der Tabelle benannte
   Test rot, und nach dem Zurückspielen der Sicherungskopie ist der Wächter wieder grün
   (`diff` gegen die Kopie leer).
@@ -244,6 +249,10 @@ kein Eventualfall, sondern wird im Test behoben.
   festgehalten, nicht verändert.
 
 ## Changelog
+
+- 2026-10-02: Adversary-Befund F001/F002 behoben: Mutationstabelle M2/M3 auf die tatsächlichen
+  Fundstellen (`_interpolate_point:542`, `points_along_remaining_route:711`) korrigiert, M5
+  (Obergrenze) und `test_sz8_obergrenze_der_messpunkte` ergänzt. Keine Änderung an Zusicherungen.
 
 - 2026-10-02: Initial spec created (Issue #2261 Teil A Szenario 8, verdichtet aus
   `docs/context/feat-2261-sz8-messpunkt-position.md`).
