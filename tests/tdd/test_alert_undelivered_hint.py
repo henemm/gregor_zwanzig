@@ -2251,6 +2251,15 @@ _REASON_EXPECTATION = {
     REASON_BELOW_THRESHOLD: ("unter deiner Schwelle", "withheld"),
     BLOCK_REASON_NO_REPLY_ADDRESS: ("keine Rückadresse gelernt", "failed"),
     BLOCK_REASON_REPLY_ADDRESS_STALE: ("Rückadresse veraltet", "failed"),
+    # Issue #2050 Szenario 12 (AC-12): fehlende Vergleichsbasis — der Waechter
+    # war blind, kein vom Nutzer eingestellter Rueckhalt -> Block "failed".
+    # `getattr` mit Literal-Rueckfall: vor der Implementierung existiert die
+    # Konstante noch nicht, ein Import liesse die ganze Datei beim Sammeln
+    # scheitern. Der Literal-Wert ist zugleich der Soll-Code.
+    getattr(
+        __import__("services.alert_log", fromlist=["_"]),
+        "REASON_NO_REFERENCE_BASIS", "no_reference_basis",
+    ): ("Kein Alarm möglich: keine gültige Vergleichsbasis", "failed"),
 }
 
 

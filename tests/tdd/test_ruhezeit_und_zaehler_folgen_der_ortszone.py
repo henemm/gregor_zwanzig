@@ -263,7 +263,7 @@ def vergleichs_alarmdienst(user_id: str):
         detect_aufrufe = 0
 
         def _detect_triggered_locations(
-            self, preset_id, location_ids, all_locations, config, day_window
+            self, preset_id, location_ids, all_locations, config, day_window, **kwargs
         ):
             type(self).detect_aufrufe += 1
             return []

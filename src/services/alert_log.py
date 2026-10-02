@@ -76,6 +76,10 @@ REASON_DOUBLE_ALERT_GUARD = "double_alert_guard"
 # auf denselben Code gebucht, eskalierte eine spaetere Auswertung den eigenen
 # Rueckzug als Anbieterausfall.
 REASON_DATA_UNAVAILABLE = "data_unavailable"
+# Issue #2050 Sz.12 (D-2/E-1): der Abweichungs-Wächter fand keine gültige
+# Vergleichsbasis (Anker fehlt oder wurde verworfen). Der Untergrund steht im
+# additiven Feld `reference_gap`, nicht im Code.
+REASON_NO_REFERENCE_BASIS = "no_reference_basis"
 
 # Ausloeser der Meldung selbst (`reason` des Eintrags).
 REASON_FORECAST_CHANGE = "forecast_change"
@@ -340,6 +344,10 @@ _E1_FIELD_TYPES = {
     # additiv-defensiven Serialisierung vorbei (Typpruefung, Absenz bei
     # `None`, fail-soft mit Meldung).
     "measurement_gaps": dict,
+    # Issue #2050 Sz.12 (E-1): Untergrund + Bezugstag einer fehlenden
+    # Vergleichsbasis (`REASON_NO_REFERENCE_BASIS`).
+    "reference_gap": str,
+    "reference_day": str,
 }
 
 
@@ -347,7 +355,7 @@ def _apply_e1_fields(
     entry: dict, *, entity_id: str,
     lead_time_minutes=None, event_at=None, event_end_at=None,
     measurement_point=None, reference_at=None, source=None,
-    measurement_gaps=None,
+    measurement_gaps=None, reference_gap=None, reference_day=None,
 ) -> None:
     """Additive E-1-Groessen additiv-defensiv in ``entry`` schreiben
     (Issue #2050 S6). ``None`` -> Absenz (kein Schluessel, kein ``null``).
@@ -368,6 +376,8 @@ def _apply_e1_fields(
         ("reference_at", reference_at),
         ("source", source),
         ("measurement_gaps", measurement_gaps),
+        ("reference_gap", reference_gap),
+        ("reference_day", reference_day),
     ):
         if wert is None:
             continue
@@ -550,6 +560,8 @@ def append_suppressed_entry(
     source: Optional[str] = None,
     measurement_gaps: Optional[dict] = None,
     convective_checked: Optional[bool] = None,
+    reference_gap: Optional[str] = None,
+    reference_day: Optional[str] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag fuer eine VOR dem Versand abgewiesene
     Meldung an (#1467 S3, Aenderung (d)).
@@ -636,8 +648,42 @@ def append_suppressed_entry(
         event_end_at=event_end_at, measurement_point=measurement_point,
         reference_at=reference_at, source=source,
         measurement_gaps=measurement_gaps,
+        reference_gap=reference_gap, reference_day=reference_day,
     )
     _append(user_id, "not_delivered", entry)
+
+
+def has_no_reference_entry(
+    user_id: str, *, entity_id: str, entity_type: str,
+    reference_gap: str, reference_day: str,
+) -> bool:
+    """Gibt es fuer DIESEN Nutzer schon einen `no_reference_basis`-Eintrag
+    dieser Entity fuer Untergrund + Tag? (Entdopplung, Issue #2050 Sz.12.)
+
+    Liest nur das `alert_log.json` des uebergebenen Nutzers. Nicht lesbar ⇒
+    `False` (lieber ein Eintrag zu viel als ein verschluckter Befund)."""
+    path = get_data_dir(user_id) / "alert_log.json"
+    try:
+        data = json.loads(path.read_text()) if path.exists() else {}
+    except (OSError, ValueError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    for e in data.get("not_delivered") or []:
+        if not isinstance(e, dict):
+            continue
+        if (e.get("entity_id") or e.get("trip_id")) != entity_id:
+            continue
+        if (e.get("entity_type") or "trip") != entity_type:
+            continue
+        if e.get("reference_gap") != reference_gap or e.get("reference_day") != reference_day:
+            continue
+        if any(
+            isinstance(c, dict) and c.get("reason") == REASON_NO_REFERENCE_BASIS
+            for c in e.get("channels_not_sent") or []
+        ):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------

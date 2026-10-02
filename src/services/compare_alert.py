@@ -94,7 +94,9 @@ class CompareAlertService:
         # + die dateibasierte `compare_alert_throttle.json`-Persistenz.
         self._throttle_store = ThrottleStore(user_id)
 
-    def _protokolliere_unterdrueckung(self, preset: dict, gate_reason: str) -> None:
+    def _protokolliere_unterdrueckung(
+        self, preset: dict, gate_reason: str, **felder,
+    ) -> None:
         """Unterdrueckungs-Protokoll des Vergleichs-Aenderungsalarms
         (Issue #2050 S3b, Szenario 10 — bis dahin schwieg dieser Pfad, Luecke
         O3). Spiegelbild des Trip-Pendants, nur mit `entity_type="compare"`.
@@ -110,6 +112,7 @@ class CompareAlertService:
                 effective_channels=effective_alert_channels(
                     preset, self._settings, self._user_id,
                 ),
+                **felder,
             )
         except Exception as e:
             logger.error(
@@ -117,6 +120,39 @@ class CompareAlertService:
                 "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), nur "
                 "der Protokoll-Eintrag fehlt.", preset_id, e, gate_reason,
             )
+
+    def _protokolliere_fehlende_basis(
+        self, preset: Optional[dict], preset_id: str, zone, gap: str,
+        reference_at: Optional[str] = None,
+    ) -> None:
+        """Issue #2050 Sz.12 (D-2/E-1): keine gueltige Vergleichsbasis ins
+        Protokoll — je PRESET + Tag + Untergrund hoechstens einmal (nicht je
+        Ort). Beruehrt weder `alert_state` noch Cooldown. Fail-soft."""
+        if not preset:
+            logger.warning(
+                "Compare-Alert: keine gueltige Vergleichsbasis (%s) fuer Preset %s, "
+                "aber kein Preset uebergeben — Protokoll-Eintrag entfaellt.",
+                gap, preset_id,
+            )
+            return
+        preset_id = preset.get("id", "")
+        tag = datetime.now(zone).date().isoformat() if zone else \
+            datetime.now(timezone.utc).date().isoformat()
+        try:
+            if alert_log.has_no_reference_entry(
+                self._user_id, entity_id=preset_id, entity_type="compare",
+                reference_gap=gap, reference_day=tag,
+            ):
+                return
+        except Exception as e:
+            logger.error(
+                "Compare-Alert: Vergleichsbasis-Entdopplung fuer Preset %s "
+                "fehlgeschlagen (%s)", preset_id, e,
+            )
+        self._protokolliere_unterdrueckung(
+            preset, alert_log.REASON_NO_REFERENCE_BASIS,
+            reference_gap=gap, reference_day=tag, reference_at=reference_at,
+        )
 
     def check_all_compare_presets(self) -> int:
         """Prüft alle Compare-Presets dieses Nutzers und versendet Alarme.
@@ -254,7 +290,8 @@ class CompareAlertService:
             day_window = resolve_compare_time_window(preset)
 
             triggered = self._detect_triggered_locations(
-                preset_id, location_ids, all_locations, config, day_window
+                preset_id, location_ids, all_locations, config, day_window,
+                preset=preset,
             )
             if not triggered:
                 continue
@@ -462,7 +499,7 @@ class CompareAlertService:
 
     def _detect_triggered_locations(
         self, preset_id: str, location_ids: list[str], all_locations: dict, config,
-        day_window: tuple[int, int],
+        day_window: tuple[int, int], preset: Optional[dict] = None,
     ) -> list[dict]:
         """Wertet jeden Ort des Presets gegen den Δ-Anker aus (Detect-Phase,
         kein Versand). Sammelt alle Treffer für den nachfolgenden gebündelten
@@ -477,7 +514,8 @@ class CompareAlertService:
                 continue
             try:
                 entry = self._evaluate_one_location(
-                    preset_id, location_id, loc, config, day_window
+                    preset_id, location_id, loc, config, day_window,
+                    preset=preset,
                 )
             except Exception as e:
                 logger.error(f"Compare-Alert check failed for {preset_id}/{location_id}: {e}")
@@ -488,14 +526,24 @@ class CompareAlertService:
 
     def _evaluate_one_location(
         self, preset_id: str, location_id: str, loc, config,
-        day_window: tuple[int, int],
+        day_window: tuple[int, int], preset: Optional[dict] = None,
     ) -> Optional[dict]:
         """Δ-Auswertung für EINEN Ort — reine Detect-Logik ohne Versand/
         State-Update (das übernimmt `_finalize_triggered_state()` NUR für
         tatsächlich versendete Treffer, Issue #1170)."""
         cached = self._snapshot_service.load(preset_id, location_id)
         if cached and self._anchor_too_old(cached[0], preset_id, location_id):
+            ankerzeit = cached[0].fetched_at
+            if ankerzeit.tzinfo is None:  # Hausnorm #1345: naiv = UTC
+                ankerzeit = ankerzeit.replace(tzinfo=timezone.utc)
+            self._protokolliere_fehlende_basis(
+                preset, preset_id, config.zone, "too_old", ankerzeit.isoformat(),
+            )
             return None
+        if not cached:  # bisher "Bootstrap": der Waechter ist blind (#2050 Sz.12)
+            self._protokolliere_fehlende_basis(
+                preset, preset_id, config.zone, "missing",
+            )
         start_hour, end_hour = day_window
         # Issue #1661 (B2): traegt der Anker einen Tagesbezug, holt der
         # Frisch-Abruf DENSELBEN Kalendertag — sonst misst das Δ den
