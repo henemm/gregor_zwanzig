@@ -1,31 +1,64 @@
-// TDD RED — Epic #1301 Scheibe F2a: /compare/new als Progressive-Tab-Editor.
+// Epic #1301 Scheibe F2a / #2277 S4: Freischalt-Vertrag des Compare-Anlege-Flows.
 //
-// Reine-Logik-Verträge für den Compare-Anlege-Flow, gespiegelt aus dem
-// Trip-Vorbild `tripNewLogic.ts` (#622). Freischalt-Kette exakt nach der
-// Tab-Struktur-Tabelle der Spec:
-//   docs/specs/modules/feat_1301_f2a_compare_new_trip_pattern.md
-//   § "Tab-Struktur (7 Tabs)" / § "compareNewLogic.ts — Signaturen" / AC-2..AC-9
-//
-// Kette: Name → Orte≥2 → metriken → wertebereiche(idealwerte) → layout →
-//        alarme → versand — mit visited-Kaskade (einmal besucht bleibt besucht).
-//
-// Echte Verhaltens-Tests (kein Mock). VOR der Implementierung SCHEITERN sie
-// (RED), weil `../compareNewLogic.ts` noch nicht existiert (Import-Fehler).
+// Vormals compareNewLogic.test.ts (Datei gelöscht, #2277 S4). Die Schwanz-Kette
+// kommt jetzt aus dem geteilten Kern shared/anlegeLockEngine.ts; das Compare-
+// Vorderteil (Name, ≥2 Orte) und der Zähler-Deckel 6 wohnen in CompareNewEditor.svelte.
+// Die Hilfsfunktionen unten bilden genau diese Komposition ab (Kern + Vorderteil);
+// die Wirkstelle selbst (echte Reiterleiste) prüft compare_new_lock_engine_wirkstelle.test.ts.
+// Freischalt-Kette: Name → Orte≥2 → metriken → wertebereiche(idealwerte) → alarme → versand,
+// mit Besuchs-Kaskade (einmal besucht bleibt besucht). Kein Mock.
 //
 // Ausführung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
-//     src/lib/components/compare-new/__tests__/compareNewLogic.test.ts
+//     src/lib/components/compare-new/__tests__/compare_anlege_freischaltung.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-	unlockedTabs,
-	doneTabs,
-	progressCount,
-	canActivate,
-	type CompareNewProgress,
-	type CompareNewTabId,
-} from '../compareNewLogic.ts';
+	tailUnlocked,
+	tailDone,
+	canFinish,
+	progressCount as kernProgressCount,
+	type TailIds,
+} from '../../shared/anlegeLockEngine.ts';
+
+type CompareNewTabId = 'vergleich' | 'orte' | 'metriken' | 'idealwerte' | 'alarme' | 'versand';
+interface CompareNewProgress {
+	name: string;
+	pickedCount: number;
+	metrikenVisited: boolean;
+	idealsVisited: boolean;
+	alarmeVisited: boolean;
+	versandVisited: boolean;
+}
+const TAIL: TailIds<CompareNewTabId> = { metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand' };
+const STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'metriken', 'idealwerte', 'alarme', 'versand'];
+
+function tailP(p: CompareNewProgress) {
+	return {
+		metrikenFrei: !!p.name.trim() && p.pickedCount >= 2,
+		metrikenVisited: p.metrikenVisited,
+		wertebereicheVisited: p.idealsVisited,
+		alarmeVisited: p.alarmeVisited,
+		versandVisited: p.versandVisited,
+	};
+}
+function unlockedTabs(p: CompareNewProgress): Set<CompareNewTabId> {
+	const s = tailUnlocked(TAIL, tailP(p));
+	s.add('vergleich');
+	if (p.name.trim()) s.add('orte');
+	return s;
+}
+function doneTabs(p: CompareNewProgress): Set<CompareNewTabId> {
+	const s = tailDone(TAIL, tailP(p));
+	if (p.name.trim()) s.add('vergleich');
+	if (p.pickedCount >= 2) s.add('orte');
+	return s;
+}
+function progressCount(done: Set<CompareNewTabId>): number {
+	return Math.min(kernProgressCount(done, STEPS), 6);
+}
+const canActivate = (done: Set<CompareNewTabId>) => canFinish(done);
 
 // ── Progress-Builder: leerer Start, gezielt Felder überschreiben ──────────────
 

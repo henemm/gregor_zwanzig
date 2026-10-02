@@ -60,6 +60,11 @@
 		name?: string;
 		startDate?: string;
 		stageNames?: string[];
+		// #2277 S4: Besuchs-Flags vorbelegen (Wirkstelle der Reiterleiste testbar).
+		wtVisited?: boolean;
+		wbVisited?: boolean;
+		alVisited?: boolean;
+		vsVisited?: boolean;
 	}
 	let { stateOverride }: { stateOverride?: TripNewStateOverride } = $props();
 	// Einmal-Lesung beim Erzeugen (untrack, wie `profileOverride` in
@@ -115,10 +120,10 @@
 	let selectedActivity = $state<ActivityType | undefined>(undefined);
 
 	// Visited-Flags (Tab-Besuch setzt done)
-	let wtVisited = $state(false);
-	let wbVisited = $state(false);
-	let alVisited = $state(false);
-	let vsVisited = $state(false);
+	let wtVisited = $state(seed.wtVisited ?? false);
+	let wbVisited = $state(seed.wbVisited ?? false);
+	let alVisited = $state(seed.alVisited ?? false);
+	let vsVisited = $state(seed.vsVisited ?? false);
 
 	let activeTab = $state<TabId>(seed.activeTab ?? 'route');
 

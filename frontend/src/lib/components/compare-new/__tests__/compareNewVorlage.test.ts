@@ -18,7 +18,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import type { ComparePreset, Location } from '../../../types.ts';
-import { unlockedTabs } from '../compareNewLogic.ts';
+import { tailUnlocked } from '../../shared/anlegeLockEngine.ts';
 import { buildNewComparePresetPayload } from '../../compare/compareEditorSave.ts';
 
 // `$app/navigation` existiert ausserhalb von SvelteKit nicht; CompareWizardState importiert es
@@ -212,14 +212,18 @@ test('AC-4 geloeschter Ort erscheint nicht in pickedIds', () => {
 test('AC-5 bei nur einem vorhandenen Ort bleibt der Reiter nach Orte gesperrt, Orte offen', () => {
 	const s = belegt(vorlage(), [loc('a')]);
 	assert.deepEqual(s.pickedIds, ['a']);
-	const offen = unlockedTabs({
-		name: s.name,
-		pickedCount: s.pickedIds.length,
-		metrikenVisited: false,
-		idealsVisited: false,
-		alarmeVisited: false,
-		versandVisited: false
-	} as never);
+	// Vorderteil wie in CompareNewEditor.svelte: Orte frei ab Namen, Metriken ab Name + >=2 Orten.
+	const offen: Set<string> = tailUnlocked(
+		{ metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand' },
+		{
+			metrikenFrei: !!s.name.trim() && s.pickedIds.length >= 2,
+			metrikenVisited: false,
+			wertebereicheVisited: false,
+			alarmeVisited: false,
+			versandVisited: false
+		}
+	);
+	if (s.name.trim()) offen.add('orte');
 	assert.ok(offen.has('orte'), 'Orte-Reiter muss offen sein, um Orte nachzuwaehlen');
 	assert.ok(!offen.has('metriken'), 'Metriken-Reiter muss bei <2 Orten gesperrt bleiben');
 });

@@ -97,3 +97,51 @@ describe('AC-3: Aktivieren-Knopf', () => {
 	test('vor Versand-Besuch deaktiviert', () => assert.equal(activateDisabled(html(alles)), true));
 	test('nach Versand-Besuch aktiv', () => assert.equal(activateDisabled(html({ ...alles, versand: true })), false));
 });
+
+// ── Zaehler-Anzeige (Hero "n / 6 Abschnitte eingerichtet" + Mobile "n/6") ──────
+function counter(h: string): { desktop: string; mobile: string } {
+	const d = h.match(/data-testid="compare-editor-progress"[\s\S]*?<span class="mono"[^>]*>\s*([^<]*?)\s*<\/span>/);
+	const m = h.match(/data-testid="cm-mobile-progress"[\s\S]*?<span class="mono"[^>]*>\s*([^<]*?)\s*<\/span>\s*<\/div>/);
+	assert.ok(d && m, 'Zaehler-Anzeige nicht im Dokument — Wirkstelle nicht erreicht');
+	return { desktop: d![1], mobile: m![1] };
+}
+
+describe('Zaehler am Editor (F002): Deckel und Schrittliste', () => {
+	test('nichts eingerichtet: "Noch nichts eingerichtet", mobil 0/6', () => {
+		const c = counter(html({}));
+		assert.equal(c.desktop, 'Noch nichts eingerichtet');
+		assert.equal(c.mobile, '0/6');
+	});
+	test('Name + 2 Orte: 2 / 6 (Vergleich + Orte)', () => {
+		const c = counter(html({ name: 'X', picked: 2 }));
+		assert.equal(c.desktop, '2 / 6 Abschnitte eingerichtet');
+		assert.equal(c.mobile, '2/6');
+	});
+	test('alle Flags gesetzt: genau 6 / 6 (Deckel 6, idealwerte zaehlt mit)', () => {
+		const c = counter(html({ name: 'X', picked: 2, metriken: true, ideals: true, alarme: true, versand: true }));
+		assert.equal(c.desktop, '6 / 6 Abschnitte eingerichtet');
+		assert.equal(c.mobile, '6/6');
+	});
+	test('Wertebereiche-Besuch allein erhoeht den Zaehler (5 / 6 ohne Versand)', () => {
+		const c = counter(html({ name: 'X', picked: 2, metriken: true, ideals: true, alarme: true }));
+		assert.equal(c.desktop, '5 / 6 Abschnitte eingerichtet');
+	});
+});
+
+describe('F003: konjunktive Kette bei uebersprungenem Flag (Compare-Semantik wie vor S4)', () => {
+	const base = { name: 'X', picked: 2 };
+	test('Ideal-Flag ohne Metriken-Flag: Wertebereiche und Alarme bleiben gesperrt', () => {
+		const h = html({ ...base, ideals: true });
+		assert.equal(locked(h, 'idealwerte'), true);
+		assert.equal(locked(h, 'alarme'), true);
+	});
+	test('Alarme-Flag ohne Ideal-Flag: Versand gesperrt', () => {
+		const h = html({ ...base, metriken: true, alarme: true });
+		assert.equal(locked(h, 'alarme'), true);
+		assert.equal(locked(h, 'versand'), true);
+	});
+	test('Versand-Flag ohne Vorgaenger: Versand-Reiter bleibt gesperrt', () => {
+		const h = html({ ...base, versand: true });
+		assert.equal(locked(h, 'versand'), true);
+	});
+});
