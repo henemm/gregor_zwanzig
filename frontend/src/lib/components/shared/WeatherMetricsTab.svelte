@@ -497,7 +497,7 @@
 		// editierter Reiter nach dem Reload seine eigene Auswahl zeigt.
 		const savedLayouts = trip!.display_config?.channel_layouts;
 		const cb: Record<ChannelId, ChannelOverride | null> = { email: null, telegram: null, sms: null };
-		for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
+		for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) { // ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 			const layout = savedLayouts?.[ch];
 			if (layout) cb[ch] = channelOverrideFromMetrics(layout, allCatalogIds(), fMap);
 		}

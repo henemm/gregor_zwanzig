@@ -10,12 +10,15 @@
 // neu abgeleitet: nur so kann der Dialog dem Versand-Reiter nicht widersprechen (AC-6).
 
 import { channelConnectionStatus } from './channelConnectionStatus';
+// Issue #2229 (AC-2): Zustellbarkeit der Premium-SMS NICHT neu ableiten.
+import { premiumSmsChannelState } from './premiumSmsChannelState';
 import type { ConnectionProfile } from './channelConnectionStatus.js';
 
 /** Die im Vergleich aktivierten Zusatzkanaele (Ausschnitt aus ComparePreset). */
 export interface SendTargetChannels {
 	send_telegram?: boolean;
 	send_sms?: boolean;
+	send_premium_sms?: boolean;
 }
 
 export interface SendTargetInfo {
@@ -81,6 +84,9 @@ export function sendTargetLabel(
 	const ziele = [`E-Mail (${p.mail_to})`];
 	if (selected.send_telegram === true && status.telegram.tone === 'good') ziele.push('Telegram');
 	if (selected.send_sms === true && status.sms.tone === 'good') ziele.push('SMS');
+	// Issue #2229 (AC-2): Premium-SMS nur, wenn eingeschaltet UND zustellbar —
+	// gesperrt sperrt sie auch der Versand-Gate (compare_alert_channels.py).
+	if (selected.send_premium_sms === true && !premiumSmsChannelState(p).disabled) ziele.push('Premium-SMS');
 
 	// " · " als Trenner — Konvention aus channelNamesLabel() (subscriptionHelpers.ts).
 	return ergebnis(`Geht an ${ziele.join(' · ')}.`, true);

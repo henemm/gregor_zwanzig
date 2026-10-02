@@ -32,6 +32,7 @@
 		formatNextSend,
 		channelNamesLabel,
 		presetChannels,
+		premiumSmsPreviewNote,
 		presetProfileLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
@@ -1162,6 +1163,7 @@
 					value={previewChannel}
 					onChange={(v: string) => (previewChannel = v as 'email' | 'sms' | 'telegram')}
 					channels={previewConfiguredChannels}
+					note={premiumSmsPreviewNote(preset, previewChannel)}
 				/>
 				{#if previewChannel === 'email'}
 					<div style="display: inline-flex; background: var(--g-paper-deep); border: 1px solid var(--g-rule); border-radius: var(--g-r-2); padding: 3px; gap: 2px; margin-left: 12px">

@@ -110,6 +110,7 @@ export function toggleGlobalMetric(
 	if (!wasOn) return { buckets: newBuckets, channelBuckets };
 
 	const newChannelBuckets = { ...channelBuckets };
+	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 	for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
 		const override = newChannelBuckets[ch];
 		if (override === null || !override.buckets.primary.includes(id)) continue;
@@ -163,6 +164,7 @@ export function mergeAllChannelLayoutsForSave(
 	buildMetrics: (override: ChannelOverride, channel: ChannelId) => WeatherConfigMetric[]
 ): ChannelLayouts {
 	let next: ChannelLayouts = { ...(prevLayouts ?? {}) };
+	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 	for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
 		const override = channelBuckets[ch];
 		if (override === null) continue;

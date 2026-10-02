@@ -202,8 +202,9 @@ class CompareRenderOptions:
     # Issue #1703 Scheibe 8: kanal-eigene Auswahl der UEBERSICHTSTABELLE, je
     # Kanal bereits gegen die Grundauswahl geschnitten (ADR-0050 Regel 1/2 ueber
     # `resolve_channel_enabled_metrics`). Keys: "email"/"telegram"/"sms" --
-    # Compare-Briefing kennt strukturell nur diese drei (ADR-0049; Premium-SMS
-    # ist im Vergleich reiner Alarm-Kanal, #1745).
+    # Compare-Briefing kennt strukturell nur diese drei (ADR-0049): Premium-SMS
+    # ist seit #2275 auch im Vergleich Briefing-Kanal, hat aber keine eigene
+    # Metrik-Auswahl -- sie sendet den fertig gerenderten SMS-Text.
     #
     # BEWUSST ADDITIV: `enabled_metrics` daruerber behaelt Bedeutung UND Wert
     # (reine globale Aufloesung). Nur die zwei Leser dieses Objekts
@@ -335,6 +336,7 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         ),
         enabled_metrics_by_channel={
             ch: resolve_channel_enabled_metrics(global_metrics, channel_raw, ch)
+            # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
             for ch in ("email", "telegram", "sms")
         },
     )

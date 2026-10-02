@@ -11,11 +11,14 @@
 		channels?: string[];
 		dense?: boolean;
 		class?: string;
+		/** Issue #2229 (AC-3): Hinweis neben den Reitern, z. B. bei Premium-SMS. Leer ⇒ nicht gerendert. */
+		note?: string;
 	}
 
-	let { value, onChange, channels = [], dense = false, class: className = '' }: Props = $props();
+	let { value, onChange, channels = [], dense = false, class: className = '', note = '' }: Props = $props();
 
 	// #610: signal entfernt — 3 Kanäle
+	// ADR-0049: kein vierter Reiter für Premium-SMS — sie hat keinen eigenen Inhalt, sie sendet den SMS-Text (Hinweis über `note`, #2229)
 	const all = ['email', 'telegram', 'sms'];
 	const LABELS: Record<string, string> = {
 		email: 'Email',
@@ -59,4 +62,14 @@
 			{/if}
 		</button>
 	{/each}
+	{#if note}
+		<span
+			data-testid="compare-preview-premium-sms-note"
+			style:align-self="center"
+			style:padding="0 8px"
+			style:font-size="12px"
+			style:font-family="var(--g-font-sans)"
+			style:color="var(--g-ink-3)"
+		>{note}</span>
+	{/if}
 </div>

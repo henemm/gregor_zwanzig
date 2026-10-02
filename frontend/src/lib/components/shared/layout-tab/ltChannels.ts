@@ -68,6 +68,7 @@ export interface LtChannel {
  * korrekt 153 nennt — zwei sich widersprechende Aussagen auf einer Seite.
  */
 export function ltChannelsFor(smsCharLimit: number): LtChannel[] {
+	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 	return (['email', 'telegram', 'sms'] as ChannelId[]).map((id) => ({
 		id,
 		label: CHANNEL_LABELS[id],
@@ -115,6 +116,7 @@ export function ltOverflowAcrossChannels(
 	smsCharLimit: number
 ): Partial<Record<ChannelId, number>> {
 	const result: Partial<Record<ChannelId, number>> = {};
+	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 	for (const id of ['email', 'telegram', 'sms'] as ChannelId[]) {
 		const overflow = ltOverflowForLimit(ltLimitForChannel(id, smsCharLimit), colCount);
 		if (overflow !== undefined) result[id] = overflow;
