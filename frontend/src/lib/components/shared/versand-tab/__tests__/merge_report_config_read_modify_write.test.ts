@@ -10,7 +10,7 @@
 // heraus, ohne dass einer von 2677 Tests rot wurde.
 //
 // Geprueft wird deshalb die reine Funktion `../mergeReportConfig.ts`, die beide
-// Schreiber (VersandTab.svelte, EditReportConfigSection.svelte) benutzen —
+// Schreiber (VersandTab.svelte, MailInhaltCard.svelte) benutzen —
 // inklusive der Abfolge ZWEIER Laeufe, also genau der Situation, die es auf
 // /trips/new erstmals gibt (beide Komponenten dauerhaft nebeneinander auf
 // demselben bind:reportConfig).
@@ -39,10 +39,7 @@ import { baueReportConfigPayload, ladeReportZustand } from '../reportConfigPaylo
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const versandTabCode = readFileSync(join(HERE, '..', '..', 'VersandTab.svelte'), 'utf-8');
-const mailInhaltCode = readFileSync(
-	join(HERE, '..', '..', '..', 'edit', 'EditReportConfigSection.svelte'),
-	'utf-8'
-);
+const mailInhaltCode = readFileSync(join(HERE, '..', '..', 'MailInhaltCard.svelte'), 'utf-8');
 
 /** Ein Write-Back-Lauf von VersandTab (Kanaele + Zeitplan gehoeren ihm immer).
  *  Argumentform 1:1 wie in VersandTab.svelte. */
@@ -54,7 +51,7 @@ function versandTabRun(
 	return mergeReportConfig({ snapshot, live, own });
 }
 
-/** Ein Write-Back-Lauf von EditReportConfigSection auf /trips/new: Mail-Inhalt
+/** Ein Write-Back-Lauf von MailInhaltCard auf /trips/new: Mail-Inhalt
  *  gehoert ihm, Kanaele/Zeitplan NICHT (showChannels/showSchedule = false —
  *  die zeigt dort der Nachbar VersandTab). Argumentform 1:1 wie in der
  *  Komponente. */
@@ -250,34 +247,34 @@ describe('Verdrahtung: beide Schreiber uebergeben den lebenden Blob', () => {
 		);
 	});
 
-	test('EditReportConfigSection.svelte liest reportConfig live (untrack)', () => {
+	test('MailInhaltCard.svelte liest reportConfig live (untrack)', () => {
 		const call = mailInhaltCode.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
-		assert.ok(call, 'EditReportConfigSection.svelte ruft baueReportConfigPayload nicht auf');
+		assert.ok(call, 'MailInhaltCard.svelte ruft baueReportConfigPayload nicht auf');
 		assert.match(
 			call[0],
 			/live:\s*untrack\(\(\)\s*=>\s*reportConfig\)/,
-			'EditReportConfigSection uebergibt keinen Live-Read von reportConfig als `live` ' +
+			'MailInhaltCard uebergibt keinen Live-Read von reportConfig als `live` ' +
 				'— Kanal-/Zeitplanwerte des Nachbarn gingen sonst verloren (F001)'
 		);
 	});
 
-	test('EditReportConfigSection reicht die echten Sichtbarkeits-Flags durch', () => {
+	test('MailInhaltCard setzt showSchedule und showChannels literal auf false', () => {
 		const call = mailInhaltCode.match(/baueReportConfigPayload\(\{[\s\S]*?\n\t\t\}\)/);
-		assert.ok(call, 'EditReportConfigSection.svelte ruft baueReportConfigPayload nicht auf');
-		// Kurzschreibweise `showSchedule,` / `showChannels,` = die Props selbst.
-		// Ein fest verdrahtetes `true` waere der zweite Schreibpfad auf fremde
-		// Felder, den der Guard gerade verhindern soll (Mutation M2).
+		assert.ok(call, 'MailInhaltCard.svelte ruft baueReportConfigPayload nicht auf');
+		// Seit #2277 S5 hat der Baustein keine Props showSchedule/showChannels mehr:
+		// er zeigt weder Zeitplan noch Kanaele, also sind beide LITERAL false. Ein
+		// `true` waere der zweite Schreibpfad auf fremde Felder (Mutation M2).
 		assert.match(
 			call[0],
-			/\bshowSchedule,/,
-			'showSchedule wird nicht als Prop durchgereicht — Zeitplan-Felder wuerden auch ' +
-				'dann geschrieben, wenn diese Instanz gar keinen Zeitplan zeigt'
+			/\bshowSchedule:\s*false\b/,
+			'showSchedule ist nicht literal false — Zeitplan-Felder wuerden geschrieben, ' +
+				'obwohl der Baustein keinen Zeitplan zeigt'
 		);
 		assert.match(
 			call[0],
-			/\bshowChannels,/,
-			'showChannels wird nicht als Prop durchgereicht — Kanal-Felder wuerden auch dann ' +
-				'geschrieben, wenn diese Instanz gar keine Kanaele zeigt (Mutation M2)'
+			/\bshowChannels:\s*false\b/,
+			'showChannels ist nicht literal false — Kanal-Felder wuerden geschrieben, ' +
+				'obwohl der Baustein keine Kanaele zeigt (Mutation M2)'
 		);
 	});
 });
@@ -384,7 +381,7 @@ describe('F003: unbedingte und bedingte Feldgruppen bleiben disjunkt', () => {
 		// Ohne diese Kontrolle waeren die Disjunktheits-Tests unten auch dann
 		// gruen, wenn der Extraktor nichts findet — eine leere Menge ist mit
 		// jeder anderen disjunkt.
-		const call = mergeCall(mailInhaltCode, 'EditReportConfigSection.svelte');
+		const call = mergeCall(mailInhaltCode, 'MailInhaltCard.svelte');
 		const eigene = groupKeys(call, 'eigene');
 		assert.ok(eigene.includes('email_format'), `eigene-Gruppe nicht erkannt: ${eigene.join(',')}`);
 		const schedule = bedingteGruppe('showSchedule');
@@ -393,8 +390,8 @@ describe('F003: unbedingte und bedingte Feldgruppen bleiben disjunkt', () => {
 		assert.ok(channels.includes('send_email'), `channels-Gruppe nicht erkannt: ${channels.join(',')}`);
 	});
 
-	test('EditReportConfigSection: kein Feld steht gleichzeitig in eigene und einer bedingten Gruppe', () => {
-		const call = mergeCall(mailInhaltCode, 'EditReportConfigSection.svelte');
+	test('MailInhaltCard: kein Feld steht gleichzeitig in eigene und einer bedingten Gruppe', () => {
+		const call = mergeCall(mailInhaltCode, 'MailInhaltCard.svelte');
 		const eigene = new Set(groupKeys(call, 'eigene'));
 		for (const flag of ['showSchedule', 'showChannels'] as const) {
 			const doppelt = bedingteGruppe(flag).filter((k) => eigene.has(k));
@@ -408,13 +405,13 @@ describe('F003: unbedingte und bedingte Feldgruppen bleiben disjunkt', () => {
 		}
 	});
 
-	test('EditReportConfigSection schreibt kein telegram_style (Schalter gehoert VersandTab)', () => {
-		const call = mergeCall(mailInhaltCode, 'EditReportConfigSection.svelte');
-		assert.ok(!/telegram_style/.test(call), 'EditReportConfigSection reicht telegram_style in den Payload (#1738 FL4)');
+	test('MailInhaltCard schreibt kein telegram_style (Schalter gehoert VersandTab)', () => {
+		const call = mergeCall(mailInhaltCode, 'MailInhaltCard.svelte');
+		assert.ok(!/telegram_style/.test(call), 'MailInhaltCard reicht telegram_style in den Payload (#1738 FL4)');
 	});
 
 	test('Baustein: ohne telegram_style im Zustand bleibt der Wert des Nachbarn stehen', () => {
-		// Der EditReportConfigSection-Pfad reicht keinen telegram_style durch; der
+		// Der MailInhaltCard-Pfad reicht keinen telegram_style durch; der
 		// Baustein darf dann keinen Default ('rich') ueber den Wert von VersandTab legen.
 		const zustand = ladeReportZustand({});
 		delete zustand.telegram_style;

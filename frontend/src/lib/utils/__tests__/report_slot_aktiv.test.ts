@@ -24,7 +24,8 @@
 //      ComparePreset; der Ortsvergleich-Zweig bleibt laut Spec unberuehrt und
 //      wird hier bewusst NICHT gegen die Trip-Tabelle geprueft.
 //   3. Editor-Startzustand: reine Regel (`editor_startzustand_folgt_der_regel`)
-//      PLUS SSR-Render von VersandTab (route) und EditReportConfigSection.
+//      PLUS SSR-Render von VersandTab (route). (#2277 S5: die zweite Naht, die alte
+//      Report-Config-Section, entfiel mit dem Code.)
 //      ACHTUNG (Messgrenze): beide Komponenten setzen morning_enabled/
 //      evening_enabled heute `$state(true)` und ueberschreiben sie ERST in
 //      `onMount`, das unter svelte/server NIE laeuft. Die SSR-Zeilen mit
@@ -288,35 +289,6 @@ describe('AC-24 Naht 3 — Versand-Reiter setzt die Haekchen beim ERZEUGEN nach 
 				istAngehakt(html, 'evening-master-switch'),
 				f.slot_evening,
 				`VersandTab "Abend aktiv" fuer ${JSON.stringify(f.report_config)}: erwartet ${f.slot_evening}`
-			);
-		});
-
-		test(`EditReportConfigSection(showSchedule) — ${f.name}`, async () => {
-			const { render } = await import('svelte/server');
-			const Edit = (
-				await import(
-					pathToFileURL(path.join(FRONTEND, 'src/lib/components/edit/EditReportConfigSection.svelte')).href
-				)
-			).default;
-			const html = render(Edit, {
-				props: {
-					reportConfig: rcOf(f),
-					mode: 'edit',
-					showMailContent: false,
-					showSchedule: true,
-					showChannels: false,
-					profileOverride: null
-				}
-			}).body;
-			assert.equal(
-				istAngehakt(html, 'morning-master-switch'),
-				f.slot_morning,
-				`Edit-Sektion "Morgen aktiv" fuer ${JSON.stringify(f.report_config)}: erwartet ${f.slot_morning}`
-			);
-			assert.equal(
-				istAngehakt(html, 'evening-master-switch'),
-				f.slot_evening,
-				`Edit-Sektion "Abend aktiv" fuer ${JSON.stringify(f.report_config)}: erwartet ${f.slot_evening}`
 			);
 		});
 	}

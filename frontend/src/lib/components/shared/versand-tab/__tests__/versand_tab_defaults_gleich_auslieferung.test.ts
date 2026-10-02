@@ -11,13 +11,13 @@
 // ERWARTUNG: GRUEN schon heute (Charakterisierung, kein RED). Die Startwerte der
 // vier Kanal-Haken entstehen beim Erzeugen der Komponente
 // (`$state(untrack(() => reportConfig?.send_email !== false))`,
-// VersandTab.svelte:143; EditReportConfigSection.svelte:78), also unter
+// VersandTab.svelte:143), also unter
 // svelte/server messbar. Der Test bewacht, dass niemand den Editor-Default
 // (E-Mail an, Rest aus) von der Auslieferung entkoppelt.
 //
-// Zwei Naehte, weil dieselbe Zusicherung an zwei Wirkorten steht:
-//   - VersandTab (route)                     -> /trips/[id], Versand-Reiter
-//   - EditReportConfigSection (showChannels) -> /trips/new (Zeitplan-Tab)
+// Naht: VersandTab (route) -> /trips/[id] und /trips/new (Versand-Reiter).
+// Issue #2277 S5: die zweite Naht (alte Report-Config-Section mit showChannels) entfaellt,
+// weil der Code entfaellt; die Kanal-Haken besitzt allein VersandTab.
 //
 // Gegenprobe im Test: mit EXPLIZIT gesetzten Werten (send_email=false,
 // send_telegram=true, ...) kippen die Haken — sonst wuerde der Test auch dann
@@ -48,12 +48,6 @@ const { render } = await import('svelte/server');
 const VersandTab = (
 	await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/VersandTab.svelte')).href)
 ).default;
-const EditReportConfigSection = (
-	await import(
-		pathToFileURL(path.join(FRONTEND, 'src/lib/components/edit/EditReportConfigSection.svelte')).href
-	)
-).default;
-
 const KANAELE = ['channel-email', 'channel-telegram', 'channel-sms', 'channel-premium-sms'] as const;
 type Kanal = (typeof KANAELE)[number];
 type Haken = Record<Kanal, boolean>;
@@ -75,19 +69,6 @@ function hakenAus(html: string): Haken {
 
 function renderVersandTab(reportConfig: Record<string, unknown> | undefined): string {
 	return render(VersandTab, { props: { context: 'route', reportConfig } }).body;
-}
-
-function renderEditSection(reportConfig: Record<string, unknown> | undefined): string {
-	return render(EditReportConfigSection, {
-		props: {
-			reportConfig,
-			mode: 'edit',
-			showMailContent: false,
-			showSchedule: false,
-			showChannels: true,
-			profileOverride: null
-		}
-	}).body;
 }
 
 const NUR_EMAIL: Haken = {
@@ -130,13 +111,6 @@ describe('AC-25 — Editor-Kanal-Defaults gleich Auslieferung (SSR, Charakterisi
 				f.erwartet,
 				`Kanal-Haken fuer ${JSON.stringify(f.rc)}: E-Mail an, Telegram/SMS/Premium-SMS aus ` +
 					'(Default der Auslieferung, loader.py:587 / _resolve_channel_flags)'
-			);
-		});
-		test(`EditReportConfigSection(showChannels) — ${f.name}`, () => {
-			assert.deepEqual(
-				hakenAus(renderEditSection(f.rc)),
-				f.erwartet,
-				`Kanal-Haken (Edit-Sektion) fuer ${JSON.stringify(f.rc)}`
 			);
 		});
 	}

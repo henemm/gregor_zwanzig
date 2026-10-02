@@ -1,4 +1,4 @@
-// Issue #1269 (a): Mount-Kanonisierung (z.B. EditReportConfigSection.svelte /
+// Issue #1269 (a): Mount-Kanonisierung (z.B. MailInhaltCard.svelte /
 // VersandTab.svelte schreiben beim Mounten Zeiten HH:MM -> HH:MM:SS und
 // materialisieren fehlende Default-Felder) darf NICHT als Nutzeränderung
 // gezählt werden. Geteilter Baustein fuer Trip UND Ortsvergleich (CLAUDE.md

@@ -411,7 +411,7 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 					message:
 						'M14: der Klick auf "Abend aktiv" hat evening_enabled=false NICHT gespeichert ' +
 						`(kein PUT mit evening_enabled=false gesehen: ${put ? 'doch gesehen' : 'ausgeblieben'}) — ` +
-						'Payload-Verdrahtung in VersandTab/EditReportConfigSection pruefen'
+						'Payload-Verdrahtung in VersandTab/die frühere Report-Config-Section (#2277 S5 entfernt) pruefen'
 				}
 			)
 			.toBe(false);

@@ -8,7 +8,7 @@
 // Quelltext. Renderharness + Test-Seam: ./tripNewSsr.ts.
 //
 // RED heute:
-//   - AC-4: der Kanal-Block kommt aus EditReportConfigSection, die zweimal
+//   - AC-4: der Kanal-Block kommt aus die frühere Report-Config-Section (#2277 S5 entfernt), die zweimal
 //     gleichzeitig gemountet ist (TripNewEditor.svelte:800/:1036, CSS-only
 //     umgeschaltet) — Testids stehen doppelt bzw. (metrik-gegated) gar nicht.
 //   - AC-5: `versand-tab` existiert auf /trips/new ueberhaupt nicht.

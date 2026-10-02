@@ -24,7 +24,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 const TRIP_ID = 'e2e-1719-s2-kaskade';
 
 // Vorab-normalisierter report_config-Blob (exakt wie layout-tab-route.spec.ts):
-// verhindert, dass EditReportConfigSections Mount-Effekt einen Auto-Save mit
+// verhindert, dass MailInhaltCards Mount-Effekt einen Auto-Save mit
 // noch-leeren buckets schedult und die Metriken-Seed überschreibt.
 const REPORT_CONFIG = {
 	enabled: true,

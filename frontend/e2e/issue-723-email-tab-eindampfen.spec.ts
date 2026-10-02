@@ -5,7 +5,7 @@
 //
 // Ziel-Oberfläche (migriert durch Fix #1047, docs/specs/modules/fix_1047_mail_content_tab_restore.md):
 // Trip-Detail-Seite /trips/[id]?tab=weather, Reiter "Wetter-Metriken" (= "Inhalt",
-// EditReportConfigSection.svelte eingebunden über WeatherMetricsTab.svelte).
+// MailInhaltCard.svelte eingebunden über WeatherMetricsTab.svelte).
 //
 // Aktuelle TestIDs (nach #664/#722/#785 — "Metriken-Überblick"-Checkbox seit #971/#774
 // entfernt, `report-show-metrics-summary` existiert NICHT mehr im DOM):

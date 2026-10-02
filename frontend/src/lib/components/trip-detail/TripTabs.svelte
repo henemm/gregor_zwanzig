@@ -11,7 +11,6 @@
 	// (Aufraeumen inkl. AlertMetricLevelTable/-Row ist Slice-6-Thema, s. Spec).
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
-	import BriefingsTab from '$lib/components/briefings-tab/BriefingsTab.svelte';
 	import {
 		EmailIframe,
 		SmsPhoneFrame,

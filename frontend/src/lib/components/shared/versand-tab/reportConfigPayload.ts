@@ -2,7 +2,7 @@
 //
 // Startzustand und Payload-Bau des `report_config`-Blobs, verhaltensgleich
 // aus dem `onMount`-/`$effect`-Rumpf von VersandTab.svelte und
-// EditReportConfigSection.svelte herausgezogen (Vorbild
+// die frühere Report-Config-Section (#2277 S5 entfernt) herausgezogen (Vorbild
 // weather-metrics-tab/weatherMetricsSavePayload.ts). Beide Komponenten rufen
 // BEIDE Funktionen auf. `$effect`/`onMount` laufen unter svelte/server nie —
 // als reine Funktionen ist die Regel per node:test messbar, ohne Nachbau im
@@ -40,7 +40,7 @@ export interface ReportZustand {
 }
 
 /** Trend-Standardwerte, wenn der Blob weder Bool-Felder noch Legacy-Array
- *  traegt (VersandTab: beide aus; EditReportConfigSection: Abend an). */
+ *  traegt (VersandTab: beide aus; die frühere Report-Config-Section (#2277 S5 entfernt): Abend an). */
 export interface TrendVorgaben {
 	multi_day_trend_morning?: boolean;
 	multi_day_trend_evening?: boolean;

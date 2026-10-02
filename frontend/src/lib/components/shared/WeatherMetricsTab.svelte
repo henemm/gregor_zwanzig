@@ -84,9 +84,9 @@
 	// eigener Aufrufer (05-Block) entfaellt mit #1728 Scheibe 2 (DEC-2/DEC-7) —
 	// die Komponente bleibt fuer den Vergleich-Zweig (mode='multiple') aktiv.
 	import AggregationMetricRow from './weather-metrics-tab/AggregationMetricRow.svelte';
-	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
+	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
 	// Issue #1117: „Amtliche Warnungen"-Checkbox auch im Inhalt-Tab (eigener Block,
-	// EditReportConfigSection bleibt unverändert).
+	// MailInhaltCard bleibt unverändert).
 	import * as UiCard from '$lib/components/ui/card/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import {
@@ -103,7 +103,7 @@
 	} from '../trip-detail/metricsEditor.ts';
 	// Issue #1234: Daten-/Absichts-Gate gegen stillen Metrik-Leerungs-Autosave.
 	import { weatherSaveGate } from '../trip-detail/weatherSaveGate.ts';
-	// Issue #1269 (a): Mount-Kanonisierung (EditReportConfigSection) darf nicht
+	// Issue #1269 (a): Mount-Kanonisierung (MailInhaltCard) darf nicht
 	// als Nutzeraenderung zaehlen — geteilter Baustein (Trip + Ortsvergleich).
 	import { reportConfigChangedByUser } from '$lib/components/shared/reportConfigDirty';
 	// Issue #1311 (C1 von Epic #1301): geteilter Baustein Trip + Ortsvergleich
@@ -549,7 +549,7 @@
 			// Nutzeraenderung wertet. Kein scheduleAutoSave() hier (ohne zu speichern).
 			_lastReportConfig = reportConfig;
 			// Issue #1234 (2a): erst nach vollstaendigem Erfolg wahr — der Render-
-			// Guard haengt daran, damit Kindkomponenten (EditReportConfigSection) nie
+			// Guard haengt daran, damit Kindkomponenten (MailInhaltCard) nie
 			// vor geladenem Katalog mounten.
 			catalogLoaded = true;
 		} catch (e: unknown) {
@@ -1045,7 +1045,7 @@
 	// Issue #774: reportConfig-Änderungen (Checkboxen) triggern Auto-Save.
 	// Nicht-reaktive Vergleichsvariable vermeidet Rekursion.
 	// Issue #1269 (a): reportConfigChangedByUser() statt rohem JSON-Vergleich —
-	// die Mount-Kanonisierung von EditReportConfigSection (toHHMMSS,
+	// die Mount-Kanonisierung von MailInhaltCard (toHHMMSS,
 	// Default-Materialisierung) erzeugt einen neuen `reportConfig`-Objektwert,
 	// OHNE dass der Nutzer etwas geaendert hat; der rohe String-/Referenz-
 	// Vergleich wertete das faelschlich als Aenderung.
@@ -1057,7 +1057,7 @@
 			_lastReportConfig = cur;
 			if (changed) {
 				// Issue #1361/#1372 S1b (Staging-Fund AC-5): reine report_config-
-				// Aenderungen (EditReportConfigSection-Checkboxen, Tagesfenster)
+				// Aenderungen (MailInhaltCard-Checkboxen, Tagesfenster)
 				// duerfen NICHT den Metrik-Katalog auf /weather-config mitschreiben
 				// — dieser Effekt reagiert ausschliesslich auf reportConfig, daher
 				// scheduleReportConfigOnlySave() statt der vollen scheduleAutoSave().
@@ -1071,7 +1071,7 @@
 	// Issue #1234 (Fix-Loop 2 / F003+F004): Capture-Listener auf dem
 	// Report-Config-Touch-Scope (s. Markup unten). Zwei Ereignis-Paare mit
 	// unterschiedlicher Aufgabe — beide noetig, keins ersetzt das andere:
-	//   - pointerdown/keydown: deckt Quick-Pick-BUTTONS ab (EditReportConfigSection
+	//   - pointerdown/keydown: deckt Quick-Pick-BUTTONS ab (MailInhaltCard
 	//     Z. 219-228), die reportConfig aendern OHNE ein change/input-Ereignis
 	//     auszuloesen. Gefiltert auf tatsaechlich bedienbare Elemente (F003),
 	//     sonst wuerde ein Streuklick auf Ueberschrift/Beschreibungstext/Leerraum
@@ -1738,10 +1738,10 @@
 			<!-- Issue #1361/#1372 S1b: Tagesfenster zieht aus dem Versand-Reiter
 			     hierher (VersandTab/VTSchedulePlan) — welche Stunden bewertet
 			     werden, ist eine Inhalts- und keine Versandfrage. Bindet direkt an
-			     reportConfig (derselbe $state, den EditReportConfigSection unten
+			     reportConfig (derselbe $state, den MailInhaltCard unten
 			     bind:reportConfig nutzt).
 			     Adversary Runde 3 (F001, CRITICAL): DayWindowCard liegt AUSSERHALB
-			     des `report-config-touch-scope`-Containers (der nur EditReportConfigSection
+			     des `report-config-touch-scope`-Containers (der nur MailInhaltCard
 			     umschliesst) -- dessen Capture-Listener sehen diese Aenderung daher
 			     NIE, `userTouched` bliebe `false` und `weatherSaveGate` wuerde JEDEN
 			     Speicherversuch verwerfen, selbst nach der reportConfigDirty-Korrektur.
@@ -1751,7 +1751,7 @@
 			     verlassen.
 			     Kein !createMode-Gate (anders als 'report_config' unten, Z. 1542):
 			     TripNewEditor.svelte haelt beim Anlegen weiterhin eine EIGENE,
-			     separate reportConfig-Instanz (eigener EditReportConfigSection
+			     separate reportConfig-Instanz (eigener MailInhaltCard
 			     ausserhalb dieser Komponente) — dieser hier lokale reportConfig-
 			     $state bleibt dort technisch wirkungslos, genau wie beim
 			     'report_config'-Abschnitt. Die Card ist trotzdem im createMode
@@ -1963,12 +1963,12 @@
 				{/if}
 
 				{#if !createMode && sections.includes('report_config')}
-				<!-- Issue #1234 (Fix-Loop 1 / F001, Fix-Loop 2 / F003+F004): EditReportConfigSection
+				<!-- Issue #1234 (Fix-Loop 1 / F001, Fix-Loop 2 / F003+F004): MailInhaltCard
 				     normalisiert reportConfig in einem eigenen $effect beim Mounten und
 				     schreibt es zurueck — das darf NICHT als Nutzergeste zaehlen (AC-6).
 				     Eine echte Interaktion des Nutzers MUSS aber weiterhin speichern
-				     (#774). EditReportConfigSection selbst darf laut Spec nicht geaendert
-				     werden, daher: vier Capture-Phase-Listener auf dem umschliessenden
+				     (#774). MailInhaltCard enthaelt bewusst keine Gesten-Erkennung,
+				     daher: vier Capture-Phase-Listener auf dem umschliessenden
 				     Container (s. onReportConfigTouchGesture/onReportConfigValueChange
 				     oben fuer die Aufgabenteilung). Alle vier feuern in der Capture-Phase
 				     noch VOR dem Ziel-Handler der Checkbox/des Buttons und damit erst
@@ -1983,13 +1983,7 @@
 					onchangecapture={onReportConfigValueChange}
 					oninputcapture={onReportConfigValueChange}
 				>
-					<EditReportConfigSection
-						bind:reportConfig
-						mode="edit"
-						showMailContent={true}
-						showChannels={false}
-						showSchedule={false}
-					/>
+					<MailInhaltCard bind:reportConfig />
 				</div>
 				{/if}
 
@@ -2095,7 +2089,7 @@
 	/* Issue #1234 (Fix-Loop 1): reiner Event-Capture-Container fuer die Report-
 	   Config-Karte — bewusst OHNE eigenes CSS. Ein normaler Block-Div verhaelt
 	   sich als Flex-Item von .bottom-section (column, gap:20px) identisch zum
-	   vorherigen direkten Kind (EditReportConfigSection-Wurzel-Div), daher kein
+	   vorherigen direkten Kind (MailInhaltCard-Wurzel-Div), daher kein
 	   `display:contents` (das hat in aelteren WebKit-Versionen Nebenwirkungen
 	   auf Event-/ARIA-Semantik — unnoetiges Risiko fuer einen reinen Layout-No-op). */
 	.save-success {

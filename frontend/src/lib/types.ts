@@ -269,6 +269,8 @@ export interface ReportConfig {
 	show_outlook?: boolean;
 	// Issue #722 — E-Mail-Format: "full" (HTML multipart) | "compact" (plain-text only)
 	email_format?: 'full' | 'compact';
+	// Issue #785 — Vortag-Vergleich im Briefing (Default an, wenn Feld fehlt)
+	show_yesterday_comparison?: boolean;
 	// Issue #1260 — Telegram im SMS-Kurzstil (opt-in). "rich" (Default, Multi-Bubble
 	// mit Inline-Knöpfen) | "kurzform" (ein Zeilentext wie SMS). Regelt Trip-Briefing
 	// UND Trip-Alarme (ein Feld je Trip).
