@@ -1310,7 +1310,9 @@ null
 ## 12) Scheduler Status Endpoint (Epic #134)
 
 Exposes scheduler job metadata. Since #2155 S2 (ADR-0079) the global aggregate
-`GET /api/scheduler/status` is token-gated and consumed only by the external
+`GET /api/scheduler/status` is token-gated (its `forecast_budget` block carries, in every state,
+the anonymous integers `active_pots`, `fair_share` (= `daily_budget / max(active_pots,1)`),
+`max_user_calls`, `users_over_fair_share` — never user identifiers, #2475) and consumed only by the external
 monitor `check-gregor20.sh` — the account page (formerly BriefingsTimeline) now
 reads its own run status via the session-authenticated `GET
 /api/scheduler/status/me` (see below).
@@ -1509,7 +1511,9 @@ Alle drei Routen: ohne Session 401, ohne Admin 403 `{"error":"forbidden"}`.
 **`GET /api/admin/users`** -> 200 `{"users":[AdminUser]}`. `AdminUser` (alle Felder immer
 vorhanden, kein `omitempty`): `id`, `email`, `display_name`, `tier`, `requested_tier`,
 `requested_at`, `email_verified_at`, `created_at`, `disabled` (bool), `is_test_user` (bool),
-`last_trip_report_run` (`{"time","status","error"}` oder `null`). Nie `password_hash`,
+`last_trip_report_run` (`{"time","status","error"}` oder `null`), `open_meteo_calls_today`
+(int, heutiger Open-Meteo-Verbrauch des Nutzers, UTC-Tag; 0 bei fehlender/kaputter/gestriger
+Zaehlerdatei, #2475). Nie `password_hash`,
 Passkey- oder Token-/Code-Felder.
 
 **`PUT /api/admin/users/{id}/tier`**, Body `{"tier":"free|standard|premium"}` -> 200 mit

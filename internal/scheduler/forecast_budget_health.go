@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/store"
 )
 
 // forecastDailyBudget mirrors ForecastBudgetGate.DAILY_BUDGET
@@ -41,6 +43,7 @@ func forecastThrottleLevel(usageRatio float64) string {
 type forecastBudgetFile struct {
 	Date        string         `json:"date"`
 	Calls       map[string]int `json:"calls"`
+	ActiveUsers []string       `json:"active_users"`
 	CacheHits   int            `json:"cache_hits"`
 	CacheMisses int            `json:"cache_misses"`
 }
@@ -61,6 +64,11 @@ func forecastBudgetSnapshot(path string) map[string]any {
 		"cache_hit_ratio": 0.0,
 		"throttle_level":  "none",
 		"status":          "unavailable",
+
+		"active_pots":           0,
+		"fair_share":            forecastDailyBudget,
+		"max_user_calls":        0,
+		"users_over_fair_share": 0,
 	}
 	if path == "" {
 		return unavailable
@@ -87,9 +95,10 @@ func forecastBudgetSnapshot(path string) map[string]any {
 	// UTC date means the counters are logically reset -- reporting
 	// yesterday's calls_today as "heute" would be factually wrong.
 	today := time.Now().UTC().Format("2006-01-02")
-	calls, cacheHits, cacheMisses := 0, 0, 0
+	calls, cacheHits, cacheMisses, activePots := 0, 0, 0, 0
 	if file.Date == today {
-		calls = file.Calls["openmeteo"] // zero value if key absent, s. spec
+		activePots = len(file.ActiveUsers) // nur die Zahl, nie die Kennungen
+		calls = file.Calls["openmeteo"]    // zero value if key absent, s. spec
 		cacheHits = file.CacheHits
 		cacheMisses = file.CacheMisses
 	}
@@ -102,6 +111,8 @@ func forecastBudgetSnapshot(path string) map[string]any {
 	if total := cacheHits + cacheMisses; total > 0 {
 		hitRatio = float64(cacheHits) / float64(total)
 	}
+	fairShare := forecastDailyBudget / max(activePots, 1)
+	maxUser, over := userUsageAggregates(path, fairShare)
 	return map[string]any{
 		"date":            today,
 		"calls_today":     calls,
@@ -112,7 +123,59 @@ func forecastBudgetSnapshot(path string) map[string]any {
 		"cache_hit_ratio": hitRatio,
 		"throttle_level":  forecastThrottleLevel(ratio),
 		"status":          "ok",
+
+		"active_pots":           activePots,
+		"fair_share":            fairShare,
+		"max_user_calls":        maxUser,
+		"users_over_fair_share": over,
 	}
+}
+
+// userForecastCalls liest den heutigen open-meteo-Zaehler eines Nutzers aus
+// <dataDir>/users/<uid>/diagnostics/forecast_budget.json. Ungueltige Kennung,
+// fehlende/kaputte Datei oder anderes Datum liefern 0 (Issue #2475).
+func userForecastCalls(dataDir, uid string) int {
+	if dataDir == "" || !store.ValidUserID(uid) {
+		return 0
+	}
+	data, err := os.ReadFile(filepath.Join(dataDir, "users", uid, "diagnostics", "forecast_budget.json"))
+	if err != nil {
+		return 0
+	}
+	var file forecastBudgetFile
+	if err := json.Unmarshal(data, &file); err != nil {
+		return 0
+	}
+	if file.Date != time.Now().UTC().Format("2006-01-02") {
+		return 0
+	}
+	return file.Calls["openmeteo"]
+}
+
+// userUsageAggregates liefert nur Aggregate ueber alle Nutzerzaehler:
+// hoechster Einzelverbrauch und Anzahl Nutzer ueber ihrem fairen Anteil.
+// Nie Kennungen. globalPath muss <dataDir>/diagnostics/forecast_budget.json sein.
+func userUsageAggregates(globalPath string, fairShare int) (maxCalls, over int) {
+	diag := filepath.Dir(globalPath)
+	if filepath.Base(diag) != "diagnostics" {
+		return 0, 0
+	}
+	dataDir := filepath.Dir(diag)
+	entries, err := os.ReadDir(filepath.Join(dataDir, "users"))
+	if err != nil {
+		return 0, 0
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		n := userForecastCalls(dataDir, e.Name())
+		maxCalls = max(maxCalls, n)
+		if n > fairShare {
+			over++
+		}
+	}
+	return maxCalls, over
 }
 
 // ForecastBudgetHealth reads the open-meteo daily-call budget snapshot from
@@ -124,4 +187,13 @@ func (s *Scheduler) ForecastBudgetHealth() map[string]any {
 	}
 	path := filepath.Join(s.store.DataDir, "diagnostics", "forecast_budget.json")
 	return forecastBudgetSnapshot(path)
+}
+
+// UserForecastCalls liefert den heutigen open-meteo-Verbrauch eines Nutzers
+// (Admin-Sicht, Issue #2475); ohne Store 0.
+func (s *Scheduler) UserForecastCalls(uid string) int {
+	if s == nil || s.store == nil {
+		return 0
+	}
+	return userForecastCalls(s.store.DataDir, uid)
 }
