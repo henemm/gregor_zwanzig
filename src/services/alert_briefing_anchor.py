@@ -244,13 +244,20 @@ def undelivered_since_last_briefing(
     kippte beim ersten Briefing nach der Auslieferung die gesamte Historie in
     die Mail (AC-7).
     """
-    from services.alert_log import read_undelivered
+    from services.alert_log import REASON_NO_REFERENCE_BASIS, read_undelivered
 
     since = last_briefing_at(
         user_id=user_id, entity_id=entity_id, entity_type=entity_type,
     )
     if since is None:
-        return []
+        # Ersatz-Fenster (#2050 Sz.12): "keine Vergleichsbasis" tritt per
+        # Definition ohne Briefing auf und waere sonst nirgends sichtbar;
+        # die uebrige Historie bleibt draussen (AC-7 aus #1461).
+        return [
+            inc for inc in read_undelivered(
+                user_id, entity_id=entity_id, entity_type=entity_type,
+            ) if REASON_NO_REFERENCE_BASIS in inc.reasons
+        ]
     return read_undelivered(
         user_id, entity_id=entity_id, entity_type=entity_type, since=since,
     )

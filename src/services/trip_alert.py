@@ -407,6 +407,34 @@ class TripAlertService:
                 "Protokoll-Eintrag fehlt.", reason, trip.id, e, gate_reason,
             )
 
+    def _protokolliere_fehlende_basis(
+        self, trip: "Trip", today: date, gap: str,
+        reference_at: Optional[str] = None,
+    ) -> None:
+        """Issue #2050 Sz.12 (D-2/E-1): „keine gueltige Vergleichsbasis" ins
+        Alarmprotokoll — nur fuer einen LAUFENDEN Trip, hoechstens einmal je
+        Nutzer + Trip + Tag + Untergrund. Fail-soft: weder Entdopplungs-Lesen
+        noch Schreiben darf den Lauf der uebrigen Trips mitreissen."""
+        if not (
+            trip.start_date is not None and trip.end_date is not None
+            and trip.start_date <= today <= trip.end_date
+        ):
+            return
+        tag = today.isoformat()
+        try:
+            if alert_log.has_no_reference_entry(
+                self._user_id, entity_id=trip.id, entity_type="trip",
+                reference_gap=gap, reference_day=tag,
+            ):
+                return
+        except Exception as e:
+            logger.error("Vergleichsbasis-Entdopplung fuer Trip %s fehlgeschlagen (%s)", trip.id, e)
+        self._protokolliere_unterdrueckung(
+            trip, reason=alert_log.REASON_FORECAST_CHANGE,
+            gate_reason=alert_log.REASON_NO_REFERENCE_BASIS,
+            reference_gap=gap, reference_day=tag, reference_at=reference_at,
+        )
+
     def check_and_send_alerts(
         self,
         trip: "Trip",
@@ -1122,7 +1150,9 @@ class TripAlertService:
         # AC-13/AC-14 gelten fuer BEIDE Aufrufer: "gar kein Anker" laesst auch
         # die Geometrie-Auswertung leerlaufen.
         if not undated:
-            self._report_missing_anchor(trip, today)
+            self._report_missing_anchor(
+                trip, today, protokollieren=tagesgleicher_anker_noetig,
+            )
             return None
         if not tagesgleicher_anker_noetig:
             # Amtliche Warnungen: Geometrie genuegt, s. Docstring.
@@ -1172,6 +1202,12 @@ class TripAlertService:
         record_alert_anchor_rejected(
             user_id=self._user_id, entity_id=trip.id, reason=reason,
         )
+        if anchor_date is not None:
+            ref_at = anchor_date.isoformat()
+        else:
+            ankerzeit = _as_aware_utc(undated[0].fetched_at)
+            ref_at = ankerzeit.isoformat() if ankerzeit else None
+        self._protokolliere_fehlende_basis(trip, today, reason, ref_at)
         return None
 
     def _kanal_anker_kandidat(
@@ -1253,7 +1289,9 @@ class TripAlertService:
             kandidaten.append(kandidat)
         return min(kandidaten, key=lambda paar: paar[0])[1]
 
-    def _report_missing_anchor(self, trip: "Trip", today: date) -> None:
+    def _report_missing_anchor(
+        self, trip: "Trip", today: date, *, protokollieren: bool = False,
+    ) -> None:
         """Issue #1661 (Teil C, C2): „gar kein Anker" ist zwei verschiedene Dinge.
 
         Bei einer Tour, deren Laufzeitraum noch nicht begonnen hat, ist das der
@@ -1283,6 +1321,8 @@ class TripAlertService:
         record_alert_anchor_rejected(
             user_id=self._user_id, entity_id=trip.id, reason="missing",
         )
+        if protokollieren:  # nur der Abweichungs-Aufruf (#2050 Sz.12)
+            self._protokolliere_fehlende_basis(trip, today, "missing")
 
     def _write_rolling_alarm_anchor(
         self, trip_id: str, target_date: date, weather: List[SegmentWeatherData],

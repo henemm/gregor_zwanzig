@@ -1269,3 +1269,115 @@ def test_diagnosedatei_schreibt_weiter_bei_jedem_lauf():
     assert len({z["ts"] for z in zeilen}) == 3, (
         f"AC-15: drei verschiedene Laufzeitpunkte im Streak: {zeilen}"
     )
+
+
+# ═════════════════ Adversary-Nachschaerfung (F001 / F002 / F003) ══════════════
+
+# 23:30 UTC und 00:15 UTC des Folgetages: an den Fixtur-Koordinaten (Zone
+# Europa/Wien, UTC+1/+2) liegen beide am SELBEN Ortstag, aber an
+# VERSCHIEDENEN UTC-Tagen — nur der Ortstag darf Bezugstag und Entdopplungs-
+# schluessel sein.
+_SPAET = timedelta(hours=13, minutes=30)
+_SPAETER = timedelta(hours=14, minutes=15)
+
+
+def test_trip_bezugstag_ist_der_ortstag_nicht_der_utc_tag():
+    """F001 (Trip): kurz vor UTC-Mitternacht ist es am Ort schon der Folgetag.
+    ``reference_day`` = Ortsdatum; ein zweiter Lauf nach UTC-Mitternacht (selber
+    Ortstag) bleibt entdoppelt."""
+    uid, trip_id = nutzer("f001t"), "trip-sz12-f001"
+    with _uhr(_SPAET):
+        heute = _heute()
+        utc_erster = _jetzt().date()
+        assert heute != utc_erster, "Fixtur-Schutz: Ortstag != UTC-Tag"
+        save_trip(laufender_trip(trip_id, heute), user_id=uid)
+        alarm_lauf(uid)
+    with _uhr(_SPAETER):
+        assert _heute() == heute and _jetzt().date() != utc_erster, (
+            "Fixtur-Schutz: zweiter Lauf am selben Ortstag, anderer UTC-Tag"
+        )
+        alarm_lauf(uid)
+
+    eintrag = _genau_ein_eintrag(uid, trip_id)
+    assert eintrag.get("reference_day") == heute.isoformat(), (
+        f"F001: reference_day muss der Ortstag {heute.isoformat()} sein: {eintrag!r}"
+    )
+
+
+def test_compare_bezugstag_ist_der_ortstag_nicht_der_utc_tag():
+    """F001 (Ortsvergleich): wie der Trip-Test, ueber ``check_all_compare_presets``."""
+    uid, preset_id = nutzer("f001c"), "cp-sz12-f001"
+    ort_ids = ["loc-sz12-f001"]
+    clean_uid(uid)
+    try:
+        with _uhr(_SPAET):
+            write_user_tier(uid, "premium")
+            orte = _orte_anlegen(uid, ort_ids)
+            write_presets(uid, [_preset(uid, preset_id, ort_ids, _compare_zone(orte))])
+            heute = _heute()
+            assert heute != _jetzt().date(), "Fixtur-Schutz: Ortstag != UTC-Tag"
+            _compare_lauf(uid, _SkriptQuelle(30.0))
+        with _uhr(_SPAETER):
+            assert _heute() == heute
+            _compare_lauf(uid, _SkriptQuelle(30.0))
+
+        eintrag = _genau_ein_eintrag(uid, preset_id, "compare")
+        assert eintrag.get("reference_day") == heute.isoformat(), (
+            f"F001: reference_day muss der Ortstag {heute.isoformat()} sein: {eintrag!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_entdopplung_unterscheidet_entity_type_bei_gleicher_kennung():
+    """F002: Trip und Preset desselben Nutzers mit IDENTISCHER Kennung, beide
+    ohne Anker => zwei Eintraege, je einer pro ``entity_type``."""
+    uid, gleiche_id = nutzer("f002"), "kennung-sz12-f002"
+    clean_uid(uid)
+    try:
+        with _uhr():
+            write_user_tier(uid, "premium")
+            orte = _orte_anlegen(uid, ["loc-sz12-f002"])
+            # Trip- und Preset-Ablage teilen sich bei gleicher Kennung dieselbe
+            # Datei — deshalb nacheinander: erst der Trip-Lauf, dann ersetzt
+            # das Preset die Datei; der Trip-Eintrag liegt dann schon im Protokoll.
+            save_trip(laufender_trip(gleiche_id, _heute()), user_id=uid)
+            alarm_lauf(uid)
+            write_presets(uid, [_preset(uid, gleiche_id, ["loc-sz12-f002"],
+                                        _compare_zone(orte))])
+            _compare_lauf(uid, _SkriptQuelle(30.0))
+
+        typen = sorted(
+            (e.get("entity_type") or "trip") for e in alle_no_ref_eintraege(uid)
+            if e.get("entity_id") == gleiche_id
+        )
+        assert typen == ["compare", "trip"], (
+            f"F002: je entity_type genau ein Eintrag: {alle_no_ref_eintraege(uid)!r}"
+        )
+    finally:
+        clean_uid(uid)
+
+
+def test_strukturell_kaputtes_protokoll_reisst_entdopplung_nicht_mit(caplog):
+    """F003: gueltiges JSON mit falscher Form (``not_delivered`` ist eine Zahl)
+    wirft im Entdopplungs-Leser einen ``TypeError`` (kein OSError/ValueError).
+    Der Lauf darf trotzdem nicht abbrechen: Trip B (gueltiger Anker) versendet,
+    obwohl Trip A (alphabetisch zuerst, ohne Anker) am Protokoll scheitert."""
+    uid = nutzer("f003")
+    trip_a, trip_b = "trip-sz12-f003-a-ohne-anker", "trip-sz12-f003-b-mit-anker"
+    with _uhr():
+        heute = _heute()
+        save_trip(laufender_trip(trip_a, heute), user_id=uid)
+        briefing_anker_schreiben(uid, trip_b, heute)
+        save_trip(laufender_trip(trip_b, heute), user_id=uid)
+        pfad = get_data_dir(uid) / "alert_log.json"
+        pfad.parent.mkdir(parents=True, exist_ok=True)
+        pfad.write_text(json.dumps({"entries": [], "not_delivered": 5}))
+        with caplog.at_level(logging.DEBUG):
+            ergebnis, mails = alarm_lauf(uid)
+
+    assert ergebnis.checked == 2, f"F003: beide Trips muessen geprueft werden: {ergebnis!r}"
+    assert mails, "F003: Trip B muss trotz kaputtem Protokoll seinen Alarm versenden."
+    assert [r for r in caplog.records if r.levelno >= logging.ERROR and trip_a in r.getMessage()], (
+        "F003: der Fehler von Trip A muss als logger.error stehen."
+    )

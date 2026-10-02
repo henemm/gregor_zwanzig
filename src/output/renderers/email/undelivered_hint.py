@@ -64,6 +64,8 @@ _REASON_LABELS = {
     # `double_alert_guard`) — ohne eigenen Eintrag fiele der Grund auf
     # "Versand fehlgeschlagen" zurueck, wo bewusst entdoppelt wurde.
     "event_duplicate": "bereits als anderes Ereignis gemeldet",
+    # #2050 Sz.12: der Wächter war blind (Untergrund steht im Protokoll).
+    "no_reference_basis": "Kein Alarm möglich: keine gültige Vergleichsbasis",
 }
 
 # #1750 E2: Einsortierung je Grund in einen der zwei Bloecke. Ein Vorfall mit
@@ -90,6 +92,8 @@ _REASON_BLOCK = {
     "data_unavailable": "failed",
     # #2050 S4c: Nutzer-Absicht wie `double_alert_guard`, kein Zustellfehler.
     "event_duplicate": "withheld",
+    # #2050 Sz.12: kein Nutzer-Rückhalt, sondern ein blinder Wächter.
+    "no_reference_basis": "failed",
 }
 
 _TRIGGER_LABELS = {
