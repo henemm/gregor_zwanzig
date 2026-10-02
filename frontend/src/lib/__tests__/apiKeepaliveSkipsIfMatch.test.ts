@@ -102,6 +102,38 @@ describe('AC-6: Abschluss-Speichervorgang beim Entladen', () => {
 	});
 });
 
+// Issue #1433 (AC-7, AC-24 — bewusst ergaenzt): die obigen Faelle bleiben fuer den
+// ECHTEN Unload OHNE Konflikt unveraendert gueltig. NEU: ist die Ressource nach
+// einem 412 als Konflikt markiert, traegt auch der keepalive-Request das (alte)
+// If-Match — der Server lehnt mit 412 ab, die Fremdaenderung bleibt erhalten.
+// Spec: docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md §5. Der Reiter-/
+// Controller-Weg steht in trip_unload_flush_bei_konflikt.test.ts.
+describe('Issue #1433 AC-7: Unload-Flush bei offenem Konflikt', () => {
+	test('test_keepaliveFlush_withOpenConflict_attachesStaleIfMatch_andIsRejected', async () => {
+		// GIVEN: Stand bekannt, Fremdschreiber aendert, ein Schreibvorgang scheitert (412) ⇒ Konflikt
+		await api.get('/api/trips/gr20');
+		const alt = getKnownEtag('gr20');
+		assert.ok(alt, 'Vorbedingung: ein Stand ist bekannt');
+		await server.handler('/api/trips/gr20', { method: 'PUT', body: JSON.stringify({ name: 'fremd' }) });
+		await assert.rejects(api.put('/api/trips/gr20', { name: 'lokal' }), (e: { status?: number }) => e.status === 412);
+		const gespeichert = JSON.stringify(server.storedBody('gr20'));
+
+		// WHEN: die Seite wird verlassen, der Abschluss-Flush geht ab
+		await assert.rejects(
+			api.put('/api/trips/gr20', { name: 'beim Verlassen' }, { keepalive: true }),
+			(e: { status?: number }) => e.status === 412,
+			'bei offenem Konflikt muss der Unload-Flush abgelehnt werden'
+		);
+
+		// THEN
+		const call = server.calls[server.calls.length - 1];
+		assert.equal(call.keepalive, true);
+		assert.equal(call.ifMatch, alt, 'der Flush traegt bei Konflikt das alte If-Match (heute: keiner)');
+		assert.equal(call.status, 412);
+		assert.equal(JSON.stringify(server.storedBody('gr20')), gespeichert, 'die Fremdaenderung darf nicht ueberschrieben worden sein');
+	});
+});
+
 // ###########################################################################
 // TDD RED — Issue #2317 (Epic #2127): Nachladen nach dem Neuladen und If-Match.
 // Spec: docs/specs/modules/speicherung_beim_neuladen.md

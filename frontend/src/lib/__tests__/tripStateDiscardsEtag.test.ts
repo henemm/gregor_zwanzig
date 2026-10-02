@@ -66,10 +66,24 @@ function assertDiscardAfterOkCheck(body: string, expectedArg: string, label: str
 const IMPORT_RE = /import\s*\{[^}]*\bdiscardEtag\b[^}]*\}\s*from\s*'\$lib\/etagRegistry/;
 
 describe('AC-5: Detailseite — sendStateUpdate', () => {
-	test('test_tripDetailPage_sendStateUpdate_discardsEtagOnSuccess', () => {
-		assert.match(tripDetailSrc, IMPORT_RE, 'trips/[id]/+page.svelte importiert discardEtag nicht');
+	// Issue #1433 (AC-8/AC-24, bewusst umgeschrieben): bis #1433 galt hier „der
+	// erfolgreiche PATCH /state verwirft den ETag". Das oeffnete ein Fenster fuer
+	// einen UNBEDINGTEN Folge-Schreibvorgang (kein If-Match) und ist abgeloest durch
+	// „Flush, PATCH, GET — trip und ETag gemeinsam aus der GET-Antwort; bei offenem
+	// Konflikt keine Adoption". Das VERHALTEN misst
+	// `components/trip-detail/__tests__/trip_state_flush_patch_get.test.ts` (echter
+	// Klick-Handler gegen den Ersatz-Server). Diese Quelltext-Pruefung haelt nur
+	// fest, dass das alte Verwerfen nicht zurueckkommt.
+	test('test_tripDetailPage_sendStateUpdate_doesNotDiscardEtag_anymore', () => {
 		const body = functionBody(tripDetailSrc, 'sendStateUpdate');
-		assertDiscardAfterOkCheck(body, 'trip.id', 'sendStateUpdate');
+		assert.ok(
+			!body.includes('discardEtag('),
+			'sendStateUpdate darf den ETag nicht mehr verwerfen (#1433): sonst laeuft der naechste Schreibvorgang unbedingt'
+		);
+		assert.ok(
+			!/import\s*\{[^}]*\bdiscardEtag\b[^}]*\}\s*from\s*'\$lib\/etagRegistry/.test(tripDetailSrc),
+			'trips/[id]/+page.svelte braucht discardEtag nicht mehr — der Import soll entfallen'
+		);
 	});
 
 	test('test_tripDetailPage_adoptsEtagFromPageDataOnMount', () => {

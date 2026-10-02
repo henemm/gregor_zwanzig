@@ -398,3 +398,96 @@ describe('AC-2/AC-5 (#2276 S1): dasselbe gilt für einen Ortsvergleich mit cp--K
 		assert.equal(c.state, 'idle', 'nach erfolgreichem Retry muss der Anzeiger wieder "Gespeichert" zeigen');
 	});
 });
+
+// ════════════════════ Issue #1433 — bewusst umgeschrieben/ergaenzt ═══════════
+//
+// Spec: docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md — §4 Punkt 2, 4, 5,
+//       AC-2, AC-3, AC-19, AC-24.
+//
+// Bis #1433 hielt der Controller GENAU EINEN gescheiterten Speichervorgang
+// (`_lastFailed` = Einzelwert); jeder weitere `doSave`/`schedule` ueberschrieb
+// ihn oder loeschte den Konflikt. Jetzt: `_lastFailed` ist eine Liste (ein
+// Eintrag je Reiter/Schreiber), „Nochmal speichern" holt den Trip per GET und
+// fuehrt ALLE Eintraege erneut aus, jeder Eintrag haelt nur seine Eigenfelder
+// (idempotent). Die Eintraege sind hier einfache `api.put`-Funktionen mit
+// UNTERSCHIEDLICHEN Rumpfen — der Test bindet sich nicht an die Listenform,
+// sondern an ihre Wirkung (welche Rumpfe beim Server ankommen).
+//
+// Dedup-Schluessel (ein Eintrag je Reiter) ist in der Spec nicht festgelegt und
+// hier bewusst NICHT geprueft (s. Uebergabebericht).
+describe('#1433: Liste statt Einzel-_lastFailed — „Nochmal speichern" fuehrt ALLE Eintraege aus', () => {
+	async function zweiKonflikte(): Promise<{ c: SaveStatus }> {
+		// GIVEN: Stand bekannt, Fremdschreiber aendert, dann scheitern ZWEI Speichervorgaenge
+		await api.get('/api/trips/gr20');
+		await server.handler('/api/trips/gr20', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: 'fremd' })
+		});
+		const c = createTestInstance('gr20', 'trip');
+		await c.doSave(() => api.put('/api/trips/gr20', { activity: 'von A' }).then(() => undefined));
+		assert.equal(c.state, 'conflict', 'Vorbedingung: Reiter A scheitert');
+		await c.doSave(() => api.put('/api/trips/gr20', { region: 'von B' }).then(() => undefined));
+		return { c };
+	}
+
+	test('nach dem Konflikt von A bleibt der Zustand `conflict`, auch wenn B speichern will', async () => {
+		const { c } = await zweiKonflikte();
+		assert.equal(c.state, 'conflict', 'AC-2: Konfliktanzeige bleibt nach dem Speichern in B');
+	});
+
+	test('retryConflict sendet BEIDE gescheiterten Rumpfe erneut (A und B), nicht nur den letzten', async () => {
+		const { c } = await zweiKonflikte();
+		const vor = putCalls().length;
+
+		await c.retryConflict();
+
+		const neu = putCalls().slice(vor).map((p) => JSON.stringify(p.anfrage));
+		assert.ok(neu.includes(JSON.stringify({ activity: 'von A' })), `der Rumpf von Reiter A fehlt beim Retry, gesehen: ${neu.join(' | ')}`);
+		assert.ok(neu.includes(JSON.stringify({ region: 'von B' })), `der Rumpf von Reiter B fehlt beim Retry, gesehen: ${neu.join(' | ')}`);
+		assert.ok(putCalls().slice(vor).every((p) => p.status === 200), 'alle Wiederholungen muessen durchgehen');
+		assert.equal(c.state, 'idle', 'danach „Gespeichert"');
+	});
+
+	test('der Retry holt den Trip ZUERST (GET), danach laufen die Wiederholungen mit dem frischen Stempel', async () => {
+		const { c } = await zweiKonflikte();
+		const vor = putCalls().length;
+		const getsVor = getCalls().length;
+		const etagVorRetry = server.etagOf('gr20');
+
+		await c.retryConflict();
+
+		assert.equal(getCalls().length, getsVor + 1, 'genau ein Refresh-GET (nicht je Eintrag einer)');
+		const get = getCalls().at(-1)!;
+		const retries = putCalls().slice(vor);
+		assert.ok(retries.length >= 2);
+		assert.ok(retries[0].startedAt >= get.finishedAt, 'AC-19: GET kommt vor den eigenen Aenderungen');
+		assert.equal(retries[0].ifMatch, etagVorRetry, 'die erste Wiederholung traegt den frisch geholten Stempel');
+	});
+
+	test('trifft der Retry erneut auf einen Konflikt, gehen die Eintraege NICHT verloren (zweiter Retry schreibt beide)', async () => {
+		let getVerzug = 0;
+		boot((method) => (method === 'GET' ? getVerzug : 0));
+		const { c } = await zweiKonflikte();
+
+		getVerzug = 40;
+		const erster = c.retryConflict(); // GET unterwegs …
+		await new Promise((r) => setTimeout(r, 10));
+		await server.handler('/api/trips/gr20', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: 'fremd 2' })
+		}); // … und ein weiterer Fremdschreiber
+		await erster;
+		assert.equal(c.state, 'conflict', 'Vorbedingung: der Retry scheitert erneut');
+
+		const vor = putCalls().length;
+		getVerzug = 0; // kein Verzug mehr
+		await c.retryConflict();
+
+		const neu = putCalls().slice(vor).map((p) => JSON.stringify(p.anfrage));
+		assert.ok(neu.includes(JSON.stringify({ activity: 'von A' })), 'Eintrag A ging beim ersten Retry verloren');
+		assert.ok(neu.includes(JSON.stringify({ region: 'von B' })), 'Eintrag B ging beim ersten Retry verloren');
+		assert.equal(c.state, 'idle');
+	});
+});
