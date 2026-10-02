@@ -14,7 +14,7 @@
 	import { getReportSchedule } from '$lib/utils/rightColumn';
 	import Stat from '$lib/components/molecules/Stat.svelte';
 	import type { Trip } from '$lib/types';
-	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
+	import { baueTripSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 
@@ -50,13 +50,9 @@
 				isEditingName = false;
 			}, 'kopf');
 			try {
-				await speichern();
+				await speichereOderMeldeKonflikt(speichern, saveController);
 			} catch (e: unknown) {
-				if ((e as { status?: number })?.status === 412 && saveController) {
-					saveController.meldeKonflikt(speichern, e);
-				} else {
-					nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-				}
+				nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
 			} finally {
 				nameSaving = false;
 			}

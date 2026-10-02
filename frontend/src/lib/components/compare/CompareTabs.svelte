@@ -23,9 +23,9 @@
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	// Epic #1273 S1: geteilter Save-Chip (position:fixed) + SaveStatus-Typ/Helper.
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
-	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
-	import { wendeNutzlastAn } from '$lib/stores/nutzlastStand';
+	import { merkeNutzlast, wendeNutzlastAn } from '$lib/stores/nutzlastStand';
 	import {
 		deriveStatusWithScheduleOverride,
 		presetBriefingTimesLabel,
@@ -85,9 +85,16 @@
 	import {
 		snapshotForRollback,
 		buildToggleActivePutPayload,
+		statusZielNutzlast,
 		hubActivationBanner,
 		createPutQueue
 	} from './compareHubPersistenz.ts';
+	import {
+		baueSpeicherung,
+		mitKonfliktSchluessel,
+		speichereOderMeldeKonflikt,
+		type PutClient
+	} from '../shared/tripSpeicherung.ts';
 	// Issue #2276 S5: der Versand-Reiter speichert selbst — Snapshot, Diff-Gate,
 	// Nutzlast und Rollback liegen im geteilten Baustein; hier bleibt nur die
 	// Hydration des Wizard-Zustands vor dem Mount.
@@ -267,41 +274,43 @@
 		await persistPickedIds(currentLocationIds.filter((id) => id !== locId));
 	}
 
+	// Issue #1433 Fix-Loop: der PUT-Weg der Schreiber ausserhalb von `schedule` (Orte,
+	// Status) laeuft durch die Hub-Queue — auch, wenn „Nochmal speichern" die Funktion
+	// spaeter direkt aufruft (F002: nie zwei Hub-PUTs parallel).
+	function hubPut<T>(pfad: string, rumpf: unknown, init: RequestInit | undefined): Promise<T> {
+		return hubPutQueue.enqueue(() => api.put<T>(pfad, rumpf, init));
+	}
+	const hubClient: PutClient = { put: hubPut };
+
+	// Issue #1433 Fix-Loop (F805): Ortsliste des offenen 'orte'-Konflikts — die sendet
+	// „Nochmal speichern". Ziel eines Rollbacks bei Nicht-412, solange der Konflikt offen ist.
+	let offeneOrteIds: string[] | null = null;
+
 	async function persistPickedIds(newIds: string[]): Promise<void> {
 		currentLocationIds = newIds;
-		// Epic #1273 S1: der try/catch liegt INNERHALB des enqueue-Closures und
-		// faengt den Fehler dort ab — der aeussere await wirft nie. Damit
-		// setError() ueberhaupt erreichbar wird, den gefangenen Fehler in einer
-		// ausserhalb deklarierten `failure`-Variable festhalten.
-		let failure: unknown = null;
 		saveController?.setSaving();
-		// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
-		// currentPreset erst zur tatsaechlichen Ausfuehrungszeit gelesen wird
-		// (frisch aus einer evtl. vorher in der Queue gelaufenen PUT-Response).
-		// Fix-Loop 2 (F003-Analogie): Rollback-Baseline (lastPersistedLocationIds)
-		// ebenfalls erst HIER lesen — s. Begruendung an der Deklaration oben.
-		const updated = await hubPutQueue.enqueue(async () => {
-			try {
-				const { url, body } = buildComparePresetPartialPayload(currentPreset.id, {
-					location_ids: newIds
-				});
-				const result = await api.put<ComparePreset>(url, body);
-				// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen —
-				// der PUT-Handler liefert das tatsaechlich gespeicherte Preset zurueck.
-				lastPersistedLocationIds = newIds;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Orte-Persistenz fehlgeschlagen, Rollback:', e);
-				currentLocationIds = lastPersistedLocationIds;
-				failure = e;
-				return null;
+		// Issue #2375: nur das Eigenfeld. Issue #1433 Fix-Loop: eigener Eintrag 'orte' —
+		// bei 412 „Nochmal speichern" statt Sackgasse.
+		const { url, body } = buildComparePresetPartialPayload(currentPreset.id, { location_ids: newIds });
+		const speichern = baueSpeicherung<ComparePreset>(hubClient, url, body, (result) => {
+			// Fix-Loop 2 (F005): Baseline aus der Server-Antwort auffrischen.
+			lastPersistedLocationIds = newIds;
+			offeneOrteIds = null;
+			currentPreset = result;
+		}, 'orte');
+		try {
+			if ((await speichereOderMeldeKonflikt(speichern, saveController)) === 'gespeichert') {
+				saveController?.setSaved();
+			} else {
+				// 'konflikt': KEIN Rollback (Falle 1) — B sieht die Liste, die der Retry sendet.
+				offeneOrteIds = newIds;
 			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
+		} catch (e) {
+			console.error('[CompareTabs] Orte-Persistenz fehlgeschlagen, Rollback:', e);
+			// F805: bei offenem Konflikt zurueck auf dessen Liste (= was der Retry sendet).
+			const offen = saveController?.state === 'conflict' ? offeneOrteIds : null;
+			currentLocationIds = offen ?? lastPersistedLocationIds;
+			saveController?.setError(extractMessage(e));
 		}
 	}
 
@@ -661,31 +670,32 @@
 		// (Alarme, Wertebereiche) vorab senden — unabhaengig vom aktiven Reiter,
 		// weil der Kebab auch von anderen Reitern aus pausiert (S3 AC-6).
 		await saveController?.flush();
-		// Epic #1273 S1: einziger der 5 Handler mit try/catch AUSSERHALB des
-		// enqueue-Closures — ein echter Fehler propagiert normal, daher direktes
-		// Wrapping ohne `failure`-Variable.
+		// Issue #1433: bei offenem Konflikt ein No-op (der Konflikt endet nur per Retry).
 		saveController?.setSaving();
-		try {
-			// Fix-Loop 3 (F007, Adversary CRITICAL): Payload aus currentPreset
-			// bauen (nicht der eingefrorenen preset-Prop) und die Baseline nach
-			// Erfolg auffrischen — identisches Muster wie persistPickedIds
-			// (F005), da dies einer von mehreren PUT-Pfaden im selben
-			// Komponenten-Scope ist.
-			// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
-			// currentPreset erst zur Ausfuehrungszeit gelesen wird — verhindert
-			// den Race mit dem Versand-Speicherweg im selben Versand-Tab.
-			currentPreset = await hubPutQueue.enqueue(async () => {
-				const { url, body } = buildToggleActivePutPayload(currentPreset, next, previousSchedule);
-				return api.put<ComparePreset>(url, body);
+		const pfad = `/api/compare/presets/${currentPreset.id}`;
+		const gemerkt = previousSchedule;
+		// Issue #1433 Fix-Loop: eigener Eintrag 'status' fuer „Nochmal speichern".
+		const speichern: SaveFn = mitKonfliktSchluessel(async (init) => {
+			const antwort = await hubPutQueue.enqueue(async () => {
+				// F002: Nutzlast erst in der Queue bauen. Falle 2: beim Retry aus dem FRISCH
+				// geholten Stand ableiten — der gemerkte `previous_schedule` kann veraltet sein.
+				const body = saveController?.imWiederholen
+					? statusZielNutzlast(await api.get<ComparePreset>(pfad), next, gemerkt)
+					: buildToggleActivePutPayload(currentPreset, next, gemerkt).body;
+				merkeNutzlast(speichern, body);
+				return api.put<ComparePreset>(pfad, body, init);
 			});
-			localSchedule = next;
-			// Staging-Fund SF-2: Elternkomponente ueber den neuen Schedule
-			// informieren, damit die Header-Status-Pille (andere Status-Quelle,
-			// s. Props-Kommentar) mitzieht, ohne dass wir hier invalidateAll()
-			// aufrufen (wuerde die eingefrorene-Prop-/currentPreset-Baseline-
-			// Architektur mit frisch geladenen `data` kollidieren lassen).
-			onScheduleChange?.(next);
-			saveController?.setSaved();
+			currentPreset = antwort;
+			localSchedule = antwort.schedule ?? next;
+			if (antwort.previous_schedule) previousSchedule = antwort.previous_schedule;
+			// Staging-Fund SF-2: die Header-Status-Pille (andere Status-Quelle) zieht mit.
+			onScheduleChange?.(localSchedule);
+		}, 'status');
+		try {
+			if ((await speichereOderMeldeKonflikt(speichern, saveController)) === 'gespeichert') {
+				saveController?.setSaved();
+			}
+			// 'konflikt': die Konfliktanzeige uebernimmt — kein eigener Fehlertext im Kebab.
 			return true;
 		} catch (e) {
 			console.error('[CompareTabs] toggleActive failed:', e);

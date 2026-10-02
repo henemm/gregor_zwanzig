@@ -253,12 +253,12 @@ test.describe('Issue #2375: Konfliktschutz im Ortsvergleich mit zwei Kontexten',
 		});
 	}
 
-	// Test 9 (Orte) / AC-4. Der Orte-Pfad hat keinen „Nochmal speichern"-Knopf
-	// (persistPickedIds meldet einen Fehler und rollt die Liste zurück); der
-	// 412 wird bestätigt, indem B den Ort ERNEUT entfernt — dieser zweite PUT
-	// läuft ohne If-Match (api.ts verwirft den ETag bei 412, #1433) und ist
-	// allein durch die Teilfeld-Nutzlast { location_ids } geschützt.
-	test('Test 9 (Orte): A ändert den Namen, B entfernt einen Ort → 412 → erneut → Name von A UND Ortsliste von B', async ({
+	// Test 9 (Orte) / AC-4. Seit #1433 bleibt nach einem 412 das alte If-Match
+	// stehen, bis „Nochmal speichern" läuft (Konflikt-Sperre, kein unbedingtes
+	// Schreiben). Der Orte-Pfad meldet seinen 412 deshalb an den Controller: die
+	// Liste von B bleibt stehen (kein Rollback), „Nochmal speichern" holt Stand und
+	// Stempel frisch und sendet erneut nur { location_ids }.
+	test('Test 9 (Orte): A ändert den Namen, B entfernt einen Ort → 412 mit If-Match → „Nochmal speichern" → Name von A UND Ortsliste von B', async ({
 		page,
 		browser,
 		baseURL,
@@ -279,10 +279,14 @@ test.describe('Issue #2375: Konfliktschutz im Ortsvergleich mit zwei Kontexten',
 		await entfernen.click();
 		await expect.poll(async () => (putsB.length ? (await putsB[0].response())?.status() : 0), { timeout: 10_000 }).toBe(412);
 		expect(await putsB[0].headerValue('if-match'), 'AC-1: If-Match aus dem Seitenaufbau').toBeTruthy();
-		await expect(zeilen, 'nach dem 412 steht die alte Ortsliste wieder da').toHaveCount(2, { timeout: 5_000 });
+		await expect(anzeige(b)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
+		await expect(zeilen, 'nach dem 412 bleibt die Ortsliste von B stehen (kein Rollback)').toHaveCount(1, { timeout: 5_000 });
 
-		await entfernen.click();
-		await expect.poll(async () => (putsB.length > 1 ? (await putsB[1].response())?.status() : 0), { timeout: 10_000 }).toBe(200);
+		// „Nochmal speichern"
+		await anzeige(b).getByRole('button', { name: 'Nochmal speichern' }).click();
+		await expect(anzeige(b)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+		expect(putsB.length, 'der Wiederholungs-PUT wurde gesendet').toBe(2);
+		expect((await putsB[1].response())?.status()).toBe(200);
 		expect(putsB[1].postDataJSON(), 'der Orte-PUT trägt nur { location_ids }').toEqual({ location_ids: ['e2e-loc-innsbruck'] });
 
 		const stand = await serverStand(page, id);
@@ -313,9 +317,11 @@ test.describe('Issue #2375: Konfliktschutz im Ortsvergleich mit zwei Kontexten',
 	});
 
 	// Test 11a / AC-6 — Hub (Kopf-Kebab → handleToggleActive). B hat einen
-	// veralteten Stand: der erste Versuch scheitert mit 412, der zweite läuft
-	// ohne If-Match (#1433) und ist allein durch die Teilfeld-Nutzlast geschützt.
-	test('Test 11a: A ändert den Namen, B pausiert im Hub → Name von A bleibt, schedule "manual", Status-PUT = { schedule, previous_schedule }', async ({
+	// veralteten Stand: der erste Versuch scheitert mit 412 (If-Match). Seit #1433
+	// bleibt das alte If-Match bis „Nochmal speichern" stehen; der Status-Pfad meldet
+	// den 412 an den Controller, der Retry holt Stand und Stempel frisch und sendet
+	// erneut nur { schedule, previous_schedule }.
+	test('Test 11a: A ändert den Namen, B pausiert im Hub → 412 → „Nochmal speichern" → Name von A bleibt, schedule "manual", Status-PUT = { schedule, previous_schedule }', async ({
 		page,
 		browser,
 		baseURL,
@@ -330,14 +336,17 @@ test.describe('Issue #2375: Konfliktschutz im Ortsvergleich mit zwei Kontexten',
 		const nameA = `${E2E_TEST_PREFIX}Name von A ${Date.now()}`;
 		await benenneUm(page, id, nameA);
 
-		const pausieren = async () => {
-			await b.getByRole('button', { name: 'Weitere Aktionen' }).first().click();
-			await b.getByRole('menuitem', { name: 'Pausieren' }).click();
-		};
-		await pausieren();
+		await b.getByRole('button', { name: 'Weitere Aktionen' }).first().click();
+		await b.getByRole('menuitem', { name: 'Pausieren' }).click();
 		await expect.poll(async () => (putsB.length ? (await putsB[0].response())?.status() : 0), { timeout: 10_000 }).toBe(412);
-		await pausieren();
-		await expect.poll(async () => (putsB.length > 1 ? (await putsB[1].response())?.status() : 0), { timeout: 10_000 }).toBe(200);
+		expect(await putsB[0].headerValue('if-match'), 'AC-1: If-Match aus dem Seitenaufbau').toBeTruthy();
+		await expect(anzeige(b)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
+
+		// „Nochmal speichern"
+		await anzeige(b).getByRole('button', { name: 'Nochmal speichern' }).click();
+		await expect(anzeige(b)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+		expect(putsB.length, 'der Wiederholungs-PUT wurde gesendet').toBe(2);
+		expect((await putsB[1].response())?.status()).toBe(200);
 		expect(Object.keys(putsB[1].postDataJSON()).sort(), 'Status-PUT trägt nur den Status').toEqual([
 			'previous_schedule',
 			'schedule'

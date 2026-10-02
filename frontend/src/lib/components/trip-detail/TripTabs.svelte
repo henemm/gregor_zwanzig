@@ -20,7 +20,7 @@
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
-	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
+	import { baueTripSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { api } from '$lib/api.js';
 	import type { ActivityType } from '$lib/types.js';
@@ -190,15 +190,7 @@
 		const speichern = baueTripSpeicherung<Trip>(
 			api, trip.id, { activity: val || undefined }, (updated) => onTripUpdate?.(updated), 'aktivitaet'
 		);
-		try {
-			await speichern();
-		} catch (err) {
-			if ((err as { status?: number })?.status === 412 && saveController) {
-				saveController.meldeKonflikt(speichern, err);
-				return;
-			}
-			throw err;
-		}
+		await speichereOderMeldeKonflikt(speichern, saveController);
 	}
 </script>
 

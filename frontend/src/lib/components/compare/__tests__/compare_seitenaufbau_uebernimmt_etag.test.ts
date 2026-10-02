@@ -27,6 +27,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { clearEtagRegistry, getKnownEtag } from '../../../etagRegistry.ts';
 import { effekteVon, umgebungFuer } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
+import { createController } from '../../shared/__tests__/versandVergleichPruefstand.ts';
 import {
 	createGoMergeServer,
 	vollerVergleich,
@@ -73,7 +74,9 @@ describe('Test 8 / AC-1: der Seitenaufbau übernimmt den ETag', () => {
 	test('die Seite übernimmt data.etag; der erste Kopf-PUT trägt If-Match und scheitert am fremden Stand mit 412', async () => {
 		const etag = server.etagOf(ID);
 		const { ast, quelle, u } = await umgebungFuer(join(ROUTE, '+page.svelte'), {
-			data: { preset: vollerVergleich(ID), etag }
+			data: { preset: vollerVergleich(ID), etag },
+			// `createSaveStatus` (Runen) ist im Pruefstand nicht herleitbar — gesaet wie die Seite ihn haelt.
+			hubSaveCtl: createController(ID)
 		});
 		const effekte = effekteVon(ast, quelle, u, 'adoptEtagFromPageLoad');
 		assert.ok(

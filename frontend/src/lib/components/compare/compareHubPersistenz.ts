@@ -50,6 +50,26 @@ export function buildToggleActivePutPayload(
 }
 
 /**
+ * Issue #1433 Fix-Loop (Falle 2): Status-Nutzlast fuer „Nochmal speichern", abgeleitet aus
+ * dem FRISCH geholten Stand statt aus dem beim Klick gemerkten `previous_schedule` (der
+ * kann veraltet sein — ein spaeteres Aktivieren stellte sonst einen alten Zeitplan wieder
+ * her). Ziel ist die gewollte Wirkung, kein Umschalten (anders als `computePauseToggle`:
+ * hat das Fremdgeraet schon pausiert, bleibt es pausiert).
+ * - Pausieren: laeuft der Vergleich, wird SEIN Zeitplan gemerkt; ist er schon pausiert,
+ *   bleibt dessen `previous_schedule` unangetastet (nur `schedule`).
+ * - Aktivieren: laeuft er schon, bleibt sein Zeitplan; sonst der gemerkte des Servers,
+ *   ersatzweise der lokal gemerkte.
+ */
+export function statusZielNutzlast(frisch: ComparePreset, ziel: string, gemerkt: string): ComparePreset {
+	const aktiv = frisch.schedule && frisch.schedule !== 'manual' ? frisch.schedule : undefined;
+	if (ziel === 'manual') {
+		return buildComparePresetPartialPayload(frisch.id, { schedule: 'manual', previous_schedule: aktiv }).body;
+	}
+	const wieder = aktiv ?? (frisch.previous_schedule || gemerkt);
+	return buildComparePresetPartialPayload(frisch.id, { schedule: wieder, previous_schedule: wieder }).body;
+}
+
+/**
  * Issue #1259 (Read-Modify-Write): Payload-Bau fuer den Vergleichs-LISTEN-
  * Kebab "Pausieren/Aktivieren" — analog `buildToggleActivePutPayload`, aber
  * mit frisch via `getPreset` geladenem Server-Stand statt der eingefrorenen

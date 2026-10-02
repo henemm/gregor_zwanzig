@@ -30,6 +30,7 @@
 		vergleichNachladeQuelle
 	} from '$lib/stores/nachEntladenNachladen';
 	import { api, getMitFassung } from '$lib/api';
+	import { baueSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
 	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad } from '$lib/etagRegistry';
 	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type ComparePreset } from '$lib/types';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -200,20 +201,34 @@
 		nameSaveError = null;
 		isEditingName = false;
 	}
+	// Issue #1433 Fix-Loop: ein Kopf-Schreibvorgang (nur das Eigenfeld, eigener Eintrag je
+	// Feld). Ein 412 geht an den Controller („Nochmal speichern", Muster TripHeader) — sonst
+	// Sackgasse, weil das alte If-Match bis zum Retry stehen bleibt. Liefert den Text fuer
+	// die lokale Fehleranzeige, bei Erfolg oder Konflikt `null` (die Konfliktanzeige zeigt).
+	async function speichereKopf(rumpf: Record<string, unknown>, feld: string, nachErfolg: () => void): Promise<string | null> {
+		const pfad = `/api/compare/presets/${currentPreset.id}`;
+		const speichern = baueSpeicherung<ComparePreset>(api, pfad, rumpf, (updated) => {
+			// Waehrend „Nochmal speichern" NICHT uebernehmen: eine neue `preset`-Referenz baut
+			// die Reiter in CompareTabs neu auf, ueber Eingaben, die der Retry gleich noch
+			// sendet (F101). Der Neuaufbau folgt nach vollem Erfolg ('wiederholt').
+			if (!hubSaveCtl.imWiederholen) currentPreset = updated;
+			nachErfolg();
+		}, `kopf-${feld}`);
+		try {
+			await speichereOderMeldeKonflikt(speichern, hubSaveCtl);
+			return null;
+		} catch (e: unknown) {
+			return (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+		}
+	}
+
 	async function saveName(): Promise<void> {
 		nameSaving = true;
 		nameSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				name: editName
-			});
-			currentPreset = updated;
+		nameSaveError = await speichereKopf({ name: editName }, 'name', () => {
 			isEditingName = false;
-		} catch (e: unknown) {
-			nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			nameSaving = false;
-		}
+		});
+		nameSaving = false;
 	}
 
 	function startRegionEdit(): void {
@@ -229,32 +244,17 @@
 	async function saveRegion(): Promise<void> {
 		regionSaving = true;
 		regionSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				display_config: { region: editRegion }
-			});
-			currentPreset = updated;
+		regionSaveError = await speichereKopf({ display_config: { region: editRegion } }, 'region', () => {
 			isEditingRegion = false;
-		} catch (e: unknown) {
-			regionSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			regionSaving = false;
-		}
+		});
+		regionSaving = false;
 	}
 
 	async function saveProfil(value: ActivityProfile): Promise<void> {
 		profilSaving = true;
 		profilSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				profil: value
-			});
-			currentPreset = updated;
-		} catch (e: unknown) {
-			profilSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			profilSaving = false;
-		}
+		profilSaveError = await speichereKopf({ profil: value }, 'profil', () => {});
+		profilSaving = false;
 	}
 
 	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.

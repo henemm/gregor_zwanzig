@@ -38,10 +38,14 @@ export function mitKonfliktSchluessel(fn: SaveFn, schluessel: string): SaveFn {
 	return Object.assign(fn, { konfliktSchluessel: schluessel });
 }
 
-/** Ein PUT auf `/api/trips/{id}`; `nachErfolg` bekommt die Server-Antwort. */
-export function baueTripSpeicherung<T>(
+/**
+ * Ein Teilfeld-PUT auf eine Ressource (Trip ODER Ortsvergleich); `nachErfolg` bekommt
+ * die Server-Antwort. Issue #1433 Fix-Loop: geteilt von den Trip-Reitern und den
+ * Ortsvergleich-Schreibern ausserhalb von `schedule` (Kopf, Orte).
+ */
+export function baueSpeicherung<T>(
 	client: PutClient,
-	tripId: string,
+	pfad: string,
 	body: Rumpf,
 	nachErfolg?: (antwort: T) => void,
 	schluessel?: string
@@ -51,10 +55,49 @@ export function baueTripSpeicherung<T>(
 		// Seite sie bei einem 412 in ihren Stand fortschreiben kann.
 		const rumpf = lies(body);
 		merkeNutzlast(fn, rumpf);
-		const antwort = await client.put<T>(`/api/trips/${tripId}`, rumpf, init);
+		const antwort = await client.put<T>(pfad, rumpf, init);
 		nachErfolg?.(antwort);
 	};
 	return schluessel ? mitKonfliktSchluessel(fn, schluessel) : fn;
+}
+
+/** Ein PUT auf `/api/trips/{id}`; `nachErfolg` bekommt die Server-Antwort. */
+export function baueTripSpeicherung<T>(
+	client: PutClient,
+	tripId: string,
+	body: Rumpf,
+	nachErfolg?: (antwort: T) => void,
+	schluessel?: string
+): SaveFn {
+	return baueSpeicherung<T>(client, `/api/trips/${tripId}`, body, nachErfolg, schluessel);
+}
+
+/** Der Teil des Controllers, an den ein Schreiber ausserhalb von `schedule` seinen 412 meldet. */
+export interface KonfliktMelder {
+	meldeKonflikt(fn: SaveFn, e: unknown): void;
+}
+
+/**
+ * Issue #1433: fuehrt einen Schreibvorgang aus, der NICHT ueber `schedule` laeuft (Kopf,
+ * Aktivitaet, Orte, Status). Ein 412 wird am Controller gemeldet — „Nochmal speichern"
+ * wiederholt dann genau diese Funktion (nur Eigenfelder, idempotent). Ohne Meldung waere
+ * der Schreiber eine Sackgasse: das alte If-Match bleibt bis zum Retry stehen (§4.1).
+ * Jeder andere Fehler (und ein 412 ohne Controller) wird weitergeworfen.
+ */
+export async function speichereOderMeldeKonflikt(
+	fn: SaveFn,
+	ctl: KonfliktMelder | null | undefined
+): Promise<'gespeichert' | 'konflikt'> {
+	try {
+		await fn();
+		return 'gespeichert';
+	} catch (e) {
+		if ((e as { status?: number })?.status === 412 && ctl) {
+			ctl.meldeKonflikt(fn, e);
+			return 'konflikt';
+		}
+		throw e;
+	}
 }
 
 /**
