@@ -209,6 +209,37 @@ def radar_service(frame_source) -> object:
     return RadarNowcastService(frame_source=frame_source)
 
 
+def aufzeichnender_radar_dienst(frame_source) -> object:
+    """Echte ``RadarNowcastService``-UNTERKLASSE, die nur mitschreibt — kein
+    Mock: ``get_nowcast()`` ruft ``super()`` auf, die gesamte
+    Entscheidungslogik (Cache, Region, ``_derive_result``) laeuft unveraendert.
+
+    Warum nicht der ``frame_source``-Seam: der bekommt nur ``(lat, lon)``. Die
+    HOEHE (``elevation_m``, seit #1991 Teil der Abfrage) ist dort strukturell
+    unsichtbar. Geteilt von ``test_issue_822_radar_nowcast_segment.py`` (#2017)
+    und ``test_alarm_szenario_messpunkt_position.py`` (#2261 Sz.8). Klasse
+    innerhalb der Funktion: ``RadarNowcastService`` wird erst zur Laufzeit
+    importiert.
+    """
+    from services.radar_service import RadarNowcastService
+
+    class _Aufzeichnend(RadarNowcastService):
+        def __init__(self, fs) -> None:
+            super().__init__(frame_source=fs)
+            self.calls: list[dict] = []
+
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
+            self.calls.append({
+                "lat": lat, "lon": lon, "elevation_m": elevation_m,
+                "priority": priority,
+            })
+            return super().get_nowcast(
+                lat, lon, elevation_m=elevation_m, priority=priority,
+            )
+
+    return _Aufzeichnend(frame_source)
+
+
 def reset_radar_cache() -> None:
     """Der Frame-Cache ist ein Prozess-Singleton (TTL 300 s). Wer INNERHALB
     eines Tests zweimal dieselbe Koordinate abruft und dabei Abrufe zaehlt,

@@ -2,7 +2,7 @@
 entity_id: fix_2017_nowcast_messpunkt
 type: bugfix
 created: 2026-08-20
-updated: 2026-08-20
+updated: 2026-10-02
 status: approved
 version: "1.0"
 tags: [alerts, radar, nowcast, trip, geometry]
@@ -422,6 +422,25 @@ Segment-Startpunkt.
    falsche Weg gewesen: „2" ist auch das Ergebnis eines vollständig defekten Caches, die
    Zusicherung wäre dann durch ihre eigene Verletzung erfüllt.
 
+8. **Näherung "Fenstermitte vs. Onset" (Nachtrag 2026-10-02, #2261 Sz.8).** Der Messpunkt ist
+   die Position zur **Mitte** des Vorwarnfensters (`now + RADAR_ONSET_THRESHOLD_MIN // 2`), nicht
+   die Position zum tatsächlichen Onset. Das ist Absicht und keine Lücke: der Onset entsteht erst
+   aus dem Abruf (Zirkelschluss, siehe oben); ein fester Zeitpunkt macht den Abruf
+   deterministisch. Der Onset liegt im Fenster bis +55 Min, also bis etwa 3-4 km hinter dem
+   Fenstermitte-Punkt. Diese Strecke deckt seit #2051 S2a die Mehrpunktabfrage ab: bis zu
+   `RADAR_ZONE_MAX_POINTS = 6` Punkte im Abstand `RADAR_ZONE_POINT_SPACING_KM = 2.0` km entlang
+   der Reststrecke (`trip_segments.points_along_remaining_route`). Dass der Messpunkt mit dem
+   Wegpunkt mitwandert (Koordinaten aller Punkte und Höhe), bewacht auf Auslöseebene
+   `tests/tdd/test_alarm_szenario_messpunkt_position.py` (#2261 Sz.8).
+
+9. 🔴 **Restrisiko: Auslöseregel nur am ersten Punkt (Nachtrag 2026-10-02, #2261 Sz.8).**
+   Seit #2051 S2a wertet `check_radar_alerts()` die Auslöseregel nur am **ersten** Punkt (dem
+   hier spezifizierten #2017-Messpunkt) aus; die Folgepunkte liefern ausschließlich die Zonen.
+   Ein Ereignis, das nur über Punkt 2 oder weiter liegt (also in 2-10 km Abstand vor dem
+   Fenstermitte-Punkt), löst daher keinen Alarm aus, auch wenn es auf der Strecke liegt. Das ist
+   eine bewusste Entscheidung aus #2051 S2a, kein Versehen. Behandlung: festgehalten, nicht
+   gebaut; geführt als eigenes Issue #2480 (nutzersichtbare Alarm-Lücke).
+
 6. **Kein Tages-Überlauf in der Messgrundlage getroffen.** Bei der Wirksamkeitsmessung (Trip
    `5f534011`) trat in keiner Kombination aus Variante/Horizont ein Tagesüberlauf auf (0
    übersprungene Onset-Punkte). AC-6 (Tagesgrenzen-Überschreitung) ist damit durch Konstruktion
@@ -438,6 +457,9 @@ Segment-Startpunkt.
 ## Changelog
 
 - 2026-08-20: Initial spec created (Issue #2017)
+- 2026-10-02: Known Limitations 8 und 9 ergänzt (#2261 Sz.8): Näherung "Fenstermitte vs. Onset"
+  und Restrisiko "Auslöseregel nur am ersten Punkt" (bewusste #2051-S2a-Entscheidung, Issue
+  #2480). Rein dokumentarisch, keine Änderung an Zusicherungen.
 - 2026-08-21: Scheibe B geliefert (Verdrahtung beider Pfade, Segment-Ende-Guard-Rückbau).
   Known Limitation 7 ergänzt: Trip und Ortsvergleich teilen keinen Cache-Eintrag mehr,
   wenn ein Preset-Ort auf einem Trip-Wegpunkt liegt — der einzige reale Zusatzverbrauch
