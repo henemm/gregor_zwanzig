@@ -70,13 +70,14 @@ Budget-Gate wurde nie angelegt. Dieses Dokument schließt beide Lücken.
    haben und fällt in Stufe 1 auf das Bestandsverhalten zurück — **drosseln**, nie eine
    Befreiung: ein Aufruf ohne Kennung darf nie mehr dürfen als einer mit Kennung.
 
-5. **Der Go-Status-Endpunkt bleibt auf Aggregate beschränkt.** `/api/scheduler/status` ist
-   ohne Anmeldung erreichbar; Nutzerkennungen dürfen dort nie erscheinen. `forecastBudgetFile`
-   (`internal/scheduler/forecast_budget_health.go`) deklariert `active_users` nicht, das Feld
-   fällt beim Unmarshal weg — es gibt bewusst **keine** Strukturänderung auf der Go-Leseseite.
-   Ein Schutztest (`forecast_budget_user_privacy_test.go`) friert diese Eigenschaft ein, damit
-   ein späteres „active_users für die Beobachtbarkeit durchreichen" an einem Test scheitert
-   statt still Kennungen zu veröffentlichen.
+5. **Kennungen erscheinen nie im Status-Endpunkt; Verbrauch je Nutzer nur hinter Admin-Auth.**
+   `/api/scheduler/status` liefert ausschließlich anonyme Aggregate (seit #2475: `active_pots`,
+   `fair_share`, `max_user_calls`, `users_over_fair_share`) — nie eine Kennung, nie den Schlüssel
+   `active_users`. `forecastBudgetFile` liest `active_users` zwar ein, aber nur um die Länge zu
+   zählen; die Liste wird nie durchgereicht. Der Verbrauch je Nutzer (`open_meteo_calls_today`)
+   steht ausschließlich in `GET /api/admin/users` (Admin-Auth, #2475). Schutztest
+   (`forecast_budget_user_privacy_test.go`) und `forecast_budget_verbrauch_je_nutzer_test.go`
+   frieren das ein, damit eine Durchreichung von Kennungen an einem Test scheitert.
 
 6. **`DAILY_BUDGET`, `POLLING_THRESHOLD` und `BRIEFING_ONLY_THRESHOLD` bleiben wörtlich an
    ihrer bisherigen Stelle** (`forecast_budget.py`, Klassenkopf) stehen — nicht umbenannt,

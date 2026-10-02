@@ -107,6 +107,7 @@
 						</div>
 					{/if}
 					<div class="text-sm" style="color: var(--g-ink-2);">Letzter Trip-Report: {lastRun(u)}</div>
+					<div class="text-sm" style="color: var(--g-ink-2);">Verbrauch heute (Open-Meteo): <strong data-testid="admin-user-verbrauch">{u.open_meteo_calls_today ?? 0}</strong></div>
 				</div>
 				<div class="flex flex-wrap items-center gap-2">
 					<select

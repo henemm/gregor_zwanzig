@@ -730,4 +730,5 @@ export interface AdminUser {
 	disabled: boolean;
 	is_test_user: boolean;
 	last_trip_report_run: { time: string; status: string; error: string } | null;
+	open_meteo_calls_today: number;
 }

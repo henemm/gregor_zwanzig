@@ -29,6 +29,8 @@ type AdminUser struct {
 	Disabled          bool           `json:"disabled"`
 	IsTestUser        bool           `json:"is_test_user"`
 	LastTripReportRun map[string]any `json:"last_trip_report_run"`
+	// Heutiger Open-Meteo-Verbrauch (UTC-Tag), 0 bei fehlender Zaehlerdatei. Issue #2475.
+	OpenMeteoCallsToday int `json:"open_meteo_calls_today"`
 }
 
 func adminUserDTO(u *model.User, sched *scheduler.Scheduler) AdminUser {
@@ -44,6 +46,8 @@ func adminUserDTO(u *model.User, sched *scheduler.Scheduler) AdminUser {
 		Disabled:          u.Disabled,
 		IsTestUser:        model.IsTestAccount(u),
 		LastTripReportRun: sched.LastTripReportRun(u.ID),
+
+		OpenMeteoCallsToday: sched.UserForecastCalls(u.ID),
 	}
 }
 
