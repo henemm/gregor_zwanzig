@@ -2,9 +2,9 @@
 entity_id: fix_2229_premium_sms_kanallisten
 type: bugfix
 created: 2026-10-01
-updated: 2026-10-01
+updated: 2026-10-02
 status: draft
-workflow: fix-2229-premium-sms-kanallisten
+workflow: fix-2229-premium-sms-kanallisten-b
 tags: [premium-sms, kanaele, vierkanal-paritaet, adr-0049, ratsche, issue-2229, epic-1676]
 ---
 
@@ -212,16 +212,17 @@ Python: pytest. Testdateien heißen nach Verhalten.
 
 ## Acceptance Criteria
 
-- [ ] **AC-1:** Given ein Ortsvergleich, bei dem der Nutzer Premium-SMS als Versandkanal eingeschaltet hat / When die Vergleichs-Kachel oder die Hub-Übersicht „Kanäle" angezeigt wird / Then steht dort „Premium-SMS" neben den übrigen eingeschalteten Kanälen, und bei ausgeschaltetem Premium-SMS steht es nicht dort.
-- [ ] **AC-2:** Given ein Nutzer mit zustellbarer Premium-SMS (Tarif Premium, Rückadresse frisch) und einem Vergleich mit eingeschaltetem Premium-SMS / When er „Jetzt senden" öffnet / Then nennt der Bestätigungstext „Premium-SMS" als Ziel; ist die Premium-SMS eingeschaltet, aber nicht zustellbar (Tarif, nie gemeldet oder verfallen), oder ausgeschaltet, wird sie nicht genannt.
-- [ ] **AC-3:** Given ein Ortsvergleich mit eingeschalteter Premium-SMS / When der Nutzer in der Vergleichs-Vorschau den SMS-Reiter wählt / Then erscheint daneben der Hinweis „Premium-SMS versendet denselben Text", und es gibt keinen vierten Reiter; bei E-Mail, Telegram oder ausgeschalteter Premium-SMS erscheint der Hinweis nicht.
-- [ ] **AC-4:** Given die bewusst dreistelligen Metrik-/Layout-Listen im Frontend und im Resolver / When ein Entwickler eine davon liest / Then trägt sie die Marke `ADR-0049` mit Begründung (Premium-SMS hat keine eigene Metrik-Auswahl), und der Kommentar im Resolver nennt Premium-SMS nicht mehr fälschlich als reinen Alarm-Kanal.
-- [ ] **AC-5:** Given der Quelltext unter `frontend/src`, `src` und `api` / When `uv run pytest tests/test_adr0049_kanalliste_ratsche.py` läuft / Then ist die Fundmenge unmarkierter Dreier-Kanallisten leer, und der Selbsttest beweist, dass eine unmarkierte Liste einen Fund erzeugt und eine markierte keinen.
-- [ ] **AC-6:** Given ein Preset ohne Premium-SMS oder ein Konto ohne Premium-Tarif / When Kanal-Anzeige und „Geht an …"-Text erzeugt werden / Then bleiben sie byte-gleich zum bisherigen Stand (keine Regression für drei Kanäle, bestehende Tests grün).
-- [ ] **AC-7:** Given zwei verschiedene Nutzer mit unterschiedlichem Premium-SMS-Zustand / When der Bestätigungstext je Nutzer erzeugt wird / Then richtet sich jeder Text nur nach dem Profil des jeweiligen Nutzers.
-- [ ] **AC-8:** Given der Trip-Editor mit abgeschaltetem SMS-Metrik-Kanal / When die Versandkanäle gespeichert werden / Then bleibt `send_premium_sms` unverändert (keine Kopplung, `syncSendFlags` unberührt).
+- **AC-1:** Given ein Ortsvergleich, bei dem der Nutzer Premium-SMS als Versandkanal eingeschaltet hat / When die Vergleichs-Kachel oder die Hub-Übersicht „Kanäle" angezeigt wird / Then steht dort „Premium-SMS" neben den übrigen eingeschalteten Kanälen, und bei ausgeschaltetem Premium-SMS steht es nicht dort.
+- **AC-2:** Given ein Nutzer mit zustellbarer Premium-SMS (Tarif Premium, Rückadresse frisch) und einem Vergleich mit eingeschaltetem Premium-SMS / When er „Jetzt senden" öffnet / Then nennt der Bestätigungstext „Premium-SMS" als Ziel; ist die Premium-SMS eingeschaltet, aber nicht zustellbar (Tarif, nie gemeldet oder verfallen), oder ausgeschaltet, wird sie nicht genannt.
+- **AC-3:** Given ein Ortsvergleich mit eingeschalteter Premium-SMS / When der Nutzer in der Vergleichs-Vorschau den SMS-Reiter wählt / Then erscheint daneben der Hinweis „Premium-SMS versendet denselben Text", und es gibt keinen vierten Reiter; bei E-Mail, Telegram oder ausgeschalteter Premium-SMS erscheint der Hinweis nicht.
+- **AC-4:** Given die bewusst dreistelligen Metrik-/Layout-Listen im Frontend und im Resolver / When ein Entwickler eine davon liest / Then trägt sie die Marke `ADR-0049` mit Begründung (Premium-SMS hat keine eigene Metrik-Auswahl), und der Kommentar im Resolver nennt Premium-SMS nicht mehr fälschlich als reinen Alarm-Kanal.
+- **AC-5:** Given der Quelltext unter `frontend/src`, `src` und `api` / When `uv run pytest tests/test_adr0049_kanalliste_ratsche.py` läuft / Then ist die Fundmenge unmarkierter Dreier-Kanallisten leer, und der Selbsttest beweist, dass eine unmarkierte Liste einen Fund erzeugt und eine markierte keinen.
+- **AC-6:** Given ein Preset ohne Premium-SMS oder ein Konto ohne Premium-Tarif / When Kanal-Anzeige und „Geht an …"-Text erzeugt werden / Then bleiben sie byte-gleich zum bisherigen Stand (keine Regression für drei Kanäle, bestehende Tests grün).
+- **AC-7:** Given zwei verschiedene Nutzer mit unterschiedlichem Premium-SMS-Zustand / When der Bestätigungstext je Nutzer erzeugt wird / Then richtet sich jeder Text nur nach dem Profil des jeweiligen Nutzers.
+- **AC-8:** Given der Trip-Editor mit abgeschaltetem SMS-Metrik-Kanal / When die Versandkanäle gespeichert werden / Then bleibt `send_premium_sms` unverändert (keine Kopplung, `syncSendFlags` unberührt).
 
 ## Changelog
 
 - 2026-10-01: Initial spec created (Issue #2229, Epic #1676)
 - 2026-10-01: Briefing-Befunde eingearbeitet — Hinweis wird im `CompareChannelSwitch` gerendert und per SSR geprüft, Staging-Schritt für die Verdrahtung, AC-8-Nachweis über bestehenden Test, Opt-in-Anzeige vs. „Jetzt senden" als gewollter Unterschied begründet.
+- 2026-10-02: Workflow neu aufgesetzt als `fix-2229-premium-sms-kanallisten-b` (PO-Entscheid): AC-Zeilen ohne Checkbox, damit der AC-Parser sie erkennt — Inhalt der ACs unverändert.
