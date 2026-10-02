@@ -1113,43 +1113,12 @@ def test_ac8_mandantentrennung_isolated():
 # ══════════════════════════════════════════════════════════════════════════
 
 from tests.helpers.nowcast_gate_fixtures import (  # noqa: E402
-    CountingFrameSource, clean_uid, fresh_uid, make_trip, reset_radar_cache,
+    CountingFrameSource, aufzeichnender_radar_dienst as _aufzeichnender_radar_dienst,
+    clean_uid, fresh_uid, make_trip, reset_radar_cache,
     save_trip, settings_email_only, write_user_tier,
 )
 
 _MITTAGS_2017 = "2026-08-11T12:00:00+00:00"
-
-
-def _aufzeichnender_radar_dienst(frame_source):
-    """Echte `RadarNowcastService`-UNTERKLASSE, die nur mitschreibt — kein
-    Mock: `get_nowcast()` ruft `super()` auf, die gesamte Entscheidungslogik
-    (Cache, Region, `_derive_result`) laeuft unveraendert, und alle uebrigen
-    Methoden (`source_label()` u. a.) bleiben die echten.
-
-    Warum nicht der vorhandene `frame_source`-Seam: der bekommt nur
-    `(lat, lon)`. Die HOEHE (`elevation_m`, seit #1991 Teil der Abfrage) ist
-    dort strukturell unsichtbar — genau sie soll aber mitwandern (#2017 AC-8).
-
-    Klasse innerhalb der Funktion, weil `RadarNowcastService` erst zur
-    Laufzeit importiert wird (Import-Reihenfolge dieser Datei).
-    """
-    from services.radar_service import RadarNowcastService
-
-    class _Aufzeichnend(RadarNowcastService):
-        def __init__(self, fs) -> None:
-            super().__init__(frame_source=fs)
-            self.calls: list[dict] = []
-
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
-            self.calls.append({
-                "lat": lat, "lon": lon, "elevation_m": elevation_m,
-                "priority": priority,
-            })
-            return super().get_nowcast(
-                lat, lon, elevation_m=elevation_m, priority=priority,
-            )
-
-    return _Aufzeichnend(frame_source)
 
 
 def _alarm_lauf_2017(
