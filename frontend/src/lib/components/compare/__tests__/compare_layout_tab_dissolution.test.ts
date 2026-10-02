@@ -36,11 +36,33 @@ import { parse } from 'svelte/compiler';
 import { COMPARE_TABS, COMPARE_TAB_VALUES, resolveCompareTab } from '../compareTabsResolve.ts';
 import { weatherMetricsTabSections } from '../../shared/weather-metrics-tab/weatherMetricsTabSections.ts';
 import {
-	unlockedTabs,
-	doneTabs,
+	tailUnlocked,
+	tailDone,
 	progressCount,
-	type CompareNewProgress
-} from '../../compare-new/compareNewLogic.ts';
+	type TailIds
+} from '../../shared/anlegeLockEngine.ts';
+
+// #2277 S4: Lock-Engine ist geteilt (shared/anlegeLockEngine.ts); das Compare-Vorderteil
+// (Name, >=2 Orte) wohnt in CompareNewEditor.svelte und wird hier als Wahrheitswert gesetzt.
+type CompareNewProgress = {
+	name: string;
+	pickedCount: number;
+	metrikenVisited: boolean;
+	idealsVisited: boolean;
+	alarmeVisited: boolean;
+	versandVisited: boolean;
+};
+const COMPARE_TAIL: TailIds = { metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand' };
+const COMPARE_STEPS = ['vergleich', 'orte', 'metriken', 'idealwerte', 'alarme', 'versand'];
+const tailOf = (p: CompareNewProgress) => ({
+	metrikenFrei: !!p.name.trim() && p.pickedCount >= 2,
+	metrikenVisited: p.metrikenVisited,
+	wertebereicheVisited: p.idealsVisited,
+	alarmeVisited: p.alarmeVisited,
+	versandVisited: p.versandVisited
+});
+const unlockedTabs = (p: CompareNewProgress) => tailUnlocked(COMPARE_TAIL, tailOf(p));
+const doneTabs = (p: CompareNewProgress) => tailDone(COMPARE_TAIL, tailOf(p));
 
 const here = dirname(fileURLToPath(import.meta.url));
 const HUB = join(here, '..', 'CompareTabs.svelte');
@@ -327,7 +349,7 @@ describe('AC-6: Anlege-Seite (/compare/new)', () => {
 		};
 		const done = doneTabs(allVisited);
 		assert.ok(done.has('versand'), 'Versand muss erreichbar und abschließbar sein');
-		assert.equal(progressCount(done), 6, 'Fortschrittszähler jetzt 6 statt 7');
+		assert.equal(progressCount(new Set([...done, 'vergleich', 'orte']), COMPARE_STEPS), 6, 'Fortschrittszähler jetzt 6 statt 7');
 	});
 
 	test('kein Lock-Hinweis verweist mehr auf den Layout-Reiter', () => {

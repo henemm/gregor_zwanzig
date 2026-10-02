@@ -13,6 +13,7 @@ import {
 	type ChannelKind,
 	type ChannelThreshold,
 } from '../shared/alarme-tab/alertChannelState.ts';
+import { tailUnlocked, tailDone, canFinish, progressCount as kernProgressCount, type TailIds } from '../shared/anlegeLockEngine.ts';
 import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryPayload.ts';
 
 // ── TabId ────────────────────────────────────────────────────────────────────
@@ -22,7 +23,9 @@ export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'metriken' | 'werteberei
 // ── Freischalt-Logik (TN_unlocked) ──────────────────────────────────────────
 // Issue #2277 S2a: neuer Parameter `wbVisited` (Wertebereiche besucht) an
 // Position 5 — die Kette laeuft jetzt ueber Wetter-Metriken -> Wertebereiche
-// -> Alarme -> Versand (Muster Compare `compareNewLogic.ts`).
+// -> Alarme -> Versand (geteilter Kern `shared/anlegeLockEngine.ts`, #2277 S4).
+
+const TAIL: TailIds<TabId> = { metriken: 'metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' };
 
 export function unlockedTabs(
 	name: string,
@@ -35,10 +38,17 @@ export function unlockedTabs(
 ): Set<TabId> {
 	const s = new Set<TabId>(['route']);
 	if (name.trim() && startDate) s.add('etappen');
-	if (etDone) { s.add('wegpunkte'); s.add('metriken'); }
-	if (wtVisited) s.add('wertebereiche');
-	if (wbVisited) s.add('alarme');
-	if (alVisited) s.add('versand');
+	if (etDone) s.add('wegpunkte');
+	// Trip-Semantik (bit-gleich zu vorher): nur `metriken` haengt an etDone, die
+	// uebrigen Schwanz-Reiter ausschliesslich an den Besuchs-Flags. Der Kern sperrt
+	// bei fehlendem Vorderteil den ganzen Schwanz — daher mit metrikenFrei=true
+	// aufrufen und `metriken` hier selbst an etDone binden.
+	const tail = tailUnlocked(TAIL, {
+		metrikenFrei: true, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited,
+		alarmeVisited: alVisited, versandVisited: vsVisited,
+	});
+	if (!etDone) tail.delete('metriken');
+	for (const t of tail) s.add(t);
 	return s;
 }
 
@@ -56,10 +66,10 @@ export function doneTabs(
 	const s = new Set<TabId>();
 	if (name.trim() && startDate) s.add('route');
 	if (etDone) s.add('etappen');
-	if (wtVisited) s.add('metriken');
-	if (wbVisited) s.add('wertebereiche');
-	if (alVisited) s.add('alarme');
-	if (vsVisited) s.add('versand');
+	for (const t of tailDone(TAIL, {
+		metrikenFrei: etDone, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited,
+		alarmeVisited: alVisited, versandVisited: vsVisited,
+	})) s.add(t);
 	return s;
 }
 
@@ -79,14 +89,13 @@ export function stageDate(startDate: string, offset: number): string | null {
 // ── Fortschrittsbalken (TN_Progress) ────────────────────────────────────────
 
 export function progressCount(done: Set<TabId>): number {
-	const steps: TabId[] = ['route', 'etappen', 'metriken', 'versand'];
-	return steps.filter(s => done.has(s)).length;
+	return kernProgressCount(done, ['route', 'etappen', 'metriken', 'versand']);
 }
 
 // ── Speichern-Gate ────────────────────────────────────────────────────────────
 
 export function canSave(done: Set<TabId>): boolean {
-	return done.has('versand');
+	return canFinish(done, 'versand');
 }
 
 // ── State + Payload-Builder ──────────────────────────────────────────────────

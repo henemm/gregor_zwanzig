@@ -635,7 +635,7 @@ Bausteinen — **kein** Multi-Step-Wizard mit Stepper (abgeschafft, PO-bekräfti
 | Route | Editor | Logik |
 |---|---|---|
 | `/trips/new` | `trip-new/TripNewEditor.svelte` (#622) | `trip-new/tripNewLogic.ts` (Freischalt-/Fortschritts-Logik, reine Funktionen) |
-| `/compare/new` | `compare-new/CompareNewEditor.svelte` (#1301 F2) | `compare-new/compareNewLogic.ts` |
+| `/compare/new` | `compare-new/CompareNewEditor.svelte` (#1301 F2) | `shared/anlegeLockEngine.ts` (geteilte Lock-Engine, #2277 S4) |
 
 Beide nutzen die geteilten Tab-Organismen aus `shared/` (`context="route"|"vergleich"`).
 Persistenz: **kein** Auto-Save wie im Detail-Hub — beide sammeln Änderungen nur

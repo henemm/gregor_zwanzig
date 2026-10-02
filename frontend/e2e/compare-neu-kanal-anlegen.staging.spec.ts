@@ -42,7 +42,7 @@ const WEG = 'pop_max_pct';
 
 /**
  * Freischalt-Kette der Anlege-Seite bis zum Reiter „Wetter-Metriken":
- * Name -> mind. 2 Orte -> Wetter-Metriken (compareNewLogic.unlockedTabs).
+ * Name -> mind. 2 Orte -> Wetter-Metriken (shared/anlegeLockEngine.ts, Vorderteil in CompareNewEditor).
  *
  * 🔴 #1423-Warteregel: der Metrik-Block ist waehrend des Katalog-Ladens
  * bewusst aus dem DOM entfernt (WeatherMetricsTab.svelte:1204-1207) — deshalb
@@ -96,8 +96,8 @@ async function oeffneAnlegeUebersicht(
 /**
  * Rest der Kette (Wertebereiche -> Alarme -> Versand) und „Briefing
  * aktivieren". Jeder Reiterbesuch schaltet den naechsten frei (*Visited-Flags,
- * compareNewLogic.ts:32-46); erst der Versand-Besuch macht den
- * Aktivieren-Knopf bedienbar (canActivate). Liefert die ID des angelegten
+ * anlegeLockEngine.ts tailUnlocked); erst der Versand-Besuch macht den
+ * Aktivieren-Knopf bedienbar (canFinish). Liefert die ID des angelegten
  * Vergleichs und traegt ihn zur Bereinigung ein.
  */
 async function briefingAktivieren(page: Page): Promise<string> {

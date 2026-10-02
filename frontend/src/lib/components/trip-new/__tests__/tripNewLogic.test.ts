@@ -47,7 +47,7 @@ import {
 //
 // Issue #2277 Scheibe S3 (Spec feat_2277_s3_reiter_angleichung_rueckbau.md,
 // AC-2/AC-4): die Kette laeuft jetzt wie beim Ortsvergleich
-// (`compareNewLogic.ts`) ueber Wertebereiche -> Alarme -> Versand. Signatur:
+// (geteilter Kern `shared/anlegeLockEngine.ts`) ueber Wertebereiche -> Alarme -> Versand. Signatur:
 //   unlockedTabs/doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited)
 // `alVisited` = Reiter Alarme besucht, `vsVisited` = Reiter Versand besucht.
 // Tab-IDs `alarme`/`versand` ersetzen `alerts`/`zeitplan` (gleich wie CompareNewEditor).

@@ -7,7 +7,7 @@
 	// Organismen (Step2Orte, WeatherMetricsTab, CorridorEditor(Mobile),
 	// AlarmeTab, VersandTab; Stundenverlauf jetzt via WeatherMetricsTab, #1360).
 	// Reine Freischalt-Logik
-	// in compareNewLogic.ts. Lokaler CompareWizardState (Context), EIN POST bei
+	// im geteilten Kern shared/anlegeLockEngine.ts (#2277 S4). Lokaler CompareWizardState (Context), EIN POST bei
 	// „Briefing aktivieren" via wiz.saveNewPreset() — kein Backend-Change.
 	//
 	// Der Alt-Editor CompareEditor.svelte wurde in Epic #1301 F2b ersatzlos
@@ -15,7 +15,7 @@
 	// Testid-Familien 1:1 erhalten (E2E-Verträge).
 	// Safari-Factory-Pattern für alle Handler (CLAUDE.md).
 
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, untrack } from 'svelte';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { Field } from '$lib/components/molecules';
 	import {
@@ -29,13 +29,12 @@
 	import { PROFILE_METRICS_WITH_SCALES, type ProfileKey } from '$lib/components/shared/corridor-editor/corridorEditorState';
 	import { api } from '$lib/api.js';
 	import {
-		unlockedTabs,
-		doneTabs,
+		tailUnlocked,
+		tailDone,
+		canFinish,
 		progressCount,
-		canActivate,
-		type CompareNewTabId,
-		type CompareNewProgress
-	} from './compareNewLogic.ts';
+		type TailIds
+	} from '$lib/components/shared/anlegeLockEngine';
 	import Step2Orte from '$lib/components/compare/steps/Step2Orte.svelte';
 	import { groupLocations } from '$lib/components/compare/locationHelpers';
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
@@ -59,11 +58,29 @@
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import { PageHeader } from '$lib/components/atoms';
 
+	type CompareNewTabId = 'vergleich' | 'orte' | 'metriken' | 'idealwerte' | 'alarme' | 'versand';
+	const TAIL: TailIds<CompareNewTabId> = {
+		metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand'
+	};
+	const PROGRESS_STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'metriken', 'idealwerte', 'alarme', 'versand'];
+
+	// Test-Seam (#2277 S4, Muster TripNewEditor `stateOverride`): Startwerte fuer
+	// Reiter/Viewport/Besuchs-Flags. Ohne Uebergabe unveraendertes Verhalten.
+	interface CompareNewStateOverride {
+		activeTab?: CompareNewTabId;
+		isMobileViewport?: boolean;
+		metrikenVisited?: boolean;
+		idealsVisited?: boolean;
+		alarmeVisited?: boolean;
+		versandVisited?: boolean;
+	}
 	interface Props {
 		locations?: Location[];
 		groups?: Group[];
+		stateOverride?: CompareNewStateOverride;
 	}
-	let { locations = [], groups }: Props = $props();
+	let { locations = [], groups, stateOverride }: Props = $props();
+	const seed: CompareNewStateOverride = untrack(() => stateOverride ?? {});
 
 	const wiz = getContext<CompareWizardState>('compare-wizard-state');
 
@@ -103,17 +120,17 @@
 	];
 
 	// ── Visited-Flags (Tab-Besuch → nächster Tab frei; nie zurückgesetzt) ──────
-	let metrikenVisited = $state(false);
-	let idealsVisited = $state(false);
-	let alarmeVisited = $state(false);
-	let versandVisited = $state(false);
+	let metrikenVisited = $state(seed.metrikenVisited ?? false);
+	let idealsVisited = $state(seed.idealsVisited ?? false);
+	let alarmeVisited = $state(seed.alarmeVisited ?? false);
+	let versandVisited = $state(seed.versandVisited ?? false);
 
-	let activeTab = $state<CompareNewTabId>('vergleich');
+	let activeTab = $state<CompareNewTabId>(seed.activeTab ?? 'vergleich');
 
 	// Echte Viewport-Erkennung (Muster #932/#1231 Slice 4): nur die
 	// Wertebereiche-/Metriken-Zweige mounten viewport-exklusiv, damit nicht
 	// Desktop- UND Mobile-Editor gleichzeitig in `wiz` schreiben.
-	let isMobileViewport = $state(false);
+	let isMobileViewport = $state(seed.isMobileViewport ?? false);
 	onMount(() => {
 		const mq = window.matchMedia('(max-width: 899px)');
 		isMobileViewport = mq.matches;
@@ -122,19 +139,41 @@
 		return () => mq.removeEventListener('change', onChange);
 	});
 
-	// ── Abgeleitete Freischaltung (reine compareNewLogic) ──────────────────────
-	const progress = $derived<CompareNewProgress>({
-		name: wiz.name,
-		pickedCount: wiz.pickedIds.length,
+	// ── Abgeleitete Freischaltung (geteilter Kern anlegeLockEngine, Vorderteil Name/≥2 Orte hier) ──────────────────────
+	const nameOk = $derived(wiz.name.trim().length > 0);
+	const orteOk = $derived(wiz.pickedIds.length >= 2);
+	// Besuchs-Flags roh (fuer "erledigt") ...
+	const tailP = $derived({
+		metrikenFrei: nameOk && orteOk,
 		metrikenVisited,
-		idealsVisited,
+		wertebereicheVisited: idealsVisited,
 		alarmeVisited,
 		versandVisited
 	});
-	const unlocked = $derived(unlockedTabs(progress));
-	const done = $derived(doneTabs(progress));
-	const doneCount = $derived(progressCount(done));
-	const canActivateNow = $derived(canActivate(done));
+	// ... und kumulativ (fuer "freigeschaltet"): Ortsvergleich-Semantik ist eine
+	// konjunktive Kette (idealwerte braucht Metriken-Besuch, alarme zusaetzlich
+	// Ideal-Besuch usw.), der Kern prueft je Stufe nur das direkte Vorgaenger-Flag.
+	const tailPChain = $derived({
+		...tailP,
+		wertebereicheVisited: metrikenVisited && idealsVisited,
+		alarmeVisited: metrikenVisited && idealsVisited && alarmeVisited,
+		versandVisited: metrikenVisited && idealsVisited && alarmeVisited && versandVisited
+	});
+	const unlocked = $derived.by(() => {
+		const s = tailUnlocked(TAIL, tailPChain);
+		s.add('vergleich');
+		if (nameOk) s.add('orte');
+		return s;
+	});
+	const done = $derived.by(() => {
+		const s = tailDone(TAIL, tailP);
+		if (nameOk) s.add('vergleich');
+		if (orteOk) s.add('orte');
+		return s;
+	});
+	// Zaehler gedeckelt bei 6 (Issue #1360), bit-gleich zu vorher min(done.size, 6).
+	const doneCount = $derived(Math.min(progressCount(done, PROGRESS_STEPS), 6));
+	const canActivateNow = $derived(canFinish(done));
 
 	const canContinue = $derived(wiz.name.trim().length > 0);
 	const orteContinueReady = $derived(wiz.pickedIds.length >= 2);
