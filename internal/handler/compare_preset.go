@@ -263,6 +263,15 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1395 S6: Sperre um den Schreibvorgang — erst hier moeglich, die
 		// ID entsteht oben im Handler (analog CreateTripHandler). Kein If-Match
 		// und kein ETag in der Antwort: der Client holt nach dem Anlegen frisch.
+		//
+		// Issue #2482: Mengen-Quote — Validierung (400) laeuft oben VOR der
+		// Quote; der Quoten-Lock (LockQuota) kommt VOR LockBriefing. Die ID ist
+		// serverseitig neu erzeugt, jede Anlage ist eine Neuanlage.
+		defer s.LockQuota()()
+		if !quotaAllows(w, r, s, quotaComparePresets) {
+			return
+		}
+
 		defer s.LockBriefing(preset.ID)()
 
 		// Issue #1250 Scheibe 7b: per-Datei-Save — nur die eigene Datei
@@ -490,6 +499,10 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1395 S6: Sperre wie bei den Schreibpfaden, aber KEIN If-Match
 		// (analog UpdateTripStateHandler, AC-15) — der Zustandswechsel ist kein
 		// inhaltliches Bearbeiten und darf nicht an einem Stempel scheitern.
+		//
+		// Issue #2482: Quoten-Lock IMMER vor LockBriefing (feste Reihenfolge);
+		// abgelehnt wird ausschliesslich das Wiederherstellen (AC-9).
+		defer s.LockQuota()()
 		defer s.LockBriefing(id)()
 
 		presets, err := s.LoadComparePresets()
@@ -507,6 +520,13 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
 			return
+		}
+
+		// Issue #2482 AC-9: Wiederherstellen wird wie eine Neuanlage geprueft.
+		if presets[idx].ArchivedAt != nil && req.Archived != nil && !*req.Archived {
+			if !quotaAllows(w, r, s, quotaComparePresets) {
+				return
+			}
 		}
 
 		if req.Archived != nil {

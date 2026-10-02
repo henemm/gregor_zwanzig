@@ -174,6 +174,33 @@ func TestMengenQuoteRoute_AC10_AdminUndAusnahmeUnbegrenzt(t *testing.T) {
 	}
 }
 
+// AC-10 + AC-11: Die Policy (Admin/Ausnahme) erreicht auch den Weg
+// POST /api/briefings, der intern an die Create-Handler delegiert — fuer
+// beide Arten nie 409, auch weit ueber der Free-Grenze.
+func TestMengenQuoteRoute_AC10_AC11_BriefingsAdminUndAusnahmeUnbegrenzt(t *testing.T) {
+	r, s, secret := quoteTestRouter(t)
+
+	for _, uid := range []string{"ops", "tester"} {
+		quoteSeedRouteTrips(t, s, uid, 3)
+		quoteSeedRoutePresets(t, s, uid, 2)
+		for i := 0; i < 2; i++ {
+			body := string(minimalRouteCreateBody(fmt.Sprintf("%s-briefing-trip-%d", uid, i), "Neu"))
+			if w := quoteReq(t, r, secret, "POST", "/api/briefings", body, uid); w.Code != http.StatusCreated {
+				t.Fatalf("%s Briefing route %d ueber der Free-Grenze: erwartet 201, bekommen %d: %s", uid, i+1, w.Code, w.Body.String())
+			}
+			if w := quoteReq(t, r, secret, "POST", "/api/briefings", string(minimalVergleichCreateBody(fmt.Sprintf("Neu %d", i))), uid); w.Code != http.StatusCreated {
+				t.Fatalf("%s Briefing vergleich %d ueber der Free-Grenze: erwartet 201, bekommen %d: %s", uid, i+1, w.Code, w.Body.String())
+			}
+		}
+		if trips, _ := s.WithUser(uid).LoadTrips(); len(trips) != 5 {
+			t.Errorf("%s: erwartet 5 Trips, bekommen %d", uid, len(trips))
+		}
+		if ps, _ := s.WithUser(uid).LoadComparePresets(); len(ps) != 4 {
+			t.Errorf("%s: erwartet 4 Ortsvergleiche, bekommen %d", uid, len(ps))
+		}
+	}
+}
+
 // AC-10: Die Ausnahme-Liste verleiht KEINE Admin-Rechte.
 func TestMengenQuoteRoute_AC10_AusnahmeIstKeinAdmin(t *testing.T) {
 	r, _, secret := quoteTestRouter(t)

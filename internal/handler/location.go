@@ -109,6 +109,13 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 		now := time.Now().UTC()
 		loc.CreatedAt = &now
 
+		// Issue #2482: Mengen-Quote — Validierung und Dubletten-409 (conflict)
+		// oben haben Vorrang; Orte zaehlen alle (kein Archiv).
+		defer s.LockQuota()()
+		if !quotaAllows(w, r, s, quotaLocations) {
+			return
+		}
+
 		if err := s.SaveLocation(loc); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)

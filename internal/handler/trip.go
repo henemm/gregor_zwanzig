@@ -202,6 +202,26 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		// am Handler-Anfang. Kein If-Match, kein ETag: beim Anlegen gibt es
 		// keinen Vorstand, gegen den geprueft werden koennte, und der Client
 		// holt danach ohnehin frisch (AC-12).
+		//
+		// Issue #2482: Mengen-Quote. Der Quoten-Lock (LockQuota) kommt VOR
+		// LockBriefing; die Upsert-Pruefung (eigene ID existiert schon -> keine
+		// Neuanlage, keine Pruefung) laeuft innerhalb des Quoten-Locks.
+		defer s.LockQuota()()
+		vorhanden, err := s.LoadTrip(trip.ID)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		// Geprueft wird die Neuanlage UND der Upsert, der einen archivierten
+		// Trip reaktiviert (fachlich ein Wiederherstellen, AC-9). Das reine
+		// Ueberschreiben bleibt frei (AC-6).
+		reaktiviert := vorhanden != nil && vorhanden.ArchivedAt != nil && trip.ArchivedAt == nil
+		if (vorhanden == nil || reaktiviert) && !quotaAllows(w, r, s, quotaTrips) {
+			return
+		}
+
 		defer s.LockBriefing(trip.ID)()
 
 		if err := s.SaveTrip(&trip); err != nil {
@@ -504,6 +524,11 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 		// dieser PATCH nicht mitten in einen laufenden PUT hineinschreibt.
 		// Bewusst OHNE If-Match-Pruefung (AC-15): eine Pruefung hier wuerde S3
 		// zwingen, auch fuer die PATCH-Pfade ETags zu fuehren — nicht beauftragt.
+		//
+		// Issue #2482: Quoten-Lock IMMER vor LockBriefing (feste Reihenfolge).
+		// Er serialisiert nur die Zustandswechsel eines Nutzers; abgelehnt wird
+		// ausschliesslich das Wiederherstellen aus dem Archiv (AC-9).
+		defer s.LockQuota()()
 		defer s.LockBriefing(id)()
 
 		existing, err := s.LoadTrip(id)
@@ -526,6 +551,14 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"bad_request"}`))
 			return
+		}
+
+		// Issue #2482 AC-9: Wiederherstellen erzeugt einen aktiven Trip und
+		// wird wie eine Neuanlage gegen die Grenze geprueft.
+		if existing.ArchivedAt != nil && req.Archived != nil && !*req.Archived {
+			if !quotaAllows(w, r, s, quotaTrips) {
+				return
+			}
 		}
 
 		now := time.Now().UTC()

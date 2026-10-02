@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -308,6 +310,91 @@ func TestMengenQuote_AC2_OrtDubletteAnDerGrenzeBleibtConflict(t *testing.T) {
 	}
 }
 
+// Spec "Reihenfolge": Validierung (400) hat Vorrang vor der Quote — auch an
+// der Grenze bekommt ein ungueltiger Rumpf 400 validation_error, nicht 409.
+func TestMengenQuote_ValidierungVorQuote(t *testing.T) {
+	faelle := []struct {
+		name, path, body string
+		seed             func(t *testing.T, s *store.Store)
+	}{
+		{"Trip_ohne_Name", "/api/trips",
+			`{"id":"trip-ungueltig","name":"","stages":[]}`,
+			func(t *testing.T, s *store.Store) { quoteSeedTrips(t, s, "alice", 3, 0) }},
+		{"Ortsvergleich_hour_from_25", "/api/compare/presets",
+			`{"name":"Ungueltig","location_ids":["loc-1","loc-2"],"schedule":"daily","profil":"SUMMER_TREKKING","hour_from":25,"hour_to":18}`,
+			func(t *testing.T, s *store.Store) { quoteSeedPresets(t, s, "alice", 2, 0) }},
+		{"Ort_ohne_Koordinaten", "/api/locations",
+			`{"name":"Ohne Koordinaten","lat":0,"lon":0}`,
+			func(t *testing.T, s *store.Store) { quoteSeedLocations(t, s, "alice", 10) }},
+	}
+	for _, f := range faelle {
+		t.Run(f.name, func(t *testing.T) {
+			s := quoteStore(t)
+			quoteTier(t, s, "alice", "free")
+			f.seed(t, s)
+			r := quoteRouter(s)
+
+			w := quoteCall(t, r, "POST", f.path, f.body, "alice")
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("ungueltiger Rumpf an der Grenze: erwartet 400, bekommen %d: %s", w.Code, w.Body.String())
+			}
+			var fe quoteFehler
+			json.Unmarshal(w.Body.Bytes(), &fe)
+			if fe.Error != "validation_error" {
+				t.Errorf("error: erwartet validation_error, bekommen %q", fe.Error)
+			}
+		})
+	}
+}
+
+// AC-8 / Spec "Der Lock ist je Nutzer": waehrend alice im Quoten-Abschnitt
+// steht (quotaBeforeSave blockiert), kommt bob mit seiner Anlage durch.
+func TestMengenQuote_LockJeNutzerBlockiertAndereNicht(t *testing.T) {
+	s := quoteStore(t)
+	quoteTier(t, s, "alice", "free")
+	quoteTier(t, s, "bob", "free")
+	r := quoteRouter(s)
+
+	drin := make(chan struct{})
+	frei := make(chan struct{})
+	var once sync.Once
+	quotaBeforeSave = func() {
+		erster := false
+		once.Do(func() { erster = true })
+		if erster { // nur alice' Anfrage haelt den Abschnitt fest
+			close(drin)
+			<-frei
+		}
+	}
+	t.Cleanup(func() { quotaBeforeSave = nil })
+
+	aliceFertig := make(chan int)
+	go func() {
+		aliceFertig <- quoteCall(t, r, "POST", "/api/trips", quoteTripBody("alice-trip"), "alice").Code
+	}()
+	<-drin // alice haelt jetzt ihren Quoten-Lock
+
+	bobFertig := make(chan int)
+	go func() {
+		bobFertig <- quoteCall(t, r, "POST", "/api/trips", quoteTripBody("bob-trip"), "bob").Code
+	}()
+	select {
+	case code := <-bobFertig:
+		if code != http.StatusCreated {
+			t.Errorf("bob: erwartet 201, bekommen %d", code)
+		}
+	case <-time.After(2 * time.Second):
+		close(frei)
+		<-aliceFertig
+		<-bobFertig
+		t.Fatalf("bob blockiert, solange alice den Quoten-Lock haelt — Lock ist nicht je Nutzer")
+	}
+	close(frei)
+	if code := <-aliceFertig; code != http.StatusCreated {
+		t.Errorf("alice: erwartet 201, bekommen %d", code)
+	}
+}
+
 // --- AC-3: exakte Grenze je Tarif, fail-closed free --------------------------
 
 type quoteRessource struct {
@@ -366,6 +453,42 @@ func TestMengenQuote_AC3_ExakteGrenzeJeTarif(t *testing.T) {
 			})
 		}
 	}
+}
+
+// Fail-closed free gilt NUR fuer "kein Tarif" (user.json fehlt). Ein echter
+// Ladefehler (kaputte user.json) darf nicht als free gelten — sonst bekaeme
+// z. B. ein Premium-Nutzer eine falsche 409 "4 von 3 Trips". Erwartet: 500
+// store_error, nichts wird gespeichert.
+func TestMengenQuote_AC3_LadefehlerDesNutzersIstKeinFree(t *testing.T) {
+	t.Run("kaputte_user_json_500", func(t *testing.T) {
+		s := quoteStore(t)
+		quoteSeedTrips(t, s, "alice", 4, 0)
+		if err := os.WriteFile(filepath.Join(s.UserDir("alice"), "user.json"), []byte(`{kaputt`), 0o644); err != nil {
+			t.Fatalf("user.json schreiben: %v", err)
+		}
+		r := quoteRouter(s)
+
+		w := quoteCall(t, r, "POST", "/api/trips", quoteTripBody("trip-neu"), "alice")
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("kaputte user.json: erwartet 500, bekommen %d: %s", w.Code, w.Body.String())
+		}
+		var f quoteFehler
+		json.Unmarshal(w.Body.Bytes(), &f)
+		if f.Error != "store_error" {
+			t.Errorf("error: erwartet store_error, bekommen %q", f.Error)
+		}
+		if _, gesamt := quoteActiveTrips(t, s, "alice"); gesamt != 4 {
+			t.Errorf("es darf nichts gespeichert werden, Bestand=%d", gesamt)
+		}
+	})
+
+	t.Run("fehlende_user_json_bleibt_free", func(t *testing.T) {
+		s := quoteStore(t)
+		quoteSeedTrips(t, s, "alice", 3, 0) // keine user.json
+		r := quoteRouter(s)
+
+		quoteMuss409(t, quoteCall(t, r, "POST", "/api/trips", quoteTripBody("trip-neu"), "alice"), "trips", 3, 3)
+	})
 }
 
 // --- AC-4: Archivieren und Loeschen schaffen Platz ---------------------------
@@ -487,6 +610,61 @@ func TestMengenQuote_AC6_UpsertEigenerTripAnDerGrenzeBleibtUpsert(t *testing.T) 
 	if _, gesamt := quoteActiveTrips(t, s, "alice"); gesamt != 4 {
 		t.Errorf("Upsert darf keinen Trip hinzufuegen, Bestand=%d", gesamt)
 	}
+}
+
+// AC-9 (Tech-Lead-Entscheidung zu AC-6): Ein Upsert, der einen ARCHIVIERTEN
+// Trip reaktiviert (Rumpf ohne archived_at), ist fachlich ein Wiederherstellen
+// und wird gegen die Grenze geprueft. AC-6 schuetzt nur das Ueberschreiben.
+func TestMengenQuote_AC9_UpsertReaktiviertArchiviertenTripWirdGeprueft(t *testing.T) {
+	archiviert := func(t *testing.T, s *store.Store) bool {
+		t.Helper()
+		tr, err := s.WithUser("alice").LoadTrip("seed-trip-3")
+		if err != nil || tr == nil {
+			t.Fatalf("LoadTrip seed-trip-3: %+v (err=%v)", tr, err)
+		}
+		return tr.ArchivedAt != nil
+	}
+
+	t.Run("an_der_Grenze_ohne_archived_at_abgelehnt", func(t *testing.T) {
+		s := quoteStore(t)
+		quoteTier(t, s, "alice", "free")
+		quoteSeedTrips(t, s, "alice", 3, 1) // seed-trip-3 ist archiviert
+		r := quoteRouter(s)
+
+		quoteMuss409(t, quoteCall(t, r, "POST", "/api/trips", quoteTripBody("seed-trip-3"), "alice"), "trips", 3, 3)
+		if !archiviert(t, s) {
+			t.Errorf("abgelehnter Upsert: Trip muss archiviert bleiben")
+		}
+		if aktiv, gesamt := quoteActiveTrips(t, s, "alice"); aktiv != 3 || gesamt != 4 {
+			t.Errorf("Bestand unveraendert erwartet (3 aktiv / 4 gesamt), bekommen %d/%d", aktiv, gesamt)
+		}
+	})
+
+	t.Run("an_der_Grenze_mit_archived_at_bleibt_Upsert", func(t *testing.T) {
+		s := quoteStore(t)
+		quoteTier(t, s, "alice", "free")
+		quoteSeedTrips(t, s, "alice", 3, 1)
+		r := quoteRouter(s)
+
+		body := strings.Replace(quoteTripBody("seed-trip-3"), `"name":"Trip seed-trip-3"`,
+			`"name":"Archiv-Upsert","archived_at":"2026-09-01T10:00:00Z"`, 1)
+		quoteMussAngelegt(t, quoteCall(t, r, "POST", "/api/trips", body, "alice"), "Upsert, der archiviert bleibt")
+		if !archiviert(t, s) {
+			t.Errorf("Upsert mit archived_at: Trip muss archiviert bleiben")
+		}
+	})
+
+	t.Run("mit_Platz_ohne_archived_at_ok", func(t *testing.T) {
+		s := quoteStore(t)
+		quoteTier(t, s, "alice", "free")
+		quoteSeedTrips(t, s, "alice", 2, 2) // seed-trip-2 und seed-trip-3 archiviert
+		r := quoteRouter(s)
+
+		quoteMussAngelegt(t, quoteCall(t, r, "POST", "/api/trips", quoteTripBody("seed-trip-3"), "alice"), "Reaktivierung mit Platz")
+		if archiviert(t, s) {
+			t.Errorf("Reaktivierung mit Platz: Trip muss aktiv sein")
+		}
+	})
 }
 
 // Eine ID, die nur bei bob existiert, ist fuer alice eine NEUANLAGE —

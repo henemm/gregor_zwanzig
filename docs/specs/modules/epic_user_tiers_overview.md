@@ -22,11 +22,18 @@ oft Alerts/Updates pro Tag maximal verschickt werden dürfen. Level ist sichtbar
 kann per einfachem Formular zur Änderung beantragt werden (kein Self-Service-Upgrade, keine
 Zahlungsanbindung in diesem Schnitt).
 
-| Level | Channel | Alert-/Update-Frequenz |
-|---|---|---|
-| Free | E-Mail, Telegram | max. **2 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) |
-| Standard | + SMS | max. **4 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) |
-| Premium | + Premium-SMS (Garmin inReach, existiert noch nicht) | **Mindestabstand 15 Minuten** (kein Tageslimit — bei diesem Intervall ist ein Zähler kein zusätzlicher Schutz mehr) |
+| Level | Channel | Alert-/Update-Frequenz | Mengengrenzen (Trips aktiv / Ortsvergleiche aktiv / Orte) |
+|---|---|---|---|
+| Free | E-Mail, Telegram | max. **2 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) | 3 / 2 / 10 |
+| Standard | + SMS | max. **4 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) | 15 / 10 / 50 |
+| Premium | + Premium-SMS (Garmin inReach, existiert noch nicht) | **Mindestabstand 15 Minuten** (kein Tageslimit — bei diesem Intervall ist ein Zähler kein zusätzlicher Schutz mehr) | 50 / 30 / 200 |
+
+**Ergänzung #2482 S5 (2026-10-02) — Mengengrenzen:** Die Spalte „Mengengrenzen" begrenzt nur
+die NEUANLAGE (und das Wiederherstellen aus dem Archiv); Bestand über der Grenze bleibt voll
+erhalten und bearbeitbar. Trips und Ortsvergleiche zählen nur nicht archivierte, Orte alle.
+Admin (`GZ_ADMIN_USER_IDS`) und Konten aus `GZ_QUOTA_EXEMPT_USER_IDS` sind unbegrenzt.
+Einzige Quelle der Werte: `model.QuotaFor` (`internal/model/tier.go`). Spec:
+`docs/specs/modules/mengen_quoten_je_tier.md`.
 
 **PO-Entscheidung 2026-07-07 (beantwortet Frage 1 aus v1.0):** Free/Standard sind echte
 Tages-Obergrenzen mit Mitternachts-Reset, KEIN reiner Mindestabstand — ein Nutzer bekommt an
@@ -183,6 +190,8 @@ eigenes Folge-Issue nach F9-Fahrplan.
 
 ## Changelog
 
+- 2026-10-02: Ergänzung #2482 S5 — Mengengrenzen je Tarif (Trips/Ortsvergleiche/Orte) in
+  die Tier-Tabelle aufgenommen (`docs/specs/modules/mengen_quoten_je_tier.md`).
 - 2026-09-24: Ergänzung #2412 S4a implementiert (`src/services/sms_daily_limit.py`,
   `docs/specs/modules/sms_daily_limit.md`) — Premium-SMS-Kosten-Deckel wie oben unter
   „Ergänzung #2412 S4a" beschrieben. Deploy/Staging-Verifikation stehen zum Zeitpunkt
