@@ -28,6 +28,7 @@
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
+	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { browser } from '$app/environment';
@@ -189,10 +190,10 @@
 	// Änderung liegt komplett in dieser Funktion; der Speicher-Regler
 	// (`SaveStatus`) bleibt unangetastet, andere Nutzer sind nicht betroffen.
 	function buildStagesSave(): SaveFn {
-		return async (init) => {
-			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages }, init);
-			onTripUpdate?.(updatedTrip);
-		};
+		// Rumpf als Funktion: `stages` wird erst beim Ausloesen gelesen (R6-F001).
+		return baueTripSpeicherung<Trip>(
+			api, tripId!, () => ({ stages }), (updatedTrip) => onTripUpdate?.(updatedTrip), 'etappen'
+		);
 	}
 	function scheduleSave(): void {
 		if (!saveController || !tripId) return;

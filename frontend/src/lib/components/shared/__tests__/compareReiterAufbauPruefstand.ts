@@ -57,11 +57,13 @@ export interface ReiterAufbau {
 export function reiterAufbau(
 	reiter: Reiter,
 	start: ComparePreset,
-	client: PutClient = api
+	client: PutClient = api,
+	/** F501: mehrere Reiter teilen wie im Hub EINEN Controller und EINE Schreib-Queue */
+	geteilt?: { ctl: SaveStatus; queue: ReturnType<typeof createPutQueue> }
 ): ReiterAufbau {
 	let basis = start;
-	const ctl = createController(start.id);
-	const queue = createPutQueue();
+	const ctl = geteilt?.ctl ?? createController(start.id);
+	const queue = geteilt?.queue ?? createPutQueue();
 	const gemeinsam = {
 		client,
 		preset: () => basis,

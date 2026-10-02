@@ -25,6 +25,7 @@
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
+	import { wendeNutzlastAn } from '$lib/stores/nutzlastStand';
 	import {
 		deriveStatusWithScheduleOverride,
 		presetBriefingTimesLabel,
@@ -204,6 +205,17 @@
 	// Uebersicht-/Vorschau-Tab lesen bewusst weiterhin `preset` direkt
 	// (bekannte, akzeptierte Stale-Anzeige, s. Fix-Vorgabe Scope).
 	let currentPreset = $state<ComparePreset>(snapshotForRollback(preset));
+
+	// Fix-Loop 3 (#1433, F201): Hydrationsquelle der Reiter ist dieser Stand. Bei einem 412
+	// wird er lokal um die abgelehnte Eigenfeld-Nutzlast fortgeschrieben (Seitenstand =
+	// Server ⊕ ausstehende Nutzlasten) — so liest ein ERSTMALS geoeffneter Reiter (z. B.
+	// Versand, teilt Abkuehlzeit/Ruhezeit mit Alarme) die Eingabe und setzt `wizardState`
+	// nicht auf den Altstand zurueck. Bewusst NUR dieser interne Stand, nicht die Seiten-
+	// Prop `preset`: deren Wechsel loest den Effekt unten aus, der die Hydrations-Flags
+	// zuruecksetzt und den OFFENEN Reiter ueber seine Eingabe neu hydrieren wuerde.
+	$effect(() => saveController?.registriereAbgelehnt((nutzlast) => {
+		currentPreset = wendeNutzlastAn(currentPreset, nutzlast);
+	}));
 
 	// Fix-Loop 1 (F002, Adversary CRITICAL): EINE gemeinsame Serialisierungs-
 	// Queue fuer ALLE Hub-PUT-Pfade (Orte/Idealwerte/Versand/Toggle-Active) —

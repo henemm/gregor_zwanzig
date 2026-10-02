@@ -265,12 +265,12 @@
 	function buildSaveFn() {
 		const payload = buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors);
 		// #2317 Baustein 1: die Entlade-Option (keepalive) erreicht den PUT.
-		// display_config wird wie bisher erst beim Speichern gelesen.
+		// Issue #1433: Teilfeld — nur `corridors`, kein display_config (Spec §2.2).
 		return baueTripSpeicherung<Trip>(
 			api,
 			trip!.id,
-			() => ({ corridors: payload.corridors, display_config: trip!.display_config }),
-			(updated) => onTripUpdate?.(updated)
+			() => ({ corridors: payload.corridors }),
+			(updated) => onTripUpdate?.(updated), 'wertebereiche'
 		);
 	}
 

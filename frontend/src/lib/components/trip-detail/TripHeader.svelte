@@ -14,6 +14,7 @@
 	import { getReportSchedule } from '$lib/utils/rightColumn';
 	import Stat from '$lib/components/molecules/Stat.svelte';
 	import type { Trip } from '$lib/types';
+	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 
@@ -41,12 +42,21 @@
 		return async function doNameSave() {
 			nameSaving = true;
 			nameSaveError = null;
-			try {
-				await api.put(`/api/trips/${trip.id}`, { name: editName });
-				onTripUpdate?.({ ...trip, name: editName });
+			// Issue #1433: Rumpf als Funktion — bei 412 wiederholt „Nochmal speichern"
+			// genau diese Namensaenderung (nur das Eigenfeld `name`, idempotent).
+			const name = editName;
+			const speichern = baueTripSpeicherung<Trip>(api, trip.id, { name }, (updated) => {
+				onTripUpdate?.(updated);
 				isEditingName = false;
+			}, 'kopf');
+			try {
+				await speichern();
 			} catch (e: unknown) {
-				nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+				if ((e as { status?: number })?.status === 412 && saveController) {
+					saveController.meldeKonflikt(speichern, e);
+				} else {
+					nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+				}
 			} finally {
 				nameSaving = false;
 			}

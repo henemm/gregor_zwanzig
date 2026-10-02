@@ -10,6 +10,7 @@
 import type { ComparePreset, ActivityProfile, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { toHHMMSS } from '../../utils/time.ts';
+import { pickEigenfelder } from '../shared/pickEigenfelder.ts';
 // Issue #1373 (S2 Scheibe B): Speicherformat der Metrik-Auswahl ist Größe +
 // Auswertung. Die Übersetzung kommt aus der bereits geladenen Antwort von
 // GET /api/compare/metrics (Scheibe A liefert metric_id/aggregation je Eintrag) —
@@ -323,13 +324,14 @@ export function waehleEigenfelder(
 	displayConfigExtra: Record<string, unknown> = {}
 ): { url: string; body: ComparePreset } {
 	const b = voll.body as unknown as Record<string, unknown>;
-	const dc = (b.display_config as Record<string, unknown> | undefined) ?? {};
-	const felder: Record<string, unknown> = {};
-	for (const k of topKeys) felder[k] = b[k];
-	const dcFelder: Record<string, unknown> = {};
-	for (const k of displayKeys) dcFelder[k] = dc[k];
-	Object.assign(dcFelder, displayConfigExtra);
-	return buildComparePresetPartialPayload(voll.url.slice('/api/compare/presets/'.length), felder, dcFelder);
+	// Adapter auf die geteilte Auswahl (#1433): gleiche Regeln wie im Trip.
+	const body = pickEigenfelder(b, { top: topKeys });
+	const dc = {
+		...((pickEigenfelder(b, { display: displayKeys }).display_config as object | undefined) ?? {}),
+		...Object.fromEntries(Object.entries(displayConfigExtra).filter(([, v]) => v !== undefined))
+	};
+	if (Object.keys(dc).length > 0) body.display_config = dc;
+	return { url: voll.url, body: body as unknown as ComparePreset };
 }
 
 // ─── Create-Pfad (POST /api/compare/presets) ──────────────────────────────

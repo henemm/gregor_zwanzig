@@ -10,7 +10,8 @@
 	// Spec: docs/specs/modules/issue_618_mobile_weather_tab.md
 	import { untrack } from 'svelte';
 	import { api } from '$lib/api.js';
-	import { baueWetterMetrikenSpeicherung } from './tripSpeicherung.ts';
+	import { baueWetterMetrikenSpeicherung, baueTripSpeicherung } from './tripSpeicherung.ts';
+	import { pickEigenfelder, WETTER_DISPLAY_KEYS, WETTER_REPORT_KEYS } from './pickEigenfelder.ts';
 	import type { Trip, MetricPreset, Horizons, ReportConfig, WeatherConfigMetric, ComparePreset } from '$lib/types';
 	// Issue #2276 S4: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import
 	// aus compare/, AC-9) — geteilte kombinierte Wetter-Metriken/Layout-
@@ -929,30 +930,34 @@
 				trip!.display_config, channel, override, horizonsMap, catalog,
 			),
 		);
-		return {
-			...(trip!.display_config ?? {}),
-			metrics: buildWeatherMetricsList(),
-			channel_layouts: nextLayouts,
-			preset_name: selectedTemplate || undefined,
-			telegram_kurzform: telegramKurzform,
-			// Issue #1720 S1: explizit, nicht nur ueber den Spread — sonst
-			// verdeckte der Altwert eine bewusste Leerauswahl (`[]`), und der
-			// Nutzer kaeme aus dem "Block aus"-Zustand nie wieder heraus
-			// (RMW-Pflicht, Fehlerklasse #102 -> #1159). `null` (nie eingestellt)
-			// reicht den Altwert unveraendert durch.
-			// Issue #1848 A2: reine Kennungen, ungewandelt (wie hourly_metrics
-			// und wie der Ortsvergleich seit dieser Scheibe).
-			outlook_metrics: outlookMetricKeysRoute === null
-				? trip!.display_config?.outlook_metrics
-				: outlookMetricKeysRoute,
-			// Issue #2049: dieselbe RMW-Bauart wie `outlook_metrics` darueber —
-			// explizit statt nur ueber den Spread, damit ein bewusstes
-			// Zuruecksetzen auf Roh nicht vom Altwert verdeckt wird. `null` (nie
-			// eingestellt) reicht den Altwert unveraendert durch.
-			outlook_metric_formats: outlookMetricFormatsRoute === null
-				? trip!.display_config?.outlook_metric_formats
-				: outlookMetricFormatsRoute,
-		};
+		// Issue #1433: Teilfeld — nur die Eigen-Schluessel des Reiters (Spec §2.2),
+		// kein Spread der lokalen, womoeglich veralteten display_config. `null`
+		// (nie eingestellt) = Schluessel NICHT senden; eine bewusste Leerauswahl
+		// (`[]`) geht durch (Loesch-Semantik, AC-17).
+		return pickEigenfelder(
+			{
+				display_config: {
+					metrics: buildWeatherMetricsList(),
+					channel_layouts: nextLayouts,
+					preset_name: selectedTemplate || undefined,
+					telegram_kurzform: telegramKurzform,
+					// Issue #1848 A2: reine Kennungen, ungewandelt.
+					outlook_metrics: outlookMetricKeysRoute === null ? undefined : outlookMetricKeysRoute,
+					// Issue #2049: dieselbe Bauart wie `outlook_metrics`.
+					outlook_metric_formats: outlookMetricFormatsRoute === null ? undefined : outlookMetricFormatsRoute,
+				},
+			},
+			{ display: WETTER_DISPLAY_KEYS },
+		).display_config;
+	}
+
+	// Issue #1433: Rumpf des Trip-PUT (zweiter Schritt / reiner report_config-Pfad) —
+	// nur Inhalt-/Tagesfenster-Schluessel (Spec §2.3) und `official_alerts_enabled`.
+	function buildTripReportBody() {
+		return pickEigenfelder(
+			{ report_config: reportConfig, official_alerts_enabled: officialAlertsEnabledRoute },
+			{ top: ['official_alerts_enabled'], report: WETTER_REPORT_KEYS },
+		);
 	}
 
 	async function handleSave() {
@@ -977,7 +982,7 @@
 				// Issue #776/#774: report_config separat persistieren (zweiter PUT, Read-Modify-Write im Backend).
 				// Issue #850: Server-Response enthält aktualisierte alert_rules (via SyncAlertRules) — nie manuell konstruieren.
 				// Issue #1117: official_alerts_enabled im selben zweiten PUT persistieren.
-				const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabledRoute });
+				const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, buildTripReportBody());
 				onTripUpdate?.(updated);
 			}
 			saveSuccess = true;
@@ -1009,8 +1014,8 @@
 			api,
 			trip!.id,
 			payload,
-			() => ({ report_config: reportConfig, official_alerts_enabled: officialAlertsEnabledRoute }),
-			nachWetterSpeicherung
+			() => buildTripReportBody(),
+			nachWetterSpeicherung, 'wetter-metriken'
 		));
 	}
 
@@ -1030,10 +1035,9 @@
 			return;
 		}
 		// #2317 Baustein 1: `init` (keepalive beim Entladen) erreicht den PUT.
-		saveController.schedule(async (init) => {
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, { report_config: reportConfig, official_alerts_enabled: officialAlertsEnabledRoute }, init);
-			nachWetterSpeicherung(updated);
-		});
+		saveController.schedule(baueTripSpeicherung<Trip>(
+			api, trip!.id, () => buildTripReportBody(), nachWetterSpeicherung, 'wetter-report'
+		));
 	}
 
 	/** Nebeneffekte nach erfolgreichem Auto-Save (beide Speicherpfade oben). */

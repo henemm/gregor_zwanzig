@@ -260,7 +260,10 @@ describe('Refresh selbst schlägt fehl: kein automatischer zweiter Versuch (Know
 			(globalThis as { fetch: unknown }).fetch = realFetch;
 		}
 
-		assert.equal(c.state, 'error', 'ein gescheiterter Refresh muss in den generischen Fehlerzustand fallen');
+		// Fix-Loop 1 (#1433, F004): umgeschrieben — statt in den Fehlerzustand zu fallen (dort gibt es
+		// keinen Wiederholen-Knopf und die Eingabe waere verwaist), bleibt „Nochmal speichern" stehen;
+		// nichts wird gesendet. Die Eintraege bleiben erhalten (Test trip_retry_fehlerpfade_kein_verlust).
+		assert.equal(c.state, 'conflict', 'ein gescheiterter Refresh laesst die Konflikt-Anzeige (Wiederholen-Knopf) stehen');
 		assert.equal(
 			putCalls().length,
 			2,

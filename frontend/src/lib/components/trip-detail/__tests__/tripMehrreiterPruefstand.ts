@@ -486,7 +486,11 @@ export async function etappenReiter(a: Aufbau): Promise<{
 export async function tripSeite(
 	a: Aufbau,
 	/** der Ersatz-Server — an ihm wird das Ende des `void`-Klick-Handlers erkannt */
-	server: { calls: Array<{ method: string; path: string; finishedAt: number }> }
+	server: { calls: Array<{ method: string; path: string; finishedAt: number }> },
+	/** Stempel aus der Server-Naht (`data.etag`) — frischer Seitenaufbau (#1433 F003) */
+	etag?: string,
+	/** Fix-Loop 2 (F105): `false` = Server-Rendering (der Kopf darf die Registry nicht beschreiben) */
+	imBrowser = true
 ): Promise<{
 	inst: Instanz;
 	pausieren(): Promise<void>;
@@ -495,7 +499,8 @@ export async function tripSeite(
 	trip(): Record<string, unknown>;
 }> {
 	const inst = await bauen(DATEI.seite, {
-		data: { trip: a.trip, etag: undefined },
+		data: { trip: a.trip, etag },
+		browser: imBrowser,
 		tripSaveCtl: a.ctl
 	});
 	/** Klick-Handler laufen `void`. Das Ende ist erreicht, wenn der PATCH beim Server

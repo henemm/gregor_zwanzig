@@ -11,7 +11,7 @@ import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { api } from '../api.ts';
-import { adoptEtagFromPageLoad, clearEtagRegistry, getKnownEtag } from '../etagRegistry.ts';
+import { adoptEtagFromPageLoad, clearEtagRegistry, getKnownEtag, istKonflikt } from '../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from './fakeTripServer.ts';
 // #2317 (Faelle ganz unten)
 import { SaveStatus } from '../stores/saveStatusStore.svelte.ts';
@@ -315,13 +315,14 @@ describe('Issue #2317 AC-11/AC-12: Nachladen haelt den If-Match-Schutz korrekt',
 			zeitgeber: sofortZeitgeber
 		});
 		// ... und ein anderer Reiter speichert direkt ueber `api` (nicht ueber den
-		// Speicher-Takt): mit dem veralteten SSR-Stempel → 412, die Registry wird verworfen.
+		// Speicher-Takt): mit dem veralteten SSR-Stempel → 412, die Registry-Eintrag
+		// aendert sich (seit #1433: Konflikt-Markierung statt Verwerfen).
 		await assert.rejects(
 			api.put('/api/trips/gr20', { name: 'anderer Reiter' }),
 			(e: { status?: number }) => e?.status === 412,
 			'Vorbedingung: der konkurrierende Schreibvorgang veraendert die Registry, waehrend der GET laeuft'
 		);
-		assert.equal(getKnownEtag('gr20'), undefined, 'Vorbedingung: die Registry ist verworfen');
+		assert.equal(istKonflikt('gr20'), true, 'Vorbedingung: die Registry ist als Konflikt markiert (#1433, vorher: verworfen)');
 		await fertigBinnen(h.fertig, 3_000);
 
 		// THEN: uebernommen wird genau eine Fassung, und die Registry traegt sie —

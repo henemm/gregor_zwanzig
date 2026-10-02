@@ -1,11 +1,12 @@
 import type { ApiError, Stage } from './types.js';
 import type { NachladeKennung } from './pwa/geraetespeicher.ts';
 import {
-	discardEtag,
 	enqueueTripWrite,
 	etagVersion,
 	extractTripId,
 	getKnownEtag,
+	istKonflikt,
+	markiereKonflikt,
 	setKnownEtag,
 	setKnownEtagIfUnchanged
 } from './etagRegistry.ts';
@@ -85,7 +86,10 @@ async function send<T>(
 	// losgeht. Vor dem Einreihen gelesen, haetten zwei kurz hintereinander
 	// ausgeloeste Schreibvorgaenge derselben Trip beide den alten Wert
 	// eingefroren und der zweite scheiterte mit 412, obwohl er gewartet hat.
-	const ifMatch = serializedWrite && tripId ? getKnownEtag(tripId) : undefined;
+	// Issue #1433: auch ein keepalive-Request (Unload-Flush) traegt das If-Match,
+	// solange die Ressource im Konflikt ist — der Server lehnt mit 412 ab.
+	const traegtIfMatch = serializedWrite || (extra?.keepalive === true && tripId !== null && istKonflikt(tripId));
+	const ifMatch = traegtIfMatch && tripId ? getKnownEtag(tripId) : undefined;
 	// Stand der Registry beim Losschicken — Grundlage dafuer, einen verspaetet
 	// eintreffenden Stempel als Rueckschritt zu erkennen (F001).
 	const versionAtStart = tripId ? etagVersion(tripId) : 0;
@@ -130,10 +134,11 @@ async function send<T>(
 			abgelaufen.status = 401;
 			throw abgelaufen;
 		}
-		// Issue #1395 S3: der gemerkte Stand ist nachweislich veraltet und die
-		// 412-Antwort traegt keinen neuen. Einmal melden, dann nicht mehr im Weg
-		// stehen — der naechste Versuch laeuft ohne Vorbedingung durch.
-		if (res.status === 412 && tripId) discardEtag(tripId);
+		// Issue #1433 (loest #1395 S3 „Discard nach 412" ab): der Stempel bleibt
+		// stehen, die Ressource ist im Konflikt. Jeder weitere Schreibvorgang
+		// traegt das alte If-Match und wird wieder abgelehnt — ein unbedingtes
+		// Schreiben nach 412 wuerde die Fremdaenderung ueberschreiben.
+		if (res.status === 412 && tripId) markiereKonflikt(tripId);
 		const err: ApiError = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
 		// `status` kommt ZUSAETZLICH dazu; `error`/`detail` bleiben unveraendert,
 		// damit extractMessage() weiterhin die deutsche Servermeldung findet.
@@ -175,11 +180,12 @@ async function request<T>(method: string, path: string, body?: unknown, extra?: 
 		throw gesperrt;
 	}
 	const tripId = extractTripId(path);
-	// `{ keepalive: true }` setzt im gesamten Repo ausschliesslich der
-	// willUnload-Zweig beim Verlassen der Seite. Dieser Vorgang hat nur ein sehr
-	// kurzes Zeitfenster: er darf weder hinter einem laufenden Schreibvorgang
-	// warten (er ginge womoeglich nie los) noch an einem unsichtbaren 412
-	// scheitern (der Nutzer sieht die Ablehnung nie, die Seite ist schon weg).
+	// `{ keepalive: true }` kommt vom Unload-Flush des Controllers (`flush({
+	// keepalive: true })`); ein Reiter setzt es nicht mehr selbst (#1433). Dieser
+	// Vorgang hat nur ein sehr kurzes Zeitfenster: er darf weder hinter einem
+	// laufenden Schreibvorgang warten (er ginge womoeglich nie los) noch ohne
+	// Konflikt an einem unsichtbaren 412 scheitern. Bei offenem Konflikt traegt er
+	// das alte If-Match (s. `send`) — dann ist die Ablehnung gewollt.
 	const isUnloadFlush = extra?.keepalive === true;
 	const serializedWrite = method === 'PUT' && tripId !== null && !isUnloadFlush;
 	const run = () => send<T>(method, path, tripId, serializedWrite, body, extra);
@@ -226,6 +232,17 @@ export async function getMitFassung<T>(path: string): Promise<{ daten: T } & Ant
  */
 export async function refreshResourceEtag(id: string, kind: NachladeKennung['typ']): Promise<void> {
 	await api.get(kind === 'vergleich' ? `/api/compare/presets/${id}` : `/api/trips/${id}`);
+}
+
+/**
+ * Fix-Loop 1 (#1433, F001/AC-19): wie `refreshResourceEtag`, liefert aber den geholten
+ * Datensatz — ausschliesslich fuer „Nochmal speichern", das ihn zusammen mit dem
+ * Stempel (liegt nach dem GET in der Registry) an die Seite gibt, BEVOR die eigenen
+ * Aenderungen erneut gesendet werden. `refreshResourceEtag` bleibt bewusst void
+ * (#1395 S4 AC-5: andere Aufrufer duerfen den Datensatz nicht zuweisen).
+ */
+export async function refreshResourceEtagMitTrip(id: string, kind: NachladeKennung['typ']): Promise<unknown> {
+	return api.get(kind === 'vergleich' ? `/api/compare/presets/${id}` : `/api/trips/${id}`);
 }
 
 /**

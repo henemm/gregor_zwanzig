@@ -8,7 +8,7 @@ import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { api } from '../api.ts';
-import { clearEtagRegistry, getKnownEtag, setKnownEtag } from '../etagRegistry.ts';
+import { clearEtagRegistry, getKnownEtag, istKonflikt, setKnownEtag } from '../etagRegistry.ts';
 import { extractMessage } from '../stores/saveStatusStore.svelte.ts';
 import {
 	createFakeTripServer,
@@ -275,22 +275,27 @@ describe('Trichter: Fehlerobjekt (AC-8)', () => {
 		assert.ok(!/412/.test(message), 'der rohe Statuscode darf nicht in der Meldung landen');
 	});
 
-	test('test_412_discardsStampSoNextAttemptGoesThrough', async () => {
+	// Issue #1433 (AC-18, bewusst umgeschrieben): bis #1433 verwarf `api.ts` den Stempel
+	// nach einem 412 und der naechste Versuch lief OHNE Vorbedingung durch — das
+	// ueberschrieb die Fremdaenderung. Jetzt bleibt der Stempel stehen (Konflikt-Sperre).
+	// Die Umschreibung erzwingen AC-18 (nach einem 412 kein unbedingtes Schreiben) und
+	// AC-24 (die zementierte Altzusicherung wird ins Gegenteil gedreht); die neue Fassung
+	// ist STAERKER als die alte (altes If-Match + erneutes 412).
+	test('test_412_keepsStampAndMarksConflict_nextAttemptCarriesStaleIfMatch', async () => {
 		// GIVEN: eine Ablehnung wegen veraltetem Stand
 		await rejectedWithStaleStamp();
+		const stamp = getKnownEtag('gr20');
 
-		// THEN: ist der gemerkte Stand verworfen — sonst scheiterte jeder weitere
-		// Versuch endlos am selben Wert und der Nutzer kaeme ohne Neuladen nicht
-		// mehr heraus.
-		assert.equal(getKnownEtag('gr20'), undefined);
+		// THEN: der gemerkte Stand bleibt, die Ressource ist im Konflikt
+		assert.ok(stamp, 'der Stempel darf nach einem 412 nicht verworfen werden');
+		assert.equal(istKonflikt('gr20'), true);
 
 		// WHEN: erneut gespeichert wird
-		await api.put('/api/trips/gr20', { name: 'X' });
+		await assert.rejects(api.put('/api/trips/gr20', { name: 'X' }), (e: { status?: number }) => e.status === 412);
 
-		// THEN: geht der Versuch ohne Vorbedingung durch (einmal melden, dann
-		// nicht mehr im Weg stehen).
-		assert.equal(lastCall().ifMatch, null);
-		assert.equal(lastCall().status, 200);
+		// THEN: der Versuch traegt das alte If-Match und wird wieder abgelehnt
+		assert.equal(lastCall().ifMatch, stamp);
+		assert.equal(lastCall().status, 412);
 	});
 
 	test('test_nonPreconditionError_keepsStamp', async () => {
