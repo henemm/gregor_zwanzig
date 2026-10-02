@@ -5,10 +5,11 @@
 // ERWEITERT 2026-08-11 um Issue #1717 (Scheibe S3, Premium-SMS in der
 // Oberflaeche) — Spec: docs/specs/modules/feat_1717_s3_premium_sms_ui.md,
 // AC-2, AC-3, AC-4, AC-9, AC-10. Diese Datei ist das Regressionsnetz, das die
-// beiden Kanalblock-Kopien (VTBriefingChannels fuer /trips/[id],
-// EditReportConfigSection fuer /trips/new) synchron haelt: jeder neue Fall wird
-// gegen BEIDE Komponenten mit demselben Profil gemessen. Der #1717-Abschnitt
-// steht unten unter "── #1717 ──".
+// Kanalbloecke (VTBriefingChannels, VersandTab) bewacht.
+// Issue #2277 S5: die zweite Kopie des Kanalblocks (alte Report-Config-Section) ist
+// entfernt; ihre Faelle entfallen, weil der Code entfaellt (Paritaets-Fall zwischen
+// zwei Kopien hat keinen Partner mehr). Die VTBriefingChannels-/VersandTab-Faelle
+// bleiben unveraendert. Der #1717-Abschnitt steht unten unter "── #1717 ──".
 //
 // Echtes serverseitiges Rendern der echten Svelte-Komponenten
 // (svelte/server `render`, Hooks: frontend/test-svelte-ssr-hooks.mjs).
@@ -16,20 +17,8 @@
 // ist per Definition eine DOM-Prüfung, nicht Quelltext-Scan — der HTML-String
 // IST hier das geprüfte Verhalten, nicht der .svelte-Quelltext).
 //
-// RED heute:
-//   - `../channelContactLabel.ts` existiert nicht → die Datei crasht komplett
-//     beim Import (ERR_MODULE_NOT_FOUND), ALLE Tests unten schlagen fehl.
-//   - Zusätzlich, sobald `channelContactLabel.ts` existiert (nächste Phase):
-//     AC-4 bleibt rot, weil `VTBriefingChannels.svelte`/`EditReportConfigSection.svelte`
-//     die E-Mail-Checkbox heute an `!!profile?.mail_to` sperren (nicht an
-//     `channelConnectionStatus(profile).email.tone === 'good'`) — eine
-//     hinterlegte, aber unbestätigte Adresse macht die Checkbox heute NICHT
-//     disabled, obwohl AC-4 das verlangt.
-//   - AC-6 bleibt rot, weil `EditReportConfigSection.svelte` heute keine
-//     `channel-status-*`-Testids rendert (nur `VTBriefingChannels.svelte` tut das).
-//
-// `profileOverride`-Prop (RED-Infrastruktur, s. beide .svelte-Dateien): Beide
-// Komponenten laden `profile` sonst per `onMount`/`fetch`, das `svelte/server`s
+// `profileOverride`-Prop (RED-Infrastruktur, s. VTBriefingChannels.svelte): Die
+// Komponente laedt `profile` sonst per `onMount`/`fetch`, das `svelte/server`s
 // `render()` nicht ausführt — ohne den Override bliebe `profile` in SSR immer
 // `null`.
 //
@@ -58,12 +47,10 @@ const VT_FILE = path.join(
 	FRONTEND,
 	'src/lib/components/shared/versand-tab/VTBriefingChannels.svelte'
 );
-const EDIT_FILE = path.join(FRONTEND, 'src/lib/components/edit/EditReportConfigSection.svelte');
 
 const { render } = await import('svelte/server');
 const { channelContactLabel } = await import('../channelContactLabel.ts');
 const VTBriefingChannels = (await import(pathToFileURL(VT_FILE).href)).default;
-const EditReportConfigSection = (await import(pathToFileURL(EDIT_FILE).href)).default;
 
 interface Profile {
 	mail_to?: string;
@@ -94,19 +81,6 @@ function renderBriefingChannels(profile: Profile | null): string {
 			onEmailChange: () => {},
 			onTelegramChange: () => {},
 			onSmsChange: () => {},
-			profileOverride: profile
-		}
-	}).body;
-}
-
-function renderEditSection(profile: Profile | null): string {
-	return render(EditReportConfigSection, {
-		props: {
-			reportConfig: {},
-			mode: 'edit',
-			showMailContent: false,
-			showSchedule: false,
-			showChannels: true,
 			profileOverride: profile
 		}
 	}).body;
@@ -160,35 +134,6 @@ describe('AC-2: VTBriefingChannels zeigt die E-Mail-Beschriftung aus channelCont
 	});
 });
 
-// ─── AC-3 ────────────────────────────────────────────────────────────────────
-
-describe('AC-3: EditReportConfigSection zeigt dieselbe Kontakt-Beschriftung wie VTBriefingChannels', () => {
-	test('E-Mail-Checkbox-Text von EditReportConfigSection = channelContactLabel(profile).email-Suffix', () => {
-		const profile: Profile = { mail_to: MAIL, email_verified: true };
-		const html = renderEditSection(profile);
-		const text = checkboxLabelText(html, 'channel-email');
-		const expected = 'E-Mail' + channelContactLabel(profile).email;
-
-		assert.equal(
-			text,
-			expected,
-			`AC-3: Erwartet exakt "${expected}" als E-Mail-Checkbox-Text in EditReportConfigSection, gerendert "${text}".`
-		);
-	});
-
-	test('beide Komponenten zeigen für IDENTISCHES Profil denselben E-Mail-Checkbox-Text', () => {
-		const profile: Profile = { mail_to: MAIL, email_verified: true };
-		const vtText = checkboxLabelText(renderBriefingChannels(profile), 'channel-email');
-		const editText = checkboxLabelText(renderEditSection(profile), 'channel-email');
-
-		assert.equal(
-			vtText,
-			editText,
-			`AC-3: VTBriefingChannels ("${vtText}") und EditReportConfigSection ("${editText}") weichen für dasselbe Profil ab.`
-		);
-	});
-});
-
 // ─── AC-4 ────────────────────────────────────────────────────────────────────
 
 describe('AC-4: E-Mail-Checkbox nur bei bestätigter Adresse anklickbar — in BEIDEN Komponenten', () => {
@@ -208,14 +153,6 @@ describe('AC-4: E-Mail-Checkbox nur bei bestätigter Adresse anklickbar — in B
 			);
 		});
 
-		test(`EditReportConfigSection — ${fall.name} → disabled === ${fall.erwartetDisabled}`, () => {
-			const inputTag = checkboxInputTag(renderEditSection(fall.profile), 'channel-email');
-			assert.equal(
-				isDisabled(inputTag),
-				fall.erwartetDisabled,
-				`AC-4 (EditReportConfigSection, ${fall.name}): erwartet disabled=${fall.erwartetDisabled}, Tag: ${inputTag}`
-			);
-		});
 	}
 });
 
@@ -240,10 +177,6 @@ describe('AC-5: Telegram-/SMS-Checkbox-Sperre bleibt unverändert (Regression)',
 			const inputTag = checkboxInputTag(renderBriefingChannels(fall.profile), 'channel-telegram');
 			assert.equal(isDisabled(inputTag), fall.erwartetDisabled, `AC-5 (VT, Telegram, ${fall.name}): Tag ${inputTag}`);
 		});
-		test(`Telegram — EditReportConfigSection — ${fall.name} → disabled === ${fall.erwartetDisabled}`, () => {
-			const inputTag = checkboxInputTag(renderEditSection(fall.profile), 'channel-telegram');
-			assert.equal(isDisabled(inputTag), fall.erwartetDisabled, `AC-5 (Edit, Telegram, ${fall.name}): Tag ${inputTag}`);
-		});
 	}
 
 	for (const fall of SMS_FAELLE) {
@@ -251,16 +184,12 @@ describe('AC-5: Telegram-/SMS-Checkbox-Sperre bleibt unverändert (Regression)',
 			const inputTag = checkboxInputTag(renderBriefingChannels(fall.profile), 'channel-sms');
 			assert.equal(isDisabled(inputTag), fall.erwartetDisabled, `AC-5 (VT, SMS, ${fall.name}): Tag ${inputTag}`);
 		});
-		test(`SMS — EditReportConfigSection — ${fall.name} → disabled === ${fall.erwartetDisabled}`, () => {
-			const inputTag = checkboxInputTag(renderEditSection(fall.profile), 'channel-sms');
-			assert.equal(isDisabled(inputTag), fall.erwartetDisabled, `AC-5 (Edit, SMS, ${fall.name}): Tag ${inputTag}`);
-		});
 	}
 });
 
 // ─── AC-6 ────────────────────────────────────────────────────────────────────
 
-describe('AC-6: EditReportConfigSection zeigt Dot+Label-Verbindungsstatus wie VTBriefingChannels', () => {
+describe('AC-6: VTBriefingChannels zeigt Dot+Label-Verbindungsstatus', () => {
 	test('alle drei channel-status-* Testids erscheinen bei vollständig hinterlegtem Profil', () => {
 		const profile: Profile = {
 			mail_to: MAIL,
@@ -269,13 +198,12 @@ describe('AC-6: EditReportConfigSection zeigt Dot+Label-Verbindungsstatus wie VT
 			sms_to: SMS,
 			sms_allowed: true
 		};
-		const html = renderEditSection(profile);
+		const html = renderBriefingChannels(profile);
 
 		for (const testid of ['channel-status-email', 'channel-status-telegram', 'channel-status-sms']) {
 			assert.ok(
 				html.includes(`data-testid="${testid}"`),
-				`AC-6: Testid "${testid}" fehlt in EditReportConfigSection — heute existiert dort kein ` +
-					'Dot+Label-Verbindungsstatus (nur in VTBriefingChannels).'
+				`AC-6: Testid "${testid}" fehlt in VTBriefingChannels (Dot+Label-Verbindungsstatus).`
 			);
 		}
 	});
@@ -298,11 +226,7 @@ describe('AC-6: EditReportConfigSection zeigt Dot+Label-Verbindungsstatus wie VT
 // PROP-VERTRAG:
 //   VTBriefingChannels: `channels.premium_sms: boolean` + `onPremiumSmsChange`
 //     (Anwesenheit der Prop schaltet den Block frei, AC-1).
-//   EditReportConfigSection: `reportConfig.send_premium_sms` — der
-//     Anhak-Zustand muss BEIM RENDERN stehen. `svelte/server` fuehrt `onMount`
-//     NICHT aus; eine Hydration allein in `onMount` ist deshalb hier nicht
-//     sichtbar. Der State muss (analog `profile`, EditReportConfigSection.svelte:98
-//     mit `untrack`) aus der Prop initialisiert werden.
+//   (Die frühere zweite Kopie mit `reportConfig.send_premium_sms` entfiel mit #2277 S5.)
 // ══════════════════════════════════════════════════════════════════════════════
 
 const { readFileSync } = await import('node:fs');
@@ -349,23 +273,9 @@ function renderVTPremium(profile: PremiumProfile | null, premiumChecked = false)
 	}).body;
 }
 
-function renderEditPremium(profile: PremiumProfile | null, premiumChecked = false): string {
-	return render(EditReportConfigSection, {
-		props: {
-			reportConfig: premiumChecked ? { send_premium_sms: true } : {},
-			mode: 'edit',
-			showMailContent: false,
-			showSchedule: false,
-			showChannels: true,
-			profileOverride: profile
-		}
-	}).body;
-}
-
-/** Die beiden Renderer als Paar — jeder #1717-Fall laeuft gegen BEIDE. */
+/** Renderer-Liste — seit #2277 S5 nur noch VTBriefingChannels (die zweite Kopie entfiel). */
 const BEIDE: Array<[string, (p: PremiumProfile | null, c?: boolean) => string]> = [
-	['VTBriefingChannels', renderVTPremium],
-	['EditReportConfigSection', renderEditPremium]
+	['VTBriefingChannels', renderVTPremium]
 ];
 
 /** Aeusseres HTML des Elements, das das gegebene Testid traegt (Tag-Nesting-
@@ -445,49 +355,6 @@ function resolveColorToken(outer: string, cssCode: string): string | null {
 	}
 	return null;
 }
-
-// ─── #1717 AC-2 ──────────────────────────────────────────────────────────────
-
-describe('#1717 AC-2: beide Komponenten zeigen denselben Premium-SMS-Zustand', () => {
-	test('beide_komponenten_zeigen_fuer_identisches_profil_denselben_premium_sms_zustand', () => {
-		for (const [name, profile] of [
-			['none', P_NONE],
-			['stale', P_STALE],
-			['fresh', P_FRESH]
-		] as Array<[string, PremiumProfile]>) {
-			const vt = renderVTPremium(profile);
-			const edit = renderEditPremium(profile);
-
-			assert.equal(
-				checkboxLabelText(vt, 'channel-premium-sms'),
-				checkboxLabelText(edit, 'channel-premium-sms'),
-				`AC-2 (${name}): Beschriftung der Premium-SMS-Checkbox weicht zwischen den beiden ` +
-					'Komponenten ab — sie muessen denselben geteilten Helfer benutzen.'
-			);
-			assert.equal(
-				elementText(vt, 'channel-status-premium-sms'),
-				elementText(edit, 'channel-status-premium-sms'),
-				`AC-2 (${name}): Verbindungsstatus-Label weicht ab.`
-			);
-			assert.equal(
-				dotTone(vt, 'channel-status-premium-sms'),
-				dotTone(edit, 'channel-status-premium-sms'),
-				`AC-2 (${name}): Dot-Ton weicht ab.`
-			);
-			assert.equal(
-				elementText(vt, 'channel-premium-sms-hint'),
-				elementText(edit, 'channel-premium-sms-hint'),
-				`AC-2 (${name}): Hinweistext weicht ab.`
-			);
-			assert.equal(
-				isDisabled(checkboxInputTag(vt, 'channel-premium-sms')),
-				isDisabled(checkboxInputTag(edit, 'channel-premium-sms')),
-				`AC-2 (${name}): Deaktiviert-Zustand weicht ab — eine der beiden Seiten laesst ` +
-					'einschalten, was die andere sperrt.'
-			);
-		}
-	});
-});
 
 // ─── #1717 AC-3 ──────────────────────────────────────────────────────────────
 
@@ -574,8 +441,7 @@ describe('#1717 AC-9: Meldedatum ist ein Daten-Label, keine Fussnote', () => {
 	test('meldedatum_label_nutzt_nicht_die_platzhalter_kontrastfarbe', () => {
 		const ERLAUBT = ['--g-ink', '--g-ink-1', '--g-ink-2', '--g-ink-3'];
 		for (const [komponente, renderer, file] of [
-			['VTBriefingChannels', renderVTPremium, VT_FILE],
-			['EditReportConfigSection', renderEditPremium, EDIT_FILE]
+			['VTBriefingChannels', renderVTPremium, VT_FILE]
 		] as Array<[string, (p: PremiumProfile | null) => string, string]>) {
 			const css = scopedCss(file);
 			for (const [name, profile] of [
@@ -606,15 +472,13 @@ describe('#1717 AC-9: Meldedatum ist ein Daten-Label, keine Fussnote', () => {
 // ─── #1717 Kanalzaehler (Tech-Lead-Entscheid 2026-08-11) ─────────────────────
 // Befund aus dem GREEN-Bericht zu S3: der Zaehler "wie viele Briefing-Kanaele
 // sind aktiv?" kannte nur drei Kanaele (VersandTab.svelte activeChannelCount,
-// EditReportConfigSection.svelte hasActiveChannel). Wer NUR Premium-SMS
+// ehemals die alte Report-Config-Section, #2277 S5 entfernt). Wer NUR Premium-SMS
 // einschaltet, sah dadurch den Leerzustand "Kein Kanal aktiv" und keine
 // Zeitplan-Optionen — waehrend das Briefing tatsaechlich rausgeht. Genau der
 // Fehler, den diese Scheibe verhindern soll, nur an einer anderen Stelle.
 //
-// GEMESSEN WIRD AM WIRKORT, in beiden Seiten — und das sind hier NICHT die
-// beiden Kanalblock-Kopien: den Zaehler haelt auf /trips/[id] die Ebene
-// darueber (VersandTab, gibt `hasActiveChannel` an VTSchedulePlan), auf
-// /trips/new EditReportConfigSection selbst. Der Leerzustand selbst lebt in
+// GEMESSEN WIRD AM WIRKORT: den Zaehler haelt die Ebene ueber dem Kanalblock
+// (VersandTab, gibt `hasActiveChannel` an VTSchedulePlan). Der Leerzustand selbst lebt in
 // VTSchedulePlan.svelte (`{#if !hasActiveChannel}`), Testid
 // `briefings-channel-empty`.
 //
@@ -632,23 +496,6 @@ function renderVersandTabRoute(cfg: Record<string, unknown>): string {
 	return render(VersandTab, { props: { context: 'route', reportConfig: cfg } }).body;
 }
 
-/** /trips/new — dieselbe Zeitplan-Sektion, andere Fassung des Zaehlers.
- * `showChannels: false`, damit im HTML nur der EINE Leerzustand aus
- * VTSchedulePlan vorkommen kann (der Kanal-Gating-Leerzustand aus #617 traegt
- * dasselbe Testid, haengt aber an `weatherChannels` — hier nicht gesetzt). */
-function renderEditSchedule(cfg: Record<string, unknown>): string {
-	return render(EditReportConfigSection, {
-		props: {
-			reportConfig: cfg,
-			mode: 'edit',
-			showMailContent: false,
-			showSchedule: true,
-			showChannels: false,
-			profileOverride: P_FRESH
-		}
-	}).body;
-}
-
 describe('#1717 Kanalzaehler: Premium-SMS allein ist ein aktiver Kanal', () => {
 	const NUR_PREMIUM = {
 		send_email: false,
@@ -660,8 +507,7 @@ describe('#1717 Kanalzaehler: Premium-SMS allein ist ein aktiver Kanal', () => {
 
 	test('nur_premium_sms_aktiv_zeigt_keinen_leerzustand_in_beiden_fassungen', () => {
 		for (const [ort, renderer] of [
-			['VersandTab (/trips/[id])', renderVersandTabRoute],
-			['EditReportConfigSection (/trips/new)', renderEditSchedule]
+			['VersandTab (/trips/[id])', renderVersandTabRoute]
 		] as Array<[string, (c: Record<string, unknown>) => string]>) {
 			// Gegenprobe: der Leerzustand ist in diesem Aufbau erreichbar.
 			assert.ok(
@@ -683,8 +529,7 @@ describe('#1717 Kanalzaehler: Premium-SMS allein ist ein aktiver Kanal', () => {
 		// Positivseite derselben Zusicherung: nicht nur "kein Leerzustand",
 		// sondern der Inhalt, den der Leerzustand ersetzt, ist tatsaechlich da.
 		for (const [ort, renderer] of [
-			['VersandTab (/trips/[id])', renderVersandTabRoute],
-			['EditReportConfigSection (/trips/new)', renderEditSchedule]
+			['VersandTab (/trips/[id])', renderVersandTabRoute]
 		] as Array<[string, (c: Record<string, unknown>) => string]>) {
 			const html = renderer(NUR_PREMIUM);
 			assert.ok(
@@ -707,8 +552,8 @@ describe('#1717 AC-10: gespeicherter Anhak-Zustand wird gelesen', () => {
 				isChecked(angehakt),
 				true,
 				`AC-10 (${komponente}): send_premium_sms=true ist gespeichert, die Checkbox rendert aber ` +
-					`nicht angehakt (Tag: ${angehakt}). Bei EditReportConfigSection heisst das: der ` +
-					'Zustand wird nur in onMount hydriert — beim Rendern ist er dann nicht da.'
+					`nicht angehakt (Tag: ${angehakt}). Der Zustand muss beim ` +
+					'Rendern stehen, nicht erst in onMount.'
 			);
 
 			const leer = checkboxInputTag(renderer(P_FRESH, false), 'channel-premium-sms');

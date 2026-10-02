@@ -4,7 +4,7 @@
 // EIN Aufruf liefert den kompletten Anzeige-Zustand der Premium-SMS-Zeile
 // (Design analog channelConnectionStatus()/channelContactLabel() im selben
 // Ordner). Beide Kanalblock-Komponenten rufen ihn auf — VTBriefingChannels.svelte
-// (/trips/[id], /compare/*) und EditReportConfigSection.svelte (/trips/new).
+// (/trips/[id], /compare/*) und die frühere Report-Config-Section (#2277 S5 entfernt) (/trips/new).
 // Eine dritte, wortgleiche Kopie der Zustandslogik waere der Default-Fehler
 // dieser Scheibe (vgl. channelContactLabel vor seiner Extraktion, #1510).
 //

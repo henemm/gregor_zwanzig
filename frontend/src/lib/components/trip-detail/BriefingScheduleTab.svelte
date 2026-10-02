@@ -114,7 +114,7 @@
 </script>
 
 <div class="briefing-schedule-tab">
-	<!-- Issue #1232 Scheibe 1: VersandTab (context="route") ersetzt EditReportConfigSection
+	<!-- Issue #1232 Scheibe 1: VersandTab (context="route") ersetzt die frühere Report-Config-Section (#2277 S5 entfernt)
 	     für Kanäle/Zeitplan/Laufzeit/Alert-Zustellung. Mail-Inhalt bleibt unangetastet im
 	     Inhalt-Tab (WeatherMetricsTab, Issue #736 AC-10-Korrektur).
 	     Issue #1269 (c): Capture-Phase-Listener (s. Script oben) — VersandTab

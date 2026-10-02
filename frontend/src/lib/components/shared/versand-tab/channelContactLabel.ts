@@ -2,7 +2,7 @@
 // Liefert die Kontakt-Beschriftungs-Suffixe je Kanal aus einem ConnectionProfile
 // (z.B. " (a@b.de)" oder "" wenn kein Kontakt hinterlegt). Ersetzt die sechs
 // bisherigen Ternary-Duplikate in VTBriefingChannels.svelte und
-// EditReportConfigSection.svelte.
+// die frühere Report-Config-Section (#2277 S5 entfernt).
 //
 // Design: EIN Aufruf liefert alle drei Kanäle als Objekt (analog
 // channelConnectionStatus()), statt drei Einzelfunktionen — hält den Aufrufaufwand

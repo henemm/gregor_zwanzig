@@ -24,7 +24,7 @@
 	// Issue #2422 S3 (AC-22/AC-24): Startzustand und Payload-Bau stehen als
 	// reine Funktionen in reportConfigPayload.ts (Slot-Regel reportSlotAktiv,
 	// Read-Modify-Write ueber mergeReportConfig) — dieselben wie in
-	// EditReportConfigSection.svelte.
+	// die frühere Report-Config-Section (#2277 S5 entfernt).
 	import { baueReportConfigPayload, ladeReportZustand } from './versand-tab/reportConfigPayload.ts';
 	// Issue #2276 S5: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import aus
 	// der Compare-Hub-Klebeschicht, aufgeloest in S6f, AC-8).
@@ -148,7 +148,7 @@
 	let multi_day_trend_morning = $state(false);
 	let multi_day_trend_evening = $state(false);
 	// Issue #1717 S3: die vier Briefing-Kanal-Flags stehen schon BEIM ERZEUGEN
-	// aus report_config (untrack, Muster EditReportConfigSection.svelte:76) und
+	// aus report_config (untrack, Muster die frühere Report-Config-Section (#2277 S5 entfernt)) und
 	// nicht erst in onMount. Zwei Gruende: der erste Rahmen zeigte sonst
 	// "E-Mail an" auch fuer einen Trip, der gar keine E-Mail schickt — und der
 	// Zeitplan-Leerzustand unten (activeChannelCount) waere ohne diese
@@ -198,7 +198,7 @@
 		// Issue #1738: Read-Modify-Write ueber den geteilten Helfer, Basis ist der
 		// LEBENDE Blob (untrack -> kein Selbst-Trigger) und nicht mehr nur der
 		// Mount-Schnappschuss. Seit /trips/new diese Komponente neben
-		// EditReportConfigSection auf dasselbe bind:reportConfig mountet, wuerde
+		// die frühere Report-Config-Section (#2277 S5 entfernt) auf dasselbe bind:reportConfig mountet, wuerde
 		// eine Zuweisung aus dem veralteten Schnappschuss jede Mail-Inhalt-
 		// Einstellung des Nachbarn (email_format, show_outlook, ...) und jedes
 		// unbekannte Bestandsfeld (change_threshold_*) still loeschen.
@@ -235,7 +235,7 @@
 	// bekommt ein echtes Briefing — ein Leerzustand "Kein Kanal aktiv" waere
 	// dann eine Anzeige, die der Wirklichkeit widerspricht (und sie sperrt die
 	// Zeitplan-Optionen weg, VTSchedulePlan.svelte:77). Dieselbe Zaehlung steht
-	// in EditReportConfigSection.svelte (hasActiveChannel, /trips/new); beide
+	// in die frühere Report-Config-Section (#2277 S5 entfernt) (hasActiveChannel, /trips/new); beide
 	// Fassungen werden im selben Testfall gegeneinander gemessen
 	// (versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts).
 	const activeChannelCount = $derived(

@@ -14,7 +14,7 @@
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
-	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
+	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
@@ -391,7 +391,7 @@
 	// ── Tagesfenster-Änderung aus WeatherMetricsTab (Issue #1775) ─────────────
 	// Rückkanal analog handleChannelsChange/handleWeatherMetricsChange —
 	// additiv mergen statt Feld für Feld separat zu halten, da reportConfig
-	// hier bereits das EINE Objekt ist, das auch EditReportConfigSection per
+	// hier bereits das EINE Objekt ist, das auch MailInhaltCard per
 	// bind:reportConfig haelt.
 	function handleDayWindowChange(w: { day_window_start_hour: number; day_window_end_hour: number }) {
 		// Fix-Loop 2 (Staging-Regression #1775 nach Merge): gleiche Fehlerklasse
@@ -867,7 +867,7 @@
 		{:else if activeTab === 'versand'}
 			<!-- Zeitplan-Tab — Issue #1738: Kanäle + Zeitplan + Laufzeit kommen aus
 			     dem geteilten VersandTab (context="route", Teilungsregel/Epic #1230).
-			     EditReportConfigSection bleibt nur noch für die Mail-Inhalt-Karte
+			     MailInhaltCard bleibt nur noch für die Mail-Inhalt-Karte
 			     (showChannels/showSchedule=false, Muster WeatherMetricsTab.svelte).
 			     Damit hängt kein Versandkanal mehr an der Wetter-Metrik-Auswahl.
 			     Das isMobileViewport-Gate hält — wie bei WeatherMetricsTab unten —
@@ -877,7 +877,7 @@
 			{#if !isMobileViewport}
 			<div style="padding: 32px 40px 60px; max-width: 720px;">
 				<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} />
-				<EditReportConfigSection bind:reportConfig mode="create" showChannels={false} showSchedule={false} />
+				<MailInhaltCard bind:reportConfig />
 			</div>
 			{/if}
 		{/if}
@@ -1160,7 +1160,7 @@
 				{#if isMobileViewport}
 				<div style="padding: 16px 16px 60px;">
 					<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} />
-					<EditReportConfigSection bind:reportConfig mode="create" showChannels={false} showSchedule={false} />
+					<MailInhaltCard bind:reportConfig />
 				</div>
 				{/if}
 			{/if}

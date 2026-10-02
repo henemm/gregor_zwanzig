@@ -280,7 +280,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 	});
 
 	// Regressionsschutz #774 (Fix-Loop 1 / F001): das neue Absichts-Gate darf
-	// nur die Normalisierungs-Rueckschreibung von EditReportConfigSection beim
+	// nur die Normalisierungs-Rueckschreibung von MailInhaltCard beim
 	// Mounten blocken (AC-6), nicht einen echten Nutzerklick auf eine der
 	// E-Mail-Inhalt-Checkboxen. Sonst waere AC-6 auf Kosten von #774 "gefixt".
 	test('#774-Regression: echter Checkbox-Klick in der E-Mail-Inhalt-Karte speichert weiterhin und bleibt nach Reload erhalten', async ({

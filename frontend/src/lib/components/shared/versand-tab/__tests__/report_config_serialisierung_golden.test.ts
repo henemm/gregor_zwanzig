@@ -12,7 +12,7 @@
 // Der Payload-Bau (`enabled = morning || evening`, Feldmenge, `toHHMMSS`) und der
 // Startzustand aus dem geladenen Blob stehen heute NUR im `$effect`- bzw.
 // `onMount`-Rumpf von VersandTab.svelte (:163-211) und
-// EditReportConfigSection.svelte (:165-173, :277-279). `$effect`/`onMount` laufen
+// MailInhaltCard.svelte (:165-173, :277-279). `$effect`/`onMount` laufen
 // unter svelte/server nie, `mergeReportConfig` allein ist nicht die Payload-
 // Funktion. In /50 wird der Bau VERHALTENSGLEICH in ein reines Modul gezogen
 // (Vorbild weatherMetricsSavePayload.ts); beide Komponenten rufen es auf:
@@ -90,7 +90,7 @@ async function ladeModul(): Promise<PayloadModul> {
 		assert.fail(
 			'reportConfigPayload.ts fehlt — reine Payload-Funktion (ladeReportZustand + ' +
 				'baueReportConfigPayload) entsteht in /50 durch verhaltensgleiches Herausziehen aus ' +
-				'VersandTab.svelte/EditReportConfigSection.svelte (shared/versand-tab/reportConfigPayload.ts)'
+				'VersandTab.svelte/MailInhaltCard.svelte (shared/versand-tab/reportConfigPayload.ts)'
 		);
 	}
 	const mod = await import(pathToFileURL(datei).href);

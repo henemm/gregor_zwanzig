@@ -6,7 +6,7 @@
 //
 // Zwei Naehte, beide echt gerendert bzw. echt gerufen:
 //   1. der kontextfreie Helfer `channelConnectionStatus` — die gemeinsame
-//      Quelle beider Aufrufer (VTBriefingChannels, EditReportConfigSection);
+//      Quelle beider Aufrufer (VTBriefingChannels, die frühere Report-Config-Section (#2277 S5 entfernt));
 //   2. der context-bewusste Baustein `VTBriefingChannels.svelte`, gerendert
 //      EINMAL mit context="route" und EINMAL mit context="vergleich" — die
 //      Pendant-Regel (CLAUDE.md) verlangt identisches Verhalten in beiden
@@ -204,6 +204,31 @@ describe('#2406 AC-14 — unbestaetigte SMS-Nummer erscheint nicht als sendebere
 			'AC-14: bestaetigt und unbestaetigt duerfen nicht denselben Text zeigen.'
 		);
 	});
+
+	// Uebernommen aus dem entfernten sms_unbestaetigt_trip_editor.test.ts (#2277 S5, AC-9):
+	// der Hinweis `channel-sms-hint` wird von drei Zweigen getragen — deshalb den TEXT pruefen.
+	for (const context of ['route', 'vergleich'] as const) {
+		test(`unbestaetigte_nummer_erklaert_den_grund_im_hinweis_${context}`, () => {
+			const hinweis = textZuTestId(renderKanaele(PROFIL_UNBESTAETIGT, context), 'channel-sms-hint');
+			assert.ok(
+				hinweis.includes('nicht bestätigt'),
+				`AC-14 (${context}): der Hinweis muss sagen, dass die Nummer nicht bestaetigt ist — bekommen: „${hinweis}".`
+			);
+			assert.ok(
+				!hinweis.includes('fehlt'),
+				`AC-14 (${context}): der Hinweis darf nicht behaupten, die Nummer fehle. Bekommen: „${hinweis}".`
+			);
+		});
+
+		test(`bestaetigte_nummer_zeigt_keinen_sms_hinweis_${context}`, () => {
+			const html = renderKanaele(PROFIL_BESTAETIGT, context);
+			assert.equal(
+				html.includes('data-testid="channel-sms-hint"'),
+				false,
+				`AC-14 Gegenprobe (${context}): bei bestaetigter Nummer darf kein SMS-Hinweis erscheinen.`
+			);
+		});
+	}
 
 	test('bestaetigte_nummer_bleibt_schaltbar', () => {
 		for (const context of ['route', 'vergleich'] as const) {

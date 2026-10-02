@@ -207,7 +207,7 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 		// gespeicherten Endzustand zu veraendern: ein Tab-Besuch allein loest
 		// laut bestehender Gate-Semantik (weatherSaveGate) KEINEN Speichervorgang
 		// aus (Vorbild: "Reiter öffnen ohne Änderung → kein PUT" im Bestand) --
-		// `report-show-outlook` (EditReportConfigSection.svelte) ist NICHT
+		// `report-show-outlook` (MailInhaltCard.svelte) ist NICHT
 		// geeignet, weil dieses Feld ausserhalb von display_config liegt und
 		// laut Bestandstest NUR den Trip-PUT (nicht weather-config) ausloest.
 		// Stattdessen: im E-Mail-Reiter (SMS bleibt unberuehrt) eine aktuell

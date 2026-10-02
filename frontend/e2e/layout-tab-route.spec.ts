@@ -19,7 +19,7 @@ const TRIP_ID = 'e2e-layout-tab-route';
 const OVERFLOW_TRIP_ID = 'e2e-layout-tab-route-overflow';
 
 // Pre-normalisierter report_config-Blob — spiegelt EXAKT die Defaults, die
-// `EditReportConfigSection`s Mount-Effekt aus einem leeren Objekt erzeugen
+// `MailInhaltCard`s Mount-Effekt aus einem leeren Objekt erzeugen
 // würde. Ohne das (Nebenbefund, siehe Rückmeldung an PO): der Mount-Effekt
 // überschreibt `reportConfig` bereits synchron beim ersten Render, bevor der
 // Metriken-Katalog geladen ist — der dadurch ausgelöste `scheduleAutoSave()`

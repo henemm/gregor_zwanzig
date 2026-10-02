@@ -7,7 +7,7 @@
 // aufgerufen und sein Rückgabewert bewertet.
 //
 // RED heute: `../channelContactLabel.ts` existiert nicht (ERR_MODULE_NOT_FOUND) —
-// die sechs Ternary-Duplikate in VTBriefingChannels.svelte/EditReportConfigSection.svelte
+// die sechs Ternary-Duplikate in VTBriefingChannels.svelte/die frühere Report-Config-Section (#2277 S5 entfernt)
 // sind bislang der einzige Ort, an dem diese Ableitung passiert.
 //
 // Pfadregel #1409: alle Pfade relativ zu DIESER Datei.

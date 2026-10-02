@@ -98,7 +98,7 @@
 	let connectionStatus = $derived(channelConnectionStatus(profile));
 	let contactLabel = $derived(channelContactLabel(profile));
 	// Issue #1717 S3: geteilter Zustands-Helfer — dieselbe Quelle, die
-	// EditReportConfigSection benutzt (keine zweite Kopie der Logik).
+	// die frühere Report-Config-Section (#2277 S5 entfernt) benutzt (keine zweite Kopie der Logik).
 	let premiumSms = $derived(premiumSmsChannelState(profile));
 
 	onMount(() => {

@@ -5,7 +5,7 @@
 //
 // Ziel-Oberfläche (migriert durch Fix #1047, docs/specs/modules/fix_1047_mail_content_tab_restore.md):
 // Trip-Detail-Seite /trips/[id]?tab=weather, Reiter "Wetter-Metriken" (= "Inhalt",
-// EditReportConfigSection.svelte eingebunden über WeatherMetricsTab.svelte). Der
+// MailInhaltCard.svelte eingebunden über WeatherMetricsTab.svelte). Der
 // Reiter "Briefing-Zeitplan" (?tab=briefings) zeigt die Karte seit #736 bewusst NICHT
 // mehr (Kanal-/Zeitplan-Reiter); zwischenzeitlich (#942) fehlte sie versehentlich auch
 // im Wetter-Metriken-Reiter — Fix #1047 stellt sie dort wieder her.

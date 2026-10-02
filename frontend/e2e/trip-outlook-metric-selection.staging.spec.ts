@@ -227,7 +227,7 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 		// Gegenprobe: der EINE vorhandene Schalter lebt weiterhin in der
 		// Mail-Inhalt-Karte — und die sitzt im SELBEN Wetter-Metriken-Reiter,
 		// nicht im Versand-Reiter: `WeatherMetricsTab.svelte:1780-1787` bindet
-		// `EditReportConfigSection` (Abschnitt 'report_config') inline ein,
+		// `MailInhaltCard` (Abschnitt 'report_config') inline ein,
 		// `BriefingScheduleTab.svelte:117-119` haelt ausdruecklich fest
 		// "Mail-Inhalt bleibt unangetastet im Inhalt-Tab". Also ohne Tab-Wechsel.
 		await expect(
