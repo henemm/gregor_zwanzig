@@ -622,6 +622,18 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      einen `capture_ids`-Listenparameter für den Fall mehrerer gebündelter Mitschnitte (z.B.
      mehrere Warnquellen im selben Trip). Spec:
      `docs/specs/modules/feat_1944_warn_mitschnitt_herkunft.md`.
+   - **Nachtrag #2050 Sz.12 (2026-10-02): fehlende Vergleichsbasis.** Kann ein Alarm-Check
+     mangels gültiger Vergleichsbasis nicht prüfen (kein/abgelehnter Briefing-Anker:
+     `missing`, `not_briefing_backed`, `too_old`, `wrong_day`), steht das als Unterdrückung
+     mit Grund `no_reference_basis` im Alarm-Protokoll (Felder `reference_gap`,
+     `reference_day`, optional `reference_at`; `alert_log.py`). Je Trip/Ortsvergleich, laufendem
+     Tag und Untergrund nur einmal (Entdopplung), mandantengetrennt, fail-soft. Gilt für
+     Trip-Alarm (nur laufender Trip, nur Abweichungszweig, `trip_alert.py`) und Ortsvergleich
+     (`compare_alert.py`); es gibt weiterhin keinen frischen Wetterabruf ohne Anker, die
+     bisherige Diagnosedatei schreibt unverändert. Im nächsten Briefing erscheint unter
+     „FEHLGESCHLAGEN" das Label „Kein Alarm möglich: keine gültige Vergleichsbasis"
+     (`undelivered_hint.py`); ohne Briefing-Zeitstempel liefert das Ersatz-Fenster nur diese
+     Einträge. Spec: `docs/specs/modules/feat_2050_sz12_fehlende_vergleichsbasis.md`.
    - Spec: `docs/specs/modules/alarm_eingangsprotokoll.md`.
 
 **Datenfluss:**
