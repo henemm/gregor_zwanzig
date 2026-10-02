@@ -241,13 +241,31 @@ export function relativeLastSent(iso: string | undefined): string {
  * an (auch leer) — der Kanal-Umschalter zeigte Telegram/SMS darum unabhängig
  * vom echten Opt-in an. Signal hat kein Opt-in-Feld und kann damit strukturell
  * nicht mehr auftauchen (statt über eine Allowlist gefiltert zu werden).
+ *
+ * Issue #2229 (AC-1): Premium-SMS wird aus `send_premium_sms` abgeleitet
+ * (Opt-in, nicht Zustellbarkeit — die meldet der Versand-Tab).
  */
 export function presetChannels(preset: ComparePreset): string[] {
 	// E-Mail ohne Opt-out (KL-6) → immer aktiv, unabhängig von `empfaenger`.
 	const result: string[] = ['Email'];
 	if (preset.send_telegram === true) result.push('Telegram');
 	if (preset.send_sms === true) result.push('SMS');
+	// Issue #2229 (AC-1): Premium-SMS ist vierter Versandkanal (ADR-0049) und
+	// folgt wie Telegram/SMS dem Opt-in — Muster `_home/cockpitHelpers.ts`.
+	if (preset.send_premium_sms === true) result.push('Premium-SMS');
 	return result;
+}
+
+/**
+ * Issue #2229 (AC-3): Hinweis neben dem SMS-Reiter der Vergleichs-Vorschau.
+ * Premium-SMS hat keinen eigenen Inhalt (sie sendet den SMS-Text, ADR-0049),
+ * deshalb kein vierter Reiter, sondern dieser Hinweis — nur beim SMS-Reiter und
+ * nur bei eingeschalteter Premium-SMS, sonst leer.
+ */
+export function premiumSmsPreviewNote(preset: ComparePreset, channel: string): string {
+	return channel === 'sms' && preset.send_premium_sms === true
+		? 'Premium-SMS versendet denselben Text'
+		: '';
 }
 
 /**

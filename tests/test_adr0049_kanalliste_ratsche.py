@@ -65,8 +65,9 @@ def finde_unmarkierte(text: str) -> list[int]:
     return funde
 
 
-def _scan_repo() -> list[str]:
-    funde: list[str] = []
+def _gescannte_dateien() -> list[Path]:
+    """Alle Dateien (relativ zu REPO), die die Ratsche liest."""
+    dateien: list[Path] = []
     for wurzel in SCAN_ROOTS:
         basis = REPO / wurzel
         if not basis.is_dir():
@@ -74,12 +75,29 @@ def _scan_repo() -> list[str]:
         for pfad in sorted(basis.rglob("*")):
             if pfad.suffix not in SUFFIXES or not pfad.is_file():
                 continue
-            if _ist_testdatei(pfad.relative_to(REPO)):
+            rel = pfad.relative_to(REPO)
+            if _ist_testdatei(rel):
                 continue
-            text = pfad.read_text(encoding="utf-8", errors="replace")
-            for nr in finde_unmarkierte(text):
-                funde.append(f"{pfad.relative_to(REPO)}:{nr}")
+            dateien.append(rel)
+    return dateien
+
+
+def _scan_repo() -> list[str]:
+    funde: list[str] = []
+    for rel in _gescannte_dateien():
+        text = (REPO / rel).read_text(encoding="utf-8", errors="replace")
+        for nr in finde_unmarkierte(text):
+            funde.append(f"{rel}:{nr}")
     return funde
+
+
+# Bewusst NICHT aus SCAN_ROOTS abgeleitet — sonst waere die Abdeckungspruefung
+# vakuum (eine gekuerzte SCAN_ROOTS wuerde sich selbst bestaetigen).
+ERWARTETE_WURZELN = ("frontend/src", "src", "api")
+BEKANNT_MARKIERTE_STELLEN = (
+    "frontend/src/lib/components/shared/layout-tab/ltChannels.ts",
+    "src/services/report_config_resolver.py",
+)
 
 
 def test_keine_unmarkierte_dreier_kanalliste_im_quelltext():
@@ -94,6 +112,18 @@ def test_keine_unmarkierte_dreier_kanalliste_im_quelltext():
         "Marke 'ADR-0049' mit Begruendung in die Zeile oder die Zeile davor.\n  "
         + "\n  ".join(funde)
     )
+
+
+def test_scan_deckt_jede_erwartete_wurzel_ab():
+    """AC-5 Abdeckung: jede Wurzel wird gescannt, bekannte Stellen werden gesehen."""
+    gescannt = _gescannte_dateien()
+    for wurzel in ERWARTETE_WURZELN:
+        teile = Path(wurzel).parts
+        treffer = [d for d in gescannt if d.parts[: len(teile)] == teile]
+        assert treffer, f"Scan-Wurzel '{wurzel}' wird nicht gescannt (keine Datei daraus gelesen)"
+    gescannte_namen = {d.as_posix() for d in gescannt}
+    for stelle in BEKANNT_MARKIERTE_STELLEN:
+        assert stelle in gescannte_namen, f"Bekannt markierte Stelle nicht gescannt: {stelle}"
 
 
 def test_selbsttest_unmarkierte_liste_ergibt_fund():

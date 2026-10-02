@@ -26,7 +26,7 @@ import {
 /** Die drei Metrik-Kanaele des Compare-Briefings. Premium-SMS ist seit #2275
  *  auch Versandkanal des Vergleichs-Briefings, traegt aber den SMS-Inhalt und
  *  hat deshalb keine eigene Metrik-Auswahl (ADR-0049). */
-export const COMPARE_CHANNEL_IDS: ChannelId[] = ['email', 'telegram', 'sms'];
+export const COMPARE_CHANNEL_IDS: ChannelId[] = ['email', 'telegram', 'sms']; // ADR-0049: nur Metrik-Kanäle
 
 /** Kanal-Overrides der Uebersicht: `null` = nie editiert (folgt der
  *  Grundauswahl), `[]` = bewusste Leerauswahl fuer diesen Kanal. */
