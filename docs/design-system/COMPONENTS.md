@@ -185,9 +185,6 @@ Diese sind nicht Foundation, aber kanonisch:
 | `<WxDrillDownPanel>` | Slide-Panel (Desktop) / Bottom-Sheet (Mobile) für Wetter aus Trip-Detail / Compare. |
 | `<TripStageCard>` | Etappen-Zeile in Trip-Detail. |
 | `<MapEditor>` | Karten-Editor für Wegpunkte. Keine Lat/Lon-Inputs. |
-| `<MapControl>` | Neutraler Karten-Werkzeug-Cluster auf Vollbild-Karten. `tools: string[]` (z.B. `['add-waypoint', 'map-style', 'search']`), `position: 'top-right'`. 44×44 px je Button, `--g-card` Hintergrund, kein Akzent. **Kein FAB** — siehe AP-012. |
-| `<ProfileSheetEmbedded>` | Bottom-Sheet im Wegpunkt-Editor (Mobile). Snaps: `peek: 92px`, `half: 320px`, `full: 540px`. Enthält `<EditorProfileSVG>` + Wegpunkt-Liste. |
-| `<EditorProfileSVG>` | Vereinfachtes Höhenprofil für Mobile-Bottom-Sheet. `width: 343px`, `height: 70px`. Synchron mit Karte via `selectedIndex`. |
 | `<EtappenStrip>` | Horizontaler Etappen-Umschalter im Editor (Drag-Sort + Pause-Insert). 70 px hoch, `StageCard` je Etappe. Sitzt direkt unter der Tab-Leiste. |
 | `<CompareMatrix>` | Kachel-Grid mit Score, Metrics, Winner-Highlight. |
 | `<CompareLocationsRail>` | Linke 280-px-Sidebar mit Gruppen + Orten. |
@@ -224,6 +221,7 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.6 | 2026-10-03 | `MapControl`, `ProfileSheetEmbedded`, `EditorProfileSVG` entfernt — keine Aufrufer mehr seit PO-Entscheid F5 (Karte/Höhenprofil entfallen auf Mobile, Spec `mobile_stages_tab_listen_only`) |
 | v1.5 | 2026-09-26 | `MTabBar` ergänzt (Mobile Usability Paket 2, geteilter Tab-Band mit scrollIntoView + A11y; Spec `mobile_tab_leisten_mtabbar`) |
 | v1.4 | 2026-09-23 | `StageCardM` ergänzt (Mobile Usability Paket 1, Listen-only Etappen-Tab; Spec `mobile_stages_tab_listen_only`) |
 | v1.3 | 2026-09-19 | Mobile-Shell S2: `TopAppBar`/Hamburger-`Drawer` raus, `BottomNav` mit Konto-Kreis, `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, `Sheet snap="auto"` |
