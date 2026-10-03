@@ -75,7 +75,9 @@ _UHR = datetime.fromisoformat(_UHR_TIROL)
 _ORTSZEIT = ZoneInfo("Europe/Vienna")  # Etappe liegt in Tirol (tz_for_coords)
 _REFERENZ = ROOT / "tests" / "fixtures" / "radar_folgepunkte" / "punkt0_referenz.json"
 
-_SCHWELLE_MIN = 55  # RADAR_ONSET_THRESHOLD_MIN — bewusst als Literal des Tests
+# RADAR_ONSET_THRESHOLD_MIN — bewusst als Literal des Tests. #2261 A-1: die
+# Schwelle ist die Reichweite der Quelle (NOWCAST_HORIZON_MIN), vorher 55.
+_SCHWELLE_MIN = 180
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +402,7 @@ def test_massgeblicher_punkt_fruehester_beginn_dann_dringlichkeit_dann_index():
     WHEN der maßgebliche gewaehlt wird / THEN gewinnt der FRUEHESTE Beginn
     (laufender Regen = 0 Min), bei Gleichstand die hoehere Dringlichkeit,
     dann der kleinere Index; nicht verwertbare Punkte (None, throttled,
-    data_unavailable) und Beginn > 55 Min sind keine Kandidaten.
+    data_unavailable) und Beginn jenseits der Schwelle sind keine Kandidaten.
 
     RED heute: `services.trip_alert.waehle_massgeblichen_punkt` existiert
     nicht (Import im Test, damit jeder Test aus eigenem Grund rot wird)."""
@@ -455,20 +457,20 @@ def test_massgeblicher_punkt_fruehester_beginn_dann_dringlichkeit_dann_index():
 
     # Keine Kandidaten -> „keiner“.
     keine = [
-        None, trocken(), nass(_SCHWELLE_MIN + 1), nass(120),
+        None, trocken(), nass(_SCHWELLE_MIN + 1), nass(_SCHWELLE_MIN + 60),
         NowcastResult(onset_minutes=5, intensity_label=INTENSITY_MODERATE,
                       source="radar", throttled=True),
         NowcastResult(onset_minutes=5, intensity_label=INTENSITY_MODERATE,
                       source="radar", data_unavailable=True),
     ]
     assert waehle(keine) is None, (
-        "Keine Kandidaten (None/trocken/Beginn > 55/throttled/data_unavailable) "
+        "Keine Kandidaten (None/trocken/Beginn > Schwelle/throttled/data_unavailable) "
         "muessen „keiner“ ergeben"
     )
-    # Grenze: genau 55 Minuten ist noch auslösend (`radar_alert_due`).
+    # Grenze: genau an der Schwelle ist noch auslösend (`radar_alert_due`).
     gewaehlt = waehle([trocken(), nass(_SCHWELLE_MIN)])
     assert gewaehlt is not None and gewaehlt[0] == 1, (
-        f"Beginn genau 55 Min ist auslösend: {gewaehlt!r}"
+        f"Beginn genau {_SCHWELLE_MIN} Min ist auslösend: {gewaehlt!r}"
     )
     assert waehle([]) is None, "leere Liste ergibt „keiner“"
 
@@ -505,11 +507,13 @@ def test_folgepunkt_nass_loest_alarm_aus(szenario):
     )
 
 
-def test_beginn_genau_55_min_am_folgepunkt_loest_aus(szenario):
-    """Randfall zu AC-1: genau 55 Min ist `radar_alert_due` noch erfuellt —
-    auch an einem Folgepunkt (faengt eine Auswahl mit `< 55`)."""
+def test_beginn_genau_an_der_schwelle_am_folgepunkt_loest_aus(szenario):
+    """Randfall zu AC-1: genau an der Schwelle (#2261 A-1: 180 Min) ist
+    `radar_alert_due` noch erfuellt — auch an einem Folgepunkt (faengt eine
+    Auswahl mit `<`). Punkt 4 ist der vorletzte: der Nutzer passiert Punkt 5
+    laut Zeitplan erst ~jetzt+177, Fenster-Ende 207 >= 180."""
     s = szenario("ac1-grenze")
-    lauf = s.lauf({4: nass(_SCHWELLE_MIN, menge=3.0, ende=80)})
+    lauf = s.lauf({4: nass(_SCHWELLE_MIN, menge=0.0, ende=None)})
     assert lauf.triggered_count == 1, (
         f"Beginn genau {_SCHWELLE_MIN} Min ueber Punkt 4 muss ausloesen "
         f"(war {lauf.triggered_count})"
@@ -656,17 +660,22 @@ def test_alle_trocken_kein_alarm(szenario):
     )
 
 
-def test_beginn_ueber_55_min_an_allen_punkten_kein_alarm(szenario):
-    """AC-4 GIVEN an ALLEN Punkten beginnt der Regen erst nach mehr als 55
-    Min / WHEN der Pruflauf laeuft / THEN kein Alarm. Auch nicht, wenn ein
-    Punkt knapp daneben liegt (56 Min)."""
+def test_beginn_jenseits_der_schwelle_an_allen_punkten_kein_alarm(szenario):
+    """AC-4 GIVEN an ALLEN Punkten beginnt der Regen erst jenseits der
+    Schwelle (#2261 A-1: 180 Min; vorher 55) / WHEN der Pruflauf laeuft /
+    THEN kein Alarm. Auch nicht, wenn ein Punkt knapp daneben liegt (+1 Min).
+    Die Ergebnisse sind gestellt — ueber die echte Quelle ist ein Beginn
+    jenseits von 180 nicht konstruierbar (Gegenstueck mit echten Frames:
+    `test_vorlauf_horizont.py`)."""
     s = szenario("ac4-spaet")
     lauf = s.lauf({
-        0: nass(80), 1: nass(_SCHWELLE_MIN + 1), 2: nass(60),
-        3: nass(120), 4: nass(70),
+        0: nass(_SCHWELLE_MIN + 25), 1: nass(_SCHWELLE_MIN + 1),
+        2: nass(_SCHWELLE_MIN + 5), 3: nass(_SCHWELLE_MIN + 65),
+        4: nass(_SCHWELLE_MIN + 15),
     })
     assert lauf.triggered_count == 0, (
-        f"AC-4: Beginn > 55 Min an allen Punkten ⇒ kein Alarm: {lauf.triggered_count}"
+        f"AC-4: Beginn > {_SCHWELLE_MIN} Min an allen Punkten ⇒ kein Alarm: "
+        f"{lauf.triggered_count}"
     )
     assert not s.entries(), f"AC-4: kein Versandeintrag: {s.entries()!r}"
 

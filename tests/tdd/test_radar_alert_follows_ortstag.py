@@ -57,7 +57,8 @@ Testpolitik (CLAUDE.md "Test-Politik: Zwei Schichten"):
 Angepasst 2026-08-21 (Issue #2017 Scheibe B, SPEC:
 docs/specs/modules/fix_2017_nowcast_messpunkt.md): Der Nowcast-Abruf erfolgt
 nicht mehr am START-Punkt des gewaehlten Segments, sondern an der zur Mitte
-des Vorwarnfensters (`jetzt + RADAR_ONSET_THRESHOLD_MIN // 2`) interpolierten
+des Vorwarnfensters (`jetzt + RADAR_MEASURE_OFFSET_MIN`, seit #2261 A-1 von der
+Schwelle entkoppelt) interpolierten
 Position darauf. Die Nachweis-Strategie dieser Datei ist unveraendert
 ("Wirkung ueber Koordinaten, nicht ueber einen Alarm-Zaehler") — nur der
 erwartete Punkt wandert von `start_point` auf die Strecke des Segments.
@@ -184,17 +185,17 @@ def _aktives_segment(segments, now_utc):
 
 
 def _zieloffset_minuten() -> int:
-    """Halbes Vorwarnfenster — der Zeitpunkt, fuer den seit #2017 gemessen
-    wird.
+    """Messpunkt-Offset — der Zeitpunkt, fuer den seit #2017 gemessen wird
+    (bis #2261 das halbe Vorwarnfenster, 55 // 2 = 27).
 
-    Ueber die MODUL-Referenz gelesen, nie als `from ... import` gebunden: der
-    Laufzeit-Drift-Waechter aus #2009 (`test_radar_onset_threshold_variance.py`)
-    setzt die Konstante zur Laufzeit um; eine beim Import gebundene Kopie
-    liefe still daran vorbei.
+    Ueber die MODUL-Referenz gelesen, nie als `from ... import` gebunden: eine
+    beim Import gebundene Kopie liefe still an einem Nachziehen der Quelle
+    vorbei. Seit #2261 A-1 eigene Konstante `RADAR_MEASURE_OFFSET_MIN` (27),
+    nicht mehr aus der Schwelle (jetzt = Quell-Horizont 180) berechnet.
     """
     from services import radar_service as radar_service_mod
 
-    return radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+    return radar_service_mod.RADAR_MEASURE_OFFSET_MIN
 
 
 def _messpunkt_der_etappe(segment, now_utc):

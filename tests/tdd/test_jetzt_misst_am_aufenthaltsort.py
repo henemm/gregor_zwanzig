@@ -177,13 +177,14 @@ def _jetzt(monkeypatch, trip, now_utc: datetime):
 def _fenstermitte_offsets() -> list[int]:
     """Die Zieloffsets, die Alarm- bzw. Briefing-Pfad benutzen (#2017).
 
-    Ueber die MODUL-Referenz gelesen, nie beim Import gebunden: der
-    Laufzeit-Drift-Waechter aus #2009 setzt ``RADAR_ONSET_THRESHOLD_MIN`` zur
-    Laufzeit um; eine gebundene Kopie liefe still daran vorbei.
+    Ueber die MODUL-Referenz gelesen, nie beim Import gebunden. Seit #2261
+    A-1 ist der Alarm-Offset von der Schwelle entkoppelt
+    (``RADAR_MEASURE_OFFSET_MIN``, +27) — die Schwelle steht auf dem
+    Quell-Horizont, ihre Haelfte waere der Briefing-Offset (+90).
     """
     from services import radar_service as rs
 
-    return [rs.RADAR_ONSET_THRESHOLD_MIN // 2, rs.NOWCAST_HORIZON_MIN // 2]
+    return [rs.RADAR_MEASURE_OFFSET_MIN, rs.NOWCAST_HORIZON_MIN // 2]
 
 
 # ──────────────────────────────── AC-1 ──────────────────────────────────────
@@ -222,7 +223,7 @@ def test_ac2_zielzeitpunkt_ist_now_utc_und_nicht_die_fenstermitte(monkeypatch):
     GIVEN dieselbe laufende Etappe,
     WHEN  ``/jetzt`` um 11:30 aufgerufen wird,
     THEN  ist der Messzeitpunkt ``now_utc`` SELBST — nicht die Fenstermitte
-          (``RADAR_ONSET_THRESHOLD_MIN // 2`` bzw. ``NOWCAST_HORIZON_MIN // 2``),
+          (``RADAR_MEASURE_OFFSET_MIN`` bzw. ``NOWCAST_HORIZON_MIN // 2``),
           mit der Alarm- und Briefing-Pfad vorauswaehlen. ``/jetzt`` ist keine
           Vorwarnung: der Nutzer fragt nach dem Ort, an dem er STEHT.
 

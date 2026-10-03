@@ -227,34 +227,29 @@ def test_ac4_radar_alert_due_pure_logic():
     """AC-4: Reine Entscheidungsfunktion — Onset <= Schwelle -> Alert fällig.
 
     Issue #2009: geprüft wird gegen die geteilte Schwelle
-    ``RADAR_ONSET_THRESHOLD_MIN`` (55) statt gegen das frühere Literal 20.
-    Damit der ``later``-Fall seine Aussage („ferner Onset löst NICHT aus")
-    behält, wandert er von 45 auf 100 Min — 45 liegt bei Schwelle 55
-    innerhalb des Alarmfensters und hätte den Test ins Gegenteil gekippt.
+    ``RADAR_ONSET_THRESHOLD_MIN`` statt gegen das frühere Literal 20.
+
+    Issue #2261 A-1: die Schwelle ist jetzt die Reichweite der Quelle (180).
+    Der frühere ``later``-Fall („ferner Onset > Schwelle löst NICHT aus") ist
+    über die echte Quelle nicht mehr konstruierbar — ersetzt durch
+    test_vorlauf_horizont.py (#2261) (nasse Frames jenseits des Horizonts,
+    Quelle ohne Frames). Hier bleiben „bald" und „trocken".
     """
-    from services.radar_service import NowcastResult, RADAR_ONSET_THRESHOLD_MIN
+    from services import radar_service as radar_service_mod
+    from services.radar_service import NowcastResult
     from services.trip_alert import radar_alert_due
 
+    schwelle = radar_service_mod.RADAR_ONSET_THRESHOLD_MIN
     soon = NowcastResult(
         onset_minutes=10, intensity_label="Starker Regen", source="radar",
         frames=_frames(10, 8.0),
-    )
-    later = NowcastResult(
-        onset_minutes=100, intensity_label="Leichter Regen", source="radar",
-        frames=_frames(100, 0.3),
     )
     dry = NowcastResult(
         onset_minutes=None, intensity_label="Kein Niederschlag", source="radar",
         frames=_frames(None, 0.0),
     )
-    assert later.onset_minutes > RADAR_ONSET_THRESHOLD_MIN, (
-        "Testvoraussetzung: der 'later'-Fall muss OBERHALB der Schwelle "
-        f"liegen, sonst prueft er das Gegenteil ({later.onset_minutes} vs. "
-        f"{RADAR_ONSET_THRESHOLD_MIN})"
-    )
-    assert radar_alert_due(soon, threshold_min=RADAR_ONSET_THRESHOLD_MIN) is True
-    assert radar_alert_due(later, threshold_min=RADAR_ONSET_THRESHOLD_MIN) is False
-    assert radar_alert_due(dry, threshold_min=RADAR_ONSET_THRESHOLD_MIN) is False
+    assert radar_alert_due(soon, threshold_min=schwelle) is True
+    assert radar_alert_due(dry, threshold_min=schwelle) is False
 
 
 def test_ac4_check_radar_alerts_sends_once_then_throttles():
