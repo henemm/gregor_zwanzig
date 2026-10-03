@@ -2,8 +2,8 @@
 entity_id: mobile_stages_tab_listen_only
 type: feature
 created: 2026-09-23
-updated: 2026-09-23
-status: draft
+updated: 2026-10-03
+status: implemented
 version: "1.0"
 tags: [mobile, usability, frontend, trip-detail, stages, atomic-design]
 ---
@@ -22,7 +22,7 @@ tags: [mobile, usability, frontend, trip-detail, stages, atomic-design]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO „approved", 2026-09-25; Design-Entscheide F1–F7 vom 2026-09-22)
 
 ## Purpose
 
@@ -225,3 +225,13 @@ StageSelectSheet, MapCanvas (kein dynamischer Import mehr im mobilen Pfad)
 
 - 2026-09-23: Initial spec created (nach Design-Doc-Stand „PO-Entscheide
   vollständig, bereit für Spec")
+- 2026-10-03: Umsetzung abgeschlossen und validiert. Iteration 1 (d05f7cbc):
+  StageCardM-Baustein + Katalog v1.4, Listen-only-Mobile-Zweig, Desktop-Hinweis,
+  Titel-Fix F1, Stat-Label 11px — Audit stages-Tab 15/2/15 → 4/1/0. Iteration 2
+  (46137b8b): Wegpunkt-Zeilen aufklappbar (F7), Pause-Wahl am „+ Etappe" (F3),
+  Cascade-Banner inline (F2), mobile JS-Höhenmessung + .mobile-editor entfernt,
+  SortableList onDndReorderEnd + ADR-0024-Changelog. Cleanup (e2d2c41b):
+  verwaiste Komponenten MapControl/ProfileSheetEmbedded/StageSelectSheet/
+  EditorProfileSVG entfernt, Katalog v1.6. Validierung: E2E 8/8 +
+  mobile-tab-bar 11/11 + stages/tabs 18/18, Unit 3134/0; Desktop-Pfade
+  zeichen-identisch (AC-9 in jeder Iteration geprüft).

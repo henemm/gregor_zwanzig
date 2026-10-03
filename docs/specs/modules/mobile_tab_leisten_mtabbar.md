@@ -2,8 +2,8 @@
 entity_id: mobile_tab_leisten_mtabbar
 type: feature
 created: 2026-09-23
-updated: 2026-09-23
-status: draft
+updated: 2026-10-03
+status: implemented
 version: "1.0"
 tags: [mobile, usability, frontend, tabs, a11y, atomic-design]
 ---
@@ -22,7 +22,7 @@ tags: [mobile, usability, frontend, tabs, a11y, atomic-design]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO „approved", 2026-09-25)
 
 ## Purpose
 
@@ -200,4 +200,14 @@ inaktiv: --g-paper-deep / --g-ink-3, mono --g-text-xs; aktiv: transluzent auf Ac
 
 ## Changelog
 
+- 2026-10-03: Umsetzung abgeschlossen und validiert. Iteration 1 (5a94e9fc):
+  MTabBar-Baustein + Katalog v1.5 (Band + Fade, scrollIntoView Mount/Wechsel,
+  WAI-ARIA roving tabindex, 44px-Trigger, Badges neutral), TripTabs umgestellt,
+  lokales Tab-CSS entfernt. Iteration 2 (0c9405d4): CompareTabs auf
+  <MTabBar size="sm"> (AP-006-Drift-Behebung), Orte-Badge-Parität, Desktop-Optik
+  1:1; neue E2E-Spec compare-tab-bar.spec.ts (5/5), stale Contract-Tests
+  (#582 AC-5b, shared_hub overflow-x) auf neue Architektur gezogen, Unit
+  3134/0, Bestandssuites 16 passed. Funde: Tarif-Quota max. 2 aktive
+  Vergleiche (Spec räumt E2E-GZ-Altbestand bei 409 auf); Panel-Segmented
+  rendert ebenfalls role=tab (Tests auf .mtabbar-Scope).
 - 2026-09-23: Initial spec created
