@@ -91,23 +91,25 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		}
 	});
 
-	test('AC-2b: "Etappen & Wegpunkte" Tab ist nicht höher als eine Zeile auf Mobile', async ({
+	test('AC-2b: "Etappen & Wegpunkte" Tab ist einzeilige 44px-Pill auf Mobile', async ({
 		page
 	}) => {
 		/**
 		 * GIVEN: Viewport ist 375×667 px (Mobile)
 		 * WHEN:  Trip-Detail-Seite geladen
-		 * THEN:  Höhe des "stages"-Triggers ist < 40px (einzeilig)
-		 *        Bei Umbruch wäre er ~44px+ (2 Zeilen à ~14px + Padding)
+		 * THEN:  Höhe des "stages"-Triggers entspricht der 44px-Pill des
+		 *         MTabBar (Mobile Usability Paket 2, Spec
+		 *         mobile_tab_leisten_mtabbar — Touch-Trigger ≥44px, fest
+		 *         statt prozentual). Ein umgebrochener Zweizeiler wäre ~60px+;
+		 *         das Einzeilige selbst sichert AC-2 (white-space: nowrap).
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
 		const stagesTab = page.getByTestId('trip-detail-tab-stages');
 		const height = await stagesTab.evaluate((el) => el.getBoundingClientRect().height);
-		// Einzeilig: Padding (0.375rem × 2 = ~12px) + Line-Height (~20px) ≈ 32px
-		// Zweizeilig wäre ≈ 44px+
-		expect(height, `"Etappen & Wegpunkte"-Tab ist ${height}px hoch (Umbruch?)`).toBeLessThan(40);
+		expect(height, `"Etappen & Wegpunkte"-Tab ist ${height}px hoch (Erwartung: 44px-Pill)`).toBeGreaterThanOrEqual(44);
+		expect(height, `"Etappen & Wegpunkte"-Tab ist ${height}px hoch (Umbruch?)`).toBeLessThanOrEqual(50);
 	});
 
 	// ─── AC-3: Aktiver Tab als Pill dargestellt ──────────────────────────────
