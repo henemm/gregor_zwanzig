@@ -8,6 +8,14 @@ version: "1.0"
 tags: [frontend, svelte, trip, weather-config, concurrency, etag, if-match]
 ---
 
+> **Abgeloest durch Issue #1433** (`docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md`):
+> (1) „Discard nach 412" gilt nicht mehr — nach einem 412 bleibt der Stempel stehen, die
+> Registry markiert die Ressource als Konflikt (`markiereKonflikt`/`istKonflikt`), weitere
+> Schreibvorgaenge tragen das alte `If-Match`. (2) Die Annahme „einziger `keepalive`-Aufrufer =
+> Unload-Flush" gilt nicht mehr als Freibrief: bei offenem Konflikt traegt auch ein
+> `keepalive`-Request das `If-Match`. (3) Die Trip-Detailseite verwirft den Stempel nach
+> `PATCH /state` nicht mehr, sondern holt den Trip per GET und uebernimmt `trip` und Stempel gemeinsam.
+
 <!-- Issue #1395 Scheibe S3 — Frontend fuehrt den Stempel: ETag-Registry + Schreib-Warteschlange im Trichter -->
 
 # Issue #1395 Scheibe S3 — Frontend fuehrt den Stempel (ETag-Registry + Schreib-Warteschlange)

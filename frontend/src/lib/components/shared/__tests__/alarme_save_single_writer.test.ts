@@ -54,17 +54,14 @@ test('#1258 S3 F001: AlarmeScheduleTab.svelte enthaelt keinen eigenen saveContro
 // ── Teil (b): EINE konsolidierte Payload traegt alle Felder gemeinsam ─────
 
 test('#1258 S3 F001: buildAlarmeDeliveryPayload konsolidiert Kanaele + Cooldown + Metrik-Level + amtliche-Toggles in EINEM Objekt', () => {
-	const payload = buildAlarmeDeliveryPayload(
-		{
-			officialWarningsEnabled: false,
-			cooldownMinutes: 30,
-			quietFrom: '21:00',
-			quietTo: '07:00',
-			channels: { email: false, telegram: true, sms: false, premium_sms: false },
-			metricLevels: { wind_gust: 'sensibel' }
-		},
-		{ ideal_ranges: { temp: [10, 20] }, region: 'gr20' }
-	) as Record<string, unknown>;
+	const payload = buildAlarmeDeliveryPayload({
+		officialWarningsEnabled: false,
+		cooldownMinutes: 30,
+		quietFrom: '21:00',
+		quietTo: '07:00',
+		channels: { email: false, telegram: true, sms: false, premium_sms: false },
+		metricLevels: { wind_gust: 'sensibel' }
+	}) as Record<string, unknown>;
 
 	// amtliche-Toggles + Cooldown/Quiet — wie bisher.
 	assert.deepEqual(payload.official_warnings, { enabled: false });
@@ -78,14 +75,10 @@ test('#1258 S3 F001: buildAlarmeDeliveryPayload konsolidiert Kanaele + Cooldown 
 		premium_sms: false
 	});
 
-	// Metrik-Level — NEU Teil derselben Payload, als RMW-Spread ueber
-	// currentDisplayConfig (fremde Keys wie ideal_ranges/region bleiben erhalten,
-	// BUG-DATALOSS-Klasse s. CLAUDE.md "Daten-Schema-Reworks").
-	assert.deepEqual(payload.display_config, {
-		ideal_ranges: { temp: [10, 20] },
-		region: 'gr20',
-		metric_alert_levels: { wind_gust: 'sensibel' }
-	});
+	// Metrik-Level — Teil derselben Payload. Issue #1433: Teilfeld statt RMW-Spread
+	// ueber die lokale display_config — fremde Keys bleiben serverseitig erhalten
+	// (einstufiger Go-Merge), sie werden nicht mehr mitgeschickt.
+	assert.deepEqual(payload.display_config, { metric_alert_levels: { wind_gust: 'sensibel' } });
 });
 
 test('#1258 S3 F001: ohne metricLevels bleibt display_config komplett aus der Payload draussen (kein leerer Overwrite)', () => {

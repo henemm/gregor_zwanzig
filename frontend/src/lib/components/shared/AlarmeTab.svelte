@@ -376,20 +376,17 @@
 	// (die haetten sich mit diesem $effect denselben Ein-Slot-Debounce
 	// geteilt und eine der beiden Aenderungen still verworfen).
 	function buildAlarmeSaveFn() {
-		const payload = buildAlarmeDeliveryPayload(
-			{
-				officialWarningsEnabled: routeOfficialWarningsEnabled,
-				cooldownMinutes: routeCooldownMinutes,
-				quietFrom: routeQuietFrom,
-				quietTo: routeQuietTo,
-				channels: routeChannelState,
-				channelThresholds: routeChannelThresholds,
-				metricLevels: routeMetricLevels
-			},
-			trip?.display_config as Record<string, unknown> | undefined
-		);
+		const payload = buildAlarmeDeliveryPayload({
+			officialWarningsEnabled: routeOfficialWarningsEnabled,
+			cooldownMinutes: routeCooldownMinutes,
+			quietFrom: routeQuietFrom,
+			quietTo: routeQuietTo,
+			channels: routeChannelState,
+			channelThresholds: routeChannelThresholds,
+			metricLevels: routeMetricLevels
+		});
 		// #2317 Baustein 1: die Entlade-Option (keepalive) erreicht den PUT.
-		return baueTripSpeicherung<Trip>(api, trip!.id, payload, (updated) => onTripUpdate?.(updated));
+		return baueTripSpeicherung<Trip>(api, trip!.id, payload, (updated) => onTripUpdate?.(updated), 'alarme');
 	}
 
 	// svelte-ignore state_referenced_locally -- Initialwert des Dirty-Check-

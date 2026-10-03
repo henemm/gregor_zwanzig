@@ -1229,9 +1229,23 @@ betroffen.
   sich also auch, wenn der Nutzer inhaltlich nichts geaendert hat. Ohne
   Rueckgabe liefe der zweite Klick desselben Nutzers in einen Konflikt mit sich
   selbst.
-- **Der Flush beim Verlassen der Seite** (`keepalive`) sendet bewusst **ohne**
-  `If-Match` — sonst liefe er in einen unsichtbaren Konflikt und die Aenderung
-  waere weg, ohne dass es jemand erfaehrt.
+- **Der Flush beim Verlassen der Seite** (`keepalive`) traegt seit Issue #1433
+  (2026-10-02) `If-Match` — ein veralteter Stand wird mit `412` abgelehnt statt
+  eine Fremdaenderung still zu ueberschreiben. (Frueher bewusst ohne `If-Match`;
+  abgeloest.)
+- **Trip-Konfliktschutz im Mehrreiter-Fall** (Issue #1433, 2026-10-02, reine
+  Frontend-Aenderung): Nach einem `412` bleibt `If-Match` bis „Nochmal speichern"
+  bestehen (kein Verwerfen des ETags), die Konfliktanzeige bleibt ueber
+  Reiterwechsel sichtbar, „Nochmal speichern" holt Trip und `ETag` gemeinsam neu
+  und sendet alle offenen Teilnutzlasten erneut. Jeder Reiter schreibt nur seine
+  Eigenfelder (`pickEigenfelder`, Teilfeld-Prinzip) — z. B. bleibt per
+  Telegram/SMS gesetztes `skip_next` erhalten. Der Versand-Reiter laeuft ueber die
+  If-Match-Warteschlange; Pausieren/Archivieren flusht, `PATCH`et `/state` und
+  holt Trip+`ETag` gemeinsam neu. Gleiches Verhalten im Ortsvergleich-Hub (AC-20).
+  Auch Schreibwege am Controller vorbei (Ortsvergleich-Kopf, Orte, Pausieren/Aktivieren
+  im Hub, Etappen-Sofortschreiben) melden `412` an den Controller, damit „Nochmal
+  speichern" erscheint (keine Sackgasse bis zum Neuladen).
+  Spec: `docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md`.
 - **Orts-Vergleiche haben zwei Schreibwege auf dieselbe Datei** —
   `PUT /api/compare/presets/{id}` (dediziert) und
   `PUT /api/briefings/{id}?kind=vergleich` (Umgehungsweg, `UpdateBriefingHandler`) —

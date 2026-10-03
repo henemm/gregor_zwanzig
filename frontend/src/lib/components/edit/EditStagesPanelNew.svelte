@@ -28,6 +28,8 @@
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
+	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
+	import { merkeNutzlast } from '$lib/stores/nutzlastStand';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { browser } from '$app/environment';
@@ -189,10 +191,10 @@
 	// Änderung liegt komplett in dieser Funktion; der Speicher-Regler
 	// (`SaveStatus`) bleibt unangetastet, andere Nutzer sind nicht betroffen.
 	function buildStagesSave(): SaveFn {
-		return async (init) => {
-			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages }, init);
-			onTripUpdate?.(updatedTrip);
-		};
+		// Rumpf als Funktion: `stages` wird erst beim Ausloesen gelesen (R6-F001).
+		return baueTripSpeicherung<Trip>(
+			api, tripId!, () => ({ stages }), (updatedTrip) => onTripUpdate?.(updatedTrip), 'etappen'
+		);
 	}
 	function scheduleSave(): void {
 		if (!saveController || !tripId) return;
@@ -446,6 +448,17 @@
 						onTripUpdate?.(updatedTrip);
 					}
 				} catch (e: unknown) {
+					if ((e as { status?: number })?.status === 412) {
+						// Issue #1433 Fix-Loop: Konflikt statt Sackgasse. Das alte If-Match bleibt bis
+						// „Nochmal speichern" stehen — ein zurueckgestellter Vorgang scheiterte sonst
+						// immer wieder. Die Kaskade ist die Antwort des Nutzers: sie bleibt stehen
+						// (Seitenstand = Server ⊕ ausstehende Nutzlast) und der Eintrag 'etappen' liest
+						// beim Retry den lebenden Stand. Kein `init` (das Abbruch-Signal gilt nur hier).
+						stages = withTargets(stages);
+						cascade = { ...active, done: true };
+						saveController.meldeKonflikt(merkeNutzlast(buildStagesSave(), { stages }), e);
+						return;
+					}
 					// R6-F002: der Abbruch nach der Obergrenze braucht eine Meldung, die
 					// erklärt, was los ist — „Speichern fehlgeschlagen" allein sagt dem
 					// Nutzer im Funkloch nichts.

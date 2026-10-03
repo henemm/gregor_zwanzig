@@ -18,6 +18,7 @@
 		isRuntimeExceeded
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
+	import { browser } from '$app/environment';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
@@ -28,8 +29,9 @@
 		starteNachladenNachEntladen,
 		vergleichNachladeQuelle
 	} from '$lib/stores/nachEntladenNachladen';
-	import { api } from '$lib/api';
-	import { adoptEtagFromPageLoad } from '$lib/etagRegistry';
+	import { api, getMitFassung } from '$lib/api';
+	import { baueSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
+	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad } from '$lib/etagRegistry';
 	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type ComparePreset } from '$lib/types';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
@@ -51,6 +53,8 @@
 	// Issue #2375: Seitenaufbau-ETag uebernehmen (Trip-Muster trips/[id]/+page.svelte),
 	// damit schon der ERSTE Schreibvorgang nach dem Laden `If-Match` traegt.
 	// Bewusst nur von `data` abhaengig, nicht vom lokalen `currentPreset`.
+	// Fix-Loop 1 (#1433, F003): frischer Seitenaufbau beendet einen offenen Konflikt (Paritaet zum Trip).
+	const seitenaufbauStempelUebernommen = browser && data.etag ? adoptEtagBeiSeitenaufbau(data.preset.id, data.etag) : false;
 	$effect(() => {
 		if (data.etag) adoptEtagFromPageLoad(data.preset.id, data.etag);
 	});
@@ -89,6 +93,35 @@
 	let uebernommeneFassung = $state(0);
 	let tabNachUebernahme = $state<string | null>(null);
 
+	// Fix-Loop 1 (#1433, F001/AC-20): „Nochmal speichern" gibt den per GET geholten
+	// Vergleich an die Seite, BEVOR es die Eintraege erneut sendet (Paritaet zu
+	// /trips/[id]); der Hub baut sich danach neu auf, mit dem offenen Reiter.
+	// Fix-Loop 2 (F101): anders als beim Trip wird `currentPreset` bei 'geholt' NICHT gesetzt —
+	// CompareTabs.svelte:717 hydriert den offenen Reiter reaktiv auf jede neue `preset`-
+	// Referenz neu und wuerde die sichtbare Eingabe mit dem GET-Stand ueberschreiben. Die
+	// AC-19-Uebernahme erfolgt in Compare erst nach vollem Retry-Erfolg ('wiederholt'):
+	// dann frisch holen (der GET-Stand von vorher enthielte die gerade gesendeten Felder
+	// nicht) und den Hub neu aufbauen. Scheitert dieser GET, bleibt der Hub unangetastet.
+	const abmeldenUebernahme = hubSaveCtl.registriereUebernahme((_stand, phase) => {
+		if (phase === 'wiederholt') void uebernehmeFrischenVergleich();
+	});
+
+	// Fix-Loop 3 (F207): der GET braucht Zeit. Kam danach etwas Neues (ausstehende/laufende
+	// Eingabe, anderer Speichervorgang ⇒ Stempel der Registry hat gewechselt), ist der
+	// geholte Stand AELTER als der Stempel — dann KEIN Neuaufbau (nie nur eines von beiden;
+	// Muster `uebernehmeNachStatusAenderung` der Trip-Seite).
+	async function uebernehmeFrischenVergleich(): Promise<void> {
+		try {
+			const frisch = await getMitFassung<ComparePreset>(`/api/compare/presets/${data.preset.id}`);
+			if (!frisch.inRegistry || hubSaveCtl.hasPending || hubSaveCtl.state !== 'idle') return;
+			tabNachUebernahme = new URL(window.location.href).searchParams.get('tab');
+			currentPreset = frisch.daten;
+			uebernommeneFassung += 1;
+		} catch {
+			/* kein Neuaufbau: der Reiter zeigt bereits die gespeicherte Eingabe */
+		}
+	}
+
 	onMount(() => {
 		const abmelden = speicherAnmeldestelle?.anmelden(hubSaveCtl);
 		const nachladen = starteNachladenNachEntladen<ComparePreset>({
@@ -104,6 +137,7 @@
 		});
 		return () => {
 			abmelden?.();
+			abmeldenUebernahme();
 			nachladen.stoppen();
 		};
 	});
@@ -167,20 +201,34 @@
 		nameSaveError = null;
 		isEditingName = false;
 	}
+	// Issue #1433 Fix-Loop: ein Kopf-Schreibvorgang (nur das Eigenfeld, eigener Eintrag je
+	// Feld). Ein 412 geht an den Controller („Nochmal speichern", Muster TripHeader) — sonst
+	// Sackgasse, weil das alte If-Match bis zum Retry stehen bleibt. Liefert den Text fuer
+	// die lokale Fehleranzeige, bei Erfolg oder Konflikt `null` (die Konfliktanzeige zeigt).
+	async function speichereKopf(rumpf: Record<string, unknown>, feld: string, nachErfolg: () => void): Promise<string | null> {
+		const pfad = `/api/compare/presets/${currentPreset.id}`;
+		const speichern = baueSpeicherung<ComparePreset>(api, pfad, rumpf, (updated) => {
+			// Waehrend „Nochmal speichern" NICHT uebernehmen: eine neue `preset`-Referenz baut
+			// die Reiter in CompareTabs neu auf, ueber Eingaben, die der Retry gleich noch
+			// sendet (F101). Der Neuaufbau folgt nach vollem Erfolg ('wiederholt').
+			if (!hubSaveCtl.imWiederholen) currentPreset = updated;
+			nachErfolg();
+		}, `kopf-${feld}`);
+		try {
+			await speichereOderMeldeKonflikt(speichern, hubSaveCtl);
+			return null;
+		} catch (e: unknown) {
+			return (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+		}
+	}
+
 	async function saveName(): Promise<void> {
 		nameSaving = true;
 		nameSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				name: editName
-			});
-			currentPreset = updated;
+		nameSaveError = await speichereKopf({ name: editName }, 'name', () => {
 			isEditingName = false;
-		} catch (e: unknown) {
-			nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			nameSaving = false;
-		}
+		});
+		nameSaving = false;
 	}
 
 	function startRegionEdit(): void {
@@ -196,32 +244,17 @@
 	async function saveRegion(): Promise<void> {
 		regionSaving = true;
 		regionSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				display_config: { region: editRegion }
-			});
-			currentPreset = updated;
+		regionSaveError = await speichereKopf({ display_config: { region: editRegion } }, 'region', () => {
 			isEditingRegion = false;
-		} catch (e: unknown) {
-			regionSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			regionSaving = false;
-		}
+		});
+		regionSaving = false;
 	}
 
 	async function saveProfil(value: ActivityProfile): Promise<void> {
 		profilSaving = true;
 		profilSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				profil: value
-			});
-			currentPreset = updated;
-		} catch (e: unknown) {
-			profilSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			profilSaving = false;
-		}
+		profilSaveError = await speichereKopf({ profil: value }, 'profil', () => {});
+		profilSaving = false;
 	}
 
 	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.

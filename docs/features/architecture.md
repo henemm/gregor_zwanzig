@@ -826,7 +826,7 @@ Getter `laufendeSpeicherung` (den gerade im Netz laufenden PUT); `+layout.svelte
 per Svelte-Context (`stores/aktiveSpeicherung.ts`, Schlüssel `'aktive-speicherung'`) eine
 Anmeldestelle bereit, an der `trips/[id]`/`compare/[id]` ihren `SaveStatus` an-/abmelden — der
 Update-Hinweis (#2316) wartet darüber vor `SKIP_WAITING` eine ausstehende Speicherung regulär
-(ohne keepalive, mit If-Match) ab, statt einen laufenden PUT durch den Reload abzuschneiden. Im
+(ohne keepalive, mit If-Match; der Unload-Flush selbst traegt seit #1433 ebenfalls If-Match) ab, statt einen laufenden PUT durch den Reload abzuschneiden. Im
 Ortsvergleich wirft die Idealwerte-Speicherfunktion einen gescheiterten PUT jetzt an den
 aufrufenden Speicher-Takt weiter, statt ihn selbst zu schlucken — sonst hätte `SaveStatus`
 fälschlich „gespeichert" gemeldet. Seit #2276 S3 lebt diese Funktion in

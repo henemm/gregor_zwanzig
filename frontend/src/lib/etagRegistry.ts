@@ -12,6 +12,31 @@
 
 const knownEtags = new Map<string, string>();
 const writeQueues = new Map<string, Promise<unknown>>();
+// Issue #1433: Ressourcen, bei denen ein Schreibvorgang mit 412 abgelehnt wurde
+// („jemand anderes hat inzwischen geaendert"). Der alte Stempel bleibt stehen,
+// jeder weitere Schreibvorgang traegt ihn weiter und wird wieder abgelehnt —
+// kein unbedingtes Schreiben nach einem 412. Endet nur durch `loescheKonflikt`
+// (Retry nach frischem GET) oder Neuladen der Seite.
+const konflikte = new Set<string>();
+
+/** Markiert die Ressource als im Konflikt (der Stempel bleibt unveraendert). */
+export function markiereKonflikt(tripId: string): void {
+	konflikte.add(tripId);
+	// Veraenderung des Eintrags im Sinne von F001: ein gleichzeitig laufender,
+	// nicht serialisierter Lesevorgang darf seinen (nun fraglichen) Stempel nicht
+	// still uebernehmen.
+	bumpVersion(tripId);
+}
+
+/** true, solange nach einem 412 noch kein Retry den Konflikt aufgeloest hat. */
+export function istKonflikt(tripId: string): boolean {
+	return konflikte.has(tripId);
+}
+
+/** Hebt die Konflikt-Markierung auf (nur nach frischem GET der Ressource). */
+export function loescheKonflikt(tripId: string): void {
+	konflikte.delete(tripId);
+}
 
 /**
  * F001 — zaehlt JEDE Veraenderung des Eintrags einer Trip (Setzen wie Verwerfen).
@@ -109,10 +134,28 @@ export function adoptEtagFromPageLoad(tripId: string, etag: string): boolean {
 }
 
 /**
- * Verwirft den gemerkten Stand. Noetig nach jedem Vorgang, der die Trip-Datei
- * veraendert, ohne einen neuen Stempel zu liefern (`PATCH /state`), und nach
- * einer `412`-Ablehnung — die traegt laut S2 bewusst keinen neuen Stempel.
- * Ohne Verwerfen scheiterte jeder weitere Versuch endlos am selben Wert.
+ * Fix-Loop 1 (#1433, F003): Stempel beim AUFBAU einer frischen Seiteninstanz
+ * (SvelteKit-Navigation weg und zurueck, Neuladen). Trip und Stempel kommen dort
+ * gemeinsam vom Server und ersetzen den lokalen Stand — ein offener Konflikt dieser
+ * Ressource endet damit („bleibt sichtbar, bis der Nutzer es ausfuehrt oder neu
+ * laedt"). Ohne Konflikt gilt unveraendert die Regel von `adoptEtagFromPageLoad`.
+ * NUR im Skript-Kopf der Seite aufrufen (einmal je Instanz), NIE in einem Effekt:
+ * ein erneut laufendes `load()` bei gemounteter Seite haelt den alten `trip`.
+ */
+export function adoptEtagBeiSeitenaufbau(tripId: string, etag: string): boolean {
+	if (konflikte.has(tripId)) {
+		konflikte.delete(tripId);
+		setKnownEtag(tripId, etag);
+		return true;
+	}
+	return adoptEtagFromPageLoad(tripId, etag);
+}
+
+/**
+ * Verwirft den gemerkten Stand. Noetig nach einem Vorgang, der die Trip-Datei
+ * veraendert, ohne einen neuen Stempel zu liefern. Seit #1433 ruft `api.ts` es
+ * NICHT mehr nach einem 412 auf (Konflikt-Sperre: `markiereKonflikt`) und
+ * `PATCH /state` ersetzt es durch GET + gemeinsame Adoption.
  */
 export function discardEtag(tripId: string): void {
 	knownEtags.delete(tripId);
@@ -140,6 +183,7 @@ export function clearEtagRegistry(): void {
 	knownEtags.clear();
 	writeQueues.clear();
 	etagVersions.clear();
+	konflikte.clear();
 }
 
 /**

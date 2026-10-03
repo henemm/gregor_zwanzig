@@ -7,6 +7,8 @@
 	// Issue #1269 (c): ohne Nutzergeste kein Schreibzugriff — derselbe Gate wie
 	// im Inhalt-Tab (weatherSaveGate.ts), kein Sonderweg.
 	import { weatherSaveGate } from './weatherSaveGate.ts';
+	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
+	import { pickEigenfelder, VERSAND_REPORT_KEYS } from '$lib/components/shared/pickEigenfelder';
 	// Issue #1269 Fix-Loop 1 (Adversary F001): Anzeige aus dem Inhalts-Diff
 	// treiben (nicht nur aus dem Gate) — identisch zu WeatherMetricsTab.svelte
 	// und CompareEditor.svelte (dirty-$derived), sonst AC-7-Asymmetrie.
@@ -36,15 +38,19 @@
 	let userTouched = $state(false);
 
 	// Issue #758: build save function for the current reportConfig state.
-	// F002: keepalive:true stellt sicher, dass der Fetch auch bei harter Browser-Navigation
-	// (page.goto) den Server erreicht — der Browser bricht einen normalen Fetch beim
-	// Seitenabbau ab, keepalive-Requests werden zu Ende gesendet.
+	// Issue #1433: kein Dauer-`keepalive` mehr — der PUT laeuft wie bei den anderen
+	// Reitern ueber die Warteschlange mit If-Match; `init` (keepalive) kommt nur
+	// vom echten Unload-Flush des Controllers. Teilfeld: nur Versand-Schluessel
+	// (Spec §2.3), `trip` lokal aus der Server-Antwort.
 	function buildSaveFn() {
 		const configSnapshot = { ...reportConfig };
-		return async function doSaveReportConfig() {
-			await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: configSnapshot }, { keepalive: true });
-			onTripUpdate?.({ ...trip, report_config: configSnapshot });
-		};
+		return baueTripSpeicherung<Trip>(
+			api,
+			trip.id,
+			pickEigenfelder({ report_config: configSnapshot }, { report: VERSAND_REPORT_KEYS }),
+			(updated) => onTripUpdate?.(updated),
+			'versand'
+		);
 	}
 
 	function makeSaveHandler() {
@@ -53,9 +59,12 @@
 			statusMsg = '';
 			try {
 				const configSnapshot = { ...reportConfig };
-				await api.put<Trip>(`/api/trips/${trip.id}`, { report_config: configSnapshot });
+				const updated = await api.put<Trip>(
+					`/api/trips/${trip.id}`,
+					pickEigenfelder({ report_config: configSnapshot }, { report: VERSAND_REPORT_KEYS })
+				);
 				statusMsg = 'Gespeichert.';
-				onTripUpdate?.({ ...trip, report_config: configSnapshot });
+				onTripUpdate?.(updated);
 			} catch (e: unknown) {
 				const err = e as { error?: string; detail?: string };
 				statusMsg = err.detail ?? err.error ?? 'Fehler beim Speichern';
@@ -66,9 +75,9 @@
 	}
 
 	// Issue #758: whenever reportConfig changes (via $effect), auto-save.
-	// AC-5: save fires synchronously (no debounce) so the fetch reaches the server
-	// even when the user navigates away immediately (hard navigation via page.goto).
-	// The server persists the data regardless of whether the client awaits the response.
+	// Issue #1433: der Speichervorgang laeuft ueber `saveController.schedule` (Debounce);
+	// beim Verlassen der Seite flusht der Controller ihn mit `{ keepalive: true }` (#1376),
+	// bei harter Navigation (page.goto) also ohne Verlust — kein Dauer-keepalive mehr.
 	// Issue #1269 (a)+(c): VersandTab normalisiert reportConfig beim Mounten
 	// (toHHMMSS, Default-Materialisierung) und schreibt es zurueck. Fix-Loop 1
 	// (Adversary F001): Anzeige aus dem INHALTS-DIFF treiben, Schreiben aus
@@ -87,9 +96,9 @@
 			_lastReportConfig = cur;
 			if (changed && saveController) {
 				if (weatherSaveGate({ catalogLoaded, userTouched }) === 'save') {
-					// Fire-and-forget: doSave starts the fetch immediately.
-					// beforeNavigate + flush handles SvelteKit client-side navigations (AC-5 belt).
-					void saveController.doSave(buildSaveFn());
+					// Issue #1433: ueber den Controller (Debounce, Flush beim Verlassen,
+					// Konflikt-Liste) — wie die anderen Reiter.
+					saveController.schedule(buildSaveFn());
 				} else {
 					saveController.setDirty();
 				}

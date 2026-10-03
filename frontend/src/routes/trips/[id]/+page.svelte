@@ -3,6 +3,7 @@
 	// Pause/Archive/Delete-Logik ist aus TripHeader hierhergewandert; Headerbuttons
 	// (Briefing-Vorschau, Bearbeiten, Test-Briefing) leben in der neuen Header-Komponente.
 	import { page } from '$app/state';
+	import { browser } from '$app/environment';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { TripHeader } from '$lib/components/organisms';
 	import { TripTabs } from '$lib/components/trip-detail';
@@ -12,10 +13,12 @@
 	import type { Trip } from '$lib/types';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
-	import { adoptEtagFromPageLoad, discardEtag } from '$lib/etagRegistry';
+	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad, istKonflikt } from '$lib/etagRegistry';
+	import { getMitFassung } from '$lib/api';
 	import { getContext, onMount } from 'svelte';
 	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	import { starteNachladenNachEntladen, tripNachladeQuelle } from '$lib/stores/nachEntladenNachladen';
+	import { wendeNutzlastAn } from '$lib/stores/nutzlastStand';
 
 	let { data } = $props();
 
@@ -29,12 +32,16 @@
 	//
 	// ACHTUNG: bewusst NUR von `data` abhaengig (`data.trip.id`, nicht das lokale
 	// `trip`). Das lokale `trip` wird von sendStateUpdate() neu gesetzt — haenge
-	// der Effekt daran, liefe er direkt NACH dem discardEtag() dort erneut und
+	// der Effekt daran, liefe er direkt NACH dem GET dort erneut und
 	// legte den laengst veralteten Stempel aus dem Seitenaufbau wieder ab. Genau
 	// den selbstgebauten Konflikt soll AC-5 verhindern. `adoptEtagFromPageLoad`
 	// setzt zusaetzlich nur, solange fuer diese Trip noch nichts bekannt ist —
 	// ein erneutes `load()` neben einem laufenden Speichervorgang duerfte sonst
 	// einen aelteren Stand zurueckschreiben (dieselbe Klasse wie F001).
+	// Fix-Loop 1 (#1433, F003): ein frischer Seitenaufbau (Navigation weg und zurueck)
+	// liefert Trip und Stempel gemeinsam und beendet einen offenen Konflikt dieser
+	// Trip — bewusst im Skript-Kopf (einmal je Instanz), nicht im Effekt.
+	const seitenaufbauStempelUebernommen = browser && data.etag ? adoptEtagBeiSeitenaufbau(data.trip.id, data.etag) : false;
 	$effect(() => {
 		if (data.etag) adoptEtagFromPageLoad(data.trip.id, data.etag);
 	});
@@ -61,6 +68,28 @@
 	// api.ts beim Nachlade-GET bereits in die Registry gelegt.
 	let uebernommeneFassung = $state(0);
 
+	// Fix-Loop 1 (#1433, F001/AC-19): „Nochmal speichern" gibt den per GET geholten Trip
+	// an die Seite, BEVOR es die Eintraege erneut sendet (Trip und Stempel gemeinsam);
+	// Fix-Loop 2 (F101): bei 'geholt' NUR `trip` setzen, KEIN Neuaufbau — die Reiter leiten
+	// ihren editierbaren Zustand nur beim Mount aus `trip` ab; ein Neuaufbau liesse die
+	// Eingabe aus der Liste und den sichtbaren Reiter auseinanderlaufen (zwei Wahrheiten).
+	// Neuaufbau erst nach vollem Erfolg ('wiederholt', `trip` kommt dann aus den Antworten).
+	const abmeldenUebernahme = tripSaveCtl.registriereUebernahme((stand, phase) => {
+		if (phase === 'geholt') {
+			trip = stand as Trip;
+			return;
+		}
+		uebernommeneFassung += 1;
+	});
+
+	// Fix-Loop 3 (#1433, F201): EINE Wahrheit. Seitenstand = letzter Serverstand ⊕ ausstehende
+	// Eigenfeld-Nutzlasten der Liste. Bei einem 412 wird `trip` lokal mit der abgelehnten
+	// Nutzlast fortgeschrieben (kein Stempelwechsel); ein spaeter (wieder) gemounteter Reiter
+	// liest sie beim Mount, ein bereits offener Reiter aendert sich nicht (liest nur beim Mount).
+	const abmeldenAbgelehnt = tripSaveCtl.registriereAbgelehnt((nutzlast) => {
+		trip = wendeNutzlastAn(trip, nutzlast);
+	});
+
 	onMount(() => {
 		const abmelden = speicherAnmeldestelle?.anmelden(tripSaveCtl);
 		const nachladen = starteNachladenNachEntladen<Trip>({
@@ -75,6 +104,8 @@
 		});
 		return () => {
 			abmelden?.();
+			abmeldenUebernahme();
+			abmeldenAbgelehnt();
 			nachladen.stoppen();
 		};
 	});
@@ -96,6 +127,29 @@
 	let testBriefingTimer: ReturnType<typeof setTimeout> | undefined;
 	let testBriefingMenuOpen = $state(false);
 
+	/**
+	 * Issue #1433: nach PATCH /state (liefert keinen Stempel, S2 AC-15) wird der Trip
+	 * frisch geholt; `trip` und ETag kommen gemeinsam aus der GET-Antwort. Bei offenem
+	 * Konflikt wird NICHTS adoptiert (der lokale Stand traegt die abgelehnte Eingabe),
+	 * nur der neue Status wird uebernommen. Der ETag bleibt dann der alte.
+	 */
+	async function uebernehmeNachStatusAenderung(updated: Trip): Promise<Trip> {
+		if (istKonflikt(trip.id)) {
+			return { ...trip, paused_at: updated.paused_at, archived_at: updated.archived_at };
+		}
+		let frisch: Awaited<ReturnType<typeof getMitFassung<Trip>>>;
+		try {
+			frisch = await getMitFassung<Trip>(`/api/trips/${trip.id}`);
+		} catch {
+			// der PATCH ist durch — scheitert nur der GET, bleibt die PATCH-Antwort
+			return updated;
+		}
+		// `inRegistry === false`: ein anderer Vorgang hat den Eintrag waehrend des GET
+		// veraendert — der Stempel dieser Antwort passt nicht mehr, also auch ihr
+		// Trip nicht (nie nur eines von beiden uebernehmen).
+		return frisch.inRegistry ? frisch.daten : updated;
+	}
+
 	async function sendStateUpdate(paused: boolean | undefined, archived: boolean | undefined): Promise<void> {
 		const body: Record<string, boolean> = {};
 		if (paused !== undefined) body.paused = paused;
@@ -103,6 +157,12 @@
 		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
 		isLoading = true;
 		try {
+			// Issue #1433: offene Speichervorgaenge zuerst abschliessen — danach PATCH,
+			// dann GET (statt den ETag zu verwerfen, was den naechsten Schreibvorgang
+			// unbedingt machte).
+			await tripSaveCtl.flush();
+			const laufend = tripSaveCtl.laufendeSpeicherung;
+			if (laufend) await laufend;
 			const res = await fetch(`/api/trips/${trip.id}/state`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
@@ -130,14 +190,9 @@
 				}
 				return;
 			}
-			// Issue #1395 S3: der erfolgreiche PATCH hat die Trip-Datei veraendert,
-			// liefert aber keinen neuen Stempel (S2 AC-15). Der gemerkte Stand ist
-			// damit veraltet — ohne Verwerfen wuerde sich die Anwendung selbst
-			// einen Konflikt bauen.
-			discardEtag(trip.id);
 			const updated: Trip = await res.json();
 			errorMsg = null;
-			trip = updated;
+			trip = await uebernehmeNachStatusAenderung(updated);
 		} catch (e) {
 			console.error(e);
 			// Issue #1065: echter Netzwerkfehler (kein HTTP-Response) → generische Meldung.

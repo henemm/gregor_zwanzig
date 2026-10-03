@@ -105,11 +105,11 @@ Diese Scheibe:
 | Datei:Zeile | Grund |
 |---|---|
 | `AlarmeTab.svelte:250` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
-| `AlarmeTab.svelte:514` | Anzeige-Zwilling der fachlichen Zusicherung aus `:250` |
-| `AlarmeTab.svelte:566` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
+| `AlarmeTab.svelte:511` | Anzeige-Zwilling der fachlichen Zusicherung aus `:250` |
+| `AlarmeTab.svelte:563` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:366` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:402` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
-| `WeatherMetricsTab.svelte:1425` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
+| `WeatherMetricsTab.svelte:1429` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
 | `versand-tab/vtBriefingChannelsText.ts:21` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:26` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `versand-tab/VTSchedulePlan.svelte:55` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
@@ -136,7 +136,7 @@ Diese Scheibe:
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:533` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
+| `AlarmeTab.svelte:530` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
 | `corridor-editor/CorridorEditor.svelte:397` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
 | `corridor-editor/CorridorEditorMobile.svelte:363` | Mobil-Zwilling von `CorridorEditor.svelte:397` |
 | `versand-tab/VTSchedulePlan.svelte:83` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
@@ -147,9 +147,9 @@ Diese Scheibe:
 
 | Datei:Zeile | Warum es (noch) eine HERKUNFT-Verzweigung ist | Warum sie bleibt |
 |---|---|---|
-| `versandVergleichSpeicherung.ts:243` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
-| `corridor-editor/wertebereicheVergleichSpeicherung.ts:206` | dito für Wertebereiche | dito |
-| `weather-metrics-tab/weatherMetricsCompareSave.ts:558` | dito für Wetter-Metriken | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
+| `versandVergleichSpeicherung.ts:244` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
+| `corridor-editor/wertebereicheVergleichSpeicherung.ts:209` | dito für Wertebereiche | dito |
+| `weather-metrics-tab/weatherMetricsCompareSave.ts:561` | dito für Wetter-Metriken | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
 | `corridor-editor/CorridorEditor.svelte:189` | Katalog-Guard: lädt `loadCompareMetricCatalog()` nur im Vergleich | Mirror-Guard zu `:221`; Auflösung bräuchte injizierte Lade-Funktion statt `context`-Schalter |
 | `corridor-editor/CorridorEditor.svelte:221` | Katalog-Guard: lädt `loadRouteExtraMetricDefs()` nur im Trip | dito, Kehrseite von `:189` |
 | `corridor-editor/CorridorEditorMobile.svelte:172` | Mobil-Zwilling von `:189` | dito |
@@ -157,10 +157,10 @@ Diese Scheibe:
 | `corridor-editor/CorridorEditor.svelte:304` | `maybeSchedule()`: wählt zwischen `vergleichSpeicherung.aenderungMelden()` und `saveController.schedule(buildSaveFn())` | Genau der in AC-2 benannte Beispielfall „Vergleichs-Speicherweg vs. `saveController.schedule`" — Auflösung bräuchte eine injizierte `SaveFn`, eigene Architekturentscheidung |
 | `corridor-editor/CorridorEditorMobile.svelte:252` | Mobil-Zwilling von `:304` | dito |
 | `VersandTab.svelte:356` | Wirkort-Guard des Selbst-Speicher-Effekts — läuft nur im Vergleich | Effekt existiert nur für den Compare-Speicherweg; Trip speichert über einen anderen Mechanismus außerhalb dieser Datei |
-| `WeatherMetricsTab.svelte:580` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
-| `WeatherMetricsTab.svelte:595` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
-| `WeatherMetricsTab.svelte:624` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
-| `WeatherMetricsTab.svelte:637` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
+| `WeatherMetricsTab.svelte:581` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
+| `WeatherMetricsTab.svelte:596` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
+| `WeatherMetricsTab.svelte:625` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
+| `WeatherMetricsTab.svelte:638` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
 
 **Summe:** 27 FACHLICH + 6 DARSTELLUNG + 14 HERKUNFT = **47**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL`.

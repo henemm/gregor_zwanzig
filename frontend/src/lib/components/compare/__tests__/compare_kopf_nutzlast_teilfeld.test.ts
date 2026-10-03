@@ -30,6 +30,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import { umgebungFuer, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
+import { createController } from '../../shared/__tests__/versandVergleichPruefstand.ts';
 import {
 	createGoMergeServer,
 	vollerVergleich,
@@ -59,7 +60,9 @@ beforeEach(() => {
 afterEach(() => server.restore());
 
 async function seite(): Promise<Knoten> {
-	const { u } = await umgebungFuer(SEITE, { data: { preset: vollerVergleich(ID) } });
+	// `createSaveStatus` (Runen) ist im Pruefstand nicht herleitbar — der Hub-Controller
+	// wird gesaet, wie die Seite ihn haelt (#1433: Kopf-412 geht an ihn).
+	const { u } = await umgebungFuer(SEITE, { data: { preset: vollerVergleich(ID) }, hubSaveCtl: createController(ID) });
 	for (const f of ['saveName', 'saveRegion', 'saveProfil']) {
 		assert.equal(typeof u[f], 'function', `Messaufbau: \`${f}\` aus +page.svelte nicht herleitbar`);
 	}

@@ -236,21 +236,22 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 	// Issue #2277 S1 — Alarm-Felder additiv mergen: Read-Modify-Write auf dem
 	// bereits gebauten display_config (channels/metrics bleiben erhalten).
 	const alarm = state.alarm ?? initialCreateTripAlarmState();
-	Object.assign(
-		trip,
-		buildAlarmeDeliveryPayload(
-			{
-				officialWarningsEnabled: alarm.officialWarningsEnabled,
-				cooldownMinutes: alarm.cooldownMinutes,
-				quietFrom: alarm.quietFrom,
-				quietTo: alarm.quietTo,
-				channels: alarm.channels,
-				channelThresholds: alarm.channelThresholds,
-				metricLevels: alarm.metricLevels,
-			},
-			trip.display_config as Record<string, unknown> | undefined
-		) as object
-	);
+	const bisherigeDc = trip.display_config as Record<string, unknown> | undefined;
+	const alarmPayload = buildAlarmeDeliveryPayload({
+		officialWarningsEnabled: alarm.officialWarningsEnabled,
+		cooldownMinutes: alarm.cooldownMinutes,
+		quietFrom: alarm.quietFrom,
+		quietTo: alarm.quietTo,
+		channels: alarm.channels,
+		channelThresholds: alarm.channelThresholds,
+		metricLevels: alarm.metricLevels,
+	}) as Record<string, unknown>;
+	Object.assign(trip, alarmPayload);
+	// Neuanlage (POST): der Alarm-Teilfeld-Rumpf traegt nur `metric_alert_levels`;
+	// channels/metrics des frisch gebauten display_config bleiben erhalten.
+	if (alarmPayload.display_config) {
+		trip.display_config = { ...(bisherigeDc ?? {}), ...(alarmPayload.display_config as object) };
+	}
 
 	return trip;
 }

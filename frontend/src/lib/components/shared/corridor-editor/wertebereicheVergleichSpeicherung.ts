@@ -15,6 +15,7 @@
 import type { ActivityProfile, ComparePreset, Corridor } from '../../../types.ts';
 import type { IdealRange } from './corridorEditorState.ts';
 import type { SaveFn, SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
+import { merkeNutzlast } from '../../../stores/nutzlastStand.ts';
 import type { PutClient } from '../tripSpeicherung.ts';
 import { buildComparePresetSavePayload, waehleEigenfelder } from '../../compare/compareEditorSave.ts';
 import { normalizeStoredOutlookMetrics } from '../weather-metrics-tab/compareMetricSelection.ts';
@@ -165,11 +166,13 @@ export function erstelleWertebereicheVergleichSpeicherung(opt: WertebereicheVerg
 				const payload = flushPendingCorridorSave(opt.preset(), current, before);
 				if (!payload) return;
 				try {
+					// Fix-Loop 3 (F201): die GESENDETE Nutzlast bleibt am Funktionsobjekt (Seitenstand-Fortschreibung bei 412).
+					merkeNutzlast(saveFn, payload.body);
 					const antwort = await client.put<ComparePreset>(payload.url, payload.body, init);
 					zuletztGespeichert = current;
 					opt.onCompareUpdate(antwort);
 				} catch (e) {
-					if ((e as { status?: number })?.status !== 412) {
+					if ((e as { status?: number })?.status !== 412 && !saveController.imWiederholen) {
 						rollbackCorridorSnapshot(zustand, before, current);
 					}
 					throw e;

@@ -20,6 +20,7 @@
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
+	import { baueTripSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { api } from '$lib/api.js';
 	import type { ActivityType } from '$lib/types.js';
@@ -184,8 +185,12 @@
 		const val = (e.target as HTMLSelectElement).value as ActivityType;
 		activityType = val || undefined;
 		if (!trip) return;
-		const updated = await api.put<Trip>(`/api/trips/${trip.id}`, { activity: activityType });
-		onTripUpdate?.(updated);
+		// Issue #1433: bei 412 meldet der Handler an den Controller („Nochmal
+		// speichern") statt unbehandelt zu scheitern; der Rumpf traegt nur `activity`.
+		const speichern = baueTripSpeicherung<Trip>(
+			api, trip.id, { activity: val || undefined }, (updated) => onTripUpdate?.(updated), 'aktivitaet'
+		);
+		await speichereOderMeldeKonflikt(speichern, saveController);
 	}
 </script>
 

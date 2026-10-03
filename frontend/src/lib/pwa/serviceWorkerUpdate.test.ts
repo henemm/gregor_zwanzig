@@ -793,8 +793,8 @@ test('#2317 AC-7 Anmeldestelle: Konflikt (412) → false, Konfliktanzeige steht,
 	assert.equal(ctl.state, 'conflict', 'die Konfliktanzeige des Reiters muss sichtbar bleiben');
 	// Sekundaer: die Eingabe ist nicht verworfen — der gescheiterte Vorgang liegt
 	// fuer „Wiederholen" (retryConflict) bereit. `_pendingFn` leert doSave bewusst.
-	const lastFailed = (ctl as unknown as { _lastFailed: { fn: unknown } | null })._lastFailed;
-	assert.equal(lastFailed?.fn, saveFn, 'der abgelehnte Speichervorgang muss fuer Wiederholen erhalten bleiben');
+	const lastFailed = (ctl as unknown as { _lastFailed: Array<{ fn: unknown }> | null })._lastFailed;
+	assert.equal(lastFailed?.[0]?.fn, saveFn, 'der abgelehnte Speichervorgang muss fuer Wiederholen erhalten bleiben');
 });
 
 test('#2317 AC-7 Anmeldestelle: offline / Netzfehler → false, Fehleranzeige steht', async () => {

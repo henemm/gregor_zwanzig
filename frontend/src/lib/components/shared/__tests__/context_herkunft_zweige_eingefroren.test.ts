@@ -204,9 +204,9 @@ const EINGEFROREN: readonly string[] = [
 	// Eintraege bleiben auf ihrer Zeile (ein kompensierender Kommentarblock
 	// gleicht die Zeilenzahl VOR ihnen wieder aus, Datei bleibt bei 631 Zeilen).
 	'AlarmeTab.svelte:250',
-	'AlarmeTab.svelte:514',
-	'AlarmeTab.svelte:533',
-	'AlarmeTab.svelte:566',
+	'AlarmeTab.svelte:511',
+	'AlarmeTab.svelte:530',
+	'AlarmeTab.svelte:563',
 	// S6e: alle DREI VersandTab-Eintraege bleiben (0 gestrichen) — sie sind
 	// Wirkort-/Darstellungs-Weichen, kein `wiz`-Symptom. Ihre Zeilennummern
 	// verschoben sich durch die elf neuen Prop-Zeilen im Skript-Teil; die neuen
@@ -222,7 +222,7 @@ const EINGEFROREN: readonly string[] = [
 	// Interfaces, zwei Snapshot-/Hydrations-Funktionen und der Payload-Trennung
 	// in `baueVersandNutzlast`, s. Implementation Details Abschnitt 4/5) — fuer
 	// sie gilt AB JETZT der neue positionsbasierte Vertrag auf `:235`.
-	'versandVergleichSpeicherung.ts:243',
+	'versandVergleichSpeicherung.ts:244',
 	// Bug #2454 Fix-Loop 1 (Rebase auf origin/main 2026-09-30, ueberlagert
 	// #2422 S2a): initFromTrip()-Bucket-Zerlegung als computeInitialBuckets()
 	// nach metricsEditor.ts ausgelagert, die Markup-Weiche zusaetzlich durch
@@ -231,11 +231,11 @@ const EINGEFROREN: readonly string[] = [
 	// allen fuenf Faellen unveraendert; Zeilennummern per Zaehlbefehl am
 	// tatsaechlichen Stand nach dem Rebase nachgemessen (nicht aus einer der
 	// beiden Vorversionen zurueckgerechnet).
-	'WeatherMetricsTab.svelte:580',
-	'WeatherMetricsTab.svelte:595',
-	'WeatherMetricsTab.svelte:624',
-	'WeatherMetricsTab.svelte:637',
-	'WeatherMetricsTab.svelte:1425',
+	'WeatherMetricsTab.svelte:581',
+	'WeatherMetricsTab.svelte:596',
+	'WeatherMetricsTab.svelte:625',
+	'WeatherMetricsTab.svelte:638',
+	'WeatherMetricsTab.svelte:1429',
 	'versand-tab/vtBriefingChannelsText.ts:21',
 	'versand-tab/vtBriefingChannelsText.ts:26',
 	// S6d: von 14 Corridor-Paaren bleiben elf (Schicksals-Tabelle der Spec).
@@ -269,10 +269,10 @@ const EINGEFROREN: readonly string[] = [
 	'alarme-tab/alarmeTabSections.ts:27',
 	'alarme-tab/alarmeTabSections.ts:38',
 	'alarme-tab/alarmeTabSections.ts:42',
-	'corridor-editor/wertebereicheVergleichSpeicherung.ts:206',
+	'corridor-editor/wertebereicheVergleichSpeicherung.ts:209',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:72',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:73',
-	'weather-metrics-tab/weatherMetricsCompareSave.ts:558',
+	'weather-metrics-tab/weatherMetricsCompareSave.ts:561',
 ];
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein
@@ -298,17 +298,17 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: 'deriveUnalertableSelectedMetricNames('
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:514',
+		eintrag: 'AlarmeTab.svelte:511',
 		zeile: "{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}",
 		folgt: 'alarme-unalertable-metrics-hint'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:533',
+		eintrag: 'AlarmeTab.svelte:530',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'TelegramKurzstilToggle'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:566',
+		eintrag: 'AlarmeTab.svelte:563',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'VTAlertSample'
 	},
@@ -461,27 +461,27 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// zusaetzliche 14 Zeilen durch die toggleGlobalMetric()-Auslagerung (31
 	// insgesamt). Text in allen fuenf Faellen unveraendert.
 	{
-		eintrag: 'WeatherMetricsTab.svelte:580',
+		eintrag: 'WeatherMetricsTab.svelte:581',
 		zeile: "if (context === 'route' && trip && catalogLoaded && !isDirty) {",
 		folgt: 'normalizeStoredOutlookMetrics('
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:595',
+		eintrag: 'WeatherMetricsTab.svelte:596',
 		zeile: "if (context === 'route' && Object.keys(catalog).length === 0) load();",
 		folgt: 'Issue #1350 Teil 2: analog dem Route-Guard oben'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:624',
+		eintrag: 'WeatherMetricsTab.svelte:625',
 		zeile: "if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();",
 		folgt: '#1401 Scheibe B: der Stundenverlauf beschriftet'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:637',
+		eintrag: 'WeatherMetricsTab.svelte:638',
 		zeile: "if (context === 'vergleich' && Object.keys(catalog).length === 0) {",
 		folgt: ".get<MetricCatalog>('/api/metrics')"
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1425',
+		eintrag: 'WeatherMetricsTab.svelte:1429',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	}

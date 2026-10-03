@@ -274,3 +274,30 @@ describe('AC-7: ohne bekannten Stand verhaelt sich alles wie vor S3', () => {
 		assert.equal(puts[puts.length - 1].status, 200);
 	});
 });
+
+// Issue #1433 (AC-18, AC-24 — bewusst ergaenzt): der Test oben ruft `discardEtag`
+// SELBST auf und bleibt deshalb gruen. Neu dokumentiert ist, was `api.ts` bei einem
+// 412 selbst tut: bis #1433 verwarf es den Stempel (naechster Schreibvorgang ohne
+// Vorbedingung = unbedingtes Schreiben, die Fremdaenderung ging verloren). Jetzt
+// bleibt der alte Stempel stehen, die Ressource ist `konflikt`, und der naechste
+// Schreibvorgang bekommt wieder 412.
+// Spec: docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md §4 Punkt 1.
+describe('Issue #1433 AC-18: nach 412 kein Discard — der naechste Schreibvorgang traegt das alte If-Match', () => {
+	test('test_after412_etagIsKept_nextWriteCarriesStaleIfMatch_andIsRejectedAgain', async () => {
+		// GIVEN: Stand bekannt, Fremdschreiber aendert, ein Schreibvorgang scheitert (412)
+		await api.get('/api/trips/gr20');
+		const alt = getKnownEtag('gr20');
+		await server.handler('/api/trips/gr20', { method: 'PUT', body: JSON.stringify({ name: 'fremd' }) });
+		await assert.rejects(api.put('/api/trips/gr20', { name: 'A' }), (e: { status?: number }) => e.status === 412);
+
+		// THEN (a): api.ts hat den Stempel NICHT verworfen
+		assert.equal(getKnownEtag('gr20'), alt, 'api.ts darf den Stempel nach einem 412 nicht mehr verwerfen');
+
+		// WHEN/THEN (b): der naechste Schreibvorgang (anderer Reiter) wird wieder abgelehnt
+		await assert.rejects(api.put('/api/trips/gr20', { name: 'B' }), (e: { status?: number }) => e.status === 412);
+		const puts = putCalls();
+		assert.equal(puts[puts.length - 1].ifMatch, alt, 'kein unbedingtes Schreiben nach 412: das alte If-Match wird erneut mitgesendet');
+		assert.equal(puts[puts.length - 1].status, 412);
+		assert.deepEqual(server.storedBody('gr20'), { name: 'fremd' }, 'die Fremdaenderung steht unveraendert auf dem Server');
+	});
+});

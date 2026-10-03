@@ -2,9 +2,14 @@
 // KEINE modul-globalen $state-Exporte (das wäre ein geteilter Singleton → bricht AC-6).
 // Jede Editor-Oberfläche erzeugt eine eigene Instanz via createSaveStatus().
 
-import { refreshResourceEtag } from '../api.ts';
+import { refreshResourceEtagMitTrip } from '../api.ts';
+import { getKnownEtag, loescheKonflikt, markiereKonflikt, setKnownEtag } from '../etagRegistry.ts';
 import type { NachladeKennung } from '../pwa/geraetespeicher.ts';
 import type { ApiError } from '../types.js';
+import { nutzlastVon, wendeNutzlastenAn } from './nutzlastStand.ts';
+
+/** F502: Stempel, der zu keinem Server-Stand passt (Go `ifMatchAllows` ⇒ 412). */
+const KEIN_STEMPEL_PLATZHALTER = '"gz-kein-stempel-vor-dem-holen"';
 
 export type SaveState = 'idle' | 'dirty' | 'saving' | 'error' | 'conflict';
 
@@ -16,6 +21,30 @@ export type SaveState = 'idle' | 'dirty' | 'saving' | 'error' | 'conflict';
  * unverändert gültig.
  */
 export type SaveFn = (init?: RequestInit) => Promise<void>;
+
+/**
+ * Issue #1433: Eintrag der Liste gescheiterter Speichervorgaenge. Der Rumpf ist
+ * eine Funktion (kein Verweis auf eine Komponenteninstanz) und haelt nur die
+ * Eigenfelder seines Reiters — das Wiederholen ist daher idempotent.
+ */
+interface FehlgeschlagenerEintrag {
+	fn: SaveFn;
+	init?: RequestInit;
+	/**
+	 * Fix-Loop 3 (F201): die zuletzt GESENDETE Eigenfeld-Nutzlast als Daten — damit die
+	 * Seite sie in ihren Stand fortschreiben kann (Seitenstand = Server ⊕ Nutzlasten).
+	 */
+	nutzlast?: unknown;
+}
+
+/**
+ * Dedup-Schluessel einer Speicherfunktion (ein Eintrag je Reiter/Schreiber, gesetzt
+ * ueber `mitKonfliktSchluessel` in `components/shared/tripSpeicherung.ts`). Fehlt er,
+ * gilt die Funktion selbst als Schluessel (kein Dedup).
+ */
+function schluesselVon(fn: SaveFn): unknown {
+	return (fn as SaveFn & { konfliktSchluessel?: string }).konfliktSchluessel ?? fn;
+}
 
 export function extractMessage(e: unknown): string {
 	if (e && typeof e === 'object') {
@@ -40,9 +69,46 @@ export class SaveStatus {
 	// nicht mehr stoppen — der Merker dient `cancel()`s Guard als Grundlage, damit
 	// dort nichts zurückgesetzt wird, solange ein Request noch unterwegs ist.
 	private _inflight: Promise<void> | null = null;
-	// Issue #1395 S4: der bei einem 412 abgelehnte Speichervorgang, damit
-	// `retryConflict()` ihn unveraendert wiederholen kann.
-	private _lastFailed: { fn: SaveFn; init?: RequestInit } | null = null;
+	// Issue #1395 S4 / #1433: die bei einem 412 abgelehnten Speichervorgaenge
+	// (deduplizierte Liste, ein Eintrag je Reiter/Schreiber), damit
+	// `retryConflict()` sie alle wiederholen kann. `null`/`undefined` = leer
+	// (Testinstanzen entstehen ohne Konstruktor).
+	private _lastFailed: FehlgeschlagenerEintrag[] | null = null;
+
+	/**
+	 * Fix-Loop 1 (#1433, F001/AC-19): die Seite uebernimmt den per GET geholten Trip
+	 * (`'geholt'`, BEVOR die Eintraege erneut gesendet werden — Trip und Stempel
+	 * gemeinsam) und erfaehrt den vollstaendigen Erfolg (`'wiederholt'`, damit die
+	 * Reiter den dann gespeicherten Stand neu anzeigen). Wird von der Seite gesetzt.
+	 */
+	onAdopt: ((trip: unknown, phase: 'geholt' | 'wiederholt') => void) | null = null;
+
+	/** true, solange `retryConflict()` die Eintraege wiederholt (s. dort). */
+	imWiederholen = false;
+
+	/**
+	 * Fix-Loop 3 (#1433, F201): bei einem 412 wird die abgelehnte Eigenfeld-Nutzlast der
+	 * Seite gemeldet, damit sie ihren Stand lokal fortschreibt (kein Stempelwechsel).
+	 * Eigener Platz neben `onAdopt` — die Seite und ein Reiter-Organisator koennen
+	 * unabhaengig voneinander registrieren, ohne einander abzuhaengen.
+	 */
+	onAbgelehnt: ((nutzlast: unknown) => void) | null = null;
+
+	/** Setzt `onAbgelehnt`; liefert die Abmeldung. */
+	registriereAbgelehnt(cb: (nutzlast: unknown) => void): () => void {
+		this.onAbgelehnt = cb;
+		return () => {
+			if (this.onAbgelehnt === cb) this.onAbgelehnt = null;
+		};
+	}
+
+	/** Setzt `onAdopt`; liefert die Abmeldung (setzt es zurueck). */
+	registriereUebernahme(cb: (trip: unknown, phase: 'geholt' | 'wiederholt') => void): () => void {
+		this.onAdopt = cb;
+		return () => {
+			if (this.onAdopt === cb) this.onAdopt = null;
+		};
+	}
 
 	private _tripId?: string;
 	// Issue #2276 S1: die Ressourcenart der Kennung ('trip' | 'vergleich'). Eigenes
@@ -64,12 +130,20 @@ export class SaveStatus {
 		this._resourceKind = kennung?.typ;
 	}
 
+	// Issue #1433: `conflict` ist STICKY — er endet nur durch `retryConflict()`
+	// (oder Neuladen der Seite). Alle uebrigen Zustandswechsel laufen an ihm vorbei.
+	private get _imKonflikt(): boolean {
+		return this.state === 'conflict';
+	}
+
 	setSaving(): void {
+		if (this._imKonflikt) return;
 		this.state = 'saving';
 		this.error = null;
 	}
 
 	setSaved(): void {
+		if (this._imKonflikt) return;
 		this.savedAt = new Date();
 		this.state = 'idle';
 		this.error = null;
@@ -78,6 +152,7 @@ export class SaveStatus {
 	}
 
 	setDirty(): void {
+		if (this._imKonflikt) return;
 		this.state = 'dirty';
 	}
 
@@ -99,6 +174,7 @@ export class SaveStatus {
 	 * ueberschrieb. Der Nutzer las Erfolg, obwohl der PUT mit 500 scheiterte.
 	 */
 	markPristine(): void {
+		if (this._imKonflikt) return;
 		// Truthy-Pruefung (nicht `!== null`): Testinstanzen entstehen im Repo per
 		// `Object.create(SaveStatus.prototype)` ohne Konstruktor, das Feld ist dort
 		// `undefined` — und "kein Fehlschlag bekannt" muss dort dasselbe heissen.
@@ -112,6 +188,8 @@ export class SaveStatus {
 	}
 
 	setError(msg: string): void {
+		this._unresolvedError = msg;
+		if (this._imKonflikt) return;
 		this.state = 'error';
 		this.error = msg;
 		this._unresolvedError = msg;
@@ -121,46 +199,146 @@ export class SaveStatus {
 		this._pendingFn = null;
 		this._timer = null;
 		this.setSaving();
-		const run = (async () => {
-			try {
-				await saveFn(init);
-				this.setSaved();
-			} catch (e) {
-				// Issue #1395 S4: nur ein echter Nebenlaeufigkeits-Konflikt auf einer
-				// bekannten Trip bekommt den eigenen Zustand mit Wiederholen-Knopf.
-				if ((e as ApiError)?.status === 412 && this._tripId) {
-					this._lastFailed = { fn: saveFn, init };
-					this.state = 'conflict';
-					this.error = extractMessage(e);
-				} else {
-					this.setError(extractMessage(e));
-				}
-			}
-		})();
+		const run = this._ausfuehren(saveFn, init);
 		this._inflight = run;
 		await run;
 		if (this._inflight === run) this._inflight = null;
 	}
 
+	private async _ausfuehren(saveFn: SaveFn, init?: RequestInit, imRetry = false): Promise<void> {
+		try {
+			await saveFn(init);
+			this._erledigt(saveFn);
+			this.setSaved();
+		} catch (e) {
+			// Issue #1395 S4: nur ein echter Nebenlaeufigkeits-Konflikt auf einer
+			// bekannten Trip bekommt den eigenen Zustand mit Wiederholen-Knopf.
+			if ((e as ApiError)?.status === 412 && this._tripId) {
+				this.meldeKonflikt(saveFn, e, init);
+			} else if (imRetry && this._tripId) {
+				// Fix-Loop 1 (F004): eine gescheiterte Wiederholung geht nicht verloren —
+				// Eintrag zurueck in die Liste, der Nutzer kann erneut „Nochmal speichern".
+				this._merke(saveFn, init);
+				markiereKonflikt(this._tripId);
+				this.state = 'conflict';
+				this.error = extractMessage(e);
+			} else {
+				this.setError(extractMessage(e));
+			}
+		}
+	}
+
 	/**
-	 * Issue #1395 S4: frischt den bekannten Stand auf und wiederholt danach genau
-	 * den Speichervorgang, der am Konflikt gescheitert ist. `setSaving()` steht
-	 * bewusst VOR dem Refresh — ein zweiter Klick trifft dann auf `'saving'` und
-	 * bricht am Guard ab, statt einen zweiten Refresh samt zweitem Sendevorgang
-	 * loszuschicken.
+	 * Issue #1433: ein Schreiber, der den Controller nicht selbst benutzt (Kopf,
+	 * Aktivitaet), meldet seinen 412 hierher. Der Rumpf landet in der Liste und
+	 * wird bei „Nochmal speichern" wiederholt.
+	 */
+	meldeKonflikt(saveFn: SaveFn, e: unknown, init?: RequestInit): void {
+		this._merke(saveFn, init);
+		const nutzlast = nutzlastVon(saveFn);
+		if (nutzlast !== undefined) this.onAbgelehnt?.(nutzlast);
+		this.state = 'conflict';
+		this.error = extractMessage(e);
+	}
+
+	/**
+	 * Fix-Loop 2 (#1433, F101/Regel 2): ein erfolgreiches Speichern unter dem Schluessel K
+	 * ist die NEUERE Wahrheit dieses Reiters — ein noch offener Eintrag K (aelterer Rumpf)
+	 * wird verworfen, sonst spielte „Nochmal speichern" ihn spaeter ueber die neuere Eingabe.
+	 * Leert das die Liste im Konflikt, ist nichts mehr zu wiederholen: Markierung loeschen,
+	 * Zustand idle (der Server hat den Stand der Eingabe bestaetigt).
+	 */
+	private _erledigt(saveFn: SaveFn): void {
+		const liste = this._lastFailed;
+		if (!liste || liste.length === 0) return;
+		const key = schluesselVon(saveFn);
+		const rest = liste.filter((x) => schluesselVon(x.fn) !== key);
+		if (rest.length === liste.length) return;
+		this._lastFailed = rest;
+		if (rest.length === 0 && this._imKonflikt && this._tripId) {
+			loescheKonflikt(this._tripId);
+			this.state = 'idle';
+		}
+	}
+
+	/** Eintrag in die deduplizierte Liste (ein Eintrag je Reiter, der neueste Rumpf gewinnt). */
+	private _merke(saveFn: SaveFn, init?: RequestInit): void {
+		const liste = (this._lastFailed ??= []);
+		const key = schluesselVon(saveFn);
+		const idx = liste.findIndex((x) => schluesselVon(x.fn) === key);
+		const eintrag = { fn: saveFn, init, nutzlast: nutzlastVon(saveFn) };
+		if (idx >= 0) liste[idx] = eintrag;
+		else liste.push(eintrag);
+	}
+
+	/**
+	 * Issue #1395 S4 / #1433: holt den Trip frisch (GET) und wiederholt danach ALLE
+	 * gescheiterten Speichervorgaenge. Jeder Rumpf traegt nur seine Eigenfelder.
+	 * Der Zustand springt vor dem GET auf `saving` — ein zweiter Klick trifft dann
+	 * auf `'saving'` und bricht am Guard ab. Die Konflikt-Markierung der Registry
+	 * wird erst nach dem GET gehoben; scheitert ein Eintrag erneut, landet er
+	 * wieder in der Liste (Zustand `conflict`).
 	 */
 	async retryConflict(): Promise<void> {
-		if (this.state !== 'conflict' || !this._lastFailed || !this._tripId || !this._resourceKind) return;
-		const { fn, init } = this._lastFailed;
-		this._lastFailed = null;
-		this.setSaving();
-		try {
-			await refreshResourceEtag(this._tripId, this._resourceKind);
-		} catch (e) {
-			this.setError(extractMessage(e));
-			return;
-		}
-		await this.doSave(fn, init);
+		const eintraege = this._lastFailed ?? [];
+		if (this.state !== 'conflict' || eintraege.length === 0 || !this._tripId || !this._resourceKind) return;
+		this._lastFailed = [];
+		this.state = 'saving';
+		this.error = null;
+		// Fix-Loop 4 (F301a): der Stempel von VOR dem GET. Scheitert der Retry, wird er
+		// zurueckgelegt — der frische GET-Stempel gehoert zu Daten, die kein offener oder
+		// spaeter geoeffneter Reiter hat (Compare: Hub haelt Altstand; Trip: offener Reiter).
+		const stempelVorGet = getKnownEtag(this._tripId);
+		const lauf = (async () => {
+			let geholt: unknown;
+			try {
+				geholt = await refreshResourceEtagMitTrip(this._tripId!, this._resourceKind!);
+			} catch (e) {
+				// Die Eingaben (auch die nicht mehr gemounteter Reiter) duerfen nicht
+				// verloren gehen: Liste zurueck, Konflikt-Anzeige und -Markierung bleiben
+				// (Fix-Loop 1, F004) — der Nutzer kann erneut „Nochmal speichern".
+				this._lastFailed = eintraege;
+				this.state = 'conflict';
+				this.error = extractMessage(e);
+				return;
+			}
+			// AC-19: Trip und Stempel (hat der GET bereits in die Registry gelegt) gemeinsam
+			// an die Seite, BEVOR die Konflikt-Markierung faellt und gesendet wird.
+			// Fix-Loop 3 (F201): der Stand ist GET ⊕ alle ausstehenden Nutzlasten — nur so
+			// zeigt ein spaeter gemounteter Reiter die Eingabe, die gleich gesendet wird.
+			this.onAdopt?.(wendeNutzlastenAn(geholt, eintraege), 'geholt');
+			loescheKonflikt(this._tripId!);
+			// `imWiederholen`: die Speicherfunktionen des Ortsvergleichs setzen bei einem
+			// Nicht-412-Fehler ihre Anzeige zurueck — beim Wiederholen darf das nicht
+			// passieren, sonst findet der naechste Versuch keinen Unterschied mehr (F101).
+			this.imWiederholen = true;
+			try {
+				for (const { fn, init } of eintraege) await this._ausfuehren(fn, init, true);
+			} finally {
+				this.imWiederholen = false;
+			}
+			if ((this._lastFailed?.length ?? 0) > 0) {
+				// Gescheiterter (auch nur teilweise gescheiterter) Retry: einfachste sichere
+				// Variante — IMMER der Stempel von vor dem GET, auch wenn ein Teil-PUT einen
+				// neueren geliefert hat. Jeder Save aus einem Reiter mit veraltetem Stand
+				// bekommt so 412; erst der naechste „Nochmal speichern" holt frisch.
+				if (stempelVorGet !== undefined) setKnownEtag(this._tripId!, stempelVorGet);
+				// F502: kein Stempel vor dem GET => NICHT verwerfen (ein Save ginge sonst ohne
+				// If-Match raus). Platzhalter, der nie zu einem Server-Stand passt => 412.
+				else setKnownEtag(this._tripId!, KEIN_STEMPEL_PLATZHALTER);
+				markiereKonflikt(this._tripId!);
+				this.state = 'conflict';
+				return;
+			}
+			// Nur nach VOLLEM Erfolg (idle, nichts ausstehend, Liste leer); sonst bleibt der
+			// offene Reiter unangetastet (F101: kein Neuaufbau ueber sichtbare Eingabe).
+			if (this.state === 'idle' && !this.hasPending && (this._lastFailed?.length ?? 0) === 0) {
+				this.onAdopt?.(geholt, 'wiederholt');
+			}
+		})();
+		this._inflight = lauf;
+		await lauf;
+		if (this._inflight === lauf) this._inflight = null;
 	}
 
 	/** Returns true if a save is pending (debounced or deferred, not yet flushed).
@@ -182,7 +360,7 @@ export class SaveStatus {
 	 *  SOFORT setSaving() — damit der Indikator nie "idle" (Gespeichert ✓) zeigt,
 	 *  während eine ungespeicherte Änderung im Debounce-Fenster wartet (AC-1). */
 	schedule(saveFn: SaveFn, ms = 700): void {
-		this.setSaving();
+		this.setSaving(); // bei offenem Konflikt ein No-op (#1433)
 		this._pendingFn = saveFn;
 		if (this._timer !== null) clearTimeout(this._timer);
 		this._timer = setTimeout(() => { void this.doSave(saveFn); }, ms);

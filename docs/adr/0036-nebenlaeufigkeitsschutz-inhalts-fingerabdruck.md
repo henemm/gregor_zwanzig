@@ -92,3 +92,97 @@ mitgefuehrten Zaehler- oder Zeitstempelfeld:
   Konsumenten des Fingerabdrucks (z. B. das Frontend in S3, der Ortsvergleich
   in S6) uebernehmen denselben Header-Vertrag (`ETag`/`If-Match`), statt einen
   eigenen Stempel-Mechanismus zu erfinden.
+
+## Fortschreibung (Issue #1433): Verhalten nach 412 / Teilfeld-Prinzip
+
+Der Client verwirft den gemerkten Fingerabdruck nach einem `412` **nicht** mehr
+(vorher: „Discard nach 412", der naechste Schreibvorgang lief ohne Vorbedingung
+durch und ueberschrieb die Fremdaenderung). Stattdessen markiert die
+ETag-Registry die Ressource als Konflikt und behaelt den alten Stempel: jeder
+weitere Schreibvorgang — auch ein Unload-Flush mit `keepalive` — traegt das alte
+`If-Match` und wird wieder abgelehnt, bis „Nochmal speichern" den Trip frisch
+holt (GET) und alle gescheiterten Speichervorgaenge wiederholt. Dazu sendet
+jeder Reiter nur seine Eigenfelder (Teilfeld-Nutzlast, `pickEigenfelder`); der
+einstufige Server-Merge (`mergeConfigMap`) haelt alle nicht erwaehnten Felder.
+Ein gueltiges `If-Match` zusammen mit einer veralteten Vollkopie fremder Felder
+wuerde sonst 200 liefern und den Verlust absegnen — die Teilfelder sind der
+eigentliche Schutz, Stempel und Konflikt-Sperre ergaenzen ihn fuer gleiche
+Schluessel. Gleichzeitiges Aendern desselben Schluessels in zwei Tabs bleibt
+eine bekannte Grenze. Spec: `docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md`.
+
+**Semantik von „Nochmal speichern" (Fix-Loop 1+2, #1433).** Leitsatz: Was der Nutzer
+zuletzt sah und gespeichert hat, gewinnt; es darf keine zwei Wahrheiten fuer dieselbe
+Eingabe geben (Listeneintrag vs. sichtbarer Reiter).
+
+- Scheitert der GET des Retries, bleibt der Zustand `conflict` (Liste, Markierung und
+  Knopf bleiben) — die Eingaben gehen nicht verloren.
+- Die Seite uebernimmt den Trip bei `'geholt'` (BEVOR die Eintraege erneut gesendet
+  werden; Trip und Stempel gemeinsam, AC-19) und erfaehrt den vollen Erfolg bei
+  `'wiederholt'`.
+- Regel 1: bei `'geholt'` werden die Reiter NICHT neu aufgebaut — sie leiten ihren
+  Zustand nur beim Mount aus `trip` ab; ein Neuaufbau liesse Listeneintrag und
+  sichtbaren Reiter auseinanderlaufen. Neuaufbau nur nach vollem Erfolg; bei Teilerfolg
+  verlassen die erfolgreichen Eintraege die Liste, gescheiterte bleiben, kein Remount.
+- Regel 2: ein erfolgreiches Speichern (200) unter dem Schluessel eines Reiters
+  entfernt dessen offenen Listeneintrag; ein aelterer Rumpf wird nie ueber eine neuere
+  erfolgreiche Schreibung gespielt. Leert das die Liste, endet der Konflikt.
+- AC-19-Uebernahme erfolgt in Compare erst nach vollem Retry-Erfolg, weil der
+  Hub-Reiter reaktiv auf `currentPreset` hydriert (`CompareTabs.svelte`, `$effect` auf
+  `preset`); dort wird nach vollem Erfolg frisch geholt. Beim Wiederholen setzen die
+  Compare-Speicherfunktionen ihre Anzeige bei Nicht-412-Fehlern nicht zurueck
+  (`imWiederholen`).
+- Fix-Loop 4 (F301a): scheitert ein Retry (auch nur teilweise), legt der Controller den
+  Stempel von VOR dem GET zurueck (einfachste sichere Variante: auch ein neuerer Stempel
+  eines Teil-PUT wird nicht behalten) und die Konflikt-Markierung bleibt gesetzt; Zustand
+  `conflict` mit der vollstaendigen Liste. Jeder Save eines offenen oder erstmals
+  geoeffneten Reiters mit veraltetem Stand bekommt damit 412. Der frische Stempel
+  wird erst nach VOLLEM Erfolg endgueltig (die Markierung faellt beim naechsten Retry).
+- Bekannte Grenzen (F301b/F302, bewusst nicht im Code geaendert): (a) der Retry sendet den
+  gesamten Eigenfeld-Satz des Reiters (Spec §2: Teilfeld je Reiter, nicht je geaendertem
+  Schluessel) — ein Fremdwert in DERSELBEN Reiter-Gruppe wird mit dem Wert ueberschrieben,
+  den der Nutzer im Reiter sah (Leitsatz oben). (b) Ein Top-Level-`null` (z. B.
+  `alert_quiet_from: null` nach Leeren der Ruhezeit) wird lokal fortgeschrieben, der
+  Go-Server ignoriert nil-Zeiger (`internal/handler/trip.go:371-375`) — vorbestehende
+  Server-Eigenheit, nur die Anzeige im Konfliktfenster weicht ab.
+- Keine 412-Sackgassen ausserhalb des Controllers: Schreibwege, die mit Registry-`If-Match`
+  am Controller vorbei schreiben, melden 412 per `meldeKonflikt` an ihn (sonst bliebe nur
+  „Fehler beim Speichern", jeder weitere Versuch liefe bis zum Neuladen in 412). Betroffen:
+  Ortsvergleich-Kopf (Name/Region/Profil), Orte (`persistPickedIds`), Pausieren/Aktivieren
+  im Hub (`handleToggleActive`) und das Etappen-Sofortschreiben der Trip-Seite. Bei 412
+  kein Rollback der Eingabe (sie wird mit „Nochmal speichern" erneut gesendet), bei anderen
+  Fehlern bleibt der Rollback; `previous_schedule` darf der Retry nicht veraltet
+  festschreiben. `/state`-PATCH, `/send` und DELETE schreiben ohne `If-Match` und sind
+  davon nicht betroffen.
+- Der Seitenkopf uebernimmt den Stempel nur im Browser (`browser`-Guard): die Registry ist
+  modulglobal und im SSR-Prozess nutzeruebergreifend geteilt.
+- Der Bestandstest `apiTripEtagHeaders` ist durch AC-18/AC-24 umgeschrieben (der
+  Stempel bleibt nach 412 stehen, statt verworfen zu werden).
+
+**Eine Wahrheit: Seitenstand = letzter Serverstand ⊕ ausstehende Nutzlasten (Fix-Loop 3, #1433).**
+Wurzel von F101/F201: Nach einem Konflikt lagen ungesicherte Eingaben nur in der Liste des
+Controllers (Closures); der Seitenstand (`trip` bzw. der Hub-Stand `currentPreset`), aus dem
+Reiter beim (Wieder-)Mount lesen, wusste davon nichts — ein neu gemounteter Reiter zeigte den
+Altstand, die Liste hielt etwas anderes. Invariante:
+
+- Jeder Listeneintrag traegt neben der Ausfuehrung die zuletzt GESENDETE Eigenfeld-Nutzlast als
+  Daten (`merkeNutzlast`, beim Senden gesetzt — nie nachtraeglich neu berechnet).
+- Bei `412` wird die Nutzlast ueber `registriereAbgelehnt` gemeldet; der Halter des Stands
+  schreibt ihn lokal fort (`wendeNutzlastAn`: einstufiger Merge wie Go `mergeConfigMap`, Arrays
+  und die zweite Ebene werden ersetzt, `undefined` wird uebersprungen). Kein Stempelwechsel.
+  Trip: die Seite (`trip`). Compare: der Hub (`CompareTabs`) — und NUR dessen interner
+  Hydrationsstand, nicht die Seiten-Prop `preset`, weil deren Wechsel die Hydrations-Flags
+  zuruecksetzt und den offenen Reiter ueber seine Eingabe neu hydrieren wuerde. Verloren ging
+  die Eingabe dort, wenn ein ERSTMALS geoeffneter Nachbar-Reiter (Versand teilt Abkuehlzeit/
+  Ruhezeit mit Alarme) `wizardState` aus dem Altstand hydrierte.
+- Bei `'geholt'` ist der Seitenstand GET-Stand ⊕ alle ausstehenden Nutzlasten (Reihenfolge der
+  Liste), Stand und Stempel gemeinsam (AC-19). Ein Ersatz per Dedup-Schluessel enthaelt die
+  fruehere Eingabe damit automatisch (der neue Reiter hat sie beim Mount gelesen).
+  **Ausnahme Compare:** die Seite setzt `currentPreset` bei `'geholt'` NICHT (gemessen: ein
+  Wechsel der Prop `preset` setzt via `CompareTabs.svelte:717` die Hydrations-Flags zurueck, der
+  offene Reiter hydriert `wizardState` neu und ueberschreibt eine ungesicherte Eingabe 77 → 45).
+  Der Hub-Stand bleibt dort bis zum `'wiederholt'`-Neuaufbau „alt ⊕ ausstehende Nutzlasten".
+  Bekanntes Restrisiko: nach einem GESCHEITERTEN Compare-Retry hydriert ein erstmals geoeffneter
+  Reiter Fremdfelder aus diesem alten Hub-Stand.
+- Offene Reiter aendern sich dabei nicht (Trip: lesen nur beim Mount). Compare 'wiederholt'
+  uebernimmt den frisch geholten Stand nur, wenn seit Beginn des GET nichts Neues ansteht und
+  der Registry-Stempel noch passt (Muster Trip-Seite `inRegistry`).
