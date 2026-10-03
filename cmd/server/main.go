@@ -64,6 +64,10 @@ func main() {
 	// nur messen, nur Zahlen ins Log; fail-soft, der Start laeuft immer weiter.
 	s.LogAddressCollisions()
 	telegramTokenStore := handler.NewTelegramTokenStore(cfg.DataDir)
+	// Issue #2160 AC-15: Reaper fuer Login-OTPs, Lösch-Codes und
+	// Telegram-Tokens — bewusst hier, nicht in den Konstruktoren.
+	stopReaper := handler.StartStoreReaper(telegramTokenStore, time.Minute)
+	defer stopReaper()
 	// Issue #2154 Scheibe A: eine Bremse fuer den ganzen Prozess — der
 	// Lernaufruf kommt immer von localhost, ein Zaehler je IP/Nummer/Konto
 	// waere wirkungslos bzw. missbrauchbar (Spec D5).

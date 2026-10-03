@@ -293,32 +293,75 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 	}
 }
 
-func DeleteAccountHandler(s *store.Store) http.HandlerFunc {
+// DeleteAccountHandler: POST /api/auth/account/delete mit Body
+// {password?, code?} (Issue #2160, ADR-0081). Ohne frischen Nachweis wird
+// nichts veraendert; mit Nachweis raeumt deleteAccountCascade alle Reste.
+func DeleteAccountHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
+		var req struct {
+			Password string `json:"password"`
+			Code     string `json:"code"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req) // leerer/kaputter Body = kein Nachweis
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			writeJSONError(w, http.StatusNotFound, "not_found")
 			return
 		}
-
-		if err := s.DeleteUser(userId); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+		if req.Password == "" && req.Code == "" {
+			writeJSONError(w, http.StatusBadRequest, "reauth_required")
 			return
 		}
-
+		var verbraucht *deleteCodeEntry
+		if req.Password != "" {
+			// Passwortweg beruehrt den Lösch-Code nie (auch nicht den Zaehler).
+			if user.PasswordHash == "" ||
+				bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
+				writeJSONError(w, http.StatusForbidden, "wrong_password")
+				return
+			}
+		} else {
+			e, ok := consumeDeleteCode(userId, req.Code, time.Now())
+			if !ok {
+				writeJSONError(w, http.StatusForbidden, "invalid_code")
+				return
+			}
+			verbraucht = e
+		}
+		if err := deleteAccountCascade(s, ts, user); err != nil {
+			// AC-13: wiederholbar — auch mit demselben Lösch-Code.
+			if verbraucht != nil {
+				restoreDeleteCode(userId, verbraucht)
+			}
+			log.Printf("account delete: %s nicht geloescht: %v", userId, err)
+			writeJSONError(w, http.StatusInternalServerError, "internal")
+			return
+		}
 		// Die Gaesteliste liegt IM Nutzerordner und ist mit DeleteUser bereits
 		// verschwunden — jedes Merkmal dieses Kontos ist damit dauerhaft
 		// ungueltig, auch nach einem Dienst-Neustart (Issue #2129 AC-16).
 		middleware.ClearSessionCookie(w)
-
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"deleted"}`))
 	}
+}
+
+// deleteAccountCascade raeumt alle Reste des Nutzers (Issue #2160): Telegram-
+// Tokens (persistiert), Login-OTPs seiner Adressen, Lösch-Code, Nutzerordner.
+// Serialisiert gegen Telegram-Connect ueber telegramConnectMu. Scheitert die
+// Token-Persistierung, bleibt der Ordner und die Löschung ist wiederholbar.
+func deleteAccountCascade(s *store.Store, ts *TelegramTokenStore, user *model.User) error {
+	telegramConnectMu.Lock()
+	defer telegramConnectMu.Unlock()
+	if ts != nil {
+		if err := ts.RemoveByUser(user.ID); err != nil {
+			return err
+		}
+	}
+	removeLoginOTPs(user.Email, user.MailTo, user.PendingContactAddress)
+	deleteCodeStore.Delete(user.ID)
+	return s.DeleteUser(user.ID)
 }
 
 // sendResetMailFn ist ein Test-Seam (Issue #2152 Fix-Loop 1, AC-6) analog zu
@@ -762,10 +805,14 @@ type profileResponse struct {
 	PremiumSmsReplyState string `json:"premium_sms_reply_state"`
 	// Eigenes Tarif-Gate (nur premium), NICHT von SmsAllowed abgeleitet —
 	// Muster SmsAllowed. Immer vorhanden.
-	PremiumSmsAllowed bool                  `json:"premium_sms_allowed"`
-	CreatedAt         string                `json:"created_at"`
-	HasPasskey        bool                  `json:"has_passkey"`
-	Passkeys          []passkeyProfileEntry `json:"passkeys,omitempty"`
+	PremiumSmsAllowed bool   `json:"premium_sms_allowed"`
+	CreatedAt         string `json:"created_at"`
+	HasPasskey        bool   `json:"has_passkey"`
+	// Issue #2160 — Konto hat ein Passwort (nie der Hash). Immer vorhanden
+	// (Muster HasPasskey): der Löschen-Dialog entscheidet daran, ob er ein
+	// Passwortfeld zeigt.
+	HasPassword bool                  `json:"has_password"`
+	Passkeys    []passkeyProfileEntry `json:"passkeys,omitempty"`
 	// Issue #2248 — Abweisung des Passkey-Angebots. Immer vorhanden (Muster
 	// HasPasskey): die Oberflaeche entscheidet an diesem Wert und darf nicht
 	// zwischen "false" und "Feld fehlt" unterscheiden muessen.
@@ -846,6 +893,7 @@ func toProfileResponse(u *model.User) profileResponse {
 		PremiumSmsAllowed:    model.PremiumSmsAllowed(tier),
 		CreatedAt:            u.CreatedAt.Format(time.RFC3339),
 		HasPasskey:           len(u.PasskeyCredentials) > 0,
+		HasPassword:          u.PasswordHash != "",
 		Passkeys:             passkeys,
 		// Issue #2248: auf diesem Weg erfaehrt die Oberflaeche die Abweisung
 		// beim naechsten Laden.

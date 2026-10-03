@@ -551,7 +551,8 @@ func TestOnlyPasswordChangeIssuesAFreshSession(t *testing.T) {
 		e.seedUser(t, uid, "geheim123")
 		cookie := e.login(t, uid, "geheim123")
 
-		resp := e.doResp(t, "DELETE", "/api/auth/account", cookie, "")
+		// Issue #2160: Löschung nur noch per POST mit Re-Auth.
+		resp := e.doResp(t, "POST", "/api/auth/account/delete", cookie, `{"password":"geheim123"}`)
 		if resp.Code != http.StatusOK {
 			t.Fatalf("Kontolöschung erwartet 200, bekommen %d", resp.Code)
 		}
@@ -712,7 +713,8 @@ func TestAccountDeletionRevokesSessionAcrossRestart(t *testing.T) {
 	if code := e.probe(t, cookie); code != http.StatusOK {
 		t.Fatalf("AC-16 Positivkontrolle: Merkmal muss vorher gültig sein, bekommen %d", code)
 	}
-	if code := e.do(t, "DELETE", "/api/auth/account", cookie, ""); code != http.StatusOK {
+	// Issue #2160: Löschung nur noch per POST mit Re-Auth.
+	if code := e.do(t, "POST", "/api/auth/account/delete", cookie, `{"password":"geheim123"}`); code != http.StatusOK {
 		t.Fatalf("AC-16: Kontolöschung erwartet 200, bekommen %d", code)
 	}
 

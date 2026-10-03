@@ -97,7 +97,19 @@ func New(deps Deps) chi.Router {
 	if os.Getenv("GZ_ENV") == "staging" {
 		r.Post("/api/auth/verify-email/staging-token", handler.StagingVerificationTokenHandler(deps.Store))
 	}
-	r.Delete("/api/auth/account", handler.DeleteAccountHandler(deps.Store))
+	// Issue #2160 (ADR-0081): Kontoloeschung nur mit frischem Nachweis
+	// (Passwort oder Lösch-Code). Der alte DELETE /api/auth/account entfaellt.
+	// Anmeldepflichtig, bewusst NICHT in der Public-Allowlist.
+	accountDeleteLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)
+	r.Post("/api/auth/account/delete",
+		accountDeleteLimiter.Middleware(handler.DeleteAccountHandler(deps.Store, deps.TelegramTokenStore)).ServeHTTP,
+	)
+	// IP-Grenze plus Mindestpause je Nutzer/Adresse (1 Code pro Minute).
+	deleteCodeLimiter := authmw.NewIPRateLimiter(3, 15*time.Minute)
+	deleteCodeMailLimiter := handler.NewMailFloodLimiter(1, time.Minute)
+	r.Post("/api/auth/account/delete-code",
+		deleteCodeLimiter.Middleware(handler.RequestDeleteCodeHandler(deps.Store, *deps.Config, deleteCodeMailLimiter)).ServeHTTP,
+	)
 	// Issue #2270: Datenexport nach DSGVO Art. 20 — authentifiziert, bewusst
 	// NICHT in der Public-Allowlist von AuthMiddleware.
 	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
