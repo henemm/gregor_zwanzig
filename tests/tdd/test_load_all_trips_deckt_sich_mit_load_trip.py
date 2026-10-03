@@ -103,7 +103,7 @@ def _einzeln_ladbar(directory: Path) -> dict:
         if json.loads(path.read_text(encoding="utf-8")).get("kind") != "route":
             continue
         try:
-            trip = load_trip(path)
+            trip = load_trip(path, user_id=USER_A)
         except Exception:
             continue
         ergebnis[trip.id] = trip
