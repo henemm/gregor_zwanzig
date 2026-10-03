@@ -15,7 +15,8 @@ Wanderer regelmaessig ein bis zwei Segmente weiter.
 Zielzustand (#2017): abgefragt wird die Position zur MITTE des
 Vorwarnfensters, also `position_at_time(..., at=jetzt + NOWCAST_HORIZON_MIN
 // 2)`. Der Alarm-Pfad benutzt denselben Baustein mit SEINEM eigenen Offset
-(`RADAR_ONSET_THRESHOLD_MIN // 2`) — geteilt wird die Positionsberechnung,
+(`RADAR_MEASURE_OFFSET_MIN` = 27, seit #2261 A-1 von der Schwelle
+entkoppelt) — geteilt wird die Positionsberechnung,
 nicht der Offset und nicht die Segmentwahl.
 
 RED-Treiber:
@@ -77,7 +78,7 @@ _MITTAGS = "2026-08-18T12:00:00+00:00"
 # Die Wegpunkte liegen bewusst weit auseinander, damit sich drei Kandidaten
 # eindeutig unterscheiden lassen:
 #   Startpunkt (alter Messpunkt)            -> (64.0,   -22.0)
-#   Offset des ALARM-Pfads (55 // 2 = 27)   -> ~(64.095, -21.905)
+#   Offset des ALARM-Pfads (RADAR_MEASURE_OFFSET_MIN = 27) -> ~(64.095, -21.905)
 #   Offset des HINWEIS-Pfads (180 // 2 = 90)-> (64.2,   -21.8)
 _HEUTE_START = (LAT, LON, 300.0)
 _HEUTE_ENDE = (LAT + 0.4, LON + 0.4, 1500.0)
@@ -117,7 +118,7 @@ def _hinweis_offset_minuten() -> int:
 
     Ueber die MODUL-Referenz gelesen (nicht als `from ... import` gebunden),
     damit ein Nachziehen der Quelle hier nicht still an einer Kopie
-    vorbeilaeuft — dieselbe Regel wie fuer `RADAR_ONSET_THRESHOLD_MIN`.
+    vorbeilaeuft — dieselbe Regel wie fuer `RADAR_MEASURE_OFFSET_MIN`.
     """
     from services import radar_service as radar_service_mod
 
@@ -125,9 +126,12 @@ def _hinweis_offset_minuten() -> int:
 
 
 def _alarm_offset_minuten() -> int:
+    """Messpunkt-Offset des ALARM-Pfads. #2261 A-1: eigene Konstante, nicht
+    mehr `RADAR_ONSET_THRESHOLD_MIN // 2` (die Schwelle steht jetzt auf dem
+    Quell-Horizont 180; ihre Haelfte fiele mit dem Hinweis-Offset zusammen)."""
     from services import radar_service as radar_service_mod
 
-    return radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+    return radar_service_mod.RADAR_MEASURE_OFFSET_MIN
 
 
 def _interpoliert(active, now_utc: datetime, offset_minuten: int):
@@ -197,7 +201,7 @@ def test_ac9_starkregen_hinweis_misst_am_eigenen_fenstermittelpunkt(monkeypatch)
       `get_nowcast()`-Aufruf die Position zu `jetzt + NOWCAST_HORIZON_MIN //
       2` (= +90 Min, Zeitanteil 120/240 = 0,5) samt interpolierter Hoehe —
       nicht `active.start_point` und ausdruecklich auch nicht die Position
-      zum Offset des ALARM-Pfads (`RADAR_ONSET_THRESHOLD_MIN // 2` = +27
+      zum Offset des ALARM-Pfads (`RADAR_MEASURE_OFFSET_MIN` = +27
       Min). Beide Pfade teilen die Berechnung, nicht den Offset.
 
     Fall A (REGRESSIONSSCHUTZ, heute bereits gruen) — eigene Segmentwahl:

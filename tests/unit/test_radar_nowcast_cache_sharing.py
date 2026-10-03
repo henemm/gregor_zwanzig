@@ -307,7 +307,8 @@ def _messpunkt_des_trips(trip):
     bewachen `test_issue_822_radar_nowcast_segment.py` und
     `test_radar_alert_follows_ortstag.py`.
 
-    Die Schwelle kommt ueber die MODUL-Referenz (Drift-Waechter #2009).
+    Der Offset kommt ueber die MODUL-Referenz (`RADAR_MEASURE_OFFSET_MIN`,
+    #2261 — vorher Schwelle // 2).
     """
     from services import radar_service as radar_service_mod
     from services.trip_day import trip_local_today
@@ -318,7 +319,8 @@ def _messpunkt_des_trips(trip):
     assert aufgeloest is not None, "Fixture-Voraussetzung: aktives Segment noetig"
     active, segment_date = aufgeloest
     at = now_utc + timedelta(
-        minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+        # Issue #2261 (A-1, AC-2): eigener Messpunkt-Offset statt Schwelle // 2.
+        minutes=radar_service_mod.RADAR_MEASURE_OFFSET_MIN
     )
     pos = position_at_time(trip, active, segment_date, at)
     return pos.lat, pos.lon, int(round(pos.elevation_m))

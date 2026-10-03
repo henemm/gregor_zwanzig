@@ -209,8 +209,8 @@ def _erwarteter_messpunkt(trip, now_utc):
     stammen, sonst machte er jede Verfaelschung mit.
 
     Der Zieloffset kommt ueber die MODUL-Referenz auf
-    ``RADAR_ONSET_THRESHOLD_MIN``, nie als ``from ... import`` gebunden — der
-    Laufzeit-Drift-Waechter aus #2009 setzt die Konstante zur Laufzeit um.
+    ``RADAR_MEASURE_OFFSET_MIN`` (#2261, vorher ``RADAR_ONSET_THRESHOLD_MIN //
+    2``), nie als ``from ... import`` gebunden.
     """
     from datetime import timedelta
 
@@ -222,7 +222,8 @@ def _erwarteter_messpunkt(trip, now_utc):
     assert aufgeloest is not None, "Testvoraussetzung: aktives Segment noetig"
     active, _segment_date = aufgeloest
     at = now_utc + timedelta(
-        minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+        # Issue #2261 (A-1, AC-2): eigener Messpunkt-Offset statt Schwelle // 2.
+        minutes=radar_service_mod.RADAR_MEASURE_OFFSET_MIN
     )
     spanne = (active.end_time - active.start_time).total_seconds()
     p = max(0.0, min(1.0, (at - active.start_time).total_seconds() / spanne))

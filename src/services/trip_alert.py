@@ -193,7 +193,53 @@ def radar_alert_due(result: object, threshold_min: int) -> bool:
     return bool(getattr(result, "already_running", False))
 
 
-def waehle_massgeblichen_punkt(ergebnisse) -> "tuple[int, object] | None":
+def menge_ist_vergleichbar(result: object) -> bool:
+    """Issue #2261 (A-1, R4): taugt die Menge dieses Laufs als Vergleichsgroesse?
+
+    Das Mengenfenster (`window_precip_mm`) umfasst 60 Minuten AB JETZT. Beginnt
+    der Regen erst ab `LOCATION_SHARPNESS_LIMIT_MIN` (60) und laeuft nicht
+    bereits, liegt das Fenster VOR dem Ereignis — die Menge (~0) ist ein
+    Vorlauf-Artefakt, keine Aussage ueber das Ereignis. Grenze ueber die
+    Modulreferenz (Drift-Schutz wie bei der Schwelle)."""
+    from services import radar_service as radar_service_mod
+
+    if getattr(result, "already_running", False):
+        return True
+    onset = getattr(result, "onset_minutes", None)
+    return onset is None or onset < radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN
+
+
+def aufenthaltsfenster_min(durchgangszeiten, now: datetime) -> list:
+    """Issue #2261 (A-1, R3): Ende des Aufenthaltsfensters je Messpunkt in
+    Minuten ab `now` — `E_k = p_{k+1} + RADAR_PASSAGE_TOLERANCE_MIN`. Am
+    letzten Punkt (und im Einzelpunkt-Fall) `None`: das Fenster ist nach oben
+    offen, der Nutzer erreicht das Etappenziel und bleibt dort."""
+    from services import radar_service as radar_service_mod
+
+    toleranz = radar_service_mod.RADAR_PASSAGE_TOLERANCE_MIN
+    enden: list = []
+    for k in range(len(durchgangszeiten)):
+        if k + 1 < len(durchgangszeiten):
+            naechster = durchgangszeiten[k + 1]
+            enden.append((naechster - now).total_seconds() / 60.0 + toleranz)
+        else:
+            enden.append(None)
+    return enden
+
+
+def _im_aufenthaltsfenster(ergebnis, fenster_ende_min) -> bool:
+    """Issue #2261 (A-1, R3): beginnt der Regen, solange der Nutzer laut
+    Zeitplan noch an diesem Punkt ist? Laufender Regen ist immer faellig,
+    ein offenes Fenster (`None`) ebenso."""
+    if getattr(ergebnis, "already_running", False) or fenster_ende_min is None:
+        return True
+    onset = getattr(ergebnis, "onset_minutes", None)
+    return onset is None or onset <= fenster_ende_min
+
+
+def waehle_massgeblichen_punkt(
+    ergebnisse, fenster_ende_min=None,
+) -> "tuple[int, object] | None":
     """Issue #2480: der EINE massgebliche Punkt aus den Ergebnissen aller
     Messpunkte (positionsgleich, `None` = nicht verwertbar) oder `None`.
 
@@ -201,6 +247,11 @@ def waehle_massgeblichen_punkt(ergebnisse) -> "tuple[int, object] | None":
     `radar_alert_due`. Frueheste Beginn gewinnt (laufender Regen = 0), dann die
     hoehere Dringlichkeit (`highest_urgency`-Rangfolge), dann der kleinere
     Index. Reine Funktion ohne Seiteneffekte.
+
+    Issue #2261 (A-1, R3): `fenster_ende_min` (positionsgleich, Minuten ab
+    jetzt, `None` = offen) schraenkt die Kandidaten auf Punkte ein, an denen
+    der Regen beginnt, solange der Nutzer laut Zeitplan dort ist. Ohne Angabe
+    gilt jedes Fenster als offen (Bestandsverhalten).
     """
     from services import radar_service as radar_service_mod
 
@@ -209,6 +260,10 @@ def waehle_massgeblichen_punkt(ergebnisse) -> "tuple[int, object] | None":
         if _zonen_messwert(ergebnis) is None:
             continue
         if not radar_alert_due(ergebnis, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
+            continue
+        if fenster_ende_min is not None and not _im_aufenthaltsfenster(
+            ergebnis, fenster_ende_min[idx],
+        ):
             continue
         beginn = 0 if ergebnis.already_running else ergebnis.onset_minutes
         dringlich = alert_urgency.urgency_from_radar(
@@ -220,6 +275,39 @@ def waehle_massgeblichen_punkt(ergebnisse) -> "tuple[int, object] | None":
         ):
             beste = (beginn, dringlich, idx, ergebnis)
     return None if beste is None else (beste[2], beste[3])
+
+
+def radar_ereignis_segmente(trip: "Trip", active, onset_dt: datetime) -> list:
+    """Issue #2261 (A-1, R5/C-2): Segmentmenge, unter der ein Radar-Ereignis
+    geprueft und registriert wird — {aktives Segment} ∪ {Segment, in dem der
+    Nutzer laut Zeitplan zur Ereigniszeit ist}.
+
+    Das Identitaets-Gate bleibt unveraendert (disjunkte Mengen sind nie
+    dasselbe Ereignis); erst die Vereinigung macht den spaeteren Lauf im
+    Folgesegment als dasselbe Ereignis erkennbar. Findet sich kein Segment zur
+    Ereigniszeit (nach der letzten Etappe) oder scheitert die Aufloesung,
+    bleibt es beim aktiven Segment."""
+    from services.trip_segments import convert_trip_to_segments
+
+    segmente = []
+    aktiv = normalize_segment_id(active.segment_id)
+    if aktiv:
+        segmente.append(aktiv)
+    try:
+        tag = trip_local_today(trip, onset_dt)
+        for seg in convert_trip_to_segments(trip, tag):
+            if seg.start_time <= onset_dt <= seg.end_time:
+                sid = normalize_segment_id(seg.segment_id)
+                if sid and sid not in segmente:
+                    segmente.append(sid)
+                break
+    except Exception as e:
+        logger.warning(
+            "Radar alert: Segment zur Ereigniszeit fuer Trip %s nicht "
+            "bestimmbar (%s) — es bleibt beim aktiven Segment.",
+            getattr(trip, "id", "?"), e,
+        )
+    return segmente
 
 
 def _zonen_messwert(result):
@@ -1681,6 +1769,27 @@ class TripAlertService:
         )
         return durchbruch
 
+    def _gewitter_ueberholt_sperrzeit(
+        self, trip: "Trip", result, urgency: str,
+    ) -> bool:
+        """Issue #2261 (A-1, AC-5): Dringlichkeits-Ausnahme an der Sperrzeit.
+
+        Mit der Schwelle auf dem Horizont stammt die Vergleichsbasis der
+        Menge oft aus einem nicht vergleichbaren Lauf (Basis `None`) — eine
+        Verschaerfung zum GEWITTER kaeme dann nie mehr durch. Sie bricht
+        durch, wenn die Lage konvektiv ist UND ihre Dringlichkeit die der
+        laufenden Sperre echt uebersteigt. Bewusst auf Konvektion begrenzt:
+        eine reine Intensitaetsstufe ist eine Mengen-Aussage und laeuft ueber
+        die Mengen-Ueberholung (#2065). Fehlt die gebuchte Dringlichkeit
+        (Alt-Eintrag), gibt es keinen Durchbruch (konservativ)."""
+        if not getattr(result, "is_convective", False):
+            return False
+        basis = last_deviation_urgency(
+            user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
+            throttle_key=trip.id, throttle_store=self._throttle_store,
+        )
+        return deviation_overtakes_cooldown(basis_urgency=basis, urgency=urgency)
+
     def check_radar_alerts(self) -> int:
         """
         Check all trips for radar-based alerts using segment-aware logic (Issue #822).
@@ -1852,8 +1961,11 @@ class TripAlertService:
             from services import radar_service as radar_service_mod
             from services import trip_segments as trip_segments_mod
 
+            # Issue #2261 (A-1, R2): eigener Messpunkt-Offset statt
+            # `Schwelle // 2` — mit der Schwelle auf dem Horizont waere der
+            # Messpunkt sonst auf +90 gewandert.
             _at = now_utc + timedelta(
-                minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+                minutes=radar_service_mod.RADAR_MEASURE_OFFSET_MIN
             )
             # Absicherung je Trip, nicht um den Stapellauf (Adversary
             # F-ADV1, Muster `fix_1479`): Vor #2017 stand hier ein trivialer
@@ -1871,8 +1983,14 @@ class TripAlertService:
             try:
                 # Issue #2051 S2a: die Punktbildung ruft `position_at_time()`
                 # selbst — der erste Punkt IST der bisherige Messpunkt.
-                _punkte = trip_segments_mod.points_along_remaining_route(
+                # Issue #2261 (A-1, R3): dieselben Punkte, je Punkt mit der
+                # Durchgangszeit laut Zeitplan (Messort zur Ereigniszeit).
+                _punkte_mit_zeit = trip_segments_mod.points_with_passage_times(
                     trip, active, segment_date, _at,
+                )
+                _punkte = [_p for _p, _t in _punkte_mit_zeit]
+                _fenster_ende = aufenthaltsfenster_min(
+                    [_t for _p, _t in _punkte_mit_zeit], now_utc,
                 )
                 _pos = _punkte[0]
             except Exception as e:
@@ -1964,7 +2082,7 @@ class TripAlertService:
             # Budget-Druck: kein Alarm.
             _wahl = None
             if not (result is not None and result.throttled):
-                _wahl = waehle_massgeblichen_punkt(_zonen_ergebnisse)
+                _wahl = waehle_massgeblichen_punkt(_zonen_ergebnisse, _fenster_ende)
             _trigger_km = None
             if _wahl is not None:
                 _pos = _punkte[_wahl[0]]
@@ -1987,6 +2105,10 @@ class TripAlertService:
             # Vergleichsbasis der naechsten Runde muss aber aus DIESEM Abruf
             # stammen.
             _menge_mm = result.window_precip_mm
+            # Issue #2261 (A-1, R4): bei fernem Beginn ist die Menge ein
+            # Vorlauf-Artefakt (~0) — sie ueberholt nichts und hinterlaesst
+            # keine Vergleichsbasis.
+            _menge_vergleichbar = menge_ist_vergleichbar(result)
 
             # Issue #2050 S3b: die Dringlichkeit dieses Abrufs entsteht HIER,
             # vor beiden Ausnahme-Entscheidungen — bis dahin wurde sie erst
@@ -2025,13 +2147,19 @@ class TripAlertService:
             # `tests/tdd/test_radar_cooldown_overtake.py`
             # (`test_f001_durchbruch_ohne_ausloeser_verhaelt_sich_wie_ein_freier_lauf`).
             _ueberholt_sperrzeit = False
+            _mengen_ueberholt = False
             if _sperrzeit_offen:
                 _basis_mm = last_nowcast_precip_mm(
                     user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
                     throttle_key=trip.id, throttle_store=self._throttle_store,
                 )
-                _ueberholt_sperrzeit = radar_overtakes_cooldown(
-                    basis_mm=_basis_mm, menge_mm=_menge_mm,
+                _mengen_ueberholt = radar_overtakes_cooldown(
+                    basis_mm=_basis_mm,
+                    menge_mm=_menge_mm if _menge_vergleichbar else None,
+                )
+                _ueberholt_sperrzeit = (
+                    _mengen_ueberholt
+                    or self._gewitter_ueberholt_sperrzeit(trip, result, _radar_urgency)
                 )
                 # Beide Zahlen in EINER Zeile, damit im Nachhinein
                 # nachvollziehbar ist, GEGEN WAS entschieden wurde -- fuer
@@ -2126,6 +2254,11 @@ class TripAlertService:
 
             if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
                 continue
+            # Issue #2261 (A-1, R3, Adversary F001): hat die Punktwahl keinen
+            # Punkt geliefert, steht hier noch das ungefilterte Punkt-0-
+            # Ergebnis — auch dort gilt das Aufenthaltsfenster (E_0).
+            if _wahl is None and not _im_aufenthaltsfenster(result, _fenster_ende[0]):
+                continue
 
             # Issue #2050 S2b: ohne kuenftigen Beginn (laufendes Ereignis, das
             # in der laufenden Viertelstunde endet) waere `timedelta(
@@ -2181,8 +2314,11 @@ class TripAlertService:
             # 3,6-fach -- alte Regel: kein Alarm). UND-Verknuepfung (nicht ODER)
             # haelt die Regel fuer festen _briefing_precip monoton in beiden
             # Groessen (AC-3).
+            # Issue #2261 (A-1, C-1): eine nicht vergleichbare Menge (Beginn
+            # >= 60 Min) ueberholt eine Ankuendigung nie.
             _overtaking = (
                 _briefing_announced
+                and _menge_vergleichbar
                 and result.window_precip_mm >= _briefing_precip * _BRIEFING_OVERTAKE_FACTOR
                 and result.window_precip_mm >= _OVERTAKE_MIN_ABSOLUTE_MM
             )
@@ -2386,18 +2522,19 @@ class TripAlertService:
             # eigentlichen Versand geprueft). Ein Nowcast ist immer Klasse
             # 'wet' (T2, AC-4b) -- `resolve_hazard_class` bekommt hier NIE
             # `None`.
+            # Issue #2261 (A-1, C-2): {aktives Segment} ∪ {Segment zur
+            # Ereigniszeit} — EINE Liste fuer Pruefung und Registrierung.
+            _ereignis_segmente = radar_ereignis_segmente(trip, active, _onset_dt)
             _identity_gate = check_event_identity_gate(
                 user_id=self._user_id, entity_id=trip.id,
                 hazard_class=resolve_hazard_class(is_convective=_radar_request.is_convective),
-                segment_ids=(
-                    [_radar_request.segment_id] if _radar_request.segment_id else []
-                ),
+                segment_ids=_ereignis_segmente,
                 severity=_radar_urgency, now=now_utc, point_at=_onset_dt,
                 # Issue #2065: dieselbe Mengen-Feststellung, die schon die
                 # Sperrzeit ueberholt hat -- die Stufenskala saettigt bei
                 # 4 mm/h und kann die Verschaerfung nicht sehen. Ohne diese
                 # Haelfte bliebe der Alarm aus, nur mit anderem Grund.
-                quantitative_escalation=_ueberholt_sperrzeit,
+                quantitative_escalation=_mengen_ueberholt,
             )
             if not _identity_gate.allowed:
                 logger.debug(
@@ -2513,7 +2650,9 @@ class TripAlertService:
                 # Issue #2065: Vergleichsbasis der naechsten Runde --
                 # Selbstbremsung, die naechste Verschaerfung muss den vollen
                 # Faktor gegen DIESE Menge erreichen.
-                precip_mm=_menge_mm,
+                # Issue #2261 (A-1, R4): ein Lauf mit nicht vergleichbarer
+                # Menge hinterlaesst KEINE Basis (`None` ⇒ kein Durchbruch).
+                precip_mm=_menge_mm if _menge_vergleichbar else None,
                 # Issue #2050 S3b: die hoechste heute in dieser Zone
                 # ZUGESTELLTE Stufe waechst bei JEDEM Versand mit (nicht nur
                 # beim Durchbruch) — sie ist die Vergleichsbasis der naechsten
@@ -2529,9 +2668,7 @@ class TripAlertService:
             record_event_identity(
                 user_id=self._user_id, entity_id=trip.id,
                 hazard_class=resolve_hazard_class(is_convective=_radar_request.is_convective),
-                segment_ids=(
-                    [_radar_request.segment_id] if _radar_request.segment_id else []
-                ),
+                segment_ids=_ereignis_segmente,
                 severity=_radar_urgency, point_at=_onset_dt,
                 now=datetime.now(timezone.utc),
             )

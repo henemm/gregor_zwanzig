@@ -357,11 +357,13 @@ def _messpunkt_des_aktiven_segments(
 ) -> tuple[float, float]:
     """Die Koordinate, an der ``check_radar_alerts()`` seit Issue #2017
     abfragt: die zur Mitte des Vorwarnfensters
-    (``RADAR_ONSET_THRESHOLD_MIN // 2``) interpolierte Position auf dem
+    (seit #2261 A-1 entkoppelt: ``RADAR_MEASURE_OFFSET_MIN``, nicht mehr
+    ``RADAR_ONSET_THRESHOLD_MIN // 2``) interpolierte Position auf dem
     aktiven Segment.
 
-    Die Schwelle kommt ueber die MODUL-Referenz, nie als ``from ... import``
-    gebunden — der Laufzeit-Drift-Waechter aus #2009 setzt sie zur Laufzeit um.
+    Der Offset kommt ueber die MODUL-Referenz, nie als ``from ... import``
+    gebunden — eine beim Import gebundene Kopie liefe still an einem
+    Nachziehen der Quelle vorbei.
 
     Reine FIXTURE-Berechnung, keine Zusicherung: dieser Test prueft die
     Ruhezeit-Haertung (#1479), nicht den Messpunkt. Deshalb darf die
@@ -382,7 +384,7 @@ def _messpunkt_des_aktiven_segments(
     )
     active, segment_date = aufgeloest
     at = now_utc + timedelta(
-        minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+        minutes=radar_service_mod.RADAR_MEASURE_OFFSET_MIN
     )
     pos = position_at_time(trip, active, segment_date, at)
     return (pos.lat, pos.lon)

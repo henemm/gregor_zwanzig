@@ -211,16 +211,18 @@ def _clean_user(uid: str) -> None:
 # --------------------------------------------------------------------------
 
 def _alarm_offset_minuten() -> int:
-    """Zieloffset des ALARM-Pfads = halbes Vorwarnfenster.
+    """Zieloffset des ALARM-Pfads = eigener Messpunkt-Offset.
 
-    Gelesen ueber die MODUL-Referenz, nie als `from ... import` gebunden: der
-    Laufzeit-Drift-Waechter aus #2009 (`test_radar_onset_threshold_variance.py
-    ::test_ac1_shared_threshold_drives_both_paths`) setzt die Konstante zur
-    Laufzeit um; eine beim Import gebundene Kopie liefe still daran vorbei.
+    Issue #2261 (A-1, AC-2): bis #2261 das halbe Vorwarnfenster
+    (`RADAR_ONSET_THRESHOLD_MIN // 2`); seit die Schwelle auf dem Horizont
+    steht, ist der Offset entkoppelt (`RADAR_MEASURE_OFFSET_MIN`, 27).
+
+    Gelesen ueber die MODUL-Referenz, nie als `from ... import` gebunden: eine
+    beim Import gebundene Kopie liefe still an einer Laufzeit-Aenderung vorbei.
     """
     from services import radar_service as radar_service_mod
 
-    return radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+    return radar_service_mod.RADAR_MEASURE_OFFSET_MIN
 
 
 def _erwartete_messposition(trip, now_utc: datetime, offset_minuten: int):
@@ -1222,7 +1224,7 @@ def test_2017_ac8_nowcast_an_interpolierter_position_mit_hoehe():
 def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
     """AC-10: der Segment-Ende-Guard aus #2009 ist entfernt — POSITIVNACHWEIS.
 
-    Given ein aktives Segment, das in 20 Minuten endet, und ein Onset in 53
+    Given ein aktives Segment, das in 20 Minuten endet, und ein Onset in 173
     Minuten (nach ALTEM Massstab also hinter `active.end_time`) / When
     `check_radar_alerts()` laeuft / Then wird der Alarm regulaer gesendet.
 
@@ -1238,7 +1240,11 @@ def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
     test_ac6_segment_end_guard_suppresses_late_onset` ist gewollt — jene Datei
     faellt in derselben Aenderung.
     """
-    onset_minutes = 53  # erreichbarer Rasterwert, <= RADAR_ONSET_THRESHOLD_MIN
+    # #2261 A-1: 173 statt 53 — groesster erreichbarer Rasterwert unter der
+    # neuen Schwelle (= Quell-Horizont 180). Der Messzeitpunkt (jetzt + 27)
+    # liegt hinter dem Segmentende, es bleibt beim Einzelpunkt am Ziel; dessen
+    # Aufenthaltsfenster ist nach oben offen (der Nutzer bleibt am Ziel).
+    onset_minutes = 173
     uid = fresh_uid("2017-ac10")
     try:
         sent, mails, _dienst, _frames, _trip, _now = _alarm_lauf_2017(
@@ -1249,7 +1255,9 @@ def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
             f"AC-10: Segment endet in 20 Min, Onset liegt bei {onset_minutes} "
             f"Min — nach Entfernung des Segment-Ende-Guards MUSS der Alarm "
             f"regulaer ausgeloest werden, erhalten sent={sent}. sent=0 heisst: "
-            f"der Guard (trip_alert.py, `_onset_dt > _segment_end`) lebt noch."
+            f"der Guard (trip_alert.py, `_onset_dt > _segment_end`) lebt noch, "
+            f"die Schwelle ist nicht der Quell-Horizont (#2261) oder das "
+            f"Aufenthaltsfenster des Einzelpunkts ist nicht offen."
         )
         assert len(mails) == 1, (
             f"AC-10: erwartet genau EINE zugestellte Alarm-Mail, erhalten "

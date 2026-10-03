@@ -416,8 +416,11 @@ def record_nowcast_sent(
         user_id, now, zone,
         urgency=urgency, is_escalation_breakthrough=is_escalation_breakthrough,
     )
+    # Issue #2261 (A-1, AC-5): die Dringlichkeit reist in den Sperr-Eintrag
+    # mit — Vergleichsbasis der Gewitter-Ausnahme an der Sperrzeit. Das Feld
+    # existiert im Eintragsformat bereits (#2050 S3c), kein Schemawechsel.
     _resolve_store(user_id, throttle_store).record(
-        throttle_scope, throttle_key, now, precip_mm=precip_mm,
+        throttle_scope, throttle_key, now, precip_mm=precip_mm, urgency=urgency,
     )
 
 

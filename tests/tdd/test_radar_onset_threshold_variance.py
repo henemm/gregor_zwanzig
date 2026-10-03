@@ -2,6 +2,12 @@
 
 SPEC: docs/specs/modules/fix_2009_nowcast_vorlauf.md (AC-1, AC-2, AC-3)
 
+Angepasst #2261 Teil A, A-1 (SPEC: docs/specs/modules/feat_2261_a1_radar_vorlauf.md):
+die Schwelle ist jetzt die Reichweite der Quelle (`NOWCAST_HORIZON_MIN`,
+180). Der Drift-Schutz (AC-1, Modulreferenz) bleibt gueltig; die
+Raster-Erwartungen (AC-2/AC-3) zeigen auf das neue Verhalten: 68/83/173
+loesen aus, ein Beginn jenseits der Reichweite (188) nicht.
+
 Heutiger Stand: `trip_alert.py:1270` ruft `radar_alert_due(result,
 threshold_min=20)` mit einem hartkodierten Literal auf,
 `compare_radar_alert.py:53` pflegt ein eigenes `_RADAR_ONSET_THRESHOLD_MIN =
@@ -110,13 +116,13 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
     Ausloeseverhalten fuer denselben Onset (38 Min, ein erreichbarer
     Rasterwert). Eine wieder eingeschlichene lokale Kopie faellt durch:
     sie bliebe beim Monkeypatch der geteilten Konstante unberuehrt und
-    wuerde weiterhin bei der Default-Schwelle 55 pruefen.
+    wuerde weiterhin bei der Default-Schwelle (#2261: 180) pruefen.
     """
     from services import radar_service
 
-    onset = 38  # < 55 (Default) und >= 30 (Fremdwert) -- trennscharf fuer beide Schwellen
+    onset = 38  # < Default (#2261: 180) und >= 30 (Fremdwert) -- trennscharf fuer beide Schwellen
 
-    # ---- Baseline: unveraenderte Default-Schwelle (55) -> Onset 38 loest in
+    # ---- Baseline: unveraenderte Default-Schwelle -> Onset 38 loest in
     #      BEIDEN Pfaden aus.
     uid_trip_base, uid_cmp_base = fresh_uid("ac1-trip-base"), fresh_uid("ac1-cmp-base")
     clean_uid(uid_trip_base)
@@ -125,11 +131,11 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
         sent_trip_base, _ = _trip_run(uid_trip_base, "trip-ac1-base", onset)
         sent_cmp_base, _ = _compare_run(uid_cmp_base, "cp-ac1-base", onset)
         assert sent_trip_base == 1, (
-            f"Voraussetzung: bei Default-Schwelle 55 muss Onset {onset} im "
+            f"Voraussetzung: bei Default-Schwelle muss Onset {onset} im "
             f"Trip-Pfad ausloesen, erhalten {sent_trip_base}"
         )
         assert sent_cmp_base == 1, (
-            f"Voraussetzung: bei Default-Schwelle 55 muss Onset {onset} im "
+            f"Voraussetzung: bei Default-Schwelle muss Onset {onset} im "
             f"Ortsvergleichs-Pfad ausloesen, erhalten {sent_cmp_base}"
         )
     finally:
@@ -147,12 +153,12 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
         sent_trip_patched, _ = _trip_run(uid_trip_patched, "trip-ac1-patched", onset)
         sent_cmp_patched, _ = _compare_run(uid_cmp_patched, "cp-ac1-patched", onset)
         assert sent_trip_patched == 0, (
-            f"Fremdwert 30 statt 55 haette Onset {onset} im Trip-Pfad "
+            f"Fremdwert 30 statt Default haette Onset {onset} im Trip-Pfad "
             f"unterdruecken muessen -- eine unabhaengige lokale Kopie der "
             f"Schwelle waere hier durchgefallen: {sent_trip_patched}"
         )
         assert sent_cmp_patched == 0, (
-            f"Fremdwert 30 statt 55 haette Onset {onset} im "
+            f"Fremdwert 30 statt Default haette Onset {onset} im "
             f"Ortsvergleichs-Pfad unterdruecken muessen -- eine unabhaengige "
             f"lokale Kopie der Schwelle waere hier durchgefallen: "
             f"{sent_cmp_patched}"
@@ -165,11 +171,15 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
 # ═══════════════════════════ AC-2 / AC-3 ══════════════════════════════════
 
 # Am Cron-Takt `7,22,37,52` + 15-Min-Datenraster erreichbare Onset-Werte
-# (docs/context/fix-2009-nowcast-vorlauf.md, Root-Cause-Tabelle). Bei
-# Schwelle 55 loesen 8/23/38/53 aus, 68/83 nicht mehr.
+# (docs/context/fix-2009-nowcast-vorlauf.md, Root-Cause-Tabelle). #2261 A-1:
+# Schwelle = Reichweite der Quelle (180) -> 8/23/38/53/68/83/173 loesen aus
+# (der Nutzer ist auf der Ganztags-Etappe von `make_trip()` dann noch am
+# ersten Messpunkt). 188 liegt jenseits der Reichweite: der einzige Frame
+# faellt aus dem Horizont, kein Beginn, kein Alarm — haelt die Variation
+# trennscharf (sonst bestuende das Raster auch mit einer Konstanten).
 _GRID = [
     (8, True), (23, True), (38, True), (53, True),
-    (68, False), (83, False),
+    (68, True), (83, True), (173, True), (188, False),
 ]
 
 
@@ -178,8 +188,9 @@ _GRID = [
     ids=[f"{m}min-{'alarm' if e else 'still'}" for m, e in _GRID],
 )
 def test_ac2_trip_variance_over_grid_values(onset_minutes, expect_alert):
-    """AC-2: Trip-Pfad ueber die sechs erreichbaren Rasterwerte -- 8/23/38/53
-    loesen bei Schwelle 55 genau EINEN Alarm aus, 68/83 keinen. Schliesst
+    """AC-2: Trip-Pfad ueber die erreichbaren Rasterwerte -- 8..173 loesen
+    (#2261: Schwelle 180) genau EINEN Alarm aus, 188 (jenseits der
+    Reichweite) keinen. Schliesst
     die Blindstelle: heute prueft kein Test, dass `onset_minutes`
     ueberhaupt variieren kann (`CountingFrameSource`-Default ist 8)."""
     uid = fresh_uid(f"ac2-{onset_minutes}")
@@ -189,7 +200,7 @@ def test_ac2_trip_variance_over_grid_values(onset_minutes, expect_alert):
         sent, mails = _trip_run(uid, trip_id, onset_minutes)
         expected = 1 if expect_alert else 0
         assert sent == expected, (
-            f"Onset {onset_minutes} Min bei Schwelle 55: erwartet {expected} "
+            f"Onset {onset_minutes} Min bei Schwelle = Horizont: erwartet {expected} "
             f"Alarm(e), erhalten {sent}"
         )
         assert len(mails) == expected, (
@@ -214,7 +225,7 @@ def test_ac3_compare_variance_over_grid_values(onset_minutes, expect_alert):
         sent, mails = _compare_run(uid, preset_id, onset_minutes)
         expected = 1 if expect_alert else 0
         assert sent == expected, (
-            f"Onset {onset_minutes} Min bei Schwelle 55: erwartet {expected} "
+            f"Onset {onset_minutes} Min bei Schwelle = Horizont: erwartet {expected} "
             f"Alarm(e), erhalten {sent}"
         )
         assert len(mails) == expected, (

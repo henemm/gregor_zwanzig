@@ -3,8 +3,10 @@
 Verdrahtet den in Slice 1a (LIVE) gelieferten Bündel-Versand-Baustein
 (`NotificationService.send_multi_location_radar_alert`) zu einem echten
 Compare-Radar-Alarm-Pfad: pro Compare-Preset und pro Ort wird der aktuelle
-Radar-Nowcast geprüft; bei Regen-Onset ≤ 20 Min (konvektive Gefahr steuert
-nur das Label) wird EINE gebündelte E-Mail an die Preset-Empfänger
+Radar-Nowcast geprüft; bei Regen-Onset innerhalb der geteilten Schwelle
+`radar_service.RADAR_ONSET_THRESHOLD_MIN` (= Horizont der Quelle, #2261 A-1;
+konvektive Gefahr steuert nur das Label) wird EINE gebündelte E-Mail an die
+Preset-Empfänger
 versendet. Eigener Parallelpfad neben `CompareAlertService` (Metrik-
 Abweichungs-Alarme) — Struktur-Vorbild ist `CompareAlertService`
 (`compare_alert.py`), Auslöse-/Fetch-Logik (Nowcast-Abruf +
