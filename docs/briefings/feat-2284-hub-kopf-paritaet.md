@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/modules/feat_2284_s1_subscription_header.md
-spec_sha256: a4abd8cc2844e83b7919fbaf1612ce77811f9ff1b73e9e1b9ec31a22cb2e212d
+spec_sha256: 14c165c3f103de2e80e5f03e53ba1755869079de51c8572ae1628f87f2f00fac
 ---
 
 # PO-Briefing: feat-2284-hub-kopf-paritaet
@@ -15,16 +15,17 @@ Der Kopf des Vergleich-Hubs wird auf einen gemeinsamen Baustein umgebaut; für N
 
 ## Definition of Done
 
-Name, Region und Profil lassen sich im Vergleich-Hub wie bisher bearbeiten und speichern, Fehler erscheinen am Feld, bestehende Browser-Tests bleiben unverändert grün.
+Name, Region und Profil lassen sich im Vergleich-Hub wie bisher bearbeiten, Fehler erscheinen am Feld, bestehende Browser-Tests bleiben grün.
 
 ## Wie geprüft wird
 
-Automatische Tests prüfen Aufbau und Wiederverwendbarkeit des Bausteins; Speichern und Fehlerfälle prüfen nur Browser-Tests, nicht die Trip-Seite selbst.
+Automatische Tests prüfen Bausteinaufbau; Speichern und Fehlerfälle prüfen nur Browser-Tests, die Trip-Seite wird nicht geprüft.
 
 ## Kritische Anmerkungen
 
-- Trip-Region, Aktivität im Kopf und Speicher-Chip-Ort aus dem Issue fehlen hier vollständig; sie folgen erst in Scheibe S2.
-- S2 wartet auf einen fremden Merge (PR 2486), Termin offen; Trip und Vergleich bleiben bis dahin ungleich.
+- Konfliktfall („Nochmal speichern“ bei Zwei-Tab-Bearbeitung) hat keine eigene Prüfbedingung; Schutz hängt nur an Bestandstests.
+- Trip-Region, Aktivität im Kopf und Speicher-Chip-Ort folgen erst in Scheibe S2.
+- Ein bestehender Browser-Test wird eingegrenzt (PO-Entscheid); Prüfaussage bleibt gleich.
 
 ## Freigabe-Frage
 

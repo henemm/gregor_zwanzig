@@ -309,11 +309,128 @@ test.describe('#2284 S1 — Vergleich-Hub-Kopf: ein Markup, unverändertes Verha
 				expect((await eingabe.inputValue()).length).toBe(60);
 				await expect(page.locator('span:visible', { hasText: /2 Orte/ })).toHaveCount(0);
 
-				await page.locator('button:visible', { hasText: /^\s*(Abbrechen|×)\s*$/ }).first().click();
+				await page.getByRole('button', { name: /^(Abbrechen|×)$/ }).filter({ visible: true }).first().click();
 				await expect(page.getByText(/Wandern\s*·\s*2 Orte/).filter({ visible: true }).first()).toBeVisible();
 			} finally {
 				await cleanup(page, presetId, locIds);
 			}
 		});
 	}
+
+	// Adversary F002/F003/F005 (#2284 S1 Fix-Loop 1): Bedienverhalten im Browser.
+	test('Bedienung (Desktop): Vorbelegung, Kacheln gesperrt während Speichern, Fallback-Text, Abbrechen verwirft Fehler', async ({
+		page
+	}) => {
+		await page.setViewportSize(DESKTOP);
+		const { presetId, locIds, name } = await seedPreset(page);
+		try {
+			await oeffneHub(page, presetId);
+			const sicht = (id: string) => page.locator(`[data-testid="${id}"]:visible`);
+			const abbrechen = () =>
+				page.getByRole('button', { name: /^(Abbrechen|×)$/ }).filter({ visible: true }).first().click();
+
+			// F005: Stift öffnen ⇒ Feld trägt den aktuellen Wert.
+			await sicht('compare-hub-name-edit-toggle').click();
+			await expect(sicht('compare-hub-name-edit')).toHaveValue(name);
+			await abbrechen();
+			await sicht('compare-hub-region-edit-toggle').click();
+			await expect(sicht('compare-hub-region-edit')).toHaveValue('Ötztal');
+			await abbrechen();
+
+			// F003: Profil-PUT hängt ⇒ alle Kacheln gesperrt, bis die Antwort kommt.
+			let freigeben: () => void = () => {};
+			const gehalten = new Promise<void>((r) => (freigeben = r));
+			await page.route(`**${PRESET_URL_PART}${presetId}`, async (route) => {
+				if (route.request().method() !== 'PUT') return route.continue();
+				await gehalten;
+				return route.continue();
+			});
+			await sicht('compare-hub-profil-option-allgemein').click();
+			for (const id of KOPF_IDS.filter((i) => i.includes('profil-option-'))) {
+				await expect(sicht(id)).toBeDisabled();
+			}
+			freigeben();
+			await expect(sicht('compare-hub-profil-option-allgemein')).toHaveAttribute('data-selected', 'true', {
+				timeout: 5_000
+			});
+			await expect(sicht('compare-hub-profil-option-wandern')).toBeEnabled();
+			await page.unroute(`**${PRESET_URL_PART}${presetId}`);
+
+			// F002: 500 ohne `error` im Rumpf ⇒ „Speichern fehlgeschlagen".
+			await page.route(`**${PRESET_URL_PART}${presetId}`, (route) =>
+				route.request().method() === 'PUT'
+					? route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
+					: route.continue()
+			);
+			await sicht('compare-hub-region-edit-toggle').click();
+			await sicht('compare-hub-region-edit').fill('Wallis');
+			await sicht('compare-hub-region-save').click();
+			await expect(sicht('compare-hub-region-save-error')).toHaveText('Speichern fehlgeschlagen', {
+				timeout: 5_000
+			});
+
+			// F003: Abbrechen verwirft den Fehler; erneut öffnen ⇒ kein Fehler, alter Wert.
+			await abbrechen();
+			await expect(page.locator('[data-testid="compare-hub-region-save-error"]')).toHaveCount(0);
+			await sicht('compare-hub-region-edit-toggle').click();
+			await expect(page.locator('[data-testid="compare-hub-region-save-error"]')).toHaveCount(0);
+			await expect(sicht('compare-hub-region-edit')).toHaveValue('Ötztal');
+			await page.unroute(`**${PRESET_URL_PART}${presetId}`);
+		} finally {
+			await cleanup(page, presetId, locIds);
+		}
+	});
+
+	// Adversary F007 (#2284 S1 Fix-Loop 2): Orte-Anzahl je Viewport aus derselben
+	// Quelle wie vor der Umstellung — Desktop zählt die gespeicherten IDs
+	// (`location_ids`), Mobil die aufgelösten Orte (`data.locations`). Sichtbar
+	// unterscheiden sie sich nur, wenn ein Ort gelöscht ist (das Löschen bereinigt
+	// das Preset nicht). `compare-hub-orte-anzahl` steht deshalb BEWUSST zweimal
+	// im DOM (responsive, wie die Knopftexte) — gezählt wird nur das Sichtbare.
+	test('F007: Orte-Anzahl — Desktop zählt gespeicherte IDs, Mobil aufgelöste Orte (Singular)', async ({ page }) => {
+		const { presetId, locIds } = await seedPreset(page);
+		try {
+			const del = await page.request.delete(`/api/locations/${locIds[1]}`);
+			expect(del.ok(), `Ort-Löschen fehlgeschlagen: ${del.status()}`).toBeTruthy();
+			expect(((await fetchPreset(page, presetId)).location_ids as string[]).length, 'Messaufbau: Preset behält beide IDs').toBe(2);
+
+			const anzahl = page.locator('[data-testid="compare-hub-orte-anzahl"]');
+			for (const [viewport, soll] of [
+				[DESKTOP, /^\s*·\s*2 Orte\s*$/],
+				[MOBIL, /^\s*·\s*1 Ort\s*$/]
+			] as const) {
+				await page.setViewportSize(viewport);
+				await oeffneHub(page, presetId);
+				expect(await anzahl.count(), 'responsive Doppel-Span: genau 2 im DOM').toBe(2);
+				const sichtbar = anzahl.filter({ visible: true });
+				await expect(sichtbar).toHaveCount(1);
+				await expect(sichtbar).toHaveText(soll);
+			}
+		} finally {
+			await cleanup(page, presetId, locIds);
+		}
+	});
+
+	test('F007: Orte-Anzahl Desktop-Singular — Preset mit 1 Ort zeigt „· 1 Ort"', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const suffix = Date.now();
+		const locRes = await page.request.post('/api/locations', {
+			data: { name: `E2E 2284-S1 Einzel ${suffix}`, lat: 47.05, lon: 11.05 }
+		});
+		expect(locRes.ok(), `Location-Anlage fehlgeschlagen: ${locRes.status()}`).toBeTruthy();
+		const locId = (await locRes.json()).id as string;
+		const presetRes = await page.request.post('/api/compare/presets', {
+			data: { name: `E2E 2284-S1 Einzel ${suffix}`, location_ids: [locId], schedule: 'daily', profil: 'wandern' }
+		});
+		expect(presetRes.ok(), `Preset-Anlage fehlgeschlagen: ${presetRes.status()}`).toBeTruthy();
+		const presetId = (await presetRes.json()).id as string;
+		try {
+			await oeffneHub(page, presetId);
+			const sichtbar = page.locator('[data-testid="compare-hub-orte-anzahl"]').filter({ visible: true });
+			await expect(sichtbar).toHaveCount(1);
+			await expect(sichtbar).toHaveText(/^\s*·\s*1 Ort\s*$/);
+		} finally {
+			await cleanup(page, presetId, [locId]);
+		}
+	});
 });

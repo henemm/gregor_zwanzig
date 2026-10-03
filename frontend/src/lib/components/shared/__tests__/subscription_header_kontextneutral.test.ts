@@ -214,9 +214,44 @@ describe('#2284 S1 AC-7 — leere Slots hinterlassen keine Wrapper', () => {
 	});
 
 	test('profileLabel leer ⇒ kein führendes oder doppeltes „ · " in der Unterzeile', async () => {
-		const body = (await html(vergleichProps({ profileLabel: '' }))).replace(/<!--[\s\S]*?-->/g, '');
-		const text = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-		assert.ok(!/·\s*·/.test(text), `doppelter Trenner: ${text}`);
-		assert.ok(!text.includes('Wandern'), `Profil-Label trotz leerer Prop: ${text}`);
+		const textVon = async (profileLabel: string) =>
+			(await html(vergleichProps({ profileLabel })))
+				.replace(/<!--[\s\S]*?-->/g, '')
+				.replace(/<[^>]+>/g, ' ')
+				.replace(/\s+/g, ' ');
+		const wandern = (t: string) => t.split('Wandern').length - 1;
+		// „Wandern" steht auch als Kachel-Beschriftung im Kopf — gezählt wird
+		// darum relativ zur Zahl der Kacheln mit diesem Text.
+		const kachelnMitWandern = VERGLEICH_OPTIONEN.filter((o) => o.label === 'Wandern').length;
+		const ohne = await textVon('');
+		assert.ok(!/·\s*·/.test(ohne), `doppelter Trenner: ${ohne}`);
+		assert.equal(wandern(ohne), kachelnMitWandern, `Profil-Label trotz leerer Prop: ${ohne}`);
+		const mit = await textVon('Wandern');
+		assert.equal(wandern(mit), kachelnMitWandern + 1, `Profil-Label fehlt in der Unterzeile: ${mit}`);
+	});
+
+	// Adversary F001 (#2284 S1 Fix-Loop 1): der Guard um das Profil-Label wirkt
+	// erst MIT meta-Snippet (Seite: „ · 3 Orte") — ohne Guard entstünde dort
+	// „Ötztal · · 3 Orte" bzw. ohne meta ein hängendes „Ötztal · ".
+	const metaOrte = createRawSnippet(() => ({ render: () => `<span>${' · '}3 Orte</span>` }));
+	const unterzeile = async (profileLabel: string, meta?: unknown) =>
+		(await html(vergleichProps(meta ? { profileLabel, meta } : { profileLabel })))
+			.replace(/<!--[\s\S]*?-->/g, '')
+			.replace(/<[^>]+>/g, ' ')
+			.replace(/\s+/g, ' ')
+			.split('Ötztal')[1]
+			.split('Allgemein')[0]
+			.trim();
+
+	test('profileLabel leer MIT meta ⇒ „Ötztal · 3 Orte" ohne doppelten Trenner', async () => {
+		assert.equal(await unterzeile('', metaOrte), '· 3 Orte');
+	});
+
+	test('profileLabel leer OHNE meta ⇒ kein hängender Trenner', async () => {
+		assert.equal(await unterzeile(''), '');
+	});
+
+	test('profileLabel gesetzt MIT meta ⇒ Label genau einmal, je ein Trenner', async () => {
+		assert.equal(await unterzeile('Wandern', metaOrte), '· Wandern · 3 Orte');
 	});
 });

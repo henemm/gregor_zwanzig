@@ -72,6 +72,16 @@ Was der Baustein leistet:
    `catch`-Block. Die Seite bildet daraus die drei heutigen PUTs (nur das geänderte Feld, kein Spread der
    Seiten-Kopie — Regel aus #2375/#2381) und ersetzt nach Erfolg `currentPreset` **mit neuer Objekt-
    Referenz** (Cross-Tab-Resync in `CompareTabs`).
+   **Nachtrag nach Integration von #1433 / PR #2486 (2026-10-03):** Die Signatur lautet
+   `onSaveField(field, value, schliessen: () => void): Promise<void>` mit **drei Ausgängen**:
+   (a) **übernommen** — die Seite ruft `schliessen()` (aus `nachErfolg` von `baueSpeicherung`), das Feld
+   schließt; (b) **Konflikt (412)** — die Seite übergibt an den Konflikt-Controller („Nochmal speichern",
+   `speichereOderMeldeKonflikt`, Eintrag je Feld `kopf-name|kopf-region|kopf-profil`), das Promise wird
+   **ohne** `schliessen()` erfüllt: Feld bleibt offen, keine eigene Fehlermeldung; gelingt der Retry
+   später, ruft `nachErfolg` `schliessen()` und das Feld schließt; (c) **Fehler** — wirft wie oben. Der
+   Baustein schließt das Feld ausschließlich über `schliessen`. Während „Nochmal speichern" läuft, wird
+   `currentPreset` nicht ersetzt (Guard `imWiederholen`, #1433 F101). Für den Nutzer ändert sich
+   gegenüber dem #1433-Stand nichts.
 4. **Kein `if kind ===` im Markup.** Alle Unterschiede zwischen Trip und Vergleich laufen über Props
    (Optionen, Präfix, Snippets, `regionMaxLength`). Das ist Voraussetzung dafür, dass S2 den Trip-Kopf
    ohne Markup-Zweig auf denselben Baustein setzen kann.
@@ -167,7 +177,13 @@ Netzwerkzugriff und kann die `user_id` aus dem Auth-Kontext nicht umgehen.)
 `compare-hub-inline-edit`, `compare-hub-save-chip` und `compare-hub-fidelity-s8c` When sie nach der
 Umstellung unverändert (ohne Änderung an den Spec-Dateien) gegen den CI-Stack laufen Then sind alle
 grün; insbesondere die Layout-Zusicherungen aus `compare-hub-fidelity-s8c` (Breadcrumb-Krümel, mobile
-Eyebrow, Profil-Label „Wandern" in der Desktop-Unterzeile) bleiben erfüllt.
+Eyebrow, Profil-Label „Wandern" in der Desktop-Unterzeile) bleiben erfüllt. **Einzige erlaubte
+Ausnahme (PO-Entscheid 2026-10-03):** in `compare-hub-fidelity-s8c.spec.ts` (Test „Unterzeile zeigt
+"Wandern" statt "wandern"") darf der Selektor `.hidden.desktop\:block` — der nur wegen der doppelten
+Desktop/Mobil-Kopie nötig war, die AC-8 abschafft — auf den einen Kopf (z. B. `[data-kind="vergleich"]`)
+eingegrenzt werden. Prüfaussage, Viewport (1280 px) und erwarteter Text „Wandern" bleiben unverändert.
+Ausgenommen sind ferner bekannte, vom Kopf unabhängige Rote, die mit dem Stand vor der Umstellung
+genauso scheitern (Nachweis per Vorher-Lauf).
 
 ## Test-Plan
 
@@ -217,7 +233,7 @@ von Hand in beiden Viewports ansehen. Kein Mail-Renderer berührt ⇒ kein Mail-
 | **Datenverlust durch Spread der Seiten-Kopie** (Fehlerklasse #2375/#2381) | `onSaveField` sendet nur das geänderte Feld; AC-3 und Mutationsgegenprobe (b) |
 | **Veralteter Resync in `CompareTabs`** nach dem Speichern | `currentPreset` wird nach Erfolg mit neuer Objekt-Referenz ersetzt (Entscheidung 3) |
 | **Doppel-testids** bleiben unbemerkt, weil die E2E `:visible` filtert | AC-8 zählt ohne `:visible` |
-| **Parallele Arbeit #1433 / PR #2486** an Trip-Dateien | S1 berührt keine Datei von #2486 (nur `routes/compare/[id]/+page.svelte` und neue Dateien); die Trip-Seite folgt in S2 nach dessen Merge |
+| **Parallele Arbeit #1433 / PR #2486** an Trip-Dateien | **Eingetreten:** #2486 hat die Kopf-Speicherfunktionen in `routes/compare/[id]/+page.svelte` geändert. S1 wurde nach dem Merge auf der main-Fassung neu aufgebaut, der #1433-Konfliktschutz bleibt vollständig erhalten (Nachtrag zu Entscheidung 3); die Trip-Seite folgt in S2 |
 
 ## Out of Scope
 
@@ -259,4 +275,6 @@ geschützt durch bestehende E2E mit unveränderten testids). Passt in das LoC-Li
 
 ## Changelog
 
+- 2026-10-03: Entscheidung 3 um den Konfliktausgang (`schliessen`-Callback) ergänzt — Integration von #1433 / PR #2486
+- 2026-10-03: AC-12 präzisiert — Selektor-Eingrenzung in `compare-hub-fidelity-s8c` erlaubt (Widerspruch zu AC-8 aufgelöst, PO-Entscheid)
 - 2026-10-03: Initial spec created (Scheibe S1 von #2284, Epic #2345 Etappe P2)

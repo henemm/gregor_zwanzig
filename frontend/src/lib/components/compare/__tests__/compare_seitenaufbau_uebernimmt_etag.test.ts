@@ -11,7 +11,7 @@
 //
 // Gemessen wird der ECHTE Loader (`load()` aus +page.server.ts) gegen einen
 // Ersatz-`fetch` mit echtem `ETag`-Header, und der ECHTE `$effect` der Seite
-// (svelteInstanzPruefstand.ts: `effekteVon`) plus der echte `saveName`.
+// (svelteInstanzPruefstand.ts: `effekteVon`) plus der echte `onSaveField` (#2284 S1, vormals `saveName`).
 // Die zweite Hälfte (Browser) sichert E2E-Test 9 per Request-Mitschnitt.
 //
 // Ausführen:
@@ -88,11 +88,12 @@ describe('Test 8 / AC-1: der Seitenaufbau übernimmt den ETag', () => {
 
 		// Ein anderer Tab speichert, danach bedient dieser Tab den Kopf.
 		server.fremdSchreiben(ID, { name: 'Fremd von A' });
-		u.editName = 'Von B';
-		await (u.saveName as () => Promise<void>)();
+		// #2284 S1: der Kopf-Speicherweg ist `onSaveField`; seit #1433 geht der 412 an den
+		// Controller („Nochmal speichern") und kommt NICHT als Fehler beim Aufrufer an.
+		await (u.onSaveField as (f: string, v: string, schliessen: () => void) => Promise<void>)('name', 'Von B', () => {});
 
 		const put = server.mitschnitt.find((e) => e.method === 'PUT');
-		assert.ok(put, 'Messaufbau: saveName hat keinen PUT ausgelöst');
+		assert.ok(put, 'Messaufbau: onSaveField hat keinen PUT ausgelöst');
 		assert.equal(put!.ifMatch, etag, 'der erste PUT nach dem Laden muss If-Match aus dem Seitenaufbau tragen');
 		assert.equal(put!.status, 412, 'mit If-Match muss der fremd geänderte Stand abgelehnt werden');
 		assert.equal(server.stand(ID).name, 'Fremd von A', 'der fremde Name darf nicht still überschrieben werden');

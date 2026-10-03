@@ -359,10 +359,14 @@ test.describe('Issue #1256 S8c (AC-11): Desktop-Unterzeile Profil-Label', () => 
 		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
 
-		// Desktop-Header ist ein eigener CSS-Container ("hidden desktop:block") —
-		// scoped statt page-weit, weil der Mobile-Header dieselbe profileLabel-
-		// Ableitung im (per CSS verborgenen) DOM ebenfalls rendert.
-		const desktopHeader = page.locator('.hidden.desktop\\:block');
+		// Seit #2284 S1 (AC-8) gibt es EINEN Kopf für Desktop und Mobil (keine
+		// verborgene Doppel-Kopie mehr). Eingegrenzt wird auf die UNTERZEILE dieses
+		// Kopfs (der Container mit dem Region-Stift), nicht auf den ganzen Kopf:
+		// dort steht auch die Profil-Kachel „Wandern", die den Text immer trägt —
+		// der Test bliebe sonst grün, selbst wenn das Profil-Label fehlt.
+		const desktopHeader = page.locator(
+			'[data-kind="vergleich"] div:has(> [data-testid="compare-hub-region-edit-toggle"])'
+		);
 		await expect(desktopHeader).toContainText('Wandern');
 	});
 });
