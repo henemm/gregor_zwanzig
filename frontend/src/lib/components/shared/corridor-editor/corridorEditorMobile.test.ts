@@ -3,7 +3,8 @@
 // (Mobile UND Desktop, s. Block ganz unten) — Name bleibt aus Historie.
 //
 // Source-Inspection-Tests (kein DOM-Rendering, keine Mocks, kein Playwright —
-// Praezedenz: lib/components/edit/issue_542_mobile_editor.test.ts). Reine
+// fruehere Praezedenz issue_542_mobile_editor.test.ts entfaellt mit
+// mobile_stages_tab_listen_only, F5/2026-09-22). Reine
 // Svelte-Komponenten-Struktur ist ohne Rendering-Harness (kein
 // @testing-library/svelte im Projekt) nur so pruefbar; AC-14 (Touch-Target-
 // Masse per getBoundingClientRect) bleibt laut Spec Live-E2E-Schicht

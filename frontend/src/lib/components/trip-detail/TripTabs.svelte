@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Segmented } from '$lib/components/atoms';
+	import MTabBar from '$lib/components/mobile/MTabBar.svelte';
 	import HubOverview from './HubOverview.svelte';
 	import BriefingScheduleTab from './BriefingScheduleTab.svelte';
 	import AlarmeScheduleTab from './AlarmeScheduleTab.svelte';
@@ -195,7 +195,16 @@
 </script>
 
 <div class="trip-tabs" data-testid="trip-detail-tab-list">
-	<Segmented options={segmentedOptions} selected={activeTab} onselect={handleValueChange} />
+	<!-- Mobile Usability Paket 2 (Spec mobile_tab_leisten_mtabbar): geteilter
+	     Baustein — Band + Fade + scrollIntoView + A11y + 44px-Trigger. Die
+	     Unterline-Desktop-Optik lebt ebenfalls im Baustein (AP-006: kein
+	     divergierendes Tab-CSS mehr hier). -->
+	<MTabBar
+		items={segmentedOptions}
+		active={activeTab}
+		onChange={(v) => void handleValueChange(v)}
+		ariaLabel="Tour-Detail"
+	/>
 	{#each TABS as tab}
 		{#if activeTab === tab.value}
 			<div data-testid="trip-detail-panel-{tab.value}">
@@ -273,39 +282,6 @@
 </div>
 
 <style>
-	.trip-tabs :global([data-slot="segmented"]) {
-		display: flex;
-		border-bottom: 1px solid var(--g-ink-faint);
-	}
-	.trip-tabs :global([data-slot="segmented-item"]) {
-		position: relative;
-		padding: 0.5rem 1rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-		border-bottom: 2px solid transparent;
-		background: transparent;
-		color: var(--g-ink);
-		cursor: pointer;
-	}
-	/* Override: app.css setzt data-active="true" global auf ink-Hintergrund (WeatherConfigDialog).
-	   TripTabs braucht transparenten Hintergrund + ink-Text, nur Unterstrichen. */
-	.trip-tabs :global([data-slot="segmented-item"][data-active="true"]) {
-		background: transparent;
-		color: var(--g-ink);
-	}
-	.trip-tabs :global([data-slot="segmented-item"][data-state='active']) {
-		border-bottom-color: var(--g-accent);
-	}
-	.trip-tabs :global([data-slot="segmented-badge"]) {
-		display: inline-block;
-		margin-left: 0.375rem;
-		padding: 0.125rem 0.375rem;
-		border-radius: 9999px;
-		background: var(--g-accent);
-		color: white;
-		font-size: 0.75rem;
-		font-weight: 600;
-	}
 	.preview-shell {
 		display: flex;
 		flex-direction: column;
@@ -359,41 +335,6 @@
 	@media (max-width: 960px) {
 		.preview-grid {
 			grid-template-columns: 1fr;
-		}
-	}
-	@media (max-width: 899px) {
-		/* Scrollbares Tab-Band. Issue #1231 Slice 6 (Fresh-Eyes-Fund): Rand-Fade
-		   statt hartem Abschnitt — signalisiert, dass links/rechts weitere Tabs
-		   folgen, ohne Scroll-Indikator-Widget. */
-		.trip-tabs :global([data-slot="segmented"]) {
-			overflow-x: auto;
-			white-space: nowrap;
-			scrollbar-width: none;
-			-ms-overflow-style: none;
-			scroll-snap-type: x mandatory;
-			scroll-padding-inline: 12px;
-			mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
-			-webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
-		}
-		.trip-tabs :global([data-slot="segmented"])::-webkit-scrollbar {
-			display: none;
-		}
-
-		/* Pill-Trigger: einzeilig, nicht schrumpfbar */
-		.trip-tabs :global([data-slot="segmented-item"]) {
-			white-space: nowrap;
-			flex-shrink: 0;
-			scroll-snap-align: start;
-			border-bottom: none;
-			border-radius: var(--g-radius-pill, 99rem);
-			padding: 0.375rem 0.875rem;
-		}
-
-		/* Aktiver Pill: gefüllt mit Akzentfarbe */
-		.trip-tabs :global([data-slot="segmented-item"][data-state='active']) {
-			background: var(--g-accent);
-			color: var(--g-paper, #f6f4ee);
-			border-bottom-color: transparent;
 		}
 	}
 </style>

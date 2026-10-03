@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gregor Zwanzig — Mobile Soll · Tab-Leisten (390×844)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Tokens — 1:1 aus frontend/src/app.css :root (Mobile-Shell-Stand 2026-09) */
+  :root {
+    --g-accent: #c45a2a; --g-accent-deep: #8c3e1a; --g-accent-tint: rgba(196, 90, 42, 0.08);
+    --g-paper: #f6f4ee; --g-paper-deep: #ecead9;
+    --g-card: #ffffff; --g-card-alt: #faf8f1;
+    --g-rule: #d8d3c2; --g-rule-soft: #e7e2d3;
+    --g-ink: #1a1a18; --g-ink-2: #45433d; --g-ink-3: #6b675c; --g-ink-4: #9a958a; --g-ink-muted: #5c5a52;
+    --g-good: #3d6b3a; --g-warn: #c08a1a; --g-bad: #a83232; --g-info: #2c5a8c;
+    --g-font-sans: 'Inter Tight', system-ui, sans-serif;
+    --g-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --g-text-xs: 11px; --g-text-sm: 13px; --g-text-md: 15px; --g-text-lg: 17px; --g-text-xl: 20px;
+    --g-track-tight: -0.02em; --g-track-wide: 0.06em; --g-track-caps: 0.12em;
+    --g-s-1: 4px; --g-s-2: 8px; --g-s-3: 12px; --g-s-4: 16px; --g-s-5: 20px; --g-s-6: 24px; --g-s-8: 32px;
+    --g-r-1: 2px; --g-r-2: 4px; --g-r-3: 6px; --g-r-4: 10px; --g-r-pill: 999px;
+    --g-shadow-1: 0 1px 0 rgba(26,26,24,0.04), 0 1px 2px rgba(26,26,24,0.04);
+    --g-shadow-2: 0 1px 0 rgba(26,26,24,0.04), 0 4px 14px rgba(26,26,24,0.06);
+    --g-shadow-3: 0 2px 0 rgba(26,26,24,0.04), 0 12px 32px rgba(26,26,24,0.08);
+    --g-nav-h: 64px; --g-nav-gap: 6px; --g-nav-inset: 16px; --g-nav-konto-gap: 10px;
+    --g-nav-glass: rgba(246, 244, 238, 0.86); --g-nav-blur: 24px;
+    --g-nav-hairline: rgba(26,26,24,0.10); --g-nav-highlight: rgba(255,255,255,0.65);
+    --g-nav-active: rgba(196,90,42,0.12);
+  }
+  html, body { margin: 0; background: #ecead9; font-family: var(--g-font-sans); color: var(--g-ink); }
+  .mono { font-family: var(--g-font-mono); font-variant-numeric: tabular-nums; }
+  h1.demo { font-size: var(--g-text-xl); margin: var(--g-s-6) var(--g-s-8) var(--g-s-2); }
+  .sub { margin: 0 var(--g-s-8) var(--g-s-5); color: var(--g-ink-2); font-size: var(--g-text-sm); max-width: 900px; line-height: 1.5; }
+  .canvas { display: flex; gap: var(--g-s-8); align-items: flex-start; padding: 0 var(--g-s-8) var(--g-s-8); flex-wrap: wrap; }
+
+  .phone {
+    width: 390px; height: 844px; background: var(--g-paper);
+    border-radius: 28px; overflow: hidden; position: relative;
+    box-shadow: var(--g-shadow-3); flex-shrink: 0;
+    display: flex; flex-direction: column;
+  }
+  .ph { padding: var(--g-s-3) var(--g-s-4) var(--g-s-2); }
+  .ph-eyebrow { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-3); letter-spacing: var(--g-track-wide); text-transform: uppercase; }
+  .ph-title { margin: 2px 0 0; font-size: var(--g-text-xl); font-weight: 600; letter-spacing: var(--g-track-tight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── MTabBar — EIN Baustein, Trip + Compare (AP-006) ─────────
+     Band + Fade (#1231) · 44px-Trigger · scrollIntoView inline:start · WAI-ARIA */
+  .tabband-wrap { position: relative; }
+  .tabband { display: flex; overflow-x: auto; scrollbar-width: none; gap: var(--g-s-2); padding: var(--g-s-2) var(--g-s-4); scroll-snap-type: x proximity; scroll-padding-inline: 12px;
+    mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); }
+  .tabband::-webkit-scrollbar { display: none; }
+  .tab { flex-shrink: 0; scroll-snap-align: start; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: var(--g-s-2) var(--g-s-3); border-radius: var(--g-r-pill); border: 1px solid var(--g-rule); background: var(--g-card); color: var(--g-ink-2); font-family: var(--g-font-sans); font-size: var(--g-text-sm); font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .tab .badge { font-family: var(--g-font-mono); font-size: var(--g-text-xs); font-weight: 600; padding: 2px 7px; border-radius: var(--g-r-pill); background: var(--g-paper-deep); color: var(--g-ink-3); }
+  .tab.active { background: var(--g-accent); border-color: var(--g-accent); color: var(--g-paper); font-weight: 600; }
+  .tab.active .badge { background: rgba(255,255,255,0.22); color: var(--g-paper); }
+  .tab:focus-visible { outline: 2px solid var(--g-accent); outline-offset: 2px; }
+  .band-cap { display: flex; align-items: center; gap: var(--g-s-2); padding: var(--g-s-1) var(--g-s-4) var(--g-s-2); }
+  .cap { font-family: var(--g-font-mono); font-size: var(--g-text-xs); color: var(--g-ink-muted); letter-spacing: var(--g-track-wide); text-transform: uppercase; }
+  .cap b { color: var(--g-accent-deep); font-weight: 700; }
+
+  .content { flex: 1; overflow: hidden; padding: var(--g-s-3) var(--g-s-4); }
+  .card { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); box-shadow: var(--g-shadow-1); padding: var(--g-s-4); }
+  .card h3 { margin: 0 0 var(--g-s-1); font-size: var(--g-text-md); font-weight: 600; }
+  .card p { margin: 0; font-size: var(--g-text-sm); color: var(--g-ink-2); line-height: 1.5; }
+  .kv { display: flex; justify-content: space-between; padding: var(--g-s-2) 0; border-bottom: 1px solid var(--g-rule-soft); font-size: var(--g-text-sm); }
+  .kv:last-child { border-bottom: none; }
+  .kv .k { color: var(--g-ink-3); font-family: var(--g-font-mono); font-size: var(--g-text-xs); letter-spacing: var(--g-track-wide); text-transform: uppercase; }
+  .kv .v { font-family: var(--g-font-mono); font-weight: 600; }
+
+  /* BottomNav + Konto-Kreis */
+  .navbar { position: absolute; left: var(--g-nav-inset); right: var(--g-nav-inset); bottom: var(--g-nav-gap); z-index: 10; display: flex; align-items: flex-end; gap: var(--g-nav-konto-gap); }
+  .nav { flex: 1; height: var(--g-nav-h); display: grid; grid-template-columns: repeat(4, 1fr); background: var(--g-nav-glass); backdrop-filter: blur(var(--g-nav-blur)); -webkit-backdrop-filter: blur(var(--g-nav-blur)); border: 1px solid var(--g-nav-hairline); border-radius: var(--g-r-pill); box-shadow: var(--g-shadow-2), inset 0 1px 0 var(--g-nav-highlight); }
+  .nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-2); font-family: var(--g-font-sans); font-size: 10px; font-weight: 500; border-radius: var(--g-r-pill); margin: 5px; }
+  .nav button.active { background: var(--g-nav-active); color: var(--g-accent-deep); font-weight: 700; }
+  .konto { width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%; background: var(--g-nav-glass); backdrop-filter: blur(var(--g-nav-blur)); border: 1px solid var(--g-nav-hairline); box-shadow: var(--g-shadow-2), inset 0 1px 0 var(--g-nav-highlight); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .konto span { width: 36px; height: 36px; border-radius: 50%; background: var(--g-accent); color: var(--g-paper); font-size: var(--g-text-sm); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+  .legend { max-width: 860px; margin: 0 var(--g-s-8) var(--g-s-8); background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-4); box-shadow: var(--g-shadow-1); padding: var(--g-s-5) var(--g-s-6); }
+  .legend h2 { margin: 0 0 var(--g-s-3); font-size: var(--g-text-xl); }
+  .legend table { border-collapse: collapse; width: 100%; font-size: var(--g-text-sm); }
+  .legend th, .legend td { text-align: left; padding: var(--g-s-2) var(--g-s-3); border-bottom: 1px solid var(--g-rule-soft); vertical-align: top; }
+  .legend th { font-family: var(--g-font-mono); font-size: var(--g-text-xs); letter-spacing: var(--g-track-wide); text-transform: uppercase; color: var(--g-ink-3); }
+  .legend code { font-family: var(--g-font-mono); font-size: var(--g-text-xs); background: var(--g-paper-deep); padding: 1px 5px; border-radius: var(--g-r-1); }
+</style>
+</head>
+<body>
+
+<h1 class="demo">Tab-Leisten auf Mobile — Empfehlung Option (a)</h1>
+<p class="sub">Band + Fade bleibt (#1231). Neu: <strong>aktiver Tab ist immer sichtbar</strong> (scrollIntoView inline:start, 12px Scroll-Padding), WAI-ARIA-Tabs (Rollen, aria-selected, ←/→), Trigger ≥ 44px. <strong>Ein</strong> geteilter Baustein <code class="mono" style="font-size: var(--g-text-xs)">MTabBar</code> für Trip und Compare — AP-006-Drift geschlossen. Klick einen Tab: er wird aktiv und an den Anfang des sichtbaren Bereichs positioniert.</p>
+
+<div class="canvas">
+
+  <!-- Frame 1: Trip-Detail, 7 Tabs, Deep-Link ?tab=alarme -->
+  <div class="phone">
+    <div class="ph">
+      <div class="ph-eyebrow">Tirol · 23.–26. September 2026</div>
+      <div class="ph-title">Mobile Audit Alpenüberquerung</div>
+    </div>
+
+    <div class="tabband-wrap">
+      <div class="tabband" role="tablist" aria-label="Tour-Detail" id="band-trip">
+        <button class="tab" role="tab" aria-selected="false" data-i="0">Übersicht</button>
+        <button class="tab" role="tab" aria-selected="false" data-i="1">Etappen &amp; Wegpunkte <span class="badge">4</span></button>
+        <button class="tab" role="tab" aria-selected="false" data-i="2">Wetter-Metriken</button>
+        <button class="tab" role="tab" aria-selected="false" data-i="3">Wertebereiche</button>
+        <button class="tab active" role="tab" aria-selected="true" data-i="4">Alarme <span class="badge">2</span></button>
+        <button class="tab" role="tab" aria-selected="false" data-i="5">Versand</button>
+        <button class="tab" role="tab" aria-selected="false" data-i="6">Vorschau</button>
+      </div>
+      <div class="band-cap"><span class="cap"><b>Zustand:</b> Deep-Link ?tab=alarme · aktiver Tab am Anfang des sichtbaren Bereichs, Fade signalisiert weitere Tabs rechts</span></div>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <h3>Alarme</h3>
+        <p>Schwellen · aktiv — der aktive Tab (Position 5 von 7) ist ohne Wischen vollständig sichtbar.</p>
+        <div style="margin-top: var(--g-s-3)">
+          <div class="kv"><span class="k">Wind / Böen</span><span class="v">≥ 50 km/h</span></div>
+          <div class="kv"><span class="k">Niederschlag</span><span class="v">≥ 10 mm/h</span></div>
+          <div class="kv"><span class="k">Gewitter</span><span class="v">≥ 40 %</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navbar">
+      <div class="nav">
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Übersicht</button>
+        <button class="active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 18c4-1 5-8 8-8s4 4 8 3"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="13" r="2"/></svg>Touren</button>
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>Vergleich</button>
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>Archiv</button>
+      </div>
+      <div class="konto"><span>MA</span></div>
+    </div>
+  </div>
+
+  <!-- Frame 2: Compare-Detail, 6 Tabs, aktiver Tab "Versand" -->
+  <div class="phone">
+    <div class="ph">
+      <div class="ph-eyebrow">Orts-Vergleich · Hub</div>
+      <div class="ph-title">Le Var</div>
+    </div>
+
+    <div class="tabband-wrap">
+      <div class="tabband" role="tablist" aria-label="Vergleich-Detail" id="band-compare">
+        <button class="tab" role="tab" aria-selected="false" data-i="0">Übersicht</button>
+        <button class="tab" role="tab" aria-selected="false" data-i="1">Orte <span class="badge">8</span></button>
+        <button class="tab" role="tab" aria-selected="false" data-i="2">Wetter-Metriken</button>
+        <button class="tab" role="tab" aria-selected="false" data-i="3">Wertebereiche</button>
+        <button class="tab" role="tab" aria-selected="false" data-i="4">Alarme</button>
+        <button class="tab active" role="tab" aria-selected="true" data-i="5">Versand</button>
+        <button class="tab" role="tab" aria-selected="false" data-i="6">Vorschau</button>
+      </div>
+      <div class="band-cap"><span class="cap"><span class="mono" style="color: var(--g-accent-deep)">▲</span> <b>AP-006:</b> identischer Baustein wie Trip — kein Hand-Copy-CSS mehr</span></div>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <h3>Versand</h3>
+        <p>Zeitplan + Kanäle — Compare nutzt denselben <span class="mono" style="font-size: var(--g-text-xs)">MTabBar</span>-Kern mit eigener Desktop-Varianten-Prop.</p>
+        <div style="margin-top: var(--g-s-3)">
+          <div class="kv"><span class="k">Status</span><span class="v">Pausiert</span></div>
+          <div class="kv"><span class="k">Morgen</span><span class="v">06:00 · Email</span></div>
+          <div class="kv"><span class="k">Abend</span><span class="v">18:00 · Email</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navbar">
+      <div class="nav">
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Übersicht</button>
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 18c4-1 5-8 8-8s4 4 8 3"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="13" r="2"/></svg>Touren</button>
+        <button class="active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>Vergleich</button>
+        <button><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>Archiv</button>
+      </div>
+      <div class="konto"><span>MA</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <h2>Optionen und Entscheidungen</h2>
+  <table>
+    <tr><th>Option</th><th>Urteil</th><th>Begründung</th></tr>
+    <tr><td><strong>(a)</strong> Band bleibt + aktiver Tab sichtbar + A11y</td><td style="color: var(--g-good); font-weight:600">Empfohlen</td><td>Fixt den Audit-Befund ohne Layout-Wechsel; Fade-Muster seit #1231 etabliert; Desktop unberührt; schließt AP-006-Drift über einen geteilten <code>MTabBar</code>.</td></tr>
+    <tr><td><strong>(b)</strong> 2-zeiliger Wrap</td><td style="color: var(--g-bad); font-weight:600">Verworfen</td><td>7 lange Labels = 2 Zeilen ≈ 90 px vertikal; ungleiche Zeilen; bricht Band-Metapher und JSX-Sollbild-Parität.</td></tr>
+    <tr><td><strong>(c)</strong> Primär-Tabs + „Mehr"</td><td style="color: var(--g-bad); font-weight:600">Verworfen</td><td>Tabs sind Navigation, keine Aktionen — AP-004/05 verstecken Aktionen im Kebab, nicht Nav-Ziele; „Versand" versteckt = nicht entdeckbar.</td></tr>
+    <tr><th colspan="3" style="padding-top: var(--g-s-4)">Konkrete Angaben</th></tr>
+    <tr><td>Positionierung</td><td colspan="2"><code>scrollIntoView({ inline: 'start', block: 'nearest' })</code> beim Mount + bei jedem Wechsel; <code>scroll-padding-inline: 12px</code> (vorhanden) liefert den linken Rand.</td></tr>
+    <tr><td>A11y</td><td colspan="2"><code>role="tablist" / "tab"</code>, <code>aria-selected</code>, roving <code>tabindex</code>, ←/→ wechselt Tabs, Fokus-Ring <code>--g-accent</code> 2px.</td></tr>
+    <tr><td>Touch</td><td colspan="2">Trigger <code>min-height: 44px</code>, Padding <code>var(--g-s-2) var(--g-s-3)</code> (heute ≈31px).</td></tr>
+    <tr><td>Badge (offen, #585)</td><td colspan="2">Vorschlag: inaktiv neutral (<code>--g-paper-deep</code> / <code>--g-ink-3</code>, mono <code>--g-text-xs</code>) statt Accent-Fill.</td></tr>
+    <tr><td>Band-Optik</td><td colspan="2">Fade-Maske 16px, Scroll-Snap, Pill-Optik unverändert (#1231). Keine neuen Tokens.</td></tr>
+  </table>
+</div>
+
+<script>
+  // Aktiven Tab an den Anfang des sichtbaren Bereichs scrollen (Mount + Klick)
+  function activate(band, tab, focus) {
+    band.querySelectorAll('.tab').forEach(t => {
+      const on = t === tab;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+    });
+    // inline:start + scroll-padding-inline 12px → Tab landet mit Rand am Anfang
+    tab.scrollIntoView({ inline: 'start', block: 'nearest', behavior: focus ? 'smooth' : 'auto' });
+  }
+  document.querySelectorAll('.tabband').forEach(band => {
+    const tabs = [...band.querySelectorAll('.tab')];
+    // Mount: initialen aktiven Tab sichtbar positionieren (Deep-Link-Fall)
+    const initial = band.querySelector('.tab.active');
+    requestAnimationFrame(() => activate(band, initial, false));
+    tabs.forEach(t => t.addEventListener('click', () => activate(band, t, true)));
+    // Tastatur: ←/→ wechselt Tabs (roving tabindex)
+    band.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      const cur = tabs.indexOf(band.querySelector('.tab.active'));
+      const next = (cur + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      activate(band, tabs[next], true);
+      tabs[next].focus();
+    });
+  });
+</script>
+</body>
+</html>

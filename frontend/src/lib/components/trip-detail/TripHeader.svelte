@@ -277,6 +277,21 @@
 		gap: 8px;
 		flex-wrap: wrap;
 	}
+	/* Mobile Usability Paket 1 (F1, PO 2026-09-22): Titel auf Mobile via
+	   Token-Skala, einzeilig mit Ellipsis — kein Überstehen bei langen Namen. */
+	@media (max-width: 899px) {
+		.trip-h1-row {
+			flex-wrap: nowrap;
+			min-width: 0;
+		}
+		.trip-h1 {
+			font-size: var(--g-text-xl);
+			min-width: 0;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
 	.name-edit-toggle {
 		display: inline-flex;
 		align-items: center;

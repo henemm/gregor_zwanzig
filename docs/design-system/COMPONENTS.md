@@ -145,6 +145,8 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | `<MField>` | `label`, `sub`, Children | Field-Wrapper Mobile. |
 | `<MBtn>` | `variant`, `size: "md" \| "lg" \| "xl"`, `block`, `icon`, `onClick` | Mobile-Button mit Min-Height 48 (lg). |
 | `<MTab>` | `items`, `active`, `onChange`, `scrollable: boolean` | Tab-Bar Mobile (scrollbar wenn nötig). |
+| `<MTabBar>` | `items: {value, label, badge?, testid?}[]`, `active`, `onChange(v)`, `ariaLabel`, `size?: "md" \| "sm"` | Geteilter Tab-Band (Mobile Usability Paket 2): Band + Fade <900px, `scrollIntoView` positioniert den aktiven Tab (Mount + Wechsel), WAI-ARIA (`tablist`/`tab`, `aria-selected`, roving `tabindex`, ←/→), Trigger ≥44px. Desktop: `md` = Trip-Unterline (Accent-Badges), `sm` = Compare-Reihe (13px/12-16px, inaktiv `--g-ink-3`, Badges neutral). Hält den `data-slot="segmented"`-Vertrag. Physisch `mobile/MTabBar.svelte`. |
+| `<StageCardM>` | `stage`, `index`, `risk?`, `open?`, `activityType?` | Vertikale Etappen-Karte der mobilen Listen-Ansicht (Etappen-Tab, Listen-only nach PO-Entscheid F5 2026-09-22). Reine Präsentation: DragHandle + SortableList verdrahtet der Aufrufer (ADR-0024); `open` klappt die Wegpunkt-Zeilen auf (F7). Physisch `mobile/StageCardM.svelte`. |
 | `<ScreenScroll>` | `padding`, `bg`, Children | Scrollbarer Mobile-Content-Bereich über der BottomNav. |
 
 ---
@@ -183,9 +185,6 @@ Diese sind nicht Foundation, aber kanonisch:
 | `<WxDrillDownPanel>` | Slide-Panel (Desktop) / Bottom-Sheet (Mobile) für Wetter aus Trip-Detail / Compare. |
 | `<TripStageCard>` | Etappen-Zeile in Trip-Detail. |
 | `<MapEditor>` | Karten-Editor für Wegpunkte. Keine Lat/Lon-Inputs. |
-| `<MapControl>` | Neutraler Karten-Werkzeug-Cluster auf Vollbild-Karten. `tools: string[]` (z.B. `['add-waypoint', 'map-style', 'search']`), `position: 'top-right'`. 44×44 px je Button, `--g-card` Hintergrund, kein Akzent. **Kein FAB** — siehe AP-012. |
-| `<ProfileSheetEmbedded>` | Bottom-Sheet im Wegpunkt-Editor (Mobile). Snaps: `peek: 92px`, `half: 320px`, `full: 540px`. Enthält `<EditorProfileSVG>` + Wegpunkt-Liste. |
-| `<EditorProfileSVG>` | Vereinfachtes Höhenprofil für Mobile-Bottom-Sheet. `width: 343px`, `height: 70px`. Synchron mit Karte via `selectedIndex`. |
 | `<EtappenStrip>` | Horizontaler Etappen-Umschalter im Editor (Drag-Sort + Pause-Insert). 70 px hoch, `StageCard` je Etappe. Sitzt direkt unter der Tab-Leiste. |
 | `<CompareMatrix>` | Kachel-Grid mit Score, Metrics, Winner-Highlight. |
 | `<CompareLocationsRail>` | Linke 280-px-Sidebar mit Gruppen + Orten. |
@@ -222,6 +221,9 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.6 | 2026-10-03 | `MapControl`, `ProfileSheetEmbedded`, `EditorProfileSVG` entfernt — keine Aufrufer mehr seit PO-Entscheid F5 (Karte/Höhenprofil entfallen auf Mobile, Spec `mobile_stages_tab_listen_only`) |
+| v1.5 | 2026-09-26 | `MTabBar` ergänzt (Mobile Usability Paket 2, geteilter Tab-Band mit scrollIntoView + A11y; Spec `mobile_tab_leisten_mtabbar`) |
+| v1.4 | 2026-09-23 | `StageCardM` ergänzt (Mobile Usability Paket 1, Listen-only Etappen-Tab; Spec `mobile_stages_tab_listen_only`) |
 | v1.3 | 2026-09-19 | Mobile-Shell S2: `TopAppBar`/Hamburger-`Drawer` raus, `BottomNav` mit Konto-Kreis, `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, `Sheet snap="auto"` |
 | v1.2 | 2026-06-02 | MapControl, ProfileSheetEmbedded, EditorProfileSVG, EtappenStrip aus Wegpunkt-Editor-Handoff (#503) ergänzt |
 | v1.1 | 2026-05-31 | Molecules-Sektion (Epic #368/372) + ConfirmDialog (Issue #478) hinzugefügt; bestehende 10 Molecules dokumentiert |
