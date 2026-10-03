@@ -172,7 +172,44 @@ export function baueAlarmNutzlast(
 	});
 	// Issue #2375: NUR die Alarm-Eigenfelder senden (Feld-Besitz-Tabelle) — kein
 	// official_alerts_enabled (Wetter-Metriken), keine send_* (Versand).
-	return waehleEigenfelder(voll, ALARM_TOP, ALARM_DISPLAY);
+	const nutzlast = waehleEigenfelder(voll, ALARM_TOP, ALARM_DISPLAY);
+	setzeGeleerteAlarmfelderNull(nutzlast.body, preset, current);
+	return nutzlast;
+}
+
+// Issue #2211: Snapshot-Feld je leerbarem Top-Level-Alarmfeld.
+const LEERBARE_ALARMFELDER = [
+	['alert_cooldown_minutes', 'alertCooldownMinutes'],
+	['alert_quiet_from', 'alertQuietFrom'],
+	['alert_quiet_to', 'alertQuietTo']
+] as const;
+
+const istLeer = (v: unknown): boolean => v === undefined || v === null || v === '';
+
+/**
+ * Issue #2211 (AC-2/AC-4/AC-13): ein geleertes Feld erreicht den Server nur als
+ * explizites `null` (fehlender Key = „behalten"). `null` geht NUR raus, wenn der
+ * gespeicherte Bestand einen Wert hatte UND der Zustand leer ist — sonst wird
+ * der Key weggelassen. Bewusst NICHT die Trip-Konvention aus
+ * `buildAlarmeDeliveryPayload` (`?? null` immer): dort ist der Zustand
+ * garantiert aus dem gespeicherten Trip initialisiert; hier läuft die Nutzlast
+ * über Snapshot-Rundreise, in der ein nicht hydrierter Zustand von „Nutzer hat
+ * geleert" nicht unterscheidbar wäre — ein stilles `null` wäre Datenverlust
+ * (Spec optional_felder_null_leert.md, Teil B „Verworfen").
+ */
+function setzeGeleerteAlarmfelderNull(
+	body: ComparePreset,
+	preset: ComparePreset,
+	current: AlarmSnapshot
+): void {
+	const ziel = body as unknown as Record<string, unknown>;
+	const bestand = preset as unknown as Record<string, unknown>;
+	for (const [key, feld] of LEERBARE_ALARMFELDER) {
+		if (istLeer(current[feld])) {
+			if (istLeer(bestand[key])) delete ziel[key];
+			else ziel[key] = null;
+		}
+	}
 }
 
 /**

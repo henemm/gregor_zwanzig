@@ -82,6 +82,12 @@ describe('Ortsvergleich Alarme leeren — explizites null (AC-2, AC-4)', () => {
 		assert.strictEqual(p.alert_quiet_to, null);
 	});
 
+	test('Ruhezeit als Leerstring geleert, Bestand 22:00/06:00 -> beide null im Payload', () => {
+		const p = body(makePreset(), zustand({ alertQuietFrom: '', alertQuietTo: '' }));
+		assert.strictEqual(p.alert_quiet_from, null);
+		assert.strictEqual(p.alert_quiet_to, null);
+	});
+
 	test('ueber den Diff-Gate-Weg (flushPendingAlarmSave): Leeren erzeugt PUT mit null', () => {
 		const preset = makePreset();
 		const before = alarmSnapshotAus(zustand());

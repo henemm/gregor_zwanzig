@@ -132,10 +132,10 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 | Body field | Behavior |
 |-----------|----------|
 | Field absent | `existing` value preserved (merge skip) |
-| Field present, value `null` | Pointer non-nil but dereferences to zero — **explicit clear** is permitted by this contract. (Edge case; not blocked by current frontend.) |
+| Field present, value `null` | **Only for the 7 scalar optionals** (`alert_cooldown_minutes`, `alert_quiet_from`, `alert_quiet_to`, `official_alerts_enabled`, `official_alert_triggers_enabled`, `region`, `activity`): **explicit clear** (pointer fields -> nil, `region`/`activity` -> `""`), via the three-state type `Optional[T]` (`internal/handler/optional_field.go`, Issue #2211). **All other fields** (`name`, lists, maps, structs): `null` = keep existing (same as absent) — a "null clears all stages" would be data loss (#99/#102). |
 | Field present, value provided | Replace `existing` field with body value (field-level replace, no deep merge of map keys) |
 
-The "explicit null clears" semantics is documented but not actively used by any current client. It falls out naturally from the pointer pattern and avoids reintroducing ambiguity.
+Update 2026-10-03 (Issue #2211): the original pointer pattern could NOT distinguish `null` from absent (encoding/json resets a pointer to nil on `null`), so "explicit null clears" never worked. It is now implemented for the 7 scalar optionals only and tested with raw JSON bodies in `internal/handler/optional_field_test.go` and `internal/handler/trip_optional_clear_test.go` (null clears / absent keeps / value sets, `PUT /api/briefings/{id}?kind=route` delegation, two-user isolation, `null` on `stages`/`name` keeps). Spec: `docs/specs/bugfix/optional_felder_null_leert.md`.
 
 ### Validation
 
@@ -201,7 +201,7 @@ go test ./internal/handler/... -run TestUpdateTripHandler -v
 ## Known Limitations
 
 - Field-level replace (no deep-merge): if a client wants to change one sub-key in `aggregation` without losing siblings, it must send the full merged object. This matches the current frontend behavior (`TripWizard.svelte:62-66` always spreads the full object).
-- "Explicit null clears the field" semantics is technically possible via pointer-to-nil-map, but no client currently uses it. Documented in spec; not actively tested as a primary case.
+- "Explicit null clears the field" applies only to the 7 scalar optionals (Issue #2211, tested in `internal/handler/trip_optional_clear_test.go`); for `name`, lists, maps and structs `null` keeps the existing value.
 - DTO is local to the handler package. If `CreateTripHandler` ever wants the same input contract, the DTO can be promoted later — not in scope here.
 
 ## Validation Checklist
@@ -218,3 +218,4 @@ After implementation (Phase 7):
 ## Changelog
 
 - 2026-04-30: Initial spec created from analysis in `docs/context/bug-99-update-trip-merge.md`
+- 2026-10-03: Issue #2211 — `null` clears the 7 scalar optionals (`Optional[T]`), all other fields keep on `null`; tests referenced above.
