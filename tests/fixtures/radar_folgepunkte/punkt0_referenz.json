@@ -1,0 +1,65 @@
+{
+  "abrufe": 6,
+  "entries": [
+    {
+      "capture_id": "<capture:0>",
+      "changes_count": 1,
+      "channels_not_sent": [],
+      "channels_sent": [
+        "email",
+        "premium_sms",
+        "sms",
+        "telegram"
+      ],
+      "entity_id": "tdd-2480-referenz-trip",
+      "entity_type": "trip",
+      "event_at": "2026-08-18T10:20:00+00:00",
+      "event_end_at": "2026-08-18T10:50:00+00:00",
+      "hazards": [],
+      "lead_time_minutes": 20,
+      "measurement_gaps": {
+        "gap_km": [],
+        "points_measured": 6,
+        "points_total": 6
+      },
+      "measurement_point": {
+        "km_from": 0.0,
+        "km_to": 23.996,
+        "segment_id": "1"
+      },
+      "metrics": [
+        {
+          "aggregation": "sum",
+          "metric_id": "precipitation"
+        }
+      ],
+      "reason": "nowcast",
+      "sent_at": "2026-08-18T10:00:00+00:00",
+      "severity": "MODERATE",
+      "source": "radar"
+    }
+  ],
+  "ereignis_identitaeten": [
+    {
+      "hazard_class": "wet",
+      "point_at": "2026-08-18T10:20:00+00:00",
+      "reported_at": "2026-08-18T10:00:00+00:00",
+      "segment_ids": [
+        "1"
+      ],
+      "severity": "MODERATE",
+      "source": "nowcast",
+      "window_end": null,
+      "window_start": null
+    }
+  ],
+  "kanaele": {
+    "mail": "[Folgepunkte Trip] km 0-24 · Regen in 20 Min · letzter Regen gegen 12:50 · Nass km 6-10, km 14-14\nRegen in 20 Min\n\nRadar-Nowcast\n\nWo & wann: km 0-24 · ab 12:20 · letzter Regen gegen 12:50 · Nass km 6-10, km 14-14\nIntensität: mäßiger Regen\nQuelle: Radar (DWD)\nBriefing: nicht angekündigt\n\nStand: heute 12:00\nCooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.\n\nRegen-/Gewitter-Alarm · Radar (DWD)",
+    "premium_sms": "S1 km 0-24: R@12:20@12:50 km6-10,14-14",
+    "sms": "S1 km 0-24: R@12:20@12:50 km6-10,14-14",
+    "telegram": "<b>Folgepunkte Trip · km 0-24 · Regen in 20 Min</b>\n12:20 · letzter Regen gegen 12:50 · Nass km 6-10, km 14-14 · mäßiger Regen · Radar (DWD)"
+  },
+  "nicht_zugestellt": [],
+  "triggered_count": 1,
+  "vergleichsbasis_mm": 3.0
+}

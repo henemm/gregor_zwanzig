@@ -593,24 +593,38 @@ def test_data_unavailable_erscheint_als_luecke():
 # ---------------------------------------------------------------------------
 
 def test_ausfall_am_ersten_punkt_erzeugt_keine_ausdehnungszeile():
-    """AC-8 GIVEN der Ausfall trifft den ersten, ausloesenden Messpunkt /
-    WHEN der Pruflauf durchlaeuft / THEN entsteht dazu KEINE Protokollzeile
-    mit einer Ausdehnungsangabe — der Lauf steigt vorher aus.
+    """AC-8 GIVEN der Ausfall trifft den ersten Messpunkt und KEIN Folgepunkt
+    loest aus (alle trocken) / WHEN der Pruflauf durchlaeuft / THEN entsteht
+    dazu KEINE Protokollzeile mit einer Ausdehnungsangabe — der Lauf steigt
+    vorher aus.
+
+    ABGELOEST/PRAEZISIERT durch #2480 (PO-Entscheid b, 2026-10-02): vorher
+    stieg der Lauf bei JEDEM Ausfall an Punkt 0 aus; jetzt nur noch, wenn
+    auch kein Folgepunkt ausloest. Mit nassem Folgepunkt gilt `sent == 1`
+    (`test_radar_alarm_folgepunkte.py`, AC-5).
 
     Positivkontrolle je Ausfallweg: DERSELBE Ausfall an Index 1 muss sehr wohl
     eine Zeile mit `measurement_gaps` erzeugen. Ohne sie waere die
     Abwesenheits-Pruefung oben trivial wahr — sie wuerde auch bestehen, wenn
     das Feld ueberhaupt nie geschrieben wird, und damit gar nichts belegen.
     """
+    # ABGELOEST/PRAEZISIERT durch #2480 (PO-Entscheid b, 2026-10-02): `sent == 0`
+    # gilt nur noch, wenn auch kein FOLGEPUNKT ausloest. Deshalb sind die
+    # Folgepunkte hier ausdruecklich TROCKEN gestellt (`trockene=(1,2,3,4,5)`
+    # — bis dahin war der Default „nass“ und der Test hat das nur implizit
+    # vorausgesetzt). Der Fall „Punkt 0 aus, Folgepunkt nass => sent == 1“
+    # lebt in `test_radar_alarm_folgepunkte.py` (AC-5).
     for name, bau_erster, bau_zweiter in (
         (
             "Ausnahme",
-            lambda: _LueckenRadar(ausnahmen=(0,)),
+            lambda: _LueckenRadar(ausnahmen=(0,), trockene=(1, 2, 3, 4, 5)),
             lambda: _LueckenRadar(ausnahmen=(1,)),
         ),
         (
             "data_unavailable",
-            lambda: _LueckenRadar(luecken={0: {"data_unavailable": True}}),
+            lambda: _LueckenRadar(
+                luecken={0: {"data_unavailable": True}}, trockene=(1, 2, 3, 4, 5),
+            ),
             lambda: _LueckenRadar(luecken={1: {"data_unavailable": True}}),
         ),
     ):

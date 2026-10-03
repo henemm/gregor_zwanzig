@@ -257,6 +257,7 @@ kommt und die Prüfung des Extremfalls (AC-2) damit überhaupt etwas misst.
   Protokollzeile mit einer Ausdehnungsangabe — der Lauf steigt vorher aus (Positivkontrolle:
   ohne diesen Nachweis würde niemand belegen, dass AC-2 tatsächlich einen Index-1..N-1-Fall
   misst).
+  > **Abgelöst durch #2480 (PO-Entscheid b, 2026-10-02):** Ausstieg bei Ausfall an Punkt 0 nur noch, wenn kein Folgepunkt auslöst (Fehlerpolitik siehe `fix_2480_radar_alle_messpunkte.md`).
 
 - **AC-9:** Given die Ableitung von `measurement_gaps` scheitert (z. B. eine unerwartete
   Datenform), When der Radar-Alarmpfad geprüft wird, Then wird der Alarm trotzdem versendet und

@@ -266,6 +266,7 @@ demselben `<=`-Muster umbauen wie die Tests der Ablösungstabelle.
 - **Side effects:** zusätzliche `get_nowcast`-Aufrufe je Trip-Lauf (gedeckelt
   auf `RADAR_ZONE_MAX_POINTS`), unverändert `priority="polling"`. Keine
   Persistenz betroffen, keine Änderung an der Auslöseregel.
+  > Vermerk: Die Zeile gilt für S2a. Ab #2480 (PO-Entscheid, 2026-10-02) gilt die Auslöseregel je Messpunkt.
 
 ## Acceptance Criteria
 

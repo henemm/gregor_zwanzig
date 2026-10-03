@@ -214,6 +214,7 @@ kein Eventualfall, sondern wird im Test behoben.
   - Test: Doku-Abnahme (`# doc-compliance-test`-Ausnahme: kein Verhaltenstest); der Adversary
     liest den Abschnitt „Known Limitations" der #2017-Spec und prüft per `gh issue view <N> --json number,title,state`, dass das
     Restrisiko-Issue existiert und in der #2017-Spec verlinkt ist.
+  > **Erledigt durch #2480 (2026-10-02):** das Restrisiko „Auslöseregel nur am ersten Punkt“ ist behoben; der AC bleibt als Doku-Nachweis bestehen.
 
 - **AC-6:** Given der neue Wächter ist grün gegen den Ist-Stand, When die Mutationen M1 bis M5
   (Messpunkt auf Startpunkt zurückdrehen, Wegpunkt-Verschiebung ignorieren in der Interpolation

@@ -193,6 +193,35 @@ def radar_alert_due(result: object, threshold_min: int) -> bool:
     return bool(getattr(result, "already_running", False))
 
 
+def waehle_massgeblichen_punkt(ergebnisse) -> "tuple[int, object] | None":
+    """Issue #2480: der EINE massgebliche Punkt aus den Ergebnissen aller
+    Messpunkte (positionsgleich, `None` = nicht verwertbar) oder `None`.
+
+    Kandidaten: verwertbar (nicht throttled/data_unavailable) und
+    `radar_alert_due`. Frueheste Beginn gewinnt (laufender Regen = 0), dann die
+    hoehere Dringlichkeit (`highest_urgency`-Rangfolge), dann der kleinere
+    Index. Reine Funktion ohne Seiteneffekte.
+    """
+    from services import radar_service as radar_service_mod
+
+    beste = None
+    for idx, ergebnis in enumerate(ergebnisse):
+        if _zonen_messwert(ergebnis) is None:
+            continue
+        if not radar_alert_due(ergebnis, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
+            continue
+        beginn = 0 if ergebnis.already_running else ergebnis.onset_minutes
+        dringlich = alert_urgency.urgency_from_radar(
+            is_convective=ergebnis.is_convective,
+            intensity_label=ergebnis.intensity_label,
+        )
+        if beste is None or beginn < beste[0] or (
+            beginn == beste[0] and alert_urgency.exceeds(dringlich, beste[1])
+        ):
+            beste = (beginn, dringlich, idx, ergebnis)
+    return None if beste is None else (beste[2], beste[3])
+
+
 def _zonen_messwert(result):
     """Issue #2051 S2a (E4): ein Nowcast-Ergebnis OHNE verwertbare Frames ist
     fuer die Zonenbildung `None`, kein "trocken".
@@ -244,7 +273,7 @@ def _messluecken_felder(punkte, ergebnisse) -> dict:
 
 def _radar_e1_fields(
     *, entity_id: str, result, now_utc: datetime, onset_dt: datetime,
-    active, snapshot, punkte=None, zonen_ergebnisse=None,
+    active, snapshot, punkte=None, zonen_ergebnisse=None, trigger_km=None,
 ) -> dict:
     """Die fuenf E-1-Groessen des Radar-Nowcast-Zweigs (Issue #2050 S6).
 
@@ -292,6 +321,9 @@ def _radar_e1_fields(
             entity_id, e,
         )
         return {}
+    # Issue #2480: km des ausloesenden Punkts entlang der Strecke (additiv).
+    if trigger_km is not None:
+        felder["trigger_point_km"] = float(trigger_km)
     # Issue #2050 S4b: EIGENER Auffang, bewusst NICHT der gemeinsame oben.
     # Der gibt bei einem Fehler `{}` zurueck — ein Fehler in dieser
     # NACHRANGIGEN Buchfuehrung risse damit alle sechs bestehenden E-1-Groessen
@@ -1867,6 +1899,8 @@ class TripAlertService:
                 int(round(_pos.elevation_m)) if _pos.elevation_m is not None else None
             )
             tz = tz_for_coords(lat, lon)
+            radar_svc = None
+            _p0_ausnahme = False
             try:
                 radar_svc = self._get_radar_service()
                 # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
@@ -1877,19 +1911,14 @@ class TripAlertService:
                 )
             except Exception as e:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
-                # Issue #2050 S4a (AC-2, Anforderung B-4): ein geworfener Abruf
-                # ist derselbe Quellenausfall wie das fail-soft-Leerergebnis
-                # weiter unten, nur in anderer Form — und er bekommt denselben
-                # Grund, UNABHAENGIG davon, ob zufaellig eine Sperrzeit lief.
-                # Die bisherige Fassung protokollierte NUR bei offener
-                # Sperrzeit, und dann mit `cooldown`: der Regelfall (keine
-                # Sperrzeit) blieb voellig still, der Ausnahmefall trug den
-                # falschen Grund — die Sperrzeit hat diesen Lauf ja nicht
-                # unterdrueckt, die Quelle hat ihn verhindert.
-                self._protokolliere_radar_unterdrueckung(
-                    trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
-                )
-                continue
+                result = None
+                _p0_ausnahme = True
+                if radar_svc is None:
+                    # Der Dienst selbst ist nicht verfuegbar: kein Folgeabruf moeglich.
+                    self._protokolliere_radar_unterdrueckung(
+                        trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
+                    )
+                    continue
 
             # Issue #2051 S2a: die uebrigen Punkte der Reststrecke, sequenziell
             # und mit derselben Prioritaet (Muster
@@ -1928,6 +1957,30 @@ class TripAlertService:
             _rain_zones = tuple(
                 derive_rain_zones(_punkte, _zonen_ergebnisse)
             )
+
+            # Issue #2480: maßgeblicher Punkt aus ALLEN Messpunkten; ab hier
+            # lesen alle nachgelagerten Stellen (`result`, `lat`/`lon`) genau
+            # diesen einen Abruf. `throttled` an Punkt 0 gilt unveraendert als
+            # Budget-Druck: kein Alarm.
+            _wahl = None
+            if not (result is not None and result.throttled):
+                _wahl = waehle_massgeblichen_punkt(_zonen_ergebnisse)
+            _trigger_km = None
+            if _wahl is not None:
+                _pos = _punkte[_wahl[0]]
+                lat, lon = _pos.lat, _pos.lon
+                result = _wahl[1]
+                # Nur bei Ausloesung durch einen FOLGEpunkt (Punkt 0 bleibt
+                # bitgleich zum Stand vor #2480, AC-2).
+                if _wahl[0] != 0:
+                    _trigger_km = _pos.distance_from_start_km
+            elif _p0_ausnahme:
+                # Punkt 0 geworfen und kein Folgepunkt loest aus: wie bisher
+                # als Quellenausfall protokolliert, nie als ruhig.
+                self._protokolliere_radar_unterdrueckung(
+                    trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
+                )
+                continue
 
             # Issue #2065: die gemessene Menge wird HIER festgehalten --
             # `result` traegt weiter unten die NotificationResult, die
@@ -2112,6 +2165,7 @@ class TripAlertService:
                 entity_id=trip.id, result=result, now_utc=now_utc,
                 onset_dt=_onset_dt, active=active, snapshot=_snapshot,
                 punkte=_punkte, zonen_ergebnisse=_zonen_ergebnisse,
+                trigger_km=_trigger_km,
             )
             # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
             # durchbricht die Briefing-Unterdrückung. Normaler (nicht-konvektiver)

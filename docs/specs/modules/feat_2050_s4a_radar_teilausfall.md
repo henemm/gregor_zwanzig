@@ -66,6 +66,7 @@ Schleife über bis zu `RADAR_ZONE_MAX_POINTS` Messpunkte entlang der Reststrecke
 - **Zwei Ebenen mit unterschiedlicher Fehlerpolitik** nach dem Merge: der auslösende Punkt bricht
   bei einem Fehler den Trip ab (dorthin gehört der Protokolleintrag), die Folgepunkte laufen
   weiter. Die Eingriffsstelle des auslösenden Zweigs wandert dabei nach oben.
+  > **Abgelöst durch #2480 (PO-Entscheid b, 2026-10-02):** der Abbruch bei Ausfall des ersten Punkts gilt nur noch, wenn auch kein Folgepunkt auslöst; ein belegt nasser Folgepunkt ist trotz Ausfall des ersten Punkts ein Alarm.
 - **Quelle der Lückenzahl für AC-12/AC-13** (von #2051 S2a am Code belegt, Stand nach deren
   Merge): `_zonen_ergebnisse` (`:1524-1546`) ist positionsgleich zu den Messpunkten und lebt an
   der Lesestelle `:1680` — Index *i* gehört zu Punkt *i*, ein `None` steht für „hier wurde nicht

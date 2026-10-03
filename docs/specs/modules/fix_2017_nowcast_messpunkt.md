@@ -440,6 +440,7 @@ Segment-Startpunkt.
    Fenstermitte-Punkt), löst daher keinen Alarm aus, auch wenn es auf der Strecke liegt. Das ist
    eine bewusste Entscheidung aus #2051 S2a, kein Versehen. Behandlung: festgehalten, nicht
    gebaut; geführt als eigenes Issue #2480 (nutzersichtbare Alarm-Lücke).
+   > **Erledigt durch #2480 (2026-10-02):** die Auslöseregel gilt je Messpunkt. KL 8 (Fenstermitte statt Onset) bleibt gültig.
 
 6. **Kein Tages-Überlauf in der Messgrundlage getroffen.** Bei der Wirksamkeitsmessung (Trip
    `5f534011`) trat in keiner Kombination aus Variante/Horizont ein Tagesüberlauf auf (0
