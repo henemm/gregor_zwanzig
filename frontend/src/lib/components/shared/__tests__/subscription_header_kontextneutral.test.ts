@@ -255,3 +255,153 @@ describe('#2284 S1 AC-7 — leere Slots hinterlassen keine Wrapper', () => {
 		assert.equal(await unterzeile('Wandern', metaOrte), '· Wandern · 3 Orte');
 	});
 });
+
+// ─── Issue #2284 S2 — AC-16 ──────────────────────────────────────────────────
+// Spec: docs/specs/modules/feat_2284_s2_trip_kopf.md (Entscheidungen 1, 2, 12, 13)
+// Neue optionale Props: `titleTestid` (Trip: 'trip-detail-h1'), Snippet `namePrefix`
+// (Shortcode INNERHALB der Überschrift), `saveController` (der Baustein rendert den
+// Speicher-Chip selbst, genau einmal). Region: `region || '—'` (Leerstring ⇒ „—").
+// RED vor S2: Props unbekannt (keine testid, kein Präfix, kein Chip) und `region=""`
+// erscheint als leere Zeile.
+
+/** Echte SaveStatus-Instanz ohne Konstruktor (Runen-Feldinitialisierer laufen unter
+ *  node nicht) — dasselbe Muster wie tripMehrreiterPruefstand.erstelleController. */
+async function controller(): Promise<unknown> {
+	const { SaveStatus } = await import(
+		pathToFileURL(path.join(FRONTEND, 'src/lib/stores/saveStatusStore.svelte.ts')).href
+	);
+	const inst = Object.create(SaveStatus.prototype) as Record<string, unknown>;
+	Object.assign(inst, {
+		state: 'idle',
+		savedAt: null,
+		error: null,
+		_timer: null,
+		_pendingFn: null,
+		_inflight: null,
+		_lastFailed: null,
+		_unresolvedError: null,
+		_tripId: 't-1',
+		_resourceKind: 'trip'
+	});
+	return inst;
+}
+
+const praefix = createRawSnippet(() => ({
+	render: () => `<span data-testid="probe-praefix">GR · </span>`
+}));
+
+async function tripSatz(extra: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+	return tripProps({ titleTestid: 'trip-detail-h1', namePrefix: praefix, saveController: await controller(), ...extra });
+}
+
+const zaehle = (body: string, id: string): number => body.split(`data-testid="${id}"`).length - 1;
+
+/** Der sichtbare Region-Text: zwischen dem Namens-Stift und dem Region-Stift
+ *  (dort steht nur die Region — badges/actions sind leer). Kommentare und Tags weg. */
+function regionText(body: string, prefix: string): string {
+	const nachName = body.split(`data-testid="${prefix}-name-edit-toggle"`)[1] ?? '';
+	const bisRegion = nachName.split(`data-testid="${prefix}-region-edit-toggle"`)[0] ?? '';
+	// ab dem Ende des Namens-Stifts
+	const ab = bisRegion.slice(bisRegion.indexOf('</button>') + '</button>'.length);
+	return ab
+		.replace(/<!--[\s\S]*?-->/g, '')
+		.replace(/<button[^>]*$/, '')
+		.replace(/<[^>]+>/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+describe('#2284 S2 AC-16 — titleTestid, namePrefix, saveController', () => {
+	test('Trip-Satz: die Überschrift trägt data-testid="trip-detail-h1" genau einmal', async () => {
+		const body = await html(await tripSatz());
+		assert.equal(zaehle(body, 'trip-detail-h1'), 1, 'trip-detail-h1 nicht genau einmal');
+		assert.match(body, /<h1[^>]*data-testid="trip-detail-h1"[^>]*>/, 'die testid sitzt nicht an der <h1>');
+	});
+
+	test('Vergleich-Satz (ohne titleTestid): keine testid an der Überschrift, kein trip-detail-h1', async () => {
+		const body = await html(vergleichProps());
+		assert.equal(zaehle(body, 'trip-detail-h1'), 0);
+		const h1 = /<h1[^>]*>/.exec(body)?.[0] ?? '';
+		assert.ok(h1, 'keine Überschrift');
+		assert.ok(!h1.includes('data-testid'), `Überschrift trägt ohne Prop eine testid: ${h1}`);
+	});
+
+	test('namePrefix steht INNERHALB der Überschrift, vor dem Namen', async () => {
+		const body = await html(await tripSatz());
+		const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/.exec(body)?.[1] ?? '';
+		assert.ok(h1.includes('data-testid="probe-praefix"'), `Präfix nicht in der Überschrift: ${h1}`);
+		assert.ok(
+			h1.indexOf('probe-praefix') < h1.indexOf('GR20 Nord'),
+			`Präfix steht nicht vor dem Namen: ${h1}`
+		);
+		assert.equal(zaehle(body, 'probe-praefix'), 1, 'Präfix nicht genau einmal');
+	});
+
+	test('ohne namePrefix: die Überschrift ist genau der Name', async () => {
+		const body = await html(vergleichProps());
+		const h1 = (/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(body)?.[1] ?? '').replace(/<!--[\s\S]*?-->/g, '');
+		assert.equal(h1.trim(), 'Dolomiten Süd');
+	});
+
+	test('mit saveController: save-indicator genau einmal', async () => {
+		const body = await html(await tripSatz());
+		assert.equal(zaehle(body, 'save-indicator'), 1, 'der Baustein rendert den Chip nicht genau einmal');
+	});
+
+	test('ohne saveController: kein save-indicator', async () => {
+		assert.equal(zaehle(await html(vergleichProps()), 'save-indicator'), 0);
+		assert.equal(zaehle(await html(tripProps()), 'save-indicator'), 0);
+	});
+
+	test('Vergleich-Satz MIT saveController: Chip ebenfalls genau einmal (kein kind-Zweig)', async () => {
+		const body = await html(vergleichProps({ saveController: await controller() }));
+		assert.equal(zaehle(body, 'save-indicator'), 1);
+	});
+});
+
+describe('#2284 S2 AC-16 — dieselbe Gerüststruktur, keine Markup-Verzweigung nach kind', () => {
+	// Gleiche Props, nur `kind` verschieden: jede Abweichung im Markup (außer dem
+	// Attribut data-kind) ist ein `kind`-Zweig (Mutationsgegenprobe (a) der S2-Spec).
+	const ohneKind = (b: string) => b.replace(/data-kind="[^"]*"/g, 'data-kind="X"');
+
+	test('voller Trip-Satz (titleTestid, namePrefix, saveController): kind="trip" ≡ kind="vergleich"', async () => {
+		const satz = await tripSatz();
+		const t = await html({ ...satz, kind: 'trip' });
+		const v = await html({ ...satz, kind: 'vergleich' });
+		assert.equal(ohneKind(t), ohneKind(v), 'das Markup verzweigt nach kind');
+	});
+
+	test('Vergleich-Satz ohne Zusatz-Props: kind="trip" ≡ kind="vergleich"', async () => {
+		const satz = vergleichProps();
+		const t = await html({ ...satz, kind: 'trip' });
+		const v = await html({ ...satz, kind: 'vergleich' });
+		assert.equal(ohneKind(t), ohneKind(v), 'das Markup verzweigt nach kind');
+	});
+
+	test('beide Sätze teilen das Grundgerüst (Überschrift, Region-Zeile, Kachelreihe)', async () => {
+		const t = geruest(await html(await tripSatz()), 'trip', TRIP_OPTIONEN);
+		const v = geruest(await html(vergleichProps()), 'compare-hub', VERGLEICH_OPTIONEN);
+		for (const teil of ['button[PFX-name-edit-toggle]', 'button[PFX-region-edit-toggle]', 'button[PFX-profil-option-OPT]']) {
+			assert.ok(t.includes(teil), `Trip-Gerüst ohne ${teil}`);
+			assert.ok(v.includes(teil), `Vergleich-Gerüst ohne ${teil}`);
+		}
+		assert.ok(t.some((x) => x.startsWith('h1')) && v.some((x) => x.startsWith('h1')), 'Überschrift fehlt');
+	});
+});
+
+describe('#2284 S2 AC-16 / AC-3 — Region-Platzhalter „—" (Normalisierung im Baustein)', () => {
+	for (const [label, region, erwartet] of [
+		['region="" ⇒ „—"', '', '—'],
+		['region=undefined ⇒ „—"', undefined, '—'],
+		['region="Nord" ⇒ „Nord"', 'Nord', 'Nord']
+	] as const) {
+		test(`Vergleich: ${label}`, async () => {
+			const body = await html(vergleichProps({ region }));
+			assert.equal(regionText(body, 'compare-hub'), erwartet);
+		});
+		test(`Trip: ${label}`, async () => {
+			const body = await html(await tripSatz({ region }));
+			assert.equal(regionText(body, 'trip'), erwartet);
+		});
+	}
+});

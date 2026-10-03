@@ -321,6 +321,7 @@
 			regionMaxLength={60}
 			testidPrefix="compare-hub"
 			{onSaveField}
+			saveController={hubSaveCtl}
 		>
 			{#snippet eyebrow()}
 				<!-- Issue #1256 S8c (AC-12): Eyebrow nur mobil. -->

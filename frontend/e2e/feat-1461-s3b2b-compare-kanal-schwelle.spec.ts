@@ -380,16 +380,17 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 			await expect(page.getByTestId(`alert-channel-threshold-${kind}`)).toBeVisible({ timeout: 10_000 });
 		}
 
-		// Speichern über einen unbeteiligten Weg (Stages-Tab, Aktivität ändern) —
+		// Speichern über einen unbeteiligten Weg (Aktivität ändern — seit #2284 S2
+		// als Kachel im Trip-Kopf statt Auswahlliste im Stages-Tab) —
 		// AC-16 verlangt: Trip-Oberfläche öffnen und speichern, kein Fehler.
 		await page.goto(`/trips/${trip.id}?tab=stages`);
 		await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible({ timeout: 15_000 });
-		const activitySelect = page.getByTestId('edit-activity-dropdown');
-		await expect(activitySelect).toBeVisible({ timeout: 10_000 });
+		const activityTile = page.getByTestId('trip-profil-option-mtb');
+		await expect(activityTile).toBeVisible({ timeout: 10_000 });
 		const putPromise = page.waitForResponse(
 			(res) => res.url().includes(`/api/trips/${trip.id}`) && res.request().method() === 'PUT'
 		);
-		await activitySelect.selectOption('mtb');
+		await activityTile.click();
 		const putRes = await putPromise;
 		expect(putRes.ok(), `Trip-Speichern fehlgeschlagen: ${putRes.status()}`).toBeTruthy();
 		await page.screenshot({

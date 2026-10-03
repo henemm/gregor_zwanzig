@@ -140,6 +140,24 @@ type _ActivityProfileOptionsCoverage =
 const _activityProfileCoverageCheck: _ActivityProfileOptionsCoverage = true;
 void _activityProfileCoverageCheck;
 
+// Issue #2284 S2 — Aktivität des Trips als Kachelreihe im Hub-Kopf. Labels wie
+// zuvor in der Auswahlliste des Etappen-Reiters.
+export const ACTIVITY_TYPE_OPTIONS = [
+	{ value: 'trekking',     label: 'Trekking' },
+	{ value: 'skitour',      label: 'Skitour' },
+	{ value: 'hochtour',     label: 'Hochtour' },
+	{ value: 'klettersteig', label: 'Klettersteig' },
+	{ value: 'mtb',          label: 'MTB' },
+	{ value: 'fahrrad_15',   label: 'Fahrrad (15 km/h)' },
+	{ value: 'fahrrad_20',   label: 'Fahrrad (20 km/h)' },
+	{ value: 'fahrrad_25',   label: 'Fahrrad (25 km/h)' },
+] as const satisfies ReadonlyArray<{ value: ActivityType; label: string }>;
+
+type _ActivityTypeOptionsCoverage =
+	ActivityType extends (typeof ACTIVITY_TYPE_OPTIONS)[number]['value'] ? true : never;
+const _activityTypeCoverageCheck: _ActivityTypeOptionsCoverage = true;
+void _activityTypeCoverageCheck;
+
 export interface Aggregation {
 	profile?: ActivityProfile;
 }

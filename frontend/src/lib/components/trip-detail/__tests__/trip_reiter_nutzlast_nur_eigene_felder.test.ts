@@ -13,6 +13,8 @@
 // ZUWENIG (vergessener Eigen-Schluessel) faellt auf.
 //
 // Erwartet gruen schon heute: Kopf, Aktivitaet, Etappen (sind bereits Teilfeld).
+// Issue #2284 S2: Kopf/Aktivitaet/Region laufen ueber `TripHeader.onSaveField`
+// (Pruefstand `kopfReiter`, AC-17) — RED, bis der Kopf die Funktion deklariert.
 //
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -240,5 +242,35 @@ describe('AC-15: Kopf, Aktivitaet, Etappen — nur das eigene Feld (heute schon 
 		e.speichern([{ id: 'T1', name: 'Umbenannt', date: '2026-10-10', waypoints: [] }]);
 		await P.fertig(a.ctl);
 		assert.deepEqual(P.sortiert(rumpf(0)), ['stages']);
+	});
+});
+
+// Issue #2284 S2 (AC-6, AC-17): alle drei Kopf-Felder ueber `TripHeader.onSaveField` —
+// je PUT exakt EIN Schluessel, nie ein Spread des Seiten-Trips (Fehlerklasse #2375/#2381).
+describe('#2284 S2 AC-6: Kopf-Region — nur das Eigenfeld, auch beim Leeren', () => {
+	test('Region: { region }', async () => {
+		const a = P.neuerAufbau();
+		const k = await P.kopfReiter(a);
+		await k.regionAendern('Alpen Nord');
+		assert.deepEqual(rumpf(0), { region: 'Alpen Nord' });
+	});
+
+	test('Region leeren: { region: "" } — der Schluessel bleibt im Rumpf (sonst kommt das Leeren nie an)', async () => {
+		const a = P.neuerAufbau();
+		const k = await P.kopfReiter(a);
+		await k.regionAendern('');
+		assert.deepEqual(rumpf(0), { region: '' });
+	});
+
+	test('Folge Name ⇒ Region ⇒ Aktivitaet: drei PUTs mit je genau einem Schluessel', async () => {
+		const a = P.neuerAufbau();
+		const k = await P.kopfReiter(a);
+		await k.umbenennen('Neuer Name');
+		await k.regionAendern('Alpen Nord');
+		await k.aktivitaetAendern('skitour');
+		assert.equal(puts().length, 3);
+		assert.deepEqual(rumpf(0), { name: 'Neuer Name' });
+		assert.deepEqual(rumpf(1), { region: 'Alpen Nord' });
+		assert.deepEqual(rumpf(2), { activity: 'skitour' });
 	});
 });

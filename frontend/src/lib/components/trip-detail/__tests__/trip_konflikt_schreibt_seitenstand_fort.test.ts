@@ -7,6 +7,9 @@
 // Kopf, Aktivitaet, Etappen); Pruefling ist der abgelehnte PUT-Rumpf — der Seitenstand
 // muss genau diese Felder tragen.
 //
+// Issue #2284 S2 (AC-9, AC-17): Kopf und Aktivitaet laufen ueber `TripHeader.onSaveField`
+// (Pruefstand `kopfReiter`/`aktivitaetReiter`); Region kommt als Eigenfeld dazu.
+//
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --experimental-test-module-mocks --test \
@@ -105,6 +108,17 @@ describe('jeder Schreiber: 412 ⇒ `trip` der Seite traegt die abgelehnte Nutzla
 		await t.aendern('skitour');
 		assert.equal(abgelehnt().length, 1);
 		assert.equal(seite.trip().activity, 'skitour');
+	});
+
+	// #2284 S2: Region ist neues Eigenfeld des Kopfs (TripHeader.onSaveField('region', …)).
+	test('Region (Kopf, #2284 S2)', async () => {
+		const { seite, neu } = await seiteMit();
+		const k = await P.kopfReiter(neu());
+		await k.regionAendern('Alpen Nord');
+		assert.equal(abgelehnt().length, 1);
+		assert.deepEqual(abgelehnt()[0].anfrage, { region: 'Alpen Nord' });
+		assert.equal(seite.trip().region, 'Alpen Nord');
+		traegt(seite.trip(), abgelehnt()[0].anfrage as Rec);
 	});
 
 	test('Etappen (Rumpf wird beim Ausloesen gelesen)', async () => {
