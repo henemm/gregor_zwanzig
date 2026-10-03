@@ -8,6 +8,11 @@
 // Spec: docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md — §4 (3/4/6), AC-10,
 //       AC-18, AC-19, AC-20 (Paritaet Ortsvergleich).
 //
+// #2284 S1: der Kopf-Speicherweg ist `onSaveField(field, value, schliessen)` (vormals
+// saveName/saveRegion/saveProfil). „Kein lokaler Fehlertext" heisst jetzt: das Promise
+// wird erfuellt (der Baustein zeigt nur bei Ablehnung eine Meldung); „Feld schliesst"
+// heisst: die Seite ruft `schliessen`.
+//
 // Gemessen am ECHTEN Instanz-Skript von `routes/compare/[id]/+page.svelte`
 // (svelteInstanzPruefstand.ts), echtem `api`, echtem SaveStatus (Kennung
 // `vergleich`) und dem Go-treuen Ersatz-Server — gelesen wird der SERVER-STAND.
@@ -65,7 +70,7 @@ afterEach(() => server.restore());
 async function seite(): Promise<{ u: Knoten; ctl: SaveStatus }> {
 	const ctl = createController(ID);
 	const { u } = await umgebungFuer(SEITE, { data: { preset: vollerVergleich(ID) }, hubSaveCtl: ctl });
-	for (const f of ['saveName', 'saveRegion', 'saveProfil']) {
+	for (const f of ['onSaveField']) {
 		assert.equal(typeof u[f], 'function', `Messaufbau: \`${f}\` aus +page.svelte nicht herleitbar`);
 	}
 	assert.equal(u.hubSaveCtl, ctl, 'Messaufbau: die Seite muss den gesaeten Controller benutzen');
@@ -74,41 +79,47 @@ async function seite(): Promise<{ u: Knoten; ctl: SaveStatus }> {
 
 const puts = () => server.mitschnitt.filter((e) => e.method === 'PUT');
 
+type SaveField = (field: string, value: string, schliessen: () => void) => Promise<void>;
+
+/** Zaehlt die Aufrufe von `schliessen` — so viel wie „Eingabefeld geschlossen". */
+function schliessSpion(): { schliessen: () => void; aufrufe: () => number } {
+	let n = 0;
+	return { schliessen: () => void (n += 1), aufrufe: () => n };
+}
+
+/** `null`, wenn das Promise erfuellt wurde; sonst der Fehlertext, den der Baustein zeigen wuerde. */
+async function lokalerFehler(lauf: Promise<void>): Promise<string | null> {
+	try {
+		await lauf;
+		return null;
+	} catch (e: unknown) {
+		return (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+	}
+}
+
 interface KopfFall {
 	was: string;
-	fehlerFeld: string;
-	ausfuehren: (u: Knoten) => Promise<void>;
+	ausfuehren: (u: Knoten, schliessen?: () => void) => Promise<void>;
 	soll: Record<string, unknown>;
 	pruefe: (stand: Record<string, unknown>) => void;
 }
 
 const FAELLE: KopfFall[] = [
 	{
-		was: 'saveName',
-		fehlerFeld: 'nameSaveError',
-		ausfuehren: async (u) => {
-			u.editName = 'Name von B';
-			await (u.saveName as () => Promise<void>)();
-		},
+		was: "onSaveField('name')",
+		ausfuehren: (u, schliessen = () => {}) => (u.onSaveField as SaveField)('name', 'Name von B', schliessen),
 		soll: { name: 'Name von B' },
 		pruefe: (s) => assert.equal(s.name, 'Name von B')
 	},
 	{
-		was: 'saveRegion',
-		fehlerFeld: 'regionSaveError',
-		ausfuehren: async (u) => {
-			u.editRegion = 'Wallis';
-			await (u.saveRegion as () => Promise<void>)();
-		},
+		was: "onSaveField('region')",
+		ausfuehren: (u, schliessen = () => {}) => (u.onSaveField as SaveField)('region', 'Wallis', schliessen),
 		soll: { display_config: { region: 'Wallis' } },
 		pruefe: (s) => assert.equal((s.display_config as Record<string, unknown>).region, 'Wallis')
 	},
 	{
-		was: 'saveProfil',
-		fehlerFeld: 'profilSaveError',
-		ausfuehren: async (u) => {
-			await (u.saveProfil as (v: string) => Promise<void>)('wintersport');
-		},
+		was: "onSaveField('profile')",
+		ausfuehren: (u, schliessen = () => {}) => (u.onSaveField as SaveField)('profile', 'wintersport', schliessen),
 		soll: { profil: 'wintersport' },
 		pruefe: (s) => assert.equal(s.profil, 'wintersport')
 	}
@@ -119,13 +130,15 @@ describe('AC-10/AC-20: Kopf des Ortsvergleichs — 412 zeigt „Nochmal speicher
 		test(`${k.was}: 412 mit If-Match ⇒ Controller \`conflict\`, kein lokaler Fehlertext, Server unveraendert`, async () => {
 			const { u, ctl } = await seite();
 			const stand0 = JSON.stringify(server.stand(ID));
-			await k.ausfuehren(u);
+			const spion = schliessSpion();
+			const fehler = await lokalerFehler(k.ausfuehren(u, spion.schliessen));
 
 			assert.equal(puts().length, 1, 'Messaufbau: genau EIN PUT');
 			assert.ok(puts()[0].ifMatch, 'AC-18: der Kopf-PUT traegt If-Match');
 			assert.equal(puts()[0].status, 412, 'Vorbedingung: der veraltete Stand wird abgelehnt');
 			assert.equal(ctl.state, 'conflict', 'AC-10: „Nochmal speichern" muss erscheinen — sonst Sackgasse');
-			assert.equal(u[k.fehlerFeld], null, 'Falle 4: der lokale Fehlertext darf die Konfliktanzeige nicht ersetzen');
+			assert.equal(fehler, null, 'Falle 4: der lokale Fehlertext darf die Konfliktanzeige nicht ersetzen');
+			assert.equal(spion.aufrufe(), 0, '#2284 S1: bei Konflikt bleibt das Eingabefeld offen (die Eingabe geht sonst verloren)');
 			assert.equal(JSON.stringify(server.stand(ID)), stand0, 'der Server schreibt nichts');
 		});
 
@@ -167,11 +180,13 @@ describe('AC-10/AC-20: Kopf des Ortsvergleichs — 412 zeigt „Nochmal speicher
 
 	test('waehrend „Nochmal speichern" ersetzt der Kopf `currentPreset` NICHT (sonst baut der Hub die Reiter ueber offene Eingaben neu)', async () => {
 		const { u, ctl } = await seite();
-		await FAELLE[0].ausfuehren(u);
+		const spion = schliessSpion();
+		await FAELLE[0].ausfuehren(u, spion.schliessen);
+		assert.equal(spion.aufrufe(), 0, 'Vorbedingung: nach dem 412 ist das Eingabefeld noch offen');
 		const vorher = u.currentPreset;
 		await ctl.retryConflict();
 		assert.equal(u.currentPreset, vorher, 'Seiten-Stand erst nach vollem Erfolg ueber den Neuaufbau (\'wiederholt\')');
-		assert.equal(u.isEditingName, false, 'das Eingabefeld schliesst nach erfolgreichem Retry');
+		assert.ok(spion.aufrufe() >= 1, 'das Eingabefeld schliesst nach erfolgreichem Retry');
 	});
 
 	test('Gegenprobe ohne Fremdschreiber: Kopf speichert normal, Seite uebernimmt die Antwort', async () => {
@@ -179,11 +194,13 @@ describe('AC-10/AC-20: Kopf des Ortsvergleichs — 412 zeigt „Nochmal speicher
 		await api.get(PFAD);
 		const stempel = getKnownEtag(ID);
 		const { u, ctl } = await seite();
-		await FAELLE[0].ausfuehren(u);
+		const spion = schliessSpion();
+		const fehler = await lokalerFehler(FAELLE[0].ausfuehren(u, spion.schliessen));
 		assert.equal(puts().at(-1)!.ifMatch, stempel);
 		assert.equal(puts().at(-1)!.status, 200);
 		assert.equal((u.currentPreset as Record<string, unknown>).name, 'Name von B');
 		assert.equal(ctl.state, 'idle');
-		assert.equal(u.nameSaveError, null);
+		assert.equal(fehler, null);
+		assert.equal(spion.aufrufe(), 1, '#2284 S1: nach direktem Erfolg schliesst das Eingabefeld');
 	});
 });

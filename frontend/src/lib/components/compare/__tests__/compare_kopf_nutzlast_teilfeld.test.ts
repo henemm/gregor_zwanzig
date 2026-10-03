@@ -9,7 +9,7 @@
 //   Test 3 / AC-9 — Body exakt { name } / { display_config: { region } } / { profil }
 //   AC-5         — ein zuvor gespeicherter Reiter-Wert bleibt nach dem Kopf-Edit
 //
-// Wo die Zusicherung wirkt: `saveName`/`saveRegion`/`saveProfil` stehen im
+// Wo die Zusicherung wirkt: `onSaveField` (#2284 S1, vormals saveName/saveRegion/saveProfil) steht im
 // Instanz-Skript von `routes/compare/[id]/+page.svelte`. Ausgeführt wird der
 // ECHTE Funktionskörper (svelteInstanzPruefstand.ts) mit dem ECHTEN `api`
 // gegen einen Ersatz-Server, der wie Go mergt — kein Test auf einen losen
@@ -63,7 +63,7 @@ async function seite(): Promise<Knoten> {
 	// `createSaveStatus` (Runen) ist im Pruefstand nicht herleitbar — der Hub-Controller
 	// wird gesaet, wie die Seite ihn haelt (#1433: Kopf-412 geht an ihn).
 	const { u } = await umgebungFuer(SEITE, { data: { preset: vollerVergleich(ID) }, hubSaveCtl: createController(ID) });
-	for (const f of ['saveName', 'saveRegion', 'saveProfil']) {
+	for (const f of ['onSaveField']) {
 		assert.equal(typeof u[f], 'function', `Messaufbau: \`${f}\` aus +page.svelte nicht herleitbar`);
 	}
 	assert.equal(typeof (u.api as Knoten)?.put, 'function', 'Messaufbau: das echte `api` fehlt in der Umgebung');
@@ -76,27 +76,27 @@ function letzterPut(): Record<string, unknown> {
 	return r[0];
 }
 
+type SaveField = (field: string, value: string, schliessen: () => void) => Promise<void>;
+
 const KOPF_EDITS: Array<{ was: string; ausfuehren: (u: Knoten) => Promise<void>; soll: Record<string, unknown> }> = [
 	{
-		was: 'saveName',
+		was: "onSaveField('name')",
 		ausfuehren: async (u) => {
-			u.editName = 'Neuer Name';
-			await (u.saveName as () => Promise<void>)();
+			await (u.onSaveField as SaveField)('name', 'Neuer Name', () => {});
 		},
 		soll: { name: 'Neuer Name' }
 	},
 	{
-		was: 'saveRegion',
+		was: "onSaveField('region')",
 		ausfuehren: async (u) => {
-			u.editRegion = 'Wallis';
-			await (u.saveRegion as () => Promise<void>)();
+			await (u.onSaveField as SaveField)('region', 'Wallis', () => {});
 		},
 		soll: { display_config: { region: 'Wallis' } }
 	},
 	{
-		was: 'saveProfil',
+		was: "onSaveField('profile')",
 		ausfuehren: async (u) => {
-			await (u.saveProfil as (v: string) => Promise<void>)('wintersport');
+			await (u.onSaveField as SaveField)('profile', 'wintersport', () => {});
 		},
 		soll: { profil: 'wintersport' }
 	}
