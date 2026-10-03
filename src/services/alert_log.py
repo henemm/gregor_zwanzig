@@ -348,6 +348,8 @@ _E1_FIELD_TYPES = {
     # Vergleichsbasis (`REASON_NO_REFERENCE_BASIS`).
     "reference_gap": str,
     "reference_day": str,
+    # Issue #2480 (E-1): Streckenkilometer des ausloesenden Messpunkts.
+    "trigger_point_km": float,
 }
 
 
@@ -356,6 +358,7 @@ def _apply_e1_fields(
     lead_time_minutes=None, event_at=None, event_end_at=None,
     measurement_point=None, reference_at=None, source=None,
     measurement_gaps=None, reference_gap=None, reference_day=None,
+    trigger_point_km=None,
 ) -> None:
     """Additive E-1-Groessen additiv-defensiv in ``entry`` schreiben
     (Issue #2050 S6). ``None`` -> Absenz (kein Schluessel, kein ``null``).
@@ -378,6 +381,7 @@ def _apply_e1_fields(
         ("measurement_gaps", measurement_gaps),
         ("reference_gap", reference_gap),
         ("reference_day", reference_day),
+        ("trigger_point_km", trigger_point_km),
     ):
         if wert is None:
             continue
@@ -424,6 +428,7 @@ def append_entry(
     reference_at: Optional[str] = None,
     source: Optional[str] = None,
     measurement_gaps: Optional[dict] = None,
+    trigger_point_km: Optional[float] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -522,7 +527,7 @@ def append_entry(
         lead_time_minutes=lead_time_minutes, event_at=event_at,
         event_end_at=event_end_at, measurement_point=measurement_point,
         reference_at=reference_at, source=source,
-        measurement_gaps=measurement_gaps,
+        measurement_gaps=measurement_gaps, trigger_point_km=trigger_point_km,
     )
 
     _append(user_id, "entries" if reachable else "not_delivered", entry)
@@ -562,6 +567,7 @@ def append_suppressed_entry(
     convective_checked: Optional[bool] = None,
     reference_gap: Optional[str] = None,
     reference_day: Optional[str] = None,
+    trigger_point_km: Optional[float] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag fuer eine VOR dem Versand abgewiesene
     Meldung an (#1467 S3, Aenderung (d)).
@@ -649,6 +655,7 @@ def append_suppressed_entry(
         reference_at=reference_at, source=source,
         measurement_gaps=measurement_gaps,
         reference_gap=reference_gap, reference_day=reference_day,
+        trigger_point_km=trigger_point_km,
     )
     _append(user_id, "not_delivered", entry)
 

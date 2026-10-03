@@ -118,3 +118,12 @@ Sperrzeit, Tageslimit, Identitäts-Gate bleiben unverändert (laufen nach der Au
 ### Open Questions (PO-Produktentscheidung)
 - [x] (a) Alarm auch, wenn Regen innerhalb der nächsten Stunde 2–10 km weiter vorn auf der Strecke beginnt? **PO-Entscheid 2026-10-02: JA** (Uhrzeit = Regenbeginn dort, nicht Ankunft; Ort über bestehenden Zonen-Suffix)
 - [x] (b) Alarm auch, wenn der eigene Messpunkt nicht abrufbar ist, weiter vorn aber Regen belegt ist? **PO-Entscheid 2026-10-02: JA** — löst #2050 S4a AC-8 bewusst ab; vorn alles trocken ⇒ weiter `data_unavailable` protokolliert, kein Alarm; throttled an Punkt 0 bleibt unverändert (keine Zusatzabrufe bei Budget-Druck)
+
+## Hinweise aus der RED-Phase (2026-10-02, für /50-implement)
+
+- **Festgelegte Schnittstellen (vom RED-Test erzwungen):** `services.trip_alert.waehle_massgeblichen_punkt(ergebnisse) -> tuple[int, NowcastResult] | None`; E-1-Feld `trigger_point_km` (float) in `alert_log._E1_FIELD_TYPES`, `_apply_e1_fields` und als `append_entry`-Kwarg; falsch typisierter Wert ⇒ nur das Feld weglassen. Bei Auslösung durch Punkt 0 wird das Feld NICHT geschrieben (AC-2-Referenz `tests/fixtures/radar_folgepunkte/punkt0_referenz.json`, aufgenommen auf `e140b3955`, ohne Regenerier-Schalter).
+- **Fake-Radar steuert nach Koordinate**, Soll-Punkte per trockenem Probelauf je Uhr; Capture-ID wird über `alert_input_capture.capture_system` je Punkt zuordenbar.
+- **AC-7-Lesart:** Heute ruft der Lauf auch bei `throttled` an Punkt 0 alle sechs Punkte ab (Zonenschleife). Getestet ist „nicht mehr Abrufe als heute" (kein Punkt doppelt, höchstens Punktzahl, nur `polling`) plus kein Alarm.
+- **AC-6** ist heute schon grün (REASON_DATA_UNAVAILABLE wird in beiden Ausfallwegen geschrieben) — Regressionsschutz.
+- **Nicht getestet (bewusst offen):** ob `measurement_gaps` Punkt 0 bei Ausnahme als Lücke führt; eigener Zweitlauf-Test für `event_duplicate` (AC-8 prüft nur Register-Stufe MODERATE des gewählten Punkts; AC-9 deckt „kein zweiter Alarm" ab).
+- **AC-8 Tageslimit:** frischer Tag ohne Zustellung zählt als LOW ⇒ jede Stufe wäre Eskalation; Test macht erst einen Folgepunkt-Alarm, leert dann das Budget, prüft Verschärfung ohne Stufenwechsel (Grund `daily_limit`).
