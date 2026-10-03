@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/modules/fix_2215_unsaved_input_marker.md
-spec_sha256: 003a629ac39dd6bd1542901b4993a8af9dc2c537abec98a1b9acd962f2870be4
+spec_sha256: 7abcf0cd036f721dfcab84307d6d0f461ad048870e34580b218c23adf82e13b0
 ---
 
 # PO-Briefing: fix-2215-debounce-setdirty
@@ -11,7 +11,7 @@ spec_sha256: 003a629ac39dd6bd1542901b4993a8af9dc2c537abec98a1b9acd962f2870be4
 
 ## Was gebaut wird
 
-Folgt auf eine gültige Eingabe ein ungültiger Zwischenstand, zeigt der Speicher-Chip nie fälschlich „Gespeichert", sondern bleibt auf „Nicht gespeichert".
+Der Speicher-Chip zeigt nie fälschlich „Gespeichert", solange im Trip oder Ortsvergleich ein ungültiger Zwischenstand auf dem Bildschirm steht.
 
 ## Definition of Done
 
@@ -19,12 +19,12 @@ In Trip und Ortsvergleich bleibt der Chip bei ungültiger Folgeeingabe auf „Ni
 
 ## Wie geprüft wird
 
-Tests spielen den Ablauf mit Zeitablauf durch und prüfen die Anzeige je Editor; echter Browser und Mobildarstellung werden nicht gemessen.
+Tests spielen den Ablauf mit Zeitablauf durch und prüfen die Anzeige je Editor; ein echter Browser wird nicht gemessen.
 
 ## Kritische Anmerkungen
 
-- Abweichung vom Ticket-Titel: Der vorgemerkte Save wird nicht abgebrochen, sondern läuft weiter, damit nichts verloren geht.
-- Ein schon laufender Speichervorgang lässt sich nicht zurücknehmen; nur die Anzeige bleibt ehrlich.
+- Neu: Ortsvergleich-Zweig (Desktop, Mobil) wurde nachgetragen; im Testplan steht dafür kein eigener benannter Test, nur allgemein AC-9.
+- Abweichung vom Ticket: Vorgemerkter Save wird nicht abgebrochen, sondern läuft weiter, damit nichts verloren geht.
 
 ## Freigabe-Frage
 

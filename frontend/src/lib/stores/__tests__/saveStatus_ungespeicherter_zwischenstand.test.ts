@@ -17,6 +17,9 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { SaveStatus } from '../saveStatusStore.svelte.ts';
+import { api } from '../../api.ts';
+import { clearEtagRegistry } from '../../etagRegistry.ts';
+import { createFakeTripServer } from '../../__tests__/fakeTripServer.ts';
 
 function neu(): SaveStatus {
 	const inst = Object.create(SaveStatus.prototype) as SaveStatus;
@@ -138,21 +141,40 @@ describe('#2215 Kerntest 6 (AC-6): Altverhalten von setDirty()/defer() bleibt', 
 
 describe('#2215 Kerntest 7 (AC-7): Konflikt ist sticky', () => {
 	test('setUnsavedInput bei Konflikt ändert nichts; nach retryConflict + Erfolg → idle (Merkmal wurde nie gesetzt)', async () => {
+		// retryConflict() macht einen echten GET — Ersatz-Server wie in saveStatusConflictRetry.test.ts.
+		clearEtagRegistry();
+		const server = createFakeTripServer({ latencyMs: 0 });
+		server.install();
+		try {
+			await runKerntest7(server);
+		} finally {
+			server.restore();
+		}
+	});
+});
+
+async function runKerntest7(server: ReturnType<typeof createFakeTripServer>): Promise<void> {
+	{
 		const c = neu();
 		const f = c as unknown as Record<string, unknown>;
 		f._tripId = 'gr20';
 		f._resourceKind = 'trip';
 		f._lastFailed = null;
-		await c.doSave(async () => {
-			throw Object.assign(new Error('Konflikt'), { error: 'precondition_failed', status: 412 });
+		// Echter 412: jemand schreibt vorbei an der Registry.
+		await api.get('/api/trips/gr20');
+		await server.handler('/api/trips/gr20', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: 'fremd' })
 		});
+		await c.doSave(() => api.put('/api/trips/gr20', { name: 'lokal' }).then(() => undefined));
 		assert.equal(c.state, 'conflict', 'Vorbedingung');
 		setUnsavedInput(c);
 		assert.equal(c.state, 'conflict');
 		await c.retryConflict();
 		assert.equal(c.state, 'idle', 'ein bei Konflikt ignoriertes setUnsavedInput darf kein Merkmal hinterlassen');
-	});
-});
+	}
+}
 
 describe('#2215 Kerntest 8 (AC-8): Fehler bei offenem Zwischenstand', () => {
 	test('gescheiterter PUT → error; späterer Erfolg bei offenem Zwischenstand → dirty; PUT-Erfolg löscht _unresolvedError', async () => {

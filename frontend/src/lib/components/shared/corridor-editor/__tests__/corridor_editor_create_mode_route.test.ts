@@ -68,7 +68,7 @@ function baueSaat(createMode: unknown, spione: Spione, metrics: unknown[] = NUR_
 		onTripUpdate: undefined,
 		saveController: {
 			schedule: (...a: unknown[]) => spione.schedule.push(a),
-			setDirty: (...a: unknown[]) => spione.setDirty.push(a)
+			setUnsavedInput: (...a: unknown[]) => spione.setDirty.push(a)
 		},
 		preset: undefined,
 		enqueueHubWrite: undefined,

@@ -969,7 +969,7 @@
 		// Geste ist, die userTouched setzt (AC-4).
 		const gateDecision = weatherSaveGate({ catalogLoaded, userTouched });
 		if (gateDecision === 'skip') {
-			saveController?.setDirty();
+			saveController?.setUnsavedInput();
 			return;
 		}
 		saving = true;
@@ -1004,7 +1004,7 @@
 		const payload = buildWeatherPayload();
 		const gateDecision = weatherSaveGate({ catalogLoaded, userTouched });
 		if (gateDecision === 'skip') {
-			saveController.setDirty();
+			saveController.setUnsavedInput();
 			return;
 		}
 		// #2317 Baustein 1: keepalive erreicht beide PUTs; regulaer bleibt die
@@ -1031,7 +1031,7 @@
 		if (!saveController || createMode) return;
 		const gateDecision = weatherSaveGate({ catalogLoaded, userTouched });
 		if (gateDecision === 'skip') {
-			saveController.setDirty();
+			saveController.setUnsavedInput();
 			return;
 		}
 		// #2317 Baustein 1: `init` (keepalive beim Entladen) erreicht den PUT.

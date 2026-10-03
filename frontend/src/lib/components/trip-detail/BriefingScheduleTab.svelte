@@ -85,7 +85,7 @@
 	// (Zeile ~490-497):
 	//   changed=false (reine Mount-Kanonisierung)     -> nichts (fixt (a))
 	//   changed=true  UND Gate "save" (echte Geste)   -> doSave() (fixt (c))
-	//   changed=true  ABER Gate "skip" (keine Geste)  -> setDirty() — ehrliche
+	//   changed=true  ABER Gate "skip" (keine Geste)  -> setUnsavedInput() — ehrliche
 	//     "Nicht gespeichert"-Anzeige statt stillem Verlust (AC-6/AC-7), falls
 	//     die Gesten-Erfassung eine Aenderung mal nicht einfaengt (F003/F004-Klasse).
 	let _lastReportConfig: ReportConfig = reportConfig;
@@ -100,7 +100,7 @@
 					// Konflikt-Liste) — wie die anderen Reiter.
 					saveController.schedule(buildSaveFn());
 				} else {
-					saveController.setDirty();
+					saveController.setUnsavedInput();
 				}
 			}
 		}

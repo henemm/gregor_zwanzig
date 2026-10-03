@@ -67,6 +67,7 @@ Neue öffentliche Methode (Arbeitsname `setUnsavedInput()`) und privates Merkmal
 - `frontend/src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:264`
 - `frontend/src/lib/components/shared/WeatherMetricsTab.svelte:972`, `:1007`, `:1034`
 - `frontend/src/lib/components/trip-detail/BriefingScheduleTab.svelte:103` (Kommentar :88 mitziehen)
+- **Nachtrag (Adversary F001, 2026-10-03):** `CorridorEditor.svelte` und `CorridorEditorMobile.svelte`, Funktion `maybeSchedule`, Zweig `context === 'vergleich'`: bei Gate ≠ `schedule` zusätzlich `saveController?.setUnsavedInput()` (neuer Aufruf, kein Umstellen). Anlege-Seite `/compare/new` hat keinen Controller (optional chaining, No-op).
 
 NICHT umstellen: `EditStagesPanelNew.svelte:445`.
 
@@ -175,4 +176,5 @@ Die Prüfung misst die Anzeige NACH Timer-Ablauf, also an der Stelle, an der die
 
 ## Changelog
 
+- 2026-10-03: Nachtrag Ortsvergleich-Zweig in `maybeSchedule` (Desktop + Mobil) nach Adversary-Finding F001
 - 2026-10-03: Initial spec created (Issue #2215)

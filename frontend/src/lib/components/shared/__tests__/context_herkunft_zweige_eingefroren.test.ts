@@ -245,24 +245,24 @@ const EINGEFROREN: readonly string[] = [
 	'corridor-editor/CorridorEditorMobile.svelte:172',
 	'corridor-editor/CorridorEditorMobile.svelte:197',
 	'corridor-editor/CorridorEditorMobile.svelte:252',
-	'corridor-editor/CorridorEditorMobile.svelte:279',
-	'corridor-editor/CorridorEditorMobile.svelte:342',
-	'corridor-editor/CorridorEditorMobile.svelte:355',
-	'corridor-editor/CorridorEditorMobile.svelte:358',
-	'corridor-editor/CorridorEditorMobile.svelte:363',
-	'corridor-editor/CorridorEditorMobile.svelte:375',
-	'corridor-editor/CorridorEditorMobile.svelte:496',
+	'corridor-editor/CorridorEditorMobile.svelte:283',
+	'corridor-editor/CorridorEditorMobile.svelte:346',
+	'corridor-editor/CorridorEditorMobile.svelte:359',
+	'corridor-editor/CorridorEditorMobile.svelte:362',
+	'corridor-editor/CorridorEditorMobile.svelte:367',
+	'corridor-editor/CorridorEditorMobile.svelte:379',
+	'corridor-editor/CorridorEditorMobile.svelte:500',
 	'corridor-editor/CorridorEditor.svelte:146',
 	'corridor-editor/CorridorEditor.svelte:189',
 	'corridor-editor/CorridorEditor.svelte:221',
 	'corridor-editor/CorridorEditor.svelte:304',
-	'corridor-editor/CorridorEditor.svelte:341',
-	'corridor-editor/CorridorEditor.svelte:375',
-	'corridor-editor/CorridorEditor.svelte:388',
-	'corridor-editor/CorridorEditor.svelte:391',
-	'corridor-editor/CorridorEditor.svelte:397',
-	'corridor-editor/CorridorEditor.svelte:418',
-	'corridor-editor/CorridorEditor.svelte:547',
+	'corridor-editor/CorridorEditor.svelte:345',
+	'corridor-editor/CorridorEditor.svelte:379',
+	'corridor-editor/CorridorEditor.svelte:392',
+	'corridor-editor/CorridorEditor.svelte:395',
+	'corridor-editor/CorridorEditor.svelte:401',
+	'corridor-editor/CorridorEditor.svelte:422',
+	'corridor-editor/CorridorEditor.svelte:551',
 	'corridor-editor/corridorEditorState.ts:297',
 	'versand-tab/VTSchedulePlan.svelte:55',
 	'versand-tab/VTSchedulePlan.svelte:83',
@@ -338,37 +338,37 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: 'vergleichSpeicherung?.aenderungMelden();'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:341',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:345',
 		zeile: "const next = context === 'vergleich'",
 		folgt: 'addCompareRow(rows, poolLeft'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:375',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:379',
 		zeile: "{#if context === 'vergleich' && compareDefsError}",
 		folgt: 'corridor-editor-vergleich-load-error'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:388',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:392',
 		zeile: "{:else if context === 'vergleich' && compareDefs === null}",
 		folgt: 'corridor-editor-vergleich-loading'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:391',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:395',
 		zeile: "{:else if context === 'route' && routeExtraDefs === null}",
 		folgt: 'corridor-editor-route-loading'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:397',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:401',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'class="ce-h2"'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:418',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:422',
 		zeile: "{#if context === 'route' && routeDefsFailed}",
 		folgt: 'corridor-editor-route-load-warning'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:547',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:551',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'corridor-editor-neutral-hint'
 	},
@@ -393,37 +393,37 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: 'vergleichSpeicherung?.aenderungMelden();'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:279',
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:283',
 		zeile: "const next = context === 'vergleich'",
 		folgt: 'addCompareRow(rows, poolLeft'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:342',
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:346',
 		zeile: "{#if context === 'vergleich' && compareDefsError}",
 		folgt: 'corridor-editor-mobile-vergleich-load-error'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:355',
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:359',
 		zeile: "{:else if context === 'vergleich' && compareDefs === null}",
 		folgt: 'corridor-editor-mobile-vergleich-loading'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:358',
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:362',
 		zeile: "{:else if context === 'route' && routeExtraDefs === null}",
 		folgt: 'corridor-editor-mobile-route-loading'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:363',
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:367',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'class="cem-title"'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:375',
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:379',
 		zeile: "{#if context === 'route' && routeDefsFailed}",
 		folgt: 'corridor-editor-mobile-route-load-warning'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:496',
+		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:500',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'corridor-editor-mobile-neutral-hint'
 	},
