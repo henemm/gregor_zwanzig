@@ -144,6 +144,15 @@ Eingabe geben (Listeneintrag vs. sichtbarer Reiter).
   `alert_quiet_from: null` nach Leeren der Ruhezeit) wird lokal fortgeschrieben, der
   Go-Server ignoriert nil-Zeiger (`internal/handler/trip.go:371-375`) — vorbestehende
   Server-Eigenheit, nur die Anzeige im Konfliktfenster weicht ab.
+- Keine 412-Sackgassen ausserhalb des Controllers: Schreibwege, die mit Registry-`If-Match`
+  am Controller vorbei schreiben, melden 412 per `meldeKonflikt` an ihn (sonst bliebe nur
+  „Fehler beim Speichern", jeder weitere Versuch liefe bis zum Neuladen in 412). Betroffen:
+  Ortsvergleich-Kopf (Name/Region/Profil), Orte (`persistPickedIds`), Pausieren/Aktivieren
+  im Hub (`handleToggleActive`) und das Etappen-Sofortschreiben der Trip-Seite. Bei 412
+  kein Rollback der Eingabe (sie wird mit „Nochmal speichern" erneut gesendet), bei anderen
+  Fehlern bleibt der Rollback; `previous_schedule` darf der Retry nicht veraltet
+  festschreiben. `/state`-PATCH, `/send` und DELETE schreiben ohne `If-Match` und sind
+  davon nicht betroffen.
 - Der Seitenkopf uebernimmt den Stempel nur im Browser (`browser`-Guard): die Registry ist
   modulglobal und im SSR-Prozess nutzeruebergreifend geteilt.
 - Der Bestandstest `apiTripEtagHeaders` ist durch AC-18/AC-24 umgeschrieben (der

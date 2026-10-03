@@ -1242,6 +1242,9 @@ betroffen.
   Telegram/SMS gesetztes `skip_next` erhalten. Der Versand-Reiter laeuft ueber die
   If-Match-Warteschlange; Pausieren/Archivieren flusht, `PATCH`et `/state` und
   holt Trip+`ETag` gemeinsam neu. Gleiches Verhalten im Ortsvergleich-Hub (AC-20).
+  Auch Schreibwege am Controller vorbei (Ortsvergleich-Kopf, Orte, Pausieren/Aktivieren
+  im Hub, Etappen-Sofortschreiben) melden `412` an den Controller, damit „Nochmal
+  speichern" erscheint (keine Sackgasse bis zum Neuladen).
   Spec: `docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md`.
 - **Orts-Vergleiche haben zwei Schreibwege auf dieselbe Datei** —
   `PUT /api/compare/presets/{id}` (dediziert) und
