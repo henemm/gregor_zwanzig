@@ -176,7 +176,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/admin/users/{id}/disabled` | PUT — nur Admin, Konto sperren/entsperren (#2155 S3) |
 | `/api/admin/users/{id}/tier` | PUT — nur Admin, Tier setzen (#2155 S3) |
 | `/api/archive/stats` | GET |
-| `/api/auth/account` | DELETE |
+| `/api/auth/account/delete` | POST — Kontoloeschung mit Re-Auth (#2160, ADR-0081; ersetzt den entfallenen DELETE auf `/api/auth/account`) |
+| `/api/auth/account/delete-code` | POST — Lösch-Code an die wirksame Adresse (#2160) |
 | `/api/auth/export` | GET |
 | `/api/auth/forgot-password` | POST |
 | `/api/auth/google/callback` | GET |
@@ -2615,7 +2616,7 @@ AuthMiddleware — die Nutzerkennung kommt aus dem geprueften Merkmal).
 
 Dieselbe Wirkung loesen **Passwortwechsel** (`PUT /api/auth/password`) und
 **Passwort-Zuruecksetzen** (`POST /api/auth/reset-password`) aus. Die
-**Kontoloeschung** (`DELETE /api/auth/account`) entfernt die Gaesteliste mit dem
+**Kontoloeschung** (`POST /api/auth/account/delete`, seit #2160) entfernt die Gaesteliste mit dem
 Nutzerordner. `POST /api/auth/logout` entfernt dagegen nur den Eintrag des
 aufrufenden Geraets.
 
@@ -3277,6 +3278,7 @@ Returns authenticated user profile (requires valid session cookie).
   "premium_sms_reply_to": "15551234567",
   "premium_sms_reply_at": "2026-08-05T12:00:00Z",
   "has_passkey": true,
+  "has_password": true,
   "passkeys": [
     {
       "id": "<base64url-credentialId>",
@@ -3316,6 +3318,7 @@ Returns authenticated user profile (requires valid session cookie).
 | premium_sms_reply_to | string | The learned Garmin reply address (Issue #1717 S3, raw value); `omitempty` — absent while the device has never reported. Read-only: the sole writer is the internal endpoint `POST /api/internal/premium-sms-learn` (#1676 S1), `PUT /api/auth/profile` does **not** accept it |
 | premium_sms_reply_at | string (RFC3339) | When that address was learned (Issue #1717 S3, raw value — here the timestamp *is* the payload, unlike `email_verified_at` which is never exposed); pointer server-side so it is omitted entirely instead of a zero-value timestamp. Same read-only rule as `premium_sms_reply_to` |
 | has_passkey | bool | Whether user has registered any passkeys |
+| has_password | bool | Issue #2160 (ADR-0081): Konto hat ein Passwort (abgeleitet aus `password_hash != ""`, der Hash wird nie ausgeliefert); **always present** (Muster `has_passkey`). Der Löschen-Dialog zeigt daran ein Passwortfeld; der Lösch-Code steht immer zur Wahl |
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
 | passkey_prompt_dismissed | bool | Whether the user has declined the one-time passkey setup offer (Issue #2248); **always present**. Persisted server-side so the dismissal holds across devices; absent/`false` on the underlying `user.json` both mean "not dismissed" |
 | pending_contact_address | string | Issue #2147 Scheibe B2: eine noch nicht bestätigte, ausstehende neue Kontaktadresse; `omitempty` — fehlt, solange keine Änderung aussteht. `email`/`mail_to` zeigen bis zur Bestätigung weiterhin die alten, wirksamen Werte; `email_verified` bleibt in dieser Zeit `true`. Wird erst über `POST /api/auth/verify-email` bestätigt (dann verschwindet dieses Feld und `mail_to`/`email` übernehmen den Wert) |
@@ -3545,10 +3548,53 @@ verändert — Freigabe erfolgt weiterhin manuell durch den PO.
 - Kein Dedup, kein Clear-Endpoint, kein Rate-Limiting über die Session-Auth hinaus — siehe
   `docs/specs/_archive/modules/issue_1071_tier_change_request.md` (Known Limitations).
 
+#### Kontoloeschung mit Re-Auth (Issue #2160, ADR-0081)
+
+Der frühere Endpunkt `DELETE /api/auth/account` ist entfallen (Route entfernt, 404/405). Beide
+neuen Endpunkte sind anmeldepflichtig (nicht in der Public-Allowlist); die Nutzerkennung kommt
+ausschließlich aus dem Auth-Kontext.
+
+**POST /api/auth/account/delete** — löscht das eigene Konto nach frischem Nachweis.
+
+Request: `{"password": "…"}` ODER `{"code": "123456"}`. Konten ohne Passwort (`has_password:
+false`) können nur den Lösch-Code nutzen. Ist `password` gesetzt, wird nur das Passwort geprüft
+(der Lösch-Code bleibt unberührt).
+
+Wirkung bei Erfolg (`200 {"status":"deleted"}`, Sitzungs-Cookie gelöscht): Telegram-Tokens des
+Nutzers (persistiert in `data/telegram_tokens.json`), Login-OTPs für `email`, `mail_to` und
+`pending_contact_address`, der Lösch-Code und `data/users/<id>/` (inkl. Gästeliste) sind weg.
+
+| Status | Body | Wann |
+|--------|------|------|
+| 400 | `{"error":"reauth_required"}` | weder `password` noch `code` |
+| 401 | `{"error":"unauthorized"}` | nicht angemeldet |
+| 403 | `{"error":"wrong_password"}` | falsches Passwort / Passwort bei passwortlosem Konto |
+| 403 | `{"error":"invalid_code"}` | Lösch-Code falsch, abgelaufen (15 min), verbraucht oder nach 3 Fehlversuchen gesperrt |
+| 404 | `{"error":"not_found"}` | Nutzer existiert nicht (mehr) |
+| 429 | `{"error":"rate_limit_exceeded"}` | mehr als 5 Aufrufe je IP in 15 min (geteilte IP-Middleware) |
+| 500 | `{"error":"internal"}` | Token-Store oder Ordner nicht löschbar — Ordner bleibt, Löschung wiederholbar |
+
+**POST /api/auth/account/delete-code** — verschickt einen 6-stelligen Lösch-Code
+ausschließlich an die wirksame Adresse (`mail_to`, sonst `email`; nie an
+`pending_contact_address`). Request-Body leer bzw. `{}`. Der Code wird erst nach erfolgreichem
+Versand gespeichert (eigener Store je Nutzerkennung, getrennt von Login-OTPs), gilt 15 Minuten,
+einmalig, max. 3 Fehlversuche. Eine neue Anforderung ersetzt den alten Code.
+
+| Status | Body | Wann |
+|--------|------|------|
+| 200 | `{"status":"sent"}` | Code verschickt |
+| 401 | `{"error":"unauthorized"}` | nicht angemeldet |
+| 404 | `{"error":"not_found"}` | Nutzer existiert nicht (mehr) |
+| 429 | `{"error":"rate_limit_exceeded"}` | mehr als 3 Aufrufe je IP in 15 min (geteilte IP-Middleware) |
+| 429 | `{"error":"rate_limit_exceeded"}` + `Retry-After` | Mindestpause je Nutzer/Adresse (1 Code pro Minute) |
+| 502 | `{"error":"mail_failed"}` | SMTP nicht konfiguriert oder Versand gescheitert — kein Code gespeichert |
+
+Das Frontend behandelt beide 429-Codes gleich.
+
 #### GET /api/auth/export
 
 Liefert dem angemeldeten Nutzer seinen Datenbestand als ZIP-Archiv aus (DSGVO Art. 20, Issue
-#2270) — die lesende Gegenrichtung zu `DELETE /api/auth/account`. Authentifiziert über die
+#2270) — die lesende Gegenrichtung zur Kontoloeschung `POST /api/auth/account/delete`. Authentifiziert über die
 Session (nicht in der Public-Allowlist von `AuthMiddleware`); die Nutzerkennung kommt
 ausschließlich aus dem Auth-Kontext, ein Request-Parameter hat keine Wirkung.
 
@@ -4490,6 +4536,11 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-10-03: Issue #2160 (Epic #2138, ADR-0081) — Kontoloeschung mit Re-Auth: neuer
+  Endpunkt `POST /api/auth/account/delete` (Body `{password?, code?}`) und
+  `POST /api/auth/account/delete-code`; der alte DELETE auf `/api/auth/account` ist entfallen
+  (404/405). Profil-DTO erhält `has_password` (bool, immer vorhanden). Details Section 19
+  „Kontoloeschung mit Re-Auth".
 - 2026-09-28: Issue #2155 Scheibe S2 (Epic #2138, ADR-0079) — `GET
   /api/scheduler/status` ist nicht mehr öffentlich: Header `X-GZ-Status-Token`
   (Env `GZ_STATUS_TOKEN`, konstantzeitiger sha256-Vergleich) ist Pflicht, leeres/nicht
@@ -4578,7 +4629,7 @@ function corridorInside(value, min, max) {
   `docs/specs/modules/email_verify_vorbereitung_2304.md`.
 - 2026-09-09: Issue #2270 (Epic #2138) — neuer Endpoint `GET /api/auth/export` liefert dem
   angemeldeten Nutzer seinen Datenbestand als ZIP-Archiv aus (DSGVO Art. 20), lesende
-  Gegenrichtung zu `DELETE /api/auth/account`. Geheimnisse (`sessions.json`,
+  Gegenrichtung zu `DELETE /api/auth/account` (seit #2160 entfallen, ersetzt durch POST …/delete). Geheimnisse (`sessions.json`,
   `password_reset.json`, `email_verification.json`, `password_hash`, `passkey_credentials`)
   sind ausgeschlossen. Details Section 19 C) und `docs/specs/modules/user_data_export.md`.
 - 2026-09-09: Issue #2263 (Epic #2257) — **kein DTO-/Feld-Wechsel**, nur die interne

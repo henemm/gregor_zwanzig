@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -57,29 +58,109 @@ func (s *TelegramTokenStore) load() {
 	}
 }
 
-func (s *TelegramTokenStore) save() {
-	s.mu.Lock()
-	data, err := json.Marshal(s.tokens)
-	s.mu.Unlock()
+// saveLocked persistiert tokens atomar (Temp-Datei + Rename, Issue #2160
+// AC-14) und gibt Fehler zurueck. Der Aufrufer haelt s.mu. Scheitert der
+// Schreibvorgang, bleibt keine Temp-Datei liegen.
+func (s *TelegramTokenStore) saveLocked(tokens map[string]pendingTelegramToken) error {
+	data, err := json.Marshal(tokens)
 	if err != nil {
-		return
+		return err
 	}
-	_ = os.WriteFile(s.path, data, 0600)
+	tmp, err := os.CreateTemp(filepath.Dir(s.path), filepath.Base(s.path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	_, werr := tmp.Write(data)
+	if werr == nil {
+		werr = tmp.Sync()
+	}
+	if cerr := tmp.Close(); werr == nil {
+		werr = cerr
+	}
+	if werr == nil {
+		werr = os.Rename(tmpName, s.path)
+	}
+	if werr != nil {
+		_ = os.Remove(tmpName)
+	}
+	return werr
 }
 
-// CreateToken generates a new one-time deep-link token for userID and returns
-// the raw token. Tokens expire after 24 hours.
-func (s *TelegramTokenStore) CreateToken(userID string) string {
+// copyTokensLocked liefert eine Kopie der Map ohne die Eintraege, fuer die
+// drop true meldet. Der Aufrufer haelt s.mu.
+func (s *TelegramTokenStore) copyTokensLocked(drop func(pendingTelegramToken) bool) map[string]pendingTelegramToken {
+	out := make(map[string]pendingTelegramToken, len(s.tokens))
+	for k, v := range s.tokens {
+		if drop == nil || !drop(v) {
+			out[k] = v
+		}
+	}
+	return out
+}
+
+// IssueToken erzeugt einen neuen Deep-Link-Token (24h TTL) fuer userID und
+// persistiert ihn. Scheitert die Persistierung, wird der Token verworfen und
+// der Fehler zurueckgegeben (Issue #2160 AC-14) — nie ein ungespeicherter Token.
+func (s *TelegramTokenStore) IssueToken(userID string) (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		panic("crypto/rand unavailable: " + err.Error())
+		return "", err
 	}
 	token := hex.EncodeToString(b)
 	s.mu.Lock()
-	s.tokens[token] = pendingTelegramToken{UserID: userID, ExpiresAt: time.Now().Add(24 * time.Hour)}
-	s.mu.Unlock()
-	s.save()
+	defer s.mu.Unlock()
+	next := s.copyTokensLocked(nil)
+	next[token] = pendingTelegramToken{UserID: userID, ExpiresAt: time.Now().Add(24 * time.Hour)}
+	if err := s.saveLocked(next); err != nil {
+		return "", err
+	}
+	s.tokens = next
+	return token, nil
+}
+
+// CreateToken ist der Bestandsweg ohne Fehlerrueckgabe; ein Speicherfehler
+// wird geloggt und liefert "" (Produktivcode nutzt IssueToken).
+func (s *TelegramTokenStore) CreateToken(userID string) string {
+	token, err := s.IssueToken(userID)
+	if err != nil {
+		log.Printf("telegram tokens: token konnte nicht gespeichert werden: %v", err)
+		return ""
+	}
 	return token
+}
+
+// RemoveByUser entfernt alle Tokens von userID und persistiert das Ergebnis
+// (Issue #2160 AC-10). Bei Speicherfehler bleibt der Speicherzustand
+// unveraendert und der Fehler wird zurueckgegeben.
+func (s *TelegramTokenStore) RemoveByUser(userID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := s.copyTokensLocked(func(pt pendingTelegramToken) bool { return pt.UserID == userID })
+	if len(next) == len(s.tokens) {
+		return nil
+	}
+	if err := s.saveLocked(next); err != nil {
+		return err
+	}
+	s.tokens = next
+	return nil
+}
+
+// gc entfernt abgelaufene Tokens (Issue #2160 AC-15). Gestartet vom Reaper
+// aus cmd/server/main.go, nie aus dem Konstruktor. Speicherfehler werden
+// geloggt; abgelaufene Eintraege filtert load() ohnehin.
+func (s *TelegramTokenStore) gc(now time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := s.copyTokensLocked(func(pt pendingTelegramToken) bool { return !now.Before(pt.ExpiresAt) })
+	if len(next) == len(s.tokens) {
+		return
+	}
+	s.tokens = next
+	if err := s.saveLocked(next); err != nil {
+		log.Printf("telegram tokens: gc konnte nicht speichern: %v", err)
+	}
 }
 
 // ResolveAndDelete looks up the token, deletes it if found, and returns the
@@ -90,11 +171,11 @@ func (s *TelegramTokenStore) ResolveAndDelete(token string) (pendingTelegramToke
 	pt, ok := s.tokens[token]
 	if ok {
 		delete(s.tokens, token)
+		if err := s.saveLocked(s.tokens); err != nil {
+			log.Printf("telegram tokens: speichern nach Einloesung fehlgeschlagen: %v", err)
+		}
 	}
 	s.mu.Unlock()
-	if ok {
-		s.save()
-	}
 	if !ok || time.Now().After(pt.ExpiresAt) {
 		return pendingTelegramToken{}, false
 	}
@@ -115,13 +196,25 @@ func GetTelegramLinkHandler(s *store.Store, ts *TelegramTokenStore) http.Handler
 			http.Error(w, "TELEGRAM_BOT_USERNAME not configured", http.StatusInternalServerError)
 			return
 		}
+		// Issue #2160 AC-10/AC-16: Laden und Token-Ausgabe unter demselben
+		// Lock wie die Kontoloeschung — sonst schreibt ein Link-Request, der
+		// den Nutzer kurz vor der Kaskade geladen hat, danach noch einen Token
+		// fuer einen geloeschten Nutzer. Lock-Reihenfolge: telegramConnectMu
+		// vor ts.mu (wie Kaskade und Connect).
+		telegramConnectMu.Lock()
 		user, err := s.LoadUser(userID)
 		if err != nil || user == nil {
+			telegramConnectMu.Unlock()
 			http.Error(w, "user not found", http.StatusNotFound)
 			return
 		}
-
-		token := ts.CreateToken(userID)
+		token, err := ts.IssueToken(userID)
+		telegramConnectMu.Unlock()
+		if err != nil {
+			log.Printf("telegram-link: token not persisted for %s: %v", userID, err)
+			http.Error(w, "token store unavailable", http.StatusInternalServerError)
+			return
+		}
 
 		connected := user.TelegramChatID != ""
 		suffix := ""
@@ -194,16 +287,20 @@ func PostTelegramConnectHandler(s *store.Store, ts *TelegramTokenStore) http.Han
 			return
 		}
 
+		// Issue #2141: Eindeutigkeit der Chat-ID. Prüfung UND Speichern laufen
+		// unter demselben Lock, sonst könnten zwei gleichzeitige Connects
+		// beide an der Prüfung vorbeikommen (TOCTOU). Issue #2160 AC-16: auch
+		// der Nutzer wird erst UNTER dem Lock geladen — die Kontoloeschung
+		// nimmt denselben Lock, ein Connect danach findet keinen Nutzer und
+		// legt den Ordner nicht als Zombie neu an.
+		telegramConnectMu.Lock()
+		defer telegramConnectMu.Unlock()
+
 		user, err := s.LoadUser(pt.UserID)
 		if err != nil || user == nil {
 			http.Error(w, "user not found", http.StatusNotFound)
 			return
 		}
-		// Issue #2141: Eindeutigkeit der Chat-ID. Prüfung UND Speichern laufen
-		// unter demselben Lock, sonst könnten zwei gleichzeitige Connects
-		// beide an der Prüfung vorbeikommen (TOCTOU).
-		telegramConnectMu.Lock()
-		defer telegramConnectMu.Unlock()
 
 		existing, err := s.FindUserByTelegramChatID(body.ChatID)
 		if err != nil {

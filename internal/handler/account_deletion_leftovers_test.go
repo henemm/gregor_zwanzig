@@ -373,8 +373,12 @@ func TestLoeschCodeAnfordern_ZweiteAnforderungDesselbenNutzersWirdGedrosselt(t *
 		t.Fatalf("erste Anforderung: expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 	w := postLoeschCodeAnfordern(h, "anna")
-	if w.Code != 429 || !strings.Contains(w.Body.String(), "rate_limited") {
-		t.Fatalf("zweite Anforderung: expected 429 rate_limited, got %d: %s", w.Code, w.Body.String())
+	var body struct {
+		Error string `json:"error"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	if w.Code != 429 || body.Error != "rate_limit_exceeded" {
+		t.Fatalf("zweite Anforderung: expected 429 rate_limit_exceeded, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
@@ -607,6 +611,10 @@ func TestKontoLoeschen_PasswortKontoMitKorrektemPasswort_UnabhaengigVomLoeschCod
 	if w.Code != 200 {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
+	// AC-12: die Kaskade raeumt auch auf dem Passwortweg den Lösch-Code ab.
+	if _, ok := deleteCodeStore.Load("anna"); ok {
+		t.Error("Lösch-Code muss nach der Löschung (Passwortweg) aus dem Store sein")
+	}
 }
 
 // --- AC-13: Speicherfehler im Token-Store => 500, Ordner bleibt, wiederholbar ---
@@ -807,6 +815,110 @@ func TestTelegramConnect_LaedtNutzerErstUnterDemMutex(t *testing.T) {
 	}
 	if nutzerOrdnerVorhanden(s, "anna") {
 		t.Error("Connect hat den geloeschten Nutzerordner neu angelegt (Zombie)")
+	}
+}
+
+// AC-10/AC-16, Link-Seite: ein Link-Request, der vor der Löschung eintrifft,
+// darf den Nutzer erst UNTER telegramConnectMu laden. Sonst schreibt er nach
+// der Kaskade noch einen Token fuer den geloeschten Nutzer auf die Platte.
+func TestTelegramLink_LaedtNutzerErstUnterDemMutex(t *testing.T) {
+	t.Setenv("TELEGRAM_BOT_USERNAME", "gregor_test_bot")
+	s := telegramConnectTestStore(t)
+	passwortKonto(t, s, "anna", "anna@beispiel.de")
+	passwortKonto(t, s, "bert", "bert@beispiel.de")
+	tsDir := t.TempDir()
+	ts := NewTelegramTokenStore(tsDir)
+	mustIssueToken(t, ts, "bert") // Datei existiert, fremder Token bleibt stehen
+
+	telegramConnectMu.Lock()
+	gesperrt := true
+	t.Cleanup(func() {
+		if gesperrt {
+			telegramConnectMu.Unlock()
+		}
+	})
+
+	done := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		req := httptest.NewRequest(http.MethodGet, "/api/auth/telegram-link", nil)
+		req = req.WithContext(middleware.ContextWithUserID(req.Context(), "anna"))
+		rr := httptest.NewRecorder()
+		GetTelegramLinkHandler(s, ts)(rr, req)
+		done <- rr
+	}()
+
+	select {
+	case rr := <-done:
+		t.Fatalf("Link-Request lief trotz gehaltenem telegramConnectMu durch: %d %s", rr.Code, rr.Body.String())
+	case <-time.After(200 * time.Millisecond): // steht am Mutex
+	}
+
+	if err := s.DeleteUser("anna"); err != nil { // die Löschung, die den Mutex haelt
+		t.Fatalf("DeleteUser: %v", err)
+	}
+	telegramConnectMu.Unlock()
+	gesperrt = false
+
+	select {
+	case rr := <-done:
+		if rr.Code != http.StatusNotFound {
+			t.Errorf("expected 404 fuer geloeschten Nutzer, got %d: %s", rr.Code, rr.Body.String())
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Link-Handler hing")
+	}
+	platte := tokensVonPlatte(t, tsDir)
+	if n := tokenAnzahlFuer(platte, "anna"); n != 0 {
+		t.Errorf("telegram_tokens.json (Platte) enthaelt %d Token(s) des geloeschten Nutzers", n)
+	}
+	if n := tokenAnzahlFuer(platte, "bert"); n != 1 {
+		t.Errorf("fremder Token von bert muss erhalten bleiben, gefunden: %d", n)
+	}
+}
+
+// AC-10/AC-16, Link-Seite, zweite Haelfte: telegramConnectMu muss auch ueber
+// IssueToken gehalten werden — ein Lock nur um LoadUser liesse die Kaskade
+// zwischen Laden und Token-Schreiben durch. Der Test haelt ts.mu, damit der
+// Request in IssueToken steht, und prueft, dass er den Mutex dabei haelt.
+func TestTelegramLink_HaeltMutexUeberTokenAusgabe(t *testing.T) {
+	t.Setenv("TELEGRAM_BOT_USERNAME", "gregor_test_bot")
+	s := telegramConnectTestStore(t)
+	passwortKonto(t, s, "anna", "anna@beispiel.de")
+	ts := NewTelegramTokenStore(t.TempDir())
+
+	ts.mu.Lock()
+	tsGesperrt := true
+	t.Cleanup(func() {
+		if tsGesperrt {
+			ts.mu.Unlock()
+		}
+	})
+
+	done := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		req := httptest.NewRequest(http.MethodGet, "/api/auth/telegram-link", nil)
+		req = req.WithContext(middleware.ContextWithUserID(req.Context(), "anna"))
+		rr := httptest.NewRecorder()
+		GetTelegramLinkHandler(s, ts)(rr, req)
+		done <- rr
+	}()
+	time.Sleep(200 * time.Millisecond) // Request steht in IssueToken an ts.mu
+
+	frei := telegramConnectMu.TryLock()
+	if frei {
+		telegramConnectMu.Unlock()
+		t.Error("telegramConnectMu war frei, waehrend der Link-Request in IssueToken stand — Kaskade koennte dazwischen")
+	}
+	ts.mu.Unlock()
+	tsGesperrt = false
+
+	select {
+	case rr := <-done:
+		if rr.Code != http.StatusOK {
+			t.Errorf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Link-Handler hing")
 	}
 }
 

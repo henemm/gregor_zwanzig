@@ -92,6 +92,70 @@ func TestReaper_TelegramTokens_EntferntAbgelaufeneBehaeltGueltige(t *testing.T) 
 	}
 }
 
+// F002 / AC-15: der laufende Reaper raeumt alle DREI Stores, laesst gueltige
+// Eintraege stehen und endet mit stop.
+func TestStoreReaper_RaeumtAlleDreiStoresUndEndetMitStop(t *testing.T) {
+	t.Cleanup(ResetOTPStoreForTest)
+	t.Cleanup(zuruecksetzenLoeschCodes)
+	now := time.Now()
+	setzeLoginOTP("weg@beispiel.de", "111111", now.Add(-time.Minute), 0)
+	setzeLoginOTP("bleibt@beispiel.de", "222222", now.Add(10*time.Minute), 0)
+	setzeLoeschCode("weg", "333333", now.Add(-time.Second), 0)
+	setzeLoeschCode("bleibt", "444444", now.Add(10*time.Minute), 0)
+	ts := NewTelegramTokenStore(t.TempDir())
+	tokBleibt := mustIssueToken(t, ts, "anna")
+	tokWeg := mustIssueToken(t, ts, "bertram")
+	ts.mu.Lock()
+	pt := ts.tokens[tokWeg]
+	pt.ExpiresAt = now.Add(-time.Minute)
+	ts.tokens[tokWeg] = pt
+	ts.mu.Unlock()
+
+	stop := StartStoreReaper(ts, 10*time.Millisecond)
+	t.Cleanup(stop)
+
+	tokenDa := func(tok string) bool {
+		ts.mu.Lock()
+		defer ts.mu.Unlock()
+		_, ok := ts.tokens[tok]
+		return ok
+	}
+	allesWeg := func() bool {
+		_, otp := otpStore.Load("weg@beispiel.de")
+		_, code := deleteCodeStore.Load("weg")
+		return !otp && !code && !tokenDa(tokWeg)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for !allesWeg() && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if _, ok := otpStore.Load("weg@beispiel.de"); ok {
+		t.Error("Reaper hat das abgelaufene Login-OTP nicht entfernt")
+	}
+	if _, ok := deleteCodeStore.Load("weg"); ok {
+		t.Error("Reaper hat den abgelaufenen Lösch-Code nicht entfernt")
+	}
+	if tokenDa(tokWeg) {
+		t.Error("Reaper hat den abgelaufenen Telegram-Token nicht entfernt")
+	}
+	if _, ok := otpStore.Load("bleibt@beispiel.de"); !ok {
+		t.Error("gueltiges Login-OTP wurde entfernt")
+	}
+	if _, ok := deleteCodeStore.Load("bleibt"); !ok {
+		t.Error("gueltiger Lösch-Code wurde entfernt")
+	}
+	if !tokenDa(tokBleibt) {
+		t.Error("gueltiger Telegram-Token wurde entfernt")
+	}
+
+	stop()
+	setzeLoeschCode("nach-stop", "555555", time.Now().Add(-time.Second), 0)
+	time.Sleep(60 * time.Millisecond)
+	if _, ok := deleteCodeStore.Load("nach-stop"); !ok {
+		t.Error("nach stop darf der Reaper nicht mehr laufen")
+	}
+}
+
 // Der Reaper wird aus main.go gestartet, nicht aus dem Konstruktor: Tests
 // bauen viele Stores, jede Goroutine im Konstruktor waere ein Leck.
 func TestReaper_KonstruktorStartetKeineGoroutine(t *testing.T) {

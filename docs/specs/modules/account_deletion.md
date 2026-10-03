@@ -133,7 +133,7 @@ Nur Einträge mit eigener `user_id` bzw. eigenen Adressen werden entfernt. Ein O
 | Falsches Passwort / Passwort bei passwortlosem Konto | 403 | `wrong_password` |
 | Falscher, abgelaufener, verbrauchter oder gesperrter Lösch-Code | 403 | `invalid_code` |
 | Nutzer existiert nicht (mehr) | 404 | `not_found` |
-| Rate-Limit überschritten | 429 | `rate_limited` |
+| Rate-Limit überschritten | 429 | `rate_limit_exceeded` (einheitlich mit `IPRateLimiter` und Mail-Flood-Limiter) |
 | Token-Store-Persistenz oder `DeleteUser` scheitert | 500 | `internal` (Ordner bleibt, wiederholbar) |
 | Code-Versand: Mail kann nicht zugestellt werden | 502 | `mail_failed` (kein Code gespeichert) |
 
@@ -166,27 +166,27 @@ Verhaltensbenannte Dateien (siehe Affected Files), kein Mock-Theater, `newTestSt
 
 ## Acceptance Criteria
 
-- [ ] **AC-1:** Given ein eingeloggter Nutzer mit Passwort, When er `POST /api/auth/account/delete` mit seinem korrekten Passwort aufruft, Then antwortet der Server 200 `{"status":"deleted"}`, sein Ordner `data/users/<id>/` ist entfernt und das Sitzungs-Cookie gelöscht.
-- [ ] **AC-2:** Given der Endpunkt `DELETE /api/auth/account` existierte bisher, When er nach der Änderung aufgerufen wird, Then löscht er nichts mehr (Route entfernt, 404/405) und nur `POST /api/auth/account/delete` löscht Konten.
-- [ ] **AC-3:** Given ein eingeloggter Nutzer, When er die Löschung mit falschem Passwort anfordert, Then antwortet der Server 403 `wrong_password` und weder Ordner, Telegram-Tokens, Login-OTPs noch Lösch-Code werden verändert.
-- [ ] **AC-4:** Given ein eingeloggter Nutzer, When er die Löschung ohne Passwort und ohne Code anfordert, Then antwortet der Server 400 `reauth_required` und es wird nichts gelöscht.
-- [ ] **AC-5:** Given ein eingeloggter Nutzer, When er `POST /api/auth/account/delete-code` aufruft, Then wird ein 6-stelliger Code ausschließlich an seine wirksame Adresse (`EffectiveContactAddress`, also `mail_to` sonst `email`) verschickt und im eigenen, nach UserID geschlüsselten Store gespeichert.
-- [ ] **AC-6:** Given ein Nutzer mit gültigem Lösch-Code, When er die Löschung mit diesem `code` (ohne Passwort) anfordert, Then wird das Konto gelöscht, und derselbe Code ist danach nicht erneut verwendbar (einmalig).
-- [ ] **AC-7:** Given ein Konto ohne Passwort (Magic-Link, Passkey-only oder Google-only), When es Passwort-Nachweis sendet, Then 403 `wrong_password`; When es einen gültigen Lösch-Code sendet, Then wird es gelöscht und ist nicht ausgesperrt.
-- [ ] **AC-8:** Given ein offenes Login-OTP (Magic-Link-Code) für die Adresse des Nutzers, When er es als Lösch-`code` sendet, Then 403 `invalid_code`; und ein Lösch-Code ist als Login-OTP nicht einlösbar (getrennte Stores).
-- [ ] **AC-9:** Given ein Lösch-Code, When er abgelaufen ist (TTL 15 Minuten), bereits einmal benutzt wurde oder dreimal falsch eingegeben wurde, Then antwortet der Server 403 `invalid_code`, auch bei danach richtigem Code.
-- [ ] **AC-10:** Given Nutzer A und Nutzer B haben je einen Telegram-Token, When A sein Konto löscht, Then enthält die von Platte gelesene `data/telegram_tokens.json` keinen Eintrag mit A's User-ID, während B's Token und B's Ordner unverändert bleiben.
-- [ ] **AC-11:** Given offene Login-OTPs für A's `Email`, `MailTo` und `PendingContactAddress`, When A sein Konto gelöscht hat, Then ist keines dieser OTPs mehr einlösbar und es entsteht dadurch kein neues Konto; OTPs für fremde Adressen bleiben unberührt.
-- [ ] **AC-12:** Given ein offener Lösch-Code von Nutzer A, When Nutzer B mit diesem Code löschen will, Then wird B nicht gelöscht (403) und A's Konto bleibt unberührt; A's Lösch-Code wird bei A's Löschung entfernt.
-- [ ] **AC-13:** Given der Telegram-Token-Store kann nicht persistiert werden, When die Löschung läuft, Then antwortet der Server 500, der Nutzerordner bleibt erhalten und die Löschung ist wiederholbar.
-- [ ] **AC-14:** Given `TelegramTokenStore.save()` schreibt, When es unterbrochen oder fehlerhaft wird, Then entsteht keine halbe Datei (Temp-Datei + Rename), und `GET`-Link-Erzeugung antwortet bei Speicherfehler 500 statt einen nie gespeicherten Token auszugeben.
-- [ ] **AC-15:** Given abgelaufene und gültige Einträge in `otpStore`, Telegram-Token-Store und Lösch-Code-Store, When `gc(now)` läuft, Then sind abgelaufene Einträge entfernt, gültige bleiben, und OTPs mit `attempts>=3` bleiben bis zum Ablauf bestehen; der Reaper wird aus `cmd/server/main.go` gestartet, nicht aus Konstruktoren.
-- [ ] **AC-16:** Given ein Nutzer wurde gelöscht, When anschließend ein Telegram-Connect für ihn eintrifft, Then legt er keinen Nutzerordner neu an (Connect und Löschung serialisiert über `telegramConnectMu`).
-- [ ] **AC-17:** Given wiederholte Aufrufe, When `/account/delete` mehr als 5 Mal oder `/account/delete-code` mehr als 3 Mal innerhalb von 15 Minuten von derselben IP kommen, Then antwortet der Server 429.
-- [ ] **AC-18:** Given ein Nutzer öffnet den Löschen-Dialog auf der Account-Seite, When sein Profil `has_password` true liefert, Then sieht er ein Passwortfeld, und in jedem Fall die Möglichkeit „Code an <Adresse> senden" mit Codefeld; bestätigt er korrekt, wird er ausgeloggt und das Konto gelöscht.
-- [ ] **AC-19:** Given ein Passwort-Konto und ein passwortloses Konto, When das Profil geladen wird, Then liefert `GET /api/auth/profile` `has_password` true bzw. false (immer vorhanden) und nie den Passwort-Hash.
-- [ ] **AC-20:** Given der Staging-E2E-Gast ist ein Passwort-Konto, When der Aufräumschritt in `kanal-an-aus-kette.staging.spec.ts` ausgeführt wird, Then räumt `POST /api/auth/account/delete` mit `{password}` das Konto weg und der Lauf endet ohne Fehler.
-- [ ] **AC-21:** Given die Änderung ist umgesetzt, When die Doku geprüft wird, Then existiert ADR `docs/adr/0081-reauth-vor-kontoloeschung.md` (im Index `docs/adr/README.md`) und `docs/reference/api_contract.md` beschreibt beide neuen Endpunkte, den entfallenen DELETE und `has_password`.
+- **AC-1:** Given ein eingeloggter Nutzer mit Passwort, When er `POST /api/auth/account/delete` mit seinem korrekten Passwort aufruft, Then antwortet der Server 200 `{"status":"deleted"}`, sein Ordner `data/users/<id>/` ist entfernt und das Sitzungs-Cookie gelöscht.
+- **AC-2:** Given der Endpunkt `DELETE /api/auth/account` existierte bisher, When er nach der Änderung aufgerufen wird, Then löscht er nichts mehr (Route entfernt, 404/405) und nur `POST /api/auth/account/delete` löscht Konten.
+- **AC-3:** Given ein eingeloggter Nutzer, When er die Löschung mit falschem Passwort anfordert, Then antwortet der Server 403 `wrong_password` und weder Ordner, Telegram-Tokens, Login-OTPs noch Lösch-Code werden verändert.
+- **AC-4:** Given ein eingeloggter Nutzer, When er die Löschung ohne Passwort und ohne Code anfordert, Then antwortet der Server 400 `reauth_required` und es wird nichts gelöscht.
+- **AC-5:** Given ein eingeloggter Nutzer, When er `POST /api/auth/account/delete-code` aufruft, Then wird ein 6-stelliger Code ausschließlich an seine wirksame Adresse (`EffectiveContactAddress`, also `mail_to` sonst `email`) verschickt und im eigenen, nach UserID geschlüsselten Store gespeichert.
+- **AC-6:** Given ein Nutzer mit gültigem Lösch-Code, When er die Löschung mit diesem `code` (ohne Passwort) anfordert, Then wird das Konto gelöscht, und derselbe Code ist danach nicht erneut verwendbar (einmalig).
+- **AC-7:** Given ein Konto ohne Passwort (Magic-Link, Passkey-only oder Google-only), When es Passwort-Nachweis sendet, Then 403 `wrong_password`; When es einen gültigen Lösch-Code sendet, Then wird es gelöscht und ist nicht ausgesperrt.
+- **AC-8:** Given ein offenes Login-OTP (Magic-Link-Code) für die Adresse des Nutzers, When er es als Lösch-`code` sendet, Then 403 `invalid_code`; und ein Lösch-Code ist als Login-OTP nicht einlösbar (getrennte Stores).
+- **AC-9:** Given ein Lösch-Code, When er abgelaufen ist (TTL 15 Minuten), bereits einmal benutzt wurde oder dreimal falsch eingegeben wurde, Then antwortet der Server 403 `invalid_code`, auch bei danach richtigem Code.
+- **AC-10:** Given Nutzer A und Nutzer B haben je einen Telegram-Token, When A sein Konto löscht, Then enthält die von Platte gelesene `data/telegram_tokens.json` keinen Eintrag mit A's User-ID, während B's Token und B's Ordner unverändert bleiben.
+- **AC-11:** Given offene Login-OTPs für A's `Email`, `MailTo` und `PendingContactAddress`, When A sein Konto gelöscht hat, Then ist keines dieser OTPs mehr einlösbar und es entsteht dadurch kein neues Konto; OTPs für fremde Adressen bleiben unberührt.
+- **AC-12:** Given ein offener Lösch-Code von Nutzer A, When Nutzer B mit diesem Code löschen will, Then wird B nicht gelöscht (403) und A's Konto bleibt unberührt; A's Lösch-Code wird bei A's Löschung entfernt.
+- **AC-13:** Given der Telegram-Token-Store kann nicht persistiert werden, When die Löschung läuft, Then antwortet der Server 500, der Nutzerordner bleibt erhalten und die Löschung ist wiederholbar.
+- **AC-14:** Given `TelegramTokenStore.save()` schreibt, When es unterbrochen oder fehlerhaft wird, Then entsteht keine halbe Datei (Temp-Datei + Rename), und `GET`-Link-Erzeugung antwortet bei Speicherfehler 500 statt einen nie gespeicherten Token auszugeben.
+- **AC-15:** Given abgelaufene und gültige Einträge in `otpStore`, Telegram-Token-Store und Lösch-Code-Store, When `gc(now)` läuft, Then sind abgelaufene Einträge entfernt, gültige bleiben, und OTPs mit `attempts>=3` bleiben bis zum Ablauf bestehen; der Reaper wird aus `cmd/server/main.go` gestartet, nicht aus Konstruktoren.
+- **AC-16:** Given ein Nutzer wurde gelöscht, When anschließend ein Telegram-Connect für ihn eintrifft, Then legt er keinen Nutzerordner neu an (Connect und Löschung serialisiert über `telegramConnectMu`).
+- **AC-17:** Given wiederholte Aufrufe, When `/account/delete` mehr als 5 Mal oder `/account/delete-code` mehr als 3 Mal innerhalb von 15 Minuten von derselben IP kommen, Then antwortet der Server 429.
+- **AC-18:** Given ein Nutzer öffnet den Löschen-Dialog auf der Account-Seite, When sein Profil `has_password` true liefert, Then sieht er ein Passwortfeld, und in jedem Fall die Möglichkeit „Code an <Adresse> senden" mit Codefeld; bestätigt er korrekt, wird er ausgeloggt und das Konto gelöscht.
+- **AC-19:** Given ein Passwort-Konto und ein passwortloses Konto, When das Profil geladen wird, Then liefert `GET /api/auth/profile` `has_password` true bzw. false (immer vorhanden) und nie den Passwort-Hash.
+- **AC-20:** Given der Staging-E2E-Gast ist ein Passwort-Konto, When der Aufräumschritt in `kanal-an-aus-kette.staging.spec.ts` ausgeführt wird, Then räumt `POST /api/auth/account/delete` mit `{password}` das Konto weg und der Lauf endet ohne Fehler.
+- **AC-21:** Given die Änderung ist umgesetzt, When die Doku geprüft wird, Then existiert ADR `docs/adr/0081-reauth-vor-kontoloeschung.md` (im Index `docs/adr/README.md`) und `docs/reference/api_contract.md` beschreibt beide neuen Endpunkte, den entfallenen DELETE und `has_password`.
 
 ## Known Limitations
 

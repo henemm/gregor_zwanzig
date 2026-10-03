@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/modules/account_deletion.md
-spec_sha256: 5e1228f7a1879f91231e841f750d1db949300934108b97e8e61cff1cc35c44ff
+spec_sha256: 89fdefdf6cecf0fcd15a981a7cd7035b8a0b50b6081f9c8edd5d1dbd03cfc024
 ---
 
 # PO-Briefing: fix-2160-account-loeschung-reste
@@ -11,22 +11,22 @@ spec_sha256: 5e1228f7a1879f91231e841f750d1db949300934108b97e8e61cff1cc35c44ff
 
 ## Was gebaut wird
 
-Konto-Löschung verlangt Passwort oder E-Mail-Code und räumt alle Reste des Nutzers weg.
+Konto-Löschung verlangt Passwort oder E-Mail-Code und räumt Telegram-Verknüpfungen und offene Login-Codes des Nutzers mit ab.
 
 ## Definition of Done
 
-Löschen ohne Nachweis wird abgewiesen; danach bleibt kein Telegram-Link und kein offener Login-Code des Nutzers übrig.
+Löschen ohne gültigen Nachweis wird abgewiesen; danach bleiben keine Telegram-Verknüpfung oder Login-Codes zurück, andere Nutzer bleiben unberührt.
 
 ## Wie geprüft wird
 
-Tests mit zwei Nutzern belegen Abweisung und Aufräumen; echte E-Mail-Zustellung des Lösch-Codes ist nur auf Staging messbar.
+Tests mit zwei Nutzern belegen Abweisung und Aufräumen; echte Zustellung der Lösch-Mail ist nur auf Staging messbar.
 
 ## Kritische Anmerkungen
 
-- Anonymisierung von Protokoll-Einträgen mit Nutzerkennung fehlt bewusst; diese Spuren bleiben bestehen.
-- Zusätzlich: Lösch-Code per E-Mail; alter Lösch-Aufruf entfällt; Passkey-Konten brauchen den Code.
-- Sperrliste für Sitzungen existiert nicht mehr; Aufräum-Job daher nur für Login-Codes, Telegram-Links, Lösch-Codes.
+- Ohne Test: Ratenbegrenzung, entfallener alter Lösch-Aufruf, Start des Aufräum-Jobs, atomares Speichern.
+- Anfrage nannte frischen Login-Code; Spec nutzt eigenen Lösch-Code, Passkey-Konten können nur so löschen.
+- Protokoll-Einträge mit Nutzerkennung bleiben bestehen.
 
 ## Freigabe-Frage
 
-Darf die Löschung Passwort oder E-Mail-Code verlangen, obwohl Protokoll-Anonymisierung nicht enthalten ist?
+Darf die Löschung Passwort oder E-Mail-Code verlangen, obwohl einige Anforderungen ungetestet sind?
