@@ -213,11 +213,11 @@ test('AC-9: die ohne Netz gezeigte Trip-Ansicht sperrt ihre Bearbeitungsflaechen
 			).toBeDisabled();
 		}
 
-		// Etappen-Tab: die Aktivitaets-Auswahl schreibt sofort per PUT.
-		await page.getByTestId('trip-detail-tab-stages').first().click();
-		await expect(page.getByTestId('edit-activity-dropdown')).toBeVisible();
+		// Trip-Kopf: die Aktivitaets-Kacheln schreiben sofort per PUT (#2284 S2 —
+		// vorher Auswahlliste im Etappen-Reiter).
+		await expect(page.getByTestId('trip-profil-option-skitour')).toBeVisible();
 		await expect(
-			page.getByTestId('edit-activity-dropdown'),
+			page.getByTestId('trip-profil-option-skitour'),
 			'die Aktivitaets-Auswahl ist ohne Netz bedienbar'
 		).toBeDisabled();
 
@@ -407,12 +407,12 @@ test('AC-10: der Bedienversuch an einer gesperrten Flaeche schickt keine schreib
 		for (const beschriftung of ['Pausieren', 'Archivieren', 'Test-Briefing senden']) {
 			await page.getByRole('button', { name: beschriftung }).click({ force: true });
 		}
-		await page.getByTestId('trip-detail-tab-stages').first().click();
+		// #2284 S2: Aktivitaet = Kachel im Trip-Kopf (vorher Auswahlliste im Etappen-Reiter).
 		await page
-			.getByTestId('edit-activity-dropdown')
-			.selectOption('skitour', { force: true })
+			.getByTestId('trip-profil-option-skitour')
+			.click({ force: true })
 			.catch(() => {
-				// Ein gesperrtes Auswahlfeld nimmt gar keinen Wert an — das ist der
+				// Eine gesperrte Kachel nimmt den Klick gar nicht an — das ist der
 				// erwuenschte Ausgang, kein Befund.
 			});
 		await page.waitForTimeout(3_000);
