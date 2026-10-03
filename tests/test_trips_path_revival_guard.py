@@ -550,10 +550,18 @@ def test_trefferkraft_scanner_detects_real_violations_on_disk(tmp_path, monkeypa
 def test_trefferkraft_ausnahmen_decken_nur_ihr_ordinal(tmp_path, monkeypatch):
     """#2482: Struct-Tag-Abschnitt und API-Bezeichner-Ausnahme duerfen den
     Waechter nicht stumpf machen. In einem Temp-Baum bleiben Join-, Slice-
-    und Konstanten-Form Funde; eine Kopie der echten quota.go mit einem
-    ZUSAETZLICHEN bare "trips" im selben Symbol liefert genau den Fund fuer
-    Ordinal 1 (Ordinal 0 bleibt durch die Ausnahme gedeckt)."""
-    go_dir = tmp_path / "internal" / "store"
+    und Konstanten-Form Funde; eine SYNTHETISCHE quota.go mit derselben
+    Struktur wie die echte (func quotaUnlimited, danach const-Block mit
+    "trips", Struct-Tag json:"trips") plus einem ZUSAETZLICHEN bare "trips"
+    im selben Symbol liefert genau den Fund fuer Ordinal 1 (Ordinal 0 bleibt
+    durch die Ausnahme gedeckt, der Struct-Tag zaehlt nicht).
+
+    Eigener Unterordner statt tmp_path direkt: der Blinding-Nachweis
+    (tests/test_trips_pfad_rueckbau.py) ruft alle Waechter-Tests mit
+    DEMSELBEN tmp_path auf -- dieser Test darf mit dem anderen
+    Trefferkraft-Test nicht um internal/store konkurrieren."""
+    root = tmp_path / "ordinal_baum"
+    go_dir = root / "internal" / "store"
     go_dir.mkdir(parents=True)
     (go_dir / "dirs.go").write_text(
         "package store\n\n"
@@ -569,17 +577,25 @@ def test_trefferkraft_ausnahmen_decken_nur_ihr_ordinal(tmp_path, monkeypatch):
         encoding="utf-8",
     )
 
-    original = (REPO_ROOT / "internal" / "handler" / "quota.go").read_text(encoding="utf-8")
-    anker = '\tquotaTrips          quotaResource = "trips"\n'
-    assert original.count(anker) == 1, "Anker in quota.go nicht eindeutig -- Test anpassen"
-    handler_dir = tmp_path / "internal" / "handler"
+    handler_dir = root / "internal" / "handler"
     handler_dir.mkdir(parents=True)
     (handler_dir / "quota.go").write_text(
-        original.replace(anker, anker + '\tquotaTripsZweit      quotaResource = "trips"\n'),
+        "package handler\n\n"
+        "func quotaUnlimited(ctx context.Context, userID string) bool {\n"
+        "\treturn false\n"
+        "}\n\n"
+        "type quotaResource string\n\n"
+        "const (\n"
+        '\tquotaTrips      quotaResource = "trips"\n'
+        '\tquotaTripsZweit quotaResource = "trips"\n'
+        ")\n\n"
+        "type profileQuota struct {\n"
+        '\tTrips *int `json:"trips"`\n'
+        "}\n",
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(sys.modules[__name__], "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(sys.modules[__name__], "REPO_ROOT", root)
 
     unlisted = _unlisted(_all_violations())
 
