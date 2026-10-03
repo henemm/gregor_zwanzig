@@ -208,3 +208,84 @@ def test_ereignis_nach_letzter_etappe_bleibt_aktives_segment():
             )
         finally:
             _clean_user(u)
+
+
+def test_amtlich_im_folgesegment_gemeldet_wird_schon_in_a_erkannt():
+    """AC-8 (Adversary M15a): die PRUEFUNG am Identitaets-Gate laeuft ueber
+    dieselbe Segmentmenge wie die Registrierung. Ist das Ereignis bereits
+    amtlich (HIGH) fuer Segment B gemeldet und sieht der Radar es schon in
+    Segment A (Ereigniszeit in B), ist es dasselbe Ereignis —
+    `event_duplicate`, kein Alarm. Eine Pruefung nur gegen [A] fande den
+    Eintrag nie."""
+    from freezegun import freeze_time
+
+    from output.renderers.alert.segments import normalize_segment_id
+    from services.alert_gate import record_event_identity, resolve_hazard_class
+
+    trip_id = "trip-2261-ac8-amtlich-b"
+    _kontrolle("ac8m", trip_id, ZWEI_SEGMENTE)
+    quelle = regen_ab(EREIGNIS, 2.0)
+
+    for tag in ("a", "b"):
+        u = nutzer(f"ac8m-{tag}")
+        try:
+            trip = baue_trip(u, trip_id, ZWEI_SEGMENTE, cooldown_min=SPERRZEIT_KURZ_MIN)
+            seg_a = _aktives_segment(trip, lauf_zeit(0))
+            seg_b = _aktives_segment(trip, lauf_zeit(LAUF_IN_B))
+            assert seg_a.segment_id != seg_b.segment_id and seg_b.start_time <= EREIGNIS <= seg_b.end_time, (
+                f"Konstruktion: Lauf 0 in A, Ereignis in B "
+                f"(A={seg_a.segment_id}, B={seg_b.segment_id})"
+            )
+            with freeze_time(T0 - timedelta(minutes=5)):
+                record_event_identity(
+                    user_id=u, entity_id=trip.id,
+                    hazard_class=resolve_hazard_class(is_convective=False),
+                    segment_ids=[normalize_segment_id(seg_b.segment_id)],
+                    severity="HIGH", now=T0 - timedelta(minutes=5), source="official",
+                    window_start=EREIGNIS - timedelta(minutes=30),
+                    window_end=EREIGNIS + timedelta(minutes=120),
+                )
+            strecke = AlarmPruefstrecke(user_id=u, settings=_settings_all_channels())
+            lauf0 = strecke.lauf(at=lauf_zeit(0), zweig="radar", trip=trip,
+                                 radar_service=radar(quelle))
+            gruende = gruende_seit(u, trip, lauf_zeit(0))
+            assert lauf0.triggered_count == 0 and alert_log.REASON_EVENT_DUPLICATE in gruende, (
+                f"[{tag}] AC-8: das amtlich fuer Segment B gemeldete Ereignis muss "
+                f"schon im Lauf in Segment A als "
+                f"{alert_log.REASON_EVENT_DUPLICATE!r} erkannt werden. "
+                f"triggered_count={lauf0.triggered_count}, Gruende={gruende!r}"
+            )
+        finally:
+            _clean_user(u)
+
+
+def test_segment_zur_ereigniszeit_nicht_bestimmbar_bleibt_aktives_segment():
+    """AC-8 (Adversary M7b): scheitert die Aufloesung des Segments zur
+    Ereigniszeit, laeuft der Alarm fail-soft mit dem aktiven Segment weiter
+    (kein Absturz, der den Alarm kostet). Kontrolle: mit intakter Etappe
+    liefert dieselbe Funktion {A, B}."""
+    import dataclasses
+
+    from output.renderers.alert.segments import normalize_segment_id
+    from services.trip_alert import radar_ereignis_segmente
+
+    u = nutzer("ac8f")
+    try:
+        trip = baue_trip(u, "trip-2261-ac8-failsoft", ZWEI_SEGMENTE,
+                         cooldown_min=SPERRZEIT_KURZ_MIN)
+        seg_a = _aktives_segment(trip, lauf_zeit(0))
+        seg_b = _aktives_segment(trip, lauf_zeit(LAUF_IN_B))
+        a = normalize_segment_id(seg_a.segment_id)
+        b = normalize_segment_id(seg_b.segment_id)
+        assert radar_ereignis_segmente(trip, seg_a, EREIGNIS) == [a, b], (
+            "Kontrolle: mit intakter Etappe muss die Menge {A, B} sein."
+        )
+        kaputt = dataclasses.replace(
+            trip, stages=[dataclasses.replace(trip.stages[0], waypoints=None)],
+        )
+        assert radar_ereignis_segmente(kaputt, seg_a, EREIGNIS) == [a], (
+            "AC-8: Aufloesung zur Ereigniszeit gescheitert — es bleibt beim "
+            "aktiven Segment, ohne Ausnahme."
+        )
+    finally:
+        _clean_user(u)

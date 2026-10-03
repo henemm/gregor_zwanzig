@@ -211,16 +211,18 @@ def _clean_user(uid: str) -> None:
 # --------------------------------------------------------------------------
 
 def _alarm_offset_minuten() -> int:
-    """Zieloffset des ALARM-Pfads = halbes Vorwarnfenster.
+    """Zieloffset des ALARM-Pfads = eigener Messpunkt-Offset.
 
-    Gelesen ueber die MODUL-Referenz, nie als `from ... import` gebunden: der
-    Laufzeit-Drift-Waechter aus #2009 (`test_radar_onset_threshold_variance.py
-    ::test_ac1_shared_threshold_drives_both_paths`) setzt die Konstante zur
-    Laufzeit um; eine beim Import gebundene Kopie liefe still daran vorbei.
+    Issue #2261 (A-1, AC-2): bis #2261 das halbe Vorwarnfenster
+    (`RADAR_ONSET_THRESHOLD_MIN // 2`); seit die Schwelle auf dem Horizont
+    steht, ist der Offset entkoppelt (`RADAR_MEASURE_OFFSET_MIN`, 27).
+
+    Gelesen ueber die MODUL-Referenz, nie als `from ... import` gebunden: eine
+    beim Import gebundene Kopie liefe still an einer Laufzeit-Aenderung vorbei.
     """
     from services import radar_service as radar_service_mod
 
-    return radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+    return radar_service_mod.RADAR_MEASURE_OFFSET_MIN
 
 
 def _erwartete_messposition(trip, now_utc: datetime, offset_minuten: int):

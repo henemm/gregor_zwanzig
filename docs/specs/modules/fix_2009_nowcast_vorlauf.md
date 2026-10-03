@@ -79,6 +79,11 @@ RADAR_ONSET_THRESHOLD_MIN = _RADAR_ONSET_THRESHOLD_MIN
 `src/services/compare_radar_alert.py:53` (`_RADAR_ONSET_THRESHOLD_MIN = 20`, Aufruf `:346`)
 importieren künftig `RADAR_ONSET_THRESHOLD_MIN` aus `radar_service` statt eigener Literale.
 
+> **Abgelöst durch `feat_2261_a1_radar_vorlauf` (PO-Entscheid A-1, 2026-08-21):** Die
+> Schwelle steht seit #2261 auf dem Quell-Horizont (`RADAR_ONSET_THRESHOLD_MIN =
+> NOWCAST_HORIZON_MIN`, 180). Abgelöst sind die 55-Begründung und die Schwellenfestlegung;
+> der Drift-Schutz AC-1 (Lesen über die Modulreferenz) bleibt gültig.
+
 **Wert 55, nicht höher:** Am Cron-Takt `7,22,37,52` und dem 15-Minuten-Datenraster sind
 ausschließlich die Onset-Werte 8, 23, 38, 53, 68, 83, 98 … erreichbar. 55 liegt knapp oberhalb
 von 53 — lässt also 8/23/38/53 durch (bis zu ~53 Min Vorlauf) und schließt 68+ aus. Die Schwelle
@@ -282,7 +287,9 @@ Compare-Modell schlicht nicht vorhanden. Siehe Abschnitt „Architektur-Entschei
 
 ## Known Limitations
 
-- **Eine Meldung pro Zelle, keine zweite Erinnerung.** Wegen der Ereignis-Identitäts-Sperre
+- **Eine Meldung pro Zelle, keine zweite Erinnerung.** *(Schwellenbezug abgelöst durch
+  `feat_2261_a1_radar_vorlauf`, PO-Entscheid A-1: Vorlauf bis zum Quell-Horizont; „keine späte
+  Erinnerung kurz vor Eintreffen“ bleibt als C-2 bestätigt.)* Wegen der Ereignis-Identitäts-Sperre
   (`alert_gate.py:559-628`, Fenster ±180 Min um den Onset-Zeitpunkt) bleibt es bei genau einer
   Meldung pro Zelle — der Alarm wandert nach vorn (~53 statt ~8 Minuten Vorlauf), er verdoppelt
   sich nicht. Die späte Erinnerung kurz vor dem tatsächlichen Einschlag entfällt damit. Das ist

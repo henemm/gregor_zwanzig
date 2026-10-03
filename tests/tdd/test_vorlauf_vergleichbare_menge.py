@@ -552,3 +552,162 @@ def test_gewitter_durchbricht_ankuendigung():
             )
         finally:
             _clean_user(u)
+
+
+# ===========================================================================
+# AC-5 — Grenzen der Gewitter-Ausnahme (Adversary F002/F003)
+# ===========================================================================
+
+def _gewitter_lauf2_quelle():
+    """Lauf 2: Gewitter bei Onset 38, Menge < 2 mm (kein Mengen-Durchbruch)."""
+    quelle = regen_ab(lauf_zeit(2) + timedelta(minutes=38), 1.0, gewitter=True)
+    gemessen = messe(quelle, lauf_zeit(2))
+    assert gemessen.is_convective and gemessen.onset_minutes == 38 and (
+        gemessen.window_precip_mm < 2.0
+    ), (
+        f"Konstruktion: Lauf 2 muss ein Gewitter bei Onset 38 mit < 2 mm sein, "
+        f"gemessen is_convective={gemessen.is_convective} "
+        f"onset={gemessen.onset_minutes} menge={gemessen.window_precip_mm}"
+    )
+    return quelle
+
+
+def test_gewitter_durchbruch_schleust_nicht_am_identitaets_gate_vorbei():
+    """AC-5/AC-8 (Adversary F002): die Gewitter-Ausnahme oeffnet NUR die
+    Sperrzeit. Ist dasselbe Ereignis bereits mit gleicher Dringlichkeit
+    (HIGH, amtlich) registriert, bleibt es am Identitaets-Gate ein Duplikat —
+    der Sperrzeit-Durchbruch ist keine Mengen-Verschaerfung.
+
+    Aufbau: Erstsicht (MODERATE) bucht Sperrzeit + Registereintrag; danach
+    kommt eine amtliche HIGH-Meldung desselben Ereignisses ins Register
+    (produktiver Schreibweg `record_event_identity`). Lauf 2 = Gewitter.
+    Ohne amtlichen Eintrag bricht derselbe Lauf durch
+    (`test_dringlichkeit_bricht_trotzdem_durch`)."""
+    from output.renderers.alert.segments import normalize_segment_id
+    from services.alert_gate import record_event_identity, resolve_hazard_class
+
+    trip_id = "trip-2261-ac5-identitaet"
+    aufbau_kontrolle("ac5i", trip_id)
+    gewitter_quelle = _gewitter_lauf2_quelle()
+
+    for tag in ("a", "b"):
+        u = nutzer(f"ac5i-{tag}")
+        try:
+            trip = baue_trip(u, trip_id, [-60, 300], cooldown_min=SPERRZEIT_LANG_MIN)
+            strecke = AlarmPruefstrecke(user_id=u, settings=_settings_all_channels())
+            lauf0 = _erstsicht_170(strecke, trip)
+            assert lauf0.triggered_count == 1, (
+                f"[{tag}] Aufbau: Erstsicht muss alarmieren, "
+                f"triggered_count={lauf0.triggered_count}"
+            )
+            from services.trip_day import trip_local_today
+            from services.trip_segments import resolve_current_segment
+            with freeze_time(lauf_zeit(1)):
+                jetzt = datetime.now(timezone.utc)
+                aktiv, _d = resolve_current_segment(
+                    trip, jetzt, trip_local_today(trip, jetzt),
+                )
+                record_event_identity(
+                    user_id=u, entity_id=trip.id,
+                    hazard_class=resolve_hazard_class(is_convective=True),
+                    segment_ids=[normalize_segment_id(aktiv.segment_id)],
+                    severity="HIGH", now=jetzt, source="official",
+                    window_start=T0, window_end=T0 + timedelta(minutes=300),
+                )
+
+            lauf2 = strecke.lauf(
+                at=lauf_zeit(2), zweig="radar", trip=trip,
+                radar_service=radar(gewitter_quelle),
+            )
+            gruende = gruende_seit(u, trip, lauf_zeit(2))
+            assert alert_log.REASON_COOLDOWN not in gruende, (
+                f"[{tag}] Voraussetzung: das Gewitter muss die Sperrzeit "
+                f"durchbrechen (sonst ist das Identitaets-Gate ungeprueft). "
+                f"Gruende={gruende!r}"
+            )
+            assert lauf2.triggered_count == 0 and (
+                alert_log.REASON_EVENT_DUPLICATE in gruende
+            ), (
+                f"[{tag}] F002: das bereits amtlich (HIGH) registrierte Ereignis "
+                f"darf der Gewitter-Durchbruch der Sperrzeit nicht am "
+                f"Identitaets-Gate vorbeischleusen. triggered_count="
+                f"{lauf2.triggered_count}, Gruende={gruende!r}"
+            )
+        finally:
+            _clean_user(u)
+
+
+def test_alt_eintrag_ohne_dringlichkeit_kein_gewitter_durchbruch():
+    """AC-5 (Adversary F003a): eine laufende Sperre aus einem Alt-Eintrag ohne
+    gebuchte Dringlichkeit (Schreibform vor #2261) laesst das Gewitter NICHT
+    durch — fehlende Basis ist kein Rangsprung (konservativ). Der Eintrag
+    entsteht ueber `record_nowcast_sent` ohne `urgency` (Aufrufform vor
+    #2261)."""
+    from services.alert_gate import record_nowcast_sent
+    from services.trip_day import anchor_tz
+
+    trip_id = "trip-2261-ac5-alteintrag"
+    aufbau_kontrolle("ac5o", trip_id)
+    gewitter_quelle = _gewitter_lauf2_quelle()
+
+    for tag in ("a", "b"):
+        u = nutzer(f"ac5o-{tag}")
+        try:
+            trip = baue_trip(u, trip_id, [-60, 300], cooldown_min=SPERRZEIT_LANG_MIN)
+            with freeze_time(lauf_zeit(0)):
+                jetzt = datetime.now(timezone.utc)
+                record_nowcast_sent(
+                    user_id=u, throttle_scope="radar", throttle_key=trip.id,
+                    now=jetzt, zone=anchor_tz(trip, jetzt), precip_mm=0.0,
+                )
+            strecke = AlarmPruefstrecke(user_id=u, settings=_settings_all_channels())
+            lauf2 = strecke.lauf(
+                at=lauf_zeit(2), zweig="radar", trip=trip,
+                radar_service=radar(gewitter_quelle),
+            )
+            gruende = gruende_seit(u, trip, lauf_zeit(2))
+            assert lauf2.triggered_count == 0 and alert_log.REASON_COOLDOWN in gruende, (
+                f"[{tag}] F003a: Sperre ohne gebuchte Dringlichkeit — kein "
+                f"Gewitter-Durchbruch, Stille mit Grund "
+                f"{alert_log.REASON_COOLDOWN!r}. triggered_count="
+                f"{lauf2.triggered_count}, Gruende={gruende!r}"
+            )
+        finally:
+            _clean_user(u)
+
+
+def test_gewitter_nach_gewitter_ist_kein_durchbruch():
+    """AC-5 (Adversary F003b): Erstsicht bereits als Gewitter (HIGH gebucht),
+    Lauf 2 wieder Gewitter (HIGH). Gleichstand ist kein Rangsprung — die
+    Sperrzeit haelt, Grund `cooldown` (nicht erst das Identitaets-Gate)."""
+    trip_id = "trip-2261-ac5-gleichstand"
+    aufbau_kontrolle("ac5g", trip_id)
+    gewitter_quelle = _gewitter_lauf2_quelle()
+
+    for tag in ("a", "b"):
+        u = nutzer(f"ac5g-{tag}")
+        try:
+            trip = baue_trip(u, trip_id, [-60, 300], cooldown_min=SPERRZEIT_LANG_MIN)
+            strecke = AlarmPruefstrecke(user_id=u, settings=_settings_all_channels())
+            lauf0 = strecke.lauf(
+                at=lauf_zeit(0), zweig="radar", trip=trip,
+                radar_service=radar(regen_ab(
+                    T0 + timedelta(minutes=ONSET_ERSTSICHT), 2.0, gewitter=True,
+                )),
+            )
+            assert lauf0.triggered_count == 1, (
+                f"[{tag}] Aufbau: Gewitter-Erstsicht muss alarmieren, "
+                f"triggered_count={lauf0.triggered_count}"
+            )
+            lauf2 = strecke.lauf(
+                at=lauf_zeit(2), zweig="radar", trip=trip,
+                radar_service=radar(gewitter_quelle),
+            )
+            gruende = gruende_seit(u, trip, lauf_zeit(2))
+            assert lauf2.triggered_count == 0 and alert_log.REASON_COOLDOWN in gruende, (
+                f"[{tag}] F003b: HIGH nach HIGH ist kein Rangsprung — die "
+                f"Sperrzeit haelt (Grund {alert_log.REASON_COOLDOWN!r}). "
+                f"triggered_count={lauf2.triggered_count}, Gruende={gruende!r}"
+            )
+        finally:
+            _clean_user(u)

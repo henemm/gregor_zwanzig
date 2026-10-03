@@ -136,6 +136,87 @@ def test_einzelpunkt_fall_fenster_offen():
     )
 
 
+@pytest.mark.parametrize("onset", [82, 100, 150])
+def test_regen_an_punkt_0_nach_dem_weitergehen_loest_nicht_aus(onset):
+    """AC-3 (Adversary F001) GIVEN Regen nur am ERSTEN Messpunkt, Beginn erst
+    nach dessen Aufenthaltsfenster (`E_0 = p_1 + 30 = 72` auf ETAPPE_MITTEL)
+    / WHEN der Prueflauf laeuft / THEN kein Alarm — auch Punkt 0 unterliegt
+    dem Fenster, nicht nur die Folgepunkte.
+
+    Bewacht den Rueckfall-Pfad: filtert das Fenster ALLE Punkte heraus, darf
+    das ungefilterte Ergebnis von Punkt 0 nicht trotzdem ausloesen."""
+    etappe = strecke.ETAPPE_MITTEL
+    e0 = etappe.fenster_ende_min()[0]
+    assert e0 is not None and onset >= e0 + 10, (
+        f"Testvoraussetzung: Beginn {onset} klar hinter E_0={e0}"
+    )
+    erhalten = _alarme(f"ac3-p0-spaet-{onset}", etappe, {0: strecke.nass(onset)})
+    assert erhalten == [0, 0], (
+        f"AC-3: Beginn in {onset} Min an Punkt 0 — der Nutzer ist laut Zeitplan "
+        f"seit {e0:.0f} Min weiter, kein Alarm erwartet, erhalten {erhalten}"
+    )
+
+
+def test_toleranz_ist_30_minuten_nicht_mehr():
+    """AC-3 (Adversary M17b): die Toleranz hinter dem naechsten Durchgang ist
+    30 Min. Beginn in 130 Min an Punkt 3 liegt hinter `E_3 = p_4 + 30 = 117`
+    — kein Alarm. Bei einer zu weiten Toleranz (60 -> 147) loeste er aus."""
+    etappe = strecke.ETAPPE_MITTEL
+    e3 = etappe.fenster_ende_min()[3]
+    assert e3 is not None and e3 + 10 <= 130 <= e3 + 30 - 10, (
+        f"Testvoraussetzung: 130 klar zwischen E_3={e3} und E_3+30"
+    )
+    erhalten = _alarme("ac3-toleranz", etappe, {3: strecke.nass(130)})
+    assert erhalten == [0, 0], (
+        f"AC-3: Beginn in 130 Min an Punkt 3 liegt hinter dem Fenster-Ende "
+        f"{e3:.0f} (Toleranz 30) — kein Alarm erwartet, erhalten {erhalten}"
+    )
+
+
+@pytest.mark.parametrize("onset", [57, 62])
+def test_regen_an_punkt_0_im_aufenthaltsfenster_loest_aus(onset):
+    """AC-3 Positivgrenze zu F001: Beginn an Punkt 0 jenseits der alten
+    Schwelle 55, aber innerhalb `E_0 = 72` -> Alarm. Ohne diese Haelfte
+    bewiese die Stille oben nur eine zu enge Regel."""
+    etappe = strecke.ETAPPE_MITTEL
+    e0 = etappe.fenster_ende_min()[0]
+    assert e0 is not None and onset <= e0 - 10, f"Testvoraussetzung: E_0={e0}"
+    erhalten = _alarme(f"ac3-p0-fenster-{onset}", etappe, {0: strecke.nass(onset)})
+    assert erhalten == [1, 1], (
+        f"AC-3: Beginn in {onset} Min an Punkt 0 liegt im Aufenthaltsfenster "
+        f"(bis {e0:.0f} Min) und muss ausloesen, erhalten {erhalten}"
+    )
+
+
+@pytest.mark.parametrize("idx", [0, 3])
+def test_regenbeginn_genau_am_fensterende_loest_aus(idx):
+    """AC-3 Fensterrand (Adversary F102) GIVEN Regen beginnt an Punkt `idx`
+    EXAKT am Ende seines Aufenthaltsfensters (`jetzt + onset_k == E_k`;
+    ETAPPE_MITTEL: E_0 = 72, E_3 = 117, ganzzahlig, weil der Durchgang im
+    15-Min-Takt liegt) / WHEN der Prueflauf laeuft / THEN wird alarmiert —
+    die Spec sagt `<=`, der Rand gehoert zum Fenster.
+
+    Gegenprobe im selben Test: eine Minute spaeter (`E_k + 1`) kein Alarm —
+    sonst bewiese das Ausloesen am Rand nichts ueber die Lage des Rands."""
+    etappe = strecke.ETAPPE_MITTEL
+    ende = etappe.fenster_ende_min()[idx]
+    assert ende is not None and ende == int(ende) and ende > 60, (
+        f"Testvoraussetzung: Fenster-Ende an Punkt {idx} ganzzahlig und jenseits "
+        f"der Menge-Grenze 60, ist {ende}"
+    )
+    rand = int(ende)
+    am_rand = _alarme(f"ac3-rand-{idx}", etappe, {idx: strecke.nass(rand)})
+    assert am_rand == [1, 1], (
+        f"AC-3: Beginn in {rand} Min an Punkt {idx} liegt GENAU am Fenster-Ende "
+        f"E_{idx}={ende:.0f} (Spec: `<=`) und muss ausloesen, erhalten {am_rand}"
+    )
+    dahinter = _alarme(f"ac3-rand-plus1-{idx}", etappe, {idx: strecke.nass(rand + 1)})
+    assert dahinter == [0, 0], (
+        f"AC-3: Beginn in {rand + 1} Min an Punkt {idx} liegt eine Minute hinter "
+        f"E_{idx}={ende:.0f} — kein Alarm erwartet, erhalten {dahinter}"
+    )
+
+
 @pytest.mark.parametrize("idx", [0, 3, 5])
 def test_laufender_regen_ist_ueberall_faellig(idx):
     """AC-3 GIVEN Regen laeuft an Punkt `idx` bereits (Lage C: kein kuenftiger

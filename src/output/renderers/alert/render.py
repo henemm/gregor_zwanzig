@@ -636,7 +636,19 @@ def _onset_wann_kopf(e: OnsetEvent) -> str:
     ueber `_onset_end_suffix()` dahinter."""
     if getattr(e, "already_running", False):
         return "läuft bereits"
-    return f"in {e.onset_minutes} Min"
+    # Issue #2261 (A-1, B-2): jenseits der Guete-Grenze ist "in 170 Min"
+    # nicht lesbar — dann die Uhrzeit mit Tagesbezug in der Form des
+    # SMS-Bausteins (`_sms_onset_time`, kein neues Format). Grenze ueber die
+    # Modulreferenz (Drift-Schutz, Muster `project.location_sharpness_display`).
+    from services import radar_service as radar_service_mod
+
+    onset = e.onset_minutes
+    if onset is not None and onset > radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN:
+        return "ab " + _sms_onset_time(
+            e.onset_time, getattr(e, "onset_day_offset", 0),
+            getattr(e, "onset_weekday", None),
+        )
+    return f"in {onset} Min"
 
 
 def _onset_wann_zeile(e: OnsetEvent, *, praefix: str = "") -> str:

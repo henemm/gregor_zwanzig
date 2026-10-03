@@ -697,22 +697,43 @@ def points_along_remaining_route(
     unvermessene Etappen tragen dort keine echte Wegstrecke, gemessen wird
     aber ueberall (E3). Die km-Zahl einer Zone erscheint erst im Text, wenn
     die Etappe vermessen ist.
+
+    Issue #2261: duenne Huelle um ``points_with_passage_times()`` — EINE
+    Geometrie, keine zweite Kopie, die abdriften koennte.
+    """
+    return [p for p, _t in points_with_passage_times(trip, active, segment_date, at)]
+
+
+def points_with_passage_times(
+    trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+) -> List[Tuple[GPXPoint, datetime]]:
+    """Dieselben Punkte wie ``points_along_remaining_route()``, je Punkt mit
+    der Durchgangszeit laut Zeitplan (Issue #2261 A-1, R3 — Messort zur
+    Ereigniszeit).
+
+    Annahme wie ``_remaining_km()``: lineare Zeitinterpolation ueber den
+    Streckenanteil. ``t0 = max(at, active.start_time)``, ``p_k = t0 +
+    Anteil_k * (active.end_time - t0)`` mit ``Anteil_k = k * Punktabstand /
+    Reststrecke`` (0 fuer den ersten Punkt). Planposition ist die legitime
+    Positionsquelle — es gibt kein GPS.
     """
     start = position_at_time(trip, active, segment_date, at)
+    t0 = max(at, active.start_time)
     rest_km = _remaining_km(active, at)
     if rest_km < RADAR_ZONE_POINT_SPACING_KM:
-        return [start]
+        return [(start, t0)]
     anzahl = min(
         RADAR_ZONE_MAX_POINTS,
         int(rest_km // RADAR_ZONE_POINT_SPACING_KM) + 1,
     )
-    return [start] + [
-        _lerp_point(
-            start, active.end_point,
-            (i * RADAR_ZONE_POINT_SPACING_KM) / rest_km,
+    restzeit = active.end_time - t0
+    ergebnis = [(start, t0)]
+    for i in range(1, anzahl):
+        anteil = (i * RADAR_ZONE_POINT_SPACING_KM) / rest_km
+        ergebnis.append(
+            (_lerp_point(start, active.end_point, anteil), t0 + anteil * restzeit)
         )
-        for i in range(1, anzahl)
-    ]
+    return ergebnis
 
 
 def points_from_km(

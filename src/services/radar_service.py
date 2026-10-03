@@ -112,32 +112,50 @@ _ONSET_PRECIP_WINDOW_MIN = 60
 
 # Issue #2009: einzige Quelle der Onset-Alarmschwelle, ersetzt die bisher
 # doppelt gepflegten Literale in trip_alert.py und compare_radar_alert.py
-# (ADR-0021 — Trip und Ortsvergleich teilen den Code). Wert 55: am Cron-Takt
-# `7,22,37,52` und dem 15-Min-Datenraster sind nur die Onset-Werte
-# 8/23/38/53/68/83 ... erreichbar; 55 liegt knapp oberhalb von 53, laesst also
-# bis zu ~53 Min Vorlauf durch und schliesst 68+ aus (jenseits ~60 Min sinkt
-# die Ortsschaerfe des INCA-Extrapolationsprodukts deutlich).
+# (ADR-0021 — Trip und Ortsvergleich teilen den Code).
 #
-# BEWUSST NUR EIN NAME — kein privates `_RADAR_ONSET_THRESHOLD_MIN` daneben
-# (anders als beim Nachbarn `NOWCAST_HORIZON_MIN` oben, der einen echten
-# modulinternen Leser hat; hier gab es nie einen). Ein zweiter, privater Name
-# laedt dazu ein, ihn zu benutzen — und wer ihn benutzt, bindet den Wert beim
-# Import und umgeht damit den Laufzeit-Drift-Schutz aus AC-1: die Aufrufer in
-# trip_alert.py/compare_radar_alert.py lesen absichtlich ueber die
-# MODUL-Referenz (`radar_service_mod.RADAR_ONSET_THRESHOLD_MIN`), damit ein
-# Auseinanderlaufen der beiden Pfade auffaellt statt still zu bleiben.
-RADAR_ONSET_THRESHOLD_MIN = 55
+# Issue #2261 Teil A, PO-Entscheid A-1 (2026-08-21): der Radar-Alarm meldet
+# SO FRUEH WIE MOEGLICH. Keine kuenstliche Untergrenze — die einzige Grenze
+# ist die Reichweite der Quelle (`NOWCAST_HORIZON_MIN`), daher abgeleitet
+# statt als zweite Zahl gepflegt. Die Ortsschaerfe jenseits ~60 Min wird
+# nicht durch Schweigen behandelt, sondern ueber die Guetekennzeichnung
+# ausgewiesen (`LOCATION_SHARPNESS_LIMIT_MIN`, #2051 S3). Die fruehere
+# Festlegung aus `fix_2009_nowcast_vorlauf` ist abgeloest
+# (feat_2261_a1_radar_vorlauf).
+#
+# BEWUSST NUR EIN NAME — kein privates `_RADAR_ONSET_THRESHOLD_MIN` daneben.
+# Ein zweiter, privater Name laedt dazu ein, ihn zu benutzen — und wer ihn
+# benutzt, bindet den Wert beim Import und umgeht damit den Laufzeit-
+# Drift-Schutz aus #2009 AC-1: die Aufrufer in trip_alert.py/
+# compare_radar_alert.py lesen absichtlich ueber die MODUL-Referenz
+# (`radar_service_mod.RADAR_ONSET_THRESHOLD_MIN`), damit ein Auseinanderlaufen
+# der beiden Pfade auffaellt statt still zu bleiben.
+RADAR_ONSET_THRESHOLD_MIN = NOWCAST_HORIZON_MIN
 _DRY_THRESHOLD_MM_H = 0.1
 
-# Issue #2051 S3 (E2): eigener Name neben RADAR_ONSET_THRESHOLD_MIN (55) --
-# die 55 ist eine AUSLOESESCHWELLE (feuert der Alarm?), diese 60 eine
-# GUETE-GRENZE (wie belastbar ist die Ortsangabe?). Belegt durch den
-# Kommentar oben ("jenseits ~60 Min sinkt die Ortsschaerfe des
-# INCA-Extrapolationsprodukts deutlich"). Downstream-Leser (render.py,
+# Issue #2051 S3 (E2): eigener Name neben RADAR_ONSET_THRESHOLD_MIN --
+# jene ist eine AUSLOESESCHWELLE (feuert der Alarm?, seit #2261 = Horizont),
+# diese 60 eine GUETE-GRENZE (wie belastbar ist die Ortsangabe?): jenseits
+# ~60 Min sinkt die Ortsschaerfe des INCA-Extrapolationsprodukts deutlich.
+# Seit #2261 zugleich Grenze "vergleichbare Menge" und Grenze "Uhrzeit statt
+# Restminuten" im Kopf. Downstream-Leser (render.py,
 # starkregen_hint.py, project.py) referenzieren die MODUL-Variable
 # (`radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN`), nie ein Import zur
 # Bindezeit -- Laufzeit-Drift-Schutz wie bei RADAR_ONSET_THRESHOLD_MIN.
 LOCATION_SHARPNESS_LIMIT_MIN = 60
+
+# Issue #2261 (A-1, R2): Zeitversatz des ERSTEN Messpunkts ab jetzt. Bis
+# #2261 aus der Schwelle berechnet (`55 // 2`); mit der Schwelle auf dem
+# Horizont waere der Messpunkt auf +90 gewandert und mit dem Briefing-Offset
+# (`NOWCAST_HORIZON_MIN // 2`) zusammengefallen. Eigener Wert, bewusst NICHT
+# aus der Schwelle abgeleitet; der erste Messpunkt bleibt bit-identisch.
+RADAR_MEASURE_OFFSET_MIN = 27
+
+# Issue #2261 (A-1, R3): Toleranz des Aufenthaltsfensters eines Messpunkts.
+# Regen an Punkt k ist nur faellig, solange er beginnt, bevor der Nutzer laut
+# Zeitplan den Folgepunkt plus diese Toleranz erreicht hat (Planposition,
+# kein GPS — wer schneller/langsamer geht, verschiebt sich dagegen).
+RADAR_PASSAGE_TOLERANCE_MIN = 30
 
 # Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings
 # in intensity_to_text() -- alert_urgency.py vergleicht gegen diese Konstanten
@@ -211,7 +229,7 @@ class NowcastResult:
     # Frames liegen. Eigenes Fenster, aber DIESELBE Akkumulationsmechanik wie
     # window_precip_mm (gemeinsamer Rechenkern `_accumulate_precip_mm`:
     # Frame-Dedup, _MAX_FRAME_COVERAGE-Deckel, Fensterende als harte Grenze).
-    # Der Alarm feuert bis RADAR_ONSET_THRESHOLD_MIN (55) Minuten vor dem
+    # Der Alarm feuert bis RADAR_ONSET_THRESHOLD_MIN (Horizont) Minuten vor dem
     # Beginn -- das Fenster ab jetzt deckt dann fast nur Trockenzeit ab und
     # untertriebe die Menge systematisch. BEWUSST beschreibend: kein Leser in
     # radar_alert_due()/der #2020-Ueberholungsregel.
@@ -1186,10 +1204,15 @@ class RadarNowcastService:
         # window_precip_mm noch max_rate_mm_h.
         onset_precip_mm: Optional[float] = None
         if onset_ts is not None:
-            onset_precip_mm = _accumulate_precip_mm(
-                frames, all_ts_sorted, onset_ts,
-                onset_ts + timedelta(minutes=_ONSET_PRECIP_WINDOW_MIN),
-            )
+            _onset_window_end = onset_ts + timedelta(minutes=_ONSET_PRECIP_WINDOW_MIN)
+            # Issue #2261 (A-1, AC-7): reicht das Fenster ab dem Beginn ueber
+            # den Quell-Horizont hinaus, ist die Menge dort abgeschnitten und
+            # zu klein -- dann KEINE Mengenangabe (an der Quelle, alle vier
+            # Kanaele lesen dasselbe Feld). Intensitaet bleibt unberuehrt.
+            if _onset_window_end <= horizon:
+                onset_precip_mm = _accumulate_precip_mm(
+                    frames, all_ts_sorted, onset_ts, _onset_window_end,
+                )
 
         # Issue #2051 S1: Ende des zusammenhaengenden nassen Blocks aus
         # DERSELBEN `frames`-Liste (kein zweiter Quellenabruf) -- der Nutzer

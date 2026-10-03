@@ -1993,9 +1993,10 @@ class TripReportSchedulerService:
         # Issue #2017: abgefragt wird die Position zur MITTE des eigenen
         # Vorhersagefensters, nicht der Startpunkt des Segments. Der Offset ist
         # bewusst ein ANDERER als im Alarm-Pfad (`trip_alert.py`,
-        # `RADAR_ONSET_THRESHOLD_MIN // 2`): dieser Pfad kennt keinen
-        # Onset-Grenzwert und akzeptiert jeden Treffer im vollen
-        # 180-Minuten-Fenster, sein Fehlerfenster ist entsprechend groesser.
+        # `RADAR_MEASURE_OFFSET_MIN`, seit #2261 A-1 vom Onset-Grenzwert
+        # entkoppelt): dieser Pfad kennt keinen Onset-Grenzwert und
+        # akzeptiert jeden Treffer im vollen 180-Minuten-Fenster, sein
+        # Fehlerfenster ist entsprechend groesser.
         # Geteilt wird die POSITIONSBERECHNUNG, nicht der Offset — und schon
         # gar nicht die Segmentwahl oben (die bleibt vorwaertsgerichtet,
         # #1667 S3).
