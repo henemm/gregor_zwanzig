@@ -309,6 +309,10 @@
 			if (saveGateDecision(rows) === 'schedule') {
 				syncToWizard();
 				vergleichSpeicherung?.aenderungMelden();
+			} else {
+				// #2215: der vorgemerkte Save des letzten gueltigen Stands (Orchestrierung) darf
+				// den ungueltigen Zwischenstand nicht als „Gespeichert" melden. Anlege-Seite: kein Controller.
+				saveController?.setUnsavedInput();
 			}
 			return;
 		}
@@ -322,7 +326,7 @@
 			return;
 		}
 		if (saveGateDecision(rows) === 'schedule') saveController?.schedule(buildSaveFn());
-		else saveController?.setDirty();
+		else saveController?.setUnsavedInput();
 	}
 
 	function patch(metric: string, p: Partial<Pick<CorridorRowState, 'min' | 'max' | 'notify' | 'mark'>>) {

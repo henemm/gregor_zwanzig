@@ -118,27 +118,27 @@ Diese Scheibe:
 | `weather-metrics-tab/weatherMetricsTabSections.ts:72` | SMS-Schwellen/Report-Config nur im Trip |
 | `weather-metrics-tab/weatherMetricsTabSections.ts:73` | Stundenverlauf-Abschnitt nur im Vergleich |
 | `corridor-editor/CorridorEditor.svelte:146` | `isFreshCompareCreate` — Profil-Prefill nur bei frischer Vergleichs-Anlage, kein Trip-Äquivalent |
-| `corridor-editor/CorridorEditor.svelte:341` | `add()` — `addCompareRow`/`addRow` unterscheiden sich strukturell (CompareMetricDef vs. RouteMetricDef) |
-| `corridor-editor/CorridorEditor.svelte:375` | Ladefehler-Banner, gebunden an den Compare-Katalog-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:388` | Ladezustand „Lade Metriken…", gebunden an den Compare-Katalog-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:391` | Ladezustand „Lade Metriken…", gebunden an den Route-Zusatzmetriken-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:418` | Rückfall-Warnung auf die 6 Standardmetriken, nur route-spezifisch |
-| `corridor-editor/CorridorEditor.svelte:547` | AC-13-Neutralitäts-Hinweis — Ranking-Konzept existiert nur im Vergleich |
+| `corridor-editor/CorridorEditor.svelte:345` | `add()` — `addCompareRow`/`addRow` unterscheiden sich strukturell (CompareMetricDef vs. RouteMetricDef) |
+| `corridor-editor/CorridorEditor.svelte:379` | Ladefehler-Banner, gebunden an den Compare-Katalog-Ladepfad |
+| `corridor-editor/CorridorEditor.svelte:392` | Ladezustand „Lade Metriken…", gebunden an den Compare-Katalog-Ladepfad |
+| `corridor-editor/CorridorEditor.svelte:395` | Ladezustand „Lade Metriken…", gebunden an den Route-Zusatzmetriken-Ladepfad |
+| `corridor-editor/CorridorEditor.svelte:422` | Rückfall-Warnung auf die 6 Standardmetriken, nur route-spezifisch |
+| `corridor-editor/CorridorEditor.svelte:551` | AC-13-Neutralitäts-Hinweis — Ranking-Konzept existiert nur im Vergleich |
 | `corridor-editor/CorridorEditorMobile.svelte:144` | Mobil-Zwilling von `CorridorEditor.svelte:146` |
-| `corridor-editor/CorridorEditorMobile.svelte:279` | Mobil-Zwilling von `CorridorEditor.svelte:341` |
-| `corridor-editor/CorridorEditorMobile.svelte:342` | Mobil-Zwilling von `CorridorEditor.svelte:375` |
-| `corridor-editor/CorridorEditorMobile.svelte:355` | Mobil-Zwilling von `CorridorEditor.svelte:388` |
-| `corridor-editor/CorridorEditorMobile.svelte:358` | Mobil-Zwilling von `CorridorEditor.svelte:391` |
-| `corridor-editor/CorridorEditorMobile.svelte:375` | Mobil-Zwilling von `CorridorEditor.svelte:418` |
-| `corridor-editor/CorridorEditorMobile.svelte:496` | Mobil-Zwilling von `CorridorEditor.svelte:547` |
+| `corridor-editor/CorridorEditorMobile.svelte:283` | Mobil-Zwilling von `CorridorEditor.svelte:345` |
+| `corridor-editor/CorridorEditorMobile.svelte:346` | Mobil-Zwilling von `CorridorEditor.svelte:379` |
+| `corridor-editor/CorridorEditorMobile.svelte:359` | Mobil-Zwilling von `CorridorEditor.svelte:392` |
+| `corridor-editor/CorridorEditorMobile.svelte:362` | Mobil-Zwilling von `CorridorEditor.svelte:395` |
+| `corridor-editor/CorridorEditorMobile.svelte:379` | Mobil-Zwilling von `CorridorEditor.svelte:422` |
+| `corridor-editor/CorridorEditorMobile.svelte:500` | Mobil-Zwilling von `CorridorEditor.svelte:551` |
 
 ### DARSTELLUNG (6 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
 
 | Datei:Zeile | Grund |
 |---|---|
 | `AlarmeTab.svelte:530` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
-| `corridor-editor/CorridorEditor.svelte:397` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
-| `corridor-editor/CorridorEditorMobile.svelte:363` | Mobil-Zwilling von `CorridorEditor.svelte:397` |
+| `corridor-editor/CorridorEditor.svelte:401` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
+| `corridor-editor/CorridorEditorMobile.svelte:367` | Mobil-Zwilling von `CorridorEditor.svelte:401` |
 | `versand-tab/VTSchedulePlan.svelte:83` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 | `alarme-tab/alarmeTabSections.ts:42` | nur DOM-/Tab-Id |

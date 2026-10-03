@@ -125,6 +125,12 @@ export class SaveStatus {
 	// liefert keinen Payload) darf den Fehlschlag trotzdem nicht vergessen.
 	private _unresolvedError: string | null = null;
 
+	// Issue #2215: ein nicht speicherbarer Zwischenstand steht auf dem Bildschirm.
+	// Ein vorgemerkter/laufender Save des letzten GUELTIGEN Stands wird trotzdem
+	// geschrieben (kein Datenverlust), meldet aber nie „Gespeichert". Truthy
+	// pruefen — Testinstanzen ohne Konstruktor haben hier `undefined`.
+	private _offenerZwischenstand = false;
+
 	constructor(kennung?: NachladeKennung) {
 		this._tripId = kennung?.id;
 		this._resourceKind = kennung?.typ;
@@ -144,16 +150,33 @@ export class SaveStatus {
 
 	setSaved(): void {
 		if (this._imKonflikt) return;
-		this.savedAt = new Date();
-		this.state = 'idle';
 		this.error = null;
 		// Erst ein ECHTER Erfolg loescht den offenen Fehlschlag (s. markPristine).
 		this._unresolvedError = null;
+		if (this._offenerZwischenstand) {
+			// #2215: Daten sind gesichert, der Bildschirm zeigt aber einen anderen Stand.
+			this.state = 'dirty';
+			return;
+		}
+		this.savedAt = new Date();
+		this.state = 'idle';
 	}
 
 	setDirty(): void {
 		if (this._imKonflikt) return;
 		this.state = 'dirty';
+	}
+
+	/**
+	 * Issue #2215: wie setDirty(), aber der Bildschirm zeigt einen NICHT speicherbaren
+	 * Zwischenstand. Ein vorgemerkter Save laeuft weiter (Timer/_pendingFn unberuehrt),
+	 * setSaved() haelt die Anzeige dann auf `dirty`, bis schedule()/cancel()/markPristine()
+	 * den Zwischenstand abloesen.
+	 */
+	setUnsavedInput(): void {
+		if (this._imKonflikt) return;
+		this.state = 'dirty';
+		this._offenerZwischenstand = true;
 	}
 
 	/**
@@ -175,6 +198,7 @@ export class SaveStatus {
 	 */
 	markPristine(): void {
 		if (this._imKonflikt) return;
+		this._offenerZwischenstand = false; // #2215
 		// Truthy-Pruefung (nicht `!== null`): Testinstanzen entstehen im Repo per
 		// `Object.create(SaveStatus.prototype)` ohne Konstruktor, das Feld ist dort
 		// `undefined` — und "kein Fehlschlag bekannt" muss dort dasselbe heissen.
@@ -360,6 +384,7 @@ export class SaveStatus {
 	 *  SOFORT setSaving() — damit der Indikator nie "idle" (Gespeichert ✓) zeigt,
 	 *  während eine ungespeicherte Änderung im Debounce-Fenster wartet (AC-1). */
 	schedule(saveFn: SaveFn, ms = 700): void {
+		this._offenerZwischenstand = false; // #2215: neue gueltige Eingabe ueberholt den Zwischenstand
 		this.setSaving(); // bei offenem Konflikt ein No-op (#1433)
 		this._pendingFn = saveFn;
 		if (this._timer !== null) clearTimeout(this._timer);
@@ -425,6 +450,7 @@ export class SaveStatus {
 	 * im Netz, wird hier nichts zurückgesetzt.
 	 */
 	cancel(): void {
+		this._offenerZwischenstand = false; // #2215
 		const hadPendingTimer = this._timer !== null;
 		const hadDeferred = !hadPendingTimer && this._pendingFn !== null;
 		if (this._timer !== null) clearTimeout(this._timer);
