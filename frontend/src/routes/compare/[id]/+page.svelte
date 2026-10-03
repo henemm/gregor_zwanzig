@@ -335,9 +335,10 @@
 			{#snippet meta()}
 				<!-- Orte-Anzahl je Viewport aus derselben Quelle wie vor #2284 S1:
 				     Desktop zählte die gespeicherten IDs, Mobil die aufgelösten Orte
-				     (weichen ab, wenn ein Ort gelöscht/nicht auflösbar ist). -->
-				<span data-testid="compare-hub-orte-anzahl" class="hidden desktop:inline">{' · '}{currentPreset.location_ids.length} {currentPreset.location_ids.length === 1 ? 'Ort' : 'Orte'}</span>
-				<span data-testid="compare-hub-orte-anzahl" class="desktop:hidden">{' · '}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}</span>
+				     (weichen ab, wenn ein Ort gelöscht/nicht auflösbar ist). Getrennte
+				     testids je Viewport, damit jede Kopf-testid genau einmal im DOM steht (AC-8). -->
+				<span data-testid="compare-hub-orte-anzahl-desktop" class="hidden desktop:inline">{' · '}{currentPreset.location_ids.length} {currentPreset.location_ids.length === 1 ? 'Ort' : 'Orte'}</span>
+				<span data-testid="compare-hub-orte-anzahl-mobil" class="desktop:hidden">{' · '}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}</span>
 			{/snippet}
 		</SubscriptionHeader>
 

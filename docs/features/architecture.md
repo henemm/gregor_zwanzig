@@ -715,7 +715,8 @@ frontend/
 │   │   │   │   └── index.ts       # Barrel (TripHeader re-exported in organisms/)
 │   │   │   ├── compare/           # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
 │   │   │   ├── shared/            # Geteilte Tab-Organismen route|vergleich (WeatherMetricsTab,
-│   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/, OutputLayoutEditor)
+│   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/, OutputLayoutEditor,
+│   │   │   │                      #   subscription-header/ = geteilter Hub-Kopf, #2284)
 │   │   │   ├── preview/           # Email/SMS preview renderers
 │   │   │   ├── email-preview/     # Email rendering
 │   │   │   ├── mobile/            # Mobile-only components
@@ -1023,6 +1024,15 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
   geteilten Tab-Organismen (`shared/`, `context="route"|"vergleich"`), Auto-Save.
 - **Bearbeiten:** Detail-Hub mit `?tab=`-Navigation (`trip-detail/` bzw.
   `compare/CompareTabs.svelte`/`CompareDetail.svelte`).
+- **Hub-Kopf (#2284 S1, Epic #2345 Etappe P2):** `shared/subscription-header/SubscriptionHeader.svelte`
+  ist der geteilte Kopf-Baustein des Detail-Hubs. Name/Region/Profil sind inline editierbar;
+  gesteuert wird er ausschließlich über Props (kein Kontext-Zweig im Markup, kein API-Import),
+  ein Markup für Desktop und Mobil. Snippet-Slots: `eyebrow`, `badges`, `meta`, `actions`.
+  Gespeichert wird über den Prop `onSaveField(field, value, schliessen)`, der drei Ausgänge
+  meldet: übernommen, Konflikt (HTTP 412) oder Fehler. Der Vergleich-Hub
+  (`routes/compare/[id]/+page.svelte`) nutzt ihn bereits (doppelter Desktop-/Mobil-Kopf entfällt;
+  Orte-Anzahl mit `compare-hub-orte-anzahl-desktop`/`-mobil`); der Trip-Hub folgt in S2.
+  Spec: `docs/specs/modules/feat_2284_s1_subscription_header.md`.
 - **Persistenz:** `/api/trips` bzw. `/api/compare/presets` (nicht
   `/api/subscriptions` — entfernt, 404).
 

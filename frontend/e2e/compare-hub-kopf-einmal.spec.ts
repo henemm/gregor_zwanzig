@@ -122,6 +122,20 @@ test.describe('#2284 S1 — Vergleich-Hub-Kopf: ein Markup, unverändertes Verha
 					expect(await loc.count(), `${id}: Anzahl im DOM (ohne :visible)`).toBe(1);
 					await expect(loc).toBeVisible();
 				}
+				// Orte-Anzahl: je Viewport eine eigene testid, jede genau einmal im DOM;
+				// die frühere gemeinsame testid existiert nicht mehr (keine Zweitinstanz).
+				expect(await page.locator('[data-testid="compare-hub-orte-anzahl"]').count(), 'alte gemeinsame testid').toBe(0);
+				const orteDesktop = page.locator('[data-testid="compare-hub-orte-anzahl-desktop"]');
+				const orteMobil = page.locator('[data-testid="compare-hub-orte-anzahl-mobil"]');
+				expect(await orteDesktop.count(), 'compare-hub-orte-anzahl-desktop: Anzahl im DOM').toBe(1);
+				expect(await orteMobil.count(), 'compare-hub-orte-anzahl-mobil: Anzahl im DOM').toBe(1);
+				if (viewport === DESKTOP) {
+					await expect(orteDesktop).toBeVisible();
+					await expect(orteMobil).toBeHidden();
+				} else {
+					await expect(orteMobil).toBeVisible();
+					await expect(orteDesktop).toBeHidden();
+				}
 				// Bearbeiten-Modus: Eingabe und Speichern-Knopf ebenfalls genau einmal.
 				await page.locator('[data-testid="compare-hub-name-edit-toggle"]:visible').click();
 				for (const id of ['compare-hub-name-edit', 'compare-hub-name-save']) {
@@ -385,8 +399,8 @@ test.describe('#2284 S1 — Vergleich-Hub-Kopf: ein Markup, unverändertes Verha
 	// Quelle wie vor der Umstellung — Desktop zählt die gespeicherten IDs
 	// (`location_ids`), Mobil die aufgelösten Orte (`data.locations`). Sichtbar
 	// unterscheiden sie sich nur, wenn ein Ort gelöscht ist (das Löschen bereinigt
-	// das Preset nicht). `compare-hub-orte-anzahl` steht deshalb BEWUSST zweimal
-	// im DOM (responsive, wie die Knopftexte) — gezählt wird nur das Sichtbare.
+	// das Preset nicht). Zwei Spans mit getrennten testids
+	// (`compare-hub-orte-anzahl-desktop` / `-mobil`), je Viewport genau einer sichtbar.
 	test('F007: Orte-Anzahl — Desktop zählt gespeicherte IDs, Mobil aufgelöste Orte (Singular)', async ({ page }) => {
 		const { presetId, locIds } = await seedPreset(page);
 		try {
@@ -394,16 +408,18 @@ test.describe('#2284 S1 — Vergleich-Hub-Kopf: ein Markup, unverändertes Verha
 			expect(del.ok(), `Ort-Löschen fehlgeschlagen: ${del.status()}`).toBeTruthy();
 			expect(((await fetchPreset(page, presetId)).location_ids as string[]).length, 'Messaufbau: Preset behält beide IDs').toBe(2);
 
-			const anzahl = page.locator('[data-testid="compare-hub-orte-anzahl"]');
-			for (const [viewport, soll] of [
-				[DESKTOP, /^\s*·\s*2 Orte\s*$/],
-				[MOBIL, /^\s*·\s*1 Ort\s*$/]
+			const desktop = page.locator('[data-testid="compare-hub-orte-anzahl-desktop"]');
+			const mobil = page.locator('[data-testid="compare-hub-orte-anzahl-mobil"]');
+			for (const [viewport, sichtbar, verborgen, soll] of [
+				[DESKTOP, desktop, mobil, /^\s*·\s*2 Orte\s*$/],
+				[MOBIL, mobil, desktop, /^\s*·\s*1 Ort\s*$/]
 			] as const) {
 				await page.setViewportSize(viewport);
 				await oeffneHub(page, presetId);
-				expect(await anzahl.count(), 'responsive Doppel-Span: genau 2 im DOM').toBe(2);
-				const sichtbar = anzahl.filter({ visible: true });
-				await expect(sichtbar).toHaveCount(1);
+				expect(await desktop.count(), 'Desktop-Span genau 1 im DOM').toBe(1);
+				expect(await mobil.count(), 'Mobil-Span genau 1 im DOM').toBe(1);
+				await expect(verborgen).toBeHidden();
+				await expect(sichtbar).toBeVisible();
 				await expect(sichtbar).toHaveText(soll);
 			}
 		} finally {
@@ -426,8 +442,9 @@ test.describe('#2284 S1 — Vergleich-Hub-Kopf: ein Markup, unverändertes Verha
 		const presetId = (await presetRes.json()).id as string;
 		try {
 			await oeffneHub(page, presetId);
-			const sichtbar = page.locator('[data-testid="compare-hub-orte-anzahl"]').filter({ visible: true });
-			await expect(sichtbar).toHaveCount(1);
+			const sichtbar = page.locator('[data-testid="compare-hub-orte-anzahl-desktop"]');
+			await expect(sichtbar).toBeVisible();
+			await expect(page.locator('[data-testid="compare-hub-orte-anzahl-mobil"]')).toBeHidden();
 			await expect(sichtbar).toHaveText(/^\s*·\s*1 Ort\s*$/);
 		} finally {
 			await cleanup(page, presetId, [locId]);
