@@ -279,6 +279,7 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 	let admin: APIRequestContext;
 	let gast: APIRequestContext;
 	let gastKontext: BrowserContext | undefined;
+	const GAST_PASSWORT = 'test1234';
 	let username = '';
 	let tripId = '';
 
@@ -286,7 +287,15 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 		// Aufraeumen in dieser Reihenfolge: Trip, dann Konto (loescht alle
 		// Nutzerdaten) — ein mail-faehiger Rest wuerde sonst weiter feuern.
 		if (gast && tripId) await gast.delete(`/api/trips/${tripId}`).catch(() => {});
-		if (gast && username) await gast.delete('/api/auth/account').catch(() => {});
+		// #2160: Kontoloeschung verlangt Re-Auth - der Gast ist ein Passwort-Konto.
+		if (gast && username) {
+			const geloescht = await gast.post('/api/auth/account/delete', {
+				data: { password: GAST_PASSWORT }
+			});
+			// AC-20: der Aufraeumschritt muss das Konto wirklich wegraeumen -
+			// ein stilles 403/400 liesse einen mail-faehigen Rest zurueck.
+			expect(geloescht.status(), `Konto-Aufraeumen HTTP ${geloescht.status()}`).toBe(200);
+		}
 		await gastKontext?.close().catch(() => {});
 		await gast?.dispose().catch(() => {});
 		await admin?.dispose().catch(() => {});
@@ -303,7 +312,7 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 		const token = `KAK${suffix.toUpperCase()}`; // eindeutig im Betreff (Trip- UND Etappenname)
 		username = `e2e2422s3${suffix}`;
 		tripId = `e2e-2422-s3-${suffix}`;
-		const passwort = 'test1234';
+		const passwort = GAST_PASSWORT;
 		const plan = planeLauf();
 		test.info().annotations.push({ type: 'mail-token', description: token });
 
