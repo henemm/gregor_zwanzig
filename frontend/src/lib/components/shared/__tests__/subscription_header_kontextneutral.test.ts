@@ -113,6 +113,9 @@ function testids(body: string): string[] {
 function geruest(body: string, prefix: string, optionen: { value: string }[]): string[] {
 	let b = body.replace(/<!--[\s\S]*?-->/g, '');
 	for (const o of optionen) {
+		// #2284 S2 v1.1: die Handy-Auswahl des Knopfs trägt eigene Options-testids
+		// (`{p}-profil-auswahl-option-<wert>`) — ebenso neutralisieren und zusammenfassen.
+		b = b.split(`${prefix}-profil-auswahl-option-${o.value}`).join('PFX-profil-auswahl-option-OPT');
 		b = b.split(`${prefix}-profil-option-${o.value}`).join('PFX-profil-option-OPT');
 	}
 	b = b.split(`${prefix}-`).join('PFX-');
@@ -121,19 +124,20 @@ function geruest(body: string, prefix: string, optionen: { value: string }[]): s
 		const tid = /data-testid="([^"]+)"/.exec(m[2])?.[1];
 		folge.push(tid ? `${m[1]}[${tid}]` : m[1]);
 	}
-	// Kachel-Gruppe (Kachel + ihre inneren Tags bis zur nächsten Kachel) zusammenfassen
-	const kachel = 'button[PFX-profil-option-OPT]';
+	// Kachel-Gruppe (Kachel + ihre inneren Tags bis zur nächsten Kachel) zusammenfassen;
+	// dasselbe für die Optionen der Handy-Auswahl (#2284 S2 v1.1).
+	const istOption = (t: string) => /\[PFX-profil-(auswahl-)?option-OPT\]$/.test(t);
 	const gruppen: string[][] = [];
 	for (const t of folge) {
-		if (t === kachel || gruppen.length === 0) gruppen.push([t]);
+		if (istOption(t) || gruppen.length === 0) gruppen.push([t]);
 		else gruppen[gruppen.length - 1].push(t);
 	}
 	const aus: string[] = [];
 	let letzteKachel: string | null = null;
 	for (const g of gruppen) {
 		const key = g.join(' ');
-		if (g[0] === kachel && key === letzteKachel) continue;
-		letzteKachel = g[0] === kachel ? key : null;
+		if (istOption(g[0]) && key === letzteKachel) continue;
+		letzteKachel = istOption(g[0]) ? key : null;
 		aus.push(...g);
 	}
 	return aus;
@@ -167,9 +171,10 @@ describe('#2284 S1 AC-6 — ein Markup für Trip und Vergleich, Unterschiede nur
 
 	test('gewählte Kachel kommt aus der Prop `profile` — genau eine mit data-selected="true"', async () => {
 		const body = await html(vergleichProps({ profile: 'wintersport' }));
-		const gewaehlt = [...body.matchAll(/<button[^>]*data-selected="true"[^>]*>/g)].map(
-			(m) => /data-testid="([^"]+)"/.exec(m[0])?.[1]
-		);
+		// nur die Kacheln zählen (#2284 S2 v1.1: die Handy-Auswahl hat eigene testids)
+		const gewaehlt = [...body.matchAll(/<button[^>]*data-selected="true"[^>]*>/g)]
+			.map((m) => /data-testid="([^"]+)"/.exec(m[0])?.[1])
+			.filter((id) => id?.startsWith('compare-hub-profil-option-'));
 		assert.deepEqual(gewaehlt, ['compare-hub-profil-option-wintersport']);
 	});
 
@@ -220,28 +225,33 @@ describe('#2284 S1 AC-7 — leere Slots hinterlassen keine Wrapper', () => {
 				.replace(/<[^>]+>/g, ' ')
 				.replace(/\s+/g, ' ');
 		const wandern = (t: string) => t.split('Wandern').length - 1;
-		// „Wandern" steht auch als Kachel-Beschriftung im Kopf — gezählt wird
-		// darum relativ zur Zahl der Kacheln mit diesem Text.
-		const kachelnMitWandern = VERGLEICH_OPTIONEN.filter((o) => o.label === 'Wandern').length;
+		// „Wandern" steht auch in den Aktivitäts-Bedienelementen (Kachel; seit #2284
+		// S2 v1.1 zusätzlich Handy-Knopf und dessen Auswahl) — gezählt wird darum
+		// relativ: mit Label genau EIN Vorkommen mehr als ohne; ohne Label steht es
+		// nicht in der Unterzeile.
 		const ohne = await textVon('');
 		assert.ok(!/·\s*·/.test(ohne), `doppelter Trenner: ${ohne}`);
-		assert.equal(wandern(ohne), kachelnMitWandern, `Profil-Label trotz leerer Prop: ${ohne}`);
+		assert.ok(!(await unterzeile('')).includes('Wandern'), `Profil-Label trotz leerer Prop: ${ohne}`);
 		const mit = await textVon('Wandern');
-		assert.equal(wandern(mit), kachelnMitWandern + 1, `Profil-Label fehlt in der Unterzeile: ${mit}`);
+		assert.equal(wandern(mit), wandern(ohne) + 1, `Profil-Label fehlt in der Unterzeile: ${mit}`);
 	});
 
 	// Adversary F001 (#2284 S1 Fix-Loop 1): der Guard um das Profil-Label wirkt
 	// erst MIT meta-Snippet (Seite: „ · 3 Orte") — ohne Guard entstünde dort
 	// „Ötztal · · 3 Orte" bzw. ohne meta ein hängendes „Ötztal · ".
 	const metaOrte = createRawSnippet(() => ({ render: () => `<span>${' · '}3 Orte</span>` }));
-	const unterzeile = async (profileLabel: string, meta?: unknown) =>
-		(await html(vergleichProps(meta ? { profileLabel, meta } : { profileLabel })))
+	// Unterzeile = Text nach der Region bis zum ersten Aktivitäts-Bedienelement
+	// (Kachel ODER, seit #2284 S2 v1.1, Handy-Knopf — der kann vor den Kacheln stehen).
+	async function unterzeile(profileLabel: string, meta?: unknown): Promise<string> {
+		const roh = await html(vergleichProps(meta ? { profileLabel, meta } : { profileLabel }));
+		const bisProfil = roh.split(/<[a-z]+[^>]*data-testid="compare-hub-profil-/)[0];
+		return bisProfil
 			.replace(/<!--[\s\S]*?-->/g, '')
 			.replace(/<[^>]+>/g, ' ')
 			.replace(/\s+/g, ' ')
 			.split('Ötztal')[1]
-			.split('Allgemein')[0]
 			.trim();
+	}
 
 	test('profileLabel leer MIT meta ⇒ „Ötztal · 3 Orte" ohne doppelten Trenner', async () => {
 		assert.equal(await unterzeile('', metaOrte), '· 3 Orte');
@@ -404,4 +414,90 @@ describe('#2284 S2 AC-16 / AC-3 — Region-Platzhalter „—" (Normalisierung i
 			assert.equal(regionText(body, 'trip'), erwartet);
 		});
 	}
+});
+
+// ─── Issue #2284 S2 v1.1 — AC-16 / AC-4: Handy-Knopf im selben Markup ────────
+// Spec v1.1, Entscheidung 14: Auf dem Handy zeigt der Baustein die Aktivität als
+// EINEN Knopf `{p}-profil-knopf` mit der gewählten Aktivität (z. B. „Trekking ▾"),
+// Tippen öffnet die Auswahl `{p}-profil-auswahl` mit eigenen Options-testids
+// `{p}-profil-auswahl-option-<wert>`. Desktop behält die Kachelreihe. Umschaltung
+// NUR per CSS-Breakpoint ⇒ im SSR-Markup stehen Kacheln UND Knopf, in beiden
+// Sätzen gleich (keine Verzweigung nach kind). Knopf trägt `data-selected-value`.
+// Sichtbarkeit Knopf ⇔ Kacheln je Viewport beweist die E2E (SSR kennt keine
+// Breakpoints).
+// RED vor v1.1: der Baustein rendert keinen Knopf.
+
+const NEUTRAL = 'Aktivität wählen';
+
+function knopf(body: string, prefix: string): { tag: string; text: string } | null {
+	const m = new RegExp(`<button([^>]*data-testid="${prefix}-profil-knopf"[^>]*)>([\\s\\S]*?)</button>`).exec(body);
+	if (!m) return null;
+	const text = m[2]
+		.replace(/<!--[\s\S]*?-->/g, '')
+		.replace(/<[^>]+>/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+	return { tag: m[1], text };
+}
+
+describe('#2284 S2 v1.1 AC-16 — Kacheln UND Handy-Knopf im selben Markup', () => {
+	for (const [satz, prefix, props, optionen] of [
+		['Trip', 'trip', () => tripSatz(), TRIP_OPTIONEN],
+		['Vergleich', 'compare-hub', async () => vergleichProps(), VERGLEICH_OPTIONEN]
+	] as const) {
+		test(`${satz}: alle Kacheln und genau ein Knopf ${prefix}-profil-knopf`, async () => {
+			const body = await html(await props());
+			for (const o of optionen) {
+				assert.equal(zaehle(body, `${prefix}-profil-option-${o.value}`), 1, `Kachel ${o.value} fehlt/doppelt`);
+			}
+			assert.equal(zaehle(body, `${prefix}-profil-knopf`), 1, `AC-16: ${prefix}-profil-knopf nicht genau einmal im Markup`);
+		});
+	}
+
+	test('Trip: Knopftext ist das Label der gewählten Aktivität („Trekking"), data-selected-value="trekking"', async () => {
+		const k = knopf(await html(await tripSatz()), 'trip');
+		assert.ok(k, 'AC-16: kein Knopf trip-profil-knopf');
+		assert.ok(k.text.includes('Trekking'), `AC-4: Knopftext ohne gewählte Aktivität: „${k.text}"`);
+		assert.ok(!k.text.includes('Skitour'), `AC-4: Knopftext nennt eine nicht gewählte Aktivität: „${k.text}"`);
+		assert.match(k.tag, /data-selected-value="trekking"/, `Knopf ohne data-selected-value: ${k.tag}`);
+	});
+
+	test('Trip: gewählte Aktivität NICHT die erste Option ⇒ Knopftext folgt der Prop (Mutation i)', async () => {
+		const k = knopf(await html(await tripSatz({ profile: 'skitour' })), 'trip');
+		assert.ok(k, 'AC-16: kein Knopf trip-profil-knopf');
+		assert.ok(k.text.includes('Skitour'), `AC-4: Knopftext zeigt nicht „Skitour": „${k.text}"`);
+		assert.ok(!k.text.includes('Trekking'), `AC-4: Knopftext zeigt die erste statt der gewählten Option: „${k.text}"`);
+		assert.match(k.tag, /data-selected-value="skitour"/);
+	});
+
+	test('Trip ohne Aktivität: neutraler Knopftext „Aktivität wählen", data-selected-value leer', async () => {
+		const k = knopf(await html(await tripSatz({ profile: undefined })), 'trip');
+		assert.ok(k, 'AC-16: kein Knopf trip-profil-knopf');
+		assert.ok(k.text.includes(NEUTRAL), `AC-4: ohne Wert fehlt der neutrale Text: „${k.text}"`);
+		for (const o of TRIP_OPTIONEN) assert.ok(!k.text.includes(o.label), `Knopf nennt ${o.label} ohne Wert`);
+		assert.match(k.tag, /data-selected-value=""|^(?![\s\S]*data-selected-value=)/, `data-selected-value nicht leer: ${k.tag}`);
+	});
+
+	test('Vergleich: Knopftext ist das Label des gewählten Profils („Wintersport", nicht die erste Option)', async () => {
+		const k = knopf(await html(vergleichProps({ profile: 'wintersport' })), 'compare-hub');
+		assert.ok(k, 'AC-16: kein Knopf compare-hub-profil-knopf');
+		assert.ok(k.text.includes('Wintersport'), `AC-4: Knopftext ohne gewähltes Profil: „${k.text}"`);
+		assert.ok(!k.text.includes('Allgemein'), `AC-4: Knopftext zeigt die erste Option: „${k.text}"`);
+		assert.match(k.tag, /data-selected-value="wintersport"/);
+	});
+
+	test('Vergleich ohne Profil: neutraler Knopftext', async () => {
+		const k = knopf(await html(vergleichProps({ profile: undefined })), 'compare-hub');
+		assert.ok(k, 'AC-16: kein Knopf compare-hub-profil-knopf');
+		assert.ok(k.text.includes(NEUTRAL), `ohne Wert fehlt der neutrale Text: „${k.text}"`);
+	});
+
+	test('Gerüst beider Sätze enthält Knopf und Auswahl-Optionen (kein kind-Zweig)', async () => {
+		const t = geruest(await html(await tripSatz()), 'trip', TRIP_OPTIONEN);
+		const v = geruest(await html(vergleichProps()), 'compare-hub', VERGLEICH_OPTIONEN);
+		for (const teil of ['button[PFX-profil-knopf]', 'button[PFX-profil-auswahl-option-OPT]']) {
+			assert.ok(t.includes(teil), `Trip-Gerüst ohne ${teil}: ${t.join(' ')}`);
+			assert.ok(v.includes(teil), `Vergleich-Gerüst ohne ${teil}: ${v.join(' ')}`);
+		}
+	});
 });

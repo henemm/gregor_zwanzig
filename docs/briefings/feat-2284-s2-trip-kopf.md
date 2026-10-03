@@ -1,32 +1,32 @@
 ---
 spec_file: docs/specs/modules/feat_2284_s2_trip_kopf.md
-spec_sha256: 051e3bb9b36e58f0429f1b3ad577120583d33adfd91703086a7570ee0179ef06
+spec_sha256: ba187bbe68ebc1b3a5ecd24f1aee0decdcf0396d771f23893f57cf42df3fa2ac
 ---
 
 # PO-Briefing: feat-2284-s2-trip-kopf
 
-- **Spec:** docs/specs/modules/feat_2284_s2_trip_kopf.md
+- **Spec:** docs/specs/modules/feat_2284_s2_trip_kopf.md (Version 1.1)
 - **Issue:** #2284
 - **Erstellt:** 2026-10-03
 
 ## Was gebaut wird
 
-Im Trip ändert man Region und Aktivität direkt im Kopf; der Speicher-Chip ist in beiden Seiten identisch.
+Trip-Kopf wie beim Ortsvergleich: Name, Region und Aktivität dort änderbar, am Handy Aktivität als ein Knopf.
 
 ## Definition of Done
 
-Region und Aktivität lassen sich im Trip-Kopf ändern, bleiben nach Neuladen erhalten; es erscheint genau ein Speicher-Chip.
+Region und Aktivität sind im Kopf änderbar und bleiben nach Neuladen; die Handy-Karte liegt in drei Messfällen nicht tiefer als zuvor.
 
 ## Wie geprüft wird
 
-Automatische Tests prüfen Speichern, Fehler, Konflikte, Fremdzugriff und Handy-Karte; das Aussehen beurteilen sie nicht.
+Browser-Tests prüfen Speichern, Fehler, Konflikt und Kartenhöhe; Handy-Höhen außerhalb der drei Messfälle bleiben ungeprüft.
 
 ## Kritische Anmerkungen
 
-- Aktivität wandert aus dem Etappen-Reiter in den Kopf als 8 Kacheln; mobil wird der Kopf höher.
-- Region verschwindet aus der Zeile über dem Namen; leere Region zeigt auch im Vergleich „—".
-- Mindest-Kartenhöhe mobil (200 px) ist nur geschätzt und kann sich im Test ändern.
+- Knappster Fall 390x700: nur etwa 13 px Reserve, Einsparungen sind Schätzungen; Messung kann scheitern.
+- Region leeren zeigt „—" auch im Ortsvergleich: ungefragte Zusatzänderung.
+- Nach Nochmal-Speichern bauen sich Reiter neu auf; offener Zustand geht verloren (Tech-Entscheidung, nicht PO).
 
 ## Freigabe-Frage
 
-Sind Aktivität als Kacheln im Kopf und die höhere Handy-Ansicht für Sie akzeptabel?
+Gibst du die geänderte Handy-Darstellung (Aktivitäts-Knopf, enger Kopf, Karte nicht tiefer als vorher) für beide Hubs frei?

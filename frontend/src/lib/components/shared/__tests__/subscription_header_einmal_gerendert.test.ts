@@ -149,6 +149,14 @@ const TRIP_KOPF_IDS = [
 	'trip-name-edit-toggle',
 	'trip-region-edit-toggle',
 	...TRIP_AKTIVITAETEN.map((o) => `trip-profil-option-${o.value}`),
+	// #2284 S2 v1.1 (Entscheidung 14): Handy-Knopf samt Auswahl. Die Auswahl und
+	// ihre 8 Optionen MÜSSEN im SSR-Markup stehen (versteckt per CSS/hidden, NICHT
+	// per `{#if offen}`) — sonst wären sie hier 0× und die „genau einmal"-Zusicherung
+	// (Spec-Test-Plan AC-10) nicht prüfbar. Eigene Options-testids, damit keine
+	// Kachel-testid doppelt im DOM steht (Strict-Mode der E2E-Locator).
+	'trip-profil-knopf',
+	'trip-profil-auswahl',
+	...TRIP_AKTIVITAETEN.map((o) => `trip-profil-auswahl-option-${o.value}`),
 	'save-indicator'
 ];
 
@@ -237,9 +245,10 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 
 	test('AC-4: gespeicherte Aktivität „trekking" ist die einzige gewählte Kachel', async () => {
 		const body = await tripHeaderHtml(TRIP);
-		const gewaehlt = [...body.matchAll(/<button[^>]*data-selected="true"[^>]*>/g)].map(
-			(m) => /data-testid="([^"]+)"/.exec(m[0])?.[1]
-		);
+		// nur Kacheln zählen (die Handy-Auswahl hat eigene testids, #2284 S2 v1.1)
+		const gewaehlt = [...body.matchAll(/<button[^>]*data-selected="true"[^>]*>/g)]
+			.map((m) => /data-testid="([^"]+)"/.exec(m[0])?.[1])
+			.filter((id) => id?.startsWith('trip-profil-option-'));
 		assert.deepEqual(gewaehlt, ['trip-profil-option-trekking']);
 	});
 
@@ -247,5 +256,31 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 		const body = await tripHeaderHtml({ ...TRIP, activity: undefined });
 		assert.equal((body.match(/data-testid="trip-profil-option-/g) ?? []).length, 8, 'Vorbedingung: 8 Kacheln');
 		assert.equal((body.match(/data-selected="true"/g) ?? []).length, 0);
+	});
+
+	// #2284 S2 v1.1 — die Hülle reicht die Aktivitäts-Beschriftungen durch: der
+	// Handy-Knopf zeigt das Label der gespeicherten Aktivität bzw. neutral.
+	const knopfText = (body: string): string | null => {
+		const m = /<button[^>]*data-testid="trip-profil-knopf"[^>]*>([\s\S]*?)<\/button>/.exec(body);
+		return m ? m[1].replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : null;
+	};
+
+	test('AC-4 (Handy-Knopf): gespeicherte Aktivität „trekking" ⇒ Knopftext „Trekking"', async () => {
+		const t = knopfText(await tripHeaderHtml(TRIP));
+		assert.ok(t !== null, 'AC-4: der Trip-Kopf rendert keinen Knopf trip-profil-knopf');
+		assert.ok(t.includes('Trekking'), `AC-4: Knopftext „${t}"`);
+	});
+
+	test('AC-4 (Handy-Knopf): „fahrrad_20" ⇒ Knopftext „Fahrrad (20 km/h)"', async () => {
+		const t = knopfText(await tripHeaderHtml({ ...TRIP, activity: 'fahrrad_20' }));
+		assert.ok(t !== null, 'AC-4: der Trip-Kopf rendert keinen Knopf trip-profil-knopf');
+		assert.ok(t.includes('Fahrrad (20 km/h)'), `AC-4: Knopftext „${t}"`);
+		assert.ok(!t.includes('Trekking'), `AC-4: Knopftext zeigt die erste Option: „${t}"`);
+	});
+
+	test('AC-4 (Handy-Knopf): ohne Aktivität ⇒ „Aktivität wählen"', async () => {
+		const t = knopfText(await tripHeaderHtml({ ...TRIP, activity: undefined }));
+		assert.ok(t !== null, 'AC-4: der Trip-Kopf rendert keinen Knopf trip-profil-knopf');
+		assert.ok(t.includes('Aktivität wählen'), `AC-4: neutraler Knopftext fehlt: „${t}"`);
 	});
 });
