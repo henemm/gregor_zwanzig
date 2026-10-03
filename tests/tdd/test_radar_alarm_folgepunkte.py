@@ -41,7 +41,7 @@ from __future__ import annotations
 import json
 import sys
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from zoneinfo import ZoneInfo
