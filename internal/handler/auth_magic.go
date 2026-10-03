@@ -43,6 +43,27 @@ type otpEntry struct {
 // otpStore holds active OTP challenges, keyed by lower-cased trimmed e-mail.
 var otpStore sync.Map
 
+// gcOTPStore entfernt abgelaufene Login-OTPs (Issue #2160 AC-15). OTPs mit
+// attempts>=3 bleiben bis zum Ablauf — sie SIND die Sperre.
+func gcOTPStore(now time.Time) {
+	otpStore.Range(func(k, v any) bool {
+		if e := v.(*otpEntry); !now.Before(e.expiresAt) {
+			otpStore.CompareAndDelete(k, e)
+		}
+		return true
+	})
+}
+
+// removeLoginOTPs entfernt die Login-OTPs der angegebenen Adressen
+// (normalisiert, leere uebersprungen) — Kontoloeschung, Issue #2160 AC-11.
+func removeLoginOTPs(addresses ...string) {
+	for _, a := range addresses {
+		if n := store.NormalizeEmailAddress(a); n != "" {
+			otpStore.Delete(n)
+		}
+	}
+}
+
 // magicLinkBeforeTakeoverReload ist eine Test-Naht (Issue #2147 Scheibe B1,
 // AC-12): im Normalbetrieb nil und damit wirkungslos. Tests koennen sie
 // setzen, um zwischen der Zuordnung (ResolveAddressOwner) und dem erneuten

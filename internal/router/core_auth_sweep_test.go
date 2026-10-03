@@ -109,7 +109,7 @@ func newCoreAuthSweepRouter(t *testing.T, pythonURL string) (chi.Router, *config
 // ausschliesslich, was dort ankommt.
 //
 // Jede Route bekommt ein FRISCHES Konto samt frischem Cookie. Sonst vergiftet
-// der Sweep sich selbst: DELETE /api/auth/account loescht das Konto und
+// der Sweep sich selbst: die Kontoloeschung entfernt das Konto und
 // POST /api/auth/logout entwertet die Sitzung — gemessen liefen danach alle
 // alphabetisch spaeteren Routen auf 401 und erreichten den Python-Fake nie.
 func callSweepRoute(t *testing.T, r http.Handler, s *store.Store, secret, userID, method, path string) {

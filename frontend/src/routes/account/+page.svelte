@@ -46,7 +46,6 @@
 	let telegramPollInterval: ReturnType<typeof setInterval> | null = null;
 	let successMsg = $state<string | null>(null);
 	let errorMsg = $state<string | null>(null);
-	let deleteErrorMsg = $state<string | null>(null);
 
 	type TestStatus = 'idle' | 'loading' | 'ok' | 'error';
 	let testStatus = $state<Record<string, TestStatus>>({email: 'idle', telegram: 'idle'});
@@ -485,18 +484,67 @@
 		trip_reports_hourly: 'Trip-Checks',
 	};
 
+	// Issue #2160 (ADR-0081): Löschen nur mit frischem Nachweis — Passwort
+	// (falls das Konto eines hat) oder Lösch-Code per E-Mail.
+	const deleteHasPassword = $derived(data.profile?.has_password === true);
+	const deleteCodeAddress = $derived(data.profile?.mail_to || data.profile?.email || '');
+	let deletePassword = $state('');
+	let deleteCode = $state('');
+	let deleteBusy = $state(false);
+	let deleteCodeSent = $state(false);
+	let deleteDialogMsg = $state<string | null>(null);
+
+	const DELETE_ERROR_TEXT: Record<string, string> = {
+		reauth_required: 'Bitte Passwort oder Lösch-Code eingeben.',
+		wrong_password: 'Das Passwort ist falsch.',
+		invalid_code: 'Der Code ist falsch, abgelaufen oder bereits benutzt.',
+		rate_limit_exceeded: 'Zu viele Versuche. Bitte warte einige Minuten.',
+		mail_failed: 'Der Code konnte nicht verschickt werden. Bitte später erneut versuchen.',
+	};
+
+	function deleteErrorText(e: unknown, fallback: string): string {
+		const body = e as { detail?: string; error?: string };
+		return (body?.error && DELETE_ERROR_TEXT[body.error]) || body?.detail || body?.error || fallback;
+	}
+
 	function deleteAccount() {
+		deletePassword = '';
+		deleteCode = '';
+		deleteCodeSent = false;
+		deleteDialogMsg = null;
 		showDeleteAccountDialog = true;
 	}
 
-	async function confirmDeleteAccount() {
-		showDeleteAccountDialog = false;
+	async function requestDeleteCode() {
+		deleteBusy = true;
+		deleteDialogMsg = null;
 		try {
-			await api.del('/api/auth/account');
-			window.location.href = '/login';
+			await api.post('/api/auth/account/delete-code', {});
+			deleteCodeSent = true;
 		} catch (e: unknown) {
-			const body = e as { detail?: string; error?: string };
-			deleteErrorMsg = body?.detail ?? body?.error ?? 'Löschen fehlgeschlagen';
+			deleteDialogMsg = deleteErrorText(e, 'Code-Versand fehlgeschlagen');
+		} finally {
+			deleteBusy = false;
+		}
+	}
+
+	async function confirmDeleteAccount() {
+		const body = deletePassword ? { password: deletePassword } : { code: deleteCode.trim() };
+		deleteBusy = true;
+		deleteDialogMsg = null;
+		// Abmelde-Muster wie "auf allen Geräten abmelden" (#2128): Merker VOR dem
+		// Aufruf, weil die Löschung die Sitzung sofort beendet.
+		merkeAbmeldung();
+		try {
+			await api.post('/api/auth/account/delete', body);
+			showDeleteAccountDialog = false;
+			window.location.href = `/login?${ABMELDE_MERKMAL}=1`;
+		} catch (e: unknown) {
+			const err = e as { status?: number };
+			if (err?.status !== 401) vergissAbmeldung();
+			deleteDialogMsg = deleteErrorText(e, 'Löschen fehlgeschlagen');
+		} finally {
+			deleteBusy = false;
 		}
 	}
 
@@ -1272,9 +1320,6 @@
 			>
 				Account löschen
 			</button>
-			{#if deleteErrorMsg}
-				<p class="mt-2 text-sm text-red-600">{deleteErrorMsg}</p>
-			{/if}
 		</Card.Content>
 	</Card.Root>
 
@@ -1410,12 +1455,62 @@
 			<Dialog.Header>
 				<Dialog.Title>Account löschen</Dialog.Title>
 				<Dialog.Description>
-					Bist du sicher? Alle deine Daten werden unwiderruflich gelöscht.
+					Bist du sicher? Alle deine Daten werden unwiderruflich gelöscht. Bestätige die
+					Löschung {deleteHasPassword ? 'mit deinem Passwort oder ' : 'mit '}einem Code per E-Mail.
 				</Dialog.Description>
 			</Dialog.Header>
+			<div class="space-y-4">
+				{#if deleteHasPassword}
+					<div class="space-y-2">
+						<label for="deletePassword" class="text-sm font-medium">Passwort</label>
+						<input
+							id="deletePassword"
+							type="password"
+							autocomplete="current-password"
+							data-testid="delete-account-password"
+							bind:value={deletePassword}
+							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						/>
+					</div>
+				{/if}
+				<div class="space-y-2">
+					<Btn
+						variant="outline"
+						data-testid="delete-account-send-code"
+						disabled={deleteBusy}
+						onclick={requestDeleteCode}
+					>
+						Code an {deleteCodeAddress} senden
+					</Btn>
+					{#if deleteCodeSent}
+						<p class="text-sm">Code verschickt — er ist 15 Minuten gültig.</p>
+					{/if}
+					<label for="deleteCode" class="block text-sm font-medium">Lösch-Code</label>
+					<input
+						id="deleteCode"
+						type="text"
+						inputmode="numeric"
+						autocomplete="one-time-code"
+						maxlength="6"
+						data-testid="delete-account-code"
+						bind:value={deleteCode}
+						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					/>
+				</div>
+				{#if deleteDialogMsg}
+					<p class="text-sm text-red-700" data-testid="delete-account-error">{deleteDialogMsg}</p>
+				{/if}
+			</div>
 			<Dialog.Footer>
 				<Btn variant="outline" onclick={() => (showDeleteAccountDialog = false)}>Abbrechen</Btn>
-				<Btn variant="destructive" onclick={confirmDeleteAccount}>Account löschen</Btn>
+				<Btn
+					variant="destructive"
+					data-testid="delete-account-confirm"
+					disabled={deleteBusy || (!deletePassword && deleteCode.trim() === '')}
+					onclick={confirmDeleteAccount}
+				>
+					Account löschen
+				</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
