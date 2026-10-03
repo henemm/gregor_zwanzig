@@ -30,6 +30,7 @@ const COMPARE_DIR = join(ROUTES_COMPARE, '..', 'lib', 'components', 'compare');
 const LIST_PAGE    = join(ROUTES_COMPARE, 'compare', '+page.svelte');
 const HUB_PAGE     = join(ROUTES_COMPARE, 'compare', '[id]', '+page.svelte');
 const COMPARE_TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
+const MTABBAR      = join(COMPARE_DIR, '..', 'mobile', 'MTabBar.svelte');
 
 // ═══════════════════════════════════════════════════════════════════
 // Block A — Compare-Liste
@@ -152,11 +153,16 @@ describe('AC-5: Compare-Hub — Tab-Buttons mit Underline statt Segmented', () =
 	});
 
 	test('AC-5b: CompareTabs hat Tab-Buttons mit border-bottom accent als Aktiv-Indikator', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
+		// Mobile Usability Paket 2 (Spec mobile_tab_leisten_mtabbar): Die
+		// Tab-Leiste lebt im geteilten MTabBar-Baustein — der Aktiv-Indikator
+		// (border-bottom accent) wird dort gepflegt, CompareTabs rendert <MTabBar>.
+		const tabsSrc = readFileSync(COMPARE_TABS, 'utf-8');
+		assert.match(tabsSrc, /<MTabBar[\s>]/, 'CompareTabs.svelte rendert nicht mehr den MTabBar-Baustein');
+		const src = readFileSync(MTABBAR, 'utf-8');
 		assert.match(
 			src,
 			/border-bottom.*g-accent|g-accent.*border-bottom/,
-			'Tab-Buttons brauchen border-bottom: 2px solid var(--g-accent) für aktiven Tab — IST: nicht vorhanden'
+			'MTabBar braucht border-bottom: 2px solid var(--g-accent) für den aktiven Tab — IST: nicht vorhanden'
 		);
 	});
 

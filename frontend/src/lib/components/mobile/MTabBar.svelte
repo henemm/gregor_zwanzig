@@ -35,9 +35,12 @@
 		onChange: (value: string) => void;
 		/** Beschriftung der Leiste für Screenreader. */
 		ariaLabel: string;
+		/** Desktop-Optik: 'md' = Trip-Unterline (default), 'sm' = Compare-Reihe
+		 *  (13px, 12/16px, inaktiv --g-ink-3, Badge neutral in beiden Breiten). */
+		size?: 'md' | 'sm';
 	}
 
-	let { items, active, onChange, ariaLabel }: Props = $props();
+	let { items, active, onChange, ariaLabel, size = 'md' }: Props = $props();
 
 	let bandEl = $state<HTMLDivElement | null>(null);
 
@@ -73,6 +76,7 @@
 <div
 	bind:this={bandEl}
 	class="mtabbar"
+	class:sm={size === 'sm'}
 	role="tablist"
 	aria-label={ariaLabel}
 	data-slot="segmented"
@@ -135,6 +139,30 @@
 		background: var(--g-accent);
 		color: #fff;
 		font-size: 0.75rem;
+		font-weight: 600;
+	}
+
+	/* size="sm" (Compare): 1:1 der bisherigen Compare-Leiste — 13px, 12/16px,
+	   inaktiv --g-ink-3, aktiv fett, Container ohne Unterstrich-Linie. */
+	.mtabbar.sm {
+		border-bottom: none;
+	}
+	.mtabbar.sm :global([data-slot='segmented-item']) {
+		padding: 12px 16px;
+		font-size: 13px;
+		color: var(--g-ink-3);
+	}
+	.mtabbar.sm :global([data-slot='segmented-item'][data-state='active']) {
+		font-weight: 600;
+		color: var(--g-ink);
+	}
+	/* Badge neutral wie bisheriger Compare-Stil (paper-deep/ink-3, mono) —
+	   Badges neutral war der Vorschlag aus dem Design-Doc Paket 2. */
+	.mtabbar.sm :global([data-slot='segmented-badge']) {
+		background: var(--g-paper-deep);
+		color: var(--g-ink-3);
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
 		font-weight: 600;
 	}
 
