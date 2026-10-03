@@ -21,8 +21,7 @@
 	import CompareSmsPreview from '$lib/components/molecules/CompareSmsPreview.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
-	// Epic #1273 S1: geteilter Save-Chip (position:fixed) + SaveStatus-Typ/Helper.
-	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
+	// SaveStatus-Typ/Helper (der Chip selbst kommt seit #2284 S2 vom SubscriptionHeader).
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
 	import { merkeNutzlast, wendeNutzlastAn } from '$lib/stores/nutzlastStand';
@@ -746,12 +745,6 @@
 		layoutHydrated = false;
 	});
 </script>
-
-<!-- Epic #1273 S1: geteilter Save-Chip (position:fixed, daher Mount-Stelle frei),
-     analog TripHeader.svelte:194-195. -->
-{#if saveController}
-	<SaveIndicator controller={saveController} />
-{/if}
 
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
 	<!-- Tab-Leiste — custom buttons mit Underline-Indikator (Issue #582) -->

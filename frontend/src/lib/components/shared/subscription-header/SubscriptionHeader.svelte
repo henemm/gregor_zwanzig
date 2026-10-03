@@ -12,6 +12,8 @@
 	import type { Snippet } from 'svelte';
 	import { Btn } from '$lib/components/atoms';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
+	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	type Field = 'name' | 'region' | 'profile';
 
@@ -24,8 +26,13 @@
 		profileLabel?: string;
 		regionMaxLength?: number;
 		testidPrefix: string;
+		/** #2284 S2: testid der Überschrift (Trip: `trip-detail-h1`); ohne Prop keine testid. */
+		titleTestid?: string;
+		/** #2284 S2: Controller des Hubs — der Baustein rendert den Speicher-Chip selbst. */
+		saveController?: SaveStatus;
 		onSaveField: (field: Field, value: string, schliessen: () => void) => Promise<void>;
 		eyebrow?: Snippet;
+		namePrefix?: Snippet;
 		badges?: Snippet;
 		meta?: Snippet;
 		actions?: Snippet;
@@ -40,8 +47,11 @@
 		profileLabel = '',
 		regionMaxLength = 60,
 		testidPrefix: p,
+		titleTestid,
+		saveController,
 		onSaveField,
 		eyebrow,
+		namePrefix,
 		badges,
 		meta,
 		actions
@@ -97,7 +107,7 @@
 			<input type="text" data-testid={`${p}-name-edit`} bind:value={draft.name} aria-label="Name bearbeiten" class="min-w-0 flex-1 desktop:flex-none font-semibold px-2 py-1 rounded-md desktop:text-2xl" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
 			{@render editButtons('name', 'Umbenennen')}
 		{:else}
-			<h1 class="m-0 min-w-0 truncate desktop:whitespace-normal font-semibold text-base desktop:text-[30px] desktop:leading-[1.1] desktop:tracking-[-0.025em]">{name}</h1>
+			<h1 data-testid={titleTestid} class="m-0 min-w-0 truncate desktop:whitespace-normal font-semibold text-base desktop:text-[30px] desktop:leading-[1.1] desktop:tracking-[-0.025em]">{#if namePrefix}{@render namePrefix()}{/if}{name}</h1>
 			<button type="button" data-testid={`${p}-name-edit-toggle`} aria-label="Name bearbeiten" onclick={() => start('name')} class="flex-shrink-0 inline-flex items-center justify-center min-h-[44px] min-w-[44px] desktop:min-h-0 desktop:min-w-0 desktop:p-1 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={15} /></button>
 		{/if}
 		{#if badges}{@render badges()}{/if}
@@ -109,7 +119,7 @@
 			<input type="text" data-testid={`${p}-region-edit`} bind:value={draft.region} aria-label="Region bearbeiten" maxlength={regionMaxLength} class="min-w-0 flex-1 desktop:flex-none px-2 py-1 rounded-md text-sm" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
 			{@render editButtons('region', 'Speichern')}
 		{:else}
-			<span>{region ?? '—'}</span>
+			<span>{region || '—'}</span>
 			<button type="button" data-testid={`${p}-region-edit-toggle`} aria-label="Region bearbeiten" onclick={() => start('region')} class="inline-flex items-center p-0.5 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={13} /></button>
 			<!-- {' · '} statt " · ": Svelte trimmt sonst das Leerzeichen vor {/if} weg. -->
 			{#if profileLabel}<span>{' · '}{profileLabel}</span>{/if}
@@ -138,3 +148,8 @@
 	</div>
 	{@render fieldError('profile', 'order-2')}
 </div>
+
+<!-- #2284 S2: Speicher-Chip (position:fixed, Mount-Stelle frei) — vom Baustein, nicht von den Seiten. -->
+{#if saveController}
+	<SaveIndicator controller={saveController} />
+{/if}
