@@ -5,6 +5,39 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## C1-83 / #2239: `load_all_trips` lieferte 0 Trips für `validator-issue110`, obwohl `load_trip` 8 Dateien lud — kein Defekt (Archiv-Filter #824 + Fehlmessung)
+
+**Status:** RESOLVED (2026-10-03) | **Severity:** Low (KEIN Datenverlust, kein Defekt) | **GitHub Issue:** #2239 (Eintrag C1-83 aus #1199)
+
+### Symptom
+
+Eine Messung im Juli 2026 (gebucht als C1-83 in #1199) ergab: `load_all_trips('validator-issue110')` liefert 0 Trips, während `load_trip` alle 8 Dateien dieses Kontos einzeln fehlerfrei lädt. Das sah nach einem stillen Verlust gültiger Trips im Listen-Ladeweg aus.
+
+### Root Cause
+
+1. **Gewolltes Archiv-Filterverhalten (#824):** Alle 8 Validator-Trips tragen `archived_at` (angelegt vom Seed `scripts/seed_validator_archive.py`). `load_all_trips` blendet archivierte Trips per Default aus (`include_archived=False`), `load_trip` filtert nicht. Zwei unterschiedliche Fragen, zwei unterschiedliche Antworten — beide korrekt.
+2. **Zusätzlich Fehlmessung:** Gemessen wurde als Nutzer `hem` ohne gesetztes `GZ_DATA_DIR`. Damit greift der relative `data`-Fallback in `get_data_root` bzw. ein veralteter `data/users`-Baum im Prod-Arbeitsverzeichnis — nicht der Datenbestand, den der Dienst tatsächlich liest.
+
+**Kein Datenverlust.**
+
+### Evidenz-Ebene (ehrlich)
+
+- **Prod-Inhalt wurde NICHT gelesen** (Lesezugriff auf das Prod-Datenverzeichnis gesperrt) — nichts hier ist „auf Prod verifiziert".
+- Nur Metadaten von Prod: 8 Dateien unter `validator-issue110/briefings/`, mtime 16.07. 04:11 (Tag des S7a-Deploys), je exakt +19 Byte gegenüber der Fixture — das entspricht der Zeile `"kind": "route",`. Indiz, kein Inhaltsbeweis.
+- Reproduziert an einer Fixture-Kopie (migriert nach `briefings/`, `kind: route`): `load_trip` 8/8 ok, `load_all_trips()` = 0, `load_all_trips(include_archived=True)` = 8.
+- Nicht gemessen: Vergleich beider Ladewege über alle Prod-Nutzer.
+
+### Fix (2026-10-03)
+
+Kein Produktivcode geändert (`src/app/loader.py` unangetastet). Neu ist der Bewachungstest `tests/tdd/test_load_all_trips_deckt_sich_mit_load_trip.py`: Er bewacht die Invariante „einzeln per `load_trip` ladbare `kind=route`-Dateien == `load_all_trips(include_archived=True)`", den Archiv-Filter, den Ausschluss von `kind=vergleich`, dass eine kaputte Datei den Ladevorgang nicht abbricht und ein ERROR-Log „Skipping corrupt trip" erzeugt, sowie die Nutzertrennung. Da der Test gegen den unveränderten Code grün ist, wurde sein Wert per Mutation M1–M4 (Archiv-Filter, ERROR-Log, Abbruch statt `continue`, `kind`-Filter entfernt) als RED belegt. Der echte Verlustpfad „kaputte Datei" bleibt über `logger.error` und `record_corrupt_trip_observability` (MQ) sichtbar.
+
+### Lessons Learned
+
+1. **Nullergebnis eines Listenladers erst gegen Archiv-/Filterflags prüfen** (`include_archived=True` gegenmessen), bevor ein Datenverlust vermutet wird.
+2. **Datenbestand nur mit gesetztem `GZ_DATA_DIR` bzw. als Service-Nutzer messen** — der relative `data`-Fallback zeigt sonst auf einen veralteten Baum.
+
+---
+
 ## BUG-1264-CUTOVER-DEPLOY: Persistenz-Cutover (#1250 S7a) ohne Prod-Migration deployt — alle Trips im Frontend unsichtbar
 
 **Status:** RESOLVED (2026-07-16) | **Severity:** High (alle Nutzer, ~1 Tag unsichtbar; KEIN Datenverlust) | **GitHub Issue:** #1264
