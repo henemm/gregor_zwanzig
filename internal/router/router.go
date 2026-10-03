@@ -42,6 +42,13 @@ func New(deps Deps) chi.Router {
 	// Issue #2155 S1 (ADR-0078): Admin-Menge einmal aus GZ_ADMIN_USER_IDS.
 	admins := config.ParseAdminUserIDs(deps.Config.AdminUserIDs)
 
+	// Issue #2482: Mengen-Quoten-Policy ueber den Request-Kontext — Admin und
+	// Ausnahme-Liste (GZ_QUOTA_EXEMPT_USER_IDS) sind unbegrenzt. Ueber den
+	// Kontext erreicht sie jeden Anlage-Weg, auch POST /api/briefings, das
+	// intern an die Trip-/Preset-Create-Handler delegiert. Die Ausnahme-Liste
+	// verleiht KEINE Admin-Rechte (RequireAdmin/profileRole nutzen nur admins).
+	r.Use(handler.QuotaPolicyMiddleware(admins, config.ParseAdminUserIDs(deps.Config.QuotaExemptUserIDs)))
+
 	// Auth endpoints (register/login exempt from AuthMiddleware)
 	// Rate-limit register: 5 attempts per IP per hour (Issue #117).
 	registerLimiter := authmw.NewIPRateLimiter(5, time.Hour)

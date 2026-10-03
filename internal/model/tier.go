@@ -38,3 +38,28 @@ func EffectiveTier(tier string) string {
 	}
 	return tier
 }
+
+// Quota sind die Mengengrenzen je Tarif (Issue #2482, Epic #2138): wie viele
+// aktive Trips, aktive Ortsvergleiche und Orte (gesamt) ein Nutzer neu anlegen
+// darf. Admin- und Ausnahme-Konten werden VOR dieser Tabelle abgefangen
+// (handler/quota.go) und sind unbegrenzt.
+type Quota struct {
+	Trips          int
+	ComparePresets int
+	Locations      int
+}
+
+// quotaTable ist die EINE Quelle der Wahrheit fuer die Grenzwerte
+// (Spec docs/specs/modules/mengen_quoten_je_tier.md). Python spiegelt sie nicht.
+var quotaTable = map[string]Quota{
+	"free":     {Trips: 3, ComparePresets: 2, Locations: 10},
+	"standard": {Trips: 15, ComparePresets: 10, Locations: 50},
+	"premium":  {Trips: 50, ComparePresets: 30, Locations: 200},
+}
+
+// QuotaFor liefert die Grenzen zum Tarif. Leerer oder unbekannter Tarif ist
+// fail-closed free — die Normalisierung geschieht hier selbst (EffectiveTier),
+// damit kein Aufrufer sie vergessen kann.
+func QuotaFor(tier string) Quota {
+	return quotaTable[EffectiveTier(tier)]
+}

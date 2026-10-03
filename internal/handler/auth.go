@@ -785,6 +785,9 @@ type profileResponse struct {
 	// GZ_ADMIN_USER_IDS steht. GET /api/auth/profile setzt sie immer; Antworten
 	// ohne Admin-Menge (PUT, SMS-Bestaetigung) lassen sie weg statt zu raten.
 	Role string `json:"role,omitempty"`
+	// Issue #2482 — Mengengrenzen je Ressource; null = unbegrenzt
+	// (Admin/Ausnahme-Konto). Wie Role nur in GET /api/auth/profile gesetzt.
+	Quota *profileQuota `json:"quota,omitempty"`
 }
 
 // profileRole leitet die Rolle aus der Admin-Menge ab (Issue #2155 S1).
@@ -869,6 +872,11 @@ func GetProfileHandler(s *store.Store, admins map[string]struct{}) http.HandlerF
 
 		resp := toProfileResponse(user)
 		resp.Role = profileRole(userId, admins)
+		// Issue #2482: dieselbe Quelle wie die Pruefung (userQuota). Bei einem
+		// Ladefehler fehlt das Feld, statt faelschlich free auszuweisen.
+		if q, qerr := userQuota(r.Context(), s, userId); qerr == nil {
+			resp.Quota = toProfileQuota(q)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}

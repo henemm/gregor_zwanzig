@@ -719,6 +719,14 @@ export interface ComparePreset {
 // Default "free" wird am Lesezeitpunkt in toProfileResponse() gesetzt.
 export type UserTier = 'free' | 'standard' | 'premium';
 
+// Issue #2482 — Mengengrenzen im Profil (GET /api/auth/profile, Feld `quota`).
+// null = unbegrenzt (Admin/Ausnahme-Konto). Quelle: model.QuotaFor (Go).
+export interface ProfileQuota {
+	trips: number | null;
+	compare_presets: number | null;
+	locations: number | null;
+}
+
 // Issue #2155 S4 — DTO der Admin-API (GET /api/admin/users), nur diese Felder.
 export interface AdminUser {
 	id: string;

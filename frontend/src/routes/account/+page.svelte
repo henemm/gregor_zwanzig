@@ -26,7 +26,12 @@
 		errorMessageFrom
 	} from '$lib/utils/premiumSmsLinkCodeHelpers';
 	import { shouldShowSmsUsageRow } from '$lib/utils/smsDailyUsageHelpers';
+	import { countActive, formatQuotaUsage } from '$lib/utils/mengenQuoteHelpers';
+	import type { ProfileQuota } from '$lib/types';
 	let { data } = $props();
+
+	// Issue #2482: Tarif-Grenzen aus dem Profil; fehlt das Feld, bleibt die Anzeige bei "x".
+	const quota = $derived(data.profile?.quota as ProfileQuota | undefined);
 
 	let displayName = $state(data.profile?.display_name ?? '');
 	let mailTo = $state(data.profile?.mail_to ?? '');
@@ -1063,19 +1068,19 @@
 					{/if}
 				</div>
 
-				<!-- Zähler -->
-				<div class="space-y-2 mb-4">
+				<!-- Zähler mit Tarif-Grenzen "x von N" (Issue #2482); unbegrenzt: nur "x" -->
+				<div class="space-y-2 mb-4" data-testid="mengen-quote">
 					<div class="flex items-center justify-between text-sm">
 						<span>Aktive Trips</span>
-						<a href="/trips" class="font-medium hover:underline">{data.trips.length}</a>
+						<a href="/trips" class="font-medium hover:underline" data-testid="quota-trips">{formatQuotaUsage(countActive(data.trips), quota?.trips)}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Aktive Vergleiche</span>
-						<a href="/compare" class="font-medium hover:underline">{data.comparePresets.filter((p: any) => !p.archived_at).length}</a>
+						<a href="/compare" class="font-medium hover:underline" data-testid="quota-compare-presets">{formatQuotaUsage(countActive(data.comparePresets), quota?.compare_presets)}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Locations</span>
-						<a href="/locations" class="font-medium hover:underline">{data.locations.length}</a>
+						<a href="/locations" class="font-medium hover:underline" data-testid="quota-locations">{formatQuotaUsage(Array.isArray(data.locations) ? data.locations.length : 0, quota?.locations)}</a>
 					</div>
 				</div>
 

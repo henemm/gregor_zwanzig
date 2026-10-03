@@ -645,11 +645,14 @@ func TestUpdateComparePreset_LowercaseWandern_RoundTrip(t *testing.T) {
 // ============================================================================
 
 func TestCreateComparePreset_ValidForecastHours_Accepted(t *testing.T) {
-	s := newTestStore(t)
-	r := chi.NewRouter()
-	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
-
 	for _, hours := range []int{24, 48, 72} {
+		// Issue #2482: je Wert ein frischer Store — drei Anlagen fuer EINEN
+		// Free-Nutzer wuerden sonst an der Ortsvergleichs-Quote (2) scheitern,
+		// die hier nicht Gegenstand ist.
+		s := newTestStore(t)
+		r := chi.NewRouter()
+		r.Post("/api/compare/presets", CreateComparePresetHandler(s))
+
 		body := validPresetBody()
 		body["forecast_hours"] = hours
 

@@ -37,7 +37,9 @@ unabhaengig vom umgebenden Ausdruck.
 2. **Konkatenation/Formatierung:** ``"tri" + "ps"``,
    ``fmt.Sprintf("tri%s", "ps")``.
 3. **Konfiguration/Umgebung:** Verzeichnisname aus ``config.ini`` oder Env.
-4. **Go-Rohstrings** (Backticks) werden vom ``"..."``-Regex nicht erfasst.
+4. **Go-Rohstrings** (Backticks) werden nicht erfasst -- einzeilige
+   Rohstrings werden vor dem ``"..."``-Regex aktiv entfernt, damit
+   Struct-Tags wie ``json:"trips"`` kein Fund sind (#2482).
 5. **Go-Blockkommentare** ``/* ... */`` werden nicht abgeschnitten --
    Falsch-Positiv-Richtung, harmlos.
 6. **Schema-Umbenennung:** ein wiederbelebter Altpfad namens ``trip_files/``
@@ -48,6 +50,14 @@ unabhaengig vom umgebenden Ausdruck.
 Keine davon ist versehentlich erreichbar -- alle erfordern bewusste Arbeit.
 Der reale Rueckfall (jemand fuegt ``"trips"`` wieder in die
 ``ProvisionUserDirs``-Liste ein) wird getroffen.
+
+## Einzelausnahmen fuer API-Bezeichner (#2482)
+
+API-Bezeichner, die zufaellig ``"trips"`` lauten (z. B. der 409-
+``resource``-Wert der Mengen-Quote), stehen als begruendete, an EIN Ordinal
+gebundene Einzelausnahme in ``API_IDENTIFIER_EXEMPTIONS`` -- NICHT in der
+Rueckbau-Liste ``KNOWN_VIOLATIONS``. Eine Ausnahme, deren Fund verschwindet,
+muss entfernt werden; ein weiteres ``"trips"`` im selben Symbol ist Fund.
 
 ## Weitere Grenzen
 
@@ -91,8 +101,28 @@ CARRIER_FILES = {
 # (KEINE Dauerausnahme, siehe frueherer Kommentar hier).
 KNOWN_VIOLATIONS: dict[str, str] = {}
 
+# Begruendete Einzelausnahmen fuer API-Bezeichner, die zufaellig "trips"
+# lauten, aber KEIN Pfad sind. Bewusst getrennt von KNOWN_VIOLATIONS (das ist
+# die Rueckbau-Liste REALER Verstoesse). Gebunden an genau EIN Ordinal
+# derselben Schluesselform "pfad::symbol::ordinal": ein weiteres "trips" im
+# selben Symbol (Ordinal 1) ist wieder ein Fund. Das Symbol ist das, was
+# _scan_go_text vergibt (die letzte vorangehende func-Deklaration -- fuer den
+# const-Block in quota.go also "quotaUnlimited"). Keine allgemeine
+# Kontextregel: ``const tripsDir = "trips"`` + Join waere genau die
+# Wiederbelebung und bleibt Fund.
+API_IDENTIFIER_EXEMPTIONS: dict[str, str] = {
+    "internal/handler/quota.go::quotaUnlimited::0": (
+        "#2482: quotaTrips = \"trips\" ist der 409-resource-Wert der "
+        "Mengen-Quote (API-Bezeichner), kein Pfad -- Spec "
+        "docs/specs/modules/mengen_quoten_je_tier.md"
+    ),
+}
+
 _TRIPS_SEGMENT_RE = re.compile(r"(?:^|/|\*/)trips(?:/|$)")
 _GO_STRING_LITERAL_RE = re.compile(r'"([^"]*)"')
+# Go-Rohstrings (Backticks), einzeilig -- vor dem "..."-Regex entfernt, damit
+# Struct-Tags wie `json:"trips"` (JSON-Schluessel, kein Pfad) nie zaehlen.
+_GO_RAW_STRING_RE = re.compile(r"`[^`]*`")
 _GO_FUNC_DECL_RE = re.compile(r"^func\s+(?:\([^)]*\)\s+)?(\w+)\s*\(")
 
 
@@ -111,12 +141,14 @@ def _scan_go_text(text: str) -> list[tuple[str, str, int]]:
     Zeile wird am ERSTEN ``//`` abgeschnitten (Vorbild:
     tests/test_egress_inventory_drift.py:_parse_go_inventory) -- eine voll
     auskommentierte Zeile zaehlt damit nicht, ein Inline-Kommentar hinter
-    echtem Code schon (AC-5).
+    echtem Code schon (AC-5). Vorher werden einzeilige Go-Rohstrings
+    (Backticks) entfernt (Grenze Nr. 4): ein Struct-Tag ``json:"trips"``
+    enthaelt ein "..."-Segment, ist aber kein Literal im Code.
     """
     results: list[tuple[str, str, int]] = []
     current_symbol = "<module>"
     for line_no, raw_line in enumerate(text.splitlines(), start=1):
-        code = raw_line.split("//", 1)[0]
+        code = _GO_RAW_STRING_RE.sub("", raw_line).split("//", 1)[0]
         m = _GO_FUNC_DECL_RE.match(code.strip())
         if m:
             current_symbol = m.group(1)
@@ -236,6 +268,15 @@ def _all_violations() -> dict[str, tuple[str, int]]:
     return findings
 
 
+def _unlisted(found: dict[str, tuple[str, int]]) -> dict[str, tuple[str, int]]:
+    """Funde, die weder Rueckbau-Eintrag noch API-Bezeichner-Ausnahme sind."""
+    return {
+        k: v
+        for k, v in found.items()
+        if k not in KNOWN_VIOLATIONS and k not in API_IDENTIFIER_EXEMPTIONS
+    }
+
+
 # ---------------------------------------------------------------------------
 # AC-1/AC-2: Go-Erkenner gegen synthetische Quellen (nicht gegen echte
 # Dateien -- sonst meldet der Waechter sich selbst).
@@ -350,6 +391,26 @@ def test_ac5_full_comment_line_is_not_a_finding():
     src = '\t// filepath.Join(dir, "trips")\n'
     raw = _scan_go_text(src)
     assert raw == [], f"Auskommentierte Zeile faelschlich als Fund gemeldet: {raw}"
+
+
+def test_ac4_go_struct_tag_is_not_a_finding():
+    """AC-4 (#2482): ein Struct-Tag ``json:"trips"`` ist ein JSON-Schluessel
+    in einem Go-Rohstring, kein Pfad-Literal -> null Funde. Ein echtes
+    Literal auf derselben Zeile bleibt Fund."""
+    assert _scan_go_text('\tTrips *int `json:"trips"`\n') == []
+    raw = _scan_go_text('\tTrips string `json:"t"` = "trips"\n')
+    assert len(raw) == 1, f"Literal neben Struct-Tag muss Fund bleiben: {raw}"
+
+
+def test_api_identifier_exemptions_only_shrink():
+    """Eine Ausnahme, deren Fund der Scanner nicht mehr meldet, ist veraltet
+    und muss entfernt werden -- sonst wuerde sie spaeter still einen
+    ECHTEN Fund an derselben Stelle decken."""
+    found = _all_violations()
+    stale = sorted(k for k in API_IDENTIFIER_EXEMPTIONS if k not in found)
+    assert not stale, f"Veraltete API_IDENTIFIER_EXEMPTIONS: {stale}"
+    falsch = {k: found[k] for k in API_IDENTIFIER_EXEMPTIONS if found[k][0] != "trips"}
+    assert not falsch, f"Ausnahme deckt kein bare \"trips\": {falsch}"
 
 
 def test_ac5_code_with_trailing_comment_is_a_finding():
@@ -486,6 +547,66 @@ def test_trefferkraft_scanner_detects_real_violations_on_disk(tmp_path, monkeypa
     )
 
 
+def test_trefferkraft_ausnahmen_decken_nur_ihr_ordinal(tmp_path, monkeypatch):
+    """#2482: Struct-Tag-Abschnitt und API-Bezeichner-Ausnahme duerfen den
+    Waechter nicht stumpf machen. In einem Temp-Baum bleiben Join-, Slice-
+    und Konstanten-Form Funde; eine SYNTHETISCHE quota.go mit derselben
+    Struktur wie die echte (func quotaUnlimited, danach const-Block mit
+    "trips", Struct-Tag json:"trips") plus einem ZUSAETZLICHEN bare "trips"
+    im selben Symbol liefert genau den Fund fuer Ordinal 1 (Ordinal 0 bleibt
+    durch die Ausnahme gedeckt, der Struct-Tag zaehlt nicht).
+
+    Eigener Unterordner statt tmp_path direkt: der Blinding-Nachweis
+    (tests/test_trips_pfad_rueckbau.py) ruft alle Waechter-Tests mit
+    DEMSELBEN tmp_path auf -- dieser Test darf mit dem anderen
+    Trefferkraft-Test nicht um internal/store konkurrieren."""
+    root = tmp_path / "ordinal_baum"
+    go_dir = root / "internal" / "store"
+    go_dir.mkdir(parents=True)
+    (go_dir / "dirs.go").write_text(
+        "package store\n\n"
+        'const tripsDir = "trips"\n\n'
+        "func (s *Store) A(base string) string {\n"
+        '\treturn filepath.Join(base, "trips")\n'
+        "}\n\n"
+        "func (s *Store) B(base string) {\n"
+        '\tfor _, sub := range []string{"locations", "trips"} {\n'
+        "\t\t_ = sub\n"
+        "\t}\n"
+        "}\n",
+        encoding="utf-8",
+    )
+
+    handler_dir = root / "internal" / "handler"
+    handler_dir.mkdir(parents=True)
+    (handler_dir / "quota.go").write_text(
+        "package handler\n\n"
+        "func quotaUnlimited(ctx context.Context, userID string) bool {\n"
+        "\treturn false\n"
+        "}\n\n"
+        "type quotaResource string\n\n"
+        "const (\n"
+        '\tquotaTrips      quotaResource = "trips"\n'
+        '\tquotaTripsZweit quotaResource = "trips"\n'
+        ")\n\n"
+        "type profileQuota struct {\n"
+        '\tTrips *int `json:"trips"`\n'
+        "}\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(sys.modules[__name__], "REPO_ROOT", root)
+
+    unlisted = _unlisted(_all_violations())
+
+    assert set(unlisted) == {
+        "internal/store/dirs.go::<module>::0",
+        "internal/store/dirs.go::A::0",
+        "internal/store/dirs.go::B::0",
+        "internal/handler/quota.go::quotaUnlimited::1",
+    }, f"Ausnahmen/Rohstring-Abschnitt machen den Waechter stumpf: {unlisted}"
+
+
 def test_ac8_scan_area_excludes_tests_and_scripts():
     """Schuetzt tests/test_briefing_route_cutover.py (Lockvogel-Datei fuer
     den Cutover-Beweis) und die Migrations-Skripte, deren Aufgabe der
@@ -515,8 +636,7 @@ def test_keine_unlisted_trips_pfad_funde():
     ``src/app/loader.py::get_trips_dir`` nicht mehr (entfernter Altbestand)
     -- KNOWN_VIOLATIONS ist leer, es gibt keinen Fund mehr zu decken.
     """
-    found = _all_violations()
-    unlisted = {k: v for k, v in found.items() if k not in KNOWN_VIOLATIONS}
+    unlisted = _unlisted(_all_violations())
     assert not unlisted, (
         "Toter 'trips'-Pfad in Produktivcode gefunden (#1708) -- ADR-0023 "
         "legt briefings/<id>.json als einzige Persistenz-Wahrheit fest. "

@@ -126,6 +126,7 @@ var storeMethodRegister = map[string]guardEntry{
 
 	"WithUser":     exempt("baut keinen Pfad, liefert nur eine Kopie mit anderer Kennung"),
 	"LockBriefing": exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel"),
+	"LockQuota":    exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2482)"),
 
 	"LocationsDir": exempt("dokumentierter Rest: kein error-Rückgabewert, produktiv außerhalb des Stores unbenutzt"),
 	"PresetsFile":  exempt("dokumentierter Rest: kein error-Rückgabewert, produktiv außerhalb des Stores unbenutzt"),

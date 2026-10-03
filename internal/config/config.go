@@ -72,6 +72,10 @@ type Config struct {
 	// Issue #2155 S1 (ADR-0078) — komma-getrennte Nutzerkennungen mit
 	// Admin-Rolle (GZ_ADMIN_USER_IDS). Leer = niemand ist Admin (fail-closed).
 	AdminUserIDs string `envconfig:"ADMIN_USER_IDS" default:""`
+	// Issue #2482 — komma-getrennte Nutzerkennungen, die von den Mengen-Quoten
+	// (Trips/Ortsvergleiche/Orte) ausgenommen sind, OHNE Admin-Rechte (z. B.
+	// das Staging-Testkonto). Leer = niemand ausgenommen (Produktion).
+	QuotaExemptUserIDs string `envconfig:"QUOTA_EXEMPT_USER_IDS" default:""`
 	// Issue #2155 S2 (ADR-0079) — Maschinen-Token fuer GET
 	// /api/scheduler/status (Header X-GZ-Status-Token). Leer = Route fuer
 	// alle Anfragen gesperrt (fail-closed), kein Startfehler.
