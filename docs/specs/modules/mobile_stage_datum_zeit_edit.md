@@ -16,7 +16,7 @@ tags: [mobile, usability, frontend, trip-detail, stages, issue-2496]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO „approved", 2026-10-04; Design-Entscheide F1–F4 vom 2026-10-04)
 
 ## Purpose
 
