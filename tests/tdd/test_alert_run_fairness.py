@@ -219,6 +219,26 @@ def test_geloeschter_trip_verschwindet_aus_zustandsdatei(monkeypatch):
         f"Erreichte Trips muessen einen neuen Stempel tragen: {state!r}"
     )
 
+    # Teil 2: ein NICHT erreichter, vorhandener Trip behaelt seinen Stempel
+    # unveraendert — Prune richtet sich nach allen geladenen Trips, nicht
+    # nach den erreichten.
+    user2 = _fresh_user("ac3b")
+    for tid in ("p-alt", "p-mittel", "p-neu"):
+        _save_active(user2, tid)
+    base = datetime(2026, 9, 20, 12, 0, tzinfo=timezone.utc)
+    newest = base + timedelta(hours=2)
+    _write_state(user2, {
+        "p-alt": base - timedelta(hours=2), "p-mittel": base, "p-neu": newest,
+    })
+    calls2 = _record_calls(monkeypatch, sleep_s=SLEEP_S, deadline_s=DEADLINE_S)
+    _service(user2).check_all_trips()
+
+    assert calls2 == ["p-alt", "p-mittel"], f"Erwartet aelteste zuerst, k=2: {calls2!r}"
+    state2 = _read_state(user2)
+    assert state2.get("p-neu") == newest, (
+        f"Nicht erreichter Trip p-neu muss mit unveraendertem Stempel bleiben: {state2!r}"
+    )
+
 
 # ---------------------------------------------------------------------------
 # AC-4 — Stempel auch fuer Giftfall, regellosen und abgelaufenen Trip; kein
@@ -264,6 +284,9 @@ def test_stempel_auch_bei_exception_regellos_und_abgelaufen(monkeypatch):
     result = _service(user_id).check_all_trips()
 
     assert "d-normal" in calls, f"Nach dem Giftfall muss der Lauf weitergehen: {calls!r}"
+    # Absicherung der Testvoraussetzung: (b) und (c) verlassen die Schleife
+    # wirklich per ``continue`` und erreichen die Pruefung nie.
+    assert "b-regellos" not in calls and "c-abgelaufen" not in calls, calls
     assert result.checked == 4 and result.skipped == 0
     state = _read_state(user_id)
     for tid in ("a-gift", "b-regellos", "c-abgelaufen", "d-normal"):
@@ -326,14 +349,15 @@ def test_zwei_nutzer_isolation_nie_default(monkeypatch):
     _write_state(user_b, {"gleich": datetime(2026, 1, 1, tzinfo=timezone.utc)})
     b_before = _state_path(user_b).read_bytes()
     default_path = _state_path("default")
-    default_existed = default_path.exists()
+    default_before = default_path.read_bytes() if default_path.exists() else None
     _record_calls(monkeypatch)
 
     _service(user_a).check_all_trips()
 
     assert "gleich" in _read_state(user_a), "Lauf fuer A muss A's Zustandsdatei schreiben"
     assert _state_path(user_b).read_bytes() == b_before, "B's Zustandsdatei wurde veraendert"
-    assert default_existed or not default_path.exists(), (
+    default_after = default_path.read_bytes() if default_path.exists() else None
+    assert default_after == default_before, (
         "Zustand landete unter data/users/default/ — Cross-User-Leck"
     )
 
@@ -406,7 +430,7 @@ def test_skipped_ids_in_ergebnis_warning_und_endpoint(monkeypatch, caplog):
     from api.main import app
 
     user_id = _fresh_user("ac8")
-    all_ids = [_save_active(user_id, f"s-{i}").id for i in range(4)]
+    all_ids = [_save_active(user_id, f"ac8-trip-{i}").id for i in range(4)]
     calls = _record_calls(monkeypatch, sleep_s=SLEEP_S, deadline_s=DEADLINE_S)
 
     with caplog.at_level(logging.WARNING):
