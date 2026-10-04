@@ -45,6 +45,7 @@ const TILE = resolve(SRC, 'lib/components/compare/CompareTile.svelte');
 const LIST_PAGE = resolve(SRC, 'routes/compare/+page.svelte');
 const HUB_PAGE = resolve(SRC, 'routes/compare/[id]/+page.svelte');
 const TABS = resolve(SRC, 'lib/components/compare/CompareTabs.svelte');
+const MTABBAR = resolve(SRC, 'lib/components/mobile/MTabBar.svelte');
 const SHEET = resolve(SRC, 'lib/components/mobile/MCompareActionSheet.svelte');
 
 describe('AC-21 — mobile Liste: Chevron statt Kebab im dense-Modus', () => {
@@ -136,15 +137,22 @@ describe('AC-22 — mobiler Hub: geteilte CompareTabs mit 4-Stat-2×2 statt Besp
 	// Fix-Loop 1 (Fresh-Eyes-Fund): der Ein-Mount-Umbau rendert die Tab-Leiste
 	// jetzt auch mobil, aber ohne horizontales Scrollen waren „Versand"/
 	// „Vorschau" auf 390px unerreichbar (Inline-Edit-Paritäts-Verletzung).
-	// Muster TripTabs.svelte:330-352.
+	// Mobile Usability Paket 2 (Spec mobile_tab_leisten_mtabbar): Die Leiste
+	// lebt im geteilten MTabBar-Baustein — CompareTabs rendert ihn nur noch.
 	test('Mobile-Media-Query macht die Tab-Leiste horizontal scrollbar (overflow-x: auto)', () => {
-		const src = readFileSync(TABS, 'utf-8');
+		const tabsSrc = readFileSync(TABS, 'utf-8');
+		assert.match(
+			tabsSrc,
+			/<MTabBar[\s>]/,
+			'CompareTabs.svelte rendert nicht mehr den MTabBar-Baustein'
+		);
+		const src = readFileSync(MTABBAR, 'utf-8');
 		const mqStart = src.indexOf('@media (max-width: 899px)');
-		assert.ok(mqStart > -1, 'CompareTabs.svelte hat keine @media (max-width: 899px)-Regel');
+		assert.ok(mqStart > -1, 'MTabBar.svelte hat keine @media (max-width: 899px)-Regel');
 		const mqBlock = src.slice(mqStart, mqStart + 1500);
 		assert.match(
 			mqBlock,
-			/\.compare-tabs-bar\s*\{[^}]*overflow-x:\s*auto/,
+			/\.mtabbar\s*\{[^}]*overflow-x:\s*auto/,
 			'Mobile-Media-Query enthält keine overflow-x: auto-Regel für die Tab-Leiste — ' +
 				'„Versand"/„Vorschau" bleiben auf schmalen Viewports unerreichbar'
 		);

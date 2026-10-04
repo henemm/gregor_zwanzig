@@ -101,6 +101,7 @@
 	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
 	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
+	import MTabBar from '$lib/components/mobile/MTabBar.svelte';
 
 	interface Props {
 		preset: ComparePreset;
@@ -139,6 +140,16 @@
 	$effect(() => {
 		activeTab = resolve(initialTab);
 	});
+
+	// Tab-Leisten-Items für den MTabBar-Baustein — Orte mit Zähler-Badge.
+	const compareBarItems = $derived(
+		COMPARE_TABS.map((t) => ({
+			value: t.value,
+			label: t.label,
+			testid: `compare-detail-tab-${t.value}`,
+			badge: t.value === 'orte' ? orteCount : undefined
+		}))
+	);
 
 	// Issue #1256 Scheibe 8 (AC-22): Viewport-Weiche fuer den Monitoring-
 	// Streifen (Desktop-5-Stat-Leiste vs. mobiles 4-Stat-2×2) und den
@@ -747,22 +758,18 @@
 </script>
 
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
-	<!-- Tab-Leiste — custom buttons mit Underline-Indikator (Issue #582) -->
-	<div class="compare-tabs-bar" style="display: flex; gap: 0">
-		{#each TABS as t}
-			{@const on = activeTab === t.value}
-			<button
-				onclick={() => handleValueChange(t.value)}
-				data-testid="compare-detail-tab-{t.value}"
-				style="padding: 12px 16px; cursor: pointer; font-size: 13px; font-weight: {on ? 600 : 500}; background: transparent; border: none; font-family: var(--g-font-sans); color: {on ? 'var(--g-ink)' : 'var(--g-ink-3)'}; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 7px"
-			>
-				{t.label}
-				{#if t.value === 'orte'}
-					<span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; background: var(--g-paper-deep); color: var(--g-ink-3); font-family: var(--g-font-mono)">{orteCount}</span>
-				{/if}
-			</button>
-		{/each}
-	</div>
+	<!-- Tab-Leiste — geteilter MTabBar-Baustein (Mobile Usability Paket 2,
+	     Spec mobile_tab_leisten_mtabbar, Iteration 2). Ersetzt das handgebaute
+	     compare-tabs-bar-Markup + das 1:1-kopierte Mobil-CSS (AP-006-Drift).
+	     size="sm" haelt die Compare-Optik (13px, 12/16px, neutraler Badge);
+	     Test-IDs bleiben. -->
+	<MTabBar
+		items={compareBarItems}
+		active={activeTab}
+		onChange={(v) => void handleValueChange(v)}
+		ariaLabel="Vergleich-Detail"
+		size="sm"
+	/>
 
 	<!-- Tab-Inhalte — Wrapper mit Padding nach JSX-Vorlage (Issue #582) -->
 	<div class="compare-tabs-content" style="position: relative; max-width: 1320px">
@@ -1263,28 +1270,10 @@
 	}
 
 	@media (max-width: 899px) {
-		/* Mobile: Tab-Leiste horizontal scrollbar. Fix-Loop 1 (Fresh-Eyes-Fund,
-		   S8): Regel fehlte, "Versand"/"Vorschau" waren auf 390px unerreichbar.
-		   Muster 1:1 TripTabs.svelte:330-352 (dort selbst ein Fresh-Eyes-Fund
-		   #1231 S6) — Rand-Fade statt hartem Abschnitt. */
-		.compare-tabs-bar {
-			overflow-x: auto;
-			white-space: nowrap;
-			scrollbar-width: none;
-			-ms-overflow-style: none;
-			scroll-snap-type: x mandatory;
-			scroll-padding-inline: 12px;
-			mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
-			-webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
-		}
-		.compare-tabs-bar::-webkit-scrollbar {
-			display: none;
-		}
-		.compare-tabs-bar button {
-			flex-shrink: 0;
-			white-space: nowrap;
-			scroll-snap-align: start;
-		}
+		/* Tab-Band-Regeln (Fade/Snap) leben im MTabBar-Baustein — das frueher
+		   1:1 aus TripTabs.svelte kopierte Mobil-CSS der compare-tabs-bar ist
+		   mit der Umstellung (Spec mobile_tab_leisten_mtabbar, Iteration 2)
+		   ersatzlos entfernt (AP-006). */
 
 		/* Issue #1256 Scheibe 8 (AC-22): CompareTabs wird jetzt ueber die
 		   Ein-Mount-Strategie auch mobil gerendert — schmaleres Padding statt

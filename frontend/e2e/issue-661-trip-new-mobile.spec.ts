@@ -258,36 +258,25 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 		expect(Math.abs((await unterkante()) - MOBILE.height), `gescrollt (scrollTop ${scrollTop})`).toBeLessThanOrEqual(1);
 	});
 
-	// Die Karte rechnet ihre Hoehe gegen den unten belegten Platz — auf /trips/new
-	// ist das der Speichern-Footer, nicht die BottomNav. Sonst verdeckt der Footer
-	// die (lizenzrechtlich verpflichtende) Karten-Attribution.
-	test('S2b AC-4 (mobil): Wegpunkte-Karte samt Attribution endet über dem Speichern-Footer', async ({ page }) => {
+	// PO-Entscheid F5 (2026-09-22, Spec mobile_stages_tab_listen_only): Karte +
+	// Höhenprofil entfallen auf Mobile ersatzlos — die Höhen-Rechnung gegen den
+	// Footer entfällt mit dem mobilen Karten-Editor. Der Etappen-Tab zeigt statt-
+	// dessen die vertikale Listen-Ansicht (StageCardM), die frei scrollt und den
+	// Speichern-Footer nicht überlappt.
+	test('S2b AC-4 (mobil): Etappen-Tab zeigt Listen-Ansicht ohne Karten-Editor (F5)', async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/trips/new');
-		await fillRoute(page, 'S2b Karte über Footer', new Date().toISOString().slice(0, 10));
-		await page.getByRole('tab', { name: /Etappen/ }).click({ force: true });
-		const gpxInputs = page.locator('.tn-mobile input[type="file"][accept=".gpx"]');
-		const stageCount = await gpxInputs.count();
-		for (let i = 0; i < stageCount; i++) {
-			await Promise.all([
-				page.waitForResponse((r) => r.url().includes('/api/gpx/parse'), { timeout: 30_000 }).catch(() => null),
-				gpxInputs.first().setInputFiles(path.resolve('./e2e/fixtures/test-trip.gpx')),
-			]);
-			await page.waitForTimeout(600);
-		}
-		await page.getByRole('tab', { name: /Wegpunkte/ }).click({ force: true });
+		await fillRoute(page, 'S2b Liste über Footer', new Date().toISOString().slice(0, 10));
+		// Wizard-Schritt: Route-Bestätigung führt in den Etappen-Schritt
+		await page.getByTestId('tn-mobile-route-cta').click();
+		await page.getByTestId('tn-mobile-stage-card').first().waitFor({ state: 'visible', timeout: 10_000 });
 
-		const karte = page.locator('.tn-mobile [data-testid="mobile-editor"]');
-		const attribution = karte.locator('.leaflet-control-attribution');
-		const footer = page.getByTestId('tn-mobile-footer');
-		await expect(karte).toBeVisible();
-		await expect(attribution).toBeVisible();
-
-		const footerOben = (await footer.boundingBox())!.y;
-		const k = (await karte.boundingBox())!;
-		const a = (await attribution.boundingBox())!;
-		expect(k.y + k.height, 'Karten-Unterkante liegt unter der Footer-Oberkante').toBeLessThanOrEqual(footerOben + 0.5);
-		expect(a.y + a.height, 'Attribution vom Footer verdeckt').toBeLessThanOrEqual(footerOben + 0.5);
+		// F5: kein mobiler Karten-Editor und keine Karte mehr im DOM ...
+		await expect(page.locator('.tn-mobile [data-testid="mobile-editor"]')).toHaveCount(0);
+		await expect(page.locator('.tn-mobile [data-testid="map-canvas"]')).toHaveCount(0);
+		// ... stattdessen die vertikale Etappen-Liste (Wizard-Stage-Cards)
+		const liste = await page.getByTestId('tn-mobile-stage-card').count();
+		expect(liste, 'Etappen-Liste rendert Stage-Cards').toBeGreaterThanOrEqual(1);
 	});
 
 	test('S2b AC-4 (desktop): Speichern-Footer sitzt am unteren Rand des Scrollbereichs', async ({ page }) => {

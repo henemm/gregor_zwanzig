@@ -361,14 +361,19 @@ e2e/issue-723-email-tab-eindampfen.spec.ts
 e2e/issue-724-trip-name-save-error.spec.ts
 e2e/issue-725-mobile-sidebar.spec.ts
 e2e/issue-767-768-test-briefing.spec.ts
-e2e/issue-951-sheet-bottomnav.spec.ts
 e2e/kurzform-gefuehlte-temperatur-kind-mitnahme.spec.ts
 e2e/mobile-bottom-nav-floating.spec.ts
 e2e/mobile-konto-sheet.spec.ts
-e2e/mobile-editor-controls-viewport.spec.ts
 e2e/speicherung-ueberlebt-neuladen.spec.ts
 e2e/systemhinweise-unter-konto-sheet.spec.ts
 e2e/tokens-and-topo.spec.ts
 e2e/trip-detail-actions.spec.ts
 e2e/trip-hub-kopf-region-aktivitaet.spec.ts
 e2e/versand-tab.spec.ts
+#
+# Aufnahme 2026-10-03 (#2160 Fix-Loop, Loeschdialog laeuft auf 390 px nicht ueber):
+# konto-loeschdialog-mobil-ueberlauf.spec.ts — Ueberlauf wirkt nur im echten Browser
+# (Layout/scrollWidth), nicht in Unit-Tests. Zweitnutzer ueber den Staging-Testweg,
+# eigener Kontext, Aufraeumen im finally. Filter A: kein waitForTimeout/skip/fixme,
+# kein `path:`-Schreibziel (Filter C entfaellt). Filter B: 3 Zyklen im Zielverbund.
+e2e/konto-loeschdialog-mobil-ueberlauf.spec.ts
