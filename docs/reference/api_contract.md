@@ -1035,6 +1035,18 @@ bleiben erhalten (Feld-Level-Preserve, Fix-Loop F002); ein explizites `"sources"
 Liste bewusst. `enabled` ist innerhalb eines mitgeschickten `official_warnings`-Objekts immer
 Pflicht-Wert der Anfrage (kein separates Preserve für `enabled` selbst).
 
+**Drei Zustände optionaler Felder (Issue #2211, `internal/handler/optional_field.go`,
+`internal/handler/trip.go`):** `PUT /api/trips/{id}` (und `PUT /api/briefings/{id}?kind=route`,
+das dorthin delegiert) unterscheidet bei sieben optionalen Feldern: **Key fehlt** → Bestand bleibt
+(#99-Kontrakt) · **Key mit `null`** → Feld wird geleert (Systemstandard greift) · **Wert** → gesetzt.
+Felder: `alert_cooldown_minutes`, `alert_quiet_from`, `alert_quiet_to`, `official_alerts_enabled`,
+`official_alert_triggers_enabled`, `region`, `activity`. Listen, Maps, Structs und `name` behalten
+bei `null` den Bestand. Ein halbes Ruhezeit-Paar (nur `alert_quiet_from` oder nur `alert_quiet_to`)
+wird gespeichert, aber als „keine Ruhezeit" gelesen. Ortsvergleich-Frontend
+(`alarmeVergleichSpeicherung.ts`) sendet `null` für Alarm-Pause/Ruhezeit nur, wenn der Bestand einen
+Wert hatte und der Editor-Zustand leer ist; sonst lässt es den Key weg. Spec:
+`docs/specs/bugfix/optional_felder_null_leert.md` (vgl. `docs/specs/bugfix/update_trip_handler_merge.md`).
+
 **Isolation:** wie jedes trip-/presetgebundene Feld strikt über `user_id` — kein Cross-User-Leck
 (s. `CLAUDE.md` Mandantenfähigkeits-Pflicht).
 

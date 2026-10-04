@@ -253,14 +253,17 @@ type tripUpdateRequest struct {
 	// Corridors — Issue #1231, Slice 3: additiv neben AlertRules, RMW-Kontrakt
 	// analog AlertRules (nil = im Body nicht gesendet -> bestehende Corridors
 	// bleiben erhalten, statt geloescht zu werden).
-	Corridors                    *[]model.Corridor `json:"corridors,omitempty"`
-	AlertCooldownMinutes         *int              `json:"alert_cooldown_minutes,omitempty"`
-	AlertQuietFrom               *string           `json:"alert_quiet_from,omitempty"`
-	AlertQuietTo                 *string           `json:"alert_quiet_to,omitempty"`
-	Region                       *string           `json:"region,omitempty"`
-	Activity                     *string           `json:"activity,omitempty"`
-	OfficialAlertsEnabled        *bool             `json:"official_alerts_enabled,omitempty"`
-	OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"`
+	Corridors *[]model.Corridor `json:"corridors,omitempty"`
+	// Issue #2211: die 7 Skalar-Optionals sind drei-zustaendig (Optional[T]):
+	// Key fehlt = behalten, null = leeren, Wert = setzen. Alle anderen Felder
+	// (Name, Listen, Maps, Structs) behalten bei null weiter den Bestand.
+	AlertCooldownMinutes         Optional[int]    `json:"alert_cooldown_minutes"`
+	AlertQuietFrom               Optional[string] `json:"alert_quiet_from"`
+	AlertQuietTo                 Optional[string] `json:"alert_quiet_to"`
+	Region                       Optional[string] `json:"region"`
+	Activity                     Optional[string] `json:"activity"`
+	OfficialAlertsEnabled        Optional[bool]   `json:"official_alerts_enabled"`
+	OfficialAlertTriggersEnabled Optional[bool]   `json:"official_alert_triggers_enabled"`
 	// OfficialWarnings — Issue #1258, RMW-Kontrakt analog OfficialAlertTriggersEnabled
 	// (nil = im Body nicht gesendet -> bestehender Wert bleibt erhalten).
 	OfficialWarnings *model.OfficialWarningsConfig `json:"official_warnings,omitempty"`
@@ -385,31 +388,15 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		if req.Corridors != nil {
 			existing.Corridors = *req.Corridors
 		}
-		if req.AlertCooldownMinutes != nil {
-			existing.AlertCooldownMinutes = req.AlertCooldownMinutes
-		}
-		if req.AlertQuietFrom != nil {
-			existing.AlertQuietFrom = req.AlertQuietFrom
-		}
-		if req.AlertQuietTo != nil {
-			existing.AlertQuietTo = req.AlertQuietTo
-		}
-		if req.Region != nil {
-			existing.Region = *req.Region
-		}
-		// Issue #674 — Activity-Feld aus PUT-Body übernehmen (F001-Fix).
-		if req.Activity != nil {
-			existing.Activity = *req.Activity
-		}
-		// Issue #1087 — Read-Modify-Write-Merge: nil = Feld fehlte im Body,
-		// bestehender Wert (auch explizit false) bleibt erhalten.
-		if req.OfficialAlertsEnabled != nil {
-			existing.OfficialAlertsEnabled = req.OfficialAlertsEnabled
-		}
-		// Issue #1088 — gleiches RMW-Merge-Muster wie OfficialAlertsEnabled.
-		if req.OfficialAlertTriggersEnabled != nil {
-			existing.OfficialAlertTriggersEnabled = req.OfficialAlertTriggersEnabled
-		}
+		// Issue #2211 (Kontrakt #99): fehlt = behalten, null = leeren, Wert = setzen.
+		// Issue #674 (Activity), #1087/#1088 (OfficialAlerts*): gleicher Merge.
+		req.AlertCooldownMinutes.ApplyPtr(&existing.AlertCooldownMinutes)
+		req.AlertQuietFrom.ApplyPtr(&existing.AlertQuietFrom)
+		req.AlertQuietTo.ApplyPtr(&existing.AlertQuietTo)
+		req.Region.ApplyValue(&existing.Region)
+		req.Activity.ApplyValue(&existing.Activity)
+		req.OfficialAlertsEnabled.ApplyPtr(&existing.OfficialAlertsEnabled)
+		req.OfficialAlertTriggersEnabled.ApplyPtr(&existing.OfficialAlertTriggersEnabled)
 		// Issue #1258 — gleiches RMW-Merge-Muster wie OfficialAlertTriggersEnabled.
 		if req.OfficialWarnings != nil {
 			// Fix-Loop F002: RMW griff bisher nur auf Objekt-Ebene — ein PUT mit
