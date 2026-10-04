@@ -97,11 +97,13 @@ test.describe('Konto-Löschdialog auf 390 px', () => {
 		page,
 		browser
 	}) => {
-		// Benutzername ≥ 28 Zeichen ⇒ Adresse `<name>@example.com` ≥ 40 Zeichen.
-		const username = 'e2eloeschdialogmobil' + Date.now();
+		// Längster erlaubter Benutzername (50 Zeichen, internal/handler/auth.go) ⇒
+		// Adresse `<name>@example.com` = 62 Zeichen. Kürzere Adressen lassen den
+		// Umbruch-Schutz am Knopf (`overflow-wrap:anywhere`) unbewacht.
+		const username = ('e2eloeschdialogmobil' + Date.now() + 'x'.repeat(30)).slice(0, 50);
 		const password = 'Test1234!x';
 		const adresse = `${username}@example.com`;
-		expect(adresse.length).toBeGreaterThanOrEqual(40);
+		expect(adresse.length).toBeGreaterThanOrEqual(60);
 
 		const ctx = await browser.newContext({
 			storageState: undefined,
