@@ -718,6 +718,8 @@
 								risk={stageRisk[stage.id]}
 								open={expandedStageId === stage.id}
 								{activityType}
+								isFirst={i === 0}
+								onDateChange={(d) => handleDateChange(stage.id, d)}
 							/>
 						</div>
 					{/if}
