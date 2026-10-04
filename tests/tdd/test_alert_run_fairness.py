@@ -49,6 +49,12 @@ from app.trip import Stage, Trip, Waypoint
 from services import trip_alert
 from services.trip_alert import TripAlertService
 
+# Auf Modulebene, nicht im Testrumpf: api/main.py ruft beim ersten Import
+# logging.basicConfig(force=True) auf und entfernt damit den caplog-Handler
+# eines bereits laufenden Tests (AC-8 saehe seine WARNING sonst nicht).
+from fastapi.testclient import TestClient  # noqa: E402
+from api.main import app  # noqa: E402
+
 # Helfer + autouse-Fixture (Registry amtlicher Quellen leeren) aus dem
 # Schwester-Test der Zeitgrenze (#1447 S1) — dieselben Bausteine, keine Kopie.
 from tests.tdd.test_alert_run_deadline import (  # noqa: F401
@@ -425,10 +431,6 @@ def test_skipped_ids_in_ergebnis_warning_und_endpoint(monkeypatch, caplog):
     """AC-8: Given ein Lauf mit Grenzabbruch und ein voller Lauf / Then
     ``skipped_ids`` (Ergebnis, WARNING, Endpoint) nennt genau die nicht
     erreichten Trips, ``len(skipped_ids) == skipped``; voller Lauf ⇒ leer."""
-    from fastapi.testclient import TestClient
-
-    from api.main import app
-
     user_id = _fresh_user("ac8")
     all_ids = [_save_active(user_id, f"ac8-trip-{i}").id for i in range(4)]
     calls = _record_calls(monkeypatch, sleep_s=SLEEP_S, deadline_s=DEADLINE_S)
@@ -483,10 +485,6 @@ def test_status_partial_nur_bei_hit_deadline(monkeypatch):
     """AC-10 (Python-Seite): ``status`` ist ``partial`` nur bei Grenzabbruch,
     sonst ``ok``; die Antwort traegt in beiden Faellen ``skipped_ids``. Die
     Go-Seite bleibt unveraendert (``go test ./internal/scheduler/...``)."""
-    from fastapi.testclient import TestClient
-
-    from api.main import app
-
     client = TestClient(app)
 
     user_ok = _fresh_user("ac10ok")
