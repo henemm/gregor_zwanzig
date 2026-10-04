@@ -353,3 +353,10 @@ e2e/systemhinweise-unter-konto-sheet.spec.ts
 e2e/tokens-and-topo.spec.ts
 e2e/trip-detail-actions.spec.ts
 e2e/versand-tab.spec.ts
+#
+# Aufnahme 2026-10-03 (#2160 Fix-Loop, Loeschdialog laeuft auf 390 px nicht ueber):
+# konto-loeschdialog-mobil-ueberlauf.spec.ts — Ueberlauf wirkt nur im echten Browser
+# (Layout/scrollWidth), nicht in Unit-Tests. Zweitnutzer ueber den Staging-Testweg,
+# eigener Kontext, Aufraeumen im finally. Filter A: kein waitForTimeout/skip/fixme,
+# kein `path:`-Schreibziel (Filter C entfaellt). Filter B: 3 Zyklen im Zielverbund.
+e2e/konto-loeschdialog-mobil-ueberlauf.spec.ts

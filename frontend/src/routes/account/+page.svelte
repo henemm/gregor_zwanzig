@@ -1476,6 +1476,7 @@
 				<div class="space-y-2">
 					<Btn
 						variant="outline"
+						class="h-auto w-full min-w-0 whitespace-normal [overflow-wrap:anywhere]"
 						data-testid="delete-account-send-code"
 						disabled={deleteBusy}
 						onclick={requestDeleteCode}
