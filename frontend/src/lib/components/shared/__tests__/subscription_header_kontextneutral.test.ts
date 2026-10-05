@@ -492,6 +492,27 @@ describe('#2284 S2 v1.1 AC-16 — Kacheln UND Handy-Knopf im selben Markup', () 
 		assert.ok(k.text.includes(NEUTRAL), `ohne Wert fehlt der neutrale Text: „${k.text}"`);
 	});
 
+	// Spec v1.2, Entscheidung 14 / AC-4 / AC-16 (Mutation u): der neutrale Knopftext
+	// ist in BEIDEN Hubs „Aktivität wählen" — derselbe Text, keine kind-Verzweigung;
+	// „Profil wählen" kommt in keiner Ausgabe vor (auch nicht außerhalb des Knopfs).
+	test('ohne Wert: Trip und Vergleich zeigen denselben neutralen Knopftext, „Profil wählen" nirgends', async () => {
+		const tripHtml = await html(await tripSatz({ profile: undefined }));
+		const vergleichHtml = await html(vergleichProps({ profile: undefined }));
+		const t = knopf(tripHtml, 'trip');
+		const v = knopf(vergleichHtml, 'compare-hub');
+		assert.ok(t && v, 'AC-16: Knopf fehlt in mindestens einem Satz');
+		assert.equal(t.text, v.text, `AC-16: neutraler Knopftext unterscheidet sich (Trip „${t.text}" / Vergleich „${v.text}")`);
+		assert.ok(v.text.includes(NEUTRAL), `AC-4: Vergleich ohne Profil zeigt nicht „${NEUTRAL}": „${v.text}"`);
+		for (const body of [
+			tripHtml,
+			vergleichHtml,
+			await html(await tripSatz()),
+			await html(vergleichProps({ profile: 'wintersport' }))
+		]) {
+			assert.ok(!/Profil w(ä|&auml;|&#228;)hlen/.test(body), 'v1.2: „Profil wählen" darf in keiner Ausgabe vorkommen');
+		}
+	});
+
 	test('Gerüst beider Sätze enthält Knopf und Auswahl-Optionen (kein kind-Zweig)', async () => {
 		const t = geruest(await html(await tripSatz()), 'trip', TRIP_OPTIONEN);
 		const v = geruest(await html(vergleichProps()), 'compare-hub', VERGLEICH_OPTIONEN);

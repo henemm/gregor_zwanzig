@@ -32,10 +32,15 @@
 // Handy (375/390 px) zeigt die Aktivitaet als EINEN Knopf `{p}-profil-knopf`
 // (Text = gewaehlte Aktivitaet bzw. „Aktivität wählen"), Tippen oeffnet die
 // Auswahl `{p}-profil-auswahl` mit eigenen Options-testids
-// `{p}-profil-auswahl-option-<wert>`; Desktop behaelt die 8 Kacheln. AC-13 misst
-// die Kartenoberkante in drei Faellen gegen die Basiswerte VOR S2 (Stand
-// 96d020e59), die 200-px-Zusicherung entfaellt (#2497). AC-9 prueft „Reiter
-// bleiben" WAEHREND des Retry, nicht nach vollem Erfolg.
+// `{p}-profil-auswahl-option-<wert>`; Desktop behaelt die 8 Kacheln. AC-9 prueft
+// „Reiter bleiben" WAEHREND des Retry, nicht nach vollem Erfolg.
+//
+// Spec v1.3 (nach F5/PR #2495, Karte entfaellt mobil): AC-13 misst die Oberkante
+// der Etappen-Liste `mobile-stages-list` (≤ 474 px, Basis 472 px am Stand
+// 461c696a2). AC-18 = Titel mobil 20 px/einzeilig/Ellipsis in Trip- UND
+// Vergleich-Hub, Desktop unveraendert. AC-19 = Chip genau einmal mit sichtbarer
+// MTabBar (im Fall AC-10 mobil). Die v1.2-Faelle Pillen-Topmost, /trips/new und
+// Kartenhoehe 126 px sowie der alte AC-13-Kartenfall entfallen.
 //
 // Ausfuehren (CI-Stack): cd frontend && npx playwright test \
 //   e2e/trip-hub-kopf-region-aktivitaet.spec.ts --project=tests
@@ -200,7 +205,7 @@ interface SeededPreset {
 	locIds: string[];
 }
 
-async function seedPreset(page: Page): Promise<SeededPreset> {
+async function seedPreset(page: Page, presetName?: string): Promise<SeededPreset> {
 	const suffix = Date.now();
 	const locIds: string[] = [];
 	for (const [name, lat, lon] of [
@@ -213,7 +218,7 @@ async function seedPreset(page: Page): Promise<SeededPreset> {
 	}
 	const presetRes = await page.request.post('/api/compare/presets', {
 		data: {
-			name: `E2E 2284-S2 ${suffix}`,
+			name: presetName ?? `E2E 2284-S2 ${suffix}`,
 			location_ids: locIds,
 			schedule: 'daily',
 			profil: 'allgemein',
@@ -871,14 +876,23 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			freigeben();
 
 			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 15_000 });
-			await page.unroute(muster);
 			// Ein Eintrag je Feld (kopf-name / kopf-region / kopf-profil): teilen zwei
 			// Felder einen Schluessel, verdraengt der juengere den aelteren und dessen
 			// PUT fehlt hier.
-			expect(
-				puts.map((b) => JSON.stringify(Object.keys(b).sort())).sort(),
-				'AC-9: der Retry muss genau je einen PUT {name}, {region}, {activity} senden'
-			).toEqual(['["activity"]', '["name"]', '["region"]']);
+			// Spec v1.2 (AC-9-Klarstellung, Mutation s): der Chip geht schon nach dem
+			// ERSTEN erfolgreichen Retry-PUT auf `idle` (saveStatusStore.svelte.ts:232-236,
+			// #1433-Bestand), die uebrigen Retry-PUTs folgen danach. Die PUT-Liste wird
+			// deshalb per Zeitgrenze (5 s) abgewartet statt sofort gelesen — verlangt
+			// werden weiterhin ALLE DREI Retry-PUTs, je mit dem richtigen Koerper.
+			await expect
+				.poll(() => puts.map((b) => JSON.stringify(b)).sort(), {
+					message: 'AC-9: der Retry muss genau je einen PUT {name}, {region}, {activity} mit dem Eigenwert senden',
+					timeout: 5_000
+				})
+				.toEqual(
+					[{ activity: 'skitour' }, { name: 'AC-9 Name' }, { region: 'AC-9 Region' }].map((b) => JSON.stringify(b)).sort()
+				);
+			await page.unroute(muster);
 
 			await expect(page.getByTestId('trip-name-edit')).toBeHidden({ timeout: 8_000 });
 			await expect(page.getByTestId('trip-region-edit')).toBeHidden({ timeout: 8_000 });
@@ -916,6 +930,14 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 					await openCompareHub(page, seeded.presetId);
 				}
 				try {
+					// AC-19 (v1.3): mobil steht die untere Tab-Leiste (MTabBar) sichtbar im Hub —
+					// der Chip wird MIT ihr genau einmal gezaehlt.
+					if (vp.mobil) {
+						await expect(
+							page.locator('[data-slot="segmented"][role="tablist"]').first(),
+							'AC-19: MTabBar muss mobil sichtbar sein'
+						).toBeVisible({ timeout: 10_000 });
+					}
 					// Ohne :visible-Filter — ein zweiter, versteckter Chip zaehlt mit.
 					await expect(page.locator('[data-testid="save-indicator"]')).toHaveCount(1, { timeout: 10_000 });
 					const chip = saveIndicator(page);
@@ -1077,21 +1099,20 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		}
 	});
 
-	// ─── AC-13 (Spec v1.1) ───────────────────────────────────────────────────
-	// Kartenoberkante `.mobile-editor` im Etappen-Reiter darf in KEINEM der drei
-	// Messfaelle tiefer liegen als VOR S2 (Basiswerte am Stand 96d020e59, lokaler
-	// Offline-Stack, Rohdaten docs/artifacts/feat-2284-s2-trip-kopf/ac13-messung-vor-s2.json),
-	// Toleranz 2 px. Die fruehere Zusicherung „Karte ≥ 200 px" (und Unterkante ≤
-	// Navigation) entfaellt laut Spec — sie war auch vor S2 nie erfuellt; das
-	// Alt-Problem kleiner Handys bearbeitet #2497.
+	// ─── AC-13 (Spec v1.3) ───────────────────────────────────────────────────
+	// Seit F5 (PR #2495) zeigt der Etappen-Reiter mobil nur eine Liste
+	// (`mobile-stages-list`), keine Karte. Messpunkt = Oberkante dieser Liste bei
+	// scrollY = 0 (Trip ohne laufende Datumsverschiebung/`cascade-strip`). Basis
+	// VOR S2 (Stand 461c696a2, lokaler Offline-Stack, je 2 Laeufe identisch, Rohdaten
+	// docs/artifacts/feat-2284-s2-trip-kopf/basis-v13-messung.json): in allen drei
+	// Faellen 472 px, Grenze Basis + 2 px = 474 px.
 	//
 	// Seeds = dieselben wie bei der Basismessung:
 	//  - 375x667 „langer Name": seedTrip('ac13') dieser Datei (Name „E2E 2284-S2 <6 Ziffern>",
-	//    Shortcode S2K ⇒ Ueberschrift vor S2 vierzeilig, 131,1 px).
+	//    Shortcode S2K).
 	//  - 390x700 „E2E Kurz" und 390x844 „E2E GR20 Nordabschnitt Etappenplan": Seed der
-	//    Ratschen-Spec mobile-editor-controls-viewport.spec.ts (makeSeed: Region Korsika,
-	//    3 Etappen 2026-08-01..03, kein Shortcode, keine Aktivitaet). Hier nachgebaut,
-	//    weil die Ratschen-Spec ihren Seed nicht exportiert.
+	//    frueheren Ratschen-Spec (Region Korsika, 3 Etappen 2026-08-01..03, kein
+	//    Shortcode, keine Aktivitaet), hier nachgebaut.
 	const ac13Seed = (id: string, name: string) => ({
 		id,
 		name,
@@ -1110,50 +1131,49 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		}
 	});
 
+	const AC13_BASIS_VOR_S2 = 472;
+	const AC13_GRENZE = AC13_BASIS_VOR_S2 + 2;
+
 	for (const fall of [
-		{ label: '375x667 langer Name', size: { width: 375, height: 667 }, basis: 600.8, ratsche: null },
-		{ label: '390x700 E2E Kurz', size: { width: 390, height: 700 }, basis: 482.5, ratsche: 'E2E Kurz' },
-		{
-			label: '390x844 GR20',
-			size: { width: 390, height: 844 },
-			basis: 600.8,
-			ratsche: 'E2E GR20 Nordabschnitt Etappenplan'
-		}
+		{ label: '375x667 langer Name', size: { width: 375, height: 667 }, name: null },
+		{ label: '390x700 E2E Kurz', size: { width: 390, height: 700 }, name: 'E2E Kurz' },
+		{ label: '390x844 GR20', size: { width: 390, height: 844 }, name: 'E2E GR20 Nordabschnitt Etappenplan' }
 	] as const) {
-		test(`AC-13 (${fall.label}): Kartenoberkante nicht tiefer als vor S2 (≤ ${(fall.basis + 2).toFixed(1)} px), Kopf ohne Querscrollen, Tippflaechen ≥ 44 px`, async ({
+		test(`AC-13 (${fall.label}): Oberkante der Etappen-Liste ≤ ${AC13_GRENZE} px (vor S2 ${AC13_BASIS_VOR_S2}), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px`, async ({
 			page
 		}, testInfo) => {
 			await page.setViewportSize(fall.size);
 			let id: string;
-			if (fall.ratsche) {
+			if (fall.name) {
 				id = `e2e-2284-s2-ac13-${fall.size.height}-${Date.now()}`;
-				const res = await page.request.post('/api/trips', { data: ac13Seed(id, fall.ratsche) });
+				const res = await page.request.post('/api/trips', { data: ac13Seed(id, fall.name) });
 				expect(res.ok(), `Trip-Anlage HTTP ${res.status()}: ${await res.text()}`).toBeTruthy();
 			} else {
 				id = await seedTrip(page, 'ac13');
 			}
 			try {
 				await openTripHub(page, id, 'stages');
-				const karte = page.getByTestId('mobile-editor');
-				await expect(karte).toBeVisible({ timeout: 10_000 });
+				const liste = page.getByTestId('mobile-stages-list');
+				await expect(liste).toBeVisible({ timeout: 10_000 });
+				await expect(page.getByTestId('cascade-strip'), 'Vorbedingung: keine laufende Datumsverschiebung').toHaveCount(0);
 
-				// ZUERST messen und protokollieren — vor jedem Lookup neuer testids, damit
+				// ZUERST messen und protokollieren — vor jedem Grenzwert-Vergleich, damit
 				// auch der RED-Lauf die Ist-Werte ins Protokoll schreibt.
 				const messen = () =>
 					page.evaluate(() => {
-						const r = (sel: string) => document.querySelector(sel)?.getBoundingClientRect();
-						const kopf = r('header.trip-header');
-						const ed = r('[data-testid="mobile-editor"]');
-						const bc = r('[data-testid="trip-detail-breadcrumb-bar"]');
+						const top = (sel: string) => {
+							const e = document.querySelector(sel);
+							return e ? Math.round(e.getBoundingClientRect().top * 10) / 10 : -1;
+						};
+						const kopf = document.querySelector('header.trip-header');
 						return {
-							kopfHoehe: kopf ? Math.round(kopf.height * 10) / 10 : -1,
-							breadcrumbHoehe: bc ? Math.round(bc.height * 10) / 10 : -1,
-							karteOben: ed ? Math.round(ed.top * 10) / 10 : -1,
-							karteHoehe: ed ? Math.round(ed.height * 10) / 10 : -1
+							listeOben: top('[data-testid="mobile-stages-list"]'),
+							navOben: top('[data-testid="bottom-nav"]'),
+							kopfHoehe: kopf ? Math.round(kopf.getBoundingClientRect().height * 10) / 10 : -1,
+							scrollY: window.scrollY
 						};
 					});
-				// Der Editor startet mit 400 px und misst erst im Effekt nach — erst zwei
-				// gleiche Messungen hintereinander gelten als eingeschwungen.
+				// Layout einschwingen lassen: zwei gleiche Messungen hintereinander.
 				let mass = await messen();
 				await expect
 					.poll(
@@ -1169,9 +1189,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 				protokoll(
 					testInfo,
 					`AC-13 Messung ${fall.label}`,
-					`Karte oben=${mass.karteOben}px (Basis vor S2 ${fall.basis}px, Grenze ${fall.basis + 2}px) · ` +
-						`Karte Hoehe=${mass.karteHoehe}px · Kopf(header.trip-header)=${mass.kopfHoehe}px · ` +
-						`Breadcrumb-Leiste=${mass.breadcrumbHoehe}px`
+					`Liste oben=${mass.listeOben}px (Basis vor S2 ${AC13_BASIS_VOR_S2}px, Grenze ${AC13_GRENZE}px) · ` +
+						`Navigation oben=${mass.navOben}px · Kopf(header.trip-header)=${mass.kopfHoehe}px · scrollY=${mass.scrollY}`
 				);
 
 				const bar = page.getByTestId('trip-detail-breadcrumb-bar');
@@ -1190,11 +1209,18 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 					vorab.push(`${z.name}=${b ? `${Math.round(b.width)}x${Math.round(b.height)}` : 'fehlt'}`);
 				}
 				protokoll(testInfo, `AC-13 Tippflaechen (vorab) ${fall.label}`, vorab.join(' · '));
-				expect(mass.karteOben, 'AC-13: .mobile-editor muss gemessen sein').toBeGreaterThan(0);
+
+				expect(mass.scrollY, 'AC-13: Messung nur bei scrollY = 0 gueltig').toBe(0);
+				expect(mass.listeOben, 'AC-13: mobile-stages-list muss gemessen sein').toBeGreaterThan(0);
+				expect(mass.navOben, 'AC-13: bottom-nav muss gemessen sein').toBeGreaterThan(0);
 				expect(
-					mass.karteOben,
-					`AC-13: die Karte liegt tiefer als vor S2 (${mass.karteOben} px > ${fall.basis} px + 2 px Toleranz)`
-				).toBeLessThanOrEqual(fall.basis + 2);
+					mass.listeOben,
+					`AC-13: die Etappen-Liste liegt tiefer als vor S2 (${mass.listeOben} px > ${AC13_BASIS_VOR_S2} px + 2 px Toleranz)`
+				).toBeLessThanOrEqual(AC13_GRENZE);
+				expect(
+					mass.listeOben,
+					`AC-13: die Etappen-Liste beginnt nicht oberhalb der Navigation (${mass.listeOben} px ≥ ${mass.navOben} px)`
+				).toBeLessThan(mass.navOben);
 
 				// Kein horizontales Scrollen; alle Kopf-Bedienelemente innerhalb der Breite.
 				const querScroll = await page.evaluate(
@@ -1218,4 +1244,117 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			}
 		});
 	}
+
+	// ─── AC-18 (Spec v1.3, Entscheidung 16: F1 im Baustein) ──────────────────
+	// Mobil (375x667) hat der Titel in BEIDEN Hubs 20 px, bleibt einzeilig und
+	// endet mit Ellipsis (echte Kuerzung: scrollWidth > clientWidth), die Seite
+	// scrollt nicht horizontal. Desktop (1280x900): Titelgroesse == Groesse VOR S2.
+	// Vor-S2-Werte (Stand 461c696a2) aus Quelltext/Token abgeleitet, NICHT aus dem
+	// WIP gemessen — Wert + Quelle: docs/artifacts/feat-2284-s2-trip-kopf/ac18-desktop-basis.json.
+	const AC18_LANGER_NAME =
+		'E2E 2284-S2 Nordabschnitt Etappenplan mit einem ausgesprochen langen Namen der auf dem Handy gekuerzt werden muss';
+	const AC18_DESKTOP_VOR_S2 = { trip: '38px', vergleich: '30px' } as const;
+
+	/** Misst die Titel-Ueberschrift: Schriftgroesse, Hoehe, Kuerzung, Seitenueberlauf. */
+	async function titelMessen(page: Page, h1: ReturnType<Page['locator']>) {
+		const t = await h1.evaluate((el) => {
+			const cs = getComputedStyle(el);
+			return {
+				fontSize: cs.fontSize,
+				textOverflow: cs.textOverflow,
+				whiteSpace: cs.whiteSpace,
+				hoehe: Math.round(el.getBoundingClientRect().height * 10) / 10,
+				scrollWidth: (el as HTMLElement).scrollWidth,
+				clientWidth: (el as HTMLElement).clientWidth
+			};
+		});
+		const seite = await page.evaluate(() => ({
+			docScrollWidth: document.documentElement.scrollWidth,
+			innerWidth: window.innerWidth
+		}));
+		return { ...t, ...seite };
+	}
+
+	type TitelMass = Awaited<ReturnType<typeof titelMessen>>;
+	const titelProtokoll = (m: TitelMass) =>
+		`font-size=${m.fontSize} · Hoehe=${m.hoehe}px · text-overflow=${m.textOverflow} · white-space=${m.whiteSpace} · ` +
+		`Titel scrollWidth=${m.scrollWidth}/clientWidth=${m.clientWidth} · Seite scrollWidth=${m.docScrollWidth}/innerWidth=${m.innerWidth}`;
+
+	function pruefeTitelMobil(m: TitelMass, hub: string) {
+		expect(m.fontSize, `AC-18 (${hub}): Titel mobil ist nicht 20 px gross (F1 im Baustein)`).toBe('20px');
+		expect(m.hoehe, `AC-18 (${hub}): Titel ist mehrzeilig (${m.hoehe} px hoch bei ${m.fontSize})`).toBeLessThan(
+			2 * parseFloat(m.fontSize)
+		);
+		expect(m.textOverflow, `AC-18 (${hub}): text-overflow ist nicht ellipsis`).toBe('ellipsis');
+		expect(
+			m.scrollWidth,
+			`AC-18 (${hub}): der Titel wird nicht gekuerzt (scrollWidth ${m.scrollWidth} ≤ clientWidth ${m.clientWidth})`
+		).toBeGreaterThan(m.clientWidth);
+		expect(m.docScrollWidth, `AC-18 (${hub}): die Seite scrollt horizontal`).toBeLessThanOrEqual(m.innerWidth);
+	}
+
+	test('AC-18 (Trip, Handy 375x667): Titel 20 px, einzeilig, Ellipsis, kein Seitenueberlauf', async ({ page }, testInfo) => {
+		await page.setViewportSize({ width: 375, height: 667 });
+		const id = await seedTrip(page, 'ac18-m', { name: AC18_LANGER_NAME });
+		try {
+			await openTripHub(page, id);
+			const h1 = page.getByTestId('trip-detail-h1');
+			await expect(h1).toContainText(AC18_LANGER_NAME);
+			const m = await titelMessen(page, h1);
+			protokoll(testInfo, 'AC-18 Trip mobil', titelProtokoll(m));
+			pruefeTitelMobil(m, 'Trip');
+		} finally {
+			await deleteTrip(page, id);
+		}
+	});
+
+	test('AC-18 (Vergleich, Handy 375x667): Titel 20 px, einzeilig, Ellipsis, kein Seitenueberlauf', async ({
+		page
+	}, testInfo) => {
+		await page.setViewportSize({ width: 375, height: 667 });
+		const seeded = await seedPreset(page, AC18_LANGER_NAME);
+		try {
+			await openCompareHub(page, seeded.presetId);
+			// Der Vergleich-Titel hat keine testid (nur der Trip reicht `titleTestid`
+			// durch): die einzige Ueberschrift der Seite, die Zaehlung sichert den Selektor.
+			const h1 = page.locator('h1');
+			await expect(h1, 'Vorbedingung: genau eine h1 im Vergleich-Hub').toHaveCount(1);
+			await expect(h1).toContainText(AC18_LANGER_NAME);
+			const m = await titelMessen(page, h1);
+			protokoll(testInfo, 'AC-18 Vergleich mobil', titelProtokoll(m));
+			pruefeTitelMobil(m, 'Vergleich');
+		} finally {
+			await cleanupPreset(page, seeded);
+		}
+	});
+
+	test('AC-18 (Trip, Desktop 1280x900): Titelgroesse unveraendert gegenueber vor S2', async ({ page }, testInfo) => {
+		await page.setViewportSize(DESKTOP);
+		const id = await seedTrip(page, 'ac18-d');
+		try {
+			await openTripHub(page, id);
+			const m = await titelMessen(page, page.getByTestId('trip-detail-h1'));
+			protokoll(testInfo, 'AC-18 Trip Desktop', `${titelProtokoll(m)} · Basis vor S2 ${AC18_DESKTOP_VOR_S2.trip}`);
+			expect(m.fontSize, 'AC-18 (Trip Desktop): Titelgroesse weicht von vor S2 ab').toBe(AC18_DESKTOP_VOR_S2.trip);
+		} finally {
+			await deleteTrip(page, id);
+		}
+	});
+
+	test('AC-18 (Vergleich, Desktop 1280x900): Titelgroesse unveraendert gegenueber vor S2', async ({ page }, testInfo) => {
+		await page.setViewportSize(DESKTOP);
+		const seeded = await seedPreset(page);
+		try {
+			await openCompareHub(page, seeded.presetId);
+			const h1 = page.locator('h1');
+			await expect(h1, 'Vorbedingung: genau eine h1 im Vergleich-Hub').toHaveCount(1);
+			const m = await titelMessen(page, h1);
+			protokoll(testInfo, 'AC-18 Vergleich Desktop', `${titelProtokoll(m)} · Basis vor S2 ${AC18_DESKTOP_VOR_S2.vergleich}`);
+			expect(m.fontSize, 'AC-18 (Vergleich Desktop): Titelgroesse weicht von vor S2 ab').toBe(
+				AC18_DESKTOP_VOR_S2.vergleich
+			);
+		} finally {
+			await cleanupPreset(page, seeded);
+		}
+	});
 });

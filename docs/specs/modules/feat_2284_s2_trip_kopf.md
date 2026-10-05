@@ -2,9 +2,9 @@
 entity_id: feat_2284_s2_trip_kopf
 type: feature
 created: 2026-10-03
-updated: 2026-10-03
+updated: 2026-10-04
 status: draft
-version: "1.1"
+version: "1.3"
 tags: [trip-hub, compare-hub, kopf, shared, paritaet, save-chip, mobil]
 workflow: feat-2284-s2-trip-kopf
 ---
@@ -40,35 +40,46 @@ Nach S2 gilt für beide Hubs dasselbe:
    „REGION · DATUM". Die Region steht jetzt in einer eigenen Zeile unter dem Namen und ist per Stift
    änderbar.
 3. **Handy: Kopf wird nicht höher als vorher.** Der Kopf bekommt zwei neue Zeilen (Region, Aktivität). Damit
-   die Karte im Etappen-Reiter dadurch nicht nach unten rutscht, wird der Handy-Kopf an anderer Stelle enger
-   gesetzt, ohne dass Inhalt entfällt (Entscheidungen 14 und 15; AC-13: Kartenoberkante in den drei
-   gemessenen Fällen nicht tiefer als vor S2). Die frühere Zusicherung „Karte mindestens 200 px hoch bei
-   375x667" entfällt, weil sie auch vor S2 nie erfüllt war (gemessen: 375x667 lag die Karte schon vorher
-   unter der unteren Navigation); das Alt-Problem wird in #2497 bearbeitet.
+   die Etappen-Liste im Etappen-Reiter dadurch nicht nach unten rutscht, wird der Handy-Kopf an anderer Stelle
+   enger gesetzt, ohne dass Inhalt entfällt (Entscheidungen 14 und 15; AC-13: Oberkante der Etappen-Liste in
+   den drei gemessenen Fällen höchstens 2 px tiefer als vor S2). Seit PR #2495 (PO-Entscheid F5 Variante B,
+   2026-09-22) zeigt der Etappen-Reiter mobil nur noch eine Liste, keine Karte und kein Höhenprofil mehr; der
+   Messpunkt ist deshalb die Liste.
 4. **Der Speicher-Chip** (unten rechts, fest am Bildschirmrand) sieht in beiden Hubs gleich aus und läuft
    gleich ab („Speichere…", dann „Gespeichert HH:MM"). Seine Position am Bildschirm ändert sich nicht.
 5. **Region leeren zeigt „—"** statt einer leeren Zeile, in **beiden** Hubs (siehe Entscheidung 13).
 6. **Handy: „Test-Briefing" steht in der Zeile von Pausieren/Archivieren** (Breadcrumb-Leiste) statt in einer
    eigenen Zeile darunter (Entscheidung 15).
+7. **(v1.2) Der Knopf heißt in beiden Hubs „Aktivität wählen ▾", solange nichts gewählt ist.** In v1.1 stand
+   für den Vergleich „Profil wählen ▾" (Entscheidung 14).
+8. **(v1.3) Der Vergleich-Titel ist auf dem Handy so groß wie der Trip-Titel.** Der Titel im Kopf-Baustein
+   bekommt mobil die F1-Darstellung (20 px, einzeilig, mit „…" bei Überlänge; Entscheidung 16). Im Trip-Hub
+   bleibt der von F1 (PO 2026-09-22) gewollte Wert von 20 px erhalten; im Vergleich-Hub wächst der Titel mobil
+   von 16 auf 20 px (Parität). Am Desktop ändert sich keine Titelgröße. (Der v1.2-Punkt „Karte auf sehr kleinen
+   Handys" entfällt: Die Karte gibt es mobil im Etappen-Reiter nicht mehr.)
 
 ## Source
 
 - **Frontend (Pfade relativ zu `frontend/src/`):**
-  `lib/components/shared/subscription-header/SubscriptionHeader.svelte` (MODIFY),
+  `lib/components/shared/subscription-header/SubscriptionHeader.svelte` (MODIFY; v1.3: Titel mobil F1),
   `lib/components/shared/tripSpeicherung.ts` (MODIFY: Helper `speichereKopfFeld`),
   `lib/types.ts` (MODIFY: `ACTIVITY_TYPE_OPTIONS`),
-  `lib/components/trip-detail/TripHeader.svelte` (MODIFY: mountet den Baustein),
+  `lib/components/trip-detail/TripHeader.svelte` (MODIFY: mountet den Baustein; v1.3: toter F1-CSS-Block auf
+  `.trip-h1` entfernt),
   `lib/components/trip-detail/TripTabs.svelte` (MODIFY: Aktivitäts-Auswahlliste raus, `activityType` reaktiv),
   `lib/components/compare/CompareTabs.svelte` (MODIFY: Chip-Mount und Import raus),
   `routes/compare/[id]/+page.svelte` (MODIFY: `saveController={hubSaveCtl}` am Baustein, nutzt
   `speichereKopfFeld`),
   `routes/trips/[id]/+page.svelte` (MODIFY: enthält die Breadcrumb-Leiste `trip-detail-breadcrumb-bar`;
   „Test-Briefing" wandert mobil in deren Aktionszeile, vertikale Abstände mobil enger)
+- **Frontend-Test (v1.3):** `frontend/e2e/mobile-stages-listen-only.spec.ts` (MODIFY: Selektor `.trip-h1` ->
+  `[data-testid="trip-detail-h1"]`, Zusicherung 20 px unverändert)
 - **Go-API (nur Test):** `internal/handler/trip_region_test.go` (MODIFY: Zwei-Nutzer-Fall)
 - **Identifier:** `SubscriptionHeader`, `titleTestid`, `saveController`, `namePrefix`, `onSaveField`,
   `speichereKopfFeld`, `ACTIVITY_TYPE_OPTIONS`, `trip-detail-h1`, `trip-detail-breadcrumb-bar`,
   `trip-region-edit-toggle|edit|save|save-error`, `trip-profil-option-{activity}`, `trip-profil-knopf`,
-  `trip-profil-auswahl`, `trip-profil-auswahl-option-{activity}`, `trip-profil-save-error`, `save-indicator`
+  `trip-profil-auswahl`, `trip-profil-auswahl-option-{activity}`, `trip-profil-save-error`, `save-indicator`,
+  `mobile-stages-list`, `cascade-strip`
 
 > **Schicht-Hinweis:** ausschließlich **Frontend** plus ein Go-Test. Kein neuer Endpoint, kein Schema-
 > Eingriff: `PUT /api/trips/{id}` trägt `region` (`internal/handler/trip.go:260`) und `activity` (`:261`)
@@ -79,7 +90,12 @@ Nach S2 gilt für beide Hubs dasselbe:
 
 Verbindlich aus der Analyse (`docs/context/feat-2284-s2-trip-kopf.md`, Abschnitt „Analysis"), Entscheidungen
 14 und 15 vom PO am 2026-10-03 nach dem CI-Rot (Fix-Loop, Übergabe
-`docs/artifacts/feat-2284-s2-trip-kopf/ci-fixloop-uebergabe.md`).
+`docs/artifacts/feat-2284-s2-trip-kopf/ci-fixloop-uebergabe.md`), die Anpassung von Entscheidung 14 (Knopftext)
+als Tech-Lead-Entscheidung am 2026-10-04 nach GREEN v1.1
+(`docs/artifacts/feat-2284-s2-trip-kopf/green-v11-befund.md`). Die v1.2-Entscheidung 16
+(F002/Kartenhöhenband in `EditStagesPanelNew.svelte`) **entfällt ersatzlos** (v1.3): Seit dem Merge von
+`origin/main` (PR #2495, F5 Variante B) gibt es mobil im Etappen-Reiter keine Karte und kein `.mobile-editor`
+mehr. Die neue Entscheidung 16 ist die „F1 im Baustein".
 
 1. **`trip-detail-h1` über optionalen Prop.** Der Baustein bekommt `titleTestid` (Trip:
    `'trip-detail-h1'`, Vergleich: nicht gesetzt ⇒ keine testid). Das ist ein Prop, kein `kind`-Zweig. Die
@@ -130,12 +146,21 @@ Verbindlich aus der Analyse (`docs/context/feat-2284-s2-trip-kopf.md`, Abschnitt
     Die Abweichung betrifft S1-AC-12 (Vergleich-Verhalten unverändert) nicht, weil der Vergleich bei
     `region=""` bisher eine leere Zeile zeigte, die nirgends zugesichert war; sie ist eine bewusste
     Verbesserung und wird im Vergleich mitgeprüft (AC-3).
+    **(v1.3, Feststellung, keine Änderung:)** Seit #2211 gilt für optionale PUT-Felder die Drei-Zustands-Regel
+    (`docs/reference/api_contract.md` ca. Z. 1038-1048, `docs/specs/bugfix/optional_felder_null_leert.md`).
+    Geprüft: Der Trip-Kopf leert die Region mit `{region: ""}`; laut Kontrakt gilt „Wert ⇒ gesetzt", der leere
+    Text ist ein Wert ⇒ weiter kontraktkonform. Der Vergleich sendet `{display_config: {region: v}}`
+    (flacher Merge, `""` überschreibt) ⇒ in Ordnung. Entscheidung 13 und AC-3 bleiben unverändert.
 14. **Handy-Kompaktknopf (PO 2026-10-03).** Unterhalb des `desktop:`-Breakpoints zeigt der Baustein die
     Aktivität (Trip) bzw. das Aktivitätsprofil (Vergleich) als **einen Knopf** mit der gewählten Aktivität
     (z. B. „Trekking ▾"). Tippen öffnet die Auswahl der 8 Möglichkeiten; eine Wahl speichert wie eine Kachel
     (**derselbe Speicherweg** `onSaveField` bzw. `speichereKopfFeld`, gleiche Fehler-, Konflikt- und
     Offline-Behandlung). Ohne gespeicherte Aktivität zeigt der Knopf den neutralen Text „Aktivität wählen ▾"
-    (im Vergleich „Profil wählen ▾"). Die Tippfläche des Knopfes und jeder Auswahl-Option ist **≥ 44 px**.
+    **in beiden Hubs** (**v1.2, Abweichung vom v1.1-Wortlaut**, der für den Vergleich „Profil wählen ▾"
+    nannte). Begründung: Die Desktop-Kachelreihe im Vergleich trägt keine Überschrift „Profil", nur
+    Kacheltexte (`SubscriptionHeader.svelte:139-156`); der Kerntest „Vergleich ohne Profil" erwartet bereits
+    „Aktivität wählen"; und „keine `kind`-Verzweigung im Markup" gilt weiter, ein Hub-abhängiger Text wäre
+    eine solche. Die Tippfläche des Knopfes und jeder Auswahl-Option ist **≥ 44 px**.
     Der Desktop (ab `desktop:`) bleibt bei der Kachelreihe. Geteilter Baustein, **keine `kind`-Verzweigung**
     im Markup: dasselbe Markup in beiden Hubs, die Umschaltung Kacheln ⇔ Knopf geschieht per CSS-Breakpoint
     (Kacheln mobil `display:none`, Knopf am Desktop `display:none`).
@@ -149,15 +174,32 @@ Verbindlich aus der Analyse (`docs/context/feat-2284-s2-trip-kopf.md`, Abschnitt
     **Abgelehnte Alternativen (PO):** Kopf einklappbar; Aktivität zurück in die Etappen; Kennzahlen und
     Knöpfe auf dem Handy entfernen; nur Knopf ohne weitere Straffung (Entscheidung 15).
 15. **„Nicht schlechter als vorher" (PO 2026-10-03).** Zusätzlich zum Knopf wird der Handy-Kopf enger
-    gesetzt; **kein Inhalt entfällt.** Konkret: (a) „Test-Briefing" steht auf dem Handy in derselben Zeile
-    wie Pausieren/Archivieren (Breadcrumb-Leiste `trip-detail-breadcrumb-bar` in `routes/trips/[id]/
-    +page.svelte`), spart ca. 36 px; (b) die vertikalen Abstände im Kopf werden mobil von 16 auf 8 px
-    gesetzt, spart ca. 24 px. **Ziel-Rechnung** (Messung 2026-10-03, lokaler Offline-Stack, S2-Stand
-    Kartenoberkante 643,6 px in allen drei Fällen): 643,6 − 114 (Knopf statt 4 Kachelzeilen) − 36
-    (Test-Briefing) − 24 (Abstände) ≈ **469,6 px**. Gegen die Basiswerte vor S2 (Stand 96d020e59): 375x667
-    langer Name 600,8 ⇒ 131 px Reserve; 390x700 „E2E Kurz" 482,5 ⇒ 12,9 px Reserve; 390x844 600,8 ⇒ 131 px
-    Reserve. Der knappste Fall ist 390x700 (Reserve unter 13 px); die Rechnung ist eine Schätzung, maßgeblich
-    ist die Messung im RED/GREEN-Lauf (Toleranz 2 px, AC-13).
+    gesetzt; **kein Inhalt entfällt** (Straffung, keine Inhalte entfernen). Konkret: (a) „Test-Briefing" steht
+    auf dem Handy in derselben Zeile wie Pausieren/Archivieren (Breadcrumb-Leiste `trip-detail-breadcrumb-bar`
+    in `routes/trips/[id]/+page.svelte`), spart ca. 36 px; (b) die vertikalen Abstände im Kopf werden mobil
+    von 16 auf 8 px gesetzt, spart ca. 24 px. **(v1.3) Messpunkt und Basis neu:** Seit PR #2495 gibt es im
+    Etappen-Reiter mobil keine Karte mehr; der Messpunkt ist die Oberkante von
+    `[data-testid="mobile-stages-list"]` (scrollY = 0, Trip ohne laufende Datumsverschiebung/`cascade-strip`).
+    Basiswerte gemessen 2026-10-04 am Stand `461c696a2` (ohne S2), lokaler Offline-Stack, je 2 Läufe
+    identisch: 375x667 langer Name **472 px**, 390x700 „E2E Kurz" **472 px**, 390x844 „E2E GR20 Nordabschnitt
+    Etappenplan" **472 px**. Ist-Stand mit S2 (GREEN v1.1 plus Merge): **479 px** in allen drei Fällen ⇒ AC-13
+    ist zum Zeitpunkt der Spec-Fassung rot, GREEN muss mindestens 5 px einsparen (Richtwert 7 px, siehe
+    Mutation (w)), ohne Inhalt zu streichen. Die v1.1-Rechnung und die alten Basiswerte (600,8 / 482,5 /
+    600,8 px, Kartenoberkante) entfallen. Maßgeblich ist die Messung im RED/GREEN-Lauf (AC-13). Die Mess-Spec
+    ist temporär; die Werte stehen im Artefakt `docs/artifacts/feat-2284-s2-trip-kopf/basis-v13-messung.json`.
+16. **F1 im Baustein (v1.3, ersetzt die entfallene F002-Entscheidung).** F1 (PO 2026-09-22): Trip-Titel mobil
+    20 px (`--g-text-xl`), einzeilig mit Ellipsis; in `main` als CSS-Block auf `.trip-h1` in `TripHeader.svelte`
+    umgesetzt. Nach S2 sitzt das `h1` im Baustein (`SubscriptionHeader.svelte`, ca. Z. 110, mobil
+    `truncate min-w-0`, Schrift `text-base` = 16 px); der Block aus `main` trifft kein Element mehr. Gemessen
+    2026-10-04 (375x667): ohne S2 Trip-Titel 20 px, mit S2 16 px; Vergleich-Hub-Titel in beiden Ständen 16 px.
+    Entscheidung: Der Baustein-Titel bekommt mobil die F1-Darstellung (20 px `--g-text-xl`, einzeilig,
+    Ellipsis). Das gilt als geteilter Baustein, **ohne `kind`-Verzweigung, auch für den Vergleich-Hub** (dort
+    heute 16 px, künftig 20 px; Parität Trip/Vergleich, CLAUDE.md-Teilungs-Invariante). Der tote F1-CSS-Block
+    in `TripHeader.svelte` wird entfernt. `mobile-stages-listen-only.spec.ts` stellt den Selektor von
+    `.trip-h1` auf `[data-testid="trip-detail-h1"]` um; die Zusicherung (20 px) bleibt unverändert (die Datei
+    steht nicht in der CI-Positivliste und würde sonst nach S2 rot). Der Desktop-Titel bleibt unverändert.
+    Der höhere Titel kostet mobil keine Zeile (einzeilig), wird aber bei der Straffung (Entscheidung 15) in
+    der Messung mitgezählt.
 
 ## Zuordnung zum Issue und Abweichungen vom Zielbild
 
@@ -175,8 +217,9 @@ Weitere Abweichungen vom Issue-Zielbild:
 - **Rückbau der Wrapper** `AlarmeScheduleTab`/`BriefingScheduleTab` ist S3.
 - Das Issue sagt „Aktivität im Kopf" nicht ausdrücklich; sie wandert hier mit, weil der Baustein ein
   Profil/Aktivitäts-Feld kennt und der Trip es sonst nirgends im Kopf hätte (Analyse, Entscheidung 5).
-- **Alt-Problem „Karte auf kleinen Handys (375x667) unter der Navigation"** ist nicht Teil von S2, sondern
-  Ticket **#2497**.
+- **Alt-Problem „Karte auf kleinen Handys (375x667) unter der Navigation"** (Ticket **#2497**): durch F5
+  (PR #2495, mobil keine Karte mehr im Etappen-Reiter) vermutlich gegenstandslos; die Klärung des Issues
+  erfolgt außerhalb dieser Spec.
 
 ## Acceptance Criteria
 
@@ -212,7 +255,8 @@ dem Neuladen ist weiter „Skitour" gewählt (am Desktop die Kachel „Skitour" 
 `data-selected="true"`); im Etappen-Reiter existiert **kein** Element `edit-activity-dropdown` mehr. Ein
 Trip ohne gespeicherte Aktivität zeigt am Desktop alle Kacheln ungewählt und auf dem Handy den Knopf mit dem
 neutralen Text „Aktivität wählen". Im Vergleich-Hub gilt dasselbe für das Aktivitätsprofil mit den
-bestehenden Vergleich-testids (Präfix `{p}` des Bausteins statt `trip`).
+bestehenden Vergleich-testids (Präfix `{p}` des Bausteins statt `trip`); ein Vergleich ohne Profil zeigt auf
+dem Handy ebenfalls den Knopftext „Aktivität wählen" (v1.2, Entscheidung 14).
 
 **AC-5:** Given der Trip-Hub ist im Etappen-Reiter geöffnet und zeigt Etappen mit Ankunftszeiten When der
 Nutzer im Kopf die Aktivität von „Trekking" auf „Skitour" wechselt Then ändern sich die Ankunftszeiten der
@@ -251,7 +295,12 @@ neu aufzubauen (ein im Etappen-Reiter geöffneter Zustand bleibt erhalten, solan
 **vollem** Retry-Erfolg dürfen die Reiter den Server-Stand neu zeigen (#1433-Verhalten,
 `routes/trips/[id]/+page.svelte:77-83`); die Zusicherung „Reiter bleiben" gilt nur während des Retry. Dieses
 Verhalten entspricht dem #1433-Konfliktschutz (AC-10, AC-15, AC-18 der Spec `trip_mehrreiter_konfliktschutz`)
-und gilt für `region` als neues Eigenfeld gleichermaßen.
+und gilt für `region` als neues Eigenfeld gleichermaßen. **(v1.2, Klarstellung, Wortlaut unverändert:)** Der
+Chip geht nach dem **ersten** erfolgreichen Retry-PUT auf `idle` (`saveStatusStore.svelte.ts:232-236`,
+#1433-Bestand), die übrigen Retry-PUTs folgen danach; das Produkt sendet alle drei (Trace: alle 200). Der
+E2E-Fall (`trip-hub-kopf-region-aktivitaet.spec.ts`, Fall AC-9) hatte ein Race im Test, nicht im Produkt: Er
+las die PUT-Liste sofort bei `idle`. Er wartet künftig per Zeitgrenze auf **alle drei** Retry-PUTs mit den
+richtigen Körpern (siehe Test-Plan).
 
 **AC-10:** Given der Trip-Hub oder der Vergleich-Hub ist geöffnet (Desktop 1280 px und Mobil 375 px) When
 die Seite geladen ist Then existiert im DOM **genau ein** Element `save-indicator` (`locator.count() ===
@@ -274,17 +323,19 @@ Aktivitäts-Auswahlliste, und ein Tippen auf den gesperrten Knopf öffnet die Au
 `pwa-offline-sperre-und-mandant` zeigt für die Aktivität auf den neuen Ort (Kachel bzw. Knopf statt
 Auswahlliste), die Aussage „offline gesperrt" bleibt erhalten.
 
-**AC-13:** Given ein Trip ist im Etappen-Reiter auf dem Handy geöffnet (drei Messfälle: 375x667 mit langem
-Namen, 390x700 Trip „E2E Kurz", 390x844) When die Seite geladen ist Then liegt die Kartenoberkante von
-`.mobile-editor` in **keinem** der drei Fälle tiefer als vor S2 (Basiswerte gemessen am Stand 96d020e59:
-375x667 langer Name **600,8 px**; 390x700 „E2E Kurz" **482,5 px**; 390x844 **600,8 px**; Toleranz 2 px, also
-höchstens 602,8 / 484,5 / 602,8 px), alle Bedienelemente des Kopfes (Knopf, Stift an der Region,
-Breadcrumb-Knöpfe inklusive „Test-Briefing") sind ohne horizontales Scrollen erreichbar, und alle
-Tippflächen sind ≥ 44 px. Die frühere Zusicherung „Karte mindestens 200 px hoch bei 375x667" **entfällt**:
-Sie war auch vor S2 nie erfüllt (gemessen: Kartenhöhe 200 px nur als Rückfall, Unterkante unter der unteren
-Navigation), ist also kein S2-Ziel; das Alt-Problem kleiner Handys wird in **#2497** bearbeitet. Die
-Ratschen-Spec `mobile-editor-controls-viewport*` (700 px) muss **ohne Änderung an der Spec-Datei** grün
-werden (AC-14-Prinzip).
+**AC-13:** Given ein Trip ist im Etappen-Reiter auf dem Handy geöffnet (scrollY = 0, Trip ohne laufende
+Datumsverschiebung/`cascade-strip`; drei Messfälle: 375x667 mit langem Namen (Seed `ac13`), 390x700 Trip
+„E2E Kurz", 390x844 „E2E GR20 Nordabschnitt Etappenplan") When die Seite geladen ist Then liegt die Oberkante
+von `[data-testid="mobile-stages-list"]` in **keinem** der drei Fälle tiefer als vor S2 (Basiswerte gemessen
+2026-10-04 am Stand `461c696a2`, je 2 Läufe identisch: 375x667 **472 px**, 390x700 **472 px**, 390x844
+**472 px**; Grenze je Fall Basis + 2 px = **474 px**; Mess-Spec temporär, Werte im Artefakt
+`docs/artifacts/feat-2284-s2-trip-kopf/basis-v13-messung.json`), die Liste beginnt oberhalb der Oberkante der
+unteren Navigation, alle Bedienelemente des Kopfes (Knopf, Stift an der Region, Breadcrumb-Knöpfe inklusive
+„Test-Briefing") sind ohne horizontales Scrollen erreichbar, und alle Tippflächen sind ≥ 44 px. Die
+Straffung entfernt dabei keinen Inhalt (Entscheidung 15). Ist-Stand mit S2 (GREEN v1.1 plus Merge von
+`origin/main`): 479 px in allen drei Fällen, also rot; GREEN muss mindestens 5 px einsparen. (v1.3 neu gefasst;
+der v1.2-Messpunkt `.mobile-editor`, die Basiswerte 600,8 / 482,5 / 600,8 px und der Bezug auf die Ratsche
+`mobile-editor-controls-viewport` entfallen.)
 
 **AC-14:** Given der Trip-Kopf wurde auf den Baustein umgestellt When die CI-Ratschen-Specs
 `issue-724-trip-name-save-error`, `issue-714-trip-ui-polish`, `issue-616-trip-one-surface` und
@@ -294,13 +345,25 @@ grün; dafür bleiben `trip-detail-h1`, `<header class="trip-header">`, `trip-de
 Trip-Kopf erhalten. Einzige Specs, die umgestellt werden dürfen, sind die zwei Nicht-Ratschen-Specs
 `pwa-offline-sperre-und-mandant.spec.ts` (`:216-222`, `:410-416`) und
 `feat-1461-s3b2b-compare-kanal-schwelle.spec.ts` (`:385-391`): Auslöser/Ziel wechselt von
-`edit-activity-dropdown` auf `trip-profil-option-*`, Prüfaussage unverändert.
+`edit-activity-dropdown` auf `trip-profil-option-*`, Prüfaussage unverändert (die weitere v1.3-Ausnahme
+`mobile-stages-listen-only.spec.ts` ist in AC-19 geregelt).
 
 **AC-15:** Given der Vergleich-Hub nach der Chip-Verlagerung When die Specs `compare-hub-name-region-profil`,
 `compare-hub-inline-edit`, `compare-hub-save-chip`, `compare-hub-fidelity-s8c` und `compare-hub-kopf-einmal`
 unverändert laufen Then sind sie so grün wie vor der Umstellung (bekannte, kopfunabhängige Rote aus S1
 bleiben in #1196 gebucht, Nachweis per Vorher-Lauf), und jede Kopf-testid existiert im Vergleich genau
-einmal.
+einmal. **(v1.2) Genau abgegrenzte Ausnahme:** `compare-hub-kopf-einmal.spec.ts` erwartet für Mobil (375x812)
+noch Kacheln und widerspricht damit Entscheidung 14. Nur diese beiden Mobil-Zusicherungen werden umgestellt:
+die Mobil-Variante der AC-8-Schleife (`:110-123`; `KOPF_IDS` `:100-107` enthält 4 Vergleich-Kacheln) und
+AC-2 Mobil (`:152-179`, klickt `compare-hub-profil-option-wintersport`). Sie prüfen mobil stattdessen den Knopf
+`compare-hub-profil-knopf` und die Auswahl `compare-hub-profil-auswahl` (Optionen
+`compare-hub-profil-auswahl-option-<wert>`) **mit derselben Strenge**: Knopf und Auswahl-Container je **genau
+einmal** im DOM (ohne `:visible`-Filter), die Wahl erfolgt über die Auswahl, und `data-selected-value` am Knopf
+wird nach der Wahl und nach dem Neuladen geprüft. **Alle Desktop-Zusicherungen der Datei bleiben
+byte-gleich.** Alle übrigen in diesem AC genannten Specs bleiben „ohne Änderung an der Spec-Datei". Beleg der
+Reichweite (Suche 2026-10-04): keine weitere Test-Datei erwartet mobil Kacheln;
+`trip-hub-kopf-region-aktivitaet.spec.ts` erwartet mobil bereits `toBeHidden`; der Playwright-Default-Viewport
+ist 1280×720 (Desktop), es gibt kein Mobil-Projekt.
 
 **AC-16:** Given der Baustein `SubscriptionHeader` wird serverseitig (SSR) mit den erweiterten Props
 gerendert When er einmal mit `titleTestid="trip-detail-h1"`, `namePrefix`-Snippet und `saveController`
@@ -309,7 +372,8 @@ testid `trip-detail-h1` und den Präfix innerhalb der Überschrift, `save-indica
 genau einmal mit Controller und gar nicht ohne Controller, beide Ausgaben haben dieselbe Gerüststruktur
 (keine Markup-Verzweigung nach `kind`), beide enthalten **sowohl** die 8 Kacheln **als auch** den Knopf
 `{p}-profil-knopf` (Umschaltung nur per CSS) mit dem Text der gewählten Aktivität bzw. dem neutralen Text
-ohne Wert, und `region=""` wird als „—" gezeigt, `region=undefined` ebenfalls, `region="Nord"` als „Nord".
+„Aktivität wählen" ohne Wert (in beiden Sätzen derselbe Text), und `region=""` wird als „—" gezeigt,
+`region=undefined` ebenfalls, `region="Nord"` als „Nord".
 
 **AC-17:** Given die #1433-Tests des Trips (`trip_kopf_aktivitaet_melden_konflikt`,
 `trip_reiter_roundtrip_jedes_feld`, `trip_reiter_nutzlast_nur_eigene_felder`,
@@ -320,20 +384,33 @@ mobile-metrics.test.ts` When der `node --test`-Kern läuft Then sind alle grün,
 Aussage steht weiter in einem Test), und die `TripHeader.*.test.ts` prüfen Verhalten (gerendertes DOM:
 Eyebrow nur Datum, Mobil-Kacheln, Abstände) statt Quelltext-Zeichenketten.
 
+**AC-18:** Given der Trip-Hub und der Vergleich-Hub sind mobil (375x667) mit einem langen Namen geöffnet
+When die Seite geladen ist Then hat der Titel (Trip: `trip-detail-h1`, Vergleich: die Titel-Überschrift des
+Bausteins) die computed font-size 20 px, bleibt einzeilig (Höhe höchstens eine Zeile) und endet mit Ellipsis
+statt überzustehen (kein horizontaler Überlauf); am Desktop (1280x900) ist die Titelgröße unverändert
+gegenüber vor S2. (v1.3 neu; Entscheidung 16.)
+
+**AC-19:** Given S2 ist umgesetzt When die Mobil-Specs aus `main` `mobile-stages-listen-only.spec.ts` (mit
+genau einem Selektor-Umzug von `.trip-h1` auf `[data-testid="trip-detail-h1"]`, sonst unverändert),
+`compare-tab-bar.spec.ts`, `issue-269-mobile-trip-tabs.spec.ts` und `issue-661-trip-new-mobile.spec.ts`
+gegen den CI-Stack laufen Then sind alle grün, und der Speicher-Chip `save-indicator` existiert dabei auch
+mit der unteren Tab-Leiste (MTabBar) in beiden Hubs genau einmal. (v1.3 neu.)
+
 ## Test-Plan
 
 **Kern (deterministisch, `node --test`, SSR-Harness wie in S1):**
 
 | Testdatei (nach Verhalten benannt) | Deckt |
 |---|---|
-| `shared/__tests__/subscription_header_kontextneutral.test.ts` (erweitern) | AC-16 (`titleTestid`, `namePrefix`, Chip genau einmal bzw. gar nicht, `region`-Normalisierung „—", Knopf und Kacheln im selben Markup, Knopftext aus gewählter Aktivität bzw. neutral) |
+| `shared/__tests__/subscription_header_kontextneutral.test.ts` (erweitern) | AC-16 (`titleTestid`, `namePrefix`, Chip genau einmal bzw. gar nicht, `region`-Normalisierung „—", Knopf und Kacheln im selben Markup, Knopftext aus gewählter Aktivität bzw. neutral „Aktivität wählen" in beiden Sätzen) |
 | `shared/__tests__/subscription_header_einmal_gerendert.test.ts` (erweitern) | AC-10 (Trip-Satz: jede Kopf-testid, `trip-profil-knopf`, `trip-profil-auswahl-option-*` und `save-indicator` genau einmal) |
 | `shared/__tests__/trip_speicherung_kopffeld.test.ts` (neu) | AC-11 (`speichereKopfFeld`: `setSaving` ⇒ Speichern ⇒ `setSaved`; Fehler ⇒ `markPristine` und weiterwerfen; Konflikt landet im Konfliktspeicher) |
 | `trip-detail/__tests__/tripMehrreiterPruefstand.ts` + die vier #1433-Tests | AC-6, AC-8, AC-9, AC-17 (auf `onSaveField` umgehängt; Zusicherungen erhalten, Schlüssel `kopf-*`) |
 | `trip-detail/TripHeader.issue699/spacing/mobile-metrics.test.ts` | AC-17 (Quelltext ⇒ Verhalten) |
 
-SSR führt keine Klick-Handler und keine Breakpoints aus; Speicher-, Fehler- und Konfliktpfade sowie die
-Sichtbarkeit Knopf ⇔ Kacheln werden deshalb im E2E bewiesen, nicht im SSR.
+SSR führt keine Klick-Handler und keine Breakpoints aus; Speicher-, Fehler- und Konfliktpfade, die
+Sichtbarkeit Knopf ⇔ Kacheln, die Titelgröße mobil (AC-18) und die Listen-Oberkante (AC-13) werden deshalb im
+E2E bewiesen, nicht im SSR.
 
 **Go:** `internal/handler/trip_region_test.go` um den Zwei-Nutzer-Fall erweitern (AC-7), orientiert an
 `TestUpdateTripHandler_TenantIsolation_ETagNotSharedAcrossUsers` (`trip_etag_ifmatch_test.go:236`).
@@ -347,11 +424,36 @@ Zählung und `position: fixed` in beiden Hubs und beiden Viewports (AC-10). Neu 
 1280 px sind 8 Kacheln sichtbar und der Knopf nicht, bei 375 px genau ein Knopf mit Aktivitätstext und keine
 sichtbare Kachel (AC-4, beide Hubs); Wahl über den Knopf aktualisiert den Knopftext sofort und überlebt
 Reload; Tippfläche des Knopfes und der Optionen ≥ 44 px (Bounding-Box); offline ist der Knopf `disabled`
-(AC-12). Kartenoberkante `.mobile-editor` in den drei Messfällen gegen die Basiswerte aus AC-13 (Toleranz
-2 px); die Anzahl der ausgeführten Fälle ändert sich ⇒ `E2E_MIN_EXECUTED_HAUPT` nachmessen. Alle Specs
-arbeiten gegen Wegwerf-Trips/-Vergleiche, nie gegen Daten des PO (insbesondere nicht gegen den Trip des PO;
-Trip-Konfiguration des PO bleibt unberührt). Für AC-9 mit Nutzer-Isolation: ein Trip des Testnutzers, kein
-Zugriff auf fremde Daten.
+(AC-12). Alle Specs arbeiten gegen Wegwerf-Trips/-Vergleiche, nie gegen Daten des PO (insbesondere nicht
+gegen den Trip des PO; Trip-Konfiguration des PO bleibt unberührt). Für AC-9 mit Nutzer-Isolation: ein Trip
+des Testnutzers, kein Zugriff auf fremde Daten.
+
+**Ergänzung v1.2 (beibehalten):**
+
+- **AC-9-Testkorrektur:** Der Fall liest die PUT-Liste nach dem Klick auf „Nochmal speichern" per
+  `expect.poll` mit Zeitgrenze (5 s) und verlangt weiterhin **alle drei** Retry-PUTs (`{name}`, `{region}`,
+  `{activity}`, je mit dem richtigen Körper). Kein sofortiges Lesen beim Wechsel des Chips auf `idle`.
+- **AC-15-Ausnahme:** `compare-hub-kopf-einmal.spec.ts` (Mobil-Variante der AC-8-Schleife und AC-2 Mobil) wird
+  auf Knopf/Auswahl umgestellt (Knopf und Auswahl je genau einmal, Wahl über die Auswahl,
+  `data-selected-value` geprüft); Desktop-Teile byte-gleich.
+
+**Ergänzung v1.3 (Live-E2E):**
+
+- **AC-13:** Fälle in `trip-hub-kopf-region-aktivitaet.spec.ts`: Oberkante von
+  `[data-testid="mobile-stages-list"]` in den drei Messfällen gegen 474 px (Basis 472 px + 2 px), Liste
+  oberhalb der Oberkante der unteren Navigation, Tippflächen ≥ 44 px. Die temporäre Mess-Spec zur
+  Basismessung wird nicht ins Repo übernommen; die Rohwerte liegen im Artefakt
+  `docs/artifacts/feat-2284-s2-trip-kopf/basis-v13-messung.json`.
+- **AC-18:** Fall mit zwei Hub-Läufen (Trip und Vergleich) bei 375x667 mit langem Namen (computed
+  font-size 20 px, einzeilig, kein horizontaler Überlauf, Ellipsis) und je ein Desktop-Fall (1280x900) mit
+  Titelgröße gleich der Vor-S2-Größe.
+- **AC-19:** Die genannten vier Mobil-Specs laufen unverändert (bis auf den einen Selektor-Umzug in
+  `mobile-stages-listen-only.spec.ts`); Chip-Zählung mit MTabBar in beiden Hubs.
+- **CI-Zähler:** Am Merge-Stand `fc64d04a1` gemessen `E2E_MIN_SPECS: 60`, `E2E_MIN_EXECUTED_HAUPT: 334`; nach
+  den finalen RED-Tests (neue und geänderte Fälle) **neu messen** und beide Werte nachziehen.
+- **Entfallen (v1.3):** Die v1.2-Fälle zu AC-18/19/20 (Pillen-Topmost, `/trips/new`, Kartenhöhe 126 px) und
+  die Ratschen `mobile-editor-controls-viewport.spec.ts` und `issue-951-sheet-bottomnav.spec.ts` (in `main`
+  gelöscht).
 
 **Mutations-Gegenprobe für den Adversary (Pflicht, per String-Ersetzung mit externer Sicherungskopie):**
 (a) `if kind === 'trip'`-Zweig ins Baustein-Markup ⇒ AC-16 rot. (b) In `TripHeader` den PUT-Rumpf auf
@@ -368,13 +470,23 @@ AC-4 (Reload zeigt alte Aktivität) und AC-6 (kein PUT mit `{activity}`) rot. (k
 Kacheln** (CSS-Umschaltung vertauscht oder Breakpoint fehlt) ⇒ AC-4 (Desktop: 8 Kacheln sichtbar, Knopf
 unsichtbar) rot. (l) **Knopf offline nicht gesperrt** (`disabled` am Knopf entfernt) ⇒ AC-12 rot. (m) Fehler
 beim Knopf-Speichern wird verschluckt (kein `trip-profil-save-error`) ⇒ AC-8 mobil rot. (n) Test-Briefing
-zurück in eigene Zeile oder Abstände zurück auf 16 px ⇒ AC-13 rot (Oberkante > Basiswert).
+zurück in eigene Zeile oder Abstände zurück auf 16 px ⇒ AC-13 rot (Listen-Oberkante > 474 px).
+Für v1.2 (fortlaufend): (o)-(r) **entfallen in v1.3** (betrafen die Kartenhöhenformel in
+`EditStagesPanelNew.svelte`, gegenstandslos nach F5). (s) **AC-9-Testkorrektur:**
+einen der drei Retry-PUTs weglassen (Routenmutation im Test oder Produkt) ⇒ der `expect.poll`-Fall rot
+(Zeitgrenze läuft ab). (t) **AC-15-Ausnahme:** `data-selected-value` am Knopf auf einen festen Wert setzen
+oder die Auswahl-Option-testid doppelt rendern ⇒ umgestellter `compare-hub-kopf-einmal`-Mobilfall rot. (u)
+Knopftext im Vergleich wieder „Profil wählen" ⇒ Kerntest „Vergleich ohne Profil" und AC-16 rot.
+Für v1.3: (v) **F1-Klasse im Baustein-Titel entfernen** (mobil wieder `text-base`) ⇒ AC-18 rot in **beiden**
+Hubs (Trip und Vergleich) und `mobile-stages-listen-only.spec.ts` rot. (w) **Straffung um 7 px zurückdrehen**
+(z. B. mobile Abstände oder Breadcrumb-Zeile um zusammen 7 px erhöhen) ⇒ AC-13 rot (Oberkante über 474 px).
 Leitfrage: wird die Zusicherung dort geprüft, wo sie WIRKT (Browser, Datei auf der Platte, gemessene
 Oberkante), nicht nur dort, wo der Code steht?
 
 **Verifikation nach Merge:** Staging-Auto-Deploy abwarten, Ratschen-Specs und `compare-hub-*` gegen
-Staging, Hub von Hand in beiden Viewports ansehen (Eyebrow, Region-Zeile, Kacheln bzw. Knopf, Karte mobil).
-Kein Mail-Renderer berührt ⇒ kein Mail-Validator. Neue Befehle über Kanäle sind nicht berührt.
+Staging, Hub von Hand in beiden Viewports ansehen (Eyebrow, Region-Zeile, Kacheln bzw. Knopf, Titelgröße
+mobil, Etappen-Liste mobil). Kein Mail-Renderer berührt ⇒ kein Mail-Validator. Neue Befehle über Kanäle sind
+nicht berührt.
 
 ## Risiken
 
@@ -384,14 +496,22 @@ Kein Mail-Renderer berührt ⇒ kein Mail-Validator. Neue Befehle über Kanäle 
 | **Doppel-Chip** während des Umzugs | Beide Mounts im selben Commit entfernt; AC-10 zählt ohne `:visible`; `feat-880` |
 | **`position: fixed` bricht**, falls ein Vorfahr `transform`/`filter` trägt | Gemessen: keiner (`<main>` hat `position:relative;overflow:hidden`, beschneidet `fixed` nicht); AC-10 belegt per `getComputedStyle` |
 | **Chip wandert beim Vergleich aus dem `{#key uebernommeneFassung}`-Bereich** (kein Neuaufbau mehr) | Verhaltensneutral, `SaveIndicator` hat keinen lokalen JS-Zustand (Dimming per CSS-Animation); AC-11 |
-| **Mobil höherer Kopf, Karte rutscht nach unten** | Entscheidungen 14 und 15; AC-13 misst Kartenoberkante in drei Fällen gegen Basiswerte vor S2; knappster Fall 390x700 (Reserve ca. 13 px laut Rechnung), maßgeblich ist die Messung |
+| **Mobil höherer Kopf, Etappen-Liste rutscht nach unten** | Entscheidungen 14 und 15; AC-13 misst die Listen-Oberkante in drei Fällen gegen Basiswerte vor S2 (472 px, Grenze 474 px); Ist-Stand 479 px ⇒ GREEN spart mindestens 5 px ohne Inhaltsverlust; Mutation (n), (w) |
+| **F1 (Titel 20 px) geht durch den Umzug in den Baustein verloren** (v1.3) | Entscheidung 16; AC-18 in beiden Hubs; Selektor-Umzug in `mobile-stages-listen-only.spec.ts`; Mutation (v) |
+| **Vergleich-Titel wächst mobil von 16 auf 20 px** (bewusste Parität, v1.3) | Entscheidung 16 (geteilter Baustein, keine `kind`-Verzweigung); AC-18 prüft Einzeiligkeit und kein horizontaler Überlauf |
+| **Straffung wird vom größeren Titel aufgezehrt** (v1.3) | Titel einzeilig (Ellipsis); AC-13 misst die Summe |
 | **Zweite Bedienoberfläche (Knopf) umgeht den Speicherweg oder die Offline-Sperre** | Knopf-Auswahl ruft denselben `onSaveField`; AC-6, AC-8, AC-12; Mutationen (j), (l), (m) |
 | **Doppelte testids im DOM** durch Kacheln plus Knopf-Auswahl | Eigene testids `{p}-profil-auswahl-option-*` (Entscheidung 14); AC-15/AC-16 zählen genau einmal |
 | **Datenverlust durch Spread** (Fehlerklasse #2375/#2381) | PUT-Rumpf nur Eigenfeld; AC-6; Mutation (b) |
 | **Fremdzugriff** über den neuen Region-Rumpf | AC-7 (Zwei-Nutzer-Test), Handler nutzt `s.WithUser(middleware.UserIDFromContext(...))` |
-| **Ratschen-Specs 724/714/336/616 und `mobile-editor-controls-viewport*` brechen** | Anker bleiben (Entscheidungen 1, 7); AC-13/AC-14 verlangen unveränderte Spec-Dateien |
+| **Ratschen-Specs 724/714/336/616 brechen** | Anker bleiben (Entscheidungen 1, 7); AC-14 verlangt unveränderte Spec-Dateien |
+| **Main-Mobil-Specs brechen durch den Umzug** (`mobile-stages-listen-only`, `compare-tab-bar`, `issue-269`, `issue-661`; v1.3) | AC-19; nur ein Selektor-Umzug erlaubt |
+| **#2211 Drei-Zustands-Regel** (v1.3) | Geprüft: `{region: ""}` ist ein Wert ⇒ kontraktkonform; Vergleich flacher Merge; keine Änderung (Entscheidung 13) |
 | **Offline-Sperre** greift nur in `<main>` | Neue Knöpfe liegen darin; AC-12 |
 | **`regionMaxLength`/Aktivität leeren** | Aktivität leeren entfällt (Kacheln und Knopf kennen keinen leeren Zustand zum Wählen); Region 60 Zeichen wie Vergleich |
+| **`compare-hub-kopf-einmal.spec.ts` widerspricht Entscheidung 14 mobil** (v1.2) | AC-15-Ausnahme, nur die zwei Mobil-Zusicherungen, gleiche Strenge; Desktop byte-gleich; Mutation (t) |
+| **AC-9-Test flackert (ca. 50 %)**, weil er die PUT-Liste zu früh liest (Race im Test, nicht im Produkt) (v1.2) | `expect.poll` mit 5 s, alle drei Retry-PUTs verlangt; Mutation (s) |
+| **`compare-hub-save-chip.spec.ts` AC-2 (`:100`) rot, nicht S2** (v1.2) | Vorbestehend. Gemessen 2026-10-04, je 5 Läufe im selben Zeitfenster auf dem lokalen Offline-Stack: Basis `1962d3262` 1/5 grün, S2-WIP 0/5 grün, identische Fehlermeldung (wartet auf den flüchtigen Zustand `saving`; bei schneller Antwort steht der Chip schon auf `idle`). Gebucht in #1196; keine AC dazu (siehe Out of Scope) |
 | **Parallelarbeit mit S3** (fasst `TripTabs.svelte` ebenfalls an) | S3 nicht parallel starten |
 | **LoC knapp unter dem Limit** | Vorab `workflow.py status` prüfen, bei Überschreitung `loc_limit_override`; Tests/Specs/Docs zählen nicht |
 
@@ -403,29 +523,40 @@ Gehört weiter zu #2284 bzw. zum Epic und folgt zeitlich danach, ist hier **nich
   (Issue-AC-3), explizites `context=` an allen Mounts (Issue-AC-4, mit S6).
 - **S4:** gemeinsamer `VTLaufzeit`-Baustein. **S5:** ein Ladeweg für den `metricsCatalog`.
 - **#2278:** Aktionsmodell (Kebab/Lifecycle-Aktionen); der `actions`-Slot bleibt leer.
-- **#2497:** Alt-Problem „Karte im Etappen-Reiter auf kleinen Handys (375x667) unter der Navigation".
+- **#2497:** Alt-Problem „Karte im Etappen-Reiter auf kleinen Handys (375x667) unter der Navigation": durch F5
+  (PR #2495, mobil keine Karte mehr) vermutlich gegenstandslos; die Klärung des Issues erfolgt außerhalb
+  dieser Spec.
+- **`EditStagesPanelNew.svelte`** (v1.3): nicht mehr im Umfang (v1.2-Höhenformel entfällt).
 - **`TripNewEditor`-Aktivitäts-Labels** (z. B. „Alpen-Trekking" vs. „Trekking"): kein S2-Thema.
 - **Aktivität leeren:** wird nicht angeboten.
+- **`compare-hub-save-chip.spec.ts` AC-2 (`:100`)** (v1.2): nicht Teil von S2, keine AC. Vorbestehend, gemessen
+  2026-10-04 mit je 5 Läufen im selben Zeitfenster auf dem lokalen Offline-Stack: Basis `1962d3262` 1/5 grün,
+  S2-WIP 0/5 grün, identische Fehlermeldung (der Test wartet auf den transienten Zustand `saving`; bei
+  schneller Antwort ist der Chip schon `idle`). Gebucht in #1196.
 
 ## Betroffene Dateien und Umfang
 
 | Datei | Änderung |
 |---|---|
-| `frontend/src/lib/components/shared/subscription-header/SubscriptionHeader.svelte` | MODIFY, ca. +60 (`titleTestid`, `saveController`, `namePrefix`, `region \|\| '—'`, Handy-Knopf samt Auswahl und CSS-Umschaltung) |
+| `frontend/src/lib/components/shared/subscription-header/SubscriptionHeader.svelte` | MODIFY, ca. +65 (`titleTestid`, `saveController`, `namePrefix`, `region \|\| '—'`, Handy-Knopf samt Auswahl und CSS-Umschaltung; v1.3: Titel mobil 20 px, einzeilig, Ellipsis) |
 | `frontend/src/lib/components/shared/tripSpeicherung.ts` | MODIFY, ca. +20 (Helper `speichereKopfFeld(fn, ctl)`: `setSaving` ⇒ `speichereOderMeldeKonflikt` ⇒ `setSaved`; Fehler ⇒ `markPristine` und weiterwerfen) |
 | `frontend/src/lib/types.ts` | MODIFY, ca. +12 (`ACTIVITY_TYPE_OPTIONS`) |
-| `frontend/src/lib/components/trip-detail/TripHeader.svelte` | MODIFY, ca. ±100 (Baustein-Mount, `speichereKopfFeld`/`onSaveField`, Namens-Markup und Chip raus, Eyebrow nur Datum, mobile Abstände 16→8 px) |
+| `frontend/src/lib/components/trip-detail/TripHeader.svelte` | MODIFY, ca. ±100 (Baustein-Mount, `speichereKopfFeld`/`onSaveField`, Namens-Markup und Chip raus, Eyebrow nur Datum, mobile Abstände 16→8 px; v1.3: toter F1-CSS-Block auf `.trip-h1` raus) |
 | `frontend/src/routes/trips/[id]/+page.svelte` | MODIFY, ca. +10 (Breadcrumb-Leiste `trip-detail-breadcrumb-bar`: „Test-Briefing" mobil in dieselbe Zeile wie Pausieren/Archivieren) |
 | `frontend/src/lib/components/trip-detail/TripTabs.svelte` | MODIFY, ca. −35 (Auswahlliste und Handler raus, `$derived`) |
 | `frontend/src/lib/components/compare/CompareTabs.svelte` | MODIFY, ca. −6 (Chip und Import) |
 | `frontend/src/routes/compare/[id]/+page.svelte` | MODIFY, ca. +5 (`saveController={hubSaveCtl}`, Speichern über `speichereKopfFeld`) |
+| `frontend/e2e/compare-hub-kopf-einmal.spec.ts` | MODIFY (v1.2, Test): nur Mobil-Zusicherungen auf Knopf/Auswahl (AC-15-Ausnahme), Desktop byte-gleich |
+| `frontend/e2e/trip-hub-kopf-region-aktivitaet.spec.ts` | CREATE/MODIFY (Test): AC-9 per `expect.poll`; v1.3: Fälle AC-13 (Listen-Oberkante), AC-18 (Titel), AC-19 (Chip mit MTabBar) |
+| `frontend/e2e/mobile-stages-listen-only.spec.ts` | MODIFY (v1.3, Test): Selektor `.trip-h1` -> `[data-testid="trip-detail-h1"]`, Zusicherung 20 px unverändert |
 | Tests, E2E, `ci_e2e_specs.txt`, Go-Test | zählen nicht gegen das LoC-Limit |
 
-Schätzung Produktivcode **ca. 250-290 brutto** in 8 Dateien (davon `tripSpeicherung.ts` und
-`routes/compare/[id]/+page.svelte` bereits als uncommittete Fix-Loop-Änderung vorhanden). Das liegt am oder
-über dem Limit von 250 ⇒ vor dem GREEN-Schritt `workflow.py status` prüfen und bei Überschreitung
-`workflow.py set-field loc_limit_override 500` setzen (kein Teilen der Scheibe, die Änderungen gehören
-zusammen). Risiko MEDIUM (zentrale Kopf-Komponente beider Hubs, Speicherweg mit Konfliktschutz).
+Schätzung Produktivcode **ca. 250-290 brutto** in 8 Dateien (v1.3: `EditStagesPanelNew.svelte` entfällt, dafür
+Titelstil im Baustein und Rückbau des F1-Blocks in `TripHeader.svelte`; davon `tripSpeicherung.ts` und
+`routes/compare/[id]/+page.svelte` bereits als uncommittete Fix-Loop-Änderung vorhanden). Das liegt am Limit
+von 250 ⇒ vor dem GREEN-Schritt `workflow.py status` prüfen und bei Überschreitung `workflow.py set-field
+loc_limit_override 500` setzen (kein Teilen der Scheibe, die Änderungen gehören zusammen). Risiko MEDIUM
+(zentrale Kopf-Komponente beider Hubs, Speicherweg mit Konfliktschutz).
 
 ## Abhängigkeiten
 
@@ -438,10 +569,17 @@ zusammen). Risiko MEDIUM (zentrale Kopf-Komponente beider Hubs, Speicherweg mit 
 | `trip_mehrreiter_konfliktschutz` (#1433) | Kontext | AC-10, AC-15, AC-18 gelten für den neuen Weg; Reiter-Neuaufbau nach vollem Retry (AC-9) |
 | `feat_880_autosave_overlay` | Kontext | Genau ein `save-indicator`, `position: fixed` |
 | `feat_1273_s2_compare_hub_name_region_profil` | Kontext | Vorlage der Verhaltens-ACs |
+| `mobile_stages_tab_listen_only` (PR #2495, F5 Variante B) | Kontext (v1.3) | Etappen-Reiter mobil nur Liste (`mobile-stages-list`), keine Karte; Messpunkt von AC-13; Spec `docs/specs/modules/mobile_stages_tab_listen_only.md` |
+| `mobile_tab_leisten_mtabbar` (PR #2495) | Kontext (v1.3) | MTabBar in TripTabs/CompareTabs; Chip genau einmal auch mit MTabBar (AC-19); Spec `docs/specs/modules/mobile_tab_leisten_mtabbar.md` |
+| `optional_felder_null_leert` (#2211) | Kontext (v1.3) | Drei-Zustands-Regel optionaler PUT-Felder; `{region: ""}` bleibt kontraktkonform (Entscheidung 13); `docs/specs/bugfix/optional_felder_null_leert.md`, `docs/reference/api_contract.md` ca. Z. 1038-1048 |
 | `docs/context/feat-2284-s2-trip-kopf.md` | Kontext | Analyse und 12 Entscheidungen |
 | `docs/artifacts/feat-2284-s2-trip-kopf/ci-fixloop-uebergabe.md` | Kontext | CI-Rot, Messung Kopfhöhe, PO-Entscheidungen 14 und 15 |
-| Ratschen-Spec `mobile-editor-controls-viewport*`, `EditStagesPanelNew.svelte:84-109` | Kontext | Kartenhöhe aus gemessener Oberkante; muss ohne Änderung grün werden (AC-13) |
-| Issue #2497 | Kontext | Alt-Problem Karte auf kleinen Handys, nicht Teil von S2 |
+| `docs/artifacts/feat-2284-s2-trip-kopf/basis-v13-messung.json` | Kontext (v1.3) | Basiswerte Listen-Oberkante am Stand `461c696a2` (472 px in drei Fällen) |
+| `docs/artifacts/feat-2284-s2-trip-kopf/green-v11-befund.md`, `ac13-messung-s2-v11.json` | Kontext (historisch) | Befund GREEN v1.1; die Karten-Messwerte sind seit v1.3 gegenstandslos |
+| `frontend/e2e/mobile-stages-listen-only.spec.ts`, `compare-tab-bar.spec.ts`, `issue-269-mobile-trip-tabs.spec.ts`, `issue-661-trip-new-mobile.spec.ts` | Betroffen/Kontext (v1.3) | Mobil-Specs aus `main`; laufen nach S2 grün (AC-19); erste mit einem Selektor-Umzug |
+| `compare-hub-kopf-einmal.spec.ts` | Betroffen (v1.2) | Mobil-Zusicherungen werden auf Knopf/Auswahl umgestellt (AC-15-Ausnahme) |
+| Issue #2497 | Kontext | Alt-Problem Karte auf kleinen Handys; durch F5 vermutlich gegenstandslos, Klärung außerhalb der Spec |
+| Issue #1196 | Kontext (v1.2) | Sammelbuchung vorbestehender Rote (`compare-hub-save-chip` AC-2) |
 
 ## Changelog
 
@@ -453,3 +591,34 @@ zusammen). Risiko MEDIUM (zentrale Kopf-Komponente beider Hubs, Speicherweg mit 
   vollem Retry ergänzt (Wortlaut „solange der Retry läuft" bleibt); AC-11 verweist auf Helper
   `speichereKopfFeld`; Test-Plan, Mutations-Gegenproben (i)-(n), Dateiliste und Risiken nachgezogen.
   Geänderte ACs brauchen erneute PO-Freigabe.
+- 2026-10-04 (v1.2, Fix-Loop nach GREEN v1.1, Tech-Lead-Entscheidungen): Entscheidung 16 (F002-Regression wird
+  in S2 behoben, `EditStagesPanelNew.svelte` neu im Umfang) und neue **AC-18** (Pille oberstes Element und
+  Karte ≥ 150 px bei 320 px Breite und 540/568/600/640 px Höhe), **AC-19** (dasselbe auf `/trips/new` mobil,
+  320×568 und 390×844), **AC-20** (375×667 nicht niedriger als 128 px, Toleranz 2 px; #2497 bleibt).
+  **AC-13** nennt die Ratschen-Datei `mobile-editor-controls-viewport.spec.ts` ausdrücklich (unverändert,
+  grün). **AC-15** bekommt eine genau abgegrenzte Ausnahme (`compare-hub-kopf-einmal.spec.ts`, nur
+  Mobil-Zusicherungen auf Knopf/Auswahl). **AC-4**, **AC-16** und Entscheidung 14: Knopftext einheitlich
+  „Aktivität wählen ▾" in beiden Hubs (Abweichung vom v1.1-Wortlaut „Profil wählen ▾"). **AC-9:** Wortlaut
+  unverändert, Testkorrektur per `expect.poll` (Race im Test, nicht im Produkt) als Klarstellung.
+  `compare-hub-save-chip` AC-2 als vorbestehend nach Out of Scope und Risiken (#1196). Test-Plan,
+  Mutations-Gegenproben (o)-(u), Dateiliste, Risiken, Abhängigkeiten nachgezogen.
+- 2026-10-04 (v1.3, Anlass: Merge von `origin/main` `461c696a2` per `fc64d04a1`; PR #2495 Mobile-Usability,
+  PO-Entscheid F5 Variante B vom 2026-09-22, F1; #2211): v1.2 war gegen einen Stand 23 Commits hinter `main`
+  geschrieben. **Gestrichen (ersatzlos, gegenstandslos nach F5):** v1.2-**AC-18**, v1.2-**AC-19**,
+  v1.2-**AC-20** (Kartenhöhenband, `/trips/new`-Pille, 128-px-Karte), die v1.2-Entscheidung 16
+  (F002/Kartenhöhenband), `EditStagesPanelNew.svelte` aus Dateiliste und Abhängigkeiten, Bezug auf die Ratsche
+  `mobile-editor-controls-viewport` und die Mutations-Gegenproben (o)-(r); #2497 als „durch F5 vermutlich
+  gegenstandslos" vermerkt (Klärung außerhalb der Spec). **Geändert:** **AC-13** neu gefasst (Messpunkt
+  `mobile-stages-list`, Basis 472 px in drei Fällen am Stand `461c696a2`, Grenze 474 px, Ist mit S2 479 px ⇒
+  GREEN spart ≥ 5 px; alte Basiswerte 600,8/482,5/600,8 entfallen; Entscheidung 15 entsprechend; 44-px-Tippflächen
+  bleiben); AC-14 verweist auf AC-19 für die Selektor-Ausnahme. **Neu:** Entscheidung 16 „F1 im Baustein"
+  (Titel mobil 20 px, einzeilig, Ellipsis, auch im Vergleich-Hub; toter F1-Block in `TripHeader.svelte` raus;
+  Selektor-Umzug in `mobile-stages-listen-only.spec.ts`), neue **AC-18** (Titel 20 px in beiden Hubs, Desktop
+  unverändert) und neue **AC-19** (Mobil-Specs aus `main` grün, Chip einmal mit MTabBar). **Feststellung ohne
+  Änderung:** #2211 Drei-Zustands-Regel, `{region: ""}` kontraktkonform (Entscheidung 13, AC-3 bleiben).
+  **Beibehalten:** AC-9-Klarstellung samt `expect.poll`, AC-15-Ausnahme `compare-hub-kopf-einmal`, Knopftext
+  „Aktivität wählen" in beiden Hubs, `compare-hub-save-chip` AC-2 Out of Scope (#1196). CI-Zähler am Merge-Stand
+  `E2E_MIN_SPECS: 60`, `E2E_MIN_EXECUTED_HAUPT: 334`; nach den finalen RED-Tests neu messen. Test-Plan,
+  Mutations-Gegenproben ((v), (w) neu), Risiken, Dateiliste, Abhängigkeiten, „Was der PO anders sieht"
+  (Punkt 3 und 8) nachgezogen. **PO-Freigabe nötig für: AC-13 (neu gefasst), AC-18 und AC-19 (neu);** AC-14
+  nur Verweis. Gestrichen: v1.2-AC-18/19/20.

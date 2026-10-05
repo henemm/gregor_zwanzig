@@ -1,32 +1,32 @@
 ---
-spec_file: docs/specs/modules/feat_2284_s2_trip_kopf.md
-spec_sha256: ba187bbe68ebc1b3a5ecd24f1aee0decdcf0396d771f23893f57cf42df3fa2ac
+spec_file: /home/hem/gregor_zwanzig/.claude/worktrees/peaceful-conjuring-hartmanis/docs/specs/modules/feat_2284_s2_trip_kopf.md
+spec_sha256: 2f8b96a49b8086ea442eabcac35e83d864f18f3ebe63d00014371cbfb37964eb
 ---
 
 # PO-Briefing: feat-2284-s2-trip-kopf
 
-- **Spec:** docs/specs/modules/feat_2284_s2_trip_kopf.md (Version 1.1)
+- **Spec:** docs/specs/modules/feat_2284_s2_trip_kopf.md (v1.3)
 - **Issue:** #2284
-- **Erstellt:** 2026-10-03
+- **Erstellt:** 2026-10-04
 
 ## Was gebaut wird
 
-Trip-Kopf wie beim Ortsvergleich: Name, Region und Aktivität dort änderbar, am Handy Aktivität als ein Knopf.
+Trip-Kopf erlaubt Name, Region, Aktivität direkt zu ändern; Speicher-Hinweis sieht in Trip und Ortsvergleich gleich aus.
 
 ## Definition of Done
 
-Region und Aktivität sind im Kopf änderbar und bleiben nach Neuladen; die Handy-Karte liegt in drei Messfällen nicht tiefer als zuvor.
+Region und Aktivität sind im Trip-Kopf änderbar und bleiben nach Neuladen; Handy-Etappen-Liste rutscht nicht tiefer.
 
 ## Wie geprüft wird
 
-Browser-Tests prüfen Speichern, Fehler, Konflikt und Kartenhöhe; Handy-Höhen außerhalb der drei Messfälle bleiben ungeprüft.
+Browser- und Server-Tests prüfen Speichern, Fehlerfälle, Fremdzugriff und Handy-Maße; echte Daten und optische Güte prüfen sie nicht.
 
 ## Kritische Anmerkungen
 
-- Knappster Fall 390x700: nur etwa 13 px Reserve, Einsparungen sind Schätzungen; Messung kann scheitern.
-- Region leeren zeigt „—" auch im Ortsvergleich: ungefragte Zusatzänderung.
-- Nach Nochmal-Speichern bauen sich Reiter neu auf; offener Zustand geht verloren (Tech-Entscheidung, nicht PO).
+- Auf dem Handy liegt die Etappen-Liste aktuell 5 px zu tief; die Straffung fehlt noch.
+- Nicht verlangt: Vergleich-Titel wird mobil von 16 auf 20 px größer; Test-Briefing wandert mobil in die Pausieren-Zeile.
+- Bewusst nicht enthalten: Speichern-Knopf im Versand-Reiter entfernen (Folgescheibe S3).
 
 ## Freigabe-Frage
 
-Gibst du die geänderte Handy-Darstellung (Aktivitäts-Knopf, enger Kopf, Karte nicht tiefer als vorher) für beide Hubs frei?
+Gibst du den Umbau frei, inklusive größerem Vergleich-Titel und verschobenem Test-Briefing auf dem Handy?
