@@ -1721,8 +1721,8 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 
 Triggers `TripAlertService.check_all_trips()` for one user. Called by the Go
 scheduler every 30 minutes. Since Issue #1447 (S1), the run is bounded by a
-hard time budget (`ALERT_RUN_DEADLINE_SECONDS = 90.0`, `src/services/trip_alert.py`)
-— well under the 120s the Go scheduler's shared `http.Client` waits per user
+hard time budget (`ALERT_RUN_DEADLINE_SECONDS`, seit #2261 A-2 S1 180.0 s, `src/services/trip_alert.py`)
+— under the 300s budget (formerly 120s) the Go scheduler's shared `http.Client` waits per user
 before aborting the request. The response now reflects whether the run
 completed fully or was cut off by that budget.
 
@@ -1773,6 +1773,17 @@ completed fully or was cut off by that budget.
 | `skipped` | int | Trips not reached because the deadline was hit (0 on a full run) |
 | `duration_s` | float | Actual wall-clock runtime of this run |
 | `reason` | string | Present only when `status: "partial"` — currently always `"deadline"` |
+| `skipped_ids` | string[] | Trip-IDs, die der Lauf nicht mehr erreicht hat (Seit #2261 A-2 S1; `skipped` ist deren Anzahl). Leer bei vollem Lauf. |
+
+**Seit #2261 A-2 S1 (2026-10-05):** Die Zeitgrenze des Laufs beträgt 180 s
+(vorher 90 s; unter dem Go-Wartebudget von 300 s). Die Trips werden in fairer
+Reihenfolge geprüft — am längsten ungeprüft zuerst, Trip-ID als Tie-Break —,
+damit bei knapper Zeit nicht immer dieselben Trips hinten herausfallen. Status
+`"partial"` erscheint nur, wenn die Zeitgrenze tatsächlich erreicht wurde. Die
+nicht erreichten Trips stehen in `skipped_ids` und im WARNING-Log. Zeitpunkt der
+letzten Prüfung je Trip: `data/users/<user_id>/alert_last_checked.json`
+(Max-Merge, gelöschte Trips werden entfernt, fail-open;
+`src/services/alert_check_state.py`).
 
 **Resolved by Scheibe S2a (Issue #1447):** the limitation described below no
 longer applies — `internal/scheduler/scheduler.go::triggerEndpointForUser`
