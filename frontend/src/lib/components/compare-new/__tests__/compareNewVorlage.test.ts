@@ -214,7 +214,7 @@ test('AC-5 bei nur einem vorhandenen Ort bleibt der Reiter nach Orte gesperrt, O
 	assert.deepEqual(s.pickedIds, ['a']);
 	// Vorderteil wie in CompareNewEditor.svelte: Orte frei ab Namen, Metriken ab Name + >=2 Orten.
 	const offen: Set<string> = tailUnlocked(
-		{ metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand' },
+		{ metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' },
 		{
 			metrikenFrei: !!s.name.trim() && s.pickedIds.length >= 2,
 			metrikenVisited: false,
@@ -225,7 +225,7 @@ test('AC-5 bei nur einem vorhandenen Ort bleibt der Reiter nach Orte gesperrt, O
 	);
 	if (s.name.trim()) offen.add('orte');
 	assert.ok(offen.has('orte'), 'Orte-Reiter muss offen sein, um Orte nachzuwaehlen');
-	assert.ok(!offen.has('metriken'), 'Metriken-Reiter muss bei <2 Orten gesperrt bleiben');
+	assert.ok(!offen.has('wetter-metriken'), 'Metriken-Reiter muss bei <2 Orten gesperrt bleiben');
 });
 test('AC-5 keine Platzhalter-IDs: null vorhandene Orte => pickedIds leer', () => {
 	assert.deepEqual(belegt(vorlage(), []).pickedIds, []);

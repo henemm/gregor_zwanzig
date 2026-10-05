@@ -81,7 +81,11 @@ export function ohneTypen(quelle: string, knoten: Knoten): string {
  *  der Ausdruck LAUT (keine stille Entwarnung). */
 export async function umgebungFuer(
 	datei: string,
-	saat: Knoten
+	saat: Knoten,
+	/** Feature #2287: `jsAlsTs` loest Importe mit `.js`-Endung (Quelltext-Konvention der
+	 *  Komponenten, z. B. `'./foo.js'`) bzw. ohne Endung auf die vorhandene `.ts`-Datei auf — ohne das bliebe
+	 *  eine solche Bindung still leer. Standard AUS: bestehende Tests aendern ihr Verhalten nicht. */
+	optionen: { jsAlsTs?: boolean } = {}
 ): Promise<{ ast: Knoten; quelle: string; u: Knoten; effekte: Array<() => void> }> {
 	const quelle = readFileSync(datei, 'utf-8');
 	const ast: Knoten = parse(quelle, { modern: true });
@@ -124,6 +128,13 @@ export async function umgebungFuer(
 			mod = (await import(spec)) as Knoten;
 		} catch {
 			mod = null;
+			if (optionen.jsAlsTs && !spec.endsWith('.ts') && !spec.endsWith('.svelte')) {
+				try {
+					mod = (await import((spec.endsWith('.js') ? spec.slice(0, -3) : spec) + '.ts')) as Knoten;
+				} catch {
+					mod = null;
+				}
+			}
 		}
 		if (!mod) continue;
 		for (const s of (stmt.specifiers ?? []) as Knoten[]) {

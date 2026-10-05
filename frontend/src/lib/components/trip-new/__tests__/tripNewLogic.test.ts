@@ -61,7 +61,7 @@ describe('AC-2/3: unlockedTabs — progressive Freischaltung', () => {
 	test('Name + Startdatum → Etappen schaltet frei', () => {
 		const u = unlockedTabs('GR20', '2026-06-15', false, false, false, false, false);
 		assert.ok(u.has('etappen'), 'Etappen muss frei sein');
-		assert.ok(!u.has('metriken'), 'Wetter noch gesperrt');
+		assert.ok(!u.has('wetter-metriken'), 'Wetter noch gesperrt');
 	});
 
 	test('Name ohne Startdatum schaltet Etappen NICHT frei', () => {
@@ -72,7 +72,7 @@ describe('AC-2/3: unlockedTabs — progressive Freischaltung', () => {
 	test('etDone → Wegpunkte UND Wetter schalten gleichzeitig frei', () => {
 		const u = unlockedTabs('GR20', '2026-06-15', true, false, false, false, false);
 		assert.ok(u.has('wegpunkte'), 'Wegpunkte frei');
-		assert.ok(u.has('metriken'), 'Wetter frei');
+		assert.ok(u.has('wetter-metriken'), 'Wetter frei');
 		assert.ok(!u.has('alarme'), 'Alarme noch gesperrt');
 		assert.ok(!u.has('versand'), 'Versand noch gesperrt');
 	});
@@ -105,12 +105,12 @@ describe('doneTabs — Done-Zustand', () => {
 		const d = doneTabs('GR20', '2026-06-15', true, false, false, false, false);
 		assert.ok(d.has('route'));
 		assert.ok(d.has('etappen'));
-		assert.ok(!d.has('metriken'));
+		assert.ok(!d.has('wetter-metriken'));
 	});
 
 	test('wtVisited → metriken; alVisited → alarme; vsVisited → versand done', () => {
 		const d = doneTabs('GR20', '2026-06-15', true, true, true, true, true);
-		assert.ok(d.has('metriken'));
+		assert.ok(d.has('wetter-metriken'));
 		assert.ok(d.has('alarme'));
 		assert.ok(d.has('versand'));
 	});
