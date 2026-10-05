@@ -3,7 +3,7 @@ entity_id: fail_closed_versand_defaults
 type: module
 created: 2026-10-05
 updated: 2026-10-05
-status: draft
+status: approved
 version: "1.0"
 tags: [bug, versand-zuverlaessigkeit, fail-closed, premium-sms, briefing-slots, epic-2505]
 ---
@@ -12,7 +12,7 @@ tags: [bug, versand-zuverlaessigkeit, fail-closed, premium-sms, briefing-slots, 
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-10-05: „approved“)
 
 ## Purpose
 
@@ -162,3 +162,4 @@ _update(): unlesbar ⇒ nichts schreiben, False zurück
 ## Changelog
 
 - 2026-10-05: Initial spec created (Issue #2231)
+- 2026-10-05: ACs vom PO freigegeben
