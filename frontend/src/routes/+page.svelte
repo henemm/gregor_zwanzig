@@ -89,12 +89,12 @@
 	const setupStepsTrip = $derived(nextPlanned ? setupStepTrip(nextPlanned) : []);
 	const setupStepsCompare = $derived(firstIncomplete ? setupStepCompare(firstIncomplete) : []);
 
-	const TRIP_TAB_MAP = ['stages', 'stages', 'weather', 'briefings', 'briefings'];
+	const TRIP_TAB_MAP = ['etappen', 'etappen', 'wetter-metriken', 'versand', 'versand'];
 
 	function buildTripCtaHref(): string {
 		if (!nextPlanned) return '/trips/new';
 		const firstOpen = setupStepsTrip.findIndex((s) => !s.done);
-		if (firstOpen < 0) return `/trips/${nextPlanned.id}?tab=overview`;
+		if (firstOpen < 0) return `/trips/${nextPlanned.id}?tab=uebersicht`;
 		if (firstOpen === 0) return '/trips/new';
 		return `/trips/${nextPlanned.id}?tab=${TRIP_TAB_MAP[firstOpen]}`;
 	}
@@ -187,7 +187,7 @@
 
 							<!-- Titel (34px, fontWeight 600) als Link -->
 							<a
-								href="/trips/{hero.id}?tab=overview"
+								href="/trips/{hero.id}?tab=uebersicht"
 								style:display="block"
 								style:font-size="34px"
 								style:font-weight="600"
@@ -276,7 +276,7 @@
 								</div>
 							</div>
 							<a
-								href="/trips/{hero.id}?tab=overview"
+								href="/trips/{hero.id}?tab=uebersicht"
 								style:font-size="12px"
 								style:color="var(--g-ink-3)"
 								style:text-decoration="none"
@@ -296,25 +296,25 @@
 								glyph="pause"
 								label="Pausentag einplanen"
 								sub="→ Etappen & Wegpunkte"
-								href="/trips/{hero.id}?tab=stages"
+								href="/trips/{hero.id}?tab=etappen"
 							/>
 							<QuickAction
 								glyph="metrics"
 								label="Wetter-Metriken ändern"
 								sub="→ Wetter-Metriken"
-								href="/trips/{hero.id}?tab=weather"
+								href="/trips/{hero.id}?tab=wetter-metriken"
 							/>
 							<QuickAction
 								glyph="clock"
 								label="Briefing-Zeitplan"
 								sub="→ Briefing-Zeitplan"
-								href="/trips/{hero.id}?tab=briefings"
+								href="/trips/{hero.id}?tab=versand"
 							/>
 							<QuickAction
 								glyph="eye"
 								label="Vorschau prüfen"
 								sub="→ Vorschau"
-								href="/trips/{hero.id}?tab=preview"
+								href="/trips/{hero.id}?tab=vorschau"
 							/>
 							<QuickAction
 								glyph="send"
@@ -379,7 +379,7 @@
 								</div>
 							</div>
 							<a
-								href="/trips/{hero.id}?tab=alerts"
+								href="/trips/{hero.id}?tab=wertebereiche"
 								style:font-size="12px"
 								style:color="var(--g-ink-3)"
 								style:text-decoration="none"
@@ -570,7 +570,7 @@
 								glyph="metrics"
 								label="Ideal-Werte ändern"
 								sub="→ Ideal-Profil"
-								href="/compare/{compareHero.id}?tab=idealwerte"
+								href="/compare/{compareHero.id}?tab=wertebereiche"
 							/>
 							<QuickAction
 								glyph="clock"
@@ -582,7 +582,7 @@
 								glyph="eye"
 								label="Vorschau prüfen"
 								sub="→ Vorschau"
-								href="/compare/{compareHero.id}?tab=preview"
+								href="/compare/{compareHero.id}?tab=vorschau"
 							/>
 							<QuickAction
 								glyph="send"
@@ -698,7 +698,7 @@
 								steps={setupStepsTrip}
 								ctaLabel="Setup fortsetzen"
 								ctaHref={tripCtaHref}
-								secondary={{ label: 'Öffnen', href: `/trips/${nextPlanned.id}?tab=overview` }}
+								secondary={{ label: 'Öffnen', href: `/trips/${nextPlanned.id}?tab=uebersicht` }}
 							/>
 						{/if}
 						{#if firstIncomplete}

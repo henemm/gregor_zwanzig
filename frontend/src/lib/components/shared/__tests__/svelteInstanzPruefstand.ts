@@ -170,9 +170,12 @@ export async function umgebungFuer(
 			if (!quelle.slice(d.init.start, d.init.end).includes('$props()')) continue;
 			for (const p of (d.id.properties as Knoten[]) ?? []) {
 				if (p.type === 'RestElement') continue;
-				const name = p.key?.name as string | undefined;
-				if (!name || (name in u && u[name] !== undefined)) continue;
 				if (p.value?.type !== 'AssignmentPattern') continue;
+				// Feature #2287 (F001): gebunden wird der LOKALE Name. Bei Umbenennung
+				// (`badges: badgesProp = {}`) ist das `badgesProp` — der Prop-Name `badges`
+				// haette sonst eine gleichnamige lokale `$derived`-Deklaration verdeckt.
+				const name = (p.value.left?.name ?? p.key?.name) as string | undefined;
+				if (!name || (name in u && u[name] !== undefined)) continue;
 				try {
 					u[name] = werte(ohneTypen(quelle, p.value.right), u);
 				} catch {

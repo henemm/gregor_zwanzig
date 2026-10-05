@@ -247,10 +247,11 @@ export function corridorZustandsBruecke(
 /** Reiter des Ortsvergleich-Hubs, die SELBST über den einen Speicher-Platz des
  *  Controllers speichern (Design Punkt 4). Issue #2276 S4: 'wetter-metriken'
  *  ergaenzt (kombinierte Wetter-Metriken/Layout-Orchestrierung); S5: 'versand'
- *  (Versand-Reiter speichert seit dem Wegfall des Wrapper-Divs selbst). */
+ *  (Versand-Reiter speichert seit dem Wegfall des Wrapper-Divs selbst). Issue #2287:
+ *  Wertebereiche heisst jetzt in beiden Hubs `wertebereiche` (vormals `idealwerte`). */
 export const SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[] = [
 	'alarme',
-	'idealwerte',
+	'wertebereiche',
 	'wetter-metriken',
 	'versand'
 ];

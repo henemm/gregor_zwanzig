@@ -18,14 +18,14 @@ import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryP
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
-export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'metriken' | 'wertebereiche' | 'alarme' | 'versand';
+export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand';
 
 // ── Freischalt-Logik (TN_unlocked) ──────────────────────────────────────────
 // Issue #2277 S2a: neuer Parameter `wbVisited` (Wertebereiche besucht) an
 // Position 5 — die Kette laeuft jetzt ueber Wetter-Metriken -> Wertebereiche
 // -> Alarme -> Versand (geteilter Kern `shared/anlegeLockEngine.ts`, #2277 S4).
 
-const TAIL: TailIds<TabId> = { metriken: 'metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' };
+const TAIL: TailIds<TabId> = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' };
 
 export function unlockedTabs(
 	name: string,
@@ -47,7 +47,7 @@ export function unlockedTabs(
 		metrikenFrei: true, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited,
 		alarmeVisited: alVisited, versandVisited: vsVisited,
 	});
-	if (!etDone) tail.delete('metriken');
+	if (!etDone) tail.delete('wetter-metriken');
 	for (const t of tail) s.add(t);
 	return s;
 }
@@ -89,7 +89,7 @@ export function stageDate(startDate: string, offset: number): string | null {
 // ── Fortschrittsbalken (TN_Progress) ────────────────────────────────────────
 
 export function progressCount(done: Set<TabId>): number {
-	return kernProgressCount(done, ['route', 'etappen', 'metriken', 'versand']);
+	return kernProgressCount(done, ['route', 'etappen', 'wetter-metriken', 'versand']);
 }
 
 // ── Speichern-Gate ────────────────────────────────────────────────────────────

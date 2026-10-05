@@ -54,7 +54,7 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 	test('AC-1/AC-2: Stunden-Auswahl im Versand-Reiter uebersteht Speichern + Reload', async ({
 		page
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=briefings`);
+		await page.goto(`/trips/${TRIP_ID}?tab=versand`);
 		const morning = page.locator('[data-testid="report-morning-time"]:visible').first();
 		await expect(morning).toBeVisible({ timeout: 15_000 });
 
@@ -86,7 +86,7 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 	test('Bug #1379: die Oberflaeche nimmt keine Uhrzeit an, die sie danach still aendert', async ({
 		page
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=briefings`);
+		await page.goto(`/trips/${TRIP_ID}?tab=versand`);
 		const morning = page.locator('[data-testid="report-morning-time"]:visible').first();
 		await expect(morning).toBeVisible({ timeout: 15_000 });
 

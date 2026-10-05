@@ -62,7 +62,7 @@
 		<p class="empty" data-testid="alert-preview-no-metrics">
 			Keine alert-fähigen Wetter-Metriken aktiv. Aktiviere zuerst
 			Wetter-Metriken (z.B. Windböen, Temperatur) im Tab
-			<a href="?tab=weather" data-testid="alert-preview-no-metrics-link"><strong>Wetter-Metriken</strong></a>.
+			<a href="?tab=wetter-metriken" data-testid="alert-preview-no-metrics-link"><strong>Wetter-Metriken</strong></a>.
 		</p>
 	{:else if enabledRules.length === 0}
 		<p class="empty" data-testid="alert-preview-empty">

@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 
 // Seed-Trip aus global.setup.ts (3 Etappen, 2 mit Wegpunkten)
 const TRIP_ID = 'e2e-cockpit-test';
-const STAGES_URL = `/trips/${TRIP_ID}?tab=stages`;
+const STAGES_URL = `/trips/${TRIP_ID}?tab=etappen`;
 
 const DESKTOP_HINT_TEXT = /Karte & Höhenprofil sind am Desktop verfügbar/;
 

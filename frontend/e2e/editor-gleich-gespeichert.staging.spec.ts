@@ -176,8 +176,8 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 			'erwartung_golden_c.json',
 		);
 
-		await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
 		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
@@ -198,8 +198,8 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 		request,
 	}) => {
 		await createGoldenCTrip(request, TRIP_ID);
-		await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
 
@@ -253,8 +253,8 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 		request,
 	}) => {
 		await createGoldenCTrip(request, TRIP_ID);
-		await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
 

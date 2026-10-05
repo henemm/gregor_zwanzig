@@ -55,7 +55,7 @@
 	<div>
 		<SectionH eyebrow="Etappen" title="Reihenfolge & Profil">
 			{#snippet right()}
-				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('stages')}>Im Editor öffnen →</Btn>
+				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('etappen')}>Im Editor öffnen →</Btn>
 			{/snippet}
 		</SectionH>
 
@@ -103,7 +103,7 @@
 					{/if}
 				</p>
 			{/if}
-			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('weather')}>Wetter-Metriken bearbeiten →</Btn>
+			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken')}>Wetter-Metriken bearbeiten →</Btn>
 		</Card>
 
 		<Card padding={18}>
@@ -112,20 +112,20 @@
 			<ReportLine kind="evening" time="18:00" channels={['email']} active />
 			<ReportLine kind="alert" time="bei Δ" channels={['telegram']} active alert />
 			<div style="margin-top: 12px;">
-				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('briefings')}>Zeitplan bearbeiten →</Btn>
+				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('versand')}>Zeitplan bearbeiten →</Btn>
 			</div>
 		</Card>
 
 		<Card padding={18}>
 			<Eyebrow style="margin-bottom: 10px;">Alerts (letzte 7 Tage)</Eyebrow>
 			<p style="font-size: 13px; color: var(--g-ink-2); margin: 0 0 12px;">Keine aktuellen Alerts.</p>
-			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('alerts')}>Alle Alerts →</Btn>
+			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wertebereiche')}>Alle Alerts →</Btn>
 		</Card>
 
 		<Card padding={18} style="background: var(--g-card-alt);">
 			<Eyebrow style="margin-bottom: 10px;">Vorschau</Eyebrow>
 			<p style="font-size: 13px; color: var(--g-ink-2); margin: 0 0 12px;">Wie sieht das nächste Briefing aus?</p>
-			<Btn variant="primary" size="sm" onclick={makeJumpHandler('preview')}>Vorschau öffnen</Btn>
+			<Btn variant="primary" size="sm" onclick={makeJumpHandler('vorschau')}>Vorschau öffnen</Btn>
 		</Card>
 	</div>
 </div>

@@ -53,7 +53,7 @@ test('AC-4: StageDetailRow zeigt SVG-Icon statt Emoji-Zeichen im weather-strip',
 	await page.goto(`/trips/${TRIP_ID}`);
 
 	// Wechsel auf Etappen-Tab, damit StageDetailRow sichtbar wird
-	const etappenTab = page.getByTestId('trip-detail-tab-stages');
+	const etappenTab = page.getByTestId('trip-detail-tab-etappen');
 	if (await etappenTab.isVisible()) {
 		await etappenTab.click();
 	}

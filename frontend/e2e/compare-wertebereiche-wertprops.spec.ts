@@ -115,9 +115,9 @@ function zaehlePuts(page: Page, pfad: string): { puts: Request[]; beantwortet: R
 }
 
 async function oeffneVergleich(page: Page, id: string, mobil = false) {
-	await page.goto(`/compare/${id}?tab=idealwerte`);
+	await page.goto(`/compare/${id}?tab=wertebereiche`);
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-detail-tab-idealwerte"]:visible').click();
+	await page.locator('[data-testid="compare-detail-tab-wertebereiche"]:visible').click();
 	const testid = mobil ? 'corridor-editor-mobile-vergleich' : 'corridor-editor-vergleich';
 	const editor = page.locator(`[data-testid="${testid}"]:visible`);
 	await expect(editor).toBeVisible({ timeout: 10_000 });
@@ -229,7 +229,7 @@ test.describe('Issue #2276 S6d: Wertebereiche auf Wertprops — Verhalten im Bro
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 900 });
 		const tripId = await legeTripAn(page, 'ac6');
-		await page.goto(`/trips/${tripId}?tab=alerts`);
+		await page.goto(`/trips/${tripId}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
 
 		const editor = page.locator('[data-testid="corridor-editor-route"]');

@@ -405,7 +405,7 @@ test('AC-10: Aenderung auf /trips/[id], sofort „Aktualisieren" → nach dem Ne
 		registerForCleanup('trip', tripId);
 
 		const ladungen = await zaehleLadungen(page);
-		await appLaeuft(page, ausl, `/trips/${tripId}?tab=alerts`);
+		await appLaeuft(page, ausl, `/trips/${tripId}?tab=wertebereiche`);
 		await neueFassungMitHinweis(page, ausl);
 		const vorher = await ladungen();
 		const alteFassung = await fassungsKennung(page);
@@ -542,7 +542,7 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 
 		const protokoll = await protokolliereSpeichernUndUebernahme(page);
 		const ladungen = await zaehleLadungen(page);
-		await appLaeuft(page, ausl, `/trips/${tripId}?tab=alerts`);
+		await appLaeuft(page, ausl, `/trips/${tripId}?tab=wertebereiche`);
 		await neueFassungMitHinweis(page, ausl);
 		const vorher = await ladungen();
 		const alteFassung = await fassungsKennung(page);

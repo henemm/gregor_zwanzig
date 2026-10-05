@@ -224,7 +224,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		expect(seed.ok(), `Trip-Anlage HTTP ${seed.status()}`).toBeTruthy();
 		registerForCleanup('trip', tripId);
 
-		await page.goto(`/trips/${tripId}?tab=alerts`);
+		await page.goto(`/trips/${tripId}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
 		const row = page.locator('[data-testid="corridor-editor-route"] [data-testid="corridor-row-wind_gust"]');
 		await expect(row).toBeVisible({ timeout: 10_000 });
@@ -285,7 +285,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		const presetId = ((await presetRes.json()) as { id: string }).id;
 		registerForCleanup('preset', presetId);
 
-		await page.goto(`/compare/${presetId}?tab=idealwerte`);
+		await page.goto(`/compare/${presetId}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
 		const editor = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
 		await expect(editor).toBeVisible({ timeout: 10_000 });
@@ -371,7 +371,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		const presetId = ((await presetRes.json()) as { id: string }).id;
 		registerForCleanup('preset', presetId);
 
-		await page.goto(`/compare/${presetId}?tab=idealwerte`);
+		await page.goto(`/compare/${presetId}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
 		const editor = page.locator('[data-testid="corridor-editor-mobile-vergleich"]');
 		await expect(editor).toBeVisible({ timeout: 10_000 });
@@ -426,7 +426,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		await page.setViewportSize({ width: 390, height: 844 });
 		const tripId = await legeTripAn(page, 'ac2-mobil');
 
-		await page.goto(`/trips/${tripId}?tab=alerts`);
+		await page.goto(`/trips/${tripId}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
 		const row = page.locator('[data-testid="corridor-editor-mobile-route"] [data-testid="corridor-mobile-row-wind_gust"]');
 		await expect(row).toBeVisible({ timeout: 10_000 });
@@ -537,7 +537,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 			}
 		});
 
-		await page.goto(`/trips/${tripId}?tab=weather`);
+		await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 15_000 });
 		const boeen = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]');
@@ -601,7 +601,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 	}) => {
 		const tripId = await legeTripAn(page, 'ac11-konflikt');
 
-		await page.goto(`/trips/${tripId}?tab=alerts`);
+		await page.goto(`/trips/${tripId}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
 		const row = page.locator('[data-testid="corridor-editor-route"] [data-testid="corridor-row-wind_gust"]');
 		await expect(row).toBeVisible({ timeout: 10_000 });

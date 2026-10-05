@@ -3,7 +3,7 @@
 	//
 	// Tabs: Übersicht · Orte · Wertebereiche · Layout · Versand · Vorschau
 	// Issue #1231, Slice 6 (Begriffs-Konsistenz): Label „Idealwerte" -> „Wertebereiche",
-	// `value`-Schlüssel unverändert (`idealwerte`). Reine Lesenansicht, keine
+	// Issue #2287: Kennung jetzt `wertebereiche` (gemeinsam mit dem Trip-Hub). Reine Lesenansicht, keine
 	// funktionale CorridorEditor-Migration hier (bleibt späterer Scope).
 	//
 	// URL-Sync via history.replaceState (?tab=VALUE), kein Hash wie TripTabs.
@@ -100,7 +100,7 @@
 	import { hydrateVersandFieldsFromPreset } from '../shared/versandVergleichSpeicherung.ts';
 	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
-	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
+	import { subscriptionTabs, resolveTab, bereinigteTabAdresse } from '../shared/subscriptionTabs.ts';
 	import MTabBar from '$lib/components/mobile/MTabBar.svelte';
 
 	interface Props {
@@ -125,29 +125,34 @@
 		saveController?: SaveStatus;
 	}
 
-	let { preset, locations, initialTab = 'uebersicht', onScheduleChange, saveController }: Props =
+	// `saveController = undefined`: ausdruecklicher Default (semantisch gleich) — ein Hub
+	// ohne Controller ruft den Flush-Guard mit `undefined` (no-op), nie mit einer
+	// ungebundenen Variablen.
+	let { preset, locations, initialTab = 'uebersicht', onScheduleChange, saveController = undefined }: Props =
 		$props();
 
-	// Epic #1273 S3: TABS/VALID_VALUES/resolve() liegen jetzt in
-	// compareTabsResolve.ts (Adversary-Fund F001 — echter Funktionsaufruf statt
-	// Datei-Grep für AC-3 testbar), Verhalten unverändert.
-	const TABS = COMPARE_TABS;
-	function resolve(value: string): string {
-		return resolveCompareTab(value);
-	}
-
+	// Issue #2287: Tabelle und Aufloesung kommen aus der GEMEINSAMEN Reiter-Tabelle
+	// (shared/subscriptionTabs.ts) — dieselben Kennungen wie im Trip-Hub; die
+	// fruehere compareTabsResolve.ts (RETIRED_TABS) geht darin auf.
 	let activeTab = $state<string>('uebersicht');
+	// E4: Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState auf die neue
+	// Kennung; unbekannte Kennung → Parameter `tab` entfernt. Keine Schleife: danach
+	// ist die Kennung neu, und history.replaceState aendert `initialTab` nicht.
 	$effect(() => {
-		activeTab = resolve(initialTab);
+		const r = resolveTab('vergleich', initialTab);
+		activeTab = r.tab;
+		if (typeof window === 'undefined') return;
+		const ziel = bereinigteTabAdresse(window.location.href, r);
+		if (ziel !== null) history.replaceState(history.state, '', ziel);
 	});
 
 	// Tab-Leisten-Items für den MTabBar-Baustein — Orte mit Zähler-Badge.
 	const compareBarItems = $derived(
-		COMPARE_TABS.map((t) => ({
-			value: t.value,
+		subscriptionTabs('vergleich').map((t) => ({
+			value: t.id,
 			label: t.label,
-			testid: `compare-detail-tab-${t.value}`,
-			badge: t.value === 'orte' ? orteCount : undefined
+			testid: `compare-detail-tab-${t.id}`,
+			badge: t.id === 'orte' ? orteCount : undefined
 		}))
 	);
 
@@ -388,7 +393,7 @@
 	}
 
 	$effect(() => {
-		if (activeTab !== 'idealwerte' || idealwerteHydrated || idealwerteHydrating) return;
+		if (activeTab !== 'wertebereiche' || idealwerteHydrated || idealwerteHydrating) return;
 		idealwerteHydrating = true;
 		void hydrateIdealwerteTab().finally(() => {
 			idealwerteHydrating = false;
@@ -440,7 +445,7 @@
 	// als ERSTER Tab geoeffnet werden (Deep-Link `?tab=alarme`) — der
 	// Hydrations-Effekt hydriert deshalb ALLE Alarm-Felder eigenstaendig ueber
 	// `hydrateAlarmFieldsFromPreset` (statt sich auf einen bereits gelaufenen
-	// idealwerte-/versand-Effekt zu verlassen).
+	// Wertebereiche-/Versand-Effekt zu verlassen).
 	let alarmeHydrated = $state(false);
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): derselbe Grund wie beim
 	// Wetter-Metriken-Reiter unten — `hydrateAlarmFieldsFromPreset` hydriert
@@ -459,7 +464,7 @@
 		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
 		// Orte-/Idealwerte-/Versand-Edit in derselben Sitzung nicht
 		// ueberschrieben wird (H3: eigenstaendige Hydration ALLER Alarm-Felder,
-		// setzt KEINEN vorherigen idealwerte-/versand-Effekt voraus).
+		// setzt KEINEN vorherigen Wertebereiche-/Versand-Effekt voraus).
 		hydrateAlarmFieldsFromPreset(wizardState, currentPreset, catalog);
 		alarmeHydrated = true;
 	}
@@ -880,7 +885,7 @@
 							</span>
 							{@render summaryChevron()}
 						</button>
-						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('idealwerte')}>
+						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('wertebereiche')}>
 							<span class="hub-summary-row-body">
 								<span class="hub-summary-row-eyebrow">Wertebereiche</span>
 								<span class="hub-summary-row-title">{profileLabel}</span>
@@ -914,7 +919,7 @@
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 							<Eyebrow>Wertebereiche</Eyebrow>
-							<button onclick={() => handleValueChange('idealwerte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+							<button onclick={() => handleValueChange('wertebereiche')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
 						<!-- Issue #1256 S8c (AC-6): presetProfileLabel statt rohem preset.profil. -->
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{profileLabel}</div>
@@ -1043,8 +1048,8 @@
 		</div>
 	{/if}
 
-	{#if activeTab === 'idealwerte'}
-		<div class="tab-panel" data-testid="compare-detail-panel-idealwerte">
+	{#if activeTab === 'wertebereiche'}
+		<div class="tab-panel" data-testid="compare-detail-panel-wertebereiche">
 			{#if idealwerteHydrated}
 				<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung, Muster TripTabs.svelte.
 				     Issue #2276 S3: der Reiter speichert selbst (saveController, Hub-Queue,

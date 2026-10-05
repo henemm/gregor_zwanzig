@@ -4,7 +4,7 @@
 // Epic #1273 S4c: Die frühere min>max-Validierung lebt seit #1231 als Clamping im
 // CorridorEditor (unit-getestet, corridorEditorState.test.ts) — ihre E2E-Fälle
 // wurden entfernt. Hier bleibt das Orte-Gate: der Weiter-Button
-// (compare-editor-continue-metriken) ist disabled bis ≥2 Orte gewählt sind.
+// (compare-editor-continue-wetter-metriken) ist disabled bis ≥2 Orte gewählt sind.
 // Epic #1301 F2a: der Orte-Weiter-Knopf führt jetzt ehrlich zum NEUEN
 // Wetter-Metriken-Tab (Ziel-benannt), nicht mehr direkt zu Wertebereiche.
 
@@ -38,7 +38,7 @@ test.describe('Compare-Create-Wizard: Orte-Gate (Weiter erst ab 2 Orten) [Issue 
 
 		// Orte-Tab: noch kein Ort gewählt → Weiter-Button disabled.
 		await page.locator('[data-testid="compare-editor-tab-orte"]:visible').first().click();
-		const weiter = page.locator('[data-testid="compare-editor-continue-metriken"]:visible').first();
+		const weiter = page.locator('[data-testid="compare-editor-continue-wetter-metriken"]:visible').first();
 		await expect(weiter).toBeVisible({ timeout: 8_000 });
 		await expect(weiter).toBeDisabled();
 

@@ -126,7 +126,7 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 		});
 
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 		// Dirty-State herstellen über ein ANDERES Metrik-Toggle (Windchill), damit der
@@ -164,7 +164,7 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 		});
 
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 		// Dirty-State herstellen über ein ANDERES Metrik-Toggle, damit die gesetzten

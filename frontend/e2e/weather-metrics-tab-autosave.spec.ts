@@ -121,12 +121,12 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 		const puts = collectTripPuts(page, id);
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			// > 700ms Debounce (saveStatusStore.svelte.ts schedule()).
 			await page.waitForTimeout(3_000);
-			await page.getByTestId('trip-detail-tab-stages').click();
+			await page.getByTestId('trip-detail-tab-etappen').click();
 			await page.waitForTimeout(500);
 
 			expect(
@@ -156,7 +156,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 				route.fulfill({ status: 500, body: JSON.stringify({ error: 'Serverfehler' }) })
 			);
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 
 			await expect(page.getByTestId('weather-metrics-load-error')).toBeVisible();
 			await expect(page.getByTestId('weather-metrics-load-retry')).toBeVisible();
@@ -180,7 +180,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 		const puts = collectTripPuts(page, id);
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			const activeToggles = page.locator('[data-testid="wm2-grundauswahl"] .toggle-btn.on');
@@ -224,7 +224,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 		const puts = collectTripPuts(page, id);
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			// 1) Bisher inaktive Metrik zuschalten.
@@ -265,7 +265,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 			expect(windEntry?.sms_threshold).toBe(30);
 
 			await page.reload();
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			const trip = await fetchTrip(request, id);
@@ -291,7 +291,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 		await createTrip(request, id, { metrics: seedMetrics(METRIC_IDS) });
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			const checkbox = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
@@ -313,7 +313,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 			expect(putResponse.ok()).toBeTruthy();
 
 			await page.reload();
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 			const afterReload = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
 			await expect(afterReload).toBeVisible();
@@ -337,7 +337,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 		await createTrip(request, id, { metrics: seedMetrics(METRIC_IDS) });
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			const checkbox = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
@@ -358,7 +358,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 			expect(putResponse.ok()).toBeTruthy();
 
 			await page.reload();
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 			const afterReload = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
 			await expect(afterReload).toBeVisible();
@@ -382,7 +382,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 		await createTrip(request, id, { metrics: seedMetrics(METRIC_IDS) });
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			const checkbox = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
@@ -407,7 +407,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 			expect(putResponse.ok()).toBeTruthy();
 
 			await page.reload();
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 			const afterReload = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
 			await expect(afterReload).toBeVisible();
@@ -430,7 +430,7 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 		const puts = collectTripPuts(page, id);
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			await page.locator('[data-testid="report-mail-content"] h3', { hasText: 'E-Mail-Inhalt' }).click();

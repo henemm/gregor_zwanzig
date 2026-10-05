@@ -112,7 +112,7 @@
 
 	// Issue #516 — Initial-Tab aus ?tab=…-Query (kanonisches Schema, kein #hash mehr).
 	// $derived bleibt reaktiv falls user navigation triggert.
-	const initialTab = $derived(page.url.searchParams.get('tab') || 'overview');
+	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
 
 	const now = new Date();
 	const status = $derived(deriveTripStatus(trip, now));

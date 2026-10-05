@@ -25,7 +25,7 @@ const seedStages = [
 
 async function openStagesTabMobile(page: Page) {
 	await page.setViewportSize({ width: 390, height: 844 });
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
 	await expect(page.getByTestId('stage-cardm')).toHaveCount(3);
 }
@@ -157,7 +157,7 @@ test('Mobile: „Nur diese Etappe" lässt die Folge-Etappen unverändert', async
 // der Desktop-Karten-Editor bleibt alleiniger Ort der Datums-/Zeitbearbeitung.
 test('Desktop: kein Date-Input in Etappen-Karten — Editor unverändert', async ({ page }) => {
 	await page.setViewportSize({ width: 1280, height: 900 });
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
 
 	await expect(page.getByTestId('stage-cardm')).toHaveCount(0);

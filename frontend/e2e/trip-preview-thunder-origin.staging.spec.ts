@@ -1,6 +1,6 @@
 // Issue #1680 Scheibe 5b — AC-12 / AC-13: Herkunft der Gewitterstufe in der
 // Gewitter-Vorschau, abgelesen im ECHTEN Browser auf der Vorschau-Flaeche
-// `/trips/<id>?tab=preview` (Bildschirm-Nachweis, nicht Zwischendatei).
+// `/trips/<id>?tab=vorschau` (Bildschirm-Nachweis, nicht Zwischendatei).
 // Spec: docs/specs/modules/feat_1680_s5b_gewitter_herkunft_vorschau.md
 //
 // Warum ein eigener Spec (Spec, Risiko 1b): kein einziges Bestands-Spec oeffnet
@@ -157,8 +157,8 @@ async function setOutlook(playwright: PlaywrightWorkerArgs['playwright'], showOu
  * sobald die ECHTE (demo-freie) Antwort fuer genau diese Ansicht da ist.
  */
 async function openPreview(page: Page, type: 'morning' | 'evening'): Promise<FrameLocator> {
-	await page.goto(`/trips/${TRIP_ID}?tab=preview`, { waitUntil: 'domcontentloaded' });
-	await expect(page.getByTestId('trip-detail-panel-preview')).toBeVisible({ timeout: 30_000 });
+	await page.goto(`/trips/${TRIP_ID}?tab=vorschau`, { waitUntil: 'domcontentloaded' });
+	await expect(page.getByTestId('trip-detail-panel-vorschau')).toBeVisible({ timeout: 30_000 });
 
 	// Erwartete Antwort VOR den Klicks registrieren — sonst Rennen.
 	const echteAntwort = page.waitForResponse(

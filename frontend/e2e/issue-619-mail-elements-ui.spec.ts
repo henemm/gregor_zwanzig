@@ -4,9 +4,9 @@
 // Workflow: issue-619-mail-elements-ui
 //
 // Ziel-Oberfläche (migriert durch Fix #1047, docs/specs/modules/fix_1047_mail_content_tab_restore.md):
-// Trip-Detail-Seite /trips/[id]?tab=weather, Reiter "Wetter-Metriken" (= "Inhalt",
+// Trip-Detail-Seite /trips/[id]?tab=wetter-metriken, Reiter "Wetter-Metriken" (= "Inhalt",
 // MailInhaltCard.svelte eingebunden über WeatherMetricsTab.svelte). Der
-// Reiter "Briefing-Zeitplan" (?tab=briefings) zeigt die Karte seit #736 bewusst NICHT
+// Reiter "Briefing-Zeitplan" (?tab=versand) zeigt die Karte seit #736 bewusst NICHT
 // mehr (Kanal-/Zeitplan-Reiter); zwischenzeitlich (#942) fehlte sie versehentlich auch
 // im Wetter-Metriken-Reiter — Fix #1047 stellt sie dort wieder her.
 //
@@ -60,8 +60,8 @@ async function deleteTrip(
 }
 
 async function openReportsSection(page: import('@playwright/test').Page, id: string) {
-	// Fix #1047: Reiter "Wetter-Metriken" (?tab=weather), nicht mehr "Briefing-Zeitplan".
-	await page.goto(`/trips/${id}?tab=weather`);
+	// Fix #1047: Reiter "Wetter-Metriken" (?tab=wetter-metriken), nicht mehr "Briefing-Zeitplan".
+	await page.goto(`/trips/${id}?tab=wetter-metriken`);
 	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }
@@ -131,14 +131,14 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 	});
 
 	// ── Fix #1047 AC-3: Mail-Inhalt-Karte bleibt im Versand-Reiter unsichtbar (unverändert) ──
-	test('Fix #1047 AC-3: E-Mail-Inhalt-Karte auf ?tab=briefings weiterhin nicht im DOM', async ({
+	test('Fix #1047 AC-3: E-Mail-Inhalt-Karte auf ?tab=versand weiterhin nicht im DOM', async ({
 		page,
 		request
 	}) => {
 		const id = tripId('fix1047-ac3');
 		await createTrip(request, id);
 		try {
-			await page.goto(`/trips/${id}?tab=briefings`);
+			await page.goto(`/trips/${id}?tab=versand`);
 			// Kanal-Checkbox ist im Versand-Reiter unconditional gerendert (Ready-Marker,
 			// da die Live-Route immer per Auto-Save läuft — kein Save-Button vorhanden).
 			await page.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });

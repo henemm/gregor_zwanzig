@@ -234,15 +234,16 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 		}
 	});
 
-	// ── AC-10: alle 6 Tabs klickbar, Panel je sichtbar ───────────────────────
-	test('AC-10: alle sechs compare-detail-tab-* Testids klickbar, Panel sichtbar', async ({ page }) => {
+	// ── AC-10: alle 7 Tabs klickbar, Panel je sichtbar ───────────────────────
+	test('AC-10: alle sieben compare-detail-tab-* Testids klickbar, Panel sichtbar', async ({ page }) => {
 		const { id } = await createPreset(page);
 		try {
 			await page.setViewportSize({ width: 1280, height: 900 });
 			await page.goto(`/compare/${id}`);
 			await page.waitForLoadState('networkidle');
 
-			const tabs = ['uebersicht', 'orte', 'idealwerte', 'layout', 'versand', 'vorschau'];
+			// Reihenfolge = shared/subscriptionTabs.ts ('vergleich'); Layout per #1360 aufgeloest.
+			const tabs = ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand', 'vorschau'];
 			for (const tab of tabs) {
 				await page.locator(`[data-testid="compare-detail-tab-${tab}"]:visible`).first().click();
 				await expect(

@@ -214,7 +214,7 @@ test('AC-9: Detail-View Etappen-Tab zeigt MapCanvas + ProfileEditor (keine Regre
 	page
 }) => {
 	await page.goto(`/trips/${TRIP_ID}#stages`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 	await expect(page.getByTestId('map-canvas')).toBeVisible();
 	await expect(page.getByTestId('profile-editor')).toBeVisible();
 });

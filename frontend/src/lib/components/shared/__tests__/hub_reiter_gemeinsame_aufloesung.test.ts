@@ -116,7 +116,13 @@ async function hubOeffnen(
 				};
 	const { u, ast, quelle } = await umgebungFuer(kind === 'trip' ? TRIP_HUB : VERGLEICH_HUB, saat, { jsAlsTs: true });
 	const fehler: string[] = [];
-	for (const e of effekteVon(ast, quelle, u)) {
+	// /50-Anpassung (Muster compare_retry_reiterwechsel_eingabe_bleibt.test.ts): nur die
+	// Effekte, die `initialTab` nennen (Reiter-Aufloesung + URL-Bereinigung). Die
+	// asynchronen Hydrations-Effekte von CompareTabs brauchen `wizardState`
+	// (Import `./compareWizardState.svelte`, vom Pruefstand nicht bindbar) und
+	// wuerden nach Testende als unhandledRejection scheitern — sie sind nicht Gegenstand
+	// dieser Zusicherungen.
+	for (const e of effekteVon(ast, quelle, u, 'initialTab')) {
 		try {
 			e();
 		} catch (err) {

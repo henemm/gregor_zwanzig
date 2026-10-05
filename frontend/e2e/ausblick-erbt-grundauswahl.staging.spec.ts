@@ -28,8 +28,8 @@ import { createTestLocation, createTestTrip } from './helpers';
 // ─── Trip ────────────────────────────────────────────────────────────────
 
 async function oeffneTripAusblick(page: Page, tripId: string): Promise<Locator> {
-	await page.goto(`/trips/${tripId}?tab=weather`);
-	const tabBtn = page.getByTestId('trip-detail-tab-weather');
+	await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
+	const tabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
 	await expect(tabBtn).toBeVisible({ timeout: 15000 });
 	await tabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');

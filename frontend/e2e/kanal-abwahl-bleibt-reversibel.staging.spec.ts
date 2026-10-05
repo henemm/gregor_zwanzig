@@ -84,8 +84,8 @@ async function createTrip(request: APIRequestContext, id: string) {
 }
 
 async function openMetricsTab(page: Page, id: string) {
-	await page.goto(`/trips/${id}?tab=weather`);
-	const weatherTabBtn = page.getByTestId('trip-detail-tab-weather');
+	await page.goto(`/trips/${id}?tab=wetter-metriken`);
+	const weatherTabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
 	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
 	await weatherTabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
@@ -139,7 +139,7 @@ test.describe('Issue #1719 S3 Block C: "Aus" ist ein Zustand', () => {
 
 		// Persistiert über Reload.
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const reloaded = page.getByTestId('weather-metrics-tab');
 		await reloaded.getByTestId('channel-tab-sms').click();
 		const reloadedAusRow = reloaded

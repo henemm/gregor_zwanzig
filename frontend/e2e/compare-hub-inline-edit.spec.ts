@@ -190,9 +190,9 @@ test.describe('Issue #1256 Scheibe 6: Hub-Idealwerte-Tab (AC-16/33/34)', () => {
 			}
 		});
 
-		await page.goto(`/compare/${id}?tab=idealwerte`);
+		await page.goto(`/compare/${id}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-idealwerte"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wertebereiche"]:visible').click();
 
 		const editor = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
 		await expect(editor).toBeVisible({ timeout: 10_000 });
@@ -230,9 +230,9 @@ test.describe('Issue #1256 Scheibe 6: Hub-Idealwerte-Tab (AC-16/33/34)', () => {
 			}
 		});
 
-		await page.goto(`/compare/${id}?tab=idealwerte`);
+		await page.goto(`/compare/${id}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-idealwerte"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wertebereiche"]:visible').click();
 
 		const editor = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
 		await expect(editor).toBeVisible({ timeout: 10_000 });
@@ -271,9 +271,9 @@ test.describe('Issue #1256 Scheibe 6: Hub-Idealwerte-Tab (AC-16/33/34)', () => {
 			}
 		});
 
-		await page.goto(`/compare/${id}?tab=idealwerte`);
+		await page.goto(`/compare/${id}?tab=wertebereiche`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-idealwerte"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wertebereiche"]:visible').click();
 
 		const editor = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
 		await expect(editor).toBeVisible({ timeout: 10_000 });
@@ -314,7 +314,7 @@ test.describe('Issue #1256 Scheibe 6: Hub-Idealwerte-Tab (AC-16/33/34)', () => {
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-idealwerte"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wertebereiche"]:visible').click();
 		const reloadedEditor = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
 		await expect(reloadedEditor).toBeVisible({ timeout: 10_000 });
 		const reloadedRow = reloadedEditor.locator('[data-testid="corridor-row-snow_depth_cm"]');

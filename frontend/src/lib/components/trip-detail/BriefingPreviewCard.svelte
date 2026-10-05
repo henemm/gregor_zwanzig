@@ -48,7 +48,7 @@
 		</ul>
 	{/if}
 
-	<a href="?tab=briefings" data-testid="right-card-briefings-edit-link" class="edit-link">
+	<a href="?tab=versand" data-testid="right-card-briefings-edit-link" class="edit-link">
 		Bearbeiten →
 	</a>
 </GCard>

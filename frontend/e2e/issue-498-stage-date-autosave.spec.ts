@@ -10,7 +10,7 @@
 // verloren die Änderung beim Verlassen/Reload.
 //
 // AC-1/AC-2/AC-3/AC-5 lassen den separaten Save-Klick BEWUSST weg → vor dem Fix ROT.
-// Editor lebt im Trip-Detail unter ?tab=stages (EditStagesSection → EditStagesPanelNew).
+// Editor lebt im Trip-Detail unter ?tab=etappen (EditStagesSection → EditStagesPanelNew).
 // Auth via storageState (playwright.config 'tests'-Projekt → admin.json).
 
 import { test, expect, type Page } from '@playwright/test';
@@ -31,7 +31,7 @@ const seedStages = [
 const seedBody = { id: TRIP_ID, name: TRIP_NAME, region: 'Korsika', stages: seedStages };
 
 async function openStagesEditor(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }

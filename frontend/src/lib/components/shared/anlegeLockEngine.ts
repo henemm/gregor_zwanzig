@@ -8,7 +8,7 @@
 // kind-eigen und wird als Wahrheitswert `metrikenFrei` uebergeben. Die Besuchs-
 // Flags werden vom Editor beim Reiterwechsel gesetzt und nie zurueckgesetzt.
 
-/** Tab-IDs der Schwanz-Kette (je Seite verschieden: `wertebereiche` vs. `idealwerte`). */
+/** Tab-IDs der Schwanz-Kette. */
 export interface TailIds<T extends string = string> {
 	metriken: T;
 	wertebereiche: T;

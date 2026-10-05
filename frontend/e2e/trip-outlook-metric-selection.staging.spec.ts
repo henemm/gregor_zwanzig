@@ -41,9 +41,9 @@ function sammleKonsolenfehler(page: Page): string[] {
 
 /** Oeffnet den Trip und wechselt in den Wetter-Metriken-Reiter. */
 async function oeffneMetrikenReiter(page: Page, tripId: string): Promise<Locator> {
-	await page.goto(`/trips/${tripId}?tab=weather`);
+	await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15000 });
-	await page.getByTestId('trip-detail-tab-weather').first().click();
+	await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
 	const reiter = page.getByTestId('weather-metrics-tab');
 	await expect(reiter).toBeVisible({ timeout: 15000 });
 	return reiter;
