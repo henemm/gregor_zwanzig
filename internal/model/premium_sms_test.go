@@ -141,3 +141,24 @@ func TestDerivePremiumSmsReplyStateStaleOneSecondOutsideTTL(t *testing.T) {
 		}
 	}
 }
+
+// #2231 AC-2: Ein Zeitstempel in der Zukunft ist ungueltig und gilt als
+// "stale" (gleiche Semantik wie der Python-Sendepfad), nicht als "fresh".
+func TestDerivePremiumSmsReplyStateFutureTimestampIsStale(t *testing.T) {
+	now := time.Now()
+	faelle := []struct {
+		name string
+		at   time.Time
+		want string
+	}{
+		{"zukunft +24h", now.Add(24 * time.Hour), PremiumSmsStateStale},
+		{"vor 1h", now.Add(-1 * time.Hour), PremiumSmsStateFresh},
+		{"vor 31 Tagen", now.Add(-31 * 24 * time.Hour), PremiumSmsStateStale},
+	}
+	for _, f := range faelle {
+		at := f.at
+		if got := DerivePremiumSmsReplyState(testReplyTo, &at); got != f.want {
+			t.Errorf("%s: got %q, want %q", f.name, got, f.want)
+		}
+	}
+}
