@@ -346,14 +346,14 @@ describe('AC-9: Namensauflösung liegt unter shared/, kein Compare-Pendant entst
 });
 
 describe('AC-10: Sprung-Link nutzt denselben Mechanismus wie die bestehenden vier Karten', () => {
-	test('Genau ein Aufruf von makeJumpHandler(\'weather\') im Template', () => {
+	test('Genau ein Aufruf von makeJumpHandler(\'wetter-metriken\') im Template (#2287: vormals \'weather\')', () => {
 		const { ast, src } = parseSvelte(HUB_OVERVIEW);
 		const onclickAttrs = findAll(ast.fragment, 'Attribute').filter((a) => a.name === 'onclick');
-		const weatherJumps = onclickAttrs.filter((a) => /makeJumpHandler\(\s*['"]weather['"]\s*\)/.test(attrExprSource(a, src)));
+		const weatherJumps = onclickAttrs.filter((a) => /makeJumpHandler\(\s*['"]wetter-metriken['"]\s*\)/.test(attrExprSource(a, src)));
 		assert.equal(
 			weatherJumps.length,
 			1,
-			'Kein (oder mehr als ein) onclick={makeJumpHandler(\'weather\')} im Template gefunden — der ' +
+			'Kein (oder mehr als ein) onclick={makeJumpHandler(\'wetter-metriken\')} im Template gefunden — der ' +
 				'neue Block muss über denselben Sprung-Mechanismus wie die bestehenden vier Karten in den ' +
 				'Reiter „Wetter-Metriken" springen (AC-10).'
 		);

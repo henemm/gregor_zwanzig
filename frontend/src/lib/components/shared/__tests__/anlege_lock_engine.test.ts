@@ -18,8 +18,9 @@ import {
 	progressCount,
 } from '../anlegeLockEngine.ts';
 
-const TRIP = { metriken: 'metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' } as const;
-const COMPARE = { metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand' } as const;
+// Feature #2287: beide Anlege-Seiten fuehren dieselben Kennungen (wetter-metriken, wertebereiche, alarme, versand).
+const TRIP = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' } as const;
+const COMPARE = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' } as const;
 
 function p(over: Partial<{ metrikenFrei: boolean; metrikenVisited: boolean; wertebereicheVisited: boolean; alarmeVisited: boolean; versandVisited: boolean }> = {}) {
 	return { metrikenFrei: true, metrikenVisited: false, wertebereicheVisited: false, alarmeVisited: false, versandVisited: false, ...over };
@@ -31,10 +32,10 @@ describe('AC-1: Schwanz-Kette Metriken → Wertebereiche → Alarme → Versand'
 		assert.deepEqual(sorted(tailUnlocked(TRIP, p({ metrikenFrei: false, metrikenVisited: true, wertebereicheVisited: true, alarmeVisited: true }))), []);
 	});
 	test('Vorderteil erfüllt, nichts besucht: nur Metriken frei', () => {
-		assert.deepEqual(sorted(tailUnlocked(TRIP, p())), ['metriken']);
+		assert.deepEqual(sorted(tailUnlocked(TRIP, p())), ['wetter-metriken']);
 	});
 	test('Wertebereiche erst nach Besuch Metriken', () => {
-		assert.deepEqual(sorted(tailUnlocked(TRIP, p({ metrikenVisited: true }))), ['metriken', 'wertebereiche']);
+		assert.deepEqual(sorted(tailUnlocked(TRIP, p({ metrikenVisited: true }))), ['wertebereiche', 'wetter-metriken']);
 	});
 	test('Alarme erst nach Besuch Wertebereiche (nicht schon nach Metriken)', () => {
 		const u = tailUnlocked(TRIP, p({ metrikenVisited: true }));
@@ -46,15 +47,15 @@ describe('AC-1: Schwanz-Kette Metriken → Wertebereiche → Alarme → Versand'
 		assert.ok(!u.has('versand'));
 		assert.ok(tailUnlocked(TRIP, p({ metrikenVisited: true, wertebereicheVisited: true, alarmeVisited: true })).has('versand'));
 	});
-	test('Compare-IDs: Wertebereiche heißen idealwerte, Kette identisch', () => {
+	test('Compare-IDs: identisch zu Trip (Feature #2287), Kette identisch', () => {
 		const u = tailUnlocked(COMPARE, p({ metrikenVisited: true, wertebereicheVisited: true, alarmeVisited: true }));
-		assert.deepEqual(sorted(u), ['alarme', 'idealwerte', 'metriken', 'versand']);
+		assert.deepEqual(sorted(u), ['alarme', 'versand', 'wertebereiche', 'wetter-metriken']);
 	});
 	test('Kette über alle 16 Besuchs-Kombinationen gegen die Referenzformel', () => {
 		for (let m = 0; m < 16; m++) {
 			const f = { metrikenFrei: true, metrikenVisited: !!(m & 1), wertebereicheVisited: !!(m & 2), alarmeVisited: !!(m & 4), versandVisited: !!(m & 8) };
 			const u = tailUnlocked(TRIP, f);
-			assert.equal(u.has('metriken'), true);
+			assert.equal(u.has('wetter-metriken'), true);
 			assert.equal(u.has('wertebereiche'), f.metrikenVisited);
 			assert.equal(u.has('alarme'), f.wertebereicheVisited);
 			assert.equal(u.has('versand'), f.alarmeVisited);
@@ -65,7 +66,7 @@ describe('AC-1: Schwanz-Kette Metriken → Wertebereiche → Alarme → Versand'
 describe('AC-7: erledigt = Besuchs-Flag, monoton und rein', () => {
 	test('tailDone spiegelt exakt die Besuchs-Flags, unabhängig vom Vorderteil', () => {
 		assert.deepEqual(sorted(tailDone(TRIP, p({ metrikenFrei: false }))), []);
-		assert.deepEqual(sorted(tailDone(TRIP, p({ metrikenVisited: true, alarmeVisited: true }))), ['alarme', 'metriken']);
+		assert.deepEqual(sorted(tailDone(TRIP, p({ metrikenVisited: true, alarmeVisited: true }))), ['alarme', 'wetter-metriken']);
 	});
 	test('Mehr Besuche nehmen nie etwas frei Gewordenes zurück (Monotonie)', () => {
 		const a = tailUnlocked(TRIP, p({ metrikenVisited: true, wertebereicheVisited: true }));
@@ -84,7 +85,7 @@ describe('AC-7: erledigt = Besuchs-Flag, monoton und rein', () => {
 
 describe('AC-3: canFinish', () => {
 	test('erst mit Versand erledigt', () => {
-		assert.equal(canFinish(new Set(['route', 'etappen', 'metriken', 'wertebereiche', 'alarme'])), false);
+		assert.equal(canFinish(new Set(['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'])), false);
 		assert.equal(canFinish(new Set(['versand'])), true);
 	});
 	test('Alarme allein genügt nicht', () => {
@@ -94,15 +95,15 @@ describe('AC-3: canFinish', () => {
 
 describe('AC-4/AC-5: progressCount(done, steps)', () => {
 	test('Trip-Schritte: Wertebereiche und Alarme zählen nicht mit, Maximum 4', () => {
-		const steps = ['route', 'etappen', 'metriken', 'versand'];
-		assert.equal(progressCount(new Set(['route', 'etappen', 'metriken', 'wertebereiche', 'alarme', 'versand']), steps), 4);
+		const steps = ['route', 'etappen', 'wetter-metriken', 'versand'];
+		assert.equal(progressCount(new Set(['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand']), steps), 4);
 		assert.equal(progressCount(new Set(['wertebereiche', 'alarme']), steps), 0);
 		assert.equal(progressCount(new Set(['route', 'versand']), steps), 2);
 	});
 	test('Compare: alle sechs Reiter ⇒ 6, weniger ⇒ genau deren Anzahl', () => {
-		const steps = ['vergleich', 'orte', 'metriken', 'idealwerte', 'alarme', 'versand'];
+		const steps = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
 		assert.equal(progressCount(new Set(steps), steps), 6);
-		assert.equal(progressCount(new Set(['vergleich', 'orte', 'metriken']), steps), 3);
+		assert.equal(progressCount(new Set(['vergleich', 'orte', 'wetter-metriken']), steps), 3);
 		assert.equal(progressCount(new Set(), steps), 0);
 	});
 });

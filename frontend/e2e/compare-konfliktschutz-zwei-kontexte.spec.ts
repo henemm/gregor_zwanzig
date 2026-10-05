@@ -158,7 +158,7 @@ const REITER_FAELLE: ReiterFall[] = [
 	},
 	{
 		reiter: 'Wertebereiche',
-		tab: 'idealwerte',
+		tab: 'wertebereiche',
 		bereit: async (p) => {
 			const editor = p.locator('[data-testid="corridor-editor-vergleich"]:visible');
 			await expect(editor.locator('[data-testid="corridor-row-snow_depth_cm"]')).toBeVisible({ timeout: 10_000 });

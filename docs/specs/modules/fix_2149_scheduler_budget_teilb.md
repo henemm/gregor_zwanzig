@@ -299,9 +299,12 @@ derselben Package (keine Millisekunden-Konstanten):
 | `briefingWaitBudget` | `600 * time.Second` | > 319s gemessener Einzelversand (#1912), ≤ `briefingRunBudget` |
 | — Briefing-Cap | kein eigenes Feld | bestehendes `s.client.Timeout = 3000s` bleibt der einzige Deckel (Punkt 3) |
 
-`alertRunBudget`/`alertWaitBudget`/`alertCallCap` gelten für alle fünf
-Alarm-Fan-out-Jobs (auch die beiden `7,22,37,52`-Radar-Jobs — deren Takt ist
-ebenfalls effektiv 15 Minuten).
+`alertRunBudget`/`alertWaitBudget`/`alertCallCap` gelten für die drei
+Alarm-Fan-out-Jobs `alert_checks`, `compare_alert_checks` und
+`compare_official_alert_checks`. **Abgelöst durch #2261 A-2 S2 (ADR-0082):**
+die beiden Radar-Jobs (`radar_alert_checks`, `compare_radar_alert_checks`)
+laufen im 5-Minuten-Takt (`3-58/5`) und haben eigene Felder
+`radarWaitBudget` 240 s / `radarRunBudget` 270 s / `radarCallCap` 600 s.
 
 ### 9. `Status()`-Erweiterung — nur Zahlen, je zuletzt abgeschlossenem Lauf
 

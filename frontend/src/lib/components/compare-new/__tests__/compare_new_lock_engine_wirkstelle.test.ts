@@ -65,20 +65,20 @@ describe('AC-6: Vorderteil an der Reiterleiste', () => {
 	test('Name, 1 Ort: Orte frei, Metriken gesperrt', () => {
 		const h = html({ name: 'X', picked: 1 });
 		assert.equal(locked(h, 'orte'), false);
-		assert.equal(locked(h, 'metriken'), true);
+		assert.equal(locked(h, 'wetter-metriken'), true);
 	});
-	test('Name, 2 Orte: Metriken frei', () => assert.equal(locked(html({ name: 'X', picked: 2 }), 'metriken'), false));
+	test('Name, 2 Orte: Metriken frei', () => assert.equal(locked(html({ name: 'X', picked: 2 }), 'wetter-metriken'), false));
 });
 
 describe('AC-1/AC-7: Schwanz-Kette an der Reiterleiste (Besuchs-Flags über stateOverride)', () => {
 	const base = { name: 'X', picked: 2 };
 	test('nichts besucht: Wertebereiche, Alarme, Versand gesperrt', () => {
 		const h = html(base);
-		for (const t of ['idealwerte', 'alarme', 'versand']) assert.equal(locked(h, t), true, t);
+		for (const t of ['wertebereiche', 'alarme', 'versand']) assert.equal(locked(h, t), true, t);
 	});
 	test('Metriken besucht: nur Wertebereiche frei', () => {
 		const h = html({ ...base, metriken: true });
-		assert.equal(locked(h, 'idealwerte'), false);
+		assert.equal(locked(h, 'wertebereiche'), false);
 		assert.equal(locked(h, 'alarme'), true);
 		assert.equal(locked(h, 'versand'), true);
 	});
@@ -132,7 +132,7 @@ describe('F003: konjunktive Kette bei uebersprungenem Flag (Compare-Semantik wie
 	const base = { name: 'X', picked: 2 };
 	test('Ideal-Flag ohne Metriken-Flag: Wertebereiche und Alarme bleiben gesperrt', () => {
 		const h = html({ ...base, ideals: true });
-		assert.equal(locked(h, 'idealwerte'), true);
+		assert.equal(locked(h, 'wertebereiche'), true);
 		assert.equal(locked(h, 'alarme'), true);
 	});
 	test('Alarme-Flag ohne Ideal-Flag: Versand gesperrt', () => {

@@ -20,16 +20,18 @@
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
+	import { subscriptionTabs, resolveTab, bereinigteTabAdresse } from '../shared/subscriptionTabs.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
+	// Issue #2287: Badge-Schluessel = Reiter-Kennungen (gemeinsame Tabelle).
 	interface Badges {
-		overview?: number;
-		stages?: number;
-		weather?: number;
-		briefings?: number;
-		alerts?: number;
+		uebersicht?: number;
+		etappen?: number;
+		'wetter-metriken'?: number;
+		versand?: number;
+		wertebereiche?: number;
 		alarme?: number;
-		preview?: number;
+		vorschau?: number;
 	}
 
 	interface Props {
@@ -45,7 +47,7 @@
 	}
 
 	let {
-		initialTab = 'overview',
+		initialTab = 'uebersicht',
 		badges: badgesProp = {},
 		trip,
 		onTripUpdate,
@@ -61,13 +63,13 @@
 	// Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl + enabled Alerts).
 	// Explizite Werte in der `badges` Prop ueberschreiben die Auto-Ableitung.
 	const badges = $derived<Badges>({
-		stages: badgesProp.stages ?? trip?.stages?.length ?? 0,
-		alerts: badgesProp.alerts ?? (trip?.alert_rules ?? []).filter((r) => r.enabled).length,
-		overview: badgesProp.overview,
-		weather: badgesProp.weather,
-		briefings: badgesProp.briefings,
+		etappen: badgesProp.etappen ?? trip?.stages?.length ?? 0,
+		wertebereiche: badgesProp.wertebereiche ?? (trip?.alert_rules ?? []).filter((r) => r.enabled).length,
+		uebersicht: badgesProp.uebersicht,
+		'wetter-metriken': badgesProp['wetter-metriken'],
+		versand: badgesProp.versand,
 		alarme: badgesProp.alarme,
-		preview: badgesProp.preview
+		vorschau: badgesProp.vorschau
 	});
 
 	// Issue #529 — Kanonische Tab-Namen aus nav-map.jsx (Single Source of Truth):
@@ -77,55 +79,49 @@
 	// Issue #736 — Reiter-Reorganisation: Labels umbenannt, value-Schlüssel unverändert.
 	// Issue #1231, Slice 6 (AC-16) — CorridorEditor vereint Alerts + Idealwerte:
 	//   weather -> "Wetter-Metriken" (war: "Inhalt"), alerts -> "Wertebereiche" (war: "Alerts").
-	// `value`-Schlüssel bleiben unverändert — URL-Parameter und Test-IDs nicht betroffen.
 	// Issue #1258 Scheibe S3 (D1) — Konvergenz mit dem Compare-Zielbild: Reihenfolge
 	// an … → Wertebereiche → Alarme → Versand angeglichen (war: briefings VOR alerts),
 	// neuer Tab "alarme" (geteilter AlarmeTab, context="route") zwischen
 	// Wertebereiche und Versand eingefuegt.
-	const TABS = [
-		{ value: 'overview', label: 'Übersicht' },
-		{ value: 'stages', label: 'Etappen & Wegpunkte' },
-		{ value: 'weather', label: 'Wetter-Metriken' },
-		{ value: 'alerts', label: 'Wertebereiche' },
-		{ value: 'alarme', label: 'Alarme' },
-		{ value: 'briefings', label: 'Versand' },
-		{ value: 'preview', label: 'Vorschau' }
-	] as const;
+	// Issue #2287: Tabelle und Kennungen kommen aus der GEMEINSAMEN Reiter-Tabelle
+	// (shared/subscriptionTabs.ts) — dieselben Kennungen wie im Ortsvergleich-Hub.
+	const TABS = subscriptionTabs('trip').map((t) => ({ value: t.id, label: t.label }));
 
 	const PLACEHOLDERS: Record<string, string> = {
-		overview: 'Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)',
-		stages: 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)',
-		preview: 'Inhalt folgt mit Issue #189 (Vorschau-Integration)'
+		uebersicht: 'Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)',
+		etappen: 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)',
+		vorschau: 'Inhalt folgt mit Issue #189 (Vorschau-Integration)'
 	};
 
 	const segmentedOptions = $derived(
 		TABS.map(tab => ({
 			value: tab.value,
 			label: tab.label,
-			badge: (badges[tab.value] ?? 0) >= 1 ? badges[tab.value] : undefined,
+			badge: (badges[tab.value as keyof Badges] ?? 0) >= 1 ? badges[tab.value as keyof Badges] : undefined,
 			testid: `trip-detail-tab-${tab.value}`,
 			badge_testid: `trip-detail-tab-badge-${tab.value}`,
 		}))
 	);
 
-	const VALID_VALUES: readonly string[] = TABS.map((t) => t.value);
-
-	function resolve(value: string): string {
-		return VALID_VALUES.includes(value) ? value : 'overview';
-	}
-
-	// Default 'overview'; $effect setzt sofort beim Mount den korrekten Tab
+	// Default 'uebersicht'; $effect setzt sofort beim Mount den korrekten Tab
 	// und synchronisiert bei späteren initialTab-Prop-Änderungen
 	// (z.B. hash-only navigation ohne Re-Mount).
-	let activeTab = $state<string>('overview');
+	let activeTab = $state<string>('uebersicht');
 	let previewType = $state<ReportType>(defaultReportType());
 	// Issue #483: Vorschau-Tab startet im Demo-Modus (Fixture-Daten), damit
 	// die Vorschau auch dann zuverlässig funktioniert, wenn der Trip in der
 	// Vergangenheit liegt oder die OpenMeteo-API gerade nicht erreichbar ist.
 	let demoMode = $state(true);
 
+	// Issue #2287 (E4): Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState
+	// auf die neue Kennung; unbekannte Kennung → Parameter `tab` entfernt. Danach ist
+	// die Kennung neu → kein erneutes Umschreiben (keine Schleife).
 	$effect(() => {
-		activeTab = resolve(initialTab);
+		const r = resolveTab('trip', initialTab);
+		activeTab = r.tab;
+		if (typeof window === 'undefined') return;
+		const ziel = bereinigteTabAdresse(window.location.href, r);
+		if (ziel !== null) void goto(ziel, { replaceState: true, noScroll: true, keepFocus: true });
 	});
 
 	// Issue #1231, Slice 3: Desktop/Mobile-Weiche fuer den Wertebereiche-Tab,
@@ -144,11 +140,13 @@
 		// statt einen irreführenden „Änderungen gehen verloren"-Dialog zu zeigen
 		// (die Änderung wird ohnehin gespeichert). onTripUpdate synchronisiert
 		// den Parent-State, damit der Wert beim Re-Mount erhalten bleibt.
-		// Issue #1117: Flush-Guard symmetrisch auf den Inhalt-Tab ('weather')
+		// Issue #2287: Literale auf die gemeinsamen Kennungen umgestellt
+		// (alerts→wertebereiche, weather→wetter-metriken, briefings→versand, stages→etappen).
+		// Issue #1117: Flush-Guard symmetrisch auf den Inhalt-Tab (Wetter-Metriken)
 		// erweitert — der neue „Amtliche Warnungen"-Schalter nutzt denselben
 		// debounce-Auto-Save; ohne Flush könnte ein sehr schneller Tab-Wechsel den
 		// frisch gemounteten Alerts-Tab kurzzeitig den alten Wert zeigen lassen.
-		// Issue #1232 Scheibe 1 (Adversary-Fund F001): 'briefings' ergänzt — die
+		// Issue #1232 Scheibe 1 (Adversary-Fund F001): Versand ergänzt — die
 		// komplette Alert-Zustellung (official_alerts_enabled/-triggers, Cooldown,
 		// Stille Stunden) lebt jetzt im Versand-Tab (VersandTab.svelte). Ohne
 		// diesen Flush würde ein schneller Wechsel weg vom Versand-Tab den
@@ -158,14 +156,14 @@
 		// Issue #1258 Scheibe S3 (D5): 'alarme' ergänzt — die Alert-Zustellung
 		// zog aus dem Versand-Tab in den neuen Alarme-Tab um, derselbe
 		// Flush-Guard gilt jetzt dort.
-		// Bug #1389 (Adversary F001): 'stages' ergänzt — der Etappen-Reiter nutzt
+		// Bug #1389 (Adversary F001): Etappen ergänzt — der Etappen-Reiter nutzt
 		// denselben Controller und kennt seit #1389 zusätzlich zurückgestellte
 		// Speichervorgänge (offene Kaskaden-Rückfrage, `defer()`). Deren Rettung
 		// hing hier allein am `beforeNavigate`-Haken der Seite, also implizit.
 		// Explizit ist besser: die Asymmetrie wäre genau die Abhängigkeit, die
 		// beim nächsten Framework-Update still kippt.
 		if (
-			(activeTab === 'alerts' || activeTab === 'weather' || activeTab === 'briefings' || activeTab === 'alarme' || activeTab === 'stages') &&
+			(activeTab === 'wertebereiche' || activeTab === 'wetter-metriken' || activeTab === 'versand' || activeTab === 'alarme' || activeTab === 'etappen') &&
 			value !== activeTab &&
 			saveController?.hasPending
 		) {
@@ -193,15 +191,15 @@
 	{#each TABS as tab}
 		{#if activeTab === tab.value}
 			<div data-testid="trip-detail-panel-{tab.value}">
-				{#if tab.value === 'overview' && trip}
+				{#if tab.value === 'uebersicht' && trip}
 					<HubOverview {trip} onJump={handleValueChange} {metricsCatalog} />
-				{:else if tab.value === 'stages'}
+				{:else if tab.value === 'etappen'}
 					{#if trip}
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
 					{/if}
-				{:else if tab.value === 'weather' && trip}
+				{:else if tab.value === 'wetter-metriken' && trip}
 					<WeatherMetricsTab {trip} {onTripUpdate} {saveController} />
-				{:else if tab.value === 'alerts' && trip}
+				{:else if tab.value === 'wertebereiche' && trip}
 					{#if isMobileViewport}
 						<CorridorEditorMobile context="route" {trip} {onTripUpdate} {saveController} />
 					{:else}
@@ -209,9 +207,9 @@
 					{/if}
 				{:else if tab.value === 'alarme' && trip}
 					<AlarmeScheduleTab {trip} {onTripUpdate} {saveController} {metricsCatalog} />
-				{:else if tab.value === 'briefings' && trip}
+				{:else if tab.value === 'versand' && trip}
 					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
-				{:else if tab.value === 'preview' && trip}
+				{:else if tab.value === 'vorschau' && trip}
 					<div class="preview-shell">
 						{#if demoMode}
 							<div class="demo-banner" role="status" data-testid="preview-demo-banner">

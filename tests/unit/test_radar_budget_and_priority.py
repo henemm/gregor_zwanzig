@@ -168,7 +168,7 @@ class _CapturingRadarService:
 
     def get_nowcast(
         self, lat: float, lon: float, elevation_m=None,
-        priority: str = "user_briefing", user_id=None,
+        priority: str = "user_briefing", user_id=None, deadline_at=None,
     ) -> NowcastResult:
         self.calls.append(
             {"lat": lat, "lon": lon, "priority": priority, "user_id": user_id}
@@ -276,7 +276,7 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
 
         def get_nowcast(
             self, lat, lon, elevation_m=None,
-            priority: str = "user_briefing", user_id=None,
+            priority: str = "user_briefing", user_id=None, deadline_at=None,
         ) -> NowcastResult:
             self.calls.append(priority)
             self.user_ids.append(user_id)

@@ -305,7 +305,7 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
 		await expect(cta).toContainText('Wetter-Metriken →');
 		await cta.getByRole('button').click();
-		await expect(page.locator('[data-testid="cm-mobile-tab-metriken"]:visible')).toHaveAttribute(
+		await expect(page.locator('[data-testid="cm-mobile-tab-wetter-metriken"]:visible')).toHaveAttribute(
 			'data-active',
 			'true'
 		);
@@ -313,21 +313,13 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 		// Wetter-Metriken-Tab -> "Wertebereiche festlegen →".
 		await expect(cta).toContainText('Wertebereiche festlegen →');
 		await cta.getByRole('button').click();
-		await expect(page.locator('[data-testid="cm-mobile-tab-idealwerte"]:visible')).toHaveAttribute(
+		await expect(page.locator('[data-testid="cm-mobile-tab-wertebereiche"]:visible')).toHaveAttribute(
 			'data-active',
 			'true'
 		);
 
-		// AC-10: Wertebereiche-Tab -> "Layout einrichten →".
-		await expect(cta).toContainText('Layout einrichten →');
-		await cta.getByRole('button').click();
-		await expect(page.locator('[data-testid="cm-mobile-tab-layout"]:visible')).toHaveAttribute(
-			'data-active',
-			'true'
-		);
-
-		// AC-11 (Issue #1258 S4, AC-28): Layout-Tab -> "Alarme einrichten →" (neue
-		// reguläre Station, ersetzt den vormals direkten Sprung zu "Versand").
+		// AC-10/AC-11 (Issue #1258 S4, AC-28; Layout-Reiter per #1360 aufgelöst):
+		// Wertebereiche-Tab -> "Alarme einrichten →" (reguläre Station vor "Versand").
 		await expect(cta).toContainText('Alarme einrichten →');
 		await cta.getByRole('button').click();
 		await expect(page.locator('[data-testid="cm-mobile-tab-alarme"]:visible')).toHaveAttribute(
@@ -465,9 +457,9 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await page.getByText(`E2E S8d D-Ort-A ${suffix}`).click();
 
 		// Epic #1301 F2a: der Orte-Weiter-Knopf ist ziel-benannt
-		// (compare-editor-continue-metriken) und führt zum NEUEN Wetter-Metriken-Tab.
+		// (compare-editor-continue-wetter-metriken) und führt zum NEUEN Wetter-Metriken-Tab.
 		// Das ⊘-Gate (disabled bis ≥2 Orte) ist unverändert.
-		const continueBtn = page.getByTestId('compare-editor-continue-metriken');
+		const continueBtn = page.getByTestId('compare-editor-continue-wetter-metriken');
 		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toBeVisible();
 		await expect(continueBtn).toBeDisabled();
 
@@ -475,7 +467,7 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toHaveCount(0);
 		await expect(continueBtn).toBeEnabled();
 		await continueBtn.click();
-		await expect(page.getByTestId('compare-editor-tab-metriken')).toHaveAttribute('data-active', 'true');
+		await expect(page.getByTestId('compare-editor-tab-wetter-metriken')).toHaveAttribute('data-active', 'true');
 	});
 
 	// Issue #1258 Scheibe S4 (E1/E2, AC-28): Layout fuehrt jetzt zu "alarme"
@@ -496,15 +488,12 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await page.getByText(`E2E S8d D2-Ort-B ${suffix}`).click();
 		// Epic #1301 F2a: neue Kette Orte → Wetter-Metriken → Wertebereiche.
 		// Orte-Fuß führt zum Metriken-Tab; der Wertebereiche-Fuß
-		// (compare-editor-continue-idealwerte) sitzt jetzt auf dem Metriken-Tab.
-		await page.getByTestId('compare-editor-continue-metriken').click();
-		await page.getByTestId('compare-editor-continue-idealwerte').click();
+		// (compare-editor-continue-wertebereiche) sitzt jetzt auf dem Metriken-Tab.
+		await page.getByTestId('compare-editor-continue-wetter-metriken').click();
+		await page.getByTestId('compare-editor-continue-wertebereiche').click();
 
-		const layoutBtn = page.getByTestId('compare-editor-continue-layout');
-		await expect(layoutBtn).toBeVisible();
-		await layoutBtn.click();
-		await expect(page.getByTestId('compare-editor-tab-layout')).toHaveAttribute('data-active', 'true');
-
+		// Layout-Schritt entfällt (Reiter per #1360 aufgelöst): der Alarme-Fuß
+		// (compare-editor-continue-alarme) sitzt auf dem Wertebereiche-Tab.
 		const alarmeBtn = page.getByTestId('compare-editor-continue-alarme');
 		await expect(alarmeBtn).toBeVisible();
 		await alarmeBtn.click();

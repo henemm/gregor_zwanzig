@@ -189,7 +189,7 @@ test('#1395 S3 Fall 1 (AC-3/AC-2): Wetter-Reiter — beide Schreibvorgaenge geli
 	try {
 		const puts = recordBrowserTripPuts(page, trip.id);
 
-		await page.goto(`/trips/${trip.id}?tab=weather`);
+		await page.goto(`/trips/${trip.id}?tab=wetter-metriken`);
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible({ timeout: 30_000 });
 
 		// Bisher inaktive Metrik zuschalten — echte Nutzergeste, loest den
@@ -524,7 +524,7 @@ test('#1395 S3 Fall 5 (Regression): Etappen-Reiter speichert weiterhin, mit If-M
 	const trip = await createTrip(request, 'etappen');
 	try {
 		const puts = recordBrowserTripPuts(page, trip.id);
-		await page.goto(`/trips/${trip.id}?tab=stages`);
+		await page.goto(`/trips/${trip.id}?tab=etappen`);
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
 
 		const timeInput = page

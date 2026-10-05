@@ -226,8 +226,8 @@ test.describe('Epic #1273 S2 — Compare-Hub Name/Region/Aktivitätsprofil inlin
 			//    Reload den Namen ohnehin frisch vom Server lädt, Adversary-Fund F001)
 			//    per In-Page-Klick in den Wertebereiche-Tab wechseln, eine Metrik
 			//    hinzufügen (löst PUT aus) und einen Wert per blur() committen.
-			await page.getByTestId('compare-detail-tab-idealwerte').click();
-			await expect(page.getByTestId('compare-detail-panel-idealwerte')).toBeVisible({
+			await page.getByTestId('compare-detail-tab-wertebereiche').click();
+			await expect(page.getByTestId('compare-detail-panel-wertebereiche')).toBeVisible({
 				timeout: 10_000
 			});
 			await page.getByRole('button', { name: '＋ Schneehöhe' }).click();

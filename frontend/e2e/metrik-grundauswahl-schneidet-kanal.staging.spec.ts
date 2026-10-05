@@ -94,8 +94,8 @@ test.describe('Issue #1719 S2 AC-10 Test B: Grundauswahl-Abwahl schneidet SMS-Ka
 		request
 	}) => {
 		await createTrip(request);
-		await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
 		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({

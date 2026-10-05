@@ -73,7 +73,7 @@ test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () 
 	// Regression; Issue #1371: Auslöser von "Warnen" auf "Markieren" umgestellt,
 	// da "Warnen" entfernt ist — derselbe Autosave-Pfad, derselbe Button-Typ).
 	test('KERN: Markieren-Toggle überlebt Tab-Wechsel in der Anzeige', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
+		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
 		await expect(page.getByTestId('corridor-editor-route')).toBeVisible();
 
 		// Ausgangszustand: Markieren inaktiv (aus dem Seed-Corridor).
@@ -85,8 +85,8 @@ test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () 
 
 		// Echter Nutzer-Pfad: Tab-BUTTON klicken (nicht goto/Reload — der Bug tritt
 		// nur beim Klick-Pfad auf).
-		await page.getByTestId('trip-detail-tab-preview').click();
-		await page.getByTestId('trip-detail-tab-alerts').click();
+		await page.getByTestId('trip-detail-tab-vorschau').click();
+		await page.getByTestId('trip-detail-tab-wertebereiche').click();
 
 		// HAUPT-ASSERTION: Der Toggle zeigt weiterhin "an".
 		await expect(markToggle(page)).toHaveAttribute('aria-pressed', 'true');
@@ -106,7 +106,7 @@ test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () 
 	// existiert kein "Warnen"-Bedienelement mehr — nur Markieren + "✕ entfernen"
 	// bleiben. Ortsvergleich-Pendant: compare-editor-autosave.spec.ts.
 	test('AC-1 (Trip): kein "Warnen"-Bedienelement mehr in der Wertebereiche-Zeile', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
+		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
 		await expect(page.getByTestId('corridor-editor-route')).toBeVisible();
 
 		await expect(thunderRow(page).getByRole('button', { name: 'Warnen' })).toHaveCount(0);

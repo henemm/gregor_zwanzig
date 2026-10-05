@@ -583,7 +583,7 @@ def test_ac13_trip_radar_alarm_bleibt_beim_abo_weiten_satz(sauberer_nutzer):
             )
 
         def get_nowcast(self, lat, lon, elevation_m=None,
-                        priority="user_briefing", user_id=None):
+                        priority="user_briefing", user_id=None, deadline_at=None):
             return self._fest
 
     trip = _radar_trip(f"trip-ac13-{uuid.uuid4().hex[:6]}")

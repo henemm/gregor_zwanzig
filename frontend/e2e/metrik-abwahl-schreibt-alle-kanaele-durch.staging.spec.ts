@@ -106,8 +106,8 @@ test.describe('Issue #1719 S3 AC-10: globale Abwahl im E-Mail-Reiter schreibt au
 		request
 	}) => {
 		await createTrip(request);
-		await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
 		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
@@ -169,7 +169,7 @@ test.describe('Issue #1719 S3 AC-10: globale Abwahl im E-Mail-Reiter schreibt au
 		// "gust" weder aktiv noch in der Aus-Gruppe (AC-8: global abgewählt heisst
 		// nirgends mehr erreichbar).
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const reloaded = page.getByTestId('weather-metrics-tab');
 		await expect(reloaded.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
 			timeout: 10_000

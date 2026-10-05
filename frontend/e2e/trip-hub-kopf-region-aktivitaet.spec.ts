@@ -424,8 +424,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		await page.setViewportSize(DESKTOP);
 		const id = await seedTrip(page, 'ac4');
 		try {
-			await openTripHub(page, id, 'stages');
-			await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible({ timeout: 10_000 });
+			await openTripHub(page, id, 'etappen');
+			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 10_000 });
 
 			await expect(page.locator('[data-testid^="trip-profil-option-"]')).toHaveCount(8);
 			for (const a of ACTIVITIES) {
@@ -600,8 +600,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		await page.setViewportSize(DESKTOP);
 		const id = await seedTrip(page, 'ac5');
 		try {
-			await openTripHub(page, id, 'stages');
-			await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible({ timeout: 10_000 });
+			await openTripHub(page, id, 'etappen');
+			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 10_000 });
 			const ankunft = page.locator('[data-testid="wp-arrival-1"]:visible').first();
 			await expect(ankunft).toBeVisible({ timeout: 10_000 });
 			const vorher = (await ankunft.innerText()).trim();
@@ -624,7 +624,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 				await page.evaluate(() => (window as unknown as { __gz2284ac5?: number }).__gz2284ac5),
 				'AC-5: die Seite wurde neu geladen'
 			).toBe(1);
-			await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible();
+			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible();
 		} finally {
 			await deleteTrip(page, id);
 		}
@@ -809,8 +809,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		await page.setViewportSize(DESKTOP);
 		const id = await seedTrip(page, 'ac9');
 		try {
-			await openTripHub(page, id, 'stages');
-			await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible({ timeout: 10_000 });
+			await openTripHub(page, id, 'etappen');
+			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 10_000 });
 
 			// Geoeffneter Zustand im Etappen-Reiter: zweite Etappe aktiv.
 			await page.getByText('Tag 2', { exact: false }).first().click();
@@ -872,7 +872,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 				datum,
 				'AC-9: der Etappen-Reiter wurde schon waehrend des Retry neu aufgebaut (aktive Etappe verloren)'
 			).toHaveValue('2027-08-02');
-			await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible();
+			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible();
 			freigeben();
 
 			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 15_000 });
@@ -988,7 +988,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await page.unroute(`**/api/trips/${id}`);
 
 			// Versand-Aenderung (Muster Spec 616): Chip steht danach weiter auf idle.
-			await page.goto(`/trips/${id}?tab=briefings`);
+			await page.goto(`/trips/${id}?tab=versand`);
 			const morning = page.getByTestId('report-morning-time');
 			await expect(morning).toBeVisible({ timeout: 10_000 });
 			// Erst auf den echten PUT warten — nach dem Seitenwechsel steht der Chip
@@ -1152,7 +1152,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 				id = await seedTrip(page, 'ac13');
 			}
 			try {
-				await openTripHub(page, id, 'stages');
+				await openTripHub(page, id, 'etappen');
 				const liste = page.getByTestId('mobile-stages-list');
 				await expect(liste).toBeVisible({ timeout: 10_000 });
 				await expect(page.getByTestId('cascade-strip'), 'Vorbedingung: keine laufende Datumsverschiebung').toHaveCount(0);

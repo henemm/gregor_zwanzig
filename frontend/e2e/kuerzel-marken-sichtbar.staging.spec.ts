@@ -59,7 +59,7 @@ const AUFLOESUNGEN = [
 	// Bauteil davor: in der Zeile teilen sich Positionsnummer, Griff, Textspalte
 	// und Bedienknoepfe eine Breite, und bei 320px bleibt fuer die Textspalte
 	// nichts uebrig. Ab 375px tritt es NICHT mehr auf.
-	// Erreichbarkeit fraglich: bei 320px existiert `trip-detail-tab-weather` gar
+	// Erreichbarkeit fraglich: bei 320px existiert `trip-detail-tab-wetter-metriken` gar
 	// nicht (eigene Messung, 20s Timeout) — der Klickpfad kommt nur hin, weil er
 	// in Normalgroesse oeffnet und danach verkleinert.
 	// **Beim Schliessen von #1791 gehoert diese Zeile zurueck.**
@@ -341,8 +341,8 @@ async function pruefeTextgleichheit(
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function oeffneTripEditor(page: Page): Promise<Locator> {
-	await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-	const reiter = page.getByTestId('trip-detail-tab-weather');
+	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+	const reiter = page.getByTestId('trip-detail-tab-wetter-metriken');
 	await expect(reiter).toBeVisible({ timeout: 15_000 });
 	await page.waitForLoadState('networkidle');
 	await reiter.click();
@@ -722,7 +722,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 		// Ohne Neuladen waere das nur eine DOM-Bewegung: der lokale
 		// `consider`-Zwischenstand sieht im selben Tab identisch aus.
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const neu = page
 			.getByTestId('weather-metrics-tab')
 			.locator('[data-testid="wm2-reihenfolge-row"]');

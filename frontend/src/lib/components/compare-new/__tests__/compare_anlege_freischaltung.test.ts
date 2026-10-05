@@ -22,7 +22,7 @@ import {
 	type TailIds,
 } from '../../shared/anlegeLockEngine.ts';
 
-type CompareNewTabId = 'vergleich' | 'orte' | 'metriken' | 'idealwerte' | 'alarme' | 'versand';
+type CompareNewTabId = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand';
 interface CompareNewProgress {
 	name: string;
 	pickedCount: number;
@@ -31,8 +31,8 @@ interface CompareNewProgress {
 	alarmeVisited: boolean;
 	versandVisited: boolean;
 }
-const TAIL: TailIds<CompareNewTabId> = { metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand' };
-const STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'metriken', 'idealwerte', 'alarme', 'versand'];
+const TAIL: TailIds<CompareNewTabId> = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' };
+const STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
 
 function tailP(p: CompareNewProgress) {
 	return {
@@ -85,7 +85,7 @@ describe('AC-2: unlockedTabs — progressive Freischaltung', () => {
 	test('AC-3: Name gesetzt → "orte" schaltet frei, "metriken" bleibt gesperrt', () => {
 		const u = unlockedTabs(progress({ name: 'Sardinien-Woche' }));
 		assert.ok(u.has('orte'), 'orte muss frei sein');
-		assert.ok(!u.has('metriken'), 'metriken noch gesperrt (Orte fehlen)');
+		assert.ok(!u.has('wetter-metriken'), 'metriken noch gesperrt (Orte fehlen)');
 	});
 
 	test('Nur Whitespace als Name schaltet "orte" NICHT frei', () => {
@@ -96,18 +96,18 @@ describe('AC-2: unlockedTabs — progressive Freischaltung', () => {
 
 	test('AC-4: genau 1 Ort schaltet "metriken" NICHT frei', () => {
 		const u = unlockedTabs(progress({ name: 'X', pickedCount: 1 }));
-		assert.ok(!u.has('metriken'), '1 Ort reicht nicht (Minimum 2)');
+		assert.ok(!u.has('wetter-metriken'), '1 Ort reicht nicht (Minimum 2)');
 	});
 
 	test('AC-4: 2 Orte schalten "metriken" frei, "idealwerte" bleibt gesperrt', () => {
 		const u = unlockedTabs(progress({ name: 'X', pickedCount: 2 }));
-		assert.ok(u.has('metriken'), 'metriken frei ab 2 Orten');
-		assert.ok(!u.has('idealwerte'), 'idealwerte noch gesperrt (Metriken nicht besucht)');
+		assert.ok(u.has('wetter-metriken'), 'metriken frei ab 2 Orten');
+		assert.ok(!u.has('wertebereiche'), 'idealwerte noch gesperrt (Metriken nicht besucht)');
 	});
 
 	test('AC-5: metrikenVisited → "idealwerte" frei, "alarme" bleibt gesperrt', () => {
 		const u1 = unlockedTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true }));
-		assert.ok(u1.has('idealwerte'), 'idealwerte frei nach Metriken-Besuch');
+		assert.ok(u1.has('wertebereiche'), 'idealwerte frei nach Metriken-Besuch');
 		// Issue #1360: hier stand vormals der Layout-Reiter — er ist aufgeloest,
 		// naechste Stufe ist direkt 'alarme'.
 		assert.ok(!u1.has('alarme'), 'alarme noch gesperrt (Wertebereiche nicht besucht)');
@@ -158,11 +158,11 @@ describe('AC-2: unlockedTabs — progressive Freischaltung', () => {
 		);
 		const expected: CompareNewTabId[] = [
 			'alarme',
-			'idealwerte',
-			'metriken',
 			'orte',
 			'vergleich',
 			'versand',
+			'wertebereiche',
+			'wetter-metriken',
 		];
 		assert.deepEqual([...u].sort(), expected);
 	});
@@ -175,7 +175,7 @@ describe('doneTabs — Done-Zustand nach Spec-Tabelle', () => {
 		const d = doneTabs(progress({ name: 'X', pickedCount: 2 }));
 		assert.ok(d.has('vergleich'));
 		assert.ok(d.has('orte'));
-		assert.ok(!d.has('metriken'), 'metriken erst nach Besuch done');
+		assert.ok(!d.has('wetter-metriken'), 'metriken erst nach Besuch done');
 	});
 
 	test('1 Ort → orte NICHT done', () => {
@@ -195,7 +195,7 @@ describe('doneTabs — Done-Zustand nach Spec-Tabelle', () => {
 				versandVisited: true,
 			})
 		);
-		for (const id of ['metriken', 'idealwerte', 'alarme', 'versand'] as CompareNewTabId[]) {
+		for (const id of ['wetter-metriken', 'wertebereiche', 'alarme', 'versand'] as CompareNewTabId[]) {
 			assert.ok(d.has(id), `${id} muss done sein`);
 		}
 	});
@@ -226,8 +226,8 @@ describe('progressCount — Fortschrittszähler', () => {
 		const bloated = new Set<CompareNewTabId>([
 			'vergleich',
 			'orte',
-			'metriken',
-			'idealwerte',
+			'wetter-metriken',
+			'wertebereiche',
 			'alarme',
 			'versand',
 			'nochwas' as CompareNewTabId,

@@ -410,6 +410,29 @@ func TestBudgetDefaults_MatchSpec(t *testing.T) {
 			t.Errorf("expected default %s=%v (Spec 8), got %v", c.name, c.want, c.got)
 		}
 	}
+
+	// Epic #2261 A-2 S2 (AC-2): Budget je Alarmart ueber budgetsFor -- Radar-
+	// Jobs 240/270/600, uebrige Alarm-Jobs 300/720/1800, Briefing 600/1440/0.
+	// Jede Vermischung (Radar mit Alarm-Werten oder umgekehrt) wird rot.
+	perJob := []struct {
+		id                string
+		wait, run, capDur time.Duration
+	}{
+		{"radar_alert_checks", 240 * time.Second, 270 * time.Second, 600 * time.Second},
+		{"compare_radar_alert_checks", 240 * time.Second, 270 * time.Second, 600 * time.Second},
+		{"alert_checks", 300 * time.Second, 720 * time.Second, 1800 * time.Second},
+		{"compare_alert_checks", 300 * time.Second, 720 * time.Second, 1800 * time.Second},
+		{"compare_official_alert_checks", 300 * time.Second, 720 * time.Second, 1800 * time.Second},
+		{"trip_reports_hourly", 600 * time.Second, 1440 * time.Second, 0},
+		{"compare_presets_daily", 600 * time.Second, 1440 * time.Second, 0},
+	}
+	for _, j := range perJob {
+		w, r, c := sched.budgetsFor(j.id)
+		if w != j.wait || r != j.run || c != j.capDur {
+			t.Errorf("budgetsFor(%s): expected %v/%v/%v (Spec A-2 S2), got %v/%v/%v",
+				j.id, j.wait, j.run, j.capDur, w, r, c)
+		}
+	}
 }
 
 // statusJob sucht den Status-Eintrag eines Jobs (beide Status()-Zweige).

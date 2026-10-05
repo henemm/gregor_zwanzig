@@ -147,8 +147,8 @@ async function createVergleich(request: APIRequestContext): Promise<string> {
 
 async function oeffneTripEditor(page: Page): Promise<Locator> {
 	await page.setViewportSize({ width: 1280, height: 900 });
-	await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-	const reiter = page.getByTestId('trip-detail-tab-weather');
+	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+	const reiter = page.getByTestId('trip-detail-tab-wetter-metriken');
 	await expect(reiter).toBeVisible({ timeout: 20_000 });
 	await page.waitForLoadState('networkidle');
 	await reiter.click();

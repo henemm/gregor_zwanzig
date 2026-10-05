@@ -22,12 +22,12 @@ const DESKTOP = { width: 1440, height: 900 };
 
 // Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
 const CANONICAL_TABS: ReadonlyArray<[string, string]> = [
-	['overview', 'Übersicht'],
-	['stages', 'Etappen & Wegpunkte'],
-	['weather', 'Wetter-Metriken'],
-	['briefings', 'Versand'],
-	['alerts', 'Wertebereiche'],
-	['preview', 'Vorschau']
+	['uebersicht', 'Übersicht'],
+	['etappen', 'Etappen & Wegpunkte'],
+	['wetter-metriken', 'Wetter-Metriken'],
+	['versand', 'Versand'],
+	['wertebereiche', 'Wertebereiche'],
+	['vorschau', 'Vorschau']
 ];
 
 test.describe('Issue #616 — EINE Trip-Seite', () => {
@@ -106,7 +106,7 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		await page.goto(DETAIL_URL);
 		await expect(page.getByTestId('hub-overview')).toBeVisible();
 		await page.getByRole('button', { name: /Im Editor öffnen/i }).first().click();
-		await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible({ timeout: 8000 });
+		await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 8000 });
 	});
 
 	// ─── AC-5: Briefing-Zeitplan ist ein ECHTER Editor (kein Mockup) ───
@@ -122,7 +122,7 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		 *        nicht mehr (Auto-Save via saveController) — auf den globalen
 		 *        Save-Indikator umgestellt statt einen toten Button zu klicken.
 		 */
-		await page.goto(`${DETAIL_URL}?tab=briefings`);
+		await page.goto(`${DETAIL_URL}?tab=versand`);
 		const morning = page.getByTestId('report-morning-time');
 		await expect(morning).toBeVisible({ timeout: 8000 });
 		// Issue #1379: Stunden-Auswahlliste — Minuten sind nicht mehr waehlbar
@@ -178,7 +178,7 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		 * THEN:  CorridorEditor (context="route") vorhanden — keine Regression
 		 *        durch die Konsolidierung.
 		 */
-		await page.goto(`${DETAIL_URL}?tab=alerts`);
+		await page.goto(`${DETAIL_URL}?tab=wertebereiche`);
 		await expect(page.getByTestId('corridor-editor-route')).toBeVisible({ timeout: 8000 });
 	});
 

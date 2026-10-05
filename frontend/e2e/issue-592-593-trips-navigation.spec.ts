@@ -111,11 +111,11 @@ test.describe('#592 Mobile: Action-Sheet mit Briefing-senden', () => {
 		await expect(sheet).toContainText('Briefing senden');
 	});
 
-	test('AC-4b: Action-Sheet-Briefing navigiert zu ?tab=preview', async () => {
+	test('AC-4b: Action-Sheet-Briefing navigiert zu ?tab=vorschau', async () => {
 		const content = readFileSync('/home/hem/gregor_zwanzig/frontend/src/routes/trips/+page.svelte', 'utf-8');
-		// Im Action-Sheet (sheetTrip) muss "Briefing senden" mit tab=preview-Route vorhanden sein
+		// Im Action-Sheet (sheetTrip) muss "Briefing senden" mit tab=vorschau-Route vorhanden sein
 		const sheetBlock = content.match(/data-testid="trip-action-sheet"[\s\S]*/)?.[0] ?? '';
 		expect(sheetBlock).toContain('Briefing senden');
-		expect(sheetBlock).toContain('tab=preview');
+		expect(sheetBlock).toContain('tab=vorschau');
 	});
 });

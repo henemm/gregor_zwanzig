@@ -8,7 +8,7 @@
 // AC-4 (alt-treu) und AC-7 (Pausentag ohne Feld) sind Guard-Tests, die vor UND
 // nach der Implementierung grün bleiben müssen (Regressionsschutz).
 //
-// Editor lebt im Trip-Detail unter ?tab=stages (EditStagesSection →
+// Editor lebt im Trip-Detail unter ?tab=etappen (EditStagesSection →
 // EditStagesPanelNew, showSave=true). /trips/{id}/edit ist deprecated (Redirect).
 // Auth via storageState (issue-675.staging.setup.ts) — kein per-Test-Login.
 
@@ -35,7 +35,7 @@ const seedStages = [
 const seedBody = { id: TRIP_ID, name: TRIP_NAME, region: 'Korsika', stages: seedStages };
 
 async function openStagesEditor(page: import('@playwright/test').Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }

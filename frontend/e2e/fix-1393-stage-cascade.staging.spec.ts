@@ -140,7 +140,7 @@ async function countTripPuts(page: Page): Promise<{ n: number }> {
 }
 
 async function openStagesEditor(page: Page, tripId: string) {
-	await page.goto(`/trips/${tripId}?tab=stages`);
+	await page.goto(`/trips/${tripId}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
 	await expect(page.locator('[data-testid="stage-date-field"]:visible').first()).toBeVisible({
 		timeout: 30_000

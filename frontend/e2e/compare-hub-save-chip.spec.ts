@@ -139,8 +139,8 @@ test.describe('Epic #1273 S1 — Compare-Hub Save-Chip', () => {
 		const { presetId, locIds } = await seedPreset(page);
 		try {
 			await page.setViewportSize({ width: 1280, height: 900 });
-			await page.goto(`/compare/${presetId}?tab=idealwerte`);
-			await expect(page.getByTestId('compare-detail-panel-idealwerte')).toBeVisible({
+			await page.goto(`/compare/${presetId}?tab=wertebereiche`);
+			await expect(page.getByTestId('compare-detail-panel-wertebereiche')).toBeVisible({
 				timeout: 10_000
 			});
 			await expect(page.getByTestId('corridor-editor-vergleich')).toBeVisible({ timeout: 10_000 });

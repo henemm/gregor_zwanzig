@@ -77,7 +77,7 @@
 		{ id: 'route',     label: 'Route',            lockHint: null,                             optional: false },
 		{ id: 'etappen',   label: 'Etappen & GPX',    lockHint: 'erst Trip-Name + Startdatum',    optional: false },
 		{ id: 'wegpunkte', label: 'Wegpunkte prüfen', lockHint: 'erst alle GPX hochladen',        optional: true  },
-		{ id: 'metriken',  label: 'Wetter-Metriken',  lockHint: 'erst alle GPX hochladen',        optional: false },
+		{ id: 'wetter-metriken',  label: 'Wetter-Metriken',  lockHint: 'erst alle GPX hochladen',        optional: false },
 		{ id: 'wertebereiche', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen',   optional: false },
 		{ id: 'alarme',    label: 'Alarme',           lockHint: 'erst Wertebereiche öffnen',      optional: false },
 		{ id: 'versand',   label: 'Versand',          lockHint: 'erst Alarme öffnen',             optional: false },
@@ -239,7 +239,7 @@
 
 	// Mobile Wegpunkte CTA: weiter zu metriken (Factory-Pattern)
 	function makeMobileWegpunkteContinueHandler() {
-		return () => switchTab('metriken');
+		return () => switchTab('wetter-metriken');
 	}
 
 	function switchTab(id: TabId) {
@@ -251,7 +251,7 @@
 		// damit ein erneuter Klick auf den bereits aktiven Tab keine ungespeicherten
 		// Wegpunkt-Edits verwirft.
 		if (id === 'wegpunkte' && prev !== 'wegpunkte') editorStages = buildEditorStages();
-		if (id === 'metriken') wtVisited = true;
+		if (id === 'wetter-metriken') wtVisited = true;
 		if (id === 'wertebereiche') wbVisited = true;
 		if (id === 'alarme') alVisited = true;
 		if (id === 'versand') vsVisited = true;
@@ -359,11 +359,10 @@
 	}
 
 	// ── Sprung aus dem geteilten VersandTab (Issue #1738) ─────────────────────
-	// VTLaufzeitRoute meldet den Sprungwunsch unter dem Trip-Detail-Tabnamen
-	// 'stages'; im Anlege-Flow heißt derselbe Tab 'etappen'.
+	// Issue #2287: Hub und Anlege-Flow fuehren dieselbe Kennung 'etappen'.
 	function makeVersandJumpHandler() {
 		return function doJump(tab: string) {
-			if (tab === 'stages' || tab === 'etappen') switchTab('etappen');
+			if (tab === 'etappen') switchTab('etappen');
 		};
 	}
 	const onVersandJump = makeVersandJumpHandler();
@@ -520,7 +519,7 @@
 			<!-- Fortschrittsbalken (TN_Progress) -->
 			<div style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
 				<div style="display: flex; gap: 3px;">
-					{#each ['route', 'etappen', 'metriken', 'versand'] as step}
+					{#each ['route', 'etappen', 'wetter-metriken', 'versand'] as step}
 						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 					{/each}
 				</div>
@@ -533,7 +532,7 @@
 		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
 		<div class="tn-mobile tn-mobile-flex" style="align-items: center; gap: 8px; padding: 8px 16px 0;">
 			<div style="display: flex; gap: 3px; flex: 1;">
-				{#each ['route', 'etappen', 'metriken', 'versand'] as step}
+				{#each ['route', 'etappen', 'wetter-metriken', 'versand'] as step}
 					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 				{/each}
 			</div>
@@ -806,7 +805,7 @@
 
 					<div style="padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
 						{#if etDone}
-							<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+							<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 								style="padding: 8px 16px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 								Wetter direkt →
 							</button>
@@ -836,11 +835,11 @@
 						</div>
 					</div>
 					<div style="display: flex; gap: 8px; flex-shrink: 0;">
-						<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+						<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 							style="padding: 6px 12px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 							Überspringen →
 						</button>
-						<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+						<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 							style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
 							Wegpunkte übernehmen →
 						</button>
@@ -853,11 +852,11 @@
 
 				<!-- Footer (1:1 TN_WegpunkteTab) -->
 				<div style="padding: 20px 40px; border-top: 1px solid var(--g-rule); background: var(--g-card); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-					<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+					<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 						style="padding: 8px 16px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 						Überspringen
 					</button>
-					<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+					<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 						style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
 						Wegpunkte übernehmen →
 					</button>
@@ -896,7 +895,7 @@
 		     Inhaltsgleichheitspruefung (Fix-Loop 2/3) bleiben als Zusatzschutz
 		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
 		{#if !isMobileViewport}
-		<div style:display={activeTab === 'metriken' ? '' : 'none'}>
+		<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
 			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
 		</div>
 		{/if}
@@ -1107,7 +1106,7 @@
 					{#if etDone}
 						<div style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
 							<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('wegpunkte')}>Wegpunkte prüfen →</MBtn>
-							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('metriken')}>Direkt zu Wetter</MBtn>
+							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('wetter-metriken')}>Direkt zu Wetter</MBtn>
 						</div>
 					{/if}
 				</div>
@@ -1171,7 +1170,7 @@
 			     display ausgeblendet). Fix-Loop 4 (s. Desktop-Mount oben): per
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
-			<div style:display={activeTab === 'metriken' ? '' : 'none'}>
+			<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
 				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
 			</div>
 			{/if}

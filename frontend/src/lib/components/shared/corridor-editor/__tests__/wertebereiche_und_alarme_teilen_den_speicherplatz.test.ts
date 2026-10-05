@@ -15,7 +15,7 @@
 // Zielschnittstelle, die dieser Test festschreibt (existiert noch NICHT → RED):
 //   shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
 //     erstelleWertebereicheVergleichSpeicherung(...)            (s. wertebereiche_vergleich_speichert_einmal.test.ts)
-//     SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[]     — enthält 'alarme' UND 'idealwerte'
+//     SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[]     — enthält 'alarme' UND 'wertebereiche'
 //     sichereSelbstSpeichererVorReiterwechsel(aktiverReiter, zielReiter, saveController?): Promise<void>
 //       — der GENERISCHE, listenbasierte Flush-Guard (Trip-Muster TripTabs.svelte
 //         handleValueChange): verlässt der Nutzer einen Reiter der Liste und steht
@@ -111,7 +111,7 @@ describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verli
 		wertebereiche.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Wertebereich-Änderung wartet im Entprell-Fenster');
 
-		await sichereSelbstSpeichererVorReiterwechsel('idealwerte', 'alarme', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'alarme', ctl);
 
 		assert.equal(puts().length, 1, 'die Wertebereich-Änderung muss VOR dem Reiterwechsel gesendet sein');
 		assert.equal(puts()[0].status, 200, 'der PUT muss abgeschlossen sein, bevor der Wechsel weiterläuft');
@@ -150,8 +150,8 @@ describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verli
 		);
 	});
 
-	test('die Liste der Selbst-Speicherer enthält „alarme" UND „idealwerte"', () => {
-		assert.ok(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('idealwerte'), '„idealwerte" fehlt im Flush-Guard');
+	test('die Liste der Selbst-Speicherer enthält „alarme" UND „wertebereiche"', () => {
+		assert.ok(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('wertebereiche'), '„wertebereiche" fehlt im Flush-Guard');
 		assert.ok(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('alarme'), '„alarme" fehlt im Flush-Guard (S2-Verhalten)');
 	});
 
@@ -160,7 +160,7 @@ describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verli
 
 		ws.radarAlertEnabled = true;
 		alarme.aenderungMelden();
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'idealwerte', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'wertebereiche', ctl);
 
 		assert.equal(puts().length, 1);
 		assert.equal(puts()[0].status, 200);
@@ -172,7 +172,7 @@ describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verli
 		bedienung.patch('wind_max_kmh', { max: 55 });
 		wertebereiche.aenderungMelden();
 
-		await sichereSelbstSpeichererVorReiterwechsel('idealwerte', 'idealwerte', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'wertebereiche', ctl);
 
 		assert.equal(puts().length, 0, 'ohne echten Wechsel bleibt der Debounce unangetastet');
 		assert.equal(ctl.hasPending, true);
@@ -180,7 +180,7 @@ describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verli
 	});
 
 	test('ohne Controller (Anlege-Seite) → kein Fehler, kein PUT', async () => {
-		await sichereSelbstSpeichererVorReiterwechsel('idealwerte', 'alarme', undefined);
+		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'alarme', undefined);
 		assert.equal(puts().length, 0);
 	});
 });
@@ -191,7 +191,7 @@ describe('AC-3: Metrik entfernen (Wertebereiche) + Alarm-Stufe ändern (Alarme) 
 
 		alarmStufe(ws, 'wind_max_kmh', 'sensibel');
 		alarme.aenderungMelden();
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'idealwerte', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'wertebereiche', ctl);
 		assert.equal(puts().length, 1, 'Vorbedingung: Alarm-Stufe gespeichert');
 
 		bedienung.remove('snow_depth_cm');
@@ -222,7 +222,7 @@ describe('AC-3: Metrik entfernen (Wertebereiche) + Alarm-Stufe ändern (Alarme) 
 
 		bedienung.remove('snow_depth_cm');
 		wertebereiche.aenderungMelden();
-		await sichereSelbstSpeichererVorReiterwechsel('idealwerte', 'alarme', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'alarme', ctl);
 		assert.equal(puts().length, 1, 'Vorbedingung: Entfernen gespeichert');
 
 		alarmStufe(ws, 'wind_max_kmh', 'sensibel');

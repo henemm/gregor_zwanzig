@@ -88,12 +88,12 @@ async function createTrip(
 }
 
 async function openMetricsTab(page: Page, id: string) {
-	await page.goto(`/trips/${id}?tab=weather`);
+	await page.goto(`/trips/${id}?tab=wetter-metriken`);
 	// SvelteKit liefert die Tab-Leiste server-gerendert VOR der Hydration aus —
 	// ein Klick, der vor dem Attachen der Event-Listener ankommt, geht spurlos
 	// verloren (#1771; Muster aus compare-hub-inline-edit.spec.ts).
 	await page.waitForLoadState('networkidle');
-	const weatherTabBtn = page.getByTestId('trip-detail-tab-weather');
+	const weatherTabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
 	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
 	await weatherTabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
@@ -186,7 +186,7 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			});
 
 			await page.reload();
-			await page.getByTestId('trip-detail-tab-weather').click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 			const reloadedRows = page
 				.getByTestId('weather-metrics-tab')
 				.locator('[data-testid="wm2-reihenfolge-row"]');
@@ -442,7 +442,7 @@ test.describe('Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (context="rout
 
 		// AC-4/AC-5-Vorstufe: nach dem Reload zeigt jeder Reiter seinen Stand.
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const reloaded = page.getByTestId('weather-metrics-tab');
 		await reloaded.getByTestId('channel-tab-email').click();
 		await expect(reloaded.locator('[data-testid="wm2-reihenfolge-row"]')).toHaveCount(2);

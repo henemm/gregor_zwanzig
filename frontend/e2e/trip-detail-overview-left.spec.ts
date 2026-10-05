@@ -317,7 +317,7 @@ test.describe('Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #
 		await page.goto(`/trips/${TRIP_ID}`);
 		// Step 1: Tab-Liste
 		await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
-		for (const tab of ['overview', 'stages', 'weather', 'briefings', 'alerts', 'preview']) {
+		for (const tab of ['uebersicht', 'etappen', 'wetter-metriken', 'versand', 'wertebereiche', 'vorschau']) {
 			await expect(page.getByTestId(`trip-detail-tab-${tab}`)).toBeVisible();
 		}
 		// Step 2: Breadcrumb (Issue #699: innere nav entfernt → äußere Bar)

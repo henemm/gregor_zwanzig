@@ -83,12 +83,13 @@ describe('AC-3: Schnellaktionen nutzen ?tab= statt Hash-Anker', () => {
 		assert.ok(!src.includes('#schedule'), 'Hash-Anker #schedule muss durch ?tab=versand ersetzt sein');
 	});
 
-	test('?tab=idealwerte und ?tab=versand sind vorhanden', () => {
+	test('?tab=wertebereiche und ?tab=versand sind vorhanden (neue Kennungen, Feature #2287)', () => {
 		const src = read(HOME);
 		assert.ok(
-			src.includes('?tab=idealwerte'),
-			'Schnellaktion "Ideal-Werte ändern" muss auf /compare/{id}?tab=idealwerte zeigen'
+			src.includes('?tab=wertebereiche'),
+			'Schnellaktion "Ideal-Werte ändern" muss auf /compare/{id}?tab=wertebereiche zeigen'
 		);
+		assert.ok(!src.includes('?tab=idealwerte'), 'Alt-Kennung ?tab=idealwerte darf nicht mehr erzeugt werden');
 		assert.ok(
 			src.includes('?tab=versand'),
 			'Schnellaktion "Briefing-Zeitplan" muss auf /compare/{id}?tab=versand zeigen'
@@ -103,12 +104,13 @@ describe('AC-3: Schnellaktionen nutzen ?tab= statt Hash-Anker', () => {
 	// dass die Links so AUSSEHEN). `resolveCompareTab` ist dieselbe Funktion,
 	// die CompareTabs.svelte für `initialTab` verwendet (compareTabsResolve.ts,
 	// Single Source of Truth) — kein Duplikat der Logik, echter Aufruf.
-	test('resolveCompareTab("idealwerte") und ("versand") lösen NICHT auf "uebersicht" zurück', async () => {
-		const { resolveCompareTab } = await import('../compareTabsResolve.ts');
+	test('Feature #2287: Alt-Kennung "idealwerte" wird auf "wertebereiche" umgeleitet, "versand" bleibt gültig, nie "uebersicht"', async () => {
+		const { resolveTab } = await import('../../shared/subscriptionTabs.ts');
+		const resolveCompareTab = (v: string): string => resolveTab('vergleich', v).tab;
 		assert.equal(
 			resolveCompareTab('idealwerte'),
-			'idealwerte',
-			'CompareTabs muss ?tab=idealwerte als gültigen Tab akzeptieren, nicht auf uebersicht zurückfallen'
+			'wertebereiche',
+			'CompareTabs muss ?tab=idealwerte (Alt-Link) auf wertebereiche umleiten, nicht auf uebersicht zurückfallen'
 		);
 		assert.equal(
 			resolveCompareTab('versand'),

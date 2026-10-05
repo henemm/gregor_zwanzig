@@ -3,13 +3,13 @@
 // Spec: docs/specs/modules/issue_736_tabs_reorg.md
 // Workflow: issue-736-tabs-reorg
 //
-// Ziel-Oberfläche: /trips/[id]?tab=weather (Inhalt-Reiter) und
-//                  /trips/[id]?tab=briefings (Versand-Reiter)
+// Ziel-Oberfläche: /trips/[id]?tab=wetter-metriken (Inhalt-Reiter) und
+//                  /trips/[id]?tab=versand (Versand-Reiter)
 //
 // Diese Tests sind RED bis die Reorganisation implementiert ist:
 //   - Tab-Labels heißen noch "Wetter-Metriken" / "Briefing-Zeitplan"
-//   - Kanal-Toggle liegt noch in ?tab=weather (nicht in ?tab=briefings)
-//   - E-Mail-Inhalt liegt noch in ?tab=briefings (nicht in ?tab=weather)
+//   - Kanal-Toggle liegt noch in ?tab=wetter-metriken (nicht in ?tab=versand)
+//   - E-Mail-Inhalt liegt noch in ?tab=versand (nicht in ?tab=wetter-metriken)
 //   - Schwellwerte-Abschnitt heißt noch "SMS-Schwellwerte"
 
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
@@ -63,7 +63,7 @@ async function deleteTrip(request: APIRequestContext, id: string) {
 	expect([200, 204, 404]).toContain(res.status());
 }
 
-async function openTab(page: Page, id: string, tab: 'weather' | 'briefings') {
+async function openTab(page: Page, id: string, tab: 'wetter-metriken' | 'versand') {
 	await page.goto(`/trips/${id}?tab=${tab}`);
 	await page.locator(`[data-testid="trip-detail-tab-${tab}"]`).waitFor({ state: 'visible' });
 }
@@ -86,18 +86,18 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 
 			// Labels prüfen. Issue #1231 Slice 6: weather-Label erneut umbenannt
 			// ("Inhalt" -> "Wetter-Metriken"), Testid/value unverändert.
-			await expect(page.locator('[data-testid="trip-detail-tab-weather"]')).toContainText('Wetter-Metriken');
-			await expect(page.locator('[data-testid="trip-detail-tab-briefings"]')).toContainText('Versand');
+			await expect(page.locator('[data-testid="trip-detail-tab-wetter-metriken"]')).toContainText('Wetter-Metriken');
+			await expect(page.locator('[data-testid="trip-detail-tab-versand"]')).toContainText('Versand');
 
 			// URL-Parameter aktivieren richtigen Reiter
-			await page.goto(`/trips/${id}?tab=weather`);
-			await expect(page.locator('[data-testid="trip-detail-tab-weather"]')).toHaveAttribute(
+			await page.goto(`/trips/${id}?tab=wetter-metriken`);
+			await expect(page.locator('[data-testid="trip-detail-tab-wetter-metriken"]')).toHaveAttribute(
 				'data-state',
 				'active'
 			);
 
-			await page.goto(`/trips/${id}?tab=briefings`);
-			await expect(page.locator('[data-testid="trip-detail-tab-briefings"]')).toHaveAttribute(
+			await page.goto(`/trips/${id}?tab=versand`);
+			await expect(page.locator('[data-testid="trip-detail-tab-versand"]')).toHaveAttribute(
 				'data-state',
 				'active'
 			);
@@ -114,7 +114,7 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 		const id = tripId('ac2');
 		await createTrip(request, id);
 		try {
-			await openTab(page, id, 'weather');
+			await openTab(page, id, 'wetter-metriken');
 			await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 
 			// Kein Kanal-Toggle im Inhalt-Reiter
@@ -137,7 +137,7 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 		const id = tripId('ac3');
 		await createTrip(request, id, { channels: { email: true, telegram: true, sms: false } });
 		try {
-			await openTab(page, id, 'briefings');
+			await openTab(page, id, 'versand');
 			// Fix #1054: Save-Button existiert auf der Live-Route nie —
 			// Ready-Marker ist die sichtbare Kanal-Checkbox (Auto-Save).
 			await page.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });
@@ -187,7 +187,7 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 			}
 		});
 		try {
-			await openTab(page, id, 'briefings');
+			await openTab(page, id, 'versand');
 			// Fix #1054: Save-Button existiert auf der Live-Route nie — Auto-Save
 			// nach Checkbox-Toggle, siehe issue-619-mail-elements-ui.spec.ts.
 			await page.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });
@@ -221,7 +221,7 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 		const id = tripId('ac5');
 		await createTrip(request, id);
 		try {
-			await openTab(page, id, 'weather');
+			await openTab(page, id, 'wetter-metriken');
 			await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 
 			// "SMS-Schwellwerte" darf NICHT vorkommen
@@ -275,7 +275,7 @@ test.describe('Issue #736: Reiter-Reorganisation "Inhalt" vs. "Versand"', () => 
 			}
 		});
 		try {
-			await openTab(page, id, 'briefings');
+			await openTab(page, id, 'versand');
 			// Fix #1054: Save-Button existiert auf der Live-Route nie —
 			// Ready-Marker ist die sichtbare Kanal-Checkbox (Auto-Save).
 			await page.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });

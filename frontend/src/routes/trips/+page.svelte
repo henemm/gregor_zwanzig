@@ -136,9 +136,9 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	function onTripAction(key: string, row: unknown) {
 		const t = row as Trip;
 		if (key === 'send') runTestReport(t, 7);
-		else if (key === 'preview') goto(`/trips/${t.id}?tab=preview`);
+		else if (key === 'preview') goto(`/trips/${t.id}?tab=vorschau`);
 		else if (key === 'alerts') openReportConfig(t);
-		else if (key === 'weather') goto(`/trips/${t.id}#weather`);
+		else if (key === 'weather') goto(`/trips/${t.id}?tab=wetter-metriken`);
 		else if (key === 'edit') openEdit(t);
 		else if (key === 'delete') deleteTarget = t;
 	}
@@ -161,7 +161,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	async function handlePrimaryAction(trip: Trip) {
 		const s = tripStatus(trip, now);
 		if (s === 'aktiv' || s === 'geplant') {
-			goto(`/trips/${trip.id}?tab=preview`);
+			goto(`/trips/${trip.id}?tab=vorschau`);
 			return;
 		}
 		if (s === 'draft') {
@@ -518,7 +518,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 	<div class="h-px mx-4 bg-border"></div>
 	<div class="py-2">
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
-			onclick={() => { const t = sheetTrip!; sheetTrip = null; goto(`/trips/${t.id}?tab=preview`); }}>
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; goto(`/trips/${t.id}?tab=vorschau`); }}>
 			<SendIcon class="size-4 text-muted-foreground shrink-0" /> Briefing senden
 		</button>
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
@@ -526,7 +526,7 @@ import PauseIcon from '@lucide/svelte/icons/pause';
 			<BellIcon class="size-4 text-muted-foreground shrink-0" /> Alerts justieren
 		</button>
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"
-			onclick={() => { const t = sheetTrip!; sheetTrip = null; goto(`/trips/${t.id}#weather`); }}>
+			onclick={() => { const t = sheetTrip!; sheetTrip = null; goto(`/trips/${t.id}?tab=wetter-metriken`); }}>
 			<CloudSunIcon class="size-4 text-muted-foreground shrink-0" /> Wetter-Konfiguration
 		</button>
 		<button class="w-full flex items-center gap-3 px-4 min-h-[44px] text-sm hover:bg-muted/60 active:bg-muted"

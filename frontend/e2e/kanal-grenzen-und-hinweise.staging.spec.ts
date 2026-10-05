@@ -98,8 +98,8 @@ async function createTrip(request: APIRequestContext) {
 }
 
 async function openMetricsTab(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-	const weatherTabBtn = page.getByTestId('trip-detail-tab-weather');
+	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+	const weatherTabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
 	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
 	await weatherTabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
