@@ -25,8 +25,8 @@ sie stattdessen `frontend_browser_gate: "UEBERSPRUNGEN via …"` bzw. `"NICHT GE
 Artefakt darf keinen Nachweis behaupten, den es nie gab.
 
 *Regel-Budget: Prüfdatum 2026-11-05. Fang-Beleg: #1552 (Kernseite auf Staging unbedienbar bei 5837
-grünen Tests, Adversary VERIFIED, alle CI-Checks grün). Am Prüfdatum mitzubewerten: ob
-`ui_screenshot_gate.py` dadurch ganz oder teilweise entbehrlich wird.*
+grünen Tests, Adversary VERIFIED, alle CI-Checks grün). (`ui_screenshot_gate.py`, früher hier zur
+Mitbewertung genannt, war nie verdrahtet und ist mit dem Gate-Rückbau Stufe 1 entfernt, #1197.)*
 
 ## Zugangsdaten: DREI Quellen, nicht zwei (2026-08-08)
 
