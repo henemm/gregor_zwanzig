@@ -17,9 +17,11 @@
 		value: string;
 		isFirst?: boolean;
 		onchange?: (newValue: string) => void;
+		/** #2496: 'inline' = Label-los fuer Kartenkontext (mobile StageCardM). */
+		variant?: 'default' | 'inline';
 	}
 
-	let { value = $bindable(''), isFirst = false, onchange }: Props = $props();
+	let { value = $bindable(''), isFirst = false, onchange, variant = 'default' }: Props = $props();
 
 	const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 	const wd = $derived(value ? WD[new Date(value + 'T00:00:00').getDay()] : '—');
@@ -31,15 +33,23 @@
 	}
 </script>
 
-<div class="stage-date" data-testid="stage-date-field">
-	<span class="label">
-		Datum{#if isFirst} · <em>Trip-Start</em>{/if}
-	</span>
-	<label class="box">
+{#if variant === 'inline'}
+	<label class="box inline" data-testid="stage-date-field">
 		<span class="wd">{wd}</span>
 		<input type="date" {value} onchange={handleChange} />
+		{#if isFirst}<span class="trip-start">· Trip-Start</span>{/if}
 	</label>
-</div>
+{:else}
+	<div class="stage-date" data-testid="stage-date-field">
+		<span class="label">
+			Datum{#if isFirst} · <em>Trip-Start</em>{/if}
+		</span>
+		<label class="box">
+			<span class="wd">{wd}</span>
+			<input type="date" {value} onchange={handleChange} />
+		</label>
+	</div>
+{/if}
 
 <style>
 	.stage-date {
@@ -96,5 +106,18 @@
 		font-variant-numeric: tabular-nums;
 		padding: 0;
 		min-width: 110px;
+	}
+
+	.box.inline {
+		min-width: 0;
+	}
+
+	.trip-start {
+		font-family: var(--g-font-data);
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--g-ink-muted);
+		white-space: nowrap;
 	}
 </style>

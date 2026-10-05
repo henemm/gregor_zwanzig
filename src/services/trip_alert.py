@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
@@ -44,6 +44,7 @@ from services.rain_extent import derive_rain_zones  # Issue #2051 S2a
 from services.trip_segments import measured_segment_km  # Issue #2036
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
+from services.alert_check_state import AlertCheckStateStore
 from services.throttle_store import ThrottleStore
 from services.alert_channels import _briefing_channels as _shared_briefing_channels
 from services.alert_channels import effective_alert_channels
@@ -58,12 +59,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("trip_alert")
 
-# Gesamt-Zeitbudget je check_all_trips()-Lauf (Issue #1447): der
-# Go-Scheduler wartet pro Nutzer maximal 120s (scheduler.go:82) und bricht
-# danach die HTTP-Verbindung ab, ohne dass der Python-Lauf davon erfaehrt.
-# 90s Reserve gegenueber diesen 120s, analog FETCH_DEADLINE_SECONDS in
-# providers/meteofrance.py und providers/dwd.py.
-ALERT_RUN_DEADLINE_SECONDS = 90.0
+# Gesamt-Zeitbudget je check_all_trips()-Lauf (Issue #1447, Epic #2261
+# A-2 S1). Die Grenze wird nur VOR einem Trip geprueft; ein Lauf endet real
+# bei Grenze + Dauer des zuletzt begonnenen Trips. Invariante (ADR-0038):
+#   Grenze + laengster beobachteter Einzel-Trip-Ueberhang <= Go-Wartebudget
+#   (alertWaitBudget = 300 s, internal/scheduler/scheduler.go).
+# Beobachtet: Ueberhang bis ca. 64 s (Prod 03.10.) => 180 + 64 = 244 <= 300.
+ALERT_RUN_DEADLINE_SECONDS = 180.0
 
 # Sperrzeit-Scope des Trip-Nowcast im geteilten `ThrottleStore` (#1213).
 # Ausschliesslich mit Trip-Kennungen belegt — der Vergleichs-Nowcast bekam mit
@@ -177,6 +179,8 @@ class AlertCheckRunResult:
     skipped: int
     duration_s: float
     hit_deadline: bool
+    # Epic #2261 A-2 S1: nicht erreichte Trip-IDs in Pruefreihenfolge.
+    skipped_ids: list[str] = field(default_factory=list)
 
 
 def radar_alert_due(result: object, threshold_min: int) -> bool:
@@ -1003,25 +1007,25 @@ class TripAlertService:
         """
         Check all active trips for weather changes and send alerts.
 
-        Called by scheduler every 30 minutes.
+        Called by scheduler every 15 minutes.
         Only checks trips that have at least one stage today or in the future.
 
         Issue #1447 (Teil A): begrenzt die Gesamtlaufzeit eines Laufs auf
-        ALERT_RUN_DEADLINE_SECONDS — deutlich unter den 120s, die der
-        Go-Scheduler pro Nutzer wartet, bevor er die HTTP-Verbindung abbricht.
-        Wird die Obergrenze vor der naechsten Tour bereits ueberschritten,
-        endet der Lauf sofort; bereits geprüfte Touren bleiben unveraendert,
-        die verbleibenden zaehlen als uebersprungen.
+        ALERT_RUN_DEADLINE_SECONDS — unter dem Go-Wartebudget je Nutzer.
+        Wird die Obergrenze vor dem naechsten Trip bereits ueberschritten,
+        endet der Lauf sofort; die verbleibenden Trips zaehlen als
+        uebersprungen. Epic #2261 A-2 S1: Reihenfolge nach „zuletzt
+        erreicht" (aelteste zuerst), damit nicht immer dieselben Trips fehlen.
 
         Returns:
-            AlertCheckRunResult mit Anzahl versendeter Alarme, geprueften
-            und uebersprungenen Touren, Gesamtlaufzeit und ob die
-            Zeitobergrenze den Lauf beendet hat.
+            AlertCheckRunResult mit Anzahl versendeter Alarme, vor der Grenze
+            erreichten und uebersprungenen Trips (inkl. skipped_ids),
+            Gesamtlaufzeit und ob die Zeitobergrenze den Lauf beendet hat.
         """
         from app.loader import load_all_trips
 
-        # Issue #1697: "heute" bestimmt sich je Trip aus der ORTSzeit der
-        # Tour, nicht der Serveruhr (ADR-0044). now_utc bleibt fuer den
+        # Issue #1697: "heute" bestimmt sich je Trip aus der ORTSzeit des
+        # Trips, nicht der Serveruhr (ADR-0044). now_utc bleibt fuer den
         # gesamten Lauf gleich, damit kein Trip eine andere "Jetzt"-Sekunde
         # sieht als der naechste.
         now_utc = datetime.now(timezone.utc)
@@ -1031,111 +1035,133 @@ class TripAlertService:
         run_started_at = time.monotonic()
         deadline_at = run_started_at + ALERT_RUN_DEADLINE_SECONDS
         trips = sorted(load_all_trips(user_id=self._user_id), key=lambda t: t.id)
+        # Epic #2261 A-2 S1: aelteste „zuletzt erreicht"-Zeit zuerst, fehlender
+        # Stempel = aeltester, Trip-ID als Tie-Break. Fail-open: ohne Zustand
+        # bleibt die ID-Reihenfolge von oben.
+        known_ids = [t.id for t in trips]
+        reached: dict[str, datetime] = {}
+        state_store = None
+        try:
+            state_store = AlertCheckStateStore(self._user_id)
+            stamps = state_store.load(known_ids)
+            trips.sort(key=lambda t: (t.id in stamps, stamps.get(t.id, now_utc), t.id))
+        except Exception as e:
+            logger.warning(f"alert_last_checked.json: Reihenfolge nach Trip-ID ({e})")
 
-        for trip in trips:
-            if time.monotonic() > deadline_at:
-                hit_deadline = True
-                break
-            checked += 1
-            # Issue #1697: Ortstag dieses Trips — die Zone haengt vom Trip ab,
-            # deshalb erst HIER (je Trip), nicht einmal vor der Schleife.
-            today = trip_local_today(trip, now_utc)
-            # Issue #222 W1: Trips with active alert_rules must be checked even if
-            # report_config is missing or alert_on_changes=False — alert_rules is the
-            # new source-of-truth (disable via rule.enabled=False).
-            # Issue #846: ein gesetztes (nicht-deaktiviertes) alert_preset zählt
-            # ebenso als aktive Quelle und muss geprüft werden.
-            # Issue #946: metric_alert_levels ist die einzige Alert-Quelle — ein Trip
-            # mit gesetzten Per-Metrik-Stufen MUSS geprüft werden, auch ohne preset,
-            # alert_rules oder report_config (sonst still übersprungen → nie ein Alert).
-            has_preset = bool(
-                trip.display_config
-                and trip.display_config.alert_preset
-                and trip.display_config.alert_preset != "deaktiviert"
-            )
-            has_metric_levels = bool(
-                trip.display_config
-                and getattr(trip.display_config, "metric_alert_levels", None)
-            )
-            # Issue #1460 (P1a): Wertebereiche sind keine aktive Alarmquelle
-            # mehr -- eine Tour, die nur Wertebereiche gesetzt hat, wird hier
-            # wieder uebersprungen (Zustand vor #1444 S1).
-            has_active_rules = (
-                has_preset
-                or has_metric_levels
-                or any(r.enabled for r in (trip.alert_rules or []))
-            )
-            # Issue #1088 F001: der amtliche Alert-Trigger ist ein eigenständiger,
-            # vom Wetter-Delta-Alert unabhängiger Auslöser (Default aktiv). Ein Trip
-            # ohne aktive Wetter-Delta-Regel darf NICHT komplett übersprungen werden,
-            # solange der amtliche Trigger nicht explizit deaktiviert ist — sonst
-            # wird check_official_alert_triggers() unten nie erreicht.
-            # Issue #2422 S4 (Fix): dieselbe Drei-Zustand-Vorrangregel wie in
-            # check_official_alert_triggers() — vorher prüfte dieser Vorab-Filter
-            # NUR das veraltete Legacy-Feld und übersprang den Trip trotz
-            # official_warnings.enabled=true (Bug, AC-5).
-            official_trigger_possible = self._official_trigger_possible(trip)
-            if (
-                not has_active_rules
-                and (not trip.report_config or not trip.report_config.alert_on_changes)
-                and not official_trigger_possible
-            ):
-                continue
-
-            # Skip expired trips (all stages in the past). Issue #1250 S4
-            # Fix-Loop F002: end_date ist None-sicher bei leeren Stages
-            # (Editor erlaubt das) — ein Trip ohne Stages ist nicht
-            # "abgelaufen", nur nicht dispatchbar, darf also nicht crashen.
-            if trip.end_date is not None and trip.end_date < today:
-                logger.debug(f"Skipping expired trip {trip.id} (ended {trip.end_date})")
-                continue
-
-            # Δ-Anker: hier ist ein Anker DESSELBEN Tages Pflicht (#1661).
-            cached = self._get_cached_weather(
-                trip, tagesgleicher_anker_noetig=True, now_utc=now_utc,
-            )
-
-            # Issue #1088: amtliche Warnungen zusätzlich zum Wetter-Delta prüfen —
-            # fail-soft, darf den Zyklus für andere Trips nicht abbrechen.
-            official_notices: list = []
-            try:
-                official_notices = self.check_official_alert_triggers(trip, now_utc=now_utc)
-            except Exception as e:
-                logger.error(f"Official alert trigger check failed for trip {trip.id}: {e}")
-
-            # #1661 Spec-Korrektur 2026-08-10: ein fehlender oder verworfener
-            # Δ-Anker legt NUR den Abweichungs-Alarm still. Stuende dieses Tor
-            # wie frueher VOR dem amtlichen Check, wuerde ein Anker vom falschen
-            # Tag auch die Unwetterwarnung verschlucken — genau in den Tagen vor
-            # dem Aufbruch, in denen sie am meisten zaehlt.
-            # Fail-soft wie der Zweig darunter: ein Fehler bei EINER Tour darf
-            # den Lauf fuer alle folgenden nicht abbrechen.
-            if not cached:
-                if official_notices:
-                    try:
-                        if self._send_official_alert_only(trip, official_notices):
-                            alerts_sent += 1
-                    except Exception as e:
-                        logger.error(f"Official alert send failed for trip {trip.id}: {e}")
-                continue
-
-            try:
-                weather_sent = self.check_and_send_alerts(
-                    trip, cached, official_notices=official_notices,
+        try:
+            for trip in trips:
+                if time.monotonic() > deadline_at:
+                    hit_deadline = True
+                    break
+                checked += 1
+                # Stempel fuer JEDEN erreichten Trip — auch bei continue/Exception.
+                reached[trip.id] = datetime.now(timezone.utc)
+                # Issue #1697: Ortstag dieses Trips — die Zone haengt vom Trip ab,
+                # deshalb erst HIER (je Trip), nicht einmal vor der Schleife.
+                today = trip_local_today(trip, now_utc)
+                # Issue #222 W1: Trips with active alert_rules must be checked even if
+                # report_config is missing or alert_on_changes=False — alert_rules is the
+                # new source-of-truth (disable via rule.enabled=False).
+                # Issue #846: ein gesetztes (nicht-deaktiviertes) alert_preset zählt
+                # ebenso als aktive Quelle und muss geprüft werden.
+                # Issue #946: metric_alert_levels ist die einzige Alert-Quelle — ein Trip
+                # mit gesetzten Per-Metrik-Stufen MUSS geprüft werden, auch ohne preset,
+                # alert_rules oder report_config (sonst still übersprungen → nie ein Alert).
+                has_preset = bool(
+                    trip.display_config
+                    and trip.display_config.alert_preset
+                    and trip.display_config.alert_preset != "deaktiviert"
                 )
-                if weather_sent:
-                    alerts_sent += 1
-                elif official_notices:
-                    # Kein Wetter-Delta-Alert gefeuert, aber neue/gestiegene amtliche
-                    # Warnung(en) — eigenständiger Versand (PO-Entscheidung).
-                    if self._send_official_alert_only(
-                        trip, official_notices, segments=cached,
-                    ):
+                has_metric_levels = bool(
+                    trip.display_config
+                    and getattr(trip.display_config, "metric_alert_levels", None)
+                )
+                # Issue #1460 (P1a): Wertebereiche sind keine aktive Alarmquelle
+                # mehr -- ein Trip, der nur Wertebereiche gesetzt hat, wird hier
+                # wieder uebersprungen (Zustand vor #1444 S1).
+                has_active_rules = (
+                    has_preset
+                    or has_metric_levels
+                    or any(r.enabled for r in (trip.alert_rules or []))
+                )
+                # Issue #1088 F001: der amtliche Alert-Trigger ist ein eigenständiger,
+                # vom Wetter-Delta-Alert unabhängiger Auslöser (Default aktiv). Ein Trip
+                # ohne aktive Wetter-Delta-Regel darf NICHT komplett übersprungen werden,
+                # solange der amtliche Trigger nicht explizit deaktiviert ist — sonst
+                # wird check_official_alert_triggers() unten nie erreicht.
+                # Issue #2422 S4 (Fix): dieselbe Drei-Zustand-Vorrangregel wie in
+                # check_official_alert_triggers() — vorher prüfte dieser Vorab-Filter
+                # NUR das veraltete Legacy-Feld und übersprang den Trip trotz
+                # official_warnings.enabled=true (Bug, AC-5).
+                official_trigger_possible = self._official_trigger_possible(trip)
+                if (
+                    not has_active_rules
+                    and (not trip.report_config or not trip.report_config.alert_on_changes)
+                    and not official_trigger_possible
+                ):
+                    continue
+
+                # Skip expired trips (all stages in the past). Issue #1250 S4
+                # Fix-Loop F002: end_date ist None-sicher bei leeren Stages
+                # (Editor erlaubt das) — ein Trip ohne Stages ist nicht
+                # "abgelaufen", nur nicht dispatchbar, darf also nicht crashen.
+                if trip.end_date is not None and trip.end_date < today:
+                    logger.debug(f"Skipping expired trip {trip.id} (ended {trip.end_date})")
+                    continue
+
+                # Δ-Anker: hier ist ein Anker DESSELBEN Tages Pflicht (#1661).
+                cached = self._get_cached_weather(
+                    trip, tagesgleicher_anker_noetig=True, now_utc=now_utc,
+                )
+
+                # Issue #1088: amtliche Warnungen zusätzlich zum Wetter-Delta prüfen —
+                # fail-soft, darf den Zyklus für andere Trips nicht abbrechen.
+                official_notices: list = []
+                try:
+                    official_notices = self.check_official_alert_triggers(trip, now_utc=now_utc)
+                except Exception as e:
+                    logger.error(f"Official alert trigger check failed for trip {trip.id}: {e}")
+
+                # #1661 Spec-Korrektur 2026-08-10: ein fehlender oder verworfener
+                # Δ-Anker legt NUR den Abweichungs-Alarm still. Stuende dieses Tor
+                # wie frueher VOR dem amtlichen Check, wuerde ein Anker vom falschen
+                # Tag auch die Unwetterwarnung verschlucken — genau in den Tagen vor
+                # dem Aufbruch, in denen sie am meisten zaehlt.
+                # Fail-soft wie der Zweig darunter: ein Fehler bei EINEM Trip darf
+                # den Lauf fuer alle folgenden nicht abbrechen.
+                if not cached:
+                    if official_notices:
+                        try:
+                            if self._send_official_alert_only(trip, official_notices):
+                                alerts_sent += 1
+                        except Exception as e:
+                            logger.error(f"Official alert send failed for trip {trip.id}: {e}")
+                    continue
+
+                try:
+                    weather_sent = self.check_and_send_alerts(
+                        trip, cached, official_notices=official_notices,
+                    )
+                    if weather_sent:
                         alerts_sent += 1
-            except Exception as e:
-                logger.error(f"Alert check failed for trip {trip.id}: {e}")
+                    elif official_notices:
+                        # Kein Wetter-Delta-Alert gefeuert, aber neue/gestiegene amtliche
+                        # Warnung(en) — eigenständiger Versand (PO-Entscheidung).
+                        if self._send_official_alert_only(
+                            trip, official_notices, segments=cached,
+                        ):
+                            alerts_sent += 1
+                except Exception as e:
+                    logger.error(f"Alert check failed for trip {trip.id}: {e}")
+        finally:
+            if state_store is not None and reached:
+                try:
+                    state_store.record(reached, known_ids)
+                except Exception as e:
+                    logger.warning(f"alert_last_checked.json nicht geschrieben: {e}")
 
         skipped = len(trips) - checked
+        skipped_ids = [t.id for t in trips[checked:]]
         duration_s = time.monotonic() - run_started_at
         if hit_deadline:
             # Kein stilles Weglassen (ADR-0018 sinngemaess): der Abbruch
@@ -1143,7 +1169,7 @@ class TripAlertService:
             logger.warning(
                 f"check_all_trips: Zeitobergrenze ({ALERT_RUN_DEADLINE_SECONDS}s) "
                 f"ueberschritten fuer user_id={self._user_id} — "
-                f"checked={checked} skipped={skipped}"
+                f"checked={checked} skipped={skipped} skipped_ids={skipped_ids}"
             )
         logger.info(
             f"check_all_trips: Lauf beendet nach {duration_s:.3f}s fuer "
@@ -1154,6 +1180,7 @@ class TripAlertService:
             alerts_sent=alerts_sent,
             checked=checked,
             skipped=skipped,
+            skipped_ids=skipped_ids,
             duration_s=duration_s,
             hit_deadline=hit_deadline,
         )

@@ -395,6 +395,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
 
 **Architektur:**
 
+0. **Faire Reihenfolge im Alarmlauf (#2261 A-2 S1, 2026-10-05)**
+   - `check_all_trips` sortiert die Trips nach dem Zeitpunkt der letzten Prüfung (am längsten ungeprüft zuerst, Trip-ID als Tie-Break). Persistenz: `data/users/<user_id>/alert_last_checked.json` (`src/services/alert_check_state.py`; Max-Merge, Prune gelöschter Trips, fail-open).
+   - Zeitgrenze des Laufs 180 s; nicht erreichte Trips erscheinen als `skipped_ids` (Ergebnis, WARNING-Log, Scheduler-Endpoint → `docs/reference/api_contract.md` §14.6). Status `partial` nur bei erreichter Zeitgrenze.
+
 1. **Read-Only Briefing-Snapshot**
    - `WeatherSnapshotService.save()` wird NUR vom Briefing-Scheduler aufgerufen (nicht vom Alert-Pfad)
    - Snapshot bleibt stabil zwischen Briefings → erlaubt konsistente Δ-Vergleiche über mehrere Alert-Läufe

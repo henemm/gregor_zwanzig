@@ -26,6 +26,7 @@
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
 	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
+	import { isPauseStage } from '$lib/components/shared/wizardHelpers';
 	import { merkeNutzlast } from '$lib/stores/nutzlastStand';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -78,13 +79,13 @@
 
 	// F3: „+ Etappe" öffnet die Wahl Etappe/Pausentag (ersetzt den
 	// Desktop-Hover-Gap PauseInsertGap, der mobil nicht bedienbar war).
-	// Der Pausentag bekommt bewusst KEINEN Namen: isPauseStage() erkennt
-	// „leer + keine Wegpunkte" als Pause, einen Namen wie 'Pausentag'
-	// dagegen nicht (#559-Ausnahme) — die Karte rendert den Titel selbst.
+	// #2496 F3: Der Pausentag heißt jetzt wie auf dem Desktop 'Pausentag' —
+	// isPauseStage() erkennt den Namen als Pause-Synonym; frühere Anlagen
+	// mit leerem Namen gelten weiter als Pause.
 	let addChoiceOpen = $state(false);
 	function handleMobileAddPause(): void {
 		if (cascadeBusy) return;
-		stages = [...stages, { id: newId(), name: '', date: '', waypoints: [] }];
+		stages = [...stages, { id: newId(), name: 'Pausentag', date: '', waypoints: [] }];
 	}
 
 	// Risiko-Ampel je Etappe für die StageCardM (lazy, fail-soft) — gleiche
@@ -156,16 +157,16 @@
 		saveController.defer(buildStagesSave());
 	}
 
-	// Pausentag = Etappe ohne Wegpunkte (Spec-Definition §5/AC-10).
-	const isPause = (s: Stage): boolean => s.waypoints.length === 0;
-
+	// #2496 F3: dieselbe Heuristik wie StageCardM/PauseStageView (isPauseStage)
+	// — ersetzt die lokale Kopie „nur Wegpunkte zählen" (#559-Fall: benannte
+	// Vorlagen-Etappen ohne Wegpunkte gelten jetzt überall als normale Etappe).
 	let activeStageId = $state<string>(
-		stages.find((s) => !isPause(s))?.id ?? stages[0]?.id ?? ''
+		stages.find((s) => !isPauseStage(s))?.id ?? stages[0]?.id ?? ''
 	);
 	let activeWaypointId = $state<string | null>(null);
 
 	const activeStage = $derived(stages.find((s) => s.id === activeStageId) ?? null);
-	const activeIsPause = $derived(activeStage ? isPause(activeStage) : false);
+	const activeIsPause = $derived(activeStage ? isPauseStage(activeStage) : false);
 	const activeStageIndex = $derived(stages.findIndex((s) => s.id === activeStageId));
 	const prevStage = $derived(activeStageIndex > 0 ? stages[activeStageIndex - 1] : null);
 	const nextStage = $derived(
@@ -718,6 +719,9 @@
 								risk={stageRisk[stage.id]}
 								open={expandedStageId === stage.id}
 								{activityType}
+								isFirst={i === 0}
+								onDateChange={(d) => handleDateChange(stage.id, d)}
+								onStartTimeChange={(t) => handleStartTimeChange(stage.id, t)}
 							/>
 						</div>
 					{/if}

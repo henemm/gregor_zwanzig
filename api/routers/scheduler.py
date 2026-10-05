@@ -76,6 +76,7 @@ def trigger_alert_checks(user_id: str = Query(...)):
         "count": result.alerts_sent,
         "checked": result.checked,
         "skipped": result.skipped,
+        "skipped_ids": result.skipped_ids,
         "duration_s": result.duration_s,
     }
     if result.hit_deadline:
