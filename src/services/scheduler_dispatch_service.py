@@ -6,7 +6,6 @@ outputs.* or output.renderers.* directly.
 """
 from __future__ import annotations
 
-import json as _json
 import logging
 from datetime import date, datetime as _datetime
 from pathlib import Path
