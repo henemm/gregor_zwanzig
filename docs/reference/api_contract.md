@@ -1229,6 +1229,12 @@ betroffen.
   `{"error":"precondition_failed","detail":"<deutscher Text>"}`, **ohne**
   `ETag`-Header und **ohne** dass geschrieben wird. Der Client soll neu laden,
   nicht blind wiederholen.
+- **Schreibsperre belegt → `503` + `Retry-After`** (Issue #2158, ADR-0083): Trip-,
+  Compare-Preset-, Wetter-Konfig- und Briefing-Abo-Schreibvorgaenge nehmen die
+  gemeinsame Sperre `briefings/<id>.json.lock` (Go und Python). Laeuft die Frist
+  (ca. 5 s) ab, antwortet die API mit `503` und Header `Retry-After`; es wird
+  **nichts** geschrieben. Der Client wiederholt spaeter (anders als `412`, wo er
+  neu laden soll).
 - `If-Match: *` und Kommalisten (ein Treffer genuegt) werden akzeptiert.
 - **Schwache Validatoren `W/"<fp>"` werden wie `"<fp>"` verglichen** (Issue #2317,
   2026-09-15). nginx komprimiert JSON per gzip und schwaecht dabei den starken
