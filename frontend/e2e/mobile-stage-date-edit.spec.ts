@@ -103,7 +103,7 @@ test('Mobile: Datum ändern öffnet die Karte nicht — Kaskaden-Frage erscheint
 	await expect(strip).toContainText('die 2 folgenden Etappen');
 
 	await page.getByTestId('stage-cardm').first().scrollIntoViewIfNeeded();
-	await page.screenshot({ path: 'test-results/mobile-stage-date-edit-cascade.png' });
+	await page.screenshot({ path: '../test-results/mobile-stage-date-edit-cascade.png' });
 });
 
 // AC-3/F2b: „Lückenlos anschließen" datiert die Folge-Etappen lückenlos
@@ -197,7 +197,7 @@ test('Mobile: Startzeit in der Karte ändern — ETA rechnet mit und persistiert
 	// Erst jetzt bewusst aufklappen: ETA des ersten Wegpunkts = neue Startzeit.
 	await cards.first().locator('.title').click();
 	await expect(cards.first().getByTestId('stage-cardm-wp-row').first()).toContainText('ETA 10:00');
-	await page.screenshot({ path: 'test-results/mobile-stage-time-edit-card.png' });
+	await page.screenshot({ path: '../test-results/mobile-stage-time-edit-card.png' });
 
 	// Persistenz: nach Reload trägt das Feld die 10:00.
 	await expect
@@ -247,7 +247,7 @@ test('Mobile: Pausentag-Anlage persistiert den Namen und bleibt Pause', async ({
 	await page.reload();
 	await expect(page.locator('[data-testid="stage-cardm"][data-pause="true"]')).toHaveCount(1);
 	await expect(timeInputOf(page.getByTestId('stage-cardm').first())).toBeVisible();
-	await page.screenshot({ path: 'test-results/mobile-stage-pause-card.png' });
+	await page.screenshot({ path: '../test-results/mobile-stage-pause-card.png' });
 });
 
 async function fetchStages(
