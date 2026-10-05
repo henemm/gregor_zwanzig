@@ -642,10 +642,19 @@ test('AC-16 (#1389): beide Knöpfe im selben Tick — der Erfolgsbanner bleibt v
  *  2) Umsortier-Animation/Neuaufbau — der `{#each}` ist nach `stage.id`
  *     verschlüsselt, die Karten wechseln beim Ablegen ihren Platz im DOM.
  *     Deshalb wird danach auf den neuen Namen an der Zielposition GEWARTET
- *     statt sofort weiterzuklicken. */
+ *     statt sofort weiterzuklicken.
+ *  3) #2496 F3: Pausen-Karten tragen `stage-card-pause-{i}` statt
+ *     `stage-card-{i}` (StageCard leitet die Testid von isPauseStage ab).
+ *     Der Ziel-Locator deckt beide Varianten ab. */
+function stageCardAt(page: Page, idx: number) {
+	return page.locator(
+		`[data-testid="stage-card-${idx}"], [data-testid="stage-card-pause-${idx}"]`
+	);
+}
+
 async function dragStageCard(page: Page, fromIdx: number, toIdx: number): Promise<void> {
 	const source = page.getByTestId(`stage-card-${fromIdx}`);
-	const target = page.getByTestId(`stage-card-${toIdx}`);
+	const target = stageCardAt(page, toIdx);
 	await source.scrollIntoViewIfNeeded();
 	await target.scrollIntoViewIfNeeded();
 	await source.dragTo(target);
@@ -1140,7 +1149,7 @@ async function dragStageCardVia(
 	stations: number[]
 ): Promise<void> {
 	const centerOf = async (i: number) => {
-		const el = page.getByTestId(`stage-card-${i}`);
+		const el = stageCardAt(page, i);
 		await el.scrollIntoViewIfNeeded();
 		const b = await el.boundingBox();
 		if (!b) throw new Error(`stage-card-${i} hat keine Bounding-Box`);

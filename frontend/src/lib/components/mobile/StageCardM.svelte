@@ -10,6 +10,8 @@
 	// F7: Tap auf die Karte klappt die Wegpunkt-Zeilen auf (auf/zu via `open`).
 	import { Pill } from '$lib/components/atoms';
 	import { isPauseStage, formatStageNumber } from '$lib/components/shared/wizardHelpers';
+	import StageDateField from '$lib/components/edit/StageDateField.svelte';
+	import StageTimeField from '$lib/components/edit/StageTimeField.svelte';
 	import { riskToPill, type StageRisk } from '$lib/utils/stageRisk';
 	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
 	import type { Stage, ActivityType } from '$lib/types';
@@ -23,8 +25,23 @@
 		open?: boolean;
 		/** Aktivität für die ETA-Berechnung der Wegpunkt-Zeilen. */
 		activityType?: ActivityType | undefined;
+		/** #2496 F1: gesetzt → Kartenkopf rendert ein inline-Datumsfeld. */
+		onDateChange?: ((iso: string) => void) | undefined;
+		/** #2496 F4: gesetzt → Kartenkopf rendert ein inline-Startzeitfeld. */
+		onStartTimeChange?: ((hhmm: string) => void) | undefined;
+		/** #2496 F1: erste Etappe → „· Trip-Start"-Marker. */
+		isFirst?: boolean;
 	}
-	let { stage, index, risk = undefined, open = false, activityType = undefined }: Props = $props();
+	let {
+		stage,
+		index,
+		risk = undefined,
+		open = false,
+		activityType = undefined,
+		onDateChange = undefined,
+		onStartTimeChange = undefined,
+		isFirst = false
+	}: Props = $props();
 
 	const isPause = $derived(isPauseStage(stage));
 	const stageLabel = $derived(formatStageNumber(index));
@@ -70,7 +87,25 @@
 	<div class="body">
 		<div class="top">
 			<span class="code">{stageLabel}{#if stage.code} · {stage.code}{/if}</span>
-			{#if stage.date}<span class="date">{stage.date}</span>{/if}
+			{#if onDateChange || onStartTimeChange}
+				<!-- #2496 F1/F4: Tap/Enter auf den Feldern darf den Karten-Toggle der
+				     Zeile (onclick/onkeydown im Aufrufer) nicht auslösen. -->
+				<span
+					class="date-edit"
+					role="presentation"
+					onclick={(e) => e.stopPropagation()}
+					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
+				>
+					{#if onDateChange}
+						<StageDateField variant="inline" value={stage.date} {isFirst} onchange={onDateChange} />
+					{/if}
+					{#if onStartTimeChange}
+						<StageTimeField variant="inline" value={stage.start_time} onchange={onStartTimeChange} />
+					{/if}
+				</span>
+			{:else if stage.date}
+				<span class="date">{stage.date}</span>
+			{/if}
 		</div>
 		{#if isPause}
 			<div class="title pause-title">Pausentag</div>
@@ -142,6 +177,13 @@
 		font-family: var(--g-font-mono);
 		font-size: var(--g-text-xs);
 		color: var(--g-ink-4);
+	}
+	.date-edit {
+		flex-shrink: 0;
+		min-width: 0;
+		display: inline-flex;
+		align-items: baseline;
+		gap: var(--g-s-2);
 	}
 	.title {
 		font-size: var(--g-text-sm);
