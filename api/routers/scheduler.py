@@ -94,14 +94,28 @@ def trigger_compare_alert_checks(user_id: str = Query(...)):
     return {"status": "ok", "count": count}
 
 
+def _radar_run_response(result) -> dict:
+    """Antwort der Radar-Laeufe (Epic #2261 A-2 S2): bisherige Felder plus
+    checked/skipped/skipped_ids/duration_s; Grenzabbruch = partial/deadline."""
+    body = {
+        "status": "partial" if result.hit_deadline else "ok",
+        "count": result.alerts_sent,
+        "checked": result.checked,
+        "skipped": result.skipped,
+        "skipped_ids": result.skipped_ids,
+        "duration_s": round(result.duration_s, 3),
+    }
+    if result.hit_deadline:
+        body["reason"] = "deadline"
+    return body
+
+
 @router.post("/radar-alert-checks")
 def trigger_radar_alert_checks(user_id: str):
     """Trigger radar/thunderstorm nowcast alert checks (proaktiv)."""
     from services.trip_alert import TripAlertService
 
-    service = TripAlertService(user_id=user_id)
-    count = service.check_radar_alerts()
-    return {"status": "ok", "count": count}
+    return _radar_run_response(TripAlertService(user_id=user_id).check_radar_alerts_run())
 
 
 @router.post("/compare-radar-alert-checks")
@@ -109,9 +123,9 @@ def trigger_compare_radar_alert_checks(user_id: str):
     """Trigger Compare-Preset Radar-Onset-Alert-Checks (Issue #1041 Slice 1b, Epic #1095)."""
     from services.compare_radar_alert import CompareRadarAlertService
 
-    service = CompareRadarAlertService(user_id=user_id)
-    count = service.check_all_compare_presets()
-    return {"status": "ok", "count": count}
+    return _radar_run_response(
+        CompareRadarAlertService(user_id=user_id).check_all_compare_presets_run()
+    )
 
 
 @router.post("/compare-official-alert-checks")

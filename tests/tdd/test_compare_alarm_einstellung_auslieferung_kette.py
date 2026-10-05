@@ -489,7 +489,13 @@ def test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm(mit):
 
 def _dateibestand(uid: str) -> dict[str, bytes]:
     wurzel = get_data_dir(uid)
-    return {str(p.relative_to(wurzel)): p.read_bytes() for p in sorted(wurzel.rglob("*")) if p.is_file()}
+    # Die „zuletzt erreicht"-Stempel der Alarmlaeufe (#2261 A-2) sind Fairness-
+    # Buchfuehrung, kein Alarm-State (Melde-Gedaechtnis, Sperrzeit, Tageszaehler).
+    return {
+        str(p.relative_to(wurzel)): p.read_bytes()
+        for p in sorted(wurzel.rglob("*"))
+        if p.is_file() and not p.name.startswith("alert_last_checked")
+    }
 
 
 def _wien(tag: date, stunde: int) -> datetime:

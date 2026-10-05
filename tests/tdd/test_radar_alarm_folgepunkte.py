@@ -186,7 +186,7 @@ class _PunktRadar(RadarNowcastService):
         )
         return i
 
-    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
+    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
         i = self._index(lat, lon)
         self.aufrufe.append({
             "idx": i, "lat": lat, "lon": lon, "priority": priority,

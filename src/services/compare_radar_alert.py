@@ -22,6 +22,7 @@ SPEC: docs/specs/modules/issue_1041b_compare_radar_alert_service.md
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -47,7 +48,10 @@ from services.compare_preset_access import (
 )
 from services.notification_service import NotificationService
 from services import radar_service as radar_service_mod
-from services.trip_alert import radar_alert_due
+from services import trip_alert as trip_alert_mod
+from services.alert_check_state import AlertCheckStateStore, sort_by_last_reached
+from services.radar_service import RadarDeadlineExceeded
+from services.trip_alert import AlertCheckRunResult, radar_alert_due
 
 logger = logging.getLogger("compare_radar_alert")
 
@@ -59,6 +63,9 @@ _DEFAULT_COOLDOWN_MINUTES = 120
 # Aenderungsalarm auf demselben Preset-Schluessel — ein gemeinsamer Scope
 # liesse die beiden Alarmarten einander gegenseitig unterdruecken).
 _THROTTLE_SCOPE = "compare_radar"
+# Eigene Stempeldatei je Alarmart (Epic #2261 A-2 S2): getrennt vom Trip-Radar
+# und vom Abweichungslauf, sonst verschoeben sich die Laeufe die Reihenfolge.
+_STATE_FILENAME = "alert_last_checked_compare_radar.json"
 
 
 def _identity_inputs(nowcast, now_utc: datetime) -> tuple:
@@ -123,21 +130,72 @@ class CompareRadarAlertService:
         self._mail_sink = mail_sink
 
     def check_all_compare_presets(self) -> int:
+        """Anzahl tatsächlich versendeter (gebündelter) Mails — eine je
+        auslösendem Preset-Lauf (Kompatibilitäts-Hülle)."""
+        return self.check_all_compare_presets_run().alerts_sent
+
+    def check_all_compare_presets_run(self) -> AlertCheckRunResult:
         """Prüft alle Compare-Presets dieses Nutzers und versendet gebündelte
-        Radar-Onset-Alarme. Returns die Anzahl tatsächlich versendeter
-        (gebündelter) Mails — eine je auslösendem Preset-Lauf."""
-        presets = self._load_presets()
-        if not presets:
-            return 0
+        Radar-Onset-Alarme.
 
+        Epic #2261 A-2 S2: dieselbe faire Reihenfolge und Zeitgrenze wie der
+        Trip-Radar (geteilter Store/Sortier-Helfer/Konstante; eigene Datei)."""
+        started = time.monotonic()
+        # Zur AUFRUFZEIT gelesen (Tests verkleinern die Konstante).
+        deadline_at = started + trip_alert_mod.RADAR_RUN_DEADLINE_SECONDS
+        presets = sorted(self._load_presets(), key=lambda p: p.get("id", ""))
         all_locations = {loc.id: loc for loc in load_all_locations(user_id=self._user_id)}
-        sent = 0
-        for preset in presets:
-            if self._check_one_preset(preset, all_locations):
-                sent += 1
-        return sent
+        now_utc = datetime.now(timezone.utc)
+        known_ids = [p.get("id", "") for p in presets]
+        reached: dict[str, datetime] = {}
+        store = None
+        try:
+            store = AlertCheckStateStore(self._user_id, filename=_STATE_FILENAME)
+            sort_by_last_reached(
+                presets, store.load(known_ids), lambda p: p.get("id", ""), now_utc,
+            )
+        except Exception as e:
+            logger.warning(f"{_STATE_FILENAME}: Reihenfolge nach Preset-ID ({e})")
+        sent = checked = 0
+        hit_deadline = False
+        try:
+            for preset in presets:
+                if time.monotonic() >= deadline_at:
+                    hit_deadline = True
+                    break
+                checked += 1
+                reached[preset.get("id", "")] = datetime.now(timezone.utc)
+                try:
+                    if self._check_one_preset(preset, all_locations, deadline_at):
+                        sent += 1
+                except RadarDeadlineExceeded:
+                    reached.pop(preset.get("id", ""), None)
+                    checked -= 1
+                    hit_deadline = True
+                    break
+        finally:
+            if store is not None and reached:
+                try:
+                    store.record(reached, known_ids)
+                except Exception as e:
+                    logger.warning(f"{_STATE_FILENAME} nicht geschrieben: {e}")
+        skipped_ids = [p.get("id", "") for p in presets[checked:]]
+        if hit_deadline:
+            logger.warning(
+                f"check_all_compare_presets (radar): Zeitobergrenze "
+                f"({trip_alert_mod.RADAR_RUN_DEADLINE_SECONDS}s) erreicht fuer "
+                f"user_id={self._user_id} — checked={checked} "
+                f"skipped={len(skipped_ids)} skipped_ids={skipped_ids}"
+            )
+        return AlertCheckRunResult(
+            alerts_sent=sent, checked=checked, skipped=len(skipped_ids),
+            skipped_ids=skipped_ids, duration_s=time.monotonic() - started,
+            hit_deadline=hit_deadline,
+        )
 
-    def _check_one_preset(self, preset: dict, all_locations: dict) -> bool:
+    def _check_one_preset(
+        self, preset: dict, all_locations: dict, deadline_at: Optional[float] = None,
+    ) -> bool:
         preset_id = preset.get("id", "")
         location_ids = preset.get("location_ids") or []
         if not preset_id or not location_ids:
@@ -231,7 +289,7 @@ class CompareRadarAlertService:
         # er nur mit den Kanaelen, die der Nutzer eingeschaltet hat.
         triggered = self._detect_triggered_locations(
             preset_id, location_ids, all_locations,
-            effective_channels=effective_channels,
+            effective_channels=effective_channels, deadline_at=deadline_at,
         )
         if not triggered:
             return False
@@ -450,7 +508,7 @@ class CompareRadarAlertService:
 
     def _detect_triggered_locations(
         self, preset_id: str, location_ids: list[str], all_locations: dict,
-        *, effective_channels=(),
+        *, effective_channels=(), deadline_at: Optional[float] = None,
     ) -> list[tuple]:
         """Je Ort im Preset: Nowcast holen, Auslöse-Schwelle prüfen (`radar_alert_due`,
         `trip_alert.py:33`) — reine Detect-Phase, kein Versand.
@@ -464,50 +522,63 @@ class CompareRadarAlertService:
         eingeschalteten Kanal — keiner."""
         radar_service = self._get_radar_service()
         triggered: list[tuple] = []
-        for location_id in location_ids:
-            loc = all_locations.get(location_id)
-            if loc is None:
-                logger.warning(
-                    f"Compare-Radar-Alert: Ort {location_id} nicht aufloesbar fuer Preset {preset_id}"
-                )
-                continue
-            try:
-                # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
-                # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
-                result = radar_service.get_nowcast(
-                    loc.lat, loc.lon, elevation_m=loc.elevation_m, priority="polling",
-                    user_id=self._user_id,
-                )
-            except Exception as e:
-                logger.error(f"Compare-Radar-Alert nowcast failed for {preset_id}/{location_id}: {e}")
-                # Issue #2050 S4a (AC-2/AC-6): geworfener Abruf = derselbe
-                # Quellenausfall wie das Leerergebnis unten, nur in anderer
-                # Form. Bis hierher endete er ohne jede Spur im Protokoll.
-                self._protokolliere_quellenausfall(
-                    preset_id, location_id, effective_channels,
-                )
-                continue
-            # Issue #2009: geteilte Schwelle aus `services.radar_service`,
-            # ueber die Modul-Referenz gelesen (kein `from ... import` — eine
-            # gebundene Kopie waere eine stille Kopie). Alias, weil der lokale
-            # Name `radar_service` hier bereits die Dienst-Instanz traegt.
-            # Issue #2050 S4a (AC-1/AC-6): ein Fremdausfall der Quelle ist nie
-            # eine Entwarnung — geprueft VOR dem Ausloese-Guard, der den
-            # Marker bewusst nicht liest (dieselbe Reihenfolge wie im
-            # Trip-Radarpfad, ADR-0021).
-            if result.data_unavailable:
-                logger.warning(
-                    "Compare-Radar-Alert: Quellenausfall fuer %s/%s (keine "
-                    "Frames aus der Quelle) — kein Alarm; der Ausfall wird als "
-                    "solcher protokolliert.", preset_id, location_id,
-                )
-                self._protokolliere_quellenausfall(
-                    preset_id, location_id, effective_channels,
-                )
-                continue
-            if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
-                continue
-            triggered.append((loc.name, loc, result))
+        # Ausfaelle erst NACH der Schleife protokollieren: bricht ein spaeterer
+        # Ort an der Zeitgrenze ab, ist das Preset „nicht erreicht" und darf
+        # keine Spur hinterlassen (A-2 S2, Spec Abschnitt 3).
+        ausfaelle: list[str] = []
+        grenze = False
+        try:
+            for location_id in location_ids:
+                loc = all_locations.get(location_id)
+                if loc is None:
+                    logger.warning(
+                        f"Compare-Radar-Alert: Ort {location_id} nicht aufloesbar fuer Preset {preset_id}"
+                    )
+                    continue
+                try:
+                    # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
+                    # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
+                    result = radar_service.get_nowcast(
+                        loc.lat, loc.lon, elevation_m=loc.elevation_m, priority="polling",
+                        user_id=self._user_id, deadline_at=deadline_at,
+                    )
+                except RadarDeadlineExceeded:
+                    raise  # Grenzabbruch: kein Quellenausfall, Lauf wertet nicht aus
+                except Exception as e:
+                    logger.error(f"Compare-Radar-Alert nowcast failed for {preset_id}/{location_id}: {e}")
+                    # Issue #2050 S4a (AC-2/AC-6): geworfener Abruf = derselbe
+                    # Quellenausfall wie das Leerergebnis unten, nur in anderer
+                    # Form. Bis hierher endete er ohne jede Spur im Protokoll.
+                    ausfaelle.append(location_id)
+                    continue
+                # Issue #2009: geteilte Schwelle aus `services.radar_service`,
+                # ueber die Modul-Referenz gelesen (kein `from ... import` — eine
+                # gebundene Kopie waere eine stille Kopie). Alias, weil der lokale
+                # Name `radar_service` hier bereits die Dienst-Instanz traegt.
+                # Issue #2050 S4a (AC-1/AC-6): ein Fremdausfall der Quelle ist nie
+                # eine Entwarnung — geprueft VOR dem Ausloese-Guard, der den
+                # Marker bewusst nicht liest (dieselbe Reihenfolge wie im
+                # Trip-Radarpfad, ADR-0021).
+                if result.data_unavailable:
+                    logger.warning(
+                        "Compare-Radar-Alert: Quellenausfall fuer %s/%s (keine "
+                        "Frames aus der Quelle) — kein Alarm; der Ausfall wird als "
+                        "solcher protokolliert.", preset_id, location_id,
+                    )
+                    ausfaelle.append(location_id)
+                    continue
+                if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
+                    continue
+                triggered.append((loc.name, loc, result))
+        except RadarDeadlineExceeded:
+            grenze = True
+            raise
+        finally:
+            # Unerwartete Fehler verlieren die gesammelten Ausfaelle nicht; nur der
+            # Grenzabbruch verwirft sie.
+            if not grenze:
+                for location_id in ausfaelle:
+                    self._protokolliere_quellenausfall(preset_id, location_id, effective_channels)
         return triggered
 
     def _finalize_triggered_state(self, preset_id: str, triggered: list[tuple]) -> None:

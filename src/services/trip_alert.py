@@ -44,7 +44,8 @@ from services.rain_extent import derive_rain_zones  # Issue #2051 S2a
 from services.trip_segments import measured_segment_km  # Issue #2036
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
-from services.alert_check_state import AlertCheckStateStore
+from services.radar_service import RadarDeadlineExceeded
+from services.alert_check_state import AlertCheckStateStore, sort_by_last_reached
 from services.throttle_store import ThrottleStore
 from services.alert_channels import _briefing_channels as _shared_briefing_channels
 from services.alert_channels import effective_alert_channels
@@ -67,10 +68,17 @@ logger = logging.getLogger("trip_alert")
 # Beobachtet: Ueberhang bis ca. 64 s (Prod 03.10.) => 180 + 64 = 244 <= 300.
 ALERT_RUN_DEADLINE_SECONDS = 180.0
 
+# Zeitgrenze je Radar-Alarmlauf (Trip UND Ortsvergleich, #2261 A-2 S2, ADR-0082),
+# reicht per `deadline_at` in die Quellenkette. Invariante: Grenze + laengster
+# Einzelschritt (180 + 8) < Go-radarWaitBudget 240 s; Cache-TTL <= Takt - Grenze.
+RADAR_RUN_DEADLINE_SECONDS = 45.0
+
 # Sperrzeit-Scope des Trip-Nowcast im geteilten `ThrottleStore` (#1213).
 # Ausschliesslich mit Trip-Kennungen belegt — der Vergleichs-Nowcast bekam mit
 # #1467 S3 deshalb einen eigenen Scope (`compare_radar`) statt diesen hier.
 _RADAR_THROTTLE_SCOPE = "radar"
+# Eigene Stempeldatei je Alarmart (A-2 S2).
+_RADAR_STATE_FILENAME = "alert_last_checked_radar.json"
 
 # Issue #1661: Hoechstalter des UNDATIERTEN Rueckfall-Ankers. Auffangnetz, das
 # NUR greift, wenn die Datei kein lesbares `target_date` traegt — ein
@@ -1044,7 +1052,7 @@ class TripAlertService:
         try:
             state_store = AlertCheckStateStore(self._user_id)
             stamps = state_store.load(known_ids)
-            trips.sort(key=lambda t: (t.id in stamps, stamps.get(t.id, now_utc), t.id))
+            sort_by_last_reached(trips, stamps, lambda t: t.id, now_utc)
         except Exception as e:
             logger.warning(f"alert_last_checked.json: Reihenfolge nach Trip-ID ({e})")
 
@@ -1818,6 +1826,10 @@ class TripAlertService:
         return deviation_overtakes_cooldown(basis_urgency=basis, urgency=urgency)
 
     def check_radar_alerts(self) -> int:
+        """Anzahl versendeter Radar-Alarme (Kompatibilitaets-Huelle)."""
+        return self.check_radar_alerts_run().alerts_sent
+
+    def check_radar_alerts_run(self) -> AlertCheckRunResult:
         """
         Check all trips for radar-based alerts using segment-aware logic (Issue #822).
 
@@ -1830,14 +1842,72 @@ class TripAlertService:
         davon, ob der Versand technisch gelingt. Sind alle Kanäle auf Trip-Ebene
         deaktiviert, bleibt Recording aus (Issue #827).
 
-        Returns the number of radar alerts triggered.
+        Epic #2261 A-2 S2: faire Reihenfolge (aelteste „zuletzt erreicht"-Zeit
+        zuerst, Datei `alert_last_checked_radar.json`) und Zeitgrenze
+        `RADAR_RUN_DEADLINE_SECONDS`, die bis in die Quellenkette reicht. Ein
+        Grenzabbruch ist kein Quellenausfall und keine Entwarnung.
         """
         from app.loader import load_all_trips
 
         now_utc = datetime.now(timezone.utc)
+        run_started_at = time.monotonic()
+        deadline_at = run_started_at + RADAR_RUN_DEADLINE_SECONDS
+        trips = sorted(load_all_trips(user_id=self._user_id), key=lambda t: t.id)
+        known_ids = [t.id for t in trips]
+        reached: dict[str, datetime] = {}
+        progress = {"checked": 0, "hit_deadline": False}
+        state_store = None
+        try:
+            state_store = AlertCheckStateStore(self._user_id, filename=_RADAR_STATE_FILENAME)
+            sort_by_last_reached(
+                trips, state_store.load(known_ids), lambda t: t.id, now_utc,
+            )
+        except Exception as e:
+            logger.warning(f"{_RADAR_STATE_FILENAME}: Reihenfolge nach Trip-ID ({e})")
+        sent = 0
+        try:
+            sent = self._check_radar_trips(trips, now_utc, deadline_at, reached, progress)
+        finally:
+            if state_store is not None and reached:
+                try:
+                    state_store.record(reached, known_ids)
+                except Exception as e:
+                    logger.warning(f"{_RADAR_STATE_FILENAME} nicht geschrieben: {e}")
+        checked = progress["checked"]
+        skipped_ids = [t.id for t in trips[checked:]]
+        if progress["hit_deadline"]:
+            logger.warning(
+                f"check_radar_alerts: Zeitobergrenze ({RADAR_RUN_DEADLINE_SECONDS}s) "
+                f"erreicht fuer user_id={self._user_id} — checked={checked} "
+                f"skipped={len(skipped_ids)} skipped_ids={skipped_ids}"
+            )
+        return AlertCheckRunResult(
+            alerts_sent=sent, checked=checked, skipped=len(skipped_ids),
+            skipped_ids=skipped_ids, duration_s=time.monotonic() - run_started_at,
+            hit_deadline=progress["hit_deadline"],
+        )
+
+    @staticmethod
+    def _abort_radar_unit(reached: dict, progress: dict, unit_id: str) -> None:
+        """Grenzabbruch mitten in einer Einheit: nicht erreicht, kein Stempel."""
+        reached.pop(unit_id, None)
+        progress["checked"] -= 1
+        progress["hit_deadline"] = True
+
+    def _check_radar_trips(
+        self, trips: list, now_utc: datetime, deadline_at: float,
+        reached: dict, progress: dict,
+    ) -> int:
+        """Eigentliche Trip-Schleife des Radar-Alarmlaufs (Anzahl Alarme)."""
         sent = 0
 
-        for trip in load_all_trips(user_id=self._user_id):
+        for trip in trips:
+            if time.monotonic() >= deadline_at:
+                progress["hit_deadline"] = True
+                break
+            progress["checked"] += 1
+            # Stempel fuer JEDEN erreichten Trip (auch bei continue/Exception).
+            reached[trip.id] = datetime.now(timezone.utc)
             # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
             # je Trip, die Zone haengt vom Trip ab.
             today = trip_local_today(trip, now_utc)
@@ -2052,8 +2122,12 @@ class TripAlertService:
                 # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
                 result = radar_svc.get_nowcast(
                     lat, lon, elevation_m=_elevation_m, priority="polling",
-                    user_id=self._user_id,
+                    user_id=self._user_id, deadline_at=deadline_at,
                 )
+            except RadarDeadlineExceeded:
+                # Zeitgrenze: weder Quellenausfall noch Entwarnung (A-2 S2).
+                self._abort_radar_unit(reached, progress, trip.id)
+                break
             except Exception as e:
                 logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
                 result = None
@@ -2076,6 +2150,7 @@ class TripAlertService:
             # sind derselbe Fall in Feldform — keine Frames, aber eben auch
             # kein belegtes "trocken", das eine Zone trennen duerfte.
             _zonen_ergebnisse: list = [_zonen_messwert(result)]
+            _grenze_erreicht = False
             for _p in _punkte[1:]:
                 try:
                     _zonen_ergebnisse.append(
@@ -2088,9 +2163,13 @@ class TripAlertService:
                                 ),
                                 priority="polling",
                                 user_id=self._user_id,
+                                deadline_at=deadline_at,
                             )
                         )
                     )
+                except RadarDeadlineExceeded:
+                    _grenze_erreicht = True
+                    break
                 except Exception as e:
                     logger.warning(
                         "Radar alert: Nowcast fuer Zonenpunkt (%.4f, %.4f) des "
@@ -2099,6 +2178,9 @@ class TripAlertService:
                         _p.lat, _p.lon, trip.id, e,
                     )
                     _zonen_ergebnisse.append(None)
+            if _grenze_erreicht:
+                self._abort_radar_unit(reached, progress, trip.id)
+                break
             _rain_zones = tuple(
                 derive_rain_zones(_punkte, _zonen_ergebnisse)
             )

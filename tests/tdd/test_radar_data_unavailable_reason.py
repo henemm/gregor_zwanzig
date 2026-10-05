@@ -152,7 +152,7 @@ class _AusfallRadar(RadarNowcastService):
         super().__init__()
         self._eigene_drosselung = eigene_drosselung
 
-    def _fetch_frames_with_fallback(self, lat, lon, elevation_m=None):
+    def _fetch_frames_with_fallback(self, lat, lon, elevation_m=None, deadline_at=None):
         self._openmeteo_unavailable_this_call = True
         if self._eigene_drosselung:
             self._budget_throttled_this_call = True
@@ -166,7 +166,7 @@ class _AbsturzRadar(RadarNowcastService):
 
     fehler = RuntimeError("Radar-Quelle nicht erreichbar (HTTP 503)")
 
-    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
+    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
         raise self.fehler
 
 

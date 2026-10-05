@@ -204,7 +204,7 @@ class PunktRadar(RadarNowcastService):
         self.script = dict(script or {})
         self.aufrufe: list[dict] = []
 
-    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
+    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
         km = km_ab_start(lat, lon)
         idx = None
         if self._soll is not None:

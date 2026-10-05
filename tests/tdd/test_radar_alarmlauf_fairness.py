@@ -285,6 +285,8 @@ def test_trip_radar_zwei_laeufe_decken_alle_trips_ab(monkeypatch):
     radar1 = _ScriptedRadar(_trip_idx, sleep_first_s=SLEEP_S)
     first = _trip_service(uid, radar1).check_radar_alerts_run()
     run1 = _ids(radar1.first_seen, ids)
+    # Stempel NACH Lauf 1 festhalten (Lauf 2 stempelt die Restlichen).
+    stamped_after_run1 = set(_read_state(uid, TRIP_STATE))
 
     radar2 = _ScriptedRadar(_trip_idx, sleep_first_s=SLEEP_S)
     second = _trip_service(uid, radar2).check_radar_alerts_run()
@@ -298,7 +300,7 @@ def test_trip_radar_zwei_laeufe_decken_alle_trips_ab(monkeypatch):
     assert first.skipped_ids == not_reached, (first.skipped_ids, not_reached)
     assert len(first.skipped_ids) == first.skipped == len(not_reached)
     assert first.checked == len(run1)
-    stamped = set(_read_state(uid, TRIP_STATE))
+    stamped = stamped_after_run1
     assert stamped == set(run1), (
         f"Nur erreichte Trips tragen einen Stempel: Stempel={sorted(stamped)!r}, erreicht={run1!r}"
     )
@@ -363,6 +365,7 @@ def test_compare_radar_zwei_laeufe_decken_alle_presets_ab(monkeypatch):
     radar1 = _ScriptedRadar(_loc_idx, sleep_first_s=SLEEP_S)
     first = _compare_service(uid, radar1).check_all_compare_presets_run()
     run1 = _ids(radar1.first_seen, ids)
+    stamped_after_run1 = set(_read_state(uid, COMPARE_STATE))
     radar2 = _ScriptedRadar(_loc_idx, sleep_first_s=SLEEP_S)
     second = _compare_service(uid, radar2).check_all_compare_presets_run()
     run2 = _ids(radar2.first_seen, ids)
@@ -373,7 +376,7 @@ def test_compare_radar_zwei_laeufe_decken_alle_presets_ab(monkeypatch):
     not_reached = [p for p in sorted(ids) if p not in run1]
     assert first.skipped_ids == not_reached, (first.skipped_ids, not_reached)
     assert len(first.skipped_ids) == first.skipped == len(not_reached)
-    assert set(_read_state(uid, COMPARE_STATE)) == set(run1), (
+    assert stamped_after_run1 == set(run1), (
         "Nur erreichte Ortsvergleiche tragen einen Stempel"
     )
     assert run2[: len(not_reached)] == not_reached, (not_reached, run2)
@@ -608,9 +611,11 @@ def test_radar_zustand_zwei_nutzer_nie_default():
     ``data/users/default/`` entsteht nichts. RED heute: ``*_run`` fehlt."""
     user_a, user_b = _uid("ac12a"), _uid("ac12b")
     for u in (user_a, user_b):
-        _make_trips(u, ["gleich"])
-        _make_presets(u, ["gleich"])
-    _write_state(user_b, TRIP_STATE, {"gleich": datetime(2026, 1, 1, tzinfo=timezone.utc)})
+        # Trips und Ortsvergleiche teilen sich briefings/<id>.json: je Nutzer
+        # verschiedene IDs, dieselben IDs ueber die Nutzer hinweg.
+        _make_trips(u, ["gleich-t"])
+        _make_presets(u, ["gleich-p"])
+    _write_state(user_b, TRIP_STATE, {"gleich-t": datetime(2026, 1, 1, tzinfo=timezone.utc)})
     b_trip_before = _state_path(user_b, TRIP_STATE).read_bytes()
     default_before = {
         f: (_state_path("default", f).read_bytes() if _state_path("default", f).exists() else None)
@@ -620,8 +625,8 @@ def test_radar_zustand_zwei_nutzer_nie_default():
     _trip_service(user_a, _ScriptedRadar(_trip_idx)).check_radar_alerts_run()
     _compare_service(user_a, _ScriptedRadar(_loc_idx)).check_all_compare_presets_run()
 
-    assert "gleich" in _read_state(user_a, TRIP_STATE), "A's Trip-Radar-Datei fehlt"
-    assert "gleich" in _read_state(user_a, COMPARE_STATE), "A's Compare-Radar-Datei fehlt"
+    assert "gleich-t" in _read_state(user_a, TRIP_STATE), "A's Trip-Radar-Datei fehlt"
+    assert "gleich-p" in _read_state(user_a, COMPARE_STATE), "A's Compare-Radar-Datei fehlt"
     assert _state_path(user_b, TRIP_STATE).read_bytes() == b_trip_before, "B's Datei wurde veraendert"
     assert not _state_path(user_b, COMPARE_STATE).exists(), "B bekam eine Compare-Radar-Datei"
     for f, before in default_before.items():
@@ -705,3 +710,225 @@ def test_compare_radar_zustand_fail_open(monkeypatch, caplog):
     assert _ids(radar.first_seen, ids) == ["q-1", "q-2", "q-3"], _ids(radar.first_seen, ids)
     assert result.alerts_sent == 3 and len(mails) == 3, (result, len(mails))
     assert _warning_nennt(caplog, COMPARE_STATE), [r.getMessage() for r in caplog.records]
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 1 (Adversary F001-F004): die Zeitgrenze WIRKT an der Stelle, an der
+# der Alarmlauf `get_nowcast` ruft. Echte `RadarNowcastService`, nur die
+# Quellenschritte (Netz-Grenze) schlafen real und zaehlen — der Fake wertet
+# `deadline_at` NICHT selbst aus, die echte Kette tut es.
+# ---------------------------------------------------------------------------
+
+from tests.tdd.test_radar_alarmlauf_zeitgrenze import (  # noqa: E402
+    _erwartete_kettenfolge,
+    _service_mit_zeitverbrauchenden_quellen,
+)
+
+STEP_S = 0.3
+
+
+def _make_multi_preset(uid: str, preset_id: str, n_locs: int) -> str:
+    """Ein Ortsvergleich mit ``n_locs`` Orten (Breite 46.0 + 0.3*j)."""
+    _premium(uid)
+    loc_ids = []
+    for j in range(n_locs):
+        loc_id = f"loc-{preset_id}-{j}"
+        save_location(
+            SavedLocation(
+                id=loc_id, name=f"Ort {preset_id}-{j}", lat=LOC_LAT0 + j * LOC_STEP,
+                lon=LOC_LON, elevation_m=1000,
+            ),
+            user_id=uid,
+        )
+        loc_ids.append(loc_id)
+    write_compare_briefings(
+        _data_root_users() / uid, [_radar_preset(preset_id, loc_ids, ["gregor-test@henemm.com"])],
+    )
+    return preset_id
+
+
+def _kette(lat: float, lon: float) -> int:
+    return len(_erwartete_kettenfolge(lat, lon))
+
+
+def test_trip_radar_grenze_wirkt_im_ersten_abruf(monkeypatch, caplog):
+    """F001/F004: Grenze laeuft MITTEN im ersten Abruf des Trips ab. Die echte
+    Kette bricht vor der 2. Quelle ab (genau 1 Quellenschritt), der Trip ist
+    nicht erreicht (kein Stempel, in skipped_ids), Endpunkt ``partial``/
+    ``deadline`` + WARNING, kein Quellenausfall-Protokoll.
+
+    Mutationen: ``deadline_at`` am ersten Abruf nicht durchreichen ⇒ ganze
+    Kette laeuft (calls > 1); Handler entfernen ⇒ data_unavailable-Eintrag;
+    ``hit_deadline`` nicht setzen ⇒ Endpunkt „ok"."""
+    uid = _uid("f4a")
+    ids = _make_trips(uid, ["z-1"])
+    svc, _cache, calls = _service_mit_zeitverbrauchenden_quellen(monkeypatch, sleep_s=0.6)
+    assert _kette(TRIP_LAT0, 9.10) >= 2
+    _patch_deadline(monkeypatch, 0.3)
+    monkeypatch.setattr(TripAlertService, "_get_radar_service", lambda self: svc)
+
+    with caplog.at_level(logging.WARNING):
+        data = TestClient(app).post(f"/api/scheduler/radar-alert-checks?user_id={uid}").json()
+
+    assert len(calls) == 1, f"Nach Ablauf der Grenze darf keine 2. Quelle beginnen: {calls!r}"
+    assert data.get("status") == "partial" and data.get("reason") == "deadline", data
+    assert data.get("skipped_ids") == ids and data.get("checked") == 0, data
+    assert ids[0] not in _read_state(uid, TRIP_STATE)
+    assert not _alert_log_has_entries(uid), _alert_log_text(uid)
+    assert any(
+        ids[0] in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING
+    ), [r.getMessage() for r in caplog.records]
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR], (
+        "Grenzabbruch ist kein Quellenausfall: kein ERROR-Log "
+        f"({[r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR]!r})"
+    )
+
+
+def test_trip_radar_grenze_wirkt_am_zonenpunkt(monkeypatch):
+    """F001: Der erste Abruf laeuft komplett durch (alle k Quellen), die Grenze
+    ist danach abgelaufen — der Zonenpunkt-Abruf beginnt KEINE Quelle.
+    Mutation: ``deadline_at`` am Zonenpunkt nicht durchreichen ⇒ 2k Aufrufe."""
+    uid = _uid("f1z")
+    ids = _make_trips(uid, ["z-1"])
+    k = _kette(TRIP_LAT0, 9.10)
+    svc, _cache, calls = _service_mit_zeitverbrauchenden_quellen(monkeypatch, sleep_s=STEP_S)
+    _patch_deadline(monkeypatch, STEP_S * (k - 0.5))
+
+    result = _trip_service(uid, _ScriptedRadarEcht(svc)).check_radar_alerts_run()
+
+    assert len(calls) == k, f"Nur der erste Abruf darf Quellen beginnen ({k}), war {calls!r}"
+    assert result.hit_deadline and result.skipped_ids == ids and result.checked == 0, result
+    assert ids[0] not in _read_state(uid, TRIP_STATE)
+    assert not _alert_log_has_entries(uid), _alert_log_text(uid)
+
+
+class _ScriptedRadarEcht:
+    """Reicht Aufrufe unveraendert an die echte Instanz weiter (Signatur mit
+    ``deadline_at``); wertet die Grenze bewusst NICHT selbst aus."""
+
+    def __init__(self, svc) -> None:
+        self._svc = svc
+
+    def get_nowcast(self, *args, **kwargs):
+        return self._svc.get_nowcast(*args, **kwargs)
+
+
+def _ausfall_am_kettenende(svc, sleep_s: float) -> None:
+    """Letzte Quelle schlaeft und wirft (503) ⇒ Quellenausfall des Orts."""
+    def _step(lat, lon, elevation_m=None):
+        time.sleep(sleep_s)
+        raise RuntimeError("503 Quelle")
+    svc._fetch_openmeteo_minutely15 = _step
+
+
+def test_compare_radar_grenze_mitten_im_ortsvergleich(monkeypatch):
+    """F001/F002/F003: Preset mit 2 Orten, Ort 1 laeuft durch und endet in
+    einem Quellenausfall, die Grenze ist danach abgelaufen, Ort 2 beginnt keine
+    Quelle (echte Kette wertet ``deadline_at`` aus). Das Preset ist nicht
+    erreicht: kein Stempel, in skipped_ids, ``checked`` nicht hochgezaehlt,
+    ``hit_deadline``, keine Mail und KEIN alert_log-Eintrag — auch nicht der
+    Quellenausfall von Ort 1 (F003).
+
+    Gegenprobe: ohne Grenzabbruch wird derselbe Ausfall protokolliert.
+    Mutationen: ``raise`` entfernen, Handler entfernen, Stempel behalten,
+    ``checked`` nicht dekrementieren, ``hit_deadline`` nicht setzen,
+    ``deadline_at`` nicht durchreichen, Ausfall sofort protokollieren."""
+    # Gegenprobe (Praemisse): ohne Abbruch steht der Ausfall im Protokoll.
+    uid_ok = _uid("f3ok")
+    _make_multi_preset(uid_ok, "mp", 2)
+    svc_ok, _c, _calls = _service_mit_zeitverbrauchenden_quellen(monkeypatch, sleep_s=0.0)
+    _ausfall_am_kettenende(svc_ok, 0.0)
+    _patch_deadline(monkeypatch, 600.0)
+    ok = _compare_service(uid_ok, _ScriptedRadarEcht(svc_ok)).check_all_compare_presets_run()
+    assert not ok.hit_deadline and ok.checked == 1, ok
+    assert "data_unavailable" in _alert_log_text(uid_ok), "Praemisse: Ausfall wird protokolliert"
+
+    uid = _uid("f3")
+    preset = _make_multi_preset(uid, "mp", 2)
+    k1 = _kette(LOC_LAT0, LOC_LON)
+    svc, _cache, calls = _service_mit_zeitverbrauchenden_quellen(monkeypatch, sleep_s=STEP_S)
+    _ausfall_am_kettenende(svc, STEP_S)
+    _patch_deadline(monkeypatch, STEP_S * (k1 - 0.5))
+    mails: list = []
+
+    result = _compare_service(uid, _ScriptedRadarEcht(svc), mails).check_all_compare_presets_run()
+
+    assert len(calls) == k1 - 1, f"Nur Ort 1 darf Quellen beginnen ({k1}), war {calls!r}"
+    assert result.hit_deadline and result.checked == 0, result
+    assert result.skipped_ids == [preset] and result.skipped == 1, result
+    assert result.alerts_sent == 0 and not mails
+    assert preset not in _read_state(uid, COMPARE_STATE), "Abgebrochenes Preset gestempelt"
+    assert not _alert_log_has_entries(uid), (
+        f"Grenzabbruch darf auch den Ausfall von Ort 1 nicht protokollieren: {_alert_log_text(uid)!r}"
+    )
+
+
+def test_compare_radar_endpunkt_meldet_abbruch_mitten_im_preset(monkeypatch, caplog):
+    """F002: Endpunkt ``partial``/``deadline`` + WARNING mit der Preset-ID, wenn
+    die Grenze mitten im Ortsvergleich (Ort 2) greift. Mutation:
+    ``hit_deadline`` bei Abbruch nicht setzen ⇒ status „ok"."""
+    from services.compare_radar_alert import CompareRadarAlertService
+
+    uid = _uid("f2ep")
+    preset = _make_multi_preset(uid, "mp", 2)
+    k1 = _kette(LOC_LAT0, LOC_LON)
+    svc, _cache, _calls = _service_mit_zeitverbrauchenden_quellen(monkeypatch, sleep_s=STEP_S)
+    _patch_deadline(monkeypatch, STEP_S * (k1 - 0.5))
+    monkeypatch.setattr(
+        CompareRadarAlertService, "_get_radar_service", lambda self: _ScriptedRadarEcht(svc),
+    )
+    with caplog.at_level(logging.WARNING):
+        data = TestClient(app).post(
+            f"/api/scheduler/compare-radar-alert-checks?user_id={uid}"
+        ).json()
+    assert data.get("status") == "partial" and data.get("reason") == "deadline", data
+    assert data.get("skipped_ids") == [preset] and data.get("checked") == 0, data
+    assert any(
+        preset in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING
+    ), [r.getMessage() for r in caplog.records]
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 2 (Adversary F008/F009): gesammelte Quellenausfaelle gehen ausser
+# bei einem Grenzabbruch nie verloren.
+# ---------------------------------------------------------------------------
+
+def test_compare_radar_ausfall_ort1_und_alarm_ort2_beides_wirksam():
+    """F008: Preset mit 2 Orten, Ort 1 Quellenausfall, Ort 2 loest aus ⇒ der
+    Alarm geht raus UND der Ausfall von Ort 1 steht im Protokoll.
+    Mutation „Ausfaelle nur protokollieren, wenn nichts ausloest" ⇒ rot."""
+    uid = _uid("f8")
+    _make_multi_preset(uid, "mp", 2)
+    mails: list = []
+    radar = _ScriptedRadar(_loc_idx, wet=True, raise_on=(0, 1, RuntimeError("503 Quelle")))
+
+    result = _compare_service(uid, radar, mails).check_all_compare_presets_run()
+
+    assert result.alerts_sent == 1 and len(mails) == 1, (result, len(mails))
+    assert "data_unavailable" in _alert_log_text(uid), (
+        f"Ausfall von Ort 1 fehlt im Protokoll: {_alert_log_text(uid)!r}"
+    )
+
+
+def test_compare_radar_ausfall_ort1_bleibt_bei_unerwartetem_fehler_an_ort2():
+    """F009: Ort 1 Quellenausfall, danach wirft die Auswertung von Ort 2 eine
+    unerwartete Exception (Dienst liefert ein unbrauchbares Ergebnis) ⇒ die
+    Exception erreicht den Aufrufer wie bisher, der Ausfall von Ort 1 steht
+    trotzdem im Protokoll (nur ein Grenzabbruch verwirft ihn).
+    Mutation „Protokollierung nur am Normalende (kein finally)" ⇒ rot."""
+    class _KaputtBeiOrt2(_ScriptedRadar):
+        def get_nowcast(self, lat, lon, *a, **kw):
+            if _loc_idx(lat) == 1:
+                return object()  # AttributeError bei der Auswertung
+            return super().get_nowcast(lat, lon, *a, **kw)
+
+    uid = _uid("f9")
+    _make_multi_preset(uid, "mp", 2)
+    radar = _KaputtBeiOrt2(_loc_idx, raise_on=(0, 1, RuntimeError("503 Quelle")))
+
+    with pytest.raises(AttributeError):
+        _compare_service(uid, radar).check_all_compare_presets_run()
+
+    assert "data_unavailable" in _alert_log_text(uid), (
+        f"Ausfall von Ort 1 ging verloren: {_alert_log_text(uid)!r}"
+    )
