@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -89,7 +89,10 @@ def _erlaube_premium_sms(uid: str) -> None:
     pfad = get_data_dir(uid) / "user.json"
     profil = json.loads(pfad.read_text())
     profil.setdefault("premium_sms_reply_to", "+490000000008")
-    profil.setdefault("premium_sms_reply_at", datetime.now(timezone.utc).isoformat())
+    # Relativ zur gestellten Uhr der Prüfstrecke (`freeze_time(_AT)`), nicht zur
+    # echten Wanduhr: ein Zeitstempel nach `_AT` liegt aus Sicht des Versands in
+    # der Zukunft und wird seit #2231 fail-closed gesperrt.
+    profil.setdefault("premium_sms_reply_at", (_AT - timedelta(minutes=5)).isoformat())
     pfad.write_text(json.dumps(profil), encoding="utf-8")
 
 

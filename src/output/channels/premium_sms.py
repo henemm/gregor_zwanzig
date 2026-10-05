@@ -80,6 +80,16 @@ class PremiumSmsOutput(SevenIoChannelBase):
                 reason_code=BLOCK_REASON_NO_REPLY_ADDRESS,
             )
         age = _now() - _as_aware(reply_at)
+        if age < timedelta(0):
+            # #2231: Zeitstempel in der Zukunft (Uhrfehler, kaputte user.json) —
+            # die Verfallsfrist griffe nie. Ungueltig ⇒ sperren, nicht freigeben.
+            raise ChannelBlockedError(
+                self.name,
+                "Zeitstempel der Rueckadresse liegt in der Zukunft "
+                f"({reply_at.isoformat()}) — ungueltig, Versand abgebrochen, "
+                "bis sich das Geraet wieder meldet.",
+                reason_code=BLOCK_REASON_REPLY_ADDRESS_STALE,
+            )
         if age > PREMIUM_SMS_REPLY_TTL:
             raise ChannelBlockedError(
                 self.name,

@@ -659,8 +659,20 @@ class TripReportSchedulerService:
             raise
         if outcome in VERMERK_AUSGAENGE:
             store.record_outcome(trip.id, report_type, local_day, outcome)
-        else:
+        elif outcome == "channels_unreachable":
             store.release(trip.id, report_type, local_day)
+        else:
+            # #2231: unbekannter Ausgang ⇒ Slot sperren statt freigeben, sonst
+            # drohen im Nachholfenster Mehrfachversaende an alle Kanaele.
+            logger.error(
+                "Unbekannter Versand-Ausgang %r fuer Slot %s/%s am %s -- "
+                "Slot gesperrt, kein Nachholversand",
+                outcome, trip.id, report_type, local_day,
+            )
+            store.record_outcome(
+                trip.id, report_type, local_day,
+                outcome if isinstance(outcome, str) and outcome else "unknown",
+            )
         return outcome
 
     def _process_pending_markers(self, now_utc: datetime, due_trip_ids_now: set) -> int:
