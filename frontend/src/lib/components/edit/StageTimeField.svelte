@@ -14,9 +14,11 @@
 	interface Props {
 		value?: string;
 		onchange?: (newValue: string) => void;
+		/** #2496: 'inline' = Label-los fuer Kartenkontext (mobile StageCardM). */
+		variant?: 'default' | 'inline';
 	}
 
-	let { value, onchange }: Props = $props();
+	let { value, onchange, variant = 'default' }: Props = $props();
 
 	// 08:00 wird nur angezeigt (displayValue), NICHT in stages geschrieben,
 	// solange der Nutzer nichts aendert (AC-4: alt-treu).
@@ -28,12 +30,18 @@
 	}
 </script>
 
-<div class="stage-time" data-testid="stage-start-time-field">
-	<span class="label">Startzeit</span>
-	<label class="box">
+{#if variant === 'inline'}
+	<label class="box inline" data-testid="stage-start-time-field">
 		<input type="time" value={displayValue} onchange={handleChange} />
 	</label>
-</div>
+{:else}
+	<div class="stage-time" data-testid="stage-start-time-field">
+		<span class="label">Startzeit</span>
+		<label class="box">
+			<input type="time" value={displayValue} onchange={handleChange} />
+		</label>
+	</div>
+{/if}
 
 <style>
 	.stage-time {
@@ -73,5 +81,9 @@
 		font-variant-numeric: tabular-nums;
 		padding: 0;
 		min-width: 70px;
+	}
+
+	.box.inline {
+		min-width: 0;
 	}
 </style>

@@ -154,7 +154,7 @@ test('Mobile: „Nur diese Etappe" lässt die Folge-Etappen unverändert', async
 });
 
 // AC-8 (Desktop-Regression): Auf >=900px existieren keine StageCardM —
-// der Desktop-Karten-Editor bleibt alleiniger Ort der Datumsbearbeitung.
+// der Desktop-Karten-Editor bleibt alleiniger Ort der Datums-/Zeitbearbeitung.
 test('Desktop: kein Date-Input in Etappen-Karten — Editor unverändert', async ({ page }) => {
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
@@ -164,3 +164,97 @@ test('Desktop: kein Date-Input in Etappen-Karten — Editor unverändert', async
 	// Der Desktop-Editor hat weiterhin genau ein Datumsfeld (aktiver Stage-Header).
 	await expect(page.getByTestId('stage-date-field')).toHaveCount(1);
 });
+
+// =============================================================================
+// Iteration 2 — F4: Startzeit inline; F3: Pausentag-Harmonisierung
+// =============================================================================
+
+function timeInputOf(card: ReturnType<Page['getByTestId']>) {
+	return card.getByTestId('stage-start-time-field').locator('input[type="time"]');
+}
+
+// AC-5/F4: Jede Karte trägt neben dem Datum ein kompaktes Zeitfeld (08:00-
+// Display-Default). Änderung → Auto-Save; die ETA-Zeilen der aufgeklappten
+// Wegpunkte rechnen ab der neuen Zeit; nach Reload steht der Wert.
+test('Mobile: Startzeit in der Karte ändern — ETA rechnet mit und persistiert', async ({
+	page
+}) => {
+	test.setTimeout(60_000);
+	await openStagesTabMobile(page);
+
+	const cards = page.getByTestId('stage-cardm');
+	for (let i = 0; i < 3; i++) {
+		await expect(timeInputOf(cards.nth(i)), `Karte ${i + 1}: Zeitfeld`).toHaveValue('08:00');
+	}
+
+	// Zeit ändern → Karte darf dabei nicht aufklappen (Tap-Konflikt, vgl. Datum).
+	const row = page.getByTestId('stage-cardm-row').first();
+	await expect(row).toHaveAttribute('aria-expanded', 'false');
+	await timeInputOf(cards.first()).fill('10:00');
+	await timeInputOf(cards.first()).blur();
+	await expect(row).toHaveAttribute('aria-expanded', 'false');
+
+	// Erst jetzt bewusst aufklappen: ETA des ersten Wegpunkts = neue Startzeit.
+	await cards.first().locator('.title').click();
+	await expect(cards.first().getByTestId('stage-cardm-wp-row').first()).toContainText('ETA 10:00');
+	await page.screenshot({ path: 'test-results/mobile-stage-time-edit-card.png' });
+
+	// Persistenz: nach Reload trägt das Feld die 10:00.
+	await expect
+		.poll(
+			async () => {
+				const res = await page.request.get(`/api/trips/${TRIP_ID}`);
+				const trip = await res.json();
+				return trip.stages[0].start_time ?? null;
+			},
+			{ timeout: 15_000 }
+		)
+		.toBe('10:00');
+	await page.reload();
+	await expect(page.getByTestId('stage-cardm')).toHaveCount(3);
+	await expect(timeInputOf(page.getByTestId('stage-cardm').first())).toHaveValue('10:00');
+});
+
+// AC-6/F3a: „+ Etappe → Pausentag" erzeugt eine Karte mit sichtbarem Titel
+// „Pausentag", die ALS PAUSE gerendert wird (data-pause) — auch nach Reload,
+// weil der Name persistiert ist. Die Datumsbearbeitung funktioniert darauf.
+test('Mobile: Pausentag-Anlage persistiert den Namen und bleibt Pause', async ({ page }) => {
+	test.setTimeout(60_000);
+	await openStagesTabMobile(page);
+
+	await page.getByTestId('mobile-add-stage').click();
+	await page.getByTestId('mobile-add-choice').getByRole('menuitem', { name: 'Pausentag' }).click();
+
+	const pauseCard = page.locator('[data-testid="stage-cardm"][data-pause="true"]');
+	await expect(pauseCard).toHaveCount(1);
+	await expect(pauseCard).toContainText('Pausentag');
+	const dateInput = dateInputOf(pauseCard);
+	await expect(dateInput).toHaveCount(1);
+
+	// Datum auf der Pausen-Karte editierbar und persistierbar.
+	await dateInput.fill('2026-08-10');
+	await dateInput.blur();
+
+	// Der Name muss in der API als 'Pausentag' stehen — sonst verliert die
+	// Karte nach Reload ihre Pause-Erkennung (#559-Synonym aus F3).
+	await expect
+		.poll(async () => (await fetchStages(page))[3]?.name, { timeout: 15_000 })
+		.toBe('Pausentag');
+	await expect
+		.poll(async () => (await fetchStages(page))[3]?.date, { timeout: 15_000 })
+		.toBe('2026-08-10');
+
+	await page.reload();
+	await expect(page.locator('[data-testid="stage-cardm"][data-pause="true"]')).toHaveCount(1);
+	await expect(timeInputOf(page.getByTestId('stage-cardm').first())).toBeVisible();
+	await page.screenshot({ path: 'test-results/mobile-stage-pause-card.png' });
+});
+
+async function fetchStages(
+	page: Page
+): Promise<Array<{ id: string; name: string; date: string; start_time?: string }>> {
+	const res = await page.request.get(`/api/trips/${TRIP_ID}`);
+	expect(res.ok(), `GET trip HTTP ${res.status()}`).toBeTruthy();
+	const trip = await res.json();
+	return trip.stages;
+}
