@@ -2,8 +2,8 @@
 entity_id: mobile_stage_datum_zeit_edit
 type: feature
 created: 2026-10-04
-updated: 2026-10-04
-status: draft
+updated: 2026-10-05
+status: implemented
 version: "1.0"
 tags: [mobile, usability, frontend, trip-detail, stages, issue-2496]
 ---
@@ -198,3 +198,15 @@ Pausentag-Heuristik (F3). Die Kaskaden-Rückfrage bleibt Inline-Banner (F2).
 
 - 2026-10-04: Initial spec created (PO-Entscheide F1–F4 vom 2026-10-04,
   Design-Doc `mobile_stage_datum_zeit_soll.md`)
+- 2026-10-05: Umsetzung abgeschlossen und validiert. Iteration 1 (8686e04a0):
+  `StageDateField variant="inline"`, editierbares Datum in `StageCardM`
+  (Event-Stop gegen Karten-Toggle), Verdrahtung an `handleDateChange` im
+  Mobile-Zweig — Red-Beleg `mobile-stage-date-edit-red.log` (4× RED),
+  E2E 6/6, Unit 4132/0. Iteration 2 (453ca8224): `StageTimeField`
+  inline-Variante + `onStartTimeChange` (F4), `isPauseStage` erkennt
+  'Pausentag', beide Anlage-Pfade benennen einheitlich, Panel-Drift
+  (lokale isPause-Kopie) durch `isPauseStage` ersetzt (F3), COMPONENTS.md
+  v1.7 — Red-Beleg `mobile-stage-date-time-edit-red-iter2.log`, E2E 8/8,
+  Unit 4134/0. Baselines: issue-498 AC-37 und issue-675 AC-3/4 verifiziert
+  pre-existing (auf gestashtem Stand rot). Desktop-Zweig zeichen-identisch
+  (AC-8).
