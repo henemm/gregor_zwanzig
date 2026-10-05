@@ -97,6 +97,10 @@ type Waypoint struct {
 	// Ohne dieses Feld wischt der erste Editor-Save den vom Python-Kern
 	// geschriebenen Wert stumm weg (Praezedenzfall suggestion_reason).
 	DistanceFromStartKm *float64 `json:"distance_from_start_km,omitempty"`
+	// Issue #2058 — Begruendung des algorithmischen Wegpunktvorschlags
+	// (Python-Kern schreibt sie). Ohne dieses Feld verwirft der erste
+	// Editor-Save den Wert stumm; bewacht durch trip_schema_drift_test.go.
+	SuggestionReason string `json:"suggestion_reason,omitempty"`
 }
 
 type Stage struct {

@@ -1,0 +1,88 @@
+{
+  "id": "drift-gate-trip",
+  "name": "Drift-Gate Voll-Trip",
+  "stages": [
+    {
+      "id": "T1",
+      "name": "Etappe 1",
+      "date": "2026-10-10",
+      "start_time": "08:00",
+      "waypoints": [
+        {
+          "id": "G1",
+          "name": "Start",
+          "lat": 42.1,
+          "lon": 9.1,
+          "elevation_m": 1200,
+          "time_window": "08:00-10:00",
+          "arrival_calculated": "08:30",
+          "origin": "algorithmic",
+          "confirmed": false,
+          "suggestion_reason": "Passhöhe",
+          "arrival_override": "08:45",
+          "distance_from_start_km": 0.0
+        }
+      ]
+    }
+  ],
+  "avalanche_regions": ["AT-07"],
+  "aggregation": {"profile": "allgemein"},
+  "weather_config": {
+    "trip_id": "drift-gate-trip",
+    "enabled_metrics": ["temperature"],
+    "updated_at": "2026-10-01T10:00:00"
+  },
+  "display_config": {
+    "trip_id": "drift-gate-trip",
+    "metrics": [],
+    "updated_at": "2026-10-01T10:00:00"
+  },
+  "report_config": {
+    "trip_id": "drift-gate-trip",
+    "enabled": true,
+    "morning_time": "07:00:00",
+    "evening_time": "18:00:00",
+    "send_email": true,
+    "send_sms": false,
+    "send_telegram": false,
+    "updated_at": "2026-10-01T10:00:00"
+  },
+  "alert_rules": [
+    {
+      "id": "r1",
+      "kind": "absolute",
+      "metric": "wind_gust",
+      "threshold": 50,
+      "unit": "km/h",
+      "severity": "warning",
+      "enabled": true,
+      "channels": ["email"]
+    }
+  ],
+  "corridors": [
+    {"metric": "temperature", "range": [0, 20], "notify": true, "mark": false, "prio": "hoch"}
+  ],
+  "alert_cooldown_minutes": 60,
+  "alert_quiet_from": "22:00",
+  "alert_quiet_to": "06:00",
+  "shortcode": "DG",
+  "activity": "wandern",
+  "region": "korsika",
+  "paused_at": "2026-10-02T08:00:00Z",
+  "archived_at": "2026-10-03T08:00:00Z",
+  "official_alerts_enabled": true,
+  "official_alert_triggers_enabled": true,
+  "official_warnings": {"enabled": true, "sources": ["meteoalarm"]},
+  "alert_channels": {"email": true, "telegram": false, "sms": false, "premium_sms": false},
+  "alert_channel_thresholds": {"email": "LOW", "telegram": "LOW", "sms": "LOW", "premium_sms": "LOW"},
+  "alert_metric_channels": {"wind_gust": ["email"]},
+  "morning_time": "07:00:00",
+  "evening_time": "18:00:00",
+  "morning_enabled": true,
+  "evening_enabled": true,
+  "send_email": true,
+  "send_sms": false,
+  "send_telegram": false,
+  "end_date": "2026-10-10",
+  "kind": "route"
+}

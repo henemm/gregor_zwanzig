@@ -367,6 +367,26 @@ oben in diesem Abschnitt), weil der Fang (Schutz der PO-freigegebenen Abweichung
 von S6h dauerhaft feststeht statt weiter offen zu sein. `EINGEFROREN_SOLL_ANZAHL` bleibt
 unverändert 47.
 
+## Trip-Schema-Drift-Gate `trip_schema_drift` (#2058, seit 2026-10-05)
+
+Test-Paar `tests/test_trip_schema_drift.py` (Python) + `internal/model/trip_schema_drift_test.go`
+(Go) auf der gemeinsamen, voll besetzten Fixture `tests/fixtures/trip_schema_full.json`. Beide
+Seiten fahren einen echten Roundtrip (Python `_parse_trip` → `_trip_to_dict`, Go
+`json.Unmarshal` → `json.Marshal`) und vergleichen die Schlüsselmengen auf Trip-, Etappen- und
+Wegpunkt-Ebene mit der Fixture — in beide Richtungen. Hintergrund: Der Speicher-Merge ersetzt
+Listen als Ganzes; ein nur einseitig bekanntes Feld ginge beim Speichern still verloren
+(Präzedenzfall `suggestion_reason`). Entscheidung: Gate statt schlüsselbasiertem Listen-Merge.
+
+**Benannte Allowlist** (identisch in beiden Tests): `send_premium_sms` (Trip, nur Go, aus
+`report_config.send_premium_sms` abgeleitet) und `trip` (Trip, Python-Legacy-Wrapper, wird nie
+geschrieben). Ein Allowlist-Eintrag, der in keinem Modell mehr vorkommt, macht den Test rot.
+
+**Neues Trip-/Etappen-/Wegpunkt-Feld ⇒ in beiden Modellen + Fixture anlegen.** Ein Feld, das in
+keinem Modell und nicht in der Fixture steht, fängt das Gate nicht — nur den einseitigen Fall.
+
+*Regel-Budget: trip_schema_drift — Prüfdatum 2027-01-03, siehe Tabelle unten. Spec:
+`docs/specs/modules/trip_schema_drift_gate.md`.*
+
 ## Regel-Budget: Prüfdaten im Überblick
 
 | Regel / Gate | Prüfdatum | Fang-Beleg bei Einführung |
@@ -389,6 +409,7 @@ unverändert 47.
 | HERKUNFT-Zweig-Ratsche `context_herkunft_zweige_eingefroren.test.ts` (#2276 Scheibe S6a) — seit S6h (2026-09-25) dauerhaftes Drift-Schutz-Gate für die final 14 akzeptierten HERKUNFT-Einträge, **kein Rückbau zum Prüfdatum** (Ausnahme von der generischen Regel-Budget-Regel, siehe Fließtext oben) | 2026-12-19 | offen — startet bei 68 Fundstellen (Stand `a789b4b5`, nach S6a), 67 nach dem S6b-Rückbau von `WeatherMetricsTab.svelte:1273`, 53 nach dem S6c-Rückbau von 14 der 18 `AlarmeTab.svelte`-Einträge, 47 nach dem S6d-Rückbau von 6 der 28 `CorridorEditor.svelte`/`CorridorEditorMobile.svelte`-Einträge, unverändert 47 durch S6e, S6g und S6h (S6h kategorisiert final: 27 FACHLICH, 6 DARSTELLUNG, 14 HERKUNFT dauerhaft akzeptiert). Kriterium: eine unbeabsichtigt **verschobene** oder entfernte der 14 dauerhaften HERKUNFT-Verzweigungen, die ohne die eingefrorene Liste unbemerkt bliebe |
 | Invarianten-Test Einstellung = Auslieferung (#2422 S1) | 2026-12-25 | KHW 403 (#2422): B1/B2/B3/B5 als Register-Einträge sichtbar |
 | ADR-0049-Kanallisten-Ratsche `tests/test_adr0049_kanalliste_ratsche.py` — Dreier-Kanalliste ohne `premium_sms` nur mit Marke `ADR-0049` (#2229) | 2026-12-30 | — (bei Einführung 8 bewusst dreistellige Listen markiert; echter Fang offen) |
+| Trip-Schema-Drift-Gate `trip_schema_drift` — Test-Paar `tests/test_trip_schema_drift.py` + `internal/model/trip_schema_drift_test.go`, Allowlist `send_premium_sms`/`trip` (#2058) | 2027-01-03 | `suggestion_reason` nur in Python (Go-Editor-Save verwarf es still), bei Einführung geschlossen |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.
