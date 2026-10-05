@@ -49,7 +49,7 @@
 		reportConfig?: ReportConfig;
 		/** Issue #736: display_config.channels-Sync bei Kanal-Toggle (Parent-Callback). Nur route. */
 		onChannelChange?: (channel: 'email' | 'telegram' | 'sms', value: boolean) => void;
-		/** Tab-Wechsel (analog HubOverview onJump) — "Etappen öffnen →" springt in 'stages'. Nur route. */
+		/** Tab-Wechsel (analog HubOverview onJump) — "Etappen öffnen →" springt in 'etappen' (#2287). Nur route. */
 		onJump?: (tab: string) => void;
 		/** Issue #2276 S6e: der Vergleichs-Zweig arbeitet auf reinen WERTPROPS +
 		 * Aenderungs-Rueckrufen statt auf dem Compare-Wizard-Zustand. Das Buendel
@@ -302,7 +302,7 @@
 	const tripEnd = $derived(computeTripEnd(trip));
 
 	function handleOpenStages() {
-		onJump?.('stages');
+		onJump?.('etappen');
 	}
 
 	// Issue #1258 Scheibe S3 (D5): die komplette Alert-Zustellungs-Sektion des

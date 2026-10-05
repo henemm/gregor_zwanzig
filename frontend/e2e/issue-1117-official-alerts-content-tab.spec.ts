@@ -3,7 +3,7 @@
 // Spec: docs/specs/modules/issue_1117_official_alerts_content_tab.md
 // Workflow: fix-1117-official-alerts-content-tab
 //
-// Ziel-Oberfläche: Trip-Detail-Seite /trips/[id]?tab=weather, Tab „Inhalt"
+// Ziel-Oberfläche: Trip-Detail-Seite /trips/[id]?tab=wetter-metriken, Tab „Inhalt"
 // (WeatherMetricsTab.svelte, Checkbox neben der "E-Mail-Inhalt"-Card).
 // `official_alerts_enabled` wird ausschließlich hier geschaltet.
 //
@@ -74,7 +74,7 @@ async function deleteTrip(request: APIRequestContext, id: string): Promise<void>
 }
 
 async function openInhalt(page: Page, id: string): Promise<void> {
-	await page.goto(`/trips/${id}?tab=weather`);
+	await page.goto(`/trips/${id}?tab=wetter-metriken`);
 	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }
@@ -157,8 +157,8 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 			// daher wird stattdessen in den Etappen-Tab gewechselt und der
 			// Datenverlust-Beweis rein über das Backend geführt.
 			await inhaltToggle.click();
-			await page.locator('[data-testid="trip-detail-tab-stages"]:visible').first().click();
-			await page.locator('[data-testid="trip-detail-panel-stages"]').waitFor({ state: 'visible' });
+			await page.locator('[data-testid="trip-detail-tab-etappen"]:visible').first().click();
+			await page.locator('[data-testid="trip-detail-panel-etappen"]').waitFor({ state: 'visible' });
 
 			// Backend-Beweis: kein Datenverlust unabhängig vom Render-Timing.
 			const check = await request.get(`/api/trips/${id}`);

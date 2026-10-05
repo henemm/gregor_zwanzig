@@ -54,7 +54,7 @@ function saveIndicator(page: Page) {
 }
 
 async function openStagesEditor(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }
@@ -137,7 +137,7 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 	test('AC-5: ausstehender Auto-Save flusht vor Navigation (kein Datenverlust)', async ({
 		page
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=briefings`);
+		await page.goto(`/trips/${TRIP_ID}?tab=versand`);
 		const timeInput = page.getByTestId('report-morning-time');
 		await expect(timeInput).toBeVisible();
 		await expect(timeInput).toHaveValue('07:00');
@@ -170,7 +170,7 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 	// AC-7: In „Briefing" gibt es keinen expliziten Speichern-Button mehr; Änderungen
 	// speichern automatisch und der Indikator quittiert.
 	test('AC-7: Briefing-Tab ohne Speichern-Button — Auto-Save quittiert', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=briefings`);
+		await page.goto(`/trips/${TRIP_ID}?tab=versand`);
 		// Der alte explizite Speichern-Button darf nicht mehr existieren.
 		await expect(page.getByTestId('briefings-save')).toHaveCount(0);
 		// Indikator ist vorhanden.

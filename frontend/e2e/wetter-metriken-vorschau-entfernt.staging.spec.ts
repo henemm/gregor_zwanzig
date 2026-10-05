@@ -85,12 +85,12 @@ async function createTrip(request: APIRequestContext) {
 }
 
 async function openMetricsTab(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=weather`);
+	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
 	// SvelteKit liefert die Tab-Leiste server-gerendert VOR der Hydration aus —
 	// ein Klick, der vor dem Attachen der Event-Listener ankommt, geht spurlos
 	// verloren (#1771; Muster aus compare-hub-inline-edit.spec.ts).
 	await page.waitForLoadState('networkidle');
-	const weatherTabBtn = page.getByTestId('trip-detail-tab-weather');
+	const weatherTabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
 	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
 	await weatherTabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
@@ -109,8 +109,8 @@ test.describe('Issue #1719 S3 Block A: Live-Vorschau ist ersatzlos weg', () => {
 	test('AC-1: weder Vorschau-Spalte noch Mobile-Knopf existieren — Desktop UND Mobil', async ({ page, request }) => {
 		// Staging-Fund (2026-08-11): `createTrip` war definiert, aber in BEIDEN
 		// Tests dieser Datei nie aufgerufen — der Trip existierte nicht, die
-		// Navigation zu `/trips/{id}?tab=weather` fand keinen Reiter
-		// ("trip-detail-tab-weather" not found). Test-/Fixture-Fehler, kein
+		// Navigation zu `/trips/{id}?tab=wetter-metriken` fand keinen Reiter
+		// ("trip-detail-tab-wetter-metriken" not found). Test-/Fixture-Fehler, kein
 		// Produktfehler (Beleg: derselbe Navigationsweg besteht in
 		// kanal-grenzen-und-hinweise.staging.spec.ts, wo der Trip angelegt wird).
 		const created = await createTrip(request);
@@ -173,7 +173,7 @@ test.describe('Issue #1719 S3 Block A: Live-Vorschau ist ersatzlos weg', () => {
 
 		// Reload: Reihenfolge bleibt.
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const reloadedRows = page
 			.getByTestId('weather-metrics-tab')
 			.locator('[data-testid="wm2-reihenfolge-row"]');

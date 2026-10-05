@@ -55,7 +55,7 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	});
 
 	// Bug #505: "Bearbeiten"-Button wurde laut Design-Vorgabe aus dem Header entfernt.
-	// Editing geschieht inline in den Tabs; /trips/[id]/edit redirectet auf ?tab=stages.
+	// Editing geschieht inline in den Tabs; /trips/[id]/edit redirectet auf ?tab=etappen.
 	test('AC-10: Kein "Bearbeiten"-Button im Header (bug #505)', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const btn = page.getByTestId('trip-detail-action-edit');
@@ -70,7 +70,7 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	// die alte "Etappen"-Kurzform existiert nicht mehr.
 	test('AC-3a: Tab "stages" heißt "Etappen & Wegpunkte"', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const stagesTab = page.getByTestId('trip-detail-tab-stages');
+		const stagesTab = page.getByTestId('trip-detail-tab-etappen');
 		await expect(stagesTab).toBeVisible();
 		await expect(stagesTab).toContainText('Etappen & Wegpunkte');
 	});
@@ -78,7 +78,7 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	// Issue #529 — Kanonische Tab-Namen (nav-map.jsx Drift aufgelöst).
 	test('AC-3b: Tab "weather" heißt "Wetter-Metriken" (nicht "Wetter-Briefing")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const weatherTab = page.getByTestId('trip-detail-tab-weather');
+		const weatherTab = page.getByTestId('trip-detail-tab-wetter-metriken');
 		await expect(weatherTab).toContainText('Wetter-Metriken');
 		await expect(weatherTab).not.toContainText('Wetter-Briefing');
 	});
@@ -87,7 +87,7 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	// "Briefing-Zeitplan" — das war der Zwischenstand vor #736).
 	test('AC-3c: Tab "briefings" heißt "Versand" (nicht "Reports & Kanäle")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const briefingsTab = page.getByTestId('trip-detail-tab-briefings');
+		const briefingsTab = page.getByTestId('trip-detail-tab-versand');
 		await expect(briefingsTab).toContainText('Versand');
 		await expect(briefingsTab).not.toContainText('Reports & Kanäle');
 	});
@@ -95,14 +95,14 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	// Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
 	test('AC-3d: Tab "alerts" heißt "Wertebereiche" (nicht "Alarmregeln")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const alertsTab = page.getByTestId('trip-detail-tab-alerts');
+		const alertsTab = page.getByTestId('trip-detail-tab-wertebereiche');
 		await expect(alertsTab).toContainText('Wertebereiche');
 		await expect(alertsTab).not.toContainText('Alarmregeln');
 	});
 
 	test('AC-3e: Etappen-Tab hat Badge mit Etappenanzahl', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const badge = page.getByTestId('trip-detail-tab-badge-stages');
+		const badge = page.getByTestId('trip-detail-tab-badge-etappen');
 		await expect(badge).toBeVisible();
 	});
 

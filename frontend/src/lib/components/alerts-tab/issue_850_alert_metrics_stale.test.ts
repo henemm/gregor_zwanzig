@@ -5,7 +5,7 @@
 //   → onTripUpdate erhält diesen Trip (nicht manuell konstruierten Payload ohne alert_rules).
 //
 // AC-2: AlertPreviewCard — Link auf Wetter-Metriken-Tab
-//   → Hinweistext enthält Element data-testid="alert-preview-no-metrics-link" → href="?tab=weather"
+//   → Hinweistext enthält Element data-testid="alert-preview-no-metrics-link" → href="?tab=wetter-metriken"
 //
 // Execution:
 //   cd frontend && node --experimental-strip-types --test \
@@ -66,7 +66,7 @@ test('AC-2: AlertPreviewCard Hinweistext enthält Link data-testid="alert-previe
 		'AlertPreviewCard.svelte muss Link mit data-testid="alert-preview-no-metrics-link" enthalten (Issue #850 AC-2)'
 	);
 	assert.ok(
-		src.includes('href="?tab=weather"'),
-		'AlertPreviewCard.svelte Link muss auf ?tab=weather verlinken (Issue #850 AC-2)'
+		src.includes('href="?tab=wetter-metriken"'),
+		'AlertPreviewCard.svelte Link muss auf ?tab=wetter-metriken verlinken (Issue #850 AC-2)'
 	);
 });

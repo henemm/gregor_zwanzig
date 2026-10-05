@@ -33,7 +33,19 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
-import { COMPARE_TABS, COMPARE_TAB_VALUES, resolveCompareTab } from '../compareTabsResolve.ts';
+// Feature #2287: die Vergleich-Reiterleiste kommt aus dem geteilten Modul
+// (`compareTabsResolve.ts` entfaellt). Dynamischer Import NUR in den AC-1/AC-3-Bloecken,
+// damit die uebrigen Tests dieser Datei (Stundenverlauf, Layout-Panel, Lock-Engine)
+// unabhaengig vom neuen Modul laufen.
+async function geteilt() {
+	const { subscriptionTabs, resolveTab } = await import('../../shared/subscriptionTabs.ts');
+	const COMPARE_TABS = subscriptionTabs('vergleich').map((t) => ({ value: t.id, label: t.label }));
+	return {
+		COMPARE_TABS,
+		COMPARE_TAB_VALUES: COMPARE_TABS.map((t) => t.value) as readonly string[],
+		resolveCompareTab: (v: string): string => resolveTab('vergleich', v).tab
+	};
+}
 import { weatherMetricsTabSections } from '../../shared/weather-metrics-tab/weatherMetricsTabSections.ts';
 import {
 	tailUnlocked,
@@ -52,8 +64,8 @@ type CompareNewProgress = {
 	alarmeVisited: boolean;
 	versandVisited: boolean;
 };
-const COMPARE_TAIL: TailIds = { metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand' };
-const COMPARE_STEPS = ['vergleich', 'orte', 'metriken', 'idealwerte', 'alarme', 'versand'];
+const COMPARE_TAIL: TailIds = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' };
+const COMPARE_STEPS = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
 const tailOf = (p: CompareNewProgress) => ({
 	metrikenFrei: !!p.name.trim() && p.pickedCount >= 2,
 	metrikenVisited: p.metrikenVisited,
@@ -177,7 +189,8 @@ function renderedTexts(subtree: unknown): string[] {
 // ── AC-1: sieben Reiter, kein „Layout" ──────────────────────────────────────
 
 describe('AC-1: Reiterleiste des Ortsvergleichs', () => {
-	test('genau sieben Reiter, keiner heißt „Layout"', () => {
+	test('genau sieben Reiter, keiner heißt „Layout"', async () => {
+		const { COMPARE_TABS, COMPARE_TAB_VALUES } = await geteilt();
 		assert.deepEqual(
 			COMPARE_TABS.map((t) => t.label),
 			['Übersicht', 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme', 'Versand', 'Vorschau'],
@@ -200,7 +213,8 @@ describe('AC-1: Reiterleiste des Ortsvergleichs', () => {
 // ── AC-3: alter Deep-Link landet in Wetter-Metriken ─────────────────────────
 
 describe('AC-3: Umleitung des alten Layout-Deep-Links', () => {
-	test("resolveCompareTab('layout') → 'wetter-metriken'", () => {
+	test("resolveCompareTab('layout') → 'wetter-metriken'", async () => {
+		const { resolveCompareTab } = await geteilt();
 		assert.equal(
 			resolveCompareTab('layout'),
 			'wetter-metriken',
@@ -209,7 +223,8 @@ describe('AC-3: Umleitung des alten Layout-Deep-Links', () => {
 		);
 	});
 
-	test('gültige Reiter bleiben unverändert, Unbekanntes fällt weiter auf Übersicht', () => {
+	test('gültige Reiter bleiben unverändert, Unbekanntes fällt weiter auf Übersicht', async () => {
+		const { COMPARE_TAB_VALUES, resolveCompareTab } = await geteilt();
 		for (const value of COMPARE_TAB_VALUES) {
 			assert.equal(resolveCompareTab(value), value);
 		}

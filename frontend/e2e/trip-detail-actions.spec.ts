@@ -186,14 +186,14 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		const tabList = page.getByTestId('trip-detail-tab-list');
 		await expect(tabList).toBeVisible();
 
-		for (const tab of ['overview', 'stages', 'weather', 'briefings', 'alerts', 'preview']) {
+		for (const tab of ['uebersicht', 'etappen', 'wetter-metriken', 'versand', 'wertebereiche', 'vorschau']) {
 			const trigger = page.getByTestId(`trip-detail-tab-${tab}`);
 			await expect(trigger).toBeVisible();
 		}
 
 		// Tab-Wechsel funktioniert nach wie vor
-		await page.getByTestId('trip-detail-tab-alerts').click();
-		await expect(page.getByTestId('trip-detail-tab-alerts')).toHaveAttribute('data-state', 'active');
+		await page.getByTestId('trip-detail-tab-wertebereiche').click();
+		await expect(page.getByTestId('trip-detail-tab-wertebereiche')).toHaveAttribute('data-state', 'active');
 	});
 
 	test('Toggle-Roundtrip: Pause → Resume → wieder aktiv', async ({ page }) => {

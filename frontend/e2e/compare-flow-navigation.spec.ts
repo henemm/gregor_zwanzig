@@ -278,18 +278,15 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–
 		// Coordinator-Punkt 3), statt blind weiterzuspringen.
 		// Epic #1301 F2a: neue Freischalt-Kette — Wertebereiche ist erst nach Besuch
 		// des NEUEN Wetter-Metriken-Tabs frei (echter Klick, kein goto).
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').click();
-		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible');
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').click();
+		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible');
 		await idealwerteTab.click();
 		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 
-		const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible');
-		await layoutTab.click();
-		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
-
 		// Issue #1258 Scheibe S4 (E1/E2, AC-28): "alarme" ist reguläre Station
-		// zwischen "layout" und "versand" — "versand" bleibt ohne Alarme-Besuch
-		// gesperrt.
+		// vor "versand" — "versand" bleibt ohne Alarme-Besuch gesperrt. Der
+		// frühere Layout-Schritt entfällt (Reiter per #1360 aufgelöst, Kette
+		// seither wertebereiche → alarme → versand).
 		const alarmeTab = page.locator('[data-testid="compare-editor-tab-alarme"]:visible');
 		await alarmeTab.click();
 		await expect(alarmeTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
@@ -573,12 +570,14 @@ test.describe('Issue #1256 Scheibe 4: Editor-Layout-Tab = geteilter LayoutTab-Or
 
 		// Epic #1301 F2a: neue Freischalt-Kette — Wertebereiche ist erst nach Besuch
 		// des NEUEN Wetter-Metriken-Tabs frei (echter Klick, kein goto).
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').click();
-		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible');
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').click();
+		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible');
 		await idealwerteTab.click();
 		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 
-		const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible');
+		// #1360: der Layout-Reiter ist aufgelöst — die Stundenverlauf-Steuerung
+		// lebt im Reiter Wetter-Metriken (WeatherMetricsTab → CompareHourlyLayoutControls).
+		const layoutTab = page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible');
 		await layoutTab.click();
 		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 	}
@@ -671,8 +670,13 @@ test.describe('Issue #1256 Fix-Loop 1 (F001): Editor öffnet bestehenden Verglei
 // dem Editor-Organism. Sollte der PO "denselben Organism" im Hub wörtlich
 // meinen, widerspricht das dem aktuellen Spec-Text und braucht eine
 // Spec-Klarstellung vor Phase 6 (s. Bericht).
-test.describe('Issue #1256 Scheibe 4 (Hub): Layout-Tab bleibt daten-konsistenter Summary-Tab', () => {
-	test('Hub-Layout-Tab bleibt erreichbar und rendert KEIN Organism-Duplikat (Ansehen-only laut Spec-Zielmodell)', async ({
+//
+// Stand #2287: Der Hub-Layout-Reiter ist seit #1360 aufgeloest; sein Inhalt
+// (Stundenverlauf) lebt im Reiter Wetter-Metriken, der seit #1703 S8 auch den
+// LayoutTab-Organism enthaelt — die fruehere „kein Organism"-Aussage ist damit
+// gegenstandslos. Geprueft wird das heutige Verhalten des alten Deep-Links.
+test.describe('Issue #1256 Scheibe 4 (Hub) → #1360/#2287: alter Layout-Deep-Link', () => {
+	test('?tab=layout landet in Wetter-Metriken, URL wird auf ?tab=wetter-metriken bereinigt', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -683,12 +687,10 @@ test.describe('Issue #1256 Scheibe 4 (Hub): Layout-Tab bleibt daten-konsistenter
 		await page.goto(`/compare/${id}?tab=layout`);
 		await page.waitForLoadState('networkidle');
 
-		const panel = page.locator('[data-testid="compare-detail-panel-layout"]:visible');
+		const panel = page.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
-		// Summary-Tab bleibt Ansehen-only laut Spec-Zielmodell — kein
-		// eingebetteter LayoutTab-Organism im Hub (Unterschied zu Orte/
-		// Idealwerte/Versand, die ab Scheibe 6/7 inline editierbar werden).
-		await expect(page.locator('[data-testid="layout-tab"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="compare-detail-panel-layout"]')).toHaveCount(0);
+		await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBe('wetter-metriken');
 	});
 });
 

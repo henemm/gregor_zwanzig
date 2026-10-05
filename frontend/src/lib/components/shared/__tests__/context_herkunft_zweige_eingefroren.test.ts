@@ -110,7 +110,7 @@ const ZAEHLBEFEHL =
 	` | grep -v __tests__ | grep -vE ':\\s*(\\*|//|/\\*)'`;
 
 /**
- * Eingefrorene Soll-Liste (47 Fundstellen) — Zielzustand NACH S6a (Totcode),
+ * Eingefrorene Soll-Liste (46 Fundstellen seit #2287; vorher 47) — Zielzustand NACH S6a (Totcode),
  * S6b (Guard-Rueckbau) UND S6c (Alarme-Flaeche auf Wertprops). Die Kategorien
  * HERKUNFT/FACHLICH/DARSTELLUNG stehen im Spec-Anhang, nicht hier — diese
  * Ratsche misst Fundorte, nicht Absichten.
@@ -268,7 +268,6 @@ const EINGEFROREN: readonly string[] = [
 	'versand-tab/VTSchedulePlan.svelte:83',
 	'alarme-tab/alarmeTabSections.ts:27',
 	'alarme-tab/alarmeTabSections.ts:38',
-	'alarme-tab/alarmeTabSections.ts:42',
 	'corridor-editor/wertebereicheVergleichSpeicherung.ts:209',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:72',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:73',
@@ -277,7 +276,10 @@ const EINGEFROREN: readonly string[] = [
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein
  *  versehentliches Kuerzen des Literals oben. */
-const EINGEFROREN_SOLL_ANZAHL = 47;
+// Issue #2287 (AC-11): `alarme-tab/alarmeTabSections.ts:42` (`wertebereicheTabId`,
+// Verzweigung nach context) BEWUSST gestrichen — die Funktion entfaellt, beide Hubs
+// springen mit derselben Kennung `wertebereiche`. Soll 47 → 46.
+const EINGEFROREN_SOLL_ANZAHL = 46;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
@@ -542,7 +544,7 @@ describe('AC-2: eingefrorene HERKUNFT-Zweig-Liste deckt sich mit dem Ist-Stand',
 		);
 	});
 
-	test('die eingefrorene Soll-Liste ist unversehrt (47 Eintraege, keine Duplikate)', () => {
+	test('die eingefrorene Soll-Liste ist unversehrt (46 Eintraege, keine Duplikate)', () => {
 		assert.strictEqual(
 			EINGEFROREN.length,
 			EINGEFROREN_SOLL_ANZAHL,

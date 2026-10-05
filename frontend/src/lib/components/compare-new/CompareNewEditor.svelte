@@ -58,11 +58,11 @@
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import { PageHeader } from '$lib/components/atoms';
 
-	type CompareNewTabId = 'vergleich' | 'orte' | 'metriken' | 'idealwerte' | 'alarme' | 'versand';
+	type CompareNewTabId = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand';
 	const TAIL: TailIds<CompareNewTabId> = {
-		metriken: 'metriken', wertebereiche: 'idealwerte', alarme: 'alarme', versand: 'versand'
+		metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand'
 	};
-	const PROGRESS_STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'metriken', 'idealwerte', 'alarme', 'versand'];
+	const PROGRESS_STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
 
 	// Test-Seam (#2277 S4, Muster TripNewEditor `stateOverride`): Startwerte fuer
 	// Reiter/Viewport/Besuchs-Flags. Ohne Uebergabe unveraendertes Verhalten.
@@ -106,15 +106,15 @@
 
 	// ── Tab-Definitionen (6 Tabs, Spec-Tabelle) ───────────────────────────────
 	// Issue #1360 (Scheibe S1a von Epic #1372): der Reiter 'layout' ist aufgeloest,
-	// die Stundenverlauf-Steuerung liegt im Reiter 'metriken' (via
+	// die Stundenverlauf-Steuerung liegt im Reiter 'wetter-metriken' (via
 	// WeatherMetricsTab, Abschnitt 'stundenverlauf'). Der Hinweis des
 	// Alarme-Reiters MUSS mit umgehaengt werden — er verwies auf einen Reiter,
 	// den es nicht mehr gibt, und haette den Alarme-Reiter unerreichbar gemacht.
 	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null }[] = [
 		{ id: 'vergleich', label: 'Vergleich', lockHint: null },
 		{ id: 'orte', label: 'Orte', lockHint: 'erst Vergleich benennen' },
-		{ id: 'metriken', label: 'Wetter-Metriken', lockHint: 'erst mind. 2 Orte auswählen' },
-		{ id: 'idealwerte', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen' },
+		{ id: 'wetter-metriken', label: 'Wetter-Metriken', lockHint: 'erst mind. 2 Orte auswählen' },
+		{ id: 'wertebereiche', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen' },
 		{ id: 'alarme', label: 'Alarme', lockHint: 'erst Wertebereiche öffnen' },
 		{ id: 'versand', label: 'Versand', lockHint: 'erst Alarme öffnen' }
 	];
@@ -151,7 +151,7 @@
 		versandVisited
 	});
 	// ... und kumulativ (fuer "freigeschaltet"): Ortsvergleich-Semantik ist eine
-	// konjunktive Kette (idealwerte braucht Metriken-Besuch, alarme zusaetzlich
+	// konjunktive Kette (Wertebereiche braucht Metriken-Besuch, alarme zusaetzlich
 	// Ideal-Besuch usw.), der Kern prueft je Stufe nur das direkte Vorgaenger-Flag.
 	const tailPChain = $derived({
 		...tailP,
@@ -207,8 +207,8 @@
 	function switchTab(id: CompareNewTabId) {
 		if (!unlocked.has(id)) return;
 		activeTab = id;
-		if (id === 'metriken') metrikenVisited = true;
-		if (id === 'idealwerte') idealsVisited = true;
+		if (id === 'wetter-metriken') metrikenVisited = true;
+		if (id === 'wertebereiche') idealsVisited = true;
 		if (id === 'alarme') alarmeVisited = true;
 		if (id === 'versand') versandVisited = true;
 	}
@@ -414,19 +414,19 @@
 		<div class="ce-cta-foot" style:max-width="980px">
 			<div class="ce-cta-row">
 				{#if !orteContinueReady}<span class="mono ce-cta-hint">⊘ min. 2 Orte auswählen</span>{/if}
-				<Btn data-testid="compare-editor-continue-metriken" variant={orteContinueReady ? 'accent' : 'quiet'} size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('metriken')} style={orteContinueReady ? '' : 'opacity:0.45; cursor:not-allowed'}>Wetter-Metriken →</Btn>
+				<Btn data-testid="compare-editor-continue-wetter-metriken" variant={orteContinueReady ? 'accent' : 'quiet'} size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('wetter-metriken')} style={orteContinueReady ? '' : 'opacity:0.45; cursor:not-allowed'}>Wetter-Metriken →</Btn>
 			</div>
 		</div>
-	{:else if activeTab === 'metriken'}
+	{:else if activeTab === 'wetter-metriken'}
 		{#if !isMobileViewport}
 			<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1040px">
 			<div class="ce-cta-row">
-				<Btn data-testid="compare-editor-continue-idealwerte" variant="accent" size="md" onclick={makeContinueHandler('idealwerte')}>Wertebereiche festlegen →</Btn>
+				<Btn data-testid="compare-editor-continue-wertebereiche" variant="accent" size="md" onclick={makeContinueHandler('wertebereiche')}>Wertebereiche festlegen →</Btn>
 			</div>
 		</div>
-	{:else if activeTab === 'idealwerte'}
+	{:else if activeTab === 'wertebereiche'}
 		{#if !isMobileViewport}
 			<CorridorEditor context="vergleich" {...corridorPropsAus(wiz)} />
 		{/if}
@@ -518,11 +518,11 @@
 			</div>
 		{:else if activeTab === 'orte'}
 			<Step2Orte {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
-		{:else if activeTab === 'metriken'}
+		{:else if activeTab === 'wetter-metriken'}
 			{#if isMobileViewport}
 				<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} />
 			{/if}
-		{:else if activeTab === 'idealwerte'}
+		{:else if activeTab === 'wertebereiche'}
 			{#if isMobileViewport}
 				<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wiz)} />
 			{/if}
@@ -545,9 +545,9 @@
 			{:else if activeTab === 'orte'}
 				{@const restOrte = 2 - wiz.pickedIds.length}
 				<MBtn block variant={orteContinueReady ? 'primary' : 'quiet'} size="xl" disabled={!orteContinueReady} onclick={handleMobileNext}>{orteContinueReady ? 'Wetter-Metriken →' : `noch ${restOrte} Ort${restOrte !== 1 ? 'e' : ''} nötig`}</MBtn>
-			{:else if activeTab === 'metriken'}
+			{:else if activeTab === 'wetter-metriken'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Wertebereiche festlegen →</MBtn>
-			{:else if activeTab === 'idealwerte'}
+			{:else if activeTab === 'wertebereiche'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Alarme einrichten →</MBtn>
 			{:else if activeTab === 'alarme'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Versand einrichten →</MBtn>

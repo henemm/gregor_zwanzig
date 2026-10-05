@@ -4,17 +4,19 @@ const TRIP_ID = 'e2e-cockpit-test';
 // Issue #302 — Labels nach Soll-Mockup. Placeholder-Regex entfernt, weil die
 // Inhalte mit Epic #135/137/138/139 längst implementiert sind und die alten
 // Skelett-Texte nicht mehr existieren.
+// Issue #2287: Reihenfolge und Beschriftungen = shared/subscriptionTabs.ts ('trip').
 const TABS = [
-	{ value: 'overview', label: 'Übersicht' },
-	{ value: 'stages', label: 'Etappen' },
-	{ value: 'weather', label: 'Wetter-Briefing' },
-	{ value: 'briefings', label: 'Reports & Kanäle' },
-	{ value: 'alerts', label: 'Alarmregeln' },
-	{ value: 'preview', label: 'Vorschau' }
+	{ value: 'uebersicht', label: 'Übersicht' },
+	{ value: 'etappen', label: 'Etappen & Wegpunkte' },
+	{ value: 'wetter-metriken', label: 'Wetter-Metriken' },
+	{ value: 'wertebereiche', label: 'Wertebereiche' },
+	{ value: 'alarme', label: 'Alarme' },
+	{ value: 'versand', label: 'Versand' },
+	{ value: 'vorschau', label: 'Vorschau' }
 ];
 
 test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
-	test('AC-1: 6 Tabs in fester Reihenfolge sichtbar', async ({ page }) => {
+	test('AC-1: 7 Tabs in fester Reihenfolge sichtbar', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const list = page.getByTestId('trip-detail-tab-list');
 		await expect(list).toBeVisible();
@@ -27,36 +29,36 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 
 	test('AC-2: ohne URL-Hash → Übersicht ist aktiv', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const overview = page.getByTestId('trip-detail-tab-overview');
+		const overview = page.getByTestId('trip-detail-tab-uebersicht');
 		await expect(overview).toHaveAttribute('data-state', 'active');
-		await expect(page.getByTestId('trip-detail-panel-overview')).toBeVisible();
+		await expect(page.getByTestId('trip-detail-panel-uebersicht')).toBeVisible();
 	});
 
-	test('AC-3: Klick auf "Etappen" wechselt aktiv + URL-Hash + Panel sichtbar', async ({ page }) => {
+	test('AC-3: Klick auf "Etappen" wechselt aktiv + URL ?tab=etappen + Panel sichtbar', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-stages').click();
-		await expect(page.getByTestId('trip-detail-tab-stages')).toHaveAttribute('data-state', 'active');
-		await expect(page).toHaveURL(new RegExp('#stages$'));
-		const panel = page.getByTestId('trip-detail-panel-stages');
+		await page.getByTestId('trip-detail-tab-etappen').click();
+		await expect(page.getByTestId('trip-detail-tab-etappen')).toHaveAttribute('data-state', 'active');
+		await expect(page).toHaveURL(/[?&]tab=etappen$/);
+		const panel = page.getByTestId('trip-detail-panel-etappen');
 		await expect(panel).toBeVisible();
 	});
 
-	test('AC-4: Aufruf mit ?tab=alerts → Alerts-Tab initial aktiv (Bug #534 — Issue #516)', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
-		await expect(page.getByTestId('trip-detail-tab-alerts')).toHaveAttribute('data-state', 'active');
-		await expect(page.getByTestId('trip-detail-panel-alerts')).toBeVisible();
+	test('AC-4: Aufruf mit ?tab=wertebereiche → Alerts-Tab initial aktiv (Bug #534 — Issue #516)', async ({ page }) => {
+		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
+		await expect(page.getByTestId('trip-detail-tab-wertebereiche')).toHaveAttribute('data-state', 'active');
+		await expect(page.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible();
 	});
 
 	test('AC-5: Aktiver Tab hat sichtbare Unterstreichung in --g-accent', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const overview = page.getByTestId('trip-detail-tab-overview');
+		const overview = page.getByTestId('trip-detail-tab-uebersicht');
 		const borderBottomColor = await overview.evaluate(
 			(el) => getComputedStyle(el).borderBottomColor
 		);
 		// accent-Token ist #c45a2a → rgb(196, 90, 42)
 		expect(borderBottomColor).toMatch(/rgb\(196,\s*90,\s*42\)|rgba\(196,\s*90,\s*42/);
 
-		const stages = page.getByTestId('trip-detail-tab-stages');
+		const stages = page.getByTestId('trip-detail-tab-etappen');
 		const inactiveBorder = await stages.evaluate((el) => getComputedStyle(el).borderBottomColor);
 		expect(inactiveBorder).not.toMatch(/rgb\(196,\s*90,\s*42\)/);
 	});
@@ -68,7 +70,7 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 		// enabled Alert-Rules). Die anderen Tabs dürfen weiterhin kein Badge zeigen.
 		await page.goto(`/trips/${TRIP_ID}`);
 		for (const tab of TABS) {
-			if (tab.value === 'stages' || tab.value === 'alerts') continue;
+			if (tab.value === 'etappen' || tab.value === 'wertebereiche') continue;
 			const badge = page.getByTestId(`trip-detail-tab-badge-${tab.value}`);
 			await expect(badge).toHaveCount(0);
 		}
@@ -81,13 +83,13 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 
 	test('AC-9: Tastatur-Navigation mit ArrowRight wechselt Fokus', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const overview = page.getByTestId('trip-detail-tab-overview');
+		const overview = page.getByTestId('trip-detail-tab-uebersicht');
 		await overview.focus();
 		await page.keyboard.press('ArrowRight');
 		const focused = await page.evaluate(() =>
 			document.activeElement?.getAttribute('data-testid')
 		);
-		expect(focused).toBe('trip-detail-tab-stages');
+		expect(focused).toBe('trip-detail-tab-etappen');
 	});
 
 	test('Badge-Guard: badges={alerts: 0} rendert KEINE Badge (>= 1 Regel, Spec §2)', async () => {
@@ -113,8 +115,8 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 			path: '../docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-overview.png',
 			fullPage: false
 		});
-		await page.goto(`/trips/${TRIP_ID}?tab=alerts`);
-		await page.waitForSelector('[data-testid="trip-detail-panel-alerts"]');
+		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
+		await page.waitForSelector('[data-testid="trip-detail-panel-wertebereiche"]');
 		await page.screenshot({
 			path: '../docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-alerts.png',
 			fullPage: false

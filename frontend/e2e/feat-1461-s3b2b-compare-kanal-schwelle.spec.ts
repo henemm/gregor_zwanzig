@@ -237,8 +237,8 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 			await lib.getByText(loc.name, { exact: true }).click();
 		}
 
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
 
 		// CompareNewEditor montiert .cm-desktop UND .cm-mobile gleichzeitig —
@@ -331,8 +331,8 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		// echte Klickpfad geht über den X-Knopf, aria-label "Schliessen").
 		await page.getByRole('button', { name: 'Schliessen' }).click();
 
-		await mobile.getByTestId('cm-mobile-tab-metriken').click({ force: true });
-		await mobile.getByTestId('cm-mobile-tab-idealwerte').click({ force: true });
+		await mobile.getByTestId('cm-mobile-tab-wetter-metriken').click({ force: true });
+		await mobile.getByTestId('cm-mobile-tab-wertebereiche').click({ force: true });
 		await mobile.getByTestId('cm-mobile-tab-alarme').click({ force: true });
 
 		const picker = mobile.getByTestId('alert-channel-picker');
@@ -383,8 +383,8 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		// Speichern über einen unbeteiligten Weg (Aktivität ändern — seit #2284 S2
 		// als Kachel im Trip-Kopf statt Auswahlliste im Stages-Tab) —
 		// AC-16 verlangt: Trip-Oberfläche öffnen und speichern, kein Fehler.
-		await page.goto(`/trips/${trip.id}?tab=stages`);
-		await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible({ timeout: 15_000 });
+		await page.goto(`/trips/${trip.id}?tab=etappen`);
+		await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 15_000 });
 		const activityTile = page.getByTestId('trip-profil-option-mtb');
 		await expect(activityTile).toBeVisible({ timeout: 10_000 });
 		const putPromise = page.waitForResponse(

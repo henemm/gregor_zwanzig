@@ -2,7 +2,7 @@
 // zwischen Orte und Wertebereiche im Ortsvergleich-Editor.
 //
 // Spec: docs/specs/modules/compare_weather_metrics_tab.md § AC-1, Dependencies
-//   (compareTabsResolve.ts:7-17)
+//   (subscriptionTabs.ts)
 //
 // RED-Erwartung (vor Implementation): COMPARE_TABS enthaelt heute 7 Tabs ohne
 // 'wetter-metriken' — jede Assertion hier schlaegt fehl, bis der Tab
@@ -15,7 +15,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { COMPARE_TABS, COMPARE_TAB_VALUES, resolveCompareTab } from '../compareTabsResolve.ts';
+import { subscriptionTabs, resolveTab } from '../../shared/subscriptionTabs.ts';
+
+// Feature #2287: die Vergleich-Reiterleiste kommt aus dem geteilten Modul
+// (`compareTabsResolve.ts` entfaellt); die Pruefungen bleiben inhaltlich gleich.
+const COMPARE_TABS = subscriptionTabs('vergleich').map((t) => ({ value: t.id, label: t.label }));
+const COMPARE_TAB_VALUES: readonly string[] = COMPARE_TABS.map((t) => t.value);
+const resolveCompareTab = (v: string): string => resolveTab('vergleich', v).tab;
 
 describe('AC-1: COMPARE_TABS registriert den neuen Tab "Wetter-Metriken"', () => {
 	test('enthaelt einen Eintrag mit value="wetter-metriken"', () => {
@@ -35,17 +41,17 @@ describe('AC-1: COMPARE_TABS registriert den neuen Tab "Wetter-Metriken"', () =>
 		);
 	});
 
-	test('liegt zwischen "orte" und "idealwerte" (Dependencies: compareTabsResolve.ts:7-17)', () => {
+	test('liegt zwischen "orte" und "wertebereiche" (Dependencies: subscriptionTabs.ts)', () => {
 		const values = COMPARE_TABS.map((t) => t.value);
 		const orteIdx = values.indexOf('orte');
-		const idealwerteIdx = values.indexOf('idealwerte');
+		const wertebereicheIdx = values.indexOf('wertebereiche');
 		const wetterIdx = values.indexOf('wetter-metriken');
 		assert.notEqual(orteIdx, -1, 'Vorbedingung verletzt: "orte" fehlt in COMPARE_TABS');
-		assert.notEqual(idealwerteIdx, -1, 'Vorbedingung verletzt: "idealwerte" fehlt in COMPARE_TABS');
+		assert.notEqual(wertebereicheIdx, -1, 'Vorbedingung verletzt: "wertebereiche" fehlt in COMPARE_TABS');
 		assert.ok(
-			wetterIdx > orteIdx && wetterIdx < idealwerteIdx,
+			wetterIdx > orteIdx && wetterIdx < wertebereicheIdx,
 			`AC-1 FAIL: "wetter-metriken" (Index ${wetterIdx}) liegt nicht zwischen "orte" (${orteIdx}) ` +
-				`und "idealwerte" (${idealwerteIdx})`
+				`und "wertebereiche" (${wertebereicheIdx})`
 		);
 	});
 
@@ -67,7 +73,7 @@ describe('AC-1: COMPARE_TABS registriert den neuen Tab "Wetter-Metriken"', () =>
 	// (Spec compare_layout_tab_dissolution, AC-1).
 	test('Regressions-Anker: alle 6 Bestands-Tabs sind weiterhin vorhanden', () => {
 		const values = COMPARE_TABS.map((t) => t.value);
-		for (const v of ['uebersicht', 'orte', 'idealwerte', 'alarme', 'versand', 'vorschau']) {
+		for (const v of ['uebersicht', 'orte', 'wertebereiche', 'alarme', 'versand', 'vorschau']) {
 			assert.ok(values.includes(v), `Regression: Bestands-Tab "${v}" fehlt in COMPARE_TABS`);
 		}
 	});

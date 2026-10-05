@@ -85,7 +85,7 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 		}
 
 		// Wetter-Metriken: eine Metrik aktiv umschalten (verändert active_metrics).
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
 		const metricRow = page
 			.locator('.cm-desktop [data-testid^="weather-metrics-vergleich-row-"] input')
 			.first();
@@ -94,13 +94,14 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 
 		// Wertebereiche: Profil-Prefill (isFreshCompareCreate) befüllt corridors +
 		// activeMetricKeys beim Öffnen (Besuch genügt, echter Klickpfad).
-		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
 		await expect(
 			page.locator('[data-testid="corridor-editor-vergleich"]:visible').first()
 		).toBeVisible({ timeout: 8_000 });
 
-		// Layout: eine Stundenverlauf-Metrik umschalten (setzt hourly_metrics).
-		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
+		// Stundenverlauf-Metrik umschalten (setzt hourly_metrics) — seit #1360 im
+		// Reiter Wetter-Metriken (Layout-Reiter aufgeloest).
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
 		const hourlyToggle = page
 			.locator('.cm-desktop [data-testid="compare-layout-hourly-metric-temp_c"] input')
 			.first();
@@ -170,9 +171,8 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 		for (const n of [nameA, nameB]) {
 			await lib.getByText(n, { exact: true }).click();
 		}
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 
@@ -209,9 +209,10 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 		for (const n of [nameA, nameB]) {
 			await lib.getByText(n, { exact: true }).click();
 		}
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-layout"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
+		// #1360: Stundenverlauf-Steuerung lebt im Reiter Wetter-Metriken.
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
 
 		await expect(
 			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()
@@ -241,7 +242,7 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 			await lib.getByText(n, { exact: true }).click();
 		}
 
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
 		const maxBox = page
 			.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-max"] input')
 			.first();

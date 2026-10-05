@@ -240,9 +240,9 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		await d.locator('[data-testid="compare-step2-library"]').getByText(nameB, { exact: true }).click();
 		// Epic #1301 F2a: neue Kette — Wetter-Metriken-Tab besuchen schaltet
 		// Wertebereiche frei (echter Klick, kein goto).
-		await d.locator('[data-testid="compare-editor-tab-metriken"]').click();
-		await d.locator('[data-testid="compare-editor-tab-idealwerte"]').click();
-		await d.locator('[data-testid="compare-editor-tab-layout"]').click();
+		await d.locator('[data-testid="compare-editor-tab-wetter-metriken"]').click();
+		await d.locator('[data-testid="compare-editor-tab-wertebereiche"]').click();
+		// Layout-Schritt entfällt (Reiter per #1360 aufgelöst).
 		await d.locator('[data-testid="compare-editor-tab-alarme"]').click();
 		await d.locator('[data-testid="compare-editor-tab-versand"]').click();
 
@@ -278,7 +278,8 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		const { id } = await createPreset(page); // Default: hourly_enabled=true
 		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-layout"]:visible').first().click();
+		// #1360: Stundenverlauf-Steuerung lebt im Reiter Wetter-Metriken.
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
 
 		const hourlyToggle = page
 			.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible')

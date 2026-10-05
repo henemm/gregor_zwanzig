@@ -93,55 +93,11 @@ async function createDraftPreset(page: Page, name: string): Promise<string> {
 	return id;
 }
 
-test.describe('Issue #1256 S8c (AC-1): Layout-Tab Desktop-Rahmen', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 900 });
-	});
-
-	test('Section-Header, Kappungs-Hint und 3 Limit-Pillen sind sichtbar', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-D ${suffix}`, 47.1, 11.1);
-		const id = await createPresetWithLocation(page, `E2E S8c Layout-D ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-layout"]').click();
-
-		const panel = page.locator('[data-testid="compare-detail-panel-layout"]');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
-		await expect(panel.getByText('Übersicht pro Kanal')).toBeVisible();
-		await expect(
-			panel.getByText('Metrik-Zeilen · Orte sind die Spalten — der Renderer kappt je Kanal')
-		).toBeVisible();
-		await expect(panel.getByText('Email · alle Spalten')).toBeVisible();
-		await expect(panel.getByText('Telegram · max 8')).toBeVisible();
-		await expect(panel.getByText('SMS · flach · 0')).toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8c (AC-2): Layout-Tab Mobil-Rahmen', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 390, height: 844 });
-	});
-
-	test('mobiler Header, Kurz-Hint und kompakte Pillen (SMS ohne "· 0") sind sichtbar', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-M ${suffix}`, 47.15, 11.15);
-		const id = await createPresetWithLocation(page, `E2E S8c Layout-M ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-		const layoutTab = page.locator('[data-testid="compare-detail-tab-layout"]');
-		await layoutTab.scrollIntoViewIfNeeded();
-		await layoutTab.click();
-
-		const panel = page.locator('[data-testid="compare-detail-panel-layout"]');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
-		await expect(panel.getByText('Spalten pro Kanal')).toBeVisible();
-		await expect(panel.getByText('Renderer kappt je Kanal')).toBeVisible();
-		await expect(panel.getByText('SMS · flach', { exact: true })).toBeVisible();
-	});
-});
+// AC-1/AC-2 (Layout-Tab Desktop-/Mobil-Rahmen) GELOESCHT (#2287-Nachbarschaft):
+// der Hub-Layout-Reiter ist per #1360 aufgeloest, und die hier geprueften Texte
+// ("Übersicht pro Kanal", "Telegram · max 8", "Renderer kappt je Kanal",
+// "Spalten pro Kanal") sind seither ausdruecklich VERBOTENE Aussagen
+// (compare-layout-tab-dissolution.spec.ts, FORBIDDEN_CLAIMS / AC-4).
 
 test.describe('Issue #1256 S8c (AC-4/AC-6): SummaryCard-Texte auf der Übersicht (Desktop)', () => {
 	test.beforeEach(async ({ page }) => {

@@ -63,7 +63,7 @@ async function clearTestPresets(request: APIRequestContext) {
 }
 
 async function openWeatherTab(page: Page, tripId: string) {
-	await page.goto(`/trips/${tripId}?tab=weather`);
+	await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
 	await page.waitForSelector('[data-testid="weather-metrics-tab"]', { timeout: 15_000 });
 }
 

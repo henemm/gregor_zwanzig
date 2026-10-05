@@ -72,8 +72,8 @@ test.describe('S2c — /compare/new?from=<id>', () => {
 			const postAbfang = page.waitForRequest(
 				(r) => r.url().endsWith('/api/compare/presets') && r.method() === 'POST'
 			);
-			await page.getByTestId('compare-editor-tab-metriken').click();
-			await page.getByTestId('compare-editor-tab-idealwerte').click();
+			await page.getByTestId('compare-editor-tab-wetter-metriken').click();
+			await page.getByTestId('compare-editor-tab-wertebereiche').click();
 			await page.getByTestId('compare-editor-tab-alarme').click();
 			await page.getByTestId('compare-editor-tab-versand').click();
 			await page.getByRole('button', { name: 'Briefing aktivieren' }).click();

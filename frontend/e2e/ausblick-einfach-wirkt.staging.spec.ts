@@ -6,7 +6,7 @@
 // Zweig in `format_outlook_value()` nie greift. Dieser Spec schliesst genau
 // diese Luecke: er klickt "Einfach" tatsaechlich und liest die WIRKUNG an der
 // ECHT gerenderten Ausblick-Zelle auf der Vorschau-Flaeche
-// `/trips/<id>?tab=preview` (Bildschirm-Nachweis, nicht Zwischendatei).
+// `/trips/<id>?tab=vorschau` (Bildschirm-Nachweis, nicht Zwischendatei).
 // Spec: docs/specs/modules/fix_2049_ausblick_darstellungsform.md, AC-14
 //
 // LAEUFT GEGEN STAGING. Der Spec ist config-frei: baseURL, nginx-Schranke und
@@ -153,8 +153,8 @@ test.afterAll(async ({ playwright }) => {
  * Rahmen, sobald die ECHTE (demo-freie) Antwort da ist.
  */
 async function openPreview(page: Page): Promise<FrameLocator> {
-	await page.goto(`/trips/${TRIP_ID}?tab=preview`, { waitUntil: 'domcontentloaded' });
-	await expect(page.getByTestId('trip-detail-panel-preview')).toBeVisible({ timeout: 30_000 });
+	await page.goto(`/trips/${TRIP_ID}?tab=vorschau`, { waitUntil: 'domcontentloaded' });
+	await expect(page.getByTestId('trip-detail-panel-vorschau')).toBeVisible({ timeout: 30_000 });
 
 	// Erwartete Antwort VOR den Klicks registrieren — sonst Rennen.
 	const echteAntwort = page.waitForResponse(
@@ -221,7 +221,7 @@ test('vorschau_zelle_wechselt_von_rohzahl_auf_wortstufe (#2049 AC-14)', async ({
 	).toBeGreaterThan(0);
 
 	// 3. In den Metriken-Editor wechseln, "Einfach" fuer "gust" klicken.
-	await page.getByTestId('trip-detail-tab-weather').click();
+	await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 	const ausblick = page.getByTestId('weather-metrics-ausblick');
 	await expect(ausblick).toBeVisible();
 	const gustRow = ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]');

@@ -241,10 +241,10 @@ test('mobile-usability audit aller Kern-Routen', async ({ page, playwright }, te
 	// Tab-Interaktionspläne pro Detailroute (Tab-Testids im Seiten-Code verankert).
 	const tabsFor = (route: string): string[] => {
 		if (/^\/trips\/[^/]+$/.test(route)) {
-			return ['stages', 'weather', 'alerts', 'alarme', 'briefings', 'preview'];
+			return ['etappen', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand', 'vorschau'];
 		}
 		if (/^\/compare\/[^/]+$/.test(route)) {
-			return ['orte', 'wetter-metriken', 'idealwerte', 'alarme', 'versand', 'vorschau'];
+			return ['orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand', 'vorschau'];
 		}
 		return [];
 	};

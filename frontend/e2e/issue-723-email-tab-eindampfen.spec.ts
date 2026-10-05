@@ -4,7 +4,7 @@
 // Workflow: issue-723-email-tab-eindampfen
 //
 // Ziel-Oberfläche (migriert durch Fix #1047, docs/specs/modules/fix_1047_mail_content_tab_restore.md):
-// Trip-Detail-Seite /trips/[id]?tab=weather, Reiter "Wetter-Metriken" (= "Inhalt",
+// Trip-Detail-Seite /trips/[id]?tab=wetter-metriken, Reiter "Wetter-Metriken" (= "Inhalt",
 // MailInhaltCard.svelte eingebunden über WeatherMetricsTab.svelte).
 //
 // Aktuelle TestIDs (nach #664/#722/#785 — "Metriken-Überblick"-Checkbox seit #971/#774
@@ -65,8 +65,8 @@ async function deleteTrip(
 }
 
 async function openReportsSection(page: import('@playwright/test').Page, id: string) {
-	// Fix #1047: Reiter "Wetter-Metriken" (?tab=weather), nicht mehr "Briefing-Zeitplan".
-	await page.goto(`/trips/${id}?tab=weather`);
+	// Fix #1047: Reiter "Wetter-Metriken" (?tab=wetter-metriken), nicht mehr "Briefing-Zeitplan".
+	await page.goto(`/trips/${id}?tab=wetter-metriken`);
 	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }

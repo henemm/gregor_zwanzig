@@ -98,7 +98,7 @@ Diese Scheibe:
   Zählbefehl) und prüft, dass die drei Kategorie-Summen 27/6/14 ergeben.
   Verhindert, dass diese Dokumentation und die Ratsche künftig auseinanderlaufen.
 
-## Anhang: AC-2-Endbilanz — alle 47 Ratschen-Einträge (Stand `3cece096`, S6g live)
+## Anhang: AC-2-Endbilanz — alle 46 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`)
 
 ### FACHLICH (27 — echter Sachunterschied, bleibt dauerhaft)
 
@@ -132,7 +132,7 @@ Diese Scheibe:
 | `corridor-editor/CorridorEditorMobile.svelte:379` | Mobil-Zwilling von `CorridorEditor.svelte:422` |
 | `corridor-editor/CorridorEditorMobile.svelte:500` | Mobil-Zwilling von `CorridorEditor.svelte:551` |
 
-### DARSTELLUNG (6 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
+### DARSTELLUNG (5 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
 
 | Datei:Zeile | Grund |
 |---|---|
@@ -141,7 +141,6 @@ Diese Scheibe:
 | `corridor-editor/CorridorEditorMobile.svelte:367` | Mobil-Zwilling von `CorridorEditor.svelte:401` |
 | `versand-tab/VTSchedulePlan.svelte:83` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
-| `alarme-tab/alarmeTabSections.ts:42` | nur DOM-/Tab-Id |
 
 ### HERKUNFT (14 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
 
@@ -162,11 +161,13 @@ Diese Scheibe:
 | `WeatherMetricsTab.svelte:625` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
 | `WeatherMetricsTab.svelte:638` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
 
-**Summe:** 27 FACHLICH + 6 DARSTELLUNG + 14 HERKUNFT = **47**, deckungsgleich
+**Summe:** 27 FACHLICH + 5 DARSTELLUNG + 14 HERKUNFT = **46**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL`.
 
 ## Changelog
 
+- 2026-10-05: #2287 (AC-11) — `alarme-tab/alarmeTabSections.ts:42` (`wertebereicheTabId`) entfällt mit der
+  Funktion; DARSTELLUNG 6 → 5, Summe 47 → 46 (Ratsche und Doc-Compliance-Test nachgezogen).
 - 2026-09-25: Initial spec created (Scheibe S6h von #2276, Epic #2345, Fast Track)
 - 2026-09-25: Korrektur (gefunden vom neuen Doc-Compliance-Test
   `ac2_endbilanz_deckt_alle_47_ab.test.ts` bei der Implementierung): in der

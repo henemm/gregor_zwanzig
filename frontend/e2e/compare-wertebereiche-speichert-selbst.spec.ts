@@ -84,9 +84,9 @@ function zaehlePuts(page: Page, id: string): { puts: Request[]; beantwortet: Req
 }
 
 async function oeffneWertebereiche(page: Page, id: string) {
-	await page.goto(`/compare/${id}?tab=idealwerte`);
+	await page.goto(`/compare/${id}?tab=wertebereiche`);
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-detail-tab-idealwerte"]:visible').click();
+	await page.locator('[data-testid="compare-detail-tab-wertebereiche"]:visible').click();
 	const editor = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
 	await expect(editor).toBeVisible({ timeout: 10_000 });
 	await expect(editor.locator('[data-testid="corridor-row-snow_depth_cm"]')).toBeVisible({ timeout: 10_000 });
@@ -350,7 +350,7 @@ test.describe('Issue #2276 S3: Reiter â€žWertebereiche" im Vergleich speichert Ã
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-idealwerte"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wertebereiche"]:visible').click();
 		const neu = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
 		await expect(neu).toBeVisible({ timeout: 10_000 });
 		await expect(neu.locator('[data-testid^="corridor-row-"]'), 'nach Neuladen muss die Leerung stehen').toHaveCount(0);

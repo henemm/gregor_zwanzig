@@ -55,9 +55,9 @@
 //   Morgen-Mail da sein, dann wird nach einer Schonfrist neu gezaehlt.
 //
 // ---------------------------------------------------------------------------
-// Selektoren-Strategie (Scoping): alles im Panel `trip-detail-panel-briefings`
+// Selektoren-Strategie (Scoping): alles im Panel `trip-detail-panel-versand`
 // (der Versand-Reiter), darin `evening-master-switch` -> native Checkbox.
-// Klickpfad ueber `trip-detail-tab-briefings` (kein goto mit ?tab=...).
+// Klickpfad ueber `trip-detail-tab-versand` (kein goto mit ?tab=...).
 // Speichern ist Autosave (BriefingScheduleTab, saveController): gewartet wird
 // auf den echten `PUT /api/trips/{id}`, nicht auf eine Pause.
 //
@@ -381,8 +381,8 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 		await page.setViewportSize({ width: 1440, height: 900 });
 		await page.goto(`/trips/${tripId}`);
 		await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15_000 });
-		await page.getByTestId('trip-detail-tab-briefings').first().click();
-		const panel = page.getByTestId('trip-detail-panel-briefings');
+		await page.getByTestId('trip-detail-tab-versand').first().click();
+		const panel = page.getByTestId('trip-detail-panel-versand');
 		await expect(panel).toBeVisible();
 
 		const morgenSchalter = panel.getByTestId('morning-master-switch').locator('input[type="checkbox"]');

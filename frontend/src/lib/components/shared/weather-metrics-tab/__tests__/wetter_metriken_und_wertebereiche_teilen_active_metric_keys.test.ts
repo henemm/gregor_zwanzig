@@ -87,7 +87,7 @@ describe('AC-4: activeMetricKeys live gelesen — Wetter-Metriken-Änderung + We
 		wetterMetriken.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Wetter-Metriken-Änderung wartet im Entprell-Fenster');
 
-		await sichereSelbstSpeichererVorReiterwechsel('wetter-metriken', 'idealwerte', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wetter-metriken', 'wertebereiche', ctl);
 		assert.equal(puts().length, 1, 'die Wetter-Metriken-Änderung muss VOR dem Reiterwechsel gesendet sein');
 		assert.ok((dc(gespeichert()).active_metrics as string[]).includes('gust_max_kmh'));
 

@@ -91,7 +91,7 @@ test.describe('Issue #1361/#1372 S1b (AC-4): Tagesfenster-Control — geteilt, b
 			await login(page);
 			await page.goto(`/trips/${id}`);
 			await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
-			await page.getByTestId('trip-detail-tab-weather').first().click();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			await expect(page.locator('[data-testid="day-window-control"]:visible').first()).toBeVisible({

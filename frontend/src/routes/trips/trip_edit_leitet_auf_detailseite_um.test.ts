@@ -41,7 +41,7 @@ test('AC-8: /trips/<id>/edit → 307 auf /trips/<id>', async () => {
 });
 
 test('AC-8: ?tab= wird an die Detailseite durchgereicht', async () => {
-	const r = await ladeUndFangeRedirect('khw-2026', '?tab=alerts');
+	const r = await ladeUndFangeRedirect('khw-2026', '?tab=wertebereiche');
 	assert.equal(r.status, 307);
-	assert.equal(r.location, '/trips/khw-2026?tab=alerts');
+	assert.equal(r.location, '/trips/khw-2026?tab=wertebereiche');
 });

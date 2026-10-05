@@ -16,7 +16,7 @@ import { test, expect } from '@playwright/test';
 
 const TRIP_ID = 'e2e-cockpit-test';
 
-async function openTripDetail(page: import('@playwright/test').Page, width: number, height: number, tab = 'overview') {
+async function openTripDetail(page: import('@playwright/test').Page, width: number, height: number, tab = 'uebersicht') {
 	await page.setViewportSize({ width, height });
 	await page.goto(`/trips/${TRIP_ID}?tab=${tab}`);
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 10_000 });
@@ -42,39 +42,39 @@ test('Mobile: Deep-Link ?tab=alarme positioniert aktiven Tab sichtbar', async ({
 });
 
 test('Mobile: Tab-Wechsel auf letzten Tab positioniert ihn sichtbar', async ({ page }) => {
-	await openTripDetail(page, 390, 844, 'overview');
+	await openTripDetail(page, 390, 844, 'uebersicht');
 	// Transport: Klick per dispatchEvent — Playwrights Actionability-Scroll
 	// kämpft mit Scroll-Snap + Fade-Maske des Bands. Was hier bewiesen wird,
 	// ist das Verhalten NACH dem Wechsel, nicht der Klick-Transport selbst.
-	await page.getByTestId('trip-detail-tab-preview').dispatchEvent('click');
-	await expect(page.getByTestId('trip-detail-tab-preview')).toHaveAttribute('aria-selected', 'true');
+	await page.getByTestId('trip-detail-tab-vorschau').dispatchEvent('click');
+	await expect(page.getByTestId('trip-detail-tab-vorschau')).toHaveAttribute('aria-selected', 'true');
 	await expectActiveTabVisible(page);
 });
 
 test('Mobile: A11y — tablist/tab, aria-selected, roving tabindex, Pfeiltasten', async ({ page }) => {
-	await openTripDetail(page, 390, 844, 'overview');
+	await openTripDetail(page, 390, 844, 'uebersicht');
 
 	// Semantik
 	const tablist = page.getByRole('tablist');
 	await expect(tablist).toBeVisible();
 	const tabs = tablist.getByRole('tab');
 	expect(await tabs.count()).toBe(7);
-	await expect(page.getByTestId('trip-detail-tab-overview')).toHaveAttribute('aria-selected', 'true');
-	await expect(page.getByTestId('trip-detail-tab-stages')).toHaveAttribute('aria-selected', 'false');
+	await expect(page.getByTestId('trip-detail-tab-uebersicht')).toHaveAttribute('aria-selected', 'true');
+	await expect(page.getByTestId('trip-detail-tab-etappen')).toHaveAttribute('aria-selected', 'false');
 
 	// Roving tabindex: nur der aktive Tab ist per Tab erreichbar
-	await expect(page.getByTestId('trip-detail-tab-overview')).toHaveAttribute('tabindex', '0');
-	await expect(page.getByTestId('trip-detail-tab-stages')).toHaveAttribute('tabindex', '-1');
+	await expect(page.getByTestId('trip-detail-tab-uebersicht')).toHaveAttribute('tabindex', '0');
+	await expect(page.getByTestId('trip-detail-tab-etappen')).toHaveAttribute('tabindex', '-1');
 
 	// Pfeiltaste rechts aktiviert den Folge-Tab
-	await page.getByTestId('trip-detail-tab-overview').focus();
+	await page.getByTestId('trip-detail-tab-uebersicht').focus();
 	await page.keyboard.press('ArrowRight');
-	await expect(page.getByTestId('trip-detail-tab-stages')).toHaveAttribute('aria-selected', 'true');
-	await expect(page.getByTestId('trip-detail-tab-stages')).toBeFocused();
+	await expect(page.getByTestId('trip-detail-tab-etappen')).toHaveAttribute('aria-selected', 'true');
+	await expect(page.getByTestId('trip-detail-tab-etappen')).toBeFocused();
 });
 
 test('Mobile: Trigger sind mindestens 44px hoch', async ({ page }) => {
-	await openTripDetail(page, 390, 844, 'overview');
+	await openTripDetail(page, 390, 844, 'uebersicht');
 	const tabs = page.getByRole('tablist').getByRole('tab');
 	const count = await tabs.count();
 	expect(count).toBe(7);
@@ -86,8 +86,8 @@ test('Mobile: Trigger sind mindestens 44px hoch', async ({ page }) => {
 });
 
 test('Mobile: Badges sichtbar (Etappen-Zähler)', async ({ page }) => {
-	await openTripDetail(page, 390, 844, 'overview');
-	const badge = page.getByTestId('trip-detail-tab-badge-stages');
+	await openTripDetail(page, 390, 844, 'uebersicht');
+	const badge = page.getByTestId('trip-detail-tab-badge-etappen');
 	await expect(badge).toBeVisible();
 	await expect(badge).toHaveText('3');
 });
@@ -97,7 +97,7 @@ test('Mobile: Badges sichtbar (Etappen-Zähler)', async ({ page }) => {
 // =============================================================================
 
 test('Desktop: Tab-Leiste unveraendert — alle Tabs ohne Band-Scroll sichtbar', async ({ page }) => {
-	await openTripDetail(page, 1280, 900, 'overview');
+	await openTripDetail(page, 1280, 900, 'uebersicht');
 
 	// Kein horizontales Scrollband: alle 7 Tabs liegen nebeneinander im Viewport
 	const tabs = page.getByRole('tablist').getByRole('tab');
@@ -109,7 +109,7 @@ test('Desktop: Tab-Leiste unveraendert — alle Tabs ohne Band-Scroll sichtbar',
 	}
 
 	// Unterline-Optik: aktiver Tab transparent mit Accent-Unterstrich
-	const active = page.getByTestId('trip-detail-tab-overview');
+	const active = page.getByTestId('trip-detail-tab-uebersicht');
 	const bg = await active.evaluate((el) => getComputedStyle(el).backgroundColor);
 	expect(bg).toBe('rgba(0, 0, 0, 0)');
 });

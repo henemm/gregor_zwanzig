@@ -76,13 +76,13 @@ async function openTripOverview(page: Page, id: string): Promise<void> {
 }
 
 async function clickVersandTab(page: Page): Promise<void> {
-	await page.getByTestId('trip-detail-tab-briefings').first().click();
-	await expect(page.getByTestId('trip-detail-panel-briefings')).toBeVisible();
+	await page.getByTestId('trip-detail-tab-versand').first().click();
+	await expect(page.getByTestId('trip-detail-panel-versand')).toBeVisible();
 }
 
 async function clickAlertsTab(page: Page): Promise<void> {
-	await page.getByTestId('trip-detail-tab-alerts').first().click();
-	await expect(page.getByTestId('trip-detail-panel-alerts')).toBeVisible();
+	await page.getByTestId('trip-detail-tab-wertebereiche').first().click();
+	await expect(page.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible();
 }
 
 // Issue #1258 Scheibe S3 (D5): neuer Tab „Alarme" — Ziel-Panel der
@@ -122,7 +122,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickVersandTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-briefings');
+		const panel = page.getByTestId('trip-detail-panel-versand');
 		await expect(panel.getByText('Etappen öffnen →')).toBeVisible();
 	});
 
@@ -132,7 +132,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickVersandTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-briefings');
+		const panel = page.getByTestId('trip-detail-panel-versand');
 		await expect(panel.getByTestId('channel-email').locator(':visible').first()).toBeVisible();
 		await expect(panel.getByTestId('morning-master-switch').locator(':visible').first()).toBeVisible();
 		await expect(panel.getByTestId('report-morning-time')).toBeVisible();
@@ -144,7 +144,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickAlertsTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-alerts');
+		const panel = page.getByTestId('trip-detail-panel-wertebereiche');
 		await expect(panel).toBeVisible();
 		await expect(panel.getByTestId('alert-cooldown-card')).toHaveCount(0);
 		await expect(panel.getByTestId('alert-preview-card')).toHaveCount(0);
@@ -157,7 +157,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickVersandTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-briefings');
+		const panel = page.getByTestId('trip-detail-panel-versand');
 		await expect(panel.getByTestId('alert-cooldown-card')).toHaveCount(0);
 		await expect(panel.getByTestId('alerts-tab-official-alerts-toggle')).toHaveCount(0);
 	});
@@ -168,9 +168,9 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickVersandTab(page);
 
-		await page.getByTestId('trip-detail-panel-briefings').getByText('Etappen öffnen →').click();
-		await expect(page.getByTestId('trip-detail-tab-stages')).toHaveAttribute('data-state', 'active');
-		await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible();
+		await page.getByTestId('trip-detail-panel-versand').getByText('Etappen öffnen →').click();
+		await expect(page.getByTestId('trip-detail-tab-etappen')).toHaveAttribute('data-state', 'active');
+		await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible();
 	});
 
 	// D2 von #1301 (2026-07-18): der ehemalige F001-Test prüfte den

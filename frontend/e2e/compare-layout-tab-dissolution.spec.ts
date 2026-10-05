@@ -288,7 +288,7 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 		await openHub(page, id);
 
 		const collected: string[] = [];
-		for (const tab of ['uebersicht', 'orte', 'wetter-metriken', 'idealwerte', 'alarme', 'versand']) {
+		for (const tab of ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand']) {
 			await page.locator(`[data-testid="compare-detail-tab-${tab}"]:visible`).first().click();
 			const panel = page.locator(`[data-testid="compare-detail-panel-${tab}"]:visible`).first();
 			await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -369,7 +369,7 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 		}
 
 		// Stundenverlauf liegt jetzt im Reiter Wetter-Metriken — wie im Hub.
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
 		const hourly = page.locator('[data-testid="compare-layout-hourly-metrics"]:visible').first();
 		await expect(
 			hourly,
@@ -389,7 +389,7 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 		await expect(newToggle).toBeVisible({ timeout: 10_000 });
 		await newToggle.click();
 
-		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 

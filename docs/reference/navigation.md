@@ -8,18 +8,26 @@ Tab-State wird ausschließlich als Query-Parameter `?tab=<value>` kodiert, **nie
 
 Begründung: SvelteKit-SSR liest `#fragment` nicht aus — Query-Parameter sind server-seitig auswertbar, verlinkbar und werden korrekt in der Browser-History gespeichert.
 
-## Valide Tab-Werte — Trip-Detail
+## Valide Tab-Werte — Trip-Detail und Ortsvergleich-Detail (#2287)
 
-| Wert | Label |
-|------|-------|
-| `overview` | Übersicht |
-| `stages` | Etappen & Wegpunkte |
-| `weather` | Wetter-Briefing |
-| `briefings` | Reports & Kanäle |
-| `alerts` | Alarmregeln |
-| `preview` | Vorschau |
+Beide Hubs nutzen EINE gemeinsame Reiter-Tabelle: `frontend/src/lib/components/shared/subscriptionTabs.ts`
+(`subscriptionTabs(kind)`, `resolveTab(kind, raw)`, `bereinigteTabAdresse()`, Tabelle `LEGACY`).
 
-Unbekannte Werte fallen auf `overview` zurück.
+| Wert | Label | Hinweis |
+|------|-------|---------|
+| `uebersicht` | Übersicht | |
+| `etappen` | Etappen & Wegpunkte | nur Trip |
+| `orte` | Orte | nur Ortsvergleich |
+| `wetter-metriken` | Wetter-Metriken | |
+| `wertebereiche` | Wertebereiche | |
+| `alarme` | Alarme | |
+| `versand` | Versand | |
+| `vorschau` | Vorschau | |
+
+Alte Kennungen (`overview`, `stages`, `weather`, `alerts`, `briefings`, `preview`, `idealwerte`, `layout` …) werden weiter
+angenommen und einmalig per `replaceState` auf die neue Kennung umgeschrieben. Unbekannte Werte fallen auf `uebersicht`
+zurück. testids folgen den Kennungen, z. B. `trip-detail-tab-uebersicht`. Die Anlage-Editoren (`TripNewEditor`,
+`CompareNewEditor`) nutzen dieselben Kennungen. `compare/compareTabsResolve.ts` und `wertebereicheTabId()` sind entfallen.
 
 ## goto-Muster (kanonisch)
 
@@ -35,11 +43,14 @@ void goto(`?tab=${value}`, { replaceState: true, noScroll: true, keepFocus: true
 
 Veraltete Routen leiten mit HTTP 301 auf die kanonische URL um.
 
-**Referenzbeispiel:** `frontend/src/routes/trips/[id]/edit/+page.server.ts` redirectet auf `/trips/[id]?tab=stages`:
+**Referenzbeispiel:** `frontend/src/routes/trips/[id]/edit/+page.server.ts` redirectet auf `/trips/[id]` und reicht `?tab=` unverändert durch (Hub löst alte Kennungen selbst auf, #2287):
 
 ```ts
 import { redirect } from '@sveltejs/kit';
-export const load = () => redirect(301, `/trips/${params.id}?tab=stages`);
+export const load = ({ params, url }) => {
+  const tab = url.searchParams.get('tab');
+  throw redirect(307, tab ? `/trips/${params.id}?tab=${tab}` : `/trips/${params.id}`);
+};
 ```
 
 Neue Routen-Aliase folgen demselben Muster: 301 auf die kanonische `?tab=`-URL.

@@ -7,7 +7,7 @@
 // → AC-1 schlägt fehl (stage-card-1 verschwunden, kein confirm-delete-stage sichtbar).
 // → Nach GREEN: alle Tests grün, kein sofortiges Löschen mehr ohne Bestätigung.
 //
-// Navigations-Muster: Trip-Editor unter /trips/{id}?tab=stages
+// Navigations-Muster: Trip-Editor unter /trips/{id}?tab=etappen
 // Auth via storageState (global.setup.ts) — kein per-Test-Login.
 
 import { test, expect } from '@playwright/test';
@@ -40,7 +40,7 @@ const seedStages = [
 const seedBody = { id: TRIP_ID, name: TRIP_NAME, region: 'Korsika', stages: seedStages };
 
 async function openStagesEditor(page: import('@playwright/test').Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
 }
 
