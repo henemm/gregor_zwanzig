@@ -13,7 +13,7 @@
 	import Stat from '$lib/components/molecules/Stat.svelte';
 	import { ACTIVITY_TYPE_OPTIONS, type Trip } from '$lib/types';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
-	import { baueTripSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
+	import { baueTripSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	interface Props {
@@ -42,7 +42,7 @@
 			onTripUpdate?.(updated);
 			schliessen();
 		}, schluessel);
-		await speichereOderMeldeKonflikt(speichern, saveController);
+		await speichereKopfFeld(speichern, saveController);
 	}
 
 	const stats = $derived(computeTripStats(trip));
@@ -115,6 +115,7 @@
 				regionMaxLength={60}
 				testidPrefix="trip"
 				titleTestid="trip-detail-h1"
+				titleSize={38}
 				{saveController}
 				{onSaveField}
 			>
@@ -215,21 +216,6 @@
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 	}
-	/* Mobile Usability Paket 1 (F1, PO 2026-09-22): Titel auf Mobile via
-	   Token-Skala, einzeilig mit Ellipsis — kein Überstehen bei langen Namen. */
-	@media (max-width: 899px) {
-		.trip-h1-row {
-			flex-wrap: nowrap;
-			min-width: 0;
-		}
-		.trip-h1 {
-			font-size: var(--g-text-xl);
-			min-width: 0;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-	}
 	.mobile-metrics {
 		display: none;
 	}
@@ -238,6 +224,12 @@
 			display: flex;
 			gap: var(--g-s-3);
 			padding-top: var(--g-s-2);
+		}
+	}
+	/* #2284 S2 (AC-13): Kopf mobil um 7 px gestrafft (oberer Innenabstand), kein Inhalt entfernt. */
+	@media (max-width: 899px) {
+		.trip-header {
+			padding-top: 19px;
 		}
 	}
 </style>

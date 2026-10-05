@@ -30,7 +30,7 @@
 		vergleichNachladeQuelle
 	} from '$lib/stores/nachEntladenNachladen';
 	import { api, getMitFassung } from '$lib/api';
-	import { baueSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
+	import { baueSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad } from '$lib/etagRegistry';
 	import { ACTIVITY_PROFILE_OPTIONS, type ComparePreset } from '$lib/types';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
@@ -198,7 +198,7 @@
 			if (!hubSaveCtl.imWiederholen) currentPreset = updated;
 			schliessen();
 		}, KOPF_SCHLUESSEL[field]);
-		await speichereOderMeldeKonflikt(speichern, hubSaveCtl);
+		await speichereKopfFeld(speichern, hubSaveCtl);
 	}
 
 	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.
