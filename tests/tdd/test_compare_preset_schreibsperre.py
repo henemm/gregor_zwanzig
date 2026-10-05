@@ -193,3 +193,56 @@ def test_ac12_compare_nutzer_b_schreibt_durch_waehrend_nutzer_a_gesperrt_ist():
     assert _lese(pb)["top_ort_letzter_versand"] == "Ort B"
     assert pa.read_bytes() == a_vorher
     assert (pb.parent / f"{PID}.json.lock").exists()
+
+
+def test_locked_json_rmw_mutate_none_schreibt_nichts_und_gibt_false():
+    """F-13 (#2158). GIVEN mutate liefert None WHEN locked_json_rmw THEN
+    False und die Datei ist byte-identisch."""
+    from services.file_lock import locked_json_rmw
+
+    pfad = compare_preset(UID)
+    vorher = pfad.read_bytes()
+    assert locked_json_rmw(pfad, lambda e: None) is False
+    assert pfad.read_bytes() == vorher
+
+
+def test_locked_json_rmw_json_kein_objekt_wirft_und_laesst_datei_unveraendert():
+    """F-13 (#2158). GIVEN die Datei enthaelt eine JSON-Liste WHEN
+    locked_json_rmw THEN ValueError, mutate nie gerufen, Datei unveraendert."""
+    from services.file_lock import locked_json_rmw
+
+    pfad = compare_preset(UID)
+    pfad.write_text("[1, 2]", encoding="utf-8")
+    vorher = pfad.read_bytes()
+    gerufen: list[int] = []
+    with pytest.raises(ValueError):
+        locked_json_rmw(pfad, lambda e: gerufen.append(1) or e)
+    assert not gerufen
+    assert pfad.read_bytes() == vorher
+
+
+def test_atomic_write_json_tmp_datei_endet_nicht_auf_json_und_wird_aufgeraeumt():
+    """F-13 (#2158). GIVEN ein Schreibvorgang WHEN mitten im Schreiben das
+    Verzeichnis gelistet wird THEN existiert die Temp-Datei, endet aber NICHT
+    auf .json (Listen filtern *.json); nach einem Fehler bleibt sie nicht
+    liegen und das Original ist unveraendert."""
+    from services.file_lock import atomic_write_json
+
+    pfad = compare_preset(UID)
+    vorher = pfad.read_bytes()
+    gesehen: list[list[str]] = []
+
+    class Spaeh(dict):
+        def items(self):
+            gesehen.append(sorted(p.name for p in pfad.parent.iterdir()))
+            raise RuntimeError("Abbruch mitten im Schreiben")
+
+    with pytest.raises(RuntimeError):
+        atomic_write_json(pfad, Spaeh(a=1))
+
+    assert gesehen, "Schreibvorgang nicht erreicht"
+    tmps = [n for n in gesehen[0] if n.endswith(".tmp")]
+    assert tmps, f"keine Temp-Datei sichtbar: {gesehen[0]}"
+    assert not any(n.endswith(".json") and n != pfad.name for n in gesehen[0])
+    assert not [p for p in pfad.parent.iterdir() if p.name.endswith(".tmp")]
+    assert pfad.read_bytes() == vorher

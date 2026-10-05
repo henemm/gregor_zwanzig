@@ -22,7 +22,8 @@ from zoneinfo import ZoneInfo
 import httpx
 
 from app.config import Settings, resolve_public_url
-from app.loader import get_data_dir, load_all_trips, save_trip
+from app.loader import LoaderError, get_data_dir, load_all_trips, update_trip
+from services.file_lock import LockTimeout
 from utils.pii_masking import mask_addr_for_pii_log
 from app.models import (
     NormalizedTimeseries,
@@ -983,9 +984,31 @@ class TripReportSchedulerService:
         rc = trip.report_config
         if rc is None or rc.skip_next is not True:
             return False
-        new_rc = dataclasses.replace(rc, skip_next=False)
-        save_trip(dataclasses.replace(trip, report_config=new_rc), user_id=self._user_id)
-        return True
+        # #2158: idempotent unter der Sperre -- nur wenn die FRISCHE Datei
+        # skip_next noch true traegt, wird es verbraucht (kein Stale-Objekt
+        # ueberschreibt Browser-Aenderungen).
+        verbraucht: dict = {}
+
+        def _verbrauche(fresh: "Trip") -> "Trip":
+            frc = fresh.report_config
+            if frc is None or frc.skip_next is not True:
+                return fresh
+            verbraucht["ja"] = True
+            return dataclasses.replace(
+                fresh, report_config=dataclasses.replace(frc, skip_next=False),
+            )
+
+        try:
+            update_trip(self._user_id, trip.id, _verbrauche)
+        except (LockTimeout, LoaderError) as e:
+            # Ueberspringen-Zusage gilt: Trip in diesem Lauf NICHT senden,
+            # der Wunsch bleibt stehen und wird im naechsten Lauf erneut versucht.
+            logger.warning(
+                "skip_next fuer Trip %s nicht verbrauchbar (%s) -- Trip wird in "
+                "diesem Lauf nicht gesendet", trip.id, e,
+            )
+            return True
+        return bool(verbraucht.get("ja"))
 
     def _get_target_date(self, report_type: str, trip: "Trip", now_utc: datetime) -> date:
         """

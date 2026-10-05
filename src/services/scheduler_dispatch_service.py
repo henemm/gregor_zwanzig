@@ -21,6 +21,7 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
+from services.file_lock import LockTimeout, locked_json_rmw
 from utils.pii_masking import mask_addr_for_pii_log
 from services.alert_briefing_anchor import (
     record_briefing_dispatch_failure,
@@ -218,12 +219,44 @@ def run_compare_presets_daily(
     return run_briefing_dispatch("vergleich", user_id, now_utc, data_root=data_root)
 
 
+def _rmw_compare_preset(path: Path, label: str, mutate) -> str:
+    """Gesperrtes + atomares RMW eines Compare-Presets (#2158, ADR-0083).
+
+    ``mutate(entry)`` bekommt den frisch unter der Sperre gelesenen Stand und
+    liefert das zu schreibende dict oder ``None``. Der kind-Guard (F002, keine
+    Trip-Korruption bei ID-Kollision) laeuft hier fuer alle drei Schreiber.
+    Rueckgabe: ``"written"`` | ``"skipped"`` | ``"timeout"`` | ``"error"``.
+    Bei Sperr-Fristablauf wird NIE ungesperrt geschrieben.
+    """
+    def _inner(entry: dict) -> dict | None:
+        if entry.get("kind") not in (None, "", "vergleich"):
+            logger.warning(
+                "briefing %s traegt kind=%r (kein vergleich) -- %s "
+                "uebersprungen (F002, keine Trip-Korruption)",
+                path, entry.get("kind"), label,
+            )
+            return None
+        neu = mutate(entry)
+        if neu is not None:
+            neu["kind"] = "vergleich"
+        return neu
+
+    try:
+        return "written" if locked_json_rmw(path, _inner) else "skipped"
+    except LockTimeout:
+        logger.warning("briefing %s: Sperre nicht erhalten -- %s nicht geschrieben", path, label)
+        return "timeout"
+    except (OSError, ValueError) as e:
+        logger.error("Failed %s fuer briefing %s: %s", label, path, e)
+        return "error"
+
+
 def save_compare_preset_status(
     user_id: str,
     preset_id: str,
     top_ort: str | None,
     data_root: str | None = None,
-) -> None:
+) -> bool | None:
     """Read-Modify-Write: schreibt letzter_versand + top_ort_letzter_versand.
 
     Issue #1250 Scheibe 7b Cutover: per-Datei-RMW auf briefings/<id>.json
@@ -242,42 +275,18 @@ def save_compare_preset_status(
     # "Datei gibt es nicht"-Zweig direkt darunter: stilles return, damit kein
     # neuer Fehlerausgang fuer die Scheduler-Aufrufer entsteht.
     if not VALID_ENTITY_ID_RE.match(preset_id):
-        return
+        return None  # Guard: kein Wert (Test: test_entity_id_path_guard)
 
     path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():
-        return
+        return False
 
-    try:
-        entry = _json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        logger.error("Failed to read briefing %s for status update: %s", path, e)
-        return
-    if not isinstance(entry, dict):
-        return
+    def _mutate(entry: dict) -> dict:
+        entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+        entry["top_ort_letzter_versand"] = top_ort
+        return entry
 
-    # Issue #1250 S7b (Adversary Fix-Loop F002): kind-Guard symmetrisch zu Gos
-    # DeleteComparePreset (internal/store/compare_preset.go). Bei ID-Kollision
-    # darf ein Trip (kind="route") NIE still in ein Fake-vergleich korrumpiert
-    # werden -- nur echte/neue vergleich-Eintraege (oder kind-leer) duerfen ueber
-    # diesen Pfad geschrieben werden.
-    if entry.get("kind") not in (None, "", "vergleich"):
-        logger.warning(
-            "briefing %s traegt kind=%r (kein vergleich) -- Status-Write "
-            "uebersprungen (F002, keine Trip-Korruption)",
-            path, entry.get("kind"),
-        )
-        return
-
-    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
-    entry["top_ort_letzter_versand"] = top_ort
-    entry["kind"] = "vergleich"
-
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            _json.dump(entry, f, indent=2, ensure_ascii=False)
-    except OSError as e:
-        logger.error("Failed to write briefing %s: %s", path, e)
+    return _rmw_compare_preset(path, "Status-Write", _mutate) == "written"
 
 
 def save_compare_preset_pause(
@@ -285,7 +294,7 @@ def save_compare_preset_pause(
     preset_id: str,
     data_root: str | None = None,
     now_iso: str | None = None,
-) -> None:
+) -> bool | None:
     """Read-Modify-Write: schreibt den Auto-Pause-Zustand (Issue #1250 Scheibe 3).
 
     Self-konsistente Pause-Repraesentation identisch zur manuellen Pause
@@ -301,43 +310,21 @@ def save_compare_preset_pause(
     # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, identisch zu
     # save_compare_preset_status (stilles return statt neuem Fehlerausgang).
     if not VALID_ENTITY_ID_RE.match(preset_id):
-        return
+        return None  # Guard: kein Wert (Test: test_entity_id_path_guard)
 
     path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():
-        return
+        return False
 
-    try:
-        entry = _json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        logger.error("Failed to read briefing %s for pause update: %s", path, e)
-        return
-    if not isinstance(entry, dict):
-        return
+    def _mutate(entry: dict) -> dict:
+        if entry.get("schedule") != "manual":
+            entry["previous_schedule"] = entry.get("schedule", "")
+            entry["schedule"] = "manual"
+        if not entry.get("paused_at"):
+            entry["paused_at"] = now_iso
+        return entry
 
-    # Issue #1250 S7b (Adversary Fix-Loop F002): kind-Guard symmetrisch zu Gos
-    # DeleteComparePreset -- bei ID-Kollision einen Trip (kind="route") NIE
-    # still in ein Fake-vergleich pausieren/korrumpieren.
-    if entry.get("kind") not in (None, "", "vergleich"):
-        logger.warning(
-            "briefing %s traegt kind=%r (kein vergleich) -- Pause-Write "
-            "uebersprungen (F002, keine Trip-Korruption)",
-            path, entry.get("kind"),
-        )
-        return
-
-    if entry.get("schedule") != "manual":
-        entry["previous_schedule"] = entry.get("schedule", "")
-        entry["schedule"] = "manual"
-    if not entry.get("paused_at"):
-        entry["paused_at"] = now_iso
-    entry["kind"] = "vergleich"
-
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            _json.dump(entry, f, indent=2, ensure_ascii=False)
-    except OSError as e:
-        logger.error("Failed to write briefing %s: %s", path, e)
+    return _rmw_compare_preset(path, "Pause-Write", _mutate) == "written"
 
 
 def resume_compare_preset(
@@ -367,39 +354,25 @@ def resume_compare_preset(
     if not path.exists():
         return "not_found"
 
-    try:
-        entry = _json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        logger.error("Failed to read briefing %s for resume: %s", path, e)
-        return "not_found"
-    if not isinstance(entry, dict):
-        return "not_found"
+    box: dict = {}
 
-    # F002-Guard symmetrisch zu save_compare_preset_pause: eine route-Datei
-    # bei ID-Kollision nie still als Vergleich fortsetzen.
-    if entry.get("kind") not in (None, "", "vergleich"):
-        logger.warning(
-            "briefing %s traegt kind=%r (kein vergleich) -- Resume-Write "
-            "uebersprungen (F002, keine Trip-Korruption)",
-            path, entry.get("kind"),
-        )
-        return "wrong_kind"
+    def _mutate(entry: dict) -> dict | None:
+        # (F002-kind-Guard laeuft vorher in _rmw_compare_preset.)
+        if not (bool(entry.get("paused_at")) or entry.get("schedule") == "manual"):
+            box["not_paused"] = True
+            return None
+        entry["schedule"] = entry.get("previous_schedule") or "daily"
+        entry.pop("paused_at", None)
+        return entry
 
-    pausiert = bool(entry.get("paused_at")) or entry.get("schedule") == "manual"
-    if not pausiert:
-        return "not_paused"
-
-    entry["schedule"] = entry.get("previous_schedule") or "daily"
-    entry.pop("paused_at", None)
-    entry["kind"] = "vergleich"
-
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            _json.dump(entry, f, indent=2, ensure_ascii=False)
-    except OSError as e:
-        logger.error("Failed to write briefing %s: %s", path, e)
-        return "not_found"
-    return "resumed"
+    ergebnis = _rmw_compare_preset(path, "Resume-Write", _mutate)
+    if ergebnis == "written":
+        return "resumed"
+    if ergebnis == "timeout":
+        return "lock_timeout"
+    if ergebnis == "skipped":
+        return "not_paused" if box.get("not_paused") else "wrong_kind"
+    return "not_found"
 
 
 def build_compare_preset_subject(name: str, target_date: date) -> str:

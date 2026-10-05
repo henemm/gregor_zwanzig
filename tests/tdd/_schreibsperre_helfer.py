@@ -1,7 +1,7 @@
 """Geteilte Helfer der Schreibsperren-Tests (#2158) -- Fremdprozess-Sperre,
 Trip-Fixture aus dem versionierten GR221-Bestand, Compare-Preset-Fixture.
 
-VERTRAG (ADR-0082): Die gemeinsame Sperrdatei ist LITERAL
+VERTRAG (ADR-0083): Die gemeinsame Sperrdatei ist LITERAL
 ``<data>/users/<uid>/briefings/<id>.json.lock``. Der Sperrhalter hier ist ein
 echter Fremdprozess (nur stdlib ``fcntl``), kein Produktivcode -- so beweist
 ein Test den Pfadvertrag ueber die Prozessgrenze, nicht nur "meine eigene
@@ -85,7 +85,7 @@ def briefings_dir(user_id: str) -> Path:
 
 
 def lock_pfad(user_id: str, entity_id: str) -> Path:
-    """LITERAL-Pfad aus ADR-0082 -- bewusst NICHT ueber Produktivcode gebaut."""
+    """LITERAL-Pfad aus ADR-0083 -- bewusst NICHT ueber Produktivcode gebaut."""
     return briefings_dir(user_id) / f"{entity_id}.json.lock"
 
 

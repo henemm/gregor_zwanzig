@@ -380,6 +380,55 @@ def test_ac10_update_trip_bei_fristablauf_wirft_und_schreibt_nichts(monkeypatch)
     assert trip_datei(UID, trip.id).read_bytes() == vorher
 
 
+def test_ac10_update_trip_standardfrist_ist_fuenf_sekunden_nicht_laenger():
+    """AC-10 (#2158) / F-10. GIVEN die Sperre ist von einem Fremdprozess
+    gehalten und die Frist wird NICHT verkuerzt WHEN update_trip THEN bricht
+    er nach der Spec-Frist von 5 s (gleich wie Go) mit LockTimeout ab --
+    weder sofort noch erst Minuten spaeter."""
+    import time
+
+    from app.loader import update_trip
+    from services.file_lock import LockTimeout
+
+    trip = gr221_trip(UID)
+    vorher = trip_datei(UID, trip.id).read_bytes()
+
+    with fremde_sperre(lock_pfad(UID, trip.id)):
+        start = time.monotonic()
+        with pytest.raises(LockTimeout):
+            update_trip(UID, trip.id, _umbenennen("Nie"))
+        dauer = time.monotonic() - start
+
+    assert 4.5 <= dauer <= 8.0, f"Standardfrist {dauer:.2f} s, Spec: 5 s"
+    assert trip_datei(UID, trip.id).read_bytes() == vorher
+
+
+def test_update_trip_auf_unbekanntem_trip_wirft_tripnotfound_und_legt_nichts_an():
+    """F-11 (#2158). GIVEN es gibt keine Datei zur id WHEN update_trip THEN
+    TripNotFound, mutate wird nicht gerufen, keine Trip-Datei entsteht."""
+    from app.loader import TripNotFound, update_trip
+
+    aufgerufen: list[int] = []
+    ziel = trip_datei(UID, "gibt-es-nicht")
+    with pytest.raises(TripNotFound):
+        update_trip(UID, "gibt-es-nicht", lambda t: aufgerufen.append(1))
+    assert not aufgerufen
+    assert not ziel.exists()
+
+
+def test_update_trip_auf_vergleich_wirft_tripnotfound_und_laesst_datei_unveraendert():
+    """F-11 (#2158). GIVEN unter der id liegt ein Vergleich (kind=vergleich)
+    WHEN update_trip THEN TripNotFound und die Datei ist byte-identisch."""
+    from app.loader import TripNotFound, update_trip
+    from tests.tdd._schreibsperre_helfer import compare_preset
+
+    pfad = compare_preset(UID, "vgl-kein-trip")
+    vorher = pfad.read_bytes()
+    with pytest.raises(TripNotFound):
+        update_trip(UID, "vgl-kein-trip", lambda t: None)
+    assert pfad.read_bytes() == vorher
+
+
 # ---------------------------------------------------------------------------
 # AC-11 -- atomares Schreiben (Leser sieht nie eine halbe Datei)
 # ---------------------------------------------------------------------------
@@ -486,3 +535,152 @@ def test_ac17_etappen_ankunftszeiten_nach_kommando_gleich_referenz():
     TripCommandProcessor()._apply_pause(trip, "2d", UID)
     referenz = json.loads(_REFERENZ.read_text(encoding="utf-8"))
     assert _arrivals(lese(UID, trip.id)) == referenz
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop #2158 (Adversary F-4..F-7) -- Mutations-Luecken schliessen
+# ---------------------------------------------------------------------------
+
+CMP_UID = "u-2158-cmp-cmd"
+CMP_PID = "vgl-2158-cmd"
+
+
+def _compare_nachricht(preset_name: str, body: str):
+    from services.trip_command_processor import InboundMessage
+
+    return InboundMessage(
+        trip_name=preset_name, body=body, sender="wanderer@example.com",
+        channel="email", user_id=CMP_UID,
+        received_at=datetime(2026, 2, 23, 12, 0, tzinfo=timezone.utc),
+    )
+
+
+@pytest.mark.parametrize("body, extra", [
+    ("### pause", {}),
+    ("### weiter", {"schedule": "manual", "previous_schedule": "daily",
+                    "paused_at": "2026-10-01T00:00:00Z"}),
+], ids=["pause", "weiter"])
+def test_ac10_compare_kommando_bei_fristablauf_antwortet_erneut_senden(
+    body, extra, monkeypatch
+):
+    """AC-10 / F-4 (#2158). GIVEN ein Ortsvergleich, dessen Sperre ein
+    Fremdprozess ueber die Frist haelt WHEN PAUSE/WEITER ueber process()
+    eintrifft THEN success=False, 'erneut senden' in der Antwort, NICHT
+    'pausiert'/'fortgesetzt', Datei byte-identisch."""
+    from services.trip_command_processor import TripCommandProcessor
+    from tests.tdd._schreibsperre_helfer import compare_preset
+
+    frist_verkuerzen(monkeypatch)
+    pfad = compare_preset(CMP_UID, CMP_PID, **extra)
+    vorher = pfad.read_bytes()
+    msg = _compare_nachricht("Vergleich 2158", body)
+
+    with fremde_sperre(lock_pfad(CMP_UID, CMP_PID)):
+        res = TripCommandProcessor().process(msg)
+
+    text = (res.confirmation_subject + " " + res.confirmation_body).lower()
+    assert res.success is False
+    assert "erneut senden" in text, f"Antwort ohne 'erneut senden': {text!r}"
+    assert "pausiert" not in text and "fortgesetzt" not in text
+    assert pfad.read_bytes() == vorher
+
+
+# --- F-5: save_trip selbst ist gesperrt -------------------------------------
+
+def test_ac7_save_trip_wartet_auf_fremdprozess_sperre():
+    """F-5 (#2158). GIVEN Fremdprozess haelt die Sperre WHEN save_trip
+    schreibt THEN wartet es (Datei unveraendert) und schreibt nach Freigabe."""
+    from app.loader import save_trip
+
+    trip = gr221_trip(UID)
+    vorher = trip_datei(UID, trip.id).read_bytes()
+    neu = _umbenennen("Save-Neu")(trip)
+
+    with fremde_sperre(lock_pfad(UID, trip.id)) as halter:
+        t, done, box = _in_thread(lambda: save_trip(neu, UID))
+        assert not done.wait(0.6), "save_trip hat trotz fremder Sperre geschrieben"
+        assert trip_datei(UID, trip.id).read_bytes() == vorher
+        halter.freigeben()
+        assert done.wait(5), "save_trip blieb nach Freigabe haengen"
+
+    t.join(2)
+    assert "fehler" not in box, box.get("fehler")
+    assert lese(UID, trip.id)["name"] == "Save-Neu"
+
+
+def test_ac10_save_trip_bei_fristablauf_wirft_locktimeout_und_schreibt_nichts(monkeypatch):
+    """F-5 (#2158). Sperre ueber die Frist gehalten => LockTimeout, Datei
+    byte-identisch."""
+    from app.loader import save_trip
+    from services.file_lock import LockTimeout
+
+    frist_verkuerzen(monkeypatch)
+    trip = gr221_trip(UID)
+    vorher = trip_datei(UID, trip.id).read_bytes()
+
+    with fremde_sperre(lock_pfad(UID, trip.id)):
+        with pytest.raises(LockTimeout):
+            save_trip(_umbenennen("Nie-Save")(trip), UID)
+
+    assert trip_datei(UID, trip.id).read_bytes() == vorher
+
+
+# --- F-6: Backfill uebernimmt nur fuer unveraenderte Wegpunkte --------------
+
+def _wp_distanzen(user_id: str, trip_id: str, stage_idx: int) -> list:
+    return [w.get("distance_from_start_km")
+            for w in lese(user_id, trip_id)["stages"][stage_idx]["waypoints"]]
+
+
+def test_backfill_uebernimmt_distanz_nicht_fuer_geaenderte_wegpunkte_derselben_etappe():
+    """F-6 (#2158). GIVEN ein veraltetes Trip-Objekt, dessen Etappe auf der
+    Platte bei GLEICHER ID geaenderte Wegpunkte hat WHEN backfill persistiert
+    THEN bekommt diese Etappe die berechneten Distanzen NICHT."""
+    from services.track_resolution import backfill_stage_distances
+
+    trip = gr221_trip(UID, mit_gpx=True)
+    pfad = trip_datei(UID, trip.id)
+    data = json.loads(pfad.read_text(encoding="utf-8"))
+    data["stages"][0]["waypoints"][0]["lat"] += 0.01
+    pfad.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    vorher = _wp_distanzen(UID, trip.id, 0)
+
+    ergebnis = backfill_stage_distances(trip, UID, trip.stages[0].date)
+
+    assert all(w.distance_from_start_km is not None for w in ergebnis.stages[0].waypoints)
+    assert _wp_distanzen(UID, trip.id, 0) == vorher, \
+        "Distanzen wurden auf geaenderte Wegpunkte uebernommen"
+
+
+def test_backfill_uebernimmt_distanz_fuer_unveraenderte_etappe():
+    """F-6 Gegenprobe (#2158). Browser aendert nur den Namen, die Etappe ist
+    unveraendert => Distanzen werden persistiert."""
+    from services.track_resolution import backfill_stage_distances
+
+    trip = gr221_trip(UID, mit_gpx=True)
+    assert all(d is None for d in _wp_distanzen(UID, trip.id, 0))
+    pfad = trip_datei(UID, trip.id)
+    data = json.loads(pfad.read_text(encoding="utf-8"))
+    data["name"] = "Browser-Name"
+    pfad.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+    backfill_stage_distances(trip, UID, trip.stages[0].date)
+
+    assert all(d is not None for d in _wp_distanzen(UID, trip.id, 0))
+    assert lese(UID, trip.id)["name"] == "Browser-Name"
+
+
+# --- F-7: data_dir-Zweig traegt die Nutzer-ID -------------------------------
+
+def test_ac12_save_trip_mit_data_dir_legt_datei_und_sperre_je_nutzer_ab(tmp_path):
+    """F-7 (#2158). GIVEN data_dir und zwei Nutzer WHEN save_trip THEN liegen
+    Datei und Sperre unter users/<uid>/briefings (nutzerbezogen)."""
+    from app.loader import save_trip
+
+    trip = gr221_trip(UID)
+    for uid in ("nutzer-a", "nutzer-b"):
+        pfad = save_trip(trip, uid, data_dir=tmp_path)
+        erwartet = tmp_path / "users" / uid / "briefings"
+        assert pfad == erwartet / f"{trip.id}.json"
+        assert pfad.exists()
+        assert (erwartet / f"{trip.id}.json.lock").exists()

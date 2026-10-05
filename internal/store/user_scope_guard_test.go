@@ -46,6 +46,10 @@ var storeMethodRegister = map[string]guardEntry{
 	"LoadGroups":  guarded(func(s *Store) error { _, err := s.LoadGroups(); return err }),
 	"SaveGroup":   guarded(func(s *Store) error { return s.SaveGroup(model.Group{ID: "g1", Name: "G1"}) }),
 	"DeleteGroup": guarded(func(s *Store) error { return s.DeleteGroup("g1") }),
+	// Issue #2158: *Locked-Varianten (Aufrufer haelt LockGroups), gleiche Pruefung.
+	"LoadGroupsLocked":  guarded(func(s *Store) error { _, err := s.LoadGroupsLocked(); return err }),
+	"SaveGroupLocked":   guarded(func(s *Store) error { return s.SaveGroupLocked(model.Group{ID: "g1", Name: "G1"}) }),
+	"DeleteGroupLocked": guarded(func(s *Store) error { return s.DeleteGroupLocked("g1") }),
 
 	"LoadLocations":  guarded(func(s *Store) error { _, err := s.LoadLocations(); return err }),
 	"LoadLocation":   guarded(func(s *Store) error { _, err := s.LoadLocation("loc1"); return err }),
@@ -124,9 +128,13 @@ var storeMethodRegister = map[string]guardEntry{
 
 	"MigrateClearPremiumSmsReplyAddresses": exempt("iteriert über ListUserIDs/LoadUser(id), nicht s.UserID"),
 
-	"WithUser":     exempt("baut keinen Pfad, liefert nur eine Kopie mit anderer Kennung"),
-	"LockBriefing": exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel"),
-	"LockQuota":    exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2482)"),
+	"WithUser":          exempt("baut keinen Pfad, liefert nur eine Kopie mit anderer Kennung"),
+	"LockBriefing":      exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel"),
+	"LockBriefingErr":   exempt("baut nur Sperrschluessel; Sperrdatei-Pfad wird mit requireUser/ValidEntityID geprueft (ADR-0083)"),
+	"LockGroups":        exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
+	"LockLocation":      exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
+	"LockMetricPresets": exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
+	"LockQuota":         exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2482)"),
 
 	"LocationsDir": exempt("dokumentierter Rest: kein error-Rückgabewert, produktiv außerhalb des Stores unbenutzt"),
 	"PresetsFile":  exempt("dokumentierter Rest: kein error-Rückgabewert, produktiv außerhalb des Stores unbenutzt"),

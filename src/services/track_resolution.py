@@ -261,6 +261,45 @@ def _melde_fehlschlag(trip, stage, user_id: str, diagnose: Dict[str, object]) ->
     )
 
 
+def _persistiere_distanzen(trip, stage, new_stage, user_id: str) -> None:
+    """#2158: Backfill gesperrt auf FRISCHEM Stand persistieren.
+
+    Uebernommen werden die Distanzen nur, wenn die Etappe in der frischen
+    Datei noch dieselbe ID UND dieselben Wegpunkte (ID + Koordinaten) traegt
+    -- sonst hat der Nutzer sie inzwischen geaendert und die berechneten
+    Werte passen nicht mehr. Sperr-Fristablauf: Warn-Log, nicht persistieren
+    (der Aufrufer rechnet mit dem In-Memory-Ergebnis weiter).
+    """
+    import dataclasses
+
+    from app.loader import LoaderError, update_trip
+    from services.file_lock import LockTimeout
+
+    def _signatur(wps):
+        return [(w.id, w.lat, w.lon) for w in wps]
+
+    distanzen = {wp.id: wp.distance_from_start_km for wp in new_stage.waypoints}
+
+    def _mutate(fresh):
+        stages = []
+        for s in fresh.stages:
+            if s.id == stage.id and _signatur(s.waypoints) == _signatur(stage.waypoints):
+                s = dataclasses.replace(s, waypoints=[
+                    dataclasses.replace(w, distance_from_start_km=distanzen[w.id])
+                    for w in s.waypoints
+                ])
+            stages.append(s)
+        return dataclasses.replace(fresh, stages=stages)
+
+    try:
+        update_trip(user_id, trip.id, _mutate)
+    except (LockTimeout, LoaderError) as e:
+        logger.warning(
+            "Track-Aufloesung: Distanzen fuer Trip %s nicht persistiert (%s)",
+            trip.id, e,
+        )
+
+
 def backfill_stage_distances(
     trip, user_id: str, target_date, *, persist: bool = True,
 ) -> object:
@@ -328,9 +367,7 @@ def backfill_stage_distances(
             new_stage if s.id == stage.id else s for s in trip.stages
         ])
         if persist:
-            from app.loader import save_trip
-
-            save_trip(updated, user_id=user_id)
+            _persistiere_distanzen(trip, stage, new_stage, user_id)
         logger.info(
             "Track-Aufloesung: Etappe %s von Trip %s nachtraeglich vermessen "
             "(%d Wegpunkte, persist=%s)", stage.id, trip.id, len(distances), persist,

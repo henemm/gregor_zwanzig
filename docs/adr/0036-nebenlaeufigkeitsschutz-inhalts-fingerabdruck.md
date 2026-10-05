@@ -23,12 +23,12 @@ schraenken die Wahl ein:
 
 1. **Dieselbe Datei wird von zwei Sprachen geschrieben.** `briefings/<id>.json`
    wird sowohl vom Go-API (`internal/store`) als auch vom Python-Kern
-   geschrieben (`src/app/loader.py:1581-1648` `save_trip`) — Telegram-/
-   SMS-Kommandos (`src/app/trip_command_processor.py:852,928,1046,1069,1128,1142`),
-   `skip_next`-Verbrauch (`src/app/trip_report_scheduler.py:517`),
+   geschrieben (`src/app/loader.py`, Funktion `save_trip`; seit ADR-0083 gesperrt und atomar) — Telegram-/
+   SMS-Kommandos (`src/services/trip_command_processor.py`, `_apply_*`-Methoden),
+   `skip_next`-Verbrauch (`src/services/trip_report_scheduler.py`, `_skip_next_verbrauchen`),
    Migrationsskripte.
 2. **Der Python-Kern bewahrt unbekannte Felder ausdruecklich**
-   (`_deep_merge_preserve_unknown`, `loader.py:124-137`). Ein Feld, das nur Go
+   (`_deep_merge_preserve_unknown` in `src/app/loader.py`). Ein Feld, das nur Go
    pflegt, wird von Python beim Schreiben unveraendert durchgereicht — es
    erkennt die eigene Aenderung also nicht als Anlass, den Stempel
    fortzuschreiben.
@@ -62,7 +62,7 @@ mitgefuehrten Zaehler- oder Zeitstempelfeld:
 - **`updated_at`-Zeitstempelfeld im Dokument.** Verworfen: alle Nachteile von
   „version" PLUS eine Namenskollision mit den bereits bestehenden
   `updated_at`-Feldern in `display_config`/`report_config`/`weather_config`
-  (`loader.py:1259,1444,1459,1551`), die Python bei jedem Speichern ohnehin auf
+  (in `src/app/loader.py`, Serialisierung von `display_config`/`report_config`/`weather_config`), die Python bei jedem Speichern ohnehin auf
   „jetzt" setzt — die schlechteste der drei Varianten.
 - **Ein Rumpf-Feld statt eines HTTP-Headers.** Verworfen: scheidet strukturell
   aus, weil bei `PUT /api/trips/{id}/weather-config` der Rumpf DIE
@@ -142,7 +142,7 @@ Eingabe geben (Listeneintrag vs. sichtbarer Reiter).
   Schluessel) — ein Fremdwert in DERSELBEN Reiter-Gruppe wird mit dem Wert ueberschrieben,
   den der Nutzer im Reiter sah (Leitsatz oben). (b) Ein Top-Level-`null` (z. B.
   `alert_quiet_from: null` nach Leeren der Ruhezeit) wird lokal fortgeschrieben, der
-  Go-Server ignoriert nil-Zeiger (`internal/handler/trip.go:371-375`) — vorbestehende
+  Go-Server ignoriert nil-Zeiger (`UpdateTripHandler` in `internal/handler/trip.go`) — vorbestehende
   Server-Eigenheit, nur die Anzeige im Konfliktfenster weicht ab.
 - Keine 412-Sackgassen ausserhalb des Controllers: Schreibwege, die mit Registry-`If-Match`
   am Controller vorbei schreiben, melden 412 per `meldeKonflikt` an ihn (sonst bliebe nur
@@ -186,3 +186,5 @@ Altstand, die Liste hielt etwas anderes. Invariante:
 - Offene Reiter aendern sich dabei nicht (Trip: lesen nur beim Mount). Compare 'wiederholt'
   uebernimmt den frisch geholten Stand nur, wenn seit Beginn des GET nichts Neues ansteht und
   der Registry-Stempel noch passt (Muster Trip-Seite `inRegistry`).
+
+- **Nachtrag 2026-10-05 (Issue #2158, ADR-0083):** Die Zeilenbelege oben wurden auf Symbolnamen umgestellt (Zeilennummern veralten). Der Fingerabdruck allein heilt keinen Lost Update zwischen Go und Python; dafuer sperren beide Prozesse dieselbe Datei `briefings/<id>.json.lock` per `flock` (ADR-0083).

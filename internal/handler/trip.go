@@ -58,7 +58,11 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung
 		// dazwischenfunken, und der Client haelt einen Stempel, der nicht zum
 		// ausgelieferten Rumpf gehoert.
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		trip, err := s.LoadTrip(id)
 		if err != nil {
@@ -222,7 +226,11 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		defer s.LockBriefing(trip.ID)()
+		unlockB, okB := lockBriefingOr503(w, s, trip.ID)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		if err := s.SaveTrip(&trip); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -301,7 +309,11 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		// durch (briefing_subscription.go) — dort darf KEINE zweite Sperre auf
 		// dieselbe <Nutzer, ID> genommen werden (sync.Mutex, nicht wiedereintritts-
 		// faehig -> sicherer Selbst-Blockierer).
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		// Fingerabdruck des Standes VOR dem Schreiben — Bezugspunkt der
 		// If-Match-Pruefung. Ein echter Lesefehler ist ein Store-Fehler; eine
@@ -516,7 +528,11 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 		// Er serialisiert nur die Zustandswechsel eines Nutzers; abgelehnt wird
 		// ausschliesslich das Wiederherstellen aus dem Archiv (AC-9).
 		defer s.LockQuota()()
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		existing, err := s.LoadTrip(id)
 		if err != nil {
@@ -600,7 +616,11 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 
 		// Issue #1395 S2: Sperre analog UpdateTripStateHandler — kein If-Match
 		// (AC-15), aber kein Hineinschreiben in einen laufenden PUT.
-		defer s.LockBriefing(tripID)()
+		unlockB, okB := lockBriefingOr503(w, s, tripID)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		trip, err := s.LoadTrip(tripID)
 		if err != nil || trip == nil {
@@ -671,7 +691,11 @@ func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 		// — die geloeschte Tour ersteht wieder auf. Mit Sperre sind nur die
 		// beiden unbedenklichen Reihenfolgen moeglich (PUT dann DELETE = weg;
 		// DELETE dann PUT = 404, es wird nichts geschrieben).
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		if err := s.DeleteTrip(id); err != nil {
 			w.Header().Set("Content-Type", "application/json")

@@ -64,7 +64,11 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 			// unten und zu GetTripHandler (trip.go) -- Sperre VOR LoadTrip,
 			// kein Selbst-Blockierer: dieser Zweig laedt selbst und
 			// delegiert NICHT an GetTripHandler.
-			defer s.LockBriefing(id)()
+			unlockB, okB := lockBriefingOr503(w, s, id)
+			if !okB {
+				return
+			}
+			defer unlockB()
 			trip, err := s.LoadTrip(id)
 			if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
 				return
@@ -83,7 +87,11 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 		// Stempel zum ausgelieferten Rumpf (analog GetComparePresetHandler).
 		// Ausschliesslich im vergleich-Zweig: der route-Zweig oben laedt selbst
 		// und ist nicht Teil dieser Scheibe.
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		// Issue #1250 Scheibe 7b: per-Datei-Read ueber die neue Store-API
 		// (kind-Guard inklusive) statt Array-Scan.
@@ -230,7 +238,11 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 		// Ab hier gilt der volle Nebenlaeufigkeitsschutz des Preset-Schreibwegs:
 		// dieselbe Sperre und derselbe Fingerabdruck wie
 		// UpdateComparePresetHandler — sonst waere dieser Weg dessen Umgehung.
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		oldFp, fpErr := s.BriefingFingerprint(id)
 		if bailIf(w, fpErr != nil, http.StatusInternalServerError, "store_error") {

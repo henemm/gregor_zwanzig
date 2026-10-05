@@ -1,6 +1,6 @@
 # ADR-0031: Dateibasierte JSON-Persistenz unter `data/users/{user_id}/` (keine Datenbank)
 
-- **Status:** Akzeptiert (rückwirkend dokumentiert 2026-07-22 — gelebte Praxis, Issue #1343)
+- **Status:** Abgelöst durch ADR-0083 (rückwirkend dokumentiert 2026-07-22 — gelebte Praxis, Issue #1343; die Aussage „Go einzige Schreib-Autorität" stimmt nicht: Python schreibt `briefings/` ebenfalls)
 - **Datum:** 2026-07-22
 - **Bezug:** `internal/store/`, ADR-0003 (Mandantentrennung), ADR-0023 (briefings/-Persistenz), CLAUDE.md §Daten-Schema-Reworks
 

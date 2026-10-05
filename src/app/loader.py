@@ -13,9 +13,10 @@ import re
 import uuid
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from output.channels.seven_io_base import mask_number
+from services.file_lock import atomic_write_json, exclusive_lock
 from app.metric_catalog import (
     normalize_outlook_metric_formats, normalize_outlook_metric_ids,
 )
@@ -1949,43 +1950,89 @@ def save_trip(
     Returns:
         Path to the saved file
     """
-    import dataclasses
-    from core.naismith import compute_stage_arrivals
+    briefings_dir = _briefings_dir_for(user_id, data_dir)
+    path = briefings_dir / f"{trip.id}.json"
+    # #2158: unter der gemeinsamen Sperre (ADR-0083) frisch lesen + atomar
+    # schreiben; Parse-Fehler wirft statt die Datei mit existing={} zu ersetzen.
+    with exclusive_lock(path):
+        _write_trip_locked(trip, path, _read_existing_locked(path))
+    return path
 
-    # Issue #802: Compute-on-Save — arrival_calculated für jede Stage berechnen.
-    trip = dataclasses.replace(
-        trip,
-        stages=[compute_stage_arrivals(s, trip.activity) for s in trip.stages],
-    )
 
+def _briefings_dir_for(user_id: str, data_dir: Optional[Union[str, Path]]) -> Path:
     if data_dir is not None:
         briefings_dir = Path(data_dir) / "users" / user_id / "briefings"
     else:
         briefings_dir = get_briefings_dir(user_id)
     briefings_dir.mkdir(parents=True, exist_ok=True)
+    return briefings_dir
 
-    path = briefings_dir / f"{trip.id}.json"
+
+def _read_existing_locked(path: Path) -> dict:
+    """Liest den Bestand UNTER der Sperre. Fehlt die Datei: ``{}``. Nicht
+    parsebar: ``TripFileCorrupt`` (Datei bleibt unveraendert, #2158 AC-9)."""
+    if not path.exists():
+        return {}
+    try:
+        existing = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        raise TripFileCorrupt(f"Trip-Datei {path} nicht lesbar: {e}") from e
+    if not isinstance(existing, dict):
+        raise TripFileCorrupt(f"Trip-Datei {path} ist kein JSON-Objekt")
+    return existing
+
+
+def _write_trip_locked(trip: Trip, path: Path, existing: dict) -> None:
+    """Compute-on-Save + RMW-Merge + atomarer Schreibvorgang (Sperre gehalten)."""
+    import dataclasses
+    from core.naismith import compute_stage_arrivals
+
+    # Issue #802: Compute-on-Save — arrival_calculated für jede Stage
+    # berechnen (bit-genau zu Go store.SaveTrip).
+    trip = dataclasses.replace(
+        trip,
+        stages=[compute_stage_arrivals(s, trip.activity) for s in trip.stages],
+    )
     python_data = _trip_to_dict(trip)
     # Issue #1250 Scheibe 7a (AC-26): jede Python-save_trip-Schreiboperation
-    # ist per Definition eine route-Entität -- kind wird unbedingt gesetzt,
-    # unabhängig vom Vorzustand des Aufrufers (analog Go store.SaveTrip).
+    # ist per Definition eine route-Entität.
     python_data["kind"] = "route"
+    # Issue #805: RMW-Merge — Go-geschriebene und Legacy-Felder bleiben erhalten.
+    atomic_write_json(path, _deep_merge_preserve_unknown(existing, python_data))
 
-    # Issue #805: RMW-Merge — vorhandene JSON laden und Python-bekannte Felder überlagern.
-    # Bewahrt Go-geschriebene und Legacy-Felder die Python nicht modelliert
-    # (z.B. display_config.channels, report_config.send_signal, multi_day_trend_morning/evening).
-    existing: dict = {}
-    if path.exists():
-        try:
-            existing = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    data = _deep_merge_preserve_unknown(existing, python_data)
 
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+class TripFileCorrupt(LoaderError):
+    """Trip-Datei ist beschaedigt/halb geschrieben — nichts wurde geschrieben."""
 
-    return path
+
+class TripNotFound(LoaderError):
+    """Trip-Datei fehlt oder ist ein Vergleich (kein Trip)."""
+
+
+def update_trip(
+    user_id: str,
+    trip_id: str,
+    mutate: Callable[[Trip], Optional[Trip]],
+    data_dir: Optional[Union[str, Path]] = None,
+) -> Trip:
+    """Gesperrtes Read-Modify-Write eines Trips (#2158, ADR-0083).
+
+    Sperre auf ``briefings/<id>.json.lock`` (dieselbe Datei wie Go), Trip
+    FRISCH lesen, ``mutate(trip)`` anwenden (In-Place oder neues Trip-Objekt
+    zurueckgeben), atomar schreiben. Wirft ``LockTimeout`` (Frist),
+    ``TripFileCorrupt`` (Datei unveraendert) oder ``TripNotFound``; eine
+    Ausnahme aus ``mutate`` bricht ohne Schreiben ab.
+    """
+    path = _briefings_dir_for(user_id, data_dir) / f"{trip_id}.json"
+    with exclusive_lock(path):
+        existing = _read_existing_locked(path)
+        if not existing or existing.get("kind") == "vergleich":
+            raise TripNotFound(f"Trip {trip_id} nicht gefunden")
+        fresh = _parse_trip(existing.get("trip", existing))
+        result = mutate(fresh)
+        updated = result if result is not None else fresh
+        _write_trip_locked(updated, path, existing)
+    return updated
 
 
 def delete_trip(trip_id: str, user_id: str) -> None:
