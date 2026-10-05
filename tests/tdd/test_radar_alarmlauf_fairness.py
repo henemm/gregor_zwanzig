@@ -59,6 +59,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
+from freezegun import freeze_time
 
 from app.loader import get_data_dir, save_location, save_trip
 from app.models import TripReportConfig
@@ -107,6 +108,26 @@ TRIP_STEP = 0.15
 LOC_LAT0 = 46.0
 LOC_STEP = 0.3
 LOC_LON = 7.75
+
+
+# Gestellte Uhr (#2261, Gestellte-Uhr-Ratsche #2242): ``_trip_with_active_segment``
+# baut das Segment um die Wanduhr. Abends (Ortszeit nahe Tagesfenster-Ende 19:00)
+# schrumpft das Ziel-Segment auf das Mindestfenster, der Trip bekommt nur 1
+# Messpunkt und die Fairness-Aussagen (>= 2 Messpunkte je Trip) sind nicht mehr
+# pruefbar. Mittags UTC liegt das Segment fuer jede Tageszeit des Laufs gleich.
+# ``tick=True``: die Deadline-Tests brauchen weiterlaufende Zeit. ``time.monotonic``
+# bleibt ECHT: freezegun ersetzt es je nach Aufrufer-Stack (Threadpool des
+# TestClients) mal ja, mal nein — Deadline-Marke und Pruefung sahen dann
+# verschiedene Uhren und die Grenze lief sofort ab.
+_UHR = "2026-10-01T10:00:00+00:00"
+
+
+@pytest.fixture(autouse=True)
+def _gestellte_uhr():
+    echte_monotonic = time.monotonic
+    with freeze_time(_UHR, tick=True):
+        time.monotonic = echte_monotonic
+        yield
 
 
 def _uid(tag: str) -> str:
