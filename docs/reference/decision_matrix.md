@@ -294,7 +294,9 @@ externe, zyklische Lastspitze bei Open-Meteo, kein Zählartefakt. Als
 Betriebsmaßnahme laufen die beiden Radar-Cron-Jobs (`radar_alert_checks`,
 `compare_radar_alert_checks`, `internal/scheduler/scheduler.go`) seither auf
 `7,22,37,52 * * * *` statt `*/15 * * * *` — versetzt zu den gemessenen
-Spitzenminuten. Alle übrigen Scheduler-Jobs bleiben unverändert. **Der
+Spitzenminuten. **Seit #2261 A-2 S2 (ADR-0082):** Takt 5 Minuten,
+`3-58/5 * * * *` (Minuten 3, 8, … 58, 3 Minuten Abstand zu :00/:30) mit
+Radar-Budget 240/270/600 s. Alle übrigen Scheduler-Jobs bleiben unverändert. **Der
 Versatz umgeht die Lastspitze, er behebt sie nicht** — die Restfehlerquote
 (~3 %) bleibt bestehen; dafür sorgt `NowcastResult.data_unavailable`
 (`src/services/radar_service.py`), das einen echten Abruf-Fehlschlag von

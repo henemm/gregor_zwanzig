@@ -115,7 +115,7 @@ class _RadarMitGewitterpruefung(RadarNowcastService):
         self._frames_fn = frames_fn
         self._gewitterpruefung_lief = gewitterpruefung_lief
 
-    def _fetch_frames_with_fallback(self, lat, lon, elevation_m=None):
+    def _fetch_frames_with_fallback(self, lat, lon, elevation_m=None, deadline_at=None):
         frames = self._frames_fn(lat, lon)
         if not self._gewitterpruefung_lief:
             self._convective_checked = False

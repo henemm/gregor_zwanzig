@@ -141,7 +141,7 @@ def _aufzeichnender_typ(calls: list, *, onset_minutes: int = 8):
                 cache=RadarNowcastCacheService(),
             )
 
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
             calls.append({
                 "lat": lat, "lon": lon,
                 "elevation_m": elevation_m, "priority": priority,

@@ -19,6 +19,7 @@ from __future__ import annotations
 import bisect
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -442,6 +443,17 @@ def _laufendes_frame(frames: list, now: datetime):
     return None
 
 
+class RadarDeadlineExceeded(Exception):
+    """Die Zeitgrenze des Alarmlaufs ist abgelaufen, bevor eine weitere
+    Quelle der Kette begonnen wurde (Epic #2261 A-2 S2, ADR-0082). Kein
+    Quellenausfall und keine Entwarnung: der Aufrufer wertet nichts aus."""
+
+
+def _raise_if_deadline(deadline_at: Optional[float]) -> None:
+    if deadline_at is not None and time.monotonic() >= deadline_at:
+        raise RadarDeadlineExceeded("Zeitgrenze des Alarmlaufs erreicht")
+
+
 class RadarNowcastService:
     """
     Coordinate-aware nowcasting service.
@@ -509,6 +521,7 @@ class RadarNowcastService:
     def get_nowcast(
         self, lat: float, lon: float, elevation_m: Optional[int] = None,
         priority: str = "user_briefing", user_id: Optional[str] = None,
+        deadline_at: Optional[float] = None,
     ) -> NowcastResult:
         """
         Fetch frames (cache-first) and derive nowcast result.
@@ -528,6 +541,10 @@ class RadarNowcastService:
         (`_derive_result`) laeuft bei Cache-Hit UND -Miss immer frisch
         relativ zur aktuellen (bzw. injizierten) Zeit -- der Cache liefert
         nie ein fertiges Ergebnis (Lehre aus Adversary-Fund F001, Scheibe C).
+
+        Epic #2261 A-2 S2: `deadline_at` (absolute `time.monotonic()`-Marke)
+        wird vor JEDER Quelle der Kette geprueft; abgelaufen =>
+        `RadarDeadlineExceeded`, nichts im Cache. `None` = unveraendert.
         """
         self._convective_checked = True
         self._openmeteo_unavailable_this_call = False
@@ -562,7 +579,9 @@ class RadarNowcastService:
             frames = self._frame_source(lat, lon)
             source = "radar"
         else:
-            frames, source = self._fetch_frames_with_fallback(lat, lon, elevation_m)
+            frames, source = self._fetch_frames_with_fallback(
+                lat, lon, elevation_m, deadline_at=deadline_at,
+            )
 
         if frames:
             self._cache.put(
@@ -790,38 +809,47 @@ class RadarNowcastService:
     # ------------------------------------------------------------------
 
     def _fetch_frames_with_fallback(
-        self, lat: float, lon: float, elevation_m: Optional[int] = None
+        self, lat: float, lon: float, elevation_m: Optional[int] = None,
+        deadline_at: Optional[float] = None,
     ) -> tuple[list, str]:
         """Try source chain; return (frames, source_label)."""
         if _within_radolan(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_brightsky(lat, lon, elevation_m)
             if frames:
                 return frames, "radar"
 
         if _within_inca(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_geosphere_inca(lat, lon, elevation_m)
             if frames:
                 return frames, "INCA"
 
         if _within_corsica(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_corsica_arome_fr(lat, lon, elevation_m)
             if frames:
                 return frames, "AROME-FR"
 
         if _within_italy_radar(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_italy_arpae(lat, lon, elevation_m)
             if frames:
                 return frames, "ARPAE-2I"
 
         if _within_arome_france(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_arome_france_hd(lat, lon, elevation_m)
             if frames:
                 return frames, "AROME-FR"
 
         if _within_icon_d2(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_icon_d2(lat, lon, elevation_m)
             if frames:
                 return frames, "ICON-D2"
+
+        _raise_if_deadline(deadline_at)
 
         frames = self._fetch_openmeteo_minutely15(lat, lon, elevation_m)
         return frames, "minutely_15"

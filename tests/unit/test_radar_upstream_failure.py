@@ -348,10 +348,11 @@ class _RecordingRadarService:
 
     def get_nowcast(
         self, lat, lon, elevation_m=None, priority: str = "user_briefing",
-        user_id=None,
+        user_id=None, deadline_at=None,
     ) -> NowcastResult:
         result = self._real.get_nowcast(
             lat, lon, elevation_m=elevation_m, priority=priority, user_id=user_id,
+            deadline_at=deadline_at,
         )
         self.results.append(result)
         return result

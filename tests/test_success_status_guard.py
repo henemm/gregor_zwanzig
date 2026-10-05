@@ -1509,12 +1509,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "api/routers/scheduler.py::trigger_compare_alert_checks::0": (
         "B3 (#1405) — trigger_compare_alert_checks: dito (Deviation)."
     ),
-    "api/routers/scheduler.py::trigger_radar_alert_checks::0": (
-        "B4 (#1405) — trigger_radar_alert_checks: dito (Radar)."
-    ),
-    "api/routers/scheduler.py::trigger_compare_radar_alert_checks::0": (
-        "B5 (#1405) — trigger_compare_radar_alert_checks: dito."
-    ),
+    # B4/B5 entfernt (#2261 A-2 S2) — die Radar-Endpunkte leiten den Status
+    # jetzt aus AlertCheckRunResult.hit_deadline ab (_radar_run_response).
     "api/routers/scheduler.py::trigger_compare_official_alert_checks::0": (
         "B6 (#1405) — trigger_compare_official_alert_checks: dito."
     ),
@@ -1540,7 +1536,7 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/compare_official_alert.py::check_all_compare_presets::0": (
         "B11c (#1405) — check_all_compare_presets: sum(genexp) ohne try/except."
     ),
-    "src/services/compare_radar_alert.py::check_all_compare_presets::0": (
+    "src/services/compare_radar_alert.py::check_all_compare_presets_run::0": (
         "B11b (#1405) — check_all_compare_presets: über _check_one_preset(...)."
     ),
     # --- B19/B20: die beiden Inbound-Reader. In Spec-Version 1.1 fälschlich
@@ -1627,7 +1623,7 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/trip_alert.py::check_all_trips::0": (
         "B9 (#1405) — check_all_trips: alerts_sent ohne Gegenzähler, return int."
     ),
-    "src/services/trip_alert.py::check_radar_alerts::0": (
+    "src/services/trip_alert.py::_check_radar_trips::0": (
         "B10 (#1405) — check_radar_alerts: sent ohne Gegenzähler."
     ),
     # --- B18: dateiweites Muster, zehn Funktionen, 13 Treffer. Reparatur (S4)
@@ -1858,10 +1854,8 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # mehr.
     # B3 — dito (Compare-Deviation)
     "api/routers/scheduler.py::trigger_compare_alert_checks": 1,
-    # B4 — dito (Radar)
-    "api/routers/scheduler.py::trigger_radar_alert_checks": 1,
-    # B5 — dito (Compare-Radar)
-    "api/routers/scheduler.py::trigger_compare_radar_alert_checks": 1,
+    # B4/B5 entfernt (#2261 A-2 S2) — Radar-Endpunkte leiten den Status aus
+    # AlertCheckRunResult.hit_deadline ab, der Scanner findet dort nichts mehr.
     # B6 — dito (Compare-Amtlich)
     "api/routers/scheduler.py::trigger_compare_official_alert_checks": 1,
     # B7 — dito (Inbound E-Mail)
@@ -1871,11 +1865,11 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # B9 — try/except je Trip, nur alerts_sent hoch, return int
     "src/services/trip_alert.py::check_all_trips": 1,
     # B10 — analoges Muster im Radar-Pfad, return sent (int)
-    "src/services/trip_alert.py::check_radar_alerts": 1,
+    "src/services/trip_alert.py::_check_radar_trips": 1,
     # B11 — try/except je Ort, nur sent gezählt
     "src/services/compare_alert.py::check_all_compare_presets": 1,
     # B11b — gleiches Muster, Nowcast-Fehler je Ort nur im logger.error
-    "src/services/compare_radar_alert.py::check_all_compare_presets": 1,
+    "src/services/compare_radar_alert.py::check_all_compare_presets_run": 1,
     # B11c — sum(1 for ... if ...) ohne jeden Fehlerzähler und ohne try/except
     "src/services/compare_official_alert.py::check_all_compare_presets": 1,
     # B12 — top_ort/actual_empfaenger zugewiesen, "status" trotzdem festes "ok"
@@ -2008,11 +2002,11 @@ def test_scanner_finds_every_spec_listed_finding():
     # gekürzte Tabelle würde sonst hinter einem grünen Scan verschwinden,
     # und genau das ist der Weg, auf dem Wächter still ihre Schärfe
     # verlieren (Test-Politik: Schwellen nie anpassen, damit etwas grün wird).
-    assert len(SPEC_LISTED_FINDINGS) == 33 and sum(SPEC_LISTED_FINDINGS.values()) == 42, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 33 "
-        "Funktionsschlüssel, Summe 42 — Version 1.2 minus B13, #1407, minus "
+    assert len(SPEC_LISTED_FINDINGS) == 31 and sum(SPEC_LISTED_FINDINGS.values()) == 40, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 31 "
+        "Funktionsschlüssel, Summe 40 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
-        "den vierten Kanal Premium-SMS, #1701 D7). Ist: "
+        "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )

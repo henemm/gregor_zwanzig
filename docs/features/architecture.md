@@ -393,6 +393,8 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
 `compare_alert_checks` (`*/15 * * * *`, 7. registrierter Job). Details:
 `docs/specs/_archive/modules/issue_1169_compare_alert_consumer.md`.
 
+**Radar-Alarm-Takt (Epic #2261 A-2 S2, ADR-0082):** die Jobs `radar_alert_checks` und `compare_radar_alert_checks` laufen im 5-Minuten-Takt (`3-58/5 * * * *`) mit eigenem Budget (Wartebudget 240 s, Laufbudget 270 s, Deckel 600 s); die übrigen Alarm-Jobs behalten 300/720/1800 s. Die Radar-Zeitgrenze `RADAR_RUN_DEADLINE_SECONDS = 45` reicht per `deadline_at` in die Quellenkette; Reihenfolge je Lauf über `alert_last_checked_radar.json` bzw. `alert_last_checked_compare_radar.json`; Radar-Cache-TTL 240 s.
+
 **Architektur:**
 
 0. **Faire Reihenfolge im Alarmlauf (#2261 A-2 S1, 2026-10-05)**

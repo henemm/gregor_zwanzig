@@ -30,11 +30,12 @@ STATE_FILENAME = "alert_last_checked.json"
 class AlertCheckStateStore:
     """Persistierte „zuletzt erreicht"-Stempel eines Nutzers."""
 
-    def __init__(self, user_id: str) -> None:
+    def __init__(self, user_id: str, filename: str = STATE_FILENAME) -> None:
         from app.loader import get_data_dir
 
         self._dir = get_data_dir(user_id)
-        self._path = self._dir / STATE_FILENAME
+        self._filename = filename
+        self._path = self._dir / filename
 
     def load(self, known_trip_ids: Iterable[str]) -> dict[str, datetime]:
         """Stempel der bekannten Trips; bei jedem Fehler leer + WARNING."""
@@ -42,7 +43,7 @@ class AlertCheckStateStore:
         try:
             stamps = self._read()
         except (OSError, ValueError, TypeError, AttributeError) as e:
-            logger.warning(f"{STATE_FILENAME} unlesbar ({self._path}): {e} — Reihenfolge nach Trip-ID")
+            logger.warning(f"{self._filename} unlesbar ({self._path}): {e} — Reihenfolge nach Trip-ID")
             return {}
         return {k: v for k, v in stamps.items() if k in known}
 
@@ -56,7 +57,7 @@ class AlertCheckStateStore:
             lock_path = str(self._path) + ".lock"
             fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
-                logger.warning(f"{STATE_FILENAME}: Sperre {lock_path} nicht erhalten — Stempel nicht gespeichert")
+                logger.warning(f"{self._filename}: Sperre {lock_path} nicht erhalten — Stempel nicht gespeichert")
                 return
             try:
                 try:
@@ -72,7 +73,7 @@ class AlertCheckStateStore:
             finally:
                 fcntl.flock(fd, fcntl.LOCK_UN)
         except OSError as e:
-            logger.warning(f"{STATE_FILENAME} nicht geschrieben ({self._path}): {e}")
+            logger.warning(f"{self._filename} nicht geschrieben ({self._path}): {e}")
         finally:
             if fd is not None:
                 os.close(fd)
@@ -101,3 +102,10 @@ class AlertCheckStateStore:
 
 def _aware(at: datetime) -> datetime:
     return at if at.tzinfo is not None else at.replace(tzinfo=timezone.utc)
+
+
+def sort_by_last_reached(units: list, stamps: dict, id_of, now_utc: datetime) -> None:
+    """Aelteste „zuletzt erreicht"-Zeit zuerst, fehlender Stempel = aeltester,
+    ID als Tie-Break (in place). EIN Baustein fuer alle Alarmlaeufe
+    (Trip, Ortsvergleich; Epic #2261 A-2 S1/S2)."""
+    units.sort(key=lambda u: (id_of(u) in stamps, stamps.get(id_of(u), now_utc), id_of(u)))

@@ -413,7 +413,7 @@ class _ZonenRadar(RadarNowcastService):
         self._ausnahme_index = ausnahme_index
         self._weitere_trockene = set(weitere_trockene)
 
-    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None):
+    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
         i = len(self.aufrufe)
         self.aufrufe.append((lat, lon))
         if i == self._ausnahme_index:

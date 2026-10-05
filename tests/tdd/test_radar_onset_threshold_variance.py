@@ -171,6 +171,8 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
 # ═══════════════════════════ AC-2 / AC-3 ══════════════════════════════════
 
 # Am Cron-Takt `7,22,37,52` + 15-Min-Datenraster erreichbare Onset-Werte
+# (Historie: seit #2261 A-2 S2 laufen die Radar-Jobs im 5-Min-Takt `3-58/5`;
+# die Werte unten sind reine Variations-Stuetzstellen, keine Cron-Abbildung.)
 # (docs/context/fix-2009-nowcast-vorlauf.md, Root-Cause-Tabelle). #2261 A-1:
 # Schwelle = Reichweite der Quelle (180) -> 8/23/38/53/68/83/173 loesen aus
 # (der Nutzer ist auf der Ganztags-Etappe von `make_trip()` dann noch am

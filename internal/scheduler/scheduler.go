@@ -155,6 +155,11 @@ type Scheduler struct {
 	alertCallCap       time.Duration
 	briefingWaitBudget time.Duration
 	briefingRunBudget  time.Duration
+	// Epic #2261 A-2 S2 (ADR-0082): Budget der Radar-Jobs, an den 5-Min-Takt
+	// gebunden (Wait 240 < Run 270 + 10 s Nacharbeit < Takt 300, Cap 2 Takte).
+	radarWaitBudget time.Duration
+	radarRunBudget  time.Duration
+	radarCallCap    time.Duration
 
 	// callBudget ist das nicht persistierte In-Flight-Register (Spec
 	// Abschnitt 2, eigener Mutex).
@@ -187,14 +192,12 @@ type budgetExceededError struct{ msg string }
 func (e *budgetExceededError) Error() string { return e.msg }
 func (e *budgetExceededError) Unwrap() error { return &partialRunError{msg: e.msg} }
 
-// alertBudgetJobIDs sind die fuenf Alarm-Fan-out-Jobs mit Alarm-Budgets und
-// eigenem Deckel (Spec Abschnitt 3/8).
-var alertBudgetJobIDs = map[string]bool{
-	"alert_checks":                  true,
-	"radar_alert_checks":            true,
-	"compare_alert_checks":          true,
-	"compare_radar_alert_checks":    true,
-	"compare_official_alert_checks": true,
+// radarBudgetJobIDs sind die zwei Radar-Jobs im 5-Minuten-Takt mit eigenem,
+// an den Takt gebundenem Budget (Epic #2261 A-2 S2, ADR-0082). Benutzt von
+// budgetsFor.
+var radarBudgetJobIDs = map[string]bool{
+	"radar_alert_checks":         true,
+	"compare_radar_alert_checks": true,
 }
 
 // New creates a Scheduler from config and store. Returns error if timezone is invalid.
@@ -234,6 +237,9 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		alertCallCap:       1800 * time.Second,
 		briefingWaitBudget: 600 * time.Second,
 		briefingRunBudget:  1440 * time.Second,
+		radarWaitBudget:    240 * time.Second,
+		radarRunBudget:     270 * time.Second,
+		radarCallCap:       600 * time.Second,
 		callBudget:         newUserCallBudget(),
 		runCounter:         make(map[string]int),
 		runBudgetSummary:   make(map[string]*jobBudgetSummary),
@@ -261,13 +267,13 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)", nil},
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
 		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).
-		// Issue #1628 S0: 7/22/37/52 statt */15 (= 0/15/30/45) -- weicht der
-		// gemessenen Open-Meteo-Lastspitze auf :00/:30 zeitlich aus. NUR
-		// diese zwei Radar-Jobs; alle anderen */15-Jobs bleiben unveraendert.
-		{"7,22,37,52 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (offset 7/22/37/52 min)", nil},
+		// Issue #1628 S0 / #2261 A-2 S2: 5-Min-Takt mit Offset 3 (Minuten 3, 8,
+		// ... 58) -- kollidiert nie mit den */5-/*/15-Jobs und :00, weicht der
+		// Open-Meteo-Lastspitze :00/:30 aus. NUR diese zwei Radar-Jobs.
+		{"3-58/5 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (every 5 min, offset 3)", nil},
 		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)", nil},
 		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)", nil},
-		{"7,22,37,52 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (offset 7/22/37/52 min)", nil},
+		{"3-58/5 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (every 5 min, offset 3)", nil},
 		{"*/15 * * * *", s.compareOfficialAlertChecks, "compare_official_alert_checks", "Compare Official Alert Checks (every 15 min)", nil},
 		// Issue #1676 Scheibe S1: Premium-SMS-Rueckkanal — pollt das seven.io-
 		// Journal auf eingehende Garmin-Nachrichten (globaler Job, kein
@@ -399,6 +405,9 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 func (s *Scheduler) budgetsFor(jobID string) (wait, run, callCap time.Duration) {
 	if jobID == "trip_reports_hourly" || jobID == "compare_presets_daily" {
 		return s.briefingWaitBudget, s.briefingRunBudget, 0
+	}
+	if radarBudgetJobIDs[jobID] {
+		return s.radarWaitBudget, s.radarRunBudget, s.radarCallCap
 	}
 	return s.alertWaitBudget, s.alertRunBudget, s.alertCallCap
 }
