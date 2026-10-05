@@ -53,6 +53,11 @@ _STATE_FILENAME = "briefing_slots.json"
 _LOCK_SUFFIX = ".lock"
 _BRIEFING_LOG_FILENAME = "briefing_log.json"
 
+#: #2231: Sentinel fuer eine unlesbare Vermerk-Datei (fail-closed). Ein leeres
+#: ``{}`` hiesse "alle Slots offen" und liesse den naechsten Schreibvorgang die
+#: beschaedigte Datei ueberschreiben.
+_UNREADABLE: dict = {"__unreadable__": True}
+
 
 class BriefingSlotStore:
     """Vermerk-Speicher fuer den Schluessel ``(trip_id, slot, local_day)``.
@@ -90,7 +95,10 @@ class BriefingSlotStore:
         (AC-9) — die greift aber nur, solange dieser Speicher noch keine
         eigene Datei hat (s. :meth:`_log_bezeugt_versand`).
         """
-        eintrag = self._find(self._load(), trip_id, slot, local_day)
+        data = self._load()
+        if data is _UNREADABLE:
+            return True  # #2231: unlesbar ⇒ Slot gilt als abgeschlossen
+        eintrag = self._find(data, trip_id, slot, local_day)
         if eintrag is not None and eintrag.get("outcome") is not None:
             return True
         return self._log_bezeugt_versand(trip_id, slot, local_day, zone)
@@ -115,7 +123,10 @@ class BriefingSlotStore:
             moment: Zeitpunkt des Laufs (UTC) — PFLICHT, kein
                 ``datetime.now()``-Rueckfall (ADR-0051 Regel 3).
         """
-        eintrag = self._find(self._load(), trip_id, slot, local_day)
+        data = self._load()
+        if data is _UNREADABLE:
+            return True  # #2231: unlesbar ⇒ kein Versand
+        eintrag = self._find(data, trip_id, slot, local_day)
         if eintrag is not None:
             if eintrag.get("outcome") is not None:
                 return True
@@ -361,9 +372,15 @@ class BriefingSlotStore:
             return {}
         try:
             data = json.loads(self._path.read_text(encoding="utf-8"))
-            return data if isinstance(data, dict) else {}
-        except (json.JSONDecodeError, OSError):
-            return {}
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.error("%s unlesbar (%s) -- Versand gesperrt", self._path, exc)
+            return _UNREADABLE
+        if not isinstance(data, dict):
+            logger.error(
+                "%s enthaelt kein JSON-Objekt -- Versand gesperrt", self._path,
+            )
+            return _UNREADABLE
+        return data
 
     def _write(self, data: dict) -> None:
         self._dir.mkdir(parents=True, exist_ok=True)
@@ -407,6 +424,8 @@ class BriefingSlotStore:
                 return False
             try:
                 data = self._load()
+                if data is _UNREADABLE:
+                    return False  # #2231: beschaedigte Datei nie ueberschreiben
                 geaendert = mutate(data)
                 if geaendert:
                     self._write(data)
