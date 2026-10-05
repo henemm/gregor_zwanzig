@@ -20,6 +20,15 @@ TAGE = [date(2026, 8, 19), date(2026, 8, 20), date(2026, 8, 21)]
 TAG = date(2026, 8, 20)
 
 
+def _outcome(user: str, trip_id: str, rt: str, day: date):
+    import json
+    from app.loader import get_data_dir
+    data = json.loads((get_data_dir(user) / "briefing_slots.json").read_text())
+    return [e["outcome"] for e in data["entries"]
+            if e["trip_id"] == trip_id and e["slot"] == rt
+            and e["local_day"] == day.isoformat()]
+
+
 def _aufbau(user: str, ausgang):
     _schreibe(user, [_trip_json("korsika", *KORSIKA, TAGE, morning="07:00:00")])
     sched = _scheduler_mit_festem_ausgang(user, ausgang)
@@ -37,6 +46,7 @@ def test_unknown_outcome_locks_slot_and_logs_error(caplog):
     store = BriefingSlotStore("u2231-unknown")
     assert store.is_recorded(trip.id, rt, ortstag) is True
     assert second is None
+    assert _outcome("u2231-unknown", trip.id, rt, ortstag) == ["weird_new_outcome"]
     assert len(sched.versandversuche) == 1
     assert any(
         r.levelno == logging.ERROR and "weird_new_outcome" in r.getMessage()
@@ -51,6 +61,7 @@ def test_non_string_outcome_locks_slot_as_unknown():
     sched, trip, rt, ortstag, moment = _aufbau("u2231-none", None)
     sched._dispatch_due_item(trip, rt, ortstag, now_utc=moment)
     assert BriefingSlotStore("u2231-none").is_recorded(trip.id, rt, ortstag) is True
+    assert _outcome("u2231-none", trip.id, rt, ortstag) == ["unknown"]
     sched._dispatch_due_item(trip, rt, ortstag, now_utc=moment)
     assert len(sched.versandversuche) == 1
 
