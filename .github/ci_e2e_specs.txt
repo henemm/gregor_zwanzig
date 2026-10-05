@@ -293,6 +293,22 @@
 #             ERSTE BESTAETIGUNG DURCH DEN CI-HAUPTLAUF AUF DEM PR.
 #   Filter C: kein `page.screenshot({path: ...})` in der Datei.
 #
+# Aufnahme 2026-10-03 (#2284 S2, Trip-Hub-Kopf auf den geteilten Baustein
+# SubscriptionHeader): trip-hub-kopf-region-aktivitaet.spec.ts — traegt AC-1
+# bis AC-6 und AC-8 bis AC-13 der Spec docs/specs/modules/
+# feat_2284_s2_trip_kopf.md (Region/Aktivitaet im Kopf, Ein-Schluessel-PUT,
+# 500/412-Pfade, genau ein Speicher-Chip in Trip- UND Vergleich-Hub, Offline-
+# Sperre, Kartenhoehe mobil). Nur Wegwerf-Trips/-Vergleiche, kein Zweit-Login.
+#   Filter A: keine Treffer fuer waitForTimeout/test.skip/test.fixme/
+#             describe.skip (grep leer, auch im Kopfkommentar), kein
+#             Hauptrepo-Pfad, kein __dirname.
+#   Filter B: 🔴 NICHT GEFAHREN. Fallzahl der neuen Datei per
+#             `npx playwright test --list` gemessen (2026-10-03): 20 eigene
+#             Faelle. Kein lokaler Zielverbund-Zyklus (Fallen des lokalen
+#             Stacks, s. o.). ERSTE BESTAETIGUNG DURCH DEN CI-HAUPTLAUF AUF
+#             DEM PR (RED-Stand: rot erwartet, GREEN-Stand: gruen).
+#   Filter C: kein `page.screenshot({path: ...})` in der Datei.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -352,6 +368,7 @@ e2e/speicherung-ueberlebt-neuladen.spec.ts
 e2e/systemhinweise-unter-konto-sheet.spec.ts
 e2e/tokens-and-topo.spec.ts
 e2e/trip-detail-actions.spec.ts
+e2e/trip-hub-kopf-region-aktivitaet.spec.ts
 e2e/versand-tab.spec.ts
 #
 # Aufnahme 2026-10-03 (#2160 Fix-Loop, Loeschdialog laeuft auf 390 px nicht ueber):

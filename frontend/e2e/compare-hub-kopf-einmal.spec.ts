@@ -107,9 +107,11 @@ const KOPF_IDS = [
 ];
 
 test.describe('#2284 S1 — Vergleich-Hub-Kopf: ein Markup, unverändertes Verhalten', () => {
+	// #2284 S2 v1.2 (AC-15-Ausnahme, Entscheidung 14): die Mobil-Variante dieser
+	// Schleife ist unten als eigener Fall `AC-8 (Mobil 375)` umgestellt (Knopf +
+	// Auswahl statt sichtbarer Kacheln). Der Desktop-Teil bleibt unverändert.
 	for (const [label, viewport] of [
-		['Desktop 1280', DESKTOP],
-		['Mobil 375', MOBIL]
+		['Desktop 1280', DESKTOP]
 	] as const) {
 		test(`AC-8 (${label}): jede Kopf-testid genau einmal im DOM und sichtbar`, async ({ page }) => {
 			await page.setViewportSize(viewport);
@@ -149,6 +151,57 @@ test.describe('#2284 S1 — Vergleich-Hub-Kopf: ein Markup, unverändertes Verha
 		});
 	}
 
+	// #2284 S2 v1.2 (AC-15-Ausnahme): auf dem Handy zeigt der Kopf die Aktivität als
+	// EINEN Knopf `compare-hub-profil-knopf` mit Auswahl `compare-hub-profil-auswahl`
+	// (Spec feat_2284_s2_trip_kopf, Entscheidung 14). Gleiche Strenge wie vorher:
+	// jede Kopf-testid genau einmal im DOM (ohne :visible); die Kacheln bleiben im
+	// Markup (genau einmal), sind mobil aber unsichtbar; Knopf sichtbar und genau
+	// einmal, Auswahl-Container genau einmal (geschlossen versteckt).
+	test('AC-8 (Mobil 375): jede Kopf-testid genau einmal im DOM und sichtbar', async ({ page }) => {
+		await page.setViewportSize(MOBIL);
+		const { presetId, locIds } = await seedPreset(page);
+		try {
+			await oeffneHub(page, presetId);
+			for (const id of KOPF_IDS) {
+				const loc = page.locator(`[data-testid="${id}"]`);
+				expect(await loc.count(), `${id}: Anzahl im DOM (ohne :visible)`).toBe(1);
+				if (id.startsWith('compare-hub-profil-option-')) {
+					await expect(loc, `${id}: Kachel ist auf dem Handy sichtbar (Entscheidung 14: Knopf statt Kacheln)`).toBeHidden();
+				} else {
+					await expect(loc).toBeVisible({ timeout: 10_000 });
+				}
+			}
+			const knopf = page.locator('[data-testid="compare-hub-profil-knopf"]');
+			const auswahl = page.locator('[data-testid="compare-hub-profil-auswahl"]');
+			await expect(knopf, 'compare-hub-profil-knopf: auf dem Handy nicht sichtbar').toBeVisible({ timeout: 10_000 });
+			expect(await knopf.count(), 'compare-hub-profil-knopf: Anzahl im DOM (ohne :visible)').toBe(1);
+			expect(await auswahl.count(), 'compare-hub-profil-auswahl: Anzahl im DOM (ohne :visible)').toBe(1);
+			await expect(knopf).toHaveAttribute('data-selected-value', 'wandern');
+			for (const v of ['allgemein', 'wintersport', 'wandern', 'summer_trekking']) {
+				const opt = page.locator(`[data-testid="compare-hub-profil-auswahl-option-${v}"]`);
+				expect(await opt.count(), `compare-hub-profil-auswahl-option-${v}: Anzahl im DOM (ohne :visible)`).toBe(1);
+			}
+			// Orte-Anzahl: je Viewport eine eigene testid, jede genau einmal im DOM;
+			// die frühere gemeinsame testid existiert nicht mehr (keine Zweitinstanz).
+			expect(await page.locator('[data-testid="compare-hub-orte-anzahl"]').count(), 'alte gemeinsame testid').toBe(0);
+			const orteDesktop = page.locator('[data-testid="compare-hub-orte-anzahl-desktop"]');
+			const orteMobil = page.locator('[data-testid="compare-hub-orte-anzahl-mobil"]');
+			expect(await orteDesktop.count(), 'compare-hub-orte-anzahl-desktop: Anzahl im DOM').toBe(1);
+			expect(await orteMobil.count(), 'compare-hub-orte-anzahl-mobil: Anzahl im DOM').toBe(1);
+			await expect(orteMobil).toBeVisible();
+			await expect(orteDesktop).toBeHidden();
+			// Bearbeiten-Modus: Eingabe und Speichern-Knopf ebenfalls genau einmal.
+			await page.locator('[data-testid="compare-hub-name-edit-toggle"]:visible').click();
+			for (const id of ['compare-hub-name-edit', 'compare-hub-name-save']) {
+				const loc = page.locator(`[data-testid="${id}"]`);
+				await expect(loc.filter({ visible: true }).first()).toBeVisible();
+				expect(await loc.count(), `${id}: Anzahl im DOM (ohne :visible)`).toBe(1);
+			}
+		} finally {
+			await cleanup(page, presetId, locIds);
+		}
+	});
+
 	test('AC-2 (Mobil 375): Name, Region, Profil ändern → nach Reload persistiert', async ({ page }) => {
 		await page.setViewportSize(MOBIL);
 		const { presetId, locIds } = await seedPreset(page);
@@ -168,15 +221,24 @@ test.describe('#2284 S1 — Vergleich-Hub-Kopf: ein Markup, unverändertes Verha
 			await sicht('compare-hub-region-save').click();
 			await expect(page.getByText(neuRegion).filter({ visible: true }).first()).toBeVisible({ timeout: 5_000 });
 
-			await sicht('compare-hub-profil-option-wintersport').click();
-			await expect(sicht('compare-hub-profil-option-wintersport')).toHaveAttribute('data-selected', 'true', {
-				timeout: 5_000
-			});
+			// #2284 S2 v1.2 (AC-15-Ausnahme, Entscheidung 14): mobil Wahl über Knopf +
+			// Auswahl statt Kachel; Knopf und Auswahl-Container je genau einmal im DOM.
+			const knopf = page.locator('[data-testid="compare-hub-profil-knopf"]');
+			const auswahl = page.locator('[data-testid="compare-hub-profil-auswahl"]');
+			expect(await knopf.count(), 'compare-hub-profil-knopf: Anzahl im DOM (ohne :visible)').toBe(1);
+			expect(await auswahl.count(), 'compare-hub-profil-auswahl: Anzahl im DOM (ohne :visible)').toBe(1);
+			await knopf.click();
+			await expect(auswahl).toBeVisible({ timeout: 5_000 });
+			await page.locator('[data-testid="compare-hub-profil-auswahl-option-wintersport"]').click();
+			await expect(auswahl).toBeHidden({ timeout: 5_000 });
+			await expect(knopf).toHaveAttribute('data-selected-value', 'wintersport', { timeout: 5_000 });
 
 			await page.reload();
 			await expect(page.getByText(neuName).filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
 			await expect(page.getByText(neuRegion).filter({ visible: true }).first()).toBeVisible();
-			await expect(sicht('compare-hub-profil-option-wintersport')).toHaveAttribute('data-selected', 'true');
+			await expect(knopf).toHaveAttribute('data-selected-value', 'wintersport');
+			expect(await knopf.count(), 'compare-hub-profil-knopf nach Reload: Anzahl im DOM').toBe(1);
+			expect(await auswahl.count(), 'compare-hub-profil-auswahl nach Reload: Anzahl im DOM').toBe(1);
 
 			const p = await fetchPreset(page, presetId);
 			expect(p.name).toBe(neuName);

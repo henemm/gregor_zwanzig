@@ -20,11 +20,7 @@
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
-	import { baueTripSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import { api } from '$lib/api.js';
-	import type { ActivityType } from '$lib/types.js';
-	import Select from '$lib/components/ui/select/Select.svelte';
 
 	interface Badges {
 		overview?: number;
@@ -59,7 +55,8 @@
 
 	// Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
 	let localStages = $state<Stage[]>(trip?.stages ?? []);
-	let activityType = $state<ActivityType | undefined>(trip?.activity);
+	// Issue #2284 S2: die Aktivität wird im Hub-Kopf geändert — hier reaktiv lesen.
+	const activityType = $derived(trip?.activity);
 
 	// Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl + enabled Alerts).
 	// Explizite Werte in der `badges` Prop ueberschreiben die Auto-Ableitung.
@@ -180,18 +177,6 @@
 		// die Keyboard-Navigation und Scroll-Position.
 		void goto(`?tab=${value}`, { replaceState: true, noScroll: true, keepFocus: true });
 	}
-
-	async function handleActivityChange(e: Event) {
-		const val = (e.target as HTMLSelectElement).value as ActivityType;
-		activityType = val || undefined;
-		if (!trip) return;
-		// Issue #1433: bei 412 meldet der Handler an den Controller („Nochmal
-		// speichern") statt unbehandelt zu scheitern; der Rumpf traegt nur `activity`.
-		const speichern = baueTripSpeicherung<Trip>(
-			api, trip.id, { activity: val || undefined }, (updated) => onTripUpdate?.(updated), 'aktivitaet'
-		);
-		await speichereOderMeldeKonflikt(speichern, saveController);
-	}
 </script>
 
 <div class="trip-tabs" data-testid="trip-detail-tab-list">
@@ -212,25 +197,6 @@
 					<HubOverview {trip} onJump={handleValueChange} {metricsCatalog} />
 				{:else if tab.value === 'stages'}
 					{#if trip}
-						<div style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--g-rule-soft);">
-							<label for="activity-select-stages" style="font-size: 11px; font-family: var(--g-font-mono); color: var(--g-ink-3); letter-spacing: 0.06em; white-space: nowrap;">AKTIVITÄT</label>
-							<Select
-								id="activity-select-stages"
-								data-testid="edit-activity-dropdown"
-								value={activityType ?? ''}
-								onchange={handleActivityChange}
-								style="font-size: 13px;"
-							>
-								<option value="trekking">Trekking</option>
-								<option value="skitour">Skitour</option>
-								<option value="hochtour">Hochtour</option>
-								<option value="klettersteig">Klettersteig</option>
-								<option value="mtb">MTB</option>
-								<option value="fahrrad_15">Fahrrad (15 km/h)</option>
-								<option value="fahrrad_20">Fahrrad (20 km/h)</option>
-								<option value="fahrrad_25">Fahrrad (25 km/h)</option>
-							</Select>
-						</div>
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
 					{/if}
 				{:else if tab.value === 'weather' && trip}

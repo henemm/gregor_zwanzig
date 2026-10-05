@@ -4,19 +4,17 @@
 	//
 	// Zweispaltig: Links Breadcrumb + H1 + Statuszeile + Meta. Rechts 3 Buttons.
 	// Pause/Archive-Logik ist in +page.svelte als Danger-Zone gewandert.
-	import { Btn } from '$lib/components/atoms';
 	import TripStatusBadge from './TripStatusBadge.svelte';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { api } from '$lib/api.js';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { deriveTripStatus, todayStageIndex } from '$lib/utils/tripStatus';
 	import { getReportSchedule } from '$lib/utils/rightColumn';
 	import Stat from '$lib/components/molecules/Stat.svelte';
-	import type { Trip } from '$lib/types';
-	import { baueTripSpeicherung, speichereOderMeldeKonflikt } from '$lib/components/shared/tripSpeicherung';
+	import { ACTIVITY_TYPE_OPTIONS, type Trip } from '$lib/types';
+	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
+	import { baueTripSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 
 	interface Props {
 		trip: Trip;
@@ -25,46 +23,32 @@
 		onStatusChange?: (updated: Trip) => void;
 		onTripUpdate?: (updated: Trip) => void;
 		now?: Date;
-		/** Issue #758: SaveStatus controller — rendert SaveIndicator in der Header-Zeile. */
+		/** Issue #758: SaveStatus controller — der Speicher-Chip kommt seit #2284 S2 vom SubscriptionHeader. */
 		saveController?: SaveStatus;
 	}
 
 	let { trip, onTripUpdate, now = new Date(), saveController }: Props = $props();
 
-	// AC-6 — Inline Trip-Name-Bearbeitung (kein separater /edit-Screen mehr)
-	// #713 — toggle: nur via Stift-Icon editierbar (kein dauerhaftes Eingabefeld)
-	let editName = $state(trip.name);
-	let nameSaving = $state(false);
-	let isEditingName = $state(false);
-	let nameSaveError: string | null = $state(null);
-
-	function makeNameSaveHandler() {
-		return async function doNameSave() {
-			nameSaving = true;
-			nameSaveError = null;
-			// Issue #1433: Rumpf als Funktion — bei 412 wiederholt „Nochmal speichern"
-			// genau diese Namensaenderung (nur das Eigenfeld `name`, idempotent).
-			const name = editName;
-			const speichern = baueTripSpeicherung<Trip>(api, trip.id, { name }, (updated) => {
-				onTripUpdate?.(updated);
-				isEditingName = false;
-			}, 'kopf');
-			try {
-				await speichereOderMeldeKonflikt(speichern, saveController);
-			} catch (e: unknown) {
-				nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-			} finally {
-				nameSaving = false;
-			}
-		};
+	// Issue #2284 S2 — Name, Region und Aktivität speichert der geteilte Baustein
+	// über diese Funktion. Rumpf = NUR das Eigenfeld (kein Spread des Seiten-Trips,
+	// Fehlerklasse #2375/#2381); Schlüssel je Feld, damit ein 412-Konflikt je Feld
+	// genau einen „Nochmal speichern"-Eintrag hat (#1433). Ausgänge: Erfolg ⇒
+	// onTripUpdate + schliessen; 412 ⇒ erfüllt ohne schliessen (Retry schließt);
+	// sonst wirft es und der Baustein zeigt die Meldung.
+	async function onSaveField(field: 'name' | 'region' | 'profile', value: string, schliessen: () => void): Promise<void> {
+		const rumpf = field === 'name' ? { name: value } : field === 'region' ? { region: value } : { activity: value };
+		const schluessel = field === 'name' ? 'kopf-name' : field === 'region' ? 'kopf-region' : 'kopf-profil';
+		const speichern = baueTripSpeicherung<Trip>(api, trip.id, rumpf, (updated) => {
+			onTripUpdate?.(updated);
+			schliessen();
+		}, schluessel);
+		await speichereKopfFeld(speichern, saveController);
 	}
 
 	const stats = $derived(computeTripStats(trip));
 	const dateRange = $derived(formatDateRange(trip));
 
-	// Issue #699 — Eyebrow im Format "REGION · DATUMSBEREICH". Fehlt eine
-	// Komponente, bleibt nur die vorhandene ohne verwaistes "·"-Trennzeichen.
-	const eyebrowText = $derived([trip.region, dateRange].filter(Boolean).join(' · '));
+	// Issue #2284 S2 — Eyebrow zeigt nur noch den Datumsbereich; die Region steht in der Region-Zeile des Bausteins.
 	const daysLabel = $derived(getDaysLabel(trip, now));
 
 	// Issue #416 — Mobile Kennzahlen-Kacheln (sichtbar nur ≤ 899px).
@@ -122,51 +106,26 @@
 <header class="trip-header">
 	<div class="header-main">
 		<div class="header-left">
-			<div class="trip-eyebrow-region">
-				{eyebrowText}
-			</div>
-
-			<div class="trip-h1-row">
-				<h1 class="trip-h1" data-testid="trip-detail-h1">
-					{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}{trip.name}
-				</h1>
-				{#if !isEditingName}
-					<button
-						type="button"
-						class="name-edit-toggle"
-						data-testid="trip-name-edit-toggle"
-						aria-label="Trip-Name bearbeiten"
-						onclick={() => { editName = trip.name; nameSaveError = null; isEditingName = true; }}
-					>
-						<PencilIcon size={15} />
-					</button>
-				{/if}
-			</div>
-
-			{#if isEditingName}
-			<div class="name-edit-row">
-				<input
-					type="text"
-					data-testid="trip-name-edit"
-					class="name-edit-input"
-					bind:value={editName}
-					aria-label="Trip-Name bearbeiten"
-				/>
-				<Btn
-					variant="ghost"
-					size="sm"
-					data-testid="trip-name-save"
-					disabled={nameSaving}
-					onclick={makeNameSaveHandler()}
-				>{nameSaving ? '…' : 'Umbenennen'}</Btn>
-				<Btn
-					variant="ghost"
-					size="sm"
-					onclick={() => { editName = trip.name; nameSaveError = null; isEditingName = false; }}
-				>Abbrechen</Btn>
-			</div>
-			{#if nameSaveError}<div class="name-edit-error" data-testid="trip-name-save-error" role="alert">{nameSaveError}</div>{/if}
-			{/if}
+			<SubscriptionHeader
+				kind="trip"
+				name={trip.name}
+				region={trip.region}
+				profile={trip.activity}
+				profileOptions={ACTIVITY_TYPE_OPTIONS}
+				regionMaxLength={60}
+				testidPrefix="trip"
+				titleTestid="trip-detail-h1"
+				titleSize={38}
+				{saveController}
+				{onSaveField}
+			>
+				{#snippet eyebrow()}
+					<div class="trip-eyebrow-region">{dateRange}</div>
+				{/snippet}
+				{#snippet namePrefix()}
+					{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}
+				{/snippet}
+			</SubscriptionHeader>
 
 			<div class="status-line">
 				<span class="status-supplement" data-testid="trip-detail-status-supplement">
@@ -194,12 +153,6 @@
 			<Stat label={startLabel} value={startValue} size="sm" mono />
 		</div>
 	</div>
-
-	<!-- Issue #880: SaveIndicator als fixes Overlay (position:fixed) — außerhalb der
-	     status-line, damit es seitenbreit unten rechts erscheint statt inline. -->
-	{#if saveController}
-		<SaveIndicator controller={saveController} />
-	{/if}
 </header>
 
 <style>
@@ -223,14 +176,6 @@
 		gap: 0.5rem;
 		min-width: 0;
 		flex: 1 1 320px;
-	}
-	.trip-h1 {
-		margin: 0;
-		font-size: 38px;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		color: var(--g-ink);
-		line-height: 1.15;
 	}
 	.h1-shortcode {
 		font-family: var(--g-font-mono, ui-monospace, monospace);
@@ -271,68 +216,6 @@
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
 	}
-	.trip-h1-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		flex-wrap: wrap;
-	}
-	/* Mobile Usability Paket 1 (F1, PO 2026-09-22): Titel auf Mobile via
-	   Token-Skala, einzeilig mit Ellipsis — kein Überstehen bei langen Namen. */
-	@media (max-width: 899px) {
-		.trip-h1-row {
-			flex-wrap: nowrap;
-			min-width: 0;
-		}
-		.trip-h1 {
-			font-size: var(--g-text-xl);
-			min-width: 0;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-	}
-	.name-edit-toggle {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		background: transparent;
-		border: none;
-		cursor: pointer;
-		color: var(--g-ink-3);
-		padding: 4px;
-		border-radius: var(--g-r-1);
-		flex-shrink: 0;
-	}
-	.name-edit-toggle:hover {
-		color: var(--g-ink);
-		background: var(--g-paper-deep);
-	}
-	.name-edit-row {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		margin-top: 2px;
-	}
-	.name-edit-input {
-		flex: 1 1 auto;
-		max-width: 380px;
-		font-size: var(--g-text-sm);
-		color: var(--g-ink);
-		border: 1px solid var(--g-rule);
-		border-radius: var(--g-r-1, 0.375rem);
-		background: var(--g-card, #fff);
-		padding: 4px 8px;
-		outline: none;
-	}
-	.name-edit-input:focus {
-		border-color: var(--g-accent);
-	}
-	.name-edit-error {
-		font-size: var(--g-text-sm);
-		color: var(--g-danger);
-		margin-top: 2px;
-	}
 	.mobile-metrics {
 		display: none;
 	}
@@ -341,6 +224,12 @@
 			display: flex;
 			gap: var(--g-s-3);
 			padding-top: var(--g-s-2);
+		}
+	}
+	/* #2284 S2 (AC-13): Kopf mobil um 7 px gestrafft (oberer Innenabstand), kein Inhalt entfernt. */
+	@media (max-width: 899px) {
+		.trip-header {
+			padding-top: 19px;
 		}
 	}
 </style>

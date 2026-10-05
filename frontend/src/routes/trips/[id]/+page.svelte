@@ -343,15 +343,18 @@
 			<Btn variant="ghost" size="sm" onclick={handleArchiveClick} disabled={isLoading}>
 				{status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
 			</Btn>
-			<div style="position: relative; display: inline-block;">
+			<div class="test-briefing-wrap">
+				<!-- #2284 S2 (Entscheidung 15): mobil kurze Beschriftung, damit der Knopf in die Zeile von
+				     Pausieren/Archivieren passt; der zugängliche Name bleibt vollständig. -->
 				<Btn
 					variant="accent"
 					size="sm"
 					data-testid="test-briefing-menu-toggle"
+					aria-label={testBriefingLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
 					onclick={() => { testBriefingMenuOpen = !testBriefingMenuOpen; }}
 					disabled={testBriefingLoading}
 				>
-					{testBriefingLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
+					{#if testBriefingLoading}Wird gesendet…{:else}Test-Briefing<span class="hidden desktop:inline">&nbsp;senden</span>{/if}
 				</Btn>
 				{#if testBriefingMenuOpen}
 					<div
@@ -446,5 +449,22 @@
 		display: flex;
 		gap: 8px;
 		flex-wrap: wrap;
+	}
+	.test-briefing-wrap {
+		position: relative;
+		display: inline-block;
+	}
+	/* #2284 S2 (AC-13): mobil 44-px-Tippflächen ohne Layout-Höhe — der negative Rand
+	   gleicht die zusätzliche Höhe aus, die Zeile bleibt so hoch wie vorher. */
+	@media (max-width: 899px) {
+		.test-briefing-wrap {
+			display: flex;
+		}
+		.breadcrumb-actions > :global([data-slot='btn']),
+		.test-briefing-wrap > :global([data-slot='btn']) {
+			min-height: 44px;
+			min-width: 44px;
+			margin-block: -8px;
+		}
 	}
 </style>

@@ -803,7 +803,7 @@ See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
 ### Trip-Editor & Compare-Editor Save-Strategien (Issue #758, konsolidiert #1234/#1261/#1269)
 
 **Beide Editoren: Auto-Save (Ortsvergleich seit #1261, vorher expliziter Speichern-Button):**
-- Trip: `TripHeader.svelte`; Ortsvergleich: der Compare-Editor-Header — beide rendern einen `SaveIndicator` (zentral sichtbar über allen Tabs)
+- Trip und Ortsvergleich: seit #2284 S2 rendert der geteilte Kopf-Baustein `SubscriptionHeader` den einzigen `SaveIndicator` (Prop `saveController`: Trip `tripSaveCtl`, Vergleich `hubSaveCtl`; zentral sichtbar über allen Tabs)
 - Alle Änderungen triggern **Auto-Save** mit Debounce (~700 ms): Trip (Name, Etappen, Briefing, Metriken), Ortsvergleich (Orte, Wertebereich, Layout, Versand, Alarme)
 - Zustände: `idle` (sauber) → `dirty` → `saving` (API-Call läuft) → `idle` (erfolgreich, `savedAt` gesetzt) oder `error` (Fehler)
 - Seit #1395 S4 (Trip, seit #2276 S1 `createSaveStatus({ typ: 'trip', id })`): bei einem `412`-ETag-Konflikt zusätzlicher Zustand `conflict` statt generischem `error` — der `SaveIndicator` zeigt „Nochmal speichern"; der Klick frischt den ETag-Stand still auf (`refreshResourceEtag(id, kind)`) und wiederholt danach automatisch den abgelehnten Speichervorgang (`retryConflict()`). Die Adresse des Auffrischens folgt ausschließlich der übergebenen Art (`NachladeKennung.typ`: `'trip'` → `/api/trips/{id}`, `'vergleich'` → `/api/compare/presets/{id}`), nie der Form der Kennung — Alt-Ortsvergleiche tragen Slugs ohne `cp-`-Präfix. **Stand Ortsvergleich:** der Mechanismus ist seit #2276 S1 entitätsneutral bereit; der Hub (`compare/[id]/+page.svelte`) ruft `createSaveStatus({ typ: 'vergleich', id })` seit #2276 S1 mit Kennung auf. Real „Nochmal speichern"-fähig sind inzwischen vier der fünf ursprünglichen Hub-Commit-Handler — seit #2276 S2 (Alarme), S3 (Wertebereiche), S4 (Wetter-Metriken/Layout) und S5 (Versand) —, weil sie über `saveController.schedule()` laufen (analog dem Trip-Zweig, `shared/alarmeVergleichSpeicherung.ts`, `shared/corridor-editor/wertebereicheVergleichSpeicherung.ts`, `shared/weather-metrics-tab/weatherMetricsCompareSave.ts` bzw. `shared/versandVergleichSpeicherung.ts`) und damit `doSave()`s Konflikt-Erkennung durchlaufen. Nur noch Orte/Aktiv-Status melden einen `412` manuell über `setError()` (kein `schedule()`-Pfad) und landen dort bei generischem `error`, nicht bei `conflict`. Siehe `docs/specs/modules/issue_1395_s4_conflict_retry.md`, `docs/specs/modules/rework_2276_s1_netz_und_fundament.md`, `docs/specs/modules/rework_2276_s2_alarme.md`, `docs/specs/modules/rework_2276_s3_wertebereiche.md`, `docs/specs/modules/rework_2276_s4_wetter_metriken.md` und `docs/specs/modules/rework_2276_s5_versand.md`.
@@ -1042,8 +1042,17 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
   Gespeichert wird über den Prop `onSaveField(field, value, schliessen)`, der drei Ausgänge
   meldet: übernommen, Konflikt (HTTP 412) oder Fehler. Der Vergleich-Hub
   (`routes/compare/[id]/+page.svelte`) nutzt ihn bereits (doppelter Desktop-/Mobil-Kopf entfällt;
-  Orte-Anzahl mit `compare-hub-orte-anzahl-desktop`/`-mobil`); der Trip-Hub folgt in S2.
-  Spec: `docs/specs/modules/feat_2284_s1_subscription_header.md`.
+  Orte-Anzahl mit `compare-hub-orte-anzahl-desktop`/`-mobil`). Seit S2 nutzt ihn auch der Trip-Hub:
+  `TripHeader.svelte` ist nur noch Hülle (Status-/Meta-Zeile, Mobil-Kacheln) und mountet den Baustein
+  mit `titleTestid="trip-detail-h1"`, Snippet `namePrefix` (Shortcode) und Eyebrow nur Datumsbereich.
+  Die Aktivität des Trips ist eine Kachelreihe im Kopf (`ACTIVITY_TYPE_OPTIONS`; auf dem Handy ein
+  Aktivitäts-Knopf „Aktivität wählen ▾" statt Kacheln), nicht mehr eine
+  Auswahlliste im Etappen-Reiter; Konflikt-Schlüssel `kopf-name`/`kopf-region`/`kopf-profil`.
+  Trip-Speicherweg: `speichereKopfFeld` in `shared/tripSpeicherung.ts` (412 ⇒ Konfliktbehandlung).
+  Titelgröße (v1.3): mobil in beiden Hubs 20 px einzeilig mit Ellipsis; Desktop über Prop `titleSize`
+  (Trip 38 px, Vergleich 30 px). Etappenliste mobil nicht tiefer als vorher (≤474 px).
+  Region leer wird als „—" gezeigt. Specs: `docs/specs/modules/feat_2284_s1_subscription_header.md`,
+  `docs/specs/modules/feat_2284_s2_trip_kopf.md`.
 - **Persistenz:** `/api/trips` bzw. `/api/compare/presets` (nicht
   `/api/subscriptions` — entfernt, 404).
 

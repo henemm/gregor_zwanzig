@@ -60,7 +60,7 @@ test('Mobile: kein horizontaler Overflow im stages-Tab', async ({ page }) => {
 test('Mobile: langer Trip-Titel steht einzeilig in 20px mit Ellipsis', async ({ page }) => {
 	await openStagesTab(page, 390, 844);
 
-	const h1 = page.locator('.trip-h1');
+	const h1 = page.locator('[data-testid="trip-detail-h1"]');
 	await expect(h1).toBeVisible();
 	const metrics = await h1.evaluate((el) => {
 		const cs = getComputedStyle(el);

@@ -15,6 +15,9 @@
 // Gemessen: der SERVER-Stand im Ersatz-Server (Go-Merge) nach dem Speichern ueber
 // den ECHTEN Reiter (Instanz-Skript + echtes `api`). Frischer Stand, kein Konflikt.
 //
+// Issue #2284 S2 (AC-17): Kopf (Name, NEU Region) und Aktivitaet ueber
+// `TripHeader.onSaveField` (Pruefstand `kopfReiter`/`aktivitaetReiter`).
+//
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --experimental-test-module-mocks --test \
@@ -327,5 +330,37 @@ describe('Kopf, Aktivitaet, Etappen (AC-15)', () => {
 		e.speichern([{ id: 'T1', name: 'Umbenannt', date: '2026-10-10', waypoints: [] }]);
 		await P.fertig(a.ctl);
 		assert.equal((stand().stages as Array<{ name: string }>)[0].name, 'Umbenannt');
+	});
+});
+
+// Issue #2284 S2 (AC-2, AC-3, AC-6, AC-17): Region ist neues Eigenfeld des Kopfs
+// (`TripHeader.onSaveField('region', …)`); Name/Region/Aktivitaet nacheinander lassen
+// jedes andere Feld des Trips unveraendert.
+describe('#2284 S2: Kopf-Region und die Kopf-Folge Name ⇒ Region ⇒ Aktivitaet', () => {
+	test('Region setzen', async () => {
+		const a = P.neuerAufbau();
+		const k = await P.kopfReiter(a);
+		await k.regionAendern('Alpen Nord');
+		assert.equal(stand().region, 'Alpen Nord');
+		assert.equal(k.geschlossen.region, 1, 'gespeichert ⇒ der Kopf schliesst das Feld');
+	});
+
+	test('Region leeren: der Leerstring kommt an (Go: omitempty laesst den Schluessel fallen)', async () => {
+		const a = P.neuerAufbau();
+		const k = await P.kopfReiter(a);
+		await k.regionAendern('');
+		assert.equal(stand().region ?? '', '', 'die alte Region „Korsika" darf nicht stehen bleiben');
+		assert.equal(k.geschlossen.region, 1);
+	});
+
+	test('AC-6: nacheinander Name, Region, Aktivitaet — danach ist ALLES uebrige unveraendert', async () => {
+		const a = P.neuerAufbau();
+		const vorher = stand();
+		const k = await P.kopfReiter(a);
+		await k.umbenennen('Neuer Name');
+		await k.regionAendern('Alpen Nord');
+		await k.aktivitaetAendern('skitour');
+		assert.deepEqual(stand(), { ...vorher, name: 'Neuer Name', region: 'Alpen Nord', activity: 'skitour' });
+		pythonEigenesUnveraendert();
 	});
 });

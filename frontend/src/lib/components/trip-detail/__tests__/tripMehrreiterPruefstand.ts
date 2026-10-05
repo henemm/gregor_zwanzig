@@ -16,6 +16,9 @@
 // Rot der Tests an der Zusicherung liegt und nicht am Aufbau.
 //
 // Pfadregel #1409: Aufrufer loesen Dateipfade relativ zur EIGENEN Testdatei auf.
+//
+// Issue #2284 S2 (AC-17): Kopf (Name, NEU Region) und Aktivitaet laufen ueber
+// `TripHeader.onSaveField` — Schnittstelle siehe `kopfReiter` weiter unten.
 
 import { readFileSync } from 'node:fs';
 import { register } from 'node:module';
@@ -421,41 +424,72 @@ export async function wertebereicheReiter(
 	};
 }
 
-/** Kopf (TripHeader): Umbenennen — der Reiter ruft `api.put` selbst, ohne Controller-`schedule`. */
-export async function kopfReiter(a: Aufbau): Promise<{
+/**
+ * Issue #2284 S2 — SCHNITTSTELLE, die der Kopf ab S2 bauen muss (AC-6, AC-8, AC-9, AC-17):
+ *
+ * `TripHeader.svelte` deklariert in seinem Instanz-Skript (top-level, wie
+ * `routes/compare/[id]/+page.svelte` in S1) die Speicherfunktion, die es dem Baustein
+ * `SubscriptionHeader` als Prop `onSaveField` uebergibt:
+ *
+ *   async function onSaveField(
+ *     field: 'name' | 'region' | 'profile',   // Feldnamen des Bausteins; 'profile' = Aktivitaet
+ *     value: string,
+ *     schliessen: () => void
+ *   ): Promise<void>
+ *
+ * - Rumpf NUR das Eigenfeld: name ⇒ `{ name }`, region ⇒ `{ region }` (Leeren = `{ region: "" }`,
+ *   der Schluessel bleibt im JSON), profile ⇒ `{ activity }`. Kein Spread von `trip`.
+ * - Konflikt-Schluessel je Feld: `kopf-name` / `kopf-region` / `kopf-profil` (Entscheidung 9),
+ *   ueber `baueTripSpeicherung(..., schluessel)` und `speichereOderMeldeKonflikt(fn, saveController)`.
+ * - Drei Ausgaenge (S1-Vertrag des Bausteins): gespeichert ⇒ `onTripUpdate(antwort)` + `schliessen()`;
+ *   412 ⇒ am Controller gemeldet, Promise erfuellt OHNE `schliessen()` (erst der erfolgreiche
+ *   Retry ruft `schliessen()` und ersetzt den Seitenstand, KEIN `imWiederholen`-Guard,
+ *   Entscheidung 10); jeder andere Fehler ⇒ wirft (der Baustein zeigt die Meldung).
+ *
+ * Der Pruefstand erreicht die Funktion wie zuvor `makeNameSaveHandler`: ueber die AST-Auswertung
+ * des echten Instanz-Skripts (`inst.u.onSaveField`) — kein neuer Export noetig.
+ */
+export type KopfFeld = 'name' | 'region' | 'profile';
+
+export interface KopfReiter {
 	inst: Instanz;
+	/** Wie oft der Kopf je Feld `schliessen()` aufgerufen hat (Feld zu = gespeichert). */
+	geschlossen: Record<KopfFeld, number>;
+	/** Roher Aufruf von `onSaveField` — eine Ablehnung schlaegt bis zum Test durch. */
+	speichereFeld(field: KopfFeld, value: string): Promise<void>;
 	umbenennen(name: string): Promise<void>;
-}> {
+	regionAendern(region: string): Promise<void>;
+	aktivitaetAendern(wert: string): Promise<void>;
+}
+
+/** Kopf (TripHeader): Name, Region und Aktivitaet ueber `onSaveField` (s. o.). */
+export async function kopfReiter(a: Aufbau): Promise<KopfReiter> {
 	const inst = await bauen(DATEI.kopf, { ...gemeinsam(a), now: new Date('2026-10-02T08:00:00Z') });
+	const geschlossen: Record<KopfFeld, number> = { name: 0, region: 0, profile: 0 };
+	const speichereFeld = async (field: KopfFeld, value: string): Promise<void> => {
+		const fn = inst.u.onSaveField as
+			| ((f: KopfFeld, v: string, schliessen: () => void) => Promise<void>)
+			| undefined;
+		if (typeof fn !== 'function') throw new Error('Messaufbau: TripHeader.onSaveField nicht herleitbar');
+		await fn(field, value, () => {
+			geschlossen[field] += 1;
+		});
+	};
 	return {
 		inst,
-		async umbenennen(name) {
-			inst.u.editName = name;
-			const handler = (inst.u.makeNameSaveHandler as () => () => Promise<void>)();
-			await handler();
-		}
+		geschlossen,
+		speichereFeld,
+		umbenennen: (name) => speichereFeld('name', name),
+		regionAendern: (region) => speichereFeld('region', region),
+		aktivitaetAendern: (wert) => speichereFeld('profile', wert)
 	};
 }
 
-/** Aktivitaet (TripTabs.handleActivityChange): kein try/catch im Produktivcode,
- *  der Aufrufer faengt hier — ob die Funktion wirft, ist nicht Teil der Zusicherung. */
-export async function aktivitaetReiter(a: Aufbau): Promise<{
-	inst: Instanz;
-	aendern(wert: string): Promise<void>;
-}> {
-	const inst = await bauen(DATEI.tabs, { ...gemeinsam(a), initialTab: 'overview' });
-	return {
-		inst,
-		async aendern(wert) {
-			const handler = inst.u.handleActivityChange as (e: unknown) => Promise<void>;
-			if (typeof handler !== 'function') throw new Error('Messaufbau: TripTabs.handleActivityChange nicht herleitbar');
-			try {
-				await handler({ target: { value: wert } });
-			} catch {
-				/* heute wirft die Funktion bei 412 (kein try/catch) — nicht Gegenstand */
-			}
-		}
-	};
+/** Aktivitaet: seit #2284 S2 eine Kachel im Kopf — derselbe Weg `TripHeader.onSaveField('profile', …)`.
+ *  Kein try/catch mehr: bei 412 erfuellt sich das Promise (Vertrag), jede Ablehnung ist ein Befund. */
+export async function aktivitaetReiter(a: Aufbau): Promise<KopfReiter & { aendern(wert: string): Promise<void> }> {
+	const k = await kopfReiter(a);
+	return { ...k, aendern: (wert) => k.aktivitaetAendern(wert) };
 }
 
 /** Etappen (EditStagesPanelNew): Speichern ueber den Controller. */

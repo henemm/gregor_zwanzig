@@ -100,6 +100,30 @@ export async function speichereOderMeldeKonflikt(
 	}
 }
 
+/** Der Teil des Controllers, den der Kopf-Speicherweg fuer den Chip-Verlauf braucht. */
+export interface KopfSpeicherMelder extends KonfliktMelder {
+	setSaving(): void;
+	setSaved(): void;
+	markPristine(): void;
+}
+
+/**
+ * Issue #2284 S2 (AC-11): Kopf-Feld speichern MIT Chip-Verlauf `saving` ⇒ `idle`
+ * („Gespeichert HH:MM") am Controller des Hubs. `speichereOderMeldeKonflikt` selbst
+ * fasst den Zustand nicht an (Orte/Status setzen ihn selbst). 412 ⇒ `conflict` (vom
+ * Melder gesetzt, `setSaved` ist dann ein No-op); anderer Fehler ⇒ Chip zurueck auf
+ * den letzten bekannten Stand (`markPristine`), der Fehler geht an den Aufrufer.
+ */
+export async function speichereKopfFeld(fn: SaveFn, ctl: KopfSpeicherMelder | null | undefined): Promise<void> {
+	ctl?.setSaving();
+	try {
+		if ((await speichereOderMeldeKonflikt(fn, ctl)) === 'gespeichert') ctl?.setSaved();
+	} catch (e) {
+		ctl?.markPristine();
+		throw e;
+	}
+}
+
 /**
  * Wetter-Metriken: zwei PUTs (`/weather-config`, dann `/api/trips/{id}`).
  * - Regulaer strikt nacheinander — die lokale Uebernahme von alert_rules haengt
