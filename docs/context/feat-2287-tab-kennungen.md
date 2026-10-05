@@ -148,3 +148,10 @@ Flush-Guards, Badges-Interface (`TripTabs.svelte:25-33/:63-71` — Badge-Keys mi
 
 ### Open Questions
 - Keine PO-Fragen. Technische Entscheidungen oben getroffen (Etappen-Kennung, testids, URL-Bereinigung, Scope Anlege-Editoren).
+
+## Hinweise aus TDD RED für /50 (2026-10-05)
+- Worktree braucht `frontend/node_modules` → Symlink auf `/home/hem/gregor_zwanzig/frontend/node_modules` (gitignored), sonst Umgebungs-Rot.
+- Die drei Dateien `subscription_tabs_resolve`, `hub_reiter_gemeinsame_aufloesung`, `reiter_sprunglinks_nur_neue_kennungen` brachen im RED-Lauf schon beim Laden ab (Modul fehlt) — ihre Einzeltests liefen noch nie gegen echten Code. Nach GREEN genau hinsehen.
+- Harness (`svelteInstanzPruefstand.ts`, neue Option `{ jsAlsTs }`) führt `$effect`-Rümpfe aus, **nicht** `onMount`: Alt-Kennungs-URL-Bereinigung muss in einem `$effect` stehen (oder einer von dort gerufenen Funktion).
+- Hubs müssen `resolveTab`/`subscriptionTabs` aus `shared/subscriptionTabs` importieren (Wertegleichheit wird geprüft), `handleValueChange` und `activeTab` behalten; MTabBar-Items werden über die testid-Form gefunden.
+- Nur per E2E/Playwright in `/e2e-verify`: AC-3 (`history.length`/Zurück), AC-10 Klickpfade, AC-12 Panel-testid, AC-13 Anlege-Flow, AC-14 Handy-Viewport, AC-15 (`rg` + E2E-Specs umstellen — noch nicht geschehen, gehört in /50).
