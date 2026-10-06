@@ -159,11 +159,11 @@ describe('AC-1/Abschnitt 1: buildNewComparePresetPayload sendet IMMER alert_chan
 		} as NewComparePresetFields;
 	}
 
-	test('Standard-Neuanlage traegt alert_channels={email:true,telegram:false,sms:false,premium_sms:false}', () => {
+	test('Standard-Neuanlage traegt alert_channels={email:true,telegram:true,sms:false,premium_sms:false} (#2518)', () => {
 		const payload = buildNewComparePresetPayload(newFields()) as Record<string, unknown>;
 		assert.deepStrictEqual(
 			payload.alert_channels,
-			{ email: true, telegram: false, sms: false, premium_sms: false },
+			{ email: true, telegram: true, sms: false, premium_sms: false },
 			`AC-1/Abschnitt 1: die Neuanlage-Payload muss immer alert_channels tragen (Standard-Default), erhalten: ${JSON.stringify(payload.alert_channels)}`
 		);
 	});

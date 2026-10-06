@@ -3,7 +3,7 @@ entity_id: alert_channel_new_default
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: draft
+status: approved
 version: "1.0"
 tags: [alerts, onboarding, trip, compare, issue-2518]
 ---
@@ -12,7 +12,7 @@ tags: [alerts, onboarding, trip, compare, issue-2518]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-10-06)
 
 ## Purpose
 
