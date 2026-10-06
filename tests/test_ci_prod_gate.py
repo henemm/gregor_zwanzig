@@ -235,6 +235,68 @@ def test_reiner_doku_merge_oeffnet_das_gate_ohne_nachweis(sb: Sandbox):
     assert sb.proofs() == []
 
 
+def _run_gate_env(repo: Path, extra: dict) -> subprocess.CompletedProcess:
+    env = _clean_env()
+    env.update(extra)
+    return subprocess.run(
+        ["bash", str(SCRIPT), str(repo)], capture_output=True, text=True, env=env
+    )
+
+
+def _checkout_to_origin_main(sb: Sandbox) -> None:
+    """Server-Checkout steht bereits auf origin/main (HEAD == Ziel, leerer Diff)."""
+    _git(sb.checkout, "pull", "-q", "origin", "main")
+    assert (
+        _git(sb.checkout, "rev-parse", "HEAD").stdout
+        == _git(sb.checkout, "rev-parse", "origin/main").stdout
+    )
+
+
+def test_head_gleich_origin_main_ohne_nachweis_ist_das_gate_zu(sb: Sandbox):
+    """F001: leerer Diff (HEAD == origin/main) darf nicht als docs-only durchwinken."""
+    sb.land("src/app.py", "X = 7\n")
+    _checkout_to_origin_main(sb)
+    assert sb.proofs() == []
+
+    proc = _run_gate(sb.checkout)
+
+    assert proc.returncode == 0, f"stdout={proc.stdout} stderr={proc.stderr}"
+    assert _gate_lines(proc) == ["PROD_GATE=closed"], proc.stdout + proc.stderr
+
+
+def test_head_gleich_origin_main_mit_echtem_nachweis_oeffnet_das_gate(sb: Sandbox):
+    """F001: derselbe Zustand mit echtem Nachweis fuer diese SHA -> open."""
+    sb.land("src/app.py", "X = 8\n")
+    sb.verify_session_head()
+    _checkout_to_origin_main(sb)
+
+    proc = _run_gate(sb.checkout)
+
+    assert proc.returncode == 0, f"stdout={proc.stdout} stderr={proc.stderr}"
+    assert _gate_lines(proc) == ["PROD_GATE=open"], proc.stdout + proc.stderr
+
+
+def test_geerbtes_skip_flag_wird_neutralisiert(sb: Sandbox):
+    """F002: GZ_SKIP_E2E_GATE=1 in der Umgebung darf das Gate nicht oeffnen."""
+    sb.land("src/app.py", "X = 9\n")
+
+    proc = _run_gate_env(sb.checkout, {"GZ_SKIP_E2E_GATE": "1"})
+
+    assert proc.returncode == 0, f"stdout={proc.stdout} stderr={proc.stderr}"
+    assert _gate_lines(proc) == ["PROD_GATE=closed"], proc.stdout + proc.stderr
+
+
+def test_ssh_befehl_fetcht_vor_dem_skript_bezug():
+    """F003 — # doc-compliance-test: Fetch muss VOR `git show origin/main:` stehen."""
+    run = _step(_deploy_job(), "Prod-Gate pruefen")["run"]
+    fetch = run.find("git fetch origin")
+    show = run.find("git show origin/main:scripts/ci_prod_gate.sh")
+    assert fetch != -1 and show != -1, run
+    assert fetch < show
+    between = run[fetch:show]
+    assert "&&" in between and ";" not in between.replace("\\;", ""), between
+
+
 # --- AC-7 / statische Teile von AC-8: ci.yml als geparste Struktur -----------------
 
 

@@ -190,3 +190,4 @@ oder bei reinen Doku-Merges. Den Ablauf, der tatsächlich läuft, beschreibt dan
 
 - 2026-10-06: Erstfassung (Scheibe 2, nach Entparkung 2026-10-05)
 - 2026-10-06: ACs vom PO freigegeben
+- 2026-10-06: Adversary F001–F003 fail-closed behoben (HEAD==origin/main ohne Nachweis → closed; GZ_SKIP_E2E_GATE neutralisiert; Fetch-Reihenfolge bewacht)
