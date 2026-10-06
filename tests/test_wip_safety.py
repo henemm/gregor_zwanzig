@@ -3,7 +3,7 @@
 Prueflinge:
 
 * ``scripts/wip_safety.sh`` (Shell-Skript, Aufruf ``bash wip_safety.sh <repo>``)
-* ``.github/workflows/ci.yml`` — Verdrahtung im Schritt "Staging-Verdict schreiben (CI smoke)"
+* (CI-Verdrahtung entfiel mit #2047 Scheibe 2 — der Reset im CI-Pfad existiert nicht mehr)
 
 Alle Verhaltenstests laufen gegen ein ECHTES Wegwerf-Git-Repo (``tempfile.mkdtemp``,
 echtes ``git init``/``clone``, echte Commits, echtes ``git reset --hard``, echter
@@ -22,7 +22,6 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "wip_safety.sh"
-CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 
 COMMITTED_TEXT = "stand aus origin/main\n"
 WIP_TEXT = "uncommittete WIP-Arbeit einer parallelen Session\n"
@@ -452,39 +451,3 @@ def test_zweiter_lauf_bei_unveraendertem_arbeitsbaum_gilt_als_gesichert(repo: Pa
         f"ausgegebener Befehl {command!r} scheiterte: {restore.stderr.strip()}"
     )
     assert (repo / TRACKED).read_text(encoding="utf-8") == WIP_TEXT
-
-
-def test_ci_ruft_die_sicherung_vor_dem_harten_reset_aus_origin_main_auf():
-    """AC-8 — # doc-compliance-test
-
-    GIVEN der CI-Schritt "Staging-Verdict schreiben (CI smoke)" in ci.yml
-    WHEN der Schritt gelesen wird
-    THEN steht der Aufruf der Sicherung VOR dem ``git reset --hard origin/main``,
-         und das Skript wird aus ``origin/main`` bezogen, nicht aus dem Arbeitsbaum.
-
-    ``ci.yml`` ist nicht ausfuehrbar testbar (Context-Doc Punkt 4) — deshalb hier
-    ausnahmsweise eine Dateiinhalt-Pruefung.
-    """
-    text = CI_WORKFLOW.read_text(encoding="utf-8")
-    step_marker = "Staging-Verdict schreiben (CI smoke)"
-    assert step_marker in text, f"Schritt {step_marker!r} fehlt in {CI_WORKFLOW}"
-
-    rest = text[text.index(step_marker) :]
-    next_step = re.search(r"\n\s+- name: ", rest)
-    block = rest[: next_step.start()] if next_step else rest
-
-    assert "wip_safety.sh" in block, (
-        f"Schritt {step_marker!r} ruft wip_safety.sh nicht auf — Block:\n{block}"
-    )
-    assert "git reset --hard origin/main" in block, (
-        "der abzusichernde harte Reset steht nicht mehr in diesem Schritt"
-    )
-    assert block.index("wip_safety.sh") < block.index("git reset --hard origin/main"), (
-        "die Sicherung muss VOR dem harten Reset laufen"
-    )
-
-    call_lines = [line for line in block.splitlines() if "wip_safety.sh" in line]
-    assert all("origin/main" in line for line in call_lines), (
-        "das Skript muss aus origin/main bezogen werden, nicht aus dem Arbeitsbaum "
-        f"(Henne-Ei beim ersten Rollout) — Zeilen: {call_lines}"
-    )

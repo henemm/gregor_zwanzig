@@ -508,7 +508,8 @@ jobs:
           retention-days: 7
 
   deploy:
-    needs: [test, lint]
+    # C4-71 (#2047 S2): Deploy haengt an allen sechs Ampel-Checks.
+    needs: [test, lint, go-test, frontend-test, svelte-check, e2e]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
@@ -550,39 +551,49 @@ jobs:
           [ "$HEALTH" = "200" ] || { echo "HEALTH $HEALTH != 200"; exit 1; }
           echo "Staging Smoke: OK"
 
-      - name: Staging-Verdict schreiben (CI smoke)
+      # #2047 Scheibe 2: Die CI schreibt KEINEN Staging-Nachweis mehr und resettet
+      # den Haupt-Checkout nicht. Sie liefert nur aus, wenn fuer origin/main bereits
+      # ein echter /e2e-verify-Nachweis vorliegt (oder der Stand docs-only ist).
+      # Einmal pruefen, nicht warten: /e2e-verify laeuft nach dem Merge laenger als
+      # dieser Job — der Normalfall ist /70-deploy Schritt 4. Das Skript wird aus
+      # origin/main bezogen (Henne-Ei beim ersten Rollout), `mktemp` statt festem
+      # /tmp-Pfad (weitere lokale Accounts auf dem Server).
+      - name: Prod-Gate pruefen
+        id: gate
         run: |
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
-          cat > /tmp/ci_e2e_findings.json << 'EOF'
-          [{"ac":"ROOT","status":"PASS","url":"/","evidence":"HTTP 200/302"},{"ac":"HEALTH","status":"PASS","url":"/api/health","evidence":"HTTP 200"}]
-          EOF
-          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no \
-            /tmp/ci_e2e_findings.json \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/ci_e2e_findings.json
-          # Sicherheitsnetz (#2047): der Verdict-Schritt resettet den Haupt-Checkout
-          # hart auf origin/main — dieser Ordner ist zugleich Arbeitsverzeichnis
-          # interaktiver Sessions. Uncommittete getrackte Arbeit wird deshalb vorher
-          # als Stash-Objekt + Tag gesichert. Das Skript wird aus origin/main bezogen
-          # (nicht aus dem Arbeitsbaum): beim ersten Rollout liegt es dort noch nicht
-          # auf Stand. Schlägt die Sicherung fehl, bricht der Schritt ab (bash -e),
-          # bevor der Reset unten läuft. Ablage per `mktemp` statt festem /tmp-Pfad:
-          # auf dem Server existieren weitere lokale Accounts, ein vorab gelegter
-          # Symlink würde die `>`-Umleitung sonst umbiegen.
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+          set +e
+          OUT=$(ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "cd /home/hem/gregor_zwanzig && t=\$(mktemp /tmp/ci_wip_safety.XXXXXX) && git fetch origin 2>/dev/null && git show origin/main:scripts/wip_safety.sh > \"\$t\" && bash \"\$t\" /home/hem/gregor_zwanzig; rc=\$?; rm -f \"\$t\"; exit \$rc"
-          # Issue #1031 Root Cause: staging_gate verlangt bei Telegram-berührenden
-          # Changes einen Live-Test (#686 AC-5) — dafür müssen die Staging-Bot-Creds
-          # (GZ_TELEGRAM_TEST_CHAT_ID etc.) aus der Server-seitigen Staging-.env
-          # gesourct sein, sonst verweigert das Gate das Verdict und der Deploy
-          # fällt auf eine veraltete Singleton-Attestation zurück.
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "cd /home/hem/gregor_zwanzig && git fetch origin 2>/dev/null && git reset --hard origin/main && set -a && . /home/hem/gregor_zwanzig_staging/.env && set +a && GZ_TELEGRAM_LIVE=1 python3 .claude/hooks/staging_gate.py --write-verdict 'VERIFIED: CI smoke test (ROOT+HEALTH) passed' --findings-json /tmp/ci_e2e_findings.json; rm -f /tmp/ci_e2e_findings.json"
-          rm -f /tmp/deploy_key /tmp/ci_e2e_findings.json
+            "cd /home/hem/gregor_zwanzig && t=\$(mktemp /tmp/ci_prod_gate.XXXXXX) && git fetch origin 2>/dev/null && git show origin/main:scripts/ci_prod_gate.sh > \"\$t\" && bash \"\$t\" /home/hem/gregor_zwanzig; rc=\$?; rm -f \"\$t\"; exit \$rc")
+          RC=$?
+          set -e
+          rm -f /tmp/deploy_key
+          echo "$OUT"
+          GATE=$(echo "$OUT" | grep -E '^PROD_GATE=(open|closed)$' | tail -n 1 || true)
+          if [ "$RC" -ne 0 ] || [ -z "$GATE" ]; then
+            echo "::error::Prod-Gate lieferte keine Entscheidung (rc=$RC) — Fetch/Skriptfehler"
+            exit 1
+          fi
+          if [ "$GATE" = "PROD_GATE=open" ]; then
+            echo "open=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "open=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prod-Deploy uebersprungen (kein Nachweis)
+        if: steps.gate.outputs.open != 'true'
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          MSG="Kein /e2e-verify-Nachweis fuer ${SHA} — Prod-Deploy ueber /70-deploy Schritt 4"
+          echo "::notice::$MSG"
+          echo "### Prod-Deploy uebersprungen" >> "$GITHUB_STEP_SUMMARY"
+          echo "$MSG" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Deploy zu Produktion via SSH
+        if: steps.gate.outputs.open == 'true'
         run: |
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
@@ -603,7 +614,7 @@ jobs:
       # json.dumps macht jeden Inhalt transportsicher. Nur die erste
       # Message-Zeile — mehr liest auf dem Handy niemand.
       - name: Telegram — Deploy erfolgreich (HENEMM Server)
-        if: success()
+        if: success() && steps.gate.outputs.open == 'true'
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
