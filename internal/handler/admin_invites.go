@@ -115,11 +115,20 @@ func AdminRevokeInviteHandler(inv *store.InviteStore) http.HandlerFunc {
 	}
 }
 
-// InviteCheckHandler: GET /api/auth/invite/{token}, oeffentlich (rate-limited
-// im Router). 200 {tier} nur bei offener Einladung, sonst neutral 404.
+// InviteCheckHandler: POST /api/auth/invite/check mit {"token":"..."},
+// oeffentlich (rate-limited im Router). Der Token steht bewusst im Body, nie in
+// der URL (Access-Log). 200 {tier} nur bei offener Einladung, sonst neutral 404.
 func InviteCheckHandler(inv *store.InviteStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if i, ok := inv.Peek(chi.URLParam(r, "token")); ok {
+		var body struct {
+			Token string `json:"token"`
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			adminError(w, http.StatusBadRequest, "invalid_request")
+			return
+		}
+		if i, ok := inv.Peek(body.Token); ok {
 			adminJSON(w, http.StatusOK, map[string]string{"tier": i.Tier})
 			return
 		}

@@ -25,7 +25,7 @@ bestehen, die E-Mail-Bestätigung bleibt Pflicht.
   Ungültiges Token -> 400 `invite_invalid`, nie ein stilles Free-Konto. Die Atomarität gilt
   innerhalb eines gregor-api-Prozesses.
 - **Kein Ablaufdatum** in v1; Widerruf durch den Admin. Öffentlicher Vorab-Check
-  `GET /api/auth/invite/{token}` rate-limited, ohne Unterscheidung benutzt/widerrufen/unbekannt.
+  `POST /api/auth/invite/check` (Token im Body, nie in der URL — sonst steht er im Access-Log; 30/h je IP), ohne Unterscheidung benutzt/widerrufen/unbekannt.
 
 ## Verworfene Alternativen
 

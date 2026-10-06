@@ -75,11 +75,11 @@ Ein Admin kann einzelne externe Personen per Link einladen und ihnen beim Regist
 - `GET /api/admin/invites` → Liste ohne Token; Status offen/benutzt/widerrufen; `used_by` inkl. Benutzername/E-Mail, falls auflösbar.
 - `POST /api/admin/invites/{id}/revoke` → nur offene Einladungen widerrufbar, benutzte → 409.
 
-**4. Öffentlicher Vorab-Check.** `GET /api/auth/invite/{token}` ohne Auth, rate-limited wie Register: 200 `{tier}` bei offener Einladung, sonst 404 `invite_invalid`. Nach außen keine Unterscheidung zwischen benutzt, widerrufen und unbekannt.
+**4. Öffentlicher Vorab-Check.** `POST /api/auth/invite/check` mit JSON-Body `{"token":"..."}` ohne Auth, rate-limited 30/h je IP (der Token steht nie in der URL, sonst landet er im Access-Log): 200 `{tier}` bei offener Einladung, sonst 404 `invite_invalid`. Nach außen keine Unterscheidung zwischen benutzt, widerrufen und unbekannt.
 
 **5. Registrierung.** `authRequest` bekommt optional `invite`. Gesetzt und ungültig → 400 `invite_invalid`, es wird kein Konto angelegt (kein stilles Free-Konto). Reihenfolge in `RegisterHandler`: alle Validierungen (Username, Passwort, E-Mail, `UserExists`, `email_taken`) laufen vor dem Einlösen, damit ein Tippfehler die Einladung nicht verbrennt. Dann wird die Einladung unter dem Mutex reserviert (`used_by`/`used_at` gesetzt und persistiert) vor `SaveUser`; Nutzer entsteht mit `Tier=<invite.tier>`, `RequestedTier` leer. Schlägt `SaveUser` oder `ProvisionUserDirs` fehl, wird die Reservierung zurückgerollt. Bei zwei parallelen Registrierungen mit demselben Token gewinnt genau eine, die andere erhält 400 `invite_invalid`. E-Mail-Bestätigung unverändert Pflicht.
 
-**6. Register-Seite.** `load` liest `url.searchParams.get('invite')` und macht den Vorab-Check serverseitig. Gültig: Hinweis „Du wurdest eingeladen — Level: <Level>", Hidden-Field `invite`. Ungültig: klarer Hinweis, dass die Einladung nicht (mehr) gültig ist, normale Registrierung (Free) bleibt möglich. Bei Einladungslink ist der Google-Knopf ausgeblendet, weil OAuth/Passkey/Magic-Link keine Einladung kennen.
+**6. Register-Seite.** `load` liest `url.searchParams.get('invite')` und macht den Vorab-Check serverseitig. Gültig: Hinweis „Du wurdest eingeladen — Level: <Level>", Hidden-Field `invite`. Nicht prüfbar (429/5xx/Netz, Zustand `unknown`): Hinweis „Einladung konnte gerade nicht geprüft werden — du kannst dich trotzdem registrieren, die Einladung wird beim Absenden geprüft", Hidden-Field bleibt gesetzt. Nur bei 404: ungültig: klarer Hinweis, dass die Einladung nicht (mehr) gültig ist, normale Registrierung (Free) bleibt möglich. Bei Einladungslink ist der Google-Knopf ausgeblendet, weil OAuth/Passkey/Magic-Link keine Einladung kennen.
 
 **7. Admin-UI auf `/admin`.** Neue Card „Einladungen": Level-Auswahl (Default Standard), Notiz, Knopf „Einladung erstellen"; nach Erstellen Link mit Kopieren-Knopf und Hinweis „nur jetzt sichtbar". Tabelle mit Notiz, Level, erstellt am, Status (Offen / Benutzt von <Name> am <Datum> / Widerrufen am <Datum>) und Aktion „Widerrufen" (nur bei offen, mit ConfirmDialog).
 
@@ -138,6 +138,7 @@ Ein Admin kann einzelne externe Personen per Link einladen und ihnen beim Regist
 - **Nur Formular-Registrierung:** Google-OAuth, Passkey und Magic-Link kennen keine Einladung (`auth_oauth.go`, `passkey.go`, `auth_magic.go`); bei Einladungslink wird der Google-Knopf deshalb ausgeblendet.
 - **In-process Mutex:** Die atomare Einlösung setzt genau einen gregor-api-Prozess je Umgebung voraus (wie bei `TelegramTokenStore`). Mehrere Prozesse auf derselben Datendatei sind nicht abgesichert.
 - Ein Konto, das nach Einlösung nie bestätigt wird, verbraucht die Einladung trotzdem; der Admin erstellt dann eine neue.
+- **Rollback nur bei `SaveUser`-Fehler:** `ProvisionUserDirs` hat keinen Fehler-Rückgabewert; scheitert es, bleibt die Einladung verbraucht (Konto existiert bereits).
 - Das Level wirkt ab Konto-Anlage; spätere Änderung läuft über die bestehende Admin-Tier-Setzung.
 
 ## Architektur-Entscheidung (ADR)
@@ -148,3 +149,4 @@ Ein Admin kann einzelne externe Personen per Link einladen und ihnen beim Regist
 ## Changelog
 
 - 2026-10-06: Initial spec created (Issue #2519)
+- 2026-10-06: Vorab-Check auf POST-Body umgestellt (Token nicht im Access-Log), Adversary F001

@@ -56,7 +56,7 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 				r.URL.Path == "/api/auth/passkey/discoverable/begin" || r.URL.Path == "/api/auth/passkey/discoverable/finish" ||
 				strings.HasPrefix(r.URL.Path, "/api/internal/") ||
 				// Issue #2519: oeffentlicher Vorab-Check einer Einladung (Router: Rate-Limit).
-				strings.HasPrefix(r.URL.Path, "/api/auth/invite/") ||
+				r.URL.Path == "/api/auth/invite/check" ||
 				// Issue #2155 S2: /api/debug/ ist NICHT mehr oeffentlich --
 				// die Debug-Routen laufen durch Session + RequireAdmin.
 				strings.HasPrefix(r.URL.Path, "/api/webhooks/telegram/") {

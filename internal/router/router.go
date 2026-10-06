@@ -61,9 +61,10 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/auth/register",
 		registerLimiter.Middleware(handler.RegisterHandlerWithInvites(deps.Store, bcrypt.DefaultCost, *deps.Config, inviteStore)).ServeHTTP,
 	)
-	// Issue #2519: oeffentlicher Vorab-Check, gleiche Bremse wie Register.
-	inviteCheckLimiter := authmw.NewIPRateLimiter(5, time.Hour)
-	r.Get("/api/auth/invite/{token}", inviteCheckLimiter.Middleware(handler.InviteCheckHandler(inviteStore)).ServeHTTP)
+	// Issue #2519: oeffentlicher Vorab-Check per POST (Token im Body, nie im
+	// Access-Log); 30/h je IP, grosszuegiger als Register (der Check ist nur Komfort).
+	inviteCheckLimiter := authmw.NewIPRateLimiter(30, time.Hour)
+	r.Post("/api/auth/invite/check", inviteCheckLimiter.Middleware(handler.InviteCheckHandler(inviteStore)).ServeHTTP)
 	loginLimiter := authmw.NewIPRateLimiter(30, time.Hour)
 	r.Post("/api/auth/login",
 		loginLimiter.Middleware(handler.LoginHandler(deps.Store, deps.Config.SessionSecret)).ServeHTTP,

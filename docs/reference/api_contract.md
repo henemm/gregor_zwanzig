@@ -201,7 +201,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/password` | PUT |
 | `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
 | `/api/auth/profile` | GET, PUT |
-| `/api/auth/invite/{token}` | GET — öffentlich, rate-limited 5/h/IP; Vorab-Check einer Einladung (#2519) |
+| `/api/auth/invite/check` | POST — öffentlich, rate-limited 30/h/IP, Token im Body; Vorab-Check einer Einladung (#2519) |
 | `/api/auth/register` | POST |
 | `/api/auth/reset-password` | POST |
 | `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
@@ -265,7 +265,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 
 (80 Pfade, 100 Routen-Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
 hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`; #2519 ergänzt `/api/admin/invites`,
-`/api/admin/invites/{id}/revoke` und `/api/auth/invite/{token}`.)
+`/api/admin/invites/{id}/revoke` und `/api/auth/invite/check`.)
 
 ---
 
@@ -1585,7 +1585,7 @@ dieser Antwort. 400 `invalid_tier` / `note_too_long` / `invalid_request`, nichts
 **`POST /api/admin/invites/{id}/revoke`** -> 200 `AdminInvite`; 404 `not_found`, 409
 `invite_used` bei benutzter Einladung (bereits widerrufene: 200, unveraendert).
 
-**`GET /api/auth/invite/{token}`** (öffentlich, 5/h/IP) -> 200 `{"tier":"..."}` bei offener
+**`POST /api/auth/invite/check`**, Body `{"token":"..."}` (öffentlich, 30/h/IP; Token nie in der URL wegen Access-Log) -> 200 `{"tier":"..."}` bei offener
 Einladung, sonst 404 `{"error":"invite_invalid"}` (keine Unterscheidung benutzt/widerrufen/unbekannt).
 
 **`POST /api/auth/register`** nimmt optional `invite` (Token). Gesetzt und ungültig -> 400

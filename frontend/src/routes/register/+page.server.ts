@@ -7,22 +7,29 @@ import { apiBase as API } from '$lib/server/apiBase.js';
 export type InviteState =
 	| { status: 'none' }
 	| { status: 'valid'; token: string; tier: string }
-	| { status: 'invalid' };
+	| { status: 'invalid' }
+	// Pruefung nicht moeglich (429/5xx/Netz): Token bleibt im Formular, die
+	// Einladung wird beim Absenden geprueft (kein stilles Free-Konto).
+	| { status: 'unknown'; token: string };
 
-// Issue #2519: Vorab-Check des Einladungslinks (?invite=...) serverseitig.
+// Issue #2519: Vorab-Check des Einladungslinks (?invite=...) serverseitig per
+// POST (Token im Body, nie in der URL/Access-Log). Nur 404 heisst "ungueltig".
 async function checkInvite(token: string, clientIP: string): Promise<InviteState> {
 	try {
-		const resp = await fetch(`${API()}/api/auth/invite/${encodeURIComponent(token)}`, {
-			headers: clientIP ? { 'X-Real-IP': clientIP } : {},
+		const resp = await fetch(`${API()}/api/auth/invite/check`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
+			body: JSON.stringify({ token }),
 		});
 		if (resp.ok) {
 			const body = await resp.json().catch(() => ({}) as { tier?: string });
 			return { status: 'valid', token, tier: String(body?.tier ?? '') };
 		}
+		if (resp.status === 404) return { status: 'invalid' };
 	} catch {
-		// Netzfehler: wie ungueltig behandeln, normale Registrierung bleibt moeglich.
+		// Netzfehler: unbekannt, nicht ungueltig.
 	}
-	return { status: 'invalid' };
+	return { status: 'unknown', token };
 }
 
 export const load: PageServerLoad = async ({ url, request }) => {
