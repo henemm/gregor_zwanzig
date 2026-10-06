@@ -3,7 +3,7 @@ entity_id: fix_2047_s2_prod_gate
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: draft
+status: approved
 version: "1.0"
 tags: [ci, deploy, gate, staging]
 ---
@@ -12,7 +12,7 @@ tags: [ci, deploy, gate, staging]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-10-06: „approved“)
 
 ## Purpose
 
@@ -189,3 +189,4 @@ oder bei reinen Doku-Merges. Den Ablauf, der tatsächlich läuft, beschreibt dan
 ## Changelog
 
 - 2026-10-06: Erstfassung (Scheibe 2, nach Entparkung 2026-10-05)
+- 2026-10-06: ACs vom PO freigegeben
