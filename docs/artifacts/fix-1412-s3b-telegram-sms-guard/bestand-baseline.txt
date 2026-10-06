@@ -1,0 +1,436 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic-2138-triage
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 87 items / 16 deselected / 71 selected
+
+tests/tdd/test_telegram_test_mode_guard.py .......                       [  9%]
+tests/tdd/test_telegram_test_isolation.py ..........................     [ 46%]
+tests/unit/test_channel_blocked_missing_recipient.py ....                [ 52%]
+tests/tdd/test_channel_origin_guard_parity.py .....EE                    [ 61%]
+tests/tdd/test_sms_test_isolation.py ......                              [ 70%]
+tests/tdd/test_issue_650_telegram_foundation.py EE.EEF.ss                [ 83%]
+tests/unit/test_pii_log_maskierung_kanaele.py ............               [100%]
+
+==================================== ERRORS ====================================
+____ ERROR at setup of test_premium_sms_test_origin_switches_to_sandbox_key ____
+
+    @pytest.fixture()
+    def premium_sms_stub():
+>       stub = _SevenIoStub()
+               ^^^^^^^^^^^^^^
+
+tests/tdd/test_channel_origin_guard_parity.py:212: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_channel_origin_guard_parity.py:199: in __init__
+    probe = socket.socket()
+            ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'pytest_socket.disable_socket.<locals>.GuardedSocket'>, family = -1
+type = -1, proto = -1, fileno = None
+
+    def __new__(
+        cls,
+        family: socket.AddressFamily | int = -1,
+        type: socket.SocketKind | int = -1,
+        proto: int = -1,
+        fileno: int | None = None,
+    ) -> GuardedSocket:
+        if _is_unix_socket(family) and allow_unix_socket:
+            return super().__new__(cls, family, type, proto, fileno)  # type: ignore[call-arg] # noqa E501
+    
+>       raise SocketBlockedError()
+E       pytest_socket.SocketBlockedError: A test tried to use socket.socket.
+
+.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:133: SocketBlockedError
+_ ERROR at setup of test_premium_sms_test_origin_without_sandbox_key_hard_aborts _
+
+    @pytest.fixture()
+    def premium_sms_stub():
+>       stub = _SevenIoStub()
+               ^^^^^^^^^^^^^^
+
+tests/tdd/test_channel_origin_guard_parity.py:212: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_channel_origin_guard_parity.py:199: in __init__
+    probe = socket.socket()
+            ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'pytest_socket.disable_socket.<locals>.GuardedSocket'>, family = -1
+type = -1, proto = -1, fileno = None
+
+    def __new__(
+        cls,
+        family: socket.AddressFamily | int = -1,
+        type: socket.SocketKind | int = -1,
+        proto: int = -1,
+        fileno: int | None = None,
+    ) -> GuardedSocket:
+        if _is_unix_socket(family) and allow_unix_socket:
+            return super().__new__(cls, family, type, proto, fileno)  # type: ignore[call-arg] # noqa E501
+    
+>       raise SocketBlockedError()
+E       pytest_socket.SocketBlockedError: A test tried to use socket.socket.
+
+.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:133: SocketBlockedError
+_ ERROR at setup of test_send_with_reply_markup_puts_inline_keyboard_on_the_wire _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x79dccf55ca40>
+
+    @pytest.fixture
+    def fake_bot(monkeypatch):
+        """Startet einen lokalen Real-HTTP-Server und routet TELEGRAM_API_BASE dorthin."""
+        state = _FakeBotState()
+>       server = HTTPServer(("127.0.0.1", 0), _make_handler(state))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_issue_650_telegram_foundation.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'pytest_socket.disable_socket.<locals>.GuardedSocket'>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = -1, fileno = None
+
+    def __new__(
+        cls,
+        family: socket.AddressFamily | int = -1,
+        type: socket.SocketKind | int = -1,
+        proto: int = -1,
+        fileno: int | None = None,
+    ) -> GuardedSocket:
+        if _is_unix_socket(family) and allow_unix_socket:
+            return super().__new__(cls, family, type, proto, fileno)  # type: ignore[call-arg] # noqa E501
+    
+>       raise SocketBlockedError()
+E       pytest_socket.SocketBlockedError: A test tried to use socket.socket.
+
+.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:133: SocketBlockedError
+___ ERROR at setup of test_send_without_reply_markup_has_no_reply_markup_key ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x79dccf55d220>
+
+    @pytest.fixture
+    def fake_bot(monkeypatch):
+        """Startet einen lokalen Real-HTTP-Server und routet TELEGRAM_API_BASE dorthin."""
+        state = _FakeBotState()
+>       server = HTTPServer(("127.0.0.1", 0), _make_handler(state))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_issue_650_telegram_foundation.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'pytest_socket.disable_socket.<locals>.GuardedSocket'>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = -1, fileno = None
+
+    def __new__(
+        cls,
+        family: socket.AddressFamily | int = -1,
+        type: socket.SocketKind | int = -1,
+        proto: int = -1,
+        fileno: int | None = None,
+    ) -> GuardedSocket:
+        if _is_unix_socket(family) and allow_unix_socket:
+            return super().__new__(cls, family, type, proto, fileno)  # type: ignore[call-arg] # noqa E501
+    
+>       raise SocketBlockedError()
+E       pytest_socket.SocketBlockedError: A test tried to use socket.socket.
+
+.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:133: SocketBlockedError
+__________ ERROR at setup of test_set_then_get_my_commands_roundtrip ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x79dccf55dbb0>
+
+    @pytest.fixture
+    def fake_bot(monkeypatch):
+        """Startet einen lokalen Real-HTTP-Server und routet TELEGRAM_API_BASE dorthin."""
+        state = _FakeBotState()
+>       server = HTTPServer(("127.0.0.1", 0), _make_handler(state))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_issue_650_telegram_foundation.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'pytest_socket.disable_socket.<locals>.GuardedSocket'>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = -1, fileno = None
+
+    def __new__(
+        cls,
+        family: socket.AddressFamily | int = -1,
+        type: socket.SocketKind | int = -1,
+        proto: int = -1,
+        fileno: int | None = None,
+    ) -> GuardedSocket:
+        if _is_unix_socket(family) and allow_unix_socket:
+            return super().__new__(cls, family, type, proto, fileno)  # type: ignore[call-arg] # noqa E501
+    
+>       raise SocketBlockedError()
+E       pytest_socket.SocketBlockedError: A test tried to use socket.socket.
+
+.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:133: SocketBlockedError
+_________ ERROR at setup of test_set_my_commands_accepts_explicit_list _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x79dccf55c1a0>
+
+    @pytest.fixture
+    def fake_bot(monkeypatch):
+        """Startet einen lokalen Real-HTTP-Server und routet TELEGRAM_API_BASE dorthin."""
+        state = _FakeBotState()
+>       server = HTTPServer(("127.0.0.1", 0), _make_handler(state))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_issue_650_telegram_foundation.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'pytest_socket.disable_socket.<locals>.GuardedSocket'>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = -1, fileno = None
+
+    def __new__(
+        cls,
+        family: socket.AddressFamily | int = -1,
+        type: socket.SocketKind | int = -1,
+        proto: int = -1,
+        fileno: int | None = None,
+    ) -> GuardedSocket:
+        if _is_unix_socket(family) and allow_unix_socket:
+            return super().__new__(cls, family, type, proto, fileno)  # type: ignore[call-arg] # noqa E501
+    
+>       raise SocketBlockedError()
+E       pytest_socket.SocketBlockedError: A test tried to use socket.socket.
+
+.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:133: SocketBlockedError
+=================================== FAILURES ===================================
+__________ test_send_with_reply_markup_unreachable_raises_outputerror __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x79dccf55c7d0>
+
+    def test_send_with_reply_markup_unreachable_raises_outputerror(monkeypatch):
+        """
+        GIVEN: ein unerreichbarer Bot-API-Endpoint
+        WHEN: send(..., reply_markup=...) aufgerufen wird
+        THEN: ein OutputError(channel="telegram") (KEIN TypeError) wird geworfen.
+        """
+        # Port 1 ist nicht bindbar → echte ConnectError (kein Mock).
+        monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", "http://127.0.0.1:1")
+        output = TelegramOutput(_LOCAL_SETTINGS)
+    
+        with pytest.raises(OutputError) as exc_info:
+>           output.send("Test #650", "Body", reply_markup=_INLINE_KEYBOARD)
+
+tests/tdd/test_issue_650_telegram_foundation.py:223: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/output/channels/telegram.py:465: in send
+    response = self._post(url, payload, chat_id=chat_id)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/output/channels/telegram.py:391: in _post
+    response = httpx.post(url, json=payload, timeout=self._timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_api.py:304: in post
+    return request(
+.venv/lib/python3.12/site-packages/httpx/_api.py:109: in request
+    return client.request(
+.venv/lib/python3.12/site-packages/httpx/_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:914: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.12/site-packages/httpx/_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.12/site-packages/httpx/_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/app/egress_guard.py:110: in _guarded_httpx_handle_request
+    return _orig_httpx_handle_request(self, request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_transports/default.py:250: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection_pool.py:256: in handle_request
+    raise exc from None
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection_pool.py:236: in handle_request
+    response = connection.handle_request(
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection.py:101: in handle_request
+    raise exc
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection.py:78: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpcore/_sync/connection.py:124: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpcore/_backends/sync.py:208: in connect_tcp
+    sock = socket.create_connection(
+/usr/lib/python3.12/socket.py:828: in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_args = ('127.0.0.1', 1, 0, <SocketKind.SOCK_STREAM: 1>), _kwargs = {}
+
+    def _guarded_getaddrinfo(*_args: Any, **_kwargs: Any) -> Any:
+>       raise SocketBlockedError("A test tried to use socket.getaddrinfo.")
+E       pytest_socket.SocketBlockedError: A test tried to use socket.getaddrinfo.
+
+.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:110: SocketBlockedError
+=============================== warnings summary ===============================
+tests/tdd/test_channel_origin_guard_parity.py::test_premium_sms_test_origin_switches_to_sandbox_key
+tests/tdd/test_channel_origin_guard_parity.py::test_premium_sms_test_origin_without_sandbox_key_hard_aborts
+tests/tdd/test_issue_650_telegram_foundation.py::test_send_with_reply_markup_puts_inline_keyboard_on_the_wire
+tests/tdd/test_issue_650_telegram_foundation.py::test_send_without_reply_markup_has_no_reply_markup_key
+tests/tdd/test_issue_650_telegram_foundation.py::test_set_then_get_my_commands_roundtrip
+tests/tdd/test_issue_650_telegram_foundation.py::test_set_my_commands_accepts_explicit_list
+  /home/hem/gregor_zwanzig/.claude/worktrees/epic-2138-triage/.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:133: UserWarning: A test tried to use socket.socket.
+    raise SocketBlockedError()
+
+tests/tdd/test_issue_650_telegram_foundation.py::test_send_with_reply_markup_unreachable_raises_outputerror
+  /home/hem/gregor_zwanzig/.claude/worktrees/epic-2138-triage/.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:110: UserWarning: A test tried to use socket.getaddrinfo.
+    raise SocketBlockedError("A test tried to use socket.getaddrinfo.")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+_ TestTestModeBlocksProdChatId.test_diverging_test_chat_id_blocks_send_without_any_post _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+_ TestGuardBlockVisibleInCompareFailedTally.test_daily_run_counts_guard_blocked_preset_as_failed _
+------------------------------ Captured log call -------------------------------
+ERROR    scheduler.dispatch:scheduler_dispatch_service.py:165 Compare preset cp-guarded failed: [telegram] Herkunftssperre (Issue #1476): Code laeuft aus einem Testlauf-Verzeichnis (nicht Prod-/Staging-Checkout), aber keine Test-Chat-ID konfiguriert (GZ_TELEGRAM_TEST_CHAT_ID) -- Versand an chat_id='777000111' abgebrochen.
+___________________ test_existing_1288_chat_guard_unchanged ____________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+___________ test_email_test_origin_switches_away_from_prod_recipient ___________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:676 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@henemm.com'] auf gregor-test@henemm.com umgeschaltet.
+_________________ test_sms_test_origin_switches_to_sandbox_key _________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:145 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+_____ test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[callback] ______
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2098 Telegram answer_callback_query failed for …789: [telegram] Netzrand im Test absichtlich gescheitert
+___ test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[command_reply] ___
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2025 Telegram command reply failed for …789: [telegram] Netzrand im Test absichtlich gescheitert
+______ test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[delete] _______
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2083 Telegram delete_message failed for …789/42: [telegram] Netzrand im Test absichtlich gescheitert
+_______ test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[edit] ________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2067 Telegram edit_message_text failed for …789/42: [telegram] Netzrand im Test absichtlich gescheitert
+______ test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[message] ______
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2044 Telegram message failed for …789: [telegram] Netzrand im Test absichtlich gescheitert
+___________ test_ac_c_registrierungszeile_nennt_chat_id_nur_maskiert ___________
+------------------------------ Captured log call -------------------------------
+INFO     services.inbound_telegram_reader:inbound_telegram_reader.py:641 Telegram chat_id …789 via token registriert
+________ test_ac_d_nicht_autorisierter_absender_erscheint_nur_maskiert _________
+------------------------------ Captured log call -------------------------------
+DEBUG    services.inbound_email_reader:inbound_email_reader.py:306 Ignoring email from: '***@example.org'
+__________ test_ac_d_unverifizierter_absender_erscheint_nur_maskiert ___________
+------------------------------ Captured log call -------------------------------
+WARNING  services.inbound_email_reader:inbound_email_reader.py:310 Sender not verified: '***@example.org'
+_____________ test_ac_d_spf_dkim_fehlschlag_erscheint_nur_maskiert _____________
+------------------------------ Captured log call -------------------------------
+WARNING  services.inbound_email_reader:inbound_email_reader.py:313 SPF/DKIM check failed: '***@example.org'
+___________ test_ac_d_unaufgeloester_absender_erscheint_nur_maskiert ___________
+------------------------------ Captured log call -------------------------------
+WARNING  services.inbound_email_reader:inbound_email_reader.py:196 Unresolved/ambiguous sender: '***@example.org'
+_ test_ac_b_guard_maskiert_jede_listenadresse[smtp.resend.com-Resend-Allowlist-Guard blockiert] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:742 Resend-Allowlist-Guard blockiert 1 Empfänger, die keinem echten Nutzerprofil zugeordnet werden konnten (Issue #1147/#1219): ['gregor-test@henemm.com, ***@example.org']
+_ test_ac_b_guard_maskiert_jede_listenadresse[mail.henemm.com-Lokal-Guard blockiert] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:782 Lokal-Guard blockiert 1 Empfaenger ausserhalb von LOCAL_MAIL_DOMAINS bzw. mit reservierter Test-Domain (Issue #1235) bei Host 'mail.henemm.com': ['gregor-test@henemm.com, ***@example.org']
+=========================== short test summary info ============================
+PASSED tests/tdd/test_telegram_test_mode_guard.py::TestTestModeBlocksProdChatId::test_missing_test_chat_id_blocks_send_without_any_post
+PASSED tests/tdd/test_telegram_test_mode_guard.py::TestTestModeBlocksProdChatId::test_diverging_test_chat_id_blocks_send_without_any_post
+PASSED tests/tdd/test_telegram_test_mode_guard.py::test_matching_test_chat_id_still_sends
+PASSED tests/tdd/test_telegram_test_mode_guard.py::test_non_test_mode_send_stays_untouched
+PASSED tests/tdd/test_telegram_test_mode_guard.py::test_profile_flagged_test_user_is_blocked_via_with_user_profile
+PASSED tests/tdd/test_telegram_test_mode_guard.py::TestGuardBlockVisibleInCompareFailedTally::test_send_compare_report_reraises_config_error_after_email
+PASSED tests/tdd/test_telegram_test_mode_guard.py::TestGuardBlockVisibleInCompareFailedTally::test_daily_run_counts_guard_blocked_preset_as_failed
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_blocks_mismatched_bot_token_before_transport[send]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_blocks_mismatched_bot_token_before_transport[_send_fallback_without_parse_mode]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_blocks_mismatched_bot_token_before_transport[delete_message]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_blocks_mismatched_bot_token_before_transport[edit_message_text]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_blocks_mismatched_bot_token_before_transport[set_my_commands]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_fails_closed_without_test_bot_token[send]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_fails_closed_without_test_bot_token[_send_fallback_without_parse_mode]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_fails_closed_without_test_bot_token[delete_message]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_fails_closed_without_test_bot_token[edit_message_text]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_token_guard_fails_closed_without_test_bot_token[set_my_commands]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_chat_argument_guard_blocks_wrong_target_chat[_send_fallback_without_parse_mode]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_chat_argument_guard_blocks_wrong_target_chat[delete_message]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_chat_argument_guard_blocks_wrong_target_chat[edit_message_text]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_pass_through_matching_test_config[send]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_pass_through_matching_test_config[_send_fallback_without_parse_mode]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_pass_through_matching_test_config[delete_message]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_pass_through_matching_test_config[edit_message_text]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_pass_through_matching_test_config[set_my_commands]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_for_testing_swaps_telegram_bot_token_both_branches
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_are_noop_in_production_mode[send]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_are_noop_in_production_mode[_send_fallback_without_parse_mode]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_are_noop_in_production_mode[delete_message]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_are_noop_in_production_mode[edit_message_text]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_guards_are_noop_in_production_mode[set_my_commands]
+PASSED tests/tdd/test_telegram_test_isolation.py::test_existing_1288_chat_guard_unchanged
+PASSED tests/tdd/test_telegram_test_isolation.py::test_inventory_flip_to_test_access
+PASSED tests/unit/test_channel_blocked_missing_recipient.py::test_email_blocked_when_mail_to_missing_no_smtp_attempt
+PASSED tests/unit/test_channel_blocked_missing_recipient.py::test_telegram_blocked_when_chat_id_missing_no_api_call
+PASSED tests/unit/test_channel_blocked_missing_recipient.py::test_sms_blocked_when_sms_to_missing_distinct_reason_code
+PASSED tests/unit/test_channel_blocked_missing_recipient.py::test_sms_missing_api_key_keeps_distinct_cause_from_missing_recipient
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_email_test_origin_switches_away_from_prod_recipient
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_email_production_origin_delivers_unchanged
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_test_origin_switches_to_sandbox_key
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_test_origin_without_sandbox_key_hard_aborts
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_production_origin_delivers_unchanged
+PASSED tests/tdd/test_sms_test_isolation.py::test_guard_blocks_mismatched_key_before_transport
+PASSED tests/tdd/test_sms_test_isolation.py::test_guard_fails_closed_without_sandbox_key
+PASSED tests/tdd/test_sms_test_isolation.py::test_guard_passes_through_matching_sandbox_key
+PASSED tests/tdd/test_sms_test_isolation.py::test_for_testing_swaps_seven_api_key_both_branches
+PASSED tests/tdd/test_sms_test_isolation.py::test_guard_is_noop_in_production_mode
+PASSED tests/tdd/test_sms_test_isolation.py::test_inventory_flip_to_test_access
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_telegramoutput_still_satisfies_protocol
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_bot_commands_structure_is_telegram_valid
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[callback]
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[command_reply]
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[delete]
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[edit]
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_c_telegram_fehlerzeile_nennt_chat_id_nur_maskiert[message]
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_c_registrierungszeile_nennt_chat_id_nur_maskiert
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_d_nicht_autorisierter_absender_erscheint_nur_maskiert
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_d_unverifizierter_absender_erscheint_nur_maskiert
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_d_spf_dkim_fehlschlag_erscheint_nur_maskiert
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_d_unaufgeloester_absender_erscheint_nur_maskiert
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_b_guard_maskiert_jede_listenadresse[smtp.resend.com-Resend-Allowlist-Guard blockiert]
+PASSED tests/unit/test_pii_log_maskierung_kanaele.py::test_ac_b_guard_maskiert_jede_listenadresse[mail.henemm.com-Lokal-Guard blockiert]
+SKIPPED [1] tests/tdd/test_issue_650_telegram_foundation.py:268: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+SKIPPED [1] tests/tdd/test_issue_650_telegram_foundation.py:292: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+ERROR tests/tdd/test_channel_origin_guard_parity.py::test_premium_sms_test_origin_switches_to_sandbox_key
+ERROR tests/tdd/test_channel_origin_guard_parity.py::test_premium_sms_test_origin_without_sandbox_key_hard_aborts
+ERROR tests/tdd/test_issue_650_telegram_foundation.py::test_send_with_reply_markup_puts_inline_keyboard_on_the_wire
+ERROR tests/tdd/test_issue_650_telegram_foundation.py::test_send_without_reply_markup_has_no_reply_markup_key
+ERROR tests/tdd/test_issue_650_telegram_foundation.py::test_set_then_get_my_commands_roundtrip
+ERROR tests/tdd/test_issue_650_telegram_foundation.py::test_set_my_commands_accepts_explicit_list
+FAILED tests/tdd/test_issue_650_telegram_foundation.py::test_send_with_reply_markup_unreachable_raises_outputerror
+= 1 failed, 62 passed, 2 skipped, 16 deselected, 7 warnings, 6 errors in 3.58s =

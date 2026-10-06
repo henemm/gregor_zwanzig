@@ -1,0 +1,44 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic-2138-triage
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 16 items
+
+tests/tdd/test_issue_650_telegram_foundation.py .......ss                [ 56%]
+tests/tdd/test_channel_origin_guard_parity.py .......                    [100%]
+
+==================================== PASSES ====================================
+__________ test_send_with_reply_markup_unreachable_raises_outputerror __________
+------------------------------ Captured log call -------------------------------
+ERROR    output.channels.telegram:telegram.py:499 Telegram send failed: [Errno 111] Connection refused
+___________ test_email_test_origin_switches_away_from_prod_recipient ___________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:676 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@henemm.com'] auf gregor-test@henemm.com umgeschaltet.
+_________________ test_sms_test_origin_switches_to_sandbox_key _________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:145 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+_____________ test_premium_sms_test_origin_switches_to_sandbox_key _____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:145 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+=========================== short test summary info ============================
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_send_with_reply_markup_puts_inline_keyboard_on_the_wire
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_send_without_reply_markup_has_no_reply_markup_key
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_telegramoutput_still_satisfies_protocol
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_set_then_get_my_commands_roundtrip
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_set_my_commands_accepts_explicit_list
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_send_with_reply_markup_unreachable_raises_outputerror
+PASSED tests/tdd/test_issue_650_telegram_foundation.py::test_bot_commands_structure_is_telegram_valid
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_email_test_origin_switches_away_from_prod_recipient
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_email_production_origin_delivers_unchanged
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_test_origin_switches_to_sandbox_key
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_test_origin_without_sandbox_key_hard_aborts
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_production_origin_delivers_unchanged
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_premium_sms_test_origin_switches_to_sandbox_key
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_premium_sms_test_origin_without_sandbox_key_hard_aborts
+SKIPPED [1] tests/tdd/test_issue_650_telegram_foundation.py:268: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+SKIPPED [1] tests/tdd/test_issue_650_telegram_foundation.py:292: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+======================== 14 passed, 2 skipped in 2.88s =========================
