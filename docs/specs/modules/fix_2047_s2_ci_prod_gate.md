@@ -66,7 +66,7 @@ sauber „ausgeliefert", „bereits ausgeliefert" und „fehlgeschlagen".
 | `tests/tdd/test_ci_deploy_gate.py` | MODIFY | Wird in /40 neu geschrieben (`# doc-compliance-test`) |
 | `tests/test_ci_wartet_auf_staging_nachweis.py` | DELETE | Prüfte das entfallene Warte-Skript |
 | `scripts/ci_wait_for_verdict.sh` | DELETE | Nie ausgeliefert, entfällt ersatzlos (nur im Arbeitsbaum untracked) |
-| `docs/adr/0084-ci-auto-deploy-nur-mit-echtem-e2e-verify-nachweis.md` | CREATE | Neues ADR (Nummer vor dem Anlegen per `git ls-tree origin/main docs/adr/` bestätigen; ist 0084 belegt, nächste freie Nummer) |
+| `docs/adr/0085-ci-auto-deploy-nur-mit-echtem-e2e-verify-nachweis.md` | CREATE | Neues ADR (Nummer vor dem Anlegen per `git ls-tree origin/main docs/adr/` bestätigen; ist 0085 belegt, nächste freie Nummer) |
 | `docs/adr/README.md` | MODIFY | Index-Eintrag; `tests/test_adr_index_drift.py` muss grün bleiben |
 | `.claude/commands/e2e-verify.md` | MODIFY | Veralteter Dateiname `e2e_verified.json` (ca. Z.69) auf `.claude/e2e_verified/<sha>.json` |
 | `docs/reference/operations_playbook.md` | MODIFY | Kurz: Selbsttest im CI-Pfad, Idempotenz, `concurrency` |
@@ -144,7 +144,7 @@ sauber „ausgeliefert", „bereits ausgeliefert" und „fehlgeschlagen".
 - [ ] **AC-7:** Given die Ausgabe des Deploy-Skripts enthält „bereits ausgeliefert" / When der Deploy-Schritt endet / Then steht `already=true` im Step-Output, andernfalls `already=false`.
 - [ ] **AC-8:** Given beliebige Kombination aus Jobstatus, `open` und `already` / When die `if`-Bedingungen der drei Telegram-Schritte ausgewertet werden / Then feuert höchstens ein Schritt je Lauf, „deployed" nie bei `already=true`, „FEHLGESCHLAGEN" nur bei `failure()`, und bei `closed` keiner.
 - [ ] **AC-9:** Given `tests/test_ci_prod_gate.py` aus #2516 und das ADR-Index-Drift-Test / When sie nach dieser Änderung laufen / Then sind beide grün, und `tests/test_ci_wartet_auf_staging_nachweis.py` sowie `scripts/ci_wait_for_verdict.sh` existieren nicht mehr.
-- [ ] **AC-10:** Given das neue ADR 0084 / When `docs/adr/README.md` und die ADR-Dateien verglichen werden / Then ist es als Ergänzung zu ADR-0006 im Index gelistet und hält fest: CI schreibt nie einen Nachweis, prüft einmal, liefert idempotent aus und führt den Selbsttest aus.
+- [ ] **AC-10:** Given das neue ADR 0085 / When `docs/adr/README.md` und die ADR-Dateien verglichen werden / Then ist es als Ergänzung zu ADR-0006 im Index gelistet und hält fest: CI schreibt nie einen Nachweis, prüft einmal, liefert idempotent aus und führt den Selbsttest aus.
 - [ ] **AC-11:** Given `.claude/commands/e2e-verify.md` und die Referenzdoku / When nach dieser Änderung gelesen / Then nennt `e2e-verify.md` den Nachweis-Pfad `.claude/e2e_verified/<sha>.json` statt `e2e_verified.json`, und Playbook bzw. Gate-Referenz erwähnen Selbsttest, Idempotenz mit Notausgang und `concurrency`.
 
 ## Known Limitations

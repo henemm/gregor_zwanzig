@@ -66,7 +66,7 @@ python3 .claude/hooks/e2e_commit_gate.py <<< '{"tool_input":{"command":"git comm
 
 ## Schritt 3a: frontend-only — visuelle Pruefung
 
-**Alternativ (empfohlen):** `staging-validator` Agent via `/5-implement` Step 9 — loggt sich automatisch in Staging ein, prüft alle ACs aus der Spec via Playwright und schreibt `e2e_verified.json` mit `verified_commit` (aktueller HEAD-SHA). Voraussetzung: aktiver Workflow mit genehmigter Spec mit AC-Format `**AC-N:** Given.../When.../Then...`.
+**Alternativ (empfohlen):** `staging-validator` Agent via `/5-implement` Step 9 — loggt sich automatisch in Staging ein, prüft alle ACs aus der Spec via Playwright und schreibt `.claude/e2e_verified/<sha>.json` mit `verified_commit` (aktueller HEAD-SHA). Voraussetzung: aktiver Workflow mit genehmigter Spec mit AC-Format `**AC-N:** Given.../When.../Then...`.
 
 Manuell (Fallback):
 

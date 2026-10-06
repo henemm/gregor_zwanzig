@@ -302,6 +302,44 @@ def test_skript_exitcode_bleibt_massgeblich(tmp_path, ausgabe):
     assert rc != 0, f"Exit 1 des Deploy-Skripts wurde verschluckt\n{out}"
 
 
+def _infra_deploy_skript() -> Path:
+    infra = Path(os.environ.get("GZ_INFRA_DIR", "/home/hem/henemm-infra"))
+    skript = infra / "scripts" / "deploy-gregor-prod.sh"
+    if not skript.is_file():
+        pytest.skip(f"henemm-infra nicht lesbar ({skript}) — Kopplung nur auf dem Server pruefbar")
+    return skript
+
+
+def _idempotenz_echos(text: str) -> tuple[list[str], list[str]]:
+    """(Kurzschluss-echos, Notausgang-echos) aus dem GZ_FORCE_REDEPLOY-Block des Skripts."""
+    lines = text.splitlines()
+    start = next((i for i, ln in enumerate(lines) if 'GZ_FORCE_REDEPLOY:-' in ln and ln.strip().startswith("if ")), None)
+    assert start is not None, "Deploy-Skript hat keinen GZ_FORCE_REDEPLOY-Block (Idempotenz-Kurzschluss fehlt)"
+    els = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == "else"), None)
+    fi = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == "fi"), None)
+    assert els is not None and fi is not None and start < els < fi, "GZ_FORCE_REDEPLOY-Block unvollstaendig"
+    notausgang = [ln for ln in lines[start + 1:els] if ln.strip().startswith("echo ") and ">>" not in ln]
+    kurz = [ln for ln in lines[els + 1:fi] if ln.strip().startswith("echo ")]
+    assert any(ln.strip() == "exit 0" for ln in lines[els + 1:fi]), "Kurzschluss endet nicht mit exit 0"
+    assert kurz, "Kurzschluss gibt keine Zeile aus"
+    assert notausgang, "Notausgang gibt keine Zeile aus"
+    return kurz, notausgang
+
+
+def test_ci_suchtext_passt_zum_echten_deploy_skript():
+    """AC-7 (Kopplung): GIVEN das echte deploy-gregor-prod.sh (henemm-infra) WHEN ci.yml danach sucht
+    THEN steht der Suchtext in der Kurzschluss-Zeile und NICHT in der Notausgang-Zeile."""
+    skript = _infra_deploy_skript()
+    _, deploy = _deploy_step()
+    such = re.findall(r'grep\s+-\w*q\w*\s+"([^"]+)"', _run(deploy))
+    assert len(such) == 1, f"erwartet genau einen grep-Suchtext im Deploy-Schritt, gefunden {such}"
+    kurz, notausgang = _idempotenz_echos(skript.read_text(encoding="utf-8"))
+    assert any(such[0] in ln for ln in kurz), f"Suchtext {such[0]!r} fehlt in der Kurzschluss-Zeile: {kurz}"
+    assert not any(such[0] in ln for ln in notausgang), (
+        f"Notausgang-Zeile enthaelt {such[0]!r} — CI setzte dann already=true: {notausgang}"
+    )
+
+
 # --- AC-6 / AC-8: Telegram-Meldungen schliessen sich aus -------------------------
 
 
@@ -377,17 +415,17 @@ def test_ci_yml_ruft_kein_warte_skript_auf():
 # --- AC-10: ADR -------------------------------------------------------------------
 
 
-def _adr_0084() -> Path:
-    files = sorted((REPO_ROOT / "docs" / "adr").glob("0084-*.md"))
-    assert len(files) == 1, f"erwartet genau eine docs/adr/0084-*.md, gefunden {files}"
+def _adr_0085() -> Path:
+    files = sorted((REPO_ROOT / "docs" / "adr").glob("0085-*.md"))
+    assert len(files) == 1, f"erwartet genau eine docs/adr/0085-*.md, gefunden {files}"
     return files[0]
 
 
-def test_adr_0084_ergaenzt_adr_0006_und_steht_im_index():
-    """AC-10: ADR-0084 existiert, ergaenzt ADR-0006 und ist im Index gelistet."""
-    adr = _adr_0084()
+def test_adr_0085_ergaenzt_adr_0006_und_steht_im_index():
+    """AC-10: ADR-0085 existiert, ergaenzt ADR-0006 und ist im Index gelistet."""
+    adr = _adr_0085()
     text = adr.read_text(encoding="utf-8")
-    assert "0006" in text, "ADR-0084 muss ADR-0006 referenzieren"
+    assert "0006" in text, "ADR-0085 muss ADR-0006 referenzieren"
     index = (REPO_ROOT / "docs" / "adr" / "README.md").read_text(encoding="utf-8")
     assert adr.name in index, f"ADR-Index verlinkt {adr.name} nicht"
 
@@ -400,10 +438,10 @@ def test_adr_0084_ergaenzt_adr_0006_und_steht_im_index():
         ("Selbsttest", r"Selbsttest|prod_selftest"),
     ],
 )
-def test_adr_0084_haelt_die_entscheidung_fest(begriff, muster):
+def test_adr_0085_haelt_die_entscheidung_fest(begriff, muster):
     """AC-10: das ADR haelt fest: kein Nachweis-Schreiber, idempotente Auslieferung, Selbsttest."""
-    text = _adr_0084().read_text(encoding="utf-8")
-    assert re.search(muster, text, re.IGNORECASE), f"ADR-0084 nennt '{begriff}' nicht"
+    text = _adr_0085().read_text(encoding="utf-8")
+    assert re.search(muster, text, re.IGNORECASE), f"ADR-0085 nennt '{begriff}' nicht"
 
 
 # --- AC-11: Doku ------------------------------------------------------------------
