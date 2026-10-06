@@ -14,6 +14,7 @@
 // Auth via storageState (playwright.config 'tests'-Projekt → admin.json).
 
 import { test, expect, type Page } from '@playwright/test';
+import { dragDndZoneItem } from './helpers';
 
 const TRIP_ID = 'e2e-498-autosave';
 const TRIP_NAME = 'E2E #498 Datum-Autosave';
@@ -629,23 +630,18 @@ test('AC-16 (#1389): beide Knöpfe im selben Tick — der Erfolgsbanner bleibt v
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Zieht die Etappen-Karte an Position `fromIdx` auf die an Position `toIdx`.
- *  Der Etappen-Streifen nutzt das native HTML5-Drag-API (EtappenStrip:
- *  `draggable={true}` + ondragstart/ondragover) — dafür ist Playwrights
- *  `dragTo()` das passende Werkzeug (es erzeugt echte Eingabe-Ereignisse, aus
- *  denen Chromium die Drag-Ereignisse ableitet).
+ *  Seit #2288 sortiert der Etappen-Streifen über den geteilten Baustein
+ *  `SortableList` (svelte-dnd-action, Pointer-Events) — wie alle anderen
+ *  Sortier-Flächen. Darum die geteilte Ziehgeste `dragDndZoneItem` (#1771 S1):
+ *  Maus-Sequenz über die 3px-Schwelle und Warten auf das `finalize`-Ereignis,
+ *  nicht Playwrights `dragTo()` (das erzeugt nur einen Move-Schritt).
  *
- *  Zwei bekannte Fallen dieses Repos sind hier berücksichtigt:
- *  1) Scrollen — `boundingBox()` scrollt nicht selbst; liegt der Streifen
- *     außerhalb des Ausschnitts, landet die Maus im Leeren. `dragTo()` scrollt
- *     implizit mit, der zusätzliche `scrollIntoViewIfNeeded()` macht es
- *     unabhängig von dieser Zusicherung.
+ *  Fallen:
+ *  1) Scrollen — erledigt `dragDndZoneItem` (scrollIntoViewIfNeeded vor boundingBox).
  *  2) Umsortier-Animation/Neuaufbau — der `{#each}` ist nach `stage.id`
- *     verschlüsselt, die Karten wechseln beim Ablegen ihren Platz im DOM.
- *     Deshalb wird danach auf den neuen Namen an der Zielposition GEWARTET
- *     statt sofort weiterzuklicken.
+ *     verschlüsselt; Tests warten danach auf den neuen Namen an der Zielposition.
  *  3) #2496 F3: Pausen-Karten tragen `stage-card-pause-{i}` statt
- *     `stage-card-{i}` (StageCard leitet die Testid von isPauseStage ab).
- *     Der Ziel-Locator deckt beide Varianten ab. */
+ *     `stage-card-{i}`. Der Ziel-Locator deckt beide Varianten ab. */
 function stageCardAt(page: Page, idx: number) {
 	return page.locator(
 		`[data-testid="stage-card-${idx}"], [data-testid="stage-card-pause-${idx}"]`
@@ -655,9 +651,7 @@ function stageCardAt(page: Page, idx: number) {
 async function dragStageCard(page: Page, fromIdx: number, toIdx: number): Promise<void> {
 	const source = page.getByTestId(`stage-card-${fromIdx}`);
 	const target = stageCardAt(page, toIdx);
-	await source.scrollIntoViewIfNeeded();
-	await target.scrollIntoViewIfNeeded();
-	await source.dragTo(target);
+	await dragDndZoneItem(page, source, target);
 }
 
 test('AC-17 (#1390): Umsortieren bei offener Rückfrage lässt beide Knöpfe erreichbar', async ({
@@ -1090,7 +1084,7 @@ test('AC-29 (#1393 F002): die bearbeitete Etappe ans Ende ziehen — Rückfrage 
 // war. Stiller Datenverlust an einer fremden Etappe.
 //
 // F002: Der Etappen-Streifen meldet jede Zwischenposition WÄHREND des Ziehens
-// (`ondragover`, nicht erst beim Ablegen). Streifte die gezogene Karte unterwegs
+// (früher `ondragover`; seit #2288 nur noch beim Ablegen — die Absicherung bleibt). Streifte die gezogene Karte unterwegs
 // die letzte Position, galt die Rückfrage als gegenstandslos und wurde mitten in
 // der Geste als „Nur diese Etappe" beantwortet und geschrieben.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1141,7 +1135,7 @@ test('AC-30 (#1393 R2-F001): „Nur diese Etappe" fasst eine fremde, bewusst ge�
  *  streifen, auf `toIdx` ablegen. Bewusst nicht `dragTo()` — das springt von der
  *  Quelle zum Ziel und überspringt jeden Zwischenzustand, genau den, in dem
  *  R2-F002 zuschlägt. Playwright braucht je Station zwei Bewegungen, damit
- *  Chromium `dragover` erzeugt; die Karten-Positionen werden nach jeder Station
+ *  Chromium Zwischenzustände erzeugt; die Karten-Positionen werden nach jeder Station
  *  neu gemessen, weil der Streifen live umsortiert. */
 async function dragStageCardVia(
 	page: Page,
