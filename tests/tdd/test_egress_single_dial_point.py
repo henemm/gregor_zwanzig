@@ -53,8 +53,10 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Regel-Budget (CLAUDE.md): dieser Waechter ersetzt keine bestehende Regel und
-# traegt daher ein Pruefdatum von +90 Tagen ab 2026-07-30 -- 2026-10-28.
-EXPIRY = date(2026, 10, 28)
+# traegt daher ein Pruefdatum. S3a: +90 Tage ab 2026-07-30. S3b (httpx-Teil)
+# ersetzt dieses Datum durch +90 Tage ab 2026-10-06 -- 2027-01-04. Kein
+# nachweisbarer Fang bis dahin -> Rueckbau.
+EXPIRY = date(2027, 1, 4)
 
 SCAN_UNTERORDNER = ("src", "api")
 
@@ -65,8 +67,8 @@ ERLAUBTER_ORT = "EmailOutput._dial_and_send"
 # S3a braucht null Ausnahmen: nach dem Loeschen von src/app/core.py ist
 # email.py die einzige Datei in src/+api/, die ueberhaupt eine SMTP-Verbindung
 # aufbaut. Die Mechanik wird trotzdem vollstaendig gebaut und ueber
-# Selbstnachweise geprueft, damit S3b den httpx-Teil rein additiv ergaenzen
-# kann (dort werden zwei Ausnahmen gebraucht).
+# Selbstnachweise geprueft; der httpx-Teil (S3b, unten) nutzt sie mit eigener
+# Erlaubt-Menge und drei Ausnahmen.
 AUSNAHMEN_HOECHSTZAHL = 0
 
 # Mindestlaenge einer Ausnahme-Begruendung, gemessen in Buchstaben/Ziffern
@@ -210,7 +212,11 @@ def bewerte_funde(
     ausnahmen: list[Ausnahme],
     hoechstzahl: int,
     heute: date,
+    *,
+    erlaubt=None,
+    meldung: str = f"SMTP-Verbindung ausserhalb von {ERLAUBTER_ORT}",
 ) -> list[str]:
+    erlaubt = erlaubt or ist_erlaubt
     befunde: list[str] = []
     if len(ausnahmen) > hoechstzahl:
         befunde.append(
@@ -219,7 +225,7 @@ def bewerte_funde(
             "abgelaufene und zu kurz begruendete."
         )
 
-    offen = {f.fundstelle: f for f in funde if not ist_erlaubt(f)}
+    offen = {f.fundstelle: f for f in funde if not erlaubt(f)}
     gedeckt: set[str] = set()
     for ausnahme in ausnahmen:
         if len(_UNWORT.sub("", ausnahme.grund)) < _MIN_BEGRUENDUNG:
@@ -247,8 +253,7 @@ def bewerte_funde(
     for fundstelle, fund in sorted(offen.items()):
         if fundstelle not in gedeckt:
             befunde.append(
-                f"{fund} -- SMTP-Verbindung ausserhalb von {ERLAUBTER_ORT} "
-                "ohne gueltige Ausnahme."
+                f"{fund} -- {meldung} ohne gueltige Ausnahme."
             )
     return befunde
 
@@ -502,7 +507,7 @@ def test_ac6_aufgeloeste_ausnahme_muss_entfernt_werden(tmp_path):
 def test_ac6_pruefdatum_ist_maschinell_auffindbar():
     """AC-6 (f): Regel-Budget -- das Pruefdatum steht als Text in der Datei,
     damit das Gate-Audit es per grep findet."""
-    assert EXPIRY == date(2026, 10, 28), "+90 Tage ab 2026-07-30"
+    assert EXPIRY == date(2027, 1, 4), "+90 Tage ab 2026-10-06 (S3b)"
     zeilen = Path(__file__).read_text(encoding="utf-8").splitlines()
     assert [n for n, z in enumerate(zeilen, 1) if EXPIRY.isoformat() in z]
 
@@ -521,3 +526,361 @@ def test_ac6_repo_wurzel_ist_der_eigene_baum():
         "falsches Gruen."
     )
     assert (REPO_ROOT / ERLAUBTE_DATEI).exists()
+
+
+# =======================================================================
+# S3b: httpx-POST-Teil (Spec fix_1412_s3b_telegram_sms_ausgang.md, AC-7)
+# =======================================================================
+#
+# Ein POST per `httpx` entsteht in `src/` + `api/` nur an den zwei erlaubten
+# Ausgaengen und an drei begruendeten localhost-Stellen. Erfasst wird NUR
+# POST -- Datenabruf per GET (20+ Provider-Dateien) bleibt aussen vor, eine
+# Ausnahmeliste in Dutzendgroesse wuerde sich selbst erodieren.
+#
+# Erfasste Formen (AST, Alias/Direktimport je Datei aufgeloest):
+#   httpx.post(...) / h.post(...) / post(...) nach `from httpx import post`
+#   httpx.request("POST", ...) / httpx.stream("POST", ...) (auch method=...)
+#   httpx.Client(...).post(...) / httpx.AsyncClient(...).post(...)
+# Ehrliche Grenze: ein in einer Variablen gebundener Client
+# (`with httpx.Client() as c: c.post(...)`) wird NICHT erkannt.
+
+ERLAUBTE_HTTPX_AUSGAENGE = frozenset({
+    ("src/output/channels/telegram.py", "TelegramOutput._post"),
+    ("src/output/channels/seven_io_base.py", "SevenIoChannelBase._post"),
+})
+
+AUSNAHMEN_HTTPX_HOECHSTZAHL = 3
+
+AUSNAHMEN_HTTPX: list[Ausnahme] = [
+    Ausnahme(
+        fundstelle="src/lib/mq_notify.py:45",
+        grund="localhost-Benachrichtigung an die Claude-MQ, kein "
+              "Endnutzer-Empfaenger",
+        frist=EXPIRY,
+    ),
+    Ausnahme(
+        fundstelle="src/services/inbound_telegram_reader.py:635",
+        grund="localhost-Aufruf an den eigenen Go-Dienst "
+              "(telegram-connect), kein Endnutzer-Empfaenger",
+        frist=EXPIRY,
+    ),
+    Ausnahme(
+        fundstelle="src/services/inbound_sms_reader.py:251",
+        grund="localhost-Aufruf an den eigenen Dienst (premium-sms-learn), "
+              "kein Endnutzer-Empfaenger",
+        frist=EXPIRY,
+    ),
+]
+
+_HTTPX_POST_NAMEN = ("post",)
+_HTTPX_METHODEN_NAMEN = ("request", "stream")
+_HTTPX_CLIENT_NAMEN = ("Client", "AsyncClient")
+
+
+def ist_erlaubter_httpx_ausgang(fund: Fund) -> bool:
+    return (fund.datei, fund.ort) in ERLAUBTE_HTTPX_AUSGAENGE
+
+
+def _httpx_namen(baum: ast.AST) -> tuple[set[str], dict[str, str]]:
+    modul_aliase: set[str] = set()
+    direktimporte: dict[str, str] = {}
+    gesucht = _HTTPX_POST_NAMEN + _HTTPX_METHODEN_NAMEN + _HTTPX_CLIENT_NAMEN
+    for knoten in ast.walk(baum):
+        if isinstance(knoten, ast.Import):
+            for name in knoten.names:
+                if name.name == "httpx":
+                    modul_aliase.add(name.asname or name.name)
+        elif isinstance(knoten, ast.ImportFrom):
+            if knoten.module == "httpx" and not knoten.level:
+                for name in knoten.names:
+                    if name.name in gesucht:
+                        direktimporte[name.asname or name.name] = name.name
+    return modul_aliase, direktimporte
+
+
+def _httpx_ziel(
+    funktion: ast.expr, modul_aliase: set[str], direktimporte: dict[str, str]
+) -> tuple[str, str] | None:
+    """(Schreibweise, Originalname) fuer `httpx.X` bzw. direkt importiertes X."""
+    if (
+        isinstance(funktion, ast.Attribute)
+        and isinstance(funktion.value, ast.Name)
+        and funktion.value.id in modul_aliase
+    ):
+        return f"{funktion.value.id}.{funktion.attr}", funktion.attr
+    if isinstance(funktion, ast.Name) and funktion.id in direktimporte:
+        return funktion.id, direktimporte[funktion.id]
+    return None
+
+
+def _ist_post_methode(aufruf: ast.Call) -> bool:
+    kandidaten = list(aufruf.args[:1]) + [
+        k.value for k in aufruf.keywords if k.arg == "method"
+    ]
+    return any(
+        isinstance(k, ast.Constant)
+        and isinstance(k.value, str)
+        and k.value.upper() == "POST"
+        for k in kandidaten
+    )
+
+
+def _httpx_post_form(
+    aufruf: ast.Call, modul_aliase: set[str], direktimporte: dict[str, str]
+) -> str | None:
+    ziel = _httpx_ziel(aufruf.func, modul_aliase, direktimporte)
+    if ziel:
+        form, original = ziel
+        if original in _HTTPX_POST_NAMEN:
+            return form
+        if original in _HTTPX_METHODEN_NAMEN and _ist_post_methode(aufruf):
+            return form
+        return None
+    # httpx.Client(...).post(...) -- direkt verkettet
+    funktion = aufruf.func
+    if (
+        isinstance(funktion, ast.Attribute)
+        and funktion.attr == "post"
+        and isinstance(funktion.value, ast.Call)
+    ):
+        client = _httpx_ziel(funktion.value.func, modul_aliase, direktimporte)
+        if client and client[1] in _HTTPX_CLIENT_NAMEN:
+            return f"{client[0]}(...).post"
+    return None
+
+
+def _httpx_funde_in_quelltext(quelltext: str, datei: str) -> list[Fund]:
+    baum = ast.parse(quelltext, filename=datei)
+    modul_aliase, direktimporte = _httpx_namen(baum)
+    if not modul_aliase and not direktimporte:
+        return []
+
+    funde: list[Fund] = []
+
+    def besuche(knoten: ast.AST, stapel: list[str]) -> None:
+        for kind in ast.iter_child_nodes(knoten):
+            if isinstance(kind, ast.Call):
+                form = _httpx_post_form(kind, modul_aliase, direktimporte)
+                if form:
+                    funde.append(Fund(
+                        datei=datei, zeile=kind.lineno, form=form,
+                        ort=".".join(stapel) or _MODULEBENE,
+                    ))
+            if isinstance(kind, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                besuche(kind, stapel + [kind.name])
+            else:
+                besuche(kind, stapel)
+
+    besuche(baum, [])
+    return funde
+
+
+def scan_httpx_posts(basis: Path) -> list[Fund]:
+    """Alle httpx-POST-Stellen unter `basis/src` und `basis/api`."""
+    funde: list[Fund] = []
+    for unterordner in SCAN_UNTERORDNER:
+        wurzel = basis / unterordner
+        if not wurzel.is_dir():
+            continue
+        for pfad in sorted(wurzel.rglob("*.py")):
+            relativ = pfad.relative_to(basis).as_posix()
+            funde.extend(
+                _httpx_funde_in_quelltext(pfad.read_text(encoding="utf-8"), relativ)
+            )
+    return funde
+
+
+def bewerte_httpx_funde(funde, ausnahmen, hoechstzahl, heute) -> list[str]:
+    return bewerte_funde(
+        funde, ausnahmen, hoechstzahl, heute,
+        erlaubt=ist_erlaubter_httpx_ausgang,
+        meldung="httpx-POST ausserhalb der erlaubten Ausgaenge",
+    )
+
+
+# -----------------------------------------------------------------------
+# AC-7: der ausgelieferte Stand
+# -----------------------------------------------------------------------
+
+
+def test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen():
+    """AC-7: `src/` + `api/` senden per httpx-POST nur ueber
+    `TelegramOutput._post`, `SevenIoChannelBase._post` und die drei
+    localhost-Ausnahmen.
+
+    RED heute: src/output/channels/seven_io_base.py (httpx.post direkt in
+    `SevenIoChannelBase.send`)."""
+    funde = scan_httpx_posts(REPO_ROOT)
+    befunde = bewerte_httpx_funde(
+        funde, AUSNAHMEN_HTTPX, AUSNAHMEN_HTTPX_HOECHSTZAHL, date.today()
+    )
+    assert not befunde, "httpx-POST ausserhalb der Ausgaenge:\n" + "\n".join(befunde)
+
+
+def test_ac7_beide_erlaubten_httpx_ausgaenge_existieren():
+    """Gegenprobe: "keine unerlaubte Stelle" waere auch gruen, wenn der
+    Scanner nichts mehr faende. Beide Ausgaenge muessen wirklich POSTen.
+
+    RED heute: `SevenIoChannelBase._post` fehlt."""
+    orte = {(f.datei, f.ort) for f in scan_httpx_posts(REPO_ROOT)
+            if ist_erlaubter_httpx_ausgang(f)}
+    assert orte == set(ERLAUBTE_HTTPX_AUSGAENGE), (
+        f"fehlende Ausgaenge: {sorted(set(ERLAUBTE_HTTPX_AUSGAENGE) - orte)}"
+    )
+
+
+def test_ac7_httpx_ausnahmen_unter_dem_deckel_und_befristet():
+    assert AUSNAHMEN_HTTPX_HOECHSTZAHL == 3
+    assert len(AUSNAHMEN_HTTPX) <= AUSNAHMEN_HTTPX_HOECHSTZAHL
+    for ausnahme in AUSNAHMEN_HTTPX:
+        assert ausnahme.frist <= EXPIRY, ausnahme
+        assert "localhost" in ausnahme.grund, ausnahme
+
+
+# -----------------------------------------------------------------------
+# AC-7: Selbstnachweise je erfasster Form
+# -----------------------------------------------------------------------
+
+_HTTPX_FORMEN = {
+    "modul": ("import httpx\n\ndef f(u):\n    return httpx.post(u)\n",
+              "httpx.post"),
+    "alias": ("import httpx as h\n\ndef f(u):\n    return h.post(u)\n",
+              "h.post"),
+    "direkt": ("from httpx import post\n\ndef f(u):\n    return post(u)\n",
+               "post"),
+    "direkt_alias": ("from httpx import post as p\n\ndef f(u):\n    return p(u)\n",
+                     "p"),
+    "request_post": ("import httpx\n\ndef f(u):\n    return httpx.request('POST', u)\n",
+                     "httpx.request"),
+    "request_method_kw": ("import httpx\n\ndef f(u):\n"
+                          "    return httpx.request(method='post', url=u)\n",
+                          "httpx.request"),
+    "stream_post": ("import httpx\n\ndef f(u):\n"
+                    "    with httpx.stream('POST', u) as r:\n        return r\n",
+                    "httpx.stream"),
+    "client_post": ("import httpx\n\ndef f(u):\n    return httpx.Client().post(u)\n",
+                    "httpx.Client(...).post"),
+    "async_client_post": ("import httpx\n\nasync def f(u):\n"
+                          "    return await httpx.AsyncClient().post(u)\n",
+                          "httpx.AsyncClient(...).post"),
+    "direkt_client_post": ("from httpx import Client\n\ndef f(u):\n"
+                           "    return Client(timeout=5).post(u)\n",
+                           "Client(...).post"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(_HTTPX_FORMEN))
+def test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet(tmp_path, name):
+    """AC-7: jede erfasste Form ausserhalb der Erlaubt-Menge wird gefunden
+    und mit Datei, Zeile und Ort gemeldet."""
+    quelltext, erwartete_form = _HTTPX_FORMEN[name]
+    _attrappe(tmp_path, f"src/services/{name}.py", quelltext)
+
+    funde = scan_httpx_posts(tmp_path)
+
+    assert len(funde) == 1, f"{name}: {[str(f) for f in funde]}"
+    assert funde[0].form == erwartete_form
+    assert funde[0].ort == "f"
+    befunde = bewerte_httpx_funde(funde, [], AUSNAHMEN_HTTPX_HOECHSTZAHL, date.today())
+    assert len(befunde) == 1
+    assert f"src/services/{name}.py:{funde[0].zeile}" in befunde[0]
+    assert "ohne gueltige Ausnahme" in befunde[0]
+
+
+_KEIN_POST = '''\
+import httpx
+from fastapi import APIRouter
+
+router = APIRouter()
+
+
+@router.post("/api/x")
+def endpunkt():
+    return httpx.get("https://example.org")
+
+
+def abruf(u):
+    with httpx.Client(timeout=5) as client:
+        return client.get(u)
+
+
+def anfrage(u):
+    return httpx.request("GET", u)
+
+
+def stream(u):
+    with httpx.stream("GET", u) as r:
+        return r
+'''
+
+
+def test_ac7_get_und_router_dekoratoren_sind_keine_fundstellen(tmp_path):
+    """AC-7 (Ueberblocken): `@router.post`, `httpx.get`, `client.get` und
+    `request("GET")` sind KEIN POST-Versand -- sonst waere `api/routers/*`
+    am ersten Tag rot."""
+    _attrappe(tmp_path, "api/routers/x.py", _KEIN_POST)
+    assert not scan_httpx_posts(tmp_path)
+
+
+def test_ac7_erlaubte_ausgaenge_in_attrappe_werden_nicht_gemeldet(tmp_path):
+    _attrappe(tmp_path, "src/output/channels/telegram.py",
+              "import httpx\n\nclass TelegramOutput:\n"
+              "    def _post(self, u, p):\n        return httpx.post(u, json=p)\n")
+    _attrappe(tmp_path, "src/output/channels/seven_io_base.py",
+              "import httpx\n\nclass SevenIoChannelBase:\n"
+              "    def _post(self, u, k, p):\n        return httpx.post(u, data=p)\n")
+    funde = scan_httpx_posts(tmp_path)
+    assert len(funde) == 2 and all(ist_erlaubter_httpx_ausgang(f) for f in funde)
+    assert not bewerte_httpx_funde(funde, [], AUSNAHMEN_HTTPX_HOECHSTZAHL, date.today())
+
+
+def test_ac7_post_in_send_statt_post_wird_gemeldet(tmp_path):
+    """Gleiche Datei, falscher Ort: `SevenIoChannelBase.send` ist NICHT der
+    Ausgang -- genau der heutige Zustand."""
+    _attrappe(tmp_path, "src/output/channels/seven_io_base.py",
+              "import httpx\n\nclass SevenIoChannelBase:\n"
+              "    def send(self, s, b):\n        return httpx.post('u', data={})\n")
+    befunde = bewerte_httpx_funde(
+        scan_httpx_posts(tmp_path), [], AUSNAHMEN_HTTPX_HOECHSTZAHL, date.today()
+    )
+    assert len(befunde) == 1 and "SevenIoChannelBase.send" in befunde[0], befunde
+
+
+def test_ac7_vierte_httpx_ausnahme_reisst_den_deckel(tmp_path):
+    _attrappe(tmp_path, "src/services/modul.py", _HTTPX_FORMEN["modul"][0])
+    funde = scan_httpx_posts(tmp_path)
+    ausnahme = Ausnahme(
+        fundstelle=funde[0].fundstelle,
+        grund="localhost-Aufruf ohne Endnutzer-Empfaenger, prozessintern",
+        frist=EXPIRY,
+    )
+    heute = date(2026, 10, 6)
+    assert not bewerte_httpx_funde(funde, [ausnahme], 3, heute)
+    befunde = bewerte_httpx_funde(funde, [ausnahme] * 4, 3, heute)
+    assert any("Hoechstzahl" in b for b in befunde), befunde
+
+
+def test_ac7_abgelaufene_httpx_ausnahme_wird_rot(tmp_path):
+    _attrappe(tmp_path, "src/services/modul.py", _HTTPX_FORMEN["modul"][0])
+    funde = scan_httpx_posts(tmp_path)
+    ausnahme = Ausnahme(
+        fundstelle=funde[0].fundstelle,
+        grund="localhost-Aufruf ohne Endnutzer-Empfaenger, prozessintern",
+        frist=date(2026, 10, 1),
+    )
+    befunde = bewerte_httpx_funde(funde, [ausnahme], 3, date(2026, 10, 2))
+    assert any("abgelaufen" in b for b in befunde), befunde
+
+
+def test_ac7_pruefdatum_steht_in_gates_und_ratschen():  # doc-compliance-test
+    """AC-7 / Regel-Budget: die Pruefdaten-Tabelle nennt diesen Waechter mit
+    seinem Datum, damit das Gate-Audit ihn am Pruefdatum findet.
+
+    RED heute: die Zeile fehlt."""
+    tabelle = (REPO_ROOT / "docs/reference/gates_und_ratschen.md").read_text(
+        encoding="utf-8"
+    )
+    zeilen = [z for z in tabelle.splitlines()
+              if "test_egress_single_dial_point" in z]
+    assert zeilen, "Zeile fuer test_egress_single_dial_point fehlt"
+    assert any(EXPIRY.isoformat() in z for z in zeilen), zeilen

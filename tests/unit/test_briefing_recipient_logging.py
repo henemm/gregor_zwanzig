@@ -121,7 +121,7 @@ def netzrand(monkeypatch) -> Netzrand:
         if rand.smtp_fehler is not None:
             raise rand.smtp_fehler
 
-    def _telegram_steckdose(self, url, payload, *, chat_id=None):
+    def _telegram_steckdose(self, url, payload, *, chat_id=None, bound_chat=False):
         rand.telegram.append({"chat_id": chat_id, "payload": payload})
         return httpx.Response(
             200, json={"ok": True, "result": {"message_id": len(rand.telegram)}},

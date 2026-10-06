@@ -152,6 +152,17 @@ class SevenIoChannelBase:
     # Transport
     # ------------------------------------------------------------------
 
+    def _post(self, url: str, api_key: str, payload: dict) -> httpx.Response:
+        """Einziger Netzausgang der seven.io-Kanaele (Issue #1412 S3b) --
+        reiner Transport. Die Sperren laufen bewusst in ``send`` (einziger
+        Aufrufer und selbst der gemeinsame Pfad fuer SMS und Premium-SMS)."""
+        return httpx.post(
+            url,
+            headers={"X-Api-Key": api_key},
+            data=payload,
+            timeout=10,
+        )
+
     def send(self, subject: str, body: str) -> None:
         """Sende `body` ueber das seven.io-Gateway. `subject` wird ignoriert.
 
@@ -168,12 +179,7 @@ class SevenIoChannelBase:
         if sender:
             payload["from"] = sender
 
-        response = httpx.post(
-            self._settings.sms_gateway_url,
-            headers={"X-Api-Key": api_key},
-            data=payload,
-            timeout=10,
-        )
+        response = self._post(self._settings.sms_gateway_url, api_key, payload)
         if response.status_code != 200:
             raise OutputError(
                 self.name,

@@ -1,0 +1,86 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic-2138-triage
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 17 items / 8 deselected / 9 selected
+
+tests/unit/test_briefing_recipient_logging.py .......                    [ 77%]
+tests/unit/test_briefing_cross_tenant_recipient_isolation.py ..          [100%]
+
+==================================== PASSES ====================================
+_ TestAC1ErfolgszeileNenntEmpfaenger.test_erfolgszeile_enthaelt_die_empfaengeradresse _
+------------------------------ Captured log call -------------------------------
+INFO     trip_report_scheduler:trip_report_scheduler.py:1348 Generating morning report for trip: TDD-1847 Trip
+INFO     trip_report_scheduler:trip_report_scheduler.py:1761 Trip report sent: TDD-1847 Trip (morning) via email to gregor-test@henemm.com
+INFO     services.weather_snapshot:weather_snapshot.py:112 Snapshot saved: tdd-1847-mail-trip
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: tdd-1847-mail-trip_2026-10-06.json
+_ TestAC1ErfolgszeileNenntEmpfaenger.test_erfolgszeile_nennt_die_zugestellten_kanaele _
+------------------------------ Captured log call -------------------------------
+INFO     trip_report_scheduler:trip_report_scheduler.py:1348 Generating morning report for trip: TDD-1847 Trip
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     trip_report_scheduler:trip_report_scheduler.py:1761 Trip report sent: TDD-1847 Trip (morning) via email,telegram to gregor-test@henemm.com
+INFO     services.weather_snapshot:weather_snapshot.py:112 Snapshot saved: tdd-1847-kanal-trip
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: tdd-1847-kanal-trip_2026-10-06.json
+_ TestAC2BriefingLogTraegtEmpfaenger.test_eintrag_traegt_empfaenger_und_alle_altfelder _
+------------------------------ Captured log call -------------------------------
+INFO     trip_report_scheduler:trip_report_scheduler.py:1348 Generating morning report for trip: TDD-1847 Trip
+INFO     trip_report_scheduler:trip_report_scheduler.py:1761 Trip report sent: TDD-1847 Trip (morning) via email to gregor-test@henemm.com
+INFO     services.weather_snapshot:weather_snapshot.py:112 Snapshot saved: tdd-1847-log-trip
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: tdd-1847-log-trip_2026-10-06.json
+_ TestAC3TelegramOnlyNenntKeineAdresse.test_keine_email_adresse_in_zeile_und_eintrag _
+------------------------------ Captured log call -------------------------------
+INFO     trip_report_scheduler:trip_report_scheduler.py:1348 Generating morning report for trip: TDD-1847 Trip
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[TEST] [TDD-1847 Trip] Etappe 1: Etappe heute — Morgen')
+INFO     trip_report_scheduler:trip_report_scheduler.py:1761 Trip report sent: TDD-1847 Trip (morning) via telegram
+INFO     services.weather_snapshot:weather_snapshot.py:112 Snapshot saved: tdd-1847-telegram-trip
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: tdd-1847-telegram-trip_2026-10-06.json
+_____ TestAC4FehlgeschlagenerVersand.test_kein_erfolg_und_kein_log_eintrag _____
+------------------------------ Captured log call -------------------------------
+INFO     trip_report_scheduler:trip_report_scheduler.py:1348 Generating morning report for trip: TDD-1847 Trip
+ERROR    services.notification_service:notification_service.py:608 E-Mail send failed for TDD-1847 Trip: [email] SMTP authentication error: (535, b'5.7.8 Authentication credentials invalid')
+INFO     services.weather_snapshot:weather_snapshot.py:112 Snapshot saved: tdd-1847-fehler-trip
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: tdd-1847-fehler-trip_2026-10-06.json
+_ TestPii2157FremdadresseWirdMaskiert.test_fremdadresse_erscheint_nur_maskiert _
+------------------------------ Captured log call -------------------------------
+INFO     trip_report_scheduler:trip_report_scheduler.py:1348 Generating morning report for trip: TDD-1847 Trip
+WARNING  output.channels.email:email.py:676 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@example.org'] auf gregor-test@henemm.com umgeschaltet.
+INFO     trip_report_scheduler:trip_report_scheduler.py:1761 Trip report sent: TDD-1847 Trip (morning) via email to ***@example.org
+INFO     services.weather_snapshot:weather_snapshot.py:112 Snapshot saved: tdd-2157-fremd-trip
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: tdd-2157-fremd-trip_2026-10-06.json
+__ TestPii2157FremdadresseWirdMaskiert.test_liste_prueft_jede_adresse_einzeln __
+------------------------------ Captured log call -------------------------------
+INFO     trip_report_scheduler:trip_report_scheduler.py:1348 Generating morning report for trip: TDD-1847 Trip
+WARNING  output.channels.email:email.py:676 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['gregor-test@henemm.com, ***@example.org'] auf gregor-test@henemm.com umgeschaltet.
+INFO     trip_report_scheduler:trip_report_scheduler.py:1761 Trip report sent: TDD-1847 Trip (morning) via email to gregor-test@henemm.com, ***@example.org
+INFO     services.weather_snapshot:weather_snapshot.py:112 Snapshot saved: tdd-2157-liste-trip
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: tdd-2157-liste-trip_2026-10-06.json
+_______ test_ac7_user_without_mail_to_is_blocked_not_delivered_to_anyone _______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:676 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@example.com'] auf gregor-test@henemm.com umgeschaltet.
+ERROR    services.notification_service:notification_service.py:608 E-Mail send failed for TDD-2144 Trip: [email] kein Empfaenger bekannt -- weder settings.mail_to noch ein per-Aufruf-Override sind gesetzt.
+_____ test_ac4_email_without_recipient_is_skipped_other_channel_unaffected _____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:608 E-Mail send failed for TDD-2144 Trip: [email] kein Empfaenger bekannt -- weder settings.mail_to noch ein per-Aufruf-Override sind gesetzt.
+=========================== short test summary info ============================
+PASSED tests/unit/test_briefing_recipient_logging.py::TestAC1ErfolgszeileNenntEmpfaenger::test_erfolgszeile_enthaelt_die_empfaengeradresse
+PASSED tests/unit/test_briefing_recipient_logging.py::TestAC1ErfolgszeileNenntEmpfaenger::test_erfolgszeile_nennt_die_zugestellten_kanaele
+PASSED tests/unit/test_briefing_recipient_logging.py::TestAC2BriefingLogTraegtEmpfaenger::test_eintrag_traegt_empfaenger_und_alle_altfelder
+PASSED tests/unit/test_briefing_recipient_logging.py::TestAC3TelegramOnlyNenntKeineAdresse::test_keine_email_adresse_in_zeile_und_eintrag
+PASSED tests/unit/test_briefing_recipient_logging.py::TestAC4FehlgeschlagenerVersand::test_kein_erfolg_und_kein_log_eintrag
+PASSED tests/unit/test_briefing_recipient_logging.py::TestPii2157FremdadresseWirdMaskiert::test_fremdadresse_erscheint_nur_maskiert
+PASSED tests/unit/test_briefing_recipient_logging.py::TestPii2157FremdadresseWirdMaskiert::test_liste_prueft_jede_adresse_einzeln
+PASSED tests/unit/test_briefing_cross_tenant_recipient_isolation.py::test_ac7_user_without_mail_to_is_blocked_not_delivered_to_anyone
+PASSED tests/unit/test_briefing_cross_tenant_recipient_isolation.py::test_ac4_email_without_recipient_is_skipped_other_channel_unaffected
+======================= 9 passed, 8 deselected in 14.82s =======================

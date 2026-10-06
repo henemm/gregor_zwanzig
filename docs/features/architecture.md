@@ -110,9 +110,14 @@ Die folgenden Komponenten leben im Python-Core:
      gewartet, reale Briefings (5–13 Nachrichten) bleiben unverzögert. Bei HTTP 429
      wird `parameters.retry_after` aus dem JSON-Rumpf gelesen, auf
      `telegram_retry_after_cap_seconds` (45) gedeckelt und **genau einmal** erneut
-     gesendet. Die Egress-Guards (#1288/#1363) bleiben bewusst **vor** `_post` in
-     den öffentlichen Methoden; `_post` wertet keine Statuscodes aus.
-     Spec: `docs/specs/modules/telegram_send_pacing.md`.
+     gesendet. Die Egress-Guards (#1288/#1363; Herkunft, Test-Bot-Token,
+     Settings-Chat via `bound_chat`, Ziel-Chat) laufen seit #1412 S3b zentral in
+     `_post` **vor** der Drossel-Reservierung — jede (auch künftige) Telegram-Methode
+     ist damit geschützt, auch `answer_callback_query`/`get_my_commands`; `_post`
+     wertet keine Statuscodes aus. SMS/Premium-SMS: `httpx.post` nur noch in
+     `SevenIoChannelBase._post` (reiner Transport), Prüfungen bleiben in `send`.
+     Specs: `docs/specs/modules/telegram_send_pacing.md`,
+     `docs/specs/modules/fix_1412_s3b_telegram_sms_ausgang.md`.
    - **SMS** (`src/output/channels/sms.py`) – SMS-Versand via seven.io
    - **Premium-SMS** (`src/output/channels/premium_sms.py`, `PremiumSmsOutput`,
      `name == "premium_sms"`, seit Issue #1676 S2a) – als **Versandkanal** im
