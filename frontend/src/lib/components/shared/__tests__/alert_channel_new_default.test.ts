@@ -30,7 +30,7 @@ function tripState(): CreateTripState {
 		region: 'Karnische Alpen',
 		startDate: '2026-06-15',
 		stages: [{ id: 1, name: 'Etappe 1' }],
-		weatherMetrics: [{ key: 'temp', enabled: true }],
+		weatherMetrics: [{ key: 'temp', enabled: true }] as never,
 		channels: { email: true, telegram: true, sms: false },
 		reportConfig: { enabled: true, morning_time: '06:00', evening_time: '18:00' }
 	};

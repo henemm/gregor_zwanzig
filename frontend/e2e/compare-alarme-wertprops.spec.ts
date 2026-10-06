@@ -192,19 +192,21 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 		// onclick) — KEIN <input type="checkbox">. Deshalb Klick-Geste und
 		// aria-checked statt .check()/toBeChecked(). Der Radar-/Kurzstil-Schalter
 		// weiter unten benutzt dagegen das Checkbox-Atom und bleibt unveraendert.
+		// Issue #2518: Neuanlage-Default = E-Mail + Telegram an, SMS aus — der
+		// Kanal-Klick wird deshalb am SMS-Schalter (startet aus) geprueft.
 		const telegram = page
-			.locator('[data-testid="alert-channel-toggle-telegram"]')
+			.locator('[data-testid="alert-channel-toggle-sms"]')
 			.first()
 			.getByRole('switch');
 		await expect(
 			telegram,
-			'Vorbedingung: der Telegram-Kanal startet aus (send_telegram: false bei der Anlage) — ' +
+			'Vorbedingung: der SMS-Kanal startet aus (Neuanlage-Default #2518) — ' +
 				'ein Klick schaltet ihn sonst AUS statt AN.'
 		).toHaveAttribute('aria-checked', 'false');
 		await telegram.click();
 		await expect(
 			telegram,
-			'AC-2 FAIL: der Telegram-Schalter nimmt die Geste nicht an.'
+			'AC-2 FAIL: der SMS-Schalter nimmt die Geste nicht an.'
 		).toHaveAttribute('aria-checked', 'true');
 		await warteAufGespeichert(page);
 		// Issue #2293 S2: der Alarme-Reiter schreibt seit der Entkopplung
@@ -217,10 +219,10 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 						(await serverStand(page, id)).alert_channels as
 							| Record<string, boolean>
 							| undefined
-					)?.telegram,
+					)?.sms,
 				{
 					timeout: 15_000,
-					message: 'AC-2 FAIL: der Telegram-Kanal wurde nicht gespeichert.'
+					message: 'AC-2 FAIL: der SMS-Kanal wurde nicht gespeichert.'
 				}
 			)
 			.toBe(true);
@@ -264,10 +266,10 @@ test.describe('Ortsvergleich · Alarme auf Wertprops (#2276 S6c)', () => {
 		await oeffneAlarme(page, id);
 		await expect(
 			page
-				.locator('[data-testid="alert-channel-toggle-telegram"]')
+				.locator('[data-testid="alert-channel-toggle-sms"]')
 				.first()
 				.getByRole('switch'),
-			'AC-2 FAIL: der Telegram-Kanal ist nach dem Neuladen wieder aus.'
+			'AC-2 FAIL: der SMS-Kanal ist nach dem Neuladen wieder aus.'
 		).toHaveAttribute('aria-checked', 'true');
 		await expect(
 			page.locator('[data-testid="telegram-kurzstil-toggle"] input[type="checkbox"]').first(),
