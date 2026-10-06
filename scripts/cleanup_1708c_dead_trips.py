@@ -67,6 +67,8 @@ def _time_warnings(targets: list[Path]) -> list[str]:
     warnings = []
     for target in targets:
         for path in target.rglob("*"):
+            if path.name.endswith(".lock"):
+                continue  # #2158: Sperrdatei ist kein Trip
             if path.is_file() and datetime.fromtimestamp(path.stat().st_mtime) > CUTOVER_DATE:
                 warnings.append(str(path))
     return warnings

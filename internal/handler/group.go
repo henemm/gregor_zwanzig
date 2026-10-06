@@ -58,7 +58,8 @@ func CreateGroupHandler(s *store.Store) http.HandlerFunc {
 			g.ID = toKebab(g.Name)
 		}
 
-		existing, err := s.LoadGroups()
+		defer s.LockGroups()() // #2158: Lesen+Schreiben unter einer Gruppen-Sperre
+		existing, err := s.LoadGroupsLocked()
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
@@ -76,7 +77,7 @@ func CreateGroupHandler(s *store.Store) http.HandlerFunc {
 			g.Order = maxOrder + 1
 		}
 
-		if err := s.SaveGroup(g); err != nil {
+		if err := s.SaveGroupLocked(g); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
@@ -96,7 +97,8 @@ func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
-		groups, err := s.LoadGroups()
+		defer s.LockGroups()() // #2158
+		groups, err := s.LoadGroupsLocked()
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
@@ -158,7 +160,7 @@ func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 			updated.Order = v
 		}
 
-		if err := s.SaveGroup(updated); err != nil {
+		if err := s.SaveGroupLocked(updated); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
@@ -177,7 +179,10 @@ func DeleteGroupHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
-		if err := s.DeleteGroup(id); err != nil {
+		// #2158: Gruppen-Sperre ueber das ganze Loeschen inkl. Orts-Aufraeumen;
+		// Orte werden darunter einzeln gesperrt (Reihenfolge Gruppe -> Ort).
+		defer s.LockGroups()()
+		if err := s.DeleteGroupLocked(id); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
@@ -195,12 +200,16 @@ func DeleteGroupHandler(s *store.Store) http.HandlerFunc {
 			if loc.GroupID == nil || *loc.GroupID != id {
 				continue
 			}
+			unlockLoc := s.LockLocation(loc.ID)
 			existing, lerr := s.LoadLocation(loc.ID)
-			if lerr != nil || existing == nil {
+			if lerr != nil || existing == nil || existing.GroupID == nil || *existing.GroupID != id {
+				unlockLoc()
 				continue
 			}
 			existing.GroupID = nil
-			if serr := s.SaveLocation(*existing); serr != nil {
+			serr := s.SaveLocation(*existing)
+			unlockLoc()
+			if serr != nil {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(500)
 				w.Write([]byte(`{"error":"store_error"}`))

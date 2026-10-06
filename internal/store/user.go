@@ -486,6 +486,10 @@ func exportWalkUserDir(base string, zw *zip.Writer) error {
 			return rerr
 		}
 		name := filepath.ToSlash(rel)
+		// Sperrdateien (<id>.json.lock, ADR-0083) sind Betriebsmittel, keine Nutzerdaten.
+		if strings.HasSuffix(name, ".lock") {
+			return nil
+		}
 		if !exportNameIstSicher(name) || !exportIstErlaubt(name) {
 			return nil
 		}

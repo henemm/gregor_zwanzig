@@ -272,7 +272,11 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		defer s.LockBriefing(preset.ID)()
+		unlockB, okB := lockBriefingOr503(w, s, preset.ID)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		// Issue #1250 Scheibe 7b: per-Datei-Save — nur die eigene Datei
 		// briefings/<id>.json schreiben (SaveComparePreset setzt kind=vergleich),
@@ -375,7 +379,11 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1395 S6: Sperre ueber den GANZEN Lesen-Pruefen-Schreiben-Zyklus.
 		// Dieselbe Sperre nimmt der zweite Schreibweg
 		// (PUT /api/briefings/{id}?kind=vergleich) auf dieselbe Datei.
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		// Fingerabdruck des Standes VOR dem Schreiben — Bezugspunkt der
 		// If-Match-Pruefung. Ein echter Lesefehler ist ein Store-Fehler; eine
@@ -452,7 +460,11 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// mitten in einen laufenden PUT faellt, wuerde sonst die Datei entfernen
 		// und der PUT sie danach wieder hinschreiben (Wiederauferstehen).
 		// KEIN If-Match: der Loeschpfad prueft keine Vorbedingung (analog Trip).
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
@@ -503,7 +515,11 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 		// Issue #2482: Quoten-Lock IMMER vor LockBriefing (feste Reihenfolge);
 		// abgelehnt wird ausschliesslich das Wiederherstellen (AC-9).
 		defer s.LockQuota()()
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
@@ -561,7 +577,11 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung
 		// dazwischenfunken, und der Client haelt einen Stempel, der nicht zum
 		// ausgelieferten Rumpf gehoert (analog TripHandler).
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {

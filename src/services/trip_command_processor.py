@@ -18,7 +18,14 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple, Optional
 
-from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
+from app.loader import (
+    LoaderError,
+    get_data_dir,
+    get_snapshots_dir,
+    load_all_trips,
+    update_trip,
+)
+from services.file_lock import LockTimeout
 from app.metric_catalog import (
     get_all_metrics,
     get_metric,
@@ -954,6 +961,10 @@ def _fetch_and_save_snapshot(trip, user_id: str, today, tomorrow) -> None:
 # Processor
 # ---------------------------------------------------------------------------
 
+class _NothingToChange(Exception):
+    """Mutation findet auf dem frischen Trip nichts zu aendern (kein Schreiben)."""
+
+
 class TripCommandProcessor:
     """Processes trip commands from any inbound channel."""
 
@@ -1319,7 +1330,9 @@ class TripCommandProcessor:
         ``_show_help_for_kind``) dem tatsaechlichen Verhalten widersprechen."""
         from services.scheduler_dispatch_service import save_compare_preset_pause
 
-        save_compare_preset_pause(user_id, preset_id)
+        if save_compare_preset_pause(user_id, preset_id) is False:
+            # #2158: Sperr-Fristablauf/Lesefehler -- nie "pausiert" behaupten.
+            return self._compare_erneut_senden(name, "pause")
         hinweis = self._t(
             " Eine angegebene Dauer wird nicht ausgewertet.",
             " A given duration is ignored.",
@@ -1336,11 +1349,27 @@ class TripCommandProcessor:
             trip_name=name,
         )
 
+    def _compare_erneut_senden(self, name: str, command: str) -> CommandResult:
+        """#2158: Compare-Datei gerade gesperrt -- Fehler an den Nutzer."""
+        return CommandResult(
+            success=False, command=command,
+            confirmation_subject=self._t(
+                f"[{name}] Bitte erneut senden", f"[{name}] Please send again"),
+            confirmation_body=self._t(
+                "Der Ortsvergleich wird gerade geaendert. Bitte den Befehl in "
+                "einer Minute erneut senden.",
+                "The comparison is being changed right now. Please send the "
+                "command again in a minute."),
+            trip_name=name,
+        )
+
     def _resume_compare(self, preset_id: str, user_id: str, name: str) -> CommandResult:
         """Setzt einen pausierten Ortsvergleich fort (AC-9/AC-10)."""
         from services.scheduler_dispatch_service import resume_compare_preset
 
         status = resume_compare_preset(user_id, preset_id)
+        if status == "lock_timeout":
+            return self._compare_erneut_senden(name, "weiter")
         if status != "resumed":
             return CommandResult(
                 success=False, command="weiter",
@@ -2363,17 +2392,19 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
 
-        shifts: list[StageShift] = []
-        new_stages: list[Stage] = []
+        def _shift(current: Trip) -> tuple[list[StageShift], list[Stage]]:
+            shifts: list[StageShift] = []
+            new_stages: list[Stage] = []
+            for stage in current.stages:
+                if stage.date > command_date:
+                    new_date = stage.date + timedelta(days=shift_days)
+                    new_stages.append(dataclasses.replace(stage, date=new_date))
+                    shifts.append(StageShift(stage.name, stage.date, new_date))
+                else:
+                    new_stages.append(stage)
+            return shifts, new_stages
 
-        for stage in trip.stages:
-            if stage.date > command_date:
-                new_date = stage.date + timedelta(days=shift_days)
-                new_stages.append(dataclasses.replace(stage, date=new_date))
-                shifts.append(StageShift(stage.name, stage.date, new_date))
-            else:
-                new_stages.append(stage)
-
+        shifts, _ = _shift(trip)
         if not shifts:
             return CommandResult(
                 success=False, command="ruhetag",
@@ -2383,8 +2414,29 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
 
-        new_trip = dataclasses.replace(trip, stages=new_stages)
-        save_trip(new_trip, user_id)
+        # #2158: Mutation auf dem FRISCH unter der Sperre gelesenen Trip.
+        applied: dict = {}
+
+        def _mutate(fresh: Trip) -> Trip:
+            fresh_shifts, fresh_stages = _shift(fresh)
+            if not fresh_shifts:
+                raise _NothingToChange()
+            applied["shifts"] = fresh_shifts
+            return dataclasses.replace(fresh, stages=fresh_stages)
+
+        try:
+            fehler = self._speichere(trip, user_id, "ruhetag", _mutate)
+        except _NothingToChange:
+            fehler = CommandResult(
+                success=False, command="ruhetag",
+                confirmation_subject=self._t(f"[{trip.name}] Keine Etappen", f"[{trip.name}] No stages"),
+                confirmation_body=self._t("Keine zukuenftigen Etappen zum Verschieben.",
+                                          "No future stages to shift."),
+                trip_name=trip.name,
+            )
+        if fehler is not None:
+            return fehler
+        shifts = applied["shifts"]
         self._delete_snapshot(trip.id, user_id)
         self._append_command_log(trip.id, "ruhetag", command_date, user_id)
 
@@ -2454,17 +2506,25 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             )
 
-        old_start = trip.stages[0].date
-        delta = new_start - old_start
-        shifts = []
-        new_stages = []
-        for stage in trip.stages:
-            new_date = stage.date + delta
-            new_stages.append(dataclasses.replace(stage, date=new_date))
-            shifts.append(StageShift(stage.name, stage.date, new_date))
+        applied: dict = {}
 
-        new_trip = dataclasses.replace(trip, stages=new_stages)
-        save_trip(new_trip, user_id)
+        def _mutate(fresh: Trip) -> Trip:
+            old = fresh.stages[0].date
+            delta = new_start - old
+            shifts_: list[StageShift] = []
+            new_stages = []
+            for stage in fresh.stages:
+                new_date = stage.date + delta
+                new_stages.append(dataclasses.replace(stage, date=new_date))
+                shifts_.append(StageShift(stage.name, stage.date, new_date))
+            applied["old_start"] = old
+            applied["shifts"] = shifts_
+            return dataclasses.replace(fresh, stages=new_stages)
+
+        fehler = self._speichere(trip, user_id, "startdatum", _mutate)
+        if fehler is not None:
+            return fehler
+        old_start, shifts = applied["old_start"], applied["shifts"]
         self._delete_snapshot(trip.id, user_id)
 
         lines = [f"Startdatum verschoben: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}", ""]
@@ -2628,9 +2688,12 @@ class TripCommandProcessor:
         else:
             delta = timedelta(days=n)
         paused_until = datetime.now(timezone.utc) + delta
-        new_rc = dataclasses.replace(trip.report_config, paused_until=paused_until)
-        new_trip = dataclasses.replace(trip, report_config=new_rc)
-        save_trip(new_trip, user_id)
+        fehler = self._speichere(
+            trip, user_id, "pause",
+            lambda fresh: self._mit_report_config(fresh, paused_until=paused_until),
+        )
+        if fehler is not None:
+            return fehler
         return CommandResult(
             success=True, command="pause",
             confirmation_subject=self._t(
@@ -2655,9 +2718,12 @@ class TripCommandProcessor:
                 confirmation_body="Für diesen Trip ist kein Berichts-Zeitplan konfiguriert.",
                 trip_name=trip.name,
             )
-        new_rc = dataclasses.replace(trip.report_config, skip_next=True)
-        new_trip = dataclasses.replace(trip, report_config=new_rc)
-        save_trip(new_trip, user_id)
+        fehler = self._speichere(
+            trip, user_id, "skip",
+            lambda fresh: self._mit_report_config(fresh, skip_next=True),
+        )
+        if fehler is not None:
+            return fehler
         return CommandResult(
             success=True, command="skip",
             confirmation_subject=self._t(
@@ -2956,9 +3022,12 @@ class TripCommandProcessor:
     def _cancel_trip(self, trip: Trip, user_id: str) -> CommandResult:
         """Disable report scheduling for the trip."""
         if trip.report_config:
-            new_config = dataclasses.replace(trip.report_config, enabled=False)
-            new_trip = dataclasses.replace(trip, report_config=new_config)
-            save_trip(new_trip, user_id)
+            fehler = self._speichere(
+                trip, user_id, "abbruch",
+                lambda fresh: self._mit_report_config(fresh, enabled=False),
+            )
+            if fehler is not None:
+                return fehler
 
         return CommandResult(
             success=True, command="abbruch",
@@ -2972,9 +3041,12 @@ class TripCommandProcessor:
     def _resume_trip(self, trip: Trip, user_id: str) -> CommandResult:
         """Reaktiviert den Report-Versand für den Trip (enabled=True via RMW)."""
         if trip.report_config:
-            new_config = dataclasses.replace(trip.report_config, enabled=True)
-            new_trip = dataclasses.replace(trip, report_config=new_config)
-            save_trip(new_trip, user_id)
+            fehler = self._speichere(
+                trip, user_id, "weiter",
+                lambda fresh: self._mit_report_config(fresh, enabled=True),
+            )
+            if fehler is not None:
+                return fehler
 
         return CommandResult(
             success=True, command="weiter",
@@ -2989,6 +3061,54 @@ class TripCommandProcessor:
     # -----------------------------------------------------------------------
     # Helpers
     # -----------------------------------------------------------------------
+
+    @staticmethod
+    def _mit_report_config(fresh: Trip, **felder) -> Trip:
+        """Wendet nur die gewollten report_config-Felder auf den FRISCHEN Trip an."""
+        if fresh.report_config is None:
+            return fresh
+        return dataclasses.replace(
+            fresh, report_config=dataclasses.replace(fresh.report_config, **felder),
+        )
+
+    def _speichere(
+        self, trip: Trip, user_id: str, command: str, mutate,
+    ) -> Optional[CommandResult]:
+        """#2158: Mutation gesperrt auf frischem Stand (``update_trip``).
+
+        ``None`` = gespeichert. Sonst die Fehlerantwort: Sperr-Fristablauf ->
+        "bitte erneut senden" (nie still verwerfen), beschaedigte/fehlende
+        Datei -> definierter Fehler. Nie ungesperrter Rueckfall.
+        """
+        try:
+            update_trip(user_id, trip.id, mutate)
+            return None
+        except LockTimeout:
+            logger.warning("Kommando %s: Sperre fuer Trip %s nicht erhalten", command, trip.id)
+            return CommandResult(
+                success=False, command=command,
+                confirmation_subject=self._t(
+                    f"[{trip.name}] Bitte erneut senden",
+                    f"[{trip.name}] Please send again"),
+                confirmation_body=self._t(
+                    "Der Trip wird gerade geaendert. Bitte den Befehl in einer "
+                    "Minute erneut senden.",
+                    "The trip is being changed right now. Please send the "
+                    "command again in a minute."),
+                trip_name=trip.name,
+            )
+        except LoaderError as e:
+            logger.error("Kommando %s: Trip %s nicht speicherbar: %s", command, trip.id, e)
+            return CommandResult(
+                success=False, command=command,
+                confirmation_subject=self._t(
+                    f"[{trip.name}] Nicht gespeichert", f"[{trip.name}] Not saved"),
+                confirmation_body=self._t(
+                    "Der Trip konnte nicht gespeichert werden. Bitte spaeter "
+                    "erneut senden.",
+                    "The trip could not be saved. Please send again later."),
+                trip_name=trip.name,
+            )
 
     def _delete_snapshot(self, trip_id: str, user_id: str) -> None:
         """Delete cached weather snapshot after date changes."""

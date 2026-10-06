@@ -57,6 +57,15 @@ Das Backend besteht aus zwei klar getrennten Schichten (siehe `docs/adr/0015-dua
   (Provider, Normalisierung, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte,
   Scheduler, Alert-System, Inbound-Handler.
 
+**Schreib-Autorität (#2158, ADR-0083):** Go ist **nicht** alleiniger Schreiber — auch der
+Python-Kern schreibt `data/users/<uid>/briefings/<id>.json` (Telegram-/SMS-Kommandos,
+`skip_next`, Distanz-Backfill, Compare-Preset-Status). Beide Prozesse sperren dieselbe Datei
+`briefings/<id>.json.lock` per `flock` (Go `LockBriefing`, Python `src/services/file_lock.py`);
+Python schreibt atomar (tmp + `os.replace`) über `update_trip` (frisch lesen unter Sperre).
+Fristablauf (~5 s) ⇒ Go antwortet 503 + `Retry-After`. Orte, Gruppen und Metrik-Vorlagen
+haben In-Prozess-Sperren je Nutzer. Lock-Reihenfolge: Quota → Gruppen/Vorlagen → Ort →
+Briefing-Mutex → flock. Gilt nur auf lokalem Dateisystem. Ersetzt ADR-0031.
+
 Die Vertragsgrenze zwischen Go und Python ist HTTP mit den DTOs aus
 `docs/reference/api_contract.md`. Seit Issue #2142 authentifiziert sich die Go-API gegenüber
 dem Python-Core mit einem gemeinsamen Geheimnis (`GZ_CORE_SHARED_SECRET`, Header

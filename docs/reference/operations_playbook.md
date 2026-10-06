@@ -487,6 +487,17 @@ einem Stash überlebt haben.
 
 ---
 
+## Sperrdateien `briefings/*.json.lock` (#2158, ADR-0083)
+
+Neben jeder Trip-/Compare-Preset-Datei liegt eine Sperrdatei `<id>.json.lock`, die Go und
+Python per `flock` teilen. Sie ist **keine Nutzerdatei**: Listen filtern nur `*.json`, Export
+und `scripts/cleanup_1708c_dead_trips.py` überspringen `*.lock`. Beim Sichten von
+`briefings/` also nicht als Datenrest werten. (Der ADR trifft keine Aussage zum Löschen von
+Hand — nicht ohne Not anfassen; `flock` gilt nur auf lokalem Dateisystem.) Dauert eine
+Sperre über ~5 s, antwortet die API mit 503 + `Retry-After`.
+
+---
+
 ## Testdaten-Cleanup (`data/users`) — Detailablauf (#1133)
 
 Einmaliges Ops-Script gegen Test-Residuen, die vor dem Fix in #1133

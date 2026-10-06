@@ -137,6 +137,7 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		defer s.LockLocation(id)() // #2158
 		existing, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -195,6 +196,7 @@ func PatchLocationHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		defer s.LockLocation(id)() // #2158
 		existing, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -279,6 +281,7 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		defer s.LockLocation(id)() // #2158
 		if err := s.DeleteLocation(id); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)

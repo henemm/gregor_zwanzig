@@ -42,31 +42,57 @@ func (s *Store) LoadGroups() ([]model.Group, error) {
 	if err := s.requireUser(); err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(s.groupsFile())
-	if err == nil {
-		var wrapper struct {
-			Groups []model.Group `json:"groups"`
-		}
-		if uerr := json.Unmarshal(data, &wrapper); uerr != nil {
-			return nil, uerr
-		}
-		if wrapper.Groups == nil {
-			wrapper.Groups = []model.Group{}
-		}
-		sort.Slice(wrapper.Groups, func(i, j int) bool {
-			return wrapper.Groups[i].Order < wrapper.Groups[j].Order
-		})
-		return wrapper.Groups, nil
+	if gs, ok, err := s.readGroupsFile(); ok || err != nil {
+		return gs, err
 	}
-	if !os.IsNotExist(err) {
+	// Migration schreibt: unter Gruppen-Sperre, Datei dort erneut pruefen.
+	defer s.LockGroups()()
+	return s.loadGroupsLocked()
+}
+
+// readGroupsFile liest groups.json; ok=false heisst "Datei fehlt" (err=nil).
+func (s *Store) readGroupsFile() ([]model.Group, bool, error) {
+	data, err := os.ReadFile(s.groupsFile())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	var wrapper struct {
+		Groups []model.Group `json:"groups"`
+	}
+	if uerr := json.Unmarshal(data, &wrapper); uerr != nil {
+		return nil, false, uerr
+	}
+	if wrapper.Groups == nil {
+		wrapper.Groups = []model.Group{}
+	}
+	sort.Slice(wrapper.Groups, func(i, j int) bool {
+		return wrapper.Groups[i].Order < wrapper.Groups[j].Order
+	})
+	return wrapper.Groups, true, nil
+}
+
+// LoadGroupsLocked wie LoadGroups, Aufrufer haelt LockGroups() (keine
+// Reentranz, ADR-0083).
+func (s *Store) LoadGroupsLocked() ([]model.Group, error) {
+	if err := s.requireUser(); err != nil {
 		return nil, err
 	}
+	return s.loadGroupsLocked()
+}
 
+func (s *Store) loadGroupsLocked() ([]model.Group, error) {
+	if gs, ok, err := s.readGroupsFile(); ok || err != nil {
+		return gs, err
+	}
 	return s.migrateGroups()
 }
 
 // migrateGroups performs the one-time lazy migration (§4). Idempotency is
-// guaranteed by the existence of groups.json after step 4.
+// guaranteed by the existence of groups.json after step 4. Aufrufer haelt
+// LockGroups().
 func (s *Store) migrateGroups() ([]model.Group, error) {
 	locations, err := s.LoadLocations()
 	if err != nil {
@@ -121,12 +147,16 @@ func (s *Store) migrateGroups() ([]model.Group, error) {
 		if !ok {
 			continue
 		}
+		unlock := s.LockLocation(loc.ID) // Gruppen -> Ort (Reihenfolge ADR-0083)
 		existing, lerr := s.LoadLocation(loc.ID)
 		if lerr != nil || existing == nil {
+			unlock()
 			continue
 		}
 		existing.GroupID = &gid
-		if serr := s.SaveLocation(*existing); serr != nil {
+		serr := s.SaveLocation(*existing)
+		unlock()
+		if serr != nil {
 			return nil, serr
 		}
 	}
@@ -155,12 +185,21 @@ func (s *Store) saveGroups(gs []model.Group) error {
 	return writeFileLogged(s.groupsFile(), data)
 }
 
-// SaveGroup upserts a group by ID.
+// SaveGroup upserts a group by ID (nimmt die Gruppen-Sperre selbst).
 func (s *Store) SaveGroup(g model.Group) error {
 	if err := s.requireUser(); err != nil {
 		return err
 	}
-	groups, err := s.LoadGroups()
+	defer s.LockGroups()()
+	return s.SaveGroupLocked(g)
+}
+
+// SaveGroupLocked wie SaveGroup, Aufrufer haelt LockGroups().
+func (s *Store) SaveGroupLocked(g model.Group) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
+	groups, err := s.loadGroupsLocked()
 	if err != nil {
 		return err
 	}
@@ -180,13 +219,23 @@ func (s *Store) SaveGroup(g model.Group) error {
 	return s.saveGroups(groups)
 }
 
-// DeleteGroup removes a group by ID. Membership cleanup (group_id=nil on
-// locations) is the handler's responsibility.
+// DeleteGroup removes a group by ID (nimmt die Gruppen-Sperre selbst).
+// Membership cleanup (group_id=nil on locations) is the handler's
+// responsibility.
 func (s *Store) DeleteGroup(id string) error {
 	if err := s.requireUser(); err != nil {
 		return err
 	}
-	groups, err := s.LoadGroups()
+	defer s.LockGroups()()
+	return s.DeleteGroupLocked(id)
+}
+
+// DeleteGroupLocked wie DeleteGroup, Aufrufer haelt LockGroups().
+func (s *Store) DeleteGroupLocked(id string) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
+	groups, err := s.loadGroupsLocked()
 	if err != nil {
 		return err
 	}
