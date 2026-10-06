@@ -1,0 +1,8 @@
+tests/tdd/test_channel_origin_guard_parity.py: 7
+tests/tdd/test_issue_650_telegram_foundation.py: 9
+tests/tdd/test_sms_test_isolation.py: 6
+tests/tdd/test_telegram_test_isolation.py: 26
+tests/tdd/test_telegram_test_mode_guard.py: 7
+tests/unit/test_channel_blocked_missing_recipient.py: 4
+tests/unit/test_pii_log_maskierung_kanaele.py: 12
+

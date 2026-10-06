@@ -16,7 +16,7 @@ tests/tdd/test_egress_single_dial_point.py ...............FF............ [ 92%]
 =================================== FAILURES ===================================
 _ test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[answer_callback_query] _
 
-sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x725821e403b0>
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd99b9010>
 name = 'answer_callback_query'
 
     @pytest.mark.parametrize("name", sorted(_ALLE_METHODEN))
@@ -34,7 +34,7 @@ E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:176: Failed
 _ test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[get_my_commands] _
 
-sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x725821e433e0>
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd99ba780>
 name = 'get_my_commands'
 
     @pytest.mark.parametrize("name", sorted(_ALLE_METHODEN))
@@ -52,7 +52,7 @@ E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:176: Failed
 _______ test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt ________
 
-sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x725821e99610>
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd9a10320>
 
     def test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt(sink):
         """AC-2: Given Test-Modus, neue Methode zielt auf den Prod-Chat / When sie
@@ -67,7 +67,7 @@ E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:272: Failed
 ______ test_ac2_neue_methode_mit_falschem_token_wird_am_ausgang_geblockt _______
 
-sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x725821e9bec0>
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd9a28590>
 
     def test_ac2_neue_methode_mit_falschem_token_wird_am_ausgang_geblockt(sink):
         """AC-2: auch ein chatloser Endpunkt prueft am Ausgang den Token."""
@@ -79,8 +79,8 @@ E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:283: Failed
 _ test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[answer_callback_query] _
 
-sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x725821e98c20>
-aufruf = <function <lambda> at 0x725822d7cd60>
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd9a2a720>
+aufruf = <function <lambda> at 0x719cda964d60>
 
     @pytest.mark.parametrize(
         "aufruf",
@@ -103,8 +103,8 @@ E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:320: Failed
 ___ test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[get_my_commands] ____
 
-sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x725821e99d30>
-aufruf = <function <lambda> at 0x725822d7ce00>
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd99bbb30>
+aufruf = <function <lambda> at 0x719cda964e00>
 
     @pytest.mark.parametrize(
         "aufruf",
@@ -127,8 +127,8 @@ E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:320: Failed
 _____ test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[neue_methode] _____
 
-sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x725821e9ac90>
-aufruf = <function <lambda> at 0x725822d7cea0>
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd9a2a8a0>
+aufruf = <function <lambda> at 0x719cda964ea0>
 
     @pytest.mark.parametrize(
         "aufruf",
@@ -151,8 +151,8 @@ E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:320: Failed
 _ test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[answer_callback_query-<lambda>-0] _
 
-monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725821e43b00>
-name = 'answer_callback_query', aufruf = <function <lambda> at 0x725822d7d1c0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x719cd9a293d0>
+name = 'answer_callback_query', aufruf = <function <lambda> at 0x719cda9651c0>
 erwartet_ziel = 0
 
     @pytest.mark.parametrize(
@@ -183,15 +183,15 @@ erwartet_ziel = 0
         )
 E       AssertionError: answer_callback_query: Token-Pruefung lief 0x statt genau 1x
 E       assert 0 == 1
-E        +  where 0 = <tdd.test_telegram_post_is_single_guarded_exit._ZaehltPruefungen object at 0x725821e41d30>.token_pruefungen
+E        +  where 0 = <tdd.test_telegram_post_is_single_guarded_exit._ZaehltPruefungen object at 0x719cd99bbe90>.token_pruefungen
 
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:380: AssertionError
 ------------------------------ Captured log call -------------------------------
 WARNING  output.channels.telegram:telegram.py:396 Telegram drosselt (HTTP 429, chat=_bot) — warte 0.00s und sende genau einmal erneut
 _ test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[get_my_commands-<lambda>-0] _
 
-monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x725821ead610>
-name = 'get_my_commands', aufruf = <function <lambda> at 0x725822d7d260>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x719cd9a139b0>
+name = 'get_my_commands', aufruf = <function <lambda> at 0x719cda965260>
 erwartet_ziel = 0
 
     @pytest.mark.parametrize(
@@ -222,7 +222,7 @@ erwartet_ziel = 0
         )
 E       AssertionError: get_my_commands: Token-Pruefung lief 0x statt genau 1x
 E       assert 0 == 1
-E        +  where 0 = <tdd.test_telegram_post_is_single_guarded_exit._ZaehltPruefungen object at 0x725821eae0f0>.token_pruefungen
+E        +  where 0 = <tdd.test_telegram_post_is_single_guarded_exit._ZaehltPruefungen object at 0x719cd99b9e20>.token_pruefungen
 
 tests/tdd/test_telegram_post_is_single_guarded_exit.py:380: AssertionError
 ------------------------------ Captured log call -------------------------------
@@ -382,4 +382,4 @@ FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac6_seven_io
 FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen
 FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_beide_erlaubten_httpx_ausgaenge_existieren
 FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_pruefdatum_steht_in_gates_und_ratschen
-======================== 13 failed, 58 passed in 3.52s =========================
+======================== 13 failed, 58 passed in 3.48s =========================

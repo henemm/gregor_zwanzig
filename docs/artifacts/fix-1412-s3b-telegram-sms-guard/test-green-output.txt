@@ -1,0 +1,146 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic-2138-triage
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 84 items
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py ................. [ 20%]
+.................................                                        [ 59%]
+tests/tdd/test_egress_single_dial_point.py ............................. [ 94%]
+.....                                                                    [100%]
+
+==================================== PASSES ====================================
+_ test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[fallback_ohne_parse_mode] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:540 Telegram 400-fallback (no parse_mode) delivered (subject='Betreff')
+_ test_korrekte_test_konfiguration_sendet_jede_methode[fallback_ohne_parse_mode] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:540 Telegram 400-fallback (no parse_mode) delivered (subject='Betreff')
+_ test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[answer_callback_query-<lambda>-0] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:418 Telegram drosselt (HTTP 429, chat=_bot) — warte 0.00s und sende genau einmal erneut
+_ test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[get_my_commands-<lambda>-0] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:418 Telegram drosselt (HTTP 429, chat=_bot) — warte 0.00s und sende genau einmal erneut
+_ test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[delete_message-<lambda>-1] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:418 Telegram drosselt (HTTP 429, chat=424242) — warte 0.00s und sende genau einmal erneut
+_ test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[delete_message-test_modus] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+_ test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[delete_message-ohne_test_modus] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+_ test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[edit_message_text-test_modus] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+_ test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[edit_message_text-ohne_test_modus] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+_ test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[fallback_ohne_parse_mode-test_modus] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+WARNING  output.channels.telegram:telegram.py:540 Telegram 400-fallback (no parse_mode) delivered (subject='Betreff')
+_ test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[fallback_ohne_parse_mode-ohne_test_modus] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+WARNING  output.channels.telegram:telegram.py:540 Telegram 400-fallback (no parse_mode) delivered (subject='Betreff')
+_ test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[neue_methode-test_modus] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+_ test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[neue_methode-ohne_test_modus] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+______________ test_post_veraendert_das_dict_des_aufrufers_nicht _______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…111' auf Test-Chat-ID '424242' umgeschaltet.
+=========================== short test summary info ============================
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[answer_callback_query]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[get_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[send]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[set_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf[send]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_send_meldet_weiter_die_settings_chat_pruefung_1288
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[answer_callback_query]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[get_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[send]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[set_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[answer_callback_query]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[get_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[send]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[set_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac2_neue_methode_mit_falschem_token_wird_am_ausgang_geblockt
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac2_neue_methode_mit_korrekter_konfiguration_sendet
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[answer_callback_query]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[get_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[neue_methode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[answer_callback_query-<lambda>-0]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[get_my_commands-<lambda>-0]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[delete_message-<lambda>-1]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac6_seven_io_basis_hat_einen_transport_post
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac6_keine_unterklasse_ueberschreibt_send
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[delete_message-test_modus]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[delete_message-ohne_test_modus]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[edit_message_text-test_modus]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[edit_message_text-ohne_test_modus]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[fallback_ohne_parse_mode-test_modus]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[fallback_ohne_parse_mode-ohne_test_modus]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[neue_methode-test_modus]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um[neue_methode-ohne_test_modus]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_ohne_test_chat_bricht_ohne_netzaufruf_ab[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_ohne_test_chat_bricht_ohne_netzaufruf_ab[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_ohne_test_chat_bricht_ohne_netzaufruf_ab[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_herkunft_test_ohne_test_chat_bricht_ohne_netzaufruf_ab[neue_methode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_post_veraendert_das_dict_des_aufrufers_nicht
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac5_genau_eine_verbindungsstelle_im_ausgelieferten_stand
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac5_der_eine_erlaubte_ausgang_existiert_wirklich
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ausnahmenliste_ist_im_ausgelieferten_stand_leer
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_verbindung_ausserhalb_des_erlaubten_orts_wird_namentlich_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_erlaubte_stelle_in_der_attrappe_wird_nicht_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[alias-import smtplib as s\n\n\ndef dial_ueber_alias(host, port):\n    return s.SMTP(host, port)\n-s.SMTP-dial_ueber_alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[direktimport-from smtplib import SMTP\n\n\ndef dial_ueber_direktimport(host, port):\n    return SMTP(host, port)\n-SMTP-dial_ueber_direktimport]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[ssl-import smtplib\n\n\nclass Versender:\n    def zustellen(self, host):\n        return smtplib.SMTP_SSL(host, 465)\n-smtplib.SMTP_SSL-Versender.zustellen]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_ausnahme_klassen_sind_keine_fundstellen
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_zu_viele_ausnahmen_werden_rot
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_abgelaufene_frist_wird_rot
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_zu_kurze_begruendung_zaehlt_nicht
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_aufgeloeste_ausnahme_muss_entfernt_werden
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_pruefdatum_ist_maschinell_auffindbar
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_repo_wurzel_ist_der_eigene_baum
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_beide_erlaubten_httpx_ausgaenge_existieren
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_httpx_ausnahmen_unter_dem_deckel_und_befristet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[async_client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt_alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt_client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[modul]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[request_method_kw]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[request_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[stream_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_get_und_router_dekoratoren_sind_keine_fundstellen
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_erlaubte_ausgaenge_in_attrappe_werden_nicht_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_post_in_send_statt_post_wird_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_vierte_httpx_ausnahme_reisst_den_deckel
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_abgelaufene_httpx_ausnahme_wird_rot
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_pruefdatum_steht_in_gates_und_ratschen
+============================== 84 passed in 3.69s ==============================

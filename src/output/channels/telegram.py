@@ -369,23 +369,45 @@ class TelegramOutput:
             pass
         return max(0.0, min(seconds, cap))
 
-    def _post(self, url: str, payload: dict, *, chat_id=None) -> httpx.Response:
-        """Einziger Transportweg zur Bot-API (Issue #1370). Kapselt AUSSCHLIESSLICH
-        Drossel-Bremse -> POST -> genau EINE 429-Wiederholung und gibt die rohe
+    def _post(
+        self, url: str, payload: dict, *, chat_id=None, bound_chat: bool = False,
+    ) -> httpx.Response:
+        """Einziger Transportweg zur Bot-API (Issue #1370) und einziger
+        geschuetzter Ausgang (Issue #1412 S3b). Ablauf: Egress-Guards ->
+        Drossel-Bremse -> POST -> genau EINE 429-Wiederholung; gibt die rohe
         Antwort zurueck.
 
-        Bewusst KEINE Guards und KEINE Statuscode-Auswertung: die Egress-Guards
-        (#1288/#1363) bleiben in der jeweiligen oeffentlichen Methode VOR diesem
-        Aufruf stehen (``test_telegram_test_isolation.py`` sichert die
-        Reihenfolge ab), und ob ein Nicht-200 eine Ausnahme wirft, fail-soft ist
-        oder den 400-HTML-Fallback ausloest (ADR-0012), entscheidet weiterhin
-        der Aufrufer.
+        Die Guards laufen HIER, fuer jede oeffentliche Methode, VOR
+        ``_reserve_send_slot`` und genau EINMAL pro Aufruf (nicht erneut beim
+        429-Wiederholungsversuch): Herkunftssperre (#1476) auf die chat_id der
+        Nutzlast, Test-Bot-Token (#1363), bei ``bound_chat`` zusaetzlich der
+        Settings-Chat (#1288), dann der Ziel-Chat (#1363). Eine neue Methode
+        bekommt diesen Schutz, ohne selbst etwas pruefen zu muessen.
+
+        Bewusst KEINE Statuscode-Auswertung: ob ein Nicht-200 eine Ausnahme
+        wirft, fail-soft ist oder den 400-HTML-Fallback ausloest (ADR-0012),
+        entscheidet weiterhin der Aufrufer.
 
         Args:
             chat_id: Chat aus der jeweiligen Anfrage (Nutzlast bzw. Argument),
                 nicht aus ``self._settings`` — sonst liefe ``delete_message``
                 auf das falsche Chat-Konto.
+            bound_chat: nur ``send`` setzt True — dann wird zusaetzlich der
+                Settings-Chat geprueft (#1288, alter Fehlertext).
         """
+        if "chat_id" in payload:
+            payload = dict(payload)
+            target = self._guard_code_origin(payload["chat_id"])
+            self._guard_test_mode_bot_token()
+            if bound_chat:
+                self._guard_test_mode_chat_id()
+            self._guard_test_mode_target_chat(target)
+            payload["chat_id"] = target
+            chat_id = target
+        else:
+            self._guard_test_mode_bot_token()
+            if bound_chat:
+                self._guard_test_mode_chat_id()
         chat_key = _NO_CHAT_KEY if chat_id is None else str(chat_id)
         self._reserve_send_slot(chat_key)
         response = httpx.post(url, json=payload, timeout=self._timeout)
@@ -444,8 +466,6 @@ class TelegramOutput:
                 "nicht gesetzt.",
                 reason_code="telegram_no_chat_id",
             )
-        self._guard_test_mode_bot_token()
-        self._guard_test_mode_chat_id()
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
 
@@ -462,7 +482,7 @@ class TelegramOutput:
             payload["parse_mode"] = parse_mode
 
         try:
-            response = self._post(url, payload, chat_id=chat_id)
+            response = self._post(url, payload, chat_id=chat_id, bound_chat=True)
             if response.status_code == 200 and _api_ok(response):
                 logger.info("Telegram message sent (subject=%r)", subject)
                 try:
@@ -508,9 +528,6 @@ class TelegramOutput:
         OHNE `parse_mode`, mit gestrippten HTML-Tags UND `html.unescape()`ten
         Entities — sonst wuerde der Fallback "&amp;" statt "&" zeigen, ein
         kosmetischer Fehler gegen einen anderen getauscht."""
-        chat_id = self._guard_code_origin(chat_id)
-        self._guard_test_mode_bot_token()
-        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
         fallback_text = html.unescape(_HTML_TAG_RE.sub("", message))
@@ -552,9 +569,6 @@ class TelegramOutput:
         Returns:
             True on HTTP 200 + ok:true, False otherwise.
         """
-        chat_id = self._guard_code_origin(chat_id)
-        self._guard_test_mode_bot_token()
-        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/deleteMessage"
         payload: dict = {"chat_id": chat_id, "message_id": message_id}
@@ -590,9 +604,6 @@ class TelegramOutput:
         fail-soft: a non-200 / HTTPError / Timeout is only logged, never raised —
         "message is not modified" and stale messages must not crash the webhook.
         """
-        chat_id = self._guard_code_origin(chat_id)
-        self._guard_test_mode_bot_token()
-        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/editMessageText"
 
@@ -646,7 +657,6 @@ class TelegramOutput:
             commands: List of command dicts with 'command' and 'description' keys.
                       Defaults to BOT_COMMANDS when None.
         """
-        self._guard_test_mode_bot_token()
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/setMyCommands"
         payload = {"commands": commands if commands is not None else BOT_COMMANDS}

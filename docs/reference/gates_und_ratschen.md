@@ -420,6 +420,7 @@ keinem Modell und nicht in der Fixture steht, fängt das Gate nicht — nur den 
 | Invarianten-Test Einstellung = Auslieferung (#2422 S1) | 2026-12-25 | KHW 403 (#2422): B1/B2/B3/B5 als Register-Einträge sichtbar |
 | ADR-0049-Kanallisten-Ratsche `tests/test_adr0049_kanalliste_ratsche.py` — Dreier-Kanalliste ohne `premium_sms` nur mit Marke `ADR-0049` (#2229) | 2026-12-30 | — (bei Einführung 8 bewusst dreistellige Listen markiert; echter Fang offen) |
 | Trip-Schema-Drift-Gate `trip_schema_drift` — Test-Paar `tests/test_trip_schema_drift.py` + `internal/model/trip_schema_drift_test.go`, Allowlist `send_premium_sms`/`trip` (#2058) | 2027-01-03 | `suggestion_reason` nur in Python (Go-Editor-Save verwarf es still), bei Einführung geschlossen |
+| Egress-Struktur-Wächter `tests/tdd/test_egress_single_dial_point.py` — `smtplib` (#1412 S3a) und `httpx`-POST (#1412 S3b) nur an den erlaubten Ausgängen (`TelegramOutput._post`, `SevenIoChannelBase._post`), Deckel 3 localhost-Ausnahmen | 2027-01-04 | `seven_io_base.py:171` (`httpx.post` direkt in `SevenIoChannelBase.send`) bei Einführung gefangen und in `_post` verlegt |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.

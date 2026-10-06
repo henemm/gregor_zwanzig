@@ -261,6 +261,15 @@ class _NeueMethodeOhnePruefung(TelegramOutput):
         token = self._settings.telegram_bot_token
         return self._post(f"{TELEGRAM_API_BASE}/bot{token}/logOut", {})
 
+    def pin_payload(self, payload: dict) -> httpx.Response:
+        """Reicht ein vom Aufrufer gebautes Dict unveraendert an `_post` --
+        fuer den Nachweis, dass `_post` dieses Dict nicht veraendert."""
+        token = self._settings.telegram_bot_token
+        return self._post(
+            f"{TELEGRAM_API_BASE}/bot{token}/pinChatMessage", payload,
+            chat_id=payload["chat_id"],
+        )
+
 
 def test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt(sink):
     """AC-2: Given Test-Modus, neue Methode zielt auf den Prod-Chat / When sie
@@ -413,3 +422,83 @@ def test_ac6_keine_unterklasse_ueberschreibt_send():
     for klasse in (SMSOutput, PremiumSmsOutput):
         assert "send" not in vars(klasse), f"{klasse.__name__} ueberschreibt send()"
         assert klasse.send is SevenIoChannelBase.send
+
+
+# ---------------------------------------------------------------------------
+# Herkunftssperre (#1476) am Ausgang: Umschreibung wirkt auf den POST
+# (Adversary-Findings F001/F002/F003)
+# ---------------------------------------------------------------------------
+#
+# Hier wird die Herkunft bewusst auf "test" gestellt (die autouse-Fixture
+# oben pinnt "production"). Konfiguration: Test-Chat gesetzt, Token korrekt.
+# Im Test-Modus prueft danach die Ziel-Chat-Pruefung den UMGESCHRIEBENEN Chat
+# und laesst ihn durch; ohne Test-Modus wirkt allein die Herkunftssperre.
+
+_HERKUNFT_TEST_METHODEN = {
+    "fallback_ohne_parse_mode": lambda o: o._send_fallback_without_parse_mode(
+        PROD_CHAT_ID, "<b>Text</b>", None, "Betreff"
+    ),
+    "delete_message": lambda o: o.delete_message(PROD_CHAT_ID, 1),
+    "edit_message_text": lambda o: o.edit_message_text(PROD_CHAT_ID, 1, "Text"),
+    "neue_methode": lambda o: o.pin_message(PROD_CHAT_ID, 7),
+}
+
+
+@pytest.fixture
+def herkunft_test(monkeypatch):
+    monkeypatch.setattr(telegram_mod, "running_origin", lambda module_file: "test")
+
+
+@pytest.mark.parametrize("test_modus", [True, False], ids=["test_modus", "ohne_test_modus"])
+@pytest.mark.parametrize("name", sorted(_HERKUNFT_TEST_METHODEN))
+def test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um(
+    sink, herkunft_test, name, test_modus
+):
+    """F001/F002: Given Herkunft "test" und konfigurierter Test-Chat / When
+    eine Methode mit Prod-Chat-Argument sendet / Then traegt der POST den
+    Test-Chat (nie den Prod-Chat), und der Drossel-Platz wird fuer den
+    Test-Chat gebucht."""
+    output = _NeueMethodeOhnePruefung(_settings(is_test_mode=test_modus))
+
+    _HERKUNFT_TEST_METHODEN[name](output)
+
+    assert len(sink.calls) == 1, f"{name}: {sink.calls!r}"
+    gesendet = str(sink.calls[0]["payload"]["chat_id"])
+    assert gesendet == TEST_CHAT_ID, (
+        f"{name}: POST ging an chat_id={gesendet!r} statt an den Test-Chat"
+    )
+    assert set(TelegramOutput._rate_limit_stamps) == {TEST_CHAT_ID}, (
+        f"{name}: Drossel-Platz fuer {set(TelegramOutput._rate_limit_stamps)!r} "
+        "gebucht statt fuer den umgeschriebenen Test-Chat"
+    )
+
+
+@pytest.mark.parametrize("name", sorted(_HERKUNFT_TEST_METHODEN))
+def test_herkunft_test_ohne_test_chat_bricht_ohne_netzaufruf_ab(
+    sink, herkunft_test, name
+):
+    """F001 Gegenfall: Given Herkunft "test" OHNE Test-Chat / When gesendet
+    wird / Then OutputConfigError der Herkunftssperre und 0 POSTs."""
+    output = _NeueMethodeOhnePruefung(_settings(
+        is_test_mode=False, telegram_test_chat_id="",
+    ))
+
+    with pytest.raises(OutputConfigError) as exc:
+        _HERKUNFT_TEST_METHODEN[name](output)
+
+    assert "Herkunftssperre" in str(exc.value), str(exc.value)
+    assert sink.calls == [], f"{name}: Netzaufruf trotz Blockade: {sink.calls!r}"
+
+
+def test_post_veraendert_das_dict_des_aufrufers_nicht(sink, herkunft_test):
+    """F003: Given Herkunft "test" (Ziel-Chat wird umgeschrieben) / When eine
+    Methode ihr eigenes Payload-Dict an `_post` gibt / Then bleibt dieses
+    Dict unveraendert -- umgeschrieben wird nur die gesendete Kopie."""
+    output = _NeueMethodeOhnePruefung(_settings())
+    payload = {"chat_id": PROD_CHAT_ID, "message_id": 7}
+    vorher = dict(payload)
+
+    output.pin_payload(payload)
+
+    assert payload == vorher, f"Aufrufer-Dict veraendert: {payload!r}"
+    assert str(sink.calls[0]["payload"]["chat_id"]) == TEST_CHAT_ID

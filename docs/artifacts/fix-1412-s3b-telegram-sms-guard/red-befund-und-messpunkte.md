@@ -4,6 +4,9 @@ Stand 2026-10-06, gemessen im Worktree `epic-2138-triage`.
 
 ## RED-Lauf (`test-red-output.txt`): 13 rot, 58 grün
 
+Nach Fast-Forward auf `origin/main` `c1463084b` erneut gemessen: unverändert
+13 rot / 58 grün, einziger Struktur-Fund weiterhin `seven_io_base.py:171`.
+
 **Heute ROT (müssen nach `/50` grün werden):**
 
 | Test | AC | Warum rot |
@@ -16,6 +19,25 @@ Stand 2026-10-06, gemessen im Worktree `epic-2138-triage`.
 | `test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen` | AC-7 | meldet `seven_io_base.py:171 (httpx.post in SevenIoChannelBase.send)` |
 | `test_ac7_beide_erlaubten_httpx_ausgaenge_existieren` | AC-7 | `SevenIoChannelBase._post` fehlt |
 | `test_ac7_pruefdatum_steht_in_gates_und_ratschen` | AC-7 | Zeile in der Prüfdaten-Tabelle fehlt |
+
+**Rohbeleg** (wörtlich aus `test-red-output.txt`, Kurzbericht und Summenzeile):
+
+```
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[answer_callback_query]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[get_my_commands]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac2_neue_methode_mit_falschem_token_wird_am_ausgang_geblockt
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[answer_callback_query]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[get_my_commands]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[neue_methode]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[answer_callback_query-<lambda>-0]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[get_my_commands-<lambda>-0]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac6_seven_io_basis_hat_einen_transport_post
+FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen
+FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_beide_erlaubten_httpx_ausgaenge_existieren
+FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_pruefdatum_steht_in_gates_und_ratschen
+======================== 13 failed, 58 passed in 3.48s =========================
+```
 
 **Heute bewusst GRÜN (Regressionsschutz, dürfen nicht kippen):** `send`,
 Rückfall, `delete_message`, `edit_message_text` in Token- und Chat-Fall;
