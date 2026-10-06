@@ -45,6 +45,7 @@
 //     --test src/lib/components/shared/__tests__/compare_alarme_wertprops.test.ts
 
 import { test, describe } from 'node:test';
+import { newEntityAlertChannelDefault } from '../alarme-tab/alertChannelState.ts';
 import assert from 'node:assert/strict';
 import { execFileSync, execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -521,7 +522,8 @@ describe('AC-3: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () =>
 				(buendel.onChannelToggle as (k: string) => void)('telegram');
 				assert.strictEqual(
 					(wiz.channels as Record<string, boolean>).telegram,
-					true,
+					// Issue #2518: Neuanlage-Default hat Telegram AN — Umschalten kippt auf AUS.
+					!newEntityAlertChannelDefault().telegram,
 					'AC-3 FAIL (Issue #2293 S2): `onChannelToggle("telegram")` schaltet ' +
 						'`wiz.channels.telegram` nicht um.'
 				);
