@@ -1528,17 +1528,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "api/routers/scheduler.py::send_test_trip_report::0": (
         "B1 (#1403/#1405) — send_test_trip_report: 'sent': True trotz outcome."
     ),
-    # --- B11/B11b/B11c: die drei Compare-Alarmprüfer. Bei allen dreien heißt
-    # eine 0 "nichts zu melden" ODER "alles kaputt" — kein Fehlerzähler.
-    "src/services/compare_alert.py::check_all_compare_presets::0": (
-        "B11 (#1405) — check_all_compare_presets: sent gezaehlt, kein Gegenzähler."
-    ),
-    "src/services/compare_official_alert.py::check_all_compare_presets::0": (
-        "B11c (#1405) — check_all_compare_presets: sum(genexp) ohne try/except."
-    ),
-    "src/services/compare_radar_alert.py::check_all_compare_presets_run::0": (
-        "B11b (#1405) — check_all_compare_presets: über _check_one_preset(...)."
-    ),
+    # B11/B11b/B11c entfernt (#2217) — die drei Compare-Alarmprüfer zählen
+    # gescheiterte Presets jetzt in `failed` (Gegenzähler je Einheit).
     # --- B19/B20: die beiden Inbound-Reader. In Spec-Version 1.1 fälschlich
     # als "kein Fund" geführt (E4).
     "src/services/inbound_email_reader.py::poll_and_process::0": (
@@ -1619,13 +1610,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/scheduler_dispatch_service.py::send_compare_preset::0": (
         "B12 (#1405) — send_compare_preset: 'status': 'ok' fest."
     ),
-    # --- B9/B10: die beiden Trip-Alarmprüfer.
-    "src/services/trip_alert.py::check_all_trips::0": (
-        "B9 (#1405) — check_all_trips: alerts_sent ohne Gegenzähler, return int."
-    ),
-    "src/services/trip_alert.py::_check_radar_trips::0": (
-        "B10 (#1405) — check_radar_alerts: sent ohne Gegenzähler."
-    ),
+    # B9/B10 entfernt (#2217) — die beiden Trip-Alarmprüfer zählen gescheiterte
+    # Trips jetzt in AlertCheckRunResult.failed (Gegenzähler je Einheit).
     # --- B18: dateiweites Muster, zehn Funktionen, 13 Treffer. Reparatur (S4)
     # am Stück: EINE Entscheidung darüber, was CommandResult.success bedeutet
     # (Antwort verfasst vs. zugrundeliegende Aktion erfolgreich).
@@ -1862,16 +1848,8 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "api/routers/scheduler.py::trigger_inbound": 1,
     # B8 — dito, Feld heißt "processed" (Inbound Telegram)
     "api/routers/scheduler.py::trigger_inbound_telegram": 1,
-    # B9 — try/except je Trip, nur alerts_sent hoch, return int
-    "src/services/trip_alert.py::check_all_trips": 1,
-    # B10 — analoges Muster im Radar-Pfad, return sent (int)
-    "src/services/trip_alert.py::_check_radar_trips": 1,
-    # B11 — try/except je Ort, nur sent gezählt
-    "src/services/compare_alert.py::check_all_compare_presets": 1,
-    # B11b — gleiches Muster, Nowcast-Fehler je Ort nur im logger.error
-    "src/services/compare_radar_alert.py::check_all_compare_presets_run": 1,
-    # B11c — sum(1 for ... if ...) ohne jeden Fehlerzähler und ohne try/except
-    "src/services/compare_official_alert.py::check_all_compare_presets": 1,
+    # B9/B10/B11/B11b/B11c entfernt (#2217) — Trip- und Compare-Alarmprüfer
+    # schotten jede Einheit ab und zählen Ausfälle in `failed`.
     # B12 — top_ort/actual_empfaenger zugewiesen, "status" trotzdem festes "ok"
     "src/services/scheduler_dispatch_service.py::send_compare_preset": 1,
     # B13 entfernt (#1407) — toter Compare-Heartbeat wurde geloescht statt
@@ -2002,11 +1980,12 @@ def test_scanner_finds_every_spec_listed_finding():
     # gekürzte Tabelle würde sonst hinter einem grünen Scan verschwinden,
     # und genau das ist der Weg, auf dem Wächter still ihre Schärfe
     # verlieren (Test-Politik: Schwellen nie anpassen, damit etwas grün wird).
-    assert len(SPEC_LISTED_FINDINGS) == 31 and sum(SPEC_LISTED_FINDINGS.values()) == 40, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 31 "
-        "Funktionsschlüssel, Summe 40 — Version 1.2 minus B13, #1407, minus "
+    assert len(SPEC_LISTED_FINDINGS) == 26 and sum(SPEC_LISTED_FINDINGS.values()) == 35, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 26 "
+        "Funktionsschlüssel, Summe 35 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
-        "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2). Ist: "
+        "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2, "
+        "minus B9/B10/B11/B11b/B11c, #2217). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )
