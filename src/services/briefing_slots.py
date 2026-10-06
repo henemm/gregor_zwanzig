@@ -52,11 +52,49 @@ CLAIM_TTL = 900  # Sekunden (15 min)
 _STATE_FILENAME = "briefing_slots.json"
 _LOCK_SUFFIX = ".lock"
 _BRIEFING_LOG_FILENAME = "briefing_log.json"
+_REBUILT_MARKER = "rebuilt_from_log_at"
 
 #: #2231: Sentinel fuer eine unlesbare Vermerk-Datei (fail-closed). Ein leeres
 #: ``{}`` hiesse "alle Slots offen" und liesse den naechsten Schreibvorgang die
 #: beschaedigte Datei ueberschreiben.
 _UNREADABLE: dict = {"__unreadable__": True}
+
+
+def lege_beschaedigte_datei_beiseite(
+    pfad: Path, grund: str, moment: datetime, log: logging.Logger,
+) -> Optional[Path]:
+    """#2231: benennt eine unlesbare Datei in ``<name>.corrupt-<UTC>`` um.
+
+    Nie loeschen, nie ueberschreiben: bei Namenskollision wird ``-1``, ``-2``
+    ... angehaengt. Genau EINE ERROR-Zeile mit Original, Ziel und Grund.
+    Scheitert die Umbenennung (OSError), bleibt das Original unangetastet:
+    ERROR-Zeile, Rueckgabe ``None`` (fail-closed, kein Absturz).
+    """
+    stempel = moment.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
+    ziel = pfad.with_name(f"{pfad.name}.corrupt-{stempel}")
+    zaehler = 0
+    while ziel.exists() or ziel.is_symlink():
+        zaehler += 1
+        ziel = pfad.with_name(f"{pfad.name}.corrupt-{stempel}-{zaehler}")
+    try:
+        os.rename(pfad, ziel)
+    except OSError as exc:
+        log.error(
+            "%s beschaedigt (%s) -- Beiseitelegen nach %s scheiterte (%s), "
+            "Datei bleibt unangetastet", pfad, grund, ziel, exc,
+        )
+        return None
+    log.error("%s beschaedigt (%s) -- beiseitegelegt nach %s", pfad, grund, ziel)
+    return ziel
+
+
+def lesefehler(pfad: Path) -> Optional[str]:
+    """Grund, warum ``pfad`` kein lesbares JSON-Objekt ist; ``None`` = lesbar."""
+    try:
+        data = json.loads(pfad.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return str(exc)
+    return None if isinstance(data, dict) else "kein JSON-Objekt"
 
 
 class BriefingSlotStore:
@@ -101,7 +139,7 @@ class BriefingSlotStore:
         eintrag = self._find(data, trip_id, slot, local_day)
         if eintrag is not None and eintrag.get("outcome") is not None:
             return True
-        return self._log_bezeugt_versand(trip_id, slot, local_day, zone)
+        return self._log_bezeugt_versand(trip_id, slot, local_day, zone, data)
 
     def is_recorded_or_claimed(
         self, trip_id: str, slot: str, local_day: date,
@@ -131,7 +169,7 @@ class BriefingSlotStore:
             if eintrag.get("outcome") is not None:
                 return True
             return not self._ist_verwaist(eintrag, moment)
-        return self._log_bezeugt_versand(trip_id, slot, local_day, zone)
+        return self._log_bezeugt_versand(trip_id, slot, local_day, zone, data)
 
     def reserve(
         self, trip_id: str, slot: str, local_day: date,
@@ -170,13 +208,15 @@ class BriefingSlotStore:
                     return False
                 if not self._ist_verwaist(eintrag, moment):
                     return False
+                if self._log_unlesbar():
+                    return False  # #2231 AC-9: kein Beleg => keine Uebernahme
                 if self._log_traegt_versand(trip_id, slot, local_day, zone):
                     eintrag["outcome"] = "sent"
                     return True  # schreiben, aber NICHT reserviert
                 eintrag["recorded_at"] = moment.isoformat()
                 stand["reserviert"] = True
                 return True
-            if self._log_bezeugt_versand(trip_id, slot, local_day, zone):
+            if self._log_bezeugt_versand(trip_id, slot, local_day, zone, data):
                 return False
             data.setdefault("entries", []).append(
                 self._eintrag(trip_id, slot, local_day, None, moment)
@@ -185,6 +225,53 @@ class BriefingSlotStore:
             return True
 
         return self._update(_op) and stand["reserviert"]
+
+    # --- Reparatur (Issue #2231) ---
+
+    def repair_if_corrupt(self, moment: datetime) -> bool:
+        """Legt eine unlesbare Vermerk-Datei beiseite und legt sie neu an.
+
+        Unter derselben Sidecar-Sperre wie jeder Schreibvorgang. ``True`` nur,
+        wenn repariert wurde; fehlende oder lesbare Datei ⇒ ``False``.
+        """
+        self._dir.mkdir(parents=True, exist_ok=True)
+        fd = os.open(str(self._path) + _LOCK_SUFFIX, os.O_CREAT | os.O_RDWR, 0o644)
+        try:
+            if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
+                logger.warning("Dateisperre fuer Reparatur nicht erhalten")
+                return False
+            try:
+                return self._repair_locked(moment)
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)
+
+    def _repair_locked(self, moment: datetime) -> bool:
+        if not (self._path.exists() or self._path.is_symlink()):
+            return False
+        grund = lesefehler(self._path)
+        if grund is None:
+            return False
+        if lege_beschaedigte_datei_beiseite(self._path, grund, moment, logger) is None:
+            return False
+        log_pfad = self._dir / _BRIEFING_LOG_FILENAME
+        if log_pfad.exists():
+            log_grund = lesefehler(log_pfad)
+            if log_grund is not None:
+                lege_beschaedigte_datei_beiseite(log_pfad, log_grund, moment, logger)
+        self._write({"entries": [], _REBUILT_MARKER: moment.isoformat()})
+        return True
+
+    def _log_unlesbar(self) -> bool:
+        """Ist ``briefing_log.json`` vorhanden, aber unlesbar? (ERROR-Zeile)"""
+        pfad = self._dir / _BRIEFING_LOG_FILENAME
+        if not pfad.exists():
+            return False
+        grund = lesefehler(pfad)
+        if grund is not None:
+            logger.error("%s unlesbar (%s) -- Zeuge fehlt", pfad, grund)
+        return grund is not None
 
     # --- Alters-Dimension (Issue #1897) ---
 
@@ -279,6 +366,7 @@ class BriefingSlotStore:
 
     def _log_bezeugt_versand(
         self, trip_id: str, slot: str, local_day: date, zone: Optional[ZoneInfo],
+        data: Optional[dict] = None,
     ) -> bool:
         """Solange ``briefing_slots.json`` NICHT existiert, gilt ein Slot als
         erledigt, wenn ``briefing_log.json`` einen Versand mit passender
@@ -309,7 +397,9 @@ class BriefingSlotStore:
         Wege; zuvor kennzeichnete nur der SMS-Weg seine Eintraege, waehrend
         Test-Versand-Knopf und Inbound-Kommando „report" weiter durchschlugen.
         """
-        if self._path.exists():
+        # #2231: Ableitung auch nach einer Reparatur (Marker), nicht bei
+        # gueltiger Datei ohne Marker (PO-Regel 2026-08-11).
+        if self._path.exists() and not (data or {}).get(_REBUILT_MARKER):
             return False
         return self._log_traegt_versand(trip_id, slot, local_day, zone)
 
@@ -330,9 +420,11 @@ class BriefingSlotStore:
             return False
         try:
             data = json.loads(pfad.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.error("%s unlesbar (%s) -- Zeuge fehlt", pfad, exc)
             return False
         if not isinstance(data, dict):
+            logger.error("%s enthaelt kein JSON-Objekt -- Zeuge fehlt", pfad)
             return False
         for eintrag in data.get("entries", []):
             if not isinstance(eintrag, dict):
@@ -425,7 +517,10 @@ class BriefingSlotStore:
             try:
                 data = self._load()
                 if data is _UNREADABLE:
-                    return False  # #2231: beschaedigte Datei nie ueberschreiben
+                    # #2231: nie ueberschreiben, sondern beiseitelegen + neu
+                    if not self._repair_locked(datetime.now(tz=timezone.utc)):
+                        return False  # Beiseitelegen scheiterte: fail-closed
+                    data = self._load()
                 geaendert = mutate(data)
                 if geaendert:
                     self._write(data)

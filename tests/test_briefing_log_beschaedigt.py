@@ -222,3 +222,30 @@ def test_ac9_gegenprobe_gueltiges_leeres_protokoll_uebernimmt_den_claim():
         s.versandversuche
     )
 
+
+
+def test_ac6_rename_fehler_beim_protokoll_ist_fail_closed(monkeypatch, caplog):
+    """GIVEN kaputtes Protokoll UND ``os.rename`` scheitert (OSError)
+    WHEN ``_append_briefing_log`` schreibt
+    THEN keine Ausnahme, Protokoll byte-identisch, ERROR nennt den Pfad.
+    """
+    import os
+
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    uid = nutzer("ac6rename")
+    log = pfad(uid, LOG_DATEI)
+    log.write_text(KAPUTT_ABBRUCH, encoding="utf-8")
+    vorher = log.read_bytes()
+    s = TripReportSchedulerService(settings=settings_email_only(), user_id=uid)
+
+    def _scheitert(src, dst):
+        raise OSError(18, "Invalid cross-device link (injiziert)")
+
+    monkeypatch.setattr(os, "rename", _scheitert)
+    with caplog.at_level(logging.ERROR):
+        s._append_briefing_log("t-2231-rn", SLOT, ["email"])
+
+    assert log.read_bytes() == vorher
+    assert quarantaene(log.parent, LOG_DATEI) == []
+    assert error_zeilen(caplog, str(log), "scheiterte"), _alle(caplog)

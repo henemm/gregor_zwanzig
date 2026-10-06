@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import re
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
@@ -78,6 +80,10 @@ def test_ac1_reparatur_legt_kaputte_datei_beiseite_und_setzt_marker(tmp_path, in
     assert store.repair_if_corrupt(moment=NOW) is True
 
     assert len(quarantaene(tmp_path, SLOTS_DATEI)) == 1
+    assert re.search(
+        r"briefing_slots\.json\.corrupt-\d{8}T\d{6}Z(-\d+)?$",
+        quarantaene(tmp_path, SLOTS_DATEI)[0].name,
+    )  # F004: Dateinamen-Muster
     neu = lies_json(tmp_path / SLOTS_DATEI)
     assert isinstance(neu, dict), neu
     assert neu.get("entries") == [], neu
@@ -324,3 +330,85 @@ def test_ac8_nur_beschaedigter_nutzer_wird_repariert(tmp_path):
     assert a.reserve("t1", "morning", DAY, moment=NOW) is True
     assert b.reserve("t1", "morning", DAY, moment=NOW) is True
     assert MARKER not in lies_json(b_datei)
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 1: Schreibpfad-Reparatur, fail-closed bei Rename-Fehler, Zeuge-ERROR
+# ---------------------------------------------------------------------------
+
+
+def test_reserve_ohne_vorherige_reparatur_repariert_im_schreibpfad(tmp_path):
+    """F001: ``reserve`` direkt auf kaputter Datei (kein ``repair_if_corrupt``)
+    repariert unter der Sperre statt ``False`` zu liefern."""
+    _kaputt(tmp_path, KAPUTT_ABBRUCH)
+    store = BriefingSlotStore("user-a", data_dir=tmp_path)
+
+    assert store.reserve("t1", "morning", DAY, moment=NOW) is True
+
+    assert len(quarantaene(tmp_path, SLOTS_DATEI)) == 1
+    assert MARKER in lies_json(tmp_path / SLOTS_DATEI)
+
+
+def _rename_scheitert(monkeypatch):
+    def _kaputt_rename(src, dst):
+        raise OSError(18, "Invalid cross-device link (injiziert)")
+
+    monkeypatch.setattr(os, "rename", _kaputt_rename)
+
+
+def test_f005_rename_fehler_ist_fail_closed_ohne_absturz(tmp_path, monkeypatch, caplog):
+    """F005: scheitert das Beiseitelegen, bleibt die Datei byte-identisch,
+    ``repair_if_corrupt`` liefert False ohne Ausnahme, ``reserve`` bleibt
+    False, genau die ERROR-Zeile nennt die Datei."""
+    p = _kaputt(tmp_path, KAPUTT_ABBRUCH)
+    vorher = p.read_bytes()
+    store = BriefingSlotStore("user-a", data_dir=tmp_path)
+    _rename_scheitert(monkeypatch)
+
+    with caplog.at_level(logging.ERROR):
+        assert store.repair_if_corrupt(moment=NOW) is False
+        assert store.reserve("t1", "morning", DAY, moment=NOW) is False
+
+    assert p.read_bytes() == vorher
+    assert quarantaene(tmp_path, SLOTS_DATEI) == []
+    assert error_zeilen(caplog, SLOTS_DATEI, "scheiterte")
+
+
+def test_f005_rename_fehler_im_takt_stuerzt_den_sammellauf_nicht_ab():
+    """F005: ``_collect_due_trips`` laeuft ohne Ausnahme durch, nichts geht raus."""
+    from freezegun import freeze_time
+
+    from tests.helpers.briefing_imminent_fixtures import write_trip
+
+    jetzt = datetime(2026, 3, 15, 7, 5, tzinfo=timezone.utc)
+    mp = pytest.MonkeyPatch()
+    try:
+        with freeze_time(jetzt):
+            uid = nutzer("f005takt")
+            write_trip(uid, "t-2231-f005", morgen_stunde=7, abend_stunde=18)
+            slots = pfad(uid, SLOTS_DATEI)
+            slots.write_text(KAPUTT_ABBRUCH, encoding="utf-8")
+            vorher = slots.read_bytes()
+            s = zaehlender_scheduler(uid, ["sent"])
+            _rename_scheitert(mp)
+            takt(strategie(uid, s), jetzt)
+    finally:
+        mp.undo()
+
+    assert s.versandversuche == []
+    assert slots.read_bytes() == vorher
+
+
+def test_f002_kaputtes_protokoll_hinter_repariertem_vermerk_loggt_error(tmp_path, caplog):
+    """F002: Datei mit Marker + unlesbares Protokoll ⇒ ``is_recorded`` nennt
+    das Protokoll in einer ERROR-Zeile."""
+    (tmp_path / SLOTS_DATEI).write_text(
+        json.dumps({"entries": [], MARKER: NOW.isoformat()}), encoding="utf-8",
+    )
+    (tmp_path / LOG_DATEI).write_text(KAPUTT_ABBRUCH, encoding="utf-8")
+    store = BriefingSlotStore("user-a", data_dir=tmp_path)
+
+    with caplog.at_level(logging.ERROR):
+        assert store.is_recorded("t1", "morning", DAY) is False
+
+    assert error_zeilen(caplog, LOG_DATEI)

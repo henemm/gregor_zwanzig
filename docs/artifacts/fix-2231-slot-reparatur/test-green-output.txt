@@ -1,0 +1,154 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/spicy-shimmying-lake
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 34 items
+
+tests/test_briefing_slot_reparatur.py ....................               [ 58%]
+tests/test_briefing_log_beschaedigt.py .........                         [ 85%]
+tests/test_briefing_slot_fail_closed.py .....                            [100%]
+
+==================================== PASSES ====================================
+_ test_ac1_reparatur_legt_kaputte_datei_beiseite_und_setzt_marker[abbruch_json] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_legt_kaputt0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_legt_kaputt0/briefing_slots.json.corrupt-20260820T060000Z
+_ test_ac1_reparatur_legt_kaputte_datei_beiseite_und_setzt_marker[liste_statt_objekt] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_legt_kaputt1/briefing_slots.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_legt_kaputt1/briefing_slots.json.corrupt-20260820T060000Z
+_ test_ac1_reparatur_legt_kaputte_datei_beiseite_und_setzt_marker[text_statt_objekt] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_legt_kaputt2/briefing_slots.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_legt_kaputt2/briefing_slots.json.corrupt-20260820T060000Z
+__________________ test_ac1_reparatur_verzeichnis_statt_datei __________________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_verzeichnis0/briefing_slots.json beschaedigt ([Errno 21] Is a directory: '/tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_verzeichnis0/briefing_slots.json') -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac1_reparatur_verzeichnis0/briefing_slots.json.corrupt-20260820T060000Z
+_________ test_ac1_takt_mit_kaputter_slot_datei_versendet_das_briefing _________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/data_root4/users/tdd-1594-2231-ac1takt-499411/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/data_root4/users/tdd-1594-2231-ac1takt-499411/briefing_slots.json.corrupt-20260315T070500Z
+______________ test_ac2_protokoll_bezeugt_versand_nach_reparatur _______________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac2_protokoll_bezeugt_ver0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac2_protokoll_bezeugt_ver0/briefing_slots.json.corrupt-20260820T060000Z
+_ test_ac3_beiseitegelegte_datei_bleibt_byte_identisch_auch_beim_zweiten_defekt _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac3_beiseitegelegte_datei0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac3_beiseitegelegte_datei0/briefing_slots.json.corrupt-20260820T060000Z
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac3_beiseitegelegte_datei0/briefing_slots.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac3_beiseitegelegte_datei0/briefing_slots.json.corrupt-20260820T060000Z-1
+_ test_ac5_leser_ohne_sperre_antworten_true_und_reparieren_nicht[abbruch_json] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:468 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant0/briefing_slots.json unlesbar (Unterminated string starting at: line 1 column 26 (char 25)) -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:468 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant0/briefing_slots.json unlesbar (Unterminated string starting at: line 1 column 26 (char 25)) -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant0/briefing_slots.json.corrupt-20260820T060000Z
+_ test_ac5_leser_ohne_sperre_antworten_true_und_reparieren_nicht[liste_statt_objekt] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:471 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant1/briefing_slots.json enthaelt kein JSON-Objekt -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:471 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant1/briefing_slots.json enthaelt kein JSON-Objekt -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant1/briefing_slots.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant1/briefing_slots.json.corrupt-20260820T060000Z
+_ test_ac5_leser_ohne_sperre_antworten_true_und_reparieren_nicht[text_statt_objekt] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:471 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant2/briefing_slots.json enthaelt kein JSON-Objekt -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:471 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant2/briefing_slots.json enthaelt kein JSON-Objekt -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant2/briefing_slots.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac5_leser_ohne_sperre_ant2/briefing_slots.json.corrupt-20260820T060000Z
+_ test_ac7_reparatur_der_slot_datei_schreibt_genau_eine_error_zeile[abbruch_json] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac7_reparatur_der_slot_da0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac7_reparatur_der_slot_da0/briefing_slots.json.corrupt-20260820T060000Z
+_ test_ac7_reparatur_der_slot_datei_schreibt_genau_eine_error_zeile[liste_statt_objekt] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac7_reparatur_der_slot_da1/briefing_slots.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac7_reparatur_der_slot_da1/briefing_slots.json.corrupt-20260820T060000Z
+_ test_ac7_reparatur_der_slot_datei_schreibt_genau_eine_error_zeile[text_statt_objekt] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac7_reparatur_der_slot_da2/briefing_slots.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac7_reparatur_der_slot_da2/briefing_slots.json.corrupt-20260820T060000Z
+_______________ test_ac8_nur_beschaedigter_nutzer_wird_repariert _______________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac8_nur_beschaedigter_nut0/a/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac8_nur_beschaedigter_nut0/a/briefing_slots.json.corrupt-20260820T060000Z
+________ test_reserve_ohne_vorherige_reparatur_repariert_im_schreibpfad ________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:468 /tmp/pytest-of-hem/pytest-1154/test_reserve_ohne_vorherige_re0/briefing_slots.json unlesbar (Unterminated string starting at: line 1 column 26 (char 25)) -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_reserve_ohne_vorherige_re0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_reserve_ohne_vorherige_re0/briefing_slots.json.corrupt-20261006T125615Z
+_____________ test_f005_rename_fehler_ist_fail_closed_ohne_absturz _____________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:82 /tmp/pytest-of-hem/pytest-1154/test_f005_rename_fehler_ist_fa0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- Beiseitelegen nach /tmp/pytest-of-hem/pytest-1154/test_f005_rename_fehler_ist_fa0/briefing_slots.json.corrupt-20260820T060000Z scheiterte ([Errno 18] Invalid cross-device link (injiziert)), Datei bleibt unangetastet
+ERROR    briefing_slots:briefing_slots.py:468 /tmp/pytest-of-hem/pytest-1154/test_f005_rename_fehler_ist_fa0/briefing_slots.json unlesbar (Unterminated string starting at: line 1 column 26 (char 25)) -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:82 /tmp/pytest-of-hem/pytest-1154/test_f005_rename_fehler_ist_fa0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- Beiseitelegen nach /tmp/pytest-of-hem/pytest-1154/test_f005_rename_fehler_ist_fa0/briefing_slots.json.corrupt-20261006T125615Z scheiterte ([Errno 18] Invalid cross-device link (injiziert)), Datei bleibt unangetastet
+_______ test_f005_rename_fehler_im_takt_stuerzt_den_sammellauf_nicht_ab ________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:82 /tmp/pytest-of-hem/pytest-1154/data_root18/users/tdd-1594-2231-f005takt-a194b5/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- Beiseitelegen nach /tmp/pytest-of-hem/pytest-1154/data_root18/users/tdd-1594-2231-f005takt-a194b5/briefing_slots.json.corrupt-20260315T070500Z scheiterte ([Errno 18] Invalid cross-device link (injiziert)), Datei bleibt unangetastet
+ERROR    briefing_slots:briefing_slots.py:468 /tmp/pytest-of-hem/pytest-1154/data_root18/users/tdd-1594-2231-f005takt-a194b5/briefing_slots.json unlesbar (Unterminated string starting at: line 1 column 26 (char 25)) -- Versand gesperrt
+_____ test_f002_kaputtes_protokoll_hinter_repariertem_vermerk_loggt_error ______
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:424 /tmp/pytest-of-hem/pytest-1154/test_f002_kaputtes_protokoll_h0/briefing_log.json unlesbar (Unterminated string starting at: line 1 column 26 (char 25)) -- Zeuge fehlt
+_______ test_ac6_protokolleintrag_trotz_kaputtem_protokoll[abbruch_json] _______
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/data_root20/users/tdd-1594-2231-ac6-757d14/briefing_log.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/data_root20/users/tdd-1594-2231-ac6-757d14/briefing_log.json.corrupt-20261006T125615Z
+____ test_ac6_protokolleintrag_trotz_kaputtem_protokoll[liste_statt_objekt] ____
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/data_root21/users/tdd-1594-2231-ac6-60963d/briefing_log.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/data_root21/users/tdd-1594-2231-ac6-60963d/briefing_log.json.corrupt-20261006T125615Z
+____ test_ac6_protokolleintrag_trotz_kaputtem_protokoll[text_statt_objekt] _____
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/data_root22/users/tdd-1594-2231-ac6-fbad0b/briefing_log.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/data_root22/users/tdd-1594-2231-ac6-fbad0b/briefing_log.json.corrupt-20261006T125615Z
+________ test_ac6_slot_reparatur_legt_auch_kaputtes_protokoll_beiseite _________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac6_slot_reparatur_legt_a0/briefing_slots.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac6_slot_reparatur_legt_a0/briefing_slots.json.corrupt-20260820T060000Z
+ERROR    briefing_slots:briefing_slots.py:87 /tmp/pytest-of-hem/pytest-1154/test_ac6_slot_reparatur_legt_a0/briefing_log.json beschaedigt (kein JSON-Objekt) -- beiseitegelegt nach /tmp/pytest-of-hem/pytest-1154/test_ac6_slot_reparatur_legt_a0/briefing_log.json.corrupt-20260820T060000Z
+_ test_ac9_verwaister_claim_wird_bei_kaputtem_protokoll_nicht_uebernommen[abbruch_json] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:273 /tmp/pytest-of-hem/pytest-1154/test_ac9_verwaister_claim_wird0/briefing_log.json unlesbar (Unterminated string starting at: line 1 column 26 (char 25)) -- Zeuge fehlt
+_ test_ac9_verwaister_claim_wird_bei_kaputtem_protokoll_nicht_uebernommen[liste_statt_objekt] _
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:273 /tmp/pytest-of-hem/pytest-1154/test_ac9_verwaister_claim_wird1/briefing_log.json unlesbar (kein JSON-Objekt) -- Zeuge fehlt
+__ test_ac9_takt_mit_verwaistem_claim_und_kaputtem_protokoll_versendet_nichts __
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:273 /tmp/pytest-of-hem/pytest-1154/data_root26/users/tdd-1594-2231-ac9takt-784cef/briefing_log.json unlesbar (Unterminated string starting at: line 1 column 26 (char 25)) -- Zeuge fehlt
+WARNING  trip_report_scheduler:trip_report_scheduler.py:656 Slot t-2231-ac9/morning am 2026-03-15 nicht reservierbar -- kein Versandversuch
+____________ test_ac6_rename_fehler_beim_protokoll_ist_fail_closed _____________
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:briefing_slots.py:82 /tmp/pytest-of-hem/pytest-1154/data_root28/users/tdd-1594-2231-ac6rename-fb4cc8/briefing_log.json beschaedigt (Unterminated string starting at: line 1 column 26 (char 25)) -- Beiseitelegen nach /tmp/pytest-of-hem/pytest-1154/data_root28/users/tdd-1594-2231-ac6rename-fb4cc8/briefing_log.json.corrupt-20261006T125615Z scheiterte ([Errno 18] Invalid cross-device link (injiziert)), Datei bleibt unangetastet
+__ test_corrupt_file_readers_say_done_and_leave_file_untouched[{"entries": [] __
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:468 /tmp/pytest-of-hem/pytest-1154/test_corrupt_file_readers_say_0/briefing_slots.json unlesbar (Expecting value: line 1 column 14 (char 13)) -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:468 /tmp/pytest-of-hem/pytest-1154/test_corrupt_file_readers_say_0/briefing_slots.json unlesbar (Expecting value: line 1 column 14 (char 13)) -- Versand gesperrt
+_______ test_corrupt_file_readers_say_done_and_leave_file_untouched[[]] ________
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:471 /tmp/pytest-of-hem/pytest-1154/test_corrupt_file_readers_say_1/briefing_slots.json enthaelt kein JSON-Objekt -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:471 /tmp/pytest-of-hem/pytest-1154/test_corrupt_file_readers_say_1/briefing_slots.json enthaelt kein JSON-Objekt -- Versand gesperrt
+_____ test_corrupt_file_readers_say_done_and_leave_file_untouched["text"] ______
+------------------------------ Captured log call -------------------------------
+ERROR    briefing_slots:briefing_slots.py:471 /tmp/pytest-of-hem/pytest-1154/test_corrupt_file_readers_say_2/briefing_slots.json enthaelt kein JSON-Objekt -- Versand gesperrt
+ERROR    briefing_slots:briefing_slots.py:471 /tmp/pytest-of-hem/pytest-1154/test_corrupt_file_readers_say_2/briefing_slots.json enthaelt kein JSON-Objekt -- Versand gesperrt
+=========================== short test summary info ============================
+PASSED tests/test_briefing_slot_reparatur.py::test_ac1_reparatur_legt_kaputte_datei_beiseite_und_setzt_marker[abbruch_json]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac1_reparatur_legt_kaputte_datei_beiseite_und_setzt_marker[liste_statt_objekt]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac1_reparatur_legt_kaputte_datei_beiseite_und_setzt_marker[text_statt_objekt]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac1_reparatur_verzeichnis_statt_datei
+PASSED tests/test_briefing_slot_reparatur.py::test_ac1_takt_mit_kaputter_slot_datei_versendet_das_briefing
+PASSED tests/test_briefing_slot_reparatur.py::test_ac2_protokoll_bezeugt_versand_nach_reparatur
+PASSED tests/test_briefing_slot_reparatur.py::test_ac3_beiseitegelegte_datei_bleibt_byte_identisch_auch_beim_zweiten_defekt
+PASSED tests/test_briefing_slot_reparatur.py::test_ac4_gueltige_datei_ohne_marker_bleibt_unangetastet
+PASSED tests/test_briefing_slot_reparatur.py::test_ac4_gegenprobe_fehlende_datei_leitet_weiter_ab
+PASSED tests/test_briefing_slot_reparatur.py::test_ac5_leser_ohne_sperre_antworten_true_und_reparieren_nicht[abbruch_json]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac5_leser_ohne_sperre_antworten_true_und_reparieren_nicht[liste_statt_objekt]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac5_leser_ohne_sperre_antworten_true_und_reparieren_nicht[text_statt_objekt]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac7_reparatur_der_slot_datei_schreibt_genau_eine_error_zeile[abbruch_json]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac7_reparatur_der_slot_datei_schreibt_genau_eine_error_zeile[liste_statt_objekt]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac7_reparatur_der_slot_datei_schreibt_genau_eine_error_zeile[text_statt_objekt]
+PASSED tests/test_briefing_slot_reparatur.py::test_ac8_nur_beschaedigter_nutzer_wird_repariert
+PASSED tests/test_briefing_slot_reparatur.py::test_reserve_ohne_vorherige_reparatur_repariert_im_schreibpfad
+PASSED tests/test_briefing_slot_reparatur.py::test_f005_rename_fehler_ist_fail_closed_ohne_absturz
+PASSED tests/test_briefing_slot_reparatur.py::test_f005_rename_fehler_im_takt_stuerzt_den_sammellauf_nicht_ab
+PASSED tests/test_briefing_slot_reparatur.py::test_f002_kaputtes_protokoll_hinter_repariertem_vermerk_loggt_error
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac6_protokolleintrag_trotz_kaputtem_protokoll[abbruch_json]
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac6_protokolleintrag_trotz_kaputtem_protokoll[liste_statt_objekt]
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac6_protokolleintrag_trotz_kaputtem_protokoll[text_statt_objekt]
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac6_slot_reparatur_legt_auch_kaputtes_protokoll_beiseite
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac9_verwaister_claim_wird_bei_kaputtem_protokoll_nicht_uebernommen[abbruch_json]
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac9_verwaister_claim_wird_bei_kaputtem_protokoll_nicht_uebernommen[liste_statt_objekt]
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac9_takt_mit_verwaistem_claim_und_kaputtem_protokoll_versendet_nichts
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac9_gegenprobe_gueltiges_leeres_protokoll_uebernimmt_den_claim
+PASSED tests/test_briefing_log_beschaedigt.py::test_ac6_rename_fehler_beim_protokoll_ist_fail_closed
+PASSED tests/test_briefing_slot_fail_closed.py::test_corrupt_file_readers_say_done_and_leave_file_untouched[{"entries": []
+PASSED tests/test_briefing_slot_fail_closed.py::test_corrupt_file_readers_say_done_and_leave_file_untouched[[]]
+PASSED tests/test_briefing_slot_fail_closed.py::test_corrupt_file_readers_say_done_and_leave_file_untouched["text"]
+PASSED tests/test_briefing_slot_fail_closed.py::test_missing_file_still_reserves
+PASSED tests/test_briefing_slot_fail_closed.py::test_corruption_of_user_a_does_not_lock_user_b
+============================== 34 passed in 1.30s ==============================
