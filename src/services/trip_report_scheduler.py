@@ -40,7 +40,11 @@ from services.alert_briefing_anchor import (
     reset_alert_memory,
     write_anchor_and_reset_memory,
 )
-from services.briefing_slots import BriefingSlotStore
+from services.briefing_slots import (
+    BriefingSlotStore,
+    lege_beschaedigte_datei_beiseite,
+    lesefehler,
+)
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import premium_sms_allowed, sms_allowed
@@ -585,6 +589,7 @@ class TripReportSchedulerService:
         from services.trip_day import trip_local_now
 
         store = BriefingSlotStore(self._user_id)
+        store.repair_if_corrupt(moment=now_utc)  # #2231: VOR der Schleife
         due: List[Tuple["Trip", str, date]] = []
         for report_type, slot_stunde in (
             ("morning", self._get_morning_hour),
@@ -2160,7 +2165,16 @@ class TripReportSchedulerService:
         (s.o.).
         """
         path = get_data_dir(self._user_id) / "briefing_log.json"
-        data = json.loads(path.read_text()) if path.exists() else {"entries": []}
+        data = {"entries": []}
+        if path.exists():
+            grund = lesefehler(path)
+            if grund is None:
+                data = json.loads(path.read_text())
+            else:  # #2231 AC-6: beiseitelegen statt Absturz nach dem Versand
+                if lege_beschaedigte_datei_beiseite(
+                    path, grund, datetime.now(tz=timezone.utc), logger,
+                ) is None:
+                    return  # Original bleibt; ERROR ist geloggt, kein Absturz
         eintrag: Dict[str, object] = {
             "trip_id": trip_id,
             "kind": kind,

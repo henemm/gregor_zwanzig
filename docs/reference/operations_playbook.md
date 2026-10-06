@@ -502,6 +502,18 @@ und `scripts/cleanup_1708c_dead_trips.py` überspringen `*.lock`. Beim Sichten v
 Hand — nicht ohne Not anfassen; `flock` gilt nur auf lokalem Dateisystem.) Dauert eine
 Sperre über ~5 s, antwortet die API mit 503 + `Retry-After`.
 
+## Beschädigte `briefing_slots.json` / `briefing_log.json` (#2231)
+
+Ist die Versand-Vermerk-Datei (`briefing_slots.json`) oder das Versandprotokoll
+(`briefing_log.json`) eines Nutzers unlesbar, repariert der nächste Sammellauf das selbst:
+die kaputte Datei wird byte-identisch als `<datei>.corrupt-<UTC-Zeitstempel>` im selben
+Nutzerverzeichnis beiseitegelegt, eine neue gültige Datei (Vermerke mit Marker
+`rebuilt_from_log_at`) entsteht, und eine ERROR-Logzeile nennt beide Pfade. Das Versandprotokoll
+dient dabei als Zeuge gegen Doppelversand. Die `.corrupt-*`-Dateien bleiben zur Ursachenanalyse
+liegen und werden nicht automatisch gelöscht; sie sind keine Nutzerdaten-Reste. Manuelles
+Reparieren ist nicht nötig. Lock-freie Leser reparieren nie (sie antworten weiter fail-closed).
+Spec: `docs/specs/modules/fix_2231_slot_reparatur.md`.
+
 ---
 
 ## Testdaten-Cleanup (`data/users`) — Detailablauf (#1133)

@@ -163,3 +163,4 @@ _update(): unlesbar ⇒ nichts schreiben, False zurück
 
 - 2026-10-05: Initial spec created (Issue #2231)
 - 2026-10-05: ACs vom PO freigegeben
+- 2026-10-06: AC-5 (Dauersperre bei beschädigter `briefing_slots.json`) abgelöst durch `docs/specs/modules/fix_2231_slot_reparatur.md` — automatische, verlustfreie Reparatur statt Sperre (PO-Entscheid „Reparatur nachliefern“)
