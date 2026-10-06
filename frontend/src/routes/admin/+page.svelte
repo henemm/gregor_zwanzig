@@ -13,9 +13,12 @@
 		confirmDisableAction,
 		enableAction,
 		disableBlocked,
-		tierSelectValueAfter
+		tierSelectValueAfter,
+		inviteStatusText,
+		createInvite,
+		revokeInvite
 	} from '$lib/admin';
-	import type { AdminUser, UserTier } from '$lib/types';
+	import type { AdminInvite, AdminUser, UserTier } from '$lib/types';
 
 	let { data } = $props();
 
@@ -23,6 +26,53 @@
 	let errors = $state<Record<string, string>>({});
 	let busy = $state<Record<string, boolean>>({});
 	let confirmId = $state<string | null>(null);
+
+	// Issue #2519: Einladungslinks. Der Link kommt nur in der Antwort auf "erstellen".
+	let invites = $state<AdminInvite[]>(data.invites ?? []);
+	let inviteTier = $state<UserTier>('standard');
+	let inviteNote = $state('');
+	let inviteBusy = $state(false);
+	let inviteError = $state('');
+	let createdLink = $state('');
+	let copied = $state(false);
+	let revokeId = $state<string | null>(null);
+
+	async function onCreateInvite(e: Event) {
+		e.preventDefault();
+		inviteBusy = true;
+		inviteError = '';
+		const r = await createInvite(fetch, inviteTier, inviteNote);
+		inviteBusy = false;
+		if (!r.ok) {
+			inviteError = r.text;
+			return;
+		}
+		createdLink = r.link;
+		copied = false;
+		invites = [r.invite, ...invites];
+		inviteNote = '';
+	}
+	async function onCopyLink() {
+		try {
+			await navigator.clipboard.writeText(createdLink);
+			copied = true;
+		} catch {
+			copied = false;
+		}
+	}
+	function makeAskRevoke(inv: AdminInvite) {
+		return () => {
+			revokeId = inv.id;
+		};
+	}
+	async function confirmRevoke() {
+		const id = revokeId;
+		revokeId = null;
+		if (!id) return;
+		const r = await revokeInvite(fetch, id);
+		if (r.ok) invites = invites.map((i) => (i.id === id ? r.invite : i));
+		else inviteError = r.text;
+	}
 
 	const TIERS: UserTier[] = ['free', 'standard', 'premium'];
 	const confirmUser = $derived(users.find((u) => u.id === confirmId) ?? null);
@@ -82,6 +132,68 @@
 
 <div class="mx-auto max-w-5xl space-y-4" data-testid="admin-page">
 	<PageHeader eyebrow="Verwaltung" title="Admin" sub="Nutzer, Tier und Kontosperre" />
+
+	<Card data-testid="admin-invites">
+		<div class="space-y-3">
+			<div class="font-semibold">Einladungen</div>
+			<form data-testid="admin-invite-form" class="flex flex-wrap items-end gap-2" onsubmit={onCreateInvite}>
+				<label class="text-sm">
+					Level
+					<select
+						data-testid="admin-invite-tier"
+						value={inviteTier}
+						onchange={(e) => (inviteTier = (e.currentTarget as HTMLSelectElement).value as UserTier)}
+						class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+					>
+						{#each TIERS as t}
+							<option value={t}>{tierLabel(t)}</option>
+						{/each}
+					</select>
+				</label>
+				<label class="text-sm">
+					Notiz
+					<input
+						data-testid="admin-invite-note"
+						type="text"
+						maxlength="200"
+						bind:value={inviteNote}
+						class="h-9 rounded-md border border-input bg-background px-3 text-sm"
+					/>
+				</label>
+				<Btn type="submit" disabled={inviteBusy} data-testid="admin-invite-create">Einladung erstellen</Btn>
+			</form>
+			{#if inviteError}
+				<p data-testid="admin-invite-error" role="alert" class="text-sm font-semibold" style="color: var(--g-danger);">{inviteError}</p>
+			{/if}
+			{#if createdLink}
+				<div data-testid="admin-invite-link-box" class="space-y-1 text-sm">
+					<div class="mono break-all" data-testid="admin-invite-link">{createdLink}</div>
+					<div class="flex items-center gap-2">
+						<Btn variant="outline" type="button" data-testid="admin-invite-copy" onclick={onCopyLink}>
+							{copied ? 'Kopiert' : 'Link kopieren'}
+						</Btn>
+						<span style="color: var(--g-ink-2);">Nur jetzt sichtbar — danach nicht mehr abrufbar.</span>
+					</div>
+				</div>
+			{/if}
+			{#each invites as inv (inv.id)}
+				<div
+					data-testid="admin-invite-row"
+					data-invite-id={inv.id}
+					class="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-sm"
+				>
+					<div>
+						<strong>{inv.note || '(ohne Notiz)'}</strong>
+						<span class="mono text-xs"> · {tierLabel(inv.tier)} · erstellt {formatTime(inv.created_at)}</span>
+						<div data-testid="admin-invite-status">{inviteStatusText(inv)}</div>
+					</div>
+					{#if inv.status === 'open'}
+						<Btn variant="outline" data-testid="admin-invite-revoke" onclick={makeAskRevoke(inv)}>Widerrufen</Btn>
+					{/if}
+				</div>
+			{/each}
+		</div>
+	</Card>
 
 	{#each users as u (u.id)}
 		<Card data-testid="admin-user-row" data-user-id={u.id}>
@@ -158,5 +270,21 @@
 	onCancel={onCancelDisable}
 	onOpenChange={(o) => {
 		if (!o) onCancelDisable();
+	}}
+/>
+
+<ConfirmDialog
+	open={revokeId !== null}
+	title="Einladung widerrufen?"
+	description="Der Link kann danach nicht mehr zum Registrieren benutzt werden."
+	confirmLabel="Widerrufen"
+	confirmVariant="destructive"
+	data-testid="admin-invite-confirm-dialog"
+	confirmTestid="admin-invite-confirm-revoke"
+	cancelTestid="admin-invite-cancel-revoke"
+	onConfirm={confirmRevoke}
+	onCancel={() => (revokeId = null)}
+	onOpenChange={(o) => {
+		if (!o) revokeId = null;
 	}}
 />

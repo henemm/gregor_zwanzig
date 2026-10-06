@@ -16,6 +16,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/model"
 )
 
 type invDTO struct {
@@ -194,7 +196,7 @@ func TestRegisterOhneEinladung_BleibtFree(t *testing.T) {
 		t.Fatalf("Register: %d %s", w.Code, w.Body.String())
 	}
 	u, _ := s.LoadUser("frei")
-	if u == nil || u.EffectiveTier() != "free" || u.RequestedTier != "" {
+	if u == nil || model.EffectiveTier(u.Tier) != "free" || u.RequestedTier != "" {
 		t.Errorf("Konto ohne Einladung: %+v", u)
 	}
 }

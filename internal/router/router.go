@@ -26,6 +26,8 @@ type Deps struct {
 	ChallengeStore     *handler.ChallengeStore
 	Scheduler          *scheduler.Scheduler
 	TelegramTokenStore *handler.TelegramTokenStore
+	// Issue #2519: Admin-Einladungslinks; nil => Store unter Config.DataDir.
+	InviteStore *store.InviteStore
 	// Issue #2154 Scheibe A: prozessweiter Fehlversuchszaehler fuer
 	// Verknuepfungs-Code-Vergleiche, instanziiert in cmd/server/main.go.
 	PremiumSmsRateLimiter *handler.PremiumSmsRateLimiter
@@ -51,10 +53,17 @@ func New(deps Deps) chi.Router {
 
 	// Auth endpoints (register/login exempt from AuthMiddleware)
 	// Rate-limit register: 5 attempts per IP per hour (Issue #117).
+	inviteStore := deps.InviteStore
+	if inviteStore == nil {
+		inviteStore = store.NewInviteStore(deps.Config.DataDir)
+	}
 	registerLimiter := authmw.NewIPRateLimiter(5, time.Hour)
 	r.Post("/api/auth/register",
-		registerLimiter.Middleware(handler.RegisterHandler(deps.Store, bcrypt.DefaultCost, *deps.Config)).ServeHTTP,
+		registerLimiter.Middleware(handler.RegisterHandlerWithInvites(deps.Store, bcrypt.DefaultCost, *deps.Config, inviteStore)).ServeHTTP,
 	)
+	// Issue #2519: oeffentlicher Vorab-Check, gleiche Bremse wie Register.
+	inviteCheckLimiter := authmw.NewIPRateLimiter(5, time.Hour)
+	r.Get("/api/auth/invite/{token}", inviteCheckLimiter.Middleware(handler.InviteCheckHandler(inviteStore)).ServeHTTP)
 	loginLimiter := authmw.NewIPRateLimiter(30, time.Hour)
 	r.Post("/api/auth/login",
 		loginLimiter.Middleware(handler.LoginHandler(deps.Store, deps.Config.SessionSecret)).ServeHTTP,
@@ -306,6 +315,10 @@ func New(deps Deps) chi.Router {
 	r.With(requireAdmin).Get("/api/admin/users", handler.AdminListUsersHandler(deps.Store, deps.Scheduler))
 	r.With(requireAdmin).Put("/api/admin/users/{id}/tier", handler.AdminSetUserTierHandler(deps.Store, deps.Scheduler))
 	r.With(requireAdmin).Put("/api/admin/users/{id}/disabled", handler.AdminSetUserDisabledHandler(deps.Store, deps.Scheduler))
+	// Issue #2519: Admin-Einladungslinks.
+	r.With(requireAdmin).Post("/api/admin/invites", handler.AdminCreateInviteHandler(inviteStore, deps.Config.PublicHost))
+	r.With(requireAdmin).Get("/api/admin/invites", handler.AdminListInvitesHandler(inviteStore))
+	r.With(requireAdmin).Post("/api/admin/invites/{id}/revoke", handler.AdminRevokeInviteHandler(inviteStore))
 
 	// Scheduler trigger proxies (frontend → Go → Python)
 	// Der Cron-Scheduler ruft Python direkt und haengt nicht an dieser Sperre.

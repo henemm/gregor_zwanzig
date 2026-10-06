@@ -30,9 +30,19 @@ type authRequest struct {
 	// Issue #2152: optionales Testkonto-Flag bei der Anlage (Projekt-Testkonten
 	// wie validator-issue110); wird persistiert, sonst bleibt es abwesend.
 	IsTestUser bool `json:"is_test_user,omitempty"`
+	// Issue #2519: optionaler Einladungs-Token (Admin-Einladungslink).
+	Invite string `json:"invite,omitempty"`
 }
 
+// RegisterHandler: offene Registrierung ohne Einladungslinks (Bestandsweg).
 func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.HandlerFunc {
+	return RegisterHandlerWithInvites(s, bcryptCost, cfg, nil)
+}
+
+// RegisterHandlerWithInvites loest zusaetzlich Admin-Einladungen ein (Issue
+// #2519, ADR-0084). Ohne invite-Feld ist das Verhalten identisch zur offenen
+// Registrierung; mit ungueltigem Token gibt es 400 invite_invalid und KEIN Konto.
+func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Config, invites *store.InviteStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req authRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -128,7 +138,44 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 			CreatedAt:    time.Now(),
 			IsTestUser:   req.IsTestUser,
 		}
+
+		// Issue #2519: Einladung erst NACH allen Validierungen reservieren (ein
+		// Tippfehler verbrennt sie nicht), aber VOR SaveUser (sonst Race: zwei
+		// Konten). Ein Fehlschlag danach rollt die Reservierung zurueck.
+		var redeemed *model.Invite
+		if req.Invite != "" {
+			var ok bool
+			var inv model.Invite
+			var rerr error
+			if invites != nil {
+				inv, ok, rerr = invites.Redeem(req.Invite, req.Username)
+			}
+			if rerr != nil {
+				log.Printf("register: invite redeem failed: %v", rerr)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(500)
+				w.Write([]byte(`{"error":"store_error"}`))
+				return
+			}
+			if !ok {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"invite_invalid"}`))
+				return
+			}
+			redeemed = &inv
+			user.Tier = inv.Tier
+			log.Printf("register: invite %s redeemed by %s", inv.ID, req.Username)
+		}
+		rollbackInvite := func() {
+			if redeemed != nil {
+				if err := invites.Rollback(redeemed.ID); err != nil {
+					log.Printf("register: invite %s rollback failed: %v", redeemed.ID, err)
+				}
+			}
+		}
 		if err := s.SaveUser(user); err != nil {
+			rollbackInvite()
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
