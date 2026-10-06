@@ -124,6 +124,8 @@ Verifikation läuft **nach** dem Push gegen Staging (`https://staging.gregor20.h
 | 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
 | 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
 
+**Ein Merge ist kein Prod-Deploy:** der CI-Job `deploy` liefert nur bei vorliegendem `/e2e-verify`-Nachweis aus (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`); sonst bleibt er grün/übersprungen und Schritt 4 (`/70-deploy`) liefert aus (#2047 S2).
+
 Wird ein Push nach `main` abgewiesen, ist das die Branch-Protection, kein Fehler. Ein PR ersetzt NICHT die Staging-Validierung — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
 
 `systemctl restart` allein **reicht nie** — das Deploy-Script macht flock-Lock → hart auf `origin/main` syncen (Daten unberührt, WIP gesichert) → Go-Binary + Frontend bauen → alle 3 Services restarten → Smoke-Test. Ohne vollen Lauf entsteht Code-Drift (#113). Script ist **parallel-session-sicher** — Schritt 4 jederzeit aus jeder Session.

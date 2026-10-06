@@ -330,16 +330,23 @@ als stash-Commit + `deploy-safety/*`-Tag gesichert).
 
 ### WIP-Sicherung: zwei Stellen, ein Muster (#2047)
 
-Der Haupt-Checkout `/home/hem/gregor_zwanzig` wird an **zwei** Stellen hart auf `origin/main`
-zurückgesetzt. Beide sichern uncommittete getrackte Arbeit vorher ab:
+Der Haupt-Checkout `/home/hem/gregor_zwanzig` wird nur noch vom Prod-Deploy hart auf
+`origin/main` zurückgesetzt. Er sichert uncommittete getrackte Arbeit vorher ab:
 
 | Wo | Skript | Tag-Präfix |
 |---|---|---|
 | Prod-Deploy | `henemm-infra/scripts/deploy-gregor-prod.sh:149-161` | `deploy-safety/<UTC-Zeitstempel>` |
-| CI-Schritt „Staging-Verdict schreiben (CI smoke)" | `scripts/wip_safety.sh` (dieses Repo) | `deploy-safety/ci-<UTC-Zeitstempel>-<stash-sha>` |
 
-Bis #2047 sicherte **nur** der Prod-Deploy ab; der CI-Schritt resettete ungesichert — bei
-jedem Merge nach `main`. Das ist behoben.
+Bis #2047 resettete zusätzlich der CI-Schritt „Staging-Verdict schreiben (CI smoke)" bei
+jedem Merge nach `main`. Seit Scheibe 2 (2026-10-06) gibt es diesen Schritt nicht mehr: der
+CI-Job `deploy` schreibt kein Verdict und führt kein `git reset` aus. Stattdessen läuft
+`scripts/ci_prod_gate.sh` auf dem Server-Checkout: `git fetch`, dann
+`staging_gate.py --check --expected-commit origin/main`, Ausgabe `PROD_GATE=open|closed`.
+Der Job hängt an allen sechs Ampel-Checks. Prod-Deploy und Erfolgs-Telegram laufen nur bei
+`open`. Bei `closed` bleibt der Job grün, der Deploy-Schritt wird übersprungen, und die
+Job-Summary verweist auf `/70-deploy` Schritt 4 (manueller Deploy vom Server nach
+`/e2e-verify`) — das ist der Normalfall, kein Fehler. Schlägt der `git fetch` fehl, ist der
+Job rot. `scripts/wip_safety.sh` bleibt als eigenständiges Skript erhalten.
 
 **Wiederherstellen:**
 
@@ -348,8 +355,7 @@ git -C /home/hem/gregor_zwanzig tag --list 'deploy-safety/*'   # Sicherungspunkt
 git -C /home/hem/gregor_zwanzig stash apply <TAG>              # zurückholen
 ```
 
-Die Meldung des jeweiligen Laufs nennt den fertigen Befehl bereits — im CI-Fall im
-Job-Protokoll des `deploy`-Jobs.
+Die Meldung des Deploy-Laufs nennt den fertigen Befehl bereits.
 
 **Drei Eigenheiten, die man kennen muss:**
 
@@ -358,8 +364,8 @@ Job-Protokoll des `deploy`-Jobs.
   sonst sammelt die GC es ein.
 - **Untrackte Dateien sind nicht abgedeckt** — beabsichtigt: `git reset --hard` fasst sie
   ebenfalls nicht an, die Abdeckung ist deckungsgleich mit dem Schaden.
-- **Schlägt die Sicherung fehl, bricht die CI-Kette ab, bevor der Reset läuft.** Ein roter
-  Verdict-Schritt kann also bedeuten: „hier lag ungesicherte Arbeit". Zeigt ein
+- **Schlägt die Sicherung fehl, bricht der Deploy ab, bevor der Reset läuft.** Ein roter
+  Deploy kann also bedeuten: „hier lag ungesicherte Arbeit". Zeigt ein
   gleichnamiger Tag auf *dasselbe* Objekt, gilt die Arbeit als gesichert und der Lauf geht
   weiter — nur bei abweichendem Objekt wird abgebrochen.
 
