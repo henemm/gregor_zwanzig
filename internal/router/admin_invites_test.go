@@ -9,13 +9,17 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	chimw "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/henemm/gregor-api/internal/model"
 )
@@ -80,6 +84,13 @@ func ivRegistrieren(t *testing.T, r http.Handler, name, email, invite string) *h
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	return w
+}
+
+// ivCheck ruft den oeffentlichen Vorab-Check (POST mit Token im Body) ohne Sitzung.
+func ivCheck(t *testing.T, r http.Handler, secret, token string) *httptest.ResponseRecorder {
+	t.Helper()
+	b, _ := json.Marshal(map[string]string{"token": token})
+	return auRuf(t, r, secret, http.MethodPost, "/api/auth/invite/check", "", string(b))
 }
 
 func ivBody(w *httptest.ResponseRecorder) string { return strings.TrimSpace(w.Body.String()) }
@@ -286,12 +297,12 @@ func TestInviteCheck_OeffentlichOhneSitzung_OffenOk_SonstNeutral404(t *testing.T
 	if w := ivRegistrieren(t, r, "wer", "wer@example.org", tokBenutzt); w.Code != http.StatusCreated {
 		t.Fatalf("Register: %d", w.Code)
 	}
-	w := auRuf(t, r, secret, http.MethodGet, "/api/auth/invite/"+tokOffen, "", "")
+	w := ivCheck(t, r, secret, tokOffen)
 	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"tier":"premium"`) {
 		t.Errorf("offen: erwartet 200 mit tier, bekommen %d %s", w.Code, w.Body.String())
 	}
 	for name, tok := range map[string]string{"unbekannt": "nope", "benutzt": tokBenutzt} {
-		w := auRuf(t, r, secret, http.MethodGet, "/api/auth/invite/"+tok, "", "")
+		w := ivCheck(t, r, secret, tok)
 		auAssertJSONFehler(t, w, http.StatusNotFound, `{"error":"invite_invalid"}`, name)
 	}
 	_ = offen
@@ -301,13 +312,79 @@ func TestInviteCheck_WiderrufenUndRateLimit(t *testing.T) {
 	r, _, secret, _ := adminTestRouter(t, "alice")
 	dto, tok := ivErstellen(t, r, secret, "standard", "")
 	auRuf(t, r, secret, http.MethodPost, "/api/admin/invites/"+dto.ID+"/revoke", "alice", "")
-	w := auRuf(t, r, secret, http.MethodGet, "/api/auth/invite/"+tok, "", "")
+	w := ivCheck(t, r, secret, tok)
 	auAssertJSONFehler(t, w, http.StatusNotFound, `{"error":"invite_invalid"}`, "widerrufen")
 	var last int
-	for i := 0; i < 8; i++ {
-		last = auRuf(t, r, secret, http.MethodGet, "/api/auth/invite/raten"+string(rune('a'+i)), "", "").Code
+	for i := 0; i < 32; i++ {
+		last = ivCheck(t, r, secret, "raten"+string(rune('a'+i))).Code
 	}
 	if last != http.StatusTooManyRequests {
-		t.Errorf("nach 9 Aufrufen erwartet 429, bekommen %d", last)
+		t.Errorf("nach 33 Aufrufen erwartet 429, bekommen %d", last)
+	}
+}
+
+// Der alte GET-Pfad mit Token in der URL ist entfernt (Token im Access-Log).
+func TestInviteCheck_GetMitTokenImPfadExistiertNicht(t *testing.T) {
+	r, _, secret, _ := adminTestRouter(t, "alice")
+	_, tok := ivErstellen(t, r, secret, "free", "")
+	w := auRuf(t, r, secret, http.MethodGet, "/api/auth/invite/"+tok, "", "")
+	if w.Code == http.StatusOK {
+		t.Errorf("GET mit Token im Pfad darf nicht mehr funktionieren: %d", w.Code)
+	}
+}
+
+// F001: der Token darf nach Vorab-Check UND Registrierung nirgends im
+// Access-Log stehen. chimw.Logger liest DefaultLogger bei jedem New(): wir
+// setzen einen Logger auf einen Puffer (echte Logger-Implementierung).
+func TestEinladungToken_ErscheintNieImAccessLog(t *testing.T) {
+	var buf syncBuf
+	orig := chimw.DefaultLogger
+	chimw.DefaultLogger = chimw.RequestLogger(&chimw.DefaultLogFormatter{Logger: log.New(&buf, "", 0), NoColor: true})
+	t.Cleanup(func() { chimw.DefaultLogger = orig })
+
+	r, _, secret, _ := adminTestRouter(t, "alice")
+	_, tok := ivErstellen(t, r, secret, "premium", "")
+	if w := ivCheck(t, r, secret, tok); w.Code != http.StatusOK {
+		t.Fatalf("Check: %d", w.Code)
+	}
+	if w := ivRegistrieren(t, r, "logtest", "logtest@example.org", tok); w.Code != http.StatusCreated {
+		t.Fatalf("Register: %d", w.Code)
+	}
+	if !strings.Contains(buf.String(), "/api/auth/invite/check") {
+		t.Fatalf("Messaufbau: Logger hat den Check nicht aufgezeichnet:\n%s", buf.String())
+	}
+	if strings.Contains(buf.String(), tok) {
+		t.Errorf("Token-Klartext im Access-Log:\n%s", buf.String())
+	}
+}
+
+type syncBuf struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuf) Write(p []byte) (int, error) { s.mu.Lock(); defer s.mu.Unlock(); return s.b.Write(p) }
+func (s *syncBuf) String() string              { s.mu.Lock(); defer s.mu.Unlock(); return s.b.String() }
+
+// F005: Laenge in Zeichen (Runen), nicht Bytes.
+func TestEinladungNotiz_LaengeInZeichen(t *testing.T) {
+	r, _, secret, _ := adminTestRouter(t, "alice")
+	ivErstellen(t, r, secret, "free", strings.Repeat("ä", 200))
+	body, _ := json.Marshal(map[string]string{"tier": "free", "note": strings.Repeat("ä", 201)})
+	if w := auRuf(t, r, secret, http.MethodPost, "/api/admin/invites", "alice", string(body)); w.Code != http.StatusBadRequest {
+		t.Errorf("201 Zeichen: erwartet 400, bekommen %d", w.Code)
+	}
+}
+
+// F004: Konto existiert schon (409) -> Einladung bleibt offen.
+func TestEinladungBleibtOffen_WennBenutzernameVergebenIst(t *testing.T) {
+	r, _, secret, _ := adminTestRouter(t, "alice")
+	_, tok := ivErstellen(t, r, secret, "premium", "")
+	w := ivRegistrieren(t, r, "bob", "bob-neu@example.org", tok)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("erwartet 409, bekommen %d: %s", w.Code, w.Body.String())
+	}
+	if liste, _ := ivListe(t, r, secret); len(liste) != 1 || liste[0].Status != "open" {
+		t.Errorf("Einladung nicht mehr offen: %+v", liste)
 	}
 }

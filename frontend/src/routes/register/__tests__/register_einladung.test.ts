@@ -61,7 +61,34 @@ describe('register load: Vorab-Check der Einladung', () => {
 		assert.equal(d.invite.status, 'valid');
 		assert.equal(d.invite.tier, 'premium');
 		assert.equal(d.invite.token, 'tok/1');
-		assert.ok(aufrufe[0].url.endsWith('/api/auth/invite/tok%2F1'), aufrufe[0].url);
+		// Token nie in der URL (Access-Log), sondern im POST-Body.
+		assert.ok(aufrufe[0].url.endsWith('/api/auth/invite/check'), aufrufe[0].url);
+		assert.ok(!aufrufe[0].url.includes('tok'), 'Token in der URL');
+		assert.equal(aufrufe[0].init.method, 'POST');
+		assert.deepEqual(JSON.parse(aufrufe[0].init.body), { token: 'tok/1' });
+	});
+
+	for (const [name, status] of [['429 (Limit)', 429], ['500', 500], ['502', 502]] as const) {
+		test(`${name}: Status unknown, Token bleibt erhalten (kein stilles Free-Konto)`, async () => {
+			antwort = { status, koerper: '{}' };
+			const d = await load(loadEvent('?invite=tok-9'));
+			assert.equal(d.invite.status, 'unknown');
+			assert.equal(d.invite.token, 'tok-9');
+		});
+	}
+
+	test('Netzfehler beim Check: Status unknown mit Token', async () => {
+		const f = globalThis.fetch;
+		globalThis.fetch = (async () => {
+			throw new Error('Netz weg');
+		}) as unknown as typeof fetch;
+		try {
+			const d = await load(loadEvent('?invite=tok-n'));
+			assert.equal(d.invite.status, 'unknown');
+			assert.equal(d.invite.token, 'tok-n');
+		} finally {
+			globalThis.fetch = f;
+		}
 	});
 
 	test('ungueltige Einladung (404): Status invalid', async () => {
@@ -86,6 +113,15 @@ describe('register Seite: Einladungs-Hinweis und Google-Knopf (AC-11)', () => {
 		assert.ok(html.includes('name="username"'), 'Formular muss bleiben');
 		assert.ok(!/name="invite"/.test(html), 'ungueltiges Token darf nicht mitgesendet werden');
 		assert.ok(!html.includes('Mit Google registrieren'));
+	});
+
+	test('unknown: Hinweis "nicht geprueft", Hidden-Field BLEIBT, Google weg', () => {
+		const html = seite({ googleEnabled: true, invite: { status: 'unknown', token: 'abc' } });
+		assert.ok(html.includes('Einladung konnte gerade nicht geprüft werden'), 'Hinweis fehlt');
+		assert.ok(html.includes('beim Absenden geprüft'));
+		assert.match(html, /<input[^>]*name="invite"[^>]*value="abc"|<input[^>]*value="abc"[^>]*name="invite"/);
+		assert.ok(!html.includes('Mit Google registrieren'));
+		assert.ok(!html.includes('nicht (mehr) gültig'));
 	});
 
 	test('ohne invite: Seite unveraendert, Google-Knopf sichtbar', () => {
