@@ -280,3 +280,77 @@ def test_prod_deploy_und_erfolgsmeldung_nur_bei_offenem_gate():
     assert "steps.gate.outputs.open != 'true'" in skipped.get("if", "")
     assert "/70-deploy" in skipped["run"] and "GITHUB_STEP_SUMMARY" in skipped["run"]
     assert "github.sha" in skipped["run"] or "GITHUB_SHA" in skipped["run"] or "SHA" in str(skipped.get("env", ""))
+
+
+# --- Schrittlogik der CI-Schritte real ausgefuehrt (bash), ``${{ }}`` ersetzt ------
+
+
+def _run_step(step: dict, workdir: Path, extra_env: dict, ssh_script: str | None = None):
+    """Fuehrt ``run`` eines Workflow-Schritts mit bash -e aus. ``ssh`` ist ein kleines
+    Transport-Shim (Fake-Binary im PATH, das Ausgabe/Exit-Code vorgibt) — der
+    Gate-Entscheid selbst ist oben gegen echte Repos getestet; hier geht es um die
+    Weiterverarbeitung der Antwort im Schritt (outputs.open / Rot bei fehlender Zeile)."""
+    import re
+
+    script = re.sub(r"\$\{\{[^}]*\}\}", "x", step["run"])
+    bin_dir = workdir / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    if ssh_script is not None:
+        shim = bin_dir / "ssh"
+        shim.write_text("#!/usr/bin/env bash\n" + ssh_script + "\n", encoding="utf-8")
+        shim.chmod(0o755)
+    out_file = workdir / "gh_output"
+    sum_file = workdir / "gh_summary"
+    out_file.write_text("", encoding="utf-8")
+    sum_file.write_text("", encoding="utf-8")
+    env = {
+        "PATH": f"{bin_dir}:{os.environ['PATH']}",
+        "HOME": str(workdir),
+        "GITHUB_OUTPUT": str(out_file),
+        "GITHUB_STEP_SUMMARY": str(sum_file),
+        **extra_env,
+    }
+    proc = subprocess.run(
+        ["bash", "-e", "-c", script], capture_output=True, text=True, env=env, cwd=str(workdir)
+    )
+    return proc, out_file.read_text(encoding="utf-8"), sum_file.read_text(encoding="utf-8")
+
+
+@pytest.fixture()
+def stepdir():
+    path = Path(tempfile.mkdtemp(prefix="ci-prod-gate-step-"))
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
+
+
+@pytest.mark.parametrize(
+    "ssh_script,expect_rc0,expect_output",
+    [
+        ('echo "[staging-gate] Meldung"; echo "PROD_GATE=open"', True, "open=true"),
+        ('echo "PROD_GATE=closed"', True, "open=false"),
+        ('echo "kein Gate-Satz"; exit 0', False, ""),
+        ('echo "PROD_GATE=open"; exit 3', False, ""),
+        ("exit 255", False, ""),
+    ],
+)
+def test_gate_schritt_setzt_output_und_wird_rot_ohne_entscheidung(
+    stepdir: Path, ssh_script: str, expect_rc0: bool, expect_output: str
+):
+    """AC-5/AC-7 (Schrittlogik): fehlende Entscheidung oder ssh-Fehler -> Schritt rot,
+    kein ``open=``-Output; sonst open=true|false."""
+    gate = _step(_deploy_job(), "Prod-Gate pruefen")
+    proc, out, _ = _run_step(gate, stepdir, {}, ssh_script)
+    assert (proc.returncode == 0) is expect_rc0, proc.stdout + proc.stderr
+    assert out.strip() == expect_output
+
+
+def test_uebersprungen_schritt_nennt_sha_und_70_deploy_in_der_job_summary(stepdir: Path):
+    """AC-8 (Inhalt der Job-Summary, Schritt real ausgefuehrt)."""
+    skipped = _step(_deploy_job(), "Prod-Deploy uebersprungen")
+    sha = "abc123def4567890abc123def4567890abc123de"
+    proc, _, summary = _run_step(skipped, stepdir, {"SHA": sha})
+    assert proc.returncode == 0, proc.stderr
+    assert sha in summary and "/70-deploy Schritt 4" in summary
+    assert "::notice::" in proc.stdout
