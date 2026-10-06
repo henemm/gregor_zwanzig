@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
-import type { AdminUser } from '$lib/types';
+import type { AdminInvite, AdminUser } from '$lib/types';
 
 // Issue #2155 S4 — Zugriffsschutz als Komfort (keine leere Seite); die eigentliche
 // Sperre bleibt requireAdmin in Go (ADR-0078).
@@ -22,5 +22,10 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const body = await res.json().catch(() => null);
 
 	const users: AdminUser[] = Array.isArray(body?.users) ? body.users : [];
-	return { users, selfId: typeof profile.id === 'string' ? profile.id : '' };
+	// Issue #2519: Einladungen sind ein Zusatz — faellt der Abruf aus, bleibt die Nutzerverwaltung nutzbar.
+	const invRes = await fetch(`${API()}/api/admin/invites`, h).catch(() => null);
+	const invBody = invRes?.ok ? await invRes.json().catch(() => null) : null;
+	const invites: AdminInvite[] = Array.isArray(invBody?.invites) ? invBody.invites : [];
+
+	return { users, invites, selfId: typeof profile.id === 'string' ? profile.id : '' };
 };

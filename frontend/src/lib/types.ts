@@ -760,3 +760,16 @@ export interface AdminUser {
 	last_trip_report_run: { time: string; status: string; error: string } | null;
 	open_meteo_calls_today: number;
 }
+
+// Issue #2519 — Einladungslink-DTO der Admin-API (GET /api/admin/invites); nie Token/Hash.
+export interface AdminInvite {
+	id: string;
+	tier: UserTier;
+	note: string;
+	status: 'open' | 'used' | 'revoked';
+	created_at: string;
+	created_by: string;
+	used_by: string;
+	used_at: string | null;
+	revoked_at: string | null;
+}

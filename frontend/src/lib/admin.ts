@@ -1,5 +1,5 @@
 // Issue #2155 S4 — reine Helfer der Admin-Seite (ohne Svelte-Umgebung testbar).
-import type { AdminUser, UserTier } from '$lib/types';
+import type { AdminInvite, AdminUser, UserTier } from '$lib/types';
 
 /** Zentrale Tier-Bezeichnungen (Konto-Seite und Admin-Seite). */
 export const TIER_LABELS: Record<UserTier, string> = {
@@ -96,4 +96,65 @@ export async function sendAdminUpdate(
 	} catch {
 		return { ok: false, text: adminErrorText(0) };
 	}
+}
+
+// ─── Issue #2519: Einladungslinks ────────────────────────────────────────────
+
+function formatDate(iso: string | null): string {
+	if (!iso) return '';
+	const d = new Date(iso);
+	return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('de-DE');
+}
+
+/** Statustext je Einladung: Offen / Benutzt von <Name> am <Datum> / Widerrufen am <Datum>. */
+export function inviteStatusText(inv: AdminInvite): string {
+	if (inv.status === 'used') return `Benutzt von ${inv.used_by} am ${formatDate(inv.used_at)}`;
+	if (inv.status === 'revoked') return `Widerrufen am ${formatDate(inv.revoked_at)}`;
+	return 'Offen';
+}
+
+function inviteErrorText(status: number, code?: string): string {
+	if (status === 403) return 'Keine Berechtigung';
+	if (status === 404) return 'Einladung nicht gefunden';
+	if (status === 409 && code === 'invite_used') return 'Die Einladung wurde bereits benutzt';
+	if (status === 400) return 'Ungültige Eingabe (Level oder Notiz über 200 Zeichen)';
+	return 'Aktion fehlgeschlagen. Bitte erneut versuchen.';
+}
+
+export type InviteCreateResult =
+	| { ok: true; invite: AdminInvite; link: string }
+	| { ok: false; text: string };
+export type InviteRevokeResult = { ok: true; invite: AdminInvite } | { ok: false; text: string };
+
+async function postInvite(fetchFn: typeof fetch, url: string, body?: unknown) {
+	try {
+		const res = await fetchFn(url, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body ?? {})
+		});
+		if (!res.ok) {
+			const err = await res.json().catch(() => ({}));
+			return { ok: false as const, text: inviteErrorText(res.status, err?.error) };
+		}
+		return { ok: true as const, data: await res.json() };
+	} catch {
+		return { ok: false as const, text: inviteErrorText(0) };
+	}
+}
+
+/** Erstellt eine Einladung; der Link wird nur in dieser Antwort geliefert. */
+export async function createInvite(
+	fetchFn: typeof fetch,
+	tier: string,
+	note: string
+): Promise<InviteCreateResult> {
+	const r = await postInvite(fetchFn, '/api/admin/invites', { tier, note });
+	if (!r.ok) return r;
+	return { ok: true, invite: r.data.invite as AdminInvite, link: String(r.data.link) };
+}
+
+export async function revokeInvite(fetchFn: typeof fetch, id: string): Promise<InviteRevokeResult> {
+	const r = await postInvite(fetchFn, `/api/admin/invites/${encodeURIComponent(id)}/revoke`);
+	return r.ok ? { ok: true, invite: r.data as AdminInvite } : r;
 }

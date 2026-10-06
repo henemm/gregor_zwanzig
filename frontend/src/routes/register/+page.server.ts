@@ -4,9 +4,42 @@ import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 
 
-export const load: PageServerLoad = async () => {
+export type InviteState =
+	| { status: 'none' }
+	| { status: 'valid'; token: string; tier: string }
+	| { status: 'invalid' }
+	// Pruefung nicht moeglich (429/5xx/Netz): Token bleibt im Formular, die
+	// Einladung wird beim Absenden geprueft (kein stilles Free-Konto).
+	| { status: 'unknown'; token: string };
+
+// Issue #2519: Vorab-Check des Einladungslinks (?invite=...) serverseitig per
+// POST (Token im Body, nie in der URL/Access-Log). Nur 404 heisst "ungueltig".
+async function checkInvite(token: string, clientIP: string): Promise<InviteState> {
+	try {
+		const resp = await fetch(`${API()}/api/auth/invite/check`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
+			body: JSON.stringify({ token }),
+		});
+		if (resp.ok) {
+			const body = await resp.json().catch(() => ({}) as { tier?: string });
+			return { status: 'valid', token, tier: String(body?.tier ?? '') };
+		}
+		if (resp.status === 404) return { status: 'invalid' };
+	} catch {
+		// Netzfehler: unbekannt, nicht ungueltig.
+	}
+	return { status: 'unknown', token };
+}
+
+export const load: PageServerLoad = async ({ url, request }) => {
+	const token = url.searchParams.get('invite');
+	const invite: InviteState = token
+		? await checkInvite(token, request.headers.get('x-real-ip') ?? '')
+		: { status: 'none' };
 	return {
 		googleEnabled: !!env.GZ_GOOGLE_CLIENT_ID,
+		invite,
 	};
 };
 
@@ -17,6 +50,7 @@ export const actions = {
 		const email = data.get('email')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
 		const confirmPassword = data.get('confirmPassword')?.toString() ?? '';
+		const invite = data.get('invite')?.toString() ?? '';
 
 		if (password !== confirmPassword) {
 			return fail(400, { error: 'Passwörter stimmen nicht überein', username, email });
@@ -26,7 +60,7 @@ export const actions = {
 		const resp = await fetch(`${API()}/api/auth/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
-			body: JSON.stringify({ username, password, email }),
+			body: JSON.stringify({ username, password, email, ...(invite && { invite }) }),
 		});
 
 		if (resp.ok) {
@@ -56,6 +90,13 @@ export const actions = {
 			// Fehlercode "invalid_email" — gezielt auf eine verständliche Meldung
 			// mappen, sonst generische Pflichtfeld-Meldung.
 			const body = await resp.json().catch(() => ({}) as { error?: string });
+			if (body?.error === 'invite_invalid') {
+				return fail(400, {
+					error: 'Die Einladung ist nicht (mehr) gültig. Lade die Seite ohne Einladungslink neu, um dich normal zu registrieren.',
+					username,
+					email,
+				});
+			}
 			if (body?.error === 'invalid_email') {
 				return fail(400, { error: 'Bitte eine gültige E-Mail-Adresse angeben', username, email });
 			}

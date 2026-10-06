@@ -1,7 +1,23 @@
 <script lang="ts">
 	import type { ActionData } from './$types.js';
 
-	let { form, data }: { form: ActionData; data: { googleEnabled: boolean } } = $props();
+	import { TIER_LABELS } from '$lib/admin';
+	import type { UserTier } from '$lib/types';
+
+	let {
+		form,
+		data
+	}: {
+		form: ActionData;
+		data: {
+			googleEnabled: boolean;
+			invite?: { status: 'none' | 'valid' | 'invalid' | 'unknown'; token?: string; tier?: string };
+		};
+	} = $props();
+
+	type InviteView = { status: 'none' | 'valid' | 'invalid' | 'unknown'; token?: string; tier?: string };
+	const invite = $derived<InviteView>(data.invite ?? { status: 'none' });
+	const tierLabel = $derived(TIER_LABELS[(invite.tier ?? '') as UserTier] ?? invite.tier ?? '');
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-background">
@@ -17,7 +33,24 @@
 			</div>
 		{/if}
 
+		{#if invite.status === 'valid'}
+			<div data-testid="register-invite-hint" class="rounded-md border border-input bg-muted p-3 text-sm">
+				Du wurdest eingeladen — Level: {tierLabel}
+			</div>
+		{:else if invite.status === 'unknown'}
+			<div data-testid="register-invite-hint" class="rounded-md border border-input bg-muted p-3 text-sm">
+				Einladung konnte gerade nicht geprüft werden — du kannst dich trotzdem registrieren, die Einladung wird beim Absenden geprüft
+			</div>
+		{:else if invite.status === 'invalid'}
+			<div data-testid="register-invite-hint" class="rounded-md border border-input bg-muted p-3 text-sm">
+				Einladung nicht (mehr) gültig, normale Registrierung weiter möglich
+			</div>
+		{/if}
+
 		<form method="POST" class="space-y-4">
+			{#if invite.status === 'valid' || invite.status === 'unknown'}
+				<input type="hidden" name="invite" value={invite.token} />
+			{/if}
 			<div class="space-y-2">
 				<label for="username" class="text-sm font-medium">Benutzername</label>
 				<input
@@ -84,7 +117,7 @@
 				class="underline hover:no-underline">Datenschutz</a
 			>
 		</p>
-		{#if data.googleEnabled}
+		{#if data.googleEnabled && invite.status === 'none'}
 			<div class="relative">
 				<div class="absolute inset-0 flex items-center">
 					<span class="w-full border-t border-input"></span>

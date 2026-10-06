@@ -172,6 +172,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/_validator/format-metric` | GET |
 | `/api/_validator/metrics-for-channel` | GET |
 | `/api/_validator/sms-fidelity-preview` | POST |
+| `/api/admin/invites` | GET, POST — nur Admin, Einladungslinks (#2519, ADR-0084) |
+| `/api/admin/invites/{id}/revoke` | POST — nur Admin, offene Einladung widerrufen (#2519) |
 | `/api/admin/users` | GET — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S3) |
 | `/api/admin/users/{id}/disabled` | PUT — nur Admin, Konto sperren/entsperren (#2155 S3) |
 | `/api/admin/users/{id}/tier` | PUT — nur Admin, Tier setzen (#2155 S3) |
@@ -199,6 +201,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/password` | PUT |
 | `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
 | `/api/auth/profile` | GET, PUT |
+| `/api/auth/invite/check` | POST — öffentlich, rate-limited 30/h/IP, Token im Body; Vorab-Check einer Einladung (#2519) |
 | `/api/auth/register` | POST |
 | `/api/auth/reset-password` | POST |
 | `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
@@ -261,7 +264,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/webhooks/telegram/{secret}` | POST |
 
 (80 Pfade, 100 Routen-Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
-hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`.)
+hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`; #2519 ergänzt `/api/admin/invites`,
+`/api/admin/invites/{id}/revoke` und `/api/auth/invite/check`.)
 
 ---
 
@@ -1562,6 +1566,32 @@ scheitert (Flag bleibt gesetzt, Wiederholung idempotent).
 
 **Login-Verweigerung:** Auf allen Wegen der Session-Ausgabe 403 `{"error":"account_disabled"}`
 fuer gesperrte Konten (nach erfolgreicher Credential-Pruefung; falsches Passwort bleibt 401).
+
+### Admin-Einladungslinks (Issue #2519, ADR-0084)
+
+Persistenz: globale Datei `data/invites.json`, nur der SHA-256-Hash des Tokens, nie Klartext.
+Die Admin-Routen: ohne Session 401, ohne Admin 403 `{"error":"forbidden"}`.
+
+**`AdminInvite`** (alle Felder immer vorhanden): `id`, `tier`, `note`, `status`
+(`open|used|revoked`), `created_at`, `created_by`, `used_by` (Benutzername oder `""`),
+`used_at`/`revoked_at` (Zeitstempel oder `null`). Nie Token oder `token_hash`.
+
+**`POST /api/admin/invites`**, Body `{"tier":"free|standard|premium","note":"<=200 Zeichen"}`
+-> 201 `{"invite":AdminInvite,"link":"<PublicHost>/register?invite=<token>"}`; der Link steht NUR in
+dieser Antwort. 400 `invalid_tier` / `note_too_long` / `invalid_request`, nichts wird gespeichert.
+
+**`GET /api/admin/invites`** -> 200 `{"invites":[AdminInvite]}`, neueste zuerst.
+
+**`POST /api/admin/invites/{id}/revoke`** -> 200 `AdminInvite`; 404 `not_found`, 409
+`invite_used` bei benutzter Einladung (bereits widerrufene: 200, unveraendert).
+
+**`POST /api/auth/invite/check`**, Body `{"token":"..."}` (öffentlich, 30/h/IP; Token nie in der URL wegen Access-Log) -> 200 `{"tier":"..."}` bei offener
+Einladung, sonst 404 `{"error":"invite_invalid"}` (keine Unterscheidung benutzt/widerrufen/unbekannt).
+
+**`POST /api/auth/register`** nimmt optional `invite` (Token). Gesetzt und ungültig -> 400
+`{"error":"invite_invalid"}`, kein Konto. Reihenfolge: alle Validierungen (inkl. `email_taken`)
+vor der Einlösung; bei Erfolg `Tier=<Level der Einladung>`, `requested_tier` leer, E-Mail-Bestätigung
+bleibt Pflicht. Ohne `invite` unverändert (Level Free).
 
 ---
 
