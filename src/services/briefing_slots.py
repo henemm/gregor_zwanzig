@@ -70,7 +70,7 @@ def lege_beschaedigte_datei_beiseite(
     Scheitert die Umbenennung (OSError), bleibt das Original unangetastet:
     ERROR-Zeile, Rueckgabe ``None`` (fail-closed, kein Absturz).
     """
-    stempel = moment.astimezone(UTC).strftime("%Y%m%dT%H%M%SZ")
+    stempel = local_dt(moment, UTC).strftime("%Y%m%dT%H%M%SZ")
     ziel = pfad.with_name(f"{pfad.name}.corrupt-{stempel}")
     zaehler = 0
     while ziel.exists() or ziel.is_symlink():
