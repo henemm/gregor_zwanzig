@@ -31,6 +31,7 @@
 
 import {
 	applyThresholdChange,
+	newEntityAlertChannelDefault,
 	resolveAlertChannelThresholds,
 	type AlertChannelState,
 	type AlertChannelThresholdState,
@@ -112,9 +113,10 @@ function vollstaendigeSchwellen(bestand: Record<string, string>): AlertChannelTh
  */
 export function alarmePropsAus(wiz: AlarmeZustandsQuelle) {
 	// Solange der Alarme-Reiter noch nie einen Kanal umgeschaltet hat
-	// (`wiz.channels` unbesetzt), gilt der AC-6-Standard-Default — dieselbe
-	// Materialisierung wie beim Go-Create (email:true, Rest aus).
-	const aktuelleKanaele = wiz.channels ?? reconstructCompareAlertChannels({});
+	// (`wiz.channels` unbesetzt = frische Neuanlage), gilt der geteilte
+	// Neuanlage-Default (Issue #2518) — identisch zum Create-Body-Rueckfall.
+	// Bestand wird vorher in `wiz.channels` hydriert (compareHubHydration.ts).
+	const aktuelleKanaele = wiz.channels ?? newEntityAlertChannelDefault();
 	return {
 		amtlicheWarnungenImBericht: wiz.officialAlertsEnabled ?? true,
 		officialWarningsEnabled: wiz.officialWarningsEnabled ?? false,

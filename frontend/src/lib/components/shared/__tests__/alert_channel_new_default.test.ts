@@ -16,6 +16,7 @@ import {
 	buildCreateTripPayload,
 	type CreateTripState
 } from '../../trip-new/tripNewLogic.ts';
+import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 import {
 	buildNewComparePresetPayload,
 	type NewComparePresetFields
@@ -110,4 +111,18 @@ test('#2518 AC-4: Bestand bleibt erhalten (kein Default-Overwrite)', () => {
 	};
 	const p = buildCreateTripPayload(st) as unknown as Record<string, unknown>;
 	assert.deepEqual(p.alert_channels, { telegram: true, sms: true, email: false, premium_sms: false });
+});
+
+test('#2518 AC-3 (Ortsvergleich): angezeigter Zustand einer frischen Neuanlage = gespeicherter Create-Body', () => {
+	const wiz: Record<string, unknown> = {};
+	const props = alarmePropsAus(wiz);
+	const body = buildNewComparePresetPayload(compareFields({ alertChannels: wiz.channels as never }));
+	assert.deepEqual(resolveAlertChannels(props.existingChannels), body.alert_channels);
+	assert.deepEqual(resolveAlertChannels(props.existingChannels), NEUER_DEFAULT);
+});
+
+test('#2518 AC-3 (Ortsvergleich): erster Umschalter baut auf dem angezeigten Default auf, nichts faellt still weg', () => {
+	const wiz: Record<string, unknown> = {};
+	alarmePropsAus(wiz).onChannelToggle('sms');
+	assert.deepEqual(wiz.channels, { email: true, telegram: true, sms: true, premium_sms: false });
 });
