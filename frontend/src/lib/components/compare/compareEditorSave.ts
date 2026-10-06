@@ -11,6 +11,7 @@ import type { ComparePreset, ActivityProfile, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { toHHMMSS } from '../../utils/time.ts';
 import { pickEigenfelder } from '../shared/pickEigenfelder.ts';
+import { newEntityAlertChannelDefault } from '../shared/alarme-tab/alertChannelState.ts';
 // Issue #1373 (S2 Scheibe B): Speicherformat der Metrik-Auswahl ist Größe +
 // Auswertung. Die Übersetzung kommt aus der bereits geladenen Antwort von
 // GET /api/compare/metrics (Scheibe A liefert metric_id/aggregation je Eintrag) —
@@ -363,10 +364,9 @@ export interface NewComparePresetFields {
 	sendPremiumSms: boolean;
 	// Issue #2293 Scheibe S2 (Implementation Details Abschnitt 1/7, AC-6):
 	// ALARM-Kanal-Bestand des Alarme-Reiters bei der Neuanlage. Optional — ohne
-	// Wert wird er 1:1 wie die Go-Materialisierung aus den drei Booleans oben
-	// abgeleitet (`{email:true, telegram:sendTelegram, sms:sendSms,
-	// premium_sms:sendPremiumSms}`), damit `AlertChannels` beim Create nie
-	// `nil` ist.
+	// Wert gilt der geteilte Neuanlage-Default (Issue #2518: `{email:true,
+	// telegram:true, sms:false, premium_sms:false}`), damit `AlertChannels` beim
+	// Create nie `nil` ist.
 	alertChannels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
 	officialWarningsEnabled: boolean;
 	morningEnabled: boolean;
@@ -457,15 +457,10 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		// Issue #1745 A (AC-11) / #2293 S2: unconditional wie die beiden Geschwister oben.
 		send_premium_sms: fields.sendPremiumSms,
 		// Issue #2293 Scheibe S2 (AC-1/Abschnitt 1): IMMER gesendet (nie
-		// weggelassen), damit `AlertChannels` beim Create nie `nil` ist — Vorgabe
-		// aus den drei Booleans oben, sofern der Alarme-Reiter keinen eigenen
-		// Bestand liefert.
-		alert_channels: fields.alertChannels ?? {
-			email: true,
-			telegram: fields.sendTelegram,
-			sms: fields.sendSms,
-			premium_sms: fields.sendPremiumSms
-		},
+		// weggelassen), damit `AlertChannels` beim Create nie `nil` ist.
+		// Issue #2518: Rueckfall ist der geteilte Neuanlage-Default (dieselbe Quelle
+		// wie der Alarme-Reiter), NICHT mehr aus den Briefing-Schaltern abgeleitet.
+		alert_channels: fields.alertChannels ?? newEntityAlertChannelDefault(),
 		// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
 		// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
 		// false), kein sources-Feld (FE schreibt sources nie).

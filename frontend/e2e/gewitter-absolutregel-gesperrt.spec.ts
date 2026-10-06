@@ -106,8 +106,9 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		await expect(page.getByTestId('alert-rules-editor')).toHaveCount(0);
 
 		await expect.soft(kanalSchalter(scope, 'telegram')).toHaveAttribute('aria-checked', 'true');
-		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
-		await expect.soft(kanalSchalter(scope, 'email')).toHaveAttribute('aria-checked', 'false');
+		// Issue #2518: Neuanlage-Default = E-Mail + Telegram an, SMS aus.
+		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'false');
+		await expect.soft(kanalSchalter(scope, 'email')).toHaveAttribute('aria-checked', 'true');
 		await expect.soft(kanalSchalter(scope, 'premium_sms')).toHaveAttribute('aria-checked', 'false');
 	});
 
@@ -146,9 +147,10 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		}
 	});
 
-	test('Kanal umschalten: E-Mail an und wieder aus', async ({ page }) => {
+	test('Kanal umschalten: SMS an und wieder aus', async ({ page }) => {
 		const scope = await openNewTripAlerts(page);
-		const sw = kanalSchalter(scope, 'email');
+		// Issue #2518: E-Mail startet in der Neuanlage an, SMS aus.
+		const sw = kanalSchalter(scope, 'sms');
 
 		await expect(sw).toHaveAttribute('aria-checked', 'false');
 		await sw.click();
@@ -173,8 +175,8 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 	test('Eingaben ueberleben den Tab-Wechsel Alerts → Route → Alerts', async ({ page }) => {
 		const scope = await openNewTripAlerts(page);
 
-		await kanalSchalter(scope, 'email').click();
-		await expect(kanalSchalter(scope, 'email')).toHaveAttribute('aria-checked', 'true');
+		await kanalSchalter(scope, 'sms').click();
+		await expect(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
 		await schwelle(scope, 'sms', 'HIGH').click();
 		await expect(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
 		await amtlicheWarnungen(scope).click();
@@ -186,7 +188,7 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
 		await expect(scope).toBeVisible();
 
-		await expect.soft(kanalSchalter(scope, 'email')).toHaveAttribute('aria-checked', 'true');
+		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
 		await expect.soft(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
 		await expect.soft(schwelle(scope, 'sms', 'LOW')).toHaveAttribute('aria-pressed', 'false');
 		await expect.soft(amtlicheWarnungen(scope)).toBeChecked();

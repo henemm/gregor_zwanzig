@@ -151,6 +151,8 @@ describe('F002: buildAndSave schickt den geaenderten Alarm-Zustand mit', () => {
 	test('POST /api/trips traegt die Eingaben aus dem Alarme-Reiter', async () => {
 		const { u, gesendet } = await editor();
 		u.handleAlarmOfficialWarningsChange(true);
+		// #2518: E-Mail ist im Neuanlage-Default an — der Klick schaltet sie ab;
+		// die Abweichung vom Default belegt, dass die Eingabe im POST ankommt.
 		u.handleAlarmChannelToggle('email');
 		u.handleAlarmThresholdChange('sms', 'HIGH');
 		u.handleAlarmCooldownChange(90);
@@ -167,7 +169,7 @@ describe('F002: buildAndSave schickt den geaenderten Alarm-Zustand mit', () => {
 		assert.strictEqual(gesendet[0].url, '/api/trips');
 		const p = gesendet[0].payload;
 		assert.deepStrictEqual(p.official_warnings, { enabled: true });
-		assert.strictEqual(p.alert_channels.email, true);
+		assert.strictEqual(p.alert_channels.email, false);
 		assert.strictEqual(p.alert_channel_thresholds.sms, 'HIGH');
 		assert.strictEqual(p.alert_cooldown_minutes, 90);
 		assert.strictEqual(p.alert_quiet_from, '22:00');

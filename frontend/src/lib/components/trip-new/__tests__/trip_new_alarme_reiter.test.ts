@@ -61,14 +61,14 @@ describe('AC-1: Mount-Ersetzung — AlarmeTab statt AlertRulesEditor (schließt 
 	});
 });
 
-describe('AC-3: E-Mail-Kanal zeigt den internen route-Default (aus) — kein fest verdrahtetes "true"', () => {
-	test('alert-channel-toggle-email ist im UNCHECKED-Zustand (aria-checked="false")', () => {
+describe('AC-3: E-Mail-Kanal zeigt den Neuanlage-Default (an, Issue #2518)', () => {
+	test('alert-channel-toggle-email ist im CHECKED-Zustand (aria-checked="true", Neuanlage-Default #2518)', () => {
 		const html = renderTripNew({ activeTab: 'alarme', isMobileViewport: false });
 		const email = outerHtml(html, 'alert-channel-toggle-email');
 		assert.match(
 			email,
-			/aria-checked="false"/,
-			'AC-3 FAIL: der E-Mail-Kanal-Schalter ist gecheckt — das waere der ' +
+			/aria-checked="true"/,
+			'AC-3 FAIL: der E-Mail-Kanal-Schalter ist nicht gecheckt — Neuanlage-Default #2518; ein Versagen waere der ' +
 				'AlarmeTab-interne "vergleich"-Hardcode-Zweig (displayChannelState), der ' +
 				'nur greift, wenn TripNewEditor eine Kanal-Wertprop (sendTelegram) setzt.'
 		);
