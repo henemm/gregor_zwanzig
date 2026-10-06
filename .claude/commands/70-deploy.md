@@ -21,7 +21,7 @@ BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund statt weit
 ```bash
 git push -u origin HEAD:<themen-branch>
 gh pr create --fill
-# CI-Ampel abwarten: alle 5 Checks gruen auf dem letzten Stand, sonst erst fixen
+# CI-Ampel abwarten: alle 6 Checks gruen auf dem letzten Stand, sonst erst fixen
 gh pr merge --merge
 ```
 
@@ -57,6 +57,11 @@ ebenfalls, solange der Drift-Monitor ruhig ist. Im Zweifel trotzdem ausliefern.
 ```bash
 bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh
 ```
+
+**CI-Abkuerzung (#2047 S2):** Der CI-Job `deploy` liefert nur dann selbst aus, wenn
+`scripts/ci_prod_gate.sh` `PROD_GATE=open` meldet (Nachweis fuer `origin/main` liegt vor).
+Sonst bleibt er gruen mit uebersprungenem Deploy-Schritt und verweist hierher — das ist der
+**Normalfall, kein Fehler**; dann diesen Schritt 4 manuell vom Server nach `/e2e-verify`.
 
 `systemctl restart` allein reicht **nie**. Das Skript nimmt ein `flock`-Lock, synchronisiert
 hart auf `origin/main` (Daten unberuehrt, WIP gesichert), baut Go-Binary + Frontend, startet

@@ -4,6 +4,16 @@ Ausgelagert aus `CLAUDE.md` (2026-08-15), damit die Detailmechanik nicht in **je
 mitgeladen wird. In `CLAUDE.md` steht je Gate nur noch der Merksatz und der Verweis hierher.
 **Hier nachsehen, wenn ein Gate blockiert und die Meldung nicht selbsterklärend ist.**
 
+## CI-Prod-Gate `ci_prod_gate.sh` (#2047 S2, seit 2026-10-06)
+
+Der CI-Job `deploy` (needs: alle sechs Ampel-Checks) schreibt **kein** Staging-Verdict mehr und
+führt **kein** `git reset` aus. `scripts/ci_prod_gate.sh` läuft auf dem Server-Checkout: `git fetch`,
+dann `staging_gate.py --check --expected-commit origin/main` (dieselbe Prüfung wie der Preflight von
+`deploy-gregor-prod.sh`), Ausgabe `PROD_GATE=open|closed`. Es schreibt nie in `.claude/e2e_verified/`.
+Prod-Deploy und Erfolgs-Telegram nur bei `open`; bei `closed` bleibt der Job grün, der Deploy-Schritt
+übersprungen, die Job-Summary verweist auf `/70-deploy` Schritt 4. `git fetch` scheitert oder fehlt
+der `PROD_GATE`-Satz ⇒ Job rot.
+
 ## Frontend-Browser-Gate (#1558, seit 2026-08-08)
 
 Berührt der committete Scope `frontend-only` oder `full-stack`, lädt `staging_gate.py --write-verdict`
