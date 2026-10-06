@@ -147,9 +147,10 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		}
 	});
 
-	test('Kanal umschalten: E-Mail an und wieder aus', async ({ page }) => {
+	test('Kanal umschalten: SMS an und wieder aus', async ({ page }) => {
 		const scope = await openNewTripAlerts(page);
-		const sw = kanalSchalter(scope, 'email');
+		// Issue #2518: E-Mail startet in der Neuanlage an, SMS aus.
+		const sw = kanalSchalter(scope, 'sms');
 
 		await expect(sw).toHaveAttribute('aria-checked', 'false');
 		await sw.click();
