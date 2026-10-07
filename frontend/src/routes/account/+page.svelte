@@ -137,17 +137,26 @@
 	let requestedTierChoice = $state<UserTier>('standard');
 	let tierChangeStatus = $state<TestStatus>('idle');
 	let tierChangeError = $state<string | null>(null);
+	// Issue #2436 — Antwort des Servers: wurde der Betreiber benachrichtigt?
+	let tierChangeNotified = $state<boolean | null>(null);
 	const pendingTier = $derived(
 		data.profile?.requested_tier && data.profile.requested_tier !== data.profile?.tier
 			? (data.profile.requested_tier as UserTier)
 			: null
 	);
+	const tierNotNotified = $derived(
+		!!pendingTier && !data.profile?.requested_notified_at
+	);
 
 	async function requestTierChange() {
 		tierChangeStatus = 'loading';
 		tierChangeError = null;
+		tierChangeNotified = null;
 		try {
-			await api.post('/api/auth/tier-change-request', { requested_tier: requestedTierChoice });
+			const res = (await api.post('/api/auth/tier-change-request', {
+				requested_tier: requestedTierChoice
+			})) as { po_notified?: boolean } | undefined;
+			tierChangeNotified = res?.po_notified === true;
 			// Profil neu laden, damit requested_tier sofort im UI erscheint.
 			await invalidateAll();
 			tierChangeStatus = 'ok';
@@ -1087,6 +1096,16 @@
 						<p data-testid="tier-change-pending" class="text-sm text-muted-foreground mb-2">
 							Level-Wechsel zu <span class="font-medium">{tierLabel(pendingTier)}</span> beantragt — wird vom Betreiber geprüft.
 						</p>
+						{#if tierNotNotified}
+							<p
+								data-testid="tier-change-not-notified"
+								role="alert"
+								class="text-sm font-medium text-destructive border border-destructive rounded-md px-3 py-2 mb-2"
+							>
+								Der Antrag ist gespeichert, aber der Betreiber wurde nicht benachrichtigt. Bitte
+								melde dich beim Betreiber, sonst bleibt der Antrag womöglich unbemerkt.
+							</p>
+						{/if}
 					{/if}
 					<div class="flex flex-wrap items-center gap-2">
 						<select
@@ -1108,7 +1127,7 @@
 							{tierChangeStatus === 'loading' ? 'Wird gesendet…' : 'Antrag stellen'}
 						</Btn>
 					</div>
-					{#if tierChangeStatus === 'ok'}
+					{#if tierChangeStatus === 'ok' && tierChangeNotified}
 						<p class="text-sm text-green-600 mt-2">Antrag gesendet</p>
 					{/if}
 					{#if tierChangeStatus === 'error' && tierChangeError}

@@ -25,6 +25,10 @@ type User struct {
 	// Zero-Value würde als "0001-01-01T00:00:00Z" serialisiert statt weggelassen.
 	RequestedTier string     `json:"requested_tier,omitempty"`
 	RequestedAt   *time.Time `json:"requested_at,omitempty"`
+	// Issue #2436 — Nachweis, dass der Betreiber ueber den offenen Antrag
+	// benachrichtigt wurde. Nur nach erfolgreichem Versand gesetzt, bei jedem
+	// neuen Antrag zuerst zurueckgesetzt, bei Freigabe geloescht.
+	RequestedNotifiedAt *time.Time `json:"requested_notified_at,omitempty"`
 	// Issue #1219 Scheibe 1 — Resend-Allowlist-Eignungskriterium. Pointer aus
 	// demselben Grund wie RequestedAt: omitempty greift bei time.Time-Structs
 	// nicht, ein Zero-Value würde als "0001-01-01T00:00:00Z" serialisiert
