@@ -85,7 +85,9 @@ test.describe('Issue #767 — handlungsleitende Fehlermeldungen', () => {
 
 		const err = page.getByTestId('test-briefing-error');
 		await expect(err).toBeVisible({ timeout: 8000 });
-		await expect(err).toContainText(/Serverfehler|später erneut/i);
+		// Issue #2124 AC-2: 502 heisst „Ergebnis unklar" (Versand kann noch laufen),
+		// nicht „Serverfehler/fehlgeschlagen" — Erwartung an die Spec angepasst.
+		await expect(err).toContainText('Ergebnis unklar — Versand kann noch laufen, nicht erneut senden');
 		await expect(err).not.toContainText('undefined');
 	});
 

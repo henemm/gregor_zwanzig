@@ -129,13 +129,16 @@ test('AC-11: Erfolgstext für 18 Uhr nennt Evening', async () => {
 	assert.match(r.result!, /diesen Trip/);
 });
 
-test('AC-11: 409 zeigt den detail-Text der Antwort', async () => {
-	antwort = { status: 409, body: JSON.stringify({ detail: 'Trip ist pausiert — kein Versand.' }) };
+// Issue #2124 AC-2: 409 ist auf POST /api/trips/<id>/send ausschliesslich
+// „Versand läuft bereits" (#1756-Lock) — das geteilte Modul sendOutcome.ts
+// zeigt dafür die feste Meldung statt des Backend-detail (Spec-Tabelle §4).
+test('AC-11/#2124: 409 zeigt „Versand läuft bereits"', async () => {
+	antwort = { status: 409, body: JSON.stringify({ detail: 'Versand für morning läuft bereits — bitte warten' }) };
 
 	const r = await sendTripTestReport('t1', 7, fetchAmServer);
 
 	assert.equal(r.result, null);
-	assert.equal(r.error, 'Trip ist pausiert — kein Versand.');
+	assert.match(r.error ?? '', /Versand läuft bereits/);
 });
 
 test('AC-11: 422 zeigt den detail-Text der Antwort', async () => {
@@ -176,6 +179,81 @@ test('AC-11: 5xx zeigt eine handlungsleitende Meldung OHNE Rohtext', async () =>
 	assert.ok(r.error, 'Fehlertext erwartet');
 	assert.doesNotMatch(r.error!, /Traceback|KeyError|secret/);
 	assert.match(r.error!, /später erneut versuchen/);
+});
+
+// ---------------------------------------------------------------------------
+// Issue #2124 AC-2/AC-3 — Verdrahtung der Trip-Liste auf das geteilte Modul
+// `$lib/utils/sendOutcome.ts` (Spec fix_2124_versand_nginx_timeout.md §4).
+// Schlüssel-Konvention `trip:<id>` (geteilt mit Trip-Detail und Dialog).
+// tripListSend.ts MUSS `from '$lib/utils/sendOutcome'` (OHNE Endung) importieren:
+// test-lib-hooks.mjs löst das auf dieselbe Datei-URL auf wie der relative Import
+// unten — nur dann teilen Test und Helfer EINE Modulinstanz (`.js` bräche hier).
+// RED heute: kein Laufzustand, 502 ergibt „fehlgeschlagen".
+// ---------------------------------------------------------------------------
+
+/** fetch, das bis zur manuellen Freigabe offen bleibt und Aufrufe zählt. */
+function haltendesFetch() {
+	const zaehler = { aufrufe: 0 };
+	const offen: Array<(r: Response) => void> = [];
+	const fn: typeof fetch = () => {
+		zaehler.aufrufe += 1;
+		return new Promise<Response>((ok) => {
+			offen.push(ok);
+		});
+	};
+	return {
+		fn,
+		zaehler,
+		// Gibt ALLE offenen Requests frei — heute (ohne Laufzustand) hängen zwei.
+		freigabe: () => {
+			for (const ok of offen.splice(0)) ok(new Response('{"status":"ok"}', { status: 200 }));
+		}
+	};
+}
+
+const naechsterTakt = () => new Promise<void>((ok) => setImmediate(ok));
+
+test('#2124 AC-3: zweiter Versand für denselben Trip während des ersten schickt keinen zweiten Request', async () => {
+	const h = haltendesFetch();
+	const erster = sendTripTestReport('t-2124-inflight', 7, h.fn);
+	const zweiterP = sendTripTestReport('t-2124-inflight', 7, h.fn);
+	await naechsterTakt();
+	const aufrufeWaehrendLauf = h.zaehler.aufrufe;
+
+	// Erst freigeben, dann prüfen — damit der Test nie an einem hängenden Request stehen bleibt.
+	h.freigabe();
+	const [r1, zweiter] = await Promise.all([erster, zweiterP]);
+
+	assert.equal(aufrufeWaehrendLauf, 1, 'während der erste läuft, darf kein zweiter Request abgehen');
+	assert.equal(zweiter.result, null);
+	assert.match(zweiter.error ?? '', /Versand läuft bereits/);
+	assert.equal(r1.error, null);
+
+	// Nach Abschluss ist ein bewusster neuer Versand wieder möglich.
+	const dritter = await sendTripTestReport('t-2124-inflight', 7, fetchAmServer);
+	assert.equal(dritter.error, null);
+	assert.equal(aufrufe.length, 1);
+});
+
+test('#2124 AC-3: Trip-Liste nutzt den geteilten Laufzustand (Schlüssel trip:<id>)', async () => {
+	const { beginSend, endSend } = await import('../../lib/utils/sendOutcome.ts');
+	assert.equal(beginSend('trip:t-2124-geteilt'), true);
+	try {
+		const r = await sendTripTestReport('t-2124-geteilt', 18, fetchAmServer);
+		assert.equal(aufrufe.length, 0, 'läuft der Versand bereits (z. B. aus dem Trip-Detail), geht kein Request ab');
+		assert.match(r.error ?? '', /Versand läuft bereits/);
+	} finally {
+		endSend('trip:t-2124-geteilt');
+	}
+});
+
+test('#2124 AC-2: 502 zeigt „Ergebnis unklar" statt „fehlgeschlagen"', async () => {
+	antwort = { status: 502, body: JSON.stringify({ error: 'upstream unreachable' }) };
+
+	const r = await sendTripTestReport('t-2124-502', 18, fetchAmServer);
+
+	assert.equal(r.result, null);
+	assert.equal(r.error, 'Ergebnis unklar — Versand kann noch laufen, nicht erneut senden');
 });
 
 test('AC-11: Netzwerkfehler ergibt einen Fehlertext statt einer Ausnahme', async () => {

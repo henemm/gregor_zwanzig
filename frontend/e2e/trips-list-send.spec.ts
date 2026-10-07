@@ -100,6 +100,8 @@ test('AC-11: 409 vom Versand zeigt den detail-Text im Dialog', async ({ page }) 
 
 	await sheet.getByText('Test Morgen-Report').click();
 
-	await expect(page.getByRole('dialog')).toContainText('Trip ist pausiert — kein Versand.');
+	// Issue #2124 AC-2: 409 ist auf diesem Pfad ausschliesslich „Versand läuft
+	// bereits" (#1756) — das geteilte Modul zeigt die feste Meldung.
+	await expect(page.getByRole('dialog')).toContainText('Versand läuft bereits');
 	expect(rec.triggerRequests).toEqual([]);
 });
