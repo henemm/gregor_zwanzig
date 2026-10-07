@@ -19,6 +19,7 @@
 	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	import { starteNachladenNachEntladen, tripNachladeQuelle } from '$lib/stores/nachEntladenNachladen';
 	import { wendeNutzlastAn } from '$lib/stores/nutzlastStand';
+	import { sendTripBriefing } from '$lib/utils/sendOutcome';
 
 	let { data } = $props();
 
@@ -288,36 +289,16 @@
 		testBriefingLoading = true;
 		testBriefingStatus = 'idle';
 		try {
-			const res = await fetch(`/api/trips/${trip.id}/send?report_type=${reportType}`, {
-				method: 'POST'
-			});
-			if (res.ok) {
+			// Issue #2124: geteilter Laufzustand (trip:<id>) + Klassifikation.
+			// 5xx: Rohtext wird nicht angezeigt (nur geloggt), 502/503/504/Netz = „Ergebnis unklar".
+			const o = await sendTripBriefing(trip.id, reportType);
+			if (o.kind === 'ok') {
 				testBriefingStatus = 'ok';
 				testBriefingMessage = null;
 			} else {
 				testBriefingStatus = 'error';
-				let detail: string | undefined;
-				try {
-					const body = await res.json();
-					detail = body?.detail;
-				} catch {
-					/* kein JSON-Body */
-				}
-				if (res.status >= 500) {
-					// AC-1/AC-3: Serverfehler → handlungsleitende Meldung, roher detail wird
-					// NICHT angezeigt; Statuscode + Rohtext werden observierbar geloggt.
-					console.error(`Test-Briefing fehlgeschlagen: HTTP ${res.status}`, detail);
-					testBriefingMessage = 'Versand fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
-				} else if (detail) {
-					testBriefingMessage = detail; // AC-2: qualifizierte 4xx-Meldung bleibt
-				} else {
-					testBriefingMessage = 'Versand fehlgeschlagen — bitte später erneut versuchen.';
-				}
+				testBriefingMessage = o.message;
 			}
-		} catch (e) {
-			console.error(e);
-			testBriefingStatus = 'error';
-			testBriefingMessage = 'Versand fehlgeschlagen — bitte später erneut versuchen.';
 		} finally {
 			testBriefingLoading = false;
 		}

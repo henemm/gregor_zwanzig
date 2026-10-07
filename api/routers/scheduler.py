@@ -319,7 +319,14 @@ def manual_send_compare_preset(preset_id: str, user_id: str = Query(...)):
     Ignoriert schedule — sendet sofort, egal ob daily/weekly/manual.
     """
     try:
-        return send_compare_preset(user_id, preset_id)
+        result = send_compare_preset(user_id, preset_id)
+        # Issue #2124: Doppelversand-Schutz wie beim Trip-Versand (#1756).
+        if result.get("status") == "already_in_progress":
+            raise HTTPException(
+                status_code=409,
+                detail="Versand für diesen Ortsvergleich läuft bereits — bitte warten",
+            )
+        return result
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:

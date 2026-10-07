@@ -12,6 +12,7 @@ package handler
 // /send ist ein Stub (Issue #461 implementiert die echte Versandlogik).
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -614,7 +615,8 @@ func SendComparePresetHandler(pythonURL string) http.HandlerFunc {
 			url += "?" + query
 		}
 
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, nil)
+		// Issue #2124: vom Client-Abbruch entkoppelt (siehe SendTripReportProxyHandler).
+		req, err := http.NewRequestWithContext(context.WithoutCancel(r.Context()), http.MethodPost, url, nil)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -623,7 +625,7 @@ func SendComparePresetHandler(pythonURL string) http.HandlerFunc {
 		}
 		req.Header.Set("Content-Type", "application/json")
 
-		client := &http.Client{Timeout: 120 * time.Second}
+		client := &http.Client{Timeout: sendProxyTimeout}
 		resp, err := client.Do(req)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")

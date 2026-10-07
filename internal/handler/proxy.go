@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -13,6 +14,17 @@ import (
 )
 
 const version = "0.1.0"
+
+// Issue #2124: Zeitgrenzen-Kette Python-Lauf < Go-Client < nginx.
+// sendProxyTimeout gilt fuer Trip- UND Compare-Versand. nginxProxyReadTimeout
+// spiegelt proxy_read_timeout/proxy_send_timeout in `location /api/` der vhosts
+// (henemm-infra/nginx/*.conf). Paket-var, damit Tests den Wirkort pruefen koennen.
+var sendProxyTimeout = 300 * time.Second
+
+const nginxProxyReadTimeout = 330 * time.Second
+
+// stagesWeatherProxyTimeout: Wetterabruf (Lesezugriff), Issue #2124 AC-9.
+var stagesWeatherProxyTimeout = 120 * time.Second
 
 // HealthHandler liefert den Gesundheitsstatus. rpID ist die effektive
 // Passkey-RP-ID der real gebauten WebAuthn-Instanz (Issue #2130) — der
@@ -196,7 +208,7 @@ func LoadedTripProxyHandler(pythonURL string) http.HandlerFunc {
 // Python core's /api/_internal/trips/{id}/stages-weather endpoint. The trip
 // ID is extracted via chi.URLParam; the client-supplied user_id is discarded
 // and the authenticated user_id from the auth context is injected instead
-// (anti-spoofing). Timeout 60s — the weather fetch spans multiple stages.
+// (anti-spoofing). Timeout stagesWeatherProxyTimeout (120s) — the weather fetch spans multiple stages.
 // Spec: docs/specs/modules/stage_weather_go_proxy.md (Issue #1212, Slice R2).
 func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +216,7 @@ func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
 		query := appendUserID("", middleware.UserIDFromContext(r.Context()))
 		url := pythonURL + "/api/_internal/trips/" + id + "/stages-weather?" + query
 
-		client := &http.Client{Timeout: 60 * time.Second}
+		client := &http.Client{Timeout: stagesWeatherProxyTimeout}
 		resp, err := client.Get(url)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -267,7 +279,9 @@ func SendTripReportProxyHandler(pythonURL string) http.HandlerFunc {
 			url += "?" + query
 		}
 
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, nil)
+		// Issue #2124: Upstream vom Client-Abbruch (Browser/nginx) entkoppeln;
+		// http.Client.Timeout bleibt die obere Grenze.
+		req, err := http.NewRequestWithContext(context.WithoutCancel(r.Context()), http.MethodPost, url, nil)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -278,7 +292,7 @@ func SendTripReportProxyHandler(pythonURL string) http.HandlerFunc {
 
 		// Issue #1756 (AC-8): 120s -> 300s, der reguläre Erfolgsfall
 		// (vollständiger Mehrtages-Ausblick) braucht 3-4 Minuten.
-		client := &http.Client{Timeout: 300 * time.Second}
+		client := &http.Client{Timeout: sendProxyTimeout}
 		resp, err := client.Do(req)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")

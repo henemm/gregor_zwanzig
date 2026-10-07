@@ -39,6 +39,7 @@
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
 	import { api } from '$lib/api.js';
+	import { sendComparePreset } from '$lib/utils/sendOutcome';
 	import { onMount } from 'svelte';
 	// Issue #1256 Scheibe 6 (AC-14/15/16/31/32/33/34): Orte-Tab-Drag +
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
@@ -656,12 +657,11 @@
 		sendLoading = true;
 		sendError = null;
 		sendQueued = false;
+		// Issue #2124: geteilter Laufzustand (compare:<id>) + Klassifikation.
 		try {
-			await api.post(`/api/compare/presets/${preset.id}/send`, {});
-			sendQueued = true;
-		} catch (e: unknown) {
-			const body = e as { detail?: string; error?: string };
-			sendError = body?.detail ?? body?.error ?? 'Versand fehlgeschlagen';
+			const o = await sendComparePreset(preset.id);
+			if (o.kind === 'ok') sendQueued = true;
+			else sendError = o.message;
 		} finally {
 			sendLoading = false;
 		}
