@@ -88,12 +88,15 @@ class TripDispatchStrategy:
                 # zu bekommen). Weder gesendet noch technisch fehlgeschlagen --
                 # der Wrapper hat den Grund bereits protokolliert.
                 return
-            # Issue #1012 (c): "no_weather" (kompletter Ausfall) zaehlt als
-            # failed statt sent -- alle anderen Outcomes bleiben sent.
-            if outcome == "no_weather":
-                self._failed += 1
-            else:
+            # Issue #2218 (A): Zaehlung nach Zustellung. Nur "sent" ist gesendet;
+            # "no_channels"/"no_stage" sind neutral (nichts zu tun); alles
+            # andere (no_weather, channels_unreachable, unbekannt) ist failed.
+            if outcome == "sent":
                 self._sent += 1
+            elif outcome in ("no_channels", "no_stage"):
+                pass
+            else:
+                self._failed += 1
         except Exception as e:
             self._failed += 1
             logger.error("Failed %s report for %s: %s", report_type, trip.id, e)

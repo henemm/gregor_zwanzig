@@ -691,6 +691,9 @@ class TripReportSchedulerService:
                 trip.id, report_type, local_day,
                 outcome if isinstance(outcome, str) and outcome else "unknown",
             )
+            # #2218: unbekannter Ausgang (inkl. None) bleibt vom "kein
+            # Versandversuch"-None (oben) unterscheidbar.
+            return outcome if isinstance(outcome, str) and outcome else "unknown"
         return outcome
 
     def _process_pending_markers(self, now_utc: datetime, due_trip_ids_now: set) -> int:

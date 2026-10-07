@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.routers import scheduler
+from services.briefing_slots import BriefingSlotStore
 from services.trip_report_scheduler import TripReportSchedulerService
 from tests.tdd.test_briefing_slot_idempotenz import (
     KORSIKA, _schreibe, _trip_json, _zeitpunkt, PARIS,
@@ -25,15 +26,22 @@ TAG = date(2026, 8, 20)
 
 # Ausgang je Nutzer — wird von der Naht gelesen
 _AUSGANG: dict[str, object] = {}
+# Nutzer, fuer die die Naht tatsaechlich aufgerufen wurde
+_AUFRUFE: list[str] = []
 
 
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setenv("GZ_ENV", "production")
     _AUSGANG.clear()
+    _AUFRUFE.clear()
 
     def _naht(self, trip, report_type, **kwargs):
-        return _AUSGANG[self._user_id]
+        _AUFRUFE.append(self._user_id)
+        ausgang = _AUSGANG[self._user_id]
+        if isinstance(ausgang, Exception):
+            raise ausgang
+        return ausgang
 
     monkeypatch.setattr(TripReportSchedulerService, "_send_trip_report_outcome", _naht)
     app = FastAPI()
@@ -74,3 +82,43 @@ def test_ac9_zwei_nutzer_werden_getrennt_bewertet(client):
     b = _lauf(client, "u2218-nutzer-b", "channels_unreachable")
     assert a == {"status": "ok", "count": 1, "failed": 0}
     assert b == {"status": "partial", "count": 0, "failed": 1}
+
+
+def test_f001_bereits_vermerkter_slot_ist_kein_versandversuch(client, monkeypatch):
+    """`_dispatch_due_item` liefert None (kein Versandversuch) -> weder sent noch failed.
+
+    Ein vorab vermerkter Slot faellt schon in `collect_due` heraus und erreicht
+    `dispatch_one` nie. Der Leerlauf entsteht nur im Rennen: ein paralleler Lauf
+    reserviert den Slot ZWISCHEN Sammlung und Versand. Das wird hier mit dem
+    echten Slot-Speicher nachgestellt.
+    """
+    user = "u2218-f001-vermerkt"
+    _AUSGANG[user] = "sent"
+    _schreibe(user, [_trip_json("korsika", *KORSIKA, TAGE, morning="07:00:00")])
+    at = _zeitpunkt(PARIS, TAG, 7)
+    original = TripReportSchedulerService._collect_due_trips
+
+    def _sammeln_dann_konkurrenz(self, now_utc):
+        due = original(self, now_utc)
+        assert due, "Testaufbau: Slot muss zunaechst faellig sein"
+        assert BriefingSlotStore(user).reserve(
+            "korsika", "morning", TAG, PARIS, moment=now_utc,
+        )
+        return due
+
+    monkeypatch.setattr(
+        TripReportSchedulerService, "_collect_due_trips", _sammeln_dann_konkurrenz,
+    )
+    r = client.post(
+        "/api/scheduler/trip-reports", params={"user_id": user, "at": at.isoformat()},
+    )
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok", "count": 0, "failed": 0}
+    assert _AUFRUFE == [], "Naht wurde aufgerufen: kein Leerlauf erzeugt"
+
+
+def test_f002_werfende_naht_zaehlt_als_failed(client):
+    assert _lauf(client, "u2218-f002-wirft", RuntimeError("boom")) == {
+        "status": "partial", "count": 0, "failed": 1,
+    }
+    assert _AUFRUFE == ["u2218-f002-wirft"]
