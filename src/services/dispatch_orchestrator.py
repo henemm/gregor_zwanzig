@@ -57,7 +57,10 @@ class TripDispatchStrategy:
         return (0, 0)
 
     def collect_due(self, now_utc: "datetime") -> list:
-        return self._service._collect_due_trips(now_utc)
+        due = self._service._collect_due_trips(now_utc)
+        # Issue #2217: gescheiterte Faelligkeitspruefungen zaehlen als failed.
+        self._failed += self._service.collect_failed
+        return due
 
     def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1012 (b2): Catch-up ZUERST, offene Nachliefer-Marker vor den
@@ -146,7 +149,10 @@ class CompareDispatchStrategy:
         if self._all_locations is None:
             self._all_locations = load_all_locations(user_id=self._user_id)
         by_id = {loc.id: loc for loc in self._all_locations}
-        return presets_due_for_hour(presets, by_id, now_utc)
+        due = presets_due_for_hour(presets, by_id, now_utc)
+        # Issue #2217: gescheiterte Faelligkeitspruefungen zaehlen als failed.
+        self._failed += len(getattr(due, "failed_ids", ()))
+        return due
 
     def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets
@@ -158,7 +164,7 @@ class CompareDispatchStrategy:
         # durchgereicht, damit der Ablauf gegen den ORTSTAG des Presets
         # geprueft wird (ADR-0044) statt gegen den Servertag. Keine zweite
         # Zeitabfrage, kein zweiter Ladevorgang.
-        _auto_pause_expired_presets(
+        self._failed += _auto_pause_expired_presets(
             self._presets, self._user_id, self._data_root,
             now_utc, self._all_locations or [],
         )

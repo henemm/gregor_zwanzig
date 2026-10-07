@@ -933,9 +933,10 @@ def test_compare_radar_ausfall_ort1_und_alarm_ort2_beides_wirksam():
 
 def test_compare_radar_ausfall_ort1_bleibt_bei_unerwartetem_fehler_an_ort2():
     """F009: Ort 1 Quellenausfall, danach wirft die Auswertung von Ort 2 eine
-    unerwartete Exception (Dienst liefert ein unbrauchbares Ergebnis) ⇒ die
-    Exception erreicht den Aufrufer wie bisher, der Ausfall von Ort 1 steht
-    trotzdem im Protokoll (nur ein Grenzabbruch verwirft ihn).
+    unerwartete Exception (Dienst liefert ein unbrauchbares Ergebnis) ⇒ seit
+    #2217 wird sie je Preset aufgefangen und als ``failed`` gezaehlt (statt
+    den Lauf abzubrechen); der Ausfall von Ort 1 steht trotzdem im Protokoll
+    (nur ein Grenzabbruch verwirft ihn).
     Mutation „Protokollierung nur am Normalende (kein finally)" ⇒ rot."""
     class _KaputtBeiOrt2(_ScriptedRadar):
         def get_nowcast(self, lat, lon, *a, **kw):
@@ -947,9 +948,9 @@ def test_compare_radar_ausfall_ort1_bleibt_bei_unerwartetem_fehler_an_ort2():
     _make_multi_preset(uid, "mp", 2)
     radar = _KaputtBeiOrt2(_loc_idx, raise_on=(0, 1, RuntimeError("503 Quelle")))
 
-    with pytest.raises(AttributeError):
-        _compare_service(uid, radar).check_all_compare_presets_run()
+    result = _compare_service(uid, radar).check_all_compare_presets_run()
 
+    assert result.failed == 1, f"Ausfall muss als failed gezaehlt werden: {result!r}"
     assert "data_unavailable" in _alert_log_text(uid), (
         f"Ausfall von Ort 1 ging verloren: {_alert_log_text(uid)!r}"
     )

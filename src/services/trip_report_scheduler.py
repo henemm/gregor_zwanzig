@@ -40,6 +40,7 @@ from services.alert_briefing_anchor import (
     reset_alert_memory,
     write_anchor_and_reset_memory,
 )
+from services.alert_check_state import report_unit_failure
 from services.briefing_slots import (
     BriefingSlotStore,
     lege_beschaedigte_datei_beiseite,
@@ -429,6 +430,10 @@ class TripReportSchedulerService:
         >>> service.send_reports("morning")  # Send reports for today's trips
     """
 
+    # Issue #2217: Trips, deren Faelligkeits-/Filterpruefung im letzten
+    # Sammellauf mit einer Ausnahme scheiterte (-> `failed` der Antwort).
+    collect_failed: int = 0
+
     def __init__(self, settings: Optional[Settings] = None, *, user_id: str) -> None:
         """
         Initialize the service.
@@ -588,6 +593,7 @@ class TripReportSchedulerService:
         """
         from services.trip_day import trip_local_now
 
+        self.collect_failed = 0
         store = BriefingSlotStore(self._user_id)
         store.repair_if_corrupt(moment=now_utc)  # #2231: VOR der Schleife
         due: List[Tuple["Trip", str, date]] = []
@@ -596,28 +602,34 @@ class TripReportSchedulerService:
             ("evening", self._get_evening_hour),
         ):
             for trip in self._get_active_trips(report_type, now_utc):
-                vor_ort = trip_local_now(trip, now_utc)
-                stunde = slot_stunde(trip)
-                if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
-                    continue
-                ortstag = vor_ort.date()
-                # Issue #1897: hier zaehlt „wird jetzt ein Versand
-                # stattfinden?" -- ein LEBENDIGER Vermerk (Versand laeuft) haelt
-                # den Trip aus der Liste, ein VERWAISTER bringt ihn zurueck.
-                if store.is_recorded_or_claimed(
-                    trip.id, report_type, ortstag, zone=vor_ort.tzinfo,
-                    moment=now_utc,
-                ):
-                    continue
-                # Issue #2422 S3 (AC-6): erst hier ginge das Briefing wirklich
-                # raus -- nur dieser Slot darf `skip_next` verbrauchen. Der
-                # Vermerk schliesst das Nachhol-Fenster fuer diesen Slot.
-                if self._skip_next_verbrauchen(trip):
-                    store.record_outcome(
-                        trip.id, report_type, ortstag, AUSGANG_UEBERSPRUNGEN,
-                    )
-                    continue
-                due.append((trip, report_type, ortstag))
+                try:
+                    vor_ort = trip_local_now(trip, now_utc)
+                    stunde = slot_stunde(trip)
+                    if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
+                        continue
+                    ortstag = vor_ort.date()
+                    # Issue #1897: hier zaehlt „wird jetzt ein Versand
+                    # stattfinden?" -- ein LEBENDIGER Vermerk (Versand laeuft) haelt
+                    # den Trip aus der Liste, ein VERWAISTER bringt ihn zurueck.
+                    if store.is_recorded_or_claimed(
+                        trip.id, report_type, ortstag, zone=vor_ort.tzinfo,
+                        moment=now_utc,
+                    ):
+                        continue
+                    # Issue #2422 S3 (AC-6): erst hier ginge das Briefing wirklich
+                    # raus -- nur dieser Slot darf `skip_next` verbrauchen. Der
+                    # Vermerk schliesst das Nachhol-Fenster fuer diesen Slot.
+                    if self._skip_next_verbrauchen(trip):
+                        store.record_outcome(
+                            trip.id, report_type, ortstag, AUSGANG_UEBERSPRUNGEN,
+                        )
+                        continue
+                    due.append((trip, report_type, ortstag))
+                except Exception:
+                    # Issue #2217: ein kaputter Trip reisst den Sammellauf nicht mit;
+                    # kein Vermerk, kein skip_next-Verbrauch (Nachhol-Fenster bleibt offen).
+                    report_unit_failure("Briefing-Sammellauf (Faelligkeit)", trip.id)
+                    self.collect_failed += 1
         return due
 
     def _dispatch_due_item(
@@ -959,33 +971,39 @@ class TripReportSchedulerService:
 
         active = []
         for trip in all_trips:
-            target_date = self._get_target_date(report_type, trip, now_utc)
-            if trip.get_stage_for_date(target_date) is None:
-                continue
-            # Issue #995: Trip-Detail-Pause-Button (Go-Feld paused_at) unterdrückt
-            # den automatischen Versand. NUR hier — NICHT in load_all_trips(),
-            # sonst würde der Alert-Dispatch (trip_alert.py) fälschlich mit
-            # unterdrückt. Manueller Test-Versand (send_test_report) umgeht diese
-            # Funktion ohnehin und bleibt unberührt.
-            if trip.paused_at is not None:
-                continue
-            rc = trip.report_config
-            # Issue #2422 S3: Slot-genau statt nur `enabled` -- dieselbe Regel
-            # wie trip_briefing_due_at und die flache Ableitung im Loader.
-            if not slot_aktiv(rc, report_type):
-                continue
-            if rc is not None and rc.paused_until is not None:
-                # Ensure tz-aware comparison
-                pu = rc.paused_until
-                if pu.tzinfo is None:
-                    pu = pu.replace(tzinfo=timezone.utc)
-                if now_utc < pu:
+            try:
+                target_date = self._get_target_date(report_type, trip, now_utc)
+                if trip.get_stage_for_date(target_date) is None:
                     continue
-            # Issue #2422 S3 (AC-6): `skip_next` wird NICHT mehr hier verbraucht
-            # (das geschah bei jedem Stundenlauf, unabhaengig von der
-            # Faelligkeit), sondern erst vom tatsaechlich faelligen Slot, s.
-            # `_skip_next_verbrauchen`.
-            active.append(trip)
+                # Issue #995: Trip-Detail-Pause-Button (Go-Feld paused_at) unterdrückt
+                # den automatischen Versand. NUR hier — NICHT in load_all_trips(),
+                # sonst würde der Alert-Dispatch (trip_alert.py) fälschlich mit
+                # unterdrückt. Manueller Test-Versand (send_test_report) umgeht diese
+                # Funktion ohnehin und bleibt unberührt.
+                if trip.paused_at is not None:
+                    continue
+                rc = trip.report_config
+                # Issue #2422 S3: Slot-genau statt nur `enabled` -- dieselbe Regel
+                # wie trip_briefing_due_at und die flache Ableitung im Loader.
+                if not slot_aktiv(rc, report_type):
+                    continue
+                if rc is not None and rc.paused_until is not None:
+                    # Ensure tz-aware comparison
+                    pu = rc.paused_until
+                    if pu.tzinfo is None:
+                        pu = pu.replace(tzinfo=timezone.utc)
+                    if now_utc < pu:
+                        continue
+                # Issue #2422 S3 (AC-6): `skip_next` wird NICHT mehr hier verbraucht
+                # (das geschah bei jedem Stundenlauf, unabhaengig von der
+                # Faelligkeit), sondern erst vom tatsaechlich faelligen Slot, s.
+                # `_skip_next_verbrauchen`.
+                active.append(trip)
+            except Exception:
+                # Issue #2217: ein kaputter Trip reisst den Sammellauf nicht mit;
+                # kein Vermerk, kein skip_next-Verbrauch (Nachhol-Fenster bleibt offen).
+                report_unit_failure("Briefing-Sammellauf (aktive Trips)", trip.id)
+                self.collect_failed += 1
 
         logger.debug(f"Active trips ({report_type}): {[t.id for t in active]}")
         return active

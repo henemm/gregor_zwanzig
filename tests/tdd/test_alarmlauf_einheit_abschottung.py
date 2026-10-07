@@ -763,3 +763,158 @@ def test_zwei_nutzer_ortsvergleich_fehler_nur_bei_a(monkeypatch, caplog):
     assert _error_records_mit_id(caplog, "p-a-kaputt"), "Fehler muss A's Preset-ID tragen"
     assert not _error_records_mit_id(caplog, "p-b-heil"), "Fehler darf nicht B zugeordnet werden"
     assert _default_snapshot() == default_before, "Schreibzugriff unter data/users/default/"
+
+
+# ===========================================================================
+# Fix-Loop 1 (Adversary F001/F003/F005)
+# ===========================================================================
+
+class _DeadlineBeiQuellenbenennung(_ScriptedRadar):
+    """F001-Naht: ``source_label`` wird in ``_check_radar_trips`` NACH den
+    beiden Nowcast-Handlern (ausserhalb jedes inneren ``except
+    RadarDeadlineExceeded``) beim Aufbau der Meldung gerufen. Die kleinste
+    ehrliche Einspeisung an dieser bestehenden Naht (DI-Radar-Dienst): beim
+    ersten Aufruf wirft sie die Zeitgrenzen-Ausnahme."""
+
+    def __init__(self, *a, **kw) -> None:
+        super().__init__(*a, **kw)
+        self.label_calls = 0
+
+    def source_label(self, source):
+        self.label_calls += 1
+        if self.label_calls == 1:
+            raise RadarDeadlineExceeded("Zeitgrenze")
+        return super().source_label(source)
+
+
+def test_trip_radar_deadline_ausserhalb_der_nowcast_handler_ist_partial_nicht_failed(monkeypatch):
+    """F001/AC-4: Die Zeitgrenze trifft den Lauf an einer Stelle ausserhalb der
+    inneren Nowcast-Handler (Quellenbenennung beim Meldungsaufbau, Trip 1).
+    Then: ``partial``/``deadline`` mit ``failed == 0``, Trip 1 gilt als nicht
+    erreicht (``skipped_ids`` enthaelt alle drei, ``checked == 0``), Trip 2 und
+    3 werden nicht mehr geprueft. Mutationen: Handler entfernen oder hinter
+    ``except Exception`` setzen => die Zeitgrenze zaehlt als ``failed`` und der
+    Lauf prueft weiter => rot."""
+    uid = _uid("f001")
+    ids = _make_trips(uid, ["a", "b", "c"])
+    radar = _DeadlineBeiQuellenbenennung(_trip_idx, wet=True)
+    mails: list = []
+    _bind_trip_service(monkeypatch, mails, radar=radar)
+
+    resp = _post("radar-alert-checks", uid)
+    data = _json(resp)
+
+    assert radar.label_calls >= 1, "Naht nicht erreicht (Aufbau traegt nicht)"
+    assert resp.status_code == 200, (resp.status_code, data)
+    assert data.get("status") == "partial" and data.get("reason") == "deadline", data
+    assert data.get("failed") == 0, f"Zeitgrenze ist kein Ausfall: {data!r}"
+    assert data.get("skipped_ids") == ids, data
+    assert data.get("checked") == 0, data
+    assert radar.label_calls == 1 and not mails, (radar.label_calls, mails)
+
+
+def test_unwetterlauf_kaputter_trip_rueckt_in_der_reihenfolge_nach_hinten(monkeypatch):
+    """F003 (AC-5 fuer ``check_all_trips``): vier Trips, der erste scheitert
+    bei jedem Lauf, die Zeitgrenze laesst je Lauf nur zwei zu. Lauf 1 erreicht
+    ``a-kaputt`` und ``b`` (``failed == 1``), Lauf 2 beginnt mit ``c`` (dann ``d``).
+    Mutation: Fairness-Stempel nicht vor der Pruefung setzen (z. B. ans Ende
+    des ``try`` verschieben) => ``a-kaputt`` bleibt ohne Stempel vorn => rot."""
+    import time
+
+    uid = _uid("f003")
+    ids = ["a-kaputt", "b", "c", "d"]
+    _unwetter_trips(uid, ids)
+    monkeypatch.setattr(trip_alert, "ALERT_RUN_DEADLINE_SECONDS", 0.2)
+    besucht: list[str] = []
+
+    def _binde():
+        class _Langsam(_TRIP_SERVICE):
+            def __init__(self, settings=None, throttle_hours=2, *, user_id,
+                         radar_service=None, mail_sink=None):
+                super().__init__(
+                    settings or _make_settings_with_email(), throttle_hours,
+                    user_id=user_id, radar_service=radar_service,
+                    mail_sink=mail_sink or (lambda subject, body: None),
+                )
+
+            def _get_cached_weather(self, trip, **kw):
+                if trip.id not in besucht:
+                    besucht.append(trip.id)
+                if trip.id == "a-kaputt":
+                    raise RuntimeError("Wetter-Anker unlesbar")
+                time.sleep(0.3)
+                return super()._get_cached_weather(trip, **kw)
+
+        monkeypatch.setattr(trip_alert, "TripAlertService", _Langsam)
+
+    _binde()
+    first = _json(_post("alert-checks", uid))
+    run1 = list(besucht)
+    besucht.clear()
+    second = _json(_post("alert-checks", uid))
+    run2 = list(besucht)
+
+    assert run1 == ["a-kaputt", "b"], (run1, first)
+    assert first.get("failed") == 1 and first.get("checked") == 2, first
+    assert run2[:1] == ["c"] and "a-kaputt" not in run2[:1], (
+        f"Lauf 2 muss mit dem nicht erreichten Trip c beginnen, nicht mit dem "
+        f"kaputten: {run2!r} ({second!r})"
+    )
+    assert (second.get("skipped_ids") or [None])[0] == "d", second
+
+
+def _zone_scheitert_in_faelligkeit(monkeypatch, preset_id: str) -> None:
+    """Nur die Zonenbestimmung INNERHALB von ``presets_due_for_hour`` scheitert
+    (Naht ``compare_slot_scheduler.first_resolvable_tz``, wie im Briefing-
+    Test); die Alarm-Dienste benutzen ihre eigene, ungepatchte Bindung."""
+    from services import compare_slot_scheduler as css
+
+    original = css.first_resolvable_tz
+
+    def _zone(locations, context_label=""):
+        if context_label == preset_id:
+            raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+        return original(locations, context_label=context_label)
+
+    monkeypatch.setattr(css, "first_resolvable_tz", _zone)
+
+
+def test_ortsvergleich_abweichung_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_failed(monkeypatch):
+    """F005 (Standard-Lauf): scheitert die Faelligkeitspruefung der
+    Vorlauf-Sperre fuer Preset 1, wird sein Alarm NICHT ohne Sperre gesendet;
+    es zaehlt als ``failed == 1``, Preset 2 wird bedient. Mutation: Pruefung auf
+    ``failed_ids`` (``due_or_raise``) entfernen => Preset 1 alarmiert => rot."""
+    uid = _uid("f005a")
+    specs = [("p-a-kaputt", {}), ("p-b-heil", {})]
+    _deviation_presets(uid, specs)
+    _zone_scheitert_in_faelligkeit(monkeypatch, "p-a-kaputt")
+    mails: list = []
+    _bind_compare_alert(monkeypatch, mails, _deviation_source([s[0] for s in specs]))
+
+    resp = _post("compare-alert-checks", uid)
+    data = _json(resp)
+
+    assert resp.status_code == 200, (resp.status_code, data)
+    assert data.get("failed") == 1, data
+    assert len(_mails_fuer(mails, uid)) == 1, (
+        f"Nur das gesunde Preset darf alarmieren: {[m[1] for m in mails]!r} {data!r}"
+    )
+
+
+def test_ortsvergleich_amtlich_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_failed(monkeypatch):
+    """F005 (amtlicher Lauf): wie oben fuer ``/compare-official-alert-checks``."""
+    uid = _uid("f005o")
+    _official_presets(uid, [("p-a-kaputt", {}), ("p-b-heil", {})],
+                      warn_for=["p-a-kaputt", "p-b-heil"])
+    _zone_scheitert_in_faelligkeit(monkeypatch, "p-a-kaputt")
+    mails: list = []
+    _bind_compare_official(monkeypatch, mails)
+
+    resp = _post("compare-official-alert-checks", uid)
+    data = _json(resp)
+
+    assert resp.status_code == 200, (resp.status_code, data)
+    assert data.get("failed") == 1, data
+    assert len(_mails_fuer(mails, uid)) == 1, (
+        f"Nur das gesunde Preset darf warnen: {[m[1] for m in mails]!r} {data!r}"
+    )

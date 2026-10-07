@@ -20,6 +20,7 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
+from services.alert_check_state import report_unit_failure
 from services.file_lock import LockTimeout, locked_json_rmw
 from utils.pii_masking import mask_addr_for_pii_log
 from services.alert_briefing_anchor import (
@@ -68,7 +69,7 @@ def _auto_pause_expired_presets(
     data_root: str,
     now_utc: _datetime,
     all_locations: list,
-) -> None:
+) -> int:
     """Pausiert Presets mit ueberschrittenem `end_date` (Issue #1250 Scheibe 3).
 
     Issue #1207: Extrahiert aus `run_compare_presets_daily` fuer Delegation
@@ -89,37 +90,48 @@ def _auto_pause_expired_presets(
     Der Zeitstempel `now_iso` stammt jetzt aus DERSELBEN Zeitabfrage wie die
     Ablauf-Pruefung (vorher `datetime.utcnow()`: naiv, ohne Zone, veraltet --
     und fuer Muster A des Zeitzonen-Waechters unsichtbar).
+
+    Issue #2217: jedes Preset ist abgeschottet; Rueckgabe = Zahl der
+    gescheiterten Presets (-> `failed` ueber `CompareDispatchStrategy`).
     """
     from services.compare_preview_service import order_locations_by_ids
     from utils.timezone import first_resolvable_tz, local_dt
 
     now_iso = now_utc.isoformat()
+    failed = 0
     for preset in presets:
-        if preset.get("archived_at"):
-            continue
-        if preset.get("paused_at") or preset.get("schedule") == "manual":
-            continue  # bereits pausiert -> idempotent, kein erneutes Schreiben
-        end_date_str = preset.get("end_date")
-        if not end_date_str:
-            continue
-        locations = order_locations_by_ids(
-            all_locations, preset.get("location_ids") or [],
-        )
-        zone = first_resolvable_tz(
-            locations, context_label=f"Preset {preset.get('id', '?')}",
-        )
         try:
-            expired = date.fromisoformat(end_date_str) < local_dt(now_utc, zone).date()
-        except (ValueError, TypeError) as e:
-            logger.warning(
-                "Preset %s: korruptes end_date bei Auto-Pause-Pruefung, "
-                "wird uebersprungen: %s",
-                preset.get("id", "?"),
-                e,
+            if preset.get("archived_at"):
+                continue
+            if preset.get("paused_at") or preset.get("schedule") == "manual":
+                continue  # bereits pausiert -> idempotent, kein erneutes Schreiben
+            end_date_str = preset.get("end_date")
+            if not end_date_str:
+                continue
+            locations = order_locations_by_ids(
+                all_locations, preset.get("location_ids") or [],
             )
-            continue
-        if expired:
-            save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+            zone = first_resolvable_tz(
+                locations, context_label=f"Preset {preset.get('id', '?')}",
+            )
+            try:
+                expired = date.fromisoformat(end_date_str) < local_dt(now_utc, zone).date()
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    "Preset %s: korruptes end_date bei Auto-Pause-Pruefung, "
+                    "wird uebersprungen: %s",
+                    preset.get("id", "?"),
+                    e,
+                )
+                continue
+            if expired:
+                save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+        except Exception:
+            # Issue #2217: ein Fehler bei EINEM Preset haelt die Auto-Pause der
+            # uebrigen nicht auf.
+            report_unit_failure("Compare-Auto-Pause", str(preset.get("id", "?")))
+            failed += 1
+    return failed
 
 
 def _dispatch_due_preset(

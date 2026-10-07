@@ -492,7 +492,8 @@ func (s *Scheduler) callUserWithBudget(jobID, path, uid string, wait, callCap ti
 		defer func() {
 			if r := recover(); r != nil {
 				log.Printf("[scheduler] %s: user %s call panicked: %v\n%s", jobID, uid, r, debug.Stack())
-				resultCh <- fmt.Errorf("panic: %v", r)
+				// PO-Entscheid 2026-10-07: Status-Text ohne Interna (kein Panic-Wert).
+				resultCh <- fmt.Errorf("panic in %s", jobID)
 			}
 		}()
 		err := s.triggerEndpointForUser(path, uid)
@@ -925,12 +926,14 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 }
 
 // runRecovered fuehrt fn aus und macht eine Panic zum Fehler (Issue #2217):
-// der Lauf wird als "error" mit "panic: ..." verbucht, der Prozess lebt weiter.
+// der Lauf wird als "error" mit exakt "panic in <jobID>" verbucht (PO-Entscheid
+// 2026-10-07: Status-Endpunkt halb-oeffentlich, kein Panic-Wert/Stack); Wert und
+// Stack stehen nur im Server-Log. Der Prozess lebt weiter.
 func runRecovered(jobID string, fn func() error) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("[scheduler] %s panicked: %v\n%s", jobID, r, debug.Stack())
-			err = fmt.Errorf("panic: %v", r)
+			err = fmt.Errorf("panic in %s", jobID)
 		}
 	}()
 	return fn()

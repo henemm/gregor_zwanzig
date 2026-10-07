@@ -49,7 +49,9 @@ from services.compare_preset_access import (
 from services.notification_service import NotificationService
 from services import radar_service as radar_service_mod
 from services import trip_alert as trip_alert_mod
-from services.alert_check_state import AlertCheckStateStore, sort_by_last_reached
+from services.alert_check_state import (
+    AlertCheckStateStore, report_unit_failure, sort_by_last_reached,
+)
 from services.radar_service import RadarDeadlineExceeded
 from services.trip_alert import AlertCheckRunResult, radar_alert_due
 
@@ -156,7 +158,7 @@ class CompareRadarAlertService:
             )
         except Exception as e:
             logger.warning(f"{_STATE_FILENAME}: Reihenfolge nach Preset-ID ({e})")
-        sent = checked = 0
+        sent = checked = failed = 0
         hit_deadline = False
         try:
             for preset in presets:
@@ -173,6 +175,11 @@ class CompareRadarAlertService:
                     checked -= 1
                     hit_deadline = True
                     break
+                except Exception:
+                    # Issue #2217: ein kaputtes Preset reisst die Folge-Presets
+                    # nicht mit; zaehlt in checked mit, Stempel bleibt gesetzt.
+                    report_unit_failure("Compare-Radar-Alarmlauf", preset.get("id", ""))
+                    failed += 1
         finally:
             if store is not None and reached:
                 try:
@@ -190,7 +197,7 @@ class CompareRadarAlertService:
         return AlertCheckRunResult(
             alerts_sent=sent, checked=checked, skipped=len(skipped_ids),
             skipped_ids=skipped_ids, duration_s=time.monotonic() - started,
-            hit_deadline=hit_deadline,
+            hit_deadline=hit_deadline, failed=failed,
         )
 
     def _check_one_preset(

@@ -1,0 +1,582 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 8 items
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py FFFFFFFF       [100%]
+
+=================================== FAILURES ===================================
+_______ test_ac11_kaputte_faelligkeitspruefung_haelt_folgetrip_nicht_auf _______
+
+trip_env = None
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x746c2b604e90>
+
+    def test_ac11_kaputte_faelligkeitspruefung_haelt_folgetrip_nicht_auf(trip_env, monkeypatch):
+        """AC-11: Given zwei Trips mit faelligem Morgen-Briefing, die
+        Faelligkeitspruefung des ersten wirft (kaputter Protokoll-Eintrag) / When
+        der stuendliche Briefing-Lauf ueber den echten Trip-Report-Endpunkt laeuft
+        / Then bekommt der zweite Trip sein Briefing (Vermerk ``sent``), die
+        Antwort enthaelt ``failed >= 1``, und fuer den ersten Trip entsteht KEIN
+        Vermerk (er bleibt im Nachhol-Fenster).
+    
+        RED heute: die Ausnahme verlaesst ``_collect_due_trips`` -> HTTP 500, kein
+        Trip wird bedient.
+        """
+        uid = "abschottung-ac11"
+        _profil(uid)
+        _trip(uid, KAPUTT)
+        _trip(uid, GESUND)
+        _kaputter_logeintrag(uid, KAPUTT)
+        klasse = _klasse_installieren(monkeypatch)
+    
+        resp = _router_lauf(uid)
+    
+        gesund = _vermerk(uid, GESUND)
+>       assert gesund is not None and gesund.get("outcome") == "sent", (
+            f"AC-11: der gesunde Trip {GESUND!r} muss im selben Lauf sein Briefing "
+            f"bekommen (Vermerk 'sent'), gefunden {gesund!r}; Versandversuche "
+            f"{klasse.versandversuche}; Antwort {_antwort(resp)}"
+        )
+E       AssertionError: AC-11: der gesunde Trip 'b-gesund' muss im selben Lauf sein Briefing bekommen (Vermerk 'sent'), gefunden None; Versandversuche []; Antwort Endpunkt brach ab (HTTP 500): OverflowError: date value out of range
+E       assert (None is not None)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:305: AssertionError
+_ test_ac12_kaputte_filterpruefung_wird_gezaehlt_geloggt_und_folgetrip_bedient _
+
+trip_env = None
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x746c285da630>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x746c28990980>
+
+    def test_ac12_kaputte_filterpruefung_wird_gezaehlt_geloggt_und_folgetrip_bedient(
+        trip_env, monkeypatch, caplog,
+    ):
+        """AC-12: Given ein Trip, dessen Filterpruefung in ``_get_active_trips``
+        (Zieltag) eine Ausnahme wirft, und ein zweiter gesunder Trip / When der
+        Briefing-Lauf ueber den echten Endpunkt laeuft / Then wird der zweite Trip
+        bedient, die Antwort zaehlt den Ausfall in ``failed``, und im Log steht ein
+        ERROR mit der Trip-ID und Stacktrace.
+    
+        Testnaht (begruendet im Modul-Docstring): Fehler-Injektion in
+        ``_get_target_date`` NUR fuer die Kennung des kaputten Trips.
+    
+        RED heute: die Ausnahme verlaesst ``_get_active_trips`` -> HTTP 500.
+        """
+        uid = "abschottung-ac12"
+        _profil(uid)
+        _trip(uid, KAPUTT)
+        _trip(uid, GESUND)
+        klasse = _klasse_installieren(monkeypatch, wirft_bei_zieltag=KAPUTT)
+        caplog.set_level(logging.ERROR)
+    
+        resp = _router_lauf(uid)
+    
+        gesund = _vermerk(uid, GESUND)
+>       assert gesund is not None and gesund.get("outcome") == "sent", (
+            f"AC-12: der gesunde Trip {GESUND!r} muss trotz kaputter Filterpruefung "
+            f"des anderen bedient werden, Vermerk {gesund!r}; Versandversuche "
+            f"{klasse.versandversuche}; Antwort {_antwort(resp)}"
+        )
+E       AssertionError: AC-12: der gesunde Trip 'b-gesund' muss trotz kaputter Filterpruefung des anderen bedient werden, Vermerk None; Versandversuche []; Antwort Endpunkt brach ab (HTTP 500): RuntimeError: Zieltag nicht bestimmbar (Fehler-Injektion)
+E       assert (None is not None)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:355: AssertionError
+_ test_ac13_skip_next_bleibt_bei_ausnahme_unverbraucht_und_wirkt_danach_einmal _
+
+trip_env = None
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x746c289a9340>
+
+    def test_ac13_skip_next_bleibt_bei_ausnahme_unverbraucht_und_wirkt_danach_einmal(
+        trip_env, monkeypatch,
+    ):
+        """AC-13: Given ein Trip mit ``skip_next``, dessen Faelligkeitspruefung
+        wirft, und ein zweiter gesunder Trip / When der Lauf stattfindet / Then
+        wird der gesunde Trip bedient und der Ausfall gezaehlt, ``skip_next`` des
+        kaputten Trips bleibt unverbraucht, kein Vermerk; beim naechsten
+        fehlerfreien Lauf wirkt ``skip_next`` genau einmal (Slot uebersprungen),
+        danach geht das Briefing wieder hinaus.
+    
+        RED heute: der ganze Lauf bricht mit HTTP 500 ab (der gesunde Trip bekommt
+        nichts). Mutations-Waechter: ``_skip_next_verbrauchen`` vor die
+        abgesicherte Pruefung ziehen => ``skip_next`` verbraucht => rot.
+        """
+        uid = "abschottung-ac13"
+        _profil(uid)
+        _trip(uid, KAPUTT, skip_next=True)
+        _trip(uid, GESUND)
+        log = _kaputter_logeintrag(uid, KAPUTT)
+        klasse = _klasse_installieren(monkeypatch)
+    
+        resp = _router_lauf(uid)
+    
+        gesund = _vermerk(uid, GESUND)
+>       assert gesund is not None and gesund.get("outcome") == "sent", (
+            f"AC-13: der gesunde Trip muss im selben Lauf bedient werden, Vermerk "
+            f"{gesund!r}; Antwort {_antwort(resp)}"
+        )
+E       AssertionError: AC-13: der gesunde Trip muss im selben Lauf bedient werden, Vermerk None; Antwort Endpunkt brach ab (HTTP 500): OverflowError: date value out of range
+E       assert (None is not None)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:410: AssertionError
+________ test_ac14_kaputte_zonenbestimmung_haelt_folgepreset_nicht_auf _________
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c27f1f9b0>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+>           due = strategie.collect_due(jetzt)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:497: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/services/dispatch_orchestrator.py:149: in collect_due
+    return presets_due_for_hour(presets, by_id, now_utc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/services/compare_slot_scheduler.py:139: in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+src/utils/timezone.py:93: in first_resolvable_tz
+    for location in locations:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+.0 = <list_iterator object at 0x746c1dc51990>
+
+>       (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+         ^^^^^^^^^^^^^^^^^^^^^^
+        context_label=preset_id,
+    ))
+E   TypeError: unhashable type: 'list'
+
+src/services/compare_slot_scheduler.py:140: TypeError
+
+During handling of the above exception, another exception occurred:
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x746c1dc52b70>
+
+    def test_ac14_kaputte_zonenbestimmung_haelt_folgepreset_nicht_auf(caplog):
+        """AC-14: Given zwei Presets, die Zonenbestimmung des ersten wirft
+        (unhashbarer ``location_ids``-Eintrag, ausserhalb des engen
+        ValueError/TypeError-Schutzes des Datumsblocks) / When der stuendliche
+        Lauf faellig sammelt / Then wird das zweite Preset weiter faellig
+        gemeldet, ``failed >= 1``, und das erste bleibt unangetastet (kein Vermerk).
+    
+        RED heute: ``presets_due_for_hour`` wirft fuer Preset 1 -> ganzer Lauf weg.
+        """
+        uid = "abschottung-ac14-faellig"
+        _ort(uid, "ort-1")
+        kaputt = _preset(uid, KAPUTT, location_ids=[["ort-1"]])
+        _preset(uid, GESUND)
+        vorher = kaputt.read_bytes()
+        caplog.set_level(logging.ERROR)
+    
+        strategie = _strategie(uid)
+>       due = _collect_und_pre_pass(strategie)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:528: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c27f1f9b0>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+            due = strategie.collect_due(jetzt)
+            strategie.pre_pass(jetzt, due)
+        except Exception as exc:  # noqa: BLE001 — genau das ist der Befund
+>           pytest.fail(
+                "Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: "
+                f"{type(exc).__name__}: {exc}"
+            )
+E           Failed: Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: TypeError: unhashable type: 'list'
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:500: Failed
+___________ test_ac14_kaputte_auto_pause_haelt_folgepreset_nicht_auf ___________
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c1dc35be0>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+            due = strategie.collect_due(jetzt)
+>           strategie.pre_pass(jetzt, due)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:498: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/services/dispatch_orchestrator.py:161: in pre_pass
+    _auto_pause_expired_presets(
+src/services/scheduler_dispatch_service.py:122: in _auto_pause_expired_presets
+    save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+user_id = 'abschottung-ac14-pause', preset_id = 271828182
+data_root = '/tmp/pytest-of-hem/pytest-1333/data_root4'
+now_iso = '2026-08-20T07:00:00+00:00'
+
+    def save_compare_preset_pause(
+        user_id: str,
+        preset_id: str,
+        data_root: str | None = None,
+        now_iso: str | None = None,
+    ) -> bool | None:
+        """Read-Modify-Write: schreibt den Auto-Pause-Zustand (Issue #1250 Scheibe 3).
+    
+        Self-konsistente Pause-Repraesentation identisch zur manuellen Pause
+        (`schedule="manual"` + `previous_schedule`), damit sie die Go-
+        Normalisierung (`NormalizeComparePreset`) uebersteht. Merge, kein
+        Replace (BUG-DATALOSS-GR221) — alle anderen Felder bleiben erhalten.
+        """
+        if data_root is None:
+            data_root = str(get_data_root())
+        if now_iso is None:
+            now_iso = _datetime.utcnow().isoformat() + "Z"
+    
+        # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, identisch zu
+        # save_compare_preset_status (stilles return statt neuem Fehlerausgang).
+>       if not VALID_ENTITY_ID_RE.match(preset_id):
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: expected string or bytes-like object, got 'int'
+
+src/services/scheduler_dispatch_service.py:311: TypeError
+
+During handling of the above exception, another exception occurred:
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x746c1dc37170>
+
+    def test_ac14_kaputte_auto_pause_haelt_folgepreset_nicht_auf(caplog):
+        """AC-14: Given zwei abgelaufene Presets, die Auto-Pause des ersten wirft
+        in ``save_compare_preset_pause`` (seine ``id`` ist eine Zahl statt einer
+        Zeichenkette -> die Kennungs-Pruefung ``VALID_ENTITY_ID_RE.match`` wirft;
+        Zonenbestimmung und Faelligkeit laufen mit dieser Kennung fehlerfrei) /
+        When der stuendliche Lauf laeuft / Then wird das zweite Preset trotzdem
+        auto-pausiert, ``failed >= 1``, das erste bleibt unangetastet, und der
+        Fehler steht mit Preset-ID und Stacktrace im Log.
+    
+        RED heute: ``_auto_pause_expired_presets`` wirft fuer Preset 1 (der enge
+        ``except (ValueError, TypeError)`` umschliesst dort nur den
+        Datumsvergleich, nicht ``save_compare_preset_pause``) -> Preset 2 bleibt
+        aktiv.
+        """
+        uid = "abschottung-ac14-pause"
+        _ort(uid, "ort-1")
+        abgelaufen = (TAG - timedelta(days=3)).isoformat()
+        kaputt = _preset(uid, KAPUTT, id=KAPUTTE_ZAHL_ID, end_date=abgelaufen)
+        gesund = _preset(uid, GESUND, end_date=abgelaufen)
+        vorher_kaputt = kaputt.read_bytes()
+        caplog.set_level(logging.ERROR)
+    
+        strategie = _strategie(uid)
+>       _collect_und_pre_pass(strategie)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:577: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c1dc35be0>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+            due = strategie.collect_due(jetzt)
+            strategie.pre_pass(jetzt, due)
+        except Exception as exc:  # noqa: BLE001 — genau das ist der Befund
+>           pytest.fail(
+                "Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: "
+                f"{type(exc).__name__}: {exc}"
+            )
+E           Failed: Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: TypeError: expected string or bytes-like object, got 'int'
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:500: Failed
+_ test_ac14_zonenbestimmung_wirft_andere_ausnahmeklasse_folgepreset_bleibt_faellig _
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c2b087e00>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+>           due = strategie.collect_due(jetzt)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:497: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/services/dispatch_orchestrator.py:149: in collect_due
+    return presets_due_for_hour(presets, by_id, now_utc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/services/compare_slot_scheduler.py:139: in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+locations = <generator object presets_due_for_hour.<locals>.<genexpr> at 0x746c1dc28660>
+context_label = 'a-kaputt'
+
+    def _zone(locations, context_label=""):
+        if context_label == KAPUTT:
+>           raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+E           RuntimeError: Zone nicht bestimmbar (Fehler-Injektion)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:632: RuntimeError
+
+During handling of the above exception, another exception occurred:
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x746c2cec8170>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x746c2cec8260>
+
+    def test_ac14_zonenbestimmung_wirft_andere_ausnahmeklasse_folgepreset_bleibt_faellig(
+        monkeypatch, caplog,
+    ):
+        """AC-14: Given zwei Presets, die Zonenbestimmung des ersten wirft eine
+        ``RuntimeError`` (keine ValueError/TypeError) / When der Lauf faellig
+        sammelt / Then ist das zweite Preset faellig, ``failed >= 1``, ERROR mit
+        Preset-ID und Stacktrace.
+    
+        RED heute: ``presets_due_for_hour`` laesst die Ausnahme durch.
+        """
+        from services import compare_slot_scheduler as css
+    
+        original = css.first_resolvable_tz
+    
+        def _zone(locations, context_label=""):
+            if context_label == KAPUTT:
+                raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+            return original(locations, context_label=context_label)
+    
+        monkeypatch.setattr(css, "first_resolvable_tz", _zone)
+        uid = "abschottung-ac14-zone-injektion"
+        _ort(uid, "ort-1")
+        kaputt = _preset(uid, KAPUTT)
+        _preset(uid, GESUND)
+        vorher = kaputt.read_bytes()
+        caplog.set_level(logging.ERROR)
+    
+        strategie = _strategie(uid)
+>       due = _collect_und_pre_pass(strategie)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:644: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c2b087e00>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+            due = strategie.collect_due(jetzt)
+            strategie.pre_pass(jetzt, due)
+        except Exception as exc:  # noqa: BLE001 — genau das ist der Befund
+>           pytest.fail(
+                "Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: "
+                f"{type(exc).__name__}: {exc}"
+            )
+E           Failed: Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: RuntimeError: Zone nicht bestimmbar (Fehler-Injektion)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:500: Failed
+_ test_ac14_pause_schreiben_wirft_andere_ausnahmeklasse_folgepreset_wird_pausiert _
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c2c4cf1d0>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+            due = strategie.collect_due(jetzt)
+>           strategie.pre_pass(jetzt, due)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:498: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/services/dispatch_orchestrator.py:161: in pre_pass
+    _auto_pause_expired_presets(
+src/services/scheduler_dispatch_service.py:122: in _auto_pause_expired_presets
+    save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+user_id = 'abschottung-ac14-pause-injektion', preset_id = 'a-kaputt'
+args = ('/tmp/pytest-of-hem/pytest-1333/data_root6', '2026-08-20T07:00:00+00:00')
+kwargs = {}
+
+    def _pause(user_id, preset_id, *args, **kwargs):
+        if preset_id == KAPUTT:
+>           raise RuntimeError("Pause nicht schreibbar (Fehler-Injektion)")
+E           RuntimeError: Pause nicht schreibbar (Fehler-Injektion)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:678: RuntimeError
+
+During handling of the above exception, another exception occurred:
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x746c2ad5f5f0>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x746c2ad5ec60>
+
+    def test_ac14_pause_schreiben_wirft_andere_ausnahmeklasse_folgepreset_wird_pausiert(
+        monkeypatch, caplog,
+    ):
+        """AC-14: Given zwei abgelaufene Presets, ``save_compare_preset_pause``
+        wirft fuer das erste eine ``RuntimeError`` / When der Lauf laeuft / Then
+        wird das zweite trotzdem auto-pausiert, ``failed >= 1``, ERROR mit
+        Preset-ID und Stacktrace.
+    
+        RED heute: ``_auto_pause_expired_presets`` laesst die Ausnahme durch.
+        """
+        from services import scheduler_dispatch_service as sds
+    
+        original = sds.save_compare_preset_pause
+    
+        def _pause(user_id, preset_id, *args, **kwargs):
+            if preset_id == KAPUTT:
+                raise RuntimeError("Pause nicht schreibbar (Fehler-Injektion)")
+            return original(user_id, preset_id, *args, **kwargs)
+    
+        monkeypatch.setattr(sds, "save_compare_preset_pause", _pause)
+        uid = "abschottung-ac14-pause-injektion"
+        _ort(uid, "ort-1")
+        abgelaufen = (TAG - timedelta(days=3)).isoformat()
+        kaputt = _preset(uid, KAPUTT, end_date=abgelaufen)
+        gesund = _preset(uid, GESUND, end_date=abgelaufen)
+        vorher = kaputt.read_bytes()
+        caplog.set_level(logging.ERROR)
+    
+        strategie = _strategie(uid)
+>       _collect_und_pre_pass(strategie)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:691: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c2c4cf1d0>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+            due = strategie.collect_due(jetzt)
+            strategie.pre_pass(jetzt, due)
+        except Exception as exc:  # noqa: BLE001 — genau das ist der Befund
+>           pytest.fail(
+                "Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: "
+                f"{type(exc).__name__}: {exc}"
+            )
+E           Failed: Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: RuntimeError: Pause nicht schreibbar (Fehler-Injektion)
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:500: Failed
+______ test_ac10_zwei_nutzer_kaputtes_preset_bei_a_nutzer_b_voll_bedient _______
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c1dc37ef0>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+>           due = strategie.collect_due(jetzt)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:497: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/services/dispatch_orchestrator.py:149: in collect_due
+    return presets_due_for_hour(presets, by_id, now_utc)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/services/compare_slot_scheduler.py:139: in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+src/utils/timezone.py:93: in first_resolvable_tz
+    for location in locations:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+.0 = <list_iterator object at 0x746c1dc37490>
+
+>       (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+         ^^^^^^^^^^^^^^^^^^^^^^
+        context_label=preset_id,
+    ))
+E   TypeError: unhashable type: 'list'
+
+src/services/compare_slot_scheduler.py:140: TypeError
+
+During handling of the above exception, another exception occurred:
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x746c1dc372f0>
+
+    def test_ac10_zwei_nutzer_kaputtes_preset_bei_a_nutzer_b_voll_bedient(caplog):
+        """AC-10: Given Nutzer A mit kaputtem Preset (Zonenbestimmung wirft) und
+        gesundem Preset, Nutzer B mit gesundem Preset / When fuer beide der
+        Ortsvergleich-Briefing-Lauf sammelt / Then ist bei A das gesunde Preset
+        weiter faellig und ``failed >= 1``, B ist voll bedient mit ``failed == 0``,
+        der ERROR traegt nur A's Preset-ID, und es entsteht kein ``default``-Nutzer.
+    
+        RED heute: der Lauf von Nutzer A bricht vollstaendig ab.
+        """
+        a, b = "abschottung-nutzer-a", "abschottung-nutzer-b"
+        for uid in (a, b):
+            _ort(uid, "ort-1")
+        _preset(a, KAPUTT, location_ids=[["ort-1"]])
+        _preset(a, GESUND)
+        _preset(b, "c-nutzer-b")
+        caplog.set_level(logging.ERROR)
+    
+        strategie_a = _strategie(a)
+>       due_a = _collect_und_pre_pass(strategie_a)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:733: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+strategie = <services.dispatch_orchestrator.CompareDispatchStrategy object at 0x746c1dc37ef0>
+jetzt = datetime.datetime(2026, 8, 20, 7, 0, tzinfo=datetime.timezone.utc)
+
+    def _collect_und_pre_pass(strategie, jetzt: datetime = JETZT) -> list:
+        """``collect_due`` + ``pre_pass`` wie in ``run_briefing_dispatch`` — ohne
+        ``dispatch_one``, damit ``failed`` ausschliesslich aus der Faelligkeits-/
+        Auto-Pause-Pruefung stammen kann. Eine Ausnahme ist hier der gemeldete
+        Defekt (ganzer Lauf bricht ab) und wird als Befund gemeldet."""
+        try:
+            due = strategie.collect_due(jetzt)
+            strategie.pre_pass(jetzt, due)
+        except Exception as exc:  # noqa: BLE001 — genau das ist der Befund
+>           pytest.fail(
+                "Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: "
+                f"{type(exc).__name__}: {exc}"
+            )
+E           Failed: Faelligkeits-/Auto-Pause-Pruefung bricht den ganzen Lauf ab: TypeError: unhashable type: 'list'
+
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py:500: Failed
+=========================== short test summary info ============================
+FAILED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac11_kaputte_faelligkeitspruefung_haelt_folgetrip_nicht_auf
+FAILED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac12_kaputte_filterpruefung_wird_gezaehlt_geloggt_und_folgetrip_bedient
+FAILED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac13_skip_next_bleibt_bei_ausnahme_unverbraucht_und_wirkt_danach_einmal
+FAILED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac14_kaputte_zonenbestimmung_haelt_folgepreset_nicht_auf
+FAILED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac14_kaputte_auto_pause_haelt_folgepreset_nicht_auf
+FAILED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac14_zonenbestimmung_wirft_andere_ausnahmeklasse_folgepreset_bleibt_faellig
+FAILED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac14_pause_schreiben_wirft_andere_ausnahmeklasse_folgepreset_wird_pausiert
+FAILED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac10_zwei_nutzer_kaputtes_preset_bei_a_nutzer_b_voll_bedient
+============================== 8 failed in 1.48s ===============================

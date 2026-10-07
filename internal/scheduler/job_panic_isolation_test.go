@@ -8,14 +8,14 @@ package scheduler
 
 import (
 	"net/http"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
 
 // AC-1: Panic in der Job-Funktion reisst den Prozess nicht mit, Status "error"
-// mit "panic:"-Praefix, Sperre frei (zweiter Aufruf wird ausgefuehrt).
+// mit exakt "panic in <jobID>" (PO-Entscheid 2026-10-07: Status-Text ohne
+// Interna, Panic-Wert nur im Server-Log), Sperre frei (zweiter Aufruf wird ausgefuehrt).
 func TestRecordRun_PanicInJob_RecordedAsErrorAndLockReleased(t *testing.T) {
 	sched := newOverlapTestScheduler(t)
 
@@ -30,8 +30,8 @@ func TestRecordRun_PanicInJob_RecordedAsErrorAndLockReleased(t *testing.T) {
 	if lr.Status != "error" {
 		t.Fatalf("expected status 'error' after panic (AC-1), got %q", lr.Status)
 	}
-	if !strings.HasPrefix(lr.Error, "panic:") || !strings.Contains(lr.Error, "kaputte Daten") {
-		t.Fatalf("expected error starting with 'panic:' and carrying the value (AC-1), got %q", lr.Error)
+	if lr.Error != "panic in panic_job" {
+		t.Fatalf("expected exact error %q without panic value (AC-1, PO-Entscheid 2026-10-07), got %q", "panic in panic_job", lr.Error)
 	}
 
 	var ran atomic.Int32

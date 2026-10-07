@@ -24,6 +24,7 @@ from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
 from services.alert_gate import check_briefing_imminent
 from services.alert_preset import _PRESET_TABLE
+from services.alert_check_state import report_unit_failure
 from services.alert_state import AlertStateService
 from services.alert_channels import effective_alert_channels
 from services.compare_alert_channels import effective_compare_telegram_style
@@ -33,7 +34,7 @@ from services.compare_preset_access import (
     load_compare_alert_presets,
     notification_service_for_preset,
 )
-from services.compare_slot_scheduler import presets_due_for_hour
+from services.compare_slot_scheduler import due_or_raise, presets_due_for_hour
 from services.compare_weather_snapshot import CompareWeatherSnapshotService
 from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import NotificationService
@@ -154,7 +155,16 @@ class CompareAlertService:
             reference_gap=gap, reference_day=tag, reference_at=reference_at,
         )
 
+    # Issue #2217: Zahl der im letzten Lauf gescheiterten Presets (Router -> failed).
+    last_failed_count: int = 0
+
     def check_all_compare_presets(self) -> int:
+        """Kompatibilitaets-Huelle: Anzahl Preset-Laeufe mit Versand; die Zahl
+        der gescheiterten Presets steht danach in ``last_failed_count``."""
+        sent, self.last_failed_count = self._check_all_counted()
+        return sent
+
+    def _check_all_counted(self) -> tuple[int, int]:
         """Prüft alle Compare-Presets dieses Nutzers und versendet Alarme.
 
         Issue #1170 (Adversary F001): ALLE gleichzeitig betroffenen Orte
@@ -176,293 +186,308 @@ class CompareAlertService:
             EINE je Preset-Lauf, unabhängig davon, wie viele Kanal-Gruppen
             dieser Lauf intern erzeugt hat.
         """
+        failed = 0
         presets = self._load_presets()
         if not presets:
-            return 0
+            return 0, 0
 
         all_locations = {loc.id: loc for loc in load_all_locations(user_id=self._user_id)}
         sent = 0
 
         for preset in presets:
-            preset_id = preset.get("id", "")
-            location_ids = preset.get("location_ids") or []
-            if not preset_id or not location_ids:
-                continue
+            try:
+                if self._check_one_preset(preset, all_locations):
+                    sent += 1
+            except Exception:
+                # Issue #2217: ein kaputtes Preset reisst die Folge-Presets nicht mit.
+                report_unit_failure("Compare-Alarmlauf", preset.get("id", ""))
+                failed += 1
 
-            # Issue #1467 S2 AG6: pausierte/archivierte Ortsvergleiche
-            # verhalten sich, als gaebe es sie nicht (PO-Vorgabe). Der Riegel
-            # sitzt bewusst GANZ vorne — vor Sperrzeit, Tageslimit, Ruhezeit
-            # und vor jedem Wetterabruf (AC-20b): ein stillgelegter Vergleich
-            # darf weder Abruf-Kontingent noch Laufzeit kosten. Die Regel
-            # steht nur im geteilten Baustein (AC-28), nie hier inline.
-            if is_silenced(preset):
-                logger.debug(f"Compare-Alert skipped: preset {preset_id} is paused/archived")
-                continue
+        return sent, failed
 
-            # Issue #1213 (AC-4): `None`/fehlend muss VOR dem Store-Aufruf auf
-            # denselben Default wie der Trip-Pfad aufgelöst werden — `.get(key,
-            # default)` griff nur, wenn der Key ganz fehlte, nicht bei explizitem
-            # `None` (heutiger Bug: Compare lief dadurch ungedrosselt).
-            cooldown_minutes = preset.get("alert_cooldown_minutes")
-            if cooldown_minutes is None:
-                cooldown_minutes = _DEFAULT_COOLDOWN_MINUTES
-            now = datetime.now(timezone.utc)
-            if self._throttle_store.is_throttled("compare_preset", preset_id, cooldown_minutes, now):
-                logger.debug(f"Compare-Alert cooldown active for preset {preset_id}")
-                # Issue #2050 S3b (Szenario 10, AC-6).
-                self._protokolliere_unterdrueckung(
-                    preset, alert_log.REASON_COOLDOWN,
-                )
-                continue
+    def _check_one_preset(self, preset: dict, all_locations: dict) -> bool:
+        """Prueft EIN Preset des Abweichungs-Alarmlaufs; True bei Versand.
 
-            # Issue #1726: die Konfiguration entsteht VOR der Tageslimit-Frage,
-            # weil sie die Ortszone traegt — Ruhezeit, Zaehler und Engine
-            # benutzen danach DIESELBE Aufloesung. Reine Vorverlegung eines
-            # seiteneffektfreien Erbauers, kein Verhaltenswechsel.
-            config = self._build_eval_config(preset, cooldown_minutes, all_locations)
+        Issue #2217: aus der Schleife herausgeloest, damit der Schutz je Preset
+        am Aufruf sitzt -- NICHT um die Ruhezeit-Pruefung (#1479).
+        """
+        preset_id = preset.get("id", "")
+        location_ids = preset.get("location_ids") or []
+        if not preset_id or not location_ids:
+            return False
 
-            # Issue #1213 (AC-6): Compare an dieselbe Tageslimit-Prüfung
-            # anbinden wie der Trip-Pfad (Epic #1067 Slice 3, #1070).
-            # Issue #1555: reason="forecast_change" reserviert einen Anteil für NowCast.
-            if not alert_daily_limit.is_allowed(
-                self._user_id, now, config.zone, reason="forecast_change",
-            ):
-                logger.debug(f"Compare-Alert suppressed: daily limit reached for preset {preset_id}")
-                # Issue #2050 S3b (Szenario 10, AC-7).
-                self._protokolliere_unterdrueckung(
-                    preset, alert_log.REASON_DAILY_LIMIT,
-                )
-                continue
+        # Issue #1467 S2 AG6: pausierte/archivierte Ortsvergleiche
+        # verhalten sich, als gaebe es sie nicht (PO-Vorgabe). Der Riegel
+        # sitzt bewusst GANZ vorne — vor Sperrzeit, Tageslimit, Ruhezeit
+        # und vor jedem Wetterabruf (AC-20b): ein stillgelegter Vergleich
+        # darf weder Abruf-Kontingent noch Laufzeit kosten. Die Regel
+        # steht nur im geteilten Baustein (AC-28), nie hier inline.
+        if is_silenced(preset):
+            logger.debug(f"Compare-Alert skipped: preset {preset_id} is paused/archived")
+            return False
 
-            # Issue #1467 S2 AG2: Ruhezeit VOR den Wetterabruf ziehen — bisher
-            # prüfte nur die Engine (`DeviationAlertEngine.evaluate()`), NACH
-            # dem Fetch in `_evaluate_one_location()`. Muster übernommen aus
-            # `compare_official_alert.py:105-113`. Dieselbe geteilte Funktion
-            # wie dort (`DeviationAlertEngine.is_quiet_hours`) — keine zweite
-            # Fassung. Sperrzeit/Tageslimit oben wurden nur GELESEN, hier wird
-            # ebenfalls nur gelesen: kein Zähler wird durch den Riegel veraendert.
-            #
-            # Issue #1479 (Wurzel-Härtung): der Behelfs-Schutz aus AG2
-            # (`try/except` + Protokollzeile + Neutralisieren von
-            # `config.quiet_from`/`config.quiet_to` vor der Weitergabe an
-            # `DeviationAlertEngine.evaluate()`) ist hier entfallen. Ein
-            # unbrauchbarer Ruhezeit-Wert wird jetzt in der geteilten Funktion
-            # selbst abgefangen und protokolliert — auch beim zweiten,
-            # Preset-internen Aufruf in `evaluate()`
-            # (`deviation_alert_engine.py:243`), weshalb das Neutralisieren
-            # überflüssig wurde. Kein eigener `try/except` an dieser
-            # Aufrufstelle: der Schutz gehört in den geteilten Baustein
-            # (ADR-0021), nicht in eine vierte Kopie.
-            quiet_hours_active = DeviationAlertEngine.is_quiet_hours(
-                now, config.quiet_from, config.quiet_to, config.zone,
-                context_label=preset_id,
+        # Issue #1213 (AC-4): `None`/fehlend muss VOR dem Store-Aufruf auf
+        # denselben Default wie der Trip-Pfad aufgelöst werden — `.get(key,
+        # default)` griff nur, wenn der Key ganz fehlte, nicht bei explizitem
+        # `None` (heutiger Bug: Compare lief dadurch ungedrosselt).
+        cooldown_minutes = preset.get("alert_cooldown_minutes")
+        if cooldown_minutes is None:
+            cooldown_minutes = _DEFAULT_COOLDOWN_MINUTES
+        now = datetime.now(timezone.utc)
+        if self._throttle_store.is_throttled("compare_preset", preset_id, cooldown_minutes, now):
+            logger.debug(f"Compare-Alert cooldown active for preset {preset_id}")
+            # Issue #2050 S3b (Szenario 10, AC-6).
+            self._protokolliere_unterdrueckung(
+                preset, alert_log.REASON_COOLDOWN,
             )
-            if quiet_hours_active:
-                logger.debug(f"Compare-Alert quiet hours active for preset {preset_id}")
-                # Issue #2050 S3b (Szenario 10, AC-8).
-                self._protokolliere_unterdrueckung(
-                    preset, alert_log.REASON_QUIET_HOURS,
-                )
-                continue
+            return False
 
-            # Issue #1594: steht das geplante Briefing dieses Vergleichs
-            # unmittelbar bevor und wurde es noch nicht versucht, waere dieser
-            # Alarm eine Doppel-Meldung. Zusaetzliche, rein lesende Stufe nach
-            # der Ruhezeit und VOR dem Wetterabruf. Die Faelligkeit wird GEFRAGT —
-            # `presets_due_for_hour` prueft `is_silenced`, `end_date`,
-            # `weekly` und die Slot-Schalter selbst, ein Preset ohne geplantes
-            # Briefing faellt dadurch von allein aus der Sperre (AC-7).
-            if check_briefing_imminent(
-                user_id=self._user_id, entity_id=preset_id, entity_type="compare",
-                now=now, zone=config.zone,
-                briefing_due_at=lambda moment: bool(
-                    presets_due_for_hour([preset], all_locations, moment)
-                ),
-            ):
-                logger.debug(f"Compare-Alert briefing imminent for preset {preset_id}")
-                continue
+        # Issue #1726: die Konfiguration entsteht VOR der Tageslimit-Frage,
+        # weil sie die Ortszone traegt — Ruhezeit, Zaehler und Engine
+        # benutzen danach DIESELBE Aufloesung. Reine Vorverlegung eines
+        # seiteneffektfreien Erbauers, kein Verhaltenswechsel.
+        config = self._build_eval_config(preset, cooldown_minutes, all_locations)
 
-            # Issue #1584 Scheibe C: das Tagesfenster dieses Presets kommt aus
-            # DERSELBEN Quelle wie Anzeige und Versand (ADR-0035) und wird an
-            # den Wetterabruf durchgereicht — der Frisch-Abruf bekommt damit
-            # denselben Zuschnitt wie der beim Report-Versand geschriebene
-            # Δ-Anker (`scheduler_dispatch_service._write_compare_alert_snapshots`).
-            day_window = resolve_compare_time_window(preset)
-
-            triggered = self._detect_triggered_locations(
-                preset_id, location_ids, all_locations, config, day_window,
-                preset=preset,
+        # Issue #1213 (AC-6): Compare an dieselbe Tageslimit-Prüfung
+        # anbinden wie der Trip-Pfad (Epic #1067 Slice 3, #1070).
+        # Issue #1555: reason="forecast_change" reserviert einen Anteil für NowCast.
+        if not alert_daily_limit.is_allowed(
+            self._user_id, now, config.zone, reason="forecast_change",
+        ):
+            logger.debug(f"Compare-Alert suppressed: daily limit reached for preset {preset_id}")
+            # Issue #2050 S3b (Szenario 10, AC-7).
+            self._protokolliere_unterdrueckung(
+                preset, alert_log.REASON_DAILY_LIMIT,
             )
-            if not triggered:
+            return False
+
+        # Issue #1467 S2 AG2: Ruhezeit VOR den Wetterabruf ziehen — bisher
+        # prüfte nur die Engine (`DeviationAlertEngine.evaluate()`), NACH
+        # dem Fetch in `_evaluate_one_location()`. Muster übernommen aus
+        # `compare_official_alert.py:105-113`. Dieselbe geteilte Funktion
+        # wie dort (`DeviationAlertEngine.is_quiet_hours`) — keine zweite
+        # Fassung. Sperrzeit/Tageslimit oben wurden nur GELESEN, hier wird
+        # ebenfalls nur gelesen: kein Zähler wird durch den Riegel veraendert.
+        #
+        # Issue #1479 (Wurzel-Härtung): der Behelfs-Schutz aus AG2
+        # (`try/except` + Protokollzeile + Neutralisieren von
+        # `config.quiet_from`/`config.quiet_to` vor der Weitergabe an
+        # `DeviationAlertEngine.evaluate()`) ist hier entfallen. Ein
+        # unbrauchbarer Ruhezeit-Wert wird jetzt in der geteilten Funktion
+        # selbst abgefangen und protokolliert — auch beim zweiten,
+        # Preset-internen Aufruf in `evaluate()`
+        # (`deviation_alert_engine.py:243`), weshalb das Neutralisieren
+        # überflüssig wurde. Kein eigener `try/except` an dieser
+        # Aufrufstelle: der Schutz gehört in den geteilten Baustein
+        # (ADR-0021), nicht in eine vierte Kopie.
+        quiet_hours_active = DeviationAlertEngine.is_quiet_hours(
+            now, config.quiet_from, config.quiet_to, config.zone,
+            context_label=preset_id,
+        )
+        if quiet_hours_active:
+            logger.debug(f"Compare-Alert quiet hours active for preset {preset_id}")
+            # Issue #2050 S3b (Szenario 10, AC-8).
+            self._protokolliere_unterdrueckung(
+                preset, alert_log.REASON_QUIET_HOURS,
+            )
+            return False
+
+        # Issue #1594: steht das geplante Briefing dieses Vergleichs
+        # unmittelbar bevor und wurde es noch nicht versucht, waere dieser
+        # Alarm eine Doppel-Meldung. Zusaetzliche, rein lesende Stufe nach
+        # der Ruhezeit und VOR dem Wetterabruf. Die Faelligkeit wird GEFRAGT —
+        # `presets_due_for_hour` prueft `is_silenced`, `end_date`,
+        # `weekly` und die Slot-Schalter selbst, ein Preset ohne geplantes
+        # Briefing faellt dadurch von allein aus der Sperre (AC-7).
+        if check_briefing_imminent(
+            user_id=self._user_id, entity_id=preset_id, entity_type="compare",
+            now=now, zone=config.zone,
+            briefing_due_at=lambda moment: due_or_raise(
+                presets_due_for_hour([preset], all_locations, moment)
+            ),
+        ):
+            logger.debug(f"Compare-Alert briefing imminent for preset {preset_id}")
+            return False
+
+        # Issue #1584 Scheibe C: das Tagesfenster dieses Presets kommt aus
+        # DERSELBEN Quelle wie Anzeige und Versand (ADR-0035) und wird an
+        # den Wetterabruf durchgereicht — der Frisch-Abruf bekommt damit
+        # denselben Zuschnitt wie der beim Report-Versand geschriebene
+        # Δ-Anker (`scheduler_dispatch_service._write_compare_alert_snapshots`).
+        day_window = resolve_compare_time_window(preset)
+
+        triggered = self._detect_triggered_locations(
+            preset_id, location_ids, all_locations, config, day_window,
+            preset=preset,
+        )
+        if not triggered:
+            return False
+
+        # Issue #1452: Versandobjekt erst NACH der Detect-Phase bauen — die
+        # Warnung bei fehlendem `mail_to` gehört an die Stelle, an der ein
+        # Versand tatsächlich anstünde (sonst Log-Rauschen je Leerlauf).
+        notification_service = self._notification_service_for(preset)
+        location_positions = self._location_positions(location_ids, all_locations)
+        telegram_style = effective_compare_telegram_style(preset)
+        thresholds = preset.get("alert_channel_thresholds")
+
+        # Issue #1461 S3b-2b (AC-3, Schleifen-Falle — Team-Lead-Korrektur):
+        # das Kanal-Set (`config.channels`) entsteht einmal je PRESET,
+        # aber jeder Ort kann eine EIGENE Dringlichkeit ausloesen. Nicht
+        # nach Dringlichkeit gruppieren (das erzeugt einen zweiten Versand
+        # schon dann, wenn zwei Orte verschieden dringlich sind — auch
+        # OHNE gesetzte Schwelle, Regress auf AC-1: aus einer Mail werden
+        # zwei, ohne dass der Nutzer etwas eingestellt hat). Stattdessen:
+        # je KANAL die Ortsliste bestimmen, die dessen Schwelle (an der
+        # EIGENEN Dringlichkeit jedes Ortes gemessen) erreicht, dann
+        # Kanaele mit IDENTISCHER Ortsliste zu einem gemeinsamen Versand
+        # buendeln. Ohne gesetzte Schwelle haben alle Kanaele dieselbe
+        # (volle) Ortsliste -> genau EIN Aufruf mit allen Kanaelen, byte-
+        # identisch zum Verhalten vor dieser Scheibe.
+        entity_by_id = {t["entity_id"]: t for t in triggered}
+        below_threshold_all: set[str] = set()
+        #
+        # Issue #1895 S2: die Kanalmenge entsteht METRIK-BEWUSST JE ORT —
+        # erst hier liegt `t["changes"]` vor. `_build_eval_config` kennt
+        # die ausloesenden Metriken noch nicht und liefert weiter nur den
+        # preset-weiten Startwert (AC-11/AC-16). Ohne Eintrag in
+        # `alert_metric_channels` ist das Ergebnis je Ort identisch mit
+        # `config.channels` — Bestandsverhalten bleibt byte-gleich.
+        kanaele_je_ort = {
+            t["entity_id"]: self._kanaele_fuer_ort(preset, config, t)
+            for t in triggered
+        }
+        # AC-17: die Vorbelegung muss auch Kanaele abdecken, die ERST
+        # durch einen Metrik-Eintrag hinzukommen — sonst wirft die
+        # Zuweisung unten `KeyError` und der GANZE Vergleichs-Alarm
+        # dieses Ortes faellt aus.
+        alle_kanaele: set[str] = set(config.channels)
+        for _ort_kanaele in kanaele_je_ort.values():
+            alle_kanaele |= _ort_kanaele
+        ids_by_channel: dict[str, list[str]] = {c: [] for c in alle_kanaele}
+        for t in triggered:
+            ort_kanaele = kanaele_je_ort[t["entity_id"]]
+            t_urgency = alert_urgency.urgency_from_changes(t["changes"])
+            allowed, suppressed = alert_channel_threshold.split_by_threshold(
+                ort_kanaele, t_urgency, thresholds,
+            )
+            below_threshold_all |= suppressed
+            for c in allowed:
+                ids_by_channel[c].append(t["entity_id"])
+
+        # Kanaele mit identischer (Reihenfolge-unabhaengiger) Ortsliste
+        # teilen sich EINEN Versand-Aufruf.
+        groups_by_ids: dict[tuple, set[str]] = {}
+        for channel, ids in ids_by_channel.items():
+            if not ids:
                 continue
+            key = tuple(sorted(ids))
+            groups_by_ids.setdefault(key, set()).add(channel)
 
-            # Issue #1452: Versandobjekt erst NACH der Detect-Phase bauen — die
-            # Warnung bei fehlendem `mail_to` gehört an die Stelle, an der ein
-            # Versand tatsächlich anstünde (sonst Log-Rauschen je Leerlauf).
-            notification_service = self._notification_service_for(preset)
-            location_positions = self._location_positions(location_ids, all_locations)
-            telegram_style = effective_compare_telegram_style(preset)
-            thresholds = preset.get("alert_channel_thresholds")
-
-            # Issue #1461 S3b-2b (AC-3, Schleifen-Falle — Team-Lead-Korrektur):
-            # das Kanal-Set (`config.channels`) entsteht einmal je PRESET,
-            # aber jeder Ort kann eine EIGENE Dringlichkeit ausloesen. Nicht
-            # nach Dringlichkeit gruppieren (das erzeugt einen zweiten Versand
-            # schon dann, wenn zwei Orte verschieden dringlich sind — auch
-            # OHNE gesetzte Schwelle, Regress auf AC-1: aus einer Mail werden
-            # zwei, ohne dass der Nutzer etwas eingestellt hat). Stattdessen:
-            # je KANAL die Ortsliste bestimmen, die dessen Schwelle (an der
-            # EIGENEN Dringlichkeit jedes Ortes gemessen) erreicht, dann
-            # Kanaele mit IDENTISCHER Ortsliste zu einem gemeinsamen Versand
-            # buendeln. Ohne gesetzte Schwelle haben alle Kanaele dieselbe
-            # (volle) Ortsliste -> genau EIN Aufruf mit allen Kanaelen, byte-
-            # identisch zum Verhalten vor dieser Scheibe.
-            entity_by_id = {t["entity_id"]: t for t in triggered}
-            below_threshold_all: set[str] = set()
-            #
-            # Issue #1895 S2: die Kanalmenge entsteht METRIK-BEWUSST JE ORT —
-            # erst hier liegt `t["changes"]` vor. `_build_eval_config` kennt
-            # die ausloesenden Metriken noch nicht und liefert weiter nur den
-            # preset-weiten Startwert (AC-11/AC-16). Ohne Eintrag in
-            # `alert_metric_channels` ist das Ergebnis je Ort identisch mit
-            # `config.channels` — Bestandsverhalten bleibt byte-gleich.
-            kanaele_je_ort = {
-                t["entity_id"]: self._kanaele_fuer_ort(preset, config, t)
-                for t in triggered
-            }
-            # AC-17: die Vorbelegung muss auch Kanaele abdecken, die ERST
-            # durch einen Metrik-Eintrag hinzukommen — sonst wirft die
-            # Zuweisung unten `KeyError` und der GANZE Vergleichs-Alarm
-            # dieses Ortes faellt aus.
-            alle_kanaele: set[str] = set(config.channels)
-            for _ort_kanaele in kanaele_je_ort.values():
-                alle_kanaele |= _ort_kanaele
-            ids_by_channel: dict[str, list[str]] = {c: [] for c in alle_kanaele}
-            for t in triggered:
-                ort_kanaele = kanaele_je_ort[t["entity_id"]]
-                t_urgency = alert_urgency.urgency_from_changes(t["changes"])
-                allowed, suppressed = alert_channel_threshold.split_by_threshold(
-                    ort_kanaele, t_urgency, thresholds,
-                )
-                below_threshold_all |= suppressed
-                for c in allowed:
-                    ids_by_channel[c].append(t["entity_id"])
-
-            # Kanaele mit identischer (Reihenfolge-unabhaengiger) Ortsliste
-            # teilen sich EINEN Versand-Aufruf.
-            groups_by_ids: dict[tuple, set[str]] = {}
-            for channel, ids in ids_by_channel.items():
-                if not ids:
-                    continue
-                key = tuple(sorted(ids))
-                groups_by_ids.setdefault(key, set()).add(channel)
-
-            delivered_all: set[str] = set()
-            reachable_all: set[str] = set()
-            # Issue #1701 (S2b, D5): ueber alle Dringlichkeits-Gruppen hinweg
-            # gesammelt, analog `delivered_all`/`reachable_all`.
-            blocked_reason_codes_all: dict[str, str] = {}
-            any_sent = False
-            finalized_ids: set[str] = set()
-            for ids_key, channels in groups_by_ids.items():
-                group = [entity_by_id[eid] for eid in ids_key]
-                entities = [(t["loc"].name, [t["fresh_point"]], t["changes"]) for t in group]
-                # Issue #1916 (AC-4): Referenz-Zeitpunkt des ERSTEN Ortes
-                # dieser Buendel-Gruppe -- analog zur `alert_tz`-Herleitung in
-                # `NotificationService.send_multi_location_deviation_alert()`
-                # (`entities[0]`). Die Compare-eigene Snapshot-Quelle
-                # (`CompareWeatherSnapshotService`) bleibt dabei unveraendert
-                # (AC-13); nur ihr bereits geladener `fetched_at`-Wert wird
-                # hier zusaetzlich formatiert durchgereicht.
-                reference_at = None
-                first_anchor_fetched_at = group[0].get("anchor_fetched_at")
-                if first_anchor_fetched_at is not None:
-                    if first_anchor_fetched_at.tzinfo is None:
-                        first_anchor_fetched_at = first_anchor_fetched_at.replace(
-                            tzinfo=timezone.utc
-                        )
-                    first_loc = group[0]["loc"]
-                    reference_at = format_reference_at(
-                        first_anchor_fetched_at,
-                        tz_for_coords(first_loc.lat, first_loc.lon),
+        delivered_all: set[str] = set()
+        reachable_all: set[str] = set()
+        # Issue #1701 (S2b, D5): ueber alle Dringlichkeits-Gruppen hinweg
+        # gesammelt, analog `delivered_all`/`reachable_all`.
+        blocked_reason_codes_all: dict[str, str] = {}
+        any_sent = False
+        finalized_ids: set[str] = set()
+        for ids_key, channels in groups_by_ids.items():
+            group = [entity_by_id[eid] for eid in ids_key]
+            entities = [(t["loc"].name, [t["fresh_point"]], t["changes"]) for t in group]
+            # Issue #1916 (AC-4): Referenz-Zeitpunkt des ERSTEN Ortes
+            # dieser Buendel-Gruppe -- analog zur `alert_tz`-Herleitung in
+            # `NotificationService.send_multi_location_deviation_alert()`
+            # (`entities[0]`). Die Compare-eigene Snapshot-Quelle
+            # (`CompareWeatherSnapshotService`) bleibt dabei unveraendert
+            # (AC-13); nur ihr bereits geladener `fetched_at`-Wert wird
+            # hier zusaetzlich formatiert durchgereicht.
+            reference_at = None
+            first_anchor_fetched_at = group[0].get("anchor_fetched_at")
+            if first_anchor_fetched_at is not None:
+                if first_anchor_fetched_at.tzinfo is None:
+                    first_anchor_fetched_at = first_anchor_fetched_at.replace(
+                        tzinfo=timezone.utc
                     )
-                notif_result = notification_service.send_multi_location_deviation_alert(
-                    entities=entities,
-                    effective_channels=channels,
-                    mail_sink=self._mail_sink,
-                    location_positions=location_positions,
-                    # Issue #1467 S2, Korrektur K-5: der Kurzstil-Schalter (#1260)
-                    # wirkte auf genau diesem Versandweg bisher gar nicht. Gelesen
-                    # wird er ueber DENSELBEN Aufloeser wie beim amtlichen
-                    # Ortsvergleich-Alarm (ADR-0021, keine zweite Fassung).
-                    telegram_style=telegram_style,
-                    reference_at=reference_at,
+                first_loc = group[0]["loc"]
+                reference_at = format_reference_at(
+                    first_anchor_fetched_at,
+                    tz_for_coords(first_loc.lat, first_loc.lon),
                 )
-                delivered_all |= set(notif_result.delivered_channels)
-                reachable_all |= set(notif_result.sent_channels)
-                blocked_reason_codes_all.update(notif_result.blocked_reason_codes)
-                if notif_result.sent:
-                    any_sent = True
-                    finalized_ids |= set(ids_key)
-            finalized = [entity_by_id[eid] for eid in finalized_ids]
+            notif_result = notification_service.send_multi_location_deviation_alert(
+                entities=entities,
+                effective_channels=channels,
+                mail_sink=self._mail_sink,
+                location_positions=location_positions,
+                # Issue #1467 S2, Korrektur K-5: der Kurzstil-Schalter (#1260)
+                # wirkte auf genau diesem Versandweg bisher gar nicht. Gelesen
+                # wird er ueber DENSELBEN Aufloeser wie beim amtlichen
+                # Ortsvergleich-Alarm (ADR-0021, keine zweite Fassung).
+                telegram_style=telegram_style,
+                reference_at=reference_at,
+            )
+            delivered_all |= set(notif_result.delivered_channels)
+            reachable_all |= set(notif_result.sent_channels)
+            blocked_reason_codes_all.update(notif_result.blocked_reason_codes)
+            if notif_result.sent:
+                any_sent = True
+                finalized_ids |= set(ids_key)
+        finalized = [entity_by_id[eid] for eid in finalized_ids]
 
-            # Issue #1459: der Ortsvergleich protokollierte bisher gar nicht
-            # (B1). Seit #1467 S1 traegt der Eintrag die Preset-Kennung im
-            # gemeinsamen Feld `entity_id`, unterschieden durch `entity_type`.
-            # Issue #1461 S3b-2b: EIN Protokoll-Eintrag je Preset-Lauf (D1),
-            # unabhaengig davon wie viele Dringlichkeits-Gruppen oben gesendet
-            # wurden — `effective_channels` bleibt das ROHE Opt-in
-            # (`config.channels`), nur der tatsaechliche Versand wurde gefiltert
-            # (rote Linie #638).
-            alle_changes = [c for t in triggered for c in t["changes"]]
-            # Issue #2050 S6 (E-1): Ereigniszeit/Messpunkt nur, wenn ALLE
-            # gebuendelten Aenderungen bzw. Orte uebereinstimmen
-            # (`unique_or_none`) -- Abweichungszweig kennt strukturell keine
-            # Vorwarnzeit und kein Ereignisende (analog Trip).
-            _e1_event_at_dt = alert_log.unique_or_none(
-                c.occurred_at for c in alle_changes
-            )
-            _e1_event_at = (
-                _e1_event_at_dt.isoformat() if _e1_event_at_dt is not None else None
-            )
-            _e1_loc_id = alert_log.unique_or_none(t["loc"].id for t in triggered)
-            _e1_measurement_point = (
-                {"location_id": _e1_loc_id} if _e1_loc_id is not None else None
-            )
-            _e1_reference_at_dt = alert_log.unique_or_none(
-                t["anchor_fetched_at"] for t in triggered
-            )
-            _e1_reference_at = (
-                _e1_reference_at_dt.isoformat() if _e1_reference_at_dt is not None else None
-            )
-            _e1_source = alert_log.unique_or_none(
-                t["anchor_provider"] for t in triggered
-            )
-            alert_log.append_entry(
-                self._user_id, entity_id=preset_id, entity_type="compare",
-                changes_count=len(alle_changes),
-                severity=alert_urgency.urgency_from_changes(alle_changes),
-                metrics=alert_log.register_pairs_from_changes(alle_changes),
-                reason=alert_log.REASON_FORECAST_CHANGE,
-                effective_channels=config.channels,
-                sent_channels=sorted(delivered_all),
-                reachable_channels=sorted(reachable_all),
-                below_threshold_channels=below_threshold_all,
-                blocked_reason_codes=blocked_reason_codes_all,
-                event_at=_e1_event_at,
-                measurement_point=_e1_measurement_point,
-                reference_at=_e1_reference_at,
-                source=_e1_source,
-            )
-            if not any_sent:
-                continue
+        # Issue #1459: der Ortsvergleich protokollierte bisher gar nicht
+        # (B1). Seit #1467 S1 traegt der Eintrag die Preset-Kennung im
+        # gemeinsamen Feld `entity_id`, unterschieden durch `entity_type`.
+        # Issue #1461 S3b-2b: EIN Protokoll-Eintrag je Preset-Lauf (D1),
+        # unabhaengig davon wie viele Dringlichkeits-Gruppen oben gesendet
+        # wurden — `effective_channels` bleibt das ROHE Opt-in
+        # (`config.channels`), nur der tatsaechliche Versand wurde gefiltert
+        # (rote Linie #638).
+        alle_changes = [c for t in triggered for c in t["changes"]]
+        # Issue #2050 S6 (E-1): Ereigniszeit/Messpunkt nur, wenn ALLE
+        # gebuendelten Aenderungen bzw. Orte uebereinstimmen
+        # (`unique_or_none`) -- Abweichungszweig kennt strukturell keine
+        # Vorwarnzeit und kein Ereignisende (analog Trip).
+        _e1_event_at_dt = alert_log.unique_or_none(
+            c.occurred_at for c in alle_changes
+        )
+        _e1_event_at = (
+            _e1_event_at_dt.isoformat() if _e1_event_at_dt is not None else None
+        )
+        _e1_loc_id = alert_log.unique_or_none(t["loc"].id for t in triggered)
+        _e1_measurement_point = (
+            {"location_id": _e1_loc_id} if _e1_loc_id is not None else None
+        )
+        _e1_reference_at_dt = alert_log.unique_or_none(
+            t["anchor_fetched_at"] for t in triggered
+        )
+        _e1_reference_at = (
+            _e1_reference_at_dt.isoformat() if _e1_reference_at_dt is not None else None
+        )
+        _e1_source = alert_log.unique_or_none(
+            t["anchor_provider"] for t in triggered
+        )
+        alert_log.append_entry(
+            self._user_id, entity_id=preset_id, entity_type="compare",
+            changes_count=len(alle_changes),
+            severity=alert_urgency.urgency_from_changes(alle_changes),
+            metrics=alert_log.register_pairs_from_changes(alle_changes),
+            reason=alert_log.REASON_FORECAST_CHANGE,
+            effective_channels=config.channels,
+            sent_channels=sorted(delivered_all),
+            reachable_channels=sorted(reachable_all),
+            below_threshold_channels=below_threshold_all,
+            blocked_reason_codes=blocked_reason_codes_all,
+            event_at=_e1_event_at,
+            measurement_point=_e1_measurement_point,
+            reference_at=_e1_reference_at,
+            source=_e1_source,
+        )
+        if not any_sent:
+            return False
 
-            self._finalize_triggered_state(finalized)
-            self._throttle_store.record("compare_preset", preset_id, now)
-            alert_daily_limit.increment(self._user_id, now, config.zone)
-            sent += 1
-
-        return sent
+        self._finalize_triggered_state(finalized)
+        self._throttle_store.record("compare_preset", preset_id, now)
+        alert_daily_limit.increment(self._user_id, now, config.zone)
+        return True
 
     @staticmethod
     def _location_positions(location_ids: list[str], all_locations: dict) -> dict[str, int]:

@@ -109,3 +109,11 @@ def sort_by_last_reached(units: list, stamps: dict, id_of, now_utc: datetime) ->
     ID als Tie-Break (in place). EIN Baustein fuer alle Alarmlaeufe
     (Trip, Ortsvergleich; Epic #2261 A-2 S1/S2)."""
     units.sort(key=lambda u: (id_of(u) in stamps, stamps.get(id_of(u), now_utc), id_of(u)))
+
+
+def report_unit_failure(label: str, unit_id: str) -> None:
+    """Eine Einheit (Trip/Preset) eines Alarmlaufs ist mit einer Ausnahme
+    gescheitert (Issue #2217): sichtbar loggen (ID + Stacktrace), nie still
+    verschlucken. Nur im ``except``-Block aufrufen. EIN Baustein fuer alle
+    Alarmlaeufe (Trip und Ortsvergleich)."""
+    logger.error("%s: Einheit %s fehlgeschlagen", label, unit_id, exc_info=True)
