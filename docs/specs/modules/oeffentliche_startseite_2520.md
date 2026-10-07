@@ -84,8 +84,8 @@ Wer nicht eingeloggt ist, soll vor der Registrierung verstehen, was Gregor Zwanz
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein nicht eingeloggter Besucher / When er `/` aufruft / Then sieht er die öffentliche Startseite (Status 200, keine Weiterleitung auf `/login`) mit Überschrift, Erklärung „Was ist Gregor Zwanzig" und den Sektionen „Was bei dir ankommt" und „Warum das unterwegs nützt".
-  - Test: Vitest/Node gegen echtes `handle` ohne Cookie auf `/` → 200 bzw. kein `redirect`; Render-Test der Startseite prüft die drei Sektionen.
+- **AC-1:** Given ein nicht eingeloggter Besucher / When er `/` aufruft / Then sieht er die öffentliche Startseite (Status 200, keine Weiterleitung auf `/login`) mit Überschrift, Erklärung „Was ist Gregor Zwanzig" und den Sektionen „Was bei dir ankommt" und „Warum das unterwegs nützt"; dort steht, dass Gregor eine hyperlokale Vorhersage liefert — für die Etappenpunkte eines Trips im jeweiligen Zeitraum der Tour bzw. für die Orte eines Ortsvergleichs —, morgens und abends als Briefing plus Alarme.
+  - Test: Vitest/Node gegen echtes `handle` ohne Cookie auf `/` → 200 bzw. kein `redirect`; Render-Test der Startseite prüft die drei Sektionen und den Katalogtext zur hyperlokalen Vorhersage (Trip-Zeitraum und Ortsvergleich).
 
 - **AC-2:** Given ein nicht eingeloggter Besucher / When er einen geschützten Pfad wie `/trips`, `/compare`, `/admin` oder `/trips/abc` aufruft / Then wird er weiterhin mit Status 302 auf `/login` umgeleitet, nur der exakte Pfad `/` ist geöffnet.
   - Test: `handle` ohne Cookie auf mehrere Pfade (`/trips`, `/admin`, `/x/`, `//`) → je 302 auf `/login`; `/` und `/?x=1` bleiben offen (200); Mutation `startsWith('/')` muss den Test rot färben.
@@ -99,8 +99,8 @@ Wer nicht eingeloggt ist, soll vor der Registrierung verstehen, was Gregor Zwanz
 - **AC-5:** Given die Startseite im Browser / When der Besucher auf „Registrieren" bzw. „Anmelden" klickt / Then gelangt er auf `/register` bzw. `/login`, und beide Links sind ohne Scrollen auf einem 375 px breiten Display erreichbar oder per Seitenende sichtbar.
   - Test: Playwright gegen Staging, Viewport 375 px, ausgeloggt: beide Links sichtbar, Klick führt auf die Zielseite.
 
-- **AC-6:** Given die Startseite / When ein Besucher den Text liest / Then wird E-Mail als Hauptkanal genannt, Telegram wird erwähnt, und das Wort „SMS" (auch „Premium-SMS") erscheint weder im sichtbaren Text noch in Alt-Texten.
-  - Test: Katalog-Test über alle Schlüssel `start.*` in `de.json`: kein Treffer auf `/sms/i`; Render-Test der Startseite prüft sichtbaren Text und `alt`-Attribute; ein Schlüssel nennt „E-Mail" im Hero-Bereich.
+- **AC-6:** Given die Startseite / When ein Besucher den Text liest / Then wird E-Mail als Hauptkanal genannt, Telegram wird erwähnt, und SMS / Satelliten-Messenger bzw. Premium-SMS mit Rückkanal erscheinen ausschließlich mit dem Zusatz „in Arbeit bzw. auf Anfrage" — nie als sofort verfügbarer Kanal.
+  - Test: Katalog-Test über alle Schlüssel `start.*` in `de.json`: jeder Wert mit Treffer auf `/sms|satellit/i` enthält zugleich „in Arbeit" und „auf Anfrage"; Screenshots/Alt-Texte zeigen keinen SMS-Kanal; ein Schlüssel nennt „E-Mail" im Hero-Bereich.
 
 - **AC-7:** Given die Startseite / When sie angezeigt wird / Then zeigt sie mindestens drei statische Screenshots (Briefing-Mail, Telegram-Nachricht, Alarm), jeweils mit nicht leerem Alt-Text auf Deutsch, die tatsächlich geladen werden (HTTP 200, nicht kaputt).
   - Test: Playwright gegen Staging: alle `img` auf der Startseite haben `naturalWidth > 0` und einen Alt-Text mit Inhalt; Node-Test prüft, dass jede im Katalog referenzierte Bilddatei existiert. Freiheit von echten Personendaten (Adressen, Namen) ist manuelle Sichtprüfung bei der Asset-Erstellung.
@@ -111,8 +111,8 @@ Wer nicht eingeloggt ist, soll vor der Registrierung verstehen, was Gregor Zwanz
 - **AC-9:** Given der Service Worker ist aktiv / When ein Besucher die Startseite besucht und sich danach als Nutzer A einloggt, dann abmeldet / Then erscheint auf `/` nie ein zwischengespeicherter Stand eines anderen Nutzers: ausgeloggt kommt immer die Startseite aus dem Netz, eingeloggt immer das eigene Cockpit.
   - Test: Playwright gegen Staging: ausgeloggt `/` → Startseite; Login Nutzer A → Cockpit; Logout → wieder Startseite, ohne Cockpit-Inhalte; Prüfung, dass in den Caches `gz-daten-*` kein Eintrag für `/` liegt.
 
-- **AC-10:** Given die Startseite auf einem 375 px breiten Display / When sie geladen wird / Then gibt es keinen horizontalen Scrollbalken, der App-Chrome (Sidebar, Bottom-Navigation) ist ausgeblendet, und der Fließtext hat einen Kontrast von mindestens 4.5:1 auf der weißen Karte.
-  - Test: Playwright gegen Staging: `document.documentElement.scrollWidth <= innerWidth`, kein Element mit `data-testid` der Navigation sichtbar; Kontrastprüfung der Textfarbe (Token-Wert gegen `--g-card`) im Node-Test.
+- **AC-10:** Given die Startseite auf einem 375 px breiten Display / When sie geladen wird / Then gibt es keinen horizontalen Scrollbalken, der App-Chrome (Sidebar, Bottom-Navigation) ist ausgeblendet, der Fließtext hat einen Kontrast von mindestens 4.5:1 auf der weißen Karte, und die Seite ist aus den bestehenden Atomic-Design-Bausteinen (`$lib/components/atoms`, `molecules`, ggf. `organisms`, z.B. `Card`, `Btn`, `SectionH`, `Eyebrow`, `PageHeader`) aufgebaut statt aus eigenem Ad-hoc-Markup; fehlt ein Baustein, wird er als wiederverwendbares Atom/Molekül angelegt.
+  - Test: Playwright gegen Staging: `document.documentElement.scrollWidth <= innerWidth`, kein Element mit `data-testid` der Navigation sichtbar; Kontrastprüfung der Textfarbe (Token-Wert gegen `--g-card`) im Node-Test; Review-/Adversary-Punkt: Startseite importiert Bausteine aus `$lib/components/atoms|molecules|organisms`, keine duplizierten Card-/Button-Stile.
 
 - **AC-11:** Given ein Besucher mit einem Einladungslink `/register?invite=…` (#2519) / When er die Registrierung nutzt / Then funktioniert diese unverändert unabhängig von der Startseite, und `/register` bleibt ohne Anmeldung erreichbar.
   - Test: Bestehende Register-Tests bleiben grün; `handle` ohne Cookie auf `/register` → keine Weiterleitung.
@@ -123,7 +123,7 @@ Wer nicht eingeloggt ist, soll vor der Registrierung verstehen, was Gregor Zwanz
 - Keine Live-Daten, keine Marketing-Tracking- oder Analytics-Skripte.
 - Screenshots sind statisch und veralten bei Renderer-Änderungen; sie werden nicht automatisch neu erzeugt.
 - Kein Link von `/login` und `/register` zurück zur Startseite (Out of Scope).
-- SMS und Premium-SMS werden bewusst nicht beworben (PO-Vorgabe), obwohl alle vier Kanäle im Produkt gleichrangig sind.
+- SMS / Satelliten-Messenger / Premium-SMS mit Rückkanal werden nur als „in Arbeit bzw. auf Anfrage" erwähnt, nicht beworben (PO 2026-10-07).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -132,3 +132,4 @@ Kein neues ADR nötig. Die Entscheidung berührt „Auth" nur durch eine einzige
 ## Changelog
 
 - 2026-10-07: Initial spec created (Issue #2520)
+- 2026-10-07: PO-Review: AC-1 hyperlokale Vorhersage (Trip-Zeitraum/Ortsvergleich), AC-6 SMS/Satellit „in Arbeit bzw. auf Anfrage", AC-10 Atomic-Design-Bausteine
