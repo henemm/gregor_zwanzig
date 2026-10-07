@@ -33,6 +33,13 @@ _AUFRUFE: list[str] = []
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setenv("GZ_ENV", "production")
+    # Der Orchestrator bricht ohne vollstaendige E-Mail-Konfiguration leer ab
+    # (`smtp_guard`). Auf einem Runner ohne `.env` kaeme der Lauf nie bis zur
+    # Naht — die Werte sind Platzhalter, die Naht unten sendet nichts.
+    monkeypatch.setenv("GZ_SMTP_HOST", "dummy.invalid")
+    monkeypatch.setenv("GZ_SMTP_USER", "dummy")
+    monkeypatch.setenv("GZ_SMTP_PASS", "dummy")
+    monkeypatch.setenv("GZ_MAIL_TO", "dummy@example.com")
     _AUSGANG.clear()
     _AUFRUFE.clear()
 
