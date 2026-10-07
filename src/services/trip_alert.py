@@ -1910,7 +1910,14 @@ class TripAlertService:
             reached[trip.id] = datetime.now(timezone.utc)
             # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
             # je Trip, die Zone haengt vom Trip ab.
-            today = trip_local_today(trip, now_utc)
+            # Issue #2217: Absicherung je Trip — beschaedigte Etappendaten
+            # eines Trips (Ortstag/Segment-Auswahl) duerfen die Folge-Trips
+            # nicht mitreissen; der Fortschrittsstempel oben bleibt gesetzt.
+            try:
+                today = trip_local_today(trip, now_utc)
+            except Exception as e:
+                logger.error(f"Radar alert local-day resolution failed for trip {trip.id}: {e}")
+                continue
             # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0]),
             # seit Issue #1667 S3 tagesuebergreifend: aktiv heute -> aktiv
             # gestern -> Vorschau heute[0] -> nichts. Eine Etappe mit
@@ -1919,7 +1926,11 @@ class TripAlertService:
             # nicht (`get_stage_for_date` loest strikt per `==` auf).
             # `segment_date` ist das Datum, dem das gewaehlte Segment
             # ENTSTAMMT — nicht zwingend `today`, s. Schnappschuss unten.
-            _resolved = self._resolve_alert_segment(trip, now_utc, today)
+            try:
+                _resolved = self._resolve_alert_segment(trip, now_utc, today)
+            except Exception as e:
+                logger.error(f"Radar alert segment selection failed for trip {trip.id}: {e}")
+                continue
             if _resolved is None:
                 # Keine Etappe an beiden Tagen oder alle Segmente zeitlich
                 # vorbei → kein Alert (Option Y der Spec)
