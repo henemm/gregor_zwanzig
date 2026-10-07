@@ -26,15 +26,9 @@ test('AC-8: t() liefert den Katalogwert; unbekannter Schluessel ist ein Typfehle
 });
 
 test('AC-1: hyperlokale Vorhersage fuer Trip-Zeitraum und Ortsvergleich, morgens/abends + Alarme', () => {
-	const k = startKeys.find((x) => /hyperlokal/i.test(katalog[x]));
-	assert.ok(k, 'kein Katalogtext zur hyperlokalen Vorhersage');
-	const txt = katalog[k!];
-	assert.match(txt, /Etappenpunkt/);
-	assert.match(txt, /Zeitraum/);
-	assert.match(txt, /Ortsvergleich/);
-	assert.match(txt, /morgens/);
-	assert.match(txt, /abends/);
-	assert.match(txt, /Alarm/);
+	const alle = [/hyperlokal/i, /Etappenpunkt/, /Zeitraum/, /Ortsvergleich/, /morgens/, /abends/, /Alarm/];
+	const k = startKeys.find((x) => alle.every((re) => re.test(katalog[x])));
+	assert.ok(k, 'kein EIN Katalogtext nennt hyperlokal, Etappenpunkt, Zeitraum, Ortsvergleich, morgens, abends, Alarm');
 });
 
 test('AC-1: drei Sektionen vorhanden', () => {

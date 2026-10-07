@@ -25,8 +25,7 @@ test('AC-4: ohne userId kein einziger fetch, oeffentlich: true', async () => {
 		assert.fail('Go-API darf ohne Sitzung nicht aufgerufen werden');
 	}) as typeof fetch;
 	try {
-		// @ts-expect-error minimales Event
-		const data = await load({ locals: {}, cookies: cookies(undefined) });
+		const data = (await load({ locals: {}, cookies: cookies(undefined) } as never)) as Record<string, unknown>;
 		assert.equal(aufrufe, 0);
 		assert.deepEqual(data, { oeffentlich: true, trips: [], presets: [], cockpitStatus: null });
 	} finally {
@@ -41,10 +40,8 @@ test('AC-3: mit userId je Nutzer eigene Daten, oeffentlich: false', async () => 
 		return new Response(JSON.stringify(body), { status: 200 });
 	}) as unknown as typeof fetch;
 	try {
-		// @ts-expect-error minimales Event
-		const a = await load({ locals: { userId: 'a' }, cookies: cookies('A') });
-		// @ts-expect-error minimales Event
-		const b = await load({ locals: { userId: 'b' }, cookies: cookies('B') });
+		const a = (await load({ locals: { userId: 'a' }, cookies: cookies('A') } as never)) as Record<string, unknown>;
+		const b = (await load({ locals: { userId: 'b' }, cookies: cookies('B') } as never)) as Record<string, unknown>;
 		assert.equal(a.oeffentlich, false);
 		assert.equal(b.oeffentlich, false);
 		assert.deepEqual(a.trips, [{ id: 'trip-gz_session=A' }]);

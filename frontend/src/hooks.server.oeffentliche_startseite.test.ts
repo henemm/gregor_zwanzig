@@ -38,8 +38,7 @@ async function rufe(pfad: string, cookie?: string): Promise<Ergebnis> {
 	const resolve = async () =>
 		new Response('<html></html>', { status: 200, headers: { 'content-type': 'text/html' } });
 	try {
-		// @ts-expect-error minimales Event genuegt fuer handle
-		const res: Response = await handle({ event, resolve });
+		const res: Response = await handle({ event, resolve } as unknown as Parameters<typeof handle>[0]);
 		return { status: res.status, headers: res.headers, locals };
 	} catch (e) {
 		const r = e as { status?: number; location?: string };
