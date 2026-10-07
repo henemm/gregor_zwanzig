@@ -11,7 +11,7 @@ Die Commands sind zweistellig; Deploy ist eine **eigene** Phase:
 
 | Command | Phase | PO-Eingriff |
 |---|---|---|
-| `/00-intake`, `/00-bug`, `/01-feature` | Einstieg/Klassifikation | — |
+| `/00-intake` (auch Bugs), `/01-feature` | Einstieg/Klassifikation | — |
 | `/10-context` | Kontext sammeln | — |
 | `/20-analyse` | Request verstehen, Codebase recherchieren | optional |
 | `/30-write-spec` | Spezifikation mit AC-N-Format | **Pflicht: ACs freigeben („go")** |
