@@ -61,8 +61,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 # Auf Modulebene: api/main.py ruft beim ersten Import logging.basicConfig(force=True)
 # auf und entfernt sonst den caplog-Handler eines laufenden Tests.
 from fastapi.testclient import TestClient  # noqa: E402
