@@ -3,7 +3,7 @@ entity_id: oeffentliche_startseite_2520
 type: module
 created: 2026-10-07
 updated: 2026-10-07
-status: draft
+status: approved
 version: "1.0"
 tags: [frontend, landing, startseite, i18n, textkatalog, auth, pwa, issue-2520]
 ---
@@ -12,7 +12,7 @@ tags: [frontend, landing, startseite, i18n, textkatalog, auth, pwa, issue-2520]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO-Freigabe 2026-10-07)
 
 ## Purpose
 
