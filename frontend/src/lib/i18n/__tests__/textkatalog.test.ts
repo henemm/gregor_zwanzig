@@ -100,3 +100,24 @@ test('AC-10: Layout blendet Chrome auf / fuer Ausgeloggte aus; Loader/Seite verz
 	const seite = readFileSync(join(frontend, 'src', 'routes', '+page.svelte'), 'utf-8');
 	assert.match(seite, /data\.oeffentlich/);
 });
+
+// doc-compliance-test
+test('F001: Links zeigen exakt auf /register und /login', () => {
+	const src = readFileSync(join(frontend, 'src', 'routes', '_start', 'Startseite.svelte'), 'utf-8');
+	assert.match(src, /href="\/register"[^>]*>\{t\('start\.cta\.register'\)\}/);
+	assert.match(src, /href="\/login"[^>]*>\{t\('start\.cta\.login'\)\}/);
+});
+
+// doc-compliance-test
+test('F002: jedes img traegt den Katalog-Alt-Text', () => {
+	const src = readFileSync(join(frontend, 'src', 'routes', '_start', 'Startseite.svelte'), 'utf-8');
+	assert.match(src, /<img src=\{b\.src\} alt=\{b\.alt\}/);
+	for (const n of ['mail', 'telegram', 'alarm']) {
+		assert.match(src, new RegExp(`alt: t\\('start\\.${n}\\.alt'\\)`));
+	}
+});
+
+test('F004: Alarm-Alt-Text passt zum Screenshot (Sturm-/Hitzewarnung)', () => {
+	assert.match(katalog['start.alarm.alt'], /Sturm/);
+	assert.match(katalog['start.alarm.alt'], /Hitze/);
+});

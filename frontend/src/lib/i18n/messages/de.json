@@ -26,7 +26,7 @@
 	"start.telegram.alt": "Beispiel eines Briefings als Telegram-Nachricht: kompakte Textzeilen mit Wetter für die Etappe",
 	"start.telegram.caption": "Briefing per Telegram",
 	"start.alarm.src": "/landing/alarm.png",
-	"start.alarm.alt": "Beispiel eines Wetteralarms: Warnung vor Gewitter mit Zeitraum und betroffenem Etappenpunkt",
+	"start.alarm.alt": "Beispiel eines Wetteralarms als E-Mail: Sturmwarnung (Stufe Orange) und Hitzewarnung (Stufe Gelb) mit Gültigkeitszeitraum und betroffenem Segment der Route",
 	"start.alarm.caption": "Alarm bei Gefahr",
 	"start.footer.hinweis": "Die Beispiele zeigen Testdaten."
 }
