@@ -1810,6 +1810,9 @@ completed fully or was cut off by that budget.
 | `duration_s` | float | Actual wall-clock runtime of this run |
 | `reason` | string | Present only when `status: "partial"` — currently always `"deadline"` |
 | `skipped_ids` | string[] | Trip-IDs, die der Lauf nicht mehr erreicht hat (Seit #2261 A-2 S1; `skipped` ist deren Anzahl). Leer bei vollem Lauf. |
+| `failed` | int | Trips, bei denen die Prüfung mit einer Ausnahme endete (Seit #2217; gilt auch für `radar-alert-checks`, `compare-radar-alert-checks`). Die Ausnahme reißt die folgenden Trips nicht mehr mit; sie wird mit Trip-/Preset-ID und Stacktrace geloggt (`report_unit_failure`, `src/services/alert_check_state.py`). `RadarDeadlineExceeded` bricht den Lauf weiterhin ab (`status: "partial"`). `compare-alert-checks` und `compare-official-alert-checks` melden `failed` ebenso. |
+
+**Seit #2217 (2026-10-07):** Stapelläufe sind abgeschottet — Alarmläufe (Trip-Radar, `check_all_trips`, drei Ortsvergleich-Alarmläufe) und der Briefing-Sammellauf (Fälligkeits-/Filterprüfung Trip, Zonenbestimmung/Auto-Pause Ortsvergleich) zählen Ausnahmen einzelner Trips/Presets in `failed`, statt abzubrechen. Der Fairness-Stempel wird vor der Prüfung gesetzt; `skip_next` bleibt bei einer Ausnahme unverbraucht. Go-Scheduler: eine Panic in `recordRun`/`callUserWithBudget` wird als Fehler `panic in <jobID>` erfasst und der Job-Lock freigegeben.
 
 **Seit #2261 A-2 S1 (2026-10-05):** Die Zeitgrenze des Laufs beträgt 180 s
 (vorher 90 s; unter dem Go-Wartebudget von 300 s). Die Trips werden in fairer

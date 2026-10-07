@@ -127,3 +127,47 @@ def test_radar_run_skips_broken_trip_and_still_checks_next_trip(
         assert id_b in stamps
     finally:
         clean_uid(uid)
+
+
+@pytest.mark.parametrize("breaker", [_break_ortstag, _break_segment],
+                         ids=["ortstag", "segment"])
+def test_radar_run_counts_broken_trip_as_failed_with_stacktrace(
+    monkeypatch, caplog, breaker,
+):
+    """#2217 AC-1/AC-6 fuer kaputte Etappendaten: der aeussere Schutz je Trip
+    zaehlt den Ausfall in ``failed`` und loggt ID MIT Stacktrace. Ein innerer
+    ``try/except ... continue`` um Ortstag/Segment-Auswahl wuerde den Fall
+    schlucken (kein failed, kein exc_info) => rot."""
+    import app.loader as loader
+
+    uid = fresh_uid("2217f")
+    clean_uid(uid)
+    try:
+        write_user_tier(uid, "standard")
+        sfx = uuid.uuid4().hex[:6]
+        id_a, id_b = f"t2217-a-{sfx}", f"t2217-b-{sfx}"
+        trip_a = _good_trip(id_a)
+        breaker(trip_a)
+        trips = [trip_a, _good_trip(id_b)]
+        monkeypatch.setattr(loader, "load_all_trips", lambda **kw: list(trips))
+        reset_radar_cache()
+
+        with caplog.at_level(logging.ERROR):
+            result = trip_alert_service(
+                uid, settings_no_channel_reachable(),
+                CountingFrameSource(onset_minutes=8), lambda s, b: None,
+            ).check_radar_alerts_run()
+
+        assert result.failed == 1, f"kaputter Trip muss als failed zaehlen: {result!r}"
+        assert result.checked == 2, result
+        mit_trace = [
+            r for r in caplog.records
+            if r.levelno >= logging.ERROR and id_a in r.getMessage()
+            and r.exc_info and r.exc_info[0] is not None
+        ]
+        assert mit_trace, (
+            f"ERROR mit Trip-ID {id_a!r} und Stacktrace fehlt: "
+            f"{[(r.getMessage(), bool(r.exc_info)) for r in caplog.records]!r}"
+        )
+    finally:
+        clean_uid(uid)

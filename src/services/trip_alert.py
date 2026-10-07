@@ -45,7 +45,9 @@ from services.trip_segments import measured_segment_km  # Issue #2036
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
 from services.corridor_threshold import CorridorHit
 from services.radar_service import RadarDeadlineExceeded
-from services.alert_check_state import AlertCheckStateStore, sort_by_last_reached
+from services.alert_check_state import (
+    AlertCheckStateStore, report_unit_failure, sort_by_last_reached,
+)
 from services.throttle_store import ThrottleStore
 from services.alert_channels import _briefing_channels as _shared_briefing_channels
 from services.alert_channels import effective_alert_channels
@@ -189,6 +191,9 @@ class AlertCheckRunResult:
     hit_deadline: bool
     # Epic #2261 A-2 S1: nicht erreichte Trip-IDs in Pruefreihenfolge.
     skipped_ids: list[str] = field(default_factory=list)
+    # Issue #2217: Einheiten (Trips/Presets), deren Pruefung mit einer Ausnahme
+    # scheiterte -- getrennt von hit_deadline (partial); failed>0 => Go: error.
+    failed: int = 0
 
 
 def radar_alert_due(result: object, threshold_min: int) -> bool:
@@ -1039,6 +1044,7 @@ class TripAlertService:
         now_utc = datetime.now(timezone.utc)
         alerts_sent = 0
         checked = 0
+        failed = 0
         hit_deadline = False
         run_started_at = time.monotonic()
         deadline_at = run_started_at + ALERT_RUN_DEADLINE_SECONDS
@@ -1064,103 +1070,109 @@ class TripAlertService:
                 checked += 1
                 # Stempel fuer JEDEN erreichten Trip — auch bei continue/Exception.
                 reached[trip.id] = datetime.now(timezone.utc)
-                # Issue #1697: Ortstag dieses Trips — die Zone haengt vom Trip ab,
-                # deshalb erst HIER (je Trip), nicht einmal vor der Schleife.
-                today = trip_local_today(trip, now_utc)
-                # Issue #222 W1: Trips with active alert_rules must be checked even if
-                # report_config is missing or alert_on_changes=False — alert_rules is the
-                # new source-of-truth (disable via rule.enabled=False).
-                # Issue #846: ein gesetztes (nicht-deaktiviertes) alert_preset zählt
-                # ebenso als aktive Quelle und muss geprüft werden.
-                # Issue #946: metric_alert_levels ist die einzige Alert-Quelle — ein Trip
-                # mit gesetzten Per-Metrik-Stufen MUSS geprüft werden, auch ohne preset,
-                # alert_rules oder report_config (sonst still übersprungen → nie ein Alert).
-                has_preset = bool(
-                    trip.display_config
-                    and trip.display_config.alert_preset
-                    and trip.display_config.alert_preset != "deaktiviert"
-                )
-                has_metric_levels = bool(
-                    trip.display_config
-                    and getattr(trip.display_config, "metric_alert_levels", None)
-                )
-                # Issue #1460 (P1a): Wertebereiche sind keine aktive Alarmquelle
-                # mehr -- ein Trip, der nur Wertebereiche gesetzt hat, wird hier
-                # wieder uebersprungen (Zustand vor #1444 S1).
-                has_active_rules = (
-                    has_preset
-                    or has_metric_levels
-                    or any(r.enabled for r in (trip.alert_rules or []))
-                )
-                # Issue #1088 F001: der amtliche Alert-Trigger ist ein eigenständiger,
-                # vom Wetter-Delta-Alert unabhängiger Auslöser (Default aktiv). Ein Trip
-                # ohne aktive Wetter-Delta-Regel darf NICHT komplett übersprungen werden,
-                # solange der amtliche Trigger nicht explizit deaktiviert ist — sonst
-                # wird check_official_alert_triggers() unten nie erreicht.
-                # Issue #2422 S4 (Fix): dieselbe Drei-Zustand-Vorrangregel wie in
-                # check_official_alert_triggers() — vorher prüfte dieser Vorab-Filter
-                # NUR das veraltete Legacy-Feld und übersprang den Trip trotz
-                # official_warnings.enabled=true (Bug, AC-5).
-                official_trigger_possible = self._official_trigger_possible(trip)
-                if (
-                    not has_active_rules
-                    and (not trip.report_config or not trip.report_config.alert_on_changes)
-                    and not official_trigger_possible
-                ):
-                    continue
-
-                # Skip expired trips (all stages in the past). Issue #1250 S4
-                # Fix-Loop F002: end_date ist None-sicher bei leeren Stages
-                # (Editor erlaubt das) — ein Trip ohne Stages ist nicht
-                # "abgelaufen", nur nicht dispatchbar, darf also nicht crashen.
-                if trip.end_date is not None and trip.end_date < today:
-                    logger.debug(f"Skipping expired trip {trip.id} (ended {trip.end_date})")
-                    continue
-
-                # Δ-Anker: hier ist ein Anker DESSELBEN Tages Pflicht (#1661).
-                cached = self._get_cached_weather(
-                    trip, tagesgleicher_anker_noetig=True, now_utc=now_utc,
-                )
-
-                # Issue #1088: amtliche Warnungen zusätzlich zum Wetter-Delta prüfen —
-                # fail-soft, darf den Zyklus für andere Trips nicht abbrechen.
-                official_notices: list = []
                 try:
-                    official_notices = self.check_official_alert_triggers(trip, now_utc=now_utc)
-                except Exception as e:
-                    logger.error(f"Official alert trigger check failed for trip {trip.id}: {e}")
-
-                # #1661 Spec-Korrektur 2026-08-10: ein fehlender oder verworfener
-                # Δ-Anker legt NUR den Abweichungs-Alarm still. Stuende dieses Tor
-                # wie frueher VOR dem amtlichen Check, wuerde ein Anker vom falschen
-                # Tag auch die Unwetterwarnung verschlucken — genau in den Tagen vor
-                # dem Aufbruch, in denen sie am meisten zaehlt.
-                # Fail-soft wie der Zweig darunter: ein Fehler bei EINEM Trip darf
-                # den Lauf fuer alle folgenden nicht abbrechen.
-                if not cached:
-                    if official_notices:
-                        try:
-                            if self._send_official_alert_only(trip, official_notices):
-                                alerts_sent += 1
-                        except Exception as e:
-                            logger.error(f"Official alert send failed for trip {trip.id}: {e}")
-                    continue
-
-                try:
-                    weather_sent = self.check_and_send_alerts(
-                        trip, cached, official_notices=official_notices,
+                    # Issue #1697: Ortstag dieses Trips — die Zone haengt vom Trip ab,
+                    # deshalb erst HIER (je Trip), nicht einmal vor der Schleife.
+                    today = trip_local_today(trip, now_utc)
+                    # Issue #222 W1: Trips with active alert_rules must be checked even if
+                    # report_config is missing or alert_on_changes=False — alert_rules is the
+                    # new source-of-truth (disable via rule.enabled=False).
+                    # Issue #846: ein gesetztes (nicht-deaktiviertes) alert_preset zählt
+                    # ebenso als aktive Quelle und muss geprüft werden.
+                    # Issue #946: metric_alert_levels ist die einzige Alert-Quelle — ein Trip
+                    # mit gesetzten Per-Metrik-Stufen MUSS geprüft werden, auch ohne preset,
+                    # alert_rules oder report_config (sonst still übersprungen → nie ein Alert).
+                    has_preset = bool(
+                        trip.display_config
+                        and trip.display_config.alert_preset
+                        and trip.display_config.alert_preset != "deaktiviert"
                     )
-                    if weather_sent:
-                        alerts_sent += 1
-                    elif official_notices:
-                        # Kein Wetter-Delta-Alert gefeuert, aber neue/gestiegene amtliche
-                        # Warnung(en) — eigenständiger Versand (PO-Entscheidung).
-                        if self._send_official_alert_only(
-                            trip, official_notices, segments=cached,
-                        ):
+                    has_metric_levels = bool(
+                        trip.display_config
+                        and getattr(trip.display_config, "metric_alert_levels", None)
+                    )
+                    # Issue #1460 (P1a): Wertebereiche sind keine aktive Alarmquelle
+                    # mehr -- ein Trip, der nur Wertebereiche gesetzt hat, wird hier
+                    # wieder uebersprungen (Zustand vor #1444 S1).
+                    has_active_rules = (
+                        has_preset
+                        or has_metric_levels
+                        or any(r.enabled for r in (trip.alert_rules or []))
+                    )
+                    # Issue #1088 F001: der amtliche Alert-Trigger ist ein eigenständiger,
+                    # vom Wetter-Delta-Alert unabhängiger Auslöser (Default aktiv). Ein Trip
+                    # ohne aktive Wetter-Delta-Regel darf NICHT komplett übersprungen werden,
+                    # solange der amtliche Trigger nicht explizit deaktiviert ist — sonst
+                    # wird check_official_alert_triggers() unten nie erreicht.
+                    # Issue #2422 S4 (Fix): dieselbe Drei-Zustand-Vorrangregel wie in
+                    # check_official_alert_triggers() — vorher prüfte dieser Vorab-Filter
+                    # NUR das veraltete Legacy-Feld und übersprang den Trip trotz
+                    # official_warnings.enabled=true (Bug, AC-5).
+                    official_trigger_possible = self._official_trigger_possible(trip)
+                    if (
+                        not has_active_rules
+                        and (not trip.report_config or not trip.report_config.alert_on_changes)
+                        and not official_trigger_possible
+                    ):
+                        continue
+
+                    # Skip expired trips (all stages in the past). Issue #1250 S4
+                    # Fix-Loop F002: end_date ist None-sicher bei leeren Stages
+                    # (Editor erlaubt das) — ein Trip ohne Stages ist nicht
+                    # "abgelaufen", nur nicht dispatchbar, darf also nicht crashen.
+                    if trip.end_date is not None and trip.end_date < today:
+                        logger.debug(f"Skipping expired trip {trip.id} (ended {trip.end_date})")
+                        continue
+
+                    # Δ-Anker: hier ist ein Anker DESSELBEN Tages Pflicht (#1661).
+                    cached = self._get_cached_weather(
+                        trip, tagesgleicher_anker_noetig=True, now_utc=now_utc,
+                    )
+
+                    # Issue #1088: amtliche Warnungen zusätzlich zum Wetter-Delta prüfen —
+                    # fail-soft, darf den Zyklus für andere Trips nicht abbrechen.
+                    official_notices: list = []
+                    try:
+                        official_notices = self.check_official_alert_triggers(trip, now_utc=now_utc)
+                    except Exception as e:
+                        logger.error(f"Official alert trigger check failed for trip {trip.id}: {e}")
+
+                    # #1661 Spec-Korrektur 2026-08-10: ein fehlender oder verworfener
+                    # Δ-Anker legt NUR den Abweichungs-Alarm still. Stuende dieses Tor
+                    # wie frueher VOR dem amtlichen Check, wuerde ein Anker vom falschen
+                    # Tag auch die Unwetterwarnung verschlucken — genau in den Tagen vor
+                    # dem Aufbruch, in denen sie am meisten zaehlt.
+                    # Fail-soft wie der Zweig darunter: ein Fehler bei EINEM Trip darf
+                    # den Lauf fuer alle folgenden nicht abbrechen.
+                    if not cached:
+                        if official_notices:
+                            try:
+                                if self._send_official_alert_only(trip, official_notices):
+                                    alerts_sent += 1
+                            except Exception as e:
+                                logger.error(f"Official alert send failed for trip {trip.id}: {e}")
+                        continue
+
+                    try:
+                        weather_sent = self.check_and_send_alerts(
+                            trip, cached, official_notices=official_notices,
+                        )
+                        if weather_sent:
                             alerts_sent += 1
-                except Exception as e:
-                    logger.error(f"Alert check failed for trip {trip.id}: {e}")
+                        elif official_notices:
+                            # Kein Wetter-Delta-Alert gefeuert, aber neue/gestiegene amtliche
+                            # Warnung(en) — eigenständiger Versand (PO-Entscheidung).
+                            if self._send_official_alert_only(
+                                trip, official_notices, segments=cached,
+                            ):
+                                alerts_sent += 1
+                    except Exception as e:
+                        logger.error(f"Alert check failed for trip {trip.id}: {e}")
+                except RadarDeadlineExceeded:
+                    raise
+                except Exception:
+                    report_unit_failure("Alarmlauf", trip.id)
+                    failed += 1
         finally:
             if state_store is not None and reached:
                 try:
@@ -1191,6 +1203,7 @@ class TripAlertService:
             skipped_ids=skipped_ids,
             duration_s=duration_s,
             hit_deadline=hit_deadline,
+            failed=failed,
         )
 
     def _get_cached_weather(
@@ -1864,9 +1877,11 @@ class TripAlertService:
             )
         except Exception as e:
             logger.warning(f"{_RADAR_STATE_FILENAME}: Reihenfolge nach Trip-ID ({e})")
-        sent = 0
+        sent = failed = 0
         try:
-            sent = self._check_radar_trips(trips, now_utc, deadline_at, reached, progress)
+            sent, failed = self._check_radar_trips(
+                trips, now_utc, deadline_at, reached, progress,
+            )
         finally:
             if state_store is not None and reached:
                 try:
@@ -1885,6 +1900,7 @@ class TripAlertService:
             alerts_sent=sent, checked=checked, skipped=len(skipped_ids),
             skipped_ids=skipped_ids, duration_s=time.monotonic() - run_started_at,
             hit_deadline=progress["hit_deadline"],
+            failed=failed,
         )
 
     @staticmethod
@@ -1897,9 +1913,11 @@ class TripAlertService:
     def _check_radar_trips(
         self, trips: list, now_utc: datetime, deadline_at: float,
         reached: dict, progress: dict,
-    ) -> int:
-        """Eigentliche Trip-Schleife des Radar-Alarmlaufs (Anzahl Alarme)."""
+    ) -> tuple[int, int]:
+        """Eigentliche Trip-Schleife des Radar-Alarmlaufs: (Anzahl Alarme,
+        Anzahl gescheiterter Trips -- Issue #2217)."""
         sent = 0
+        failed = 0
 
         for trip in trips:
             if time.monotonic() >= deadline_at:
@@ -1908,893 +1926,892 @@ class TripAlertService:
             progress["checked"] += 1
             # Stempel fuer JEDEN erreichten Trip (auch bei continue/Exception).
             reached[trip.id] = datetime.now(timezone.utc)
-            # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
-            # je Trip, die Zone haengt vom Trip ab.
-            # Issue #2217: Absicherung je Trip — beschaedigte Etappendaten
-            # eines Trips (Ortstag/Segment-Auswahl) duerfen die Folge-Trips
-            # nicht mitreissen; der Fortschrittsstempel oben bleibt gesetzt.
             try:
+                # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
+                # je Trip, die Zone haengt vom Trip ab.
                 today = trip_local_today(trip, now_utc)
-            except Exception as e:
-                logger.error(f"Radar alert local-day resolution failed for trip {trip.id}: {e}")
-                continue
-            # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0]),
-            # seit Issue #1667 S3 tagesuebergreifend: aktiv heute -> aktiv
-            # gestern -> Vorschau heute[0] -> nichts. Eine Etappe mit
-            # Abendstart und Ankunft nach Mitternacht traegt ihr Ziel-Segment
-            # bis in den Folgetag; der heutige Kalendertag allein fand es
-            # nicht (`get_stage_for_date` loest strikt per `==` auf).
-            # `segment_date` ist das Datum, dem das gewaehlte Segment
-            # ENTSTAMMT — nicht zwingend `today`, s. Schnappschuss unten.
-            try:
+                # Segment-Auswahl (Issue #822 — ersetzt stage.waypoints[0]),
+                # seit Issue #1667 S3 tagesuebergreifend: aktiv heute -> aktiv
+                # gestern -> Vorschau heute[0] -> nichts. Eine Etappe mit
+                # Abendstart und Ankunft nach Mitternacht traegt ihr Ziel-Segment
+                # bis in den Folgetag; der heutige Kalendertag allein fand es
+                # nicht (`get_stage_for_date` loest strikt per `==` auf).
+                # `segment_date` ist das Datum, dem das gewaehlte Segment
+                # ENTSTAMMT — nicht zwingend `today`, s. Schnappschuss unten.
                 _resolved = self._resolve_alert_segment(trip, now_utc, today)
-            except Exception as e:
-                logger.error(f"Radar alert segment selection failed for trip {trip.id}: {e}")
-                continue
-            if _resolved is None:
-                # Keine Etappe an beiden Tagen oder alle Segmente zeitlich
-                # vorbei → kein Alert (Option Y der Spec)
-                logger.debug(
-                    f"Radar alert skipped: kein aktives/naechstes Segment fuer {trip.id}"
-                )
-                continue
-            active, segment_date = _resolved
-
-            # Issue #1697 AC-4: Horizont-Guard — Vorbild
-            # `trip_report_scheduler.py::_build_starkregen_hint`. Ein Segment,
-            # das erst weit in der Zukunft beginnt, loest keinen Nowcast-Abruf
-            # aus (Horizont ~60 min); ohne diesen Guard riefe die neue
-            # Ortstag-Etappenwahl in der 22:00-00:00-UTC-Randzeit jede Nacht
-            # einen fachlich sinnlosen Nowcast fuer die morgige Etappe ab.
-            if active.start_time > now_utc:
-                from services.radar_service import NOWCAST_HORIZON_MIN
-
-                minutes_until_start = (active.start_time - now_utc).total_seconds() / 60.0
-                if minutes_until_start > NOWCAST_HORIZON_MIN:
-                    # #1405-Linie: WAS uebersprungen wird, wird benannt, nicht
-                    # nur DASS uebersprungen wird — der Startzeitpunkt macht
-                    # die Meldung zu einer Aussage ueber das Segment selbst
-                    # (pruefbar, betrieblich brauchbar), statt nur ueber die
-                    # Distanz in Minuten.
+                if _resolved is None:
+                    # Keine Etappe an beiden Tagen oder alle Segmente zeitlich
+                    # vorbei → kein Alert (Option Y der Spec)
                     logger.debug(
-                        f"Radar alert skipped: Segment beginnt erst in "
-                        f"{minutes_until_start:.0f} min (>{NOWCAST_HORIZON_MIN} min "
-                        f"Horizont, Start={active.start_time.isoformat()}) fuer {trip.id}"
+                        f"Radar alert skipped: kein aktives/naechstes Segment fuer {trip.id}"
                     )
                     continue
+                active, segment_date = _resolved
 
-            # Issue #1752 (Scheibe B zu #1745, D1/D2): Radar-Alarme folgen
-            # demselben Kanal-Resolver wie Gewitter-, Aenderungs- und amtliche
-            # Alarme — `trip.alert_channels`/`trip.alert_rules` statt der
-            # Briefing-Flags. Das Kanal-Set wird GENAU EINMAL berechnet und an
-            # allen drei Stellen (Unterdrueckungs-Protokoll, Leer-Check,
-            # Versand) geteilt; zwei leicht abweichende Ableitungen waren die
-            # Ursache dieses Bugs.
-            # D3: bewusst NACH dem Horizont-Guard oben — fuer ein Segment, das
-            # zeitlich gar nicht in Frage kommt, darf die `alert_rules`-Union
-            # nicht ausgewertet werden.
-            # Absicherung je Trip, nicht um den Stapellauf: scheitert die
-            # Kanal-Aufloesung EINES Trips (beschaedigte `alert_channels`/
-            # `alert_rules` aus der Persistenz), verlieren sonst ALLE weiteren
-            # Trips dieses Nutzers ihren Radar-Alarm — bei jedem Scheduler-Tick
-            # erneut, bis die Daten repariert sind (Muster `fix_1479`). Breite
-            # Klausel + laute Meldung mit Kennung, wie beim Nowcast-Abruf ein
-            # paar Zeilen weiter unten.
-            try:
-                effective_channels = self._effective_alert_channels(trip)
-            except Exception as e:
-                logger.error(f"Radar alert channel resolution failed for trip {trip.id}: {e}")
-                continue
+                # Issue #1697 AC-4: Horizont-Guard — Vorbild
+                # `trip_report_scheduler.py::_build_starkregen_hint`. Ein Segment,
+                # das erst weit in der Zukunft beginnt, loest keinen Nowcast-Abruf
+                # aus (Horizont ~60 min); ohne diesen Guard riefe die neue
+                # Ortstag-Etappenwahl in der 22:00-00:00-UTC-Randzeit jede Nacht
+                # einen fachlich sinnlosen Nowcast fuer die morgige Etappe ab.
+                if active.start_time > now_utc:
+                    from services.radar_service import NOWCAST_HORIZON_MIN
 
-            cooldown_min = (
-                trip.alert_cooldown_minutes
-                if trip.alert_cooldown_minutes is not None
-                else self._throttle_hours * 60
-            )
-            # Issue #1467 S3: dieselbe Kette wie bisher (Ruhezeit -> Sperrzeit
-            # -> Tages-Obergrenze, #1070/#1555), jetzt aus dem geteilten
-            # Baustein, den auch der Vergleichs-Nowcast benutzt. Reihenfolge,
-            # Scope (`radar`), Schluessel (`trip.id`) und Zustellverhalten
-            # bleiben unveraendert — neu ist allein der Protokoll-Eintrag.
-            gate = check_nowcast_gate(
-                user_id=self._user_id,
-                throttle_scope=_RADAR_THROTTLE_SCOPE,
-                throttle_key=trip.id,
-                cooldown_minutes=cooldown_min,
-                quiet_from=trip.alert_quiet_from,
-                quiet_to=trip.alert_quiet_to,
-                context_label=trip.id,
-                now=now_utc,
-                zone=anchor_tz(trip, now_utc),
-                throttle_store=self._throttle_store,
-            )
-            # Issue #2065: die SPERRZEIT ist die einzige Stufe der Kette, die
-            # eine quantitative Verschaerfung ueberholen darf. Der Lauf haelt
-            # deshalb hier nicht mehr an, sondern holt die Daten und
-            # entscheidet weiter unten gegen die zuletzt gemeldete Menge.
-            # Ruhezeit (#1955, unbrechbar) und Tages-Obergrenze bleiben
-            # unveraendert harte Stops.
-            _sperrzeit_offen = (
-                not gate.allowed and gate.reason == alert_log.REASON_COOLDOWN
-            )
-            # Issue #2050 S3b (Szenario 7): zweites, davon UNABHAENGIGES
-            # Signal. Ein erschoepftes Tagesbudget haelt den Lauf ebenfalls
-            # nicht mehr hier an — die Dringlichkeit, gegen die entschieden
-            # wird, entsteht erst aus dem Nowcast-Abruf. Die Ruhezeit bleibt
-            # der einzige unbrechbare Stop (#1955, AC-21). Beide Gruende
-            # schliessen einander an DIESER Stelle aus (`gate.reason` traegt
-            # genau einen Wert), die Reihenfolge Ruhezeit -> Sperrzeit ->
-            # Tages-Obergrenze bleibt damit unangetastet.
-            _budget_erschoepft = (
-                not gate.allowed and gate.reason == alert_log.REASON_DAILY_LIMIT
-            )
-            if not gate.allowed and not _sperrzeit_offen and not _budget_erschoepft:
-                logger.debug(
-                    f"Radar alert suppressed ({gate.reason}) for trip {trip.id}"
-                )
-                # Absicherung je Trip, nicht um den Stapellauf: scheitert der
-                # Protokoll-Eintrag EINES Trips, verlieren sonst ALLE weiteren
-                # Trips dieses Nutzers ihren Radar-Alarm (Muster `fix_1479`).
-                # Breite Klausel + laute Meldung mit Kennung, wie beim
-                # Nowcast-Abruf ein paar Zeilen weiter unten.
-                self._protokolliere_radar_unterdrueckung(
-                    trip, gate.reason, effective_channels,
-                )
-                continue
+                    minutes_until_start = (active.start_time - now_utc).total_seconds() / 60.0
+                    if minutes_until_start > NOWCAST_HORIZON_MIN:
+                        # #1405-Linie: WAS uebersprungen wird, wird benannt, nicht
+                        # nur DASS uebersprungen wird — der Startzeitpunkt macht
+                        # die Meldung zu einer Aussage ueber das Segment selbst
+                        # (pruefbar, betrieblich brauchbar), statt nur ueber die
+                        # Distanz in Minuten.
+                        logger.debug(
+                            f"Radar alert skipped: Segment beginnt erst in "
+                            f"{minutes_until_start:.0f} min (>{NOWCAST_HORIZON_MIN} min "
+                            f"Horizont, Start={active.start_time.isoformat()}) fuer {trip.id}"
+                        )
+                        continue
 
-            # Bis zu RADAR_ZONE_MAX_POINTS get_nowcast-Calls pro Trip
-            # (Budget, #1329; Deckel und Abstand aus `trip_segments`) — seit
-            # Issue #2017 ab dem Ort, an dem der Nutzer zur MITTE des
-            # Vorwarnfensters sein wird, nicht mehr am Startpunkt des
-            # Segments (den hat er zu diesem Zeitpunkt laengst verlassen;
-            # gemessener Median-Versatz 1,99 km).
-            #
-            # Issue #2051 S2a: die #2017-Zusicherung "genau EIN Abruf" ist
-            # BEWUSST auf eine Obergrenze abgeloest (Spec, Abschnitt
-            # "Abgeloeste Zusicherung") — die raeumliche Ausdehnung des
-            # Ereignisses braucht mehrere Messpunkte entlang der
-            # Reststrecke. Der ERSTE Punkt bleibt der #2017-Messpunkt und
-            # traegt unveraendert die Ausloeseregel; die uebrigen liefern
-            # ausschliesslich die Zonen. Unterhalb des Punktabstands
-            # (Reststrecke < 2 km) bleibt es bei genau einem Abruf.
-            #
-            # Onset-frei: `_at` ist ein FESTER Zeitpunkt (halbes Fenster),
-            # kein aus dem Nowcast-Ergebnis abgeleiteter. Der Onset entsteht
-            # erst AUS diesem Abruf (`_onset_dt` unten) — ihn hier zu
-            # benutzen waere ein Zirkelschluss.
-            #
-            # Die Schwelle kommt ueber die MODUL-Referenz, nicht als
-            # `from ... import` gebunden: eine beim Import gebundene Kopie
-            # liefe still am Drift-Schutz aus #2009 vorbei.
-            from services import radar_service as radar_service_mod
-            from services import trip_segments as trip_segments_mod
+                # Issue #1752 (Scheibe B zu #1745, D1/D2): Radar-Alarme folgen
+                # demselben Kanal-Resolver wie Gewitter-, Aenderungs- und amtliche
+                # Alarme — `trip.alert_channels`/`trip.alert_rules` statt der
+                # Briefing-Flags. Das Kanal-Set wird GENAU EINMAL berechnet und an
+                # allen drei Stellen (Unterdrueckungs-Protokoll, Leer-Check,
+                # Versand) geteilt; zwei leicht abweichende Ableitungen waren die
+                # Ursache dieses Bugs.
+                # D3: bewusst NACH dem Horizont-Guard oben — fuer ein Segment, das
+                # zeitlich gar nicht in Frage kommt, darf die `alert_rules`-Union
+                # nicht ausgewertet werden.
+                # Absicherung je Trip, nicht um den Stapellauf: scheitert die
+                # Kanal-Aufloesung EINES Trips (beschaedigte `alert_channels`/
+                # `alert_rules` aus der Persistenz), verlieren sonst ALLE weiteren
+                # Trips dieses Nutzers ihren Radar-Alarm — bei jedem Scheduler-Tick
+                # erneut, bis die Daten repariert sind (Muster `fix_1479`). Breite
+                # Klausel + laute Meldung mit Kennung, wie beim Nowcast-Abruf ein
+                # paar Zeilen weiter unten.
+                try:
+                    effective_channels = self._effective_alert_channels(trip)
+                except Exception as e:
+                    logger.error(f"Radar alert channel resolution failed for trip {trip.id}: {e}")
+                    continue
 
-            # Issue #2261 (A-1, R2): eigener Messpunkt-Offset statt
-            # `Schwelle // 2` — mit der Schwelle auf dem Horizont waere der
-            # Messpunkt sonst auf +90 gewandert.
-            _at = now_utc + timedelta(
-                minutes=radar_service_mod.RADAR_MEASURE_OFFSET_MIN
-            )
-            # Absicherung je Trip, nicht um den Stapellauf (Adversary
-            # F-ADV1, Muster `fix_1479`): Vor #2017 stand hier ein trivialer
-            # Attributzugriff (`active.start_point.lat`); jetzt steht hier ein
-            # Aufruf mit Verzweigungen, Datumsarithmetik und iterativem
-            # Nachladen des Folgetags. Wirft der fuer EINEN Trip, verloeren
-            # sonst ALLE weiteren Trips dieses Nutzers ihren Radar-Alarm —
-            # `load_all_trips()` sortiert nicht, es traefe also zufaellig
-            # wechselnde Trips, und `api/routers/scheduler.py` faengt darum
-            # herum nichts ab.
-            # Eigener `try` statt Aufnahme in den Nowcast-`try` unten: der
-            # Fehler nimmt denselben Weg (`continue`), bekommt aber eine
-            # UNTERSCHEIDBARE Meldung. Unter "Radar nowcast failed" abgelegt
-            # waere er stiller als vorher — er kommt gar nicht vom Abruf.
-            try:
-                # Issue #2051 S2a: die Punktbildung ruft `position_at_time()`
-                # selbst — der erste Punkt IST der bisherige Messpunkt.
-                # Issue #2261 (A-1, R3): dieselben Punkte, je Punkt mit der
-                # Durchgangszeit laut Zeitplan (Messort zur Ereigniszeit).
-                _punkte_mit_zeit = trip_segments_mod.points_with_passage_times(
-                    trip, active, segment_date, _at,
+                cooldown_min = (
+                    trip.alert_cooldown_minutes
+                    if trip.alert_cooldown_minutes is not None
+                    else self._throttle_hours * 60
                 )
-                _punkte = [_p for _p, _t in _punkte_mit_zeit]
-                _fenster_ende = aufenthaltsfenster_min(
-                    [_t for _p, _t in _punkte_mit_zeit], now_utc,
+                # Issue #1467 S3: dieselbe Kette wie bisher (Ruhezeit -> Sperrzeit
+                # -> Tages-Obergrenze, #1070/#1555), jetzt aus dem geteilten
+                # Baustein, den auch der Vergleichs-Nowcast benutzt. Reihenfolge,
+                # Scope (`radar`), Schluessel (`trip.id`) und Zustellverhalten
+                # bleiben unveraendert — neu ist allein der Protokoll-Eintrag.
+                gate = check_nowcast_gate(
+                    user_id=self._user_id,
+                    throttle_scope=_RADAR_THROTTLE_SCOPE,
+                    throttle_key=trip.id,
+                    cooldown_minutes=cooldown_min,
+                    quiet_from=trip.alert_quiet_from,
+                    quiet_to=trip.alert_quiet_to,
+                    context_label=trip.id,
+                    now=now_utc,
+                    zone=anchor_tz(trip, now_utc),
+                    throttle_store=self._throttle_store,
                 )
-                _pos = _punkte[0]
-            except Exception as e:
-                logger.error(
-                    "Radar alert: Positionsbestimmung fuer Trip %s "
-                    "fehlgeschlagen (%s) — dieser Trip wird uebersprungen, die "
-                    "uebrigen Trips dieses Nutzers laufen weiter.",
-                    trip.id, e,
+                # Issue #2065: die SPERRZEIT ist die einzige Stufe der Kette, die
+                # eine quantitative Verschaerfung ueberholen darf. Der Lauf haelt
+                # deshalb hier nicht mehr an, sondern holt die Daten und
+                # entscheidet weiter unten gegen die zuletzt gemeldete Menge.
+                # Ruhezeit (#1955, unbrechbar) und Tages-Obergrenze bleiben
+                # unveraendert harte Stops.
+                _sperrzeit_offen = (
+                    not gate.allowed and gate.reason == alert_log.REASON_COOLDOWN
                 )
-                if _sperrzeit_offen:
+                # Issue #2050 S3b (Szenario 7): zweites, davon UNABHAENGIGES
+                # Signal. Ein erschoepftes Tagesbudget haelt den Lauf ebenfalls
+                # nicht mehr hier an — die Dringlichkeit, gegen die entschieden
+                # wird, entsteht erst aus dem Nowcast-Abruf. Die Ruhezeit bleibt
+                # der einzige unbrechbare Stop (#1955, AC-21). Beide Gruende
+                # schliessen einander an DIESER Stelle aus (`gate.reason` traegt
+                # genau einen Wert), die Reihenfolge Ruhezeit -> Sperrzeit ->
+                # Tages-Obergrenze bleibt damit unangetastet.
+                _budget_erschoepft = (
+                    not gate.allowed and gate.reason == alert_log.REASON_DAILY_LIMIT
+                )
+                if not gate.allowed and not _sperrzeit_offen and not _budget_erschoepft:
+                    logger.debug(
+                        f"Radar alert suppressed ({gate.reason}) for trip {trip.id}"
+                    )
+                    # Absicherung je Trip, nicht um den Stapellauf: scheitert der
+                    # Protokoll-Eintrag EINES Trips, verlieren sonst ALLE weiteren
+                    # Trips dieses Nutzers ihren Radar-Alarm (Muster `fix_1479`).
+                    # Breite Klausel + laute Meldung mit Kennung, wie beim
+                    # Nowcast-Abruf ein paar Zeilen weiter unten.
                     self._protokolliere_radar_unterdrueckung(
                         trip, gate.reason, effective_channels,
                     )
-                continue
-            lat = _pos.lat
-            lon = _pos.lon
-            # Hoehe MUSS mitwandern (#1991/#2017): der neue Ort mit der
-            # alten Hoehe abgefragt entscheidet im Gebirge ueber Regen oder
-            # Schnee. Normalisierung auf ganze Meter HIER, nicht in
-            # `position_at_time()` — `get_nowcast` fuehrt `elevation_m` roh
-            # in den Cache-Schluessel, und `1000` und `1000.0` erzeugten in
-            # #1991 zwei Eintraege fuer denselben Punkt.
-            _elevation_m = (
-                int(round(_pos.elevation_m)) if _pos.elevation_m is not None else None
-            )
-            tz = tz_for_coords(lat, lon)
-            radar_svc = None
-            _p0_ausnahme = False
-            try:
-                radar_svc = self._get_radar_service()
-                # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
-                # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
-                result = radar_svc.get_nowcast(
-                    lat, lon, elevation_m=_elevation_m, priority="polling",
-                    user_id=self._user_id, deadline_at=deadline_at,
+                    continue
+
+                # Bis zu RADAR_ZONE_MAX_POINTS get_nowcast-Calls pro Trip
+                # (Budget, #1329; Deckel und Abstand aus `trip_segments`) — seit
+                # Issue #2017 ab dem Ort, an dem der Nutzer zur MITTE des
+                # Vorwarnfensters sein wird, nicht mehr am Startpunkt des
+                # Segments (den hat er zu diesem Zeitpunkt laengst verlassen;
+                # gemessener Median-Versatz 1,99 km).
+                #
+                # Issue #2051 S2a: die #2017-Zusicherung "genau EIN Abruf" ist
+                # BEWUSST auf eine Obergrenze abgeloest (Spec, Abschnitt
+                # "Abgeloeste Zusicherung") — die raeumliche Ausdehnung des
+                # Ereignisses braucht mehrere Messpunkte entlang der
+                # Reststrecke. Der ERSTE Punkt bleibt der #2017-Messpunkt und
+                # traegt unveraendert die Ausloeseregel; die uebrigen liefern
+                # ausschliesslich die Zonen. Unterhalb des Punktabstands
+                # (Reststrecke < 2 km) bleibt es bei genau einem Abruf.
+                #
+                # Onset-frei: `_at` ist ein FESTER Zeitpunkt (halbes Fenster),
+                # kein aus dem Nowcast-Ergebnis abgeleiteter. Der Onset entsteht
+                # erst AUS diesem Abruf (`_onset_dt` unten) — ihn hier zu
+                # benutzen waere ein Zirkelschluss.
+                #
+                # Die Schwelle kommt ueber die MODUL-Referenz, nicht als
+                # `from ... import` gebunden: eine beim Import gebundene Kopie
+                # liefe still am Drift-Schutz aus #2009 vorbei.
+                from services import radar_service as radar_service_mod
+                from services import trip_segments as trip_segments_mod
+
+                # Issue #2261 (A-1, R2): eigener Messpunkt-Offset statt
+                # `Schwelle // 2` — mit der Schwelle auf dem Horizont waere der
+                # Messpunkt sonst auf +90 gewandert.
+                _at = now_utc + timedelta(
+                    minutes=radar_service_mod.RADAR_MEASURE_OFFSET_MIN
                 )
-            except RadarDeadlineExceeded:
-                # Zeitgrenze: weder Quellenausfall noch Entwarnung (A-2 S2).
-                self._abort_radar_unit(reached, progress, trip.id)
-                break
-            except Exception as e:
-                logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
-                result = None
-                _p0_ausnahme = True
-                if radar_svc is None:
-                    # Der Dienst selbst ist nicht verfuegbar: kein Folgeabruf moeglich.
+                # Absicherung je Trip, nicht um den Stapellauf (Adversary
+                # F-ADV1, Muster `fix_1479`): Vor #2017 stand hier ein trivialer
+                # Attributzugriff (`active.start_point.lat`); jetzt steht hier ein
+                # Aufruf mit Verzweigungen, Datumsarithmetik und iterativem
+                # Nachladen des Folgetags. Wirft der fuer EINEN Trip, verloeren
+                # sonst ALLE weiteren Trips dieses Nutzers ihren Radar-Alarm —
+                # `load_all_trips()` sortiert nicht, es traefe also zufaellig
+                # wechselnde Trips, und `api/routers/scheduler.py` faengt darum
+                # herum nichts ab.
+                # Eigener `try` statt Aufnahme in den Nowcast-`try` unten: der
+                # Fehler nimmt denselben Weg (`continue`), bekommt aber eine
+                # UNTERSCHEIDBARE Meldung. Unter "Radar nowcast failed" abgelegt
+                # waere er stiller als vorher — er kommt gar nicht vom Abruf.
+                try:
+                    # Issue #2051 S2a: die Punktbildung ruft `position_at_time()`
+                    # selbst — der erste Punkt IST der bisherige Messpunkt.
+                    # Issue #2261 (A-1, R3): dieselben Punkte, je Punkt mit der
+                    # Durchgangszeit laut Zeitplan (Messort zur Ereigniszeit).
+                    _punkte_mit_zeit = trip_segments_mod.points_with_passage_times(
+                        trip, active, segment_date, _at,
+                    )
+                    _punkte = [_p for _p, _t in _punkte_mit_zeit]
+                    _fenster_ende = aufenthaltsfenster_min(
+                        [_t for _p, _t in _punkte_mit_zeit], now_utc,
+                    )
+                    _pos = _punkte[0]
+                except Exception as e:
+                    logger.error(
+                        "Radar alert: Positionsbestimmung fuer Trip %s "
+                        "fehlgeschlagen (%s) — dieser Trip wird uebersprungen, die "
+                        "uebrigen Trips dieses Nutzers laufen weiter.",
+                        trip.id, e,
+                    )
+                    if _sperrzeit_offen:
+                        self._protokolliere_radar_unterdrueckung(
+                            trip, gate.reason, effective_channels,
+                        )
+                    continue
+                lat = _pos.lat
+                lon = _pos.lon
+                # Hoehe MUSS mitwandern (#1991/#2017): der neue Ort mit der
+                # alten Hoehe abgefragt entscheidet im Gebirge ueber Regen oder
+                # Schnee. Normalisierung auf ganze Meter HIER, nicht in
+                # `position_at_time()` — `get_nowcast` fuehrt `elevation_m` roh
+                # in den Cache-Schluessel, und `1000` und `1000.0` erzeugten in
+                # #1991 zwei Eintraege fuer denselben Punkt.
+                _elevation_m = (
+                    int(round(_pos.elevation_m)) if _pos.elevation_m is not None else None
+                )
+                tz = tz_for_coords(lat, lon)
+                radar_svc = None
+                _p0_ausnahme = False
+                try:
+                    radar_svc = self._get_radar_service()
+                    # Issue #1329 C2: Scheduler-Radar ist ein polling-Check
+                    # (drosselbar bei Budget-Druck) -- kein Nutzer-Briefing.
+                    result = radar_svc.get_nowcast(
+                        lat, lon, elevation_m=_elevation_m, priority="polling",
+                        user_id=self._user_id, deadline_at=deadline_at,
+                    )
+                except RadarDeadlineExceeded:
+                    # Zeitgrenze: weder Quellenausfall noch Entwarnung (A-2 S2).
+                    self._abort_radar_unit(reached, progress, trip.id)
+                    break
+                except Exception as e:
+                    logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
+                    result = None
+                    _p0_ausnahme = True
+                    if radar_svc is None:
+                        # Der Dienst selbst ist nicht verfuegbar: kein Folgeabruf moeglich.
+                        self._protokolliere_radar_unterdrueckung(
+                            trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
+                        )
+                        continue
+
+                # Issue #2051 S2a: die uebrigen Punkte der Reststrecke, sequenziell
+                # und mit derselben Prioritaet (Muster
+                # `compare_radar_alert._detect_triggered_locations`).
+                #
+                # Anders als der ERSTE Abruf (oben, traegt die Ausloeseregel)
+                # bricht ein Fehler hier den Trip NICHT ab: ein Punkt ohne
+                # verwertbare Daten ist eine Luecke, weder nass noch trocken (E4),
+                # und darf den Alarm nicht kosten. `throttled`/`data_unavailable`
+                # sind derselbe Fall in Feldform — keine Frames, aber eben auch
+                # kein belegtes "trocken", das eine Zone trennen duerfte.
+                _zonen_ergebnisse: list = [_zonen_messwert(result)]
+                _grenze_erreicht = False
+                for _p in _punkte[1:]:
+                    try:
+                        _zonen_ergebnisse.append(
+                            _zonen_messwert(
+                                radar_svc.get_nowcast(
+                                    _p.lat, _p.lon,
+                                    elevation_m=(
+                                        int(round(_p.elevation_m))
+                                        if _p.elevation_m is not None else None
+                                    ),
+                                    priority="polling",
+                                    user_id=self._user_id,
+                                    deadline_at=deadline_at,
+                                )
+                            )
+                        )
+                    except RadarDeadlineExceeded:
+                        _grenze_erreicht = True
+                        break
+                    except Exception as e:
+                        logger.warning(
+                            "Radar alert: Nowcast fuer Zonenpunkt (%.4f, %.4f) des "
+                            "Trips %s fehlgeschlagen (%s) — der Punkt faellt aus "
+                            "der Ausdehnung heraus, der Alarm laeuft weiter.",
+                            _p.lat, _p.lon, trip.id, e,
+                        )
+                        _zonen_ergebnisse.append(None)
+                if _grenze_erreicht:
+                    self._abort_radar_unit(reached, progress, trip.id)
+                    break
+                _rain_zones = tuple(
+                    derive_rain_zones(_punkte, _zonen_ergebnisse)
+                )
+
+                # Issue #2480: maßgeblicher Punkt aus ALLEN Messpunkten; ab hier
+                # lesen alle nachgelagerten Stellen (`result`, `lat`/`lon`) genau
+                # diesen einen Abruf. `throttled` an Punkt 0 gilt unveraendert als
+                # Budget-Druck: kein Alarm.
+                _wahl = None
+                if not (result is not None and result.throttled):
+                    _wahl = waehle_massgeblichen_punkt(_zonen_ergebnisse, _fenster_ende)
+                _trigger_km = None
+                if _wahl is not None:
+                    _pos = _punkte[_wahl[0]]
+                    lat, lon = _pos.lat, _pos.lon
+                    result = _wahl[1]
+                    # Nur bei Ausloesung durch einen FOLGEpunkt (Punkt 0 bleibt
+                    # bitgleich zum Stand vor #2480, AC-2).
+                    if _wahl[0] != 0:
+                        _trigger_km = _pos.distance_from_start_km
+                elif _p0_ausnahme:
+                    # Punkt 0 geworfen und kein Folgepunkt loest aus: wie bisher
+                    # als Quellenausfall protokolliert, nie als ruhig.
                     self._protokolliere_radar_unterdrueckung(
                         trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
                     )
                     continue
 
-            # Issue #2051 S2a: die uebrigen Punkte der Reststrecke, sequenziell
-            # und mit derselben Prioritaet (Muster
-            # `compare_radar_alert._detect_triggered_locations`).
-            #
-            # Anders als der ERSTE Abruf (oben, traegt die Ausloeseregel)
-            # bricht ein Fehler hier den Trip NICHT ab: ein Punkt ohne
-            # verwertbare Daten ist eine Luecke, weder nass noch trocken (E4),
-            # und darf den Alarm nicht kosten. `throttled`/`data_unavailable`
-            # sind derselbe Fall in Feldform — keine Frames, aber eben auch
-            # kein belegtes "trocken", das eine Zone trennen duerfte.
-            _zonen_ergebnisse: list = [_zonen_messwert(result)]
-            _grenze_erreicht = False
-            for _p in _punkte[1:]:
-                try:
-                    _zonen_ergebnisse.append(
-                        _zonen_messwert(
-                            radar_svc.get_nowcast(
-                                _p.lat, _p.lon,
-                                elevation_m=(
-                                    int(round(_p.elevation_m))
-                                    if _p.elevation_m is not None else None
-                                ),
-                                priority="polling",
-                                user_id=self._user_id,
-                                deadline_at=deadline_at,
-                            )
+                # Issue #2065: die gemessene Menge wird HIER festgehalten --
+                # `result` traegt weiter unten die NotificationResult, die
+                # Vergleichsbasis der naechsten Runde muss aber aus DIESEM Abruf
+                # stammen.
+                _menge_mm = result.window_precip_mm
+                # Issue #2261 (A-1, R4): bei fernem Beginn ist die Menge ein
+                # Vorlauf-Artefakt (~0) — sie ueberholt nichts und hinterlaesst
+                # keine Vergleichsbasis.
+                _menge_vergleichbar = menge_ist_vergleichbar(result)
+
+                # Issue #2050 S3b: die Dringlichkeit dieses Abrufs entsteht HIER,
+                # vor beiden Ausnahme-Entscheidungen — bis dahin wurde sie erst
+                # kurz vor dem Versand gebildet (`_radar_request`, weiter unten),
+                # also NACH der Tages-Obergrenzen-Nachpruefung, die sie braucht.
+                # Ableitung und Werte sind unveraendert: `_radar_request` traegt
+                # dieselben zwei Groessen aus DIESEM `result`, und
+                # `urgency_from_radar()` liest das Label case-insensitiv (dort
+                # steht es nur mit kleinem Anfangsbuchstaben).
+                _radar_urgency = alert_urgency.urgency_from_radar(
+                    is_convective=result.is_convective,
+                    intensity_label=result.intensity_label,
+                )
+                # Traegt der Budget-Durchbruch diesen Lauf? Entscheidet unten
+                # ueber die Buchung (`escalation_breakthroughs`) und bleibt False,
+                # solange das Budget gar nicht im Weg stand.
+                _budget_durchbruch = False
+
+                # Issue #2065: Ueberholungs-Entscheidung gegen die zuletzt
+                # gemeldete Menge. Bewusst VOR dem Ausloese-Guard
+                # (`radar_alert_due`): so bekommt jeder Lauf, der AN DER SPERRZEIT
+                # haengenbleibt, weiterhin seinen Protokoll-Eintrag mit Grund
+                # `cooldown` — unabhaengig davon, ob die Lage alarmwuerdig waere.
+                #
+                # 🔴 Nach einem erfolgreichen Durchbruch gilt das NICHT mehr, und
+                # das ist Absicht: der Durchgang ist dann nicht mehr gesperrt und
+                # verhaelt sich ab hier wie ein freier Lauf. Scheitert er
+                # anschliessend am Ausloese-Guard (`radar_alert_due`) oder am
+                # Doppel-Alarm-Guard, bleibt er genauso still wie ein freier Lauf
+                # in derselben Lage — „nicht alarmwuerdig" ist in diesem System
+                # kein Unterdrueckungs-Ereignis und bekommt keinen `alert_log`-
+                # Eintrag. Ein `cooldown`-Eintrag waere dort schlicht falsch: die
+                # Sperrzeit hat diesen Lauf ja gerade NICHT unterdrueckt. Die
+                # Entscheidung selbst bleibt ueber die `logger.info`-Zeile weiter
+                # unten nachvollziehbar (AC-13, beide Ausgaenge). Festgenagelt in
+                # `tests/tdd/test_radar_cooldown_overtake.py`
+                # (`test_f001_durchbruch_ohne_ausloeser_verhaelt_sich_wie_ein_freier_lauf`).
+                _ueberholt_sperrzeit = False
+                _mengen_ueberholt = False
+                if _sperrzeit_offen:
+                    _basis_mm = last_nowcast_precip_mm(
+                        user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
+                        throttle_key=trip.id, throttle_store=self._throttle_store,
+                    )
+                    _mengen_ueberholt = radar_overtakes_cooldown(
+                        basis_mm=_basis_mm,
+                        menge_mm=_menge_mm if _menge_vergleichbar else None,
+                    )
+                    _ueberholt_sperrzeit = (
+                        _mengen_ueberholt
+                        or self._gewitter_ueberholt_sperrzeit(trip, result, _radar_urgency)
+                    )
+                    # Beide Zahlen in EINER Zeile, damit im Nachhinein
+                    # nachvollziehbar ist, GEGEN WAS entschieden wurde -- fuer
+                    # beide Ausgaenge (Durchbruch und Stille).
+                    logger.info(
+                        "Radar alert: Sperrzeit-Ueberholung fuer Trip %s geprueft — "
+                        "Vergleichsbasis %s mm, gemessene Menge %.1f mm: %s",
+                        trip.id,
+                        "unbekannt" if _basis_mm is None else f"{_basis_mm:.1f}",
+                        _menge_mm,
+                        "Durchbruch" if _ueberholt_sperrzeit else "Sperrzeit bleibt",
+                    )
+                    if not _ueberholt_sperrzeit:
+                        # Issue #2050 S4a (AC-9): ab hier liegt ein Abruf vor, also
+                        # reist auch die Frage mit, ob seine Gewitterpruefung lief.
+                        self._protokolliere_radar_unterdrueckung(
+                            trip, gate.reason, effective_channels,
+                            convective_checked=result.convective_checked,
                         )
-                    )
-                except RadarDeadlineExceeded:
-                    _grenze_erreicht = True
-                    break
-                except Exception as e:
-                    logger.warning(
-                        "Radar alert: Nowcast fuer Zonenpunkt (%.4f, %.4f) des "
-                        "Trips %s fehlgeschlagen (%s) — der Punkt faellt aus "
-                        "der Ausdehnung heraus, der Alarm laeuft weiter.",
-                        _p.lat, _p.lon, trip.id, e,
-                    )
-                    _zonen_ergebnisse.append(None)
-            if _grenze_erreicht:
-                self._abort_radar_unit(reached, progress, trip.id)
-                break
-            _rain_zones = tuple(
-                derive_rain_zones(_punkte, _zonen_ergebnisse)
-            )
-
-            # Issue #2480: maßgeblicher Punkt aus ALLEN Messpunkten; ab hier
-            # lesen alle nachgelagerten Stellen (`result`, `lat`/`lon`) genau
-            # diesen einen Abruf. `throttled` an Punkt 0 gilt unveraendert als
-            # Budget-Druck: kein Alarm.
-            _wahl = None
-            if not (result is not None and result.throttled):
-                _wahl = waehle_massgeblichen_punkt(_zonen_ergebnisse, _fenster_ende)
-            _trigger_km = None
-            if _wahl is not None:
-                _pos = _punkte[_wahl[0]]
-                lat, lon = _pos.lat, _pos.lon
-                result = _wahl[1]
-                # Nur bei Ausloesung durch einen FOLGEpunkt (Punkt 0 bleibt
-                # bitgleich zum Stand vor #2480, AC-2).
-                if _wahl[0] != 0:
-                    _trigger_km = _pos.distance_from_start_km
-            elif _p0_ausnahme:
-                # Punkt 0 geworfen und kein Folgepunkt loest aus: wie bisher
-                # als Quellenausfall protokolliert, nie als ruhig.
-                self._protokolliere_radar_unterdrueckung(
-                    trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
-                )
-                continue
-
-            # Issue #2065: die gemessene Menge wird HIER festgehalten --
-            # `result` traegt weiter unten die NotificationResult, die
-            # Vergleichsbasis der naechsten Runde muss aber aus DIESEM Abruf
-            # stammen.
-            _menge_mm = result.window_precip_mm
-            # Issue #2261 (A-1, R4): bei fernem Beginn ist die Menge ein
-            # Vorlauf-Artefakt (~0) — sie ueberholt nichts und hinterlaesst
-            # keine Vergleichsbasis.
-            _menge_vergleichbar = menge_ist_vergleichbar(result)
-
-            # Issue #2050 S3b: die Dringlichkeit dieses Abrufs entsteht HIER,
-            # vor beiden Ausnahme-Entscheidungen — bis dahin wurde sie erst
-            # kurz vor dem Versand gebildet (`_radar_request`, weiter unten),
-            # also NACH der Tages-Obergrenzen-Nachpruefung, die sie braucht.
-            # Ableitung und Werte sind unveraendert: `_radar_request` traegt
-            # dieselben zwei Groessen aus DIESEM `result`, und
-            # `urgency_from_radar()` liest das Label case-insensitiv (dort
-            # steht es nur mit kleinem Anfangsbuchstaben).
-            _radar_urgency = alert_urgency.urgency_from_radar(
-                is_convective=result.is_convective,
-                intensity_label=result.intensity_label,
-            )
-            # Traegt der Budget-Durchbruch diesen Lauf? Entscheidet unten
-            # ueber die Buchung (`escalation_breakthroughs`) und bleibt False,
-            # solange das Budget gar nicht im Weg stand.
-            _budget_durchbruch = False
-
-            # Issue #2065: Ueberholungs-Entscheidung gegen die zuletzt
-            # gemeldete Menge. Bewusst VOR dem Ausloese-Guard
-            # (`radar_alert_due`): so bekommt jeder Lauf, der AN DER SPERRZEIT
-            # haengenbleibt, weiterhin seinen Protokoll-Eintrag mit Grund
-            # `cooldown` — unabhaengig davon, ob die Lage alarmwuerdig waere.
-            #
-            # 🔴 Nach einem erfolgreichen Durchbruch gilt das NICHT mehr, und
-            # das ist Absicht: der Durchgang ist dann nicht mehr gesperrt und
-            # verhaelt sich ab hier wie ein freier Lauf. Scheitert er
-            # anschliessend am Ausloese-Guard (`radar_alert_due`) oder am
-            # Doppel-Alarm-Guard, bleibt er genauso still wie ein freier Lauf
-            # in derselben Lage — „nicht alarmwuerdig" ist in diesem System
-            # kein Unterdrueckungs-Ereignis und bekommt keinen `alert_log`-
-            # Eintrag. Ein `cooldown`-Eintrag waere dort schlicht falsch: die
-            # Sperrzeit hat diesen Lauf ja gerade NICHT unterdrueckt. Die
-            # Entscheidung selbst bleibt ueber die `logger.info`-Zeile weiter
-            # unten nachvollziehbar (AC-13, beide Ausgaenge). Festgenagelt in
-            # `tests/tdd/test_radar_cooldown_overtake.py`
-            # (`test_f001_durchbruch_ohne_ausloeser_verhaelt_sich_wie_ein_freier_lauf`).
-            _ueberholt_sperrzeit = False
-            _mengen_ueberholt = False
-            if _sperrzeit_offen:
-                _basis_mm = last_nowcast_precip_mm(
-                    user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
-                    throttle_key=trip.id, throttle_store=self._throttle_store,
-                )
-                _mengen_ueberholt = radar_overtakes_cooldown(
-                    basis_mm=_basis_mm,
-                    menge_mm=_menge_mm if _menge_vergleichbar else None,
-                )
-                _ueberholt_sperrzeit = (
-                    _mengen_ueberholt
-                    or self._gewitter_ueberholt_sperrzeit(trip, result, _radar_urgency)
-                )
-                # Beide Zahlen in EINER Zeile, damit im Nachhinein
-                # nachvollziehbar ist, GEGEN WAS entschieden wurde -- fuer
-                # beide Ausgaenge (Durchbruch und Stille).
-                logger.info(
-                    "Radar alert: Sperrzeit-Ueberholung fuer Trip %s geprueft — "
-                    "Vergleichsbasis %s mm, gemessene Menge %.1f mm: %s",
-                    trip.id,
-                    "unbekannt" if _basis_mm is None else f"{_basis_mm:.1f}",
-                    _menge_mm,
-                    "Durchbruch" if _ueberholt_sperrzeit else "Sperrzeit bleibt",
-                )
-                if not _ueberholt_sperrzeit:
-                    # Issue #2050 S4a (AC-9): ab hier liegt ein Abruf vor, also
-                    # reist auch die Frage mit, ob seine Gewitterpruefung lief.
-                    self._protokolliere_radar_unterdrueckung(
-                        trip, gate.reason, effective_channels,
-                        convective_checked=result.convective_checked,
-                    )
-                    continue
-                # Die Tages-Obergrenze wurde wegen des Abbruchs an der
-                # Sperrzeit nie geprueft (feste Reihenfolge, ADR-0021) -- der
-                # Durchbruch darf sie nicht stillschweigend mit-ueberspringen.
-                # Rein lesend; gebucht wird weiterhin erst nach Zustellung.
-                if not alert_daily_limit.is_allowed(
-                    self._user_id, now_utc, anchor_tz(trip, now_utc),
-                    reason="nowcast",
-                ):
-                    # Issue #2050 S3b (AC-22): auch DIESE Nachpruefung kennt
-                    # die Eskalations-Ausnahme. Beide Ausnahmen wirken
-                    # unabhaengig — ein Lauf kann an der Sperrzeit UND am
-                    # Budget haengen und beide durchbrechen; ohne die Pruefung
-                    # hier stoppte das erschoepfte Budget den Fall, bevor die
-                    # Ausnahme unten ueberhaupt erreichbar waere.
+                        continue
+                    # Die Tages-Obergrenze wurde wegen des Abbruchs an der
+                    # Sperrzeit nie geprueft (feste Reihenfolge, ADR-0021) -- der
+                    # Durchbruch darf sie nicht stillschweigend mit-ueberspringen.
+                    # Rein lesend; gebucht wird weiterhin erst nach Zustellung.
+                    if not alert_daily_limit.is_allowed(
+                        self._user_id, now_utc, anchor_tz(trip, now_utc),
+                        reason="nowcast",
+                    ):
+                        # Issue #2050 S3b (AC-22): auch DIESE Nachpruefung kennt
+                        # die Eskalations-Ausnahme. Beide Ausnahmen wirken
+                        # unabhaengig — ein Lauf kann an der Sperrzeit UND am
+                        # Budget haengen und beide durchbrechen; ohne die Pruefung
+                        # hier stoppte das erschoepfte Budget den Fall, bevor die
+                        # Ausnahme unten ueberhaupt erreichbar waere.
+                        _budget_durchbruch = self._eskalation_bricht_budget(
+                            trip, now_utc, _radar_urgency,
+                        )
+                        if not _budget_durchbruch:
+                            logger.debug(
+                                "Radar alert suppressed (Tages-Obergrenze nach "
+                                "Sperrzeit-Durchbruch) for trip %s", trip.id,
+                            )
+                            self._protokolliere_radar_unterdrueckung(
+                                trip, alert_log.REASON_DAILY_LIMIT, effective_channels,
+                                convective_checked=result.convective_checked,
+                            )
+                            continue
+                elif _budget_erschoepft:
+                    # Issue #2050 S3b (Szenario 7, AC-15 bis AC-17): das Gate hat
+                    # an der Tages-Obergrenze gehalten. Jetzt — und erst jetzt,
+                    # mit der Dringlichkeit dieses Abrufs in der Hand — entscheidet
+                    # der Aufrufer, ob die Lage sie durchbricht.
                     _budget_durchbruch = self._eskalation_bricht_budget(
                         trip, now_utc, _radar_urgency,
                     )
                     if not _budget_durchbruch:
                         logger.debug(
-                            "Radar alert suppressed (Tages-Obergrenze nach "
-                            "Sperrzeit-Durchbruch) for trip %s", trip.id,
+                            "Radar alert suppressed (Tages-Obergrenze, keine "
+                            "Eskalation) for trip %s", trip.id,
                         )
                         self._protokolliere_radar_unterdrueckung(
-                            trip, alert_log.REASON_DAILY_LIMIT, effective_channels,
+                            trip, gate.reason, effective_channels,
                             convective_checked=result.convective_checked,
                         )
                         continue
-            elif _budget_erschoepft:
-                # Issue #2050 S3b (Szenario 7, AC-15 bis AC-17): das Gate hat
-                # an der Tages-Obergrenze gehalten. Jetzt — und erst jetzt,
-                # mit der Dringlichkeit dieses Abrufs in der Hand — entscheidet
-                # der Aufrufer, ob die Lage sie durchbricht.
-                _budget_durchbruch = self._eskalation_bricht_budget(
-                    trip, now_utc, _radar_urgency,
-                )
-                if not _budget_durchbruch:
-                    logger.debug(
-                        "Radar alert suppressed (Tages-Obergrenze, keine "
-                        "Eskalation) for trip %s", trip.id,
+
+                # Issue #2009: EINE geteilte Schwelle statt zweier Literale
+                # (ADR-0021). Bewusst ueber die Modul-Referenz gelesen, nicht als
+                # `from ... import RADAR_ONSET_THRESHOLD_MIN` gebunden — eine
+                # gebundene Kopie waere eine stille Kopie und wuerde beim
+                # Nachziehen der Quelle auseinanderlaufen.
+                from services import radar_service as radar_service_mod
+
+                # Issue #2050 S4a (AC-1, Anforderung B-4): ein Fremdausfall der
+                # Quelle ist NIE eine Entwarnung. Ohne Frames gibt es keinen
+                # Beginn, und der Lauf faellt heute in denselben stummen Ausstieg
+                # wie eine ruhige Viertelstunde — im Protokoll ununterscheidbar von
+                # "geprueft, alles ruhig". Geprueft wird deshalb VOR dem
+                # Ausloese-Guard: `radar_alert_due()` bleibt unveraendert eine
+                # reine Aussage ueber die LAGE, nicht ueber die Datenlage.
+                if result.data_unavailable:
+                    logger.warning(
+                        "Radar alert: Quellenausfall fuer Trip %s (keine Frames aus "
+                        "der Quelle) — kein Alarm; der Ausfall wird als solcher "
+                        "protokolliert statt als ruhige Viertelstunde.", trip.id,
                     )
                     self._protokolliere_radar_unterdrueckung(
-                        trip, gate.reason, effective_channels,
+                        trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
                         convective_checked=result.convective_checked,
                     )
                     continue
 
-            # Issue #2009: EINE geteilte Schwelle statt zweier Literale
-            # (ADR-0021). Bewusst ueber die Modul-Referenz gelesen, nicht als
-            # `from ... import RADAR_ONSET_THRESHOLD_MIN` gebunden — eine
-            # gebundene Kopie waere eine stille Kopie und wuerde beim
-            # Nachziehen der Quelle auseinanderlaufen.
-            from services import radar_service as radar_service_mod
+                if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
+                    continue
+                # Issue #2261 (A-1, R3, Adversary F001): hat die Punktwahl keinen
+                # Punkt geliefert, steht hier noch das ungefilterte Punkt-0-
+                # Ergebnis — auch dort gilt das Aufenthaltsfenster (E_0).
+                if _wahl is None and not _im_aufenthaltsfenster(result, _fenster_ende[0]):
+                    continue
 
-            # Issue #2050 S4a (AC-1, Anforderung B-4): ein Fremdausfall der
-            # Quelle ist NIE eine Entwarnung. Ohne Frames gibt es keinen
-            # Beginn, und der Lauf faellt heute in denselben stummen Ausstieg
-            # wie eine ruhige Viertelstunde — im Protokoll ununterscheidbar von
-            # "geprueft, alles ruhig". Geprueft wird deshalb VOR dem
-            # Ausloese-Guard: `radar_alert_due()` bleibt unveraendert eine
-            # reine Aussage ueber die LAGE, nicht ueber die Datenlage.
-            if result.data_unavailable:
-                logger.warning(
-                    "Radar alert: Quellenausfall fuer Trip %s (keine Frames aus "
-                    "der Quelle) — kein Alarm; der Ausfall wird als solcher "
-                    "protokolliert statt als ruhige Viertelstunde.", trip.id,
+                # Issue #2050 S2b: ohne kuenftigen Beginn (laufendes Ereignis, das
+                # in der laufenden Viertelstunde endet) waere `timedelta(
+                # minutes=None)` ein Absturz. Bezugszeitpunkt ist dann JETZT --
+                # dieser Wert traegt die Ereignis-Identitaet (Entdopplung) und den
+                # Briefing-Vergleich, beide brauchen einen Zeitpunkt (Bruchstelle 3).
+                _onset_dt = now_utc + timedelta(minutes=result.onset_minutes or 0)
+
+
+                # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
+                # Issue #1667 S3: gelesen wird unter dem Datum, dem das GEWAEHLTE
+                # Segment entstammt — nicht unter `today`. Stammt es vom Vortag
+                # (Nacht-Ankunft), liegt sein Briefing-Schnappschuss auch unter
+                # dem Vortag; mit `today` fiele der Vergleich ins Leere und ein
+                # gerade gewonnener Alarm bliebe unbegruendet unterdrueckt bzw.
+                # der angekuendigte Regen unerkannt.
+                from services.weather_snapshot import WeatherSnapshotService
+                # Issue #2050 S6 (E-1): `segment_fetched_at=True` -- die
+                # Vergleichsbasis im Protokoll soll den Abruf benennen, auf den
+                # sich der Briefing-Vergleich wirklich beruft. Nur HIER opt-in
+                # (s. `load_dated()`): der Alarm-Footer #1916 laeuft ueber
+                # `_get_cached_weather()` und bleibt beim Schreibzeitpunkt.
+                _snapshot = WeatherSnapshotService(self._user_id).load_dated(
+                    trip.id, segment_date, segment_fetched_at=True,
                 )
-                self._protokolliere_radar_unterdrueckung(
-                    trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
+                _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
+                _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)
+                # Issue #2050 S6 (E-1): die an DIESEM Zweig bekannten Groessen --
+                # EINMAL abgeleitet und an allen drei Protokollstellen dieses
+                # Zweigs identisch (Briefing-Gate, Ereignis-Identitaet, Versand).
+                # Issue #2050 S4b: `_punkte`/`_zonen_ergebnisse` sind die ROHFORM
+                # der Ausdehnungs-Messung, positionsgleich — aus ihnen entsteht die
+                # Buchfuehrung ueber die ausgefallenen Messpunkte. Die verdichteten
+                # Zonen taugen dafuer nicht: `derive_rain_zones` uebergeht eine
+                # Luecke kommentarlos, danach ist sie nicht mehr rekonstruierbar.
+                _e1 = _radar_e1_fields(
+                    entity_id=trip.id, result=result, now_utc=now_utc,
+                    onset_dt=_onset_dt, active=active, snapshot=_snapshot,
+                    punkte=_punkte, zonen_ergebnisse=_zonen_ergebnisse,
+                    trigger_km=_trigger_km,
+                )
+                # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
+                # durchbricht die Briefing-Unterdrückung. Normaler (nicht-konvektiver)
+                # angekündigter Regen bleibt unterdrückt (reines Δ-Modell).
+                #
+                # #2020 A3: Ueberholungs-Pruefung statt binaerer Sperre. Menge gegen
+                # Menge (window_precip_mm vs. _briefing_precip), Relevanz-Untergrenze
+                # ebenfalls ueber die Menge (F008, PO-Entscheid 2026-08-21) --
+                # NICHT mehr ueber die Spitzenrate: anhaltender, nicht-spitzer Regen
+                # ist per Definition nicht spitz und fiel durch die alte
+                # Ratenschwelle durch, obwohl er die Ankuendigung real ueberholte
+                # (belegt: 3,9 mm/h ueber 50 Min = 3,575 mm gegen 1,0 mm Ankuendigung,
+                # 3,6-fach -- alte Regel: kein Alarm). UND-Verknuepfung (nicht ODER)
+                # haelt die Regel fuer festen _briefing_precip monoton in beiden
+                # Groessen (AC-3).
+                # Issue #2261 (A-1, C-1): eine nicht vergleichbare Menge (Beginn
+                # >= 60 Min) ueberholt eine Ankuendigung nie.
+                _overtaking = (
+                    _briefing_announced
+                    and _menge_vergleichbar
+                    and result.window_precip_mm >= _briefing_precip * _BRIEFING_OVERTAKE_FACTOR
+                    and result.window_precip_mm >= _OVERTAKE_MIN_ABSOLUTE_MM
+                )
+                # Issue #2050 S4a (AC-7, Anforderung B-4): die Unterdrueckung setzt
+                # jetzt voraus, dass die Gewitterpruefung STATTGEFUNDEN hat.
+                # `is_convective` ist per Vorgabe `False` und wird ohne den
+                # Gewitter-Beiabruf nie gesetzt — aus "nicht geprueft" wurde still
+                # "kein Gewitter", und der Sicherheits-Override aus #883 liess sich
+                # damit durch eine NIE STATTGEFUNDENE Pruefung aushebeln. Eine
+                # durchgefuehrte, negative Pruefung traegt die Unterdrueckung
+                # unveraendert (Δ-Modell, Gegenprobe AC-8).
+                if (
+                    _briefing_announced and result.convective_checked
+                    and not result.is_convective and not _overtaking
+                ):
+                    logger.debug(
+                        f"Radar alert suppressed: briefing had {_briefing_precip} mm for {trip.id}"
+                    )
+                    try:
+                        alert_log.append_suppressed_entry(
+                            self._user_id, entity_id=trip.id, entity_type="trip",
+                            reason=alert_log.REASON_NOWCAST,
+                            gate_reason=f"briefing_announced:{_briefing_precip}mm",
+                            effective_channels=effective_channels,
+                            **_e1,
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "Radar alert: Unterdrueckungs-Protokoll (Briefing-Ankuendigung) "
+                            "fuer Trip %s fehlgeschlagen (%s) — der Alarm blieb aus, nur der "
+                            "Protokoll-Eintrag fehlt.", trip.id, e,
+                        )
+                    continue
+
+                # Issue #2050 S4c (Entscheidung 2): der Doppel-Alert-Guard (#818)
+                # ist HIER entfernt, nicht repariert -- er las `precip:<segment>`,
+                # geschrieben wird das Melde-Gedaechtnis aber als
+                # `<change.metric>:<segment_id>` (der reale Schluessel heisst
+                # `precip_sum_mm:<segment>`); der Niederschlags-Teil war seit #818
+                # toter Code, ohne Eskalations-Ausnahme. Die Paarung "Δ meldete,
+                # Radar zieht nach" laeuft ab jetzt ausschliesslich ueber
+                # `check_event_identity_gate()` weiter unten -- der Δ-Zweig
+                # registriert seine nassen Alarme jetzt dort (`check_and_send_alerts`),
+                # der Grund heisst fuer diese Paarung `event_duplicate` statt
+                # `double_alert_guard` (AC-14/AC-15). Der Grund-Code selbst bleibt
+                # in `alert_log.py`/`undelivered_hint.py` fuer historische
+                # Eintraege erhalten.
+
+                # Kein Kanal konfiguriert → kein Alert (nichts zu recorden).
+                # Spec-Nachtrag 2026-08-11 (#1701, "die achte Stelle"): bewusst
+                # gegen das effektive Kanal-Set gefuehrt statt gegen eine vierte
+                # can_send_*()-Bereitschaftsfrage -- ein Trip mit ausschliesslich
+                # Premium-SMS hat kein `sms_to`, `can_send_sms()` waere False,
+                # obwohl ein funktionsfaehiger Kanal konfiguriert ist.
+                if not effective_channels:
+                    logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
+                    continue
+
+                # Cooldown-Anzeige
+                if cooldown_min % 60 == 0:
+                    n = cooldown_min // 60
+                    cooldown_display = f"{n} Stunde" if n == 1 else f"{n} Stunden"
+                else:
+                    cooldown_display = f"{cooldown_min} Minuten"
+
+                # Issue #952 (reopened): kurzes Intensitäts-Label (kein format_now_text-Satz
+                # mehr — der Renderer haengt selbst "ab {onset_time}" an). Briefing-Kontext
+                # wandert in ein eigenes Feld (4. Datenblock-Zeile, nur E-Mail).
+                # Issue #1310 (AC-4 aus #883 Slice 4): der Override-Fall braucht einen
+                # eigenen dritten Zustand. "bereits angekündigt" allein ist zwar wahr,
+                # verschweigt aber die Zuspitzung, wegen der überhaupt gesendet wurde --
+                # angekündigter Regen, der laut Radar konvektiv (Gewitter/Hagel) wird.
+                # Ohne Konvektion kommt der Zweig hier gar nicht an (oben `continue`);
+                # die Fallunterscheidung bleibt trotzdem explizit, damit die Aussage
+                # auch dann richtig ist, wenn die Unterdrückung oben je gelockert wird.
+                if _briefing_announced and result.is_convective:
+                    _briefing_context = "bereits angekündigt — jetzt akut"
+                elif _briefing_announced:
+                    _briefing_context = "bereits angekündigt"
+                else:
+                    _briefing_context = "nicht angekündigt"
+                # F002: Anzeige-Kontext mitten im Satz ("leichter Regen") -- erstes
+                # Zeichen kleinschreiben; intensity_to_text() selbst bleibt Title-Case
+                # (andere Caller nutzen es am Satzanfang). Alle Labels beginnen mit
+                # Adjektiv, daher ist [:1].lower() hier immer korrekt.
+                _label = result.intensity_label
+                _label = _label[:1].lower() + _label[1:]
+                # Issue #2009: Uhrzeit und Tagesbezug aus DEMSELBEN Zeitpunkt
+                # (`_onset_dt`, oben berechnet) und
+                # DERSELBEN Zone — eine zweite Herleitung koennte auseinander-
+                # laufen und "00:23" wieder mehrdeutig machen.
+                _onset_time_str = local_fmt(_onset_dt, tz)
+                # Issue #2051 S1: Ende-Uhrzeit, ihr EIGENER Tagesbezug und der
+                # R4-Waechter ueber die geteilte Fassung, die auch das
+                # Ortsvergleich-Buendel benutzt (ADR-0021). Der Waechter reist
+                # ausdruecklich MIT: er waehlt im Renderer die Textform
+                # (Untergrenze vs. bekanntes Ende, Spec v1.1). Lazy importiert wie
+                # die uebrigen Renderer-Bausteine dieses Pfads.
+                from output.renderers.alert.official_alerts import (
+                    _de_weekday_short,  # Issue #2054: EIN Kuerzel-Erzeuger
+                )
+                from output.renderers.alert.project import (
+                    event_end_display, location_sharpness_display, source_reach_display,
+                )
+
+                _end_time_str, _end_day_offset, _end_ongoing, _end_weekday = (
+                    event_end_display(now_utc, result, tz)
+                )
+                # Issue #2054: Versatz und Wochentagskuerzel des BEGINNS aus
+                # DEMSELBEN Zeitpunkt und DERSELBEN Zone -- eine zweite Herleitung
+                # koennte auseinanderlaufen (Muster #2009 o.).
+                _onset_day_offset = day_offset(now_utc, _onset_dt, tz)
+                # Issue #2051 S3: Reichweite und Guete-Grenzzeit ueber dieselben
+                # geteilten Fassungen, die auch der Ortsvergleich-Pfad benutzt
+                # (ADR-0021).
+                _reach_time_str, _reach_day_offset = source_reach_display(
+                    now_utc, result, tz,
+                )
+                _sharp_time_str, _sharp_day_offset = location_sharpness_display(
+                    now_utc, result.onset_minutes,
+                    getattr(result, "event_end_minutes", None), tz,
+                )
+                _radar_request = RadarAlertRequest(
+                    onset_minutes=result.onset_minutes,
+                    already_running=result.already_running,  # Issue #2050 S2b
+                    onset_time=_onset_time_str,
+                    onset_day_offset=_onset_day_offset,
+                    onset_weekday=(
+                        _de_weekday_short(local_dt(_onset_dt, tz))
+                        if _onset_day_offset else None
+                    ),
+                    km_from=active.start_point.distance_from_start_km,
+                    km_to=active.end_point.distance_from_start_km,
+                    # Issue #2036/#2051 S2a: stammen diese km-Zahlen aus echter
+                    # GPX-Wegstrecke? Die Etappe weiss es (`distance_measured`),
+                    # der Onset-Pfad hat sie bis hierher nie gefragt — ohne die
+                    # Antwort bliebe die Ausdehnung unten auf jeder Etappe stumm.
+                    km_measured=getattr(active, "distance_measured", False),
+                    # Issue #2051 S2a: die Nass-Zonen der Reststrecke.
+                    rain_zones=_rain_zones,
+                    # Issue #2050 S4b-2: die Kennzeichnung im Text speist sich aus
+                    # DENSELBEN beiden Groessen, die schon Ausloeseentscheidung
+                    # (S4a) und Alarmprotokoll (S4b) fuehren -- die Messluecken
+                    # ueber `_e1`, also ueber die eine bestehende Ableitung
+                    # `_messluecken_felder`. Eine zweite Herleitung koennte
+                    # auseinanderlaufen und Text und Protokoll verschiedene
+                    # Wahrheiten erzaehlen lassen.
                     convective_checked=result.convective_checked,
+                    gap_km=tuple(
+                        _e1.get("measurement_gaps", {}).get("gap_km", ())
+                    ),
+                    # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne
+                    # liefert — nur zusaetzlich mit ihrer Kennung, damit der
+                    # Nowcast denselben Ort benennt wie die amtliche Warnung.
+                    segment_id=normalize_segment_id(active.segment_id),
+                    is_convective=result.is_convective,
+                    intensity_label=_label,
+                    source_label=radar_svc.source_label(result.source),
+                    briefing_context=_briefing_context,
+                    # Issue #2122: das Datum, dem das gewaehlte Segment ENTSTAMMT
+                    # (kann der Vortag sein, s. `_resolve_alert_segment`-Docstring)
+                    # -- NICHT `today` (`notification_service.send_radar_alert`
+                    # leitet daraus die Etappen-Nummer ab, AC-6).
+                    segment_date=segment_date,
+                    # Issue #2046: die Menge der Stunde AB DEM BEGINN aus DEMSELBEN
+                    # NowcastResult, das schon onset_minutes/intensity_label
+                    # liefert (analog `is_convective=result.is_convective`) -- rein
+                    # beschreibend, ohne Einfluss auf die Ausloeseregel.
+                    onset_precip_mm=result.onset_precip_mm,
+                    # Issue #2051 S1: Ende desselben Ereignisses -- beschreibend,
+                    # ohne Einfluss auf die Ausloeseregel (wie onset_precip_mm).
+                    event_end_time=_end_time_str,
+                    event_end_day_offset=_end_day_offset,
+                    event_end_weekday=_end_weekday,  # Issue #2054
+                    event_ongoing_beyond_horizon=_end_ongoing,
+                    # Issue #2051 S3: additiv.
+                    source_reach_time=_reach_time_str,
+                    source_reach_day_offset=_reach_day_offset,
+                    location_sharpness_limit_time=_sharp_time_str,
+                    location_sharpness_limit_day_offset=_sharp_day_offset,
+                    tz=tz,
                 )
-                continue
 
-            if not radar_alert_due(result, radar_service_mod.RADAR_ONSET_THRESHOLD_MIN):
-                continue
-            # Issue #2261 (A-1, R3, Adversary F001): hat die Punktwahl keinen
-            # Punkt geliefert, steht hier noch das ungefilterte Punkt-0-
-            # Ergebnis — auch dort gilt das Aufenthaltsfenster (E_0).
-            if _wahl is None and not _im_aufenthaltsfenster(result, _fenster_ende[0]):
-                continue
-
-            # Issue #2050 S2b: ohne kuenftigen Beginn (laufendes Ereignis, das
-            # in der laufenden Viertelstunde endet) waere `timedelta(
-            # minutes=None)` ein Absturz. Bezugszeitpunkt ist dann JETZT --
-            # dieser Wert traegt die Ereignis-Identitaet (Entdopplung) und den
-            # Briefing-Vergleich, beide brauchen einen Zeitpunkt (Bruchstelle 3).
-            _onset_dt = now_utc + timedelta(minutes=result.onset_minutes or 0)
-
-
-            # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)
-            # Issue #1667 S3: gelesen wird unter dem Datum, dem das GEWAEHLTE
-            # Segment entstammt — nicht unter `today`. Stammt es vom Vortag
-            # (Nacht-Ankunft), liegt sein Briefing-Schnappschuss auch unter
-            # dem Vortag; mit `today` fiele der Vergleich ins Leere und ein
-            # gerade gewonnener Alarm bliebe unbegruendet unterdrueckt bzw.
-            # der angekuendigte Regen unerkannt.
-            from services.weather_snapshot import WeatherSnapshotService
-            # Issue #2050 S6 (E-1): `segment_fetched_at=True` -- die
-            # Vergleichsbasis im Protokoll soll den Abruf benennen, auf den
-            # sich der Briefing-Vergleich wirklich beruft. Nur HIER opt-in
-            # (s. `load_dated()`): der Alarm-Footer #1916 laeuft ueber
-            # `_get_cached_weather()` und bleibt beim Schreibzeitpunkt.
-            _snapshot = WeatherSnapshotService(self._user_id).load_dated(
-                trip.id, segment_date, segment_fetched_at=True,
-            )
-            _briefing_precip = self._briefing_precip_for_onset(_snapshot, active.segment_id, _onset_dt)
-            _briefing_announced = (_briefing_precip is not None and _briefing_precip >= 0.5)
-            # Issue #2050 S6 (E-1): die an DIESEM Zweig bekannten Groessen --
-            # EINMAL abgeleitet und an allen drei Protokollstellen dieses
-            # Zweigs identisch (Briefing-Gate, Ereignis-Identitaet, Versand).
-            # Issue #2050 S4b: `_punkte`/`_zonen_ergebnisse` sind die ROHFORM
-            # der Ausdehnungs-Messung, positionsgleich — aus ihnen entsteht die
-            # Buchfuehrung ueber die ausgefallenen Messpunkte. Die verdichteten
-            # Zonen taugen dafuer nicht: `derive_rain_zones` uebergeht eine
-            # Luecke kommentarlos, danach ist sie nicht mehr rekonstruierbar.
-            _e1 = _radar_e1_fields(
-                entity_id=trip.id, result=result, now_utc=now_utc,
-                onset_dt=_onset_dt, active=active, snapshot=_snapshot,
-                punkte=_punkte, zonen_ergebnisse=_zonen_ergebnisse,
-                trigger_km=_trigger_km,
-            )
-            # Sicherheits-Override (Slice 4, #883): konvektive Gefahr (Gewitter/Hagel)
-            # durchbricht die Briefing-Unterdrückung. Normaler (nicht-konvektiver)
-            # angekündigter Regen bleibt unterdrückt (reines Δ-Modell).
-            #
-            # #2020 A3: Ueberholungs-Pruefung statt binaerer Sperre. Menge gegen
-            # Menge (window_precip_mm vs. _briefing_precip), Relevanz-Untergrenze
-            # ebenfalls ueber die Menge (F008, PO-Entscheid 2026-08-21) --
-            # NICHT mehr ueber die Spitzenrate: anhaltender, nicht-spitzer Regen
-            # ist per Definition nicht spitz und fiel durch die alte
-            # Ratenschwelle durch, obwohl er die Ankuendigung real ueberholte
-            # (belegt: 3,9 mm/h ueber 50 Min = 3,575 mm gegen 1,0 mm Ankuendigung,
-            # 3,6-fach -- alte Regel: kein Alarm). UND-Verknuepfung (nicht ODER)
-            # haelt die Regel fuer festen _briefing_precip monoton in beiden
-            # Groessen (AC-3).
-            # Issue #2261 (A-1, C-1): eine nicht vergleichbare Menge (Beginn
-            # >= 60 Min) ueberholt eine Ankuendigung nie.
-            _overtaking = (
-                _briefing_announced
-                and _menge_vergleichbar
-                and result.window_precip_mm >= _briefing_precip * _BRIEFING_OVERTAKE_FACTOR
-                and result.window_precip_mm >= _OVERTAKE_MIN_ABSOLUTE_MM
-            )
-            # Issue #2050 S4a (AC-7, Anforderung B-4): die Unterdrueckung setzt
-            # jetzt voraus, dass die Gewitterpruefung STATTGEFUNDEN hat.
-            # `is_convective` ist per Vorgabe `False` und wird ohne den
-            # Gewitter-Beiabruf nie gesetzt — aus "nicht geprueft" wurde still
-            # "kein Gewitter", und der Sicherheits-Override aus #883 liess sich
-            # damit durch eine NIE STATTGEFUNDENE Pruefung aushebeln. Eine
-            # durchgefuehrte, negative Pruefung traegt die Unterdrueckung
-            # unveraendert (Δ-Modell, Gegenprobe AC-8).
-            if (
-                _briefing_announced and result.convective_checked
-                and not result.is_convective and not _overtaking
-            ):
-                logger.debug(
-                    f"Radar alert suppressed: briefing had {_briefing_precip} mm for {trip.id}"
+                # Kanal-Schwelle (ADR-0046) auf dem oben einmalig berechneten,
+                # geteilten Kanal-Set. Bis #1752 stand hier ein dritter Aufruf der
+                # eigenen Radar-Ableitung samt zweitem Leer-Check — beides
+                # entfallen: die Aufloesung ist rein, `trip` bleibt zwischen dem
+                # Leer-Check oben (`if not effective_channels`) und dieser Stelle
+                # unveraendert.
+                # Issue #2050 S3b: `_radar_urgency` steht bereits — es wird jetzt
+                # direkt nach dem Nowcast-Abruf gebildet, weil die
+                # Eskalations-Ausnahme am Tagesbudget es dort schon braucht. Eine
+                # zweite Ableitung hier waere eine stille Kopie derselben Groesse.
+                _radar_allowed, _radar_suppressed = alert_channel_threshold.split_by_threshold(
+                    effective_channels, _radar_urgency, trip.alert_channel_thresholds,
                 )
-                try:
-                    alert_log.append_suppressed_entry(
-                        self._user_id, entity_id=trip.id, entity_type="trip",
-                        reason=alert_log.REASON_NOWCAST,
-                        gate_reason=f"briefing_announced:{_briefing_precip}mm",
-                        effective_channels=effective_channels,
-                        **_e1,
-                    )
-                except Exception as e:
-                    logger.error(
-                        "Radar alert: Unterdrueckungs-Protokoll (Briefing-Ankuendigung) "
-                        "fuer Trip %s fehlgeschlagen (%s) — der Alarm blieb aus, nur der "
-                        "Protokoll-Eintrag fehlt.", trip.id, e,
-                    )
-                continue
 
-            # Issue #2050 S4c (Entscheidung 2): der Doppel-Alert-Guard (#818)
-            # ist HIER entfernt, nicht repariert -- er las `precip:<segment>`,
-            # geschrieben wird das Melde-Gedaechtnis aber als
-            # `<change.metric>:<segment_id>` (der reale Schluessel heisst
-            # `precip_sum_mm:<segment>`); der Niederschlags-Teil war seit #818
-            # toter Code, ohne Eskalations-Ausnahme. Die Paarung "Δ meldete,
-            # Radar zieht nach" laeuft ab jetzt ausschliesslich ueber
-            # `check_event_identity_gate()` weiter unten -- der Δ-Zweig
-            # registriert seine nassen Alarme jetzt dort (`check_and_send_alerts`),
-            # der Grund heisst fuer diese Paarung `event_duplicate` statt
-            # `double_alert_guard` (AC-14/AC-15). Der Grund-Code selbst bleibt
-            # in `alert_log.py`/`undelivered_hint.py` fuer historische
-            # Eintraege erhalten.
-
-            # Kein Kanal konfiguriert → kein Alert (nichts zu recorden).
-            # Spec-Nachtrag 2026-08-11 (#1701, "die achte Stelle"): bewusst
-            # gegen das effektive Kanal-Set gefuehrt statt gegen eine vierte
-            # can_send_*()-Bereitschaftsfrage -- ein Trip mit ausschliesslich
-            # Premium-SMS hat kein `sms_to`, `can_send_sms()` waere False,
-            # obwohl ein funktionsfaehiger Kanal konfiguriert ist.
-            if not effective_channels:
-                logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
-                continue
-
-            # Cooldown-Anzeige
-            if cooldown_min % 60 == 0:
-                n = cooldown_min // 60
-                cooldown_display = f"{n} Stunde" if n == 1 else f"{n} Stunden"
-            else:
-                cooldown_display = f"{cooldown_min} Minuten"
-
-            # Issue #952 (reopened): kurzes Intensitäts-Label (kein format_now_text-Satz
-            # mehr — der Renderer haengt selbst "ab {onset_time}" an). Briefing-Kontext
-            # wandert in ein eigenes Feld (4. Datenblock-Zeile, nur E-Mail).
-            # Issue #1310 (AC-4 aus #883 Slice 4): der Override-Fall braucht einen
-            # eigenen dritten Zustand. "bereits angekündigt" allein ist zwar wahr,
-            # verschweigt aber die Zuspitzung, wegen der überhaupt gesendet wurde --
-            # angekündigter Regen, der laut Radar konvektiv (Gewitter/Hagel) wird.
-            # Ohne Konvektion kommt der Zweig hier gar nicht an (oben `continue`);
-            # die Fallunterscheidung bleibt trotzdem explizit, damit die Aussage
-            # auch dann richtig ist, wenn die Unterdrückung oben je gelockert wird.
-            if _briefing_announced and result.is_convective:
-                _briefing_context = "bereits angekündigt — jetzt akut"
-            elif _briefing_announced:
-                _briefing_context = "bereits angekündigt"
-            else:
-                _briefing_context = "nicht angekündigt"
-            # F002: Anzeige-Kontext mitten im Satz ("leichter Regen") -- erstes
-            # Zeichen kleinschreiben; intensity_to_text() selbst bleibt Title-Case
-            # (andere Caller nutzen es am Satzanfang). Alle Labels beginnen mit
-            # Adjektiv, daher ist [:1].lower() hier immer korrekt.
-            _label = result.intensity_label
-            _label = _label[:1].lower() + _label[1:]
-            # Issue #2009: Uhrzeit und Tagesbezug aus DEMSELBEN Zeitpunkt
-            # (`_onset_dt`, oben berechnet) und
-            # DERSELBEN Zone — eine zweite Herleitung koennte auseinander-
-            # laufen und "00:23" wieder mehrdeutig machen.
-            _onset_time_str = local_fmt(_onset_dt, tz)
-            # Issue #2051 S1: Ende-Uhrzeit, ihr EIGENER Tagesbezug und der
-            # R4-Waechter ueber die geteilte Fassung, die auch das
-            # Ortsvergleich-Buendel benutzt (ADR-0021). Der Waechter reist
-            # ausdruecklich MIT: er waehlt im Renderer die Textform
-            # (Untergrenze vs. bekanntes Ende, Spec v1.1). Lazy importiert wie
-            # die uebrigen Renderer-Bausteine dieses Pfads.
-            from output.renderers.alert.official_alerts import (
-                _de_weekday_short,  # Issue #2054: EIN Kuerzel-Erzeuger
-            )
-            from output.renderers.alert.project import (
-                event_end_display, location_sharpness_display, source_reach_display,
-            )
-
-            _end_time_str, _end_day_offset, _end_ongoing, _end_weekday = (
-                event_end_display(now_utc, result, tz)
-            )
-            # Issue #2054: Versatz und Wochentagskuerzel des BEGINNS aus
-            # DEMSELBEN Zeitpunkt und DERSELBEN Zone -- eine zweite Herleitung
-            # koennte auseinanderlaufen (Muster #2009 o.).
-            _onset_day_offset = day_offset(now_utc, _onset_dt, tz)
-            # Issue #2051 S3: Reichweite und Guete-Grenzzeit ueber dieselben
-            # geteilten Fassungen, die auch der Ortsvergleich-Pfad benutzt
-            # (ADR-0021).
-            _reach_time_str, _reach_day_offset = source_reach_display(
-                now_utc, result, tz,
-            )
-            _sharp_time_str, _sharp_day_offset = location_sharpness_display(
-                now_utc, result.onset_minutes,
-                getattr(result, "event_end_minutes", None), tz,
-            )
-            _radar_request = RadarAlertRequest(
-                onset_minutes=result.onset_minutes,
-                already_running=result.already_running,  # Issue #2050 S2b
-                onset_time=_onset_time_str,
-                onset_day_offset=_onset_day_offset,
-                onset_weekday=(
-                    _de_weekday_short(local_dt(_onset_dt, tz))
-                    if _onset_day_offset else None
-                ),
-                km_from=active.start_point.distance_from_start_km,
-                km_to=active.end_point.distance_from_start_km,
-                # Issue #2036/#2051 S2a: stammen diese km-Zahlen aus echter
-                # GPX-Wegstrecke? Die Etappe weiss es (`distance_measured`),
-                # der Onset-Pfad hat sie bis hierher nie gefragt — ohne die
-                # Antwort bliebe die Ausdehnung unten auf jeder Etappe stumm.
-                km_measured=getattr(active, "distance_measured", False),
-                # Issue #2051 S2a: die Nass-Zonen der Reststrecke.
-                rain_zones=_rain_zones,
-                # Issue #2050 S4b-2: die Kennzeichnung im Text speist sich aus
-                # DENSELBEN beiden Groessen, die schon Ausloeseentscheidung
-                # (S4a) und Alarmprotokoll (S4b) fuehren -- die Messluecken
-                # ueber `_e1`, also ueber die eine bestehende Ableitung
-                # `_messluecken_felder`. Eine zweite Herleitung koennte
-                # auseinanderlaufen und Text und Protokoll verschiedene
-                # Wahrheiten erzaehlen lassen.
-                convective_checked=result.convective_checked,
-                gap_km=tuple(
-                    _e1.get("measurement_gaps", {}).get("gap_km", ())
-                ),
-                # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne
-                # liefert — nur zusaetzlich mit ihrer Kennung, damit der
-                # Nowcast denselben Ort benennt wie die amtliche Warnung.
-                segment_id=normalize_segment_id(active.segment_id),
-                is_convective=result.is_convective,
-                intensity_label=_label,
-                source_label=radar_svc.source_label(result.source),
-                briefing_context=_briefing_context,
-                # Issue #2122: das Datum, dem das gewaehlte Segment ENTSTAMMT
-                # (kann der Vortag sein, s. `_resolve_alert_segment`-Docstring)
-                # -- NICHT `today` (`notification_service.send_radar_alert`
-                # leitet daraus die Etappen-Nummer ab, AC-6).
-                segment_date=segment_date,
-                # Issue #2046: die Menge der Stunde AB DEM BEGINN aus DEMSELBEN
-                # NowcastResult, das schon onset_minutes/intensity_label
-                # liefert (analog `is_convective=result.is_convective`) -- rein
-                # beschreibend, ohne Einfluss auf die Ausloeseregel.
-                onset_precip_mm=result.onset_precip_mm,
-                # Issue #2051 S1: Ende desselben Ereignisses -- beschreibend,
-                # ohne Einfluss auf die Ausloeseregel (wie onset_precip_mm).
-                event_end_time=_end_time_str,
-                event_end_day_offset=_end_day_offset,
-                event_end_weekday=_end_weekday,  # Issue #2054
-                event_ongoing_beyond_horizon=_end_ongoing,
-                # Issue #2051 S3: additiv.
-                source_reach_time=_reach_time_str,
-                source_reach_day_offset=_reach_day_offset,
-                location_sharpness_limit_time=_sharp_time_str,
-                location_sharpness_limit_day_offset=_sharp_day_offset,
-                tz=tz,
-            )
-
-            # Kanal-Schwelle (ADR-0046) auf dem oben einmalig berechneten,
-            # geteilten Kanal-Set. Bis #1752 stand hier ein dritter Aufruf der
-            # eigenen Radar-Ableitung samt zweitem Leer-Check — beides
-            # entfallen: die Aufloesung ist rein, `trip` bleibt zwischen dem
-            # Leer-Check oben (`if not effective_channels`) und dieser Stelle
-            # unveraendert.
-            # Issue #2050 S3b: `_radar_urgency` steht bereits — es wird jetzt
-            # direkt nach dem Nowcast-Abruf gebildet, weil die
-            # Eskalations-Ausnahme am Tagesbudget es dort schon braucht. Eine
-            # zweite Ableitung hier waere eine stille Kopie derselben Groesse.
-            _radar_allowed, _radar_suppressed = alert_channel_threshold.split_by_threshold(
-                effective_channels, _radar_urgency, trip.alert_channel_thresholds,
-            )
-
-            # Issue #1467 S4b-1: quellenuebergreifende Ereignis-Identitaet --
-            # LETZTE Stufe vor dem Versand (AC-12), kanaluebergreifend (V3,
-            # daher NACH der Kanal-Schwelle oben berechnet, aber VOR dem
-            # eigentlichen Versand geprueft). Ein Nowcast ist immer Klasse
-            # 'wet' (T2, AC-4b) -- `resolve_hazard_class` bekommt hier NIE
-            # `None`.
-            # Issue #2261 (A-1, C-2): {aktives Segment} ∪ {Segment zur
-            # Ereigniszeit} — EINE Liste fuer Pruefung und Registrierung.
-            _ereignis_segmente = radar_ereignis_segmente(trip, active, _onset_dt)
-            _identity_gate = check_event_identity_gate(
-                user_id=self._user_id, entity_id=trip.id,
-                hazard_class=resolve_hazard_class(is_convective=_radar_request.is_convective),
-                segment_ids=_ereignis_segmente,
-                severity=_radar_urgency, now=now_utc, point_at=_onset_dt,
-                # Issue #2065: dieselbe Mengen-Feststellung, die schon die
-                # Sperrzeit ueberholt hat -- die Stufenskala saettigt bei
-                # 4 mm/h und kann die Verschaerfung nicht sehen. Ohne diese
-                # Haelfte bliebe der Alarm aus, nur mit anderem Grund.
-                quantitative_escalation=_mengen_ueberholt,
-            )
-            if not _identity_gate.allowed:
-                logger.debug(
-                    f"Radar alert suppressed ({_identity_gate.reason}) for trip {trip.id}"
+                # Issue #1467 S4b-1: quellenuebergreifende Ereignis-Identitaet --
+                # LETZTE Stufe vor dem Versand (AC-12), kanaluebergreifend (V3,
+                # daher NACH der Kanal-Schwelle oben berechnet, aber VOR dem
+                # eigentlichen Versand geprueft). Ein Nowcast ist immer Klasse
+                # 'wet' (T2, AC-4b) -- `resolve_hazard_class` bekommt hier NIE
+                # `None`.
+                # Issue #2261 (A-1, C-2): {aktives Segment} ∪ {Segment zur
+                # Ereigniszeit} — EINE Liste fuer Pruefung und Registrierung.
+                _ereignis_segmente = radar_ereignis_segmente(trip, active, _onset_dt)
+                _identity_gate = check_event_identity_gate(
+                    user_id=self._user_id, entity_id=trip.id,
+                    hazard_class=resolve_hazard_class(is_convective=_radar_request.is_convective),
+                    segment_ids=_ereignis_segmente,
+                    severity=_radar_urgency, now=now_utc, point_at=_onset_dt,
+                    # Issue #2065: dieselbe Mengen-Feststellung, die schon die
+                    # Sperrzeit ueberholt hat -- die Stufenskala saettigt bei
+                    # 4 mm/h und kann die Verschaerfung nicht sehen. Ohne diese
+                    # Haelfte bliebe der Alarm aus, nur mit anderem Grund.
+                    quantitative_escalation=_mengen_ueberholt,
                 )
-                try:
-                    alert_log.append_suppressed_entry(
-                        self._user_id, entity_id=trip.id, entity_type="trip",
-                        reason=alert_log.REASON_NOWCAST, gate_reason=_identity_gate.reason,
-                        effective_channels=effective_channels,
-                        # Issue #2050 S4a (AC-9): reist an JEDER Radar-
-                        # Unterdrueckungsstelle mit, auch hier -- diese Stufe
-                        # liegt NACH dem Abruf, die Angabe ist also bekannt.
-                        # Ohne sie waere ein Δ-Registereintrag, der einen Lauf
-                        # mit ausgefallener Gewitterpruefung unterdrueckt, vom
-                        # Eintrag eines mit durchgefuehrter Pruefung nicht
-                        # mehr unterscheidbar.
-                        convective_checked=result.convective_checked,
-                        **_e1,
+                if not _identity_gate.allowed:
+                    logger.debug(
+                        f"Radar alert suppressed ({_identity_gate.reason}) for trip {trip.id}"
                     )
-                except Exception as e:
-                    logger.error(
-                        "Radar alert: Unterdrueckungs-Protokoll (Ereignis-"
-                        "Identitaet) fuer Trip %s fehlgeschlagen (%s) — der "
-                        "Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
-                        trip.id, e,
-                    )
-                continue
+                    try:
+                        alert_log.append_suppressed_entry(
+                            self._user_id, entity_id=trip.id, entity_type="trip",
+                            reason=alert_log.REASON_NOWCAST, gate_reason=_identity_gate.reason,
+                            effective_channels=effective_channels,
+                            # Issue #2050 S4a (AC-9): reist an JEDER Radar-
+                            # Unterdrueckungsstelle mit, auch hier -- diese Stufe
+                            # liegt NACH dem Abruf, die Angabe ist also bekannt.
+                            # Ohne sie waere ein Δ-Registereintrag, der einen Lauf
+                            # mit ausgefallener Gewitterpruefung unterdrueckt, vom
+                            # Eintrag eines mit durchgefuehrter Pruefung nicht
+                            # mehr unterscheidbar.
+                            convective_checked=result.convective_checked,
+                            **_e1,
+                        )
+                    except Exception as e:
+                        logger.error(
+                            "Radar alert: Unterdrueckungs-Protokoll (Ereignis-"
+                            "Identitaet) fuer Trip %s fehlgeschlagen (%s) — der "
+                            "Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
+                            trip.id, e,
+                        )
+                    continue
 
-            # Issue #2018: das Gate hat diese Meldung als NACHTRAG zu einer
-            # bereits zugestellten Meldung eingestuft — dieselbe Zustellung
-            # wie bisher, nur in anderer FORM. Fehlt der Meldezeitpunkt
-            # (fail-soft aus dem Register), entfaellt die Uhrzeit ersatzlos
-            # statt eines erfundenen Platzhalters.
-            # Issue #2050 S4c (AC-13): die Formulierung wird quellenabhaengig
-            # -- ein Δ-Vorgaenger ist KEINE amtliche Warnung, die alte,
-            # hartkodierte Formulierung waere fuer ihn falsch.
-            if _identity_gate.is_addendum:
-                _bezug = (
-                    "Ergänzung zur gemeldeten Wetterabweichung"
-                    if _identity_gate.addendum_source == "deviation"
-                    else "Ergänzung zur amtlichen Warnung"
+                # Issue #2018: das Gate hat diese Meldung als NACHTRAG zu einer
+                # bereits zugestellten Meldung eingestuft — dieselbe Zustellung
+                # wie bisher, nur in anderer FORM. Fehlt der Meldezeitpunkt
+                # (fail-soft aus dem Register), entfaellt die Uhrzeit ersatzlos
+                # statt eines erfundenen Platzhalters.
+                # Issue #2050 S4c (AC-13): die Formulierung wird quellenabhaengig
+                # -- ein Δ-Vorgaenger ist KEINE amtliche Warnung, die alte,
+                # hartkodierte Formulierung waere fuer ihn falsch.
+                if _identity_gate.is_addendum:
+                    _bezug = (
+                        "Ergänzung zur gemeldeten Wetterabweichung"
+                        if _identity_gate.addendum_source == "deviation"
+                        else "Ergänzung zur amtlichen Warnung"
+                    )
+                    if _identity_gate.addendum_reported_at is not None:
+                        _bezug += (
+                            f" von {local_fmt(_identity_gate.addendum_reported_at, tz)}"
+                        )
+                    _radar_request = replace(_radar_request, addendum_reference=_bezug)
+
+                # Best-Effort-Zustellung über NotificationService (Issue #1023)
+                result = self._notification_service.send_radar_alert(
+                    trip=trip,
+                    request=_radar_request,
+                    source=radar_svc.source_label(result.source),
+                    cooldown_display=cooldown_display,
+                    effective_channels=_radar_allowed,
+                    mail_sink=self._mail_sink,
+                    telegram_style=_trip_telegram_style(trip),
                 )
-                if _identity_gate.addendum_reported_at is not None:
-                    _bezug += (
-                        f" von {local_fmt(_identity_gate.addendum_reported_at, tz)}"
-                    )
-                _radar_request = replace(_radar_request, addendum_reference=_bezug)
+                # Issue #1459: Protokoll VOR dem Zustellbarkeits-Guard; die
+                # Ziel-Liste (`entries` vs. `not_delivered`) entscheidet
+                # `append_entry()` selbst (D4). `result` traegt hier bereits die
+                # NotificationResult — die Nowcast-Auswertung steckt im Request.
+                # `effective_channels` bleibt ROH (rote Linie #638).
+                # Issue #1948 (S1, AC-4): Korrelation ueber denselben
+                # Koordinaten-Schluessel wie get_nowcast() (Zeitfenster =
+                # Radar-Cache-TTL, 300s Default).
+                from services.radar_service import _nowcast_source_key
+                _nowcast_capture_id = alert_input_capture.latest_capture_id(
+                    "nowcast", _nowcast_source_key(lat, lon), max_age=300.0,
+                )
+                alert_log.append_entry(
+                    self._user_id, entity_id=trip.id, entity_type="trip",
+                    changes_count=1,
+                    severity=_radar_urgency,
+                    metrics=alert_log.register_pairs_for_nowcast(
+                        _radar_request.is_convective
+                    ),
+                    reason=alert_log.REASON_NOWCAST,
+                    effective_channels=effective_channels,
+                    sent_channels=result.delivered_channels,
+                    reachable_channels=result.sent_channels,
+                    below_threshold_channels=_radar_suppressed,
+                    blocked_reason_codes=result.blocked_reason_codes,
+                    capture_id=_nowcast_capture_id,
+                    # Issue #2018: Nachtraege bleiben im Protokoll auswertbar;
+                    # ohne Nachtrag entstehen die Felder gar nicht erst.
+                    is_addendum=_identity_gate.is_addendum,
+                    addendum_reported_at=(
+                        _identity_gate.addendum_reported_at.isoformat()
+                        if _identity_gate.addendum_reported_at is not None else None
+                    ),
+                    **_e1,
+                )
+                delivered = result.sent
+                if not delivered:
+                    logger.info(f"Radar alert: kein zustellbarer Kanal für {trip.id}")
+                    continue
 
-            # Best-Effort-Zustellung über NotificationService (Issue #1023)
-            result = self._notification_service.send_radar_alert(
-                trip=trip,
-                request=_radar_request,
-                source=radar_svc.source_label(result.source),
-                cooldown_display=cooldown_display,
-                effective_channels=_radar_allowed,
-                mail_sink=self._mail_sink,
-                telegram_style=_trip_telegram_style(trip),
-            )
-            # Issue #1459: Protokoll VOR dem Zustellbarkeits-Guard; die
-            # Ziel-Liste (`entries` vs. `not_delivered`) entscheidet
-            # `append_entry()` selbst (D4). `result` traegt hier bereits die
-            # NotificationResult — die Nowcast-Auswertung steckt im Request.
-            # `effective_channels` bleibt ROH (rote Linie #638).
-            # Issue #1948 (S1, AC-4): Korrelation ueber denselben
-            # Koordinaten-Schluessel wie get_nowcast() (Zeitfenster =
-            # Radar-Cache-TTL, 300s Default).
-            from services.radar_service import _nowcast_source_key
-            _nowcast_capture_id = alert_input_capture.latest_capture_id(
-                "nowcast", _nowcast_source_key(lat, lon), max_age=300.0,
-            )
-            alert_log.append_entry(
-                self._user_id, entity_id=trip.id, entity_type="trip",
-                changes_count=1,
-                severity=_radar_urgency,
-                metrics=alert_log.register_pairs_for_nowcast(
-                    _radar_request.is_convective
-                ),
-                reason=alert_log.REASON_NOWCAST,
-                effective_channels=effective_channels,
-                sent_channels=result.delivered_channels,
-                reachable_channels=result.sent_channels,
-                below_threshold_channels=_radar_suppressed,
-                blocked_reason_codes=result.blocked_reason_codes,
-                capture_id=_nowcast_capture_id,
-                # Issue #2018: Nachtraege bleiben im Protokoll auswertbar;
-                # ohne Nachtrag entstehen die Felder gar nicht erst.
-                is_addendum=_identity_gate.is_addendum,
-                addendum_reported_at=(
-                    _identity_gate.addendum_reported_at.isoformat()
-                    if _identity_gate.addendum_reported_at is not None else None
-                ),
-                **_e1,
-            )
-            delivered = result.sent
-            if not delivered:
-                logger.info(f"Radar alert: kein zustellbarer Kanal für {trip.id}")
-                continue
+                # Recording nach Best-Effort-Zustellung (F001-Semantik)
+                # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
+                # Issue #1213: alleinige Radar-Throttle-Quelle ist der Store — der
+                # alert_state-Key `radar_throttle` und die Legacy-Datei
+                # `radar_alert_throttle.json` werden nicht mehr geschrieben (nur
+                # noch als Migrationsquellen gelesen).
+                # Issue #1467 S3: beide Buchungen buendelt jetzt der geteilte
+                # Baustein — unveraendert erst NACH der Zustellung.
+                record_nowcast_sent(
+                    user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
+                    throttle_key=trip.id, now=datetime.now(timezone.utc),
+                    zone=anchor_tz(trip, now_utc),
+                    throttle_store=self._throttle_store,
+                    # Issue #2065: Vergleichsbasis der naechsten Runde --
+                    # Selbstbremsung, die naechste Verschaerfung muss den vollen
+                    # Faktor gegen DIESE Menge erreichen.
+                    # Issue #2261 (A-1, R4): ein Lauf mit nicht vergleichbarer
+                    # Menge hinterlaesst KEINE Basis (`None` ⇒ kein Durchbruch).
+                    precip_mm=_menge_mm if _menge_vergleichbar else None,
+                    # Issue #2050 S3b: die hoechste heute in dieser Zone
+                    # ZUGESTELLTE Stufe waechst bei JEDEM Versand mit (nicht nur
+                    # beim Durchbruch) — sie ist die Vergleichsbasis der naechsten
+                    # Eskalationspruefung. Der verbrauchte Durchbruch wird nur
+                    # gebucht, wenn er diesen Lauf auch getragen hat.
+                    urgency=_radar_urgency,
+                    is_escalation_breakthrough=_budget_durchbruch,
+                )
+                # Issue #1467 S4b-1 (AC-2/AC-3, F001-Symmetrie): NUR nach
+                # erfolgreicher Zustellung -- ein spaeterer amtlicher Alarm
+                # fuer dasselbe Ereignis findet diesen Eintrag ueber
+                # `check_event_identity_gate()`.
+                record_event_identity(
+                    user_id=self._user_id, entity_id=trip.id,
+                    hazard_class=resolve_hazard_class(is_convective=_radar_request.is_convective),
+                    segment_ids=_ereignis_segmente,
+                    severity=_radar_urgency, point_at=_onset_dt,
+                    now=datetime.now(timezone.utc),
+                )
+                sent += 1
+            except RadarDeadlineExceeded:
+                # Zeitgrenze ausserhalb der Nowcast-Abrufe (z. B. bei der
+                # Quellenbenennung): wie die inneren Handler -- Einheit nicht
+                # erreicht, partial/deadline, NICHT als failed gezaehlt (#2217).
+                self._abort_radar_unit(reached, progress, trip.id)
+                break
+            except Exception:
+                report_unit_failure("Radar-Alarmlauf", trip.id)
+                failed += 1
 
-            # Recording nach Best-Effort-Zustellung (F001-Semantik)
-            # Issue #1070: nur bei tatsaechlichem Versand zaehlen (F001-Symmetrie)
-            # Issue #1213: alleinige Radar-Throttle-Quelle ist der Store — der
-            # alert_state-Key `radar_throttle` und die Legacy-Datei
-            # `radar_alert_throttle.json` werden nicht mehr geschrieben (nur
-            # noch als Migrationsquellen gelesen).
-            # Issue #1467 S3: beide Buchungen buendelt jetzt der geteilte
-            # Baustein — unveraendert erst NACH der Zustellung.
-            record_nowcast_sent(
-                user_id=self._user_id, throttle_scope=_RADAR_THROTTLE_SCOPE,
-                throttle_key=trip.id, now=datetime.now(timezone.utc),
-                zone=anchor_tz(trip, now_utc),
-                throttle_store=self._throttle_store,
-                # Issue #2065: Vergleichsbasis der naechsten Runde --
-                # Selbstbremsung, die naechste Verschaerfung muss den vollen
-                # Faktor gegen DIESE Menge erreichen.
-                # Issue #2261 (A-1, R4): ein Lauf mit nicht vergleichbarer
-                # Menge hinterlaesst KEINE Basis (`None` ⇒ kein Durchbruch).
-                precip_mm=_menge_mm if _menge_vergleichbar else None,
-                # Issue #2050 S3b: die hoechste heute in dieser Zone
-                # ZUGESTELLTE Stufe waechst bei JEDEM Versand mit (nicht nur
-                # beim Durchbruch) — sie ist die Vergleichsbasis der naechsten
-                # Eskalationspruefung. Der verbrauchte Durchbruch wird nur
-                # gebucht, wenn er diesen Lauf auch getragen hat.
-                urgency=_radar_urgency,
-                is_escalation_breakthrough=_budget_durchbruch,
-            )
-            # Issue #1467 S4b-1 (AC-2/AC-3, F001-Symmetrie): NUR nach
-            # erfolgreicher Zustellung -- ein spaeterer amtlicher Alarm
-            # fuer dasselbe Ereignis findet diesen Eintrag ueber
-            # `check_event_identity_gate()`.
-            record_event_identity(
-                user_id=self._user_id, entity_id=trip.id,
-                hazard_class=resolve_hazard_class(is_convective=_radar_request.is_convective),
-                segment_ids=_ereignis_segmente,
-                severity=_radar_urgency, point_at=_onset_dt,
-                now=datetime.now(timezone.utc),
-            )
-            sent += 1
-
-        return sent
+        return sent, failed
 
     def _fetch_fresh_weather(
         self,

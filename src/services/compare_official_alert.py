@@ -42,6 +42,7 @@ from services.alert_gate import (
     record_event_identity,
     resolve_hazard_class,
 )
+from services.alert_check_state import report_unit_failure
 from services.alert_state import AlertStateService
 from services.alert_channels import effective_alert_channels
 from services.compare_alert_channels import effective_compare_telegram_style
@@ -50,7 +51,7 @@ from services.compare_preset_access import (
     load_compare_alert_presets,
     notification_service_for_preset,
 )
-from services.compare_slot_scheduler import presets_due_for_hour
+from services.compare_slot_scheduler import due_or_raise, presets_due_for_hour
 from services.notification_service import NotificationService
 from services.official_alerts import get_official_alerts_for_location
 from utils.timezone import first_resolvable_tz, local_dt
@@ -89,12 +90,28 @@ class CompareOfficialAlertService:
         self._sms_sink = sms_sink
         self._telegram_sink = telegram_sink
 
+    # Issue #2217: Zahl der im letzten Lauf gescheiterten Presets (Router -> failed).
+    last_failed_count: int = 0
+
     def check_all_compare_presets(self) -> int:
+        sent, self.last_failed_count = self._check_all_counted()
+        return sent
+
+    def _check_all_counted(self) -> tuple[int, int]:
         presets = self._load_presets()
         if not presets:
-            return 0
+            return 0, 0
         all_locations = {loc.id: loc for loc in load_all_locations(user_id=self._user_id)}
-        return sum(1 for preset in presets if self._check_one_preset(preset, all_locations))
+        sent = failed = 0
+        for preset in presets:
+            try:
+                if self._check_one_preset(preset, all_locations):
+                    sent += 1
+            except Exception:
+                # Issue #2217: ein kaputtes Preset reisst die Folge-Presets nicht mit.
+                report_unit_failure("Compare-Amtlich-Alarmlauf", preset.get("id", ""))
+                failed += 1
+        return sent, failed
 
     def _check_one_preset(self, preset: dict, all_locations: dict) -> bool:
         preset_id = preset.get("id", "")
@@ -182,7 +199,7 @@ class CompareOfficialAlertService:
         if check_briefing_imminent(
             user_id=self._user_id, entity_id=preset_id, entity_type="compare",
             now=datetime.now(timezone.utc), zone=zone,
-            briefing_due_at=lambda moment: bool(
+            briefing_due_at=lambda moment: due_or_raise(
                 presets_due_for_hour([preset], all_locations, moment)
             ),
         ):

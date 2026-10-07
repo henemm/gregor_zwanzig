@@ -1,0 +1,82 @@
+Using CPython 3.12.3 interpreter at: /usr/bin/python3
+Creating virtual environment at: .venv
+   Building gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie
+      Built gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie
+Installed 57 packages in 135ms
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 21 items
+
+tests/test_success_status_guard.py .F...................                 [100%]
+
+=================================== FAILURES ===================================
+___________________ test_no_unlisted_success_status_findings ___________________
+
+    def test_no_unlisted_success_status_findings():
+        """AC-2: GIVEN ein neuer Fund mit einer der vier Signaturen (konstanter
+        Erfolgswert aus einem Aufruf, Erfolgsmarker vor dem Versand,
+        teilerfolg-blinde Zählung, unverdrahteter Heartbeat, Aufruf ohne
+        Rückmeldung) irgendwo in der Scanfläche
+        WHEN der Wächter läuft
+        THEN schlägt er fehl und benennt Datei:Zeile — die Restliste kann nicht
+        stillschweigend wachsen.
+    
+        Einträge aus INTENTIONAL_CONSTANT_SUCCESS zählen hier ausdrücklich nicht
+        als Fund (AC-14): sie sind bewusst erlaubt und tragen eine geprüfte
+        Begründung.
+    
+        Der Nachweis, dass der Scanner die Muster wirklich strukturell erkennt
+        (statt zufällig zur Restliste zu passen), sind die synthetischen
+        Wirkungsnachweise AC-4 bis AC-13.
+        """
+        found = _all_violations()
+        unlisted = {
+            location: kind
+            for location, kind in found.items()
+            if location not in KNOWN_VIOLATIONS
+            and location not in INTENTIONAL_CONSTANT_SUCCESS
+        }
+>       assert not unlisted, (
+            "Neue unverdiente Erfolgsmeldungen entdeckt (Issue #1405): ein "
+            "ok/sent/success wird gemeldet, ohne aus dem tatsächlichen Ergebnis "
+            "abgeleitet zu sein. Beheben nach dem Referenzmuster "
+            "run_briefing_dispatch() ((sent, failed)-Tupel aus einer "
+            "fehler-isolierten Schleife, Status rein aus failed > 0) — oder, "
+            "falls fachlich berechtigt, mit Begründung in "
+            "INTENTIONAL_CONSTANT_SUCCESS eintragen. Code reference: "
+            f"{sorted(unlisted.items())}"
+        )
+E       AssertionError: Neue unverdiente Erfolgsmeldungen entdeckt (Issue #1405): ein ok/sent/success wird gemeldet, ohne aus dem tatsächlichen Ergebnis abgeleitet zu sein. Beheben nach dem Referenzmuster run_briefing_dispatch() ((sent, failed)-Tupel aus einer fehler-isolierten Schleife, Status rein aus failed > 0) — oder, falls fachlich berechtigt, mit Begründung in INTENTIONAL_CONSTANT_SUCCESS eintragen. Code reference: [('src/services/compare_alert.py::check_all_compare_presets::0', 'partial_success_blind'), ('src/services/compare_official_alert.py::check_all_compare_presets::0', 'partial_success_blind'), ('src/services/compare_radar_alert.py::check_all_compare_presets_run::0', 'partial_success_blind'), ('src/services/trip_alert.py::_check_radar_trips::0', 'partial_success_blind'), ('src/services/trip_alert.py::check_all_trips::0', 'partial_success_blind')]
+E       assert not {'src/services/compare_alert.py::check_all_compare_presets::0': 'partial_success_blind', 'src/services/compare_officia...ts_run::0': 'partial_success_blind', 'src/services/trip_alert.py::_check_radar_trips::0': 'partial_success_blind', ...}
+
+tests/test_success_status_guard.py:2074: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/test_success_status_guard.py::test_scanner_finds_every_spec_listed_finding
+PASSED tests/test_success_status_guard.py::test_known_violations_only_shrink
+PASSED tests/test_success_status_guard.py::test_scanner_detects_constant_success_from_call_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_diverging_except_return_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_pre_try_success_marker_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_partial_success_blind_loop_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_tuple_shaped_decoy_without_real_failure_counter
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_pure_computation_calls_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_house_norm_sent_failed_tuple_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_unwired_heartbeat_function_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_wired_heartbeat_call_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_unacknowledged_dispatch_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_acknowledged_dispatch_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_persistence_only_swallow_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_webhook_ack_is_documented_exception_not_silent_pass
+PASSED tests/test_success_status_guard.py::test_public_host_info_exceptions_keep_their_wording
+PASSED tests/test_success_status_guard.py::test_intentional_exceptions_carry_nonempty_justification
+PASSED tests/test_success_status_guard.py::test_intentional_exception_list_cannot_grow
+PASSED tests/test_success_status_guard.py::test_scan_scope_excludes_go_internal_tree
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_pure_liveness_endpoint
+FAILED tests/test_success_status_guard.py::test_no_unlisted_success_status_findings
+======================== 1 failed, 20 passed in 13.45s =========================

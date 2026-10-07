@@ -20,6 +20,7 @@ import logging
 from datetime import date, datetime, time as dt_time, timedelta
 from typing import NamedTuple
 
+from services.alert_check_state import report_unit_failure
 from services.compare_alert_guard import is_silenced
 from utils.timezone import first_resolvable_tz, local_dt
 
@@ -100,6 +101,29 @@ def resolve_preset_slots(preset: dict) -> PresetSlots:
     return PresetSlots(morning_enabled, morning_time, evening_enabled, evening_time)
 
 
+class DueList(list):
+    """Liste der faelligen Presets plus ``failed_ids`` (Issue #2217): IDs der
+    Presets, deren Faelligkeitspruefung mit einer Ausnahme scheiterte. Fuer
+    bestehende Aufrufer eine gewoehnliche Liste."""
+
+    failed_ids: list
+
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
+        self.failed_ids = []
+
+
+def due_or_raise(due: list) -> bool:
+    """Ist das Preset faellig? Scheiterte die Pruefung selbst (``failed_ids``),
+    wird eine Ausnahme geworfen statt „nicht faellig" zu melden (Issue #2217):
+    die Vorlauf-Sperre der Alarme darf bei einer unlesbaren Faelligkeit nicht
+    still wegfallen -- der Schutz je Preset im Alarmlauf zaehlt es als failed."""
+    failed = getattr(due, "failed_ids", ())
+    if failed:
+        raise RuntimeError(f"Faelligkeitspruefung gescheitert fuer Preset {list(failed)}")
+    return bool(due)
+
+
 def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime) -> list:
     """Liefert je faelligem Preset ein `DuePreset`-Tripel
     `(preset, target_date, tage_ab_ortstag)`.
@@ -124,50 +148,61 @@ def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime) 
     fuer die uebrigen Presets desselben Users nicht abbrechen — es wird
     uebersprungen (Log-Warnung), der Rest der Liste laeuft unbeeinflusst
     weiter.
+
+    Issue #2217: jede andere Ausnahme je Preset (Zonenbestimmung etc.) wird
+    ebenfalls je Preset abgefangen und geloggt; die Rueckgabe
+    (``DueList``) traegt die IDs der gescheiterten Presets in ``failed_ids``
+    fuer den ``failed``-Zaehler.
     """
-    due: list = []
+    due = DueList()
     for preset in presets:
-        # Issue #1467 S2 AG6: dieselbe Frage wie in den drei Alarm-Pfaden —
-        # deshalb dieselbe, einzige Fassung (AC-28). `paused_at` kommt damit
-        # neu hinzu; ein pausiertes Preset war hier ohnehin nie faellig
-        # gemeint.
-        # end_date wertet dieser Scheduler unten selbst aus (Ortstag).
-        if is_silenced(preset, ohne_end_date=True):
-            continue
-
-        preset_id = preset.get("id", "?")
-        vor_ort = local_dt(now_utc, first_resolvable_tz(
-            (all_locations.get(lid) for lid in preset.get("location_ids") or []),
-            context_label=preset_id,
-        ))
-        hour, today = vor_ort.hour, vor_ort.date()
-
         try:
-            end_date_str = preset.get("end_date")
-            if end_date_str:
-                if date.fromisoformat(end_date_str) < today:
-                    continue
+            # Issue #1467 S2 AG6: dieselbe Frage wie in den drei Alarm-Pfaden —
+            # deshalb dieselbe, einzige Fassung (AC-28). `paused_at` kommt damit
+            # neu hinzu; ein pausiertes Preset war hier ohnehin nie faellig
+            # gemeint.
+            # end_date wertet dieser Scheduler unten selbst aus (Ortstag).
+            if is_silenced(preset, ohne_end_date=True):
+                continue
 
-            # #511: weekly gate't auf den Versandtag (beide Slots) — sonst
-            # sendet ein Wochen-Abo taeglich. Fehlt `weekday` (Altbestand),
-            # verhaelt sich das Preset wie daily.
-            if preset.get("schedule") == "weekly":
-                weekday = preset.get("weekday")
-                if weekday is not None and int(weekday) != today.weekday():
-                    continue
+            preset_id = preset.get("id", "?")
+            vor_ort = local_dt(now_utc, first_resolvable_tz(
+                (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+                context_label=preset_id,
+            ))
+            hour, today = vor_ort.hour, vor_ort.date()
 
-            slots = resolve_preset_slots(preset)
-        except (ValueError, TypeError) as e:
-            logger.warning(
-                "Preset %s: korrupte Zeitplan-Daten (end_date/morning_time/"
-                "evening_time), wird uebersprungen: %s",
-                preset_id,
-                e,
-            )
-            continue
+            try:
+                end_date_str = preset.get("end_date")
+                if end_date_str:
+                    if date.fromisoformat(end_date_str) < today:
+                        continue
 
-        if slots.morning_enabled and slots.morning_time.hour == hour:
-            due.append(_due(preset, today, MORGEN_SLOT_VERSATZ))
-        if slots.evening_enabled and slots.evening_time.hour == hour:
-            due.append(_due(preset, today, ABEND_SLOT_VERSATZ))
+                # #511: weekly gate't auf den Versandtag (beide Slots) — sonst
+                # sendet ein Wochen-Abo taeglich. Fehlt `weekday` (Altbestand),
+                # verhaelt sich das Preset wie daily.
+                if preset.get("schedule") == "weekly":
+                    weekday = preset.get("weekday")
+                    if weekday is not None and int(weekday) != today.weekday():
+                        continue
+
+                slots = resolve_preset_slots(preset)
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    "Preset %s: korrupte Zeitplan-Daten (end_date/morning_time/"
+                    "evening_time), wird uebersprungen: %s",
+                    preset_id,
+                    e,
+                )
+                continue
+
+            if slots.morning_enabled and slots.morning_time.hour == hour:
+                due.append(_due(preset, today, MORGEN_SLOT_VERSATZ))
+            if slots.evening_enabled and slots.evening_time.hour == hour:
+                due.append(_due(preset, today, ABEND_SLOT_VERSATZ))
+        except Exception:
+            # Issue #2217: ein kaputtes Preset haelt die uebrigen nicht auf;
+            # kein Vermerk, wird beim naechsten Lauf erneut geprueft.
+            report_unit_failure("Compare-Briefing-Faelligkeit", str(preset.get("id", "?")))
+            due.failed_ids.append(str(preset.get("id", "?")))
     return due

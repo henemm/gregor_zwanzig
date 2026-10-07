@@ -78,6 +78,7 @@ def trigger_alert_checks(user_id: str = Query(...)):
         "skipped": result.skipped,
         "skipped_ids": result.skipped_ids,
         "duration_s": result.duration_s,
+        "failed": result.failed,
     }
     if result.hit_deadline:
         response["reason"] = "deadline"
@@ -91,7 +92,7 @@ def trigger_compare_alert_checks(user_id: str = Query(...)):
 
     service = CompareAlertService(user_id=user_id)
     count = service.check_all_compare_presets()
-    return {"status": "ok", "count": count}
+    return {"status": "ok", "count": count, "failed": service.last_failed_count}
 
 
 def _radar_run_response(result) -> dict:
@@ -104,6 +105,7 @@ def _radar_run_response(result) -> dict:
         "skipped": result.skipped,
         "skipped_ids": result.skipped_ids,
         "duration_s": round(result.duration_s, 3),
+        "failed": result.failed,
     }
     if result.hit_deadline:
         body["reason"] = "deadline"
@@ -135,7 +137,7 @@ def trigger_compare_official_alert_checks(user_id: str = Query(...)):
 
     service = CompareOfficialAlertService(user_id=user_id)
     count = service.check_all_compare_presets()
-    return {"status": "ok", "count": count}
+    return {"status": "ok", "count": count, "failed": service.last_failed_count}
 
 
 @router.post("/inbound-commands")
