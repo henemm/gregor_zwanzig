@@ -1,32 +1,32 @@
 ---
 spec_file: docs/specs/modules/etappen_strip_sortable_list.md
-spec_sha256: edeb71c3df15d30ab0da5dd3ac2b695545c12e64e0e4261cfb2dc48f25b8ec2b
+spec_sha256: 5cee4de62b21bfd04dc5e741cb716002dbd8d123e5cc81b5678ac09e24432eac
 ---
 
 # PO-Briefing: fix-2288-etappen-dnd
 
 - **Spec:** docs/specs/modules/etappen_strip_sortable_list.md
 - **Issue:** #2288
-- **Erstellt:** 2026-10-06
+- **Erstellt:** 2026-10-07
 
 ## Was gebaut wird
 
-Etappen im Trip-Editor werden wie Orte per Griff sortiert, auch per Touch; die alte Sonderlösung entfällt.
+Im Trip-Editor sortieren Sie Etappen am Desktop jetzt wie überall sonst: per Griff, Tastatur oder Fingergeste.
 
 ## Definition of Done
 
-Etappen lassen sich per Maus, Touch und Tastatur umsortieren, Änderung greift erst beim Ablegen, und keine alte Sortiertechnik bleibt im Code.
+Etappen lassen sich per Griff mit Maus, Finger und Tastatur umsortieren, die Reihenfolge wird beim Ablegen gespeichert.
 
 ## Wie geprüft wird
 
-Browser-Tests spielen Maus-, Touch-, Tastatur- und Randscroll-Gesten durch, ein Wächter verhindert Rückfall; die Doku-Änderung wird nur durchgesehen.
+Browser-Tests ziehen echte Karten per Maus, Finger und Tastatur; echte Endgeräte werden nicht getestet.
 
 ## Kritische Anmerkungen
 
-- Randscrollen beim Ziehen ist ungewiss; scheitert es, wächst der Aufwand dieses Tickets.
-- Gelöschte ungenutzte Gruppen-Komponente war nicht gefordert; vier Tests werden dafür angepasst (von Ihnen entschieden).
-- Doku-Änderung (Entscheidungsdatei) hat keinen eigenen Test, nur Durchsicht.
+- Neu: Die Reihenfolge wird beim Ablegen automatisch gespeichert, auch in der mobilen Liste – das hat niemand verlangt.
+- Nachbarkarten gleiten beim Ziehen nicht mehr weich, sondern springen um; das ist ein Kompromiss für zuverlässiges Ablegen.
+- Per Tastatur wird die Reihenfolge erst beim Ablegen gemeldet, nicht pro Pfeilschritt; Escape verwirft.
 
 ## Freigabe-Frage
 
-Keine offene Entscheidung — Freigabe der Spec als Ganzes?
+Sind die drei Abweichungen akzeptabel, sodass die Spec freigegeben werden kann?
