@@ -34,6 +34,7 @@
 		// Issue #1268 (AC-10): geteilte Slot-Aufloesung — NICHT nachbauen.
 		primarySendSlot
 	} from '$lib/utils/cockpitHelpers568.js';
+	import Startseite from './_start/Startseite.svelte';
 	import TripKachel from './_home/TripKachel.svelte';
 	import CompareKachel from './_home/CompareKachel.svelte';
 	import EmptyKachel from './_home/EmptyKachel.svelte';
@@ -139,6 +140,10 @@
 	});
 </script>
 
+<!-- Issue #2520 — Ausgeloggte sehen die oeffentliche Startseite, Eingeloggte das Cockpit. -->
+{#if data.oeffentlich}
+	<Startseite />
+{:else}
 <div class="page-root" style:position="relative" style:max-width="1320px">
 	<!-- Mobile-Shell S2 — Wordmark + Datum als erste Zeile der Uebersicht (nur
 	     hier, nur mobil): die Marke einmal pro Sitzung statt in einem fixen
@@ -894,6 +899,8 @@
 	<Btn href="/compare" variant="quiet" size="sm">Alle anzeigen</Btn>
 {/snippet}
 
+
+{/if}
 
 <style>
 	.cockpit-hero {

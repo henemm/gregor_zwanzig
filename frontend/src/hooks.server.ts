@@ -41,6 +41,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const result = session ? verifySession(session, secret) : null;
 
 	if (!result) {
+		// Issue #2520 — einzige oeffentliche Seite ausser den Auth-Pfaden: exakt
+		// `/` (Query egal) zeigt Ausgeloggten die Startseite. Bewusst KEIN
+		// `startsWith`; kein userId, kein Mandant-Header (#2131).
+		if (event.url.pathname === '/') {
+			const oeffentlich = await resolve(event);
+			if ((oeffentlich.headers.get('content-type') ?? '').includes('text/html')) {
+				oeffentlich.headers.set('cache-control', 'no-cache');
+			}
+			return oeffentlich;
+		}
 		redirect(302, '/login');
 	}
 

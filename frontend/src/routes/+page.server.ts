@@ -3,7 +3,17 @@ import type { Trip, ComparePreset, CockpitStatus } from '$lib/types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, locals }) => {
+	// Issue #2520 — Ausgeloggte sehen die oeffentliche Startseite: keine
+	// Go-API-Aufrufe, keine Nutzerdaten.
+	if (!locals.userId) {
+		return {
+			oeffentlich: true,
+			trips: [] as Trip[],
+			presets: [] as ComparePreset[],
+			cockpitStatus: null as CockpitStatus | null
+		};
+	}
 	const session = cookies.get('gz_session');
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 	if (session) headers['Cookie'] = `gz_session=${session}`;
@@ -32,5 +42,5 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	// Wetter-Endpoint-Fetch ließ `/` bis ~57 s hängen (Regression aus #386).
 	// Der Hero rendert sofort aus Trip-/Etappen-Daten; Wetter/Risk bleibt dormant.
 	// trips/presets behalten defensive AbortSignal.timeout(5000) (fail-soft).
-	return { trips, presets, cockpitStatus };
+	return { oeffentlich: false, trips, presets, cockpitStatus };
 };

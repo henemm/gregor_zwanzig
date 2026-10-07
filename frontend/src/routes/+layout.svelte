@@ -208,7 +208,10 @@
 	}
 
 	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
-	const isLogin = $derived(publicPages.includes(page.url.pathname));
+	// Issue #2520 — `/` ist fuer Ausgeloggte die oeffentliche Startseite (ohne Chrome).
+	const isLogin = $derived(
+		publicPages.includes(page.url.pathname) || (page.url.pathname === '/' && !data.userId)
+	);
 	// Showcase-Route (#370): ohne App-Chrome (Sidebar/BottomNav), damit
 	// die Brand-Demos die einzigen App-Bausteine auf der Seite sind.
 	const isShowcase = $derived(page.url.pathname === '/_design');
