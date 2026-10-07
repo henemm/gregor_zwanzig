@@ -1692,7 +1692,11 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 		notified := sendTierChangeNotification(cfg, userId, currentTier, req.RequestedTier)
 		if notified {
 			// Frisch laden (Read-Modify-Write), damit kein Zwischenstand ueberschrieben wird.
-			if fresh, err := s.LoadUser(userId); err == nil && fresh != nil {
+			// Nur stempeln, wenn der gesendete Antrag noch der aktuelle ist (F001):
+			// sonst Freigabe/Folgeantrag waehrend des Versands -> kein Nachweis.
+			if fresh, err := s.LoadUser(userId); err == nil && fresh != nil &&
+				fresh.RequestedTier == req.RequestedTier &&
+				fresh.RequestedAt != nil && fresh.RequestedAt.Equal(now) {
 				ts := time.Now()
 				fresh.RequestedNotifiedAt = &ts
 				if err := s.SaveUser(*fresh); err != nil {

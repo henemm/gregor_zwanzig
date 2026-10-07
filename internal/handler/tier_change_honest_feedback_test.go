@@ -236,3 +236,51 @@ func TestTierChangeHonest_ProfilLiefertRequestedNotifiedAt(t *testing.T) {
 		t.Errorf("Profil muss requested_notified_at tragen, got %v", resp)
 	}
 }
+
+// Adversary F001 (a): Admin gibt den Antrag frei, waehrend die Mail unterwegs
+// ist. Der Nachweis darf nicht nachtraeglich an den freigegebenen Nutzer geraten.
+func TestTierChangeHonest_F001_FreigabeWaehrendVersandStempeltNicht(t *testing.T) {
+	s := newTestStore(t)
+	seedFree(t, s, "alice")
+	withTierMailFn(t, func(c, fb mail.MailConfig, to string, msg mail.Mail) error {
+		return s.SetUserTierAdmin("alice", "standard")
+	})
+	code, resp := postTierRequest(t, s, fullMailCfg(), "alice", "standard")
+	if code != 200 || resp["po_notified"] != false {
+		t.Fatalf("want 200 + po_notified=false, got %d %v", code, resp)
+	}
+	m := rawUserJSON(t, s, "alice")
+	for _, k := range []string{"requested_tier", "requested_at", "requested_notified_at"} {
+		if _, ok := m[k]; ok {
+			t.Errorf("%s darf nach Freigabe nicht (wieder) auftauchen", k)
+		}
+	}
+	if m["tier"] != "standard" {
+		t.Errorf("Freigabe muss erhalten bleiben, got %v", m["tier"])
+	}
+}
+
+// Adversary F001 (b): Ein spaeter Versand zu Antrag 1 darf Antrag 2 nicht stempeln.
+func TestTierChangeHonest_F001_SpaeterVersandStempeltNeuerenAntragNicht(t *testing.T) {
+	s := newTestStore(t)
+	seedFree(t, s, "alice")
+	withTierMailFn(t, func(c, fb mail.MailConfig, to string, msg mail.Mail) error {
+		// Mitten im Versand von Antrag 1 stellt der Nutzer Antrag 2, dessen Mail scheitert.
+		withTierMailFn(t, func(c, fb mail.MailConfig, to string, msg mail.Mail) error { return errors.New("down") })
+		if _, r2 := postTierRequest(t, s, fullMailCfg(), "alice", "premium"); r2["po_notified"] != false {
+			t.Errorf("Antrag 2 muss po_notified=false melden, got %v", r2)
+		}
+		return nil // Antrag 1 gilt als erfolgreich versendet
+	})
+	_, resp := postTierRequest(t, s, fullMailCfg(), "alice", "standard")
+	if resp["po_notified"] != false {
+		t.Errorf("Antrag 1 ist nicht mehr der aktuelle: po_notified muss false sein, got %v", resp)
+	}
+	m := rawUserJSON(t, s, "alice")
+	if m["requested_tier"] != "premium" {
+		t.Errorf("aktueller Antrag muss premium sein, got %v", m["requested_tier"])
+	}
+	if _, ok := m["requested_notified_at"]; ok {
+		t.Error("Nachweis von Antrag 1 darf Antrag 2 nicht stempeln")
+	}
+}
