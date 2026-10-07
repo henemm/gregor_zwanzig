@@ -334,3 +334,25 @@ func TestTierRequestHealthUnnotifiedCountTwoUsers(t *testing.T) {
 		}
 	}
 }
+
+// Haertung #2436 (Mutation "unnotified != nil" ueberlebte): der gemeldete und
+// der ungemeldete Antrag muessen einzeln unterschieden werden, nicht nur in der Summe.
+func TestTierRequestHealthUnnotifiedCountDistinguishesNotifiedFromNot(t *testing.T) {
+	ts := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
+	nur := func(notified bool) float64 {
+		doc := `{"id":"gz2436-x","tier":"free","requested_tier":"standard","requested_at":"` + ts + `"`
+		if notified {
+			doc += `,"requested_notified_at":"` + ts + `"`
+		}
+		doc += `}`
+		sched := newTierRequestSchedulerCfg(t, t.TempDir(), "po@example.com", "smtp.example.com", map[string]string{"gz2436-x": doc})
+		th, _ := tierRequestHealthBlock(t, sched)
+		return th["unnotified_count"].(float64)
+	}
+	if got := nur(true); got != 0 {
+		t.Errorf("gemeldeter Antrag: unnotified_count want 0, got %v", got)
+	}
+	if got := nur(false); got != 1 {
+		t.Errorf("ungemeldeter Antrag: unnotified_count want 1, got %v", got)
+	}
+}
