@@ -128,8 +128,8 @@ neuer Trip- oder Compare-eigener Baustein; die Pendant-Frage ist damit erfüllt.
 - **Input:** Nutzer zieht eine Etappenkarte am Griff (Maus/Touch) oder greift sie per Leertaste.
 - **Output:** Die Reihenfolge wird erst beim Ablegen gemeldet und gespeichert; Kaskaden-Rückfrage
   wird erst dann bewertet.
-- **Side effects:** Keine Persistenzänderung; die Reihenfolge läuft wie bisher über
-  `handleStagesReorder` → Autosave.
+- **Side effects:** Keine Persistenzänderung (kein Schema); die Reihenfolge wird beim Ablegen
+  in `handleReorderEnd` gespeichert (siehe „Abweichungen bei der Umsetzung").
 
 ## Acceptance Criteria
 
@@ -276,3 +276,29 @@ nur mitgezogen, wenn sich Texte/Maße ändern.
 ## Changelog
 
 - 2026-10-06: Initial spec created (#2288, Epic #2345 Etappe P2)
+- 2026-10-07: Abweichungen bei der Umsetzung nachgetragen (Adversary Runde 2, R2-F1), siehe unten.
+
+## Abweichungen bei der Umsetzung
+
+Bei der Umsetzung (GREEN + Adversary) ergaben sich Abweichungen von den obigen Annahmen. Sie sind
+gemessen (lokaler E2E-Stack), die ACs bleiben unverändert gültig:
+
+1. **Speichern beim Ablegen:** `EditStagesPanelNew.handleReorderEnd` speichert die Reihenfolge jetzt
+   beim Ablegen (vorher gab es keinen Autosave-Aufruf, `handleStagesReorder` setzte nur den Zustand).
+   Bei offener Kaskaden-Rückfrage wird wie beim Löschen aufgeschoben (`deferSave`); ein
+   `cascadeBusy`-Riegel gilt wie in `handleStagesReorder`. Wirkt auch auf die mobile Etappenliste.
+   Der Abschnitt „Source" (EditStagesPanelNew: „Logik unverändert") ist damit überholt.
+2. **`flipDurationMs={0}` am Strip:** `svelte-dnd-action` tastet die Zeigerposition nur alle
+   `flipDurationMs*1,07` ab; bei 200 ms übersprangen schnelle Gesten Stationen. Folge: Nachbarkarten
+   springen ohne Gleiten um.
+3. **128-px-Polster rechts an der Zone:** Der „+ Etappe"-Knopf liegt absolut darüber; ohne Polster
+   wurde ein Ablegen am rechten Rand als `droppedOutsideOfAny` verworfen (AC-8).
+4. **Platzhalter-Zeile:** In der horizontalen Zone rendert `SortableList` den Platzhalter der
+   Bibliothek mit derselben Zeile wie das gezogene Element (sonst 0 px breit, Karte springt eine
+   Position zu weit).
+5. **Tastatur-Vertrag des Bausteins:** Die Bibliothek meldet nach jedem Pfeilschritt `finalize`.
+   `SortableList` puffert das bei eigener Tastatur-Geste und meldet erst beim Ablegen genau einmal
+   (Escape: nichts, Fokusverlust: nach 150 ms melden, Griffwechsel: Rest melden). Dokumentiert in
+   ADR-0024.
+6. **`SortableList` Initialisierung:** `dndItems` wird per `untrack` aus `items` initialisiert
+   (sonst blieb der SSR-Render leer).

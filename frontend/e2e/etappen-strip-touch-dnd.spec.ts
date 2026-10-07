@@ -45,7 +45,18 @@ test('AC-10: Fingergeste sortiert die Etappen um, speichert nur beim Ablegen, sc
 	await expect(page.getByTestId('etappen-strip')).toBeVisible();
 	const card = (i: number) => page.getByTestId('etappen-strip').getByTestId(`stage-card-${i}`);
 
+	// Selbsttest des Helfers (M10): es kommen ECHTE Touch-Ereignisse an, keine Mausereignisse.
+	await page.evaluate(() => {
+		const w = window as unknown as { __ev: Record<string, number> };
+		w.__ev = { touchstart: 0, touchmove: 0, mousedown: 0 };
+		for (const t of Object.keys(w.__ev))
+			window.addEventListener(t, () => w.__ev[t]++, { capture: true, passive: true });
+	});
 	const { pageScrolledY } = await dragDndZoneItemTouch(page, card(2), card(0));
+	const ev = await page.evaluate(() => (window as unknown as { __ev: Record<string, number> }).__ev);
+	expect(ev.touchstart, 'keine touchstart-Ereignisse: Helfer sendet keine Touch-Geste').toBeGreaterThan(0);
+	expect(ev.touchmove).toBeGreaterThan(2);
+	expect(ev.mousedown, 'Helfer hat Mausereignisse gesendet').toBe(0);
 
 	await expect(card(0)).toContainText('Tag 3');
 	await expect.poll(() => storedOrder(page), { timeout: 15_000 }).toEqual(['s3', 's1', 's2']);
