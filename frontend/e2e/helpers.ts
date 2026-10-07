@@ -92,6 +92,88 @@ export async function dragDndZoneItem(page: Page, source: Locator, target: Locat
 }
 
 /**
+ * Touch-Variante von `dragDndZoneItem` (#2288 AC-10): zieht ein `.sortable-item`
+ * per ECHTEN Touch-Ereignissen (Chrome-DevTools-Protokoll
+ * `Input.dispatchTouchEvent`: touchStart → mehrere touchMove → touchEnd), nicht
+ * per Maus. Gleiche zustandsbasierte Wartestrategie wie `dragDndZoneItem`: erst
+ * zurück, wenn die `.sortable-zone` `finalize` gefeuert hat (#1771).
+ *
+ * Voraussetzung: Playwright-Kontext mit `hasTouch: true` (nur Chromium).
+ * Gibt zurück, um wie viele Pixel die Seite während der Geste gescrollt hat
+ * (`window.scrollY`-Delta) — eine Geste, die statt zu ziehen die Seite
+ * scrollt, ist genau der Fehler, den AC-10 ausschließen soll.
+ */
+export async function dragDndZoneItemTouch(
+	page: Page,
+	source: Locator,
+	target: Locator
+): Promise<{ pageScrolledY: number }> {
+	await source.scrollIntoViewIfNeeded();
+	await target.scrollIntoViewIfNeeded();
+
+	const zone = source
+		.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " sortable-zone ")]')
+		.last();
+	const zoneHandle = await zone.elementHandle();
+	if (!zoneHandle) throw new Error('dragDndZoneItemTouch: keine .sortable-zone-Ahnenzone gefunden');
+
+	const before = await zoneHandle.evaluate((el) => {
+		const marker = el as HTMLElement & { __gzFinalizeCount?: number };
+		if (marker.__gzFinalizeCount === undefined) {
+			marker.__gzFinalizeCount = 0;
+			el.addEventListener('finalize', () => {
+				marker.__gzFinalizeCount = (marker.__gzFinalizeCount ?? 0) + 1;
+			});
+		}
+		return marker.__gzFinalizeCount;
+	});
+
+	const sourceBox = await source.boundingBox();
+	const targetBox = await target.boundingBox();
+	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItemTouch: source/target ohne BoundingBox');
+
+	const scrollBefore = await page.evaluate(() => window.scrollY);
+	const cdp = await page.context().newCDPSession(page);
+	const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x?: number, y?: number) =>
+		cdp.send('Input.dispatchTouchEvent', {
+			type,
+			touchPoints: type === 'touchEnd' ? [] : [{ x: x as number, y: y as number }]
+		});
+
+	const sx = sourceBox.x + sourceBox.width / 2;
+	const sy = sourceBox.y + sourceBox.height / 2;
+	const tx = targetBox.x + targetBox.width / 2;
+	const ty = targetBox.y + targetBox.height / 2;
+
+	await touch('touchStart', sx, sy);
+	// Erste Bewegung reißt sicher die 3px-Schwelle, damit dndzone den Drag erkennt.
+	for (let i = 1; i <= 6; i++) await touch('touchMove', sx, sy - 2 * i);
+	await page.waitForTimeout(120);
+	const steps = 15;
+	for (let i = 1; i <= steps; i++) {
+		await touch('touchMove', sx + ((tx - sx) * i) / steps, sy + ((ty - sy) * i) / steps);
+	}
+	await page.waitForTimeout(120);
+	await touch('touchEnd');
+	await cdp.detach().catch(() => {});
+
+	try {
+		await page.waitForFunction(
+			({ el, before }) =>
+				((el as HTMLElement & { __gzFinalizeCount?: number }).__gzFinalizeCount ?? 0) > before,
+			{ el: zoneHandle, before },
+			{ timeout: 5_000, polling: 100 }
+		);
+	} catch {
+		throw new Error(
+			'dragDndZoneItemTouch: kein finalize-Ereignis nach der Touch-Geste (#2288 AC-10) — svelte-dnd-action hat den Drag nicht committet'
+		);
+	}
+	const scrollAfter = await page.evaluate(() => window.scrollY);
+	return { pageScrolledY: Math.abs(scrollAfter - scrollBefore) };
+}
+
+/**
  * Login helper — authenticates via the login form and returns the page
  * with a valid session cookie set.
  */

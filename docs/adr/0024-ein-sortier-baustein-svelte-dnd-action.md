@@ -17,8 +17,7 @@ verschiedenen Techniken und vier verschiedenen Verträgen für dieselbe Operatio
 | `trip-detail/BucketSection.svelte` | `svelte-dnd-action` | `onDndReorder(newOrder: string[])` |
 | `compare/CompareTabs.svelte` (Orte) | `svelte-dnd-action` | keiner — persistiert selbst via PUT-Queue |
 | `trip-detail/WeatherV2Reihenfolge.svelte` | HTML5 Drag API | `onDndReorder(fromId, toId)` |
-| `waypoints/EtappenStrip.svelte` | HTML5 Drag API | `onStagesReorder(stages: Stage[])` |
-| `compare/GroupSection.svelte` | HTML5 Drag API | `onDragStart(id)` / `onDrop(targetId)` |
+| `waypoints/EtappenStrip.svelte` (Stand vor #2288; seither `SortableList`) | HTML5 Drag API | `onStagesReorder(stages: Stage[])` |
 
 `onDndReorder` heißt dabei zweimal gleich und bedeutet Verschiedenes. Der heikelste Teil —
 ein `$state`-Spiegel, der per `$effect` (nicht `$derived`) mit der Quelle synchronisiert
@@ -84,15 +83,6 @@ Nicht-Teilung eine dokumentierte Begründung.
 6. **Die ▲/▼-Buttons entfallen ersatzlos als Buttons** — ihre Funktion übernimmt der
    eingebaute Tastatur-Pfad der Bibliothek auf dem fokussierbaren Griff. Damit werden AC-3
    und AC-4 der Spec #433 ungültig; ihre Begründung ist durch die Versionslage entfallen.
-7. **Zwei Flächen bleiben bewusst draußen** (Begründungspflicht der Teilungs-Invariante
-   erfüllt durch diesen Eintrag):
-   - `waypoints/EtappenStrip.svelte` — `svelte-dnd-action` entfernt Nicht-Item-Kinder aus
-     der Zone; dort müssen Pause-Lücken und der „+ Etappe"-Knopf zwischen den Items im
-     normalen Fluss bleiben (dokumentiert in `EtappenStrip.svelte:4-6`). Eine Übernahme
-     setzt voraus, diese Kinder zuvor aus der Zone zu lösen — eigener Umbau, eigenes Ticket.
-   - `compare/GroupSection.svelte` — verwaist: kein `<GroupSection`-Vorkommen in irgendeiner
-     `.svelte`-Datei, seit ihr einziger Konsument `LocationsRail.svelte` in #1256 Scheibe 1
-     als Totcode gelöscht wurde. Gemeldet an #1206. Tote Flächen werden nicht migriert.
 
 ## Verworfene Alternativen
 
@@ -136,8 +126,6 @@ Nicht-Teilung eine dokumentierte Begründung.
 - **Folgepflichten:**
   - Neue Sortier-Flächen konsumieren `SortableList`. Eine neue handverdrahtete
     Drag-Implementierung ist ein Review-Befund, kein Stilfrage.
-  - `EtappenStrip` bleibt die einzige geduldete HTML5-Ausnahme; wird der
-    Non-Item-Kinder-Konflikt dort gelöst, ist die Fläche nachzuziehen.
   - Jede Fläche, die `SortableList` konsumiert, setzt `aria-label` auf Zone und Items —
     sonst ist der gewonnene Tastatur-Pfad unbeschriftet.
   - Bedingtes Markup zwischen Zeilen (Telegram-Divider, Cut-Line) gehört **in** den
@@ -147,6 +135,24 @@ Nicht-Teilung eine dokumentierte Begründung.
     keiner den Tastatur-Pfad prüft. AC-4 ist genau dieser Test.
 
 ## Changelog
+
+- **2026-10-07 (#2288, Strip-Ausnahme entfällt):** `EtappenStrip` sortiert jetzt über
+  `SortableList` (neuer optionaler Prop `direction="horizontal"`); die „+ Pause"-Lücke liegt im
+  Item-Snippet, „+ Etappe" als Geschwister der Zone — der Non-Item-Kinder-Konflikt ist gelöst.
+  Die Ausnahme (Entscheidung 7, Folgepflicht) ist gestrichen; die verwaiste
+  `compare/GroupSection.svelte` wurde gelöscht. Im Frontend gibt es nur noch eine Drag-Technik,
+  ein Wächter-Test (`no_native_draggable_guard.test.ts`) sichert das gegen Rückfall.
+  **Vertragsergänzung Tastatur (gleicher Eintrag):** Die Bibliothek feuert `finalize` nach jedem
+  Pfeilschritt (`keyboardAction.js`). `SortableList` puffert diese Zwischenschritte (nur lokal,
+  nicht nach aussen) und meldet beim Ablegen (Leertaste, Klick daneben) genau EINEN Report:
+  `onDndReorder` mit der Endreihenfolge, dann `onDndReorderEnd`; für Zuhörer an der Zone gibt es
+  entsprechend ein einziges gebündeltes `finalize`. Escape bricht ab (Ausgangszustand, nichts
+  gemeldet). Verlässt der Fokus die Zone mitten im Griff, wird der Stand nach einer Frist von
+  150 ms gemeldet statt verloren; ein Griffwechsel meldet den Rest des ersten Griffs. Gepuffert wird
+  nur, wenn dieselbe Zone die Geste gestartet hat — wandert ein Item per Tab in eine andere Zone,
+  laufen beide Zonen wie zuvor sofort durch (kein Itemverlust). Maus-/Touch-Pfad unverändert
+  (`finalize` beim Ablegen). Horizontale Zone: der Platzhalter der Bibliothek rendert dieselbe
+  Zeile wie das gezogene Item (sonst ist er 0 px breit und der Klon landet versetzt).
 
 - **2026-09-25 (Ergänzung `onDndReorderEnd`):** Optionaler Prop
   `onDndReorderEnd?: () => void`, feuert direkt nach `onDndReorder` beim
@@ -170,3 +176,11 @@ Nicht-Teilung eine dokumentierte Begründung.
   bleiben unverändert gültig. Die Korrektur verhindert im Gegenteil einen Bruch von AC-1 und
   des Bestandstests zu AC-3. Lehre: Bibliotheks-Zusagen aus der README gehören vor einer
   Architektur-Festlegung am Quelltext verifiziert.
+- **2026-10-07 (#2288, Nachtrag Umsetzung):** Der Etappen-Strip nutzt `SortableList` mit
+  `flipDurationMs=0` (schnelle Gesten übersprangen sonst Stationen; Nachbarkarten springen ohne
+  Gleiten), einem 128-px-Polster rechts (Ablegen am Rand, „+ Etappe" liegt darüber) und speichert
+  beim Ablegen (`handleReorderEnd`, auch mobile Liste; bei offener Kaskaden-Rückfrage aufgeschoben).
+  Bekannt, vorbestehend und nicht durch #2288 verursacht: Auf dem Wetter-Metriken-Tab (zwei Zonen
+  mit doppelten IDs) verliert die Quellzone per Tastatur ein Item, sobald Zone 2 den Fokus bekommt
+  (Bibliotheksverhalten, gemessen auf `origin/main`); Sammel-Eintrag #1199.
+
