@@ -84,7 +84,7 @@ Wer nicht eingeloggt ist, soll vor der Registrierung verstehen, was Gregor Zwanz
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein nicht eingeloggter Besucher / When er `/` aufruft / Then sieht er die öffentliche Startseite (Status 200, keine Weiterleitung auf `/login`) mit Überschrift, Erklärung „Was ist Gregor Zwanzig" und den Sektionen „Was bei dir ankommt" und „Warum das unterwegs nützt"; dort steht, dass Gregor eine hyperlokale Vorhersage liefert — für die Etappenpunkte eines Trips im jeweiligen Zeitraum der Tour bzw. für die Orte eines Ortsvergleichs —, morgens und abends als Briefing plus Alarme.
+- **AC-1:** Given ein nicht eingeloggter Besucher / When er `/` aufruft / Then sieht er die öffentliche Startseite (Status 200, keine Weiterleitung auf `/login`) mit Überschrift, Erklärung „Was ist Gregor Zwanzig" und den Sektionen „Was bei dir ankommt" und „Warum das unterwegs nützt"; dort steht, dass Gregor eine hyperlokale Vorhersage liefert — für die Etappenpunkte eines Trips im jeweiligen Zeitraum des Trips bzw. für die Orte eines Ortsvergleichs —, morgens und abends als Briefing plus Alarme.
   - Test: Vitest/Node gegen echtes `handle` ohne Cookie auf `/` → 200 bzw. kein `redirect`; Render-Test der Startseite prüft die drei Sektionen und den Katalogtext zur hyperlokalen Vorhersage (Trip-Zeitraum und Ortsvergleich).
 
 - **AC-2:** Given ein nicht eingeloggter Besucher / When er einen geschützten Pfad wie `/trips`, `/compare`, `/admin` oder `/trips/abc` aufruft / Then wird er weiterhin mit Status 302 auf `/login` umgeleitet, nur der exakte Pfad `/` ist geöffnet.
