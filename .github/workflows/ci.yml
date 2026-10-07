@@ -512,6 +512,11 @@ jobs:
     needs: [test, lint, go-test, frontend-test, svelte-check, e2e]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # #2047 S2b: zwei Merges liefern nie gleichzeitig aus; ein laufender
+    # Deploy wird nie abgebrochen (der naechste reiht sich ein).
+    concurrency:
+      group: prod-deploy
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -592,17 +597,50 @@ jobs:
           echo "### Prod-Deploy uebersprungen" >> "$GITHUB_STEP_SUMMARY"
           echo "$MSG" >> "$GITHUB_STEP_SUMMARY"
 
+      # #2047 S2b: Das Deploy-Skript ist idempotent — steht der Stand schon live
+      # (z. B. per /70-deploy aus der Session), meldet es "bereits ausgeliefert"
+      # und startet nichts neu. Die Ausgabe laeuft live ins Log und wird danach
+      # auf genau dieses Literal geprueft (Kopplung mit henemm-infra
+      # scripts/deploy-gregor-prod.sh). Der Skript-Exitcode bleibt massgeblich.
       - name: Deploy zu Produktion via SSH
+        id: deploy
         if: steps.gate.outputs.open == 'true'
         run: |
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
+          LOG=$(mktemp)
+          set +e
           ssh -i /tmp/deploy_key \
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
+            "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh" 2>&1 | tee "$LOG"
+          EXIT=${PIPESTATUS[0]}
+          set -e
+          rm -f /tmp/deploy_key
+          if grep -qF "bereits ausgeliefert" "$LOG"; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+          rm -f "$LOG"
+          exit $EXIT
+
+      # #2047 S2b: Post-Deploy-Selbsttest auch im CI-Pfad (wie /70-deploy 4b).
+      # Exit != 0 macht den Job rot — nichts verschlucken.
+      - name: Post-Deploy-Selbsttest Produktion
+        if: success() && steps.gate.outputs.open == 'true'
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          set +e
+          ssh -i /tmp/deploy_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "cd /home/hem/gregor_zwanzig && python3 .claude/hooks/prod_selftest.py"
           EXIT=$?
+          set -e
           rm -f /tmp/deploy_key
           exit $EXIT
 
@@ -613,8 +651,10 @@ jobs:
       # entschaerft zugleich die Script-Injection ueber Commit-Messages;
       # json.dumps macht jeden Inhalt transportsicher. Nur die erste
       # Message-Zeile — mehr liest auf dem Handy niemand.
+      # Drei Meldungen, die sich ausschliessen (#2047 S2b): deployed /
+      # bereits ausgeliefert / FEHLGESCHLAGEN; bei geschlossenem Gate keine.
       - name: Telegram — Deploy erfolgreich (HENEMM Server)
-        if: success() && steps.gate.outputs.open == 'true'
+        if: success() && steps.gate.outputs.open == 'true' && steps.deploy.outputs.already != 'true'
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
@@ -626,6 +666,26 @@ jobs:
           first = lines[0] if lines else ""
           sha = os.environ["SHA"][:7]
           print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": "gregor20 deployed: %s %s" % (sha, first)}))
+          EOF
+          )
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" > /dev/null
+
+      - name: Telegram — Stand war schon live (HENEMM Server)
+        if: success() && steps.gate.outputs.open == 'true' && steps.deploy.outputs.already == 'true'
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
+          SHA: ${{ github.sha }}
+        run: |
+          BODY=$(python3 - <<'EOF'
+          import json, os
+          lines = (os.environ.get("COMMIT_MSG") or "").splitlines()
+          first = lines[0] if lines else ""
+          sha = os.environ["SHA"][:7]
+          text = "gregor20 bereits ausgeliefert (kein Neustart): %s %s" % (sha, first)
+          print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": text}))
           EOF
           )
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \

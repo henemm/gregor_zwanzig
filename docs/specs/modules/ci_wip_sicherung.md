@@ -200,3 +200,6 @@ ungleich 0), bricht der CI-Schritt ab, bevor der Reset läuft.
 - 2026-08-21: AC-11 (Idempotenz bei unverändertem Arbeitsbaum) ergänzt, AC-9 auf den Fall
   „abweichendes Objekt bzw. echter Tag-Fehler" präzisiert — Adversary-Befund: zwei Läufe in
   derselben Sekunde bei gleichem Inhalt brachen die CI-Kette ab, obwohl die Arbeit gesichert war.
+- 2026-10-06: Nachtrag — CI-Aufrufer mit #2047 S2 entfallen: Der CI-Job `deploy` schreibt kein
+  Verdict mehr und führt kein `git reset` aus (PR #2516, ADR-0085). Die WIP-Sicherung bleibt
+  allein in `deploy-gregor-prod.sh` wirksam.

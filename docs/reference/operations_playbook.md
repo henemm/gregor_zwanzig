@@ -224,6 +224,14 @@ gegen Staging (Schritt 3 oben) — der Selbsttest bestätigt hier nur „Prod le
 korrekt auf Login um", nicht „Feature funktioniert". Siehe Spec Issue #564 und #1353 für
 technische Details.
 
+**Selbsttest im CI-Pfad (#2047 S2b, ADR-0085):** Liefert die CI aus (Gate `open`), ruft sie danach per ssh
+`cd /home/hem/gregor_zwanzig && python3 .claude/hooks/prod_selftest.py` auf. Exit ≠ 0 macht den Job
+rot. Ohne Workflow-Variable landet der Bericht unter `docs/artifacts/unknown/`. Das Deploy-Skript
+ist idempotent: Steht `deployed_commit` schon auf `origin/main`, meldet es „bereits ausgeliefert"
+und startet nichts neu (Notausgang `GZ_FORCE_REDEPLOY=1`). CI und `/70-deploy` können denselben
+Stand also gefahrlos beide ausliefern. Der Job `deploy` ist per
+`concurrency: {group: prod-deploy, cancel-in-progress: false}` serialisiert.
+
 ---
 
 ## Liefer-Workflow — Detailablauf (PR statt Direkt-Push, PO-go 2026-08-05)

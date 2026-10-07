@@ -14,6 +14,14 @@ Prod-Deploy und Erfolgs-Telegram nur bei `open`; bei `closed` bleibt der Job gr�
 übersprungen, die Job-Summary verweist auf `/70-deploy` Schritt 4. `git fetch` scheitert oder fehlt
 der `PROD_GATE`-Satz ⇒ Job rot.
 
+**Ergänzung S2b (ADR-0085):** `deploy-gregor-prod.sh` hat einen Idempotenz-Kurzschluss. Ist
+`deployed_commit` gleich `origin/main`, gibt es „bereits ausgeliefert" und Exit 0, ohne Neustart.
+**Notausgang:** `GZ_FORCE_REDEPLOY=1 bash …/deploy-gregor-prod.sh` liefert trotzdem aus und
+protokolliert das in `.claude/deploy-overrides.log`. Nach dem Deploy läuft im CI-Pfad
+`prod_selftest.py` (Exit ≠ 0 ⇒ Job rot). Job `deploy` hat `concurrency: prod-deploy` ohne Abbruch.
+**Telegram-Ausschluss:** je Lauf höchstens eine Meldung, entweder „deployed", „bereits
+ausgeliefert" oder „FEHLGESCHLAGEN" (nur bei `failure()`). Bei `closed` gibt es keine Meldung.
+
 ## Frontend-Browser-Gate (#1558, seit 2026-08-08)
 
 Berührt der committete Scope `frontend-only` oder `full-stack`, lädt `staging_gate.py --write-verdict`
