@@ -15,6 +15,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -208,7 +210,11 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 	}
 
 	s := &Scheduler{
-		cron:                    cron.New(cron.WithLocation(loc)),
+		// Issue #2217 (C1-63): aeusseres Netz — eine Panic in einem Cron-Eintrag
+		// ausserhalb von recordRun() beendet sonst den ganzen Prozess.
+		cron: cron.New(cron.WithLocation(loc), cron.WithChain(
+			cron.Recover(cron.PrintfLogger(log.New(os.Stderr, "[cron] ", log.LstdFlags))),
+		)),
 		pythonURL:               cfg.PythonCoreURL,
 		heartbeatComparePresets: cfg.HeartbeatComparePresets,
 		// Issue #1912: 120s reichte fuer den regulaeren Versand nicht mehr
@@ -481,6 +487,14 @@ func (s *Scheduler) callUserWithBudget(jobID, path, uid string, wait, callCap ti
 		log.Printf("[scheduler] %s: user %s call cap %v expired, in-flight marker released without booking", jobID, uid, callCap)
 	})
 	go func() {
+		// Issue #2217: eine Panic im Aufruf fuer EINEN Nutzer darf den Prozess
+		// nicht beenden — sie zaehlt als Fehler dieses Nutzers.
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[scheduler] %s: user %s call panicked: %v\n%s", jobID, uid, r, debug.Stack())
+				resultCh <- fmt.Errorf("panic: %v", r)
+			}
+		}()
 		err := s.triggerEndpointForUser(path, uid)
 		resultCh <- err // gepuffert: blockiert nie, auch wenn niemand mehr liest
 		if capped.Load() {
@@ -879,7 +893,7 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 	}
 	defer lock.Unlock()
 
-	err := fn()
+	err := runRecovered(jobID, fn)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -908,6 +922,18 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 			Status: "ok",
 		}
 	}
+}
+
+// runRecovered fuehrt fn aus und macht eine Panic zum Fehler (Issue #2217):
+// der Lauf wird als "error" mit "panic: ..." verbucht, der Prozess lebt weiter.
+func runRecovered(jobID string, fn func() error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[scheduler] %s panicked: %v\n%s", jobID, r, debug.Stack())
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	return fn()
 }
 
 // triggerResponseBody mirrors the JSON body returned by Python trigger
