@@ -48,7 +48,7 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
 
 ## Workflow
 
-OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake`, `/00-bug`, `/01-feature`):
+OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake` — auch Bugs starten dort, `/00-bug` gibt es nicht mehr — und `/01-feature`):
 
 | Command | Purpose | PO-Eingriff |
 |---------|---------|-------------|
