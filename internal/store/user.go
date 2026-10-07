@@ -160,6 +160,7 @@ func (s *Store) SetUserTierAdmin(id, tier string) error {
 		m["tier"], _ = json.Marshal(tier)
 		delete(m, "requested_tier")
 		delete(m, "requested_at")
+		delete(m, "requested_notified_at")
 	})
 }
 

@@ -836,6 +836,8 @@ type profileResponse struct {
 	// Antrag vorliegt (omitempty bzw. nil-Pointer).
 	RequestedTier string     `json:"requested_tier,omitempty"`
 	RequestedAt   *time.Time `json:"requested_at,omitempty"`
+	// Issue #2436 — Betreiber benachrichtigt (nur bei Erfolg gesetzt).
+	RequestedNotifiedAt *time.Time `json:"requested_notified_at,omitempty"`
 	// Issue #1717 S3 — Premium-SMS (Garmin inReach) in der Oberflaeche. REIN
 	// LESEND: die Rueckadresse lernt ausschliesslich der interne Rueckkanal
 	// (S1), UpdateProfileHandler nimmt die Felder nicht entgegen (AC-7).
@@ -922,17 +924,18 @@ func toProfileResponse(u *model.User) profileResponse {
 	// Issue #1555: eine Quelle für alle Leser — model.EffectiveTier().
 	tier := model.EffectiveTier(u.Tier)
 	return profileResponse{
-		ID:             u.ID,
-		Email:          u.Email,
-		DisplayName:    u.DisplayName,
-		MailTo:         u.MailTo,
-		SmsTo:          u.SmsTo,
-		TelegramChatID: u.TelegramChatID,
-		Tier:           tier,
-		SmsAllowed:     model.SmsAllowed(tier),
-		EmailVerified:  u.EmailVerifiedAt != nil,
-		RequestedTier:  u.RequestedTier,
-		RequestedAt:    u.RequestedAt,
+		ID:                  u.ID,
+		Email:               u.Email,
+		DisplayName:         u.DisplayName,
+		MailTo:              u.MailTo,
+		SmsTo:               u.SmsTo,
+		TelegramChatID:      u.TelegramChatID,
+		Tier:                tier,
+		SmsAllowed:          model.SmsAllowed(tier),
+		EmailVerified:       u.EmailVerifiedAt != nil,
+		RequestedTier:       u.RequestedTier,
+		RequestedAt:         u.RequestedAt,
+		RequestedNotifiedAt: u.RequestedNotifiedAt,
 		// Issue #1717 S3: Rohwerte durchgereicht, Zustand + Tarif-Gate abgeleitet.
 		PremiumSmsReplyTo:    u.PremiumSmsReplyTo,
 		PremiumSmsReplyAt:    u.PremiumSmsReplyAt,
@@ -1676,47 +1679,78 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 		now := time.Now()
 		user.RequestedTier = req.RequestedTier
 		user.RequestedAt = &now
+		// Ein alter Nachweis gilt nie fuer einen neuen Antrag (Issue #2436 AC-5).
+		user.RequestedNotifiedAt = nil
 		if err := s.SaveUser(*user); err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
 			return
 		}
 
-		// Erst nach erfolgreichem Save antworten — Mail beeinflusst die Response nie.
-		w.Write([]byte(`{"status":"ok"}`))
-
-		if cfg.PoEmail == "" {
-			log.Printf("tier-change: PO_EMAIL not configured — request stored for %s but no mail sent", userId)
-			return
-		}
-		if cfg.SMTPHost == "" {
-			log.Printf("tier-change: SMTP not configured — request stored for %s but no mail sent", userId)
-			return
-		}
-
-		mailCfg := mail.MailConfig{
-			Host: cfg.SMTPHost, Port: cfg.SMTPPort,
-			User: cfg.SMTPUser, Pass: cfg.SMTPPass,
-			From: cfg.SMTPFrom,
-		}
-		fallbackCfg := mail.MailConfig{
-			Host: cfg.FallbackSMTPHost, Port: 587,
-			User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
-		}
-		msg := mail.BuildTierChangeRequestMail(userId, currentTier, req.RequestedTier)
-
-		// Goroutine mit Timeout — der Endpoint darf nicht auf SMTP blockieren.
-		go func(to string, msg mail.Mail, c, fb mail.MailConfig, username string) {
-			done := make(chan error, 1)
-			go func() { done <- mail.SendWithFallback(c, fb, to, msg) }()
-			select {
-			case err := <-done:
-				if err != nil {
-					log.Printf("tier-change: mail send failed for %s: %v", username, err)
+		// Der Antrag ist gespeichert: HTTP 200 bleibt in jedem Fall. Ob der
+		// Betreiber erreicht wurde, sagt po_notified (Issue #2436).
+		notified := sendTierChangeNotification(cfg, userId, currentTier, req.RequestedTier)
+		if notified {
+			// Frisch laden (Read-Modify-Write), damit kein Zwischenstand ueberschrieben wird.
+			// Nur stempeln, wenn der gesendete Antrag noch der aktuelle ist (F001):
+			// sonst Freigabe/Folgeantrag waehrend des Versands -> kein Nachweis.
+			if fresh, err := s.LoadUser(userId); err == nil && fresh != nil &&
+				fresh.RequestedTier == req.RequestedTier &&
+				fresh.RequestedAt != nil && fresh.RequestedAt.Equal(now) {
+				ts := time.Now()
+				fresh.RequestedNotifiedAt = &ts
+				if err := s.SaveUser(*fresh); err != nil {
+					log.Printf("tier-change: could not persist requested_notified_at for %s: %v", userId, err)
+					notified = false
 				}
-			case <-time.After(20 * time.Second):
-				log.Printf("tier-change: mail send timeout (20s) for %s", username)
+			} else {
+				notified = false
 			}
-		}(cfg.PoEmail, msg, mailCfg, fallbackCfg, userId)
+		}
+		json.NewEncoder(w).Encode(map[string]any{"status": "ok", "po_notified": notified})
+	}
+}
+
+// sendTierChangeMailFn ist die Transportgrenze fuer die PO-Benachrichtigung
+// (Issue #2436), Muster sendResetMailFn.
+var sendTierChangeMailFn = mail.SendWithFallback
+
+// tierChangeMailTimeout begrenzt die synchrone Wartezeit auf den Versand.
+var tierChangeMailTimeout = 15 * time.Second
+
+// sendTierChangeNotification versendet die PO-Mail synchron mit hartem Timeout
+// und meldet, ob der Betreiber erreicht wurde.
+func sendTierChangeNotification(cfg config.Config, userId, currentTier, requestedTier string) bool {
+	if cfg.PoEmail == "" {
+		log.Printf("tier-change: PO_EMAIL not configured — request stored for %s but no mail sent", userId)
+		return false
+	}
+	if cfg.SMTPHost == "" {
+		log.Printf("tier-change: SMTP not configured — request stored for %s but no mail sent", userId)
+		return false
+	}
+	mailCfg := mail.MailConfig{
+		Host: cfg.SMTPHost, Port: cfg.SMTPPort,
+		User: cfg.SMTPUser, Pass: cfg.SMTPPass,
+		From: cfg.SMTPFrom,
+	}
+	fallbackCfg := mail.MailConfig{
+		Host: cfg.FallbackSMTPHost, Port: 587,
+		User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
+	}
+	msg := mail.BuildTierChangeRequestMail(userId, currentTier, requestedTier)
+
+	done := make(chan error, 1)
+	go func() { done <- sendTierChangeMailFn(mailCfg, fallbackCfg, cfg.PoEmail, msg) }()
+	select {
+	case err := <-done:
+		if err != nil {
+			log.Printf("tier-change: mail send failed for %s: %v", userId, err)
+			return false
+		}
+		return true
+	case <-time.After(tierChangeMailTimeout):
+		log.Printf("tier-change: mail send timeout (%s) for %s", tierChangeMailTimeout, userId)
+		return false
 	}
 }
