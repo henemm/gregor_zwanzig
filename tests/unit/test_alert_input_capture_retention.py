@@ -24,7 +24,6 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
 
 H = 3600.0
 
