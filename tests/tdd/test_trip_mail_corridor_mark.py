@@ -319,7 +319,7 @@ class TestTripMailCatalogMetricCorridorMark:
     def test_ac10_cape_korridor_markiert_nicht_mehr(self):
         """Issue #1585 AC-10: ein Bestands-Korridor auf cape_max_jkg markiert
         nichts mehr -- CAPE hat keine Spalte mehr, und
-        resolve_corridor_summary_field() loest den Schluessel zu None auf.
+        summary_field_for() loest den Schluessel zu None auf (CAPE nicht waehlbar).
         Kein Crash, keine Markierung, kein Rest der frueheren CAPE-Zelle."""
         dp = _dp(t2m_c=10.0, cape_jkg=1500.0)
         corridors = [Corridor(metric="cape_max_jkg", range=[1000, None], mark=True)]

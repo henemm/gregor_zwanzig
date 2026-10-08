@@ -42,7 +42,6 @@ from services.alert_log import (
     append_suppressed_entry,
     read_undelivered,
     register_pairs_from_changes,
-    register_pairs_from_corridor_hits,
 )
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
@@ -432,28 +431,3 @@ def test_ac23_unterdrueckte_meldung_bleibt_ohne_register_eintrag():
 
 
 # ───────────────────────────────── AC-24 ───────────────────────────────────
-
-def test_ac24_korridor_treffer_traegt_wert_ohne_vorwert_und_ohne_schwelle():
-    """AC-24 GIVEN ein ``CorridorHit`` mit ``value=45.0`` und ``bound=40.0``
-    WHEN er ueber ``register_pairs_from_corridor_hits()`` protokolliert wird
-    THEN traegt das Register-Dict ``value: 45.0``, aber KEINEN
-    ``previous_value`` (ein Grenzwert-Treffer hat keinen Vorwert) und KEINEN
-    ``bound`` (die Schwelle ist Konfiguration, kein Messwert — E1/E4)."""
-    from services.corridor_threshold import CorridorHit
-
-    uid = fresh_user("ac24")
-    hit = CorridorHit(metric="wind_gust", value=45.0, bound=40.0, direction="above",
-                      segment_id="1", occurred_at=None)
-
-    _protokolliere(uid, register_pairs_from_corridor_hits([hit]), entity_id="trip-ac24")
-
-    m = _dict_fuer(_latest_entry(uid), "gust", "max")
-    assert m.get("value") == 45.0, (
-        f"Der gerissene Wert fehlt oder ist falsch: {m!r}"
-    )
-    assert "previous_value" not in m, (
-        f"Ein Grenzwert-Treffer hat keinen Vorwert — der Schluessel darf fehlen: {m!r}"
-    )
-    assert "bound" not in m, (
-        f"Die Schwelle gehoert NICHT ins Protokoll (E1): {m!r}"
-    )

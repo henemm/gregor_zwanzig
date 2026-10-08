@@ -210,7 +210,7 @@ class OnsetEvent:
 @dataclass(frozen=True)
 class OnsetShiftEvent:
     """Eine Beginn-Verschiebung (Issue #1468) -- eigener Render-Vertrag nach
-    dem Vorbild von `CorridorEvent` (ADR-0013).
+    dem Vorbild eines eigenen Render-Vertrags (ADR-0013).
 
     Bewusst KEIN `AlertEvent`: dessen Werte laufen durch den Zahlen-
     Formatierer (`render._val`/`_num`, Katalog-Einheit angehaengt, Vorzeichen
@@ -244,55 +244,17 @@ class OnsetShiftEvent:
 
 
 @dataclass(frozen=True)
-class CorridorEvent:
-    """Ein Schwellen-Treffer (Issue #1444 S1) -- eigener Render-Vertrag
-    (ADR-0013): KEIN `WeatherChange`-Missbrauch mit erfundenem
-    `old_value=0.0`. Kennt bewusst KEIN "vorher" -- nur den Ist-Wert gegen
-    die vom Nutzer gesetzte Grenze."""
-    metric_id: str           # catalog metric_id (NICHT summary_field)
-    value: float              # Ist-Wert
-    bound: float               # die TATSAECHLICH gerissene Grenze
-    direction: str            # "above" | "below"
-    occurred_at: str | None   # "HH:MM"
-    km_from: float
-    km_to: float
-    location_label: str | None = None
-    # Issue #2036 (Adversary F001): additiv, optional -- dieselbe Bauart wie
-    # `AlertEvent.segment_id` (#1744 A1). OHNE sie kann der Renderer bei einer
-    # unvermessenen Etappe gar keinen Ort nennen und faellt zwangslaeufig auf
-    # die Luftlinien-km zurueck, genau das verbietet AC-13. Gesetzt vom
-    # Trip-Korridor-Pfad (`project.to_corridor_events`); Altdaten ohne Kennung
-    # behalten den km-Rueckfall (#1744 AC-7).
-    segment_id: str | None = None
-    # Issue #2036: additiv, Default aus. `True` NUR, wenn `km_from`/`km_to`
-    # aus echter GPX-Wegstrecke stammen (`TripSegment.distance_measured`).
-    # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
-    # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
-    km_measured: bool = False
-    # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
-    stage_number: int | None = None
-    # Issue #2205: additiv, Muster `AlertEvent.hail_flag` (o.).
-    hail_flag: bool | None = None
-
-
-@dataclass(frozen=True)
 class AlertMessage:
     """Kanonische Alert-Nachricht über alle vier Kanäle."""
     trip_short: str
     stand_at: str                              # "HH:MM"
-    events: tuple[AlertEvent | OnsetEvent, ...]  # ≥1 bei Deviation ODER Onset;
-    # leer, wenn ausschliesslich Korridor-Treffer vorliegen (s.u.)
+    events: tuple[AlertEvent | OnsetEvent, ...]  # ≥1 bei Deviation ODER Onset
     source: str | None = None                  # Radar (#919): source != None → Onset-Zweig; Deviation → None
     cooldown_display: str | None = None        # Radar (#919): Pflichttext Cooldown-Hinweis
     # Issue #1169: additiv, optional. Gesetzt nur vom Compare-Punkt-Pfad
     # (to_point_alert_message) — zeigt Ortsname statt km-Spanne. Trip-Pfad
     # (to_alert_message) setzt dieses Feld NIE (Regressions-Invariante, AC-7).
     location_label: str | None = None
-    # Issue #1444 S1: additiv, optional. Schwellen-Treffer desselben Laufs --
-    # werden zusaetzlich zu (oder anstelle von) `events` in dieselbe Nachricht
-    # gebuendelt (Muster #1088). Bestehende Aufrufer setzen dieses Feld nie
-    # (Default leer, Regressions-Invariante).
-    corridor_events: tuple[CorridorEvent, ...] = ()
     # Issue #1468: additiv, optional. Beginn-Verschiebungen desselben Laufs --
     # in DERSELBE Nachricht wie die Stufen-/Wert-Aenderungen (PO-Entscheid:
     # beide melden, im Text zusammenfassen, nicht zwei getrennte Nachrichten).

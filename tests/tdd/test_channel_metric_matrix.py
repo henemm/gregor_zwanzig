@@ -1839,7 +1839,7 @@ _GEWITTER_ID = _ALERT_METRIC_TO_CATALOG_ID[AlertMetric.THUNDER_LEVEL][0]
 _UNIT_PROBE_VALUE = 12.0
 _EINHEITEN_UNTER_BEOBACHTUNG = sorted({m.unit for m in _METRICS} | set(_HANDLED_UNITS))
 
-# Alarm-SMS-Tokengrammatik (render.py ``_sms_token`` / ``_sms_corridor_token``),
+# Alarm-SMS-Tokengrammatik (render.py ``_sms_token``),
 # vier Formen -- die Grammatik muss alle vier zerlegen, ohne zur Teilstring-
 # Suche zu verwaessern ('N' (temperature_cold) ist Wortanfang von 'NS'
 # (fresh_snow), s. AC-S1-2-Gegenprobe):

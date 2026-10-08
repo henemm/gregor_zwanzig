@@ -43,7 +43,6 @@ from output.renderers.alert.segments import normalize_segment_id
 from services.rain_extent import derive_rain_zones  # Issue #2051 S2a
 from services.trip_segments import measured_segment_km  # Issue #2036
 from services.point_weather import AlertEvaluationConfig, TripSegmentWeatherAdapter
-from services.corridor_threshold import CorridorHit
 from services.radar_service import RadarDeadlineExceeded
 from services.alert_check_state import (
     AlertCheckStateStore, report_unit_failure, sort_by_last_reached,
@@ -2877,7 +2876,6 @@ class TripAlertService:
         weather: List[SegmentWeatherData],
         changes: List[WeatherChange],
         official_notices: Optional[list] = None,
-        corridor_hits: Optional[List[CorridorHit]] = None,
         reference_at: Optional[str] = None,
     ) -> "NotificationResult":
         """
@@ -2886,8 +2884,7 @@ class TripAlertService:
         Issue #1023: Rendering und Versand werden an den NotificationService
         delegiert; TripAlertService kennt keine Renderer-/Transport-Details mehr.
         Issue #1088: liegen `official_notices` vor, werden sie in dieselbe
-        Nachricht gebündelt (kein zweiter Versand). Issue #1444 S1: dasselbe
-        gilt fuer `corridor_hits` (Schwellen-Treffer, Muster #1088).
+        Nachricht gebündelt (kein zweiter Versand).
 
         Returns:
             Die volle `NotificationResult`. `result.sent` ist True, sobald
@@ -2930,7 +2927,6 @@ class TripAlertService:
             official_notices=official_notices or [],
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
-            corridor_hits=corridor_hits or [],
             reference_at=reference_at,
         )
 

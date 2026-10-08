@@ -193,30 +193,6 @@ def register_pairs_from_changes(changes) -> list[tuple[str, str]]:
     )
 
 
-def register_pairs_from_corridor_hits(hits) -> list[tuple[str, str]]:
-    """Grenzwert-Treffer -> Register-Paare, ueber BEIDE Korridor-Namensraeume.
-
-    `CorridorHit.metric` kann aus dem alten `AlertMetric`-Namensraum oder aus
-    dem Compare-Katalog stammen; `resolve_corridor_summary_field()` (S2a-
-    Baustein) vereinheitlicht beide auf den Summary-Feldnamen.
-
-    Der gerissene Wert kommt mit (E4), ein Vorwert NICHT: ein Korridor-Treffer
-    hat keinen -- und die Schwelle (`bound`) ist Konfiguration, kein Messwert.
-    """
-    from services.corridor_threshold import resolve_corridor_summary_field
-
-    felder = [(h, resolve_corridor_summary_field(h.metric)) for h in hits or []]
-    return _norm_pairs(
-        _mit_werten(
-            metric_and_aggregation_for_field(f),
-            value=h.value,
-            rank=abs(h.value or 0.0),
-            segment_id=h.segment_id,
-        )
-        for h, f in felder if f
-    )
-
-
 def register_pairs_for_nowcast(is_convective) -> list[tuple[str, str]]:
     """Radar-Nowcast -> Register-Paar; kein Feldname noetig (O1).
 

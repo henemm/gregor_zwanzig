@@ -414,33 +414,6 @@ def test_sms_risk_label_thunder_low_no_gewitter_word():
     )
 
 
-# ------- 10. alert/render — Korridor-Alarmzeile, reiner LOW-Grenzwert-Treffer
-
-def test_corridor_alert_line_no_gewitter_word_for_pure_low():
-    from output.renderers.alert.model import AlertMessage, CorridorEvent
-    from output.renderers.alert.render import render_email, render_telegram
-
-    # Grenze UND Ist-Wert beide auf LOW (1.0) -- kein Ueberschreiten Richtung
-    # MED/HIGH, reiner LOW-Grenzwert-Treffer.
-    ce = CorridorEvent(
-        metric_id="thunder", value=1.0, bound=1.0, direction="above",
-        occurred_at=None, km_from=0.0, km_to=4.0,
-    )
-    msg = AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(), corridor_events=(ce,))
-
-    _html, plain = render_email(msg)
-    tg = render_telegram(msg)
-
-    assert "Gewitter" not in plain, (
-        f"Korridor-Alarmzeile (E-Mail-Klartext) enthaelt bei reinem "
-        f"LOW-Treffer noch 'Gewitter': {plain!r}"
-    )
-    assert "Gewitter" not in tg, (
-        f"Korridor-Alarmzeile (Telegram) enthaelt bei reinem LOW-Treffer "
-        f"noch 'Gewitter': {tg!r}"
-    )
-
-
 # ===========================================================================
 # AC-2 — CAPE-Wert steht direkt an der LOW-Aussage
 # AC-4 — Herkunftsabhaengigkeit (reine CAPE-Luftmasse vs. gemischte Herkunft)
@@ -584,8 +557,7 @@ def test_ac6_tg_day_footer_keeps_event_symbol_for_med_and_high():
 
 
 # ===========================================================================
-# AC-1 im ABWEICHUNGS-Alarm (`events`) — die Schwester zu Test 10 oben, der
-# nur `corridor_events` band.
+# AC-1 im ABWEICHUNGS-Alarm (`events`).
 #
 # Gemessen vor dem Fix: derselbe Alarmbereich sagte bei IDENTISCHER Stufe je
 # nach Alarmart Verschiedenes -- Korridor-Alarm "Luftmasse", Abweichungs-Alarm

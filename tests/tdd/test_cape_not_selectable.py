@@ -407,28 +407,6 @@ class TestAlertEngineExcludesCape:
 
 
 # ---------------------------------------------------------------------------
-# AC-10 (automatische Konsequenz von AC-1, gemessen): der CAPE-Wertebereichs-
-# Korridor (Ortsvergleich/Trip-Mail-Markierung) wird inert, weil
-# resolve_corridor_summary_field() bereits heute über summary_field_for()
-# läuft (die selectable bereits vor diesem Issue respektiert hat). Kein
-# eigener Code-Fix nötig — nur ein Nachweis + ehrliche Nachführung der 3
-# bestehenden Tests in tests/tdd/test_trip_mail_corridor_mark.py.
-# ---------------------------------------------------------------------------
-
-class TestCorridorGoesInertForCape:
-    """AC-10: ein CAPE-Wertebereichs-Korridor löst nach der Änderung kein
-    Summary-Feld mehr auf — die Markierung entfällt (PO-bestätigt 2026-08-10)."""
-
-    def test_resolve_corridor_summary_field_returns_none_for_cape(self):
-        from services.corridor_threshold import resolve_corridor_summary_field
-
-        result = resolve_corridor_summary_field("cape_max_jkg")
-        assert result is None, (
-            f"AC-10: CAPE-Korridor muss nach der Änderung kein Feld mehr auflösen, war: {result!r}"
-        )
-
-
-# ---------------------------------------------------------------------------
 # Mutations-Gegenprobe (Adversary Runde 1, F001/F002): die beiden neuen Filter
 # müssen gegen `MetricDefinition.selectable` arbeiten, NICHT gegen die
 # Zeichenkette "cape" bzw. `AlertMetric.CAPE`. Ohne die folgenden Tests bleibt

@@ -295,32 +295,3 @@ def test_ac4_compare_wiring_ueber_echten_aufrufpfad_liefert_referenz_zeitpunkt()
         f"AC-4 (Wiring): der Referenz-Zeitpunkt des Compare-Ankers "
         f"({erwartete_zeit}) muss im Mail-Body erscheinen. Mail-Body:\n{body}"
     )
-
-
-def test_ac5_regression_korridor_only_footer_bleibt_unveraendert():
-    """AC-5 (REGRESSIONSSCHUTZ, erwartet GRUEN): reine Schwellen-/Radar-
-    Alarme (kein Δ-Vergleich) behalten "Stand: heute HH:MM" unveraendert --
-    Slice 1 betrifft ausschliesslich Δ-Vergleichs-Alarme.
-    """
-    from output.renderers.alert.model import AlertMessage, CorridorEvent
-    from output.renderers.alert.render import render_email
-
-    ce = CorridorEvent(
-        metric_id="gust", value=55.0, bound=50.0, direction="above",
-        occurred_at="14:00", km_from=0.0, km_to=5.0,
-    )
-    msg = AlertMessage(
-        trip_short="Test-Trip", stand_at="14:00", events=(), source=None,
-        corridor_events=(ce,),
-    )
-    _html, plain = render_email(msg)
-
-    assert "Stand: heute 14:00" in plain, (
-        f"AC-5: der Korridor-Footer muss weiterhin 'Stand: heute HH:MM' "
-        f"zeigen (Regressions-Invariante). Body:\n{plain}"
-    )
-    assert _GENERISCHER_TEXT not in plain and "reference_at" not in plain.lower(), (
-        f"AC-5: reine Schwellen-Alarme duerfen KEINEN Referenz-Zeitpunkt- "
-        f"Zusatz bekommen -- das ist ausschliesslich Δ-Vergleichs-Alarmen "
-        f"vorbehalten. Body:\n{plain}"
-    )
