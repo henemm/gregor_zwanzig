@@ -2399,7 +2399,7 @@ class TripCommandProcessor:
                 if stage.date > command_date:
                     new_date = stage.date + timedelta(days=shift_days)
                     new_stages.append(dataclasses.replace(stage, date=new_date))
-                    shifts.append(StageShift(stage.name, stage.date, new_date))
+                    shifts.append(StageShift(current.numbered_stage_label(stage, en=self._en), stage.date, new_date))
                 else:
                     new_stages.append(stage)
             return shifts, new_stages
@@ -2516,7 +2516,7 @@ class TripCommandProcessor:
             for stage in fresh.stages:
                 new_date = stage.date + delta
                 new_stages.append(dataclasses.replace(stage, date=new_date))
-                shifts_.append(StageShift(stage.name, stage.date, new_date))
+                shifts_.append(StageShift(fresh.numbered_stage_label(stage, en=self._en), stage.date, new_date))
             applied["old_start"] = old
             applied["shifts"] = shifts_
             return dataclasses.replace(fresh, stages=new_stages)
@@ -2559,7 +2559,7 @@ class TripCommandProcessor:
         strich = "-" if self._en else "–"  # #2417 AC-30: GSM-7 auf Kurzform-Kanaelen
         for stage in trip.stages:
             if stage.date >= today:
-                lines.append(f"  {stage.date:%d.%m.%Y} {strich} {stage.name}")
+                lines.append(f"  {stage.date:%d.%m.%Y} {strich} {trip.numbered_stage_label(stage, en=self._en)}")
         return CommandResult(
             success=True, command="status",
             confirmation_subject=f"[{trip.name}] Status",

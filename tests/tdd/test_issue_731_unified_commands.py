@@ -316,8 +316,9 @@ class TestAC6StatusUpcomingOnly:
         save_trip(_make_trip(), user_id=_USER_A)
         result = TripCommandProcessor().process(_msg("STATUS", _USER_A))
         body = result.confirmation_body or ""
-        assert _today_name() in body, "STATUS muss die heutige Etappe zeigen (AC-6)"
-        assert _yesterday_name() not in body, \
+        # #2441: STATUS nennt die gezaehlte Nummer ("Etappe N"), nicht den Rohnamen
+        assert "Etappe 2" in body, "STATUS muss die heutige Etappe zeigen (AC-6)"
+        assert "Etappe 1" not in body, \
             "STATUS darf vergangene Etappen NICHT mehr listen (AC-6)"
 
 
