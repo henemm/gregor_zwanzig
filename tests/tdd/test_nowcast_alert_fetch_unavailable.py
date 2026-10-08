@@ -142,3 +142,87 @@ def test_ac28_zwei_nutzer_mit_gleicher_trip_id_tragen_ihre_eigene_unit():
     za, zb = _journal(f"{a}/t-gleich"), _journal(f"{b}/t-gleich")
     assert za and za[0]["outcome"] == "unavailable", za
     assert zb and {z["outcome"] for z in zb} == {"ok"}, zb
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Nachbesserung (F001/F002)
+# ---------------------------------------------------------------------------
+
+import logging  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+
+from services import alert_log  # noqa: E402
+from services.radar_service import INTENSITY_DRY, NowcastResult  # noqa: E402
+
+
+def test_dienst_nicht_verfuegbar_protokolliert_ausfall_ohne_zonenschleife(caplog):
+    """F001: wirft schon ``_get_radar_service()`` (der Dienst selbst fehlt),
+    gibt es keinen Folgeabruf: der Trip wird mit ``data_unavailable``
+    protokolliert und uebersprungen -- KEIN Zonenpunkt-Abruf auf ``None``
+    (``'NoneType' object has no attribute``), ``alert_fetch``/``unavailable``
+    ist gebucht."""
+    uid = _uid("ohne-dienst")
+    _make_trips(uid, ["t-ohne-dienst"])
+    dienst = _trip_service(uid, _ScriptedRadar(_trip_idx), [])
+
+    def _kein_dienst():
+        raise RuntimeError("Radar-Dienst nicht initialisierbar")
+
+    dienst._get_radar_service = _kein_dienst  # Fehler an der Systemgrenze
+
+    with caplog.at_level(logging.WARNING):
+        ergebnis = dienst.check_radar_alerts_run()
+
+    assert ergebnis.alerts_sent == 0
+    nonetype = [r.getMessage() for r in caplog.records if "NoneType" in r.getMessage()]
+    assert nonetype == [], f"Zonenschleife lief mit radar_svc=None: {nonetype}"
+    vorfaelle = alert_log.read_undelivered(
+        uid, entity_id="t-ohne-dienst", entity_type="trip",
+        since=datetime(2026, 10, 1, 9, 59, tzinfo=timezone.utc),
+    )
+    gruende = {g for v in vorfaelle for g in v.reasons}
+    assert alert_log.REASON_DATA_UNAVAILABLE in gruende, (
+        f"Dienstausfall nicht als data_unavailable protokolliert: {gruende!r}"
+    )
+    zeilen = _journal(f"{uid}/t-ohne-dienst")
+    assert [z["outcome"] for z in zeilen] == ["unavailable"], zeilen
+
+
+class _FesteAntwort(_ScriptedRadar):
+    """Echte Unterklasse: liefert ein festes ``NowcastResult`` (Feldform eines
+    Ausfalls bzw. einer Drosselung) statt zu werfen."""
+
+    def __init__(self, ergebnis: NowcastResult) -> None:
+        super().__init__(_trip_idx)
+        self._ergebnis = ergebnis
+
+    def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing",
+                    user_id=None, deadline_at=None):
+        idx = self._idx_fn(lat)
+        self.calls_per_unit[idx] = self.calls_per_unit.get(idx, 0) + 1
+        return self._ergebnis
+
+
+@pytest.mark.parametrize("feld", ["throttled", "data_unavailable"])
+def test_datenloses_ergebnis_bucht_weder_ok_noch_unavailable(feld):
+    """F002 (AC-28-Auslegung): ein gedrosseltes bzw. datenloses Ergebnis ist
+    weder Erfolg noch Ausnahme -- es bucht NICHTS. Ein vorheriger Ausfall
+    derselben Einheit bleibt damit die letzte Zeile (steht weiter in
+    ``failed_units``), statt von einem Schein-``ok`` abgeloest zu werden."""
+    uid = _uid(f"leer-{feld}")
+    _make_trips(uid, ["t-leer"])
+
+    _lauf(uid, "t-leer", raise_on=(0, 1, RuntimeError("Nowcast down")))
+    vorher = _journal(f"{uid}/t-leer")
+    assert [z["outcome"] for z in vorher] == ["unavailable"], "Aufbau: Ausfall gebucht"
+
+    radar = _FesteAntwort(NowcastResult(
+        onset_minutes=None, intensity_label=INTENSITY_DRY, source="radar", **{feld: True},
+    ))
+    _trip_service(uid, radar, []).check_radar_alerts_run()
+
+    assert radar.calls_per_unit.get(0, 0) >= 1, "Aufbau: der Abruf lief wirklich"
+    nachher = _journal(f"{uid}/t-leer")
+    assert [z["outcome"] for z in nachher] == ["unavailable"], (
+        f"{feld}=True darf weder ok noch unavailable buchen: {nachher}"
+    )
