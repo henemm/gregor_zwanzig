@@ -744,14 +744,12 @@ def send_compare_preset(
         )
     finally:
         release_send_lock("compare", user_id, preset_id)
-    result = {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
     # #2216: Teilverlust an den Aufrufer melden (leer/fehlend = nichts fehlt).
     fehlende = _missing_location_ids(
         load_all_locations(user_id=user_id), preset.get("location_ids") or []
     )
-    if fehlende:
-        result["fehlende_orte"] = fehlende
-    return result
+    return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger),
+            **({"fehlende_orte": fehlende} if fehlende else {})}
 
 
 def _write_compare_alert_snapshots(

@@ -125,7 +125,7 @@ def test_vollstaendig_aufloesbar_ohne_fehlende_orte(mit, client):
     r = _senden(client, uid, pid)
 
     assert r.status_code == 200, r.text
-    assert not r.json().get("fehlende_orte")
+    assert "fehlende_orte" not in r.json()
 
 
 # --- AC-7: Scheduler-Lauf schreibt Warnung mit Preset-ID und fehlenden IDs --------
