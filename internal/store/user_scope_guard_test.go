@@ -71,8 +71,9 @@ var storeMethodRegister = map[string]guardEntry{
 	"SaveTrip":   guarded(func(s *Store) error { return s.SaveTrip(&model.Trip{ID: "t1", Name: "T1"}) }),
 	"DeleteTrip": guarded(func(s *Store) error { return s.DeleteTrip("t1") }),
 
-	"LoadComparePresets": guarded(func(s *Store) error { _, err := s.LoadComparePresets(); return err }),
-	"LoadComparePreset":  guarded(func(s *Store) error { _, err := s.LoadComparePreset("c1"); return err }),
+	"ComparePresetsUsingLocation": guarded(func(s *Store) error { _, err := s.ComparePresetsUsingLocation("x"); return err }),
+	"LoadComparePresets":          guarded(func(s *Store) error { _, err := s.LoadComparePresets(); return err }),
+	"LoadComparePreset":           guarded(func(s *Store) error { _, err := s.LoadComparePreset("c1"); return err }),
 	"SaveComparePreset": guarded(func(s *Store) error {
 		return s.SaveComparePreset(model.ComparePreset{ID: "c1", Name: "C1"})
 	}),

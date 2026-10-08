@@ -218,7 +218,7 @@
 		try {
 			// Issue #2124: geteilter Laufzustand (compare:<id>) + Klassifikation.
 			const o = await sendComparePreset(currentPreset.id);
-			sendMsg = o.kind === 'ok' ? 'Test-Briefing gesendet' : o.message;
+			sendMsg = o.kind === 'ok' ? (o.message || 'Test-Briefing gesendet') : o.message;
 		} finally {
 			isSending = false;
 		}

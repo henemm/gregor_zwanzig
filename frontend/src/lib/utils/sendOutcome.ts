@@ -77,7 +77,13 @@ export function isSending(key: string): boolean {
 export const tripSendKey = (tripId: string): string => `trip:${tripId}`;
 export const compareSendKey = (presetId: string): string => `compare:${presetId}`;
 
-export type SendRunResult = { kind: SendOutcomeKind; message: string; skipped: boolean };
+export type SendRunResult = {
+	kind: SendOutcomeKind;
+	message: string;
+	skipped: boolean;
+	/** #2216: IDs der Orte, die beim Ortsvergleich-Versand nicht mehr aufloesbar waren. */
+	fehlendeOrte?: string[];
+};
 
 /**
  * Fuehrt `send` genau einmal je Schluessel gleichzeitig aus. Laeuft schon ein
@@ -115,8 +121,26 @@ export function sendTripBriefing(
 }
 
 /** Ortsvergleich-Briefing manuell senden (Hub, Liste, Tabs). */
-export function sendComparePreset(presetId: string, fetchFn: typeof fetch = fetch): Promise<SendRunResult> {
-	return runSend(compareSendKey(presetId), () =>
-		fetchFn(`/api/compare/presets/${encodeURIComponent(presetId)}/send`, { method: 'POST' })
-	);
+export async function sendComparePreset(presetId: string, fetchFn: typeof fetch = fetch): Promise<SendRunResult> {
+	let fehlende: string[] = [];
+	const r = await runSend(compareSendKey(presetId), async () => {
+		const res = await fetchFn(`/api/compare/presets/${encodeURIComponent(presetId)}/send`, { method: 'POST' });
+		if (res.ok) {
+			try {
+				const body = (await res.clone().json()) as { fehlende_orte?: unknown };
+				if (Array.isArray(body?.fehlende_orte)) fehlende = body.fehlende_orte.map(String);
+			} catch {
+				/* kein JSON-Body */
+			}
+		}
+		return res;
+	});
+	if (r.kind === 'ok' && fehlende.length > 0) {
+		return {
+			...r,
+			fehlendeOrte: fehlende,
+			message: `Test-Briefing gesendet, aber Orte fehlten (gelöscht, ${fehlende.length}): ${fehlende.join(', ')}. Ersetze die Orte im Ortsvergleich.`,
+		};
+	}
+	return r;
 }

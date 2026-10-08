@@ -316,3 +316,25 @@ func (s *Store) DeleteComparePreset(id string) error {
 	}
 	return err
 }
+
+// ComparePresetsUsingLocation liefert die Ortsvergleiche DIESES Nutzers, deren
+// LocationIDs den Ort referenzieren (#2216). Nutzerbindung ueber den Store.
+func (s *Store) ComparePresetsUsingLocation(locationID string) ([]model.ComparePreset, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
+	presets, err := s.LoadComparePresets()
+	if err != nil {
+		return nil, err
+	}
+	var used []model.ComparePreset
+	for _, p := range presets {
+		for _, id := range p.LocationIDs {
+			if id == locationID {
+				used = append(used, p)
+				break
+			}
+		}
+	}
+	return used, nil
+}
