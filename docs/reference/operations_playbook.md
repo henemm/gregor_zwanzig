@@ -855,3 +855,16 @@ Header `X-GZ-Status-Token` (Env `GZ_STATUS_TOKEN`) abrufbar — `check-gregor20.
 ihn mitsenden (Rollout-Reihenfolge: ADR-0079). Wächst der Abstand `now − last_success_at`, während
 Briefings weiterlaufen, schreibt der Mitschnitt nicht mehr — die Wetterausgabe ist davon
 unberührt, der Mitschnitt ist durchgehend fail-soft.
+
+## Scheduler-Läufe: Zeitlimit-Abbrüche und Laufdauer diagnostizieren (#1539 S0/S1a)
+
+- **Status:** `/api/scheduler/status` (Token-Header wie oben) zeigt je Job `last_run.duration_s` und
+  bei Fan-out-Jobs den Block `deadline_aborts` (`total`, `last_at`, `last_skipped`, `counting_since`).
+  Der Zähler liegt im Speicher und steht nach jedem Deploy/Neustart auf 0 (`counting_since`
+  nennt den Start). `check-gregor20.sh` (henemm-infra) warnt, sobald `deadline_aborts.total` wächst.
+- **Log (Python-Kern):** je Route die Zeile „`<dienst>: Lauf beendet nach Xs fuer user_id=…`"; der
+  Trip-Alarm loggt zusätzlich die Dauer je Trip/Etappe. So lässt sich ein langsamer Nutzer finden.
+- **Alarm-Protokoll:** Zustandsdateien (alert_log, alert_state, Wetter-Snapshots, Open-Meteo-
+  Verfügbarkeits-Cache) werden atomar geschrieben. Gelingt die Sperre für `alert_log` nicht
+  rechtzeitig, steht im ERROR-Log der **vollständige Eintrag**, und der Zähler
+  `alert_log_lost_entries` steigt — der Eintrag lässt sich aus dem Log nachtragen.

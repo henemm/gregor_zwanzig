@@ -8,6 +8,8 @@ SPEC: docs/specs/modules/go_scheduler.md v1.0 (Step 2)
 """
 from __future__ import annotations
 
+import logging
+import time
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -17,6 +19,8 @@ from services.scheduler_dispatch_service import (
     run_compare_presets_daily,
     send_compare_preset,
 )
+
+logger = logging.getLogger("scheduler")
 
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
 
@@ -53,9 +57,15 @@ def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
     service = TripReportSchedulerService(user_id=user_id)
     # Issue #766: (sent, failed) — bei Teilfehlern status="partial" zurückgeben,
     # damit das externe Monitoring 452-Rate-Limit-Ausfälle erkennen kann.
+    started_at = time.monotonic()
     sent, failed = service.send_due_reports(now_utc)
+    duration_s = round(time.monotonic() - started_at, 3)
+    logger.info(
+        f"trip_reports: Lauf beendet nach {duration_s:.3f}s fuer "
+        f"user_id={user_id} (sent={sent} failed={failed})"
+    )
     status = "partial" if failed > 0 else "ok"
-    return {"status": status, "count": sent, "failed": failed}
+    return {"status": status, "count": sent, "failed": failed, "duration_s": duration_s}
 
 
 @router.post("/alert-checks")
@@ -92,12 +102,22 @@ def trigger_compare_alert_checks(user_id: str = Query(...)):
 
     service = CompareAlertService(user_id=user_id)
     count = service.check_all_compare_presets()
-    return {"status": "ok", "count": count, "failed": service.last_failed_count}
+    return {
+        "status": "ok",
+        "count": count,
+        "failed": service.last_failed_count,
+        "checked": service.last_checked_count,
+        "duration_s": round(service.last_duration_s, 3),
+    }
 
 
-def _radar_run_response(result) -> dict:
+def _radar_run_response(result, dienst: str, user_id: str) -> dict:
     """Antwort der Radar-Laeufe (Epic #2261 A-2 S2): bisherige Felder plus
     checked/skipped/skipped_ids/duration_s; Grenzabbruch = partial/deadline."""
+    logger.info(
+        f"{dienst}: Lauf beendet nach {result.duration_s:.3f}s fuer "
+        f"user_id={user_id} (checked={result.checked} skipped={result.skipped})"
+    )
     body = {
         "status": "partial" if result.hit_deadline else "ok",
         "count": result.alerts_sent,
@@ -117,7 +137,9 @@ def trigger_radar_alert_checks(user_id: str):
     """Trigger radar/thunderstorm nowcast alert checks (proaktiv)."""
     from services.trip_alert import TripAlertService
 
-    return _radar_run_response(TripAlertService(user_id=user_id).check_radar_alerts_run())
+    return _radar_run_response(
+        TripAlertService(user_id=user_id).check_radar_alerts_run(), "radar_alert", user_id
+    )
 
 
 @router.post("/compare-radar-alert-checks")
@@ -126,7 +148,9 @@ def trigger_compare_radar_alert_checks(user_id: str):
     from services.compare_radar_alert import CompareRadarAlertService
 
     return _radar_run_response(
-        CompareRadarAlertService(user_id=user_id).check_all_compare_presets_run()
+        CompareRadarAlertService(user_id=user_id).check_all_compare_presets_run(),
+        "compare_radar_alert",
+        user_id,
     )
 
 
@@ -137,7 +161,13 @@ def trigger_compare_official_alert_checks(user_id: str = Query(...)):
 
     service = CompareOfficialAlertService(user_id=user_id)
     count = service.check_all_compare_presets()
-    return {"status": "ok", "count": count, "failed": service.last_failed_count}
+    return {
+        "status": "ok",
+        "count": count,
+        "failed": service.last_failed_count,
+        "checked": service.last_checked_count,
+        "duration_s": round(service.last_duration_s, 3),
+    }
 
 
 @router.post("/inbound-commands")

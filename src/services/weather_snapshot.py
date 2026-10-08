@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
 from app.loader import get_snapshots_dir
+from services.file_lock import atomic_write_json
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
@@ -108,7 +109,7 @@ class WeatherSnapshotService:
             }
 
             filepath = self._snapshots_dir / f"{trip_id}.json"
-            filepath.write_text(json.dumps(snapshot, indent=2))
+            atomic_write_json(filepath, snapshot)
             logger.info(f"Snapshot saved: {trip_id}")
         except Exception as e:
             logger.warning(f"Failed to save snapshot {trip_id}: {e}")
@@ -135,7 +136,7 @@ class WeatherSnapshotService:
             }
 
             filepath = self._snapshots_dir / f"{trip_id}_{target_date.isoformat()}.json"
-            filepath.write_text(json.dumps(snapshot, indent=2))
+            atomic_write_json(filepath, snapshot)
             logger.info(f"Dated snapshot saved: {filepath.name}")
         except Exception as e:
             logger.warning(f"Failed to save dated snapshot {trip_id} {target_date}: {e}")
@@ -273,7 +274,7 @@ class WeatherSnapshotService:
             }
 
             filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor_{channel}.json"
-            filepath.write_text(json.dumps(snapshot, indent=2))
+            atomic_write_json(filepath, snapshot)
             logger.info(f"Alarm anchor saved: {trip_id} ({channel})")
         except Exception as e:
             logger.warning(f"Failed to save alarm anchor {trip_id} ({channel}): {e}")

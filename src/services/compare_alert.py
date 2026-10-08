@@ -15,6 +15,7 @@ SPEC: docs/specs/modules/issue_1169_compare_alert_consumer.md
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -157,11 +158,21 @@ class CompareAlertService:
 
     # Issue #2217: Zahl der im letzten Lauf gescheiterten Presets (Router -> failed).
     last_failed_count: int = 0
+    # Issue #1539 S0: Messung des letzten Laufs (Router -> checked/duration_s).
+    last_checked_count: int = 0
+    last_duration_s: float = 0.0
 
     def check_all_compare_presets(self) -> int:
         """Kompatibilitaets-Huelle: Anzahl Preset-Laeufe mit Versand; die Zahl
         der gescheiterten Presets steht danach in ``last_failed_count``."""
+        started_at = time.monotonic()
         sent, self.last_failed_count = self._check_all_counted()
+        self.last_duration_s = time.monotonic() - started_at
+        logger.info(
+            f"compare_alert: Lauf beendet nach {self.last_duration_s:.3f}s fuer "
+            f"user_id={self._user_id} (checked={self.last_checked_count} "
+            f"alerts_sent={sent} failed={self.last_failed_count})"
+        )
         return sent
 
     def _check_all_counted(self) -> tuple[int, int]:
@@ -188,6 +199,7 @@ class CompareAlertService:
         """
         failed = 0
         presets = self._load_presets()
+        self.last_checked_count = len(presets)
         if not presets:
             return 0, 0
 

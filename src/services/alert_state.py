@@ -28,6 +28,8 @@ import json
 import logging
 from pathlib import Path
 
+from services.file_lock import atomic_write_json
+
 logger = logging.getLogger("alert_state")
 
 # Issue #1460 (P2): Schlüsselraum der amtlichen Warnungen. Einzige Quelle für
@@ -74,7 +76,7 @@ class AlertStateService:
         """Persist the alert-state dict for an entity."""
         try:
             self._state_dir.mkdir(parents=True, exist_ok=True)
-            self._path(entity_id).write_text(json.dumps(state, indent=2))
+            atomic_write_json(self._path(entity_id), state)
         except OSError as e:
             logger.error(f"Failed to save alert_state for {entity_id}: {e}")
 

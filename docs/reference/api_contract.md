@@ -1360,6 +1360,13 @@ reads its own run status via the session-authenticated `GET
 
 Returns current scheduler state with per-job metadata (next_run, last_run).
 
+**Additive fields (#1539 S0):** `last_run.duration_s` (number, seconds, 3 decimals, present for
+every job; Go wall clock around the run, without the remaining runtime of late fan-out calls).
+`deadline_aborts{}` only on fan-out jobs: cumulative in-memory count of runs aborted by the
+Python time limit (`reason: "deadline"`) — `total` (never reset by an ok run), `last_at` (absent
+while `total == 0`), `last_skipped` (count), `counting_since` (process/scheduler start). Numbers
+only — never trip or user identifiers.
+
 **Auth (since #2155 S2, ADR-0079):** requires header `X-GZ-Status-Token` matching the
 configured `GZ_STATUS_TOKEN` (machine secret for the external monitor
 `check-gregor20.sh`, constant-time comparison, both sides sha256-hashed first). A
@@ -1414,6 +1421,12 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
         "in_flight": 1,
         "skipped_in_flight": 0,
         "not_reached_budget": 0
+      },
+      "deadline_aborts": {
+        "total": 2,
+        "last_at": "2026-08-01T12:00:00Z",
+        "last_skipped": 2,
+        "counting_since": "2026-07-30T08:00:00Z"
       }
     }
   ],

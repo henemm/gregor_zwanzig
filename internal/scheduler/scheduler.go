@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -37,6 +38,26 @@ type jobResult struct {
 	Time   time.Time `json:"time"`
 	Status string    `json:"status"` // "ok", "partial" (Issue #1447 S2a) or "error"
 	Error  string    `json:"error,omitempty"`
+	// DurationS: Go-Wanduhr des Laufs in Sekunden (Issue #1539 S0), KEIN omitempty.
+	DurationS float64 `json:"duration_s"`
+}
+
+// deadlineFailedError: Zeitobergrenzen-Abbruch MIT gescheitertem Element
+// (failed > 0). Bleibt ein harter Fehler (Status "error"), wird aber als
+// Abbruch gezaehlt (Issue #1539 S0).
+type deadlineFailedError struct {
+	msg     string
+	skipped int
+}
+
+func (e *deadlineFailedError) Error() string { return e.msg }
+
+// deadlineAbortState zaehlt Zeitobergrenzen-Abbrueche (reason "deadline") je
+// Fan-out-Job kumulativ (Issue #1539 S0). Nur Zahlen/Zeitstempel -- nie IDs.
+type deadlineAbortState struct {
+	Total       int
+	LastAt      time.Time
+	LastSkipped int
 }
 
 // jobOverlapState zaehlt Ticks, die wegen eines noch laufenden Vorgaengers
@@ -62,6 +83,9 @@ type jobOverlapState struct {
 type partialRunError struct {
 	msg     string
 	wrapped error
+	// deadline/skipped: Zeitobergrenzen-Abbruch aus dem Python-Body (#1539 S0).
+	deadline bool
+	skipped  int
 }
 
 func (e *partialRunError) Error() string { return e.msg }
@@ -175,6 +199,12 @@ type Scheduler struct {
 	// Beide geschuetzt durch s.mu wie overlapState.
 	runCounter       map[string]int
 	runBudgetSummary map[string]*jobBudgetSummary
+
+	// abortMu schuetzt abortState/abortSince (Issue #1539 S0); eigener Mutex,
+	// damit weder harvestLateResult noch Status die s.mu-Reihenfolge beruehren.
+	abortMu    sync.Mutex
+	abortState map[string]*deadlineAbortState
+	abortSince time.Time
 }
 
 // jobBudgetSummary sind die oeffentlichen Budget-Zahlen des zuletzt
@@ -253,6 +283,8 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		callBudget:         newUserCallBudget(),
 		runCounter:         make(map[string]int),
 		runBudgetSummary:   make(map[string]*jobBudgetSummary),
+		abortState:         make(map[string]*deadlineAbortState),
+		abortSince:         time.Now(),
 	}
 
 	// Register jobs and store EntryID → jobMeta mapping
@@ -452,7 +484,58 @@ func (s *Scheduler) harvestLateResult(jobID, uid string) {
 		}
 	}
 	log.Printf("[scheduler] %s: user %s late result harvested (%s), informational only", jobID, uid, outcome)
+	s.countDeadlineAbort(jobID, err)
 	s.userState.RecordLate(jobID, uid, outcome, errText)
+}
+
+// countDeadlineAbort verbucht einen Zeitobergrenzen-Abbruch (Issue #1539 S0).
+// Zwei Aufrufstellen (Nutzerschritt, Nachzuegler), die sich ausschliessen: bei
+// abgelaufenem Wartebudget kommt hier ein budgetExceededError (deadline=false),
+// das spaete Ergebnis zaehlt erst beim Einsammeln -- nie doppelt.
+func (s *Scheduler) countDeadlineAbort(jobID string, err error) {
+	if err == nil {
+		return
+	}
+	var skipped int
+	var pe *partialRunError
+	var de *deadlineFailedError
+	switch {
+	case errors.As(err, &pe) && pe.deadline:
+		skipped = pe.skipped
+	case errors.As(err, &de):
+		skipped = de.skipped
+	default:
+		return
+	}
+	s.abortMu.Lock()
+	defer s.abortMu.Unlock()
+	st, ok := s.abortState[jobID]
+	if !ok {
+		st = &deadlineAbortState{}
+		s.abortState[jobID] = st
+	}
+	st.Total++
+	st.LastAt = time.Now().In(s.cron.Location())
+	st.LastSkipped = skipped
+}
+
+// deadlineAbortsField baut den Block deadline_aborts (nur Fan-out-Jobs).
+func (s *Scheduler) deadlineAbortsField(jobID string) map[string]any {
+	if !fanOutJobIDs[jobID] {
+		return nil
+	}
+	s.abortMu.Lock()
+	defer s.abortMu.Unlock()
+	out := map[string]any{
+		"total":          0,
+		"counting_since": s.abortSince.In(s.cron.Location()).Format(time.RFC3339),
+	}
+	if st, ok := s.abortState[jobID]; ok && st.Total > 0 {
+		out["total"] = st.Total
+		out["last_at"] = st.LastAt.Format(time.RFC3339)
+		out["last_skipped"] = st.LastSkipped
+	}
+	return out
 }
 
 // runUserStep entscheidet fuer einen Nutzer: Skip bei noch laufendem Vorlauf-
@@ -475,6 +558,7 @@ func (s *Scheduler) runUserStep(jobID, path, uid string, deadline time.Time, wai
 		return "not_reached", fmt.Sprintf("%s: Laufbudget erschöpft", jobID), nil, nil
 	}
 	err := s.callUserWithBudget(jobID, path, uid, min(waitBudget, remaining), callCap)
+	s.countDeadlineAbort(jobID, err)
 	return s.classifyUserErr(jobID, uid, err)
 }
 
@@ -898,7 +982,9 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 	}
 	defer lock.Unlock()
 
+	started := time.Now()
 	err := runRecovered(jobID, fn)
+	durationS := math.Round(time.Since(started).Seconds()*1000) / 1000
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -920,11 +1006,15 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 			Time:   time.Now().In(s.cron.Location()),
 			Status: status,
 			Error:  err.Error(),
+
+			DurationS: durationS,
 		}
 	} else {
 		s.lastRuns[jobID] = &jobResult{
 			Time:   time.Now().In(s.cron.Location()),
 			Status: "ok",
+
+			DurationS: durationS,
 		}
 	}
 }
@@ -953,6 +1043,11 @@ type triggerResponseBody struct {
 	Status string `json:"status"`
 	Count  int    `json:"count"`
 	Failed int    `json:"failed"`
+	// reason/skipped/duration_s (Issue #1539 S0): skipped_ids wird bewusst
+	// NICHT gelesen -- es duerfen nie IDs im Status landen.
+	Reason    string  `json:"reason"`
+	Skipped   int     `json:"skipped"`
+	DurationS float64 `json:"duration_s"`
 }
 
 // triggerEndpointForUser sends a POST to the Python trigger endpoint for a specific user.
@@ -988,7 +1083,8 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+		// Kein Rohbody (F008): er kann skipped_ids/Trip-IDs enthalten.
+		return fmt.Errorf("HTTP %d (body %d bytes)", resp.StatusCode, len(body))
 	}
 
 	// Issue #1012 (AC-5, d): HTTP 200 kann trotzdem einen fachlichen
@@ -997,20 +1093,34 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	// Job fälschlich als "ok", obwohl kein Briefing zugestellt wurde.
 	var parsed triggerResponseBody
 	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil {
+		if parsed.Failed > 0 && parsed.Reason == "deadline" {
+			// Abbruch + gescheiterter Trip: Body traegt skipped_ids -- nur Zahlen.
+			return &deadlineFailedError{msg: fmt.Sprintf(
+				"%s reported %d failed (status=%s, count=%d, reason=deadline, skipped=%d)",
+				path, parsed.Failed, parsed.Status, parsed.Count, parsed.Skipped,
+			), skipped: parsed.Skipped}
+		}
 		if parsed.Failed > 0 {
 			return fmt.Errorf(
-				"%s reported %d failed (status=%s, count=%d): %s",
-				path, parsed.Failed, parsed.Status, parsed.Count, string(body),
+				"%s reported %d failed (status=%s, count=%d, skipped=%d)",
+				path, parsed.Failed, parsed.Status, parsed.Count, parsed.Skipped,
 			)
 		}
 		// Issue #1447 S2a: status="partial" ohne failed (Scheibe S1 —
 		// Alarm-Lauf durch die Zeitobergrenze abgebrochen) ist ein
 		// Teilerfolg, kein harter Fehler — recordRun() verbucht das als
 		// jobResult.Status "partial", nicht "error".
+		if parsed.Status == "partial" && parsed.Reason == "deadline" {
+			// Der Body traegt skipped_ids (Trip-IDs) -- nie in den Status-Text.
+			return &partialRunError{msg: fmt.Sprintf(
+				"%s reported partial status (count=%d, reason=deadline, skipped=%d)",
+				path, parsed.Count, parsed.Skipped,
+			), deadline: true, skipped: parsed.Skipped}
+		}
 		if parsed.Status == "partial" {
 			return &partialRunError{msg: fmt.Sprintf(
-				"%s reported partial status (count=%d): %s",
-				path, parsed.Count, string(body),
+				"%s reported partial status (count=%d, skipped=%d)",
+				path, parsed.Count, parsed.Skipped,
 			)}
 		}
 	}
@@ -1243,9 +1353,10 @@ func (s *Scheduler) Status() map[string]any {
 			}
 			if lr, ok := s.lastRuns[meta.id]; ok {
 				job["last_run"] = map[string]any{
-					"time":   lr.Time.Format(time.RFC3339),
-					"status": lr.Status,
-					"error":  lr.Error,
+					"time":       lr.Time.Format(time.RFC3339),
+					"status":     lr.Status,
+					"error":      lr.Error,
+					"duration_s": lr.DurationS,
 				}
 			} else {
 				job["last_run"] = nil
@@ -1255,6 +1366,9 @@ func (s *Scheduler) Status() map[string]any {
 			}
 			if users := s.usersField(meta.id); users != nil {
 				job["users"] = users
+			}
+			if aborts := s.deadlineAbortsField(meta.id); aborts != nil {
+				job["deadline_aborts"] = aborts
 			}
 			jobs = append(jobs, job)
 		}

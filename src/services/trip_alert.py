@@ -1070,6 +1070,7 @@ class TripAlertService:
                 checked += 1
                 # Stempel fuer JEDEN erreichten Trip — auch bei continue/Exception.
                 reached[trip.id] = datetime.now(timezone.utc)
+                trip_started_at = time.monotonic()
                 try:
                     # Issue #1697: Ortstag dieses Trips — die Zone haengt vom Trip ab,
                     # deshalb erst HIER (je Trip), nicht einmal vor der Schleife.
@@ -1173,6 +1174,12 @@ class TripAlertService:
                 except Exception:
                     report_unit_failure("Alarmlauf", trip.id)
                     failed += 1
+                finally:
+                    # Issue #1539 S0 (AC-7): Dauer je Trip, auch bei continue/Fehler.
+                    logger.info(
+                        f"Trip {trip.name}: geprueft in "
+                        f"{time.monotonic() - trip_started_at:.3f} s"
+                    )
         finally:
             if state_store is not None and reached:
                 try:
@@ -2838,6 +2845,7 @@ class TripAlertService:
 
         fresh_weather = []
         for cached in cached_weather:
+            segment_started_at = time.monotonic()
             today_utc = now_utc.date()
             if cached.segment.end_time < now_utc:
                 continue  # Bereits absolviert — überspringen
@@ -2868,6 +2876,11 @@ class TripAlertService:
                     f"Failed to fetch fresh weather for segment "
                     f"{cached.segment.segment_id}: {e}"
                 )
+            # Issue #1539 S0 (AC-7): Dauer je Etappen-Abruf.
+            logger.info(
+                f"Etappe {cached.segment.segment_id}: Abruf in "
+                f"{time.monotonic() - segment_started_at:.3f} s"
+            )
 
         return fresh_weather
 
