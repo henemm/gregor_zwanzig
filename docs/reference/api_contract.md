@@ -231,6 +231,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/groups` | GET, POST |
 | `/api/groups/{id}` | DELETE, PATCH |
 | `/api/health` | GET |
+| `/api/internal/premium-sms-learn` | POST | — interner Lernweg der Garmin-Antwortadresse (#1676 S1; im Inventar nachgetragen #2218)
 | `/api/internal/telegram-connect` | POST |
 | `/api/locations` | GET, POST |
 | `/api/locations/resolve` | POST |
@@ -246,7 +247,11 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/preview/{trip_id}/sms` | GET |
 | `/api/preview/{trip_id}/telegram` | GET |
 | `/api/scheduler/alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
+| `/api/scheduler/compare-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
+| `/api/scheduler/compare-official-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
+| `/api/scheduler/compare-radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
 | `/api/scheduler/inbound-commands` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
+| `/api/scheduler/radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
 | `/api/scheduler/status` | GET | — nur mit Header `X-GZ-Status-Token` (Maschinen-Token, keine Session, #2155 S2)
 | `/api/scheduler/status/me` | GET | — Session-Pflicht, liefert nur den eigenen Lauf-Status (#2155 S2)
 | `/api/scheduler/trip-reports` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
@@ -263,9 +268,14 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/trips/{id}/weather-config` | GET, PUT |
 | `/api/webhooks/telegram/{secret}` | POST |
 
-(80 Pfade, 100 Routen-Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
+(101 Pfade, 123 Routen-Registrierungen, nachgezählt 2026-10-08 per `chi.Walk` und
+Router-Quelltext; davon 4 Pfade/4 Registrierungen nur bei `GZ_ENV=staging`, ohne sie
+97 Pfade/119 Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
 hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`; #2519 ergänzt `/api/admin/invites`,
-`/api/admin/invites/{id}/revoke` und `/api/auth/invite/check`.)
+`/api/admin/invites/{id}/revoke` und `/api/auth/invite/check`; #2218 Scheibe C die vier
+Admin-Trigger `radar-alert-checks`, `compare-alert-checks`, `compare-radar-alert-checks`,
+`compare-official-alert-checks`. Die frühere Angabe „80 Pfade/100 Registrierungen" war
+bereits vor #2218 veraltet.)
 
 ---
 
@@ -1485,7 +1495,7 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| running | bool | Is scheduler process active |
+| running | bool | Real process state of the cron scheduler (Issue #2218 C5-15): `false` before `Start()`, `true` after `Start()`, `false` after `Stop()`. Staging runs with the scheduler disabled (`scheduler_gate.go`) and therefore reports `false` — correct, not a fault. Before #2218 this field was hard-wired to `true`. A process state, not a statement about successful runs (see `jobs[].last_run`). |
 | timezone | string | Scheduler timezone (default: "Europe/Vienna") |
 | jobs[] | array | List of scheduled jobs |
 | jobs[].id | string | Job identifier (morning, evening, alert, trip_reports_hourly) |
@@ -1512,12 +1522,13 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 | briefing_health.briefing_dispatch_errors_recent_count | int (Issue #1629) | Count of briefing dispatch errors in the last 24 hours (recorded in `users/<uid>/diagnostics/briefing_dispatch_failures.jsonl`). |
 | briefing_health.alert_anchor_rejected_streak_since | string \| null (Issue #1661) | ISO-8601 UTC timestamp when the current unbroken series of **rejected deviation-alert anchors** started, or `null` if no streak is active. An anchor is rejected when it describes a different calendar day than today (`wrong_day`), is older than the 26 h fallback limit (`too_old`), or is missing entirely while the trip is already running (`missing`) — in each case the deviation guard has no valid comparison point and stays silent. Gap threshold: **60 minutes** (the alert check runs every 15 minutes, so an hour without a further rejection ends the series; the 26 h threshold used for briefings would keep the same fault invisible for days). |
 | briefing_health.alert_anchor_rejected_recent_count | int (Issue #1661) | Count of rejected deviation-alert anchors in the last 24 hours (recorded in `users/<uid>/diagnostics/alert_anchor_rejected.jsonl`). Only the timestamp is decoded on the Go side — neither the trip id nor the rejection reason leaves the Python core (#252). |
-| briefing_health.track_resolution_failure_streak_since | string \| null (Issue #2073 Scheibe 2) | ISO-8601 UTC timestamp when the current unbroken series of failed GPX track resolutions started, or `null` if no streak is active — exactly like the `provider_error_*`/`alert_anchor_rejected_*` neighbours above, so a monitor tests for `null`. (The Go helper `analyzeTrackResolutionFailures` returns the empty string internally for "no streak"; the handler does not put that into the response map, so the wire format carries `null` — measured on staging 2026-08-22 at `c38e35cc`.) A failure is written when `resolve_stage_track_km` finds no candidate within tolerance, finds several candidates that disagree on the distance, or the stage's already-stored distances turn out implausible (recorded in `users/<uid>/diagnostics/track_resolution_failures.jsonl`, written only on the dispatch path, not on preview). Gap threshold: **26 hours** — deliberately not the 60-minute threshold of the alert-anchor twin, because the Python writer damps track-resolution failures to at most one line per stage and process, so the next line only arrives with the following daily briefing/deploy cycle. |
+| briefing_health.track_resolution_failure_streak_since | string \| null (Issue #2073 Scheibe 2) | ISO-8601 UTC timestamp when the current unbroken series of failed GPX track resolutions started, or `null` if no streak is active — exactly like the `provider_error_*`/`alert_anchor_rejected_*` neighbours above, so a monitor tests for `null`. (The Go helper `analyzeTrackResolutionFailures` returns the empty string internally for "no streak"; the handler does not put that into the response map, so the wire format carries `null` — measured on staging 2026-08-22 at `c38e35cc`.) A failure is written when `resolve_stage_track_km` finds no candidate within tolerance, finds several candidates that disagree on the distance, or the stage's already-stored distances turn out implausible (recorded in `users/<uid>/diagnostics/track_resolution_failures.jsonl`, written only on the dispatch path, not on preview). Gap threshold: **26 hours** — deliberately not the 60-minute threshold of the alert-anchor twin, because the Python writer damps its lines: resolution failures (`no_candidate_within_tolerance`, `ambiguous_result`) to at most one line per stage and process, so the next line only arrives with the following daily briefing/deploy cycle; `implausible_measurement` (since Issue #2218 C5-47) to at most one line per (user, trip, stage) and **12 hours** — 12 h < 26 h, so that streak never lapses while the stage stays implausible. The damping only starts after the line was actually written; if writing fails, the next run retries. A process restart allows at most one extra line per stage. |
 | briefing_health.track_resolution_failures_recent_count | int (Issue #2073 Scheibe 2) | Count of failed track resolutions in the last 24 hours, summed over all users. Only the timestamp is decoded on the Go side — neither trip id, stage id, reason nor detail leaves the Python core (#252). |
-| enrichment_health | object (Issue #1581, ADR-0018, ADR-0047 Addendum) | Raw call outcomes for degradable **enrichment** paths (thunder direct sources, radar nowcast, SNOWGRID snow depth, and since #2030 the forecast capture `forecast_capture` — a diagnostic path, not a provider fallback, but degradable in the same way) — a top-level sibling of `briefing_health`, never nested inside it, because an enrichment outage is explicitly not a briefing outage (`coreBriefingSources` stays unchanged). One key per path that has been called at least once; a path never called does not appear (no fabricated failure). No streak/threshold decision is made in Go — `check-gregor20.sh` forms `now − last_success_at` itself, exactly like `warn_service_health`. |
-| enrichment_health.\<path\>.last_attempt_at | string \| null | ISO-8601 UTC timestamp of the most recent call attempt for this path (`thunder`, `thunder_additive`, `radar_nowcast`, `snowgrid`, `forecast_capture`), regardless of outcome — including `self_throttled`, so a growing gap to `last_success_at` is externally visible. |
+| enrichment_health | object (Issue #1581, ADR-0018, ADR-0047 Addendum) | Raw call outcomes for degradable **enrichment** paths (thunder direct sources, radar nowcast, SNOWGRID snow depth, since #2218 the alert-check weather fetch `alert_fetch` with per-unit `failed_units`, and since #2030 the forecast capture `forecast_capture` — a diagnostic path, not a provider fallback, but degradable in the same way) — a top-level sibling of `briefing_health`, never nested inside it, because an enrichment outage is explicitly not a briefing outage (`coreBriefingSources` stays unchanged). One key per path that has been called at least once; a path never called does not appear (no fabricated failure). No streak/threshold decision is made in Go — `check-gregor20.sh` forms `now − last_success_at` itself, exactly like `warn_service_health`. |
+| enrichment_health.\<path\>.last_attempt_at | string \| null | ISO-8601 UTC timestamp of the most recent call attempt for this path (`thunder`, `thunder_additive`, `radar_nowcast`, `snowgrid`, `forecast_capture`, `alert_fetch`), regardless of outcome — including `self_throttled`, so a growing gap to `last_success_at` is externally visible. |
 | enrichment_health.\<path\>.last_success_at | string \| null | ISO-8601 UTC timestamp of the most recent outcome `"ok"`. A served-through-fallback call does **not** update this field, even though it delivered values — booking it as success would keep this timestamp fresh through a multi-day degradation and hide the exact state ADR-0018 wants visible. |
-| enrichment_health.\<path\>.last_fallback_at | string \| null | ISO-8601 UTC timestamp of the most recent outcome `"fallback"` (thunder: named substitute source, ADR-0047; radar: an HTTP error status from the GeoSphere INCA nowcast call that still yields frames from another source — since Issue #1658 Scheibe S2, 2026-08-23; before that fix the same case was mis-booked as `"ok"` because `fetch_nowcast()` swallowed the error status instead of raising it, see ADR-0018). |
+| enrichment_health.\<path\>.last_fallback_at | string \| null | ISO-8601 UTC timestamp of the most recent outcome `"fallback"` (thunder: named substitute source, ADR-0047; radar: an HTTP error status from the GeoSphere INCA nowcast call that still yields frames from another source — since Issue #1658 Scheibe S2, 2026-08-23; before that fix the same case was mis-booked as `"ok"` because `fetch_nowcast()` swallowed the error status instead of raising it, see ADR-0018. Since Issue #2218 C5-37 an **empty** INCA answer — no timeseries or no data points — is booked as `"fallback"` too, with a WARN log line; dry weather is not affected, it yields zero-precipitation frames, never an empty answer. The offline fixture mode stays silent). |
+| enrichment_health.\<path\>.failed_units | string[] (Issue #2218 Scheibe B) | Units (`<user_id>/<trip_id>` for trips, `<user_id>/<preset_id>/<location_id>` for compare) whose **latest** journal line for this path is `"unavailable"` — a later `"ok"` of the same unit removes it. Newest first, at most 20 entries; `[]` when none. Used by the `alert_fetch` path (weather fetch of the alert checks: trip Δ check, trip radar nowcast since #2218 C5-02c, compare alert check); `RadarDeadlineExceeded` books nothing; a throttled or data-less radar result books neither `ok` nor `unavailable`. |
 | enrichment_health.\<path\>.last_fallback_detail | string \| null | The named substitute source (e.g. `eu_direct`) of the most recent `"fallback"` outcome — the youngest fallback wins, including its own detail if empty, decided by timestamp not file position (Issue #1647, AC-1). `null` without a fallback line. `check-gregor20.sh` block `2e-e` names this source in its alert text. |
 | enrichment_health.\<path\>.self_throttled | bool | `true` if the journal contains at least one `"self_throttled"` outcome for this path — the call was skipped by our own budget gate rather than failing against the remote source. |
 | enrichment_health.journal_read_error | bool (present only on error) | `true` when `data/diagnostics/enrichment_calls.jsonl` exists but could not be read (e.g. path is a directory) — our own fault, distinct from a missing journal (fresh deploy, silently empty map). |
@@ -1803,7 +1814,12 @@ completed fully or was cut off by that budget.
 
 > **Nur Admin (Issue #2155 S1, ADR-0078):** über die Go-API nur für Nutzer, deren
 > Kennung in `GZ_ADMIN_USER_IDS` steht; sonst 403 `{"error":"forbidden"}` (ohne
-> Sitzung weiterhin 401). Gilt ebenso für `POST /api/scheduler/inbound-commands`.
+> Sitzung weiterhin 401). Gilt ebenso für `POST /api/scheduler/inbound-commands`
+> und — seit Issue #2218 Scheibe C (C5-02a) — für die vier übrigen Alarm-Trigger
+> `POST /api/scheduler/radar-alert-checks`, `/compare-alert-checks`,
+> `/compare-radar-alert-checks` und `/compare-official-alert-checks` (Proxy an den
+> gleichnamigen Python-Pfad). Ein Admin-Trigger läuft über **alle** Nutzer und kann
+> echte Alarme versenden — auf Prod nicht als Test auslösen.
 > Der Cron-Scheduler ruft den Python-Core direkt und ist nicht betroffen.
 
 **Query Parameters:**

@@ -73,7 +73,7 @@ def netzrand(monkeypatch) -> Netzrand:
     rand = Netzrand()
 
     def _smtp_steckdose(self, host, port, user, password, recipients, msg,
-                        from_addr, deadline_at):
+                        from_addr, deadline_at, message_ids=None):
         rand.smtp.append({"host": host, "recipients": list(recipients), "from": from_addr})
 
     def _telegram_steckdose(self, url, payload, *, chat_id=None, bound_chat=False):

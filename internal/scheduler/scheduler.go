@@ -122,6 +122,7 @@ type jobMeta struct {
 // Scheduler wraps robfig/cron and triggers Python services via HTTP.
 type Scheduler struct {
 	cron                    *cron.Cron
+	running                 atomic.Bool // Issue #2218 C5-15: echter Prozesszustand fuer Status()
 	pythonURL               string
 	heartbeatComparePresets string
 	poEmail                 string // Issue #2436: tier_request_health.po_mail_configured
@@ -333,6 +334,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
+	s.running.Store(true)
 	log.Printf("[scheduler] Started: 9 cron entries (10 jobs), timezone %s", s.cron.Location())
 }
 
@@ -340,6 +342,7 @@ func (s *Scheduler) Start() {
 func (s *Scheduler) Stop() {
 	ctx := s.cron.Stop()
 	<-ctx.Done()
+	s.running.Store(false)
 	log.Println("[scheduler] Stopped")
 }
 
@@ -1374,7 +1377,7 @@ func (s *Scheduler) Status() map[string]any {
 		}
 	}
 	return map[string]any{
-		"running":             true,
+		"running":             s.running.Load(),
 		"jobs":                jobs,
 		"timezone":            s.cron.Location().String(),
 		"briefing_health":     s.BriefingHealth(),

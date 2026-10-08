@@ -176,6 +176,34 @@ def _delta_event_window(
     return min(starts), max(ends)
 
 
+def _fmt_fenster_zeit(value: Optional[datetime]) -> str:
+    return value.isoformat(timespec="minutes") if value is not None else "offen"
+
+
+def _log_alarm_fenster(
+    trip_id: str, quelle: str,
+    start: Optional[datetime], ende: Optional[datetime],
+) -> None:
+    """Issue #2218 C5-02b: genau eine Info-Zeile je Alarmpruefung mit der
+    Fenstergrenze -- Trip-ID, Start, Ende, Quelle; bewusst OHNE Koordinaten
+    (PII). Kein Fenster => ``fenster=keines`` (unterscheidbar von "nicht
+    geprueft"). Reine Beobachtung, aendert keine Fensterlogik (#1599)."""
+    if start is None and ende is None:
+        logger.info("Alarm-Fenster trip=%s quelle=%s fenster=keines", trip_id, quelle)
+        return
+    logger.info(
+        "Alarm-Fenster trip=%s quelle=%s start=%s ende=%s",
+        trip_id, quelle, _fmt_fenster_zeit(start), _fmt_fenster_zeit(ende),
+    )
+
+
+def _radar_fenster_ende(now: datetime, enden_min: list) -> Optional[datetime]:
+    """Spaetestes endliches Aufenthaltsfenster-Ende (Minuten ab `now`) als
+    Zeitpunkt; `None` = nach oben offen (Einzelpunkt)."""
+    endlich = [e for e in enden_min if e is not None]
+    return now + timedelta(minutes=max(endlich)) if endlich else None
+
+
 @dataclass(frozen=True)
 class AlertCheckRunResult:
     """Ergebnis eines check_all_trips()-Laufs (Issue #1447 Teil A) statt des
@@ -843,6 +871,7 @@ class TripAlertService:
         _delta_window_start, _delta_window_end = _delta_event_window(
             _wet_changes, fresh_weather,
         )
+        _log_alarm_fenster(trip.id, "delta", _delta_window_start, _delta_window_end)
         _delta_segment_ids = sorted({
             sid for sid in (
                 normalize_segment_id(c.segment_id) for c in _wet_changes
@@ -2140,6 +2169,9 @@ class TripAlertService:
                             trip, gate.reason, effective_channels,
                         )
                     continue
+                _log_alarm_fenster(
+                    trip.id, "radar", now_utc, _radar_fenster_ende(now_utc, _fenster_ende),
+                )
                 lat = _pos.lat
                 lon = _pos.lon
                 # Hoehe MUSS mitwandern (#1991/#2017): der neue Ort mit der
@@ -2152,6 +2184,7 @@ class TripAlertService:
                     int(round(_pos.elevation_m)) if _pos.elevation_m is not None else None
                 )
                 tz = tz_for_coords(lat, lon)
+                from providers import enrichment_health as _eh
                 radar_svc = None
                 _p0_ausnahme = False
                 try:
@@ -2170,12 +2203,28 @@ class TripAlertService:
                     logger.error(f"Radar nowcast failed for trip {trip.id}: {e}")
                     result = None
                     _p0_ausnahme = True
+                    # Issue #2218 C5-02c: Ausfall des ersten Abrufs im Journal.
+                    _eh.log_enrichment_call(
+                        _eh.PATH_ALERT_FETCH, _eh.OUTCOME_UNAVAILABLE,
+                        unit=f"{self._user_id}/{trip.id}",
+                    )
                     if radar_svc is None:
                         # Der Dienst selbst ist nicht verfuegbar: kein Folgeabruf moeglich.
                         self._protokolliere_radar_unterdrueckung(
                             trip, alert_log.REASON_DATA_UNAVAILABLE, effective_channels,
                         )
                         continue
+                else:
+                    # `ok` nur mit verwertbaren Daten (Muster Delta-Zweig): ein
+                    # gedrosseltes/datenloses Ergebnis loest einen Ausfall nicht ab.
+                    if not (
+                        getattr(result, "throttled", False)
+                        or getattr(result, "data_unavailable", False)
+                    ):
+                        _eh.log_enrichment_call(
+                            _eh.PATH_ALERT_FETCH, _eh.OUTCOME_OK,
+                            unit=f"{self._user_id}/{trip.id}",
+                        )
 
                 # Issue #2051 S2a: die uebrigen Punkte der Reststrecke, sequenziell
                 # und mit derselben Prioritaet (Muster

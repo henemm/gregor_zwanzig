@@ -889,6 +889,10 @@ class RadarNowcastService:
             provider = GeoSphereProvider()
             ts = provider.fetch_nowcast(lat, lon)
             if not ts or not ts.data:
+                # Issue #2218 C5-37 (ADR-0018): eine leere INCA-Antwort ist ein
+                # Ausfall, kein "ok" — Trockenwetter liefert Nullframes, nie [].
+                logger.warning("GeoSphere INCA returned no data points, falling back")
+                self._inca_unavailable_this_call = True
                 return []
             frames = []
             for dp in ts.data:
