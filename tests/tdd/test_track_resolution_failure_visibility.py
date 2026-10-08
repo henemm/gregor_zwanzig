@@ -76,8 +76,10 @@ def _prozess_cache_leeren():
     from services import track_resolution
 
     track_resolution._failed_lookups.clear()
+    track_resolution._implausible_reported.clear()
     yield
     track_resolution._failed_lookups.clear()
+    track_resolution._implausible_reported.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -795,4 +797,53 @@ def test_ac22_neustart_erzeugt_hoechstens_eine_zusatzzeile_dann_wieder_gedaempft
     assert len(_implausible(uid)) == 2, (
         "nach dem Neustart genau EINE Zusatzzeile erwartet (insgesamt 2), "
         f"bekam {len(_implausible(uid))}"
+    )
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="als root greift kein Schreibschutz")
+def test_gescheitertes_schreiben_daempft_nicht_naechste_runde_schreibt(uhr):
+    """C5-47 (Nachbesserung): scheitert das Schreiben der
+    ``implausible_measurement``-Zeile (echter Fehler: Diagnose-Verzeichnis
+    nicht beschreibbar), darf die Daempfung NICHT greifen -- die naechste
+    15-Minuten-Runde schreibt die Zeile doch. Sonst bliebe die Etappe bis zu
+    12 h stumm, obwohl nie eine Zeile im Journal stand."""
+    from app.loader import get_data_dir
+
+    uid = "tdd-2218c-schreibfehler"
+    trip = _unplausibler_trip(uid)
+    diag = get_data_dir(uid) / "diagnostics"
+    diag.mkdir(parents=True, exist_ok=True)
+    diag.chmod(0o500)
+    try:
+        _lauf(uid, trip)
+    finally:
+        diag.chmod(0o700)
+    assert _implausible(uid) == [], "Vorbedingung: erste Runde konnte nicht schreiben"
+
+    uhr.weiter(_VIERTELSTUNDE)
+    _lauf(uid, trip)
+
+    assert len(_implausible(uid)) == 1, (
+        "nach gescheitertem Schreiben muss die naechste Runde die Zeile "
+        f"nachholen, bekam {len(_implausible(uid))}"
+    )
+
+
+def test_gleichnamige_etappen_zweier_trips_desselben_nutzers_eigenstaendig(uhr):
+    """Adversary F005: zwei Trips DESSELBEN Nutzers mit gleichnamiger Etappe
+    (T1), beide unplausibel -> jeder Trip schreibt seine eigene erste Zeile;
+    die Daempfung des einen unterdrueckt den anderen nicht (Schluessel traegt
+    die Trip-ID)."""
+    uid = "tdd-2218c-zwei-trips"
+    trip_a = _unplausibler_trip(uid, trip_id="trip-a")
+    trip_b = _unplausibler_trip(uid, trip_id="trip-b")
+
+    for _ in range(2):
+        _lauf(uid, trip_a)
+        _lauf(uid, trip_b)
+        uhr.weiter(_VIERTELSTUNDE)
+
+    paare = sorted((z["trip_id"], z["stage_id"]) for z in _implausible(uid))
+    assert paare == [("trip-a", "T1"), ("trip-b", "T1")], (
+        f"je Trip genau eine Zeile fuer T1 erwartet: {paare}"
     )

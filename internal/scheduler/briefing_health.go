@@ -210,19 +210,23 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 // degradation.
 //
 // Deliberately NOT alertAnchorRejectedGapThreshold (60min), even though the
-// same alert run writes both: the Python writer damps track-resolution
-// failures via _failed_lookups to AT MOST ONE line per stage and PROCESS
-// (parsing the whole GPX inventory has a per-run time budget). A permanently
-// broken stage therefore produces one line and then stays quiet until the
-// service restarts — with an hour-long threshold the streak would lapse
-// within minutes while the degradation continues, which is exactly the
-// "Kaschieren" ADR-0018 forbids. 26h (as for the dispatch twin) covers the
-// daily briefing/deploy rhythm that produces the next line.
+// same alert run writes both. The Python writer has two dampings:
+//   - resolution failures: _failed_lookups, AT MOST ONE line per stage and
+//     PROCESS (parsing the whole GPX inventory has a per-run time budget). A
+//     permanently broken stage produces one line and then stays quiet until
+//     the service restarts; 26h (as for the dispatch twin) covers the daily
+//     briefing/deploy rhythm that produces the next line.
+//   - implausible_measurement: time-based, at most one line per
+//     (user, trip, stage) and 12h (Issue #2218 C5-47). 12h < 26h, so this
+//     streak never lapses while the stage stays implausible.
 //
-// Known limit: a process running longer than 26h without a restart lets the
-// streak lapse although the stage is still unmeasured. The 24h recent count
-// keeps the same limitation; both are bounded by the writer's damping, not by
-// this threshold.
+// With an hour-long threshold the streak would lapse within minutes while the
+// degradation continues, which is exactly the "Kaschieren" ADR-0018 forbids.
+//
+// Known limit: for resolution failures a process running longer than 26h
+// without a restart lets the streak lapse although the stage is still
+// unmeasured. The 24h recent count keeps the same limitation; both are bounded
+// by the writer's damping, not by this threshold.
 const trackResolutionFailureStreakGapThreshold = 26 * time.Hour
 
 // trackResolutionFailureEntry mirrors one line of
