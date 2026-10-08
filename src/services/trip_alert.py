@@ -687,9 +687,22 @@ class TripAlertService:
         # 2. Fetch fresh weather if not provided
         if fresh_weather is None:
             fresh_weather = self._fetch_fresh_weather(cached_weather)
+            # Issue #2218 (B1-09): leer ohne Versuch = Normalfall, kein Ausfall.
+            from providers import enrichment_health as _eh
+            _versucht, _gescheitert = getattr(self, "_fetch_stats", (0, 0))
+            if _gescheitert:
+                _eh.log_enrichment_call(
+                    _eh.PATH_ALERT_FETCH, _eh.OUTCOME_UNAVAILABLE,
+                    unit=f"{self._user_id}/{trip.id}",
+                )
+            elif _versucht and fresh_weather:
+                _eh.log_enrichment_call(
+                    _eh.PATH_ALERT_FETCH, _eh.OUTCOME_OK,
+                    unit=f"{self._user_id}/{trip.id}",
+                )
 
         if not fresh_weather:
-            logger.warning(f"No fresh weather data for trip {trip.id}")
+            logger.debug(f"No fresh weather data for trip {trip.id}")
             return False
 
         # 3./4./4b. Issue #1168 (F001-Fix): Detektor-Wahl (inkl. #961-
@@ -2843,6 +2856,8 @@ class TripAlertService:
         now_utc = datetime.now(timezone.utc)
 
         fresh_weather = []
+        versucht = gescheitert = 0
+        self._fetch_stats = (0, 0)
         for cached in cached_weather:
             segment_started_at = time.monotonic()
             today_utc = now_utc.date()
@@ -2850,6 +2865,7 @@ class TripAlertService:
                 continue  # Bereits absolviert — überspringen
             if cached.segment.start_time.date() > today_utc:
                 continue  # Beginnt erst morgen oder später — überspringen
+            versucht += 1
             try:
                 # Issue #1329: der frühere `service._cache.clear()` erzwang
                 # bei JEDEM Alarm-Check einen Upstream-Fetch. Mit dem
@@ -2871,6 +2887,7 @@ class TripAlertService:
                 )
                 fresh_weather.append(fresh)
             except Exception as e:
+                gescheitert += 1
                 logger.error(
                     f"Failed to fetch fresh weather for segment "
                     f"{cached.segment.segment_id}: {e}"
@@ -2881,6 +2898,7 @@ class TripAlertService:
                 f"{time.monotonic() - segment_started_at:.3f} s"
             )
 
+        self._fetch_stats = (versucht, gescheitert)
         return fresh_weather
 
     def _send_alert(

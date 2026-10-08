@@ -30,6 +30,8 @@ PATH_THUNDER_ADDITIVE = "thunder_additive"  # #1992: additive Zusatzquelle
 # zeitgleichen Erfolg der Primaerquelle im Aggregat ueberdeckt wird.
 PATH_RADAR_NOWCAST = "radar_nowcast"
 PATH_SNOWGRID = "snowgrid"  # #1992: SNOWGRID-Schneetiefe
+PATH_ALERT_FETCH = "alert_fetch"  # #2218: Wetterabruf der Alarm-Checks
+# (Trip + Ortsvergleich), je Einheit ueber das optionale Feld `unit`.
 PATH_FORECAST_CAPTURE = "forecast_capture"  # #2030: Vorhersage-Mitschnitt --
 # kein Provider-Fallback, aber ein degradierbarer Diagnose-Pfad: bleibt sein
 # Ausfall stumm, steht man beim naechsten Vorfall wieder ohne Daten da.
@@ -52,6 +54,7 @@ _JOURNAL_UNTERPFAD = ("diagnostics", "enrichment_calls.jsonl")
 
 def log_enrichment_call(
     path: str, outcome: str, detail: Optional[str] = None,
+    unit: Optional[str] = None,
 ) -> None:
     """Einen Anreicherungs-Abrufversuch protokollieren (fail-soft).
 
@@ -76,12 +79,15 @@ def log_enrichment_call(
 
         jpath = get_data_root().joinpath(*_JOURNAL_UNTERPFAD)
         jpath.parent.mkdir(parents=True, exist_ok=True)
-        line = json.dumps({
+        record = {
             "ts": datetime.now(timezone.utc).isoformat(),
             "path": path,
             "outcome": outcome,
             "detail": detail,
-        })
+        }
+        if unit is not None:  # #2218: nur gesetzt => Altzeilen byte-identisch
+            record["unit"] = unit
+        line = json.dumps(record)
         with jpath.open("a") as fh:
             fh.write(line + "\n")
     except Exception:

@@ -21,6 +21,9 @@ from typing import Optional
 
 from app.config import Settings
 from app.loader import load_all_locations
+from providers.enrichment_health import (
+    OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_ALERT_FETCH, log_enrichment_call,
+)
 from services import alert_channel_threshold, alert_daily_limit, alert_log
 import services.alert_urgency as alert_urgency
 from services.alert_gate import check_briefing_imminent
@@ -556,7 +559,15 @@ class CompareAlertService:
                 )
             except Exception as e:
                 logger.error(f"Compare-Alert check failed for {preset_id}/{location_id}: {e}")
+                log_enrichment_call(
+                    PATH_ALERT_FETCH, OUTCOME_UNAVAILABLE,
+                    unit=f"{self._user_id}/{preset_id}/{location_id}",
+                )
                 continue
+            log_enrichment_call(
+                PATH_ALERT_FETCH, OUTCOME_OK,
+                unit=f"{self._user_id}/{preset_id}/{location_id}",
+            )
             if entry is not None:
                 triggered.append(entry)
         return triggered
