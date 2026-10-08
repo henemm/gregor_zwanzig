@@ -76,13 +76,17 @@ def lock_path_for(target: Path) -> Path:
 
 
 @contextmanager
-def exclusive_lock(target: Path) -> Iterator[None]:
-    """flock(LOCK_EX) auf ``<target>.lock``; ``LockTimeout`` bei Fristablauf."""
+def exclusive_lock(target: Path, timeout_s: Optional[float] = None) -> Iterator[None]:
+    """flock(LOCK_EX) auf ``<target>.lock``; ``LockTimeout`` bei Fristablauf.
+
+    ``timeout_s=None`` -> ``BRIEFING_LOCK_TIMEOUT_SECONDS`` (zur Aufrufzeit gelesen).
+    """
     lock_file = lock_path_for(Path(target))
     lock_file.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(lock_file, os.O_RDWR | os.O_CREAT, 0o644)
     try:
-        if not acquire_exclusive(fd, BRIEFING_LOCK_TIMEOUT_SECONDS):
+        if not acquire_exclusive(
+            fd, BRIEFING_LOCK_TIMEOUT_SECONDS if timeout_s is None else timeout_s):
             raise LockTimeout(f"Sperre auf {lock_file} nicht erhalten")
         try:
             yield

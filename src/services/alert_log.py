@@ -35,14 +35,22 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from app.loader import get_data_dir
 from app.metric_catalog import metric_and_aggregation_for_field
+from services.file_lock import LockTimeout, atomic_write_json, exclusive_lock
 
 logger = logging.getLogger(__name__)
+
+# #1539 S1a: Wartefrist auf die Schreibsperre und Prozess-Zaehler verlorener
+# Eintraege (Sperre nicht erhalten -> Eintrag nur im Journal).
+ALERT_LOG_LOCK_TIMEOUT_SECONDS = 30.0
+alert_log_lost_entries = 0
+_lost_lock = threading.Lock()
 
 # O2 -- Gruende einer Nicht-Zustellung. Im JSON bewusst freie Strings statt
 # eines geschlossenen Enums: der kuenftige Grund "unter der Kanal-Schwelle"
@@ -534,18 +542,31 @@ def append_entry(
 
 
 def _append(user_id: str, target: str, entry: dict) -> None:
-    """Read-Modify-Write der ganzen Datei; Alt-Eintraege bleiben unangetastet."""
+    """Gesperrtes Read-Modify-Write der ganzen Datei; Alt-Eintraege bleiben
+    unangetastet. Bei Sperr-Timeout: laut protokollieren, nie ungesperrt
+    schreiben, keine Ausnahme an den Aufrufer (#1539 S1a, AC-11)."""
+    global alert_log_lost_entries
     path = get_data_dir(user_id) / "alert_log.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        data = json.loads(path.read_text()) if path.exists() else {}
-    except (OSError, ValueError) as e:  # kaputte Datei darf keinen Alarm killen
-        logger.warning("alert_log: %s nicht lesbar (%s) -- neu angelegt", path, e)
-        data = {}
-    data.setdefault("entries", [])
-    data.setdefault(target, [])
-    data[target].append(entry)
-    path.write_text(json.dumps(data, indent=2))
+        with exclusive_lock(path, timeout_s=ALERT_LOG_LOCK_TIMEOUT_SECONDS):
+            try:
+                data = json.loads(path.read_text()) if path.exists() else {}
+            except (OSError, ValueError) as e:  # kaputte Datei darf keinen Alarm killen
+                logger.warning("alert_log: %s nicht lesbar (%s) -- neu angelegt", path, e)
+                data = {}
+            data.setdefault("entries", [])
+            data.setdefault(target, [])
+            data[target].append(entry)
+            atomic_write_json(path, data)
+    except LockTimeout:
+        with _lost_lock:
+            alert_log_lost_entries += 1
+        logger.error(
+            "alert_log: Sperre nicht erhalten -- Eintrag NICHT geschrieben "
+            "(target=%s, user=%s): %s",
+            target, user_id, json.dumps(entry, ensure_ascii=False, default=str),
+        )
 
 
 def append_suppressed_entry(

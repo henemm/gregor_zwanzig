@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import List
 
 from app.loader import get_data_dir
+from services.file_lock import atomic_write_json
 from services.point_weather import PointWeatherData
 from services.weather_snapshot import (
     _deserialize_summary,
@@ -78,7 +79,7 @@ class CompareWeatherSnapshotService:
                         row[fname] = fval.name if isinstance(fval, Enum) else fval
                     hourly.append(row)
                 entry["hourly"] = hourly
-            self._path(preset_id, location_id).write_text(json.dumps(entry, indent=2))
+            atomic_write_json(self._path(preset_id, location_id), entry)
         except OSError as e:
             logger.error(f"Failed to save compare snapshot {preset_id}/{location_id}: {e}")
 

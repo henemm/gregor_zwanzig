@@ -136,3 +136,21 @@ def test_trip_briefing_lauf_meldet_dauer_und_loggt_einmal(client, caplog):
     _pruefe_dauer(data)
     zeilen = _laufzeilen(caplog, uid)
     assert len(zeilen) == 1, f"Erwartet genau eine Laufzeile fuer {uid}, gefunden: {zeilen!r}"
+
+
+@pytest.mark.parametrize(
+    "route, dienst",
+    [("/api/scheduler/radar-alert-checks", "radar_alert"),
+     ("/api/scheduler/compare-radar-alert-checks", "compare_radar_alert")],
+)
+def test_radar_lauf_loggt_genau_eine_laufzeile_mit_user_id(client, caplog, route, dienst):
+    """AC-6 (Adversary F004): die Radar-Routen schreiben je Lauf genau eine
+    Zeile "<dienst>: Lauf beendet nach ... user_id=<uid>" und liefern duration_s."""
+    uid = f"tdd-1539-radar-{uuid.uuid4().hex[:6]}"  # Nutzer ohne Daten: nichts zu pruefen
+    with caplog.at_level(logging.INFO):
+        resp = client.post(route, params={"user_id": uid})
+    assert resp.status_code == 200
+    _pruefe_dauer(resp.json())
+    zeilen = _laufzeilen(caplog, uid)
+    assert len(zeilen) == 1, f"Erwartet genau eine Laufzeile fuer {uid}, gefunden: {zeilen!r}"
+    assert zeilen[0].startswith(f"{dienst}: Lauf beendet nach")

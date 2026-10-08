@@ -51,6 +51,7 @@ from providers.http import (
     stop_at_deadline,
 )
 from providers.merge import merge_missing_fields
+from services.file_lock import LockTimeout, atomic_write_json, exclusive_lock
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -353,7 +354,26 @@ class OpenMeteoProvider:
         """Save probe result as JSON cache."""
         pfad = availability_cache_path()
         pfad.parent.mkdir(parents=True, exist_ok=True)
-        pfad.write_text(json.dumps(result, indent=2))
+        atomic_write_json(pfad, result)
+
+    def _auto_probe_single(self) -> Optional[dict]:
+        """Auto-Probe genau einmal (#1539 S1a, AC-10): unter Sperre den Cache
+        erneut laden (Double-Checked-Locking) und nur proben, wenn er immer
+        noch fehlt/abgelaufen ist."""
+        try:
+            # Wartende bleiben bis zum Ende der Probe stehen: Probe-HTTP-Timeout
+            # (TIMEOUT) + 30 s Puffer fuer mehrere Modelle/Retries.
+            with exclusive_lock(availability_cache_path(), timeout_s=TIMEOUT + 30.0):
+                cache = self._load_availability_cache()
+                if cache is not None:
+                    return cache
+                logger.info("Availability cache missing/expired — auto-probing...")
+                return self.probe_model_availability()
+        except LockTimeout as e:
+            logger.warning("Auto-probe lock not acquired: %s", e)
+        except Exception as e:
+            logger.warning("Auto-probe failed: %s", e)
+        return None
 
     def probe_model_availability(self) -> dict:
         """
@@ -1238,11 +1258,7 @@ class OpenMeteoProvider:
         # WEATHER-05b: Check for missing metrics and fetch fallback
         cache = self._load_availability_cache()
         if cache is None:
-            try:
-                logger.info("Availability cache missing/expired — auto-probing...")
-                cache = self.probe_model_availability()
-            except Exception as e:
-                logger.warning("Auto-probe failed: %s", e)
+            cache = self._auto_probe_single()
         if cache is not None:
             primary_info = cache["models"].get(model_id)
             if primary_info:

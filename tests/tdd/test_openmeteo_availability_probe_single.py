@@ -105,3 +105,40 @@ def test_auto_probe_laeuft_bei_gleichzeitigen_abrufen_genau_einmal(monkeypatch, 
         assert gueltig is not None and gueltig["probe_date"] == date.today().isoformat(), (
             "Cache nach den Abrufen nicht gueltig"
         )
+
+
+@pytest.mark.timeout(30)
+def test_wartender_abruf_wartet_laenger_als_die_standardfrist_auf_die_probe(monkeypatch, tmp_path):
+    """Adversary F006: haelt ein anderer Thread die Probe-Sperre laenger als die
+    Standardfrist (hier 0.3 s, Halter 0.8 s), wartet der Abruf trotzdem und sieht
+    danach den gueltigen Cache -- er arbeitet nicht ohne Cache weiter."""
+    import fcntl
+    import os
+
+    from services import file_lock
+
+    cache = tmp_path / "model_availability.json"
+    monkeypatch.setattr(om, "AVAILABILITY_CACHE_PATH", cache)
+    monkeypatch.setattr(file_lock, "BRIEFING_LOCK_TIMEOUT_SECONDS", 0.3)
+    gueltig = {"probe_date": date.today().isoformat(), "models": {}}
+    gehalten = threading.Event()
+
+    def halter() -> None:
+        fd = os.open(str(cache) + ".lock", os.O_RDWR | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            gehalten.set()
+            time.sleep(0.8)  # "laufende Probe", laenger als die Standardfrist
+            cache.write_text(json.dumps(gueltig))
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+
+    th = threading.Thread(target=halter, daemon=True)
+    th.start()
+    assert gehalten.wait(timeout=5)
+    ergebnis = om.OpenMeteoProvider()._auto_probe_single()
+    th.join(timeout=5)
+    assert ergebnis is not None and ergebnis["probe_date"] == gueltig["probe_date"], (
+        "Wartender gab nach der Standardfrist auf und lief ohne Cache weiter"
+    )

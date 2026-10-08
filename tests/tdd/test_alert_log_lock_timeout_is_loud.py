@@ -99,3 +99,35 @@ def test_lock_timeout_protokolliert_eintrag_laut_und_zaehlt(monkeypatch, caplog)
     assert getattr(alert_log, "alert_log_lost_entries", 0) == zaehler_vorher + 1, (
         "Zaehler alert_log_lost_entries ist nicht um genau 1 gestiegen"
     )
+
+
+@pytest.mark.timeout(20)
+def test_lock_timeout_mit_nicht_serialisierbarem_feld_wirft_nicht(monkeypatch, caplog):
+    """Adversary F007: auch im Timeout-Zweig keine Ausnahme beim Loggen."""
+    monkeypatch.setattr(alert_log, "ALERT_LOG_LOCK_TIMEOUT_SECONDS", 0.3, raising=False)
+    pfad = get_data_dir("ac11-bob") / "alert_log.json"
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    vorher_zaehler = alert_log.alert_log_lost_entries
+    halten, freigeben = threading.Event(), threading.Event()
+
+    def sperrhalter() -> None:
+        fd = os.open(str(pfad) + ".lock", os.O_RDWR | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            halten.set()
+            freigeben.wait(timeout=15)
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+
+    halter = threading.Thread(target=sperrhalter, daemon=True)
+    halter.start()
+    assert halten.wait(timeout=5)
+    try:
+        with caplog.at_level(logging.ERROR, logger="services.alert_log"):
+            alert_log._append("ac11-bob", "entries", {"entity_id": "ac11-obj", "x": object()})
+    finally:
+        freigeben.set()
+        halter.join(timeout=5)
+    assert any("ac11-obj" in r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR)
+    assert alert_log.alert_log_lost_entries == vorher_zaehler + 1
