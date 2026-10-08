@@ -638,3 +638,161 @@ def test_meldegrenze_wirkt_im_echten_aufloesungspfad(versatz_m, erwartete_zeilen
         f"bester Kandidat {versatz_m} m entfernt: {erwartete_zeilen} Zeile(n) "
         f"erwartet, bekam {len(zeilen)} — {zeilen}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Scheibe C (#2218, Eintrag C5-47): zeitbasierte Daempfung von
+# ``implausible_measurement`` -- hoechstens eine Zeile je (Nutzer, Trip, Etappe)
+# und 12 h.
+# SPEC: docs/specs/modules/fix_2218_scheibe_c_observability.md (AC-19..AC-22)
+#
+# Die Uhr der Daempfung ist ueber ``track_resolution._jetzt()`` austauschbar
+# (Sekunden, monoton); ``raising=False``, damit der Test vor der Umsetzung an
+# der ZUSICHERUNG (Zeilenzahl) scheitert, nicht am fehlenden Attribut. Gelesen
+# wird die ECHTE Journaldatei. Journal-``ts`` ist Wanduhr -- der Abstand der
+# Zeilen wird deshalb auf der gestellten Uhr gemessen (Zeitpunkt, zu dem das
+# Journal um eine Zeile gewachsen ist).
+# ---------------------------------------------------------------------------
+
+_UNPLAUSIBEL = [0.0, 0.1, 0.2, 0.3]   # G1->G2 sind 5,5 km Luftlinie
+_VIERTELSTUNDE = 15 * 60.0
+_ZWOELF_H = 12 * 3600.0
+
+
+class _GestellteUhr:
+    def __init__(self, start: float = 1000.0) -> None:
+        self.t = start
+
+    def __call__(self) -> float:
+        return self.t
+
+    def weiter(self, sekunden: float) -> None:
+        self.t += sekunden
+
+
+@pytest.fixture
+def uhr(monkeypatch):
+    from services import track_resolution
+
+    u = _GestellteUhr()
+    monkeypatch.setattr(track_resolution, "_jetzt", u, raising=False)
+    return u
+
+
+def _implausible(user_id: str) -> list:
+    return [z for z in _journal(user_id) if z.get("reason") == "implausible_measurement"]
+
+
+def _unplausibler_trip(user_id: str, trip_id: str = "trip-2218-c"):
+    return _trip(user_id, _waypoints(distanzen=_UNPLAUSIBEL), trip_id=trip_id)
+
+
+def test_ac19_achtundvierzig_runden_in_12h_schreiben_genau_eine_zeile(uhr):
+    """AC-19: unplausible Distanzen, 48 Aufloesungsrunden im 15-Minuten-Takt
+    (12 h) -> genau EINE ``implausible_measurement``-Zeile (heute: 48)."""
+    uid = "tdd-2218c-ac19"
+    trip = _unplausibler_trip(uid)
+
+    for _ in range(48):
+        _lauf(uid, trip)
+        uhr.weiter(_VIERTELSTUNDE)
+
+    zeilen = _implausible(uid)
+    assert len(zeilen) == 1, (
+        f"48 Runden in 12 h: genau eine Zeile erwartet, bekam {len(zeilen)}"
+    )
+
+
+def test_ac20_nach_12h_entsteht_jeweils_eine_neue_zeile_streak_reisst_nicht_ab(uhr):
+    """AC-20: bleibt die Etappe ueber 12 h hinaus unplausibel, entsteht nach je
+    12 h eine neue Zeile -- der Abstand benachbarter Zeilen erreicht nie 26 h
+    (Luecke, ab der der Go-Streak abreisst) und ist nie kleiner als 12 h.
+
+    72 h im 15-Minuten-Takt = 7 Zeilen (t = 0, 12, ..., 72 h). Gemessen auf der
+    gestellten Uhr: Zeitpunkte, zu denen das Journal wuchs. Mutation
+    "Intervall 30 h" -> Abstand >= 26 h -> rot."""
+    uid = "tdd-2218c-ac20"
+    trip = _unplausibler_trip(uid)
+
+    schreibzeiten: list[float] = []
+    bekannt = 0
+    for _ in range(72 * 4 + 1):
+        _lauf(uid, trip)
+        n = len(_implausible(uid))
+        if n > bekannt:
+            schreibzeiten.append(uhr.t)
+            bekannt = n
+        uhr.weiter(_VIERTELSTUNDE)
+
+    abstaende = [b - a for a, b in zip(schreibzeiten, schreibzeiten[1:])]
+    assert len(schreibzeiten) == 7, (
+        f"72 h bei 12-h-Takt: 7 Zeilen erwartet, bekam {len(schreibzeiten)}"
+    )
+    assert all(_ZWOELF_H <= a < 26 * 3600.0 for a in abstaende), (
+        f"Zeilenabstaende muessen in [12 h, 26 h) liegen (Sekunden): {abstaende}"
+    )
+
+
+def test_ac21_daempfung_je_nutzer_trip_und_etappe_getrennt(uhr):
+    """AC-21: zwei Etappen desselben Trips und eine gleichnamige Etappe eines
+    zweiten Nutzers, alle unplausibel -> jede (Nutzer, Trip, Etappe) schreibt
+    ihre erste Zeile, keine unterdrueckt die andere, die Zeilen landen im
+    Journal des richtigen Nutzers. Zweite Runde: jede bleibt bei einer Zeile."""
+    from datetime import timedelta
+
+    from app.trip import Stage, Trip
+
+    def _zwei_etappen(trip_id: str):
+        s1 = Stage(id="T1", name="E1", date=_ZIELDATUM,
+                   waypoints=_waypoints(distanzen=_UNPLAUSIBEL))
+        s2 = Stage(id="T2", name="E2", date=_ZIELDATUM + timedelta(days=1),
+                   waypoints=_waypoints(distanzen=_UNPLAUSIBEL))
+        return Trip(id=trip_id, name="Zwei Etappen", stages=[s1, s2])
+
+    from services.track_resolution import backfill_stage_distances
+
+    anna, bodo = "tdd-2218c-ac21-anna", "tdd-2218c-ac21-bodo"
+    trip_a, trip_b = _zwei_etappen("trip-gleich"), _zwei_etappen("trip-gleich")
+
+    for _runde in range(2):
+        for tag in (_ZIELDATUM, _ZIELDATUM + timedelta(days=1)):
+            backfill_stage_distances(trip_a, anna, tag, persist=True)
+        backfill_stage_distances(trip_b, bodo, _ZIELDATUM, persist=True)
+        uhr.weiter(_VIERTELSTUNDE)
+
+    stages_a = sorted(z["stage_id"] for z in _implausible(anna))
+    stages_b = sorted(z["stage_id"] for z in _implausible(bodo))
+    assert stages_a == ["T1", "T2"], (
+        f"Nutzer A: je Etappe genau eine Zeile erwartet: {stages_a}"
+    )
+    assert stages_b == ["T1"], (
+        f"Nutzer B: seine gleichnamige Etappe T1 muss ihre eigene erste Zeile "
+        f"schreiben (Mandantentrennung): {stages_b}"
+    )
+
+
+def test_ac22_neustart_erzeugt_hoechstens_eine_zusatzzeile_dann_wieder_gedaempft(monkeypatch, uhr):
+    """AC-22: nach einem Prozess-Neustart (Daempfungsspeicher leer) entsteht in
+    der ersten Runde hoechstens eine Zusatzzeile je Etappe, die Folgerunden sind
+    wieder gedaempft. Neustart = Modul neu ausfuehren (Prozessspeicher weg)."""
+    import importlib
+
+    from services import track_resolution
+
+    uid = "tdd-2218c-ac22"
+    trip = _unplausibler_trip(uid)
+    _lauf(uid, trip)
+    uhr.weiter(_VIERTELSTUNDE)
+    _lauf(uid, trip)
+    assert len(_implausible(uid)) == 1, "Vorbedingung: vor dem Neustart gedaempft"
+
+    importlib.reload(track_resolution)          # "Neustart": Speicher des Moduls weg
+    track_resolution._jetzt = uhr               # dieselbe gestellte Uhr
+    for _ in range(3):
+        uhr.weiter(_VIERTELSTUNDE)
+        _lauf(uid, trip)
+
+    assert len(_implausible(uid)) == 2, (
+        "nach dem Neustart genau EINE Zusatzzeile erwartet (insgesamt 2), "
+        f"bekam {len(_implausible(uid))}"
+    )
