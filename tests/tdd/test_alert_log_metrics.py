@@ -21,7 +21,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from app.loader import get_briefings_dir, get_data_dir
-from app.models import Corridor, ThunderLevel
+from app.models import ThunderLevel
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 
