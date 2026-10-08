@@ -102,11 +102,6 @@ def trigger_compare_alert_checks(user_id: str = Query(...)):
 
     service = CompareAlertService(user_id=user_id)
     count = service.check_all_compare_presets()
-    return _compare_run_response(service, count)
-
-
-def _compare_run_response(service, count: int) -> dict:
-    """Antwort der Compare-Alarmlaeufe (#1539 S0): Bestandsfelder plus checked/duration_s."""
     return {
         "status": "ok",
         "count": count,
@@ -166,7 +161,13 @@ def trigger_compare_official_alert_checks(user_id: str = Query(...)):
 
     service = CompareOfficialAlertService(user_id=user_id)
     count = service.check_all_compare_presets()
-    return _compare_run_response(service, count)
+    return {
+        "status": "ok",
+        "count": count,
+        "failed": service.last_failed_count,
+        "checked": service.last_checked_count,
+        "duration_s": round(service.last_duration_s, 3),
+    }
 
 
 @router.post("/inbound-commands")

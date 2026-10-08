@@ -62,7 +62,10 @@ def _lauf(client, user: str, ausgang) -> dict:
     at = _zeitpunkt(PARIS, TAG, 7).isoformat()
     r = client.post("/api/scheduler/trip-reports", params={"user_id": user, "at": at})
     assert r.status_code == 200
-    return r.json()
+    body = r.json()
+    dauer = body.pop("duration_s")
+    assert isinstance(dauer, (int, float)) and dauer >= 0
+    return body
 
 
 def test_ac6_channels_unreachable_meldet_partial(client):
@@ -120,7 +123,10 @@ def test_f001_bereits_vermerkter_slot_ist_kein_versandversuch(client, monkeypatc
         "/api/scheduler/trip-reports", params={"user_id": user, "at": at.isoformat()},
     )
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "count": 0, "failed": 0}
+    body = r.json()
+    dauer = body.pop("duration_s")
+    assert isinstance(dauer, (int, float)) and dauer >= 0
+    assert body == {"status": "ok", "count": 0, "failed": 0}
     assert _AUFRUFE == [], "Naht wurde aufgerufen: kein Leerlauf erzeugt"
 
 

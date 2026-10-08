@@ -450,3 +450,25 @@ func TestStatusError_NeverEchoesRawBodySkippedIDs(t *testing.T) {
 		}
 	}
 }
+
+// Adversary F001: zwei Abbrueche desselben Fan-out-Jobs nacheinander --
+// total kumuliert auf 2, last_skipped stammt aus dem zweiten Lauf.
+func TestDeadlineAbort_TwoConsecutiveAbortsAccumulate(t *testing.T) {
+	as := newAbortServer(t)
+	as.set(abortUserA, deadlineBody, 0) // skipped:2
+	sched, _, _ := newBudgetScheduler(t, as.srv.URL, abortUserA)
+
+	sched.alertChecks() // erster Abbruch
+	as.set(abortUserA, fmt.Sprintf(`{"status":"partial","reason":"deadline","count":0,"checked":1,"skipped":5,`+
+		`"skipped_ids":["%s","b","c","d","e"],"duration_s":180.01}`, abortTrip), 0)
+	sched.alertChecks() // zweiter Abbruch
+
+	doc, _ := statusDoc(t, sched)
+	aborts := abortsOf(t, jobDoc(t, doc, "alert_checks"))
+	if got := jsonNum(t, aborts, "total"); got != 2 {
+		t.Fatalf("expected deadline_aborts.total=2 after two aborts, got %v", got)
+	}
+	if got := jsonNum(t, aborts, "last_skipped"); got != 5 {
+		t.Fatalf("expected deadline_aborts.last_skipped=5 from second run, got %v", got)
+	}
+}
