@@ -6,24 +6,31 @@ plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
 timeout: 30.0s
 timeout method: signal
 timeout func_only: False
-collected 50 items
+collected 67 items
 
-tests/integration/test_segment_weather_single_flight.py ..............   [ 28%]
-tests/tdd/test_forecast_budget_reserve_atomic.py .....                   [ 38%]
-tests/tdd/test_meteoalarm_budget_reserve_atomic.py ..                    [ 42%]
-tests/tdd/test_budget_reserve_lock_timeout_is_loud.py ...                [ 48%]
-tests/tdd/test_single_flight_keys_independent.py ....                    [ 56%]
-tests/tdd/test_single_flight_wait_is_bounded.py ..                       [ 60%]
-tests/tdd/test_warn_feed_single_flight.py .......                        [ 74%]
-tests/unit/test_parallel_fetch_nested.py .                               [ 76%]
-tests/unit/test_parallel_fetch_context.py ..                             [ 80%]
-tests/unit/test_parallel_fetch_ordered.py ...                            [ 86%]
-tests/unit/test_parallel_fetch_deadline.py ..                            [ 90%]
-tests/tdd/test_meteoalarm_budget_buchung_im_abrufpfad.py ..              [ 94%]
-tests/tdd/test_forecast_budget_reserve_waechter.py ...                   [100%]
+tests/integration/test_segment_weather_single_flight.py ..............   [ 20%]
+tests/tdd/test_budget_reserve_lock_timeout_is_loud.py ...                [ 25%]
+tests/tdd/test_forecast_budget_reserve_atomic.py ..........              [ 40%]
+tests/tdd/test_forecast_budget_reserve_waechter.py ...                   [ 44%]
+tests/tdd/test_internal_forecast_budget_reserve.py ............          [ 62%]
+tests/tdd/test_meteoalarm_budget_buchung_im_abrufpfad.py ..              [ 65%]
+tests/tdd/test_meteoalarm_budget_reserve_atomic.py ..                    [ 68%]
+tests/tdd/test_single_flight_keys_independent.py ....                    [ 74%]
+tests/tdd/test_single_flight_wait_is_bounded.py ..                       [ 77%]
+tests/tdd/test_warn_feed_single_flight.py .......                        [ 88%]
+tests/unit/test_parallel_fetch_context.py ..                             [ 91%]
+tests/unit/test_parallel_fetch_deadline.py ..                            [ 94%]
+tests/unit/test_parallel_fetch_nested.py .                               [ 95%]
+tests/unit/test_parallel_fetch_ordered.py ...                            [100%]
 
 ==================================== PASSES ====================================
 __ test_ac17_leader_provider_fehler_alle_wartenden_derselbe_fehler_ein_fetch ___
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 14:01:54,119 ERROR services.segment_weather: Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+2026-10-08 14:01:54,119 ERROR services.segment_weather: Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+2026-10-08 14:01:54,119 ERROR services.segment_weather: Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+2026-10-08 14:01:54,119 ERROR services.segment_weather: Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+2026-10-08 14:01:54,119 ERROR services.segment_weather: Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
 ------------------------------ Captured log call -------------------------------
 ERROR    services.segment_weather:segment_weather.py:298 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
 ERROR    services.segment_weather:segment_weather.py:298 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
@@ -31,21 +38,40 @@ ERROR    services.segment_weather:segment_weather.py:298 Provider failed for seg
 ERROR    services.segment_weather:segment_weather.py:298 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
 ERROR    services.segment_weather:segment_weather.py:298 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
 ___________ test_forecast_reserve_bei_globalem_lock_timeout_ist_laut ___________
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 14:01:56,300 WARNING forecast_budget: Dateisperre /tmp/pytest-of-hem/pytest-2138/test_forecast_reserve_bei_glob0/diagnostics/forecast_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
 ------------------------------ Captured log call -------------------------------
-WARNING  forecast_budget:forecast_budget.py:466 Dateisperre /tmp/pytest-of-hem/pytest-2037/test_forecast_reserve_bei_glob0/diagnostics/forecast_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
+WARNING  forecast_budget:forecast_budget.py:470 Dateisperre /tmp/pytest-of-hem/pytest-2138/test_forecast_reserve_bei_glob0/diagnostics/forecast_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
 ____________ test_forecast_reserve_bei_nutzer_lock_timeout_ist_laut ____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 14:01:56,510 WARNING forecast_budget: Dateisperre /tmp/pytest-of-hem/pytest-2138/test_forecast_reserve_bei_nutz0/users/nutzer_a/diagnostics/forecast_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
 ------------------------------ Captured log call -------------------------------
-WARNING  forecast_budget:forecast_budget.py:466 Dateisperre /tmp/pytest-of-hem/pytest-2037/test_forecast_reserve_bei_nutz0/users/nutzer_a/diagnostics/forecast_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
+WARNING  forecast_budget:forecast_budget.py:470 Dateisperre /tmp/pytest-of-hem/pytest-2138/test_forecast_reserve_bei_nutz0/users/nutzer_a/diagnostics/forecast_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
 ______________ test_meteoalarm_reserve_bei_lock_timeout_ist_laut _______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 14:01:56,715 WARNING meteoalarm_budget: Dateisperre /tmp/pytest-of-hem/pytest-2138/test_meteoalarm_reserve_bei_lo0/diagnostics/meteoalarm_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
 ------------------------------ Captured log call -------------------------------
-WARNING  meteoalarm_budget:meteoalarm_budget.py:288 Dateisperre /tmp/pytest-of-hem/pytest-2037/test_meteoalarm_reserve_bei_lo0/diagnostics/meteoalarm_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
-__________ test_ac3_fehlschlag_erreicht_fehler_senke_jedes_wartenden ___________
+WARNING  meteoalarm_budget:meteoalarm_budget.py:288 Dateisperre /tmp/pytest-of-hem/pytest-2138/test_meteoalarm_reserve_bei_lo0/diagnostics/meteoalarm_budget.json.lock nicht innerhalb 0.20s erhalten -- Buchung verloren
+____ test_a_schreibfehler_statt_sperr_timeout_zaehlt_als_verlorene_buchung _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 14:01:57,415 WARNING forecast_budget: Budget-Buchung in /tmp/pytest-of-hem/pytest-2138/test_a_schreibfehler_statt_spe0/diagnostics/forecast_budget.json verloren ([Errno 21] Is a directory: '/tmp/pytest-of-hem/pytest-2138/test_a_schreibfehler_statt_spe0/diagnostics/.forecast_budget_pbxuywgz.tmp' -> '/tmp/pytest-of-hem/pytest-2138/test_a_schreibfehler_statt_spe0/diagnostics/forecast_budget.json')
 ------------------------------ Captured log call -------------------------------
-WARNING  warn_egress:warn_egress.py:646 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  forecast_budget:forecast_budget.py:459 Budget-Buchung in /tmp/pytest-of-hem/pytest-2138/test_a_schreibfehler_statt_spe0/diagnostics/forecast_budget.json verloren ([Errno 21] Is a directory: '/tmp/pytest-of-hem/pytest-2138/test_a_schreibfehler_statt_spe0/diagnostics/.forecast_budget_pbxuywgz.tmp' -> '/tmp/pytest-of-hem/pytest-2138/test_a_schreibfehler_statt_spe0/diagnostics/forecast_budget.json')
 _______ test_restbudget_abruf_bucht_genau_einen_call_in_der_budgetdatei ________
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 14:01:57,953 WARNING meteoalarm: meteoalarm:AT:p1: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
 ------------------------------ Captured log call -------------------------------
 WARNING  meteoalarm:warn_egress.py:570 meteoalarm:AT:p1: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
 ________ test_ausgeschoepftes_budget_abruf_erreicht_den_upstream_nicht _________
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 14:01:57,956 WARNING meteoalarm: meteoalarm:AT:p1-Abruf fehlgeschlagen (api.meteoalarm.org)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/official_alerts/warn_egress.py", line 531, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/official_alerts/meteoalarm.py", line 738, in _do_request
+    raise _MeteoAlarmBudgetExhausted(
+services.official_alerts.meteoalarm._MeteoAlarmBudgetExhausted: MeteoAlarm-Tagesbudget erschoepft (2/Tag) -- Abruf AT Seite 1 uebersprungen
 ------------------------------ Captured log call -------------------------------
 WARNING  meteoalarm:warn_egress.py:538 meteoalarm:AT:p1-Abruf fehlgeschlagen (api.meteoalarm.org)
 Traceback (most recent call last):
@@ -55,9 +81,11 @@ Traceback (most recent call last):
   File "/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/official_alerts/meteoalarm.py", line 738, in _do_request
     raise _MeteoAlarmBudgetExhausted(
 services.official_alerts.meteoalarm._MeteoAlarmBudgetExhausted: MeteoAlarm-Tagesbudget erschoepft (2/Tag) -- Abruf AT Seite 1 uebersprungen
-____ test_a_schreibfehler_statt_sperr_timeout_zaehlt_als_verlorene_buchung _____
+__________ test_ac3_fehlschlag_erreicht_fehler_senke_jedes_wartenden ___________
+----------------------------- Captured stderr call -----------------------------
+2026-10-08 14:02:00,490 WARNING warn_egress: meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
 ------------------------------ Captured log call -------------------------------
-WARNING  forecast_budget:forecast_budget.py:455 Budget-Buchung in /tmp/pytest-of-hem/pytest-2037/test_a_schreibfehler_statt_spe0/diagnostics/forecast_budget.json verloren ([Errno 21] Is a directory: '/tmp/pytest-of-hem/pytest-2037/test_a_schreibfehler_statt_spe0/diagnostics/.forecast_budget_s9fppp4m.tmp' -> '/tmp/pytest-of-hem/pytest-2037/test_a_schreibfehler_statt_spe0/diagnostics/forecast_budget.json')
+WARNING  warn_egress:warn_egress.py:646 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
 =========================== short test summary info ============================
 PASSED tests/integration/test_segment_weather_single_flight.py::test_ac11_validierungsfehler_bucht_keinen_call_und_ruft_keinen_provider
 PASSED tests/integration/test_segment_weather_single_flight.py::test_ac13_n_parallele_gleiche_segmente_genau_ein_fetch_forecast
@@ -73,16 +101,38 @@ PASSED tests/integration/test_segment_weather_single_flight.py::test_ac18_parall
 PASSED tests/integration/test_segment_weather_single_flight.py::test_ac18_parallel_nie_mehr_upstream_calls_als_seriell[b_verschiedene]
 PASSED tests/integration/test_segment_weather_single_flight.py::test_ac18_parallel_nie_mehr_upstream_calls_als_seriell[c_mischung_zwei_nutzer]
 PASSED tests/integration/test_segment_weather_single_flight.py::test_ac18_budget_erschoepft_user_briefing_erreicht_trotzdem_den_provider
+PASSED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_forecast_reserve_bei_globalem_lock_timeout_ist_laut
+PASSED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_forecast_reserve_bei_nutzer_lock_timeout_ist_laut
+PASSED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_meteoalarm_reserve_bei_lock_timeout_ist_laut
 PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_parallel_reserve_kontoschutz_ab_100_prozent_exakt
 PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_parallel_reserve_schwelle_ohne_nutzer_exakt
 PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_user_briefing_wird_auch_bei_100_prozent_nie_gedrosselt
 PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_zwei_nutzer_parallel_buchen_nur_eigenen_topf_ohne_deadlock
 PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_schreibt_dieselbe_schluesselmenge_wie_record_call
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht[polling]
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht[alert_check]
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_mehrere_einheiten_schoepft_grenze_exakt_aus[polling]
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_mehrere_einheiten_schoepft_grenze_exakt_aus[alert_check]
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_user_briefing_mehrere_einheiten_bei_restbudget_eins_erlaubt
+PASSED tests/tdd/test_forecast_budget_reserve_waechter.py::test_a_schreibfehler_statt_sperr_timeout_zaehlt_als_verlorene_buchung
+PASSED tests/tdd/test_forecast_budget_reserve_waechter.py::test_b_utc_tageswechsel_gilt_auch_fuer_reserve
+PASSED tests/tdd/test_forecast_budget_reserve_waechter.py::test_c_nutzer_topf_wird_nicht_unter_der_globalen_sperre_gebucht
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_erlaubte_reservierung_bucht_zwei_einheiten_auf_die_echte_user_id
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_erlaubte_reservierung_bucht_genau_einen_cache_miss
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_vielverbraucher_abgelehnt_unbeteiligter_erlaubt
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_abgelehnte_reservierung_bucht_nichts
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_priority_aus_der_query_erreicht_das_gate
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_user_id_aus_der_query_bestimmt_den_getroffenen_topf
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_reserve_ohne_user_id_wird_abgewiesen
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_parallele_anfragen_ueberbuchen_das_restbudget_nicht
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_reservierung_ueberbucht_restbudget_von_einer_einheit_nicht[polling]
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_reservierung_ueberbucht_restbudget_von_einer_einheit_nicht[alert_check]
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_reservierung_schoepft_restbudget_von_zwei_einheiten_exakt_aus[polling]
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_reservierung_schoepft_restbudget_von_zwei_einheiten_exakt_aus[alert_check]
+PASSED tests/tdd/test_meteoalarm_budget_buchung_im_abrufpfad.py::test_restbudget_abruf_bucht_genau_einen_call_in_der_budgetdatei
+PASSED tests/tdd/test_meteoalarm_budget_buchung_im_abrufpfad.py::test_ausgeschoepftes_budget_abruf_erreicht_den_upstream_nicht
 PASSED tests/tdd/test_meteoalarm_budget_reserve_atomic.py::test_parallel_reserve_genau_restbudget_mal_true
 PASSED tests/tdd/test_meteoalarm_budget_reserve_atomic.py::test_nach_utc_tageswechsel_beginnt_zaehler_bei_null
-PASSED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_forecast_reserve_bei_globalem_lock_timeout_ist_laut
-PASSED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_forecast_reserve_bei_nutzer_lock_timeout_ist_laut
-PASSED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_meteoalarm_reserve_bei_lock_timeout_ist_laut
 PASSED tests/tdd/test_single_flight_keys_independent.py::test_ac2_anderer_schluessel_wartet_nicht_auf_haengenden_leader
 PASSED tests/tdd/test_single_flight_keys_independent.py::test_ac2_registrier_lock_frei_nach_lauf_und_nach_fehler
 PASSED tests/tdd/test_single_flight_keys_independent.py::test_ac2_cached_fetch_zwei_schluessel_unabhaengig
@@ -96,40 +146,12 @@ PASSED tests/tdd/test_warn_feed_single_flight.py::test_ac3_fehlschlag_erreicht_f
 PASSED tests/tdd/test_warn_feed_single_flight.py::test_ac4_wartende_bekommen_entry_aus_dem_flug_nicht_per_cache_get
 PASSED tests/tdd/test_warn_feed_single_flight.py::test_f003_vorgaenger_flug_schreibt_zwischen_erstpruefung_und_flugstart_kein_zweiter_abruf
 PASSED tests/tdd/test_warn_feed_single_flight.py::test_f004_zwei_cache_dicts_gleicher_schluessel_parallel_je_ein_abruf
-PASSED tests/unit/test_parallel_fetch_nested.py::test_verschachtelter_aufruf_laeuft_inline_im_selben_thread
 PASSED tests/unit/test_parallel_fetch_context.py::test_call_source_und_senken_im_worker_und_danach_zurueckgesetzt
 PASSED tests/unit/test_parallel_fetch_context.py::test_zwei_nutzer_gleichzeitig_ohne_uebersprechen
+PASSED tests/unit/test_parallel_fetch_deadline.py::test_deadline_und_timeout_sind_unterscheidbar
+PASSED tests/unit/test_parallel_fetch_deadline.py::test_verwaister_worker_haelt_slot_folgeaufruf_kehrt_fristgerecht_zurueck
+PASSED tests/unit/test_parallel_fetch_nested.py::test_verschachtelter_aufruf_laeuft_inline_im_selben_thread
 PASSED tests/unit/test_parallel_fetch_ordered.py::test_ergebnisse_in_eingabereihenfolge_bei_umgekehrter_fertigstellung
 PASSED tests/unit/test_parallel_fetch_ordered.py::test_teilausfall_nur_im_outcome_der_betroffenen_aufgabe
 PASSED tests/unit/test_parallel_fetch_ordered.py::test_spitzenzaehler_nie_ueber_slotzahl_und_retry_haelt_slot
-PASSED tests/unit/test_parallel_fetch_deadline.py::test_deadline_und_timeout_sind_unterscheidbar
-PASSED tests/unit/test_parallel_fetch_deadline.py::test_verwaister_worker_haelt_slot_folgeaufruf_kehrt_fristgerecht_zurueck
-PASSED tests/tdd/test_meteoalarm_budget_buchung_im_abrufpfad.py::test_restbudget_abruf_bucht_genau_einen_call_in_der_budgetdatei
-PASSED tests/tdd/test_meteoalarm_budget_buchung_im_abrufpfad.py::test_ausgeschoepftes_budget_abruf_erreicht_den_upstream_nicht
-PASSED tests/tdd/test_forecast_budget_reserve_waechter.py::test_a_schreibfehler_statt_sperr_timeout_zaehlt_als_verlorene_buchung
-PASSED tests/tdd/test_forecast_budget_reserve_waechter.py::test_b_utc_tageswechsel_gilt_auch_fuer_reserve
-PASSED tests/tdd/test_forecast_budget_reserve_waechter.py::test_c_nutzer_topf_wird_nicht_unter_der_globalen_sperre_gebucht
-============================= 50 passed in 21.35s ==============================
-============================= test session starts ==============================
-platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
-rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche
-configfile: pyproject.toml
-plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
-timeout: 30.0s
-timeout method: signal
-timeout func_only: False
-collected 8 items
-
-tests/tdd/test_internal_forecast_budget_reserve.py ........              [100%]
-
-==================================== PASSES ====================================
-=========================== short test summary info ============================
-PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_erlaubte_reservierung_bucht_zwei_einheiten_auf_die_echte_user_id
-PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_erlaubte_reservierung_bucht_genau_einen_cache_miss
-PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_vielverbraucher_abgelehnt_unbeteiligter_erlaubt
-PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_abgelehnte_reservierung_bucht_nichts
-PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_priority_aus_der_query_erreicht_das_gate
-PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_user_id_aus_der_query_bestimmt_den_getroffenen_topf
-PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_reserve_ohne_user_id_wird_abgewiesen
-PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_parallele_anfragen_ueberbuchen_das_restbudget_nicht
-============================== 8 passed in 1.02s ===============================
+============================= 67 passed in 21.96s ==============================

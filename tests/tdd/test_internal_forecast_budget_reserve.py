@@ -560,3 +560,60 @@ def test_parallele_anfragen_ueberbuchen_das_restbudget_nicht(core_client, kleine
     assert len(erlaubt) == rest
     assert _globale_calls() <= kleiner_deckel
     assert _cache_misses() - vorlauf_misses == len(erlaubt)
+
+
+# ---------------------------------------------------------------------------
+# #1539 AC-6/AC-12: eine Reservierung (2 Einheiten) darf ein Restbudget von
+# 1 Einheit nicht ueberbuchen -- die Grenze wirkt am Endpunkt.
+# SPEC: docs/specs/modules/feat_1539_s1b_s2_abruf_baustein.md (AC-6, AC-12)
+# ---------------------------------------------------------------------------
+
+def _vorlauf_durch_fremden_nutzer(client: TestClient, ungerade: bool) -> None:
+    """Global auf DAILY_BUDGET-2 (bzw. -1) -- ausschliesslich ueber das Produkt.
+
+    Nutzer B reserviert neunmal ueber den Endpunkt (18 Einheiten). Fuer den
+    ungeraden Stand bucht B eine weitere Einheit ueber ``record_call()``
+    (Bestandspfad mit units=1, ``segment_weather.py``), denn der Endpunkt bucht
+    immer 2. Nutzer A bleibt bei 0 und damit unter seinem fairen Anteil --
+    es entscheidet allein die Grenze des Restbudgets."""
+    for _ in range(9):
+        _erlaube(client, NUTZER_B)
+    if ungerade:
+        ForecastBudgetGate(NUTZER_B).record_call()
+
+
+@pytest.mark.parametrize("priority", ["polling", "alert_check"])
+def test_reservierung_ueberbucht_restbudget_von_einer_einheit_nicht(
+    core_client, kleiner_deckel, priority
+):
+    _vorlauf_durch_fremden_nutzer(core_client, ungerade=True)
+    assert _globale_calls() == kleiner_deckel - 1
+    vorher = _zaehlerstand(NUTZER_A, NUTZER_B)
+
+    antwort = _reserve(core_client, NUTZER_A, priority=priority)
+
+    assert antwort.status_code == 200, antwort.text[:300]
+    koerper = antwort.json()
+    assert koerper["allowed"] is False, (
+        "AC-6/AC-12: 2 Einheiten bei Restbudget 1 wuerden das Tageslimit "
+        f"ueberschreiten -- muss abgelehnt werden, bekam {koerper}"
+    )
+    assert set(koerper) == {"allowed", "retry_after_s"}
+    assert isinstance(koerper["retry_after_s"], int)
+    assert _zaehlerstand(NUTZER_A, NUTZER_B) == vorher
+    assert _globale_calls() == kleiner_deckel - 1
+
+
+@pytest.mark.parametrize("priority", ["polling", "alert_check"])
+def test_reservierung_schoepft_restbudget_von_zwei_einheiten_exakt_aus(
+    core_client, kleiner_deckel, priority
+):
+    _vorlauf_durch_fremden_nutzer(core_client, ungerade=False)
+    assert _globale_calls() == kleiner_deckel - 2
+
+    antwort = _reserve(core_client, NUTZER_A, priority=priority)
+
+    assert antwort.status_code == 200, antwort.text[:300]
+    assert antwort.json() == {"allowed": True}
+    assert _globale_calls() == kleiner_deckel
+    assert _nutzer_calls(NUTZER_A) == EINHEITEN_JE_RESERVIERUNG

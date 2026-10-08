@@ -169,3 +169,50 @@ def test_reserve_schreibt_dieselbe_schluesselmenge_wie_record_call(tmp_path):
     )
     # Zusatz: reserve bucht genau eine Einheit wie record_call.
     assert _calls(_global_file(neu)) == _calls(_global_file(basis)) == 1
+
+
+def _vorlauf_fremd(root, anzahl: int) -> None:
+    """Ausgangsstand ueber das Produkt: ein ANDERER Nutzer verbraucht ``anzahl``
+    Einheiten, damit der pruefende Nutzer unter seinem fairen Anteil liegt
+    (Stufe 1 laesst ihn durch) -- es entscheidet allein die Restbudget-Grenze."""
+    seed = ForecastBudgetGate("nutzer_b", data_root=root)
+    for _ in range(anzahl):
+        seed.record_call()
+
+
+@pytest.mark.parametrize("priority", ["polling", "alert_check"])
+def test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht(tmp_path, monkeypatch, priority):
+    """AC-6/AC-12: Restbudget 1, ``reserve(units=2)`` (Reserve-Endpoint bucht 2
+    Einheiten je Forecast-Abruf) -> abgelehnt, nichts gebucht."""
+    monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", BUDGET)
+    _vorlauf_fremd(tmp_path, BUDGET - 1)
+
+    gate = ForecastBudgetGate("nutzer_a", data_root=tmp_path)
+    assert gate.reserve(priority, units=2) is False
+
+    assert _calls(_global_file(tmp_path)) == BUDGET - 1
+    assert not _user_file(tmp_path, "nutzer_a").exists()
+
+
+@pytest.mark.parametrize("priority", ["polling", "alert_check"])
+def test_reserve_mehrere_einheiten_schoepft_grenze_exakt_aus(tmp_path, monkeypatch, priority):
+    """AC-6: Restbudget 2, ``reserve(units=2)`` -> erlaubt, calls == DAILY_BUDGET."""
+    monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", BUDGET)
+    _vorlauf_fremd(tmp_path, BUDGET - 2)
+
+    gate = ForecastBudgetGate("nutzer_a", data_root=tmp_path)
+    assert gate.reserve(priority, units=2) is True
+
+    assert _calls(_global_file(tmp_path)) == BUDGET
+    assert _calls(_user_file(tmp_path, "nutzer_a")) == 2
+
+
+def test_user_briefing_mehrere_einheiten_bei_restbudget_eins_erlaubt(tmp_path, monkeypatch):
+    """AC-18: user_briefing wird nie gedrosselt, auch nicht ueber die Grenze."""
+    monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", BUDGET)
+    _vorlauf_fremd(tmp_path, BUDGET - 1)
+
+    gate = ForecastBudgetGate("nutzer_a", data_root=tmp_path)
+    assert gate.reserve("user_briefing", units=2) is True
+
+    assert _calls(_global_file(tmp_path)) == BUDGET + 1

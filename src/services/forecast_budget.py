@@ -165,7 +165,11 @@ class ForecastBudgetGate:
         entscheidung: list = []  # leer = nicht entschieden (Update fehlgeschlagen)
 
         def _global(data: dict) -> None:
-            erlaubt = schwelle is None or self._erlaubt_laut_daten(data, schwelle, now)
+            erlaubt = schwelle is None or (
+                self._erlaubt_laut_daten(data, schwelle, now)
+                # Mehrere Einheiten duerfen das Tageslimit nicht ueberbuchen.
+                and data["calls"].get(PROVIDER, 0) + units <= self.DAILY_BUDGET
+            )
             entscheidung.append(erlaubt)
             if not erlaubt:
                 return
