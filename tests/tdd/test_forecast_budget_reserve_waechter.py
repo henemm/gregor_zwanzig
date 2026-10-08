@@ -23,8 +23,6 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 import services.forecast_budget as fb
 
 
