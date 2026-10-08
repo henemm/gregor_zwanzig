@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import copy
 import json
+import pytest
 import sys
 from pathlib import Path
 
@@ -333,3 +334,22 @@ def test_cape_off_alt_schluessel_entfernt_cape_regel(tmp_path):
     assert "cape" not in namen, (
         f"`cape_max_jkg: off` gespeichert, `cape`-Regel entsteht trotzdem: {namen!r}"
     )
+
+
+# ══════════════════════════════ F001 (Nachtrag) ══════════════════════════════
+
+@pytest.mark.parametrize("unerwartet", [None, "x"])
+def test_nicht_dict_metric_alert_levels_laedt_ohne_exception_und_bleibt(tmp_path, unerwartet):
+    """F001 GIVEN `metric_alert_levels` ist kein Dict (null / String) auf Platte
+    WHEN der echte Ladepfad `load_compare_presets` laeuft THEN keine Exception
+    und der Wert bleibt unveraendert (Guard `isinstance(levels, dict)`)."""
+    _schreibe_preset(tmp_path, {"wind_gust": "standard"}, None)
+    datei = tmp_path / "users" / _USER / "briefings" / "cp-1981.json"
+    preset = json.loads(datei.read_text(encoding="utf-8"))
+    preset["display_config"]["metric_alert_levels"] = unerwartet
+    datei.write_text(json.dumps(preset), encoding="utf-8")
+
+    dc = _geladen(tmp_path).get("display_config") or {}
+
+    assert "metric_alert_levels" in dc
+    assert dc["metric_alert_levels"] == unerwartet
