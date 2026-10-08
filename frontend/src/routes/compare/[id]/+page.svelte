@@ -7,6 +7,7 @@
 	// Viewport-Umschaltung (4-Stat-2×2 statt 5-Stat-Leiste, CorridorEditorMobile
 	// im Idealwerte-Tab) passiert INNERHALB von CompareTabs (matchMedia).
 	import { Btn, BackLink } from '$lib/components/atoms';
+	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
 	import CompareKebab from '$lib/components/compare/CompareKebab.svelte';
@@ -247,6 +248,10 @@
 		isPausing = false;
 	}
 
+	// Issue #2214: Bestaetigungsdialog fuer 'Loeschen' (State analog trips/[id]).
+	let deleteDialogOpen = $state(false);
+	let isDeleting = $state(false);
+
 	function handleAction(id: string) {
 		// Epic #1273 S3: der 'edit'/'setup'-Zweig entfiel — compareDetailActions()
 		// liefert kein 'edit' mehr und kein Aufrufer im Hub uebergibt 'edit'/'setup'.
@@ -263,8 +268,22 @@
 		} else if (id === 'delete' || id === 'trash') {
 			// 'trash' kommt aus compareDetailActions() (Hub-Header, #1256 S3 + #1261) —
 			// selbe Lösch-Aktion wie 'delete' aus compareActions() (Listen-Kebab).
-			void deletePreset();
+			// Issue #2214: erst Rueckfrage (ConfirmDialog, wie Trip-Hub), kein Sofort-DELETE.
+			deleteDialogOpen = true;
 		}
+	}
+
+	function handleDeleteCancel(): void {
+		deleteDialogOpen = false;
+	}
+
+	function handleDeleteDialogOpenChange(open: boolean): void {
+		deleteDialogOpen = open;
+	}
+
+	async function handleDeleteConfirm(): Promise<void> {
+		deleteDialogOpen = false;
+		await deletePreset();
 	}
 
 	async function archivePreset() {
@@ -282,12 +301,15 @@
 	}
 
 	async function deletePreset() {
+		isDeleting = true;
 		try {
 			const res = await fetch(`/api/compare/presets/${currentPreset.id}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(`DELETE failed: ${res.status}`);
 			window.location.href = '/compare';
 		} catch {
 			sendMsg = 'Löschen fehlgeschlagen.';
+		} finally {
+			isDeleting = false;
 		}
 	}
 </script>
@@ -397,6 +419,22 @@
 	{status}
 	onAction={handleAction}
 	presetName={currentPreset.name}
+/>
+
+<!-- Issue #2214: Loeschen erst nach Bestaetigung (Muster trips/[id]/+page.svelte). -->
+<ConfirmDialog
+	open={deleteDialogOpen}
+	title="Vergleich endgültig löschen?"
+	description={'"' + currentPreset.name + '" wird unwiderruflich gelöscht.'}
+	confirmLabel="Löschen"
+	confirmVariant="destructive"
+	data-testid="compare-detail-delete-confirm-dialog"
+	cancelTestid="compare-detail-delete-confirm-cancel"
+	confirmTestid="compare-detail-delete-confirm-yes"
+	disabled={isDeleting}
+	onConfirm={handleDeleteConfirm}
+	onCancel={handleDeleteCancel}
+	onOpenChange={handleDeleteDialogOpenChange}
 />
 
 <style>
