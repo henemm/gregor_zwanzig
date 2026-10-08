@@ -81,7 +81,7 @@ def test_versand_alle_orte_geloescht_422_mit_klarem_grund(mit, client):
     detail = r.json()["detail"]
     assert "verweist auf gelöschte Orte" in detail, detail
     assert "Ersetze die Orte" in detail, detail
-    assert not mit.kanaele(), "bei 422 darf nichts versendet worden sein"
+    assert not mit.kanaele, "bei 422 darf nichts versendet worden sein"
 
 
 def test_vorschau_alle_orte_geloescht_klarer_grund():
@@ -110,7 +110,7 @@ def test_teilverlust_router_reicht_fehlende_orte_durch(mit, client):
 
     assert r.status_code == 200, r.text
     assert r.json()["fehlende_orte"] == [GELOESCHT]
-    assert mit.kanaele(), "mit dem übrigen Ort muss der Versand weiterlaufen"
+    assert mit.kanaele, "mit dem übrigen Ort muss der Versand weiterlaufen"
 
     r2 = _senden(client, fremd, pid)
     assert r2.status_code == 200, r2.text

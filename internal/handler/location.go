@@ -282,6 +282,30 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		defer s.LockLocation(id)() // #2158
+
+		// #2216: Ort in einem Ortsvergleich -> nicht loeschen, Namen melden.
+		used, err := s.ComparePresetsUsingLocation(id)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		if len(used) > 0 {
+			type ref struct {
+				ID   string `json:"id"`
+				Name string `json:"name"`
+			}
+			refs := make([]ref, 0, len(used))
+			for _, p := range used {
+				refs = append(refs, ref{ID: p.ID, Name: p.Name})
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(409)
+			json.NewEncoder(w).Encode(map[string]any{"error": "location_in_use", "compare_presets": refs})
+			return
+		}
+
 		if err := s.DeleteLocation(id); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)

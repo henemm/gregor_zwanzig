@@ -172,3 +172,30 @@ test('AC-4: Dialog schließen + neu öffnen — Auslöser bleibt gesperrt, bis d
 	assert.equal(zweiterDialog.senden(), true);
 	m2.endSend(`trip:${tripId}`);
 });
+
+// ---------------------------------------------------------------------------
+// #2216 AC-7: sendComparePreset reicht fehlende_orte durch
+// ---------------------------------------------------------------------------
+
+function antwort(status: number, body: unknown): typeof fetch {
+	return (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
+}
+
+test('AC-7: Test-Versand mit fehlenden Orten -> fehlendeOrte + Hinweis in der Meldung', async () => {
+	const { sendComparePreset } = await mod();
+	const r = await sendComparePreset(
+		'cmp-fehlt-2216',
+		antwort(200, { status: 'ok', fehlende_orte: ['loc-weg'] }),
+	);
+	assert.equal(r.kind, 'ok');
+	assert.deepEqual((r as { fehlendeOrte?: string[] }).fehlendeOrte, ['loc-weg']);
+	assert.match(r.message, /Orte fehlten|fehlen/i, `Meldung nennt fehlende Orte: ${r.message}`);
+});
+
+test('AC-7: Test-Versand ohne fehlende Orte -> unveränderte (leere) ok-Meldung', async () => {
+	const { sendComparePreset } = await mod();
+	const r = await sendComparePreset('cmp-komplett-2216', antwort(200, { status: 'ok' }));
+	assert.equal(r.kind, 'ok');
+	assert.equal(r.message, '');
+	assert.ok(!((r as { fehlendeOrte?: string[] }).fehlendeOrte?.length));
+});

@@ -37,6 +37,12 @@ from services.compare_alert_channels import (
 logger = logging.getLogger("scheduler.dispatch")
 
 
+def _missing_location_ids(locations: list, location_ids: list[str]) -> list[str]:
+    """IDs aus `location_ids`, die in `locations` nicht aufloesbar sind (#2216)."""
+    resolved_ids = {loc.id for loc in locations}
+    return [i for i in location_ids if i not in resolved_ids]
+
+
 def _load_presets_for_dispatch(user_id: str, data_root: str) -> list | None:
     """Laedt die Compare-Presets eines Users fuer den Dispatch.
 
@@ -490,7 +496,17 @@ def send_one_compare_preset(
     # (konfigurierte Orts-Reihenfolge), nicht über die Cache-Reihenfolge.
     locations = order_locations_by_ids(all_locations_cache, location_ids)
     if not locations:
-        raise ValueError(f"Preset {preset_id}: Orte {location_ids} nicht aufloesbar")
+        raise ValueError(
+            f"Ortsvergleich '{preset_id}' verweist auf gelöschte Orte. "
+            f"Ersetze die Orte im Ortsvergleich. (Orte {location_ids} nicht aufloesbar)"
+        )
+    # #2216: Teilverlust sichtbar machen (Versand laeuft mit den uebrigen Orten).
+    fehlende_orte = _missing_location_ids(locations, location_ids)
+    if fehlende_orte:
+        logger.warning(
+            "Ortsvergleich %s: Orte nicht aufloesbar (geloescht?), Versand ohne sie: %s",
+            preset_id, fehlende_orte,
+        )
 
     if target_date is None:
         # Kein Slot-Kontext (Einzelversand): EINE Zeitabfrage, aus der beide
@@ -728,7 +744,14 @@ def send_compare_preset(
         )
     finally:
         release_send_lock("compare", user_id, preset_id)
-    return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
+    result = {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
+    # #2216: Teilverlust an den Aufrufer melden (leer/fehlend = nichts fehlt).
+    fehlende = _missing_location_ids(
+        load_all_locations(user_id=user_id), preset.get("location_ids") or []
+    )
+    if fehlende:
+        result["fehlende_orte"] = fehlende
+    return result
 
 
 def _write_compare_alert_snapshots(

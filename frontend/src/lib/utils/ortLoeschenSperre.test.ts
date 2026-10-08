@@ -59,25 +59,4 @@ test('AC-4: location_in_use mit leerer Liste -> kein Hinweis (kein leerer Satz)'
 	assert.equal(ortInUseHinweis({ status: 409, error: 'location_in_use', compare_presets: [] }), null);
 });
 
-function antwort(status: number, body: unknown): typeof fetch {
-	return (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
-}
-
-test('AC-7: Test-Versand mit fehlenden Orten -> fehlendeOrte + Hinweis in der Meldung', async () => {
-	const { sendComparePreset } = await import('./sendOutcome.ts');
-	const r = await sendComparePreset(
-		'cmp-fehlt-2216',
-		antwort(200, { status: 'ok', fehlende_orte: ['loc-weg'] }),
-	);
-	assert.equal(r.kind, 'ok');
-	assert.deepEqual((r as { fehlendeOrte?: string[] }).fehlendeOrte, ['loc-weg']);
-	assert.match(r.message, /Orte fehlten|fehlen/i, `Meldung nennt fehlende Orte: ${r.message}`);
-});
-
-test('AC-7: Test-Versand ohne fehlende Orte -> unveränderte (leere) ok-Meldung', async () => {
-	const { sendComparePreset } = await import('./sendOutcome.ts');
-	const r = await sendComparePreset('cmp-komplett-2216', antwort(200, { status: 'ok' }));
-	assert.equal(r.kind, 'ok');
-	assert.equal(r.message, '');
-	assert.ok(!((r as { fehlendeOrte?: string[] }).fehlendeOrte?.length));
-});
+// AC-7 (sendComparePreset/fehlende_orte): Tests liegen in sendOutcome.test.ts.

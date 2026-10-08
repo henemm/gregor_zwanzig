@@ -244,8 +244,8 @@ class ComparePreviewService:
         )
         if not locations:
             raise ValueError(
-                f"Orts-Vergleich '{preset.get('id', '')}': Orte {location_ids} "
-                "nicht aufloesbar"
+                f"Ortsvergleich '{preset.get('id', '')}' verweist auf gelöschte Orte. "
+                f"Ersetze die Orte im Ortsvergleich. (Orte {location_ids} nicht aufloesbar)"
             )
         return locations
 
