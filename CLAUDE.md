@@ -179,7 +179,7 @@ Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN
 
 ## Confidence — NICHT wählbar als Metrik (Issue #710, Final)
 
-**`confidence_pct` ist KEINE pro-Etappe wählbare Wetter-Metrik** — eine Meta-Aussage über mehrtägige Ensemble-Divergenz, keine lokale Wettergröße. Darf ausschließlich erscheinen als: (1) Vorhersage-Verlässlichkeits-Hinweis im E-Mail-Textblock, (2) SMS-Token (C+/C~/C? für Sicherheit-Bands), (3) interne Aggregation/Scoring. **NIEMALS** im Trip-Editor, Wizard Step 3, Metrik-Auswahl oder als per-Etappe-Spalte.
+**`confidence_pct` ist KEINE pro-Etappe wählbare Wetter-Metrik** — eine Meta-Aussage über mehrtägige Ensemble-Divergenz, keine lokale Wettergröße. Darf ausschließlich erscheinen als: (1) Vorhersage-Verlässlichkeits-Hinweis im E-Mail-Textblock, (2) interne Aggregation/Scoring. Ein SMS-Token (`C+/C~/C?`) gibt es nicht (#2233). **NIEMALS** im Trip-Editor, Wizard Step 3, Metrik-Auswahl oder als per-Etappe-Spalte.
 
 **Implementierung:** `MetricDefinition.selectable=false`; GET `/api/metrics` filtert auf `selectable=true`. Alte Trips mit aktiviertem `confidence` laden still, die Metrik wird in Render-Pfaden ignoriert.
 
