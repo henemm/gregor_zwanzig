@@ -907,7 +907,9 @@ def test_status_kurzform_ist_gsm7_und_sprachneutral(monkeypatch, user_ids, kanal
     assert etappen, "Testaufbau: keine heutige/kommende Etappe."
     strich = "-" if kanal in ("premium_sms", "telegram_kurzform") else "–"
     erwartet = f"Status: {nutzer.trip.name}\n\n" + "\n".join(
-        f"  {s.date:%d.%m.%Y} {strich} {s.name}" for s in etappen
+        f"  {s.date:%d.%m.%Y} {strich} "
+        + nutzer.trip.numbered_stage_label(s, en=kanal in ("premium_sms", "telegram_kurzform"))
+        for s in etappen
     )
     if transport == "premium_sms":
         assert text == erwartet, (

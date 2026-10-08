@@ -42,7 +42,7 @@ from tests.tdd._gsm7_charset import _first_non_gsm7_char
 
 __all__ = ["user_ids"]  # pytest muss die importierte Fixture im Modul finden
 
-_ETAPPE_ZEILE = re.compile(r"Etappe (\d+)(?:: ?(.*))?$")
+_ETAPPE_ZEILE = re.compile(r"(?:Etappe|Stage) (\d+)(?:: ?(.*))?$")
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +252,34 @@ def test_startdatum_bestaetigung_nennt_gleiche_nummern_wie_status(aufbau, user_i
     )
 
 
+def test_startdatum_auf_telegram_kurzform_nennt_stage_n_mit_gezaehlter_nummer(aufbau, user_ids):
+    """Premium-SMS kennt kein ``startdatum`` (Befehlsliste ohne das Wort);
+    englisch erreichbar ist es ueber Telegram mit ``telegram_style=kurzform``
+    (#2417 AC-5): je Etappe "Stage N: Rest", N aus der Trip-Position."""
+    recorder, settings = aufbau
+    nutzer = _nutzer(user_ids)
+    eintraege = [(1, "01: Anreise"), (2, "02 – Aufstieg"), (3, "03: Gipfel")]
+    trip = _trip_mit_etappen(nutzer, eintraege)
+    rc = dataclasses.replace(trip.report_config, telegram_style="kurzform")
+    save_trip(dataclasses.replace(trip, report_config=rc), nutzer.user_id)
+    trip = nutzer.trip = next(t for t in load_all_trips(nutzer.user_id) if t.id == trip.id)
+    assert trip.report_config.telegram_style == "kurzform"
+    neuer_start = min(s.date for s in trip.stages) + timedelta(days=2)
+    erwartet = [
+        (_erwartete_nummer(trip, s), rest)
+        for s, rest in zip(trip.stages, ("Anreise", "Aufstieg", "Gipfel"))
+    ]
+
+    sende_telegram_text(settings, nutzer, f"startdatum {neuer_start:%Y-%m-%d}")
+    text = _telegram_text(recorder, nutzer)
+    assert not re.search(r"Etappe \d", text), text
+    zeilen = [
+        (int(m.group(1)), m.group(2).strip())
+        for m in re.finditer(r"Stage (\d+): ?(\w+)", text)
+    ]
+    assert zeilen == erwartet, text
+
+
 # ---------------------------------------------------------------------------
 # AC-6 -- Kurzform-Kanal: GSM-7, ASCII-Strich; Mail: Strich bleibt
 # ---------------------------------------------------------------------------
@@ -266,7 +294,8 @@ def test_status_auf_premium_sms_ist_gsm7_und_traegt_gezaehlte_nummer(aufbau, use
                  if e["to"] == nutzer.premium_sms_reply_to]
     assert antworten, "Keine Premium-SMS-Antwort auf status"
     text = antworten[-1]
-    assert f"Etappe {_erwartete_nummer(trip, trip.stages[3])}" in text, text
+    # Premium-SMS ist immer englisch (#2417 AC-4): "Stage N".
+    assert f"Stage {_erwartete_nummer(trip, trip.stages[3])}" in text, text
     assert "02:" not in text, text
     assert _first_non_gsm7_char(text.replace("ü", "u")) is None, text
     assert "–" not in text, text
