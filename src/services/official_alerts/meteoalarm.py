@@ -732,12 +732,13 @@ def _get_cached_index(country: str) -> Optional[dict]:
             # naechsten 429. Faellt-offen (MeteoAlarmBudgetGate.allow()):
             # ein kaputter Zaehler blockiert nie.
             gate = _meteoalarm_budget_gate()
-            if not gate.allow():
+            # Issue #1539 S1b: Pruefen + Buchen atomar (reserve), damit parallele
+            # Abrufe das Tagesbudget nicht ueberbuchen.
+            if not gate.reserve():
                 raise _MeteoAlarmBudgetExhausted(
                     f"MeteoAlarm-Tagesbudget erschoepft ({gate.daily_budget}/Tag) "
                     f"-- Abruf {country} Seite {page} uebersprungen"
                 )
-            gate.record_call()
             key = os.environ.get("GZ_METEOALARM_APIKEY")
             url = f"{METEOALARM_BASE_URL}/collections/warnings/locations/{country}"
             return httpx.get(

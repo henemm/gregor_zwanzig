@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator, Optional
 
 from services import alert_input_capture
+from services.single_flight import SingleFlight
 
 logger = logging.getLogger("warn_egress")
 
@@ -44,6 +45,11 @@ WARN_FAILURE_TTL = 60.0  # Sekunden — kurzes Failure-Fenster
 # damit ein Punkt ausserhalb des Zustaendigkeitsbereichs nicht bei jedem
 # 15-Minuten-Scheduler-Takt erneut abgefragt wird.
 WARN_NOT_COVERED_TTL = 24 * 3600.0  # Sekunden — 24h
+
+# Issue #1539 S1b (C4-64): Single-flight je (Cache, Schluessel). Wartezeit der
+# Mitflieger auf den Leader (Providerfrist + Puffer); danach holen sie selbst ab.
+WARN_FLIGHT_WAIT_TIMEOUT_S = 90.0
+_FLIGHTS = SingleFlight()
 
 # Issue #1348 (Real-Pfad-Fix): ``cached_fetch`` faengt JEDEN Fehlschlag fail-soft
 # ab und gibt ``None`` zurueck; die Quellen wandeln ``None`` -> ``[]`` und werfen
@@ -177,7 +183,7 @@ def collect_capture_ids(collected: list) -> Iterator[None]:
 def _store_entry(
     cache: dict, cache_key: str, *, data: Any, fetched_at: float, ttl: float,
     capture_id: Optional[str],
-) -> None:
+) -> dict:
     """Schreibt den Zwischenspeicher-Eintrag und meldet die Herkunft.
 
     ``capture_id`` ist rein additiv (Issue #1944): ohne Kennung entsteht das
@@ -187,6 +193,7 @@ def _store_entry(
         entry["capture_id"] = capture_id
     cache[cache_key] = entry
     _record_capture_id(capture_id)
+    return entry
 
 # Append-only JSONL für jeden Warn-Dienst-Egress (Cache-Hit wie echter Call).
 # Issue #1633: Test-Override (Path) oder None. Der frühere Modul-Konstanten-Name
@@ -442,23 +449,77 @@ def cached_fetch(
     """
     now = clock()
     entry = cache.get(cache_key)
-    if entry is not None and entry.get("fetched_at") is not None \
-            and (now - entry["fetched_at"]) < entry["ttl"]:
-        # Ein gecachter Fehlschlag (data=None, z.B. waehrend 429-Backoff) ist
-        # weiterhin "nicht abrufbar" — nicht "erfolgreich leer" (Issue #1348)
-        # — und traegt genau das jetzt auch im Journal (Issue #1422 S1: sonst
-        # sieht er von aussen aus wie ein Treffer auf gute Daten).
-        cached_ok = entry["data"] is not None
-        log_warn_service_call(service, host, status=None, cache_hit=True, ok=cached_ok)
-        if not cached_ok:
-            _record_fetch_failure()
-        elif entry["ttl"] == WARN_NOT_COVERED_TTL:
-            mark_not_covered()  # Issue #1681: gecachtes "nicht zustaendig"
-        # Issue #1944 (Luecke a): der Treffer meldet die Kennung SEINES
-        # Ursprungsabrufs -- kein zusaetzlicher Mitschnitt noetig.
-        _record_capture_id(entry.get("capture_id"))
-        return entry["data"]
+    if _is_fresh(entry, now):
+        return _serve_entry(service, host, entry)
 
+    fetch_kwargs = dict(
+        cache=cache, cache_key=cache_key, service=service, host=host,
+        request_fn=request_fn, parse_fn=parse_fn, clock=clock,
+        success_ttl=success_ttl, failure_ttl=failure_ttl, log=log,
+        rate_limit_retry=rate_limit_retry, on_response=on_response,
+        not_covered_statuses=not_covered_statuses,
+    )
+
+    def leader_fn() -> tuple:
+        # Zweite Pruefung: ein Vorgaenger-Flug kann den Eintrag zwischen
+        # unserer Pruefung und dem Flug-Start frisch geschrieben haben.
+        current = cache.get(cache_key)
+        if _is_fresh(current, clock()):
+            return current, True
+        return _fetch_and_store(**fetch_kwargs), False
+
+    res = _FLIGHTS.run((id(cache), cache_key), leader_fn,
+                       wait_timeout_s=WARN_FLIGHT_WAIT_TIMEOUT_S)
+    if res.is_leader:
+        if res.error is not None:
+            raise res.error
+        flight_entry, was_hit = res.value
+        if was_hit:
+            return _serve_entry(service, host, flight_entry)
+        return flight_entry["data"]
+    if res.error is not None or res.timed_out:
+        # Fail-open: Flug gescheitert/zu lang -- selbst abholen.
+        return _fetch_and_store(**fetch_kwargs)["data"]
+    # Wartender: Entry stammt aus dem Flug (nicht per erneutem cache.get --
+    # eine TTL, die waehrend des Leader-Schlafs ablaeuft, waere ein falscher
+    # Miss). Eigene Senken ueber _serve_entry.
+    return _serve_entry(service, host, res.value[0])
+
+
+def _is_fresh(entry: Optional[dict], now: float) -> bool:
+    return entry is not None and entry.get("fetched_at") is not None \
+        and (now - entry["fetched_at"]) < entry["ttl"]
+
+
+def _serve_entry(service: str, host: str, entry: dict) -> Any:
+    """Bedient Journal und die Senken des AKTUELLEN Kontexts aus einem Entry
+    (Cache-Treffer oder Flug-Ergebnis)."""
+    # Ein gecachter Fehlschlag (data=None, z.B. waehrend 429-Backoff) ist
+    # weiterhin "nicht abrufbar" -- nicht "erfolgreich leer" (Issue #1348) --
+    # und traegt genau das jetzt auch im Journal (Issue #1422 S1).
+    cached_ok = entry["data"] is not None
+    log_warn_service_call(service, host, status=None, cache_hit=True, ok=cached_ok)
+    if not cached_ok:
+        _record_fetch_failure()
+    elif entry["ttl"] == WARN_NOT_COVERED_TTL:
+        mark_not_covered()  # Issue #1681: gecachtes "nicht zustaendig"
+    # Issue #1944 (Luecke a): der Treffer meldet die Kennung SEINES
+    # Ursprungsabrufs -- kein zusaetzlicher Mitschnitt noetig.
+    _record_capture_id(entry.get("capture_id"))
+    return entry["data"]
+
+
+def _fetch_and_store(
+    *, cache: dict, cache_key: str, service: str, host: str,
+    request_fn: Callable[[], Any], parse_fn: Callable[[Any], Any],
+    clock: Callable[[], float], success_ttl: float, failure_ttl: float,
+    log: logging.Logger, rate_limit_retry: Optional[RateLimitRetryPolicy],
+    on_response: Optional[Callable[[Any], None]],
+    not_covered_statuses: Optional[frozenset[int]],
+) -> dict:
+    """Echter Abruf (Leader-Zweig von ``cached_fetch``): schreibt den Eintrag in
+    den Zwischenspeicher, bedient die Senken des Leaders und liefert den Eintrag."""
+    now = clock()
     # Issue #1944: Kennung des jeweils letzten echten Abrufs. Bei einer
     # Ratenbremsen-Wiederholung ueberschreibt jeder Durchlauf sie -- nach
     # ``break`` steht hier exakt die Kennung des Abrufs, dessen Antwort den
@@ -475,11 +536,12 @@ def cached_fetch(
             # jede fremde Ausnahme bleibt ein echter Anbieter-Ausfall.
             self_throttled = bool(getattr(exc, "self_throttled", False))
             log.warning("%s-Abruf fehlgeschlagen (%s)", service, host, exc_info=True)
-            cache[cache_key] = {"data": None, "fetched_at": now, "ttl": failure_ttl}
+            entry = {"data": None, "fetched_at": now, "ttl": failure_ttl}
+            cache[cache_key] = entry
             log_warn_service_call(service, host, status=None, cache_hit=False,
                                   ok=False, self_throttled=self_throttled)
             _record_fetch_failure()
-            return None
+            return entry
 
         if on_response is not None:
             try:
@@ -556,12 +618,12 @@ def cached_fetch(
             "(Retry-After=%s)",
             service, backoff, logged_retry_after,
         )
-        _store_entry(cache, cache_key, data=None, fetched_at=now, ttl=backoff,
+        entry = _store_entry(cache, cache_key, data=None, fetched_at=now, ttl=backoff,
                      capture_id=capture_id)
         log_warn_service_call(service, host, status=429, cache_hit=False,
                               retry_after=logged_retry_after, ok=False)
         _record_fetch_failure()
-        return None
+        return entry
 
     if not_covered_statuses is not None and status in not_covered_statuses:
         # Issue #1397 S2a: "nicht zustaendig" ist KEIN Ausfall -- kein
@@ -572,33 +634,33 @@ def cached_fetch(
             service, status,
         )
         neutral_value: Any = {}
-        _store_entry(cache, cache_key, data=neutral_value, fetched_at=now,
+        entry = _store_entry(cache, cache_key, data=neutral_value, fetched_at=now,
                      ttl=WARN_NOT_COVERED_TTL, capture_id=capture_id)
         # Issue #1422 S1: "nicht zustaendig" ist fachlich ein ERFOLG (ok=True),
         # auch wenn der Statuscode 404 sonst ein Fehlschlag waere.
         log_warn_service_call(service, host, status=status, cache_hit=False, ok=True)
         mark_not_covered()  # Issue #1681
-        return neutral_value
+        return entry
 
     if status >= 400:
         log.warning("%s-Abruf fehlgeschlagen (%s, HTTP %s)", service, host, status)
-        _store_entry(cache, cache_key, data=None, fetched_at=now,
+        entry = _store_entry(cache, cache_key, data=None, fetched_at=now,
                      ttl=failure_ttl, capture_id=capture_id)
         log_warn_service_call(service, host, status=status, cache_hit=False, ok=False)
         _record_fetch_failure()
-        return None
+        return entry
 
     try:
         data = parse_fn(resp)
     except Exception:
         log.warning("%s-Abruf fehlgeschlagen (%s, Parse)", service, host, exc_info=True)
-        _store_entry(cache, cache_key, data=None, fetched_at=now,
+        entry = _store_entry(cache, cache_key, data=None, fetched_at=now,
                      ttl=failure_ttl, capture_id=capture_id)
         log_warn_service_call(service, host, status=status, cache_hit=False, ok=False)
         _record_fetch_failure()
-        return None
+        return entry
 
-    _store_entry(cache, cache_key, data=data, fetched_at=now,
+    entry = _store_entry(cache, cache_key, data=data, fetched_at=now,
                  ttl=success_ttl, capture_id=capture_id)
     log_warn_service_call(service, host, status=status, cache_hit=False, ok=True)
-    return data
+    return entry

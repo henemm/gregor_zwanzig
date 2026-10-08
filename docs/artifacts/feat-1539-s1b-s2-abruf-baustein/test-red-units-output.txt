@@ -1,0 +1,66 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 10 items
+
+tests/tdd/test_forecast_budget_reserve_atomic.py .....FF...              [100%]
+
+=================================== FAILURES ===================================
+_____ test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht[polling] ______
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-2113/test_reserve_mehrere_einheiten0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x73e4128fe150>
+priority = 'polling'
+
+    @pytest.mark.parametrize("priority", ["polling", "alert_check"])
+    def test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht(tmp_path, monkeypatch, priority):
+        """AC-6/AC-12: Restbudget 1, ``reserve(units=2)`` (Reserve-Endpoint bucht 2
+        Einheiten je Forecast-Abruf) -> abgelehnt, nichts gebucht."""
+        monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", BUDGET)
+        _vorlauf_fremd(tmp_path, BUDGET - 1)
+    
+        gate = ForecastBudgetGate("nutzer_a", data_root=tmp_path)
+>       assert gate.reserve(priority, units=2) is False
+E       AssertionError: assert True is False
+E        +  where True = reserve('polling', units=2)
+E        +    where reserve = <services.forecast_budget.ForecastBudgetGate object at 0x73e4128fdc10>.reserve
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:191: AssertionError
+___ test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht[alert_check] ____
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-2113/test_reserve_mehrere_einheiten1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x73e412c74530>
+priority = 'alert_check'
+
+    @pytest.mark.parametrize("priority", ["polling", "alert_check"])
+    def test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht(tmp_path, monkeypatch, priority):
+        """AC-6/AC-12: Restbudget 1, ``reserve(units=2)`` (Reserve-Endpoint bucht 2
+        Einheiten je Forecast-Abruf) -> abgelehnt, nichts gebucht."""
+        monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", BUDGET)
+        _vorlauf_fremd(tmp_path, BUDGET - 1)
+    
+        gate = ForecastBudgetGate("nutzer_a", data_root=tmp_path)
+>       assert gate.reserve(priority, units=2) is False
+E       AssertionError: assert True is False
+E        +  where True = reserve('alert_check', units=2)
+E        +    where reserve = <services.forecast_budget.ForecastBudgetGate object at 0x73e414e801d0>.reserve
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:191: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_parallel_reserve_kontoschutz_ab_100_prozent_exakt
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_parallel_reserve_schwelle_ohne_nutzer_exakt
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_user_briefing_wird_auch_bei_100_prozent_nie_gedrosselt
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_zwei_nutzer_parallel_buchen_nur_eigenen_topf_ohne_deadlock
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_schreibt_dieselbe_schluesselmenge_wie_record_call
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_mehrere_einheiten_schoepft_grenze_exakt_aus[polling]
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_mehrere_einheiten_schoepft_grenze_exakt_aus[alert_check]
+PASSED tests/tdd/test_forecast_budget_reserve_atomic.py::test_user_briefing_mehrere_einheiten_bei_restbudget_eins_erlaubt
+FAILED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht[polling]
+FAILED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_mehrere_einheiten_ueberbucht_restbudget_nicht[alert_check]
+========================= 2 failed, 8 passed in 1.30s ==========================

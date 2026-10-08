@@ -52,6 +52,7 @@ import json
 import logging
 import os
 import tempfile
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,6 +63,17 @@ from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
 logger = logging.getLogger("meteoalarm_budget")
 
 _LOCK_SUFFIX = ".lock"
+
+# Issue #1539 S1b: fail-open verlorene Buchungen (Sperr-Timeout, IO-Fehler)
+# werden gezaehlt und laut geloggt (Muster ``alert_log_lost_entries``).
+meteoalarm_budget_lost_bookings = 0
+_lost_lock = threading.Lock()
+
+
+def _count_lost_booking() -> None:
+    global meteoalarm_budget_lost_bookings
+    with _lost_lock:
+        meteoalarm_budget_lost_bookings += 1
 
 
 class MeteoAlarmBudgetGate:
@@ -111,10 +123,30 @@ class MeteoAlarmBudgetGate:
             state = self._load_state(now)
         except Exception:
             return True
+        return self._erlaubt_laut_state(state, now)
+
+    def _erlaubt_laut_state(self, state: dict, now: Optional[datetime]) -> bool:
         reset_ts = state.get("observed_reset_ts")
         if reset_ts is not None and self._now_ts(now) < reset_ts:
             return False
         return state["calls"] < self.daily_budget
+
+    def reserve(self, now: Optional[datetime] = None) -> bool:
+        """Atomares ``allow()`` + ``record_call()`` (Issue #1539 S1b): Reset-
+        Pruefung, ``calls < daily_budget`` und Erhoehung laufen in EINER
+        Read-Modify-Write-Sequenz unter der Dateisperre. Fail-open: kann die
+        Datei nicht aktualisiert werden, gilt ``True`` und der Verlustzaehler
+        ``meteoalarm_budget_lost_bookings`` steigt (WARNING im Log)."""
+        entscheidung: list = []
+
+        def _op(data: dict) -> None:
+            erlaubt = self._erlaubt_laut_state(data, now)
+            entscheidung.append(erlaubt)
+            if erlaubt:
+                data["calls"] = data.get("calls", 0) + 1
+
+        self._safe_update(_op, now)
+        return not (entscheidung and entscheidung[0] is False)
 
     def record_call(self) -> None:
         """Zaehlt einen tatsaechlichen Index-Seiten-Abruf (Cache-Miss, der
@@ -225,39 +257,49 @@ class MeteoAlarmBudgetGate:
                 os.unlink(tmp_name)
             raise
 
-    def _safe_update(self, mutate: Callable[[dict], None]) -> None:
+    def _safe_update(
+        self, mutate: Callable[[dict], None], now: Optional[datetime] = None
+    ) -> bool:
         """Reload-merge-write unter Dateisperre. Fail-open: JEDER Fehler
-        (Lock-Timeout, IO, kaputtes JSON) wird geschluckt -- ein
-        Zaehl-Defekt darf nie einen Abruf verhindern. Ein Sperren-Timeout
-        wirft dabei NICHT (`acquire_exclusive`, #1448 S2) -- die WARNING
-        wird explizit VOR dem `return` geloggt, damit sie nicht von diesem
-        `except Exception: pass` erfasst werden kann."""
+        (Lock-Timeout, IO, kaputtes JSON) bleibt ohne Ausnahme -- ein
+        Zaehl-Defekt darf nie einen Abruf verhindern. Seit #1539 S1b meldet
+        die Methode den Erfolg; eine verlorene Buchung steigt im Zaehler
+        ``meteoalarm_budget_lost_bookings`` und steht als WARNING im Log."""
         try:
-            self._dir.mkdir(parents=True, exist_ok=True)
-            lock_path = str(self._path) + _LOCK_SUFFIX
-            fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+            if self._update_unter_sperre(mutate, now):
+                return True
+            _count_lost_booking()
+            return False
+        except Exception as exc:
+            _count_lost_booking()
+            logger.warning("MeteoAlarm-Budget-Buchung verloren (%s)", exc)
+            return False
+
+    def _update_unter_sperre(self, mutate: Callable[[dict], None], now) -> bool:
+        self._dir.mkdir(parents=True, exist_ok=True)
+        lock_path = str(self._path) + _LOCK_SUFFIX
+        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        try:
+            start = time.monotonic()
+            if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
+                # F003 (Adversary #1448 S2): tatsaechlich gewartete Zeit
+                # loggen, nicht die konfigurierte Zeitgrenze.
+                elapsed = time.monotonic() - start
+                logger.warning(
+                    "Dateisperre %s nicht innerhalb %.2fs erhalten -- "
+                    "Buchung verloren",
+                    lock_path, elapsed,
+                )
+                return False
             try:
-                start = time.monotonic()
-                if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
-                    # F003 (Adversary #1448 S2): tatsaechlich gewartete Zeit
-                    # loggen, nicht die konfigurierte Zeitgrenze.
-                    elapsed = time.monotonic() - start
-                    logger.warning(
-                        "Dateisperre %s nicht innerhalb %.2fs erhalten -- "
-                        "Schreibvorgang uebersprungen",
-                        lock_path, elapsed,
-                    )
-                    return
                 try:
-                    try:
-                        data = self._load_state()
-                    except Exception:
-                        data = {"date": self._today_utc(), "calls": 0, "observed_reset_ts": None}
-                    mutate(data)
-                    self._write(data)
-                finally:
-                    fcntl.flock(fd, fcntl.LOCK_UN)
+                    data = self._load_state(now)
+                except Exception:
+                    data = {"date": self._today_utc(now), "calls": 0, "observed_reset_ts": None}
+                mutate(data)
+                self._write(data)
+                return True
             finally:
-                os.close(fd)
-        except Exception:
-            pass
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)

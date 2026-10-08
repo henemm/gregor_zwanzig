@@ -1,0 +1,959 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 38 items
+
+tests/tdd/test_warn_feed_single_flight.py .FFFF                          [ 13%]
+tests/tdd/test_single_flight_keys_independent.py FF.                     [ 21%]
+tests/tdd/test_single_flight_wait_is_bounded.py FF                       [ 26%]
+tests/tdd/test_forecast_budget_reserve_atomic.py FFFFF                   [ 39%]
+tests/tdd/test_meteoalarm_budget_reserve_atomic.py FF                    [ 44%]
+tests/tdd/test_budget_reserve_lock_timeout_is_loud.py FFF                [ 52%]
+tests/integration/test_segment_weather_single_flight.py .FFF.FF.F.       [ 78%]
+tests/unit/test_parallel_fetch_ordered.py FFF                            [ 86%]
+tests/unit/test_parallel_fetch_deadline.py FF                            [ 92%]
+tests/unit/test_parallel_fetch_nested.py F                               [ 94%]
+tests/unit/test_parallel_fetch_context.py FF                             [100%]
+
+=================================== FAILURES ===================================
+_______________ test_ac1_n_parallele_aufrufer_ein_upstream_abruf _______________
+
+journal = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_ac1_n_parallele_aufrufer_0/warn_service_calls.jsonl')
+capture_id = None
+
+    @pytest.mark.timeout(30)
+    def test_ac1_n_parallele_aufrufer_ein_upstream_abruf(journal, capture_id):
+        """AC-1: request_fn genau 1x, alle gleiches Ergebnis, N-1 cache_hit-Zeilen."""
+        cache: dict = {}
+        req = _CountingRequest(delay=0.5)
+        threads, errors, results, j = _run_parallel(N, lambda i: _fetch(cache, req))
+        _finish(threads, errors, j)
+    
+>       assert req.calls == 1, f"request_fn {req.calls}x aufgerufen, erwartet 1x"
+E       AssertionError: request_fn 12x aufgerufen, erwartet 1x
+E       assert 12 == 1
+E        +  where 12 = <tdd.test_warn_feed_single_flight._CountingRequest object at 0x7397ade02630>.calls
+
+tests/tdd/test_warn_feed_single_flight.py:132: AssertionError
+______________ test_ac1_wartende_bedienen_eigene_capture_id_senke ______________
+
+journal = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_ac1_wartende_bedienen_eig0/warn_service_calls.jsonl')
+capture_id = None
+
+    @pytest.mark.timeout(30)
+    def test_ac1_wartende_bedienen_eigene_capture_id_senke(journal, capture_id):
+        """AC-3 (Erfolgsfall): jeder Thread sieht die capture-id in SEINER Senke."""
+        from services.official_alerts import warn_egress
+    
+        cache: dict = {}
+        req = _CountingRequest(delay=0.5)
+        sinks: list = [None] * N
+    
+        def work(i):
+            with warn_egress.observe_capture_id() as sink:
+                sinks[i] = sink
+                return _fetch(cache, req)
+    
+        threads, errors, _, j = _run_parallel(N, work)
+        _finish(threads, errors, j)
+    
+>       assert req.calls == 1
+E       assert 12 == 1
+E        +  where 12 = <tdd.test_warn_feed_single_flight._CountingRequest object at 0x7397ae0b5fa0>.calls
+
+tests/tdd/test_warn_feed_single_flight.py:158: AssertionError
+__________ test_ac3_fehlschlag_erreicht_fehler_senke_jedes_wartenden ___________
+
+journal = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_ac3_fehlschlag_erreicht_f0/warn_service_calls.jsonl')
+capture_id = None
+
+    @pytest.mark.timeout(30)
+    def test_ac3_fehlschlag_erreicht_fehler_senke_jedes_wartenden(journal, capture_id):
+        """AC-3: Leader scheitert (HTTP 500) -> JEDE Fehler-Senke meldet failed,
+        JEDE capture-id-Senke traegt die Kennung; nur ein Upstream-Abruf."""
+        from services.official_alerts import warn_egress
+    
+        cache: dict = {}
+        req = _CountingRequest(delay=0.5, status=500)
+        fail_sinks: list = [None] * N
+        cap_sinks: list = [None] * N
+    
+        def work(i):
+            with warn_egress.observe_fetch_failure() as fs, warn_egress.observe_capture_id() as cs:
+                fail_sinks[i], cap_sinks[i] = fs, cs
+                return _fetch(cache, req)
+    
+        threads, errors, results, j = _run_parallel(N, work)
+        _finish(threads, errors, j)
+    
+>       assert req.calls == 1, f"request_fn {req.calls}x aufgerufen, erwartet 1x"
+E       AssertionError: request_fn 12x aufgerufen, erwartet 1x
+E       assert 12 == 1
+E        +  where 12 = <tdd.test_warn_feed_single_flight._CountingRequest object at 0x7397ad9eddc0>.calls
+
+tests/tdd/test_warn_feed_single_flight.py:181: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+WARNING  warn_egress:warn_egress.py:584 meteoalarm:AT:p1-Abruf fehlgeschlagen (h, HTTP 500)
+______ test_ac4_wartende_bekommen_entry_aus_dem_flug_nicht_per_cache_get _______
+
+journal = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_ac4_wartende_bekommen_ent0/warn_service_calls.jsonl')
+capture_id = None
+
+    @pytest.mark.timeout(30)
+    def test_ac4_wartende_bekommen_entry_aus_dem_flug_nicht_per_cache_get(journal, capture_id):
+        """AC-4: Der Leader 'schlaeft' laenger als die TTL (Uhr springt waehrend des
+        Abrufs ueber die TTL). Ein erneutes cache.get waere ein falscher Miss ->
+        zweiter Upstream-Abruf. Erwartet: Entry kommt aus dem Flug."""
+        clock = {"t": 1000.0}
+        cache: dict = {}
+        gate = threading.Event()
+        req = _CountingRequest(gate=gate, on_done=lambda: clock.__setitem__("t", 5000.0))
+        threads, errors, results, j = _run_parallel(
+            N, lambda i: _fetch(cache, req, clock=lambda: clock["t"], success_ttl=10.0))
+        time.sleep(1.0)  # alle Threads sind im Aufruf, Leader haengt im Abruf
+        gate.set()
+        _finish(threads, errors, j)
+    
+>       assert req.calls == 1, f"request_fn {req.calls}x aufgerufen (falscher Miss), erwartet 1x"
+E       AssertionError: request_fn 12x aufgerufen (falscher Miss), erwartet 1x
+E       assert 12 == 1
+E        +  where 12 = <tdd.test_warn_feed_single_flight._CountingRequest object at 0x7397ad9edd00>.calls
+
+tests/tdd/test_warn_feed_single_flight.py:202: AssertionError
+________ test_ac2_anderer_schluessel_wartet_nicht_auf_haengenden_leader ________
+
+    @pytest.mark.timeout(30)
+    def test_ac2_anderer_schluessel_wartet_nicht_auf_haengenden_leader():
+>       from services.single_flight import SingleFlight
+E       ModuleNotFoundError: No module named 'services.single_flight'
+
+tests/tdd/test_single_flight_keys_independent.py:36: ModuleNotFoundError
+___________ test_ac2_registrier_lock_frei_nach_lauf_und_nach_fehler ____________
+
+    @pytest.mark.timeout(30)
+    def test_ac2_registrier_lock_frei_nach_lauf_und_nach_fehler():
+>       from services.single_flight import SingleFlight
+E       ModuleNotFoundError: No module named 'services.single_flight'
+
+tests/tdd/test_single_flight_keys_independent.py:78: ModuleNotFoundError
+_______________ test_ac5_wartender_bekommt_timed_out_nach_frist ________________
+
+    @pytest.mark.timeout(30)
+    def test_ac5_wartender_bekommt_timed_out_nach_frist():
+>       from services.single_flight import SingleFlight
+E       ModuleNotFoundError: No module named 'services.single_flight'
+
+tests/tdd/test_single_flight_wait_is_bounded.py:36: ModuleNotFoundError
+________________ test_ac5_cached_fetch_wartender_holt_selbst_ab ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_ac5_cached_fetch_wartende0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad9ef9b0>
+
+    @pytest.mark.timeout(30)
+    def test_ac5_cached_fetch_wartender_holt_selbst_ab(tmp_path, monkeypatch):
+        from services.official_alerts import warn_egress
+    
+        monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", tmp_path / "j.jsonl")
+>       monkeypatch.setattr(warn_egress, "WARN_FLIGHT_WAIT_TIMEOUT_S", 0.4)
+E       AttributeError: <module 'services.official_alerts.warn_egress' from '/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/official_alerts/warn_egress.py'> has no attribute 'WARN_FLIGHT_WAIT_TIMEOUT_S'
+
+tests/tdd/test_single_flight_wait_is_bounded.py:75: AttributeError
+____________ test_parallel_reserve_kontoschutz_ab_100_prozent_exakt ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_parallel_reserve_kontosch0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad9ec500>
+
+    @pytest.mark.timeout(60)
+    def test_parallel_reserve_kontoschutz_ab_100_prozent_exakt(tmp_path, monkeypatch):
+        """AC-6: Restbudget M=5 (bis exakt 100 %), N=16 parallel -> genau 5 True,
+        ``calls`` steht bei genau 20, nie darueber."""
+        monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", BUDGET)
+        vorlauf = 15
+        seed = ForecastBudgetGate("nutzer_a", data_root=tmp_path)
+        for _ in range(vorlauf):
+            seed.record_call()
+        rest = BUDGET - vorlauf
+        n = 16
+        assert rest < n
+    
+>       results = _run_parallel(
+            n, lambda i: ForecastBudgetGate("nutzer_a", data_root=tmp_path).reserve("polling")
+        )
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+n = 16
+fn = <function test_parallel_reserve_kontoschutz_ab_100_prozent_exakt.<locals>.<lambda> at 0x7397ad6a2e80>
+
+    def _run_parallel(n: int, fn):
+        """Startet n Threads hinter einer Barrier. Sammelt Ergebnisse UND Ausnahmen."""
+        barrier = threading.Barrier(n)
+        results: list = []
+        errors: list = []
+        res_lock = threading.Lock()
+    
+        def _worker(i: int) -> None:
+            try:
+                barrier.wait(timeout=JOIN_TIMEOUT_S)
+                value = fn(i)
+                with res_lock:
+                    results.append(value)
+            except BaseException as exc:  # noqa: BLE001 - Thread-Ausnahmen selbst einsammeln
+                with res_lock:
+                    errors.append(exc)
+    
+        threads = [threading.Thread(target=_worker, args=(i,), daemon=True) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=JOIN_TIMEOUT_S)
+        assert not any(t.is_alive() for t in threads), "Thread haengt (Deadlock?)"
+>       assert errors == [], f"Ausnahmen in Threads: {errors!r}"
+E       AssertionError: Ausnahmen in Threads: [AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'")]
+E       assert [AttributeErr...serve'"), ...] == []
+E         
+E         Left contains 16 more items, first extra item: AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'")
+E         Use -v to get more diff
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:58: AssertionError
+_______________ test_parallel_reserve_schwelle_ohne_nutzer_exakt _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_parallel_reserve_schwelle0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad9e7d10>
+
+    @pytest.mark.timeout(60)
+    def test_parallel_reserve_schwelle_ohne_nutzer_exakt(tmp_path, monkeypatch):
+        """AC-6: unattributiert (user_id=None), polling-Schwelle 80 %: Vorlauf 75 von
+        100 -> genau 5 True, ``calls`` genau 80."""
+        monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", 100)
+        seed = ForecastBudgetGate(None, data_root=tmp_path)
+        for _ in range(75):
+            seed.record_call()
+        n = 16
+    
+>       results = _run_parallel(
+            n, lambda i: ForecastBudgetGate(None, data_root=tmp_path).reserve("polling")
+        )
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+n = 16
+fn = <function test_parallel_reserve_schwelle_ohne_nutzer_exakt.<locals>.<lambda> at 0x7397ad6a1a80>
+
+    def _run_parallel(n: int, fn):
+        """Startet n Threads hinter einer Barrier. Sammelt Ergebnisse UND Ausnahmen."""
+        barrier = threading.Barrier(n)
+        results: list = []
+        errors: list = []
+        res_lock = threading.Lock()
+    
+        def _worker(i: int) -> None:
+            try:
+                barrier.wait(timeout=JOIN_TIMEOUT_S)
+                value = fn(i)
+                with res_lock:
+                    results.append(value)
+            except BaseException as exc:  # noqa: BLE001 - Thread-Ausnahmen selbst einsammeln
+                with res_lock:
+                    errors.append(exc)
+    
+        threads = [threading.Thread(target=_worker, args=(i,), daemon=True) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=JOIN_TIMEOUT_S)
+        assert not any(t.is_alive() for t in threads), "Thread haengt (Deadlock?)"
+>       assert errors == [], f"Ausnahmen in Threads: {errors!r}"
+E       AssertionError: Ausnahmen in Threads: [AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'")]
+E       assert [AttributeErr...serve'"), ...] == []
+E         
+E         Left contains 16 more items, first extra item: AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'")
+E         Use -v to get more diff
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:58: AssertionError
+_________ test_user_briefing_wird_auch_bei_100_prozent_nie_gedrosselt __________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_user_briefing_wird_auch_b0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad9e7890>
+
+    @pytest.mark.timeout(60)
+    def test_user_briefing_wird_auch_bei_100_prozent_nie_gedrosselt(tmp_path, monkeypatch):
+        """AC-6 (fix_1329-Invariante): user_briefing bleibt auch parallel ungedrosselt."""
+        monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", BUDGET)
+        seed = ForecastBudgetGate("nutzer_a", data_root=tmp_path)
+        for _ in range(BUDGET):
+            seed.record_call()
+    
+>       results = _run_parallel(
+            8,
+            lambda i: ForecastBudgetGate("nutzer_a", data_root=tmp_path).reserve("user_briefing"),
+        )
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+n = 8
+fn = <function test_user_briefing_wird_auch_bei_100_prozent_nie_gedrosselt.<locals>.<lambda> at 0x7397ade43740>
+
+    def _run_parallel(n: int, fn):
+        """Startet n Threads hinter einer Barrier. Sammelt Ergebnisse UND Ausnahmen."""
+        barrier = threading.Barrier(n)
+        results: list = []
+        errors: list = []
+        res_lock = threading.Lock()
+    
+        def _worker(i: int) -> None:
+            try:
+                barrier.wait(timeout=JOIN_TIMEOUT_S)
+                value = fn(i)
+                with res_lock:
+                    results.append(value)
+            except BaseException as exc:  # noqa: BLE001 - Thread-Ausnahmen selbst einsammeln
+                with res_lock:
+                    errors.append(exc)
+    
+        threads = [threading.Thread(target=_worker, args=(i,), daemon=True) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=JOIN_TIMEOUT_S)
+        assert not any(t.is_alive() for t in threads), "Thread haengt (Deadlock?)"
+>       assert errors == [], f"Ausnahmen in Threads: {errors!r}"
+E       AssertionError: Ausnahmen in Threads: [AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'")]
+E       assert [AttributeErr...serve'"), ...] == []
+E         
+E         Left contains 8 more items, first extra item: AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'")
+E         Use -v to get more diff
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:58: AssertionError
+_______ test_zwei_nutzer_parallel_buchen_nur_eigenen_topf_ohne_deadlock ________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_zwei_nutzer_parallel_buch0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad995430>
+
+    @pytest.mark.timeout(60)
+    def test_zwei_nutzer_parallel_buchen_nur_eigenen_topf_ohne_deadlock(tmp_path, monkeypatch):
+        """AC-8: A bucht 10x, B 7x parallel -> Topf A == 10, Topf B == 7, global 17."""
+        monkeypatch.setattr(ForecastBudgetGate, "DAILY_BUDGET", 9000)
+        plan = ["nutzer_a"] * 10 + ["nutzer_b"] * 7
+    
+>       results = _run_parallel(
+            len(plan),
+            lambda i: ForecastBudgetGate(plan[i], data_root=tmp_path).reserve("polling"),
+        )
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+n = 17
+fn = <function test_zwei_nutzer_parallel_buchen_nur_eigenen_topf_ohne_deadlock.<locals>.<lambda> at 0x7397ade43b00>
+
+    def _run_parallel(n: int, fn):
+        """Startet n Threads hinter einer Barrier. Sammelt Ergebnisse UND Ausnahmen."""
+        barrier = threading.Barrier(n)
+        results: list = []
+        errors: list = []
+        res_lock = threading.Lock()
+    
+        def _worker(i: int) -> None:
+            try:
+                barrier.wait(timeout=JOIN_TIMEOUT_S)
+                value = fn(i)
+                with res_lock:
+                    results.append(value)
+            except BaseException as exc:  # noqa: BLE001 - Thread-Ausnahmen selbst einsammeln
+                with res_lock:
+                    errors.append(exc)
+    
+        threads = [threading.Thread(target=_worker, args=(i,), daemon=True) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=JOIN_TIMEOUT_S)
+        assert not any(t.is_alive() for t in threads), "Thread haengt (Deadlock?)"
+>       assert errors == [], f"Ausnahmen in Threads: {errors!r}"
+E       AssertionError: Ausnahmen in Threads: [AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'"), AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'")]
+E       assert [AttributeErr...serve'"), ...] == []
+E         
+E         Left contains 17 more items, first extra item: AttributeError("'ForecastBudgetGate' object has no attribute 'reserve'")
+E         Use -v to get more diff
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:58: AssertionError
+________ test_reserve_schreibt_dieselbe_schluesselmenge_wie_record_call ________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_reserve_schreibt_dieselbe0')
+
+    def test_reserve_schreibt_dieselbe_schluesselmenge_wie_record_call(tmp_path):
+        """AC-10: Baseline entsteht im Test aus ``allow()`` + ``record_call()``;
+        ``reserve()`` darf kein Feld hinzufuegen oder weglassen (global + Nutzer)."""
+        basis = tmp_path / "basis"
+        neu = tmp_path / "neu"
+    
+        g_alt = ForecastBudgetGate("nutzer_a", data_root=basis)
+        assert g_alt.allow("polling") is True
+        g_alt.record_call()
+    
+        g_neu = ForecastBudgetGate("nutzer_a", data_root=neu)
+>       assert g_neu.reserve("polling") is True
+               ^^^^^^^^^^^^^
+E       AttributeError: 'ForecastBudgetGate' object has no attribute 'reserve'
+
+tests/tdd/test_forecast_budget_reserve_atomic.py:164: AttributeError
+_______________ test_parallel_reserve_genau_restbudget_mal_true ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_parallel_reserve_genau_re0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad965460>
+
+    @pytest.mark.timeout(60)
+    def test_parallel_reserve_genau_restbudget_mal_true(tmp_path, monkeypatch):
+        """AC-7: Budget 10, Vorlauf 6 (ueber record_call) -> M=4; N=16 parallel ->
+        genau 4 True, ``calls`` steht bei genau 10."""
+        monkeypatch.setenv("GZ_METEOALARM_DAILY_BUDGET", "10")
+        seed = MeteoAlarmBudgetGate(data_root=tmp_path)
+        for _ in range(6):
+            seed.record_call()
+        n = 16
+        barrier = threading.Barrier(n)
+        results: list = []
+        errors: list = []
+        lock = threading.Lock()
+    
+        def _worker() -> None:
+            try:
+                barrier.wait(timeout=JOIN_TIMEOUT_S)
+                value = MeteoAlarmBudgetGate(data_root=tmp_path).reserve()
+                with lock:
+                    results.append(value)
+            except BaseException as exc:  # noqa: BLE001
+                with lock:
+                    errors.append(exc)
+    
+        threads = [threading.Thread(target=_worker, daemon=True) for _ in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=JOIN_TIMEOUT_S)
+        assert not any(t.is_alive() for t in threads)
+>       assert errors == [], f"Ausnahmen in Threads: {errors!r}"
+E       AssertionError: Ausnahmen in Threads: [AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'"), AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'")]
+E       assert [AttributeErr...serve'"), ...] == []
+E         
+E         Left contains 16 more items, first extra item: AttributeError("'MeteoAlarmBudgetGate' object has no attribute 'reserve'")
+E         Use -v to get more diff
+
+tests/tdd/test_meteoalarm_budget_reserve_atomic.py:61: AssertionError
+_____________ test_nach_utc_tageswechsel_beginnt_zaehler_bei_null ______________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_nach_utc_tageswechsel_beg0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad97c1a0>
+
+    def test_nach_utc_tageswechsel_beginnt_zaehler_bei_null(tmp_path, monkeypatch):
+        """AC-7: Budget 3 am Tag 1 ausgeschoepft; ``now=`` auf Tag 2 -> wieder True,
+        ``calls`` steht bei 1 (Zaehler begann bei 0)."""
+        monkeypatch.setenv("GZ_METEOALARM_DAILY_BUDGET", "3")
+        tag1 = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+        tag2 = datetime(2026, 1, 2, 0, 5, tzinfo=timezone.utc)
+        gate = MeteoAlarmBudgetGate(data_root=tmp_path)
+    
+>       assert [gate.reserve(now=tag1) for _ in range(3)] == [True, True, True]
+                ^^^^^^^^^^^^
+E       AttributeError: 'MeteoAlarmBudgetGate' object has no attribute 'reserve'
+
+tests/tdd/test_meteoalarm_budget_reserve_atomic.py:76: AttributeError
+___________ test_forecast_reserve_bei_globalem_lock_timeout_ist_laut ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_forecast_reserve_bei_glob0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad967620>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7397ad965f10>
+
+    def test_forecast_reserve_bei_globalem_lock_timeout_ist_laut(tmp_path, monkeypatch, caplog):
+        """AC-9 (Forecast, globale Datei)."""
+        monkeypatch.setattr(fb, "LOCK_TIMEOUT_SECONDS", 0.2)
+        gate = fb.ForecastBudgetGate(None, data_root=tmp_path)
+        lock = tmp_path / "diagnostics" / "forecast_budget.json.lock"
+>       vorher = fb.forecast_budget_lost_bookings
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'services.forecast_budget' has no attribute 'forecast_budget_lost_bookings'
+
+tests/tdd/test_budget_reserve_lock_timeout_is_loud.py:46: AttributeError
+____________ test_forecast_reserve_bei_nutzer_lock_timeout_ist_laut ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_forecast_reserve_bei_nutz0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad965790>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7397ad967200>
+
+    def test_forecast_reserve_bei_nutzer_lock_timeout_ist_laut(tmp_path, monkeypatch, caplog):
+        """AC-9 (Forecast, Nutzer-Topf; globale Buchung gelingt, nur der Nutzer-Topf geht verloren)."""
+        monkeypatch.setattr(fb, "LOCK_TIMEOUT_SECONDS", 0.2)
+        gate = fb.ForecastBudgetGate("nutzer_a", data_root=tmp_path)
+        lock = tmp_path / "users" / "nutzer_a" / "diagnostics" / "forecast_budget.json.lock"
+>       vorher = fb.forecast_budget_lost_bookings
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'services.forecast_budget' has no attribute 'forecast_budget_lost_bookings'
+
+tests/tdd/test_budget_reserve_lock_timeout_is_loud.py:61: AttributeError
+______________ test_meteoalarm_reserve_bei_lock_timeout_ist_laut _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-1903/test_meteoalarm_reserve_bei_lo0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7397ad966c00>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7397ad966ae0>
+
+    def test_meteoalarm_reserve_bei_lock_timeout_ist_laut(tmp_path, monkeypatch, caplog):
+        """AC-9 (MeteoAlarm)."""
+        monkeypatch.setattr(mb, "LOCK_TIMEOUT_SECONDS", 0.2)
+        gate = mb.MeteoAlarmBudgetGate(data_root=tmp_path)
+        lock = tmp_path / "diagnostics" / "meteoalarm_budget.json.lock"
+>       vorher = mb.meteoalarm_budget_lost_bookings
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'services.official_alerts.meteoalarm_budget' has no attribute 'meteoalarm_budget_lost_bookings'
+
+tests/tdd/test_budget_reserve_lock_timeout_is_loud.py:76: AttributeError
+_______ test_ac13_n_parallele_gleiche_segmente_genau_ein_fetch_forecast ________
+
+    @pytest.mark.timeout(60)
+    def test_ac13_n_parallele_gleiche_segmente_genau_ein_fetch_forecast():
+        """AC-13: N parallele Abrufe desselben Segments (gleicher Bucket, gleiches
+        Fenster) => genau EIN `fetch_forecast` am Provider-Rand, alle N bekommen
+        ein Ergebnis."""
+        n = 6
+        provider = ZaehlenderProvider()
+        cache = WeatherCacheService()
+        dienst = _dienst(provider, cache)
+        segment = _segment("gleich")
+    
+        ergebnisse, fehler = _parallel([
+            (lambda: dienst.fetch_segment_weather(segment, user_id=NUTZER_A)) for _ in range(n)
+        ])
+    
+        _keine_thread_fehler(fehler)
+        assert all(isinstance(e, SegmentWeatherData) for e in ergebnisse)
+        assert all(not e.has_error and e.timeseries is not None for e in ergebnisse)
+>       assert provider.call_count == 1, (
+            f"{provider.call_count} fetch_forecast statt 1 bei {n} parallelen gleichen Segmenten"
+        )
+E       AssertionError: 6 fetch_forecast statt 1 bei 6 parallelen gleichen Segmenten
+E       assert 6 == 1
+E        +  where 6 = <test_segment_weather_single_flight.ZaehlenderProvider object at 0x7397ad967a70>.call_count
+
+tests/integration/test_segment_weather_single_flight.py:262: AssertionError
+_ test_ac14_zwei_nutzer_call_auf_leader_gate_hit_auf_eigenem_gate_des_wartenden _
+
+    @pytest.mark.timeout(60)
+    def test_ac14_zwei_nutzer_call_auf_leader_gate_hit_auf_eigenem_gate_des_wartenden():
+        """AC-14: zwei echte Nutzer rufen parallel dasselbe Segment. Der Call wird
+        auf dem Gate des Leaders gebucht, der Wartende bucht einen Cache-Hit auf
+        SEINEM Gate (kein eigener Call) und erhaelt die EIGENE `segment_id` samt
+        eigenem Aggregat.
+    
+        Hinweis: `cache_hits` liegt nur im globalen Topf; die Zuordnung zum
+        Nutzer laeuft daher ueber `user_calls_today` (Call nur beim Leader)
+        plus globales Delta `calls == +1`, `cache_hits == +1`."""
+        provider = ZaehlenderProvider()
+        cache = WeatherCacheService()
+        dienst_a, dienst_b = _dienst(provider, cache), _dienst(provider, cache)
+        seg_a = _segment("seg-a")
+        seg_b = _segment("seg-b")  # gleicher Bucket+Fenster, eigene Identitaet
+    
+        erwartet_a = _baseline(seg_a)
+        erwartet_b = _baseline(seg_b)
+        vorher = _stand(None)
+    
+        (res_a, res_b), fehler = _parallel([
+            lambda: dienst_a.fetch_segment_weather(seg_a, user_id=NUTZER_A),
+            lambda: dienst_b.fetch_segment_weather(seg_b, user_id=NUTZER_B),
+        ])
+    
+        _keine_thread_fehler(fehler)
+>       assert provider.call_count == 1
+E       assert 2 == 1
+E        +  where 2 = <test_segment_weather_single_flight.ZaehlenderProvider object at 0x7397ad9642f0>.call_count
+
+tests/integration/test_segment_weather_single_flight.py:295: AssertionError
+_ test_ac15_cache_nach_zwei_nutzer_lauf_nur_rohzeitreihen_kein_identitaetsleck _
+
+    @pytest.mark.timeout(60)
+    def test_ac15_cache_nach_zwei_nutzer_lauf_nur_rohzeitreihen_kein_identitaetsleck():
+        """AC-15 (ergaenzt fix_1329 AC-9): nach Single-flight-Laeufen mit zwei
+        Nutzern enthaelt der Cache ausschliesslich Rohzeitreihen -- weder
+        Nutzerkennung noch Segmentidentitaet noch Aggregat. Ein dritter Aufrufer
+        mit ABWEICHENDER (schmalerer) Fensterdauer bekommt aus dem Cache nie
+        Identitaet oder Aggregat des Ersten, sondern seine eigenen."""
+        provider = ZaehlenderProvider()
+        cache = WeatherCacheService()
+        seg_a = _segment("breit-a", start_hour=10, duration_hours=4.0)
+        seg_b = _segment("breit-b", start_hour=10, duration_hours=4.0)
+        seg_c = _segment("schmal-c", start_hour=11, duration_hours=1.0)
+        erwartet_c = _baseline(seg_c)
+    
+        (res_a, res_b), fehler = _parallel([
+            lambda: _dienst(provider, cache).fetch_segment_weather(seg_a, user_id=NUTZER_A),
+            lambda: _dienst(provider, cache).fetch_segment_weather(seg_b, user_id=NUTZER_B),
+        ])
+        _keine_thread_fehler(fehler)
+        # Zugleich der Beweis, dass der Cache ueberhaupt genau einmal befuellt wurde.
+>       assert provider.call_count == 1
+E       assert 2 == 1
+E        +  where 2 = <test_segment_weather_single_flight.ZaehlenderProvider object at 0x73978837b290>.call_count
+
+tests/integration/test_segment_weather_single_flight.py:335: AssertionError
+__ test_ac17_leader_provider_fehler_alle_wartenden_derselbe_fehler_ein_fetch ___
+
+    @pytest.mark.timeout(60)
+    def test_ac17_leader_provider_fehler_alle_wartenden_derselbe_fehler_ein_fetch():
+        """AC-17: der Leader wirft `ProviderRequestError` => alle Wartenden
+        erhalten denselben Fehler, und es laeuft KEIN zweiter Abruf-Retry-Zyklus
+        (`fetch_forecast` genau 1x)."""
+        n = 5
+        provider = ZaehlenderProvider(fehler=True)
+        cache = WeatherCacheService()
+        dienst = _dienst(provider, cache)
+        segment = _segment("fehler")
+    
+        ergebnisse, fehler = _parallel([
+            (lambda: dienst.fetch_segment_weather(segment, user_id=NUTZER_A)) for _ in range(n)
+        ])
+    
+        _keine_thread_fehler(fehler)
+        assert all(e is not None and e.has_error for e in ergebnisse)
+        meldungen = {e.error_message for e in ergebnisse}
+        assert len(meldungen) == 1 and "503" in next(iter(meldungen))
+>       assert provider.call_count == 1, (
+            f"{provider.call_count} fetch_forecast statt 1 nach Leader-Fehler"
+        )
+E       AssertionError: 5 fetch_forecast statt 1 nach Leader-Fehler
+E       assert 5 == 1
+E        +  where 5 = <test_segment_weather_single_flight.ZaehlenderProvider object at 0x7397ab465e20>.call_count
+
+tests/integration/test_segment_weather_single_flight.py:438: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:213 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+ERROR    services.segment_weather:segment_weather.py:213 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+ERROR    services.segment_weather:segment_weather.py:213 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+ERROR    services.segment_weather:segment_weather.py:213 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+ERROR    services.segment_weather:segment_weather.py:213 Provider failed for segment fehler: [openmeteo] HTTP 503 (Fake am Provider-Rand)
+______ test_ac18_parallel_nie_mehr_upstream_calls_als_seriell[a_gleiche] _______
+
+folge_fn = <function _folge_a at 0x7397ad64e8e0>
+
+    @pytest.mark.timeout(60)
+    @pytest.mark.parametrize(
+        "folge_fn",
+        [_folge_a, _folge_b, _folge_c],
+        ids=["a_gleiche", "b_verschiedene", "c_mischung_zwei_nutzer"],
+    )
+    def test_ac18_parallel_nie_mehr_upstream_calls_als_seriell(folge_fn):
+        """AC-18: je Abruffolge einmal seriell, einmal parallel (Barrier). Die Zahl
+        echter Upstream-Calls parallel ist <= seriell. Folge (a) ist heute
+        ehrlich rot (seriell 1, parallel N)."""
+        folge, erwartet_eindeutig = folge_fn()
+        seriell = _lauf(folge, parallel=False)
+        assert seriell == erwartet_eindeutig, "Referenz: ein Call je Bucket+Fenster"
+        parallel = _lauf(folge, parallel=True)
+>       assert parallel <= seriell, f"parallel {parallel} > seriell {seriell}"
+E       AssertionError: parallel 6 > seriell 1
+E       assert 6 <= 1
+
+tests/integration/test_segment_weather_single_flight.py:502: AssertionError
+_ test_ac18_parallel_nie_mehr_upstream_calls_als_seriell[c_mischung_zwei_nutzer] _
+
+folge_fn = <function _folge_c at 0x7397ad64f380>
+
+    @pytest.mark.timeout(60)
+    @pytest.mark.parametrize(
+        "folge_fn",
+        [_folge_a, _folge_b, _folge_c],
+        ids=["a_gleiche", "b_verschiedene", "c_mischung_zwei_nutzer"],
+    )
+    def test_ac18_parallel_nie_mehr_upstream_calls_als_seriell(folge_fn):
+        """AC-18: je Abruffolge einmal seriell, einmal parallel (Barrier). Die Zahl
+        echter Upstream-Calls parallel ist <= seriell. Folge (a) ist heute
+        ehrlich rot (seriell 1, parallel N)."""
+        folge, erwartet_eindeutig = folge_fn()
+        seriell = _lauf(folge, parallel=False)
+        assert seriell == erwartet_eindeutig, "Referenz: ein Call je Bucket+Fenster"
+        parallel = _lauf(folge, parallel=True)
+>       assert parallel <= seriell, f"parallel {parallel} > seriell {seriell}"
+E       AssertionError: parallel 6 > seriell 3
+E       assert 6 <= 3
+
+tests/integration/test_segment_weather_single_flight.py:502: AssertionError
+_____ test_ergebnisse_in_eingabereihenfolge_bei_umgekehrter_fertigstellung _____
+
+pf_env = <function pf_env.<locals>.setzen at 0x7397ab46cae0>
+
+    @pytest.mark.timeout(30)
+    def test_ergebnisse_in_eingabereihenfolge_bei_umgekehrter_fertigstellung(pf_env):
+        pf_env(workers=8, slots=8)
+>       pf = _importieren()
+             ^^^^^^^^^^^^^^
+
+tests/unit/test_parallel_fetch_ordered.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _importieren():
+>       from services import parallel_fetch
+E       ImportError: cannot import name 'parallel_fetch' from 'services' (/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/__init__.py)
+
+tests/unit/test_parallel_fetch_ordered.py:49: ImportError
+___________ test_teilausfall_nur_im_outcome_der_betroffenen_aufgabe ____________
+
+pf_env = <function pf_env.<locals>.setzen at 0x7397ad68e980>, thread_fehler = []
+
+    @pytest.mark.timeout(30)
+    def test_teilausfall_nur_im_outcome_der_betroffenen_aufgabe(pf_env, thread_fehler):
+        pf_env(workers=8, slots=8)
+>       pf = _importieren()
+             ^^^^^^^^^^^^^^
+
+tests/unit/test_parallel_fetch_ordered.py:84: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _importieren():
+>       from services import parallel_fetch
+E       ImportError: cannot import name 'parallel_fetch' from 'services' (/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/__init__.py)
+
+tests/unit/test_parallel_fetch_ordered.py:49: ImportError
+_________ test_spitzenzaehler_nie_ueber_slotzahl_und_retry_haelt_slot __________
+
+pf_env = <function pf_env.<locals>.setzen at 0x7397ab46d1c0>, thread_fehler = []
+
+    @pytest.mark.timeout(30)
+    def test_spitzenzaehler_nie_ueber_slotzahl_und_retry_haelt_slot(pf_env, thread_fehler):
+        slots = 2
+        pf_env(workers=8, slots=slots)
+>       pf = _importieren()
+             ^^^^^^^^^^^^^^
+
+tests/unit/test_parallel_fetch_ordered.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _importieren():
+>       from services import parallel_fetch
+E       ImportError: cannot import name 'parallel_fetch' from 'services' (/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/__init__.py)
+
+tests/unit/test_parallel_fetch_ordered.py:49: ImportError
+________________ test_deadline_und_timeout_sind_unterscheidbar _________________
+
+pf_env = <function pf_env.<locals>.setzen at 0x7397ab46ca40>
+freigabe = <threading.Event at 0x7397ab465c40: unset>
+
+    @pytest.mark.timeout(30)
+    def test_deadline_und_timeout_sind_unterscheidbar(pf_env, freigabe):
+        pf_env(workers=4, slots=1)
+>       pf = _importieren()
+             ^^^^^^^^^^^^^^
+
+tests/unit/test_parallel_fetch_deadline.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _importieren():
+>       from services import parallel_fetch
+E       ImportError: cannot import name 'parallel_fetch' from 'services' (/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/__init__.py)
+
+tests/unit/test_parallel_fetch_deadline.py:45: ImportError
+___ test_verwaister_worker_haelt_slot_folgeaufruf_kehrt_fristgerecht_zurueck ___
+
+pf_env = <function pf_env.<locals>.setzen at 0x7397ab46c900>
+freigabe = <threading.Event at 0x73978837bfb0: unset>
+
+    @pytest.mark.timeout(30)
+    def test_verwaister_worker_haelt_slot_folgeaufruf_kehrt_fristgerecht_zurueck(
+        pf_env, freigabe
+    ):
+        pf_env(workers=4, slots=1)
+>       pf = _importieren()
+             ^^^^^^^^^^^^^^
+
+tests/unit/test_parallel_fetch_deadline.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _importieren():
+>       from services import parallel_fetch
+E       ImportError: cannot import name 'parallel_fetch' from 'services' (/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/__init__.py)
+
+tests/unit/test_parallel_fetch_deadline.py:45: ImportError
+__________ test_verschachtelter_aufruf_laeuft_inline_im_selben_thread __________
+
+pf_env = None
+
+    @pytest.mark.timeout(30)
+    def test_verschachtelter_aufruf_laeuft_inline_im_selben_thread(pf_env):
+>       from services import parallel_fetch as pf
+E       ImportError: cannot import name 'parallel_fetch' from 'services' (/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/__init__.py)
+
+tests/unit/test_parallel_fetch_nested.py:35: ImportError
+_______ test_call_source_und_senken_im_worker_und_danach_zurueckgesetzt ________
+
+pf_env = <function pf_env.<locals>.setzen at 0x7397ab46e020>, thread_fehler = []
+
+    @pytest.mark.timeout(30)
+    def test_call_source_und_senken_im_worker_und_danach_zurueckgesetzt(pf_env, thread_fehler):
+        pf_env(workers=1)  # EIN Worker: die Folgeaufgabe laeuft garantiert im selben Thread
+>       from services import parallel_fetch as pf
+E       ImportError: cannot import name 'parallel_fetch' from 'services' (/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/__init__.py)
+
+tests/unit/test_parallel_fetch_context.py:48: ImportError
+_______________ test_zwei_nutzer_gleichzeitig_ohne_uebersprechen _______________
+
+pf_env = <function pf_env.<locals>.setzen at 0x7397ab46e660>, thread_fehler = []
+
+    @pytest.mark.timeout(30)
+    def test_zwei_nutzer_gleichzeitig_ohne_uebersprechen(pf_env, thread_fehler):
+        pf_env(workers=8)
+>       from services import parallel_fetch as pf
+E       ImportError: cannot import name 'parallel_fetch' from 'services' (/home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche/src/services/__init__.py)
+
+tests/unit/test_parallel_fetch_context.py:127: ImportError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/tdd/test_warn_feed_single_flight.py::test_pruefling_liegt_im_worktree
+PASSED tests/tdd/test_single_flight_keys_independent.py::test_ac2_cached_fetch_zwei_schluessel_unabhaengig
+PASSED tests/integration/test_segment_weather_single_flight.py::test_ac11_validierungsfehler_bucht_keinen_call_und_ruft_keinen_provider
+PASSED tests/integration/test_segment_weather_single_flight.py::test_ac16_gedrosselter_leader_wartender_mit_hoeherer_prioritaet_ruft_selbst_ab
+PASSED tests/integration/test_segment_weather_single_flight.py::test_ac18_parallel_nie_mehr_upstream_calls_als_seriell[b_verschiedene]
+PASSED tests/integration/test_segment_weather_single_flight.py::test_ac18_budget_erschoepft_user_briefing_erreicht_trotzdem_den_provider
+FAILED tests/tdd/test_warn_feed_single_flight.py::test_ac1_n_parallele_aufrufer_ein_upstream_abruf
+FAILED tests/tdd/test_warn_feed_single_flight.py::test_ac1_wartende_bedienen_eigene_capture_id_senke
+FAILED tests/tdd/test_warn_feed_single_flight.py::test_ac3_fehlschlag_erreicht_fehler_senke_jedes_wartenden
+FAILED tests/tdd/test_warn_feed_single_flight.py::test_ac4_wartende_bekommen_entry_aus_dem_flug_nicht_per_cache_get
+FAILED tests/tdd/test_single_flight_keys_independent.py::test_ac2_anderer_schluessel_wartet_nicht_auf_haengenden_leader
+FAILED tests/tdd/test_single_flight_keys_independent.py::test_ac2_registrier_lock_frei_nach_lauf_und_nach_fehler
+FAILED tests/tdd/test_single_flight_wait_is_bounded.py::test_ac5_wartender_bekommt_timed_out_nach_frist
+FAILED tests/tdd/test_single_flight_wait_is_bounded.py::test_ac5_cached_fetch_wartender_holt_selbst_ab
+FAILED tests/tdd/test_forecast_budget_reserve_atomic.py::test_parallel_reserve_kontoschutz_ab_100_prozent_exakt
+FAILED tests/tdd/test_forecast_budget_reserve_atomic.py::test_parallel_reserve_schwelle_ohne_nutzer_exakt
+FAILED tests/tdd/test_forecast_budget_reserve_atomic.py::test_user_briefing_wird_auch_bei_100_prozent_nie_gedrosselt
+FAILED tests/tdd/test_forecast_budget_reserve_atomic.py::test_zwei_nutzer_parallel_buchen_nur_eigenen_topf_ohne_deadlock
+FAILED tests/tdd/test_forecast_budget_reserve_atomic.py::test_reserve_schreibt_dieselbe_schluesselmenge_wie_record_call
+FAILED tests/tdd/test_meteoalarm_budget_reserve_atomic.py::test_parallel_reserve_genau_restbudget_mal_true
+FAILED tests/tdd/test_meteoalarm_budget_reserve_atomic.py::test_nach_utc_tageswechsel_beginnt_zaehler_bei_null
+FAILED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_forecast_reserve_bei_globalem_lock_timeout_ist_laut
+FAILED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_forecast_reserve_bei_nutzer_lock_timeout_ist_laut
+FAILED tests/tdd/test_budget_reserve_lock_timeout_is_loud.py::test_meteoalarm_reserve_bei_lock_timeout_ist_laut
+FAILED tests/integration/test_segment_weather_single_flight.py::test_ac13_n_parallele_gleiche_segmente_genau_ein_fetch_forecast
+FAILED tests/integration/test_segment_weather_single_flight.py::test_ac14_zwei_nutzer_call_auf_leader_gate_hit_auf_eigenem_gate_des_wartenden
+FAILED tests/integration/test_segment_weather_single_flight.py::test_ac15_cache_nach_zwei_nutzer_lauf_nur_rohzeitreihen_kein_identitaetsleck
+FAILED tests/integration/test_segment_weather_single_flight.py::test_ac17_leader_provider_fehler_alle_wartenden_derselbe_fehler_ein_fetch
+FAILED tests/integration/test_segment_weather_single_flight.py::test_ac18_parallel_nie_mehr_upstream_calls_als_seriell[a_gleiche]
+FAILED tests/integration/test_segment_weather_single_flight.py::test_ac18_parallel_nie_mehr_upstream_calls_als_seriell[c_mischung_zwei_nutzer]
+FAILED tests/unit/test_parallel_fetch_ordered.py::test_ergebnisse_in_eingabereihenfolge_bei_umgekehrter_fertigstellung
+FAILED tests/unit/test_parallel_fetch_ordered.py::test_teilausfall_nur_im_outcome_der_betroffenen_aufgabe
+FAILED tests/unit/test_parallel_fetch_ordered.py::test_spitzenzaehler_nie_ueber_slotzahl_und_retry_haelt_slot
+FAILED tests/unit/test_parallel_fetch_deadline.py::test_deadline_und_timeout_sind_unterscheidbar
+FAILED tests/unit/test_parallel_fetch_deadline.py::test_verwaister_worker_haelt_slot_folgeaufruf_kehrt_fristgerecht_zurueck
+FAILED tests/unit/test_parallel_fetch_nested.py::test_verschachtelter_aufruf_laeuft_inline_im_selben_thread
+FAILED tests/unit/test_parallel_fetch_context.py::test_call_source_und_senken_im_worker_und_danach_zurueckgesetzt
+FAILED tests/unit/test_parallel_fetch_context.py::test_zwei_nutzer_gleichzeitig_ohne_uebersprechen
+========================= 32 failed, 6 passed in 9.91s =========================
+=== TestClient-Datei (ohne --disable-socket, braucht lokalen Socket) ===
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/resilient-launching-avalanche
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 8 items
+
+tests/tdd/test_internal_forecast_budget_reserve.py .......F              [100%]
+
+=================================== FAILURES ===================================
+___________ test_parallele_anfragen_ueberbuchen_das_restbudget_nicht ___________
+
+core_client = <starlette.testclient.TestClient object at 0x7f0a4d104140>
+kleiner_deckel = 20
+
+    @pytest.mark.timeout(60)
+    def test_parallele_anfragen_ueberbuchen_das_restbudget_nicht(core_client, kleiner_deckel):
+        """AC-12.
+    
+        Given Restbudget fuer genau 6 Reservierungen (je 2 Einheiten, Deckel 20,
+              Vorlauf 4 Reservierungen ueber den Endpunkt)
+        When 24 Anfragen hinter einer Barrier parallel eintreffen
+        Then antworten genau 6 mit ``{"allowed": true}``, die abgelehnten behalten
+             die Form ``{"allowed": false, "retry_after_s": int}``, der globale
+             Zaehler steht bei hoechstens 20 und ``cache_misses`` ist um genau die
+             Zahl der erlaubten Antworten gewachsen.
+        """
+        import threading
+    
+        for _ in range(4):
+            _erlaube(core_client, NUTZER_A)
+        vorlauf_calls = _globale_calls()
+        vorlauf_misses = _cache_misses()
+        assert vorlauf_calls == 8
+        rest = (kleiner_deckel - vorlauf_calls) // EINHEITEN_JE_RESERVIERUNG
+        n = 24
+        assert rest < n
+    
+        barrier = threading.Barrier(n)
+        antworten: list = []
+        fehler: list = []
+        sperre = threading.Lock()
+    
+        def _worker() -> None:
+            try:
+                client = TestClient(app)  # nach core_client: Env-Secret ist gesetzt
+                barrier.wait(timeout=30)
+                antwort = _reserve(client, NUTZER_A)
+                with sperre:
+                    antworten.append((antwort.status_code, antwort.json()))
+            except BaseException as exc:  # noqa: BLE001
+                with sperre:
+                    fehler.append(exc)
+    
+        threads = [threading.Thread(target=_worker, daemon=True) for _ in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=45)
+        assert not any(t.is_alive() for t in threads), "Thread haengt"
+        assert fehler == [], f"Ausnahmen in Threads: {fehler!r}"
+    
+        assert len(antworten) == n
+        assert all(status == 200 for status, _ in antworten)
+        erlaubt = [b for _, b in antworten if b["allowed"] is True]
+        abgelehnt = [b for _, b in antworten if b["allowed"] is False]
+        assert erlaubt == [{"allowed": True}] * len(erlaubt)
+        assert all(
+            set(b) == {"allowed", "retry_after_s"} and isinstance(b["retry_after_s"], int)
+            for b in abgelehnt
+        )
+>       assert len(erlaubt) <= rest, (
+            f"AC-12: {len(erlaubt)} erlaubt bei Restbudget {rest} (Ueberbuchung)"
+        )
+E       AssertionError: AC-12: 24 erlaubt bei Restbudget 6 (Ueberbuchung)
+E       assert 24 <= 6
+E        +  where 24 = len([{'allowed': True}, {'allowed': True}, {'allowed': True}, {'allowed': True}, {'allowed': True}, {'allowed': True}, ...])
+
+tests/tdd/test_internal_forecast_budget_reserve.py:557: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_erlaubte_reservierung_bucht_zwei_einheiten_auf_die_echte_user_id
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_erlaubte_reservierung_bucht_genau_einen_cache_miss
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_vielverbraucher_abgelehnt_unbeteiligter_erlaubt
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_abgelehnte_reservierung_bucht_nichts
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_priority_aus_der_query_erreicht_das_gate
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_user_id_aus_der_query_bestimmt_den_getroffenen_topf
+PASSED tests/tdd/test_internal_forecast_budget_reserve.py::test_reserve_ohne_user_id_wird_abgewiesen
+FAILED tests/tdd/test_internal_forecast_budget_reserve.py::test_parallele_anfragen_ueberbuchen_das_restbudget_nicht
+========================= 1 failed, 7 passed in 1.43s ==========================

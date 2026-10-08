@@ -488,3 +488,132 @@ def test_reserve_ohne_user_id_wird_abgewiesen(core_client):
         "Eine Anfrage ohne user_id darf niemanden in active_users eintragen — "
         f"vorgefunden: {_aktive_nutzer()}"
     )
+
+
+# ---------------------------------------------------------------------------
+# #1539 AC-12: parallele Anfragen duerfen das Restbudget nicht ueberbuchen
+# SPEC: docs/specs/modules/feat_1539_s1b_s2_abruf_baustein.md (AC-12)
+# Ausfuehrung: uv run pytest tests/tdd/test_internal_forecast_budget_reserve.py -v -rA --disable-socket
+# RED-Erwartung: allow()+record_call() sind getrennt -> N parallele Anfragen
+# bei Restbudget < N lassen mehr durch als Budget vorhanden war.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.timeout(60)
+def test_parallele_anfragen_ueberbuchen_das_restbudget_nicht(core_client, kleiner_deckel):
+    """AC-12.
+
+    Given Restbudget fuer genau 6 Reservierungen (je 2 Einheiten, Deckel 20,
+          Vorlauf 4 Reservierungen ueber den Endpunkt)
+    When 24 Anfragen hinter einer Barrier parallel eintreffen
+    Then antworten genau 6 mit ``{"allowed": true}``, die abgelehnten behalten
+         die Form ``{"allowed": false, "retry_after_s": int}``, der globale
+         Zaehler steht bei hoechstens 20 und ``cache_misses`` ist um genau die
+         Zahl der erlaubten Antworten gewachsen.
+    """
+    import threading
+
+    for _ in range(4):
+        _erlaube(core_client, NUTZER_A)
+    vorlauf_calls = _globale_calls()
+    vorlauf_misses = _cache_misses()
+    assert vorlauf_calls == 8
+    rest = (kleiner_deckel - vorlauf_calls) // EINHEITEN_JE_RESERVIERUNG
+    n = 24
+    assert rest < n
+
+    barrier = threading.Barrier(n)
+    antworten: list = []
+    fehler: list = []
+    sperre = threading.Lock()
+
+    def _worker() -> None:
+        try:
+            client = TestClient(app)  # nach core_client: Env-Secret ist gesetzt
+            barrier.wait(timeout=30)
+            antwort = _reserve(client, NUTZER_A)
+            with sperre:
+                antworten.append((antwort.status_code, antwort.json()))
+        except BaseException as exc:  # noqa: BLE001
+            with sperre:
+                fehler.append(exc)
+
+    threads = [threading.Thread(target=_worker, daemon=True) for _ in range(n)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=45)
+    assert not any(t.is_alive() for t in threads), "Thread haengt"
+    assert fehler == [], f"Ausnahmen in Threads: {fehler!r}"
+
+    assert len(antworten) == n
+    assert all(status == 200 for status, _ in antworten)
+    erlaubt = [b for _, b in antworten if b["allowed"] is True]
+    abgelehnt = [b for _, b in antworten if b["allowed"] is False]
+    assert erlaubt == [{"allowed": True}] * len(erlaubt)
+    assert all(
+        set(b) == {"allowed", "retry_after_s"} and isinstance(b["retry_after_s"], int)
+        for b in abgelehnt
+    )
+    assert len(erlaubt) <= rest, (
+        f"AC-12: {len(erlaubt)} erlaubt bei Restbudget {rest} (Ueberbuchung)"
+    )
+    assert len(erlaubt) == rest
+    assert _globale_calls() <= kleiner_deckel
+    assert _cache_misses() - vorlauf_misses == len(erlaubt)
+
+
+# ---------------------------------------------------------------------------
+# #1539 AC-6/AC-12: eine Reservierung (2 Einheiten) darf ein Restbudget von
+# 1 Einheit nicht ueberbuchen -- die Grenze wirkt am Endpunkt.
+# SPEC: docs/specs/modules/feat_1539_s1b_s2_abruf_baustein.md (AC-6, AC-12)
+# ---------------------------------------------------------------------------
+
+def _vorlauf_durch_fremden_nutzer(client: TestClient, ungerade: bool) -> None:
+    """Global auf DAILY_BUDGET-2 (bzw. -1) -- ausschliesslich ueber das Produkt.
+
+    Nutzer B reserviert neunmal ueber den Endpunkt (18 Einheiten). Fuer den
+    ungeraden Stand bucht B eine weitere Einheit ueber ``record_call()``
+    (Bestandspfad mit units=1, ``segment_weather.py``), denn der Endpunkt bucht
+    immer 2. Nutzer A bleibt bei 0 und damit unter seinem fairen Anteil --
+    es entscheidet allein die Grenze des Restbudgets."""
+    for _ in range(9):
+        _erlaube(client, NUTZER_B)
+    if ungerade:
+        ForecastBudgetGate(NUTZER_B).record_call()
+
+
+@pytest.mark.parametrize("priority", ["polling", "alert_check"])
+def test_reservierung_ueberbucht_restbudget_von_einer_einheit_nicht(
+    core_client, kleiner_deckel, priority
+):
+    _vorlauf_durch_fremden_nutzer(core_client, ungerade=True)
+    assert _globale_calls() == kleiner_deckel - 1
+    vorher = _zaehlerstand(NUTZER_A, NUTZER_B)
+
+    antwort = _reserve(core_client, NUTZER_A, priority=priority)
+
+    assert antwort.status_code == 200, antwort.text[:300]
+    koerper = antwort.json()
+    assert koerper["allowed"] is False, (
+        "AC-6/AC-12: 2 Einheiten bei Restbudget 1 wuerden das Tageslimit "
+        f"ueberschreiten -- muss abgelehnt werden, bekam {koerper}"
+    )
+    assert set(koerper) == {"allowed", "retry_after_s"}
+    assert isinstance(koerper["retry_after_s"], int)
+    assert _zaehlerstand(NUTZER_A, NUTZER_B) == vorher
+    assert _globale_calls() == kleiner_deckel - 1
+
+
+@pytest.mark.parametrize("priority", ["polling", "alert_check"])
+def test_reservierung_schoepft_restbudget_von_zwei_einheiten_exakt_aus(
+    core_client, kleiner_deckel, priority
+):
+    _vorlauf_durch_fremden_nutzer(core_client, ungerade=False)
+    assert _globale_calls() == kleiner_deckel - 2
+
+    antwort = _reserve(core_client, NUTZER_A, priority=priority)
+
+    assert antwort.status_code == 200, antwort.text[:300]
+    assert antwort.json() == {"allowed": True}
+    assert _globale_calls() == kleiner_deckel
+    assert _nutzer_calls(NUTZER_A) == EINHEITEN_JE_RESERVIERUNG

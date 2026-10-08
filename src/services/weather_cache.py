@@ -265,6 +265,22 @@ class WeatherCacheService:
         elevation_m = int(round(raw_elevation)) if raw_elevation is not None else None
         return f"{lat}_{lon}_{elevation_m}_{model_id}_{enrich_ensemble}_{enrich_snow}"
 
+    def flight_key(
+        self,
+        segment: TripSegment,
+        enrich_ensemble: bool,
+        enrich_snow: bool,
+        model_id: str,
+    ) -> str:
+        """Single-flight-Schluessel (Issue #1539 S2): Bucket + Fenster aus der
+        bestehenden ``_bucket_key``-/``_storage_key``-Logik (keine zweite
+        Rundung). Identisch zum Speicherschluessel, den ``put()`` fuer dieses
+        Segment bildet -- enthaelt nie Nutzer- oder Segmentidentitaet."""
+        bucket = self._bucket_key(segment, enrich_ensemble, enrich_snow, model_id)
+        return self._storage_key(
+            bucket, to_utc(segment.start_time), to_utc(segment.end_time)
+        )
+
     @staticmethod
     def _storage_key(bucket: str, window_start: datetime, window_end: datetime) -> str:
         return f"{bucket}|{window_start.isoformat()}|{window_end.isoformat()}"
