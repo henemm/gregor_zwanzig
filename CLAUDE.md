@@ -68,6 +68,8 @@ OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake`, `/00-bug`
 
 **Fresh Eyes:** Bei UI-Änderungen prüft zusätzlich ein `fresh-eyes-inspector` Screenshots OHNE Bug-Kontext.
 
+**Rückfragen an den PO IMMER über das `AskUserQuestion`-Tool** — nie als Freitext-Frage am Ende einer Antwort (PO-Vorgabe 2026-10-08). Gilt auch für Spec-Freigaben.
+
 **Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation). >10 Min ohne grüne Tests → `TaskStop` + Neustart mit präziserem Briefing; max 2 Versuche, danach Eskalation.
 
 **Agenten-Modelle:** `developer` Opus · `bug-intake`/`feature-planner`/`implementation-validator`/`spec-writer`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/Explore Haiku.

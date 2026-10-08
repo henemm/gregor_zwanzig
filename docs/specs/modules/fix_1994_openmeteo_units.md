@@ -3,7 +3,7 @@ entity_id: fix_1994_openmeteo_units
 type: module
 created: 2026-10-08
 updated: 2026-10-08
-status: draft
+status: approved
 version: "1.0"
 tags: [openmeteo, provider, einheiten, audit-b-04, bugfix]
 workflow: fix-1994-openmeteo-units
@@ -13,7 +13,7 @@ workflow: fix-1994-openmeteo-units
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-10-08 — Umfang inkl. Go-Provider; Dev-Skripte `tools/weather_validation.py`, `scripts/eichung_cape_schwelle.py` ausdrücklich nicht im Scope)
 
 ## Purpose
 
@@ -40,7 +40,7 @@ Produktiv, Python:
 | 6 | `src/providers/geosphere.py:580` (Wolken-Abruf, `get` :598) | api.open-meteo.com `/v1/forecast` | `_koordinaten_params(...)` (:587) | Einheiten im Erbauer |
 | 7 | `src/services/radar_service.py:1017` (Nowcast, `get` :1020) | api.open-meteo.com `/v1/forecast` (`minutely_15`) | `_koordinaten_params(...)` (:1011) | Einheiten im Erbauer |
 
-Gemeinsamer Senke: `OpenMeteoProvider._request` (:633, `get` :682) fuer 1, 2, 4, 5; direkter `self._client.get` fuer 3 (:778) und 6 (:598); `httpx.Client.get` fuer 7 (:1020).
+Gemeinsame Senke: `OpenMeteoProvider._request` (:633, `get` :682) fuer 1, 2, 4, 5; direkter `self._client.get` fuer 3 (:778) und 6 (:598); `httpx.Client.get` fuer 7 (:1020).
 
 Produktiv, Go (`internal/provider/openmeteo/provider.go`):
 
@@ -53,7 +53,7 @@ Nicht produktiv (Dev-/Analyse-Werkzeuge, siehe Offene Fragen): `tools/weather_va
 
 ## Estimated Scope
 
-- **LoC:** ~+60 (Python ~15, Go ~10, Tests ~35 netto im Produktivpfad-Anteil gerechnet; Tests zaehlen voll)
+- **LoC:** ca. +60 (Python ~15, Go ~10, Tests ~35)
 - **Files:** 4-5 (3 Produktiv, 2 Test)
 - **Effort:** low
 

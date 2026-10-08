@@ -3,7 +3,7 @@ entity_id: rework_2230_corridor_path_removal
 type: module
 created: 2026-10-08
 updated: 2026-10-08
-status: draft
+status: approved
 version: "1.0"
 workflow: rework-2230-corridor-path-removal
 tags: [rework, removal, dead-code, alerts, corridor]
@@ -13,7 +13,7 @@ tags: [rework, removal, dead-code, alerts, corridor]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-10-08 — ohne AC-4/Test 2: reiner Rückbau ohne geänderten Datenweg, AC-3 sichert die Ausgaben; `test_cape_not_selectable.py` AC-10 ersatzlos löschen; `loc_limit_override 1500`)
 
 ## Purpose
 
@@ -144,7 +144,6 @@ Kein Produktivpfad befuellt `corridor_hits`. `TripAlertService.check_and_send_al
 ### Automated Tests (TDD RED)
 
 - [ ] Test 1: GIVEN eine aufgezeichnete Referenz-Alarmnachricht eines Trips mit gespeicherten `corridors` WHEN Subject/E-Mail/Telegram/SMS/Premium-SMS gerendert werden THEN sind alle Ausgaben byte-gleich zu den Fixtures (laeuft vor dem Rueckbau gruen, nach dem Rueckbau gruen).
-- [ ] Test 2: GIVEN zwei verschiedene Nutzer mit je einem Trip mit `corridors` WHEN `_send_alert` laeuft THEN geht jede Nachricht nur an die Empfaenger des jeweiligen Nutzers und ist byte-gleich zur Fixture (Zwei-Nutzer-Pflicht).
 - [ ] Test 3: GIVEN ein Trip-JSON mit `corridors` inkl. unbekanntem Zusatzfeld WHEN er geladen und gespeichert wird THEN ist das Feld `corridors` im Ergebnis byte-gleich (bestehend: `test_corridor_persistence.py`, `trip_corridors_write_test.go`).
 - [ ] Test 4: GIVEN der Rueckbau WHEN `services.corridor_threshold`, `CorridorHit`, `CorridorEvent`, `register_pairs_from_corridor_hits` und der Parameter `corridor_hits` importiert/aufgerufen werden THEN schlaegt das mit `ImportError` bzw. `TypeError` fehl (Nachweis ueber `inspect.signature` und echten Import, kein Dateiinhalt-Check).
 - [ ] Test 5: GIVEN ein Trip mit `notify=True`-Korridor, dessen Wert die Grenze reisst WHEN `check_and_send_alerts` laeuft THEN wird kein Alarm versendet (bestehend: `test_corridor_no_longer_triggers_alerts.py`).
@@ -160,7 +159,7 @@ Kein Produktivpfad befuellt `corridor_hits`. `TripAlertService.check_and_send_al
 - **AC-3:** Given ein Trip mit gespeicherten `corridors` (`notify=True`, `mark=True`) und realen Wetteraenderungen / When Alarm-Betreff, E-Mail (HTML und Klartext), Telegram, SMS und Premium-SMS gerendert werden / Then sind alle Ausgaben byte-gleich zu den vor dem Rueckbau aufgezeichneten Fixtures unter `tests/fixtures/alert_corridor_removal_2230/`.
   - Test: neue Datei `tests/tdd/test_alert_ausgabe_nach_korridor_rueckbau.py` rendert mit den echten Renderern und vergleicht mit den Fixtures. Zusaetzlich bleiben gruen: `tests/tdd/test_alert_stufenwort.py`, `test_alert_sms_delta_notation.py`, `test_alert_sms_segment_head.py`, `test_alert_etappen_praefix_kurzform.py`, `test_alert_telegram_stand_zeile.py`, `test_telegram_kurzstil_trip_alert.py`, `test_alert_location_measured_km.py`, `tests/unit/test_alert_channel_premium_sms.py`, `tests/unit/test_official_alert_output_unchanged.py`.
 
-- **AC-4:** Given zwei verschiedene Nutzer mit je einem Trip mit gespeicherten `corridors` und je eigenen Empfaengern / When der Alarm-Lauf fuer beide Trips ausgeloest wird / Then erreicht jede Alarm-Nachricht auf allen konfigurierten Kanaelen (E-Mail, Telegram, SMS, Premium-SMS) ausschliesslich die Empfaenger des eigenen Nutzers, und der Inhalt ist byte-gleich zur Fixture aus AC-3.
+- **AC-4:** _gestrichen (PO-Freigabe 2026-10-08): kein geänderter Datenweg, Ausgabe-Gleichheit sichert AC-3._
   - Test: in `tests/tdd/test_alert_ausgabe_nach_korridor_rueckbau.py` mit lokalen Transport-Stubs (`mail_sink`, Telegram-/SevenIO-Stub wie in `test_alert_etappen_praefix_kurzform.py`), Nutzer ueber `nutzer_mit_tier`; bestehend zusaetzlich `tests/tdd/test_alert_tenancy_two_users.py`.
 
 - **AC-5:** Given gespeicherte Trips (und Orts-Vergleiche) mit `corridors`-Eintraegen inklusive unbekannter Zusatzfelder / When sie nach dem Rueckbau geladen und ueber Python-Loader und Go-Store wieder gespeichert werden / Then ist das Feld `corridors` im gespeicherten JSON unveraendert (Read-Modify-Write ohne Feldverlust), und `src/app/models.py`, `src/app/trip.py`, `src/app/loader.py`, `internal/model/*`, `internal/store/*` sind im Diff nicht enthalten.
