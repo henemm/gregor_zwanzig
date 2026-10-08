@@ -203,6 +203,13 @@ def test_ac17_alle_drei_zweige_behalten_ueber_50_dateien_der_letzten_24h():
     from services import alert_input_capture
 
     uid = _uid("ac17")
+    # Begrenzung je Zweig (Adversary F003): je Zweig ein ueber 24 h alter
+    # Mitschnitt eines Keys, der danach frisch beschrieben wird -- er muss weg.
+    dir_a = get_data_dir(uid) / "alert_input"
+    dir_a.mkdir(parents=True, exist_ok=True)
+    alt_a = _altdatei(dir_a, "forecast_change_trip_e0", 30 * H)
+    alt_b = _altdatei(_system_dir("official_alert"), "vigilance_0", 30 * H)
+    alt_c = _altdatei(_system_dir("nowcast"), "nowcast_0", 30 * H)
     for i in range(60):
         assert alert_input_capture.capture_user_scoped(
             uid, entity_type="trip", entity_id=f"e{i % 3}",
@@ -220,6 +227,10 @@ def test_ac17_alle_drei_zweige_behalten_ueber_50_dateien_der_letzten_24h():
     c = list(_system_dir("nowcast").glob("*.json"))
     assert (len(a), len(b), len(c)) == (60, 60, 60), (
         f"je Zweig 60 Mitschnitte erwartet (a, b, c): {(len(a), len(b), len(c))}"
+    )
+    assert (alt_a.exists(), alt_b.exists(), alt_c.exists()) == (False, False, False), (
+        "je Zweig muss der ueber 24 h alte Mitschnitt entfernt sein (a, b, c): "
+        f"{(alt_a.exists(), alt_b.exists(), alt_c.exists())}"
     )
 
 
@@ -244,3 +255,122 @@ def test_ac18_latest_capture_id_findet_den_mitschnitt_nach_6h_und_50_fremden_dat
     assert alert_input_capture.latest_capture_id(
         "nowcast", key, max_age=24 * H,
     ) == erwartet, "der Mitschnitt wurde vom Ansturm fremder Keys verdraengt"
+
+
+# ---------------------------------------------------------------------------
+# Adversary F006 -- latest_capture_id filtert per Dateinamen-Praefix, bevor es
+# JSON liest; Ergebnis unveraendert (Key mit ``_``, gekuerzter Key)
+# ---------------------------------------------------------------------------
+
+def test_f006_key_mit_unterstrich_und_praefix_nachbar_liefert_den_richtigen():
+    """``nowcast_f6`` und ``nowcast_f6_b`` teilen ein Namenspraefix; jede
+    Abfrage liefert die capture_id IHRES Keys, auch wenn der Nachbar juenger ist."""
+    from services import alert_input_capture
+
+    a = _schreibe("nowcast_f6")
+    b = _schreibe("nowcast_f6_b")
+    assert alert_input_capture.latest_capture_id("nowcast", "nowcast_f6", max_age=H) == a
+    assert alert_input_capture.latest_capture_id("nowcast", "nowcast_f6_b", max_age=H) == b
+
+
+def test_f006_gekuerzte_keys_mit_gleichem_dateipraefix_werden_per_json_getrennt():
+    """``_safe_key`` kuerzt auf 80 Zeichen: zwei Keys, die sich erst danach
+    unterscheiden, landen unter demselben Dateinamen-Praefix -- die Abfrage
+    verifiziert ``source_key`` im JSON und liefert den richtigen Mitschnitt,
+    nicht den juengeren des Nachbarn."""
+    from services import alert_input_capture
+
+    lang_a, lang_b = "n" * 80 + "_A", "n" * 80 + "_B"
+    a = _schreibe(lang_a)
+    b = _schreibe(lang_b)
+    assert alert_input_capture.latest_capture_id("nowcast", lang_a, max_age=H) == a
+    assert alert_input_capture.latest_capture_id("nowcast", lang_b, max_age=H) == b
+
+
+def test_f006_dateien_fremder_keys_werden_nicht_gelesen():
+    """Eine juengere Datei unter FREMDEM Dateinamen-Praefix, deren JSON
+    (faelschlich) denselben ``source_key`` traegt, wird nicht beruecksichtigt
+    -- Beleg, dass Dateien fremder Keys gar nicht erst geoeffnet werden (sonst
+    gewaenne sie als juengster Treffer)."""
+    from services import alert_input_capture
+
+    d = _system_dir("nowcast")
+    eigen_datei = _altdatei(d, "nowcast_f6_eigen", 120)       # 2 min alt
+    eigene = json.loads(eigen_datei.read_text())["capture_id"]
+    fremd = _altdatei(d, "nowcast_f6_fremd", 5)               # 5 s alt, juenger
+    record = json.loads(fremd.read_text())
+    record["source_key"] = "nowcast_f6_eigen"                 # faelschlich gleicher Key
+    fremd.write_text(json.dumps(record))
+
+    assert alert_input_capture.latest_capture_id(
+        "nowcast", "nowcast_f6_eigen", max_age=H,
+    ) == eigene, "eine Datei unter fremdem Dateinamen-Praefix wurde gelesen"
+
+
+# ---------------------------------------------------------------------------
+# Adversary F008 -- Altersfenster von latest_capture_id
+# ---------------------------------------------------------------------------
+
+def test_f008_abgelaufener_einziger_mitschnitt_liefert_none():
+    """Einzige Datei des Keys mit ``captured_at = jetzt - 2*max_age`` (liegt
+    noch im Verzeichnis, juenger als 24 h) -> ausserhalb ``max_age`` -> None."""
+    from services import alert_input_capture
+
+    max_age = 60.0
+    datei = _altdatei(_system_dir("nowcast"), "nowcast_f8_alt", 2 * max_age)
+    assert datei.exists(), "Aufbau: Datei liegt noch im Verzeichnis"
+    assert alert_input_capture.latest_capture_id(
+        "nowcast", "nowcast_f8_alt", max_age=max_age,
+    ) is None
+
+
+def test_f008_zukunftszeitstempel_liefert_none():
+    """Ein Mitschnitt mit ``captured_at`` in der Zukunft ist kein gueltiger
+    Treffer (Uhrensprung/kaputte Datei) -> None."""
+    from services import alert_input_capture
+
+    _altdatei(_system_dir("nowcast"), "nowcast_f8_zukunft", -H)
+    assert alert_input_capture.latest_capture_id(
+        "nowcast", "nowcast_f8_zukunft", max_age=24 * H,
+    ) is None
+
+
+def test_f008_zukunftsdatei_wird_uebersprungen_aelterer_gueltiger_gewinnt():
+    """Die (nach Namen) juengste Datei liegt in der Zukunft und wird
+    uebersprungen; geliefert wird der naechstaeltere gueltige Mitschnitt."""
+    from services import alert_input_capture
+
+    d = _system_dir("nowcast")
+    gueltig = _altdatei(d, "nowcast_f8_misch", 10 * 60)
+    _altdatei(d, "nowcast_f8_misch", -H)
+    erwartet = json.loads(gueltig.read_text())["capture_id"]
+    assert alert_input_capture.latest_capture_id(
+        "nowcast", "nowcast_f8_misch", max_age=H,
+    ) == erwartet
+
+
+# ---------------------------------------------------------------------------
+# Adversary F009 -- Dateien ohne passendes Namensmuster im Prune
+# ---------------------------------------------------------------------------
+
+def test_f009_fremddatei_ohne_namensmuster_stoert_den_mitschnitt_nicht():
+    """Eine ueber 24 h alte Datei, deren Name NICHT dem Muster
+    ``{key}_{zeitstempel}.json`` folgt, liegt im Verzeichnis -> das Schreiben
+    eines Mitschnitts funktioniert, ``latest_capture_id`` findet ihn, und die
+    Fremddatei bleibt unangetastet (nur der Gesamtdeckel duerfte sie treffen)."""
+    from services import alert_input_capture
+
+    d = _system_dir("nowcast")
+    fremd = d / "notizen.json"
+    inhalt = '{"hinweis": "kein Mitschnitt"}'
+    fremd.write_text(inhalt)
+    ts = time.time() - 30 * H
+    os.utime(fremd, (ts, ts))
+
+    cid = alert_input_capture.capture_system(
+        branch="nowcast", source_key="nowcast_f9", payload={"n": 1},
+    )
+
+    assert cid, "Mitschnitt wurde nicht geschrieben (Prune an der Fremddatei gescheitert?)"
+    assert alert_input_capture.latest_capture_id("nowcast", "nowcast_f9", max_age=H) == cid
+    assert fremd.exists() and fremd.read_text() == inhalt, "Fremddatei wurde angetastet"
