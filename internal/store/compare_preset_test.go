@@ -164,3 +164,37 @@ func TestAltVokabularFixture_NamenEindeutig(t *testing.T) {
 		gesehen[fall.Name] = true
 	}
 }
+
+// TestLegacyAlertLevelKeys_GleichtFixtureTabelle (AC-8/AC-9): GIVEN die
+// gemeinsame Fixture-Tabelle WHEN sie gegen die Produktionstabelle
+// legacyAlertLevelKeys gehalten wird THEN sind beide gleich (JSON null == "").
+// Das Python-Pendant ist test_produktionstabelle_gleicht_fixture_tabelle.
+func TestLegacyAlertLevelKeys_GleichtFixtureTabelle(t *testing.T) {
+	_, self, _, _ := runtime.Caller(0)
+	path := filepath.Join(filepath.Dir(self), "..", "..", "tests", "fixtures",
+		"metric_alert_levels_alt_vokabular", "faelle.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Fixture lesen: %v", err)
+	}
+	var doc struct {
+		Tabelle map[string]*string `json:"tabelle"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("Fixture parsen: %v", err)
+	}
+	erwartet := map[string]string{}
+	for alt, neu := range doc.Tabelle {
+		if neu == nil {
+			erwartet[alt] = ""
+		} else {
+			erwartet[alt] = *neu
+		}
+	}
+	if len(erwartet) == 0 {
+		t.Fatal("Fixture-Tabelle ist leer")
+	}
+	if !reflect.DeepEqual(erwartet, legacyAlertLevelKeys) {
+		t.Fatalf("legacyAlertLevelKeys weicht von der Fixture-Tabelle ab:\nFixture: %v\nProd:    %v", erwartet, legacyAlertLevelKeys)
+	}
+}

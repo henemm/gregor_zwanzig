@@ -36,6 +36,7 @@ RED (schlaegt HEUTE fehl):
 GUARD (HEUTE gruen, darf nicht kippen):
   - test_trip_ohne_alt_schluessel_bleibt_unveraendert             (AC-7, zweite Haelfte)
   - test_uebersetzungstabelle_deckt_sich_mit_katalog              (AC-8)
+  - test_produktionstabelle_gleicht_fixture_tabelle               (AC-8/AC-9)
   - AC-6 Regel-Haelfte (Regelmenge == Standard-Satz) innerhalb des AC-6-Tests
   - AC-10 zweite Haelfte: bestehende
     `test_compare_alert_missing_active_metrics_with_levels.py` (CAPE bleibt)
@@ -55,7 +56,8 @@ sys.path.insert(0, str(_REPO / "src"))
 
 from app.config import Settings  # noqa: E402
 from app.loader import (  # noqa: E402
-    compare_preset_to_dict, load_compare_presets, load_trip_from_dict,
+    _ALT_ALERT_LEVEL_KEYS, compare_preset_to_dict, load_compare_presets,
+    load_trip_from_dict,
 )
 from app.metric_catalog import _METRICS_BY_ID, alert_metric_for  # noqa: E402
 from services.alert_preset import expand_per_metric_levels  # noqa: E402
@@ -284,6 +286,14 @@ def test_trip_ohne_alt_schluessel_bleibt_unveraendert():
 
 
 # ══════════════════════════════ AC-8 ═════════════════════════════════════════
+
+def test_produktionstabelle_gleicht_fixture_tabelle():
+    """AC-8/AC-9 GIVEN die gemeinsame Fixture-Tabelle WHEN sie gegen die
+    Produktionstabelle `_ALT_ALERT_LEVEL_KEYS` gehalten wird THEN sind beide
+    gleich (JSON null == None). Ohne diesen Vergleich bliebe ein nur in einer
+    der beiden Produktionstabellen (Python/Go) geaenderter Eintrag unentdeckt."""
+    assert dict(_ALT_ALERT_LEVEL_KEYS) == _faelle()["tabelle"]
+
 
 def test_uebersetzungstabelle_deckt_sich_mit_katalog():
     """AC-8 GIVEN die Uebersetzungstabelle WHEN jeder Summary-Alt-Schluessel
