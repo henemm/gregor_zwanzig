@@ -99,6 +99,8 @@ func normalizeLoadedComparePreset(p *model.ComparePreset) {
 		p.ForecastHours = 48
 	}
 	migrateComparePresetSlots(p)
+	// Issue #1981: Alt-Vokabular in metric_alert_levels -> Alarm-Namen.
+	migrateMetricAlertLevels(p.DisplayConfig)
 	// Issue #2293 S2: Altbestand-Bereinigung VOR dem generischen
 	// NormalizeComparePreset-Aufruf (der materialisiert mit cleanup=false,
 	// no-op sobald AlertChannels != nil) -- nur der Lade-Pfad einer

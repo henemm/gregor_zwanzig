@@ -43,6 +43,10 @@ func normalizeTrip(trip *model.Trip) {
 	// Stages ABGELEITET — nie stale. ReportConfig bleibt die einzige Wahrheit
 	// fuer den Versand, s. docs/context/feat-1250-s4-trip-konvergenz.md.
 	deriveFlatFields(trip)
+
+	// Issue #1981: Alt-Vokabular in metric_alert_levels auch beim Laden
+	// uebersetzen (Save-Pfad ruft es zusaetzlich, idempotent).
+	migrateMetricAlertLevels(trip.DisplayConfig)
 }
 
 // deriveFlatFields leitet additive, nicht-autoritative flache Slot-/Kanal-
@@ -324,26 +328,46 @@ func (s *Store) DeleteTrip(id string) error {
 	return err
 }
 
-// migrateMetricAlertLevels verschiebt einen Legacy-Key
-// "display_config.metric_alert_levels.snow_line" nach "freezing_level",
-// falls letzterer noch nicht gesetzt ist. Siehe Python-_migrate_metric_alert_levels
-// (Issue #959) und Go-Pendant Issue #1000.
+// legacyAlertLevelKeys: Alt-Schluessel (Summary-Vokabular) -> Alarm-Name,
+// "" = verwerfen. Deckungsgleich mit Python `_ALT_ALERT_LEVEL_KEYS` (Issue #1981).
+var legacyAlertLevelKeys = map[string]string{
+	"temp_max_c":        "temperature_max",
+	"temp_min_c":        "temperature_min",
+	"gust_max_kmh":      "wind_gust",
+	"precip_sum_mm":     "precipitation_sum",
+	"visibility_min_m":  "visibility",
+	"cape_max_jkg":      "cape",
+	"thunder_level_max": "thunder_level",
+	"wind_max_kmh":      "wind_change",
+	"snow_line":         "freezing_level", // Issue #959/#1000
+	"wind_chill_min_c":  "",
+}
+
+// normalizeMetricAlertLevels uebersetzt Alt-Schluessel in-place; ein vorhandener
+// Neu-Schluessel gewinnt, andere Schluessel bleiben unveraendert (idempotent).
+func normalizeMetricAlertLevels(levels map[string]interface{}) {
+	for alt, neu := range legacyAlertLevelKeys {
+		v, ok := levels[alt]
+		if !ok {
+			continue
+		}
+		if neu != "" {
+			if _, exists := levels[neu]; !exists {
+				levels[neu] = v
+			}
+		}
+		delete(levels, alt)
+	}
+}
+
+// migrateMetricAlertLevels wendet die Alt-Vokabular-Uebersetzung auf
+// display_config.metric_alert_levels an. Siehe Python-_migrate_metric_alert_levels
+// (Issues #959/#1981) und Go-Pendant Issue #1000.
 func migrateMetricAlertLevels(displayConfig map[string]interface{}) {
 	if displayConfig == nil {
 		return
 	}
-	raw, ok := displayConfig["metric_alert_levels"]
-	if !ok {
-		return
-	}
-	levels, ok := raw.(map[string]interface{})
-	if !ok {
-		return
-	}
-	if v, ok := levels["snow_line"]; ok {
-		if _, exists := levels["freezing_level"]; !exists {
-			levels["freezing_level"] = v
-		}
-		delete(levels, "snow_line")
+	if levels, ok := displayConfig["metric_alert_levels"].(map[string]interface{}); ok {
+		normalizeMetricAlertLevels(levels)
 	}
 }

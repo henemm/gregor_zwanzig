@@ -353,6 +353,9 @@ def load_compare_presets(
         # bleiben load_all_trips vorbehalten (keine Doppelklassifizierung).
         if data.get("kind") != "vergleich":
             continue
+        # Issue #1981: Alt-Vokabular nur im Speicher normalisieren (raw + Feld).
+        if "display_config" in data:
+            data = {**data, "display_config": _migrate_preset_display_config(data["display_config"])}
         presets.append(compare_preset_from_dict(data))
     return presets
 
@@ -761,21 +764,49 @@ def _normalize_legacy_mode(mc_data: Dict[str, Any]) -> tuple[Optional[str], bool
     return mode, mc_data.get("use_friendly_format", True)
 
 
-def _migrate_metric_alert_levels(levels: Any) -> Any:
-    """Issue #959: snow_line → freezing_level (Read-Modify-Write, kein Datenverlust).
+# Issue #1981: Alt-Schluessel (Summary-Vokabular) -> Alarm-Name. None = verwerfen.
+# Deckungsgleich mit Go (internal/store/trip.go `legacyAlertLevelKeys`).
+_ALT_ALERT_LEVEL_KEYS: Dict[str, Optional[str]] = {
+    "temp_max_c": "temperature_max",
+    "temp_min_c": "temperature_min",
+    "gust_max_kmh": "wind_gust",
+    "precip_sum_mm": "precipitation_sum",
+    "visibility_min_m": "visibility",
+    "cape_max_jkg": "cape",
+    "thunder_level_max": "thunder_level",
+    "wind_max_kmh": "wind_change",
+    "snow_line": "freezing_level",  # Issue #959
+    "wind_chill_min_c": None,
+}
 
-    Nullgradgrenze ist zu EINER Alert-Metrik (freezing_level) konsolidiert. Alt-
-    persistierte Trips mit `metric_alert_levels.snow_line` werden beim Laden
-    umbenannt — bestehendes Dict kopieren, nur diesen Key verschieben, alle
-    anderen Felder unangetastet lassen (BUG-DATALOSS-GR221-Lehre). Ein bereits
-    vorhandener freezing_level-Eintrag gewinnt (kein Überschreiben).
+
+def _migrate_metric_alert_levels(levels: Any) -> Any:
+    """Issues #959/#1981: Alt-Schluessel in `metric_alert_levels` -> Alarm-Namen.
+
+    Read-Modify-Write auf einer Kopie (BUG-DATALOSS-GR221-Lehre): nur Alt-
+    Schluessel werden verschoben bzw. verworfen, alle anderen bleiben
+    unveraendert. Ein bereits vorhandener Neu-Schluessel gewinnt. Idempotent.
     """
-    if not isinstance(levels, dict) or "snow_line" not in levels:
+    if not isinstance(levels, dict) or not any(k in levels for k in _ALT_ALERT_LEVEL_KEYS):
         return levels
     migrated = dict(levels)
-    value = migrated.pop("snow_line")
-    migrated.setdefault("freezing_level", value)
+    for alt, neu in _ALT_ALERT_LEVEL_KEYS.items():
+        if alt not in migrated:
+            continue
+        value = migrated.pop(alt)
+        if neu is not None:
+            migrated.setdefault(neu, value)
     return migrated
+
+
+def _migrate_preset_display_config(dc: Any) -> Any:
+    """Issue #1981: Alt-Vokabular in display_config.metric_alert_levels (nur im Speicher)."""
+    if not isinstance(dc, dict) or "metric_alert_levels" not in dc:
+        return dc
+    levels = _migrate_metric_alert_levels(dc["metric_alert_levels"])
+    if levels is dc["metric_alert_levels"]:
+        return dc
+    return {**dc, "metric_alert_levels": levels}
 
 
 def _ist_waehlbare_katalog_groesse(metric_id: str) -> bool:

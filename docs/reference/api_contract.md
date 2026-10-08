@@ -4524,6 +4524,15 @@ eine zweite Regel mit demselben Feld wieder scharf wird (`wind_change` ⊃ `gust
 `display_config` bleibt in diesem Fall bewusst `None` — sonst entfiele die CAPE-Regel, deren
 Katalog-Größe seit #1585 `selectable=False` trägt.
 
+**Normalisierung Alt-Vokabular beim Laden (Issue #1981):** Bestandsdaten können Alt-Schlüssel im
+Summary-Vokabular enthalten (`temp_max_c`, `gust_max_kmh`, `cape_max_jkg`, `precip_sum_mm`,
+`visibility_min_m`, `thunder_level_max`, `wind_max_kmh`, `wind_chill_min_c`, `snow_line`).
+Diese werden beim Laden in Python (`src/app/loader.py`) und Go (`internal/store/trip.go`,
+`internal/store/compare_preset.go`) auf Alarm-Namen übersetzt (`temperature_max`, `wind_gust` …);
+`wind_chill_min_c` wird verworfen. Ein existierender Neu-Schlüssel gewinnt bei Doppelbelegung.
+Fremde Schlüssel bleiben unverändert. Der Normalisierer ist idempotent. Dies ermöglicht, dass
+eine im Editor abgewählte Alarm-Metrik (Stufe „off") auch bei Alt-Datenbestand wirkt.
+
 **`corridors[].metric` trug zwei Namensräume** (#1444 S2a, aus `resolve_corridor_summary_field()`
 in `corridor_threshold.py`): eine `AlertMetric`-Kennung (die 5 fest verdrahteten Zeilen, z.B.
 `wind_gust`, `snow_line`) ODER einen Katalog-`key` (die 18 seit #1425 aus dem Katalog gespeisten
