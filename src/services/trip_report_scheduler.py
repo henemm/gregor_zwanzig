@@ -12,7 +12,6 @@ import dataclasses
 import json
 import logging
 import os
-import threading
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
