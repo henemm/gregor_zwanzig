@@ -214,29 +214,29 @@ def test_radar_alert_trip_short_survives_double_truncation():
     falten, dann nochmal kuerzen), die Buchstaben frisst, weil 'ü' -> 'ue'
     beim Falten waechst.
 
-    Retargeted ZWEIMAL, jedesmal weil der VORHERIGE Traeger-Pfad die
+    Retargeted DREIMAL, jedesmal weil der VORHERIGE Traeger-Pfad die
     Doppelkuerzung verlor — die Pruefling-Logik selbst blieb unveraendert:
-    (1) Issue #1935/#1779 E4: weg vom reinen Trip-Radar/Onset-Pfad, der
-    seither keinen Namen mehr im Kopf fuehrt, hin zum Compare-Radar-
-    Buendel-Pfad. (2) Issue #1948 S4 (2026-08-19): auch der Onset-Buendel-Kopf
-    fuehrt seither den Ortsnamen aus `location_label` statt des gekuerzten
-    `trip_short` — die Kuerzungslogik `_ascii(msg.trip_short)[:16].rstrip(...)`
-    lebt unveraendert im Schwellen-Alarm-Kopf (`_render_sms_corridor_only`,
-    render.py:872) und im Trip-Aenderungs-Kopf (render.py:922) weiter. Dorthin
-    verlegt dieser Test die Fixture — wieder ohne den Pruefling zu aendern.
-    Blieben wir am Onset-Pfad, waere der Test still bedeutungslos gruen."""
-    from output.renderers.alert.model import AlertMessage, CorridorEvent
+    (1) Issue #1935/#1779 E4: weg vom reinen Trip-Radar/Onset-Pfad. (2) Issue
+    #1948 S4: auch der Onset-Buendel-Kopf fuehrt den Ortsnamen aus
+    `location_label`. (3) Issue #2230: der Schwellen-Alarm-Kopf
+    (`_render_sms_corridor_only`) ist mit dem Korridor-Pfad entfernt. Die
+    Kuerzung `_ascii(msg.trip_short)[:16].rstrip(...)` lebt unveraendert im
+    Kopf des Aenderungs-Alarms mit nachrichtenweitem `location_label` (Ein-Ort-
+    Ortsvergleich, `_render_sms_body`, Zweig `elif msg.location_label`) weiter.
+    Dorthin verlegt dieser Test die Fixture — wieder ohne den Pruefling zu
+    aendern."""
+    from output.renderers.alert.model import AlertEvent, AlertMessage
     from output.renderers.alert.render import render_sms
     from utils.ascii_fold import fold_ascii
 
     trip_short = "Wandergruppe München"
-    corridor = CorridorEvent(
-        metric_id="temperature", value=31.0, bound=30.0, direction="above",
-        occurred_at="14:00", km_from=0.0, km_to=5.0,
+    event = AlertEvent(
+        metric_id="temperature", value_from=20.0, value_to=31.0, threshold=5.0,
+        cmp="über", occurred_at="14:00", km_from=0.0, km_to=5.0,
     )
     msg = AlertMessage(
-        trip_short=trip_short, stand_at="14:00", events=(),
-        corridor_events=(corridor,), cooldown_display="60 Min",
+        trip_short=trip_short, stand_at="14:00", events=(event,), source=None,
+        location_label="Ort",
     )
 
     sms = render_sms(msg)

@@ -5,7 +5,7 @@ SPEC:    docs/specs/modules/fix_2122_etappen_praefix_kurzform.md (AC-1..AC-12)
 KONTEXT: docs/context/fix_2122_etappen_praefix_kurzform.md
 
 RED-VERTRAG: `stage_number` existiert heute auf KEINEM der vier
-Ereignis-Datenmodelle (`AlertEvent`, `OnsetEvent`, `CorridorEvent`,
+Ereignis-Datenmodelle (`AlertEvent`, `OnsetEvent`,
 `OnsetShiftEvent`, `RadarAlertRequest`), der Kopfbau in `render.py` kennt kein
 Praefix. Jede Konstruktion/jeder Aufruf mit diesem Schluesselwort schlaegt mit
 `TypeError` fehl; wo der Text ohne das Schluesselwort auskommt (AC-8/AC-9),
@@ -17,7 +17,7 @@ Als Naht dienen echte lokale HTTP-Stubs (seven.io- und Telegram-Bot-API,
 Loopback-Socket, 1:1 das Muster aus `test_alert_sms_location_positions.py`
 und `test_telegram_kurzstil_trip_alert.py`) sowie echte `Trip`/`Stage`/
 `AlertEvent`-DTOs und echte Produktions-Projektionsfunktionen
-(`to_alert_message`, `to_multi_point_alert_message`, `to_corridor_events`).
+(`to_alert_message`, `to_multi_point_alert_message`).
 Kein Netz, kein echter Versand — jeder Kanal ist entweder ein lokaler Stub
 oder eine reine Aufzeichnungs-Senke.
 
@@ -55,7 +55,6 @@ from app.trip import Stage, Trip, Waypoint
 from output.renderers.alert.model import AlertEvent, AlertMessage
 from output.renderers.alert.project import to_multi_point_alert_message
 from output.renderers.alert.render import render_sms
-from services.corridor_threshold import CorridorHit
 from services.notification_service import NotificationService, RadarAlertRequest
 from services.official_alerts.models import OfficialAlert
 from services.weather_snapshot import WeatherSnapshotService
@@ -404,46 +403,6 @@ def test_ac3_onset_shift_alert_carries_stage_prefix():
         assert text.startswith("S3 "), (
             f"AC-3: die Beginn-Verschiebung muss das Etappen-Praefix tragen, "
             f"gemessen: {text!r}"
-        )
-    finally:
-        stub.stop()
-
-
-# ═══════════════════════ AC-4 — Korridor (Schwellen-Treffer) ════════════════
-
-def test_ac4_corridor_alert_carries_stage_prefix():
-    """AC-4: ein reiner Schwellen-Treffer (`CorridorEvent`, ueber
-    `to_corridor_events`/`corridor_hits`) traegt das Etappen-Praefix VOR der
-    Ortsangabe. Der Korridor-Kopf traegt (anders als der Δ-Kopf) zusaetzlich
-    den Trip-Namen (`_render_sms_corridor_only`, `render.py:1613-1615`) — die
-    Spec verlangt nur "vor der Ortsangabe" (AC-4-Wortlaut), nicht zwingend am
-    Textanfang. Geprueft wird deshalb die relative Position ('S3' VOR der
-    Ortsangabe 'Seg 1:'), nicht `startswith`.
-    """
-    trip = _multi_stage_trip()
-    hit = CorridorHit(
-        metric="wind_gust", value=90.0, bound=70.0, direction="above",
-        segment_id="1", occurred_at=datetime.now(UTC),
-    )
-    stub = _SevenIoStub()
-    try:
-        svc = NotificationService(
-            settings=_settings_sms_only(stub.port),
-            user_id=nutzer_mit_tier(f"tdd-2122-ac4-{uuid.uuid4().hex[:6]}"),
-        )
-        svc.send_deviation_alert(
-            trip=trip, weather=[_segment_weather_data()], changes=[],
-            corridor_hits=[hit], effective_channels={"sms"},
-        )
-        assert len(stub.received) == 1
-        text = stub.received[0]["text"]
-        assert "S3" in text and "Seg 1:" in text, (
-            f"AC-4: der Korridor-Alarm muss das Etappen-Praefix 'S3' UND die "
-            f"gewohnte Ortsangabe 'Seg 1:' tragen, gemessen: {text!r}"
-        )
-        assert text.index("S3") < text.index("Seg 1:"), (
-            "AC-4: 'S3' muss VOR der Ortsangabe 'Seg 1:' stehen, gemessen: "
-            f"{text!r}"
         )
     finally:
         stub.stop()

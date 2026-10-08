@@ -21,7 +21,7 @@ from output.tokens.metrics import LEVELS, _fmt_num
 from utils.ascii_fold import fold_ascii
 
 from .model import (
-    AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
+    AlertEvent, AlertMessage, OnsetEvent, OnsetShiftEvent,
     arrow, km_span, over_thr, severity, side_label,
 )
 from .project import COMPARE_RADAR_SOURCE
@@ -85,8 +85,8 @@ def _val_raw(e: AlertEvent, value: float) -> str:
 
 
 def _val(e: AlertEvent, value: float) -> str:
-    """Wert MIT Einheit fuer eine POSITION (value_from/value_to, Korridor-
-    bound/value) — Email/Telegram/Betreff. Bei Stufenmetriken (`is_level`)
+    """Wert MIT Einheit fuer eine POSITION (value_from/value_to) —
+    Email/Telegram/Betreff. Bei Stufenmetriken (`is_level`)
     das deutsche Stufenwort statt der Ordinalzahl (Issue #1948 S6, Leit-
     unterscheidung Positionen vs. Abstaende); Werte ausserhalb 0-3 fallen auf
     die bisherige Zahlform zurueck (AC-13)."""
@@ -194,17 +194,12 @@ def _label(e: AlertEvent) -> str:
 def _deviation_label(e: AlertEvent) -> str:
     """Kuerzel der Abweichungs-Alarmzeile -- STUFENABHAENGIG (Issue #2176).
 
-    Schwesterfunktion zu `_corridor_label()` mit derselben Regel, angewandt auf
-    die Felder des Abweichungs-Ereignisses: bleiben VORHER- UND NACHHER-Wert
-    auf "leicht" oder darunter, traegt die Zeile keine Ereignisbehauptung mehr
+    Bleiben VORHER- UND NACHHER-Wert auf "leicht" oder darunter, traegt die Zeile keine Ereignisbehauptung mehr
     -- "leicht" misst eine Luftmasse. Sobald einer der beiden MED/HIGH
     erreicht, bleibt es bei "Gewitter" (Spec AC-6) -- deshalb der Blick auf
     BEIDE Werte, nicht nur auf `value_to`.
 
-    Ohne diese Weiche sagte derselbe Alarmbereich bei identischer Stufe je nach
-    Alarmart Verschiedenes: der Korridor-Alarm "Luftmasse", der
-    Abweichungs-Alarm "Gewitter". `_label()` selbst bleibt levelunabhaengig --
-    es ist weiterhin der Metrikname fuer MED/HIGH, fuer die
+    `_label()` selbst bleibt levelunabhaengig -- es ist weiterhin der Metrikname fuer MED/HIGH, fuer die
     Beginn-Verschiebungs-Ereignisse und fuer jede andere Groesse.
     """
     if _is_level_metric(e.metric_id):
@@ -247,7 +242,7 @@ def _stage_prefix(events) -> str:
     """Issue #2122: die EINE Stelle, an der das Etappen-Praefix der
     Alarm-Kurzform entsteht -- alle vier Kopf-Zweige stellen ihr Ergebnis
     voran (`_render_sms_onset_shift_only`, `_render_sms_onset`,
-    `_render_sms_corridor_only`, `_render_sms_body`).
+    `_render_sms_body`).
 
     Fehlt bei IRGENDEINEM Ereignis die Etappen-Nummer, entfaellt das Praefix
     GANZ -- eine Teilangabe waere unehrlich (dieselbe Logik wie
@@ -403,29 +398,7 @@ def _km_str_onset(e: OnsetEvent) -> str:
     return _location_of((e,))
 
 
-# --- Schwellen-Treffer (Issue #1444 S1, ADR-0013: eigener Render-Vertrag,
-# KEIN "vorher", KEIN "von A auf B") -----------------------------------------
-
-def _corridor_where(ce: CorridorEvent) -> str:
-    """Ortsangabe EINES Schwellen-Treffers (Issue #2036, Adversary F001) --
-    ueber DIESELBE geteilte Aufloesung wie alle anderen Alarmarten
-    (`segments.format_alert_location`). Vorher baute dieser Zweig seine
-    km-Spanne selbst und umging damit sowohl die Segment-Sprache (#1744)
-    als auch die Echtheitspruefung (#2036 AC-13): eine unvermessene Etappe
-    zeigte eine aus Luftlinie erfundene Kilometerangabe."""
-    return format_alert_location(
-        ce.location_label, [getattr(ce, "segment_id", None)],
-        ce.km_from, ce.km_to,
-        km_measured=getattr(ce, "km_measured", False),
-    )
-
-
-def _corridor_when(ce: CorridorEvent) -> str:
-    when = _corridor_where(ce)
-    if ce.occurred_at:
-        when += f" · {ce.occurred_at}"
-    return when
-
+# --- Hagel-Zusaetze (Issue #2205) -------------------------------------------
 
 def _hail_note_suffix(e) -> str:
     """Issue #2205: bestehende Hagelaussage (`format_hail_note`) als Zusatz
@@ -441,47 +414,6 @@ def _sms_hail_suffix(e) -> str:
     from output.tokens.builder import FORECAST_TH_HAIL_SUFFIX
 
     return FORECAST_TH_HAIL_SUFFIX if getattr(e, "hail_flag", None) is True else ""
-
-
-def _corridor_value_str(ce: CorridorEvent) -> str:
-    return (
-        f"Grenze {_val(ce, ce.bound)} · jetzt {_val(ce, ce.value)}"
-        f"{_hail_note_suffix(ce)}"
-    )
-
-
-def _corridor_label(ce: CorridorEvent) -> str:
-    """Kuerzel der Korridor-Alarmzeile -- STUFENABHAENGIG (Issue #2176).
-
-    Bei der Gewitter-Metrik traegt ein Treffer, der die Stufe "leicht" WEDER
-    an der Grenze NOCH am Ist-Wert verlaesst, keine Ereignisbehauptung mehr:
-    "leicht" misst eine Luftmasse. Sobald Grenze ODER Ist-Wert MED/HIGH
-    erreicht, bleibt es bei "Gewitter" (Spec AC-6, Regressionsanker) --
-    deshalb der Blick auf BEIDE Werte, nicht nur auf `ce.value`.
-    """
-    if _is_level_metric(ce.metric_id):
-        from app.models import ThunderLevel
-        from output.metric_format import thunder_ordinal
-
-        low = thunder_ordinal(ThunderLevel.LOW)
-        if max(int(round(ce.bound, 0)), int(round(ce.value, 0))) <= low:
-            return "Luftmasse"
-    return _label(ce)
-
-
-def _corridor_line(ce: CorridorEvent) -> str:
-    """Eigener Wortlaut: NIE 'vorher', NIE 'von A auf B' -- nur Groesse,
-    Grenze, Ist-Wert, Etappe (Issue #1444 S1, ADR-0013)."""
-    return (
-        f"{_corridor_label(ce)}: deine Grenze {_val(ce, ce.bound)} ist "
-        f"gerissen — jetzt {_val(ce, ce.value)}{_hail_note_suffix(ce)} "
-        f"({_corridor_when(ce)})"
-    )
-
-
-def _sms_corridor_token(ce: CorridorEvent) -> str:
-    tok = f"!{_code(ce)}{int(round(ce.value))}{_sms_hail_suffix(ce)}"
-    return tok + f"@{ce.occurred_at[:2]}" if ce.occurred_at else tok
 
 
 # --- Beginn-Verschiebung (Issue #1468, ADR-0013: eigener Render-Vertrag --
@@ -542,7 +474,7 @@ def _sms_onset_shift_token(oe: OnsetShiftEvent) -> str:
 
 def _render_email_onset_shift_only(msg: AlertMessage) -> tuple[str, str]:
     """Reine Beginn-Verschiebung ohne Wert-Aenderungs-Anteil -- Bauform 1:1
-    wie `_render_email_corridor_only` (Issue #1444 S1)."""
+    wie die Wert-Aenderungs-Mail (Issue #1444 S1)."""
     h1 = _onset_shift_h1(msg)
     footer = f"Stand: heute {msg.stand_at}"
     plain = "\n".join(
@@ -1270,7 +1202,7 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
 def render_subject(msg: AlertMessage) -> str:
     if msg.source is not None:
         return _render_subject_onset(msg)
-    if not msg.events and not msg.corridor_events and msg.onset_shift_events:
+    if not msg.events and msg.onset_shift_events:
         # Issue #1468: reine Beginn-Verschiebung ohne Wert-Aenderungs-Anteil.
         oe = msg.onset_shift_events[0]
         mehr = (f" +{len(msg.onset_shift_events) - 1}"
@@ -1279,13 +1211,6 @@ def render_subject(msg: AlertMessage) -> str:
             f"[{msg.trip_short}] {_onset_shift_where(oe)} · {_label(oe)}-Beginn "
             f"{oe.to_time} ({oe.shift_text}){mehr}"
         )
-    if not msg.events and msg.corridor_events:
-        # Issue #1444 S1 (AC-1/2/5): reiner Schwellen-Alarm ohne Aenderungs-Anteil.
-        n = len(msg.corridor_events)
-        if n == 1:
-            ce = msg.corridor_events[0]
-            return f"[{msg.trip_short}] {_corridor_when(ce)} · Grenze gerissen: {_corridor_label(ce)}"
-        return f"[{msg.trip_short}] {n} Grenzen gerissen"
     evs = _sorted(msg)
     km = _km_str(msg)
     if len(evs) == 1:
@@ -1421,43 +1346,14 @@ def _with_origin(html: str, plain: str, mail_type: str, source: str) -> tuple[st
     return html, plain
 
 
-def _render_email_corridor_only(msg: AlertMessage) -> tuple[str, str]:
-    """Reiner Schwellen-Alarm ohne Aenderungs-Anteil (Issue #1444 S1,
-    AC-1/AC-2/AC-5) -- eigener Render-Pfad, kein `WeatherChange`-Missbrauch,
-    kein erfundenes "vorher" (ADR-0013)."""
-    n = len(msg.corridor_events)
-    h1 = (
-        f"{_corridor_label(msg.corridor_events[0])}: Grenze gerissen" if n == 1
-        else f"{n} Grenzen gerissen"
-    )
-    footer = f"Stand: heute {msg.stand_at}"
-    plain = "\n".join(
-        [h1, "", *[_corridor_line(ce) for ce in msg.corridor_events], "", footer]
-    )
-    rows = [
-        _datarow_html(_corridor_label(ce), _corridor_value_str(ce), G_DANGER, i == 0)
-        for i, ce in enumerate(msg.corridor_events)
-    ]
-    html = (
-        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
-        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
-        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
-        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
-        "</body></html>"
-    )
-    return _with_origin(html, plain, "deviation-alert", "Open-Meteo")
-
-
 def render_email(msg: AlertMessage) -> tuple[str, str]:
     if msg.source is not None:
         html, plain = _render_email_onset(msg)
         # AC-5 (Befund 4a): reale Quelle des ersten (fuehrenden) Onset-Events.
         onset_source = getattr(msg.events[0], "source_label", None) or "Open-Meteo"
         return _with_origin(html, plain, "radar-alert", onset_source)
-    if not msg.events and not msg.corridor_events and msg.onset_shift_events:
+    if not msg.events and msg.onset_shift_events:
         return _render_email_onset_shift_only(msg)
-    if not msg.events and msg.corridor_events:
-        return _render_email_corridor_only(msg)
     evs = _sorted(msg)
     h1 = _h1(msg)
     single = len(evs) == 1
@@ -1543,17 +1439,12 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         plain_data = [f"{k}: {v}" for k, v in data_rows]
 
     verdict_bg = G_DANGER if any_over else G_SUCCESS
-    # Issue #1444 S1 (AC-6): Schwellen-Treffer desselben Laufs in dieselbe
-    # Nachricht buendeln -- eigener Wortlaut, kein erfundenes "vorher".
-    corridor_lines = [_corridor_line(ce) for ce in msg.corridor_events]
     # Issue #1468 (PO-Entscheid): Beginn- UND Stufenaenderung werden beide
     # gemeldet, aber im Text DERSELBEN Nachricht zusammengefasst.
     onset_lines = [_onset_shift_line(oe) for oe in msg.onset_shift_events]
     plain_parts = [h1, "", verdict_text, ""] + plain_data
     if onset_lines:
         plain_parts += ["", *onset_lines]
-    if corridor_lines:
-        plain_parts += ["", *corridor_lines]
     plain_parts += ["", footer]
     plain = "\n".join(plain_parts)
 
@@ -1573,8 +1464,6 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
             f"{oe.from_time} → {_onset_shift_to(oe)} ({oe.shift_text})",
             G_DANGER, not rows,
         ))
-    for ce in msg.corridor_events:
-        rows.append(_datarow_html(_corridor_label(ce), _corridor_value_str(ce), G_DANGER, not rows))
 
     html = (
         "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
@@ -1594,15 +1483,10 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
 def render_telegram(msg: AlertMessage) -> str:
     if msg.source is not None:
         return _render_telegram_onset(msg)
-    if not msg.events and not msg.corridor_events and msg.onset_shift_events:
+    if not msg.events and msg.onset_shift_events:
         # Issue #1468: reine Beginn-Verschiebung.
         lines = [f"<b>{_esc(f'{msg.trip_short} · {_onset_shift_h1(msg)}')}</b>"]
         lines += [_onset_shift_line(oe) for oe in msg.onset_shift_events]
-        return "\n".join(lines)
-    if not msg.events and msg.corridor_events:
-        # Issue #1444 S1 (AC-1/2/5): reiner Schwellen-Alarm.
-        lines = [f"<b>{_esc(msg.trip_short)}</b>"]
-        lines += [_corridor_line(ce) for ce in msg.corridor_events]
         return "\n".join(lines)
     evs = _sorted(msg)
     km = _km_str(msg)
@@ -1637,10 +1521,9 @@ def render_telegram(msg: AlertMessage) -> str:
             for e in evs
         )
         lines = [f"<b>{_esc(verdict)}</b>", metric_line]
-    # Issue #1468 / #1444 S1 (AC-6): Beginn-Verschiebungen und Schwellen-
-    # Treffer desselben Laufs anhaengen -- eine Nachricht, nicht drei.
+    # Issue #1468: Beginn-Verschiebungen desselben Laufs anhaengen -- eine
+    # Nachricht, nicht zwei.
     lines += [_onset_shift_line(oe) for oe in msg.onset_shift_events]
-    lines += [_corridor_line(ce) for ce in msg.corridor_events]
     # Issue #1948 S6 (AC-11): dieselbe Stand-/Vergleichszeile wie die E-Mail
     # -- AUSSCHLIESSLICH hier, niemals in render_sms (AC-12, der Telegram-
     # Kurzstil sendet render_sms()s Text unveraendert weiter).
@@ -1724,28 +1607,6 @@ def _sms_rest_token(e: AlertEvent) -> str | None:
     return tok
 
 
-def _render_sms_corridor_only(msg: AlertMessage, limit: int) -> str:
-    """Reiner Schwellen-Alarm ohne Aenderungs-Anteil (Issue #1444 S1)."""
-    trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
-    prefix = _stage_prefix(msg.corridor_events)  # Issue #2122
-    if msg.location_label:
-        head = f"{prefix}{trip} {_ascii(msg.location_label)[:24]}: "
-    else:
-        # Issue #2036 (Adversary F001): dieselbe Aufloesung wie Betreff,
-        # E-Mail und Telegram -- Segment-Sprache bzw. gemessene km-Spanne,
-        # nie eine aus Luftlinie erfundene Zahl (AC-13). Alles-oder-nichts
-        # ueber die Treffer desselben Laufs, analog `_location_of`.
-        evs = msg.corridor_events
-        where = format_alert_location(
-            None, [getattr(ce, "segment_id", None) for ce in evs],
-            min(ce.km_from for ce in evs), max(ce.km_to for ce in evs),
-            km_measured=all(getattr(ce, "km_measured", False) for ce in evs),
-        )
-        head = f"{prefix}{trip} {_ascii_alert_location(where)}: "
-    body = head + " ".join(_sms_corridor_token(ce) for ce in msg.corridor_events)
-    return body if len(body) <= limit else body[:limit]
-
-
 # Issue #2018 (AC-B4/AC-B11): Kompakt-Token der Nachtragsmeldung fuer SMS,
 # Kurzstil-Telegram und Premium-SMS -- die drei Kanaele, die denselben
 # SMS-Text senden. Bewusst OHNE "-": die SMS-Grammatik ueberlaedt den
@@ -1811,10 +1672,8 @@ def _render_sms_body(
     """
     if msg.source is not None:
         return _render_sms_onset(msg, limit)
-    if not msg.events and not msg.corridor_events and msg.onset_shift_events:
+    if not msg.events and msg.onset_shift_events:
         return _render_sms_onset_shift_only(msg, limit)
-    if not msg.events and msg.corridor_events:
-        return _render_sms_corridor_only(msg, limit)
     evs = _sorted(msg)
     trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
     # Nur der gebuendelte Mehr-Orte-Fall traegt per-Event-`location_label`
@@ -1836,14 +1695,11 @@ def _render_sms_body(
         # wie Betreff/E-Mail/Telegram (`_km_str`), Emoji ENTFERNT statt
         # transliteriert (AC-7), kein Trip-Name mehr (AC-5).
         # Issue #2122: das Etappen-Praefix ueber ALLE Bausteine dieser
-        # Nachricht (Δ-Ereignisse + Beginn-Verschiebungen + Schwellen-Treffer)
+        # Nachricht (Δ-Ereignisse + Beginn-Verschiebungen)
         # -- fehlt es bei irgendeinem, entfaellt es GANZ (AC-8). Der Compare-
         # Pfad setzt `stage_number` nie -> Praefix bleibt leer (AC-9).
-        prefix = _stage_prefix(
-            list(evs) + list(msg.onset_shift_events) + list(msg.corridor_events)
-        )
+        prefix = _stage_prefix(list(evs) + list(msg.onset_shift_events))
         head = f"{prefix}{_ascii_alert_location(_km_str(msg))}: "
-    # Issue #1444 S1 (AC-6): Schwellen-Treffer-Tokens desselben Laufs mit.
     # Issue #2020 Scheibe 2: das Restmengen-Token steht DIREKT neben dem
     # Delta-Token desselben Ereignisses -- sonst stuenden bei mehreren
     # Ereignissen Menge und Rest an unzusammenhaengenden Stellen.
@@ -1853,10 +1709,7 @@ def _render_sms_body(
         rest = _sms_rest_token(e)
         if rest:
             tokens.append(rest)
-    tokens += (
-        [_sms_onset_shift_token(oe) for oe in msg.onset_shift_events]
-        + [_sms_corridor_token(ce) for ce in msg.corridor_events]
-    )
+    tokens += [_sms_onset_shift_token(oe) for oe in msg.onset_shift_events]
 
     kept: list[str] = []
     for tok in tokens:

@@ -184,6 +184,15 @@ def is_within_forecast_horizon(stage_date: date, reference_date: date) -> bool:
     return (stage_date - reference_date).days <= OPENMETEO_MAX_FORECAST_DAYS
 
 
+# Issue #1994 (Audit B-04): Einheiten explizit senden, statt sich auf API-
+# Defaults zu verlassen. Die Normalisierung nimmt km/h, Celsius und mm an.
+OPENMETEO_EINHEITEN: Dict[str, str] = {
+    "wind_speed_unit": "kmh",
+    "temperature_unit": "celsius",
+    "precipitation_unit": "mm",
+}
+
+
 def _koordinaten_params(
     lat: float, lon: float, elevation_m: Optional[float] = None
 ) -> Dict[str, Any]:
@@ -198,6 +207,7 @@ def _koordinaten_params(
     radar_service.py rufen ausschliesslich diese Funktion -- kein zweiter,
     unregistrierter Aufbau-Ort mehr im Code."""
     params: Dict[str, Any] = {"latitude": lat, "longitude": lon}
+    params.update(OPENMETEO_EINHEITEN)
     if elevation_m is not None:
         params["elevation"] = int(round(elevation_m))
     return params
@@ -404,6 +414,7 @@ class OpenMeteoProvider:
                 "timezone": "UTC",
                 "start_date": tomorrow,
                 "end_date": tomorrow,
+                **OPENMETEO_EINHEITEN,
             }
 
             try:
@@ -903,6 +914,7 @@ class OpenMeteoProvider:
             "timezone": "UTC",
             "start_date": start.strftime("%Y-%m-%d"),
             "end_date": end.strftime("%Y-%m-%d"),
+            **OPENMETEO_EINHEITEN,
         }
         try:
             logger.debug("Fetching UV from Air Quality API (CAMS)")

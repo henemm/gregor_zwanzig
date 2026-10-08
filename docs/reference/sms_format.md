@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.31"
+version: "2.34"
 status: active
 created: 2025-12-27
-updated: 2026-09-19
+updated: 2026-10-08
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -77,7 +77,6 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Forecast | `R PR W G TH:` | nur bei aktivierter Metrik (bei `-` als Null-Wert) |
 | Forecast (Gewitter Folge-Etappe) | `TH+:` | nur bei aktivierter Metrik „Gewitter“ — seit Fix #1482 (2026-08-04) synchron mit `TH:` über dieselbe Metrik-Bindung (vorher Ist-Abweichung, s. Hinweis unter §2) |
 | Forecast (14 erweiterte Metriken, Issue #1660 Scheibe B) | `HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ` (bis 2026-08-17 `NL`, Fix #1926) | Morgen + Abend, jeweils nur bei aktivierter Metrik — Details §3.2a. `WD:`/`PT:` tragen seit Issue #1824 den Grammatik-Doppelpunkt (Buchstaben-Wert, s. §3.2a) |
-| Confidence | `C` | nur wenn Provider Konfidenz liefert (Issue #121, v2.1) |
 | Risks (Vigilance) | `VR:VT:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab der wirksamen Kanal-Schwelle — Ortsvergleich weiterhin fest ab ORANGE, Trips seit Issue #1461 S3b-2a je Kanal einstellbar, Startwert bereits ab GELB (§3.4c) |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
@@ -215,7 +214,7 @@ Levels für `TH`/`TH+`:
 
 ### 3.2a Erweiterte Metrik-Tokens (Issue #1660 Scheibe B)
 
-14 vorher wählbare, aber wirkungslose Metriken tragen jetzt ein SMS-Kürzel — Position im Format: eigener Block direkt nach `TH+:`, vor `C`/Vigilance (§2). Alle 14 folgen der Grundregel „gewählt/nicht gewählt" (§2): abgewählt entfällt das Kürzel vollständig, gewählt aber ohne Wert zeigt die Null-Form, Datenlücke macht daraus `?` (`_gap_or()`, s. §4).
+14 vorher wählbare, aber wirkungslose Metriken tragen jetzt ein SMS-Kürzel — Position im Format: eigener Block direkt nach `TH+:`, vor Vigilance (§2). Alle 14 folgen der Grundregel „gewählt/nicht gewählt" (§2): abgewählt entfällt das Kürzel vollständig, gewählt aber ohne Wert zeigt die Null-Form, Datenlücke macht daraus `?` (`_gap_or()`, s. §4).
 
 Drei Wertegrammatik-Klassen:
 
@@ -322,28 +321,15 @@ Ein **eigenständiger** Marker `X?` (2 Zeichen, GSM-7-sicher) signalisiert: für
 
 - **Bedingung:** `any(SegmentWeatherData.official_alerts_unavailable)` — gesetzt am echten Fail-soft-Pfad (`get_official_alerts_with_status`, #1348). Strenge Regel: **eine** ausgefallene abdeckende Quelle genügt.
 - **Kein Warn-Block-Token:** `X?` gehört zur eigenen Kategorie `unavailable`, trägt **nie** den `!`-Marker (§3.4c) und darf nicht als amtliche Warnung („`!X?`") gelesen werden. Es ist „nicht abrufbar", nicht „es liegt eine Warnung vor".
-- **Position:** am Ende der Zeile (nach Wintersport-Block, vor `DBG`), analog zum Verlässlichkeits-Symbol `C`.
+- **Position:** am Ende der Zeile (nach Wintersport-Block, vor `DBG`).
 - **Truncation:** höchste Priorität (12, §6, noch über dem Warn-Block) und **nicht** in der Drop-Liste — der sicherheitsrelevante Marker fällt unter 160-Zeichen-Druck **strukturell nie** weg.
 - **Kanäle:** In Telegram-Kurzform (die `sms_text` sendet) erscheint `X?` automatisch mit; das Telegram-„rich"-Briefing und die Compare-/Trip-Mail zeigen stattdessen die ausgeschriebene Hinweiszeile bzw. den Banner.
 
 Quelle des Flags: `src/output/tokens/dto.py` (`NormalizedForecast.official_alerts_unavailable`), Emission in `src/output/tokens/builder.py`. Vertraglich abgesichert durch `docs/specs/modules/feat_1349_sms_unavailable.md`.
 
-### 3.4b Confidence-Symbol `C` (v2.1, Issue #121)
+### 3.4b Confidence-Symbol `C` — entfallen (v2.34, Issue #2233)
 
-Einzelnes Zeichen, das die tagesweise Worst-Case-Konfidenz der Wettervorhersage signalisiert. Position: **nach `TH+:`, vor `VR:`/Vigilance-Tokens**.
-
-| Wert | Symbol | Bedeutung |
-|------|--------|-----------|
-| `confidence_pct_min >= 75` | `C+` | Sichere Vorhersage |
-| `50 <= confidence_pct_min < 75` | `C~` | Mittlere Sicherheit |
-| `confidence_pct_min < 50` | `C?` | Unsichere Vorhersage |
-| `confidence_pct_min is None` | _(Token weggelassen)_ | Kein Provider-Support |
-
-**GSM-7-konform** — `+`, `~`, `?` sind alle Standard-GSM-7-Zeichen.
-
-Aggregation: `min()` der stündlichen `confidence_pct` über alle Segmente des Tages.
-
-Beispiel mit niedriger Konfidenz: `Etappe: N12 D22 R0.5 W15 G25 C?`
+Das in v2.1 (Issue #121) spezifizierte Token `C+`/`C~`/`C?` wurde nie im Builder erzeugt und ist per PO-Entscheid 2026-09-08 aus dem Vertrag gestrichen: `confidence_pct` ist keine wählbare Metrik (#710), und das SMS-Zeichenbudget ist knapp. Die Vorhersage-Verlässlichkeit erscheint nur im E-Mail-Textblock.
 
 ### 3.5 Fire-Risk-Tokens (Korsika-spezifisch)
 
@@ -725,6 +711,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.31 | 2026-09-19 | **`PR` bekommt einen zweiten, metrik-lokalen `?`-Auslöser (Fix #1794).** Bisher löste für `PR` ausschließlich das segmentweite `has_data_gap` die `?`-Form aus. Fällt `pop_pct` trotz vollständiger Fensterpunkte durchgängig `None` (WEATHER-05a/05b-Fallback für dieses Feld erschöpft), zeigte `PR` bislang fälschlich die Null-Form `PR-` statt eines Fehlend-Hinweises. Neues DTO-Feld `pop_all_missing` (`DailyForecast`, `dto.py`), berechnet in `_segments_to_normalized_forecast()` (`sms_trip.py`), in `build_token_line()` (`builder.py`) nur für `sym == "PR"` mit `has_data_gap` ODER-verknüpft. Ein echtes `pop_pct=0` bleibt unverändert `PR-`. Betrifft §4 (`?`-Form-Hinweis). Spec: `docs/specs/modules/fix_1794_arome_precip_prob_null.md`. |
 | 2.32 | 2026-09-27 | **Kurzform ist englisch — Kürzel bereinigt (Issue #2417).** Eingabe-Kürzel `temperature` (Stundenverlauf) wechselt von `D` auf `T`, weil `D` in der SMS bereits der Tageshöchstwert ist (kein Formatwechsel — nur betroffen ist die per Nachricht abfragbare Bedeutung, siehe §3.4c). Amtliche Warn-Kürzel `TS`/`FO`/`RA`/`WG`/`AB` ersetzen `TH`/`FL`/`HR`/`W`/`CL` (§3.4c), Météo-France-Vigilance `VR:`/`VT:` ersetzt `HR:`/`TH:` (§3.3/§3.4). Neuer Befehl `CODES`/`KUERZEL` liefert die vollständige Kürzel-Legende auf Anfrage. Spec: `docs/specs/modules/feat_2417_kurzform_englisch.md`. |
 | 2.33 | 2026-10-01 | **Register leeren (Issue #2422 S6).** (B1) `TF` ist jetzt auch im **Trip** ein Token (Eltern-Metrik `wind_chill`): `TF<Tiefstwert °C>@<Stunde>` über das Tagesfenster, `TF-` ohne Stundenwerte, `TF?` bei Datenlücke; fällt beim Kürzen als allererstes Komfort-Token (`TF`, `FN`, `FL`, `FD`); `KÜRZEL`/`CODES` im Trip-Kontext nennen `TF` wieder (löst #2454 AC-6/AC-7 ab). (B2) Roh/Einfach je Metrik wirkt jetzt in SMS, Premium-SMS und Telegram-Kurzform für Wolken (`cloud_total`/`low`/`mid`/`high`): Einfach-Stufen identisch zu den E-Mail-Bändern (z. B. `CT:SCT@4` statt `CT70@4`); Quelle `SMS_FORMAT_MODE_METRIC_IDS`, Bestandsnutzer behalten den Default. (B3) Telegram rich nutzt seine eigene Roh/Einfach-Einstellung statt der E-Mail-Einstellung. (B5) Keine Windrichtungs-Geisterspalte in Telegram, wenn `wind_direction` mit Wind zusammengeführt ist. Spec: `docs/specs/modules/fix_2422_s6_register_leeren.md`. |
+| 2.34 | 2026-10-08 | **Confidence-Symbol `C+`/`C~`/`C?` gestrichen (Issue #2233, PO-Entscheid 2026-09-08).** Das Token war seit v2.1 spezifiziert, wurde aber nie erzeugt (`"C"` fehlt in `POSITIONAL`/`PRIORITY` von `src/output/tokens/builder.py`). §2-Zeile und §3.4b entfernt; keine Codeänderung. |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

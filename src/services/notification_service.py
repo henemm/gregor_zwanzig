@@ -857,15 +857,13 @@ class NotificationService:
         official_notices: Optional[list] = None,
         mail_sink: Optional[object] = None,
         telegram_style: str = "rich",
-        corridor_hits: Optional[list] = None,
         reference_at: Optional[str] = None,
     ) -> NotificationResult:
         """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
 
         Issue #1023: Der AlertService kennt keine Renderer-/Transport-Details mehr.
         Issue #1088: optionale amtliche Warnungen werden in dieselbe Nachricht
-        gebündelt (kein zweiter Versand). Issue #1444 S1: `corridor_hits`
-        (Schwellen-Treffer) buendeln sich genauso in dieselbe Nachricht.
+        gebündelt (kein zweiter Versand).
         Issue #1916: `reference_at` ist der bereits formatierte Referenz-
         Zeitpunkt der tatsaechlich verglichenen Vergleichsbasis (Aufrufer:
         `TripAlertService`) -- additiv, `None` laesst den Footer unveraendert.
@@ -892,7 +890,7 @@ class NotificationService:
         stage_number = _stage_number_for_date(trip, trip_local_today(trip, now_utc))
         alert_msg = to_alert_message(
             changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
-            corridor_hits=corridor_hits, reference_at=reference_at,
+            reference_at=reference_at,
             now_utc=now_utc, stage_number=stage_number,
         )
         return self._dispatch_alert_message(

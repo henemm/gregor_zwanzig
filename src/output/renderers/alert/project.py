@@ -16,7 +16,7 @@ from utils.timezone import (
     _as_utc, day_offset, local_dt, local_fmt, resolve_location_tz,
 )
 from .model import (
-    AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
+    AlertEvent, AlertMessage, OnsetEvent, OnsetShiftEvent,
 )
 # Issue #2020 Scheibe 2: EIN Wochentagskuerzel-Erzeuger fuer die Kurzform --
 # derselbe, den die amtliche Warnung schon benutzt (kein Nachbau).
@@ -145,7 +145,7 @@ def _resolve_metric_id(field: str, direction: str) -> str:
 def _trip_segment(entry):
     """`SegmentWeatherData` ODER blankes `TripSegment` -> `TripSegment`
     (Issue #2036). Beide Bauformen kommen an: der Aenderungspfad reicht
-    Wetterdaten herein, der Korridor-Pfad kann auch die nackten Segmente
+    Wetterdaten herein, ein Aufrufer kann auch die nackten Segmente
     liefern. Ohne diese Normalisierung endet die zweite Bauform im
     `except`-Zweig und der Treffer verschwindet stumm."""
     return getattr(entry, "segment", entry)
@@ -268,7 +268,7 @@ def _remaining_fields(eintrag, ch, now_utc, tz) -> dict:
     `eintrag` ist der ROHE Eintrag aus `_find_segment()` -- also die
     `SegmentWeatherData` mit ihrer Stundenreihe, NICHT das ueber
     `_trip_segment()` normalisierte `TripSegment` (Issue #2036). Ein blanker
-    Segment-Eintrag (Korridor-Pfad) traegt keine Reihe und faellt unten
+    Segment-Eintrag traegt keine Reihe und faellt unten
     still auf "nicht bestimmbar" zurueck -- richtig, weil dort nichts zu
     rechnen ist.
 
@@ -309,7 +309,7 @@ def _remaining_fields(eintrag, ch, now_utc, tz) -> dict:
 
 
 def to_alert_message(
-    changes, segments, trip_name, *, tz, stand_at, corridor_hits=None,
+    changes, segments, trip_name, *, tz, stand_at,
     reference_at=None, now_utc=None, stage_number=None,
 ) -> AlertMessage:
     """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
@@ -317,10 +317,6 @@ def to_alert_message(
     Issue #1386: die Ereigniszeit („Wo & wann … · HH:MM", SMS `@HH`) wird HIER
     in ORTSZEIT formatiert — je Event aus den Koordinaten SEINER Etappe
     (`TripSegment.start_point`), `tz` ist Fallback ohne Koordinaten.
-
-    Issue #1444 S1: `corridor_hits` (optional, `list[CorridorHit]`) buendelt
-    Schwellen-Treffer desselben Laufs in DIESELBE Nachricht (Muster #1088) --
-    `changes` kann dabei leer sein (Korridor als einzige Alarmquelle, AC-5).
 
     Issue #2020 Scheibe 2: `now_utc` ist die REFERENZZEIT des Versands --
     ohne sie kann niemand entscheiden, welche Stunde noch bevorsteht. Aus ihr
@@ -331,8 +327,8 @@ def to_alert_message(
 
     Issue #2122: `stage_number` ist additiv, optional (Muster `now_utc` o.).
     Vom Aufrufer bereits ueber `Trip.get_stage_for_date()` aufgeloest -- reist
-    unveraendert auf JEDES erzeugte `AlertEvent`/`OnsetShiftEvent`/
-    `CorridorEvent` durch. `None` laesst die Ausgabe byte-identisch (AC-8).
+    unveraendert auf JEDES erzeugte `AlertEvent`/`OnsetShiftEvent`
+    durch. `None` laesst die Ausgabe byte-identisch (AC-8).
     """
     events: list[AlertEvent] = []
     onset_events: list[OnsetShiftEvent] = []
@@ -384,101 +380,10 @@ def to_alert_message(
             stage_number=stage_number,  # Issue #2122
             hail_flag=_hail_flag_for(metric_id, eintrag),  # Issue #2205
         ))
-    corridor_events = (
-        to_corridor_events(corridor_hits, segments, tz=tz, stage_number=stage_number)
-        if corridor_hits else ()
-    )
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
-        corridor_events=corridor_events,
         onset_shift_events=tuple(onset_events), reference_at=reference_at,
     )
-
-
-def _resolve_corridor_metric_id(alert_metric: str, direction: str) -> str:
-    """Korridor-Metrik (BEIDE Namensraeume) → Katalog metric_id fuer
-    Beschriftung/Einheit/Kuerzel (Issue #1444 S1, F001-Fix; S2a Namensraum).
-
-    Die Aufloesung des Summary-Felds kommt aus
-    `services.corridor_threshold.resolve_corridor_summary_field()` -- DIESELBE
-    Funktion, die der Waechter benutzt. Zwei Kopien wuerden bedeuten, dass ein
-    im Waechter erkannter Treffer bei der Projektion erneut verschluckt wird.
-
-    Loest ueber das SUMMARY-FIELD auf (wie `_resolve_metric_id()` fuer den
-    Delta-Pfad) statt ueber `_ALERT_METRIC_TO_CATALOG_ID` -- das Feld ist die
-    praezisere Quelle: `SNOW_LINE` mappt dort auf ZWEI Katalog-IDs
-    (`snowfall_limit`/`freezing_level`, Issue #961 OR-Policy fuer die
-    Wetter-Tab-Aktivierung, BEIDE mit cmp='unter'), obwohl die
-    Korridor-Auswertung ausschliesslich `freezing_level_m` liest (Issue #959).
-    Ueber das Feld ist das unzweideutig EIN Treffer -- der alte Weg ueber die
-    AlertMetric-Enum-Mehrdeutigkeit warf hier `ValueError` (F001, GEFUNDEN
-    von der Adversary-Pruefung: stiller Total-Ausfall der Tour in JEDEM Lauf).
-
-    Bleibt ein Feld dennoch mehrdeutig (nur `temp_min_c` ->
-    temperature/temperature_cold), bevorzugt eine cmp-Uebereinstimmung die
-    Beschriftung -- NUR ein Label-Tie-Break, NIE eine Fehlerquelle: ohne
-    Treffer faellt die Funktion auf den ERSTEN Kandidaten zurueck statt zu
-    werfen. Die tatsaechliche Richtung der Meldung kommt beim Rendern aus
-    `CorridorHit.direction`, NICHT aus dieser Katalog-cmp (die beschreibt die
-    STANDARDRICHTUNG DER METRIK, nicht die Richtung EINES EINZELNEN Treffers).
-    """
-    from services.corridor_threshold import resolve_corridor_summary_field
-
-    field = resolve_corridor_summary_field(alert_metric)
-    if not field:
-        raise KeyError(f"Unbekannte Korridor-Metrik: {alert_metric!r}")
-    candidates = [m for m in _METRICS if field in m.summary_fields.values()]
-    if not candidates:
-        raise KeyError(f"Unbekanntes summary_field für Korridor-Projektion: {field!r}")
-    if len(candidates) == 1:
-        return candidates[0].id
-    want = "über" if direction == "above" else "unter"
-    for m in candidates:
-        if m.cmp == want:
-            return m.id
-    return candidates[0].id
-
-
-def to_corridor_events(
-    hits, segments, *, tz, stage_number: int | None = None,
-) -> tuple[CorridorEvent, ...]:
-    """`CorridorHit`-Liste (`services.corridor_threshold`) → `CorridorEvent`-Tupel
-    (Issue #1444 S1). Eigener Render-Vertrag, kein `WeatherChange`-Umweg.
-
-    F001-Haertung: ein einzelner nicht projizierbarer Treffer darf die ganze
-    Nachricht nicht verschlucken (ADR-0018: ausweichen ja, kaschieren nein --
-    sichtbar protokolliert, aber der Rest der Nachricht inkl. eines
-    gleichzeitig vorliegenden Aenderungs-Alarms wird trotzdem zugestellt).
-    """
-    events: list[CorridorEvent] = []
-    for hit in hits:
-        try:
-            metric_id = _resolve_corridor_metric_id(hit.metric, hit.direction)
-            # Issue #2205: den Roheintrag behalten -- nur er traegt das Aggregat.
-            entry = _find_segment(segments, hit.segment_id)
-            match = _trip_segment(entry)
-            events.append(CorridorEvent(
-                metric_id=metric_id, value=hit.value, bound=hit.bound,
-                direction=hit.direction,
-                occurred_at=_fmt_occurred_at(
-                    hit.occurred_at, _tz_for_location(match.start_point, tz)
-                ),
-                km_from=match.start_point.distance_from_start_km,
-                km_to=match.end_point.distance_from_start_km,
-                # Issue #2036: Kennung der TATSAECHLICH aufgeloesten Etappe
-                # (Muster `to_alert_message`) und Herkunft der Spanne reisen
-                # mit -- ohne beides kann der Renderer nur km zeigen (F001).
-                segment_id=normalize_segment_id(match.segment_id),
-                km_measured=bool(getattr(match, "distance_measured", False)),
-                stage_number=stage_number,  # Issue #2122
-                hail_flag=_hail_flag_for(metric_id, entry),  # Issue #2205
-            ))
-        except Exception as e:
-            logger.warning(
-                "Korridor-Treffer nicht projizierbar, uebersprungen: "
-                "metric=%r segment_id=%r: %s", hit.metric, hit.segment_id, e,
-            )
-    return tuple(events)
 
 
 def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> AlertMessage:

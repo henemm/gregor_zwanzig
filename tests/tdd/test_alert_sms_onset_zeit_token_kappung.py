@@ -8,7 +8,7 @@ SPEC: docs/specs/modules/fix_2078_onset_sms_zeit_token_schnitt.md (AC-1..AC-9)
 Text stur bei `limit` ab. Bei einem ausreichend langen Ortsnamen trifft
 dieser Endschnitt mitten ins Zeit-Token (`Sa0:40` -> `Sa0:4`) -- eine
 inhaltlich FALSCHE statt einer fehlenden Uhrzeit. Der Fix kappt den Kopf VOR
-dem Zusammensetzen auf 24 Zeichen (Muster `_render_sms_corridor_only`).
+dem Zusammensetzen auf 24 Zeichen (Muster der frueheren Schwellen-Treffer-SMS, #2230 entfernt).
 
 RED-Ursache: `head` traegt heute keinen `[:24]`-Zuschnitt. Bei den Faellen
 mit langem Ortsnamen (AC-1/2/3/5/6/7/9) ist der Kopf im Ist-Zustand LAENGER
