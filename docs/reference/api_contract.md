@@ -1739,7 +1739,7 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 | 422 | No stages for target date (Bug #716 — AC-1) | `"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum"` |
 | 422 | Invalid `report_type` | `"Invalid report_type: {value}"` |
 
-**Idempotenz (Issue #1756):** Ein zweiter Aufruf für denselben `(user_id, trip_id, report_type)`-Schlüssel während ein erster Versand noch läuft (z. B. wiederholter Klick nach vorzeitigem Proxy-Timeout) wird mit HTTP 409 abgewiesen statt einen zweiten echten Versand auszulösen. Der Lock ist prozesslokal (`threading.Lock`, In-Memory), keine Persistenz. Der Go-Proxy (`SendTripReportProxyHandler`) hat außerdem einen auf 300s (vorher 120s) angehobenen Timeout, da der reguläre Erfolgsfall durch den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann.
+**Idempotenz (Issue #1756):** Ein zweiter Aufruf für denselben `(user_id, trip_id, report_type)`-Schlüssel während ein erster Versand noch läuft (z. B. wiederholter Klick nach vorzeitigem Proxy-Timeout) wird mit HTTP 409 abgewiesen statt einen zweiten echten Versand auszulösen. Der Lock ist prozesslokal (`threading.Lock`, In-Memory), keine Persistenz; seit Issue #2124 liegt das Register im geteilten Modul `src/services/send_lock.py` (Trip und Ortsvergleich, Schlüssel enthält `user_id`). Der Go-Proxy reicht den Upstream-Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht); nginx `proxy_read_timeout` 330 s (henemm-infra) liegt über dem Proxy-Timeout. Das Frontend klassifiziert Antworten in `$lib/utils/sendOutcome.ts` (502/503/504/Netzfehler = „Ergebnis unklar — nicht erneut senden“, 409 = „Versand läuft bereits“). Der Go-Proxy (`SendTripReportProxyHandler`) hat außerdem einen auf 300s (vorher 120s) angehobenen Timeout, da der reguläre Erfolgsfall durch den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann.
 
 **Multi-Tenant Behavior:**
 - `user_id` query parameter determines which user's data (trip, email config) is used
@@ -2486,7 +2486,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 | POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
 | PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
-| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'` |
+| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
 
 ### Validation Rules (POST/PUT)
 

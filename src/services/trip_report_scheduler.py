@@ -12,7 +12,6 @@ import dataclasses
 import json
 import logging
 import os
-import threading
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -24,6 +23,7 @@ import httpx
 from app.config import Settings, resolve_public_url
 from app.loader import LoaderError, get_data_dir, load_all_trips, update_trip
 from services.file_lock import LockTimeout
+from services.send_lock import release_send_lock, try_acquire_send_lock
 from utils.pii_masking import mask_addr_for_pii_log
 from app.models import (
     NormalizedTimeseries,
@@ -394,28 +394,14 @@ def record_corrupt_trip_observability(
     )
 
 
-# Issue #1756: In-Process-Lock gegen doppelten manuellen Trip-Versand.
-# Modul-Ebene (nicht instanz-gebunden): pro Request entsteht eine neue
-# TripReportSchedulerService-Instanz (api/routers/scheduler.py), ein
-# Instanzattribut würde daher nie mit sich selbst kollidieren. Wirkt nur
-# innerhalb eines Systemd-Prozesses (siehe Spec „Known Limitations").
-_send_locks: Dict[Tuple[str, str, str], bool] = {}
-_send_locks_guard = threading.Lock()
-
-
+# Issue #1756/#2124: Lock-Logik liegt im geteilten Modul services.send_lock
+# (auch vom Compare-Versand genutzt); diese Namen bleiben als duenne Huellen.
 def _try_acquire_send_lock(user_id: str, trip_id: str, report_type: str) -> bool:
-    key = (user_id, trip_id, report_type)
-    with _send_locks_guard:
-        if _send_locks.get(key):
-            return False
-        _send_locks[key] = True
-        return True
+    return try_acquire_send_lock(user_id, trip_id, report_type)
 
 
 def _release_send_lock(user_id: str, trip_id: str, report_type: str) -> None:
-    key = (user_id, trip_id, report_type)
-    with _send_locks_guard:
-        _send_locks.pop(key, None)
+    release_send_lock(user_id, trip_id, report_type)
 
 
 class TripReportSchedulerService:

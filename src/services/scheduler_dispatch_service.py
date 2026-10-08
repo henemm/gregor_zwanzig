@@ -22,6 +22,7 @@ from app.loader import (
 )
 from services.alert_check_state import report_unit_failure
 from services.file_lock import LockTimeout, locked_json_rmw
+from services.send_lock import release_send_lock, try_acquire_send_lock
 from utils.pii_masking import mask_addr_for_pii_log
 from services.alert_briefing_anchor import (
     record_briefing_dispatch_failure,
@@ -716,10 +717,17 @@ def send_compare_preset(
         raise KeyError(f"Compare-Preset {preset_id} nicht gefunden")
     preset = compare_preset_to_dict(preset_obj)
 
-    settings = Settings().with_user_profile(user_id)
-    top_ort, actual_empfaenger = send_one_compare_preset(
-        preset, settings, user_id, data_root, on_demand=True,
-    )
+    # Issue #2124 (AC-5/AC-8): Lauf-Lock je (Nutzer, Preset) - Schluessel
+    # beginnt mit "compare", enthaelt user_id (Mandantentrennung).
+    if not try_acquire_send_lock("compare", user_id, preset_id):
+        return {"status": "already_in_progress"}
+    try:
+        settings = Settings().with_user_profile(user_id)
+        top_ort, actual_empfaenger = send_one_compare_preset(
+            preset, settings, user_id, data_root, on_demand=True,
+        )
+    finally:
+        release_send_lock("compare", user_id, preset_id)
     return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
 
 
