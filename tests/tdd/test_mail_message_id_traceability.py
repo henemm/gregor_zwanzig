@@ -57,7 +57,9 @@ class _Draht:
         self._nr: dict[tuple[str, str], int] = {}
 
 
-def _installiere(monkeypatch, skript=None) -> _Draht:
+def _installiere(monkeypatch, skript=None, starttls_skript=None) -> _Draht:
+    """``starttls_skript(host) -> Ausnahme | None`` laesst die Verbindung schon
+    vor der Einlieferung scheitern (z. B. 421 beim STARTTLS)."""
     draht = _Draht(skript)
 
     class _Socket:
@@ -76,7 +78,10 @@ def _installiere(monkeypatch, skript=None) -> _Draht:
             return False
 
         def starttls(self):
-            pass
+            if starttls_skript is not None:
+                fehler = starttls_skript(self._host)
+                if fehler is not None:
+                    raise fehler
 
         def login(self, user, password):
             pass
@@ -158,7 +163,10 @@ def test_eingelieferte_mail_traegt_genau_eine_message_id_und_unveraenderte_kopfz
     assert len(_ids(msg)) == 1, f"Message-ID-Kopfzeilen: {_ids(msg)}"
     assert _ID_FORM.match(_ids(msg)[0]), f"Form <...@henemm.com> verletzt: {_ids(msg)}"
     assert msg["Subject"] == "Wetter-Briefing Testlauf"
-    assert msg["From"] == ABSENDER
+    # Bestandsverhalten (email.py send(): ``from_addr = self._reply_to or
+    # self._from``): ist eine Inbound-Adresse gesetzt, steht SIE im From --
+    # das bleibt unveraendert (Korrektur der RED-Erwartung in /50).
+    assert msg["From"] == "antwort@henemm.com"
     assert NUTZER_BOX in msg["To"]
     assert msg["Date"], "Date-Kopfzeile fehlt"
     assert msg["Reply-To"] == "antwort@henemm.com"
@@ -317,3 +325,70 @@ def test_abgelehnter_empfaenger_bekommt_keine_erfolgszeile(monkeypatch, caplog):
     assert [r for r in caplog.records if r.levelno == logging.ERROR and STAGING_BOX in r.getMessage()], (
         "die bestehende Fehlerzeile fuer den abgelehnten Empfaenger fehlt"
     )
+
+
+# ---------------------------------------------------------------------------
+# Adversary F004 -- Ersatzweg bei mehreren Empfaengern: je Empfaenger die
+# eigene ID auch dort, Logzeile nennt sie
+# ---------------------------------------------------------------------------
+
+def _pruefe_ersatzweg_je_empfaenger(draht, caplog, empfaenger):
+    ersatz = [(e, _roh_id(_parse(roh))) for h, e, roh in draht.versuche if h == ERSATZ]
+    assert [e for e, _ in ersatz] == empfaenger, f"Aufbau: Ersatzweg je Empfaenger: {ersatz}"
+    ids = [mid for _, mid in ersatz]
+    assert len(set(ids)) == len(empfaenger), (
+        f"Ersatzweg: Message-IDs nicht je Empfaenger verschieden: {ersatz}"
+    )
+    primaer_ids = {
+        e: _roh_id(_parse(roh)) for h, e, roh in draht.versuche if h == PRIMAER
+    }
+    zeilen = _info_zeilen(caplog)
+    for adresse, mid in ersatz:
+        if adresse in primaer_ids:
+            assert primaer_ids[adresse] == mid, (
+                f"{adresse}: Primaer- und Ersatzweg tragen verschiedene IDs"
+            )
+        treffer = [z for z in zeilen if mid.strip("<>") in z]
+        assert len(treffer) == 1 and "route=fallback" in treffer[0], (
+            f"{adresse}: genau eine Ersatzweg-Erfolgszeile mit seiner ID erwartet: {zeilen}"
+        )
+        if adresse in (TEST_BOX, STAGING_BOX):
+            assert adresse in treffer[0], treffer[0]
+
+
+def test_ersatzweg_nach_verbindungsabbruch_je_empfaenger_eigene_id(monkeypatch, caplog):
+    """F004 (Weg ueber ``_handle_transient_dial_failure``): der Primaerweg bricht
+    die Verbindung ab, der Ersatzweg nimmt alle drei an -- jede Einlieferung
+    auf dem Ersatzweg traegt die ID IHRES Empfaengers."""
+    empfaenger = [TEST_BOX, STAGING_BOX, NUTZER_BOX]
+    draht = _installiere(
+        monkeypatch,
+        lambda host, empf, nr: (
+            smtplib.SMTPServerDisconnected("weg") if host == PRIMAER else None
+        ),
+    )
+
+    with caplog.at_level(logging.INFO, logger=email_module.logger.name):
+        _sende(_postausgang(fallback_host=ERSATZ), empfaenger)
+
+    _pruefe_ersatzweg_je_empfaenger(draht, caplog, empfaenger)
+
+
+def test_ersatzweg_nach_4xx_beim_verbindungsaufbau_je_empfaenger_eigene_id(
+    monkeypatch, caplog,
+):
+    """F004 (Weg ueber den 4xx-Zweig in ``send()``): der Primaerweg antwortet
+    schon beim STARTTLS mit 421, der Ersatzweg nimmt alle drei an -- jede
+    Einlieferung traegt die ID IHRES Empfaengers."""
+    empfaenger = [TEST_BOX, STAGING_BOX, NUTZER_BOX]
+    draht = _installiere(
+        monkeypatch,
+        starttls_skript=lambda host: (
+            smtplib.SMTPResponseException(421, "busy") if host == PRIMAER else None
+        ),
+    )
+
+    with caplog.at_level(logging.INFO, logger=email_module.logger.name):
+        _sende(_postausgang(fallback_host=ERSATZ), empfaenger)
+
+    _pruefe_ersatzweg_je_empfaenger(draht, caplog, empfaenger)

@@ -12,7 +12,7 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.utils import formatdate, getaddresses, parseaddr
+from email.utils import formatdate, getaddresses, make_msgid, parseaddr
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -314,6 +314,7 @@ def build_mime_message(
     mail_type: str | None = None,
     mail_format: str | None = None,
     compare_hourly_enabled: bool | None = None,
+    message_id: str | None = None,
 ):
     """Issue #722: Build a MIME message. Pure function, no SMTP side-effects.
 
@@ -326,6 +327,9 @@ def build_mime_message(
 
     Issue #1107: Optionaler Marker-Header X-GZ-Compare-Hourly-Enabled für den
     Compare-Mail-Validator (email_spec_validator.py).
+
+    Issue #2218 C5-53: genau eine Kopfzeile ``Message-ID`` (uebergeben oder
+    selbst erzeugt) -- reiner Zusatz-Header fuer den Zustellnachweis.
     """
     if html:
         msg = MIMEMultipart("alternative")
@@ -369,7 +373,35 @@ def build_mime_message(
             msg["X-GZ-Format"] = mail_format
         if compare_hourly_enabled is not None:
             msg["X-GZ-Compare-Hourly-Enabled"] = "true" if compare_hourly_enabled else "false"
+    msg["Message-ID"] = message_id or new_message_id()
     return msg
+
+
+def new_message_id() -> str:
+    """Issue #2218 C5-53: Message-ID in der Absender-Domain der Resend-Mails."""
+    return make_msgid(domain="henemm.com")
+
+
+def _set_message_id(msg, message_id: str) -> None:
+    """Kopfzeile ERSETZEN, nie eine zweite anhaengen (#2218 C5-53, AC-4)."""
+    if msg["Message-ID"] is None:
+        msg["Message-ID"] = message_id
+    else:
+        msg.replace_header("Message-ID", message_id)
+
+
+def _log_accepted(accepted, message_ids, attempt: int, route: str) -> None:
+    """Issue #2218 C5-53: je vom Postausgang ANGENOMMENEM Empfaenger eine
+    Zeile mit Message-ID und maskierter Adresse -- belegt die Annahme, nicht
+    die Zustellung im Postfach."""
+    from utils.pii_masking import mask_addr_for_pii_log
+
+    for recipient in accepted or []:
+        logger.info(
+            "Email accepted by SMTP: message_id=%s to=%s attempt=%d route=%s",
+            (message_ids or {}).get(recipient), mask_addr_for_pii_log(recipient),
+            attempt, route,
+        )
 
 
 class EmailOutput:
@@ -471,7 +503,8 @@ class EmailOutput:
         msg,
         from_addr: str,
         deadline_at: float,
-    ) -> None:
+        message_ids: dict | None = None,
+    ) -> list[str]:
         """Issue #1412 S3a: der EINE Ort, an dem eine SMTP-Verbindung entsteht.
 
         Reiner Transport — die Empfänger-Guards bleiben in `send()`, vor der
@@ -490,7 +523,12 @@ class EmailOutput:
         `min(SMTP_OP_TIMEOUT_SECONDS, Restzeit)`. `_phase_timeout_or_raise()`
         wirft `TimeoutError` statt `settimeout(0)`, falls die Restzeit vor
         Erreichen einer Phase bereits erschöpft ist.
+
+        Issue #2218 C5-53: `message_ids` (Empfaenger -> ID) setzt vor jedem
+        `sendmail()` die Kopfzeile des Empfaengers (ersetzt, nie doppelt).
+        Rueckgabe: die vom Postausgang ANGENOMMENEN Empfaenger.
         """
+        ids = message_ids or {}
         with smtplib.SMTP(
             host, port, timeout=_phase_timeout_or_raise(deadline_at)
         ) as server:
@@ -499,14 +537,21 @@ class EmailOutput:
             server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
             server.login(user, password)
             if len(recipients) == 1:
+                if recipients[0] in ids:
+                    _set_message_id(msg, ids[recipients[0]])
                 server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
                 server.sendmail(from_addr, recipients, msg.as_string())
+                return list(recipients)
             else:
                 fehler: list[tuple[str, Exception]] = []
+                angenommen: list[str] = []
                 for recipient in recipients:
+                    if recipient in ids:
+                        _set_message_id(msg, ids[recipient])
                     server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
                     try:
                         server.sendmail(from_addr, [recipient], msg.as_string())
+                        angenommen.append(recipient)
                     except smtplib.SMTPServerDisconnected:
                         # Adversary-Fund F001 zu #1448 S1: ein
                         # Transportabbruch (z.B. weil die neue
@@ -534,6 +579,7 @@ class EmailOutput:
                         f"Alle {len(recipients)} Empfaenger abgelehnt: "
                         f"{[str(e) for _, e in fehler]}",
                     )
+                return angenommen
 
     def _handle_transient_dial_failure(
         self,
@@ -546,6 +592,7 @@ class EmailOutput:
         recipients: list[str],
         msg,
         from_addr: str,
+        message_ids: dict | None = None,
     ) -> bool:
         """Issue #1448 S1: gemeinsame Behandlung für vorübergehende
         Transportfehler (`OSError`, `smtplib.SMTPServerDisconnected`) in
@@ -587,7 +634,7 @@ class EmailOutput:
         # auswerten, bevor auf ihn ausgewichen wird.
         if self._fallback_host and not self._fallback_recipients_blocked(recipients):
             try:
-                self._dial_and_send(
+                accepted = self._dial_and_send(
                     self._fallback_host,
                     FALLBACK_SMTP_PORT,
                     self._fallback_user,
@@ -598,8 +645,10 @@ class EmailOutput:
                     # Issue #1448 S1: eigene, garantierte Deadline statt des
                     # (evtl. bereits aufgebrauchten) Rests des Primärbudgets.
                     deadline_at=time.monotonic() + FALLBACK_RESERVE_SECONDS,
+                    message_ids=message_ids,
                 )
                 logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
+                _log_accepted(accepted, message_ids, attempt + 1, "fallback")
                 return True
             except Exception as fb_err:
                 raise OutputError("email", f"Connection error: {e} (fallback also failed: {fb_err})")
@@ -794,6 +843,9 @@ class EmailOutput:
                     f"Domains: {masked}",
                 )
 
+        # Issue #2218 C5-53: je Empfaenger EINE ID, vor der Retry-Schleife
+        # vergeben -- Retry und Ersatzweg senden dieselbe ID.
+        message_ids = {r: new_message_id() for r in recipients}
         msg = build_mime_message(
             subject=subject,
             body=body,
@@ -805,6 +857,7 @@ class EmailOutput:
             mail_type=mail_type,
             mail_format=mail_format,
             compare_hourly_enabled=compare_hourly_enabled,
+            message_id=message_ids.get(recipients[0]) if recipients else None,
         )
 
         # Retry logic with exponential backoff
@@ -853,7 +906,7 @@ class EmailOutput:
             # verbraucht hat).
             versuch_start = time.monotonic()
             try:
-                self._dial_and_send(
+                accepted = self._dial_and_send(
                     self._host,
                     self._port,
                     self._user,
@@ -862,11 +915,13 @@ class EmailOutput:
                     msg,
                     from_addr,
                     deadline_at=primaer_deadline,
+                    message_ids=message_ids,
                 )
 
                 # Success - log if this was after retry
                 if attempt > 0:
                     logger.info(f"Email send succeeded after {attempt + 1} attempt(s)")
+                _log_accepted(accepted, message_ids, attempt + 1, "primary")
                 return
 
             except smtplib.SMTPAuthenticationError as e:
@@ -916,7 +971,7 @@ class EmailOutput:
                     # wird — nicht bloß gegen self._host (Primärhost).
                     if self._fallback_host and not self._fallback_recipients_blocked(recipients):
                         try:
-                            self._dial_and_send(
+                            accepted = self._dial_and_send(
                                 self._fallback_host,
                                 FALLBACK_SMTP_PORT,
                                 self._fallback_user,
@@ -928,8 +983,10 @@ class EmailOutput:
                                 # statt des (evtl. bereits aufgebrauchten)
                                 # Rests des Primärbudgets.
                                 deadline_at=time.monotonic() + FALLBACK_RESERVE_SECONDS,
+                                message_ids=message_ids,
                             )
                             logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
+                            _log_accepted(accepted, message_ids, attempt + 1, "fallback")
                             return
                         except Exception as fb_err:
                             raise OutputError(
@@ -979,6 +1036,7 @@ class EmailOutput:
                 if self._handle_transient_dial_failure(
                     e, attempt, max_attempts, versuch_dauer, primaer_deadline,
                     backoff_base, recipients, msg, from_addr,
+                    message_ids=message_ids,
                 ):
                     return
 
@@ -995,6 +1053,7 @@ class EmailOutput:
                 if self._handle_transient_dial_failure(
                     e, attempt, max_attempts, versuch_dauer, primaer_deadline,
                     backoff_base, recipients, msg, from_addr,
+                    message_ids=message_ids,
                 ):
                     return
 
