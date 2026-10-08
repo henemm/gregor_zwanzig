@@ -199,6 +199,9 @@ def test_zahlenpraefix_wird_ersetzt_nicht_addiert(aufbau, user_ids):
     ("1. Pass", "1. Pass"),
     ("2. X", "2. X"),
     ("03:", ""),
+    ("02:X", "02:X"),
+    ("12:30 Start", "12:30 Start"),
+    ("100: X", "100: X"),
 ])
 def test_praefix_randfaelle(aufbau, user_ids, name, erwartet_rest):
     recorder, settings = aufbau
