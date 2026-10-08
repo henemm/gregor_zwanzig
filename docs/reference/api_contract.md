@@ -1192,6 +1192,24 @@ Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen un
 | GET | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location lesen |
 | PUT | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location setzen — **kein** `ETag`/`If-Match` (Orte liegen auf einer anderen Datei-Ebene) |
 
+### DELETE /api/locations/{id} — Ort-Loeschen-Sperre (Issue #2216, seit 2026-10-08)
+
+Ein Ort, der in `LocationIDs` eines Ortsvergleichs **desselben Nutzers** steht, wird nicht geloescht.
+
+| Status | Bedeutung |
+|--------|-----------|
+| 204 | Ort geloescht (in keinem Ortsvergleich des Nutzers verwendet) |
+| **409** | `location_in_use` — Ort bleibt bestehen |
+| 500 | `store_error` — Nutzungspruefung fehlgeschlagen, nichts geloescht |
+
+409-Body:
+
+```json
+{"error":"location_in_use","compare_presets":[{"id":"…","name":"…"}]}
+```
+
+Die Orte-Seite zeigt die Namen mit Link auf `/compare/{id}` und den Hinweis, den Ort dort zuerst zu entfernen. Die Pruefung laeuft ueber den nutzergebundenen Store (`WithUser`), nie ueber `"default"`; Ortsvergleiche anderer Nutzer erscheinen nie.
+
 ### Nebenlaeufigkeit: `ETag` / `If-Match` (Issue #1395, seit 2026-07-27, Orts-Vergleiche seit S6 2026-07-31)
 
 Betrifft **Touren UND Orts-Vergleiche** (beide teilen sich dieselbe
@@ -2499,7 +2517,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 | POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
 | PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
-| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
+| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 / 422 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. **Fehlende Orte (#2216):** sind alle Orte des Ortsvergleichs geloescht, antwortet der Versand (und `POST /api/preview/compare/{preset_id}`) mit **422** und der Meldung „Ortsvergleich '<id>' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich." (bewusst nicht 409). Fehlt nur ein Teil, laeuft der Versand mit den uebrigen Orten und die 200-Antwort traegt zusaetzlich `fehlende_orte` (Liste der nicht aufloesbaren Ort-IDs; leer/fehlend wenn nichts fehlt); der Scheduler-Lauf loggt eine Warnung, der Compare-Hub zeigt nach dem Test-Versand einen Hinweis. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
 
 ### Validation Rules (POST/PUT)
 
