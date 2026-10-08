@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -119,5 +121,29 @@ func TestEnrichmentHealthFailedUnitsDeckelUndLeereListe(t *testing.T) {
 	}
 	if leer := failedUnits(t, health, "snowgrid"); len(leer) != 0 {
 		t.Fatalf("Pfad ohne Ausfall: erwartet [], ist %v", leer)
+	}
+}
+
+// F001 (#2218, AC-10): Das Health-Ergebnis, so wie die API es ausliefert
+// (json.Marshal), traegt bei einem Pfad ohne scheiternde Einheit
+// "failed_units":[] — nie null. Eine nil-Slice im Interface faengt der
+// ==nil-Vergleich im Helfer failedUnits nicht; erst die Serialisierung zeigt es.
+func TestEnrichmentHealthFailedUnitsSerialisiertAlsLeereListeNichtNull(t *testing.T) {
+	tmpDir := t.TempDir()
+	base := time.Now().UTC().Add(-2 * time.Hour)
+	writeEnrichmentJournal(t, tmpDir,
+		unitLine(base, "snowgrid", "ok", "u1/leer"),
+		enrichmentLine(base, "thunder", "ok", ""),
+	)
+	health := newEnrichmentHealthTestScheduler(t, tmpDir).EnrichmentHealth()
+	for _, path := range []string{"snowgrid", "thunder"} {
+		b, err := json.Marshal(enrichmentEntry(t, health, path))
+		if err != nil {
+			t.Fatalf("json.Marshal %s: %v", path, err)
+		}
+		out := string(b)
+		if strings.Contains(out, `"failed_units":null`) || !strings.Contains(out, `"failed_units":[]`) {
+			t.Fatalf("%s: erwartet failed_units:[], ist %s", path, out)
+		}
 	}
 }

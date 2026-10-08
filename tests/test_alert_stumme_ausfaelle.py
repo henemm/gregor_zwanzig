@@ -320,3 +320,16 @@ def test_ac9_compare_journal_nicht_beschreibbar_aendert_den_lauf_nicht(
         jp.rmdir()
 
     assert (sent, failed) == (0, 0)
+
+
+def test_f002_log_enrichment_call_ohne_unit_schreibt_kein_unit_feld():
+    """#2218 F002: Ohne unit bleibt die Zeile byte-identisch zur Altform."""
+    from providers.enrichment_health import log_enrichment_call
+
+    jp = get_data_root() / "diagnostics" / "enrichment_calls.jsonl"
+    log_enrichment_call("thunder", "ok")
+    last = jp.read_text().splitlines()[-1]
+    rec = json.loads(last)
+    assert "unit" not in rec
+    assert list(rec) == ["ts", "path", "outcome", "detail"]
+    assert '"unit"' not in last

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -18,6 +19,7 @@ type enrichmentCallEntry struct {
 	Path    string `json:"path"`
 	Outcome string `json:"outcome"`
 	Detail  string `json:"detail"`
+	Unit    string `json:"unit"` // #2218: optional (trip/location), absent in old lines
 }
 
 // Outcome vocabulary of log_enrichment_call() — kept as constants so a rename
@@ -38,6 +40,42 @@ type enrichmentAgg struct {
 	lastFallbackAt     string
 	lastFallbackDetail string
 	selfThrottled      bool
+	// unitLatest holds the newest entry per unit (#2218); only lines carrying
+	// a unit contribute.
+	unitLatest map[string]unitState
+}
+
+type unitState struct {
+	ts      string
+	outcome string
+}
+
+const maxFailedUnits = 20
+
+// failedUnits lists units whose newest entry is "unavailable", newest outage
+// first, ties broken by name, capped at maxFailedUnits. Never nil.
+func (a *enrichmentAgg) failedUnits() []string {
+	type failed struct{ unit, ts string }
+	var list []failed
+	for u, st := range a.unitLatest {
+		if st.outcome == enrichmentOutcomeUnavailable {
+			list = append(list, failed{u, st.ts})
+		}
+	}
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].ts != list[j].ts {
+			return list[i].ts > list[j].ts
+		}
+		return list[i].unit < list[j].unit
+	})
+	out := []string{}
+	for i, f := range list {
+		if i >= maxFailedUnits {
+			break
+		}
+		out = append(out, f.unit)
+	}
+	return out
 }
 
 // aggregateEnrichmentCalls scans path (data/diagnostics/enrichment_calls.jsonl)
@@ -89,6 +127,14 @@ func aggregateEnrichmentCalls(path string) (map[string]*enrichmentAgg, bool) {
 
 		if entry.Ts > agg.lastAttemptAt {
 			agg.lastAttemptAt = entry.Ts
+		}
+		if entry.Unit != "" {
+			if agg.unitLatest == nil {
+				agg.unitLatest = map[string]unitState{}
+			}
+			if cur, seen := agg.unitLatest[entry.Unit]; !seen || entry.Ts >= cur.ts {
+				agg.unitLatest[entry.Unit] = unitState{entry.Ts, entry.Outcome}
+			}
 		}
 		switch entry.Outcome {
 		case enrichmentOutcomeOK:
@@ -154,6 +200,7 @@ func (s *Scheduler) EnrichmentHealth() map[string]any {
 			"last_fallback_at":     nilIfEmpty(agg.lastFallbackAt),
 			"last_fallback_detail": nilIfEmpty(agg.lastFallbackDetail),
 			"self_throttled":       agg.selfThrottled,
+			"failed_units":         agg.failedUnits(),
 		}
 	}
 	return result
