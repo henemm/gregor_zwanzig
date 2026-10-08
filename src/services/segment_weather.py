@@ -18,7 +18,26 @@ from app.day_window import display_end_time
 from app.debug import DebugBuffer
 from app.models import SegmentWeatherData, SegmentWeatherSummary, TripSegment
 
+from dataclasses import dataclass
+
+from services.single_flight import SingleFlight
+
 logger = logging.getLogger(__name__)
+
+# Issue #1539 S2: Single-flight je (Cache, Bucket+Fenster). Wartezeit der
+# Mitflieger = Providerfrist (60 s Open-Meteo, 180 s Geosphere) + Puffer;
+# danach holen sie selbst ab (fail-open). Zur Aufrufzeit gelesen.
+SEGMENT_FLIGHT_WAIT_TIMEOUT_S = 200.0
+_FLIGHTS = SingleFlight()
+
+
+@dataclass
+class _Raw:
+    """Ergebnis eines Flugs: NUR Rohdaten, nie Aggregat/Identitaet/Nutzer."""
+
+    kind: str  # "ok" | "hit" | "throttled"
+    timeseries: "Optional[NormalizedTimeseries]" = None
+    fetched_at: Optional[datetime] = None
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries
@@ -131,6 +150,7 @@ class SegmentWeatherService:
             ValueError: If segment time window is invalid
         """
         from services.forecast_budget import ForecastBudgetGate
+        from providers.base import ProviderRequestError
 
         # Issue #2387: die Kennung entscheidet, WEN eine erreichte Schwelle
         # trifft. `None` heisst ausdruecklich "unattributiert" -- dann gilt
@@ -158,25 +178,57 @@ class SegmentWeatherService:
                 cache_hit=True,
             )
 
+        # Issue #1539 S2: Single-flight um Miss -> Fetch -> Put. Nur der Leader
+        # ruft den Provider; Wartende bekommen die ROHE Zeitreihe aus dem Flug
+        # (nie Aggregat/Identitaet des Leaders) und aggregieren selbst.
+        args = (segment, enrich_ensemble, enrich_snow, priority, budget_gate, model_id)
+
+        def leader_fn() -> "_Raw":
+            current = self._cache.get(segment, enrich_ensemble, enrich_snow, model_id)
+            if current is not None:  # ein Vorgaenger-Flug hat gerade geschrieben
+                return _Raw("hit", current.timeseries, current.cached_at)
+            return self._load_raw(*args)
+
+        key = (id(self._cache), self._cache.flight_key(
+            segment, enrich_ensemble, enrich_snow, model_id))
+        res = _FLIGHTS.run(key, leader_fn, wait_timeout_s=SEGMENT_FLIGHT_WAIT_TIMEOUT_S)
+
+        if res.error is not None:
+            if isinstance(res.error, ProviderRequestError):
+                # Derselbe Fehler fuer Leader UND Wartende, kein zweiter Retry-Zyklus.
+                return self._provider_error_result(segment, res.error)
+            if res.is_leader:
+                raise res.error  # z.B. ValueError aus _validate_segment
+        if res.is_leader:
+            return self._result_from_raw(segment, res.value, budget_gate, shared=False)
+        if res.error is None and not res.timed_out and res.value.kind != "throttled":
+            return self._result_from_raw(segment, res.value, budget_gate, shared=True)
+        # Fail-open: Flug gescheitert/zu lang, oder Leader gedrosselt (andere
+        # Prioritaet moeglich) -- selbst versuchen, ohne Flug.
+        try:
+            raw = self._load_raw(*args)
+        except ProviderRequestError as e:
+            return self._provider_error_result(segment, e)
+        return self._result_from_raw(segment, raw, budget_gate, shared=False)
+
+    def _load_raw(
+        self, segment: TripSegment, enrich_ensemble: bool, enrich_snow: bool,
+        priority: str, budget_gate, model_id: str,
+    ) -> "_Raw":
+        """Miss -> validate -> reserve -> fetch -> put (RAW). Raises
+        ValueError (Validierung) / ProviderRequestError."""
         self._debug.add("weather.cache: MISS - fetching from provider")
         budget_gate.record_cache_miss()
 
-        # Step 0b: Verbrauchsbudget pruefen (Issue #1329 Teil 2) -- NUR bei
-        # Cache-Miss, denn ein Cache-Hit verbraucht kein Kontingent.
-        if not budget_gate.allow(priority):
-            self._debug.add(f"budget.throttled: priority={priority}")
-            return SegmentWeatherData(
-                segment=segment,
-                timeseries=None,
-                aggregated=SegmentWeatherSummary(),
-                fetched_at=datetime.now(timezone.utc),
-                provider=self._provider.name,
-                has_error=True,
-                error_message="budget_throttled",
-            )
-
-        # Step 1: Validate time window
+        # Step 1: Validierung VOR der Buchung (Issue #1539): ein Validierungs-
+        # fehler darf keinen Call buchen.
         self._validate_segment(segment)
+
+        # Step 0b: Verbrauchsbudget atomar pruefen+buchen (Issue #1329 Teil 2
+        # + #1539 S1b) -- NUR bei Cache-Miss, ein Hit verbraucht kein Kontingent.
+        if not budget_gate.reserve(priority):
+            self._debug.add(f"budget.throttled: priority={priority}")
+            return _Raw("throttled")
 
         # Step 2 & 3: Log segment info and create Location
         self._debug.add(f"segment: {segment.segment_id}")
@@ -187,8 +239,6 @@ class SegmentWeatherService:
             f"time: {segment.start_time.isoformat()} - {segment.end_time.isoformat()}"
         )
         self._debug.add(f"duration: {segment.duration_hours:.1f}h")
-
-        # Create Location from segment start_point
         location = Location(
             latitude=segment.start_point.lat,
             longitude=segment.start_point.lon,
@@ -198,20 +248,36 @@ class SegmentWeatherService:
             else None,
         )
 
-        # Step 4: Fetch weather data (WEATHER-04: catch provider errors)
-        from providers.base import ProviderRequestError
-        try:
-            budget_gate.record_call()  # Issue #1329: tatsaechlicher Upstream-Versuch
-            timeseries = self._provider.fetch_forecast(
-                location,
-                start=segment.start_time,
-                end=segment.end_time,
-                enrich_ensemble=enrich_ensemble,
-                enrich_snow=enrich_snow,
-            )
-        except ProviderRequestError as e:
-            logger.error(f"Provider failed for segment {segment.segment_id}: {e}")
-            self._debug.add(f"provider.error: {e}")
+        # Step 4: Fetch weather data (WEATHER-04: ProviderRequestError propagates)
+        timeseries = self._provider.fetch_forecast(
+            location,
+            start=segment.start_time,
+            end=segment.end_time,
+            enrich_ensemble=enrich_ensemble,
+            enrich_snow=enrich_snow,
+        )
+
+        # Step 5: Log provider response, store RAW timeseries in cache
+        # (Feature 2.4 + Issue #1329 Teil 1, F001 fix: never the derived
+        # SegmentWeatherData).
+        self._debug.add(f"forecast.points: {len(timeseries.data)}")
+        self._debug.add(f"forecast.model: {timeseries.meta.model}")
+        # Issue #1991: angeforderte vs. vom Provider gemeldete Hoehe.
+        self._debug.add(
+            f"elevation: angefordert={location.elevation_m} "
+            f"gemeldet={timeseries.meta.model_elevation_m}"
+        )
+        fetched_at = datetime.now(timezone.utc)
+        self._cache.put(segment, timeseries, enrich_ensemble, enrich_snow, model_id)
+        return _Raw("ok", timeseries, fetched_at)
+
+    def _result_from_raw(
+        self, segment: TripSegment, raw: "_Raw", budget_gate, shared: bool
+    ) -> SegmentWeatherData:
+        """Step 6+7: aggregiert ueber das EIGENE Fenster dieses Segments.
+        ``shared`` (Wartender) oder ``raw.kind == "hit"`` bucht einen Cache-Hit
+        auf dem EIGENEN Gate; der Fetch-Leader hat Miss und Call bereits gebucht."""
+        if raw.kind == "throttled":
             return SegmentWeatherData(
                 segment=segment,
                 timeseries=None,
@@ -219,26 +285,26 @@ class SegmentWeatherService:
                 fetched_at=datetime.now(timezone.utc),
                 provider=self._provider.name,
                 has_error=True,
-                error_message=str(e),
+                error_message="budget_throttled",
             )
-
-        # Step 5: Log provider response, store RAW timeseries in cache
-        # (Feature 2.4 + Issue #1329 Teil 1, F001 fix: never the derived
-        # SegmentWeatherData).
-        self._debug.add(f"forecast.points: {len(timeseries.data)}")
-        self._debug.add(f"forecast.model: {timeseries.meta.model}")
-        # Issue #1991: angeforderte vs. vom Provider gemeldete Hoehe -- kein
-        # neuer Diagnosekanal, dieselbe Zeile wie die bestehenden Debug-Eintraege.
-        self._debug.add(
-            f"elevation: angefordert={location.elevation_m} "
-            f"gemeldet={timeseries.meta.model_elevation_m}"
-        )
-        fetched_at = datetime.now(timezone.utc)
-        self._cache.put(segment, timeseries, enrich_ensemble, enrich_snow, model_id)
-
-        # Step 6+7: Aggregate over THIS segment's own window and wrap
+        hit = shared or raw.kind == "hit"
+        if hit:
+            budget_gate.record_cache_hit()
         return self._aggregate_for_segment(
-            segment, timeseries, fetched_at=fetched_at, cache_hit=False
+            segment, raw.timeseries, fetched_at=raw.fetched_at, cache_hit=hit
+        )
+
+    def _provider_error_result(self, segment: TripSegment, e: Exception) -> SegmentWeatherData:
+        logger.error(f"Provider failed for segment {segment.segment_id}: {e}")
+        self._debug.add(f"provider.error: {e}")
+        return SegmentWeatherData(
+            segment=segment,
+            timeseries=None,
+            aggregated=SegmentWeatherSummary(),
+            fetched_at=datetime.now(timezone.utc),
+            provider=self._provider.name,
+            has_error=True,
+            error_message=str(e),
         )
 
     def _aggregate_for_segment(

@@ -140,3 +140,34 @@ def test_ac2_cached_fetch_zwei_schluessel_unabhaengig(tmp_path, monkeypatch):
     assert errors == [], errors
     assert b_ok, "Schluessel B hat auf haengenden Schluessel A gewartet"
     assert out["b"] == {"v": "B"} and out["a"] == {"v": "A"}
+
+
+@pytest.mark.timeout(30)
+def test_f005_zwei_aufeinanderfolgende_laeufe_gleicher_schluessel_je_eigener_leader_frisches_ergebnis():
+    """Fix-Loop 1 (Adversary F005): nach Flugende wird der Flug aus der
+    Registratur entfernt. Ein spaeterer Lauf mit demselben Schluessel ist wieder
+    Leader, ruft ``leader_fn`` erneut und bekommt ein FRISCHES Ergebnis -- nicht
+    das alte."""
+    from services.single_flight import SingleFlight
+
+    sf = SingleFlight()
+    aufrufe: list = []
+
+    def leader_fn():
+        aufrufe.append(1)
+        return len(aufrufe)
+
+    erst = sf.run("k", leader_fn, wait_timeout_s=1.0)
+    # Der Folgelauf kommt aus einem ANDEREN Thread: im selben Thread liefe ein
+    # nicht entfernter Flug ueber die Reentranz-Abkuerzung und sähe wie ein
+    # frischer Leader aus (falsches Gruen).
+    out: dict = {}
+    errors: list = []
+    t = _start(lambda: out.__setitem__("zweit", sf.run("k", leader_fn, wait_timeout_s=1.0)), errors)
+    t.join(timeout=10)
+    assert not t.is_alive() and errors == [], errors
+    zweit = out["zweit"]
+
+    assert erst.is_leader and zweit.is_leader
+    assert (erst.value, zweit.value) == (1, 2)
+    assert len(aufrufe) == 2

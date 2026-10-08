@@ -159,3 +159,13 @@ Die Spec lässt diese Nahtstellen offen; die RED-Tests legen sie fest, `/50-impl
   `GZ_PARALLEL_FETCH_SLOTS_<PROVIDER_UPPER>` (Provider-Schlüssel `open_meteo`=3, `meteoalarm`=1,
   `meteo_france`=4; unbekannter Provider ⇒ 3). Beides lazy beim ersten Gebrauch gelesen;
   `parallel_fetch._reset_for_tests()` verwirft Executor und Semaphoren, damit Tests neue Env-Werte setzen können.
+
+## Hinweise aus TDD RED für /50 (2026-10-08)
+
+- `tests/tdd/test_internal_forecast_budget_reserve.py` läuft **ohne** `--disable-socket` (TestClient braucht lokalen Socket); alle übrigen RED-Dateien mit.
+- Grüne Wächtertests (heute schon erfüllt, bewachen Mutationen): AC-2 über `cached_fetch` mit zwei Schlüsseln, AC-11 (Mutation 6: `_validate_segment` hinter `reserve`), AC-16, AC-18(b), AC-18 `user_briefing` bei vollem Budget.
+- **AC-16 ist schwach:** Der gedrosselte Leader ist sofort fertig, deshalb lässt sich die Überlappung mit dem Wartenden ohne Eingriff in `src/` nicht erzwingen. Der Adversary muss den Zweig „Leader gedrosselt ⇒ Wartender reserviert selbst" eigens per Mutation prüfen.
+- AC-14: Beide Nutzer nutzen dasselbe Fenster, weil `flight_key` das Fenster enthält. Die abweichende Fensterdauer prüft AC-15 über einen dritten Aufrufer.
+- AC-9, Nutzer-Topf: Nur die Nutzer-Sperre wird gehalten, und der Verlustzähler steigt um genau 1. Grund: Die globale Buchung gelingt, nur die Nutzer-Buchung geht verloren.
+- Öffentliche Methode ist `SegmentWeatherService.fetch_segment_weather`.
+- Dieser Abschnitt ist nach dem RED-Commit `0bfb69d66` entstanden und noch nicht committet (Commit-Sperre in Phase 6 bis zum Adversary-Verdict). Er geht mit dem GREEN-Commit hinein.

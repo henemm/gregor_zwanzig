@@ -28,6 +28,7 @@ import json
 import logging
 import os
 import tempfile
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +41,18 @@ logger = logging.getLogger("forecast_budget")
 PROVIDER = "openmeteo"
 _LOCK_SUFFIX = ".lock"
 _FILENAME = "forecast_budget.json"
+
+# Issue #1539 S1b: Buchungen, die fail-open verloren gehen (Sperr-Timeout, IO-Fehler),
+# werden gezaehlt und laut geloggt statt still verschluckt (Muster
+# ``alert_log_lost_entries``, nur im Prozess, kein JSON-Feld -- Go-Kopplung).
+forecast_budget_lost_bookings = 0
+_lost_lock = threading.Lock()
+
+
+def _count_lost_booking() -> None:
+    global forecast_budget_lost_bookings
+    with _lost_lock:
+        forecast_budget_lost_bookings += 1
 
 
 class ForecastBudgetGate:
@@ -122,11 +135,8 @@ class ForecastBudgetGate:
         """
         if priority == "user_briefing":
             return True
-        if priority == "polling":
-            schwelle = self.POLLING_THRESHOLD
-        elif priority == "alert_check":
-            schwelle = self.BRIEFING_ONLY_THRESHOLD
-        else:
+        schwelle = self._schwelle_fuer(priority)
+        if schwelle is None:
             return True  # unbekannte Prioritaet -> nie drosseln (fail-open)
         try:
             ratio = self._read_usage_ratio(now)
@@ -137,6 +147,40 @@ class ForecastBudgetGate:
         if ratio >= 1.0:
             return False  # Stufe 2 -- harter Kontoschutz (AC-8)
         return not self._ueber_fairem_anteil(now)  # Stufe 1 (AC-1/AC-10)
+
+    def reserve(
+        self, priority: str, units: int = 1, now: Optional[datetime] = None
+    ) -> bool:
+        """Atomares ``allow()`` + ``record_call()`` (Issue #1539 S1b).
+
+        Entscheidung und Buchung im GLOBALEN Topf laufen in EINER Read-Modify-
+        Write-Sequenz unter der Dateisperre -- N parallele Aufrufer bei Restbudget
+        M bekommen genau M-mal ``True``. Danach wird der Nutzer-Topf in eigener,
+        NICHT verschachtelter Sperre gebucht (feste Reihenfolge global -> Nutzer,
+        nie beide gehalten). Fail-open: kann die globale Datei nicht
+        aktualisiert werden, gilt ``True`` und der Verlustzaehler steigt.
+        ``user_briefing`` und unbekannte Prioritaeten werden nie gedrosselt,
+        aber gebucht. Bei Ablehnung wird nichts gebucht."""
+        schwelle = self._schwelle_fuer(priority)
+        entscheidung: list = []  # leer = nicht entschieden (Update fehlgeschlagen)
+
+        def _global(data: dict) -> None:
+            erlaubt = schwelle is None or self._erlaubt_laut_daten(data, schwelle, now)
+            entscheidung.append(erlaubt)
+            if not erlaubt:
+                return
+            data["calls"][PROVIDER] = data["calls"].get(PROVIDER, 0) + units
+            if self._user_id is not None and self._user_id not in data["active_users"]:
+                data["active_users"].append(self._user_id)
+
+        def _nutzer(data: dict) -> None:
+            data["calls"][PROVIDER] = data["calls"].get(PROVIDER, 0) + units
+
+        self._safe_update(_global, now)
+        if entscheidung and entscheidung[0] is False:
+            return False
+        self._safe_update_user(_nutzer, now)
+        return True
 
     def record_call(self) -> None:
         """Zaehlt einen tatsaechlichen Upstream-Call (Cache-Miss, der den
@@ -220,6 +264,28 @@ class ForecastBudgetGate:
         moment = now if now is not None else datetime.now(timezone.utc)
         return moment.astimezone(timezone.utc).date().isoformat()
 
+    def _schwelle_fuer(self, priority: str) -> Optional[float]:
+        """Schwelle der Prioritaet; ``None`` = nie drosseln (``user_briefing``,
+        unbekannte Prioritaet -> fail-open)."""
+        if priority == "polling":
+            return self.POLLING_THRESHOLD
+        if priority == "alert_check":
+            return self.BRIEFING_ONLY_THRESHOLD
+        return None
+
+    def _erlaubt_laut_daten(
+        self, data: dict, schwelle: float, now: Optional[datetime]
+    ) -> bool:
+        """Die Stufen-Entscheidung von ``allow()`` auf bereits geladenen
+        (unter Sperre gehaltenen) Daten."""
+        calls = data["calls"].get(PROVIDER, 0)
+        ratio = calls / self.DAILY_BUDGET if self.DAILY_BUDGET > 0 else 0.0
+        if ratio < schwelle:
+            return True  # Stufe 0
+        if ratio >= 1.0:
+            return False  # Stufe 2 -- harter Kontoschutz
+        return not self._ueber_fairem_anteil_n(len(data["active_users"]), now)
+
     def _read_usage_ratio(self, now: Optional[datetime] = None) -> float:
         data = self._load_for_today(now)
         calls = data["calls"].get(PROVIDER, 0)
@@ -259,12 +325,15 @@ class ForecastBudgetGate:
         befreien: ein Aufruf ohne Kennung darf nie mehr duerfen als ein
         Aufruf mit Kennung.
         """
-        if self._user_path is None:
-            return True
         try:
             aktive = len(self._load_for_today(now)["active_users"])
         except Exception:
             aktive = 0
+        return self._ueber_fairem_anteil_n(aktive, now)
+
+    def _ueber_fairem_anteil_n(self, aktive: int, now: Optional[datetime]) -> bool:
+        if self._user_path is None:
+            return True
         return self._user_calls_today(now) > self._fair_share_fuer(aktive)
 
     def _leerer_tag(self, today: str) -> dict:
@@ -341,22 +410,26 @@ class ForecastBudgetGate:
                 os.unlink(tmp_name)
             raise
 
-    def _safe_update(self, mutate: Callable[[dict], None]) -> None:
+    def _safe_update(
+        self, mutate: Callable[[dict], None], now: Optional[datetime] = None
+    ) -> bool:
         """Reload-merge-write der GLOBALEN Datei unter Dateisperre."""
-        self._update_datei(
-            self._dir, self._path, self._load_for_today,
-            lambda: self._leerer_tag(self._today_utc()), mutate,
+        return self._update_datei(
+            self._dir, self._path, lambda: self._load_for_today(now),
+            lambda: self._leerer_tag(self._today_utc(now)), mutate,
         )
 
-    def _safe_update_user(self, mutate: Callable[[dict], None]) -> None:
+    def _safe_update_user(
+        self, mutate: Callable[[dict], None], now: Optional[datetime] = None
+    ) -> bool:
         """Reload-merge-write des NUTZER-Topfs unter EIGENEM Sidecar-Lock
         (weniger Contention als ein gemeinsames Lock, Muster
         `throttle_store.py:197-245`). Ohne Kennung passiert nichts."""
         if self._user_dir is None or self._user_path is None:
-            return
-        self._update_datei(
-            self._user_dir, self._user_path, self._load_user_for_today,
-            lambda: {"date": self._today_utc(), "calls": {}}, mutate,
+            return True
+        return self._update_datei(
+            self._user_dir, self._user_path, lambda: self._load_user_for_today(now),
+            lambda: {"date": self._today_utc(now), "calls": {}}, mutate,
         )
 
     def _update_datei(
@@ -366,38 +439,45 @@ class ForecastBudgetGate:
         laden: Callable[[], dict],
         leerbau: Callable[[], dict],
         mutate: Callable[[dict], None],
-    ) -> None:
-        """Fail-open: JEDER Fehler (Lock-Timeout, IO, kaputtes JSON) wird
-        geschluckt -- ein Zaehl-Defekt darf nie einen Versand verhindern.
-        Ein Sperren-Timeout wirft dabei NICHT (`acquire_exclusive`, #1448
-        S2) -- die WARNING wird explizit VOR dem `return` geloggt, damit
-        sie nicht von diesem `except Exception: pass` erfasst werden kann."""
+    ) -> bool:
+        """Fail-open: JEDER Fehler (Lock-Timeout, IO, kaputtes JSON) bleibt
+        ohne Ausnahme -- ein Zaehl-Defekt darf nie einen Versand verhindern.
+        Seit #1539 S1b meldet die Methode den Erfolg zurueck; eine verlorene
+        Buchung steigt im Prozesszaehler ``forecast_budget_lost_bookings`` und
+        steht als WARNING im Log (kein stilles ``pass`` mehr)."""
         try:
-            verzeichnis.mkdir(parents=True, exist_ok=True)
-            lock_path = str(pfad) + _LOCK_SUFFIX
-            fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+            if self._update_unter_sperre(verzeichnis, pfad, laden, leerbau, mutate):
+                return True
+            _count_lost_booking()
+            return False
+        except Exception as exc:
+            _count_lost_booking()
+            logger.warning("Budget-Buchung in %s verloren (%s)", pfad, exc)
+            return False
+
+    def _update_unter_sperre(self, verzeichnis, pfad, laden, leerbau, mutate) -> bool:
+        verzeichnis.mkdir(parents=True, exist_ok=True)
+        lock_path = str(pfad) + _LOCK_SUFFIX
+        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        try:
+            start = time.monotonic()
+            if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
+                # F003 (Adversary #1448 S2): tatsaechlich gewartete Zeit loggen.
+                logger.warning(
+                    "Dateisperre %s nicht innerhalb %.2fs erhalten -- "
+                    "Buchung verloren",
+                    lock_path, time.monotonic() - start,
+                )
+                return False
             try:
-                start = time.monotonic()
-                if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
-                    # F003 (Adversary #1448 S2): tatsaechlich gewartete Zeit
-                    # loggen, nicht die konfigurierte Zeitgrenze.
-                    elapsed = time.monotonic() - start
-                    logger.warning(
-                        "Dateisperre %s nicht innerhalb %.2fs erhalten -- "
-                        "Schreibvorgang uebersprungen",
-                        lock_path, elapsed,
-                    )
-                    return
                 try:
-                    try:
-                        data = laden()
-                    except Exception:
-                        data = leerbau()
-                    mutate(data)
-                    self._write(verzeichnis, pfad, data)
-                finally:
-                    fcntl.flock(fd, fcntl.LOCK_UN)
+                    data = laden()
+                except Exception:
+                    data = leerbau()
+                mutate(data)
+                self._write(verzeichnis, pfad, data)
+                return True
             finally:
-                os.close(fd)
-        except Exception:
-            pass
+                fcntl.flock(fd, fcntl.LOCK_UN)
+        finally:
+            os.close(fd)

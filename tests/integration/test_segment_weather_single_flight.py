@@ -17,9 +17,9 @@ RED-Erwartung (vor /50-implement):
   * AC-14  ROT    -- zwei Nutzer: beide rufen den Provider, kein Cache-Hit.
   * AC-15  ROT    -- Cache-Inhalt selbst ist heute schon roh; rot wird der
                      Test an der Provider-Zaehlung des Zwei-Nutzer-Laufs.
-  * AC-16  GRUEN  -- Waechter: der gedrosselte Leader ist sofort fertig, die
-                     Ueberlappung mit dem Wartenden laesst sich ohne
-                     Eingriff in die Produktion nicht erzwingen.
+  * AC-16  GRUEN  -- Waechter; die Ueberlappung (Wartender haengt am Flug des
+                     gedrosselten Leaders) wird seit Fix-Loop 1 ueber einen
+                     Haken im echten Cache (`_HakenCache`) erzwungen.
   * AC-17  ROT    -- Leader-Fehler: jeder Thread macht eigenen Retry-Zyklus.
   * AC-18  Folge (a) ROT (seriell 1, parallel N), (b) und (c) je nach
            Ueberlappung; Budget-erschoepft-Fall GRUEN (Waechter).
@@ -358,60 +358,232 @@ def test_ac15_cache_nach_zwei_nutzer_lauf_nur_rohzeitreihen_kein_identitaetsleck
 
 # --- AC-16 -----------------------------------------------------------------
 
+class _HakenCache(WeatherCacheService):
+    """Echter Cache mit Haken (KEIN Mock): der Thread namens ``leader`` haelt
+    bei seinem ZWEITEN ``get`` -- das ist die Doppelpruefung im Flug, der Flug
+    ist also schon registriert -- an, bis ``freigabe`` gesetzt wird. So haengt
+    ein spaeter eintreffender Wartender nachweislich am laufenden Flug."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.freigabe = threading.Event()
+        self.leader_im_flug = threading.Event()
+        self.wartender_hat_geprueft = threading.Event()
+        self._zaehler: dict[str, int] = {}
+        self._zaehler_lock = threading.Lock()
+
+    def get(self, segment, enrich_ensemble=True, enrich_snow=True, model_id=""):
+        name = threading.current_thread().name
+        with self._zaehler_lock:
+            self._zaehler[name] = self._zaehler.get(name, 0) + 1
+            nr = self._zaehler[name]
+        if name == "leader" and nr == 2:
+            self.leader_im_flug.set()
+            assert self.freigabe.wait(timeout=20), "Haken nie freigegeben"
+        ergebnis = super().get(segment, enrich_ensemble, enrich_snow, model_id)
+        if name == "wartender" and nr == 1:
+            self.wartender_hat_geprueft.set()
+        return ergebnis
+
+
+def _starte(name, fn, ergebnisse, fehler) -> threading.Thread:
+    def _inner():
+        try:
+            ergebnisse[name] = fn()
+        except BaseException as exc:  # noqa: BLE001 - C4-62: selbst einsammeln
+            fehler.append((name, exc))
+    t = threading.Thread(target=_inner, name=name, daemon=True)
+    t.start()
+    return t
+
+
 @pytest.mark.timeout(60)
 def test_ac16_gedrosselter_leader_wartender_mit_hoeherer_prioritaet_ruft_selbst_ab():
-    """AC-16 (WAECHTER, heute gruen): Budget erschoepft (`calls ==
-    DAILY_BUDGET`). Der Leader laeuft auf niedriger Prioritaet (`polling`) und
-    wird gedrosselt, der Wartende (`user_briefing`) reserviert selbst und
-    ruft ab. Ergebnis: genau EIN Provider-Call, gebucht beim Wartenden.
-
-    Grenze: der gedrosselte Leader ist sofort fertig; ob der Wartende dabei
-    wirklich am Flug haengt, laesst sich ohne Eingriff in die Produktion nicht
-    erzwingen. Der Test bewacht deshalb die Endzusicherung (kein Abruf-Verlust
-    durch Leader-Drosselung), nicht die Ueberlappung."""
+    """AC-16 (Wirkstelle, F001): Budget erschoepft (`calls == DAILY_BUDGET`).
+    Der Leader laeuft auf niedriger Prioritaet (`polling`) und haelt per Haken
+    im Flug an. Erst wenn der Wartende (`user_briefing`) seine Erstpruefung
+    hinter sich hat und damit am Flug haengt (0.4 s Vorsprung), wird der Leader
+    freigegeben: er wird gedrosselt. Der Wartende darf das Drosselungs-
+    Ergebnis NICHT erben, sondern reserviert selbst und ruft ab. Ergebnis:
+    genau EIN Provider-Call, gebucht beim Wartenden."""
     _setze_budget(calls=ForecastBudgetGate.DAILY_BUDGET, active_users=[NUTZER_A, NUTZER_B])
     provider = ZaehlenderProvider(dauer_s=0.05)
-    cache = WeatherCacheService()
+    cache = _HakenCache()
     seg_leader = _segment("leader-niedrig")
     seg_wartend = _segment("wartend-hoch")
-
     ergebnisse: dict = {}
     fehler: list = []
 
-    def _leader():
-        try:
-            ergebnisse["leader"] = _dienst(provider, cache).fetch_segment_weather(
-                seg_leader, priority="polling", user_id=NUTZER_A
-            )
-        except BaseException as exc:  # noqa: BLE001
-            fehler.append(exc)
-
-    def _wartender():
-        try:
-            time.sleep(0.1)  # nach dem Leader eintreffen
-            ergebnisse["wartend"] = _dienst(provider, cache).fetch_segment_weather(
-                seg_wartend, priority="user_briefing", user_id=NUTZER_B
-            )
-        except BaseException as exc:  # noqa: BLE001
-            fehler.append(exc)
-
-    threads = [threading.Thread(target=_leader, daemon=True),
-               threading.Thread(target=_wartender, daemon=True)]
-    for t in threads:
-        t.start()
-    for t in threads:
+    t_leader = _starte("leader", lambda: _dienst(provider, cache).fetch_segment_weather(
+        seg_leader, priority="polling", user_id=NUTZER_A), ergebnisse, fehler)
+    assert cache.leader_im_flug.wait(timeout=20), "Leader nie im Flug"
+    t_wart = _starte("wartender", lambda: _dienst(provider, cache).fetch_segment_weather(
+        seg_wartend, priority="user_briefing", user_id=NUTZER_B), ergebnisse, fehler)
+    assert cache.wartender_hat_geprueft.wait(timeout=20)
+    time.sleep(0.4)  # Wartender ist jetzt nachweislich am Flug des Leaders registriert
+    assert provider.call_count == 0 and "wartender" not in ergebnisse
+    cache.freigabe.set()
+    for t in (t_leader, t_wart):
         t.join(timeout=JOIN_FRIST_S)
-    assert not any(t.is_alive() for t in threads)
+    assert not any(t.is_alive() for t in (t_leader, t_wart))
     assert not fehler, f"Thread-Ausnahmen: {fehler!r}"
 
     assert ergebnisse["leader"].has_error
     assert ergebnisse["leader"].error_message == "budget_throttled"
-    assert not ergebnisse["wartend"].has_error
-    assert ergebnisse["wartend"].timeseries is not None
-    assert ergebnisse["wartend"].segment.segment_id == "wartend-hoch"
+    assert not ergebnisse["wartender"].has_error, "Wartender erbte die Drosselung des Leaders"
+    assert ergebnisse["wartender"].timeseries is not None
+    assert ergebnisse["wartender"].segment.segment_id == "wartend-hoch"
     assert provider.call_count == 1
     assert _stand(NUTZER_B)["user_calls_today"] == 1
     assert _stand(NUTZER_A)["user_calls_today"] == 0
+
+
+# --- F003: Doppelpruefung des Caches im Leader -----------------------------
+
+class _VorgaengerSchreibtCache(WeatherCacheService):
+    """Echter Cache: der ERSTE ``get`` liefert Miss, danach schreibt -- wie ein
+    Vorgaenger-Flug, der zwischen Erstpruefung und Flugstart endet -- ein
+    Eintrag fuer genau dieses Segment in den Cache."""
+
+    def __init__(self, zeitreihe) -> None:
+        super().__init__()
+        self._zeitreihe = zeitreihe
+        self._schon = False
+
+    def get(self, segment, enrich_ensemble=True, enrich_snow=True, model_id=""):
+        ergebnis = super().get(segment, enrich_ensemble, enrich_snow, model_id)
+        if not self._schon:
+            self._schon = True
+            self.put(segment, self._zeitreihe, enrich_ensemble, enrich_snow, model_id)
+        return ergebnis
+
+
+@pytest.mark.timeout(60)
+def test_f003_vorgaenger_flug_schreibt_zwischen_erstpruefung_und_flugstart_kein_zweiter_abruf():
+    """Erstpruefung = Miss, dann ist der Cache befuellt, dann wird der Aufrufer
+    Leader: die Doppelpruefung im Leader muss den Treffer finden, der Provider
+    wird NICHT gerufen, der Treffer wird als Cache-Hit gebucht."""
+    from types import SimpleNamespace
+
+    zeitreihe = ZaehlenderProvider(dauer_s=0.0).fetch_forecast(SimpleNamespace(name="seed"))
+    provider = ZaehlenderProvider(dauer_s=0.0)
+    cache = _VorgaengerSchreibtCache(zeitreihe)
+    vorher = _stand(None)
+
+    ergebnis = _dienst(provider, cache).fetch_segment_weather(
+        _segment("doppelpruefung"), user_id=NUTZER_A)
+
+    assert not ergebnis.has_error and ergebnis.timeseries is not None
+    assert provider.call_count == 0, "Doppelpruefung fehlt: zweiter Upstream-Abruf"
+    nachher = _stand(None)
+    assert nachher["calls_today"] == vorher["calls_today"]
+    assert nachher["cache_hits"] - vorher["cache_hits"] == 1
+
+
+# --- F004: Flug-Schluessel enthaelt Fenster und Cache-Instanz --------------
+
+@pytest.mark.timeout(60)
+def test_f004_gleicher_bucket_verschiedene_fenster_parallel_zwei_fetches_je_eigenes_fenster():
+    """Gleicher Ort/Bucket, aber 4h- und 1h-Fenster gleichzeitig: der Flug-
+    Schluessel enthaelt das Fenster, also zwei Fetches; jeder Aufrufer behaelt
+    Identitaet und Aggregat seines eigenen Fensters."""
+    provider = ZaehlenderProvider()
+    cache = WeatherCacheService()
+    breit = _segment("fenster-breit", start_hour=10, duration_hours=4.0)
+    schmal = _segment("fenster-schmal", start_hour=11, duration_hours=1.0)
+    erwartet_breit, erwartet_schmal = _baseline(breit), _baseline(schmal)
+
+    (res_breit, res_schmal), fehler = _parallel([
+        lambda: _dienst(provider, cache).fetch_segment_weather(breit, user_id=NUTZER_A),
+        lambda: _dienst(provider, cache).fetch_segment_weather(schmal, user_id=NUTZER_B),
+    ])
+
+    _keine_thread_fehler(fehler)
+    assert provider.call_count == 2, (
+        f"{provider.call_count} fetch_forecast statt 2 bei verschiedenen Fenstern"
+    )
+    assert res_breit.segment.segment_id == "fenster-breit"
+    assert res_schmal.segment.segment_id == "fenster-schmal"
+    assert res_breit.aggregated.temp_max_c == erwartet_breit.aggregated.temp_max_c
+    assert res_schmal.aggregated.temp_max_c == erwartet_schmal.aggregated.temp_max_c
+    assert res_breit.aggregated.temp_max_c != res_schmal.aggregated.temp_max_c
+
+
+@pytest.mark.timeout(60)
+def test_f004_zwei_cache_instanzen_gleicher_schluessel_parallel_je_ein_abruf():
+    """Zwei verschiedene Cache-Instanzen (z. B. Test vs. Prozess-Singleton)
+    mit identischem Schluessel teilen KEINEN Flug: je Cache ein Abruf."""
+    provider = ZaehlenderProvider()
+    cache_1, cache_2 = WeatherCacheService(), WeatherCacheService()
+    segment = _segment("zwei-caches")
+
+    ergebnisse, fehler = _parallel([
+        lambda: _dienst(provider, cache_1).fetch_segment_weather(segment, user_id=NUTZER_A),
+        lambda: _dienst(provider, cache_2).fetch_segment_weather(segment, user_id=NUTZER_B),
+    ])
+
+    _keine_thread_fehler(fehler)
+    assert all(not e.has_error for e in ergebnisse)
+    assert provider.call_count == 2, (
+        f"{provider.call_count} fetch_forecast statt 2 bei zwei Cache-Instanzen"
+    )
+
+
+# --- F006: Wartefrist-Ablauf im Segment-Pfad -------------------------------
+
+class _ErsterHaengtProvider(ZaehlenderProvider):
+    """Der ERSTE Abruf haengt ``haengt_s`` (haengender Leader), alle weiteren
+    laufen sofort."""
+
+    def __init__(self, haengt_s: float) -> None:
+        super().__init__(dauer_s=0.0)
+        self._haengt_s = haengt_s
+        self._entscheid = threading.Lock()
+        self._schon = False
+        self.erster_drin = threading.Event()
+
+    def fetch_forecast(self, location, **kwargs):
+        with self._entscheid:
+            erster, self._schon = not self._schon, True
+        if erster:
+            self.erster_drin.set()
+            time.sleep(self._haengt_s)
+        return super().fetch_forecast(location, **kwargs)
+
+
+@pytest.mark.timeout(60)
+def test_f006_wartefrist_abgelaufen_wartender_holt_selbst_ab_und_kehrt_fristgerecht_zurueck(
+    monkeypatch,
+):
+    """AC-5 an der Wirkstelle: der Leader haengt 4 s, die Wartefrist ist auf
+    0.3 s verkuerzt. Der Wartende holt selbst ab (zweiter Provider-Call), liefert
+    ein Ergebnis und kehrt lange vor dem Leader zurueck."""
+    import services.segment_weather as sw
+
+    monkeypatch.setattr(sw, "SEGMENT_FLIGHT_WAIT_TIMEOUT_S", 0.3)
+    provider = _ErsterHaengtProvider(haengt_s=4.0)
+    cache = WeatherCacheService()
+    segment = _segment("frist")
+    ergebnisse: dict = {}
+    fehler: list = []
+
+    t_leader = _starte("leader", lambda: _dienst(provider, cache).fetch_segment_weather(
+        segment, user_id=NUTZER_A), ergebnisse, fehler)
+    assert provider.erster_drin.wait(timeout=20)
+    beginn = time.monotonic()
+    t_wart = _starte("wartender", lambda: _dienst(provider, cache).fetch_segment_weather(
+        segment, user_id=NUTZER_B), ergebnisse, fehler)
+    t_wart.join(timeout=3.0)
+    dauer = time.monotonic() - beginn
+    wartender_fertig = not t_wart.is_alive()
+    t_leader.join(timeout=JOIN_FRIST_S)
+    t_wart.join(timeout=JOIN_FRIST_S)
+
+    assert wartender_fertig and dauer < 3.0, "Wartender kehrte nicht fristgerecht zurueck"
+    assert not fehler, f"Thread-Ausnahmen: {fehler!r}"
+    assert not ergebnisse["wartender"].has_error
+    assert ergebnisse["wartender"].timeseries is not None
+    assert provider.call_count == 2
 
 
 # --- AC-17 -----------------------------------------------------------------

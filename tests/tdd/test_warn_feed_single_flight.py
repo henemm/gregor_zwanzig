@@ -203,3 +203,58 @@ def test_ac4_wartende_bekommen_entry_aus_dem_flug_nicht_per_cache_get(journal, c
     assert all(r is not None and r == results[0] for r in results), results
     hits = [r for r in _records(journal) if r["cache_hit"] is True]
     assert len(hits) == N - 1
+
+
+# --- Waechter (Fix-Loop 1, Adversary F003/F004) ------------------------------
+
+class _VorgaengerSchreibtDict(dict):
+    """Echtes ``dict``: der ERSTE ``get`` liefert Miss, danach landet ein frischer
+    Eintrag im Cache -- wie ein Vorgaenger-Flug, der zwischen Erstpruefung und
+    Flugstart endet."""
+
+    def __init__(self, entry):
+        super().__init__()
+        self._entry = entry
+        self._schon = False
+
+    def get(self, key, default=None):
+        ergebnis = super().get(key, default)
+        if not self._schon:
+            self._schon = True
+            self[key] = self._entry
+        return ergebnis
+
+
+@pytest.mark.timeout(30)
+def test_f003_vorgaenger_flug_schreibt_zwischen_erstpruefung_und_flugstart_kein_zweiter_abruf(
+    journal, capture_id,
+):
+    """Erstpruefung = Miss, dann ist der Cache frisch befuellt, dann wird der
+    Aufrufer Leader: die Doppelpruefung im Leader muss den Treffer bedienen,
+    ``request_fn`` darf NICHT laufen."""
+    entry = {"data": {"features": [{"id": "vorgaenger"}]}, "fetched_at": 1000.0,
+             "ttl": 100.0, "capture_id": None}
+    cache = _VorgaengerSchreibtDict(entry)
+    req = _CountingRequest()
+
+    ergebnis = _fetch(cache, req, clock=lambda: 1000.0)
+
+    assert req.calls == 0, "Doppelpruefung fehlt: zweiter Upstream-Abruf"
+    assert ergebnis == {"features": [{"id": "vorgaenger"}]}
+    hits = [r for r in _records(journal) if r["cache_hit"] is True]
+    assert len(hits) == 1
+
+
+@pytest.mark.timeout(30)
+def test_f004_zwei_cache_dicts_gleicher_schluessel_parallel_je_ein_abruf(journal, capture_id):
+    """Zwei verschiedene Cache-Dicts mit identischem Schluessel teilen KEINEN
+    Flug (``id(cache)`` im Flug-Schluessel): je Cache ein Upstream-Abruf."""
+    cache_1: dict = {}
+    cache_2: dict = {}
+    req = _CountingRequest(delay=0.5)
+    threads, errors, results, j = _run_parallel(
+        2, lambda i: _fetch(cache_1 if i == 0 else cache_2, req))
+    _finish(threads, errors, j)
+
+    assert req.calls == 2, f"request_fn {req.calls}x aufgerufen, erwartet 2x (je Cache 1x)"
+    assert all(r is not None for r in results)

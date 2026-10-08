@@ -146,7 +146,11 @@ def reserve_forecast_budget(user_id: str = Query(...), priority: str = Query(...
     bucht nichts.
     """
     gate = ForecastBudgetGate(user_id)
-    if not gate.allow(priority):
+    # Issue #1539 S1b: Pruefen + Buchen atomar in EINEM reserve() -- parallele
+    # Anfragen (Go-Scheduler) koennen das Restbudget so nicht ueberbuchen.
+    # Die Einheiten gehen in einem Zug in den globalen und den Nutzer-Topf;
+    # reserve() traegt die user_id wie record_call() in "active_users" ein.
+    if not gate.reserve(priority, units=EINHEITEN_JE_FORECAST_ABRUF):
         return {
             "allowed": False,
             "retry_after_s": _sekunden_bis_utc_mitternacht(),
@@ -156,12 +160,6 @@ def reserve_forecast_budget(user_id: str = Query(...), priority: str = Query(...
     # Abruf ist faktisch ein Miss. Ohne diese Buchung luege die Cache-Hit-Quote
     # in /api/scheduler/status nach oben.
     gate.record_cache_miss()
-    for _ in range(EINHEITEN_JE_FORECAST_ABRUF):
-        # Wiederholter Aufruf statt eines Zaehler-Parameters: record_call()
-        # traegt zusaetzlich die user_id in die mengengepruefte Menge
-        # "active_users" ein, der zweite Aufruf erhoeht also ausschliesslich
-        # "calls". Absicht, kein Kopierfehler (Spec Z. 73-85).
-        gate.record_call()
     return {"allowed": True}
 
 
