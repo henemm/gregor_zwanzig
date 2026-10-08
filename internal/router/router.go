@@ -326,6 +326,10 @@ func New(deps Deps) chi.Router {
 	r.With(requireAdmin).Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/trip-reports"))
 	r.With(requireAdmin).Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/alert-checks"))
 	r.With(requireAdmin).Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/inbound-commands"))
+	r.With(requireAdmin).Post("/api/scheduler/radar-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/radar-alert-checks"))
+	r.With(requireAdmin).Post("/api/scheduler/compare-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/compare-alert-checks"))
+	r.With(requireAdmin).Post("/api/scheduler/compare-radar-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/compare-radar-alert-checks"))
+	r.With(requireAdmin).Post("/api/scheduler/compare-official-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/compare-official-alert-checks"))
 
 	return r
 }

@@ -36,6 +36,10 @@ var triggerPfade = []string{
 	"/api/scheduler/trip-reports",
 	"/api/scheduler/alert-checks",
 	"/api/scheduler/inbound-commands",
+	"/api/scheduler/radar-alert-checks",
+	"/api/scheduler/compare-alert-checks",
+	"/api/scheduler/compare-radar-alert-checks",
+	"/api/scheduler/compare-official-alert-checks",
 }
 
 // pythonZiel zaehlt die Aufrufe je Pfad und antwortet wie der Python-Core.
