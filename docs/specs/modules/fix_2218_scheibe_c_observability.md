@@ -4,7 +4,7 @@ type: module
 created: 2026-10-08
 updated: 2026-10-08
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [observability, mail, scheduler, alerts, health, capture, track-resolution]
 ---
 
@@ -40,8 +40,8 @@ jeder ausgehenden Mail. Die Scheibe betrifft alle vier Kanäle gleichermaßen ni
 
 - **Python-Core:** `src/output/channels/email.py` (C5-53),
   `src/services/radar_service.py` (C5-37), `src/services/alert_input_capture.py`
-  (B2-71), `src/services/track_resolution.py` (C5-47),
-  `src/services/trip_alert.py` (C5-02b/c)
+  (B2-71), `src/services/track_resolution.py` + `src/services/track_resolution_health.py`
+  (C5-47), `src/services/trip_alert.py` (C5-02b/c)
 - **Go-API:** `internal/scheduler/scheduler.go` (C5-15),
   `internal/scheduler/briefing_health.go` (nur Kommentar, C5-47),
   `internal/router/router.go` (C5-02a)
@@ -49,19 +49,20 @@ jeder ausgehenden Mail. Die Scheibe betrifft alle vier Kanäle gleichermaßen ni
 - **Identifier:** `EmailOutput.build_mime_message` / `EmailOutput.send` /
   `EmailOutput._dial_and_send`, `Scheduler.Start` / `Stop` / `Status`,
   `RadarNowcastService._fetch_geosphere_inca`, `alert_input_capture._prune`,
-  `track_resolution._melde_unplausible_messung`, `trip_alert._delta_event_window` /
+  `track_resolution._melde_unplausible_messung`,
+  `track_resolution_health.record_track_resolution_failure`, `trip_alert._delta_event_window` /
   `aufenthaltsfenster_min`
 
 **Schicht:** Python-Core und Go-API. Kein Frontend.
 
 ## Estimated Scope
 
-- **LoC produktiv:** ca. +75 / −10
+- **LoC produktiv:** ca. +235 / −33 (v1.1: am Umsetzungsstand nachgemessen; v1.0 schätzte +75 / −10)
 - **LoC mit Tests:** voraussichtlich über dem Limit 250 ⇒ vor `/50-implement`
   `workflow.py set-field loc_limit_override 500` (Begründung: sechs gleichrangige
   Einträge in einem Workflow, PO-Vorgabe „nichts abspalten"; Tests zählen mit)
-- **Files:** 9 produktiv (2 Go, 5 Python, 1 Go-Kommentar, 1 Doku) + 9 Testdateien
-- **Acceptance Criteria:** 30
+- **Files:** 12 produktiv (3 Go inkl. 1 Kommentar-Änderung, 8 Python, 1 Doku; v1.1: zusätzlich `track_resolution_health.py`) + Testdateien
+- **Acceptance Criteria:** 31
 - **Effort:** medium · **Risiko:** MEDIUM (viele kleine, isolierte Änderungen;
   Außenwirkung nur der Message-ID-Header)
 
@@ -70,8 +71,9 @@ jeder ausgehenden Mail. Die Scheibe betrifft alle vier Kanäle gleichermaßen ni
 | `src/output/channels/email.py` | MODIFY (Message-ID, Erfolgszeile) | Python-Core | +30 / −3 |
 | `src/services/radar_service.py` | MODIFY (leerer INCA-Zweig) | Python-Core | +5 |
 | `src/services/alert_input_capture.py` | MODIFY (Prune je `source_key` + Deckel) | Python-Core | +30 / −7 |
-| `src/services/track_resolution.py` | MODIFY (Dämpfung, Docstring) | Python-Core | +20 / −5 |
-| `src/services/trip_alert.py` | MODIFY (Fenster-Logzeilen, `alert_fetch` im Nowcast-Zweig) | Python-Core | +25 |
+| `src/services/track_resolution.py` | MODIFY (Dämpfung, Docstring; Zeitstempel nur nach Schreiberfolg) | Python-Core | +20 / −5 |
+| `src/services/track_resolution_health.py` | MODIFY (v1.1: `record_track_resolution_failure` liefert `True`/`False`) | Python-Core | +6 / −1 |
+| `src/services/trip_alert.py` | MODIFY (Fenster-Logzeilen, `alert_fetch` im Nowcast-Zweig, `ok` nur bei verwertbaren Daten) | Python-Core | +45 |
 | `internal/scheduler/scheduler.go` | MODIFY (`atomic.Bool`) | Go-API | +8 / −1 |
 | `internal/scheduler/briefing_health.go` | MODIFY (nur Kommentar Z.215-225) | Go-API | Kommentar |
 | `internal/router/router.go` | MODIFY (4 Proxy-Routen) | Go-API | +4 |
@@ -84,7 +86,9 @@ Testdateien (nach Verhalten benannt, nicht nach Issue):
 | `tests/tdd/test_mail_message_id_traceability.py` | CREATE (C5-53) |
 | `tests/tdd/test_radar_inca_fallback_journal.py` | MODIFY (C5-37, Bestandsdatei erweitern) |
 | `tests/unit/test_alert_input_capture_retention.py` | **ERSETZEN/ANPASSEN** (B2-71, s. u.) |
-| `tests/tdd/test_track_resolution_failure_visibility.py` | MODIFY (C5-47) |
+| `tests/tdd/test_track_resolution_failure_visibility.py` | MODIFY (C5-47, inkl. AC-31) |
+| `tests/unit/test_briefing_recipient_logging.py`, `tests/unit/test_briefing_cross_tenant_recipient_isolation.py` | MODIFY (v1.1: Ersatzfunktionen für `_dial_and_send` um `message_ids=None` ergänzt) |
+| `internal/router/admin_trigger_alert_routes_test.go`, `internal/scheduler/scheduler_running_lifecycle_test.go`, `internal/scheduler/track_resolution_streak_cadence_test.go` | CREATE (v1.1: Go-Tests zu AC-23/24, AC-8, AC-20) |
 | `tests/tdd/test_alert_window_boundary_logging.py` | CREATE (C5-02b) |
 | `tests/tdd/test_nowcast_alert_fetch_unavailable.py` | CREATE (C5-02c) |
 | `internal/scheduler/scheduler_test.go` | MODIFY (C5-15) |
@@ -140,7 +144,8 @@ Entscheidungen:
    `msg["Message-ID"] = …`, das eine zweite Kopfzeile anhängen würde). Bei nur einem
    Empfänger gilt die beim Bau gesetzte ID. Retry/Fallback derselben Zustellung
    verwenden je Empfänger weiterhin dieselbe ID.
-4. **Erfolgs-Logzeile auch beim Erstversuch.** `_dial_and_send` gibt die Liste der
+4. **Erfolgs-Logzeile auch beim Erstversuch.** `_dial_and_send` (neuer Parameter
+   `message_ids`, Rückgabe jetzt `list[str]` statt `None`) gibt die Liste der
    tatsächlich vom Postausgang **angenommenen** Empfänger zurück (bei Teil-Ablehnung
    nur diese; abgelehnte Empfänger bleiben im bestehenden `logger.error`). `send()`
    (und der Fallback-Zweig) schreibt je angenommenem Empfänger genau eine
@@ -150,6 +155,15 @@ Entscheidungen:
    attempt(s)", `[SMTP-FALLBACK]`) bleiben. Die Sammelzeilen in
    `trip_report_scheduler.py:1767/479` und `scheduler_dispatch_service.py:571` bleiben
    unverändert; die Message-ID-Zeile ist der Nachweis je Zustellung.
+   Die Rückgabe dient **ausschließlich** der Erfolgs-Logzeile; Versand- und
+   Fehlersemantik von `send()` bleiben unverändert. Bestandstests, die
+   `_dial_and_send` ersetzen (`test_briefing_recipient_logging.py`,
+   `test_briefing_cross_tenant_recipient_isolation.py`), tragen jetzt den Parameter
+   `message_ids=None`; ihre Ersatzfunktionen liefern `None` ⇒ keine Erfolgszeile
+   („Erfolg nie ohne Annahme").
+   **Absender (v1.1):** Das Bestandsverhalten `from_addr = self._reply_to or self._from`
+   (`email.py` ~Z.707) bleibt unverändert. Ist eine Antwortadresse konfiguriert, steht
+   sie im `From`-Header; ein fester Absender wird **nicht** zugesichert.
 5. **Aussagekraft ehrlich begrenzt.** „Accepted by SMTP" belegt die Annahme durch den
    Postausgang, nicht die Zustellung im Postfach. Die ID erlaubt erst den Abgleich
    (Resend-Dashboard, IMAP-Suche). Reicht Resend die ID nicht unverändert durch, ist
@@ -267,6 +281,13 @@ im Prozessspeicher noch keine Meldung existiert oder die letzte ≥ 12 h zurück
 danach wird der Zeitpunkt aktualisiert. Die Uhr ist über eine kleine Funktion
 (`_jetzt()`, Monotonic) austauschbar, damit der Test ohne Warten prüfen kann.
 
+**Dämpfung erst nach Schreiberfolg (v1.1):** `record_track_resolution_failure`
+(`track_resolution_health.py`) liefert `True`, wenn die Zeile wirklich geschrieben
+wurde, sonst `False` (fail-soft bleibt: keine Ausnahme nach außen).
+`_melde_unplausible_messung` setzt den Dämpfungszeitstempel **nur bei `True`**.
+Scheitert das Schreiben, ist die Etappe nicht gedämpft, und die nächste Runde holt die
+Zeile nach — nichts geht still verloren (ADR-0018).
+
 Begründung des Intervalls: Der Go-Leser (`briefing_health.go`,
 `trackResolutionFailureStreakGapThreshold = 26h`) lässt den Streak abreißen, wenn
 zwischen zwei Zeilen mehr als 26 h liegen. 12 h < 26 h ⇒ der Streak reißt **nie** ab,
@@ -300,8 +321,11 @@ Endpunkte; nur `alert-checks` hat heute einen Admin-Proxy (neben `trip-reports` 
 `internal/router/core_auth_sweep_test.go` (der Sweep zählt selbsttätig über
 `chi.Walk`; `minPythonCallsReached = 24` bei Ist 27 prüfen und, falls sich der
 Ist-Wert ändert, Kommentar/Wert gemäß dessen Regel nachziehen — nie senken),
-`docs/reference/api_contract.md` (Zeile ~266: 80 Pfade/100 Registrierungen ⇒
-84/104, Routentabelle um vier Zeilen).
+`docs/reference/api_contract.md` (Zeile ~271: Routenzahl gemäß echter
+`chi.Walk`-Zählung, Stand Umsetzung **101 Pfade / 123 Registrierungen**, davon 4 nur bei
+`GZ_ENV=staging` — ohne diese 97/119; Routentabelle um vier Zeilen; fehlende
+Inventarzeile `/api/internal/premium-sms-learn` nachgetragen. Die v1.0-Zahl 84/104 war
+falsch).
 
 **Nachweis ohne Prod-Auslösung:** Ein Admin-Trigger auf Prod läuft über **alle**
 Nutzer und kann echte Alarme versenden — ein verbotener Sammel-Versand. Der Nachweis
@@ -322,9 +346,13 @@ bleibt, `tests/unit/test_ziel_segment_anzeige_invarianz.py` läuft unverändert 
 **(c) Trip-Nowcast bucht `alert_fetch` (`trip_alert.py`).** Im Ausnahmezweig des
 ersten Nowcast-Abrufs (`except Exception`, Zeile ~2167, setzt `_p0_ausnahme`) wird
 zusätzlich `alert_fetch`/`unavailable` mit `unit = f"{self._user_id}/{trip.id}"`
-gebucht (wie in Scheibe B). Ein erfolgreicher Abruf bucht `alert_fetch`/`ok` mit
-derselben `unit`, damit ein späterer Erfolg den Ausfall ablöst. `RadarDeadlineExceeded`
-bleibt davon ausgenommen (Zeitgrenze ist weder Ausfall noch Entwarnung, A-2 S2).
+gebucht (wie in Scheibe B). `alert_fetch`/`ok` mit derselben `unit` bucht **nur** ein
+Nowcast-Ergebnis mit verwertbaren Radardaten (v1.1), damit ein späterer Erfolg den
+Ausfall ablöst. Ergebnisse mit `throttled` oder `data_unavailable` buchen weder `ok`
+noch `unavailable`: sonst würde ein früherer Ausfall in `failed_units` fälschlich
+gelöscht (ADR-0018; Muster Δ-Zweig `_versucht and fresh_weather`).
+`RadarDeadlineExceeded` bucht nichts (Zeitgrenze ist weder Ausfall noch Entwarnung,
+A-2 S2).
 Rückgabe und Alarmentscheidung unverändert.
 
 ### 7. Doku (`docs/reference/api_contract.md`)
@@ -345,7 +373,7 @@ echter Zustand (auf Staging `false`), die vier neuen Admin-Routen samt Routenzah
   INCA-Antwort; Mitschnitte mindestens 24 h abrufbar; höchstens eine
   `implausible_measurement`-Zeile je Etappe und 12 h; vier zusätzliche
   Admin-Trigger; Fenster-Logzeile je Alarmprüfung; `alert_fetch`-Eintrag im
-  Nowcast-Ausnahmezweig.
+  Nowcast-Ausnahmezweig (`ok` nur bei verwertbaren Radardaten).
 - **Side effects:** keine auf Alarmentscheidung, Versand, Drosselung oder
   Nutzermeldungen. Einzige sichtbare Folge für Empfänger: ein zusätzlicher
   technischer Mail-Header. Mehr `fallback`-WARN-Zeilen bei leerer INCA-Antwort
@@ -363,10 +391,11 @@ Staging-Datenbestand ist für den Nutzer `hem` nicht lesbar, der Nachweis liegt 
   When `send()` die Nachricht aufbaut und einliefert / Then trägt die eingelieferte
   Nachricht genau eine Kopfzeile `Message-ID` der Form `<…@henemm.com>`, und alle
   bisherigen Kopfzeilen (`Subject`, `From`, `To`, `Date`, `Reply-To`, `X-GZ-*`) sind
-  unverändert.
-  - Test (Kern): `test_mail_message_id_traceability.py` fängt an einem echten
-    lokalen SMTP-Empfänger (Testserver, kein Mock der Zusicherung) die Rohnachricht
-    ab und zählt die Kopfzeile.
+  unverändert (`From` bleibt Bestandsverhalten: Antwortadresse, falls gesetzt, sonst
+  Standardabsender — `self._reply_to or self._from`).
+  - Test (Kern): `test_mail_message_id_traceability.py` fängt an der Systemgrenze
+    (aufzeichnende `smtplib.SMTP`-Attrappe, s. Test Plan) den Rohstring an `sendmail`
+    ab und zählt die Kopfzeile. Die echte Zustellung belegt nur AC-6/AC-7 (Staging).
 
 - **AC-2:** Given eine Mail, die beim ersten Versuch vom Postausgang angenommen wird /
   When `send()` zurückkehrt / Then steht im Log genau eine Info-Zeile je Empfänger mit
@@ -379,7 +408,7 @@ Staging-Datenbestand ist für den Nutzer `hem` nicht lesbar, der Nachweis liegt 
   auf den Ersatzweg `[SMTP-FALLBACK]` ausweicht / When die Mail schließlich angenommen
   wird / Then tragen alle Einlieferungsversuche dieselbe Message-ID, und die
   Erfolgs-Logzeile nennt genau diese ID.
-  - Test (Kern): Testserver lehnt Versuch 1 (und im zweiten Fall den Primärweg ganz)
+  - Test (Kern): Attrappe lehnt Versuch 1 (und im zweiten Fall den Primärweg ganz)
     mit 4xx ab; die abgefangenen Rohnachrichten werden verglichen.
 
 - **AC-4:** Given eine Mail an drei Empfänger (Versand je Empfänger, #457/#1426) /
@@ -387,14 +416,14 @@ Staging-Datenbestand ist für den Nutzer `hem` nicht lesbar, der Nachweis liegt 
   Empfänger-Zustellung eine **eigene** Message-ID, jede eingelieferte Nachricht hat
   genau **eine** `Message-ID`-Kopfzeile (keine doppelte), und das Log nennt je
   Empfänger die zu seiner Einlieferung gehörende ID.
-  - Test (Kern): Testserver sammelt die drei Rohnachrichten; IDs paarweise
+  - Test (Kern): Attrappe sammelt die drei Rohnachrichten; IDs paarweise
     verschieden; Kopfzeilenzahl je Nachricht == 1.
 
 - **AC-5:** Given drei Empfänger, von denen der Postausgang einen ablehnt / When
   `send()` abschließt / Then erhalten nur die zwei angenommenen Empfänger eine
   Erfolgs-Logzeile mit Message-ID; für den abgelehnten steht keine Erfolgszeile
   („Erfolg" wird nie ohne Annahme behauptet), die bestehende Fehlerzeile bleibt.
-  - Test (Kern): Testserver weist einen Empfänger mit 550 ab.
+  - Test (Kern): Attrappe weist einen Empfänger mit 550 ab.
 
 - **AC-6:** Given die geänderte Mail-Erzeugung / When die Mail-Validatoren gegen eine
   echt zugestellte Staging-Mail laufen / Then enden
@@ -525,6 +554,13 @@ Staging-Datenbestand ist für den Nutzer `hem` nicht lesbar, der Nachweis liegt 
   gedämpft.
   - Test (Kern): Speicher des Moduls zurücksetzen, einmal und nochmals laufen lassen.
 
+- **AC-31:** Given das Schreiben der Diagnose-Zeile für eine unplausible Etappe scheitert
+  (Journal-Datei nicht schreibbar) / When die Auflösung in der nächsten
+  15-Minuten-Runde erneut läuft und das Schreiben dann gelingt / Then wird in der
+  ersten Runde keine Dämpfung gesetzt, die nächste Runde schreibt die Zeile nach, und
+  erst danach greift die 12-h-Dämpfung.
+  - Test (Kern): `test_track_resolution_failure_visibility.py::test_gescheitertes_schreiben_daempft_nicht_naechste_runde_schreibt`.
+
 ### C5-02 — Alarm-Pfad im Betrieb
 
 - **AC-23:** Given ein angemeldeter Admin / When er `POST` auf jede der vier neuen
@@ -543,8 +579,9 @@ Staging-Datenbestand ist für den Nutzer `hem` nicht lesbar, der Nachweis liegt 
 - **AC-25:** Given der Router mit den neuen Routen / When der Sweep
   `core_auth_sweep_test.go` alle Routen per `chi.Walk` durchläuft / Then bleibt er
   grün, `minPythonCallsReached` wird unverändert eingehalten, und die Routenzahl in
-  `api_contract.md` (84 Pfade, 104 Registrierungen) stimmt mit der Router-Realität
-  überein.
+  `api_contract.md` (101 Pfade, 123 Registrierungen; ohne die 4 nur bei `GZ_ENV=staging`
+  existierenden Routen 97/119) entspricht der echten `chi.Walk`-Zählung des Routers;
+  das Inventar enthält auch die Zeile `/api/internal/premium-sms-learn`.
   - Test (Kern, Go): Sweep-Test; Zahlenabgleich im Review der Doku.
 
 - **AC-26:** Given eine Δ-Alarmprüfung für einen Trip mit nasser Änderung / When sie
@@ -565,9 +602,11 @@ Staging-Datenbestand ist für den Nutzer `hem` nicht lesbar, der Nachweis liegt 
 - **AC-28:** Given der erste Nowcast-Abruf des Trip-Radar-Alarms wirft eine Ausnahme /
   When die Alarmprüfung läuft / Then steht im Journal ein Eintrag `alert_fetch`/
   `unavailable` mit `unit` aus Nutzer-ID und Trip-ID, und die Prüfung verhält sich
-  sonst wie bisher (kein Alarm, keine Nutzermeldung); bei erfolgreichem Abruf
-  steht `alert_fetch`/`ok` mit derselben `unit`; eine `RadarDeadlineExceeded` bucht
-  **keinen** `unavailable`-Eintrag.
+  sonst wie bisher (kein Alarm, keine Nutzermeldung); bei einem Abruf mit
+  verwertbaren Radardaten steht `alert_fetch`/`ok` mit derselben `unit`; ein Ergebnis
+  mit `throttled` oder `data_unavailable` bucht weder `ok` noch `unavailable` (ein
+  früherer Ausfall bleibt in `failed_units` stehen); eine `RadarDeadlineExceeded` bucht
+  **nichts**.
   - Test (Kern): `test_nowcast_alert_fetch_unavailable.py`, Fake-Nowcast-Dienst an
     der Systemgrenze wirft; echte Journaldatei; zwei Nutzer.
   - Staging: `NOT_MEASURABLE_ON_STAGING`.
@@ -594,8 +633,10 @@ Staging-Datenbestand ist für den Nutzer `hem` nicht lesbar, der Nachweis liegt 
 - **Schichtung:** alles Kern-deterministisch ohne Netz; Staging nur dort, wo der
   Datenbestand für `hem` lesbar bzw. die Zusicherung ohne Datenbestand messbar ist
   (AC-6, AC-7, AC-9, AC-29).
-- **Kein Mock-Theater:** SMTP gegen einen echten lokalen Testserver (Rohnachricht
-  abgefangen), Journal und Mitschnitte gegen echte Dateien im tmp-Verzeichnis
+- **Kein Mock-Theater:** SMTP an der Systemgrenze durch eine aufzeichnende
+  `smtplib.SMTP`-Attrappe ersetzt, die den Rohstring an `sendmail` festhält (v1.1,
+  **Abweichung vom v1.0-Plan „echter lokaler SMTP-Testserver"**: `aiosmtpd` ist nicht
+  verfügbar, und `_dial_and_send` erzwingt STARTTLS + Login). Journal und Mitschnitte gegen echte Dateien im tmp-Verzeichnis
   (`get_data_root()` pro Test umgebogen), Go-Tests mit echtem `Scheduler`/Router.
   Fakes nur an Systemgrenzen (GeoSphere-Provider, Nowcast-Dienst, Python-Ziel).
 - **Prüfling relativ zur Testdatei:** Python-Tests lösen `src/` über den Pfad der
@@ -623,7 +664,8 @@ Staging-Datenbestand ist für den Nutzer `hem` nicht lesbar, der Nachweis liegt 
   `test_track_resolution_legacy_trip.py`, `test_ziel_segment_anzeige_invarianz.py`;
   Go: `go test ./internal/scheduler/... ./internal/router/...`.
   Rückgabewert von `_dial_and_send` (bisher `None`) ändert sich — bestehende Tests
-  dazu werden im selben Zug mit angepasst.
+  dazu wurden im selben Zug angepasst (`message_ids=None` in den Ersatzfunktionen).
+  Zusätzliche Mutation (n): Dämpfungszeitstempel auch bei `False` setzen ⇒ AC-31 rot.
 
 ## Staging-Nachweis
 
@@ -640,6 +682,10 @@ Deploy folgt dem normalen Weg (PR, Staging-Auto-Deploy, `/e2e-verify`, Prod-Depl
 | C5-47 | `NOT_MEASURABLE_ON_STAGING` — Nutzer-Journale nicht lesbar; nur Kern-Tests. |
 | C5-02b/c | `NOT_MEASURABLE_ON_STAGING` — Log/Journal der Alarmläufe nicht lesbar; nur Kern-Tests. |
 
+**Commit-Schnitt (Rollback-Fähigkeit, v1.1):** ein Commit je Eintrag — C5-15, C5-02a,
+C5-37, B2-71, C5-47, C5-53, C5-02b/c, Doku —, damit jeder Punkt einzeln zurücknehmbar
+ist.
+
 Nachweise, die nicht gemessen werden können, werden ausdrücklich als solche
 ausgewiesen; ein „PASS" wird nie erfunden.
 
@@ -654,6 +700,9 @@ ausgewiesen; ein „PASS" wird nie erfunden.
   kann bei sehr vielen aktiven Nowcast-Keys (> ca. 34) die 24-h-Zielgröße
   unterschreiten; der Eingriff wird als Warnzeile sichtbar. Wachsen die Bestände
   dauerhaft, ist der Deckel neu zu bemessen.
+- **Mail-Test an der Systemgrenze (v1.1):** Die Kern-Tests prüfen den Rohstring an einer
+  `smtplib.SMTP`-Attrappe, keinen echten SMTP-Dialog. Die echte Zustellung inkl.
+  Message-ID belegt ausschließlich der Staging-Nachweis (AC-6/AC-7).
 - **`running` ist ein Prozesszustand,** keine Aussage über erfolgreiche Läufe; für
   letzteres gibt es `last_run` je Job.
 - **Fenster-Logzeile (C5-02b)** protokolliert Grenzen, keine Begründung der
@@ -686,3 +735,11 @@ ausgewiesen; ein „PASS" wird nie erfunden.
 - 2026-10-08: Initial spec created (Issue #2218 Scheibe C, Analyse
   `docs/context/fix-2218-scheibe-c-observability.md`). Sechs Einträge in einer Spec:
   C5-53, C5-15, C5-37, B2-71, C5-47, C5-02 (a+b+c).
+- 2026-10-08 (v1.1): An den Umsetzungsstand angeglichen (PO-Beschluss). C5-47: Dämpfung
+  erst nach Schreiberfolg, `track_resolution_health.py` neu in Affected Files, neue AC-31;
+  AC-1: Absender = Bestandsverhalten `_reply_to or _from`; AC-25: Routenzahl 101/123
+  (97/119 ohne Staging-Routen) statt 84/104, Inventarzeile `premium-sms-learn`;
+  C5-02c/AC-28: `ok` nur bei verwertbaren Radardaten, `throttled`/`data_unavailable`
+  buchen nichts; Test-Plan: SMTP-Attrappe statt lokalem Testserver (offen benannt);
+  `_dial_and_send`-Rückgabe nur für die Erfolgszeile; Commit-Schnitt je Eintrag;
+  Scope +235/−33, 12 produktive Dateien.
