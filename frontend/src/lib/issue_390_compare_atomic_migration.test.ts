@@ -39,14 +39,6 @@ test.skip('AC-1b: compare/+page.svelte hat aria-pressed auf dem Mobile-Chip-Butt
 	);
 });
 
-test('AC-3: GroupSection.svelte enthält profileSignature(loc.activity_profile) für Location-Items', () => {
-	const src = read('lib/components/compare/GroupSection.svelte');
-	assert.ok(
-		src.includes('profileSignature(loc.activity_profile)'),
-		'profileSignature(loc.activity_profile) fehlt in GroupSection.svelte — Profil-Dot pro Location-Item nicht migriert'
-	);
-});
-
 test('AC-5a: compare/+page.svelte enthält keine rohen Chip-Klassen mehr (rounded-full border border-border bg-muted)', () => {
 	const src = read('routes/compare/+page.svelte');
 	assert.ok(

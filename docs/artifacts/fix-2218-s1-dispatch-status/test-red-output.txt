@@ -1,0 +1,134 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/rippling-sparking-petal
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 7 items
+
+tests/test_dispatch_status_delivery.py F.FFFFF                           [100%]
+
+=================================== FAILURES ===================================
+_________________ test_ac6_channels_unreachable_meldet_partial _________________
+
+client = <starlette.testclient.TestClient object at 0x79d2c2dc8cb0>
+
+    def test_ac6_channels_unreachable_meldet_partial(client):
+>       assert _lauf(client, "u2218-unreach", "channels_unreachable") == {
+            "status": "partial", "count": 0, "failed": 1,
+        }
+E       AssertionError: assert {'count': 1, ...status': 'ok'} == {'count': 0, ...s': 'partial'}
+E         
+E         Differing items:
+E         {'failed': 0} != {'failed': 1}
+E         {'status': 'ok'} != {'status': 'partial'}
+E         {'count': 1} != {'count': 0}
+E         Use -v to get more diff
+
+tests/test_dispatch_status_delivery.py:54: AssertionError
+___ test_ac7_no_weather_und_unbekannt_zaehlen_als_failed[weird_new_outcome] ____
+
+client = <starlette.testclient.TestClient object at 0x79d2b8040c50>
+ausgang = 'weird_new_outcome'
+
+    @pytest.mark.parametrize("ausgang", ["no_weather", "weird_new_outcome", None])
+    def test_ac7_no_weather_und_unbekannt_zaehlen_als_failed(client, ausgang):
+        user = f"u2218-ac7-{ausgang}"
+>       assert _lauf(client, user, ausgang) == {"status": "partial", "count": 0, "failed": 1}
+E       AssertionError: assert {'count': 1, ...status': 'ok'} == {'count': 0, ...s': 'partial'}
+E         
+E         Differing items:
+E         {'failed': 0} != {'failed': 1}
+E         {'status': 'ok'} != {'status': 'partial'}
+E         {'count': 1} != {'count': 0}
+E         Use -v to get more diff
+
+tests/test_dispatch_status_delivery.py:62: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:trip_report_scheduler.py:673 Unbekannter Versand-Ausgang 'weird_new_outcome' fuer Slot korsika/morning am 2026-08-20 -- Slot gesperrt, kein Nachholversand
+__________ test_ac7_no_weather_und_unbekannt_zaehlen_als_failed[None] __________
+
+client = <starlette.testclient.TestClient object at 0x79d2c0060f50>
+ausgang = None
+
+    @pytest.mark.parametrize("ausgang", ["no_weather", "weird_new_outcome", None])
+    def test_ac7_no_weather_und_unbekannt_zaehlen_als_failed(client, ausgang):
+        user = f"u2218-ac7-{ausgang}"
+>       assert _lauf(client, user, ausgang) == {"status": "partial", "count": 0, "failed": 1}
+E       AssertionError: assert {'count': 0, ...status': 'ok'} == {'count': 0, ...s': 'partial'}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'status': 'ok'} != {'status': 'partial'}
+E         {'failed': 0} != {'failed': 1}
+E         Use -v to get more diff
+
+tests/test_dispatch_status_delivery.py:62: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:trip_report_scheduler.py:673 Unbekannter Versand-Ausgang None fuer Slot korsika/morning am 2026-08-20 -- Slot gesperrt, kein Nachholversand
+________________ test_ac8_leerlaeufe_sind_neutral[no_channels] _________________
+
+client = <starlette.testclient.TestClient object at 0x79d2b808c1d0>
+ausgang = 'no_channels'
+
+    @pytest.mark.parametrize("ausgang", ["no_channels", "no_stage"])
+    def test_ac8_leerlaeufe_sind_neutral(client, ausgang):
+>       assert _lauf(client, f"u2218-ac8-{ausgang}", ausgang) == {
+            "status": "ok", "count": 0, "failed": 0,
+        }
+E       AssertionError: assert {'count': 1, ...status': 'ok'} == {'count': 0, ...status': 'ok'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Differing items:
+E         {'count': 1} != {'count': 0}
+E         Use -v to get more diff
+
+tests/test_dispatch_status_delivery.py:67: AssertionError
+__________________ test_ac8_leerlaeufe_sind_neutral[no_stage] __________________
+
+client = <starlette.testclient.TestClient object at 0x79d2b808d6d0>
+ausgang = 'no_stage'
+
+    @pytest.mark.parametrize("ausgang", ["no_channels", "no_stage"])
+    def test_ac8_leerlaeufe_sind_neutral(client, ausgang):
+>       assert _lauf(client, f"u2218-ac8-{ausgang}", ausgang) == {
+            "status": "ok", "count": 0, "failed": 0,
+        }
+E       AssertionError: assert {'count': 1, ...status': 'ok'} == {'count': 0, ...status': 'ok'}
+E         
+E         Omitting 2 identical items, use -vv to show
+E         Differing items:
+E         {'count': 1} != {'count': 0}
+E         Use -v to get more diff
+
+tests/test_dispatch_status_delivery.py:67: AssertionError
+________________ test_ac9_zwei_nutzer_werden_getrennt_bewertet _________________
+
+client = <starlette.testclient.TestClient object at 0x79d2b80c4980>
+
+    def test_ac9_zwei_nutzer_werden_getrennt_bewertet(client):
+        a = _lauf(client, "u2218-nutzer-a", "sent")
+        b = _lauf(client, "u2218-nutzer-b", "channels_unreachable")
+        assert a == {"status": "ok", "count": 1, "failed": 0}
+>       assert b == {"status": "partial", "count": 0, "failed": 1}
+E       AssertionError: assert {'count': 1, ...status': 'ok'} == {'count': 0, ...s': 'partial'}
+E         
+E         Differing items:
+E         {'failed': 0} != {'failed': 1}
+E         {'status': 'ok'} != {'status': 'partial'}
+E         {'count': 1} != {'count': 0}
+E         Use -v to get more diff
+
+tests/test_dispatch_status_delivery.py:76: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/test_dispatch_status_delivery.py::test_ac7_no_weather_und_unbekannt_zaehlen_als_failed[no_weather]
+FAILED tests/test_dispatch_status_delivery.py::test_ac6_channels_unreachable_meldet_partial
+FAILED tests/test_dispatch_status_delivery.py::test_ac7_no_weather_und_unbekannt_zaehlen_als_failed[weird_new_outcome]
+FAILED tests/test_dispatch_status_delivery.py::test_ac7_no_weather_und_unbekannt_zaehlen_als_failed[None]
+FAILED tests/test_dispatch_status_delivery.py::test_ac8_leerlaeufe_sind_neutral[no_channels]
+FAILED tests/test_dispatch_status_delivery.py::test_ac8_leerlaeufe_sind_neutral[no_stage]
+FAILED tests/test_dispatch_status_delivery.py::test_ac9_zwei_nutzer_werden_getrennt_bewertet
+========================= 6 failed, 1 passed in 1.79s ==========================

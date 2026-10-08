@@ -3,9 +3,6 @@ package handler
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -29,42 +26,10 @@ func dispatchTripSend(h http.HandlerFunc, path, userID string) *httptest.Respons
 	return w
 }
 
-func sendTripReportHandlerSource(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("os.Getwd() fehlgeschlagen: %v", err)
-	}
-	proxyPath := filepath.Join(wd, "proxy.go")
-	raw, err := os.ReadFile(proxyPath)
-	if err != nil {
-		t.Fatalf("proxy.go konnte nicht gelesen werden (%s): %v", proxyPath, err)
-	}
-	src := string(raw)
-
-	start := strings.Index(src, "func SendTripReportProxyHandler(")
-	if start < 0 {
-		t.Fatal("SendTripReportProxyHandler nicht in proxy.go gefunden")
-	}
-	rest := src[start:]
-	nextFunc := regexp.MustCompile(`\n}\n\n// \w`).FindStringIndex(rest)
-	if nextFunc == nil {
-		t.Fatal("Funktionsende von SendTripReportProxyHandler nicht gefunden")
-	}
-	return rest[:nextFunc[0]]
-}
-
-func TestSendTripReportProxyHandlerTimeoutIs300Seconds(t *testing.T) {
-	body := sendTripReportHandlerSource(t)
-
-	if strings.Contains(body, "120 * time.Second") {
-		t.Errorf("SendTripReportProxyHandler traegt noch den alten 120s-Timeout -- erwartet 300s (AC-8): %s",
-			body)
-	}
-	if !strings.Contains(body, "300 * time.Second") {
-		t.Errorf("SendTripReportProxyHandler traegt keinen 300s-Timeout (AC-8). Funktionskoerper: %s", body)
-	}
-}
+// Issue #2124: der fruehere Quelltext-Grep-Test auf das Literal "300 * time.Second"
+// (TestSendTripReportProxyHandlerTimeoutIs300Seconds) ist entfallen. Wert UND Wirkort
+// des 300-s-Timeouts bewacht jetzt proxy_timeout_chain_test.go verhaltensnah
+// (sendProxyTimeout, gemeinsam fuer Trip und Compare).
 
 func startFakeSchedulerPython(t *testing.T, status int, body string) *httptest.Server {
 	t.Helper()

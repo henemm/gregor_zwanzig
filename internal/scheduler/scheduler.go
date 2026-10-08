@@ -100,6 +100,8 @@ type Scheduler struct {
 	cron                    *cron.Cron
 	pythonURL               string
 	heartbeatComparePresets string
+	poEmail                 string // Issue #2436: tier_request_health.po_mail_configured
+	smtpHost                string
 	client                  *http.Client
 	store                   *store.Store
 	mu                      sync.RWMutex
@@ -217,6 +219,8 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		)),
 		pythonURL:               cfg.PythonCoreURL,
 		heartbeatComparePresets: cfg.HeartbeatComparePresets,
+		poEmail:                 cfg.PoEmail,
+		smtpHost:                cfg.SMTPHost,
 		// Issue #1912: 120s reichte fuer den regulaeren Versand nicht mehr
 		// (laengster gemessener Einzelversand 319s, briefing_slots.py:48) und
 		// riss Laeufe als Timeout ab, die tatsaechlich noch liefen. 3000s (50

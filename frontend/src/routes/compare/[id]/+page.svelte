@@ -36,6 +36,7 @@
 	import { ACTIVITY_PROFILE_OPTIONS, type ComparePreset } from '$lib/types';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
+	import { sendComparePreset } from '$lib/utils/sendOutcome';
 
 	let { data } = $props();
 
@@ -215,10 +216,9 @@
 		isSending = true;
 		sendMsg = null;
 		try {
-			const res = await fetch(`/api/compare/presets/${currentPreset.id}/send`, { method: 'POST' });
-			sendMsg = res.ok ? 'Test-Briefing gesendet' : 'Fehler beim Senden';
-		} catch {
-			sendMsg = 'Netzwerkfehler';
+			// Issue #2124: geteilter Laufzustand (compare:<id>) + Klassifikation.
+			const o = await sendComparePreset(currentPreset.id);
+			sendMsg = o.kind === 'ok' ? 'Test-Briefing gesendet' : o.message;
 		} finally {
 			isSending = false;
 		}

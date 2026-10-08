@@ -1443,7 +1443,9 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
   },
   "tier_request_health": {
     "open_count": 1,
-    "oldest_open_age_hours": 192.4
+    "oldest_open_age_hours": 192.4,
+    "unnotified_count": 0,
+    "po_mail_configured": true
   }
 }
 ```
@@ -1490,6 +1492,8 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 | enrichment_health.journal_read_error | bool (present only on error) | `true` when `data/diagnostics/enrichment_calls.jsonl` exists but could not be read (e.g. path is a directory) — our own fault, distinct from a missing journal (fresh deploy, silently empty map). |
 | tier_request_health | object (Issue #1555) | Privacy-safe aggregate of open tier-change requests (`POST /api/auth/tier-change-request`, Issue #1071) across ALL users. Purely numeric — no `user_id`, `display_name` or e-mail ever appears here (#252), independent of the token gate added in #2155 S2. A request counts as **done** when `requested_tier` is empty OR equals the effective `tier`; only otherwise it is **open**. |
 | tier_request_health.open_count | int | Number of currently open tier-change requests across all users. `0` when none are pending. |
+| tier_request_health.unnotified_count | int | Issue #2436 — Number of open requests for which the operator was NOT notified (`requested_notified_at` missing). Count only, no identifiers. |
+| tier_request_health.po_mail_configured | bool | Issue #2436 — `true` only if both `PO_EMAIL` and `SMTP_HOST` are set; `false` means tier requests cannot reach the operator. |
 | tier_request_health.oldest_open_age_hours | float | Age in hours of the **oldest** open request (from its `requested_at`); `0.0` when `open_count` is 0 or no open request carries a `requested_at`. Raw hours only — the 7-day overdue threshold is evaluated by the external monitor (`check-gregor20.sh`), not here. |
 
 **Error Responses:**
@@ -1735,7 +1739,7 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 | 422 | No stages for target date (Bug #716 — AC-1) | `"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum"` |
 | 422 | Invalid `report_type` | `"Invalid report_type: {value}"` |
 
-**Idempotenz (Issue #1756):** Ein zweiter Aufruf für denselben `(user_id, trip_id, report_type)`-Schlüssel während ein erster Versand noch läuft (z. B. wiederholter Klick nach vorzeitigem Proxy-Timeout) wird mit HTTP 409 abgewiesen statt einen zweiten echten Versand auszulösen. Der Lock ist prozesslokal (`threading.Lock`, In-Memory), keine Persistenz. Der Go-Proxy (`SendTripReportProxyHandler`) hat außerdem einen auf 300s (vorher 120s) angehobenen Timeout, da der reguläre Erfolgsfall durch den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann.
+**Idempotenz (Issue #1756):** Ein zweiter Aufruf für denselben `(user_id, trip_id, report_type)`-Schlüssel während ein erster Versand noch läuft (z. B. wiederholter Klick nach vorzeitigem Proxy-Timeout) wird mit HTTP 409 abgewiesen statt einen zweiten echten Versand auszulösen. Der Lock ist prozesslokal (`threading.Lock`, In-Memory), keine Persistenz; seit Issue #2124 liegt das Register im geteilten Modul `src/services/send_lock.py` (Trip und Ortsvergleich, Schlüssel enthält `user_id`). Der Go-Proxy reicht den Upstream-Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht); nginx `proxy_read_timeout` 330 s (henemm-infra) liegt über dem Proxy-Timeout. Das Frontend klassifiziert Antworten in `$lib/utils/sendOutcome.ts` (502/503/504/Netzfehler = „Ergebnis unklar — nicht erneut senden“, 409 = „Versand läuft bereits“). Der Go-Proxy (`SendTripReportProxyHandler`) hat außerdem einen auf 300s (vorher 120s) angehobenen Timeout, da der reguläre Erfolgsfall durch den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann.
 
 **Multi-Tenant Behavior:**
 - `user_id` query parameter determines which user's data (trip, email config) is used
@@ -2482,7 +2486,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 | POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
 | PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
-| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'` |
+| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
 
 ### Validation Rules (POST/PUT)
 
@@ -3374,6 +3378,7 @@ Returns authenticated user profile (requires valid session cookie).
 | tier | string | User's level: `free`/`standard`/`premium` (Issue #1068, Slice 1 of Epic #1067); always present, defaults to `free` if unset on the underlying `user.json` (fallback happens only at read time, never written back); display-only in this slice, no channel or alert-frequency enforcement yet |
 | sms_allowed | bool | Whether SMS channel is available for this user (Issue #1069, Slice 2 of Epic #1067); `true` if `tier` is `standard` or `premium`, `false` for `free`; determines server-side channel-gating in report-dispatch and alert-dispatch |
 | requested_tier | string | Level change requested by the user via `POST /api/auth/tier-change-request` (Issue #1071, Slice 4 of Epic #1067); `omitempty` — absent/empty if no request is pending. Does not change `tier` itself; only the PO setting `tier` manually clears the pending state (once `requested_tier == tier`, the frontend Pending-hint disappears) |
+| requested_notified_at | string (RFC3339) | Issue #2436 — set only after the operator mail was sent successfully for the current request; `omitempty` — absent means the operator was NOT notified (frontend shows a warning). Cleared on every new request and on admin approval |
 | requested_at | string (RFC3339) | Timestamp of the pending tier-change request set alongside `requested_tier`; pointer type server-side so it is omitted entirely (not a zero-value timestamp) when no request is pending |
 | premium_sms_allowed | bool | Whether the Premium-SMS channel (Garmin inReach) is available (Issue #1717 S3); **always present**. Own tariff gate `model.PremiumSmsAllowed` — `true` **only** for `tier == "premium"`, deliberately NOT derived from `sms_allowed` (which also lets `standard` through). Otherwise a `standard` user could tick a channel the dispatch path blocks anyway (#1676 S2a AC-8) |
 | premium_sms_reply_state | string | Server-derived state of the learned reply address (Issue #1717 S3): `none` (device never reported), `stale` (reported but past the expiry), `fresh` (valid); **always present**. Derived from `PremiumSmsReplyTo`/`PremiumSmsReplyAt` via `model.DerivePremiumSmsReplyState` against `model.PremiumSmsReplyTTL` (30 days, Go pendant of `PREMIUM_SMS_REPLY_TTL` in `src/output/channels/premium_sms.py`; drift guard: `tests/test_premium_sms_ttl_drift.py`). The UI follows this field only and never recomputes the deadline — otherwise a third copy of the number would exist |
@@ -3575,8 +3580,9 @@ fresh stored match on the same `from` and no resolving `code` was provided (Issu
 
 Requests a level change (Free/Standard/Premium) for the authenticated user (Issue #1071, Slice 4
 of Epic #1067). Vermerkt den Antrag per Read-Modify-Write in `user.json`
-(`requested_tier`/`requested_at`) und löst eine asynchrone Benachrichtigungsmail an den PO aus
-(`PO_EMAIL`/`cfg.PoEmail`). Das effektive `tier`-Feld wird durch diesen Endpoint **nicht**
+(`requested_tier`/`requested_at`) und versendet die Benachrichtigungsmail an den PO
+(`PO_EMAIL`/`cfg.PoEmail`) **synchron mit 15 s Timeout** (Issue #2436); `requested_notified_at` wird nur
+nach erfolgreichem Versand gesetzt und bei jedem neuen Antrag zuerst zurückgesetzt. Das effektive `tier`-Feld wird durch diesen Endpoint **nicht**
 verändert — Freigabe erfolgt weiterhin manuell durch den PO.
 
 **Request Body:**
@@ -3586,9 +3592,9 @@ verändert — Freigabe erfolgt weiterhin manuell durch den PO.
 }
 ```
 
-**Response 200:**
+**Response 200:** (Antrag ist in jedem Fall gespeichert; `po_notified` sagt, ob der Betreiber erreicht wurde — `false` bei fehlendem `PO_EMAIL`/`SMTP_HOST`, Versandfehler oder Timeout)
 ```json
-{"status": "ok"}
+{"status": "ok", "po_notified": true}
 ```
 
 **Error Responses:**

@@ -26,6 +26,7 @@
 	import { buildFreshTogglePutPayload } from '$lib/components/compare/compareHubPersistenz.js';
 	import { sendTargetLabel } from '$lib/components/shared/versand-tab/sendTargetLabel.js';
 	import MIcon from '$lib/components/mobile/MIcon.svelte';
+	import { sendComparePreset } from '$lib/utils/sendOutcome';
 
 	let { data } = $props();
 	let presets: ComparePreset[] = $state(data.presets ?? []);
@@ -158,13 +159,10 @@
 		sendTarget = null;
 		error = null;
 		sendInfo = null;
-		try {
-			const res = await fetch(`/api/compare/presets/${target.id}/send`, { method: 'POST' });
-			if (!res.ok) throw new Error(`send failed: ${res.status}`);
-			sendInfo = 'Briefing wurde versendet.';
-		} catch {
-			error = 'Versand fehlgeschlagen. Bitte versuche es erneut.';
-		}
+		// Issue #2124: geteilter Laufzustand (compare:<id>) + Klassifikation.
+		const o = await sendComparePreset(target.id);
+		if (o.kind === 'ok') sendInfo = 'Briefing wurde versendet.';
+		else error = o.message;
 	}
 
 	async function confirmDelete() {

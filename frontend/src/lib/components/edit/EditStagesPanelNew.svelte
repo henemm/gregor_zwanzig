@@ -487,15 +487,31 @@
 	function handleStagesReorder(reordered: Stage[]): void {
 		if (cascadeBusy) return;
 		// Bug #1393 R2-F002: hier NICHT über die Rückfrage entscheiden. Der Streifen
-		// meldet jede Zwischenposition während des Ziehens; streifte die Karte
-		// unterwegs die letzte Stelle, wurde die Rückfrage mitten in der Geste als
-		// „Nur diese Etappe" beantwortet und geschrieben — die Absicht des Nutzers
-		// stillschweigend umgedeutet, noch bevor er die Maus losließ. Bewertet wird
-		// erst beim Ablegen (`onReorderEnd`).
+		// meldet die neue Reihenfolge erst beim Ablegen (SortableList: nur finalize,
+		// #2288) — nie eine Zwischenposition. Früher (natives HTML5-Drag) kam jede
+		// Zwischenposition; die Rückfrage wurde dann mitten in der Geste beantwortet.
+		// `cascadeBusy` bleibt als zweite Linie; bewertet wird in `onReorderEnd`.
 		stages = reordered;
 	}
 	function handleReorderEnd(): void {
+		// Wie handleStagesReorder: waehrend des Kaskaden-Schreibens wurde nichts uebernommen.
+		if (cascadeBusy) return;
+		const warOffen = cascade !== null && !cascade.done;
 		settleMootCascade();
+		// #2288: die neue Reihenfolge wird beim Ablegen gespeichert. Steht eine
+		// Kaskaden-Rückfrage offen (zurückgestellter Vorgang), wird dieser mit dem
+		// aktuellen Stand neu aufgesetzt statt sofort geschrieben (wie beim Löschen).
+		if (!saveController || !tripId) return;
+		if (cascade && !cascade.done) {
+			deferSave();
+		} else if (warOffen) {
+			// settleMootCascade() -> dismissCascade() hat den aktuellen Stand schon
+			// geschrieben (cancel + doSave) — kein zweiter PUT im selben Tick.
+		} else {
+			// Ablegen ist eine abgeschlossene Handlung — sofort schreiben, nicht entprellen.
+			saveController.cancel();
+			void saveController.doSave(buildStagesSave());
+		}
 	}
 	function handleStageActivate(stageId: string): void {
 		if (stageId === activeStageId) return;

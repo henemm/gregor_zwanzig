@@ -377,3 +377,17 @@ e2e/versand-tab.spec.ts
 # eigener Kontext, Aufraeumen im finally. Filter A: kein waitForTimeout/skip/fixme,
 # kein `path:`-Schreibziel (Filter C entfaellt). Filter B: 3 Zyklen im Zielverbund.
 e2e/konto-loeschdialog-mobil-ueberlauf.spec.ts
+#
+# Aufnahme 2026-10-07 (#2124 Fix-Loop F001, Versand-Auslöser teilen EINEN Laufzustand):
+# send-in-flight-guard.spec.ts -- bewacht im echten Browser, dass alle fuenf .svelte-
+# Ausloeser (Trip-Liste, Trip-Detail, Compare-Liste, Compare-Hub, Compare-Tabs) den
+# Helfer sendTripBriefing/sendComparePreset nutzen (Gegenprobe je Ausloeser: direkter
+# fetch statt Helfer macht den zugehoerigen Fall rot). Der Versand wird per page.route
+# abgefangen, es geht nichts an Python/Empfaenger. Filter A: kein waitForTimeout/skip/
+# fixme, kein path:-Schreibziel (Filter C entfaellt). Compare-Liste braucht einen
+# bestaetigten Zweitnutzer (registriereBestaetigtenZweitnutzer, Aufraeumen im finally).
+# Filter B im ZIELVERBUND (60 Hauptlauf-Dateien + bug-703 separat), 3 Zyklen hintereinander,
+# je frischer Stack (neue Datenwurzel, admin.json geloescht), Ports 8095/8005, CI=1:
+# Hauptlauf expected=344 / unexpected=0 / skipped=0 / flaky=0 (3x identisch);
+# Zweitlauf bug-703 expected=3 / unexpected=0 (3x identisch).
+e2e/send-in-flight-guard.spec.ts
