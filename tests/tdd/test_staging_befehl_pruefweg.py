@@ -60,6 +60,15 @@ kein Mock/patch):
                 timeout=360, schlaf=time.sleep) -> int
         legt EINEN Wegwerf-Nutzer an, räumt im finally auf (loesche_nutzer);
         scheitert das Aufräumen, wird die Nutzer-Kennung ausgegeben.
+        Liest die Uhr NICHT selbst (``heute`` kommt von außen); die Sperre
+        für das Zeitfenster um Mitternacht Ortszeit gehört in ``main()``.
+        Je Befehl wird ``seit_uid`` neu bestimmt, damit eine Antwort nie
+        einem früheren Befehl desselben Laufs zugeordnet wird.
+        Rückgabe 0 nur, wenn alle gewählten Szenarien bestehen.
+
+Fehler der StagingApi (HTTP ≠ 2xx) erben von ``RuntimeError``. Der Header
+``X-GZ-Core-Auth`` trägt den rohen Secret-Wert (``api/main.py``,
+``CORE_AUTH_HEADER``, Vergleich per ``compare_digest``).
 """
 from __future__ import annotations
 
@@ -572,13 +581,19 @@ def test_auswertung_status_heute_zahl():
     status = _status_text(trip, HEUTE)
     assert f"Etappe {n}: {OBST_REST}" in status  # Fixture-Selbstkontrolle
 
+    # Text-Fassung des Briefings (plain.py: stage_name-Zeile = numbered_stage_label)
     heute_lang = f"Morgen-Briefing\nEtappe {n}: {OBST_REST}\n08:00 12°C"
+    # HTML-Fassung nach Tag-Entfernung (html.py: eigenes Element „Etappe N / Gesamt", Titel getrennt)
+    heute_html = f"MORGEN\nEtappe {n} / {len(etappen)}\n{OBST_REST}\nDo · 14.07.2027 · 06:00 MESZ"
     heute_kurz = f"E{n} {OBST_REST[:10]} T12"
     assert w.werte_aus("A", etappen, {"status": status, "heute": heute_lang}, HEUTE).ok
+    assert w.werte_aus("A", etappen, {"status": status, "heute": heute_html}, HEUTE).ok
     assert w.werte_aus("A", etappen, {"status": status, "heute": heute_kurz}, HEUTE).ok
 
     # heute nennt die Zahl aus dem Namen (2) statt der Position
     falsch_heute = f"Morgen-Briefing\nEtappe 2: {OBST_REST}\n"
+    assert not w.werte_aus("A", etappen, {"status": status, "heute": falsch_heute}, HEUTE).ok
+    falsch_heute = f"MORGEN\nEtappe 2 / {len(etappen)}\n{OBST_REST}\n"
     assert not w.werte_aus("A", etappen, {"status": status, "heute": falsch_heute}, HEUTE).ok
     # heute nennt eine andere Zahl als status
     assert not w.werte_aus("A", etappen, {"status": status, "heute": f"E{n + 1} Obstansers"}, HEUTE).ok
@@ -726,11 +741,19 @@ def test_antworttext_liest_html_briefing():
     m["From"] = "gregor-test@henemm.com"
     m["To"] = "gregor-test+t@henemm.com"
     m["Subject"] = "[T] Morgen"
-    m.set_content("<html><body><h2>Etappe 4: <b>Obstansersee-Hütte</b> nach Porzehütte</h2></body></html>",
-                  subtype="html")
+    # Struktur wie src/output/renderers/email/html.py (Issue #890): Nummer und Titel in
+    # getrennten Elementen ohne Leerraum dazwischen.
+    m.set_content(
+        '<html><body><table><tr><td><div class="eyebrow">MORGEN</div>'
+        '<div style="font-size:11px;">Etappe 4 / 5</div>'
+        '<div style="font-size:20px;"><b>Obstansersee-Hütte</b> nach Porzehütte</div>'
+        '</td></tr></table></body></html>',
+        subtype="html")
     text = w.antworttext(m.as_bytes())
-    assert "Etappe 4:" in text
-    assert "<h2>" not in text and "<b>" not in text
+    assert re.search(r"\bEtappe 4 / 5\b", text)
+    assert "5Obstansersee" not in text, "Tag-Entfernung muss Element-Grenzen als Leerraum erhalten"
+    assert "Obstansersee-Hütte nach Porzehütte" in text
+    assert "<div" not in text and "<b>" not in text
 
 
 # ---------------------------------------------------------------------------
@@ -758,6 +781,80 @@ def test_cleanup_laeuft_auch_bei_fehler(stelle, fehler):
     assert "registriere" in api.schritte
     assert api.schritte[-1] == "loesche_nutzer", f"Schrittfolge: {api.schritte}"
     assert api.schritte.count("registriere") == 1, "genau EIN Wegwerf-Nutzer pro Lauf (Registrier-Limit)"
+
+
+class _ErsatzSystem:
+    """Spielt den Staging-Eingang nach: jede eingelieferte Befehlsmail erzeugt eine
+    Antwort an die Absender-Plus-Adresse im gemeinsamen Postfach. Die heute-Antwort
+    erscheint erst nach dem nächsten Warteschritt (wie das echte Briefing später)."""
+
+    def __init__(self, api: "_ErsatzApi", heute_zahl_versatz: int = 0):
+        self.api = api
+        self.imap = _ErsatzImap({1: _mail_bytes("gregor-test@henemm.com", "alt", "alt", "<alt@x>")})
+        self.versatz = heute_zahl_versatz
+        self.ausstehend: list[bytes] = []
+        system = self
+
+        class _Smtp(_ErsatzSmtp):
+            verbindungen: list = []
+            umschlaege: list = []
+            fehler = None
+
+            def sendmail(self, from_addr, to_addrs, msg, *a, **k):
+                super().sendmail(from_addr, to_addrs, msg, *a, **k)
+                system._antworte(from_addr, msg)
+                return {}
+
+        self.smtp = _Smtp
+
+    def _ablegen(self, raw: bytes):
+        self.imap.mails[max(self.imap.mails) + 1] = raw
+
+    def _antworte(self, plus, msg):
+        raw = msg if isinstance(msg, bytes) else (msg.encode() if isinstance(msg, str) else msg.as_bytes())
+        betreff = email.message_from_bytes(raw)["Subject"] or ""
+        trip = next(t for t in self.api.trips if betreff.startswith(f"[{t['name']}]"))
+        etappen = trip["stages"]
+        if betreff.rstrip().endswith("status"):
+            self._ablegen(_mail_bytes(plus, f"[{trip['name']}] Status", _status_text(trip, HEUTE), "<s@x>"))
+        elif betreff.rstrip().endswith("heute"):
+            n = _chrono_nummer(etappen, OBST) + self.versatz
+            text = f"Morgen-Briefing\nEtappe {n}: {OBST_REST}\n"
+            self.ausstehend.append(_mail_bytes(plus, f"[{trip['name']}] Morgen", text, "<h@x>"))
+
+    def schlaf(self, _s):
+        while self.ausstehend:
+            self._ablegen(self.ausstehend.pop(0))
+
+
+class _ErsatzApiMitTrips(_ErsatzApi):
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.trips: list[dict] = []
+
+    def lege_trip_an(self, trip):
+        super().lege_trip_an(trip)
+        self.trips.append(trip)
+
+
+@pytest.mark.parametrize("versatz,erwartet", [(0, 0), (1, 1)])
+def test_lauf_szenario_a_bis_zur_auswertung(versatz, erwartet):
+    """AC-4/AC-7 im Zusammenspiel: Antwort da (count=0) ⇒ Exit 0; falsche heute-Zahl ⇒ Exit 1.
+
+    Die heute-Antwort erscheint erst NACH der status-Antwort. Ein Werkzeug, das die
+    Lauf-UID nicht je Befehl neu bestimmt, wertet die status-Mail als heute-Antwort
+    und meldet im Fall „falsche Zahl" fälschlich Exit 0.
+    """
+    w = _werkzeug()
+    api = _ErsatzApiMitTrips()
+    system = _ErsatzSystem(api, heute_zahl_versatz=versatz)
+    rc = w.fuehre_lauf(["A"], api=api, smtp_factory=system.smtp, imap_factory=lambda: system.imap,
+                       heute=HEUTE, tag="tagok", timeout=5, schlaf=system.schlaf)
+    assert rc == erwartet
+    assert len(system.smtp.umschlaege) == 2, "A braucht genau zwei Befehlsmails (status, heute)"
+    assert api.schritte[-1] == "loesche_nutzer"
+    assert 1 in system.imap.mails and 1 not in system.imap.gesehen | system.imap.geloescht, \
+        "fremde Mail im geteilten Postfach angefasst"
 
 
 def test_cleanup_ohne_antwort_und_gescheitertes_loeschen_wird_gemeldet(capsys):
