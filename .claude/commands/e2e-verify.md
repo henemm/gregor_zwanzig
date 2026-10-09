@@ -101,6 +101,36 @@ uv run python3 .claude/hooks/email_spec_validator.py
 
 **STOP wenn:** Validator nicht Exit 0.
 
+### Rezept: Befehl per echtem Mail-Eingang auf Staging
+
+Fuer Aenderungen an E-Mail-Befehlen (`status`, `heute`, Ruhetag, Startdatum;
+`trip_command_processor.py`, `inbound_email_reader.py`) prueft dieses Werkzeug den
+ECHTEN Zustellweg. Testmails ueber die angemeldete Einlieferung (Port 587) tragen nie den
+Absender-Echtheitsvermerk und werden vom Eingang zu Recht verworfen (#2143). Das Werkzeug
+liefert deshalb anonym ueber Port 25 ein (der eigene Server ist fuer `henemm.com`
+sendeberechtigt), legt einen Wegwerf-Nutzer `gregor-test+<tag>@henemm.com` samt Trips an,
+stoesst den Poll ueber den Kern (Port 8001, `X-GZ-Core-Auth`) an und liest die Antwortmail
+per IMAP (nur `BODY.PEEK`, nur eigene Plus-Adresse). Im `finally` wird alles geloescht.
+
+```bash
+python3 .claude/tools/staging_befehl_pruefen.py --szenario status        # eine status-Mail (Trip B)
+python3 .claude/tools/staging_befehl_pruefen.py --szenario heute         # status + heute (Trip A)
+python3 .claude/tools/staging_befehl_pruefen.py --szenario verschiebung  # Ruhetag + Startdatum (D, D2)
+python3 .claude/tools/staging_befehl_pruefen.py --szenario alle          # A, B, C, D, D2
+```
+
+- **Exit 0:** alle gewaehlten Szenarien bestanden (je Szenario eine `PASS`-Zeile).
+- **Exit 1:** Antwort ausgeblieben (Mail vermutlich verworfen) oder Inhalt falsch.
+- **Exit 2:** Aufruf-/Umgebungsfehler (Relay-Sperre, fehlende Zugangsdaten, Registrierung
+  abgelehnt oder 429 — 5 Versuche pro IP und Stunde, Lauf nahe Mitternacht Ortszeit).
+- **Erfolg = Antwortmail, nicht count:** Hat der Cron die Mail schon verarbeitet, meldet der
+  Poll `count=0`, obwohl alles funktioniert. `count` ist nur Diagnose; eine ausbleibende
+  Antwortmail ist immer ein Fehler (der Eingang markiert verworfene Mails still als gelesen).
+- Scheitert das Aufraeumen, steht die Kennung des uebrig gebliebenen Nutzers in der Ausgabe.
+- **Nicht abgedeckt:** SMS, Premium-SMS und Telegram (#2441 AC-6, AC-7) laufen NICHT ueber
+  dieses Werkzeug, sondern ueber Kern-Tests mit echtem Eingang, die Staging-Vorschau und
+  den Handy-Nachtest nach dem Prod-Deploy.
+
 ## Schritt 3c: Telegram-Scope — funktionaler Live-Test
 
 Wenn der Change den Telegram-Pfad berührt (geänderte Dateien mit `telegram` /
