@@ -18,6 +18,7 @@ import httpx
 from app.config import Settings, resolve_public_host
 from app.loader import compare_preset_to_dict, load_all_trips, load_compare_presets
 from app.trip import Trip
+from lib.go_internal import post_internal
 from output.channels.seven_io_base import mask_number
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
@@ -632,8 +633,8 @@ class InboundTelegramReader:
         """Verarbeitet /start TOKEN — registriert chat_id beim Go-Backend."""
         self._ensure_notification_service(settings)
         try:
-            resp = httpx.post(
-                "http://localhost:8090/api/internal/telegram-connect",
+            resp = post_internal(
+                "/api/internal/telegram-connect",
                 json={"token": token, "chat_id": chat_id},
                 timeout=5,
             )
@@ -669,6 +670,8 @@ class InboundTelegramReader:
                     )
                 except Exception as ce:
                     logger.warning(f"Konflikt-Nachricht fehlgeschlagen: {ce}")
+            elif resp.status_code in (401, 503):
+                logger.error(f"telegram-connect abgelehnt (HTTP {resp.status_code}) -- Core-Geheimnis prüfen")
             else:
                 logger.warning(f"telegram-connect returned {resp.status_code}")
         except Exception as e:

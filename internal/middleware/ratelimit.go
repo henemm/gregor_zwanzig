@@ -98,12 +98,16 @@ func (rl *IPRateLimiter) Middleware(next http.Handler) http.Handler {
 // (set by the Nginx reverse proxy — the only ingress since Issue #116), and
 // falls back to RemoteAddr (stripping the port).
 func clientIP(r *http.Request) string {
-	if v := r.Header.Get("X-Real-IP"); v != "" {
-		return v
-	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		host = r.RemoteAddr
+	}
+	// X-Real-IP nur von einem Loopback-Absender (nginx / SvelteKit) glauben;
+	// sonst ist der Header client-steuerbar (#2159).
+	if v := r.Header.Get("X-Real-IP"); v != "" {
+		if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+			return v
+		}
 	}
 	return host
 }

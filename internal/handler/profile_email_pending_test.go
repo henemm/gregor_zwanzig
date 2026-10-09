@@ -255,7 +255,7 @@ func ausstehendLogin(s *store.Store, uid string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	LoginHandler(s, eindeutigSecret).ServeHTTP(w, req)
+	LoginHandler(s, eindeutigSecret, "").ServeHTTP(w, req)
 	return w
 }
 

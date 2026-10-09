@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/coreauth"
 	"github.com/henemm/gregor-api/internal/handler"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/provider"
@@ -67,7 +68,7 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/auth/invite/check", inviteCheckLimiter.Middleware(handler.InviteCheckHandler(inviteStore)).ServeHTTP)
 	loginLimiter := authmw.NewIPRateLimiter(30, time.Hour)
 	r.Post("/api/auth/login",
-		loginLimiter.Middleware(handler.LoginHandler(deps.Store, deps.Config.SessionSecret)).ServeHTTP,
+		loginLimiter.Middleware(handler.LoginHandler(deps.Store, deps.Config.SessionSecret, deps.Config.PublicHost)).ServeHTTP,
 	)
 	r.Post("/api/auth/logout", handler.LogoutHandler(deps.Store, deps.Config.SessionSecret))
 	// Issue #2129: "auf allen Geraeten abmelden" — authentifiziert, bewusst
@@ -144,13 +145,14 @@ func New(deps Deps) chi.Router {
 		// Issue #2423 — Tarif/SMS-Tageszaehler des EIGENEN Kontos setzen.
 		r.Post("/api/auth/staging-seed", handler.StagingSeedHandler(deps.Store, *deps.Config))
 	}
-	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret))
+	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret, deps.Config.PublicHost))
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
 	r.Post("/api/auth/tier-change-request", handler.RequestTierChangeHandler(deps.Store, *deps.Config))
 	// Bug #590: Telegram /start-Flow — link generation + status polling + internal connect
 	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(deps.Store, deps.TelegramTokenStore))
 	r.Get("/api/auth/telegram-status", handler.GetTelegramStatusHandler(deps.Store))
-	r.Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store, deps.TelegramTokenStore))
+	coreAuth := coreauth.RequireCoreAuth(deps.Config.CoreSharedSecret)
+	r.With(coreAuth).Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store, deps.TelegramTokenStore))
 	// Issue #1676 Scheibe S1: Premium-SMS-Rueckkanal — lernt die von Garmin
 	// vergebene Rueckadresse (localhost-only, aufgerufen vom Python-Core).
 	premiumSmsLimiter := deps.PremiumSmsRateLimiter
@@ -160,7 +162,7 @@ func New(deps Deps) chi.Router {
 		// funktional gleichwertig.
 		premiumSmsLimiter = handler.NewPremiumSmsRateLimiter(handler.DefaultPremiumSmsLinkCodeBudget)
 	}
-	r.Post("/api/internal/premium-sms-learn", handler.PostPremiumSmsLearnHandler(deps.Store, premiumSmsLimiter))
+	r.With(coreAuth).Post("/api/internal/premium-sms-learn", handler.PostPremiumSmsLearnHandler(deps.Store, premiumSmsLimiter))
 	// Issue #2154 Scheibe A: Verknuepfungs-Code im Konto — anmeldepflichtig
 	// ueber die globale AuthMiddleware, bewusst NICHT in der Public-Allowlist.
 	r.Post("/api/auth/premium-sms-link-code", handler.PostPremiumSmsLinkCodeHandler(deps.Store, bcrypt.DefaultCost))
@@ -185,14 +187,14 @@ func New(deps Deps) chi.Router {
 		passkeyLimiter.Middleware(handler.PasskeyLoginBeginHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
 	)
 	r.Post("/api/auth/passkey/login/finish",
-		passkeyLimiter.Middleware(handler.PasskeyLoginFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.PasskeyLoginFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, deps.Config.PublicHost)).ServeHTTP,
 	)
 	// Issue #467 — Discoverable Credentials + Conditional UI (public)
 	r.Post("/api/auth/passkey/discoverable/begin",
 		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableBeginHandler(deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
 	)
 	r.Post("/api/auth/passkey/discoverable/finish",
-		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, deps.Config.PublicHost)).ServeHTTP,
 	)
 	// Authenticated endpoints (cookie required via AuthMiddleware)
 	r.Post("/api/auth/passkey/register/begin",

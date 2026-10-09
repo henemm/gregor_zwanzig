@@ -15,6 +15,8 @@ package handler
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"crypto/subtle"
 	"io"
 	"log"
 	"net/http"
@@ -43,7 +45,7 @@ func TelegramWebhookHandler(pythonCoreURL string) http.HandlerFunc {
 			http.Error(w, "webhook not configured", http.StatusServiceUnavailable)
 			return
 		}
-		if r.Header.Get("X-Telegram-Bot-Api-Secret-Token") != secret {
+		if !secretEqual(r.Header.Get("X-Telegram-Bot-Api-Secret-Token"), secret) {
 			n := rejectedWebhookRequests.Add(1)
 			log.Printf("[telegram-webhook] 403 rejected (count=%d, remote=%s)", n, r.RemoteAddr)
 			http.Error(w, "forbidden", http.StatusForbidden)
@@ -80,4 +82,10 @@ func TelegramWebhookHandler(pythonCoreURL string) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+// secretEqual vergleicht konstantzeitig (sha256 + ConstantTimeCompare, #2159).
+func secretEqual(got, want string) bool {
+	a, b := sha256.Sum256([]byte(got)), sha256.Sum256([]byte(want))
+	return subtle.ConstantTimeCompare(a[:], b[:]) == 1
 }

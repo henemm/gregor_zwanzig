@@ -23,7 +23,7 @@ import (
 // RED-Zustand: Kompilierfehler, weil config.NewWebAuthn(*config.Config) noch
 // nicht existiert.
 //
-// Bewusst OHNE newTestWebAuthn(t, rpID, origin): genau dieses Selbstbauen der
+// Bewusst OHNE passkeytest.NewWebAuthn(t, rpID, origin): genau dieses Selbstbauen der
 // Konfiguration ist der Grund, warum die 31 bestehenden Passkey-Tests grün
 // blieben, während Produktion drei Monate rpId "localhost" gesendet hat. Hier
 // läuft die echte Kette config.Load() -> config.NewWebAuthn() -> Handler ->

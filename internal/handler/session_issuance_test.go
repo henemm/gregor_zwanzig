@@ -52,12 +52,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/handler/passkeytest"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
 const issuanceSecret = "test-secret-32-chars-minimum-ok!"
+
+// issuancePublicHost: https-PublicHost, damit das Secure-Flag jedes
+// Ausstellungswegs an der Wirkstelle (Konstruktor/Config -> SetSessionCookie)
+// gemessen wird (#2159 AC-9). Kein TLS, kein X-Forwarded-Proto im Request.
+const issuancePublicHost = "https://gregor.example.invalid"
 
 // minOneYearSeconds ist die geforderte Untergrenze der Cookie-Lebensdauer
 // (AC-18). Bewusst eine harte Zahl: ein Test, der "irgendeine Lebensdauer"
@@ -139,7 +145,7 @@ func anmeldenViaPasswortAendern(t *testing.T, gesperrt bool) anmeldeVersuch {
 		strings.NewReader(`{"old_password":"altespw123","new_password":"neuespw456"}`))
 	req = addUserToContext(req, uid)
 	w := httptest.NewRecorder()
-	ChangePasswordHandler(s, bcrypt.MinCost, issuanceSecret)(w, req)
+	ChangePasswordHandler(s, bcrypt.MinCost, issuanceSecret, issuancePublicHost)(w, req)
 	return anmeldeVersuch{w: w, s: s, uid: uid}
 }
 
@@ -214,7 +220,7 @@ func anmeldenViaPassword(t *testing.T, gesperrt bool) anmeldeVersuch {
 	req := httptest.NewRequest("POST", "/api/auth/login",
 		strings.NewReader(`{"username":"alice","password":"geheim123"}`))
 	w := httptest.NewRecorder()
-	LoginHandler(s, issuanceSecret).ServeHTTP(w, req)
+	LoginHandler(s, issuanceSecret, issuancePublicHost).ServeHTTP(w, req)
 	return anmeldeVersuch{w: w, s: s, uid: "alice"}
 }
 
@@ -247,7 +253,7 @@ func anmeldenViaMagicLink(t *testing.T, gesperrt bool) anmeldeVersuch {
 		setzeGesperrtRoh(t, s, uid)
 	}
 
-	cfg := &config.Config{SessionSecret: issuanceSecret}
+	cfg := &config.Config{SessionSecret: issuanceSecret, PublicHost: issuancePublicHost}
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/magic-link/verify",
 		strings.NewReader(`{"email":"magic@example.com","code":"123456"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -291,6 +297,7 @@ func anmeldenViaGoogle(t *testing.T, gesperrt bool) anmeldeVersuch {
 		GoogleClientSecret: "test-secret",
 		GoogleRedirectURL:  "https://example.com/callback",
 		SessionSecret:      issuanceSecret,
+		PublicHost:         issuancePublicHost,
 	}
 
 	const state = "state-2129"
@@ -315,7 +322,7 @@ func anmeldenViaPasskeyLogin(t *testing.T, gesperrt bool) anmeldeVersuch {
 	t.Helper()
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	// #2271: bestätigt seeden, BEVOR registerForUser läuft. Der geteilte
 	// Helfer seedet nur unter `if existing == nil` (passkey_test.go:969) —
@@ -344,9 +351,9 @@ func anmeldenViaPasskeyLogin(t *testing.T, gesperrt bool) anmeldeVersuch {
 	}
 
 	finishW := httptest.NewRecorder()
-	PasskeyLoginFinishHandler(s, wa, cs, issuanceSecret).ServeHTTP(finishW,
+	PasskeyLoginFinishHandler(s, wa, cs, issuanceSecret, issuancePublicHost).ServeHTTP(finishW,
 		httptest.NewRequest("POST", "/api/auth/passkey/login/finish",
-			bytes.NewReader(auth.makeAssertionResponse(t, beginResp.PublicKey.Challenge, 1))))
+			bytes.NewReader(auth.MakeAssertionResponse(t, beginResp.PublicKey.Challenge, 1))))
 	return anmeldeVersuch{w: finishW, s: s, uid: "alice"}
 }
 
@@ -363,7 +370,7 @@ func anmeldenViaPasskeyDiscoverable(t *testing.T, gesperrt bool) anmeldeVersuch 
 	t.Helper()
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	const uid = "alice"
 	seedeKonto2271(t, s, uid, true) // #2271: siehe mintViaPasskeyLogin
@@ -384,10 +391,10 @@ func anmeldenViaPasskeyDiscoverable(t *testing.T, gesperrt bool) anmeldeVersuch 
 	challenge, _ := pk["challenge"].(string)
 
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
-		bytes.NewReader(auth.makeAssertionResponseDiscoverable(t, challenge, 1, uid)))
+		bytes.NewReader(auth.MakeAssertionResponseDiscoverable(t, challenge, 1, uid)))
 	finishReq.Header.Set("Content-Type", "application/json")
 	finishW := httptest.NewRecorder()
-	PasskeyLoginDiscoverableFinishHandler(s, wa, cs, issuanceSecret).ServeHTTP(finishW, finishReq)
+	PasskeyLoginDiscoverableFinishHandler(s, wa, cs, issuanceSecret, issuancePublicHost).ServeHTTP(finishW, finishReq)
 	return anmeldeVersuch{w: finishW, s: s, uid: uid}
 }
 
@@ -445,7 +452,7 @@ func denyViaPassword(t *testing.T) abgewiesen {
 	req := httptest.NewRequest("POST", "/api/auth/login",
 		strings.NewReader(`{"username":"bob","password":"geheim123"}`))
 	w := httptest.NewRecorder()
-	LoginHandler(s, issuanceSecret).ServeHTTP(w, req)
+	LoginHandler(s, issuanceSecret, "").ServeHTTP(w, req)
 	return abgewiesen{
 		code: w.Code, body: strings.TrimSpace(w.Body.String()),
 		cookie: sessionCookieOderNil(w), store: s, userID: "bob",
@@ -457,7 +464,7 @@ func denyViaPasskeyLogin(t *testing.T) abgewiesen {
 	t.Helper()
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	const uid = "bob"
 	seedeKonto2271(t, s, uid, false)
@@ -480,9 +487,9 @@ func denyViaPasskeyLogin(t *testing.T) abgewiesen {
 	}
 
 	finishW := httptest.NewRecorder()
-	PasskeyLoginFinishHandler(s, wa, cs, issuanceSecret).ServeHTTP(finishW,
+	PasskeyLoginFinishHandler(s, wa, cs, issuanceSecret, "").ServeHTTP(finishW,
 		httptest.NewRequest("POST", "/api/auth/passkey/login/finish",
-			bytes.NewReader(auth.makeAssertionResponse(t, beginResp.PublicKey.Challenge, 1))))
+			bytes.NewReader(auth.MakeAssertionResponse(t, beginResp.PublicKey.Challenge, 1))))
 	return abgewiesen{
 		code: finishW.Code, body: strings.TrimSpace(finishW.Body.String()),
 		cookie: sessionCookieOderNil(finishW), store: s, userID: uid,
@@ -495,7 +502,7 @@ func denyViaPasskeyDiscoverable(t *testing.T) abgewiesen {
 	t.Helper()
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	const uid = "bob"
 	seedeKonto2271(t, s, uid, false)
@@ -513,10 +520,10 @@ func denyViaPasskeyDiscoverable(t *testing.T) abgewiesen {
 	challenge, _ := pk["challenge"].(string)
 
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
-		bytes.NewReader(auth.makeAssertionResponseDiscoverable(t, challenge, 1, uid)))
+		bytes.NewReader(auth.MakeAssertionResponseDiscoverable(t, challenge, 1, uid)))
 	finishReq.Header.Set("Content-Type", "application/json")
 	finishW := httptest.NewRecorder()
-	PasskeyLoginDiscoverableFinishHandler(s, wa, cs, issuanceSecret).ServeHTTP(finishW, finishReq)
+	PasskeyLoginDiscoverableFinishHandler(s, wa, cs, issuanceSecret, "").ServeHTTP(finishW, finishReq)
 	return abgewiesen{
 		code: finishW.Code, body: strings.TrimSpace(finishW.Body.String()),
 		cookie: sessionCookieOderNil(finishW), store: s, userID: uid,
@@ -609,6 +616,10 @@ func TestIssuingLoginPaths_IssueFourPartCookie(t *testing.T) {
 			}
 			if !got.cookie.HttpOnly {
 				t.Errorf("AC-18/%s: Merkmal muss HttpOnly bleiben", way.name)
+			}
+			// #2159 AC-9: https-PublicHost => Secure, ohne TLS/X-Forwarded-Proto.
+			if !got.cookie.Secure {
+				t.Errorf("#2159 AC-9/%s: Cookie muss aus dem https-PublicHost Secure sein", way.name)
 			}
 			if got.cookie.SameSite != http.SameSiteLaxMode {
 				t.Errorf("AC-18/%s: SameSite muss Lax bleiben, ist %v", way.name, got.cookie.SameSite)
@@ -713,7 +724,7 @@ func TestBlockingLoginPaths_RefuseUnverifiedAccounts(t *testing.T) {
 func TestPasskeyPublicRegistration_IssuesNoSession(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	beginW := httptest.NewRecorder()
@@ -732,12 +743,12 @@ func TestPasskeyPublicRegistration_IssuesNoSession(t *testing.T) {
 		t.Fatalf("AC-8 begin decode: %v", err)
 	}
 
-	auth := newTestAuthenticator(t, rpID, origin)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
 	finishW := httptest.NewRecorder()
 	// Leere config.Config: kein SMTPHost → kein Verifikations-Dispatch.
 	PasskeyRegisterPublicFinishHandler(s, wa, cs, issuanceSecret, config.Config{}).ServeHTTP(finishW,
 		httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish",
-			bytes.NewReader(auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge))))
+			bytes.NewReader(auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge))))
 
 	if finishW.Code != http.StatusCreated {
 		t.Fatalf("AC-8: die Kontoerstellung bleibt erfolgreich — erwartet 201, bekommen %d: %s",
@@ -892,5 +903,17 @@ func TestDisabledAccount_AllIssuancePaths_Refuse403(t *testing.T) {
 					"(typisiertes Zurückschreiben verliert es)", way.name)
 			}
 		})
+	}
+}
+
+// #2159 AC-9: auch der Passwort-aendern-Weg (stellt eine neue Sitzung aus)
+// reicht den PublicHost bis ins Cookie durch.
+func TestChangePassword_SessionCookieSecureAusPublicHost(t *testing.T) {
+	v := anmeldenViaPasswortAendern(t, false)
+	if v.w.Code != 200 {
+		t.Fatalf("Passwort aendern: erwartet 200, bekommen %d: %s", v.w.Code, v.w.Body.String())
+	}
+	if c := sessionCookieFrom(t, v.w, "Passwort-aendern"); !c.Secure {
+		t.Error("Passwort aendern: Cookie muss aus dem https-PublicHost Secure sein")
 	}
 }

@@ -199,6 +199,12 @@ class Settings(BaseSettings):
         description="Gemeinsames Geheimnis Go -> Python-Core (env: GZ_CORE_SHARED_SECRET, #2142)",
     )
 
+    # Issue #2159 — Basis-URL der Go-API fuer interne Aufrufe (Staging: :8091).
+    go_api_url: str = Field(
+        default="http://localhost:8090",
+        description="Basis-URL der Go-API (env: GZ_GO_API_URL, #2159)",
+    )
+
     # Issue #2272 — oeffentliche Basis-URL fuer Nutzer-Links. Bewusst OHNE
     # Default: ein fehlender Wert ist ein Konfigurationsfehler, ein Fallback
     # auf die Produktionsadresse waere derselbe Bug mit Log-Zeile.

@@ -41,7 +41,7 @@ func TestChangePasswordHandler_Success(t *testing.T) {
 	req = addUserToContext(req, "alice")
 	w := httptest.NewRecorder()
 
-	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret)(w, req)
+	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret, "")(w, req)
 
 	if w.Code != 200 {
 		t.Fatalf("Expected 200, got %d: %s", w.Code, w.Body.String())
@@ -67,7 +67,7 @@ func TestChangePasswordHandler_WrongOldPassword(t *testing.T) {
 	req = addUserToContext(req, "alice")
 	w := httptest.NewRecorder()
 
-	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret)(w, req)
+	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret, "")(w, req)
 
 	if w.Code != 403 {
 		t.Fatalf("Expected 403, got %d: %s", w.Code, w.Body.String())
@@ -87,7 +87,7 @@ func TestChangePasswordHandler_NewPasswordTooShort(t *testing.T) {
 	req = addUserToContext(req, "alice")
 	w := httptest.NewRecorder()
 
-	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret)(w, req)
+	ChangePasswordHandler(s, bcrypt.MinCost, changePwTestSecret, "")(w, req)
 
 	if w.Code != 400 {
 		t.Fatalf("Expected 400, got %d: %s", w.Code, w.Body.String())

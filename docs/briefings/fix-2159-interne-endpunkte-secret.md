@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/bugfix/interne_endpunkte_core_auth.md
-spec_sha256: 1e2f3dab303ee138afa5a742d92cb1be62f318942abe0763c0bd5c9c0f039ebe
+spec_sha256: 90627c3fb9e54be1a964aa376a70a7c9b9f69113cb4990f8483790260ff8b4d9
 ---
 
 # PO-Briefing: fix-2159-interne-endpunkte-secret
@@ -11,22 +11,22 @@ spec_sha256: 1e2f3dab303ee138afa5a742d92cb1be62f318942abe0763c0bd5c9c0f039ebe
 
 ## Was gebaut wird
 
-Interne Server-Schnittstellen für Telegram-Verknüpfung und Premium-SMS-Lernen verlangen künftig ein gemeinsames Geheimnis, nicht nur Herkunft vom Server.
+Zwei interne Schnittstellen (Telegram verknüpfen, Premium-SMS lernen) akzeptieren nur noch Aufrufe mit dem gemeinsamen Geheimnis.
 
 ## Definition of Done
 
-Aufrufe ohne oder mit falschem Geheimnis werden mit Fehler abgelehnt und ändern keine Nutzerdaten; Telegram-Verknüpfung und Premium-SMS funktionieren weiterhin.
+Aufrufe ohne oder mit falschem Geheimnis werden abgelehnt und ändern keine Nutzerdaten; Telegram-Verknüpfung und Premium-SMS-Lernen funktionieren mit Geheimnis weiter wie bisher.
 
 ## Wie geprüft wird
 
-Automatische Tests gegen echten Router und lokale Testserver beweisen Ablehnung und Weiterbetrieb; Staging-Betrieb, Dokumentation und echte Telegram-Zustellung prüfen sie nicht.
+Automatische Tests mit echtem Router und lokalen Testservern beweisen Ablehnung und Weiterbetrieb; ob der Vergleich zeitkonstant ist, wird nicht gemessen.
 
 ## Kritische Anmerkungen
 
-- Manueller Betriebsschritt außerhalb des Codes nötig: Staging-Einstellung ergänzen, sonst fallen dort Telegram-Verknüpfung und Premium-SMS aus.
-- Kriterium 12 (Dokumentation) hat keinen automatischen Test; Prüfung nur im Review.
-- Zusatz: Gesundheitsabfrage zeigt Go-Adresse an, damit ein fehlender Staging-Eintrag auffällt; nicht verlangt, aber unkritisch.
+- Ohne manuellen Eintrag in der Staging-Konfiguration scheitern dort Telegram-Verknüpfung und SMS-Lernen; das liegt außerhalb des Codes.
+- Nicht verlangt: Staging-Fehlverbindung zur Produktion wird mitbehoben und ein Health-Feld ergänzt.
+- Dokumentations-Anforderung (AC-12) hat keinen automatischen Test. Prüfung nur im Review.
 
 ## Freigabe-Frage
 
-Soll dieser Schutz inklusive manuellem Staging-Eintrag und Cookie-Härtung aus #2163 so umgesetzt werden?
+Soll die Spec inklusive der mitgenommenen Härtungen aus #2163 und der Staging-Korrektur freigegeben werden?

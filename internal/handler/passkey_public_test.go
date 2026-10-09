@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/handler/passkeytest"
 	"github.com/henemm/gregor-api/internal/mail"
 	"github.com/henemm/gregor-api/internal/model"
 )
@@ -25,7 +26,7 @@ import (
 func TestPasskeyRegisterPublicBegin_Success(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	body := []byte(`{"username":"newuser","email":"new@example.com"}`)
@@ -65,7 +66,7 @@ func TestPasskeyRegisterPublicBegin_Success(t *testing.T) {
 func TestPasskeyRegisterPublicBegin_UserExists(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	// Seed an existing user.
@@ -95,7 +96,7 @@ func TestPasskeyRegisterPublicBegin_UserExists(t *testing.T) {
 func TestPasskeyRegisterPublicBegin_InvalidUsername(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	h := PasskeyRegisterPublicBeginHandler(s, wa, cs)
 
@@ -132,7 +133,7 @@ func TestPasskeyRegisterPublicBegin_InvalidUsername(t *testing.T) {
 func TestPasskeyRegisterPublicBegin_InvalidEmail(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	cases := []struct {
@@ -168,7 +169,7 @@ func TestPasskeyRegisterPublicBegin_InvalidEmail(t *testing.T) {
 func TestPasskeyRegisterPublicRoundtrip_Success(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
@@ -192,8 +193,8 @@ func TestPasskeyRegisterPublicRoundtrip_Success(t *testing.T) {
 	}
 
 	// Step 2: Authenticator creates attestation for the challenge
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 
 	// Step 3: Finish
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
@@ -240,7 +241,7 @@ func TestPasskeyRegisterPublicRoundtrip_Success(t *testing.T) {
 func TestPasskeyRegisterPublicFinish_TriggersDispatch_1226_AC6(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
@@ -277,8 +278,8 @@ func TestPasskeyRegisterPublicFinish_TriggersDispatch_1226_AC6(t *testing.T) {
 	}
 
 	// Finish — echte Attestation über testAuthenticator.
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
 	finishW := httptest.NewRecorder()
 	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, cfg).ServeHTTP(finishW, finishReq)
@@ -312,13 +313,13 @@ func TestPasskeyRegisterPublicFinish_TriggersDispatch_1226_AC6(t *testing.T) {
 func TestPasskeyRegisterPublicFinish_ChallengeExpired(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
 	// Craft a well-formed attestation but without a matching challenge in the store.
-	auth := newTestAuthenticator(t, rpID, origin)
-	body := auth.makeAttestationResponse(t, "dGhpcyBpcyBhIGZha2UgY2hhbGxlbmdl") // arbitrary b64url
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	body := auth.MakeAttestationResponse(t, "dGhpcyBpcyBhIGZha2UgY2hhbGxlbmdl") // arbitrary b64url
 
 	req := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(body))
 	w := httptest.NewRecorder()
@@ -343,7 +344,7 @@ func TestPasskeyRegisterPublicFinish_ChallengeExpired(t *testing.T) {
 func TestPasskeyRegisterPublicFinish_UsernameRace(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
@@ -357,7 +358,9 @@ func TestPasskeyRegisterPublicFinish_UsernameRace(t *testing.T) {
 	}
 
 	var beginResp struct {
-		PublicKey struct{ Challenge string `json:"challenge"` } `json:"publicKey"`
+		PublicKey struct {
+			Challenge string `json:"challenge"`
+		} `json:"publicKey"`
 	}
 	json.Unmarshal(beginW.Body.Bytes(), &beginResp)
 
@@ -367,8 +370,8 @@ func TestPasskeyRegisterPublicFinish_UsernameRace(t *testing.T) {
 	}
 
 	// Step 3: Finish — must reject with 409
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
 	finishW := httptest.NewRecorder()
 	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, config.Config{}).ServeHTTP(finishW, finishReq)

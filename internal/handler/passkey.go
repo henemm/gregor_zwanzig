@@ -205,7 +205,7 @@ func PasskeyLoginBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challen
 // assertion via go-webauthn, persists the updated SignCount/LastUsedAt on the
 // matched credential, and sets a session cookie with the same shape as the
 // classic Username/Password login flow.
-func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret string) http.HandlerFunc {
+func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Cap the body size to prevent memory exhaustion (F004).
 		r.Body = http.MaxBytesReader(w, r.Body, maxWebAuthnBodyBytes)
@@ -256,7 +256,7 @@ func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challe
 			return
 		}
 
-		if !issueSession(w, r, s, entry.UserID, secret) {
+		if !issueSession(w, r, s, entry.UserID, secret, publicHost) {
 			return
 		}
 
@@ -299,7 +299,7 @@ func PasskeyLoginDiscoverableBeginHandler(wa *webauthn.WebAuthn, cs *ChallengeSt
 // The browser supplies the user identity via the assertion's userHandle; we look
 // up the user via that handle and validate the signature against their stored
 // credentials. Issue #467 — V3 Add-on.
-func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret string) http.HandlerFunc {
+func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Cap body size — same as V1 (F004).
 		r.Body = http.MaxBytesReader(w, r.Body, maxWebAuthnBodyBytes)
@@ -357,7 +357,7 @@ func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn
 		}
 
 		userID := mu.WebAuthnName()
-		if !issueSession(w, r, s, userID, secret) {
+		if !issueSession(w, r, s, userID, secret, publicHost) {
 			return
 		}
 

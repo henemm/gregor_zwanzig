@@ -647,7 +647,7 @@ func TestPasswortLoginBleibtBeiBestandsduplikatFuerBeideMoeglich_AC11(t *testing
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/login",
 			strings.NewReader(`{"username":"`+uid+`","password":"`+pw+`"}`))
 		w := httptest.NewRecorder()
-		LoginHandler(s, eindeutigSecret).ServeHTTP(w, req)
+		LoginHandler(s, eindeutigSecret, "").ServeHTTP(w, req)
 		if w.Code != http.StatusOK || !hatSessionCookie(w) {
 			t.Errorf("AC-11: Passwort-Login für %q erwartet 200 mit Cookie, bekommen %d: %s", uid, w.Code, w.Body.String())
 		}
