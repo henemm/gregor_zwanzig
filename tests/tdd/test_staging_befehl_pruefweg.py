@@ -73,6 +73,8 @@ Fehler der StagingApi (HTTP ≠ 2xx) erben von ``RuntimeError``. Der Header
 from __future__ import annotations
 
 import email
+import email.header
+import email.policy
 import importlib.util
 import re
 import sys
@@ -240,7 +242,12 @@ class _ErsatzImap:
             daten: list = []
             for u in self._uids(satz):
                 raw = self.mails[u]
-                if "HEADER" in teil:
+                if "HEADER.FIELDS" in teil:
+                    felder = re.search(r"HEADER\.FIELDS\s*\(([^)]*)\)", teil).group(1).split()
+                    kopf = email.message_from_bytes(raw, policy=email.policy.compat32)
+                    nutz = b"".join(f"{n}: {v}\n".encode() for n in felder
+                                    for k, v in kopf.items() if k.upper() == n) + b"\n"
+                elif "HEADER" in teil:
                     nutz = raw.split(b"\n\n", 1)[0] + b"\n\n"
                 else:
                     nutz = raw
@@ -788,8 +795,11 @@ class _ErsatzSystem:
     Antwort an die Absender-Plus-Adresse im gemeinsamen Postfach. Die heute-Antwort
     erscheint erst nach dem nächsten Warteschritt (wie das echte Briefing später)."""
 
-    def __init__(self, api: "_ErsatzApi", heute_zahl_versatz: int = 0):
+    def __init__(self, api: "_ErsatzApi", heute_zahl_versatz: int = 0,
+                 vorab: bool = False, heute_betreff: str | None = None):
         self.api = api
+        self.vorab = vorab
+        self.heute_betreff = heute_betreff
         self.imap = _ErsatzImap({1: _mail_bytes("gregor-test@henemm.com", "alt", "alt", "<alt@x>")})
         self.versatz = heute_zahl_versatz
         self.ausstehend: list[bytes] = []
@@ -815,12 +825,28 @@ class _ErsatzSystem:
         betreff = email.message_from_bytes(raw)["Subject"] or ""
         trip = next(t for t in self.api.trips if betreff.startswith(f"[{t['name']}]"))
         etappen = trip["stages"]
+        if self.vorab:
+            self._vorlauf(plus, trip["name"])
         if betreff.rstrip().endswith("status"):
             self._ablegen(_mail_bytes(plus, f"[{trip['name']}] Status", _status_text(trip, HEUTE), "<s@x>"))
         elif betreff.rstrip().endswith("heute"):
             n = _chrono_nummer(etappen, OBST) + self.versatz
             text = f"Morgen-Briefing\nEtappe {n}: {OBST_REST}\n"
-            self.ausstehend.append(_mail_bytes(plus, f"[{trip['name']}] Morgen", text, "<h@x>"))
+            betreff_h = self.heute_betreff or f"[{trip['name']}] Morgen"
+            raw_h = _mail_bytes(plus, betreff_h, text, "<h@x>")
+            if self.heute_betreff:  # GANZER Betreff in EINEM kodierten Wort (wie Go/mime.QEncoding)
+                kodiert = email.header.Header(betreff_h, "utf-8").encode().replace("\n", "").encode()
+                raw_h = re.sub(rb"Subject: [^\n]*(\n[ \t][^\n]*)*", b"Subject: " + kodiert, raw_h, count=1)
+            self.ausstehend.append(raw_h)
+
+    def _vorlauf(self, plus, trip_name):
+        """Mails an dieselbe Adresse, die KEINE Antwort sind und VOR der echten Antwort liegen."""
+        verif = (f"From: Gregor 20 <noreply@henemm.com>\nTo: {plus}\n"
+                 "Subject: =?UTF-8?q?Best=C3=A4tige_deine_E-Mail-Adresse_f=C3=BCr_Gregor_20?=\n"
+                 "Message-ID: <verif@x>\n\nBitte bestaetigen.\n").encode()
+        self._ablegen(verif)
+        self._ablegen(_mail_bytes(plus, "[Anderer-Trip] Status", "FALSCH anderer Trip", "<a1@x>"))
+        self._ablegen(_mail_bytes(plus, f"Re: [{trip_name}] Status", "FALSCH nur enthalten", "<a2@x>"))
 
     def schlaf(self, _s):
         while self.ausstehend:
@@ -921,6 +947,230 @@ def test_ausgaben_enthalten_keine_geheimnisse(capsys, fehler_pfad):
             "Poll-Auslösung ohne X-GZ-Core-Auth — Test wäre vakuum"
     for geheim in passwoerter | {secret, _ErsatzTransport.TOKEN}:
         assert geheim not in gesamt, "Geheimnis in der Ausgabe"
+
+
+# ---------------------------------------------------------------------------
+# Fix-Runde nach Adversary (F008, F002, F003, F004, F006)
+# ---------------------------------------------------------------------------
+
+def test_antwortsuche_ueberspringt_systemmail_an_dieselbe_adresse():
+    """F008: die Verifikationsmail der Registrierung geht an dieselbe Plus-Adresse und liegt VOR der Antwort."""
+    w = _werkzeug()
+    plus = "gregor-test+lauf43@henemm.com"
+    imap = _ErsatzImap({
+        6: _mail_bytes(plus, "Bestätige deine E-Mail-Adresse für Gregor 20", "Link", "<verif@x>"),
+        7: _mail_bytes(plus, "[GZ-Pruefung lauf43 B] Status", "Status: richtig", "<antwort@x>"),
+    })
+    raw = w.finde_antwort(imap, plus, seit_uid=0, betreffe=("[GZ-Pruefung lauf43 B]", "[GZ#"))
+    assert raw is not None
+    assert email.message_from_bytes(raw)["Message-ID"] == "<antwort@x>"
+    nur_system = _ErsatzImap({6: imap.mails[6]})
+    assert w.finde_antwort(nur_system, plus, seit_uid=0, betreffe=("[GZ-Pruefung lauf43 B]",)) is None
+
+
+class _AufzeichnenderTransport:
+    def __init__(self, status_je_pfad=None):
+        self.anfragen = []
+        self.status_je_pfad = status_je_pfad or {}
+
+    def __call__(self, method, url, headers=None, body=None):
+        self.anfragen.append((method, url.split("//", 1)[1].split("/", 1)[1], dict(headers or {}), body))
+        for teil, status in self.status_je_pfad.items():
+            if teil in url:
+                return status, {"error": "x"}
+        return 200, {"token": "tok-1", "count": 0, "id": "x"}
+
+
+def test_registrierkette_reihenfolge_und_inhalt():
+    """F002: register -> login -> staging-token -> verify-email -> trips -> poll -> account/delete."""
+    w = _werkzeug()
+    tr = _AufzeichnenderTransport()
+    api = w.StagingApi("https://s.example.invalid", "http://127.0.0.1:8001", "geheim-x", tr)
+    plus = "gregor-test+kette1@henemm.com"
+    nutzer = api.registriere(plus)
+    trip = w.baue_trip("B", "kette1", HEUTE)
+    api.lege_trip_an(trip)
+    api.loese_poll_aus()
+    api.loesche_nutzer()
+    pfade = [(m, p) for m, p, _, _ in tr.anfragen]
+    assert pfade == [
+        ("POST", "api/auth/register"), ("POST", "api/auth/login"),
+        ("POST", "api/auth/verify-email/staging-token"), ("POST", "api/auth/verify-email"),
+        ("POST", "api/trips"), ("POST", "api/scheduler/inbound-commands"),
+        ("POST", "api/auth/account/delete"),
+    ]
+    reg, login, tokreq, ver, trips, poll, loesch = (a[3] for a in tr.anfragen)
+    assert reg["email"] == plus and reg["username"] == nutzer and len(reg["password"]) >= 8
+    assert login == {"username": nutzer, "password": reg["password"]}
+    assert tokreq == {"username": nutzer}
+    assert ver == {"user": nutzer, "token": "tok-1"}
+    assert trips["id"] == trip["id"] and trips["name"] == trip["name"]
+    assert loesch == {"password": reg["password"]}
+    assert tr.anfragen[5][2].get("X-GZ-Core-Auth") == "geheim-x"
+
+
+def test_http_fehler_bei_registrierung_ist_exit_2_ohne_wiederholung(capsys):
+    """F002: 429 bei register -> klare Meldung, Exit 2, genau EIN Versuch, kein Loeschversuch."""
+    w = _werkzeug()
+    tr = _AufzeichnenderTransport({"/api/auth/register": 429})
+    api = w.StagingApi("https://s.example.invalid", "http://127.0.0.1:8001", "geheim-x", tr)
+    rc = w.fuehre_lauf_exit(["B"], api=api, smtp_factory=_smtp_klasse(),
+                            imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="tag429",
+                            timeout=0, schlaf=_kein_schlaf)
+    assert rc == 2
+    assert [p for _, p, _, _ in tr.anfragen].count("api/auth/register") == 1
+    assert not any("account/delete" in p for _, p, _, _ in tr.anfragen)
+    err = capsys.readouterr().err
+    assert "429" in err and "register" in err and "geheim-x" not in err
+
+
+def test_cleanup_loescht_nur_eigene_antworten():
+    """F003: nur Mails mit To == Plus-Adresse werden geloescht, fremde und Namensverlaengerungen nicht."""
+    w = _werkzeug()
+    plus = "gregor-test+lauf44@henemm.com"
+    imap = _postfach(plus)
+    imap.mails[12] = _mail_bytes(plus, "[T] Status", "zweite eigene", "<e2@x>")
+    w.loesche_eigene_antworten(imap, plus)
+    assert 10 not in imap.mails and 12 not in imap.mails
+    for fremd in (7, 8, 9, 11):
+        assert fremd in imap.mails, f"fremde Mail {fremd} geloescht"
+
+
+def test_imap_verbindungen_werden_geschlossen():
+    """F004: jede je Poll geoeffnete IMAP-Verbindung wird mit logout beendet."""
+    w = _werkzeug()
+    geoeffnet = []
+
+    class _Imap(_ErsatzImap):
+        def __init__(self):
+            super().__init__({})
+            self.zu = False
+            geoeffnet.append(self)
+
+        def logout(self):
+            self.zu = True
+            return ("BYE", [b""])
+
+    rc = w.fuehre_lauf(["B"], api=_ErsatzApi(), smtp_factory=_smtp_klasse(), imap_factory=_Imap,
+                       heute=HEUTE, tag="tagimap", timeout=0, schlaf=_kein_schlaf)
+    assert rc != 0 and geoeffnet
+    assert all(i.zu for i in geoeffnet), "IMAP-Verbindung ohne logout liegen gelassen"
+
+
+def test_ohne_cleanup_loescht_nichts_und_nennt_die_kennung(capsys):
+    """F006: --ohne-cleanup (aufraeumen=False) ueberspringt das Loeschen und gibt die Kennung aus."""
+    w = _werkzeug()
+    api = _ErsatzApi()
+    imap = _ErsatzImap({})
+    w.fuehre_lauf(["B"], api=api, smtp_factory=_smtp_klasse(), imap_factory=lambda: imap,
+                  heute=HEUTE, tag="tagoc", timeout=0, schlaf=_kein_schlaf, aufraeumen=False)
+    assert "loesche_nutzer" not in api.schritte
+    assert api.nutzer_id in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("heute_betreff", [None, "[GZ#ABCD] Morgen – Briefing"])
+def test_lauf_nimmt_nur_echte_antworten_trotz_vorlauf_mails(heute_betreff):
+    """F009: Verifikationsmail (RFC 2047), fremder Trip und 'enthaelt nur' liegen VOR der Antwort;
+    die heute-Antwort mit Shortcode-Betreff (kodiert) zaehlt trotzdem. Im LAUF bewacht."""
+    w = _werkzeug()
+    api = _ErsatzApiMitTrips()
+    system = _ErsatzSystem(api, vorab=True, heute_betreff=heute_betreff)
+    rc = w.fuehre_lauf(["A"], api=api, smtp_factory=system.smtp, imap_factory=lambda: system.imap,
+                       heute=HEUTE, tag="tagvor", timeout=5, schlaf=system.schlaf)
+    assert rc == 0
+    if heute_betreff:  # Fixture-Selbstkontrolle: der Betreff liegt wirklich RFC-2047-kodiert vor
+        kodiert = email.header.Header(heute_betreff, "utf-8").encode()
+        assert kodiert.startswith("=?") and "[GZ#" not in kodiert
+
+
+def test_lauf_ohne_echte_antwort_nur_vorlauf_mails_ist_fehlschlag():
+    """F009: liegen nur Systemmails/fremde Mails an der Adresse, ist das KEINE Antwort (Exit 1)."""
+    w = _werkzeug()
+    api = _ErsatzApiMitTrips()
+    system = _ErsatzSystem(api, vorab=True)
+    def nur_vorlauf(plus, msg):
+        raw = msg if isinstance(msg, bytes) else msg.as_bytes()
+        trip = next(t for t in api.trips if (email.message_from_bytes(raw)["Subject"] or "").startswith(f"[{t['name']}]"))
+        system._vorlauf(plus, trip["name"])
+
+    system._antworte = nur_vorlauf
+    rc = w.fuehre_lauf(["B"], api=api, smtp_factory=system.smtp, imap_factory=lambda: system.imap,
+                       heute=HEUTE, tag="tagnur", timeout=0, schlaf=system.schlaf)
+    assert rc == 1
+
+
+def test_lauf_raeumt_eigene_antworten_im_cleanup_weg():
+    """F003b: der LAUF ruft das Antwort-Aufraeumen auf; fremde Mail im Postfach bleibt."""
+    w = _werkzeug()
+    api = _ErsatzApiMitTrips()
+    system = _ErsatzSystem(api, vorab=True)
+    plus = w.baue_plus_adresse("tagcln")
+    rc = w.fuehre_lauf(["B"], api=api, smtp_factory=system.smtp, imap_factory=lambda: system.imap,
+                       heute=HEUTE, tag="tagcln", timeout=5, schlaf=system.schlaf)
+    assert rc == 0
+    uebrig = [u for u, m in system.imap.mails.items()
+              if plus in (email.message_from_bytes(m)["To"] or "")]
+    assert uebrig == [], f"eigene Mails nicht aufgeraeumt: {uebrig}"
+    assert 1 in system.imap.mails
+
+
+@pytest.mark.parametrize("to_feld", [
+    "gregor-test+lauf45@henemm.com, fremd@henemm.com",
+    "fremd@henemm.com, gregor-test+lauf45@henemm.com",
+])
+def test_antwortsuche_lehnt_mehrfach_empfaenger_ab(to_feld):
+    """F012: genau EIN Empfaenger gleich der Plus-Adresse; Mehrfach-To zaehlt nicht."""
+    w = _werkzeug()
+    plus = "gregor-test+lauf45@henemm.com"
+    imap = _ErsatzImap({5: _mail_bytes(to_feld, "[T] Status", "Mehrfach", "<m@x>")})
+    assert w.finde_antwort(imap, plus, seit_uid=0) is None
+
+
+def _main_umgebung(monkeypatch, tmp_path, *, mit_zugang=True):
+    w = _werkzeug()
+    monkeypatch.setattr(w, "STAGING_ENV", tmp_path / "keine.env")
+    for k in ("GZ_TEST_IMAP_USER", "GZ_TEST_IMAP_PASS", "GZ_CORE_SHARED_SECRET"):
+        if mit_zugang:
+            monkeypatch.setenv(k, "platzhalter-" + k.lower())
+        else:
+            monkeypatch.delenv(k, raising=False)
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    return w, datetime(2027, 7, 14, 12, 0, tzinfo=ZoneInfo("Europe/Vienna"))
+
+
+def test_main_fehlende_zugangsdaten_ist_exit_2_ohne_netz(monkeypatch, tmp_path, capsys):
+    """F010: ohne Zugangsdaten Exit 2, nennt die Namen, kontaktiert nichts."""
+    w, jetzt = _main_umgebung(monkeypatch, tmp_path, mit_zugang=False)
+    tr = _AufzeichnenderTransport()
+    smtp = _smtp_klasse()
+    rc = w.main(["--szenario", "status"], transport=tr, smtp_factory=smtp,
+                imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
+    assert rc == 2
+    assert tr.anfragen == [] and smtp.verbindungen == []
+    assert "GZ_TEST_IMAP_USER" in capsys.readouterr().err
+
+
+def test_main_reicht_ohne_cleanup_durch_und_wandelt_fehler_in_exit_2(monkeypatch, tmp_path, capsys):
+    """F010: --ohne-cleanup erreicht den Lauf; HTTP-Fehler laufen ueber fuehre_lauf_exit (Exit 2)."""
+    w, jetzt = _main_umgebung(monkeypatch, tmp_path)
+    tr = _AufzeichnenderTransport()
+    rc = w.main(["--szenario", "B", "--timeout", "0", "--ohne-cleanup"], transport=tr,
+                smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
+    assert rc == 1  # keine Antwort
+    assert not any("account/delete" in p for _, p, _, _ in tr.anfragen)
+    assert "--ohne-cleanup" in capsys.readouterr().out
+
+    tr2 = _AufzeichnenderTransport({"/api/auth/register": 429})
+    rc2 = w.main(["--szenario", "B", "--timeout", "0"], transport=tr2,
+                 smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
+    assert rc2 == 2
+
+    tr3 = _AufzeichnenderTransport()
+    w.main(["--szenario", "B", "--timeout", "0"], transport=tr3,
+           smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
+    assert any("account/delete" in p for _, p, _, _ in tr3.anfragen), "ohne Schalter muss geloescht werden"
+
 
 
 # ---------------------------------------------------------------------------
