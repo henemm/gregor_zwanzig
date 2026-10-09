@@ -577,7 +577,9 @@ def test_2050s3b_aenderungsalarm_protokolliert_die_ruhezeit_unterdrueckung():
         offen = gust_alert_trip("trip-1467s3-ac9-ok")
         offen.alert_quiet_from, offen.alert_quiet_to = quiet_window_elsewhere()
         raus = trip_alert_service(
-            kontrolle, settings_email_only(), CountingFrameSource(), lambda s, b: None,
+            # ADR-0086 (#1405): keyword-kompatible Senke -- `lambda s, b` warf
+            # TypeError und galt nur unter "betreten = gesendet" als Versand.
+            kontrolle, settings_email_only(), CountingFrameSource(), lambda subject=None, body=None, **_kw: None,
         ).check_and_send_alerts(
             offen, [weather(1, gust_max_kmh=20.0)],
             fresh_weather=[weather(1, gust_max_kmh=60.0)],
@@ -593,7 +595,9 @@ def test_2050s3b_aenderungsalarm_protokolliert_die_ruhezeit_unterdrueckung():
         still = gust_alert_trip("trip-1467s3-ac9-quiet")
         still.alert_quiet_from, still.alert_quiet_to = quiet_window_now()
         unterdrueckt = trip_alert_service(
-            gesperrt, settings_email_only(), CountingFrameSource(), lambda s, b: None,
+            # ADR-0086 (#1405): keyword-kompatible Senke -- `lambda s, b` warf
+            # TypeError und galt nur unter "betreten = gesendet" als Versand.
+            gesperrt, settings_email_only(), CountingFrameSource(), lambda subject=None, body=None, **_kw: None,
         ).check_and_send_alerts(
             still, [weather(1, gust_max_kmh=20.0)],
             fresh_weather=[weather(1, gust_max_kmh=60.0)],

@@ -101,6 +101,16 @@ def _protokoll_zahl(uid: str) -> int:
     return len(log["entries"]) + len(log["not_delivered"])
 
 
+def _alarm_eintraege(uid: str) -> int:
+    """Echte Alarm-Eintraege (``changes_count > 0``) -- ohne die
+    Unterdrueckungs-Eintraege der Gates (#2050 S3b, ``changes_count == 0``)."""
+    log = read_log(uid)
+    return sum(
+        1 for e in log["entries"] + log["not_delivered"]
+        if (e.get("changes_count") or 0) > 0
+    )
+
+
 def _tageszaehler_summe(uid: str) -> int:
     """Summe aller Zaehlerstaende in ``alert_daily_count.json`` (0 ohne Datei)."""
     pfad = get_data_dir(uid) / "alert_daily_count.json"
@@ -1034,9 +1044,18 @@ def test_ac19_reine_sperre_ist_je_pfad_terminal(rig, pfad):
     for minuten in (0, 31, 62):
         p.lauf(_T0 + timedelta(minutes=minuten))
     assert rig.anzahl_versuche("sms") == 0, rig
-    assert _protokoll_zahl(uid) == 1, (
-        f"AC-19 ({pfad}): reine Sperre muss terminal sein -- {_protokoll_zahl(uid)} "
-        f"Protokolleintraege nach drei Laeufen"
+    # AC-9 fordert "keine weiteren Versuche, ein Zustand" -- nicht "genau ein
+    # Protokolleintrag": nach der terminalen Buchung schreiben Folgelaeufe
+    # (wie nach einer Zustellung) die Unterdrueckungs-Eintraege aus #2050 S3b
+    # (`cooldown`/`event_duplicate`, `changes_count == 0`). Gezaehlt werden
+    # deshalb nur echte Alarm-Eintraege (ADR-0086, #1405 S1).
+    assert _alarm_eintraege(uid) == 1, (
+        f"AC-19 ({pfad}): reine Sperre muss terminal sein -- {_alarm_eintraege(uid)} "
+        f"Alarm-Eintraege nach drei Laeufen"
+    )
+    assert _tageszaehler_summe(uid) == 1, (
+        f"AC-19 ({pfad}): reine Sperre muss genau einmal gebucht sein, "
+        f"Tageszaehler {_tageszaehler_summe(uid)}"
     )
     assert wiederholungs_eintraege(uid) == {}, f"AC-19 ({pfad}): Backoff trotz reiner Sperre"
 
@@ -1093,3 +1112,438 @@ def test_ac20_drei_versandpfade_liefern_denselben_ausgang(rig, fall):
         assert len({json.dumps(v) for v in betreten.values()}) == 1 and betreten["send_official_alert"] == sorted(kanaele), (
             f"AC-20 ({fall}): attempted_channels weichen ab: {betreten!r}"
         )
+
+
+
+# ═══════════════ Nachtraege aus der Adversary-Pruefung (#1405 S1) ════════════
+
+
+def test_f001_nowcast_toleranz_trennt_klasse_und_laufend(tmp_path):
+    """F001: GIVEN ein Fehlversuchs-Backoff fuer einen nassen Nowcast mit
+    absolutem Beginn / WHEN ein konvektives Ereignis mit GLEICHEM Beginn bzw.
+    ein laufendes Ereignis derselben Klasse ansteht / THEN blockiert der
+    Backoff beide NICHT -- er gilt nur fuer dieselbe Klasse und dieselbe
+    Beginn-Art (absolut vs. "laufend"). Gegenkontrolle: derselbe Beginn +10 Min
+    derselben Klasse ist blockiert; eine Buchung raeumt die Eintraege ab."""
+    from services import alert_retry_backoff as rb
+    from services.throttle_store import ThrottleStore
+
+    store = ThrottleStore("tdd-1405-f001", data_dir=tmp_path)
+    beginn = _T0 + timedelta(minutes=12)
+    nass = rb.nowcast_key("trip-x", False, beginn)
+    assert rb.settle_nowcast(store, "radar", [nass], "transport_failed", _T0) is False
+
+    jetzt = _T0 + timedelta(minutes=5)
+    gleich = rb.nowcast_key("trip-x", False, beginn + timedelta(minutes=10))
+    assert rb.nowcast_backoff_active(store, "radar", [gleich], jetzt) is True, "Kontrolle"
+    konvektiv = rb.nowcast_key("trip-x", True, beginn)
+    assert rb.nowcast_backoff_active(store, "radar", [konvektiv], jetzt) is False, (
+        "F001: andere Gefahrenklasse bei gleichem Beginn darf nicht blockiert sein"
+    )
+    laufend = rb.nowcast_key("trip-x", False, None)
+    assert rb.nowcast_backoff_active(store, "radar", [laufend], jetzt) is False, (
+        "F001: 'laufend' ist ein anderes Ereignis als ein absoluter Beginn"
+    )
+    # Umgekehrt: ein Backoff auf 'laufend' blockiert 'laufend', aber keine andere Entitaet.
+    rb.settle_nowcast(store, "radar", [laufend], "transport_failed", jetzt)
+    assert rb.nowcast_backoff_active(store, "radar", [laufend], jetzt) is True
+    anderer = rb.nowcast_key("trip-y", False, beginn)
+    assert rb.nowcast_backoff_active(store, "radar", [anderer], jetzt) is False
+    assert rb.settle_nowcast(store, "radar", [gleich, laufend], "delivered", jetzt) is True
+    assert store.keys("radar:retry") == [], store.keys("radar:retry")
+
+
+def test_f002_premium_sms_sperre_beim_versand_ist_blocked_only(rig):
+    """F002 (AC-5): GIVEN Premium-SMS ist der einzige Kanal und die gelernte
+    Rueckadresse ist veraltet / WHEN der echte ``PremiumSmsOutput`` beim
+    Versand mit Sperr-Code abbricht (Kanal in ``failed_channels`` UND in
+    ``blocked_reason_codes``) / THEN lautet der Ausgang ``blocked_only``,
+    nicht ``transport_failed`` -- kein Draht, nichts zugestellt."""
+    from services.notification_service import NotificationService
+
+    uid = _uid("f002")
+    alt = datetime.now(timezone.utc) - timedelta(days=60)
+    premium_profil_schreiben(uid, reply_at=alt)
+    dienst = NotificationService(rig.settings(premium_reply_at=alt), uid)
+    result = _versende("send_official_alert", dienst, {"premium_sms"})
+
+    assert rig.anzahl_versuche("premium_sms") == 0, rig
+    assert "premium_sms" in result.failed_channels, f"Voraussetzung: {result!r}"
+    assert "premium_sms" in result.blocked_reason_codes, f"Voraussetzung: {result!r}"
+    assert result.sent is False
+    assert _ausgang(result) == "blocked_only", (
+        f"F002: Sperre mit Code beim Versand muss 'blocked_only' sein, ist {_ausgang(result)!r}"
+    )
+
+
+def test_f003_amtlicher_ortsvergleich_totalausfall_steht_in_entries(rig):
+    """F003 (AC-17/AC-18 im amtlichen Ortsvergleich): GIVEN der einzige Kanal
+    E-Mail scheitert / WHEN der amtliche Ortsvergleich-Alarm laeuft / THEN
+    steht der Eintrag in ``entries`` (nicht ``not_delivered``) mit leerer
+    Zugestellt-Liste und ``delivery_failed`` -- die Cockpit-Zahl bleibt 1,
+    auch nach einem Lauf waehrend des Backoffs."""
+    uid = _uid("f003")
+    rig.modus["email"] = "fehler"
+    p = _VergleichAmtlich(rig, uid, ("email",))
+    p.lauf(_T0)
+    assert rig.anzahl_versuche("email") == 1, rig
+    log = read_log(uid)
+    assert len(log["entries"]) == 1 and not log["not_delivered"], log
+    eintrag = log["entries"][0]
+    assert eintrag.get("channels_sent") == [], eintrag
+    assert reason_for_channel(eintrag, "email") == "delivery_failed", eintrag
+    p.lauf(_T0 + timedelta(minutes=10))
+    assert _protokoll_zahl(uid) == 1, f"F003: Zweiteintrag waehrend des Backoffs: {read_log(uid)!r}"
+
+
+def test_f004_trip_aenderungsalarm_totalausfall_ist_nicht_gesendet(rig):
+    """F004: GIVEN der Trip-Aenderungsalarm geht an E-Mail und der Fake-SMTP
+    lehnt ab / WHEN der Alarm versendet wird / THEN liefert
+    ``check_and_send_alerts`` False, und das Versandergebnis hat ``sent``
+    falsch, leere ``sent_channels`` und ``delivery_outcome == transport_failed``."""
+    from services.trip_alert import TripAlertService
+
+    uid = _uid("f004")
+    rig.modus["email"] = "fehler"
+    p = _TripAenderung(rig, uid, ("email",))
+    assert p.lauf(_T0) is False, "F004: check_and_send_alerts meldet Erfolg trotz Totalausfall"
+
+    _caches_leeren()
+    with freeze_time(_T0 + timedelta(minutes=1)):
+        trip = gust_alert_trip("trip-f004", alert_channels=kanal_auswahl("email"))
+        aenderung = WeatherChange(
+            metric="gust_max_kmh", old_value=20.0, new_value=60.0, delta=40.0,
+            threshold=20.0, severity=ChangeSeverity.MODERATE, direction="increase",
+            segment_id="1",
+        )
+        result = TripAlertService(
+            settings=p.settings, throttle_hours=0, user_id=uid,
+        )._send_alert(trip, [weather(1, gust_max_kmh=60.0)], [aenderung])
+    assert rig.anzahl_versuche("email") == 2, rig
+    assert result.sent is False and result.sent_channels == [], (
+        f"F004: Totalausfall darf nicht als gesendet gelten: {result!r}"
+    )
+    assert _ausgang(result) == "transport_failed", _ausgang(result)
+
+
+def test_ac15_ortsvergleich_backoff_von_nutzer_a_bremst_nutzer_b_nicht(rig):
+    """AC-15 (Ortsvergleich): GIVEN zwei Nutzer mit identischer Preset-ID, bei
+    A scheitert der Versand (Backoff) / WHEN fuer B derselbe Alarm ausgeloest
+    wird / THEN wird B zugestellt, und der Backoff bleibt je Nutzer getrennt."""
+    a, b = _uid("ac15c-a"), _uid("ac15c-b")
+    rig.email_modus_je_host = {"smtp-a.rig-1405.test": "fehler", "smtp-b.rig-1405.test": "ok"}
+    pa = _VergleichAenderung(rig, a, ("email",), smtp_host="smtp-a.rig-1405.test",
+                             entity_id="cp-gleich")
+    pb = _VergleichAenderung(rig, b, ("email",), smtp_host="smtp-b.rig-1405.test",
+                             entity_id="cp-gleich")
+    pa.lauf(_T0)
+    assert wiederholungs_eintraege(a), "AC-15 Voraussetzung: Backoff bei Nutzer A fehlt"
+    pb.lauf(_T0 + timedelta(minutes=5))
+    assert [e["host"] for e in rig.angenommen["email"]] == ["smtp-b.rig-1405.test"], rig
+    assert wiederholungs_eintraege(b) == {}, "AC-15: Nutzer B hat einen fremden Backoff"
+    assert wiederholungs_eintraege(a), "AC-15: Backoff von A wurde durch B veraendert"
+
+
+class _VergleichDisjunkt(_VergleichBasis):
+    """Ortsvergleich mit zwei DISJUNKTEN Kanal-Gruppen ueber die Metrik-Kanaele
+    je Ort (#1895 S2): Ort A loest per Boee aus (E-Mail, preset-weit), Ort B
+    per Regen -- ``precipitation`` geht nur an Telegram."""
+
+    name = "compare_alert_disjunkt"
+    #: Kanaele der Regen-Metrik (Ort B); Ort A (Boee) geht preset-weit per E-Mail.
+    regen_kanaele = {"telegram": True}
+
+    def aufbauen(self) -> None:
+        super().aufbauen()
+        from services.compare_weather_snapshot import CompareWeatherSnapshotService
+
+        pfad = compare_data_root() / self.uid
+        write_compare_briefings(pfad, [{
+            "id": self.entity_id, "name": "Vergleich 1405", "user_id": self.uid,
+            "location_ids": ["loc-a", "loc-b"], "schedule": "daily", "weekday": 4,
+            "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,
+            "empfaenger": [], "created_at": "2026-03-01T00:00:00Z",
+            "alert_cooldown_minutes": 60,
+            "alert_channels": kanal_auswahl("email"),
+            "alert_metric_channels": {"precipitation": dict(self.regen_kanaele)},
+        }])
+        CompareWeatherSnapshotService(user_id=self.uid).save(
+            self.entity_id, "loc-b", _ortswetter("loc-b", gust_max_kmh=20.0, precip_sum_mm=2.0),
+        )
+
+    def _lauf(self, ereignis: str):
+        from services.compare_alert import CompareAlertService
+
+        class _Quelle:
+            def fetch(self, point_id, lat, lon, *_a, **_kw):
+                if point_id == "loc-a":
+                    return _ortswetter("loc-a", gust_max_kmh=60.0)
+                return _ortswetter("loc-b", gust_max_kmh=20.0, precip_sum_mm=18.0)
+
+        return CompareAlertService(
+            settings=self.settings, user_id=self.uid, weather_source=_Quelle(),
+        ).check_all_compare_presets()
+
+
+def test_f005_disjunkte_gruppe_mit_totalausfall_wird_nach_backoff_nachgeholt(rig):
+    """F005 (AC-10 je Gruppe im Ortsvergleich): GIVEN zwei Orte mit disjunkten
+    Kanal-Gruppen -- Ort A per E-Mail (stellt zu), Ort B per Telegram
+    (Totalausfall) / WHEN der Aenderungsalarm laeuft / THEN ist A gebucht, B
+    im Backoff, und die Preset-Sperrzeit wird NICHT gebucht; bei +31 Min wird
+    B zugestellt, A NICHT erneut gesendet; bei +62 Min geht nichts mehr raus."""
+    from services.throttle_store import ThrottleStore
+
+    uid = _uid("f005")
+    rig.modus["telegram"] = "fehler"
+    p = _VergleichDisjunkt(rig, uid, ("email",))
+    p.lauf(_T0)
+    assert rig.anzahl_angenommen("email") == 1, f"Voraussetzung: Ort A per E-Mail: {rig!r}"
+    # Telegram-Versuche = Sprechblase + Unvollstaendig-Hinweis (#1370-Muster).
+    tg_versuche = rig.anzahl_versuche("telegram")
+    assert tg_versuche >= 1 and rig.anzahl_angenommen("telegram") == 0, (
+        f"Voraussetzung: Ort B per Telegram, Totalausfall: {rig!r}"
+    )
+    assert wiederholungs_eintraege(uid), "F005: Gruppe B ohne Backoff"
+    assert ThrottleStore(uid).last_sent("compare_preset", p.entity_id) is None, (
+        "F005: Preset-Sperrzeit trotz gescheiterter Gruppe gebucht -- B verloere seinen Retry"
+    )
+    rig.modus["telegram"] = "ok"
+    p.lauf(_T0 + timedelta(minutes=10))
+    assert rig.anzahl_versuche("telegram") == tg_versuche, f"F005: Versuch waehrend Backoff: {rig!r}"
+    p.lauf(_T0 + timedelta(minutes=31))
+    assert rig.anzahl_angenommen("telegram") == 1, f"F005: Gruppe B nicht nachgeholt: {rig!r}"
+    assert rig.anzahl_versuche("email") == 1, f"F005: Ort A doppelt versendet: {rig!r}"
+    assert wiederholungs_eintraege(uid) == {}, "F005: Backoff nach Zustellung nicht geloescht"
+    vorher = rig.alle_versuche()
+    p.lauf(_T0 + timedelta(minutes=62))
+    assert rig.alle_versuche() == vorher, f"F005: Versand nach Abschluss: {rig!r}"
+
+
+# ═══════════════ Nachtraege Adversary-Durchgang 2 (F101-F103) ════════════════
+
+
+class _VergleichVerschachtelt(_VergleichDisjunkt):
+    """Verschachtelte Kanal-Gruppen: Ort B (Regen) geht an E-Mail UND
+    Telegram, Ort A (Boee) nur an E-Mail ⇒ Gruppen E-Mail(A,B) + Telegram(B)."""
+
+    name = "compare_alert_verschachtelt"
+    regen_kanaele = {"email": True, "telegram": True}
+
+
+def test_f101_verschachtelte_gruppe_behaelt_backoff_nach_teilzustellung(rig):
+    """F101 (AC-11/AC-18, Ortsvergleich): GIVEN E-Mail(A,B) scheitert,
+    Telegram(B) stellt zu -- B ist finalisiert, die E-Mail-Gruppe schrumpft auf
+    (A) / WHEN die Pruefung im 15-Minuten-Takt laeuft / THEN kein zweiter
+    E-Mail-Versuch und kein zweiter Protokolleintrag bei +15; beim ersten Lauf
+    nach Ablauf (+30) mit repariertem Draht wird A genau einmal zugestellt;
+    danach kein Versand mehr, B nie ein zweites Mal."""
+    uid = _uid("f101")
+    rig.modus["email"] = "fehler"
+    p = _VergleichVerschachtelt(rig, uid, ("email",))
+    p.lauf(_T0)
+    assert rig.anzahl_versuche("email") == 1, f"Voraussetzung: E-Mail(A,B): {rig!r}"
+    assert rig.anzahl_angenommen("telegram") == 1, f"Voraussetzung: Telegram(B): {rig!r}"
+    p.lauf(_T0 + timedelta(minutes=15))
+    assert rig.anzahl_versuche("email") == 1, f"F101: zweiter Versuch nach 15 Min: {rig!r}"
+    assert _protokoll_zahl(uid) == 1, f"F101: zweiter Protokolleintrag: {read_log(uid)!r}"
+    rig.modus["email"] = "ok"
+    p.lauf(_T0 + timedelta(minutes=30))
+    assert rig.anzahl_angenommen("email") == 1, f"F101: A nicht nachgeholt: {rig!r}"
+    for minuten in (45, 60, 75):
+        p.lauf(_T0 + timedelta(minutes=minuten))
+    assert rig.anzahl_versuche("email") == 2, f"F101: Versand nach Abschluss: {rig!r}"
+    assert rig.anzahl_versuche("telegram") == 1, f"F101: B ein zweites Mal: {rig!r}"
+    assert wiederholungs_eintraege(uid) == {}, wiederholungs_eintraege(uid)
+
+
+@pytest.mark.parametrize("pfad", list(_AUFRUFER))
+def test_f102_totalausfall_protokoll_steht_je_aufrufer_in_entries(rig, pfad):
+    """F102 (AC-17/AC-18 je Aufrufer): GIVEN der einzige Kanal E-Mail scheitert
+    / WHEN der Aufrufer laeuft / THEN steht der Protokolleintrag in
+    ``entries`` (Kanal betreten, ``reachable`` aus ``attempted_channels``)
+    mit ``delivery_failed`` -- nicht in ``not_delivered``."""
+    uid = _uid(f"f102-{pfad}")
+    rig.modus["email"] = "fehler"
+    p = _AUFRUFER[pfad](rig, uid, ("email",))
+    p.lauf(_T0)
+    assert rig.anzahl_versuche("email") == 1, f"Voraussetzung {pfad}: {rig!r}"
+    log = read_log(uid)
+    assert len(log["entries"]) == 1 and not log["not_delivered"], (
+        f"F102 ({pfad}): Totalausfall gehoert nach entries: {log!r}"
+    )
+    assert reason_for_channel(log["entries"][0], "email") == "delivery_failed", log
+
+
+def test_f103_ortsvergleich_totalausfall_bucht_nichts_und_schweigt_im_backoff(rig):
+    """F103 C2/C4/C7 (AC-10/AC-18, Ortsvergleich-Aenderung): GIVEN Totalausfall
+    / WHEN der Lauf und ein zweiter waehrend des Backoffs folgen / THEN kein
+    Tageskontingent, keine Preset-Sperrzeit, im Backoff weder Versuch noch
+    Protokolleintrag."""
+    from services.throttle_store import ThrottleStore
+
+    uid = _uid("f103-total")
+    rig.modus["email"] = "fehler"
+    p = _VergleichAenderung(rig, uid, ("email",))
+    p.lauf(_T0)
+    assert _tageszaehler_summe(uid) == 0, "C7: Tageskontingent trotz Totalausfall gebucht"
+    assert ThrottleStore(uid).last_sent("compare_preset", p.entity_id) is None, (
+        "C4: Preset-Sperrzeit trotz Totalausfall gebucht"
+    )
+    p.lauf(_T0 + timedelta(minutes=10))
+    assert rig.anzahl_versuche("email") == 1, rig
+    assert _protokoll_zahl(uid) == 1, f"C2: Eintrag waehrend des Backoffs: {read_log(uid)!r}"
+
+
+def test_f103_ortsvergleich_zustellung_setzt_preset_sperrzeit(rig):
+    """F103 C4 (AC-8): GIVEN der Versand stellt zu / WHEN gebucht wird / THEN
+    ist die Preset-Sperrzeit gesetzt und genau ein Tageskontingent verbraucht."""
+    from services.throttle_store import ThrottleStore
+
+    uid = _uid("f103-ok")
+    p = _VergleichAenderung(rig, uid, ("email",))
+    assert p.lauf(_T0) == 1
+    assert ThrottleStore(uid).last_sent("compare_preset", p.entity_id) is not None, (
+        "C4: Preset-Sperrzeit nach Zustellung fehlt"
+    )
+    assert _tageszaehler_summe(uid) == 1
+
+
+def test_f103_ortsvergleich_reine_sperre_zaehlt_nicht_als_gesendet(rig):
+    """F103 C6a: GIVEN der einzige Kanal SMS ist per Tageslimit gesperrt /
+    WHEN der Ortsvergleich-Aenderungsalarm laeuft / THEN wird terminal gebucht,
+    aber der Lauf meldet 0 gesendete Alarme (gesendet heisst zugestellt)."""
+    uid = _uid("f103-sperre")
+    p = _VergleichAenderung(rig, uid, ("sms",))
+    _sms_limit_ausschoepfen(uid, _T0, sms=10)
+    assert p.lauf(_T0) == 0, "C6a: reine Sperre als gesendet gezaehlt"
+    assert _tageszaehler_summe(uid) == 1, "Voraussetzung: terminal gebucht"
+
+
+class _VergleichZweiMetriken(_VergleichBasis):
+    """Ort A mit Boee (Ereignis A) bzw. Boee + Regen (Ereignis B) -- dieselbe
+    Stelle, andere Metrik."""
+
+    name = "compare_alert_zwei_metriken"
+
+    def aufbauen(self) -> None:
+        super().aufbauen()
+        from services.compare_weather_snapshot import CompareWeatherSnapshotService
+
+        CompareWeatherSnapshotService(user_id=self.uid).save(
+            self.entity_id, "loc-a", _ortswetter("loc-a", gust_max_kmh=20.0, precip_sum_mm=2.0),
+        )
+
+    def _lauf(self, ereignis: str):
+        from services.compare_alert import CompareAlertService
+
+        regen = 18.0 if ereignis == "B" else 2.0
+
+        class _Quelle:
+            def fetch(self, point_id, lat, lon, *_a, **_kw):
+                if point_id == "loc-a":
+                    return _ortswetter("loc-a", gust_max_kmh=60.0, precip_sum_mm=regen)
+                return _ortswetter("loc-b", gust_max_kmh=20.0)
+
+        return CompareAlertService(
+            settings=self.settings, user_id=self.uid, weather_source=_Quelle(),
+        ).check_all_compare_presets()
+
+
+def test_f103_c8_andere_metrik_am_selben_ort_wird_sofort_versendet(rig):
+    """F103 C8 (AC-12): GIVEN Ereignis A (Boee an Ort A) steht im Backoff /
+    WHEN am SELBEN Ort eine andere Metrik (Regen) ausloest / THEN wird sofort
+    versendet -- der Backoff gilt je Ereignis (Ort + Metrik)."""
+    uid = _uid("f103-c8")
+    rig.modus["email"] = "fehler"
+    p = _VergleichZweiMetriken(rig, uid, ("email",))
+    p.lauf(_T0)
+    assert wiederholungs_eintraege(uid), "Voraussetzung: Backoff fuer Ereignis A fehlt"
+    rig.modus["email"] = "ok"
+    p.lauf(_T0 + timedelta(minutes=5), ereignis="B")
+    assert rig.anzahl_angenommen("email") == 1, (
+        f"C8: andere Metrik am selben Ort vom Backoff blockiert: {rig!r}"
+    )
+
+
+class _OrtsWarnquelle:
+    """Warnquelle, die nur die angegebenen Breiten (Orte) abdeckt."""
+
+    def __init__(self, alerts, breiten) -> None:
+        self._alerts, self._breiten = alerts, breiten
+
+    @property
+    def name(self) -> str:
+        return "tdd-1405-ortsquelle"
+
+    def covers(self, lat, lon) -> bool:
+        return any(abs(lat - b) < 0.1 for b in self._breiten)
+
+    def fetch(self, lat, lon, **kwargs):
+        return list(self._alerts) if self.covers(lat, lon) else []
+
+
+class _VergleichAmtlichJeOrt(_VergleichBasis):
+    """Ereignis A: Sturmwarnung nur an Ort A; Ereignis B: DIESELBE Warnung an
+    Ort A und Ort B."""
+
+    name = "compare_official_je_ort"
+
+    def _lauf(self, ereignis: str):
+        from services.compare_official_alert import CompareOfficialAlertService
+        from tests.helpers.briefing_imminent_fixtures import nur_diese_warnquelle
+
+        breiten = [LAT] if ereignis == "A" else [LAT, _LOC_B[0]]
+        quelle = _OrtsWarnquelle([_warnung("wind", jetzt=datetime.now(timezone.utc))], breiten)
+        with nur_diese_warnquelle(quelle):
+            return CompareOfficialAlertService(
+                settings=self.settings, user_id=self.uid,
+            ).check_all_compare_presets()
+
+
+def test_f103_k2_gleiche_warnung_an_anderem_ort_wird_nicht_blockiert(rig):
+    """F103 K2 (AC-12, amtlicher Ortsvergleich): GIVEN die Sturmwarnung an Ort A
+    steht im Backoff / WHEN dieselbe Warnung zusaetzlich Ort B betrifft / THEN
+    wird sofort versendet -- der Fingerabdruck enthaelt den Ort."""
+    uid = _uid("f103-k2")
+    rig.modus["email"] = "fehler"
+    p = _VergleichAmtlichJeOrt(rig, uid, ("email",))
+    p.lauf(_T0)
+    assert rig.anzahl_versuche("email") == 1, f"Voraussetzung: {rig!r}"
+    assert wiederholungs_eintraege(uid), "Voraussetzung: Backoff fuer Ort A fehlt"
+    rig.modus["email"] = "ok"
+    p.lauf(_T0 + timedelta(minutes=5), ereignis="B")
+    assert rig.anzahl_angenommen("email") == 1, (
+        f"K2: gleiche Warnung an anderem Ort vom Backoff blockiert: {rig!r}"
+    )
+
+
+class _VergleichEineEmailGruppe(_VergleichDisjunkt):
+    """Regelfall: beide Orte (Boee an A, Regen an B) gehen per E-Mail ⇒ EINE
+    Gruppe E-Mail(A,B) mit zwei Ereignissen."""
+
+    name = "compare_alert_eine_gruppe"
+    regen_kanaele = dict(email=True)
+
+
+def test_f201_zwei_orte_eine_email_gruppe_totalausfall_backoff_je_ereignis(rig):
+    """F201 (AC-10/AC-11/AC-18, Ortsvergleich): GIVEN zwei Orte in derselben
+    E-Mail-Gruppe und Totalausfall / WHEN Laeufe bei +0 und +10 Min folgen /
+    THEN genau 1 Versuch und genau 1 Protokolleintrag; bei +31 Min mit
+    repariertem Draht sind beide Orte zugestellt und kein Backoff bleibt
+    uebrig. Bewacht, dass Pruefung und Buchung denselben Fingerabdruck je
+    Ereignis verwenden."""
+    uid = _uid("f201")
+    rig.modus["email"] = "fehler"
+    p = _VergleichEineEmailGruppe(rig, uid, ("email",))
+    p.lauf(_T0)
+    p.lauf(_T0 + timedelta(minutes=10))
+    assert rig.anzahl_versuche("email") == 1, f"F201: Versuch waehrend des Backoffs: {rig!r}"
+    assert _protokoll_zahl(uid) == 1, f"F201: Eintrag waehrend des Backoffs: {read_log(uid)!r}"
+    rig.modus["email"] = "ok"
+    p.lauf(_T0 + timedelta(minutes=31))
+    assert rig.anzahl_angenommen("email") == 1, f"F201: nicht nachgeholt: {rig!r}"
+    nachgeholt = read_log(uid)["entries"][-1]
+    assert nachgeholt.get("channels_sent") == ["email"] and nachgeholt.get("changes_count") == 2, (
+        f"F201: beide Ereignisse (Ort A und Ort B) muessen zugestellt sein: {nachgeholt!r}"
+    )
+    assert wiederholungs_eintraege(uid) == {}, wiederholungs_eintraege(uid)

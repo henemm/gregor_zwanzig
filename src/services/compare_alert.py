@@ -25,6 +25,7 @@ from providers.enrichment_health import (
     OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_ALERT_FETCH, log_enrichment_call,
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
+from services import alert_retry_backoff
 import services.alert_urgency as alert_urgency
 from services.alert_gate import check_briefing_imminent
 from services.alert_preset import _PRESET_TABLE
@@ -404,10 +405,22 @@ class CompareAlertService:
         # Issue #1701 (S2b, D5): ueber alle Dringlichkeits-Gruppen hinweg
         # gesammelt, analog `delivered_all`/`reachable_all`.
         blocked_reason_codes_all: dict[str, str] = {}
-        any_sent = False
+        outcomes: list[str] = []
+        im_backoff = 0
         finalized_ids: set[str] = set()
+        failed_ids: set[str] = set()
         for ids_key, channels in groups_by_ids.items():
             group = [entity_by_id[eid] for eid in ids_key]
+            # Issue #1405 S1 (ADR-0086): Backoff je EREIGNIS (Ort + Metrik/
+            # Abschnitt), nicht je Gruppe -- eine Gruppe, die nach einer
+            # Teilzustellung schrumpft, behaelt so ihren Backoff (AC-11).
+            # Uebersprungen wird nur, wenn ALLE ihre Ereignisse im Backoff sind.
+            if all(
+                alert_retry_backoff.backoff_active(self._throttle_store, "compare_preset", fp)
+                for fp in self._retry_fps(preset_id, group)
+            ):
+                im_backoff += 1
+                continue
             entities = [(t["loc"].name, [t["fresh_point"]], t["changes"]) for t in group]
             # Issue #1916 (AC-4): Referenz-Zeitpunkt des ERSTEN Ortes
             # dieser Buendel-Gruppe -- analog zur `alert_tz`-Herleitung in
@@ -441,11 +454,16 @@ class CompareAlertService:
                 reference_at=reference_at,
             )
             delivered_all |= set(notif_result.delivered_channels)
-            reachable_all |= set(notif_result.sent_channels)
+            reachable_all |= set(notif_result.attempted_channels)
             blocked_reason_codes_all.update(notif_result.blocked_reason_codes)
-            if notif_result.sent:
-                any_sent = True
+            outcomes.append(notif_result.delivery_outcome)
+            if notif_result.delivery_outcome in alert_retry_backoff.BOOKING_OUTCOMES:
                 finalized_ids |= set(ids_key)
+            elif notif_result.delivery_outcome == alert_retry_backoff.TRANSPORT_FAILED:
+                failed_ids |= set(ids_key)
+        if im_backoff and not outcomes:
+            return False  # alle Gruppen im Backoff: kein Versuch, kein Eintrag
+        self._settle_retry_backoffs(preset_id, entity_by_id, finalized_ids, failed_ids)
         finalized = [entity_by_id[eid] for eid in finalized_ids]
 
         # Issue #1459: der Ortsvergleich protokollierte bisher gar nicht
@@ -496,13 +514,17 @@ class CompareAlertService:
             reference_at=_e1_reference_at,
             source=_e1_source,
         )
-        if not any_sent:
+        if not finalized:
             return False
 
         self._finalize_triggered_state(finalized)
-        self._throttle_store.record("compare_preset", preset_id, now)
+        # Eine gescheiterte Gruppe darf ihren Retry nicht an der Preset-
+        # Sperrzeit verlieren: dann keine Sperrzeit (zugestellte Orte sind
+        # finalisiert und loesen nicht erneut aus).
+        if alert_retry_backoff.TRANSPORT_FAILED not in outcomes:
+            self._throttle_store.record("compare_preset", preset_id, now)
         alert_daily_limit.increment(self._user_id, now, config.zone)
-        return True
+        return bool(delivered_all)
 
     @staticmethod
     def _location_positions(location_ids: list[str], all_locations: dict) -> dict[str, int]:
@@ -674,6 +696,29 @@ class CompareAlertService:
             age.total_seconds() / 3600, _MAX_ANCHOR_AGE.total_seconds() / 3600,
         )
         return True
+
+    @staticmethod
+    def _retry_fps(preset_id: str, group: list[dict]) -> list[str]:
+        """Issue #1405 S1: ein Fingerabdruck je Ereignis (Ort + Metrik/Abschnitt)."""
+        return [
+            alert_retry_backoff.event_fingerprint(
+                preset_id, [f"{t['loc'].id}/{c.metric}:{c.segment_id}"],
+            )
+            for t in group for c in t["changes"]
+        ]
+
+    def _settle_retry_backoffs(
+        self, preset_id: str, entity_by_id: dict, finalized_ids: set, failed_ids: set,
+    ) -> None:
+        """Gebuchte Orte: Backoff ihrer Ereignisse loeschen; Orte, die nur in
+        gescheiterten Gruppen standen: Backoff setzen (Issue #1405 S1)."""
+        for eid in finalized_ids | failed_ids:
+            outcome = (
+                alert_retry_backoff.DELIVERED if eid in finalized_ids
+                else alert_retry_backoff.TRANSPORT_FAILED
+            )
+            for fp in self._retry_fps(preset_id, [entity_by_id[eid]]):
+                alert_retry_backoff.settle(self._throttle_store, "compare_preset", fp, outcome)
 
     def _finalize_triggered_state(self, triggered: list[dict]) -> None:
         """Alert-State-Update nach ERFOLGREICHEM gebündeltem Versand — pro

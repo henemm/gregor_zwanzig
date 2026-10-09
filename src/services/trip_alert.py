@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Iterable, List, Optional
 from app.config import Settings
 from app.models import SegmentWeatherData, WeatherChange
 from services import alert_channel_threshold, alert_daily_limit, alert_input_capture, alert_log
+from services import alert_retry_backoff
 from services.alert_briefing_anchor import record_alert_anchor_rejected
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
@@ -488,6 +489,11 @@ def _trip_telegram_style(trip: "Trip") -> str:
     return getattr(rc, "telegram_style", "rich") or "rich"
 
 
+
+#: Issue #1405 S1: eigener Backoff-Scope des amtlichen Trip-Alarms (der
+#: Aenderungsalarm belegt ``trip:retry``) -- die Alarmarten bremsen sich nicht.
+_OFFICIAL_RETRY_SCOPE = "trip_official"
+
 class TripAlertService:
     """
     Service for sending weather change alerts.
@@ -840,6 +846,14 @@ class TripAlertService:
                     )
                     return False
 
+        # Issue #1405 S1 (ADR-0086): laeuft fuer genau dieses Ereignis ein
+        # Fehlversuchs-Backoff, kein Versand und kein Protokolleintrag.
+        _retry_fp = alert_retry_backoff.event_fingerprint(
+            trip.id, (f"{c.metric}:{c.segment_id}" for c in to_report),
+        )
+        if alert_retry_backoff.backoff_active(self._throttle_store, "trip", _retry_fp):
+            return False
+
         # Issue #1948 (S1, AC-1): roher Eingangs-Datensatz VOR dem Versand
         # -- capture_user_scoped() ist selbst fail-open.
         capture_id = alert_input_capture.capture_user_scoped(
@@ -935,7 +949,7 @@ class TripAlertService:
             reason=alert_log.REASON_FORECAST_CHANGE,
             effective_channels=eval_config.channels,
             sent_channels=notif_result.delivered_channels,
-            reachable_channels=notif_result.sent_channels,
+            reachable_channels=notif_result.attempted_channels,
             below_threshold_channels=self._last_below_threshold_channels,
             blocked_reason_codes=notif_result.blocked_reason_codes,
             capture_id=capture_id,
@@ -950,11 +964,14 @@ class TripAlertService:
             ),
             source=cached_weather[0].provider if cached_weather else None,
         )
-        delivered = notif_result.sent
-        if not delivered:
+        # Issue #1405 S1 (ADR-0086): gebucht wird nur bei Zustellung oder
+        # terminaler Sperre; ein Transportfehler setzt den Backoff.
+        if not alert_retry_backoff.settle(
+            self._throttle_store, "trip", _retry_fp, notif_result.delivery_outcome,
+        ):
             logger.warning(
-                f"Alert not deliverable on any effective channel for trip "
-                f"{trip.id} — kein Throttle/Log"
+                f"Alert not delivered for trip {trip.id} "
+                f"({notif_result.delivery_outcome}) — kein Throttle/Log"
             )
             return False
 
@@ -1018,7 +1035,7 @@ class TripAlertService:
             notif_result.delivered_channels,
         )
 
-        return True
+        return notif_result.sent
 
     def _select_change_detector(self, trip: "Trip") -> WeatherChangeDetectionService:
         """Dünner Wrapper — Detektor-Wahl inkl. #961-„Aktivieren-Lücke"-Backfill
@@ -2760,6 +2777,18 @@ class TripAlertService:
                         )
                     continue
 
+                # Issue #1405 S1 (ADR-0086): Fehlversuchs-Backoff je Ereignis
+                # (Klasse + absoluter Beginn, 30-Min-Toleranz) -- kein
+                # Versuch, kein Protokolleintrag, solange er laeuft.
+                _retry_keys = [alert_retry_backoff.nowcast_key(
+                    trip.id, _radar_request.is_convective,
+                    None if _radar_request.already_running else _onset_dt,
+                )]
+                if alert_retry_backoff.nowcast_backoff_active(
+                    self._throttle_store, _RADAR_THROTTLE_SCOPE, _retry_keys,
+                ):
+                    continue
+
                 # Issue #2018: das Gate hat diese Meldung als NACHTRAG zu einer
                 # bereits zugestellten Meldung eingestuft — dieselbe Zustellung
                 # wie bisher, nur in anderer FORM. Fehlt der Meldezeitpunkt
@@ -2812,7 +2841,7 @@ class TripAlertService:
                     reason=alert_log.REASON_NOWCAST,
                     effective_channels=effective_channels,
                     sent_channels=result.delivered_channels,
-                    reachable_channels=result.sent_channels,
+                    reachable_channels=result.attempted_channels,
                     below_threshold_channels=_radar_suppressed,
                     blocked_reason_codes=result.blocked_reason_codes,
                     capture_id=_nowcast_capture_id,
@@ -2825,9 +2854,14 @@ class TripAlertService:
                     ),
                     **_e1,
                 )
-                delivered = result.sent
-                if not delivered:
-                    logger.info(f"Radar alert: kein zustellbarer Kanal für {trip.id}")
+                if not alert_retry_backoff.settle_nowcast(
+                    self._throttle_store, _RADAR_THROTTLE_SCOPE, _retry_keys,
+                    result.delivery_outcome,
+                ):
+                    logger.info(
+                        f"Radar alert: nicht zugestellt für {trip.id} "
+                        f"({result.delivery_outcome})"
+                    )
                     continue
 
                 # Recording nach Best-Effort-Zustellung (F001-Semantik)
@@ -2868,7 +2902,7 @@ class TripAlertService:
                     severity=_radar_urgency, point_at=_onset_dt,
                     now=datetime.now(timezone.utc),
                 )
-                sent += 1
+                sent += int(result.sent)
             except RadarDeadlineExceeded:
                 # Zeitgrenze ausserhalb der Nowcast-Abrufe (z. B. bei der
                 # Quellenbenennung): wie die inneren Handler -- Einheit nicht
@@ -2967,12 +3001,12 @@ class TripAlertService:
         Nachricht gebündelt (kein zweiter Versand).
 
         Returns:
-            Die volle `NotificationResult`. `result.sent` ist True, sobald
-            mindestens ein konfigurierter Kanal erreichbar war; Sendefehler auf
-            einem konfigurierten Kanal werden geloggt, unterdruecken das
-            Recording aber NICHT (Best-Effort, Anti-Pattern #656). Issue #1459:
-            der Aufrufer braucht zusaetzlich `sent_channels`/`failed_channels`
-            fuers Alarm-Protokoll, deshalb die volle Ruecksage statt nur `bool`.
+            Die volle `NotificationResult`. Issue #1405 S1 (ADR-0086):
+            `result.sent` ist True, sobald mindestens ein Kanal ZUGESTELLT hat;
+            ueber Buchung oder Wiederholung entscheidet der Aufrufer anhand von
+            `delivery_outcome`. Issue #1459: der Aufrufer braucht zusaetzlich
+            `attempted_channels`/`failed_channels` fuers Alarm-Protokoll,
+            deshalb die volle Ruecksage statt nur `bool`.
         """
         # Issue #638: Effective channels — per-alert override beats briefing channels.
         # Issue #1895 S2: metrik-bewusst — die ROHEN Summary-Keys der
@@ -3266,6 +3300,16 @@ class TripAlertService:
         _official_allowed, _official_suppressed = alert_channel_threshold.split_by_threshold(
             effective_channels, _official_urgency, trip.alert_channel_thresholds,
         )
+        # Issue #1405 S1 (ADR-0086): Fehlversuchs-Backoff je Meldungs-Satz.
+        _retry_fp = alert_retry_backoff.event_fingerprint(
+            trip.id, alert_retry_backoff.official_alert_parts(
+                a for a, _segment_ids in official_notices
+            ),
+        )
+        if alert_retry_backoff.backoff_active(
+            self._throttle_store, _OFFICIAL_RETRY_SCOPE, _retry_fp,
+        ):
+            return False
         result = self._notification_service.send_official_alert(
             trip=trip,
             notices=official_notices,
@@ -3303,7 +3347,7 @@ class TripAlertService:
             reason=alert_log.REASON_OFFICIAL_ALERT,
             effective_channels=effective_channels,
             sent_channels=result.delivered_channels,
-            reachable_channels=result.sent_channels,
+            reachable_channels=result.attempted_channels,
             below_threshold_channels=_official_suppressed,
             blocked_reason_codes=result.blocked_reason_codes,
             event_at=_e1_valid_from.isoformat() if _e1_valid_from else None,
@@ -3320,7 +3364,10 @@ class TripAlertService:
                 [a for a, _segment_ids in official_notices]
             ),
         )
-        if result.sent:
+        if alert_retry_backoff.settle(
+            self._throttle_store, _OFFICIAL_RETRY_SCOPE, _retry_fp,
+            result.delivery_outcome,
+        ):
             self._record_official_alert_state(trip.id, official_notices)
             self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
             alert_daily_limit.increment(

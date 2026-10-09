@@ -29,6 +29,8 @@ from typing import Optional
 from app.config import Settings
 from app.loader import load_all_locations
 from services import alert_channel_threshold, alert_daily_limit, alert_log
+from services import alert_retry_backoff
+from services.throttle_store import ThrottleStore
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
     check_event_identity_gate,
@@ -402,6 +404,18 @@ class CompareRadarAlertService:
         allowed, suppressed = alert_channel_threshold.split_by_threshold(
             effective_channels, severity, preset.get("alert_channel_thresholds"),
         )
+        # Issue #1405 S1 (ADR-0086): Fehlversuchs-Backoff je Ereignis (Ort +
+        # Klasse + absoluter Beginn) -- geteilter Baustein wie im Trip-Radar.
+        retry_store = ThrottleStore(self._user_id)
+        retry_keys = [
+            alert_retry_backoff.nowcast_key(
+                f"{preset_id}/{loc.id}", nowcast.is_convective,
+                _onset_at(nowcast, now_utc) if nowcast.onset_minutes is not None else None,
+            )
+            for _name, loc, nowcast in triggered
+        ]
+        if alert_retry_backoff.nowcast_backoff_active(retry_store, _THROTTLE_SCOPE, retry_keys):
+            return False
         # Issue #1383: Das Orts-Objekt MUSS mitgereicht werden — der Versand
         # leitet daraus die Ortszeit ab (vorher wurde `_loc` verworfen und die
         # Mail rendete alle Uhrzeiten in UTC).
@@ -447,14 +461,16 @@ class CompareRadarAlertService:
             reason=alert_log.REASON_NOWCAST,
             effective_channels=effective_channels,
             sent_channels=notif_result.delivered_channels,
-            reachable_channels=notif_result.sent_channels,
+            reachable_channels=notif_result.attempted_channels,
             below_threshold_channels=suppressed,
             blocked_reason_codes=notif_result.blocked_reason_codes,
             lead_time_minutes=_e1_lead_time,
             event_at=_e1_event_at, event_end_at=_e1_event_end_at,
             measurement_point=_e1_measurement_point, source=_e1_source,
         )
-        if not notif_result.sent:
+        if not alert_retry_backoff.settle_nowcast(
+            retry_store, _THROTTLE_SCOPE, retry_keys, notif_result.delivery_outcome,
+        ):
             return False
 
         self._finalize_triggered_state(preset_id, triggered)
@@ -483,7 +499,7 @@ class CompareRadarAlertService:
             urgency=severity,
             is_escalation_breakthrough=_budget_durchbruch,
         )
-        return True
+        return notif_result.sent
 
     def _protokolliere_quellenausfall(
         self, preset_id: str, location_id: str, effective_channels,

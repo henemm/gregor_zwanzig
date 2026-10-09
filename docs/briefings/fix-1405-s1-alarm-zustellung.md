@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/modules/fix_1405_s1_alarm_zustellung.md
-spec_sha256: d5055fd0d3bfe4421ae3f2c10a9fad6c2366ca01d00c1200f321b29e35b5d1fb
+spec_sha256: e546bfbece141f3abcb00e3122b7bfd3af4c9a9c16f71a64bef32bbed9a82fb3
 ---
 
 # PO-Briefing: fix-1405-s1-alarm-zustellung
@@ -23,9 +23,9 @@ Echte Versandklassen gegen Fake-Server prüfen Ausfall, Teilerfolg, Sperre und W
 
 ## Kritische Anmerkungen
 
-- Kein Wiederholungsdeckel: bei Dauerausfall bis zu 48 Versuche täglich, bei unklaren Fehlschlägen bis zu 48 doppelte Alarme.
-- Neu: Alarme, die nur am SMS-Tageslimit scheitern, gelten endgültig als erledigt und werden nie nachgeholt.
-- "Zugestellt" heißt nur: Versandweg hat angenommen, nicht: Empfänger hat gelesen.
+- Kein Wiederholungsdeckel: bei Dauerausfall bis zu 48 Versuche täglich, bei unklarem Fehlschlag bis zu 48 Dubletten.
+- Neu: Alarm, der nur am SMS-Tageslimit scheitert, gilt als erledigt und wird nie nachgeholt.
+- Zwei Regen-Alarme gleicher Art, höchstens 30 Minuten auseinander, gelten als ein Ereignis; der zweite kann 30 Minuten warten.
 
 ## Freigabe-Frage
 

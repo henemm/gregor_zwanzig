@@ -259,9 +259,10 @@ def test_ac3_telegram_ratenbegrenzung_aus_lauf_eins_ueberlebt_nicht_bis_lauf_zwe
             at=_AT + timedelta(seconds=1), zweig="deviation",
             trip=trip4, cached_weather=cached, fresh_weather=fresh,
         )
-        # `triggered_count` bleibt UNGEPRÜFT: er zählt bereits den Versuch
-        # (Anti-Pattern #656, `notification_service.py:104-110/1059`), nicht
-        # die Zustellung. `telegram` (Stub-Abgriff) ist der einzige Nachweis.
+        # `triggered_count` bleibt UNGEPRÜFT: der Stub-Abgriff `telegram` ist
+        # der Nachweis am Draht. Seit ADR-0086 (#1405 S1) zählt `sent` nur
+        # noch Zustellungen (frueher den Versuch, Anti-Pattern #656); der
+        # Abgriff bleibt trotzdem der staerkere Beleg.
         assert not lauf4.telegram, (
             "Gegenprobe: OHNE Cache-Reset muss Lauf 2 am durchgeschlagenen "
             "Telegram-Ratenlimit aus Lauf 1 scheitern — sonst beweist der "

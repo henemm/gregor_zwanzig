@@ -39,13 +39,17 @@ Premium-SMS gleichermaßen.
   `src/services/notification_service.py`, `src/services/trip_alert.py`,
   `src/services/compare_alert.py`, `src/services/compare_radar_alert.py`,
   `src/services/compare_official_alert.py`, `src/services/trip_command_processor.py`,
-  `api/routers/scheduler.py`, `tests/test_success_status_guard.py` (Wächter-Pflege)
+  `api/routers/scheduler.py`, `tests/test_success_status_guard.py` (Wächter-Pflege),
+  `src/services/alert_retry_backoff.py` (NEU, geteilter Backoff-Baustein),
+  `src/services/throttle_store.py` (additive Lesemethode `keys(scope)`)
 - **Identifier:** `NotificationResult` (+ neues Feld `attempted_channels`, neue Property
   `delivery_outcome`), `send_official_alert`, `_dispatch_alert_message`,
   `send_multi_location_official_alert`, `_trigger_report`, `_trigger_on_demand`,
-  `send_test_trip_report`
-- Kein Frontend, keine Go-API-Änderung. `alert_log.append_entry` und `ThrottleStore`
-  bleiben in ihrer Schnittstelle unverändert (Backoff = zusätzlicher Scope im bestehenden Store).
+  `send_test_trip_report`, `alert_retry_backoff` (`backoff_active`, `settle`,
+  `nowcast_backoff_active`, `settle_nowcast`), `ThrottleStore.keys`
+- Kein Frontend, keine Go-API-Änderung. `alert_log.append_entry` bleibt unverändert;
+  `ThrottleStore`: bestehende Schnittstelle und Dateiformat unverändert, eine additive
+  Lesemethode `keys(scope)` (Backoff = zusätzlicher Scope im bestehenden Store).
 
 ## Estimated Scope
 
@@ -258,6 +262,10 @@ Weitere Fixture-Nutzer, im RED-Schritt zu prüfen: `tests/helpers/alert_log_fixt
 - **Restrisiko mehrdeutige Fehlschläge:** SMTP-Timeout nach DATA, Telegram-ReadTimeout nach Annahme, SMS-Timeout nach Annahme — der Alarm kann real angekommen sein und wird nach 30 Min erneut versendet: bis zu 48 mögliche Dubletten je Tag und Ereignis. Beim SMS-Timeout wird zusätzlich die Reservierung zurückgegeben, das Tageskontingent wird dann unterzählt. Bewusste Abwägung ADR-0086: ein verlorener Alarm wiegt schwerer als eine Dublette.
 - **Verzögerung:** Ein nach Totalausfall wiederholter Radar-Alarm kommt frühestens nach 30 Minuten erneut (der 5-Minuten-Takt prüft, versendet aber erst nach Ablauf des Backoffs).
 - Der Ereignis-Fingerabdruck unterscheidet nach Metrik/Abschnitt/Gefahrenklasse, nicht nach Zahlenwert: ändert sich nur der Wert derselben Metrik, gilt das Ereignis als dasselbe.
+- **Radar-Ereignis-Toleranz:** Der Nowcast trägt keine stabile Ereigniskennung; sein
+  Fingerabdruck ist Entität (bzw. Ort) + Klasse + absoluter Beginn. Zwei Radar-Ereignisse
+  derselben Klasse, deren Startzeiten höchstens 30 Min auseinanderliegen, gelten als dasselbe
+  Ereignis — während eines Fehl-Backoffs wartet das zweite also bis zu 30 Min.
 - **Verhaltensänderung im Trip-Pfad:** eine reine Sperre (alle Kanäle durch Tageslimit gesperrt) wurde dort bisher nicht gebucht und jeden Lauf neu geprüft; sie wird jetzt (wie im Sammelpfad bisher) terminal gebucht (AC-9).
 
 ## Architektur-Entscheidung (ADR)
@@ -270,3 +278,5 @@ Weitere Fixture-Nutzer, im RED-Schritt zu prüfen: `tests/helpers/alert_log_fixt
 ## Changelog
 
 - 2026-10-09: Initial spec created (v1.0), Issue #1405 Scheibe 1
+- 2026-10-09: v1.1 — Source um `alert_retry_backoff.py` und die additive Lesemethode
+  `ThrottleStore.keys` ergänzt; Known Limitation „Radar-Ereignis-Toleranz" (keine AC geändert)
