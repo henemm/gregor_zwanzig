@@ -100,3 +100,9 @@ Ein Ticket, eine Spec, eine Auslieferung. Scheibenschnitt (Python vor Go) ist **
 
 ### Open Questions
 - keine PO-Fragen; Restpunkte von #2163 (Enumeration, Timing, os.Getenv, ProxyHandler, Python-Pfadbauten, Log, .env.tpl) bleiben in #2163.
+
+## Deploy-Notizen (aus Phase 6, 2026-10-09)
+- **Staging-Betriebsschritt (vor Staging-Validierung, durch Claude selbst):** `GZ_GO_API_URL=http://localhost:8091` in `/home/hem/gregor_zwanzig_staging/.env` ergänzen.
+- **Im selben Schritt Staging-`GZ_CORE_SHARED_SECRET` erneuern** (neuer Wert ≥32 Zeichen, z. B. `openssl rand -hex 32`): Beim Adversary-Lauf Runde 1 geriet ein Bruchstück des Staging-Secrets in eine lokale Tool-Ausgabe (Sitzungsprotokoll). Go- und Python-Staging lesen dieselbe `.env` ⇒ danach `gregor-api-staging` und `gregor-python-staging` neu starten. Werte NIE ausgeben.
+- Messung danach: Staging-Python `/health` ⇒ `go_api_url == http://localhost:8091`; Telegram-`/start`-Verknüpfung auf Staging durchspielen.
+- F004 (LOW, außerhalb des Tickets): Go-Default `PublicHost` ist https ⇒ lokaler http-Login ohne `GZ_PUBLIC_HOST` bekommt Secure-Cookies; CI setzt den Wert korrekt. → Sammel-Issue #1199.
