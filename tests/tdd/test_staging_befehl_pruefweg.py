@@ -156,8 +156,10 @@ def _smtp_klasse(fehler: BaseException | None = None):
     return type("Smtp", (_ErsatzSmtp,), {"verbindungen": [], "umschlaege": [], "fehler": fehler})
 
 
-def _mail_bytes(to: str, betreff: str, text: str, msgid: str) -> bytes:
+def _mail_bytes(to: str, betreff: str, text: str, msgid: str, mail_typ: str | None = None) -> bytes:
     m = EmailMessage()
+    if mail_typ:
+        m["X-GZ-Mail-Type"] = mail_typ
     m["From"] = "gregor-test@henemm.com"
     m["To"] = to
     m["Subject"] = betreff
@@ -295,6 +297,9 @@ class _ErsatzApi:
     def loese_poll_aus(self):
         self._ggf("loese_poll_aus")
         return 0
+
+    def loesche_trip(self, trip_id):
+        self.schritte.append("loesche_trip")
 
     def loesche_nutzer(self):
         self.schritte.append("loesche_nutzer")
@@ -796,10 +801,12 @@ class _ErsatzSystem:
     erscheint erst nach dem nächsten Warteschritt (wie das echte Briefing später)."""
 
     def __init__(self, api: "_ErsatzApi", heute_zahl_versatz: int = 0,
-                 vorab: bool = False, heute_betreff: str | None = None):
+                 vorab: bool = False, heute_betreff: str | None = None,
+                 heute_echtes_briefing: bool = False):
         self.api = api
         self.vorab = vorab
         self.heute_betreff = heute_betreff
+        self.heute_echtes_briefing = heute_echtes_briefing
         self.imap = _ErsatzImap({1: _mail_bytes("gregor-test@henemm.com", "alt", "alt", "<alt@x>")})
         self.versatz = heute_zahl_versatz
         self.ausstehend: list[bytes] = []
@@ -833,7 +840,13 @@ class _ErsatzSystem:
             n = _chrono_nummer(etappen, OBST) + self.versatz
             text = f"Morgen-Briefing\nEtappe {n}: {OBST_REST}\n"
             betreff_h = self.heute_betreff or f"[{trip['name']}] Morgen"
-            raw_h = _mail_bytes(plus, betreff_h, text, "<h@x>")
+            typ = None
+            if self.heute_echtes_briefing:
+                # Echtes Briefing: Betreff OHNE Trip-Praefix, Marker-Header gesetzt (siehe
+                # test_echter_briefing_betreff_*, Quelle src/output/subject.py:175-183 + :96-116)
+                betreff_h = f"Etappe {n}: {OBST_REST} {chr(8212)} Morgen"
+                typ = "trip-briefing"
+            raw_h = _mail_bytes(plus, betreff_h, text, "<h@x>", typ)
             if self.heute_betreff:  # GANZER Betreff in EINEM kodierten Wort (wie Go/mime.QEncoding)
                 kodiert = email.header.Header(betreff_h, "utf-8").encode().replace("\n", "").encode()
                 raw_h = re.sub(rb"Subject: [^\n]*(\n[ \t][^\n]*)*", b"Subject: " + kodiert, raw_h, count=1)
@@ -897,21 +910,94 @@ def test_cleanup_ohne_antwort_und_gescheitertes_loeschen_wird_gemeldet(capsys):
     assert api.nutzer_id in aus.out + aus.err
 
 
-class _ErsatzTransport:
-    """HTTP-Rand der StagingApi: antwortet generisch und hält Anfragen fest."""
+HELFER_USER = "helfer-bestaetigt"
+HELFER_PASS = "HELFER-PASSWORT-GEHEIM-31ab"
+
+
+class _VertragsStaging:
+    """Staging-Server mit dem ECHTEN Vertrag (kein Spiegel der eigenen Annahme).
+
+    - register legt ein UNBESTAETIGTES Konto an und stellt keine Sitzung aus
+    - login eines unbestaetigten Kontos -> 403 {"error":"email_not_verified"} (#2271)
+    - staging-token verlangt eine Sitzung eines BESTAETIGTEN Kontos, sonst 401
+    - verify-email ist oeffentlich und loest das Token ein
+    - Trip-Anlage und Konto-Loeschung wirken auf die Sitzung, in der sie laufen
+    Jede ``sitzung()`` ist ein eigener Cookie-Speicher; ``akteure`` haelt je Anfrage fest,
+    unter welchem angemeldeten Nutzer sie lief.
+    """
 
     TOKEN = "TOKEN-GEHEIM-c0ffee-9912"
 
-    def __init__(self, fehler_pfad: str | None = None):
+    def __init__(self, status_je_pfad=None):
         self.anfragen: list[tuple] = []
-        self.fehler_pfad = fehler_pfad
+        self.akteure: list[str | None] = []
+        self.status_je_pfad = status_je_pfad or {}
+        self.konten = {HELFER_USER: {"pw": HELFER_PASS, "verifiziert": True}}
+        self.trips: list[tuple[str, str]] = []
+        self.geloescht: list[str] = []
 
-    def __call__(self, method, url, headers=None, body=None):
-        self.anfragen.append((method, url, dict(headers or {}), body))
-        if self.fehler_pfad and self.fehler_pfad in url:
-            return 500, {"error": "internal"}
-        return 200, {"id": "nutzer-fake-1", "user_id": "nutzer-fake-1", "token": self.TOKEN,
-                     "count": 0, "ok": True}
+    def sitzung(self):
+        cookie = {"nutzer": None}
+
+        def transport(method, url, headers=None, body=None):
+            pfad = url.split("//", 1)[1].split("/", 1)[1]
+            self.anfragen.append((method, pfad, dict(headers or {}), body))
+            self.akteure.append(cookie["nutzer"])
+            for teil, status in self.status_je_pfad.items():
+                if teil in url:
+                    return status, {"error": "x"}
+            return self._antwort(cookie, pfad, headers or {}, body or {}, method)
+
+        return transport
+
+    TRIP_KONTINGENT = 3  # Tarif "free": internal/model/tier.go:55, Zaehlregel internal/handler/quota.go:130ff
+
+    def _antwort(self, cookie, pfad, headers, body, method="POST"):
+        nutzer = cookie["nutzer"]
+        if pfad == "api/auth/register":
+            self.konten[body["username"]] = {"pw": body["password"], "verifiziert": False}
+            return 201, {"id": "nutzer-fake-1"}
+        if pfad == "api/auth/login":
+            k = self.konten.get(body.get("username"))
+            if k is None or k["pw"] != body.get("password"):
+                return 401, {"error": "invalid_credentials"}
+            if not k["verifiziert"]:
+                return 403, {"error": "email_not_verified"}
+            cookie["nutzer"] = body["username"]
+            return 200, {"ok": True}
+        if pfad == "api/auth/verify-email/staging-token":
+            if nutzer is None or not self.konten[nutzer]["verifiziert"]:
+                return 401, {"error": "unauthorized"}
+            return 200, {"token": self.TOKEN}
+        if pfad == "api/auth/verify-email":
+            k = self.konten.get(body.get("user"))
+            if k is None or body.get("token") != self.TOKEN:
+                return 400, {"error": "invalid_token"}
+            k["verifiziert"] = True
+            return 200, {"ok": True}
+        if pfad == "api/scheduler/inbound-commands":
+            return 200, {"count": 0}
+        if nutzer is None:
+            return 401, {"error": "unauthorized"}
+        if pfad == "api/trips" and method == "POST":
+            if sum(1 for n, _ in self.trips if n == nutzer) >= self.TRIP_KONTINGENT:
+                return 409, {"error": "quota_exceeded"}
+            self.trips.append((nutzer, body.get("id")))
+            return 201, {"id": body.get("id")}
+        if pfad.startswith("api/trips/") and method == "DELETE":  # internal/router/router.go:242
+            eintrag = (nutzer, pfad.rsplit("/", 1)[1])
+            if eintrag not in self.trips:
+                return 404, {"error": "not_found"}
+            self.trips.remove(eintrag)
+            return 204, {}
+        if pfad == "api/auth/account/delete":
+            if body.get("password") != self.konten[nutzer]["pw"]:
+                return 403, {"error": "wrong_password"}
+            self.geloescht.append(nutzer)
+            del self.konten[nutzer]
+            cookie["nutzer"] = None
+            return 200, {"ok": True}
+        return 200, {"ok": True}
 
     def gesendete_passwoerter(self) -> set[str]:
         werte = set()
@@ -923,13 +1009,21 @@ class _ErsatzTransport:
         return werte
 
 
+def _api(tr, secret="geheim-x"):
+    """StagingApi mit getrennten Sitzungen: Wegwerf-Nutzer und Helfer-Konto."""
+    w = _werkzeug()
+    return w.StagingApi("https://s.example.invalid", "http://127.0.0.1:8001", secret,
+                        tr.sitzung(), helfer_transport=tr.sitzung(),
+                        helfer_zugang=(HELFER_USER, HELFER_PASS))
+
+
 @pytest.mark.parametrize("fehler_pfad", [None, "/api/trips"])
 def test_ausgaben_enthalten_keine_geheimnisse(capsys, fehler_pfad):
     """AC-9: weder Passwort noch Token noch Core-Secret in irgendeiner Ausgabe."""
     w = _werkzeug()
     secret = "KERN-SECRET-PLATZHALTER-5b7d"
-    transport = _ErsatzTransport(fehler_pfad)
-    api = w.StagingApi("https://staging.example.invalid", "http://127.0.0.1:8001", secret, transport)
+    transport = _VertragsStaging({fehler_pfad: 500} if fehler_pfad else None)
+    api = _api(transport, secret)
     try:
         w.fuehre_lauf(["B"], api=api, smtp_factory=_smtp_klasse(),
                       imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="tagsec",
@@ -941,11 +1035,12 @@ def test_ausgaben_enthalten_keine_geheimnisse(capsys, fehler_pfad):
 
     passwoerter = transport.gesendete_passwoerter()
     assert passwoerter, "Registrierung hat kein Passwort gesendet — Test wäre vakuum"
+    assert HELFER_PASS in passwoerter, "Helfer-Login hat kein Passwort gesendet — Test wäre vakuum"
     if fehler_pfad is None:
         assert any(secret in h.values() for _, u, h, _ in transport.anfragen
-                   if "/api/scheduler/inbound-commands" in u), \
+                   if "api/scheduler/inbound-commands" in u), \
             "Poll-Auslösung ohne X-GZ-Core-Auth — Test wäre vakuum"
-    for geheim in passwoerter | {secret, _ErsatzTransport.TOKEN}:
+    for geheim in passwoerter | {secret, _VertragsStaging.TOKEN}:
         assert geheim not in gesamt, "Geheimnis in der Ausgabe"
 
 
@@ -968,24 +1063,11 @@ def test_antwortsuche_ueberspringt_systemmail_an_dieselbe_adresse():
     assert w.finde_antwort(nur_system, plus, seit_uid=0, betreffe=("[GZ-Pruefung lauf43 B]",)) is None
 
 
-class _AufzeichnenderTransport:
-    def __init__(self, status_je_pfad=None):
-        self.anfragen = []
-        self.status_je_pfad = status_je_pfad or {}
-
-    def __call__(self, method, url, headers=None, body=None):
-        self.anfragen.append((method, url.split("//", 1)[1].split("/", 1)[1], dict(headers or {}), body))
-        for teil, status in self.status_je_pfad.items():
-            if teil in url:
-                return status, {"error": "x"}
-        return 200, {"token": "tok-1", "count": 0, "id": "x"}
-
-
 def test_registrierkette_reihenfolge_und_inhalt():
-    """F002: register -> login -> staging-token -> verify-email -> trips -> poll -> account/delete."""
+    """F002/#2542: Helfer-Login -> register -> staging-token -> verify-email -> login -> trips -> poll -> delete."""
     w = _werkzeug()
-    tr = _AufzeichnenderTransport()
-    api = w.StagingApi("https://s.example.invalid", "http://127.0.0.1:8001", "geheim-x", tr)
+    tr = _VertragsStaging()
+    api = _api(tr)
     plus = "gregor-test+kette1@henemm.com"
     nutzer = api.registriere(plus)
     trip = w.baue_trip("B", "kette1", HEUTE)
@@ -994,26 +1076,76 @@ def test_registrierkette_reihenfolge_und_inhalt():
     api.loesche_nutzer()
     pfade = [(m, p) for m, p, _, _ in tr.anfragen]
     assert pfade == [
-        ("POST", "api/auth/register"), ("POST", "api/auth/login"),
-        ("POST", "api/auth/verify-email/staging-token"), ("POST", "api/auth/verify-email"),
+        ("POST", "api/auth/login"),  # Helfer
+        ("POST", "api/auth/register"), ("POST", "api/auth/verify-email/staging-token"),
+        ("POST", "api/auth/verify-email"), ("POST", "api/auth/login"),
         ("POST", "api/trips"), ("POST", "api/scheduler/inbound-commands"),
         ("POST", "api/auth/account/delete"),
     ]
-    reg, login, tokreq, ver, trips, poll, loesch = (a[3] for a in tr.anfragen)
+    helfer_login, reg, tokreq, ver, login, trips, poll, loesch = (a[3] for a in tr.anfragen)
+    assert helfer_login == {"username": HELFER_USER, "password": HELFER_PASS}
     assert reg["email"] == plus and reg["username"] == nutzer and len(reg["password"]) >= 8
+    assert reg["username"] != HELFER_USER
     assert login == {"username": nutzer, "password": reg["password"]}
     assert tokreq == {"username": nutzer}
-    assert ver == {"user": nutzer, "token": "tok-1"}
+    assert ver == {"user": nutzer, "token": _VertragsStaging.TOKEN}
     assert trips["id"] == trip["id"] and trips["name"] == trip["name"]
     assert loesch == {"password": reg["password"]}
-    assert tr.anfragen[5][2].get("X-GZ-Core-Auth") == "geheim-x"
+    assert tr.anfragen[6][2].get("X-GZ-Core-Auth") == "geheim-x"
+
+
+def test_wegwerf_nutzer_wird_nach_bestaetigung_angemeldet_und_helfer_bleibt_unberuehrt():
+    """#2542: Login des neuen Nutzers erst NACH verify-email (sonst 403 email_not_verified);
+    staging-token laeuft unter der Helfer-Sitzung; Trip und Loeschung unter dem Wegwerf-Nutzer."""
+    w = _werkzeug()
+    tr = _VertragsStaging()
+    api = _api(tr)
+    nutzer = api.registriere("gregor-test+sess1@henemm.com")
+    api.lege_trip_an(w.baue_trip("B", "sess1", HEUTE))
+    api.loesche_nutzer()
+    nach_pfad = {}
+    for (_, pfad, _, _), akteur in zip(tr.anfragen, tr.akteure):
+        nach_pfad.setdefault(pfad, []).append(akteur)
+    assert nach_pfad["api/auth/verify-email/staging-token"] == [HELFER_USER]
+    assert tr.trips == [(nutzer, "gzp-sess1-b")]
+    assert tr.geloescht == [nutzer]
+    assert HELFER_USER in tr.konten, "Helfer-Konto darf nie geloescht werden"
+    assert nutzer not in tr.konten
+
+
+def test_fehlender_helfer_login_stoppt_vor_der_registrierung(capsys):
+    """#2542: scheitert der Helfer-Login, wird NICHT registriert (kein verbrauchter Versuch, keine Konto-Leiche)."""
+    w = _werkzeug()
+    tr = _VertragsStaging({"/api/auth/login": 401})
+    api = _api(tr)
+    rc = w.fuehre_lauf_exit(["B"], api=api, smtp_factory=_smtp_klasse(),
+                            imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="taghelf",
+                            timeout=0, schlaf=_kein_schlaf)
+    assert rc == 2
+    pfade = [p for _, p, _, _ in tr.anfragen]
+    assert "api/auth/register" not in pfade and "api/auth/account/delete" not in pfade
+    assert HELFER_PASS not in capsys.readouterr().err
+
+
+def test_http_fehler_nennt_das_error_feld_ohne_geheimnisse():
+    """#2542: Meldung enthaelt das error-Feld der Antwort (z. B. email_not_verified), nie Passwoerter."""
+    w = _werkzeug()
+
+    def transport(methode, url, headers, body):
+        return 403, {"error": "email_not_verified", "password": "NICHT-AUSGEBEN"}
+
+    api = w.StagingApi("https://s.example.invalid", "http://127.0.0.1:8001", "geheim-x", transport)
+    with pytest.raises(w.StagingFehler) as exc:
+        api._rufe("POST", "https://s.example.invalid/api/auth/login", {"password": "x"})
+    text = str(exc.value)
+    assert "HTTP 403 (email_not_verified)" in text and "NICHT-AUSGEBEN" not in text
 
 
 def test_http_fehler_bei_registrierung_ist_exit_2_ohne_wiederholung(capsys):
     """F002: 429 bei register -> klare Meldung, Exit 2, genau EIN Versuch, kein Loeschversuch."""
     w = _werkzeug()
-    tr = _AufzeichnenderTransport({"/api/auth/register": 429})
-    api = w.StagingApi("https://s.example.invalid", "http://127.0.0.1:8001", "geheim-x", tr)
+    tr = _VertragsStaging({"/api/auth/register": 429})
+    api = _api(tr)
     rc = w.fuehre_lauf_exit(["B"], api=api, smtp_factory=_smtp_klasse(),
                             imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="tag429",
                             timeout=0, schlaf=_kein_schlaf)
@@ -1129,11 +1261,15 @@ def test_antwortsuche_lehnt_mehrfach_empfaenger_ab(to_feld):
 def _main_umgebung(monkeypatch, tmp_path, *, mit_zugang=True):
     w = _werkzeug()
     monkeypatch.setattr(w, "STAGING_ENV", tmp_path / "keine.env")
-    for k in ("GZ_TEST_IMAP_USER", "GZ_TEST_IMAP_PASS", "GZ_CORE_SHARED_SECRET"):
+    for k in ("GZ_TEST_IMAP_USER", "GZ_TEST_IMAP_PASS", "GZ_CORE_SHARED_SECRET",
+              "GZ_AUTH_USER", "GZ_AUTH_PASS"):
         if mit_zugang:
             monkeypatch.setenv(k, "platzhalter-" + k.lower())
         else:
             monkeypatch.delenv(k, raising=False)
+    if mit_zugang:
+        monkeypatch.setenv("GZ_AUTH_USER", HELFER_USER)
+        monkeypatch.setenv("GZ_AUTH_PASS", HELFER_PASS)
     from datetime import datetime
     from zoneinfo import ZoneInfo
     return w, datetime(2027, 7, 14, 12, 0, tzinfo=ZoneInfo("Europe/Vienna"))
@@ -1142,33 +1278,49 @@ def _main_umgebung(monkeypatch, tmp_path, *, mit_zugang=True):
 def test_main_fehlende_zugangsdaten_ist_exit_2_ohne_netz(monkeypatch, tmp_path, capsys):
     """F010: ohne Zugangsdaten Exit 2, nennt die Namen, kontaktiert nichts."""
     w, jetzt = _main_umgebung(monkeypatch, tmp_path, mit_zugang=False)
-    tr = _AufzeichnenderTransport()
+    tr = _VertragsStaging()
     smtp = _smtp_klasse()
-    rc = w.main(["--szenario", "status"], transport=tr, smtp_factory=smtp,
-                imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
+    rc = w.main(["--szenario", "status"], transport=tr.sitzung(), helfer_transport=tr.sitzung(),
+                smtp_factory=smtp, imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
     assert rc == 2
     assert tr.anfragen == [] and smtp.verbindungen == []
     assert "GZ_TEST_IMAP_USER" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("fehlt", ["GZ_AUTH_USER", "GZ_AUTH_PASS"])
+def test_main_ohne_helfer_zugangsdaten_ist_exit_2_ohne_registrierung(monkeypatch, tmp_path, capsys, fehlt):
+    """#2542: ohne GZ_AUTH_USER/PASS Exit 2 VOR jeder Registrierung (kein register-Aufruf, kein Netz)."""
+    w, jetzt = _main_umgebung(monkeypatch, tmp_path)
+    monkeypatch.delenv(fehlt)
+    tr = _VertragsStaging()
+    smtp = _smtp_klasse()
+    rc = w.main(["--szenario", "status"], transport=tr.sitzung(), helfer_transport=tr.sitzung(),
+                smtp_factory=smtp, imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
+    assert rc == 2
+    assert tr.anfragen == [] and smtp.verbindungen == []
+    err = capsys.readouterr().err
+    assert fehlt in err and HELFER_PASS not in err
+
+
 def test_main_reicht_ohne_cleanup_durch_und_wandelt_fehler_in_exit_2(monkeypatch, tmp_path, capsys):
     """F010: --ohne-cleanup erreicht den Lauf; HTTP-Fehler laufen ueber fuehre_lauf_exit (Exit 2)."""
     w, jetzt = _main_umgebung(monkeypatch, tmp_path)
-    tr = _AufzeichnenderTransport()
-    rc = w.main(["--szenario", "B", "--timeout", "0", "--ohne-cleanup"], transport=tr,
+    tr = _VertragsStaging()
+    rc = w.main(["--szenario", "B", "--timeout", "0", "--ohne-cleanup"], transport=tr.sitzung(),
+                helfer_transport=tr.sitzung(),
                 smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
     assert rc == 1  # keine Antwort
     assert not any("account/delete" in p for _, p, _, _ in tr.anfragen)
     assert "--ohne-cleanup" in capsys.readouterr().out
 
-    tr2 = _AufzeichnenderTransport({"/api/auth/register": 429})
-    rc2 = w.main(["--szenario", "B", "--timeout", "0"], transport=tr2,
-                 smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
+    tr2 = _VertragsStaging({"/api/auth/register": 429})
+    rc2 = w.main(["--szenario", "B", "--timeout", "0"], transport=tr2.sitzung(),
+                 helfer_transport=tr2.sitzung(), smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
     assert rc2 == 2
 
-    tr3 = _AufzeichnenderTransport()
-    w.main(["--szenario", "B", "--timeout", "0"], transport=tr3,
-           smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
+    tr3 = _VertragsStaging()
+    w.main(["--szenario", "B", "--timeout", "0"], transport=tr3.sitzung(),
+           helfer_transport=tr3.sitzung(), smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}), jetzt=jetzt)
     assert any("account/delete" in p for _, p, _, _ in tr3.anfragen), "ohne Schalter muss geloescht werden"
 
 
@@ -1222,3 +1374,82 @@ def test_gesamtlauf_alle_szenarien_auf_staging():
     """AC-8 (live) + AC-11: alle Szenarien gegen Staging ⇒ Exit 0."""
     w = _werkzeug()
     assert w.main(["--szenario", "alle"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Fix-Runde 2 (zweiter echter Lauf): Trip-Kontingent + echter Briefing-Betreff
+# ---------------------------------------------------------------------------
+
+def test_alle_szenarien_ueberschreiten_das_trip_kontingent_nicht():
+    """Befund 1: Tarif free = max. 3 Trips. A,B,C,D,D2 duerfen nie gleichzeitig existieren.
+
+    Rot gegen den Stand ohne Trip-Loeschen: 4. Trip -> 409 quota_exceeded -> StagingFehler.
+    """
+    w = _werkzeug()
+    tr = _VertragsStaging()
+    api = _api(tr)
+    rc = w.fuehre_lauf(["A", "B", "C", "D", "D2"], api=api, smtp_factory=_smtp_klasse(),
+                       imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="tagquota",
+                       timeout=0, schlaf=_kein_schlaf)
+    assert rc != 0  # keine Antworten -> Befund, aber KEIN Abbruch durch 409
+    angelegt = [p for m, p, _, _ in tr.anfragen if p == "api/trips"]
+    assert len(angelegt) == 5, "alle fuenf Szenarien muessen ihren Trip anlegen koennen"
+    assert not [t for t in tr.trips if t[0].startswith("gzp-")], "Trips muessen nach Lauf weg sein"
+
+
+def test_trip_wird_unter_der_sitzung_des_wegwerf_nutzers_geloescht():
+    """Befund 1: DELETE /api/trips/{id} laeuft als Wegwerf-Nutzer (nicht Helfer), fremde Trips bleiben."""
+    w = _werkzeug()
+    tr = _VertragsStaging()
+    tr.trips.append(("anderer-nutzer", "fremd"))
+    api = _api(tr)
+    w.fuehre_lauf(["B"], api=api, smtp_factory=_smtp_klasse(), imap_factory=lambda: _ErsatzImap({}),
+                  heute=HEUTE, tag="tagdel2", timeout=0, schlaf=_kein_schlaf)
+    loeschungen = [(a, p) for (m, p, _, _), a in zip(tr.anfragen, tr.akteure)
+                   if m == "DELETE" and p.startswith("api/trips/")]
+    assert len(loeschungen) == 1
+    assert loeschungen[0][0].startswith("gzp-") and loeschungen[0][1].endswith("-b")
+    assert ("anderer-nutzer", "fremd") in tr.trips
+
+
+def test_echter_briefing_betreff_traegt_keinen_trip_praefix():
+    """Befund 2: Quelle des Betreffs. Das Briefing nennt die Etappe als 'Etappe N: <Name>'
+    (src/app/trip.py:311, aufgerufen trip_report_scheduler.py:1554). Mit Trip-Praefix waere der
+    Betreff 78+ Zeichen; build_email_subject verwirft den Trip-Praefix dann
+    (src/output/subject.py:175-183) -> Betreff beginnt NICHT mit '[<Trip>]'."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+    from output.subject import build_email_subject
+    from output.tokens.dto import TokenLine
+    zeile = TokenLine(stage_name="Etappe 4: Obstansersee-Hütte nach Porzehütte", report_type="morning",
+                      tokens=(), trip_name="GZ-Pruefung 090724-bd5f7394 A", shortcode=None)
+    betreff = build_email_subject(zeile)
+    assert betreff == "Etappe 4: Obstansersee-Hütte nach Porzehütte \u2014 Morgen"
+    assert not betreff.startswith("[")
+
+
+def test_antwortsuche_erkennt_briefing_ohne_trip_praefix_ueber_marker_header():
+    """Befund 2: ECHTER Betreff (s.o.) + Header X-GZ-Mail-Type: trip-briefing (src/output/channels/email.py:344,
+    notification_service.py:2166). Systemmail ohne Marker und Alarmmail mit anderem Typ zaehlen NICHT."""
+    w = _werkzeug()
+    plus = "gregor-test+lauf44@henemm.com"
+    betreffe = ("[GZ-Pruefung lauf44 A]", "[GZ#")
+    echt = "Etappe 4: Obstansersee-Hütte nach Porzehütte \u2014 Morgen"
+    verif = _mail_bytes(plus, "Bestätige deine E-Mail-Adresse für Gregor 20", "Link", "<verif@x>")
+    alarm = _mail_bytes(plus, "Etappe 4: Obstansersee-Hütte nach Porzehütte \u2014 Alarm", "x", "<al@x>", "deviation-alert")
+    briefing = _mail_bytes(plus, echt, "Morgen-Briefing", "<b@x>", "trip-briefing")
+    imap = _ErsatzImap({6: verif, 7: alarm, 8: briefing})
+    raw = w.finde_antwort(imap, plus, seit_uid=0, betreffe=betreffe)
+    assert raw is not None and email.message_from_bytes(raw)["Message-ID"] == "<b@x>"
+    ohne = _ErsatzImap({6: verif, 7: alarm, 9: _mail_bytes(plus, echt, "t", "<c@x>")})
+    assert w.finde_antwort(ohne, plus, seit_uid=0, betreffe=betreffe) is None
+
+
+def test_lauf_erkennt_echte_heute_briefing_mail():
+    """Befund 2 im LAUF (A: status + heute): die heute-Antwort ist ein echtes Briefing ohne Trip-Praefix."""
+    w = _werkzeug()
+    api = _ErsatzApiMitTrips()
+    system = _ErsatzSystem(api, vorab=True, heute_echtes_briefing=True)
+    rc = w.fuehre_lauf(["A"], api=api, smtp_factory=system.smtp, imap_factory=lambda: system.imap,
+                       heute=HEUTE, tag="tagbrief", timeout=5, schlaf=system.schlaf)
+    assert rc == 0

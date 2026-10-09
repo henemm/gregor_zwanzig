@@ -111,6 +111,9 @@ liefert deshalb anonym ueber Port 25 ein (der eigene Server ist fuer `henemm.com
 sendeberechtigt), legt einen Wegwerf-Nutzer `gregor-test+<tag>@henemm.com` samt Trips an,
 stoesst den Poll ueber den Kern (Port 8001, `X-GZ-Core-Auth`) an und liest die Antwortmail
 per IMAP (nur `BODY.PEEK`, nur eigene Plus-Adresse). Im `finally` wird alles geloescht.
+Voraussetzung: ein bestaetigtes Helfer-Konto (`GZ_AUTH_USER`/`GZ_AUTH_PASS` in
+`/home/hem/gregor_zwanzig_staging/.env`) holt das Bestaetigungs-Token des neuen Nutzers
+(Henne-Ei, #2271); es wird nie veraendert oder geloescht. Fehlen die Werte: Exit 2 vor jeder Registrierung.
 
 ```bash
 python3 .claude/tools/staging_befehl_pruefen.py --szenario status        # eine status-Mail (Trip B)

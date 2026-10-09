@@ -61,7 +61,7 @@ _ADRESSE = re.compile(r"[A-Za-z0-9._%+\-]+@henemm\.com")
 
 
 class StagingFehler(RuntimeError):
-    """HTTP-Fehler der Staging-Schnittstelle (ohne Antwortkoerper, ohne Geheimnisse)."""
+    """HTTP-Fehler der Staging-Schnittstelle (nur Status und ``error``-Kennung, keine Geheimnisse)."""
 
 
 @dataclass
@@ -277,6 +277,12 @@ def _betreff(kopf) -> str:
         return str(roh)
 
 
+# Echte Trip-Briefings tragen den Marker-Header (src/output/channels/email.py:344,
+# notification_service.py:2166). Ihr Betreff darf den "[<Trip>]"-Praefix VERLIEREN
+# (src/output/subject.py:175-183, 78-Zeichen-Kuerzung) - der Header ist daher das robuste Merkmal.
+ANTWORT_MAILTYPEN = ("trip-briefing",)
+
+
 def _eigene_uids(imap, plus_adresse: str, seit_uid: int, betreffe=None) -> list[int]:
     """UIDs > seit_uid, deren To-Header EXAKT die Plus-Adresse ist (IMAP-TO sucht Teilstring).
 
@@ -288,12 +294,13 @@ def _eigene_uids(imap, plus_adresse: str, seit_uid: int, betreffe=None) -> list[
     for uid in sorted(int(u) for u in (daten[0] or b"").split()):
         if uid <= seit_uid:
             continue
-        _, d = imap.uid("FETCH", str(uid), "(BODY.PEEK[HEADER.FIELDS (TO SUBJECT)])")
+        _, d = imap.uid("FETCH", str(uid), "(BODY.PEEK[HEADER.FIELDS (TO SUBJECT X-GZ-MAIL-TYPE)])")
         kopf = message_from_bytes(next((t[1] for t in d if isinstance(t, tuple)), b""))
         adressen = [a.lower() for _, a in getaddresses(kopf.get_all("To", []))]
         if adressen != [plus_adresse.lower()]:
             continue
-        if betreffe and not _betreff(kopf).startswith(tuple(betreffe)):
+        if betreffe and not _betreff(kopf).startswith(tuple(betreffe)) \
+                and (kopf.get("X-GZ-Mail-Type") or "").strip().lower() not in ANTWORT_MAILTYPEN:
             continue
         treffer.append(uid)
     return treffer
@@ -319,9 +326,14 @@ def loesche_eigene_antworten(imap, plus_adresse: str) -> None:
 class StagingApi:
     """Wegwerf-Nutzer, Trips und Poll-Ausloesung auf Staging; transport ist der HTTP-Rand."""
 
-    def __init__(self, basis_url, kern_url, kern_secret, transport):
+    def __init__(self, basis_url, kern_url, kern_secret, transport, *,
+                 helfer_transport=None, helfer_zugang=None):
+        """``transport`` = Sitzung des Wegwerf-Nutzers; ``helfer_transport`` = EIGENE Sitzung
+        (eigener Cookie-Speicher) des bestaetigten Helfer-Kontos ``helfer_zugang=(user, pass)``.
+        Der Helfer holt nur das staging-token und wird nie veraendert oder geloescht."""
         self._basis, self._kern = basis_url.rstrip("/"), kern_url.rstrip("/")
         self._secret, self._transport = kern_secret, transport
+        self._helfer_transport, self._helfer_zugang = helfer_transport, helfer_zugang
         self._username = None
         self._passwort = None
 
@@ -332,29 +344,42 @@ class StagingApi:
     def nutzer_id(self):
         return self._username
 
-    def _rufe(self, methode, url, body=None, headers=None) -> dict:
-        status, antwort = self._transport(methode, url, headers or {}, body)
+    def _rufe(self, methode, url, body=None, headers=None, transport=None) -> dict:
+        status, antwort = (transport or self._transport)(methode, url, headers or {}, body)
         if not 200 <= status < 300:
             pfad = url.split("//", 1)[-1].split("/", 1)[-1]
-            raise StagingFehler(f"{methode} /{pfad} -> HTTP {status}")
+            kennung = antwort.get("error") if isinstance(antwort, dict) else None
+            zusatz = f" ({kennung})" if isinstance(kennung, str) and re.fullmatch(r"[\w.\-]{1,60}", kennung) else ""
+            raise StagingFehler(f"{methode} /{pfad} -> HTTP {status}{zusatz}")
         return antwort
 
     def registriere(self, email_adresse: str) -> str:
         tag = email_adresse.split("+", 1)[-1].split("@", 1)[0]
         name, passwort = f"gzp-{tag}", secrets.token_urlsafe(18)
         b = self._basis
+        if self._helfer_transport is None or not self._helfer_zugang:
+            raise StagingFehler("Helfer-Konto (GZ_AUTH_USER/GZ_AUTH_PASS) fehlt - nichts registriert")
+        # Helfer ZUERST: scheitert er, wird kein Registrierungsversuch verbraucht, keine Leiche angelegt
+        self._rufe("POST", f"{b}/api/auth/login",
+                   {"username": self._helfer_zugang[0], "password": self._helfer_zugang[1]},
+                   transport=self._helfer_transport)
         self._rufe("POST", f"{b}/api/auth/register", {
             "username": name, "password": passwort, "email": email_adresse})
         self._username, self._passwort = name, passwort  # erst jetzt existiert der Nutzer
+        tok = self._rufe("POST", f"{b}/api/auth/verify-email/staging-token",
+                         {"username": self._username}, transport=self._helfer_transport)["token"]
+        self._rufe("POST", f"{b}/api/auth/verify-email", {"user": self._username, "token": tok})
+        # erst nach der Bestaetigung (sonst 403 email_not_verified, #2271): Sitzung des Wegwerf-Nutzers
         self._rufe("POST", f"{b}/api/auth/login",
                    {"username": self._username, "password": self._passwort})
-        tok = self._rufe("POST", f"{b}/api/auth/verify-email/staging-token",
-                         {"username": self._username})["token"]
-        self._rufe("POST", f"{b}/api/auth/verify-email", {"user": self._username, "token": tok})
         return self._username
 
     def lege_trip_an(self, trip: dict) -> None:
         self._rufe("POST", f"{self._basis}/api/trips", trip)
+
+    def loesche_trip(self, trip_id: str) -> None:
+        """Haelt das Trip-Kontingent (Tarif free: 3) ein: Trip nach dem Szenario wieder weg."""
+        self._rufe("DELETE", f"{self._basis}/api/trips/{trip_id}")
 
     def loese_poll_aus(self):
         antwort = self._rufe("POST", f"{self._kern}/api/scheduler/inbound-commands", None,
@@ -450,6 +475,7 @@ def _fahre_szenario(s, api, plus, smtp_factory, imap_factory, heute, tag, timeou
     neu = min(_d(e) for e in trip["stages"]) + timedelta(days=3) if s == "D2" else None
     erg = werte_aus(s, trip["stages"], antworten, heute, neues_startdatum=neu)
     print(f"{'PASS' if erg.ok else 'FAIL'} {s}: {erg.meldung}")
+    api.loesche_trip(trip["id"])
     return max(rc, 0 if erg.ok else 1)
 
 
@@ -525,7 +551,8 @@ def _ortszeit_sperre(jetzt: datetime) -> bool:
     return minuten >= 23 * 60 + 45 or minuten < 15
 
 
-def main(argv=None, *, transport=None, smtp_factory=None, imap_factory=None, jetzt=None) -> int:
+def main(argv=None, *, transport=None, helfer_transport=None, smtp_factory=None, imap_factory=None,
+         jetzt=None) -> int:
     """Netzrand injizierbar (Tests); ohne Angaben gelten echtes HTTP, SMTP und IMAP."""
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--szenario", default="alle")
@@ -537,7 +564,8 @@ def main(argv=None, *, transport=None, smtp_factory=None, imap_factory=None, jet
         print(f"Unbekanntes Szenario: {args.szenario}", file=sys.stderr)
         return 2
     env = _lade_env()
-    fehlend = [k for k in ("GZ_TEST_IMAP_USER", "GZ_TEST_IMAP_PASS", "GZ_CORE_SHARED_SECRET") if not env.get(k)]
+    fehlend = [k for k in ("GZ_TEST_IMAP_USER", "GZ_TEST_IMAP_PASS", "GZ_CORE_SHARED_SECRET",
+                                       "GZ_AUTH_USER", "GZ_AUTH_PASS") if not env.get(k)]
     if fehlend:
         print(f"Zugangsdaten fehlen: {', '.join(fehlend)}", file=sys.stderr)
         return 2
@@ -549,7 +577,9 @@ def main(argv=None, *, transport=None, smtp_factory=None, imap_factory=None, jet
         return 2
     api = StagingApi(env.get("GZ_STAGING_BASE_URL", "https://staging.gregor20.henemm.com"),
                      env.get("GZ_STAGING_CORE_URL", "http://127.0.0.1:8001"),
-                     env["GZ_CORE_SHARED_SECRET"], transport or http_transport())
+                     env["GZ_CORE_SHARED_SECRET"], transport or http_transport(),
+                     helfer_transport=helfer_transport or http_transport(),
+                     helfer_zugang=(env["GZ_AUTH_USER"], env["GZ_AUTH_PASS"]))
     return fuehre_lauf_exit(szenarien, api=api, smtp_factory=smtp_factory or smtplib.SMTP,
                             imap_factory=imap_factory or _imap_factory(env), heute=jetzt.date(), tag=baue_tag(),
                             timeout=args.timeout, aufraeumen=not args.ohne_cleanup)
