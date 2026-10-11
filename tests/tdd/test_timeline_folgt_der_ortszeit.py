@@ -832,7 +832,9 @@ def test_ac7_fehlertext_nennt_den_tatsaechlich_benutzten_zieltag():
 
         ergebnis = _befehl(trip, "### heute", empfangen)
 
-    assert ergebnis.success is True, ergebnis.confirmation_body
+    # Issue #1405 S1 (AC-25): `success` folgt dem echten Ergebnis -- bei
+    # `no_stage` ist nichts versendet worden, die Antwort geht trotzdem raus.
+    assert ergebnis.success is False, ergebnis.confirmation_body
     assert "(21.08.2026)" in ergebnis.confirmation_body, (
         "AC-7: der Fehlertext muss den TATSAECHLICH von send_on_demand_report "
         "benutzten Zieltag (21.08., Ortstag zum Verarbeitungszeitpunkt) "
