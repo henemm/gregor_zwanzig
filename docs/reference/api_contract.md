@@ -232,7 +232,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/groups/{id}` | DELETE, PATCH |
 | `/api/health` | GET |
 | `/api/internal/premium-sms-learn` | POST | — Auth `X-GZ-Core-Auth`: 401 fehlend/falsch, 503 nicht konfiguriert (#2159); interner Lernweg der Garmin-Antwortadresse (#1676 S1; im Inventar nachgetragen #2218)
-| `/api/internal/telegram-connect` | POST |
+| `/api/internal/telegram-connect` | POST | — Auth `X-GZ-Core-Auth`: 401 fehlend/falsch, 503 nicht konfiguriert (#2159); interner Verknüpfungsweg des Telegram-Kontos (#2141)
 | `/api/locations` | GET, POST |
 | `/api/locations/resolve` | POST |
 | `/api/locations/{id}` | DELETE, GET, PATCH, PUT |
