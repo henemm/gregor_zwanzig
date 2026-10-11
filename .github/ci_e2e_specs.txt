@@ -391,3 +391,13 @@ e2e/konto-loeschdialog-mobil-ueberlauf.spec.ts
 # Hauptlauf expected=344 / unexpected=0 / skipped=0 / flaky=0 (3x identisch);
 # Zweitlauf bug-703 expected=3 / unexpected=0 (3x identisch).
 e2e/send-in-flight-guard.spec.ts
+#
+# Aufnahme 2026-10-11 (#2521 S1, Begriff-Erklaerung ⓘ + Infobox, Phase /40 TDD-RED):
+# begriff-erklaerung.spec.ts -- bewacht im echten Browser Popover-Oeffnen/Schliessen
+# (Esc, Klick daneben, Enter, Leertaste, Fokus-Rueckgabe auf das ⓘ), die Infobox je
+# Anlege-Reiter von /trips/new und /compare/new und die Konsolen-Sauberkeit.
+# Filter A: kein waitForTimeout/skip/fixme, kein .staging.spec. Stand: in RED
+# aufgenommen, die Implementierung existiert noch nicht. Filter B (3x gruen im
+# Zielverbund) ist NOCH NICHT gemessen -- das Nachmessen gehoert zu /50-implement;
+# bis dahin ist der Eintrag eine Vorab-Reservierung, kein Filter-B-Beleg.
+e2e/begriff-erklaerung.spec.ts

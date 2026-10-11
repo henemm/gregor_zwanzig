@@ -1,5 +1,7 @@
 // Issue #2520 — typisierter Textkatalog + Inhalt der oeffentlichen Startseite.
 // AC-1 (Inhalt), AC-6 (Kanaele), AC-7 (Bilder), AC-8 (Typ + Katalogtexte), AC-10 (Kontrast, Bausteine).
+// Issue #2521 S1 (ab dem Block „info.*/tip.*“ unten): AC-15 (Katalog-Vollstaendigkeit, kein Fliesstext
+// ausserhalb t()), AC-17 (keine Handlungsempfehlung).
 //
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --test src/lib/i18n/__tests__/textkatalog.test.ts
@@ -11,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { t } from '../index.ts';
 import de from '../messages/de.json' with { type: 'json' };
+import { ARIA_WORT, BEGRIFFE, INFO_TEXTE, TIP_TEXTE } from '../../components/shared/__tests__/infoboxTexte.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontend = join(__dirname, '..', '..', '..', '..');
@@ -120,4 +123,98 @@ test('F002: jedes img traegt den Katalog-Alt-Text', () => {
 test('F004: Alarm-Alt-Text passt zum Screenshot (Sturm-/Hitzewarnung)', () => {
 	assert.match(katalog['start.alarm.alt'], /Sturm/);
 	assert.match(katalog['start.alarm.alt'], /Hitze/);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #2521 S1 — Erklaer- und Infobox-Texte (Spec begriff_erklaerung_infobox.md)
+//
+// Die Soll-Texte stehen als LITERALE in infoboxTexte.ts (PO-freigegebener
+// Wortlaut) — NICHT aus dem Katalog gelesen, sonst bestaetigt sich der Katalog
+// selbst. Gelesen wird `de` als Record, nicht ueber `t()`, damit der Test nicht
+// vom Typ des noch fehlenden Schluessels abhaengt.
+//
+// Gegenprobe (AC-15): ein leerer Wert, ein abweichender Wortlaut, ein fehlender
+// oder ein zusaetzlicher Schluessel macht einen der Faelle unten rot; ebenso
+// deutscher Fliesstext in einem der Bausteine ausserhalb von `t()`.
+// ─────────────────────────────────────────────────────────────────────────────
+const infoKeys = Object.keys(katalog).filter((k) => k.startsWith('info.'));
+const tipKeys = Object.keys(katalog).filter((k) => k.startsWith('tip.'));
+
+test('#2521 AC-15: jeder freigegebene info.*-Schluessel ist vorhanden, nicht leer und wortgleich', () => {
+	for (const [key, soll] of Object.entries(INFO_TEXTE)) {
+		assert.ok(katalog[key]?.trim().length > 0, `${key} fehlt oder ist leer`);
+		assert.equal(katalog[key], soll, `${key}: Wortlaut weicht vom freigegebenen Text ab`);
+	}
+});
+
+test('#2521 AC-15: jeder freigegebene tip.*-Schluessel ist vorhanden, nicht leer und wortgleich', () => {
+	for (const [key, soll] of Object.entries(TIP_TEXTE)) {
+		assert.ok(katalog[key]?.trim().length > 0, `${key} fehlt oder ist leer`);
+		assert.equal(katalog[key], soll, `${key}: Wortlaut weicht vom freigegebenen Text ab`);
+	}
+});
+
+test('#2521 AC-15: je Begriff ein nicht leerer Knopfname tip.aria.<begriff>, der den Begriff nennt', () => {
+	const namen = new Set<string>();
+	for (const b of BEGRIFFE) {
+		const wert = katalog[`tip.aria.${b}`];
+		assert.ok(wert?.trim().length > 0, `tip.aria.${b} fehlt oder ist leer`);
+		assert.match(wert, ARIA_WORT[b], `tip.aria.${b} nennt den Begriff nicht: "${wert}"`);
+		namen.add(wert);
+	}
+	assert.equal(namen.size, BEGRIFFE.length, 'zwei Knoepfe tragen denselben Namen (Vorlese-Hilfe unterscheidet sie nicht)');
+});
+
+test('#2521 AC-15: der Katalog enthaelt GENAU die freigegebenen info.*/tip.*-Schluessel (keine ungeprueften Texte)', () => {
+	const erlaubt = new Set([
+		...Object.keys(INFO_TEXTE),
+		...Object.keys(TIP_TEXTE),
+		...BEGRIFFE.map((b) => `tip.aria.${b}`)
+	]);
+	const fremd = [...infoKeys, ...tipKeys].filter((k) => !erlaubt.has(k));
+	assert.deepEqual(fremd, [], 'Katalog enthaelt nicht freigegebene Schluessel (z. B. info.wegpunkte.vergleich)');
+	assert.ok(infoKeys.length === Object.keys(INFO_TEXTE).length, `info.*: ${infoKeys.length} Schluessel statt 9`);
+	assert.ok(tipKeys.length === 8, `tip.*: ${tipKeys.length} Schluessel statt 8 (4 Texte + 4 Knopfnamen)`);
+});
+
+test('#2521 AC-15: Texte sagen nie „Tour“ (immer Trip)', () => {
+	const alle = [...infoKeys, ...tipKeys].map((k) => katalog[k]).join('\n');
+	assert.ok(alle.length > 0, 'keine info.*/tip.*-Texte im Katalog — Messaufbau leer');
+	assert.doesNotMatch(alle, /\bTour/);
+});
+
+test('#2521 AC-17: keine Handlungsempfehlung in info.*/tip.* (Verbotsliste)', () => {
+	const verboten = /solltest|sollte\b|empfehl|besser|ratsam|am besten|musst du/i;
+	for (const k of [...infoKeys, ...tipKeys]) {
+		assert.doesNotMatch(katalog[k], verboten, `${k}: Empfehlungsformel im Text: "${katalog[k]}"`);
+	}
+	assert.ok(infoKeys.length + tipKeys.length > 0, 'keine Texte geprueft — Messaufbau leer');
+});
+
+// doc-compliance-test
+test('#2521 AC-15: die neuen Bausteine tragen keinen Fliesstext ausserhalb von t() (nur das ⓘ-Zeichen ist erlaubt)', () => {
+	const dateien = [
+		'components/molecules/BegriffErklaerung.svelte',
+		'components/molecules/Infobox.svelte',
+		'components/ui/popover/popover-content.svelte'
+	];
+	for (const rel of dateien) {
+		const datei = join(frontend, 'src', 'lib', rel);
+		assert.ok(existsSync(datei), `${rel} existiert nicht`);
+		const src = readFileSync(datei, 'utf-8');
+		const markup = src
+			.replace(/<script[\s\S]*?<\/script>/g, '')
+			.replace(/<style[\s\S]*?<\/style>/g, '')
+			.replace(/<!--[\s\S]*?-->/g, '');
+		const ohneAusdruecke = markup.replace(/\{[^{}]*\}/g, '');
+		// Allowlist (Entscheidung): das Symbol ⓘ ist ein Zeichen, keine Sprache.
+		const text = ohneAusdruecke.replace(/<[^>]*>/g, ' ').replace(/ⓘ/g, '').trim();
+		assert.equal(text, '', `${rel}: Fliesstext im Markup: "${text}"`);
+		const code = src.replace(/<style[\s\S]*?<\/style>/g, '');
+		assert.doesNotMatch(
+			code,
+			/(aria-label|title|alt|placeholder)="[^"{]*[A-Za-zÄÖÜäöü]{3,}[^"]*"/,
+			`${rel}: deutscher Text in einem Attribut statt aus dem Katalog`
+		);
+	}
 });
