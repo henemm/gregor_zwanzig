@@ -253,8 +253,8 @@ Umständen.
   Kurzform-Kanal (global oder je Kanal-Reiter, dabei global ebenfalls aktiv gemäß
   ADR-0050) und speichert; ODER eine Bestandsdatei mit dem eingefrorenen Muster (Elter an,
   alle drei Kinder explizit aus) wird migriert.
-- **Output:** Die anschließend erzeugte Kurzform (SMS/Premium-SMS/Telegram-Kurzform, sofern
-  #2455 dort separat behoben ist) enthält FD/FL (Tageswerte) bzw. FN (Nachtwert im
+- **Output:** Die anschließend erzeugte Kurzform (SMS/Premium-SMS/Telegram-Kurzform; die
+  Telegram-Kurzform übernimmt die SMS-Auswahl, gewolltes Verhalten gemäß #2455) enthält FD/FL (Tageswerte) bzw. FN (Nachtwert im
   Abendbriefing). Die CODES/KUERZEL-Antwort im Trip-Kontext bewirbt „TF" nicht mehr; im
   Ortsvergleich-Kontext bleibt sie unverändert.
 - **Side effects:** `deriveMissingChildMetrics()`/`moveWithDerivedChildren()` wirken
@@ -408,13 +408,11 @@ Umständen.
 
 ## Known Limitations
 
-- **Telegram-Kurzform separat:** Telegram-Kurzform nutzt heute die `sms`-Metrik-Auswahl
-  statt eines eigenen Telegram-Layouts (`trip_report.py:345`) — eigener Nebenbefund, wird
-  in Issue #2455 behandelt, nicht Teil dieser Spec. **Der Fehler dieses Tickets ist für
-  Telegram-Kurzform trotzdem mit behoben:** Weil sie denselben Kurzform-Text (`sms_text`)
-  sendet, erscheinen FD/FL dort genauso wie in SMS und Premium-SMS (nachgewiesen in AC-13).
-  Offen bleibt nur, dass eine *abweichende* Telegram-Spalten-Auswahl in der Kurzform nicht
-  wirkt (#2455).
+- **Telegram-Kurzform folgt der SMS-Auswahl (gewolltes Verhalten, #2455):** Die
+  Telegram-Kurzform sendet den `sms_text` und übernimmt damit die SMS-Auswahl
+  (`channel_layouts.sms`) 1:1; eine eigene Telegram-Auswahl gilt nur für das ausführliche
+  Telegram. FD/FL erscheinen dort daher genauso wie in SMS und Premium-SMS (nachgewiesen
+  in AC-13). Das ist kein Defekt, sondern PO-Entscheidung vom 2026-10-09.
 - **`channel_layouts_per_report` ohne Editor-UI:** Der Editor liest/schreibt dieses Feld
   nicht (nur `cockpitHelpers568.ts` prüft es auf Nicht-`null`) — nur die Migration deckt
   bestehende Dateien mit diesem Legacy-Feld (#434) ab; kein neues Editor-Verhalten dafür.

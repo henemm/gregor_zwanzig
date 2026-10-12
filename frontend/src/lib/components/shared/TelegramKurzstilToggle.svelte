@@ -15,6 +15,7 @@
 	// Spec: docs/specs/modules/feat_1260_telegram_kurzstil.md (AC-11)
 
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		/** Kontext-Marker fuer die Sharing-Invariante (AC-11) — beide Kontexte
@@ -57,9 +58,9 @@
 	</span>
 	<p class="tks-sub">
 		{#if disabled}
-			Erst aktiv, wenn Telegram als Kanal an ist.
+			{t('telegram_kurzstil.hinweis_inaktiv')}
 		{:else}
-			Telegram bekommt denselben kurzen Ein-Zeilen-Text wie SMS — ohne Knöpfe.
+			{t('telegram_kurzstil.hinweis_aktiv')}
 		{/if}
 	</p>
 </div>

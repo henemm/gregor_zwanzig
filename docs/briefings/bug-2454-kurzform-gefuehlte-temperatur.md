@@ -25,7 +25,7 @@ Tests prüfen Editor, Speicherung und Kurzform-Text automatisiert; Zustellung un
 
 - Ohne diese Zusatzregel bleibt der Fehler bei frisch gewählten Werten bestehen; eine bewusst abgewählte Zeile kann später zurückkommen.
 - Eine Datenbereinigung ändert echte Bestandsdaten, auch Ihren Trip KHW 403; eng begrenzt auf das Fehlermuster.
-- Telegram-Kurzform mit abweichender Spaltenauswahl bleibt defekt, wird separat in Issue #2455 behandelt.
+- Telegram-Kurzform übernimmt die SMS-Auswahl, gewolltes Verhalten gemäß Issue #2455 (PO-Entscheidung 2026-10-09); eine abweichende Telegram-Auswahl gilt nur für das ausführliche Telegram.
 
 ## Freigabe-Frage
 

@@ -327,6 +327,10 @@ Ein **eigenständiger** Marker `X?` (2 Zeichen, GSM-7-sicher) signalisiert: für
 
 Quelle des Flags: `src/output/tokens/dto.py` (`NormalizedForecast.official_alerts_unavailable`), Emission in `src/output/tokens/builder.py`. Vertraglich abgesichert durch `docs/specs/modules/feat_1349_sms_unavailable.md`.
 
+### 3.4e Telegram-Kurzform folgt der SMS-Auswahl (Issue #2455)
+
+Die Telegram-Kurzform (`telegram_style="kurzform"`, Schalter „Telegram im SMS-Kurzstil") sendet den `sms_text` und übernimmt damit die SMS-Auswahl (Metriken, Reihenfolge, Layout aus `channel_layouts.sms`, im Ortsvergleich `channel_active_metrics.sms`) 1:1. Das ist **gewolltes Verhalten** (PO-Entscheidung 2026-10-09), kein Defekt: eine abweichende Telegram-Auswahl bleibt bei Kurzform wirkungslos und gilt nur für das ausführliche Telegram (`rich`). Abgesichert durch `tests/tdd/test_telegram_kurzform_ignoriert_telegram_auswahl.py`; in der Oberfläche erklärt der Hinweis am Schalter die Regel. Spec: `docs/specs/modules/telegram_kurzform_sms_auswahl_2455.md`.
+
 ### 3.4b Confidence-Symbol `C` — entfallen (v2.34, Issue #2233)
 
 Das in v2.1 (Issue #121) spezifizierte Token `C+`/`C~`/`C?` wurde nie im Builder erzeugt und ist per PO-Entscheid 2026-09-08 aus dem Vertrag gestrichen: `confidence_pct` ist keine wählbare Metrik (#710), und das SMS-Zeichenbudget ist knapp. Die Vorhersage-Verlässlichkeit erscheint nur im E-Mail-Textblock.
