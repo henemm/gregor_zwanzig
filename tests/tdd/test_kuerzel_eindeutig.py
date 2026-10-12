@@ -97,7 +97,7 @@ KUERZEL_WORTLAUT_DE = "\n".join([
     "Format: E4 Etappe 4, 23@5 über der Schwelle ab 5 Uhr, (24@7) Spitze, "
     "D13/27 Tiefst/Höchst, +HL Hagel, - nichts, ? keine Daten.",
     "Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN "
-    "Schnee, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H "
+    "Schnee, AW Lawine, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H "
     "niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine "
     "Warndaten.",
 ])
@@ -278,9 +278,9 @@ def test_codes_tokenizer_selbsttest_am_spec_wortlaut():
         "fire zones/top level/massifs.\n"
         "Format: E4 stage 4, 23@5 over limit from 5h, (24@7) peak, D13/27 "
         "min/max, +HL hail, - none, ? no data.\n"
-        "Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, IC "
-        "ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: "
-        "Meteo-France rain/storm risk. X? no alert data."
+        "Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW "
+        "avalanche, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: "
+        "MF rain/storm risk. X? no data."
     )
     tokens = _codes_tokens(spec_codes)
     codes = _soll_codes_ac9() | {"T", "TF", "C"}

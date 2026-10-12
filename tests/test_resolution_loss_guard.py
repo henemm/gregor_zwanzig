@@ -735,11 +735,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
         "Log. Der logger.warning der Nachbarhälfte hat mit diesem Zweig nichts "
         "zu tun."
     ),
-    "src/services/official_alerts/meteoalarm.py::_group_and_map_info_entries::0": (
-        "A13 (#1405, vormals _extract_alerts_from_cap:362; Funktion mit #1445 "
-        "aufgeteilt) — ganze Warnung fällt weg bei unbekanntem awareness_type "
-        "(_TYPE_HAZARD_MAP-Fehltreffer)."
-    ),
+    # A13 BEHOBEN (#1430): _group_and_map_info_entries meldet verworfene
+    # awareness_types jetzt per logger.debug (Eintrag entfernt, Liste schrumpft).
     # --- Beim Bau des Wächters NEU gefunden (nicht in der Bestandsaufnahme).
     # Jede Zeile von Hand nachgelesen; jede ist die exakte Mechanik einer
     # bereits belegten Fundstelle an einer weiteren Stelle. Reparatur gehört
@@ -869,7 +866,7 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # nachziehen, s. Spec #1466 "Known Limitations").
     # (Die Spec-Tabelle nennt "_parse_cap" — dieser Name existiert nicht.)
     "src/services/official_alerts/meteoalarm.py::_collect_cap_info_entries": 1,
-    "src/services/official_alerts/meteoalarm.py::_group_and_map_info_entries": 1,
+    # A13 BEHOBEN (#1430): Verwerfen wird geloggt -> Eintrag entfernt (Summe 12).
 }
 
 
