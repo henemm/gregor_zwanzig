@@ -15,7 +15,7 @@
 	// duenne DOM-Event-Verdrahtung (PO-Vorgabe: Geste muss funktionieren) —
 	// funktioniert unveraendert auch fuer den Ordinal-Modus (scale=[0,2], step=1).
 	import { untrack } from 'svelte';
-	import { Eyebrow } from '$lib/components/atoms';
+	import { Eyebrow } from '$lib/components/atoms'; import Infobox from '$lib/components/molecules/Infobox.svelte'; import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 	import { api } from '$lib/api';
 	import { baueTripSpeicherung } from '../tripSpeicherung.ts';
 	import { toCompareProfile, type ActivityProfile, type Trip, type SensLevel, type Corridor, type ComparePreset } from '$lib/types';
@@ -45,7 +45,7 @@
 		/** Issue #2277 S2a: Anlege-Modus fuer context="route" (/trips/new) —
 		 *  schaltet den Selbst-Speicher-Pfad (PUT via saveController) ab, meldet
 		 *  Aenderungen stattdessen ausschliesslich ueber onCorridorsChange. */
-		createMode?: boolean;
+		createMode?: boolean; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
@@ -73,7 +73,7 @@
 	}
 	let {
 		context = 'route',
-		createMode = false,
+		createMode = false, showInfobox = false,
 		trip,
 		onTripUpdate,
 		saveController,
@@ -375,11 +375,11 @@
 
 <svelte:window onpointermove={onWindowPointerMove} onpointerup={onWindowPointerUp} />
 
-<div class="corridor-editor" data-testid="corridor-editor-{context}">
+<div class="corridor-editor" data-testid="corridor-editor-{context}">{#if showInfobox}<Infobox reiter="wertebereiche" {context} />{/if}
 	{#if context === 'vergleich' && compareDefsError}
 		<!-- Issue #1350 Teil 3 (AC-4): sichtbarer Fehlerzustand statt still
 		     leerem Editor bei Endpoint-Ausfall -- kein Pool, keine Zeilen. -->
-		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<p class="ce-error" role="alert" data-testid="corridor-editor-vergleich-load-error">
 			{compareDefsError}
 		</p>
@@ -390,16 +390,16 @@
 			onclick={() => (compareDefsError = null)}
 		>Wiederholen</button>
 	{:else if context === 'vergleich' && compareDefs === null}
-		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-vergleich-loading">Lade Metriken…</p>
 	{:else if context === 'route' && routeExtraDefs === null}
 		<!-- Issue #1425 (AC-6): erkennbarer Ladezustand, statt kurz nur die alten
 		     6 Metriken zu zeigen und die uebrigen nachpoppen zu lassen. -->
-		<Eyebrow>Wertebereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-route-loading">Lade Metriken…</p>
 	{:else}
 	{#if context === 'vergleich'}
-		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<h2 class="ce-h2">Sag mir, welche Werte dir ideal sind</h2>
 		<p class="ce-lead">
 			Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im
@@ -410,7 +410,7 @@
 		     Sofort-Meldung, die er nicht ausloest — `corridor.notify` hat keinen
 		     Leser, die Alarme kommen ausschliesslich aus
 		     display_config.metric_alert_levels (Reiter Alarme, seit #1371). -->
-		<Eyebrow>Wertebereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<h2 class="ce-h2">Sag mir, welche Werte für dich passen</h2>
 		<p class="ce-lead">
 			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im
@@ -610,6 +610,8 @@
 	.ce-ordinal-group { display: inline-flex; gap: 4px; }
 	.ce-ordinal-btn { padding: 3px 8px; font-size: 11px; border-radius: var(--g-r-2, 4px); border: 1px solid var(--g-rule); background: transparent; color: var(--g-ink-3); cursor: pointer; }
 	.ce-ordinal-btn.on { border-color: var(--g-accent); color: var(--g-accent-deep); background: var(--g-accent-tint); }
+	/* #2521 S1: Ueberschrift + ⓘ in einer Zeile (Eyebrow ist display:block). */
+	.ce-eyebrow-row { display: flex; align-items: center; gap: 4px; }
 	@media (max-width: 899px) {
 		.corridor-editor { padding: 1rem; max-width: 100%; }
 	}

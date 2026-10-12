@@ -10,6 +10,8 @@ tags: [frontend, go, python, onboarding, hilfe, tooltip, infobox, standardwerte,
 
 # Onboarding und Hilfe für eingeladene Nutzer
 
+S1 (Tooltips+Infoboxen) ist in begriff_erklaerung_infobox.md spezifiziert; PO-Entscheid 2026-10-08: Popover per Tippen statt Hover-Tooltip; Frontend-Tests laufen über node --test, nicht Vitest.
+
 ## Approval
 
 - [ ] Approved (PO-Freigabe ausstehend: ACs auf Deutsch lesen und mit `approved` bzw. `freigabe` bestätigen)

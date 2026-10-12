@@ -231,8 +231,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/groups` | GET, POST |
 | `/api/groups/{id}` | DELETE, PATCH |
 | `/api/health` | GET |
-| `/api/internal/premium-sms-learn` | POST | — interner Lernweg der Garmin-Antwortadresse (#1676 S1; im Inventar nachgetragen #2218)
-| `/api/internal/telegram-connect` | POST |
+| `/api/internal/premium-sms-learn` | POST | — Auth `X-GZ-Core-Auth`: 401 fehlend/falsch, 503 nicht konfiguriert (#2159); interner Lernweg der Garmin-Antwortadresse (#1676 S1; im Inventar nachgetragen #2218)
+| `/api/internal/telegram-connect` | POST | — Auth `X-GZ-Core-Auth`: 401 fehlend/falsch, 503 nicht konfiguriert (#2159); interner Verknüpfungsweg des Telegram-Kontos (#2141)
 | `/api/locations` | GET, POST |
 | `/api/locations/resolve` | POST |
 | `/api/locations/{id}` | DELETE, GET, PATCH, PUT |
@@ -3548,9 +3548,12 @@ sending chat's `chat_id` on that user (Issue #2141: erst nach einer Eindeutigkei
 | 422 | `{"error":"token invalid or expired"}` | Token unknown or past its 24h TTL |
 | 500 | `{"error":"lookup failed"}` | `FindUserByTelegramChatID` failed |
 | 500 | `{"error":"save failed"}` | `SaveUser` failed |
+| 401 | `{"error":"unauthorized"}` | **(Issue #2159)** Header `X-GZ-Core-Auth` fehlt oder ist falsch (`coreauth.RequireCoreAuth`, ADR-0062) |
+| 503 | `{"error":"core_auth_not_configured"}` | **(Issue #2159)** Go-seitig ist `GZ_CORE_SHARED_SECRET` nicht gesetzt (fail-closed) |
 | 403 | `forbidden` (plain text) | Request did not originate from `127.0.0.1`/`::1`, or arrived via a proxy header (`requireLocalOnly`) |
 
 **Notes:**
+- Auth: Header `X-GZ-Core-Auth` (gemeinsames Geheimnis), gesendet von `lib.go_internal.post_internal`. Python-`/health` zeigt die wirksame Go-Basis-URL im Feld `go_api_url` (kein Secret).
 - Uniqueness check and `SaveUser` run under the same process-wide mutex (`telegramConnectMu`) to
   close a TOCTOU window between two concurrent connect attempts targeting the same `chat_id`
   (Issue #2141).
@@ -3618,6 +3621,8 @@ fresh stored match on the same `from` and no resolving `code` was provided (Issu
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"bad_request"}` | JSON not decodable, or `from` empty |
+| 401 | `{"error":"unauthorized"}` | **(Issue #2159)** Header `X-GZ-Core-Auth` fehlt oder ist falsch (ADR-0062); der Python-Leser behandelt 401/403/503 als vorübergehend (Lesezeiger rückt nicht vor) |
+| 503 | `{"error":"core_auth_not_configured"}` | **(Issue #2159)** Go-seitig ist `GZ_CORE_SHARED_SECRET` nicht gesetzt (fail-closed) |
 | 403 | `forbidden` (plain text) | Request did not originate from `127.0.0.1`/`::1`, or arrived via a proxy header (`requireLocalOnly`) |
 | 409 | `{"error":"skipped","reason":"no_unique_premium_candidate"}` | No Premium user with a stored match to `from` exists, and no `code` provided, or no single unambiguous Premium candidate exists |
 | 409 | `{"status":"skipped","reason":"stored_reply_to_ambiguous"}` | Two or more Premium users hold a fresh stored match on `from` (Garmin reuses reply addresses from a rotating pool) and no `code` resolved the collision — no user record is written (Issue #2328) |

@@ -23,7 +23,7 @@
 		wetterMetrikenZustandsBruecke
 	} from './weather-metrics-tab/weatherMetricsCompareSave.ts';
 	import { HORIZONS_ALL } from '$lib/types';
-	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms';
+	import { Btn, Card, Eyebrow, Pill } from '$lib/components/atoms'; import Infobox from '$lib/components/molecules/Infobox.svelte';
 	// Issue #1311 (C1, Fix-Loop 1 / F001): private Sub-Komponenten von
 	// WeatherMetricsTab mitverschoben nach shared/weather-metrics-tab/ (kein
 	// weiterer Importeur, s. grep-Beweis in der Fix-Loop-Rueckmeldung).
@@ -221,7 +221,7 @@
 		// `saveController` (Anlege-Seite) bleibt der Speicherzweig inaktiv.
 		preset?: ComparePreset;
 		onCompareUpdate?: (updated: ComparePreset) => void;
-		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 	}
 	let {
 		context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange,
@@ -231,7 +231,7 @@
 		onVergleichsMetrikenChange, onOfficialAlertsEnabledChange, onDayWindowStartHourChange, onDayWindowEndHourChange,
 		onHourlyMetricKeysChange, onHourlyEnabledChange, onOutlookMetricKeysChange, onOutlookMetricFormatsChange,
 		onOutlookEnabledChange,
-		preset, onCompareUpdate, enqueueHubWrite
+		preset, onCompareUpdate, enqueueHubWrite, showInfobox = false
 	}: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
@@ -1425,7 +1425,7 @@
 		{/if}
 	</UiCard.Root>
 {/snippet}
-
+{#if showInfobox}<Infobox reiter="wetter-metriken" {context} />{/if}
 {#if context === 'vergleich'}
 	<!-- Issue #1311 (C1): Vergleich-Grundauswahl — an/aus je Metrik, keine
 	     Buckets/Horizonte/SMS-Schwellen/Report-Config (AC-1, AC-8

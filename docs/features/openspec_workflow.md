@@ -28,7 +28,8 @@ Die Commands sind zweistellig; Deploy ist eine **eigene** Phase:
   Umgebungsvariable `GZ_ACTIVE_WORKFLOW` (Symlink-Fallback deaktiviert).
 - **Hooks erzwingen den Ablauf** (Auswahl): `workflow_gate` (Phasen-Sequenz,
   AC-N-Pflicht), `qa_gate`/Adversary-Verdict-Gating, `renderer_mail_gate`
-  (#811), `e2e_commit_gate`, `nebenbefund_gate`, `test_naming_gate`.
+  (#811), `e2e_commit_gate`, `test_naming_gate` (`nebenbefund_gate` am
+  Prüfdatum 2026-10-09 zurückgebaut, #1197 — Regel steht weiter in CLAUDE.md).
   Gate-/Hook-Bugs gehören ins Plugin-Repo (agent-os-openspec).
 - Die verbindliche Kurzreferenz der Regeln (LoC-Limit, Execution-Log,
   Token-Tracking, Trigger-Typen) steht in **CLAUDE.md → „Workflow-Tools v3"**.

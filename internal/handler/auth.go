@@ -221,7 +221,7 @@ func hasVerifiedEmail(s *store.Store, userId string) (verified bool, readable bo
 // als Abkuerzung setzen; das Gate liegt deshalb unumgehbar hier.
 //
 // Liefert false, wenn bereits geantwortet wurde (Gate oder Fehlerfall).
-func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret string) bool {
+func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret, publicHost string) bool {
 	verified, readable := hasVerifiedEmail(s, userId)
 	if !readable {
 		w.Header().Set("Content-Type", "application/json")
@@ -235,7 +235,7 @@ func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId
 		w.Write([]byte(`{"error":"email_not_verified"}`))
 		return false
 	}
-	return issueSessionWithoutVerificationGate(w, r, s, userId, secret)
+	return issueSessionWithoutVerificationGate(w, r, s, userId, secret, publicHost)
 }
 
 // issueSessionWithoutVerificationGate mintet eine Anmelde-Kennung, traegt sie
@@ -252,7 +252,7 @@ func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId
 // sichtbar; ein Parameter an issueSession haette sie unsichtbar gemacht.
 //
 // Liefert false, wenn bereits geantwortet wurde (Fehlerfall).
-func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret string) bool {
+func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret, publicHost string) bool {
 	// Issue #2155 S3 (ADR-0080): gesperrte Konten bekommen keine Sitzung.
 	// Ladefehler => fail-closed. Nach der Credential-Pruefung, damit ein
 	// falsches Passwort weiter 401 liefert (kein Existenz-Leak).
@@ -283,11 +283,11 @@ func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request,
 		w.Write([]byte(`{"error":"store_error"}`))
 		return false
 	}
-	middleware.SetSessionCookie(w, r, middleware.SignSessionWithID(userId, sessionId, secret))
+	middleware.SetSessionCookie(w, r, middleware.SignSessionWithID(userId, sessionId, secret), publicHost)
 	return true
 }
 
-func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
+func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req authRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -331,7 +331,7 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 			return
 		}
 
-		if !issueSession(w, r, s, req.Username, secret) {
+		if !issueSession(w, r, s, req.Username, secret, publicHost) {
 			return
 		}
 
@@ -1557,7 +1557,7 @@ func hasControlChars(s string) bool {
 	return false
 }
 
-func ChangePasswordHandler(s *store.Store, bcryptCost int, secret string) http.HandlerFunc {
+func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
@@ -1629,7 +1629,7 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret string) http.H
 		// Adresse geaendert hat, steht auf EmailVerifiedAt == nil — er muss
 		// sein Passwort weiter aendern koennen, ohne dabei ausgesperrt zu
 		// werden. Das ist die einzige Stelle, die die Ausnahme nutzen darf.
-		if !issueSessionWithoutVerificationGate(w, r, s, userId, secret) {
+		if !issueSessionWithoutVerificationGate(w, r, s, userId, secret, publicHost) {
 			return
 		}
 

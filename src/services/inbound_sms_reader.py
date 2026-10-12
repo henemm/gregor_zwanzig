@@ -70,12 +70,13 @@ from services.trip_command_processor import (
 # `.process()` abfaengt und keine Parse-Logik nachbildet
 # (tests/unit/test_inbound_sms_reply_learning.py::_CommandProcessorRecorder).
 from services.trip_command_processor import TripCommandProcessor as _ParseNurProcessor
+from lib.go_internal import post_internal
 from services.trip_selection import ZIELLOS_SCHLUESSEL, resolve_command_target
 
 logger = logging.getLogger(__name__)
 
 JOURNAL_URL = "https://gateway.seven.io/api/journal/inbound"
-LEARN_ENDPOINT = "http://localhost:8090/api/internal/premium-sms-learn"
+LEARN_PATH = "/api/internal/premium-sms-learn"
 GARMIN_MARKER = "inreachlink.com"
 # Issue #2323: bewusst EIGENE Konstante, nicht aus premium_sms.py importiert --
 # sonst folgte dieses Gate einer Aenderung der Absendernummer stillschweigend.
@@ -248,11 +249,12 @@ class InboundSmsReader:
             if dry_run:
                 payload["dry_run"] = True
             try:
-                response = httpx.post(LEARN_ENDPOINT, json=payload, timeout=5)
+                response = post_internal(LEARN_PATH, json=payload, timeout=5)
             except Exception as e:
                 failed += 1
                 logger.warning(
-                    "premium-sms-learn fehlgeschlagen (Netzwerk) fuer maskierte "
+                    "premium-sms-learn fehlgeschlagen (Netzwerk oder Geheimnis "
+                    "nicht konfiguriert) fuer maskierte "
                     "Nummer %s: %s -- Zeiger bleibt stehen (Fix F001).",
                     _mask(sender), e,
                 )
@@ -283,9 +285,10 @@ class InboundSmsReader:
                             "fuer maskierte Nummer %s: %s -- Lernvorgang bleibt "
                             "erfolgreich (AC-6).", _mask(sender), e,
                         )
-            elif 400 <= response.status_code < 500:
+            elif 400 <= response.status_code < 500 and response.status_code not in (401, 403):
                 # Bewusste Ablehnung (409 fehlender/ungueltiger Code, 429
-                # Ratebremse) -- abschliessende Entscheidung, kein
+                # Ratebremse) -- abschliessende Entscheidung (401/403 sind
+                # Fehlkonfiguration des Geheimnisses, #2159: vorruebergehend), kein
                 # Wiederholungsgrund, aber sichtbar (Issue #2154 AC-11).
                 max_seen = max(max_seen, msg_id)
                 rejected += 1

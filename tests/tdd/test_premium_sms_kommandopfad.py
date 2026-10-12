@@ -391,6 +391,10 @@ def _poll(monkeypatch, *, journal: _Journal, lernen: _LernEndpunkt,
     """
     monkeypatch.setattr(reader_mod, "classify_origin", lambda root: herkunft)
     monkeypatch.setattr(reader_mod, "httpx", _HttpSchicht(journal, lernen))
+    # #2159: der Lern-Aufruf geht ueber lib.go_internal.post_internal (Header + Secret).
+    import lib.go_internal as go_internal_mod
+    monkeypatch.setattr(go_internal_mod, "httpx", _HttpSchicht(journal, lernen))
+    monkeypatch.setenv("GZ_CORE_SHARED_SECRET", "fixture-core-secret-0123456789abcdef")
     if dry_run_env:
         monkeypatch.setenv(reader_mod.DRYRUN_ENV_VAR, "1")
     else:

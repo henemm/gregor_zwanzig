@@ -209,7 +209,7 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 		if !ok {
 			return
 		}
-		if !issueSession(w, r, s, userID, cfg.SessionSecret) {
+		if !issueSession(w, r, s, userID, cfg.SessionSecret, cfg.PublicHost) {
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]string{"id": userID})

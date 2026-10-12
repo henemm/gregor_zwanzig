@@ -5,6 +5,12 @@
 //   1. `.svelte`-Dateien werden mit svelte/compiler nach SSR-JS uebersetzt,
 //      so dass `render()` aus `svelte/server` sie ausgeben kann.
 //   2. `$lib/x.js`-Importe (SvelteKit-Konvention) zeigen auf `src/lib/x.ts`.
+//   3. Runen-Module aus Bibliotheken (`node_modules/**/*.svelte.js`, z. B.
+//      bits-ui) werden mit `compileModule` uebersetzt — sonst bricht jeder
+//      Render, der einen bits-ui-Baustein enthaelt (seit #2521 S1 das ⓘ im
+//      Alarme-/Wertebereiche-Reiter), mit `$state is not defined` ab. Bewusst
+//      NUR node_modules: eigene `*.svelte.ts`-Module behandeln die Tests selbst
+//      (Muster trip-new/__tests__/ssrRunesHook.mjs).
 //
 // Registrierung erfolgt IM TESTFILE via node:module `register()` — der
 // Basis-Pfad wird dort relativ zur Testdatei aufgeloest (Pfadregel #1409),
@@ -12,7 +18,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { compile } from 'svelte/compiler';
+import { compile, compileModule } from 'svelte/compiler';
 
 /** Erste existierende Variante eines Modul-URLs (.ts/.svelte/index.ts). */
 function firstExisting(baseUrl) {
@@ -41,6 +47,11 @@ export async function resolve(specifier, context, nextResolve) {
 }
 
 export async function load(url, context, nextLoad) {
+	if (url.startsWith('file:') && url.includes('/node_modules/') && url.endsWith('.svelte.js')) {
+		const file = fileURLToPath(url);
+		const { js } = compileModule(readFileSync(file, 'utf-8'), { generate: 'server', filename: file });
+		return { format: 'module', shortCircuit: true, source: js.code };
+	}
 	if (url.endsWith('.svelte')) {
 		const file = fileURLToPath(url);
 		const { js } = compile(readFileSync(file, 'utf-8'), {

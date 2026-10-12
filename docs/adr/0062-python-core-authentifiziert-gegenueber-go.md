@@ -113,3 +113,18 @@ Daraus folgende Regeln:
   selbsttätig aufzählt und an einem Fake-Python-Core misst, was dort tatsächlich ankommt.
 - **Bereits laufende Prozesse** ändern ihr Verhalten nicht rückwirkend — der Schutz wirkt erst
   beim nächsten Prozessstart nach dem Eintragen des Geheimnisses.
+
+## Nachtrag 2026-10-09 (#2159): Rückrichtung Python → Go
+
+Dasselbe Geheimnis (`GZ_CORE_SHARED_SECRET`) und derselbe Header (`X-GZ-Core-Auth`) gelten
+auch für die zwei internen Go-Endpunkte `POST /api/internal/telegram-connect` und
+`POST /api/internal/premium-sms-learn`. „Loopback + kein nginx-Header" (`requireLocalOnly`) bleibt
+als zusätzliche Schicht erhalten, ist aber nicht mehr der Auth-Träger.
+
+- **Go (ein zentraler Ort):** `coreauth.RequireCoreAuth(secret)` (`internal/coreauth/verify.go`),
+  im Router um beide Routen gelegt. Fehlender/falscher Header → **401**; Go-seitig kein Geheimnis
+  konfiguriert → **503** (fail-closed, nie „leer gleich leer"). Vergleich sha256 + `subtle`.
+- **Python (ein zentraler Ort):** `lib.go_internal.post_internal()` setzt Basis-URL
+  (`GZ_GO_API_URL`, Default `http://localhost:8090`) und Header; ohne Secret wird nicht gesendet.
+- **Folge für Aufrufer:** 401/403/503 gelten als vorübergehend (Premium-SMS-Lesezeiger rückt nicht
+  vor), 409/429 bleiben endgültig.

@@ -17,6 +17,7 @@ import (
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/mail"
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -51,7 +52,7 @@ func GoogleOAuthInitHandler(cfg *config.Config) http.HandlerFunc {
 		}
 		state := hex.EncodeToString(stateBytes)
 
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
+		secure := middleware.CookieSecure(r, cfg.PublicHost)
 		http.SetCookie(w, &http.Cookie{
 			Name:     "gz_oauth_state",
 			Value:    state,
@@ -199,7 +200,7 @@ func googleOAuthCallbackHandlerInternal(cfg *config.Config, s *store.Store, user
 
 		// Das Gate in issueSession bleibt als Rueckfallebene bestehen (kein
 		// Weg umgeht es), ist hier aber durch die Vorpruefung unerreichbar.
-		if !issueSession(w, r, s, userId, cfg.SessionSecret) {
+		if !issueSession(w, r, s, userId, cfg.SessionSecret, cfg.PublicHost) {
 			return
 		}
 

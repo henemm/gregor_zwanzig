@@ -69,7 +69,10 @@ Briefing-Mutex → flock. Gilt nur auf lokalem Dateisystem. Ersetzt ADR-0031.
 Die Vertragsgrenze zwischen Go und Python ist HTTP mit den DTOs aus
 `docs/reference/api_contract.md`. Seit Issue #2142 authentifiziert sich die Go-API gegenüber
 dem Python-Core mit einem gemeinsamen Geheimnis (`GZ_CORE_SHARED_SECRET`, Header
-`X-GZ-Core-Auth`) — Details siehe `docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`.
+`X-GZ-Core-Auth`) — Details siehe `docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`. Seit #2159 gilt dasselbe
+Geheimnis in Gegenrichtung: Die internen Go-Endpunkte (`/api/internal/premium-sms-learn`,
+`/api/internal/telegram-connect`) verlangen zusätzlich zum Localhost-Guard `X-GZ-Core-Auth`;
+Python ruft sie über `src/lib/go_internal.py::post_internal` (Basis-URL `GZ_GO_API_URL`).
 
 ### Python-Core: Wetter-Pipeline und Rendering
 
@@ -733,7 +736,7 @@ frontend/
 │   │   │   ├── atoms/             # Atom-Schicht (Atomic Design Level 1, Epic #371)
 │   │   │   │   └── *.svelte       # Token-basierte UI-Primitive (Button, Label, Badge, etc.)
 │   │   │   ├── molecules/         # Molecule-Schicht (Atomic Design Level 2, Epic #372)
-│   │   │   │   └── *.svelte       # Combinations of atoms (FieldGroup, StatCard, etc.)
+│   │   │   │   └── *.svelte       # Combinations of atoms (FieldGroup, StatCard, BegriffErklaerung, Infobox, etc.)
 │   │   │   ├── organisms/         # Organism-Schicht (Atomic Design Level 3, Epic #471)
 │   │   │   │   ├── index.ts       # Barrel re-export (19 Organisms — Datei lesen, nicht raten)
 │   │   │   │   └── organisms.test.ts  # Source-inspection tests (no ui/ imports)

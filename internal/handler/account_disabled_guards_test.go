@@ -45,7 +45,7 @@ func TestIssueSession_UnreadableProfileIsFailClosed(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", nil)
 	w := httptest.NewRecorder()
-	if issueSessionWithoutVerificationGate(w, req, s, uid, issuanceSecret) {
+	if issueSessionWithoutVerificationGate(w, req, s, uid, issuanceSecret, "") {
 		t.Fatalf("Ladefehler: Ausgabe muss scheitern (fail-closed), lieferte true")
 	}
 	if w.Code < 400 {
