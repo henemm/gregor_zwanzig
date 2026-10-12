@@ -396,8 +396,8 @@ e2e/send-in-flight-guard.spec.ts
 # begriff-erklaerung.spec.ts -- bewacht im echten Browser Popover-Oeffnen/Schliessen
 # (Esc, Klick daneben, Enter, Leertaste, Fokus-Rueckgabe auf das ⓘ), die Infobox je
 # Anlege-Reiter von /trips/new und /compare/new und die Konsolen-Sauberkeit.
-# Filter A: kein waitForTimeout/skip/fixme, kein .staging.spec. Stand: in RED
-# aufgenommen, die Implementierung existiert noch nicht. Filter B (3x gruen im
-# Zielverbund) ist NOCH NICHT gemessen -- das Nachmessen gehoert zu /50-implement;
-# bis dahin ist der Eintrag eine Vorab-Reservierung, kein Filter-B-Beleg.
+# Filter A: kein waitForTimeout/skip/fixme, kein .staging.spec. In RED aufgenommen,
+# Implementierung seit c61885dea. Filter B (3x gruen im Zielverbund) wird im
+# CI-Hauptlauf des PR gemessen (Erstlauf + 2 Wiederholungen des e2e-Jobs); der
+# PR wird erst nach drei gruenen Laeufen gemerged. Fallzahl: 19 (+ global.setup).
 e2e/begriff-erklaerung.spec.ts

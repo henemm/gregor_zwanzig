@@ -733,7 +733,7 @@ frontend/
 │   │   │   ├── atoms/             # Atom-Schicht (Atomic Design Level 1, Epic #371)
 │   │   │   │   └── *.svelte       # Token-basierte UI-Primitive (Button, Label, Badge, etc.)
 │   │   │   ├── molecules/         # Molecule-Schicht (Atomic Design Level 2, Epic #372)
-│   │   │   │   └── *.svelte       # Combinations of atoms (FieldGroup, StatCard, etc.)
+│   │   │   │   └── *.svelte       # Combinations of atoms (FieldGroup, StatCard, BegriffErklaerung, Infobox, etc.)
 │   │   │   ├── organisms/         # Organism-Schicht (Atomic Design Level 3, Epic #471)
 │   │   │   │   ├── index.ts       # Barrel re-export (19 Organisms — Datei lesen, nicht raten)
 │   │   │   │   └── organisms.test.ts  # Source-inspection tests (no ui/ imports)
