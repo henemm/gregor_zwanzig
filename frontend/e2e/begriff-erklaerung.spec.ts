@@ -83,8 +83,13 @@ async function wechsleTripReiter(page: Page, mobil: boolean, reiter: TripReiter)
 async function tripBis(page: Page, mobil: boolean, ziel: TripReiter): Promise<void> {
 	await page.setViewportSize(mobil ? MOBILE : DESKTOP);
 	await page.goto('/trips/new');
-	await page.getByTestId(`trip-new-name-input-${mobil ? 'mobile' : 'desktop'}`).fill('E2E-GZ-Infobox-Trip');
-	await page.getByTestId('trip-new-date-input').fill(new Date().toISOString().slice(0, 10));
+	// Eingaben vor der Hydration gehen verloren (Zustand wird zurueckgesetzt, Etappen
+	// bleibt gesperrt „⊘“). Deshalb Eingabe wiederholen, bis Etappen freigeschaltet ist.
+	await expect(async () => {
+		await page.getByTestId(`trip-new-name-input-${mobil ? 'mobile' : 'desktop'}`).fill('E2E-GZ-Infobox-Trip');
+		await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(new Date().toISOString().slice(0, 10));
+		await expect(tripTab(page, mobil, 'etappen')).not.toHaveAccessibleName(/⊘/, { timeout: 500 });
+	}).toPass({ timeout: 10_000 });
 	if (ziel === 'route') return;
 
 	await wechsleTripReiter(page, mobil, 'etappen');
@@ -95,6 +100,8 @@ async function tripBis(page: Page, mobil: boolean, ziel: TripReiter): Promise<vo
 	// Antwort + den kleineren Zaehler warten (statt auf eine Uhr).
 	const gpx = path.resolve('./e2e/fixtures/test-trip.gpx');
 	const eingaben = page.locator(`${mobil ? '.tn-mobile' : '.tn-desktop'} input[type="file"][accept=".gpx"]`);
+	// count() wartet nicht: erst warten, bis der Etappen-Reiter seine Eingaben gerendert hat.
+	await expect(eingaben.first()).toBeAttached();
 	let rest = await eingaben.count();
 	expect(rest, 'Messaufbau: keine GPX-Eingabe gefunden').toBeGreaterThan(0);
 	while (rest > 0) {
@@ -175,7 +182,7 @@ async function pruefeInfobox(page: Page, reiter: string, kontext: Kontext): Prom
 }
 
 function iiKnopf(page: Page, begriff: Begriff): Locator {
-	return page.getByRole('button', { name: ARIA_WORT[begriff] });
+	return page.getByRole('button', { name: new RegExp('^Erklärung: ' + ARIA_WORT[begriff].source) });
 }
 
 function sprechblase(page: Page, begriff: Begriff): Locator {
@@ -209,9 +216,15 @@ async function pruefePopover(page: Page, begriff: Begriff, daneben: Locator): Pr
 	await page.keyboard.press('Space');
 	await expect(blase).toBeVisible();
 
-	// Klick daneben (auf die neutrale Infobox) schliesst, Fokus zurueck auf dem ⓘ
-	await daneben.click();
-	await expect(blase).toBeHidden();
+	// Klick daneben (auf die neutrale Infobox) schliesst, Fokus zurueck auf dem ⓘ.
+	// bits-ui haengt die Aussenklick-Erkennung erst kurz nach dem Oeffnen ein —
+	// ein sofortiger Klick kann davor landen. Deshalb wird Klick+Pruefung wiederholt
+	// (ohne Uhr-Wartezeit); schliesst das Produkt nie, bleibt der Fall rot.
+	await expect(blase).toBeVisible();
+	await expect(async () => {
+		await daneben.click();
+		await expect(blase).toBeHidden({ timeout: 500 });
+	}).toPass({ timeout: 5000 });
 	await expect(knopf).toBeFocused();
 }
 
@@ -283,6 +296,7 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 		await pruefeInfobox(page, 'wetter-metriken', 'route');
 		const vorher = veraendernde.length;
 
+		await wechsleTripReiter(page, false, 'wertebereiche');
 		await wechsleTripReiter(page, false, 'alarme');
 		await pruefeInfobox(page, 'alarme', 'route');
 		await wechsleTripReiter(page, false, 'wetter-metriken');

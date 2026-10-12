@@ -125,7 +125,7 @@ describe('shared/infoboxKeys.ts: die Lookup-Map waehlt den Katalogschluessel (ke
 });
 
 // doc-compliance-test
-describe('AC-18: die neuen Dateien enthalten keine `context ===`-Verzweigung (Ratsche scannt nur shared/)', () => {
+describe('AC-18: die neuen Dateien enthalten keine Kontext-Vergleichs-Verzweigung (Ratsche scannt nur shared/)', () => {
 	test('molecules/Infobox, molecules/BegriffErklaerung, shared/infoboxKeys, ui/popover/*', () => {
 		const dateien = [
 			join(COMPONENTS, 'molecules/Infobox.svelte'),

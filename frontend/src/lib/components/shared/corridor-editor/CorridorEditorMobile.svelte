@@ -25,7 +25,7 @@
 	//    der Reiter markiert nur noch, die Alarm-Empfindlichkeit setzt
 	//    ausschliesslich der Reiter Alarme.
 	import { untrack } from 'svelte';
-	import { Eyebrow, Dot } from '$lib/components/atoms';
+	import { Eyebrow, Dot } from '$lib/components/atoms'; import Infobox from '$lib/components/molecules/Infobox.svelte'; import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 	import ScreenScroll from '$lib/components/mobile/ScreenScroll.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import { api } from '$lib/api';
@@ -54,7 +54,7 @@
 	import { materializeActiveMetricKeys } from '../weather-metrics-tab/compareMetricOrder.ts';
 
 	interface Props {
-		context?: 'route' | 'vergleich';
+		context?: 'route' | 'vergleich'; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
@@ -81,7 +81,7 @@
 		onMetricAlertLevelsChange?: (v: Record<string, string>) => void;
 	}
 	let {
-		context = 'route',
+		context = 'route', showInfobox = false,
 		trip,
 		onTripUpdate,
 		saveController,
@@ -342,11 +342,11 @@
 <svelte:window onpointermove={onWindowPointerMove} onpointerup={onWindowPointerUp} />
 
 <ScreenScroll padding={14}>
-	<div class="cem" data-testid="corridor-editor-mobile-{context}">
+	<div class="cem" data-testid="corridor-editor-mobile-{context}">{#if showInfobox}<Infobox reiter="wertebereiche" {context} />{/if}
 		{#if context === 'vergleich' && compareDefsError}
 			<!-- Issue #1350 Teil 3 (AC-4): sichtbarer Fehlerzustand statt still
 			     leerem Editor bei Endpoint-Ausfall. -->
-			<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<p class="cem-error" role="alert" data-testid="corridor-editor-mobile-vergleich-load-error">
 				{compareDefsError}
 			</p>
@@ -357,21 +357,21 @@
 				onclick={() => (compareDefsError = null)}
 			>Wiederholen</button>
 		{:else if context === 'vergleich' && compareDefs === null}
-			<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-vergleich-loading">Lade Metriken…</div>
 		{:else if context === 'route' && routeExtraDefs === null}
 			<!-- Issue #1425 (AC-6): Ladezustand statt Nachpoppen der Zusatz-Metriken. -->
-			<Eyebrow>Wertebereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-route-loading">Lade Metriken…</div>
 		{:else}
 		{#if context === 'vergleich'}
-			<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-title">Sag mir, welche Werte dir ideal sind</div>
 			<div class="cem-lead">Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.</div>
 		{:else}
 			<!-- Issue #1425 (S2 Teil 2, Scheibe C, AC-1): wortgleich zum Desktop-Editor —
 			     keine Sofort-Meldung mehr versprechen, Verweis auf den Reiter Alarme. -->
-			<Eyebrow>Wertebereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-title">Sag mir, welche Werte für dich passen</div>
 			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im Reiter Alarme ein.</div>
 		{/if}
@@ -570,5 +570,7 @@
 	.cem-pool-label { font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.08em; text-transform: uppercase; }
 	.cem-summary { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12.5px; color: var(--g-ink-2); }
 	.cem-summary-item { display: inline-flex; align-items: center; gap: 7px; }
+	/* #2521 S1: Ueberschrift + ⓘ in einer Zeile (Eyebrow ist display:block). */
+	.cem-eyebrow-row { display: flex; align-items: center; gap: 4px; }
 	.cem-neutral { font-size: 10.5px; color: var(--g-ink-4); margin-top: 8px; letter-spacing: 0.02em; line-height: 1.5; }
 </style>

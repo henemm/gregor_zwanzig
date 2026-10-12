@@ -3,6 +3,8 @@
 	// + Schwellwert-Anzeige. Spec: docs/specs/modules/feat_864_859_alert_presets.md
 	import type { AlertMetric, SensLevel } from '$lib/types';
 	import { levelToThreshold, thresholdTitle } from './alertMetricTable.ts';
+	import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
+	import { METRIK_BEGRIFF } from '$lib/components/shared/infoboxKeys';
 
 	interface Props {
 		metric: AlertMetric;
@@ -32,6 +34,7 @@
 	// (aktuell nur CAPE) -- sitzt im `title`, nicht im knappen Zellentext.
 	const title = $derived(thresholdTitle(metric));
 	const isDimmed = $derived(level === 'off');
+	const begriff = $derived(METRIK_BEGRIFF[metric]);
 </script>
 
 <tr
@@ -40,7 +43,12 @@
 	data-metric={metric}
 	data-level={level}
 >
-	<td class="metric-label">{label}</td>
+	<td class="metric-label">
+		{label}
+		<!-- Issue #2521 S1 (AC-10): ⓘ nur fuer Metriken aus der Map (heute nur CAPE);
+		     der `title` an der Schwellwert-Zelle bleibt unveraendert. -->
+		{#if begriff}<BegriffErklaerung {begriff} suffix="alarm-{metric}" />{/if}
+	</td>
 	<td class="segmented-control" data-testid="alert-metric-segmented-{metric}">
 		{#each LEVELS as l (l)}
 			<button
