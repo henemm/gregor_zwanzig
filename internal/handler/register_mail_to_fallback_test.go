@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/handler/passkeytest"
 	"github.com/henemm/gregor-api/internal/mail"
 )
 
@@ -131,7 +132,7 @@ func TestGoogleOAuthCallback_SetsMailToOnRegistration_AC1(t *testing.T) {
 func TestPasskeyRegisterPublicFinish_SetsMailToOnRegistration_AC1(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
@@ -152,8 +153,8 @@ func TestPasskeyRegisterPublicFinish_SetsMailToOnRegistration_AC1(t *testing.T) 
 		t.Fatalf("AC-1 begin: cannot decode response: %v", err)
 	}
 
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
 	finishW := httptest.NewRecorder()

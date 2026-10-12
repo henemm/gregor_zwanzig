@@ -35,6 +35,7 @@ import (
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/middleware"
+	"github.com/henemm/gregor-api/internal/handler/passkeytest"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -217,7 +218,7 @@ func TestRegistrierungKennungskonfliktHatVorrangVorAdresskonflikt_AC4(t *testing
 func TestPasskeyPublicBeginWeistBelegteAdresseAb_AC5(t *testing.T) {
 	s := newTestStore(t)
 	rpID, origin := "localhost", "http://localhost"
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	const adresse = "adresse-ac5@beispiel.de"
 	speichereKonto(t, s, model.User{ID: "halter-ac5", Email: adresse, MailTo: adresse})
@@ -244,7 +245,7 @@ func TestPasskeyPublicBeginWeistBelegteAdresseAb_AC5(t *testing.T) {
 func TestPasskeyPublicFinishWeistZwischenzeitlichBelegteAdresseAb_AC6(t *testing.T) {
 	s := newTestStore(t)
 	rpID, origin := "localhost", "http://localhost"
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 	cfg := config.Config{}
@@ -274,8 +275,8 @@ func TestPasskeyPublicFinishWeistZwischenzeitlichBelegteAdresseAb_AC6(t *testing
 		t.Fatalf("AC-6: die Zwischenzeit-Registrierung muss gelingen, bekommen %d: %s", regW.Code, regW.Body.String())
 	}
 
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 	finishReq := httptest.NewRequest(http.MethodPost, "/api/auth/passkey/register/public/finish", bytes.NewReader(finishBody))
 	finishW := httptest.NewRecorder()
 	PasskeyRegisterPublicFinishHandler(s, wa, cs, secret, cfg).ServeHTTP(finishW, finishReq)
@@ -758,7 +759,7 @@ func TestProfilUpdateMitUnlesbaremFremdkontoIstFailClosed_F002(t *testing.T) {
 func TestPasskeyPublicBeginMitUnlesbaremFremdkontoIstFailClosed_F002(t *testing.T) {
 	s := newTestStore(t)
 	rpID, origin := "localhost", "http://localhost"
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	const defektID = "defekt-f002-begin"
@@ -799,7 +800,7 @@ func TestPasskeyPublicBeginMitUnlesbaremFremdkontoIstFailClosed_F002(t *testing.
 func TestPasskeyPublicFinishMitUnlesbaremFremdkontoIstFailClosed_F002(t *testing.T) {
 	s := newTestStore(t)
 	rpID, origin := "localhost", "http://localhost"
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 	cfg := config.Config{}
@@ -832,8 +833,8 @@ func TestPasskeyPublicFinishMitUnlesbaremFremdkontoIstFailClosed_F002(t *testing
 		t.Fatalf("beschaedigte user.json schreiben: %v", err)
 	}
 
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 
 	var mitschnitt strings.Builder
 	log.SetOutput(&logWriter{&mitschnitt})

@@ -670,6 +670,7 @@ def install_transport_fakes(monkeypatch: pytest.MonkeyPatch) -> Recorder:
     zurueck, an dem jeder Test seine Zusicherungen misst."""
     pin_production_origins(monkeypatch)
     pin_transport_env(monkeypatch)
+    monkeypatch.setenv("GZ_CORE_SHARED_SECRET", "fixture-core-secret-0123456789abcdef")  # #2159: post_internal sendet nie ohne Secret
     reset_telegram_process_state(monkeypatch)
     recorder = Recorder()
     monkeypatch.setattr(httpx, "post", recorder.httpx_post)

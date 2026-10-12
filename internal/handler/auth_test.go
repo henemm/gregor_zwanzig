@@ -466,7 +466,7 @@ func TestLoginHandlerSuccess(t *testing.T) {
 			`"email_verified_at":"2026-04-15T00:00:00Z","created_at":"2026-04-15T00:00:00Z"}`), 0644)
 
 	secret := "test-secret-32-chars-long-enough"
-	h := LoginHandler(s, secret)
+	h := LoginHandler(s, secret, "")
 
 	// WHEN: Logging in with correct credentials
 	body := `{"username":"alice","password":"geheim123"}`
@@ -514,7 +514,7 @@ func TestLoginHandlerWrongPassword(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "user.json"),
 		[]byte(`{"id":"alice","password_hash":"`+string(hash)+`"}`), 0644)
 
-	h := LoginHandler(s, "secret")
+	h := LoginHandler(s, "secret", "")
 
 	// WHEN: Wrong password
 	body := `{"username":"alice","password":"falsch!!!"}`
@@ -530,7 +530,7 @@ func TestLoginHandlerWrongPassword(t *testing.T) {
 
 func TestLoginHandlerUserNotFound(t *testing.T) {
 	s := newTestStore(t)
-	h := LoginHandler(s, "secret")
+	h := LoginHandler(s, "secret", "")
 
 	body := `{"username":"nobody","password":"geheim123"}`
 	req := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(body))
@@ -544,7 +544,7 @@ func TestLoginHandlerUserNotFound(t *testing.T) {
 
 func TestLoginHandlerMalformedJSON(t *testing.T) {
 	s := newTestStore(t)
-	h := LoginHandler(s, "secret")
+	h := LoginHandler(s, "secret", "")
 
 	body := `{not valid json`
 	req := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(body))

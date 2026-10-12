@@ -547,27 +547,18 @@ def test_ac6_repo_wurzel_ist_der_eigene_baum():
 ERLAUBTE_HTTPX_AUSGAENGE = frozenset({
     ("src/output/channels/telegram.py", "TelegramOutput._post"),
     ("src/output/channels/seven_io_base.py", "SevenIoChannelBase._post"),
+    # #2159: zentraler Python -> Go-Sende-Helfer (ersetzt die zwei
+    # datei:ZEILE-Ausnahmen der beiden Inbound-Reader).
+    ("src/lib/go_internal.py", "post_internal"),
 })
 
-AUSNAHMEN_HTTPX_HOECHSTZAHL = 3
+AUSNAHMEN_HTTPX_HOECHSTZAHL = 1
 
 AUSNAHMEN_HTTPX: list[Ausnahme] = [
     Ausnahme(
         fundstelle="src/lib/mq_notify.py:45",
         grund="localhost-Benachrichtigung an die Claude-MQ, kein "
               "Endnutzer-Empfaenger",
-        frist=EXPIRY,
-    ),
-    Ausnahme(
-        fundstelle="src/services/inbound_telegram_reader.py:635",
-        grund="localhost-Aufruf an den eigenen Go-Dienst "
-              "(telegram-connect), kein Endnutzer-Empfaenger",
-        frist=EXPIRY,
-    ),
-    Ausnahme(
-        fundstelle="src/services/inbound_sms_reader.py:251",
-        grund="localhost-Aufruf an den eigenen Dienst (premium-sms-learn), "
-              "kein Endnutzer-Empfaenger",
         frist=EXPIRY,
     ),
 ]
@@ -730,7 +721,7 @@ def test_ac7_beide_erlaubten_httpx_ausgaenge_existieren():
 
 
 def test_ac7_httpx_ausnahmen_unter_dem_deckel_und_befristet():
-    assert AUSNAHMEN_HTTPX_HOECHSTZAHL == 3
+    assert AUSNAHMEN_HTTPX_HOECHSTZAHL == 1
     assert len(AUSNAHMEN_HTTPX) <= AUSNAHMEN_HTTPX_HOECHSTZAHL
     for ausnahme in AUSNAHMEN_HTTPX:
         assert ausnahme.frist <= EXPIRY, ausnahme

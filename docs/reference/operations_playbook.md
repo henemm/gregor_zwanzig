@@ -255,6 +255,15 @@ Fehlt die Variable, beendet sich die Go-API beim Start (Fail-Fast), und der Pyth
 weist ohne gesetztes Geheimnis jede Anfrage außer `/health` mit `503` ab. Siehe
 `docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`.
 
+**Seit #2159** gilt dasselbe Geheimnis auch für die internen Go-Endpunkte
+(`/api/internal/premium-sms-learn`, `/api/internal/telegram-connect`): Der Python-Core
+sendet es als `X-GZ-Core-Auth`; ohne Geheimnis auf Go-Seite antworten sie `503`, bei
+fehlendem/falschem Header `401`. Der SMS-Leser hält bei 401/403/503 seinen Lesezeiger.
+Die Go-Basis-URL liest Python aus `GZ_GO_API_URL` (Default `http://localhost:8090`, im
+Python-`/health` als `go_api_url` sichtbar). Prod braucht keinen Eintrag; Staging muss
+`GZ_GO_API_URL=http://localhost:8091` in `/home/hem/gregor_zwanzig_staging/.env` setzen
+(sonst adressiert Staging-Python die Produktions-Go-API auf 8090).
+
 **Seit #2272 zusätzliche Pflicht-Voraussetzung vor Schritt 4:** `GZ_PUBLIC_HOST` muss vor
 dem Prod-Deploy dieses Fixes zusätzlich in `/home/hem/gregor_zwanzig/.env`
 (`https://gregor20.henemm.com`) und in `/home/hem/gregor_zwanzig_staging/.env`

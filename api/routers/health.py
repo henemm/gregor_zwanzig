@@ -1,6 +1,7 @@
 """Health check endpoint."""
 from fastapi import APIRouter
 
+from lib import go_internal
 from app.config import Settings, resolve_public_host
 
 router = APIRouter()
@@ -14,4 +15,5 @@ def health():
         "status": "ok",
         "version": "0.1.0",
         "public_host": resolve_public_host(Settings()),
+        "go_api_url": go_internal.go_api_url(),
     }

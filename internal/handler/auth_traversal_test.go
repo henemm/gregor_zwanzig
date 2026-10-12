@@ -120,7 +120,7 @@ func TestLoginHandler_TraversalUsername_RejectedSameAsUnknownUser_AC1(t *testing
 	})
 
 	secret := "test-secret-32-chars-long-enough"
-	h := LoginHandler(s, secret)
+	h := LoginHandler(s, secret, "")
 
 	attack := httptest.NewRequest("POST", "/api/auth/login",
 		strings.NewReader(`{"username":"../marker","password":"attackerpass123"}`))
@@ -159,7 +159,7 @@ func TestLoginHandler_TraversalUsersBobPayload_CanImpersonateRealUser_AC1(t *tes
 		t.Fatalf("SaveUser(bob): %v", err)
 	}
 
-	h := LoginHandler(s, "test-secret-32-chars-long-enough")
+	h := LoginHandler(s, "test-secret-32-chars-long-enough", "")
 	req := httptest.NewRequest("POST", "/api/auth/login",
 		strings.NewReader(`{"username":"../users/bob","password":"bobs-real-pass"}`))
 	w := httptest.NewRecorder()
@@ -187,7 +187,7 @@ func TestLoginHandler_ValidCredentials_StillWorks_AC2(t *testing.T) {
 		t.Fatalf("SaveUser: %v", err)
 	}
 
-	h := LoginHandler(s, "test-secret-32-chars-long-enough")
+	h := LoginHandler(s, "test-secret-32-chars-long-enough", "")
 	req := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(`{"username":"alice","password":"geheim123"}`))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -414,7 +414,7 @@ func TestResetPassword_RealUserStillWorks_AC7(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("AC-7: expected 200, got %d: %s", w.Code, w.Body.String())
 	}
-	loginHandler := LoginHandler(s, "test-secret-32-chars-long-enough")
+	loginHandler := LoginHandler(s, "test-secret-32-chars-long-enough", "")
 	loginReq := httptest.NewRequest("POST", "/api/auth/login", strings.NewReader(`{"username":"carla","password":"brandneu1234"}`))
 	wLogin := httptest.NewRecorder()
 	loginHandler.ServeHTTP(wLogin, loginReq)
@@ -644,7 +644,7 @@ func TestAuthRoutes_TraversalRejection_LogsRoute_AC15(t *testing.T) {
 			name:   "LoginHandler",
 			prefix: "login:",
 			request: func(s *store.Store) (http.Handler, *http.Request) {
-				return LoginHandler(s, "test-secret-32-chars-long-enough"),
+				return LoginHandler(s, "test-secret-32-chars-long-enough", ""),
 					httptest.NewRequest("POST", "/api/auth/login",
 						strings.NewReader(`{"username":"`+attack+`","password":"x"}`))
 			},

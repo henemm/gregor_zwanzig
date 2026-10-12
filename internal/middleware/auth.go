@@ -138,7 +138,7 @@ func SignSessionWithID(userId, sessionId, secret string) string {
 // SetSessionCookie setzt das Anmelde-Cookie. EINE Stelle fuer alle
 // Ausstellungswege -- vorher stand derselbe Block sechsmal im Code, und genau
 // so entsteht Drift zwischen den Wegen.
-func SetSessionCookie(w http.ResponseWriter, r *http.Request, token string) {
+func SetSessionCookie(w http.ResponseWriter, r *http.Request, token, publicHost string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "gz_session",
 		Value:    token,
@@ -146,8 +146,14 @@ func SetSessionCookie(w http.ResponseWriter, r *http.Request, token string) {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   SessionMaxAgeSeconds,
-		Secure:   r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil,
+		Secure:   CookieSecure(r, publicHost),
 	})
+}
+
+// CookieSecure: Secure gilt bei TLS am Socket oder https-PublicHost. Der
+// vom Client steuerbare X-Forwarded-Proto wird bewusst ignoriert (#2159).
+func CookieSecure(r *http.Request, publicHost string) bool {
+	return r.TLS != nil || strings.HasPrefix(publicHost, "https://")
 }
 
 // ClearSessionCookie loescht das Anmelde-Cookie im Browser.
