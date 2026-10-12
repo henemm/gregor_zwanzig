@@ -339,3 +339,27 @@ def test_fb02_format_email_without_trip_still_works():
     assert "gesamte Route" not in hits[0], (
         f"Ohne Trip-Kontext ist die Gesamtroute unbekannt: {hits[0]!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# #1430 AC-6 — Lawinenwarnung (MeteoAlarm Typ 9) im Telegram-Trip-Bericht
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(("level", "level_word"), [(4, "ROT"), (3, "ORANGE")])
+def test_1430_lawinenwarnung_erscheint_als_lawine_mit_stufe(level: int, level_word: str):
+    texts = _bubbles([_alert("avalanche", level)])
+    hits = _warn_bubbles(texts, "Lawine")
+    assert hits, f"Keine Bubble nennt die Lawinenwarnung (Stufe {level}): {texts!r}"
+    assert level_word in hits[0], f"Stufenwort {level_word!r} fehlt: {hits[0]!r}"
+    assert "9; avalanche" not in hits[0] and "AW" not in hits[0], (
+        f"Rohtext bzw. SMS-Kuerzel in der Telegram-Bubble: {hits[0]!r}"
+    )
+
+
+def test_1430_gelbe_lawinenwarnung_folgt_dem_bestehenden_stufenfilter():
+    """Lawine verhaelt sich wie jede andere Gefahrenart (Startwert 'gering',
+    #1461 S3b-2a): gelb erzeugt dieselbe Bubble wie gelber Starkregen."""
+    regen = _warn_bubbles(_bubbles([_alert("rain", 2)]), "Starkregen")
+    lawine = _warn_bubbles(_bubbles([_alert("avalanche", 2)]), "Lawine")
+    assert bool(lawine) == bool(regen), (
+        f"Lawine gelb weicht vom Filter der anderen Gefahrenarten ab: {lawine!r} / {regen!r}"
+    )

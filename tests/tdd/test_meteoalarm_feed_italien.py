@@ -1268,3 +1268,39 @@ def test_ac7_at_indexfehlschlag_faerbt_it_ergebnis_nicht_ein(monkeypatch):
         meteoalarm._index_cache.clear()
         meteoalarm._geometry_cache.clear()
         meteoalarm._cap_cache.clear()
+
+
+# ---------------------------------------------------------------------------
+# Issue #1430 AC-2: Lawinenwarnung (MeteoAlarm-Typ 9) ueber den Sammelweg.
+# ---------------------------------------------------------------------------
+
+def test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe(monkeypatch):
+    """GIVEN der (abgeleitete) IT-Feed fuehrt fuer Lazio (IT012) einen Eintrag
+    ``9; avalanche`` / ``3; orange; Severe``, WHEN die amtlichen Warnungen fuer
+    Rom ueber MeteoAlarmFeedSource("IT") ermittelt werden, THEN erscheint die
+    Warnung mit hazard == "avalanche" und der Stufe 3 des Eintrags."""
+    import services.official_alerts.base as oa_base
+    from services.official_alerts import get_official_alerts_with_status, meteoalarm_feed
+
+    _assert_pruefling_aus_diesem_baum()
+    feed = json.loads(
+        (_REPO_ROOT / "tests" / "fixtures" / "meteoalarm" / "feed_avalanche_type9.json")
+        .read_text(encoding="utf-8")
+    )["IT"]
+    server = _JsonServer(feed)
+    backup = list(oa_base._REGISTERED_SOURCES)
+    oa_base._REGISTERED_SOURCES.clear()
+    try:
+        monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{server.port}")
+        oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("IT"))
+
+        alerts, unavailable = get_official_alerts_with_status(*ROM, now=TEST_NOW)
+
+        assert unavailable is False
+        assert any(a.hazard == "avalanche" and a.level == 3 for a in alerts), (
+            f"Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: {alerts}"
+        )
+    finally:
+        server.shutdown()
+        oa_base._REGISTERED_SOURCES.clear()
+        oa_base._REGISTERED_SOURCES.extend(backup)

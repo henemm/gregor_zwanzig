@@ -834,3 +834,31 @@ def test_f002_suedtirol_zamg_404_kompensiert_it_ausfall_nicht(it_feed_ok, erwart
         _alerts, unavailable = get_official_alerts_with_status(*BOZEN, now=TEST_NOW_BAYERN)
 
     assert unavailable is erwartet
+
+
+# ─────────── Issue #1430 AC-2: Lawinenwarnung (Typ 9) ueber den Sammelweg ─────
+
+def test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe():
+    """GIVEN der (abgeleitete) DE-Feed fuehrt fuer Garmisch-Partenkirchen
+    (DE195 / 109180000) einen Eintrag ``9; avalanche`` / ``3; orange; Severe``
+    (Cache-Vorbelegung wie die uebrigen DE-Tests), WHEN die amtlichen
+    Warnungen ueber MeteoAlarmFeedSource("DE") ermittelt werden, THEN
+    erscheint die Warnung mit hazard == "avalanche" und Stufe 3."""
+    _assert_pruefling_aus_diesem_baum()
+    from services.official_alerts import get_official_alerts_with_status
+    from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
+
+    feed = json.loads(
+        (_REPO_ROOT / "tests" / "fixtures" / "meteoalarm" / "feed_avalanche_type9.json")
+        .read_text(encoding="utf-8")
+    )["DE"]
+    _feed_vorbelegen("DE", feed)
+    de = MeteoAlarmFeedSource("DE")
+
+    with _nur_quellen(de):
+        alerts, unavailable = get_official_alerts_with_status(*GARMISCH, now=TEST_NOW_BAYERN)
+
+    assert unavailable is False
+    assert any(a.hazard == "avalanche" and a.level == 3 for a in alerts), (
+        f"Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: {alerts}"
+    )

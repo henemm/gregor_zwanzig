@@ -55,3 +55,20 @@ def test_ac15_fix_1249_spec_marks_ac5_as_superseded():
     assert "sms_official_alert_tokens.md" in text, (
         f"{_FIX_1249.name} verweist nicht auf die Nachfolge-Spec"
     )
+
+
+# ---------------------------------------------------------------------------
+# #1430 AC-11 — Lawine/AW in der Referenzdoku (doc-compliance-test)
+# ---------------------------------------------------------------------------
+_SMS_FORMAT = Path(__file__).resolve().parents[2] / "docs" / "reference" / "sms_format.md"
+
+
+def test_1430_sms_format_nennt_lawine_aw_und_grenzt_av_ab():  # doc-compliance-test
+    text = _SMS_FORMAT.read_text(encoding="utf-8")
+    assert "avalanche | AW | Lawine" in text.replace("`", ""), (
+        "Tabellenzeile 'avalanche | AW | Lawine' fehlt in sms_format.md §3.4c"
+    )
+    abschnitt = text.split("### 3.4c", 1)[1]
+    assert "AV" in abschnitt and "Lawinenstufe" in abschnitt, (
+        "Abgrenzung AW (Warnung) / AV (Lawinenstufe) fehlt in §3.4c"
+    )

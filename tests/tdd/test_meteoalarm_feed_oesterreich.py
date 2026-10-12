@@ -1275,3 +1275,42 @@ def test_ac8_kaputter_eintrag_fremder_zone_und_gleichzeitiger_it_ausfall_faerben
             dual.shutdown()
         oa_base._REGISTERED_SOURCES.clear()
         oa_base._REGISTERED_SOURCES.extend(backup)
+
+
+# ---------------------------------------------------------------------------
+# Issue #1430 AC-2: Lawinenwarnung (MeteoAlarm-Typ 9) ueber den Sammelweg.
+# ---------------------------------------------------------------------------
+
+def test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe(monkeypatch):
+    """GIVEN der (abgeleitete) AT-Feed fuehrt fuer AT707 (Lienz/Sillian) einen
+    Eintrag ``9; avalanche`` / ``3; orange; Severe``, WHEN die amtlichen
+    Warnungen fuer Sillian ueber MeteoAlarmFeedSource("AT") ermittelt werden,
+    THEN erscheint die Warnung mit hazard == "avalanche" und Stufe 3."""
+    import services.official_alerts.base as oa_base
+    from services.official_alerts import geosphere_warn, get_official_alerts_with_status, meteoalarm_feed
+
+    _assert_pruefling_aus_diesem_baum()
+    feed = json.loads(
+        (_REPO_ROOT / "tests" / "fixtures" / "meteoalarm" / "feed_avalanche_type9.json")
+        .read_text(encoding="utf-8")
+    )["AT"]
+    zamg = _ZamgServer({_round4(*SILLIAN): _zamg_body(70728, "Sillian")})
+    feed_server = _JsonServer(feed)
+    backup = list(oa_base._REGISTERED_SOURCES)
+    oa_base._REGISTERED_SOURCES.clear()
+    try:
+        monkeypatch.setattr(geosphere_warn, "GEOSPHERE_WARN_URL", f"http://127.0.0.1:{zamg.port}")
+        monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{feed_server.port}")
+        oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("AT"))
+
+        alerts, unavailable = get_official_alerts_with_status(*SILLIAN, now=TEST_NOW)
+
+        assert unavailable is False
+        assert any(a.hazard == "avalanche" and a.level == 3 for a in alerts), (
+            f"Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: {alerts}"
+        )
+    finally:
+        zamg.shutdown()
+        feed_server.shutdown()
+        oa_base._REGISTERED_SOURCES.clear()
+        oa_base._REGISTERED_SOURCES.extend(backup)
