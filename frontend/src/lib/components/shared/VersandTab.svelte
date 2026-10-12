@@ -62,6 +62,9 @@
 		/** Issue #2293 Scheibe S2 (#2448): neuntes Klasse-A-Feld — eigener
 		 * Premium-SMS-Briefing-Schalter im Versand-Reiter des Ortsvergleichs. */
 		sendPremiumSms?: boolean;
+		/** Issue #2455 F002: Kurzform-Status des Vergleichs (display_config.telegram_style),
+		 * NUR lesend fuer die Telegram-Unterzeile — der Schalter selbst sitzt im Alarme-Reiter. */
+		vergleichTelegramStyle?: 'rich' | 'kurzform';
 		morningEnabled?: boolean;
 		morningTime?: string;
 		eveningEnabled?: boolean;
@@ -109,6 +112,7 @@
 		sendTelegram,
 		sendSms,
 		sendPremiumSms,
+		vergleichTelegramStyle,
 		morningEnabled,
 		morningTime,
 		eveningEnabled,
@@ -413,6 +417,7 @@
 			onTelegramChange={makeToggleHandler((v) => onSendTelegramChange?.(v))}
 			onSmsChange={makeToggleHandler((v) => onSendSmsChange?.(v))}
 			onPremiumSmsChange={makeToggleHandler((v) => onSendPremiumSmsChange?.(v))}
+			telegramStyle={vergleichTelegramStyle ?? 'rich'}
 			emailTestid="compare-step5-channel-email"
 			telegramTestid="compare-step5-channel-telegram"
 			smsTestid="compare-step5-channel-sms"

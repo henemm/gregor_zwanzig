@@ -445,7 +445,7 @@
 			</div>
 		</div>
 	{:else if activeTab === 'versand'}
-		<VersandTab context="vergleich" {...versandPropsAus(wiz)} activation={versandActivationBanner} showInfobox={true} />
+		<VersandTab context="vergleich" {...versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
 	{/if}
 </div><!-- /.cm-desktop -->
 
@@ -531,7 +531,7 @@
 				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} showInfobox={true} />
 			{/if}
 		{:else if activeTab === 'versand'}
-			<VersandTab context="vergleich" {...versandPropsAus(wiz)} activation={versandActivationBanner} showInfobox={true} />
+			<VersandTab context="vergleich" {...versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
 		{/if}
 	</div>
 

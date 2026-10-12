@@ -214,9 +214,9 @@ const EINGEFROREN: readonly string[] = [
 	// 🔴 Issue #2293 Scheibe S2 (#2448): zusaetzliche Verschiebung um 8 Zeilen
 	// durch den neunten Klasse-A-Prop `sendPremiumSms` (Prop-Deklaration,
 	// Destrukturierung, `werte()`-Bruecke) — `:348/:358/:394` -> `:356/:366/:402`.
-	'VersandTab.svelte:356',
-	'VersandTab.svelte:366',
-	'VersandTab.svelte:402',
+	'VersandTab.svelte:360',
+	'VersandTab.svelte:370',
+	'VersandTab.svelte:406',
 	// 🔴 Issue #2293 Scheibe S2: `versandVergleichSpeicherung.ts:221` verschob
 	// sich auf `:235` (+14 Zeilen VOR dieser Stelle: `sendPremiumSms` in zwei
 	// Interfaces, zwei Snapshot-/Hydrations-Funktionen und der Payload-Trennung
@@ -439,17 +439,17 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// ist in beiden Zweigen gleich und taugte als Anker nicht — ein vertauschtes
 	// Paar faende dort seinen Anker und die Fesselung waere wertlos.
 	{
-		eintrag: 'VersandTab.svelte:356',
+		eintrag: 'VersandTab.svelte:360',
 		zeile: "if (context !== 'vergleich' || !vergleichSpeicherung) return;",
 		folgt: 'versandSnapshotAus(versandZustand);'
 	},
 	{
-		eintrag: 'VersandTab.svelte:366',
+		eintrag: 'VersandTab.svelte:370',
 		zeile: "{#if context === 'route'}",
 		folgt: 'email: send_email,'
 	},
 	{
-		eintrag: 'VersandTab.svelte:402',
+		eintrag: 'VersandTab.svelte:406',
 		zeile: "{:else if context === 'vergleich'}",
 		folgt: 'email: sendEmail ?? false,'
 	},

@@ -1104,6 +1104,7 @@
 				<VersandTab
 					context="vergleich"
 					{...versandPropsAus(wizardState)}
+					vergleichTelegramStyle={wizardState.telegramStyle ?? 'rich'}
 					activation={hubActivationCard}
 					preset={currentPreset}
 					{saveController}

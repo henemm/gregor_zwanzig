@@ -77,7 +77,7 @@ Backend-Ist (unverändert, nur durch Test abgesichert): `src/services/notificati
 ## Known Limitations
 
 - Im Layout-Reiter (`layout-tab/LTChannelPicker.svelte`, `ltChannels.ts`) wird kein Hinweis "gilt nur für ausführliches Telegram" ergänzt. Der Reiter kennt `telegram_style` nicht (keine Referenz im `layout-tab`-Verzeichnis); ihn dorthin durchzureichen wäre ein Datenfluss-Umbau über den Umfang hinaus. Der Hinweis am Schalter (AC-1) und die Versand-Unterzeile (AC-3) decken die Regel ab. Folgearbeit nur bei PO-Wunsch.
-- Die Unterzeile aus AC-3 gilt im Trip-Kontext. Im Ortsvergleich gibt es dort keine Telegram-Unterzeile mit Spaltenangabe, der Hinweis aus AC-1 trägt.
+- Die Unterzeile aus AC-3 gilt in beiden Kontexten (geteilter Baustein `VTBriefingChannels`). Im Ortsvergleich reicht `VersandTab` den Kurzform-Status (`display_config.telegram_style`) nur lesend durch (Prop `vergleichTelegramStyle`); der Schalter selbst bleibt im Alarme-Reiter, es gibt keinen zweiten Schalter im Versand-Reiter.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -87,3 +87,4 @@ Backend-Ist (unverändert, nur durch Test abgesichert): `src/services/notificati
 ## Changelog
 
 - 2026-10-09: Initial spec created (PO-Entscheidung #2455)
+- 2026-10-12: Adversary F002 - Versand-Unterzeile auch im Ortsvergleich (lesend)
