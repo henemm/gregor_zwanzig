@@ -231,10 +231,13 @@ def test_ac2_ohne_jede_zustellung_rueckt_kein_einziger_kanal_vor():
         fresh_weather=[_wetter(FRISCH_HOCH_BOE)],
     )
 
-    assert ausgeloest, (
-        "Fixtur-Schutz: der Lauf muss bis zum Schreibpfad kommen — Telegram "
-        "war erreichbar (nur der Transport scheiterte), der Bestand wertet "
-        "das als 'gesendet'."
+    # ADR-0086 (#1405 S1): ein Totalausfall ist NICHT "gesendet" — der Lauf
+    # meldet False (`transport_failed`), statt wie frueher den betretenen,
+    # aber gescheiterten Kanal als Erfolg zu werten. Dass der Lauf trotzdem
+    # bis zum Versand kam, belegt der Protokoll-Eintrag unten.
+    assert ausgeloest is False, (
+        "ADR-0086: Totalausfall (Telegram erreichbar, Transport gescheitert) "
+        f"darf nicht als gesendet gelten, erhalten: {ausgeloest!r}."
     )
     assert not mails, "Fixtur-Schutz: E-Mail ist hier gar nicht konfiguriert."
     bilanz = _letzter_protokoll_eintrag(user_id)["channels_sent"]

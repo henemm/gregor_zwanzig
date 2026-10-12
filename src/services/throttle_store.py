@@ -132,6 +132,13 @@ class ThrottleStore:
         }
         self._update(lambda data: data.setdefault(scope, {}).__setitem__(key, eintrag))
 
+    def keys(self, scope: str) -> list[str]:
+        """Issue #1405 S1: alle Schluessel eines Scopes (rein lesend, additiv;
+        der Fehlversuchs-Backoff braucht sie fuer den toleranzbasierten
+        Nowcast-Abgleich und das Aufraeumen abgelaufener Eintraege)."""
+        eintraege = self._load().get(scope, {})
+        return list(eintraege) if isinstance(eintraege, dict) else []
+
     def clear(self, scope: str, key: str) -> None:
         def _op(data: dict) -> None:
             data.get(scope, {}).pop(key, None)

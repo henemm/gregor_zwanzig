@@ -429,16 +429,15 @@ def append_entry(
     * kein Kanal erreichbar -> `not_delivered` (fuer Go unsichtbar, veraendert
       also weder Cockpit-Kachel noch Archiv-Statistik).
 
-    Massgeblich fuer die Ziel-Liste ist damit EXAKT das heutige Kriterium des
-    Bestands (`NotificationResult.sent`: mindestens ein konfigurierter Kanal
-    war erreichbar), NICHT der Zustellerfolg -- der Bestand loggt nach
-    Best-Effort-Semantik ausdruecklich auch dann, wenn der Transport auf einem
-    erreichbaren Kanal scheitert (Anti-Pattern #656). `entries` bleibt fuer
-    Bestandstouren dadurch bit-identisch: wo heute geschrieben wird, wird
-    weiter geschrieben; `not_delivered` faengt nur die Faelle, die heute
-    SPURLOS verschwinden.
+    Massgeblich fuer die Ziel-Liste ist damit die ERREICHBARKEIT (mindestens
+    ein konfigurierter Kanal wurde betreten), NICHT der Zustellerfolg -- auch
+    ein auf einem erreichbaren Kanal gescheiterter Transport landet in
+    `entries` (#1459 AC-11/AC-15). Seit ADR-0086 (#1405 S1) heisst
+    `NotificationResult.sent` "zugestellt"; die Erreichbarkeit steht in
+    `NotificationResult.attempted_channels`. `not_delivered` faengt die
+    Faelle ohne jeden betretenen Kanal.
 
-    `reachable_channels` traegt diese Erreichbarkeit (`result.sent_channels`);
+    `reachable_channels` traegt diese Erreichbarkeit (`result.attempted_channels`);
     `sent_channels` traegt den tatsaechlichen Zustellerfolg und fuellt
     `channels_sent`/`channels_not_sent`. Ohne `reachable_channels` gilt
     `sent_channels` auch als Erreichbarkeits-Angabe (Direktaufrufer).

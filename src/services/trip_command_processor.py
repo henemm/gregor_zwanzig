@@ -1552,7 +1552,7 @@ class TripCommandProcessor:
             label = {"Heute": "Today", "Morgen": "Tomorrow"}.get(label, label)
         if ergebnis.outcome != "sent":
             return CommandResult(
-                success=True, command=query_key,
+                success=ergebnis.outcome == "sent", command=query_key,
                 confirmation_subject=f"[{trip.name}] {label}",
                 confirmation_body=_on_demand_failure_body(
                     ergebnis.outcome, label, ergebnis.zieltag, en=self._en,
@@ -1561,7 +1561,7 @@ class TripCommandProcessor:
                 reply_markup=buttons,
             )
         return CommandResult(
-            success=True, command=query_key,
+            success=ergebnis.outcome == "sent", command=query_key,
             confirmation_subject=f"[{trip.name}] {label}",
             confirmation_body=self._t(f"{label}-Briefing wird gesendet.",
                                       f"{label} briefing is being sent."),
@@ -2476,14 +2476,48 @@ class TripCommandProcessor:
 
         from services.trip_report_scheduler import TripReportSchedulerService
         service = TripReportSchedulerService(user_id=user_id)
-        service.send_test_report(trip, report_type)
-
+        # Issue #1405 S1 (B15): das echte Ergebnis entscheidet ueber Antwort
+        # und Erfolg; eine Ausnahme wird zur Fehlermeldung statt zum Absturz.
+        try:
+            outcome = service.send_test_report_outcome(trip, report_type)
+        except Exception as e:  # noqa: BLE001 — Antwort statt Absturz (AC-23)
+            logger.error(f"report command failed for trip {trip.id}: {e}")
+            outcome = "error"
+        if outcome == "sent":
+            subject = self._t("Report gesendet", "Report sent")
+        else:
+            subject = self._t("Report nicht gesendet", "Report not sent")
         return CommandResult(
-            success=True, command="report",
-            confirmation_subject=f"[{trip.name}] Report gesendet",
-            confirmation_body=f"{report_type.title()} Report wird jetzt gesendet.",
+            success=outcome == "sent", command="report",
+            confirmation_subject=f"[{trip.name}] {subject}",
+            confirmation_body=self._report_reply_body(outcome, report_type),
             trip_name=trip.name,
         )
+
+    def _report_reply_body(self, outcome: str, report_type: str) -> str:
+        """Issue #1405 S1 (AC-22): eigener Klartext je Ergebnis; nur `sent`
+        meldet einen Versand."""
+        typ = report_type.title()
+        texte = {
+            "sent": (f"{typ} Report wird jetzt gesendet.",
+                     f"{typ} report is being sent now."),
+            "no_stage": (f"{typ} Report nicht gesendet: heute ist keine Etappe geplant.",
+                         f"{typ} report not sent: no stage planned for today."),
+            "no_weather": (f"{typ} Report nicht gesendet: keine Wetterdaten verfuegbar.",
+                           f"{typ} report not sent: no weather data available."),
+            "no_channels": (f"{typ} Report nicht gesendet: kein Versandweg aktiv.",
+                            f"{typ} report not sent: no delivery channel enabled."),
+            "channels_unreachable": (
+                f"{typ} Report nicht gesendet: Versandweg konfiguriert, aber nicht erreichbar.",
+                f"{typ} report not sent: delivery channel configured but unreachable."),
+            "already_in_progress": (
+                f"{typ} Report nicht gesendet: ein Versand laeuft bereits.",
+                f"{typ} report not sent: a delivery is already in progress."),
+        }
+        de, en = texte.get(outcome, (
+            f"{typ} Report nicht gesendet: interner Fehler beim Ausloesen.",
+            f"{typ} report not sent: internal error while triggering."))
+        return self._t(de, en)
 
     def _shift_start(
         self, trip: Trip, value: Optional[str], user_id: str,

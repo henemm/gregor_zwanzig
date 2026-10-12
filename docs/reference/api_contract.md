@@ -1770,6 +1770,8 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 }
 ```
 
+Seit Issue #1405 S1 (ADR-0086) sind `status` und `sent` aus dem Versand-Ergebnis abgeleitet (`"sent": outcome == "sent"`, `"status": "ok"` nur bei `sent`, sonst das Ergebnis selbst). Für alle bekannten Ergebnisse ist die Antwort unverändert — die Nicht-`sent`-Fälle enden vorher in 422/409. Das Frontend wertet nur den HTTP-Status aus (`sendOutcome.ts`).
+
 **Error Responses:**
 
 | Status | Scenario | Detail |

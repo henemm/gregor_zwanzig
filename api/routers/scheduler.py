@@ -339,7 +339,13 @@ def send_test_trip_report(trip_id: str, user_id: str = Query(...), report_type: 
             status_code=409,
             detail=f"Versand für {report_type} läuft bereits — bitte warten",
         )
-    return {"status": "ok", "trip_id": trip_id, "report_type": report_type, "sent": True}
+    # Issue #1405 S1 (B1): Kennzeichen aus dem Ergebnis abgeleitet, nicht
+    # fest -- fuer `sent` byte-gleich zur bisherigen Antwort.
+    return {
+        "status": "ok" if outcome == "sent" else outcome,
+        "trip_id": trip_id, "report_type": report_type,
+        "sent": outcome == "sent",
+    }
 
 
 @router.post("/compare-presets/{preset_id}/send")

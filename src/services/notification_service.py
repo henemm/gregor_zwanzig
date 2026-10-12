@@ -141,10 +141,9 @@ class NotificationResult:
     telegram_fully_sent: bool = True
     no_channel_configured: bool = False
     error: str | None = None
-    # Issue #1459: `sent_channels` bedeutet "Kanal wurde betreten" (Best-Effort,
-    # Anti-Pattern #656) -- ein gescheiterter Transport bleibt darin stehen.
-    # `failed_channels` haelt zusaetzlich fest, welche davon technisch NICHT
-    # angekommen sind, ohne diese bewusste Semantik zu veraendern.
+    # Issue #1405 S1 (ADR-0086, loest #684 AC-3 ab): `sent_channels` heisst
+    # in allen Pfaden "zugestellt"; "betreten" steht in `attempted_channels`.
+    # `failed_channels` haelt fest, welche Kanaele technisch scheiterten.
     failed_channels: list[str] = field(default_factory=list)
     # Issue #1676 S2a (Spec D4): Kanal -> Grund, warum NICHTS hinausging.
     # `failed_channels` haelt gescheiterte Transporte fest; hier steht der
@@ -160,11 +159,31 @@ class NotificationResult:
     # oder Programmfehler. Genau diese Unterscheidung ist am Prosatext allein
     # nicht moeglich — ein Absturztext sieht dort aus wie eine Sperrmeldung.
     blocked_reason_codes: dict[str, str] = field(default_factory=dict)
+    # Issue #1405 S1 (ADR-0086): Kanaele, die BETRETEN wurden (Gate bestanden,
+    # Versand versucht) -- unabhaengig vom Ausgang. Speist im Alarmpfad
+    # `reachable_channels` (Cockpit-Zahl, #1459 AC-11); `sent_channels`
+    # heisst seither in allen Pfaden "zugestellt".
+    attempted_channels: list[str] = field(default_factory=list)
 
     @property
     def delivered_channels(self) -> list[str]:
         """Kanaele, die den Versand ohne Fehler abgeschlossen haben."""
         return [c for c in self.sent_channels if c not in self.failed_channels]
+
+    @property
+    def delivery_outcome(self) -> str:
+        """Issue #1405 S1 (ADR-0086): abgeleiteter Ausgang, nie gesetzt.
+
+        Sperre = Key in `blocked_reason_codes`; Transportfehler = Key in
+        `failed_channels` OHNE Sperr-Code (Premium-SMS-Transportfehler steht
+        zusaetzlich in `blocked_channels`, aber ohne Code)."""
+        if self.delivered_channels:
+            return "delivered"
+        if any(c not in self.blocked_reason_codes for c in self.failed_channels):
+            return "transport_failed"
+        if self.blocked_reason_codes:
+            return "blocked_only"
+        return "no_channel"
 
 
 def _record_block_reason_code(
@@ -1148,14 +1167,16 @@ class NotificationService:
             dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
         )
 
+        # Issue #1405 S1 (ADR-0086): `sent_channels` = zugestellt (append IM
+        # try NACH dem Send), `attempted_channels` = betreten (NACH dem try).
         sent_channels: list[str] = []
+        attempted_channels: list[str] = []
         failed_channels: list[str] = []  # Issue #1459: Alarm-Protokoll
         # Issue #1701 (S2b, D5): analog `_dispatch_alert_message`.
         blocked_channels: dict[str, str] = {}
         blocked_reason_codes: dict[str, str] = {}
 
         if "email" in effective_channels and self._settings.can_send_email():
-            sent_channels.append("email")
             try:
                 if mail_sink is not None:
                     mail_sink(subject=subject, body=html)
@@ -1164,12 +1185,13 @@ class NotificationService:
                         subject=subject, body=html, html=True,
                         plain_text_body=plain, mail_type="official-alert",
                     )
+                sent_channels.append("email")
             except Exception as e:
                 failed_channels.append("email")
                 logger.error(f"Official alert email failed for {trip.name}: {e}")
+            attempted_channels.append("email")
 
         if "telegram" in effective_channels and self._settings.can_send_telegram():
-            sent_channels.append("telegram")
             try:
                 # Issue #1260 S3: Kurzstil sendet den SMS-Text (Plaintext,
                 # parse_mode=None) statt der reichen Telegram-Warnvorlage.
@@ -1184,26 +1206,29 @@ class NotificationService:
                         subject=subject, body=telegram_text,
                         parse_mode="HTML", suppress_subject_line=True,
                     )
+                sent_channels.append("telegram")
             except Exception as e:
                 failed_channels.append("telegram")
                 logger.error(f"Official alert telegram failed for {trip.name}: {e}")
+            attempted_channels.append("telegram")
 
         if "sms" in effective_channels and self._settings.can_send_sms():
             now_sms = datetime.now(timezone.utc)
             if self._sms_gate_reserve(
                 "sms", "alert", now_sms, blocked_channels, blocked_reason_codes,
             ):
-                sent_channels.append("sms")
                 try:
                     sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
                     if sms_sink is not None:
                         sms_sink(sms_text)
                     else:
                         SMSOutput(self._settings).send(subject="", body=sms_text)
+                    sent_channels.append("sms")
                 except Exception as e:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
                     failed_channels.append("sms")
                     logger.error(f"Official alert sms failed for {trip.name}: {e}")
+                attempted_channels.append("sms")
 
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # can_send_*()-Bereitschaftsfrage (D2), Sperrgrund geht nach
@@ -1214,10 +1239,10 @@ class NotificationService:
             if self._sms_gate_reserve(
                 "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
             ):
-                sent_channels.append("premium_sms")
                 try:
                     premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
                     PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
+                    sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(
                         self._require_user(), "premium_sms", now_premium,
@@ -1226,9 +1251,11 @@ class NotificationService:
                     _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
                     failed_channels.append("premium_sms")
                     logger.error(f"Official alert premium-sms failed for {trip.name}: {e}")
+                attempted_channels.append("premium_sms")
 
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
+            attempted_channels=attempted_channels,
             failed_channels=failed_channels,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
@@ -1438,46 +1465,43 @@ class NotificationService:
             tz=alert_tz, context_label="Ortsvergleich",
         )
 
-        sent_channels: list[str] = []
-        failed_channels: list[str] = []  # Issue #1459: Alarm-Protokoll
         # Issue #1701 (S2b, D5): analog `_dispatch_alert_message`.
         blocked_channels: dict[str, str] = {}
         blocked_reason_codes: dict[str, str] = {}
+        # Issue #1405 S1 (ADR-0086): Helfer liefern `True` = zugestellt. Ein
+        # `False` MIT Sperr-Code ist eine bewusste Sperre, kein Transport-
+        # fehler. `attempted_channels` fuehrt -- wie frueher `sent_channels`
+        # -- jeden betretenen Kanal, auch den gesperrten (Cockpit-Zahl).
+        versuche: list[tuple[str, bool]] = []
         if "email" in effective_channels and self._settings.can_send_email():
-            if not self._dispatch_compare_official_email(
+            versuche.append(("email", self._dispatch_compare_official_email(
                 preset_name, subject, html, mail_sink, plain=plain,
-            ):
-                failed_channels.append("email")
-            sent_channels.append("email")
+            )))
         if "telegram" in effective_channels and self._settings.can_send_telegram():
-            if not self._dispatch_compare_official_telegram(
+            versuche.append(("telegram", self._dispatch_compare_official_telegram(
                 preset_name, subject, dto_notices, source_label, alert_tz, telegram_sink,
                 telegram_style=telegram_style,
-            ):
-                failed_channels.append("telegram")
-            sent_channels.append("telegram")
+            )))
         if "sms" in effective_channels and self._settings.can_send_sms():
-            if not self._dispatch_compare_official_sms(
+            versuche.append(("sms", self._dispatch_compare_official_sms(
                 preset_name, dto_notices, alert_tz, sms_sink,
                 blocked_channels, blocked_reason_codes,
-            ):
-                failed_channels.append("sms")
-            sent_channels.append("sms")
+            )))
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # can_send_*()-Bereitschaftsfrage (D2), Sperrgrund geht nach
         # `blocked_channels`/`blocked_reason_codes` statt `failed_channels`.
-        # Append NACH dem Helfer-Aufruf (wie bei email/telegram/sms in dieser
-        # Funktion) — der Erfolgsmarker steht erst, nachdem die Tat versucht
-        # wurde, nicht davor (Klasse 1c, s. `test_success_status_guard.py`).
         if "premium_sms" in effective_channels:
-            if not self._dispatch_compare_official_premium_sms(
+            versuche.append(("premium_sms", self._dispatch_compare_official_premium_sms(
                 preset_name, dto_notices, alert_tz, blocked_channels, blocked_reason_codes,
-            ):
-                failed_channels.append("premium_sms")
-            sent_channels.append("premium_sms")
+            )))
 
+        sent_channels = [c for c, ok in versuche if ok]
+        failed_channels = [  # Issue #1459: Alarm-Protokoll
+            c for c, ok in versuche if not ok and c not in blocked_reason_codes
+        ]
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
+            attempted_channels=[c for c, _ok in versuche],
             failed_channels=failed_channels,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
@@ -1790,7 +1814,10 @@ class NotificationService:
             plain += "\n\n" + extra_text
             telegram_body += "\n\n" + extra_text
 
+        # Issue #1405 S1 (ADR-0086): `sent_channels` = zugestellt (append IM
+        # try NACH dem Send), `attempted_channels` = betreten (NACH dem try).
         sent_channels: list[str] = []
+        attempted_channels: list[str] = []
         failed_channels: list[str] = []
         # Issue #1701 (S2b, D5): Kanal -> Grund, warum Premium-SMS NICHT
         # zugestellt wurde (bewusste Sperre, nicht Transportfehler) — an den
@@ -1820,10 +1847,9 @@ class NotificationService:
             else:
                 logger.error(f"{label} alert failed for {target_name}: {e}")
 
-        # E-Mail: Kanal gilt als betreten, wenn er konfiguriert ist — auch wenn
-        # der Best-Effort-Versand fehlschlägt (Issue #684 AC-3, Anti-Pattern #656).
+        # E-Mail: zugestellt erst nach fehlerfreiem Send (ADR-0086 loest
+        # #684 AC-3 ab); betreten ist der Kanal in jedem Fall.
         if "email" in effective_channels and self._settings.can_send_email():
-            sent_channels.append("email")
             try:
                 if mail_sink is not None:
                     mail_sink(subject=subject, body=plain)
@@ -1834,12 +1860,13 @@ class NotificationService:
                         plain_text_body=plain,
                         mail_type=mail_type,
                     )
+                sent_channels.append("email")
             except Exception as e:
                 _log_error("email", e)
+            attempted_channels.append("email")
 
         # Telegram
         if "telegram" in effective_channels and self._settings.can_send_telegram():
-            sent_channels.append("telegram")
             try:
                 if telegram_style == "kurzform":
                     # Issue #1467 S2, Korrektur K-6 (PO-Entscheidung
@@ -1902,11 +1929,18 @@ class NotificationService:
                             telegram_fully_sent = False
                             failed_count += 1
                     if failed_count:
-                        failed_channels.append("telegram")
                         # #1370-Muster: Teilzustellung wird gemeldet statt
                         # still verschluckt.
                         self._send_telegram_incomplete_hint(
                             SimpleNamespace(email_subject=subject), failed_count,
+                        )
+                    # Issue #1405 S1 (AC-6): mindestens eine Blase angekommen
+                    # = Kanal zugestellt (keine Wiederholung, keine Dubletten);
+                    # die Teilzustellung zeigt `telegram_fully_sent`. Scheitern
+                    # ALLE Blasen, ist das ein Transportfehler.
+                    if failed_count == len(telegram_groups):
+                        raise RuntimeError(
+                            f"alle {failed_count} Telegram-Sprechblasen gescheitert"
                         )
                 else:
                     TelegramOutput(self._settings).send(
@@ -1915,8 +1949,10 @@ class NotificationService:
                         parse_mode="HTML",
                         suppress_subject_line=True,
                     )
+                sent_channels.append("telegram")
             except Exception as e:
                 _log_error("telegram", e)
+            attempted_channels.append("telegram")
 
         # SMS
         if "sms" in effective_channels and self._settings.can_send_sms():
@@ -1924,12 +1960,13 @@ class NotificationService:
             if self._sms_gate_reserve(
                 "sms", "alert", now_sms, blocked_channels, blocked_reason_codes,
             ):
-                sent_channels.append("sms")
                 try:
                     SMSOutput(self._settings).send(subject=subject, body=sms_body)
+                    sent_channels.append("sms")
                 except Exception as e:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
                     _log_error("sms", e)
+                attempted_channels.append("sms")
 
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # vorgeschaltete can_send_*()-Bereitschaftsfrage (D2): die
@@ -1943,9 +1980,9 @@ class NotificationService:
             if self._sms_gate_reserve(
                 "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
             ):
-                sent_channels.append("premium_sms")
                 try:
                     PremiumSmsOutput(self._settings).send(subject=subject, body=sms_body)
+                    sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(
                         self._require_user(), "premium_sms", now_premium,
@@ -1953,9 +1990,11 @@ class NotificationService:
                     blocked_channels["premium_sms"] = str(e)
                     _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
                     _log_error("premium_sms", e)
+                attempted_channels.append("premium_sms")
 
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
+            attempted_channels=attempted_channels,
             failed_channels=failed_channels,
             telegram_fully_sent=telegram_fully_sent,
             blocked_channels=blocked_channels,

@@ -54,7 +54,12 @@ def test_ac9_kumulativer_trend_ueber_mehrere_laeufe_loest_dennoch_aus():
 
     user_id, trip_id = f"tdd-1916-ac9-{uuid.uuid4().hex[:8]}", "trip-ac9"
     trip = gust_alert_trip(trip_id)
-    svc = TripAlertService(settings=settings_email_only(), user_id=user_id)
+    # ADR-0086 (#1405): Senke statt echtem SMTP-Versand an `dummy.invalid` --
+    # der gescheiterte Transport galt nur unter "betreten = gesendet" als Alarm.
+    svc = TripAlertService(
+        settings=settings_email_only(), user_id=user_id,
+        mail_sink=lambda subject=None, body=None, **_kw: None,
+    )
     snap_svc = WeatherSnapshotService(user_id=user_id)
 
     aktueller_anker = [_wetter(_URSPRUNGSWERT, datetime.now(timezone.utc))]

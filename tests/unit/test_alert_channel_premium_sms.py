@@ -879,7 +879,11 @@ def test_radar_alarm_run_logs_specific_premium_sms_block_reason(monkeypatch):
     )
     sent = svc.check_radar_alerts()
 
-    assert sent >= 1, f"Voraussetzung: der Radar-Alarm muss ausgeloest worden sein, sent={sent}"
+    # ADR-0086 (#1405): der einzige Kanal ist gesperrt (`blocked_only`) --
+    # terminal gebucht, aber NICHT zugestellt; der Zaehler zaehlt nur
+    # Zustellungen. Dass der Alarm ausgeloest wurde, belegt der
+    # Protokoll-Eintrag unten (Vorbedingung).
+    assert sent == 0, f"ADR-0086: eine reine Sperre ist keine Zustellung, sent={sent}"
     log = read_log(uid)
     entries = [e for e in log["entries"] if e.get("entity_id") == trip_id]
     assert len(entries) == 1, f"Erwartet genau einen Eintrag fuer {trip_id!r}: {log!r}"

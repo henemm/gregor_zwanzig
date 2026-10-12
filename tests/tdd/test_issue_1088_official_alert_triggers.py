@@ -771,7 +771,9 @@ class TestS4bEventIdentityWiring:
                 save_trip(trip_nowcast, uid)
                 raus = trip_alert_service(
                     uid, settings_email_only(), CountingFrameSource(onset_minutes=8),
-                    lambda s, b: None,
+                    # ADR-0086 (#1405): keyword-kompatible Senke -- `lambda s, b` warf
+                    # TypeError und galt nur unter "betreten = gesendet" als Versand.
+                    lambda subject=None, body=None, **_kw: None,
                 ).check_radar_alerts()
                 assert raus == 1, f"Voraussetzung: der Nowcast muss zustellen ({raus!r})"
                 assert len(results) >= 1, (
@@ -794,7 +796,9 @@ class TestS4bEventIdentityWiring:
             # #1196 Klasse C Teil 4: Dummy-SMTP wie im Nowcast-Pfad oben --
             # ohne settings= baut TripAlertService Settings() aus der Umgebung
             # (can_send_email() nur mit Host-.env True).
-            svc = TripAlertService(user_id=uid, settings=settings_email_only(), mail_sink=lambda s, b: None)
+            # ADR-0086 (#1405): keyword-kompatible Senke -- `lambda s, b` warf
+            # TypeError und galt nur unter "betreten = gesendet" als Versand.
+            svc = TripAlertService(user_id=uid, settings=settings_email_only(), mail_sink=lambda subject=None, body=None, **_kw: None)
             notices = svc.check_official_alert_triggers(trip_amtlich)
             assert len(notices) == 1, "Voraussetzung: die amtliche Warnung muss neu sein"
 
@@ -985,7 +989,9 @@ class TestS4bEventIdentityWiring:
 
             # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
             # settings= baut TripAlertService Settings() aus der Umgebung.
-            svc = TripAlertService(user_id=uid, settings=settings_email_only(), mail_sink=lambda s, b: None)
+            # ADR-0086 (#1405): keyword-kompatible Senke -- `lambda s, b` warf
+            # TypeError und galt nur unter "betreten = gesendet" als Versand.
+            svc = TripAlertService(user_id=uid, settings=settings_email_only(), mail_sink=lambda subject=None, body=None, **_kw: None)
             notices = svc.check_official_alert_triggers(trip)
             assert len(notices) == 1, "Voraussetzung: die Warnung muss als NEU erkannt werden"
 

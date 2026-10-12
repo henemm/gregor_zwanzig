@@ -1523,11 +1523,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # --- B13 entfernt (#1407): die Funktion war toter Code (Legacy-Pfad
     # #1131) und wurde ersatzlos geloescht statt angeschlossen — der Scanner
     # findet an dieser Stelle nichts mehr, der Eintrag entfaellt mit ihr.
-    # --- B1: der #1403-Fall. Der Nutzer liest "Testmail verschickt", obwohl
-    # nie etwas losgeschickt wurde ("no_channels" fällt bis zu sent=True durch).
-    "api/routers/scheduler.py::send_test_trip_report::0": (
-        "B1 (#1403/#1405) — send_test_trip_report: 'sent': True trotz outcome."
-    ),
+    # --- B1 entfernt (#1405 S1, ADR-0086): send_test_trip_report leitet
+    # "sent" jetzt aus outcome == "sent" ab — der Scanner findet dort nichts mehr.
     # B11/B11b/B11c entfernt (#2217) — die drei Compare-Alarmprüfer zählen
     # gescheiterte Presets jetzt in `failed` (Gegenzähler je Einheit).
     # --- B19/B20: die beiden Inbound-Reader. In Spec-Version 1.1 fälschlich
@@ -1543,25 +1540,9 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/notification_service.py::_send_telegram_incomplete_hint::0": (
         "B21 (#1405) — _send_telegram_incomplete_hint: TelegramOutput, kein Signal."
     ),
-    # --- B14a: Marker vor der Tat, drei Kanäle. NotificationResult.sent=True
-    # heißt damit "konfiguriert", nicht "zugestellt" (#684 AC-3, #656).
-    "src/services/notification_service.py::send_official_alert::0": (
-        "B14a (#1405/#684) — send_official_alert: append('email') vor dem try."
-    ),
-    "src/services/notification_service.py::send_official_alert::1": (
-        "B14a (#1405/#684) — send_official_alert: dito, Telegram."
-    ),
-    "src/services/notification_service.py::send_official_alert::2": (
-        "B14a (#1405/#684) — send_official_alert: dito, SMS."
-    ),
-    # Issue #1701 (S2b, D7): vierter Kanal Premium-SMS (Garmin inReach) --
-    # bewusste Ratschen-Anhebung 3->4, NICHT die Buchung hinter den `try`
-    # verschoben (s. Spec D7). `sent_channels`="versucht" bleibt getrennt von
-    # `reachable_channels`="erreichbar" -- dieselbe Marker-vor-der-Tat-Semantik
-    # wie die drei Bestandskanaele.
-    "src/services/notification_service.py::send_official_alert::3": (
-        "B14a (#1405/#684, #1701 D7) — send_official_alert: dito, Premium-SMS."
-    ),
+    # --- B14a entfernt (#1405 S1, ADR-0086): send_official_alert trägt
+    # sent_channels erst NACH erfolgreichem Send ein (im try), den Versuch in
+    # attempted_channels NACH dem try/except — kein Marker mehr vor der Tat.
     # --- B14b ENTFERNT (#1459, 2026-08-02): die drei Compare-Versandhelfer
     # _dispatch_compare_official_{email,telegram,sms} hatten keine Rückmeldung —
     # der Aufrufer buchte den Erfolg auf den bloßen Umstand, dass er sie
@@ -1583,22 +1564,9 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # Restliste blieb stehen, weil ihr zeilenbasierter Schlüssel damals
     # ohnehin schon 13-fach rot war und der echte Fortschritt darin unterging.
     # Genau dagegen ist #1466 gebaut.
-    # --- B14c: dasselbe Marker-vor-der-Tat-Muster im gemeinsamen
-    # Alarm-Versandweg (Änderungs-, Radar- und amtliche Alarme).
-    "src/services/notification_service.py::_dispatch_alert_message::0": (
-        "B14c (#1405/#684) — _dispatch_alert_message: append('email') vor dem try."
-    ),
-    "src/services/notification_service.py::_dispatch_alert_message::1": (
-        "B14c (#1405/#684) — _dispatch_alert_message: dito, Telegram."
-    ),
-    "src/services/notification_service.py::_dispatch_alert_message::2": (
-        "B14c (#1405/#684) — _dispatch_alert_message: dito, SMS."
-    ),
-    # Issue #1701 (S2b, D7): vierter Kanal Premium-SMS, dieselbe Begruendung
-    # wie bei send_official_alert::3 oben.
-    "src/services/notification_service.py::_dispatch_alert_message::3": (
-        "B14c (#1405/#684, #1701 D7) — _dispatch_alert_message: dito, Premium-SMS."
-    ),
+    # --- B14c entfernt (#1405 S1, ADR-0086): _dispatch_alert_message, gleiche
+    # Reparatur wie send_official_alert (sent_channels im try nach dem Send,
+    # attempted_channels nach dem try/except).
     "src/services/notification_service.py::send_command_reply_email::0": (
         "B21 (#1405) — send_command_reply_email: EmailOutput, keine Rückmeldung."
     ),
@@ -1627,14 +1595,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/trip_command_processor.py::_handle_query::3": (
         "B18 (#1405) — _handle_query (timeline_morgen): dito."
     ),
-    # --- B16: outcome wird geprüft, der Text variiert korrekt — nur `success`
-    # bleibt in BEIDEN Ausgängen True (zweiter Treffer: s. Kopfkommentar).
-    "src/services/trip_command_processor.py::_trigger_on_demand::0": (
-        "B16 (#1405) — _trigger_on_demand: success=True trotz outcome != 'sent'."
-    ),
-    "src/services/trip_command_processor.py::_trigger_on_demand::1": (
-        "B16 (#1405) — _trigger_on_demand: Erfolgsausgang, ohne Bezug auf outcome."
-    ),
+    # --- B16 entfernt (#1405 S1, ADR-0086): _trigger_on_demand leitet
+    # `success` jetzt aus outcome ab.
     "src/services/trip_command_processor.py::_handle_drilldown::0": (
         "B18 (#1405) — _handle_drilldown: nach WeatherExtractor(...).drilldown()."
     ),
@@ -1660,10 +1622,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/trip_command_processor.py::_apply_ruhetag::0": (
         "B18 (#1405) — _apply_ruhetag: nach unzugewiesenem save_trip(...)."
     ),
-    # --- B15: das Ergebnis wird nicht einmal entgegengenommen.
-    "src/services/trip_command_processor.py::_trigger_report::0": (
-        "B15 (#1405) — _trigger_report: send_test_report(...) unzugewiesen."
-    ),
+    # --- B15 entfernt (#1405 S1, ADR-0086): _trigger_report wertet
+    # send_test_report_outcome(...) aus; success und Text folgen dem Ergebnis.
     "src/services/trip_command_processor.py::_show_status::0": (
         "B18 (#1405) — _show_status: matcht über das triviale date.today(). "
         "Bewusst aufgenommen (Arbeitsvorrat, keine Vorab-Filterung) — die "
@@ -1833,8 +1793,8 @@ INTENTIONAL_CONSTANT_SUCCESS: dict[str, str] = {
 # beschlossen und dort nachgezogen, nicht still hier.
 # ---------------------------------------------------------------------------
 SPEC_LISTED_FINDINGS: dict[str, int] = {
-    # B1 — der #1403-Fall: "no_channels" fällt durch bis "sent": True
-    "api/routers/scheduler.py::send_test_trip_report": 1,
+    # B1 entfernt (#1405 S1, ADR-0086) — send_test_trip_report leitet
+    # "sent" aus outcome == "sent" ab, der Scanner findet dort nichts mehr.
     # B2 entfernt (#1447 S1) — trigger_alert_checks leitet den Status jetzt
     # aus AlertCheckRunResult.hit_deadline ab, der Scanner findet dort nichts
     # mehr.
@@ -1854,15 +1814,12 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "src/services/scheduler_dispatch_service.py::send_compare_preset": 1,
     # B13 entfernt (#1407) — toter Compare-Heartbeat wurde geloescht statt
     # angeschlossen, der Scanner findet dort nichts mehr.
-    # B14a — sent_channels.append() vor dem try, jetzt VIER Kanäle
-    # (email/telegram/sms/premium_sms). Issue #1701 (S2b, D7): von 3 auf 4
-    # angehoben, NICHT die Buchung hinter den `try` verschoben — die Spec
-    # trifft diese Entscheidung ausdrücklich (Nachzugpflicht dieses
-    # Kommentars).
-    "src/services/notification_service.py::send_official_alert": 4,
-    # B14c — dito, jetzt VIER Kanäle; genutzt von Änderungs-, Radar- und
-    # amtlichen Alarmen. Issue #1701 (S2b, D7).
-    "src/services/notification_service.py::_dispatch_alert_message": 4,
+    # B14a/B14c entfernt (#1405 S1, ADR-0086) — send_official_alert und
+    # _dispatch_alert_message tragen sent_channels erst nach erfolgreichem
+    # Send ein und attempted_channels NACH dem try/except. Die bisherige
+    # Ratschen-Anhebung 3->4 aus #1701 D7 entfällt damit ganz (-2 Schlüssel,
+    # -8 Treffer); der Detektor 1c ist unverändert (AC-27 belegt, dass er ein
+    # attempted_channels.append VOR dem try weiterhin meldet).
     # B14b entfernt (#1459, 2026-08-02) — die drei Helfer
     # _dispatch_compare_official_{email,telegram,sms} liefern jetzt `bool`, und
     # send_compare_official_alert() WERTET den Rueckgabewert aus (fuellt daraus
@@ -1870,10 +1827,9 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # weggeworfen: ein gescheiterter Ortsvergleich-Versand galt als Erfolg —
     # genau der Mangel, den diese drei Eintraege gefuehrt haben. Der Scanner
     # findet dort nichts mehr, die Ratsche ist entsprechend kleiner.
-    # B15 — send_test_report() unzugewiesen, danach bedingungslos success=True
-    "src/services/trip_command_processor.py::_trigger_report": 1,
-    # B16 — outcome geprüft, Text variiert korrekt, success=True aber nicht
-    "src/services/trip_command_processor.py::_trigger_on_demand": 1,
+    # B15/B16 entfernt (#1405 S1, ADR-0086) — _trigger_report wertet
+    # send_test_report_outcome aus, _trigger_on_demand leitet success aus
+    # outcome ab; der Scanner findet dort nichts mehr.
     # B17 — toter Code, sent_count ohne Gegenzähler, return int
     "src/services/trip_report_scheduler.py::send_reports": 1,
     # --- B18 (NEU Version 1.2, E3): dateiweites Muster in ----------------
@@ -1980,12 +1936,15 @@ def test_scanner_finds_every_spec_listed_finding():
     # gekürzte Tabelle würde sonst hinter einem grünen Scan verschwinden,
     # und genau das ist der Weg, auf dem Wächter still ihre Schärfe
     # verlieren (Test-Politik: Schwellen nie anpassen, damit etwas grün wird).
-    assert len(SPEC_LISTED_FINDINGS) == 26 and sum(SPEC_LISTED_FINDINGS.values()) == 35, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 26 "
-        "Funktionsschlüssel, Summe 35 — Version 1.2 minus B13, #1407, minus "
+    # #1405 S1 (ADR-0086): minus B1, B14a (4), B14c (4), B15, B16
+    # -> 21 Schlüssel, Summe 24 (vorher 26/35).
+    assert len(SPEC_LISTED_FINDINGS) == 21 and sum(SPEC_LISTED_FINDINGS.values()) == 24, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 21 "
+        "Funktionsschlüssel, Summe 24 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
         "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2, "
-        "minus B9/B10/B11/B11b/B11c, #2217). Ist: "
+        "minus B9/B10/B11/B11b/B11c, #2217, minus B1/B14a/B14c/B15/B16, "
+        "#1405 S1 ADR-0086). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )
@@ -2517,6 +2476,102 @@ def test_scanner_detects_pre_try_success_marker_in_synthetic_file(tmp_path):
         "send_trip_report und send_compare_report) wurde als Fund gemeldet — "
         "der Detektor wertet die Reihenfolge nicht aus und wäre damit nie "
         f"grün zu bekommen. Fundliste: {good_found}"
+    )
+
+
+def test_pre_try_detector_flags_attempted_channels_only_before_try(tmp_path):
+    """AC-27 (#1405 S1, ADR-0086): GIVEN der Detektor 1c zählt jedes nackte
+    ``<Name>.append(...)`` vor einem riskanten ``try`` — unabhängig vom Namen
+    der Sammlung / WHEN ``attempted_channels`` ("Kanal betreten") befüllt wird
+    / THEN ist ein ``attempted_channels.append`` VOR dem ``try`` weiterhin ein
+    Fund (Detektor nicht gelockert, kein Namens-Schlupfloch für das neue
+    Feld), und dasselbe ``append`` NACH dem ``try/except``-Block ist keiner.
+
+    Das ist die Bauform, die ADR-0086 für ``send_official_alert`` und
+    ``_dispatch_alert_message`` vorschreibt: ``sent_channels.append`` im
+    ``try`` nach dem Send, ``attempted_channels.append`` nach dem Block.
+    Ohne diese Gegenprobe könnte die Reparatur den Marker bloß umbenennen
+    und B14a/B14c verschwänden aus der Restliste, ohne behoben zu sein.
+    """
+    header = (
+        "import logging\n"
+        "\n"
+        "from output.channels.email import EmailOutput\n"
+        "from output.channels.telegram import TelegramOutput\n"
+        "\n"
+        "logger = logging.getLogger(__name__)\n"
+        "\n"
+        "\n"
+    )
+
+    before_file = tmp_path / "synthetic_attempted_before_try.py"
+    before_file.write_text(
+        header
+        + "def _dispatch_alert_message(settings, subject, plain, html, channels):\n"
+        "    sent_channels = []\n"
+        "    attempted_channels = []\n"
+        "\n"
+        "    if 'email' in channels and settings.can_send_email():\n"
+        "        attempted_channels.append('email')\n"
+        "        try:\n"
+        "            EmailOutput(settings).send(subject=subject, body=html, plain_text_body=plain)\n"
+        "            sent_channels.append('email')\n"
+        "        except Exception as e:\n"
+        "            logger.error('Email alert failed: %s', e)\n"
+        "\n"
+        "    if 'telegram' in channels and settings.can_send_telegram():\n"
+        "        attempted_channels.append('telegram')\n"
+        "        try:\n"
+        "            TelegramOutput(settings).send(subject=subject, body=plain)\n"
+        "            sent_channels.append('telegram')\n"
+        "        except Exception as e:\n"
+        "            logger.error('Telegram alert failed: %s', e)\n"
+        "\n"
+        "    return sent_channels, attempted_channels\n",
+        encoding="utf-8",
+    )
+    before_found = _find_pre_try_success_marker_violations(before_file)
+    assert len(before_found) == 2, (
+        "AC-27: ein attempted_channels.append VOR dem riskanten try muss je "
+        "Kanal ein Klasse-1c-Fund sein (der Detektor ist namensunabhängig) — "
+        f"erwartet 2 Treffer, gefunden {len(before_found)}: {before_found}"
+    )
+    assert all(
+        kind == f"{KIND_PRE_TRY_SUCCESS_MARKER}::_dispatch_alert_message"
+        for kind in before_found.values()
+    ), f"AC-27: unerwartete Fund-Art: {before_found}"
+
+    after_file = tmp_path / "synthetic_attempted_after_try.py"
+    after_file.write_text(
+        header
+        + "def _dispatch_alert_message(settings, subject, plain, html, channels):\n"
+        "    sent_channels = []\n"
+        "    attempted_channels = []\n"
+        "\n"
+        "    if 'email' in channels and settings.can_send_email():\n"
+        "        try:\n"
+        "            EmailOutput(settings).send(subject=subject, body=html, plain_text_body=plain)\n"
+        "            sent_channels.append('email')\n"
+        "        except Exception as e:\n"
+        "            logger.error('Email alert failed: %s', e)\n"
+        "        attempted_channels.append('email')\n"
+        "\n"
+        "    if 'telegram' in channels and settings.can_send_telegram():\n"
+        "        try:\n"
+        "            TelegramOutput(settings).send(subject=subject, body=plain)\n"
+        "            sent_channels.append('telegram')\n"
+        "        except Exception as e:\n"
+        "            logger.error('Telegram alert failed: %s', e)\n"
+        "        attempted_channels.append('telegram')\n"
+        "\n"
+        "    return sent_channels, attempted_channels\n",
+        encoding="utf-8",
+    )
+    after_found = _find_pre_try_success_marker_violations(after_file)
+    assert not after_found, (
+        "AC-27: attempted_channels.append NACH dem try/except (die von "
+        "ADR-0086 vorgeschriebene Bauform) wurde als Klasse-1c-Fund gemeldet "
+        f"— die Reparatur wäre nie grün zu bekommen. Fundliste: {after_found}"
     )
 
 

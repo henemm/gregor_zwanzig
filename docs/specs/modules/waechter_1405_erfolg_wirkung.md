@@ -409,7 +409,7 @@ eigene Verifikations-Ergänzung).
 
 | # | Datei:Zeile | Funktion | Klasse | Befund |
 |---|---|---|---|---|
-| B1 | `api/routers/scheduler.py:217` | `send_test_trip_report` | 1 | Der #1403-Fall. `"no_channels"` wird vom Router nicht abgefangen — fällt durch bis `"sent": True` |
+| B1 | `api/routers/scheduler.py:217` | `send_test_trip_report` | 1 | Der #1403-Fall. `"no_channels"` wird vom Router nicht abgefangen — fällt durch bis `"sent": True`. **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. `"sent"` wird aus `outcome == "sent"` abgeleitet. |
 | B2 | `api/routers/scheduler.py:54` | `trigger_alert_checks` | 1 | `status: "ok"` fest; `count` echt, fließt nicht in den Status |
 | B3 | `api/routers/scheduler.py:64` | `trigger_compare_alert_checks` | 1 | dito |
 | B4 | `api/routers/scheduler.py:74` | `trigger_radar_alert_checks` | 1 | dito |
@@ -424,13 +424,13 @@ eigene Verifikations-Ergänzung).
 | B11c | `src/services/compare_official_alert.py:72` | `CompareOfficialAlertService.check_all_compare_presets` | 2 | `sum(1 for preset in presets if self._check_one_preset(...))` — kein Fehlerzähler, kein `try/except` im Rumpf |
 | B12 | `src/services/scheduler_dispatch_service.py:443` | `send_compare_preset` | 1 | `top_ort, actual_empfaenger` zugewiesen, aber `"status"` fest `"ok"` |
 | B13 | `api/routers/scheduler.py:147` | `_ping_heartbeat_compare` | 3 | Toter Code. Kein Aufrufer außerhalb der Definition; `trigger_compare_presets_daily` ruft sie nicht auf |
-| B14a | `src/services/notification_service.py:660` | `send_official_alert` | 1c | `sent_channels.append("email")` (analog telegram Z. 672, sms Z. 694) vor dem `try` — 3 Kanal-Vorkommen |
+| B14a | `src/services/notification_service.py:660` | `send_official_alert` | 1c | `sent_channels.append("email")` (analog telegram Z. 672, sms Z. 694) vor dem `try` — 3 Kanal-Vorkommen. **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. `sent_channels.append` steht im `try` nach dem Send, `attempted_channels.append` nach dem `try/except` (4 Kanäle inkl. Premium-SMS). |
 | B14b (email) | `src/services/notification_service.py:878` | `_dispatch_compare_official_email` | 4 | try/except, Handler nur `logger.error`, kein `return`-Wert, ruft `EmailOutput(...).send(...)` |
 | B14b (telegram) | `src/services/notification_service.py:891` | `_dispatch_compare_official_telegram` | 4 | dito, Telegram-Kanal; nacktes `return` (Z. 916) zählt NICHT als Rückmeldung (S-9) |
 | B14b (sms) | `src/services/notification_service.py:929` | `_dispatch_compare_official_sms` | 4 | dito, SMS-Kanal |
-| B14c | `src/services/notification_service.py:1066` | `_dispatch_alert_message` | 1c | dito wie B14a, 3 Kanal-Vorkommen (Z. 1066/1082/1103) |
-| B15 | `src/services/trip_command_processor.py:888` | `_trigger_report` | 1 | `service.send_test_report(trip, report_type)` unzugewiesen, danach bedingungslos `return CommandResult(success=True, ...)` |
-| B16 | `src/services/trip_command_processor.py:526` | `_trigger_on_demand` | 1 | `outcome` geprüft, Bestätigungstext variiert korrekt, `success` nicht |
+| B14c | `src/services/notification_service.py:1066` | `_dispatch_alert_message` | 1c | dito wie B14a, 3 Kanal-Vorkommen (Z. 1066/1082/1103). **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. Gleiche Reparatur wie B14a (4 Kanäle). |
+| B15 | `src/services/trip_command_processor.py:888` | `_trigger_report` | 1 | `service.send_test_report(trip, report_type)` unzugewiesen, danach bedingungslos `return CommandResult(success=True, ...)`. **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. `send_test_report_outcome` wird ausgewertet; `success` und Text folgen dem Ergebnis. |
+| B16 | `src/services/trip_command_processor.py:526` | `_trigger_on_demand` | 1 | `outcome` geprüft, Bestätigungstext variiert korrekt, `success` nicht. **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. `success` wird aus `outcome` abgeleitet. |
 | B17 | `src/services/trip_report_scheduler.py:240` | `send_reports` | 2 | Toter Code. `sent_count` ohne Gegenzähler, `return sent_count` (int) |
 | **B18** | `src/services/trip_command_processor.py` (zehn Funktionen, s. u.) | `_handle_query` (4×) / `_handle_drilldown` / `_handle_hours_drilldown` / `_apply_ruhetag` / `_show_status` / `_apply_pause` / `_apply_skip` / `_show_now` / `_cancel_trip` / `_resume_trip` | 1 | **NEU (E3, Tech-Lead-Entscheidung 2026-07-28).** Dateiweites Muster, dieselbe Mechanik wie B15/B16 — s. „B18-Detailtabelle" unten. Reparatur sinnvollerweise am Stück (eine Entscheidung über `CommandResult.success`, nicht zehn Einzelfixes) |
 | **B19** | `src/services/inbound_email_reader.py:77` | `poll_and_process` | 2 | **NEU (E4).** `for uid in uids: ... processed += self._process_single(...)`, `except Exception: logger.error(...)` (kein Gegenzähler), `return processed`. Bislang fälschlich als „kein Fund" geführt („zählt nur tatsächlich Verarbeitetes" ist fachlich richtig, aber KEIN strukturelles Ausschlusskriterium) |
@@ -500,6 +500,8 @@ Scan-Ergebnis):
 | `src/services/notification_service.py::_send_telegram_incomplete_hint` | 1 |
 | `src/services/notification_service.py::send_command_reply_email` | 1 |
 | `src/services/notification_service.py::_send_service_error_email` | 1 |
+
+**Stand nach #1405 S1 (ADR-0086, 2026-10-09):** `SPEC_LISTED_FINDINGS` führt noch **21** Funktionsschlüssel mit **Summe 24** (vorher 26/35). Entfernt: `send_test_trip_report` (B1, 1), `send_official_alert` (B14a, 4), `_dispatch_alert_message` (B14c, 4), `_trigger_report` (B15, 1), `_trigger_on_demand` (B16, 1). Die Tabelle oben bleibt als historische Herleitung stehen; maßgeblich ist der Kopfkommentar von `SPEC_LISTED_FINDINGS`.
 
 **Summe der Mindest-Treffer = 45**, verteilt über **38** Funktionsschlüssel
 (23 aus Version 1.1 + 10 aus B18 + 2 aus B19/B20 + 3 aus B21), die **23**
@@ -799,3 +801,9 @@ B15–B17-Aufnahme trotz totem Code).
   auf 4 (Tabelle oben), `SPEC_LISTED_FINDINGS`-Summe von 40 auf 42.
   Funktionsschlüssel-Zahl (33) unverändert. Dies ist genau die in „Offene
   Punkte" 2 vorgesehene, hier beschlossene Korrektur.
+- 2026-10-09 (Nachzug Issue #1405 Scheibe 1, ADR-0086): B1, B14a (4), B14c (4),
+  B15 und B16 repariert und aus `KNOWN_VIOLATIONS`/`SPEC_LISTED_FINDINGS`
+  entfernt — 21 Funktionsschlüssel, Summe 24 (vorher 26/35). Der Detektor 1c
+  bleibt unverändert; ein neuer synthetischer Nachweis (AC-27 der Spec
+  `fix_1405_s1_alarm_zustellung.md`) belegt, dass ein
+  `attempted_channels.append` VOR einem riskanten `try` weiterhin ein Fund ist.

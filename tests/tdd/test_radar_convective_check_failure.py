@@ -226,8 +226,9 @@ def test_ac7_ausgefallene_gewitterpruefung_traegt_die_briefing_unterdrueckung_ni
     allein aus diesem Grund unterdrueckt.
 
     Nachgewiesen am TATSAECHLICHEN Versand ueber die vier Kanal-Abgriffe der
-    Pruefstrecke, nicht nur am Zaehler: `triggered_count` zaehlt bereits den
-    VERSUCH (Anti-Muster #656).
+    Pruefstrecke, nicht nur am Zaehler: `triggered_count` zaehlte frueher den
+    VERSUCH (Anti-Muster #656); seit ADR-0086 (#1405 S1) zaehlt er nur noch
+    Zustellungen -- der Draht-Abgriff bleibt der staerkere Beleg.
 
     Die Gegenprobe zu diesem Test ist AC-8 — dieselbe Lage mit
     DURCHGEFUEHRTER Pruefung muss weiterhin schweigen. Beide zusammen

@@ -35,6 +35,8 @@ from output.renderers.alert.official_alerts import (
     official_alert_state_key,
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
+from services import alert_retry_backoff
+from services.throttle_store import ThrottleStore
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
     check_briefing_imminent,
@@ -71,6 +73,10 @@ def _effective_telegram_style(preset: dict) -> str:
     stehen; das Verhalten ist unveraendert."""
     return effective_compare_telegram_style(preset)
 
+
+#: Issue #1405 S1: Backoff-Scope des amtlichen Ortsvergleich-Alarms (dieser
+#: Pfad kennt sonst keine Sperrzeit im ``ThrottleStore``).
+_RETRY_SCOPE = "compare_official"
 
 class CompareOfficialAlertService:
     """Wertet amtliche Warnungen je Compare-Preset/Ort aus und versendet EINEN
@@ -308,6 +314,17 @@ class CompareOfficialAlertService:
         allowed, suppressed = alert_channel_threshold.split_by_threshold(
             effective_channels, severity, preset.get("alert_channel_thresholds"),
         )
+        # Issue #1405 S1 (ADR-0086): Fehlversuchs-Backoff je Ereignis (Ort +
+        # Meldungs-Kennung) -- geteilter Baustein wie im amtlichen Trip-Pfad.
+        retry_store = ThrottleStore(self._user_id)
+        retry_fp = alert_retry_backoff.event_fingerprint(preset_id, (
+            f"{loc_id}/{part}"
+            for alert, loc_ids in tagged_alerts
+            for part in alert_retry_backoff.official_alert_parts([alert])
+            for loc_id in loc_ids
+        ))
+        if alert_retry_backoff.backoff_active(retry_store, _RETRY_SCOPE, retry_fp):
+            return False
         result = notification_service.send_multi_location_official_alert(
             preset.get("name", preset_id), locs, tagged_alerts,
             allowed,
@@ -347,7 +364,7 @@ class CompareOfficialAlertService:
             reason=alert_log.REASON_OFFICIAL_ALERT,
             effective_channels=effective_channels,
             sent_channels=result.delivered_channels,
-            reachable_channels=result.sent_channels,
+            reachable_channels=result.attempted_channels,
             below_threshold_channels=suppressed,
             blocked_reason_codes=result.blocked_reason_codes,
             event_at=_e1_event_at, event_end_at=_e1_event_end_at,
@@ -357,7 +374,9 @@ class CompareOfficialAlertService:
                 [a for a, _loc_ids in tagged_alerts]
             ),
         )
-        if not result.sent:
+        if not alert_retry_backoff.settle(
+            retry_store, _RETRY_SCOPE, retry_fp, result.delivery_outcome,
+        ):
             return False
 
         self._record_state(preset_id, per_location_new)
@@ -378,7 +397,7 @@ class CompareOfficialAlertService:
                     window_start=alert.valid_from, window_end=alert.valid_to,
                     now=datetime.now(timezone.utc),
                 )
-        return True
+        return result.sent
 
     def _detect(
         self, preset_id: str, locs: list, sources: Optional[list[str]] = None

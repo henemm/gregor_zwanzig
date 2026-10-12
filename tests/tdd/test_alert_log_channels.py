@@ -197,7 +197,15 @@ def test_ac15_konfiguriert_aber_nichts_zugestellt_bleibt_in_entries():
     ``channels_sent`` sowie beide Kanaele mit ``delivery_failed``.
 
     Damit ist "ausgeloest, aber niemand hat es bekommen" im Protokoll
-    erkennbar, ohne die im Cockpit gezeigte Zahl anzufassen."""
+    erkennbar, ohne die im Cockpit gezeigte Zahl anzufassen.
+
+    ADR-0086 (#1405): ``sent_channels`` heisst jetzt "zugestellt"; die
+    Erreichbarkeit (``reachable_channels``) speist sich aus
+    ``attempted_channels`` ("Kanal betreten"). Die Aussage dieses Tests bleibt
+    unveraendert (Spec fix_1405_s1_alarm_zustellung.md, AC-18/AC-28) — er
+    laeuft durch den echten Alarm-Lauf, die Umstellung muss also im Aufrufer
+    wirken. Ergaenzt um AC-18 zweite Haelfte: ein zweiter Lauf derselben Lage
+    waehrend des Backoffs erzeugt KEINEN weiteren Eintrag."""
     uid = fresh_user("ac15")
     _run(uid, "trip-ac15", settings=settings_email_and_failing_telegram(),
          channels=_EMAIL_AND_TELEGRAM, mail_sink=_boom)
@@ -219,6 +227,18 @@ def test_ac15_konfiguriert_aber_nichts_zugestellt_bleibt_in_entries():
         )
     assert entry.get("entity_id") == "trip-ac15", (
         f"Der Eintrag muss der Trip zuordenbar bleiben: {entry.get('entity_id')!r}"
+    )
+
+    # ADR-0086 (#1405): Totalausfall wird nicht als erledigt gebucht, sondern
+    # mit Backoff wiederholt — waehrend des Backoffs (30 Min) entsteht bei
+    # unveraenderter Lage KEIN zweiter Protokoll-Eintrag (AC-18, AC-11 der
+    # Spec fix_1405_s1_alarm_zustellung.md).
+    _run(uid, "trip-ac15", settings=settings_email_and_failing_telegram(),
+         channels=_EMAIL_AND_TELEGRAM, mail_sink=_boom)
+    log = read_log(uid)
+    assert len(log["entries"]) == 1 and not log["not_delivered"], (
+        "ADR-0086: waehrend des Fehlversuchs-Backoffs darf derselbe Alarm "
+        f"keinen weiteren Protokoll-Eintrag erzeugen: {log!r}"
     )
 
 
@@ -254,10 +274,19 @@ def test_ac11_fehlgeschlagener_versand_veraendert_die_angezeigte_zahl_nicht():
         )
 
     vorher = _zaehle_x()
+    # ADR-0086 (#1405): Die Erreichbarkeit kommt jetzt aus
+    # `attempted_channels` (Kanal betreten), nicht mehr aus `sent_channels`
+    # (das heisst jetzt "zugestellt"). Der hier protokollierte Fall — kein
+    # Kanal betreten, nichts zugestellt — wird deshalb ueber
+    # `reachable_channels=attempted_channels` eingegeben; die Aussage (Zahl
+    # bleibt bei zwei, Eintrag in `not_delivered`) ist unveraendert.
+    attempted_channels: list[str] = []
+    delivered_channels: list[str] = []
     alert_log.append_entry(
         uid, entity_id="X", entity_type="trip", changes_count=1, severity="MODERATE",
         metrics=[("gust", "max")], reason="forecast_change",
-        effective_channels={"email"}, sent_channels=[],
+        effective_channels={"email"}, sent_channels=delivered_channels,
+        reachable_channels=attempted_channels,
     )
     nachher = _zaehle_x()
 
@@ -269,6 +298,28 @@ def test_ac11_fehlgeschlagener_versand_veraendert_die_angezeigte_zahl_nicht():
     )
     assert len(read_log(uid)["not_delivered"]) == 1, (
         "Der fehlgeschlagene Versand muss stattdessen in 'not_delivered' stehen."
+    )
+
+    # ADR-0086 (#1405), AC-17: ein Kanal WURDE betreten, hat aber nicht
+    # zugestellt (Totalausfall bei konfiguriertem Kanal). Bisher stand er in
+    # `sent_channels` und damit in `entries` — mit `attempted_channels` als
+    # Quelle der Erreichbarkeit muss das bit-genau so bleiben (Zahl +1 wie
+    # bisher, nicht `not_delivered`).
+    attempted_channels = ["email"]
+    delivered_channels = []
+    alert_log.append_entry(
+        uid, entity_id="X", entity_type="trip", changes_count=1, severity="MODERATE",
+        metrics=[("gust", "max")], reason="forecast_change",
+        effective_channels={"email"}, sent_channels=delivered_channels,
+        reachable_channels=attempted_channels,
+    )
+    assert _zaehle_x() == 3, (
+        "ADR-0086: ein betretener, aber gescheiterter Kanal zaehlte bisher als "
+        "Eintrag in `entries` — die Cockpit-Zahl muss dabei bleiben "
+        f"(erwartet 3, erhalten {_zaehle_x()})."
+    )
+    assert len(read_log(uid)["not_delivered"]) == 1, (
+        "ADR-0086: der betretene Kanal darf nicht in 'not_delivered' landen."
     )
 
 
