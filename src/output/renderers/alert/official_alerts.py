@@ -66,6 +66,7 @@ _HAZARD_LABELS: dict[str, str] = {
     "wind_gust": "Sturm",
     "rain": "Starkregen",
     "snow": "Schneefall",
+    "avalanche": "Lawine",
     "black_ice": "Glatteis",
     "access_ban": "Zugang gesperrt",
     # Adversary F004 (HIGH, #1239 Nachzug Runde 2): "wildfire_risk" (Quelle

@@ -21,6 +21,7 @@ HAZARD_SMS_SYMBOLS: dict[str, str] = {
     "rain": "RA",
     "wind_gust": "WG",
     "snow": "SN",
+    "avalanche": "AW",
     "black_ice": "IC",
     "extreme_heat": "HT",
     "extreme_cold": "CD",
@@ -32,13 +33,13 @@ HAZARD_SMS_SYMBOLS: dict[str, str] = {
 # (Schluessel = hazard wie oben) -- CODES (en) und KUERZEL (de) lesen hier.
 HAZARD_BEDEUTUNG_EN: dict[str, str] = {
     "thunderstorm": "storm", "flood": "flood", "rain": "heavy rain",
-    "wind_gust": "wind", "snow": "snow", "black_ice": "ice",
+    "wind_gust": "wind", "snow": "snow", "avalanche": "avalanche", "black_ice": "ice",
     "extreme_heat": "heat", "extreme_cold": "cold", "wildfire_risk": "fire",
     "access_ban": "closure",
 }
 HAZARD_BEDEUTUNG_DE: dict[str, str] = {
     "thunderstorm": "Gewitter", "flood": "Hochwasser", "rain": "Starkregen",
-    "wind_gust": "Wind", "snow": "Schnee", "black_ice": "Glätte",
+    "wind_gust": "Wind", "snow": "Schnee", "avalanche": "Lawine", "black_ice": "Glätte",
     "extreme_heat": "Hitze", "extreme_cold": "Kälte", "wildfire_risk": "Waldbrand",
     "access_ban": "Sperrung",
 }

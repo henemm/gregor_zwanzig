@@ -131,8 +131,8 @@ STD_SYMBOLS = {s for s, _ in POSITIONAL}
 # DBG erscheint nie beim Nutzer). CODES (en) und KUERZEL (de) lesen hier.
 BAUSTEIN_BEDEUTUNG_EN: dict[str, str] = {
     "AV": "avalanche level", "Z:": "fire zones", "MAX": "top level",
-    "M:": "massifs", VIGI_HR: "Meteo-France rain risk",
-    VIGI_TH: "Meteo-France storm risk", UNAVAILABLE_SYMBOL: "no alert data",
+    "M:": "massifs", VIGI_HR: "MF rain risk",
+    VIGI_TH: "MF storm risk", UNAVAILABLE_SYMBOL: "no data",
 }
 BAUSTEIN_BEDEUTUNG_DE: dict[str, str] = {
     "AV": "Lawinenstufe", "Z:": "Brandzonen", "MAX": "Höchststufe",

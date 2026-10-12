@@ -99,7 +99,7 @@ CODES:
 Weather: T temp, D day max, N night, L day min, TF feels like, FD/FL/FN = D/L/N feels like, R rain mm, PR rain %, TH thunder, TH+ next stage, W wind km/h, G gusts, WD wind dir, HU humidity, DP dew point, CP storm energy, PT precip type, SL snow line m, NS24+ new snow 24h, CT/CL/CM/CH clouds total/low/mid/high, VS visibility, SU sun h, UV index, HP pressure, FZ 0C level m.
 More: SD snow depth, AV avalanche level, C confidence, Z:/MAX/M: fire zones/top level/massifs.
 Format: E4 stage 4, 23@5 over limit from 5h, (24@7) peak, D13/27 min/max, +HL hail, - none, ? no data.
-Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: Meteo-France rain/storm risk. X? no alert data.
+Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW avalanche, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: MF rain/storm risk. X? no data.
 ```
 
 **Wo die Bedeutungen stehen (PO-Vorgabe 27.09.2026: Der Metrik-Katalog ist der einzige Ort, an dem Wettermetriken definiert sein dürfen):**
@@ -180,7 +180,7 @@ Wie beim Trip fehlt eine HELP-Zeile, weil der Nutzer die Liste gerade liest. Die
     Wetter: T Temperatur, D Tageshöchstwert, N Nacht, L Tagestiefstwert, TF gefühlt, FD/FL/FN = D/L/N gefühlt, R Regen mm, PR Regenwahrscheinlichkeit %, TH Gewitter, TH+ Gewitter Folge-Etappe, W Wind km/h, G Böen, WD Windrichtung, HU Luftfeuchte, DP Taupunkt, CP Gewitterenergie, PT Niederschlagsart, SL Schneefallgrenze m, NS24+ Neuschnee 24h, CT/CL/CM/CH Bewölkung gesamt/tief/mittel/hoch, VS Sicht, SU Sonnenstunden, UV UV-Index, HP Luftdruck, FZ Nullgradgrenze m.
     Weitere: SD Schneehöhe, AV Lawinenstufe, C Vorhersage-Verlässlichkeit, Z:/MAX/M: Brandzonen/Höchststufe/Massive.
     Format: E4 Etappe 4, 23@5 über der Schwelle ab 5 Uhr, (24@7) Spitze, D13/27 Tiefst/Höchst, +HL Hagel, - nichts, ? keine Daten.
-    Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN Schnee, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine Warndaten.
+    Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN Schnee, AW Lawine, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine Warndaten.
     ```
   - Test: `test_kuerzel_eindeutig.py::test_codes_deutsch_auf_langform_kanaelen`.
 

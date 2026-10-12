@@ -1,0 +1,1521 @@
+{
+ "_ABGELEITET": "NICHT aufgezeichnet. Abgeleitet (Issue #1430, AC-2) aus je einem realen Eintrag von tests/fixtures/meteoalarm_feed/feed_{italy,austria,germany}_sample.json (IT: Lazio ...115902.089, AT: Lienz AT707 ...095118_d1_707, DE: Garmisch-Partenkirchen Gewitter ...827-4990-973a-8fdd25c4c2b2.MUL). Ersetzt wurden NUR awareness_type -> '9; avalanche', awareness_level -> '3; orange; Severe' (+ severity, event, headline). Zeitfenster, Zonen und uebrige Felder unveraendert.",
+ "IT": {
+  "warnings": [
+   {
+    "alert": {
+     "identifier": "2.49.0.0.380.3.IT.260731115902.089",
+     "incidents": "Update",
+     "info": [
+      {
+       "area": [
+        {
+         "areaDesc": "Lazio",
+         "geocode": [
+          {
+           "value": "IT012",
+           "valueName": "EMMA_ID"
+          }
+         ]
+        }
+       ],
+       "audience": "Private",
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "description": "Severe weather expected INLAND AREAS.\n (DISCLAIMER: \"Information provided on METEOALARM for Italy regard only the intensity and recurrence of the phenomena, further details can be found at www.meteoam.it. METEOALARM information do not provide the assessment of impact on the territory and they do not represent the Official Alerts messages that are issued by the National Civil Protection Service https://www.protezionecivile.gov.it\")",
+       "effective": "2026-07-31T11:00:00+02:00",
+       "event": "Avalanche Warning",
+       "expires": "2026-08-02T01:59:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "BE PREPARED. Take precautions and keep up to date with the latest weather forecast. Expect some disruption to daily routines and BE PREPARED for disruption to outdoor activities.",
+       "language": "en-GB",
+       "onset": "2026-07-31T11:00:00+02:00",
+       "parameter": [
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Monitor"
+       ],
+       "senderName": "Italian Air Force National Meteorological Service",
+       "severity": "Severe",
+       "urgency": "Future",
+       "web": "https://meteoalarm.org/en/live/region/IT?s=lazio"
+      },
+      {
+       "area": [
+        {
+         "areaDesc": "Lazio",
+         "geocode": [
+          {
+           "value": "IT012",
+           "valueName": "EMMA_ID"
+          }
+         ]
+        }
+       ],
+       "audience": "Privato",
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "description": "Sono previsti fenomeni meteorologici intensi AREE INTERNE. \n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+       "effective": "2026-07-31T11:00:00+02:00",
+       "event": "Avalanche Warning",
+       "expires": "2026-08-02T01:59:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "ESSERE PREPARATI. Prendere le dovute precauzioni e tenersi aggiornati sulle ultime previsioni del tempo. Aspettarsi qualche disgio durante le normali attività quotidiane ed essere pronti ad interrompere le attività all'aria aperta.",
+       "language": "it-IT",
+       "onset": "2026-07-31T11:00:00+02:00",
+       "parameter": [
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Monitor"
+       ],
+       "senderName": "Servizio Meteorologico dell'Aeronautica Militare",
+       "severity": "Severe",
+       "urgency": "Future",
+       "web": "https://meteoalarm.org/it/live/region/IT?s=lazio"
+      }
+     ],
+     "msgType": "Update",
+     "references": "aerocnmca.1sv.prv1@aeronautica.difesa.it,2.49.0.0.380.3.IT.260730104551.067,2026-07-30T10:45:52+02:00",
+     "scope": "Public",
+     "sender": "aerocnmca.1sv.prv1@aeronautica.difesa.it",
+     "sent": "2026-07-31T11:59:03+02:00",
+     "status": "Actual"
+    },
+    "uuid": "0fcf6f1c-c7f4-4ef7-9a0e-579ef8f4ebfa"
+   }
+  ]
+ },
+ "AT": {
+  "warnings": [
+   {
+    "alert": {
+     "identifier": "2.49.0.0.40.0.AT.-20260731095118_d1_707",
+     "incidents": "Alert",
+     "info": [
+      {
+       "area": [
+        {
+         "areaDesc": "Lienz",
+         "geocode": [
+          {
+           "value": "AT707",
+           "valueName": "EMMA_ID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "description": "Es ist mit erhöhter Hitzebelastung zu rechnen.",
+       "effective": "2026-07-31T09:51:18+02:00",
+       "event": "Avalanche Warning",
+       "expires": "2026-08-01T23:59:59+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "VORSICHT, große Hitze ist zu erwarten. Auswirkungen auf die Gesundheit sind nicht auszuschließen, vor allem bei alten Menschen, Kranken und bei Kindern.",
+       "language": "de-DE",
+       "onset": "2026-08-01T00:00:00+02:00",
+       "parameter": [
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Monitor"
+       ],
+       "senderName": "GeoSphere Austria",
+       "severity": "Severe",
+       "urgency": "Future",
+       "web": "http://warnungen.zamg.at/html/de/morgen/hitze/at/tirol/"
+      },
+      {
+       "area": [
+        {
+         "areaDesc": "Lienz",
+         "geocode": [
+          {
+           "value": "AT707",
+           "valueName": "EMMA_ID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "description": "Enhanced heat stress must be expected.",
+       "effective": "2026-07-31T09:51:18+02:00",
+       "event": "Avalanche Warning",
+       "expires": "2026-08-01T23:59:59+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "BE AWARE that high temperatures are expected. Some health risks amongst vulnerable people e.g. the elderly and very young are possible.",
+       "language": "en-GB",
+       "onset": "2026-08-01T00:00:00+02:00",
+       "parameter": [
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Monitor"
+       ],
+       "senderName": "GeoSphere Austria",
+       "severity": "Severe",
+       "urgency": "Future",
+       "web": "http://warnungen.zamg.at/html/de/morgen/hitze/at/tirol/"
+      }
+     ],
+     "msgType": "Alert",
+     "scope": "Public",
+     "sender": "cap@zamg.ac.at",
+     "sent": "2026-07-31T09:51:18+02:00",
+     "status": "Actual"
+    },
+    "uuid": "e009f61f-18cf-49df-9e62-a8d1f620ff31"
+   }
+  ]
+ },
+ "DE": {
+  "warnings": [
+   {
+    "alert": {
+     "code": [
+      "id:2.49.0.0.276.0.DWD.PVW.1789572300000.239d17e8-4827-4990-973a-8fdd25c4c2b2",
+      "MCP:v2.0"
+     ],
+     "identifier": "2.49.0.0.276.0.DWD.PVW.1789572300000.239d17e8-4827-4990-973a-8fdd25c4c2b2.MUL",
+     "incidents": "Alert",
+     "info": [
+      {
+       "area": [
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Garmisch-Partenkirchen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE195",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109180000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Weilheim-Schongau",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE342",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109190000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Ostallgäu",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE239",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109777000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Landsberg am Lech",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE130",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109181000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Bad Tölz-Wolfratshausen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE371",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109173000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Stadt Kaufbeuren",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE120",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109762000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "contact": "Deutscher Wetterdienst",
+       "description": "Es treten Gewitter auf. Dabei gibt es Windböen mit Geschwindigkeiten bis 60 km/h (17 m/s, 33 kn, Bft 7).",
+       "event": "Avalanche Warning",
+       "eventCode": [
+        {
+         "value": "2.1.14",
+         "valueName": "PROFILE_VERSION"
+        },
+        {
+         "value": "© GeoBasis-DE / BKG 2021 (Daten modifiziert)",
+         "valueName": "LICENSE"
+        },
+        {
+         "value": "31",
+         "valueName": "II"
+        },
+        {
+         "value": "THUNDERSTORM",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "WIND",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "255 235 59",
+         "valueName": "AREA_COLOR"
+        }
+       ],
+       "expires": "2026-09-16T18:30:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "Hinweis auf: Blitzschlag (Lebensgefahr!); umherfliegende leichte Gegenstände. \nHandlungsempfehlungen: \nAufenthalt im Freien vermeiden oder Schutz suchen (z.B. in Gebäuden); Gewässer meiden; lose Gegenstände sichern; z.B. Zelte und Abdeckungen befestigen",
+       "language": "de-DE",
+       "onset": "2026-09-16T17:25:00+02:00",
+       "parameter": [
+        {
+         "value": "<60 [km/h]",
+         "valueName": "gusts"
+        },
+        {
+         "value": "Blitzschlag (Lebensgefahr!)",
+         "valueName": "impacts"
+        },
+        {
+         "value": "umherfliegende leichte Gegenstände",
+         "valueName": "impacts"
+        },
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Prepare"
+       ],
+       "senderName": "Deutscher Wetterdienst",
+       "severity": "Severe",
+       "urgency": "Immediate",
+       "web": "https://dwd.de/warnungen"
+      },
+      {
+       "area": [
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Garmisch-Partenkirchen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE195",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109180000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Weilheim-Schongau",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE342",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109190000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Ostallgäu",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE239",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109777000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Landsberg am Lech",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE130",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109181000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Bad Tölz-Wolfratshausen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE371",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109173000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Stadt Kaufbeuren",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE120",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109762000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "contact": "Deutscher Wetterdienst",
+       "description": "There is a risk of thunderstorms, possibly with wind gusts (level 1 of 4).\nMax. gusts: < 60 km/h",
+       "event": "Avalanche Warning",
+       "eventCode": [
+        {
+         "value": "2.1.14",
+         "valueName": "PROFILE_VERSION"
+        },
+        {
+         "value": "© GeoBasis-DE / BKG 2021 (Daten modifiziert)",
+         "valueName": "LICENSE"
+        },
+        {
+         "value": "31",
+         "valueName": "II"
+        },
+        {
+         "value": "THUNDERSTORM",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "WIND",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "255 235 59",
+         "valueName": "AREA_COLOR"
+        }
+       ],
+       "expires": "2026-09-16T18:30:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "Hazard(s) to expect: lightning (danger to life!); light objects flying through the air. \nRecommendations for what to do: \nAvoid staying outdoors and seek shelter (e.g. in buildings). Avoid being near lakes and rivers Secure loose objects. For example, fasten tents and coverings.",
+       "language": "en",
+       "onset": "2026-09-16T17:25:00+02:00",
+       "parameter": [
+        {
+         "value": "<60 [km/h]",
+         "valueName": "gusts"
+        },
+        {
+         "value": "lightning (danger to life!)",
+         "valueName": "impacts"
+        },
+        {
+         "value": "light objects flying through the air",
+         "valueName": "impacts"
+        },
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Prepare"
+       ],
+       "senderName": "Deutscher Wetterdienst",
+       "severity": "Severe",
+       "urgency": "Immediate",
+       "web": "https://dwd.de/warnungen"
+      },
+      {
+       "area": [
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Garmisch-Partenkirchen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE195",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109180000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Weilheim-Schongau",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE342",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109190000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Ostallgäu",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE239",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109777000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Landsberg am Lech",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE130",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109181000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Bad Tölz-Wolfratshausen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE371",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109173000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Stadt Kaufbeuren",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE120",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109762000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "contact": "Deutscher Wetterdienst",
+       "description": "Il y a un risque de orages pouvant s'accompagner de rafales de vent (Niveau 1 sur 4).\nRafale maximale: < 60 km/h",
+       "event": "Avalanche Warning",
+       "eventCode": [
+        {
+         "value": "2.1.14",
+         "valueName": "PROFILE_VERSION"
+        },
+        {
+         "value": "© GeoBasis-DE / BKG 2021 (Daten modifiziert)",
+         "valueName": "LICENSE"
+        },
+        {
+         "value": "31",
+         "valueName": "II"
+        },
+        {
+         "value": "THUNDERSTORM",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "WIND",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "255 235 59",
+         "valueName": "AREA_COLOR"
+        }
+       ],
+       "expires": "2026-09-16T18:30:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "Attention : foudre (danger de mort !) ; objets légers emportés par le vent. \nRecommandations d'action : \nÉvitez toutes activités en plein air ou mettez-vous à l'abri (p. ex. dans un bâtiment) ; Évitez les plans ou les cours d'eau ; Rangez ou fixez les objets non fixés ; Fixez p. ex. les tentes et les bâches",
+       "language": "fr",
+       "onset": "2026-09-16T17:25:00+02:00",
+       "parameter": [
+        {
+         "value": "<60 [km/h]",
+         "valueName": "gusts"
+        },
+        {
+         "value": "foudre (danger de mort !)",
+         "valueName": "impacts"
+        },
+        {
+         "value": "objets légers emportés par le vent",
+         "valueName": "impacts"
+        },
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Prepare"
+       ],
+       "senderName": "Deutscher Wetterdienst",
+       "severity": "Severe",
+       "urgency": "Immediate",
+       "web": "https://dwd.de/warnungen"
+      },
+      {
+       "area": [
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Garmisch-Partenkirchen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE195",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109180000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Weilheim-Schongau",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE342",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109190000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Ostallgäu",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE239",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109777000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Landsberg am Lech",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE130",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109181000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Bad Tölz-Wolfratshausen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE371",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109173000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Stadt Kaufbeuren",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE120",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109762000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "contact": "Deutscher Wetterdienst",
+       "description": "Existe el riesgo de que se produzca tormenta con y vientos racheadoso. (Nivel 1 de 4)\nRachas máximas de viento: < 60 km/h",
+       "event": "Avalanche Warning",
+       "eventCode": [
+        {
+         "value": "2.1.14",
+         "valueName": "PROFILE_VERSION"
+        },
+        {
+         "value": "© GeoBasis-DE / BKG 2021 (Daten modifiziert)",
+         "valueName": "LICENSE"
+        },
+        {
+         "value": "31",
+         "valueName": "II"
+        },
+        {
+         "value": "THUNDERSTORM",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "WIND",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "255 235 59",
+         "valueName": "AREA_COLOR"
+        }
+       ],
+       "expires": "2026-09-16T18:30:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "Indicio de: caída de rayos (¡peligro de muerte!); objetos ligeros que vuelan por el aire. \nRecomendaciones de acción: \nevitar estar al aire libre; buscar refugio (p. ej. en edificios); alejarse de cuerpos de agua; asegurar objetos sueltos; p. ej. fijar las tiendas de campaña y lonas",
+       "language": "es",
+       "onset": "2026-09-16T17:25:00+02:00",
+       "parameter": [
+        {
+         "value": "<60 [km/h]",
+         "valueName": "gusts"
+        },
+        {
+         "value": "caída de rayos (¡peligro de muerte!)",
+         "valueName": "impacts"
+        },
+        {
+         "value": "objetos ligeros que vuelan por el aire",
+         "valueName": "impacts"
+        },
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Prepare"
+       ],
+       "senderName": "Deutscher Wetterdienst",
+       "severity": "Severe",
+       "urgency": "Immediate",
+       "web": "https://dwd.de/warnungen"
+      },
+      {
+       "area": [
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Garmisch-Partenkirchen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE195",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109180000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Weilheim-Schongau",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE342",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109190000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Ostallgäu",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE239",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109777000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Landsberg am Lech",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE130",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109181000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Bad Tölz-Wolfratshausen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE371",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109173000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Stadt Kaufbeuren",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE120",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109762000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "contact": "Deutscher Wetterdienst",
+       "description": "هناك خطر من حدوث عواصف رعدية أيضا مع رياح عاصفة  (الدرجة 1 من 4)\nعصفات قسوة: < 60 كم/ساعة",
+       "event": "Avalanche Warning",
+       "eventCode": [
+        {
+         "value": "2.1.14",
+         "valueName": "PROFILE_VERSION"
+        },
+        {
+         "value": "© GeoBasis-DE / BKG 2021 (Daten modifiziert)",
+         "valueName": "LICENSE"
+        },
+        {
+         "value": "31",
+         "valueName": "II"
+        },
+        {
+         "value": "THUNDERSTORM",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "WIND",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "255 235 59",
+         "valueName": "AREA_COLOR"
+        }
+       ],
+       "expires": "2026-09-16T18:30:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "الخطر ( المخاطر ) المتوقعة: البرق (خطر على الحياة!); تطاير أجسام صغيرة الحجم في الهواء. \nالتوصيات التي يجب اتباعها: \nتجنب البقاء في الخارج مهما تطلب الأمر، ثم ابحث عن ملجأ. (داخل المباني مثلًا); تجنب البقاء قريبًا من البحيرات والأنهار; تأمين الأشياء الغير مؤمنه; على سبيل المثال ، ربط الخيام والأغطية",
+       "language": "ar",
+       "onset": "2026-09-16T17:25:00+02:00",
+       "parameter": [
+        {
+         "value": "<60 [km/h]",
+         "valueName": "gusts"
+        },
+        {
+         "value": "البرق (خطر على الحياة!)",
+         "valueName": "impacts"
+        },
+        {
+         "value": "تطاير أجسام صغيرة الحجم في الهواء",
+         "valueName": "impacts"
+        },
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Prepare"
+       ],
+       "senderName": "Deutscher Wetterdienst",
+       "severity": "Severe",
+       "urgency": "Immediate",
+       "web": "https://dwd.de/warnungen"
+      },
+      {
+       "area": [
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Garmisch-Partenkirchen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE195",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109180000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Weilheim-Schongau",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE342",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109190000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Ostallgäu",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE239",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109777000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Landsberg am Lech",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE130",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109181000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Bad Tölz-Wolfratshausen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE371",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109173000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Stadt Kaufbeuren",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE120",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109762000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "contact": "Deutscher Wetterdienst",
+       "description": "Существует риск от: Гроза, возможны шквалы ветра (уровень 1 из 4).\nМаксимальные порывы ветра: < 60 км / ч",
+       "event": "Avalanche Warning",
+       "eventCode": [
+        {
+         "value": "2.1.14",
+         "valueName": "PROFILE_VERSION"
+        },
+        {
+         "value": "© GeoBasis-DE / BKG 2021 (Daten modifiziert)",
+         "valueName": "LICENSE"
+        },
+        {
+         "value": "31",
+         "valueName": "II"
+        },
+        {
+         "value": "THUNDERSTORM",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "WIND",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "255 235 59",
+         "valueName": "AREA_COLOR"
+        }
+       ],
+       "expires": "2026-09-16T18:30:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "Ожидаемая опасность: ударов молнии (опасность для жизни!); летающих легких предметов. \nПоведенческие рекомендации: \nизбегать нахождения на открытом воздухе или находиться в укрытии (напр., в здании); избегать водоемов; обеспечить надежность незакрепленных предметов; укрепить, напр., палатки или защитные покрытия",
+       "language": "ru",
+       "onset": "2026-09-16T17:25:00+02:00",
+       "parameter": [
+        {
+         "value": "<60 [km/h]",
+         "valueName": "gusts"
+        },
+        {
+         "value": "ударов молнии (опасность для жизни!)",
+         "valueName": "impacts"
+        },
+        {
+         "value": "летающих легких предметов",
+         "valueName": "impacts"
+        },
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Prepare"
+       ],
+       "senderName": "Deutscher Wetterdienst",
+       "severity": "Severe",
+       "urgency": "Immediate",
+       "web": "https://dwd.de/warnungen"
+      },
+      {
+       "area": [
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Garmisch-Partenkirchen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE195",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109180000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Weilheim-Schongau",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE342",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109190000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Ostallgäu",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE239",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109777000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Landsberg am Lech",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE130",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109181000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Bad Tölz-Wolfratshausen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE371",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109173000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Stadt Kaufbeuren",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE120",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109762000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "contact": "Deutscher Wetterdienst",
+       "description": "Rüzgar esintili kötü hava koşulları bekleniyor (Seviye 1 / 4).\nMaksimum rüzgar: < 60 km/s",
+       "event": "Avalanche Warning",
+       "eventCode": [
+        {
+         "value": "2.1.14",
+         "valueName": "PROFILE_VERSION"
+        },
+        {
+         "value": "© GeoBasis-DE / BKG 2021 (Daten modifiziert)",
+         "valueName": "LICENSE"
+        },
+        {
+         "value": "31",
+         "valueName": "II"
+        },
+        {
+         "value": "THUNDERSTORM",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "WIND",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "255 235 59",
+         "valueName": "AREA_COLOR"
+        }
+       ],
+       "expires": "2026-09-16T18:30:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "Beklenen tehlike(ler): Yıldırım (Hayati Tehlike); havada uçan hafif nesneler. \nNe yapılması gerektiğine dair tavsiyeler: \nAçık havada kalmaktan kaçının ve sığınak arayın (örn. binalarda). Göllerin ve nehirlerin yakınında olmaktan kaçının. Gevşek nesneleri sabitleyin. Örneğin, çadırları ve örtüleri sabitleyin.",
+       "language": "tr",
+       "onset": "2026-09-16T17:25:00+02:00",
+       "parameter": [
+        {
+         "value": "<60 [km/h]",
+         "valueName": "gusts"
+        },
+        {
+         "value": "Yıldırım (Hayati Tehlike)",
+         "valueName": "impacts"
+        },
+        {
+         "value": "havada uçan hafif nesneler",
+         "valueName": "impacts"
+        },
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Prepare"
+       ],
+       "senderName": "Deutscher Wetterdienst",
+       "severity": "Severe",
+       "urgency": "Immediate",
+       "web": "https://dwd.de/warnungen"
+      },
+      {
+       "area": [
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Garmisch-Partenkirchen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE195",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109180000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Weilheim-Schongau",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE342",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109190000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Ostallgäu",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE239",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109777000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Landsberg am Lech",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE130",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109181000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Kreis Bad Tölz-Wolfratshausen",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE371",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109173000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        },
+        {
+         "altitude": 0.0,
+         "areaDesc": "Stadt Kaufbeuren",
+         "ceiling": 9842.5197,
+         "geocode": [
+          {
+           "value": "DE120",
+           "valueName": "EMMA_ID"
+          },
+          {
+           "value": "109762000",
+           "valueName": "WARNCELLID"
+          }
+         ]
+        }
+       ],
+       "category": [
+        "Met"
+       ],
+       "certainty": "Likely",
+       "contact": "Deutscher Wetterdienst",
+       "description": "Istnieje ryzyko wystąpienia: burze, również z porywami wiatru (stopień 1 z 4)\nMaksymalne porywy wiatru: < 60 km/h",
+       "event": "Avalanche Warning",
+       "eventCode": [
+        {
+         "value": "2.1.14",
+         "valueName": "PROFILE_VERSION"
+        },
+        {
+         "value": "© GeoBasis-DE / BKG 2021 (Daten modifiziert)",
+         "valueName": "LICENSE"
+        },
+        {
+         "value": "31",
+         "valueName": "II"
+        },
+        {
+         "value": "THUNDERSTORM",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "WIND",
+         "valueName": "GROUP"
+        },
+        {
+         "value": "255 235 59",
+         "valueName": "AREA_COLOR"
+        }
+       ],
+       "expires": "2026-09-16T18:30:00+02:00",
+       "headline": "Avalanche Warning",
+       "instruction": "Ostrzeżenie: uderzenie piorunów (zagrożenie życia!); latające w powietrzu lekkie przedmioty. \nZalecenia, jak się zachować: \nUnikaj przebywania na zewnątrz i poszukaj schronienia (np. w budynkach). Unikaj przebywania w pobliżu zbiorników wodnych i rzek. Zabezpiecz luźne przedmioty. Np. zabezpiecz namioty i pokrywy.",
+       "language": "pl",
+       "onset": "2026-09-16T17:25:00+02:00",
+       "parameter": [
+        {
+         "value": "<60 [km/h]",
+         "valueName": "gusts"
+        },
+        {
+         "value": "uderzenie piorunów (zagrożenie życia!)",
+         "valueName": "impacts"
+        },
+        {
+         "value": "latające w powietrzu lekkie przedmioty",
+         "valueName": "impacts"
+        },
+        {
+         "value": "3; orange; Severe",
+         "valueName": "awareness_level"
+        },
+        {
+         "value": "9; avalanche",
+         "valueName": "awareness_type"
+        }
+       ],
+       "responseType": [
+        "Prepare"
+       ],
+       "senderName": "Deutscher Wetterdienst",
+       "severity": "Severe",
+       "urgency": "Immediate",
+       "web": "https://dwd.de/warnungen"
+      }
+     ],
+     "msgType": "Alert",
+     "scope": "Public",
+     "sender": "opendata@dwd.de",
+     "sent": "2026-09-16T17:25:00+02:00",
+     "source": "PVW",
+     "status": "Actual"
+    },
+    "uuid": "dd1a28d2-8e99-41b7-86de-03fbee195105"
+   }
+  ]
+ }
+}

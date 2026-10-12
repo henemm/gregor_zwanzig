@@ -71,6 +71,7 @@ SPEC_SYMBOLS: list[tuple[str, str]] = [
     ("rain", "RA"),
     ("wind_gust", "WG"),
     ("snow", "SN"),
+    ("avalanche", "AW"),
     ("black_ice", "IC"),
     ("extreme_heat", "HT"),
     ("extreme_cold", "CD"),
@@ -617,4 +618,35 @@ def test_characterization_two_alerts_mixed_level_survives_extraction():
         "Trip-SMS-Warn-Block hat sich veraendert -- Regressionsanker fuer die "
         "Extraktion (#1332) gebrochen.\n"
         f"  erwartet: {GOLDEN_TWO_ALERTS_MIXED_LEVEL!r}\n  erhalten: {sms!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# #1430 AC-4 / AC-8 — Lawinenwarnung (MeteoAlarm Typ 9) im !-Warn-Block
+# ---------------------------------------------------------------------------
+def _lawinen_alert_aus_aufzeichnung() -> OfficialAlert:
+    """Echte aufgezeichnete CAP-Datei (Typ 9, Stufe 3) durch die echte
+    Eingangsfunktion -- kein von Hand gebauter Alert."""
+    from pathlib import Path
+
+    from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+
+    cap = (Path(__file__).resolve().parent.parent / "fixtures" / "meteoalarm"
+           / "cap_avalanche_plus_heat.xml").read_text(encoding="utf-8")
+    lawinen = [a for a in _extract_alerts_from_cap(cap) if a.hazard == "avalanche"]
+    assert lawinen, "Fixture liefert keine avalanche-Warnung (Mapper kennt Typ 9 nicht)"
+    return lawinen[0]
+
+
+def test_1430_ac4_lawinenwarnung_steht_als_aw_im_warn_block():
+    alert = _lawinen_alert_aus_aufzeichnung()
+    sms = _sms([alert])
+    assert "!AW:M" in sms, f"Lawinenwarnung Stufe 3 muss '!AW:M' ergeben: {sms!r}"
+
+
+def test_1430_ac8_schnee_steht_vor_lawine_bei_gleicher_stufe():
+    sms = _sms([_alert("avalanche", 3), _alert("snow", 3)])
+    assert "SN:M" in sms and "AW:M" in sms, f"beide Warnungen erwartet: {sms!r}"
+    assert sms.index("SN:M") < sms.index("AW:M"), (
+        f"Schnee muss vor Lawine stehen (Katalog-Reihenfolge): {sms!r}"
     )

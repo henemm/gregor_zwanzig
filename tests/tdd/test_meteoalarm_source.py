@@ -326,29 +326,6 @@ def test_ac3_gruene_stufe_level1_wird_gefiltert():
 
 
 # ---------------------------------------------------------------------------
-# AC-4: Unbekannter awareness_type (Lawine) wird uebersprungen, kein Crash
-# ---------------------------------------------------------------------------
-
-def test_ac4_lawine_uebersprungen_hitze_bleibt_erhalten():
-    """AC-4: GIVEN eine synthetische CAP-Fixture mit ZWEI Warnungen fuer
-    denselben Punkt (awareness_type=9 Lawine, keine App-Kategorie UND
-    awareness_type=5 Hitze), WHEN die Mapping-Funktion die Antwort
-    verarbeitet, THEN wird die Lawinen-Warnung uebersprungen (kein Eintrag,
-    kein Crash) und die Hitze-Warnung erscheint unveraendert."""
-    from services.official_alerts.meteoalarm import _extract_alerts_from_cap
-
-    cap_text = _read_fixture("cap_avalanche_plus_heat.xml")
-    alerts = _extract_alerts_from_cap(cap_text)
-
-    assert len(alerts) == 1, (
-        f"Lawinen-Warnung (awareness_type=9) muss uebersprungen werden, "
-        f"erwartet genau 1 Alert (Hitze), erhalten {len(alerts)}"
-    )
-    assert alerts[0].hazard == "extreme_heat"
-    assert alerts[0].level == 2
-
-
-# ---------------------------------------------------------------------------
 # AC-5: Fail-soft (fehlende ENV / kaputtes Index-JSON / kaputtes CAP-XML) +
 # Fehler-Isolation gegenueber anderen Quellen
 # ---------------------------------------------------------------------------

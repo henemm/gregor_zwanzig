@@ -106,9 +106,9 @@ CODES_WORTLAUT = (
     "Z:/MAX/M: fire zones/top level/massifs.\n"
     "Format: E4 stage 4, 23@5 over limit from 5h, (24@7) peak, D13/27 min/max, "
     "+HL hail, - none, ? no data.\n"
-    "Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, "
+    "Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW avalanche, "
     "IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. "
-    "VR:VT: Meteo-France rain/storm risk. X? no alert data."
+    "VR:VT: MF rain/storm risk. X? no data."
 )
 
 #: AC-19-Ausnahme: Telegram antwortet auf einen unbekannten Befehl deutsch
