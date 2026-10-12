@@ -18,6 +18,7 @@
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
+	import Infobox from '$lib/components/molecules/Infobox.svelte';
 	import type { ChannelKind, ChannelThreshold } from '$lib/components/shared/alarme-tab/alertChannelState';
 	import { deriveActiveAlertMetricsForTrip } from '$lib/components/shared/alarme-tab/tripAlertMetricsFromCatalog';
 	import type { MetricCatalog } from '$lib/components/trip-detail/metricsEditor';
@@ -823,6 +824,8 @@
 		{:else if activeTab === 'wegpunkte'}
 			<!-- Wegpunkte-Tab (Issue #658) — Info-Banner + eingebetteter Editor + Footer -->
 			<div style="position: relative;">
+				<!-- Issue #2521 S1 (AC-4): Infobox oben im optionalen Reiter. -->
+				{#if !isMobileViewport}<div style="padding: 14px 40px 0;"><Infobox reiter="wegpunkte" context="route" /></div>{/if}
 				<!-- Info-Banner (1:1 TN_WegpunkteTab) -->
 				<div style="padding: 14px 40px; background: var(--g-card); border-bottom: 1px solid var(--g-rule-soft); display: flex; justify-content: space-between; align-items: center; gap: 24px;">
 					<div style="flex: 1;">
@@ -875,7 +878,7 @@
 			     überschreiben sich gegenseitig (Last-Write-Wins, Fix-Loop 4). -->
 			{#if !isMobileViewport}
 			<div style="padding: 32px 40px 60px; max-width: 720px;">
-				<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} />
+				<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} showInfobox={true} />
 				<MailInhaltCard bind:reportConfig />
 			</div>
 			{/if}
@@ -896,7 +899,7 @@
 		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
-			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+			<WeatherMetricsTab trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
 		</div>
 		{/if}
 
@@ -905,7 +908,7 @@
 		     XOR Mobile), Sichtbarkeit ueber style:display. -->
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
-			<CorridorEditor context="route" trip={stubTrip} createMode={true} onCorridorsChange={handleCorridorsChange} />
+			<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} onCorridorsChange={handleCorridorsChange} />
 		</div>
 		{/if}
 
@@ -916,7 +919,7 @@
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'alarme' ? '' : 'none'}>
 			<div style="padding: 32px 40px 60px;">
-				<AlarmeTab context="route" trip={stubTrip} createMode={true}
+				<AlarmeTab context="route" trip={stubTrip} createMode={true} showInfobox={true}
 					officialWarningsEnabled={alarm.officialWarningsEnabled}
 					onOfficialWarningsChange={handleAlarmOfficialWarningsChange}
 					cooldownMinutes={alarm.cooldownMinutes}
@@ -1140,6 +1143,8 @@
 			{:else if activeTab === 'wegpunkte'}
 				<!-- Mobile Wegpunkte-Tab: eingebetteter Editor mit eigenem Mobile-Layout (L1) -->
 				<div style="position: relative; padding: 0 0 80px;">
+					<!-- Issue #2521 S1 (AC-4): Infobox oben im optionalen Reiter. -->
+					{#if isMobileViewport}<div style="padding: 12px 16px 0;"><Infobox reiter="wegpunkte" context="route" /></div>{/if}
 					<div style="padding: 12px 16px; background: var(--g-accent-tint); border-bottom: 1px solid var(--g-accent-rule);">
 						<div class="mono" style="font-size: 10.5px; color: var(--g-accent-deep); line-height: 1.55;">
 							Wegpunkte automatisch berechnet. Namen anpassen oder überspringen.
@@ -1158,7 +1163,7 @@
 				     Issue #1738 — geteilter VersandTab, XOR zum Desktop-Mount oben. -->
 				{#if isMobileViewport}
 				<div style="padding: 16px 16px 60px;">
-					<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} />
+					<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} showInfobox={true} />
 					<MailInhaltCard bind:reportConfig />
 				</div>
 				{/if}
@@ -1171,14 +1176,14 @@
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
-				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+				<WeatherMetricsTab trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
 			</div>
 			{/if}
 
 			<!-- Issue #2277 S2a — Mobile CorridorEditor, XOR zum Desktop-Mount oben. -->
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
-				<CorridorEditor context="route" trip={stubTrip} createMode={true} onCorridorsChange={handleCorridorsChange} />
+				<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} onCorridorsChange={handleCorridorsChange} />
 			</div>
 			{/if}
 
@@ -1186,7 +1191,7 @@
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'alarme' ? '' : 'none'}>
 				<div style="padding: 16px 16px 60px;">
-					<AlarmeTab context="route" trip={stubTrip} createMode={true}
+					<AlarmeTab context="route" trip={stubTrip} createMode={true} showInfobox={true}
 						officialWarningsEnabled={alarm.officialWarningsEnabled}
 						onOfficialWarningsChange={handleAlarmOfficialWarningsChange}
 						cooldownMinutes={alarm.cooldownMinutes}

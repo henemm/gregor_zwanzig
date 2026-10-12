@@ -35,7 +35,7 @@
 	import AlertPreviewCard from '$lib/components/alerts-tab/AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from '$lib/components/alerts-tab/AlertMetricLevelTable.svelte';
 	import VTAlertSample from './versand-tab/VTAlertSample.svelte';
-	import AlertChannelPicker from './AlertChannelPicker.svelte';
+	import AlertChannelPicker from './AlertChannelPicker.svelte'; import Infobox from '$lib/components/molecules/Infobox.svelte';
 	import {
 		alarmeTabSections,
 		triggerGroupHeading,
@@ -138,7 +138,7 @@
 		// unveraendertes Verhalten (Fetch in onMount); mit Uebergabe (auch
 		// explizit `null`) wird der Fetch uebersprungen — SSR-Tests koennen den
 		// Tarif-Zustand so steuern, ohne dass `onMount` je laeuft (#1717).
-		profileOverride?: { premium_sms_allowed?: boolean } | null;
+		profileOverride?: { premium_sms_allowed?: boolean } | null; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 	}
 	let {
 		context = 'route',
@@ -173,7 +173,7 @@
 		existingChannels,
 		onChannelToggle,
 		existingChannelThresholds,
-		profileOverride
+		profileOverride, showInfobox = false
 	}: Props = $props();
 
 	// ── Tarif-Zustand fuer das Premium-SMS-Gate (AC-5/AC-13) ───────────────────
@@ -471,7 +471,7 @@
 	});
 </script>
 
-<div class="alarme-tab" data-testid="alarme-tab">
+<div class="alarme-tab" data-testid="alarme-tab">{#if showInfobox}<Infobox reiter="alarme" {context} />{/if}
 	{#each sections as id (id)}
 		<div
 			class="alarme-section{id === 'radar' ? ' alarme-section--tight' : ''}"

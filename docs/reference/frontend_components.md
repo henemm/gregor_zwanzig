@@ -362,6 +362,13 @@ All molecules export from the barrel `$lib/components/molecules/index.ts`.
 import { ConfirmDialog, DetailRow, ChannelRow, AlertRow, Stat } from '$lib/components/molecules';
 ```
 
+### BegriffErklaerung und Infobox (#2521 S1, 2026-10-12)
+
+- `molecules/BegriffErklaerung.svelte`: ⓘ-Knopf mit Sprechblase (bits-ui-Popover unter `ui/popover/`); erklärt Wertebereiche, Kanal-Schwelle („Dringlichkeits-Schwelle"), CAPE und Cooldown. Texte `tip.*` in `frontend/src/lib/i18n/messages/de.json`.
+- `molecules/Infobox.svelte` (`<aside>`): immer sichtbar, nicht wegklickbar, „Kannst du überspringen — Standard: …" (Texte `info.*`). Nur auf den Anlege-Seiten `/trips/new` und `/compare/new` über Prop `showInfobox`; Schlüsselauswahl über `shared/infoboxKeys.ts`. Bearbeiten-Hubs zeigen nur die ⓘ, keine Infobox.
+- Eingebunden in die geteilten Reiter-Organismen (AlarmeTab, VersandTab, WeatherMetricsTab, CorridorEditor inkl. Mobile) — Trip und Ortsvergleich nutzen denselben Code.
+- SSR-Testharness `frontend/test-svelte-ssr-hooks.mjs` kompiliert zusätzlich `node_modules/**/*.svelte.js` (bits-ui-Runen).
+
 ### ConfirmDialog Component
 
 **File:** `frontend/src/lib/components/molecules/ConfirmDialog.svelte`

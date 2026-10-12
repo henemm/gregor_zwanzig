@@ -419,7 +419,7 @@
 		</div>
 	{:else if activeTab === 'wetter-metriken'}
 		{#if !isMobileViewport}
-			<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} />
+			<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} showInfobox={true} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1040px">
 			<div class="ce-cta-row">
@@ -428,7 +428,7 @@
 		</div>
 	{:else if activeTab === 'wertebereiche'}
 		{#if !isMobileViewport}
-			<CorridorEditor context="vergleich" {...corridorPropsAus(wiz)} />
+			<CorridorEditor context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
@@ -437,7 +437,7 @@
 		</div>
 	{:else if activeTab === 'alarme'}
 		{#if alarmeHydrated}
-			<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} />
+			<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} showInfobox={true} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
@@ -445,7 +445,7 @@
 			</div>
 		</div>
 	{:else if activeTab === 'versand'}
-		<VersandTab context="vergleich" {...versandPropsAus(wiz)} activation={versandActivationBanner} />
+		<VersandTab context="vergleich" {...versandPropsAus(wiz)} activation={versandActivationBanner} showInfobox={true} />
 	{/if}
 </div><!-- /.cm-desktop -->
 
@@ -520,18 +520,18 @@
 			<Step2Orte {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
 		{:else if activeTab === 'wetter-metriken'}
 			{#if isMobileViewport}
-				<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} />
+				<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} showInfobox={true} />
 			{/if}
 		{:else if activeTab === 'wertebereiche'}
 			{#if isMobileViewport}
-				<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wiz)} />
+				<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
 			{/if}
 		{:else if activeTab === 'alarme'}
 			{#if alarmeHydrated}
-				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} />
+				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} showInfobox={true} />
 			{/if}
 		{:else if activeTab === 'versand'}
-			<VersandTab context="vergleich" {...versandPropsAus(wiz)} activation={versandActivationBanner} />
+			<VersandTab context="vergleich" {...versandPropsAus(wiz)} activation={versandActivationBanner} showInfobox={true} />
 		{/if}
 	</div>
 

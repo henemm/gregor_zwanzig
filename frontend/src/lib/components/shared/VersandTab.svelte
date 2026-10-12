@@ -17,7 +17,7 @@
 	import VTBriefingChannels from './versand-tab/VTBriefingChannels.svelte';
 	import VTSchedulePlan from './versand-tab/VTSchedulePlan.svelte';
 	import VTLaufzeitRoute from './versand-tab/VTLaufzeitRoute.svelte';
-	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte';
+	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte'; import Infobox from '$lib/components/molecules/Infobox.svelte';
 	// Issue #1738 Fix-Loop 1 (F001/F002): die Read-Modify-Write-Regel des
 	// report_config-Blobs steht als reine, pruefbare Funktion neben beiden
 	// Schreibern statt zweimal im jeweiligen Effect-Rumpf.
@@ -95,7 +95,7 @@
 		// oder `saveController` (Anlege-Seite) bleibt der Speicherzweig inaktiv.
 		preset?: ComparePreset;
 		onCompareUpdate?: (updated: ComparePreset) => void;
-		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 	}
 	let {
 		context = 'route',
@@ -130,7 +130,7 @@
 		activation,
 		preset,
 		onCompareUpdate,
-		enqueueHubWrite
+		enqueueHubWrite, showInfobox = false
 	}: Props = $props();
 
 	// ── Sektion 1+2: Briefing-Kanäle + Zeitplan (report_config) ────────────────
@@ -364,7 +364,7 @@
 </script>
 
 {#if context === 'route'}
-	<div class="versand-tab" data-testid="versand-tab">
+	<div class="versand-tab" data-testid="versand-tab">{#if showInfobox}<Infobox reiter="versand" {context} />{/if}
 		<VTBriefingChannels
 			{context}
 			channels={{
@@ -400,7 +400,7 @@
 		<VTLaufzeitRoute {tripEnd} onOpenStages={handleOpenStages} />
 	</div>
 {:else if context === 'vergleich'}
-	<div class="versand-tab" data-testid="versand-tab">
+	<div class="versand-tab" data-testid="versand-tab">{#if showInfobox}<Infobox reiter="versand" {context} />{/if}
 		<VTBriefingChannels
 			{context}
 			channels={{
