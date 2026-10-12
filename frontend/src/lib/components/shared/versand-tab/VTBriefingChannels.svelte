@@ -117,7 +117,7 @@
 	// Funktionen (vtBriefingChannelsText.ts) — keine Wertung mehr ("läuft/wird
 	// flach" raus), SMS-Zeichengrenze kontextabhängig (Trip 160 / Vergleich 153).
 	const ctxLeadText = $derived(vtBriefingLeadText(context));
-	const SUB = $derived(vtBriefingSubTexts(context));
+	const SUB = $derived(vtBriefingSubTexts(context, telegramStyle));
 </script>
 
 <div>
