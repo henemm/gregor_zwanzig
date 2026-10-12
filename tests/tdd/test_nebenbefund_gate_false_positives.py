@@ -35,8 +35,21 @@ def _load_gate():
 
 
 @pytest.fixture
-def gate():
-    return _load_gate()
+def gate(monkeypatch):
+    """Gate mit festem `today()` = EXPIRY (letzter aktiver Tag): die Logik-ACs
+    pruefen das AKTIVE Gate, unabhaengig von der Systemuhr. Ohne das wurden
+    AC-3/AC-5 ab 2026-10-10 rot, weil das Gate sich selbst abschaltet
+    (Regel-Budget, Rueckbau-Entscheid #1197). AC-8 ueberschreibt das Datum."""
+    mod = _load_gate()
+    expiry = mod.EXPIRY
+
+    class AmPruefdatum(date):
+        @classmethod
+        def today(cls):
+            return expiry
+
+    monkeypatch.setattr(mod, "date", AmPruefdatum)
+    return mod
 
 
 def _run(mod, monkeypatch, cmd):
