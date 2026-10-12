@@ -32,23 +32,8 @@ def _make_trip(trip_id: str, trip_name: str, stages):
     return Trip(id=trip_id, name=trip_name, stages=stages)
 
 
-# =============================================================================
-# AC-7: Fehlende Credentials → 0 zurück, kein API-Call
-# =============================================================================
-
-def test_poll_returns_zero_without_credentials():
-    """
-    GIVEN: Settings without telegram_bot_token or telegram_chat_id
-    WHEN: poll_and_process() is called
-    THEN: Returns 0 and makes no API call
-    """
-    from services.inbound_telegram_reader import InboundTelegramReader
-    from app.config import Settings
-
-    settings = Settings(telegram_bot_token="", telegram_chat_id="")
-    reader = InboundTelegramReader()
-    result = reader.poll_and_process(settings)
-    assert result == 0
+# AC-7 (poll_and_process ohne Credentials) entfaellt: der Poll-Pfad ist
+# entfernt (#1369), Updates kommen nur noch per Webhook.
 
 
 # =============================================================================

@@ -1517,9 +1517,7 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "api/routers/scheduler.py::trigger_inbound::0": (
         "B7 (#1405) — trigger_inbound: dito; der 'skipped'-Zweig ist korrekt."
     ),
-    "api/routers/scheduler.py::trigger_inbound_telegram::0": (
-        "B8 (#1405) — trigger_inbound_telegram: dito, Feld heißt 'processed'."
-    ),
+    # B8 entfernt (#1369) — Endpoint /inbound-telegram samt Poll-Pfad geloescht.
     # --- B13 entfernt (#1407): die Funktion war toter Code (Legacy-Pfad
     # #1131) und wurde ersatzlos geloescht statt angeschlossen — der Scanner
     # findet an dieser Stelle nichts mehr, der Eintrag entfaellt mit ihr.
@@ -1532,9 +1530,7 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/inbound_email_reader.py::poll_and_process::0": (
         "B19 (#1405) — poll_and_process: processed hoch, except nur logger.error."
     ),
-    "src/services/inbound_telegram_reader.py::poll_and_process::0": (
-        "B20 (#1405) — poll_and_process: dito über _process_update(...)."
-    ),
+    # B20 entfernt (#1369) — Telegram-poll_and_process geloescht.
     # --- B21: Klasse 4 im Versandkontext, bei der E2-Verifikation gefunden.
     # Strukturell nicht von B14b zu unterscheiden.
     "src/services/notification_service.py::_send_telegram_incomplete_hint::0": (
@@ -1806,8 +1802,7 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "api/routers/scheduler.py::trigger_compare_official_alert_checks": 1,
     # B7 — dito (Inbound E-Mail)
     "api/routers/scheduler.py::trigger_inbound": 1,
-    # B8 — dito, Feld heißt "processed" (Inbound Telegram)
-    "api/routers/scheduler.py::trigger_inbound_telegram": 1,
+    # B8 entfernt (#1369) — Endpoint /inbound-telegram samt Poll-Pfad geloescht.
     # B9/B10/B11/B11b/B11c entfernt (#2217) — Trip- und Compare-Alarmprüfer
     # schotten jede Einheit ab und zählen Ausfälle in `failed`.
     # B12 — top_ort/actual_empfaenger zugewiesen, "status" trotzdem festes "ok"
@@ -1874,8 +1869,7 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # B19 — for uid in uids: processed += self._process_single(...),
     # except Exception: logger.error(...), return processed
     "src/services/inbound_email_reader.py::poll_and_process": 1,
-    # B20 — identisches Muster über self._process_update(...)
-    "src/services/inbound_telegram_reader.py::poll_and_process": 1,
+    # B20 entfernt (#1369) — Telegram-poll_and_process geloescht.
     # --- B21 (NEU Version 1.2): Klasse 4 im Versandkontext ---------------
     # Bei der Verifikation der E2-Einschränkung gefunden: strukturell nicht
     # von B14b zu unterscheiden (try/except, Logger-only-Handler, kein
@@ -1938,13 +1932,16 @@ def test_scanner_finds_every_spec_listed_finding():
     # verlieren (Test-Politik: Schwellen nie anpassen, damit etwas grün wird).
     # #1405 S1 (ADR-0086): minus B1, B14a (4), B14c (4), B15, B16
     # -> 21 Schlüssel, Summe 24 (vorher 26/35).
-    assert len(SPEC_LISTED_FINDINGS) == 21 and sum(SPEC_LISTED_FINDINGS.values()) == 24, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 21 "
-        "Funktionsschlüssel, Summe 24 — Version 1.2 minus B13, #1407, minus "
+    # #1369: B8 (trigger_inbound_telegram) und B20 (Telegram-poll_and_process)
+    # durch Löschen des Poll-Pfads entfallen (Mechanik wie B13)
+    # -> 19 Schlüssel, Summe 22.
+    assert len(SPEC_LISTED_FINDINGS) == 19 and sum(SPEC_LISTED_FINDINGS.values()) == 22, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 19 "
+        "Funktionsschlüssel, Summe 22 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
         "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2, "
         "minus B9/B10/B11/B11b/B11c, #2217, minus B1/B14a/B14c/B15/B16, "
-        "#1405 S1 ADR-0086). Ist: "
+        "#1405 S1 ADR-0086, minus B8/B20, #1369 Poll-Pfad geloescht). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )
@@ -1988,10 +1985,10 @@ def test_scanner_finds_every_spec_listed_finding():
         f"behandelt (S-8). Code reference: {b18_missing}"
     )
 
-    # --- AC-18: B19/B20, die beiden Inbound-Reader als Klasse-2-Fund ------
+    # --- AC-18: B19 (E-Mail-Reader) als Klasse-2-Fund. B20 (Telegram-
+    # poll_and_process) entfiel mit dem Poll-Pfad (#1369).
     inbound_expected = [
         "src/services/inbound_email_reader.py::poll_and_process",
-        "src/services/inbound_telegram_reader.py::poll_and_process",
     ]
     inbound_missing = sorted(
         location for location in inbound_expected if hit_counts.get(location, 0) < 1
