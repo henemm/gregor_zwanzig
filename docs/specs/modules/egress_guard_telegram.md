@@ -273,20 +273,10 @@ Beide Zeilen MÜSSEN deckungsgleich bleiben — erzwungen von
   `egress_guard_sms.md` dokumentierte Restlücke. Bleibt hier bewusst
   unverändert, da der Chat-Argument-Guard bereits jeden Versand an eine
   Nicht-Test-Chat-ID blockiert.
-- **Rest-Lücke `_get_updates` (eigene Klasse, nicht Teil dieser Spec):**
-  `src/services/inbound_telegram_reader.py::InboundTelegramReader._get_updates`
-  (Zeile ~120–139) liest `settings.telegram_bot_token` direkt und ruft
-  `httpx.get()` ohne einen der beiden neuen Guards auf — weder Token- noch
-  Chat-Argument-Guard sitzen in `TelegramOutput`, diese Klasse ist eine andere.
-  Durch den Inventar-Flip (`api.telegram.org`: `BLOCKED` → `TEST_ACCESS`) ist
-  dieser Aufruf jetzt zum ersten Mal überhaupt passierbar (vorher hätte der
-  zentrale Wächter ihn ohnehin geblockt). Praktisch tot: Telegram-Updates
-  laufen seit der Webhook-Umstellung (#637) per Push über
-  `/api/webhooks/telegram/{secret}`, `_get_updates()` (Poll-Pfad) wird im
-  Produktivbetrieb nicht mehr aufgerufen. Damit die Aussage „Telegram-Egress
-  ist isoliert" ehrlich bleibt, ist dieser tote Poll-Pfad dennoch als offene
-  Lücke dokumentiert statt stillschweigend als erledigt zu gelten —
-  ausgelagert als **#1369**.
+- Der frühere Telegram-Poll-Pfad (`InboundTelegramReader._get_updates`,
+  direkter `getUpdates`-Aufruf am Guard vorbei) ist mit **#1369** entfernt
+  (Rückbau statt Absicherung); Telegram-Updates kommen ausschließlich per
+  Webhook (#637). Keine offene Lücke mehr in dieser Klasse.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -310,4 +300,5 @@ zentralen Egress-Wächter an. Sie erbt dessen Prüfdatum **2026-10-19** (siehe
 ## Changelog
 
 - 2026-07-24: Initial spec erstellt — Issue #1363, Scheibe C von #1337
-- 2026-07-24: Umgesetzt — Token-Guard (`_guard_test_mode_bot_token`) + Chat-Argument-Guard (`_guard_test_mode_target_chat`) auf 5 schreibenden Methoden, `telegram_test_bot_token`-Feld inkl. `for_testing()`-Swap, Inventar-Flip `api.telegram.org` → `TEST_ACCESS` (Python + Go). Known Limitations um Rest-Lücke `inbound_telegram_reader.py::_get_updates` (→ #1369) ergänzt.
+- 2026-07-24: Umgesetzt — Token-Guard (`_guard_test_mode_bot_token`) + Chat-Argument-Guard (`_guard_test_mode_target_chat`) auf 5 schreibenden Methoden, `telegram_test_bot_token`-Feld inkl. `for_testing()`-Swap, Inventar-Flip `api.telegram.org` → `TEST_ACCESS` (Python + Go). Known Limitations um den damals offenen Poll-Pfad `inbound_telegram_reader.py::_get_updates` ergänzt (inzwischen mit #1369 zurückgebaut).
+- 2026-10-12: Known Limitations — Poll-Pfad-Lücke gestrichen, Poll-Pfad mit #1369 zurückgebaut (`fix_1369_inbound_telegram_poll_entfernen.md`).

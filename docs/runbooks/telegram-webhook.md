@@ -41,21 +41,12 @@ Basis für den BetterStack-Healthcheck (Alert bei Fehler/Stau).
 
 ## Rollback (Webhook → Polling)
 
-Telegram erlaubt **kein** Parallelbetrieb (ein Bot = eine URL; `getUpdates` liefert
-`409` solange ein Webhook gesetzt ist). Rollback ist Big-Bang:
-
-1. **Webhook entfernen:**
-   ```bash
-   export TELEGRAM_BOT_TOKEN=...
-   scripts/telegram_set_webhook.sh delete
-   ```
-2. **Poll-Job reaktivieren:** in `internal/scheduler/scheduler.go` die mit Issue #637
-   entfernte Job-Zeile wiederherstellen
-   (`{"@every 30s", s.inboundTelegram, "inbound_telegram_poll", ...}`) plus die Methode
-   `inboundTelegram()` (triggert `/api/scheduler/inbound-telegram`), Job-Zähler-Log auf
-   „5 jobs" zurücksetzen, Go-Binary neu bauen + Service restarten.
-   Der Python-Trigger-Endpoint `/api/scheduler/inbound-telegram` ist als Notfall-Fallback
-   erhalten geblieben und sofort wieder nutzbar.
+Gibt es nicht mehr. Der Poll-Pfad (`InboundTelegramReader.poll_and_process`/
+`_get_updates`) und der Trigger-Endpoint `/api/scheduler/inbound-telegram` sind mit
+#1369 entfernt, weil sie mit rohem Bot-Token an den Egress-Guards vorbeiliefen.
+Bei Webhook-Störungen: Webhook neu registrieren (`scripts/telegram_set_webhook.sh`),
+`getWebhookInfo` prüfen; Telegram puffert Updates bis 24 h. Soll Polling je
+wiederkommen, braucht es eine neue Spec mit Egress-Guard von Anfang an.
 
 ## Token-Rotation
 

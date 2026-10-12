@@ -24,9 +24,6 @@ logger = logging.getLogger("scheduler")
 
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
 
-_telegram_reader = None
-
-
 @router.post("/trip-reports")
 def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
     """Trigger trip reports for the current (or a given) point in time.
@@ -221,21 +218,6 @@ def trigger_inbound_sms():
     rejected = getattr(reader, "last_rejected_count", 0)
     status = "partial" if failed > 0 or rejected > 0 else "ok"
     return {"status": status, "count": count, "failed": failed, "rejected": rejected}
-
-
-@router.post("/inbound-telegram")
-def trigger_inbound_telegram():
-    """Trigger Telegram Bot polling."""
-    global _telegram_reader
-    from services.inbound_telegram_reader import InboundTelegramReader
-
-    settings = Settings()
-    if not settings.can_send_telegram():
-        return {"status": "skipped", "reason": "telegram not configured"}
-    if _telegram_reader is None:
-        _telegram_reader = InboundTelegramReader()
-    count = _telegram_reader.poll_and_process(settings)
-    return {"status": "ok", "processed": count}
 
 
 @router.post("/compare-presets-daily")

@@ -1,8 +1,10 @@
 """
-Inbound Telegram Reader — Bot API long-polling for trip commands.
+Inbound Telegram Reader — verarbeitet Trip-Befehle aus Telegram-Updates.
 
-Polls getUpdates for new messages, extracts commands (free-text, no ### prefix),
-delegates to TripCommandProcessor, and sends confirmations via NotificationService.
+Updates kommen ausschliesslich ueber den Webhook (api/routers/webhook.py, #637);
+der fruehere Poll-Pfad ist entfernt (#1369). Extrahiert Befehle (Freitext, kein
+### Praefix), delegiert an TripCommandProcessor und sendet Antworten ueber
+NotificationService.
 
 SPEC: docs/specs/modules/inbound_telegram_reader.md v1.0
 """
@@ -12,8 +14,6 @@ import logging
 import re
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
-
-import httpx
 
 from app.config import Settings, resolve_public_host
 from app.loader import compare_preset_to_dict, load_all_trips, load_compare_presets
@@ -46,9 +46,6 @@ from services.trip_selection import (
 )
 
 logger = logging.getLogger(__name__)
-
-TELEGRAM_API_BASE = "https://api.telegram.org"
-
 
 def _bare_public_host(settings: Settings) -> str | None:
     """Blosser Host ohne Schema — fuer die Fliesstext-Erwaehnung in Chat-Antworten."""
@@ -141,10 +138,9 @@ def _ohne_satzzeichen_am_wortende(word: str) -> str:
 
 
 class InboundTelegramReader:
-    """Polls Telegram Bot API and processes trip commands from messages."""
+    """Processes trip commands from Telegram webhook updates."""
 
     def __init__(self) -> None:
-        self._offset: int = 0
         self.sent_message_ids: list[int] = []  # Issue #686: collected for observability + cleanup
         self._notification_service: NotificationService | None = None
 
@@ -155,56 +151,6 @@ class InboundTelegramReader:
         Nutzer-Settings."""
         if self._notification_service is None:
             self._notification_service = NotificationService(settings=settings)
-
-    def poll_and_process(self, settings: Settings) -> int:
-        """Long-polling: holt neue Updates, verarbeitet Befehle.
-
-        Returns: Anzahl verarbeiteter Befehle.
-        Gibt 0 zurück und macht keinen API-Call wenn settings.can_send_telegram() False ist.
-        """
-        if not settings.can_send_telegram():
-            return 0
-
-        token = settings.telegram_bot_token
-        updates = self._get_updates(token)
-        if not updates:
-            return 0
-
-        processed = 0
-        max_update_id = self._offset - 1
-        for update in updates:
-            update_id = update.get("update_id", 0)
-            if update_id > max_update_id:
-                max_update_id = update_id
-            try:
-                if self._process_update(update, settings):
-                    processed += 1
-            except Exception as e:
-                logger.error(f"Error processing update {update_id}: {e}")
-
-        self._offset = max_update_id + 1
-        return processed
-
-    def _get_updates(self, token: str) -> list[dict]:
-        """GET getUpdates with offset and timeout=30.
-
-        Returns empty list on any error (fail-soft).
-        """
-        url = f"{TELEGRAM_API_BASE}/bot{token}/getUpdates"
-        params = {"offset": self._offset, "timeout": 30}
-        try:
-            response = httpx.get(url, params=params, timeout=35)
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("result", [])
-            logger.error(
-                "getUpdates returned status %d: %s",
-                response.status_code,
-                response.text[:200],
-            )
-        except Exception as e:
-            logger.error("getUpdates failed: %s", e)
-        return []
 
     def _process_update(self, update: dict, settings: Settings) -> bool:
         """Verarbeitet ein einzelnes Update.

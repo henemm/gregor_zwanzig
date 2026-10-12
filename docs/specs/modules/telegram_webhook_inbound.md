@@ -90,7 +90,7 @@ POST /api/internal/telegram-webhook
 ### 4. Cleanup & Migration
 
 - Scheduler-Job `inbound_telegram_poll` (`@every 30s`) aus `internal/scheduler/scheduler.go` entfernen; Job-Zähler-Log „5 jobs" anpassen.
-- `poll_and_process`/`_get_updates` als deprecated markieren (nicht löschen — Notfall-Fallback), nicht mehr vom Scheduler getriggert.
+- `poll_and_process`/`_get_updates` nicht mehr vom Scheduler getriggert. Ursprünglich als Notfall-Rückweg aufbewahrt; mit #1369 samt Endpoint `/api/scheduler/inbound-telegram` entfernt (Rückbau, da der Pfad an den Egress-Guards vorbeilief). Polling käme nur über eine neue Spec mit Guard von Anfang an zurück.
 - Setup-Script `scripts/telegram_set_webhook.sh`: registriert/aktualisiert Webhook (`setWebhook` mit `url` + `secret_token`), unterstützt `deleteWebhook` für Rollback, druckt `getWebhookInfo`.
 
 ### 5. Monitoring & Betrieb
@@ -98,7 +98,7 @@ POST /api/internal/telegram-webhook
 - **Webhook-Healthcheck:** periodischer `getWebhookInfo`-Check (Prod) → wertet `last_error_message` + `pending_update_count` aus → BetterStack-Alert bei Fehler/Stau. (Liveness-Ersatz für den entfallenden `last_run` des Poll-Jobs.)
 - **403-Alert:** abgewiesene Webhook-Requests sichtbar/alertbar (Anomalie-Erkennung Angriffsvektor).
 - **Nginx (henemm-infra, via MQ):** IP-Allowlist auf Telegram-Ranges (`149.154.160.0/20`, `91.108.4.0/22` — zur Umsetzung gegen offizielle Telegram-Doku verifizieren) + `limit_req`-Rate-Limit auf dem Webhook-Pfad.
-- **Runbook** (`docs/`): Webhook registrieren, Rollback (`deleteWebhook` + Poll-Job reaktivieren), Token-Rotation, Staging-Bot-Setup.
+- **Runbook** (`docs/`): Webhook registrieren, Rollback (`deleteWebhook`; der Poll-Pfad ist seit #1369 entfernt), Token-Rotation, Staging-Bot-Setup.
 
 ## Expected Behavior
 
@@ -140,10 +140,11 @@ Given ein bereits verarbeitetes Update (update_id N), When dasselbe Update (oder
 
 ## Known Limitations
 
-- Kein sanfter Parallelbetrieb Polling↔Webhook (Telegram: ein Bot = eine URL; `getUpdates` liefert `409` solange Webhook gesetzt). Umstellung ist Big-Bang; Rollback nur via `deleteWebhook` + Poll-Job-Reaktivierung (Runbook).
+- Kein sanfter Parallelbetrieb Polling↔Webhook (Telegram: ein Bot = eine URL; `getUpdates` liefert `409` solange Webhook gesetzt). Umstellung ist Big-Bang; Seit dem Rückbau des Poll-Pfads (#1369) gibt es keinen Polling-Rollback mehr; ein Rückweg bräuchte eine neue Spec mit Egress-Guard.
 - IP-Allowlist hängt an Telegrams veröffentlichten Ranges; ändern sie sich, greift ersatzweise der Secret-Header (Defense-in-Depth).
 - Webhook setzt öffentliche Erreichbarkeit + gültiges TLS voraus (Let's-Encrypt-Renewal). Bei Ausfall queued Telegram bis 24 h und retryt.
 
 ## Changelog
 
 - 2026-06-07: Initial spec created (Issue #637)
+- 2026-10-12: Poll-Pfad (`poll_and_process`/`_get_updates`, Endpoint `/api/scheduler/inbound-telegram`) entfernt statt als Fallback behalten — #1369 (`fix_1369_inbound_telegram_poll_entfernen.md`).
