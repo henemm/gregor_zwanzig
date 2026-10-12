@@ -468,9 +468,9 @@ def _index_cache_entries_for(country: str, page: int) -> list[dict]:
 # awareness_type (führende Ganzzahl) -> App-hazard. 11 (flood), 12 (flooding),
 # 13 (rain-flood) sind Ueberschwemmungs-Warnarten und werden auf "flood"
 # abgebildet (Issue #1427 S1; 12 war zuvor faelschlich "rain", 13 unabgebildet).
-# 4 (fog), 7 (coastal-event), 9 (avalanche, s. Issue #1430): keine App-
-# Kategorie, bewusst NICHT gemappt -> wird uebersprungen (analog unbekannter
-# warntypid bei GeoSphere, kein Crash).
+# 9 (avalanche) -> "avalanche" (Issue #1430). 4 (fog), 7 (coastal-event):
+# keine App-Kategorie, bewusst NICHT gemappt (s. _DISCARDED_TYPES) -> wird
+# uebersprungen (analog unbekannter warntypid bei GeoSphere, kein Crash).
 _TYPE_HAZARD_MAP: dict[int, str] = {
     1: "wind_gust",
     2: "snow",
@@ -478,10 +478,17 @@ _TYPE_HAZARD_MAP: dict[int, str] = {
     5: "extreme_heat",
     6: "extreme_cold",
     8: "wildfire_risk",
+    9: "avalanche",
     10: "rain",
     11: "flood",
     12: "flood",
     13: "flood",
+}
+
+# Bewusst verworfene awareness_types (Issue #1430) -- nur fuer die Debug-Zeile.
+_DISCARDED_TYPES: dict[int, str] = {
+    4: "Nebel",
+    7: "Kueste",
 }
 
 # Modul-Level-Caches: Index pro Land, geometry-/CAP-Inhalte pro URL.
@@ -626,8 +633,15 @@ def _group_and_map_info_entries(entries: list[dict]) -> list[OfficialAlert]:
             level = _leading_int(level_raw)
             if level is None or level < 2:
                 continue
-            hazard = _TYPE_HAZARD_MAP.get(_leading_int(type_raw))
+            type_num = _leading_int(type_raw)
+            hazard = _TYPE_HAZARD_MAP.get(type_num)
             if hazard is None:
+                name = _DISCARDED_TYPES.get(type_num)
+                grund = "bewusst nicht unterstuetzt" if name else "unbekannter awareness_type"
+                logger.debug(
+                    "MeteoAlarm awareness_type %s (%s) Stufe %s verworfen: %s",
+                    type_num, name or type_raw, level, grund,
+                )
                 continue
             preferred = _pick_preferred_entry(groups[key])
             label = preferred.get("event") or preferred.get("headline") or hazard

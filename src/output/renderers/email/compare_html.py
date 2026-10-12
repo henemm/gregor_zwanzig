@@ -566,6 +566,9 @@ def _warn_short(alert) -> tuple[str, str]:
     if alert.hazard == "flood":
         sev = {2: "caution", 3: "warn", 4: "danger"}.get(alert.level, "warn")
         return "Hochwasser", sev
+    if alert.hazard == "avalanche":
+        sev = {2: "caution", 3: "warn", 4: "danger"}.get(alert.level, "warn")
+        return "Lawine", sev
     return alert.label, "info"
 
 

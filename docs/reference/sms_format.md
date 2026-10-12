@@ -276,11 +276,14 @@ Amtliche Unwetterwarnungen (`official_alerts`-Dienst, alle Provider) erscheinen 
 | `rain` | `RA` | Starkregen |
 | `wind_gust` | `WG` | Sturm |
 | `snow` | `SN` | Schneefall |
+| `avalanche` | `AW` | Lawine |
 | `black_ice` | `IC` | Glatteis |
 | `extreme_heat` | `HT` | Hitze |
 | `extreme_cold` | `CD` | Kälte |
 | `wildfire_risk` | `FR` | Waldbrand-Gefahr |
 | `access_ban` | `AB` | Zugang gesperrt |
+
+**Abgrenzung `AW` / `AV` (Issue #1430):** `AW` ist die amtliche Lawinen-**Warnung** (MeteoAlarm awareness_type 9, Warn-Block mit Stufe, z.B. `!AW:M`); `AV` ist die Lawinenstufe (Lawinenstufe 1-5) aus dem Wintersport-Block (§3.1). Zwei verschiedene Aussagen, zwei Kürzel.
 
 **Seit #2417 (AC-27):** `TS`/`FO`/`RA`/`WG`/`AB` statt `TH`/`FL`/`HR`/`W`/`CL` — die alten Kürzel glichen Wetter-Kürzeln. Die Bedeutung jedes Kürzels (en/de) steht an genau einer Stelle: Wettermetriken im Metrik-Katalog (`MetricDefinition.kuerzel_bedeutung_en/_de`), Warn-Kürzel in `hazard_symbols.py` (`HAZARD_BEDEUTUNG_*`), Bausteine und Formatzeichen in `tokens/builder.py`; der Befehl `CODES`/`KUERZEL` liefert sie per Nachricht.
 
