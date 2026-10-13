@@ -36,6 +36,7 @@ import math
 import threading
 import time
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
@@ -55,6 +56,12 @@ from tenacity import (
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from providers.base import ProviderRequestError, ThunderSourceUnavailableError
+from providers.enrichment_health import (
+    OUTCOME_FALLBACK,
+    OUTCOME_OK,
+    PATH_THUNDER_BUDGET,
+    log_enrichment_call,
+)
 from providers.http import (
     capped_timeout_or_raise,
     make_deadline_before_hook,
@@ -141,6 +148,16 @@ THUNDER_RUN_FALLBACK_STAGES = 2
 # 000..048, stuendlich). Darueber hinaus wird gar nicht erst abgerufen.
 THUNDER_MAX_TIMESTEP = 48
 
+# #2554: Gewitter-Downloads bekommen einen eigenen, strengeren Abrufweg -- bei
+# langsamem DWD (Stoerung 12.10.: 151-170s je Abruf) verbrannte der Grund-
+# Timeout (30s, 5 Versuche) das 150s-Budget nach 1-2 Zeitpunkten. Ein haengender
+# Einzelabruf kostet hoechstens THUNDER_REQUEST_TIMEOUT, ein ReadTimeout wird
+# NICHT wiederholt. Je Zeitpunkt laufen bis zu THUNDER_PARALLEL_DOWNLOADS
+# Downloads gleichzeitig (Reihenfolge der Groessen bleibt, #1531 AC-7).
+THUNDER_REQUEST_TIMEOUT = 10.0
+THUNDER_RETRY_ATTEMPTS = 2
+THUNDER_PARALLEL_DOWNLOADS = 5
+
 
 def _is_retryable_error(exception: BaseException) -> bool:
     """1:1-Muster meteofrance.py: retryable bei 500/502/503/504 +
@@ -150,6 +167,15 @@ def _is_retryable_error(exception: BaseException) -> bool:
     if isinstance(exception, (httpx.ConnectError, httpx.ReadTimeout)):
         return True
     return False
+
+
+def _is_thunder_retryable_error(exception: BaseException) -> bool:
+    """#2554: wie `_is_retryable_error`, aber OHNE ReadTimeout -- ein Server,
+    der THUNDER_REQUEST_TIMEOUT lang geschwiegen hat, erholt sich innerhalb des
+    Abrufs selten; ein zweiter Versuch wuerde den Haenger verdoppeln."""
+    if isinstance(exception, httpx.HTTPStatusError):
+        return exception.response.status_code in RETRY_STATUS_CODES
+    return isinstance(exception, httpx.ConnectError)
 
 
 def _vector_to_speed_kmh(u: float, v: float) -> float:
@@ -455,6 +481,9 @@ def _precip_series_from_cumulative(
     return result
 
 
+_BUDGET_ENDE = object()  # Marke: Budget war vor dem Download erschoepft (#2554)
+
+
 def _thunder_budget_erschoepft(deadline_at: float) -> bool:
     """Zeitgrenze der Gewitter-Anreicherung (Spec AC-4), fest gebildet und vor
     JEDEM Einzel-Call geprueft — auch vor dem Anker-Abruf."""
@@ -466,6 +495,13 @@ def _thunder_budget_erschoepft(deadline_at: float) -> bool:
         THUNDER_FETCH_DEADLINE_SECONDS,
     )
     return True
+
+
+def _thunder_zaehle(zustand: Dict[str, object], schluessel: str) -> None:
+    """#2554: Zaehler `versucht`/`fehlgeschlagen` werden aus mehreren Threads
+    erhoeht; `+= 1` ist nicht atomar, deshalb hinter dem Lock des Abrufs."""
+    with zustand["lock"]:  # type: ignore[attr-defined]
+        zustand[schluessel] = int(zustand[schluessel]) + 1
 
 
 class DwdDirectProvider:
@@ -530,6 +566,29 @@ class DwdDirectProvider:
         response.raise_for_status()  # nicht-retryable Fehler (4xx)
         return response.content
 
+    @retry(
+        stop=stop_after_attempt(THUNDER_RETRY_ATTEMPTS) | stop_at_deadline,
+        wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
+        retry=retry_if_exception(_is_thunder_retryable_error),
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
+    )
+    def _thunder_request(self, url: str, deadline_at: Optional[float] = None) -> bytes:
+        """#2554: GET fuer Gewitter-Raster -- eigener Timeout
+        (`THUNDER_REQUEST_TIMEOUT`), `THUNDER_RETRY_ATTEMPTS` Versuche, kein
+        Retry bei ReadTimeout. Frist wie `_request` auf `deadline_at` gedeckelt."""
+        request_timeout = capped_timeout_or_raise(
+            provider_name=self.name,
+            base_timeout=THUNDER_REQUEST_TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="FETCH_DEADLINE_SECONDS",
+            budget_seconds=FETCH_DEADLINE_SECONDS,
+        )
+        response = self._client.get(url, timeout=request_timeout)
+        response.raise_for_status()  # 5xx -> Retry (HTTPStatusError), 4xx sichtbar
+        return response.content
+
     def _fetch_series(
         self, param: str, lat: float, lon: float,
         run: datetime, deadline_at: float,
@@ -568,7 +627,7 @@ class DwdDirectProvider:
             ttt = int((ziel - lauf).total_seconds() // 3600)
             if ttt < 0 or ttt > THUNDER_MAX_TIMESTEP:
                 return None
-            zustand["versucht"] = int(zustand["versucht"]) + 1
+            _thunder_zaehle(zustand, "versucht")
             url = _build_url(lauf, ttt, param)
             # #2465: Treffer im Punkt-Fenster-Cache — kein Download, kein
             # Entpacken. Die Datei existiert (sonst laege kein Fenster vor),
@@ -578,7 +637,7 @@ class DwdDirectProvider:
                 zustand["bestaetigt"] = True
                 return gecacht.value_at(lat, lon, param)
             try:
-                raw = self._request(url, deadline_at=deadline_at)
+                raw = self._thunder_request(url, deadline_at=deadline_at)
             except httpx.HTTPStatusError as e:
                 weiterer_kandidat = (
                     e.response.status_code == 404
@@ -586,7 +645,7 @@ class DwdDirectProvider:
                     and int(zustand["index"]) < len(kandidaten) - 1
                 )
                 if not weiterer_kandidat:
-                    zustand["fehlgeschlagen"] = int(zustand["fehlgeschlagen"]) + 1
+                    _thunder_zaehle(zustand, "fehlgeschlagen")
                     logger.warning(
                         "Gewittersignal '%s' +%dh nicht abrufbar: %s",
                         param, ttt, e,
@@ -600,7 +659,7 @@ class DwdDirectProvider:
                 )
                 continue
             except Exception as e:
-                zustand["fehlgeschlagen"] = int(zustand["fehlgeschlagen"]) + 1
+                _thunder_zaehle(zustand, "fehlgeschlagen")
                 logger.warning(
                     "Gewittersignal '%s' +%dh nicht abrufbar: %s", param, ttt, e
                 )
@@ -645,7 +704,9 @@ class DwdDirectProvider:
         # UnboundLocalError den "wirft NIE"-Vertrag dieser Methode brechen.
         zustand: Dict[str, object] = {
             "index": 0, "bestaetigt": False, "versucht": 0, "fehlgeschlagen": 0,
+            "lock": threading.Lock(),  # #2554: schuetzt die Zaehler
         }
+        abgebrochen = False  # Budget-Ende (#2554: auch fuer die Journalzeile)
         try:
             now = datetime.now(timezone.utc)
             # Nullpunkt der Offsets: das gewuenschte Zeitfenster, nie vor dem
@@ -672,7 +733,6 @@ class DwdDirectProvider:
             # Bezugszeitpunkt praktisch immer Stunden nach dem Lauf liegt --
             # wird er echt abgerufen: EIN zusaetzlicher Call je kumuliertem
             # Signal, VOR dem eigentlichen Zeitschritt-Abruf unten.
-            abgebrochen = False
             for param in THUNDER_PARAMS:
                 if param not in THUNDER_CUMULATIVE_PARAMS or not offsets or not (base > run):
                     continue
@@ -690,19 +750,49 @@ class DwdDirectProvider:
             # kritischsten Signale VORN platziert (Spec Implementation
             # Details Punkt 2): die hinteren Signale sollen bei Budget-Ende
             # ausfallen, nicht die hinteren Zeitschritte EINES Signals.
+            # #2554: je Zeitpunkt laufen die Groessen parallel (Aufgaben in
+            # THUNDER_PARAMS-Reihenfolge, Einsortieren ueber die Groesse). Solange
+            # noch kein Lauf bestaetigt ist, wird nacheinander abgerufen, damit
+            # der Lauf-Rueckfall (404) nicht zwischen Threads racet.
+            def hole(param: str, offset: int) -> Optional[float]:
+                if _thunder_budget_erschoepft(deadline_at):
+                    return _BUDGET_ENDE
+                wert = self._thunder_point(
+                    param, lat, lon, base + timedelta(hours=offset),
+                    kandidaten, zustand, deadline_at=deadline_at,
+                )
+                # Ohne Wert erst an/nach der Frist beendet: der Download wurde
+                # durch das Budget abgeschnitten (kein 404/Fehler davor).
+                if wert is None and time.monotonic() >= deadline_at:
+                    return _BUDGET_ENDE
+                return wert
+
             if not abgebrochen:
-                for offset in offsets:
-                    if abgebrochen:
-                        break
-                    for param in THUNDER_PARAMS:
-                        if _thunder_budget_erschoepft(deadline_at):
-                            abgebrochen = True
+                with ThreadPoolExecutor(
+                    max_workers=THUNDER_PARALLEL_DOWNLOADS
+                ) as pool:
+                    for offset in offsets:
+                        offen = list(THUNDER_PARAMS)
+                        while offen and not zustand["bestaetigt"]:
+                            param = offen.pop(0)
+                            wert = hole(param, offset)
+                            if wert is _BUDGET_ENDE:
+                                abgebrochen = True
+                                break
+                            roh_je_param[param][offset] = wert
+                        if abgebrochen:
                             break
-                        roh_je_param[param][offset] = self._thunder_point(
-                            param, lat, lon, base + timedelta(hours=offset),
-                            kandidaten, zustand,
-                            deadline_at=deadline_at,
-                        )
+                        futures = [(p, pool.submit(hole, p, offset)) for p in offen]
+                        for param, future in futures:
+                            wert = future.result()
+                            if wert is _BUDGET_ENDE:
+                                # Hintere Groessen dieses Zeitpunkts verwerfen:
+                                # nie fehlt eine vordere bei vorhandener hinterer.
+                                abgebrochen = True
+                                break
+                            roh_je_param[param][offset] = wert
+                        if abgebrochen:
+                            break
             for param in THUNDER_PARAMS:
                 kumuliert = param in THUNDER_CUMULATIVE_PARAMS
                 ergebnis[param] = (
@@ -718,6 +808,11 @@ class DwdDirectProvider:
         # der neue Ausnahmetyp nicht vom generischen `except Exception:`
         # darueber verschluckt wird -- er soll zum Aufrufer (thunder_enrichment)
         # durchschlagen.
+        log_enrichment_call(
+            PATH_THUNDER_BUDGET,
+            OUTCOME_FALLBACK if abgebrochen else OUTCOME_OK,
+            "icon_d2_budget_erschoepft" if abgebrochen else None,
+        )
         versucht = int(zustand["versucht"])
         fehlgeschlagen = int(zustand["fehlgeschlagen"])
         if versucht > 0 and fehlgeschlagen == versucht:
