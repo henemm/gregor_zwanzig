@@ -26,6 +26,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+from tests.helpers.telegram_empfaenger import antwort_im_update
 
 from tests.tdd._telegram_live_fixture import live_telegram_enabled
 
@@ -96,7 +97,7 @@ def test_ac2_send_returns_message_id(monkeypatch):
     with _socket(resp) as base:
         monkeypatch.setattr(tg, "TELEGRAM_API_BASE", base)
         settings = Settings(telegram_bot_token="testtoken", telegram_chat_id="999")
-        out = tg.TelegramOutput(settings)
+        out = antwort_im_update(settings, settings.telegram_chat_id)
         mid = out.send("Betreff", "Inhalt")
 
     assert mid == 4242, f"send() muss die message_id liefern, war: {mid!r}"
