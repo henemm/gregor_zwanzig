@@ -26,6 +26,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+from tests.helpers.telegram_empfaenger import antwort_im_update
 
 from tests.tdd._telegram_live_fixture import live_telegram_enabled
 
@@ -96,7 +97,7 @@ def test_ac2_send_returns_message_id(monkeypatch):
     with _socket(resp) as base:
         monkeypatch.setattr(tg, "TELEGRAM_API_BASE", base)
         settings = Settings(telegram_bot_token="testtoken", telegram_chat_id="999")
-        out = tg.TelegramOutput(settings)
+        out = antwort_im_update(settings, settings.telegram_chat_id)
         mid = out.send("Betreff", "Inhalt")
 
     assert mid == 4242, f"send() muss die message_id liefern, war: {mid!r}"
@@ -141,7 +142,7 @@ def test_ac1_fixture_ensures_user_with_active_trip(tmp_path):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.real_data_root
-@pytest.mark.timeout(240)
+@pytest.mark.timeout(600)
 @pytest.mark.skipif(
     not live_telegram_enabled(),
     reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
@@ -164,7 +165,9 @@ def test_ac3_all_seven_commands_produce_meaningful_content():
     Läuft gegen das CWD-`data`-Verzeichnis (get_data_dir ist CWD-relativ) — in der
     Validierung im Staging-Tree mit echten Wetter-Providern.
 
-    @pytest.mark.timeout(240) (statt globalem 30s-Default, Issue #1210 AC-1
+    @pytest.mark.timeout(600) (statt globalem 30s-Default, Issue #1210 AC-1
+    Auf 600s angehoben (Messung Staging 2026-10-13, #1412): ~99 Telegram-POSTs a 3,5s
+    Pacing plus ~1800 DWD-ICON-EU-Abrufe liegen allein ueber 240s.
     erlaubt deklarierte Ausnahmen): der Test macht für sieben Kommandos echte
     Wetterabrufe. Ist die Primärquelle für Gewittersignale nicht erreichbar,
     greift die Ersatzquelle mit GRIB-Rasterlesen, und die Summe sprengt 30s —
@@ -255,7 +258,7 @@ def test_ac3_all_seven_commands_produce_meaningful_content():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.real_data_root
-@pytest.mark.timeout(240)
+@pytest.mark.timeout(600)
 @pytest.mark.skipif(
     not live_telegram_enabled(),
     reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
@@ -275,7 +278,7 @@ def test_ac4_live_delivery_and_cleanup():
     Akzeptanzkriterium aus der 1007-Spec (volle Bubbles statt Einzeiler) hier
     erstmals live bewiesen.
 
-    @pytest.mark.timeout(240) (statt globalem 30s-Default, Issue #1210 AC-1
+    @pytest.mark.timeout(600) (statt globalem 30s-Default, Issue #1210 AC-1
     erlaubt deklarierte Ausnahmen): der Live-Sendepfad im Fixture pacet jeden
     Telegram-POST (_paced_telegram_post in _telegram_live_fixture.py) mit
     ~3.5s Abstand, weil Telegram sonst mit HTTP 429 abriegelt (7 Kommandos,

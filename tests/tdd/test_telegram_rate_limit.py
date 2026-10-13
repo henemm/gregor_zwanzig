@@ -47,6 +47,7 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 from output.channels.base import OutputConfigError
 from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import antwort_im_update, profil_chat
 from services.notification_service import NotificationService, TripReportRequest
 
 # AC-8: schärfer als der globale 30-s-Timeout (pyproject.toml:63).
@@ -271,7 +272,7 @@ def test_normal_briefing_series_is_not_slowed_down(count, monkeypatch):
         started = time.monotonic()
         for text in texts:
             # Frische Instanz je Nachricht — so arbeitet notification_service.py:344.
-            TelegramOutput(settings).send("Briefing", text, parse_mode="HTML",
+            antwort_im_update(settings, settings.telegram_chat_id).send("Briefing", text, parse_mode="HTML",
                                           suppress_subject_line=True)
         elapsed = time.monotonic() - started
 
@@ -322,7 +323,7 @@ def test_twenty_part_briefing_survives_throttling_gateway(monkeypatch):
         failures = []
         for text in texts:
             try:
-                TelegramOutput(settings).send("Lange Etappe", text, parse_mode="HTML",
+                antwort_im_update(settings, settings.telegram_chat_id).send("Lange Etappe", text, parse_mode="HTML",
                                               suppress_subject_line=True)
             except Exception as exc:  # noqa: BLE001 — Fehlerbild soll sichtbar sein
                 failures.append(f"{text}: {exc!r}")
@@ -361,7 +362,7 @@ def test_single_429_with_retry_after_is_retried_and_delivered(monkeypatch):
 
         started, mid, error = time.monotonic(), None, None
         try:
-            mid = TelegramOutput(settings).send("Briefing", text, parse_mode="HTML",
+            mid = antwort_im_update(settings, settings.telegram_chat_id).send("Briefing", text, parse_mode="HTML",
                                                 suppress_subject_line=True)
         except Exception as exc:  # noqa: BLE001
             error = exc
@@ -412,9 +413,9 @@ def test_retry_after_429_is_capped_even_when_the_window_is_saturated(monkeypatch
                              telegram_retry_after_cap_seconds=cap)
 
         # Erste Nachricht sättigt das Fenster (1 Zugriff je Sekunde).
-        TelegramOutput(settings).send("Briefing", "Erste Bubble", parse_mode="HTML",
+        antwort_im_update(settings, settings.telegram_chat_id).send("Briefing", "Erste Bubble", parse_mode="HTML",
                                       suppress_subject_line=True)
-        mid = TelegramOutput(settings).send("Briefing", "Zweite Bubble", parse_mode="HTML",
+        mid = antwort_im_update(settings, settings.telegram_chat_id).send("Briefing", "Zweite Bubble", parse_mode="HTML",
                                             suppress_subject_line=True)
         finished = time.monotonic()
 
@@ -450,7 +451,7 @@ def test_rate_limit_bookkeeping_forgets_silent_chats(monkeypatch):
             settings = _settings(chat, telegram_rate_limit_max_per_window=5,
                                  telegram_rate_limit_window_seconds=window)
             time.sleep(window * 2)  # Fenster des vorigen Chats sicher abgelaufen
-            TelegramOutput(settings).send("Briefing", f"Text {chat}", parse_mode="HTML",
+            antwort_im_update(settings, settings.telegram_chat_id).send("Briefing", f"Text {chat}", parse_mode="HTML",
                                           suppress_subject_line=True)
 
         assert quiet_chat not in TelegramOutput._rate_limit_stamps, (
@@ -503,7 +504,10 @@ def _run_briefing(stub: _TelegramStub, tag: str, monkeypatch) -> None:
         trip=trip, report_type="morning", segment_weather=[_segment(i) for i in (1, 2, 3)],
         trip_tz=ZoneInfo("Europe/Vienna"), report_config=rc,
         send_email=False, send_sms=False, send_telegram=True)
-    NotificationService(settings=_settings(_chat(tag)),
+    settings = _settings(_chat(tag))
+    # #1412 S4a: Empfaenger ist der Profil-Chat des Nutzers (user.json).
+    profil_chat("tdd-1370-pacing", settings.telegram_chat_id)
+    NotificationService(settings=settings,
                         user_id="tdd-1370-pacing").send_trip_report(request)
 
 
@@ -652,15 +656,15 @@ def test_mixed_write_series_to_same_chat_is_fully_delivered(monkeypatch):
                              telegram_rate_limit_window_seconds=0.3,
                              telegram_retry_after_cap_seconds=0.05)
 
-        loading_id = TelegramOutput(settings).send(
+        loading_id = antwort_im_update(settings, settings.telegram_chat_id).send(
             "Bitte warten", "⏳ Briefing wird erstellt …", parse_mode="HTML",
             suppress_subject_line=True)
         assert loading_id is not None, "Lade-Nachricht wurde nicht zugestellt."
         for i in range(4):
-            TelegramOutput(settings).send("Briefing", f"Bubble {i + 1}",
+            antwort_im_update(settings, settings.telegram_chat_id).send("Briefing", f"Bubble {i + 1}",
                                           parse_mode="HTML", suppress_subject_line=True)
-        deleted = TelegramOutput(settings).delete_message(chat_id, loading_id)
-        TelegramOutput(settings).edit_message_text(chat_id, loading_id + 1, "Korrektur")
+        deleted = antwort_im_update(settings, settings.telegram_chat_id).delete_message(chat_id, loading_id)
+        antwort_im_update(settings, settings.telegram_chat_id).edit_message_text(chat_id, loading_id + 1, "Korrektur")
 
         assert not stub.throttled, (
             f"Die Gegenstelle musste {len(stub.throttled)} Mal drosseln — der Sender "
