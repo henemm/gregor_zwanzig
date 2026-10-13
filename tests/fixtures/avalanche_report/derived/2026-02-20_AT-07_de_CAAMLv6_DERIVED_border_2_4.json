@@ -1,0 +1,900 @@
+{
+ "bulletins": [
+  {
+   "publicationTime": "2026-02-20T06:40:07Z",
+   "validTime": {
+    "startTime": "2026-02-19T16:00:00Z",
+    "endTime": "2026-02-20T16:00:00Z"
+   },
+   "unscheduled": true,
+   "highlights": "Spontane Lawinen sind zu erwarten.",
+   "avalancheActivity": {
+    "highlights": "Sehr gefährliche Lawinensituation. Die Gefährdung bezieht sich vor allem auf alpines Schneesportgelände.",
+    "comment": "Der viele Neuschnee und die mit dem starken Westwind entstehenden, umfangreichen Triebschneeansammlungen sind an allen Expositionen oberhalb der Waldgrenze sehr störanfällig. Solche Gefahrenstellen liegen auch im Bereich der Waldgrenze. <br/> <br/> Mit Neuschnee und Wind sind bis in die Nacht hinein spontane Lawinen zu erwarten. Lawinen können teilweise in tiefe Schichten durchreißen und groß werden. Dies an West-, Nord- und Osthängen. <br/> <br/> Die spontane Lawinenaktivität nimmt mit dem Ende der Schneefälle langsam ab. Vor allem in den Föhngebieten sind mit dem starken bis stürmischen Nordwestwind weiterhin spontane Lawinen möglich. Vorsicht vor allem in windabgewandten Einzugsgebieten."
+   },
+   "snowpackStructure": {
+    "comment": "Bis am Vormittag fallen gebietsweise 10 bis 20 cm Schnee. Der Wind bläst mäßig bis stark. Der Wind bläst vor allem in den Südlichen Zillertaler Alpen und den Hohen Tauern und entlang der Grenze zu Südtirol zeitweise stürmisch. Der Wind verfrachtet den Neuschnee. Es entstehen weitere Triebschneeansammlungen. <br/> <br/> Die Schneedecke ist verbreitet störanfällig. Neu- und Triebschnee überlagern eine schwache Altschneedecke. Schon etwas ältere Triebschneeansammlungen liegen auf Oberflächenreif. Im unteren Teil der Altschneedecke sind ausgeprägte Schwachschichten vorhanden. Dies vor allem an West-, Nord- und Osthängen oberhalb der Waldgrenze."
+   },
+   "tendency": [
+    {
+     "highlights": "Es fällt gebietsweise etwas Schnee. Der Regen führt in tiefen und mittleren Lagen zu einer Aufweichung der Schneedecke. Mit teils stürmischem Wind aus westlichen Richtungen entstehen am Samstag weitere Triebschneeansammlungen. <br/> Die Verhältnisse für Schneesport abseits gesicherter Pisten bleiben sehr gefährlich. Lawinen können sehr leicht ausgelöst werden. Es sind weiterhin spontane Lawinen möglich.",
+     "tendencyType": "steady",
+     "validTime": {
+      "startTime": "2026-02-20T16:00:00Z",
+      "endTime": "2026-02-21T16:00:00Z"
+     }
+    }
+   ],
+   "customData": {
+    "ALBINA": {
+     "mainDate": "2026-02-20"
+    },
+    "LWD_Tyrol": {
+     "dangerPatterns": [
+      "DP1",
+      "DP6"
+     ]
+    }
+   },
+   "avalancheProblems": [
+    {
+     "problemType": "persistent_weak_layers",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "many",
+     "avalancheSize": 3,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "N"
+     ]
+    },
+    {
+     "problemType": "new_snow",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "some",
+     "avalancheSize": 3,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "S",
+      "N",
+      "SW",
+      "SE"
+     ]
+    },
+    {
+     "problemType": "new_snow",
+     "elevation": {},
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "few",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "loose"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "S",
+      "N",
+      "SW",
+      "SE"
+     ]
+    }
+   ],
+   "bulletinID": "8247781c-5524-4be2-9d13-8ba417592979",
+   "dangerRatings": [
+    {
+     "mainValue": "moderate",
+     "elevation": {
+      "upperBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    },
+    {
+     "mainValue": "high",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    }
+   ],
+   "lang": "de",
+   "regions": [
+    {
+     "name": "Glocknergruppe Pasterze",
+     "regionID": "AT-02-01-01"
+    },
+    {
+     "name": "Zillertaler Alpen Nordwest",
+     "regionID": "AT-07-23-02"
+    },
+    {
+     "name": "Zillertaler Alpen Nordost",
+     "regionID": "AT-07-23-01"
+    },
+    {
+     "name": "Weißkugelgruppe",
+     "regionID": "AT-07-20"
+    },
+    {
+     "name": "Kitzbüheler Alpen Wildschönau",
+     "regionID": "AT-07-17-01"
+    },
+    {
+     "name": "Gurgler Gruppe",
+     "regionID": "AT-07-21"
+    },
+    {
+     "name": "Stubaier Alpen Mitte",
+     "regionID": "AT-07-22"
+    },
+    {
+     "name": "Venedigergruppe Süd",
+     "regionID": "AT-07-24"
+    },
+    {
+     "name": "Tuxer Alpen West",
+     "regionID": "AT-07-15"
+    },
+    {
+     "name": "Tuxer Alpen Ost",
+     "regionID": "AT-07-16"
+    },
+    {
+     "name": "Kalkkögel",
+     "regionID": "AT-07-14-04"
+    },
+    {
+     "name": "Serleskamm",
+     "regionID": "AT-07-14-05"
+    },
+    {
+     "name": "Glocknergruppe Süd",
+     "regionID": "AT-07-26-01"
+    },
+    {
+     "name": "Hinteres Ahrntal",
+     "regionID": "IT-32-BZ-05-03"
+    },
+    {
+     "name": "Durreckgruppe",
+     "regionID": "IT-32-BZ-11"
+    },
+    {
+     "name": "Langtaufers",
+     "regionID": "IT-32-BZ-02-01"
+    },
+    {
+     "name": "Stubaier Alpen Süd",
+     "regionID": "IT-32-BZ-04-01"
+    },
+    {
+     "name": "Zillertaler Alpen Süd",
+     "regionID": "IT-32-BZ-05-02"
+    },
+    {
+     "name": "Pfitsch",
+     "regionID": "IT-32-BZ-05-01"
+    },
+    {
+     "name": "Schnalser Kamm",
+     "regionID": "IT-32-BZ-03"
+    },
+    {
+     "name": "Hinteres Passeiertal",
+     "regionID": "IT-32-BZ-07-01"
+    }
+   ]
+  },
+  {
+   "publicationTime": "2026-02-20T06:40:07Z",
+   "validTime": {
+    "startTime": "2026-02-19T16:00:00Z",
+    "endTime": "2026-02-20T16:00:00Z"
+   },
+   "unscheduled": true,
+   "highlights": "Spontane Lawinen sind zu erwarten.",
+   "avalancheActivity": {
+    "highlights": "Weiterhin sehr gefährliche Lawinensituation.",
+    "comment": "Neu- und Triebschnee überlagern eine schwache Altschneedecke. Der viele Neuschnee und die mit dem starken Westwind entstehenden, umfangreichen Triebschneeansammlungen sind an allen Expositionen oberhalb der Waldgrenze sehr störanfällig. Solche Gefahrenstellen liegen auch im Bereich der Waldgrenze. <br/> <br/> Mit Neuschnee und Wind sind im Verlaufe der Nacht spontane Lawinen zu erwarten. Lawinen können teilweise in tiefe Schichten durchreißen und groß werden. Dies an West-, Nord- und Osthängen. Vorsicht vor allem in windabgewandten noch nicht entladenen Einzugsgebieten. Lawinen können sehr vereinzelt sehr groß werden. Exponierte Verkehrswege können vereinzelt gefährdet sein. <br/> <br/> Die spontane Lawinenaktivität nimmt mit dem Ende der Schneefälle allmählich ab."
+   },
+   "snowpackStructure": {
+    "comment": "Bis am Vormittag fallen verbreitet 15 bis 30 cm Schnee. Der Wind bläst teils stark. <br/> <br/> Die Schneedecke ist störanfällig. Viel Neuschnee und Triebschnee verbinden sich nur langsam mit dem Altschnee. Die verschiedenen Triebschneeansammlungen sind ungenügend miteinander und mit dem Altschnee verbunden. <br/> Im unteren Teil der Schneedecke sind an West-, Nord- und Osthängen störanfällige Schwachschichten vorhanden. <br/> <br/> Lawinenabgänge und die Meldungen der Beobachter bestätigten die schlechte Stabilität der Schneedecke."
+   },
+   "tendency": [
+    {
+     "highlights": "Es fällt gebietsweise etwas Schnee. Mit teils stürmischem Wind aus westlichen Richtungen entstehen am Samstag weitere Triebschneeansammlungen. Der Regen führt in tiefen und mittleren Lagen zu einer Aufweichung der Schneedecke. <br/> <br/> Die Verhältnisse für Schneesport abseits gesicherter Pisten bleiben sehr gefährlich. Lawinen können sehr leicht ausgelöst werden. Es sind spontane Lawinen möglich.",
+     "tendencyType": "steady",
+     "validTime": {
+      "startTime": "2026-02-20T16:00:00Z",
+      "endTime": "2026-02-21T16:00:00Z"
+     }
+    }
+   ],
+   "customData": {
+    "ALBINA": {
+     "mainDate": "2026-02-20"
+    },
+    "LWD_Tyrol": {
+     "dangerPatterns": [
+      "DP1",
+      "DP6"
+     ]
+    }
+   },
+   "avalancheProblems": [
+    {
+     "problemType": "persistent_weak_layers",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "many",
+     "avalancheSize": 3,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "N"
+     ]
+    },
+    {
+     "problemType": "new_snow",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "some",
+     "avalancheSize": 3,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "S",
+      "N",
+      "SW",
+      "SE"
+     ]
+    },
+    {
+     "problemType": "gliding_snow",
+     "elevation": {
+      "upperBound": "2400"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "few",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "glide"
+      }
+     },
+     "aspects": [
+      "E",
+      "W",
+      "S",
+      "SW",
+      "SE"
+     ]
+    }
+   ],
+   "bulletinID": "71aa2c9f-2deb-4505-957f-8642e21a6a51",
+   "dangerRatings": [
+    {
+     "mainValue": "moderate",
+     "elevation": {
+      "upperBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    },
+    {
+     "mainValue": "high",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    }
+   ],
+   "lang": "de",
+   "regions": [
+    {
+     "name": "Lechtaler Alpen Ost",
+     "regionID": "AT-07-02-02"
+    },
+    {
+     "name": "Ammergauer Alpen Süd",
+     "regionID": "AT-07-02-01"
+    },
+    {
+     "name": "Kaunergrat",
+     "regionID": "AT-07-14-01"
+    },
+    {
+     "name": "Verwallgruppe Mitte",
+     "regionID": "AT-07-10"
+    },
+    {
+     "name": "Verwallgruppe Ost",
+     "regionID": "AT-07-11"
+    },
+    {
+     "name": "Allgäuer Alpen Ost",
+     "regionID": "AT-07-01"
+    },
+    {
+     "name": "Silvretta Ost",
+     "regionID": "AT-07-12"
+    },
+    {
+     "name": "Samnaungruppe",
+     "regionID": "AT-07-13"
+    },
+    {
+     "name": "Mieminger Gebirge",
+     "regionID": "AT-07-03"
+    },
+    {
+     "name": "Lechtaler Alpen West",
+     "regionID": "AT-07-07"
+    },
+    {
+     "name": "Lechtaler Alpen Mitte",
+     "regionID": "AT-07-08"
+    },
+    {
+     "name": "Glockturmgruppe",
+     "regionID": "AT-07-19"
+    },
+    {
+     "name": "Grieskogelgruppe",
+     "regionID": "AT-07-09"
+    },
+    {
+     "name": "Kühtai - Geigenkamm",
+     "regionID": "AT-07-14-02"
+    },
+    {
+     "name": "Sellrain - Alpeiner Berge",
+     "regionID": "AT-07-14-03"
+    },
+    {
+     "name": "Karwendel West",
+     "regionID": "AT-07-04-01"
+    }
+   ]
+  },
+  {
+   "publicationTime": "2026-02-20T06:40:07Z",
+   "validTime": {
+    "startTime": "2026-02-19T16:00:00Z",
+    "endTime": "2026-02-20T16:00:00Z"
+   },
+   "unscheduled": true,
+   "highlights": "Für Wintersport abseits gesicherter Pisten sind die Verhältnisse sehr gefährlich. Fernauslösungen und spontane Lawinen sind zu erwarten.",
+   "avalancheActivity": {
+    "highlights": "Für Wintersport abseits gesicherter Pisten sind die Verhältnisse sehr gefährlich. Fernauslösungen und spontane Lawinen sind zu erwarten.",
+    "comment": "Triebschneeansammlungen sind an allen Expositionen sehr störanfällig. Diese können in oberflächennahen Schichten der Schneedecke ausgelöst werden. Lawinen können auch in bodennahe Schichten der Schneedecke durchreißen und an West-, Nord- und Osthängen groß werden. Spontane Lawinen sind zu erwarten. Dies besonders an Felswandfüßen und hinter Geländekanten. Vorsicht auch im Bereich der Waldgrenze. Die Auslaufbereiche sollten gemieden werden. <br/> <br/> Zudem besteht eine nicht zu unterschätzende Gefahr von Lockerschneelawinen. <br/> <br/>"
+   },
+   "snowpackStructure": {
+    "comment": "Seit Donnerstag fielen 30 bis 50 cm Schnee, lokal auch mehr. Der Nordwestwind verfrachtet den Neuschnee. Verbreitet entstehen weitere Triebschneeansammlungen. Schon etwas ältere Triebschneeansammlungen liegen teilweise auf Oberflächenreif. Die Schneedecke wird zunehmend störanfällig. In der Altschneedecke sind vor allem an West-, Nord- und Osthängen ausgeprägte Schwachschichten vorhanden."
+   },
+   "tendency": [
+    {
+     "highlights": "Die Schneedecke bleibt störanfällig. Mit der Erwärmung steigt die Auslösebereitschaft an.",
+     "tendencyType": "steady",
+     "validTime": {
+      "startTime": "2026-02-20T16:00:00Z",
+      "endTime": "2026-02-21T16:00:00Z"
+     }
+    }
+   ],
+   "customData": {
+    "ALBINA": {
+     "mainDate": "2026-02-20"
+    },
+    "LWD_Tyrol": {
+     "dangerPatterns": [
+      "DP1",
+      "DP8"
+     ]
+    }
+   },
+   "avalancheProblems": [
+    {
+     "problemType": "persistent_weak_layers",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "many",
+     "avalancheSize": 3,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "N"
+     ]
+    },
+    {
+     "problemType": "wind_slab",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "many",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "S",
+      "N",
+      "SW",
+      "SE"
+     ]
+    },
+    {
+     "problemType": "new_snow",
+     "elevation": {},
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "few",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "loose"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "S",
+      "N",
+      "SW",
+      "SE"
+     ]
+    }
+   ],
+   "bulletinID": "f63c4619-8cbf-4e6a-905a-dcf3a2f851b1",
+   "dangerRatings": [
+    {
+     "mainValue": "moderate",
+     "elevation": {
+      "upperBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    },
+    {
+     "mainValue": "high",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    }
+   ],
+   "lang": "de",
+   "regions": [
+    {
+     "name": "Karnische Alpen Lesachtal",
+     "regionID": "AT-02-14"
+    },
+    {
+     "name": "Gailtaler Alpen West",
+     "regionID": "AT-02-10"
+    },
+    {
+     "name": "Karnische Alpen Plöckenpass",
+     "regionID": "AT-02-15-01"
+    },
+    {
+     "name": "Kreuzeckgruppe Osttirol",
+     "regionID": "AT-07-29-03"
+    }
+   ]
+  },
+  {
+   "publicationTime": "2026-02-20T06:40:07Z",
+   "validTime": {
+    "startTime": "2026-02-19T16:00:00Z",
+    "endTime": "2026-02-20T16:00:00Z"
+   },
+   "unscheduled": true,
+   "highlights": "Für Wintersport abseits gesicherter Pisten sind die Verhältnisse sehr gefährlich. Fernauslösungen und spontane Lawinen sind zu erwarten.",
+   "avalancheActivity": {
+    "highlights": "Abseits gesicherter Pisten sehr gefährliche Lawinensituation. Die Gefährdung bezieht sich vor allem auf alpines Schneesportgelände.",
+    "comment": "Triebschneeansammlungen sind an allen Expositionen oberhalb der Waldgrenze sehr störanfällig, Vorsicht auch im Bereich der Waldgrenze. Lawinen können in oberflächennahen Schichten der Schneedecke ausgelöst werden. <br/> Zudem können Lawinen auch in bodennahe Schichten der Schneedecke durchreißen und an West-, Nord- und Osthängen groß werden. Wummgeräusche und Risse beim Betreten der Schneedecke sowie frische Lawinen sind Alarmzeichen und weisen auf die Gefahr hin. Fernauslösungen sind möglich. <br/> <br/> Mit dem starken bis stürmischen Nordföhn sind weiterhin spontane Lawinen zu erwarten. Dies aus sehr steilen windabgewandten Einzugsgebieten, v.a. an Felswandfüßen und hinter Geländekanten. <br/> <br/> An sehr steilen Hängen sind kleine und mittlere Lockerschneelawinen möglich."
+   },
+   "snowpackStructure": {
+    "comment": "Seit Donnerstag fielen 20 bis 40 cm Schnee. Am Freitag bläst der Wind stark bis stürmisch. <br/> Der Wind verfrachtet den Neuschnee. Es entstehen weitere Triebschneeansammlungen. <br/> <br/> Die Schneedecke ist verbreitet störanfällig. Neu- und Triebschnee überlagern eine schwache Altschneedecke. Schon etwas ältere Triebschneeansammlungen liegen auf Oberflächenreif. Im unteren Teil der Altschneedecke sind ausgeprägte Schwachschichten vorhanden. Dies vor allem an West-, Nord- und Osthängen oberhalb der Waldgrenze."
+   },
+   "tendency": [
+    {
+     "highlights": "Die Verhältnisse abseits der Pisten sind sehr gefährlich. Schwachschichten im Altschnee sind die Hauptgefahr.",
+     "tendencyType": "steady",
+     "validTime": {
+      "startTime": "2026-02-20T16:00:00Z",
+      "endTime": "2026-02-21T16:00:00Z"
+     }
+    }
+   ],
+   "customData": {
+    "ALBINA": {
+     "mainDate": "2026-02-20"
+    },
+    "LWD_Tyrol": {
+     "dangerPatterns": [
+      "DP1",
+      "DP6"
+     ]
+    }
+   },
+   "avalancheProblems": [
+    {
+     "problemType": "persistent_weak_layers",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "many",
+     "avalancheSize": 3,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "N"
+     ]
+    },
+    {
+     "problemType": "wind_slab",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "many",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "S",
+      "N",
+      "SW",
+      "SE"
+     ]
+    },
+    {
+     "problemType": "new_snow",
+     "elevation": {
+      "upperBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "few",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "loose"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "NE",
+      "S",
+      "N",
+      "SW",
+      "SE"
+     ]
+    }
+   ],
+   "bulletinID": "812c7676-648f-44ae-873b-80aba41c45eb",
+   "dangerRatings": [
+    {
+     "mainValue": "moderate",
+     "elevation": {
+      "upperBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    },
+    {
+     "mainValue": "high",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    }
+   ],
+   "lang": "de",
+   "regions": [
+    {
+     "name": "Lasörlinggruppe",
+     "regionID": "AT-07-25"
+    },
+    {
+     "name": "Deferegger Alpen Ost",
+     "regionID": "AT-07-27"
+    },
+    {
+     "name": "Schobergruppe West",
+     "regionID": "AT-07-28"
+    },
+    {
+     "name": "Lienzer Dolomiten",
+     "regionID": "AT-07-29-02"
+    },
+    {
+     "name": "Goldried",
+     "regionID": "AT-07-26-02"
+    },
+    {
+     "name": "Karnische Alpen Osttirol",
+     "regionID": "AT-07-29-01"
+    },
+    {
+     "name": "Grödner Dolomiten",
+     "regionID": "IT-32-BZ-18-02"
+    },
+    {
+     "name": "Sextner Dolomiten",
+     "regionID": "IT-32-BZ-20"
+    },
+    {
+     "name": "Pfunderer Berge Ost",
+     "regionID": "IT-32-BZ-10"
+    },
+    {
+     "name": "Ratschings",
+     "regionID": "IT-32-BZ-04-02"
+    },
+    {
+     "name": "Rieserfernergruppe",
+     "regionID": "IT-32-BZ-12"
+    },
+    {
+     "name": "Deferegger Alpen West",
+     "regionID": "IT-32-BZ-13"
+    },
+    {
+     "name": "Sesvenna Gruppe Süd",
+     "regionID": "IT-32-BZ-01-02"
+    },
+    {
+     "name": "Ortlergruppe",
+     "regionID": "IT-32-BZ-14"
+    },
+    {
+     "name": "Ultental",
+     "regionID": "IT-32-BZ-15"
+    },
+    {
+     "name": "Sesvenna Gruppe Nord",
+     "regionID": "IT-32-BZ-01-01"
+    },
+    {
+     "name": "Planeilerberge",
+     "regionID": "IT-32-BZ-02-02"
+    },
+    {
+     "name": "Saldurn-Mastaun Kamm",
+     "regionID": "IT-32-BZ-06"
+    },
+    {
+     "name": "Pragser Dolomiten",
+     "regionID": "IT-32-BZ-19"
+    },
+    {
+     "name": "Hirzergruppe",
+     "regionID": "IT-32-BZ-08-01"
+    },
+    {
+     "name": "Pfunderer Berge West",
+     "regionID": "IT-32-BZ-09"
+    },
+    {
+     "name": "Jakobspitzegruppe",
+     "regionID": "IT-32-BZ-08-02"
+    },
+    {
+     "name": "Texelgruppe",
+     "regionID": "IT-32-BZ-07-02"
+    }
+   ]
+  },
+  {
+   "publicationTime": "2026-02-20T06:40:07Z",
+   "validTime": {
+    "startTime": "2026-02-19T16:00:00Z",
+    "endTime": "2026-02-20T16:00:00Z"
+   },
+   "unscheduled": true,
+   "avalancheActivity": {
+    "highlights": "Vorsicht vor Triebschnee und schwachem Altschnee. Die Gefahrenstellen liegen im Bereich der Waldgrenze sowie oberhalb der Waldgrenze.",
+    "comment": "Die frischen Triebschneeansammlungen können stellenweise sehr leicht ausgelöst werden und mittlere Größe erreichen. Die Gefahrenstellen liegen in Rinnen, Mulden und hinter Geländekanten, Vorsicht im Bereich der Waldgrenze und oberhalb der Waldgrenze. Die Triebschneeansammlungen werden teils überschneit und damit schwierig zu erkennen. <br/> Zudem können Lawinen v.a. in schattigen, windgeschützten Lagen im schwachen Altschnee ausgelöst werden. Wummgeräusche sowie Risse beim Betreten der Schneedecke können auf die Gefahr hinweisen."
+   },
+   "snowpackStructure": {
+    "comment": "In der Nacht fallen 5 bis 15 cm Schnee. Der Wind bläst mäßig. <br/> <br/> Die frischen Triebschneeansammlungen liegen auf weichen Schichten. Sie liegen teilweise auf Oberflächenreif. <br/> Im unteren Teil der Altschneedecke sind vor allem an West-, Nord- und Osthängen kantig aufgebaute Schwachschichten vorhanden."
+   },
+   "tendency": [
+    {
+     "highlights": "Es fällt etwas Schnee. Der Regen führt in tiefen und mittleren Lagen zu einer Aufweichung der Schneedecke. Vorsicht vor Triebschnee und schwachem Altschnee.",
+     "tendencyType": "steady",
+     "validTime": {
+      "startTime": "2026-02-20T16:00:00Z",
+      "endTime": "2026-02-21T16:00:00Z"
+     }
+    }
+   ],
+   "customData": {
+    "ALBINA": {
+     "mainDate": "2026-02-20"
+    },
+    "LWD_Tyrol": {
+     "dangerPatterns": [
+      "DP6",
+      "DP1"
+     ]
+    }
+   },
+   "avalancheProblems": [
+    {
+     "problemType": "wind_slab",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "very_poor",
+     "frequency": "some",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "SE",
+      "E",
+      "NW",
+      "W",
+      "N",
+      "NE"
+     ]
+    },
+    {
+     "problemType": "persistent_weak_layers",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "poor",
+     "frequency": "few",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "E",
+      "NW",
+      "W",
+      "N",
+      "NE"
+     ]
+    }
+   ],
+   "bulletinID": "76aeeacd-0998-4212-a4d5-081ab00a6150",
+   "dangerRatings": [
+    {
+     "mainValue": "low",
+     "elevation": {
+      "upperBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    },
+    {
+     "mainValue": "moderate",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    }
+   ],
+   "lang": "de",
+   "regions": [
+    {
+     "name": "Brandenberger Alpen",
+     "regionID": "AT-07-05"
+    },
+    {
+     "name": "Kaisergebirge - Waidringer Alpen",
+     "regionID": "AT-07-06"
+    },
+    {
+     "name": "Kitzbüheler Alpen Wildseeloder",
+     "regionID": "AT-07-18"
+    },
+    {
+     "name": "Karwendel Ost",
+     "regionID": "AT-07-04-02"
+    },
+    {
+     "name": "Kitzbüheler Alpen Brixental",
+     "regionID": "AT-07-17-02"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+{
+ "recorded_at": "2026-10-13T07:39:09Z",
+ "request": "GET https://static.avalanche.report/bulletins/latest/AT-02_de_CAAMLv6.json (301 -> https://avalanche.report/bulletins/latest/AT-02_de_CAAMLv6.json)",
+ "status": 404,
+ "headers": {
+  "Access-Control-Allow-Origin": "*",
+  "Server": "Caddy",
+  "Content-Length": "0"
+ },
+ "body": ""
+}
