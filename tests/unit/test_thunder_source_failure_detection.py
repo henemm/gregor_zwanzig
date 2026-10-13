@@ -149,6 +149,10 @@ def _dwd_server(monkeypatch, *, status_je_zeitschritt=None, inhalt=None):
     monkeypatch.setattr(
         dwd.DwdDirectProvider._request.retry, "wait", tenacity.wait_none(),
     )
+    monkeypatch.setattr(
+        dwd.DwdDirectProvider._thunder_request.retry, "wait",
+        tenacity.wait_none(),
+    )
     try:
         yield srv
     finally:

@@ -32,6 +32,9 @@ PATH_RADAR_NOWCAST = "radar_nowcast"
 PATH_SNOWGRID = "snowgrid"  # #1992: SNOWGRID-Schneetiefe
 PATH_ALERT_FETCH = "alert_fetch"  # #2218: Wetterabruf der Alarm-Checks
 # (Trip + Ortsvergleich), je Einheit ueber das optionale Feld `unit`.
+PATH_THUNDER_BUDGET = "thunder_budget"  # #2554: Budget-Ende des ICON-D2-
+# Gewitterabrufs -- eigener Pfad, damit es nicht von der `ok`-Zeile des
+# Aufrufers (`thunder`) ueberdeckt wird.
 PATH_FORECAST_CAPTURE = "forecast_capture"  # #2030: Vorhersage-Mitschnitt --
 # kein Provider-Fallback, aber ein degradierbarer Diagnose-Pfad: bleibt sein
 # Ausfall stumm, steht man beim naechsten Vorfall wieder ohne Daten da.
