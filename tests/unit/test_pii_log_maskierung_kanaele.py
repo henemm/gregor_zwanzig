@@ -43,7 +43,7 @@ def telegram_scheitert(monkeypatch) -> None:
     from services import notification_service as ns
 
     class _TelegramScheitert:
-        def __init__(self, settings) -> None:
+        def __init__(self, settings, recipient=None) -> None:
             pass
 
         def _fehler(self, *args, **kwargs):
@@ -118,7 +118,7 @@ def test_ac_c_registrierungszeile_nennt_chat_id_nur_maskiert(monkeypatch, caplog
         return httpx.Response(200, json={"ok": True})
 
     class _TelegramAufzeichner:
-        def __init__(self, settings) -> None:
+        def __init__(self, settings, recipient=None) -> None:
             pass
 
         def send(self, *args, **kwargs) -> int:

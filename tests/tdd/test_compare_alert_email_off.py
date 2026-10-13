@@ -47,6 +47,7 @@ from app.models import SegmentWeatherSummary
 from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 def _data_root_users() -> Path:
@@ -229,7 +230,7 @@ def test_ac2_deviation_alert_stays_silent_on_email_with_channels_off(monkeypatch
 
         mails: list[tuple[str, str]] = []
         service = CompareAlertService(
-            settings=_settings_all_channels(), user_id=uid,
+            settings=_settings_all_channels(), user_id=mit_profil_chat(uid, _settings_all_channels()),
             weather_source=_ScriptedWeatherSource({loc_id: 30.0}),
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
@@ -288,7 +289,7 @@ def test_ac2_radar_alert_stays_silent_on_email_with_channels_off(monkeypatch):
 
         mails: list[tuple[str, str]] = []
         service = CompareRadarAlertService(
-            settings=_settings_all_channels(), user_id=uid,
+            settings=_settings_all_channels(), user_id=mit_profil_chat(uid, _settings_all_channels()),
             radar_service=RadarNowcastService(frame_source=_frame_source),
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
@@ -356,7 +357,7 @@ def test_ac2_official_alert_stays_silent_on_email_with_channels_off():
         mails: list = []
         tg_calls: list = []
         service = CompareOfficialAlertService(
-            settings=_settings_all_channels(), user_id=uid,
+            settings=_settings_all_channels(), user_id=mit_profil_chat(uid, _settings_all_channels()),
             mail_sink=lambda subject, body: mails.append(body),
             telegram_sink=lambda text: tg_calls.append(text),
         )

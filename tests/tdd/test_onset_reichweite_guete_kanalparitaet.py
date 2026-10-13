@@ -76,6 +76,7 @@ from tests.helpers.nowcast_gate_fixtures import (
     quiet_window_elsewhere, radar_service, reset_radar_cache,
 )
 from tests.helpers.tagesbezug import expected_day_and_time, extract_day_and_time
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 # Issue #2096: gestellte Uhr statt Wanduhr. Die frueheren nackten
 # `HH:MM`-Regexe trafen ab ~21:05 UTC nicht mehr, weil der Renderer bei
@@ -264,7 +265,7 @@ def _text_vom_trip_pfad(frames, telegram_stub, monkeypatch, *, stil: str) -> str
 
         svc = TripAlertService(
             settings=_telegram_only_settings(f"trip-{stil}"), throttle_hours=0,
-            user_id=uid, radar_service=radar_service(frames),
+            user_id=mit_profil_chat(uid, _telegram_only_settings(f"trip-{stil}")), radar_service=radar_service(frames),
         )
         vorher = len(telegram_stub.sent)
         sent = svc.check_radar_alerts()
@@ -329,7 +330,7 @@ def _text_vom_ortsvergleich_pfad(frames, telegram_stub, monkeypatch, *, stil: st
         }])
 
         svc = CompareRadarAlertService(
-            settings=_telegram_only_settings(f"cmp-{stil}"), user_id=uid,
+            settings=_telegram_only_settings(f"cmp-{stil}"), user_id=mit_profil_chat(uid, _telegram_only_settings(f"cmp-{stil}")),
             radar_service=radar_service(frames),
         )
         vorher = len(telegram_stub.sent)

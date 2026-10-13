@@ -19,5 +19,14 @@ def nutzer_mit_tier(uid: str, tier: str = "standard") -> str:
     """Schreibt `user.json` mit `tier` und gibt `uid` zurueck (inline nutzbar)."""
     d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
+    # #1412 S4a: Read-Modify-Write -- ein zuvor eingetragener Profil-Chat
+    # (tests.helpers.telegram_empfaenger) bleibt erhalten.
+    datei = d / "user.json"
+    try:
+        profil = json.loads(datei.read_text()) if datei.exists() else {}
+    except ValueError:
+        profil = {}
+    profil = profil if isinstance(profil, dict) else {}
+    profil.update({"id": uid, "tier": tier})
+    datei.write_text(json.dumps(profil))
     return uid

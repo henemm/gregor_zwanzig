@@ -45,6 +45,7 @@ from tests.helpers.alert_log_fixtures import (
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 _GUST_STANDARD_THRESHOLD_KMH = 20.0
 
@@ -53,7 +54,7 @@ def _service(user_id: str, sink: list, **kwargs):
     from services.trip_alert import TripAlertService
 
     return TripAlertService(
-        settings=settings_email_only(), user_id=user_id, throttle_hours=0,
+        settings=settings_email_only(), user_id=mit_profil_chat(user_id, settings_email_only()), throttle_hours=0,
         mail_sink=lambda subject, body: sink.append((subject, body)), **kwargs,
     )
 
@@ -716,7 +717,7 @@ def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
         monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub_1.base_url)
         mails_1: list = []
         svc_1 = TripAlertService(
-            settings=settings, user_id="tdd-1461-ac14a", throttle_hours=0,
+            settings=settings, user_id=mit_profil_chat("tdd-1461-ac14a", settings), throttle_hours=0,
             mail_sink=lambda subject, body: mails_1.append((subject, body)),
         )
         result_1 = svc_1._send_alert(
@@ -740,7 +741,7 @@ def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
         monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub_2.base_url)
         mails_2: list = []
         svc_2 = TripAlertService(
-            settings=settings, user_id="tdd-1461-ac14b", throttle_hours=0,
+            settings=settings, user_id=mit_profil_chat("tdd-1461-ac14b", settings), throttle_hours=0,
             mail_sink=lambda subject, body: mails_2.append((subject, body)),
         )
         sent_2 = svc_2._send_official_alert_only(

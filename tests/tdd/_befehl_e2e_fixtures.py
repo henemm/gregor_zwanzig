@@ -313,6 +313,7 @@ from services.trip_command_processor import (
 from services.inbound_telegram_reader import _CALLBACK_QUERY_MAP
 from services.trip_selection import KEIN_KANDIDAT_TEXT
 from tests.fixtures.authentication_results_fixtures import AR_PASS, TEST_AUTHSERV_ID
+from tests.helpers.telegram_empfaenger import numerische_chat_id
 
 # ---------------------------------------------------------------------------
 # Fixture-Koordinaten (Fixture-Provider, exakter Treffer -- s. Moduldoku)
@@ -1036,7 +1037,7 @@ def lege_po_lage_nutzer_an(new_user_id: Callable[[], str], *, trip_name: str = "
     """L3: 1 aktiver Trip UND >=1 aktive Ortsvergleiche ohne ``end_date`` --
     die tatsaechliche Lage des PO (Spec "PO-Lage-Fixture")."""
     user_id = new_user_id()
-    chat_id = f"chat-{user_id}"
+    chat_id = numerische_chat_id(user_id)  # #1412 S4a: Formpruefung AC-6
     mail_to = f"{user_id}@henemm.com"
     reply_to = f"+49170{abs(hash(user_id)) % 10_000_000:07d}"
     _schreibe_user_json(
@@ -1067,7 +1068,7 @@ def lege_lage_an(new_user_id: Callable[[], str], lage: str) -> BefehlNutzer:
         return lege_po_lage_nutzer_an(new_user_id)
 
     user_id = new_user_id()
-    chat_id = f"chat-{user_id}"
+    chat_id = numerische_chat_id(user_id)  # #1412 S4a: Formpruefung AC-6
     mail_to = f"{user_id}@henemm.com"
     reply_to = f"+49170{abs(hash(user_id)) % 10_000_000:07d}"
     _schreibe_user_json(

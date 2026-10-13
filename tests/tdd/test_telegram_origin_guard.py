@@ -29,11 +29,13 @@ from app.config import Settings
 from app.origin_guard import checkout_root, classify_origin
 from output.channels import telegram as telegram_mod
 from output.channels.base import OutputConfigError
-from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import profil_ausgang
 
-PROD_CHAT_ID = "PROD_CHAT_ID_777"
-STAGING_CHAT_ID = "STAGING_CHAT_ID_555"
-TEST_CHAT_ID = "TEST_CHAT_ID_424242"
+# #1412 S4a: numerisch (Formpruefung der Chat-ID).
+PROD_CHAT_ID = "777000111"
+STAGING_CHAT_ID = "555000555"
+TEST_CHAT_ID = "424242"
+_NUTZER = "nutzer-herkunft"
 
 
 class _FakeBotApiResponse:
@@ -95,7 +97,7 @@ def test_ac1_test_origin_switches_away_from_prod_chat(httpx_sink):
     Keine Herkunft wird hier gefaked: telegram.py laeuft real aus diesem
     Worktree, dessen Checkout-Wurzel weder Prod- noch Staging-Wurzel ist —
     genau der Fall, der den Schalter nicht setzt."""
-    TelegramOutput(_prod_style_settings()).send("Betreff", "Testnachricht")
+    profil_ausgang(_prod_style_settings(), _NUTZER, PROD_CHAT_ID).send("Betreff", "Testnachricht")
 
     calls = httpx_sink.calls
     assert len(calls) == 1
@@ -115,7 +117,7 @@ def test_ac2_missing_test_chat_id_hard_aborts_without_any_post(httpx_sink):
     settings = _prod_style_settings(telegram_test_chat_id="")
 
     with pytest.raises(OutputConfigError, match="1476"):
-        TelegramOutput(settings).send("Betreff", "Testnachricht")
+        profil_ausgang(settings, _NUTZER, PROD_CHAT_ID).send("Betreff", "Testnachricht")
 
     assert httpx_sink.calls == []
 
@@ -136,7 +138,7 @@ def test_ac3_production_origin_delivers_unchanged(httpx_sink, monkeypatch):
         origin_guard_mod, "PROD_ROOT", checkout_root(Path(telegram_mod.__file__))
     )
 
-    TelegramOutput(_prod_style_settings()).send("Betreff", "Prodnachricht")
+    profil_ausgang(_prod_style_settings(), _NUTZER, PROD_CHAT_ID).send("Betreff", "Prodnachricht")
 
     calls = httpx_sink.calls
     assert len(calls) == 1
@@ -159,7 +161,7 @@ def test_ac4_staging_origin_unaffected_by_new_guard(httpx_sink, monkeypatch):
     )
     settings = _prod_style_settings(telegram_chat_id=STAGING_CHAT_ID)
 
-    TelegramOutput(settings).send("Betreff", "Stagingnachricht")
+    profil_ausgang(settings, _NUTZER, STAGING_CHAT_ID).send("Betreff", "Stagingnachricht")
 
     calls = httpx_sink.calls
     assert len(calls) == 1
@@ -176,7 +178,9 @@ def test_ac5_switch_logs_reason_and_target_chat_id_exactly_once(httpx_sink, capl
     wird / THEN steht dort GENAU EINMAL eine Zeile mit Grund und
     Ziel-Chat-ID — eine stille Umleitung waere wieder ein blinder Fleck."""
     with caplog.at_level(logging.WARNING):
-        TelegramOutput(_prod_style_settings()).send("Betreff", "Testnachricht")
+        profil_ausgang(_prod_style_settings(), _NUTZER, PROD_CHAT_ID).send(
+            "Betreff", "Testnachricht",
+        )
 
     switch_logs = [
         r for r in caplog.records

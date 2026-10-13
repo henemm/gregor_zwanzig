@@ -94,8 +94,12 @@ def test_telegram_blocked_when_chat_id_missing_no_api_call(monkeypatch):
         update={"telegram_chat_id": None},
     )
 
+    # #1412 S4a: der Empfaenger kommt aus dem Profil -- Profil OHNE Chat.
+    from tests.helpers.telegram_empfaenger import profil_ausgang, profil_chat
+
+    profil_chat("nutzer-ohne-chat", None)
     with pytest.raises(ChannelBlockedError) as excinfo:
-        telegram_mod.TelegramOutput(settings).send("Betreff", "Text")
+        profil_ausgang(settings, "nutzer-ohne-chat").send("Betreff", "Text")
 
     assert excinfo.value.reason_code == "telegram_no_chat_id", (
         f"BUG #2144: erwartet reason_code='telegram_no_chat_id', bekommen "

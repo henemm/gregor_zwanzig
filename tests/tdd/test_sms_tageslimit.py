@@ -61,6 +61,7 @@ from app.models import (  # noqa: E402
 )
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from app.user import SavedLocation  # noqa: E402
+from tests.helpers.telegram_empfaenger import numerische_chat_id  # noqa: E402
 from services.notification_service import (  # noqa: E402
     NotificationService, RadarAlertRequest, TripReportRequest,
 )
@@ -154,7 +155,7 @@ def _aufzeichner_installieren(monkeypatch) -> Mitschrift:
             _buchen("premium_sms", subject)
 
     class _TelegramAufzeichner:
-        def __init__(self, settings) -> None:
+        def __init__(self, settings, recipient=None) -> None:
             self._s = settings
 
         def send(self, subject, body, reply_markup=None, *, parse_mode=None,
@@ -201,7 +202,11 @@ def _kennung(praefix: str) -> str:
 def _nutzer_anlegen(uid: str, tier: str) -> None:
     d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
+    (d / "user.json").write_text(json.dumps({
+        "id": uid, "tier": tier,
+        # #1412 S4a: Telegram-Empfaenger kommt aus dem Profil, nicht der ENV.
+        "telegram_chat_id": numerische_chat_id(uid),
+    }))
 
 
 def _zaehler_pfad(uid: str) -> Path:
@@ -994,21 +999,21 @@ def _user_json_tier_liste(uid: str) -> None:
     waere eine Liste `unhashable` (`TypeError`)."""
     d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"tier": ["hack"]}))
+    (d / "user.json").write_text(json.dumps({"tier": ["hack"], "telegram_chat_id": numerische_chat_id(uid)}))
 
 
 def _user_json_tier_zahl(uid: str) -> None:
     """Adversary F009: `tier` ist eine Zahl statt eines Strings."""
     d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"tier": 42}))
+    (d / "user.json").write_text(json.dumps({"tier": 42, "telegram_chat_id": numerische_chat_id(uid)}))
 
 
 def _user_json_tier_unbekannt(uid: str) -> None:
     """Adversary F009: `tier` ist ein String, aber kein bekannter Tier-Wert."""
     d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"tier": "gold"}))
+    (d / "user.json").write_text(json.dumps({"tier": "gold", "telegram_chat_id": numerische_chat_id(uid)}))
 
 
 @pytest.mark.parametrize(
@@ -1067,9 +1072,15 @@ def test_f001_kaputte_zaehlerdatei_ist_fail_open(kaputt_machen, sms_erwartet, mi
     assert mitschrift.anzahl("email") == 1, (
         "F001: E-Mail muss trotz kaputter Daten zugestellt werden"
     )
-    assert mitschrift.anzahl("telegram") >= 1, (
-        "F001: Telegram muss trotz kaputter Daten zugestellt werden"
-    )
+    if kaputt_machen in (_user_json_als_liste, _user_json_als_skalar):
+        # #1412 S4a (AC-3): ein user.json, das kein Objekt ist, traegt keinen
+        # Profil-Chat -- Telegram wird geblockt (nicht abgebrochen: der Lauf
+        # kehrt regulaer zurueck, E-Mail ist zugestellt).
+        assert "telegram" not in ergebnis.sent_channels
+    else:
+        assert mitschrift.anzahl("telegram") >= 1, (
+            "F001: Telegram muss trotz kaputter Daten zugestellt werden"
+        )
     if sms_erwartet:
         assert mitschrift.anzahl("sms") == 1, (
             f"F001: SMS muss trotz kaputter Zaehlerdatei versendet werden "

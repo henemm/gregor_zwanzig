@@ -156,6 +156,21 @@ def _dwd_raster_cache_leeren():
 
 
 @pytest.fixture(autouse=True)
+def _telegram_herkunftsbeleg_leeren():
+    """#1412 S4a: der Herkunftsbeleg ``_current_inbound_sender`` (Absender des
+    laufenden Webhook-Updates) ist eine ContextVar im Haupt-Thread -- ein Test,
+    der ihn per ``tests.helpers.telegram_empfaenger.antwort_im_update`` setzt,
+    darf ihn nicht an den naechsten Test vererben."""
+    def _leeren():
+        modul = sys.modules.get("output.channels.recipient")
+        if modul is not None:
+            modul._current_inbound_sender.set(None)
+    _leeren()
+    yield
+    _leeren()
+
+
+@pytest.fixture(autouse=True)
 def _core_auth_secret_configured():
     """Stellt fuer jeden Test sicher, dass ein Geheimnis konfiguriert ist.
 

@@ -69,6 +69,7 @@ from tests.helpers.alert_log_fixtures import (
 )
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 # ═══════════════════════════ Telegram-Stub (echtes 127.0.0.1) ═════════════
 #
@@ -289,7 +290,7 @@ def test_ac2_erhoehte_schwelle_blockt_nur_diesen_kanal_bei_geringer_dringlichkei
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(
@@ -340,7 +341,7 @@ def test_ac3_regenradar_pfad_respektiert_dieselbe_schwelle(monkeypatch):
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), throttle_hours=0, user_id=uid,
+            settings=_settings_email_and_telegram(), throttle_hours=0, user_id=mit_profil_chat(uid, _settings_email_and_telegram()),
             radar_service=RadarNowcastService(frame_source=_light_wet_frames),
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
@@ -404,7 +405,7 @@ def test_ac4_alle_kanaele_unter_schwelle_landet_im_protokoll_und_briefing(
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         sent = svc.check_and_send_alerts(
@@ -540,7 +541,7 @@ def test_ac8_zwei_nutzer_je_eigene_schwelle_ohne_vermischung(monkeypatch):
         _pin_telegram_stub(monkeypatch, stub_hoch)
         mails_hoch: list = []
         svc_hoch = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid_hoch,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid_hoch, _settings_email_and_telegram()),
             throttle_hours=0,
             mail_sink=lambda subject, body: mails_hoch.append((subject, body)),
         )
@@ -551,7 +552,7 @@ def test_ac8_zwei_nutzer_je_eigene_schwelle_ohne_vermischung(monkeypatch):
         _pin_telegram_stub(monkeypatch, stub_gering)
         mails_gering: list = []
         svc_gering = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid_gering,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid_gering, _settings_email_and_telegram()),
             throttle_hours=0,
             mail_sink=lambda subject, body: mails_gering.append((subject, body)),
         )
@@ -708,7 +709,7 @@ def test_ac1_ohne_gesetzte_schwelle_erreicht_die_meldung_alle_konfigurierten_kan
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(
@@ -754,7 +755,7 @@ def test_ac9_kachel_und_archiv_quelle_entries_unveraendert_bei_normalem_alarm(
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         sent = svc.check_and_send_alerts(
@@ -839,7 +840,7 @@ def test_ac11_ortsvergleich_alarm_unveraendert_trotz_trip_kanal_schwellen(monkey
         trip_stub = _TelegramStub()
         _pin_telegram_stub(monkeypatch, trip_stub)
         TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: None,
         )._send_alert(trip, [weather(1)], [_change(ChangeSeverity.MINOR)])
         trip_stub.stop()
@@ -906,7 +907,7 @@ def test_ac13_gelbe_amtliche_warnung_loest_alarm_unveraendert_aus(monkeypatch):
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(
@@ -977,7 +978,7 @@ def test_f001_below_threshold_grund_im_echten_delta_wetter_dispatch(monkeypatch)
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         sent = svc.check_and_send_alerts(
@@ -1112,7 +1113,7 @@ def test_f002_go_geschriebene_json_wird_gelesen_und_wirkt_im_alarm_dispatch(
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(trip, [weather(1)], [_change(ChangeSeverity.MINOR)])
@@ -1246,7 +1247,7 @@ def test_einzeln_auftretende_amtliche_warnung_ohne_wetter_delta_respektiert_kana
             _pin_telegram_stub(monkeypatch, stub)
             mails: list = []
             svc = TripAlertService(
-                settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+                settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
                 mail_sink=lambda subject, body: mails.append((subject, body)),
             )
             official_notices = svc.check_official_alert_triggers(trip)

@@ -43,6 +43,7 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 from services.notification_service import NotificationService, TripReportRequest
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # ---------------------------------------------------------------------------
@@ -189,15 +190,15 @@ class TestAC10MultiUserIsolation:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
 
-            chat_a, chat_b = "1111-userA", "2222-userB"
+            chat_a, chat_b = "1111001", "2222002"  # #1412 S4a: numerisch (AC-6)
 
             # Zwei ECHTE, getrennte Nutzer-Kontexte — explizite user_id, KEIN
             # "default"-Fallback; getrennte Settings (eigene chat_id).
             svc_a = NotificationService(
-                settings=_settings(chat_a), user_id="user-a-1260",
+                settings=_settings(chat_a), user_id=mit_profil_chat("user-a-1260", _settings(chat_a)),
             )
             svc_b = NotificationService(
-                settings=_settings(chat_b), user_id="user-b-1260",
+                settings=_settings(chat_b), user_id=mit_profil_chat("user-b-1260", _settings(chat_b)),
             )
 
             trip_a = _make_trip("A", telegram_style="kurzform")

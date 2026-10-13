@@ -46,6 +46,7 @@ from output.channels.telegram import (
     TelegramOutput,
     reset_telegram_rate_limit_for_tests,
 )
+from tests.helpers.telegram_empfaenger import antwort_im_update
 
 PROD_CHAT_ID = "777000111"
 TEST_CHAT_ID = "424242"
@@ -171,7 +172,7 @@ def test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf(sink, na
     Token) und 0 Aufrufe an httpx.post.
 
     RED heute: answer_callback_query und get_my_commands (keine Pruefung)."""
-    output = TelegramOutput(_token_falsch())
+    output = antwort_im_update(_token_falsch(), TEST_CHAT_ID)
 
     with pytest.raises(OutputConfigError) as exc:
         _mit_test_chat(name)(output)
@@ -187,7 +188,7 @@ def test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf(sink, name):
     """AC-1: Given Test-Modus, Ziel ist die Prod-Chat-ID / When eine
     chat-gebundene Methode sendet / Then OutputConfigError mit dem
     Prod-Chat im Text und 0 Netzaufrufe."""
-    output = TelegramOutput(_chat_falsch())
+    output = antwort_im_update(_chat_falsch(), PROD_CHAT_ID)
 
     with pytest.raises(OutputConfigError) as exc:
         _CHAT_METHODEN[name](output)
@@ -201,7 +202,7 @@ def test_ac1_send_meldet_weiter_die_settings_chat_pruefung_1288(sink):
     dem #1288-Text -- NICHT nur die Argument-Pruefung #1363. Faellt der
     Schalter weg, meldet `send` den #1363-Text und dieser Test wird rot
     (AC-8-Gegenprobe)."""
-    output = TelegramOutput(_chat_falsch())
+    output = antwort_im_update(_chat_falsch(), PROD_CHAT_ID)
 
     with pytest.raises(OutputConfigError) as exc:
         output.send("Betreff", "Text")
@@ -219,11 +220,11 @@ def test_ac1_send_meldet_weiter_die_settings_chat_pruefung_1288(sink):
 def test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert(sink, name):
     """AC-4 (Gegenfall): Prod-Normalbetrieb (`is_test_mode=False`) mit
     beliebigem Token/Chat -- jede Methode sendet genau einen POST."""
-    output = TelegramOutput(_settings(
+    output = antwort_im_update(_settings(
         is_test_mode=False,
         telegram_bot_token=PROD_TOKEN,
         telegram_chat_id=PROD_CHAT_ID,
-    ))
+    ), PROD_CHAT_ID)
 
     _ALLE_METHODEN[name](output)
 
@@ -234,7 +235,7 @@ def test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert(sink, name):
 def test_korrekte_test_konfiguration_sendet_jede_methode(sink, name):
     """Regressionsschutz gegen Ueberblocken: korrekter Test-Token + Test-Chat
     sendet ueber jede Methode genau einen POST."""
-    output = TelegramOutput(_settings())
+    output = antwort_im_update(_settings(), TEST_CHAT_ID)
 
     _mit_test_chat(name)(output)
 
@@ -276,7 +277,7 @@ def test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt(sink):
     `_post` ruft / Then OutputConfigError und 0 Netzaufrufe.
 
     RED heute: `_post` prueft nichts, der Sink faengt den POST."""
-    output = _NeueMethodeOhnePruefung(_settings())
+    output = antwort_im_update(_settings(), PROD_CHAT_ID, _NeueMethodeOhnePruefung)
 
     with pytest.raises(OutputConfigError) as exc:
         output.pin_message(PROD_CHAT_ID, 7)
@@ -298,7 +299,7 @@ def test_ac2_neue_methode_mit_falschem_token_wird_am_ausgang_geblockt(sink):
 
 def test_ac2_neue_methode_mit_korrekter_konfiguration_sendet(sink):
     """Gegenprobe: der Ausgang blockt nicht pauschal."""
-    output = _NeueMethodeOhnePruefung(_settings())
+    output = antwort_im_update(_settings(), TEST_CHAT_ID, _NeueMethodeOhnePruefung)
 
     output.pin_message(TEST_CHAT_ID, 7)
 
@@ -318,8 +319,9 @@ def test_ac2_neue_methode_mit_korrekter_konfiguration_sendet(sink):
                      id="answer_callback_query"),
         pytest.param(lambda: TelegramOutput(_token_falsch()).get_my_commands(),
                      id="get_my_commands"),
-        pytest.param(lambda: _NeueMethodeOhnePruefung(_settings()).pin_message(PROD_CHAT_ID, 7),
-                     id="neue_methode"),
+        pytest.param(lambda: antwort_im_update(
+            _settings(), PROD_CHAT_ID, _NeueMethodeOhnePruefung,
+        ).pin_message(PROD_CHAT_ID, 7), id="neue_methode"),
     ],
 )
 def test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz(sink, aufruf):
@@ -340,8 +342,8 @@ class _ZaehltPruefungen(TelegramOutput):
     """Zaehlt, wie oft die ECHTEN Pruefungen laufen (Weiterreichung, kein
     Ersatz)."""
 
-    def __init__(self, settings):
-        super().__init__(settings)
+    def __init__(self, settings, **kwargs):
+        super().__init__(settings, **kwargs)
         self.token_pruefungen = 0
         self.ziel_pruefungen = 0
 
@@ -381,7 +383,7 @@ def test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429(
     RED heute: answer_callback_query/get_my_commands pruefen den Token nie
     (0 statt 1)."""
     s = _sink_429_dann_200(monkeypatch)
-    output = _ZaehltPruefungen(_settings())
+    output = antwort_im_update(_settings(), TEST_CHAT_ID, _ZaehltPruefungen)
 
     aufruf(output)
 
@@ -458,7 +460,9 @@ def test_herkunft_test_schreibt_den_gesendeten_chat_auf_den_test_chat_um(
     eine Methode mit Prod-Chat-Argument sendet / Then traegt der POST den
     Test-Chat (nie den Prod-Chat), und der Drossel-Platz wird fuer den
     Test-Chat gebucht."""
-    output = _NeueMethodeOhnePruefung(_settings(is_test_mode=test_modus))
+    output = antwort_im_update(
+        _settings(is_test_mode=test_modus), PROD_CHAT_ID, _NeueMethodeOhnePruefung,
+    )
 
     _HERKUNFT_TEST_METHODEN[name](output)
 
@@ -479,9 +483,9 @@ def test_herkunft_test_ohne_test_chat_bricht_ohne_netzaufruf_ab(
 ):
     """F001 Gegenfall: Given Herkunft "test" OHNE Test-Chat / When gesendet
     wird / Then OutputConfigError der Herkunftssperre und 0 POSTs."""
-    output = _NeueMethodeOhnePruefung(_settings(
+    output = antwort_im_update(_settings(
         is_test_mode=False, telegram_test_chat_id="",
-    ))
+    ), PROD_CHAT_ID, _NeueMethodeOhnePruefung)
 
     with pytest.raises(OutputConfigError) as exc:
         _HERKUNFT_TEST_METHODEN[name](output)
@@ -494,7 +498,7 @@ def test_post_veraendert_das_dict_des_aufrufers_nicht(sink, herkunft_test):
     """F003: Given Herkunft "test" (Ziel-Chat wird umgeschrieben) / When eine
     Methode ihr eigenes Payload-Dict an `_post` gibt / Then bleibt dieses
     Dict unveraendert -- umgeschrieben wird nur die gesendete Kopie."""
-    output = _NeueMethodeOhnePruefung(_settings())
+    output = antwort_im_update(_settings(), PROD_CHAT_ID, _NeueMethodeOhnePruefung)
     payload = {"chat_id": PROD_CHAT_ID, "message_id": 7}
     vorher = dict(payload)
 

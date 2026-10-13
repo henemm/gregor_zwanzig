@@ -35,6 +35,7 @@ from app.config import Settings
 from app.models import ForecastDataPoint, ThunderLevel
 from output.channels.base import OutputConfigError
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.telegram_empfaenger import antwort_im_update, profil_ausgang
 
 PROD_CHAT_ID = "777000111"
 TEST_CHAT_ID = "424242"
@@ -106,9 +107,8 @@ class TestTestModeBlocksProdChatId:
 
         RED: heute postet send() ungeprueft — der Sink faengt den Call, es
         gibt keinen Fehler."""
-        from output.channels.telegram import TelegramOutput
 
-        output = TelegramOutput(_guard_settings())
+        output = antwort_im_update(_guard_settings(), PROD_CHAT_ID)
 
         with pytest.raises(OutputConfigError):
             output.send("Betreff", "Testnachricht")
@@ -121,9 +121,10 @@ class TestTestModeBlocksProdChatId:
     def test_diverging_test_chat_id_blocks_send_without_any_post(self, httpx_sink):
         """AC-5 (Variante 'abweichend'): telegram_test_chat_id ist zwar
         gesetzt, aber chat_id zeigt trotzdem auf die Prod-ID → Block."""
-        from output.channels.telegram import TelegramOutput
 
-        output = TelegramOutput(_guard_settings(telegram_test_chat_id=TEST_CHAT_ID))
+        output = antwort_im_update(
+            _guard_settings(telegram_test_chat_id=TEST_CHAT_ID), PROD_CHAT_ID,
+        )
 
         with pytest.raises(OutputConfigError):
             output.send("Betreff", "Testnachricht")
@@ -142,11 +143,10 @@ def test_matching_test_chat_id_still_sends(httpx_sink):
     lauffaehig.
 
     Bewusst schon heute GRUEN (Regressionsschutz gegen Ueberblocken)."""
-    from output.channels.telegram import TelegramOutput
 
-    output = TelegramOutput(_guard_settings(
+    output = antwort_im_update(_guard_settings(
         telegram_chat_id=TEST_CHAT_ID, telegram_test_chat_id=TEST_CHAT_ID,
-    ))
+    ), TEST_CHAT_ID)
 
     message_id = output.send("Betreff", "Testnachricht")
 
@@ -164,13 +164,12 @@ def test_non_test_mode_send_stays_untouched(httpx_sink, monkeypatch):
     ohne Pin greift sie in jedem Nicht-Server-Checkout zuerst und verdeckt
     die Flanke."""
     import output.channels.telegram as telegram_mod
-    from output.channels.telegram import TelegramOutput
 
     monkeypatch.setattr(telegram_mod, "running_origin", lambda module_file: "production")
-    output = TelegramOutput(Settings(
+    output = antwort_im_update(Settings(
         telegram_bot_token="fake:token",
         telegram_chat_id=PROD_CHAT_ID,
-    ))
+    ), PROD_CHAT_ID)
 
     message_id = output.send("Betreff", "Prodnachricht")
 
@@ -193,7 +192,6 @@ def test_profile_flagged_test_user_is_blocked_via_with_user_profile(
 
     RED: heute geht der POST an die Prod-Chat-ID raus."""
     from app import loader as app_loader
-    from output.channels.telegram import TelegramOutput
 
     data_root = tmp_path / "data"
     monkeypatch.chdir(tmp_path)  # is_test_user_id liest data/ relativ zum cwd
@@ -224,7 +222,7 @@ def test_profile_flagged_test_user_is_blocked_via_with_user_profile(
     assert settings.telegram_chat_id == PROD_CHAT_ID
 
     with pytest.raises(OutputConfigError):
-        TelegramOutput(settings).send("Betreff", "Testnachricht")
+        profil_ausgang(settings, user_id).send("Betreff", "Testnachricht")
 
     assert httpx_sink.telegram_calls() == [], (
         "AC-7: Auch der profilbasierte Test-User darf KEINEN Bot-API-POST "

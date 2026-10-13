@@ -69,6 +69,7 @@ from tests.helpers.nowcast_gate_fixtures import (
     TRIP_LAT, TRIP_LON, CountingFrameSource, clean_uid, fresh_uid, location,
     make_trip, radar_service, reset_radar_cache, save_trip, write_user_tier,
 )
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 # ═════════════════════════ Gemeinsame Ausdruecke ═════════════════════════════
 
@@ -244,7 +245,7 @@ def _kurznachricht_vom_trip_pfad(
 
             svc = TripAlertService(
                 settings=_telegram_only_settings("trip"), throttle_hours=0,
-                user_id=uid, radar_service=radar_service(
+                user_id=mit_profil_chat(uid, _telegram_only_settings("trip")), radar_service=radar_service(
                     CountingFrameSource(onset_minutes=53),
                 ),
             )

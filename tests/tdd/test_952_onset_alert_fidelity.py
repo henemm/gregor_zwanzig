@@ -42,7 +42,7 @@ from output.renderers.alert.render import (
     render_email, render_subject, render_sms, render_telegram,
 )
 from output.channels import telegram as telegram_mod
-from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import profil_ausgang
 from services.radar_service import NowcastResult, RadarNowcastService
 
 from app.loader import get_data_dir
@@ -629,7 +629,7 @@ class TestAC4TelegramOutputHtmlParseMode:
     def test_send_with_new_params_has_html_parse_mode_and_no_subject_prefix(
         self, fake_telegram_bot,
     ):
-        output = TelegramOutput(_TELEGRAM_SETTINGS)
+        output = profil_ausgang(_TELEGRAM_SETTINGS, "nutzer-952", "99999")  # #1412 S4a
 
         # RED vor Fix: send() kennt parse_mode/suppress_subject_line nicht -> TypeError.
         output.send(
@@ -652,7 +652,7 @@ class TestAC5TelegramOutputBackwardCompatible:
         self, fake_telegram_bot,
     ):
         """Muss HEUTE UND nach dem Fix grün sein (Rückwärtskompatibilität)."""
-        output = TelegramOutput(_TELEGRAM_SETTINGS)
+        output = profil_ausgang(_TELEGRAM_SETTINGS, "nutzer-952", "99999")  # #1412 S4a
         output.send("Betreff 952", "Body")
 
         payload = fake_telegram_bot.last_payload

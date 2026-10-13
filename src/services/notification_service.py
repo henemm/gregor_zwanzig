@@ -33,6 +33,7 @@ from output.channels.email import EmailOutput
 from output.channels.premium_sms import PremiumSmsOutput
 from output.channels.seven_io_base import mask_number
 from output.channels.sms import SMSOutput
+from output.channels.recipient import TelegramRecipient
 from output.channels.telegram import TelegramOutput
 from services import sms_daily_limit
 from services.trip_command_processor import CommandResult
@@ -490,6 +491,18 @@ class NotificationService:
             )
         return self._user_id
 
+    def _telegram_output(self) -> TelegramOutput:
+        """Issue #1412 S4a: Telegram-Ausgang an den Profil-Chat des Nutzers
+        (frisch aus ``user.json``), nie an ``settings.telegram_chat_id``."""
+        recipient = TelegramRecipient.for_user(self._require_user(), self._settings)
+        return TelegramOutput(self._settings, recipient=recipient)
+
+    @staticmethod
+    def _telegram_reply(settings: Settings, chat_id) -> TelegramOutput:
+        """Issue #1412 S4a (R7): Antwort geht an die uebergebene ``chat_id``
+        -- nur zulaessig als Absender des laufenden Webhook-Updates."""
+        return TelegramOutput(settings, recipient=TelegramRecipient.inbound_reply(chat_id))
+
     def _sms_gate_reserve(
         self, kind: str, purpose: str, now: datetime,
         blocked_channels: dict[str, str], blocked_reason_codes: dict[str, str],
@@ -697,7 +710,7 @@ class NotificationService:
                 # ohne Bubbles/Inline-Knöpfe, parse_mode=None (Text ist nicht
                 # HTML-escaped).
                 try:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=report.email_subject,
                         body=report.sms_text or report.email_plain,
                         parse_mode=None,
@@ -719,7 +732,7 @@ class NotificationService:
                 for i, bubble_text in enumerate(bubbles):
                     markup = report.telegram_actions_markup if i == len(bubbles) - 1 else None
                     try:
-                        TelegramOutput(self._settings).send(
+                        self._telegram_output().send(
                             subject=report.email_subject,
                             body=bubble_text,
                             reply_markup=markup,
@@ -782,7 +795,7 @@ class NotificationService:
         from output.renderers.narrow import render_telegram_incomplete_hint
 
         try:
-            TelegramOutput(self._settings).send(
+            self._telegram_output().send(
                 subject=report.email_subject,
                 body=render_telegram_incomplete_hint(missing_count),
                 parse_mode="HTML",
@@ -855,7 +868,7 @@ class NotificationService:
 
         if send_telegram and self._settings.can_send_telegram():
             try:
-                TelegramOutput(self._settings).send(subject=subject, body=text)
+                self._telegram_output().send(subject=subject, body=text)
                 sent_channels.append("telegram")
             except Exception as e:
                 logger.error(f"No-data hint Telegram failed for {trip.name}: {e}")
@@ -1197,12 +1210,12 @@ class NotificationService:
                 # parse_mode=None) statt der reichen Telegram-Warnvorlage.
                 if telegram_style == "kurzform":
                     kurz_body = render_official_alert_sms(dto_notices, tz=alert_tz)
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject, body=kurz_body,
                         parse_mode=None, suppress_subject_line=True,
                     )
                 else:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject, body=telegram_text,
                         parse_mode="HTML", suppress_subject_line=True,
                     )
@@ -1333,7 +1346,7 @@ class NotificationService:
                 if telegram_sink is not None:
                     telegram_sink(telegram_text)
                 else:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject,
                         body=telegram_text,
                         parse_mode=None,
@@ -1544,7 +1557,7 @@ class NotificationService:
                 if telegram_sink is not None:
                     telegram_sink(kurz_body)
                 else:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject, body=kurz_body,
                         parse_mode=None, suppress_subject_line=True,
                     )
@@ -1555,7 +1568,7 @@ class NotificationService:
             if telegram_sink is not None:
                 telegram_sink(telegram_text)
             else:
-                TelegramOutput(self._settings).send(
+                self._telegram_output().send(
                     subject=subject, body=telegram_text,
                     parse_mode="HTML", suppress_subject_line=True,
                 )
@@ -1879,7 +1892,7 @@ class NotificationService:
                     # je Ort aufgeteilt waeren die Ortsnummern sinnlos. Die
                     # beiden anderen Kurzstil-Pfade (Trip-Alarm, amtlicher
                     # Ortsvergleich-Alarm) senden ebenfalls genau eine.
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject,
                         body=sms_body,
                         parse_mode=None,
@@ -1915,7 +1928,7 @@ class NotificationService:
                                 [group], tz=alert_tz, stand_at=alert_msg.stand_at,
                             )
                             single_body = render_alert_telegram(single_msg)
-                            TelegramOutput(self._settings).send(
+                            self._telegram_output().send(
                                 subject=subject,
                                 body=single_body,
                                 parse_mode="HTML",
@@ -1943,7 +1956,7 @@ class NotificationService:
                             f"alle {failed_count} Telegram-Sprechblasen gescheitert"
                         )
                 else:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject,
                         body=telegram_body,
                         parse_mode="HTML",
@@ -2057,7 +2070,7 @@ class NotificationService:
             }
             if result.reply_markup is not None:
                 kwargs["reply_markup"] = result.reply_markup
-            return TelegramOutput(settings).send(**kwargs)
+            return self._telegram_reply(settings, chat_id).send(**kwargs)
         except Exception as e:
             logger.error(f"Telegram command reply failed for {mask_number(chat_id)}: {e}")
             return None
@@ -2076,7 +2089,7 @@ class NotificationService:
             kwargs = {"subject": subject, "body": body}
             if reply_markup is not None:
                 kwargs["reply_markup"] = reply_markup
-            return TelegramOutput(settings).send(**kwargs)
+            return self._telegram_reply(settings, chat_id).send(**kwargs)
         except Exception as e:
             logger.error(f"Telegram message failed for {mask_number(chat_id)}: {e}")
             return None
@@ -2091,9 +2104,8 @@ class NotificationService:
         reply_markup: dict | None = None,
     ) -> bool:
         """Editiert eine vorhandene Telegram-Nachricht in-place."""
-        from output.channels.telegram import TelegramOutput
         try:
-            TelegramOutput(settings).edit_message_text(
+            self._telegram_reply(settings, chat_id).edit_message_text(
                 chat_id,
                 message_id,
                 text,
@@ -2112,9 +2124,8 @@ class NotificationService:
         settings: Settings,
     ) -> bool:
         """Löscht eine Telegram-Nachricht."""
-        from output.channels.telegram import TelegramOutput
         try:
-            TelegramOutput(settings).delete_message(chat_id, message_id)
+            self._telegram_reply(settings, chat_id).delete_message(chat_id, message_id)
             return True
         except Exception as e:
             logger.error(f"Telegram delete_message failed for {mask_number(chat_id)}/{message_id}: {e}")

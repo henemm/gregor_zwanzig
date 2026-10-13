@@ -39,6 +39,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     user_ids,
 )
 from tests.tdd._gsm7_charset import _first_non_gsm7_char
+from tests.helpers.telegram_empfaenger import numerische_chat_id
 
 __all__ = ["user_ids"]  # pytest muss die importierte Fixture im Modul finden
 
@@ -51,7 +52,7 @@ _ETAPPE_ZEILE = re.compile(r"(?:Etappe|Stage) (\d+)(?:: ?(.*))?$")
 
 def _nutzer(new_user_id) -> BefehlNutzer:
     user_id = new_user_id()
-    chat_id = f"chat-{user_id}"
+    chat_id = numerische_chat_id(user_id)  # #1412 S4a: Formpruefung AC-6
     mail_to = f"{user_id}@henemm.com"
     reply_to = f"+49170{abs(hash(user_id)) % 10_000_000:07d}"
     _schreibe_user_json(
