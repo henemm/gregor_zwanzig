@@ -50,6 +50,7 @@ from app.loader import lookup_user_by_telegram_chat_id, save_trip
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from services.inbound_telegram_reader import InboundTelegramReader
 from services.notification_service import NotificationService
+from tests.helpers.telegram_empfaenger import im_update
 
 AMBIGUOUS_CHAT_ID = "55501"
 
@@ -306,11 +307,13 @@ def test_start_command_answers_in_chat_when_connect_returns_conflict(monkeypatch
     reader = InboundTelegramReader()
     reader._notification_service = _RecordingNotificationService()
 
-    handled = reader._process_start_command(
-        token="tdd-einmal-token",
-        chat_id=AMBIGUOUS_CHAT_ID,
-        settings=_base_settings(AMBIGUOUS_CHAT_ID),
-    )
+    # #1412 S4a: /start laeuft im Update dieses Absenders (Herkunftsbeleg).
+    with im_update(AMBIGUOUS_CHAT_ID):
+        handled = reader._process_start_command(
+            token="tdd-einmal-token",
+            chat_id=AMBIGUOUS_CHAT_ID,
+            settings=_base_settings(AMBIGUOUS_CHAT_ID),
+        )
 
     assert handled is True
     assert recorder.connect, "Der Connect-Endpunkt der Go-API wurde gar nicht gerufen"
@@ -340,11 +343,12 @@ def test_start_command_stays_silent_for_other_error_statuses(monkeypatch):
     reader = InboundTelegramReader()
     reader._notification_service = _RecordingNotificationService()
 
-    reader._process_start_command(
-        token="tdd-einmal-token",
-        chat_id=AMBIGUOUS_CHAT_ID,
-        settings=_base_settings(AMBIGUOUS_CHAT_ID),
-    )
+    with im_update(AMBIGUOUS_CHAT_ID):
+        reader._process_start_command(
+            token="tdd-einmal-token",
+            chat_id=AMBIGUOUS_CHAT_ID,
+            settings=_base_settings(AMBIGUOUS_CHAT_ID),
+        )
 
     assert recorder.connect, "Der Connect-Endpunkt der Go-API wurde gar nicht gerufen"
     assert not recorder.telegram, (

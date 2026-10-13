@@ -19,10 +19,6 @@ def send_test_message(channel: str, user_id: str) -> dict:
     Returns:
         A dict with either {"status": "ok"} or {"error": ...}.
     """
-    # Issue #198: Channel-Tests sind konzeptionell Tests → IMMER Gmail-Routing,
-    # nie über Production-SMTP (Resend). _is_test_user("default") liefert False,
-    # daher zwingen wir .for_testing() unabhängig vom user_id.
-    settings = Settings().with_user_profile(user_id).for_testing()
     subject = "Gregor 20 — Testmeldung"
     body = "Dein Kanal funktioniert!"
 
@@ -30,12 +26,18 @@ def send_test_message(channel: str, user_id: str) -> dict:
         if channel == "email":
             from output.channels.email import EmailOutput
 
-            output = EmailOutput(settings)
+            # Issue #198: Mail-Test IMMER ueber den Test-Postausgang, nie Resend.
+            output = EmailOutput(Settings().with_user_profile(user_id).for_testing())
             output.send(subject, body, html=False)
         elif channel == "telegram":
+            from output.channels.recipient import TelegramRecipient
             from output.channels.telegram import TelegramOutput
 
-            output = TelegramOutput(settings)
+            # Issue #1412 S4a (M3): an den Profil-Chat ueber den Produktions-Bot,
+            # NICHT ueber for_testing() (das zielte auf den Betreiber-Test-Chat).
+            settings = Settings().with_user_profile(user_id)
+            recipient = TelegramRecipient.for_user(user_id, settings)
+            output = TelegramOutput(settings, recipient=recipient)
             output.send(subject, body)
         else:
             return {"error": f"Unbekannter Kanal: {channel}"}

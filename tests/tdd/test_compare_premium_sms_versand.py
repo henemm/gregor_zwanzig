@@ -25,6 +25,7 @@ import pytest
 from app.config import Settings
 from app.models import ForecastDataPoint, ThunderLevel
 from app.user import SavedLocation
+from tests.helpers.telegram_empfaenger import numerische_chat_id
 from services.notification_service import NotificationService
 
 TARGET_DATE = date(2026, 7, 8)
@@ -91,7 +92,7 @@ def _aufzeichner_installieren(monkeypatch) -> Mitschrift:
             _buchen("premium_sms", body)
 
     class _Telegram:
-        def __init__(self, settings) -> None: ...
+        def __init__(self, settings, recipient=None) -> None: ...
 
         def send(self, subject, body, reply_markup=None, *, parse_mode=None,
                  suppress_subject_line=False) -> int:
@@ -139,7 +140,11 @@ def _nutzer(uid: str, tier: str = "premium") -> str:
 
     d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
+    (d / "user.json").write_text(json.dumps({
+        "id": uid, "tier": tier,
+        # #1412 S4a: Telegram-Empfaenger kommt aus dem Profil, nicht der ENV.
+        "telegram_chat_id": numerische_chat_id(uid),
+    }))
     return uid
 
 

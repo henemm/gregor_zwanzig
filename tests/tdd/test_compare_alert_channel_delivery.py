@@ -78,6 +78,7 @@ from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
 import pytest
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
@@ -337,7 +338,7 @@ def _run_compare_alerts(
     from services.compare_alert import CompareAlertService
 
     service = CompareAlertService(
-        settings=settings, user_id=user_id,
+        settings=settings, user_id=mit_profil_chat(user_id, settings),
         weather_source=_ScriptedWeatherSource(
             values if values is not None else {"loc-1": 30.0}
         ),

@@ -338,7 +338,8 @@ def test_ac5_inbound_reply_vergleicht_int_und_str_normalisiert(
 
 
 @pytest.mark.parametrize(
-    "chat", ["abc", "12; DROP", "", "1" * 21, "12a", "+491701234567", "-", "1 2"],
+    "chat", ["abc", "12; DROP", "", "1" * 21, "12a", "+491701234567", "-", "1 2",
+             "\u0661\u0662\u0663"],  # F006: arabisch-indische Ziffern (nur ASCII zulaessig)
 )
 def test_ac6_nicht_numerische_chat_id_blockt_vor_jedem_http_call(sink, chat):
     """AC-6.
@@ -624,3 +625,264 @@ def test_ac13_debug_cli_kanal_telegram_wird_mit_klarer_meldung_abgelehnt(sink):
         get_channel("telegram", _settings()).send("GZ Report", "Text")
     assert "telegram" in str(exc.value).lower(), f"AC-13: Meldung unklar: {exc.value!r}"
     assert sink.calls == [], f"AC-13: kein HTTP-Call erlaubt, gesehen {sink.calls!r}"
+
+
+# ═══════════════════════ Fix-Loop 1 (Adversary F001-F004, F007) ══════════════
+
+
+def _sender(chat):
+    from output.channels.recipient import _current_inbound_sender
+
+    return _current_inbound_sender.set(chat)
+
+
+@pytest.mark.parametrize("methode", ["send", "edit", "delete"])
+def test_f001_befehlsantwort_wege_treffen_genau_die_uebergebene_chat_id(sink, methode):
+    """F001 (R7, Wirkort statt Code-Ort).
+
+    GIVEN ein laufendes Update von Absender 700000011; die Einstellungen
+          tragen den globalen Betreiber-Chat.
+    WHEN  ``NotificationService.send_telegram_message`` /
+          ``edit_telegram_message_text`` / ``delete_telegram_message`` mit
+          ``chat_id=700000011`` gegen das ECHTE ``TelegramOutput`` laeuft.
+    THEN  geht genau EIN POST der passenden Bot-Methode an 700000011 und der
+          Dienst meldet Erfolg.
+    """
+    from output.channels.recipient import _current_inbound_sender
+    from services.notification_service import NotificationService
+
+    settings = _settings()
+    dienst = NotificationService(settings=settings, user_id=None)
+    token = _sender("700000011")
+    try:
+        if methode == "send":
+            ok = dienst.send_telegram_message(
+                chat_id="700000011", subject="S", body="B", settings=settings,
+            ) is not None
+            bot_methode = "/sendMessage"
+        elif methode == "edit":
+            ok = dienst.edit_telegram_message_text(
+                chat_id="700000011", message_id=5, text="T", settings=settings,
+            )
+            bot_methode = "/editMessageText"
+        else:
+            ok = dienst.delete_telegram_message(
+                chat_id="700000011", message_id=5, settings=settings,
+            )
+            bot_methode = "/deleteMessage"
+    finally:
+        _current_inbound_sender.reset(token)
+
+    assert ok, f"F001: {methode} meldet keinen Erfolg"
+    assert len(sink.calls) == 1 and sink.calls[0]["url"].endswith(bot_methode), sink.calls
+    assert sink.chats() == ["700000011"], f"F001: gesehen {sink.chats()!r}"
+
+
+def test_f002_429_wiederholung_prueft_den_herkunftsbeleg_nicht_erneut(sink):
+    """F002 (AC-9, "genau einmal geprueft" -- am Wirkort messbar).
+
+    GIVEN Empfaenger ``inbound_reply(700000012)`` im laufenden Update; die
+          Bot-API antwortet zuerst 429 (``retry_after=0``). Zwischen erstem
+          POST und Wiederholung wird der Herkunftsbeleg geleert -- eine
+          (verbotene) zweite Pruefung beim Retry wuerde jetzt blocken.
+    WHEN  der Versand einmal wiederholt wird.
+    THEN  genau 2 POSTs an 700000012, Zustellung erfolgreich.
+    """
+    from output.channels.recipient import TelegramRecipient, _current_inbound_sender
+
+    token = _sender("700000012")
+    sink.antworten = [
+        lambda req: httpx.Response(
+            429, json={"ok": False, "parameters": {"retry_after": 0}}, request=req,
+        ),
+    ]
+
+    def _beleg_weg(nr: int) -> None:
+        if nr == 1:
+            _current_inbound_sender.set(None)
+
+    sink.bei_aufruf = _beleg_weg
+    try:
+        mid = TelegramOutput(
+            _settings(), recipient=TelegramRecipient.inbound_reply("700000012"),
+        ).send("Betreff", "Text")
+    finally:
+        _current_inbound_sender.reset(token)
+    assert mid is not None
+    assert sink.chats() == ["700000012", "700000012"], f"F002: gesehen {sink.chats()!r}"
+
+
+@pytest.mark.parametrize("methode", ["edit_message_text", "delete_message"])
+def test_f003_profil_empfaenger_von_b_blockt_fremden_ziel_chat_von_a(sink, methode):
+    """F003 (Mandantentrennung, zwei Nutzer).
+
+    GIVEN Nutzer A (Chat A) und B (Chat B); Ausgang mit ``for_user(B)``.
+    WHEN  eine chat-gebundene Methode mit dem Chat von A aufgerufen wird.
+    THEN  ``ChannelBlockedError`` mit ``telegram_recipient_mismatch``, 0 POSTs.
+    """
+    from output.channels.recipient import TelegramRecipient
+
+    _profil("nutzer-a", telegram_chat_id=CHAT_A)
+    _profil("nutzer-b", telegram_chat_id=CHAT_B)
+    settings = _settings()
+    out = TelegramOutput(settings, recipient=TelegramRecipient.for_user("nutzer-b", settings))
+    with pytest.raises(ChannelBlockedError) as exc:
+        if methode == "edit_message_text":
+            out.edit_message_text(CHAT_A, 1, "Text")
+        else:
+            out.delete_message(CHAT_A, 1)
+    assert exc.value.reason_code == "telegram_recipient_mismatch"
+    assert sink.calls == [], f"F003: {sink.calls!r}"
+
+
+def test_f003_antwort_empfaenger_blockt_abweichendes_ziel_als_mismatch(sink):
+    """F003 (inbound_reply): Empfaenger 700000013 im Update von 700000013,
+    Ziel der Methode ist 700000014 -> ``telegram_recipient_mismatch``, 0 POSTs."""
+    from output.channels.recipient import TelegramRecipient, _current_inbound_sender
+
+    token = _sender("700000013")
+    try:
+        out = TelegramOutput(_settings(), recipient=TelegramRecipient.inbound_reply("700000013"))
+        with pytest.raises(ChannelBlockedError) as exc:
+            out.edit_message_text("700000014", 1, "Text")
+    finally:
+        _current_inbound_sender.reset(token)
+    assert exc.value.reason_code == "telegram_recipient_mismatch"
+    assert sink.calls == []
+
+
+def test_f004_testmodus_prueft_das_original_ziel_nicht_den_settings_chat(sink):
+    """F004 (#1288-Guard am Wirkort).
+
+    GIVEN Testmodus mit korrektem Test-Token; ``settings.telegram_chat_id``
+          IST der Test-Chat, das Original-Ziel (Absender des Updates) ist ein
+          anderer Chat.
+    WHEN  ``send`` laeuft.
+    THEN  blockt der #1288-Guard (er prueft das Original-Ziel), 0 POSTs.
+    """
+    from output.channels.recipient import TelegramRecipient, _current_inbound_sender
+
+    settings = _settings(
+        is_test_mode=True, telegram_bot_token=TEST_TOKEN, telegram_chat_id=TEST_CHAT,
+    )
+    token = _sender("700000015")
+    try:
+        with pytest.raises(OutputConfigError) as exc:
+            TelegramOutput(
+                settings, recipient=TelegramRecipient.inbound_reply("700000015"),
+            ).send("Betreff", "Text")
+    finally:
+        _current_inbound_sender.reset(token)
+    assert "Issue #1288" in str(exc.value), str(exc.value)
+    assert sink.calls == []
+
+
+def test_f007_drossel_und_429_logs_nennen_die_chat_id_nicht(sink, caplog):
+    """F007 (Spec: Logs nennen nie die Chat-ID).
+
+    GIVEN Empfaenger ``for_user(B)``; Drossel auf 1 Nachricht je 0.05 s, die
+          Bot-API antwortet beim ersten POST mit 429.
+    WHEN  zwei Nachrichten nacheinander gesendet werden (Wartezeile der
+          Drossel UND 429-Warnung entstehen).
+    THEN  enthaelt keine Logzeile die rohe Chat-ID.
+    """
+    from output.channels.recipient import TelegramRecipient
+
+    _profil("nutzer-b", telegram_chat_id=CHAT_B)
+    settings = _settings(
+        telegram_rate_limit_max_per_window=1, telegram_rate_limit_window_seconds=0.05,
+    )
+    sink.antworten = [
+        lambda req: httpx.Response(
+            429, json={"ok": False, "parameters": {"retry_after": 0}}, request=req,
+        ),
+    ]
+    caplog.set_level(logging.DEBUG)
+    empfaenger = TelegramRecipient.for_user("nutzer-b", settings)
+    TelegramOutput(settings, recipient=empfaenger).send("Betreff", "eins")
+    TelegramOutput(settings, recipient=empfaenger).send("Betreff", "zwei")
+
+    texte = [r.getMessage() for r in caplog.records]
+    assert any("drosselt" in t for t in texte), f"Vorbedingung 429-Log: {texte!r}"
+    assert any("Telegram-Drossel: warte" in t for t in texte), f"Vorbedingung Drossel-Log: {texte!r}"
+    assert not any(CHAT_B in t for t in texte), f"F007: Chat-ID im Log: {texte!r}"
+
+
+# ═══════════════════════ Fix-Loop 2 (Adversary F-NEU-1..3) ═══════════════════
+
+
+def test_fneu1_unvollstaendig_hinweis_geht_an_den_profil_chat(sink):
+    """F-NEU-1 (fail-soft-Pfad ``_send_telegram_incomplete_hint``).
+
+    GIVEN Nutzer B mit Profil-Chat B; die Einstellungen tragen den globalen
+          Betreiber-Chat; echtes ``NotificationService`` + echtes
+          ``TelegramOutput``.
+    WHEN  der "Briefing unvollstaendig"-Hinweis fuer 2 fehlende Teile
+          ausgeloest wird.
+    THEN  geht genau EIN sendMessage-POST an Chat B (fail-soft darf eine
+          Fehlverdrahtung nicht verschlucken).
+    """
+    from types import SimpleNamespace
+
+    from services.notification_service import NotificationService
+
+    _profil("nutzer-b", telegram_chat_id=CHAT_B)
+    dienst = NotificationService(settings=_settings(), user_id="nutzer-b")
+    dienst._send_telegram_incomplete_hint(SimpleNamespace(email_subject="Briefing"), 2)
+
+    assert len(sink.calls) == 1 and sink.calls[0]["url"].endswith("/sendMessage"), sink.calls
+    assert sink.chats() == [CHAT_B], f"F-NEU-1: gesehen {sink.chats()!r}"
+
+
+def test_fneu2_keine_daten_hinweis_geht_per_telegram_an_den_profil_chat(sink):
+    """F-NEU-2 (``send_no_data_hint``, Telegram-Zweig).
+
+    GIVEN Nutzer B mit Profil-Chat B; globaler Betreiber-Chat in Settings.
+    WHEN  der "Wetterdaten nicht verfuegbar"-Hinweis NUR per Telegram geht.
+    THEN  genau EIN sendMessage-POST an Chat B, Telegram steht in
+          ``sent_channels``.
+    """
+    from types import SimpleNamespace
+
+    from services.notification_service import NotificationService
+
+    _profil("nutzer-b", telegram_chat_id=CHAT_B)
+    dienst = NotificationService(settings=_settings(), user_id="nutzer-b")
+    ergebnis = dienst.send_no_data_hint(
+        SimpleNamespace(name="Trip-B"), "evening", send_email=False, send_telegram=True,
+    )
+
+    assert "telegram" in ergebnis.sent_channels, ergebnis
+    assert len(sink.calls) == 1 and sink.calls[0]["url"].endswith("/sendMessage"), sink.calls
+    assert sink.chats() == [CHAT_B], f"F-NEU-2: gesehen {sink.chats()!r}"
+
+
+def test_fneu3_drossel_abbruch_nennt_die_chat_id_weder_im_log_noch_im_fehler(
+    sink, caplog, monkeypatch,
+):
+    """F-NEU-3 (Drossel-Abbruch, Spec: Logs nennen nie die Chat-ID).
+
+    GIVEN Drossel auf 1 Nachricht je 60 s, Wartefrist auf 0.05 s verkuerzt.
+    WHEN  die zweite Nachricht an Chat B den Drossel-Abbruch erzwingt.
+    THEN  ``OutputError``; weder die Abbruch-Logzeile noch der Fehlertext
+          enthaelt die rohe Chat-ID.
+    """
+    from output.channels.recipient import TelegramRecipient
+
+    _profil("nutzer-b", telegram_chat_id=CHAT_B)
+    monkeypatch.setattr(telegram_mod, "SEND_SLOT_MAX_WAIT_SECONDS", 0.05)
+    settings = _settings(
+        telegram_rate_limit_max_per_window=1, telegram_rate_limit_window_seconds=60,
+    )
+    empfaenger = TelegramRecipient.for_user("nutzer-b", settings)
+    caplog.set_level(logging.DEBUG)
+    TelegramOutput(settings, recipient=empfaenger).send("Betreff", "eins")
+    with pytest.raises(OutputError) as exc:
+        TelegramOutput(settings, recipient=empfaenger).send("Betreff", "zwei")
+
+    texte = [r.getMessage() for r in caplog.records]
+    assert any("Abbruch nach" in t for t in texte), f"Vorbedingung Abbruch-Log: {texte!r}"
+    assert "timed out" in str(exc.value), str(exc.value)
+    assert not any(CHAT_B in t for t in texte), f"F-NEU-3: Chat-ID im Log: {texte!r}"
+    assert CHAT_B not in str(exc.value), f"F-NEU-3: Chat-ID im Fehlertext: {exc.value}"
+    assert len(sink.calls) == 1

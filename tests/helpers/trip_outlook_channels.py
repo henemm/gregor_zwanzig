@@ -44,6 +44,7 @@ from tests.helpers.trip_outlook_selection import (  # noqa: E402
 from tests.tdd.test_trip_outlook_dispatch_mail import (  # noqa: E402
     _fixture_scheduler_klasse,
 )
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 REFERENCE_COMPACT = REFERENCE_DIR / "compact_block.txt"
 REFERENCE_TELEGRAM = REFERENCE_DIR / "telegram_bubble.txt"
@@ -175,7 +176,7 @@ def versendete_teile(t, *, report_type: str = "evening") -> tuple[str, list[str]
     try:
         with utc_process_tz():
             scheduler = _fixture_scheduler_klasse()(
-                settings=_settings(user_id), user_id=user_id)
+                settings=_settings(user_id), user_id=mit_profil_chat(user_id, _settings(user_id)))
             ergebnis = scheduler._send_trip_report_outcome(
                 t, report_type, on_demand=True)
     finally:

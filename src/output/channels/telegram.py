@@ -11,6 +11,12 @@ import httpx
 from app.config import Settings
 from app.origin_guard import running_origin
 from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
+from output.channels.recipient import (
+    RecipientPurpose,
+    TelegramRecipient,
+    _current_inbound_sender,
+    normalize_chat_id,
+)
 from output.channels.seven_io_base import mask_number
 
 logger = logging.getLogger(__name__)
@@ -39,6 +45,9 @@ _NO_CHAT_KEY = "_bot"
 # Wir tracken nur Paare von öffnenden/schließenden Tags; self-closing Tags werden
 # ignoriert, weil sie keine Balance benötigen.
 _HTML_TAG_RE = re.compile(r"<(/?)([a-zA-Z][a-zA-Z0-9_]*)[^>]*>")
+
+# Issue #1412 S4a (AC-6): bedingungslose Formpruefung der Chat-ID.
+_CHAT_ID_RE = re.compile(r"-?\d{1,20}", re.ASCII)  # nur ASCII-Ziffern
 
 
 def _truncate_html(message: str, max_len: int) -> str:
@@ -182,8 +191,11 @@ class TelegramOutput:
     _rate_limit_lock = threading.Lock()
     _rate_limit_stamps: dict[str, list[float]] = {}
 
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self, settings: Settings | None = None, *, recipient: TelegramRecipient | None = None,
+    ) -> None:
         self._settings = settings if settings else Settings()
+        self._recipient = recipient
         self._timeout = 10
         self.sent_message_ids: list[int] = []
 
@@ -226,20 +238,20 @@ class TelegramOutput:
             )
         return test_chat_id
 
-    def _guard_test_mode_chat_id(self) -> None:
+    def _guard_test_mode_chat_id(self, chat_id) -> None:
         """Bedingungsloser Guard (Issue #1288, Vorbild email.py #1219): im
         Test-Modus (is_test_mode=True — gesetzt durch for_testing()/
         with_user_profile() bei Staging ODER is_test_user_id()) ist
         AUSSCHLIESSLICH die konfigurierte Test-Chat-ID erlaubt. Faengt genau
         die Fallback-Luecke aus config.py:225,237 ab: fehlt
         telegram_test_chat_id, bleibt telegram_chat_id sonst unveraendert
-        die Prod-ID.
+        die Prod-ID. Seit #1412 S4a wird der urspruengliche Ziel-Chat des
+        Empfaengers geprueft, nicht mehr settings.telegram_chat_id.
         """
         if not self._settings.is_test_mode:
             return
         test_chat_id = self._settings.telegram_test_chat_id
-        chat_id = self._settings.telegram_chat_id
-        if not test_chat_id or chat_id != test_chat_id:
+        if not test_chat_id or str(chat_id) != str(test_chat_id):
             raise OutputConfigError(
                 "telegram",
                 f"Test-Modus aktiv, aber chat_id={chat_id!r} ist nicht die "
@@ -282,6 +294,31 @@ class TelegramOutput:
                 "konfigurierte Test-Chat-ID (GZ_TELEGRAM_TEST_CHAT_ID) — "
                 "Versand blockiert (Issue #1363).",
             )
+
+    def _check_recipient(self, chat_id) -> None:
+        """Empfaengervertrag (Issue #1412 S4a), VOR jedem Umschreiben: Form
+        (bedingungslos) -> Empfaenger vorhanden -> Herkunft je Zweck. Blockt
+        mit ``ChannelBlockedError``; die Meldung nennt nie die Chat-ID."""
+        def _block(reason_code: str, text: str):
+            logger.warning("Telegram-Versand blockiert (%s): %s", reason_code, text)
+            return ChannelBlockedError(self.name, text, reason_code=reason_code)
+
+        chat = normalize_chat_id(chat_id)
+        if not _CHAT_ID_RE.fullmatch(chat):
+            raise _block("telegram_invalid_chat_id", "Chat-ID ist nicht numerisch.")
+        recipient = self._recipient
+        if recipient is None:
+            raise _block("telegram_no_recipient", "kein belegter Empfaenger uebergeben.")
+        if recipient.chat_id != chat:
+            raise _block("telegram_recipient_mismatch", "Ziel-Chat weicht vom Empfaenger ab.")
+        if recipient.purpose == RecipientPurpose.inbound_reply:
+            if normalize_chat_id(_current_inbound_sender.get()) != chat:
+                raise _block(
+                    "telegram_not_inbound_sender",
+                    "Antwort-Ziel ist nicht der Absender des laufenden Updates.",
+                )
+        elif recipient.purpose != RecipientPurpose.user_profile:
+            raise _block("telegram_unknown_purpose", "unbekannter Empfaenger-Zweck.")
 
     def _reserve_send_slot(self, chat_key: str) -> None:
         """Drossel-Bremse (Issue #1370): haelt die Schreibzugriffe je Chat unter
@@ -341,16 +378,16 @@ class TelegramOutput:
                     "Telegram-Drossel: Abbruch nach %.2fs Wartezeit (chat=%s) "
                     "-- SEND_SLOT_MAX_WAIT_SECONDS (%.0fs) ueberschritten, "
                     "Nachricht wird NICHT gesendet",
-                    waited, chat_key, SEND_SLOT_MAX_WAIT_SECONDS,
+                    waited, mask_number(chat_key), SEND_SLOT_MAX_WAIT_SECONDS,
                 )
                 raise OutputError(
                     "telegram",
                     f"_reserve_send_slot timed out after {waited:.2f}s "
-                    f"(chat={chat_key})",
+                    f"(chat={mask_number(chat_key)})",
                 )
             logger.info(
                 "Telegram-Drossel: warte %.2fs vor dem naechsten Schreibzugriff "
-                "(chat=%s, %d/%ds)", wait, chat_key, max_per_window, window,
+                "(chat=%s, %d/%ds)", wait, mask_number(chat_key), max_per_window, window,
             )
             time.sleep(max(min(wait, remaining), _MIN_SLEEP_SECONDS))
 
@@ -397,17 +434,17 @@ class TelegramOutput:
         """
         if "chat_id" in payload:
             payload = dict(payload)
-            target = self._guard_code_origin(payload["chat_id"])
+            original = payload["chat_id"]
+            self._check_recipient(original)
+            target = self._guard_code_origin(original)
             self._guard_test_mode_bot_token()
             if bound_chat:
-                self._guard_test_mode_chat_id()
+                self._guard_test_mode_chat_id(original)
             self._guard_test_mode_target_chat(target)
             payload["chat_id"] = target
             chat_id = target
         else:
             self._guard_test_mode_bot_token()
-            if bound_chat:
-                self._guard_test_mode_chat_id()
         chat_key = _NO_CHAT_KEY if chat_id is None else str(chat_id)
         self._reserve_send_slot(chat_key)
         response = httpx.post(url, json=payload, timeout=self._timeout)
@@ -417,7 +454,7 @@ class TelegramOutput:
         wait = self._retry_after_seconds(response)
         logger.warning(
             "Telegram drosselt (HTTP 429, chat=%s) — warte %.2fs und sende "
-            "genau einmal erneut", chat_key, wait,
+            "genau einmal erneut", mask_number(chat_key), wait,
         )
         if wait > 0:
             time.sleep(wait)
@@ -454,18 +491,15 @@ class TelegramOutput:
             OutputConfigError: Test-Modus mit fehlender/abweichender
                 Test-Chat-ID (Issue #1288) — VOR jedem httpx.post.
         """
-        chat_id = self._guard_code_origin(self._settings.telegram_chat_id)
-        # Issue #2144: kein Empfaenger bekannt (Nutzer ohne eigene
-        # telegram_chat_id) -- sauber abbrechen statt mit chat_id=None
-        # einen Bot-API-Call zu versuchen (Vorbild premium_sms.py
-        # `_resolve_recipient()`).
-        if not chat_id:
+        # Issue #1412 S4a: Empfaenger kommt ausschliesslich aus dem belegten
+        # Empfaenger-Objekt, nie aus settings.telegram_chat_id (Default: Block).
+        if self._recipient is None:
+            logger.warning("Telegram-Versand blockiert (telegram_no_recipient)")
             raise ChannelBlockedError(
-                self.name,
-                "kein Empfaenger bekannt -- settings.telegram_chat_id ist "
-                "nicht gesetzt.",
-                reason_code="telegram_no_chat_id",
+                self.name, "kein belegter Empfaenger uebergeben.",
+                reason_code="telegram_no_recipient",
             )
+        chat_id = self._recipient.chat_id
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
 

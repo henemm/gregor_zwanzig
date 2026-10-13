@@ -54,6 +54,7 @@ from services.notification_service import NotificationService
 from tests.helpers.nutzer_tier import nutzer_mit_tier
 from services.official_alerts.models import OfficialAlert
 from services.trip_alert import TripAlertService
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # ---------------------------------------------------------------------------
@@ -251,7 +252,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = TripAlertService(settings=settings, user_id="tdd-1260-alert-a")
+            svc = TripAlertService(settings=settings, user_id=mit_profil_chat("tdd-1260-alert-a", settings))
 
             # Telegram-only (kein SMS-Tier-Gate); Style aus dem Trip aufgelöst.
             trip = _make_trip("kurzform", send_sms=False)
@@ -282,7 +283,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = TripAlertService(settings=settings, user_id="tdd-1260-alert-b")
+            svc = TripAlertService(settings=settings, user_id=mit_profil_chat("tdd-1260-alert-b", settings))
 
             trip = _make_trip("rich", send_sms=False)
             svc._send_alert(trip, [_make_segment_data()], [_make_change()])
@@ -303,7 +304,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-1260-alert-c"))
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat(nutzer_mit_tier("tdd-1260-alert-c"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: send_deviation_alert kennt telegram_style noch nicht → TypeError.
@@ -342,7 +343,7 @@ class TestAC4OfficialAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-1260-off-a"))
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat(nutzer_mit_tier("tdd-1260-off-a"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: send_official_alert kennt telegram_style noch nicht → TypeError.
@@ -389,7 +390,7 @@ class TestAC4OfficialAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-off-b")
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat("tdd-1260-off-b", settings))
 
             trip = _make_trip("rich", send_sms=False)
             svc.send_official_alert(
@@ -430,7 +431,7 @@ class TestGuardCompareDeviationUnaffected:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-cmp")
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat("tdd-1260-cmp", settings))
 
             point = GPXPoint(lat=42.2, lon=9.05, elevation_m=400.0)
             svc.send_multi_location_deviation_alert(
@@ -513,7 +514,7 @@ class TestIssue2018AddendumReachesKurzstilTelegram:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-2018-b5"))
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat(nutzer_mit_tier("tdd-2018-b5"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: `RadarAlertRequest` kennt `addendum_reference` nicht.
@@ -567,7 +568,7 @@ class TestIssue2018AddendumReachesKurzstilTelegram:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id=nutzer_mit_tier("tdd-2018-b10"))
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat(nutzer_mit_tier("tdd-2018-b10"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             svc.send_radar_alert(

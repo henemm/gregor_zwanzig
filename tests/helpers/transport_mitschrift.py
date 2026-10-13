@@ -97,12 +97,14 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
             _buchen("premium_sms", self._s.premium_sms_reply_to, subject, body=body)
 
     class _TelegramAufzeichner:
-        def __init__(self, settings) -> None:
+        def __init__(self, settings, recipient=None) -> None:
             self._s = settings
+            # #1412 S4a: Ziel ist der belegte Empfaenger, nicht settings.
+            self._ziel = recipient.chat_id if recipient else None
 
         def send(self, subject, body, reply_markup=None, *, parse_mode=None,
                  suppress_subject_line=False) -> int:
-            _buchen("telegram", self._s.telegram_chat_id, subject, body=body,
+            _buchen("telegram", self._ziel, subject, body=body,
                     parse_mode=parse_mode)
             return 1
 

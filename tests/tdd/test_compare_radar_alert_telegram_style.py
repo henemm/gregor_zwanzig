@@ -48,6 +48,7 @@ from app.user import SavedLocation
 import output.channels.telegram as tg_module
 
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 def _data_root_users() -> Path:
@@ -234,7 +235,7 @@ class TestAC3CompareRadarAlertTelegramKurzstil:
             radar_service = RadarNowcastService(frame_source=frame_source)
 
             service = CompareRadarAlertService(
-                settings=_telegram_only_settings(), user_id=uid,
+                settings=_telegram_only_settings(), user_id=mit_profil_chat(uid, _telegram_only_settings()),
                 radar_service=radar_service,
             )
             sent = service.check_all_compare_presets()
@@ -296,7 +297,7 @@ class TestAC4CompareRadarAlertTelegramRichRegression:
             radar_service = RadarNowcastService(frame_source=frame_source)
 
             service = CompareRadarAlertService(
-                settings=_telegram_only_settings(), user_id=uid,
+                settings=_telegram_only_settings(), user_id=mit_profil_chat(uid, _telegram_only_settings()),
                 radar_service=radar_service,
             )
             sent = service.check_all_compare_presets()

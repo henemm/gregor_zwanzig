@@ -282,7 +282,7 @@ def test_ac7_r7_uebergebene_chat_id_wird_tatsaechlich_verwendet(sink):
     from services.trip_command_processor import CommandResult
 
     settings = _settings()
-    dienst = NotificationService(settings=settings)
+    dienst = NotificationService(settings=settings, user_id=None)
     ergebnis = CommandResult(
         success=True, command="hilfe",
         confirmation_subject="Hilfe", confirmation_body="Befehle: ...",
@@ -458,3 +458,47 @@ def test_ac11_test_knopf_email_zweig_unveraendert_ueber_testpostausgang(monkeypa
 
     assert ergebnis == {"status": "ok"}, f"AC-11: gesehen {ergebnis!r}"
     assert verbindungen == [TEST_SMTP_HOST], f"AC-11: gesehen {verbindungen!r}"
+
+
+# ═══════════════════════ Fix-Loop 1 (Adversary F005) ═════════════════════════
+
+
+def test_f005_knopfklick_editiert_beim_absender_und_blockt_fremden_chat(sink, monkeypatch):
+    """F005 (Herkunftsbeleg im Callback-Pfad).
+
+    GIVEN ein UNBEKANNTER Absender (Chat 900000021) klickt einen Knopf; das
+          ECHTE ``_process_callback_query`` laeuft. Waehrend des Klicks
+          versucht eine Sonde (Nachbarfunktion ``_bare_public_host``, laeuft
+          nach dem Setzen des Belegs) eine Antwort an den fremden Chat
+          900000022.
+    WHEN  der Klick verarbeitet wird.
+    THEN  geht der Registrierungs-Edit an 900000021, der Spinner wird
+          beendet, der fremde Chat wird geblockt und erreicht den Draht nie.
+    """
+    from output.channels.recipient import TelegramRecipient
+    from services import inbound_telegram_reader as reader_mod
+    from services.inbound_telegram_reader import InboundTelegramReader
+
+    ergebnis: dict = {}
+
+    def _sonde(settings):
+        try:
+            TelegramOutput(
+                _settings(), recipient=TelegramRecipient.inbound_reply("900000022"),
+            ).send("Sonde", "fremd")
+            ergebnis["fremd"] = "zugestellt"
+        except ChannelBlockedError:
+            ergebnis["fremd"] = "geblockt"
+        return None
+
+    monkeypatch.setattr(reader_mod, "_bare_public_host", _sonde)
+    update = {"update_id": 2, "callback_query": {
+        "id": "cq-f005", "data": "glance",
+        "message": {"message_id": 77, "chat": {"id": 900000021}},
+    }}
+    InboundTelegramReader()._process_update(update, _settings())
+
+    assert ergebnis == {"fremd": "geblockt"}, f"F005: gesehen {ergebnis!r}"
+    assert sink.chats("/editMessageText") == ["900000021"], f"F005: {sink.calls!r}"
+    assert "900000022" not in sink.chats(), f"F005: fremder Chat am Draht: {sink.calls!r}"
+    assert any(c["url"].endswith("/answerCallbackQuery") for c in sink.calls)

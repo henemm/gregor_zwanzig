@@ -19,6 +19,7 @@ from app.config import Settings, resolve_public_host
 from app.loader import compare_preset_to_dict, load_all_trips, load_compare_presets
 from app.trip import Trip
 from lib.go_internal import post_internal
+from output.channels.recipient import _current_inbound_sender
 from output.channels.seven_io_base import mask_number
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
@@ -170,7 +171,16 @@ class InboundTelegramReader:
         chat_id = str(message.get("chat", {}).get("id", ""))
         if not text or not chat_id:
             return False
+        # Issue #1412 S4a: Herkunftsbeleg "Absender des laufenden Updates" --
+        # nur innerhalb dieses Updates darf an chat_id geantwortet werden.
+        token = _current_inbound_sender.set(chat_id)
+        try:
+            return self._process_message(text, chat_id, settings)
+        finally:
+            _current_inbound_sender.reset(token)
 
+    def _process_message(self, text: str, chat_id: str, settings: Settings) -> bool:
+        """Verarbeitet eine geparste Textnachricht (innerhalb des Belegs)."""
         # /start TOKEN Handling — VOR user-resolve (user noch nicht bekannt)
         if text.startswith("/start "):
             token = text[len("/start "):].strip()
@@ -195,9 +205,8 @@ class InboundTelegramReader:
                     "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
                     f"im Account-Bereich{f' auf {host}' if host else ''})."
                 ),
-                # #2168: an den fragenden Chat antworten, nicht an die Basis-
-                # /Betreiber-Chat-ID (Muster wie `_process_start_command`).
-                settings=settings.model_copy(update={"telegram_chat_id": chat_id}),
+                # #2168/#1412 S4a: Antwort an den fragenden Chat (inbound_reply).
+                settings=settings,
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
@@ -390,6 +399,15 @@ class InboundTelegramReader:
                 self.sent_message_ids.append(mid)
 
     def _process_callback_query(self, callback: dict, settings: Settings) -> bool:
+        """Setzt den Herkunftsbeleg (Issue #1412 S4a) fuer den Button-Klick."""
+        msg = callback.get("message") or {}
+        token = _current_inbound_sender.set(str(msg.get("chat", {}).get("id", "")))
+        try:
+            return self._handle_callback_query(callback, settings)
+        finally:
+            _current_inbound_sender.reset(token)
+
+    def _handle_callback_query(self, callback: dict, settings: Settings) -> bool:
         """Verarbeitet einen Button-Klick (callback_query) — Zoom-Navigation.
 
         editMessageText ersetzt die Nachricht in-place; answerCallbackQuery wird
@@ -587,12 +605,11 @@ class InboundTelegramReader:
             if resp.status_code == 200:
                 logger.info(f"Telegram chat_id {mask_number(chat_id)} via token registriert")
                 try:
-                    confirm_settings = settings.model_copy(update={"telegram_chat_id": chat_id})
                     self._notification_service.send_telegram_message(
                         chat_id=chat_id,
                         subject="Verbunden",
                         body="✓ Du bist jetzt mit Gregor verbunden! Sende 'hilfe' für verfügbare Befehle.",
-                        settings=confirm_settings,
+                        settings=settings,
                     )
                 except Exception as ce:
                     logger.warning(f"Bestätigungsnachricht fehlgeschlagen: {ce}")
@@ -603,7 +620,6 @@ class InboundTelegramReader:
                     f"telegram-connect: chat_id {mask_number(chat_id)} bereits mit einem anderen Konto verknüpft"
                 )
                 try:
-                    conflict_settings = settings.model_copy(update={"telegram_chat_id": chat_id})
                     self._notification_service.send_telegram_message(
                         chat_id=chat_id,
                         subject="Verbinden nicht möglich",
@@ -612,7 +628,7 @@ class InboundTelegramReader:
                             "Trenne die Verbindung zuerst im Konto-Bereich des anderen Kontos "
                             "und sende danach erneut /start."
                         ),
-                        settings=conflict_settings,
+                        settings=settings,
                     )
                 except Exception as ce:
                     logger.warning(f"Konflikt-Nachricht fehlgeschlagen: {ce}")

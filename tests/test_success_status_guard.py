@@ -255,6 +255,9 @@ _PURE_COMPUTATION_MODULES = {"math"}
 # Stellen, davon 15 Persistenz-Helfer — ein `save()`, das jeden Fehler
 # schluckt, ist ein verwandtes, aber anderes Problem (AC-13b).
 _CHANNEL_OUTPUT_CLASSES = {"EmailOutput", "TelegramOutput", "SMSOutput"}
+# #1412 S4a: `NotificationService` baut `TelegramOutput` nur noch ueber diese
+# Fabrik-Methoden (Empfaengervertrag) -- derselbe Ausgabeaufruf, andere Form.
+_CHANNEL_OUTPUT_FACTORIES = {"_telegram_output", "_telegram_reply"}
 
 # Übergebene Sink-Parameter (`mail_sink(...)`, `telegram_sink(...)`,
 # `sms_sink(...)`) sind die zweite zugelassene Form eines Ausgabeaufrufs.
@@ -1314,6 +1317,11 @@ def _dispatches_on_a_channel(scope: ast.AST) -> bool:
     verwiesen (#1199).
     """
     for node in _walk_local(*scope.body):
+        if (
+            isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+            and node.func.attr in _CHANNEL_OUTPUT_FACTORIES
+        ):
+            return True
         if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)):
             continue
         if node.func.id in _CHANNEL_OUTPUT_CLASSES:

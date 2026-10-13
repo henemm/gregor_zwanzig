@@ -129,8 +129,13 @@ def get_channel(name: str, settings: "Settings") -> OutputChannel:
         from output.channels.premium_sms import PremiumSmsOutput
         return PremiumSmsOutput(settings)
     elif name == "telegram":
-        from output.channels.telegram import TelegramOutput
-        return TelegramOutput(settings)
+        # Issue #1412 S4a: Telegram braucht einen belegten Empfaenger (Nutzer-
+        # Profil oder Absender eines Updates) -- die Debug-CLI hat keinen.
+        raise OutputConfigError(
+            "telegram",
+            "Telegram ist in der Debug-CLI nicht verfuegbar: Versand nur an den "
+            "Profil-Chat eines Nutzers (Issue #1412).",
+        )
     elif name == "none":
         return NullOutput()
     else:

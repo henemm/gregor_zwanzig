@@ -68,8 +68,9 @@ def _aufzeichner_installieren(monkeypatch) -> list[str]:
     aufgezeichnete_chat_ids: list[str] = []
 
     class _TelegramAufzeichner:
-        def __init__(self, settings) -> None:
-            aufgezeichnete_chat_ids.append(settings.telegram_chat_id)
+        def __init__(self, settings, recipient=None) -> None:
+            # #1412 S4a: Ziel ist der belegte Empfaenger, nicht settings.
+            aufgezeichnete_chat_ids.append(recipient.chat_id if recipient else None)
 
         def send(self, subject, body, reply_markup=None, *, parse_mode=None,
                  suppress_subject_line=False) -> int:

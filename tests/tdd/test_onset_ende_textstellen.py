@@ -58,6 +58,7 @@ from tests.helpers.nutzer_tier import nutzer_mit_tier
 
 from tests.helpers.nowcast_gate_fixtures import clean_uid, fresh_uid, make_trip
 from tests.helpers.tagesbezug import expected_day_and_time, extract_day_and_time
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 # Issue #2096: zwei gestellte Uhren fuer den Buendel-Fall, dessen
 # Konstruktor die Uhrzeiten aus `datetime.now()` ableitet. Mittags liegt
@@ -635,7 +636,7 @@ def test_ac12_sms_premium_sms_und_telegram_kurzstil_zeigen_dasselbe_ende(
     uid = fresh_uid("2051-ac12")
     clean_uid(uid)
     try:
-        svc = NotificationService(_drei_kanal_settings(seven_io_stub.port), nutzer_mit_tier(uid, "premium"))
+        svc = NotificationService(_drei_kanal_settings(seven_io_stub.port), mit_profil_chat(nutzer_mit_tier(uid, "premium"), _drei_kanal_settings(seven_io_stub.port)))
 
         svc.send_radar_alert(
             trip=make_trip("trip-2051-ac12"),

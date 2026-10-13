@@ -59,6 +59,7 @@ from services.notification_service import NotificationService, RadarAlertRequest
 from services.official_alerts.models import OfficialAlert
 from services.weather_snapshot import WeatherSnapshotService
 from tests.helpers.nutzer_tier import nutzer_mit_tier
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 UTC = timezone.utc
 TZ = ZoneInfo("Europe/Vienna")
@@ -296,7 +297,7 @@ def test_ac1_deviation_alert_prefix_derived_from_trip_stage_position():
     try:
         svc = NotificationService(
             settings=_settings_sms_only(stub.port),
-            user_id=nutzer_mit_tier(f"tdd-2122-ac1-{uuid.uuid4().hex[:6]}"),
+            user_id=mit_profil_chat(nutzer_mit_tier(f"tdd-2122-ac1-{uuid.uuid4().hex[:6]}"), _settings_sms_only(stub.port)),
         )
         svc.send_deviation_alert(
             trip=trip, weather=[_segment_weather_data()], changes=[_change()],
@@ -340,7 +341,7 @@ def test_ac2_radar_alert_shares_same_stage_prefix_as_deviation_alert():
     stub = _SevenIoStub()
     try:
         uid = f"tdd-2122-ac2-{uuid.uuid4().hex[:6]}"
-        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=nutzer_mit_tier(uid))
+        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=mit_profil_chat(nutzer_mit_tier(uid), _settings_sms_only(stub.port)))
         svc.send_deviation_alert(
             trip=trip, weather=[_segment_weather_data()], changes=[_change()],
             effective_channels={"sms"},
@@ -392,7 +393,7 @@ def test_ac3_onset_shift_alert_carries_stage_prefix():
     try:
         svc = NotificationService(
             settings=_settings_sms_only(stub.port),
-            user_id=nutzer_mit_tier(f"tdd-2122-ac3-{uuid.uuid4().hex[:6]}"),
+            user_id=mit_profil_chat(nutzer_mit_tier(f"tdd-2122-ac3-{uuid.uuid4().hex[:6]}"), _settings_sms_only(stub.port)),
         )
         svc.send_deviation_alert(
             trip=trip, weather=[_segment_weather_data()], changes=[change],
@@ -434,7 +435,7 @@ def test_ac5_official_alert_carries_stage_prefix_from_rolling_anchor():
             valid_to=datetime.now(UTC) + timedelta(hours=3),
             region_label="Test-Region",
         )
-        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=nutzer_mit_tier(uid))
+        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=mit_profil_chat(nutzer_mit_tier(uid), _settings_sms_only(stub.port)))
         svc.send_official_alert(
             trip=trip, notices=[(alert, ["1"])], effective_channels={"sms"},
         )
@@ -463,7 +464,7 @@ def test_ac6_radar_alert_uses_segment_date_not_wall_clock_today():
     stub = _SevenIoStub()
     try:
         uid = f"tdd-2122-ac6-{uuid.uuid4().hex[:6]}"
-        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=nutzer_mit_tier(uid))
+        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=mit_profil_chat(nutzer_mit_tier(uid), _settings_sms_only(stub.port)))
 
         def _req(segment_date):
             try:
@@ -679,7 +680,7 @@ def test_ac11_all_three_short_channels_carry_the_same_stage_prefix(monkeypatch):
         monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
         svc = NotificationService(
             settings=_settings_all_short_channels(sms_stub.port),
-            user_id=nutzer_mit_tier(f"tdd-2122-ac11-{uuid.uuid4().hex[:6]}", "premium"),
+            user_id=mit_profil_chat(nutzer_mit_tier(f"tdd-2122-ac11-{uuid.uuid4().hex[:6]}", "premium"), _settings_all_short_channels(sms_stub.port)),
         )
         svc.send_deviation_alert(
             trip=trip, weather=[_segment_weather_data()], changes=[_change()],
@@ -759,7 +760,7 @@ def test_f001_deviation_alert_prefix_follows_trip_local_day_not_server_clock():
         try:
             svc = NotificationService(
                 settings=_settings_sms_only(stub.port),
-                user_id=nutzer_mit_tier(f"tdd-2122-f001-{uuid.uuid4().hex[:6]}"),
+                user_id=mit_profil_chat(nutzer_mit_tier(f"tdd-2122-f001-{uuid.uuid4().hex[:6]}"), _settings_sms_only(stub.port)),
             )
             svc.send_deviation_alert(
                 trip=trip, weather=[_segment_weather_data()], changes=[_change()],
@@ -807,7 +808,7 @@ def test_f002_official_alert_omits_prefix_when_anchor_is_stale():
             valid_to=datetime.now(UTC) + timedelta(hours=3),
             region_label="Test-Region",
         )
-        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=nutzer_mit_tier(uid))
+        svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=mit_profil_chat(nutzer_mit_tier(uid), _settings_sms_only(stub.port)))
         svc.send_official_alert(
             trip=trip, notices=[(alert, ["1"])], effective_channels={"sms"},
         )
@@ -888,7 +889,7 @@ def test_f003_radar_alert_prefix_reaches_the_real_trigger_path():
                 loader_save_trip(trip, user_id=uid)
                 svc = TripAlertService(
                     settings=_settings_sms_only(stub.port),
-                    throttle_hours=0, user_id=uid,
+                    throttle_hours=0, user_id=mit_profil_chat(uid, _settings_sms_only(stub.port)),
                     radar_service=radar_service(CountingFrameSource(onset_minutes=8)),
                 )
                 result = svc.check_radar_alerts()

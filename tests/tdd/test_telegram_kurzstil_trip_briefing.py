@@ -41,6 +41,7 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 from services.notification_service import NotificationService, TripReportRequest
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +238,7 @@ class TestAC2KurzstilRedirectsSmsTextToTelegram:
             _d = get_data_dir(_uid)
             _d.mkdir(parents=True, exist_ok=True)
             (_d / "user.json").write_text(json.dumps({"id": _uid, "tier": "standard"}))
-            svc = NotificationService(settings=settings, user_id=_uid)
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat(_uid, settings))
 
             # RED: TripReportConfig(telegram_style="kurzform") wirft hier TypeError.
             trip = _make_trip(telegram_style="kurzform")
@@ -291,7 +292,7 @@ class TestAC1RichRemainsBubbleList:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
 
             settings = _settings(tg_stub.port, _free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-briefing")
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat("tdd-1260-briefing", settings))
 
             # RED: TripReportConfig(telegram_style="rich") wirft hier TypeError,
             # solange das Feld noch nicht existiert.

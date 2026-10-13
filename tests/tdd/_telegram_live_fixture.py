@@ -15,6 +15,8 @@ from typing import Optional
 
 import httpx as _httpx
 
+from tests.helpers.telegram_empfaenger import antwort_im_update
+
 # ---------------------------------------------------------------------------
 # Konstanten
 # ---------------------------------------------------------------------------
@@ -452,7 +454,8 @@ def run_command_through_pipeline(
         except Exception:
             return ""
 
-        out = TelegramOutput(settings.model_copy(update={"telegram_chat_id": str(chat_id)}))
+        # #1412 S4a: Aufraeumen als Antwort im gerade verarbeiteten Update.
+        out = antwort_im_update(settings, str(chat_id))
         cleanup_ids = (
             [mid for mid in TelegramOutput.recent_message_ids if mid not in baseline_ids]
             if is_on_demand else list(reader.sent_message_ids)
@@ -522,7 +525,8 @@ def deliver_and_cleanup(
     except Exception:
         return (None, False)
 
-    out = TelegramOutput(settings.model_copy(update={"telegram_chat_id": str(chat_id)}))
+    # #1412 S4a: Aufraeumen als Antwort im gerade verarbeiteten Update.
+    out = antwort_im_update(settings, str(chat_id))
 
     if is_on_demand:
         new_ids = [

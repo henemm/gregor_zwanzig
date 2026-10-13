@@ -46,8 +46,9 @@ def telegram_mitschrift(monkeypatch) -> list[dict]:
     mitschrift: list[dict] = []
 
     class _TelegramAufzeichner:
-        def __init__(self, settings) -> None:
-            self._chat = settings.telegram_chat_id
+        def __init__(self, settings, recipient=None) -> None:
+            # #1412 S4a: Ziel ist der belegte Empfaenger, nicht settings.
+            self._chat = recipient.chat_id if recipient else None
 
         def send(self, subject, body, reply_markup=None, *, parse_mode=None,
                  suppress_subject_line=False) -> int:

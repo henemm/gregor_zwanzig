@@ -103,7 +103,16 @@ def clean_uid(user_id: str) -> None:
 def write_user_tier(user_id: str, tier: str) -> None:
     d = get_data_dir(user_id)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"id": user_id, "tier": tier}))
+    # #1412 S4a: Read-Modify-Write -- ein zuvor eingetragener Profil-Chat
+    # (tests.helpers.telegram_empfaenger) bleibt erhalten.
+    datei = d / "user.json"
+    try:
+        profil = json.loads(datei.read_text()) if datei.exists() else {}
+    except ValueError:
+        profil = {}
+    profil = profil if isinstance(profil, dict) else {}
+    profil.update({"id": user_id, "tier": tier})
+    datei.write_text(json.dumps(profil))
 
 
 # ───────────────────────────────── Settings ─────────────────────────────────

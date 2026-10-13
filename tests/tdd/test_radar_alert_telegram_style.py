@@ -46,6 +46,7 @@ from tests.tdd.test_952_onset_alert_fidelity import (
     _clean_user,
     _trip_with_active_segment,
 )
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +163,7 @@ class TestAC1RadarAlertTelegramKurzstil:
 
             from services.trip_alert import TripAlertService
             svc = TripAlertService(
-                settings=_telegram_only_settings(), throttle_hours=0, user_id=uid,
+                settings=_telegram_only_settings(), throttle_hours=0, user_id=mit_profil_chat(uid, _telegram_only_settings()),
                 radar_service=_GuaranteedWetRadar(
                     onset_minutes=12, intensity_label="leichter Regen",
                     is_convective=False,
@@ -217,7 +218,7 @@ class TestAC2RadarAlertTelegramRichRegression:
 
             from services.trip_alert import TripAlertService
             svc = TripAlertService(
-                settings=_telegram_only_settings(), throttle_hours=0, user_id=uid,
+                settings=_telegram_only_settings(), throttle_hours=0, user_id=mit_profil_chat(uid, _telegram_only_settings()),
                 radar_service=_GuaranteedWetRadar(
                     onset_minutes=12, intensity_label="leichter Regen",
                     is_convective=False,
