@@ -271,6 +271,25 @@ Auswertung aufruft. Specs:
 
 **Konfiguration:** Nutzer-Profile liegen in `data/users/<user_id>/user.json` mit Feldern `mail_to` und `telegram_chat_id`.
 
+### Telegram-Empfängervertrag (Issue #1412, Scheibe S4a)
+
+`TelegramOutput` (`src/output/channels/telegram.py`) sendet nur noch an einen **ausdrücklich
+belegten Empfänger** (`TelegramRecipient`, `src/output/channels/recipient.py`) — es gibt keinen
+Rückfall auf den globalen `.env`-Chat:
+- `TelegramRecipient.for_user(user_id, settings)` liest den Chat frisch aus
+  `data/users/<uid>/user.json`; im Testmodus (`is_test_mode`) gilt `telegram_test_chat_id`.
+- `TelegramRecipient.inbound_reply(chat_id)` ist nur innerhalb eines eingehenden Updates und nur
+  an den Absender zulässig (ContextVar-Herkunftsbeleg in `inbound_telegram_reader`).
+- Die Chat-ID wird vor jedem HTTP-Call auf die Form `-?\d{1,20}` geprüft.
+- Ohne Empfänger: Block mit Reason-Code `telegram_no_recipient` bzw. `telegram_no_chat_id`,
+  0 HTTP-Calls.
+- `set_my_commands` / `answer_callback_query` brauchen keinen Empfänger.
+- Test-Knopf „Telegram testen“ (`channel_test_service`) geht an den **Profil-Chat** des Nutzers über
+  den Produktions-Bot (vorher Betreiber-Test-Chat).
+- Debug-CLI lehnt den Kanal `telegram` mit `OutputConfigError` ab.
+
+Spec: `docs/specs/modules/fix_1412_s4a_empfaengervertrag_telegram.md`.
+
 ### Premium-SMS-Rückkanal (Issue #1676, Scheibe S1 — Rückadresse lernen)
 
 **Komponente:** `src/services/inbound_sms_reader.py` (`InboundSmsReader.poll_and_process()`),
