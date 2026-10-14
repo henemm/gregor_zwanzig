@@ -285,6 +285,17 @@ _SHOW_COLUMNS_INFO_LOCATION = (
     "src/services/trip_command_processor.py::_show_columns_info::0"
 )
 _SHOW_CONFIG_LOCATION = "src/services/trip_command_processor.py::_show_config::0"
+_SHOW_HELP_LOCATION = "src/services/trip_command_processor.py::_show_help::0"
+_SHOW_HELP_FOR_KIND_LOCATION = (
+    "src/services/trip_command_processor.py::_show_help_for_kind::0"
+)
+_SHOW_STATUS_LOCATION = "src/services/trip_command_processor.py::_show_status::0"
+_TEXT_ANTWORT_JUSTIFICATION = (
+    "Reine Text-Antwort aus der Trip-Konfiguration ohne Wetterabruf, ohne "
+    "Schreiben und ohne Fehlerausgang — es gibt nichts, was success abbilden "
+    "koennte (#1405 S4a, Praezedenz _show_columns_info/_show_config); "
+    "_show_status nutzt nur das Tagesdatum und die Etappenliste"
+)
 _PUBLIC_HOST_INFO_JUSTIFICATION = (
     "Rein informative Antwort ohne Fehlerpfad, kein fachlicher Erfolgsstatus "
     "— resolve_public_host/resolve_public_url liefert None nur bei nicht "
@@ -1584,119 +1595,12 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     ),
     # B9/B10 entfernt (#2217) — die beiden Trip-Alarmprüfer zählen gescheiterte
     # Trips jetzt in AlertCheckRunResult.failed (Gegenzähler je Einheit).
-    # --- B18: dateiweites Muster, zehn Funktionen, 13 Treffer. Reparatur (S4)
-    # am Stück: EINE Entscheidung darüber, was CommandResult.success bedeutet
-    # (Antwort verfasst vs. zugrundeliegende Aktion erfolgreich).
-    "src/services/trip_command_processor.py::_handle_query::0": (
-        "B18 (#1405) — _handle_query (glance): nach self._fmt_glance(...)."
-    ),
-    "src/services/trip_command_processor.py::_handle_query::1": (
-        "B18 (#1405) — _handle_query (heute_gewitter): nach _fmt_gewitter(...)."
-    ),
-    "src/services/trip_command_processor.py::_handle_query::2": (
-        "B18 (#1405) — _handle_query (timeline_heute): nach _fmt_timeline(...)."
-    ),
-    "src/services/trip_command_processor.py::_handle_query::3": (
-        "B18 (#1405) — _handle_query (timeline_morgen): dito."
-    ),
-    # --- B16 entfernt (#1405 S1, ADR-0086): _trigger_on_demand leitet
-    # `success` jetzt aus outcome ab.
-    "src/services/trip_command_processor.py::_handle_drilldown::0": (
-        "B18 (#1405) — _handle_drilldown: nach WeatherExtractor(...).drilldown()."
-    ),
-    "src/services/trip_command_processor.py::_handle_hours_drilldown::0": (
-        "B18 (#1405) — _handle_hours_drilldown: nach vier drilldown(...)-Abrufen."
-    ),
-    # --- Issue #2134 (Ad-hoc-Abruf aus dem Metrik-Katalog): zwei neue
-    # Fundstellen derselben B18-Signatur, keine neue Klasse.
-    "src/services/trip_command_processor.py::_handle_metric_drilldown::0": (
-        "B18 (#1405, #2134) — _handle_metric_drilldown: unbedingtes "
-        "success=True nach WeatherExtractor(...).drilldown(...). Der "
-        "Ausfall-Zweig davor prueft das Ergebnis sehr wohl "
-        "(`_traegt_werte(res)` -> success=False mit benannter Luecke); "
-        "unverdient ist nur der Erfolgszweig, wie bei _handle_drilldown."
-    ),
-    "src/services/trip_command_processor.py::_show_help::0": (
-        "B18 (#1405, #2134) — _show_help: seit der Ableitung aus "
-        "_COMMAND_SPECS/get_all_metrics() steht ein Aufruf vor dem "
-        "unbedingten success=True. Eine Hilfe KANN nicht scheitern (reine "
-        "Textbildung ohne I/O) — derselbe Reparatur-Vorrat wie "
-        "_show_status, keine Ausnahme in INTENTIONAL_CONSTANT_SUCCESS."
-    ),
-    "src/services/trip_command_processor.py::_apply_ruhetag::0": (
-        "B18 (#1405) — _apply_ruhetag: nach unzugewiesenem save_trip(...)."
-    ),
-    # --- B15 entfernt (#1405 S1, ADR-0086): _trigger_report wertet
-    # send_test_report_outcome(...) aus; success und Text folgen dem Ergebnis.
-    "src/services/trip_command_processor.py::_show_status::0": (
-        "B18 (#1405) — _show_status: matcht über das triviale date.today(). "
-        "Bewusst aufgenommen (Arbeitsvorrat, keine Vorab-Filterung) — die "
-        "Signatur ist syntaktisch, nicht risikobewusst (Spec 'Offene Punkte' 3)."
-    ),
-    "src/services/trip_command_processor.py::_apply_pause::0": (
-        "B18 (#1405) — _apply_pause: nach unzugewiesenem save_trip(...)."
-    ),
-    "src/services/trip_command_processor.py::_apply_skip::0": (
-        "B18 (#1405) — _apply_skip: dito."
-    ),
-    "src/services/trip_command_processor.py::_show_now::0": (
-        "B18 (#1405) — _show_now: nach svc.get_nowcast(...)/format_now_text(...)."
-    ),
-    "src/services/trip_command_processor.py::_cancel_trip::0": (
-        "B18 (#1405) — _cancel_trip: nach bedingtem, unzugewiesenem save_trip(...)."
-    ),
-    "src/services/trip_command_processor.py::_resume_trip::0": (
-        "B18 (#1405) — _resume_trip: dito."
-    ),
-    # --- Issue #2282 Scheibe S1 (Ortsvergleich ueber Eingangskanaele) -----
-    # Dieselbe B18-Signatur wie _apply_pause/_cancel_trip/_resume_trip
-    # oben: nach einem unzugewiesenen RMW-Aufruf (save_compare_preset_pause)
-    # bzw. einer aus dem RMW-Ergebnis (resume_compare_preset) abgeleiteten
-    # Fallunterscheidung folgt ein Rueckgabe-Dict mit hartkodiertem
-    # `success`. Reparatur-Vorrat wie beim Trip-Pendant, keine neue Regel.
-    "src/services/trip_command_processor.py::_apply_compare_pause::0": (
-        "B18 (#1405, Analogie zu _apply_pause) — _apply_compare_pause: nach "
-        "unzugewiesenem save_compare_preset_pause(...)."
-    ),
-    "src/services/trip_command_processor.py::_resume_compare::0": (
-        "B18 (#1405, Analogie zu _resume_trip) — _resume_compare: der "
-        "'resumed'-Zweig behauptet success=True unabhaengig vom konkreten "
-        "Rueckgabewert des vorherigen resume_compare_preset(...)-Aufrufs "
-        "(nur die Statusgleichheit wird geprueft, nicht der Wert selbst "
-        "durchgereicht)."
-    ),
-    "src/services/trip_command_processor.py::_show_help_for_kind::0": (
-        "B18 (#1405, Analogie zu _show_help) — _show_help_for_kind: reine "
-        "Text-Zusammenstellung aus _COMMAND_SPECS, success=True ist "
-        "syntaktisch konstant wie beim Trip-Pendant."
-    ),
-    # --- Issue #2051 S4 (/strecke-Kommando, Adversary-Runde 3): dieselbe
-    # B18-Signatur wie _show_now/_show_status/_handle_query oben -- nach
-    # einem Aufruf (get_nowcast(...)/derive_rain_zones(...)/den beiden
-    # Renderern) folgt ein unbedingtes `success=True`, das nicht auf den
-    # Aufruf Bezug nimmt. Fachlich geprueft (team-lead-Auftrag): `success`
-    # wird von KEINEM Aufrufer gelesen (inbound_telegram_reader.py,
-    # inbound_email_reader.py senden confirmation_subject/-body IMMER
-    # gleich zurueck, unabhaengig vom Wert) -- die Unterscheidung hat heute
-    # keine Verhaltensauswirkung. Fachlich ist `success=True` in allen drei
-    # Zweigen zudem korrekt: das Kommando hat eine gueltige, ehrliche
-    # Antwort verfasst (auch der Ausfall-Zweig AC-7 ist per Spec E1 eine
-    # normale, keine fehlgeschlagene Antwort -- Analogie zu AC-6). Dieselbe
-    # Bestandsentscheidung wie bei den bereits gelisteten Query-Kommandos:
-    # Reparatur-Vorrat (B18), keine Ausnahme in INTENTIONAL_CONSTANT_SUCCESS
-    # (die bleibt strukturell auf den einen Webhook-Fall beschraenkt, AC-14).
-    "src/services/trip_command_processor.py::_show_strecke::0": (
-        "B18 (#1405, Analogie) — _show_strecke: alle Folgepunkte ausgefallen "
-        "(AC-7), nach der Fail-soft-Nowcast-Schleife."
-    ),
-    "src/services/trip_command_processor.py::_show_strecke::1": (
-        "B18 (#1405, Analogie) — _show_strecke: kein Regen erkannt (AC-19), "
-        "nach derive_rain_zones(...)."
-    ),
-    "src/services/trip_command_processor.py::_show_strecke::2": (
-        "B18 (#1405, Analogie) — _show_strecke: Zonen gebildet (Normalfall), "
-        "nach _fmt_strecke_email(...)/_fmt_strecke_telegram(...)."
-    ),
+    # --- B18 entfernt (#1405 S4a, Spec feat_1405_s4a_befehlsantwort_erfolg_wirkung):
+    # alle 21 Trip-Schluessel in trip_command_processor.py. 18 repariert
+    # (Klasse A: Speichern -> divergierender except / `fortgesetzt`; Klasse B:
+    # Wetterabruf -> `success` und Text am selben Befund), 3 reine Text-
+    # Antworten (_show_help, _show_help_for_kind, _show_status) als genehmigte
+    # Ausnahmen in INTENTIONAL_CONSTANT_SUCCESS gefuehrt.
     # --- B17 + der eine neue Fundort: beide zählen ohne Gegenzähler.
     "src/services/trip_report_scheduler.py::send_reports::0": (
         "B17 (#1405) — send_reports: sent_count ohne Gegenzähler, return int."
@@ -1719,8 +1623,9 @@ KNOWN_VIOLATIONS: dict[str, str] = {
 # macht die Ratsche NICHT rot; ein Eintrag ohne nichtleere Begründung dagegen
 # schon (AC-14).
 #
-# Genau EIN Eintrag, und der Scanner meldet die Stelle tatsächlich (AC-14
-# prüft beides): `telegram_webhook` ist strukturell ein Klasse-1-Fund —
+# Der Scanner meldet jede Stelle tatsächlich (AC-14 prüft beides). Erster
+# Eintrag: `telegram_webhook`; seit #1405 S4a kommen die Text-Antworten
+# `_show_help`/`_show_help_for_kind`/`_show_status` hinzu (siehe unten). `telegram_webhook` ist strukturell ein Klasse-1-Fund —
 # `_reader._process_update(update, settings)` steht als unzugewiesener Aufruf
 # im try, der Handler protokolliert nur, danach folgt ein festes
 # {"status": "ok"}. Fachlich ist das trotzdem richtig: die 200-Antwort ist
@@ -1737,6 +1642,10 @@ INTENTIONAL_CONSTANT_SUCCESS: dict[str, str] = {
     _WEBHOOK_ACK_LOCATION: _WEBHOOK_ACK_JUSTIFICATION,
     _SHOW_COLUMNS_INFO_LOCATION: _PUBLIC_HOST_INFO_JUSTIFICATION,
     _SHOW_CONFIG_LOCATION: _PUBLIC_HOST_INFO_JUSTIFICATION,
+    # #1405 S4a (AC-15/AC-18): genau diese drei Klasse-C-Funktionen.
+    _SHOW_HELP_LOCATION: _TEXT_ANTWORT_JUSTIFICATION,
+    _SHOW_HELP_FOR_KIND_LOCATION: _TEXT_ANTWORT_JUSTIFICATION,
+    _SHOW_STATUS_LOCATION: _TEXT_ANTWORT_JUSTIFICATION,
 }
 
 
@@ -1835,40 +1744,10 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # outcome ab; der Scanner findet dort nichts mehr.
     # B17 — toter Code, sent_count ohne Gegenzähler, return int
     "src/services/trip_report_scheduler.py::send_reports": 1,
-    # --- B18 (NEU Version 1.2, E3): dateiweites Muster in ----------------
-    # trip_command_processor.py. Zehn Funktionsschlüssel, 13 Treffer,
-    # dieselbe Mechanik wie B15/B16 — ein abgeleiteter oder unzugewiesener
-    # Aufruf, danach ein hartkodiertes success=True im
-    # CommandResult-Konstruktor, das den abgeleiteten Wert nicht
-    # referenziert. Reparatur (S4) sinnvollerweise am Stück: EINE
-    # Entscheidung darüber, was CommandResult.success bedeuten soll
-    # (Antwort erfolgreich verfasst vs. zugrundeliegende Aktion erfolgreich).
-    # B18 — vier unabhängige Zweige (glance / heute_gewitter /
-    # timeline_heute / timeline_morgen), je nach einem Renderer-Aufruf
-    # (self._fmt_glance/_fmt_gewitter/_fmt_timeline). VIER Treffer: ein
-    # Scanner, der die def-Zeile als Schlüssel nimmt, ließe alle vier auf
-    # einen Eintrag zusammenfallen und käme hier nie über 1.
-    "src/services/trip_command_processor.py::_handle_query": 4,
-    # B18 — res = WeatherExtractor(user_id).drilldown(...)
-    "src/services/trip_command_processor.py::_handle_drilldown": 1,
-    # B18 — r_temp = ex.drilldown(...) (plus drei weitere Ableitungen)
-    "src/services/trip_command_processor.py::_handle_hours_drilldown": 1,
-    # B18 — save_trip(new_trip, user_id) unzugewiesen
-    "src/services/trip_command_processor.py::_apply_ruhetag": 1,
-    # B18 — today = date.today(): trivialer Aufruf, matcht trotzdem
-    # (Signatur ist syntaktisch, nicht risikobewusst — Spec "Offene
-    # Punkte" 3; Arbeitsvorrat statt Vorab-Filterung)
-    "src/services/trip_command_processor.py::_show_status": 1,
-    # B18 — save_trip(new_trip, user_id) unzugewiesen
-    "src/services/trip_command_processor.py::_apply_pause": 1,
-    # B18 — dito
-    "src/services/trip_command_processor.py::_apply_skip": 1,
-    # B18 — result = svc.get_nowcast(...), body = svc.format_now_text(...)
-    "src/services/trip_command_processor.py::_show_now": 1,
-    # B18 — save_trip(new_trip, user_id), bedingt und unzugewiesen
-    "src/services/trip_command_processor.py::_cancel_trip": 1,
-    # B18 — dito
-    "src/services/trip_command_processor.py::_resume_trip": 1,
+    # --- B18 entfernt (#1405 S4a): alle zehn Trip-Funktionsschluessel (13
+    # Treffer) in trip_command_processor.py sind repariert bzw. (Klasse C)
+    # als genehmigte Ausnahme gefuehrt, der Scanner meldet dort nichts
+    # Offenes mehr. AC-17-Prueffolge unten laeuft ueber die uebrigen Schluessel.
     # --- B19/B20 (NEU Version 1.2, E4): die beiden Inbound-Reader --------
     # In Version 1.1 fälschlich als "kein Fund, bereits erfolgsbereinigt"
     # geführt. "processed zählt nur tatsächlich Verarbeitetes" ist fachlich
@@ -1943,13 +1822,15 @@ def test_scanner_finds_every_spec_listed_finding():
     # #1369: B8 (trigger_inbound_telegram) und B20 (Telegram-poll_and_process)
     # durch Löschen des Poll-Pfads entfallen (Mechanik wie B13)
     # -> 19 Schlüssel, Summe 22.
-    assert len(SPEC_LISTED_FINDINGS) == 19 and sum(SPEC_LISTED_FINDINGS.values()) == 22, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 19 "
-        "Funktionsschlüssel, Summe 22 — Version 1.2 minus B13, #1407, minus "
+    # #1405 S4a: minus B18 (zehn Funktionsschluessel, 13 Treffer) -> 9 / 9.
+    assert len(SPEC_LISTED_FINDINGS) == 9 and sum(SPEC_LISTED_FINDINGS.values()) == 9, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 9 "
+        "Funktionsschlüssel, Summe 9 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
         "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2, "
         "minus B9/B10/B11/B11b/B11c, #2217, minus B1/B14a/B14c/B15/B16, "
-        "#1405 S1 ADR-0086, minus B8/B20, #1369 Poll-Pfad geloescht). Ist: "
+        "#1405 S1 ADR-0086, minus B8/B20, #1369 Poll-Pfad geloescht, minus B18 (zehn "
+        "Schluessel, 13 Treffer), #1405 S4a). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )
@@ -3412,6 +3293,10 @@ _APPROVED_EXCEPTIONS = {
     _WEBHOOK_ACK_LOCATION,
     _SHOW_COLUMNS_INFO_LOCATION,
     _SHOW_CONFIG_LOCATION,
+    # #1405 S4a (AC-18): Spec-Entscheidung feat_1405_s4a_befehlsantwort_erfolg_wirkung.
+    _SHOW_HELP_LOCATION,
+    _SHOW_HELP_FOR_KIND_LOCATION,
+    _SHOW_STATUS_LOCATION,
 }
 
 

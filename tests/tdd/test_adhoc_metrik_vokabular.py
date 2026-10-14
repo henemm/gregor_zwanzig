@@ -318,7 +318,11 @@ def test_ac20_gewitter_und_thdr_liefern_zwei_verschiedene_antworten():
     tages = sende(fix, "gewitter", channel="telegram")
     stunden = sende(fix, "Thdr", channel="telegram")
 
-    assert tages.command == "heute_gewitter" and tages.success, (
+    # #1405 S4a AC-21 (bewusste Erwartungsaenderung): zugesichert wird das
+    # Routing, nicht `success`. Die Fixtur legt den Snapshot ab "jetzt" an;
+    # nachmittags liegen die heutigen Etappenpunkte in der Vergangenheit ->
+    # "noch keine Wetterdaten" und korrekt success=False (AC-10).
+    assert tages.command == "heute_gewitter", (
         f"AC-20: `gewitter` muss weiter die Gewitter-Tagesaussage liefern, "
         f"erhalten command={tages.command!r} / success={tages.success} / "
         f"body={tages.confirmation_body!r}"
