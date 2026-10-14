@@ -1392,10 +1392,10 @@ class TripCommandProcessor:
             confirmation_subject=self._t(
                 f"[{name}] Bitte erneut senden", f"[{name}] Please send again"),
             confirmation_body=self._t(
-                "Der Ortsvergleich wird gerade geaendert. Bitte den Befehl in "
-                "einer Minute erneut senden.",
-                "The comparison is being changed right now. Please send the "
-                "command again in a minute."),
+                "Befehl nicht ausgefuehrt: Der Ortsvergleich wird gerade "
+                "geaendert. Bitte in einer Minute erneut senden.",
+                "Command not executed: the comparison is being changed right "
+                "now. Please send it again in a minute."),
             trip_name=name,
         )
 
@@ -3213,10 +3213,10 @@ class TripCommandProcessor:
                     f"[{trip.name}] Bitte erneut senden",
                     f"[{trip.name}] Please send again"),
                 confirmation_body=self._t(
-                    "Der Trip wird gerade geaendert. Bitte den Befehl in einer "
-                    "Minute erneut senden.",
-                    "The trip is being changed right now. Please send the "
-                    "command again in a minute."),
+                    "Befehl nicht ausgefuehrt: Der Trip wird gerade geaendert. "
+                    "Bitte in einer Minute erneut senden.",
+                    "Command not executed: the trip is being changed right now. "
+                    "Please send it again in a minute."),
                 trip_name=trip.name,
             ))
         except LoaderError as e:

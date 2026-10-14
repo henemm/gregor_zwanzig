@@ -396,6 +396,22 @@ def _sperrtext(text: str) -> None:
     assert "STATUS" not in text, f"zentrale Fehlerantwort statt lokaler Sperrmeldung: {text!r}"
 
 
+#: AC-5/AC-8: die Antwort sagt explizit, dass der Befehl NICHT ausgefuehrt
+#: wurde -- der Nutzer soll es nicht aus "wird gerade geaendert" erschliessen.
+_NICHT_AUSGEFUEHRT = {False: "nicht ausgefuehrt", True: "not executed"}
+
+
+def _englisch_am_kanal(kanal: str) -> bool:
+    """Premium-SMS/SMS antworten stets englisch (siehe AC-2-Tests oben)."""
+    return kanal in ("premium_sms", "sms")
+
+
+def _meldet_nicht_ausgefuehrt(text: str, englisch: bool) -> None:
+    erwartet = _NICHT_AUSGEFUEHRT[englisch]
+    assert erwartet in text.lower(), (
+        f"AC-5/AC-8: {erwartet!r} fehlt in der Antwort: {text!r}")
+
+
 def _keine_erfolgsbehauptung(text: str, woerter) -> None:
     kl = text.lower()
     for w in woerter:
@@ -420,23 +436,28 @@ def test_ac5_gesperrter_trip_meldet_nicht_ausgefuehrt(monkeypatch, user_ids, kan
     text = g.alles
     assert any(w in text.lower() for w in _ERNEUT), f"kein Wiederholungshinweis: {text!r}"
     _sperrtext(text)
+    _meldet_nicht_ausgefuehrt(text, _englisch_am_kanal(kanal))
     _keine_erfolgsbehauptung(text, erfolg)
     assert datei.read_bytes() == vorher
 
 
+@pytest.mark.parametrize("englisch", [False, True])
 @pytest.mark.parametrize("name", sorted(KLASSE_A_BEFEHLE))
-def test_ac5_gesperrter_trip_process_success_false(monkeypatch, user_ids, name):
-    """AC-5: ``success=False`` bei gesperrtem Trip."""
+def test_ac5_gesperrter_trip_process_success_false(monkeypatch, user_ids, name, englisch):
+    """AC-5: ``success=False`` bei gesperrtem Trip; Text sagt "nicht
+    ausgefuehrt" bzw. "not executed"."""
     befehl, _ = KLASSE_A_BEFEHLE[name]
     recorder, nutzer, _ = _umgebung(monkeypatch, user_ids)
     frist_verkuerzen(monkeypatch, 0.3)
 
     with fremde_sperre(lock_pfad(nutzer.user_id, nutzer.trip.id)):
-        res, exc = process_direkt(nutzer, befehl)
+        res, exc = process_direkt(nutzer, befehl, englisch=englisch)
 
     r = _ergebnis(res, exc)
     assert r.success is False
     _sperrtext(_vol(r))
+    _meldet_nicht_ausgefuehrt(r.confirmation_body, englisch)
+    assert len(r.confirmation_body) <= MAX_SMS, r.confirmation_body
 
 
 def _datei_unter_falschem_namen(nutzer: BefehlNutzer) -> Path:
@@ -564,20 +585,24 @@ def test_ac8_gesperrter_vergleich_meldet_nicht_ausgefuehrt(monkeypatch, user_ids
     _ohne_ladehinweis(g, kanal)
     assert any(w in g.alles.lower() for w in _ERNEUT), g.alles
     _sperrtext(g.alles)
+    _meldet_nicht_ausgefuehrt(g.alles, _englisch_am_kanal(kanal))
     _keine_erfolgsbehauptung(g.alles, ("pausiert unbefristet", "paused until", "ortsvergleich pausiert"))
     assert datei.read_bytes() == vorher
 
 
-def test_ac8_gesperrter_vergleich_process_success_false(monkeypatch, user_ids):
+@pytest.mark.parametrize("englisch", [False, True])
+def test_ac8_gesperrter_vergleich_process_success_false(monkeypatch, user_ids, englisch):
     recorder, nutzer, _ = _umgebung(monkeypatch, user_ids, "L4")
     frist_verkuerzen(monkeypatch, 0.3)
 
     with _preset_sperre(nutzer):
-        res, exc = process_direkt(nutzer, "pause", vergleich=True)
+        res, exc = process_direkt(nutzer, "pause", englisch=englisch, vergleich=True)
 
     r = _ergebnis(res, exc)
     assert r.success is False
     _sperrtext(_vol(r))
+    _meldet_nicht_ausgefuehrt(r.confirmation_body, englisch)
+    assert len(r.confirmation_body) <= MAX_SMS, r.confirmation_body
 
 
 @pytest.mark.parametrize("kanal", KANAELE)
