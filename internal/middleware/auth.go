@@ -59,7 +59,10 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 				r.URL.Path == "/api/auth/invite/check" ||
 				// Issue #2155 S2: /api/debug/ ist NICHT mehr oeffentlich --
 				// die Debug-Routen laufen durch Session + RequireAdmin.
-				strings.HasPrefix(r.URL.Path, "/api/webhooks/telegram/") {
+				strings.HasPrefix(r.URL.Path, "/api/webhooks/telegram/") ||
+				// Issue #2439: Push-Eingang Befehle -- eng auf die beiden Praefixe.
+				strings.HasPrefix(r.URL.Path, "/api/webhooks/sms/") ||
+				strings.HasPrefix(r.URL.Path, "/api/webhooks/mail/") {
 				next.ServeHTTP(w, r)
 				return
 			}

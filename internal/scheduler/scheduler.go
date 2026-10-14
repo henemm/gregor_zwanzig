@@ -161,6 +161,13 @@ type Scheduler struct {
 	jobLocksMu sync.Mutex
 	jobLocks   map[string]*sync.Mutex
 
+	// pushMu/push/kickSleep: Push-Weckruf der Befehls-Poll-Jobs (Issue #2439,
+	// push_kick.go). kickSleep ist die injizierbare Wartefunktion (nil =
+	// time.Sleep).
+	pushMu    sync.Mutex
+	push      map[string]*pushState
+	kickSleep func(time.Duration)
+
 	// notifier delivers MQ messages (e.g. heartbeat-URL missing). Defaults to
 	// notify.SendMQ; tests inject their own.
 	notifier Notifier
@@ -859,9 +866,7 @@ func (s *Scheduler) dataWriteSelftest() {
 }
 
 func (s *Scheduler) inboundCommands() {
-	s.recordRun("inbound_command_poll", func() error {
-		return s.triggerGlobalEndpoint("/api/scheduler/inbound-commands")
-	})
+	s.cronPoll(JobInboundCommandPoll)
 }
 
 // premiumSmsPoll triggert den seven.io-Journal-Abruf des Python-Core (Issue
@@ -877,9 +882,7 @@ func (s *Scheduler) inboundCommands() {
 // wird -- ein voruebergehender heilt sich durch den Zeiger-Fix (Fix F001,
 // Python-Seite) im naechsten Lauf von selbst.
 func (s *Scheduler) premiumSmsPoll() {
-	s.recordRun("premium_sms_poll", func() error {
-		return s.triggerPremiumSmsPollEndpoint()
-	})
+	s.cronPoll(JobPremiumSMSPoll)
 }
 
 // triggerPremiumSmsPollEndpoint ruft POST /api/scheduler/inbound-sms auf und
@@ -889,6 +892,12 @@ func (s *Scheduler) premiumSmsPoll() {
 // inbound_command_poll und weitere Jobs daran haengen, die dieses Verhalten
 // nicht wollen.
 func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
+	return s.triggerPremiumSmsPollEndpointRes(nil)
+}
+
+// triggerPremiumSmsPollEndpointRes wie triggerPremiumSmsPollEndpoint; res
+// (optional) nimmt `processed`/busy auf (Issue #2439).
+func (s *Scheduler) triggerPremiumSmsPollEndpointRes(res *pollResult) error {
 	url := s.pythonURL + "/api/scheduler/inbound-sms"
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
@@ -912,6 +921,7 @@ func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
 
 	var parsed triggerResponseBody
 	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil {
+		fillPollResult(res, parsed)
 		if parsed.Failed > 0 {
 			return fmt.Errorf(
 				"/api/scheduler/inbound-sms reported %d failed learn call(s) "+
@@ -966,8 +976,16 @@ func (s *Scheduler) jobLock(jobID string) *sync.Mutex {
 // of skipping it, and robfig/cron would stack goroutines under frequent
 // overlap.
 func (s *Scheduler) recordRun(jobID string, fn func() error) {
+	s.runJob(jobID, fn, false)
+}
+
+// runJob ist recordRun; wait=true (Push-Kick, Issue #2439) wartet auf den
+// jobLock statt den Lauf zu ueberspringen.
+func (s *Scheduler) runJob(jobID string, fn func() error, wait bool) {
 	lock := s.jobLock(jobID)
-	if !lock.TryLock() {
+	if wait {
+		lock.Lock()
+	} else if !lock.TryLock() {
 		now := time.Now().In(s.cron.Location())
 		s.mu.Lock()
 		st, ok := s.overlapState[jobID]
@@ -1046,6 +1064,8 @@ type triggerResponseBody struct {
 	Status string `json:"status"`
 	Count  int    `json:"count"`
 	Failed int    `json:"failed"`
+	// Issue #2439: verarbeitete Befehle des Poll-Laufs (Push-Nachversuch/AC-13).
+	Processed int `json:"processed"`
 	// reason/skipped/duration_s (Issue #1539 S0): skipped_ids wird bewusst
 	// NICHT gelesen -- es duerfen nie IDs im Status landen.
 	Reason    string  `json:"reason"`
@@ -1139,6 +1159,12 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 // Issue #200: inbound IMAP polling targets a shared mailbox; one tick must
 // produce exactly one IMAP login, not N (one per user).
 func (s *Scheduler) triggerGlobalEndpoint(path string) error {
+	return s.triggerGlobalEndpointRes(path, nil)
+}
+
+// triggerGlobalEndpointRes wie triggerGlobalEndpoint; res (optional) nimmt
+// `processed`/busy aus dem Antwortkoerper auf (Issue #2439).
+func (s *Scheduler) triggerGlobalEndpointRes(path string, res *pollResult) error {
 	url := s.pythonURL + path
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
@@ -1158,8 +1184,21 @@ func (s *Scheduler) triggerGlobalEndpoint(path string) error {
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
+	var parsed triggerResponseBody
+	if json.Unmarshal(body, &parsed) == nil {
+		fillPollResult(res, parsed)
+	}
 	log.Printf("[scheduler] %s → %d", path, resp.StatusCode)
 	return nil
+}
+
+// fillPollResult uebernimmt processed/busy der Python-Antwort (res darf nil sein).
+func fillPollResult(res *pollResult, parsed triggerResponseBody) {
+	if res == nil {
+		return
+	}
+	res.Processed = parsed.Processed
+	res.Busy = parsed.Status == "busy"
 }
 
 // pingHeartbeat sends a GET to BetterStack. Fire-and-forget with logging.
@@ -1372,6 +1411,9 @@ func (s *Scheduler) Status() map[string]any {
 			}
 			if aborts := s.deadlineAbortsField(meta.id); aborts != nil {
 				job["deadline_aborts"] = aborts
+			}
+			if push := s.pushField(meta.id); push != nil {
+				job["push"] = push
 			}
 			jobs = append(jobs, job)
 		}

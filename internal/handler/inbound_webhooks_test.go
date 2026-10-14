@@ -8,15 +8,18 @@ package handler
 //          (kein Lauf am Server, rejected_total++, last_received bleibt nil)
 //   AC-4   TestSMSWebhook_503_* / TestMailWebhook_503_*
 //   AC-9   TestWebhooks_StatusZaehler_GueltigUndAbgewiesen (Zaehler im Status)
-//   AC-12  Die SMS-Signatur wird ausschliesslich gegen die AUFGEZEICHNETE
-//          Fixture internal/handler/testdata/seven_sms_mo.json geprueft; hier
-//          wird NICHTS selbst nach einem angenommenen HMAC-Schema signiert.
+//   AC-12  Die SMS-Signatur wird ausschliesslich gegen die Fixture
+//          internal/handler/testdata/seven_sms_mo.json geprueft -- ein Testvektor
+//          (Test-Schluessel, Fantasienummern) nach dem gegen seven.io belegten
+//          Algorithmus (docs/artifacts/feat-2439-befehle-push-eingang/
+//          seven-signatur-nachweis.md, testdata/README.md); hier wird NICHTS
+//          selbst signiert.
 //          Fehlt die Datei, scheitern die SMS-Tests mit klarer Meldung (t.Fatalf).
 //   AC-1/AC-2 (Handler-Seite) TestSMSWebhook_Gueltig_* / TestMailWebhook_Gueltig_*
 //          (200 + der Poll-Job laeuft am Server SOFORT, ohne 5-min-Tick).
 //
-// Die Fixture muss vor GREEN echt mitgeschnitten werden (Request-Catcher oder
-// Staging-Hook). Erwartetes Format (JSON):
+// Die Fixture ist ein Testvektor (kein Mitschnitt: der echte Schluessel und echte
+// Nummern duerfen nicht ins Repo). Format (JSON):
 //   { "url": "<volle Ziel-URL inkl. Pfad-Secret>", "method": "POST",
 //     "headers": { "X-Signature": ..., "X-Timestamp": ..., "X-Nonce": ...,
 //                  "Content-Type": ... },
@@ -200,9 +203,8 @@ func ladeSevenFixture(t *testing.T) sevenFixture {
 	raw, err := os.ReadFile(p)
 	if err != nil {
 		t.Fatalf("AC-12: aufgezeichnete seven.io-Fixture %s fehlt (%v). Sie muss vor GREEN "+
-			"mit einem ECHTEN sms_mo-Request mitgeschnitten werden (Header X-Signature/"+
-			"X-Timestamp/X-Nonce, roher Body, Signing-Key, PublicHost) -- NICHT selbst "+
-			"nach einem angenommenen HMAC-Schema erzeugen.", p, err)
+			"als Testvektor nach dem belegten Algorithmus vorliegen (Header X-Signature/"+
+			"X-Timestamp/X-Nonce, roher Body, Test-Signing-Key, PublicHost, siehe testdata/README.md).", p, err)
 	}
 	var f sevenFixture
 	if err := json.Unmarshal(raw, &f); err != nil {
