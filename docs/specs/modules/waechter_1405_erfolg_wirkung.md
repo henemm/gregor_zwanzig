@@ -392,7 +392,17 @@ umgekehrt: ein Eintrag hier bedeutet „bewusst erlaubt", nicht „Reparatur
 ausstehend". Ein Fund, der auf dieser Liste steht, zählt NICHT als
 `KNOWN_VIOLATIONS`-Eintrag und macht die Ratsche nicht rot.
 
-Einziger bekannter Eintrag: `api/routers/webhook.py:72`
+**Nachzug #1405 S4a (2026-10-14, Spec `feat_1405_s4a_befehlsantwort_erfolg_wirkung`,
+AC-15/AC-18):** die Liste ist um genau drei Klasse-C-Funktionen gewachsen —
+`_show_help`, `_show_help_for_kind`, `_show_status` in
+`trip_command_processor.py`. Begründung: reine Text-Antworten aus der
+Trip-Konfiguration ohne Wetterabruf, ohne Schreiben, ohne Fehlerausgang
+(`_show_status` nutzt nur das Tagesdatum und die Etappenliste); es gibt nichts,
+was `success` abbilden könnte — Präzedenz `_show_columns_info`/`_show_config`.
+`_is_pure_computation_call` bleibt unverändert (Gate-Code, würde den Wächter
+repo-weit lockern).
+
+Ursprünglich einziger bekannter Eintrag: `api/routers/webhook.py:72`
 (`telegram_webhook`) — Begründungstext MUSS wörtlich die Unterscheidung
 tragen: „Protokoll-Empfangsbestätigung an Telegram, kein fachlicher
 Erfolgsstatus — verhindert Retry-Sturm (dokumentiert im Docstring, Z.
@@ -502,6 +512,19 @@ Scan-Ergebnis):
 | `src/services/notification_service.py::_send_service_error_email` | 1 |
 
 **Stand nach #1405 S1 (ADR-0086, 2026-10-09):** `SPEC_LISTED_FINDINGS` führt noch **21** Funktionsschlüssel mit **Summe 24** (vorher 26/35). Entfernt: `send_test_trip_report` (B1, 1), `send_official_alert` (B14a, 4), `_dispatch_alert_message` (B14c, 4), `_trigger_report` (B15, 1), `_trigger_on_demand` (B16, 1). Die Tabelle oben bleibt als historische Herleitung stehen; maßgeblich ist der Kopfkommentar von `SPEC_LISTED_FINDINGS`.
+
+**Stand nach #1405 S4a (2026-10-14):** `SPEC_LISTED_FINDINGS` führt noch **9**
+Funktionsschlüssel mit **Summe 9** (vorher 19/22). Entfernt: alle zehn B18-Schlüssel
+(`_handle_query` 4, `_handle_drilldown`, `_handle_hours_drilldown`, `_apply_ruhetag`,
+`_show_status`, `_apply_pause`, `_apply_skip`, `_show_now`, `_cancel_trip`,
+`_resume_trip` = 13 Treffer). `KNOWN_VIOLATIONS` verliert alle 21 Trip-Schlüssel
+(18 repariert, 3 Klasse C als genehmigte Ausnahme). Restliste außerhalb des
+Trip-Befehlsprozessors: **gemessen** am 2026-10-14 — `len(KNOWN_VIOLATIONS)` des
+Erfolgs-Wächters 31 → **10** (Alt-Stand aus dem HEAD-Stand von `tests/test_success_status_guard.py`,
+Neu-Stand per Import der Datei und `len(KNOWN_VIOLATIONS)`);
+`_all_violations()` findet 16 = 10 offene + 6 genehmigte Ausnahmen
+(`INTENTIONAL_CONSTANT_SUCCESS`); Auflösungs-Wächter (`tests/test_resolution_loss_guard.py`)
+unverändert **22**. Die Zahl 31 im S4a-Briefing war damit korrekt.
 
 **Summe der Mindest-Treffer = 45**, verteilt über **38** Funktionsschlüssel
 (23 aus Version 1.1 + 10 aus B18 + 2 aus B19/B20 + 3 aus B21), die **23**
@@ -807,3 +830,12 @@ B15–B17-Aufnahme trotz totem Code).
   bleibt unverändert; ein neuer synthetischer Nachweis (AC-27 der Spec
   `fix_1405_s1_alarm_zustellung.md`) belegt, dass ein
   `attempted_channels.append` VOR einem riskanten `try` weiterhin ein Fund ist.
+- 2026-10-14 (Nachzug Issue #1405 Scheibe S4a): B18 komplett aus
+  `KNOWN_VIOLATIONS`/`SPEC_LISTED_FINDINGS` entfernt (21 Trip-Schlüssel, zehn
+  Funktionsschlüssel/13 Treffer) — Anker `len == 9 and sum == 9`. Klasse A
+  (Speichern) über divergierenden `except _SpeicherFehler`, Klasse B
+  (Wetterabruf) über einen Return, dessen `success` am selben Befund hängt wie
+  der Text; Klasse C (`_show_help`, `_show_help_for_kind`, `_show_status`) als
+  genehmigte Ausnahmen (Ausnahmeliste 3 → 6). Zentraler Fang in
+  `TripCommandProcessor.process()`: Programmfehler im Handler liefert eine
+  Fehlerantwort statt Schweigen.

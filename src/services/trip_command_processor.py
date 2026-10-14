@@ -965,6 +965,14 @@ class _NothingToChange(Exception):
     """Mutation findet auf dem frischen Trip nichts zu aendern (kein Schreiben)."""
 
 
+class _SpeicherFehler(Exception):
+    """#1405 S4a: Speichern gescheitert -- traegt die Fehlerantwort an den Nutzer."""
+
+    def __init__(self, result: "CommandResult"):
+        super().__init__(result.command)
+        self.result = result
+
+
 class TripCommandProcessor:
     """Processes trip commands from any inbound channel."""
 
@@ -976,8 +984,33 @@ class TripCommandProcessor:
         return en if self._en else de
 
     def process(self, msg: InboundMessage) -> CommandResult:
-        """Parse, validate, and execute a trip command."""
+        """Parse, validate, and execute a trip command.
+
+        #1405 S4a: ein Programmfehler im Handler darf den Nutzer nicht ohne
+        Antwort lassen (Mail/SMS/Telegram verschicken jede Antwort) -- er
+        bleibt mit Traceback im Protokoll, der Nutzer bekommt eine kurze
+        Fehlerantwort. Bewusst KEIN "bitte erneut senden": skip/ruhetag/heute
+        sind nicht wiederholungsfest.
+        """
         self._en = msg.englisch or msg.channel in _KURZFORM_KANAELE
+        try:
+            return self._process(msg)
+        except Exception:
+            logger.exception(
+                "Kommando %r fuer Trip %r: unerwarteter Fehler", msg.body, msg.trip_name)
+            return CommandResult(
+                success=False, command="error",
+                confirmation_subject=self._t("Befehl fehlgeschlagen", "Command failed"),
+                confirmation_body=self._t(
+                    "Befehl konnte nicht sicher ausgefuehrt werden. Bitte mit "
+                    "STATUS pruefen, bevor du ihn erneut sendest.",
+                    "Command could not be run safely. Please check with STATUS "
+                    "before you send it again."),
+                trip_name=msg.trip_name,
+            )
+
+    def _process(self, msg: InboundMessage) -> CommandResult:
+        """Eigentliche Verarbeitung von ``process`` (ohne Fehlerfang)."""
         # Issue #2282 Abschnitt 5: die Vergleichs-Dispatch-Weiche laeuft VOR
         # jedem Trip-Zweig (Drilldown/Query/Hilfe/Metrikwort/Dispatch) — der
         # unveraenderte Trip-Pfad darunter bleibt byte-gleich.
@@ -1330,9 +1363,12 @@ class TripCommandProcessor:
         ``_show_help_for_kind``) dem tatsaechlichen Verhalten widersprechen."""
         from services.scheduler_dispatch_service import save_compare_preset_pause
 
-        if save_compare_preset_pause(user_id, preset_id) is False:
-            # #2158: Sperr-Fristablauf/Lesefehler -- nie "pausiert" behaupten.
-            return self._compare_erneut_senden(name, "pause")
+        try:
+            if save_compare_preset_pause(user_id, preset_id) is False:
+                # #2158: Sperr-Fristablauf/Lesefehler -- nie "pausiert" behaupten.
+                raise _SpeicherFehler(self._compare_erneut_senden(name, "pause"))
+        except _SpeicherFehler as e:
+            return e.result
         hinweis = self._t(
             " Eine angegebene Dauer wird nicht ausgewertet.",
             " A given duration is ignored.",
@@ -1370,23 +1406,18 @@ class TripCommandProcessor:
         status = resume_compare_preset(user_id, preset_id)
         if status == "lock_timeout":
             return self._compare_erneut_senden(name, "weiter")
-        if status != "resumed":
-            return CommandResult(
-                success=False, command="weiter",
-                confirmation_subject=self._t(
-                    f"[{name}] Ortsvergleich", f"[{name}] Comparison"),
-                confirmation_body=self._t(
-                    f"Ortsvergleich '{name}' ist nicht pausiert.",
-                    f"Comparison '{name}' is not paused."),
-                trip_name=name,
-            )
+        fortgesetzt = status == "resumed"
         return CommandResult(
-            success=True, command="weiter",
-            confirmation_subject=self._t(
-                f"[{name}] Ortsvergleich fortgesetzt", f"[{name}] Comparison resumed"),
-            confirmation_body=self._t(
-                f"Ortsvergleich '{name}' wieder aktiv.",
-                f"Comparison '{name}' active again."),
+            success=fortgesetzt, command="weiter",
+            confirmation_subject=(
+                self._t(f"[{name}] Ortsvergleich fortgesetzt",
+                        f"[{name}] Comparison resumed") if fortgesetzt
+                else self._t(f"[{name}] Ortsvergleich", f"[{name}] Comparison")),
+            confirmation_body=(
+                self._t(f"Ortsvergleich '{name}' wieder aktiv.",
+                        f"Comparison '{name}' active again.") if fortgesetzt
+                else self._t(f"Ortsvergleich '{name}' ist nicht pausiert.",
+                             f"Comparison '{name}' is not paused.")),
             trip_name=name,
         )
 
@@ -1473,53 +1504,73 @@ class TripCommandProcessor:
             from_time=received_at,
         )
 
+        # Fallback (should not reach)
+        if query_key not in ("glance", "heute_gewitter", "timeline_heute",
+                             "timeline_morgen"):
+            return CommandResult(
+                success=False, command=query_key,
+                confirmation_subject="Fehler",
+                confirmation_body="Unbekannter Query-Key.",
+                trip_name=trip.name,
+            )
+
+        # #1405 S4a: EIN Return -- `success` und Text haengen am selben Befund
+        # ("Wetterdaten fuer den angefragten Tag fehlen", tagesgenau).
+        luecke_heute = self._wetterdaten_fehlen(timeline, trip, today, tz_heute)
+        luecke_morgen = self._wetterdaten_fehlen(timeline, trip, tomorrow, tz_morgen)
+        buttons = None
         if query_key == "glance":
             body = self._fmt_glance(timeline, today, tomorrow, tz_heute, tz_morgen,
                                     trip=trip, channel=channel)
-            return CommandResult(
-                success=True, command="glance",
-                confirmation_subject=f"[{trip.name}] Glance",
-                confirmation_body=body,
-                trip_name=trip.name,
-                reply_markup=_GLANCE_BUTTONS,
-            )
+            subject = f"[{trip.name}] Glance"
+            # Glance fragt zwei Tage: nur wenn KEIN Tag Daten traegt UND
+            # mindestens einer eine Luecke ist, fehlen die Daten.
+            agg_vorhanden = timeline.available and bool(
+                self._aggregate_day(timeline, today, tz_heute)
+                or self._aggregate_day(timeline, tomorrow, tz_morgen))
+            fehlen = not timeline.available or (
+                not agg_vorhanden and (luecke_heute or luecke_morgen))
+            buttons = _GLANCE_BUTTONS
         elif query_key == "heute_gewitter":
             body = self._fmt_gewitter(timeline, today, tz_heute, trip=trip,
                                       channel=channel)
-            return CommandResult(
-                success=True, command="heute_gewitter",
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Gewitter heute", f"[{trip.name}] Storms today"),
-                confirmation_body=body,
-                trip_name=trip.name,
-            )
+            subject = self._t(f"[{trip.name}] Gewitter heute", f"[{trip.name}] Storms today")
+            fehlen = luecke_heute
         elif query_key == "timeline_heute":
             body = self._fmt_timeline(timeline, today, self._t("Heute", "Today"), "today",
                                       tz_heute, trip=trip, channel=channel)
-            return CommandResult(
-                success=True, command="timeline_heute",
-                confirmation_subject=f"[{trip.name}] Timeline {self._t('heute', 'today')}",
-                confirmation_body=body,
-                trip_name=trip.name,
-                reply_markup=self._timeline_buttons(timeline, today, "today", tz_heute),
-            )
-        elif query_key == "timeline_morgen":
+            subject = f"[{trip.name}] Timeline {self._t('heute', 'today')}"
+            fehlen = luecke_heute
+            buttons = self._timeline_buttons(timeline, today, "today", tz_heute)
+        else:
             body = self._fmt_timeline(timeline, tomorrow, self._t("Morgen", "Tomorrow"),
                                       "tomorrow", tz_morgen, trip=trip, channel=channel)
-            return CommandResult(
-                success=True, command="timeline_morgen",
-                confirmation_subject=f"[{trip.name}] Timeline {self._t('morgen', 'tomorrow')}",
-                confirmation_body=body,
-                trip_name=trip.name,
-                reply_markup=self._timeline_buttons(timeline, tomorrow, "tomorrow", tz_morgen),
-            )
-        # Fallback (should not reach)
+            subject = f"[{trip.name}] Timeline {self._t('morgen', 'tomorrow')}"
+            fehlen = luecke_morgen
+            buttons = self._timeline_buttons(timeline, tomorrow, "tomorrow", tz_morgen)
         return CommandResult(
-            success=False, command=query_key,
-            confirmation_subject="Fehler",
-            confirmation_body="Unbekannter Query-Key.",
+            success=not fehlen, command=query_key,
+            confirmation_subject=subject,
+            confirmation_body=body,
             trip_name=trip.name,
+            reply_markup=buttons,
         )
+
+    def _wetterdaten_fehlen(self, timeline, trip: Trip, target_date: date, tz) -> bool:
+        """#1405 S4a: fehlen die Wetterdaten fuer ``target_date``?
+
+        Genau der Befund, der in den Formatierern den Ohne-Daten-Text waehlt:
+        gar kein Snapshot, oder fuer den Tag keine Punkte BEI geplanter Etappe
+        (Datenluecke, ``_tagesaussage_ohne_daten``). Ein Tag ohne Etappe ist
+        keine Datenluecke ("Keine Etappe geplant" stimmt).
+        """
+        if not timeline.available:
+            return True
+        if any(local_dt(p.arrival_time, tz).date() == target_date
+               for p in timeline.points):
+            return False
+        from services.trip_segments import convert_trip_to_segments
+        return bool(convert_trip_to_segments(trip, target_date))
 
     def _trigger_on_demand(
         self, trip: Trip, report_type: str, label: str, user_id: str,
@@ -1615,36 +1666,34 @@ class TripCommandProcessor:
             )
             if hail_res.available:
                 hail_by_ts = {pt.ts: pt.value for pt in hail_res.points}
+        # #1405 S4a: EIN Return -- `res.available` waehlt Text UND `success`.
+        markup = None
         if not res.available:
-            return CommandResult(
-                success=False,
-                command=f"dd_{metric}_{day_token}",
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Keine stündlichen Daten", f"[{trip.name}] No hourly data"),
-                confirmation_body=self._t(
-                    "Keine stündlichen Daten verfügbar. "
-                    "Bitte einen Report anfordern um aktuelle Daten zu laden.",
-                    "No hourly data available. Please request a briefing to load data.",
-                ),
-                trip_name=trip.name,
-            )
-
-        # #2417 AC-5: Telegram-Kurzform bekommt die sprachneutrale Kurzform.
-        if _ist_kurzform_kanal(channel) or self._en:
-            body = self._format_drilldown_kurzform(
-                res, definition, tz, folgetag=(day_token == "tomorrow"),
+            subject = self._t(
+                f"[{trip.name}] Keine stündlichen Daten", f"[{trip.name}] No hourly data")
+            body = self._t(
+                "Keine stündlichen Daten verfügbar. "
+                "Bitte einen Report anfordern um aktuelle Daten zu laden.",
+                "No hourly data available. Please request a briefing to load data.",
             )
         else:
-            body = self._format_drilldown(
-                res, header, fmt, tz, with_emoji=with_emoji, hail_by_ts=hail_by_ts,
-            )
-        back = "tl_today" if day_token == "today" else "tl_tomorrow"
-        markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
+            subject = self._t(f"[{trip.name}] {header} stündlich",
+                              f"[{trip.name}] {_kurzform_kuerzel(definition)}")
+            # #2417 AC-5: Telegram-Kurzform bekommt die sprachneutrale Kurzform.
+            if _ist_kurzform_kanal(channel) or self._en:
+                body = self._format_drilldown_kurzform(
+                    res, definition, tz, folgetag=(day_token == "tomorrow"),
+                )
+            else:
+                body = self._format_drilldown(
+                    res, header, fmt, tz, with_emoji=with_emoji, hail_by_ts=hail_by_ts,
+                )
+            back = "tl_today" if day_token == "today" else "tl_tomorrow"
+            markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
         return CommandResult(
-            success=True,
+            success=res.available,
             command=f"dd_{metric}_{day_token}",
-            confirmation_subject=self._t(f"[{trip.name}] {header} stündlich",
-                                         f"[{trip.name}] {_kurzform_kuerzel(definition)}"),
+            confirmation_subject=subject,
             confirmation_body=body,
             reply_markup=markup,
             trip_name=trip.name,
@@ -1695,21 +1744,9 @@ class TripCommandProcessor:
         # Kurzform (eigene Pruefung, _KURZFORM_KANAELE bleibt unveraendert, AC-7).
         kurzform = _ist_kurzform_kanal(channel) or self._en
         betreff = f"[{trip.name}] " + (_kurzform_kuerzel(metric) if self._en else metric.label_de)
-        if not _traegt_werte(res):
-            # Gefuehrt heisst nicht gefuellt — auch die Kurzform SAGT das
-            # (Issue #2207, AC-13), auf englisch wie der uebrige Kurztext.
-            return CommandResult(
-                success=False, command=f"metrik_{metric_id}",
-                confirmation_subject=betreff,
-                confirmation_body=(
-                    fold_ascii(f"{_kurzform_kuerzel(metric)} no data")
-                    if kurzform else
-                    f"{metric.label_de}: für diesen Ort und Zeitraum nicht "
-                    f"verfügbar (keine stündlichen Werte vorhanden)."
-                ),
-                trip_name=trip.name,
-            )
-        if tageswert:
+        # #1405 S4a: `traegt` waehlt Ohne-Werte-Text UND `success` (ein Return).
+        traegt = _traegt_werte(res)
+        if traegt and tageswert:
             werte = [p.value for p in res.points if p.value is not None]
             wert = max(werte) if "max" in metric.default_aggregations else min(werte)
             return CommandResult(
@@ -1721,23 +1758,37 @@ class TripCommandProcessor:
                 ),
                 trip_name=trip.name,
             )
-        if kurzform:
-            body = self._format_drilldown_kurzform(
-                res, metric, tz, folgetag=(day_token == "tomorrow"),
+        markup = None
+        if not traegt:
+            # Gefuehrt heisst nicht gefuellt — auch die Kurzform SAGT das
+            # (Issue #2207, AC-13), auf englisch wie der uebrige Kurztext.
+            subject = betreff
+            body = (
+                fold_ascii(f"{_kurzform_kuerzel(metric)} no data")
+                if kurzform else
+                f"{metric.label_de}: für diesen Ort und Zeitraum nicht "
+                f"verfügbar (keine stündlichen Werte vorhanden)."
             )
         else:
-            body = self._format_drilldown(
-                res, metric.label_de, _metric_formatter(metric), tz,
-                with_emoji=(channel == "telegram"),
-            )
-        back = "tl_today" if day_token == "today" else "tl_tomorrow"
-        return CommandResult(
-            success=True, command=f"metrik_{metric_id}",
-            confirmation_subject=betreff if self._en else f"[{trip.name}] {metric.label_de} stündlich",
-            confirmation_body=body,
-            reply_markup={"inline_keyboard": [
+            if kurzform:
+                body = self._format_drilldown_kurzform(
+                    res, metric, tz, folgetag=(day_token == "tomorrow"),
+                )
+            else:
+                body = self._format_drilldown(
+                    res, metric.label_de, _metric_formatter(metric), tz,
+                    with_emoji=(channel == "telegram"),
+                )
+            back = "tl_today" if day_token == "today" else "tl_tomorrow"
+            subject = betreff if self._en else f"[{trip.name}] {metric.label_de} stündlich"
+            markup = {"inline_keyboard": [
                 [{"text": "⬅️ Zurück", "callback_data": back}]
-            ]},
+            ]}
+        return CommandResult(
+            success=traegt, command=f"metrik_{metric_id}",
+            confirmation_subject=subject,
+            confirmation_body=body,
+            reply_markup=markup,
             trip_name=trip.name,
         )
 
@@ -1798,46 +1849,44 @@ class TripCommandProcessor:
         # gemappt werden — eine einzelne Luecke wird jetzt BENANNT.
         nutzbar = [s for s in spalten if _traegt_werte(ergebnis[s[1]])]
         fehlend = [s for s in spalten if s not in nutzbar]
+        # #1405 S4a: EIN Return -- `nutzbar` waehlt Text UND `success`.
+        markup = None
         if not nutzbar:
-            return CommandResult(
-                success=False,
-                command=f"dd_hours_{day_token}",
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Keine stündlichen Daten", f"[{trip.name}] No hourly data"),
-                confirmation_body=self._t(
-                    "Keine stündlichen Daten verfügbar. "
-                    "Bitte einen Report anfordern um aktuelle Daten zu laden.",
-                    "No hourly data available. Please request a briefing to load data.",
-                ),
-                trip_name=trip.name,
+            subject = self._t(
+                f"[{trip.name}] Keine stündlichen Daten", f"[{trip.name}] No hourly data")
+            body = self._t(
+                "Keine stündlichen Daten verfügbar. "
+                "Bitte einen Report anfordern um aktuelle Daten zu laden.",
+                "No hourly data available. Please request a briefing to load data.",
             )
-
-        karte = {
-            feld: {p.ts: p.value for p in res.points}
-            for feld, res in ergebnis.items()
-        }
-        lines = [f"📅 {self._t('Stunden', 'Hours')} · {label} ({today_date:%d.%m})", ""]
-        for pt in ergebnis[nutzbar[0][1]].points:
-            zellen = []
-            for _name, feld, fmt, breite, leer in nutzbar:
-                wert = karte[feld].get(pt.ts)
-                zellen.append((leer if wert is None else fmt(wert)).ljust(breite))
-            h = f"{local_hour(pt.ts, tz):02d}"
-            lines.append(f"{h}  " + " ".join(zellen).rstrip())
-        if fehlend:
-            lines.append("")
-            lines.append(
-                ", ".join(s[0] for s in fehlend)
-                + self._t(": nicht verfügbar (keine Daten für diesen Zeitraum).",
-                          ": not available (no data for this period).")
-            )
-
-        markup = {"inline_keyboard": [[{"text": back_btn, "callback_data": back_cb}]]}
+        else:
+            karte = {
+                feld: {p.ts: p.value for p in res.points}
+                for feld, res in ergebnis.items()
+            }
+            lines = [f"📅 {self._t('Stunden', 'Hours')} · {label} ({today_date:%d.%m})", ""]
+            for pt in ergebnis[nutzbar[0][1]].points:
+                zellen = []
+                for _name, feld, fmt, breite, leer in nutzbar:
+                    wert = karte[feld].get(pt.ts)
+                    zellen.append((leer if wert is None else fmt(wert)).ljust(breite))
+                h = f"{local_hour(pt.ts, tz):02d}"
+                lines.append(f"{h}  " + " ".join(zellen).rstrip())
+            if fehlend:
+                lines.append("")
+                lines.append(
+                    ", ".join(s[0] for s in fehlend)
+                    + self._t(": nicht verfügbar (keine Daten für diesen Zeitraum).",
+                              ": not available (no data for this period).")
+                )
+            subject = f"[{trip.name}] {self._t('Stunden', 'Hours')} {label}"
+            body = "\n".join(lines)
+            markup = {"inline_keyboard": [[{"text": back_btn, "callback_data": back_cb}]]}
         return CommandResult(
-            success=True,
+            success=bool(nutzbar),
             command=f"dd_hours_{day_token}",
-            confirmation_subject=f"[{trip.name}] {self._t('Stunden', 'Hours')} {label}",
-            confirmation_body="\n".join(lines),
+            confirmation_subject=subject,
+            confirmation_body=body,
             reply_markup=markup,
             trip_name=trip.name,
         )
@@ -2425,20 +2474,27 @@ class TripCommandProcessor:
             return dataclasses.replace(fresh, stages=fresh_stages)
 
         try:
-            fehler = self._speichere(trip, user_id, "ruhetag", _mutate)
+            self._speichere(trip, user_id, "ruhetag", _mutate)
+        except _SpeicherFehler as e:
+            return e.result
         except _NothingToChange:
-            fehler = CommandResult(
+            return CommandResult(
                 success=False, command="ruhetag",
                 confirmation_subject=self._t(f"[{trip.name}] Keine Etappen", f"[{trip.name}] No stages"),
                 confirmation_body=self._t("Keine zukuenftigen Etappen zum Verschieben.",
                                           "No future stages to shift."),
                 trip_name=trip.name,
             )
-        if fehler is not None:
-            return fehler
         shifts = applied["shifts"]
-        self._delete_snapshot(trip.id, user_id)
-        self._append_command_log(trip.id, "ruhetag", command_date, user_id)
+        # AC-7: der Ruhetag IST gespeichert -- ein Fehler beim Nebenschaden
+        # (Snapshot loeschen, Befehls-Log) darf die Antwort nicht kippen.
+        try:
+            self._delete_snapshot(trip.id, user_id)
+            self._append_command_log(trip.id, "ruhetag", command_date, user_id)
+        except Exception as exc:
+            logger.warning(
+                "Ruhetag gespeichert, Nebenschaden (Snapshot/Befehls-Log) "
+                "fehlgeschlagen fuer Trip %s: %s", trip.id, exc)
 
         tage_wort = self._t("Tag" if shift_days == 1 else "Tage",
                             "day" if shift_days == 1 else "days")
@@ -2555,9 +2611,10 @@ class TripCommandProcessor:
             applied["shifts"] = shifts_
             return dataclasses.replace(fresh, stages=new_stages)
 
-        fehler = self._speichere(trip, user_id, "startdatum", _mutate)
-        if fehler is not None:
-            return fehler
+        try:
+            self._speichere(trip, user_id, "startdatum", _mutate)
+        except _SpeicherFehler as e:
+            return e.result
         old_start, shifts = applied["old_start"], applied["shifts"]
         self._delete_snapshot(trip.id, user_id)
 
@@ -2722,12 +2779,13 @@ class TripCommandProcessor:
         else:
             delta = timedelta(days=n)
         paused_until = datetime.now(timezone.utc) + delta
-        fehler = self._speichere(
-            trip, user_id, "pause",
-            lambda fresh: self._mit_report_config(fresh, paused_until=paused_until),
-        )
-        if fehler is not None:
-            return fehler
+        try:
+            self._speichere(
+                trip, user_id, "pause",
+                lambda fresh: self._mit_report_config(fresh, paused_until=paused_until),
+            )
+        except _SpeicherFehler as e:
+            return e.result
         return CommandResult(
             success=True, command="pause",
             confirmation_subject=self._t(
@@ -2752,12 +2810,13 @@ class TripCommandProcessor:
                 confirmation_body="Für diesen Trip ist kein Berichts-Zeitplan konfiguriert.",
                 trip_name=trip.name,
             )
-        fehler = self._speichere(
-            trip, user_id, "skip",
-            lambda fresh: self._mit_report_config(fresh, skip_next=True),
-        )
-        if fehler is not None:
-            return fehler
+        try:
+            self._speichere(
+                trip, user_id, "skip",
+                lambda fresh: self._mit_report_config(fresh, skip_next=True),
+            )
+        except _SpeicherFehler as e:
+            return e.result
         return CommandResult(
             success=True, command="skip",
             confirmation_subject=self._t(
@@ -2863,10 +2922,16 @@ class TripCommandProcessor:
         svc = RadarNowcastService()
         # Issue #1329 C2: /jetzt ist eine Nutzeraktion -- explizit
         # user_briefing (Default, nie gedrosselt), zur Dokumentation der Absicht.
-        result = svc.get_nowcast(
-            pos.lat, pos.lon, elevation_m=elevation_m, priority="user_briefing",
-            user_id=user_id,
-        )
+        try:
+            result = svc.get_nowcast(
+                pos.lat, pos.lon, elevation_m=elevation_m, priority="user_briefing",
+                user_id=user_id,
+            )
+        except Exception as e:
+            # #1405 S4a (AC-12): Ausfall der Quelle -> Antwort statt Schweigen.
+            logger.warning(
+                "Jetzt-Befehl: Nowcast fuer Trip %s fehlgeschlagen (%s)", trip.id, e)
+            return self._nowcast_ausfall(trip, "now")
         # Issue #1402: ohne tz faellt format_now_text() auf das argumentlose
         # .astimezone() zurueck -- deutet die Onset-Zeit in der PROZESS-
         # Zeitzone des Servers statt der Ortszeit des Wegpunkts.
@@ -2875,12 +2940,33 @@ class TripCommandProcessor:
         body = svc.format_now_text(
             result, tz=tz_for_coords(pos.lat, pos.lon), englisch=self._en,
         )
+        # #1405 S4a (AC-12 Ergaenzung): "Regen-Kurzfristpruefung aktuell nicht
+        # moeglich" (data_unavailable) ist KEIN Erfolg -- derselbe Befund waehlt
+        # in format_now_text den Text und hier den Status.
         return CommandResult(
-            success=True, command="now",
+            success=not getattr(result, "data_unavailable", False), command="now",
             confirmation_subject=f"[{trip.name}] Nowcast",
             confirmation_body=body,
             trip_name=trip.name,
             reply_markup={"inline_keyboard": [[{"text": "🔄 Aktualisieren", "callback_data": "now"}]]},
+        )
+
+    def _nowcast_text(self) -> str:
+        """#1405 S4a: ehrliche Antwort, wenn der Nowcast nichts geliefert hat."""
+        return self._t(
+            "Nowcast nicht verfügbar — Regen-Kurzfristprüfung aktuell nicht "
+            "möglich. Bitte selbst beobachten.",
+            "Nowcast not available - short-term rain check not possible right "
+            "now. Please watch the sky yourself.",
+        )
+
+    def _nowcast_ausfall(self, trip: Trip, command: str) -> CommandResult:
+        """#1405 S4a: Fehlerantwort fuer ``jetzt``/``strecke`` bei Quellenausfall."""
+        return CommandResult(
+            success=False, command=command,
+            confirmation_subject=f"[{trip.name}] Nowcast",
+            confirmation_body=self._nowcast_text(),
+            trip_name=trip.name,
         )
 
     def _show_strecke(
@@ -2907,7 +2993,14 @@ class TripCommandProcessor:
         from utils.timezone import tz_for_coords
 
         today = trip_local_today(trip, now_utc)
-        trip = backfill_stage_distances(trip, user_id, today, persist=True)
+        try:
+            trip = backfill_stage_distances(trip, user_id, today, persist=True)
+        except Exception as e:
+            # #1405 S4a (AC-14): Streckenlaengen nachtragen scheitert -> Antwort.
+            logger.warning(
+                "Strecke-Kommando: Streckenlaengen fuer Trip %s nicht "
+                "nachtragbar (%s)", trip.id, e)
+            return self._nowcast_ausfall(trip, "strecke")
         resolved = resolve_current_segment(trip, now_utc, today)
         if resolved is None:
             return CommandResult(  # AC-18: wortgleich zu _show_now
@@ -3009,45 +3102,38 @@ class TripCommandProcessor:
         # E1: fallen ALLE Folgepunkte aus, obwohl mehr als einer geplant
         # war, gibt es keine km-Zonen-Angabe (AC-7) -- genau 1 geplanter
         # Punkt ist dagegen der volle Messumfang, kein Ausfall (AC-6).
+        # #1405 S4a (AC-13): lieferte KEIN Punkt (auch der Startpunkt nicht)
+        # einen Wert, ist "Kein Regen" eine erfundene Entwarnung -- Text UND
+        # `success` haengen am selben Befund (`keine_daten`, ein Return).
+        keine_daten = all(e is None for e in ergebnisse)
         folgepunkte = ergebnisse[1:]
-        if len(points) > 1 and folgepunkte and all(e is None for e in folgepunkte):
-            text = self._t(
+        if keine_daten:
+            body = self._nowcast_text()
+        elif len(points) > 1 and folgepunkte and all(e is None for e in folgepunkte):
+            body = self._t(
                 "Ausdehnung entlang der Reststrecke konnte nicht ermittelt "
                 "werden — nur der Startpunkt lieferte Daten.",
                 "Rain extent along the route could not be determined - only "
                 "the start point returned data.",
             )
             if geprueft_zeile:
-                text = f"{text} {geprueft_zeile}"
-            return CommandResult(
-                success=True, command="strecke",
-                confirmation_subject=f"[{trip.name}] Strecke",
-                confirmation_body=text,
-                trip_name=trip.name,
-            )
-
-        zonen = tuple(derive_rain_zones(points, ergebnisse))
-        if not zonen:
-            text = self._t("Kein Regen entlang des geprüften Abschnitts erkannt.",
-                           "No rain found along the checked section.")
+                body = f"{body} {geprueft_zeile}"
+        else:
+            zonen = tuple(derive_rain_zones(points, ergebnisse))
+            if not zonen:
+                body = self._t("Kein Regen entlang des geprüften Abschnitts erkannt.",
+                               "No rain found along the checked section.")
+            else:
+                tz = tz_for_coords(points[0].lat, points[0].lon)
+                body = (
+                    _fmt_strecke_email(zonen, tz, now_utc) if channel == "email"
+                    else _fmt_strecke_telegram(zonen, tz, now_utc, en=self._en)
+                )
             if geprueft_zeile:
-                text = f"{text} {geprueft_zeile}"
-            return CommandResult(
-                success=True, command="strecke",
-                confirmation_subject=f"[{trip.name}] Strecke",
-                confirmation_body=text,
-                trip_name=trip.name,
-            )
-
-        tz = tz_for_coords(points[0].lat, points[0].lon)
-        body = (
-            _fmt_strecke_email(zonen, tz, now_utc) if channel == "email"
-            else _fmt_strecke_telegram(zonen, tz, now_utc, en=self._en)
-        )
-        if geprueft_zeile:
-            body = f"{body}\n{geprueft_zeile}"
+                trenner = "\n" if zonen else " "
+                body = f"{body}{trenner}{geprueft_zeile}"
         return CommandResult(
-            success=True, command="strecke",
+            success=not keine_daten, command="strecke",
             confirmation_subject=f"[{trip.name}] Strecke",
             confirmation_body=body,
             trip_name=trip.name,
@@ -3055,13 +3141,14 @@ class TripCommandProcessor:
 
     def _cancel_trip(self, trip: Trip, user_id: str) -> CommandResult:
         """Disable report scheduling for the trip."""
-        if trip.report_config:
-            fehler = self._speichere(
-                trip, user_id, "abbruch",
-                lambda fresh: self._mit_report_config(fresh, enabled=False),
-            )
-            if fehler is not None:
-                return fehler
+        try:
+            if trip.report_config:
+                self._speichere(
+                    trip, user_id, "abbruch",
+                    lambda fresh: self._mit_report_config(fresh, enabled=False),
+                )
+        except _SpeicherFehler as e:
+            return e.result
 
         return CommandResult(
             success=True, command="abbruch",
@@ -3074,13 +3161,14 @@ class TripCommandProcessor:
 
     def _resume_trip(self, trip: Trip, user_id: str) -> CommandResult:
         """Reaktiviert den Report-Versand für den Trip (enabled=True via RMW)."""
-        if trip.report_config:
-            fehler = self._speichere(
-                trip, user_id, "weiter",
-                lambda fresh: self._mit_report_config(fresh, enabled=True),
-            )
-            if fehler is not None:
-                return fehler
+        try:
+            if trip.report_config:
+                self._speichere(
+                    trip, user_id, "weiter",
+                    lambda fresh: self._mit_report_config(fresh, enabled=True),
+                )
+        except _SpeicherFehler as e:
+            return e.result
 
         return CommandResult(
             success=True, command="weiter",
@@ -3107,19 +3195,19 @@ class TripCommandProcessor:
 
     def _speichere(
         self, trip: Trip, user_id: str, command: str, mutate,
-    ) -> Optional[CommandResult]:
+    ) -> None:
         """#2158: Mutation gesperrt auf frischem Stand (``update_trip``).
 
-        ``None`` = gespeichert. Sonst die Fehlerantwort: Sperr-Fristablauf ->
-        "bitte erneut senden" (nie still verwerfen), beschaedigte/fehlende
-        Datei -> definierter Fehler. Nie ungesperrter Rueckfall.
+        Rueckkehr = gespeichert. Sonst ``_SpeicherFehler`` mit der Fehlerantwort
+        (#1405 S4a): Sperr-Fristablauf -> "bitte erneut senden" (nie still
+        verwerfen), beschaedigte/fehlende Datei -> definierter Fehler. Nie
+        ungesperrter Rueckfall.
         """
         try:
             update_trip(user_id, trip.id, mutate)
-            return None
         except LockTimeout:
             logger.warning("Kommando %s: Sperre fuer Trip %s nicht erhalten", command, trip.id)
-            return CommandResult(
+            raise _SpeicherFehler(CommandResult(
                 success=False, command=command,
                 confirmation_subject=self._t(
                     f"[{trip.name}] Bitte erneut senden",
@@ -3130,10 +3218,10 @@ class TripCommandProcessor:
                     "The trip is being changed right now. Please send the "
                     "command again in a minute."),
                 trip_name=trip.name,
-            )
+            ))
         except LoaderError as e:
             logger.error("Kommando %s: Trip %s nicht speicherbar: %s", command, trip.id, e)
-            return CommandResult(
+            raise _SpeicherFehler(CommandResult(
                 success=False, command=command,
                 confirmation_subject=self._t(
                     f"[{trip.name}] Nicht gespeichert", f"[{trip.name}] Not saved"),
@@ -3142,7 +3230,7 @@ class TripCommandProcessor:
                     "erneut senden.",
                     "The trip could not be saved. Please send again later."),
                 trip_name=trip.name,
-            )
+            ))
 
     def _delete_snapshot(self, trip_id: str, user_id: str) -> None:
         """Delete cached weather snapshot after date changes."""

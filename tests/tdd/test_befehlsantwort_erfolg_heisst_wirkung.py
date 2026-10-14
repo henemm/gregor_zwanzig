@@ -466,6 +466,11 @@ def test_ac6_loaderfehler_meldet_nicht_gespeichert(monkeypatch, user_ids, kanal,
     text = g.alles
     assert re.search(r"nicht gespeichert|not saved|could not be saved", text, re.IGNORECASE), (
         f"AC-6: 'Nicht gespeichert' fehlt: {text!r}")
+    if kanal == "email":
+        # F002: auch der BETREFF der tatsaechlich versendeten Mail (der Body
+        # traegt "gespeichert werden" ohnehin).
+        assert any(re.search(r"nicht gespeichert|not saved", b, re.IGNORECASE)
+                   for b in g.betreffe), f"AC-6: Betreff: {g.betreffe!r}"
     _keine_erfolgsbehauptung(text, erfolg)
     assert datei.read_bytes() == vorher
     assert not trip_datei(nutzer.user_id, nutzer.trip.id).exists()
@@ -798,6 +803,48 @@ def test_ac12_nowcast_mit_daten_success_true(monkeypatch, user_ids):
     assert _ergebnis(res, exc).success is True
 
 
+def _nowcast_ohne_daten():
+    from services.radar_service import INTENSITY_DRY, NowcastResult
+
+    return NowcastResult(onset_minutes=None, intensity_label=INTENSITY_DRY,
+                         source="radar", data_unavailable=True)
+
+
+@pytest.mark.parametrize("kanal", KANAELE)
+def test_ac12_ergaenzung_nowcast_ohne_daten_antwort_kommt_an(monkeypatch, user_ids, kanal):
+    """AC-12 Ergaenzung: Nowcast ohne Daten -- die Quelle liefert ein Ergebnis
+    mit ``data_unavailable``; die Antwort kommt an und sagt "nicht moeglich"."""
+    recorder, nutzer, settings = _umgebung(monkeypatch, user_ids)
+    calls: list = []
+    monkeypatch.setattr(
+        "services.radar_service.RadarNowcastService",
+        recording_radar_service_type(calls, script=lambda idx: _nowcast_ohne_daten()),
+    )
+
+    g = sende(kanal, nutzer, settings, recorder, "jetzt")
+
+    assert calls, "der Nowcast-Fake wurde nie gefragt -- Messaufbau kaputt"
+    _ohne_ladehinweis(g, kanal)
+    assert re.search(r"nicht m.glich|not possible", g.alles, re.IGNORECASE), g.alles
+
+
+def test_ac12_ergaenzung_nowcast_ohne_daten_process_success_false(monkeypatch, user_ids):
+    """AC-12 Ergaenzung: Nowcast ohne Daten -> Text unveraendert, success=False."""
+    recorder, nutzer, _ = _umgebung(monkeypatch, user_ids)
+    calls: list = []
+    monkeypatch.setattr(
+        "services.radar_service.RadarNowcastService",
+        recording_radar_service_type(calls, script=lambda idx: _nowcast_ohne_daten()),
+    )
+
+    res, exc = process_direkt(nutzer, "jetzt")
+
+    r = _ergebnis(res, exc)
+    assert calls
+    assert "nicht möglich" in r.confirmation_body, r.confirmation_body
+    assert r.success is False
+
+
 @pytest.mark.parametrize("kanal", KANAELE)
 def test_ac13_strecke_alle_punkte_leer_behauptet_kein_regen(monkeypatch, user_ids, kanal):
     """AC-13: liefert der Nowcast fuer ALLE Punkte nichts, heisst die Antwort
@@ -880,7 +927,10 @@ def test_ac14_backfill_ausfall_bringt_antwort(monkeypatch, user_ids, kanal):
     g = sende(kanal, nutzer, settings, recorder, "strecke")
 
     _ohne_ladehinweis(g, kanal)
-    assert _NOWCAST_NICHT_VERFUEGBAR.search(g.alles) or "STATUS" in g.alles, g.alles
+    # F001: genau die lokale Nowcast-Fehlerantwort -- NICHT die zentrale
+    # STATUS-Antwort aus process() (die wuerde ein werfender except-Zweig liefern).
+    assert _NOWCAST_NICHT_VERFUEGBAR.search(g.alles), g.alles
+    assert "STATUS" not in g.alles, g.alles
 
 
 def test_ac14_backfill_ausfall_process_success_false(monkeypatch, user_ids):
