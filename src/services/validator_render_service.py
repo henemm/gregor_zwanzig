@@ -279,7 +279,7 @@ def _render_official_preview(trip_obj: Trip, payloads: list) -> dict:
     )
     plain = render_official_alert_mail_plain(
         dto_notices, source_label=source_label, stand_at=stand_at,
-        tz=alert_tz, context_label=trip_obj.name,
+        tz=alert_tz, context_label=trip_obj.name, source_url=source_url,
     )
     telegram = render_official_alert_telegram(
         dto_notices, prefix=trip_obj.name, source_label=source_label, tz=alert_tz,

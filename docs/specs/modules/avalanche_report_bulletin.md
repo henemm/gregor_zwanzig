@@ -2,9 +2,9 @@
 entity_id: avalanche_report_bulletin
 type: feature
 created: 2026-10-13
-updated: 2026-10-13
+updated: 2026-10-14
 status: draft
-version: "1.0"
+version: "1.2"
 tags: [official_alerts, avalanche, eaws, avalanche-report, sms, telegram, premium-sms, email, egress, wintersport]
 workflow: feat-1441-s1-lawinenlagebericht
 ---
@@ -47,7 +47,7 @@ in `data_sources.md` ist Teil der Umsetzung (siehe Affected Files).
 | Quelle | Lawinenlagebericht der Euregio Tirol-Südtirol-Trentino und des Lawinenwarndienstes Kärnten über `avalanche.report` (Format CAAML v6, JSON) |
 | Hosts | `static.avalanche.report` (Bulletin-Dateien; leitet per 301 auf `avalanche.report` weiter) und `avalanche.report` (Weiterleitungsziel, Bulletin-Link). Nur diese zwei Hosts kommen ins Egress-Inventar. |
 | Abdeckung Slice 1 | Tirol (AT-07), Südtirol (IT-32-BZ), Trentino (IT-32-TN), Kärnten (AT-02). **PO-Entscheid 2026-10-13 ("Belegte zuerst").** Salzburg, Bayern und übrige österreichische Länder sind nicht Teil von Slice 1 (Lizenz der dortigen Dienste nicht belegt); sie werden nach Lizenzzusage per Konfigurationseintrag freigeschaltet. |
-| Lizenz Bulletins | CC BY 4.0 — Namensnennung und Link zur Quelle sind Pflicht und stehen in Mail und Telegram (Quellenname + Bulletin-URL) |
+| Lizenz Bulletins | CC BY 4.0 — Namensnennung und Link zur Quelle sind Pflicht und stehen in Mail und Telegram-Vollform (Quellenname + Bulletin-URL); SMS und Telegram-Kurzstil (= SMS-Text) ohne |
 | Lizenz Regionen-Geometrie | CC0 (EAWS-Regions, `regions.avalanches.org`, nur `latest/`); vier GeoJSON-Dateien werden eingecheckt, kein Laufzeitabruf |
 | Zugang | Kein Schlüssel, kein veröffentlichtes Limit; statische Dateien mit ETag; Abruf nur über `cached_fetch` (TTL 1800 s) |
 | Nicht beantragt | `lawinen-warnung.eu`, EU-Sammelfeed `eaws_bulletins`, SLF (Schweiz, Slice 2) |
@@ -157,16 +157,21 @@ für diese Gefahrenart. Explizite Zuordnung für 1-5 an: `_LEVEL_WORDS`, `_LEVEL
 `_warn_short` in `compare_html.py` (Stufe 5 → `danger`, nicht der Default `warn`); `alert_urgency.py`
 (Stufe 1 ist nicht HIGH). Nur Daten, keine Handlungsempfehlung. Stufe, Höhenangabe und Problemnamen des
 Warndienstes bleiben unverändert (Haftung). `_SOURCE_LABELS` führt den Quellennamen ("Lawinenwarndienst
-Tirol/Südtirol/Trentino/Kärnten, avalanche.report"); Mail und Telegram enthalten die Bulletin-URL
-`https://avalanche.report/bulletin/{YYYY-MM-DD}?region={microRegionID}` (CC BY 4.0).
+Tirol/Südtirol/Trentino/Kärnten, avalanche.report"); Mail (Trip-Briefing, Ortsvergleich und
+eigenständige Warnungs-Mail) und Telegram in Vollform enthalten Quellenname und Bulletin-URL
+`https://avalanche.report/bulletin/{YYYY-MM-DD}?region={microRegionID}` (CC BY 4.0). Telegram im
+Kurzstil sendet wie bisher genau den SMS-Text (PO-Vorgabe: Kurzform folgt der SMS) und trägt daher
+wie die SMS weder Quellenname noch URL.
 
 ### 8. Eskalation und Dublettenwahl
 
 Eskalation (`official_alerts.py:487`, `:549`) und Dublettenwahl (`base.py:209-232`) vergleichen für
 `avalanche_bulletin` die Originalstufe `native_level`. Stufe 4 → 5 eskaliert (abgeleitetes `level` bliebe
 4). Neue Gültigkeitsperiode am Folgetag (17:00) mit gleicher Stufe löst keinen neuen Alarm aus
-(`_identity_hazard_prefix`, #1685). Absenkung und Entwarnung tragen die Dringlichkeit des alten Werts
-(ADR/PO-Vorgabe "Entwarnung trägt die Dringlichkeit des alten Werts").
+(`_identity_hazard_prefix`, #1685). Eine Absenkung wird in dieser Scheibe wie bei allen amtlichen
+Warnungen nicht als neue Warnung gemeldet; das Melde-Gedächtnis behält den alten Höchstwert. Die
+Entwarnung (Absenkung/Ende) mit der Dringlichkeit des alten Werts für alle amtlichen Warnungen liefert
+Scheibe S2 von #1441 (PO-Entscheid 13.10.2026); der Helfer `urgency_from_official_transition` liegt bereit.
 
 ### 9. RegionMapper
 
@@ -267,10 +272,11 @@ Voraussetzung für den Deploy.
   Gültigkeitsperiode am Folgetag (17:00) entsteht kein neuer Alarm.
   - Test: `tests/test_avalanche_report_escalation.py` — echter Eskalationspfad (`official_alerts.py`), beide Fälle.
 
-- **AC-13:** Given zuletzt gemeldete Stufe 4 und aktuelle Stufe 2 oder Entwarnung / When die
-  Absenkung gemeldet wird / Then trägt die Meldung die Dringlichkeit des alten Werts (Stufe 4), nicht die
-  der neuen Stufe.
-  - Test: `tests/test_avalanche_report_escalation.py` — Absenkungs- und Entwarnungsfall.
+- **AC-13:** Given zuletzt gemeldete Stufe 4 und aktuelle Stufe 2 / When der Lagebericht ausgewertet
+  wird / Then wird die Absenkung nicht als neue Warnung gemeldet und das Melde-Gedächtnis behält Stufe 4.
+  Die Entwarnung mit der Dringlichkeit des alten Werts liefert Scheibe S2 von #1441 (PO-Entscheid
+  13.10.2026: Entwarnung für alle amtlichen Warnungen).
+  - Test: `tests/test_avalanche_report_escalation.py` — Absenkungsfall (nicht gemeldet, Gedächtnis behält den alten Höchstwert).
 
 - **AC-14:** Given Lagebericht-Stufe 1 (gering) / When die Trip-Briefing-Mail und die Ortsvergleichs-Mail
   gerendert werden / Then ist Stufe 1 als Info sichtbar ("Lawinenstufe 1 (gering)"), unterscheidbar von
@@ -285,8 +291,12 @@ Voraussetzung für den Deploy.
 
 - **AC-16:** Given Stufe 4 oberhalb der Waldgrenze mit Problem Triebschnee / When die Trip-Briefing-Mail
   und Telegram erzeugt werden / Then lautet der Text "Lawinenstufe 4 (groß) oberhalb Waldgrenze ·
-  Triebschnee", enthält Quellenname und Bulletin-URL (CC BY 4.0) und keine Handlungsempfehlung.
-  - Test: `tests/test_avalanche_report_channels.py` — Winter-Fixture durch `render_warn_block` und `render_official_alert_telegram`.
+  Triebschnee", enthält Quellenname und Bulletin-URL (CC BY 4.0) und keine Handlungsempfehlung. Auch die
+  eigenständige Warnungs-Mail (Trip und Ortsvergleich) trägt Quellenname und Bulletin-URL, im HTML- und
+  im Klartext-Teil.
+  - Test: `tests/test_avalanche_report_channels.py` — Winter-Fixture durch `render_warn_block` und `render_official_alert_telegram`;
+    eigenständige Warnungs-Mail über den echten Versandweg: `test_ac16_eigenstaendige_warn_mail_traegt_quellenname_und_bulletin_url`,
+    `test_ac16_ortsvergleich_warn_mail_traegt_quellenname_und_bulletin_url`.
 
 - **AC-17:** Given Lagebericht Stufe 4 für den Tag einer Trip-Etappe, sowohl mit sichtbarer als auch mit
   ausgeschalteter Metrik `AV` / When die Trip-Briefing-SMS erzeugt wird / Then enthält sie das Token `AV4`
@@ -404,3 +414,5 @@ Bestands-Mapper.
 ## Changelog
 
 - 2026-10-13: Initial spec created (Issue #1441 Slice 1, Epic #2258; erledigt #1473)
+- 2026-10-13 v1.1: AC-13 und Abschnitt 8 auf den Umfang von S1 begrenzt (Absenkung nicht gemeldet, Gedächtnis behält Höchstwert). Die Entwarnung mit alter Dringlichkeit für alle amtlichen Warnungen kommt in Scheibe S2 von #1441 (PO-Entscheid 13.10.2026). Anlass: Adversary-Finding F003, Helfer ohne Aufrufer.
+- 2026-10-14 v1.2: Lizenzpflicht präzisiert — Quellenname und Bulletin-URL auch in der eigenständigen Warnungs-Mail (vorher fehlte die URL dort); Telegram-Kurzstil folgt der SMS ohne URL. Anlass: Adversary-Findings F011/F014.

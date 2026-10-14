@@ -353,9 +353,11 @@ def test_ac5_gruene_stufe_zeigt_minus_und_urgency_bleibt_absturzfrei():
         "die vierstufige SMS-Darstellungsleiter lebt als eigene Tabelle im "
         f"Renderer. Gefunden: {hazard_symbols.LEVEL_LETTERS!r}"
     )
-    assert urgency_from_official_level(1) == "HIGH", (
-        "AC-5: `urgency_from_official_level(1)` muss unveraendert und "
-        "absturzfrei antworten (konservativer 'H'-Rueckfall)."
+    # #1441 (AC-14, Spec avalanche_report_bulletin): Stufe 1 (gering/gruen) ist
+    # seither explizit LOW statt des konservativen 'H'-Rueckfalls -- die
+    # Zusicherung dieses ACs (absturzfrei, LEVEL_LETTERS bleibt {2,3,4}) gilt weiter.
+    assert urgency_from_official_level(1) == "LOW", (
+        "AC-5/#1441: `urgency_from_official_level(1)` muss absturzfrei LOW liefern."
     )
     assert urgency_from_official_level(2) == "LOW"
     assert urgency_from_official_level(3) == "MODERATE"

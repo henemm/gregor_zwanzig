@@ -171,6 +171,33 @@ def test_ac18_gemischte_nachricht_nennt_lagebericht_und_gewitter():
     assert len(sms) <= 140
 
 
+# ---------------------------------------------------------------- AC-17 (Kanalparitaet): Ortsvergleich-SMS
+@pytest.mark.parametrize("ziffer", [4, 5])
+def test_ac17_ortsvergleich_sms_traegt_av_mit_originalziffer(ziffer):
+    """Fix-Loop F009: der ECHTE Ortsvergleich-SMS-Renderer (`render_compare_sms`) zeigt den
+    Lagebericht als `!AV<Ziffer>` -- dieselbe Token-Grammatik wie die Trip-SMS (geteilter Helfer
+    `hazard_symbols.alert_entry_token_parts`). Mutation C1 (Helfer umgehen, `AV:4` bauen) wird rot."""
+    from datetime import date
+
+    from app.user import ComparisonResult, LocationResult, SavedLocation
+    from output.renderers.comparison import render_compare_sms
+
+    ort = LocationResult(
+        location=SavedLocation(id="tirol-huette", name="Tirol-Huette", lat=46.96, lon=12.40,
+                               elevation_m=2300),
+        temp_max=-2.0, wind_max=20.0, official_alerts=[_stufe(ziffer)],
+    )
+    sms = render_compare_sms(ComparisonResult(
+        locations=[ort], time_window=(0, 23), target_date=date(2026, 2, 20),
+    ))
+
+    assert len(_av_token(sms, ziffer)) == 1, sms
+    assert f"!AV{ziffer}" in sms, f"AV{ziffer} gehoert in den !-Marker: {sms!r}"
+    assert "AV:" not in sms and not re.search(r"AV\d?[LMH@]", sms), sms
+    if ziffer == 5:
+        assert not _av_token(sms, 4), "Stufe 5 darf nicht als Farblevel 4 erscheinen"
+
+
 # ---------------------------------------------------------------- AC-21: kein zweites AV aus _wintersport
 def test_ac21_wintersport_baut_kein_av_token_mehr_auch_nicht_bei_sichtbarer_metrik():
     from output.tokens.builder import _wintersport

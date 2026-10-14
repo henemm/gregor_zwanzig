@@ -10,6 +10,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
+# Issue #1441 (ADR-0087): Gefahrenart des amtlichen Lawinen-Lageberichts --
+# eigene EAWS-Skala 1-5 neben der Awareness-Skala 1-4 (`avalanche`, MeteoAlarm).
+AVALANCHE_BULLETIN = "avalanche_bulletin"
+
 
 @dataclass(frozen=True)
 class OfficialAlert:
@@ -37,3 +41,24 @@ class OfficialAlert:
     # nachweisbar ist (Vorfall #1929). None = Herkunft nicht eindeutig
     # feststellbar; eine falsche Zuordnung waere schlimmer als keine.
     capture_id: Optional[str] = None
+    # Issue #1441 (ADR-0087): zweite Skala. Bestand = "awareness" (1-4, level).
+    # Lagebericht = "eaws": `native_level` 1-5 ist die Originalstufe, `level`
+    # nur die abgeleitete Farbe (5 -> 4). Alle Felder mit Default -> Bestand
+    # bit-identisch.
+    scale: str = "awareness"
+    native_level: Optional[int] = None
+    # Hoehenangabe woertlich: Zahl als String ("2200") oder "Waldgrenze";
+    # Richtung "above"/"below". None = keine Hoehenbegrenzung.
+    elevation_value: Optional[str] = None
+    elevation_direction: Optional[str] = None
+    # CAAML-`problemType`-Codes in Bulletin-Reihenfolge, dedupliziert.
+    problems: tuple[str, ...] = ()
+    # "earlier"/"later" nur, wenn Vor- und Nachmittag verschiedene Stufen haben.
+    time_of_day: Optional[str] = None
+
+
+def comparable_level(alert: OfficialAlert) -> int:
+    """Stufe fuer Vergleiche INNERHALB einer Gefahrenart (Dublettenwahl,
+    Eskalation, Gedaechtnis): die Originalstufe, wenn gesetzt, sonst `level`.
+    Nie ueber Gefahrenarten/Skalen hinweg verwenden (ADR-0087)."""
+    return alert.native_level if alert.native_level is not None else alert.level

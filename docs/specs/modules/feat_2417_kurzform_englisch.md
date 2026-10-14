@@ -97,9 +97,9 @@ Send a code (e.g. R) for its values.
 CODES:
 ```
 Weather: T temp, D day max, N night, L day min, TF feels like, FD/FL/FN = D/L/N feels like, R rain mm, PR rain %, TH thunder, TH+ next stage, W wind km/h, G gusts, WD wind dir, HU humidity, DP dew point, CP storm energy, PT precip type, SL snow line m, NS24+ new snow 24h, CT/CL/CM/CH clouds total/low/mid/high, VS visibility, SU sun h, UV index, HP pressure, FZ 0C level m.
-More: SD snow depth, AV avalanche level, C confidence, Z:/MAX/M: fire zones/top level/massifs.
+More: SD snow depth, C confidence, Z:/MAX/M: fire zones/top level/massifs.
 Format: E4 stage 4, 23@5 over limit from 5h, (24@7) peak, D13/27 min/max, +HL hail, - none, ? no data.
-Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW avalanche, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: MF rain/storm risk. X? no data.
+Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW avalanche, AV avalanche level, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: MF rain/storm risk. X? no data.
 ```
 
 **Wo die Bedeutungen stehen (PO-Vorgabe 27.09.2026: Der Metrik-Katalog ist der einzige Ort, an dem Wettermetriken definiert sein dürfen):**
@@ -108,11 +108,11 @@ Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW avalanch
 |---|---|
 | Jedes Kürzel einer Wettermetrik (alle Einträge in `_METRICS`, inklusive `snow_depth`=`SD`, `confidence`=`C` und beider Gewitter-Kürzel `TH`/`TH+`) | **`src/app/metric_catalog.py`**, im jeweiligen `MetricDefinition`-Eintrag, als neues Feld je Kürzel |
 | Warn-Kürzel (`TH`, `FL`, `HR`, … hinter `!`) | `src/output/tokens/hazard_symbols.py`, direkt bei `HAZARD_SMS_SYMBOLS`, wo das Kürzel selbst definiert ist. Das sind amtliche Warnarten, keine Wettermetriken. |
-| Übrige Bausteine ohne Katalog-Eintrag (`AV`, `Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`) und Formatzeichen (`E<N>`, `@`, `(…)`, `/`, `+HL`, `-`, `?`) | `src/output/tokens/builder.py`, direkt bei der Konstante, die das Zeichen erzeugt |
+| Übrige Bausteine ohne Katalog-Eintrag (`Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`) und Formatzeichen (`E<N>`, `@`, `(…)`, `/`, `+HL`, `-`, `?`) | `src/output/tokens/builder.py`, direkt bei der Konstante, die das Zeichen erzeugt |
 
 CODES/KUERZEL enthält **keinen einzigen** eigenen Bedeutungstext. Die Antwort wird zur Laufzeit aus diesen drei Stellen zusammengesetzt. Die Blöcke oben (englisch) und in AC-10 (deutsch) sind das **erwartete Ergebnis** dieser Ableitung zum Freigabezeitpunkt, keine zweite Definition. Ändert jemand eine Bedeutung im Katalog, ändert sich die CODES-Antwort, und der Wortlaut-Test wird rot. Das ist gewollt, weil der PO dann den neuen Wortlaut sieht.
 
-CODES erklärt damit **jedes** Zeichen, das in einer Kurzform-SMS erscheinen kann: die Wetter-Register, die übrigen Bausteine aus `src/output/tokens/builder.py` (`SD`, `AV`, `C`, `Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`; `MAX` = Brandzonen der höchsten Stufe), die Formatzeichen und die Warn-Kürzel hinter `!`. Nicht erklärt wird nur `DBG` (erscheint ausschließlich im Test-/Debug-Modus, nie beim Nutzer).
+CODES erklärt damit **jedes** Zeichen, das in einer Kurzform-SMS erscheinen kann: die Wetter-Register, die übrigen Bausteine aus `src/output/tokens/builder.py` (`SD`, `C`, `Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`; `MAX` = Brandzonen der höchsten Stufe), die Formatzeichen und die Warn-Kürzel hinter `!`. Nicht erklärt wird nur `DBG` (erscheint ausschließlich im Test-/Debug-Modus, nie beim Nutzer).
 
 Beim **Ortsvergleich** enthält HELP nur die Zeilen der dort erlaubten Befehle (laut `kinds`). Weil ein Ortsvergleich unbefristet pausiert (Vorgänger-Spec AC-29, Test `test_ac29_vergleichshilfe_bietet_pause_ohne_dauerangabe` bleibt gültig), lautet die PAUSE-Zeile dort anders als beim Trip. Kürzel-Abfragen gibt es beim Ortsvergleich nicht, deshalb entfällt die Zeile „Send a code …". Verbindlicher Wortlaut (Ortsvergleich, Kurzform-Kanal):
 
@@ -169,7 +169,7 @@ Wie beim Trip fehlt eine HELP-Zeile, weil der Nutzer die Liste gerade liest. Die
 
 ### D. CODES
 
-- **AC-9:** Given die Antwort auf `CODES`/`KUERZEL` ist nach AC-4/AC-5 englisch (Premium-SMS immer, Telegram bei gesendetem englischem Wort `CODES`) / When die Antwort aufgebaut wird / Then enthält sie jedes Kürzel aus `SMS_SYMBOL_BY_METRIC` und `SMS_MULTI_SYMBOLS_BY_METRIC` (die tatsächlich gesendeten Ausgabe-Kürzel) mit einer kurzen englischen Bedeutung, dazu die übrigen Bausteine aus `builder.py` außer `DBG` (`SD`, `AV`, `C`, `Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`), die Formatzeichen der Kurzform-Grammatik (Etappen-Präfix `E<N>`, Stunden-Marker `@`, Spitze `(…)`, Bereich `D13/27`, Hagel-Suffix `+HL`, Null-Form `-`, Lücken-Marker `?`) und einen eigenen Abschnitt „Alerts" mit den zehn Warn-Kürzeln aus `HAZARD_SMS_SYMBOLS` samt Stufen `L/M/H` — und braucht höchstens 5 Segmente.
+- **AC-9:** Given die Antwort auf `CODES`/`KUERZEL` ist nach AC-4/AC-5 englisch (Premium-SMS immer, Telegram bei gesendetem englischem Wort `CODES`) / When die Antwort aufgebaut wird / Then enthält sie jedes Kürzel aus `SMS_SYMBOL_BY_METRIC` und `SMS_MULTI_SYMBOLS_BY_METRIC` (die tatsächlich gesendeten Ausgabe-Kürzel) mit einer kurzen englischen Bedeutung, dazu die übrigen Bausteine aus `builder.py` außer `DBG` (`SD`, `C`, `Z:`, `MAX`, `M:`, `VR:`, `VT:`, `X?`), die Formatzeichen der Kurzform-Grammatik (Etappen-Präfix `E<N>`, Stunden-Marker `@`, Spitze `(…)`, Bereich `D13/27`, Hagel-Suffix `+HL`, Null-Form `-`, Lücken-Marker `?`) und einen eigenen Abschnitt „Alerts" mit den zehn Warn-Kürzeln aus `HAZARD_SMS_SYMBOLS` samt Stufen `L/M/H` — und braucht höchstens 5 Segmente.
   - Der Text entspricht **zeichengenau** dem „Verbindlichen Wortlaut" oben (`test_codes_ist_der_freigegebene_wortlaut`).
   - Test: `test_kuerzel_eindeutig.py::test_codes_vollstaendig_gegen_ausgabe_register` — leitet die Soll-Menge aus `SMS_SYMBOL_BY_METRIC`/`SMS_MULTI_SYMBOLS_BY_METRIC`/`HAZARD_SMS_SYMBOLS` ab (nicht aus einer zusätzlichen, handgepflegten Bedeutungs-Liste) und schlägt fehl, sobald ein Register-Kürzel in der CODES-Antwort fehlt oder ein Kürzel ohne Bedeutungstext auftaucht. Die Soll-Menge umfasst zusätzlich jedes Token-Symbol, das `builder.py` erzeugen kann (außer `DBG`). Segmentzahl ≤ 5 mit `sms_segments()`.
 
@@ -178,9 +178,9 @@ Wie beim Trip fehlt eine HELP-Zeile, weil der Nutzer die Liste gerade liest. Die
     ```
     Kürzel
     Wetter: T Temperatur, D Tageshöchstwert, N Nacht, L Tagestiefstwert, TF gefühlt, FD/FL/FN = D/L/N gefühlt, R Regen mm, PR Regenwahrscheinlichkeit %, TH Gewitter, TH+ Gewitter Folge-Etappe, W Wind km/h, G Böen, WD Windrichtung, HU Luftfeuchte, DP Taupunkt, CP Gewitterenergie, PT Niederschlagsart, SL Schneefallgrenze m, NS24+ Neuschnee 24h, CT/CL/CM/CH Bewölkung gesamt/tief/mittel/hoch, VS Sicht, SU Sonnenstunden, UV UV-Index, HP Luftdruck, FZ Nullgradgrenze m.
-    Weitere: SD Schneehöhe, AV Lawinenstufe, C Vorhersage-Verlässlichkeit, Z:/MAX/M: Brandzonen/Höchststufe/Massive.
+    Weitere: SD Schneehöhe, C Vorhersage-Verlässlichkeit, Z:/MAX/M: Brandzonen/Höchststufe/Massive.
     Format: E4 Etappe 4, 23@5 über der Schwelle ab 5 Uhr, (24@7) Spitze, D13/27 Tiefst/Höchst, +HL Hagel, - nichts, ? keine Daten.
-    Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN Schnee, AW Lawine, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine Warndaten.
+    Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN Schnee, AW Lawine, AV Lawinenstufe, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine Warndaten.
     ```
   - Test: `test_kuerzel_eindeutig.py::test_codes_deutsch_auf_langform_kanaelen`.
 
@@ -386,4 +386,5 @@ Jeder datenbewegende Pfad (mutierende Befehle über den Eingang) wird mit **zwei
 ## Changelog
 
 - 2026-09-27: Initial spec created (Issue #2417, PO-Entscheid 27.09.2026: Kurzform ist englisch, also auch ihre Befehle).
+- 2026-10-13 v1.2: Nachzug aus #1441 (Lawinen-Lagebericht): `AV` ist jetzt das Warn-Kürzel der amtlichen Lawinenstufe (`hazard_symbols.py`, Gefahrenart `avalanche_bulletin`) und kein Baustein aus `builder.py` mehr. In CODES/KUERZEL wandert „AV avalanche level"/„AV Lawinenstufe" aus „More"/„Weitere" in „Alerts after !"/„Warnungen nach !" direkt hinter `AW`. Freigabe des Nachzugs per PO-`override` vom 13.10.2026.
 - 2026-09-27 v1.1: Nachbesserung aus der RED-Phase (Tests gegen den Code gemessen). `MAX` (Brandzonen höchster Stufe) in CODES en/de ergänzt, dafür „C forecast confidence" → „C confidence" (763 Zeichen, weiter 5 Segmente). AC-22 korrigiert: Ortsvergleich-Kurzform bleibt bei `D`/`L`. Neu AC-28 (Kälte-Alarm `N` → `T`), AC-29 (Ortsvergleich-Auswahl zeigt das gesendete Kürzel), AC-30 (STATUS GSM-7-sauber). Ortsvergleich-HELP zeichengenau festgelegt (PAUSE unbefristet, keine Kürzel-Zeile). Abschnitt H um zehn weitere deutsche Kurzform-Antworten und die GSM-7-Pflicht ergänzt. AC-4 verweist jetzt richtig auf Abschnitt H.

@@ -10,6 +10,7 @@ from output.tokens.dto import (
     DailyForecast, MetricSpec, NormalizedForecast, ReportType,
     Token, TokenLine,
 )
+from output.tokens.hazard_symbols import alert_entry_token_parts
 from output.tokens.metrics import (
     render_temperature, render_threshold_peak_value, render_int,
     render_inverse_min_value, STUFEN_FN,
@@ -53,7 +54,7 @@ PRIORITY = {
     # amtliche Schneewarnung (hazard_symbols.py).
     # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
     # nachweislich 'FK') -- kein Eintrag mehr.
-    "DBG": 1, "AV": 2, "SL": 2, "NS24+": 2, "SD": 2,
+    "DBG": 1, "SL": 2, "NS24+": 2, "SD": 2,
     "Z:": 3, "MAX": 3, "M:": 3, "PR": 5,
     # Issue #1410: das gefuehlte Trio rangiert unter PR (5) -- es faellt aber
     # ohnehin schon im dedizierten Schritt in render.py::_truncate(), bevor der
@@ -117,7 +118,10 @@ POSITIONAL = [
     # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
     # nachweislich 'FK') -- kein Eintrag mehr.
     ("SD", "wintersport"), ("NS24+", "wintersport"),
-    ("SL", "wintersport"), ("AV", "wintersport"),
+    # Issue #1441: 'AV' ist kein Wintersport-Baustein mehr -- die Lawinenstufe
+    # kommt ausschliesslich aus dem amtlichen Lagebericht im Warnblock
+    # (hazard_symbols `avalanche_bulletin`), nie ein zweites Mal von hier.
+    ("SL", "wintersport"),
     (UNAVAILABLE_SYMBOL, "unavailable"),
     ("DBG", "debug"),
 ]
@@ -130,12 +134,12 @@ STD_SYMBOLS = {s for s, _ in POSITIONAL}
 # ohne Katalog-Eintrag (Wetter-Kuerzel wie SD/C stehen im Metrik-Katalog,
 # DBG erscheint nie beim Nutzer). CODES (en) und KUERZEL (de) lesen hier.
 BAUSTEIN_BEDEUTUNG_EN: dict[str, str] = {
-    "AV": "avalanche level", "Z:": "fire zones", "MAX": "top level",
+    "Z:": "fire zones", "MAX": "top level",
     "M:": "massifs", VIGI_HR: "MF rain risk",
     VIGI_TH: "MF storm risk", UNAVAILABLE_SYMBOL: "no data",
 }
 BAUSTEIN_BEDEUTUNG_DE: dict[str, str] = {
-    "AV": "Lawinenstufe", "Z:": "Brandzonen", "MAX": "Höchststufe",
+    "Z:": "Brandzonen", "MAX": "Höchststufe",
     "M:": "Massive", VIGI_HR: "Météo-France-Risiko Regen",
     VIGI_TH: "Météo-France-Risiko Gewitter", UNAVAILABLE_SYMBOL: "keine Warndaten",
 }
@@ -267,13 +271,12 @@ def _official_alerts(fc: NormalizedForecast) -> list[Token]:
     """Issue #1318: Warn-Block-Token aus den bereits gefilterten und sortierten
     `(Kuerzel, Stufenbuchstabe, Stunde)`-Tripeln. Der `!`-Marker selbst gehoert
     dem Renderer (genau einmal vor dem ersten Token des Blocks)."""
+    # Issue #1441: Grammatik (blank / `AV4` / `TS:H@14`) aus EINEM geteilten
+    # Helfer -- dieselbe Quelle wie die Ortsvergleich-SMS.
     out: list[Token] = []
     for symbol, level, hour in fc.official_alerts:
-        if not level:
-            out.append(Token(symbol, "", "official_alert", OFFICIAL_ALERT_PRIORITY))
-            continue
-        value = level if hour is None else f"{level}@{hour}"
-        out.append(Token(f"{symbol}:", value, "official_alert", OFFICIAL_ALERT_PRIORITY))
+        sym, value = alert_entry_token_parts(symbol, level, hour)
+        out.append(Token(sym, value, "official_alert", OFFICIAL_ALERT_PRIORITY))
     return out
 
 
@@ -311,7 +314,8 @@ def _wintersport(day: DailyForecast, by_sym: dict[str, MetricSpec],
         ("SD", day.snow_depth_cm),
         ("NS24+", day.snow_new_24h_cm),
         ("SL", day.snowfall_limit_m),
-        ("AV", float(day.avalanche_level) if day.avalanche_level is not None else None),
+        # Issue #1441 (AC-21): kein 'AV' mehr -- die Lawinenstufe steht genau
+        # einmal im Warnblock (`_official_alerts`, Lagebericht).
         # Fix #1887 E6 Scheibe A: 'WC'-Paar entfaellt ERSATZLOS (verdoppelte
         # nachweislich 'FK', identisches Feld/Fenster/Aggregation).
     ]

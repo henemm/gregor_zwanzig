@@ -455,8 +455,8 @@ def _measured_event_km(alert_msg) -> dict:
 
 def _official_source_url_for(dto_notices: list) -> str | None:
     """Quelle-Link der führenden (höchststufigen) Warnung (Issue #1216 F002).
-    Für variant="standalone" derzeit ungenutzt (der Thin-Wrapper reicht 1:1 an
-    render_official_alert_html durch), aber spec-konform mitgereicht."""
+    Issue #1441 (CC BY 4.0): auch die eigenstaendige Warn-Mail zeigt ihn
+    (HTML-Fusszeile + Klartext)."""
     if not dto_notices:
         return None
     leading = max(dto_notices, key=lambda n: n.alert.level)
@@ -1162,8 +1162,8 @@ class NotificationService:
         subject = render_official_alert_subject(dto_notices, prefix=trip.name, tz=alert_tz)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
         # Issue #1216 F002: geteilter Baustein statt Direktaufruf. variant=
-        # "standalone" reicht 1:1 an render_official_alert_html durch (byte-
-        # identischer Output, Fidelity-Bestandsschutz #952/#957).
+        # "standalone" reicht an render_official_alert_html durch (#1441: inkl.
+        # `source_url` fuer den Quelle-Link, CC BY 4.0).
         html = render_warn_block(
             dto_notices, variant="standalone", source_label=source_label,
             source_url=source_url, stand_at=stand_at, tz=alert_tz,
@@ -1174,7 +1174,7 @@ class NotificationService:
         # Tags aus dem HTML und der Klartext-Leser bekommt Zeilensalat.
         plain = render_official_alert_mail_plain(
             dto_notices, source_label=source_label, stand_at=stand_at,
-            tz=alert_tz, context_label=trip.name,
+            tz=alert_tz, context_label=trip.name, source_url=source_url,
         )
         telegram_text = render_official_alert_telegram(
             dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
@@ -1475,7 +1475,7 @@ class NotificationService:
         # wieder zwei verschiedene Klartexte.
         plain = render_official_alert_mail_plain(
             dto_notices, source_label=source_label, stand_at=stand_at,
-            tz=alert_tz, context_label="Ortsvergleich",
+            tz=alert_tz, context_label="Ortsvergleich", source_url=source_url,
         )
 
         # Issue #1701 (S2b, D5): analog `_dispatch_alert_message`.

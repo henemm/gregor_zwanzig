@@ -30,6 +30,7 @@ from services.official_alerts import warn_egress
 from services.official_alerts.department_mapper import lookup_department
 from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
 from services.official_alerts.models import OfficialAlert
+from services.official_alerts.region_mapper import point_in_geometry
 from services.radar_service import (
     _INCA_LAT_MAX,
     _INCA_LAT_MIN,
@@ -1005,38 +1006,9 @@ def _fetch_cap(url: str, alert_id: Optional[str], country_code: Optional[str] = 
     )
 
 
-def _point_in_ring(lat: float, lon: float, ring: list) -> bool:
-    """Ray-Casting gegen einen einzelnen GeoJSON-Ring ([lon, lat]-Paare)."""
-    inside = False
-    n = len(ring)
-    j = n - 1
-    for i in range(n):
-        xi, yi = ring[i][0], ring[i][1]
-        xj, yj = ring[j][0], ring[j][1]
-        if (yi > lat) != (yj > lat):
-            x_at_lat = (xj - xi) * (lat - yi) / (yj - yi) + xi
-            if lon < x_at_lat:
-                inside = not inside
-        j = i
-    return inside
-
-
-def _point_in_polygon_coords(lat: float, lon: float, coords: list) -> bool:
-    if not coords:
-        return False
-    if not _point_in_ring(lat, lon, coords[0]):
-        return False
-    return not any(_point_in_ring(lat, lon, hole) for hole in coords[1:])
-
-
-def _point_in_geometry(lat: float, lon: float, geometry: dict) -> bool:
-    gtype = geometry.get("type")
-    coords = geometry.get("coordinates")
-    if gtype == "Polygon":
-        return _point_in_polygon_coords(lat, lon, coords)
-    if gtype == "MultiPolygon":
-        return any(_point_in_polygon_coords(lat, lon, poly) for poly in coords or [])
-    return False
+# Issue #1441 (AC-10): der Polygon-Test ist der geteilte Mapper-Baustein --
+# keine eigene Ray-Cast-Kopie mehr (geo_ray_cast._point_in_ring ist die einzige).
+_point_in_geometry = point_in_geometry
 
 
 class MeteoAlarmSource:

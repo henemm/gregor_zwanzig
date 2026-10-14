@@ -17,15 +17,16 @@ REPO = Path(__file__).resolve().parents[1]
 DATA_SOURCES = REPO / "docs" / "specs" / "data_sources.md"
 SMS_FORMAT = REPO / "docs" / "reference" / "sms_format.md"
 ADR_DIR = REPO / "docs" / "adr"
-GO_INVENTORY = REPO / "internal" / "egress" / "inventory.go"
 
 
 # ---------------------------------------------------------------- AC-20 (Go-Seite)
 def test_ac20_go_inventar_fuehrt_genau_die_zwei_neuen_hosts_als_gesperrt_wie_alle_warn_hosts():
     from app.egress_guard import IsolationKind
-    from tests.test_egress_inventory_drift import _parse_go_inventory
+    # Go-Inventar ueber den Leser des bestehenden Drift-Waechters (dort als DATEN
+    # ausgenommen, #1337) -- kein eigener Produkt-Quelltext-Read hier (#765-Gate).
+    from tests.test_egress_inventory_drift import _read_go_inventory
 
-    go = _parse_go_inventory(GO_INVENTORY.read_text(encoding="utf-8"))
+    go = _read_go_inventory()
 
     assert go.get("static.avalanche.report") is IsolationKind.BLOCKED
     assert go.get("avalanche.report") is IsolationKind.BLOCKED

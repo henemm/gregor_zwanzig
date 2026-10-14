@@ -38,6 +38,25 @@ Jede Datei ist eine Kopie von `bulletins/2026-02-20_AT-07_de_CAAMLv6.json` (echt
 | `2026-02-20_AT-07_de_CAAMLv6_DERIVED_border_2_4.json` | im Bulletin der Region AT-07-04-02: jedes `mainValue == "considerable"` -> `"moderate"` (AT-07-16 bleibt echt `high`) | Grenzpunkt-Paar mit Stufe 2 / Stufe 4 (echt waere 3 / 4) |
 | `2026-02-20_AT-07_de_CAAMLv6_DERIVED_border_4_4.json` | im Bulletin der Region AT-07-04-02: jedes `mainValue == "considerable"` -> `"high"` | Gleichstand 4 / 4 am Grenzpunkt (Tie-Break kleinste Regions-ID) |
 
+### Nachtrag #1441 Fix-Loop 1 (Adversary F004)
+
+Basis ist hier das **Bulletin der Region AT-07-05** aus `bulletins/2026-03-01_AT-07_de_CAAMLv6.json`
+(echt, Bulletin `121dcdb3…`, unveraendert ausgeschnitten -- die uebrigen Bulletins des Tages sind
+weggelassen) mit **genau einem** geaenderten Feldwert:
+
+| Datei | Geaenderte Felder | Grund |
+|---|---|---|
+| `derived/2026-03-01_AT-07_de_CAAMLv6_DERIVED_no_rating.json` | `dangerRatings[0].mainValue`: `"moderate"` -> `"no_rating"` (im CAAML-Schema erlaubter Wert ohne EAWS-Stufe) | `no_rating` wird verworfen statt als Absturz behandelt: Stufe 3 bleibt, kein falsches "nicht abrufbar" |
+| `derived/defekt/2026-03-01_AT-07_de_CAAMLv6_DERIVED_kaputte_endzeit.json` | `validTime.endTime`: `"2026-03-01T16:00:00Z"` -> `"kein-zeitpunkt"` | Auswertungsfehler nach erfolgreichem Abruf -> sichtbar "nicht abrufbar" (`mark_fetch_incomplete`) |
+
+**SYNTHETISCH (nicht aufgezeichnet):** `derived/defekt/kein_caaml.json` -- gueltiges JSON ohne
+`bulletins`-Liste (Wartungsantwort). Beweist: eine Antwort, die kein CAAML-Dokument ist, ist ein
+Ausfall ("nicht abrufbar"), keine stille Leere.
+
+Die Dateien unter `derived/defekt/` liegen bewusst in einem Unterordner: sie sind absichtlich
+unparsbar und gehoeren nicht in die Eigenschaftspruefung "jede Region jeder Fixture wird geparst"
+(`test_avalanche_report_parser.py`, globbt nur `derived/*.json`).
+
 ## Grenzpunkt (AC-9)
 
 Die Mikroregionen `AT-07-04-02` und `AT-07-16` grenzen aneinander. Der Punkt

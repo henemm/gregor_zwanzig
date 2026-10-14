@@ -156,6 +156,25 @@ def test_ac13_absenkung_von_4_auf_2_wird_nicht_als_neue_warnung_gemeldet():
     assert melden is False
 
 
+def test_ac13_absenkung_im_identischen_gueltigkeitsfenster_wird_nicht_gemeldet():
+    """Nachtrags-Bulletin: dasselbe Gueltigkeitsfenster (gleicher Schluessel), Stufe 4 -> 2.
+    Der Gedaechtnis-Eintrag traegt kein eigenes Fenster (Alt-Eintrag), damit entscheidet
+    ausschliesslich der Pfad "exakter Schluessel" -- dort darf nur ein ANSTIEG melden.
+    Mutation `>` -> `!=` im exakten Pfad laesst diesen Test rot werden."""
+    from output.renderers.alert.official_alerts import official_alert_state_key
+
+    vier, zwei = _vier_und_zwei_am_grenzpunkt()
+    schluessel = official_alert_state_key(vier)
+    assert official_alert_state_key(zwei) == schluessel, "Voraussetzung: derselbe Schluessel"
+    state = _gedaechtnis(vier)
+    state[schluessel].update(valid_from=None, valid_to=None)
+
+    melden, stale, merged = _urteil(zwei, state)
+
+    assert (melden, stale, merged) == (False, None, None), "Absenkung ist keine neue Warnung"
+    assert state[schluessel]["last_reported_value"] == 4.0, "das Gedaechtnis behaelt Stufe 4"
+
+
 def test_ac13_absenkung_in_beruehrender_folgeperiode_behaelt_den_alten_hoechstwert_im_gedaechtnis():
     vier, zwei = _vier_und_zwei_am_grenzpunkt()
     zwei_morgen = replace(zwei, valid_from=vier.valid_to, valid_to=vier.valid_to + timedelta(days=1))

@@ -150,7 +150,9 @@ def test_ac12_new_tokens_drop_before_any_wintersport_token():
         f"-- irgendetwas MUSS entfernt worden sein: {truncated!r}"
     )
 
-    for wintersport_token in ("SD180", "NS24+25", "SL1800", "AV3"):
+    # #1441: 'AV3' entfaellt -- _wintersport() baut kein AV mehr (Lawinenstufe
+    # nur noch als amtlicher Lagebericht im !-Warnblock).
+    for wintersport_token in ("SD180", "NS24+25", "SL1800"):
         assert wintersport_token in truncated, (
             f"Wintersport-Token {wintersport_token!r} darf bei dieser Ueberlaenge "
             f"NICHT vor den 14 neuen Token entfernt werden: {truncated!r}"

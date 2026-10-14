@@ -20,7 +20,9 @@ DROP_ORDER = [
     "HP", "FZ",
     # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
     # nachweislich 'FK') -- kein Eintrag mehr.
-    "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:",
+    # Issue #1441: 'AV' (Lagebericht) ist ein Warnblock-Token und faellt mit den
+    # amtlichen Warnungen zuletzt -- kein Eintrag hier.
+    "SL", "NS24+", "SD", "Z:", "MAX", "M:",
 ]
 
 

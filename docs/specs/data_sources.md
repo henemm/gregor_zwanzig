@@ -51,6 +51,7 @@ Diese Tabelle definiert, welche Information aus welcher Quelle bezogen wird.
 | SWE | GeoSphere SNOWGRID | - | Alpen/AT | Schneewasseraequivalent |
 | Sonnenstunden | *Berechnet* | - | - | effective_cloud < 30% |
 | Gefuehlte Temp. | *Berechnet* | - | - | Wind Chill Formel |
+| Lawinengefahrenstufe (EAWS 1-5) | avalanche.report (CAAML v6) | - | Tirol, Suedtirol, Trentino, Kaernten | Amtlicher Lagebericht, CC BY 4.0, siehe Antrag #6 |
 
 **Regionen-Codes:**
 - `Alpen/AT` = Oesterreich, Alpenraum (GeoSphere bevorzugt)
@@ -203,6 +204,7 @@ Die folgenden Quellen sind NICHT genehmigt:
 | 2025-12-31 | 1.0 | Initial: GeoSphere, Open-Meteo (cloud layers), Bergfex | Henning |
 | 2026-01-24 | 1.1 | Open-Meteo erweitert: Wetter-Parameter + Regional Models (AROME, ICON-D2, MetNo, ECMWF). Bedingung: ZWINGEND Modellauswahl fuer alle Regionen. | Henning |
 | 2026-08-01 | 1.2 | Amtliche Warnungen nachgetragen: MeteoAlarm (Bestand, war nie eingetragen) + Wechsel des Bezugswegs auf den kontingentfreien Feed `feeds.meteoalarm.org`. Siehe ADR-0039. | Henning (PO-Entscheidung 2026-08-01) |
+| 2026-10-13 | 1.3 | Amtlicher Lawinen-Lagebericht ueber avalanche.report (Tirol, Suedtirol, Trentino, Kaernten), Issue #1441. Siehe ADR-0087. | Henning (Spec-Freigabe 2026-10-13) |
 
 ---
 
@@ -217,6 +219,30 @@ Die folgenden Quellen sind NICHT genehmigt:
 Keine offenen Antraege.
 
 ### Genehmigte Antraege
+
+#### Antrag #6: Lawinen-Lagebericht ueber avalanche.report (CAAML v6)
+
+**Datum:** 2026-10-13
+**Status:** ✅ APPROVED (2026-10-13, Henning — mit der Freigabe der Spec)
+**Antragsteller:** Claude (Issue #1441 Slice 1, Epic #2258)
+**Spec:** `docs/specs/modules/avalanche_report_bulletin.md`
+**ADR:** [ADR-0087](../adr/0087-lawinen-lagebericht-zweite-skala.md)
+
+**Zusammenfassung:** Der amtliche Lawinen-Lagebericht (EAWS-Gefahrenstufe 1-5 mit Hoehengrenze
+und Lawinenproblem) der Euregio Tirol-Suedtirol-Trentino und des Lawinenwarndienstes Kaernten,
+bezogen als statische CAAML-v6-Dateien von `static.avalanche.report` (leitet per 301 auf
+`avalanche.report` weiter). Kein Schluessel, kein veroeffentlichtes Limit; Abruf nur ueber
+`warn_egress.cached_fetch` (TTL 1800 s).
+
+| Daten | Status | Bemerkung |
+|-------|--------|-----------|
+| Lawinen-Lagebericht AT-07, IT-32-BZ, IT-32-TN, AT-02 (Stufe, Hoehe, Problem, Gueltigkeit) | approved | Hosts `static.avalanche.report` + `avalanche.report`; Lizenz **CC BY 4.0** — Quellenname und Bulletin-Link in Mail und Telegram |
+| Mikroregionen-Geometrie (EAWS Regions, `regions.avalanches.org`, nur `latest/`) | approved | **CC0**, vier Dateien eingecheckt, kein Laufzeitabruf |
+| Salzburg, Bayern, uebrige AT-Laender | **nicht beantragt** | Lizenz der Dienste nicht belegt; Freischaltung spaeter per Tabelleneintrag nach Lizenzzusage |
+| `lawinen-warnung.eu`, EU-Sammelfeed `eaws_bulletins`, SLF | **nicht beantragt** | SLF (Schweiz) = Slice 2 |
+
+**Begruendung:** Der Lagebericht ist fuer Weitwanderer im Winter und Fruehjahr die zentrale
+Sicherheitsinformation; MeteoAlarm liefert nur eine grobe Awareness-Stufe 1-4.
 
 #### Antrag #2: MeteoAlarm — amtliche Unwetterwarnungen ueber den kontingentfreien Feed
 

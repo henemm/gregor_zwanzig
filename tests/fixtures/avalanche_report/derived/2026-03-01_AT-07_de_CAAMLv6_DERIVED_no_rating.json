@@ -1,0 +1,119 @@
+{
+ "bulletins": [
+  {
+   "publicationTime": "2026-02-28T16:08:08Z",
+   "validTime": {
+    "startTime": "2026-02-28T16:00:00Z",
+    "endTime": "2026-03-01T16:00:00Z"
+   },
+   "unscheduled": true,
+   "avalancheActivity": {
+    "highlights": "Vorsicht vor schwachem Altschnee. Nassschnee beachten.",
+    "comment": "Schon einzelne Wintersportler können stellenweise Lawinen auslösen. Gefährlich sind vor allem Schattenhänge, besonders im Bereich der Waldgrenze sowie oberhalb der Waldgrenze. <br/> <br/> Die nächtliche Abstrahlung ist verbreitet stark eingeschränkt. Es sind unterhalb von rund 2200 m einzelne kleine und vereinzelt mittlere nasse Lockerschneelawinen möglich. <br/> <br/> Zudem sind Gleitschneelawinen möglich. Dies besonders an Böschungen und Grashängen."
+   },
+   "snowpackStructure": {
+    "comment": "Es fällt gebietsweise etwas Schnee. Es ist mild. <br/> <br/> Die Schneedecke bleibt stellenweise instabil. Im unteren Teil der Schneedecke sind an West-, Nord- und Osthängen störanfällige Schwachschichten vorhanden. <br/> <br/> Die Schneeoberfläche kühlt in der bedeckten Nacht kaum ab und ist schon am Morgen aufgeweicht."
+   },
+   "tendency": [
+    {
+     "highlights": "Vorsicht vor schwachem Altschnee. Einzelne Wintersportler können weiterhin Lawinen auslösen. <br/> <br/> Es ist verbreitet sonnig. Leichter Anstieg der Gefahr von nassen Lawinen mit der tageszeitlichen Erwärmung und der Sonneneinstrahlung.",
+     "tendencyType": "steady",
+     "validTime": {
+      "startTime": "2026-03-01T16:00:00Z",
+      "endTime": "2026-03-02T16:00:00Z"
+     }
+    }
+   ],
+   "customData": {
+    "ALBINA": {
+     "mainDate": "2026-03-01"
+    },
+    "LWD_Tyrol": {
+     "dangerPatterns": [
+      "DP1"
+     ]
+    }
+   },
+   "avalancheProblems": [
+    {
+     "problemType": "persistent_weak_layers",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "poor",
+     "frequency": "some",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "slab"
+      }
+     },
+     "aspects": [
+      "NW",
+      "N",
+      "NE"
+     ]
+    },
+    {
+     "problemType": "wet_snow",
+     "elevation": {
+      "upperBound": "2200"
+     },
+     "validTimePeriod": "all_day",
+     "snowpackStability": "poor",
+     "frequency": "few",
+     "avalancheSize": 2,
+     "customData": {
+      "ALBINA": {
+       "avalancheType": "loose"
+      }
+     },
+     "aspects": [
+      "E",
+      "SE",
+      "SW",
+      "W",
+      "S"
+     ]
+    }
+   ],
+   "bulletinID": "121dcdb3-b6b4-4ae0-8211-5c40532aafc6",
+   "dangerRatings": [
+    {
+     "mainValue": "no_rating",
+     "elevation": {
+      "upperBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    },
+    {
+     "mainValue": "considerable",
+     "elevation": {
+      "lowerBound": "treeline"
+     },
+     "validTimePeriod": "all_day"
+    }
+   ],
+   "lang": "de",
+   "regions": [
+    {
+     "name": "Brandenberger Alpen",
+     "regionID": "AT-07-05"
+    },
+    {
+     "name": "Kaisergebirge - Waidringer Alpen",
+     "regionID": "AT-07-06"
+    },
+    {
+     "name": "Kitzbüheler Alpen Wildseeloder",
+     "regionID": "AT-07-18"
+    },
+    {
+     "name": "Karwendel Ost",
+     "regionID": "AT-07-04-02"
+    }
+   ]
+  }
+ ]
+}

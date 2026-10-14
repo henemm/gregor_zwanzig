@@ -25,8 +25,22 @@ def urgency_from_official_level(level: int) -> str:
     """Amtliche Warnstufe (1-4) -> Dringlichkeit, über die bestehende
     Abbildung `hazard_symbols.LEVEL_LETTERS` (E2). Fallback bei einer Stufe
     außerhalb des Katalogs ist konservativ `"HIGH"` (AC-3)."""
+    # Issue #1441 (AC-14): Stufe 1 (gering/gruen) ist explizit LOW -- nie der
+    # konservative HIGH-Rueckfall. `LEVEL_LETTERS` bleibt {2,3,4} (TABU).
+    if level == 1:
+        return "LOW"
     letter = hazard_symbols.LEVEL_LETTERS.get(level, "H")
     return _LETTER_TO_URGENCY[letter]
+
+
+def urgency_from_official_transition(previous, current) -> str:
+    """Absenkung/Entwarnung einer amtlichen Warnung (Issue #1441, AC-13): die
+    Meldung traegt die Dringlichkeit des ALTEN Werts -- Maximum aus alt und neu
+    (Vorbild `_ordinal_severity`, PO-Regel "Entwarnung traegt die Dringlichkeit
+    des alten Werts"). `current=None` = Entwarnung. Verglichen wird das
+    abgeleitete `level` (EAWS 5 -> 4 = HIGH)."""
+    current_level = current.level if current is not None else 0
+    return urgency_from_official_level(max(previous.level, current_level))
 
 
 def urgency_from_radar(*, is_convective: bool, intensity_label: str) -> str:

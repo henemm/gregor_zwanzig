@@ -28,8 +28,8 @@ var Inventory = map[string]Kind{
 	// (Python-Seite seit 9f57ae16, hier nachgezogen gegen Inventar-Drift).
 	"opendata.dwd.de": TestAccess,
 	// Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
-	"warnungen.zamg.at":             Blocked,
-	"api.brightsky.dev":             TestAccess,
+	"warnungen.zamg.at": Blocked,
+	"api.brightsky.dev": TestAccess,
 	// Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
 	"api.meteoalarm.org": Blocked,
 	// Issue #1445 S1: derselbe Anbieter, kontingentfreier Feed-Transport --
@@ -37,9 +37,13 @@ var Inventory = map[string]Kind{
 	"feeds.meteoalarm.org":              Blocked,
 	"public-api.meteofrance.fr":         Blocked,
 	"www.risque-prevention-incendie.fr": Blocked,
-	"gateway.seven.io":                  TestAccess,
-	"api.telegram.org":                  TestAccess,
-	"mail.henemm.com":                   TestAccess,
+	// Issue #1441 S1: Lawinen-Lagebericht (avalanche.report) — Warn-Host,
+	// static.* leitet per 301 auf avalanche.report weiter.
+	"static.avalanche.report": Blocked,
+	"avalanche.report":        Blocked,
+	"gateway.seven.io":        TestAccess,
+	"api.telegram.org":        TestAccess,
+	"mail.henemm.com":         TestAccess,
 	// Go-Dienst: Ortsauflösung, Höhen, Tour-Import — kostenlos und
 	// nebenwirkungsfrei, muss auf Staging funktionieren.
 	"nominatim.openstreetmap.org": TestAccess,

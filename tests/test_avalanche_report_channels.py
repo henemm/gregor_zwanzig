@@ -171,6 +171,87 @@ def test_ac16_quellenname_und_bulletin_url_stehen_in_mail_und_telegram():
     assert name in telegram and url in telegram
 
 
+_AC16_NAME = "Lawinenwarndienst Tirol, avalanche.report"
+_AC16_URL = "https://avalanche.report/bulletin/2026-02-20?region=AT-07-25"
+
+
+def _zugestellte_warn_mail_teile(monkeypatch, versand) -> tuple[str, str]:
+    """Gemeinsamer Rand fuer beide AC-16-Warnmail-Tests: echter Versandpfad inkl.
+    `EmailOutput.send` und MIME-Bau; ersetzt ist nur der SMTP-Rand `_dial_and_send`.
+    `versand(settings)` loest den Versand aus. Liefert (HTML-Teil, Klartext-Teil)
+    der zugestellten Mail."""
+    from app.config import Settings
+    from output.channels.email import EmailOutput
+
+    erfasst = []
+    monkeypatch.setattr(EmailOutput, "_dial_and_send",
+                        lambda self, *a, **kw: erfasst.append(kw.get("msg") if "msg" in kw else a[5]))
+    settings = Settings(smtp_host="smtp.test.invalid", smtp_user="t@test.invalid", smtp_pass="x",
+                        mail_to="to@test.invalid")
+
+    versand(settings)
+
+    assert len(erfasst) == 1 and erfasst[0].get("X-GZ-Mail-Type") == "official-alert"
+    teile = {p.get_content_type(): p.get_payload(decode=True).decode(p.get_content_charset() or "utf-8")
+             for p in erfasst[0].walk() if p.get_content_type() in ("text/html", "text/plain")}
+    return teile["text/html"], teile["text/plain"]
+
+
+def _assert_quellenname_und_bulletin_url(html: str, klartext: str) -> None:
+    assert _AC16_NAME in html and f'href="{_AC16_URL}"' in html, "HTML-Teil ohne Quellenname/Bulletin-Link"
+    assert _AC16_NAME in klartext and _AC16_URL in klartext, \
+        f"Klartext ohne Quellenname/Bulletin-URL:\n{klartext}"
+
+
+def test_ac16_eigenstaendige_warn_mail_traegt_quellenname_und_bulletin_url(monkeypatch):
+    """CC BY 4.0 auch in der eigenstaendigen Warn-Mail (`X-GZ-Mail-Type: official-alert`).
+
+    Echter Versandpfad `NotificationService.send_official_alert` inkl. `EmailOutput.send`
+    und MIME-Bau; ersetzt ist nur der SMTP-Rand `_dial_and_send`. Gemessen wird die
+    zugestellte Mail -- HTML- UND Klartext-Teil (der Klartext wird separat gebaut)."""
+    from datetime import date
+
+    from app.trip import Stage, Trip, Waypoint
+    from services.notification_service import NotificationService
+
+    a = _stufe4()
+    waypoints = [Waypoint(id=f"w{i}", name=f"P{i}", lat=47.0 + i * 0.01, lon=11.0 + i * 0.01,
+                          elevation_m=2000.0) for i in range(3)]
+    trip = Trip(id="t-1441-standalone-url", name="Stubai",
+                stages=[Stage(id="s1", name="Tag 1", date=date(2026, 2, 20), waypoints=waypoints)])
+
+    html, klartext = _zugestellte_warn_mail_teile(
+        monkeypatch,
+        lambda settings: NotificationService(settings, "t-1441-standalone-url").send_official_alert(
+            trip=trip, notices=[(a, ["1"])], effective_channels={"email"}, sms_sink=lambda text: None,
+        ),
+    )
+
+    _assert_quellenname_und_bulletin_url(html, klartext)
+
+
+def test_ac16_ortsvergleich_warn_mail_traegt_quellenname_und_bulletin_url(monkeypatch):
+    """Ortsvergleich-Pendant (Adversary F011): CC BY 4.0 auch in der eigenstaendigen
+    Warn-Mail des Ortsvergleichs. Echter Versandpfad
+    `NotificationService.send_multi_location_official_alert` ohne `mail_sink` -> echter
+    `EmailOutput.send`; ersetzt ist nur `_dial_and_send`."""
+    from app.user import SavedLocation
+    from services.notification_service import NotificationService
+
+    a = _stufe4()
+    orte = [SavedLocation(id=f"o{i}", name=f"Ort {i}", lat=47.0 + i * 0.01, lon=11.0 + i * 0.01,
+                          elevation_m=2000) for i in range(3)]
+
+    html, klartext = _zugestellte_warn_mail_teile(
+        monkeypatch,
+        lambda settings: NotificationService(settings).send_multi_location_official_alert(
+            "Stubai-Vergleich", orte, [(a, ["o0", "o1"])], {"email"},
+        ),
+    )
+
+    _assert_quellenname_und_bulletin_url(html, klartext)
+
+
 def test_ac16_keine_handlungsempfehlung_in_mail_und_telegram():
     a = _triebschnee_stufe4()
     for text in (render_trip_mail([a]), _telegram(a), render_compare_mail([a])):

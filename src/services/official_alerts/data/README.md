@@ -16,3 +16,18 @@ Warngebiete: Deutscher Wetterdienst (DWD), CC BY 4.0; Copyright GeoBasis-DE / BK
 - **Aktualisierung:** bei einer DWD-Kreisreform meldet der Drift-Wächter
   (`log_zone_drift`, Service `meteoalarm_feed:DE`) unbekannte `WARNCELLID`s aus dem Feed;
   dann den Layer mit obigem Aufruf neu ziehen.
+
+## `avalanche_regions_{AT-07,IT-32-BZ,IT-32-TN,AT-02}.geojson.json` — EAWS-Mikroregionen, Issue #1441
+
+Regionen-Geometrie: EAWS Micro-Regions, **CC0** (`regions.avalanches.org`).
+
+- **Herkunft:** `https://regions.avalanches.org/micro-regions/latest/{X}_micro-regions.geojson.json`
+  (nur `latest/`), einmalig abgerufen am 2026-10-13 — zur Laufzeit wird nichts nachgeladen.
+  Byte-identisch zu `tests/fixtures/avalanche_report/regions/{X}_micro-regions.geojson.json`
+  (Test `test_ac7_standardtabelle_...` vergleicht die Bytes).
+- **Umfang:** je Mikroregion ein Feature, `properties.id` = CAAML-`regionID` (z. B. `AT-07-28`),
+  Geometrie CRS84 `MultiPolygon` (`[lon, lat]`).
+- **Verwendung:** `services/official_alerts/region_mapper.py` (Punkt → Mikroregionen) für
+  `AvalancheReportSource` (`avalanche_report.py`, Konfigurationstabelle `AVALANCHE_REGION_TABLE`).
+- **Aktualisierung:** bei einer Regionsreform der Warndienste die Datei aus `latest/` neu ziehen
+  (Fixture und Paketkopie gemeinsam). Ein weiteres Land = neue Tabellenzeile + Regionsdatei hier.

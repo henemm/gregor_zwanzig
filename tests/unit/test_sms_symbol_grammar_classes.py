@@ -60,7 +60,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # (Implementation Details der Spec, Gleichungspaar 30 Katalog + 6 System = 36).
 # #2417 AC-27: Meteo-France 'HR:'/'TH:' heissen 'VR:'/'VT:' -- 'VT:' teilt sich
 # kein Symbol mehr mit dem Gewitter-Kuerzel 'TH:' und steht deshalb selbst hier.
-_SYSTEM_SYMBOLS = {"DBG", "AV", "VR:", "VT:", "M:", "MAX", "Z:"}
+# #1441: 'AV' ist kein Builder-Baustein mehr (PRIORITY/POSITIONAL) -- die
+# Lawinenstufe ist Warn-Kuerzel des Lageberichts (hazard_symbols); 7 -> 6.
+_SYSTEM_SYMBOLS = {"DBG", "VR:", "VT:", "M:", "MAX", "Z:"}
 
 
 def _katalog_union() -> set[str]:
@@ -192,9 +194,9 @@ def test_ac_s6_4_system_exception_list_is_closed_and_disjoint():
     benannten Ausnahmeliste, keine dritte, unerklaerte Kategorie."""
     katalog_union = _katalog_union()
 
-    assert len(_SYSTEM_SYMBOLS) == 7, (
+    assert len(_SYSTEM_SYMBOLS) == 6, (
         f"Die Systemzeichen-Ausnahmeliste hat {len(_SYSTEM_SYMBOLS)} "
-        f"Eintraege, erwartet 7: {sorted(_SYSTEM_SYMBOLS)!r}"
+        f"Eintraege, erwartet 6: {sorted(_SYSTEM_SYMBOLS)!r}"
     )
 
     unexplained = set(PRIORITY.keys()) - (katalog_union | _SYSTEM_SYMBOLS)
@@ -212,7 +214,7 @@ def test_ac_s6_4_system_exception_list_is_closed_and_disjoint():
 
     assert set(PRIORITY.keys()) == (katalog_union | _SYSTEM_SYMBOLS), (
         "PRIORITY.keys() sollte exakt der Vereinigung aus Katalog-Union "
-        f"und Systemzeichen-Ausnahmeliste (7) entsprechen: "
+        f"und Systemzeichen-Ausnahmeliste (6) entsprechen: "
         f"PRIORITY hat {len(PRIORITY)} Schluessel."
     )
 

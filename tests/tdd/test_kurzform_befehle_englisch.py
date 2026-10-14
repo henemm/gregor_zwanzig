@@ -95,6 +95,7 @@ HELP_WORTLAUT_ORTSVERGLEICH = (
 )
 
 #: #2422 S6 (B1) loest #2454 AC-6 ab -- TF steht wieder im Trip-CODES-Wortlaut.
+#: #1441: "AV avalanche level" steht als Warn-Kuerzel (Lagebericht) unter "Alerts after !".
 CODES_WORTLAUT = (
     "Weather: T temp, D day max, N night, L day min, TF feels like, "
     "FD/FL/FN = D/L/N feels like, R rain mm, PR rain %, TH thunder, "
@@ -102,12 +103,12 @@ CODES_WORTLAUT = (
     "DP dew point, CP storm energy, PT precip type, SL snow line m, "
     "NS24+ new snow 24h, CT/CL/CM/CH clouds total/low/mid/high, VS visibility, "
     "SU sun h, UV index, HP pressure, FZ 0C level m.\n"
-    "More: SD snow depth, AV avalanche level, C confidence, "
+    "More: SD snow depth, C confidence, "
     "Z:/MAX/M: fire zones/top level/massifs.\n"
     "Format: E4 stage 4, 23@5 over limit from 5h, (24@7) peak, D13/27 min/max, "
     "+HL hail, - none, ? no data.\n"
     "Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW avalanche, "
-    "IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. "
+    "AV avalanche level, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. "
     "VR:VT: MF rain/storm risk. X? no data."
 )
 

@@ -61,7 +61,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 ## 2. Token-Reihenfolge (fix)
 
 ```
-{Name}: N L D FN FL FD R PR W G TH: TH+: HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ C VR:VT: !{Warn-Block} Z: M: [SD NS24+ SL AV] X? DBG
+{Name}: N L D FN FL FD R PR W G TH: TH+: HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ C VR:VT: !{Warn-Block} Z: M: [SD NS24+ SL] X? DBG
 ```
 
 **Hinweis zu `L D` / `FL FD` (Issue #1824, 2026-08-14; Kürzel `K`→`L`/`FK`→`FL` seit Fix #1926, 2026-08-17):** Sind bei einer Temperatur-Metrik **beide** Auswertungen („Tiefstwert" UND „Höchstwert") gewählt, erscheinen die beiden Kürzel nicht getrennt, sondern als **ein Bereichs-Token** unter dem Höchstwert-Kürzel: `D{min}/{max}` statt `L{min} D{max}` (gefühlt: `FD{min}/{max}`). Ist nur eine der beiden Auswertungen gewählt, bleibt die bisherige Einzelform (`L13` bzw. `D27`) unverändert — `L`/`FL` bedeuten also weiterhin immer den Tiefstwert. `N`/`FN` (Nacht) sind davon nicht betroffen.
@@ -80,7 +80,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Risks (Vigilance) | `VR:VT:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab der wirksamen Kanal-Schwelle — Ortsvergleich weiterhin fest ab ORANGE, Trips seit Issue #1461 S3b-2a je Kanal einstellbar, Startwert bereits ab GELB (§3.4c) |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
-| Wintersport | `SD NS24+ SL AV` | optional (Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`; `WC` mit Fix #1887 entfallen, verdoppelte `FK`) |
+| Wintersport | `SD NS24+ SL` | optional (Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`; `WC` mit Fix #1887 entfallen, verdoppelte `FK`; `AV` seit #1441 im Warn-Block, §3.4c) |
 | Nicht abrufbar | `X?` | nur wenn ≥1 abdeckende amtliche Warn-Quelle beim Fetch ausgefallen ist (§3.4d, Issue #1349; Kürzel seit Epic #1703 Scheibe 6 `X?`, vormals `W?` — Kollision mit dem Wind-Datenausfall-Marker) |
 | Debug | `DBG[...]` | nur Dry-Run / Debug-Modus |
 
@@ -100,7 +100,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 
 > **Fix #1483 (2026-08-05):** Bis hierhin gab es die `?`-Form nur für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:`/`TH+:`. Die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` durchliefen stattdessen `render_temperature()`, das ausschliesslich Zahl oder `-` lieferte — eine Datenlücke erschien dort folglich als `K-` und war von „geprüft, kein Wert” nicht unterscheidbar. Jetzt nutzen beide Pfade denselben gemeinsamen Helfer `_gap_or()` (`builder.py:120-130`): `_mk_metric()` (Zeile 150, Schwellwert-Kürzel) UND die Temperatur-Schleife in `build_token_line()` (Zeile 299). `_wintersport()` (Schneehöhe/Neuschnee/Schneefallgrenze/Lawinenstufe/Windchill) bleibt bewusst unverändert und zeigt weiterhin nie `?` — es ruft `render_int()` über einen eigenen Pfad auf, der mit `_gap_or()` nichts zu tun hat. Details: `docs/specs/modules/fix_1483_temp_gap_marker.md`.
 
-> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL AV`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `X?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) bleibt unverändert prioritätsbasiert — die Anzeige-Position beeinflusst NICHT, welches Token zuerst fällt. Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
+> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `X?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) bleibt unverändert prioritätsbasiert — die Anzeige-Position beeinflusst NICHT, welches Token zuerst fällt. Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
 
 ---
 
@@ -277,13 +277,16 @@ Amtliche Unwetterwarnungen (`official_alerts`-Dienst, alle Provider) erscheinen 
 | `wind_gust` | `WG` | Sturm |
 | `snow` | `SN` | Schneefall |
 | `avalanche` | `AW` | Lawine |
+| `avalanche_bulletin` | `AV` | Lawinenstufe (amtlicher Lagebericht, EAWS 1-5, Ziffer statt L/M/H — `!AV4`) |
 | `black_ice` | `IC` | Glatteis |
 | `extreme_heat` | `HT` | Hitze |
 | `extreme_cold` | `CD` | Kälte |
 | `wildfire_risk` | `FR` | Waldbrand-Gefahr |
 | `access_ban` | `AB` | Zugang gesperrt |
 
-**Abgrenzung `AW` / `AV` (Issue #1430):** `AW` ist die amtliche Lawinen-**Warnung** (MeteoAlarm awareness_type 9, Warn-Block mit Stufe, z.B. `!AW:M`); `AV` ist die Lawinenstufe (Lawinenstufe 1-5) aus dem Wintersport-Block (§3.1). Zwei verschiedene Aussagen, zwei Kürzel.
+**Abgrenzung `AW` / `AV` (Issue #1430, seit #1441):** `AW` (`avalanche`) ist die amtliche Lawinen-**Warnung** (MeteoAlarm awareness_type 9, Awareness-Skala 1-4, z.B. `!AW:M`); `AV` (`avalanche_bulletin`) ist die Lawinenstufe 1-5 des amtlichen **Lageberichts** (avalanche.report, EAWS). Zwei verschiedene Aussagen auf zwei Skalen, zwei Kürzel — beide dürfen nebeneinander stehen (`!AV4 AW:M`), verglichen wird nie über die Skalen hinweg (ADR-0087).
+
+**Sonderfall `avalanche_bulletin` (`AV`, Issue #1441):** das Token trägt die **Originalziffer** der EAWS-Stufe direkt am Kürzel — `AV4`, `AV5` —, ohne Doppelpunkt, ohne `L/M/H` und ohne Stunde (die Ausgabezeit 17:00 ist keine Warnstunde). Es steht ausschließlich im `!`-Block (nie mehr im Wintersport-Block, §3.6) und damit genau einmal, unabhängig von der Metrik-Einstellung; Kürzungspriorität wie alle amtlichen Warnungen. Der Stufenfilter wirkt wie bei allen amtlichen Warnungen auf das abgeleitete Farblevel (1, 2, 3, 4, 4). Alarm- und Premium-SMS (`render_official_alert_sms`) zeigen dasselbe Token (`!AV5`).
 
 **Seit #2417 (AC-27):** `TS`/`FO`/`RA`/`WG`/`AB` statt `TH`/`FL`/`HR`/`W`/`CL` — die alten Kürzel glichen Wetter-Kürzeln. Die Bedeutung jedes Kürzels (en/de) steht an genau einer Stelle: Wettermetriken im Metrik-Katalog (`MetricDefinition.kuerzel_bedeutung_en/_de`), Warn-Kürzel in `hazard_symbols.py` (`HAZARD_BEDEUTUNG_*`), Bausteine und Formatzeichen in `tokens/builder.py`; der Befehl `CODES`/`KUERZEL` liefert sie per Nachricht.
 
@@ -313,6 +316,7 @@ Beides ist sicherheitsrelevant, nicht kosmetisch: eine amtliche Warnung, die sti
 Nur Vorhersage:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16
 Mit Warnung:      GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 !TS:H@14 WG:M
 Brand + Sperrung: GR20 E5: N9 D28 R- W12@11 TH:- !FR:H AB
+Lagebericht:      KHW E5: N-6 D2 R- W20@11 !AV4
 Nicht abrufbar:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 X?
 ```
 
@@ -365,7 +369,10 @@ Wenn keine relevanten Zonen/Massifs aktiv sind: **Block komplett weglassen** (ke
 | `SD{cm}` | Schneehöhe gesamt | `snow_depth_cm` |
 | `NS24+{cm}` | Neuschnee 24h | `snow_new_24h_cm` |
 | `SL{m}` | Schneefallgrenze | `snowfall_limit_m` |
-| `AV{1-5}` | Lawinenstufe | `AvalancheReport.danger.level` |
+
+> **Seit Issue #1441:** `AV{1-5}` (Lawinenstufe) ist kein Wintersport-Token mehr. Die Stufe kommt
+> aus dem amtlichen Lagebericht und steht im `!`-Warnblock (§3.4c, `avalanche_bulletin`), genau
+> einmal und unabhängig von der Metrik-Einstellung.
 
 > **Kürzel-Umstellung 2026-08-01 (#1435 E3b).** Schneehöhe hieß bis dahin `SN`,
 > Neuschnee `SN24+`, Schneefallgrenze `SFL`. Die drei Kürzel stammen jetzt aus
@@ -449,7 +456,7 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 | `WD:` / `PT:` / `SU` / `HP` | `WD:-` / `PT:-` / `SU-` / `HP-` | Klasse (c), bei fehlendem Tageswert — anders als bei den Wintersport-Token (unten) gibt es hier eine Null-Form, kein komplettes Weglassen (DEC-3, `fix_1660b_sms_token_wiring.md`). Der Doppelpunkt bei `WD:`/`PT:` gehört zum Symbol und steht deshalb auch in Null- und Lückenform (Issue #1824, Muster `TH:-`) |
 | `VR` / `VT` (Vigilance) | `VR:-VT:-` | Bei keiner Vigilance-Warnung; immer paarweise |
 | `Z` / `M` (Fire) | komplett weglassen | Kein `Z:-`, einfach Block entfernen |
-| `SD`/`NS24+`/`SL`/`AV` | komplett weglassen | Wintersport-Tokens nicht zwingend |
+| `SD`/`NS24+`/`SL` | komplett weglassen | Wintersport-Tokens nicht zwingend |
 | `DBG` | komplett weglassen | Nur Debug-Modus |
 
 **Zur `?`-Form (Issue #1328, erweitert um `TH+:` durch Fix #1482, um die Temperatur-Kürzel durch Fix #1483 (2026-08-04/05) und um die 14 erweiterten Metrik-Kürzel durch Issue #1660 Scheibe B, 2026-08-10; Kürzel `K`→`L`/`FK`→`FL`/`NL`→`FZ` seit Fix #1926, 2026-08-17):** Bei einer Datenlücke im ausgewerteten Fenster wird die Null-Form `-` zu `?` („unbekannt”) — das gilt für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:` des berichteten Tages sowie für `TH+:` der Folge-Etappe, wenn diese existiert, ihre Daten aber weder über den Trend-Pfad noch den Fallback-Fetch beschaffbar waren. Dieselbe Regel gilt für alle 14 Kürzel aus §3.2a (`HU`/`DP`/`WD`/`CP`/`PT`/`CT`/`CL`/`CM`/`CH`/`VS`/`SU`/`UV`/`HP`/`FZ`) — auch die vier Tageswert-Kürzel ohne Stunde (`WD`/`PT`/`SU`/`HP`) zeigen bei Datenlücke `?` statt `-`. Existiert schlicht kein Folgetag (letzte Etappe des Trips), bleibt es unverändert bei `TH+:-`, nie `TH+:?`. Seit Fix #1483 gilt dieselbe Regel auch für die Temperatur-Kürzel `N`/`L`/`D`/`FN`/`FL`/`FD` — eine Datenlücke im Fenster zeigt jetzt `N?`/`L?`/… statt `N-`/`L-`/…; fehlt lediglich der Wert ohne Datenlücke, bleibt es bei `-`. Beide Kürzel-Gruppen laufen über denselben gemeinsamen Helfer `_gap_or()` (`builder.py:120-130`), aufgerufen aus `_mk_metric()` (Zeile 150) bzw. der Temperatur-Schleife in `build_token_line()` (Zeile 299).
@@ -534,7 +541,7 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser 
 
 1. `DBG[...]`
 2. Die 14 erweiterten Metrik-Tokens aus §3.2a (`HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ`, Issue #1660 Scheibe B; `NL`→`FZ` seit Fix #1926) — fallen als erste Fachtoken, noch VOR den Wintersport-Größen
-3. Wintersport-Tokens (`AV`, `SL`, `NS24+`, `SD`)
+3. Wintersport-Tokens (`SL`, `NS24+`, `SD`)
 4. Fire-Block komplett (`Z:HIGH...`, `MAX...`, `M:...`)
 5. Peak-Werte `(max@h)` (Threshold-Werte bleiben erhalten)
 6. `FN`, `FL`, `FD` (gefühlte Temperaturen — Komfortangabe, fällt VOR den sicherheitsrelevanten Planungsgrössen, Issue #1410; `FK`→`FL` seit Fix #1926)
@@ -592,9 +599,10 @@ Paliri: D24 G35@14(58@17) TH:H@15 VR:-VT:H@15
 
 ### 8.5 Wintersport
 ```
-Arlberg: N-12 D-5 SD180 NS24+25 SL1800 AV3 W45@12 G78@14(85@16)
+Arlberg: N-12 D-5 SD180 NS24+25 SL1800 W45@12 G78@14(85@16)
 ```
-**Länge:** 63 Zeichen. (Bis Fix #1887 stand hier zusätzlich `WC-22` am Ende —
+**Länge:** 59 Zeichen. (Bis #1441 stand hier zusätzlich `AV3` — die Lawinenstufe steht seither
+als amtlicher Lagebericht im `!`-Block, §3.4c.) (Bis Fix #1887 stand hier zusätzlich `WC-22` am Ende —
 entfallen, verdoppelte den Wert von `FK`, s. §3.6/§9.)
 
 ### 8.6 Mit Debug
@@ -628,7 +636,7 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `!`-Warn-Block (§3.4c) | `SegmentWeatherData.official_alerts` (`official_alerts`-Dienst, alle Provider, 9 hazards) | Dedup (`dedupe_official_alerts`) + Filter Stufe ≥ Startschwelle „gering" (seit #1461 S3b-2a/S3b-2b, s. §2), Kürzel aus `hazard_symbols.py` | ✅ vorhanden (Issue #1318) — **andere Quelle** als die beiden Vigilance-Zeilen darüber, die weiterhin am alten `get_warning_full()`-Pfad hängen |
 | `Z`/`M` | `risque-prevention-incendie.fr` | tagesaktueller JSON | ⚠️ Provider TODO |
 | `SD`/`NS24+`/`SL` | GeoSphere/SLF | siehe Wintersport-Spec | ⚠️ teilweise vorhanden |
-| `AV` | `AvalancheReport.danger.level` | aus Lawinenbericht | ⚠️ Provider TODO |
+| `AV` | amtlicher Lagebericht `avalanche.report` (`avalanche_bulletin`, Warn-Block) | CAAML v6, EAWS 1-5 | ✅ seit #1441 (Tirol, Südtirol, Trentino, Kärnten) |
 | `FN` / `FL` / `FD` (bis 2026-08-17 `FK`, Fix #1926) | `night_wind_chill_min_c` / `wind_chill_min_c` / `wind_chill_max_c` | Open-Meteo `apparent_temperature`, GeoSphere | ✅ vorhanden (Issue #1410) — `FL`/`FD` seit #1728 (2026-08-15) über die eigenen Metriken `wind_chill_day_low`/`wind_chill_day_high` gegated (s. §2) |
 | `L` (bis 2026-08-17 `K`, Fix #1926) | `temp_min_c` (Gehzeit-Fenster) | Provider | ✅ vorhanden (Issue #1410) — seit #1728 (2026-08-15) nur bei aktivierter Metrik „Tages-Tiefsttemperatur (Gehzeit)“ (`temperature_day_low`); bis dahin hing das Kürzel an der Auswertungswahl „nur Tiefstwert“ von „Temperatur“. Ist zusätzlich `temperature_day_high` aktiv, trägt `D{min}/{max}` denselben Wert in der ersten Hälfte (Issue #1824) |
 | `HU` | `humidity_pct` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
@@ -655,7 +663,7 @@ Markierte TODOs sind separate Issues, nicht Teil dieser Spec.
 | Forecast (N…TH+) | global | immer ausgeben, **soweit die Metrik gewählt ist** (§2, Issue #1415) |
 | Vigilance (`HR`/`TH`) | nur Frankreich | komplett weglassen (kein `-`) |
 | Fire (`Z`/`M`) | nur Korsika (FR) | komplett weglassen |
-| Wintersport (SD…AV) | AT/CH/Tirol/Südtirol/Trentino | komplett weglassen, wenn Provider fehlt |
+| Wintersport (SD…SL) | AT/CH/Tirol/Südtirol/Trentino | komplett weglassen, wenn Provider fehlt |
 
 ---
 

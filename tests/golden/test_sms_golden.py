@@ -54,6 +54,10 @@ def _default_specs():
         MetricSpec(symbol="SD", enabled=True),
         MetricSpec(symbol="NS24+", enabled=True),
         MetricSpec(symbol="SL", enabled=True),
+        # #1441: 'AV' erzeugt _wintersport() nicht mehr (Lawinenstufe nur noch
+        # aus dem amtlichen Lagebericht im !-Warnblock) -- der Spec bleibt als
+        # Beleg, dass eine sichtbare AV-Metrik kein Token mehr baut; Golden
+        # arlberg-winter-morning.txt ohne das vormalige 'AV3' neu erzeugt.
         MetricSpec(symbol="AV", enabled=True),
         # Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
         # fix_1887_e6a_sms_kuerzel_register.md): 'WC' entfaellt ERSATZLOS
