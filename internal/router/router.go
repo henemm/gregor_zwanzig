@@ -169,6 +169,10 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/auth/premium-sms-link-code", handler.GetPremiumSmsLinkCodeHandler(deps.Store))
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected)
 	r.Post("/api/webhooks/telegram/{secret}", handler.TelegramWebhookHandler(deps.Config.PythonCoreURL))
+	// Issue #2439: Push-Eingang fuer Befehle (SMS seven.io, Mail Stalwart) --
+	// oeffentlich, secret-/signaturgeschuetzt, weckt nur den Poll-Job (ADR-0087).
+	r.Post("/api/webhooks/sms/{secret}", handler.InboundSMSWebhook(deps.Scheduler, deps.Config.PublicHost, time.Now))
+	r.Post("/api/webhooks/mail/{secret}", handler.InboundMailWebhook(deps.Scheduler))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(deps.Config))
 	r.Get("/api/auth/google/callback", handler.GoogleOAuthCallbackHandler(deps.Config, deps.Store))
 	magicLinkLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)

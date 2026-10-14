@@ -8,8 +8,10 @@ SPEC: docs/specs/modules/go_scheduler.md v1.0 (Step 2)
 """
 from __future__ import annotations
 
+import fcntl
 import logging
 import time
+from contextlib import contextmanager
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -23,6 +25,33 @@ from services.scheduler_dispatch_service import (
 logger = logging.getLogger("scheduler")
 
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
+
+
+@contextmanager
+def _poll_lock(name: str):
+    """Nicht-blockierender flock je Poll-Kanal (Issue #2439, ADR-0087).
+
+    Cron, Push-Weckruf und Admin-Proxy laufen alle durch diesen Lock, damit
+    ``last_seen_id`` bzw. IMAP-``UNSEEN`` nie doppelt abgearbeitet werden.
+    Liefert True, wenn der Lock gehalten wird, False bei Belegung.
+    """
+    from app.loader import get_data_root
+
+    directory = get_data_root() / "diagnostics"
+    directory.mkdir(parents=True, exist_ok=True)
+    fd = open(directory / name, "a+")
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        fd.close()
 
 @router.post("/trip-reports")
 def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
@@ -179,9 +208,13 @@ def trigger_inbound():
     if not imap_user or not imap_pass:
         return {"status": "skipped", "reason": "imap_not_configured"}
 
-    reader = InboundEmailReader()
-    count = reader.poll_and_process(settings)
-    return {"status": "ok", "count": count}
+    with _poll_lock("inbound_command_poll.lock") as frei:
+        if not frei:
+            return {"status": "busy"}
+        reader = InboundEmailReader()
+        count = reader.poll_and_process(settings)
+    # Issue #2439: "processed" steuert den Nachversuch des Push-Weckrufs in Go.
+    return {"status": "ok", "count": count, "processed": count}
 
 
 @router.post("/inbound-sms")
@@ -206,7 +239,10 @@ def trigger_inbound_sms():
 
     settings = Settings()
     reader = InboundSmsReader()
-    count = reader.poll_and_process(settings)
+    with _poll_lock("inbound_sms_poll.lock") as frei:
+        if not frei:
+            return {"status": "busy"}
+        count = reader.poll_and_process(settings)
     failed = reader.last_failed_count
     # Issue #2154 AC-11: eine bewusste Ablehnung (409 fehlender/ungueltiger
     # Verknuepfungs-Code, 429 Ratebremse) ist KEIN Netz-/5xx-Fehler und darf
@@ -217,7 +253,11 @@ def trigger_inbound_sms():
     # partialRunError aus -- kein neues Go-Statusfeld noetig.
     rejected = getattr(reader, "last_rejected_count", 0)
     status = "partial" if failed > 0 or rejected > 0 else "ok"
-    return {"status": status, "count": count, "failed": failed, "rejected": rejected}
+    # Issue #2439: "processed" = in diesem Lauf gefundene/verarbeitete Befehle.
+    return {
+        "status": status, "count": count, "failed": failed,
+        "rejected": rejected, "processed": count,
+    }
 
 
 @router.post("/compare-presets-daily")

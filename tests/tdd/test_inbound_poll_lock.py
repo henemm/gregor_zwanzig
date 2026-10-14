@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import fcntl
 import json
+import threading
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -38,7 +39,14 @@ from fastapi.testclient import TestClient
 
 from api.routers import scheduler
 from app.loader import get_data_root
-from tests.tdd._befehl_e2e_fixtures import install_transport_fakes
+from tests.tdd._befehl_e2e_fixtures import (
+    _mime_plain,
+    install_transport_fakes,
+    lege_lage_an,
+    user_ids,
+)
+
+__all__ = ["user_ids"]  # pytest muss die importierte Fixture im Modul finden
 
 SMS_LOCK = "inbound_sms_poll.lock"
 MAIL_LOCK = "inbound_command_poll.lock"
@@ -230,3 +238,144 @@ def test_mail_lock_sperrt_den_sms_pfad_nicht(client, monkeypatch):
 
     assert antwort.json().get("status") != "busy", antwort.text
     assert sms.aufrufe == 1
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Luecke F001: /inbound-commands meldet ``processed`` (AC-7 Mail)
+# ---------------------------------------------------------------------------
+#
+# Echter Endpunkt, echter ``InboundEmailReader.poll_and_process`` und echter
+# ``_process_single`` -- ersetzt ist NUR die IMAP-Verbindung (Transportgrenze).
+# Zwei Befehlsmails bekannter Absender + eine Mail eines unbekannten Absenders
+# -> ``processed`` muss genau 2 sein.
+
+class _FakeImapPostfach:
+    """Double NUR fuer ``imaplib.IMAP4_SSL``: liefert feste Rohmails je UID."""
+
+    def __init__(self, mails: dict[bytes, bytes]):
+        self._mails = mails
+        self.gesehen: list[bytes] = []
+
+    def __call__(self, *_a, **_kw):  # Konstruktor-Ersatz: IMAP4_SSL(host, port)
+        return self
+
+    def login(self, *_a):
+        return "OK", [b"logged in"]
+
+    def select(self, *_a):
+        return "OK", [str(len(self._mails)).encode()]
+
+    def search(self, *_a):
+        return "OK", [b" ".join(self._mails)]
+
+    def fetch(self, uid, _spec):
+        return "OK", [(b"1 (RFC822)", self._mails[uid])]
+
+    def store(self, uid, _flags, _value):
+        self.gesehen.append(uid)
+        return "OK", []
+
+    def logout(self):
+        return "BYE", []
+
+
+def test_f001_inbound_commands_meldet_processed_gleich_anzahl_befehle_bekannter_absender(
+    client, monkeypatch, user_ids
+):
+    from services import inbound_email_reader
+
+    install_transport_fakes(monkeypatch)
+    nutzer_a = lege_lage_an(user_ids, "L2")
+    nutzer_b = lege_lage_an(user_ids, "L2")
+    betreff = "Re: [Solo-Trip] Etappe"
+    postfach = _FakeImapPostfach({
+        b"1": _mime_plain(nutzer_a.mail_to, betreff, "Hilfe"),
+        b"2": _mime_plain("unbekannt-2439@henemm.com", betreff, "Hilfe"),
+        b"3": _mime_plain(nutzer_b.mail_to, betreff, "Hilfe"),
+    })
+    monkeypatch.setattr(inbound_email_reader.imaplib, "IMAP4_SSL", postfach)
+
+    antwort = client.post("/api/scheduler/inbound-commands")
+
+    assert antwort.status_code == 200, antwort.text
+    body = antwort.json()
+    assert body.get("status") == "ok", body
+    assert "processed" in body, f"Antwort muss 'processed' tragen (Go steuert damit den Nachversuch): {body}"
+    assert isinstance(body["processed"], int) and not isinstance(body["processed"], bool), body
+    assert body["processed"] == 2, (
+        f"genau die 2 Befehle bekannter Absender sind verarbeitet, der unbekannte nicht: {body}"
+    )
+    assert sorted(postfach.gesehen) == [b"1", b"2", b"3"], "alle drei Mails muessen gelesen sein"
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Luecke F002: der Lock ist EXKLUSIV -- zwei echte, gleichzeitige
+# Endpunkt-Aufrufe: der zweite meldet busy, verarbeitet wird genau einmal.
+# ---------------------------------------------------------------------------
+
+class _BlockierenderReader:
+    """Nur der ERSTE Aufruf blockiert bis ``freigabe``; spaetere kehren sofort
+    zurueck (sonst haengt der Test unter einem geteilten Lock)."""
+
+    def __init__(self):
+        self.aufrufe = 0
+        self.betreten = threading.Event()
+        self.freigabe = threading.Event()
+        self._mu = threading.Lock()
+
+    def __call__(self, *_a, **_kw):
+        with self._mu:
+            self.aufrufe += 1
+            erster = self.aufrufe == 1
+        if erster:
+            self.betreten.set()
+            self.freigabe.wait(10)
+        return 1
+
+
+def _zwei_gleichzeitige_aufrufe(endpunkt, reader: _BlockierenderReader):
+    ergebnis: dict = {}
+
+    def _erster():
+        ergebnis["erster"] = endpunkt()
+
+    t = threading.Thread(target=_erster, daemon=True)
+    t.start()
+    try:
+        assert reader.betreten.wait(5), "der erste Aufruf hat den Reader nicht erreicht"
+        ergebnis["zweiter"] = endpunkt()
+    finally:
+        reader.freigabe.set()
+        t.join(10)
+    assert not t.is_alive(), "der erste Aufruf ist nicht zurueckgekehrt"
+    return ergebnis["erster"], ergebnis["zweiter"]
+
+
+def test_f002_inbound_sms_zwei_gleichzeitige_aufrufe_zweiter_ist_busy(monkeypatch):
+    from services import inbound_sms_reader
+
+    install_transport_fakes(monkeypatch)
+    reader = _BlockierenderReader()
+    monkeypatch.setattr(inbound_sms_reader.InboundSmsReader, "poll_and_process", reader)
+
+    erster, zweiter = _zwei_gleichzeitige_aufrufe(scheduler.trigger_inbound_sms, reader)
+
+    assert zweiter == {"status": "busy"}, f"zweiter gleichzeitiger Aufruf muss busy melden: {zweiter}"
+    assert erster.get("status") != "busy" and erster.get("processed") == 1, erster
+    assert reader.aufrufe == 1, f"der Journal-Poll darf nur EINMAL laufen, lief {reader.aufrufe}x"
+    assert (_diagnostics() / SMS_LOCK).exists(), "Lock-Datei muss unter get_data_root()/diagnostics liegen"
+
+
+def test_f002_inbound_commands_zwei_gleichzeitige_aufrufe_zweiter_ist_busy(monkeypatch):
+    from services import inbound_email_reader
+
+    install_transport_fakes(monkeypatch)
+    reader = _BlockierenderReader()
+    monkeypatch.setattr(inbound_email_reader.InboundEmailReader, "poll_and_process", reader)
+
+    erster, zweiter = _zwei_gleichzeitige_aufrufe(scheduler.trigger_inbound, reader)
+
+    assert zweiter == {"status": "busy"}, f"zweiter gleichzeitiger Aufruf muss busy melden: {zweiter}"
+    assert erster.get("status") == "ok" and erster.get("processed") == 1, erster
+    assert reader.aufrufe == 1, f"der IMAP-Poll darf nur EINMAL laufen, lief {reader.aufrufe}x"
+    assert (_diagnostics() / MAIL_LOCK).exists(), "Lock-Datei muss unter get_data_root()/diagnostics liegen"
