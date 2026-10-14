@@ -76,6 +76,18 @@ Zwischen Env-Wechsel und Hook-Update antwortet der Endpunkt 403; der Fallback-Po
 `kicks_coalesced`, `missed_total`, `last_missed`. Steigender `missed_total` heißt: der Sofort-Weg ist
 ausgefallen (Befehl wurde erst vom Fallback-Poll verarbeitet).
 
+## Reihenfolge bei der Inbetriebnahme
+
+1. **Staging: `PUBLIC_HOST` auf den Staging-Host setzen.** Der Default ist der Prod-Host; sonst stimmt
+   die signierte URL nicht und seven.io-Aufrufe enden dauerhaft in 403.
+2. **Basic-Auth-Ausnahme auf Staging** ist nur durch eine echte seven.io-Zustellung belegbar. Aufrufe
+   vom Server selbst umgehen Basic-Auth (infra#229) und beweisen die Ausnahme nicht.
+3. **`missed_total`-Auswertung** in `henemm-infra` `check-gregor20.sh` erst scharf schalten, wenn die
+   Hooks registriert sind und `push.last_received` sichtbar ist. Fehlendes Feld = 0. Die Zähler leben im
+   Speicher: nach einem Go-Restart neu baselinen, nicht als Fehler werten.
+4. **Stalwart-Eventname** bei der Registrierung gegen v0.16.26 per Admin-API verifizieren und hier
+   eintragen: _noch offen — Eintrag nach Verifikation_.
+
 ## Staging-Beleg
 
 - **SMS:** das Konto hat nur die Service-Nummer, keine zweite. Beleg deshalb über einen zweiten Hook

@@ -294,7 +294,10 @@ Spec: `docs/specs/modules/fix_1412_s4a_empfaengervertrag_telegram.md`.
 
 **Komponente:** `src/services/inbound_sms_reader.py` (`InboundSmsReader.poll_and_process()`),
 getriggert vom Go-Cron-Job `premium_sms_poll` (`*/5 * * * *`) über
-`POST /api/scheduler/inbound-sms`.
+`POST /api/scheduler/inbound-sms`. Seit #2439 weckt zusätzlich ein Webhook
+(`/api/webhooks/sms/{secret}`, E-Mail analog `/api/webhooks/mail/{secret}`) den Poll sofort
+(`Scheduler.Kick`); der Poll bleibt Wahrheit, Cron Fallback (ADR-0087,
+`docs/runbooks/inbound-webhooks.md`).
 
 **Zweck:** Der Reader pollt das seven.io-Journal (`GET journal/inbound`) und
 entscheidet seit #2323 anhand des strukturell immer vorhandenen `to`-Felds
