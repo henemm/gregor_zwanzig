@@ -268,11 +268,12 @@ Aufrufer mit nacktem `TelegramOutput(settings).send`. Gegen absichtlich
 bösartigen Code im selben Prozess hilft er nicht (Python hat keine
 Capability-Isolation).
 
-`PUT /api/auth/profile` nimmt `telegram_chat_id` als Freitext
-(`internal/handler/auth.go:544, :587-589`). Bis dahin ist „Chat ∈ Profil“ kein
-voller Herkunftsbeleg. Das Schließen dieser Stelle (Go-Nachzug, PUT-Härtung, ADR
-„Empfängerschutz“) ist **Umfang der bereits geplanten Scheibe S5** desselben
-Issues #1412.
+~~`PUT /api/auth/profile` nimmt `telegram_chat_id` als Freitext.~~ Veraltet
+(korrigiert mit #1412 S5): Seit #2141 übernimmt `PUT /api/auth/profile` für
+`telegram_chat_id` nur noch den Leerstring („Telegram trennen“); gesetzt wird
+die `chat_id` ausschließlich über den Einmal-Token-Flow `/start TOKEN` →
+`PostTelegramConnectHandler` (`internal/handler/telegram_connect.go`). Damit ist
+„Chat ∈ Profil“ ein Herkunftsbeleg. Festgehalten in ADR-0087 „Empfängerschutz“.
 
 ## Test Plan
 

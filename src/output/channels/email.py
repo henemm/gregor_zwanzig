@@ -784,6 +784,10 @@ class EmailOutput:
                     )
                     or any(_is_reserved_test_domain(a) for a in candidates)
                     or _raw_contains_test_mailbox(r)
+                    # Issue #1412 S5 (C3-20 A/Z1): die quote-bewusste
+                    # Hauptliste -- so liest der Postausgang das Feld -- darf
+                    # keinen nicht-leeren Eintrag ohne "@" enthalten.
+                    or any(a and "@" not in a for _, a in getaddresses([r]))
                 ):
                     blocked.append(r)
             if blocked:
@@ -824,6 +828,8 @@ class EmailOutput:
                     not candidates
                     or any(_is_reserved_test_domain(a) for a in candidates)
                     or any(not _is_local_mail_domain(a) for a in candidates)
+                    # Issue #1412 S5 (C3-20 A/Z1): wie im Resend-Zweig.
+                    or any(a and "@" not in a for _, a in getaddresses([r]))
                 ):
                     blocked.append(r)
             if blocked:

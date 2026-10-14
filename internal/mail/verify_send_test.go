@@ -6,7 +6,7 @@ import (
 )
 
 // TDD GREEN — Issue #1219 Scheibe 2a-i: Versand des E-Mail-Bestätigungslinks.
-// Spec: docs/specs/modules/fix_1219_verify_flow_2a.md (AC-3, AC-4, AC-5).
+// Spec: docs/specs/_archive/modules/fix_1219_verify_flow_2a.md (AC-3, AC-4, AC-5).
 //
 // Co-located Ersatz für den temporären externen RED-Test
 // (internal/mail/tests/verify_send_red_test.go) — siehe Spec "Source".

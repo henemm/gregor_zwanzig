@@ -2,6 +2,7 @@ package mail
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,7 @@ import (
 )
 
 // TDD RED — Issue #1122: Resend Default-Deny im Go-Sendepfad.
-// Spec: docs/specs/modules/issue_1122_resend_default_deny.md
+// Spec: docs/specs/_archive/modules/issue_1122_resend_default_deny.md
 //
 // Send() MUSS jeden Resend-Host VOR dem Netzwerk-Dial ablehnen, wenn
 // (a) der Prozess unter `go test` läuft (testing.Testing()) — auch mit Token,
@@ -95,26 +96,32 @@ func TestSend_ResendHostBlockedCaseInsensitive(t *testing.T) {
 	}
 }
 
-// AC-5: Nicht-Resend-Hosts werden vom Guard NICHT blockiert. 127.0.0.1:1 ist
-// unerreichbar → es darf ein Dial-Fehler kommen, aber KEIN Guard-Fehler.
-func TestSend_NonResendHostNotBlockedByGuard(t *testing.T) {
+// AC-5 (umgestellt mit #1412 S5, D1): Nicht-Resend-Hosts bekommen NICHT den
+// Resend-Guard (#1122), sondern die Lokalregel. Fremdadresse => ErrGuardBlocked
+// (kein Dial); eigene Domain => Guard lässt durch, 127.0.0.1:1 ist
+// unerreichbar → Dial-Fehler, KEIN Guard-Fehler.
+func TestSend_NonResendHostForeignBlockedOwnDomainReachesDial(t *testing.T) {
 	cfg := MailConfig{Host: "127.0.0.1", Port: 1, User: "u", Pass: "p"}
 	err := Send(cfg, "user@example.com", resendTestMail())
+	if !errors.Is(err, ErrGuardBlocked) {
+		t.Errorf("S5: Fremdadresse auf Nicht-Resend-Host muss ErrGuardBlocked liefern, war: %v", err)
+	}
+	err = Send(cfg, "user@henemm.com", resendTestMail())
 	if err == nil {
 		t.Fatal("Test-Prämisse verletzt: 127.0.0.1:1 darf nicht erreichbar sein")
 	}
-	if strings.Contains(err.Error(), "GZ_RESEND_ALLOWED") {
-		t.Errorf("AC-5: Guard darf Nicht-Resend-Hosts nicht blockieren, Fehler war: %v", err)
+	if errors.Is(err, ErrGuardBlocked) || strings.Contains(err.Error(), "GZ_RESEND_ALLOWED") {
+		t.Errorf("S5: eigene Domain darf den Guard passieren (Dial-Fehler erwartet), Fehler war: %v", err)
 	}
 }
 
 // AC-5: SendWithFallback ist über Send() für BEIDE Configs abgedeckt — ein
 // Resend-Fallback wird ebenso verweigert (kein Schlupfloch über den Fallback-Pfad).
 func TestSendWithFallback_ResendFallbackAlsoBlocked(t *testing.T) {
-	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@gmail.com"))
+	t.Setenv("GZ_DATA_DIR", allowlistedDataDir(t, "user@henemm.com"))
 	primary := MailConfig{Host: "127.0.0.1", Port: 1, User: "u", Pass: "p"}
 	fallback := MailConfig{Host: "smtp.resend.com", Port: 587, User: "resend", Pass: "re_x"}
-	err := SendWithFallback(primary, fallback, "user@gmail.com", resendTestMail())
+	err := SendWithFallback(primary, fallback, "user@henemm.com", resendTestMail())
 	if err == nil {
 		t.Fatal("SendWithFallback mit Resend-Fallback muss fehlschlagen — sonst leakt der Fallback-Pfad über Resend")
 	}
