@@ -29,7 +29,7 @@ router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
 
 @contextmanager
 def _poll_lock(name: str):
-    """Nicht-blockierender flock je Poll-Kanal (Issue #2439, ADR-0087).
+    """Nicht-blockierender flock je Poll-Kanal (Issue #2439, ADR-0088).
 
     Cron, Push-Weckruf und Admin-Proxy laufen alle durch diesen Lock, damit
     ``last_seen_id`` bzw. IMAP-``UNSEEN`` nie doppelt abgearbeitet werden.

@@ -1403,7 +1403,7 @@ only — never trip or user identifiers.
 `last_missed` (missed = cron poll processed a command with no webhook/kick in the preceding
 5 min). In-memory counters, reset on Go restart. See `docs/runbooks/inbound-webhooks.md`.
 
-**Webhooks (#2439, ADR-0087, session-free):** `POST /api/webhooks/sms/{secret}` (seven.io
+**Webhooks (#2439, ADR-0088, session-free):** `POST /api/webhooks/sms/{secret}` (seven.io
 `sms_mo`; headers `X-Signature`/`X-Timestamp`/`X-Nonce`, HMAC-SHA256, ±30 s, nonce cache; signed
 URL from `PUBLIC_HOST`) and `POST /api/webhooks/mail/{secret}` (Stalwart, Bearer). Valid ⇒ 200 and
 `Scheduler.Kick` runs `premium_sms_poll` / `inbound_command_poll` at once (coalescing, min gap 2 s);

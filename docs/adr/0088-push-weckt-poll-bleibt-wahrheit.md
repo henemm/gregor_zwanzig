@@ -1,4 +1,4 @@
-# ADR-0087: Push weckt, Poll bleibt Wahrheit — Webhook stößt nur den bestehenden Poll-Job an
+# ADR-0088: Push weckt, Poll bleibt Wahrheit — Webhook stößt nur den bestehenden Poll-Job an
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-10-14

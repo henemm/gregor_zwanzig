@@ -1,6 +1,6 @@
 # Runbook — Push-Eingang für Befehle (SMS + E-Mail), Issue #2439
 
-„Webhook = Weckruf“ (ADR-0087): seven.io bzw. Stalwart melden einen Eingang, Go prüft und stößt den
+„Webhook = Weckruf“ (ADR-0088): seven.io bzw. Stalwart melden einen Eingang, Go prüft und stößt den
 bestehenden Poll-Job sofort an. Der `*/5`-Poll bleibt Fallback und Wahrheit.
 
 ```

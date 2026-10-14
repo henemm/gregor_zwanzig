@@ -1,6 +1,6 @@
 package handler
 
-// Push-Eingang fuer Befehle (Issue #2439, ADR-0087): "Webhook = Weckruf".
+// Push-Eingang fuer Befehle (Issue #2439, ADR-0088): "Webhook = Weckruf".
 //
 // Oeffentliche, secret-geschuetzte Endpunkte
 //

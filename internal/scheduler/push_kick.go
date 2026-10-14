@@ -1,6 +1,6 @@
 package scheduler
 
-// Push-Weckruf fuer die Befehls-Poll-Jobs (Issue #2439, ADR-0087).
+// Push-Weckruf fuer die Befehls-Poll-Jobs (Issue #2439, ADR-0088).
 //
 // Ein Webhook (seven.io sms_mo bzw. Stalwart-Mail-Eingang) verarbeitet nichts
 // selbst, sondern stoesst den BESTEHENDEN Poll-Job sofort an: Kick(jobID).
