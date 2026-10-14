@@ -301,7 +301,9 @@ def test_fehlender_folgetag_meldet_datenluecke_statt_fehlender_etappe():
         ergebnis = _befehl(trip, "### query: timeline_morgen")
 
     body = ergebnis.confirmation_body
-    assert ergebnis.success is True, body
+    # #1405 S4a AC-21: bewusste Erwartungsaenderung -- Wetterdaten fehlen (Datenluecke),
+    # die Antwort sagt das, also darf der Status nicht 'erfolgreich' lauten.
+    assert ergebnis.success is False, body
     assert FALSCHAUSSAGE not in body, (
         f"AC-1: die Antwort behauptet etwas ueber die TRIP-PLANUNG "
         f"({FALSCHAUSSAGE!r}), obwohl fuer morgen eine Etappe existiert und "
@@ -515,7 +517,9 @@ def test_gewitterabfrage_meldet_datenluecke_statt_fehlender_etappe():
         ergebnis = _befehl(trip, "### query: heute_gewitter")
 
     body = ergebnis.confirmation_body
-    assert ergebnis.success is True, body
+    # #1405 S4a AC-21: bewusste Erwartungsaenderung -- Wetterdaten fehlen (Datenluecke),
+    # die Antwort sagt das, also darf der Status nicht 'erfolgreich' lauten.
+    assert ergebnis.success is False, body
     assert FALSCHAUSSAGE not in body, (
         f"AC-6: die Gewitter-Antwort behauptet {FALSCHAUSSAGE!r}, obwohl heute "
         f"eine Etappe existiert und nur die Daten fehlen:\n{body}"
