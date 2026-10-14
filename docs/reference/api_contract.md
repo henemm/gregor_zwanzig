@@ -266,9 +266,12 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/trips/{id}/state` | PATCH |
 | `/api/trips/{id}/waypoints/{waypointId}/confirm` | PATCH |
 | `/api/trips/{id}/weather-config` | GET, PUT |
+| `/api/webhooks/mail/{secret}` | POST | — sitzungsfrei, Bearer (Stalwart), #2439
+| `/api/webhooks/sms/{secret}` | POST | — sitzungsfrei, HMAC-SHA256-Signatur (seven.io), #2439
 | `/api/webhooks/telegram/{secret}` | POST |
 
-(101 Pfade, 123 Routen-Registrierungen, nachgezählt 2026-10-08 per `chi.Walk` und
+(Stand 2026-10-08: 101 Pfade, 123 Routen-Registrierungen; #2439 fügt die zwei Webhook-Pfade
+`/api/webhooks/sms/{secret}` und `/api/webhooks/mail/{secret}` hinzu, nicht neu nachgezählt; nachgezählt per `chi.Walk` und
 Router-Quelltext; davon 4 Pfade/4 Registrierungen nur bei `GZ_ENV=staging`, ohne sie
 97 Pfade/119 Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
 hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`; #2519 ergänzt `/api/admin/invites`,
@@ -1394,6 +1397,19 @@ every job; Go wall clock around the run, without the remaining runtime of late f
 Python time limit (`reason: "deadline"`) — `total` (never reset by an ok run), `last_at` (absent
 while `total == 0`), `last_skipped` (count), `counting_since` (process/scheduler start). Numbers
 only — never trip or user identifiers.
+
+**Additive field (#2439):** jobs `premium_sms_poll` and `inbound_command_poll` carry `push{}`:
+`last_received`, `received_total`, `rejected_total`, `kicks_coalesced`, `missed_total`,
+`last_missed` (missed = cron poll processed a command with no webhook/kick in the preceding
+5 min). In-memory counters, reset on Go restart. See `docs/runbooks/inbound-webhooks.md`.
+
+**Webhooks (#2439, ADR-0088, session-free):** `POST /api/webhooks/sms/{secret}` (seven.io
+`sms_mo`; headers `X-Signature`/`X-Timestamp`/`X-Nonce`, HMAC-SHA256, ±30 s, nonce cache; signed
+URL from `PUBLIC_HOST`) and `POST /api/webhooks/mail/{secret}` (Stalwart, Bearer). Valid ⇒ 200 and
+`Scheduler.Kick` runs `premium_sms_poll` / `inbound_command_poll` at once (coalescing, min gap 2 s);
+invalid ⇒ 403; missing env ⇒ 503 (fail-closed). Python `/api/scheduler/inbound-sms` and
+`/inbound-commands` hold a flock and answer `{"status":"busy"}` on a parallel run. Cron `*/5`
+remains the fallback.
 
 **Auth (since #2155 S2, ADR-0079):** requires header `X-GZ-Status-Token` matching the
 configured `GZ_STATUS_TOKEN` (machine secret for the external monitor
