@@ -244,7 +244,7 @@ def test_ac16_ortsvergleich_warn_mail_traegt_quellenname_und_bulletin_url(monkey
 
     html, klartext = _zugestellte_warn_mail_teile(
         monkeypatch,
-        lambda settings: NotificationService(settings).send_multi_location_official_alert(
+        lambda settings: NotificationService(settings, "t-1441-multi-url").send_multi_location_official_alert(
             "Stubai-Vergleich", orte, [(a, ["o0", "o1"])], {"email"},
         ),
     )

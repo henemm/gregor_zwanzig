@@ -874,12 +874,15 @@ def _render_warn_banner(locations: list[LocationResult]) -> str:
     total = len(valid)
     leading_loc = None
     leading_alert = None
-    # Issue #1441: bei gleichem Farblevel entscheidet die Originalstufe
-    # (Lagebericht 5 vor 4) -- `comparable_level`, nie ueber Skalen allein.
+    # Issue #1441 (AC-11, ADR-0087): primaer das Farblevel. Die Originalstufe
+    # (Lagebericht 5 vor 4) entscheidet einen Gleichstand NUR innerhalb
+    # derselben Gefahrenart -- nie ueber Skalen hinweg; sonst bleibt die
+    # zuerst gefundene Warnung fuehrend.
     for loc in alerted:
         for a in loc.official_alerts:
-            if leading_alert is None or (a.level, comparable_level(a)) > (
-                    leading_alert.level, comparable_level(leading_alert)):
+            if (leading_alert is None or a.level > leading_alert.level or (
+                    a.level == leading_alert.level and a.hazard == leading_alert.hazard
+                    and comparable_level(a) > comparable_level(leading_alert))):
                 leading_alert, leading_loc = a, loc
     word = _LEVEL_WORDS.get(leading_alert.level, ("🔴", "ROT"))[1]
     count_line = f"höchste Stufe {word} · {leading_loc.location.name}"
