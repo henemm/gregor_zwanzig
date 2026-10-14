@@ -2,6 +2,7 @@ package mail
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,7 @@ import (
 )
 
 // TDD GREEN — Issue #1219: positive Empfänger-Allowlist für Resend-Versand.
-// Spec: docs/specs/modules/fix_1219_resend_allowlist.md (AC-1..AC-7)
+// Spec: docs/specs/_archive/modules/fix_1219_resend_allowlist.md (AC-1..AC-7)
 //
 // Go-Pendant zu tests/tdd/test_resend_recipient_allowlist.py. Testet
 // loadResendAllowlist()/recipientBlocked() direkt (package-intern, kein
@@ -136,15 +137,23 @@ func TestRecipientBlocked_TestUserMailToBlocked(t *testing.T) {
 	}
 }
 
-// AC-4: Stalwart-Host bleibt unberührt — der Allowlist-Guard greift nur bei
-// Resend-Hosts.
-func TestRecipientBlocked_StalwartHostGuardInactive(t *testing.T) {
+// AC-4 (umgestellt mit #1412 S5, D1): Stalwart-Host bekommt NICHT die
+// Resend-Allowlist, sondern die Lokalregel -- nur die eigene Domain
+// (@henemm.com) kommt durch, Fremdadressen werden mit ErrGuardBlocked
+// abgelehnt (vorher: Guard auf Stalwart inaktiv).
+func TestRecipientBlocked_StalwartHostLocalOnly(t *testing.T) {
 	dataDir := t.TempDir() // isoliert, KEIN Fixture-Profil
 	t.Setenv("GZ_DATA_DIR", dataDir)
 
 	err := recipientBlocked("mail.henemm.com", "unbekannt@example.com")
-	if err != nil {
-		t.Errorf("AC-4: recipientBlocked() darf bei Stalwart-Host nicht greifen, Fehler war: %v", err)
+	if !errors.Is(err, ErrGuardBlocked) {
+		t.Errorf("S5: Fremdadresse bei Stalwart-Host muss ErrGuardBlocked liefern, war: %v", err)
+	}
+	if err := recipientBlocked("mail.henemm.com", "unbekannt@gmail.com"); !errors.Is(err, ErrGuardBlocked) {
+		t.Errorf("S5: Fremdadresse (gmail.com) bei Stalwart-Host muss ErrGuardBlocked liefern, war: %v", err)
+	}
+	if err := recipientBlocked("mail.henemm.com", "unbekannt@henemm.com"); err != nil {
+		t.Errorf("S5: eigene Domain bei Stalwart-Host muss erlaubt sein (ohne Allowlist-Eintrag), Fehler war: %v", err)
 	}
 }
 

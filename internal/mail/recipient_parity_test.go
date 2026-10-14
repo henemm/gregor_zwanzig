@@ -345,6 +345,7 @@ func TestAC7FixtureDatenwurzelFehltWirdErkannt(t *testing.T) {
 
 var guardRegionFuncs = []string{
 	"recipientBlocked",
+	"localRecipientBlocked",
 	"rawContainsTestMailbox",
 	"loadResendAllowlist",
 	"splitRecipientField",

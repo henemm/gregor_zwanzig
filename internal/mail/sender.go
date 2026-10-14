@@ -276,6 +276,8 @@ func MaskAddrForLog(raw string) string {
 var (
 	controlCharsRe   = regexp.MustCompile(`[\r\n\v\f\x00]`)
 	testMailboxRawRe = regexp.MustCompile(`(?i)(?:gregor-test|gregor-staging)(?:\+[^@]*)?@henemm\.com`)
+	// quotedStringRe: gequoteter Anzeigename, s. splitRecipientField (#1412 S5).
+	quotedStringRe = regexp.MustCompile(`"[^"]*"`)
 )
 
 // rawContainsTestMailbox strippt zuerst Steuerzeichen (\r \n \v \f \x00) aus
@@ -364,13 +366,58 @@ func splitRecipientField(to string) []string {
 				withAt = append(withAt, field)
 			}
 		}
-		if len(withAt) > 0 {
+		// Issue #1412 S5 (C3-20 Fall B, Q1): nur splitten, wenn ausserhalb
+		// gequoteter Anzeigenamen JEDES Feld ein "@" traegt. Bleibt dort ein
+		// Feld ohne "@" (`a@henemm.com garbage`), bleibt das GANZE Fragment
+		// Kandidat und blockt -- so liest es auch der Postausgang.
+		bare := true
+		for _, field := range strings.Fields(quotedStringRe.ReplaceAllString(part, " ")) {
+			if !strings.Contains(field, "@") {
+				bare = false
+			}
+		}
+		if len(withAt) > 0 && bare {
 			out = append(out, withAt...)
 		} else {
 			out = append(out, part)
 		}
 	}
 	return out
+}
+
+// localMailDomain ist die einzige Domain, die ein Nicht-Resend-Postausgang
+// erreichen darf -- Paritaet zu Python LOCAL_MAIL_DOMAINS (Issue #1235).
+const localMailDomain = "henemm.com"
+
+// localRecipientBlocked ist die Lokalregel fuer JEDEN Nicht-Resend-Host
+// (Stalwart, Google, kuenftige) -- Issue #1412 S5 (D1, ADR-0087), Paritaet zu
+// Pythons Nicht-Resend-Zweig in EmailOutput.send: nur Empfaenger der eigenen
+// Domain (Domain nach dem LETZTEN "@", lowercase, ohne Endpunkte),
+// reservierte Test-Domains immer gesperrt, Kandidat ohne "@" sperrt.
+// Das Test-Postfach-Fangnetz ist hier BEWUSST aus -- sonst waeren
+// gregor-test@/gregor-staging@henemm.com lokal nicht mehr zustellbar.
+func localRecipientBlocked(host, to string) error {
+	parts := splitRecipientField(to)
+	var blocked []string
+	for _, part := range parts {
+		normalized := normalizedAddrForGuardUncapped(part)
+		idx := strings.LastIndex(normalized, "@")
+		if idx < 0 || isReservedTestDomain(normalized) ||
+			strings.TrimRight(normalized[idx+1:], ".") != localMailDomain {
+			blocked = append(blocked, maskAddrForLog(part))
+		}
+	}
+	if len(parts) == 0 || len(blocked) > 0 {
+		log.Printf(
+			"mail.Send: Lokal-Guard blockiert %d Empfänger ausserhalb von %s bzw. mit "+
+				"reservierter Test-Domain bei Host %q (#1235/#1412 S5): %v",
+			len(blocked), localMailDomain, host, blocked)
+		return fmt.Errorf(
+			"%w: mail.Send: Empfänger nicht lokal zustellbar bei Host %q (#1412 S5) — "+
+				"auf Nicht-Resend-Postausgängen sind nur @%s-Empfänger erlaubt",
+			ErrGuardBlocked, host, localMailDomain)
+	}
+	return nil
 }
 
 // recipientBlocked enforces the recipient-side Resend invariant. Seit Issue
@@ -384,9 +431,11 @@ func splitRecipientField(to string) []string {
 // Fix-Loop 1 (F002a) + Fix-Loop 2 (F003): `to` wird an der Trennzeichen-
 // KLASSE Komma/Semikolon gesplittet (mit Whitespace-Fallback für Fragmente,
 // die mail.ParseAddress nicht parsen kann).
+// Issue #1412 S5 (D1): jeder Nicht-Resend-Host bekommt die Lokalregel
+// (localRecipientBlocked) statt bisher gar keiner Pruefung.
 func recipientBlocked(host, to string) error {
 	if !strings.Contains(strings.ToLower(host), "resend") {
-		return nil
+		return localRecipientBlocked(host, to)
 	}
 	// Fix-Loop 4 (F005): roher Substring-Scan bleibt ZUSÄTZLICH aktiv (kein
 	// Ersatz für die Allowlist-Prüfung) — greift unabhängig davon, ob
@@ -576,8 +625,9 @@ func recipientBlockedForVerification(host, to string) error {
 // SendVerificationMail versendet eine Bestätigungsmail über den engeren
 // Verifikations-Sonderpfad (Issue #1219 Scheibe 2a-i): Fangnetz/Ein-Empfänger/
 // Reserved-Domain-Guard statt der Resend-Allowlist, danach unverändert
-// resendBlocked (#1122). Genau EIN vorgesehener Aufrufer im Codebase: der
-// Versand-Zweig in UpdateProfileHandler. Defense-in-Depth (Adversary F001):
+// resendBlocked (#1122). Vier Aufrufer im Codebase (Issue #1412 S5): die
+// Verifikations-Mail im Profil (UpdateProfileHandler), der Magic-Link, der
+// Google-Hinweis und der Lösch-Code. Defense-in-Depth (Adversary F001):
 // dialAndSend bekommt die per TrimSpace bereinigte Adresse statt des
 // Roh-Strings — recipientBlockedForVerification garantiert an dieser Stelle
 // bereits, dass es sich um exakt eine saubere addr-spec handelt.

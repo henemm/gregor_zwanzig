@@ -1,12 +1,13 @@
 package mail
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
 
 // TDD GREEN — Issue #1147: dritte, empfängerseitige Resend-Guard-Linie.
-// Spec: docs/specs/modules/issue_1147_resend_recipient_invariant.md (AC-5, AC-6)
+// Spec: docs/specs/_archive/modules/issue_1147_resend_recipient_invariant.md (AC-5, AC-6)
 //
 // recipientBlocked() muss VOR resendBlocked() greifen, damit der Guard auch
 // unter `go test` beobachtbar ist (resendBlocked blockiert dort JEDEN
@@ -97,16 +98,21 @@ func TestSend_ResendHostNormalRecipientNot1147Guard(t *testing.T) {
 	}
 }
 
-// Nicht-Resend-Host + gregor-test@ → kein 1147-Fehler (Dial-Fehler ist okay,
-// da 127.0.0.1:1 unerreichbar ist).
-func TestSend_NonResendHostToTestMailboxNot1147Guard(t *testing.T) {
+// Nicht-Resend-Host (umgestellt mit #1412 S5, D1): gregor-test@ bleibt
+// lokal zustellbar (Fangnetz dort bewusst aus, kein Guard-Fehler; der
+// Dial-Fehler ist okay, da 127.0.0.1:1 unerreichbar ist) -- eine
+// Fremdadresse wird dagegen von der Lokalregel mit ErrGuardBlocked geblockt.
+func TestSend_NonResendHostTestMailboxDeliverableForeignBlocked(t *testing.T) {
 	cfg := MailConfig{Host: "127.0.0.1", Port: 1, User: "u", Pass: "p"}
 	err := Send(cfg, "gregor-test@henemm.com", resendTestMail())
 	if err == nil {
 		t.Fatal("Test-Prämisse verletzt: 127.0.0.1:1 darf nicht erreichbar sein")
 	}
-	if strings.Contains(err.Error(), "1147") {
-		t.Errorf("Guard darf Nicht-Resend-Hosts nicht blockieren, Fehler war: %v", err)
+	if strings.Contains(err.Error(), "1147") || errors.Is(err, ErrGuardBlocked) {
+		t.Errorf("Test-Postfach muss auf Nicht-Resend-Host den Guard passieren, Fehler war: %v", err)
+	}
+	if err := Send(cfg, "real@gmail.com", resendTestMail()); !errors.Is(err, ErrGuardBlocked) {
+		t.Errorf("S5: Fremdadresse auf Nicht-Resend-Host muss ErrGuardBlocked liefern, war: %v", err)
 	}
 }
 

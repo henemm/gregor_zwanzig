@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -420,6 +421,20 @@ func deleteAccountCascade(s *store.Store, ts *TelegramTokenStore, user *model.Us
 // Default ist mail.SendWithFallback selbst.
 var sendResetMailFn = mail.SendWithFallback
 
+// resetHostClass reduziert den Primär-Host für die Block-Logzeile des
+// Passwort-Resets (Issue #1412 S5, AC-7) auf resend/lokal/andere.
+func resetHostClass(host string) string {
+	h := strings.ToLower(host)
+	switch {
+	case strings.Contains(h, "resend"):
+		return "resend"
+	case h == "mail.henemm.com" || h == "localhost" || h == "127.0.0.1":
+		return "lokal"
+	default:
+		return "andere"
+	}
+}
+
 func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -523,7 +538,13 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 			go func() { done <- sendResetMailFn(c, fb, to, msg) }()
 			select {
 			case err := <-done:
-				if err != nil {
+				// Issue #1412 S5 (AC-7): Empfängerschutz-Block bekommt EINE
+				// eigene Markerzeile -- ohne Empfänger, ohne Benutzername, ohne
+				// err (enthält maskierte Domains). Antwort bleibt "ok".
+				if errors.Is(err, mail.ErrGuardBlocked) {
+					log.Printf("password reset: Empfängerschutz hat Versand blockiert "+
+						"(Host-Klasse %s, kein Fallback)", resetHostClass(c.Host))
+				} else if err != nil {
 					log.Printf("password reset: mail send failed for %s: %v", username, err)
 				}
 			case <-time.After(20 * time.Second):
