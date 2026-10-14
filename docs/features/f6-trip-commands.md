@@ -161,12 +161,18 @@ abgelehnt — kein Wetterabruf.
 - Jede Antwort mit Messung schließt mit `Geprüft: km {von}-{bis}.` — der tatsächlich
   geprüften Spanne (aus den erfolgreich abgefragten Punkten, nicht den geplanten).
 
-**Drei ehrliche Sonderfälle:**
+**Vier ehrliche Sonderfälle:**
 - Keine aktive Etappe/kein auflösbarer Standort — derselbe Text wie `JETZT` in derselben
   Situation.
 - Kilometrierung für die Etappe nicht verfügbar (auch nach Nachrüst-Versuch) — keine
   Streckenangabe möglich, kein Wetterabruf.
 - Kein Regen im geprüften Abschnitt erkannt — eigener Hinweistext samt geprüfter Spanne.
+  Nur bei tatsächlich gemessenen Punkten.
+- Nowcast ausgefallen oder alle Punkte ohne Messwert — Antwort „Nowcast nicht verfügbar"
+  (nie „Kein Regen erkannt"); gilt ebenso für `JETZT`. Seit #1405 S4a meldet
+  `CommandResult.success` nur bei tatsächlicher Wirkung `True`; gesperrter Trip/Ortsvergleich
+  („Befehl nicht ausgefuehrt … in einer Minute erneut senden") und Programmfehler
+  („konnte nicht sicher ausgefuehrt werden … mit STATUS pruefen") liefern `success=False`.
 
 **Bekannte Grenze:** Die Antwort deckt nur das aktuell aktive Wegpunkt-Segment ab, nicht
 die volle Resttagesetappe (Bestandsgrenze aus S2a/S2b im Alarm-Pfad — dieselben Bausteine
