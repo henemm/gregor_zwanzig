@@ -408,6 +408,7 @@ def cached_fetch(
     rate_limit_retry: Optional[RateLimitRetryPolicy] = None,
     on_response: Optional[Callable[[Any], None]] = None,
     not_covered_statuses: Optional[frozenset[int]] = None,
+    not_covered_ttl: float = WARN_NOT_COVERED_TTL,
 ) -> Optional[Any]:
     """TTL-Cache mit 429-bewusstem Rückzug und Egress-Zähler.
 
@@ -446,6 +447,11 @@ def cached_fetch(
     Zweig oben unterscheidet Fehlschlag von Erfolg ueber ``data is None``)
     und wird von den bestehenden ``_extract_alerts()``-Implementierungen
     (KeyError auf ``data["properties"]``) bereits sauber zu ``[]``.
+
+    ``not_covered_ttl`` (Issue #1441, Standard ``WARN_NOT_COVERED_TTL`` = 24 h,
+    Bestand bit-identisch): Cache-Dauer des neutralen "nicht zustaendig"-
+    Ergebnisses. Der Lawinen-Lagebericht nutzt 404 als "kein aktueller
+    Bericht" -- das darf nicht 24 h verborgen bleiben (Neuausgabe 17:00).
     """
     now = clock()
     entry = cache.get(cache_key)
@@ -457,7 +463,7 @@ def cached_fetch(
         request_fn=request_fn, parse_fn=parse_fn, clock=clock,
         success_ttl=success_ttl, failure_ttl=failure_ttl, log=log,
         rate_limit_retry=rate_limit_retry, on_response=on_response,
-        not_covered_statuses=not_covered_statuses,
+        not_covered_statuses=not_covered_statuses, not_covered_ttl=not_covered_ttl,
     )
 
     def leader_fn() -> tuple:
@@ -501,7 +507,7 @@ def _serve_entry(service: str, host: str, entry: dict) -> Any:
     log_warn_service_call(service, host, status=None, cache_hit=True, ok=cached_ok)
     if not cached_ok:
         _record_fetch_failure()
-    elif entry["ttl"] == WARN_NOT_COVERED_TTL:
+    elif entry["ttl"] == WARN_NOT_COVERED_TTL or entry.get("not_covered"):
         mark_not_covered()  # Issue #1681: gecachtes "nicht zustaendig"
     # Issue #1944 (Luecke a): der Treffer meldet die Kennung SEINES
     # Ursprungsabrufs -- kein zusaetzlicher Mitschnitt noetig.
@@ -516,6 +522,7 @@ def _fetch_and_store(
     log: logging.Logger, rate_limit_retry: Optional[RateLimitRetryPolicy],
     on_response: Optional[Callable[[Any], None]],
     not_covered_statuses: Optional[frozenset[int]],
+    not_covered_ttl: float = WARN_NOT_COVERED_TTL,
 ) -> dict:
     """Echter Abruf (Leader-Zweig von ``cached_fetch``): schreibt den Eintrag in
     den Zwischenspeicher, bedient die Senken des Leaders und liefert den Eintrag."""
@@ -635,7 +642,9 @@ def _fetch_and_store(
         )
         neutral_value: Any = {}
         entry = _store_entry(cache, cache_key, data=neutral_value, fetched_at=now,
-                     ttl=WARN_NOT_COVERED_TTL, capture_id=capture_id)
+                     ttl=not_covered_ttl, capture_id=capture_id)
+        if not_covered_ttl != WARN_NOT_COVERED_TTL:
+            entry["not_covered"] = True  # #1441: Treffer bleibt "nicht zustaendig"
         # Issue #1422 S1: "nicht zustaendig" ist fachlich ein ERFOLG (ok=True),
         # auch wenn der Statuscode 404 sonst ein Fehlschlag waere.
         log_warn_service_call(service, host, status=status, cache_hit=False, ok=True)

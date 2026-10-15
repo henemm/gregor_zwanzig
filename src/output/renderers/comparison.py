@@ -870,13 +870,10 @@ def _official_alert_sms_marker(
     einen `!`)."""
     if not entries:
         return ""
-    parts = []
-    for symbol, level, hour in entries:
-        if not level:
-            parts.append(symbol)
-        else:
-            value = f"{level}@{hour}" if hour is not None else level
-            parts.append(f"{symbol}:{value}")
+    # Issue #1441: dieselbe Token-Grammatik wie die Trip-SMS (geteilter Helfer).
+    from output.tokens.hazard_symbols import alert_entry_token_parts
+
+    parts = ["".join(alert_entry_token_parts(symbol, level, hour)) for symbol, level, hour in entries]
     return "!" + " ".join(parts)
 
 

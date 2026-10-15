@@ -432,7 +432,11 @@ class CompareOfficialAlertService:
             )
         ]
         if sources:
-            raw = [(alert, loc_ids) for alert, loc_ids in raw if alert.source in sources]
+            # Issue #1441: Quellenname = Teil vor dem ersten ':' (Lagebericht
+            # `avalanche_report:AT-07` -> `avalanche_report`); Quellen ohne ':'
+            # verhalten sich unveraendert.
+            raw = [(alert, loc_ids) for alert, loc_ids in raw
+                   if alert.source.split(":", 1)[0] in sources]
         deduped = dedupe_official_alerts(raw)
 
         state_svc_by_loc = {loc.id: AlertStateService(user_id=self._user_id) for loc in locs}

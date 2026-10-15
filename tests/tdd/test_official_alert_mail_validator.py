@@ -504,3 +504,186 @@ def test_render_py_still_requires_radar_nachweis_not_official(tmp_path):
         f"render.py MIT radar-Nachweis (ohne official-Log) muss passieren. "
         f"rc={res2.returncode} stderr={res2.stderr!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1441 (Spec avalanche_report_bulletin.md Abschnitt 7, ADR-0089):
+# Lawinen-Lagebericht -- Stufe als Wortlaut "Lawinenstufe N (<EAWS-Wort>)",
+# keine Leiter/Farbwoerter. Mails kommen ueber den ECHTEN Versandpfad
+# `NotificationService.send_official_alert` inkl. `EmailOutput.send` und
+# MIME-Bau; ersetzt ist nur der SMTP-Rand `_dial_and_send`. Verfaelschungen
+# ausschliesslich per String-Ersetzung im zugestellten HTML/Klartext.
+# ---------------------------------------------------------------------------
+
+_AVALANCHE_FIXTURE = (
+    REPO_ROOT / "tests" / "fixtures" / "avalanche_report" / "bulletins"
+    / "2026-02-20_AT-07_de_CAAMLv6.json"
+)
+
+
+def _avalanche_stufe4():
+    """Echter Parser auf das aufgezeichnete Bulletin, Quelle wie im Produktivpfad."""
+    from services.official_alerts.avalanche_report import parse_region_alert
+
+    doc = json.loads(_AVALANCHE_FIXTURE.read_text(encoding="utf-8"))
+    return parse_region_alert(doc, "AT-07-25", source="avalanche_report:AT-07")
+
+
+def _gewitter_alert(label: str = "Gewitterwarnung"):
+    """Default-Label wie im aufgezeichneten MeteoAlarm-Feed (`"event":"Gewitterwarnung"`);
+    GeoSphere liefert das kurze Typ-Wort "Gewitter" (geosphere_warn.py `_HAZARD_MAP`)."""
+    return _alert(
+        2, "thunderstorm", label,
+        datetime(2026, 2, 20, 12, 0, tzinfo=UTC), datetime(2026, 2, 20, 20, 0, tzinfo=UTC),
+        region="Stubai",
+    )
+
+
+def _zugestellte_mail(monkeypatch, alerts: list):
+    """Versendet `alerts` ueber den echten Trip-Warnpfad und liefert
+    (Message, HTML-Teil, Klartext-Teil) der zugestellten Mail."""
+    from datetime import date
+
+    from app.config import Settings
+    from app.trip import Stage, Trip, Waypoint
+    from output.channels.email import EmailOutput
+    from services.notification_service import NotificationService
+
+    erfasst = []
+    monkeypatch.setattr(EmailOutput, "_dial_and_send",
+                        lambda self, *a, **kw: erfasst.append(kw.get("msg") if "msg" in kw else a[5]))
+    settings = Settings(smtp_host="smtp.test.invalid", smtp_user="t@test.invalid", smtp_pass="x",
+                        mail_to="to@test.invalid")
+    waypoints = [Waypoint(id=f"w{i}", name=f"P{i}", lat=47.0 + i * 0.01, lon=11.0 + i * 0.01,
+                          elevation_m=2000.0) for i in range(3)]
+    trip = Trip(id="t-1441-validator", name="Stubai",
+                stages=[Stage(id="s1", name="Tag 1", date=date(2026, 2, 20), waypoints=waypoints)])
+
+    NotificationService(settings, "t-1441-validator").send_official_alert(
+        trip=trip, notices=[(a, ["1"]) for a in alerts], effective_channels={"email"},
+        sms_sink=lambda text: None,
+    )
+
+    assert len(erfasst) == 1 and erfasst[0].get("X-GZ-Mail-Type") == "official-alert"
+    teile = {p.get_content_type(): p.get_payload(decode=True).decode(p.get_content_charset() or "utf-8")
+             for p in erfasst[0].walk() if p.get_content_type() in ("text/html", "text/plain")}
+    return erfasst[0], teile["text/html"], teile["text/plain"]
+
+
+_STUFE4_ECHT = "Lawinenstufe 4 (groß)"
+_STUFE4_FALSCH = "Lawinenstufe 5 (groß)"
+
+
+def test_avalanche_only_mail_passes(monkeypatch):
+    """Reine Lawinenmail (keine Leiter, keine Farbwoerter) besteht -- S-2/P-2
+    sind nur fuer sie gelockert."""
+    mod = _load_validator_module()
+    msg, html, plain = _zugestellte_mail(monkeypatch, [_avalanche_stufe4()])
+    assert _STUFE4_ECHT in html and _STUFE4_ECHT in plain, "Testaufbau: Stufen-Wortlaut fehlt"
+    assert "stufe-line" not in html, "Testaufbau: reine Lawinenmail traegt eine Leiter"
+
+    ok, errors = mod.validate_message(msg)
+    assert ok is True, f"Echt gerenderte reine Lawinenmail muss bestehen, errors={errors}"
+
+
+def test_avalanche_wrong_eaws_word_only_in_html_fails(monkeypatch):
+    """F013: Ziffer 5 mit Wort 'groß' NUR im HTML-Teil -- der Klartext ist
+    korrekt, der Pruefer muss den HTML-Teil trotzdem lesen (P-2b)."""
+    mod = _load_validator_module()
+    _msg, html, plain = _zugestellte_mail(monkeypatch, [_avalanche_stufe4()])
+    html_falsch = html.replace(_STUFE4_ECHT, _STUFE4_FALSCH)
+    assert html_falsch != html and _STUFE4_FALSCH not in plain, "Testaufbau: Verfaelschung"
+
+    ok, errors = mod.validate_message(_build_real_official_alert_message(html_falsch, plain))
+    assert ok is False, f"'Lawinenstufe 5 (groß)' im HTML muss fallen, errors={errors}"
+    assert any(e.startswith("P-2b") for e in errors), f"Erwartet P-2b-Befund: {errors}"
+
+
+def test_avalanche_wrong_eaws_word_only_in_plain_fails(monkeypatch):
+    """Dasselbe NUR im Klartext-Teil -> P-2b."""
+    mod = _load_validator_module()
+    _msg, html, plain = _zugestellte_mail(monkeypatch, [_avalanche_stufe4()])
+    plain_falsch = plain.replace(_STUFE4_ECHT, _STUFE4_FALSCH)
+    assert plain_falsch != plain and _STUFE4_FALSCH not in html, "Testaufbau: Verfaelschung"
+
+    ok, errors = mod.validate_message(_build_real_official_alert_message(html, plain_falsch))
+    assert ok is False, f"'Lawinenstufe 5 (groß)' im Klartext muss fallen, errors={errors}"
+    assert any(e.startswith("P-2b") for e in errors), f"Erwartet P-2b-Befund: {errors}"
+
+
+def _ohne_farbwoerter(text: str) -> str:
+    for wort in ("GELB", "ORANGE", "ROT"):
+        text = text.replace(wort, "")
+    return text
+
+
+@pytest.mark.parametrize("label", [
+    "Gewitter",         # GeoSphere-Label (geosphere_warn.py _HAZARD_MAP)
+    "Gewitterwarnung",  # MeteoAlarm-Label, so aufgezeichnet in tests/fixtures
+])
+def test_thunderstorm_mail_without_ladder_but_avalanche_text_fails(monkeypatch, label):
+    """F012: eine Gewittermail, deren Leiter und Farbwoerter verloren gehen,
+    darf sich nicht durch angehaengten Lawinen-Wortlaut in die Lockerung fuer
+    reine Lawinenmails retten -- S-2 bleibt strikt. Fuer BEIDE realen
+    Label-Formen: der Renderer zeigt das zusammengesetzte Quell-Label
+    ("Gewitterwarnung") unveraendert an (`_display_label`)."""
+    mod = _load_validator_module()
+    _msg, html, plain = _zugestellte_mail(monkeypatch, [_gewitter_alert(label)])
+    assert 'class="stufe-line"' in html, "Testaufbau: Gewittermail ohne Leiter gerendert"
+    lawine = f"{_STUFE4_ECHT} oberhalb Waldgrenze · Lawinenwarndienst Tirol, avalanche.report"
+
+    html_kaputt = _ohne_farbwoerter(html.replace('class="stufe-line"', 'class="x"'))
+    html_kaputt = html_kaputt.replace("</body>", f"<p>{lawine}</p></body>", 1)
+    plain_kaputt = _ohne_farbwoerter(plain) + "\n" + lawine + "\n"
+    assert "stufe-line" not in html_kaputt and lawine in html_kaputt, "Testaufbau: Verfaelschung"
+    assert not any(w in plain_kaputt for w in ("GELB", "ORANGE", "ROT")), "Testaufbau: Farbwort"
+
+    ok, errors = mod.validate_message(_build_real_official_alert_message(html_kaputt, plain_kaputt))
+    assert ok is False, f"Gewittermail ohne Leiter muss fallen, errors={errors}"
+    assert any(e.startswith("S-2") for e in errors), f"Erwartet S-2-Befund: {errors}"
+
+
+def test_mixed_thunderstorm_and_avalanche_mail_passes(monkeypatch):
+    """Gemischte Mail (Gewitter + Lawine) traegt das Eskalations-Meter und besteht."""
+    mod = _load_validator_module()
+    msg, html, _plain = _zugestellte_mail(monkeypatch, [_gewitter_alert(), _avalanche_stufe4()])
+    assert _STUFE4_ECHT in html and "Gewitter" in html, "Testaufbau: keine gemischte Mail"
+
+    ok, errors = mod.validate_message(msg)
+    assert ok is True, f"Gemischte Mail muss bestehen, errors={errors}"
+
+
+def test_mixed_mail_without_meter_or_ladder_fails(monkeypatch):
+    """Gemischte Mail ohne Meter/Leiter faellt -- die Lawinen-Lockerung gilt
+    nur fuer reine Lawinenmails."""
+    mod = _load_validator_module()
+    _msg, html, plain = _zugestellte_mail(monkeypatch, [_gewitter_alert(), _avalanche_stufe4()])
+    assert 'class="warn stacked"' in html and 'class="meter ' in html, "Testaufbau: kein Meter"
+    html_kaputt = (html.replace('class="warn stacked"', 'class="warn"')
+                   .replace('class="meter ', 'class="x ')
+                   .replace('class="stufe-line"', 'class="x"'))
+
+    ok, errors = mod.validate_message(_build_real_official_alert_message(html_kaputt, plain))
+    assert ok is False, f"Gemischte Mail ohne Meter/Leiter muss fallen, errors={errors}"
+    assert any(e.startswith("S-2") for e in errors), f"Erwartet S-2-Befund: {errors}"
+
+
+def test_other_hazard_words_mirror_renderer_hazard_labels():
+    """Drift-Waechter: `_OTHER_HAZARD_RE` spiegelt genau `_HAZARD_LABELS` ohne
+    die Lawinen-Eintraege. Kommt eine Gefahrenart dazu, muss der Pruefer sie
+    kennen -- sonst rettet sich deren Mail in die Lawinen-Lockerung (F012)."""
+    import re as _re
+
+    from output.renderers.alert.official_alerts import _HAZARD_LABELS
+
+    mod = _load_validator_module()
+    gruppe = _re.search(r"\(([^()]*)\)", mod._OTHER_HAZARD_RE.pattern)
+    assert gruppe, f"Unerwartete Form von _OTHER_HAZARD_RE: {mod._OTHER_HAZARD_RE.pattern!r}"
+    im_pruefer = set(gruppe.group(1).split("|"))
+    erwartet = {label for hazard, label in _HAZARD_LABELS.items()
+                if hazard not in ("avalanche", "avalanche_bulletin")}
+
+    assert im_pruefer == erwartet, (
+        f"Drift: nur im Pruefer {sorted(im_pruefer - erwartet)}, "
+        f"nur im Renderer {sorted(erwartet - im_pruefer)}"
+    )

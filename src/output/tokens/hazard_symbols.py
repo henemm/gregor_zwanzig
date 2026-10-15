@@ -22,6 +22,9 @@ HAZARD_SMS_SYMBOLS: dict[str, str] = {
     "wind_gust": "WG",
     "snow": "SN",
     "avalanche": "AW",
+    # Issue #1441 (ADR-0089): amtlicher Lawinen-Lagebericht, EAWS-Stufe 1-5 als
+    # Ziffer (`AV4`, kein L/M/H) -- `AV` gehoert EXKLUSIV dieser Gefahrenart.
+    "avalanche_bulletin": "AV",
     "black_ice": "IC",
     "extreme_heat": "HT",
     "extreme_cold": "CD",
@@ -33,13 +36,15 @@ HAZARD_SMS_SYMBOLS: dict[str, str] = {
 # (Schluessel = hazard wie oben) -- CODES (en) und KUERZEL (de) lesen hier.
 HAZARD_BEDEUTUNG_EN: dict[str, str] = {
     "thunderstorm": "storm", "flood": "flood", "rain": "heavy rain",
-    "wind_gust": "wind", "snow": "snow", "avalanche": "avalanche", "black_ice": "ice",
+    "wind_gust": "wind", "snow": "snow", "avalanche": "avalanche",
+    "avalanche_bulletin": "avalanche level", "black_ice": "ice",
     "extreme_heat": "heat", "extreme_cold": "cold", "wildfire_risk": "fire",
     "access_ban": "closure",
 }
 HAZARD_BEDEUTUNG_DE: dict[str, str] = {
     "thunderstorm": "Gewitter", "flood": "Hochwasser", "rain": "Starkregen",
-    "wind_gust": "Wind", "snow": "Schnee", "avalanche": "Lawine", "black_ice": "Glätte",
+    "wind_gust": "Wind", "snow": "Schnee", "avalanche": "Lawine",
+    "avalanche_bulletin": "Lawinenstufe", "black_ice": "Glätte",
     "extreme_heat": "Hitze", "extreme_cold": "Kälte", "wildfire_risk": "Waldbrand",
     "access_ban": "Sperrung",
 }
@@ -94,3 +99,25 @@ def sms_symbol_for(hazard: str) -> str:
 # Binaere Gefahren ohne Schweregrad — erscheinen als blankes Kuerzel ohne
 # Doppelpunkt/Stufe (`AB`, nicht `AB:H`) und tragen nie eine Stunde.
 LEVELLESS_HAZARDS = frozenset({"access_ban"})
+
+# Issue #1441: Gefahrenarten mit eigener Ziffern-Skala -- Token `{Kuerzel}{Ziffer}`
+# (`AV4`), ohne Doppelpunkt, ohne L/M/H und ohne Stunde. `LEVEL_LETTERS` und
+# `MIN_SMS_LEVEL` bleiben davon unberuehrt.
+NUMERIC_LEVEL_HAZARDS = frozenset({"avalanche_bulletin"})
+
+
+def alert_entry_token_parts(symbol: str, level: str, hour: "int | None") -> tuple[str, str]:
+    """EINE Grammatik fuer ein Warnblock-Tripel `(Kuerzel, Stufe, Stunde)` aus
+    `official_alerts_to_sms_entries` -> `(Token-Symbol, Token-Wert)`; geteilt von
+    Trip-SMS (`builder._official_alerts`) und Ortsvergleich-SMS
+    (`comparison._official_alert_sms_marker`), Issue #1441:
+
+    - ohne Stufe (`access_ban`)       -> `("AB", "")`        -> `AB`
+    - Ziffern-Skala (Lagebericht)     -> `("AV", "4")`       -> `AV4`
+    - L/M/H-Stufe, optional Stunde    -> `("TS:", "H@14")`   -> `TS:H@14`
+    """
+    if not level:
+        return symbol, ""
+    if level.isdigit():
+        return symbol, level
+    return f"{symbol}:", (level if hour is None else f"{level}@{hour}")

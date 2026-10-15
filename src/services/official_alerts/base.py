@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Protocol
 
 from services.official_alerts import warn_egress
-from services.official_alerts.models import OfficialAlert
+from services.official_alerts.models import OfficialAlert, comparable_level
 
 logger = logging.getLogger(__name__)
 
@@ -207,12 +207,15 @@ def get_official_alerts_with_status(
     results = filter_alerts_to_window(results, effective_start, window_end)
 
     # Pass 1: je hazard die "beste" Quelle bestimmen (hoechstes level;
-    # Gleichstand: zuerst gesammelt).
+    # Gleichstand: zuerst gesammelt). Issue #1441 (ADR-0089): verglichen wird
+    # die Originalstufe, falls gesetzt (`comparable_level`) -- nur innerhalb
+    # EINER Gefahrenart, nie ueber Skalen hinweg.
     best_source: dict[str, str] = {}
     best_level: dict[str, int] = {}
     for alert in results:
-        if alert.hazard not in best_level or alert.level > best_level[alert.hazard]:
-            best_level[alert.hazard] = alert.level
+        rank = comparable_level(alert)
+        if alert.hazard not in best_level or rank > best_level[alert.hazard]:
+            best_level[alert.hazard] = rank
             best_source[alert.hazard] = alert.source
 
     # Pass 2: nur Alerts der besten Quelle je hazard behalten; exakte
@@ -227,7 +230,7 @@ def get_official_alerts_with_status(
         if key not in kept:
             kept[key] = alert
             order.append(key)
-        elif alert.level > kept[key].level:
+        elif comparable_level(alert) > comparable_level(kept[key]):
             kept[key] = alert
     return [kept[k] for k in order], unavailable
 

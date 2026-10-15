@@ -317,7 +317,9 @@ def test_ac5_catalog_matches_spec_table():
     """Der Katalog `hazard_symbols.py` ist die einzige Quelle — und traegt
     exakt die 9 Paare der Spec-Tabelle."""
     from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
-    assert dict(SPEC_SYMBOLS) == dict(HAZARD_SMS_SYMBOLS), (
+    # #1441: der amtliche Lawinen-Lagebericht (EAWS 1-5) traegt `AV` (Ziffer statt Buchstabe,
+    # eigene Darstellung -- hier nicht Teil der parametrisierten L/M/H-Faelle).
+    assert {**dict(SPEC_SYMBOLS), "avalanche_bulletin": "AV"} == dict(HAZARD_SMS_SYMBOLS), (
         "Katalog weicht von der Spec-Tabelle (Abschnitt 1) ab: "
         f"{dict(HAZARD_SMS_SYMBOLS)!r}"
     )

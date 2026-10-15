@@ -83,6 +83,8 @@ BAUSTEIN_FELD_DE = "BAUSTEIN_BEDEUTUNG_DE"
 #: TRIP-Kontext -- es loest Bug #2454 AC-6 ("TF entfaellt im Trip") ab, weil der
 #: Trip ``TF<Tiefstwert>@<Stunde>`` jetzt versendet. Der Wortlaut ist der des
 #: Ortsvergleich-Kontexts (AC-7, unveraendert).
+#: #1441: "AV Lawinenstufe" ist seither Warn-Kuerzel des amtlichen Lageberichts
+#: (`avalanche_bulletin`) und steht unter "Warnungen nach !" direkt hinter "AW Lawine".
 KUERZEL_WORTLAUT_DE = "\n".join([
     "Kürzel",
     "Wetter: T Temperatur, D Tageshöchstwert, N Nacht, L Tagestiefstwert, "
@@ -92,12 +94,12 @@ KUERZEL_WORTLAUT_DE = "\n".join([
     "Gewitterenergie, PT Niederschlagsart, SL Schneefallgrenze m, NS24+ "
     "Neuschnee 24h, CT/CL/CM/CH Bewölkung gesamt/tief/mittel/hoch, VS Sicht, "
     "SU Sonnenstunden, UV UV-Index, HP Luftdruck, FZ Nullgradgrenze m.",
-    "Weitere: SD Schneehöhe, AV Lawinenstufe, C Vorhersage-Verlässlichkeit, "
+    "Weitere: SD Schneehöhe, C Vorhersage-Verlässlichkeit, "
     "Z:/MAX/M: Brandzonen/Höchststufe/Massive.",
     "Format: E4 Etappe 4, 23@5 über der Schwelle ab 5 Uhr, (24@7) Spitze, "
     "D13/27 Tiefst/Höchst, +HL Hagel, - nichts, ? keine Daten.",
     "Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN "
-    "Schnee, AW Lawine, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H "
+    "Schnee, AW Lawine, AV Lawinenstufe, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H "
     "niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine "
     "Warndaten.",
 ])
@@ -274,12 +276,12 @@ def test_codes_tokenizer_selbsttest_am_spec_wortlaut():
         "storm energy, PT precip type, SL snow line m, NS24+ new snow 24h, "
         "CT/CL/CM/CH clouds total/low/mid/high, VS visibility, SU sun h, UV "
         "index, HP pressure, FZ 0C level m.\n"
-        "More: SD snow depth, AV avalanche level, C confidence, Z:/MAX/M: "
+        "More: SD snow depth, C confidence, Z:/MAX/M: "
         "fire zones/top level/massifs.\n"
         "Format: E4 stage 4, 23@5 over limit from 5h, (24@7) peak, D13/27 "
         "min/max, +HL hail, - none, ? no data.\n"
         "Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW "
-        "avalanche, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: "
+        "avalanche, AV avalanche level, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: "
         "MF rain/storm risk. X? no data."
     )
     tokens = _codes_tokens(spec_codes)

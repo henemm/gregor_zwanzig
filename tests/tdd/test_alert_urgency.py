@@ -856,3 +856,51 @@ def test_two_users_official_alert_severity_isolated():
         "Alice und Bob duerfen NICHT dasselbe Datenverzeichnis teilen "
         f"(Rueckfall auf 'default'?): {get_data_dir(alice)} == {get_data_dir(bob)}"
     )
+
+
+# ═══════════════════ #1441 — Lawinen-Lagebericht (EAWS 1-5) ═══════════════
+# SPEC: docs/specs/modules/avalanche_report_bulletin.md (AC-14, AC-18)
+# Alerts kommen aus dem echten Parser auf aufgezeichneten Bulletins
+# (tests/fixtures/avalanche_report/); die Dringlichkeit folgt dem abgeleiteten
+# `level` (1,2,3,4,4) ueber die bestehende Abbildung -- nur Stufe 1 braucht eine
+# eigene Zuordnung (sonst `LEVEL_LETTERS.get(1, "H")` = HIGH).
+def _lagebericht(stufe: int):
+    from tests.helpers.avalanche_report_support import parse_alert
+
+    quelle = {
+        1: ("2026-03-01_AT-02_de_CAAMLv6.json", "AT-02-05-02"),
+        2: ("2026-03-01_AT-07_de_CAAMLv6.json", "AT-07-29-02"),
+        3: ("2026-01-30_AT-07_de_CAAMLv6.json", "AT-07-28"),
+        4: ("2026-02-20_AT-07_de_CAAMLv6.json", "AT-07-25"),
+        5: ("derived/2026-02-20_AT-07_de_CAAMLv6_DERIVED_very_high.json", "AT-07-25"),
+    }[stufe]
+    return parse_alert(*quelle)
+
+
+def test_1441_stufe_1_ist_nicht_high():
+    """AC-14: Stufe 1 (gering) darf nicht ueber den konservativen HIGH-Rueckfall laufen."""
+    import services.alert_urgency as alert_urgency
+
+    assert alert_urgency.urgency_from_official_level(1) == "LOW"
+
+
+def test_1441_lagebericht_stufe_1_aus_dem_bulletin_ist_nicht_high():
+    import services.alert_urgency as alert_urgency
+
+    assert alert_urgency.urgency_from_official_level(_lagebericht(1).level) == "LOW"
+
+
+def test_1441_lagebericht_stufen_2_bis_5_folgen_dem_abgeleiteten_level():
+    import services.alert_urgency as alert_urgency
+
+    assert [alert_urgency.urgency_from_official_level(_lagebericht(n).level) for n in (2, 3, 4, 5)] == [
+        "LOW", "MODERATE", "HIGH", "HIGH",
+    ]
+
+
+def test_1441_bestehender_rueckfall_fuer_unbekannte_stufen_bleibt_high():
+    """Regressionswache (bewusst schon heute gruen): AC-3 von #1461."""
+    import services.alert_urgency as alert_urgency
+
+    assert alert_urgency.urgency_from_official_level(9) == "HIGH"
+    assert alert_urgency.urgency_from_official_level(4) == "HIGH"

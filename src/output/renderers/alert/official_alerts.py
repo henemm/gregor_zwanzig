@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 
 from output.tokens.hazard_symbols import (
     HAZARD_ORDER, HAZARD_SMS_SYMBOLS, LEVEL_LETTERS, LEVELLESS_HAZARDS,
-    MIN_SMS_LEVEL, sms_symbol_for,
+    MIN_SMS_LEVEL, NUMERIC_LEVEL_HAZARDS, sms_symbol_for,
 )
 
 # Issue #1744 A1: `format_segment_reference` ist seit dem Umzug nach
@@ -48,12 +48,15 @@ _LEVEL_WORDS: dict[int, tuple[str, str]] = {
 }
 
 # Position "N/3" auf der Warnstufen-Leiter GELB->ORANGE->ROT (Issue #1216).
-_LEVEL_POSITION: dict[int, int] = {2: 1, 3: 2, 4: 3}
+# Issue #1441: Stufe 1 explizit ausserhalb der Leiter (0); die EAWS-Stufe 5
+# erreicht `level` nie (abgeleitetes Farblevel 5 -> 4), die Leiter entfaellt
+# fuer den Lagebericht ohnehin (`_is_eaws`).
+_LEVEL_POSITION: dict[int, int] = {1: 0, 2: 1, 3: 2, 4: 3}
 
 # CSS-Klassenname je Stufe (Design-Vorlage "Alert · Amtliche Warnung", #1233
 # Slice B) -- rein strukturell (Klassen tragen keine eigene Farbe im Mail-
 # Output, die Farbe kommt ausschliesslich ueber Inline-Style-Tokens, AC-13).
-_LEVEL_CLASS: dict[int, str] = {2: "gelb", 3: "orange", 4: "rot"}
+_LEVEL_CLASS: dict[int, str] = {1: "gruen", 2: "gelb", 3: "orange", 4: "rot"}
 
 # Positions-Wort fuer den `.stufe-hint` (Design-Vorlage, AC-8).
 _LEVEL_POSITION_WORD: dict[int, str] = {1: "niedrigste", 2: "mittlere", 3: "höchste"}
@@ -80,6 +83,9 @@ _HAZARD_LABELS: dict[str, str] = {
     # Issue #1427 S1: MeteoAlarm-Typen 11/12/13 (flood/flooding/rain-flood)
     # bzw. DPC Idrogeo/Idraulico -- Hochwasser- und Erdrutschwarnungen.
     "flood": "Hochwasser/Erdrutsch",
+    # Issue #1441 (ADR-0089): amtlicher Lawinen-Lagebericht (EAWS 1-5), neben
+    # der MeteoAlarm-Lawinenwarnung "avalanche" (Awareness 1-4).
+    "avalanche_bulletin": "Lawinenstufe",
 }
 
 # hazard -> (Anzeige, SMS-Kuerzel). Issue #1318 Abschnitt 1b: die Anzeige-Labels
@@ -113,7 +119,59 @@ _SOURCE_LABELS: dict[str, str] = {
     # Italienischer Zivilschutz, additive Quelle fuer Gewitter/Hochwasser/
     # Erdrutsch (services/official_alerts/dpc.py, Issue #1427 S2).
     "dpc": "Protezione Civile (DPC)",
+    # Issue #1441: Lawinen-Lagebericht je Tabellenzeile (avalanche_report.py,
+    # `AVALANCHE_REGION_TABLE`); Namensnennung ist Lizenzpflicht (CC BY 4.0).
+    "avalanche_report:at-07": "Lawinenwarndienst Tirol, avalanche.report",
+    "avalanche_report:it-32-bz": "Lawinenwarndienst Südtirol, avalanche.report",
+    "avalanche_report:it-32-tn": "Lawinenwarndienst Trentino, avalanche.report",
+    "avalanche_report:at-02": "Lawinenwarndienst Kärnten, avalanche.report",
 }
+
+# Issue #1441: EAWS-Woerter und Lawinenprobleme -- Wortlaut des Warndienstes,
+# nur Daten, keine Handlungsempfehlung. Unbekannter Code -> der Code selbst.
+_EAWS_WORDS: dict[int, str] = {1: "gering", 2: "mäßig", 3: "erheblich", 4: "groß", 5: "sehr groß"}
+AVALANCHE_PROBLEM_NAMES_DE: dict[str, str] = {
+    "new_snow": "Neuschnee", "wind_slab": "Triebschnee", "persistent_weak_layers": "Altschnee",
+    "wet_snow": "Nassschnee", "gliding_snow": "Gleitschnee", "cornices": "Wechten",
+    "no_distinct_avalanche_problem": "kein ausgeprägtes Lawinenproblem",
+    "favourable_situation": "günstige Situation",
+}
+_ELEVATION_WORDS: dict[str, str] = {"above": "oberhalb", "below": "unterhalb"}
+_TIME_OF_DAY_WORDS: dict[str, str] = {"earlier": "vormittags", "later": "nachmittags"}
+
+
+def _is_eaws(alert: "OfficialAlert") -> bool:
+    """Lagebericht-Gefahrenart: eigene Skala, keine Awareness-Leiter (ADR-0089)."""
+    return alert.hazard == "avalanche_bulletin"
+
+
+def _rank(alert: "OfficialAlert") -> int:
+    """Originalstufe, falls gesetzt, sonst `level` -- nur innerhalb einer Gefahrenart."""
+    from services.official_alerts.models import comparable_level
+
+    return comparable_level(alert)
+
+
+def avalanche_bulletin_text(alert: "OfficialAlert") -> str:
+    """Zentraler Text des Lageberichts, z. B. "Lawinenstufe 4 (groß) oberhalb
+    Waldgrenze · Triebschnee" (Stufe, Hoehe, Tageszeit, Probleme -- woertlich)."""
+    level = _rank(alert)
+    text = f"Lawinenstufe {level}"
+    if level in _EAWS_WORDS:
+        text += f" ({_EAWS_WORDS[level]})"
+    if alert.elevation_value and alert.elevation_direction in _ELEVATION_WORDS:
+        unit = "" if alert.elevation_value == "Waldgrenze" else " m"
+        text += f" {_ELEVATION_WORDS[alert.elevation_direction]} {alert.elevation_value}{unit}"
+    if alert.time_of_day in _TIME_OF_DAY_WORDS:
+        text += f" ({_TIME_OF_DAY_WORDS[alert.time_of_day]})"
+    if alert.problems:
+        text += " · " + ", ".join(AVALANCHE_PROBLEM_NAMES_DE.get(c, c) for c in alert.problems)
+    return text
+
+
+def _alert_text(alert: "OfficialAlert") -> str:
+    """Badge-/Plain-Text: Lagebericht ueber den zentralen Helfer, sonst `label`."""
+    return avalanche_bulletin_text(alert) if _is_eaws(alert) else alert.label
 
 
 def official_alert_source_label(source: str | None) -> str:
@@ -222,7 +280,7 @@ def render_official_alerts_html(
     for label, alerts in entries:
         for alert in alerts:
             color = _level_colors.get(alert.level, G_ALERT_L4)
-            alert_label = _html.escape(alert.label)
+            alert_label = _html.escape(_alert_text(alert))
             prefix_html = ""
             if label and label != alert.label:
                 name = _html.escape(label)
@@ -269,7 +327,7 @@ def render_official_alerts_plain(entries: list[tuple[str, list["OfficialAlert"]]
             suffix = ""
             if alert.valid_from and alert.valid_to:
                 suffix = f" ({_format_validity(alert)})"
-            lines.append(f"Amtliche Warnung: {alert.label}{suffix}")
+            lines.append(f"Amtliche Warnung: {_alert_text(alert)}{suffix}")
     return lines
 
 
@@ -323,7 +381,7 @@ def dedupe_official_alerts(
             best[key] = a
             segment_ids_by_key[key] = set()
             order.append(key)
-        elif a.level > best[key].level:
+        elif _rank(a) > _rank(best[key]):
             best[key] = a
         segment_ids_by_key[key].update(segment_ids)
     return [(best[key], sorted(segment_ids_by_key[key])) for key in order]
@@ -378,6 +436,10 @@ def official_alerts_to_sms_entries(
         symbol = sms_symbol_for(alert.hazard)
         if alert.hazard in LEVELLESS_HAZARDS:
             entry = (symbol, "", None)
+        elif alert.hazard in NUMERIC_LEVEL_HAZARDS:
+            # Issue #1441: Originalziffer (`AV4`), keine Stunde (Ausgabezeit 17:00
+            # ist keine Warnstunde) -- der Builder rendert ohne Doppelpunkt.
+            entry = (symbol, str(_rank(alert)), None)
         else:
             hour = _warn_hour(alert, tz) if tz is not None else None
             entry = (symbol, LEVEL_LETTERS.get(alert.level, "H"), hour)
@@ -484,7 +546,7 @@ def official_alert_revision_verdict(
     prev = state.get(key)
 
     def _exact_match_verdict() -> tuple[bool, Optional[str], Optional[dict]]:
-        should_report = prev is None or alert.level > prev.get("last_reported_value", 0)
+        should_report = prev is None or _rank(alert) > prev.get("last_reported_value", 0)
         return should_report, None, None
 
     if alert.valid_from is None or alert.valid_to is None:
@@ -546,14 +608,15 @@ def official_alert_revision_verdict(
     # Faelle umdrehen, die auch ohne Containment still waeren -- sonst wuerde
     # z.B. "nur verlaengert" (#1685 AC-2, gleicher Beginn, spaeteres Ende) mit
     # altem `reported_at` faelschlich erneut melden.
-    escalated = alert.level > kandidat_level
+    # Issue #1441: Originalstufe (4 -> 5 eskaliert, abgeleitetes level bliebe 4).
+    escalated = _rank(alert) > kandidat_level
     containment_greift = is_containment and kandidat_frisch
     vorverlegung = (not containment_greift) and (kandidat_vf - alert_vf) >= timedelta(hours=2)
     if escalated or vorverlegung:
         return True, None, None
 
     merged_entry = {
-        "last_reported_value": max(kandidat_level, float(alert.level)),
+        "last_reported_value": max(kandidat_level, float(_rank(alert))),
         # Adversary F002 (#1685 Fix-Loop, HIGH): `.get(..., "")` griff nur bei
         # fehlendem Schluessel, nicht bei explizit gespeichertem `None` -- ein
         # zweiter gleichrangiger Kandidat mit `reported_at: null` liess den
@@ -581,7 +644,7 @@ def official_alert_state_entry(alert: "OfficialAlert", reported_at_iso: str) -> 
     _record_state`. Neu ggue. dem Ist-Zustand: `valid_from`/`valid_to`, damit
     `official_alert_revision_verdict` spaeter echte Ueberlappung pruefen kann."""
     return {
-        "last_reported_value": float(alert.level),
+        "last_reported_value": float(_rank(alert)),
         "reported_at": reported_at_iso,
         "valid_from": alert.valid_from.isoformat() if alert.valid_from else None,
         "valid_to": alert.valid_to.isoformat() if alert.valid_to else None,
@@ -651,7 +714,9 @@ def _bundle_by_hazard_level(
     regions_by_key: dict[tuple, list[str]] = {}
     order: list[tuple] = []
     for a, segment_ids in deduped:
-        key = (a.hazard, a.level, a.label, a.valid_from, a.valid_to)
+        # Issue #1441: fuer den Lagebericht ist der angezeigte Text (Stufe, Hoehe,
+        # Probleme) Schluessel -- sonst bestimmte der Repraesentant ihn allein.
+        key = (a.hazard, a.level, _alert_text(a), a.valid_from, a.valid_to)
         if key not in rep:
             rep[key] = a
             ids_by_key[key] = []
@@ -702,7 +767,8 @@ def render_official_alert_notice_plain(
         # nur ein voellig eigenstaendiges Roh-Label wird durch das Typ-Wort
         # ersetzt (s. `_display_label`-Docstring Fall (d)).
         word = _LEVEL_WORDS.get(a.level, ("🔴", "ROT"))[1]
-        lines.append(f"{word} — {_display_label(a)}")
+        # Issue #1441: der Lagebericht traegt seine Stufe im Wortlaut, kein Ampelwort.
+        lines.append(_display_label(a) if _is_eaws(a) else f"{word} — {_display_label(a)}")
         region_line = f"Region: {a.region_label or 'unbekannt'}"
         if segment_ids:
             region_line += f" — {format_segment_reference(segment_ids)}"
@@ -792,6 +858,8 @@ def _display_label(alert: "OfficialAlert") -> str:
     Roh-Label der Quelle oder am Dedup-Schluessel (Regress-Schutz gegen
     #1172/#1200/#1217/#1218, die beide ausschliesslich `alert.label`
     unveraendert nutzen)."""
+    if _is_eaws(alert):
+        return avalanche_bulletin_text(alert)  # Issue #1441: Wortlaut statt Leiter
     typ, _sms = _hazard_display(alert)
     label = alert.label
     if label == typ or not label:
@@ -934,12 +1002,14 @@ def render_official_alert_subject(
     shown = ordered[:_SUBJECT_MAX_WARNINGS]
     omitted = len(ordered) - len(shown)
     more = f" +{omitted} weitere" if omitted > 0 else ""
-    if uniform:
+    if uniform and not any(_is_eaws(n.alert) for n in ordered):
         _emoji, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
         body = f"{word} " + " + ".join(_typ_tag(n, tz) for n in shown)
     else:
+        # Issue #1441: der Lagebericht steht ohne Ampelwort (Stufe im Wortlaut).
         body = " + ".join(
-            f"{_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]} {_typ_tag(n, tz)}"
+            _typ_tag(n, tz) if _is_eaws(n.alert)
+            else f"{_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]} {_typ_tag(n, tz)}"
             for n in shown
         )
     if not _uniform_scope(ordered):
@@ -1022,7 +1092,7 @@ def _headline_text(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
     types = []
     for n in ordered:
         typ = _display_label(n.alert)
-        if not uniform:
+        if not uniform and not _is_eaws(n.alert):
             _e, lw = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
             typ = f"{typ} ({lw})"
         types.append(typ)
@@ -1036,7 +1106,8 @@ def _verdict_text(n_count: int, leading_word: str, uniform: bool) -> str:
     """Kennzeichen-Text '{N} amtliche Warnung(en)' (+ Hoechststufe bei
     gemischten Stufen) -- geteilt von Verdict-Pille und Klartext-Teil."""
     word = "amtliche Warnung" if n_count == 1 else "amtliche Warnungen"
-    extra = "" if uniform else f" · höchste Stufe {leading_word}"
+    # Issue #1441: leeres `leading_word` = fuehrender Lagebericht, kein Ampelwort.
+    extra = "" if uniform or not leading_word else f" · höchste Stufe {leading_word}"
     return f"{n_count} {word}{extra}"
 
 
@@ -1303,7 +1374,8 @@ def _standalone_warn_stacked_html(
     from output.renderers.email.design_tokens import G_INK
 
     typ = _standalone_warn_type_html(notice)
-    meter = _standalone_bars_meter_html(notice.alert.level, color)
+    # Issue #1441: der Lagebericht nennt seine Stufe im Titel -- keine n/3-Leiter.
+    meter = "" if _is_eaws(notice.alert) else _standalone_bars_meter_html(notice.alert.level, color)
     facts = _standalone_facts_html(_standalone_fact_rows(notice, tz), "")
     return (
         f'<div class="warn stacked" style="display:block;padding:14px 16px;'
@@ -1372,8 +1444,9 @@ def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool
         # — Monts Toulonnais" im Titel).
         typ = _display_label(leading.alert)
         _e, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
+        word_part = "" if _is_eaws(leading.alert) else f" ({word})"
         return (
-            f"Das {_html.escape(typ)} ({word}) ist die kritischere Warnung "
+            f"Das {_html.escape(typ)}{word_part} ist die kritischere Warnung "
             "und steht deshalb oben."
         )
     leading = ordered[0]
@@ -1451,7 +1524,7 @@ def _standalone_src_html(
 
 def render_official_alert_html(
     notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str, tz: "ZoneInfo",
-    context_label: str | None = None,
+    context_label: str | None = None, source_url: str | None = None,
 ) -> str:
     """E-Mail-HTML auf dem SOLL-Design (#1233 Slice B, „Alert · Amtliche
     Warnung"): Verdict-Pill, deterministische Headline, Warnstufen-Leiter
@@ -1468,20 +1541,24 @@ def render_official_alert_html(
     dazu baut `render_official_alert_mail_plain`."""
     from output.renderers.email.design_tokens import (
         FONT_DATA, FONT_UI, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4, G_INK,
-        G_INK_FAINT, G_INK_MUTED,
+        G_INK_FAINT, G_INK_MUTED, G_SUCCESS,
     )
 
-    level_colors = {2: G_ALERT_L2, 3: G_ALERT_L3, 4: G_ALERT_L4}
+    # Issue #1441: Stufe 1 explizit (sonst Default ROT fuer die Lagebericht-Stufe 1).
+    level_colors = {1: G_SUCCESS, 2: G_ALERT_L2, 3: G_ALERT_L3, 4: G_ALERT_L4}
     ordered = _sort_notices(notices)
     uniform = len({n.alert.level for n in ordered}) == 1
     leading_level = ordered[0].alert.level
     _emoji, leading_word = _LEVEL_WORDS.get(leading_level, ("🔴", "ROT"))
+    if _is_eaws(ordered[0].alert):
+        leading_word = ""  # Issue #1441: kein Ampelwort fuer den Lagebericht
 
     verdict = _standalone_verdict_html(
         len(ordered), leading_level, leading_word, uniform, level_colors, FONT_DATA,
     )
     headline = _standalone_headline_html(ordered, uniform)
-    ladder = _standalone_ladder_html(leading_level, level_colors) if uniform else ""
+    with_ladder = uniform and not any(_is_eaws(n.alert) for n in ordered)
+    ladder = _standalone_ladder_html(leading_level, level_colors) if with_ladder else ""
 
     if uniform:
         warns = "".join(
@@ -1505,10 +1582,16 @@ def render_official_alert_html(
         f'overflow:hidden;margin:4px 0 16px;">{warns}{src}</div>'
     )
 
+    # Issue #1441 (CC BY 4.0): mit `source_url` wird der Quellenname zum Link --
+    # derselbe Baustein wie im eingebetteten WarnBlock. Ohne URL unveraendert.
+    abgerufen = (
+        _source_link_html(source_label, source_url, f"color:{G_INK_FAINT};")
+        if source_url else _html.escape(source_label)
+    )
     footer = (
         f'<p class="body-foot" style="font-size:13.5px;color:{G_INK_FAINT};'
         f'margin:18px 0 0;">Stand: heute {_html.escape(stand_at)} · '
-        f'abgerufen bei {_html.escape(source_label)}</p>'
+        f'abgerufen bei {abgerufen}</p>'
     )
     # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile mit
     # Kontext (Trip-Name bzw. „Ortsvergleich") -- Zeile 2 zeigt die echte
@@ -1527,7 +1610,7 @@ def render_official_alert_html(
 
 def render_official_alert_mail_plain(
     notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str,
-    tz: "ZoneInfo", context_label: str | None = None,
+    tz: "ZoneInfo", context_label: str | None = None, source_url: str | None = None,
 ) -> str:
     """Klartext-Teil der eigenstaendigen amtlichen Warn-Mail (#1744 A2, AC-13).
 
@@ -1553,6 +1636,8 @@ def render_official_alert_mail_plain(
     uniform = len({n.alert.level for n in ordered}) == 1
     leading_level = ordered[0].alert.level
     _emoji, leading_word = _LEVEL_WORDS.get(leading_level, ("🔴", "ROT"))
+    if _is_eaws(ordered[0].alert):
+        leading_word = ""  # Issue #1441: kein Ampelwort fuer den Lagebericht
 
     zeilen = [
         _headline_text(ordered, uniform),
@@ -1560,7 +1645,7 @@ def render_official_alert_mail_plain(
         _verdict_text(len(ordered), leading_word, uniform),
         "",
     ]
-    if uniform:
+    if uniform and not any(_is_eaws(n.alert) for n in ordered):
         # Gegenstueck der Warnstufen-Leiter: die Skala traegt eine Einordnung,
         # die eine blosse Wortangabe verliert (AC-9) -- im Klartext als
         # Datenzeile, weil es dort keine Leiter gibt.
@@ -1571,7 +1656,7 @@ def render_official_alert_mail_plain(
         )
     for n in ordered:
         rows: list[_DataRow] = []
-        if not uniform:
+        if not uniform and not _is_eaws(n.alert):
             _e, word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
             rows.append(("Warnstufe", f"{word} · {_LEVEL_POSITION.get(n.alert.level, 0)}/3", None))
         rows.append(_standalone_type_row(n))
@@ -1585,9 +1670,11 @@ def render_official_alert_mail_plain(
         # `_standalone_src_sentence` liefert bereits escapetes HTML (geteilt mit
         # der Datenzeile) -- im Klartext gehoert der rohe Satz hin.
         zeilen.append(_html.unescape(sentence))
+    # Issue #1441 (CC BY 4.0): Gegenstueck des Quelle-Links im HTML.
+    link = f" → {source_url}" if source_url else ""
     zeilen.extend([
         "",
-        f"Stand: heute {stand_at} · abgerufen bei {source_label}",
+        f"Stand: heute {stand_at} · abgerufen bei {source_label}{link}",
         "",
         render_origin_footer_text(build_origin_footer(
             "official-alert", source=source_label, context_label=context_label,
@@ -1629,6 +1716,18 @@ def _embedded_chip(label: str, *, active: bool) -> str:
     return f'<span class="seg" style="{base}">{_html.escape(label)}</span>'
 
 
+def _source_link_html(source_label: str, source_url: str | None, style: str) -> str:
+    """Quelle-Link (`.wb-src`), geteilt von eingebettetem WarnBlock und
+    eigenstaendiger Warn-Mail (Issue #1441, CC BY 4.0: Namensnennung + Link).
+    Ohne `source_url` nur der Quellenname."""
+    if source_url:
+        return (
+            f'<a class="wb-src" href="{_html.escape(source_url)}" '
+            f'style="{style}">{_html.escape(source_label)} →</a>'
+        )
+    return f'<span class="wb-src" style="{style}">{_html.escape(source_label)}</span>'
+
+
 def _render_warn_block_embedded(
     notices: list["OfficialAlertNotice"], *, source_label: str,
     source_url: str | None, tz: "ZoneInfo | None", count_line: str | None,
@@ -1662,6 +1761,10 @@ def _render_warn_block_embedded(
 
     if count_line is not None:
         count = count_line
+    elif any(_is_eaws(nt.alert) for nt in ordered):
+        # Issue #1441: keine Awareness-Leiter fuer die EAWS-Skala -- die Stufe
+        # steht im Wortlaut jeder Warnung.
+        count = f"{n} aktiv"
     elif uniform:
         pos = _LEVEL_POSITION.get(leading_level, 0)
         count = f"{n} aktiv · Stufe {leading_word} ({pos}/3)"
@@ -1672,16 +1775,7 @@ def _render_warn_block_embedded(
         "margin-left:auto;font-family:'JetBrains Mono',monospace;"
         "font-size:10.5px;color:#6b6962;text-decoration:none;"
     )
-    if source_url:
-        src_html = (
-            f'<a class="wb-src" href="{_html.escape(source_url)}" '
-            f'style="{src_style}">{_html.escape(source_label)} →</a>'
-        )
-    else:
-        src_html = (
-            f'<span class="wb-src" style="{src_style}">'
-            f'{_html.escape(source_label)}</span>'
-        )
+    src_html = _source_link_html(source_label, source_url, src_style)
 
     items = []
     for nt in ordered:
@@ -1725,7 +1819,7 @@ def _render_warn_block_embedded(
             # daneben steht (bei uniformer Stufe steht sie im `count_line`-Kopf
             # des ganzen Blocks).
             type_display = _display_label(nt.alert)
-        if uniform:
+        if uniform or _is_eaws(nt.alert):
             meter, lvl = "", ""
         else:
             _e, lw = _LEVEL_WORDS.get(nt.alert.level, ("🔴", "ROT"))
@@ -1827,7 +1921,7 @@ def render_warn_block(
     if variant == "standalone":
         return render_official_alert_html(
             notices, source_label=source_label, stand_at=stand_at or "", tz=tz,
-            context_label=context_label,
+            context_label=context_label, source_url=source_url,
         )
     if variant == "embedded":
         return _render_warn_block_embedded(
@@ -1887,6 +1981,9 @@ def render_official_alert_telegram(
     kind = "Warnstufe" if uniform else "höchste Stufe"
     scope_part = f"{leading.scope_label} · " if (show_scope and uniform_scope) else ""
     head = f"{prefix} · {scope_part}{kind} {leading_word} ({pos}/3)"
+    if _is_eaws(leading.alert):
+        # Issue #1441: Lagebericht-Stufe statt Awareness-Leiter im Kopf.
+        head = f"{prefix} · {scope_part}Lawinenstufe {_rank(leading.alert)}"
     lines = [f"<b>{_html.escape(head)}</b>"]
     for n in ordered:
         emoji, _word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
@@ -1896,6 +1993,10 @@ def render_official_alert_telegram(
             body = f"{body} · {_html.escape(_format_validity(n.alert, tz))}"
         lines.append(f"{emoji} {body}{scope}")
     lines.append(_html.escape(source_label))
+    # Issue #1441 (CC BY 4.0): Link zum Bulletin des Warndienstes.
+    for n in ordered:
+        if _is_eaws(n.alert) and n.alert.url:
+            lines.append(_html.escape(n.alert.url))
     return "\n".join(lines)
 
 
@@ -2075,6 +2176,9 @@ def _sms_hazard_token(alert: "OfficialAlert", time_part: str) -> str:
     symbol = sms_symbol_for(alert.hazard)
     if alert.hazard in LEVELLESS_HAZARDS:
         return symbol
+    if alert.hazard in NUMERIC_LEVEL_HAZARDS:
+        # Issue #1441: Originalziffer (`AV5`) -- kein L/M/H, keine Stunde.
+        return f"{symbol}{_rank(alert)}"
     letter = _SMS_LEVEL_LETTERS.get(alert.level, "H")
     token = f"{symbol}:{letter}"
     return f"{token} {time_part}" if time_part else token
@@ -2126,7 +2230,7 @@ def render_official_alert_sms(
     head = f"{prefix}{_ascii(f'{leading.sms_scope}: ')}" if uniform_scope else prefix
     # `access_ban` traegt nie eine Stunde -- auch nicht als Fallback-Variante.
     leading_time = (
-        "" if leading.alert.hazard in LEVELLESS_HAZARDS
+        "" if leading.alert.hazard in LEVELLESS_HAZARDS | NUMERIC_LEVEL_HAZARDS
         else _tag_time(leading.alert, tz)
     )
     # ASCII-Konvertierung VOR der Kuerzung (nicht danach), damit die

@@ -365,7 +365,8 @@ _CODES_WETTER = (
     ("SL",), ("NS24+",), ("CT", "CL", "CM", "CH"), ("VS",), ("SU",), ("UV",),
     ("HP",), ("FZ",),
 )
-_CODES_WEITERE = (("SD",), ("AV",), ("C",), ("Z:", "MAX", "M:"))
+# Issue #1441: 'AV' steht als Warn-Kuerzel (Lagebericht) unter "Warnungen nach !".
+_CODES_WEITERE = (("SD",), ("C",), ("Z:", "MAX", "M:"))
 
 
 def _codes_gruppe(codes: tuple, bedeutung: dict) -> str:

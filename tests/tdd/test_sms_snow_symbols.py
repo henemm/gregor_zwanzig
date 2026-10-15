@@ -422,7 +422,11 @@ def test_ac5_wintersport_block_order_unchanged():
     Fix #1887 E6 Scheibe A: 'WC' folgte hier bislang auf AV, ist aber
     ERSATZLOS entfallen (PO-Entscheid) -- der Block schrumpft von 5 auf 4
     Positionen, die relative Reihenfolge der verbleibenden vier bleibt
-    unangetastet."""
+    unangetastet.
+
+    #1441: 'AV' ist kein Wintersport-Token mehr (Lawinenstufe nur noch aus dem
+    amtlichen Lagebericht im !-Warnblock) -- der Block ist SD, NS24+, SL; ein
+    AV-Token darf hier gar nicht mehr erscheinen."""
     rendered = _line(_winter_day()).render(400)
     tokens = _tokens(rendered)
 
@@ -434,13 +438,16 @@ def test_ac5_wintersport_block_order_unchanged():
             f"AC-5: Token mit Praefix {prefix!r} fehlt in {rendered!r}"
         )
 
-    order = [_index(p) for p in ("SD", "NS24+", "SL", "AV")]
+    order = [_index(p) for p in ("SD", "NS24+", "SL")]
+    assert not any(tok.startswith("AV") for tok in tokens), (
+        f"#1441: _wintersport() darf kein AV-Token mehr bauen: {rendered!r}"
+    )
     assert order == sorted(order), (
-        "AC-5: Wintersport-Block nicht in der Reihenfolge SD, NS24+, SL, AV. "
+        "AC-5: Wintersport-Block nicht in der Reihenfolge SD, NS24+, SL. "
         f"Positionen={order!r} Zeile={rendered!r}"
     )
     # Der Block ist zusammenhaengend und steht am Ende der Zeile (§2).
-    assert order == list(range(order[0], order[0] + 4)), (
+    assert order == list(range(order[0], order[0] + 3)), (
         f"AC-5: Wintersport-Block ist nicht mehr zusammenhaengend: {rendered!r}"
     )
     assert order[-1] == len(tokens) - 1, (
@@ -511,7 +518,10 @@ def test_ac6_drop_order_positions_of_snow_symbols_unchanged():
     assert DROP_ORDER[0] == "DBG", (
         f"AC-6: Kopf der Drop-Reihenfolge veraendert: {DROP_ORDER!r}"
     )
-    tail_symbols = ["AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:"]
+    # #1441: 'AV' ist ein Warnblock-Token (Lagebericht) und faellt mit den
+    # amtlichen Warnungen zuletzt -- es steht nicht mehr in DROP_ORDER.
+    assert "AV" not in DROP_ORDER, f"#1441: AV darf nicht frueh fallen: {DROP_ORDER!r}"
+    tail_symbols = ["SL", "NS24+", "SD", "Z:", "MAX", "M:"]
     tail_indices = [DROP_ORDER.index(sym) for sym in tail_symbols]
     assert tail_indices == sorted(tail_indices), (
         "AC-6: die relative Kuerzungs-Reihenfolge der Bestandssymbole hat "

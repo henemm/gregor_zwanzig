@@ -58,6 +58,7 @@ from output.renderers.alert.official_alerts import (
     _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
 )
+from services.official_alerts.models import comparable_level
 
 
 # ---------------------------------------------------------------------------
@@ -569,6 +570,12 @@ def _warn_short(alert) -> tuple[str, str]:
     if alert.hazard == "avalanche":
         sev = {2: "caution", 3: "warn", 4: "danger"}.get(alert.level, "warn")
         return "Lawine", sev
+    if alert.hazard == "avalanche_bulletin":
+        # Issue #1441: Originalstufe 1-5 (ersatzweise `level`), jede Stufe explizit
+        # -- Stufe 5 nie schwaecher als 4, Stufe 1 eine Info.
+        stufe = alert.native_level if alert.native_level is not None else alert.level
+        sev = {1: "info", 2: "caution", 3: "warn", 4: "danger", 5: "danger"}.get(stufe, "danger")
+        return f"Lawine {stufe}", sev
     return alert.label, "info"
 
 
@@ -867,19 +874,29 @@ def _render_warn_banner(locations: list[LocationResult]) -> str:
     total = len(valid)
     leading_loc = None
     leading_alert = None
+    # Issue #1441 (AC-11, ADR-0089): primaer das Farblevel. Die Originalstufe
+    # (Lagebericht 5 vor 4) entscheidet einen Gleichstand NUR innerhalb
+    # derselben Gefahrenart -- nie ueber Skalen hinweg; sonst bleibt die
+    # zuerst gefundene Warnung fuehrend.
     for loc in alerted:
         for a in loc.official_alerts:
-            if leading_alert is None or a.level > leading_alert.level:
+            if (leading_alert is None or a.level > leading_alert.level or (
+                    a.level == leading_alert.level and a.hazard == leading_alert.hazard
+                    and comparable_level(a) > comparable_level(leading_alert))):
                 leading_alert, leading_loc = a, loc
     word = _LEVEL_WORDS.get(leading_alert.level, ("🔴", "ROT"))[1]
     count_line = f"höchste Stufe {word} · {leading_loc.location.name}"
+    if leading_alert.hazard == "avalanche_bulletin":
+        # Issue #1441: keine Awareness-Leiter/Ampelwort fuer die EAWS-Skala.
+        stufe = leading_alert.native_level or leading_alert.level
+        count_line = f"Lawinenstufe {stufe} · {leading_loc.location.name}"
 
     # Je Gefahr die höchststufige Warnung, Meter nach Stufe absteigend.
     by_hazard: dict = {}
     for loc in alerted:
         for a in loc.official_alerts:
             cur = by_hazard.get(a.hazard)
-            if cur is None or a.level > cur.level:
+            if cur is None or comparable_level(a) > comparable_level(cur):
                 by_hazard[a.hazard] = a
     notices = []
     for a in sorted(by_hazard.values(), key=lambda x: -x.level):
