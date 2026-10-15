@@ -242,6 +242,35 @@ var radarBudgetJobIDs = map[string]bool{
 	"compare_radar_alert_checks": true,
 }
 
+// newCoreClient baut den geteilten HTTP-Client zum Python-Core.
+//
+// Issue #2439: ohne Keep-Alive. uvicorn schliesst eine Idle-Verbindung nach
+// 5 s, der Go-Default haelt sie 90 s. Trifft der naechste POST (z. B. der
+// SMS-Nachversuch nach 5 s) genau diese geschlossene Verbindung, scheitert er
+// mit EOF -- und Go wiederholt einen POST nicht von selbst. Der Client spricht
+// nur Loopback zum Core, eine neue TCP-Verbindung je Aufruf kostet praktisch
+// nichts. Bewusst KEIN generischer Retry: derselbe Client traegt
+// nicht-idempotente Briefing-Versaende (triggerEndpointForUser).
+func newCoreClient(timeout time.Duration) *http.Client {
+	return &http.Client{Timeout: timeout, Transport: closeConnTransport{}}
+}
+
+// closeConnTransport setzt Close=true und delegiert an das ZUR AUFRUFZEIT
+// gueltige http.DefaultTransport. Bewusst kein eigener *http.Transport und
+// keine Typ-Assertion: coreauth.Install (#2142, X-GZ-Core-Auth) und
+// egress.Install haengen ihre Wrapper in http.DefaultTransport ein -- ein
+// eigener Transport wuerde beide umgehen (Core antwortet 401), eine
+// Assertion auf *http.Transport panict im Produktivstart.
+type closeConnTransport struct{}
+
+func (closeConnTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Klonen statt mutieren: der RoundTripper-Vertrag verbietet, den
+	// uebergebenen Request zu veraendern.
+	cloned := req.Clone(req.Context())
+	cloned.Close = true
+	return http.DefaultTransport.RoundTrip(cloned)
+}
+
 // New creates a Scheduler from config and store. Returns error if timezone is invalid.
 func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 	loc, err := time.LoadLocation(cfg.SchedulerTimezone)
@@ -265,7 +294,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		// min) liegt knapp unter dem stuendlichen Cron-Abstand; die
 		// Overlap-Sperre in recordRun() verhindert, dass ein langsamer Lauf
 		// den Folgetick blockiert.
-		client:         &http.Client{Timeout: 3000 * time.Second},
+		client:         newCoreClient(3000 * time.Second),
 		store:          st,
 		lastRuns:       make(map[string]*jobResult),
 		entryMap:       make(map[cron.EntryID]jobMeta),
