@@ -37,7 +37,8 @@ Regelbetrieb nur Gewitter-/Schneesignale liefern, keine Temperatur; die Asymmetr
 in ADR-0018 bereits abgesicherten Cross-Provider-Totalausfall.
 
 Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm (IT/AT/DE),
-DPC, Vigilance, Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle —
+DPC, Vigilance, Météo des forêts, Massiv-Sperren, Lawinen-Lagebericht avalanche.report
+(EAWS-Stufen 1–5, #1441, ADR-0089)) sind **nicht** Teil dieser Tabelle —
 sie sind kein Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
 länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`
 (AT/IT) sowie Issue #1681 (DE, `docs/specs/modules/feat_1681_meteoalarm_de.md`).
