@@ -478,9 +478,41 @@ def test_f004_sinkende_stufe_im_still_zweig_senkt_last_reported_value_nicht():
     should_report, stale_key, merged_entry = official_alert_revision_verdict(new_alert, state)
 
     assert should_report is False, "Sinkende Stufe bei echter Ueberlappung darf nicht erneut melden"
+    # #1441 S2 (bewusst umgestellt): der REVISIONS-MERGE behaelt weiter `max` --
+    # eine Neuausgabe ist nie eine Entwarnung (Spec feat_1441_s2_entwarnung.md
+    # Abschnitt 4). Gesenkt wird das Gedaechtnis nicht MEHR NIE, sondern ueber den
+    # eigenen Entwarnungs-Schreibweg nach Zustellung -- s. den Folgetest am echten
+    # Alarmpfad. Diese Zusicherung bewacht weiter die Mutation `max(...)` -> neu.
     assert merged_entry["last_reported_value"] == 3.0, (
-        f"last_reported_value darf bei sinkender Stufe NICHT absinken: {merged_entry!r}"
+        f"Der Revisions-Merge selbst darf bei sinkender Stufe NICHT absinken: {merged_entry!r}"
     )
+
+
+def test_f004_sinkende_stufe_bei_gesunder_meldender_quelle_ergibt_entwarnung_und_senkt(monkeypatch):
+    """#1441 S2 (ersetzt die alte Produkt-Zusicherung "Hoechstwert wird nie gesenkt").
+    GIVEN eine per Alarm gemeldete Warnung Stufe 3; die meldende Quelle revidiert das
+          Fenster (ueberlappend, nicht vorverlegt) und senkt dabei auf Stufe 2
+    WHEN  der echte Trip-Alarmlauf (`check_all_trips`) laeuft
+    THEN  kommt eine Entwarnung "3 -> 2", und der (fortgeschriebene) Gedaechtnis-
+          Eintrag dieser Identitaet steht danach auf Stufe 2.
+    RED heute: still, Gedaechtnis bleibt auf 3."""
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+    from tests.tdd._official_alert_allclear_fixtures import (
+        Szenario, basis_jetzt, entwarnungs_sendungen, lauf_erstwarnung, quellen,
+    )
+
+    mit = aufzeichner_installieren(monkeypatch)
+    t0 = basis_jetzt()
+    sz = Szenario("trip", monkeypatch, mit, t0, level=3, bis_stunden=7)
+    with quellen(sz.x):
+        lauf_erstwarnung(sz)
+        sz.x.alerts = [sz.warnung(2, von=sz.von + timedelta(hours=4), bis=sz.bis + timedelta(hours=5))]
+        snap = sz.lauf(15)
+
+    assert entwarnungs_sendungen(snap, "email"), f"Sinkende Revision muss Entwarnung ergeben: {snap!r}"
+    eintraege = sz.eintraege()
+    assert eintraege and all(e.get("last_reported_value") == 2.0 for e in eintraege.values()), (
+        f"Gedaechtnis nach Entwarnung nicht auf 2 gesenkt: {eintraege!r}")
 
 
 def test_f005_unparsebarer_bestandswert_faellt_auf_exakten_treffer_zurueck():

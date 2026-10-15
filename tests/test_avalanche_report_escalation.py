@@ -160,7 +160,14 @@ def test_ac13_absenkung_im_identischen_gueltigkeitsfenster_wird_nicht_gemeldet()
     """Nachtrags-Bulletin: dasselbe Gueltigkeitsfenster (gleicher Schluessel), Stufe 4 -> 2.
     Der Gedaechtnis-Eintrag traegt kein eigenes Fenster (Alt-Eintrag), damit entscheidet
     ausschliesslich der Pfad "exakter Schluessel" -- dort darf nur ein ANSTIEG melden.
-    Mutation `>` -> `!=` im exakten Pfad laesst diesen Test rot werden."""
+    Mutation `>` -> `!=` im exakten Pfad laesst diesen Test rot werden.
+
+    #1441 S2 (bewusst umgestellt): die Absenkung ist weiterhin keine NEUE WARNUNG
+    (Urteil unveraendert), aber nicht mehr "still mit Hoechstwert": sie ergibt eine
+    Entwarnung, und das Gedaechtnis wird nach Zustellung gesenkt -- geprueft am
+    echten Alarmpfad in
+    `test_ac13_nachtrags_absenkung_4_auf_2_ergibt_entwarnung_und_senkt_das_gedaechtnis`.
+    Hier bleibt nur: das reine Urteil schreibt nichts (es ist nicht der Senk-Weg)."""
     from output.renderers.alert.official_alerts import official_alert_state_key
 
     vier, zwei = _vier_und_zwei_am_grenzpunkt()
@@ -172,17 +179,56 @@ def test_ac13_absenkung_im_identischen_gueltigkeitsfenster_wird_nicht_gemeldet()
     melden, stale, merged = _urteil(zwei, state)
 
     assert (melden, stale, merged) == (False, None, None), "Absenkung ist keine neue Warnung"
-    assert state[schluessel]["last_reported_value"] == 4.0, "das Gedaechtnis behaelt Stufe 4"
+    assert state[schluessel]["last_reported_value"] == 4.0, (
+        "das reine Urteil schreibt das Gedaechtnis nicht -- gesenkt wird erst nach Zustellung "
+        "der Entwarnung (#1441 S2)")
 
 
 def test_ac13_absenkung_in_beruehrender_folgeperiode_behaelt_den_alten_hoechstwert_im_gedaechtnis():
+    """#1441 S2: der REVISIONS-MERGE selbst behaelt weiter `max` (Spec Abschnitt 4:
+    eine Neuausgabe ist nie eine Entwarnung). Gesenkt wird ausschliesslich ueber den
+    eigenen Entwarnungs-Schreibweg nach Zustellung -- s. den Alarmpfad-Test unten."""
     vier, zwei = _vier_und_zwei_am_grenzpunkt()
     zwei_morgen = replace(zwei, valid_from=vier.valid_to, valid_to=vier.valid_to + timedelta(days=1))
 
     melden, stale, merged = _urteil(zwei_morgen, _gedaechtnis(vier))
 
     assert melden is False and merged is not None
-    assert merged["last_reported_value"] == 4.0, "die alte Dringlichkeit bleibt im Gedaechtnis"
+    assert merged["last_reported_value"] == 4.0, (
+        "der Revisions-Merge senkt nie -- das ist allein Sache des Entwarnungs-Schreibwegs")
+
+
+def test_ac13_nachtrags_absenkung_4_auf_2_ergibt_entwarnung_und_senkt_das_gedaechtnis(monkeypatch):
+    """#1441 S2 (ersetzt die alte Zusicherung "Absenkung still, Gedaechtnis behaelt 4").
+    GIVEN der Lagebericht meldete per Alarm Stufe 4 (Karwendel Ost), die Quelle antwortet
+          gesund mit dem Nachtrags-Bulletin Stufe 2 im identischen Gueltigkeitsfenster
+    WHEN  der Trip-Alarmlauf laeuft
+    THEN  kommt die Entwarnung `+AV4>2` (SMS/Premium-SMS) bzw. "4 -> 2" (Mail), und der
+          Gedaechtnis-Eintrag steht danach auf Stufe 2.
+    RED heute: keine Entwarnung, Gedaechtnis bleibt auf 4."""
+    from freezegun import freeze_time
+
+    from output.renderers.alert.official_alerts import official_alert_state_key
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+    from tests.tdd._official_alert_allclear_fixtures import (
+        Szenario, entwarnungs_sendungen, gedaechtnis, lauf_erstwarnung, quellen,
+    )
+
+    vier, zwei = _vier_und_zwei_am_grenzpunkt()
+    mit = aufzeichner_installieren(monkeypatch)
+    with freeze_time(JETZT):  # Briefing-Zeiten/Etappentag relativ zur Laufzeit
+        sz = Szenario("trip", monkeypatch, mit, JETZT, hazard=vier.hazard)
+    sz.x.name = vier.source  # Registry-Name == OfficialAlert.source
+    sz.x.alerts = [vier]
+    with quellen(sz.x):
+        lauf_erstwarnung(sz)
+        sz.x.alerts = [zwei]
+        snap = sz.lauf(15)
+
+    sms = [s["body"] for s in entwarnungs_sendungen(snap, "sms")]
+    assert any("+AV4>2" in t for t in sms), f"Entwarnung `+AV4>2` fehlt: {snap!r}"
+    eintrag = gedaechtnis(sz.uid, sz.entity).get(official_alert_state_key(vier), {})
+    assert eintrag.get("last_reported_value") == 2.0, f"Gedaechtnis nach Entwarnung nicht gesenkt: {eintrag!r}"
 
 
 def test_ac13_absenkung_traegt_die_dringlichkeit_des_alten_werts():
