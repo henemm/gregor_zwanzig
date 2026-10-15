@@ -1,4 +1,4 @@
-# ADR-0087: Lawinen-Lagebericht als zweite Skala neben der Awareness-Skala
+# ADR-0089: Lawinen-Lagebericht als zweite Skala neben der Awareness-Skala
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-10-13

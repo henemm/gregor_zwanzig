@@ -207,7 +207,7 @@ def get_official_alerts_with_status(
     results = filter_alerts_to_window(results, effective_start, window_end)
 
     # Pass 1: je hazard die "beste" Quelle bestimmen (hoechstes level;
-    # Gleichstand: zuerst gesammelt). Issue #1441 (ADR-0087): verglichen wird
+    # Gleichstand: zuerst gesammelt). Issue #1441 (ADR-0089): verglichen wird
     # die Originalstufe, falls gesetzt (`comparable_level`) -- nur innerhalb
     # EINER Gefahrenart, nie ueber Skalen hinweg.
     best_source: dict[str, str] = {}

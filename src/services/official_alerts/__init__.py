@@ -47,7 +47,7 @@ register_official_alert_source(MeteoAlarmFeedSource("AT"))
 # kompensieren einen DE-Ausfall nicht (warn_egress.mark_not_covered, AC-3).
 register_official_alert_source(MeteoAlarmFeedSource("DE"))
 register_official_alert_source(DpcSource())
-# Issue #1441 (ADR-0087): Lawinen-Lagebericht als LETZTE Quelle -- eigene
+# Issue #1441 (ADR-0089): Lawinen-Lagebericht als LETZTE Quelle -- eigene
 # Gefahrenart `avalanche_bulletin`, konkurriert mit keiner Bestandsquelle;
 # die Position haelt den Tie-Break der Bestandsquellen unveraendert.
 register_official_alert_source(AvalancheReportSource())

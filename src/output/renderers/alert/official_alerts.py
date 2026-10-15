@@ -83,7 +83,7 @@ _HAZARD_LABELS: dict[str, str] = {
     # Issue #1427 S1: MeteoAlarm-Typen 11/12/13 (flood/flooding/rain-flood)
     # bzw. DPC Idrogeo/Idraulico -- Hochwasser- und Erdrutschwarnungen.
     "flood": "Hochwasser/Erdrutsch",
-    # Issue #1441 (ADR-0087): amtlicher Lawinen-Lagebericht (EAWS 1-5), neben
+    # Issue #1441 (ADR-0089): amtlicher Lawinen-Lagebericht (EAWS 1-5), neben
     # der MeteoAlarm-Lawinenwarnung "avalanche" (Awareness 1-4).
     "avalanche_bulletin": "Lawinenstufe",
 }
@@ -141,7 +141,7 @@ _TIME_OF_DAY_WORDS: dict[str, str] = {"earlier": "vormittags", "later": "nachmit
 
 
 def _is_eaws(alert: "OfficialAlert") -> bool:
-    """Lagebericht-Gefahrenart: eigene Skala, keine Awareness-Leiter (ADR-0087)."""
+    """Lagebericht-Gefahrenart: eigene Skala, keine Awareness-Leiter (ADR-0089)."""
     return alert.hazard == "avalanche_bulletin"
 
 

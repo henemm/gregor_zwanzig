@@ -1,7 +1,7 @@
 """AvalancheReportSource -- amtlicher Lawinen-Lagebericht (Issue #1441, Slice 1).
 
 SPEC: docs/specs/modules/avalanche_report_bulletin.md
-ADR: docs/adr/0087-lawinen-lagebericht-zweite-skala.md (ergaenzt ADR-0016)
+ADR: docs/adr/0089-lawinen-lagebericht-zweite-skala.md (ergaenzt ADR-0016)
 
 Liest die CAAML-v6-Bulletins von ``avalanche.report`` (Euregio Tirol-Suedtirol-
 Trentino, Lawinenwarndienst Kaernten; CC BY 4.0) und liefert je Punkt GENAU

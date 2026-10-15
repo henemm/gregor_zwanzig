@@ -59,7 +59,7 @@ _VERDICT_RE = re.compile(r"(\d+)\s+amtliche Warnung(?:en)?")
 # Warnstufe strukturell vorhanden ist (zusaetzlich ueber S-2 abgesichert).
 _LEVEL_WORD_RE = re.compile(r"(GELB|ORANGE|ROT)")
 
-# Issue #1441 (Spec avalanche_report_bulletin.md Abschnitt 7, ADR-0087): der
+# Issue #1441 (Spec avalanche_report_bulletin.md Abschnitt 7, ADR-0089): der
 # amtliche Lawinen-Lagebericht traegt die EAWS-Stufe als Wortlaut
 # "Lawinenstufe N (<EAWS-Wort>)" -- die Leiter "Warnstufe X · n/3" und die
 # Farbwoerter GELB/ORANGE/ROT entfallen fuer diese Gefahrenart. Der Renderer

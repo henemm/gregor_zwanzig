@@ -874,7 +874,7 @@ def _render_warn_banner(locations: list[LocationResult]) -> str:
     total = len(valid)
     leading_loc = None
     leading_alert = None
-    # Issue #1441 (AC-11, ADR-0087): primaer das Farblevel. Die Originalstufe
+    # Issue #1441 (AC-11, ADR-0089): primaer das Farblevel. Die Originalstufe
     # (Lagebericht 5 vor 4) entscheidet einen Gleichstand NUR innerhalb
     # derselben Gefahrenart -- nie ueber Skalen hinweg; sonst bleibt die
     # zuerst gefundene Warnung fuehrend.

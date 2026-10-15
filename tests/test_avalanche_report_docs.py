@@ -57,8 +57,12 @@ def test_ac22_sms_format_doku_erklaert_die_doppelung_avalanche_und_avalanche_bul
     assert re.search(r"!AV\d", text), "Beispiel des Warnblock-Tokens (z. B. !AV4) fehlt"
 
 
-def test_ac22_adr_0087_existiert_und_steht_im_index():
-    dateien = sorted(ADR_DIR.glob("0087-*.md"))
-    assert len(dateien) == 1, f"ADR-0087 fehlt: {dateien}"
+def test_ac22_adr_zur_zweiten_skala_existiert_und_steht_im_index():
+    # Identifikation ueber den Titel, nicht nur die Nummer: eine fremde ADR mit
+    # derselben Nummer (Kollision nach Rebase) darf den Test nicht taeuschen.
+    dateien = sorted(ADR_DIR.glob("0089-*.md"))
+    assert len(dateien) == 1, f"ADR-0089 fehlt oder ist doppelt belegt: {dateien}"
+    titel = dateien[0].read_text(encoding="utf-8").splitlines()[0]
+    assert titel.startswith("# ADR-0089:") and "Lawinen-Lagebericht" in titel, titel
     index = (ADR_DIR / "README.md").read_text(encoding="utf-8")
-    assert f"[0087]({dateien[0].name})" in index
+    assert f"[0089]({dateien[0].name})" in index

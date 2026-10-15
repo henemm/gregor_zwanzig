@@ -284,7 +284,7 @@ Amtliche Unwetterwarnungen (`official_alerts`-Dienst, alle Provider) erscheinen 
 | `wildfire_risk` | `FR` | Waldbrand-Gefahr |
 | `access_ban` | `AB` | Zugang gesperrt |
 
-**Abgrenzung `AW` / `AV` (Issue #1430, seit #1441):** `AW` (`avalanche`) ist die amtliche Lawinen-**Warnung** (MeteoAlarm awareness_type 9, Awareness-Skala 1-4, z.B. `!AW:M`); `AV` (`avalanche_bulletin`) ist die Lawinenstufe 1-5 des amtlichen **Lageberichts** (avalanche.report, EAWS). Zwei verschiedene Aussagen auf zwei Skalen, zwei Kürzel — beide dürfen nebeneinander stehen (`!AV4 AW:M`), verglichen wird nie über die Skalen hinweg (ADR-0087).
+**Abgrenzung `AW` / `AV` (Issue #1430, seit #1441):** `AW` (`avalanche`) ist die amtliche Lawinen-**Warnung** (MeteoAlarm awareness_type 9, Awareness-Skala 1-4, z.B. `!AW:M`); `AV` (`avalanche_bulletin`) ist die Lawinenstufe 1-5 des amtlichen **Lageberichts** (avalanche.report, EAWS). Zwei verschiedene Aussagen auf zwei Skalen, zwei Kürzel — beide dürfen nebeneinander stehen (`!AV4 AW:M`), verglichen wird nie über die Skalen hinweg (ADR-0089).
 
 **Sonderfall `avalanche_bulletin` (`AV`, Issue #1441):** das Token trägt die **Originalziffer** der EAWS-Stufe direkt am Kürzel — `AV4`, `AV5` —, ohne Doppelpunkt, ohne `L/M/H` und ohne Stunde (die Ausgabezeit 17:00 ist keine Warnstunde). Es steht ausschließlich im `!`-Block (nie mehr im Wintersport-Block, §3.6) und damit genau einmal, unabhängig von der Metrik-Einstellung; Kürzungspriorität wie alle amtlichen Warnungen. Der Stufenfilter wirkt wie bei allen amtlichen Warnungen auf das abgeleitete Farblevel (1, 2, 3, 4, 4). Alarm- und Premium-SMS (`render_official_alert_sms`) zeigen dasselbe Token (`!AV5`).
 

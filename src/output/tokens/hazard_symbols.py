@@ -22,7 +22,7 @@ HAZARD_SMS_SYMBOLS: dict[str, str] = {
     "wind_gust": "WG",
     "snow": "SN",
     "avalanche": "AW",
-    # Issue #1441 (ADR-0087): amtlicher Lawinen-Lagebericht, EAWS-Stufe 1-5 als
+    # Issue #1441 (ADR-0089): amtlicher Lawinen-Lagebericht, EAWS-Stufe 1-5 als
     # Ziffer (`AV4`, kein L/M/H) -- `AV` gehoert EXKLUSIV dieser Gefahrenart.
     "avalanche_bulletin": "AV",
     "black_ice": "IC",

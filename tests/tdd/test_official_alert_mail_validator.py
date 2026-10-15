@@ -507,7 +507,7 @@ def test_render_py_still_requires_radar_nachweis_not_official(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Issue #1441 (Spec avalanche_report_bulletin.md Abschnitt 7, ADR-0087):
+# Issue #1441 (Spec avalanche_report_bulletin.md Abschnitt 7, ADR-0089):
 # Lawinen-Lagebericht -- Stufe als Wortlaut "Lawinenstufe N (<EAWS-Wort>)",
 # keine Leiter/Farbwoerter. Mails kommen ueber den ECHTEN Versandpfad
 # `NotificationService.send_official_alert` inkl. `EmailOutput.send` und
