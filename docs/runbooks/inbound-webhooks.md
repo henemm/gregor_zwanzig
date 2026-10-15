@@ -76,6 +76,20 @@ Zwischen Env-Wechsel und Hook-Update antwortet der Endpunkt 403; der Fallback-Po
 `kicks_coalesced`, `missed_total`, `last_missed`. Steigender `missed_total` heißt: der Sofort-Weg ist
 ausgefallen (Befehl wurde erst vom Fallback-Poll verarbeitet).
 
+## Go→Core-Verbindung ohne Keep-Alive (2026-10-15, Nachbesserung #2439)
+
+Der geteilte Go-HTTP-Client zum Python-Core (`newCoreClient`, `internal/scheduler/scheduler.go`)
+nutzt kein Keep-Alive: `closeConnTransport` setzt `req.Close=true` auf einem Request-Klon und
+delegiert an das zur Aufrufzeit gültige `http.DefaultTransport` (coreauth- und egress-Wrapper bleiben
+erhalten). Ursache: Der Core schließt Idle-Verbindungen; ein späterer POST (z. B. SMS-Nachversuch nach
+3 s/8 s, AC-7) lief auf eine bereits geschlossene, wiederverwendete Verbindung und scheiterte mit
+`EOF` — Go wiederholt POST nicht. Wächter: Go-Kerntest
+`internal/scheduler/core_verbindung_wiederverwendung_test.go`.
+
+**Grenze:** Der Staging-Test (`tests/e2e/test_push_eingang_befehle_staging.py`) prüft
+`last_run.status == "ok"`. Da `kickRound` bei Fehlern weiterversucht, bliebe ein EOF im ersten Versuch
+mit erfolgreichem Nachversuch dort unsichtbar; die Verbindungsebene ist nur im Go-Kerntest bewacht.
+
 ## Reihenfolge bei der Inbetriebnahme
 
 1. **Staging: `PUBLIC_HOST` auf den Staging-Host setzen.** Der Default ist der Prod-Host; sonst stimmt

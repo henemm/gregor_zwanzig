@@ -107,6 +107,11 @@ def _pruefe_sofortweg(job_id: str):
     assert push.get("received_total", 0) >= 1
     empfangen = datetime.fromisoformat(push["last_received"])
     assert job.get("last_run"), f"{job_id}: kein last_run"
+    assert job["last_run"].get("status") == "ok", (
+        f"{job_id}: last_run.status ist {job['last_run'].get('status')!r} statt 'ok' -- "
+        f"Poll-Lauf nach Webhook gescheitert (z.B. EOF auf wiederverwendeter "
+        f"Core-Verbindung): {job['last_run']!r}"
+    )
     gelaufen = datetime.fromisoformat(job["last_run"]["time"])
     abstand = (gelaufen - empfangen).total_seconds()
     assert 0 <= abstand <= GRENZE_SEKUNDEN, (
