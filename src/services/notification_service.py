@@ -165,6 +165,9 @@ class NotificationResult:
     # `reachable_channels` (Cockpit-Zahl, #1459 AC-11); `sent_channels`
     # heisst seither in allen Pfaden "zugestellt".
     attempted_channels: list[str] = field(default_factory=list)
+    # Issue #1441 S2: Kanaele, deren Nachricht die Entwarnung TATSAECHLICH
+    # enthielt (SMS-Kuerzung kann sie verdraengen, AC-12).
+    allclear_channels: list[str] = field(default_factory=list)
 
     @property
     def delivered_channels(self) -> list[str]:
@@ -451,6 +454,81 @@ def _measured_event_km(alert_msg) -> dict:
         if seg:
             result[str(seg)] = (e.km_from, e.km_to)
     return result
+
+
+def _official_allclear_source_label(dto_notices: list, ac_notices: list) -> str:
+    """Issue #1441 S2: Quelle einer reinen Entwarnung aus dem Gedaechtnis."""
+    from output.renderers.alert.official_alerts import official_alert_source_label
+
+    if dto_notices or not ac_notices:
+        return _official_source_label_for(dto_notices)
+    return ", ".join(dict.fromkeys(official_alert_source_label(n.source) for n in ac_notices))
+
+
+def _official_subject(dto_notices: list, ac_notices: list, *, prefix: str, tz) -> str:
+    """Issue #1441 S2: Warnung zuerst, dann "+ Entwarnung …"."""
+    from output.renderers.alert.official_alerts import (
+        render_official_alert_subject, render_official_allclear_subject_part,
+    )
+
+    if not ac_notices:
+        return render_official_alert_subject(dto_notices, prefix=prefix, tz=tz)
+    part = render_official_allclear_subject_part(ac_notices)
+    if dto_notices:
+        return f"{render_official_alert_subject(dto_notices, prefix=prefix, tz=tz)} + {part}"
+    scopes = {n.scope_label for n in ac_notices}
+    scope = next(iter(scopes)) if len(scopes) == 1 else "mehrere Orte"
+    return f"[{prefix}] {scope} · {part}"
+
+
+def _official_mail_bodies(
+    dto_notices: list, ac_notices: list, *, source_label: str, source_url, stand_at: str,
+    tz, context_label: str,
+) -> tuple[str, str]:
+    """Issue #1441 S2: (HTML, Klartext) -- Entwarnungs-Abschnitt nach den Warnungen."""
+    from output.renderers.alert import official_alerts as oa
+
+    if not dto_notices:
+        kw = dict(stand_at=stand_at, source_label=source_label, context_label=context_label)
+        return (oa.render_official_allclear_mail_html(ac_notices, **kw),
+                oa.render_official_allclear_mail_plain(ac_notices, **kw))
+    html = oa.render_warn_block(
+        dto_notices, variant="standalone", source_label=source_label,
+        source_url=source_url, stand_at=stand_at, tz=tz, context_label=context_label,
+        allclear_html=oa.render_official_allclear_html(ac_notices),
+    )
+    plain = oa.render_official_alert_mail_plain(
+        dto_notices, source_label=source_label, stand_at=stand_at,
+        tz=tz, context_label=context_label, source_url=source_url,
+        allclear_lines=oa.render_official_allclear_plain(ac_notices),
+    )
+    return html, plain
+
+
+def _official_telegram_rich(dto_notices: list, ac_notices: list, *, prefix: str,
+                            source_label: str, tz) -> str:
+    from output.renderers.alert.official_alerts import (
+        render_official_alert_telegram, render_official_allclear_telegram,
+    )
+
+    if not dto_notices:
+        return render_official_allclear_telegram(ac_notices, prefix=prefix)
+    text = render_official_alert_telegram(dto_notices, prefix=prefix, source_label=source_label, tz=tz)
+    return f"{text}\n\n{render_official_allclear_telegram(ac_notices)}" if ac_notices else text
+
+
+def _compare_allclear_channels(ac_notices: list, dto_notices: list, telegram_style: str,
+                               alert_tz) -> list[str]:
+    """Issue #1441 S2: Kanaele, deren Ortsvergleich-Nachricht die Entwarnung traegt."""
+    from output.renderers.alert.official_alerts import render_official_alert_sms_with_allclears
+
+    if not ac_notices:
+        return []
+    _text, in_sms = render_official_alert_sms_with_allclears(dto_notices, ac_notices, tz=alert_tz)
+    channels = ["email"]
+    if telegram_style != "kurzform" or in_sms:
+        channels.append("telegram")
+    return channels + (["sms", "premium_sms"] if in_sms else [])
 
 
 def _official_source_url_for(dto_notices: list) -> str | None:
@@ -1102,18 +1180,21 @@ class NotificationService:
         sms_sink: Optional[object] = None,
         telegram_style: str = "rich",
         segment_km: Optional[dict] = None,
+        allclears: Optional[list] = None,
     ) -> NotificationResult:
         """Standalone amtlicher Alert ohne Wetter-Delta (Issue #1088; Format-
         Fidelity zur Design-Vorlage in Issue #1216).
+
+        Issue #1441 S2: `allclears` (Entwarnungen) stehen in DERSELBEN Nachricht
+        nach den Warnungen; `allclear_channels` meldet, wo sie enthalten waren.
 
         Baut aus den rohen `(OfficialAlert, segment_ids)`-Paaren die
         kontext-agnostischen `OfficialAlertNotice`-DTOs und rendert Betreff,
         HTML-Body, Telegram- und SMS-Text ueber die vier Vorlagen-Renderer.
         """
         from output.renderers.alert.official_alerts import (
-            build_official_alert_notices, render_official_alert_mail_plain,
-            render_official_alert_sms, render_official_alert_subject,
-            render_official_alert_telegram, render_warn_block,
+            build_official_alert_notices, build_official_allclear_notices,
+            render_official_alert_sms_with_allclears,
         )
         from utils.timezone import tz_for_coords
 
@@ -1155,30 +1236,32 @@ class NotificationService:
         dto_notices = build_official_alert_notices(
             trip, notices, segment_km=segment_km, stage_number=stage_number,
         )
-        source_label = _official_source_label_for(dto_notices)
+        ac_notices = build_official_allclear_notices(allclears or [])
+        source_label = _official_allclear_source_label(dto_notices, ac_notices)
         source_url = _official_source_url_for(dto_notices)
         # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
         # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
-        subject = render_official_alert_subject(dto_notices, prefix=trip.name, tz=alert_tz)
+        subject = _official_subject(dto_notices, ac_notices, prefix=trip.name, tz=alert_tz)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        # Issue #1216 F002: geteilter Baustein statt Direktaufruf. variant=
-        # "standalone" reicht an render_official_alert_html durch (#1441: inkl.
-        # `source_url` fuer den Quelle-Link, CC BY 4.0).
-        html = render_warn_block(
-            dto_notices, variant="standalone", source_label=source_label,
-            source_url=source_url, stand_at=stand_at, tz=alert_tz,
-            context_label=trip.name,
+        # Issue #1216 F002 / #1744 A2 (AC-13): geteilter Baustein (variant=
+        # "standalone") plus eigens gebauter Klartext aus denselben Datenzeilen.
+        html, plain = _official_mail_bodies(
+            dto_notices, ac_notices, source_label=source_label, source_url=source_url,
+            stand_at=stand_at, tz=alert_tz, context_label=trip.name,
         )
-        # Issue #1744 A2 (AC-13): eigens gebauter Klartext-Teil aus denselben
-        # Datenzeilen wie das HTML -- ohne ihn strippt `build_mime_message` die
-        # Tags aus dem HTML und der Klartext-Leser bekommt Zeilensalat.
-        plain = render_official_alert_mail_plain(
-            dto_notices, source_label=source_label, stand_at=stand_at,
-            tz=alert_tz, context_label=trip.name, source_url=source_url,
+        telegram_text = _official_telegram_rich(
+            dto_notices, ac_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
         )
-        telegram_text = render_official_alert_telegram(
-            dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
+        sms_body, sms_has_allclear = render_official_alert_sms_with_allclears(
+            dto_notices, ac_notices, tz=alert_tz,
         )
+        allclear_channels: list[str] = []
+        if ac_notices:
+            allclear_channels.append("email")
+            if telegram_style != "kurzform" or sms_has_allclear:
+                allclear_channels.append("telegram")
+            if sms_has_allclear:
+                allclear_channels.extend(["sms", "premium_sms"])
 
         # Issue #1405 S1 (ADR-0086): `sent_channels` = zugestellt (append IM
         # try NACH dem Send), `attempted_channels` = betreten (NACH dem try).
@@ -1209,9 +1292,8 @@ class NotificationService:
                 # Issue #1260 S3: Kurzstil sendet den SMS-Text (Plaintext,
                 # parse_mode=None) statt der reichen Telegram-Warnvorlage.
                 if telegram_style == "kurzform":
-                    kurz_body = render_official_alert_sms(dto_notices, tz=alert_tz)
                     self._telegram_output().send(
-                        subject=subject, body=kurz_body,
+                        subject=subject, body=sms_body,
                         parse_mode=None, suppress_subject_line=True,
                     )
                 else:
@@ -1231,11 +1313,10 @@ class NotificationService:
                 "sms", "alert", now_sms, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
                     if sms_sink is not None:
-                        sms_sink(sms_text)
+                        sms_sink(sms_body)
                     else:
-                        SMSOutput(self._settings).send(subject="", body=sms_text)
+                        SMSOutput(self._settings).send(subject="", body=sms_body)
                     sent_channels.append("sms")
                 except Exception as e:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
@@ -1253,8 +1334,7 @@ class NotificationService:
                 "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
-                    PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
+                    PremiumSmsOutput(self._settings).send(subject="", body=sms_body)
                     sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(
@@ -1272,6 +1352,7 @@ class NotificationService:
             failed_channels=failed_channels,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
+            allclear_channels=allclear_channels,
         )
 
     # TODO(#1207): wird durch den Versand-Orchestrator generalisiert
@@ -1418,6 +1499,7 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
         telegram_sink: Optional[object] = None,
+        allclears: Optional[list] = None,
     ) -> NotificationResult:
         """Gebündelter Standalone-Alarm für amtliche Warnungen im Ortsvergleich
         (Issue #1216 Slice 2a) — Orts-Scope-Pendant zu `send_official_alert()`
@@ -1438,8 +1520,7 @@ class NotificationService:
         statt einer eigenen `tz_for_coords()`-Direktkopie.
         """
         from output.renderers.alert.official_alerts import (
-            build_compare_official_alert_notices, render_official_alert_mail_plain,
-            render_official_alert_subject, render_warn_block,
+            build_compare_official_alert_notices, build_official_allclear_notices,
         )
         from utils.timezone import resolve_location_tz
 
@@ -1448,7 +1529,9 @@ class NotificationService:
         dto_notices = build_compare_official_alert_notices(
             all_location_ids, id_to_name, tagged_alerts,
         )
-        if not dto_notices:
+        # Issue #1441 S2: Entwarnungen (Orts-IDs -> Namen) in derselben Nachricht.
+        ac_notices = build_official_allclear_notices(allclears or [], id_to_name)
+        if not dto_notices and not ac_notices:
             return NotificationResult(sent=False, sent_channels=[])
 
         first_loc = locations[0] if locations else None
@@ -1457,25 +1540,17 @@ class NotificationService:
             if first_loc is not None
             else ZoneInfo("UTC")
         )
-        source_label = _official_source_label_for(dto_notices)
+        source_label = _official_allclear_source_label(dto_notices, ac_notices)
         source_url = _official_source_url_for(dto_notices)
         # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
         # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
-        subject = render_official_alert_subject(dto_notices, prefix=preset_name, tz=alert_tz)
+        subject = _official_subject(dto_notices, ac_notices, prefix=preset_name, tz=alert_tz)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        # Issue #1216 F002: geteilter Baustein (variant="standalone") statt
-        # Direktaufruf; Thin-Wrapper -> byte-identischer HTML-Output.
-        html = render_warn_block(
-            dto_notices, variant="standalone", source_label=source_label,
-            source_url=source_url, stand_at=stand_at, tz=alert_tz,
-            context_label="Ortsvergleich",
-        )
-        # Issue #1744 A2 (AC-13): derselbe Mailtyp, derselbe Klartext-Bau wie im
-        # Trip-Pfad -- sonst haetten die zwei Flaechen desselben Mailtyps
-        # wieder zwei verschiedene Klartexte.
-        plain = render_official_alert_mail_plain(
-            dto_notices, source_label=source_label, stand_at=stand_at,
-            tz=alert_tz, context_label="Ortsvergleich", source_url=source_url,
+        # Issue #1216 F002 / #1744 A2 (AC-13): derselbe Baustein und derselbe
+        # Klartext-Bau wie im Trip-Pfad.
+        html, plain = _official_mail_bodies(
+            dto_notices, ac_notices, source_label=source_label, source_url=source_url,
+            stand_at=stand_at, tz=alert_tz, context_label="Ortsvergleich",
         )
 
         # Issue #1701 (S2b, D5): analog `_dispatch_alert_message`.
@@ -1493,12 +1568,12 @@ class NotificationService:
         if "telegram" in effective_channels and self._settings.can_send_telegram():
             versuche.append(("telegram", self._dispatch_compare_official_telegram(
                 preset_name, subject, dto_notices, source_label, alert_tz, telegram_sink,
-                telegram_style=telegram_style,
+                telegram_style=telegram_style, ac_notices=ac_notices,
             )))
         if "sms" in effective_channels and self._settings.can_send_sms():
             versuche.append(("sms", self._dispatch_compare_official_sms(
                 preset_name, dto_notices, alert_tz, sms_sink,
-                blocked_channels, blocked_reason_codes,
+                blocked_channels, blocked_reason_codes, ac_notices=ac_notices,
             )))
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # can_send_*()-Bereitschaftsfrage (D2), Sperrgrund geht nach
@@ -1506,6 +1581,7 @@ class NotificationService:
         if "premium_sms" in effective_channels:
             versuche.append(("premium_sms", self._dispatch_compare_official_premium_sms(
                 preset_name, dto_notices, alert_tz, blocked_channels, blocked_reason_codes,
+                ac_notices=ac_notices,
             )))
 
         sent_channels = [c for c, ok in versuche if ok]
@@ -1518,6 +1594,9 @@ class NotificationService:
             failed_channels=failed_channels,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
+            allclear_channels=_compare_allclear_channels(
+                ac_notices, dto_notices, telegram_style, alert_tz,
+            ),
         )
 
     def _dispatch_compare_official_email(
@@ -1541,11 +1620,11 @@ class NotificationService:
     def _dispatch_compare_official_telegram(
         self, preset_name: str, subject: str, dto_notices: list, source_label: str,
         alert_tz: ZoneInfo, telegram_sink: Optional[object],
-        telegram_style: str = "rich",
+        telegram_style: str = "rich", ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
         from output.renderers.alert.official_alerts import (
-            render_official_alert_sms, render_official_alert_telegram,
+            render_official_alert_sms_with_allclears,
         )
 
         try:
@@ -1553,7 +1632,9 @@ class NotificationService:
             # parse_mode=None, keine Inline-Knöpfe) statt der reichen Compare-
             # Warnvorlage. Default "rich" bleibt unverändert.
             if telegram_style == "kurzform":
-                kurz_body = render_official_alert_sms(dto_notices, tz=alert_tz)
+                kurz_body, _ = render_official_alert_sms_with_allclears(
+                    dto_notices, ac_notices or [], tz=alert_tz,
+                )
                 if telegram_sink is not None:
                     telegram_sink(kurz_body)
                 else:
@@ -1562,8 +1643,9 @@ class NotificationService:
                         parse_mode=None, suppress_subject_line=True,
                     )
                 return True
-            telegram_text = render_official_alert_telegram(
-                dto_notices, prefix=preset_name, source_label=source_label, tz=alert_tz,
+            telegram_text = _official_telegram_rich(
+                dto_notices, ac_notices or [], prefix=preset_name,
+                source_label=source_label, tz=alert_tz,
             )
             if telegram_sink is not None:
                 telegram_sink(telegram_text)
@@ -1582,13 +1664,16 @@ class NotificationService:
         sms_sink: Optional[object],
         blocked_channels: Optional[dict[str, str]] = None,
         blocked_reason_codes: Optional[dict[str, str]] = None,
+        ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief.
 
         Issue #2412 S4a: `False` auch bei Tageslimit-Sperre (kein
         Transportversuch) — `blocked_channels`/`blocked_reason_codes` werden
         dann befuellt (analog `_dispatch_compare_official_premium_sms`)."""
-        from output.renderers.alert.official_alerts import render_official_alert_sms
+        from output.renderers.alert.official_alerts import (
+            render_official_alert_sms_with_allclears,
+        )
 
         _blocked = blocked_channels if blocked_channels is not None else {}
         _codes = blocked_reason_codes if blocked_reason_codes is not None else {}
@@ -1596,7 +1681,9 @@ class NotificationService:
         if not self._sms_gate_reserve("sms", "alert", now, _blocked, _codes):
             return False
         try:
-            sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
+            sms_text, _ = render_official_alert_sms_with_allclears(
+                dto_notices, ac_notices or [], tz=alert_tz,
+            )
             if sms_sink is not None:
                 sms_sink(sms_text)
             else:
@@ -1610,13 +1697,16 @@ class NotificationService:
     def _dispatch_compare_official_premium_sms(
         self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
         blocked_channels: dict[str, str], blocked_reason_codes: dict[str, str],
+        ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1701 (S2b, Vorbild `_dispatch_compare_official_sms`):
         `True`, wenn der Transport ohne Fehler durchlief. Eine bewusste
         Sperre (keine/veraltete Rueckadresse ODER Issue #2412 S4a
         Tageslimit) landet zusaetzlich in `blocked_channels`/
         `blocked_reason_codes` (D5) — kein Transportfehler."""
-        from output.renderers.alert.official_alerts import render_official_alert_sms
+        from output.renderers.alert.official_alerts import (
+            render_official_alert_sms_with_allclears,
+        )
 
         now = datetime.now(timezone.utc)
         if not self._sms_gate_reserve(
@@ -1624,7 +1714,9 @@ class NotificationService:
         ):
             return False
         try:
-            premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
+            premium_text, _ = render_official_alert_sms_with_allclears(
+                dto_notices, ac_notices or [], tz=alert_tz,
+            )
             PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
         except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
             sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)

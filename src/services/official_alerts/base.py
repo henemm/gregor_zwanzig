@@ -11,10 +11,12 @@ Spec) — nur Standardlib und eigene Modelle.
 """
 from __future__ import annotations
 
+import contextvars
 import logging
-from dataclasses import replace
+from contextlib import contextmanager
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-from typing import Protocol
+from typing import Iterator, Optional, Protocol
 
 from services.official_alerts import warn_egress
 from services.official_alerts.models import OfficialAlert, comparable_level
@@ -116,6 +118,73 @@ def _enrich_with_capture_id(
         return alerts
 
 
+@dataclass(frozen=True)
+class OfficialSourceQuery:
+    """Issue #1441 S2: Pro-Quelle-Ergebnis EINES Abrufs (vor dem Quellen-
+    Merge, nach dem Fensterfilter). ``sources``: Registry-Name -> ``(ok,
+    alerts)``; ``ok`` nur ohne Exception, ``failed``, ``not_covered`` und
+    ``fetch_incomplete``."""
+    lat: float
+    lon: float
+    window_start: datetime
+    window_end: Optional[datetime]
+    sources: dict
+
+
+_source_query_sink: contextvars.ContextVar[Optional[list]] = contextvars.ContextVar(
+    "official_source_query_sink", default=None
+)
+
+
+@contextmanager
+def collect_source_queries(sink: list) -> Iterator[list]:
+    """Rueckkanal wie ``warn_egress.collect_capture_ids``: jeder Abruf
+    innerhalb des Kontexts haengt sein ``OfficialSourceQuery`` an ``sink``.
+    Ohne Kontext ein No-Op -- Rueckgabetypen bleiben unveraendert."""
+    token = _source_query_sink.set(sink)
+    try:
+        yield sink
+    finally:
+        _source_query_sink.reset(token)
+
+
+def _sources_by_name(per_source: list, start: datetime, end: datetime | None) -> dict:
+    """Gleichnamige Quellen (MeteoAlarm-Laender-Instanzen) vereinen: ok nur,
+    wenn ALLE zustaendigen ok sind. Eine Instanz, die beim Abruf "nicht
+    zustaendig" UND leer meldete, zaehlt -- wie in der ``covering``-Bilanz --
+    nicht mit; bleibt nur sie, ist die Quelle nicht ``ok``."""
+    sources: dict = {}
+    for name, ok, alerts, not_responsible in per_source:
+        if not_responsible:
+            continue
+        alerts = filter_alerts_to_window(alerts, start, end)
+        prev_ok, prev_alerts = sources.get(name, (True, []))
+        sources[name] = (prev_ok and ok, prev_alerts + alerts)
+    for name, _ok, _alerts, not_responsible in per_source:
+        if not_responsible and name not in sources:
+            sources[name] = (False, [])
+    return sources
+
+
+def get_official_alerts_with_sources(
+    lat: float,
+    lon: float,
+    *,
+    window_start: datetime | None = None,
+    window_end: datetime | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Issue #1441 S2 (Variante C): ``{quelle: (ok, alerts)}`` VOR dem
+    Quellen-Merge, NACH dem Fensterfilter -- Grundlage der Entwarnung. Das
+    Aggregat-``unavailable`` reicht dafuer nicht (es gleicht Teilausfall aus)."""
+    sink: list = []
+    with collect_source_queries(sink):
+        get_official_alerts_with_status(
+            lat, lon, window_start=window_start, window_end=window_end, now=now,
+        )
+    return sink[-1].sources if sink else {}
+
+
 def get_official_alerts_with_status(
     lat: float,
     lon: float,
@@ -156,6 +225,7 @@ def get_official_alerts_with_status(
     identisch zu ``get_official_alerts_for_location``.
     """
     results: list[OfficialAlert] = []
+    per_source: list[tuple[str, bool, list[OfficialAlert], bool]] = []  # #1441 S2
     covering, failed = 0, 0
     for source in _REGISTERED_SOURCES:
         try:
@@ -186,8 +256,16 @@ def get_official_alerts_with_status(
                         "official_alerts: %s fetch failed", source_name, exc_info=True
                     )
                     failed += 1
+                    per_source.append((source_name, False, [], False))
                     continue
-        results.extend(_enrich_with_capture_id(source_alerts, capture_ids))
+        enriched = _enrich_with_capture_id(source_alerts, capture_ids)
+        results.extend(enriched)
+        per_source.append((
+            source_name,
+            not fetch_status["failed"] and not fetch_status["not_covered"],
+            enriched,
+            bool(fetch_status["not_covered"] and not fetch_status["failed"] and not source_alerts),
+        ))
         # Issue #1681 (AC-3): der grobe covers()-Vorfilter sagte "zustaendig",
         # die Quelle stellte beim Abruf aber fest "fuer diesen Punkt nicht
         # zustaendig" (ZAMG 404, keine Zone) -- sie zaehlt dann NICHT als
@@ -205,6 +283,12 @@ def get_official_alerts_with_status(
         now = datetime.now(timezone.utc)
     effective_start = max(now, window_start) if window_start is not None else now
     results = filter_alerts_to_window(results, effective_start, window_end)
+    sink = _source_query_sink.get()
+    if sink is not None:
+        sink.append(OfficialSourceQuery(
+            lat, lon, effective_start, window_end,
+            _sources_by_name(per_source, effective_start, window_end),
+        ))
 
     # Pass 1: je hazard die "beste" Quelle bestimmen (hoechstes level;
     # Gleichstand: zuerst gesammelt). Issue #1441 (ADR-0089): verglichen wird

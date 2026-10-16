@@ -40,6 +40,21 @@ logger = logging.getLogger("comparison_engine")
 COMPARE_FORECAST_HOURS = 96
 
 
+def fetch_location_official_alerts(lat: float, lon: float) -> tuple:
+    """Amtliche Warnungen eines Orts: ``(alerts, unavailable, query)``.
+
+    Issue #1441 S2 (Adversary F002): ``query`` ist das Pro-Quelle-Ergebnis
+    (``OfficialSourceQuery``) DESSELBEN Abrufs -- mitgeschnitten im Thread des
+    Abrufs (kein Kontext-Rueckkanal ueber den Thread-Pool noetig), damit der
+    Briefing-Senkpfad die GEZEIGTE Lage bewertet statt nachzufragen."""
+    from services.official_alerts import collect_source_queries, get_official_alerts_with_status
+
+    sink: list = []
+    with collect_source_queries(sink):
+        alerts, unavailable = get_official_alerts_with_status(lat, lon)
+    return alerts, unavailable, (sink[-1] if sink else None)
+
+
 def _filter_by_target_date_and_window(
     raw_data: List["ForecastDataPoint"], target_date: "date",
     start_hour: int, end_hour: int, tz: "ZoneInfo",
@@ -317,10 +332,12 @@ class ComparisonEngine:
 
                 # Issue #1034 — amtliche Warnungen, additiv, nur im Erfolgszweig.
                 # Issue #1040: strukturell kein Fetch bei official_alerts_enabled=False.
+                official_alert_query = None
                 if official_alerts_enabled:
                     try:
-                        from services.official_alerts import get_official_alerts_with_status
-                        official_alerts, official_alerts_unavailable = get_official_alerts_with_status(loc.lat, loc.lon)
+                        official_alerts, official_alerts_unavailable, official_alert_query = (
+                            fetch_location_official_alerts(loc.lat, loc.lon)
+                        )
                     except Exception:
                         logger.warning(
                             "comparison_engine: official_alerts nicht ladbar — "
@@ -339,6 +356,7 @@ class ComparisonEngine:
                     score=score,
                     official_alerts=official_alerts,
                     official_alerts_unavailable=official_alerts_unavailable,
+                    official_alert_query=official_alert_query,
                     snow_depth_cm=snow_depth,
                     snow_new_cm=snow_new,
                     temp_min=metrics.get("temp_min"),

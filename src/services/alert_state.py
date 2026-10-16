@@ -46,6 +46,31 @@ OFFICIAL_ALERT_KEY_PREFIX = "official_alert:"
 EVENT_IDENTITY_KEY_PREFIX = "event_identity:"
 
 
+def prune_expired_official(state: dict, now) -> bool:
+    """Issue #1441 S2 (AC-9): entfernt ``official_alert:``-Eintraege, deren
+    ``valid_to`` vor ``now`` liegt (planmaessiger Ablauf ist keine
+    Entwarnung, der Eintrag wird nur aufgeraeumt). Eintraege ohne bzw. mit
+    unlesbarem ``valid_to`` bleiben -- im Zweifel behalten. Liefert, ob sich
+    ``state`` geaendert hat."""
+    from datetime import datetime, timezone
+
+    expired = []
+    for key, entry in state.items():
+        if not key.startswith(OFFICIAL_ALERT_KEY_PREFIX) or not isinstance(entry, dict):
+            continue
+        try:
+            valid_to = datetime.fromisoformat(entry.get("valid_to") or "")
+        except (TypeError, ValueError):
+            continue
+        if valid_to.tzinfo is None:
+            valid_to = valid_to.replace(tzinfo=timezone.utc)
+        if valid_to < now:
+            expired.append(key)
+    for key in expired:
+        del state[key]
+    return bool(expired)
+
+
 class AlertStateService:
     """Lädt/speichert/löscht das Alert-Melde-Gedächtnis pro Trip (mandantengetrennt)."""
 

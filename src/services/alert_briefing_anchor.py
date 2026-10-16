@@ -322,7 +322,7 @@ def write_anchor_and_reset_memory(
 
 
 def record_official_alerts_reported(
-    *, user_id: str, entity_id: str, alerts: list,
+    *, user_id: str, entity_id: str, alerts: list, meta: dict | None = None,
 ) -> None:
     """Vermerkt amtliche Warnungen als 'im Briefing gemeldet' — DIE geteilte
     Schreib-Logik fürs Melde-Gedächtnis (`official_alert:`-Namensraum).
@@ -336,6 +336,11 @@ def record_official_alerts_reported(
     Refactor hierher (Verhalten unverändert, siehe AC-5).
 
     Fail-soft bei leerer `alerts`-Liste: No-Op.
+
+    Issue #1441 S2: der Eintrag traegt `source`/`scope`/`level` (Grundlage der
+    Entwarnung). `meta` (Schluessel -> `{"source", "scope"}`, aus
+    `official_alert_allclear.reported_meta`) liefert Registry-Namen und Ort;
+    ohne `meta` bleibt ein vorhandener `scope` erhalten.
     """
     if not alerts:
         return
@@ -350,8 +355,41 @@ def record_official_alerts_reported(
     now_iso = datetime.now(timezone.utc).isoformat()
     for a in alerts:
         key = official_alert_state_key(a)
-        state[key] = official_alert_state_entry(a, now_iso)
+        item = (meta or {}).get(key) or {}
+        previous = state.get(key) if isinstance(state.get(key), dict) else {}
+        state[key] = official_alert_state_entry(
+            a, now_iso, source=item.get("source"),
+            scope=item.get("scope") or previous.get("scope"),
+        )
     state_svc.save(entity_id, state)
+
+
+def settle_official_alerts_after_briefing(
+    *, user_id: str, entity_id: str, queries: list,
+) -> None:
+    """Issue #1441 S2 (PO 15.10., Spec Abschnitte 5/6): ein ZUGESTELLTES
+    Briefing hat informiert -- es senkt das Gedaechtnis auf die gezeigte Stufe
+    bzw. setzt den Tombstone fuer eine nicht mehr gezeigte Warnung, und es
+    loescht `absent_since` einer noch gezeigten. Nur bei gesunder meldender
+    Quelle (dieselbe Erkennung wie im Alarm-Pfad). Ergaenzt den Bestands-
+    Record (der nur bei gezeigten Warnungen laeuft) um `source`/`scope`.
+    Aufrufer: nur nach Zustellung, nie beim Ad-hoc-Abruf."""
+    from services.alert_state import AlertStateService
+    from services.official_alert_allclear import (
+        apply_official_allclears, detect_official_allclear, reported_meta,
+        tag_reported_entries,
+    )
+
+    state_svc = AlertStateService(user_id=user_id)
+    state = state_svc.load(entity_id)
+    if not any(k.startswith("official_alert:") for k in state):
+        return
+    now = datetime.now(timezone.utc)
+    tagged = tag_reported_entries(state, reported_meta(queries))
+    allclears, changed = detect_official_allclear(state, queries, now, confirm_ended=False)
+    applied = apply_official_allclears(state, allclears, now)
+    if tagged or changed or applied:
+        state_svc.save(entity_id, state)
 
 
 def reset_alert_memory(*, user_id: str, entity_id: str) -> None:

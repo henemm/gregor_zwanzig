@@ -28,8 +28,8 @@ import pytest
 from output.tokens.hazard_symbols import sms_symbol_for
 from tests.helpers.transport_mitschrift import ALLE_KANAELE, aufzeichner_installieren
 from tests.tdd._official_alert_allclear_fixtures import (
-    EMPFEHLUNGS_WOERTER, FLAECHEN, Szenario, amtliche_eintraege, basis_jetzt,
-    entwarnungs_sendungen, lauf_erstwarnung, quellen, warnung,
+    EMPFEHLUNGS_WOERTER, FLAECHEN, Szenario, basis_jetzt,
+    entwarnungs_sendungen, lauf_erstwarnung, quellen,
 )
 
 VIER_AUF_ZWEI = re.compile(r"4\s*(?:→|->|>)\s*2")

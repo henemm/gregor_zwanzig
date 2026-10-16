@@ -421,6 +421,37 @@ def _effective_compare_briefing_channels(preset: dict, settings: Settings, user_
     return effective_compare_briefing_channels(preset, settings, user_id)
 
 
+def _settle_compare_briefing(user_id: str, preset_id: str, loc_result) -> None:
+    """Issue #1441 S2: Briefing-Senk-/Tombstone-Pfad des Ortsvergleichs.
+
+    Bewertet wird die GEZEIGTE Lage: das Pro-Quelle-Ergebnis desselben Abrufs,
+    den die Vergleichs-Engine je Ort mitschneidet (`official_alert_query`,
+    Adversary F002) -- keine Nachfrage nach der Zustellung. Ohne Mitschnitt
+    (Fetch aus, Abruf-Fehler) ist die Gesundheit unbekannt: nie senken.
+    Fail-soft: ein Fehler kostet nur die Entwarnungs-Kuerzung."""
+    from datetime import timezone as _tz
+
+    from services import alert_briefing_anchor
+    from services.official_alert_allclear import AllClearQuery
+
+    loc = loc_result.location
+    entity_id = f"{preset_id}:{loc.id}"
+    query = getattr(loc_result, "official_alert_query", None)
+    try:
+        alert_briefing_anchor.settle_official_alerts_after_briefing(
+            user_id=user_id, entity_id=entity_id, queries=[AllClearQuery(
+                scope=loc.id, scope_ids=(loc.id,),
+                window_start=query.window_start if query else _datetime.now(_tz.utc),
+                window_end=query.window_end if query else None,
+                sources=query.sources if query else None,
+                shown=tuple(loc_result.official_alerts or ()),
+            )],
+        )
+    except Exception:
+        logger.warning("Compare-Briefing-Entwarnungspfad fehlgeschlagen fuer %s", entity_id,
+                       exc_info=True)
+
+
 def send_one_compare_preset(
     preset: dict,
     settings: Settings,
@@ -692,6 +723,9 @@ def send_one_compare_preset(
                     entity_id=f"{preset_id}:{loc_result.location.id}",
                     alerts=loc_result.official_alerts,
                 )
+            # Issue #1441 S2 (PO 15.10.): auch OHNE gezeigte Warnung senken bzw.
+            # Tombstone setzen -- nur bei gesunder meldender Quelle.
+            _settle_compare_briefing(user_id, preset_id, loc_result)
 
     _anchor_and_reset()
 

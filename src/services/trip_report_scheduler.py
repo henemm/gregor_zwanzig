@@ -404,6 +404,21 @@ def _release_send_lock(user_id: str, trip_id: str, report_type: str) -> None:
     release_send_lock(user_id, trip_id, report_type)
 
 
+def _briefing_queries(sink: list, sw) -> list:
+    """Issue #1441 S2: Pro-Quelle-Ergebnis eines Briefing-Abrufs als
+    `AllClearQuery` (Ort = gerundete Koordinate, wie im Alarm-Pfad)."""
+    from services.official_alert_allclear import AllClearQuery, scope_token
+
+    return [
+        AllClearQuery(
+            scope=scope_token(q.lat, q.lon), scope_ids=(str(sw.segment.segment_id),),
+            window_start=q.window_start, window_end=q.window_end, sources=q.sources,
+            shown=tuple(sw.official_alerts or ()),
+        )
+        for q in sink
+    ]
+
+
 class TripReportSchedulerService:
     """
     Service for scheduled trip weather reports.
@@ -1460,6 +1475,9 @@ class TripReportSchedulerService:
         # Issue #1087: amtliche Warnungen pro eindeutigem Segment-Startpunkt,
         # strukturell kein Fetch bei official_alerts_enabled=False (analog
         # comparison_engine.py Fetch-Gating, #1040-Pointer-Muster).
+        # Issue #1441 S2: Quellen-Gesundheit DIESES Briefing-Laufs je Ort -- fuer
+        # den Senk-/Tombstone-Pfad nach Zustellung.
+        official_queries: list = []
         if trip.official_alerts_enabled is not False:
             seen_coords: set[tuple[float, float]] = set()
             for sw in segment_weather:
@@ -1473,14 +1491,19 @@ class TripReportSchedulerService:
                     continue
                 seen_coords.add(coord)
                 try:
-                    from services.official_alerts import get_official_alerts_with_status
-                    sw.official_alerts, sw.official_alerts_unavailable = (
-                        get_official_alerts_with_status(
-                            *coord,
-                            window_start=segments[0].start_time,
-                            window_end=segments[-1].end_time,
-                        )
+                    from services.official_alerts import (
+                        collect_source_queries, get_official_alerts_with_status,
                     )
+                    _sink: list = []
+                    with collect_source_queries(_sink):
+                        sw.official_alerts, sw.official_alerts_unavailable = (
+                            get_official_alerts_with_status(
+                                *coord,
+                                window_start=segments[0].start_time,
+                                window_end=segments[-1].end_time,
+                            )
+                        )
+                    official_queries.extend(_briefing_queries(_sink, sw))
                 except Exception:
                     logger.warning(
                         "trip_report_scheduler: official_alerts nicht ladbar",
@@ -1808,6 +1831,16 @@ class TripReportSchedulerService:
                 record_official_alerts_reported(
                     user_id=self._user_id, entity_id=trip.id, alerts=all_official_alerts,
                 )
+            # Issue #1441 S2 (PO 15.10.): auch OHNE gezeigte Warnung -- das
+            # Briefing senkt das Gedaechtnis bzw. setzt den Tombstone.
+            from services.alert_briefing_anchor import settle_official_alerts_after_briefing
+            try:
+                settle_official_alerts_after_briefing(
+                    user_id=self._user_id, entity_id=trip.id, queries=official_queries,
+                )
+            except Exception:
+                logger.warning("Briefing-Entwarnungspfad fehlgeschlagen fuer %s", trip.id,
+                               exc_info=True)
 
         _anchor_and_reset()
 

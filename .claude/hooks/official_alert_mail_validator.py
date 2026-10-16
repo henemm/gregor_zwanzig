@@ -156,6 +156,45 @@ def _extract_parts(msg: Message) -> tuple[str, str]:
     return "\n".join(plain_parts), "\n".join(html_parts)
 
 
+# Issue #1441 S2 (ADR-0090): Entwarnungs-Uebergang "Stufe 4 → 2" bzw. "Stufe 4 → beendet".
+_ALLCLEAR_TRANSITION_RE = re.compile(r"Stufe\s+(\d)\s*(?:→|->)\s*(\d|beendet)")
+# Nur Daten, keine Handlungsempfehlung (Spec AC-16).
+_RECOMMENDATION_WORDS = ("sicher", "kannst", "empfehlen", "gefahrlos", "aufbrechen", "losgehen")
+
+
+def _decoded_subject(msg: Message) -> str:
+    """Betreff RFC-2047-dekodiert (fail-soft: Rohwert)."""
+    from email.header import decode_header, make_header
+
+    raw = msg.get("Subject") or ""
+    try:
+        return str(make_header(decode_header(raw)))
+    except Exception:
+        return str(raw)
+
+
+def _allclear_errors(msg: Message, plain: str, html: str, classes: set[str]) -> list[str]:
+    """E-1..E-4: Abschnitt, Betreff, plausibler Uebergang (alt > neu bzw.
+    'beendet'), keine Handlungsempfehlung."""
+    errors: list[str] = []
+    text = plain + "\n" + html
+    if "entwarnung" not in classes or "Entwarnung" not in (plain or html):
+        errors.append("E-1: Abschnitt 'Entwarnung' fehlt (Klasse 'entwarnung' bzw. Ueberschrift).")
+    if "Entwarnung" not in _decoded_subject(msg):
+        errors.append(f"E-2: Betreff ohne 'Entwarnung': {_decoded_subject(msg)!r}")
+    transitions = _ALLCLEAR_TRANSITION_RE.findall(text)
+    if not transitions:
+        errors.append("E-3: Kein Uebergang 'Stufe N → M' bzw. 'Stufe N → beendet' gefunden.")
+    for old, new in transitions:
+        if new != "beendet" and int(old) <= int(new):
+            errors.append(f"E-3: Entwarnung ohne Absenkung: 'Stufe {old} → {new}' (alt muss > neu sein).")
+    # Ganzes Wort (Adversary F008): "Sicherheitsbereich"/"unsicher" sind Daten.
+    hits = [w for w in _RECOMMENDATION_WORDS if re.search(rf"\b{re.escape(w)}\b", text.lower())]
+    if hits:
+        errors.append(f"E-4: Handlungsempfehlung im Text: {hits}")
+    return errors
+
+
 def validate_message(msg: Message) -> tuple[bool, list[str]]:
     """Faellt das Urteil ueber ein geparstes email.message.Message-Objekt.
 
@@ -185,6 +224,17 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
         collector.feed(html)
     except Exception as exc:  # fail-closed: kaputtes HTML ist ein echter Befund
         errors.append(f"S-0: HTML-Body nicht parsbar: {exc}")
+
+    # Issue #1441 S2: Entwarnungs-Plausibilitaet. Eine REINE Entwarnungs-Mail
+    # traegt keinen Warn-Block -- dann entfallen S-1/S-2/P-1..P-4, die
+    # Entwarnungs-Pruefungen E-1..E-4 und der Stand-Footer P-5 bleiben.
+    # Gemischte Mails durchlaufen zusaetzlich alle bisherigen Pruefungen.
+    if "entwarnung" in collector.classes or "Entwarnung" in _decoded_subject(msg):
+        errors.extend(_allclear_errors(msg, plain, html, collector.classes))
+        if not ({"verdict", "warn"} & collector.classes):
+            if "Stand: heute" not in text:
+                errors.append("P-5: 'Stand: heute'-Footer fehlt im Body.")
+            return len(errors) == 0, errors
 
     missing_classes = _REQUIRED_CLASSES - collector.classes
     if missing_classes:

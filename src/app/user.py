@@ -162,6 +162,9 @@ class LocationResult:
     # Issue #1349 (Scheibe 3) — Ausfall-Flag einer abdeckenden amtlichen
     # Quelle, additiv wie oben. Default False = rueckwaertskompatibel.
     official_alerts_unavailable: bool = False
+    # Issue #1441 S2 — Pro-Quelle-Ergebnis DESSELBEN Abrufs (transient,
+    # `OfficialSourceQuery`); None = unbekannt -> das Briefing senkt nie.
+    official_alert_query: Optional[object] = None
 
 
 @dataclass

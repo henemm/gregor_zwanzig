@@ -511,11 +511,11 @@ def compare_briefing(monkeypatch, sz: Szenario, minuten: float):
     """Echtes Ortsvergleich-Briefing ueber ``send_one_compare_preset``
     (``scheduler_dispatch_service.py``, Record-Aufruf ~:690). Ersetzt ist nur
     das WETTER der Vergleichs-Engine (``engine_naht`` der Kette); die amtlichen
-    Warnungen holt die Engine-Naht -- wie ``ComparisonEngine`` selbst -- ueber
-    ``get_official_alerts_with_status`` aus der ECHTEN Registry (Quellen-
-    Gesundheit inklusive, "nicht abrufbar" bei Ausfall)."""
+    Warnungen holt die Engine-Naht ueber DENSELBEN Produkt-Baustein wie
+    ``ComparisonEngine`` selbst (``fetch_location_official_alerts``) aus der
+    ECHTEN Registry -- Quellen-Gesundheit inklusive ("nicht abrufbar" bei
+    Ausfall) und mit dem Pro-Quelle-Mitschnitt desselben Abrufs."""
     import services.comparison_engine as ce_mod
-    from services.official_alerts import get_official_alerts_with_status
     from tests.tdd._compare_kette_fixtures import briefing_senden, engine_naht, settings_fuer
 
     assert sz.flaeche == "vergleich", "Briefing-Helfer nur fuer die Ortsvergleich-Flaeche"
@@ -527,9 +527,9 @@ def compare_briefing(monkeypatch, sz: Szenario, minuten: float):
         def run(*args, **kwargs):
             ergebnis = basis.run(*args, **kwargs)
             for lr in ergebnis.locations:
-                lr.official_alerts, lr.official_alerts_unavailable = (
-                    get_official_alerts_with_status(lr.location.lat, lr.location.lon)
-                )
+                (lr.official_alerts, lr.official_alerts_unavailable,
+                 lr.official_alert_query) = ce_mod.fetch_location_official_alerts(
+                    lr.location.lat, lr.location.lon)
             return ergebnis
 
     monkeypatch.setattr(ce_mod, "ComparisonEngine", _MitAmtlichenWarnungen)
