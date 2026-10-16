@@ -2,7 +2,7 @@
 entity_id: onboarding_hilfe_2521
 type: module
 created: 2026-10-07
-updated: 2026-10-07
+updated: 2026-10-16
 status: draft
 version: "1.1"
 tags: [frontend, go, python, onboarding, hilfe, tooltip, infobox, standardwerte, testmail, admin, i18n, textkatalog, issue-2521]
@@ -80,6 +80,8 @@ Ein eingeladener Nutzer soll vom ersten Login bis zum ersten zugestellten Briefi
 `Tooltip.svelte`: ein Auslöser (Button mit `aria-describedby`, Fokus per Tab, Öffnen per Tipp/Enter/Leertaste, Schließen per Esc, erneuten Tipp oder Fokusverlust; Hover ist nur Zusatz). Text in `--g-ink` auf `--g-card`, Kontrast >= 4.5:1, nie `--g-ink-4`. Nicht nur `title=`, weil das auf Touch nicht erscheint. `Infobox.svelte`: Karte mit Text „Kannst du überspringen — Standard: …", Parameter `standard` und `context`. Beide Bausteine sind geteilt und nehmen nur Katalogschlüssel entgegen. Hilfeseite `/hilfe` (auch für Eingeloggte sichtbar, Link in Navigation/Footer) mit den Abschnitten: Briefing-Zeiten (morgens/abends), Alarme, Kanäle (E-Mail Hauptkanal; Telegram; SMS/Premium-SMS nur als Hinweis „je nach Tarif"), danach untergeordnet „Antwortbefehle". Die Seite nennt nirgends, dass ein Kanal einen anderen ersetzt.
 
 **S2 — Willkommen, Checkliste, Testmail.**
+> S2 spezifiziert in onboarding_willkommen_checkliste.md (maßgeblich; die folgenden Absätze sind der überholte Entwurfsstand).
+
 *Neue Profilfelder (Schema-Änderung):* in `internal/model/user.go` drei Felder, alle `omitempty`: `OnboardingDismissed bool`, `ChecklistDismissed bool`, `TestMailSentAt *time.Time`. `profileResponse` gibt beide Bools immer aus (kein „Feld fehlt", Muster `PasskeyPromptDismissed`) und `test_mail_sent_at` als Rohzeitstempel (fehlt, solange nie gesendet). `UpdateProfileHandler` nimmt **nur** die beiden Bools als `*bool` an, jeweils `if update.X != nil { user.X = *update.X }` auf dem geladenen Objekt (Read-Modify-Write, kein Replace). `test_mail_sent_at` steht bewusst nicht im Update-Decoder: ein vom Client mitgeschickter Wert wird nie gelesen. Der Pre-Snapshot-Hook `data_schema_backup.py` greift beim Edit an `user.go`; Roundtrip-Test siehe AC-6.
 *Erstlogin-Erkennung / Bestandsnutzer:* kein Backfill. Das Willkommen erscheint nur, wenn `onboarding_dismissed == false` **und** der Nutzer weder Trips noch Orts-Vergleiche hat. Es wird mit „Verstanden" weggeklickt (`PUT … {onboarding_dismissed: true}`).
 *Datenfluss Home:* `+layout.server.ts` nutzt schon den Profilabruf für `passkey_prompt_dismissed` und reicht zusätzlich die in der Tabelle genannten Felder durch (kein zweiter Abruf); `+page.svelte` liest sie aus dem Layout-`data`.
@@ -165,7 +167,10 @@ Tooltips (Katalogtexte `tip.*`) an: „Wertebereiche", „Kanal-Schwelle" und �
 
 Kein neues ADR nötig. ADR-0032 (Editor-Paradigma) bleibt unberührt: S3 ergänzt nur einen Footer-Knopf. Die Umstellung der Testmail auf den echten Versandweg ändert nur den E-Mail-Zweig einer Test-Funktion und hebt das Test-Routing für Test-/Staging-Nutzer nicht auf (`with_user_profile` erzwingt es weiter). Die drei Profilfelder folgen dem Muster aus #2248 (Persistenz im Go-Nutzermodell). Falls die Review dies als Kanal-/Provider-/Datenmodell-Entscheidung wertet: Abweichung ⇒ neues ADR.
 
+> Korrektur 2026-10-16: Für S2 ist die Testmail-Umstellung eine Kanal-/Versandentscheidung; dafür entsteht ADR-0091 (siehe onboarding_willkommen_checkliste.md).
+
 ## Changelog
 
 - 2026-10-07: Initial spec created (Issue #2521), gestuft S1-S4
 - 2026-10-07: PO-Entscheidungen: `test_mail_sent_at` serverseitig gesetzt (eigener Go-Handler), Checklistenpunkt „Erstes Briefing erhalten" (abgeleitet, Pflicht), `checklist_dismissed` mit „Ausblenden", Admin-Übersicht (S5); ACs neu nummeriert (AC-1..AC-21)
+- 2026-10-16: S2 spezifiziert in onboarding_willkommen_checkliste.md (eigene Spec mit neu nummerierten ACs, Varianten A3/B3'); die S2-Abschnitte dieses Entwurfs sind überholt

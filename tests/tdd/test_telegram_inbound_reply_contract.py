@@ -411,17 +411,15 @@ def test_ac11_test_knopf_ohne_profil_chat_meldet_fehler_statt_erfolg(sink, knopf
     assert sink.calls == [], f"AC-11: kein HTTP-Call erlaubt, gesehen {sink.calls!r}"
 
 
-def test_ac11_test_knopf_email_zweig_unveraendert_ueber_testpostausgang(monkeypatch, knopf_env):
-    """AC-11 (E-Mail-Zweig, #198) -- Erhaltung, bewusst gruen.
+#: Produktions-Postausgang OHNE "resend" im Namen: der Resend-Default-Deny
+#: (#1122) lenkte einen Resend-Host im pytest-Lauf auf ``TEST_SMTP_HOST`` um,
+#: dann waeren normale Kette und Test-Postausgang am Draht ununterscheidbar.
+#: Lokal zustellbar -- deshalb sind die Profiladressen unten ``@henemm.com``.
+PROD_SMTP_HOST = "versandkette-pruefung.henemm.com"
 
-    GIVEN ein Nutzer mit ``mail_to`` im Profil; Produktions-SMTP ist Resend,
-          Test-SMTP ist Stalwart.
-    WHEN  er "E-Mail testen" drueckt.
-    THEN  Erfolg, und die SMTP-Verbindung geht an den Test-Postausgang
-          (``for_testing()`` bleibt fuer E-Mail), nicht an Resend.
-    """
+
+def _smtp_aufzeichner_installieren(monkeypatch) -> list[str]:
     from output.channels import email as email_mod
-    from services.channel_test_service import send_test_message
 
     verbindungen: list[str] = []
 
@@ -452,9 +450,49 @@ def test_ac11_test_knopf_email_zweig_unveraendert_ueber_testpostausgang(monkeypa
 
     monkeypatch.setattr(email_mod.smtplib, "SMTP", _SmtpAufzeichner)
     monkeypatch.setattr(email_mod, "running_origin", lambda module_file: "production")
+    monkeypatch.setenv("GZ_SMTP_HOST", PROD_SMTP_HOST)
+    return verbindungen
 
-    _profil("nutzer-mail", mail_to="nutzer-mail@henemm.com")
+
+def test_ac11_test_knopf_email_echter_nutzer_ueber_normale_versandkette(monkeypatch, knopf_env):
+    """AC-11 (E-Mail-Zweig) -- abgeloest durch #2521 S2 / ADR-0091.
+
+    Vorher (#198): "E-Mail-Zweig unveraendert ueber den Test-Postausgang"
+    (``verbindungen == [TEST_SMTP_HOST]``). Neu: ein echter Nutzer mit
+    bestaetigter Adresse bekommt die Testmail ueber die normale Versandkette.
+
+    GIVEN ein echter Nutzer mit bestaetigter ``mail_to``.
+    WHEN  er "E-Mail testen" drueckt.
+    THEN  Erfolg, die Verbindung geht an den Produktions-Postausgang.
+    """
+    from services.channel_test_service import send_test_message
+
+    verbindungen = _smtp_aufzeichner_installieren(monkeypatch)
+    _profil(
+        "nutzer-mail", mail_to="nutzer-mail@henemm.com",
+        email_verified_at="2026-10-01T08:00:00Z",
+    )
     ergebnis = send_test_message("email", "nutzer-mail")
+
+    assert ergebnis == {"status": "ok"}, f"AC-11/ADR-0091: gesehen {ergebnis!r}"
+    assert verbindungen == [PROD_SMTP_HOST], f"AC-11/ADR-0091: gesehen {verbindungen!r}"
+
+
+def test_ac11_test_knopf_email_testnutzer_weiter_ueber_testpostausgang(monkeypatch, knopf_env):
+    """AC-11 (E-Mail-Zweig, Testnutzer) -- Erhaltung nach ADR-0091, gruen.
+
+    GIVEN ein Testkonto (``is_test_user``) mit bestaetigter ``mail_to``.
+    WHEN  es "E-Mail testen" drueckt.
+    THEN  Erfolg, die Verbindung geht weiter an den Test-Postausgang.
+    """
+    from services.channel_test_service import send_test_message
+
+    verbindungen = _smtp_aufzeichner_installieren(monkeypatch)
+    _profil(
+        "konto-mail", mail_to="gregor-test+knopf@henemm.com",
+        email_verified_at="2026-10-01T08:00:00Z", is_test_user=True,
+    )
+    ergebnis = send_test_message("email", "konto-mail")
 
     assert ergebnis == {"status": "ok"}, f"AC-11: gesehen {ergebnis!r}"
     assert verbindungen == [TEST_SMTP_HOST], f"AC-11: gesehen {verbindungen!r}"
