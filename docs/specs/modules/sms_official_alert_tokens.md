@@ -188,6 +188,20 @@ Token des Blocks; die übrigen Warn-Token folgen mit normalem Leerzeichen (kein 
 Sortierung: Stufe absteigend (rot vor orange), bei Gleichstand feste Katalog-Reihenfolge (siehe
 Tabelle oben) — deterministisch, keine Abhängigkeit von `valid_from`.
 
+### 2b. Entwarnungs-Block `+` (Nachzug #1441 S2, ADR-0090)
+
+Neben dem Warn-Block `!` gibt es einen eigenen **Entwarnungs-Block mit Marker `+`** (GSM-7-Basiszeichen,
+kein Konflikt mit `!`). Er nutzt dieselben Gefahrkürzel aus dem Katalog (Abschnitt 1b) und trägt den
+Übergang mit `>` (alte Stufe, `>`, neue Stufe):
+
+- gesenkt: `+TS:H>L` (Gewitter von hoch auf leicht); Lawine numerisch `+AV4>2`
+- vorzeitig beendet: `+TS:H>0` bzw. `+AV4>0` (`0` ist als Endmarker eindeutig, Stufenbuchstaben sind `- L M H`, Lawinen-Rang ≥ 1)
+- Folgetoken im Block ohne zweites `+`, durch Leerzeichen getrennt, wie beim `!`-Block.
+
+Die Dringlichkeit einer Entwarnung entspricht der alten Stufe; planmäßiges Ablaufen und Quellenausfall
+erzeugen keinen Token. Die Telegram-Kurzform folgt dieser SMS-Form. Quelle der Festlegung:
+`feat_1441_s2_entwarnung.md`, Implementierung `src/output/renderers/alert/official_alerts.py`.
+
 ### 3. Backend — SMS (Issue #1318, Scheibe A)
 
 - **Kürzel-Katalog:** EIN neues, kleines Modul `src/output/tokens/hazard_symbols.py` definiert
@@ -486,6 +500,8 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
 - **`#1220`:** falls der Regressionstest (AC-11) entgegen der Analyse-Erwartung ROT ist, deckt
   diese Spec den dann nötigen Mini-Fix noch nicht im Detail ab — Umfang wäre in `day_window.py`
   bzw. `compact_summary.py` nachzuziehen, analog zum Präzedenzfall #1146.
+- **Entwarnung (#1441 S2):** Der `+`-Block (Abschnitt 2b) ist additiv; das Warn-Token-Format `!` und der
+  Stufe-≥-orange-Filter bleiben unverändert. Eine Entwarnung trägt bewusst keine Zeitangabe (`@h`).
 - **Restliche Formatlogik der Standalone-Warn-SMS unverändert:** die Kürzel-Vereinheitlichung
   (Abschnitt 1b) rührt ausschließlich an der Kürzel-Herkunft von `render_official_alert_sms`;
   Kopfzeile, Ortszusatz, Budget-Rückfallstufen und Bündelung aus #1216/#1249 bleiben unverändert.
@@ -507,6 +523,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
 
 ## Changelog
 
+- 2026-10-16: Nachzug #1441 S2 (ADR-0090) — Abschnitt 2b und Known Limitations: Entwarnungs-Block `+` mit Token `+TS:H>L`, `+AV4>2`, `+TS:H>0` (gesenkt bzw. vorzeitig beendet).
 - 2026-07-20: Initial spec created
 - 2026-07-20 (Nachtrag, PO-Entscheidung): Known-Limitation-Punkt „Divergenter Kürzel-Katalog"
   war eine Fehldeutung der PO-Entscheidung #2 aus der Analyse — diese legte nur den

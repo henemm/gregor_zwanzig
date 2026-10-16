@@ -56,7 +56,12 @@ from services.compare_preset_access import (
 )
 from services.compare_slot_scheduler import due_or_raise, presets_due_for_hour
 from services.notification_service import NotificationService
-from services.official_alerts import get_official_alerts_for_location
+from services.alert_state import prune_expired_official
+from services.official_alert_allclear import (
+    AllClearQuery, allclear_settled, apply_official_allclears, detect_official_allclear,
+    reported_meta,
+)
+from services.official_alerts import collect_source_queries, get_official_alerts_for_location
 from utils.timezone import first_resolvable_tz, local_dt
 
 logger = logging.getLogger("compare_official_alert")
@@ -229,8 +234,10 @@ class CompareOfficialAlertService:
             return False
 
         sources = (official_warnings or {}).get("sources") or None
+        self._pending_allclears = []
         tagged_alerts, per_location_new = self._detect(preset_id, locs, sources)
-        if not tagged_alerts:
+        allclears = list(self._pending_allclears)  # Issue #1441 S2
+        if not tagged_alerts and not allclears:
             return False
 
         now = datetime.now(timezone.utc)
@@ -298,7 +305,7 @@ class CompareOfficialAlertService:
                     )
             if remaining_loc_ids:
                 filtered_alerts.append((alert, remaining_loc_ids))
-        if not filtered_alerts:
+        if not filtered_alerts and not allclears:
             return False
         tagged_alerts = filtered_alerts
 
@@ -307,9 +314,14 @@ class CompareOfficialAlertService:
         # Argument, also NACH dem Versand) -- `split_by_threshold()` braucht
         # sie davor. `effective_channels` bleibt fuers Protokoll ROH (rote
         # Linie #638), nur der tatsaechliche Versand (`allowed`) wird gefiltert.
+        # Issue #1441 S2 (AC-4): Stapel-Max ueber Warnungen UND alte Stufen der
+        # Entwarnungen.
         severity = alert_urgency.highest_urgency(*[
             alert_urgency.urgency_from_official_level(a.level)
             for a, _loc_ids in tagged_alerts
+        ], *[
+            alert_urgency.urgency_from_official_transition(ac.old_level, ac.new_level)
+            for ac, _loc_ids in allclears
         ])
         allowed, suppressed = alert_channel_threshold.split_by_threshold(
             effective_channels, severity, preset.get("alert_channel_thresholds"),
@@ -317,12 +329,12 @@ class CompareOfficialAlertService:
         # Issue #1405 S1 (ADR-0086): Fehlversuchs-Backoff je Ereignis (Ort +
         # Meldungs-Kennung) -- geteilter Baustein wie im amtlichen Trip-Pfad.
         retry_store = ThrottleStore(self._user_id)
-        retry_fp = alert_retry_backoff.event_fingerprint(preset_id, (
+        retry_fp = alert_retry_backoff.event_fingerprint(preset_id, [*(
             f"{loc_id}/{part}"
             for alert, loc_ids in tagged_alerts
             for part in alert_retry_backoff.official_alert_parts([alert])
             for loc_id in loc_ids
-        ))
+        ), *(f"{loc_ids[0]}/allclear:{ac.key}:{ac.new_rank}" for ac, loc_ids in allclears)])
         if alert_retry_backoff.backoff_active(retry_store, _RETRY_SCOPE, retry_fp):
             return False
         result = notification_service.send_multi_location_official_alert(
@@ -330,7 +342,7 @@ class CompareOfficialAlertService:
             allowed,
             _effective_telegram_style(preset),
             mail_sink=self._mail_sink, sms_sink=self._sms_sink,
-            telegram_sink=self._telegram_sink,
+            telegram_sink=self._telegram_sink, allclears=[ac for ac, _l in allclears],
         )
         # Issue #2050 S6 (E-1): Ereigniszeit/Messpunkt/Quelle nur, wenn ALLE
         # Warnungen dieses Eintrags uebereinstimmen (`unique_or_none`) --
@@ -356,10 +368,10 @@ class CompareOfficialAlertService:
         # Issue #1459: die Gefahrenart steht in `hazards`, nicht in `metrics` (O1).
         alert_log.append_entry(
             self._user_id, entity_id=preset_id, entity_type="compare",
-            changes_count=len(tagged_alerts),
+            changes_count=len(tagged_alerts) + len(allclears),
             severity=severity,
             hazards=alert_log.hazards_from_official_alerts(
-                [a for a, _loc_ids in tagged_alerts]
+                [a for a, _loc_ids in tagged_alerts] + [ac.alert for ac, _l in allclears]
             ),
             reason=alert_log.REASON_OFFICIAL_ALERT,
             effective_channels=effective_channels,
@@ -380,6 +392,8 @@ class CompareOfficialAlertService:
             return False
 
         self._record_state(preset_id, per_location_new)
+        if allclear_settled(result):
+            self._apply_allclears(preset_id, allclears)
         alert_daily_limit.increment(self._user_id, now, zone)
         # Issue #1917 S4b-2 (F001-Symmetrie): NUR nach erfolgreicher
         # Zustellung. Gefahrenarten ausserhalb des `wet`-Kanons
@@ -421,16 +435,7 @@ class CompareOfficialAlertService:
         keine Etappen — die Menge der geprueften Orte bleibt deshalb
         unveraendert die des Presets (AC-33), nur die Zeit kommt hinzu."""
         now = datetime.now(timezone.utc)
-        raw = [
-            (alert, [loc.id])
-            for loc in locs
-            for alert in get_official_alerts_for_location(
-                loc.lat, loc.lon,
-                window_start=now,
-                window_end=self._day_window_end(preset_id, loc, now),
-                now=now,
-            )
-        ]
+        raw, queries_by_loc = self._fetch_locations(preset_id, locs, now)
         if sources:
             # Issue #1441: Quellenname = Teil vor dem ersten ':' (Lagebericht
             # `avalanche_report:AT-07` -> `avalanche_report`); Quellen ohne ':'
@@ -464,9 +469,39 @@ class CompareOfficialAlertService:
                     changed_locs.add(loc_id)
             if is_new:
                 new_or_escalated.append((alert, loc_ids))
+        # Issue #1441 S2: GC + Entwarnungs-Erkennung je Ort (eigenes Gedaechtnis).
+        self._pending_allclears = []
+        self._pending_meta = {}
+        for loc_id, state in state_by_loc.items():
+            queries = queries_by_loc.get(loc_id, [])
+            self._pending_meta[loc_id] = reported_meta(queries)
+            pruned = prune_expired_official(state, now)
+            allclears, absent_changed = detect_official_allclear(state, queries, now)
+            self._pending_allclears.extend((ac, [loc_id]) for ac in allclears)
+            if pruned or absent_changed:
+                changed_locs.add(loc_id)
         for loc_id in changed_locs:
             state_svc_by_loc[loc_id].save(f"{preset_id}:{loc_id}", state_by_loc[loc_id])
         return new_or_escalated, per_location_new
+
+    def _fetch_locations(self, preset_id: str, locs: list, now: datetime) -> tuple[list, dict]:
+        """Abruf je Ort; Issue #1441 S2: Pro-Quelle-Ergebnis desselben Abrufs
+        (``collect_source_queries``) als ``AllClearQuery`` je Ort."""
+        raw: list = []
+        queries_by_loc: dict = {}
+        for loc in locs:
+            sink: list = []
+            window_end = self._day_window_end(preset_id, loc, now)
+            with collect_source_queries(sink):
+                alerts = list(get_official_alerts_for_location(
+                    loc.lat, loc.lon, window_start=now, window_end=window_end, now=now,
+                ))
+            raw.extend((alert, [loc.id]) for alert in alerts)
+            queries_by_loc[loc.id] = [AllClearQuery(
+                scope=loc.id, scope_ids=(loc.id,), window_start=now, window_end=window_end,
+                sources=sink[-1].sources if sink else None, shown=tuple(alerts),
+            )]
+        return raw, queries_by_loc
 
     def _day_window_end(self, preset_id: str, loc, now: datetime) -> datetime:
         """Issue #1460 (P4): Ende des HEUTIGEN Tagesfensters dieses Ortes, in
@@ -504,14 +539,29 @@ class CompareOfficialAlertService:
 
     def _record_state(self, preset_id: str, per_location_new: dict) -> None:
         now_iso = datetime.now(timezone.utc).isoformat()
+        meta_by_loc = getattr(self, "_pending_meta", {}) or {}
         for loc_id, alerts in per_location_new.items():
             entity_id = f"{preset_id}:{loc_id}"
             state_svc = AlertStateService(user_id=self._user_id)
             state = state_svc.load(entity_id)
+            meta = meta_by_loc.get(loc_id, {})
             for alert in alerts:
                 key = official_alert_state_key(alert)
-                state[key] = official_alert_state_entry(alert, now_iso)
+                state[key] = official_alert_state_entry(
+                    alert, now_iso, source=(meta.get(key) or {}).get("source"), scope=[loc_id],
+                )
             state_svc.save(entity_id, state)
+
+    def _apply_allclears(self, preset_id: str, allclears: list) -> None:
+        """Issue #1441 S2: nach Zustellung senken bzw. Tombstone setzen (je Ort)."""
+        now = datetime.now(timezone.utc)
+        for ac, loc_ids in allclears:
+            for loc_id in loc_ids:
+                entity_id = f"{preset_id}:{loc_id}"
+                state_svc = AlertStateService(user_id=self._user_id)
+                state = state_svc.load(entity_id)
+                if apply_official_allclears(state, [ac], now):
+                    state_svc.save(entity_id, state)
 
     def _effective_channels(self, preset: dict) -> set[str]:
         """Duenner Wrapper (Issue #2279 S1) — delegiert an die geteilte

@@ -7,8 +7,11 @@ from __future__ import annotations
 from services.official_alerts.avalanche_report import AvalancheReportSource
 from services.official_alerts.base import (
     OfficialAlertSource,
+    OfficialSourceQuery,
+    collect_source_queries,
     filter_alerts_to_window,
     get_official_alerts_for_location,
+    get_official_alerts_with_sources,
     get_official_alerts_with_status,
     register_official_alert_source,
 )
@@ -58,6 +61,9 @@ __all__ = [
     "register_official_alert_source",
     "get_official_alerts_for_location",
     "get_official_alerts_with_status",
+    "get_official_alerts_with_sources",
+    "collect_source_queries",
+    "OfficialSourceQuery",
     "filter_alerts_to_window",
     "VigilanceSource",
     "MeteoForetsSource",

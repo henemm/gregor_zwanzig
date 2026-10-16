@@ -494,6 +494,20 @@ def _trip_telegram_style(trip: "Trip") -> str:
 #: Aenderungsalarm belegt ``trip:retry``) -- die Alarmarten bremsen sich nicht.
 _OFFICIAL_RETRY_SCOPE = "trip_official"
 
+
+def _allclear_urgencies(allclears: list) -> list[str]:
+    """Issue #1441 S2 (AC-4): Dringlichkeit der Entwarnung = ALTE Stufe
+    (Maximum aus alt und neu), wirksam an der Kanal-Schwelle."""
+    return [
+        alert_urgency.urgency_from_official_transition(ac.old_level, ac.new_level)
+        for ac in allclears
+    ]
+
+
+def _allclear_parts(allclears: list) -> list[str]:
+    """Issue #1441 S2: Backoff-Kennung der Entwarnung (Schluessel + Zielstufe)."""
+    return [f"allclear:{ac.key}:{ac.new_rank}" for ac in allclears]
+
 class TripAlertService:
     """
     Service for sending weather change alerts.
@@ -547,6 +561,11 @@ class TripAlertService:
         # (protokolliert sie) -- wird bei jedem `_send_alert()`-Aufruf neu
         # gesetzt, kein dauerhafter Zustand.
         self._last_below_threshold_channels: set[str] = set()
+        # Issue #1441 S2: Bruecke von `check_official_alert_triggers()` (Erkennung)
+        # zu Versand/Schreibweg -- je Lauf neu gesetzt: Entwarnungen und
+        # Herkunft/Ort der gezeigten Warnungen (Gedaechtnis-Felder).
+        self._pending_official_allclears: list = []
+        self._official_meta: dict = {}
 
     def _protokolliere_unterdrueckung(
         self, trip: "Trip", *, reason: str, gate_reason: Optional[str], **felder,
@@ -1191,8 +1210,10 @@ class TripAlertService:
                     # Issue #1088: amtliche Warnungen zusätzlich zum Wetter-Delta prüfen —
                     # fail-soft, darf den Zyklus für andere Trips nicht abbrechen.
                     official_notices: list = []
+                    allclears: list = []  # Issue #1441 S2
                     try:
                         official_notices = self.check_official_alert_triggers(trip, now_utc=now_utc)
+                        allclears = list(self._pending_official_allclears)
                     except Exception as e:
                         logger.error(f"Official alert trigger check failed for trip {trip.id}: {e}")
 
@@ -1204,9 +1225,11 @@ class TripAlertService:
                     # Fail-soft wie der Zweig darunter: ein Fehler bei EINEM Trip darf
                     # den Lauf fuer alle folgenden nicht abbrechen.
                     if not cached:
-                        if official_notices:
+                        if official_notices or allclears:
                             try:
-                                if self._send_official_alert_only(trip, official_notices):
+                                if self._send_official_alert_only(
+                                    trip, official_notices, allclears=allclears,
+                                ):
                                     alerts_sent += 1
                             except Exception as e:
                                 logger.error(f"Official alert send failed for trip {trip.id}: {e}")
@@ -1218,11 +1241,17 @@ class TripAlertService:
                         )
                         if weather_sent:
                             alerts_sent += 1
-                        elif official_notices:
+                            # Issue #1441 S2: die Warnungen reisten mit dem Wetter-
+                            # Alarm; eine Entwarnung geht eigenstaendig hinterher.
+                            if allclears:
+                                self._send_official_alert_only(
+                                    trip, [], segments=cached, allclears=allclears,
+                                )
+                        elif official_notices or allclears:
                             # Kein Wetter-Delta-Alert gefeuert, aber neue/gestiegene amtliche
                             # Warnung(en) — eigenständiger Versand (PO-Entscheidung).
                             if self._send_official_alert_only(
-                                trip, official_notices, segments=cached,
+                                trip, official_notices, segments=cached, allclears=allclears,
                             ):
                                 alerts_sent += 1
                     except Exception as e:
@@ -3084,10 +3113,11 @@ class TripAlertService:
         # migriert -> ebenfalls Legacy-Fallback statt stillem Default True.
         # Issue #2422 S4 (Fix): dieselbe Regel wie im Vorab-Filter von
         # check_all_trips() — geteilt über _official_trigger_possible().
+        self._pending_official_allclears = []
+        self._official_meta = {}
         if not self._official_trigger_possible(trip):
             return []
         from services.alert_state import AlertStateService
-        from services.official_alerts import get_official_alerts_for_location
 
         # #1661 Spec-Korrektur 2026-08-10: KEINE Tages-Pruefung auf diesem Pfad.
         # `cached` dient hier nur als Routen-Geometrie mit absoluten Zeiten; der
@@ -3134,29 +3164,26 @@ class TripAlertService:
                 group_order.append(key)
             group_segments[key].append(str(segment.segment_id))
 
-        tagged_alerts: list[tuple] = []
-        for key in group_order:
-            coord, window_start, window_end = key
-            segment_ids = group_segments[key]
-            try:
-                for alert in get_official_alerts_for_location(
-                    *coord, window_start=window_start, window_end=window_end, now=now_utc,
-                ):
-                    tagged_alerts.append((alert, segment_ids))
-            except Exception as e:
-                logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")
+        tagged_alerts, queries = self._fetch_official_groups(
+            trip, group_order, group_segments, now_utc,
+        )
 
         from output.renderers.alert.official_alerts import (
             dedupe_official_alerts,
             official_alert_state_key,
             official_alert_revision_verdict,
         )
+        from services.alert_state import prune_expired_official
+        from services.official_alert_allclear import detect_official_allclear, reported_meta
+
         tagged_alerts = dedupe_official_alerts(tagged_alerts)
+        self._official_meta = reported_meta(queries)
 
         state_svc = AlertStateService(user_id=self._user_id)
         state = state_svc.load(trip.id)
         new_or_escalated = []
-        state_changed = False
+        # Issue #1441 S2 (AC-9): abgelaufene Eintraege aufraeumen.
+        state_changed = prune_expired_official(state, now_utc)
         for a, segment_ids in tagged_alerts:
             should_report, stale_key, merged_entry = official_alert_revision_verdict(a, state)
             if should_report:
@@ -3168,9 +3195,58 @@ class TripAlertService:
                 del state[stale_key]
                 state[official_alert_state_key(a)] = merged_entry
                 state_changed = True
-        if state_changed:
+        # Issue #1441 S2: Entwarnung auf dem fortgeschriebenen Gedaechtnis
+        # erkennen (setzt/loescht `absent_since`); Versand und Senken uebernimmt
+        # der Aufrufer nach Zustellung.
+        self._pending_official_allclears, absent_changed = detect_official_allclear(
+            state, queries, now_utc,
+        )
+        if state_changed or absent_changed:
             state_svc.save(trip.id, state)
         return new_or_escalated
+
+    def _fetch_official_groups(
+        self, trip: "Trip", group_order: list, group_segments: dict, now_utc: datetime,
+    ) -> tuple[list, list]:
+        """Abruf je `(Koordinate, Fenster)`-Gruppe. Issue #1441 S2: das Pro-
+        Quelle-Ergebnis DESSELBEN Abrufs reist ueber `collect_source_queries`
+        mit (ein ersetzter Abruf liefert keins -> Quellen-Gesundheit
+        unbekannt -> nie eine Entwarnung)."""
+        from services.official_alert_allclear import AllClearQuery, scope_token
+        from services.official_alerts import collect_source_queries, get_official_alerts_for_location
+
+        tagged_alerts: list[tuple] = []
+        queries: list = []
+        for key in group_order:
+            coord, window_start, window_end = key
+            segment_ids = group_segments[key]
+            sink: list = []
+            try:
+                with collect_source_queries(sink):
+                    alerts = list(get_official_alerts_for_location(
+                        *coord, window_start=window_start, window_end=window_end, now=now_utc,
+                    ))
+            except Exception as e:
+                logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")
+                continue
+            tagged_alerts.extend((alert, segment_ids) for alert in alerts)
+            queries.append(AllClearQuery(
+                scope=scope_token(*coord), scope_ids=tuple(segment_ids),
+                window_start=sink[-1].window_start if sink else window_start,
+                window_end=window_end, sources=sink[-1].sources if sink else None,
+                shown=tuple(alerts),
+            ))
+        return tagged_alerts, queries
+
+    def _apply_official_allclears(self, trip_id: str, allclears: list) -> None:
+        """Issue #1441 S2: nach Zustellung senken bzw. Tombstone setzen."""
+        from services.alert_state import AlertStateService
+        from services.official_alert_allclear import apply_official_allclears
+
+        state_svc = AlertStateService(user_id=self._user_id)
+        state = state_svc.load(trip_id)
+        if apply_official_allclears(state, allclears, datetime.now(timezone.utc)):
+            state_svc.save(trip_id, state)
 
     def _record_official_alert_state(self, trip_id: str, official_notices: list) -> None:
         """Issue #1088/#1200: alert_state nach erfolgreichem Versand fortschreiben
@@ -3187,10 +3263,12 @@ class TripAlertService:
         record_official_alerts_reported(
             user_id=self._user_id, entity_id=trip_id,
             alerts=[a for a, _segment_ids in official_notices],
+            meta=self._official_meta,  # Issue #1441 S2: Registry-Name + Ort
         )
 
     def _send_official_alert_only(
         self, trip: "Trip", official_notices: list, segments: Optional[list] = None,
+        allclears: Optional[list] = None,
     ) -> bool:
         """Issue #1088: Standalone-Versand einer amtlichen Warnung ohne Wetter-Delta.
 
@@ -3205,7 +3283,14 @@ class TripAlertService:
         (E1): sie las den Topf `"trip"`, den der Änderungsalarm befüllt, und
         verschluckte damit bis zu 120 Minuten lang jede amtliche Eskalation.
         Geschrieben wird der Topf weiterhin (s. unten) — nur gelesen nicht mehr.
+
+        Issue #1441 S2: `allclears` (Entwarnungen) reisen in DERSELBEN Nachricht
+        mit; sie laufen nicht durchs Ereignis-Identitaets-Gate (keine Dublette
+        einer Warnung), bestimmen aber Kanal-Schwelle und Backoff nach ihrer
+        ALTEN Stufe. Gesenkt wird nur nach Zustellung auf einem Kanal, dessen
+        Nachricht die Entwarnung enthielt.
         """
+        allclears = list(allclears or [])
         now_utc = datetime.now(timezone.utc)
         # Issue #2050 S3b (Szenario 10, AC-5, Luecke E3): `check_official_alert_gate`
         # liefert den passenden Grund seit jeher mit — bis dahin verwarf ihn
@@ -3286,7 +3371,7 @@ class TripAlertService:
                     "Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
                     trip.id, e,
                 )
-        if not _filtered_notices:
+        if not _filtered_notices and not allclears:
             return False
         official_notices = _filtered_notices
 
@@ -3296,15 +3381,15 @@ class TripAlertService:
         _official_urgency = alert_urgency.highest_urgency(*[
             alert_urgency.urgency_from_official_level(a.level)
             for a, _segment_ids in official_notices
-        ])
+        ], *_allclear_urgencies(allclears))
         _official_allowed, _official_suppressed = alert_channel_threshold.split_by_threshold(
             effective_channels, _official_urgency, trip.alert_channel_thresholds,
         )
         # Issue #1405 S1 (ADR-0086): Fehlversuchs-Backoff je Meldungs-Satz.
         _retry_fp = alert_retry_backoff.event_fingerprint(
-            trip.id, alert_retry_backoff.official_alert_parts(
+            trip.id, [*alert_retry_backoff.official_alert_parts(
                 a for a, _segment_ids in official_notices
-            ),
+            ), *_allclear_parts(allclears)],
         )
         if alert_retry_backoff.backoff_active(
             self._throttle_store, _OFFICIAL_RETRY_SCOPE, _retry_fp,
@@ -3320,6 +3405,7 @@ class TripAlertService:
             # Abweichungsalarm. Ohne Segmente (kein Anker) bleibt die Karte
             # leer und die Warnung bei der Segment-Sprache (AC-10).
             segment_km=measured_segment_km(segments),
+            allclears=allclears,
         )
         # Issue #2050 S6 (E-1): Ereigniszeit, Messpunkt und Quelle nur, wenn
         # ALLE Warnungen dieses EINEN Eintrags darin uebereinstimmen
@@ -3339,10 +3425,10 @@ class TripAlertService:
         # NICHT als Register-Kennung in `metrics` (eigenes Vokabular, O1).
         alert_log.append_entry(
             self._user_id, entity_id=trip.id, entity_type="trip",
-            changes_count=len(official_notices),
+            changes_count=len(official_notices) + len(allclears),
             severity=_official_urgency,
             hazards=alert_log.hazards_from_official_alerts(
-                [a for a, _segment_ids in official_notices]
+                [a for a, _segment_ids in official_notices] + [ac.alert for ac in allclears]
             ),
             reason=alert_log.REASON_OFFICIAL_ALERT,
             effective_channels=effective_channels,
@@ -3369,6 +3455,10 @@ class TripAlertService:
             result.delivery_outcome,
         ):
             self._record_official_alert_state(trip.id, official_notices)
+            from services.official_alert_allclear import allclear_settled
+
+            if allclear_settled(result):
+                self._apply_official_allclears(trip.id, allclears)
             self._throttle_store.record("trip", trip.id, datetime.now(timezone.utc))
             alert_daily_limit.increment(
                 self._user_id, now_utc, anchor_tz(trip, now_utc),

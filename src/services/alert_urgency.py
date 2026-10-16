@@ -38,9 +38,15 @@ def urgency_from_official_transition(previous, current) -> str:
     Meldung traegt die Dringlichkeit des ALTEN Werts -- Maximum aus alt und neu
     (Vorbild `_ordinal_severity`, PO-Regel "Entwarnung traegt die Dringlichkeit
     des alten Werts"). `current=None` = Entwarnung. Verglichen wird das
-    abgeleitete `level` (EAWS 5 -> 4 = HIGH)."""
-    current_level = current.level if current is not None else 0
-    return urgency_from_official_level(max(previous.level, current_level))
+    abgeleitete `level` (EAWS 5 -> 4 = HIGH).
+
+    Issue #1441 S2: produktiv genutzt fuer die Entwarnung -- Eingaben duerfen
+    Warnungen ODER blosse Stufen (`int`, alte Stufe aus dem Gedaechtnis) sein."""
+    def _level(x) -> int:
+        return int(getattr(x, "level", x) or 0)
+
+    current_level = _level(current) if current is not None else 0
+    return urgency_from_official_level(max(_level(previous), current_level))
 
 
 def urgency_from_radar(*, is_convective: bool, intensity_label: str) -> str:

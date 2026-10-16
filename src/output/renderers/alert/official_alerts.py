@@ -125,6 +125,10 @@ _SOURCE_LABELS: dict[str, str] = {
     "avalanche_report:it-32-bz": "Lawinenwarndienst Südtirol, avalanche.report",
     "avalanche_report:it-32-tn": "Lawinenwarndienst Trentino, avalanche.report",
     "avalanche_report:at-02": "Lawinenwarndienst Kärnten, avalanche.report",
+    # Issue #1441 S2: Registry-Namen (Melde-Gedaechtnis `source`) -- eine reine
+    # Entwarnungs-Mail nennt die Quelle ueber diesen Namen.
+    "meteoalarm_feed": "MeteoAlarm",
+    "avalanche_report": "Lawinenwarndienste, avalanche.report",
 }
 
 # Issue #1441: EAWS-Woerter und Lawinenprobleme -- Wortlaut des Warndienstes,
@@ -616,6 +620,11 @@ def official_alert_revision_verdict(
         return True, None, None
 
     merged_entry = {
+        # Issue #1441 S2: Herkunft, Ort und alte Stufe reisen mit -- sonst
+        # saehe jede fortgeschriebene Warnung wie ein Alt-Eintrag aus und
+        # bekaeme nie eine Entwarnung. `absent_since` faellt weg: die Warnung
+        # ist gerade wieder da.
+        **{f: kandidat[f] for f in ("source", "scope", "level") if f in kandidat},
         "last_reported_value": max(kandidat_level, float(_rank(alert))),
         # Adversary F002 (#1685 Fix-Loop, HIGH): `.get(..., "")` griff nur bei
         # fehlendem Schluessel, nicht bei explizit gespeichertem `None` -- ein
@@ -637,18 +646,30 @@ def official_alert_revision_verdict(
     return False, stale_key, merged_entry
 
 
-def official_alert_state_entry(alert: "OfficialAlert", reported_at_iso: str) -> dict:
+def official_alert_state_entry(
+    alert: "OfficialAlert", reported_at_iso: str, *,
+    source: str | None = None, scope: list | None = None,
+) -> dict:
     """Issue #1685: Schema-Builder fuer Melde-Gedaechtnis-Eintraege -- ersetzt
     die bisher zwei unabhaengig duplizierten Inline-Dicts in
     `record_official_alerts_reported` und `CompareOfficialAlertService.
     _record_state`. Neu ggue. dem Ist-Zustand: `valid_from`/`valid_to`, damit
-    `official_alert_revision_verdict` spaeter echte Ueberlappung pruefen kann."""
-    return {
+    `official_alert_revision_verdict` spaeter echte Ueberlappung pruefen kann.
+
+    Issue #1441 S2: zusaetzlich `source` (meldende Quelle, Registry-Name falls
+    bekannt), `scope` (Orte der Meldung) und `level` (Dringlichkeits-Skala)
+    -- Grundlage der Entwarnung. Gelesen wird nur per `.get()`."""
+    entry = {
         "last_reported_value": float(_rank(alert)),
         "reported_at": reported_at_iso,
         "valid_from": alert.valid_from.isoformat() if alert.valid_from else None,
         "valid_to": alert.valid_to.isoformat() if alert.valid_to else None,
+        "source": source or alert.source,
+        "level": int(alert.level),
     }
+    if scope:
+        entry["scope"] = list(scope)
+    return entry
 
 
 def _bundle_by_hazard_level(
@@ -1525,6 +1546,7 @@ def _standalone_src_html(
 def render_official_alert_html(
     notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str, tz: "ZoneInfo",
     context_label: str | None = None, source_url: str | None = None,
+    allclear_html: str = "",
 ) -> str:
     """E-Mail-HTML auf dem SOLL-Design (#1233 Slice B, „Alert · Amtliche
     Warnung"): Verdict-Pill, deterministische Headline, Warnstufen-Leiter
@@ -1604,13 +1626,14 @@ def render_official_alert_html(
     ))
     return (
         f'<html><body style="font-family:{FONT_UI};color:{G_INK};">'
-        f'{verdict}{headline}{ladder}{warns_block}{footer}{origin}</body></html>'
+        f'{verdict}{headline}{ladder}{warns_block}{allclear_html}{footer}{origin}</body></html>'
     )
 
 
 def render_official_alert_mail_plain(
     notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str,
     tz: "ZoneInfo", context_label: str | None = None, source_url: str | None = None,
+    allclear_lines: list[str] | None = None,
 ) -> str:
     """Klartext-Teil der eigenstaendigen amtlichen Warn-Mail (#1744 A2, AC-13).
 
@@ -1670,6 +1693,7 @@ def render_official_alert_mail_plain(
         # `_standalone_src_sentence` liefert bereits escapetes HTML (geteilt mit
         # der Datenzeile) -- im Klartext gehoert der rohe Satz hin.
         zeilen.append(_html.unescape(sentence))
+    zeilen.extend(allclear_lines or [])  # Issue #1441 S2: Entwarnung NACH den Warnungen
     # Issue #1441 (CC BY 4.0): Gegenstueck des Quelle-Links im HTML.
     link = f" → {source_url}" if source_url else ""
     zeilen.extend([
@@ -1902,7 +1926,7 @@ def render_warn_block(
     notices: list["OfficialAlertNotice"], *, variant: str, source_label: str,
     source_url: str | None = None, stand_at: str | None = None,
     tz: "ZoneInfo | None" = None, count_line: str | None = None,
-    context_label: str | None = None,
+    context_label: str | None = None, allclear_html: str = "",
 ) -> str:
     """Geteilter WarnBlock-Renderer (Issue #1216). EIN Baustein fuer alle drei
     Mail-Flaechen (Trip-Briefing, Ortsvergleich, Standalone-Alarm), einziger
@@ -1921,7 +1945,7 @@ def render_warn_block(
     if variant == "standalone":
         return render_official_alert_html(
             notices, source_label=source_label, stand_at=stand_at or "", tz=tz,
-            context_label=context_label, source_url=source_url,
+            context_label=context_label, source_url=source_url, allclear_html=allclear_html,
         )
     if variant == "embedded":
         return _render_warn_block_embedded(
@@ -2420,3 +2444,179 @@ def build_compare_official_alert_notices(
             regions=regions,
         ))
     return notices
+
+
+# ═══════════════ Issue #1441 S2: Entwarnung (ADR-0090) ═══════════════════════
+# Nur Daten -- Gefahr, Region/Ort, "Stufe alt → neu" bzw. "beendet". Keine
+# Handlungsempfehlung. Warnungen stehen in jeder Nachricht VOR der Entwarnung.
+
+
+@dataclass(frozen=True)
+class OfficialAllClearNotice:
+    """Praesentations-DTO einer Entwarnung (Trip und Ortsvergleich)."""
+    kind: str  # "lowered" | "ended"
+    hazard: str
+    hazard_label: str
+    region: str
+    scope_label: str
+    sms_scope: str
+    old_rank: int
+    new_rank: int
+    old_level: int
+    new_level: int
+    source: str = ""
+
+
+def build_official_allclear_notices(
+    allclears: list, id_to_name: dict | None = None,
+) -> list[OfficialAllClearNotice]:
+    """Trip (``id_to_name=None``): ``scope_ids`` sind Segment-IDs; Ortsvergleich:
+    Orts-IDs, aufgeloest ueber ``id_to_name``."""
+    notices = []
+    for ac in allclears:
+        ids = [str(i) for i in ac.scope_ids]
+        if id_to_name is None:
+            scope_label = format_segment_reference(ids) if ids else "Route"
+            sms_scope = scope_label.replace("Segment ", "Seg ").replace("–", "-").replace("🏁 Ziel", "Ziel")
+        else:
+            scope_label = ", ".join(dict.fromkeys(id_to_name.get(i, i) for i in ids)) or "Ort"
+            sms_scope = scope_label.replace(" ", "").replace(",", "+")
+        a = ac.alert
+        notices.append(OfficialAllClearNotice(
+            kind=ac.kind, hazard=a.hazard, hazard_label=_HAZARD_LABELS.get(a.hazard, a.label),
+            region=a.region_label or a.dedup_id or "", scope_label=scope_label,
+            sms_scope=sms_scope, old_rank=int(ac.old_rank), new_rank=int(ac.new_rank),
+            old_level=int(ac.old_level), new_level=int(ac.new_level), source=a.source,
+        ))
+    return notices
+
+
+def _allclear_transition(n: OfficialAllClearNotice) -> str:
+    return f"Stufe {n.old_rank} → beendet" if n.kind == "ended" else f"Stufe {n.old_rank} → {n.new_rank}"
+
+
+def official_allclear_lines(allclears: list[OfficialAllClearNotice]) -> list[str]:
+    """Je Entwarnung eine Datenzeile: Gefahr · Region · Ort: Übergang."""
+    lines = []
+    for n in allclears:
+        parts = [n.hazard_label] + [p for p in (n.region, n.scope_label) if p and p != n.hazard_label]
+        lines.append(f"{' · '.join(parts)}: {_allclear_transition(n)}")
+    return lines
+
+
+def render_official_allclear_subject_part(allclears: list[OfficialAllClearNotice]) -> str:
+    first = allclears[0]
+    trans = "beendet" if first.kind == "ended" else f"{first.old_rank}→{first.new_rank}"
+    more = f" +{len(allclears) - 1} weitere" if len(allclears) > 1 else ""
+    return f"Entwarnung {first.hazard_label} {trans}{more}"
+
+
+def render_official_allclear_html(allclears: list[OfficialAllClearNotice]) -> str:
+    """Eigener Abschnitt "Entwarnung" (nach den Warnungen)."""
+    if not allclears:
+        return ""
+    rows = "".join(
+        f'<p style="margin:4px 0;font-size:15px;">{_html.escape(line)}</p>'
+        for line in official_allclear_lines(allclears)
+    )
+    return (
+        '<div class="entwarnung" style="border:1px solid #d8d3c2;border-radius:6px;'
+        'padding:10px 16px;margin:4px 0 16px;">'
+        f'<h2 style="font-size:17px;margin:0 0 6px;">Entwarnung</h2>{rows}</div>'
+    )
+
+
+def render_official_allclear_mail_html(
+    allclears: list[OfficialAllClearNotice], *, stand_at: str, source_label: str,
+    context_label: str | None = None,
+) -> str:
+    """Vollstaendige Mail, wenn der Lauf NUR Entwarnungen traegt."""
+    from output.renderers.email.design_tokens import FONT_UI, G_INK, G_INK_FAINT
+    from output.renderers.email.helpers import build_origin_footer, render_origin_footer_html
+
+    footer = (
+        f'<p class="body-foot" style="font-size:13.5px;color:{G_INK_FAINT};margin:18px 0 0;">'
+        f'Stand: heute {_html.escape(stand_at)} · abgerufen bei {_html.escape(source_label)}</p>'
+    )
+    origin = render_origin_footer_html(build_origin_footer(
+        "official-alert", source=source_label, context_label=context_label,
+    ))
+    return (
+        f'<html><body style="font-family:{FONT_UI};color:{G_INK};">'
+        f'{render_official_allclear_html(allclears)}{footer}{origin}</body></html>'
+    )
+
+
+def render_official_allclear_plain(allclears: list[OfficialAllClearNotice]) -> list[str]:
+    return ["", "Entwarnung", *official_allclear_lines(allclears)] if allclears else []
+
+
+def render_official_allclear_mail_plain(
+    allclears: list[OfficialAllClearNotice], *, stand_at: str, source_label: str,
+    context_label: str | None = None,
+) -> str:
+    from output.renderers.email.helpers import build_origin_footer, render_origin_footer_text
+
+    zeilen = render_official_allclear_plain(allclears)[1:]
+    zeilen += ["", f"Stand: heute {stand_at} · abgerufen bei {source_label}", "",
+               render_origin_footer_text(build_origin_footer(
+                   "official-alert", source=source_label, context_label=context_label,
+               ))]
+    return "\n".join(zeilen)
+
+
+def render_official_allclear_telegram(
+    allclears: list[OfficialAllClearNotice], *, prefix: str | None = None,
+) -> str:
+    """Telegram-Abschnitt; mit ``prefix`` als eigenstaendige Nachricht."""
+    head = f"{prefix} · Entwarnung" if prefix else "Entwarnung"
+    lines = [f"<b>{_html.escape(head)}</b>"]
+    lines += [_html.escape(line) for line in official_allclear_lines(allclears)]
+    return "\n".join(lines)
+
+
+def _allclear_sms_token(n: OfficialAllClearNotice) -> str:
+    """`TS:H>L` / `TS:H>0` bzw. numerisch `AV4>2` / `AV4>0` (Spec Abschnitt 7)."""
+    symbol = sms_symbol_for(n.hazard)
+    if n.hazard in NUMERIC_LEVEL_HAZARDS:
+        return f"{symbol}{n.old_rank}>{n.new_rank}"
+    old = _SMS_LEVEL_LETTERS.get(n.old_level, "H")
+    new = "0" if n.kind == "ended" else _SMS_LEVEL_LETTERS.get(n.new_level, "-")
+    return f"{symbol}:{old}>{new}"
+
+
+def render_official_allclear_sms_block(
+    allclears: list[OfficialAllClearNotice], *, with_scope: bool = False,
+) -> str:
+    """`+`-Block (GSM-7-Basiszeichen): ein `+`, Folgetoken durch Leerzeichen."""
+    from .render import _ascii
+
+    tokens = [_allclear_sms_token(n) + (f" {n.sms_scope}" if with_scope else "") for n in allclears]
+    return _ascii("+" + " ".join(tokens))
+
+
+def render_official_alert_sms_with_allclears(
+    notices: list["OfficialAlertNotice"], allclears: list[OfficialAllClearNotice], *,
+    tz: "ZoneInfo | None", limit: int = 140,
+) -> tuple[str, bool]:
+    """SMS mit Entwarnungs-Block: ``(text, entwarnung_enthalten)``. Warnungen
+    haben Vorrang -- der Block kommt nur hinzu, wenn KEINE Warnung gekuerzt
+    wurde und er vollstaendig passt; sonst gilt die Entwarnung auf diesem Kanal
+    als nicht zugestellt (AC-12)."""
+    from .render import _ascii
+
+    if not notices:
+        scopes = {n.sms_scope for n in allclears}
+        head = _ascii(f"{allclears[0].sms_scope}: ") if len(scopes) == 1 else ""
+        text = head + render_official_allclear_sms_block(allclears, with_scope=len(scopes) > 1)
+        return (text, True) if len(text) <= limit else (_word_boundary_truncate(text, limit), False)
+    warn = render_official_alert_sms(notices, limit=limit, tz=tz)
+    if not allclears:
+        return warn, False
+    untruncated = render_official_alert_sms(notices, limit=10**6, tz=tz)
+    warn_scopes = {n.sms_scope for n in notices}
+    with_scope = len(warn_scopes) > 1 or {n.sms_scope for n in allclears} != warn_scopes
+    candidate = f"{warn} {render_official_allclear_sms_block(allclears, with_scope=with_scope)}"
+    if warn == untruncated and len(candidate) <= limit:
+        return candidate, True
+    return warn, False
