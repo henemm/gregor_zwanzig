@@ -454,6 +454,17 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        `region_label` > `label`; Präfix-Konstante `OFFICIAL_ALERT_KEY_PREFIX` in
        `services/alert_state.py`. Die Felder `valid_from`/`valid_to` kamen mit **#1685**;
        Bestandseinträge ohne sie bleiben gültig (Read-Modify-Write mit Merge).
+       Mit **#1441 S2** (ADR-0090) kommen additiv `source`, `scope`, `level`, `absent_since` und
+       `ended_at` (Tombstone) hinzu; Bestandseinträge ohne `source`
+       erzeugen bewusst keine Entwarnung (einmalige Lücke).
+   - **Entwarnung amtlicher Warnungen seit #1441 S2 (ADR-0090):** Wird eine gemeldete Warnung
+     gesenkt (z. B. 4 → 2) oder ist sie bei gesunder Quelle in zwei aufeinanderfolgenden
+     Alarm-Läufen verschwunden („vorzeitig beendet"), geht eine Entwarnung über alle vier Kanäle
+     (Trip und Ortsvergleich, geteilter Pfad in `services/official_alert_allclear.py` und
+     `output/renderers/alert/official_alerts.py`); Dringlichkeit = alte Stufe, SMS-Block `+`
+     (`+TS:H>L`, `+AV4>2`, `+TS:H>0`). Planmäßiger Ablauf und Quellenausfall sind keine
+     Entwarnung; ein zugestelltes Briefing, das die Senkung schon zeigte, senkt das Gedächtnis
+     ⇒ kein Entwarnungs-Alarm. Spec: `docs/specs/modules/feat_1441_s2_entwarnung.md`.
    - **Re-Alert-Logik (Änderungs-Raum):**
      - Neu (kein Eintrag): Alert sent, Eintrag angelegt
      - Stagnation (`|current - last| < threshold`): unterdrückt

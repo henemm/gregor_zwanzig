@@ -207,6 +207,11 @@ gegen den echten DE-Feed nur in `/e2e-verify`.
   erscheint diese Warnung nicht als aktive Warnung im Ergebnis. Eine eigene aktive Meldung „diese
   Warnung wurde aufgehoben" ist nicht Teil dieser Änderung und berührt nicht die bestehende
   Entwarnungs-Dringlichkeitsregel für hauseigene Gewitterstufen (#2177).
+  **Nachzug #1441 S2 (ADR-0090):** Die Aufhebung führt weiterhin NICHT über `AllClear` zur Meldung
+  (AllClear bleibt verworfen, siehe Dateitabelle). Stattdessen verschwindet die Warnung bei gesunder Quelle
+  aus dem Abruf; nach Bestätigung in zwei aufeinanderfolgenden Alarm-Läufen geht eine Entwarnung („vorzeitig
+  beendet", SMS `+…>0`) mit der Dringlichkeit des alten Werts über alle Kanäle. Fällt die Quelle aus, gibt es
+  keine Entwarnung.
   - Test: Test 5 oben.
 
 - **AC-6:** Given die bestehenden Warnungen für Italien und Österreich, When dieselben
@@ -255,9 +260,9 @@ gegen den echten DE-Feed nur in `/e2e-verify`.
   deckt nur die 402 Landkreis-Flächen ab, nicht `dwd:Warngebiete_Kueste`. Warnungen für die 8
   Küstenzellen (`WARNCELLID`-Präfix `501…`) können keinem Wanderpunkt zugeordnet werden. Für das
   Wanderer-Produkt ist das irrelevant — eine spätere Erweiterung wäre eine eigene Scheibe.
-- **Aktive Entwarnungs-Meldung bei Aufhebung amtlicher Warnungen ist eine eigene Produktfrage**
-  und nicht Teil dieser Spec (s. AC-5). Das Verhalten entspricht dem bisherigen, stillen
-  Verschwinden bei IT/AT.
+- **Aktive Entwarnungs-Meldung bei Aufhebung amtlicher Warnungen** ist nicht Teil dieser Spec (s. AC-5);
+  sie wird seit #1441 S2 (ADR-0090, `feat_1441_s2_entwarnung.md`) quellenübergreifend geliefert — über das
+  Verschwinden bei gesunder Quelle (zwei Läufe), nicht über `AllClear`.
 - **Drift der Warnzellen bei DWD-Kreisreformen.** Der Drift-Wächter meldet nur bereits im Feed
   aufgetauchte, unbekannte `WARNCELLID`s — er verhindert keine veraltete Geometrie, solange
   keine neue Kennung im Feed erscheint.
@@ -267,8 +272,8 @@ gegen den echten DE-Feed nur in `/e2e-verify`.
 
 ## Out of Scope
 
-- Aktive Entwarnungs-Meldung bei Aufhebung amtlicher Warnungen (eigene Produktfrage, siehe Known
-  Limitations).
+- Aktive Entwarnungs-Meldung bei Aufhebung amtlicher Warnungen über `AllClear` (bleibt verworfen; die
+  Entwarnung liefert #1441 S2 über das Verschwinden bei gesunder Quelle, siehe Known Limitations).
 - Küsten- und Seegebiete (`dwd:Warngebiete_Kueste`, `dwd:Warngebiete_Binnenseen`).
 - Komprimierter Abruf: am 2026-09-19 gemessen — der Feed-Server liefert auch mit
   `Accept-Encoding: gzip` unkomprimiert (5,5 MB, identische Bytezahl mit/ohne Header, kein
@@ -294,6 +299,7 @@ gegen den echten DE-Feed nur in `/e2e-verify`.
 
 ## Changelog
 
+- 2026-10-16: Nachzug #1441 S2 (ADR-0090) — AC-5, Known Limitations, Out of Scope: Aufhebung führt über das Verschwinden bei gesunder Quelle (zwei Läufe) zur Entwarnung, nicht über `AllClear`.
 - 2026-09-19: Implementierung — „nicht zuständig" als generisches Signal (`warn_egress.mark_not_covered()`,
   gesetzt von ZAMG-404, AT Fall 1, DPC ohne Zone); `base.py` nimmt solche Quellen aus der
   `covering`-Bilanz. Folgewirkung über DE hinaus (Tech-Lead-Entscheid, gleiches Prinzip wie AC-3):

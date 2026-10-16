@@ -173,6 +173,13 @@ Warnungen nicht als neue Warnung gemeldet; das Melde-Gedächtnis behält den alt
 Entwarnung (Absenkung/Ende) mit der Dringlichkeit des alten Werts für alle amtlichen Warnungen liefert
 Scheibe S2 von #1441 (PO-Entscheid 13.10.2026); der Helfer `urgency_from_official_transition` liegt bereit.
 
+**Nachzug #1441 S2 (ADR-0090):** Eine Absenkung der Lawinenstufe (z. B. 4 → 2, verglichen über
+`native_level`) löst jetzt eine Entwarnung über alle vier Kanäle aus, mit der Dringlichkeit der alten
+Stufe; SMS-Form `+AV4>2`, bei Ende `+AV4>0`. Verschwindet der Lagebericht bei gesunder Quelle in zwei
+aufeinanderfolgenden Alarm-Läufen, gilt die Warnung als vorzeitig beendet. Ablauf der Gültigkeit
+(planmäßig) und Quellenausfall sind keine Entwarnung. Ein zugestelltes Briefing, das die Senkung schon
+zeigte, senkt das Gedächtnis ⇒ kein Entwarnungs-Alarm. Details: `feat_1441_s2_entwarnung.md`.
+
 ### 9. RegionMapper
 
 Neues Modul `region_mapper.py`: GeoJSON laden (fail-soft, Cache), Punkt → alle getroffenen Regionen, ein
@@ -276,6 +283,10 @@ Voraussetzung für den Deploy.
   wird / Then wird die Absenkung nicht als neue Warnung gemeldet und das Melde-Gedächtnis behält Stufe 4.
   Die Entwarnung mit der Dringlichkeit des alten Werts liefert Scheibe S2 von #1441 (PO-Entscheid
   13.10.2026: Entwarnung für alle amtlichen Warnungen).
+  **Nachzug S2:** Die Absenkung 4 → 2 erzeugt jetzt eine Entwarnung (`+AV4>2`) mit der Dringlichkeit von
+  Stufe 4 (AC siehe `feat_1441_s2_entwarnung.md`); das Gedächtnis wird erst nach der Entwarnung (bzw. einem
+  zugestellten Briefing mit der Senkung) auf Stufe 2 gesenkt. Die Aussage „nicht als neue Warnung gemeldet"
+  bleibt richtig — die Entwarnung ist ein eigener, additiver Typ.
   - Test: `tests/test_avalanche_report_escalation.py` — Absenkungsfall (nicht gemeldet, Gedächtnis behält den alten Höchstwert).
 
 - **AC-14:** Given Lagebericht-Stufe 1 (gering) / When die Trip-Briefing-Mail und die Ortsvergleichs-Mail
@@ -385,6 +396,9 @@ Compare-spezifischer Code außer `_ALERT_LEVEL_CELL`).
 - Das `latest/`-Bulletin deckt nur den aktuellen Gültigkeitszeitraum ab; Etappen jenseits davon erhalten keine Stufe (kein Bericht ≠ Entwarnung, Anzeige bleibt leer).
 - Das Morgen-Update wird laut Quelle in-place ersetzt (nicht verifiziert); die 1800-s-TTL begrenzt die Verzögerung.
 - Alte DTOs in `src/app/models.py` bleiben ungenutzt (bewusst nicht wiederbelebt).
+- Entwarnung (#1441 S2, ADR-0090): „kein Bericht ≠ Entwarnung" gilt weiter — ein fehlendes `latest/`-Bulletin
+  bei ungesunder Quelle oder außerhalb der Gültigkeit erzeugt keine Entwarnung; „vorzeitig beendet" braucht
+  zwei aufeinanderfolgende Läufe bei gesunder Quelle (Verzögerung um ein Prüfintervall).
 
 ## Out of Scope
 
@@ -416,3 +430,4 @@ Bestands-Mapper.
 - 2026-10-13: Initial spec created (Issue #1441 Slice 1, Epic #2258; erledigt #1473)
 - 2026-10-13 v1.1: AC-13 und Abschnitt 8 auf den Umfang von S1 begrenzt (Absenkung nicht gemeldet, Gedächtnis behält Höchstwert). Die Entwarnung mit alter Dringlichkeit für alle amtlichen Warnungen kommt in Scheibe S2 von #1441 (PO-Entscheid 13.10.2026). Anlass: Adversary-Finding F003, Helfer ohne Aufrufer.
 - 2026-10-14 v1.2: Lizenzpflicht präzisiert — Quellenname und Bulletin-URL auch in der eigenständigen Warnungs-Mail (vorher fehlte die URL dort); Telegram-Kurzstil folgt der SMS ohne URL. Anlass: Adversary-Findings F011/F014.
+- 2026-10-16 v1.3: Nachzug #1441 S2 (ADR-0090) — Abschnitt 8, AC-13 und Known Limitations: Absenkung/Ende der Lawinenstufe löst Entwarnung mit alter Dringlichkeit aus (`+AV4>2`, `+AV4>0`); Version-Header der Spec unverändert.
