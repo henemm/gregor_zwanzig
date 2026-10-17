@@ -17,10 +17,8 @@ Helper -- ein fehlendes Modul macht den einzelnen Test rot, nicht das Sammeln.
 """
 from __future__ import annotations
 
-import ast
-import re
+import copy
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import httpx
 import pytest
@@ -44,6 +42,7 @@ from tests.helpers.slf_support import (
     WINTER_MORGEN,
     FakeClock,
     SlfFixtureTransport,
+    _ch_features,
     alerts_with_status,
     call_log,
     ch_regions_at,
@@ -60,8 +59,6 @@ from tests.helpers.slf_support import (
 )
 
 UTC = timezone.utc
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SLF_MODULE = REPO_ROOT / "src" / "services" / "official_alerts" / "slf.py"
 
 WINTER_NOW = datetime(2026, 3, 1, 8, 0, tzinfo=UTC)           # Morgen-Ausgabe 07:00Z-16:00Z gilt
 AUSSER_SAISON = datetime(2026, 10, 16, 10, 0, tzinfo=UTC)      # Aufzeichnungstag von leer.json
@@ -375,22 +372,32 @@ def test_ac13_region_aus_februar_fehlt_im_dezember_dieselbe_quelle_liefert_sie_n
     assert transport.count == 2
 
 
-def test_ac13_quelltext_enthaelt_keine_feste_liste_von_regions_ids():
-    # doc-compliance-test
-    """AC-13 (nur dieser Teil Doku-Konformitaet, laut Spec erlaubt): Given ``slf.py`` / Then steht
-    darin kein String-Literal, das eine CH-Regions-ID ist -- weder als Ausschlussliste noch als
-    Einzelvergleich (Docstrings/Kommentare zaehlen nicht)."""
-    assert SLF_MODULE.exists(), f"Pruefling fehlt: {SLF_MODULE.relative_to(REPO_ROOT)}"
-    tree = ast.parse(SLF_MODULE.read_text(encoding="utf-8"))
-    region_id = re.compile(r"^CH-\d{4}$")
+def test_ac13_abgeleitet_jede_mikroregion_im_bulletin_liefert_ihre_warnung_keine_ausschlussliste(monkeypatch):
+    """AC-13 (Spec-Mutation 12: feste Ausschlussliste) Given ein aus 2026-03-01 Morgen abgeleiteter
+    Lagebericht, dessen EINES gueltiges Bulletin ALLE Mikroregionen der Schweizer Umriss-Datei
+    bewertet / When fuer jede Region ein Innenpunkt abgefragt wird / Then liefert jede Region genau
+    ihre ``slf_bulletin:<id>``-Warnung ohne Ausfallhinweis -- keine Region ist im Code ausgeschlossen.
+    Alle Punkte teilen sich genau einen Abruf."""
+    alle = [rid for rid, _ in _ch_features()]
+    assert len(alle) > 100, f"Voraussetzung: vollstaendige CH-Umriss-Datei ({len(alle)} Regionen)"
+    abgeleitet = copy.deepcopy(slf_doc(WINTER_MORGEN))
+    bulletin = abgeleitet["bulletins"][0]
+    bulletin["regions"] = [{"regionID": rid, "name": rid} for rid in alle]
+    abgeleitet["bulletins"] = [bulletin]
+    assert region_ids_in(abgeleitet) == set(alle)
+    transport = SlfFixtureTransport(abgeleitet)
+    only_slf(monkeypatch, transport, FakeClock(WINTER_NOW))
 
-    treffer = [
-        (node.lineno, node.value) for node in ast.walk(tree)
-        if isinstance(node, ast.Constant) and isinstance(node.value, str)
-        and region_id.match(node.value)
-    ]
+    fehlend = {}
+    for rid in alle:
+        # grid=8 reicht fuer alle 149 Regionen (geprueft) und haelt die Laufzeit klein
+        alerts, unavailable = alerts_with_status(*interior_point(rid, grid=8), WINTER_NOW)
+        quellen = [a.source for a in _slf_alerts(alerts)]
+        if quellen != [f"slf_bulletin:{rid}"] or unavailable is not False:
+            fehlend[rid] = (quellen, unavailable)
 
-    assert treffer == [], f"hartcodierte Regions-IDs in slf.py: {treffer}"
+    assert fehlend == {}, f"Regionen ohne ihre Warnung (Ausschlussliste?): {fehlend}"
+    assert transport.count == 1, "alle Regionen teilen sich genau einen Abruf"
 
 
 # ================================================================== AC-14: SLF-Ausfall im Mittelland
