@@ -16,16 +16,19 @@
 // nie antwortenden Server nie zurueck, der Test scheitert dann an der Frist
 // statt den ganzen Lauf aufzuhalten.
 //
-// Nicht in dieser Kern-Schicht belegbar: dass die fuenf Aufrufstellen
-// (Compare-Vorschau 70 s, notify/test 130 s, Alarm-Vorschau 40 s, zweimal
-// locations/resolve 40 s) ihr Budget tatsaechlich uebergeben. Ein Quelltext-
-// Check ist verboten; das prueft der Adversary bzw. die Staging-Verifikation.
+// Die Langlaeufer-Budgets (Compare-Vorschau 70 s, notify/test 130 s,
+// Alarm-Vorschau 40 s) liegen gebuendelt in `langlaeufer` (api.ts),
+// locations/resolve 40 s als Konstante `ZEITLIMIT_ORT_AUFLOESEN_MS`; alle sind
+// unten mit gestellter Uhr bewacht (Fix-Loop 1, F002). Dass eine
+// Svelte-Komponente sie tatsaechlich benutzt, ist in dieser Kern-Schicht nicht
+// belegbar (kein Render der Komponenten-Handler); ein Quelltext-Check ist
+// verboten.
 //
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --experimental-test-module-mocks --test src/lib/__tests__/apiZeitlimit.test.ts
 
-import { test, describe, before, beforeEach, afterEach } from 'node:test';
+import { test, describe, before, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { clearEtagRegistry, getKnownEtag, istKonflikt } from '../etagRegistry.ts';
@@ -324,5 +327,92 @@ describe('AC-7: PUT im Zeitlimit, Server hat ihn trotzdem angenommen', () => {
 		} finally {
 			server.restore();
 		}
+	});
+});
+
+// Fix-Loop 1 (F002): die Budgets der Langlaeufer sind auf den Millisekunden-
+// Punkt bewacht. Echtes Warten auf 40–130 s ist ausgeschlossen; die Uhr wird
+// deshalb mit `mock.timers` gestellt — sie treibt den ECHTEN `send()`, kein
+// Argument-Spiegel. Ein Budget eine Millisekunde vor Ablauf: Abruf laeuft noch;
+// bei Ablauf: TimeoutError. Fehlt das Budget, greift der (gesenkte) Default und
+// der Abruf scheitert schon beim ersten Vorruecken.
+type Langlaeufer = {
+	compareVorschau: (presetId: string) => Promise<unknown>;
+	testNachricht: (channel: string) => Promise<unknown>;
+	alarmVorschau: (tripId: string, payload: unknown) => Promise<unknown>;
+};
+
+const flush = () => new Promise((r) => setImmediate(r));
+
+/** Prueft die Budget-Grenze eines Abrufs mit gestellter Uhr. */
+async function pruefeBudgetGrenze(
+	starte: () => Promise<unknown>,
+	budgetMs: number
+): Promise<Aufruf[]> {
+	setzeDefault(LIMIT);
+	netz = installiereFetch(null);
+	mock.timers.enable({ apis: ['setTimeout'] });
+	try {
+		type Ausgang = { ok: boolean; fehler?: unknown };
+		const stand: { ausgang: Ausgang | null } = { ausgang: null };
+		starte().then(
+			() => (stand.ausgang = { ok: true }),
+			(fehler) => (stand.ausgang = { ok: false, fehler })
+		);
+		await flush();
+		mock.timers.tick(budgetMs - 1);
+		await flush();
+		assert.equal(stand.ausgang, null, `der Abruf wurde vor seinem Budget von ${budgetMs} ms abgebrochen`);
+		mock.timers.tick(1);
+		await flush();
+		await flush();
+		const ausgang = stand.ausgang as Ausgang | null;
+		assert.ok(ausgang, `nach ${budgetMs} ms muss der Abruf ins Zeitlimit laufen`);
+		assert.equal(ausgang.ok, false);
+		istZeitlimitFehler(ausgang.fehler);
+		assert.equal(ohr.fehlgeschlagen, 1);
+		return netz.aufrufe;
+	} finally {
+		mock.timers.reset();
+	}
+}
+
+describe('F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)', () => {
+	function langlaeufer(): Langlaeufer {
+		const l = (modul as unknown as { langlaeufer?: Langlaeufer }).langlaeufer;
+		assert.ok(l, 'api.ts muss `langlaeufer` exportieren');
+		return l!;
+	}
+
+	test('Compare-Vorschau: 70 s (Go-Proxy 60 s), POST /api/preview/compare/{id}', FRIST, async () => {
+		const aufrufe = await pruefeBudgetGrenze(() => langlaeufer().compareVorschau('cp-1'), 70_000);
+		assert.equal(aufrufe.length, 1);
+		assert.equal(aufrufe[0].path, '/api/preview/compare/cp-1');
+		assert.equal(aufrufe[0].init?.method, 'POST');
+	});
+
+	test('Test-Versand: 130 s (Go-Proxy 120 s), POST /api/notify/test {channel}', FRIST, async () => {
+		const aufrufe = await pruefeBudgetGrenze(() => langlaeufer().testNachricht('telegram'), 130_000);
+		assert.equal(aufrufe[0].path, '/api/notify/test');
+		assert.equal(aufrufe[0].init?.method, 'POST');
+		assert.deepEqual(JSON.parse(String(aufrufe[0].init?.body)), { channel: 'telegram' });
+	});
+
+	test('Alarm-Vorschau: 40 s (Go-Proxy ca. 30 s), POST /api/trips/{id}/alert-preview', FRIST, async () => {
+		const aufrufe = await pruefeBudgetGrenze(
+			() => langlaeufer().alarmVorschau('t-1', { rules: [] }),
+			40_000
+		);
+		assert.equal(aufrufe[0].path, '/api/trips/t-1/alert-preview');
+		assert.deepEqual(JSON.parse(String(aufrufe[0].init?.body)), { rules: [] });
+	});
+
+	test('Orts-Aufloesung (Step2Orte/LocationNewModal): `api.post` mit ZEITLIMIT_ORT_AUFLOESEN_MS laeuft 40 s', FRIST, async () => {
+		const m = modul as unknown as { ZEITLIMIT_ORT_AUFLOESEN_MS?: number };
+		assert.equal(m.ZEITLIMIT_ORT_AUFLOESEN_MS, 40_000);
+		await pruefeBudgetGrenze(
+			() => api().post('/api/locations/resolve', { input: 'x' }, { zeitlimitMs: m.ZEITLIMIT_ORT_AUFLOESEN_MS }),
+			40_000
+		);
 	});
 });

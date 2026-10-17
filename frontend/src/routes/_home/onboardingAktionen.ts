@@ -4,6 +4,7 @@
 // Callbacks herein.
 
 import type { OnboardingProfil } from './onboardingSichtbarkeit.js';
+import { ZEITLIMIT_TEST_NACHRICHT_MS, type AbrufOptionen } from '../../lib/api.ts';
 
 export type DismissFeld = 'onboarding_dismissed' | 'checklist_dismissed';
 
@@ -46,7 +47,7 @@ export type TestmailStatus = 'idle' | 'loading' | 'error';
 
 export interface OnboardingApi {
 	put(pfad: string, body: unknown): Promise<unknown>;
-	post(pfad: string, body: unknown): Promise<unknown>;
+	post(pfad: string, body: unknown, extra?: AbrufOptionen): Promise<unknown>;
 }
 
 export interface OnboardingAktionenDeps {
@@ -73,7 +74,12 @@ export function erzeugeOnboardingAktionen(d: OnboardingAktionenDeps) {
 		d.setTestmail('loading', null);
 		const fallback = d.t('onboarding.testmail.fehler');
 		try {
-			const resp = (await d.api.post('/api/notify/test', { channel: 'email' })) as {
+			// #2361: eigenes Budget 130 s (Go-Proxy 120 s) statt des Standard-Limits.
+			const resp = (await d.api.post(
+				'/api/notify/test',
+				{ channel: 'email' },
+				{ zeitlimitMs: ZEITLIMIT_TEST_NACHRICHT_MS }
+			)) as {
 				status?: string;
 				error?: string;
 			} | null;

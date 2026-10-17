@@ -3,7 +3,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Btn } from '$lib/components/atoms';
-	import { api, downloadUserDataExport } from '$lib/api.js';
+	import { api, downloadUserDataExport, langlaeufer } from '$lib/api.js';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -276,7 +276,8 @@
 		testStatus[channel] = 'loading';
 		testError[channel] = null;
 		try {
-			const resp = await api.post('/api/notify/test', { channel });
+			// #2361: eigenes Budget 130 s (Go-Proxy 120 s), s. `langlaeufer` in api.ts.
+			const resp = await langlaeufer.testNachricht(channel);
 			if (resp?.error) {
 				testError[channel] = resp.error;
 				testStatus[channel] = 'error';

@@ -9,7 +9,7 @@
 	// Spec: docs/specs/modules/issue_680_compare_editor_slice3.md,
 	//       docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 5 (AC-13)
 	import { getContext } from 'svelte';
-	import { api } from '$lib/api';
+	import { api, ZEITLIMIT_ORT_AUFLOESEN_MS } from '$lib/api';
 	import type { CompareWizardState } from '../compareWizardState.svelte';
 	import type { Location, Group } from '$lib/types';
 	import { groupLocations } from '../locationHelpers';
@@ -119,8 +119,9 @@
 		resolveError = null;
 		preview = null;
 		try {
-			preview = await api.post<ResolveResult>('/api/locations/resolve', {
-				input: importInput
+			// #2361: eigenes Budget 40 s (Resolver bis ca. 30 s), s. api.ts.
+			preview = await api.post<ResolveResult>('/api/locations/resolve', { input: importInput }, {
+				zeitlimitMs: ZEITLIMIT_ORT_AUFLOESEN_MS
 			});
 			// AC-2/AC-4: Namensfeld vorbelegen — erkannter Name, sonst Koordinaten, NIE die URL.
 			nameDraft = preview.suggested_name ?? `${preview.lat.toFixed(4)}, ${preview.lon.toFixed(4)}`;

@@ -101,8 +101,12 @@ function sichtbarkeit(stand: 'visible' | 'hidden'): void {
 
 let netz: ReturnType<typeof installiereFetch> | null = null;
 afterEach(async () => {
-	sichtbarkeit('visible');
+	// Probe ueber die Sichtbarkeit beenden — ein Weg, der vom Online-Pfad
+	// unabhaengig ist: ist gerade der Stopp bei `gz-abruf-gelungen` kaputt,
+	// endet der Test rot statt im Haenger (Fix-Loop 2, F-R2-3).
+	sichtbarkeit('hidden');
 	gehOnline();
+	sichtbarkeit('visible');
 	await warte(INTERVALL * 2);
 	netz?.restore();
 	netz = null;
@@ -182,5 +186,50 @@ describe('#2361 AC-8: keine Probe ohne Anlass', () => {
 		const beimVerstecken = netz.health();
 		await warte(INTERVALL * 4);
 		assert.equal(netz.health(), beimVerstecken, 'bei unsichtbarer Seite muss das Intervall beendet sein');
+	});
+});
+
+describe('#2361 Fix-Loop 1 (F003): hoechstens EIN Probe-Abruf gleichzeitig', () => {
+	test('haengt die Probe laenger als mehrere Intervalle, geht keine zweite raus', FRIST, async () => {
+		kurzesIntervall();
+		// Eigener fetch-Ersatz: /api/health haengt, bis der Test ihn freigibt —
+		// sonst liefe der 25-s-Zeitlimit-Timer der Probe in spaetere Tests hinein.
+		const echtesFetch = globalThis.fetch;
+		let health = 0;
+		let freigeben: (() => void) | null = null;
+		(globalThis as { fetch: unknown }).fetch = (input: unknown) => {
+			if (String(input) === '/api/health') health += 1;
+			return new Promise<Response>((resolve) => {
+				freigeben = () =>
+					resolve(
+						new Response(JSON.stringify({ status: 'ok' }), {
+							status: 200,
+							headers: { 'Content-Type': 'application/json' }
+						})
+					);
+			});
+		};
+		try {
+			gehOffline();
+			await warte(INTERVALL * 6 + INTERVALL / 2);
+			assert.equal(health, 1, `waehrend eine Probe haengt, darf keine weitere starten (gesehen: ${health})`);
+			freigeben!();
+			await warte(INTERVALL);
+			assert.equal(modul.verbindung.offline, false, 'die freigegebene Probe entsperrt');
+		} finally {
+			(globalThis as { fetch: unknown }).fetch = echtesFetch;
+		}
+	});
+});
+
+describe('#2361 Fix-Loop 2 (F-R2-1): Geraetemeldung „offline" startet die Probe', () => {
+	test('window-Ereignis offline ⇒ nach dem Intervall GET /api/health; Antwort 200 ⇒ online', FRIST, async () => {
+		kurzesIntervall();
+		netz = installiereFetch(200);
+		windowStandIn.dispatchEvent(new Event('offline'));
+		assert.equal(modul.verbindung.offline, true, 'Messaufbau: Geraetemeldung offline ⇒ Store offline');
+		await warte(INTERVALL * 4);
+		assert.ok(netz.health() >= 1, 'nach der Geraetemeldung offline muss die Probe anlaufen');
+		assert.equal(modul.verbindung.offline, false, 'die gelungene Probe entsperrt');
 	});
 });

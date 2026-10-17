@@ -401,3 +401,15 @@ e2e/send-in-flight-guard.spec.ts
 # CI-Hauptlauf des PR gemessen (Erstlauf + 2 Wiederholungen des e2e-Jobs); der
 # PR wird erst nach drei gruenen Laeufen gemerged. Fallzahl: 19 (+ global.setup).
 e2e/begriff-erklaerung.spec.ts
+#
+# Aufnahme 2026-10-17 (#2361 Fix-Loop 2, Zeitlimit fuer send()):
+# langlaeufer-zeitbudget-wirkort.spec.ts -- bewacht im echten Browser, dass die
+# fuenf Langlaeufer (Compare-Vorschau 70 s, Test-Versand Konto 130 s,
+# Alarm-Vorschau 40 s, Orts-Aufloesung Vergleichs-Editor und „Neuer Ort" je 40 s)
+# ihr eigenes Budget AN DER AUFRUFSTELLE tragen: Uhr per page.clock 26 s
+# vorgespult, der festgehaltene Abruf darf nicht abbrechen. Filter A: kein
+# waitForTimeout/skip/fixme, kein .staging.spec. Filter B lokal 3x gruen gegen
+# den isolierten Stack (je frischer Stack, admin.json geloescht); im Zielverbund
+# misst der CI-Hauptlauf des PR. Filter C: Screenshot nur nach test-results/
+# (ignoriert). Fallzahl: 5.
+e2e/langlaeufer-zeitbudget-wirkort.spec.ts
