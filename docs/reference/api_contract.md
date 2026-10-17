@@ -3471,7 +3471,7 @@ Returns authenticated user profile (requires valid session cookie).
 
 #### POST /api/notify/test
 
-Issue #2521 S2 (ADR-0091). Body `{"channel": "email"|"telegram"}`. Go proxyt an den Python-Core (`src/services/channel_test_service.py`) mit der `user_id` des Aufrufers.
+Issue #2521 S2 (ADR-0092). Body `{"channel": "email"|"telegram"}`. Go proxyt an den Python-Core (`src/services/channel_test_service.py`) mit der `user_id` des Aufrufers.
 
 - `channel=email`: geht über die **normale Versandkette** an die **bestätigte Profiladresse** (`mail_to`, `email_verified_at` gesetzt) des Nutzers — nicht mehr über den Test-Postausgang (löst den entsprechenden Teil von `fix_1412_s4a` ab).
 - **Sperren** (Antwort HTTP 200 mit `{"error": "..."}`, kein Versand): fehlende oder unbestätigte Adresse, sowie Kennung `default`.
@@ -4698,7 +4698,7 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
-- 2026-10-17: Issue #2521 Scheibe S2 (ADR-0091) — Onboarding: Profil-DTO erhält
+- 2026-10-17: Issue #2521 Scheibe S2 (ADR-0092) — Onboarding: Profil-DTO erhält
   `onboarding_pending`, `onboarding_dismissed`, `checklist_dismissed` (immer vorhanden) sowie
   `test_mail_sent_at`, `first_briefing_at` (`omitempty`, read-only); `PUT /api/auth/profile`
   nimmt nur die beiden Dismiss-Flags. `POST /api/notify/test` (`email`) sendet über die normale

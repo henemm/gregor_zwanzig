@@ -167,7 +167,7 @@ Tooltips (Katalogtexte `tip.*`) an: „Wertebereiche", „Kanal-Schwelle" und �
 
 Kein neues ADR nötig. ADR-0032 (Editor-Paradigma) bleibt unberührt: S3 ergänzt nur einen Footer-Knopf. Die Umstellung der Testmail auf den echten Versandweg ändert nur den E-Mail-Zweig einer Test-Funktion und hebt das Test-Routing für Test-/Staging-Nutzer nicht auf (`with_user_profile` erzwingt es weiter). Die drei Profilfelder folgen dem Muster aus #2248 (Persistenz im Go-Nutzermodell). Falls die Review dies als Kanal-/Provider-/Datenmodell-Entscheidung wertet: Abweichung ⇒ neues ADR.
 
-> Korrektur 2026-10-16: Für S2 ist die Testmail-Umstellung eine Kanal-/Versandentscheidung; dafür entsteht ADR-0091 (siehe onboarding_willkommen_checkliste.md).
+> Korrektur 2026-10-16: Für S2 ist die Testmail-Umstellung eine Kanal-/Versandentscheidung; dafür entsteht ADR-0092 (siehe onboarding_willkommen_checkliste.md).
 
 ## Changelog
 

@@ -1,32 +1,33 @@
 ---
 spec_file: docs/specs/modules/onboarding_willkommen_checkliste.md
-spec_sha256: f7dd80fe90c43bd347e36f0bf3064ea1177c5b8fd44c30c242a38c27469ad73e
-spec_frozen_sha256: 9c0047faa6cfe7f27aeb2e5435c7e81e42ecac8e6d2d037700408343694dac60
+spec_sha256: be12d5f2540d74ab67fbe7e37bd50976cc78c47a0739ef305456b037c7fea9b3
+spec_frozen_sha256: a69a0438f3cae04dd7a619cb9339277d4406d6fcc128a870eb4804330155fd8d
 ---
 
 # PO-Briefing: feat-2521-s2-willkommen
 
 - **Spec:** docs/specs/modules/onboarding_willkommen_checkliste.md
 - **Issue:** #2521
-- **Erstellt:** 2026-10-16
+- **Erstellt:** 2026-10-17
 
 ## Was gebaut wird
 
-Neue Nutzer sehen Willkommen und Startklar-Checkliste, können eine Testmail senden; „+ Neuer Vergleich" führt zum Anlegen.
+Neue Nutzer sehen Willkommen und Checkliste, senden eine Testmail; „+ Neuer Vergleich" führt zum Anlegen.
 
 ## Definition of Done
 
-Neuer Nutzer sieht Willkommen, bekommt Testmail an seine Adresse; Bestandsnutzer sehen nichts; Checkliste endet nach erstem planmäßigen Briefing.
+Neuer Nutzer sieht Willkommen, erhält Testmail an seine Adresse; Bestandsnutzer sehen nichts; Checkliste endet nach erstem planmäßigen Briefing.
 
 ## Wie geprüft wird
 
-Tests prüfen Sichtbarkeit, Nutzertrennung, Mailempfänger und Link; echte Zustellung und erstes Briefing sind auf Staging nur eingeschränkt messbar.
+Tests prüfen Sichtbarkeit, Nutzertrennung, Mailempfänger und Link; echte Zustellung und erstes Briefing sind auf Staging kaum messbar.
 
 ## Kritische Anmerkungen
 
-- Testmail nutzt für echte Nutzer den echten Versandweg; löst eine frühere freigegebene Regel ab (neues ADR).
-- Zusatz: „Ausblenden" versteckt die Checkliste trotz offener Punkte; Issue verlangte „sichtbar bis erledigt".
+- Einzige Änderung: Testmail-Entscheidung heißt nun ADR-0092 statt 0091 (Nummernkollision); Inhalt gleich, Zustimmung liegt vor.
+- Testmail nutzt für echte Nutzer den echten Versandweg und löst eine frühere Regel ab.
+- „Ausblenden" versteckt die Checkliste trotz offener Punkte; Issue verlangte „sichtbar bis erledigt".
 
 ## Freigabe-Frage
 
-Sollen nur neu angelegte Nutzer Willkommen und Checkliste samt echter Testmail an ihre Adresse bekommen?
+Freigabe mit Umnummerierung auf ADR-0092: Willkommen, Checkliste und echte Testmail nur für neu angelegte Nutzer?

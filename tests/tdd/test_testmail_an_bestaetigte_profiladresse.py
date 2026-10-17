@@ -1,7 +1,7 @@
 """Nutzer-Testmail an die bestaetigte Profiladresse (Onboarding S2, AC-8/9/10).
 
 Spec: docs/specs/modules/onboarding_willkommen_checkliste.md (AC-8, AC-9, AC-10)
-ADR-0091 (loest die #198-Regel "Testmail nie ueber den echten Postausgang"
+ADR-0092 (loest die #198-Regel "Testmail nie ueber den echten Postausgang"
 fuer echte Nutzer ab).
 
 Nachweisform wie ``test_telegram_inbound_reply_contract.py`` (AC-11-E-Mail-

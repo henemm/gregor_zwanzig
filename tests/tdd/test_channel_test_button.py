@@ -75,7 +75,7 @@ def test_notify_test_unknown_channel_returns_error():
 
 
 # -- Test 5: user_id "default" sendet keine Testmail --
-# Abgeloest durch #2521 S2 / ADR-0091: vorher sendete dieser Test (Marker
+# Abgeloest durch #2521 S2 / ADR-0092: vorher sendete dieser Test (Marker
 # ``email``) eine ECHTE Mail unter ``user_id="default"`` und erwartete
 # ``status: ok``. Neu sperrt der Dienst ``"default"`` -- es wird nicht mehr
 # gewaehlt, deshalb laeuft der Test ohne Marker im Kern, mit Aufzeichner am

@@ -127,7 +127,7 @@ _B3_MODULE_MARKED = (
 
 # Batch 3 (#1211b), K3-Tabelle: 9 Dateien bekommen nur auf den real
 # dialenden Tests/Klassen einen Marker (Rest bleibt im Standardlauf) -- je
-# (Pfad, Marker)-Paar. #2521 S2 (ADR-0091): test_channel_test_button.py entfernt
+# (Pfad, Marker)-Paar. #2521 S2 (ADR-0092): test_channel_test_button.py entfernt
 # -- der einzige email-dialende Test wurde durch einen netzfreien ersetzt.
 _B3_PARTIAL_MARKED = (
     ("tests/tdd/test_issue_1069_tier_channel_gating.py", "staging"),

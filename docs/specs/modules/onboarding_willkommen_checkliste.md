@@ -21,7 +21,7 @@ Ein neu eingeladener Nutzer soll vom ersten Login bis zum ersten planmäßig zug
 
 ## Source
 
-- **File:** `internal/model/user.go`, `internal/store/user.go`, `internal/handler/auth.go`, `internal/handler/notify.go` (neu), `internal/router/router.go`, `src/services/channel_test_service.py`, `src/services/first_briefing.py` (neu), `frontend/src/routes/+layout.server.ts`, `frontend/src/routes/+page.svelte`, `frontend/src/routes/_home/EmptyKachel.svelte`, `frontend/src/routes/_home/StartklarCheckliste.svelte` (neu), `frontend/src/lib/i18n/messages/de.json`, `docs/adr/0091-nutzer-testmail-an-bestaetigte-profiladresse.md` (neu)
+- **File:** `internal/model/user.go`, `internal/store/user.go`, `internal/handler/auth.go`, `internal/handler/notify.go` (neu), `internal/router/router.go`, `src/services/channel_test_service.py`, `src/services/first_briefing.py` (neu), `frontend/src/routes/+layout.server.ts`, `frontend/src/routes/+page.svelte`, `frontend/src/routes/_home/EmptyKachel.svelte`, `frontend/src/routes/_home/StartklarCheckliste.svelte` (neu), `frontend/src/lib/i18n/messages/de.json`, `docs/adr/0092-nutzer-testmail-an-bestaetigte-profiladresse.md` (neu)
 - **Identifier:** `User.OnboardingPending`, `User.OnboardingDismissed`, `User.ChecklistDismissed`, `User.TestMailSentAt`, `SetUserOnboardingFlags`, `SetUserTestMailSentAt`, `NotifyTestHandler`, `send_test_message`, `mark_first_briefing`, `StartklarCheckliste`
 
 > **Schicht-Hinweis:** Full-Stack (Go, Python, SvelteKit). Mandantenfähig: jeder Endpoint und jeder Schreibweg arbeitet mit der `user_id` aus dem Auth-Kontext, nie mit `"default"`. Alle vier Kanäle bleiben gleichrangig; die Checkliste macht E-Mail zum Pflichtweg der Zustellung, ersetzt aber keinen anderen Kanal.
@@ -55,8 +55,8 @@ Ein neu eingeladener Nutzer soll vom ersten Login bis zum ersten planmäßig zug
 | `frontend/src/routes/_home/EmptyKachel.svelte:9` | MODIFY | Willkommens-Inhalt, Link-Fix |
 | `frontend/src/routes/_home/StartklarCheckliste.svelte` | CREATE | Checkliste mit „Ausblenden" |
 | `frontend/src/lib/i18n/messages/de.json` | MODIFY | Alle neuen Texte (`onboarding.*`) |
-| `docs/adr/0091-nutzer-testmail-an-bestaetigte-profiladresse.md`, `docs/adr/README.md` | CREATE/MODIFY | Neues ADR und Indexeintrag (`tests/test_adr_index_drift.py`) |
-| `docs/specs/modules/fix_1412_s4a_empfaengervertrag_telegram.md:247-248` | MODIFY | Vermerk „abgelöst durch #2521 S2 / ADR-0091" |
+| `docs/adr/0092-nutzer-testmail-an-bestaetigte-profiladresse.md`, `docs/adr/README.md` | CREATE/MODIFY | Neues ADR und Indexeintrag (`tests/test_adr_index_drift.py`) |
+| `docs/specs/modules/fix_1412_s4a_empfaengervertrag_telegram.md:247-248` | MODIFY | Vermerk „abgelöst durch #2521 S2 / ADR-0092" |
 | `docs/specs/modules/onboarding_hilfe_2521.md` | MODIFY | Verweis „S2 spezifiziert in onboarding_willkommen_checkliste.md" |
 | `tests/tdd/test_telegram_inbound_reply_contract.py:414`, `tests/tdd/test_channel_test_button.py:81-101`, `tests/test_success_status_guard.py:~2144` | MODIFY | An die neue Testmail-Regel angepasst (siehe „Abgelöste Zusicherungen") |
 | Neue Tests: Go, pytest, `node --test`, Staging-Playwright | CREATE | zu den ACs |
@@ -103,13 +103,13 @@ Ein neu eingeladener Nutzer soll vom ersten Login bis zum ersten planmäßig zug
 4. **Link-Fix:** `+page.svelte:104` (`buildCompareCtaHref`), `:162` und `EmptyKachel.svelte:9` auf `/compare/new`; Listen-Links auf `/compare` bleiben.
 5. **Texte** ausschließlich über `t(key)` aus `de.json` (Präfix `onboarding.*`), durchgehend „Trip", Kontrast mindestens 4,5:1, nie `--g-ink-4`. Texte erklären und zeigen Stand, sie geben keine Handlungsempfehlung. Tests mit `node --test`, nicht Vitest.
 
-### ADR-0091
+### ADR-0092
 
-`docs/adr/0091-nutzer-testmail-an-bestaetigte-profiladresse.md`: „Nutzer-Testmail geht an die bestätigte Profiladresse über den echten Versandweg". Löst die #198-Regel „Testmail nie über Resend" (Quelle: `docs/specs/_archive/bugfix/bug_198_notify_test_resend.md:20-22`) **für echte Nutzer** ab; Bezug ADR-0087. Eintrag in `docs/adr/README.md`.
+`docs/adr/0092-nutzer-testmail-an-bestaetigte-profiladresse.md`: „Nutzer-Testmail geht an die bestätigte Profiladresse über den echten Versandweg". Löst die #198-Regel „Testmail nie über Resend" (Quelle: `docs/specs/_archive/bugfix/bug_198_notify_test_resend.md:20-22`) **für echte Nutzer** ab; Bezug ADR-0087. Eintrag in `docs/adr/README.md`.
 
 ### Abgelöste Zusicherungen (ausdrücklich, nicht still)
 
-- Freigegebene AC in `docs/specs/modules/fix_1412_s4a_empfaengervertrag_telegram.md:247-248` („E-Mail-Zweig des Test-Knopfs bleibt unverändert (#198)") samt Test `tests/tdd/test_telegram_inbound_reply_contract.py:414` (`verbindungen == [TEST_SMTP_HOST]`). Dort Vermerk „abgelöst durch #2521 S2 / ADR-0091"; der Test wird auf die neue Regel umgestellt (echter Nutzer: normale Kette; Testnutzer: weiter Stalwart).
+- Freigegebene AC in `docs/specs/modules/fix_1412_s4a_empfaengervertrag_telegram.md:247-248` („E-Mail-Zweig des Test-Knopfs bleibt unverändert (#198)") samt Test `tests/tdd/test_telegram_inbound_reply_contract.py:414` (`verbindungen == [TEST_SMTP_HOST]`). Dort Vermerk „abgelöst durch #2521 S2 / ADR-0092"; der Test wird auf die neue Regel umgestellt (echter Nutzer: normale Kette; Testnutzer: weiter Stalwart).
 - `tests/tdd/test_channel_test_button.py:81-101` (echte Mail mit `user_id="default"`): wird auf die neue Sperre umgestellt, `"default"` sendet nichts mehr.
 - `tests/test_success_status_guard.py:~2144` (Zeilenzitate aus `channel_test_service`): Zitate nachgezogen.
 - Der Konto-Testknopf (`frontend/src/routes/account/+page.svelte:275-290`) nutzt denselben Pfad und profitiert mit.
@@ -156,7 +156,7 @@ Ein neu eingeladener Nutzer soll vom ersten Login bis zum ersten planmäßig zug
   - Prüfung: `node --test` Render-Test aller Links inkl. `buildCompareCtaHref`; Staging-Playwright.
 - **AC-17:** Given Willkommen und Checkliste / When ich die Texte lese / Then stehen sie vollständig im Textkatalog (nicht leer, durchgehend „Trip", keine Handlungsempfehlung), haben Kontrast mindestens 4,5:1 und nutzen nie `--g-ink-4`; die Seite wirft keinen Konsolenfehler.
   - Prüfung: Katalogtest mit Gegenprobe, Kontrast-Test der Token, Staging-Playwright mit Konsolen-Listener.
-- **AC-18:** Given das neue ADR und die abgelösten Zusicherungen / When die Test-Suite läuft / Then enthält `docs/adr/README.md` das ADR-0091, die abgelöste AC in `fix_1412_s4a_empfaengervertrag_telegram.md` trägt den Vermerk „abgelöst durch #2521 S2 / ADR-0091", und die drei angepassten Bestandstests sind grün.
+- **AC-18:** Given das neue ADR und die abgelösten Zusicherungen / When die Test-Suite läuft / Then enthält `docs/adr/README.md` das ADR-0092, die abgelöste AC in `fix_1412_s4a_empfaengervertrag_telegram.md` trägt den Vermerk „abgelöst durch #2521 S2 / ADR-0092", und die drei angepassten Bestandstests sind grün.
   - Prüfung: `tests/test_adr_index_drift.py`; benannte Testdateien `test_telegram_inbound_reply_contract.py`, `test_channel_test_button.py`, `test_success_status_guard.py`.
 
 ## Test Plan
@@ -185,9 +185,10 @@ Ein neu eingeladener Nutzer soll vom ersten Login bis zum ersten planmäßig zug
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** ADR-0091 (neu)
+- **ADR-Nr.:** ADR-0092 (neu)
 - **Rationale:** Die Testmail für echte Nutzer geht über den echten Versandweg an die bestätigte Profiladresse. Das löst die Regel aus #198 („Testmail nie über Resend") für echte Nutzer ab und berührt die Kanal-/Versandentscheidung (ADR-0087). Testnutzer und Staging bleiben unverändert auf Stalwart.
 
 ## Changelog
 
 - 2026-10-16: Initial spec created (Issue #2521, Scheibe S2); Varianten A3 (Testmail), B3' (`first_briefing.json`), PO-Entscheidungen „nur planmäßige Briefings zählen" und „nur neu Eingeladene"
+- 2026-10-17: ADR-Nummer 0091 → 0092 (Kollision mit ADR-0091 SLF-Lawinenquelle aus #1441 S3, zuerst in main); Inhalt unverändert, PO-Zustimmung 2026-10-17

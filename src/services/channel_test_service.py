@@ -19,7 +19,7 @@ _MAIL_GESPERRT = (
 def _sperre_email(user_id: str) -> str | None:
     """Fehlertext, wenn fuer diesen Nutzer keine Testmail gesendet werden darf.
 
-    Issue #2521 S2 / ADR-0091: gesendet wird nur an die bestaetigte
+    Issue #2521 S2 / ADR-0092: gesendet wird nur an die bestaetigte
     Profiladresse dieses Nutzers -- nie an "default", nie an die globale
     Betreiber-Adresse (Rueckfall von ``with_user_profile``).
     """
@@ -58,7 +58,7 @@ def send_test_message(channel: str, user_id: str) -> dict:
             sperre = _sperre_email(user_id)
             if sperre:
                 return {"error": sperre}
-            # Issue #2521 S2 / ADR-0091 (loest #198 fuer echte Nutzer ab):
+            # Issue #2521 S2 / ADR-0092 (loest #198 fuer echte Nutzer ab):
             # normale Versandkette an die bestaetigte Profiladresse; Testnutzer
             # und Staging bleiben ueber force_test in with_user_profile auf Stalwart.
             output = EmailOutput(Settings().with_user_profile(user_id))

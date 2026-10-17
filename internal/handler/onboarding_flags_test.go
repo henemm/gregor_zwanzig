@@ -497,3 +497,69 @@ func TestUpdateProfileMixedPutIgnoresForgedServerOwnedOnboardingFields(t *testin
 		t.Errorf("AC-6: gemischter PUT hat first_briefing.json angelegt")
 	}
 }
+
+// F021 (AC-6/AC-7): Der Nur-Flags-Zweig (Merge-Setter) darf NUR greifen, wenn
+// ausser den Dismiss-Flags KEIN weiteres Profilfeld mitkommt. Fuer jedes
+// Nachbarfeld wird derselbe PUT einmal OHNE und einmal MIT Flag gegen zwei
+// identische Stores gefahren: das Nachbarfeld muss mit Flag exakt dieselbe
+// Wirkung auf der Platte haben wie ohne Flag (nicht still verworfen), und das
+// Flag muss zusaetzlich gesetzt sein.
+func TestUpdateProfileFlagPlusNeighbourFieldIsNotSilentlyDropped(t *testing.T) {
+	const uid = "gemischt2521"
+	faelle := []struct{ name, json string }{
+		{"email", `"email":"neu-email2521@example.com"`},
+		{"mail_to", `"mail_to":"neu-mailto2521@example.com"`},
+		{"sms_to", `"sms_to":"+4915112345678"`},
+		{"telegram_chat_id", `"telegram_chat_id":""`},
+		{"passkey_prompt_dismissed", `"passkey_prompt_dismissed":false`},
+	}
+	for _, f := range faelle {
+		for _, flag := range []string{"onboarding_dismissed", "checklist_dismissed"} {
+			f, flag := f, flag
+			t.Run(f.name+"+"+flag, func(t *testing.T) {
+				sOhne, sMit := newTestStore(t), newTestStore(t)
+				onbWriteRawUser(t, sOhne, uid, onbAltdatei(uid))
+				onbWriteRawUser(t, sMit, uid, onbAltdatei(uid))
+
+				wOhne := onbPutProfile(t, sOhne, uid, `{`+f.json+`}`)
+				wMit := onbPutProfile(t, sMit, uid, `{"`+flag+`":true,`+f.json+`}`)
+				if wMit.Code != wOhne.Code {
+					t.Fatalf("PUT mit Flag: Status %d, ohne Flag %d: %s", wMit.Code, wOhne.Code, wMit.Body.String())
+				}
+
+				ohne := onbReadRawUser(t, sOhne, uid)
+				mit := onbReadRawUser(t, sMit, uid)
+				if v, ok := mit[flag]; !onbIstTrue(v, ok) {
+					t.Errorf("AC-6/7: %s nicht gesetzt im gemischten PUT (%s)", flag, v)
+				}
+				alt := onbAltdatei(uid)
+				geaendert := 0
+				schluessel := map[string]bool{}
+				for k := range ohne {
+					schluessel[k] = true
+				}
+				for k := range alt {
+					schluessel[k] = true
+				}
+				for k := range schluessel {
+					if k == flag {
+						continue
+					}
+					vo, okO := ohne[k]
+					vm, okM := mit[k]
+					altRaw, _ := json.Marshal(alt[k])
+					if okO && onbJSONEqual(vo, altRaw) {
+						continue
+					}
+					geaendert++
+					if okO != okM || (okO && !onbJSONEqual(vm, vo)) {
+						t.Errorf("AC-6/7: Feld %q mit Flag still verworfen/anders gespeichert (ohne Flag: %s/%v, mit Flag: %s/%v)", k, vo, okO, vm, okM)
+					}
+				}
+				if geaendert == 0 {
+					t.Fatalf("Kontrolle: der PUT ohne Flag hat nichts veraendert — Test misst nichts (%s)", f.name)
+				}
+			})
+		}
+	}
+}

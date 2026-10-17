@@ -1,4 +1,4 @@
-# ADR-0091: Nutzer-Testmail an die bestätigte Profiladresse über den echten Versandweg
+# ADR-0092: Nutzer-Testmail an die bestätigte Profiladresse über den echten Versandweg
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-10-16

@@ -1088,7 +1088,10 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				json.NewEncoder(w).Encode(toProfileResponse(user))
 				return
 			}
-			// Gemischter PUT: Flags am geladenen Objekt, SaveUser unten.
+		}
+		// Gemischter PUT: Flags am geladenen Objekt, SaveUser unten. Wird nach
+		// jedem frischen Laden (TOCTOU-Absicherung) erneut angewendet.
+		applyDismissFlags := func() {
 			if update.OnboardingDismissed != nil {
 				user.OnboardingDismissed = *update.OnboardingDismissed
 			}
@@ -1096,6 +1099,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				user.ChecklistDismissed = *update.ChecklistDismissed
 			}
 		}
+		applyDismissFlags()
 
 		// Display-Name-Format-Pruefung VOR jedem Schreibzugriff — bei einem
 		// ungueltigen Wert darf noch nichts (auch keine Adress-Sperre) berührt
@@ -1191,6 +1195,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				return
 			}
 			user = fresh
+			applyDismissFlags()
 
 			if emailChanged {
 				taken, terr := s.IsAddressTakenByOtherAccount(*update.Email, userId)

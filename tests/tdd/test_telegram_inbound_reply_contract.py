@@ -455,7 +455,7 @@ def _smtp_aufzeichner_installieren(monkeypatch) -> list[str]:
 
 
 def test_ac11_test_knopf_email_echter_nutzer_ueber_normale_versandkette(monkeypatch, knopf_env):
-    """AC-11 (E-Mail-Zweig) -- abgeloest durch #2521 S2 / ADR-0091.
+    """AC-11 (E-Mail-Zweig) -- abgeloest durch #2521 S2 / ADR-0092.
 
     Vorher (#198): "E-Mail-Zweig unveraendert ueber den Test-Postausgang"
     (``verbindungen == [TEST_SMTP_HOST]``). Neu: ein echter Nutzer mit
@@ -474,12 +474,12 @@ def test_ac11_test_knopf_email_echter_nutzer_ueber_normale_versandkette(monkeypa
     )
     ergebnis = send_test_message("email", "nutzer-mail")
 
-    assert ergebnis == {"status": "ok"}, f"AC-11/ADR-0091: gesehen {ergebnis!r}"
-    assert verbindungen == [PROD_SMTP_HOST], f"AC-11/ADR-0091: gesehen {verbindungen!r}"
+    assert ergebnis == {"status": "ok"}, f"AC-11/ADR-0092: gesehen {ergebnis!r}"
+    assert verbindungen == [PROD_SMTP_HOST], f"AC-11/ADR-0092: gesehen {verbindungen!r}"
 
 
 def test_ac11_test_knopf_email_testnutzer_weiter_ueber_testpostausgang(monkeypatch, knopf_env):
-    """AC-11 (E-Mail-Zweig, Testnutzer) -- Erhaltung nach ADR-0091, gruen.
+    """AC-11 (E-Mail-Zweig, Testnutzer) -- Erhaltung nach ADR-0092, gruen.
 
     GIVEN ein Testkonto (``is_test_user``) mit bestaetigter ``mail_to``.
     WHEN  es "E-Mail testen" drueckt.
