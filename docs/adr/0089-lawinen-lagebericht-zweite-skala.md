@@ -1,6 +1,6 @@
 # ADR-0089: Lawinen-Lagebericht als zweite Skala neben der Awareness-Skala
 
-- **Status:** Akzeptiert
+- **Status:** Akzeptiert (teilweise ergänzt durch ADR-0091)
 - **Datum:** 2026-10-13
 - **Bezug:** GitHub-Issue #1441 Slice 1 (Epic #2258, erledigt #1473), Spec
   `docs/specs/modules/avalanche_report_bulletin.md`; ergänzt ADR-0016 (additiver Warntyp),
@@ -39,7 +39,8 @@ Zusammenführung "höchste Stufe gewinnt" verglich zwei Skalen miteinander.
 
 - Bestandswarnungen bleiben bit-identisch (alle neuen Felder mit Default).
 - Ein weiteres Land ist ein Tabelleneintrag (`AVALANCHE_REGION_TABLE`) plus Regionsdatei und
-  Egress-Host — kein Parser-/Renderer-Code.
+  Egress-Host — kein Parser-/Renderer-Code. *(Teilweise ergänzt durch ADR-0091: Die Schweiz (SLF)
+  folgt wegen anderem Dokument-Zuschnitt dem Muster eigene Quelle + geteiltes `caaml.py`.)*
 - Jede Stufen-Renderstelle braucht für diese Gefahrenart eine explizite Zuordnung (Stufe 1 ist
   Info, nie HIGH; Stufe 5 nie schwächer als 4).
 - Die toten DTOs `AvalancheDanger`/`AvalancheReport` in `src/app/models.py` werden nicht
