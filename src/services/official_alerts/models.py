@@ -55,6 +55,9 @@ class OfficialAlert:
     problems: tuple[str, ...] = ()
     # "earlier"/"later" nur, wenn Vor- und Nachmittag verschiedene Stufen haben.
     time_of_day: Optional[str] = None
+    # Issue #1441 S3 (SLF): amtliche Feinstufe "-"/"+" (``subdivision``), nur fuer
+    # die Langform (Mail, Telegram). Vergleiche nutzen weiter nur `native_level`.
+    level_modifier: Optional[str] = None
 
 
 def comparable_level(alert: OfficialAlert) -> int:

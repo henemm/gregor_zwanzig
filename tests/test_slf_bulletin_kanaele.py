@@ -283,7 +283,7 @@ def test_ac3_gerenderter_mail_und_telegram_text_nennt_unterhalb_2400_m(monkeypat
 def test_ac4_mehrdeutige_grenzen_ergeben_im_gerenderten_text_keine_hoehe(monkeypatch):
     """AC-4. GIVEN Abend-Ausgabe 2026-03-01, Region CH-5112 (maessig; Altschnee ab 2000 m UND
     Nassschnee bis 2200 m, beide maessig) WHEN Warnblock, Warnzeilen und Telegram gerendert
-    werden THEN Stufe 2 ohne "oberhalb"/"unterhalb"."""
+    werden THEN Stufe 2+ (Feinstufe plus laut Fixture) ohne "oberhalb"/"unterhalb"."""
     from tests.helpers.avalanche_report_support import embedded_block
 
     a = _slf_warnung(monkeypatch, WINTER_ABEND, "CH-5112", T_ABEND)
@@ -293,7 +293,7 @@ def test_ac4_mehrdeutige_grenzen_ergeben_im_gerenderten_text_keine_hoehe(monkeyp
     zeilen = " | ".join(_warnzeilen_plain([a]))
     telegram = _telegram_direkt(a)
 
-    assert "Lawinenstufe 2 (mäßig)" in block and "Lawinenstufe 2 (mäßig)" in zeilen
+    assert "Lawinenstufe 2+ (mäßig)" in block and "Lawinenstufe 2+ (mäßig)" in zeilen
     for text in (block, zeilen, telegram):
         assert "oberhalb" not in text and "unterhalb" not in text, text
 
@@ -490,13 +490,14 @@ def test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an(m
     """AC-22. GIVEN Eskalation auf Stufe 4 in CH-7231 (abgeleitet aus 2026-03-01 Morgen)
     WHEN der Alarm im Trip- bzw. Ortsvergleich-Alarm versendet wird THEN kommt er ueber diesen
     Kanal an -- Premium-SMS ausdruecklich auch im Ortsvergleich -- mit Stufe, Ort (Ortsvergleich)
-    und Hoehe (Langform) in kanalgerechter Form."""
+    und Hoehe (Langform) in kanalgerechter Form. Die Feinstufe minus der Vorlage bleibt
+    erhalten (``derive`` aendert sie nicht) -- Langform daher "4-"."""
     a = _muenstertal_abgeleitet(monkeypatch, 4)
     sendung = _einzige(_FLAECHEN[flaeche](monkeypatch, a), kanal)
     text = " ".join(str(sendung.get(f) or "") for f in ("subject", "body", "plain_text_body"))
 
     if kanal in ("email", "telegram"):
-        assert "Lawinenstufe 4 (groß) oberhalb 2000 m" in text, text
+        assert "Lawinenstufe 4- (groß) oberhalb 2000 m" in text, text
         assert (TRIP_NAME if flaeche == "trip" else ORT) in text, text
     else:
         assert len(_av_token(sendung["body"], 4)) == 1, sendung["body"]
@@ -508,11 +509,11 @@ def test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an(m
 def test_ac22_abgeleitet_stufe_5_nimmt_dieselben_wege_mit_originalziffer(monkeypatch, flaeche):
     """AC-22. GIVEN Stufe 5 (abgeleitet, ``level`` bleibt 4) WHEN der Alarm versendet wird
     THEN kommt er ueber alle vier Kanaele an, SMS/Premium-SMS mit ``AV5``, Mail mit
-    "Lawinenstufe 5 (sehr groß)"."""
+    "Lawinenstufe 5- (sehr groß)" (Feinstufe minus der Vorlage bleibt erhalten)."""
     mit = _FLAECHEN[flaeche](monkeypatch, _muenstertal_abgeleitet(monkeypatch, 5))
 
     assert set(mit.kanaele) == ALLE, mit
-    assert "Lawinenstufe 5 (sehr groß)" in _einzige(mit, "email")["body"]
+    assert "Lawinenstufe 5- (sehr groß)" in _einzige(mit, "email")["body"]
     for kanal in ("sms", "premium_sms"):
         assert len(_av_token(_einzige(mit, kanal)["body"], 5)) == 1, mit
 

@@ -27,10 +27,13 @@ from urllib.parse import urlsplit
 
 import httpx
 
-from utils.timezone import to_utc
-
 from services.official_alerts import warn_egress
-from services.official_alerts.models import AVALANCHE_BULLETIN, OfficialAlert
+# #1441 S3 (ADR-0091): die reinen CAAML-Funktionen liegen in caaml.py (geteilt mit SlfSource).
+from services.official_alerts.caaml import (  # noqa: F401  (Re-Export fuer den S1-Bestand)
+    BULLETIN_URL, EAWS_WORDS_DE, _carrier, _elevation, _find_region, _parse_time,
+    _problems, _rated, _time_of_day, parse_region_alert,
+)
+from services.official_alerts.models import OfficialAlert
 from services.official_alerts.region_mapper import RegionMapper
 
 logger = logging.getLogger("avalanche_report")
@@ -38,19 +41,8 @@ logger = logging.getLogger("avalanche_report")
 SERVICE_NAME = "avalanche_report"
 SOURCE_PREFIX = "avalanche_report"
 DEFAULT_URL_PATTERN = "https://static.avalanche.report/bulletins/latest/{X}_de_CAAMLv6.json"
-BULLETIN_URL = "https://avalanche.report/bulletin/{date}?region={region}"
 TIMEOUT = 8.0
 _DATA_DIR = Path(__file__).resolve().parent / "data"
-
-# EAWS-Stufe (CAAML ``mainValue``) -> Originalstufe 1-5.
-_MAIN_VALUES: dict[str, int] = {
-    "low": 1, "moderate": 2, "considerable": 3, "high": 4, "very_high": 5,
-}
-EAWS_WORDS_DE: dict[int, str] = {
-    1: "gering", 2: "mäßig", 3: "erheblich", 4: "groß", 5: "sehr groß",
-}
-# Gleichstand der Hoechststufe: all_day vor later vor earlier (Vertrag Abschnitt 2).
-_PERIOD_RANK: dict[str, int] = {"all_day": 0, "later": 1, "earlier": 2}
 
 
 @dataclass(frozen=True)
@@ -77,117 +69,6 @@ AVALANCHE_REGION_TABLE: tuple[AvalancheRegionConfig, ...] = (
     _row("IT-32-TN", "Lawinenwarndienst Trentino"),
     _row("AT-02", "Lawinenwarndienst Kärnten"),
 )
-
-
-def _parse_time(value: object) -> Optional[datetime]:
-    if not isinstance(value, str) or not value:
-        return None
-    return to_utc(datetime.fromisoformat(value.replace("Z", "+00:00")))
-
-
-def _elevation(rating: dict) -> tuple[Optional[str], Optional[str]]:
-    """(Wert, Richtung) woertlich -- ``treeline`` -> "Waldgrenze", kein erfundener Wert."""
-    elevation = rating.get("elevation") or {}
-    for bound, direction in (("lowerBound", "above"), ("upperBound", "below")):
-        value = elevation.get(bound)
-        if value is not None:
-            return ("Waldgrenze" if value == "treeline" else str(value)), direction
-    return None, None
-
-
-def _time_of_day(rated: list[tuple[int, dict]]) -> Optional[str]:
-    """Nur bei verschiedener Hoechststufe von Vor-/Nachmittag: die Periode der Hoechststufe."""
-    def _max(period: str) -> int:
-        return max((lvl for lvl, r in rated
-                    if r.get("validTimePeriod", "all_day") in (period, "all_day")), default=0)
-
-    if not any(r.get("validTimePeriod") in ("earlier", "later") for _l, r in rated):
-        return None
-    earlier, later = _max("earlier"), _max("later")
-    if earlier == later:
-        return None
-    return "earlier" if earlier > later else "later"
-
-
-def _carrier(rated: list[tuple[int, dict]]) -> tuple[int, dict]:
-    """Rating der Hoechststufe; Gleichstand: ohne Hoehenbegrenzung (breiteste
-    Aussage), dann all_day/later/earlier, dann Bulletin-Reihenfolge."""
-    top = max(lvl for lvl, _r in rated)
-    candidates = [(i, lvl, r) for i, (lvl, r) in enumerate(rated) if lvl == top]
-    _i, lvl, rating = min(candidates, key=lambda c: (
-        _elevation(c[2])[0] is not None,
-        _PERIOD_RANK.get(c[2].get("validTimePeriod", "all_day"), 0), c[0],
-    ))
-    return lvl, rating
-
-
-def _problems(bulletin: dict) -> tuple[str, ...]:
-    out: list[str] = []
-    for problem in bulletin.get("avalancheProblems") or []:
-        code = problem.get("problemType")
-        if code and code not in out:
-            out.append(code)
-    return tuple(out)
-
-
-def _rated(bulletin: dict, region_id: str) -> list[tuple[int, dict]]:
-    """Ratings mit bekannter EAWS-Stufe; unbekannte Werte (z. B. ``no_rating``)
-    werden verworfen und gemeldet -- nie still (#1405)."""
-    rated: list[tuple[int, dict]] = []
-    dropped: list[object] = []
-    for rating in bulletin.get("dangerRatings") or []:
-        value = rating.get("mainValue")
-        if value in _MAIN_VALUES:
-            rated.append((_MAIN_VALUES[value], rating))
-        else:
-            dropped.append(value)
-    if dropped:
-        logger.info("avalanche_report (#1441): %s -- Stufen ohne EAWS-Zuordnung verworfen: %s",
-                    region_id, dropped)
-    return rated
-
-
-def _find_region(doc: dict, region_id: str) -> Optional[tuple[dict, dict]]:
-    for bulletin in doc.get("bulletins") or []:
-        for region in bulletin.get("regions") or []:
-            if region.get("regionID") == region_id:
-                return bulletin, region
-    return None
-
-
-def parse_region_alert(doc: dict, region_id: str, *, source: str = SOURCE_PREFIX) -> Optional[OfficialAlert]:
-    """CAAML v6 -> ein ``OfficialAlert`` fuer eine Mikroregion. Rein, KEINE
-    Gueltigkeitspruefung. ``None``, wenn die Region in keinem Bulletin steht
-    oder das Bulletin keine bekannte Stufe traegt.
-
-    Datum der Bulletin-URL = Ausgabetag = Datum von ``validTime.endTime``. Die
-    Warndienste setzen ``endTime`` auf 17:00 Ortszeit (15:00 UTC Sommer, 16:00
-    UTC Winter) -- das UTC-Datum ist damit stets das Ortsdatum, ohne festes
-    Zonen-Literal und ohne stillen tz-Rueckfall (Waechter #1402)."""
-    found = _find_region(doc, region_id)
-    if found is None:
-        return None
-    bulletin, region = found
-    rated = _rated(bulletin, region_id)
-    if not rated:
-        return None
-    native, rating = _carrier(rated)
-    elevation_value, direction = _elevation(rating)
-    valid = bulletin.get("validTime") or {}
-    valid_to = _parse_time(valid.get("endTime"))
-    url = None
-    if valid_to is not None:
-        day = valid_to.date().isoformat()
-        url = BULLETIN_URL.format(date=day, region=region_id)
-    return OfficialAlert(
-        source=source, hazard=AVALANCHE_BULLETIN, level=min(native, 4),
-        label=f"Lawinenstufe {native} ({EAWS_WORDS_DE[native]})",
-        valid_from=_parse_time(valid.get("startTime")), valid_to=valid_to, url=url,
-        region_label=region.get("name"), dedup_id=f"{AVALANCHE_BULLETIN}:{region_id}",
-        scale="eaws", native_level=native, elevation_value=elevation_value,
-        elevation_direction=direction, problems=_problems(bulletin),
-        time_of_day=_time_of_day(rated),
-    )
 
 
 def _parse_document(resp: httpx.Response) -> dict:

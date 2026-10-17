@@ -181,6 +181,17 @@ def test_ac6_feinstufe_im_modell_ziffer_bleibt_unveraendert(fixture, region, nat
     assert a.level_modifier == modifier
 
 
+def test_ac6_feinstufe_kommt_vom_traeger_rating_nicht_vom_ersten_rating():
+    """AC-6 (Spec Abschnitt 6, Adversary F001): Given at_2026-04-10T08:00Z, CH-4242 -- erstes
+    Rating maessig/ganztags mit subdivision minus, Traeger-Rating erheblich/nachmittags ohne
+    Feinstufe When abgerufen Then native_level 3 und level_modifier None (Feinstufe des
+    Traegers, nicht des ersten Ratings)."""
+    a = _one(APRIL, "CH-4242")
+
+    assert (a.native_level, a.time_of_day) == (3, "later")
+    assert a.level_modifier is None
+
+
 def test_ac6_level_modifier_ist_optionales_modellfeld_mit_default_none():
     """AC-6: Given das Modell OfficialAlert When ohne Feinstufe angelegt Then level_modifier
     ist None (Bestand bit-identisch)."""

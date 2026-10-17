@@ -21,6 +21,7 @@ from services.official_alerts.massif_closure import MassifClosureSource
 from services.official_alerts.meteo_forets import MeteoForetsSource
 from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
 from services.official_alerts.models import OfficialAlert
+from services.official_alerts.slf import SlfSource
 from services.official_alerts.vigilance import VigilanceSource
 
 # Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036/#1037/#1085/#1086/#1427/#1445.
@@ -54,6 +55,10 @@ register_official_alert_source(DpcSource())
 # Gefahrenart `avalanche_bulletin`, konkurriert mit keiner Bestandsquelle;
 # die Position haelt den Tie-Break der Bestandsquellen unveraendert.
 register_official_alert_source(AvalancheReportSource())
+# Issue #1441 S3 (ADR-0091): SLF-Lagebericht DIREKT nach avalanche.report (AT/CH-
+# Polygone disjunkt). Diese Zeile ist der einzige Schalter: lehnt das SLF die
+# Nutzung ab, wird nur sie entfernt (Antrag #7).
+register_official_alert_source(SlfSource())
 
 __all__ = [
     "OfficialAlert",
@@ -72,4 +77,5 @@ __all__ = [
     "MeteoAlarmFeedSource",
     "DpcSource",
     "AvalancheReportSource",
+    "SlfSource",
 ]

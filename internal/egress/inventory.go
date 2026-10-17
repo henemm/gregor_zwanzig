@@ -41,9 +41,11 @@ var Inventory = map[string]Kind{
 	// static.* leitet per 301 auf avalanche.report weiter.
 	"static.avalanche.report": Blocked,
 	"avalanche.report":        Blocked,
-	"gateway.seven.io":        TestAccess,
-	"api.telegram.org":        TestAccess,
-	"mail.henemm.com":         TestAccess,
+	// Issue #1441 S3: SLF-Lawinen-Lagebericht (CAAML6, ganze Schweiz) — Warn-Host.
+	"aws.slf.ch":       Blocked,
+	"gateway.seven.io": TestAccess,
+	"api.telegram.org": TestAccess,
+	"mail.henemm.com":  TestAccess,
 	// Go-Dienst: Ortsauflösung, Höhen, Tour-Import — kostenlos und
 	// nebenwirkungsfrei, muss auf Staging funktionieren.
 	"nominatim.openstreetmap.org": TestAccess,
