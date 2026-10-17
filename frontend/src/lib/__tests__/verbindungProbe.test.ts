@@ -59,14 +59,18 @@ const warte = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 before(async () => {
 	modul = (await import('../stores/verbindung.svelte.ts')) as unknown as Modul;
+	modul.verbindung.starte();
+});
+
+/** Vertrag pruefen und das Intervall verkuerzen — je Test, damit jeder einzeln rot wird. */
+function kurzesIntervall(): void {
 	assert.equal(
 		typeof modul.setzeProbeIntervall,
 		'function',
 		'verbindung.svelte.ts muss `setzeProbeIntervall(ms)` exportieren (Test-Setter)'
 	);
 	modul.setzeProbeIntervall!(INTERVALL);
-	modul.verbindung.starte();
-});
+}
 
 /** fetch-Ersatz: `/api/health` antwortet mit `status` (oder Netzfehler bei null). */
 function installiereFetch(status: number | null): { health: () => number; restore: () => void } {
@@ -112,6 +116,7 @@ describe('#2361 AC-8: Probe-Intervall', () => {
 
 describe('#2361 AC-8: Probe entsperrt die App von selbst', () => {
 	test('offline + sichtbar ⇒ GET /api/health; Antwort 200 ⇒ online, Probe stoppt', FRIST, async () => {
+		kurzesIntervall();
 		netz = installiereFetch(200);
 		gehOffline();
 		assert.equal(modul.verbindung.offline, true, 'Messaufbau: Store ist offline');
@@ -124,6 +129,7 @@ describe('#2361 AC-8: Probe entsperrt die App von selbst', () => {
 	});
 
 	test('scheitert die Probe, bleibt die App gesperrt und probt im Takt weiter (kein Aufschaukeln)', FRIST, async () => {
+		kurzesIntervall();
 		netz = installiereFetch(null);
 		gehOffline();
 		await warte(INTERVALL * 6 + INTERVALL / 2);
@@ -135,6 +141,7 @@ describe('#2361 AC-8: Probe entsperrt die App von selbst', () => {
 
 describe('#2361 AC-8: keine Probe ohne Anlass', () => {
 	test('online ⇒ kein /api/health-Abruf', FRIST, async () => {
+		kurzesIntervall();
 		netz = installiereFetch(200);
 		gehOnline();
 		await warte(INTERVALL * 5);
@@ -142,6 +149,7 @@ describe('#2361 AC-8: keine Probe ohne Anlass', () => {
 	});
 
 	test('offline, aber Seite unsichtbar ⇒ kein Probe-Abruf', FRIST, async () => {
+		kurzesIntervall();
 		netz = installiereFetch(200);
 		sichtbarkeit('hidden');
 		gehOffline();
@@ -151,6 +159,7 @@ describe('#2361 AC-8: keine Probe ohne Anlass', () => {
 	});
 
 	test('wird die Seite wieder sichtbar, setzt die Probe ein und entsperrt', FRIST, async () => {
+		kurzesIntervall();
 		netz = installiereFetch(200);
 		sichtbarkeit('hidden');
 		gehOffline();
@@ -163,6 +172,7 @@ describe('#2361 AC-8: keine Probe ohne Anlass', () => {
 	});
 
 	test('wird die Seite unsichtbar, endet eine laufende Probe', FRIST, async () => {
+		kurzesIntervall();
 		netz = installiereFetch(null);
 		gehOffline();
 		await warte(INTERVALL * 3);
