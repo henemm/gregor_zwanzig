@@ -714,6 +714,11 @@ def send_one_compare_preset(
     # vermerken, damit der unabhaengige Checker sie nicht kurz darauf erneut
     # als eigenen Alarm verschickt (Trip-Gegenstueck seit #1614 Teil 1).
     if send_result.sent and not on_demand:
+        # Issue #2521 S2: erstes planmaessig zugestelltes Briefing (fail-soft).
+        from services.first_briefing import mark_first_briefing
+
+        mark_first_briefing(user_id)
+
         from services import alert_briefing_anchor
 
         for loc_result in result.locations:

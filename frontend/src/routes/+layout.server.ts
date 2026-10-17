@@ -1,5 +1,6 @@
 import type { LayoutServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { onboardingAusProfil } from './_home/onboardingSichtbarkeit.js';
 
 
 export const load: LayoutServerLoad = async ({ locals, cookies }) => {
@@ -10,6 +11,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	let passkeyPromptDismissed = false;
 	// Issue #2155 S4 — Sichtbarkeit des Admin-Eintrags; fail-closed, Go bleibt die Sperre.
 	let isAdmin = false;
+	// Issue #2521 S2 — Onboarding-Felder aus DEMSELBEN Profil-Abruf (fail-closed).
+	let profileJson: Record<string, unknown> | null = null;
 	if (locals.userId) {
 		const session = cookies.get('gz_session');
 		const profile = await fetch(`${API()}/api/auth/profile`, {
@@ -17,6 +20,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		})
 			.then((r) => (r.ok ? r.json() : null))
 			.catch(() => null);
+		profileJson = profile;
 		displayName = profile?.display_name ?? null;
 		hasPasskey = profile?.has_passkey === true;
 		passkeyPromptDismissed = profile?.passkey_prompt_dismissed === true;
@@ -28,6 +32,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		displayName,
 		hasPasskey,
 		passkeyPromptDismissed,
-		isAdmin
+		isAdmin,
+		onboarding: onboardingAusProfil(profileJson)
 	};
 };

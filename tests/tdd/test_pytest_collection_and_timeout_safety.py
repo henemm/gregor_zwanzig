@@ -125,9 +125,10 @@ _B3_MODULE_MARKED = (
     ("tests/tdd/test_issue_934_wizard_schedule.py", "staging"),
 )
 
-# Batch 3 (#1211b), K3-Tabelle: 10 Dateien bekommen nur auf den real
+# Batch 3 (#1211b), K3-Tabelle: 9 Dateien bekommen nur auf den real
 # dialenden Tests/Klassen einen Marker (Rest bleibt im Standardlauf) -- je
-# (Pfad, Marker)-Paar.
+# (Pfad, Marker)-Paar. #2521 S2 (ADR-0092): test_channel_test_button.py entfernt
+# -- der einzige email-dialende Test wurde durch einen netzfreien ersetzt.
 _B3_PARTIAL_MARKED = (
     ("tests/tdd/test_issue_1069_tier_channel_gating.py", "staging"),
     ("tests/tdd/test_issue_1037_massif_closure.py", "live"),
@@ -135,7 +136,6 @@ _B3_PARTIAL_MARKED = (
     ("tests/tdd/test_issue_645_telegram_outputerror_arity.py", "live"),
     ("tests/tdd/test_issue_731_unified_commands.py", "live"),
     ("tests/tdd/test_scheduler_triggers.py", "email"),
-    ("tests/tdd/test_channel_test_button.py", "email"),
     ("tests/tdd/test_issue_608_sms_seven_io.py", "live"),
     ("tests/tdd/test_fix_853_842_837_tooling_gates.py", "live"),
     ("tests/tdd/test_issue_1035_vigilance_source.py", "live"),
@@ -307,7 +307,7 @@ def live_collect() -> subprocess.CompletedProcess:
 
 @pytest.fixture(scope="module")
 def b3_partial_total_collect() -> subprocess.CompletedProcess:
-    """Marker-neutrale Collection NUR der 10 Batch-3-Teil-markierten Dateien
+    """Marker-neutrale Collection NUR der 9 Batch-3-Teil-markierten Dateien
     (`-o addopts=` schaltet die Marker-Filterung komplett ab) -- liefert den
     Gesamt-Count je Datei fuer den Partitionsnachweis (Muster
     mixed_total_collect)."""
@@ -465,7 +465,7 @@ def test_b3_module_files_excluded_from_default(default_collect, live_collect, st
 def test_b3_partial_files_partition(
     default_collect, live_collect, email_collect, staging_collect, b3_partial_total_collect,
 ):
-    """GIVEN 10 Batch-3-Dateien (#1211b) mit Teil-Marker (nur real dialende
+    """GIVEN 9 Batch-3-Dateien (#1211b) mit Teil-Marker (nur real dialende
     Tests/Klassen) WHEN Standardlauf und markereigener Lauf gemeinsam
     betrachtet werden THEN hat jede Datei im Standardlauf WENIGER Tests als
     marker-neutral gesammelt (Partitionsnachweis) UND Standardlauf +

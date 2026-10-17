@@ -3455,12 +3455,27 @@ Returns authenticated user profile (requires valid session cookie).
 | passkey_prompt_dismissed | bool | Whether the user has declined the one-time passkey setup offer (Issue #2248); **always present**. Persisted server-side so the dismissal holds across devices; absent/`false` on the underlying `user.json` both mean "not dismissed" |
 | pending_contact_address | string | Issue #2147 Scheibe B2: eine noch nicht bestätigte, ausstehende neue Kontaktadresse; `omitempty` — fehlt, solange keine Änderung aussteht. `email`/`mail_to` zeigen bis zur Bestätigung weiterhin die alten, wirksamen Werte; `email_verified` bleibt in dieser Zeit `true`. Wird erst über `POST /api/auth/verify-email` bestätigt (dann verschwindet dieses Feld und `mail_to`/`email` übernehmen den Wert) |
 | role | string | Issue #2155 S1 (ADR-0078): abgeleitete Rolle `admin`\|`user`; **always present** in `GET`. `admin` genau dann, wenn die Kennung in `GZ_ADMIN_USER_IDS` steht, sonst `user`. Nicht schreibbar: wird nie aus `user.json` gelesen oder dorthin geschrieben, ein mitgesendetes `role` in `PUT /api/auth/profile` wird ignoriert |
+| onboarding_pending | bool | Issue #2521 S2: neues Konto, dem die Startseite Willkommens-Kachel und „Startklar"-Checkliste zeigt; **always present**. Read-only (nur der Anlegeweg setzt es) |
+| onboarding_dismissed | bool | Issue #2521 S2: Willkommens-Kachel weggeklickt; **always present**. Über `PUT /api/auth/profile` schreibbar |
+| checklist_dismissed | bool | Issue #2521 S2: Checkliste weggeklickt; **always present**. Über `PUT /api/auth/profile` schreibbar |
+| test_mail_sent_at | string (RFC3339) | Issue #2521 S2: Zeitpunkt der letzten erfolgreichen Testmail (`POST /api/notify/test`, `channel=email`); `omitempty`, read-only. Nur informativ in der Checkliste |
+| first_briefing_at | string (RFC3339) | Issue #2521 S2: Zeitpunkt des ersten **planmäßigen** Briefings (Trip oder Ortsvergleich, nicht on-demand/Testversand); `omitempty`, read-only, wird einmalig gesetzt (`src/services/first_briefing.py`) |
+
+`PUT /api/auth/profile` nimmt von den Onboarding-Feldern **nur** `onboarding_dismissed` und `checklist_dismissed` an (Merge-Semantik, andere Felder bleiben unberührt); `onboarding_pending`, `test_mail_sent_at` und `first_briefing_at` werden ignoriert.
 
 **Error Responses:**
 
 | Status | Body | Scenario |
 |--------|------|----------|
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+
+#### POST /api/notify/test
+
+Issue #2521 S2 (ADR-0092). Body `{"channel": "email"|"telegram"}`. Go proxyt an den Python-Core (`src/services/channel_test_service.py`) mit der `user_id` des Aufrufers.
+
+- `channel=email`: geht über die **normale Versandkette** an die **bestätigte Profiladresse** (`mail_to`, `email_verified_at` gesetzt) des Nutzers — nicht mehr über den Test-Postausgang (löst den entsprechenden Teil von `fix_1412_s4a` ab).
+- **Sperren** (Antwort HTTP 200 mit `{"error": "..."}`, kein Versand): fehlende oder unbestätigte Adresse, sowie Kennung `default`.
+- Erfolg: `{"status": "ok"}`. Nur dann setzt die Go-Schicht `test_mail_sent_at` im Profil des Aufrufers (Fehler des Core melden HTTP 200 + `error`, HTTP 200 allein genügt nicht).
 
 #### PUT /api/auth/profile
 
@@ -4683,6 +4698,12 @@ function corridorInside(value, min, max) {
 
 ## Changelog
 
+- 2026-10-17: Issue #2521 Scheibe S2 (ADR-0092) — Onboarding: Profil-DTO erhält
+  `onboarding_pending`, `onboarding_dismissed`, `checklist_dismissed` (immer vorhanden) sowie
+  `test_mail_sent_at`, `first_briefing_at` (`omitempty`, read-only); `PUT /api/auth/profile`
+  nimmt nur die beiden Dismiss-Flags. `POST /api/notify/test` (`email`) sendet über die normale
+  Versandkette an die bestätigte Profiladresse; gesperrt bei fehlender/unbestätigter Adresse
+  oder Kennung `default`. Spec: `docs/specs/modules/onboarding_willkommen_checkliste.md`.
 - 2026-10-03: Issue #2160 (Epic #2138, ADR-0081) — Kontoloeschung mit Re-Auth: neuer
   Endpunkt `POST /api/auth/account/delete` (Body `{password?, code?}`) und
   `POST /api/auth/account/delete-code`; der alte DELETE auf `/api/auth/account` ist entfallen

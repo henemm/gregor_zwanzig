@@ -69,3 +69,26 @@ def test_index_status_matches_file_status():
         "Status-Drift zwischen ADR-Dateien und docs/adr/README.md-Index:\n  "
         + "\n  ".join(mismatches)
     )
+
+
+def test_adr_0092_supersede_note_index_and_file_consistent():
+    # doc-compliance-test
+    """#2521 S2 / AC-18: Die #198-Regel „Testmail nie über Resend" ist durch
+    ADR-0092 abgelöst — der Vermerk in der fix_1412-Spec, die Indexzeile und
+    die ADR-Datei müssen zusammenpassen."""
+    name = "0092-nutzer-testmail-an-bestaetigte-profiladresse.md"
+    spec = REPO / "docs" / "specs" / "modules" / "fix_1412_s4a_empfaengervertrag_telegram.md"
+    assert "abgelöst durch #2521 S2 / ADR-0092" in spec.read_text(encoding="utf-8"), (
+        "fix_1412-Spec: Vermerk „abgelöst durch #2521 S2 / ADR-0092“ fehlt"
+    )
+
+    index_lines = [
+        ln for ln in README.read_text(encoding="utf-8").splitlines()
+        if ln.startswith("| [0092]") and name in ln
+    ]
+    assert index_lines, f"docs/adr/README.md: keine Indexzeile „| [0092]…“ mit Verweis auf {name}"
+
+    adr = ADR_DIR / name
+    assert adr.is_file(), f"{name} fehlt"
+    h1 = next((ln for ln in adr.read_text(encoding="utf-8").splitlines() if ln.startswith("# ")), "")
+    assert h1.startswith("# ADR-0092"), f"H1 von {name} beginnt nicht mit „# ADR-0092“: {h1!r}"

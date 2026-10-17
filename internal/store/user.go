@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/henemm/gregor-api/internal/model"
 )
@@ -149,6 +150,54 @@ func (s *Store) SetUserDisabled(id string, disabled bool) error {
 			delete(m, "disabled")
 		}
 	})
+}
+
+// SetUserOnboardingFlags setzt NUR die uebergebenen Dismiss-Flags (nil =
+// unberuehrt) per Merge (Issue #2521 S2). Fehlende user.json = Fehler.
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) SetUserOnboardingFlags(id string, onboardingDismissed, checklistDismissed *bool) error {
+	return s.mergeUserJSON(id, func(m map[string]json.RawMessage) {
+		set := func(key string, v *bool) {
+			if v == nil {
+				return
+			}
+			if *v {
+				m[key] = json.RawMessage("true")
+			} else {
+				delete(m, key)
+			}
+		}
+		set("onboarding_dismissed", onboardingDismissed)
+		set("checklist_dismissed", checklistDismissed)
+	})
+}
+
+// SetUserTestMailSentAt setzt NUR "test_mail_sent_at" per Merge (Issue #2521 S2).
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) SetUserTestMailSentAt(id string, at time.Time) error {
+	return s.mergeUserJSON(id, func(m map[string]json.RawMessage) {
+		m["test_mail_sent_at"], _ = json.Marshal(at.UTC())
+	})
+}
+
+// LoadFirstBriefingAt liest data/users/<id>/first_briefing.json (Issue #2521
+// S2, geschrieben vom Python-Core). Fail-soft: fehlend/kaputt = "".
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) LoadFirstBriefingAt(id string) string {
+	if !ValidUserID(id) {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(s.UserDir(id), "first_briefing.json"))
+	if err != nil {
+		return ""
+	}
+	var fb struct {
+		At string `json:"first_briefing_at"`
+	}
+	if json.Unmarshal(data, &fb) != nil {
+		return ""
+	}
+	return fb.At
 }
 
 // SetUserTierAdmin setzt "tier" und loescht einen offenen Antrag

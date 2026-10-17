@@ -803,7 +803,7 @@ frontend/
 │       ├── locations/ · settings/ · subscriptions/ · archiv/ · gpx-upload/ · account/
 │       ├── admin/                 # Admin-Seite (#2155 S4): Nutzerliste, Tier, Konto sperren; Load antwortet 403 für Nicht-Admins
 │       ├── login/ · register/ · logout/ · magic-link/ · forgot-password/ · reset-password/ · verify-email/
-│       ├── _home/                 # Route-lokale Cockpit-Kacheln
+│       ├── _home/                 # Route-lokale Cockpit-Kacheln (inkl. Willkommen/StartklarCheckliste, #2521 S2)
 │       ├── _design/ · _design-system/  # Component showcases (dev-only)
 │       └── email-preview-dev/     # Mail-Vorschau (dev-only)
 │       (URL-Konvention ?tab= statt #hash: docs/reference/navigation.md)

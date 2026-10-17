@@ -584,6 +584,7 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 				CreatedAt:       now,
 			}},
 		}
+		model.MarkOnboardingPending(&newUser)
 		if err := s.SaveUser(newUser); err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "store_error")
 			return

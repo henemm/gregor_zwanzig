@@ -400,6 +400,7 @@ func createOAuthUser(s *store.Store, provider, sub, email string) (*model.User, 
 			MailTo:        email,
 			CreatedAt:     time.Now(),
 		}
+		model.MarkOnboardingPending(&user)
 		if err := s.SaveUser(user); err != nil {
 			return nil, err
 		}

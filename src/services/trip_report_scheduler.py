@@ -1788,6 +1788,12 @@ class TripReportSchedulerService:
                 trip.id, report_type, result.sent_channels,
                 angefordert=angefordert, mail_empfaenger=mail_empfaenger_fuer_log,
             )
+            if not angefordert:
+                # Issue #2521 S2: nur planmaessig zugestellte Briefings haken
+                # "Erstes Briefing erhalten" ab (fail-soft, einmalig).
+                from services.first_briefing import mark_first_briefing
+
+                mark_first_briefing(self._user_id)
             logger.info(
                 "Trip report sent: %s (%s) via %s%s",
                 trip.name,
