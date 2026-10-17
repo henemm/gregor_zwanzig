@@ -59,3 +59,42 @@ test('AC-7/#1271: Pausiert-Zähler wird aus tripStatus() === "pausiert" berechne
 		'+page.svelte: Pausiert-Zähler soll über tripStatus(t, now) === "pausiert" gefiltert werden — fehlt noch (TDD RED erwartet Fehler).'
 	);
 });
+
+// ---------------------------------------------------------------------------
+// Issue #2278 AC-11 (TDD): archivierte Trips sind kein "Fertig" der Trip-LISTE.
+// Die Liste blendet Archiviertes aus (Loader-Filter; Zwei-Sessions-Nachweis in
+// lib/server/__tests__/profileLoader.test.ts). Das Cockpit bleibt UNVERAENDERT:
+// tripStatus() mappt archived weiterhin auf 'fertig' (Guard, heute und danach gruen).
+// Hinweis /50: die drei Source-Inspection-Tests oben pruefen die INLINE-Pillen der Seite
+// und muessen auf StatusFilterPills umgestellt werden (Spec "Bewusst zu aendernde Tests").
+// ---------------------------------------------------------------------------
+import { register } from 'node:module';
+import { tripStatus } from '../../../lib/utils/tripStatus.ts';
+
+const VERGANGEN = { id: 'a', name: 'A', stages: [{ id: 's', name: 's', date: '2026-01-01', waypoints: [] }] } as any;
+
+test('AC-11 Guard: Cockpit-Status eines archivierten Trips mit vergangenem Datum bleibt "fertig"', () => {
+	const jetzt = new Date('2026-10-17T12:00:00Z');
+	assert.equal(tripStatus({ ...VERGANGEN, archived_at: '2026-02-01T00:00:00Z' }, jetzt), 'fertig');
+	assert.equal(tripStatus(VERGANGEN, jetzt), 'fertig');
+});
+
+test('AC-11: die Trip-Liste filtert Archiviertes serverseitig (load() von +page.server.ts)', async () => {
+	register(new URL('../../compare/__tests__/server-load-resolve.hooks.mjs', import.meta.url));
+	const { load } = (await import('../+page.server.ts')) as any;
+	const original = globalThis.fetch;
+	globalThis.fetch = (async () =>
+		new Response(
+			JSON.stringify([
+				{ id: 'aktiv', name: 'Aktiv', stages: [], archived_at: null },
+				{ id: 'archiviert', name: 'Arch', stages: [], archived_at: '2026-09-01T00:00:00Z' }
+			]),
+			{ status: 200 }
+		)) as unknown as typeof fetch;
+	try {
+		const r = await load({ cookies: { get: () => 'sess' }, fetch: globalThis.fetch });
+		assert.deepEqual((r.trips ?? []).map((t: any) => t.id), ['aktiv']);
+	} finally {
+		globalThis.fetch = original;
+	}
+});
