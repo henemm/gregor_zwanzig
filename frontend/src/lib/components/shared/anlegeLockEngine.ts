@@ -55,6 +55,20 @@ export function canFinish(done: Set<string>, versandId: string = 'versand'): boo
 	return done.has(versandId);
 }
 
+/**
+ * „Mit Standardwerten speichern" (Issue #2521 S3, kind-neutral): frei, wenn die
+ * Pflichtangaben erfuellt und die Standardwerte bereit sind und der
+ * Bestandsknopf (`canFinish` bzw. `canSave`) noch gesperrt ist — nie beide
+ * gleichzeitig aktiv.
+ */
+export function canFinishMitStandardwerten(p: {
+	pflichtErfuellt: boolean;
+	defaultsBereit: boolean;
+	bestandFrei: boolean;
+}): boolean {
+	return p.pflichtErfuellt && p.defaultsBereit && !p.bestandFrei;
+}
+
 /** Zaehlt, wie viele der `steps` in `done` stehen. */
 export function progressCount(done: Set<string>, steps: readonly string[]): number {
 	return steps.filter((s) => done.has(s)).length;

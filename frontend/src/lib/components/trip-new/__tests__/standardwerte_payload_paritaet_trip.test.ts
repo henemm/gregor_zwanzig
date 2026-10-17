@@ -40,6 +40,7 @@ import {
 	knopfEinbettungen,
 	knopfAttribut,
 	ruhe,
+	derivedNeu,
 	type EditorUmgebung
 } from '../../shared/__tests__/standardwerteEditorPruefstand.ts';
 
@@ -200,5 +201,68 @@ describe('AC-6/AC-9/AC-11 an der Wirkstelle: Klick im echten Trip-Editor', () =>
 		await klick();
 		await ruhe();
 		assert.equal(posts.length, 1);
+	});
+});
+
+// ── Adversary F001: defaultsBereit kommt ueber den ECHTEN Rueckkanal ──────────
+// `catalogLoaded` wird hier NICHT gesaet: der Editor-Handler, den der
+// Wetter-Metriken-Reiter nach seinem Katalog-Laden bedient
+// (`onWeatherMetricsChange={handleWeatherMetricsChange}`), muss den Knopf
+// freischalten.
+async function editorOhneKatalogSaat() {
+	const posts: string[] = [];
+	const e = await editorUmgebung(TRIP_EDITOR, {
+		stateOverride: {},
+		name: 'Trip X',
+		startDate: '2026-07-01',
+		stages: [1, 2].map((id) => ({ id, name: `E${id}`, gpx: GPX, waypoints: [] })),
+		reportConfig: klon(VOR_VERSAND),
+		api: {
+			post: async (url: string) => {
+				posts.push(url);
+				return { id: 'neu-1' };
+			},
+			get: async () => ({})
+		}
+	});
+	const knoepfe = knopfEinbettungen(e.ast);
+	assert.ok(knoepfe.length >= 2, 'TripNewEditor bettet <StandardwerteSpeichernKnopf> nicht Desktop UND mobil ein');
+	const aktiv = () => knoepfe.map((k) => Boolean(knopfAttribut(k, e, 'enabled')));
+	return { e, posts, aktiv, klick: () => (knopfAttribut(knoepfe[0], e, 'onclick') as () => unknown)() };
+}
+
+describe('F001: Rueckkanal des Wetter-Metriken-Reiters schaltet den Standardwerte-Knopf frei', () => {
+	test('vor der Meldung des Reiters gesperrt, danach aktiv; Klick speichert genau einmal', async () => {
+		const { e, posts, aktiv, klick } = await editorOhneKatalogSaat();
+		assert.ok(aktiv().every((a) => a === false), 'Knopf aktiv, bevor der Reiter seine Standardauswahl gemeldet hat');
+		assert.equal(typeof e.u.handleWeatherMetricsChange, 'function', 'Messaufbau: handleWeatherMetricsChange fehlt');
+		e.u.handleWeatherMetricsChange([{ metric_id: 'temperature', enabled: true }]);
+		derivedNeu(e);
+		assert.ok(aktiv().every((a) => a === true), 'Meldung des Reiters schaltet den Knopf nicht frei');
+		await klick();
+		await ruhe();
+		assert.deepEqual(posts, ['/api/trips']);
+	});
+});
+
+// ── Adversary F002: beide Trip-Guards einzeln ────────────────────────────────
+describe('F002: gesperrtes Gate — jeder Trip-Guard wirkt fuer sich', () => {
+	test('Klick-Handler bei gesperrtem Gate ruft buildAndSave gar nicht auf', async () => {
+		const { e, klick } = await editorOhneKatalogSaat();
+		let aufrufe = 0;
+		e.u.buildAndSave = async () => {
+			aufrufe++;
+			return null;
+		};
+		await klick();
+		await ruhe();
+		assert.equal(aufrufe, 0, 'Klick-Handler ignoriert das gesperrte Standardwerte-Gate');
+	});
+	test('buildAndSave(true) bei gesperrtem Gate speichert nichts', async () => {
+		const { e, posts } = await editorOhneKatalogSaat();
+		const id = await e.u.buildAndSave(true);
+		await ruhe();
+		assert.equal(id, null);
+		assert.deepEqual(posts, [], 'buildAndSave(mitStandardwerten) ignoriert das gesperrte Gate');
 	});
 });

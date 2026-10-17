@@ -104,7 +104,7 @@ describe('AC-16: Kanaele gleichrangig nebeneinander', () => {
 });
 
 describe('AC-21 (Render): Lesbarkeit', () => {
-	test('die Seite nutzt nie --g-ink-4 (nur Placeholder/Disabled erlaubt)', async () => {
+	test('die Seite nutzt nie --g-ink-4 (nur Platzhalter/Disabled erlaubt)', async () => {
 		assert.ok(!(await hilfeHtml()).includes('--g-ink-4'));
 	});
 	test('kein „Tour" im gerenderten Text', async () => {

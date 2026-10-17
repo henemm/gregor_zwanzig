@@ -174,3 +174,31 @@ describe('AC-8: besuchter, geaenderter Wertebereich bleibt erhalten', () => {
 		assert.deepEqual(gespeichert[0], klon(nutzer), 'Profil-Vorbelegung hat die Nutzerwerte ueberschrieben');
 	});
 });
+
+// ── Adversary F002: Klick bei gesperrtem Gate (Katalog GELADEN, nur 1 Ort) ────
+// Der Katalog ist da — damit greift allein der Gate-Guard des Klick-Handlers,
+// nicht der Katalog-Guard.
+describe('F002: Ortsvergleich — Klick bei gesperrtem Gate speichert nichts', () => {
+	test('nur 1 Ort, Katalog geladen: Klick-Handler loest kein saveNewPreset aus', async () => {
+		const wiz = neuerWiz({ name: 'Std', pickedIds: ['loc0'], activityProfile: null });
+		let speichern = 0;
+		wiz.saveNewPreset = async () => {
+			speichern++;
+		};
+		const e = await editorUmgebung(COMPARE_EDITOR, {
+			getContext: () => wiz,
+			stateOverride: { activeTab: 'vergleich', isMobileViewport: false },
+			window: { matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) }
+		});
+		await mountenUndWarten(e);
+		derivedNeu(e);
+		assert.ok(Array.isArray(e.u.standardwerteKatalog), 'Messaufbau: Vergleichs-Katalog nicht geladen');
+		const knoepfe = knopfEinbettungen(e.ast);
+		assert.ok(knoepfe.length >= 1);
+		assert.equal(Boolean(knopfAttribut(knoepfe[0], e, 'enabled')), false, 'Messaufbau: Gate muss gesperrt sein');
+		await (knopfAttribut(knoepfe[0], e, 'onclick') as () => unknown)();
+		await ruhe();
+		assert.equal(speichern, 0, 'Klick-Handler ignoriert das gesperrte Standardwerte-Gate');
+		assert.deepEqual(wiz.corridors ?? [], [], 'Klick bei gesperrtem Gate hat trotzdem vorbelegt');
+	});
+});

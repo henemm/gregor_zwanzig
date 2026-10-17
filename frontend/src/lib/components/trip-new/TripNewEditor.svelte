@@ -44,7 +44,10 @@
 		progressCount,
 		canSave,
 		buildCreateTripPayload,
+		ergaenzeStandardwerteReportConfig,
 	} from './tripNewLogic.ts';
+	import { canFinishMitStandardwerten } from '$lib/components/shared/anlegeLockEngine';
+	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
 
 	// ── Test-Seam (Issue #1738, Muster `profileOverride` aus #1510) ──────────
 	// Der gesamte Anlege-Zustand lebt in internem `$state`; `isMobileViewport`
@@ -113,6 +116,10 @@
 	let corridors = $state<Corridor[]>([]);
 	// Metrik-Katalog fuer die Alarm-Metrik-Zeilen (fail-soft, Muster WeatherMetricsTab).
 	let metricsCatalog = $state<MetricCatalog>({});
+	// #2521 S3: Voraussetzung fuer „Mit Standardwerten speichern" (defaultsBereit):
+	// Metrik-Katalog geladen UND Standardauswahl vom Wetter-Metriken-Reiter
+	// gemeldet (gesetzt in handleWeatherMetricsChange).
+	let catalogLoaded = $state(false);
 	onMount(() => {
 		api.get<MetricCatalog>('/api/metrics').then((c) => { metricsCatalog = c; }).catch(() => {});
 	});
@@ -170,6 +177,12 @@
 	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited));
 	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited));
 	const ready = $derived(canSave(done));
+	// #2521 S3: eigenes Gate des Standardwerte-Knopfs (Bestandsknopf bleibt an `ready`).
+	const standardwerteFrei = $derived(canFinishMitStandardwerten({
+		pflichtErfuellt: name.trim().length > 0 && !!startDate && etDone,
+		defaultsBereit: catalogLoaded,
+		bestandFrei: ready,
+	}));
 	const gpxCount = $derived(stages.filter(s => s.gpx !== null).length);
 	const progressN = $derived(progressCount(done));
 
@@ -377,6 +390,9 @@
 	// Rückkanal analog handleChannelsChange — ohne ihn verwirft der Anlege-
 	// Dialog die sichtbar angehakte Auswahl still beim Speichern.
 	function handleWeatherMetricsChange(m: WeatherConfigMetric[]) {
+		// #2521 S3: der Reiter meldet erst nach SEINEM Katalog-Laden — erst dann
+		// liegt die Standard-Metrikauswahl vor (defaultsBereit des Standardwerte-Knopfs).
+		catalogLoaded = true;
 		// Fix-Loop 2 (Staging-Befund effect_update_depth_exceeded): defensiv
 		// zusaetzlich zum Effect-Scope-Fix in WeatherMetricsTab.svelte --
 		// inhaltsgleicher Aufruf darf KEINE neue Array-Referenz erzeugen, sonst
@@ -422,8 +438,10 @@
 	function handleAlarmQuietHoursChange(von: string | undefined, bis: string | undefined) { alarm = { ...alarm, quietFrom: von, quietTo: bis }; }
 
 	// ── Speichern ─────────────────────────────────────────────────────────────
-	async function buildAndSave(): Promise<string | null> {
-		if (!ready || saving || savedTripId) return null;
+	// #2521 S3: `mitStandardwerten` = Weg des Standardwerte-Knopfs — eigenes Gate
+	// statt `ready`, report_config wie nach unveraendertem Durchklicken ergaenzt.
+	async function buildAndSave(mitStandardwerten = false): Promise<string | null> {
+		if (!(mitStandardwerten ? standardwerteFrei : ready) || saving || savedTripId) return null;
 		saveError = null;
 		saving = true;
 		// Issue #658 — etwaige offene Editor-Edits vor dem POST in den State holen.
@@ -436,7 +454,7 @@
 				stages: stages.map(s => ({ id: s.id, name: s.name, waypoints: s.waypoints })),
 				weatherMetrics,
 				channels,
-				reportConfig,
+				reportConfig: mitStandardwerten ? ergaenzeStandardwerteReportConfig(reportConfig) : reportConfig,
 				alarm,
 				corridors,
 				activity: selectedActivity,
@@ -475,7 +493,16 @@
 		return () => { intentionalCancel = true; goto('/trips'); };
 	}
 
+	function makeStandardwerteHandler() {
+		return async function doSaveStandardwerte() {
+			if (!standardwerteFrei) return;
+			const id = await buildAndSave(true);
+			if (id) await goto(`/trips/${id}`);
+		};
+	}
+
 	const onSave = makeSaveHandler();
+	const onStandardwerte = makeStandardwerteHandler();
 	const onCancel = makeCancelHandler();
 
 	// Die Karte im Wegpunkte-Reiter muss ueber dem Speichern-Footer enden (Attribution).
@@ -942,6 +969,7 @@
 			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
 				{#if !ready}
 					<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4);">Versand einrichten zum Speichern</span>
+					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />
 				{/if}
 				<button type="button" onclick={onSave} disabled={!ready || saving}
 					data-testid="trip-new-save-btn"
@@ -1218,6 +1246,11 @@
 
 			<!-- Speichern (geteilter Sticky-Footer; BottomNav ist auf Anlege-Seiten ausgeblendet) -->
 			<EditorStickyFooter context="route" navClearance={false} testid="tn-mobile-footer">
+				{#if !ready}
+					<div style="display: flex; justify-content: center; margin-bottom: 8px;">
+						<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="tn-mobile-standardwerte" />
+					</div>
+				{/if}
 				<MBtn block variant={ready ? 'primary' : 'quiet'} size="xl" disabled={!ready || saving} onclick={onSave} testid="tn-mobile-save">
 					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Speichern'}
 				</MBtn>

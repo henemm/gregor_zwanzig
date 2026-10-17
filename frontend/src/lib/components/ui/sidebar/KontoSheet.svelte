@@ -16,6 +16,8 @@
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import ShieldIcon from '@lucide/svelte/icons/shield';
 	import XIcon from '@lucide/svelte/icons/x';
+	import HelpIcon from '@lucide/svelte/icons/circle-question-mark';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		open: boolean;
@@ -39,6 +41,8 @@
 		{ href: '/account#kanaele', label: 'Kanäle & Empfänger', icon: MessageSquare, testid: 'konto-sheet-kanaele' },
 		{ href: '/account', label: 'Einstellungen', icon: SettingsIcon, testid: 'konto-sheet-einstellungen' },
 		{ href: '/account#system-status', label: 'System-Status', icon: MonitorIcon, testid: 'konto-sheet-status' },
+		// Issue #2521 S3 — Hilfeseite.
+		{ href: '/hilfe', label: t('nav.hilfe'), icon: HelpIcon, testid: 'konto-sheet-hilfe' },
 	];
 </script>
 
