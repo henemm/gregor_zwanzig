@@ -627,7 +627,7 @@ def _find_constant_success_violations(path: Path) -> dict[str, str]:
     * **Ausschluss „except divergiert":** enthält ein ``except``-Handler der
       Funktion selbst ein ``return`` mit einem ANDEREN Wert, ist der Status
       doch an den Ausgang gekoppelt → kein Fund. Belegt korrekt
-      ausgeschlossen: ``channel_test_service.py:42`` (Handler liefert
+      ausgeschlossen: ``channel_test_service.py:78`` (Handler liefert
       ``{"error": ...}``), ``forecast_budget.py:102`` und
       ``official_alerts/meteoalarm_budget.py:143`` (Handler liefert
       ``"status": "unavailable"``) — AC-5.
@@ -2141,10 +2141,10 @@ def test_scanner_ignores_diverging_except_return_in_synthetic_file(tmp_path):
 
     Zwei belegte Bauformen aus dem eigenen Bestand:
 
-    1. ``channel_test_service.send_test_message`` (Z. 12-45): ``{"status":
-       "ok"}`` (Z. 42) wird nur erreicht, wenn ``output.send()`` ohne
+    1. ``channel_test_service.send_test_message`` (Z. 41-80): ``{"status":
+       "ok"}`` (Z. 78) wird nur erreicht, wenn ``output.send()`` ohne
        Ausnahme durchgelaufen ist; der Handler liefert ``{"error": str(exc)}``
-       (Z. 43f.).
+       (Z. 79f.).
     2. ``ForecastBudgetGate.snapshot`` (Z. 87-113): ``"status": "ok"``
        (Z. 102) im ``try``, ``"status": "unavailable"`` (Z. 112) im
        ``except``. Identisch gebaut ist
