@@ -2,7 +2,7 @@
 	// Issue #182 — Alert-Konfigurator: Alert-Vorschau (Email).
 	// Issue #586 — h4 entfernt, Card-Styling nach JSX.
 
-	import { api } from '$lib/api';
+	import { langlaeufer } from '$lib/api';
 	import type { Trip, AlertRule } from '$lib/types';
 	import { buildAlertPreviewPayload } from './alertPreviewHelpers';
 
@@ -31,13 +31,14 @@
 		sms = '';
 		try {
 			const payload = buildAlertPreviewPayload(alertRules, trip.stages);
-			const result = await api.post<{
+			// #2361: eigenes Budget 40 s (Go-Proxy ca. 30 s), s. `langlaeufer` in api.ts.
+			const result = await langlaeufer.alarmVorschau<{
 				subject: string;
 				email_html: string;
 				email_plain: string;
 				telegram: string;
 				sms: string;
-			}>(`/api/trips/${trip.id}/alert-preview`, payload);
+			}>(trip.id, payload);
 			subject = result.subject;
 			emailHtml = result.email_html;
 			telegram = result.telegram;

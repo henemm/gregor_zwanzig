@@ -38,7 +38,7 @@
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
-	import { api } from '$lib/api.js';
+	import { api, langlaeufer } from '$lib/api.js';
 	import { sendComparePreset } from '$lib/utils/sendOutcome';
 	import { onMount } from 'svelte';
 	// Issue #1256 Scheibe 6 (AC-14/15/16/31/32/33/34): Orte-Tab-Drag +
@@ -625,14 +625,15 @@
 		previewSmsCount = 0;
 		previewError = null;
 		previewLoading = true;
-		api
-			.post<{
+		// #2361: eigenes Budget 70 s (Go-Proxy 60 s), s. `langlaeufer` in api.ts.
+		langlaeufer
+			.compareVorschau<{
 				subject: string;
 				email_html: string;
 				telegram: string;
 				sms: string;
 				sms_char_count: number;
-			}>(`/api/preview/compare/${presetId}`, {})
+			}>(presetId)
 			.then((r) => {
 				previewHtml = r.email_html;
 				previewTelegram = r.telegram;

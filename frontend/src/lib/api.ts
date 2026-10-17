@@ -70,6 +70,32 @@ function schreibenVerboten(method: string): boolean {
 	return schreibsperre;
 }
 
+/**
+ * Issue #2361: Zeitlimit je Abruf. Ohne Limit wartet `fetch` bei einer praktisch
+ * toten Verbindung (EDGE-Funkloch) minutenlang, ohne dass die App reagiert.
+ * 25 s: ein Funkloch wird nach rund einer halben Minute gemeldet. Langlaeufer
+ * geben ihr eigenes Budget ueber die Option `zeitlimitMs` mit.
+ */
+export const STANDARD_ZEITLIMIT_MS = 25_000;
+let standardZeitlimitMs = STANDARD_ZEITLIMIT_MS;
+
+/** Nur fuer Tests: senkt das Default-Budget, damit kein Fake-Timer noetig ist. */
+export function setzeStandardZeitlimit(ms: number): void {
+	standardZeitlimitMs = ms;
+}
+
+/** Fetch-Optionen plus eigenes Budget je Aufruf (#2361). */
+export type AbrufOptionen = RequestInit & { zeitlimitMs?: number };
+
+function zeitlimitFehler(): Error {
+	// Bewusst KEIN `status: 0` — das ist die Schreibsperre aus #2131.
+	const fehler = new Error(
+		'Die Verbindung ist zu langsam — der Server hat nicht rechtzeitig geantwortet.'
+	);
+	fehler.name = 'TimeoutError';
+	return fehler;
+}
+
 async function send<T>(
 	method: string,
 	path: string,
@@ -77,7 +103,7 @@ async function send<T>(
 	/** true = dieser Vorgang laeuft durch die Warteschlange (serialisierter PUT). */
 	serializedWrite: boolean,
 	body?: unknown,
-	extra?: RequestInit,
+	optionen?: AbrufOptionen,
 	/** #2317: nimmt den ETag der Antwort und das Registry-Ergebnis auf. */
 	fassung?: AntwortFassung
 ): Promise<T> {
@@ -88,6 +114,7 @@ async function send<T>(
 	// eingefroren und der zweite scheiterte mit 412, obwohl er gewartet hat.
 	// Issue #1433: auch ein keepalive-Request (Unload-Flush) traegt das If-Match,
 	// solange die Ressource im Konflikt ist — der Server lehnt mit 412 ab.
+	const { zeitlimitMs, ...extra } = optionen ?? {};
 	const traegtIfMatch = serializedWrite || (extra?.keepalive === true && tripId !== null && istKonflikt(tripId));
 	const ifMatch = traegtIfMatch && tripId ? getKnownEtag(tripId) : undefined;
 	// Stand der Registry beim Losschicken — Grundlage dafuer, einen verspaetet
@@ -105,16 +132,45 @@ async function send<T>(
 	if (body !== undefined) {
 		opts.body = JSON.stringify(body);
 	}
+	// Issue #2361: eigenes Abbruch-Signal NACH `...extra` — ein Aufrufer-Signal
+	// wird nicht ersetzt, sondern verknuepft (bricht der Aufrufer ab, bricht
+	// auch der interne Controller ab). Ohne `AbortSignal.timeout/any`, die
+	// Safari < 17.4 nicht kennt. keepalive (Unload-Flush) bleibt ohne Limit:
+	// die Seite ist ohnehin im Verlassen, der Browser begrenzt keepalive selbst.
+	const aufruferSignal = extra.signal ?? null;
+	const mitZeitlimit = extra.keepalive !== true;
+	let zeitAbgelaufen = false;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let aufruferAbbruch: (() => void) | undefined;
+	if (mitZeitlimit) {
+		const steuerung = new AbortController();
+		aufruferAbbruch = () => steuerung.abort(aufruferSignal?.reason);
+		if (aufruferSignal?.aborted) steuerung.abort(aufruferSignal.reason);
+		else aufruferSignal?.addEventListener('abort', aufruferAbbruch, { once: true });
+		timer = setTimeout(() => {
+			zeitAbgelaufen = true;
+			steuerung.abort();
+		}, zeitlimitMs ?? standardZeitlimitMs);
+		opts.signal = steuerung.signal;
+	}
 	let res: Response;
 	try {
 		res = await fetch(path, opts);
 	} catch (netzfehler) {
+		// Abbruch durch den Aufrufer ist keine Verbindungsstoerung: weiterwerfen
+		// (AbortError), nichts melden.
+		if (!zeitAbgelaufen && aufruferSignal?.aborted) throw netzfehler;
 		// Issue #2131: der einzige belastbare Beweis, dass der Server NICHT
 		// erreichbar ist. `navigator.onLine` allein taugt dafuer nicht (es meldet
 		// nur eine vorhandene Netzwerkschnittstelle). Ab hier sperrt die
 		// Oberflaeche — bis ein Abruf nachweislich wieder gelingt.
 		meldeAbrufAusgang(false);
+		// #2361: kein automatisches Wiederholen — auch nicht fuer GET.
+		if (zeitAbgelaufen) throw zeitlimitFehler();
 		throw netzfehler;
+	} finally {
+		if (timer !== undefined) clearTimeout(timer);
+		if (aufruferAbbruch) aufruferSignal?.removeEventListener('abort', aufruferAbbruch);
 	}
 	// Auch eine 4xx/5xx-Antwort BEWEIST einen erreichbaren Server: es hat
 	// jemand geantwortet. Nur der ausbleibende Antwortende sperrt.
@@ -171,7 +227,7 @@ async function send<T>(
 	return res.json();
 }
 
-async function request<T>(method: string, path: string, body?: unknown, extra?: RequestInit): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, extra?: AbrufOptionen): Promise<T> {
 	if (schreibenVerboten(method)) {
 		const gesperrt = new Error(
 			'Ohne Verbindung lässt sich nichts speichern — die Änderung wurde nicht abgeschickt.'
@@ -193,11 +249,40 @@ async function request<T>(method: string, path: string, body?: unknown, extra?: 
 }
 
 export const api = {
-	get: <T>(path: string) => request<T>('GET', path),
-	post: <T>(path: string, body: unknown) => request<T>('POST', path, body),
-	put: <T>(path: string, body: unknown, extra?: RequestInit) => request<T>('PUT', path, body, extra),
-	patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
-	del: (path: string) => request<void>('DELETE', path)
+	get: <T>(path: string, extra?: AbrufOptionen) => request<T>('GET', path, undefined, extra),
+	post: <T>(path: string, body: unknown, extra?: AbrufOptionen) => request<T>('POST', path, body, extra),
+	put: <T>(path: string, body: unknown, extra?: AbrufOptionen) => request<T>('PUT', path, body, extra),
+	patch: <T>(path: string, body: unknown, extra?: AbrufOptionen) => request<T>('PATCH', path, body, extra),
+	del: (path: string, extra?: AbrufOptionen) => request<void>('DELETE', path, undefined, extra)
+};
+
+/**
+ * Issue #2361: Budgets der bewusst langen Aktionen — jeweils Server-Limit plus
+ * Puffer, damit der Server zuerst antwortet. Aendert sich ein Server-Limit,
+ * muss das Budget hier mitwandern.
+ */
+/** Compare-Vorschau: Go-Proxy begrenzt auf 60 s. */
+export const ZEITLIMIT_COMPARE_VORSCHAU_MS = 70_000;
+/** Test-Versand (notify/test): Go-Proxy begrenzt auf 120 s (internal/handler/notify.go). */
+export const ZEITLIMIT_TEST_NACHRICHT_MS = 130_000;
+/** Alarm-Vorschau: Go-Proxy begrenzt auf ca. 30 s. */
+export const ZEITLIMIT_ALARM_VORSCHAU_MS = 40_000;
+/**
+ * Orts-Aufloesung (locations/resolve): Resolver gesamt bis ca. 30 s. Die beiden
+ * Aufrufstellen (Step2Orte, LocationNewModal) rufen `api.post` direkt mit
+ * dieser Konstante auf — aeltere Quelltext-Tests verlangen dort die
+ * Schreibweise `api.post<ResolveResult>('/api/locations/resolve'`.
+ */
+export const ZEITLIMIT_ORT_AUFLOESEN_MS = 40_000;
+
+/** #2361: die Langlaeufer-Abrufe — jeder traegt sein eigenes Budget. */
+export const langlaeufer = {
+	compareVorschau: <T>(presetId: string) =>
+		api.post<T>(`/api/preview/compare/${presetId}`, {}, { zeitlimitMs: ZEITLIMIT_COMPARE_VORSCHAU_MS }),
+	testNachricht: <T>(channel: string) =>
+		api.post<T>('/api/notify/test', { channel }, { zeitlimitMs: ZEITLIMIT_TEST_NACHRICHT_MS }),
+	alarmVorschau: <T>(tripId: string, payload: unknown) =>
+		api.post<T>(`/api/trips/${tripId}/alert-preview`, payload, { zeitlimitMs: ZEITLIMIT_ALARM_VORSCHAU_MS })
 };
 
 /** #2317: ETag einer Antwort und ob die Registry ihn uebernommen hat. */

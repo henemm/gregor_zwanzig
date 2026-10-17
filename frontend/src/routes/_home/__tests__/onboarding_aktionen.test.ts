@@ -12,7 +12,7 @@
 // gilt bei HTTP 200 ohne status "ok" als gesendet; Fehlertext der Antwort
 // wird verschluckt.
 
-import { test, describe } from 'node:test';
+import { test, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -117,5 +117,106 @@ describe('AC-8: Testmail gilt nur bei status "ok" als gesendet', () => {
 		await a.aktionen.sendeTestmail();
 		assert.equal(a.lokal().testMailSentAt, undefined);
 		assert.deepEqual(a.testmail(), { status: 'error', fehler: 'Limit erreicht' });
+	});
+});
+
+// Fix-Loop 1 (#2361, F001): "Testmail senden" laeuft ueber notify/test, das der
+// Go-Proxy bis 120 s offen haelt. Hier geht der Klick durch den ECHTEN
+// `api.post`/`send()` (Netzgrenze ist nur fetch) — das Budget wird dort
+// geprueft, wo es wirkt: an der Aufrufstelle. Die Uhr wird mit `mock.timers`
+// gestellt; der Default ist auf 20 ms gesenkt, damit ein fehlendes Budget
+// sofort auffaellt.
+const apiModul = (await import(
+	pathToFileURL(path.resolve(HERE, '..', '..', '..', 'lib', 'api.ts')).href
+)) as typeof import('../../../lib/api.ts');
+
+describe('#2361 F001: Testmail traegt das notify/test-Budget (130 s)', () => {
+	const flush = () => new Promise((r) => setImmediate(r));
+
+	/** fetch-Ersatz: antwortet nach `nachMs` (null = nie), lehnt bei Abbruch ab. */
+	function installiere(nachMs: number | null): { pfade: string[]; restore: () => void } {
+		const echt = globalThis.fetch;
+		const pfade: string[] = [];
+		(globalThis as { fetch: unknown }).fetch = (input: unknown, init?: RequestInit) => {
+			pfade.push(String(input));
+			return new Promise<Response>((resolve, reject) => {
+				init?.signal?.addEventListener(
+					'abort',
+					() => reject(new DOMException('The operation was aborted.', 'AbortError')),
+					{ once: true }
+				);
+				if (nachMs !== null) {
+					setTimeout(
+						() =>
+							resolve(
+								new Response(JSON.stringify({ status: 'ok', channel: 'email' }), {
+									status: 200,
+									headers: { 'Content-Type': 'application/json' }
+								})
+							),
+						nachMs
+					);
+				}
+			});
+		};
+		return { pfade, restore: () => ((globalThis as { fetch: unknown }).fetch = echt) };
+	}
+
+	function aufbauEcht() {
+		let lokal: Record<string, unknown> = {};
+		let testmail: { status: string; fehler: string | null } = { status: 'idle', fehler: null };
+		const aktionen = erzeugeOnboardingAktionen({
+			api: apiModul.api,
+			t: (k) => `T(${k})`,
+			getLokal: () => lokal,
+			setLokal: (neu) => (lokal = neu),
+			setTestmail: (status, fehler) => (testmail = { status, fehler }),
+			jetzt: () => '2026-10-17T05:00:00.000Z'
+		});
+		return { aktionen, lokal: () => lokal, testmail: () => testmail };
+	}
+
+	async function mitGestellterUhr(nachMs: number | null, ablauf: (n: ReturnType<typeof installiere>) => Promise<void>) {
+		const altesWindow = (globalThis as { window?: unknown }).window;
+		(globalThis as { window?: unknown }).window = new EventTarget();
+		apiModul.setzeStandardZeitlimit(20);
+		const netz = installiere(nachMs);
+		mock.timers.enable({ apis: ['setTimeout'] });
+		try {
+			await ablauf(netz);
+		} finally {
+			mock.timers.reset();
+			netz.restore();
+			apiModul.setzeStandardZeitlimit(apiModul.STANDARD_ZEITLIMIT_MS);
+			(globalThis as { window?: unknown }).window = altesWindow;
+		}
+	}
+
+	test('Antwort nach 60 s (weit ueber dem Standard-Limit) => Testmail gilt als gesendet', async () => {
+		await mitGestellterUhr(60_000, async (netz) => {
+			const a = aufbauEcht();
+			const laeuft = a.aktionen.sendeTestmail();
+			await flush();
+			mock.timers.tick(60_000);
+			await laeuft;
+			assert.deepEqual(netz.pfade, ['/api/notify/test']);
+			assert.deepEqual(a.testmail(), { status: 'idle', fehler: null });
+			assert.equal(a.lokal().testMailSentAt, '2026-10-17T05:00:00.000Z');
+		});
+	});
+
+	test('keine Antwort => laeuft bis 130 s, erst dann Fehler', async () => {
+		await mitGestellterUhr(null, async () => {
+			const a = aufbauEcht();
+			const laeuft = a.aktionen.sendeTestmail();
+			await flush();
+			mock.timers.tick(129_999);
+			await flush();
+			assert.equal(a.testmail().status, 'loading', 'die Testmail wurde vor 130 s abgebrochen');
+			mock.timers.tick(1);
+			await laeuft;
+			assert.equal(a.testmail().status, 'error');
+			assert.equal(a.lokal().testMailSentAt, undefined);
+		});
 	});
 });

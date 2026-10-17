@@ -1075,6 +1075,7 @@ sichtbar — mit allen anderen Routen ausdrücklich **nicht**:
   aber gesperrt und tragen eine sichtbare Begründung (`OfflineSperre.svelte`, `offlineGate.ts`,
   Vorbild `premiumSmsAlarmGate.ts`) — sowohl bei aus dem Speicher gezeigten Ansichten als auch bei
   Netzverlust während einer live geladenen Sitzung (`frontend/src/lib/stores/verbindung.svelte.ts`).
+  Zentrales Zeitlimit in `send()` (`frontend/src/lib/api.ts`, Issue #2361): abgelaufenes Limit = `TimeoutError` und Store „offline"; bei „offline" entsperrt eine Verbindungs-Probe (`GET /api/health`, alle 15 s, nur bei sichtbarer Seite) wieder. Spec: `docs/specs/modules/fix_2361_abruf_zeitlimit.md`.
 - Programm-Update lässt den Inhalts-Bucket unangetastet; Abmelden über beide bekannten Wege leert
   ihn vollständig mit.
 
