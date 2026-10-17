@@ -167,6 +167,39 @@ Zweite Runde, gezielte Nachfassung statt Wiederholung: (a) Falsche Mutationsorte
 **Implementierer:**
 (keine Rueckfrage offen; Entscheid ueber F001-F005 beim Aufrufer)
 
+### Runde 3
+**Adversary:**
+Gezielte Nachpruefung der zwei in Runde 1/2 nicht zitierten Code-Dateien (Phase-8-Gate #259). Basislauf 301 Tests gruen (tests/test_avalanche_report_*.py, tests/test_egress_inventory_drift.py, tests/tdd/test_egress_guard.py, tests/tdd/test_warn_service_egress.py, tests/test_slf_bulletin_parser.py, tests/test_slf_bulletin_abdeckung.py). Mutationen per String-Ersetzung mit externer Sicherungskopie, danach Arbeitsbaum identisch.
+
+Confirmation: AC-15
+  Code reference: src/app/egress_guard.py:57
+  Evidence: M1 (BLOCKED -> TEST_ACCESS) rot in test_egress_inventory_drift.py::test_inventories_are_identical, test_slf_bulletin_abdeckung.py::test_ac15_aws_slf_ch_ist_wie_avalanche_report_klassifiziert und ::test_ac15_echter_abruf_aus_der_testumgebung_wird_blockiert. M2 (Zeile entfernt) rot in test_inventories_are_identical und test_ac15_aws_slf_ch_ist_wie_avalanche_report_klassifiziert.
+  Status: CONFIRMED
+
+Confirmation: AC-7
+  Code reference: src/services/official_alerts/avalanche_report.py:139
+  Evidence: M3 (source-Argument an parse_region_alert entfernt) rot in test_avalanche_report_source.py::test_ac1_*, test_avalanche_report_coverage.py::test_ac8_*, test_slf_bulletin_parser.py::test_ac7_*. M5 (region_id verfaelscht) rot in 8 Tests (ausfall_sichtbarkeit, channels::test_ac19_*, coverage, dedup).
+  Status: CONFIRMED
+
+Confirmation: AC-16, AC-17, AC-28
+  Code reference: src/services/official_alerts/avalanche_report.py:33
+  Evidence: M6 (parse_region_alert aus dem Re-Export entfernt) rot in test_avalanche_report_ausfall_sichtbarkeit.py und test_avalanche_report_channels.py::test_ac14_*/test_ac15_*; der Bestand importiert parse_region_alert weiter aus avalanche_report.
+  Status: CONFIRMED
+
+Findings:
+Finding F006
+  ID: F006
+  Severity: LOW
+  Category: anti_pattern
+  Code reference: src/services/official_alerts/avalanche_report.py:32
+  Description: Die Re-Export-Liste nennt neben parse_region_alert auch _carrier, _elevation, _find_region, _parse_time, _problems, _rated, _time_of_day, BULLETIN_URL, EAWS_WORDS_DE; M4 (_carrier entfernt) bleibt gruen, kein Bestand importiert diese Namen aus avalanche_report.
+  Spec requirement: AC-7 — S1-Verhalten unveraendert.
+  Conflict: Toter Re-Export ohne Waechter; kein nutzersichtbares Verhalten betroffen.
+  Remediation: Sammel-Eintrag #1199 (Re-Export auf parse_region_alert reduzieren).
+
+**Implementierer:**
+F006 geht als Sammel-Eintrag an #1199 (LOW, kein Verhalten). Keine Code-Aenderung.
+
 ## Herkunft der Vorbedingungen
 
 kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
@@ -178,7 +211,7 @@ kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
   Evidence: Mutation 27 (`level_modifier=_level_modifier(rated[0][1])` in src/services/official_alerts/caaml.py:181) wird jetzt von `test_ac6_feinstufe_kommt_vom_traeger_rating_nicht_vom_ersten_rating` rot gezogen (einziger roter Test); nach Wiederherstellung per Dateivergleich identisch. Neuer Lauf der sechs Testdateien: 148 passed.
 
 VERDICT: HOLDS (Tri-State-Wort: VERIFIED)
-Tests: 148 passed (neue Suiten), 304 passed (Bestand), Go egress ok, 0 failed.
+Tests: 148 passed (neue Suiten), 304 passed (Bestand), Go egress ok, 0 failed. Runde 3: 301 passed, egress_guard.py und avalanche_report.py per Mutation bewacht (F006 LOW).
 Pflicht-Mutationen 1-12: alle von mindestens einem Test gefangen. Mutation 27 nach Nachbesserung ebenfalls. Offen: F002-F004 (LOW, nicht gefangene Mutationen) und Beobachtung F005 (LOW).
 Regressions: keine gefunden. Checklist: 34/34 Punkte (3 Expected Behavior + 31 ACs) bewiesen.
 Empfehlung: F001 geschlossen; F002-F005 als Sammel-Eintraege (#1199).
@@ -206,6 +239,39 @@ Empfehlung: F001 geschlossen; F002-F005 als Sammel-Eintraege (#1199).
 - blob:1f159d5bd69ffb17a23b8bd1f7ee603c8caba109  src/output/renderers/email/compare_html.py
 - blob:a97a9137951fc838f63a2a8e68018221e5bf8947  src/services/official_alert_allclear.py
 - blob:9ea537a76e47ee9d8a095efcdefd255e66cc3291  src/services/official_alerts/__init__.py
+- blob:b2b731f4ae78ec5414ef1a389fb860f6d4f0adb8  src/services/official_alerts/caaml.py
+- blob:ca8751070b7a3ac3c8112c06617057334ad05bca  src/services/official_alerts/data/README.md
+- blob:fb2cea2e9c26b22527ca12eeecc33fb14d262746  src/services/official_alerts/models.py
+- blob:c4eec3a8b332842d95c684972ac2bcf4f8d874c1  src/services/official_alerts/slf.py
+- blob:e6cc6e2c8c98cbc2dd91dfd14945e6003419bd49  tests/test_slf_bulletin_parser.py
+
+## Geprüfte Dateien
+
+- sha256:46228d6ea85da9f367919e68b0f4d091934b5cf55efbc0d25d996d3220203e86  .claude/hooks/official_alert_mail_validator.py
+- sha256:6c8d0219cde1aa6d08d83004b7bf9caf891e9b63e396b80274530872f8778fba  internal/egress/inventory.go
+- sha256:4361266bea6a05e84b98e5ce74c4f0ea13725021830cf1aabd22b7eecc714aaf  src/app/egress_guard.py
+- sha256:9adc393f825f7ceec36cc2f82422e7b089366396332b6df4aa2ee7cb36aa1933  src/output/renderers/alert/official_alerts.py
+- sha256:9a90fac4c5878bf77f636297c123e4ee75eeeeb7ec17752820dafcb5538a7661  src/output/renderers/email/compare_html.py
+- sha256:c5feb54c642c7799f37ffe9ff4b3d3f971d0826d779490535650b53498c00fdd  src/services/official_alert_allclear.py
+- sha256:eeab9414f6a41d8593dbe03ef7f0680402b8bca7e899858d2f69760b53de3ced  src/services/official_alerts/__init__.py
+- sha256:01dd36c89181b835e6c5ea4f379b4eed5cf1666deb12ad1c0a004c36264c7ba6  src/services/official_alerts/avalanche_report.py
+- sha256:775c5f00ef0c99f0eeca8a836d8b4f049fea4731fd10c748fd58acd5839116df  src/services/official_alerts/caaml.py
+- sha256:63127118d2370338d8d3b7569ac58386136b674b63c2572bf9326a2f3b8c0697  src/services/official_alerts/data/README.md
+- sha256:f129323b96482e7754ec8adeadbaa7b117ec3c497df54cee377d55394494d783  src/services/official_alerts/models.py
+- sha256:e9aa4485fc2c86b32bf8c698f96ed2b97131c4177970fe143abcb49081b2d6b4  src/services/official_alerts/slf.py
+- sha256:e1ea57fee56ee2fd2c91a455cacedd05e298702573181d7d5af301c8911ffb19  tests/test_slf_bulletin_parser.py
+
+## Prüfbasis
+
+- base: 6fafebf3e690349232bb35d9d0d1ebb819198cec
+- blob:acf8205ff034074767ca1955d2bab305a1d90958  .claude/hooks/official_alert_mail_validator.py
+- blob:7afb7acf55c951d126ecf146d96c820aeac2141c  internal/egress/inventory.go
+- blob:4b3afd24c92fd6686f1bec8947f4bd3b26ef8612  src/app/egress_guard.py
+- blob:c71274ac89f6891cd7b47de8268b44f49a6988cf  src/output/renderers/alert/official_alerts.py
+- blob:1f159d5bd69ffb17a23b8bd1f7ee603c8caba109  src/output/renderers/email/compare_html.py
+- blob:a97a9137951fc838f63a2a8e68018221e5bf8947  src/services/official_alert_allclear.py
+- blob:9ea537a76e47ee9d8a095efcdefd255e66cc3291  src/services/official_alerts/__init__.py
+- blob:51857a94f1b5692cedb51c1d22e77c3ca32e6106  src/services/official_alerts/avalanche_report.py
 - blob:b2b731f4ae78ec5414ef1a389fb860f6d4f0adb8  src/services/official_alerts/caaml.py
 - blob:ca8751070b7a3ac3c8112c06617057334ad05bca  src/services/official_alerts/data/README.md
 - blob:fb2cea2e9c26b22527ca12eeecc33fb14d262746  src/services/official_alerts/models.py
