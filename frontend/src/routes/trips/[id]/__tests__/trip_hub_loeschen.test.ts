@@ -119,11 +119,16 @@ describe('AC-12: Lebenszyklus-Menue statt Breadcrumb-Aktionsleiste; Senden ist P
 		assert.ok(!vomMenue.bezeichner.has('sendSubscription'), 'Menue sendet ohne Rueckfrage');
 	});
 
-	test('Pausieren/Archivieren laufen ueber den Adapter (setPaused / setArchived)', () => {
+	test('Pausieren/Fortsetzen und Archivieren/Reaktivieren erreichen einen Zustands-Schreibweg', () => {
 		const kebab = komponenten(ast, 'SubscriptionKebab')[0];
 		assert.ok(kebab, '<SubscriptionKebab> fehlt');
 		const r = erreichbar(ast, attrWert(attribut(kebab, 'onSelect') ?? attribut(kebab, 'onAction')));
-		assert.ok(r.literale.has('pause') || r.literale.has('resume'), 'Pausieren/Fortsetzen nicht verdrahtet');
-		assert.ok(r.literale.has('archive') || r.literale.has('unarchive'), 'Archivieren/Reaktivieren nicht verdrahtet');
+		assert.ok(r.literale.has('pause') && r.literale.has('resume'), 'Pausieren/Fortsetzen nicht verdrahtet');
+		assert.ok(r.literale.has('archive') && r.literale.has('unarchive'), 'Archivieren/Reaktivieren nicht verdrahtet');
+		// Schreibweg: entweder der bestehende Hub-Schreiber (flusht offene Speicherungen, ETag #1433)
+		// oder der Adapter. Beides ist zulaessig; ein Handler OHNE Schreibweg waere ein totes Element.
+		const schreibt = ['sendStateUpdate', 'setPaused', 'setArchived'].some((n) => r.bezeichner.has(n));
+		assert.ok(schreibt, 'Pausieren/Archivieren erreichen keinen Schreibweg (sendStateUpdate / setPaused / setArchived)');
+		// Archivieren/Reaktivieren hat eine Rueckfrage (ConfirmDialog) oder schreibt direkt — Reaktivieren darf nie fehlen.
 	});
 });

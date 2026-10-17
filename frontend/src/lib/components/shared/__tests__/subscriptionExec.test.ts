@@ -184,3 +184,43 @@ describe('Archivieren / Loeschen / Senden — beide Arten, richtige Endpunkte', 
 		assert.deepEqual([s.aufrufe[0].method, s.aufrufe[0].url], ['POST', '/api/compare/presets/send-c-1/send']);
 	});
 });
+
+describe('Versand-Schutz (#2124): kein Doppelversand bei gleichzeitigem Aufruf', () => {
+	test('zwei gleichzeitige sendSubscription fuer dieselbe Id: genau EIN Request, der zweite ist skipped', async () => {
+		const { sendSubscription } = braucheModul();
+		let freigeben!: () => void;
+		const haelt = new Promise<void>((r) => (freigeben = r));
+		const aufrufe: string[] = [];
+		const fetchFn = (async (u: any, init?: any) => {
+			aufrufe.push(`${init?.method ?? 'GET'} ${u}`);
+			await haelt;
+			return new Response('{"status":"ok"}', { status: 200 });
+		}) as unknown as typeof fetch;
+		const erster = sendSubscription('trip', 'doppel-t', { reportType: 'morning' }, fetchFn);
+		const zweiter = await sendSubscription('trip', 'doppel-t', { reportType: 'morning' }, fetchFn);
+		freigeben();
+		const e = await erster;
+		assert.equal(aufrufe.length, 1, `zwei Requests abgeschickt: ${JSON.stringify(aufrufe)}`);
+		assert.equal(zweiter.skipped, true);
+		assert.equal(e.skipped, false);
+	});
+	test('gleiches fuer den Ortsvergleich; verschiedene Ids blockieren sich nicht', async () => {
+		const { sendSubscription } = braucheModul();
+		let freigeben!: () => void;
+		const haelt = new Promise<void>((r) => (freigeben = r));
+		const aufrufe: string[] = [];
+		const fetchFn = (async (u: any) => {
+			aufrufe.push(String(u));
+			await haelt;
+			return new Response('{}', { status: 200 });
+		}) as unknown as typeof fetch;
+		const a = sendSubscription('vergleich', 'doppel-c1', {}, fetchFn);
+		const zweiteGleiche = await sendSubscription('vergleich', 'doppel-c1', {}, fetchFn);
+		const andere = sendSubscription('vergleich', 'doppel-c2', {}, fetchFn);
+		await new Promise((r) => setTimeout(r, 5));
+		freigeben();
+		await Promise.all([a, andere]);
+		assert.equal(zweiteGleiche.skipped, true);
+		assert.equal(aufrufe.length, 2, `erwartet 2 (c1, c2), war: ${JSON.stringify(aufrufe)}`);
+	});
+});

@@ -21,6 +21,7 @@ import { login, createTestTrip, createTestComparePreset, createTestLocation, cle
 test.use({ viewport: { width: 1280, height: 900 } });
 
 const HEUTE = new Date().toISOString().slice(0, 10);
+const neueId = () => `e2e-gz-trip-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 const ETAPPE = (id: string) => ({
 	id: `${id}-s1`,
 	name: 'Etappe 1',
@@ -45,9 +46,8 @@ test.describe('AC-1: Trip-Liste Desktop — Pausieren im Zeilenmenue', () => {
 	});
 
 	test('erster Menuepunkt ist "Pausieren"; Wahl pausiert den Trip; danach "Fortsetzen"', async ({ page }) => {
-		const trip = await createTestTrip(page.request, { stages: [] });
-		// Etappe mit heutigem Datum => Status "aktiv"
-		await page.request.put(`/api/trips/${trip.id}`, { data: { id: trip.id, name: trip.name, stages: [ETAPPE(trip.id)] } });
+		const id = neueId();
+		const trip = await createTestTrip(page.request, { id, stages: [ETAPPE(id)] });
 
 		const menue = await tripMenue(page, trip.id);
 		const eintraege = menue.getByRole('menuitem');
@@ -69,8 +69,8 @@ test.describe('AC-1: Trip-Liste Desktop — Pausieren im Zeilenmenue', () => {
 	});
 
 	test('Reihenfolge und Beschriftung des Trip-Menues == Ortsvergleich-Menue', async ({ page }) => {
-		const trip = await createTestTrip(page.request, { stages: [] });
-		await page.request.put(`/api/trips/${trip.id}`, { data: { id: trip.id, name: trip.name, stages: [ETAPPE(trip.id)] } });
+		const id = neueId();
+		const trip = await createTestTrip(page.request, { id, stages: [ETAPPE(id)] });
 		const ort = await createTestLocation(page.request, { name: 'Menue-Paritaet', lat: 42.1, lon: 9.0 });
 		const preset = await createTestComparePreset(page.request, { locationIds: [ort.id] });
 
@@ -86,8 +86,8 @@ test.describe('AC-1: Trip-Liste Desktop — Pausieren im Zeilenmenue', () => {
 	});
 
 	test('AC-11: ein archivierter Trip erscheint nicht in der Trip-Liste', async ({ page }) => {
-		const trip = await createTestTrip(page.request, { stages: [] });
-		await page.request.put(`/api/trips/${trip.id}`, { data: { id: trip.id, name: trip.name, stages: [ETAPPE(trip.id)] } });
+		const id = neueId();
+		const trip = await createTestTrip(page.request, { id, stages: [ETAPPE(id)] });
 		await page.goto('/trips');
 		await expect(page.getByTestId(`trip-row-${trip.id}`)).toBeVisible();
 

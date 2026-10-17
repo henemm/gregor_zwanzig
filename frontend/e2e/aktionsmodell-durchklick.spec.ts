@@ -11,8 +11,9 @@
 //                        Eintraege role=menuitem mit Label aus subscriptionActions
 //   Mobil-Liste        : Karte `subscription-card-{id}`, Menue-Knopf `subscription-card-menu-{id}`,
 //                        Blatt-Eintraege `subscription-action-{actionId}`; Filter-Pillen `status-filter-pill-{value}`
-//   Hub                : Lebenszyklus-Menue-Knopf `subscription-kebab` (aria-label "Weitere Aktionen"), Eintraege
-//                        role=menuitem; Primaerknopf `subscription-hub-send`; Loesch-Dialog
+//   Hub                : Lebenszyklus-Knopf `subscription-kebab` (aria-label "Weitere Aktionen") in BEIDEN Viewports;
+//                        Desktop: Dropdown, Eintraege role=menuitem; Mobil: oeffnet das SubscriptionActionSheet
+//                        (surface='hub'), Eintraege `subscription-action-{actionId}`; Primaerknopf `subscription-hub-send`; Loesch-Dialog
 //                        `{trip|compare}-detail-delete-confirm-{dialog,cancel,yes}`
 //   Sende-Dialog       : `send-confirm-dialog`, `send-confirm-yes`, `send-confirm-cancel`; nur Trip:
 //                        `send-confirm-berichtsart-morning` / `-evening` (Morgen vorausgewaehlt)
@@ -52,20 +53,17 @@ interface Objekt {
 
 async function legeAn(page: Page, kind: Kind): Promise<Objekt> {
 	if (kind === 'trip') {
-		const t = await createTestTrip(page.request, { stages: [] });
-		await page.request.put(`/api/trips/${t.id}`, {
-			data: {
-				id: t.id,
-				name: t.name,
-				stages: [
-					{
-						id: `${t.id}-s1`,
-						name: 'Etappe 1',
-						date: HEUTE,
-						waypoints: [{ id: `${t.id}-w1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }]
-					}
-				]
-			}
+		const id = `e2e-gz-trip-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+		const t = await createTestTrip(page.request, {
+			id,
+			stages: [
+				{
+					id: `${id}-s1`,
+					name: 'Etappe 1',
+					date: HEUTE,
+					waypoints: [{ id: `${id}-w1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }]
+				}
+			]
 		});
 		return { id: t.id, name: t.name, pfad: `/trips/${t.id}` };
 	}
@@ -112,6 +110,21 @@ async function listenMenueOeffnen(page: Page, kind: Kind, o: Objekt, viewport: k
 
 /** Waehlt eine Aktion nach ID im geoeffneten Listenmenue. */
 async function aktionWaehlen(page: Page, viewport: keyof typeof VIEWPORTS, id: string, label: string) {
+	if (viewport === 'desktop') await page.getByRole('menuitem', { name: label, exact: true }).click();
+	else await page.getByTestId(`subscription-action-${id}`).click();
+}
+
+/** Hub: Lebenszyklus-Knopf oeffnen. */
+async function hubMenueOeffnen(page: Page) {
+	await page.getByTestId('subscription-kebab').click();
+}
+/** Hub: Beschriftungen der angebotenen Lebenszyklus-Aktionen (Desktop: Menue, Mobil: Blatt). */
+async function hubLabels(page: Page, viewport: keyof typeof VIEWPORTS): Promise<string[]> {
+	const eintraege =
+		viewport === 'desktop' ? page.getByRole('menuitem') : page.locator('[data-testid^="subscription-action-"]');
+	return (await eintraege.allTextContents()).map((t) => t.trim());
+}
+async function hubAktionWaehlen(page: Page, viewport: keyof typeof VIEWPORTS, id: string, label: string) {
 	if (viewport === 'desktop') await page.getByRole('menuitem', { name: label, exact: true }).click();
 	else await page.getByTestId(`subscription-action-${id}`).click();
 }
@@ -204,9 +217,10 @@ for (const kind of ['trip', 'vergleich'] as const) {
 				await page.goto(o.pfad);
 
 				// Lebenszyklus-Menue: Pausieren/Fortsetzen · Archivieren/Reaktivieren · Loeschen
-				await page.getByTestId('subscription-kebab').click();
-				await expect(page.getByRole('menuitem')).toHaveText(['Pausieren', 'Archivieren', 'Löschen']);
+				await hubMenueOeffnen(page);
+				await expect.poll(() => hubLabels(page, viewport)).toEqual(['Pausieren', 'Archivieren', 'Löschen']);
 				await page.keyboard.press('Escape');
+				if (viewport === 'mobil') await page.getByLabel('Schliessen').click().catch(() => {});
 
 				// Primaerknopf Senden -> Dialog (kein Versand vor Bestaetigung)
 				await page.getByTestId('subscription-hub-send').click();
@@ -227,13 +241,13 @@ for (const kind of ['trip', 'vergleich'] as const) {
 
 				// Loeschen: Dialog mit Namen, erst Bestaetigen loest DELETE aus, danach Liste
 				const praefix = kind === 'trip' ? 'trip' : 'compare';
-				await page.getByTestId('subscription-kebab').click();
-				await page.getByRole('menuitem', { name: 'Löschen', exact: true }).click();
+				await hubMenueOeffnen(page);
+				await hubAktionWaehlen(page, viewport, 'delete', 'Löschen');
 				await expect(page.getByTestId(`${praefix}-detail-delete-confirm-dialog`)).toContainText(o.name);
 				await page.getByTestId(`${praefix}-detail-delete-confirm-cancel`).click();
 				expect(rec.loeschen).toEqual([]);
-				await page.getByTestId('subscription-kebab').click();
-				await page.getByRole('menuitem', { name: 'Löschen', exact: true }).click();
+				await hubMenueOeffnen(page);
+				await hubAktionWaehlen(page, viewport, 'delete', 'Löschen');
 				await page.getByTestId(`${praefix}-detail-delete-confirm-yes`).click();
 				await expect.poll(() => rec.loeschen.length).toBe(1);
 				await expect(page).toHaveURL(kind === 'trip' ? /\/trips\/?$/ : /\/compare\/?$/);

@@ -75,9 +75,15 @@ describe('AC-1: Desktop-Trip-Liste — Zeilenmenue aus der EINEN Aktionsquelle',
 		assert.ok(!r.bezeichner.has('deleteSubscription'), 'Loeschen ohne Rueckfrage');
 	});
 
-	test('Zeilen-Primaerknopf "Briefing senden" bleibt erhalten (AC-17)', () => {
+	test('Zeilen-Primaerknopf "Briefing senden" bleibt, oeffnet aber den Sende-Dialog (AC-3/AC-17: nie ohne Rueckfrage)', () => {
 		const r = erreichbar(ast, wert(attribut(listenTabelle(), 'rowPrimary')));
 		assert.ok(r.literale.has('Briefing senden'), 'Primaerknopf "Briefing senden" fehlt');
+		const dlg = komponenten(ast, 'SendConfirmDialog')[0];
+		assert.ok(dlg, '<SendConfirmDialog> fehlt');
+		const zustand = ids(wert(attribut(dlg, 'open')));
+		assert.ok([...zustand].some((n) => r.bezeichner.has(n)), 'Primaerknopf erreicht den Sende-Dialog nicht');
+		for (const direkt of ['sendSubscription', 'sendTripTestReport', 'runTestReport', 'sendTripBriefing'])
+			assert.ok(!r.bezeichner.has(direkt), `Primaerknopf sendet direkt (${direkt}) — ohne Rueckfrage`);
 	});
 });
 
