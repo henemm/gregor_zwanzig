@@ -277,7 +277,7 @@
 		testError[channel] = null;
 		try {
 			// #2361: eigenes Budget 130 s (Go-Proxy 120 s), s. `langlaeufer` in api.ts.
-			const resp = await langlaeufer.testNachricht(channel);
+			const resp = await langlaeufer.testNachricht<{ error?: string }>(channel);
 			if (resp?.error) {
 				testError[channel] = resp.error;
 				testStatus[channel] = 'error';

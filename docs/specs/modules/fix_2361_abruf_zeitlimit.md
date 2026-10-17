@@ -137,6 +137,7 @@ Mutations-Gegenproben fuer den Adversary: Timer nicht aufraeumen, Signal VOR `..
 
 - Ein Zeitlimit ist kein Beweis, dass der Server die Anfrage nicht verarbeitet hat; bei Schreibvorgaengen faengt nur der ETag-Mechanismus das ab.
 - Direkte `fetch()`-Aufrufe (siehe Nicht im Scope) haben weiterhin kein App-seitiges Zeitlimit.
+- Das Zeitlimit deckt nur den Zeitraum bis zum Eintreffen der Antwort-Kopfzeilen ab; haengt der Server danach beim Ausliefern des Antwortkoerpers, wartet `res.json()` ohne Limit (unwahrscheinlich bei kleinen JSON-Antworten, Nebenbefund #1199).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -146,3 +147,7 @@ Mutations-Gegenproben fuer den Adversary: Timer nicht aufraeumen, Signal VOR `..
 ## Changelog
 
 - 2026-10-17: Initial spec created (Issue #2361)
+- 2026-10-17: Umsetzung (Issue #2361) - Abweichungen von der Affected-Files-Tabelle:
+  - `frontend/src/routes/_home/onboardingAktionen.ts` setzt das 130-s-Budget fuer den Testnachricht-Aufruf (notify/test) im Onboarding (fachlich noetig, gleicher Endpoint wie in account); dazu Test `onboarding_aktionen.test.ts`.
+  - Zusaetzliche Tests: `verbindungProbeStartOffline.test.ts` und E2E `langlaeufer-zeitbudget-wirkort.spec.ts` (Wirkort-Nachweis der Komponenten-Verdrahtung, Fix-Loop 2).
+  - CI-Ratsche als Folge der neuen E2E-Datei: `E2E_MIN_SPECS` 62 -> 63 und `E2E_MIN_EXECUTED_HAUPT` 363 -> 368 in `.github/workflows/ci.yml`, Eintrag in `.github/ci_e2e_specs.txt`.

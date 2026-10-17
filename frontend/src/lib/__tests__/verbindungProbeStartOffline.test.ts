@@ -33,6 +33,14 @@ Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, confi
 
 const warte = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Laden VOR der Test-Frist: das Uebersetzen der .svelte.ts-Datei dauert unter
+// Volllast der Gesamt-Suite laenger als 1,5 s. Der Import startet nichts —
+// die Probe laeuft erst mit `starte()`.
+const modul = (await import('../stores/verbindung.svelte.ts')) as unknown as {
+	verbindung: { offline: boolean; starte: () => void };
+	setzeProbeIntervall: (ms: number) => void;
+};
+
 test('Start mit navigator.onLine === false ⇒ Probe laeuft ohne weiteres Ereignis an und entsperrt', { timeout: 1500 }, async () => {
 	let health = 0;
 	(globalThis as { fetch: unknown }).fetch = async (input: unknown) => {
@@ -41,10 +49,6 @@ test('Start mit navigator.onLine === false ⇒ Probe laeuft ohne weiteres Ereign
 			status: 200,
 			headers: { 'Content-Type': 'application/json' }
 		});
-	};
-	const modul = (await import('../stores/verbindung.svelte.ts')) as unknown as {
-		verbindung: { offline: boolean; starte: () => void };
-		setzeProbeIntervall: (ms: number) => void;
 	};
 	modul.setzeProbeIntervall(20);
 	modul.verbindung.starte();
