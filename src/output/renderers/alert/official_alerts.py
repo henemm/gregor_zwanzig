@@ -129,6 +129,16 @@ _SOURCE_LABELS: dict[str, str] = {
     # Entwarnungs-Mail nennt die Quelle ueber diesen Namen.
     "meteoalarm_feed": "MeteoAlarm",
     "avalanche_report": "Lawinenwarndienste, avalanche.report",
+    # Issue #1441 S3 (Antrag #7): SLF -- Registry-Name UND jede Region
+    # `slf_bulletin:CH-xxxx` (Aufloesung ueber den Praefix, `_PREFIX_LABELS`).
+    "slf_bulletin": "WSL-Institut für Schnee- und Lawinenforschung SLF",
+}
+# Quellen, deren Regions-Kennungen ueber den Praefix vor dem ersten ":" aufgeloest werden.
+_PREFIX_LABELS: frozenset[str] = frozenset({"slf_bulletin"})
+# Issue #1441 S3 (Antrag #7, Auflage): Hinweis auf die Massgeblichkeit des
+# Originalberichts -- nur Langform (Mail, Telegram), nie SMS/Kurzform.
+_AUTHORITY_NOTES: dict[str, str] = {
+    "slf_bulletin": "Maßgeblich ist der Originalbericht des SLF.",
 }
 
 # Issue #1441: EAWS-Woerter und Lawinenprobleme -- Wortlaut des Warndienstes,
@@ -160,7 +170,8 @@ def avalanche_bulletin_text(alert: "OfficialAlert") -> str:
     """Zentraler Text des Lageberichts, z. B. "Lawinenstufe 4 (groß) oberhalb
     Waldgrenze · Triebschnee" (Stufe, Hoehe, Tageszeit, Probleme -- woertlich)."""
     level = _rank(alert)
-    text = f"Lawinenstufe {level}"
+    # Issue #1441 S3: amtliche Feinstufe ("3-"/"3+") nur in der Langform.
+    text = f"Lawinenstufe {level}{alert.level_modifier or ''}"
     if level in _EAWS_WORDS:
         text += f" ({_EAWS_WORDS[level]})"
     if alert.elevation_value and alert.elevation_direction in _ELEVATION_WORDS:
@@ -188,6 +199,9 @@ def official_alert_source_label(source: str | None) -> str:
     key = source.lower()
     if key in _SOURCE_LABELS:
         return _SOURCE_LABELS[key]
+    prefix = key.split(":", 1)[0]
+    if prefix in _PREFIX_LABELS:
+        return _SOURCE_LABELS[prefix]
     if "geosphere" in key:
         return "GeoSphere Austria"
     if "vigilance" in key or "meteofrance" in key:
@@ -195,6 +209,13 @@ def official_alert_source_label(source: str | None) -> str:
     if "dwd" in key:
         return "DWD"
     return source
+
+
+def official_alert_authority_notes(alerts: "list[OfficialAlert]") -> list[str]:
+    """Massgeblichkeits-Saetze der beteiligten Quellen (Issue #1441 S3),
+    je Quelle einmal, in Reihenfolge der Warnungen."""
+    notes = (_AUTHORITY_NOTES.get(str(a.source or "").split(":", 1)[0]) for a in alerts)
+    return list(dict.fromkeys(n for n in notes if n))
 
 
 @dataclass(frozen=True)
@@ -1614,7 +1635,7 @@ def render_official_alert_html(
         f'<p class="body-foot" style="font-size:13.5px;color:{G_INK_FAINT};'
         f'margin:18px 0 0;">Stand: heute {_html.escape(stand_at)} · '
         f'abgerufen bei {abgerufen}</p>'
-    )
+    ) + _authority_note_html(ordered)
     # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile mit
     # Kontext (Trip-Name bzw. „Ortsvergleich") -- Zeile 2 zeigt die echte
     # Quelle (`source_label`, ggf. nach AC-4 mehrfach), nicht den Renderer-Pfad.
@@ -1699,6 +1720,7 @@ def render_official_alert_mail_plain(
     zeilen.extend([
         "",
         f"Stand: heute {stand_at} · abgerufen bei {source_label}{link}",
+        *official_alert_authority_notes([n.alert for n in ordered]),
         "",
         render_origin_footer_text(build_origin_footer(
             "official-alert", source=source_label, context_label=context_label,
@@ -1750,6 +1772,15 @@ def _source_link_html(source_label: str, source_url: str | None, style: str) -> 
             f'style="{style}">{_html.escape(source_label)} →</a>'
         )
     return f'<span class="wb-src" style="{style}">{_html.escape(source_label)}</span>'
+
+
+def _authority_note_html(ordered: list["OfficialAlertNotice"]) -> str:
+    """Massgeblichkeits-Satz (Issue #1441 S3) als Fusszeile des Warn-Blocks."""
+    notes = official_alert_authority_notes([n.alert for n in ordered])
+    if not notes:
+        return ""
+    return (f'<div class="wb-authority" style="font-size:12px;color:#6b6962;margin-top:4px;">'
+            f'{_html.escape(" ".join(notes))}</div>')
 
 
 def _render_warn_block_embedded(
@@ -1918,6 +1949,7 @@ def _render_warn_block_embedded(
         f'{_html.escape(count)}</span> {src_html}'
         f'</div>'
         f'<div class="wb-list">{"".join(items)}</div>'
+        f'{_authority_note_html(ordered)}'
         f'</div></div>'
     )
 
@@ -2007,7 +2039,8 @@ def render_official_alert_telegram(
     head = f"{prefix} · {scope_part}{kind} {leading_word} ({pos}/3)"
     if _is_eaws(leading.alert):
         # Issue #1441: Lagebericht-Stufe statt Awareness-Leiter im Kopf.
-        head = f"{prefix} · {scope_part}Lawinenstufe {_rank(leading.alert)}"
+        head = (f"{prefix} · {scope_part}Lawinenstufe {_rank(leading.alert)}"
+                f"{leading.alert.level_modifier or ''}")
     lines = [f"<b>{_html.escape(head)}</b>"]
     for n in ordered:
         emoji, _word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
@@ -2021,6 +2054,7 @@ def render_official_alert_telegram(
     for n in ordered:
         if _is_eaws(n.alert) and n.alert.url:
             lines.append(_html.escape(n.alert.url))
+    lines.extend(_html.escape(t) for t in official_alert_authority_notes([n.alert for n in ordered]))
     return "\n".join(lines)
 
 

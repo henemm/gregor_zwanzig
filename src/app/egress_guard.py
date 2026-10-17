@@ -53,6 +53,8 @@ INVENTORY: dict[str, IsolationKind] = {
     # per 301 auf ``avalanche.report`` weiter (beide deklariert).
     "static.avalanche.report": IsolationKind.BLOCKED,
     "avalanche.report": IsolationKind.BLOCKED,
+    # Issue #1441 S3: SLF-Lawinen-Lagebericht (CAAML6, ganze Schweiz) -- Warn-Host.
+    "aws.slf.ch": IsolationKind.BLOCKED,
     "gateway.seven.io": IsolationKind.TEST_ACCESS,
     "api.telegram.org": IsolationKind.TEST_ACCESS,
     "mail.henemm.com": IsolationKind.TEST_ACCESS,

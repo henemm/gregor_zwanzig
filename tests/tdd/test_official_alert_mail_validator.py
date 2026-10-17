@@ -687,3 +687,104 @@ def test_other_hazard_words_mirror_renderer_hazard_labels():
         f"Drift: nur im Pruefer {sorted(im_pruefer - erwartet)}, "
         f"nur im Renderer {sorted(erwartet - im_pruefer)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #1441 Scheibe S3 (Spec feat_1441_s3_slf.md, AC-30): SLF-Lagebericht mit
+# amtlicher Feinstufe ("Lawinenstufe 3- (erheblich)") und SLF-Quellenangabe.
+# Die Mail entsteht aus dem AUFGEZEICHNETEN SLF-Bulletin (tests/fixtures/slf/,
+# Region CH-7231, 2026-03-01 Morgen: erheblich/minus) ueber die echte Quelle
+# `SlfSource` und den echten Versandpfad (`_zugestellte_mail`). Verfaelschungen
+# ausschliesslich per String-Ersetzung im zugestellten HTML/Klartext.
+# ---------------------------------------------------------------------------
+
+_SLF_STUFE = "Lawinenstufe 3- (erheblich)"
+_SLF_STUFE_FALSCH = "Lawinenstufe 3- (mäßig)"
+
+
+def _slf_alert_ch_7231():
+    """Echte SLF-Warnung aus dem aufgezeichneten Bulletin (lazy: Pruefling im RED)."""
+    from datetime import datetime as _dt
+
+    from tests.helpers.slf_support import (
+        WINTER_MORGEN, FakeClock, SlfFixtureTransport, interior_point, make_slf_source,
+    )
+
+    quelle = make_slf_source(SlfFixtureTransport(WINTER_MORGEN),
+                             FakeClock(_dt(2026, 3, 1, 8, 0, tzinfo=UTC)))
+    alerts = quelle.fetch(*interior_point("CH-7231"))
+    assert len(alerts) == 1, f"Testaufbau: genau eine SLF-Warnung fuer CH-7231 erwartet: {alerts!r}"
+    return alerts[0]
+
+
+def _slf_mail(monkeypatch):
+    from tests.helpers.slf_support import SLF_LABEL
+
+    msg, html, plain = _zugestellte_mail(monkeypatch, [_slf_alert_ch_7231()])
+    assert _SLF_STUFE in html and _SLF_STUFE in plain, (
+        f"Testaufbau: Feinstufen-Wortlaut '{_SLF_STUFE}' fehlt in der gerenderten SLF-Mail")
+    assert SLF_LABEL in plain, "Testaufbau: SLF-Quellenangabe fehlt in der gerenderten Mail"
+    return msg, html, plain
+
+
+def test_ac30_slf_mail_mit_feinstufe_und_slf_quelle_besteht(monkeypatch):
+    """AC-30 [Mail-Validator kennt Feinstufe und SLF]
+    GIVEN eine aus dem SLF-Bulletin gerenderte Warnungs-Mail mit "Lawinenstufe 3- (erheblich)"
+          und der Quelle "WSL-Institut fuer Schnee- und Lawinenforschung SLF" (kein
+          avalanche.report im Text)
+    WHEN  official_alert_mail_validator.py sie prueft
+    THEN  wird sie als reine Lawinenmail erkannt und besteht (ok=True, keine Fehler).
+    (Heute faellt eine solche Mail mit S-2/P-2: "3-" passt nicht auf das Stufenmuster, und die
+    einzige Quellen-Kennung ist avalanche.report.)"""
+    mod = _load_validator_module()
+    msg, html, plain = _slf_mail(monkeypatch)
+    assert "avalanche.report" not in html + plain, "Testaufbau: SLF-Mail traegt avalanche.report"
+
+    ok, errors = mod.validate_message(msg)
+    assert ok is True, f"Echt gerenderte SLF-Lawinenmail mit Feinstufe muss bestehen, errors={errors}"
+
+
+def test_ac30_slf_mail_mit_feinstufe_und_falschem_eaws_wort_faellt(monkeypatch):
+    """AC-30 (Gegenprobe Wort)
+    GIVEN dieselbe SLF-Mail, in HTML und Klartext "Lawinenstufe 3- (mäßig)" statt "(erheblich)"
+    WHEN  der Validator sie prueft
+    THEN  faellt sie mit dem P-2b-Befund (Ziffer und EAWS-Wort passen nicht zusammen) -- nicht
+          bloss, weil die Mail gar nicht als Lawinenmail erkannt wird."""
+    mod = _load_validator_module()
+    _msg, html, plain = _slf_mail(monkeypatch)
+    html_falsch = html.replace(_SLF_STUFE, _SLF_STUFE_FALSCH)
+    plain_falsch = plain.replace(_SLF_STUFE, _SLF_STUFE_FALSCH)
+    assert _SLF_STUFE not in html_falsch + plain_falsch, "Testaufbau: Verfaelschung unvollstaendig"
+
+    ok, errors = mod.validate_message(_build_real_official_alert_message(html_falsch, plain_falsch))
+    assert ok is False, f"'{_SLF_STUFE_FALSCH}' muss fallen, errors={errors}"
+    assert any(e.startswith("P-2b") for e in errors), f"Erwartet P-2b-Befund: {errors}"
+
+
+def test_ac30_slf_mail_ohne_quelle_faellt(monkeypatch):
+    """AC-30 (Gegenprobe Quelle)
+    GIVEN dieselbe SLF-Mail, aus der jede Quellenangabe entfernt ist (Quellen-Datenzeile,
+          "abgerufen bei"-Link, Fusszeilen-Label, SLF-Link)
+    WHEN  der Validator sie prueft
+    THEN  faellt sie mit einem Quellen-Befund (S-1b bzw. P-4)."""
+    import re as _re
+
+    from tests.helpers.slf_support import SLF_LABEL
+
+    mod = _load_validator_module()
+    _msg, html, plain = _slf_mail(monkeypatch)
+
+    def _ohne_quelle(text: str) -> str:
+        text = _re.sub(r"https?://[^\s\"<]*slf\.ch[^\s\"<]*", "", text)
+        for traeger in (SLF_LABEL, "Quelle:", "abgerufen bei"):
+            text = text.replace(traeger, "")
+        return text
+
+    html_ohne, plain_ohne = _ohne_quelle(html), _ohne_quelle(plain)
+    assert SLF_LABEL not in html_ohne + plain_ohne and "slf.ch" not in html_ohne + plain_ohne, (
+        "Testaufbau: Quellenangabe nicht vollstaendig entfernt")
+    assert _SLF_STUFE in plain_ohne, "Testaufbau: Stufen-Wortlaut muss bleiben"
+
+    ok, errors = mod.validate_message(_build_real_official_alert_message(html_ohne, plain_ohne))
+    assert ok is False, f"SLF-Mail ohne Quelle muss fallen, errors={errors}"
+    assert any(e.startswith(("S-1b", "P-4")) for e in errors), f"Erwartet S-1b/P-4: {errors}"

@@ -65,10 +65,10 @@ _LEVEL_WORD_RE = re.compile(r"(GELB|ORANGE|ROT)")
 # Farbwoerter GELB/ORANGE/ROT entfallen fuer diese Gefahrenart. Der Renderer
 # emittiert dafuer KEINE eigene CSS-Klasse (official_alerts.py `_is_eaws`
 # unterdrueckt nur Leiter/Meter), Stufentraeger ist daher der Text.
-_AVALANCHE_LEVEL_RE = re.compile(r"Lawinenstufe\s+([1-5])\s*\(([^)\n<]+)\)")
+_AVALANCHE_LEVEL_RE = re.compile(r"Lawinenstufe\s+([1-5])[-+]?\s*\(([^)\n<]+)\)")
 _EAWS_WORDS = {1: "gering", 2: "mäßig", 3: "erheblich", 4: "groß", 5: "sehr groß"}
 # Positive Quellen-Kennung des Lageberichts (Quellenlabel bzw. Bulletin-URL).
-_AVALANCHE_SOURCE_MARK = "avalanche.report"
+_AVALANCHE_SOURCE_MARKS = ("avalanche.report", "Schnee- und Lawinenforschung SLF", "slf.ch")
 # Typ-Woerter aller ANDEREN Gefahrenarten (Spiegel von official_alerts.py
 # `_HAZARD_LABELS` ohne die Lawinen-Eintraege; Drift bewacht
 # tests/tdd/test_official_alert_mail_validator.py). Taucht eines davon auf,
@@ -257,7 +257,7 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
     # Klartext UND HTML-Teil getrennt durchsuchen (Adversary F013): ein falsches
     # Stufen-Wort nur im HTML-Teil darf nicht unbemerkt bleiben.
     avalanche_levels = _AVALANCHE_LEVEL_RE.findall(plain) + _AVALANCHE_LEVEL_RE.findall(html)
-    is_avalanche = bool(avalanche_levels) and _AVALANCHE_SOURCE_MARK in (text + html)
+    is_avalanche = bool(avalanche_levels) and any(m in text + html for m in _AVALANCHE_SOURCE_MARKS)
     # Reine Lawinenmail: KEIN Farbwort und KEIN Typ-Wort einer anderen
     # Gefahrenart (F012). Traegt die Mail zusaetzlich eine andere Warnung
     # (gemischt), bleibt S-2 strikt wie bisher (Leiter oder Meter Pflicht).

@@ -50,7 +50,7 @@ in `data_sources.md` ist Teil der Umsetzung (siehe Affected Files).
 | Lizenz Bulletins | CC BY 4.0 — Namensnennung und Link zur Quelle sind Pflicht und stehen in Mail und Telegram-Vollform (Quellenname + Bulletin-URL); SMS und Telegram-Kurzstil (= SMS-Text) ohne |
 | Lizenz Regionen-Geometrie | CC0 (EAWS-Regions, `regions.avalanches.org`, nur `latest/`); vier GeoJSON-Dateien werden eingecheckt, kein Laufzeitabruf |
 | Zugang | Kein Schlüssel, kein veröffentlichtes Limit; statische Dateien mit ETag; Abruf nur über `cached_fetch` (TTL 1800 s) |
-| Nicht beantragt | `lawinen-warnung.eu`, EU-Sammelfeed `eaws_bulletins`, SLF (Schweiz, Slice 2) |
+| Nicht beantragt | `lawinen-warnung.eu`, EU-Sammelfeed `eaws_bulletins`, SLF (Schweiz: eigene Scheibe S3, siehe `docs/specs/modules/feat_1441_s3_slf.md`, Antrag #7 in `data_sources.md`) |
 
 ## Estimated Scope
 
@@ -402,7 +402,7 @@ Compare-spezifischer Code außer `_ALERT_LEVEL_CELL`).
 
 ## Out of Scope
 
-SLF (Schweiz) = Slice 2; Bayern, Salzburg und übrige AT-Länder (nach Lizenzzusage); EU-Sammelfeed;
+SLF (Schweiz) = Scheibe S3 (`docs/specs/modules/feat_1441_s3_slf.md`, ADR-0091); Bayern, Salzburg und übrige AT-Länder (nach Lizenzzusage); EU-Sammelfeed;
 `lawinen-warnung.eu`; Handlungsempfehlungen; sichtbarer "Saison"-Text; Migration der vier
 Bestands-Mapper.
 

@@ -205,6 +205,7 @@ Die folgenden Quellen sind NICHT genehmigt:
 | 2026-01-24 | 1.1 | Open-Meteo erweitert: Wetter-Parameter + Regional Models (AROME, ICON-D2, MetNo, ECMWF). Bedingung: ZWINGEND Modellauswahl fuer alle Regionen. | Henning |
 | 2026-08-01 | 1.2 | Amtliche Warnungen nachgetragen: MeteoAlarm (Bestand, war nie eingetragen) + Wechsel des Bezugswegs auf den kontingentfreien Feed `feeds.meteoalarm.org`. Siehe ADR-0039. | Henning (PO-Entscheidung 2026-08-01) |
 | 2026-10-13 | 1.3 | Amtlicher Lawinen-Lagebericht ueber avalanche.report (Tirol, Suedtirol, Trentino, Kaernten), Issue #1441. Siehe ADR-0089. | Henning (Spec-Freigabe 2026-10-13) |
+| 2026-10-17 | 1.4 | Amtlicher Lawinen-Lagebericht des SLF (Schweiz, `aws.slf.ch`), Issue #1441 S3, Antrag #7, genehmigt mit Auflagen (Quellenangabe, Link, schriftliche Anfrage beim SLF, Abschaltbarkeit). Siehe ADR-0091. | Henning (PO-Entscheid 2026-10-17) |
 
 ---
 
@@ -219,6 +220,43 @@ Die folgenden Quellen sind NICHT genehmigt:
 Keine offenen Antraege.
 
 ### Genehmigte Antraege
+
+#### Antrag #7: Lawinen-Lagebericht des SLF (Schweiz, CAAML v6)
+
+**Datum:** 2026-10-17
+**Status:** ✅ APPROVED mit Auflagen (2026-10-17, Henning — PO-Entscheid vor der Spec-Freigabe)
+**Antragsteller:** Claude (Issue #1441 Scheibe S3)
+**Spec:** `docs/specs/modules/feat_1441_s3_slf.md`
+**ADR:** [ADR-0091](../adr/0091-slf-eigene-lawinenquelle.md)
+
+**Zusammenfassung:** Der amtliche Lawinen-Lagebericht des WSL-Instituts fuer Schnee- und
+Lawinenforschung SLF (EAWS-Gefahrenstufe 1-5 mit amtlicher Feinstufe, Hoehengrenze und
+Lawinenproblem fuer die ganze Schweiz), bezogen als CAAML-v6-JSON von `aws.slf.ch`
+(`/api/bulletin/caaml/de/json`, ohne Schluessel). Ein Abruf fuer die ganze Schweiz ueber
+`warn_egress.cached_fetch` (TTL 1800 s). Die Schnittstelle traegt **keine ausdrueckliche
+Weiterverwendungs-Lizenz**; die Rechtliches-Seite des SLF enthaelt nur Haftungsausschluss und
+Eigenverantwortung.
+
+| Daten | Status | Bemerkung |
+|-------|--------|-----------|
+| Lawinen-Lagebericht SLF (Stufe, Feinstufe, Hoehe, Problem, Gueltigkeit) | approved mit Auflagen | Host `aws.slf.ch`; Auflagen siehe unten |
+| Mikroregionen-Geometrie CH (EAWS Regions, `regions.avalanches.org`, nur `latest/`) | approved | **CC0**, eine Datei eingecheckt (`avalanche_regions_CH.geojson.json`), kein Laufzeitabruf |
+
+**Auflagen des PO (2026-10-17):**
+1. **Quellenangabe** „WSL-Institut fuer Schnee- und Lawinenforschung SLF" in Mail und Telegram-Langform,
+   dazu der Link zum Originalbericht `https://www.slf.ch/de/lawinenbulletin-und-schneesituation/`
+   (die API hat kein Link-Feld) und der Hinweis, dass der Originalbericht massgeblich ist.
+2. **Schriftliche Anfrage beim SLF** zur Weiterverwendung (Entwurf:
+   `docs/artifacts/feat-1441-s3-slf/anfrage_slf_entwurf.md`; Versand durch den PO).
+3. **Abschaltbar mit einer Zeile:** Lehnt das SLF ab, wird die Quelle abgeschaltet, indem die
+   Registrierung in `src/services/official_alerts/__init__.py` entfernt wird; die Spec sichert das
+   mit einem Test ab.
+4. Stufe, Feinstufe, Hoehe und Problemnamen bleiben Wortlaut des SLF (Haftung); nur Daten, keine
+   Handlungsempfehlung.
+
+**Begruendung:** Der SLF-Bericht ist fuer Weitwanderer in der Schweiz die amtliche
+Lawineninformation; die Awareness-Warnungen von MeteoAlarm sind dafuer zu grob und fuer die
+Schweiz nicht angebunden.
 
 #### Antrag #6: Lawinen-Lagebericht ueber avalanche.report (CAAML v6)
 
