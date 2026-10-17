@@ -74,7 +74,21 @@ type User struct {
 	// komplett zurueckschreiben: ein nur roh gesetztes Feld verschwaende dort.
 	// omitempty: Bestandsprofile laden unveraendert als nicht gesperrt.
 	Disabled bool `json:"disabled,omitempty"`
+	// Issue #2521 S2 — Onboarding. OnboardingPending markiert ein NEU angelegtes
+	// Konto (alle nutzerseitigen Anlagewege, nie der Admin-Seed); Bestandskonten
+	// tragen es nicht und sehen Willkommen/Checkliste nie. Nur der Server setzt
+	// es. Die Dismiss-Flags setzt der Nutzer ueber PUT /api/auth/profile.
+	// TestMailSentAt: Versand der Testmail angenommen (nicht Zustellung).
+	// TYPISIERT, damit die Felder jeden SaveUser-Schreiber ueberstehen.
+	OnboardingPending   bool       `json:"onboarding_pending,omitempty"`
+	OnboardingDismissed bool       `json:"onboarding_dismissed,omitempty"`
+	ChecklistDismissed  bool       `json:"checklist_dismissed,omitempty"`
+	TestMailSentAt      *time.Time `json:"test_mail_sent_at,omitempty"`
 }
+
+// MarkOnboardingPending kennzeichnet ein neu angelegtes Konto als "neu
+// eingeladen" (Issue #2521 S2). Gemeinsamer Helfer aller Anlagewege.
+func MarkOnboardingPending(u *User) { u.OnboardingPending = true }
 
 // SmsVerificationCode — Issue #2406. Struktureller Klon von
 // EmailVerificationToken: nur der bcrypt-Hash liegt auf Platte, mit Ablauf und

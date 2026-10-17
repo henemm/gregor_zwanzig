@@ -261,6 +261,79 @@ test.describe.serial('Onboarding S2: Willkommen, Startklar-Checkliste, echte Tes
 		await page.close();
 	});
 
+	// ---- Klick-Verdrahtung (Fix-Loop 2, F005) --------------------------------
+	// Die Knoepfe werden hier geklickt und an der WIRKUNG gemessen (PUT/POST an die
+	// API, Profil-Flags serverseitig, Zustand nach Neuladen) -- nicht an
+	// Quelltext. Reihenfolge ist Teil des Vertrags: das Willkommen-Testmail-Knopf
+	// steht nur, solange "Verstanden" nicht gedrueckt ist; der Checklisten-Knopf
+	// (AC-8 oben) nur, solange noch keine Testmail ging.
+
+	async function dismissFlags(): Promise<{ onboarding: boolean; checkliste: boolean }> {
+		const r = await gastKontext!.request.get('/api/auth/profile');
+		expect(r.ok()).toBeTruthy();
+		const p = (await r.json()) as Record<string, unknown>;
+		return { onboarding: p.onboarding_dismissed === true, checkliste: p.checklist_dismissed === true };
+	}
+
+	test('Verdrahtung: Willkommen-Knopf "Testmail senden" loest die Testmail aus (POST /api/notify/test, email)', async () => {
+		const page = await gastKontext!.newPage();
+		await page.goto('/');
+		await expect(page.getByTestId('onboarding-willkommen')).toBeVisible();
+		const anfrage = page.waitForRequest(
+			(r) => r.url().includes('/api/notify/test') && r.method() === 'POST'
+		);
+		const antwort = page.waitForResponse(
+			(r) => r.url().includes('/api/notify/test') && r.request().method() === 'POST'
+		);
+		await page.getByTestId('onboarding-testmail-senden').click();
+		expect((await anfrage).postDataJSON()).toEqual({ channel: 'email' });
+		const json = (await (await antwort).json()) as { status?: string; error?: string };
+		expect(json.error, `Testmail-Fehler: ${json.error}`).toBeUndefined();
+		expect(json.status).toBe('ok');
+		await page.close();
+	});
+
+	test('Verdrahtung: "Verstanden" setzt NUR onboarding_dismissed -- Willkommen weg, Checkliste bleibt', async () => {
+		expect(await dismissFlags(), 'Ausgangslage').toEqual({ onboarding: false, checkliste: false });
+		const page = await gastKontext!.newPage();
+		await page.goto('/');
+		await expect(page.getByTestId('onboarding-willkommen')).toBeVisible();
+		const put = page.waitForResponse(
+			(r) => r.url().includes('/api/auth/profile') && r.request().method() === 'PUT'
+		);
+		await page.getByTestId('onboarding-willkommen-verstanden').click();
+		expect((await put).ok()).toBeTruthy();
+
+		await page.reload();
+		await expect(page.getByTestId('onboarding-willkommen')).toHaveCount(0);
+		await expect(page.getByTestId('startklar-checkliste')).toBeVisible();
+		expect(await dismissFlags(), 'nur onboarding_dismissed darf true sein').toEqual({
+			onboarding: true,
+			checkliste: false
+		});
+		await page.close();
+	});
+
+	test('Verdrahtung: "Ausblenden" setzt NUR checklist_dismissed -- Checkliste weg nach Neuladen', async () => {
+		const page = await gastKontext!.newPage();
+		await page.goto('/');
+		await expect(page.getByTestId('startklar-checkliste')).toBeVisible();
+		const put = page.waitForResponse(
+			(r) => r.url().includes('/api/auth/profile') && r.request().method() === 'PUT'
+		);
+		await page.getByTestId('startklar-ausblenden').click();
+		expect((await put).ok()).toBeTruthy();
+
+		await page.reload();
+		await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+		await expect(page.getByTestId('startklar-checkliste')).toHaveCount(0);
+		expect(await dismissFlags(), 'jetzt beide, "Ausblenden" darf "Verstanden" nicht zuruecknehmen').toEqual({
+			onboarding: true,
+			checkliste: true
+		});
+		await page.close();
+	});
+
 	test('AC-2: Bestandskonto (GZ_AUTH_USER, vor S2 angelegt) sieht weder Willkommen noch Checkliste', async ({ browser }) => {
 		adminKontext = await neuerBrowserKontext(browser);
 		const login = await adminKontext.request.post('/api/auth/login', {

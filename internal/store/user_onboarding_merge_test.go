@@ -217,3 +217,61 @@ func TestOnboardingSettersDoNotCreateMissingUserAndRejectInvalidID(t *testing.T)
 		t.Errorf("SetUserTestMailSentAt(../boese): ErrInvalidUserID erwartet, bekommen %v", err)
 	}
 }
+
+// Fix-Loop 1 (F006) — LoadFirstBriefingAt liest nur unter einer GUELTIGEN
+// Kennung. Mit "../x" (Pfad-Ausbruch) liefert es "" und liest nichts ausserhalb
+// des Nutzerordners, auch wenn dort eine passende Datei liegt.
+//
+// Mutation, die hier rot werden MUSS: die ValidUserID-Pruefung entfernen.
+func TestLoadFirstBriefingAtRejectsInvalidUserID(t *testing.T) {
+	s := New(t.TempDir(), "test")
+	// Koeder: eine Ebene ueber dem Nutzerordner von "a" liegt der Ordner "x";
+	// "../x" aus <users>/<id>/ ... wuerde ihn erreichen. Positivkontrolle gleich mit.
+	koeder := filepath.Join(s.UserDir("x"), "first_briefing.json")
+	if err := os.MkdirAll(filepath.Dir(koeder), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(koeder, []byte(`{"first_briefing_at":"2026-01-01T00:00:00Z"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := s.LoadFirstBriefingAt("x"); got != "2026-01-01T00:00:00Z" {
+		t.Fatalf("Positivkontrolle: gueltige Kennung liest nicht (%q)", got)
+	}
+	// Koeder dort, wohin "../x" tatsaechlich aufloest (ausserhalb von users/),
+	// und Zwischenordner "a" fuer "a/../x".
+	for _, dir := range []string{s.UserDir("../x"), s.UserDir("a")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(s.UserDir("../x"), "first_briefing.json"),
+		[]byte(`{"first_briefing_at":"2026-01-01T00:00:00Z"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"../x", "a/../x", "x/../x", ""} {
+		if got := s.LoadFirstBriefingAt(bad); got != "" {
+			t.Errorf("LoadFirstBriefingAt(%q) = %q, erwartet \"\" (ungueltige Kennung)", bad, got)
+		}
+	}
+}
+
+// AC-8: ein zweiter Aufruf ersetzt den bisherigen Zeitstempel (kein
+// "nur beim ersten Mal setzen").
+func TestSetUserTestMailSentAtOverwritesEarlierTimestamp(t *testing.T) {
+	s := New(t.TempDir(), "test")
+	const uid = "timo2521neu"
+	onbStoreAltdatei(t, s, uid)
+	frueher := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
+	spaeter := time.Date(2026, 10, 17, 9, 30, 0, 0, time.UTC)
+
+	if err := s.SetUserTestMailSentAt(uid, frueher); err != nil {
+		t.Fatalf("SetUserTestMailSentAt (1): %v", err)
+	}
+	if err := s.SetUserTestMailSentAt(uid, spaeter); err != nil {
+		t.Fatalf("SetUserTestMailSentAt (2): %v", err)
+	}
+	u, err := s.LoadUser(uid)
+	if err != nil || u == nil || u.TestMailSentAt == nil || !u.TestMailSentAt.Equal(spaeter) {
+		t.Errorf("AC-8: zweiter Aufruf muss den Zeitstempel ersetzen, gelesen: %+v (%v)", u, err)
+	}
+}

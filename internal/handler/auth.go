@@ -175,6 +175,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 				}
 			}
 		}
+		model.MarkOnboardingPending(&user)
 		if err := s.SaveUser(user); err != nil {
 			rollbackInvite()
 			w.Header().Set("Content-Type", "application/json")
@@ -887,6 +888,14 @@ type profileResponse struct {
 	// HasPasskey): die Oberflaeche entscheidet an diesem Wert und darf nicht
 	// zwischen "false" und "Feld fehlt" unterscheiden muessen.
 	PasskeyPromptDismissed bool `json:"passkey_prompt_dismissed"`
+	// Issue #2521 S2 — Onboarding. Die drei Bools immer (kein "Feld fehlt"),
+	// Zeitstempel nur wenn vorhanden. first_briefing_at setzt GET
+	// (aus first_briefing.json), nie user.json.
+	OnboardingPending   bool   `json:"onboarding_pending"`
+	OnboardingDismissed bool   `json:"onboarding_dismissed"`
+	ChecklistDismissed  bool   `json:"checklist_dismissed"`
+	TestMailSentAt      string `json:"test_mail_sent_at,omitempty"`
+	FirstBriefingAt     string `json:"first_briefing_at,omitempty"`
 	// Issue #2147 Scheibe B2 — ausstehende (noch nicht bestaetigte) neue
 	// Kontaktadresse. Fehlt, solange nichts aussteht; mail_to/email zeigen
 	// bis zur Bestaetigung die alten, wirksamen Werte.
@@ -923,6 +932,13 @@ type passkeyProfileEntry struct {
 	AuthenticatorName string `json:"authenticator_name,omitempty"`
 	CreatedAt         string `json:"created_at"`
 	LastUsedAt        string `json:"last_used_at,omitempty"`
+}
+
+func formatTimePtr(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format(time.RFC3339)
 }
 
 func toProfileResponse(u *model.User) profileResponse {
@@ -969,6 +985,10 @@ func toProfileResponse(u *model.User) profileResponse {
 		// Issue #2248: auf diesem Weg erfaehrt die Oberflaeche die Abweisung
 		// beim naechsten Laden.
 		PasskeyPromptDismissed: u.PasskeyPromptDismissed,
+		OnboardingPending:      u.OnboardingPending,
+		OnboardingDismissed:    u.OnboardingDismissed,
+		ChecklistDismissed:     u.ChecklistDismissed,
+		TestMailSentAt:         formatTimePtr(u.TestMailSentAt),
 		PendingContactAddress:  u.PendingContactAddress,
 		// Issue #2406: dieselbe Frage wie die Sperre in config.py stellt —
 		// eine Quelle (smsVerifiziert), damit Anzeige und Wirkung nicht
@@ -991,6 +1011,7 @@ func GetProfileHandler(s *store.Store, admins map[string]struct{}) http.HandlerF
 
 		resp := toProfileResponse(user)
 		resp.Role = profileRole(userId, admins)
+		resp.FirstBriefingAt = s.LoadFirstBriefingAt(userId)
 		// Issue #2482: dieselbe Quelle wie die Pruefung (userQuota). Bei einem
 		// Ladefehler fehlt das Feld, statt faelschlich free auszuweisen.
 		if q, qerr := userQuota(r.Context(), s, userId); qerr == nil {
@@ -1039,12 +1060,41 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			// Wert wird uebernommen, ein fehlendes Feld laesst die Abweisung
 			// unberuehrt.
 			PasskeyPromptDismissed *bool `json:"passkey_prompt_dismissed"`
+			// Issue #2521 S2 — Dismiss-Flags (nur diese zwei, nie pending/Zeitstempel).
+			OnboardingDismissed *bool `json:"onboarding_dismissed"`
+			ChecklistDismissed  *bool `json:"checklist_dismissed"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"invalid request"}`))
 			return
+		}
+
+		if update.OnboardingDismissed != nil || update.ChecklistDismissed != nil {
+			if update.Email == nil && update.DisplayName == nil && update.MailTo == nil &&
+				update.SmsTo == nil && update.TelegramChatID == nil && update.PasskeyPromptDismissed == nil {
+				// Nur Dismiss-Flags: Merge-Setter statt SaveUser (Fremdfelder bleiben).
+				if err := s.SetUserOnboardingFlags(userId, update.OnboardingDismissed, update.ChecklistDismissed); err != nil {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(500)
+					w.Write([]byte(`{"error":"store_error"}`))
+					return
+				}
+				if fresh, err := s.LoadUser(userId); err == nil && fresh != nil {
+					user = fresh
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(toProfileResponse(user))
+				return
+			}
+			// Gemischter PUT: Flags am geladenen Objekt, SaveUser unten.
+			if update.OnboardingDismissed != nil {
+				user.OnboardingDismissed = *update.OnboardingDismissed
+			}
+			if update.ChecklistDismissed != nil {
+				user.ChecklistDismissed = *update.ChecklistDismissed
+			}
 		}
 
 		// Display-Name-Format-Pruefung VOR jedem Schreibzugriff — bei einem

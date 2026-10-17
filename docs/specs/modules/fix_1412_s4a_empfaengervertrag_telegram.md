@@ -245,7 +245,7 @@ Nachweisform für alle ACs: Kern-Test mit Sink am `httpx`-Rand, `is_test_mode=Fa
   Profil-Chat dieses Nutzers über den Produktions-Bot und nicht an den
   Betreiber-Test-Chat; der Telegram-Zweig durchläuft `for_testing()` nicht.
   Hat der Nutzer keinen Profil-Chat, erhält er eine Fehlermeldung statt einer
-  Erfolgsmeldung. Der E-Mail-Zweig des Test-Knopfs bleibt unverändert (#198).
+  Erfolgsmeldung. Der E-Mail-Zweig des Test-Knopfs bleibt unverändert (#198). *(abgelöst durch #2521 S2 / ADR-0091)*
   - Test: `GZ_TELEGRAM_TEST_CHAT_ID` gesetzt, `is_test_mode=False`; Sink
     prüft Ziel-Chat und Bot-Token; Fall ohne Profil-Chat; E-Mail-Zweig unverändert.
 

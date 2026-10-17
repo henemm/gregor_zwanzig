@@ -451,3 +451,49 @@ func TestGetProfileCorruptFirstBriefingFileOmitsField(t *testing.T) {
 		t.Errorf("AC-12 Positivkontrolle: gueltige first_briefing.json wird nicht gelesen: %s", body)
 	}
 }
+
+// Fix-Loop 1 (F004) — AC-6 auch fuer den GEMISCHTEN PUT: Dismiss-Flag plus ein
+// anderes Profilfeld laeuft ueber SaveUser (nicht ueber den Merge-Setter). Auch
+// dort bleiben mitgeschickte `onboarding_pending`, `test_mail_sent_at` und
+// `first_briefing_at` wirkungslos; das erlaubte Flag UND das andere Feld wirken
+// (Positivkontrolle, sonst waere "nichts uebernommen" trivial wahr).
+//
+// Mutation, die hier rot werden MUSS: im gemischten Zweig `onboarding_pending`
+// bzw. `test_mail_sent_at` aus dem Body in das geladene Nutzerobjekt uebernehmen.
+func TestUpdateProfileMixedPutIgnoresForgedServerOwnedOnboardingFields(t *testing.T) {
+	s := newTestStore(t)
+	const uid = "mia2521"
+	datei := onbAltdatei(uid)
+	datei["onboarding_pending"] = true
+	datei["test_mail_sent_at"] = "2026-10-10T10:00:00Z"
+	onbWriteRawUser(t, s, uid, datei)
+
+	w := onbPutProfile(t, s, uid, `{"checklist_dismissed":true,"display_name":"Mia Neu",`+
+		`"onboarding_pending":false,"test_mail_sent_at":"2001-01-01T00:00:00Z",`+
+		`"first_briefing_at":"2002-02-02T00:00:00Z"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("gemischter PUT: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
+	}
+
+	nachher := onbReadRawUser(t, s, uid)
+	// Positivkontrolle: Flag UND anderes Feld im selben PUT wirkten.
+	if v, ok := nachher["checklist_dismissed"]; !onbIstTrue(v, ok) {
+		t.Errorf("AC-6 Positivkontrolle: checklist_dismissed im gemischten PUT nicht gesetzt (%s)", v)
+	}
+	if v, ok := nachher["display_name"]; !ok || !onbJSONEqual(v, json.RawMessage(`"Mia Neu"`)) {
+		t.Errorf("AC-6 Positivkontrolle: display_name im gemischten PUT nicht uebernommen (%s)", v)
+	}
+	// Wirkungslos: Server-Felder bleiben, wie sie waren.
+	if v, ok := nachher["onboarding_pending"]; !onbIstTrue(v, ok) {
+		t.Errorf("AC-6: gemischter PUT hat onboarding_pending veraendert (%s, vorhanden=%v)", v, ok)
+	}
+	if v, ok := nachher["test_mail_sent_at"]; !ok || !onbJSONEqual(v, json.RawMessage(`"2026-10-10T10:00:00Z"`)) {
+		t.Errorf("AC-6: gemischter PUT hat test_mail_sent_at veraendert (%s, vorhanden=%v)", v, ok)
+	}
+	if v, ok := nachher["first_briefing_at"]; ok {
+		t.Errorf("AC-6: gefaelschtes first_briefing_at landete in user.json (%s)", v)
+	}
+	if _, err := os.Stat(filepath.Join(s.UserDir(uid), "first_briefing.json")); err == nil {
+		t.Errorf("AC-6: gemischter PUT hat first_briefing.json angelegt")
+	}
+}

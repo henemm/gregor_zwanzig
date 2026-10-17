@@ -253,7 +253,7 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(deps.Store))
 	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(deps.Store))
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(deps.Config.PythonCoreURL))
-	r.Post("/api/notify/test", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/notify/test"))
+	r.Post("/api/notify/test", handler.NotifyTestHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Get("/api/compare", handler.CompareProxyHandler(deps.Config.PythonCoreURL))
 	// Issue #1350 Teil 1: read-only Compare-Metrik-Katalog (statisch, kein user_id-Bezug).
 	r.Get("/api/compare/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/api/compare/metrics"))

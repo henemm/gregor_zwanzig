@@ -50,7 +50,7 @@ func onbPythonStub(t *testing.T, antwort string) (*httptest.Server, func() []onb
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
 		mu.Lock()
-		calls = append(calls, onbCoreCall{path: r.URL.Path, userID: r.URL.Query()["user_id"], body: string(b)})
+		calls = append(calls, onbCoreCall{path: r.URL.Path, userID: r.URL.Query()["user_id"], body: string(b)}) // gz-closure-param-write: Test-Stub zeichnet Aufrufe auf, kein Store-Zugriff
 		mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -220,5 +220,33 @@ func TestNotifyTestWithoutAuthReturns401AndCallsNothing(t *testing.T) {
 	}
 	if nachher := onbReadRawUserBytes(t, s, uid); string(nachher) != string(vorher) {
 		t.Errorf("AC-11: ohne Anmeldung (Client-?user_id=%s) wurde dessen user.json veraendert", uid)
+	}
+}
+
+// AC-8: "Testmail gesendet am <heutiges Datum>" -- jede weitere erfolgreiche
+// Testmail setzt test_mail_sent_at NEU; ein vorhandenes altes Datum bleibt
+// nicht stehen. Faengt die Mutation "nur beim ersten Mal setzen".
+func TestNotifyTestEmailOkOverwritesOlderTestMailSentAt(t *testing.T) {
+	s := newTestStore(t)
+	const a = "alma2521neu"
+	alt := onbAltdatei(a)
+	alt["test_mail_sent_at"] = "2026-01-02T03:04:05Z"
+	onbWriteRawUser(t, s, a, alt)
+
+	srv, _ := onbPythonStub(t, `{"status":"ok","channel":"email"}`)
+
+	vor := time.Now().Add(-time.Second)
+	w := onbNotifyTest(t, s, srv.URL, a, "", `{"channel":"email"}`)
+	nach := time.Now().Add(time.Second)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
+	}
+	ts, ok := onbTestMailSentAt(t, s, a)
+	if !ok {
+		t.Fatalf("AC-8: test_mail_sent_at fehlt nach erfolgreicher Testmail")
+	}
+	if ts.Before(vor) || ts.After(nach) {
+		t.Errorf("AC-8: test_mail_sent_at=%s ist nicht aktualisiert (erwartet im Zeitraum [%s, %s])", ts, vor, nach)
 	}
 }

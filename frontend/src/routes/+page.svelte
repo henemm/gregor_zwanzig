@@ -38,6 +38,16 @@
 	import TripKachel from './_home/TripKachel.svelte';
 	import CompareKachel from './_home/CompareKachel.svelte';
 	import EmptyKachel from './_home/EmptyKachel.svelte';
+	import StartklarCheckliste from './_home/StartklarCheckliste.svelte';
+	import { buildCompareCtaHref } from './_home/compareCta.js';
+	import { erzeugeOnboardingAktionen } from './_home/onboardingAktionen.js';
+	import {
+		zeigeWillkommen,
+		zeigeCheckliste,
+		type OnboardingProfil
+	} from './_home/onboardingSichtbarkeit.js';
+	import { api } from '$lib/api.js';
+	import { t } from '$lib/i18n/index.js';
 
 	let { data } = $props();
 
@@ -49,6 +59,30 @@
 	);
 	const cockpitStatus = $derived((data.cockpitStatus ?? null) as CockpitStatus | null);
 	const isEmpty = $derived(trips.length === 0 && presets.length === 0);
+
+	// Issue #2521 S2 — Onboarding. Profilstand vom Loader; lokale Overrides
+	// spiegeln nur, was der Nutzer gerade geklickt hat (die Wahrheit liegt im Profil).
+	let onbLokal = $state<Partial<OnboardingProfil>>({});
+	let testmailStatus = $state<'idle' | 'loading' | 'error'>('idle');
+	let testmailFehler = $state<string | null>(null);
+	const onb = $derived(
+		data.onboarding ? ({ ...data.onboarding, ...onbLokal } as OnboardingProfil) : null
+	);
+	const bestand = $derived({ tripCount: trips.length, compareCount: presets.length });
+	const willkommenSichtbar = $derived(onb ? zeigeWillkommen(onb, bestand) : false);
+	const checklisteSichtbar = $derived(onb ? zeigeCheckliste(onb, bestand) : false);
+
+	// Klick-Logik liegt testbar in ./_home/onboardingAktionen.ts.
+	const { verstanden, ausblenden, sendeTestmail } = erzeugeOnboardingAktionen({
+		api,
+		t,
+		getLokal: () => onbLokal,
+		setLokal: (neu) => (onbLokal = neu),
+		setTestmail: (status, fehler) => {
+			testmailStatus = status;
+			testmailFehler = fehler;
+		}
+	});
 
 	const todayPretty = now.toLocaleDateString('de-DE', {
 		weekday: 'short',
@@ -100,16 +134,9 @@
 		return `/trips/${nextPlanned.id}?tab=${TRIP_TAB_MAP[firstOpen]}`;
 	}
 
-	function buildCompareCtaHref(): string {
-		if (!firstIncomplete) return '/compare';
-		const firstOpen = setupStepsCompare.findIndex((s) => !s.done);
-		const step = firstOpen < 0 ? 1 : firstOpen + 1;
-		// Epic #1273 S3: Ziel ist der Hub, nicht mehr die alte /edit-Route.
-		return `/compare/${firstIncomplete.id}`;
-	}
-
 	const tripCtaHref = $derived(buildTripCtaHref());
-	const compareCtaHref = $derived(buildCompareCtaHref());
+	// Issue #2521 S2 (AC-16): reiner Export, Ziel ohne angefangenen Vergleich = /compare/new.
+	const compareCtaHref = $derived(buildCompareCtaHref(firstIncomplete));
 
 	// --- Rechte Spalte / Archiv ---------------------------------------------
 	const briefings = $derived(
@@ -159,12 +186,30 @@
 	>
 		{#snippet right()}
 			<Btn href="/trips/new" variant="ghost" size="sm">+ Neuer Trip</Btn>
-			<Btn href="/compare" variant="ghost" size="sm">+ Neuer Vergleich</Btn>
+			<Btn href="/compare/new" variant="ghost" size="sm">+ Neuer Vergleich</Btn>
 		{/snippet}
 	</PageHeader>
 
+	{#if checklisteSichtbar && onb}
+		<StartklarCheckliste
+			profil={onb}
+			tripCount={trips.length}
+			compareCount={presets.length}
+			{testmailStatus}
+			{testmailFehler}
+			onTestmail={sendeTestmail}
+			onAusblenden={ausblenden}
+		/>
+	{/if}
+
 	{#if isEmpty}
-		<EmptyKachel />
+		<EmptyKachel
+			willkommen={willkommenSichtbar}
+			{testmailStatus}
+			{testmailFehler}
+			onTestmail={sendeTestmail}
+			onVerstanden={verstanden}
+		/>
 	{:else}
 
 		<!-- Zustand A: aktiver Trip-Hero + Schnellaktionen in linker Spalte -->
@@ -736,7 +781,7 @@
 						glyph="metrics"
 						label="Neuer Orts-Vergleich"
 						sub="Wizard · 5 Schritte"
-						href="/compare"
+						href="/compare/new"
 					/>
 					<QuickAction
 						glyph="eye"

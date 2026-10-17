@@ -300,6 +300,7 @@ func createMagicLinkUser(s *store.Store, email string) (*model.User, error) {
 			CreatedAt:       now,
 			EmailVerifiedAt: &now, // the redeemed code proved the address
 		}
+		model.MarkOnboardingPending(&user)
 		if err := s.SaveUser(user); err != nil {
 			return nil, err
 		}

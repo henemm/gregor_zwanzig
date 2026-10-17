@@ -332,6 +332,37 @@ def test_fehlgeschlagenes_trip_briefing_setzt_keinen_merker(mitschrift, monkeypa
     assert not _merker_pfad(uid).exists(), "AC-13: fehlgeschlagener Versand darf nicht abhaken"
 
 
+def test_konfigurierter_aber_nicht_zugestellter_trip_versand_setzt_keinen_merker(
+    mitschrift, monkeypatch
+):
+    """AC-13 (konfiguriert, nicht zugestellt, KEINE Ausnahme) -- Waechter.
+
+    GIVEN ein Trip, der nur Telegram verlangt, der Bot aber nicht verbunden ist
+          (kein Token/Chat): der Kanal ist konfiguriert, der Versand liefert
+          still nichts aus (``sent=False``, keine Ausnahme, kein
+          ``no_channel_configured``).
+    WHEN  der planmaessige Versand laeuft.
+    THEN  kein Merker -- der Aufruf muss im Zustell-Zweig stehen, nicht davor.
+    """
+    monkeypatch.setenv("GZ_TELEGRAM_BOT_TOKEN", "")
+    monkeypatch.setenv("GZ_TELEGRAM_CHAT_ID", "")
+    uid = _trip_nutzer("trip-unzugestellt")
+    trip = _trip_anlegen(uid)
+    trip.report_config.send_email = False
+    trip.report_config.send_telegram = True
+    save_trip(trip, uid)
+    trip = next(t for t in load_all_trips(uid) if t.id == trip.id)
+    assert trip.report_config.send_telegram and not trip.report_config.send_email
+
+    ausgang = TripReportSchedulerService(user_id=uid)._send_trip_report_outcome(
+        trip, "morning", on_demand=False, angefordert=False,
+    )
+
+    assert ausgang != "sent", f"Vorbedingung: nichts zugestellt, Ausgang {ausgang!r}"
+    assert mitschrift.kanaele == [], f"Vorbedingung: {mitschrift!r}"
+    assert not _merker_pfad(uid).exists(), "AC-13: nicht zugestellt darf nicht abhaken"
+
+
 # ═══════════════════ AC-13: Aufrufstelle Ortsvergleich ═══════════════════════
 
 
@@ -406,3 +437,100 @@ def test_fehlgeschlagener_vergleich_setzt_keinen_merker(vergleich, monkeypatch):
         briefing_senden(uid, preset_id, settings_fuer(uid))
 
     assert not _merker_pfad(uid).exists(), "AC-13: fehlgeschlagener Versand darf nicht abhaken"
+
+
+# ═══════════════ Fix-Loop 1: sent=False OHNE Ausnahme (F002) ═════════════════
+
+
+def test_nicht_zustellbares_trip_briefing_ohne_ausnahme_setzt_keinen_merker(mitschrift):
+    """AC-13 (F002, Trip): planmaessiger Lauf, aber KEIN Kanal stellt zu.
+
+    Der Versandaufruf wirft nicht, ``result.sent`` ist False (kein Kanal
+    aktiv). Der Merker darf trotz ``angefordert=False`` nicht entstehen --
+    die Bedingung wirkt am ``else`` der Zustell-Verzweigung, nicht davor.
+    """
+    uid = _trip_nutzer("trip-unzustellbar")
+    trip = _trip_anlegen(uid)
+    trip.report_config = TripReportConfig(
+        trip_id=trip.id, send_email=False, send_sms=False,
+        send_premium_sms=False, send_telegram=False,
+    )
+
+    ausgang = TripReportSchedulerService(user_id=uid)._send_trip_report_outcome(
+        trip, "morning", on_demand=False, angefordert=False,
+    )
+
+    assert ausgang != "sent", f"Vorbedingung: nichts zugestellt, Ausgang {ausgang!r}"
+    assert mitschrift.kanaele == [], f"Vorbedingung: nichts hinausgegangen ({mitschrift!r})"
+    assert not _merker_pfad(uid).exists(), "AC-13: nicht zugestelltes Briefing darf nicht abhaken"
+
+
+def test_nicht_zustellbarer_vergleich_ohne_ausnahme_setzt_keinen_merker(vergleich, monkeypatch):
+    """AC-13 (F002, Ortsvergleich): planmaessig, ``send_result.sent`` False.
+
+    E-Mail ist im Briefing-Pfad immer aktiv; die Kanalaufloesung wird daher im
+    VERBRAUCHENDEN Modul auf "keiner" gesetzt (vorgesehene Naht, s. Docstring
+    von ``_effective_compare_briefing_channels``). Der echte
+    ``send_compare_report`` liefert dann ``sent=False`` ohne Ausnahme.
+    """
+    from services import scheduler_dispatch_service as sds
+
+    uid, preset_id = _vergleich_nutzer()
+    monkeypatch.setattr(sds, "_effective_compare_briefing_channels", lambda *a, **k: set())
+
+    briefing_senden(uid, preset_id, settings_fuer(uid))
+
+    assert vergleich.kanaele == [], f"Vorbedingung: nichts zugestellt ({vergleich!r})"
+    assert not _merker_pfad(uid).exists(), "AC-13: nicht zugestellter Vergleich darf nicht abhaken"
+
+
+# ═══════════════ Fix-Loop 1: F003 -- "default" schreibt nichts ═══════════════
+
+
+def test_default_kennung_schreibt_keinen_merker():
+    """AC-12 (F003): ohne echte Kennung (``"default"``/leer) kein Merker."""
+    from services.first_briefing import mark_first_briefing
+
+    ordner = get_data_dir("default")
+    ordner.mkdir(parents=True, exist_ok=True)
+    mark_first_briefing("default")
+    mark_first_briefing("")
+
+    assert not (ordner / MERKER).exists(), "AC-12: 'default' darf keinen Merker tragen"
+
+
+# ═══════ Fix-Loop 3: oeffentliche Einstiege "report" und SMS heute/morgen ═══════
+
+
+def test_report_kommando_setzt_keinen_merker(mitschrift):
+    """AC-13 (F010): Inbound-Kommando "report" ueber ``send_test_report``.
+
+    Der oeffentliche Einstieg muss ``angefordert=True`` setzen; der Test
+    ruft ihn selbst, nicht ``_send_trip_report_outcome``.
+    """
+    uid = _trip_nutzer("trip-report-kommando")
+    trip = _trip_anlegen(uid)
+    vorher = _log_eintraege(uid)
+
+    gesendet = TripReportSchedulerService(user_id=uid).send_test_report(trip, "morning")
+
+    assert gesendet is True and mitschrift.kanaele == ["email"], (
+        f"Vorbedingung: zugestellt ({gesendet!r}, {mitschrift!r})"
+    )
+    assert _log_eintraege(uid) == vorher + 1, "Vorbedingung: Log fortgeschrieben"
+    assert not _merker_pfad(uid).exists(), "AC-13: Kommando 'report' darf nicht abhaken"
+
+
+def test_sms_heute_morgen_setzt_keinen_merker(mitschrift):
+    """AC-13 (F010b): SMS "heute"/"morgen" ueber ``send_on_demand_report``."""
+    uid = _trip_nutzer("trip-sms-heute")
+    trip = _trip_anlegen(uid)
+    vorher = _log_eintraege(uid)
+
+    ergebnis = TripReportSchedulerService(user_id=uid).send_on_demand_report(trip, "morning")
+
+    assert ergebnis.outcome == "sent" and mitschrift.kanaele == ["email"], (
+        f"Vorbedingung: zugestellt ({ergebnis!r}, {mitschrift!r})"
+    )
+    assert _log_eintraege(uid) == vorher + 1, "Vorbedingung: Log fortgeschrieben"
+    assert not _merker_pfad(uid).exists(), "AC-13: SMS heute/morgen darf nicht abhaken"

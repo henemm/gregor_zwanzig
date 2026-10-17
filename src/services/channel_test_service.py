@@ -6,7 +6,36 @@ outputs.* modules.
 """
 from __future__ import annotations
 
+import json
+
 from app.config import Settings
+
+_MAIL_GESPERRT = (
+    "Die Testmail wurde nicht gesendet: Für dein Konto ist keine bestätigte "
+    "E-Mail-Adresse hinterlegt. Bitte bestätige zuerst deine Adresse im Profil."
+)
+
+
+def _sperre_email(user_id: str) -> str | None:
+    """Fehlertext, wenn fuer diesen Nutzer keine Testmail gesendet werden darf.
+
+    Issue #2521 S2 / ADR-0091: gesendet wird nur an die bestaetigte
+    Profiladresse dieses Nutzers -- nie an "default", nie an die globale
+    Betreiber-Adresse (Rueckfall von ``with_user_profile``).
+    """
+    if not user_id or user_id == "default":
+        return _MAIL_GESPERRT
+    from app.loader import get_data_dir
+
+    try:
+        profil = json.loads((get_data_dir(user_id) / "user.json").read_text())
+    except (OSError, ValueError):
+        return _MAIL_GESPERRT
+    if not isinstance(profil, dict):
+        return _MAIL_GESPERRT
+    if not profil.get("email_verified_at") or not (profil.get("mail_to") or "").strip():
+        return _MAIL_GESPERRT
+    return None
 
 
 def send_test_message(channel: str, user_id: str) -> dict:
@@ -26,8 +55,13 @@ def send_test_message(channel: str, user_id: str) -> dict:
         if channel == "email":
             from output.channels.email import EmailOutput
 
-            # Issue #198: Mail-Test IMMER ueber den Test-Postausgang, nie Resend.
-            output = EmailOutput(Settings().with_user_profile(user_id).for_testing())
+            sperre = _sperre_email(user_id)
+            if sperre:
+                return {"error": sperre}
+            # Issue #2521 S2 / ADR-0091 (loest #198 fuer echte Nutzer ab):
+            # normale Versandkette an die bestaetigte Profiladresse; Testnutzer
+            # und Staging bleiben ueber force_test in with_user_profile auf Stalwart.
+            output = EmailOutput(Settings().with_user_profile(user_id))
             output.send(subject, body, html=False)
         elif channel == "telegram":
             from output.channels.recipient import TelegramRecipient

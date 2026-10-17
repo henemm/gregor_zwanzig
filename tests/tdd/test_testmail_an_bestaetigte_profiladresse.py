@@ -359,3 +359,26 @@ def test_leere_profiladresse_sendet_nichts_und_nie_an_den_betreiber(smtp):
     assert BETREIBER not in smtp.empfaenger, f"AC-10: Betreiber erreicht: {smtp!r}"
     assert smtp.verbindungen == [] and smtp.sendungen == [], f"AC-10: {smtp!r}"
     _klarer_deutscher_fehlertext(ergebnis)
+
+
+def test_profiladresse_nur_aus_leerzeichen_sendet_nichts(smtp):
+    """AC-10 (Profil-``mail_to`` besteht nur aus Leerzeichen) -- Waechter.
+
+    GIVEN ein bestaetigtes Profil, dessen ``mail_to`` nur Leerzeichen enthaelt
+          (truthy, aber keine Adresse), globale Betreiber-Adresse gesetzt.
+    WHEN  die Testmail ausgeloest wird.
+    THEN  keine Verbindung, kein Betreiber-Empfang, deutscher Fehlertext --
+          die Sperre muss die Adresse trimmen, nicht nur auf Truthiness pruefen.
+    """
+    from services.channel_test_service import send_test_message
+
+    _profil(
+        "nutzer-leerzeichen-adresse", mail_to="   ",
+        email_verified_at="2026-10-01T08:00:00Z",
+    )
+
+    ergebnis = send_test_message("email", "nutzer-leerzeichen-adresse")
+
+    assert BETREIBER not in smtp.empfaenger, f"AC-10: Betreiber erreicht: {smtp!r}"
+    assert smtp.verbindungen == [] and smtp.sendungen == [], f"AC-10: {smtp!r}"
+    _klarer_deutscher_fehlertext(ergebnis)
