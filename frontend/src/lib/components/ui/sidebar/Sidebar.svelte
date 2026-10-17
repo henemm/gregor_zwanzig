@@ -10,6 +10,7 @@
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import SunIcon from '@lucide/svelte/icons/sun';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
+	import { t } from '$lib/i18n';
 
 	interface SidebarProps {
 		userId: string | null | undefined;
@@ -33,6 +34,8 @@
 		{ id: 'trips',   href: '/trips',   label: 'Meine Trips',    icon: 'trip'    },
 		{ id: 'compare', href: '/compare', label: 'Orts-Vergleich', icon: 'compare' },
 		{ id: 'archive', href: '/archiv',  label: 'Archiv',         icon: 'archive' },
+		// Issue #2521 S3 — Hilfeseite (BottomNav bleibt unveraendert).
+		{ id: 'hilfe',   href: '/hilfe',   label: t('nav.hilfe'),   icon: 'hilfe'   },
 	];
 	// Issue #2155 S4 — Eintrag nur fuer Admins (Komfort; Go bleibt die Sperre).
 	const navItems = $derived(
@@ -127,6 +130,13 @@
 						stroke-width="1.7" stroke-linejoin="round">
 						<rect x="3" y="5" width="18" height="4" rx="1"/>
 						<path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>
+					</svg>
+				{:else if item.icon === 'hilfe'}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+						stroke={active ? 'var(--g-accent)' : 'var(--g-ink-3)'}
+						stroke-width="1.7" stroke-linecap="round">
+						<circle cx="12" cy="12" r="9"/>
+						<path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/>
 					</svg>
 				{:else if item.icon === 'admin'}
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"

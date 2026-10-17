@@ -96,4 +96,7 @@
 			{h === 'sms' ? t('onboarding.hinweis.sms') : t('onboarding.hinweis.premium_sms')}
 		</p>
 	{/each}
+	<p style="margin: 12px 0 0; font-size: 13px;">
+		<a href="/hilfe" data-testid="startklar-hilfe" style="color: var(--g-ink); text-decoration: underline;">{t('onboarding.checkliste.hilfe')}</a>
+	</p>
 </section>

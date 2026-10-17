@@ -801,6 +801,7 @@ frontend/
 │       ├── trips/                 # Trip-Liste, Detail-Hub (?tab=), /trips/new (TripNewEditor)
 │       ├── compare/               # Vergleichs-Liste, Detail-Hub, /compare/new (CompareNewEditor)
 │       ├── locations/ · settings/ · subscriptions/ · archiv/ · gpx-upload/ · account/
+│       ├── hilfe/                 # Hilfeseite (nur eingeloggt, #2521 S3): Briefing, Alarme, vier Kanäle, Antwort-Befehle
 │       ├── admin/                 # Admin-Seite (#2155 S4): Nutzerliste, Tier, Konto sperren; Load antwortet 403 für Nicht-Admins
 │       ├── login/ · register/ · logout/ · magic-link/ · forgot-password/ · reset-password/ · verify-email/
 │       ├── _home/                 # Route-lokale Cockpit-Kacheln (inkl. Willkommen/StartklarCheckliste, #2521 S2)
@@ -1092,6 +1093,18 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
 - **Anlegen:** `/trips/new` → `trip-new/TripNewEditor.svelte`; `/compare/new` →
   `compare-new/CompareNewEditor.svelte` — progressive Tab-Anlege-Seiten aus den
   geteilten Tab-Organismen (`shared/`, `context="route"|"vergleich"`), Auto-Save.
+- **„Mit Standardwerten speichern“ (#2521 S3, 2026-10-17):** Beide Anlege-Seiten haben den
+  geteilten Knopf `shared/StandardwerteSpeichernKnopf.svelte`. Er speichert ohne Durchklicken
+  aller Reiter mit denselben Werten, die das Durchklicken ergäbe. Aktiv wird er über das Gate
+  `canFinishMitStandardwerten` (`shared/anlegeLockEngine.ts`): Trip = Name, Startdatum und alle
+  Etappen mit GPX; Vergleich = Name + mindestens 2 Orte; jeweils erst, wenn der Metrik-Katalog
+  geladen ist. Vorbelegung: `ergaenzeStandardwerteReportConfig` (`trip-new/tripNewLogic.ts`)
+  bzw. `belegeWertebereicheVor` (`compare-new/CompareNewEditor.svelte`).
+- **Hilfeseite `/hilfe` (#2521 S3):** Abschnitte Briefing, Alarme, vier Kanäle
+  (E-Mail/Telegram/SMS/Premium-SMS) und Antwort-Befehle; nur eingeloggt. Erreichbar über
+  Sidebar, Konto-Sheet und Startklar-Checkliste. Die Befehlsliste wird durch
+  `tests/test_hilfe_befehle_drift.py` gegen die Python-Befehle abgesichert.
+  Spec: `docs/specs/modules/onboarding_standardwerte_hilfe.md`.
 - **Bearbeiten:** Detail-Hub mit `?tab=`-Navigation (`trip-detail/` bzw.
   `compare/CompareTabs.svelte`/`CompareDetail.svelte`).
 - **Hub-Kopf (#2284 S1, Epic #2345 Etappe P2):** `shared/subscription-header/SubscriptionHeader.svelte`

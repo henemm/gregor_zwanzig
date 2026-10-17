@@ -15,6 +15,8 @@ import {
 } from '../shared/alarme-tab/alertChannelState.ts';
 import { tailUnlocked, tailDone, canFinish, progressCount as kernProgressCount, type TailIds } from '../shared/anlegeLockEngine.ts';
 import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryPayload.ts';
+import { baueReportConfigPayload, ladeReportZustand } from '../shared/versand-tab/reportConfigPayload.ts';
+import { ladeMailZustand } from '../shared/mailInhaltZustand.ts';
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
@@ -254,4 +256,40 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 	}
 
 	return trip;
+}
+
+// ── „Mit Standardwerten speichern" (Issue #2521 S3, AC-6) ───────────────────
+// Ergaenzt report_config um die Felder, die sonst erst Versand-Reiter und
+// Mail-Inhalt-Karte beim Oeffnen schreiben — mit DENSELBEN reinen Bausteinen
+// und in derselben Reihenfolge (erst VersandTab, dann MailInhaltCard auf dem
+// lebenden Blob). Gesetzte Werte gewinnen (Lade-Funktionen lesen den Blob),
+// unbekannte Bestandsfelder bleiben erhalten; `multi_day_trend_reports` ist
+// wie beim Durchklicken `[]`. Rein: die Eingabe wird nicht veraendert.
+export function ergaenzeStandardwerteReportConfig(rc: ReportConfig | undefined): ReportConfig {
+	const basis = { ...((rc ?? {}) as Record<string, unknown>) };
+	const nachVersand = baueReportConfigPayload({
+		snapshot: basis,
+		live: basis,
+		zustand: ladeReportZustand(basis)
+	});
+	const mail = ladeMailZustand(nachVersand);
+	return baueReportConfigPayload({
+		snapshot: basis,
+		live: nachVersand,
+		eigene: { ...mail, daily_summary_metrics: [...mail.daily_summary_metrics] },
+		showSchedule: false,
+		showChannels: false,
+		zustand: {
+			morning_enabled: false,
+			evening_enabled: false,
+			morning_time: '07:00',
+			evening_time: '18:00',
+			multi_day_trend_morning: false,
+			multi_day_trend_evening: false,
+			send_email: true,
+			send_telegram: false,
+			send_sms: false,
+			send_premium_sms: false
+		}
+	}) as ReportConfig;
 }

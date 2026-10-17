@@ -26,12 +26,22 @@
 		type Group
 	} from '$lib/types';
 	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
-	import { PROFILE_METRICS_WITH_SCALES, type ProfileKey } from '$lib/components/shared/corridor-editor/corridorEditorState';
+	import {
+		PROFILE_METRICS_WITH_SCALES,
+		buildComparePrefillRows,
+		buildCompareCorridorSavePayload,
+		type CompareMetricDef,
+		type ProfileKey
+	} from '$lib/components/shared/corridor-editor/corridorEditorState';
+	import { materializeActiveMetricKeys } from '$lib/components/shared/weather-metrics-tab/compareMetricOrder';
+	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
+	import type { SensLevel } from '$lib/types';
 	import { api } from '$lib/api.js';
 	import {
 		tailUnlocked,
 		tailDone,
 		canFinish,
+		canFinishMitStandardwerten,
 		progressCount,
 		type TailIds
 	} from '$lib/components/shared/anlegeLockEngine';
@@ -49,7 +59,10 @@
 	// #1435 E1a-2: der Alarme-Reiter leitet seine Zeilen aus dem Register-Katalog
 	// ab — die Anlege-Seite muss ihn deshalb ebenfalls laden (geteilter
 	// Promise-Cache, kein zweiter Netzwerk-Request) und durchreichen.
-	import { loadCompareSelectionEntries } from '$lib/components/shared/corridor-editor/compareMetricCatalogLoader';
+	import {
+		loadCompareSelectionEntries,
+		loadCompareMetricCatalog
+	} from '$lib/components/shared/corridor-editor/compareMetricCatalogLoader';
 	import type { CompareSelectionEntry } from '$lib/components/shared/weather-metrics-tab/compareMetricSelection';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
@@ -102,6 +115,17 @@
 	}
 	onMount(() => {
 		void hydrateAlarmeTab();
+	});
+
+	// #2521 S3: Vergleichs-Katalog (GET /api/compare/metrics, geteilter
+	// Promise-Cache) ist Voraussetzung fuer „Mit Standardwerten speichern";
+	// scheitert der Abruf, bleibt der Knopf gesperrt (null).
+	let standardwerteKatalog = $state<CompareMetricDef[] | null>(null);
+	async function ladeStandardwerteKatalog(): Promise<void> {
+		standardwerteKatalog = await loadCompareMetricCatalog().catch(() => null);
+	}
+	onMount(() => {
+		void ladeStandardwerteKatalog();
 	});
 
 	// ── Tab-Definitionen (6 Tabs, Spec-Tabelle) ───────────────────────────────
@@ -174,6 +198,11 @@
 	// Zaehler gedeckelt bei 6 (Issue #1360), bit-gleich zu vorher min(done.size, 6).
 	const doneCount = $derived(Math.min(progressCount(done, PROGRESS_STEPS), 6));
 	const canActivateNow = $derived(canFinish(done));
+	const standardwerteFrei = $derived(canFinishMitStandardwerten({
+		pflichtErfuellt: nameOk && orteOk,
+		defaultsBereit: standardwerteKatalog !== null,
+		bestandFrei: canActivateNow
+	}));
 
 	const canContinue = $derived(wiz.name.trim().length > 0);
 	const orteContinueReady = $derived(wiz.pickedIds.length >= 2);
@@ -245,6 +274,38 @@
 		}
 	}
 
+	// ── „Mit Standardwerten speichern" (#2521 S3) ──────────────────────────────
+	// Wertebereiche wie beim unveraenderten Reiter-Besuch vorbelegen (dieselbe
+	// Kette und dasselbe Prefill-Profil wie CorridorEditor), ausser der Nutzer
+	// hat den Reiter schon besucht — dann gelten dessen Werte. Danach derselbe
+	// Speicherweg wie „Briefing aktivieren".
+	function belegeWertebereicheVor(defs: CompareMetricDef[]) {
+		const profileKey = wiz.activityProfile ? (toCompareProfile(wiz.activityProfile) as ProfileKey) : 'ALLGEMEIN';
+		const levels = wiz.metricAlertLevels as Record<string, SensLevel | undefined> | undefined;
+		const payload = buildCompareCorridorSavePayload(buildComparePrefillRows(profileKey, defs), [], {
+			idealRanges: wiz.idealRanges ?? {},
+			activeMetricKeys: materializeActiveMetricKeys(wiz.activeMetricKeys ?? null),
+			metricAlertLevels: levels ?? {}
+		}, []);
+		wiz.corridors = payload.corridors;
+		wiz.idealRanges = payload.idealRanges;
+		wiz.activeMetricKeys = payload.activeMetricKeys;
+		wiz.metricAlertLevels = payload.metricAlertLevels;
+	}
+	function makeStandardwerteHandler() {
+		return async function doStandardwerte() {
+			if (!standardwerteFrei || activating || !standardwerteKatalog) return;
+			activating = true;
+			try {
+				if (!idealsVisited) belegeWertebereicheVor(standardwerteKatalog);
+				await wiz.saveNewPreset();
+			} finally {
+				activating = false;
+			}
+		};
+	}
+	const onStandardwerte = makeStandardwerteHandler();
+
 	// ── Mobile-only State ──────────────────────────────────────────────────────
 	let mobileLibraryOpen = $state(false);
 	let lockToastMsg = $state('');
@@ -309,6 +370,7 @@
 			<div style:display="flex" style:gap="8px" style:align-items="center">
 				{#if !canActivateNow}
 					<span class="mono" style:font-size="10.5px" style:color="var(--g-ink-4)">Versand einrichten zum Aktivieren</span>
+					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="compare-editor-standardwerte" />
 				{/if}
 				<Btn variant="ghost" size="sm" href="/compare">Abbrechen</Btn>
 				<Btn
@@ -538,6 +600,11 @@
 	<!-- Sticky-Footer (geteilter Baustein): Weiter-Aktion des Reiters, auf
 	     Versand „Briefing aktivieren" (Mobile-Shell S2, vorher App-Leiste). -->
 	<EditorStickyFooter context="vergleich" testid="cm-mobile-cta" navClearance={false}>
+			{#if !canActivateNow}
+				<div style="display: flex; justify-content: center; margin-bottom: 8px;">
+					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="cm-mobile-standardwerte" />
+				</div>
+			{/if}
 			{#if activeTab === 'versand'}
 				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? 'Speichere…' : canActivateNow ? 'Briefing aktivieren' : 'Versand einrichten zum Aktivieren'}</MBtn>
 			{:else if activeTab === 'vergleich'}

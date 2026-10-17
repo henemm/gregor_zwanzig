@@ -93,6 +93,8 @@ Ein eingeladener Nutzer soll vom ersten Login bis zum ersten zugestellten Briefi
 *Link-Fix:* „+ Neuer Vergleich" führt auf `/compare/new` (statt `/compare`) in `+page.svelte:162` und `EmptyKachel`.
 
 **S3 — Mit Standardwerten speichern.**
+> **Überholt:** S3 ist in `onboarding_standardwerte_hilfe.md` spezifiziert. Dieser Absatz, AC-15 bis AC-17 und Hilfe-AC-2 gelten nicht mehr (siehe dort „Abweichungen von der Gesamt-Spec").
+
 `canSaveWithDefaults(pflichtErfuellt: boolean): boolean` in `anlegeLockEngine.ts`, kind-neutral; Trip übergibt `name && startDate && stages.length >= 1`, Ortsvergleich `name && orte.length >= 2`. Der Knopf sitzt im geteilten `EditorStickyFooter` (neuer optionaler Slot/Prop, gleiche Optik für `context="route"` und `"vergleich"`), ist deaktiviert, solange die Pflichtfelder fehlen; Tabs bleiben nutzbar. Nutzlast: Metrik-Vorauswahl wie sie der Wetter-Metriken-Reiter standardmäßig anzeigt, also aus `GET /api/metrics` per `default_enabled`/`trip_default_enabled` (`buildDefaultsPayload(catalog)` im geteilten Baustein; dieselbe Funktion nutzt der Reiter, kein zweites Regelwerk). `TripNewEditor.svelte:103` startet `weatherMetrics` leer und füllt aus dem Reiter, deshalb berechnet der Knopf die Auswahl direkt aus dem Katalog. Versand: E-Mail an; Alarme: Kanal E-Mail als Standard, übrige Alarm-Felder aus `initialCreateTripAlarmState()`. Speichern geht denselben Weg wie „Anlegen" (`buildCreateTripPayload` bzw. Compare-Speichern), keine Nebenroute.
 
 **S4 — Tooltips und Infoboxen platzieren.**

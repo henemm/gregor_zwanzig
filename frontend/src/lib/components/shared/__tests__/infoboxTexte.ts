@@ -16,7 +16,7 @@ export const INFO_TEXTE: Record<string, string> = {
 	'info.wertebereiche.route':
 		'Kannst du überspringen — Standard: keine Wertebereiche, im Briefing wird nichts hervorgehoben.',
 	'info.wertebereiche.vergleich':
-		'Kannst du überspringen — Standard: keine Wertebereiche, im Briefing wird nichts hervorgehoben.',
+		'Kannst du überspringen — Standard: die Wertebereiche werden aus dem Aktivitätsprofil vorbelegt.',
 	'info.alarme.route':
 		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen aus. Telegram wirkt erst nach der Verknüpfung.',
 	'info.alarme.vergleich':
