@@ -47,7 +47,7 @@ import { corridorPropsAus } from '../../compare/corridorPropsAus.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const CORRIDOR_EDITOR = join(HIER, '..', '..', 'shared', 'corridor-editor', 'CorridorEditor.svelte');
-const REPO_ROOT = resolve(HIER, ...Array(7).fill('..'));
+const REPO_ROOT = resolve(HIER, ...Array(6).fill('..'));
 const PY =
 	'import sys, json\n' +
 	"sys.path.insert(0, 'src')\n" +

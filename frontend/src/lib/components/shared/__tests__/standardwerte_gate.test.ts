@@ -165,7 +165,7 @@ describe('Wirkstelle Trip (/trips/new): enabled des Standardwerte-Knopfs', () =>
 // Netzgrenze: `globalThis.fetch`. GET /api/compare/metrics liefert den LIVE-
 // Katalog aus dem Python-Kern (Muster compareMetricCatalogParity.test.ts) bzw.
 // im Fehlerfall HTTP 500. Alles andere antwortet leer.
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), ...Array(7).fill('..'));
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), ...Array(6).fill('..'));
 const PY =
 	'import sys, json\n' +
 	"sys.path.insert(0, 'src')\n" +
