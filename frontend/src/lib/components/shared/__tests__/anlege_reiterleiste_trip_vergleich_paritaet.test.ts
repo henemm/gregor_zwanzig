@@ -175,3 +175,32 @@ describe('AC-4: Fußzeilen-Hinweis und Fortschritt auf /trips/new', () => {
 		assert.match(visibleText(html), /\b0\/4\b/, 'AC-4 FAIL: die mobile Fortschrittsanzeige steht nicht auf „/4".');
 	});
 });
+
+// ── Onboarding S3 (Issue #2521, AC-12): neuer Knopf „Mit Standardwerten speichern" ──
+// Spec: docs/specs/modules/onboarding_standardwerte_hilfe.md. Additiv — die
+// obigen Zusicherungen bleiben unveraendert. Beide Leisten fuehren (solange der
+// Bestandsknopf gesperrt ist) denselben Knopf mit derselben Beschriftung. Der
+// Ortsvergleich wird mit Wizard-Kontext gerendert wie in
+// compare-new/__tests__/compare_new_lock_engine_wirkstelle.test.ts.
+describe('AC-12 (#2521 S3): Standardwerte-Knopf in beiden Anlege-Leisten', () => {
+	test('Trip-Footer und Ortsvergleich-Kopfzeile tragen den Knopf mit identischer Beschriftung', async () => {
+		const { pathToFileURL } = await import('node:url');
+		const { render } = await import('svelte/server');
+		const Vergleich = (await import(pathToFileURL(COMPARE_EDITOR).href)).default;
+		const wiz = { name: 'X', region: '', profile: 'wandern', pickedIds: ['loc0', 'loc1'] };
+		const vergleich = render(Vergleich, {
+			props: { stateOverride: { activeTab: 'vergleich', isMobileViewport: false } },
+			context: new Map([['compare-wizard-state', wiz]])
+		}).body;
+		const trip = renderTripNew({ activeTab: 'route', isMobileViewport: false });
+		const beschriftung = (html: string, testid: string): string | null => {
+			const m = new RegExp(`<button\\b[^>]*data-testid="${testid}"[^>]*>([\\s\\S]*?)</button>`).exec(html);
+			return m ? visibleText(m[1]) : null;
+		};
+		const t = beschriftung(trip, 'trip-new-standardwerte-btn');
+		const v = beschriftung(vergleich, 'compare-editor-standardwerte');
+		assert.ok(t, 'AC-12 FAIL: Trip-Footer ohne Standardwerte-Knopf (trip-new-standardwerte-btn).');
+		assert.ok(v, 'AC-12 FAIL: Ortsvergleich-Kopfzeile ohne Standardwerte-Knopf (compare-editor-standardwerte).');
+		assert.equal(t, v, 'AC-12 FAIL: Beschriftung des Standardwerte-Knopfs weicht zwischen Trip und Ortsvergleich ab.');
+	});
+});
