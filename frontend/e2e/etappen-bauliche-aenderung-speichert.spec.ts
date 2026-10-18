@@ -105,6 +105,13 @@ test('AC-9: waehrend die Kaskade geschrieben wird, sind Hoehenprofil und Wegpunk
 			el.closest('[aria-busy="true"]') !== null
 		);
 	expect(await gesperrt('profile-add-area'), 'Hoehenprofil sichtbar gesperrt').toBe(true);
+	const keineZeigerEreignisse = (testId: string) =>
+		page.getByTestId(testId).evaluate((el) => {
+			const gesperrterContainer = el.closest('[aria-busy="true"]') ?? el;
+			return getComputedStyle(gesperrterContainer).pointerEvents === 'none';
+		});
+	expect(await keineZeigerEreignisse('profile-add-area'), 'Hoehenprofil: pointer-events none').toBe(true);
+	expect(await keineZeigerEreignisse('waypoint-delete-0'), 'Wegpunkt loeschen: pointer-events none').toBe(true);
 	expect(await gesperrt('waypoint-delete-0'), 'Wegpunkt loeschen gesperrt').toBe(true);
 	expect(await gesperrt('waypoint-rename-0'), 'Wegpunkt umbenennen gesperrt').toBe(true);
 

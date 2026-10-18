@@ -297,3 +297,47 @@ describe('AC-10: Umsortieren (#2288) unveraendert (Regressionswaechter fuer den 
 		assert.equal(a.ctl.hasPending, true);
 	});
 });
+
+describe('F001: nach angewendeter Kaskade (Erfolgs-Streifen, cascade.done) wird sofort geschrieben', () => {
+	async function kaskadeAngewendet() {
+		const { a, u } = await aufbau();
+		rueckfrageOeffnen(u, 'T1', '2026-10-15', ['T2', 'T3']);
+		await (u.applyCascade as () => Promise<void>)();
+		await ruhe(300);
+		const c = u.cascade as { done: boolean } | null;
+		assert.ok(c && c.done === true, 'Messaufbau: Kaskade angewendet, Erfolgs-Streifen steht');
+		assert.equal(a.ctl.hasPending, false, 'Messaufbau: nichts vorgemerkt');
+		return { a, u, vorher: puts().length };
+	}
+
+	test('F001: Etappe hinzufuegen nach Kaskade ⇒ genau ein weiterer PUT, nichts vorgemerkt', async () => {
+		const { a, u, vorher } = await kaskadeAngewendet();
+		rufe(u, 'handleAddStage');
+		await ruhe();
+		assert.equal(puts().length - vorher, 1, 'genau EIN Speichervorgang fuer die Handlung');
+		assert.equal(serverEtappen().length, 4, 'neue Etappe steht auf dem Server');
+		assert.equal(a.ctl.hasPending, false, 'nichts bleibt vorgemerkt');
+	});
+
+	test('F001: Etappe loeschen nach Kaskade ⇒ genau ein weiterer PUT ohne die Etappe', async () => {
+		const { a, u, vorher } = await kaskadeAngewendet();
+		loesche(u, 'T3');
+		await ruhe();
+		assert.equal(puts().length - vorher, 1);
+		assert.deepEqual(ids(serverEtappen()), ['T1', 'T2']);
+		assert.equal(a.ctl.hasPending, false);
+	});
+});
+
+describe('F003: saveController vorhanden, aber keine tripId', () => {
+	test('F003: 0 PUT bei Hinzufuegen, Pausentag, Profil-Klick, Loeschen', async () => {
+		const { u } = await aufbau();
+		Object.assign(u, { tripId: undefined });
+		rufe(u, 'handleAddStage');
+		rufe(u, 'handlePauseInsert', 0);
+		rufe(u, 'handleProfileAdd', 0.5);
+		loesche(u, 'T2');
+		await ruhe();
+		assert.equal(puts().length, 0, 'ohne tripId wird nichts automatisch geschrieben');
+	});
+});
