@@ -86,6 +86,7 @@
 	function handleMobileAddPause(): void {
 		if (cascadeBusy) return;
 		stages = [...stages, { id: newId(), name: 'Pausentag', date: '', waypoints: [] }];
+		speichereBaulicheAenderung();
 	}
 
 	// Risiko-Ampel je Etappe für die StageCardM (lazy, fail-soft) — gleiche
@@ -440,16 +441,17 @@
 		}
 	}
 
-	function dismissCascade(): void {
+	// Rückgabe: true, wenn hier selbst geschrieben wurde (Signal für den Helfer).
+	function dismissCascade(): boolean {
 		// „Nur diese Etappe" ist die ANTWORT — erst jetzt wird geschrieben. Beim
 		// „Schließen" des Erfolgs-Streifens (cascade.done) gibt es nichts zu speichern.
 		// Adversary F004: läuft eine Kaskaden-Anwendung, hier NICHT dazwischenfunken —
 		// sonst kämpfen zwei Schreibvorgänge. Ein Doppeltipp auf diesen Knopf ist
 		// unkritisch: synchron, `cascade` wird vor jeder Weitergabe genullt (e2e AC-10).
-		if (cascadeBusy) return;
+		if (cascadeBusy) return false;
 		const open = cascade !== null && !cascade.done;
 		cascade = null;
-		if (!open) return;
+		if (!open) return false;
 
 		// Bug #1389 F006: UNBEDINGT schreiben. Ein fehlgeschlagener Kaskaden-Versuch
 		// hat den zurückgestellten Save abgeräumt (applyCascade → cancel()) — das
@@ -466,6 +468,7 @@
 		} else {
 			void save();
 		}
+		return true;
 	}
 
 	// Bug #1393 F001/F002: fällt die LETZTE Folge-Etappe weg — gelöscht oder vor
@@ -474,8 +477,24 @@
 	// über null Etappen zu verlangen und den zurückgestellten Speichervorgang
 	// liegenzulassen. Also wie „Nur diese Etappe" behandeln — wegräumen UND
 	// schreiben (Bug #1389 F006: nie still verwerfen).
-	function settleMootCascade(): void {
-		if (cascade && !cascade.done && cascadeFollowers.length === 0) dismissCascade();
+	function settleMootCascade(): boolean {
+		if (cascade && !cascade.done && cascadeFollowers.length === 0) return dismissCascade();
+		return false;
+	}
+
+	// #2213/#2288: gemeinsamer Abschluss jeder baulichen Handlung (Ablegen, Hinzufügen,
+	// Löschen, Pausentag, Profil-Klick, Wegpunkt umbenennen/löschen). Kein Controller
+	// oder keine tripId (Knopf-Modus, Neuanlage): nichts. Rückfrage weiter offen:
+	// neu vormerken. Sonst sofort schreiben — außer settleMootCascade hat es schon getan.
+	function speichereBaulicheAenderung(): void {
+		const geschrieben = settleMootCascade();
+		if (!saveController || !tripId) return;
+		if (cascade && !cascade.done) {
+			deferSave();
+		} else if (!geschrieben) {
+			saveController.cancel();
+			void saveController.doSave(buildStagesSave());
+		}
 	}
 
 	// EtappenStrip-Handler
@@ -496,22 +515,7 @@
 	function handleReorderEnd(): void {
 		// Wie handleStagesReorder: waehrend des Kaskaden-Schreibens wurde nichts uebernommen.
 		if (cascadeBusy) return;
-		const warOffen = cascade !== null && !cascade.done;
-		settleMootCascade();
-		// #2288: die neue Reihenfolge wird beim Ablegen gespeichert. Steht eine
-		// Kaskaden-Rückfrage offen (zurückgestellter Vorgang), wird dieser mit dem
-		// aktuellen Stand neu aufgesetzt statt sofort geschrieben (wie beim Löschen).
-		if (!saveController || !tripId) return;
-		if (cascade && !cascade.done) {
-			deferSave();
-		} else if (warOffen) {
-			// settleMootCascade() -> dismissCascade() hat den aktuellen Stand schon
-			// geschrieben (cancel + doSave) — kein zweiter PUT im selben Tick.
-		} else {
-			// Ablegen ist eine abgeschlossene Handlung — sofort schreiben, nicht entprellen.
-			saveController.cancel();
-			void saveController.doSave(buildStagesSave());
-		}
+		speichereBaulicheAenderung();
 	}
 	function handleStageActivate(stageId: string): void {
 		if (stageId === activeStageId) return;
@@ -525,6 +529,7 @@
 		const updated = [...stages];
 		updated.splice(afterIndex + 1, 0, newPause);
 		stages = updated;
+		speichereBaulicheAenderung();
 	}
 	// Bug #708 — Etappe entfernen: erst Dialog zeigen, dann per confirmRemoveStage löschen.
 	function confirmRemoveStage(): void {
@@ -542,31 +547,27 @@
 		// Löschen (er würde die Etappe wiederauferstehen lassen) und wird deshalb mit
 		// dem aktuellen Stand neu aufgesetzt statt verworfen — verwerfen wäre der
 		// stille Datenverlust aus F006.
-		if (cascade?.stageId === stageId) {
-			cascade = null;
-		} else {
-			// Bug #1393 F001: eine FOLGE-Etappe ist verschwunden. Die Rückfrage bleibt
-			// gültig — sie zählt und rechnet live weiter, es entsteht keine Lücke.
-			// Nur wenn dadurch gar nichts mehr dahinter liegt, ist sie gegenstandslos.
-			settleMootCascade();
-		}
+		// Bug #1393 F001: bei einer FOLGE-Etappe bleibt die Rückfrage gültig; nur wenn
+		// dahinter nichts mehr liegt, löst der Helfer sie auf (settleMootCascade).
+		if (cascade?.stageId === stageId) cascade = null;
 		// Bug #1393 R5: das Neu-Anmelden gilt für JEDE gelöschte Etappe, nicht nur für
 		// die auslösende. Ein zurückgestellter Speichervorgang (etwa nach einem
 		// fehlgeschlagenen Kaskaden-Versuch) trägt sonst weiter den Stand VOR dem
 		// Löschen und lässt die Etappe beim nächsten Flush wiederauferstehen.
-		if (saveController?.hasPending) deferSave();
+		speichereBaulicheAenderung();
 		pendingRemoveStageId = null;
 	}
 	function handleAddStage(): void {
 		if (cascadeBusy) return; // R5-F001
 		const newStage: Stage = { id: newId(), name: 'Neue Etappe', date: '', waypoints: [] };
 		stages = [...stages, newStage];
+		speichereBaulicheAenderung();
 	}
 
 	// Profil-Klick → interpolierten Wegpunkt einfügen.
 	// Issue #503: KEIN suggested-Flag mehr — alle Wegpunkte sind gleichwertig.
 	function handleProfileAdd(fraction: number): void {
-		if (!activeStage) return;
+		if (cascadeBusy || !activeStage) return;
 		const { lat, lon, elevation_m, insertAfterIndex } = interpolateWaypoint(
 			activeStage.waypoints,
 			fraction
@@ -586,6 +587,7 @@
 		});
 		activeWaypointId = newWp.id;
 		addModeHint = false;
+		speichereBaulicheAenderung();
 	}
 
 	function handleWaypointActivate(waypointId: string): void {
@@ -608,6 +610,7 @@
 
 	function makeRenameHandler(stageId: string, waypointId: string) {
 		return function handleRename() {
+			if (cascadeBusy) return;
 			const newName = prompt('Neuer Name:');
 			if (!newName) return;
 			stages = stages.map((s) =>
@@ -618,13 +621,16 @@
 							waypoints: s.waypoints.map((w) => (w.id !== waypointId ? w : { ...w, name: newName }))
 						}
 			);
+			speichereBaulicheAenderung();
 		};
 	}
 	function makeDeleteHandler(stageId: string, waypointId: string) {
 		return function handleDelete() {
+			if (cascadeBusy) return;
 			stages = stages.map((s) =>
 				s.id !== stageId ? s : { ...s, waypoints: s.waypoints.filter((w) => w.id !== waypointId) }
 			);
+			speichereBaulicheAenderung();
 		};
 	}
 </script>
@@ -829,7 +835,7 @@
 					{/if}
 
 					<!-- Profil-Card (Höhenprofil) -->
-					<div class="editor-card editor-card--padded" data-testid="profile-card">
+					<div class="editor-card editor-card--padded" class:cascade-locked={cascadeBusy} aria-busy={cascadeBusy ? 'true' : undefined} data-testid="profile-card">
 						<div class="editor-card-header editor-card-header--inline">
 							<Eyebrow>Höhenprofil · synchron mit Karte</Eyebrow>
 						</div>
@@ -853,7 +859,7 @@
 							+ auf Route
 						</Btn>
 					</div>
-					<div class="sidebar-list">
+					<div class="sidebar-list" class:cascade-locked={cascadeBusy} aria-busy={cascadeBusy ? 'true' : undefined}>
 						{#each activeStage.waypoints as waypoint, i (waypoint.id)}
 							<WaypointCard
 								{waypoint}
@@ -993,6 +999,11 @@
 		font-weight: 600;
 		color: var(--g-ink);
 		margin-top: 2px;
+	}
+	/* #2213: sichtbar gesperrt, solange die Kaskade angewendet wird */
+	.cascade-locked {
+		opacity: 0.5;
+		pointer-events: none;
 	}
 	.sidebar-list {
 		display: flex;
