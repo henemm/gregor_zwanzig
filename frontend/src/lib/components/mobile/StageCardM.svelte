@@ -14,6 +14,7 @@
 	import StageTimeField from '$lib/components/edit/StageTimeField.svelte';
 	import { riskToPill, type StageRisk } from '$lib/utils/stageRisk';
 	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
+	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
 	import type { Stage, ActivityType } from '$lib/types';
 
 	interface Props {
@@ -59,18 +60,12 @@
 			let km: number | null = null;
 			let ascent: number | null = null;
 			if (wps.length >= 2) {
-				let dist = 0;
 				let up = 0;
 				for (let i = 1; i < wps.length; i++) {
-					const a = wps[i - 1];
-					const b = wps[i];
-					const dlat = (b.lat - a.lat) * 111.32;
-					const dlon = (b.lon - a.lon) * 111.32 * Math.cos((a.lat * Math.PI) / 180);
-					dist += Math.sqrt(dlat * dlat + dlon * dlon);
-					const diff = (b.elevation_m ?? 0) - (a.elevation_m ?? 0);
+					const diff = (wps[i].elevation_m ?? 0) - (wps[i - 1].elevation_m ?? 0);
 					if (diff > 0) up += diff;
 				}
-				km = dist;
+				km = computeHeaderStats(stage).distanceKm;
 				ascent = up > 0 ? up : null;
 			}
 			return { km, ascent, wpCount: wps.length };
