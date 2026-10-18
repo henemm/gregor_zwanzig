@@ -7,7 +7,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const TRIP_ID = 'e2e-2213-bauliche';
-const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: 800 + lat * 10 });
+const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: Math.round(800 + lat * 10) });
 const stages = Array.from({ length: 3 }, (_, i) => ({
 	id: `s${i + 1}`,
 	name: `Tag ${i + 1}`,
