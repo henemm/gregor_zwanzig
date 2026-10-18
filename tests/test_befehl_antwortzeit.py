@@ -177,6 +177,10 @@ def _sauberer_zustand(monkeypatch):
     # (Backoff >= 2 s je Datei, gemessen ~20 s fuer 10 Dateien); 404 wird nicht wiederholt.
     with _dwd_server(monkeypatch, regel=lambda _p, _l, _t: ("status", 404)):
         yield
+    # F-N4: Vorwaerm-Nachlaeufer dieses Tests abwarten, bevor der globale Cache
+    # geleert wird -- sonst schreiben sie in den Cache des NAECHSTEN Tests.
+    for t in [t for t in threading.enumerate() if t.name.startswith("dwd-prewarm")]:
+        t.join(timeout=5)
     dwd._RASTER_CACHE.clear()
     parallel_fetch._reset_for_tests()
 
@@ -428,14 +432,16 @@ def test_ac6_vorwaermen_laedt_hoechstens_zwei_fenster_gleichzeitig_und_ueberlapp
     Gesamtzeit < 0,75 x (4 x Einzelzeit eines Fensters)."""
     provider = dwd.DwdDirectProvider()
     einstieg = _vorwaermen_einstieg(provider)
+    fenster = [_fenster(i) for i in range(4)]
     with _dwd_server(monkeypatch, verzoegerung_s=0.15) as server:
+        # Referenz im SELBEN Lauf und unter denselben Bedingungen: dieselben vier Fenster
+        # nacheinander (max_parallel=1) -- kein kalter Einzelabruf als Massstab.
         t0 = time.monotonic()
-        _prewarm_fenster(einstieg, KARNISCH, [_fenster(0)])
-        einzel_s = time.monotonic() - t0
+        _prewarm_fenster(einstieg, KARNISCH, fenster, max_parallel=1)
+        seriell_s = time.monotonic() - t0
         dwd._RASTER_CACHE.clear()
         server.abrufe.clear()
 
-        fenster = [_fenster(i) for i in range(4)]
         t0 = time.monotonic()
         _prewarm_fenster(einstieg, KARNISCH, fenster)
         gesamt_s = time.monotonic() - t0
@@ -449,9 +455,9 @@ def test_ac6_vorwaermen_laedt_hoechstens_zwei_fenster_gleichzeitig_und_ueberlapp
     assert spitze == 2, (
         f"AC-6: erwartet GENAU 2 gleichzeitig aktive Fenster (Pool 2), gemessen {spitze}"
     )
-    assert gesamt_s < 0.75 * 4 * einzel_s, (
-        f"AC-6: Gesamtzeit {gesamt_s:.2f} s ist nicht < 0,75 x Summe der Einzelzeiten "
-        f"({4 * einzel_s:.2f} s) -- Wartezeiten ueberlappen nicht"
+    assert gesamt_s < 0.75 * seriell_s, (
+        f"AC-6: Gesamtzeit {gesamt_s:.2f} s ist nicht < 0,75 x serielle Summe "
+        f"({seriell_s:.2f} s) -- Wartezeiten ueberlappen nicht"
     )
 
 
@@ -990,3 +996,577 @@ def test_ac13_berichte_sind_bit_identisch_zum_eingefrorenen_altstand(mitschrift,
         assert aktuell[schluessel] == referenz[schluessel], (
             f"AC-13: Ausgabe von {schluessel!r} weicht vom eingefrorenen Altstand ab"
         )
+
+
+# ===========================================================================
+# Fix-Loop 1 (Adversary-Findings F001..F007) -- Tests ERGAENZT, nichts abgeschwaecht
+# ===========================================================================
+
+import contextvars  # noqa: E402
+from tests.tdd._befehl_e2e_fixtures import (  # noqa: E402
+    basis_settings, install_transport_fakes, lege_lage_an, sende_telegram_text, user_ids,
+)
+
+__all__ = ["user_ids"]  # Fixture aus dem Fundament muss im Modul sichtbar sein
+
+
+@pytest.mark.parametrize("befehlswort", [
+    "+4915112345678", "hans.mueller@example.com", "Freitext mit Leerzeichen GEHEIM",
+])
+def test_f001_befehlsname_kommt_nur_aus_festen_woertern_nie_aus_nutzertext(
+    caplog, mitschrift, befehlswort,
+):
+    """F001: Telefonnummer, Mailadresse oder Freitext im Befehlswort (als
+    ``### <wort>`` und als ``### query: <wort>``) landen NIE im Journal -> UNKNOWN."""
+    caplog.set_level(logging.INFO)
+    uid = _kennung("f001")
+    _nutzer_anlegen(uid, mail="f001@example.invalid", chat_id="chat-f001")
+    trip = _trip_anlegen(uid, name="Dauer F001")
+
+    _befehl(trip.name, f"### {befehlswort}: x", kanal="email", uid=uid,
+            absender="f001@example.invalid")
+    _befehl(trip.name, f"### query: {befehlswort}", kanal="email", uid=uid,
+            absender="f001@example.invalid")
+
+    zeilen = _dauer_zeilen(caplog)
+    assert [z[0] for z in zeilen] == ["UNKNOWN", "UNKNOWN"], f"F001: {zeilen}"
+    gesamt = "\n".join(_zeilen(caplog, LOGGER_DAUER))
+    for teil in ("4915112345678", "mueller", "example.com", "GEHEIM", "Freitext"):
+        assert teil not in gesamt, f"F001: {teil!r} im Dauer-Journal: {gesamt}"
+
+
+def test_f002_telegram_zeile_umfasst_die_uebergabe_an_den_versand(
+    caplog, monkeypatch, user_ids,
+):
+    """F002: die Zeile entsteht NACH der Uebergabe der Antwort an den Versand-
+    Provider -- ein verzoegerter Versand muss in dauer_ms stehen; genau eine Zeile."""
+    from services.notification_service import NotificationService
+
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    original = NotificationService.send_command_reply_telegram
+
+    def _langsam(self, *a, **kw):
+        time.sleep(0.4)
+        return original(self, *a, **kw)
+
+    monkeypatch.setattr(NotificationService, "send_command_reply_telegram", _langsam)
+    nutzer = lege_lage_an(user_ids, "L2")
+
+    sende_telegram_text(basis_settings(), nutzer, "hilfe")
+
+    zeilen = _dauer_zeilen(caplog)
+    assert len(zeilen) == 1, f"F002: genau eine Zeile erwartet, gefunden {zeilen}"
+    assert zeilen[0][:3] == ("HELP", "telegram", "-")  # ziellos: kein Trip aufgeloest
+    assert zeilen[0][3] >= 400, f"F002: Versand-Uebergabe fehlt in dauer_ms: {zeilen}"
+
+
+def test_f002_telegram_rueckfrage_ohne_process_schreibt_genau_eine_zeile(
+    caplog, monkeypatch, user_ids,
+):
+    """F002: mehrdeutiges Ziel (zwei Ortsvergleiche, kein Trip) -> Rueckfrage, KEIN
+    ``process()`` -- trotzdem genau eine Zeile (Befehl HEUTE, trip=-)."""
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L5")
+
+    sende_telegram_text(basis_settings(), nutzer, "heute")
+
+    zeilen = _dauer_zeilen(caplog)
+    assert [(z[0], z[1], z[2]) for z in zeilen] == [("HEUTE", "telegram", "-")], (
+        f"F002: Rueckfrage-Zweig ohne (genau eine) Zeile: {zeilen}"
+    )
+
+
+class _LernAntwort:
+    def __init__(self, user_id: str):
+        self._uid = user_id
+
+    def json(self):
+        return {"user_id": self._uid}
+
+
+def test_f002_premium_sms_rueckfrage_schreibt_genau_eine_zeile(
+    caplog, monkeypatch, user_ids,
+):
+    """F002: derselbe Rueckfrage-Fall auf dem Premium-SMS-Eingang: die Messung wird
+    vom Poll-Lauf um ``_verarbeite_befehl`` gelegt (hier nachgestellt)."""
+    from output.channels.premium_sms import PremiumSmsOutput
+    from services.inbound_sms_reader import InboundSmsReader
+    from services.trip_command_processor import befehl_messung
+
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L5")
+    gesendet: list = []
+    monkeypatch.setattr(PremiumSmsOutput, "__init__", lambda self, settings: None)
+    monkeypatch.setattr(PremiumSmsOutput, "send",
+                        lambda self, subject, body, **kw: gesendet.append(body))
+
+    with befehl_messung("premium_sms"):
+        InboundSmsReader()._verarbeite_befehl(
+            basis_settings(), "heute", "+491701234567", _LernAntwort(nutzer.user_id))
+
+    zeilen = _dauer_zeilen(caplog)
+    assert gesendet, "Vorbedingung: die Rueckfrage wurde per Premium-SMS beantwortet"
+    assert [(z[0], z[1], z[2]) for z in zeilen] == [("HEUTE", "premium_sms", "-")], zeilen
+
+
+def test_f003_laufendes_segment_bricht_nach_endgueltigem_ausfall_eines_anderen_ab(
+    monkeypatch,
+):
+    """F003 (#1113 Lastschutz): Segment A scheitert endgueltig (3 transiente Versuche).
+    Segment B hat dann erst EINEN Versuch hinter sich (haengt 0,7 s) und darf nicht
+    weiter wiederholen: 1 Aufruf statt 3."""
+    monkeypatch.setattr(scheduler_mod, "FETCH_RETRY_BACKOFF_SECONDS", 0.05, raising=True)
+    segmente = _segmente(2)
+    lat_a, lat_b = (s.start_point.lat for s in segmente)
+    aufrufe = {lat_a: 0, lat_b: 0}
+    sperre = threading.Lock()
+
+    class _Ausfall:
+        name = "openmeteo"
+
+        def fetch_forecast(self, location, start=None, end=None, enrich_ensemble=True,
+                           enrich_snow=True):
+            with sperre:
+                aufrufe[location.latitude] += 1
+            if location.latitude == lat_b:
+                time.sleep(0.7)
+            raise httpx.ReadTimeout("timed out (transient)")
+
+    ergebnis = TripReportSchedulerService(user_id=_kennung("f003"))._fetch_weather(
+        segmente, provider=_Ausfall())
+
+    assert aufrufe[lat_a] == 3, f"F003: Segment A braucht sein volles Budget: {aufrufe}"
+    assert aufrufe[lat_b] == 1, (
+        f"F003: Segment B wiederholte trotz endgueltigem Providerausfall: {aufrufe}"
+    )
+    assert [d.has_error for d in ergebnis] == [True, True]
+    assert [d.segment.segment_id for d in ergebnis] == [1, 2]
+
+
+def test_f004_cache_mit_acht_ausschnitten_je_url_bleibt_unter_40_mb():
+    """F004: Worst Case 8 Ausschnitte je URL ueber alle URLs gefuellt -> Gesamtspeicher
+    hart < 40 MB (Gesamtbudget), URL-Grenze 2048 bleibt."""
+    vorlage = _echtes_fenster(KARNISCH.latitude, KARNISCH.longitude)
+    for url_nr in range(2 * dwd._RASTER_CACHE._max_urls):
+        for k in range(8):
+            dwd._RASTER_CACHE.put(f"http://acht.invalid/{url_nr}",
+                                  dataclasses.replace(vorlage, row0=k))
+    gesamt = sum(w.array.nbytes for f in dwd._RASTER_CACHE._data.values() for w in f)
+    anzahl = sum(len(f) for f in dwd._RASTER_CACHE._data.values())
+    assert gesamt < 40 * 1024 * 1024, f"F004: {gesamt / 1e6:.1f} MB (>= 40 MB)"
+    assert anzahl >= 2000, f"F004: Budget evakuiert zu viel ({anzahl} Ausschnitte)"
+    assert dwd._RASTER_CACHE._max_urls == 2048
+
+
+def test_f004_vorwaermen_deckt_auch_eine_ferne_folgeetappe_ab(monkeypatch):
+    """F004/AC-7: Folgeetappe in einem anderen Rasterausschnitt (Norddeutschland statt
+    Alpen): der Hauptabruf dort macht nach dem Vorwaermen 0 Downloads. Vorbedingung:
+    OHNE Vorwaermen waeren es Downloads (sonst beweist der Test nichts)."""
+    from providers.thunder_enrichment import enrich_thunder
+
+    heute = datetime.now(timezone.utc).date()
+    morgen = heute + timedelta(days=1)
+    nah = (KARNISCH.latitude, KARNISCH.longitude)
+    fern = Location(latitude=53.5, longitude=10.0, name="fern")
+    trip = Trip(id="fern-2439", name="Fern", stages=[
+        Stage(id="T1", name="Heute", date=heute, waypoints=[
+            Waypoint(id="a", name="a", lat=nah[0], lon=nah[1], elevation_m=800)]),
+        Stage(id="T2", name="Morgen", date=morgen, waypoints=[
+            Waypoint(id="b", name="b", lat=fern.latitude, lon=fern.longitude, elevation_m=50)]),
+    ])
+    segment = _segment(heute, 8, 12, lat=nah[0], lon=nah[1])
+    service = TripReportSchedulerService(user_id=_kennung("f004f"))
+
+    with _dwd_server(monkeypatch, verzoegerung_s=0.0) as server:
+        enrich_thunder(_om_tagesreihe(morgen), fern, bereits_befragt="geosphere")
+        ohne = len(server.kopie())
+        dwd._RASTER_CACHE.clear()
+        server.abrufe.clear()
+
+        service._dwd_vorwaermen(trip, [segment], heute)
+        nach_vorwaermen = len(server.kopie())
+        enrich_thunder(_om_tagesreihe(morgen), fern, bereits_befragt="geosphere")
+        zusaetzlich = len(server.kopie()) - nach_vorwaermen
+
+    assert ohne > 0, "Vorbedingung: ohne Vorwaermen laedt der Hauptabruf fuer den fernen Ort"
+    assert zusaetzlich == 0, f"F004: Hauptabruf am fernen Ort lud noch {zusaetzlich} Datei(en)"
+
+
+def test_f005_hauptabruf_zaehlt_cache_treffer_und_keine_downloads(monkeypatch, caplog):
+    """F005: nach dem Vorwaermen meldet die Fensterzeile des Hauptabrufs
+    ``downloads=0`` und ``cache_treffer>0`` (Zaehler im Haupt-Cache-Pfad bewacht)."""
+    caplog.set_level(logging.INFO)
+    provider = dwd.DwdDirectProvider()
+    fenster = _fenster(0)
+    with _dwd_server(monkeypatch, verzoegerung_s=0.0):
+        _vorwaermen_einstieg(provider)(KARNISCH, [fenster])
+        caplog.clear()
+        provider.fetch_thunder_signals_named(KARNISCH, *fenster)
+
+    zeilen = _dwd_fenster(caplog)
+    assert len(zeilen) == 1 and zeilen[0][1] == 0 and zeilen[0][2] > 0, zeilen
+
+
+def test_f006_vorwaermen_haelt_die_frist_ein_wenn_der_server_haengt(monkeypatch, caplog):
+    """F006: Server haengt, Frist 0,4 s, Anfrage-Timeout 1,0 s -> prewarm_windows kehrt
+    nach ~der Frist zurueck (nicht erst nach dem Anfrage-Timeout), vermerkt den
+    Fehlschlag, wirft nicht."""
+    caplog.set_level(logging.INFO)
+    monkeypatch.setattr(dwd, "THUNDER_PREWARM_DEADLINE_SECONDS", 0.4, raising=True)
+    monkeypatch.setattr(dwd, "THUNDER_REQUEST_TIMEOUT", 1.0, raising=True)
+    einstieg = _vorwaermen_einstieg(dwd.DwdDirectProvider())
+
+    with _dwd_server(monkeypatch, regel=lambda p, l, t: ("hang", 30)):
+        t0 = time.monotonic()
+        einstieg(KARNISCH, [_fenster(0), _fenster(1)])
+        dauer = time.monotonic() - t0
+
+    assert dauer < 0.9, f"F006: Vorwaermen hielt die Frist nicht ein ({dauer:.2f} s)"
+    assert any(VORWAERMEN_FEHLT in r.getMessage() and r.levelno >= logging.WARNING
+               for r in caplog.records), "F006: Fehlschlag nicht vermerkt"
+
+
+def test_f006_wartender_haengt_nicht_laenger_als_eine_anfragezeit_am_einzelflug(monkeypatch):
+    """F006: ein haengender Lader haelt die URL-Sperre; ein Wartender (Hauptabruf)
+    wartet hoechstens ``THUNDER_REQUEST_TIMEOUT`` und laedt dann selbst."""
+    monkeypatch.setattr(dwd, "THUNDER_REQUEST_TIMEOUT", 0.5, raising=True)
+    url = "http://einzelflug.invalid/x"
+    haelt, frei = threading.Event(), threading.Event()
+
+    def lader():
+        with dwd._einzelflug(url):
+            haelt.set()
+            frei.wait(5)
+
+    thread = threading.Thread(target=lader, daemon=True)
+    thread.start()
+    assert haelt.wait(2)
+    t0 = time.monotonic()
+    with dwd._einzelflug(url):
+        wartezeit = time.monotonic() - t0
+    frei.set()
+    thread.join(timeout=3)
+    assert 0.4 <= wartezeit < 1.5, f"F006: Wartezeit am Einzelflug {wartezeit:.2f} s"
+
+
+_SPION_VAR: contextvars.ContextVar = contextvars.ContextVar("spion", default="leer")
+
+
+class _KontextSpion(dwd.DwdDirectProvider):
+    """Echte Unterklasse (kein Mock): haelt fest, was der Vorwaerm-Thread sieht."""
+
+    def __init__(self):
+        super().__init__()
+        self.gesehen: list = []
+
+    def fetch_thunder_signals_named(self, location, start=None, end=None):
+        self.gesehen.append(_SPION_VAR.get())
+        raise RuntimeError("absichtlich: Fensterfehler")
+
+
+def test_f007_vorwaerm_thread_erbt_den_kontext_und_ein_fensterfehler_wird_gefangen(caplog):
+    """F007: (a) der Vorwaerm-Thread laeuft im kopierten Kontext des Aufrufers
+    (copy_context), (b) wirft das Fenster, wirft prewarm_windows nicht und vermerkt es."""
+    caplog.set_level(logging.INFO)
+    spion = _KontextSpion()
+    token = _SPION_VAR.set("vom-aufrufer")
+    try:
+        spion.prewarm_windows(KARNISCH, [_fenster(0), _fenster(1)])
+    finally:
+        _SPION_VAR.reset(token)
+
+    assert spion.gesehen == ["vom-aufrufer", "vom-aufrufer"], spion.gesehen
+    assert any(VORWAERMEN_FEHLT in r.getMessage() for r in caplog.records)
+
+
+def test_f007_fehler_im_vorwaerm_aufbau_wird_gefangen_und_vermerkt(caplog):
+    """F007: scheitert schon der Aufbau (ungueltige Poolgroesse), wirft
+    prewarm_windows nicht, sondern vermerkt den Fehlschlag."""
+    caplog.set_level(logging.INFO)
+    dwd.DwdDirectProvider().prewarm_windows(KARNISCH, [_fenster(0)], max_parallel=-1)
+    assert any(VORWAERMEN_FEHLT in r.getMessage() and r.levelno >= logging.WARNING
+               for r in caplog.records)
+
+
+# ===========================================================================
+# Fix-Loop 2 (Adversary Runde 2: F-N1 .. F-N5)
+# ===========================================================================
+
+from tests.tdd._befehl_e2e_fixtures import (  # noqa: E402
+    _FakeImap, _mime_plain, klicke_telegram_knopf, sende_premium_sms,
+)
+
+
+_ORIGINAL_VORWAERMEN = TripReportSchedulerService._dwd_vorwaermen  # vor jedem Patch
+
+
+def _om_aehnliche_reihe(start, end) -> NormalizedTimeseries:
+    """Die Reihe, die Open-Meteo fuer einen Abruf start.date .. end.date liefert
+    (ganze Tage, stuendlich)."""
+    anfang = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
+    stunden = ((end.date() - start.date()).days + 1) * 24
+    meta = ForecastMeta(provider=Provider.OPENMETEO, model="icon_d2", grid_res_km=2.0)
+    return NormalizedTimeseries(meta=meta, data=[
+        ForecastDataPoint(ts=anfang + timedelta(hours=h), t2m_c=5.0) for h in range(stunden)])
+
+
+def _thunder_fixture_provider():
+    """Echter Fixture-Anbieter, der wie Open-Meteo je Abruf die DWD-Gewitteranreicherung
+    auf der Ganztagesreihe ausfuehrt (Fixture-Pfad kennt sie sonst nicht)."""
+    import os
+    from providers.fixture import FixtureProvider
+    from providers.thunder_enrichment import enrich_thunder
+
+    class _MitGewitter(FixtureProvider):
+        def fetch_forecast(self, location, start=None, end=None, enrich_ensemble=True,
+                           enrich_snow=True):
+            if start is not None and end is not None:
+                enrich_thunder(_om_aehnliche_reihe(start, end), location,
+                               bereits_befragt="geosphere")
+            return super().fetch_forecast(location, start, end, enrich_ensemble, enrich_snow)
+
+    return _MitGewitter(os.environ["GZ_TEST_FIXTURE_DIR"])
+
+
+def _bericht_mit_dwd_zaehlung(monkeypatch, mitschrift, uid, stufen, *, vorwaermen: bool):
+    """Baut den Abend-Bericht eines Trips ueber den echten Weg; liefert
+    (Downloads gesamt, Downloads nach dem Vorwaermen)."""
+    import providers.base as base
+
+    gp = base.get_provider
+    monkeypatch.setattr(base, "get_provider",
+                        lambda name, *a, **k: _thunder_fixture_provider()
+                        if name == "openmeteo" else gp(name, *a, **k))
+    original = _ORIGINAL_VORWAERMEN
+    stand: dict = {}
+    with _dwd_server(monkeypatch, verzoegerung_s=0.0) as server:
+        def _vorwaermen(self, *a, **k):
+            if vorwaermen:
+                original(self, *a, **k)
+            stand["nach"] = len(server.kopie())
+
+        monkeypatch.setattr(TripReportSchedulerService, "_dwd_vorwaermen", _vorwaermen)
+        _nutzer_anlegen(uid, mail="inv@example.invalid", chat_id="chat-inv")
+        heute = datetime.now(timezone.utc).date()
+        stages = [
+            Stage(id=f"V{i}", name=f"Etappe {i}", date=heute + timedelta(days=tag),
+                  waypoints=[Waypoint(id=f"V{i}a", name="Start", lat=lat, lon=lon, elevation_m=600,
+                                      arrival_calculated="08:00"),
+                             Waypoint(id=f"V{i}b", name="Ziel", lat=lat + 0.02, lon=lon + 0.02,
+                                      elevation_m=900, arrival_calculated="12:00")])
+            for i, (tag, lat, lon) in enumerate(stufen)
+        ]
+        trip = Trip(id=f"inv-{uid[-6:]}", name="Invariante", stages=stages,
+                    official_alerts_enabled=False,
+                    report_config=TripReportConfig(trip_id=f"inv-{uid[-6:]}", send_email=True))
+        save_trip(trip, uid)
+        trip = next(t for t in load_all_trips(uid) if t.id == f"inv-{uid[-6:]}")
+        aus = TripReportSchedulerService(user_id=uid).send_test_report_outcome(trip, "evening")
+        gesamt = len(server.kopie())
+        stand["ttt"] = sorted({(a[1], a[3]) for a in server.kopie()})
+    assert aus == "sent", aus
+    _bericht_mit_dwd_zaehlung.letzte = stand["ttt"]
+    return gesamt, stand["nach"]
+
+
+@pytest.mark.parametrize("stufen", [
+    [(1, 47.2692, 11.4041)],
+    [(1, 47.2692, 11.4041), (2, 53.5, 10.0)],
+    [(1, 47.2692, 11.4041), (2, 47.5692, 11.4041)],
+], ids=["eintagestrip", "mehrtages_ferne_folgeetappe", "mehrtages_nahe_folgeetappe"])
+def test_f_n1_vorwaermen_laedt_genau_was_der_hauptabruf_braucht(
+    mitschrift, monkeypatch, stufen,
+):
+    """F-N1 (beide Richtungen): Downloads gesamt MIT Vorwaermen == OHNE Vorwaermen
+    (nichts Ueberfluessiges) UND der Hauptabruf macht nach dem Vorwaermen 0 Downloads."""
+    ohne, _ = _bericht_mit_dwd_zaehlung(monkeypatch, mitschrift, "inv-ohne-a1b2c3",
+                                        [(t, la + 0.0011, lo) for t, la, lo in stufen],
+                                        vorwaermen=False)
+    _ohne_ttt = _bericht_mit_dwd_zaehlung.letzte
+    dwd._RASTER_CACHE.clear()
+    mit, nach = _bericht_mit_dwd_zaehlung(monkeypatch, mitschrift, "inv-mit-d4e5f6",
+                                          stufen, vorwaermen=True)
+    assert ohne > 0, "Vorbedingung: der Hauptabruf laedt DWD-Dateien"
+    assert set(_bericht_mit_dwd_zaehlung.letzte) == set(_ohne_ttt), "F-N1: andere Dateien geladen"
+    assert mit == ohne, f"F-N1: mit Vorwaermen {mit} Downloads, ohne {ohne}"
+    assert mit - nach == 0, f"F-N1: Hauptabruf nach dem Vorwaermen lud noch {mit - nach}"
+
+
+def test_f_n3_korsika_fr_direct_laedt_nichts_beim_dwd(monkeypatch):
+    """F-N3: ein Trip auf Korsika (fr_direct) macht 0 DWD-Vorwaerm-Downloads."""
+    from providers.thunder_routing import thunder_provider_for
+
+    heute = datetime.now(timezone.utc).date()
+    lat, lon = 42.30, 9.15
+    assert thunder_provider_for(lat, lon) != "de_direct", "Vorbedingung: nicht de_direct"
+    trip = Trip(id="korsika-2439", name="Korsika", stages=[
+        Stage(id="K1", name="K1", date=heute, waypoints=[
+            Waypoint(id="k", name="k", lat=lat, lon=lon, elevation_m=800)])])
+    with _dwd_server(monkeypatch, verzoegerung_s=0.0) as server:
+        TripReportSchedulerService(user_id=_kennung("fn3"))._dwd_vorwaermen(
+            trip, [_segment(heute, 8, 12, lat=lat, lon=lon)], heute)
+        abrufe = len(server.kopie())
+    assert abrufe == 0, f"F-N3: {abrufe} DWD-Abrufe fuer einen fr_direct-Trip"
+
+
+# ---- F-N2: Reader-Verdrahtung der Messung (echte Reader-Wege, lokaler Versand-Ersatz)
+
+def test_f_n2_email_reader_schreibt_eine_zeile_mit_eigener_trip_id(
+    caplog, monkeypatch, user_ids,
+):
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    a, b = lege_lage_an(user_ids, "L2"), lege_lage_an(user_ids, "L2")
+    assert a.trip.id != b.trip.id
+    from services.inbound_email_reader import InboundEmailReader
+    for nutzer in (a, b):
+        raw = _mime_plain(nutzer.mail_to, f"Re: [{nutzer.trip.name}] Etappe", "Status")
+        InboundEmailReader()._process_single(_FakeImap(raw), b"1", basis_settings())
+    zeilen = _dauer_zeilen(caplog)
+    assert [(z[0], z[1], z[2]) for z in zeilen] == [
+        ("STATUS", "email", a.trip.id), ("STATUS", "email", b.trip.id)], zeilen
+
+
+def test_f_n2_email_trip_nicht_gefunden_wird_markiert(caplog, monkeypatch, user_ids):
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    from services.inbound_email_reader import InboundEmailReader
+    raw = _mime_plain(nutzer.mail_to, "Re: [Gibt Es Nicht] Etappe", "Status")
+    InboundEmailReader()._process_single(_FakeImap(raw), b"1", basis_settings())
+    assert [(z[0], z[1], z[2]) for z in _dauer_zeilen(caplog)] == [("UNKNOWN", "email", "-")]
+
+
+def test_f_n5_mail_ohne_befehl_erzeugt_keine_zeile(caplog, monkeypatch, user_ids):
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    from services.inbound_email_reader import InboundEmailReader
+    raw = _mime_plain(nutzer.mail_to, "Hallo ohne Klammern", "Status")
+    InboundEmailReader()._process_single(_FakeImap(raw), b"1", basis_settings())
+    assert _dauer_zeilen(caplog) == []
+
+
+def test_f_n2_premium_sms_reader_zeile_trip_und_kanalname(caplog, monkeypatch, user_ids):
+    caplog.set_level(logging.INFO)
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    sende_premium_sms(basis_settings(), recorder, nutzer, "status")
+    zeilen = _dauer_zeilen(caplog)
+    assert [(z[0], z[1], z[2]) for z in zeilen] == [("STATUS", "premium_sms", nutzer.trip.id)], zeilen
+
+
+def test_f_n2_telegram_reader_zwei_nutzer_je_eigene_trip_id(caplog, monkeypatch, user_ids):
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    a, b = lege_lage_an(user_ids, "L2"), lege_lage_an(user_ids, "L2")
+    sende_telegram_text(basis_settings(), a, "status")
+    sende_telegram_text(basis_settings(), b, "status")
+    zeilen = _dauer_zeilen(caplog)
+    assert [(z[0], z[1], z[2]) for z in zeilen] == [
+        ("STATUS", "telegram", a.trip.id), ("STATUS", "telegram", b.trip.id)], zeilen
+
+
+def test_f_n2_telegram_unbekannter_befehl_wird_markiert(caplog, monkeypatch, user_ids):
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    sende_telegram_text(basis_settings(), nutzer, "xyzzy quatsch")
+    assert [(z[0], z[1], z[2]) for z in _dauer_zeilen(caplog)] == [("UNKNOWN", "telegram", "-")]
+
+
+def test_f_n2_telegram_knopf_zweige_schreiben_je_eine_zeile(caplog, monkeypatch, user_ids):
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    klicke_telegram_knopf(basis_settings(), nutzer, "act_help")
+    zeilen = _dauer_zeilen(caplog)
+    assert [(z[0], z[1]) for z in zeilen] == [("HELP", "telegram")], zeilen
+
+    caplog.clear()
+    mehrdeutig = lege_lage_an(user_ids, "L5")
+    klicke_telegram_knopf(basis_settings(), mehrdeutig, "act_pause")
+    zeilen = _dauer_zeilen(caplog)
+    assert [(z[0], z[1], z[2]) for z in zeilen] == [("PAUSE", "telegram", "-")], zeilen
+
+
+
+# ===========================================================================
+# Fix-Loop 3 (F-O2, F-O3)
+# ===========================================================================
+
+def test_f_o2_email_zeile_umfasst_die_uebergabe_an_den_versand(caplog, monkeypatch, user_ids):
+    """F-O2: E-Mail-Normalfall -- die Zeile entsteht NACH der Uebergabe der Antwort an
+    den Versand (verzoegert um 0,4 s), genau eine Zeile."""
+    from services.inbound_email_reader import InboundEmailReader
+    from services.notification_service import NotificationService
+
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    original = NotificationService.send_command_reply_email
+
+    def _langsam(self, *a, **kw):
+        time.sleep(0.4)
+        return original(self, *a, **kw)
+
+    monkeypatch.setattr(NotificationService, "send_command_reply_email", _langsam)
+    nutzer = lege_lage_an(user_ids, "L2")
+    raw = _mime_plain(nutzer.mail_to, f"Re: [{nutzer.trip.name}] Etappe", "Hilfe")
+
+    InboundEmailReader()._process_single(_FakeImap(raw), b"1", basis_settings())
+
+    zeilen = _dauer_zeilen(caplog)
+    assert len(zeilen) == 1 and zeilen[0][:3] == ("HELP", "email", nutzer.trip.id), zeilen
+    assert zeilen[0][3] >= 400, f"F-O2: Versand-Uebergabe fehlt in dauer_ms: {zeilen}"
+
+
+def test_f_o2_premium_sms_zeile_umfasst_die_uebergabe_an_den_versand(
+    caplog, monkeypatch, user_ids,
+):
+    """F-O2: Premium-SMS-Eingang -- Zeile erst nach der (um 0,4 s verzoegerten) Uebergabe."""
+    from services.notification_service import NotificationService
+
+    caplog.set_level(logging.INFO)
+    recorder = install_transport_fakes(monkeypatch)
+    original = NotificationService.send_command_reply_premium_sms
+
+    def _langsam(self, *a, **kw):
+        time.sleep(0.4)
+        return original(self, *a, **kw)
+
+    monkeypatch.setattr(NotificationService, "send_command_reply_premium_sms", _langsam)
+    nutzer = lege_lage_an(user_ids, "L2")
+
+    sende_premium_sms(basis_settings(), recorder, nutzer, "status")
+
+    zeilen = _dauer_zeilen(caplog)
+    assert len(zeilen) == 1 and zeilen[0][:3] == ("STATUS", "premium_sms", nutzer.trip.id), zeilen
+    assert zeilen[0][3] >= 400, f"F-O2: Versand-Uebergabe fehlt in dauer_ms: {zeilen}"
+
+
+def test_f_o3_telegram_name_plus_unbekanntes_wort_schreibt_genau_eine_zeile(
+    caplog, monkeypatch, user_ids,
+):
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    sende_telegram_text(basis_settings(), nutzer, f"{nutzer.trip.name} xyzzy")
+    assert [(z[0], z[1], z[2]) for z in _dauer_zeilen(caplog)] == [("UNKNOWN", "telegram", "-")]
+
+
+def test_f_o3_trip_id_der_zeile_kommt_bei_vergleich_aus_resolved_preset_id(
+    caplog, monkeypatch, user_ids,
+):
+    caplog.set_level(logging.INFO)
+    install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L4")
+    preset = nutzer.presets[0]
+    TripCommandProcessor().process(InboundMessage(
+        trip_name=preset.get("name", ""), body="### hilfe", sender="x", channel="email",
+        received_at=datetime.now(timezone.utc), user_id=nutzer.user_id,
+        resolved_kind="vergleich", resolved_preset_id=preset["id"],
+    ))
+    assert [(z[0], z[1], z[2]) for z in _dauer_zeilen(caplog)] == [("HELP", "email", preset["id"])]

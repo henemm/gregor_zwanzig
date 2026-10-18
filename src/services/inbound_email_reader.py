@@ -26,6 +26,8 @@ from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
     TripCommandProcessor,
+    befehl_markieren,
+    befehl_messung,
 )
 
 logger = logging.getLogger(__name__)
@@ -184,7 +186,17 @@ class InboundEmailReader:
         uid: bytes,
         settings: Settings,
     ) -> int:
-        """Process one email. Returns 1 if command processed, else 0."""
+        """Process one email. Returns 1 if command processed, else 0.
+        #2439: umspannt die Verarbeitung mit der Befehls-Messung (Dauer-Zeile)."""
+        with befehl_messung("email"):
+            return self._process_single_inner(imap, uid, settings)
+
+    def _process_single_inner(
+        self,
+        imap: imaplib.IMAP4_SSL,
+        uid: bytes,
+        settings: Settings,
+    ) -> int:
         self._ensure_notification_service(settings)
         _, msg_data = imap.fetch(uid, "(RFC822)")
         msg = email.message_from_bytes(msg_data[0][1])
@@ -217,6 +229,7 @@ class InboundEmailReader:
         # 3. Find trip — error reply if not found
         trip_id = self._find_trip_id(trip_name, _user_id)
         if not trip_id:
+            befehl_markieren(None)
             result = CommandResult(
                 success=False, command="trip_not_found",
                 confirmation_subject=f"[{trip_name}] Trip nicht gefunden",

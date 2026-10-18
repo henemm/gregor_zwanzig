@@ -295,12 +295,12 @@ def test_sentinel_kommt_aus_dem_nodata_tag_des_rasters():
 
 
 def test_produktivgrenzen_des_prozessweiten_cache():
-    assert dwd._RASTER_CACHE._max_urls == dwd._RASTER_CACHE_MAX_URLS == 512
+    assert dwd._RASTER_CACHE._max_urls == dwd._RASTER_CACHE_MAX_URLS == 2048
     assert dwd._RASTER_CACHE._max_windows == dwd._RASTER_CACHE_MAX_WINDOWS_PER_URL == 8
     f = dwd._decode_window(_RASTER, 48.14, 11.57)
-    for i in range(600):
+    for i in range(2100):
         dwd._RASTER_CACHE.put(f"https://x/{i}", f)
-    assert len(dwd._RASTER_CACHE) == 512
+    assert len(dwd._RASTER_CACHE) == 2048
     # bis zu 8 verschiedene Ausschnitte je URL, danach wird verdraengt
     for lat in [58.0, 56.0, 54.0, 52.0, 50.0, 48.0, 46.0, 44.0, 43.3, 57.0, 55.0]:
         dwd._RASTER_CACHE.put("https://x/viele", dwd._decode_window(_RASTER, lat, 11.57))

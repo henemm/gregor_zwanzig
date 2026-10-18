@@ -62,6 +62,8 @@ from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
     TripCommandProcessor,
+    befehl_markieren,
+    befehl_messung,
     match_leading_name,
 )
 # Eigener, NICHT durch Tests ersetzbarer Name fuer die zustandslose
@@ -278,7 +280,8 @@ class InboundSmsReader:
                     # nicht erhoehen, sonst kippt der Go-Scheduler-Status von
                     # "ok" auf "partial" (AC-6).
                     try:
-                        self._verarbeite_befehl(settings, text, sender, response)
+                        with befehl_messung("premium_sms"):
+                            self._verarbeite_befehl(settings, text, sender, response)
                     except Exception as e:
                         logger.warning(
                             "Premium-SMS-Kommandoverarbeitung fehlgeschlagen "
@@ -378,6 +381,7 @@ class InboundSmsReader:
                     key, trips, presets, now_utc, channel="premium_sms",
                 )
                 if ziel.kind is None:
+                    befehl_markieren(key)
                     # AC-5/AC-17: identischer Text wie Telegram, kein
                     # `process()`-Aufruf.
                     hinweis = CommandResult(

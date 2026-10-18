@@ -12,6 +12,7 @@ import dataclasses
 import json
 import logging
 import os
+import threading
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -82,6 +83,9 @@ class OnDemandErgebnis(NamedTuple):
 OUTAGE_WITHHOLD_RATIO = 0.75
 FETCH_RETRY_ATTEMPTS = 2
 FETCH_RETRY_BACKOFF_SECONDS = 1
+# #2439: Gesamtfrist der parallelen Segmentschleife (frueher unbegrenzt seriell;
+# jeder Einzelabruf hat weiter seine eigenen Provider-Zeitgrenzen).
+FETCH_WEATHER_DEADLINE_SECONDS = 600.0
 
 # Adversary Finding F002: nur HTTP 5xx/Timeout/Overloaded gelten als
 # transient und rechtfertigen einen Retry — alles andere (z. B. ungültige
@@ -135,6 +139,129 @@ def _is_transient_fetch_error(exc: Exception) -> bool:
     return any(marker in message for marker in _TRANSIENT_FETCH_ERROR_MARKERS)
 
 logger = logging.getLogger("trip_report_scheduler")
+# #2439: Laufzeit-Journal der Befehle (Dauer je Befehl und je Phase des Briefing-Baus).
+dauer_logger = logging.getLogger("befehl_dauer")
+
+
+class _Phasenuhr:
+    """#2439 (AC-2): Phasenzeiten des Briefing-Baus. `wechsel(name)` beginnt eine
+    Phase; die Zeit bis zum naechsten Wechsel gehoert ihr. `rest` wird nicht
+    ausgegeben. Ausgabe: eine Zeile je Phase."""
+
+    def __init__(self, trip_id: str) -> None:
+        self._trip_id = trip_id
+        self._summe: dict[str, float] = {}
+        self._name = "rest"
+        self._t = time_module.monotonic()
+
+    def wechsel(self, name: str) -> None:
+        jetzt = time_module.monotonic()
+        self._summe[self._name] = self._summe.get(self._name, 0.0) + (jetzt - self._t)
+        self._name, self._t = name, jetzt
+
+    def abschluss(self) -> None:
+        self.wechsel("rest")
+        for name, sekunden in self._summe.items():
+            if name != "rest":
+                dauer_logger.info(
+                    "phase=%s trip=%s dauer_ms=%d", name, self._trip_id, round(sekunden * 1000),
+                )
+
+
+def _fetch_segment_mit_wiederholung(
+    service, segment: TripSegment, user_id: Optional[str], fail_fast: "threading.Event",
+) -> SegmentWeatherData:
+    """Ein Segment mit Retry/Backoff (#1113); liefert bei Misserfolg ein
+    has_error-Objekt statt zu werfen."""
+    last_error: Exception | None = None
+    returned_error_data: SegmentWeatherData | None = None
+    attempts = 1 if fail_fast.is_set() else FETCH_RETRY_ATTEMPTS + 1
+    for attempt in range(attempts):
+        if attempt > 0 and fail_fast.is_set():
+            # #1113 Lastschutz: ein anderes Segment ist endgueltig gescheitert
+            # ("Provider ist down") -- keine weiteren Versuche mehr.
+            break
+        try:
+            # Bug #288: Skip ensemble per-segment; will be added once via
+            # _enrich_ensemble_for_trip() to keep API-Calls at 1/Report.
+            data = service.fetch_segment_weather(
+                segment, enrich_ensemble=False, user_id=user_id,
+            )
+        except Exception as e:
+            last_error = e
+            returned_error_data = None
+            has_more_attempts = attempt < attempts - 1
+            if has_more_attempts and _is_transient_fetch_error(e):
+                # Issue #1113: kurzer Backoff gegen transiente 503er,
+                # bevor der Fehler-Platzhalter erzeugt wird.
+                time_module.sleep(FETCH_RETRY_BACKOFF_SECONDS * (attempt + 1))
+                continue
+            logger.error(
+                f"Weather fetch failed for segment {segment.segment_id} "
+                f"after {attempt + 1} attempt(s): {e}"
+            )
+            break
+        if data.has_error:
+            # Adversary F005-Folgefund: SegmentWeatherService faengt
+            # ProviderRequestError bereits intern ab (WEATHER-04) und
+            # liefert statt eines Raise ein has_error-Objekt zurueck.
+            # Daher muss die Retry-Pruefung auch den Rueckgabewert
+            # inspizieren, nicht nur geworfene Exceptions.
+            last_error = RuntimeError(data.error_message)
+            returned_error_data = data
+            has_more_attempts = attempt < attempts - 1
+            if has_more_attempts and _is_transient_fetch_error(last_error):
+                time_module.sleep(FETCH_RETRY_BACKOFF_SECONDS * (attempt + 1))
+                continue
+            logger.error(
+                f"Weather fetch failed for segment {segment.segment_id} "
+                f"after {attempt + 1} attempt(s): {data.error_message}"
+            )
+            break
+        return data
+    # Adversary F004: Fail-Fast nur, wenn dieses Segment sein volles
+    # Retry-Budget durchlaufen hat UND der letzte Fehler transient war
+    # ("Provider ist wirklich down"); gilt fuer Segmente, die danach starten.
+    if attempt == attempts - 1 and _is_transient_fetch_error(last_error):
+        fail_fast.set()
+    if returned_error_data is not None:
+        return returned_error_data
+    return _fehler_platzhalter(segment, last_error)
+
+
+def _fehler_platzhalter(segment: TripSegment, fehler: BaseException) -> SegmentWeatherData:
+    """WEATHER-04: Error-Placeholder statt auslassen."""
+    return SegmentWeatherData(
+        segment=segment,
+        timeseries=None,
+        aggregated=SegmentWeatherSummary(),
+        fetched_at=datetime.now(timezone.utc),
+        provider="unknown",
+        has_error=True,
+        error_message=str(fehler),
+    )
+
+
+def _tag_fenster(bereiche) -> list[tuple[datetime, datetime]]:
+    """Ein Fenster je Abruf-Bereich (erster Tag, letzter Tag) -- DER Zuschnitt, den
+    `thunder_enrichment._fetch_lightning_density` fuer eine Open-Meteo-Reihe bildet,
+    die die ganzen Tage enthaelt (auch bei kurzem Segment): von = max(erster Tag
+    00:00, volle aktuelle Stunde) - 1 h, bis = letzter Tag 23:00. Je Abruf EIN
+    Fenster (nicht je Tag): der Hauptabruf deckelt die Offsets ab `von` selbst."""
+    stunde = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    fenster = []
+    for d0, d1 in sorted(set(bereiche)):
+        von = max(datetime(d0.year, d0.month, d0.day, tzinfo=timezone.utc), stunde) - timedelta(hours=1)
+        bis = datetime(d1.year, d1.month, d1.day, tzinfo=timezone.utc) + timedelta(hours=23)
+        if bis > von:
+            fenster.append((von, bis))
+    return fenster
+
+
+def thunder_prewarm_windows(segments) -> list[tuple[datetime, datetime]]:
+    """#2439 (AC-7): DWD-Fenster der Segmente mit DEMSELBEN Zuschnitt wie der
+    spaetere Hauptabruf (Open-Meteo-Datum = Datum von Start und Ende des Segments)."""
+    return _tag_fenster({(s.start_time.date(), s.end_time.date()) for s in segments})
 
 # Issue #2220 (C5-58): die vier heute bekannten `restrict_to_channel`-Namen —
 # ausschliesslich fuer den Namens-Guard in `_resolve_channel_flags`, kein
@@ -1303,6 +1430,29 @@ class TripReportSchedulerService:
         target_date: date | None = None,
         restrict_to_channel: str | None = None,
     ) -> str:
+        """Briefing bauen und senden (Doku: `_briefing_bauen_und_senden`); schreibt
+        zusaetzlich die Phasenzeiten (#2439, AC-2) ins Journal."""
+        uhr = _Phasenuhr(trip.id)
+        try:
+            return self._briefing_bauen_und_senden(
+                trip, report_type, allow_test_fallback, on_demand, catchup_prefix,
+                angefordert, target_date, restrict_to_channel, uhr,
+            )
+        finally:
+            uhr.abschluss()
+
+    def _briefing_bauen_und_senden(
+        self,
+        trip: "Trip",
+        report_type: str,
+        allow_test_fallback: bool,
+        on_demand: bool,
+        catchup_prefix: str | None,
+        angefordert: bool,
+        target_date: date | None,
+        restrict_to_channel: str | None,
+        uhr: "_Phasenuhr",
+    ) -> str:
         """
         Generate and send report for a single trip.
 
@@ -1469,8 +1619,17 @@ class TripReportSchedulerService:
             logger.warning(f"Wind exposition detection failed for {trip.id}: {e}")
             exposed_sections = []
 
+        # 2a. #2439: DWD-Tagesfenster vorwaermen (Pool 2), danach trifft der
+        # Hauptabruf den Cache.
+        uhr.wechsel("vorwaermen")
+        self._dwd_vorwaermen(
+            trip, weather_segments, target_date, render_options.show_multi_day_trend,
+        )
+
         # 3. Fetch weather for each segment
+        uhr.wechsel("zieltag")
         segment_weather = self._fetch_weather(weather_segments)
+        uhr.wechsel("warnungen")
 
         # Issue #1087: amtliche Warnungen pro eindeutigem Segment-Startpunkt,
         # strukturell kein Fetch bei official_alerts_enabled=False (analog
@@ -1557,7 +1716,9 @@ class TripReportSchedulerService:
             )
 
         # 2b. Ensemble-Anreicherung: 1 API-Call für letzten Waypoint der letzten Etappe
+        uhr.wechsel("ensemble")
         self._enrich_ensemble_for_trip(trip, segment_weather)
+        uhr.wechsel("rest")
 
         # 2c. F12 / Issue #122 (refactored Issue #479):
         # Stabilitäts-Label für die kommenden Etappen — wird aus den bereits
@@ -1579,8 +1740,10 @@ class TripReportSchedulerService:
 
         # 4. Night weather (both report types — Issue #1313)
         night_weather = None
+        uhr.wechsel("nacht")
         if segment_weather:
             night_weather = self._fetch_night_weather(segment_weather[-1])
+        uhr.wechsel("rest")
 
         # 6. Multi-day trend (configurable per report type — via Resolver, Issue #1208)
         #    Built BEFORE the thunder forecast (#1275): both must reflect the
@@ -1591,6 +1754,7 @@ class TripReportSchedulerService:
         outlook_state = None
         outlook_horizon_days = None
         if segment_weather and render_options.show_multi_day_trend:
+            uhr.wechsel("ausblick")
             trend_result = self._build_stage_trend(
                 trip, target_date, now_utc=now_utc, tz=trip_tz,
                 report_type=report_type,
@@ -1608,10 +1772,12 @@ class TripReportSchedulerService:
         #    Issue #1651: `night_weather` (Schritt 4, oben) wird durchgereicht,
         #    damit der Satz ein Gewitter ausserhalb des Tagesfensters nennt --
         #    aus DERSELBEN Reihe, die daneben als Nacht-Tabelle steht.
+        uhr.wechsel("gewitter_vorschau")
         thunder_forecast = self._build_thunder_forecast_from_trend_or_fetch(
             trip, target_date, now_utc=now_utc, tz=trip_tz,
             multi_day_trend=multi_day_trend, night_weather=night_weather,
         )
+        uhr.wechsel("rest")
 
         # 7b. Vortag-Vergleich (Issue #750): gestrigen Snapshot laden + Deltas
         # berechnen. Fail-soft — fehlt der Vortag, bleibt day_comparison None.
@@ -1646,6 +1812,7 @@ class TripReportSchedulerService:
         # 8. NotificationService: render + send (Issue #1022).
         # Der Scheduler liefert nur noch ein DTO; Renderer-/Transport-Imports
         # bleiben im NotificationService.
+        uhr.wechsel("rendern")
         request = self._build_trip_report_request(
             trip=trip,
             report_type=report_type,
@@ -1716,6 +1883,7 @@ class TripReportSchedulerService:
         # Versandaufruf: über dem Wetterabruf entstünde ein Anker aus
         # unvollständigen Daten, also eine Referenz, die nie ein Briefing war
         # (AC-10).
+        uhr.wechsel("versand")
         try:
             result = self._notification_service.send_trip_report(request)
         except Exception as exc:
@@ -1734,6 +1902,7 @@ class TripReportSchedulerService:
             # Unverändert weiterreichen: `dispatch_orchestrator` zählt den Lauf
             # weiterhin als fehlgeschlagen und protokolliert ihn (AC-3).
             raise
+        uhr.wechsel("rest")
         errors = request.failed_segments
 
         # Issue #1439 AC-6: ein erfolgreich versendeter Kurzfristhinweis
@@ -2345,6 +2514,76 @@ class TripReportSchedulerService:
                 result.append(seg)
         return result
 
+    @staticmethod
+    def _vorwaerm_bedarf(trip, segments, target_date, trend_an: bool) -> list:
+        """(Ort, Abruf-Bereiche), die der Hauptabruf beim DWD tatsaechlich anfragt -- nicht
+        mehr: Zieltag-Segmente (Start je Segment), Nacht (Ziel der letzten Etappe,
+        Tag und Folgetag), und die kommenden Etappen am Ort ihrer Wegpunkte, die
+        Ausblick (erste 3, wenn `trend_an`) bzw. Gewitter-Vorschau (nur Etappen am
+        Tag +1/+2) abfragen. Orte naeher als 0,3 Grad teilen sich einen Ausschnitt."""
+        from app.day_window import display_end_time
+        from providers.openmeteo import is_within_forecast_horizon
+        from services.trip_day import trip_local_today
+
+        wuensche = [
+            ((s.start_point.lat, s.start_point.lon, s.start_point.elevation_m),
+             {(s.start_time.date(), s.end_time.date())}) for s in segments
+        ]
+        # Nacht: Reihe ab Ankunft bis 06:00 des Folgetags (`fetch_night_weather`).
+        ziel = segments[-1].end_point
+        ankunft = display_end_time(segments[-1]).date()
+        wuensche.append(
+            ((ziel.lat, ziel.lon, ziel.elevation_m),
+             {(ankunft, ankunft + timedelta(days=1))})
+        )
+        # Tagesbasis wie `_build_stage_trend`: Ortstag der Tour.
+        heute = trip_local_today(trip, datetime.now(timezone.utc))
+        vorschau = {target_date + timedelta(days=1), target_date + timedelta(days=2)}
+        kommende = trip.get_future_stages(target_date)
+        for stage in (kommende[:3] if trend_an else [s for s in kommende if s.date in vorschau]):
+            if is_within_forecast_horizon(stage.date, heute):
+                wuensche.extend(
+                    ((w.lat, w.lon, w.elevation_m), {(stage.date, stage.date)})
+                    for w in stage.waypoints
+                )
+        orte: list = []  # [(lat, lon, hoehe, tage)]
+        for (lat, lon, hoehe), tage in wuensche:
+            for ort in orte:
+                if abs(ort[0] - lat) <= 0.3 and abs(ort[1] - lon) <= 0.3:
+                    ort[3] |= tage
+                    break
+            else:
+                orte.append([lat, lon, hoehe, set(tage)])
+        return orte
+
+    def _dwd_vorwaermen(
+        self, trip, segments: List[TripSegment], target_date, trend_an: bool = True,
+    ) -> None:
+        """#2439 (S1): DWD-Tagesfenster (Zieltag, Nacht, +1, +2) vorab mit Pool 2
+        laden. Nur fuer `de_direct`-Orte; Kernsuite-Naht: mit Fixture-Verzeichnis
+        und unveraendertem Produktions-`BASE_URL` kein Netz. Fehler nur ins Journal."""
+        try:
+            from providers import dwd
+            from providers.base import get_provider
+            from providers.thunder_routing import thunder_provider_for
+
+            if os.environ.get("GZ_TEST_FIXTURE_DIR") and dwd.BASE_URL == dwd.PRODUKTIV_BASE_URL:
+                return
+            if not segments:
+                return
+            from app.config import Location
+            for lat, lon, hoehe, tage in self._vorwaerm_bedarf(trip, segments, target_date, trend_an):
+                fenster = _tag_fenster(tage)
+                if fenster and thunder_provider_for(lat, lon) == "de_direct":
+                    get_provider("de_direct").prewarm_windows(
+                        Location(
+                            latitude=lat, longitude=lon,
+                            elevation_m=None if hoehe is None else int(hoehe),
+                        ), fenster,
+                    )
+        except Exception:
+            logger.warning("Vorwärmen fehlgeschlagen", exc_info=True)
+
     def _fetch_weather(
         self,
         segments: List[TripSegment],
@@ -2374,90 +2613,28 @@ class TripReportSchedulerService:
             provider = get_provider("openmeteo")
         service = SegmentWeatherService(provider)
 
+        # #2439 (S2): Segmente parallel (Semaphore je Provider), Ergebnis in
+        # Segmentreihenfolge. Adversary Finding F002: sobald EIN Segment trotz
+        # aller Retries endgueltig gescheitert ist, bekommen spaeter startende
+        # Segmente nur noch 1 Versuch (`fail_fast`), damit der >75 %-Guard einen
+        # Totalausfall in Sekunden statt Minuten erkennt.
+        from services.parallel_fetch import fetch_ordered
+
+        fail_fast = threading.Event()
+        ergebnisse = fetch_ordered(
+            segments,
+            lambda seg: _fetch_segment_mit_wiederholung(service, seg, self._user_id, fail_fast),
+            provider="open_meteo",
+            deadline_at=time_module.monotonic() + FETCH_WEATHER_DEADLINE_SECONDS,
+        )
         weather_data = []
-        # Adversary Finding F002: sobald EIN Segment trotz aller Retries
-        # endgültig gescheitert ist, deutet das auf einen andauernden
-        # Provider-Ausfall hin (nicht auf einen einzelnen Ausreißer) — die
-        # restlichen Segmente desselben Aufrufs bekommen dann nur noch 1
-        # Versuch (kein Sleep), damit der >75 %-Guard einen Totalausfall in
-        # Sekunden statt Minuten erkennt (~150 User im sequenziellen
-        # Scheduler-Loop).
-        fail_fast = False
-        for segment in segments:
-            last_error: Exception | None = None
-            returned_error_data: SegmentWeatherData | None = None
-            attempts = 1 if fail_fast else FETCH_RETRY_ATTEMPTS + 1
-            for attempt in range(attempts):
-                try:
-                    # Bug #288: Skip ensemble per-segment; will be added once via
-                    # _enrich_ensemble_for_trip() to keep API-Calls at 1/Report.
-                    data = service.fetch_segment_weather(
-                        segment, enrich_ensemble=False, user_id=self._user_id,
-                    )
-                except Exception as e:
-                    last_error = e
-                    returned_error_data = None
-                    has_more_attempts = attempt < attempts - 1
-                    if has_more_attempts and _is_transient_fetch_error(e):
-                        # Issue #1113: kurzer Backoff gegen transiente 503er,
-                        # bevor der Fehler-Platzhalter erzeugt wird.
-                        time_module.sleep(FETCH_RETRY_BACKOFF_SECONDS * (attempt + 1))
-                        continue
-                    logger.error(
-                        f"Weather fetch failed for segment {segment.segment_id} "
-                        f"after {attempt + 1} attempt(s): {e}"
-                    )
-                    break
-                if data.has_error:
-                    # Adversary F005-Folgefund: SegmentWeatherService faengt
-                    # ProviderRequestError bereits intern ab (WEATHER-04) und
-                    # liefert statt eines Raise ein has_error-Objekt zurueck.
-                    # Der echte Provider (openmeteo.py) wirft IMMER diese
-                    # Exception-Klasse, daher muss die Retry-Pruefung auch
-                    # den Rueckgabewert inspizieren — nicht nur geworfene
-                    # Exceptions —, sonst greift der Retry gegen den echten
-                    # Produktionscode-Pfad nie.
-                    last_error = RuntimeError(data.error_message)
-                    returned_error_data = data
-                    has_more_attempts = attempt < attempts - 1
-                    if has_more_attempts and _is_transient_fetch_error(last_error):
-                        time_module.sleep(FETCH_RETRY_BACKOFF_SECONDS * (attempt + 1))
-                        continue
-                    logger.error(
-                        f"Weather fetch failed for segment {segment.segment_id} "
-                        f"after {attempt + 1} attempt(s): {data.error_message}"
-                    )
-                    break
-                weather_data.append(data)
-                last_error = None
-                returned_error_data = None
-                break
-            if last_error is not None:
-                # Adversary Finding F004: Fail-Fast nur, wenn dieses Segment
-                # sein volles Retry-Budget durchlaufen hat UND der letzte
-                # Fehler transient war — das ist das "Provider ist wirklich
-                # down"-Signal. Ein sofortiger nicht-transienter Fehler
-                # (z. B. ungueltige Koordinaten, 0 Retries verbraucht) darf
-                # den Retry-Anspruch der Folgesegmente nicht zerstoeren.
-                if attempt == attempts - 1 and _is_transient_fetch_error(last_error):
-                    fail_fast = True
-                if returned_error_data is not None:
-                    # SegmentWeatherService lieferte bereits ein vollstaendiges
-                    # has_error-Objekt (korrekter provider-Name) — kein neuer
-                    # Platzhalter noetig.
-                    weather_data.append(returned_error_data)
-                else:
-                    # WEATHER-04: Error-Placeholder statt auslassen
-                    error_data = SegmentWeatherData(
-                        segment=segment,
-                        timeseries=None,
-                        aggregated=SegmentWeatherSummary(),
-                        fetched_at=datetime.now(timezone.utc),
-                        provider="unknown",
-                        has_error=True,
-                        error_message=str(last_error),
-                    )
-                    weather_data.append(error_data)
+        for out in ergebnisse:
+            if out.error is None and out.skipped is None and out.value is not None:
+                weather_data.append(out.value)
+                continue
+            fehler = out.error or RuntimeError(f"Wetterabruf nicht abgeschlossen ({out.skipped})")
+            logger.error(f"Weather fetch failed for segment {out.item.segment_id}: {fehler}")
+            weather_data.append(_fehler_platzhalter(out.item, fehler))
 
         return weather_data
 
