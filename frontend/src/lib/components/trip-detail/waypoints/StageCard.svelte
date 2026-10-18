@@ -4,6 +4,7 @@
 	// Inline SVG-Polyline (MiniSpark), width 200px, border statt outline für aktiven Zustand.
 
 	import { isPauseStage, formatStageNumber } from '$lib/components/shared/wizardHelpers';
+	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
 	import type { Stage } from '$lib/types';
 
 	interface Props {
@@ -21,18 +22,7 @@
 	const stageLabel = $derived(formatStageNumber(index));
 
 	const totalKm = $derived(
-		(() => {
-			if (!stage.waypoints || stage.waypoints.length < 2) return null;
-			let dist = 0;
-			for (let i = 1; i < stage.waypoints.length; i++) {
-				const a = stage.waypoints[i - 1];
-				const b = stage.waypoints[i];
-				const dlat = (b.lat - a.lat) * 111.32;
-				const dlon = (b.lon - a.lon) * 111.32 * Math.cos((a.lat * Math.PI) / 180);
-				dist += Math.sqrt(dlat * dlat + dlon * dlon);
-			}
-			return dist;
-		})()
+		!stage.waypoints || stage.waypoints.length < 2 ? null : computeHeaderStats(stage).distanceKm
 	);
 
 	const ascent = $derived(
