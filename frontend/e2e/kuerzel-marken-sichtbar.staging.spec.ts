@@ -682,49 +682,55 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 	});
 
 	// ── AC-14 ───────────────────────────────────────────────────────────────
-	test('AC-14: die Ziehgeste sortiert weiterhin um und speichert', async ({ page, request }) => {
-		// PFLICHT, kein Nice-to-have: S3 hat in genau dieser Datei die Ziehgeste
-		// lautlos zerbrochen (neue Array-Referenz im Zeilen-Markup), und 2553
-		// Unit-Tests haben das nicht gesehen.
-		await createTrip(request);
-		await page.setViewportSize({ width: 1440, height: 900 });
-		const tab = await oeffneTripEditor(page);
+	// AC-14 gilt auch unter 900px (#1791 AC-6): 375px = Bereich der Einspalten-Zeile.
+	for (const breite of [1440, 375]) {
+		test(`AC-14: die Ziehgeste sortiert weiterhin um und speichert (${breite}px)`, async ({ page, request }) => {
+			// PFLICHT, kein Nice-to-have: S3 hat in genau dieser Datei die Ziehgeste
+			// lautlos zerbrochen (neue Array-Referenz im Zeilen-Markup), und 2553
+			// Unit-Tests haben das nicht gesehen.
+			await createTrip(request);
+			await page.setViewportSize({ width: breite, height: breite < 900 ? 800 : 900 });
+			const tab = await oeffneTripEditor(page);
 
-		const kanal = tab.locator('[data-testid="wm2-reihenfolge"]').first();
-		const zeilen = kanal.locator('[data-testid="wm2-reihenfolge-row"]');
-		// Keine feste Zeilenzahl: das Backend faechert wind_chill im Kanal-Block auf (8 Zeilen).
-		await expect(zeilen.first()).toBeVisible();
-		const ersteVorher = await zeilen.first().getAttribute('data-metric-id');
-		expect(ersteVorher).toBe(TRIP_METRIKEN[0]);
+			const kanal = tab.locator('[data-testid="wm2-reihenfolge"]').first();
+			const zeilen = kanal.locator('[data-testid="wm2-reihenfolge-row"]');
+			// Keine feste Zeilenzahl: das Backend faechert wind_chill im Kanal-Block auf (8 Zeilen).
+			await expect(zeilen.first()).toBeVisible();
+			const ersteVorher = await zeilen.first().getAttribute('data-metric-id');
+			expect(ersteVorher).toBe(TRIP_METRIKEN[0]);
 
-		const quelle = kanal.locator(
-			`[data-testid="wm2-reihenfolge-row"][data-metric-id="${TRIP_METRIKEN[2]}"]`
-		);
-		const ziel = kanal.locator(
-			`[data-testid="wm2-reihenfolge-row"][data-metric-id="${TRIP_METRIKEN[0]}"]`
-		);
-		await ziehe(page, quelle, ziel);
+			// Unter 900px (#1791 AC-6) liegen die Bedienelemente in einer eigenen Zeile
+			// unter dem Label: am Ziehgriff greifen, nicht in der Zeilenmitte.
+			const quelleZeile = kanal.locator(
+				`[data-testid="wm2-reihenfolge-row"][data-metric-id="${TRIP_METRIKEN[2]}"]`
+			);
+			const quelle = breite < 900 ? quelleZeile.locator('.drag-handle') : quelleZeile;
+			const ziel = kanal.locator(
+				`[data-testid="wm2-reihenfolge-row"][data-metric-id="${TRIP_METRIKEN[0]}"]`
+			);
+			await ziehe(page, quelle, ziel);
 
-		await expect(zeilen.first()).toHaveAttribute('data-metric-id', TRIP_METRIKEN[2]);
-		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
-			timeout: 15_000
+			await expect(zeilen.first()).toHaveAttribute('data-metric-id', TRIP_METRIKEN[2]);
+			await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
+				timeout: 15_000
+			});
+
+			// Ohne Neuladen waere das nur eine DOM-Bewegung: der lokale
+			// `consider`-Zwischenstand sieht im selben Tab identisch aus.
+			await page.reload();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+			const neu = page
+				.getByTestId('weather-metrics-tab')
+				.locator('[data-testid="wm2-reihenfolge"]')
+				.first()
+				.locator('[data-testid="wm2-reihenfolge-row"]');
+			await expect(
+				neu.first(),
+				'AC-14 FAIL: nach dem Neuladen steht die alte Reihenfolge — die Ziehgeste ' +
+					'hat bewegt, aber nicht gespeichert'
+			).toHaveAttribute('data-metric-id', TRIP_METRIKEN[2], { timeout: 10_000 });
 		});
-
-		// Ohne Neuladen waere das nur eine DOM-Bewegung: der lokale
-		// `consider`-Zwischenstand sieht im selben Tab identisch aus.
-		await page.reload();
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
-		const neu = page
-			.getByTestId('weather-metrics-tab')
-			.locator('[data-testid="wm2-reihenfolge"]')
-			.first()
-			.locator('[data-testid="wm2-reihenfolge-row"]');
-		await expect(
-			neu.first(),
-			'AC-14 FAIL: nach dem Neuladen steht die alte Reihenfolge — die Ziehgeste ' +
-				'hat bewegt, aber nicht gespeichert'
-		).toHaveAttribute('data-metric-id', TRIP_METRIKEN[2], { timeout: 10_000 });
-	});
+	}
 
 	// ── #1791 AC-3 / AC-5 ───────────────────────────────────────────────────
 	//
@@ -801,5 +807,61 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 			befunde,
 			`AC-5 FAIL — ab 900px muss .controls neben dem Label stehen:\n  ` + befunde.join('\n  ')
 		).toEqual([]);
+	});
+
+	// ── #1791 AC-6 (Aus-Zeile bei 320px) ────────────────────────────────────
+	test('AC-6: bei 320px bleibt die Aus-Zeile einzeilig, "Ein" bedienbar und holt die Groesse zurueck', async ({
+		page,
+		request
+	}) => {
+		await createTrip(request);
+		const tab = await oeffneTripEditor(page);
+		await page.setViewportSize({ width: 320, height: 568 });
+		await page.waitForTimeout(250);
+
+		const kanal = tab.locator('[data-testid="wm2-reihenfolge"]').first();
+		const zeilen = kanal.locator('[data-testid="wm2-reihenfolge-row"]');
+		const vorher = await zeilen.count();
+		// Eine Aus-Zeile entsteht, indem eine Groesse per "Aus" aus dem Kanal genommen wird.
+		const id = 'humidity'; // nicht aufgefaechert: genau eine Kanal-Zeile
+		await zeilen.and(kanal.locator(`[data-metric-id="${id}"]`)).locator('.btn-aus').click();
+		await expect(zeilen).toHaveCount(vorher - 1);
+
+		const aus = kanal.locator(`[data-testid="wm2-aus-row"][data-metric-id="${id}"]`);
+		await expect(aus, 'AC-6 FAIL: keine Aus-Zeile fuer die ausgeschaltete Groesse').toHaveCount(1);
+		await aus.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+
+		expect(await aus.locator('.drag-handle').count(), 'AC-6 FAIL: Aus-Zeile traegt einen Ziehgriff').toBe(0);
+
+		const g = await aus.evaluate((row) => {
+			const ein = row.querySelector('.btn-ein') as HTMLElement;
+			const label = row.querySelector('.label-cell') as HTMLElement;
+			const e = ein.getBoundingClientRect();
+			const l = label.getBoundingClientRect();
+			const mitte = document.elementFromPoint((e.left + e.right) / 2, (e.top + e.bottom) / 2);
+			return {
+				links: e.left,
+				rechts: e.right,
+				vw: window.innerWidth,
+				ueberlagert: !mitte || !(mitte === ein || ein.contains(mitte)),
+				wer: mitte ? `<${mitte.tagName.toLowerCase()} class="${mitte.className}">` : 'nichts',
+				einMitte: (e.top + e.bottom) / 2,
+				labelMitte: (l.top + l.bottom) / 2
+			};
+		});
+		expect(g.links, 'AC-6 FAIL: "Ein" links ausserhalb des Sichtfensters').toBeGreaterThanOrEqual(-1);
+		expect(g.rechts, `AC-6 FAIL: "Ein" ragt rechts aus dem Sichtfenster (${g.vw}px)`).toBeLessThanOrEqual(g.vw + 1);
+		expect(g.ueberlagert, `AC-6 FAIL: "Ein" wird ueberdeckt von ${g.wer}`).toBe(false);
+		expect(
+			Math.abs(g.einMitte - g.labelMitte),
+			`AC-6 FAIL: Label (Mitte ${Math.round(g.labelMitte)}) und "Ein" (Mitte ${Math.round(g.einMitte)}) liegen nicht in einer Zeile`
+		).toBeLessThanOrEqual(20);
+
+		await aus.locator('.btn-ein').click();
+		await expect(
+			zeilen,
+			'AC-6 FAIL: Klick auf "Ein" hat die Groesse nicht in den Kanal zurueckgeholt'
+		).toHaveCount(vorher);
+		await expect(aus).toHaveCount(0);
 	});
 });

@@ -480,10 +480,24 @@
 			overflow-wrap: normal;
 			max-width: 100%;
 		}
+		/* Issue #1791: Ziehzeile unter 900px zweizeilig -- Zeile 1 Position,
+		   Griff, Name+Marken (volle Breite fuer die Textspalte), Zeile 2 die
+		   Bedienelemente rechtsbuendig. Aus-Zeilen bleiben unberuehrt. */
+		.row:not(.aus-row) {
+			grid-template-columns: 28px 16px 1fr;
+		}
+		.row:not(.aus-row) .label-cell {
+			grid-column: 3;
+		}
+		.row:not(.aus-row) .controls {
+			grid-column: 1 / -1;
+			grid-row: 2;
+		}
 		.controls {
-			flex-direction: column;
-			align-items: flex-end;
-			gap: 4px;
+			flex-direction: row;
+			flex-wrap: wrap;
+			justify-content: flex-end;
+			gap: 4px 8px;
 		}
 	}
 </style>

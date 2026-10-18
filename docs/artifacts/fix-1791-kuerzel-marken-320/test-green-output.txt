@@ -1,0 +1,91 @@
+▶ AC-1: kein Kuerzel bleibt ohne Erklaertext
+  ✔ Trip: die Legende deckt genau die Kuerzel der GERENDERTEN Groessen ab (1826.108764ms)
+  ✔ Trip: eine NICHT gerenderte Groesse bekommt keinen Eintrag (0.665981ms)
+  ✔ Vergleich: jede gerenderte Zeile mit Kuerzel steht mit Bedeutung in der Legende (1.828253ms)
+✔ AC-1: kein Kuerzel bleibt ohne Erklaertext (1832.173155ms)
+▶ AC-2: der Trip-Editor erklaert die sechs Temperatur-/Windchill-Groessen
+  ✔ jedes der sechs Kuerzel traegt sein Registerlabel (2.637944ms)
+✔ AC-2: der Trip-Editor erklaert die sechs Temperatur-/Windchill-Groessen (3.669124ms)
+▶ AC-2a: der Ortsvergleich entdoppelt nicht nach Kuerzel
+  ✔ `D` und `L` je einmal, kein Kuerzel doppelt (#2417 AC-12/AC-29) (2.400093ms)
+✔ AC-2a: der Ortsvergleich entdoppelt nicht nach Kuerzel (2.519083ms)
+▶ AC-4: fehlende Quelle erzeugt keine Leerzeilen
+  ✔ leere oder halbe Datenlage liefert gar keine Eintraege (4.485427ms)
+✔ AC-4: fehlende Quelle erzeugt keine Leerzeilen (4.744927ms)
+▶ Kein stilles Verschwinden: unaufloesbare Groessen werden gemeldet
+  ✔ Kuerzel ohne Bedeutung: kein Eintrag, aber ein Vermerk (2.477094ms)
+✔ Kein stilles Verschwinden: unaufloesbare Groessen werden gemeldet (2.599635ms)
+▶ AC-5: die Legende sitzt in der Komponente, die die Marken rendert
+  ✔ Marken und Legende stehen in DERSELBEN Komponente (16.124484ms)
+  ✔ KEINE Datei rendert Marken ohne Legende (33.199009ms)
+  ✔ Der Reiter fuehrt keine zweite, eigene Legende mehr (0.788792ms)
+✔ AC-5: die Legende sitzt in der Komponente, die die Marken rendert (50.271932ms)
+▶ AC-3: die Legende speist sich aus den Props der Marken
+  ✔ die Ableitung erreicht genau die Quellen, aus denen auch die Marken kommen (0.668701ms)
+  ✔ die Aus-Gruppe ist mitgedeckt (0.547691ms)
+  ✔ im Legenden-Markup steht kein Kuerzel und kein Label als fester Text (3.799725ms)
+✔ AC-3: die Legende speist sich aus den Props der Marken (5.165388ms)
+▶ AC-4: der Guard haengt an den Daten, nicht am Kontext
+  ✔ die Legende steht unter einer Bedingung ueber ihrer eigenen Quelle (10.611725ms)
+  ✔ die Bedingung wertet bei leerer Legende WIRKLICH falsch aus (3.854205ms)
+✔ AC-4: der Guard haengt an den Daten, nicht am Kontext (14.570951ms)
+▶ AC-1: der echte Aufruf erklaert GENAU die Marken seines Blocks
+  ✔ Trip: Marken-Menge == Legenden-Menge (5.033178ms)
+  ✔ Vergleich: Marken-Menge == Legenden-Menge (16.564614ms)
+✔ AC-1: der echte Aufruf erklaert GENAU die Marken seines Blocks (21.782142ms)
+▶ F007: alle VIER Einbettungen reichen brauchbare Props durch
+  ✔ Trip-Reihenfolge (WeatherMetricsTab): die echte Herleitung liefert Marken UND Legende (852.430785ms)
+  ✔ Vergleichs-Reihenfolge (WeatherMetricsTab): die echte Herleitung liefert Marken UND Legende (630.017294ms)
+  ✔ Ausblick (CompareOutlookLayoutControls): die echte Herleitung liefert Marken UND Legende (43.437302ms)
+  ✔ Stundenverlauf (CompareHourlyLayoutControls): die echte Herleitung liefert Marken UND Legende (11.857687ms)
+✔ F007: alle VIER Einbettungen reichen brauchbare Props durch (1538.12011ms)
+▶ AC-5: die Zeile des Trips-Editors traegt zwei beschriftete Marken
+  ✔ beide Marken sind auffindbar und sichtbar beschriftet (111.682141ms)
+✔ AC-5: die Zeile des Trips-Editors traegt zwei beschriftete Marken (125.5078ms)
+▶ AC-6: die Kurzform-Marke zeigt alle Kuerzel, nicht nur das erste
+  ✔ die Marke rendert eine Liste (Schleife oder join), keinen Einzelwert (28.2196ms)
+✔ AC-6: die Kurzform-Marke zeigt alle Kuerzel, nicht nur das erste (28.35478ms)
+▶ AC-9: eine Groesse ohne Kuerzel bekommt gar keine Marke
+  ✔ die Kurzform-Marke haengt an einer Bedingung ueber ihrer eigenen Quelle (20.420829ms)
+✔ AC-9: eine Groesse ohne Kuerzel bekommt gar keine Marke (20.57556ms)
+▶ AC-6: der Trips-Editor speist die Kurzform-Marke aus /api/sms-symbols
+  ✔ die Trips-Einbettung erreicht den Kuerzel-Katalog des Backends (546.125445ms)
+✔ AC-6: der Trips-Editor speist die Kurzform-Marke aus /api/sms-symbols (546.258625ms)
+▶ AC-7: die drei Vergleichs-Editoren tragen ebenfalls beide Marken
+  ✔ Vergleichs-Uebersicht: die Zeile traegt beide beschrifteten Marken (699.411145ms)
+  ✔ Vergleichs-Stundenverlauf: die Zeile traegt beide beschrifteten Marken (46.613657ms)
+  ✔ Vergleichs-Ausblick: die Zeile traegt beide beschrifteten Marken (91.999562ms)
+✔ AC-7: die drei Vergleichs-Editoren tragen ebenfalls beide Marken (840.040667ms)
+▶ AC-6/AC-7: die Kurzform-Marke wird je Flaeche aus der RICHTIGEN Quelle gespeist
+  ✔ Trips-Editor: aus /api/sms-symbols, NICHT aus dem Register (156.767755ms)
+  ✔ Vergleichs-Uebersicht: aus /api/sms-symbols, NICHT mehr aus dem Register (241.468158ms)
+  ✔ Vergleichs-Stundenverlauf: aus /api/sms-symbols, NICHT mehr aus dem Register (8.189062ms)
+  ✔ Vergleichs-Ausblick: aus /api/sms-symbols, NICHT mehr aus dem Register (22.764203ms)
+✔ AC-6/AC-7: die Kurzform-Marke wird je Flaeche aus der RICHTIGEN Quelle gespeist (429.451137ms)
+▶ #1453: die Namensform-Datengrundlage des Vergleichs bleibt vollstaendig
+  ✔ Vergleichs-Uebersicht: die Zeile erreicht das Register-Kuerzel (sms_code) (173.07587ms)
+  ✔ Vergleichs-Stundenverlauf: die Zeile erreicht das Register-Kuerzel (sms_code) (16.153543ms)
+  ✔ Vergleichs-Ausblick: die Zeile erreicht das Register-Kuerzel (sms_code) (8.182821ms)
+✔ #1453: die Namensform-Datengrundlage des Vergleichs bleibt vollstaendig (197.611964ms)
+▶ AC-8: der Bestandswaechter aus #1453 laeuft weiterhin gruen
+  ✔ weather_metric_name_forms_visible.test.ts besteht (2881.968912ms)
+✔ AC-8: der Bestandswaechter aus #1453 laeuft weiterhin gruen (2882.195264ms)
+▶ AC-7: jeder der vier Editoren zeigt alle drei Namensformen
+  ✔ Trips-Editor (context="route"): eine Anzeigeflaeche rendert deutschen Namen, Kurzform UND SMS-Kuerzel (946.924902ms)
+  ✔ Compare-Uebersicht (context="vergleich"): eine Anzeigeflaeche rendert deutschen Namen, Kurzform UND SMS-Kuerzel (438.552001ms)
+  ✔ Compare-Stundenverlauf: eine Anzeigeflaeche rendert deutschen Namen, Kurzform UND SMS-Kuerzel (56.863223ms)
+  ✔ Compare-Ausblick: eine Anzeigeflaeche rendert deutschen Namen, Kurzform UND SMS-Kuerzel (56.959693ms)
+✔ AC-7: jeder der vier Editoren zeigt alle drei Namensformen (1500.751797ms)
+▶ AC-7: die Metrik-Eintraege der Compare-Editoren fuehren alle drei Formen
+  ✔ WeatherMetricsTab.svelte: jedes gebaute Metrik-Objekt traegt Kurzform und SMS-Kuerzel (237.559501ms)
+  ✔ CompareHourlyLayoutControls.svelte: jedes gebaute Metrik-Objekt traegt Kurzform und SMS-Kuerzel (8.122772ms)
+  ✔ CompareOutlookLayoutControls.svelte: jedes gebaute Metrik-Objekt traegt Kurzform und SMS-Kuerzel (21.45008ms)
+✔ AC-7: die Metrik-Eintraege der Compare-Editoren fuehren alle drei Formen (267.851085ms)
+ℹ tests 43
+ℹ suites 20
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6370.690617
