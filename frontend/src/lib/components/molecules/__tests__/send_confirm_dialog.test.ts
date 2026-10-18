@@ -90,6 +90,18 @@ describe('AC-3: Ziel kommt aus sendTargetLabel — fuer beide Arten', () => {
 		});
 	}
 
+	test('Fix-Loop 1 (F014/AC-10): ohne Profil/Session ist das Ziel „unbekannt" (gesperrt); mit Profil ohne Adresse bleibt es „keine E-Mail-Adresse"', () => {
+		const modell = braucheModell();
+		for (const ohne of [null, undefined]) {
+			const m = modell('trip', ohne, { send_telegram: true });
+			assert.equal(m.gesperrt, true);
+			assert.match(m.beschreibung, /unbekannt/);
+		}
+		const leer = modell('trip', {}, {});
+		assert.equal(leer.gesperrt, true);
+		assert.match(leer.beschreibung, /keine E-Mail-Adresse/);
+	});
+
 	test('zwei Nutzer: Ziel B enthaelt nie die Adresse/den Chat von A (AC-10)', () => {
 		const modell = braucheModell();
 		const a = modell('trip', PROFIL_A, { send_telegram: true });

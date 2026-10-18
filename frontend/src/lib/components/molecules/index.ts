@@ -23,13 +23,10 @@ export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 // Issue #488 — Compare-Kachel-Atome (Epic #485 Block A).
 // Cross-Verzeichnis-Re-Export, damit alle Downstream-Issues (#485-B/C/D)
 // die Molecule-API einheitlich aus `$lib/components/molecules` importieren.
-export { default as CompareTile }       from '../compare/CompareTile.svelte';
+// (CompareTile/CompareKebab entfallen mit #2278: SubscriptionCard/SubscriptionKebab.)
 export { default as CompareStatusPill } from '../compare/CompareStatusPill.svelte';
-export { default as CompareKebab }      from '../compare/CompareKebab.svelte';
 export { default as CompareLocationRow } from './CompareLocationRow.svelte';
 export { default as CompareIdealRow } from './CompareIdealRow.svelte';
-export { default as ReportConfigDialog } from './ReportConfigDialog.svelte';
-export { default as TestReportDialog } from './TestReportDialog.svelte';
 
 // Issue #568 — Startseite-Cockpit-Molecules (Spec: docs/specs/modules/issue_568_home_redesign.md).
 export { default as QuickAction } from './QuickAction.svelte';

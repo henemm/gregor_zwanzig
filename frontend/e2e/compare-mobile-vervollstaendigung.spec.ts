@@ -90,45 +90,34 @@ async function createPresetWithLocation(
 	return id;
 }
 
-test.describe('Issue #1256 Scheibe 8 (AC-21): mobile Liste — Chevron statt Kebab', () => {
+// Issue #2278 loest die Entscheidung "mobile Liste = nur Link/Chevron" (#1256 S8 AC-21) ab:
+// mobil zeigt die Karte (SubscriptionCard) einen Menue-Knopf, das Aktionsblatt und die Filter-Pillen.
+test.describe('Issue #2278 (loest #1256 S8 AC-21 ab): mobile Liste — Karte mit Menue-Knopf und Aktionsblatt', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 	});
 
-	test('AC-21: dense-Kachel zeigt Chevron, keinen Kebab, und navigiert per Tipp auf das Detail', async ({
+	test('mobile Karte hat Menue-Knopf, navigiert per Tipp auf das Detail und oeffnet das Aktionsblatt', async ({
 		page
 	}) => {
-		const name = `E2E S8 Chevron ${Date.now()}`;
+		const name = `E2E S8 Karte ${Date.now()}`;
 		const id = await createPreset(page, name);
 
 		await page.goto('/compare');
 		await page.waitForLoadState('networkidle');
 
-		const tile = page.locator(`[data-testid="compare-tile-${id}"]:visible`);
-		await expect(tile).toBeVisible({ timeout: 10_000 });
+		const karte = page.getByTestId(`subscription-card-${id}`);
+		await expect(karte).toBeVisible({ timeout: 10_000 });
+		await expect(page.getByTestId(`subscription-card-menu-${id}`)).toBeVisible();
+		await expect(page.locator('[data-testid^="status-filter-pill-"]')).toHaveCount(5);
 
-		// AC-21: Chevron (CompareTile.svelte dense-Zweig, lucide chevron-right)
-		// ist die einzige Trailing-Affordance — kein Kebab mehr in der Kachel.
-		await expect(tile.locator('svg.lucide-chevron-right')).toBeVisible({ timeout: 5_000 });
-		await expect(tile.locator('button[aria-label="Weitere Aktionen"]')).toHaveCount(0);
+		await page.getByTestId(`subscription-card-menu-${id}`).click();
+		await expect(page.locator('[data-snap]')).toBeVisible({ timeout: 5_000 });
+		await page.keyboard.press('Escape');
+		await page.mouse.click(10, 10);
 
-		await tile.click();
+		await karte.click({ position: { x: 24, y: 24 } });
 		await expect(page).toHaveURL(new RegExp(`/compare/${id}$`), { timeout: 10_000 });
-	});
-
-	test('AC-21: kein Kebab-Trigger sichtbar irgendwo im mobilen Kachel-Stack (Desktop-Grid bleibt CSS-verborgen)', async ({
-		page
-	}) => {
-		const name = `E2E S8 Chevron-Liste ${Date.now()}`;
-		await createPreset(page, name);
-
-		await page.goto('/compare');
-		await page.waitForLoadState('networkidle');
-
-		// Der Desktop-Kachel-Grid (CompareGrid) rendert weiterhin einen Kebab pro
-		// Kachel, ist aber unter 900px per `hidden desktop:block` aus dem
-		// sichtbaren Baum genommen — :visible filtert ihn korrekt heraus.
-		await expect(page.locator('button[aria-label="Weitere Aktionen"]:visible')).toHaveCount(0);
 	});
 });
 
@@ -231,7 +220,7 @@ test.describe('Issue #1256 Scheibe 8 (AC-23): mobiles Bottom-Sheet — Lifecycle
 		await page.setViewportSize({ width: 390, height: 844 });
 	});
 
-	test('AC-23: ⋯-Button öffnet Bottom-Sheet mit genau Aktivieren/Archivieren/Löschen (pausierter Vergleich)', async ({
+	test('AC-23: ⋯-Button öffnet Bottom-Sheet mit genau Fortsetzen/Archivieren/Löschen (pausierter Vergleich)', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -245,7 +234,9 @@ test.describe('Issue #1256 Scheibe 8 (AC-23): mobiles Bottom-Sheet — Lifecycle
 		// Mobile TopBar-⋯-Button teilt sich das aria-label mit dem Desktop-
 		// Header-Kebab (S7-Ist-Befund) — auf mobilem Viewport ist nur der
 		// TopBar-Button :visible (Desktop-Header per CSS verborgen).
-		const moreBtn = page.locator('button[aria-label="Weitere Aktionen"]:visible');
+		// Issue #2278: EIN Lebenszyklus-Knopf `subscription-kebab` in beiden Viewports
+		// (mobil oeffnet er das SubscriptionActionSheet, Flaeche 'hub').
+		const moreBtn = page.getByTestId('subscription-kebab');
 		await expect(moreBtn).toBeVisible({ timeout: 10_000 });
 		await moreBtn.click();
 
@@ -258,14 +249,14 @@ test.describe('Issue #1256 Scheibe 8 (AC-23): mobiles Bottom-Sheet — Lifecycle
 		// via compareDetailActions()) — das Mobile-Sheet bleibt bewusst
 		// Lifecycle-only (#1256 Scheibe 8 AC-23), Mobile hat den separaten
 		// Stift-Button statt eines Kebab-Eintrags.
-		await expect(sheet.getByText('Aktivieren', { exact: true })).toBeVisible({ timeout: 5_000 });
+		await expect(sheet.getByText('Fortsetzen', { exact: true })).toBeVisible({ timeout: 5_000 });
 		await expect(sheet.getByText('Archivieren', { exact: true })).toBeVisible({ timeout: 5_000 });
 		await expect(sheet.getByText('Löschen', { exact: true })).toBeVisible({ timeout: 5_000 });
 
 		// Listen-/Editor-exklusive Aktionen dürfen im mobilen Sheet NICHT mehr
 		// auftauchen (AC-23 — Umstellung von compareActions() weg).
-		await expect(sheet.getByText('Briefing jetzt senden', { exact: true })).toHaveCount(0);
-		await expect(sheet.getByText('Vorschau öffnen', { exact: true })).toHaveCount(0);
+		await expect(sheet.getByText('Senden', { exact: true })).toHaveCount(0);
+		await expect(sheet.getByText('Vorschau', { exact: true })).toHaveCount(0);
 		await expect(sheet.getByText('Bearbeiten', { exact: true })).toHaveCount(0);
 
 		// Nur öffnen/lesen/schließen — keine Aktion tatsächlich auslösen.

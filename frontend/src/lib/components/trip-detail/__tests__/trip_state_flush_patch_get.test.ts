@@ -13,7 +13,7 @@
 // Ersetzt die Quelltext-Zusicherung „sendStateUpdate verwirft den ETag" aus
 // `tripStateDiscardsEtag.test.ts` (dort bewusst umgeschrieben) durch eine
 // VERHALTENS-Zusicherung: der ECHTE Klick-Handler der Seite
-// (`handlePauseClick`/`handleArchiveConfirm`, Instanz-Skript von +page.svelte)
+// (`handleHubAction('pause')`/`handleArchiveConfirm`, Instanz-Skript von +page.svelte)
 // laeuft gegen den Ersatz-Server; gemessen wird Reihenfolge, Registry und `trip`.
 //
 // Ausfuehren:

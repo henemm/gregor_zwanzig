@@ -44,6 +44,7 @@ interface Aufruf {
 }
 let aufrufe: Aufruf[] = [];
 let profilFaellt = false;
+let profilStatus: number | null = null;
 
 function sessionAus(init: any): string | null {
 	const kopf = init?.headers ?? {};
@@ -61,6 +62,7 @@ async function fetchDouble(input: any, init?: any) {
 	if (url.includes('/api/auth/profile')) {
 		if (!session) return fehler(401);
 		if (profilFaellt) throw new TypeError('fetch failed');
+		if (profilStatus) return fehler(profilStatus);
 		return antwort(PROFIL[session] ?? {});
 	}
 	// Fachdaten antworten bewusst auch ohne Session: das Profil ist die einzige Variable dieses Tests.
@@ -141,6 +143,17 @@ for (const [name, getLoad, params] of LOADER) {
 				assert.equal(r.profile, null);
 			} finally {
 				profilFaellt = false;
+			}
+		});
+
+		test('Fix-Loop 1 (n32): antwortet das Profil mit Fehlerstatus (angemeldet, aber HTTP 500), ist profile = null — kein leeres Objekt', async () => {
+			profilStatus = 500;
+			try {
+				const r: any = await getLoad()(event('sess-anna', params));
+				assert.ok(r && 'profile' in r, 'load() liefert `profile` nicht');
+				assert.equal(r.profile, null);
+			} finally {
+				profilStatus = null;
 			}
 		});
 	});

@@ -142,11 +142,11 @@ test.describe('#528 Compare Hub · Header-Primäraktion', () => {
 	// von issue_1273_s3_redirect_links.test.ts AC-4. Der Test prüft daher
 	// jetzt den geltenden Stand: Primäraktion "Test senden" ja, redundante
 	// "Bearbeiten"-Affordanz nein.
-	test('AC-3: Aktives Preset zeigt "Test senden", keine redundante "Bearbeiten"-Affordanz', async ({
+	test('AC-3: Aktives Preset zeigt "Senden" (Issue #2278), keine redundante "Bearbeiten"-Affordanz', async ({
 		page
 	}) => {
 		await page.goto(`/compare/${activePresetId}`);
-		await expect(page.getByRole('button', { name: 'Test senden' })).toBeVisible();
+		await expect(page.getByTestId('subscription-hub-send')).toHaveText('Senden');
 		await expect(page.getByRole('link', { name: 'Bearbeiten' })).toHaveCount(0);
 	});
 });

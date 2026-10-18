@@ -24,39 +24,29 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PAGE = join(here, '../+page.svelte');
+// Issue #2278: die Pillen sind ein geteilter Baustein (StatusFilterPills), die Seite liefert die Zaehler.
+const PILLS = join(here, '../../../lib/components/molecules/StatusFilterPills.svelte');
 const source = readFileSync(PAGE, 'utf8');
+const pillsSource = readFileSync(PILLS, 'utf8');
 
-// Isoliert den Block der mobilen Filter-Pills (Issue #413), damit die
-// Prüfung nicht versehentlich auf den Desktop-Zähler-Balken matcht, der laut
-// Spec bewusst KEINEN eigenen Pausiert-Zähler bekommt (Known Limitations).
-function mobilePillsBlock(src: string): string {
-	const marker = '<!-- Mobile Filter-Pills';
-	const idx = src.indexOf(marker);
-	assert.ok(idx >= 0, '+page.svelte: Mobile-Filter-Pills-Kommentar nicht gefunden.');
-	return src.slice(idx, idx + 1200);
-}
-
-test('AC-7/#1271: mobile Filter-Pills enthalten einen Eintrag für value "pausiert"', () => {
-	const block = mobilePillsBlock(source);
+test('AC-7/#1271: Filter-Pillen enthalten einen Eintrag für value "pausiert"', () => {
 	assert.ok(
-		/value:\s*['"]pausiert['"]/.test(block),
-		'+page.svelte: mobile Filter-Pills sollen einen Eintrag { value: "pausiert", ... } enthalten — fehlt noch (TDD RED erwartet Fehler).'
+		/value:\s*['"]pausiert['"]/.test(pillsSource),
+		'StatusFilterPills.svelte: soll einen Eintrag { value: "pausiert", ... } enthalten.'
 	);
 });
 
-test('AC-7/#1271: mobile Filter-Pills zeigen das Label "Pausiert"', () => {
-	const block = mobilePillsBlock(source);
+test('AC-7/#1271: Filter-Pillen zeigen das Label "Pausiert"', () => {
 	assert.ok(
-		/label:\s*['"]Pausiert['"]/.test(block),
-		'+page.svelte: mobile Filter-Pills sollen ein Label "Pausiert" enthalten — fehlt noch (TDD RED erwartet Fehler).'
+		/label:\s*['"]Pausiert['"]/.test(pillsSource),
+		'StatusFilterPills.svelte: soll ein Label "Pausiert" enthalten.'
 	);
 });
 
-test('AC-7/#1271: Pausiert-Zähler wird aus tripStatus() === "pausiert" berechnet', () => {
-	const block = mobilePillsBlock(source);
+test('AC-7/#1271: Pausiert-Zähler der Trip-Liste wird aus tripStatus() === "pausiert" berechnet', () => {
 	assert.ok(
-		/tripStatus\(t,\s*now\)\s*===\s*['"]pausiert['"]/.test(block),
-		'+page.svelte: Pausiert-Zähler soll über tripStatus(t, now) === "pausiert" gefiltert werden — fehlt noch (TDD RED erwartet Fehler).'
+		/pausiert:\s*filteredTrips\.filter\(t => tripStatus\(t,\s*now\)\s*===\s*['"]pausiert['"]\)/.test(source),
+		'+page.svelte: Pausiert-Zähler soll über tripStatus(t, now) === "pausiert" gefiltert werden.'
 	);
 });
 

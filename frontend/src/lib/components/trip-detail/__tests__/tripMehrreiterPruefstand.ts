@@ -557,7 +557,8 @@ export async function tripSeite(
 		inst,
 		async pausieren() {
 			const vorher = server.calls.length;
-			(inst.u.handlePauseClick as () => void)();
+			// #2278: das Lebenszyklus-Menue ruft handleHubAction('pause') (frueher handlePauseClick).
+			(inst.u.handleHubAction as (id: string) => void)('pause');
 			await abwarten(vorher);
 		},
 		async archivieren() {

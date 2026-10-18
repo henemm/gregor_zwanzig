@@ -26,8 +26,8 @@ test.describe('Issue #1471 — Sende-Dialog nennt tatsaechliches Ziel (Staging-V
 
 		// --- Sende-Dialog ---
 		await page.getByTestId('compare-row-kebab').first().click();
-		await page.getByRole('menuitem', { name: 'Briefing jetzt senden' }).click();
-		const sendDialog = page.getByRole('dialog').filter({ hasText: 'Briefing jetzt senden?' });
+		await page.getByRole('menuitem', { name: 'Senden', exact: true }).click();
+		const sendDialog = page.getByTestId('send-confirm-dialog'); // Issue #2278: geteilter SendConfirmDialog
 		await expect(sendDialog).toBeVisible();
 		await page.screenshot({ path: path.join(ART, 'ac-send-dialog.png'), fullPage: true });
 
@@ -92,8 +92,8 @@ test.describe('Runde 2 — Adversary Edge Cases', () => {
 		// Mehrfaches Oeffnen/Schliessen des Kebab-Menues + Dialogs (Race-Stresstest).
 		for (let i = 0; i < 2; i++) {
 			await page.getByTestId('compare-row-kebab').first().click();
-			await page.getByRole('menuitem', { name: 'Briefing jetzt senden' }).click();
-			const dlg = page.getByRole('dialog').filter({ hasText: 'Briefing jetzt senden?' });
+			await page.getByRole('menuitem', { name: 'Senden', exact: true }).click();
+			const dlg = page.getByTestId('send-confirm-dialog');
 			await expect(dlg).toBeVisible();
 			await dlg.getByRole('button', { name: 'Abbrechen' }).click();
 			await expect(dlg).toBeHidden();
@@ -101,8 +101,8 @@ test.describe('Runde 2 — Adversary Edge Cases', () => {
 
 		// Dialog final offen lassen und mehrfach (schnell) auf den gesperrten Button klicken.
 		await page.getByTestId('compare-row-kebab').first().click();
-		await page.getByRole('menuitem', { name: 'Briefing jetzt senden' }).click();
-		const sendDialog = page.getByRole('dialog').filter({ hasText: 'Briefing jetzt senden?' });
+		await page.getByRole('menuitem', { name: 'Senden', exact: true }).click();
+		const sendDialog = page.getByTestId('send-confirm-dialog');
 		await expect(sendDialog).toBeVisible();
 		const confirmBtn = sendDialog.getByRole('button', { name: 'Senden' });
 		const isDisabled = await confirmBtn.isDisabled();

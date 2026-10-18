@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { loadProfile } from '$lib/server/profileLoader.js';
 
 
 export const load: PageServerLoad = async ({ params, cookies }) => {
@@ -14,11 +15,13 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	// verliert seine Datengrundlage und zeigt den Fallback-Hinweis. Beide
 	// Fetches werden vor dem `return` awaitet, damit kein Ladefenster
 	// entsteht (Fehlerklasse #1320, AC-5).
-	const [res, metricsCatalog] = await Promise.all([
+	const [res, metricsCatalog, profile] = await Promise.all([
 		fetch(`${API()}/api/trips/${params.id}`, { headers }),
 		fetch(`${API()}/api/metrics`, { headers })
 			.then((r) => (r.ok ? r.json() : null))
-			.catch(() => null)
+			.catch(() => null),
+		// Issue #2278: Profil fuer den Sende-Dialog (fail-soft, null ohne Session).
+		loadProfile(cookies)
 	]);
 	if (res.status === 404) {
 		throw error(404, `Trip '${params.id}' nicht gefunden`);
@@ -33,5 +36,5 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	// vor dieser Scheibe (S2-Rollout-Politik: fehlender Header = angenommen).
 	const etag = res.headers.get('ETag') ?? undefined;
 	const trip = await res.json();
-	return { trip, etag, metricsCatalog };
+	return { trip, etag, metricsCatalog, profile };
 };

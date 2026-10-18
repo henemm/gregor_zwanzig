@@ -61,7 +61,24 @@ async function versandHalten(page: Page, pattern: string): Promise<Halter> {
 
 /** Karte des Seed-Trips in der mobilen Trip-Liste (andere Specs legen weitere Trips an). */
 function tripKarte(page: Page) {
-	return page.getByTestId('trip-card').filter({ hasText: 'E2E Cockpit Test Trip' }).first();
+	return page
+		.locator('[data-testid^="subscription-card-"][data-kind="trip"]')
+		.filter({ hasText: 'E2E Cockpit Test Trip' })
+		.first();
+}
+
+/** Issue #2278: mobile Trip-Liste -> Karten-Menue -> "Senden" -> Sende-Dialog -> "Senden" bestaetigen. */
+async function tripListeSenden(page: Page) {
+	await tripKarte(page).locator('[data-testid^="subscription-card-menu-"]').click();
+	await page.getByTestId('subscription-action-send').click();
+	await page.getByTestId('send-confirm-yes').click();
+}
+
+/** Issue #2278: Hub (Desktop) -> Primaerknopf "Senden" -> Sende-Dialog -> bestaetigen (Berichtsart wie angegeben). */
+async function hubSenden(page: Page, berichtsart: 'morning' | 'evening') {
+	await page.getByTestId('subscription-hub-send').click();
+	await page.getByTestId(`send-confirm-berichtsart-${berichtsart}`).check();
+	await page.getByTestId('send-confirm-yes').click();
 }
 
 // ---------------------------------------------------------------------------
@@ -69,25 +86,21 @@ function tripKarte(page: Page) {
 // ---------------------------------------------------------------------------
 
 test.describe('#2124 Trip — geteilter Laufzustand', () => {
-	test('AC-3/AC-4: Trip-Liste — Dialog schließen + erneut senden schickt keinen zweiten Request', async ({ page }) => {
+	test('AC-3/AC-4: Trip-Liste — erneut senden während des Laufs schickt keinen zweiten Request', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await login(page);
 		const halter = await versandHalten(page, '**/api/trips/*/send*');
 		try {
 			await page.goto('/trips');
-			const menuBtn = tripKarte(page).getByTestId('trip-card-menu-btn');
-			await menuBtn.click();
-			await page.getByTestId('trip-action-sheet').getByText('Test Morgen-Report').click();
+			await tripListeSenden(page);
 			await expect.poll(() => halter.requests.length).toBe(1);
 
-			// Dialog bleibt während des Laufs schließbar (AC-4).
-			await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
-			await expect(page.getByRole('dialog')).toHaveCount(0);
+			// Issue #2278: der Sende-Dialog schliesst mit der Bestaetigung (AC-4: nie blockiert).
+			await expect(page.getByTestId('send-confirm-dialog')).toHaveCount(0);
 
-			// Derselbe Trip, anderer Eintrag im Sheet: darf KEINEN zweiten Request schicken.
-			await menuBtn.click();
-			await page.getByTestId('trip-action-sheet').getByText('Test Abend-Report').click();
-			await expect(page.getByRole('dialog').getByText(LAEUFT)).toBeVisible({ timeout: 8000 });
+			// Derselbe Trip nochmal: darf KEINEN zweiten Request schicken.
+			await tripListeSenden(page);
+			await expect(page.getByTestId('trips-error')).toContainText(LAEUFT, { timeout: 8000 });
 			expect(halter.requests, 'zweiter Versand während des ersten').toHaveLength(1);
 		} finally {
 			await halter.freigeben();
@@ -100,19 +113,16 @@ test.describe('#2124 Trip — geteilter Laufzustand', () => {
 		const halter = await versandHalten(page, `**/api/trips/${TRIP_ID}/send*`);
 		try {
 			await page.goto('/trips');
-			await tripKarte(page).getByTestId('trip-card-menu-btn').click();
-			await page.getByTestId('trip-action-sheet').getByText('Test Morgen-Report').click();
+			await tripListeSenden(page);
 			await expect.poll(() => halter.requests.length).toBe(1);
-			await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
-			await expect(page.getByRole('dialog')).toHaveCount(0);
+			await expect(page.getByTestId('send-confirm-dialog')).toHaveCount(0);
 
 			// Clientseitig ins Trip-Detail (Modulzustand bleibt), dort anderer Auslöser.
-			await tripKarte(page).getByTestId('trip-card-content-btn').click();
+			await tripKarte(page).click({ position: { x: 24, y: 24 } });
 			await page.waitForURL(`**/trips/${TRIP_ID}*`);
 			await page.setViewportSize(DESKTOP);
 			await expect(page.getByTestId('trip-detail-breadcrumb-bar')).toBeVisible({ timeout: 8000 });
-			await page.getByTestId('test-briefing-menu-toggle').click();
-			await page.getByTestId('test-briefing-option-evening').click();
+			await hubSenden(page, 'evening');
 
 			await expect(page.getByTestId('test-briefing-error')).toContainText(LAEUFT, { timeout: 8000 });
 			expect(halter.requests, 'zweiter Versand während des ersten').toHaveLength(1);
@@ -128,8 +138,7 @@ test.describe('#2124 Trip — geteilter Laufzustand', () => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await expect(page.getByTestId('trip-detail-breadcrumb-bar')).toBeVisible({ timeout: 8000 });
 
-		await page.getByTestId('test-briefing-menu-toggle').click();
-		await page.getByTestId('test-briefing-option-evening').click();
+		await hubSenden(page, 'evening');
 		await expect.poll(() => halter.requests.length).toBe(1);
 		await halter.freigeben(502, JSON.stringify({ error: 'upstream unreachable' }));
 
@@ -171,6 +180,12 @@ async function seedPreset(page: Page): Promise<{ presetId: string; locIds: strin
 	return { presetId: (await presetRes.json()).id as string, locIds };
 }
 
+/** Issue #2278: Compare-Hub -> Primaerknopf "Senden" -> Sende-Dialog -> bestaetigen (Ortsvergleich: keine Berichtsart). */
+async function compareHubSenden(page: Page) {
+	await page.getByTestId('subscription-hub-send').click();
+	await page.getByTestId('send-confirm-yes').click();
+}
+
 async function cleanup(page: Page, presetId: string, locIds: string[]) {
 	await page.request.delete(`/api/compare/presets/${presetId}`).catch(() => {});
 	for (const id of locIds) await page.request.delete(`/api/locations/${id}`).catch(() => {});
@@ -185,7 +200,7 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 		try {
 			await page.goto(`/compare/${presetId}?tab=versand`);
 
-			await page.getByRole('button', { name: 'Test senden', exact: true }).click();
+			await compareHubSenden(page);
 			await expect.poll(() => halter.requests.length).toBe(1);
 
 			// Anderer Auslöser (CompareTabs, Versand-Tab) für dasselbe Preset.
@@ -219,13 +234,13 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 			await gast.goto('/compare');
 			const zeile = gast.getByTestId(`compare-tile-${presetId}`);
 			await zeile.getByRole('button', { name: 'Briefing senden' }).click();
-			await gast.getByRole('dialog', { name: 'Briefing jetzt senden?' }).getByRole('button', { name: 'Senden', exact: true }).click();
+			await gast.getByTestId('send-confirm-yes').click();
 			await expect.poll(() => halter!.requests.length).toBe(1);
 
 			// Clientseitig in den Hub (Modulzustand bleibt), dort anderer Auslöser.
 			await zeile.getByText(/E2E 2124/).first().click();
 			await gast.waitForURL(`**/compare/${presetId}*`);
-			await gast.getByRole('button', { name: 'Test senden', exact: true }).click();
+			await compareHubSenden(gast);
 
 			await expect(gast.getByText(LAEUFT).first()).toBeVisible({ timeout: 8000 });
 			expect(halter.requests, 'zweiter Versand während des ersten').toHaveLength(1);
@@ -247,7 +262,7 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 		try {
 			await page.goto(`/compare/${presetId}`);
 
-			await page.getByRole('button', { name: 'Test senden', exact: true }).click();
+			await compareHubSenden(page);
 			await expect.poll(() => halter.requests.length).toBe(1);
 			await halter.freigeben(502, JSON.stringify({ error: 'upstream unreachable' }));
 

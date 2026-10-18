@@ -407,11 +407,14 @@ test('#1395 S3 Fall 3 (AC-5): nach dem Pausieren gelingt das Speichern im Alarme
 		await expect(page.getByTestId('alarme-tab')).toBeVisible({ timeout: 30_000 });
 
 		// Pausieren auf der Detailseite (echter Klickpfad).
-		await page.getByRole('button', { name: 'Pausieren' }).click();
-		await expect(
-			page.getByRole('button', { name: 'Fortsetzen' }),
-			'Trip ist pausiert'
-		).toBeVisible({ timeout: 30_000 });
+		// #2278: Lebenszyklus-Aktionen sind Eintraege des Hub-Menues.
+		await page.getByTestId('subscription-kebab').click();
+		await page.getByTestId('subscription-action-pause').click();
+		await expect(async () => {
+			await page.getByTestId('subscription-kebab').click();
+			await expect(page.getByTestId('subscription-action-resume'), 'Trip ist pausiert').toBeVisible({ timeout: 2_000 });
+		}).toPass({ timeout: 30_000 });
+		await page.keyboard.press('Escape');
 		const nachPause = await fetchTrip(request, trip.id);
 		console.log(`[#1395 S3 Fall 3] paused_at=${JSON.stringify(nachPause.paused_at)}`);
 		expect(nachPause.paused_at, 'Vorbedingung: die Trip ist wirklich pausiert').toBeTruthy();
@@ -469,14 +472,16 @@ test('#1395 S3 Fall 4 (AC-5): nach dem Archivieren gelingt das Speichern im Alar
 		await page.goto(`/trips/${trip.id}?tab=alarme`);
 		await expect(page.getByTestId('alarme-tab')).toBeVisible({ timeout: 30_000 });
 
-		await page.getByRole('button', { name: 'Archivieren' }).click();
+		await page.getByTestId('subscription-kebab').click();
+		await page.getByTestId('subscription-action-archive').click();
 		const dialog = page.getByTestId('trip-detail-archive-confirm-dialog');
 		await expect(dialog).toBeVisible({ timeout: 20_000 });
 		await page.getByTestId('trip-detail-archive-confirm-yes').click();
-		await expect(
-			page.getByRole('button', { name: 'Reaktivieren' }),
-			'Trip ist archiviert'
-		).toBeVisible({ timeout: 30_000 });
+		await expect(async () => {
+			await page.getByTestId('subscription-kebab').click();
+			await expect(page.getByTestId('subscription-action-unarchive'), 'Trip ist archiviert').toBeVisible({ timeout: 2_000 });
+		}).toPass({ timeout: 30_000 });
+		await page.keyboard.press('Escape');
 		const nachArchiv = await fetchTrip(request, trip.id);
 		console.log(`[#1395 S3 Fall 4] archived_at=${JSON.stringify(nachArchiv.archived_at)}`);
 		expect(nachArchiv.archived_at, 'Vorbedingung: die Trip ist wirklich archiviert').toBeTruthy();

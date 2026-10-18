@@ -11,8 +11,11 @@
 	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Card, Stat, PageHeader } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
+	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
+	import StatusFilterPills from '$lib/components/molecules/StatusFilterPills.svelte';
 	import ListTable from '$lib/components/organisms/ListTable.svelte';
-	import CompareTile from '$lib/components/compare/CompareTile.svelte';
+	import SubscriptionCard from '$lib/components/organisms/SubscriptionCard.svelte';
+	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import {
 		deriveStatusFromPreset,
 		presetLocationsLabel,
@@ -20,13 +23,11 @@
 		presetChannels,
 		presetTileScheduleLabel,
 		relativeLastSent,
-		compareActions,
+		compareFilterStatus,
 		type CompareStatus
 	} from '$lib/components/compare/subscriptionHelpers.js';
-	import { buildFreshTogglePutPayload } from '$lib/components/compare/compareHubPersistenz.js';
-	import { sendTargetLabel } from '$lib/components/shared/versand-tab/sendTargetLabel.js';
-	import MIcon from '$lib/components/mobile/MIcon.svelte';
-	import { sendComparePreset } from '$lib/utils/sendOutcome';
+	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions.js';
+	import { setPaused, deleteSubscription, sendSubscription } from '$lib/components/shared/subscriptionExec.js';
 
 	let { data } = $props();
 	let presets: ComparePreset[] = $state(data.presets ?? []);
@@ -39,10 +40,8 @@
 	let sendInfo: string | null = $state(null);
 	let error: string | null = $state(null);
 
-	// Issue #1471 — der Dialog nennt das tatsaechliche Ziel (Konto-Adresse + aktive
-	// Zusatzkanaele) statt der seit #1452 dauerhaft leeren `empfaenger`-Zaehlung.
-	// Text UND Sperre stammen aus derselben Ableitung, damit sie nicht auseinanderlaufen.
-	let sendZiel = $derived(sendTargetLabel(data.profile, sendTarget));
+	// Mobiles Aktionsblatt (Issue #2278 AC-2/AC-14: geteilter Baustein wie beim Trip)
+	let actionPreset: ComparePreset | null = $state(null);
 
 	const STATUS_LABEL: Record<CompareStatus, string> = {
 		active: 'aktiv',
@@ -107,11 +106,6 @@
 		}
 	];
 
-	function compareRowActions(row: unknown) {
-		const status = deriveStatusFromPreset(row as ComparePreset);
-		return compareActions(status).map((a) => ({ key: a.id, label: a.label, danger: a.danger }));
-	}
-
 	function compareRowPrimary(row: unknown) {
 		const p = row as ComparePreset;
 		return deriveStatusFromPreset(p) === 'active'
@@ -119,40 +113,37 @@
 			: null;
 	}
 
+	// EIN Dispatch fuer Desktop-Zeilenmenue und mobiles Blatt (AC-2, AC-8, AC-16).
+	// Epic #1273 S3: setup/edit landen auf dem Hub, nicht mehr auf /edit.
 	function onCompareAction(key: string, row: unknown) {
 		const p = row as ComparePreset;
-		if (key === 'delete') deleteTarget = p;
-		// Epic #1273 S3: setup/edit landen auf dem Hub, nicht mehr auf /edit.
-		else if (key === 'setup') goto('/compare/' + p.id);
-		else if (key === 'edit') goto('/compare/' + p.id);
-		else if (key === 'preview') goto('/compare/' + p.id + '?tab=vorschau');
-		else if (key === 'pause') void togglePause(p);
+		if (key === 'pause') void togglePause(p, true);
+		else if (key === 'resume') void togglePause(p, false);
 		else if (key === 'send') sendTarget = p;
+		else if (key === 'preview') goto('/compare/' + p.id + '?tab=vorschau');
+		else if (key === 'alarms') goto('/compare/' + p.id + '?tab=alarme');
+		else if (key === 'weather') goto('/compare/' + p.id + '?tab=wetter-metriken');
+		else if (key === 'edit') goto('/compare/' + p.id);
+		else if (key === 'continue-setup') goto('/compare/' + p.id);
+		else if (key === 'delete') deleteTarget = p;
 	}
 
-	// Issue #1259 — Read-Modify-Write: frischer Server-Stand vor dem PUT.
-	async function togglePause(preset: ComparePreset) {
+	// Issue #1259 — Read-Modify-Write (frischer Stand vor dem PUT) steckt im Adapter.
+	async function togglePause(preset: ComparePreset, paused: boolean) {
 		error = null;
 		try {
-			const { url, body } = await buildFreshTogglePutPayload(preset.id, async (id) => {
-				const res = await fetch(`/api/compare/presets/${id}`);
-				if (!res.ok) throw new Error(`GET failed: ${res.status}`);
-				return res.json();
-			});
-			const res = await fetch(url, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body)
-			});
-			if (!res.ok) throw new Error(`PUT failed: ${res.status}`);
-			const updated = await res.json();
-			presets = presets.map((p) => (p.id === preset.id ? updated : p));
+			await setPaused('vergleich', preset.id, paused);
+			const res = await fetch(`/api/compare/presets/${preset.id}`);
+			if (res.ok) {
+				const updated = await res.json();
+				presets = presets.map((p) => (p.id === preset.id ? updated : p));
+			}
 		} catch {
 			error = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
 		}
 	}
 
-	// Issue #627 — Einzel-Sofortversand.
+	// Issue #627 — Einzel-Sofortversand (nach Bestaetigung im Sende-Dialog).
 	async function confirmSend() {
 		if (!sendTarget) return;
 		const target = sendTarget;
@@ -160,7 +151,7 @@
 		error = null;
 		sendInfo = null;
 		// Issue #2124: geteilter Laufzustand (compare:<id>) + Klassifikation.
-		const o = await sendComparePreset(target.id);
+		const o = await sendSubscription('vergleich', target.id);
 		if (o.kind === 'ok') sendInfo = 'Briefing wurde versendet.';
 		else error = o.message;
 	}
@@ -170,13 +161,12 @@
 		error = null;
 		const target = deleteTarget;
 		try {
-			await api.del(`/api/compare/presets/${target.id}`);
+			await deleteSubscription('vergleich', target.id);
 			presets = presets.filter((p) => p.id !== target.id);
-			deleteTarget = null;
 		} catch {
 			error = 'Löschen fehlgeschlagen. Bitte versuche es erneut.';
-			deleteTarget = null;
 		}
+		deleteTarget = null;
 	}
 
 	let counts = $derived({
@@ -194,9 +184,19 @@
 			: presets
 	);
 
-	// Issue #611 archivierte die mobile Kachel selbst (onAction/handleTileAction);
-	// Issue #1256 Scheibe 8 (AC-21) macht die dense-Kachel zur reinen Navigation —
-	// Aktionen (inkl. Archivieren) leben mobil jetzt ausschließlich im Detail-Hub.
+	// Issue #2278 loest die Link-only-Entscheidung (#1256 S8 AC-21) ab: mobil dieselbe Karte,
+	// dasselbe Aktionsblatt und dieselben Filter-Pillen wie beim Trip (Paritaet, Epic #2345 DoD-3).
+	let mobileFilter = $state<'all' | 'aktiv' | 'geplant' | 'pausiert' | 'fertig'>('all');
+	const mobilePresets = $derived(
+		presets.filter((p) => mobileFilter === 'all' || compareFilterStatus(p) === mobileFilter)
+	);
+	const pillCounts = $derived({
+		all: presets.length,
+		aktiv: presets.filter((p) => compareFilterStatus(p) === 'aktiv').length,
+		geplant: 0, // Ortsvergleiche haben kein Startdatum
+		pausiert: presets.filter((p) => compareFilterStatus(p) === 'pausiert').length,
+		fertig: presets.filter((p) => compareFilterStatus(p) === 'fertig').length
+	});
 
 	// Mobile-Shell S2: Titel, Eyebrow und „Neuer Vergleich" stehen mobil im
 	// <PageHeader> der Seite (Rechts-Slot) — derselbe Baustein wie die
@@ -258,7 +258,12 @@
 				rows={filteredPresets}
 				getRowId={(row) => (row as ComparePreset).id}
 				onRowClick={(row) => goto(`/compare/${(row as ComparePreset).id}`)}
-				rowActions={compareRowActions}
+				rowActions={(row) =>
+					subscriptionActions('vergleich', subscriptionLifecycle('vergleich', row as ComparePreset), 'list').map((a) => ({
+						key: a.id,
+						label: a.label,
+						danger: a.danger
+					}))}
 				rowPrimary={compareRowPrimary}
 				onAction={onCompareAction}
 				emptyText={searchQuery
@@ -298,10 +303,15 @@
 						Noch keine Vergleiche angelegt.
 					</Card>
 				{:else}
-					{#each presets as preset (preset.id)}
-						<a href="/compare/{preset.id}" class="block min-h-[44px]">
-							<CompareTile sub={preset} dense={true} />
-						</a>
+					<StatusFilterPills active={mobileFilter} counts={pillCounts} onSelect={(v) => { mobileFilter = v; }} />
+					{#each mobilePresets as preset (preset.id)}
+						<SubscriptionCard
+							kind="vergleich"
+							sub={preset}
+							dense
+							onclick={() => goto('/compare/' + preset.id)}
+							onAction={() => { actionPreset = preset; }}
+						/>
 					{/each}
 				{/if}
 			</div>
@@ -321,13 +331,20 @@
 	onOpenChange={(open) => { if (!open) deleteTarget = null; }}
 />
 
-<ConfirmDialog
+<SendConfirmDialog
 	open={sendTarget !== null}
-	title="Briefing jetzt senden?"
-	description={sendZiel.text}
-	confirmLabel="Senden"
-	disabled={sendZiel.gesperrt}
+	kind="vergleich"
+	profile={data.profile}
+	subscription={sendTarget}
 	onConfirm={confirmSend}
 	onCancel={() => (sendTarget = null)}
-	onOpenChange={(open) => { if (!open) sendTarget = null; }}
+/>
+
+<SubscriptionActionSheet
+	open={actionPreset !== null}
+	onClose={() => (actionPreset = null)}
+	kind="vergleich"
+	status={actionPreset ? subscriptionLifecycle('vergleich', actionPreset) : 'active'}
+	name={actionPreset?.name}
+	onAction={(id) => { if (actionPreset) onCompareAction(id, actionPreset); }}
 />

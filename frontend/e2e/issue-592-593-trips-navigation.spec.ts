@@ -63,33 +63,19 @@ test.describe('#593 Desktop: Trips-Zeile klickbar', () => {
 test.describe('#592 Mobile: Kartentipp navigiert zu Detail', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
-	test('AC-3: Tipp auf trip-card-content-btn navigiert zu /trips/{id}', async ({ page }) => {
+	// Issue #2278: die Karte ist die geteilte SubscriptionCard; ihr Tipp navigiert direkt.
+	// (AC-3b/AC-5 waren Quelltext-Pruefungen des entfallenen trip-card-content-btn — abgeloest.)
+	test('AC-3: Tipp auf die Trip-Karte navigiert zu /trips/{id}', async ({ page }) => {
 		await page.goto(TRIPS_PAGE);
-		const contentBtn = page.getByTestId('trip-card-content-btn').first();
-		await expect(contentBtn).toBeVisible();
+		const karte = page.locator('[data-testid^="subscription-card-"][data-kind="trip"]').first();
+		await expect(karte).toBeVisible();
 
-		await contentBtn.click();
+		await karte.click({ position: { x: 24, y: 24 } });
 
 		// Muss direkt auf Detail-Seite navigieren
 		await expect(page).toHaveURL(new RegExp('/trips/[a-z0-9-]+$'));
 		// KEIN Expansion-Block sichtbar nach Klick
 		await expect(page.locator('[data-testid="trip-card-stack"] .border-t')).not.toBeVisible();
-	});
-
-	test('AC-3b: trip-card-content-btn hat goto-Navigation, kein expandedCardId-Toggle', async () => {
-		const content = readFileSync('/home/hem/gregor_zwanzig/frontend/src/routes/trips/+page.svelte', 'utf-8');
-		// content-btn darf expandedCardId NICHT mehr setzen
-		const contentBtnBlock = content.match(/data-testid="trip-card-content-btn"[\s\S]*?(?=data-testid="trip-card-menu-btn")/)?.[0] ?? '';
-		expect(contentBtnBlock).not.toContain('expandedCardId');
-		// content-btn muss goto haben
-		expect(contentBtnBlock).toContain('goto');
-	});
-
-	test('AC-5: expandedCardId-Toggle komplett aus trip-card-content-btn entfernt', async () => {
-		const content = readFileSync('/home/hem/gregor_zwanzig/frontend/src/routes/trips/+page.svelte', 'utf-8');
-		// expandedCardId darf nicht mehr im content-btn verwendet werden
-		const contentBtnBlock = content.match(/data-testid="trip-card-content-btn"[\s\S]*?<\/button>/)?.[0] ?? '';
-		expect(contentBtnBlock).not.toContain('expandedCardId');
 	});
 });
 
@@ -100,22 +86,33 @@ test.describe('#592 Mobile: Kartentipp navigiert zu Detail', () => {
 test.describe('#592 Mobile: Action-Sheet mit Briefing-senden', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
-	test('AC-4: Action-Sheet enthält "Briefing senden" nach EllipsisVertical-Tipp', async ({ page }) => {
+	test('AC-4: Action-Sheet enthält "Senden" und es öffnet den Sende-Dialog (nicht nur die Vorschau)', async ({ page }) => {
 		await page.goto(TRIPS_PAGE);
-		const menuBtn = page.getByTestId('trip-card-menu-btn').first();
+		const menuBtn = page.locator('[data-testid^="subscription-card-menu-"]').first();
 		await expect(menuBtn).toBeVisible();
 		await menuBtn.click();
 
-		const sheet = page.getByTestId('trip-action-sheet');
-		await expect(sheet).toBeVisible();
-		await expect(sheet).toContainText('Briefing senden');
+		const senden = page.getByTestId('subscription-action-send');
+		await expect(senden).toHaveText('Senden');
+		await senden.click();
+		// Issue #2278 (AC-14): "Senden" im Blatt öffnet den Sende-Dialog, statt nur ?tab=vorschau zu öffnen.
+		await expect(page.getByTestId('send-confirm-dialog')).toBeVisible();
+		await expect(page).not.toHaveURL(/tab=vorschau/);
 	});
+});
 
-	test('AC-4b: Action-Sheet-Briefing navigiert zu ?tab=vorschau', async () => {
-		const content = readFileSync('/home/hem/gregor_zwanzig/frontend/src/routes/trips/+page.svelte', 'utf-8');
-		// Im Action-Sheet (sheetTrip) muss "Briefing senden" mit tab=vorschau-Route vorhanden sein
-		const sheetBlock = content.match(/data-testid="trip-action-sheet"[\s\S]*/)?.[0] ?? '';
-		expect(sheetBlock).toContain('Briefing senden');
-		expect(sheetBlock).toContain('tab=vorschau');
+// ---------------------------------------------------------------------------
+// Issue #2278 AC-13: Breadcrumb "Trips" im Trip-Hub ist ein Link auf die Liste
+// ---------------------------------------------------------------------------
+
+test.describe('#2278 Trip-Hub: Breadcrumb "Trips" fuehrt zur Liste', () => {
+	test.use({ viewport: { width: 1280, height: 800 } });
+
+	test('AC-13: Klick auf "Trips" im Breadcrumb navigiert zu /trips', async ({ page }) => {
+		await page.goto(`/trips/${TRIP_ID}`);
+		const bar = page.getByTestId('trip-detail-breadcrumb-bar');
+		await expect(bar).toBeVisible();
+		await bar.getByRole('link', { name: 'Trips', exact: true }).click();
+		await expect(page).toHaveURL(/\/trips\/?$/);
 	});
 });

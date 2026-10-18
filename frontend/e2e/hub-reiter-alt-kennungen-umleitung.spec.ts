@@ -158,15 +158,14 @@ test.describe('Vergleich-Hub: Alt-Kennungen werden umgeleitet und die URL berein
 });
 
 test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
-	test('Trip-Liste (Handy): „Wetter-Konfiguration" öffnet den Reiter Wetter-Metriken', async ({ page }) => {
-		const { id, name } = await neuerTrip(page);
+	test('Trip-Liste (Handy): „Wetter-Metriken" öffnet den Reiter Wetter-Metriken', async ({ page }) => {
+		const { id } = await neuerTrip(page);
 		await page.setViewportSize(HANDY);
 		await page.goto('/trips');
 
-		await page.getByRole('button', { name: `Aktionen für ${name}` }).click();
-		const sheet = page.getByTestId('trip-action-sheet');
-		await expect(sheet).toBeVisible();
-		await sheet.getByRole('button', { name: /Wetter-Konfiguration/ }).click();
+		// Issue #2278: geteilte SubscriptionCard + SubscriptionActionSheet
+		await page.getByTestId(`subscription-card-menu-${id}`).click();
+		await page.getByTestId('subscription-action-weather').click();
 
 		await expect(page).toHaveURL(new RegExp(`/trips/${id}\\?tab=wetter-metriken$`), { timeout: 15_000 });
 		await expect(page.getByTestId('trip-detail-panel-wetter-metriken')).toBeVisible({ timeout: 15_000 });

@@ -26,55 +26,33 @@ const MOBILE_DIR    = join(COMPARE_DIR, '..', 'mobile');
 const ROUTES_CMP    = join(COMPARE_DIR, '..', '..', '..', 'routes', 'compare');
 const ROUTES_CMP_ID = join(ROUTES_CMP, '[id]');
 
-const ACTION_SHEET  = join(MOBILE_DIR, 'MCompareActionSheet.svelte');
-const MOBILE_INDEX  = join(MOBILE_DIR, 'index.ts');
+// Issue #2278: MCompareActionSheet ist im geteilten SubscriptionActionSheet aufgegangen (beide Arten).
+const ACTION_SHEET  = join(MOBILE_DIR, 'SubscriptionActionSheet.svelte');
 const CMP_PAGE      = join(ROUTES_CMP, '+page.svelte');
 const DETAIL_PAGE   = join(ROUTES_CMP_ID, '+page.svelte');
 
-// ── AC-1: MCompareActionSheet ─────────────────────────────────────────────────
+// ── AC-1: SubscriptionActionSheet ─────────────────────────────────────────────
 
-describe('AC-1: MCompareActionSheet.svelte existiert und wird exportiert', () => {
-	test('MCompareActionSheet.svelte existiert in mobile/', () => {
+describe('AC-1: SubscriptionActionSheet.svelte existiert', () => {
+	test('SubscriptionActionSheet.svelte existiert in mobile/', () => {
 		assert.ok(
 			existsSync(ACTION_SHEET),
-			'MCompareActionSheet.svelte fehlt in frontend/src/lib/components/mobile/'
+			'SubscriptionActionSheet.svelte fehlt in frontend/src/lib/components/mobile/'
 		);
 	});
 
-	test('mobile/index.ts exportiert MCompareActionSheet', () => {
-		const src = readFileSync(MOBILE_INDEX, 'utf-8');
-		assert.match(
-			src,
-			/MCompareActionSheet/,
-			'mobile/index.ts exportiert MCompareActionSheet nicht — Export-Eintrag fehlt'
-		);
-	});
-
-	test('MCompareActionSheet.svelte nutzt Sheet als Basis (snap="half")', () => {
-		assert.ok(existsSync(ACTION_SHEET), 'MCompareActionSheet.svelte fehlt');
+	test('SubscriptionActionSheet.svelte nutzt Sheet als Basis (snap="half")', () => {
+		assert.ok(existsSync(ACTION_SHEET), 'SubscriptionActionSheet.svelte fehlt');
 		const src = readFileSync(ACTION_SHEET, 'utf-8');
 		assert.match(
 			src,
 			/Sheet/,
-			'MCompareActionSheet.svelte importiert Sheet nicht — Bottom-Sheet-Basis fehlt'
+			'SubscriptionActionSheet.svelte importiert Sheet nicht — Bottom-Sheet-Basis fehlt'
 		);
 	});
 
-	// Issue #1256 Scheibe 8 (AC-23): Sheet nutzt jetzt compareLifecycleActions()
-	// statt des vollen compareActions()-Umfangs (präzise Assertion s.
-	// compare_mobile_shared_hub.test.ts, AC-23-Beschreibung dort).
-	test('MCompareActionSheet.svelte nutzt compareLifecycleActions()', () => {
-		assert.ok(existsSync(ACTION_SHEET), 'MCompareActionSheet.svelte fehlt');
-		const src = readFileSync(ACTION_SHEET, 'utf-8');
-		assert.match(
-			src,
-			/compareLifecycleActions/,
-			'MCompareActionSheet.svelte verwendet compareLifecycleActions() nicht — Aktionsliste fehlt'
-		);
-	});
-
-	test('MCompareActionSheet.svelte hat 52px Tap-Target für Aktions-Zeilen', () => {
-		assert.ok(existsSync(ACTION_SHEET), 'MCompareActionSheet.svelte fehlt');
+	test('SubscriptionActionSheet.svelte hat 52px Tap-Target für Aktions-Zeilen', () => {
+		assert.ok(existsSync(ACTION_SHEET), 'SubscriptionActionSheet.svelte fehlt');
 		const src = readFileSync(ACTION_SHEET, 'utf-8');
 		assert.match(
 			src,
@@ -96,22 +74,19 @@ describe('AC-2: /compare/+page.svelte hat mobilen Kachel-Stack', () => {
 		);
 	});
 
-	test('/compare/+page.svelte rendert CompareTile mit dense=true im mobilen Block', () => {
+	test('/compare/+page.svelte rendert SubscriptionCard mit dense im mobilen Block', () => {
 		const src = readFileSync(CMP_PAGE, 'utf-8');
 		assert.match(
 			src,
-			/dense.*true|dense={true}/,
-			'/compare/+page.svelte hat kein dense=true auf CompareTile für mobile Ansicht'
+			/<SubscriptionCard[^>]*\bdense\b/,
+			'/compare/+page.svelte hat kein dense auf SubscriptionCard für mobile Ansicht'
 		);
 	});
 
-	test('/compare/+page.svelte hat 44px Tap-Target im mobilen Stack (min-h-[44px])', () => {
-		const src = readFileSync(CMP_PAGE, 'utf-8');
-		assert.match(
-			src,
-			/min-h-\[44px\]|min-height.*44/,
-			'/compare/+page.svelte hat kein 44px-Tap-Target im mobilen Stack'
-		);
+	// Das 44px-Tap-Target der mobilen Karte steckt im geteilten Baustein (Menue-Knopf 44x44).
+	test('SubscriptionCard hat 44px Tap-Target für den Menü-Knopf (dense)', () => {
+		const src = readFileSync(join(COMPARE_DIR, '..', 'organisms', 'SubscriptionCard.svelte'), 'utf-8');
+		assert.match(src, /style:height="44px"/, 'SubscriptionCard: Menü-Knopf ohne 44px-Tap-Target');
 	});
 });
 
@@ -129,13 +104,13 @@ describe('AC-3-prereq: /compare/[id]/+page.svelte als Basis vorhanden', () => {
 // ── AC-3: Bottom-Sheet auf Detail-Seite ──────────────────────────────────────
 
 describe('AC-3: ⋯-Button öffnet Bottom-Sheet auf /compare/[id]', () => {
-	test('/compare/[id]/+page.svelte importiert MCompareActionSheet', () => {
+	test('/compare/[id]/+page.svelte importiert SubscriptionActionSheet', () => {
 		assert.ok(existsSync(DETAIL_PAGE), '/compare/[id]/+page.svelte fehlt');
 		const src = readFileSync(DETAIL_PAGE, 'utf-8');
 		assert.match(
 			src,
-			/MCompareActionSheet/,
-			'MCompareActionSheet wird in /compare/[id]/+page.svelte nicht importiert'
+			/SubscriptionActionSheet/,
+			'SubscriptionActionSheet wird in /compare/[id]/+page.svelte nicht importiert'
 		);
 	});
 

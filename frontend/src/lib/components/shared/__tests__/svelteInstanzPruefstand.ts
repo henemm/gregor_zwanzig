@@ -58,6 +58,10 @@ export function ohneTypen(quelle: string, knoten: Knoten): string {
 			loecher.push([k.expression.end, k.typeAnnotation.end]);
 		}
 		if (k.type === 'TSNonNullExpression' && k.expression) loecher.push([k.expression.end, k.end]);
+		// Optionaler Parameter `name?: T`: die Typannotation ist ausgeblendet, das `?` bliebe stehen
+		// und machte die Signatur zum Syntaxfehler (Funktion fehlte still in der Umgebung, #2278 F017).
+		if (k.type === 'Identifier' && k.optional === true && typeof k.start === 'number')
+			loecher.push([k.start + String(k.name).length, k.start + String(k.name).length + 1]);
 		for (const key of Object.keys(k)) {
 			if (key !== 'parent' && key !== 'loc') lauf(k[key]);
 		}
@@ -186,7 +190,10 @@ export async function umgebungFuer(
 	}
 	// Funktionsdeklarationen zuerst — sie werden in JS gehoben, und die
 	// Herleitungen rufen sie auf.
-	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
+	for (const roh of (ast.instance?.content?.body as Knoten[]) ?? []) {
+		// `export function f() {}` (Instanzmethode einer Komponente, #2278 F025) ist eine
+		// ExportNamedDeclaration um die eigentliche Funktionsdeklaration.
+		const stmt = roh.type === 'ExportNamedDeclaration' && roh.declaration ? roh.declaration : roh;
 		if (stmt.type !== 'FunctionDeclaration' || stmt.id?.type !== 'Identifier') continue;
 		if (stmt.id.name in u) continue;
 		try {

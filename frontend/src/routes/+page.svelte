@@ -803,7 +803,7 @@
 					/>
 					<div class="kachel-grid-3">
 						{#each activePresets as preset (preset.id)}
-							<CompareKachel {preset} />
+							<CompareKachel sub={preset} />
 						{/each}
 					</div>
 				</div>

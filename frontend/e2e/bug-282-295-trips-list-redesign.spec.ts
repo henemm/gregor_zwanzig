@@ -85,8 +85,8 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 		 * GIVEN: Desktop-Viewport, /trips, mindestens 1 Trip
 		 * WHEN:  User klickt ⋯-Button in der ersten Tabellenzeile
 		 * THEN:  Dropdown öffnet sich mit genau 6 Items:
-		 *        Bearbeiten, Test-Briefing Morgen, Test-Briefing Abend,
-		 *        Wetter-Konfiguration, Report-Konfiguration, Löschen
+		 *        Issue #2278 (subscriptionActions, Fläche Liste): Senden, Vorschau, Alarme,
+		 *        Wetter-Metriken, Bearbeiten, Löschen (+ Pausieren/Fortsetzen an erster Stelle)
 		 *        Das Item "Bearbeiten" hat data-testid="trip-edit-btn"
 		 */
 		await page.setViewportSize(DESKTOP_VIEWPORT);
@@ -104,11 +104,11 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 
 		// Alle 6 Items prüfen
 		for (const label of [
+			'Senden',
+			'Vorschau',
+			'Alarme',
+			'Wetter-Metriken',
 			'Bearbeiten',
-			'Test-Briefing Morgen',
-			'Test-Briefing Abend',
-			'Wetter-Konfiguration',
-			'Report-Konfiguration',
 			'Löschen',
 		]) {
 			await expect(page.getByRole('button', { name: label }).first()).toBeVisible({
@@ -150,13 +150,13 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 	});
 
 	// ─── AC-5: Primary-Button-Label statusabhängig ───────────────────────────
-	test('AC-5: Primary-Button zeigt "Briefing-Vorschau" für aktive/geplante Trips', async ({
+	test('AC-5: Primary-Button zeigt "Briefing senden" für aktive Trips (Issue #2278: öffnet den Sende-Dialog)', async ({
 		page
 	}) => {
 		/**
-		 * GIVEN: Desktop-Viewport, /trips, mindestens 1 aktiver oder geplanter Trip
+		 * GIVEN: Desktop-Viewport, /trips, mindestens 1 aktiver Trip
 		 * WHEN:  Aktionsspalte gerendert wird
-		 * THEN:  Primary-Button zeigt "Briefing-Vorschau"
+		 * THEN:  Primary-Button zeigt "Briefing senden"
 		 */
 		await page.setViewportSize(DESKTOP_VIEWPORT);
 		await page.goto('/trips');
@@ -173,14 +173,14 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 			.last()
 			.locator('button, a[role="button"]')
 			.filter({
-				hasText: /Briefing-Vorschau|Reaktivieren|Dearchivieren/,
+				hasText: /Briefing senden/,
 			});
 		const count = await primaryBtns.count();
 		// Im ersten Row muss ein Primary-Button existieren
 		const actionsCell = firstRow.locator('td').last();
 		const primaryBtn = actionsCell
 			.locator('button')
-			.filter({ hasText: /Briefing-Vorschau|Reaktivieren|Dearchivieren/ })
+			.filter({ hasText: /Briefing senden/ })
 			.first();
 		await expect(primaryBtn).toBeVisible({ timeout: 5000 });
 	});
@@ -217,8 +217,8 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 		/**
 		 * GIVEN: Mobile-Viewport (≤ 899px), /trips, mindestens 1 Trip
 		 * WHEN:  Seite geladen wird
-		 * THEN:  trip-card-stack, trip-card, trip-card-content-btn, trip-card-menu-btn
-		 *        sind vorhanden und funktionsfähig
+		 * THEN:  trip-card-stack, subscription-card-{id}, subscription-card-menu-{id}
+		 *        (Issue #2278: geteilte SubscriptionCard) sind vorhanden und funktionsfähig
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/trips');
@@ -226,19 +226,19 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 		const cardStack = page.getByTestId('trip-card-stack');
 		await expect(cardStack).toBeVisible({ timeout: 5000 });
 
-		const firstCard = cardStack.getByTestId('trip-card').first();
+		const firstCard = cardStack.locator('[data-testid^="subscription-card-"][data-kind="trip"]').first();
 		if (!(await firstCard.isVisible({ timeout: 3000 }).catch(() => false))) {
 			// Kein Trip — AC-7 nicht sinnvoll testbar
 			test.skip();
 			return;
 		}
 
-		await expect(firstCard.getByTestId('trip-card-content-btn')).toBeVisible();
-		await expect(firstCard.getByTestId('trip-card-menu-btn')).toBeVisible();
+		const menuBtn = firstCard.locator('[data-testid^="subscription-card-menu-"]');
+		await expect(menuBtn).toBeVisible();
 
 		// Bottom-Sheet öffnet sich
-		await firstCard.getByTestId('trip-card-menu-btn').click();
-		const sheet = page.getByTestId('trip-action-sheet');
+		await menuBtn.click();
+		const sheet = page.locator('[data-snap]');
 		await expect(sheet).toBeVisible({ timeout: 3000 });
 	});
 

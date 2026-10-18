@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Issue #491 — Compare-Preset Detail-Seite.
-	// Issue #493 — Mobile-Responsive: TopBar + MCompareActionSheet.
+	// Issue #493 — Mobile-Responsive: TopBar + SubscriptionActionSheet.
 	// Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): der mobile Bespoke-
 	// Block (2×2-5-Karten-Grid + flache Standort-Liste) entfaellt — CompareDetail
 	// wird jetzt GENAU EINMAL gemountet und versorgt Desktop UND Mobile; die
@@ -10,12 +10,14 @@
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
-	import CompareKebab from '$lib/components/compare/CompareKebab.svelte';
-	import { MCompareActionSheet } from '$lib/components/mobile';
+	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
+	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
+	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
+	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
+	import { deleteSubscription, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
 	import {
 		deriveStatusWithScheduleOverride,
 		presetProfileLabel,
-		compareDetailActions,
 		isRuntimeExceeded
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
@@ -168,7 +170,7 @@
 	// ueberschrittenem end_date gegriffen hat.
 	let runtimeExceeded = $derived(isRuntimeExceeded(currentPreset));
 	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
-	// Unterzeile (Muster CompareTile.svelte:62) — leer bei unbekanntem/fehlendem profil.
+	// Unterzeile (Muster SubscriptionCard.svelte) — leer bei unbekanntem/fehlendem profil.
 	let profileLabel = $derived(presetProfileLabel(currentPreset.profil));
 
 	// Issue #2284 S1 — Speicherweg des geteilten Kopfs (SubscriptionHeader).
@@ -207,6 +209,17 @@
 	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
 
 	let actionSheetOpen = $state(false);
+	// Issue #2278 AC-12: Lebenszyklus-Menue wie beim Trip — Desktop = Dropdown, Mobil = Aktionsblatt.
+	let mobil = $state(false);
+	let sendDialogOpen = $state(false);
+	const lifecycle = $derived(currentPreset.archived_at != null ? 'archived' : status);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		const update = () => (mobil = mq.matches);
+		update();
+		mq.addEventListener('change', update);
+		return () => mq.removeEventListener('change', update);
+	});
 
 	// Issue #528 — Status-abhängige Header-Primäraktion.
 	let isSending = $state(false);
@@ -253,21 +266,16 @@
 	let isDeleting = $state(false);
 
 	function handleAction(id: string) {
-		// Epic #1273 S3: der 'edit'/'setup'-Zweig entfiel — compareDetailActions()
-		// liefert kein 'edit' mehr und kein Aufrufer im Hub uebergibt 'edit'/'setup'.
+		// Epic #1273 S3: kein 'edit'/'setup' im Hub; die Aktionen stammen aus
+		// subscriptionActions('vergleich', status, 'hub') (Issue #2278).
 		if (id === 'pause' || id === 'resume') {
-			// 'resume' kommt aus compareDetailActions() (Hub-Header, #1256 S3 + #1261) —
-			// selbe Toggle-Aktion wie 'pause' aus compareActions() (Listen-Kebab).
+			// 'pause' und 'resume' sind dieselbe Toggle-Aktion.
 			void togglePause();
-		} else if (id === 'send') {
-			void handleTestSend();
-		} else if (id === 'preview') {
-			window.location.href = '/compare/' + currentPreset.id + '?tab=vorschau';
 		} else if (id === 'archive') {
 			void archivePreset();
-		} else if (id === 'delete' || id === 'trash') {
-			// 'trash' kommt aus compareDetailActions() (Hub-Header, #1256 S3 + #1261) —
-			// selbe Lösch-Aktion wie 'delete' aus compareActions() (Listen-Kebab).
+		} else if (id === 'unarchive') {
+			void unarchivePreset();
+		} else if (id === 'delete') {
 			// Issue #2214: erst Rueckfrage (ConfirmDialog, wie Trip-Hub), kein Sofort-DELETE.
 			deleteDialogOpen = true;
 		}
@@ -288,26 +296,34 @@
 
 	async function archivePreset() {
 		try {
-			const res = await fetch(`/api/compare/presets/${currentPreset.id}/state`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ archived: true })
-			});
-			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			await setArchived('vergleich', currentPreset.id, true);
 			window.location.href = '/compare';
-		} catch {
-			sendMsg = 'Archivieren fehlgeschlagen.';
+		} catch (e) {
+			sendMsg = fehlerText(e, 'Archivieren fehlgeschlagen.');
+		}
+	}
+
+	// Nutzerverstaendliche Meldung: 4xx mit Server-Detail, sonst der feste Text (5xx/Netz).
+	function fehlerText(e: unknown, fest: string): string {
+		return e instanceof SubscriptionExecError && e.status < 500 && e.detail ? e.detail : fest;
+	}
+
+	async function unarchivePreset() {
+		try {
+			await setArchived('vergleich', currentPreset.id, false);
+			window.location.reload();
+		} catch (e) {
+			sendMsg = fehlerText(e, 'Reaktivieren fehlgeschlagen.');
 		}
 	}
 
 	async function deletePreset() {
 		isDeleting = true;
 		try {
-			const res = await fetch(`/api/compare/presets/${currentPreset.id}`, { method: 'DELETE' });
-			if (!res.ok) throw new Error(`DELETE failed: ${res.status}`);
+			await deleteSubscription('vergleich', currentPreset.id);
 			window.location.href = '/compare';
-		} catch {
-			sendMsg = 'Löschen fehlgeschlagen.';
+		} catch (e) {
+			sendMsg = fehlerText(e, 'Löschen fehlgeschlagen.');
 		} finally {
 			isDeleting = false;
 		}
@@ -369,21 +385,27 @@
 			{#if status === 'draft'}
 				<Btn variant="primary" onclick={() => { window.location.href = `?tab=versand`; }}>Setup abschließen</Btn>
 			{:else}
-				<Btn variant="primary" onclick={handleTestSend} disabled={isSending}>
-					{isSending ? 'Wird gesendet…' : 'Test senden'}
+				<!-- Senden ist der Primaerknopf und oeffnet den Sende-Dialog (AC-3/AC-12) -->
+				<Btn variant="primary" data-testid="subscription-hub-send" onclick={() => (sendDialogOpen = true)} disabled={isSending || lifecycle === 'archived'}>
+					{isSending ? 'Wird gesendet…' : 'Senden'}
 				</Btn>
 			{/if}
-			<CompareKebab {status} actions={compareDetailActions(status)} onSelect={handleAction} />
+			{#if !mobil}
+				<SubscriptionKebab data-testid="subscription-kebab" actions={subscriptionActions('vergleich', lifecycle, 'hub')} onSelect={handleAction} />
+			{/if}
 		</div>
 		<!-- mt-[25px] = Eyebrow (9px) + gap-4 (16px): Knopf steht wie bisher auf Höhe der Namenszeile. -->
-		<button
-			type="button"
-			class="desktop:hidden flex flex-shrink-0 items-center justify-center min-h-[44px] min-w-[44px] mt-[25px] rounded-md"
-			aria-label="Weitere Aktionen"
-			onclick={() => (actionSheetOpen = true)}
-		>
-			<MoreHorizontalIcon size={20} />
-		</button>
+		{#if mobil}
+			<button
+				type="button"
+				class="flex flex-shrink-0 items-center justify-center min-h-[44px] min-w-[44px] mt-[25px] rounded-md"
+				data-testid="subscription-kebab"
+				aria-label="Weitere Aktionen"
+				onclick={() => (actionSheetOpen = true)}
+			>
+				<MoreHorizontalIcon size={20} />
+			</button>
+		{/if}
 	</div>
 
 	<!-- sendMsg/pauseError wie bisher nur Desktop (mobil: Aktions-Sheet). -->
@@ -413,12 +435,25 @@
 {/key}
 
 <!-- Bottom-Sheet für mobile Aktionen (#493) -->
-<MCompareActionSheet
+<SubscriptionActionSheet
 	open={actionSheetOpen}
 	onClose={() => (actionSheetOpen = false)}
-	{status}
+	kind="vergleich"
+	status={lifecycle}
+	surface="hub"
 	onAction={handleAction}
-	presetName={currentPreset.name}
+	name={currentPreset.name}
+/>
+
+<!-- Issue #2278 AC-3: Senden erst nach Bestaetigung, Ziel aus dem Konto-Profil des angemeldeten Nutzers. -->
+<SendConfirmDialog
+	open={sendDialogOpen}
+	kind="vergleich"
+	profile={data.profile}
+	subscription={currentPreset}
+	running={isSending}
+	onConfirm={() => { sendDialogOpen = false; void handleTestSend(); }}
+	onCancel={() => (sendDialogOpen = false)}
 />
 
 <!-- Issue #2214: Loeschen erst nach Bestaetigung (Muster trips/[id]/+page.svelte). -->

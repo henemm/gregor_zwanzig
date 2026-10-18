@@ -61,13 +61,14 @@ describe('AC-1: Preset-Name, Status, Schedule, Empfänger angezeigt', () => {
 		);
 	});
 
-	test('+page.svelte importiert CompareKebab für Aktionsmenü', () => {
+	// Issue #2278: das Aktionsmenue ist das geteilte SubscriptionKebab (loest CompareKebab ab).
+	test('+page.svelte importiert SubscriptionKebab für Aktionsmenü', () => {
 		assert.ok(existsSync(PAGE_SVELTE), '+page.svelte fehlt');
 		const src = readFileSync(PAGE_SVELTE, 'utf-8');
 		assert.match(
 			src,
-			/CompareKebab/,
-			'CompareKebab wird in +page.svelte nicht importiert — Aktionsmenü fehlt'
+			/SubscriptionKebab/,
+			'SubscriptionKebab wird in +page.svelte nicht importiert — Aktionsmenü fehlt'
 		);
 	});
 

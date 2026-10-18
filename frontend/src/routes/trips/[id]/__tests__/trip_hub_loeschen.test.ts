@@ -77,7 +77,15 @@ describe('AC-5/#1064: Loeschen ist im Trip-Hub erreichbar und laeuft ueber den B
 		// "mit dem Namen": Titel oder Beschreibung referenziert den Namen (Ausdruck, kein reiner Literaltext).
 		const tb = [attribut(d, 'title')?.value, attribut(d, 'description')?.value];
 		const namensBezug = tb.some((v) =>
-			collect(v ?? [], (n) => n.type === 'MemberExpression' || (n.type === 'Identifier' && /name/i.test(n.name))).length > 0
+			// Fix-Loop 1 (F008): exakt `trip.name`, nicht irgendein Bezeichner mit "name".
+			collect(
+				v ?? [],
+				(n) =>
+					n.type === 'MemberExpression' &&
+					n.object?.type === 'Identifier' &&
+					n.object.name === 'trip' &&
+					n.property?.name === 'name'
+			).length > 0
 		);
 		assert.ok(namensBezug, 'Dialogtext nennt den Trip-Namen nicht (AC-5: "mit dem Namen")');
 	});

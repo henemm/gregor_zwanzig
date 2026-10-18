@@ -201,15 +201,16 @@ test('AC-9: die ohne Netz gezeigte Trip-Ansicht sperrt ihre Bearbeitungsflaechen
 		).toBeVisible();
 		expect((await hinweis.innerText()).trim().length, 'die Begruendung ist leer').toBeGreaterThan(10);
 
-		// Die drei schreibenden Bedienelemente der Kopfzeile.
-		for (const beschriftung of ['Pausieren', 'Archivieren', 'Test-Briefing senden']) {
+		// Die schreibenden Bedienelemente der Kopfzeile (#2278: Primaerknopf "Senden" und der
+		// Ausloeser des Lebenszyklus-Menues, hinter dem Pausieren/Archivieren/Loeschen stehen).
+		for (const testid of HUB_SCHREIBENDE_KNOEPFE) {
 			await expect(
-				page.getByRole('button', { name: beschriftung }),
-				`"${beschriftung}" ist ohne Netz weiterhin sichtbar — richtig (ADR-0034)`
+				page.getByTestId(testid),
+				`"${testid}" ist ohne Netz weiterhin sichtbar — richtig (ADR-0034)`
 			).toBeVisible();
 			await expect(
-				page.getByRole('button', { name: beschriftung }),
-				`"${beschriftung}" ist ohne Netz bedienbar, obwohl der Schreibweg fehlt`
+				page.getByTestId(testid),
+				`"${testid}" ist ohne Netz bedienbar, obwohl der Schreibweg fehlt`
 			).toBeDisabled();
 		}
 
@@ -304,10 +305,12 @@ async function alarmReiterOeffnen(page: Page): Promise<void> {
  * Quickset-Leiste (die ~56 Schaltflaechen aus dem Finding) sowie die Kopfzeile
  * der Ansicht — damit der Nachweis nicht an einer einzelnen Stelle haengt.
  */
+const HUB_SCHREIBENDE_KNOEPFE = ['subscription-hub-send', 'subscription-kebab'];
+
 const SPERR_PROBEN = [
 	'[data-testid^="alert-level-"]',
 	'[data-testid^="alert-quickset-"]',
-	'[data-testid="test-briefing-menu-toggle"]'
+	'[data-testid="subscription-hub-send"]' // Issue #2278: Primaerknopf "Senden" ersetzt test-briefing-menu-toggle
 ];
 
 test('F005: gesperrte Bedienelemente sind sichtbar gesperrt und ihre Gruppe traegt die Begruendung', async ({
@@ -388,7 +391,8 @@ test('AC-10: der Bedienversuch an einer gesperrten Flaeche schickt keine schreib
 	// Ohne sie waere der Nachweis unten auch dann gruen, wenn das Bedienelement
 	// gar nicht mehr existiert oder ueberhaupt nie geschrieben haette.
 	const mitNetz = schreibversucheMitschneiden(context);
-	await page.getByRole('button', { name: 'Pausieren' }).click();
+	await page.getByTestId('subscription-kebab').click();
+	await page.getByTestId('subscription-action-pause').click();
 	await expect
 		.poll(() => mitNetz.length, { timeout: 15_000 })
 		.toBeGreaterThan(0);
@@ -404,8 +408,8 @@ test('AC-10: der Bedienversuch an einer gesperrten Flaeche schickt keine schreib
 		// `force`: der Nutzer tippt trotzdem. Genau dieser Versuch darf nichts
 		// ausloesen — der Nachweis umgeht deshalb bewusst die Bedienbarkeits-
 		// pruefung von Playwright.
-		for (const beschriftung of ['Pausieren', 'Archivieren', 'Test-Briefing senden']) {
-			await page.getByRole('button', { name: beschriftung }).click({ force: true });
+		for (const testid of HUB_SCHREIBENDE_KNOEPFE) {
+			await page.getByTestId(testid).click({ force: true });
 		}
 		// #2284 S2: Aktivitaet = Kachel im Trip-Kopf (vorher Auswahlliste im Etappen-Reiter).
 		await page
@@ -446,7 +450,7 @@ test('AC-11: faellt das Netz an der live geladenen Ansicht weg, sperrt sie ohne 
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15_000 });
 	// Ausgangslage: bedienbar. Ohne diese Messung waere der Nachweis unten auch
 	// von einer Seite erfuellt, die von vornherein alles sperrt.
-	await expect(page.getByRole('button', { name: 'Pausieren' })).toBeEnabled();
+	await expect(page.getByTestId('subscription-kebab')).toBeEnabled();
 	await expect(page.getByTestId('offline-sperre-hinweis')).toHaveCount(0);
 
 	const schreibversuche = schreibversucheMitschneiden(context);
@@ -455,7 +459,7 @@ test('AC-11: faellt das Netz an der live geladenen Ansicht weg, sperrt sie ohne 
 	await context.setOffline(true);
 	try {
 		await expect(
-			page.getByRole('button', { name: 'Pausieren' }),
+			page.getByTestId('subscription-kebab'),
 			'die live geladene Ansicht bleibt nach dem Netzverlust bedienbar'
 		).toBeDisabled({ timeout: 15_000 });
 		await expect(

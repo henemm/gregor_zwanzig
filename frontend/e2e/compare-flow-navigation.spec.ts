@@ -353,10 +353,10 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Mobile (AC-25, AC
 		await page.goto('/compare');
 		await page.waitForLoadState('networkidle');
 
-		// Unter 900px rendert routes/compare/+page.svelte den mobilen
-		// Kachel-Stack (<a href="/compare/{id}">), das Desktop-Grid bleibt via
-		// CSS ausgeblendet, aber im DOM vorhanden — :visible ist Pflicht.
-		const tile = page.locator(`[data-testid="compare-tile-${id}"]:visible`);
+		// Unter 900px rendert routes/compare/+page.svelte den mobilen Kachel-Stack
+		// (Issue #2278: geteilte SubscriptionCard, Tipp navigiert), das Desktop-Grid bleibt via
+		// CSS ausgeblendet, aber im DOM vorhanden.
+		const tile = page.getByTestId(`subscription-card-${id}`);
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 		await tile.click();
 
@@ -399,8 +399,8 @@ test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-5: Hub-Kebab bei pausiertem Vergleich = [Aktivieren, Archivieren, Bearbeiten, Löschen] ──
-	test('AC-5: Hub-Header-Kebab (pausierter Vergleich) zeigt Aktivieren/Archivieren/Bearbeiten/Löschen', async ({
+	// ── AC-5: Hub-Kebab bei pausiertem Vergleich = [Fortsetzen, Archivieren, Löschen] (Issue #2278, AC-12) ──
+	test('AC-5: Hub-Header-Kebab (pausierter Vergleich) zeigt Fortsetzen/Archivieren/Löschen', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -411,21 +411,21 @@ test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC
 		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
 
-		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		const kebabTrigger = page.getByTestId('subscription-kebab');
 		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
 		await kebabTrigger.click();
 
-		// Lifecycle-Vertrag: "Archivieren" erreichbar (KL-7), "Bearbeiten" seit #1261 ergänzt.
-		await expect(page.getByRole('menuitem', { name: 'Aktivieren' })).toBeVisible({ timeout: 5_000 });
+		// Lifecycle-Vertrag (subscriptionActions, Fläche 'hub'): "Archivieren" erreichbar (KL-7).
+		await expect(page.getByRole('menuitem', { name: 'Fortsetzen' })).toBeVisible({ timeout: 5_000 });
 		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).toBeVisible({ timeout: 5_000 });
 		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible({ timeout: 5_000 });
-		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toBeVisible({ timeout: 5_000 });
 
-		// Listen-exklusive Aktionen dürfen im Hub-Header weiterhin NICHT auftauchen.
-		await expect(page.getByRole('menuitem', { name: 'Vorschau öffnen' })).not.toBeVisible();
-		await expect(page.getByRole('menuitem', { name: 'Briefing jetzt senden' })).not.toBeVisible();
+		// Listen-exklusive Aktionen (und "Bearbeiten": der Hub IST die Bearbeiten-Fläche) fehlen im Hub-Menü.
+		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).not.toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Vorschau' })).not.toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Senden' })).not.toBeVisible();
 
-		await expect(page.getByRole('menuitem')).toHaveCount(4);
+		await expect(page.getByRole('menuitem')).toHaveCount(3);
 
 		await page.keyboard.press('Escape');
 	});
@@ -442,7 +442,7 @@ test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC
 		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
 
-		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		const kebabTrigger = page.getByTestId('subscription-kebab');
 		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
 		await kebabTrigger.click();
 
