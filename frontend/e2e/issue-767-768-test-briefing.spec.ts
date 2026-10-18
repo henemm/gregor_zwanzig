@@ -12,8 +12,10 @@
 //
 // Ausführung: cd frontend && npx playwright test issue-767-768-test-briefing
 
-import { test, expect, type Page } from '@playwright/test';
-import { login } from './helpers.js';
+import { expect, type Page } from '@playwright/test';
+// Issue #2278 AC-10: ohne zustellbares Ziel ist "Senden" im Dialog gesperrt — die Specs laufen als
+// bestaetigter Zweitnutzer mit mail_to und eigenem Seed-Trip (helpers.ts, testMitZustellbaremZiel).
+import { login, testMitZustellbaremZiel as test } from './helpers.js';
 
 const TRIP_ID = 'e2e-cockpit-test';
 const DESKTOP = { width: 1440, height: 900 };

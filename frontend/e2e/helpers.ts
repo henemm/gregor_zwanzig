@@ -1,4 +1,4 @@
-import { type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { test as base, expect, type APIRequestContext, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
 import { resolveE2EUser } from './testUser.ts';
 
@@ -247,6 +247,64 @@ export async function registriereBestaetigtenZweitnutzer(
 		throw new Error(`Login ${username} fehlgeschlagen: ${login.status()} ${await login.text()}`);
 	}
 }
+
+type Sitzung = Awaited<ReturnType<BrowserContext['storageState']>>;
+
+/**
+ * Issue #2278 AC-10: Spec-Basis fuer Versand-Specs, deren Nutzer ein ZUSTELLBARES Ziel braucht.
+ *
+ * Der Sende-Dialog sperrt "Senden" ohne `mail_to` (sendTargetLabel.ts). Der Env-Admin des
+ * CI-Stacks hat keins und bekommt auch keins per `PUT /api/auth/profile {mail_to}`: er ist
+ * bestaetigt, die neue Adresse landet als Pending-Adresse (auth.go, Zweig `default:` der
+ * Adressaenderung) samt Bestaetigungsmail. Deshalb EIN bestaetigter Zweitnutzer je Worker
+ * (Registrierungsbremse: 5/h je IP, router.go) — `page`/`context` laufen als dieser Nutzer, der
+ * Admin bleibt unberuehrt. Der Nutzer bekommt den Seed-Trip `e2e-cockpit-test` mit demselben
+ * Namen wie beim Admin (global.setup.ts), damit die Specs ihre Kennungen behalten. Der Versand
+ * selbst wird in den Specs per `page.route` abgefangen.
+ */
+export const testMitZustellbaremZiel = base.extend<object, { zustellbareSitzung: Sitzung }>({
+	storageState: ({ zustellbareSitzung }, use) => use(zustellbareSitzung),
+	zustellbareSitzung: [
+		async ({ browser }, use, workerInfo) => {
+			const baseURL = workerInfo.project.use.baseURL;
+			const neu = { baseURL, storageState: undefined, serviceWorkers: 'block' as const };
+			// Admin-Sitzung des Projekts (global.setup.ts) holt das Staging-Token.
+			const adminCtx = await browser.newContext({ ...neu, storageState: workerInfo.project.use.storageState });
+			const gastCtx = await browser.newContext(neu);
+			const username = `e2ezustellbar${Date.now()}w${workerInfo.workerIndex}`;
+			const kennwort = 'Test1234!x';
+			try {
+				await registriereBestaetigtenZweitnutzer(adminCtx.request, gastCtx.request, username, kennwort);
+			} finally {
+				await adminCtx.close();
+			}
+			const profil = await (await gastCtx.request.get('/api/auth/profile')).json();
+			expect(profil?.mail_to, 'Vorbedingung: Zweitnutzer hat ein zustellbares mail_to').toBeTruthy();
+			const heute = new Date().toISOString().slice(0, 10);
+			const morgen = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+			const trip = await gastCtx.request.post('/api/trips', {
+				data: {
+					id: 'e2e-cockpit-test',
+					name: 'E2E Cockpit Test Trip',
+					region: 'Korsika',
+					stages: [
+						{ id: 'e2e-stage-2', name: 'Heute', date: heute, waypoints: [
+							{ id: 'e2e-wp-2', name: 'Mitte', lat: 42.2, lon: 9.1, elevation_m: 1200 },
+							{ id: 'e2e-wp-3', name: 'Ziel', lat: 42.3, lon: 9.2, elevation_m: 600 }
+						] },
+						{ id: 'e2e-stage-3', name: 'Morgen', date: morgen, waypoints: [] }
+					],
+					report_config: { enabled: true, morning_time: '06:00:00', evening_time: '18:00:00' }
+				}
+			});
+			expect(trip.ok(), `Seed-Trip des Zweitnutzers: ${trip.status()}`).toBeTruthy();
+			await use(await gastCtx.storageState());
+			await gastCtx.request.post('/api/auth/account/delete', { data: { password: kennwort } }).catch(() => {});
+			await gastCtx.close();
+		},
+		{ scope: 'worker' }
+	]
+});
 
 /**
  * Eingabe-Vertrag fuer Trip-Wizard Step 1 (Sub-Spec #161 §9).

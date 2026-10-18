@@ -30,8 +30,11 @@
 // Ausführen (aus frontend/, lokaler E2E-Stack):
 //   npx playwright test e2e/send-in-flight-guard.spec.ts
 
-import { test, expect, type Page, type Route } from '@playwright/test';
-import { login, registriereBestaetigtenZweitnutzer } from './helpers.js';
+import { expect, type Page, type Route } from '@playwright/test';
+// Issue #2278 AC-10: der Sende-Dialog sperrt "Senden" ohne zustellbares Ziel; der Seed-Admin des
+// CI-Stacks hat keins. Alle Faelle laufen deshalb als bestaetigter Zweitnutzer mit mail_to und
+// eigenem Seed-Trip `e2e-cockpit-test` (EIN Konto je Worker, helpers.ts).
+import { login, testMitZustellbaremZiel as test } from './helpers.js';
 
 const TRIP_ID = 'e2e-cockpit-test';
 const DESKTOP = { width: 1440, height: 900 };
@@ -214,43 +217,30 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 	});
 
 	// Der Bestätigungsdialog der Compare-Liste sperrt „Senden" ohne bestätigte Konto-
-	// Adresse (`sendTargetLabel`). Der Seed-Admin des CI-Stacks hat keine ⇒ eigener,
-	// sofort bestätigter Zweitnutzer (Muster: konto-loeschdialog-mobil-ueberlauf.spec.ts).
-	test('AC-3: Compare-Liste hält den Versand, Hub-Kopf (per Klick erreicht) schickt keinen zweiten Request', async ({ page, browser }) => {
-		const username = `e2e2124liste${Date.now()}`;
-		const kennwort = 'Test1234!x';
-		const ctx = await browser.newContext({ storageState: undefined, viewport: DESKTOP, serviceWorkers: 'block' });
-		const gast = await ctx.newPage();
-		let angelegt = false;
-		let preset: { presetId: string; locIds: string[] } | null = null;
-		let halter: Halter | null = null;
+	// Adresse (`sendTargetLabel`) ⇒ `page` ist der zustellbare Zweitnutzer (Datei-Kopf).
+	test('AC-3: Compare-Liste hält den Versand, Hub-Kopf (per Klick erreicht) schickt keinen zweiten Request', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		await login(page);
+		const preset = await seedPreset(page);
+		const { presetId } = preset;
+		const halter = await versandHalten(page, `**/api/compare/presets/${presetId}/send*`);
 		try {
-			await registriereBestaetigtenZweitnutzer(page.request, gast.request, username, kennwort);
-			angelegt = true;
-			preset = await seedPreset(gast);
-			const { presetId } = preset;
-			halter = await versandHalten(gast, `**/api/compare/presets/${presetId}/send*`);
-
-			await gast.goto('/compare');
-			const zeile = gast.getByTestId(`compare-tile-${presetId}`);
+			await page.goto('/compare');
+			const zeile = page.getByTestId(`compare-tile-${presetId}`);
 			await zeile.getByRole('button', { name: 'Briefing senden' }).click();
-			await gast.getByTestId('send-confirm-yes').click();
-			await expect.poll(() => halter!.requests.length).toBe(1);
+			await page.getByTestId('send-confirm-yes').click();
+			await expect.poll(() => halter.requests.length).toBe(1);
 
 			// Clientseitig in den Hub (Modulzustand bleibt), dort anderer Auslöser.
 			await zeile.getByText(/E2E 2124/).first().click();
-			await gast.waitForURL(`**/compare/${presetId}*`);
-			await compareHubSenden(gast);
+			await page.waitForURL(`**/compare/${presetId}*`);
+			await compareHubSenden(page);
 
-			await expect(gast.getByText(LAEUFT).first()).toBeVisible({ timeout: 8000 });
+			await expect(page.getByText(LAEUFT).first()).toBeVisible({ timeout: 8000 });
 			expect(halter.requests, 'zweiter Versand während des ersten').toHaveLength(1);
 		} finally {
-			await halter?.freigeben();
-			if (preset) await cleanup(gast, preset.presetId, preset.locIds);
-			if (angelegt) {
-				await gast.request.post('/api/auth/account/delete', { data: { password: kennwort } }).catch(() => {});
-			}
-			await ctx.close();
+			await halter.freigeben();
+			await cleanup(page, presetId, preset.locIds);
 		}
 	});
 

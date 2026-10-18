@@ -424,6 +424,15 @@
 	}
 		/* #2284 S2 (AC-13): mobil 44-px-Tippflaechen ohne Layout-Hoehe. */
 	@media (max-width: 899px) {
+		/* #2278 (AC-13): Pfad kuerzt mit Ellipsis statt "Senden" + Kebab in eine zweite Zeile zu schieben
+		   (390 px, langer Name: +33 px Kopfhoehe). Der volle Name steht im Titel darunter. */
+		.breadcrumb-path {
+			flex: 1 1 0;
+			min-width: 0;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 		.hub-actions > :global([data-slot='btn']) {
 			min-height: 44px;
 			min-width: 44px;
