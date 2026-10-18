@@ -689,7 +689,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 			// lautlos zerbrochen (neue Array-Referenz im Zeilen-Markup), und 2553
 			// Unit-Tests haben das nicht gesehen.
 			await createTrip(request);
-			await page.setViewportSize({ width: breite, height: breite < 900 ? 800 : 900 });
+			await page.setViewportSize({ width: breite, height: breite < 900 ? 1600 : 900 });
 			const tab = await oeffneTripEditor(page);
 
 			const kanal = tab.locator('[data-testid="wm2-reihenfolge"]').first();
