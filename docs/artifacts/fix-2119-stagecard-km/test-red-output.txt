@@ -1,0 +1,90 @@
+TAP version 13
+# Subtest: \#2119 Etappen-Kachel: GPX-Track-Distanz
+    # Subtest: AC-1: Desktop-Kachel zeigt Differenz der distance_from_start_km (17.5 km)
+    not ok 1 - AC-1: Desktop-Kachel zeigt Differenz der distance_from_start_km (17.5 km)
+      ---
+      duration_ms: 4.597665
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/frontend/src/lib/components/trip-detail/waypoints/__tests__/stage_card_km_gpx_distanz.test.ts:54:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The input did not match the regular expression /17\.5\s*km/. Input:
+        
+        '<!--[--><div data-testid="stage-card-0" style=" width: 200px; min-height: 88px; padding: 10px 12px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; border-radius: 4px; cursor: default; background: var(--g-card); border: 1px solid var(--g-rule); position: relative; "><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:9px; font-family:var(--g-font-mono); font-weight:600; color:var(--g-ink-4); letter-spacing:0.04em;">⋮⋮ T01 · </span> <!--[-1--><!--]--></div> <!--[-1--><div style="font-size:12px; font-weight:600; margin-top:4px; line-height:1.3; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Tag 1</div> <!--[0--><svg viewBox="0 0 174 18" width="100%" height="18" preserveAspectRatio="none" style="display:block"><polyline points="0.0,17.0 87.0,9.8 174.0,1.0" fill="none" stroke="var(--g-ink-4)" stroke-width="1.2"></polyline></svg><!--]--> <!--[0--><div style="font-size:9px; font-family:var(--g-font-mono); color:var(--g-ink-3);"><!--[0-->11.1 km<!--]--><!--[0-->·<!--]--><!--[0-->↑666<!--]--></div><!--]--><!--]--></div><!--]-->'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<!--[--><div data-testid="stage-card-0" style=" width: 200px; min-height: 88px; padding: 10px 12px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; border-radius: 4px; cursor: default; background: var(--g-card); border: 1px solid var(--g-rule); position: relative; "><div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-size:9px; font-family:var(--g-font-mono); font-weight:600; color:var(--g-ink-4); letter-spacing:0.04em;">⋮⋮ T01 · </span> <!--[-1--><!--]--></div> <!--[-1--><div style="font-size:12px; font-weight:600; margin-top:4px; line-height:1.3; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Tag 1</div> <!--[0--><svg viewBox="0 0 174 18" width="100%" height="18" preserveAspectRatio="none" style="display:block"><polyline points="0.0,17.0 87.0,9.8 174.0,1.0" fill="none" stroke="var(--g-ink-4)" stroke-width="1.2"></polyline></svg><!--]--> <!--[0--><div style="font-size:9px; font-family:var(--g-font-mono); color:var(--g-ink-3);"><!--[0-->11.1 km<!--]--><!--[0-->·<!--]--><!--[0-->↑666<!--]--></div><!--]--><!--]--></div><!--]-->'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/frontend/src/lib/components/trip-detail/waypoints/__tests__/stage_card_km_gpx_distanz.test.ts:55:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: AC-2: mobile Kachel zeigt dieselbe Track-Distanz wie die Desktop-Kachel
+    not ok 2 - AC-2: mobile Kachel zeigt dieselbe Track-Distanz wie die Desktop-Kachel
+      ---
+      duration_ms: 7.024127
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/frontend/src/lib/components/trip-detail/waypoints/__tests__/stage_card_km_gpx_distanz.test.ts:58:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The input did not match the regular expression /17\.5\s*km/. Input:
+        
+        '<!--[--><div class="stage-cardm svelte-1ye1p4c" data-testid="stage-cardm"><div class="body svelte-1ye1p4c"><div class="top svelte-1ye1p4c"><span class="code svelte-1ye1p4c">T01<!--[-1--><!--]--></span> <!--[1--><span class="date svelte-1ye1p4c">2026-08-01</span><!--]--></div> <!--[-1--><div class="title svelte-1ye1p4c">Tag 1</div> <div class="meta svelte-1ye1p4c"><!--[0-->11.1 km<!--]--><!--[0-->·<!--]--><!--[0-->↑666<!--]--> <!--[0-->· 3 WP<!--]--></div><!--]--> <!--[-1--><!--]--></div> <!--[0--><div class="risk svelte-1ye1p4c"><span data-slot="pill" data-tone="default" class=""><!---->—<!----></span><!----></div><!--]--> <span class="chevron svelte-1ye1p4c" data-testid="stage-cardm-chevron" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><!--]-->'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<!--[--><div class="stage-cardm svelte-1ye1p4c" data-testid="stage-cardm"><div class="body svelte-1ye1p4c"><div class="top svelte-1ye1p4c"><span class="code svelte-1ye1p4c">T01<!--[-1--><!--]--></span> <!--[1--><span class="date svelte-1ye1p4c">2026-08-01</span><!--]--></div> <!--[-1--><div class="title svelte-1ye1p4c">Tag 1</div> <div class="meta svelte-1ye1p4c"><!--[0-->11.1 km<!--]--><!--[0-->·<!--]--><!--[0-->↑666<!--]--> <!--[0-->· 3 WP<!--]--></div><!--]--> <!--[-1--><!--]--></div> <!--[0--><div class="risk svelte-1ye1p4c"><span data-slot="pill" data-tone="default" class=""><!---->—<!----></span><!----></div><!--]--> <span class="chevron svelte-1ye1p4c" data-testid="stage-cardm-chevron" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></span></div><!--]-->'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/frontend/src/lib/components/trip-detail/waypoints/__tests__/stage_card_km_gpx_distanz.test.ts:59:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: AC-3: ohne Messwerte weiterhin Naeherungs-Distanz (beide Kacheln)
+    ok 3 - AC-3: ohne Messwerte weiterhin Naeherungs-Distanz (beide Kacheln)
+      ---
+      duration_ms: 0.487311
+      type: 'test'
+      ...
+    # Subtest: AC-3: unter 2 Wegpunkten keine km-Angabe (beide Kacheln)
+    ok 4 - AC-3: unter 2 Wegpunkten keine km-Angabe (beide Kacheln)
+      ---
+      duration_ms: 0.38035
+      type: 'test'
+      ...
+    1..4
+not ok 1 - \#2119 Etappen-Kachel: GPX-Track-Distanz
+  ---
+  duration_ms: 13.939933
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/frontend/src/lib/components/trip-detail/waypoints/__tests__/stage_card_km_gpx_distanz.test.ts:53:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 4
+# suites 1
+# pass 2
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 772.568324
