@@ -304,3 +304,56 @@ test.describe('AC-10: Sende-Dialog nennt nur das Ziel des angemeldeten Nutzers',
 		}
 	});
 });
+
+// Adversary F001 (#2278): die Sperre muss am KNOPF wirken, nicht nur im Modell. Zustand "kein Kanal kann
+// liefern" wird echt hergestellt: frischer, bestaetigter Zweitnutzer leert sein mail_to (email == mail_to
+// => wirksame Adresse unveraendert, sofort geschrieben, auth.go "mail_to leeren"). Das Profil, das der
+// Dialog sieht, hat dann KEIN mail_to => sendTargetLabel sperrt. page.route auf das Profil geht nicht:
+// es wird serverseitig geladen (+page.server.ts -> loadProfile). Braucht GZ_ENV=staging wie AC-10.
+test.describe('AC-3: Sende-Dialog sperrt Bestaetigen, wenn kein Kanal liefern kann', () => {
+	test('Hub-Trip ohne mail_to: send-confirm-yes ist disabled, es geht nichts raus', async ({ page, browser }) => {
+		await login(page);
+		const username = `e2e-gz-c-${Date.now()}`;
+		const kontext = await browser.newContext();
+		const gast = kontext.request;
+		const tripId = `e2e-gz-trip-${username}`;
+		try {
+			await registriereBestaetigtenZweitnutzer(page.request, gast, username, 'Test1234!x');
+			const leer = await gast.put('/api/auth/profile', { data: { mail_to: '' } });
+			expect(leer.ok(), `mail_to leeren: ${leer.status()}`).toBeTruthy();
+			const profil = await (await gast.get('/api/auth/profile')).json();
+			expect(profil?.mail_to ?? '', 'Vorbedingung: Profil ohne mail_to').toBe('');
+
+			const res = await gast.post('/api/trips', {
+				data: {
+					id: tripId,
+					name: `E2E-GZ-Trip-${username}`,
+					stages: [
+						{
+							id: 's1',
+							name: 'E1',
+							date: HEUTE,
+							waypoints: [{ id: 'w1', name: 'S', lat: 42.1, lon: 9.0, elevation_m: 500 }]
+						}
+					]
+				}
+			});
+			expect(res.ok()).toBeTruthy();
+			const seite = await kontext.newPage();
+			const gesendet: string[] = [];
+			await seite.route('**/api/trips/*/send*', async (route) => {
+				gesendet.push(route.request().url());
+				await route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"ok"}' });
+			});
+			await seite.goto(`/trips/${tripId}`);
+			await seite.getByTestId('subscription-hub-send').click();
+			await expect(seite.getByTestId('send-confirm-dialog')).toContainText('keine E-Mail-Adresse');
+			await expect(seite.getByTestId('send-confirm-yes')).toBeDisabled();
+			await seite.getByTestId('send-confirm-yes').click({ force: true }).catch(() => {});
+			expect(gesendet, 'gesperrter Knopf darf nichts senden').toEqual([]);
+		} finally {
+			await gast.delete(`/api/trips/${tripId}`).catch(() => {});
+			await kontext.close();
+		}
+	});
+});

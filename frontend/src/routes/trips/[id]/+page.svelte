@@ -262,7 +262,7 @@
 	}
 
 	// Senden: erst nach Bestaetigung im Sende-Dialog (AC-3/AC-4); Berichtsart aus der Wahl.
-	async function handleSendConfirm(berichtsart?: 'morning' | 'evening'): Promise<void> {
+	async function handleSendConfirm(berichtsart: 'morning' | 'evening' | undefined): Promise<void> {
 		sendDialogOpen = false;
 		clearTimeout(sendTimer);
 		sendLoading = true;

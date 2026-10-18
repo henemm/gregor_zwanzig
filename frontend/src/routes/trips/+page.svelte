@@ -144,7 +144,7 @@
 		deleteTarget = null;
 	}
 
-	async function confirmSend(berichtsart?: 'morning' | 'evening') {
+	async function confirmSend(berichtsart: 'morning' | 'evening' | undefined) {
 		if (!sendTarget) return;
 		const target = sendTarget;
 		sendTarget = null;
