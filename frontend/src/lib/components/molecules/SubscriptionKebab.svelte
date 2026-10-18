@@ -1,35 +1,18 @@
 <script lang="ts">
-	// Issue #488 — CompareKebab (Molecule, Svelte 5).
-	//
-	// Kebab-Kontextmenü für CompareTile mit statusabhängigen Aktionen.
-	// Nutzt das bits-ui v2 {#snippet child({ props })}-Trigger-Pattern
-	// (Portal-basiert, Safari-/iOS-tauglich).
-	//
-	// Kein API-Call hier: emittiert nur onSelect(id) — die Elternkomponente
-	// (CompareTile / CompareGrid) ist für API-Aufruf + Confirm-Dialog zuständig.
-	//
-	// Spec: docs/specs/modules/issue_488_compare_tile_atoms.md §4
-	// Referenz: frontend/src/routes/trips/+page.svelte (TripKebab-Muster)
+	// Issue #2278 — kind-neutrales Kebab-Menue (verallgemeinert CompareKebab). Zeigt genau die
+	// uebergebenen Aktionen und emittiert onSelect(id); API-Aufrufe/Dialoge liegen beim Aufrufer.
 
 	import { DropdownMenu } from 'bits-ui';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import { compareActions } from './subscriptionHelpers.js';
-	import type { CompareAction, CompareStatus } from './subscriptionHelpers.js';
 
 	interface Props {
-		status: CompareStatus;
+		actions: Array<{ id: string; label: string; danger?: boolean }>;
 		onSelect?: (id: string) => void;
 		class?: string;
-		// Issue #1256 Scheibe 3 — optionale Aktionsliste injizierbar statt hart
-		// auf compareActions() verdrahtet (Header-Kebab braucht die Lifecycle-
-		// Variante, compareLifecycleActions()). Default bleibt der bisherige
-		// Listen-Vertrag — kein Bruch für bestehende Aufrufer/Testids.
-		actions?: CompareAction[];
+		'data-testid'?: string;
 	}
 
-	let { status, onSelect, class: className = '', actions: actionsProp }: Props = $props();
-
-	const actions = $derived(actionsProp ?? compareActions(status));
+	let { actions, onSelect, class: className = '', 'data-testid': testid }: Props = $props();
 </script>
 
 <DropdownMenu.Root>
@@ -39,6 +22,7 @@
 				{...props}
 				type="button"
 				class="kebab-trigger {className}"
+				data-testid={testid}
 				onclick={(e: MouseEvent) => {
 					e.stopPropagation();
 				}}
@@ -68,6 +52,7 @@
 		>
 			{#each actions as action (action.id)}
 				<DropdownMenu.Item
+					data-testid="subscription-action-{action.id}"
 					class={'w-full text-left px-3 py-1.5 text-sm cursor-default outline-none hover:bg-muted ' +
 						(action.danger ? 'text-destructive' : '')}
 					onSelect={() => onSelect?.(action.id)}
@@ -81,14 +66,12 @@
 </DropdownMenu.Root>
 
 <style>
-	/* Touch-Geräte: 28px-Optik behalten, Trefferfläche auf 44px vergrößern
-	   (Design-Vorgabe Mobile: Touch-Ziele >= 44px). */
 	@media (pointer: coarse) {
 		.kebab-trigger {
 			position: relative;
 		}
 		.kebab-trigger::after {
-			content: "";
+			content: '';
 			position: absolute;
 			inset: -8px;
 		}

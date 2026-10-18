@@ -50,42 +50,46 @@ async function aufzeichnen(page: Page): Promise<Aufzeichnung> {
 	return rec;
 }
 
-async function ersteKarteMenueOeffnen(page: Page) {
+// Issue #2278: mobil laeuft "Senden" ueber Karte -> Aktionsblatt -> Sende-Dialog (SendConfirmDialog);
+// Morgen/Abend waehlt der Nutzer im Dialog, gesendet wird erst nach "Senden".
+async function ersteKarteSendenOeffnen(page: Page) {
 	await page.goto('/trips');
-	const menuBtn = page.getByTestId('trip-card-menu-btn').first();
+	const menuBtn = page.locator('[data-testid^="subscription-card-menu-"]').first();
 	await expect(menuBtn).toBeVisible();
 	await menuBtn.click();
-	const sheet = page.getByTestId('trip-action-sheet');
-	await expect(sheet).toBeVisible();
-	return sheet;
+	await page.getByTestId('subscription-action-send').click();
+	const dialog = page.getByTestId('send-confirm-dialog');
+	await expect(dialog).toBeVisible();
+	return dialog;
 }
 
-test('AC-10/AC-11: „Test Morgen-Report" sendet genau EINEN Trip (morning), kein Sammel-Trigger', async ({ page }) => {
+test('AC-10/AC-11: Berichtsart "Morgen" sendet genau EINEN Trip (morning), kein Sammel-Trigger', async ({ page }) => {
 	const rec = await aufzeichnen(page);
-	const sheet = await ersteKarteMenueOeffnen(page);
+	const dialog = await ersteKarteSendenOeffnen(page);
 
-	await sheet.getByText('Test Morgen-Report').click();
+	await expect(dialog).not.toContainText('Alle aktiven Trips');
+	await expect(page.getByTestId('send-confirm-berichtsart-morning')).toBeChecked();
+	expect(rec.sendRequests, 'vor der Bestaetigung darf nichts gesendet werden').toHaveLength(0);
+	await page.getByTestId('send-confirm-yes').click();
 
-	await expect(page.getByRole('dialog')).toContainText('diesen Trip');
-	await expect(page.getByRole('dialog')).not.toContainText('Alle aktiven Trips');
-	expect(rec.sendRequests).toHaveLength(1);
+	await expect.poll(() => rec.sendRequests.length).toBe(1);
 	expect(rec.sendRequests[0]).toMatch(/^POST \/api\/trips\/[^/]+\/send\?report_type=morning$/);
 	expect(rec.triggerRequests).toEqual([]);
 });
 
-test('AC-10/AC-11: „Test Abend-Report" sendet genau EINEN Trip (evening), kein Sammel-Trigger', async ({ page }) => {
+test('AC-10/AC-11: Berichtsart "Abend" sendet genau EINEN Trip (evening), kein Sammel-Trigger', async ({ page }) => {
 	const rec = await aufzeichnen(page);
-	const sheet = await ersteKarteMenueOeffnen(page);
+	await ersteKarteSendenOeffnen(page);
 
-	await sheet.getByText('Test Abend-Report').click();
+	await page.getByTestId('send-confirm-berichtsart-evening').check();
+	await page.getByTestId('send-confirm-yes').click();
 
-	await expect(page.getByRole('dialog')).toContainText('diesen Trip');
-	expect(rec.sendRequests).toHaveLength(1);
+	await expect.poll(() => rec.sendRequests.length).toBe(1);
 	expect(rec.sendRequests[0]).toMatch(/^POST \/api\/trips\/[^/]+\/send\?report_type=evening$/);
 	expect(rec.triggerRequests).toEqual([]);
 });
 
-test('AC-11: 409 vom Versand zeigt den detail-Text im Dialog', async ({ page }) => {
+test('AC-11: 409 vom Versand zeigt die feste Meldung "Versand läuft bereits"', async ({ page }) => {
 	const rec = await aufzeichnen(page);
 	// Spaetere Route gewinnt: dieselbe URL jetzt mit 409 + detail beantworten.
 	await page.route('**/api/trips/*/send*', async (route) => {
@@ -96,12 +100,12 @@ test('AC-11: 409 vom Versand zeigt den detail-Text im Dialog', async ({ page }) 
 			body: JSON.stringify({ detail: 'Trip ist pausiert — kein Versand.' })
 		});
 	});
-	const sheet = await ersteKarteMenueOeffnen(page);
+	await ersteKarteSendenOeffnen(page);
 
-	await sheet.getByText('Test Morgen-Report').click();
+	await page.getByTestId('send-confirm-yes').click();
 
 	// Issue #2124 AC-2: 409 ist auf diesem Pfad ausschliesslich „Versand läuft
 	// bereits" (#1756) — das geteilte Modul zeigt die feste Meldung.
-	await expect(page.getByRole('dialog')).toContainText('Versand läuft bereits');
+	await expect(page.getByTestId('trips-error')).toContainText('Versand läuft bereits');
 	expect(rec.triggerRequests).toEqual([]);
 });

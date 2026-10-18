@@ -9,6 +9,18 @@
 	import { TripTabs } from '$lib/components/trip-detail';
 	import { Btn, TopoBg } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
+	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
+	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
+	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
+	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions';
+	import {
+		deleteSubscription,
+		sendSubscription,
+		setArchived,
+		setPaused,
+		SubscriptionExecError
+	} from '$lib/components/shared/subscriptionExec';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -19,7 +31,6 @@
 	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	import { starteNachladenNachEntladen, tripNachladeQuelle } from '$lib/stores/nachEntladenNachladen';
 	import { wendeNutzlastAn } from '$lib/stores/nutzlastStand';
-	import { sendTripBriefing } from '$lib/utils/sendOutcome';
 
 	let { data } = $props();
 
@@ -92,6 +103,10 @@
 	});
 
 	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		const mqUpdate = () => (mobil = mq.matches);
+		mqUpdate();
+		mq.addEventListener('change', mqUpdate);
 		const abmelden = speicherAnmeldestelle?.anmelden(tripSaveCtl);
 		const nachladen = starteNachladenNachEntladen<Trip>({
 			kennung: { typ: 'trip', id: trip.id },
@@ -104,6 +119,7 @@
 			}
 		});
 		return () => {
+			mq.removeEventListener('change', mqUpdate);
 			abmelden?.();
 			abmeldenUebernahme();
 			abmeldenAbgelehnt();
@@ -122,11 +138,15 @@
 	let deleteDialogOpen = $state(false);
 	let isLoading = $state(false);
 	let errorMsg = $state<string | null>(null);
-	let testBriefingLoading = $state(false);
-	let testBriefingStatus = $state<'idle' | 'ok' | 'error'>('idle');
-	let testBriefingMessage = $state<string | null>(null);
-	let testBriefingTimer: ReturnType<typeof setTimeout> | undefined;
-	let testBriefingMenuOpen = $state(false);
+	let sendDialogOpen = $state(false);
+	let sendLoading = $state(false);
+	let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');
+	let sendMessage = $state<string | null>(null);
+	let sendTimer: ReturnType<typeof setTimeout> | undefined;
+	// Lebenszyklus-Menue: Desktop = Dropdown, Mobil = Aktionsblatt (surface 'hub'), Issue #2278 AC-12.
+	let sheetOpen = $state(false);
+	let mobil = $state(false);
+	const lifecycle = $derived(subscriptionLifecycle('trip', trip, now));
 
 	/**
 	 * Issue #1433: nach PATCH /state (liefert keinen Stempel, S2 AC-15) wird der Trip
@@ -152,9 +172,6 @@
 	}
 
 	async function sendStateUpdate(paused: boolean | undefined, archived: boolean | undefined): Promise<void> {
-		const body: Record<string, boolean> = {};
-		if (paused !== undefined) body.paused = paused;
-		if (archived !== undefined) body.archived = archived;
 		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
 		isLoading = true;
 		try {
@@ -164,48 +181,32 @@
 			await tripSaveCtl.flush();
 			const laufend = tripSaveCtl.laufendeSpeicherung;
 			if (laufend) await laufend;
-			const res = await fetch(`/api/trips/${trip.id}/state`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body)
-			});
-			if (!res.ok) {
-				// Issue #1059: 4xx/5xx-Übersetzung analog handleTestBriefing — nutzerverständliche
-				// Meldung statt rohem Statuscode-String.
-				// Issue #1065: HTTP-Fehler direkt setzen und return, damit der catch-Block
-				// nur für echte Netzwerk-Ausnahmen (fetch wirft) erreicht wird.
-				let detail: string | undefined;
-				try {
-					const errBody = await res.json();
-					detail = errBody?.detail;
-				} catch {
-					/* kein JSON-Body */
-				}
-				if (res.status >= 500) {
-					console.error(`Status-Update fehlgeschlagen: HTTP ${res.status}`, detail);
-					errorMsg = 'Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
-				} else if (detail) {
-					errorMsg = detail;
-				} else {
-					errorMsg = 'Aktion fehlgeschlagen, bitte später erneut versuchen.';
-				}
-				return;
-			}
-			const updated: Trip = await res.json();
+			// Issue #2278: Schreibweg ueber den geteilten Adapter (PATCH /state); Fehler tragen Status + Detail.
+			const antwort: unknown =
+				paused !== undefined
+					? await setPaused('trip', trip.id, paused)
+					: await setArchived('trip', trip.id, archived === true);
+			const updated = antwort as Trip;
 			errorMsg = null;
 			trip = await uebernehmeNachStatusAenderung(updated);
 		} catch (e) {
-			console.error(e);
-			// Issue #1065: echter Netzwerkfehler (kein HTTP-Response) → generische Meldung.
-			errorMsg = 'Aktion fehlgeschlagen — bitte Verbindung prüfen.';
+			errorMsg = aktionsFehler(e);
 		} finally {
 			isLoading = false;
 		}
 	}
 
-	function handlePauseClick(): void {
-		const nextPaused = status !== 'paused';
-		void sendStateUpdate(nextPaused, undefined);
+	// Issue #1059/#1065: nutzerverstaendliche Meldung — 5xx generisch, 4xx mit Server-Detail, sonst Netzfehler.
+	function aktionsFehler(e: unknown): string {
+		if (e instanceof SubscriptionExecError) {
+			if (e.status >= 500) {
+				console.error(`Aktion fehlgeschlagen: HTTP ${e.status}`, e.detail);
+				return 'Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
+			}
+			return e.detail ?? 'Aktion fehlgeschlagen, bitte später erneut versuchen.';
+		}
+		console.error(e);
+		return 'Aktion fehlgeschlagen — bitte Verbindung prüfen.';
 	}
 
 	function handleArchiveClick(): void {
@@ -238,33 +239,10 @@
 		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
 		isLoading = true;
 		try {
-			const res = await fetch(`/api/trips/${trip.id}`, { method: 'DELETE' });
-			if (!res.ok) {
-				// Issue #1059: 4xx/5xx-Übersetzung analog sendStateUpdate.
-				// Issue #1065: HTTP-Fehler direkt setzen und return; catch nur für
-				// echte Netzwerk-Ausnahmen.
-				let detail: string | undefined;
-				try {
-					const errBody = await res.json();
-					detail = errBody?.detail;
-				} catch {
-					/* kein JSON-Body */
-				}
-				if (res.status >= 500) {
-					console.error(`Löschen fehlgeschlagen: HTTP ${res.status}`, detail);
-					errorMsg = 'Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
-				} else if (detail) {
-					errorMsg = detail;
-				} else {
-					errorMsg = 'Aktion fehlgeschlagen, bitte später erneut versuchen.';
-				}
-				return;
-			}
+			await deleteSubscription('trip', trip.id);
 			void goto('/trips');
 		} catch (e) {
-			console.error(e);
-			// Issue #1065: echter Netzwerkfehler (kein HTTP-Response) → generische Meldung.
-			errorMsg = 'Aktion fehlgeschlagen — bitte Verbindung prüfen.';
+			errorMsg = aktionsFehler(e);
 		} finally {
 			isLoading = false;
 			deleteDialogOpen = false;
@@ -283,27 +261,35 @@
 		trip = updated;
 	}
 
-	async function handleTestBriefing(reportType: 'morning' | 'evening'): Promise<void> {
-		testBriefingMenuOpen = false;
-		clearTimeout(testBriefingTimer);
-		testBriefingLoading = true;
-		testBriefingStatus = 'idle';
+	// Senden: erst nach Bestaetigung im Sende-Dialog (AC-3/AC-4); Berichtsart aus der Wahl.
+	async function handleSendConfirm(berichtsart: 'morning' | 'evening' | undefined): Promise<void> {
+		sendDialogOpen = false;
+		clearTimeout(sendTimer);
+		sendLoading = true;
+		sendStatus = 'idle';
 		try {
 			// Issue #2124: geteilter Laufzustand (trip:<id>) + Klassifikation.
-			// 5xx: Rohtext wird nicht angezeigt (nur geloggt), 502/503/504/Netz = „Ergebnis unklar".
-			const o = await sendTripBriefing(trip.id, reportType);
+			const o = await sendSubscription('trip', trip.id, { reportType: berichtsart });
 			if (o.kind === 'ok') {
-				testBriefingStatus = 'ok';
-				testBriefingMessage = null;
+				sendStatus = 'ok';
+				sendMessage = null;
 			} else {
-				testBriefingStatus = 'error';
-				testBriefingMessage = o.message;
+				sendStatus = 'error';
+				sendMessage = o.message;
 			}
 		} finally {
-			testBriefingLoading = false;
+			sendLoading = false;
 		}
-		clearTimeout(testBriefingTimer);
-		testBriefingTimer = setTimeout(() => { testBriefingStatus = 'idle'; }, 4000);
+		sendTimer = setTimeout(() => { sendStatus = 'idle'; }, 4000);
+	}
+
+	// Lebenszyklus-Menue (Desktop-Dropdown und mobiles Blatt): Pausieren/Fortsetzen schreiben ueber den
+	// Hub-Schreiber (flusht offene Speicherungen, ETag #1433); Archivieren/Loeschen fragen zurueck.
+	function handleHubAction(id: string): void {
+		if (id === 'pause') void sendStateUpdate(true, undefined);
+		else if (id === 'resume') void sendStateUpdate(false, undefined);
+		else if (id === 'archive' || id === 'unarchive') handleArchiveClick();
+		else if (id === 'delete') handleDeleteClick();
 	}
 </script>
 
@@ -313,58 +299,43 @@
 	<TopoBg opacity={0.14} />
 	<div class="breadcrumb-bar" data-testid="trip-detail-breadcrumb-bar">
 		<div class="mono breadcrumb-path" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
-			<span style="opacity: 0.6;">Trips</span>
+			<a href="/trips" style="opacity: 0.6; color: inherit; text-decoration: none;">Trips</a>
 			<span style="margin: 0 8px;">/</span>
 			<span style="color: var(--g-ink);">{trip.shortcode ?? trip.name}</span>
 		</div>
-		<div class="breadcrumb-actions">
-			<Btn variant="ghost" size="sm" onclick={handlePauseClick} disabled={isLoading || status === 'archived'}>
-				{status === 'paused' ? 'Fortsetzen' : 'Pausieren'}
+		<div class="hub-actions">
+			<!-- Senden ist der Primaerknopf und oeffnet den Sende-Dialog (AC-12) -->
+			<Btn
+				variant="accent"
+				size="sm"
+				data-testid="subscription-hub-send"
+				onclick={() => { sendDialogOpen = true; }}
+				disabled={sendLoading || lifecycle === 'archived' || lifecycle === 'draft'}
+			>
+				{sendLoading ? 'Wird gesendet…' : 'Senden'}
 			</Btn>
-			<Btn variant="ghost" size="sm" onclick={handleArchiveClick} disabled={isLoading}>
-				{status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
-			</Btn>
-			<div class="test-briefing-wrap">
-				<!-- #2284 S2 (Entscheidung 15): mobil kurze Beschriftung, damit der Knopf in die Zeile von
-				     Pausieren/Archivieren passt; der zugängliche Name bleibt vollständig. -->
-				<Btn
-					variant="accent"
-					size="sm"
-					data-testid="test-briefing-menu-toggle"
-					aria-label={testBriefingLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
-					onclick={() => { testBriefingMenuOpen = !testBriefingMenuOpen; }}
-					disabled={testBriefingLoading}
+			{#if mobil}
+				<button
+					type="button"
+					data-testid="subscription-kebab"
+					aria-label="Weitere Aktionen"
+					title="Weitere Aktionen"
+					onclick={() => { sheetOpen = true; }}
+					style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-2);"
 				>
-					{#if testBriefingLoading}Wird gesendet…{:else}Test-Briefing<span class="hidden desktop:inline">&nbsp;senden</span>{/if}
-				</Btn>
-				{#if testBriefingMenuOpen}
-					<div
-						class="test-briefing-menu"
-						style="position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: var(--g-card, #ffffff); border: 1px solid var(--g-line, #d8d4ca); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12);"
-					>
-						<Btn
-							variant="ghost"
-							size="sm"
-							data-testid="test-briefing-option-morning"
-							onclick={() => handleTestBriefing('morning')}
-						>
-							Morgen
-						</Btn>
-						<Btn
-							variant="ghost"
-							size="sm"
-							data-testid="test-briefing-option-evening"
-							onclick={() => handleTestBriefing('evening')}
-						>
-							Abend
-						</Btn>
-					</div>
-				{/if}
-			</div>
-			{#if testBriefingStatus === 'ok'}
-				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">Test-Briefing gesendet!</span>
-			{:else if testBriefingStatus === 'error'}
-				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">{testBriefingMessage ?? 'Fehler beim Senden'}</span>
+					<EllipsisVerticalIcon size={18} />
+				</button>
+			{:else}
+				<SubscriptionKebab
+					data-testid="subscription-kebab"
+					actions={subscriptionActions('trip', lifecycle, 'hub')}
+					onSelect={handleHubAction}
+				/>
+			{/if}
+			{#if sendStatus === 'ok'}
+				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">Briefing gesendet!</span>
+			{:else if sendStatus === 'error'}
+				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">{sendMessage ?? 'Fehler beim Senden'}</span>
 			{/if}
 			{#if errorMsg}
 				<span data-testid="trip-detail-action-error" style="font-size: 12px; color: var(--g-error, #c62828);">{errorMsg}</span>
@@ -404,7 +375,7 @@
 <ConfirmDialog
 	open={deleteDialogOpen}
 	title="Trip endgültig löschen?"
-	description="Dieser Schritt löscht den Trip dauerhaft und kann nicht rückgängig gemacht werden."
+	description={`„${trip.name}“ wird dauerhaft gelöscht. Dieser Schritt kann nicht rückgängig gemacht werden.`}
 	confirmLabel="Löschen"
 	confirmVariant="destructive"
 	data-testid="trip-detail-delete-confirm-dialog"
@@ -414,6 +385,26 @@
 	onConfirm={handleDeleteConfirm}
 	onCancel={handleDeleteCancel}
 	onOpenChange={handleDeleteDialogOpenChange}
+/>
+
+<SendConfirmDialog
+	open={sendDialogOpen}
+	kind="trip"
+	profile={data.profile}
+	subscription={trip}
+	running={sendLoading}
+	onConfirm={handleSendConfirm}
+	onCancel={() => { sendDialogOpen = false; }}
+/>
+
+<SubscriptionActionSheet
+	open={sheetOpen}
+	onClose={() => { sheetOpen = false; }}
+	kind="trip"
+	status={lifecycle}
+	surface="hub"
+	name={trip.name}
+	onAction={handleHubAction}
 />
 
 <style>
@@ -426,23 +417,23 @@
 		gap: 16px;
 		flex-wrap: wrap;
 	}
-	.breadcrumb-actions {
+	.hub-actions {
 		display: flex;
 		gap: 8px;
 		flex-wrap: wrap;
 	}
-	.test-briefing-wrap {
-		position: relative;
-		display: inline-block;
-	}
-	/* #2284 S2 (AC-13): mobil 44-px-Tippflächen ohne Layout-Höhe — der negative Rand
-	   gleicht die zusätzliche Höhe aus, die Zeile bleibt so hoch wie vorher. */
+		/* #2284 S2 (AC-13): mobil 44-px-Tippflaechen ohne Layout-Hoehe. */
 	@media (max-width: 899px) {
-		.test-briefing-wrap {
-			display: flex;
+		/* #2278 (AC-13): Pfad kuerzt mit Ellipsis statt "Senden" + Kebab in eine zweite Zeile zu schieben
+		   (390 px, langer Name: +33 px Kopfhoehe). Der volle Name steht im Titel darunter. */
+		.breadcrumb-path {
+			flex: 1 1 0;
+			min-width: 0;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
-		.breadcrumb-actions > :global([data-slot='btn']),
-		.test-briefing-wrap > :global([data-slot='btn']) {
+		.hub-actions > :global([data-slot='btn']) {
 			min-height: 44px;
 			min-width: 44px;
 			margin-block: -8px;

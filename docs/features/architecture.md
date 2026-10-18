@@ -1137,6 +1137,18 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
 - `PROFILE_METRICS_WITH_SCALES` — Metric definitions indexed by profile
 - `IDEAL_DEFAULTS` — Default ranges per profile (populated on first render)
 
+### Aktionsmodell für Trips und Ortsvergleiche (Issue #2278, 2026-10-18)
+
+Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/specs/modules/feat_2278_aktionsmodell.md`).
+
+- **Tabelle:** `shared/subscriptionActions.ts` leitet die Aktionen aus Art (Trip/Ortsvergleich) × Status × Fläche (Liste/Hub/Mobil) ab.
+- **Ausführung:** `shared/subscriptionExec.ts` (Adapter); Pausieren/Fortsetzen per Read-Modify-Write.
+- **Senden:** nur nach Bestätigung im `SendConfirmDialog`. Er zeigt das Versandziel, sperrt ohne zustellbaren Kanal; Morgen/Abend gibt es nur beim Trip (Default Morgen). Das Profil lädt `lib/server/profileLoader.ts` serverseitig aus der Session, ohne Default-Fallback.
+- **Hub:** Lebenszyklus-Kebab (Pausieren/Fortsetzen, Archivieren/Reaktivieren, Löschen mit Bestätigung); „Senden" ist der Primärknopf.
+- **Gemeinsame Bausteine:** `SubscriptionCard`, `SubscriptionActionSheet`, `SubscriptionKebab`, `StatusFilterPills`.
+- **Entfallen:** `CompareTile`, `MCompareActionSheet`, `ReportConfigDialog`, `TestReportDialog`, `tripListSend`. Alarme und Wetter-Metriken liegen auf den Editor-Reitern. Die Startseiten-Kachel hat nur „Bearbeiten"; archivierte Trips verschwinden aus der Liste.
+- **Wächter:** Ein Kern-Test übersetzt jede `.svelte`-Datei unter `frontend/src` mit dem Svelte-Compiler und parst das JS (fängt Build-Brüche, die `svelte-check` nicht sieht).
+
 ---
 
 ## Integration Points

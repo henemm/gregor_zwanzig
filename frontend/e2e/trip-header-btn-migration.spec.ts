@@ -30,13 +30,13 @@ test.describe('Issue #215 Sprint 1 — TripHeader Button→Btn Migration', () =>
 	test('AC-2: alle Header-Action-Buttons haben data-slot="btn"', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const pauseBtn = page.getByTestId('trip-detail-action-pause');
-		const archiveBtn = page.getByTestId('trip-detail-action-archive');
-		await expect(pauseBtn).toHaveAttribute('data-slot', 'btn');
-		await expect(archiveBtn).toHaveAttribute('data-slot', 'btn');
+		// #2278: Header-Aktionen = Primaerknopf "Senden" (Btn) + Lebenszyklus-Menue (Archivieren steht darin).
+		const sendBtn = page.getByTestId('subscription-hub-send');
+		await expect(sendBtn).toHaveAttribute('data-slot', 'btn');
 
 		// Dialog öffnen, dann Dialog-Buttons prüfen.
-		await archiveBtn.click();
+		await page.getByTestId('subscription-kebab').click();
+		await page.getByTestId('subscription-action-archive').click();
 		const cancelBtn = page.getByTestId('trip-detail-archive-confirm-cancel');
 		const confirmBtn = page.getByTestId('trip-detail-archive-confirm-yes');
 		await expect(cancelBtn).toHaveAttribute('data-slot', 'btn');

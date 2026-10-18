@@ -61,7 +61,12 @@ export function sendTargetLabel(
 	profile: ConnectionProfile | null | undefined,
 	preset: SendTargetChannels | null | undefined
 ): SendTargetInfo {
-	const p = profile ?? {};
+	// Issue #2278 AC-10: ohne Konto-Profil (keine Session / nicht ladbar) ist das Ziel UNBEKANNT —
+	// gesperrt, nie ein Default-Nutzer. Unterscheidet sich von „Profil da, aber ohne Adresse".
+	if (profile === null || profile === undefined) {
+		return ergebnis('Versandziel unbekannt — das Konto-Profil ist nicht verfügbar; es wird nichts gesendet.', false);
+	}
+	const p = profile;
 	const selected = preset ?? {};
 	const status = channelConnectionStatus(p);
 

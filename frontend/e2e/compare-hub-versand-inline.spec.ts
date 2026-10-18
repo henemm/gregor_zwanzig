@@ -364,7 +364,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		// zurückbleibt (Preset wird ohnehin in afterEach gelöscht, aber
 		// symmetrisch zum Auftrag).
 		await page.locator('button[aria-label="Weitere Aktionen"]:visible').click();
-		await page.getByRole('menuitem', { name: 'Aktivieren' }).click();
+		await page.getByRole('menuitem', { name: 'Fortsetzen' }).click();
 		await expect(reloadedCta).toHaveText('Pausieren', { timeout: 10_000 });
 	});
 

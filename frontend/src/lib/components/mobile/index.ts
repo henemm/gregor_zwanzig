@@ -25,9 +25,6 @@ export { default as MobileShell } from './MobileShell.svelte';
 // Re-Export-Wrapper (Bridge auf ui/sidebar/, #267)
 export { default as BottomNav } from './BottomNav.svelte';
 
-// Issue #493 — Compare Bottom-Sheet (Block E, Epic #485)
-export { default as MCompareActionSheet } from './MCompareActionSheet.svelte';
-
 // Mobile Usability Paket 2 — geteilter mobiler Tab-Band (Spec mobile_tab_leisten_mtabbar)
 export { default as MTabBar } from './MTabBar.svelte';
 

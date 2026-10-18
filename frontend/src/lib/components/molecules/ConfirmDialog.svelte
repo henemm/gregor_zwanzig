@@ -9,6 +9,7 @@
 
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Btn } from '$lib/components/atoms';
+	import type { Snippet } from 'svelte';
 
 	interface Props {
 		open: boolean;
@@ -24,6 +25,8 @@
 		onConfirm: () => void;
 		onCancel: () => void;
 		onOpenChange: (open: boolean) => void;
+		/** Optionaler Zusatzinhalt zwischen Beschreibung und Knoepfen (z. B. Berichtsart-Wahl, #2278). */
+		children?: Snippet;
 	}
 
 	let {
@@ -39,7 +42,8 @@
 		confirmTestid,
 		onConfirm,
 		onCancel,
-		onOpenChange
+		onOpenChange,
+		children
 	}: Props = $props();
 </script>
 
@@ -49,6 +53,7 @@
 			<Dialog.Title>{title}</Dialog.Title>
 			<Dialog.Description>{description}</Dialog.Description>
 		</Dialog.Header>
+		{@render children?.()}
 		<Dialog.Footer>
 			<Btn variant="outline" data-testid={cancelTestid} onclick={onCancel}>
 				{cancelLabel}

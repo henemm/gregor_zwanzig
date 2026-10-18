@@ -155,7 +155,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 
 	// ── AC-4: Vorschau → /compare/{id}?tab=vorschau ──────────────────────────
 
-	test('AC-4: "Vorschau öffnen" navigiert zu ?tab=vorschau', async ({ page }) => {
+	test('AC-4: "Vorschau" navigiert zu ?tab=vorschau', async ({ page }) => {
 		const tile = page.locator('[data-testid^="compare-tile-"]:visible').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
@@ -163,8 +163,8 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await kebab.click();
 		await page.waitForTimeout(500);
 
-		// Klick auf "Vorschau öffnen"
-		const previewItem = page.getByRole('menuitem', { name: 'Vorschau öffnen' });
+		// Klick auf "Vorschau" (Issue #2278: Beschriftung der einen Aktionsquelle)
+		const previewItem = page.getByRole('menuitem', { name: 'Vorschau', exact: true });
 		await expect(previewItem).toBeVisible();
 		await previewItem.click();
 
@@ -199,7 +199,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 			await kebab.click();
 			await page.waitForTimeout(500);
 
-			// Prüfe: Menü enthält "Pausieren" (nicht "Aktivieren")
+			// Prüfe: Menü enthält "Pausieren" (nicht "Fortsetzen")
 			const pauseItem = page.getByRole('menuitem', { name: 'Pausieren' });
 			await expect(pauseItem).toBeVisible();
 
@@ -213,11 +213,11 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 			// (Die Kachel bleibt in der Liste, Pausieren entfernt sie nicht.)
 			await expect(statusPill).toContainText('pausiert', { timeout: 5_000 });
 
-			// Prüfe: Kebab-Menü zeigt jetzt "Aktivieren"
+			// Prüfe: Kebab-Menü zeigt jetzt "Fortsetzen"
 			const kebab2 = tile.locator('button[aria-label="Weitere Aktionen"]');
 			await kebab2.click();
 			await page.waitForTimeout(500);
-			await expect(page.getByRole('menuitem', { name: 'Aktivieren' })).toBeVisible();
+			await expect(page.getByRole('menuitem', { name: 'Fortsetzen' })).toBeVisible();
 			await page.keyboard.press('Escape');
 		} finally {
 			await cleanupFixture(page, presetId, locId);
@@ -226,7 +226,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 
 	// ── AC-3: Pausierten Vergleich aktivieren → schedule='daily' ─────────────
 
-	test('AC-3: "Aktivieren" wechselt pausierten Vergleich zu aktiv', async ({ page }) => {
+	test('AC-3: "Fortsetzen" wechselt pausierten Vergleich zu aktiv', async ({ page }) => {
 		// Eigenes, isoliertes pausiertes Preset anlegen (schedule='manual' + eine
 		// Location ⇒ Status 'pausiert'), statt auf Fremd-Presets zu bauen.
 		const suffix = Date.now();
@@ -248,11 +248,11 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 			await kebab.click();
 			await page.waitForTimeout(500);
 
-			// Prüfe: Menü enthält "Aktivieren" (nicht "Pausieren")
-			const activateItem = page.getByRole('menuitem', { name: 'Aktivieren' });
+			// Prüfe: Menü enthält "Fortsetzen" (nicht "Pausieren")
+			const activateItem = page.getByRole('menuitem', { name: 'Fortsetzen' });
 			await expect(activateItem).toBeVisible();
 
-			// Klick auf "Aktivieren"
+			// Klick auf "Fortsetzen"
 			await activateItem.click();
 			await page.waitForTimeout(1000);
 
@@ -317,7 +317,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	// "send" ist seit #627 fester Bestandteil des 5er-Vertrags (Soll
 	// molecules.jsx:1018-1027). Assertion auf den aktuellen Vertrag umgestellt.
 
-	test('AC-6 (korrigiert #1256 S1): Menü enthält "Briefing jetzt senden"', async ({ page }) => {
+	test('AC-6 (korrigiert #1256 S1, #2278): Menü enthält "Senden"', async ({ page }) => {
 		const tile = page.locator('[data-testid^="compare-tile-"]:visible').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
@@ -326,7 +326,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await page.waitForTimeout(500);
 
 		// Prüfe: "Briefing jetzt senden" ist vorhanden (#627, seit #1256 S1 fester Bestandteil der 5 Aktionen)
-		const sendItem = page.getByRole('menuitem', { name: 'Briefing jetzt senden' });
+		const sendItem = page.getByRole('menuitem', { name: 'Senden', exact: true });
 		await expect(sendItem).toBeVisible();
 
 		await page.keyboard.press('Escape');
@@ -351,18 +351,21 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		// Pflicht-Aktionen: Löschen und Bearbeiten müssen weiterhin vorhanden sein.
 		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible();
 		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toBeVisible();
-		await expect(page.getByRole('menuitem', { name: 'Vorschau öffnen' })).toBeVisible();
-		await expect(page.getByRole('menuitem', { name: 'Briefing jetzt senden' })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Vorschau', exact: true })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Senden', exact: true })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Alarme', exact: true })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Wetter-Metriken', exact: true })).toBeVisible();
 		// Genau eine der beiden Toggle-Varianten (status-abhängig) muss vorhanden sein.
-		const pauseOrActivate = page.getByRole('menuitem', { name: /^(Pausieren|Aktivieren)$/ });
+		const pauseOrActivate = page.getByRole('menuitem', { name: /^(Pausieren|Fortsetzen)$/ });
 		await expect(pauseOrActivate).toHaveCount(1);
 
 		// #1256 S1: "Archivieren" darf im Listen-Kebab NICHT mehr vorkommen.
 		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).not.toBeVisible();
 
-		// Exakt 5 Menüeinträge insgesamt (kein Archivieren, kein sechster Eintrag).
+		// Exakt 7 Menüeinträge insgesamt (Issue #2278: Pausieren/Fortsetzen, Senden, Vorschau, Alarme,
+		// Wetter-Metriken, Bearbeiten, Löschen — kein Archivieren).
 		const menuItems = page.getByRole('menuitem');
-		await expect(menuItems).toHaveCount(5);
+		await expect(menuItems).toHaveCount(7);
 
 		// Schließe Menü per Escape
 		await page.keyboard.press('Escape');

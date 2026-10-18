@@ -83,13 +83,13 @@ test.describe('Issue #486 — Desktop Trips-Zeile: Overflow-Menü statt Icon-Ges
 	});
 
 	// AC-4: ⋯-Button existiert und öffnet Menü mit 6 Items
-	test('AC-4: ⋯-Button öffnet Overflow-Menü mit allen 6 Einträgen', async ({ page }) => {
+	test('AC-4: ⋯-Button öffnet Overflow-Menü mit den Listen-Aktionen der einen Quelle', async ({ page }) => {
 		/**
 		 * GIVEN: Desktop-Viewport, /trips geladen, mindestens 1 Trip
 		 * WHEN:  User klickt auf [data-testid="trip-row-menu-btn"]
-		 * THEN:  Ein [role="menu"] erscheint mit den Texten:
-		 *        „Briefing jetzt senden", „Email-Vorschau", „Alert-Konfiguration",
-		 *        „Wetter-Metriken", „Bearbeiten", „Löschen"
+		 * THEN:  Ein [role="menu"] erscheint mit den Texten (Issue #2278, subscriptionActions):
+		 *        „Senden", „Vorschau", „Alarme", „Wetter-Metriken", „Bearbeiten", „Löschen"
+		 *        (und je nach Status „Pausieren"/„Fortsetzen" an erster Stelle)
 		 */
 		const desktopGrid = page.locator('.hidden.desktop\\:block');
 		const menuBtn = desktopGrid.locator('[data-testid="trip-row-menu-btn"]').first();
@@ -100,15 +100,16 @@ test.describe('Issue #486 — Desktop Trips-Zeile: Overflow-Menü statt Icon-Ges
 		await expect(menu).toBeVisible({ timeout: 3_000 });
 
 		for (const label of [
-			'Briefing jetzt senden',
-			'Email-Vorschau',
-			'Alert-Konfiguration',
+			'Senden',
+			'Vorschau',
+			'Alarme',
 			'Wetter-Metriken',
 			'Bearbeiten',
 			'Löschen',
 		]) {
-			await expect(menu.getByText(label, { exact: false })).toBeVisible();
+			await expect(menu.getByText(label, { exact: true })).toBeVisible();
 		}
+		await expect(menu.getByText('Alert-Konfiguration')).toHaveCount(0);
 	});
 
 	// AC-4b: Menü schließt bei Klick außerhalb
@@ -160,17 +161,17 @@ test.describe('Issue #486 — Desktop Trips-Zeile: Overflow-Menü statt Icon-Ges
 		await expect(menu.locator('[data-testid="trip-edit-btn"]')).toBeVisible();
 	});
 
-	// AC-8: Mobile-Pfad unberührt — trip-card-menu-btn bleibt sichtbar auf Mobile
-	test('AC-8: Mobile-Pfad unberührt — trip-card-menu-btn vorhanden auf Mobile-Viewport', async ({ page }) => {
+	// AC-8: Mobile-Pfad bleibt — Karten-Menue-Knopf ist auf Mobile sichtbar (Issue #2278: SubscriptionCard)
+	test('AC-8: Mobile-Pfad — subscription-card-menu vorhanden auf Mobile-Viewport', async ({ page }) => {
 		/**
 		 * GIVEN: Mobile-Viewport (375), /trips geladen
 		 * WHEN:  Seite gerendert
-		 * THEN:  [data-testid="trip-card-menu-btn"] ist sichtbar (Mobile-Stack bleibt erhalten)
+		 * THEN:  [data-testid^="subscription-card-menu-"] ist sichtbar (Mobile-Stack bleibt erhalten)
 		 */
 		await page.setViewportSize({ width: 375, height: 667 });
 		await page.goto('/trips');
 		await expect(
-			page.locator('[data-testid="trip-card-menu-btn"]').first()
+			page.locator('[data-testid^="subscription-card-menu-"]').first()
 		).toBeVisible({ timeout: 10_000 });
 	});
 });

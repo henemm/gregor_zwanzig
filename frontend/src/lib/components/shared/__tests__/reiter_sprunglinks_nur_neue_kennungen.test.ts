@@ -196,9 +196,14 @@ describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Vergleich-Sprungli
 		});
 	}
 
-	test('Vergleich-Detailseite: ?tab=vorschau (Weiterleitung) und ?tab=versand (Setup abschliessen) bleiben', () => {
-		const k = erzeugteKennungen('routes/compare/[id]/+page.svelte');
-		assert.ok(k.includes('vorschau') && k.includes('versand'), JSON.stringify(k));
+	// Issue #2278 AC-12: das Hub-Menue ist reiner Lebenszyklus (kein "Vorschau"); die Vorschau-
+	// Weiterleitung steht jetzt im Listenmenue, "Setup abschliessen" bleibt im Hub.
+	test('Vergleich-Detailseite: ?tab=versand (Setup abschliessen) bleibt; Vorschau/Alarme/Wetter-Metriken springt die Liste an', () => {
+		const hub = erzeugteKennungen('routes/compare/[id]/+page.svelte');
+		assert.ok(hub.includes('versand'), JSON.stringify(hub));
+		const liste = erzeugteKennungen('routes/compare/+page.svelte');
+		for (const id of ['vorschau', 'alarme', 'wetter-metriken'])
+			assert.ok(liste.includes(id), `Vergleich-Liste springt nicht auf '${id}': ${JSON.stringify(liste)}`);
 	});
 
 	test('CompareTabs: „Bearbeiten →"-Sprung auf Wertebereiche nutzt die Kennung wertebereiche', () => {

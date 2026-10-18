@@ -47,11 +47,14 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	// Fix-Loop 2026-07-13 (F002): Test-Briefing ist heute ein Dropdown-Toggle
 	// (Morgen/Abend-Auswahl) statt eines Direkt-Buttons — Testid entsprechend
 	// aktualisiert (routes/trips/[id]/+page.svelte:244).
-	test('AC-7: Test-Briefing-Menü vorhanden (data-testid="test-briefing-menu-toggle")', async ({ page }) => {
+	// Issue #2278: der Hub hat den Primaerknopf "Senden" (oeffnet den Sende-Dialog mit Morgen/Abend-Wahl)
+	// und das Lebenszyklus-Menue `subscription-kebab` statt der Breadcrumb-Aktionsleiste.
+	test('AC-7: Primaerknopf "Senden" und Lebenszyklus-Menue vorhanden', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const btn = page.getByTestId('test-briefing-menu-toggle');
+		const btn = page.getByTestId('subscription-hub-send');
 		await expect(btn).toBeVisible();
-		await expect(btn).toContainText('Test-Briefing');
+		await expect(btn).toContainText('Senden');
+		await expect(page.getByTestId('subscription-kebab')).toBeVisible();
 	});
 
 	// Bug #505: "Bearbeiten"-Button wurde laut Design-Vorgabe aus dem Header entfernt.

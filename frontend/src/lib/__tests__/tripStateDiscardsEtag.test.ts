@@ -126,33 +126,18 @@ describe('AC-5: Detailseite — sendStateUpdate', () => {
 	});
 });
 
-describe('AC-5/AC-10: Listenseite — drei /state-Aufrufer', () => {
-	test('test_tripsListPage_allThreeStateCallers_discardEtagOnSuccess', () => {
+describe('AC-5/AC-10: Listenseite — der einzige /state-Aufrufer (Pausieren)', () => {
+	// Issue #2278: Archivieren/Dearchivieren der Liste entfielen (die Liste blendet Archiviertes aus,
+	// toter Code); Pausieren laeuft ueber den Adapter `setPaused` (PATCH /state steckt dort).
+	test('test_tripsListPage_togglePause_discardsEtagOnSuccess', () => {
 		assert.match(tripListSrc, IMPORT_RE, 'trips/+page.svelte importiert discardEtag nicht');
-
-		// 1) Archivierung aufheben
-		assertDiscardAfterOkCheck(
-			functionBody(tripListSrc, 'handlePrimaryAction'),
-			'trip.id',
-			'handlePrimaryAction (Dearchivieren)'
-		);
-
-		// 2) Archivieren
-		const archiveBody = functionBody(tripListSrc, 'handleArchive');
-		assertDiscardAfterOkCheck(archiveBody, 'archiveTarget.id', 'handleArchive');
-		const discardIdx = archiveBody.indexOf('discardEtag(archiveTarget.id)');
-		const resetIdx = archiveBody.indexOf('archiveTarget = null');
-		assert.ok(resetIdx >= 0, 'handleArchive setzt archiveTarget nicht mehr zurueck?');
+		const body = functionBody(tripListSrc, 'togglePause');
+		const schreibIdx = body.indexOf("await setPaused('trip'");
+		const discardIdx = body.indexOf('discardEtag(trip.id)');
+		assert.ok(schreibIdx >= 0, 'togglePause schreibt nicht ueber setPaused');
 		assert.ok(
-			discardIdx < resetIdx,
-			'handleArchive: discardEtag(archiveTarget.id) muss VOR "archiveTarget = null" stehen — sonst laeuft es auf null'
-		);
-
-		// 3) Pause-Umschalter
-		assertDiscardAfterOkCheck(
-			functionBody(tripListSrc, 'handlePauseToggle'),
-			'trip.id',
-			'handlePauseToggle'
+			discardIdx > schreibIdx,
+			'togglePause: discardEtag(trip.id) muss NACH dem erfolgreichen setPaused stehen (setPaused wirft bei Fehler)'
 		);
 	});
 });
@@ -185,18 +170,19 @@ describe('AC-10: Archivseite — nur der Trip-Zweig', () => {
 describe('Vollstaendigkeit: kein sechster Umgehungsweg', () => {
 	test('test_exactlyFiveTripStateCallSites_allInCoveredFiles', () => {
 		const RE = /\/api\/trips\/\$\{[^}]+\}\/state/g;
+		const adapterSrc = readFileSync(
+			join(here, '..', 'components', 'shared', 'subscriptionExec.ts'),
+			'utf-8'
+		);
 		const counts = {
 			'trips/[id]/+page.svelte': (tripDetailSrc.match(RE) ?? []).length,
 			'trips/+page.svelte': (tripListSrc.match(RE) ?? []).length,
 			'archiv/+page.svelte': (archivSrc.match(RE) ?? []).length
 		};
-		assert.deepEqual(counts, {
-			'trips/[id]/+page.svelte': 1,
-			'trips/+page.svelte': 3,
-			'archiv/+page.svelte': 1
-		});
-		// Summe = 5. Kommt eine Stelle dazu, faellt dieser Test auf und der
+		// Issue #2278: Detail- und Listenseite schreiben ueber den Adapter (EIN Ausfuehrungsweg);
+		// roh bleibt nur die Archivseite. Kommt eine Stelle dazu, faellt dieser Test auf und der
 		// zugehoerige discardEtag-Aufruf wird nicht vergessen.
-		assert.equal(Object.values(counts).reduce((a, b) => a + b, 0), 5);
+		assert.deepEqual(counts, { 'trips/[id]/+page.svelte': 0, 'trips/+page.svelte': 0, 'archiv/+page.svelte': 1 });
+		assert.ok(/\/state`/.test(adapterSrc), 'der Adapter schreibt PATCH /state nicht mehr');
 	});
 });

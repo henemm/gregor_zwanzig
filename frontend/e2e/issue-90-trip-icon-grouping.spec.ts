@@ -36,7 +36,7 @@ test.describe('Bug #295 — Trips-Liste: Primary-Button + Kebab (Ablösung Issue
 		// Primary-Button ist sichtbar
 		const primaryBtn = actionsCell
 			.locator('button')
-			.filter({ hasText: /Briefing-Vorschau|Reaktivieren|Dearchivieren/ })
+			.filter({ hasText: /Briefing senden|Briefing-Vorschau|Reaktivieren|Dearchivieren/ })
 			.first();
 		await expect(primaryBtn).toBeVisible();
 
@@ -73,26 +73,20 @@ test.describe('Bug #295 — Trips-Liste: Primary-Button + Kebab (Ablösung Issue
 
 		await firstRow.getByTitle('Weitere Aktionen').click();
 
-		const expectedItems = [
-			'Bearbeiten',
-			'Test-Briefing Morgen',
-			'Test-Briefing Abend',
-			'Wetter-Konfiguration',
-			'Report-Konfiguration',
-			'Löschen',
-		];
+		// #2278: EINE Aktionsquelle (subscriptionActions, Fläche "list"). Für einen aktiven/pausierten
+		// Trip: Pausieren|Fortsetzen · Senden · Vorschau · Alarme · Wetter-Metriken · Bearbeiten · Löschen.
+		const expectedItems = ['Senden', 'Vorschau', 'Alarme', 'Wetter-Metriken', 'Bearbeiten', 'Löschen'];
 		for (const item of expectedItems) {
-			await expect(page.getByRole('button', { name: item }).first()).toBeVisible({
+			await expect(page.getByRole('menuitem', { name: item, exact: true }).first()).toBeVisible({
 				timeout: 3000,
 			});
 		}
 
 		// DOM-Reihenfolge prüfen
-		const dropdownButtons = page.locator('[role="menu"] button, [role="menuitem"]');
-		const texts = await dropdownButtons.allTextContents();
+		const texts = await page.locator('[role="menuitem"]').allTextContents();
 		const normalized = texts.map((t) => t.trim()).filter(Boolean);
-		expect(normalized[0]).toBe('Bearbeiten');
-		expect(normalized[normalized.length - 1]).toBe('Löschen');
+		expect(normalized[0]).toMatch(/^(Pausieren|Fortsetzen)$/);
+		expect(normalized.slice(1)).toEqual(expectedItems);
 	});
 
 	test('AC-3: data-testid="trip-edit-btn" liegt im Kebab auf dem Item "Bearbeiten"', async ({
@@ -135,7 +129,7 @@ test.describe('Bug #295 — Trips-Liste: Primary-Button + Kebab (Ablösung Issue
 		}
 
 		await firstRow.getByTitle('Weitere Aktionen').click();
-		const morgenBtn = page.getByRole('button', { name: 'Test-Briefing Morgen' }).first();
+		const morgenBtn = page.getByRole('menuitem', { name: 'Löschen', exact: true }).first();
 		await expect(morgenBtn).toBeVisible({ timeout: 3000 });
 
 		// Klick auf ein Item schließt das Dropdown

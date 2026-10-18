@@ -21,6 +21,8 @@ import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+// Issue #2278: Loeschen laeuft ueber den geteilten Adapter (EIN Ausfuehrungsweg); er bekommt hier dasselbe fetch.
+import { deleteSubscription, SubscriptionExecError } from '../../../lib/components/shared/subscriptionExec.ts';
 
 const PAGE = join(fileURLToPath(new URL('../[id]/', import.meta.url)), '+page.svelte');
 const SRC = readFileSync(PAGE, 'utf8');
@@ -62,7 +64,7 @@ function baue(deleteStatus: number) {
 	const handlerNamen = ['handleDeleteConfirm', 'handleDeleteCancel', 'handleDeleteDialogOpenChange'].filter(
 		(n) => new RegExp(`function\\s+${n}\\s*\\(`).test(SCRIPT)
 	);
-	const teile = [funktion('handleAction'), funktion('deletePreset'), ...handlerNamen.map(funktion)];
+	const teile = [funktion('handleAction'), funktion('deletePreset'), funktion('fehlerText'), ...handlerNamen.map(funktion)];
 	// `$state`-Variablen werden durch ein Zustandsobjekt ersetzt (Svelte-Runen gibt es hier nicht).
 	const körper = teile
 		.join('\n')
@@ -77,6 +79,8 @@ function baue(deleteStatus: number) {
 		'togglePause',
 		'handleTestSend',
 		'archivePreset',
+		'deleteSubscription',
+		'SubscriptionExecError',
 		stripTypeScriptTypes(körper) +
 			`\nreturn { handleAction, handleDeleteConfirm: typeof handleDeleteConfirm === 'function' ? handleDeleteConfirm : undefined, handleDeleteCancel: typeof handleDeleteCancel === 'function' ? handleDeleteCancel : undefined, handleDeleteDialogOpenChange: typeof handleDeleteDialogOpenChange === 'function' ? handleDeleteDialogOpenChange : undefined };`
 	);
@@ -88,7 +92,9 @@ function baue(deleteStatus: number) {
 		{ id: 'cp-2214', name: 'Dolomiten Süd' },
 		noop,
 		noop,
-		noop
+		noop,
+		(kind: 'trip' | 'vergleich', id: string) => deleteSubscription(kind, id, fetchStub as unknown as typeof fetch),
+		SubscriptionExecError
 	);
 	return { z, aufrufe, location, ...api } as {
 		z: Zustand;
@@ -104,7 +110,8 @@ function baue(deleteStatus: number) {
 const loeschen = (a: Aufruf) => a.method === 'DELETE';
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-for (const aktion of ['delete', 'trash']) {
+// Die Alt-Kennung 'trash' ist mit #2278 abgeschafft (Hub-Menue = subscriptionActions, ID 'delete').
+for (const aktion of ['delete']) {
 	describe(`#2214 — Kebab-Aktion "${aktion}"`, () => {
 		test(`AC-1: "${aktion}" oeffnet den Bestaetigungsdialog und sendet noch kein DELETE`, async () => {
 			const s = baue(200);

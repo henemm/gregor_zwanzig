@@ -1,20 +1,20 @@
 <script lang="ts">
-	// Issue #492 — Thin-Wrapper auf CompareTile (Block A, #488).
-	// Spec: docs/specs/modules/issue_492_home_umbau_wizard_feinschliff.md
-	//
-	// Delegiert Rendering und Aktionen vollständig an CompareTile.
-	// Klick navigiert zur Compare-Detail-Seite, Kebab "Bearbeiten" zur Edit-Route.
+	// Issue #492 / #2278 — Thin-Wrapper auf die geteilte SubscriptionCard (kind="vergleich").
+	// Klick navigiert zum Hub; das Kebab bietet nur "Bearbeiten" (ebenfalls Hub), siehe kachelActions.
 
 	import { goto } from '$app/navigation';
-	import CompareTile from '$lib/components/compare/CompareTile.svelte';
+	import SubscriptionCard from '$lib/components/organisms/SubscriptionCard.svelte';
+	import { compareKachelActions } from './kachelActions.js';
 	import type { ComparePreset } from '$lib/types.js';
 
 	let { sub }: { sub: ComparePreset } = $props();
 </script>
 
-<CompareTile
+<SubscriptionCard
+	kind="vergleich"
 	{sub}
 	compact
+	actions={compareKachelActions()}
 	onclick={() => goto('/compare/' + sub.id)}
 	onAction={(id) => {
 		// Epic #1273 S3: Ziel ist der Hub, nicht mehr die alte /edit-Route.

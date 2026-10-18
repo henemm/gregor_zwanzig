@@ -366,16 +366,20 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			// Wegwerf-Trips zuerst sicher finden, dann Region-Freiheit pruefen.
 			await page.setViewportSize(MOBILE);
 			await page.goto('/trips');
-			const card = page.getByTestId('trip-card').filter({ hasText: String(gespeichert.name) });
+			// Issue #2278: geteilte SubscriptionCard statt Inline-Karte
+			const card = page
+				.locator('[data-testid^="subscription-card-"][data-kind="trip"]')
+				.filter({ hasText: String(gespeichert.name) });
 			await expect(card, 'Vorbedingung: die Karte des Wegwerf-Trips steht in der Liste').toHaveCount(1, {
 				timeout: 15_000
 			});
 			await expect(card.getByText('—', { exact: true })).toHaveCount(0);
-			const leereZeilen = await card
-				.getByTestId('trip-card-content-btn')
-				.evaluate((btn) =>
-					Array.from(btn.children).filter((el) => (el.textContent ?? '').trim() === '').length
-				);
+			const leereZeilen = await card.evaluate(
+				(el) =>
+					Array.from(el.querySelectorAll('span')).filter(
+						(s) => s.children.length === 0 && (s.textContent ?? '').trim() === ''
+					).length
+			);
 			expect(leereZeilen, 'AC-3: die Trip-Karte zeigt eine leere Region-Zeile').toBe(0);
 			// Home-Hero: zeigt nur den aktiven Live-Trip (Seed e2e-cockpit-test) —
 			// fuer einen Wegwerf-Trip hier nicht herstellbar (im Bericht gemeldet).
@@ -1198,9 +1202,9 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 					{ name: 'trip-profil-knopf', loc: profilKnopf(page) },
 					{ name: 'trip-region-edit-toggle', loc: page.getByTestId('trip-region-edit-toggle') },
 					{ name: 'trip-name-edit-toggle', loc: page.getByTestId('trip-name-edit-toggle') },
-					{ name: 'Breadcrumb „Pausieren"', loc: bar.getByRole('button', { name: /Pausieren|Fortsetzen/ }) },
-					{ name: 'Breadcrumb „Archivieren"', loc: bar.getByRole('button', { name: /Archivieren|Reaktivieren/ }) },
-					{ name: 'test-briefing-menu-toggle', loc: page.getByTestId('test-briefing-menu-toggle') }
+					// Issue #2278: Lebenszyklus-Menue + Primaerknopf "Senden" ersetzen die Einzelknoepfe der Breadcrumb-Leiste
+					{ name: 'subscription-kebab', loc: bar.getByTestId('subscription-kebab') },
+					{ name: 'subscription-hub-send', loc: page.getByTestId('subscription-hub-send') }
 				];
 				// Erst alle Groessen protokollieren (auch im Rot-Fall vollstaendig), dann pruefen.
 				const vorab: string[] = [];

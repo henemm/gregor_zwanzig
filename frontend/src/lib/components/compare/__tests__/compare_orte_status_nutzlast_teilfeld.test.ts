@@ -111,9 +111,10 @@ describe('AC-6: Listenseite /compare — Kebab „Pausieren" sendet nur den Stat
 		try {
 			const { u } = await umgebungFuer(LISTE, { data: { presets: [voll()] } });
 			assert.equal(typeof u.togglePause, 'function', 'Messaufbau: togglePause nicht herleitbar');
-			assert.equal(typeof u.buildFreshTogglePutPayload, 'function', 'Messaufbau: buildFreshTogglePutPayload fehlt in der Umgebung');
+			// Issue #2278: die Liste pausiert ueber den geteilten Adapter (setPaused -> Read-Modify-Write).
+			assert.equal(typeof u.setPaused, 'function', 'Messaufbau: setPaused fehlt in der Umgebung');
 			server.fremdSchreiben(ID, { name: 'Fremd von A' });
-			await (u.togglePause as (p: ComparePreset) => Promise<void>)(voll());
+			await (u.togglePause as (p: ComparePreset, paused: boolean) => Promise<void>)(voll(), true);
 			assert.equal(u.error, null, `Messaufbau: togglePause meldet Fehler ${String(u.error)}`);
 			const ruempfe = server.putRuempfe();
 			assert.equal(ruempfe.length, 1);
