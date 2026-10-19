@@ -283,3 +283,27 @@ describe('F013 (AC-17): toter Code im Trip-Hub', () => {
 		assert.ok(!lokaleBindungen(TRIP_HUB).has('handlePauseClick'));
 	});
 });
+
+describe('Fix-Loop 2 (AC-3/AC-12): Senden-Primaerknopf ist auf JEDER Breite erreichbar', () => {
+	// Vorfahren-Elemente mit nacktem Klassen-Token `hidden` (= ohne Breakpoint-Praefix) blenden den
+	// Knopf unterhalb des Desktop-Breakpoints aus („hidden desktop:flex").
+	const versteckendeVorfahren = (ast: any, knoten: any): string[] =>
+		collect(ast.fragment, (n) => n.type === 'RegularElement' || n.type === 'Component')
+			.filter((el) => collect(el, (k) => k === knoten).length > 0)
+			.flatMap((el) => {
+				const klasse = (el.attributes ?? []).find((a: any) => a.type === 'Attribute' && a.name === 'class');
+				const text = klasse ? collect(klasse, (k) => k.type === 'Text').map((k) => k.data).join(' ') : '';
+				return text.split(/\s+/).includes('hidden') ? [`${el.name}.${text}`] : [];
+			});
+	for (const [name, ast] of [['Trip-Hub', TRIP_HUB], ['Compare-Hub', CMP_HUB]] as const) {
+		test(`${name}: kein Vorfahre des Senden-Knopfs ist unterhalb des Desktop-Breakpoints versteckt`, () => {
+			const btn = mitAttribut(ast, 'data-testid', 'subscription-hub-send')[0];
+			assert.ok(btn, `${name}: Senden-Knopf fehlt`);
+			assert.deepEqual(versteckendeVorfahren(ast, btn), []);
+		});
+	}
+	test('Compare-Hub: das Aktionsblatt bleibt mobil ueber den Kebab erreichbar (nicht doppelt gebaut)', () => {
+		assert.equal(mitAttribut(CMP_HUB, 'data-testid', 'subscription-kebab').length, 2);
+		assert.equal(komponenten(CMP_HUB, 'SubscriptionActionSheet').length, 1);
+	});
+});

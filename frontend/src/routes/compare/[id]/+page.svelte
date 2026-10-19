@@ -381,31 +381,32 @@
 			{/snippet}
 		</SubscriptionHeader>
 
-		<div class="hidden desktop:flex" style="gap: 8px; flex-shrink: 0">
+		<!-- Senden/Setup auf allen Breiten sichtbar (AC-3/AC-12, wie im Trip-Hub); mobil sitzt der Kebab daneben.
+		     mt-[25px] = Eyebrow (9px) + gap-4 (16px): Knopf steht auf Höhe der Namenszeile. -->
+		<div class="flex items-center mt-[25px] desktop:mt-0" style="gap: 8px; flex-shrink: 0">
 			{#if status === 'draft'}
-				<Btn variant="primary" onclick={() => { window.location.href = `?tab=versand`; }}>Setup abschließen</Btn>
+				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" onclick={() => { window.location.href = `?tab=versand`; }}>Setup abschließen</Btn>
 			{:else}
 				<!-- Senden ist der Primaerknopf und oeffnet den Sende-Dialog (AC-3/AC-12) -->
-				<Btn variant="primary" data-testid="subscription-hub-send" onclick={() => (sendDialogOpen = true)} disabled={isSending || lifecycle === 'archived'}>
+				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" data-testid="subscription-hub-send" onclick={() => (sendDialogOpen = true)} disabled={isSending || lifecycle === 'archived'}>
 					{isSending ? 'Wird gesendet…' : 'Senden'}
 				</Btn>
 			{/if}
 			{#if !mobil}
 				<SubscriptionKebab data-testid="subscription-kebab" actions={subscriptionActions('vergleich', lifecycle, 'hub')} onSelect={handleAction} />
 			{/if}
+			{#if mobil}
+				<button
+					type="button"
+					class="flex flex-shrink-0 items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
+					data-testid="subscription-kebab"
+					aria-label="Weitere Aktionen"
+					onclick={() => (actionSheetOpen = true)}
+				>
+					<MoreHorizontalIcon size={20} />
+				</button>
+			{/if}
 		</div>
-		<!-- mt-[25px] = Eyebrow (9px) + gap-4 (16px): Knopf steht wie bisher auf Höhe der Namenszeile. -->
-		{#if mobil}
-			<button
-				type="button"
-				class="flex flex-shrink-0 items-center justify-center min-h-[44px] min-w-[44px] mt-[25px] rounded-md"
-				data-testid="subscription-kebab"
-				aria-label="Weitere Aktionen"
-				onclick={() => (actionSheetOpen = true)}
-			>
-				<MoreHorizontalIcon size={20} />
-			</button>
-		{/if}
 	</div>
 
 	<!-- sendMsg/pauseError wie bisher nur Desktop (mobil: Aktions-Sheet). -->

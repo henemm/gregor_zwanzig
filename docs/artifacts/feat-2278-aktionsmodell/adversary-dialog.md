@@ -125,6 +125,27 @@ Mutations-Gegenprobe (String-/Zeilen-Ersetzung, Sicherung im Scratchpad `page.ba
 - M1 komplette Regel `.breadcrumb-path { ... }` aus `@media (max-width: 899px)` entfernt (+page.svelte:429-435): Kernschicht `npm test` -> **0 rot** (5550 / 5545 pass / 0 fail). UEBERLEBT in der Kernschicht; `grep breadcrumb-path` findet die Klasse in keiner Testdatei. Faengt nur der Live-Test trip-hub-kopf-region-aktivitaet.spec.ts (AC-13, Etappen-Liste <= 474 px, 375x667 langer Name und 390x844) - NICHT ausgefuehrt (kein E2E-Stack), daher "nicht gemessen". Statisch: ohne die Regel bricht `flex-wrap: wrap` den Kopf um (+33 px, das war der CI-Befund 488 px), der Test wuerde also rot. -> F005.
 - Gegenfrage Fixture: ein Entfernen der Konto-Loeschung oder des `mail_to`-Expects ist in der Kernschicht nicht messbar (reiner Live-Aufbau); ehrlich nicht gemessen. -> F006.
 
+### Runde 5
+**Adversary:** Nachpruefung des Fix-Loop-2 (Staging-Durchfall: `subscription-hub-send` im Ortsvergleich-Hub mobil in `hidden desktop:flex` versteckt). Selbst gemessen: `cd frontend && npm test` -> tests 5557, pass 5552, fail 0, skipped 5 (voller Bericht adversary-test-output.txt). **Kein Playwright ausgefuehrt** (kein E2E-Stack, Staging nicht erreichbar): die Sichtbarkeit bei 390 px ist nur statisch begruendet, nicht gemessen.
+
+Code reference: frontend/src/routes/compare/[id]/+page.svelte:386 - Der Wrapper hat jetzt `flex items-center mt-[25px] desktop:mt-0` ohne `hidden`; Senden (Zeile 391) bzw. Setup (Zeile 388, draft) tragen `min-h-[44px] desktop:min-h-0`. Desktop-Kebab nur unter `{#if !mobil}` (Zeile 395), mobiler Kebab nur unter `{#if mobil}` (Zeile 398-407): je Viewport genau EIN Element mit `data-testid="subscription-kebab"` (mobil wird `mobil` per matchMedia in Zeile 213-218 gesetzt; vor der Hydration rendert SSR den Desktop-Kebab, unveraendertes Verhalten). draft: Setup-Knopf statt Senden, `subscription-hub-send` fehlt dort wie bisher (AC-3: nur ausserhalb des Entwurfs). archived: `disabled={isSending || lifecycle === 'archived'}` (Zeile 391) unveraendert; Mutation `disabled={isSending}` wird rot (siehe M4). Desktop-Aussehen: nur `mt-0`/`min-h-0` ab Breakpoint, Wrapper war vorher `desktop:flex` und ist jetzt dauerhaft `flex`; gleiche Darstellung. Der Aktionsblatt-Pfad (Zeile 440) bleibt einmal gebaut.
+Code reference: frontend/src/lib/components/shared/__tests__/aktionsmodell_seiten_bindung.test.ts:287-309 - neue Pruefung sucht Vorfahren (RegularElement/Component) des Senden-Knopfs, deren statischer `class`-Text das nackte Token `hidden` enthaelt. Das fasst nur Klartext-Token: andere Ausblend-Mechanismen sieht sie nicht (M2).
+
+Mutations-Gegenprobe (String-Ersetzung via Scratchpad-mut.py, Sicherung `page_r5.bak`, nach jeder Mutation Rueckkopie und `cmp` identisch; Zielsuite aktionsmodell_seiten_bindung.test.ts):
+- M1 `class="flex items-center mt-[25px] desktop:mt-0"` -> `class="hidden desktop:flex"`: **ROT** (2 Tests: „Compare-Hub: kein Vorfahre ... versteckt", Fix-Loop-2-Suite). Gefangen am neuen Test.
+- M2a `max-desktop:hidden flex`: **GRUEN (ueberlebt)**. Token ist `max-desktop:hidden`, nicht `hidden`.
+- M2b `sr-only desktop:not-sr-only flex`: **GRUEN (ueberlebt)**.
+- M2c `style="display:none; ..."`: **GRUEN (ueberlebt)**.
+- M2d `class:hidden={mobil}` am Wrapper: **GRUEN (ueberlebt)**.
+- M2e (Variante) `{#if mobil}{:else if status === 'draft'}` (Senden/Setup mobil gar nicht gerendert): **ROT** (Hub-Primaerknopf-Test und F019/F015/F018-Bedingungstest), gefangen an anderer Stelle.
+- M3 mobiler Kebab `{#if mobil}` -> `{#if false}`: **ROT** (Kebab-Zaehlung =2 und Fix-Loop-2-Suite).
+- M4 archived-Sperre entfernt (`disabled={isSending}`): **ROT** (Compare-Primaerknopf-Test, F001).
+- M5 Desktop-Kebab `{#if !mobil}` -> `{#if true}` (doppelte testid mobil): **ROT** (Hub-Kebab-Bedingungstest, F019-Test).
+Hinweis: M2d und M2e liefen versehentlich kurz parallel; die Datei war danach identisch (`cmp`), M2d wurde allein wiederholt (weiterhin gruen/ueberlebt).
+
+Antwort auf die Leitfrage: Die Zusicherung „Senden mobil erreichbar" ist nur gegen das Token `hidden` im Klartext geprueft, nicht gegen die tatsaechliche Sichtbarkeit; gefangen wird sie wirklich nur vom E2E aktionsmodell-durchklick.spec.ts:226 (misst am echten Viewport), der in dieser Runde nicht lief. -> F007.
+**Implementierer:** (nicht anwesend) F007 neu, LOW (Sichtbarkeit nur im Live-Test bewacht).
+
 ### Findings
 Finding:
   ID: F001
@@ -189,6 +210,16 @@ Finding:
   Conflict: Nur Aufraeum-Hygiene im Fehlerfall; CI-Stack wird pro Lauf neu aufgesetzt, Staging hat Karteileichen-Reinigung.
   Remediation: gesamten Aufbau nach der Registrierung in `try/finally` mit Loeschung im finally; Sammelpunkt #1199.
 
+Finding:
+  ID: F007
+  Severity: LOW
+  Category: edge_case
+  Code reference: frontend/src/lib/components/shared/__tests__/aktionsmodell_seiten_bindung.test.ts:289-296
+  Description: Die Vorfahren-Pruefung erkennt nur das nackte Klassen-Token `hidden`. Gemessen: `max-desktop:hidden`, `sr-only desktop:not-sr-only`, `style="display:none"` und `class:hidden={mobil}` am Wrapper (frontend/src/routes/compare/[id]/+page.svelte:386) lassen die Kernschicht gruen (0 rot), obwohl der Senden-Knopf mobil dann unsichtbar waere.
+  Spec requirement: AC-3/AC-12 - Senden ist als Primaerknopf auf jeder Breite erreichbar
+  Conflict: Der Test bewacht den konkreten Vorfall (Token `hidden`), nicht die Sichtbarkeit; die Wirkung bewacht nur der E2E aktionsmodell-durchklick.spec.ts:226 am echten Viewport (Zwei-Schichten-Politik, in dieser Runde nicht ausgefuehrt).
+  Remediation: /e2e-verify muss aktionsmodell-durchklick.spec.ts gruen zeigen (Pflicht vor Prod). Optional: Test auf Tokens mit Suffix `:hidden`/`sr-only`/`invisible`, `style` mit `display:none` und `class:hidden`-Direktiven erweitern.
+
 ## Herkunft der Vorbedingungen
 
 kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
@@ -196,9 +227,9 @@ kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
 ## Verdict
 **VERIFIED**
 
-Begruendung (Runde 4): Gesamtsuite 5550 tests / 5545 pass / 0 fail / 5 skipped, Python-Datei 2 passed. CSS-Regel nur mobil, Desktop unveraendert, Tippflaechen/Querscroll nicht beruehrt, voller Name bleibt erreichbar. Fixture isoliert (echter Zweitnutzer, kein "default", In-Memory-Sitzung, Loeschung am Ende). Geloeschte Python-Tests hatten Ersatz-Waechter (sendOutcome.test.ts) und verlieren keine Zusicherung. Mutation M1 (CSS-Regel entfernt) ueberlebt die Kernschicht und wird nur vom nicht ausgefuehrten Live-Test AC-13 gefangen (F005, LOW); F006 LOW (Aufraeumen im Fehlerfall). Offen bleiben F004-F006, alle LOW. Playwright wurde in dieser Runde nicht ausgefuehrt.
+Begruendung (Runde 5): Gesamtsuite 5557 tests / 5552 pass / 0 fail / 5 skipped. Compare-Hub: Senden/Setup-Wrapper auf allen Breiten sichtbar, 44-px-Flaeche mobil, je Viewport genau ein Kebab (Desktop `!mobil`, mobil `mobil`), draft zeigt Setup statt Senden, archived bleibt disabled (M4 rot). Mutationen M1, M2e, M3, M4, M5 rot; M2a-M2d (andere Ausblend-Mechanismen) ueberleben die Kernschicht (F007, LOW) und werden nur vom Live-E2E aktionsmodell-durchklick.spec.ts:226 gefangen, der in dieser Runde NICHT lief. Pflicht: /e2e-verify muss diesen E2E gruen zeigen, sonst ist die mobile Sichtbarkeit nicht gemessen. Offen: F004-F007, alle LOW.
 
-AC-Uebersicht: AC-1 bis AC-17 belegt (Runde 4 beruehrt AC-3, AC-10, AC-13, AC-17).
+AC-Uebersicht: AC-1 bis AC-17 belegt (Runde 5 beruehrt AC-3, AC-12).
 
 ## Geprüfte Dateien
 
@@ -213,6 +244,7 @@ AC-Uebersicht: AC-1 bis AC-17 belegt (Runde 4 beruehrt AC-3, AC-10, AC-13, AC-17
 - sha256:e884bed1c80b17311968d653cf5ec247977c73cd9aa4668794976da101a30f6b  frontend/src/lib/components/molecules/__tests__/send_confirm_dialog_sperre.test.ts
 - sha256:a208da2cb7f724de191a89c6b9c06de7e659dcdfa385a882b32eef10d4870a47  frontend/src/lib/components/molecules/index.ts
 - sha256:dba1374d2916f45183842c1e89be8bce6bc53a163e0b59c14c0e0f876486ebcf  frontend/src/lib/components/molecules/sendConfirmModel.ts
+- sha256:9e2d0be71260158b85ae1006c72fc25b2393fd692af70b43c60c594a654bbd16  frontend/src/lib/components/shared/__tests__/aktionsmodell_seiten_bindung.test.ts
 - sha256:691065bafb0bd13257823164a4bff7bf48f3e896ce82d116bb1b0da4a2dbb613  frontend/src/lib/components/shared/subscriptionActions.ts
 - sha256:41d2da8877e2e5695571488422addb33d3087eefa0ad7e4a478c71e58db3b5c0  frontend/src/lib/components/shared/subscriptionExec.ts
 - sha256:d7ffc0924894b233512fe62aea11ca83f321ab6e8f18539e9b7b0acee9e8fe6b  frontend/src/lib/components/shared/versand-tab/sendTargetLabel.ts
@@ -220,6 +252,7 @@ AC-Uebersicht: AC-1 bis AC-17 belegt (Runde 4 beruehrt AC-3, AC-10, AC-13, AC-17
 - sha256:9e06ffedfa1f8fd701140d66fec7e2ea40a4ec0764ebae71f32fcc17cd518651  frontend/src/routes/__tests__/seiten_kompilieren_zu_gueltigem_js.test.ts
 - sha256:1accd3c5ecbf0c7bd80d38edcd34b38895253cc0b1ef99397540a7eb87372346  frontend/src/routes/_home/kachelActions.ts
 - sha256:4f7dca6b51d51c1c987205484448f0e4a64a6ed30dd46b2031aa8972fe695b93  frontend/src/routes/compare/[id]/+page.server.ts
+- sha256:b0f76d3038ef72468d36f8bd4a0477066bbd0640c5ba9b4c5b350dea9f5da8b9  frontend/src/routes/compare/[id]/+page.svelte
 - sha256:9b2615fbf90c8f69096aab3db82ed0b3fc486715be88d0d06eed2e04ca8fbd1e  frontend/src/routes/trips/+page.server.ts
 - sha256:15ef7daf8d6c533454c4a8a3e15306f93d6285cca23d4305702dcc7dee4cfdbd  frontend/src/routes/trips/+page.svelte
 - sha256:b23fcc3b0b504a16deb995051279bf299fc48e40b7d626ebbbf1200c94c04776  frontend/src/routes/trips/[id]/+page.server.ts
@@ -228,7 +261,7 @@ AC-Uebersicht: AC-1 bis AC-17 belegt (Runde 4 beruehrt AC-3, AC-10, AC-13, AC-17
 
 ## Prüfbasis
 
-- base: 302131e31733fa2f542b3cd1b3047b29c1faac93
+- base: 719d0af57d85d73452df9f62e2811f1d7b26ad97
 - blob:22a8ffe51e8ae13b74331704024edad506717680  frontend/e2e/aktionsmodell-durchklick.spec.ts
 - blob:dd5b44f8ec519ef2022c255805e0d70b13462ba4  frontend/e2e/helpers.ts
 - blob:178d3da97825a39eea85530e1d3d325de5156101  frontend/e2e/issue-767-768-test-briefing.spec.ts
@@ -240,6 +273,7 @@ AC-Uebersicht: AC-1 bis AC-17 belegt (Runde 4 beruehrt AC-3, AC-10, AC-13, AC-17
 - blob:fb72e3e25069e716fe5ae346fe88565ca8f18390  frontend/src/lib/components/molecules/__tests__/send_confirm_dialog_sperre.test.ts
 - blob:6d64e640a86c58c277ff2f586bfd8807978a833c  frontend/src/lib/components/molecules/index.ts
 - blob:b98126bb5e3db7eef8bed8d1ece1bf555bcc0906  frontend/src/lib/components/molecules/sendConfirmModel.ts
+- blob:1ae78af422fa97a36fb5c7bccf6b09a67de84348  frontend/src/lib/components/shared/__tests__/aktionsmodell_seiten_bindung.test.ts
 - blob:5e00b5e180f6daefd4aab4a24300f242aeca9b1e  frontend/src/lib/components/shared/subscriptionActions.ts
 - blob:0a1c633d0d25bf8ba976f70f9e8869ccd1eca00b  frontend/src/lib/components/shared/subscriptionExec.ts
 - blob:8f8bb89e8f7474c066850f8a589cb3f3821ddd63  frontend/src/lib/components/shared/versand-tab/sendTargetLabel.ts
@@ -247,6 +281,7 @@ AC-Uebersicht: AC-1 bis AC-17 belegt (Runde 4 beruehrt AC-3, AC-10, AC-13, AC-17
 - blob:0554bf1730a21865e3ebadf59be347cb8a56ac1f  frontend/src/routes/__tests__/seiten_kompilieren_zu_gueltigem_js.test.ts
 - blob:14dd57da2d02a6d9cac191da64704c8807c6d0cc  frontend/src/routes/_home/kachelActions.ts
 - blob:a5bda77704a14d17da8027169d47b13a733d256d  frontend/src/routes/compare/[id]/+page.server.ts
+- blob:805ddf204ea838cd3ca4a70fc53bd31afea48cdf  frontend/src/routes/compare/[id]/+page.svelte
 - blob:df631580646e6d79794cd83ee150ed6aff60e8b9  frontend/src/routes/trips/+page.server.ts
 - blob:0a1ec77694c2d7caa9ce76703ff71823d57ad67f  frontend/src/routes/trips/+page.svelte
 - blob:ebe2129e6748f4e9194df506e122503680e72e1f  frontend/src/routes/trips/[id]/+page.server.ts
