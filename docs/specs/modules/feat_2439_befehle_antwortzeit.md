@@ -90,6 +90,8 @@ Cache
   - Punkt-Fenster-Cache dwd.py: Obergrenze 512 → 2048 URLs.
 ```
 
+**Nachtrag Umsetzung (Validierung 2026-10-19):** Für den Startpunkt der Dauer-Messung (AC-1, „Eingang beim Core") wurden zusätzlich die drei Befehls-Eingänge `src/services/inbound_email_reader.py`, `src/services/inbound_telegram_reader.py` und `src/services/inbound_sms_reader.py` angepasst (zusammen +30/−4 Zeilen): Sie setzen den Eingangszeitpunkt bzw. markieren den erkannten Befehl. AC-16 liegt im Repo `henemm-infra` (Commit `544008e`, Abschnitt 2f in `scripts/check-gregor20.sh`, Tests `tests/test_check_gregor20_push_missed.py`).
+
 ## Expected Behavior
 
 - **Input:** Befehl des Nutzers über E-Mail, Telegram, SMS oder Premium-SMS (unverändert).
@@ -182,3 +184,4 @@ Geplante Tests, nach Verhalten benannt, kein Mock-Theater:
 
 - 2026-10-18: Initial spec created (v1.0) — schließt #2439 komplett ab (Zielgröße, Beobachtbarkeit, Vorwärmen, parallele Segmentschleife, Cache 2048, Teil-a-Betriebs-Rest)
 - 2026-10-18: v1.1 — Zielgrößen gelten ausdrücklich auf allen drei Befehlseingängen inkl. Premium-SMS (AC-3/AC-4) und verbindlich auch für Korsika (AC-5), statt dort nur zu berichten
+- 2026-10-19: Nachtrag Implementation Details — drei Eingangs-Reader als Mess-Startpunkt, Ort der AC-16-Umsetzung in henemm-infra (keine AC-Änderung)
