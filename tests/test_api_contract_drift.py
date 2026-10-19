@@ -86,3 +86,44 @@ def test_no_phantom_go_json_tags_in_doc():
         "```go-Blöcke in api_contract.md enthalten json-Tags, die in keinem "
         f"Struct unter internal/ existieren: {sorted(set(phantoms))}"
     )
+
+
+def _inventory_rows(text: str) -> dict[str, str]:
+    """Zeilen des Endpunkt-Inventars (Sektion 0.5): `| `/api/...` | … |` →
+    {pfad: ganze Zeile}. Nur echte Tabellenzeilen zaehlen — Fliesstext im
+    Changelog (z. B. „/signal entfernt") darf den Test nicht taeuschen."""
+    rows: dict[str, str] = {}
+    for line in text.splitlines():
+        m = re.match(r"^\|\s*`(/api/[^`]+)`\s*\|", line)
+        if m:
+            rows[m.group(1)] = line
+    return rows
+
+
+def test_inventory_lists_kind_neutral_preview_routes_and_drops_signal():
+    """AC-7 (Issue #2283 S1): GIVEN docs/reference/api_contract.md
+    WHEN das Endpunkt-Inventar gelesen wird
+    THEN stehen dort die kind-neutralen Routen `/api/briefings/{id}/preview`
+    und `/api/briefings/{id}/alert-preview` als eigene Zeilen, die Alt-Routen
+    sind als Delegates gekennzeichnet, und `/api/preview/{trip_id}/signal`
+    ist keine Inventarzeile mehr (Route entfernt, Signal app-weit weg #610)."""
+    rows = _inventory_rows(_contract_text())
+
+    missing = [p for p in ("/api/briefings/{id}/preview", "/api/briefings/{id}/alert-preview")
+               if p not in rows]
+    assert not missing, f"AC-7: Inventarzeilen fehlen: {missing}"
+
+    assert "/api/preview/{trip_id}/signal" not in rows, (
+        "AC-7: `/api/preview/{trip_id}/signal` steht noch als Inventarzeile: "
+        f"{rows.get('/api/preview/{trip_id}/signal')!r}"
+    )
+
+    legacy = [
+        "/api/preview/{trip_id}/email", "/api/preview/{trip_id}/sms",
+        "/api/preview/{trip_id}/telegram", "/api/preview/compare/{preset_id}",
+        "/api/trips/{id}/alert-preview",
+    ]
+    not_delegate = [p for p in legacy if "delegate" not in rows.get(p, "").lower()]
+    assert not not_delegate, (
+        f"AC-7: Alt-Routen ohne Delegate-Kennzeichnung im Inventar: {not_delegate}"
+    )

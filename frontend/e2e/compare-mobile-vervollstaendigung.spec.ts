@@ -334,17 +334,57 @@ test.describe('Issue #1256 Scheibe 8b: Hub-Vorschau-Kanal-Umschalter (AC-1)', ()
 		await expect(smsBtn).toBeVisible({ timeout: 10_000 });
 		await smsBtn.click();
 
-		await expect(panel.locator('[data-testid="compare-preview-sms-hint"]')).toBeVisible({ timeout: 5_000 });
+		// Issue #2283: geteilter Vorschau-Reiter — SMS im Telefonrahmen.
+		await expect(panel.locator('[data-testid="sms-phone-wrapper"]')).toBeVisible({ timeout: 90_000 });
 		// AC-3: SMS ist unkonfiguriert, der Umschalter zeigt den Hinweis daneben.
-		await expect(panel.locator('[data-testid="compare-preview-channel-not-configured"]')).toBeVisible({
+		await expect(panel.locator('[data-testid="preview-channel-not-configured"]')).toBeVisible({
 			timeout: 5_000
 		});
 
-		const emailBtn = panel.getByRole('button', { name: 'Email' });
+		const emailBtn = panel.getByRole('button', { name: /^(E-Mail|Email)/ });
 		await emailBtn.click();
 
-		await expect(panel.locator('[data-testid="compare-preview-sms-hint"]')).toHaveCount(0);
-		await expect(panel.locator('[data-testid="compare-preview-channel-not-configured"]')).toHaveCount(0);
-		await expect(panel.locator('[data-testid="compare-preview-iframe"]')).toBeVisible({ timeout: 15_000 });
+		await expect(panel.locator('[data-testid="sms-phone-wrapper"]')).toHaveCount(0);
+		await expect(panel.locator('[data-testid="preview-channel-not-configured"]')).toHaveCount(0);
+		await expect(panel.locator('[data-testid="email-iframe"]')).toBeVisible({ timeout: 15_000 });
+	});
+});
+
+// ── Issue #2283 AC-13 (docs/specs/modules/shared_preview_tab.md): mobil ─────
+// Senden nur ueber den Hub-Kopf (#2278, mobil seit #2580 sichtbar). Das alte
+// „Test-Briefing jetzt senden" (compare-hub-activation-testsend) in der
+// Versand-Karte und im Vorschau-Reiter ist auf den Hub-Kopf umgestellt.
+// Der Sende-Abruf wird abgefangen — keine echte Zustellung.
+test.describe('Issue #2283 AC-13: Senden nur im Hub-Kopf (mobil)', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 390, height: 844 });
+	});
+
+	test('mobil: Versand-/Vorschau-Reiter ohne Test-Senden, Hub-Kopf-Senden erreichbar und sendet', async ({ page }) => {
+		const suffix = Date.now();
+		const locId = await createLocation(page, `E2E 2283 Mobil-Senden ${suffix}`, 47.22, 11.12);
+		const id = await createPresetWithLocation(page, `E2E 2283 Mobil-Senden ${suffix}`, 'daily', locId);
+
+		const sende: string[] = [];
+		await page.route(new RegExp(`/api/compare/presets/${id}/send$`), async (route) => {
+			sende.push(route.request().url());
+			await route.fulfill({ status: 200, json: { status: 'queued' } });
+		});
+
+		for (const reiter of ['versand', 'vorschau']) {
+			await page.goto(`/compare/${id}?tab=${reiter}`);
+			await page.waitForLoadState('networkidle');
+			const panel = page.locator(`[data-testid="compare-detail-panel-${reiter}"]:visible`);
+			await expect(panel).toBeVisible({ timeout: 10_000 });
+			await expect(panel.locator('[data-testid="compare-hub-activation-testsend"]')).toHaveCount(0);
+			await expect(panel.getByRole('button', { name: /Test-Briefing/ })).toHaveCount(0);
+		}
+
+		const kopfSenden = page.locator('[data-testid="subscription-hub-send"]:visible');
+		await expect(kopfSenden).toBeInViewport();
+		await kopfSenden.click();
+		await expect(page.getByTestId('send-confirm-dialog')).toBeVisible();
+		await page.getByTestId('send-confirm-yes').click();
+		await expect.poll(() => sende.length, { timeout: 10_000 }).toBe(1);
 	});
 });

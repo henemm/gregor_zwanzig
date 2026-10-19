@@ -22,6 +22,12 @@
 //
 // Der festgehaltene Abruf erreicht den Server nie: es wird nichts versandt
 // und nichts aufgeloest (kein externer Dienst).
+//
+// Issue #2283 (docs/specs/modules/shared_preview_tab.md, AC-9): migriert auf den
+// geteilten Vorschau-Reiter — Abruf GET /api/briefings/{id}/preview?kind=vergleich,
+// gezaehlt wird jeder Aufruf daran (kein Laden vor dem Oeffnen, genau einer
+// trotz Kanal-/Ansichtswechsel). Alarm-Vorschau auf
+// POST /api/briefings/{id}/alert-preview?kind=route (AC-20/AC-21).
 
 import { test, expect, type Page, type Route, type Request } from '@playwright/test';
 import { createTestComparePreset, createTestLocation, cleanupTracked, login, registerForCleanup } from './helpers.js';
@@ -80,26 +86,45 @@ test.describe('#2361 Langlaeufer-Budgets wirken an der Aufrufstelle', () => {
 		const preset = await createTestComparePreset(page.request, { locationIds: [a.id, b.id] });
 
 		await page.clock.install();
-		const abruf = await halteAbrufFest(page, /\/api\/preview\/compare\//, {
+		// Issue #2283 (AC-9/AC-15): der geteilte Vorschau-Reiter holt ueber
+		// GET /api/briefings/{id}/preview?kind=vergleich (Buendel-Antwortform).
+		const abruf = await halteAbrufFest(page, /\/api\/briefings\/[^/?]+\/preview\?kind=vergleich/, {
 			subject: 'Budget-Betreff',
 			email_html: '<html><body><p>Budget-Vorschau angekommen</p></body></html>',
-			telegram: 'Budget-Telegram',
-			sms: 'Budget-SMS',
-			sms_char_count: 10
+			sms: { text: 'Budget-SMS', char_count: 10 },
+			telegram: { body: 'Budget-Telegram' }
 		});
-		await page.goto(`/compare/${preset.id}?tab=vorschau`);
+		// AC-9: kein Abruf vor dem Oeffnen des Reiters (Hub zuerst auf der Uebersicht)
+		await page.goto(`/compare/${preset.id}`);
+		// erst nach der Hydration messen — sonst entginge ein Eager-Load beim Hub-Mount
+		await expect(page.locator('[data-testid="compare-detail-panel-uebersicht"]:visible')).toBeVisible({
+			timeout: 10_000
+		});
+		await page.evaluate(() => new Promise((r) => setTimeout(r, 0)));
+		expect(abruf.unterwegs(), 'die Vorschau wurde schon beim Oeffnen des Hubs geladen').toBe(0);
 		await page.locator('[data-testid="compare-detail-tab-vorschau"]:visible').click();
 		const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 
 		await nachStandardLimitLaeuftNoch(page, abruf);
-		await expect(panel.getByTestId('compare-preview-loading')).toBeVisible();
-		await expect(panel.getByTestId('compare-preview-error')).toHaveCount(0);
+		await expect(panel.getByTestId('preview-loading')).toBeVisible();
+		await expect(panel.getByTestId('preview-error')).toHaveCount(0);
 		await page.screenshot({ path: testInfo.outputPath('laeuft-noch-bei-26s.png'), fullPage: true });
 
 		await abruf.freigeben();
-		await expect(panel.getByTestId('compare-preview-iframe')).toBeVisible({ timeout: 10_000 });
-		await expect(panel.getByTestId('compare-preview-loading')).toHaveCount(0);
+		await expect(panel.getByTestId('email-iframe')).toBeVisible({ timeout: 10_000 });
+		await expect(panel.getByTestId('preview-loading')).toHaveCount(0);
+
+		// AC-9: Kanal- und Ansichtswechsel laden nicht neu — genau EIN Abruf.
+		await panel.getByRole('button', { name: /^SMS/ }).click();
+		await expect(panel.getByTestId('sms-token-bubble')).toHaveText('Budget-SMS');
+		await panel.getByRole('button', { name: /^Telegram/ }).click();
+		await expect(panel.getByTestId('preview-telegram')).toContainText('Budget-Telegram');
+		await panel.getByRole('button', { name: /^(E-Mail|Email)/ }).click();
+		await panel.getByTestId('preview-email-view-mobile').click();
+		await panel.getByTestId('preview-email-view-desktop').click();
+		await page.evaluate(() => new Promise((r) => setTimeout(r, 0)));
+		expect(abruf.unterwegs(), 'Kanal-/Ansichtswechsel hat die Vorschau erneut abgerufen').toBe(1);
 	});
 
 	test('Test-Versand im Konto (130 s): laeuft nach 26 s noch und meldet danach „Gesendet"', async ({ page }) => {
@@ -145,7 +170,8 @@ test.describe('#2361 Langlaeufer-Budgets wirken an der Aufrufstelle', () => {
 		registerForCleanup('trip', tripId);
 
 		await page.clock.install();
-		const abruf = await halteAbrufFest(page, new RegExp(`/api/trips/${tripId}/alert-preview$`), {
+		// Issue #2283 (AC-20/AC-21): kind-neutraler Weg POST /api/briefings/{id}/alert-preview?kind=route.
+		const abruf = await halteAbrufFest(page, new RegExp(`/api/briefings/${tripId}/alert-preview\\?kind=route$`), {
 			subject: 'Budget-Alarm-Betreff',
 			email_html: '<html><body>Alarm</body></html>',
 			email_plain: 'Alarm',

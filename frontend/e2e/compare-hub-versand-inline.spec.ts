@@ -382,15 +382,67 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 
-		const iphoneBtn = panel.getByRole('button', { name: 'iPhone-Mail' });
-		const desktopBtn = panel.getByRole('button', { name: 'Desktop-Inbox' });
-		await expect(iphoneBtn).toBeVisible({ timeout: 10_000 });
+		// Issue #2283: der geteilte Vorschau-Reiter fuehrt den Desktop/Mobil-
+		// Umschalter (testids preview-email-view-*); die gewaehlte Ansicht steht
+		// am E-Mail-Rahmen (data-email-view).
+		const mobilBtn = panel.getByTestId('preview-email-view-mobile');
+		const desktopBtn = panel.getByTestId('preview-email-view-desktop');
+		await expect(mobilBtn).toBeVisible({ timeout: 10_000 });
 		await expect(desktopBtn).toBeVisible({ timeout: 10_000 });
+		const rahmen = panel.getByTestId('email-iframe-wrapper');
 
-		await iphoneBtn.click();
-		await expect(iphoneBtn).toHaveCSS('font-weight', '600', { timeout: 5_000 });
+		await mobilBtn.click();
+		await expect(rahmen).toHaveAttribute('data-email-view', 'mobile', { timeout: 5_000 });
 
 		await desktopBtn.click();
-		await expect(desktopBtn).toHaveCSS('font-weight', '600', { timeout: 5_000 });
+		await expect(rahmen).toHaveAttribute('data-email-view', 'desktop', { timeout: 5_000 });
+	});
+});
+
+// ── Issue #2283 AC-13 (docs/specs/modules/shared_preview_tab.md) ────────────
+// Senden gibt es nur noch ueber das Aktionsmodell (#2278) im Hub-Kopf. Das
+// frueher in der Versand-Aktivierungskarte und im Vorschau-Reiter liegende
+// „Test-Briefing (jetzt) senden" (testid compare-hub-activation-testsend) ist
+// auf den Hub-Kopf umgestellt: subscription-hub-send → send-confirm-dialog →
+// send-confirm-yes → POST /api/compare/presets/{id}/send (ohne Empfaenger im
+// Koerper — der Server sendet an die konfigurierten Empfaenger dieses Nutzers).
+// Der Sende-Abruf wird hier abgefangen und beantwortet, damit keine echte Mail
+// rausgeht; bewiesen wird der Weg, nicht die Zustellung.
+test.describe('Issue #2283 AC-13: Senden nur im Hub-Kopf (Desktop)', () => {
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 900 });
+	});
+
+	test('Versand- und Vorschau-Reiter ohne Test-Senden; Hub-Kopf sendet an die konfigurierten Empfaenger', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const locA = await createLocation(page, `E2E-2283 Senden-A ${suffix}`, 47.5, 10.3);
+		const locB = await createLocation(page, `E2E-2283 Senden-B ${suffix}`, 47.55, 10.35);
+		const id = await createPresetWithLocations(page, `E2E-2283 Senden ${suffix}`, [locA, locB]);
+
+		const sende: { url: string; body: string | null }[] = [];
+		await page.route(new RegExp(`/api/compare/presets/${id}/send$`), async (route) => {
+			sende.push({ url: route.request().url(), body: route.request().postData() });
+			await route.fulfill({ status: 200, json: { status: 'queued' } });
+		});
+
+		for (const reiter of ['versand', 'vorschau']) {
+			await page.goto(`/compare/${id}?tab=${reiter}`);
+			await page.waitForLoadState('networkidle');
+			await page.locator(`[data-testid="compare-detail-tab-${reiter}"]:visible`).click();
+			const panel = page.locator(`[data-testid="compare-detail-panel-${reiter}"]:visible`);
+			await expect(panel).toBeVisible({ timeout: 10_000 });
+			await expect(panel.locator('[data-testid="compare-hub-activation-testsend"]')).toHaveCount(0);
+			await expect(panel.getByRole('button', { name: /Test-Briefing/ })).toHaveCount(0);
+		}
+
+		const kopfSenden = page.locator('[data-testid="subscription-hub-send"]:visible');
+		await expect(kopfSenden).toBeVisible();
+		await kopfSenden.click();
+		await expect(page.getByTestId('send-confirm-dialog')).toBeVisible();
+		await page.getByTestId('send-confirm-yes').click();
+		await expect.poll(() => sende.length, { timeout: 10_000 }).toBe(1);
+		expect(sende[0].body ?? '', 'der Sende-Abruf darf keine Empfaenger vom Client mitschicken').not.toMatch(/@/);
 	});
 });

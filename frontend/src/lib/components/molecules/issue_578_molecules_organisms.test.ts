@@ -15,8 +15,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
+import { register } from 'node:module';
 
 const moleculesDir = dirname(fileURLToPath(import.meta.url));
 const componentsRoot = join(moleculesDir, '..');
@@ -278,51 +279,73 @@ describe('AC-9: CompareChannelSwitch — neues Molecule', () => {
 });
 
 describe('AC-10–13: Compare-Briefing-Vorschau-Molecules', () => {
-	const PREVIEW_MOLS = [
-		'ComparePreviewMissing',
-		'CompareBriefingPreview',
-		'CompareChatBubble',
-		'CompareSmsPreview',
-	];
-
-	for (const name of PREVIEW_MOLS) {
-		test(`${name}.svelte existiert in molecules/`, () => {
-			assert.ok(
-				hasMol(`${name}.svelte`),
-				`molecules/${name}.svelte fehlt — noch nicht implementiert`
-			);
-		});
-		test(`${name} in molecules/index.ts exportiert`, () => {
-			const idx = readMol('index.ts');
-			assert.ok(
-				new RegExp(`\\b${name}\\b`).test(idx),
-				`molecules/index.ts: ${name} nicht exportiert`
-			);
-		});
-	}
+	// Issue #2283 AC-14: ComparePreviewMissing, CompareBriefingPreview und
+	// CompareSmsPreview sind entfernt (siehe Block „#2283 AC-14" unten) — hier
+	// bleibt nur der weiterlebende, kontextneutrale Baustein CompareChatBubble.
+	test('CompareChatBubble.svelte existiert in molecules/', () => {
+		assert.ok(hasMol('CompareChatBubble.svelte'), 'molecules/CompareChatBubble.svelte fehlt');
+	});
 
 	test('AC-11: CompareChatBubble hat Telegram-Farben (#610: Signal-Farben entfernt)', () => {
 		const src = readMol('CompareChatBubble.svelte');
 		assert.ok(/#17212b/.test(src), 'CompareChatBubble: Telegram-Backdrop #17212b fehlt');
 		assert.ok(/#5ea9dd/.test(src), 'CompareChatBubble: Telegram-Accent #5ea9dd fehlt');
 	});
+	// AC-12 (CompareSmsPreview 153 Zeichen) und AC-13 (ComparePreviewMissing
+	// dashed) entfallen mit #2283 AC-14: beide Bausteine sind ersatzlos entfernt,
+	// die SMS-Vorschau laeuft in beiden Hubs ueber preview/SmsPhoneFrame.
+});
 
-	// Issue #1719 S3 (Spec-Korrektur, Commit 6403c57a): das Limit ist 153, nicht
-	// 140 — 140 war fuer den Vergleichspfad nachweislich falsch gemessen
-	// (channel_layout.py:45-54, GSM-7/UDH floor((140-6)*8/7)). Umgedreht statt
-	// geloescht, weil AC-12 (Kuerzung + Warn-Farbe) weiterhin gilt, nur mit der
-	// korrigierten Zahl.
-	test('AC-12: CompareSmsPreview kürzt bei > 153 Zeichen + Warn-Farbe', () => {
-		const src = readMol('CompareSmsPreview.svelte');
-		assert.ok(/153/.test(src), 'CompareSmsPreview: 153-Zeichen-Limit fehlt');
-		assert.ok(/#f0a060/.test(src), 'CompareSmsPreview: Warn-Farbe #f0a060 bei Überschreitung fehlt');
-	});
+// ════════════════ Issue #2283 AC-14 — tote/ersetzte Vorschau-Molecules entfernt ════════════════
+//
+// Spec: docs/specs/modules/shared_preview_tab.md (AC-14). Geprueft ueber echte
+// Importe (Barrel laden, Exportliste lesen; Komponentenpfad laden) statt ueber
+// Dateitext. Der Barrel enthaelt .svelte-Dateien, deshalb laufen die Importe
+// ueber die SSR-Hooks (frontend/test-svelte-ssr-hooks.mjs, Pfadregel #1409).
+//
+// RED HEUTE: der Barrel exportiert alle drei noch, die Dateien laden noch.
+describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSmsPreview entfernt', () => {
+	const FRONTEND = join(componentsRoot, '../../..');
+	const ENTFERNT = ['CompareBriefingPreview', 'ComparePreviewMissing', 'CompareSmsPreview'];
+	const BLEIBEN = ['CompareChannelSwitch', 'CompareChatBubble'];
 
-	test('AC-13: ComparePreviewMissing hat dashed-border', () => {
-		const src = readMol('ComparePreviewMissing.svelte');
-		assert.ok(/dashed/.test(src), 'ComparePreviewMissing: border: 1px dashed ... fehlt');
-		assert.ok(/g-rule/.test(src), 'ComparePreviewMissing: --g-rule fehlt');
-	});
+	let registriert = false;
+	async function barrel(): Promise<Record<string, unknown>> {
+		if (!registriert) {
+			register(
+				pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href,
+				pathToFileURL(FRONTEND + '/').href
+			);
+			registriert = true;
+		}
+		return (await import(pathToFileURL(join(moleculesDir, 'index.ts')).href)) as Record<string, unknown>;
+	}
+
+	for (const name of ENTFERNT) {
+		test(`molecules/index.ts exportiert ${name} nicht mehr`, async () => {
+			const mod = await barrel();
+			assert.equal(
+				name in mod,
+				false,
+				`molecules/index.ts exportiert ${name} noch — AC-14: der Baustein ist durch shared/PreviewTab ersetzt bzw. tot (#1270) und faellt samt Barrel-Eintrag`
+			);
+		});
+		test(`${name}.svelte laesst sich nicht mehr laden`, async () => {
+			await barrel();
+			await assert.rejects(
+				import(pathToFileURL(join(moleculesDir, `${name}.svelte`)).href),
+				(e: { code?: string }) => e.code === 'ERR_MODULE_NOT_FOUND',
+				`molecules/${name}.svelte ist noch vorhanden — AC-14 verlangt die Entfernung`
+			);
+		});
+	}
+
+	for (const name of BLEIBEN) {
+		test(`${name} lebt als kontextneutraler Baustein weiter (Barrel-Export bleibt)`, async () => {
+			const mod = await barrel();
+			assert.equal(typeof mod[name], 'function', `molecules/index.ts muss ${name} weiter exportieren (AC-14)`);
+		});
+	}
 });
 
 // ════════════════ BLOCK C — Neue Organisms ════════════════
@@ -459,10 +482,9 @@ describe('AC-20: molecules/index.ts — alle neuen Molecules exportiert', () => 
 		'HorizonChips',
 		'ScoreToggle',
 		'CompareChannelSwitch',
-		'CompareBriefingPreview',
 		'CompareChatBubble',
-		'CompareSmsPreview',
-		'ComparePreviewMissing',
+		// CompareBriefingPreview, CompareSmsPreview, ComparePreviewMissing entfallen
+		// mit #2283 AC-14 (Gegenprobe: Block „#2283 AC-14" oben).
 	];
 
 	for (const name of ALL_NEW_MOLECULES) {
