@@ -1,0 +1,38 @@
+[
+  {
+    "method": "POST",
+    "path": "/api/_validator/compare-email-preview"
+  },
+  {
+    "method": "POST",
+    "path": "/api/_validator/sms-fidelity-preview"
+  },
+  {
+    "method": "POST",
+    "path": "/api/briefings/{entity_id}/alert-preview"
+  },
+  {
+    "method": "GET",
+    "path": "/api/briefings/{entity_id}/preview"
+  },
+  {
+    "method": "POST",
+    "path": "/api/preview/compare/{preset_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/api/preview/{trip_id}/email"
+  },
+  {
+    "method": "GET",
+    "path": "/api/preview/{trip_id}/sms"
+  },
+  {
+    "method": "GET",
+    "path": "/api/preview/{trip_id}/telegram"
+  },
+  {
+    "method": "POST",
+    "path": "/api/trips/{trip_id}/alert-preview"
+  }
+]

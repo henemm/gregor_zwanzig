@@ -208,10 +208,17 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 		}
 	});
 
-	// ── AC-8: Vorschau-Tab Kanal SMS/Telegram → Missing-Hinweis, kein Rang/Score ─
-	test('AC-8: Vorschau-Tab Kanal SMS/Telegram zeigt Missing-Hinweis, kein Rang/Score-Markup', async ({
+	// ── AC-8 (#1229) → migriert auf Issue #2283 AC-12 ───────────────────────
+	// Der Missing-Hinweis „Vorschau-Daten nicht verfügbar." ist seit #1270
+	// Geschichte (echte Kanal-Inhalte aus EINEM Abruf). Seit #2283 rendert der
+	// Vergleich den GETEILTEN Vorschau-Reiter (shared/PreviewTab, context=
+	// "vergleich") mit derselben Anordnung wie der Trip: SMS im Telefonrahmen,
+	// Telegram als Chat-Blase, kein eigenes iframe, kein Morgen/Abend, kein Demo.
+	// Spec: docs/specs/modules/shared_preview_tab.md (AC-12).
+	test('AC-8/#2283 AC-12: Vorschau-Tab rendert den geteilten PreviewTab — SMS im Telefonrahmen, Telegram-Blase', async ({
 		page
 	}) => {
+		test.setTimeout(150_000);
 		const { id } = await createPreset(page);
 		try {
 			await page.setViewportSize({ width: 1280, height: 900 });
@@ -221,14 +228,19 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 
 			const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible').first();
 			await expect(panel).toBeVisible({ timeout: 10_000 });
+			await expect(panel.getByTestId('preview-tab')).toHaveAttribute('data-context', 'vergleich');
+			await expect(panel.getByTestId('preview-loading')).toHaveCount(0, { timeout: 90_000 });
 
-			for (const label of ['SMS', 'Telegram']) {
-				await panel.getByRole('button', { name: label, exact: true }).first().click();
-				await expect(panel).toContainText('Vorschau-Daten nicht verfügbar.', { timeout: 10_000 });
-				// Kein Rang/Score-Markup der V1-Molecules (CompareChatBubble/CompareSmsPreview):
-				// deren Bubble-Header trägt den Marker-Text "Gregor Zwanzig".
-				await expect(panel).not.toContainText('Gregor Zwanzig');
-			}
+			await panel.getByRole('button', { name: /^SMS/ }).first().click();
+			await expect(panel.getByTestId('sms-phone-wrapper')).toBeVisible();
+			await panel.getByRole('button', { name: /^Telegram/ }).first().click();
+			await expect(panel.getByTestId('preview-telegram')).toBeVisible();
+
+			// Kein Alt-Markup des Vergleichs mehr (eigenes iframe, CompareSmsPreview)
+			await expect(panel.locator('[data-testid="compare-preview-iframe"]')).toHaveCount(0);
+			await expect(panel.locator('[data-testid="compare-preview-sms-text"]')).toHaveCount(0);
+			await expect(panel.getByTestId('preview-controls')).toHaveCount(0);
+			await expect(panel.getByTestId('preview-demo-banner')).toHaveCount(0);
 		} finally {
 			await deletePreset(page, id);
 		}

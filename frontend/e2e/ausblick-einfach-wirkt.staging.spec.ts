@@ -157,9 +157,10 @@ async function openPreview(page: Page): Promise<FrameLocator> {
 	await expect(page.getByTestId('trip-detail-panel-vorschau')).toBeVisible({ timeout: 30_000 });
 
 	// Erwartete Antwort VOR den Klicks registrieren — sonst Rennen.
+	// Issue #2283: der Vorschau-Reiter laedt alle Kanaele mit EINEM Buendelaufruf.
 	const echteAntwort = page.waitForResponse(
 		(r) =>
-			r.url().includes(`/api/preview/${TRIP_ID}/email`) &&
+			r.url().includes(`/api/briefings/${TRIP_ID}/preview?kind=route`) &&
 			r.url().includes('type=evening') &&
 			!r.url().includes('demo=1'),
 		{ timeout: 120_000 }

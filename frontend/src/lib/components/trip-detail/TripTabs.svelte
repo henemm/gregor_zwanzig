@@ -11,12 +11,8 @@
 	// (Aufraeumen inkl. AlertMetricLevelTable/-Row ist Slice-6-Thema, s. Spec).
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
-	import {
-		EmailIframe,
-		SmsPhoneFrame,
-		defaultReportType,
-		type ReportType
-	} from '$lib/components/preview';
+	// Issue #2283: geteilter Vorschau-Reiter (gleiche Anordnung wie im Ortsvergleich).
+	import PreviewTab from '$lib/components/shared/PreviewTab.svelte';
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
@@ -89,8 +85,7 @@
 
 	const PLACEHOLDERS: Record<string, string> = {
 		uebersicht: 'Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)',
-		etappen: 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)',
-		vorschau: 'Inhalt folgt mit Issue #189 (Vorschau-Integration)'
+		etappen: 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)'
 	};
 
 	const segmentedOptions = $derived(
@@ -107,11 +102,16 @@
 	// und synchronisiert bei späteren initialTab-Prop-Änderungen
 	// (z.B. hash-only navigation ohne Re-Mount).
 	let activeTab = $state<string>('uebersicht');
-	let previewType = $state<ReportType>(defaultReportType());
-	// Issue #483: Vorschau-Tab startet im Demo-Modus (Fixture-Daten), damit
-	// die Vorschau auch dann zuverlässig funktioniert, wenn der Trip in der
-	// Vergangenheit liegt oder die OpenMeteo-API gerade nicht erreichbar ist.
-	let demoMode = $state(true);
+	// Issue #483: der Vorschau-Reiter startet im Demo-Modus — der Standard
+	// liegt seit #2283 im geteilten Lader (shared/previewLoader.ts).
+	// Konfigurierte Briefing-Kanaele fuer die Kanal-Markierung im Vorschau-Reiter.
+	const previewChannels = $derived(
+		[
+			trip?.report_config?.send_email !== false ? 'email' : null,
+			trip?.report_config?.send_sms === true ? 'sms' : null,
+			trip?.report_config?.send_telegram === true ? 'telegram' : null
+		].filter((c): c is string => c !== null)
+	);
 
 	// Issue #2287 (E4): Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState
 	// auf die neue Kennung; unbekannte Kennung → Parameter `tab` entfernt. Danach ist
@@ -210,33 +210,15 @@
 				{:else if tab.value === 'versand' && trip}
 					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
 				{:else if tab.value === 'vorschau' && trip}
-					<div class="preview-shell">
-						{#if demoMode}
-							<div class="demo-banner" role="status" data-testid="preview-demo-banner">
-								<span>Vorschau mit Beispieldaten.</span>
-								<button
-									type="button"
-									class="demo-banner-action"
-									onclick={() => (demoMode = false)}
-									data-testid="preview-demo-disable"
-								>
-									Echte Wetterdaten laden
-								</button>
-							</div>
-						{/if}
-						<div class="preview-controls" data-testid="preview-controls">
-							<label>
-								<input type="radio" bind:group={previewType} value="morning" /> Morgen
-							</label>
-							<label>
-								<input type="radio" bind:group={previewType} value="evening" /> Abend
-							</label>
-						</div>
-						<div class="preview-grid">
-							<EmailIframe tripId={trip.id} type={previewType} demo={demoMode} />
-							<SmsPhoneFrame tripId={trip.id} type={previewType} demo={demoMode} />
-						</div>
-					</div>
+					<!-- #2283: neuer Trip (gleiche Seite, andere ID) ⇒ neuer Lader, neuer Abruf. -->
+					{#key trip.id}
+						<PreviewTab
+							context="route"
+							id={trip.id}
+							premiumSms={trip.report_config?.send_premium_sms === true}
+							configuredChannels={previewChannels}
+						/>
+					{/key}
 				{:else}
 					<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
 				{/if}
@@ -244,61 +226,3 @@
 		{/if}
 	{/each}
 </div>
-
-<style>
-	.preview-shell {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		padding: 1rem;
-	}
-	.demo-banner {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: 0.625rem 0.875rem;
-		background: var(--g-warning-soft, #fef3c7);
-		color: var(--g-ink, #1a1a18);
-		border: 1px solid var(--g-warning, #f59e0b);
-		border-radius: var(--g-r-2, 0.5rem);
-		font-size: 0.875rem;
-	}
-	.demo-banner-action {
-		flex-shrink: 0;
-		padding: 0.375rem 0.75rem;
-		background: var(--g-ink, #1a1a18);
-		color: var(--g-paper, #f6f4ee);
-		border: 0;
-		border-radius: var(--g-r-1, 0.375rem);
-		font-size: 0.8125rem;
-		font-weight: 500;
-		cursor: pointer;
-	}
-	.demo-banner-action:hover {
-		background: var(--g-ink-strong, #000);
-	}
-	.preview-controls {
-		display: flex;
-		gap: 1.25rem;
-		font-size: 0.875rem;
-		color: var(--g-ink, #1a1a18);
-	}
-	.preview-controls label {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		cursor: pointer;
-	}
-	.preview-grid {
-		display: grid;
-		gap: 1.5rem;
-		grid-template-columns: minmax(0, 1fr) 360px;
-		align-items: start;
-	}
-	@media (max-width: 960px) {
-		.preview-grid {
-			grid-template-columns: 1fr;
-		}
-	}
-</style>

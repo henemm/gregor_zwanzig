@@ -209,14 +209,7 @@ describe('AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid', () =
 	});
 });
 
-describe('AC-7: Vorschau-Tab — ChannelSwitch + Email-Toggle + BriefingPreview', () => {
-	test('AC-7: Vorschau-Tab hat Email-View-Toggle Desktop/iPhone', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
-		assert.match(
-			src,
-			/Desktop.*Inbox|iPhone.*Mail|desktop.*iphone/i,
-			'Vorschau-Tab muss Email-View-Toggle mit "Desktop-Inbox" und "iPhone-Mail" haben — IST: nicht vorhanden'
-		);
-	});
-});
+// AC-7 (Email-View-Toggle im Vorschau-Tab) entfaellt mit #2283: der Vorschau-
+// Reiter ist der geteilte shared/PreviewTab — Desktop/Mobil-Umschalter bewacht
+// shared/__tests__/previewTab.test.ts per Rendern (preview-email-view-*).
 

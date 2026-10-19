@@ -312,7 +312,10 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	{
 		eintrag: 'AlarmeTab.svelte:563',
 		zeile: "{#if context === 'vergleich'}",
-		folgt: 'VTAlertSample'
+		// #2283 S5: VTAlertSample durch echte AlertPreviewCard ersetzt (AC-21).
+		// Anker samt `kind="vergleich"`: das FENSTER (8 Zeilen) reicht bis in den
+		// Trip-Zweig, dessen `<AlertPreviewCard kind="route">` sonst vakuum traefe.
+		folgt: 'AlertPreviewCard kind="vergleich"'
 	},
 	// S6d (Issue #2276): die 22 ueberlebenden Corridor-Eintraege — gemessen am
 	// Quelltext NACH dem Wertprop-Umbau. `isFreshCompareCreate` ist der eine

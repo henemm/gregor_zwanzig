@@ -269,8 +269,8 @@ func New(deps Deps) chi.Router {
 	// Issue #140 / #189: Output-Vorschau Email + SMS
 	r.Get("/api/preview/{trip_id}/email", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "email"))
 	r.Get("/api/preview/{trip_id}/sms", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "sms"))
-	// Issue #363: Signal/Telegram-Vorschau (kanal-bewusster Narrow-Renderer #360)
-	r.Get("/api/preview/{trip_id}/signal", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "signal"))
+	// Issue #363: Telegram-Vorschau (kanal-bewusster Narrow-Renderer #360).
+	// Issue #2283 AC-6: /signal entfernt (Signal app-weit weg seit #610).
 	r.Get("/api/preview/{trip_id}/telegram", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "telegram"))
 	// Issue #1270: Orts-Vergleich-Vorschau — EIN Abruf, ALLE Kanäle (ADR-0011).
 	r.Post("/api/preview/compare/{preset_id}", handler.ComparePreviewProxyHandler(deps.Config.PythonCoreURL))
@@ -294,6 +294,9 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/briefings", handler.CreateBriefingHandler(deps.Store))
 	r.Put("/api/briefings/{id}", handler.UpdateBriefingHandler(deps.Store))
 	r.Delete("/api/briefings/{id}", handler.DeleteBriefingHandler(deps.Store))
+	// Issue #2283: kind-neutrale Vorschau + Alarm-Vorschau (Alt-Routen oben als Delegates).
+	r.Get("/api/briefings/{id}/preview", handler.BriefingPreviewHandler(deps.Config.PythonCoreURL))
+	r.Post("/api/briefings/{id}/alert-preview", handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL))
 	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)
 	r.Get("/api/cockpit/status", handler.CockpitStatusHandler(deps.Store))
 	// Issue #396: Archiv-Statistiken — Briefings + Alarme pro Tour (Gesamtzahl, kein Zeitfilter)

@@ -114,29 +114,19 @@ func TestPreviewProxyHandlerPropagates404(t *testing.T) {
 	}
 }
 
-// Issue #363 (AC-5): Signal/Telegram werden über denselben generischen
-// PreviewProxyHandler an <python>/api/preview/{id}/{channel} weitergeleitet,
-// user_id aus dem Auth-Context injiziert, Query verbatim durchgereicht.
-func TestPreviewProxyHandlerForwardsSignalChannel(t *testing.T) {
-	py, lastURL := startFakePreviewPython(t, 200, `{"subject":"x","body":"y","char_count":1,"max_line_width":1}`, "")
+// Issue #2283 AC-6: der Signal-Kanal ist seit #610 app-weit entfernt, der
+// Python-Core hat keinen /signal-Endpoint. Der fruehere Test
+// TestPreviewProxyHandlerForwardsSignalChannel (#363) erwartete das
+// Weiterleiten an /api/preview/{id}/signal und ist deshalb entfallen. Die
+// Entfernung ist nur am Router beobachtbar (PreviewProxyHandler nimmt jeden
+// Kanalnamen entgegen) — Nachweis: internal/router/preview_proxy_targets_test.go
+// (TestPreviewSignalRouteRemoved_404). Der Abgleich Alt-Route <-> Buendelaufruf
+// (AC-5) steht in briefing_preview_test.go (externes Testpaket, braucht den
+// echten Router).
 
-	h := PreviewProxyHandler(py.URL, "signal")
-	w := dispatchPreviewWithChi(h, "signal", "/api/preview/gr20/signal?type=morning", "alice")
-
-	if w.Code != 200 {
-		t.Fatalf("expected 200, got %d (body=%q)", w.Code, w.Body.String())
-	}
-	if !strings.Contains(*lastURL, "/api/preview/gr20/signal") {
-		t.Errorf("expected proxied URL to include trip_id and signal channel, got %q", *lastURL)
-	}
-	if !strings.Contains(*lastURL, "user_id=alice") {
-		t.Errorf("expected user_id=alice injected from auth context, got %q", *lastURL)
-	}
-	if !strings.Contains(*lastURL, "type=morning") {
-		t.Errorf("expected type=morning forwarded verbatim, got %q", *lastURL)
-	}
-}
-
+// Issue #363 (AC-5): Telegram wird über den generischen PreviewProxyHandler an
+// <python>/api/preview/{id}/telegram weitergeleitet, user_id aus dem
+// Auth-Context injiziert, Query verbatim durchgereicht.
 func TestPreviewProxyHandlerForwardsTelegramChannel(t *testing.T) {
 	py, lastURL := startFakePreviewPython(t, 200, `{"subject":"x","body":"y","char_count":1,"max_line_width":1}`, "")
 

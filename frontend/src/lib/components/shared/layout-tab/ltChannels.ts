@@ -33,7 +33,7 @@ export const SMS_TRIP_CHAR_LIMIT = 160;
 
 /** Beleg: src/output/renderers/channel_layout.py:45-54, GSM-7/UDH-Rechnung
  *  floor((140-6)*8/7). Gilt fuer den Ortsvergleich (VTBriefingChannels im
- *  vergleich-Kontext, CompareSmsPreview). */
+ *  vergleich-Kontext, SMS-Vorschau in shared/PreviewTab). */
 export const SMS_COMPARE_CHAR_LIMIT = 153;
 
 const CHANNEL_LABELS: Record<ChannelId, string> = {

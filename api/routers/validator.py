@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from app.loader import VALID_ENTITY_ID_RE, _parse_trip, get_briefings_dir
 from app.metric_catalog import format_metric_value
@@ -373,6 +373,38 @@ def alert_preview(
             body.segment_times = _synthesize_segment_times(trip_obj, body.changes)
 
     return render_alert_preview(trip_obj, body)
+
+
+@router.post("/api/briefings/{entity_id}/alert-preview")
+def briefing_alert_preview(
+    entity_id: str,
+    body: dict,
+    kind: str = Query(..., description="route | vergleich (Pflicht, ADR-0023)"),
+    user_id: str = Query(...),
+):
+    """Issue #2283 S4 (AC-16): kind-neutrale Alarm-Vorschau.
+
+    `kind=route` ist ein Delegate auf `alert_preview` (Body und Antwort wie
+    `POST /api/trips/{id}/alert-preview`). `kind=vergleich` rendert ueber
+    dieselben Versand-Projektionen wie der Orts-Vergleich-Alarm
+    (`compare_alert_preview_service`). Beide Loader sind user-scoped.
+    """
+    if kind == "route":
+        try:
+            trip_body = AlertPreviewBody.model_validate(body)
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors(include_url=False))
+        return alert_preview(entity_id, trip_body, user_id=user_id)
+    if kind != "vergleich":
+        raise HTTPException(status_code=400, detail="kind_required")
+    from services.compare_alert_preview_service import render_compare_alert_preview
+
+    try:
+        return render_compare_alert_preview(entity_id, user_id=user_id, body=body)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except (KeyError, TypeError, ValueError) as e:
+        raise HTTPException(status_code=422, detail=f"Ungültiger Alarm-Körper: {e}")
 
 
 def _real_segment_ids_for_today(trip_obj: Trip) -> set[str]:

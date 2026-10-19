@@ -1177,9 +1177,11 @@ Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/spec
 | `/api/locations` | GET/POST | Location library (for compare) |
 | `/api/compare/presets` | GET/POST | Compare-Presets (Orts-Vergleich) |
 | `/api/compare/presets/{id}` | GET/PUT/DELETE | Einzelnes Compare-Preset (`PATCH …/state`, `POST …/send`) |
-| `/api/preview/compare/{preset_id}` | POST | Vorschau aller Kanäle eines Compare-Presets (#1270) |
+| `/api/briefings/{id}/preview?kind=route\|vergleich` | GET | Vorschau aller Kanäle in einer Antwort, geteilter Vorschau-Reiter `shared/PreviewTab.svelte` (#2283) |
+| `/api/briefings/{id}/alert-preview?kind=route\|vergleich` | POST | Alarm-Vorschau Trip und Ortsvergleich (#2283) |
+| `/api/preview/compare/{preset_id}` | POST | Alt-Route, Delegate auf die Bündel-Vorschau (#1270, #2283) |
 | `/api/briefings` | GET | Briefing-Subscriptions (Trip-Briefing-Abos, ADR-0023) |
-| `/api/preview/{id}/email\|sms\|telegram` | GET | Trip report preview rendering (demo mode optional) |
+| `/api/preview/{id}/email\|sms\|telegram` | GET | Alt-Routen, Delegates (demo mode optional); `/signal` entfernt (#2283) |
 | `/api/account` | GET/PUT | User account |
 | `/api/scheduler/status` | GET | Job status monitoring |
 

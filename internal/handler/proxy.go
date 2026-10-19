@@ -315,41 +315,11 @@ func SendTripReportProxyHandler(pythonURL string) http.HandlerFunc {
 // AlertPreviewProxyHandler proxies POST /api/trips/{id}/alert-preview.
 // Trip ID via chi.URLParam, user_id from auth context appended to query.
 // Spec: docs/specs/modules/issue_221_validator_observability_endpoints.md.
+// Issue #2283 AC-16: Alt-Route, Delegate auf forwardPreview (preview_proxy.go).
 func AlertPreviewProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
-		url := pythonURL + "/api/trips/" + id + "/alert-preview"
-		if query != "" {
-			url += "?" + query
-		}
-
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"proxy_error"}`))
-			return
-		}
-		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
-
-		client := &http.Client{Timeout: 30 * time.Second}
-		resp, err := client.Do(req)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
-			return
-		}
-		defer resp.Body.Close()
-
-		ct := resp.Header.Get("Content-Type")
-		if ct == "" {
-			ct = "application/json"
-		}
-		w.Header().Set("Content-Type", ct)
-		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		forwardPreview(w, r, http.MethodPost, pythonURL+"/api/trips/"+id+"/alert-preview", previewProxyTimeout)
 	}
 }
 

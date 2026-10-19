@@ -22,7 +22,11 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const TABS = resolve(HERE, '../CompareTabs.svelte');
+// Issue #2283: der Vorschau-Reiter des Vergleichs ist der geteilte
+// shared/PreviewTab.svelte (Zustand im Lader shared/previewLoader.ts) — die
+// Zusicherungen gelten seither dort.
+const TABS = resolve(HERE, '../../shared/PreviewTab.svelte');
+const LOADER = resolve(HERE, '../../shared/previewLoader.ts');
 
 function previewBlock(): string {
 	const src = readFileSync(TABS, 'utf-8');
@@ -61,9 +65,9 @@ describe('AC-2 — Kanal-Liste kommt aus der Preset-Konfiguration', () => {
 	});
 
 	test('previewChannel-Typ umfasst telegram', () => {
-		const src = readFileSync(TABS, 'utf-8');
-		const decl = src.match(/let previewChannel = \$state<([^>]+)>/);
-		assert.ok(decl, 'previewChannel-State-Deklaration nicht gefunden');
+		const src = readFileSync(LOADER, 'utf-8');
+		const decl = src.match(/export type PreviewChannel = ([^;]+);/);
+		assert.ok(decl, 'PreviewChannel-Typ-Deklaration nicht gefunden');
 		assert.ok(
 			decl[1].includes('telegram'),
 			`previewChannel-Typ ist <${decl[1]}> — Telegram kann nie gewählt werden`

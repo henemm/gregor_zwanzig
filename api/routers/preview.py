@@ -150,3 +150,48 @@ def preview_telegram(
         raise HTTPException(status_code=422, detail=str(e))
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+
+BRIEFING_KINDS = ("route", "vergleich")
+
+
+@router.get("/api/briefings/{entity_id}/preview")
+def preview_briefing(
+    entity_id: str,
+    kind: str = Query(..., description="route | vergleich (Pflicht, ADR-0023)"),
+    user_id: str = Query(..., description="Session-User (vom Go-Proxy injiziert)"),
+    type: str = Query("morning", description="morning | evening (nur route)"),
+    date: str | None = Query(None, description="ISO-Datum"),
+    demo: bool = Query(False, description="Issue #483: Fixture-Daten (nur route)"),
+):
+    """Issue #2283 S1: kind-neutrale Vorschau, EIN Abruf, ALLE Kanaele.
+
+    Antwortform fuer beide kinds: `{subject, email_html, sms: {text,
+    char_count}, telegram: {body, bubbles?}}`. `type`/`demo` gelten nur bei
+    `kind=route`; der Vergleich kennt einen festen Berichtstyp und keine
+    Demo-Daten. Beide Loader sind user-scoped (fremde ID -> 404, ADR-0003).
+    """
+    if kind not in BRIEFING_KINDS:
+        raise HTTPException(status_code=400, detail="kind_required")
+    if kind == "route" and type not in VALID_REPORT_TYPES:
+        raise HTTPException(status_code=422, detail=f"Ungültiger type '{type}'")
+    try:
+        if kind == "route":
+            return _build_service(user_id).render_all_channels(
+                entity_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
+            )
+        c = ComparePreviewService().render_all_channels(
+            entity_id, user_id=user_id, target_date=date,
+        )
+        return {
+            "subject": c["subject"],
+            "email_html": c["email_html"],
+            "sms": {"text": c["sms"], "char_count": c["sms_char_count"]},
+            "telegram": {"body": c["telegram"]},
+        }
+    except (FileNotFoundError, LookupError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
