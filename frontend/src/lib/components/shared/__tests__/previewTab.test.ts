@@ -143,7 +143,7 @@ async function geladenerLader(
 
 async function renderTab(ctx: Ctx, loader: Loader, extra: Record<string, unknown> = {}): Promise<string> {
 	const PreviewTab = await previewTab();
-	return render(PreviewTab as never, {
+	return render(PreviewTab as unknown as import('svelte').Component<Record<string, unknown>>, {
 		props: { context: ctx, id: ctx === 'route' ? 't-1' : 'cp-1', loader, ...extra }
 	}).body;
 }

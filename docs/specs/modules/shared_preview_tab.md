@@ -72,6 +72,12 @@ Trip-Hub und Ortsvergleich-Hub bekommen **einen** gemeinsamen Vorschau-Reiter (`
 
 **Pendant-Sperre:** neue Dateien nur unter `shared/`, `preview/`, `molecules/`; keine neuen Dateien unter `compare/` oder `trip-detail/`; keine neue Compare-only-Komponente.
 
+**Zusätzlich geänderte Dateien (Umsetzung, 2026-10-19):** `src/services/preview_service.py` (Bündel-Render `render_all_channels` ergänzt), `frontend/src/lib/components/alerts-tab/alertPreviewHelpers.ts` (kind-neutraler Abruf), `frontend/src/lib/components/shared/layout-tab/ltChannels.ts` (1 Zeile).
+
+**Begründung Pendant-Sperre für `compare_alert_preview_service.py`:** Der Dienst ist compare-eigen, weil die Vergleichs-Alarm-Nachrichten andere Versand-Builder nutzen (`to_multi_point_alert_message`, `to_multi_location_onset_alert_message`, `build_compare_official_alert_notices`); der Trip-Pfad nutzt `render_alert_preview` in `validator_render_service.py`. Der Frontend-Baustein (`AlertPreviewCard`) ist geteilt.
+
+**AC-6 Wächter:** Der Go-Wächter liest das versionierte Abbild `internal/router/testdata/python_preview_routes.json`; `tests/test_vorschau_proxy_ziel_snapshot.py` erzwingt, dass das Abbild exakt der echten FastAPI-Routentabelle entspricht.
+
 ## Expected Behavior
 
 - **Input:** Nutzer öffnet im Trip-Hub oder Ortsvergleich-Hub den Reiter „Vorschau" bzw. klickt in „Alarme" auf eine Alarm-Vorschau.
@@ -204,6 +210,7 @@ Mutations-Gegenprobe (Pflicht in `/50`): Vorschau-Weg vom Versand-Projektionsauf
 - Premium-SMS wird in der Vorschau nur als Hinweis gezeigt; kein eigenes Vorschau-Backend (wie bisher im Ortsvergleich).
 - Der Trip-Standard `demoMode=true` bleibt unverändert.
 - Das Vergleichs-Mail-Template bleibt compare-eigen (ADR-0023, E9).
+- Die amtliche Alarm-Vorschau zeigt keine Entwarnungen (für eine frische Warnung gibt es keine); Parität zum Versand ist für den Fall ohne Entwarnung belegt.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -213,3 +220,4 @@ Mutations-Gegenprobe (Pflicht in `/50`): Vorschau-Weg vom Versand-Projektionsauf
 ## Changelog
 
 - 2026-10-19: Initiale Spec (Issue #2283, Epic #2345 P3), 21 ACs in 5 Scheiben
+- 2026-10-19: Umsetzung dokumentiert (zusätzliche Dateien, Begründung Pendant-Sperre, AC-6-Abbild, Known Limitation Entwarnung); ACs unverändert
