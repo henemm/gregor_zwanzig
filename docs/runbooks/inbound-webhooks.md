@@ -53,8 +53,8 @@ moeglich“. seven.io sendet Webhooks von festen Adressen `195.201.160.143` und
 ## Stalwart registrieren
 
 Webhook im Stalwart-Admin (v0.16.26) mit Ziel `https://<host>/api/webhooks/mail/<STALWART_WEBHOOK_PATH_SECRET>`,
-Authentifizierung „Bearer“ mit `STALWART_WEBHOOK_SECRET`. Eventname: **vor Registrierung an v0.16.26
-verifizieren** (Doku nennt `message-ingest.ham`, ein Beispiel `store.ingest`). Ein falscher Name ist
+Authentifizierung „Bearer“ mit `STALWART_WEBHOOK_SECRET`. Eventname: **`message-ingest.ham`** (an v0.16.26
+verifiziert; `store.ingest` aus einem Doku-Beispiel existiert nicht). Ein falscher Name ist
 stille Nicht-Zustellung — sichtbar nur über ausbleibendes `push.last_received`. Netzpfad: Der
 Container erreicht Go nur über den öffentlichen Nginx-Pfad (Hairpin); Go bindet `127.0.0.1:8090`.
 
@@ -99,8 +99,8 @@ mit erfolgreichem Nachversuch dort unsichtbar; die Verbindungsebene ist nur im G
 3. **`missed_total`-Auswertung** in `henemm-infra` `check-gregor20.sh` erst scharf schalten, wenn die
    Hooks registriert sind und `push.last_received` sichtbar ist. Fehlendes Feld = 0. Die Zähler leben im
    Speicher: nach einem Go-Restart neu baselinen, nicht als Fehler werten.
-4. **Stalwart-Eventname** bei der Registrierung gegen v0.16.26 per Admin-API verifizieren und hier
-   eintragen: _noch offen — Eintrag nach Verifikation_.
+4. **Stalwart-Eventname:** `message-ingest.ham` ist gegen v0.16.26 verifiziert und hier eingetragen
+   (`store.ingest` aus einem Doku-Beispiel existiert nicht).
 
 ## Staging-Beleg
 

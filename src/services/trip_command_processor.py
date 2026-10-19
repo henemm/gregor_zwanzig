@@ -12,7 +12,10 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import contextvars
 import re
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -53,6 +56,8 @@ if TYPE_CHECKING:  # nur fuer die Typangabe — zur Laufzeit bleibt der
     from services.weather_extractor import TimelineResult
 
 logger = logging.getLogger(__name__)
+# #2439 (AC-1): Laufzeit-Journal, eine Zeile je Befehl -- ohne Texte/Adressen/Nummern.
+dauer_logger = logging.getLogger("befehl_dauer")
 
 
 def _norm(s: str) -> str:
@@ -974,6 +979,69 @@ class _SpeicherFehler(Exception):
         self.result = result
 
 
+class _Messung:
+    """#2439: eine laufende Befehls-Messung (Eingang bis Uebergabe an den Versand)."""
+
+    def __init__(self, kanal: str) -> None:
+        self.kanal = kanal
+        self.t0 = time.monotonic()
+        self.name: Optional[str] = None
+        self.trip_id: Optional[str] = None
+
+
+_MESSUNG: contextvars.ContextVar[Optional[_Messung]] = contextvars.ContextVar(
+    "befehl_messung", default=None)
+
+
+def _befehlsname(key: Optional[str], value: Optional[str] = None) -> str:
+    """Befehlsname fuer das Journal -- NUR aus festen Woertern, nie Nutzertext
+    (F001): alles Unbekannte (Nummer, Adresse, Freitext) wird `UNKNOWN`."""
+    if key == "query":
+        key = (value or "").lower()
+    if key in ("hilfe", "kuerzel"):
+        return {"hilfe": "HELP", "kuerzel": "CODES"}[key]
+    erlaubt = _VALID_COMMANDS | _QUERY_KEYS | set(_BARE_KEYWORD_MAP.values())
+    if key in erlaubt:
+        return key.upper()
+    if key and (_HOURS_PATTERN.match(key) or _DRILLDOWN_PATTERN.match(key)):
+        return "DRILLDOWN"
+    return "UNKNOWN"
+
+
+def befehl_markieren(key: Optional[str], value: Optional[str] = None) -> None:
+    """Vermerkt den Befehl der laufenden Messung (fuer Zweige ohne `process()`,
+    z. B. Rueckfragen); ohne laufende Messung wirkungslos."""
+    m = _MESSUNG.get()
+    if m is not None:
+        m.name = _befehlsname(key, value)
+
+
+@contextmanager
+def befehl_messung(kanal: str):
+    """#2439 (AC-1, F002): umspannt die Verarbeitung EINER Nachricht im Eingang
+    (Reader) bis nach der Uebergabe der Antwort an den Versand-Provider. Beim
+    Verlassen entsteht GENAU EINE Dauer-Zeile -- aber nur, wenn die Nachricht ein
+    Befehl war (`process()` bzw. `befehl_markieren` hat ihn vermerkt)."""
+    if _MESSUNG.get() is not None:
+        yield
+        return
+    m = _Messung(kanal)
+    token = _MESSUNG.set(m)
+    try:
+        yield
+    finally:
+        _MESSUNG.reset(token)
+        if m.name is not None:
+            _schreibe_dauer(m.name, m.kanal, m.trip_id, m.t0)
+
+
+def _schreibe_dauer(name: str, kanal: str, trip_id: Optional[str], t0: float) -> None:
+    dauer_logger.info(
+        "befehl=%s kanal=%s trip=%s dauer_ms=%d",
+        name, kanal, trip_id or "-", round((time.monotonic() - t0) * 1000),
+    )
+
+
 class TripCommandProcessor:
     """Processes trip commands from any inbound channel."""
 
@@ -993,13 +1061,14 @@ class TripCommandProcessor:
         Fehlerantwort. Bewusst KEIN "bitte erneut senden": skip/ruhetag/heute
         sind nicht wiederholungsfest.
         """
+        t0 = time.monotonic()
         self._en = msg.englisch or msg.channel in _KURZFORM_KANAELE
         try:
-            return self._process(msg)
+            ergebnis = self._process(msg)
         except Exception:
             logger.exception(
                 "Kommando %r fuer Trip %r: unerwarteter Fehler", msg.body, msg.trip_name)
-            return CommandResult(
+            ergebnis = CommandResult(
                 success=False, command="error",
                 confirmation_subject=self._t("Befehl fehlgeschlagen", "Command failed"),
                 confirmation_body=self._t(
@@ -1009,6 +1078,31 @@ class TripCommandProcessor:
                     "before you send it again."),
                 trip_name=msg.trip_name,
             )
+        self._logge_dauer(msg, t0)
+        return ergebnis
+
+    def _logge_dauer(self, msg: InboundMessage, t0: float) -> None:
+        """#2439 (AC-1): Befehl und Trip fuer die Dauer-Zeile ermitteln. Laeuft eine
+        Reader-Messung (`befehl_messung`), schreibt SIE die Zeile nach der Uebergabe
+        an den Versand; sonst entsteht sie hier. Nie ein Nachrichtentext, keine
+        Adresse/Nummer/Chat-ID."""
+        try:
+            key, value = self._parse_command(msg.body)
+            if key is None and _metric_id_for_word(_erstes_wort(msg.body)):
+                name = "METRIK"
+            else:
+                name = _befehlsname(key, value)
+            trip_id = msg.resolved_preset_id
+            if not trip_id:
+                trip = self._find_trip(msg.trip_name, msg.user_id)
+                trip_id = trip.id if trip else None
+        except Exception:
+            name, trip_id = "UNKNOWN", None
+        m = _MESSUNG.get()
+        if m is not None:
+            m.name, m.trip_id = name, trip_id
+            return
+        _schreibe_dauer(name, msg.channel, trip_id, t0)
 
     def _process(self, msg: InboundMessage) -> CommandResult:
         """Eigentliche Verarbeitung von ``process`` (ohne Fehlerfang)."""

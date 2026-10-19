@@ -877,3 +877,16 @@ unberührt, der Mitschnitt ist durchgehend fail-soft.
   Verfügbarkeits-Cache) werden atomar geschrieben. Gelingt die Sperre für `alert_log` nicht
   rechtzeitig, steht im ERROR-Log der **vollständige Eintrag**, und der Zähler
   `alert_log_lost_entries` steigt — der Eintrag lässt sich aus dem Log nachtragen.
+
+## Antwortzeit der Befehle diagnostizieren (#2439)
+
+- **Journal:** Jeder Befehl (E-Mail, Telegram, SMS, Premium-SMS) schreibt eine Zeile
+  `befehl=… kanal=… trip=… dauer_ms=…` (ohne personenbezogene Inhalte). Auslesen:
+  `journalctl -u gregor-python | grep "dauer_ms="` (Staging: `gregor-python-staging`, mit `sudo -n`).
+  Der Briefing-Bau loggt zusätzlich Phasenzeiten, so lässt sich ein langsamer Schritt finden.
+- **Beschleunigung:** DWD-Gewitter-Tagesfenster (Zieltag/Nacht/+1/+2) werden vor dem Hauptabruf mit
+  höchstens 2 gleichzeitig vorgewärmt (Fehler nur im Log); die Segmentschleife in `_fetch_weather`
+  läuft parallel über `services/parallel_fetch.fetch_ordered`. Der DWD-Punkt-Fenster-Cache hält
+  2048 statt 512 URLs (~28 MB Speicher).
+- **Monitoring:** `check-gregor20.sh` (henemm-infra) schlägt Alarm, wenn `push.missed_total` eines
+  Befehls-Eingangs steigt (siehe `docs/runbooks/inbound-webhooks.md`).

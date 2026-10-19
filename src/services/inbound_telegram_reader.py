@@ -22,10 +22,13 @@ from lib.go_internal import post_internal
 from output.channels.recipient import _current_inbound_sender
 from output.channels.seven_io_base import mask_number
 from services.notification_service import NotificationService
+from services.trip_command_processor import TripCommandProcessor as _ParseNurProcessor
 from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
     TripCommandProcessor,
+    befehl_markieren,
+    befehl_messung,
     _BARE_KEYWORD_MAP,
     _erste_zeile,
     _erstes_wort,
@@ -175,7 +178,8 @@ class InboundTelegramReader:
         # nur innerhalb dieses Updates darf an chat_id geantwortet werden.
         token = _current_inbound_sender.set(chat_id)
         try:
-            return self._process_message(text, chat_id, settings)
+            with befehl_messung("telegram"):
+                return self._process_message(text, chat_id, settings)
         finally:
             _current_inbound_sender.reset(token)
 
@@ -228,6 +232,7 @@ class InboundTelegramReader:
             name_prefix, rest, name_kind, name_ziel = named
             key, body = self._command_body(rest)
             if key is None:
+                befehl_markieren(None)
                 self._send_unknown_command(chat_id, user_settings)
                 return True
             # Adversary F001-Nachtrag (#2282 Fix-Loop 2): match_leading_name
@@ -260,6 +265,7 @@ class InboundTelegramReader:
         # blockierte z.B. "hilfe" bei Trip+Vergleich mit einer Rueckfrage (B1).
         key, body = self._command_body(text)
         if key is None:
+            befehl_markieren(None)
             self._send_unknown_command(chat_id, user_settings)
             return True
 
@@ -275,6 +281,7 @@ class InboundTelegramReader:
                 key, trips, presets, now_utc, channel="telegram", englisch=englisch,
             )
             if ziel.kind is None:
+                befehl_markieren(key)
                 # Issue #2282 AC-5: identischer Text wie Premium-SMS, kein
                 # Host-Zusatz mehr (der wuerde die Kanalgleichheit brechen).
                 mid = self._notification_service.send_telegram_message(
@@ -403,7 +410,8 @@ class InboundTelegramReader:
         msg = callback.get("message") or {}
         token = _current_inbound_sender.set(str(msg.get("chat", {}).get("id", "")))
         try:
-            return self._handle_callback_query(callback, settings)
+            with befehl_messung("telegram"):
+                return self._handle_callback_query(callback, settings)
         finally:
             _current_inbound_sender.reset(token)
 
@@ -493,6 +501,7 @@ class InboundTelegramReader:
             else:
                 ziel = resolve_trip_only_target(trips, presets, now_utc)
             if ziel.kind is None:
+                befehl_markieren(*_ParseNurProcessor()._parse_command(body))
                 # AC-22: sichtbare Antwort statt stillem No-Op.
                 self._notification_service.edit_telegram_message_text(
                     chat_id=chat_id, message_id=message_id, text=ziel.text,
