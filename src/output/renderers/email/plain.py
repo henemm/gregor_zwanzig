@@ -24,7 +24,7 @@ from app.profile import ActivityProfile
 # Issue #2134: EINE Quelle fuer den Befehlssatz. Import-Richtung ist etabliert
 # und zirkelfrei (`renderers/narrow.py:52` holt sich ACTIONS_BUBBLE_BUTTONS aus
 # demselben Modul); die Gegenrichtung existiert nicht.
-from services.trip_command_processor import command_rows
+from output.renderers.email.command_block import render_commands_plain
 from utils.timezone import local_fmt
 
 from output.renderers.day_window import (
@@ -367,9 +367,7 @@ def render_plain(
     # Erkennung, der HTML-Block und beide Fehlertexte. Vorher fehlte STRECKE
     # hier und zusätzlich RUHETAG im HTML.
     lines.append("")
-    lines.append("── Antwort-Kommandos ──")
-    for label, beschreibung in command_rows():
-        lines.append(f"  {label:<20} – {beschreibung}")
+    lines.append(render_commands_plain("route"))
     lines.append("")
 
     all_rows = [r for tbl in seg_tables for r in tbl]

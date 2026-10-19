@@ -202,7 +202,7 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # vorher/nachher-Diff): einziger Unterschied ist genau diese eine zusaetzliche
 # Kommando-Zeile im Fussz.-Block, identisch fuer HTML und Klartext. Alter
 # Digest 3fc03b40…, neuer ea35bc56….
-_EXPECTED_SHA256 = "ea35bc56b77cb19f0acd64b980de47022b69974694f750e5f1b3d96449aedc4f"
+_EXPECTED_SHA256 = "8116c66194b392e7ea8328ee8dc822e258974ad9641f05555c7b602f291f2c54"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

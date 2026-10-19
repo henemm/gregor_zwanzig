@@ -221,6 +221,8 @@ _BARE_KEYWORD_MAP = {
     "strecke":  "strecke",
     "kuerzel":  "kuerzel",
     "kürzel":   "kuerzel",
+    "startdatum": "startdatum",
+    "report":   "report",
 }
 
 # Issue #2134: EINE Quelle fuer den Steuerbefehlssatz — Hilfe, beide
@@ -272,7 +274,7 @@ _COMMAND_SPECS: tuple[_Befehl, ...] = (
             "no briefings 2 days/12H", _BEIDE_KINDS, "2D", "no briefings until RESUME"),
     _Befehl("skip", "skip", "", "Nächstes Briefing überspringen",
             "skip next briefing", _ROUTE_ONLY),
-    _Befehl("stop", "stop", "", "Briefings dauerhaft deaktivieren",
+    _Befehl("stop", "stop", "", "Briefings dauerhaft deaktivieren (auch ABBRUCH)",
             "end briefings", _ROUTE_ONLY),
     _Befehl("weiter", "resume", "", "Briefings reaktivieren",
             "restart briefings", _BEIDE_KINDS),
@@ -280,6 +282,12 @@ _COMMAND_SPECS: tuple[_Befehl, ...] = (
             "this list", _BEIDE_KINDS),
     _Befehl("kuerzel", "codes", "", "Kürzel-Bedeutungen anzeigen (auch CODES)",
             "code meanings", _BEIDE_KINDS),
+    _Befehl("startdatum", "startdate", "JJJJ-MM-TT",
+            "Startdatum des Trips setzen, alle Etappen verschieben",
+            "move start", _ROUTE_ONLY, "date"),
+    _Befehl("report", "report", "[morning / evening]",
+            "Briefing jetzt senden (Standard: morning)",
+            "send now", _ROUTE_ONLY, "evening"),
 )
 
 # #2417 AC-2: die englischen Woerter wirken wie ihr deutsches Pendant --
@@ -289,7 +297,7 @@ _BARE_KEYWORD_MAP.update({
 })
 
 
-def command_rows() -> list[tuple[str, str]]:
+def command_rows(kind: str = "route") -> list[tuple[str, str]]:
     """(Befehl inkl. Argumentform, Beschreibung) je Eintrag — z.B.
     ``("PAUSE [2d / 12h]", "Briefings für Dauer unterbrechen")``.
 
@@ -297,7 +305,12 @@ def command_rows() -> list[tuple[str, str]]:
     ``_COMMAND_SPECS`` zur Aufrufzeit, sonst waeren sie wieder
     danebengeschriebene Kopien (Mutations-Gegenprobe AC-10).
     """
-    return [(f"{s.wort.upper()} {s.arg}".strip(), s.beschreibung_de) for s in _COMMAND_SPECS]
+    # Ortsvergleich pausiert unbefristet (AC-29 #2417): PAUSE ohne Dauer.
+    return [
+        (f"{s.wort.upper()} {'' if (kind == 'vergleich' and s.wort == 'pause') else s.arg}".strip(),
+         s.beschreibung_de)
+        for s in _COMMAND_SPECS if kind in s.kinds
+    ]
 
 
 def bare_keywords() -> frozenset[str]:
@@ -1358,11 +1371,6 @@ class TripCommandProcessor:
         # "query" statt des tatsaechlich gesendeten Befehls.
         if key == "query" and value and value.lower() in _QUERY_KEYS:
             key = value.lower()
-        # "report" ist beim Trip kein Bare-Keyword (nur "### report: ...")
-        # -- am Vergleich muss die Uebergangsantwort trotzdem greifen, wenn
-        # es bloss als Wort gesendet wird (AC-11).
-        if key is None and (_erstes_wort(msg.body) or "").lower() == "report":
-            key = "report"
         if key == "hilfe":
             return self._show_help_for_kind("vergleich")
         if key == "kuerzel":
@@ -1385,16 +1393,9 @@ class TripCommandProcessor:
                 confirmation_body=hilfe_kurzform(kind),
             )
         zeilen = ["Verfügbare Befehle:", ""]
-        for s in _COMMAND_SPECS:
-            if kind not in s.kinds:
-                continue
-            # AC-29 (#2417): ein Ortsvergleich pausiert IMMER unbefristet
-            # (keine Dauerauswertung, s. ``_apply_compare_pause``) -- die
-            # Vergleichs-Hilfe darf PAUSE deshalb keine Dauer versprechen.
-            # Die Trip-Hilfe (kind="route") bleibt unveraendert bei "[2d / 12h]".
-            arg = "" if (kind == "vergleich" and s.wort == "pause") else s.arg
-            label = f"{s.wort.upper()} {arg}".strip()
-            zeilen.append(f"  {label:<21} – {s.beschreibung_de}")
+        # AC-29 (#2417): Vergleichs-PAUSE ohne Dauer -- steckt in command_rows.
+        for label, beschreibung in command_rows(kind):
+            zeilen.append(f"  {label:<21} – {beschreibung}")
         return CommandResult(
             success=True, command="hilfe",
             confirmation_subject="Hilfe",
@@ -2678,7 +2679,8 @@ class TripCommandProcessor:
             return CommandResult(
                 success=False, command="startdatum",
                 confirmation_subject=f"[{trip.name}] Fehlendes Datum",
-                confirmation_body="Bitte Datum angeben: ### startdatum: YYYY-MM-DD",
+                confirmation_body=self._t("Bitte Datum angeben: STARTDATUM JJJJ-MM-TT",
+                                          "Please give a date: STARTDATE YYYY-MM-DD"),
                 trip_name=trip.name,
             )
         try:
@@ -2687,7 +2689,9 @@ class TripCommandProcessor:
             return CommandResult(
                 success=False, command="startdatum",
                 confirmation_subject=f"[{trip.name}] Ungueltiges Datum",
-                confirmation_body=f"'{value}' ist kein gueltiges Datum. Format: YYYY-MM-DD",
+                confirmation_body=self._t(
+                    f"'{value}' ist kein gueltiges Datum. Format: STARTDATUM JJJJ-MM-TT",
+                    f"'{value}' is not a valid date. Format: STARTDATE YYYY-MM-DD"),
                 trip_name=trip.name,
             )
 
@@ -2713,14 +2717,17 @@ class TripCommandProcessor:
         old_start, shifts = applied["old_start"], applied["shifts"]
         self._delete_snapshot(trip.id, user_id)
 
-        lines = [f"Startdatum verschoben: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}", ""]
-        lines.append("Neue Etappen-Daten:")
+        lines = [self._t(
+            f"Startdatum verschoben: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}",
+            f"Start date moved: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}",
+        ), ""]
+        lines.append(self._t("Neue Etappen-Daten:", "New stage dates:"))
         for s in shifts:
             lines.append(f"  {s.stage_name}: {s.new_date:%d.%m.%Y}")
 
         return CommandResult(
             success=True, command="startdatum",
-            confirmation_subject=f"[{trip.name}] Startdatum geaendert",
+            confirmation_subject=f"[{trip.name}] " + self._t("Startdatum geaendert", "Start date changed"),
             confirmation_body="\n".join(lines),
             trip_name=trip.name, shifts=shifts,
         )

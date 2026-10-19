@@ -386,7 +386,7 @@ ab). Details: `docs/specs/modules/fix_2275_compare_premium_sms_versand.md`,
 aus `BOT_COMMANDS` gesetzt und verifiziert:
 
 - **Startup-Hook** (`api/main.py`, Lifespan): ruft `TelegramOutput.set_my_commands()` auf
-- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (26 Befehle: glance, heute, morgen, now, heute_gewitter, timeline_heute, timeline_morgen, hilfe, jetzt, gewitter, strecke, ruhetag, status, pause, skip, stop, weiter, kuerzel, today, tomorrow, storms, route, restday, resume, help, codes) — seit #2417 AC-21 (deutsche Vereinigung) bzw. AC-20 (englische Slash-Befehle + `kuerzel`/`codes`) mit allen `_COMMAND_SPECS`-Wörtern
+- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (29 Befehle: glance, heute, morgen, now, heute_gewitter, timeline_heute, timeline_morgen, hilfe, jetzt, gewitter, strecke, ruhetag, status, pause, skip, stop, weiter, kuerzel, today, tomorrow, storms, route, restday, resume, help, codes, startdatum, startdate, report) — seit #2417 AC-21 (deutsche Vereinigung) bzw. AC-20 (englische Slash-Befehle + `kuerzel`/`codes`) mit allen `_COMMAND_SPECS`-Wörtern
 - **Idempotent:** jeder Deploy/Restart stellt das Menü sicher
 - **Fail-soft:** fehlender Bot-Token blockt den Service-Start nicht
 - **Live-Verifikation (Post-Deploy):** Der Selftest prüft via `getMyCommands` gegen den Prod-Bot,

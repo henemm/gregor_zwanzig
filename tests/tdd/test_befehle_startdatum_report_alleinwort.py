@@ -386,8 +386,10 @@ def test_ac6_zwei_nutzer_startdatum_und_report_beruehren_nur_nutzer_a(monkeypatc
     b_vorher = _etappendaten(b)
     ziel = startdatum_ziel()
 
-    _sende("premium_sms", recorder, a, f"STARTDATUM {ziel.isoformat()}")
+    # REPORT zuerst: der Offline-Wetterprovider liefert nur Daten fuer heute,
+    # nach der Verschiebung gaebe es kein Briefing mehr.
     texte = _sende("premium_sms", recorder, a, "REPORT")
+    _sende("premium_sms", recorder, a, f"STARTDATUM {ziel.isoformat()}")
 
     assert _etappendaten(a) == [ziel + timedelta(days=i) for i in range(3)]
     assert _etappendaten(b) == b_vorher, "STARTDATUM von A hat B's Etappen veraendert"
@@ -403,9 +405,16 @@ def test_ac6_laufender_report_von_a_weist_report_von_b_nicht_ab(monkeypatch, use
     recorder = install_transport_fakes(monkeypatch)
     a = lege_po_lage_nutzer_an(user_ids, trip_name="Trip A", anzahl_vergleiche=0)
     b = lege_po_lage_nutzer_an(user_ids, trip_name="Trip B", anzahl_vergleiche=0)
-    sperren(a.user_id, a.trip.id, "morning")  # A's Versand laeuft noch
-
-    texte_b = _sende("premium_sms", recorder, b, "REPORT")
+    # A's Versand laeuft noch -- unter DERSELBEN Trip-ID wie B's Trip: nur die user_id im
+    # Sperrschluessel trennt die beiden (sonst bliebe die Isolation ungeprueft, F001).
+    # Ueber die Produktiv-Huelle des Versandwegs nehmen (nicht ueber die Fixture mit
+    # festem Dreier-Schluessel), damit ein Schluessel ohne user_id hier kollidiert.
+    from services.trip_report_scheduler import _release_send_lock, _try_acquire_send_lock
+    assert _try_acquire_send_lock(a.user_id, b.trip.id, "morning")
+    try:
+        texte_b = _sende("premium_sms", recorder, b, "REPORT")
+    finally:
+        _release_send_lock(a.user_id, b.trip.id, "morning")
 
     assert _briefings_an(recorder, b) == 1, f"B wurde durch A's Lauf abgewiesen: {texte_b!r}"
     assert "being sent now" in texte_b[-1].lower()

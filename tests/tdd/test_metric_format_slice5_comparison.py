@@ -122,6 +122,13 @@ GOLDEN = (
     "Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · "
     "Rain = Niederschlag · UV = UV-Index · Thdr = Gewitter · "
     "Rain% = Regenwahrscheinlichkeit · Visib = Sichtweite\n"
+    "\n"
+    "── Antwort-Kommandos ──\n"  # #2420: geteilter Befehlsblock
+    "  PAUSE                – Briefings für Dauer unterbrechen\n"
+    "  WEITER               – Briefings reaktivieren\n"
+    "  HILFE                – Diese Hilfe anzeigen (auch HELP)\n"
+    "  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)\n"
+    "\n"
     "---\n"
     "Gregor Zwanzig"
 )

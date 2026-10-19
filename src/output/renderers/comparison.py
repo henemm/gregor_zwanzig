@@ -411,6 +411,10 @@ def render_comparison_text(
         ))
         lines.append("")
 
+    from output.renderers.email.command_block import render_commands_plain
+    lines.append("")
+    lines.append(render_commands_plain("vergleich"))
+    lines.append("")
     lines.append("---")
     lines.append("Gregor Zwanzig")
 

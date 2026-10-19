@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 from app.profile import ActivityProfile
 # Issue #2134: EINE Quelle fuer den Befehlssatz (s. plain.py) — zirkelfrei,
 # `renderers/narrow.py:52` importiert seit jeher aus demselben Modul.
-from services.trip_command_processor import command_rows
+from output.renderers.email.command_block import render_commands_html
 from utils.timezone import local_dt, local_fmt, tz_abbrev
 
 from output.renderers.day_window import (
@@ -467,52 +467,6 @@ def _render_mobile_hour_list(
         '<div class="mobile-hour-list" style="margin-top:12px;'
         'border:1px solid #e6e1d3;background:#fff;">'
         + "".join(items)
-        + "</div>"
-    )
-
-
-def _render_kommandos_section() -> str:
-    """JSX EmailPreview L185-200 — Antwort-Kommandos eigene Sektion (AC-8).
-
-    Issue #2134: die Befehlsliste ist ABGELEITET (`_COMMAND_SPECS`), nicht mehr
-    hier eingetippt — vorher fehlten STRECKE und RUHETAG, die der
-    Klartext-Fußzeile bekannt waren.
-    """
-    cmds = command_rows()
-    rows = []
-    for i in range(0, len(cmds), 3):
-        tds = ""
-        for cmd, desc in cmds[i:i + 3]:
-            tds += (
-                f'<td style="padding:6px 16px 6px 0;vertical-align:top;">'
-                f'<span style="font-family:{FONT_DATA};font-size:11px;font-weight:700;'
-                f'color:#1d1c1a;min-width:70px;display:inline-block;">{cmd}</span>'
-                f'<span style="font-family:{FONT_DATA};font-size:10px;color:#9a978d;'
-                f'display:block;margin-top:1px;">{desc}</span>'
-                f'</td>'
-            )
-        rows.append(f'<tr>{tds}</tr>')
-
-    grid = (
-        '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:10px;">'
-        + "".join(rows)
-        + "</table>"
-    )
-    hint = (
-        f'<div style="font-family:{FONT_DATA};font-size:10px;color:#b8b4a8;margin-top:10px;">'
-        f'Antworte auf diese E-Mail mit einem Schlüsselwort.</div>'
-    )
-    eyebrow_html = (
-        f'<span style="font-family:{FONT_DATA};font-size:10px;'
-        f'letter-spacing:0.12em;color:#9a978d;font-weight:600;'
-        f'text-transform:uppercase;">Antwort-Kommandos</span>'
-    )
-    return (
-        f'<div style="background:{G_HEADER_BG};border-bottom:1px solid #e6e1d3;'
-        f'padding:16px 28px 18px;">'
-        + eyebrow_html
-        + grid
-        + hint
         + "</div>"
     )
 
@@ -1777,7 +1731,7 @@ def render_html(
         {thunder_html}
         {trend_html}{undelivered_html}
 
-        {_render_kommandos_section()}
+        {render_commands_html("route")}
 
         {risk_legend_html}
         {footer_html}

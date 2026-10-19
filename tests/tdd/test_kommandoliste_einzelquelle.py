@@ -15,7 +15,7 @@ RED-Ursache (acht divergierende Listen, keine zwei gleich):
   Liste.
 
 Mock-frei: echte Renderer-Aufrufe (`render_plain`,
-`_render_kommandos_section`), echter `process()`-Aufruf, echter
+`command_block.render_commands_html`), echter `process()`-Aufruf, echter
 `InboundTelegramReader._process_update`. Der Telegram-Versand haengt an einer
 ECHTEN `NotificationService`-Unterklasse als Naht (kein `Mock()`/`patch()`) —
 geprueft wird der TEXT, den der Reader erzeugt, nicht der Transport.
@@ -198,9 +198,9 @@ def _plain_kommandoblock() -> str:
 
 def _html_kommandoblock() -> str:
     """Der Block "Antwort-Kommandos" aus der ECHTEN HTML-Ausgabe, entmarkupt."""
-    from output.renderers.email.html import _render_kommandos_section
+    from output.renderers.email.command_block import render_commands_html
 
-    return re.sub(r"<[^>]+>", " ", _render_kommandos_section())
+    return re.sub(r"<[^>]+>", " ", render_commands_html("route"))
 
 
 def _befehlswoerter(text: str) -> set[str]:

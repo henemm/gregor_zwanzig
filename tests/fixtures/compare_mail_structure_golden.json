@@ -204,6 +204,13 @@
       "   17:00  Wind 18",
       "",
       "Einheiten: Wind km/h",
+      "",
+      "── Antwort-Kommandos ──",
+      "  PAUSE                – Briefings für Dauer unterbrechen",
+      "  WEITER               – Briefings reaktivieren",
+      "  HILFE                – Diese Hilfe anzeigen (auch HELP)",
+      "  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)",
+      "",
       "---",
       "Gregor Zwanzig"
     ]

@@ -145,7 +145,7 @@ BOT_COMMANDS = [
     {"command": "status", "description": "Heute und kommende Etappen"},
     {"command": "pause", "description": "Briefings für Dauer unterbrechen"},
     {"command": "skip", "description": "Nächstes Briefing überspringen"},
-    {"command": "stop", "description": "Briefings dauerhaft deaktivieren"},
+    {"command": "stop", "description": "Briefings dauerhaft deaktivieren (auch ABBRUCH)"},
     {"command": "weiter", "description": "Briefings reaktivieren"},
     # #2417 Kurzform englisch AC-20: KUERZEL + englische Slash-Befehle
     # (gleich geschriebene now/status/pause/skip/stop stehen oben schon).
@@ -158,6 +158,10 @@ BOT_COMMANDS = [
     {"command": "resume", "description": "restart briefings"},
     {"command": "help", "description": "command list"},
     {"command": "codes", "description": "code meanings"},
+    # #2420: STARTDATUM/REPORT (Beschreibung = Kopie aus _COMMAND_SPECS).
+    {"command": "startdatum", "description": "Startdatum des Trips setzen, alle Etappen verschieben"},
+    {"command": "startdate", "description": "move start"},
+    {"command": "report", "description": "Briefing jetzt senden (Standard: morning)"},
 ]
 
 

@@ -100,11 +100,15 @@
 	"hilfe.befehle.skip.befehl": "SKIP",
 	"hilfe.befehle.skip.text": "Nächstes Briefing überspringen",
 	"hilfe.befehle.stop.befehl": "STOP",
-	"hilfe.befehle.stop.text": "Briefings dauerhaft deaktivieren",
+	"hilfe.befehle.stop.text": "Briefings dauerhaft deaktivieren (auch ABBRUCH)",
 	"hilfe.befehle.weiter.befehl": "WEITER",
 	"hilfe.befehle.weiter.text": "Briefings reaktivieren",
 	"hilfe.befehle.hilfe.befehl": "HILFE",
 	"hilfe.befehle.hilfe.text": "Befehlsliste anzeigen (auch HELP)",
 	"hilfe.befehle.kuerzel.befehl": "KUERZEL",
-	"hilfe.befehle.kuerzel.text": "Kürzel-Bedeutungen anzeigen (auch CODES)"
+	"hilfe.befehle.kuerzel.text": "Kürzel-Bedeutungen anzeigen (auch CODES)",
+	"hilfe.befehle.startdatum.befehl": "STARTDATUM JJJJ-MM-TT",
+	"hilfe.befehle.startdatum.text": "Startdatum des Trips setzen, alle Etappen verschieben",
+	"hilfe.befehle.report.befehl": "REPORT [morning / evening]",
+	"hilfe.befehle.report.text": "Briefing jetzt senden (Standard: morning)"
 }
