@@ -118,3 +118,54 @@ def test_gegenprobe_drift_wird_erkannt(art: str):
         kat[f"hilfe.befehle.{wort}.befehl"] = rows[0][0] + "X"
     d = drift(rows, kat)
     assert d["fehlt_im_katalog"] or d["nur_im_katalog"]
+
+
+# ── #2420 (Epic #2506): STARTDATUM und REPORT werden angeboten ───────────────
+# Harte Literale (nicht aus command_rows() abgeleitet): ein fehlender Eintrag
+# soll den Test rot machen, nicht aus der Erwartung verschwinden.
+
+def test_zaehler_fuenfzehn_befehle_inkl_startdatum_und_report():
+    """Spec feat_2420_befehle_anzeigen AC-14/AC-15: 13 -> 15 Befehle."""
+    befehle = [befehl for befehl, _ in command_rows()]
+    assert len(befehle) == 15, f"{len(befehle)} statt 15 Befehlen: {befehle!r}"
+    assert "STARTDATUM JJJJ-MM-TT" in befehle
+    assert "REPORT [morning / evening]" in befehle
+    assert command_rows() == command_rows("route"), (
+        "command_rows() ohne Argument muss der Trip-Liste (kind='route') entsprechen"
+    )
+
+
+def test_katalog_fuehrt_startdatum_und_report_mit_beschreibung():
+    katalog = _katalog()
+    befehle = katalog_befehle(katalog)
+    assert befehle.get("startdatum") == "STARTDATUM JJJJ-MM-TT"
+    assert befehle.get("report") == "REPORT [morning / evening]"
+    for wort in ("startdatum", "report"):
+        assert str(katalog.get(f"hilfe.befehle.{wort}.text", "")).strip(), wort
+
+
+def test_stop_beschreibung_nennt_abbruch_in_quelle_und_katalog():
+    """ABBRUCH ist kein eigener Befehl, sondern Alias von STOP (Spec-Entscheidung)."""
+    quelle = dict(command_rows())
+    assert "auch ABBRUCH" in quelle["STOP"], quelle["STOP"]
+    assert "ABBRUCH" in _katalog()["hilfe.befehle.stop.text"]
+    assert not [b for b, _ in command_rows() if b.split()[0] in ("ABBRUCH", "COLUMNS")]
+
+
+def test_ortsvergleich_liste_hat_genau_vier_befehle_ohne_pause_dauer():
+    """AC-10: die Vergleichs-Liste ist command_rows('vergleich')."""
+    rows = command_rows("vergleich")
+    assert [b for b, _ in rows] == ["PAUSE", "WEITER", "HILFE", "KUERZEL"], rows
+    assert all(beschreibung for _, beschreibung in rows)
+
+
+def test_bot_commands_enthalten_startdatum_startdate_report_und_halten_bot_api_regeln():
+    from src.output.channels.telegram import BOT_COMMANDS
+
+    eintraege = {c["command"]: c["description"] for c in BOT_COMMANDS}
+    for name in ("startdatum", "startdate", "report"):
+        assert name in eintraege, f"BOT_COMMANDS ohne {name!r}"
+    for name, beschreibung in eintraege.items():
+        assert re.fullmatch(r"[a-z0-9_]{1,32}", name), name
+        assert 0 < len(beschreibung) <= 256, name
+    assert len(eintraege) < 100

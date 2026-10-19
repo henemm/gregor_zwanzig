@@ -352,3 +352,35 @@ def test_ac1_jeder_eintrag_traegt_englisches_wort_und_wirkung():
         f"AC-1: {len(ohne)} von {len(tcp._COMMAND_SPECS)} Eintraegen fehlt "
         f"wort_en oder wirkung_en: {ohne!r}"
     )
+
+
+# ===========================================================================
+# #2420 (Epic #2506) — STARTDATUM und REPORT: alle Kopien aus EINER Quelle
+# SPEC: docs/specs/modules/feat_2420_befehle_anzeigen.md AC-8, AC-15
+# ===========================================================================
+
+def test_2420_befehlssatz_wuchs_auf_fuenfzehn_und_alle_kopien_folgen():
+    """GIVEN ``_COMMAND_SPECS`` mit 15 Eintraegen WHEN Klartext-Block, HTML-Block
+    und der Fehlertext erzeugt werden THEN tragen ALLE drei ``STARTDATUM`` und
+    ``REPORT`` (harte Literale, nicht aus der Quelle abgeleitet) und der
+    Klartext-Block hat genau 15 Zeilen."""
+    from services import trip_command_processor as tcp
+
+    assert len(tcp._COMMAND_SPECS) == 15
+
+    plain = _plain_kommandoblock()
+    html = _befehlswoerter(_html_kommandoblock())
+    assert len([z for z in plain.splitlines() if z.startswith("  ")]) == 15, plain
+    for wort in ("STARTDATUM", "REPORT"):
+        assert wort in _befehlswoerter(plain), f"Klartext-Block ohne {wort}: {plain}"
+        assert wort in html, f"HTML-Block ohne {wort}: {sorted(html)!r}"
+
+    fix = lege_trip_an("t2420", mit_snapshot=False)
+    fehlertext = text_woerter(_fehlertext_unbekanntes_wort(fix))
+    for wort in ("startdatum", "report"):
+        assert wort in fehlertext, f"Fehlertext verschweigt {wort!r}"
+
+
+def test_2420_stop_zeile_nennt_abbruch_in_beiden_bloecken():
+    assert "ABBRUCH" in _befehlswoerter(_plain_kommandoblock())
+    assert "ABBRUCH" in _befehlswoerter(_html_kommandoblock())
