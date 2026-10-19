@@ -983,6 +983,9 @@ def test_ac13_berichte_sind_bit_identisch_zum_eingefrorenen_altstand(mitschrift,
     assert GOLDEN.is_file(), f"Golden-Fixture fehlt: {GOLDEN}"
     referenz = json.loads(GOLDEN.read_text(encoding="utf-8"))
     referenz.pop("_hinweis", None)
+    # Die Referenz enthaelt den Nutzer-Link auf GZ_PUBLIC_HOST. Lokal liefert ihn die .env,
+    # in der CI fehlt sie: fest setzen, damit der Vergleich nicht von der Umgebung abhaengt.
+    monkeypatch.setenv("GZ_PUBLIC_HOST", "https://gregor20.henemm.com")
 
     with _dwd_server(monkeypatch, verzoegerung_s=0.0):
         aktuell = _bericht_aufnehmen(mitschrift, "befehlzeit-golden", *REYKJAVIK)
