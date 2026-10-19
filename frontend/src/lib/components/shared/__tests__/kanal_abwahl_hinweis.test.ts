@@ -39,7 +39,7 @@ async function hinweisText(): Promise<string> {
 	return mod.ltKanalAbwahlHinweisText();
 }
 
-async function rendere(offColumns?: string[]): Promise<string> {
+async function rendere(offColumns?: string[], kanal: string = 'email'): Promise<string> {
 	const { render } = await import('svelte/server');
 	const comp: any = (
 		await import(
@@ -54,7 +54,7 @@ async function rendere(offColumns?: string[]): Promise<string> {
 		primaryColumns: ['temperature'],
 		metricById,
 		friendlyMap: {},
-		activeChannel: 'email',
+		activeChannel: kanal,
 		highlight: null,
 		onRemove: () => {},
 		onDndReorder: () => {},
@@ -90,6 +90,14 @@ describe('#2438 Kanal-Abwahl-Hinweis', () => {
 		assert.ok(hinweis > zeile, 'Hinweis muss unter der Aus-Liste stehen');
 		assert.ok(html.includes(WORTLAUT));
 	});
+
+	for (const kanal of ['telegram', 'sms']) {
+		test(`AC-1/AC-3: Hinweis erscheint auch im Kanal ${kanal} (leere Aus-Gruppe)`, async () => {
+			const html = await rendere([], kanal);
+			assert.match(html, /data-testid="wm2-aus-hinweis"/);
+			assert.ok(html.includes(WORTLAUT));
+		});
+	}
 
 	test('AC-4: globale Grundauswahl-Ansicht (ohne offColumns) hat keinen Hinweis', async () => {
 		const html = await rendere(undefined);

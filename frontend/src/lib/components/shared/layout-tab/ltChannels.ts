@@ -149,3 +149,8 @@ export function ltCapNoteText(params: {
 	const countLabel = hasLabelColumn ? `${colCount} Spalten (Label + ${subject})` : `${colCount} ${subject}`;
 	return `${label}: ${countLabel} · ${fitText}`;
 }
+
+/** Issue #2438 (ADR-0050): Regel-Hinweis im Kanal-Reiter — reine Beschreibung. */
+export function ltKanalAbwahlHinweisText(): string {
+	return 'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.';
+}
