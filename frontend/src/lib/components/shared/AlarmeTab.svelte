@@ -34,7 +34,7 @@
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from '$lib/components/alerts-tab/AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from '$lib/components/alerts-tab/AlertMetricLevelTable.svelte';
-	import VTAlertSample from './versand-tab/VTAlertSample.svelte';
+	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers'; // #2283 S5: echte Alarm-Vorschau statt VTAlertSample
 	import AlertChannelPicker from './AlertChannelPicker.svelte'; import Infobox from '$lib/components/molecules/Infobox.svelte';
 	import {
 		alarmeTabSections,
@@ -561,10 +561,10 @@
 				/>
 			{:else if id === 'sample'}
 				{#if context === 'vergleich'}
-					<VTAlertSample context="vergleich" />
+					<Eyebrow style="margin: 4px 0 10px;">Beispiel-Warnung</Eyebrow><AlertPreviewCard kind="vergleich" id={preset?.id ?? ''} alertRules={vergleichAlarmRegeln(effectiveActiveMetrics, effectiveMetricLevels)} locationIds={preset?.location_ids ?? []} />
 				{:else}
 					<Eyebrow style="margin: 4px 0 10px;">Beispiel-Warnung</Eyebrow>
-					<AlertPreviewCard trip={trip!} alertRules={trip?.alert_rules ?? []} />
+					<AlertPreviewCard kind="route" id={trip?.id ?? ''} alertRules={trip?.alert_rules ?? []} stages={trip?.stages ?? []} />
 				{/if}
 			{/if}
 		</div>

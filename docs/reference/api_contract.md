@@ -217,6 +217,8 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/verify-email/staging-token` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404) |
 | `/api/briefings` | GET, POST |
 | `/api/briefings/{id}` | DELETE, GET, PUT |
+| `/api/briefings/{id}/alert-preview` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; kind-neutrale Alarm-Vorschau, Section 20 (#2283 S4)
+| `/api/briefings/{id}/preview` | GET | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; EIN Abruf, alle Kanäle, Section 20 (#2283 S1)
 | `/api/cockpit/status` | GET |
 | `/api/compare` | GET |
 | `/api/compare/metrics` | GET |
@@ -241,11 +243,10 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/metric-presets/{id}` | DELETE, PATCH |
 | `/api/metrics` | GET |
 | `/api/notify/test` | POST |
-| `/api/preview/compare/{preset_id}` | POST |
-| `/api/preview/{trip_id}/email` | GET |
-| `/api/preview/{trip_id}/signal` | GET | — **tote Route** (Python-Core kennt Signal nicht mehr, #610; Abbau → Sammel-Issue #1199)
-| `/api/preview/{trip_id}/sms` | GET |
-| `/api/preview/{trip_id}/telegram` | GET |
+| `/api/preview/compare/{preset_id}` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
+| `/api/preview/{trip_id}/email` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
+| `/api/preview/{trip_id}/sms` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
+| `/api/preview/{trip_id}/telegram` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
 | `/api/scheduler/alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/scheduler/compare-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
 | `/api/scheduler/compare-official-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
@@ -259,7 +260,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/templates` | GET |
 | `/api/trips` | GET, POST |
 | `/api/trips/{id}` | DELETE, GET, PUT |
-| `/api/trips/{id}/alert-preview` | POST |
+| `/api/trips/{id}/alert-preview` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/alert-preview?kind=route` (#2283)
 | `/api/trips/{id}/briefing-history` | GET |
 | `/api/trips/{id}/send` | POST |
 | `/api/trips/{id}/stages/weather` | GET |
@@ -4014,6 +4015,59 @@ type WebAuthnCredential struct {
 Provides preview rendering of trip reports in Email, SMS, or Telegram formats (Signal wurde app-weit entfernt, Issue #610). Supports both live weather and fixture-based demo mode. Seit Issue #1270 zusätzlich: EIN Compare-Preview-Endpoint, der alle Kanäle eines Orts-Vergleich-Presets in einer Antwort liefert (s. `POST /api/preview/compare/{preset_id}` unten).
 
 **Handler:** `api/routers/preview.py` | **Routing:** `internal/router/router.go` (Trip-Routen), `internal/router/router.go:161-167` (Compare-Proxy)
+
+### GET /api/briefings/{id}/preview (Issue #2283 S1)
+
+Kind-neutrale Vorschau — **ein** Abruf liefert alle Kanäle, für beide kinds in
+derselben Form. Go-Handler `internal/handler/briefing_preview.go::BriefingPreviewHandler`
+prüft `kind` (fehlt/falsch → 400 `{"error":"kind_required"}`) und die ID
+(`store.ValidEntityID` verletzt → 400 `{"error":"validation_error"}`, Python wird
+nicht erreicht), verwirft einen Client-`user_id` und injiziert die Kennung aus
+der Anmeldung (ADR-0003). Proxy-Ziel: Python `GET /api/briefings/{id}/preview`
+(`api/routers/preview.py::preview_briefing`). Zeitlimit Go 30 s (`route`) bzw.
+60 s (`vergleich`).
+
+**Query Parameters:** `kind` (Pflicht, `route|vergleich`); nur bei `kind=route`:
+`type` (`morning|evening`), `date`, `demo` (wie `/email`). Bei `vergleich` gilt nur
+`date`.
+
+**Response 200:**
+
+```json
+{
+  "subject": "...",
+  "email_html": "<html>...</html>",
+  "sms": {"text": "...", "char_count": 137},
+  "telegram": {"body": "...", "bubbles": ["..."]}
+}
+```
+
+`telegram.bubbles` nur bei `kind=route` (#1001). Inhalt je Kanal identisch zu den
+Alt-Routen (`route`: `/email`, `/sms` `token_line`, `/telegram`; `vergleich`:
+`POST /api/preview/compare/{preset_id}`). Fremde ID → 404 (user-scoped Loader).
+Die Alt-Routen bleiben als **Delegates** über dieselbe Proxy-Logik
+(`forwardPreview` in `internal/handler/preview_proxy.go`).
+`GET /api/preview/{trip_id}/signal` ist entfernt (404, #2283 AC-6).
+
+### POST /api/briefings/{id}/alert-preview (Issue #2283 S4)
+
+Kind-neutrale Alarm-Vorschau. Go-Prüfungen wie oben (400 `kind_required`,
+400 `validation_error`, Client-`user_id` verworfen), Körper unverändert durch,
+Zeitlimit 30 s. Proxy-Ziel: Python `POST /api/briefings/{id}/alert-preview`
+(`api/routers/validator.py::briefing_alert_preview`).
+
+- `kind=route`: Body und Antwort exakt wie `POST /api/trips/{id}/alert-preview`
+  (Section 22.5); die Alt-Route bleibt als Delegate.
+- `kind=vergleich`: orts-bezogener Body, **genau eines** von
+  `changes: [{location_id, metric, old_value, new_value, delta, threshold, severity, direction}]`,
+  `onsets: [{location_id, onset_minutes, intensity_label, source, is_convective}]`,
+  `official: [{source, hazard, level, label, valid_from, valid_to, region_label, location_ids}]`.
+  Antwort `{subject, email_html, email_plain, telegram, telegram_bubbles, sms}` aus
+  `src/services/compare_alert_preview_service.py` — dieselben Projektionen wie der
+  Versand (`to_multi_point_alert_message`, `to_multi_location_onset_alert_message`,
+  Bausteine von `send_multi_location_official_alert`, ADR-0011). Keine Seiteneffekte
+  (kein SMS-Kontingent, kein Versand). Ort nicht im Vergleich/Body ungültig → 422,
+  fremder Vergleich → 404.
 
 ### GET /api/preview/{trip_id}/email
 

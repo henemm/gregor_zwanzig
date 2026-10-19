@@ -223,27 +223,21 @@ test('#421 AC-3: waypoint-Match ist case-insensitive', () => {
 // AC-4: Source-Inspection — kein roher Statuscode/JSON mehr in den Frames
 // ============================================================================
 
-const emailSrc = readFileSync(new URL('../EmailIframe.svelte', import.meta.url), 'utf8');
-const smsSrc = readFileSync(new URL('../SmsPhoneFrame.svelte', import.meta.url), 'utf8');
+// Issue #2283: EmailIframe/SmsPhoneFrame rufen nicht mehr selbst ab (Inhalt
+// als Prop). Den Abruf und die Fehler-Uebersetzung traegt seither der
+// geteilte Lader shared/previewLoader.ts — die #421-Zusicherung gilt dort.
+// (Der AbortError-Zweig entfaellt: der Lader bricht keinen Abruf ab.)
+const loaderSrc = readFileSync(new URL('../../shared/previewLoader.ts', import.meta.url), 'utf8');
 
-for (const [name, src] of [
-	['EmailIframe.svelte', emailSrc],
-	['SmsPhoneFrame.svelte', smsSrc]
-] as const) {
-	test(`#421 AC-4: ${name} reicht keinen rohen HTTP-Status/Body mehr durch`, () => {
-		assert.ok(!src.includes('HTTP ${res.status}'), 'keine rohe HTTP-Statuszahl');
-		assert.ok(!src.includes('${detail}'), 'kein roher Body angehängt');
-		assert.ok(!src.includes('Netzwerkfehler:'), 'kein rohes "Netzwerkfehler:"-Präfix');
-	});
+test('#421 AC-4: previewLoader.ts reicht keinen rohen HTTP-Status/Body mehr durch', () => {
+	assert.ok(!loaderSrc.includes('HTTP ${'), 'keine rohe HTTP-Statuszahl');
+	assert.ok(!loaderSrc.includes('${detail}'), 'kein roher Body angehängt');
+	assert.ok(!loaderSrc.includes('Netzwerkfehler:'), 'kein rohes "Netzwerkfehler:"-Präfix');
+});
 
-	test(`#421 AC-4: ${name} verwendet friendlyPreviewError`, () => {
-		assert.ok(src.includes('friendlyPreviewError'), 'importiert + nutzt die zentrale Funktion');
-	});
-
-	test(`#421 AC-4: ${name} behält AbortError-Early-Return im catch-Zweig`, () => {
-		assert.match(src, /AbortError/);
-	});
-}
+test('#421 AC-4: previewLoader.ts verwendet friendlyPreviewError', () => {
+	assert.ok(loaderSrc.includes('friendlyPreviewError'), 'importiert + nutzt die zentrale Funktion');
+});
 
 // ============================================================================
 // Issue #483: Demo-Modus — buildPreviewUrl mit demo-Parameter

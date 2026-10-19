@@ -27,19 +27,26 @@ Vertrag des neuen Moduls (von diesen Tests festgelegt):
       {"official": [{"source", "hazard", "level", "label", "valid_from",
                      "valid_to", "region_label", "location_ids": [...]}, ...]}
 
-Referenzen (= Versandweg, Zeilen gemessen auf origin/main @500734951):
+Referenzen = der ECHTE Versandweg, keine Nachbildung im Test (Zusicherung
+am Wirkort gemessen, #2283 Adversary-Vorgabe):
 - Abweichung (AC-17): `NotificationService.send_multi_location_deviation_alert`
-  (notification_service.py:1040) → `to_multi_point_alert_message`
-  → `_dispatch_alert_message` (:1807): Betreff/E-Mail aus der Bündel-
-  Nachricht, SMS `render_sms(limit=140, location_positions=…)` mit den
-  Positionen aus `CompareAlertService._location_positions`, Telegram je Ort
-  `to_multi_point_alert_message([gruppe])` (:2019) bzw. Kurzstil = SMS-Text.
-- Radar/Onset (AC-18): `send_multi_location_radar_alert` (:1104) →
-  `to_multi_location_onset_alert_message(…, cooldown_display=…)` mit dem
-  Cooldown-Text aus `compare_radar_alert._format_cooldown_display`.
+  → `_dispatch_alert_message`, mit denselben Aufruf-Parametern wie
+  `compare_alert.py` (Positionen aus `CompareAlertService._location_positions`,
+  `effective_compare_telegram_style`).
+- Radar/Onset (AC-18): `send_multi_location_radar_alert` mit dem
+  Cooldown-Text aus `compare_radar_alert._format_cooldown_display` (wie
+  `compare_radar_alert.py`).
+  Mitschnitt fuer AC-17/18 am Draht: Betreff + Klartext ueber `mail_sink`,
+  Telegram ueber einen lokalen Bot-API-Stub (`TELEGRAM_API_BASE` →
+  127.0.0.1), SMS ueber einen lokalen seven.io-Stub (`sms_gateway_url` →
+  127.0.0.1, Sandbox-Key) — Haus-Muster `test_radar_alert_telegram_style.py`
+  / `test_alert_addendum_sms.py`. Nichts geht an echte Empfaenger; das
+  SMS-Tageskontingent wird nur im isolierten tmp-Datenordner reserviert.
+  Bekannte Grenze: das E-Mail-HTML gibt der Versand nur an den echten
+  `EmailOutput` — es wird hier nicht am Draht verglichen (Ableitung aus
+  derselben Nachricht wie der verglichene Klartext).
 - Amtlich (AC-19): der ECHTE Versand `send_multi_location_official_alert`
-  (:1491) mit Aufzeichnungs-Senken (mail_sink/telegram_sink/sms_sink) —
-  keine Nachbildung.
+  mit Aufzeichnungs-Senken (mail_sink/telegram_sink/sms_sink).
 
 Zeit: Stand-Zeile und Onset-Uhrzeiten haengen an `now()`. Jeder Vergleich
 laeuft Referenz → Vorschau → Referenz; nur wenn beide Referenzen gleich sind
@@ -50,14 +57,23 @@ ModuleNotFoundError in jedem Test (Import bewusst IN der Testfunktion).
 """
 from __future__ import annotations
 
+import http.server
+import json
+import socket
+import threading
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
+import output.channels.telegram as tg_module
+from app.config import Settings
 from app.loader import get_data_dir, save_location
 from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.nutzer_tier import nutzer_mit_tier
+from tests.helpers.telegram_empfaenger import profil_chat
 from tests.integration.test_briefing_preview_bundle import env  # noqa: F401  (Fixture)
 
 PRESET_ID = "cp-2283-alarm"
@@ -68,7 +84,15 @@ LOCATIONS = [
     SavedLocation(id="loc-ibk", name="Innsbruck", lat=47.27, lon=11.39, elevation_m=574),
     SavedLocation(id="loc-bz", name="Bozen", lat=46.50, lon=11.35, elevation_m=262),
     SavedLocation(id="loc-mer", name="Meran", lat=46.67, lon=11.16, elevation_m=325),
+    # Weitere Orte nur fuer den Langfall (SMS-Kuerzung greift erst ab ~8 Orten
+    # mit mehreren Metriken — sonst bliebe das 140er-Limit unbeobachtbar).
+    SavedLocation(id="loc-sz", name="Schwaz", lat=47.35, lon=11.71, elevation_m=545),
+    SavedLocation(id="loc-hall", name="Hall", lat=47.28, lon=11.51, elevation_m=574),
+    SavedLocation(id="loc-imst", name="Imst", lat=47.24, lon=10.74, elevation_m=828),
+    SavedLocation(id="loc-lz", name="Lienz", lat=46.83, lon=12.77, elevation_m=673),
+    SavedLocation(id="loc-kuf", name="Kufstein", lat=47.58, lon=12.17, elevation_m=499),
 ]
+ALL_IDS = [loc.id for loc in LOCATIONS]
 
 # Woerter, die eine Handlungsempfehlung anzeigen (CLAUDE.md/PO: nur Daten).
 EMPFEHLUNGS_PHRASEN = ("empfohlen", "empfehl", "sollten", "meiden", "bitte", "verhalten")
@@ -135,31 +159,143 @@ def _assert_channels_equal(got: dict, ref: dict, label: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Draht-Mitschnitt des echten Versands (AC-17/18) — lokale HTTP-Stubs, kein Mock
+# ---------------------------------------------------------------------------
+
+
+def _free_port() -> int:
+    s = socket.socket()
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+class _RecordingServer:
+    """Lokaler HTTP-Server auf 127.0.0.1; `parse` macht aus dem POST-Koerper
+    einen Eintrag, `reply` ist die Antwort (Vorbild _TelegramStub/_SevenIoStub)."""
+
+    def __init__(self, parse, reply: bytes) -> None:
+        self.received: list[dict] = []
+        received = self.received
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):  # noqa: N802
+                length = int(self.headers.get("Content-Length", 0))
+                received.append(parse(self.rfile.read(length).decode()))
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(reply)
+
+            def log_message(self, *args):  # noqa: D401
+                pass
+
+        self.port = _free_port()
+        self._server = http.server.HTTPServer(("127.0.0.1", self.port), Handler)
+        threading.Thread(target=self._server.serve_forever, daemon=True).start()
+
+    @property
+    def base_url(self) -> str:
+        return f"http://127.0.0.1:{self.port}"
+
+    def stop(self) -> None:
+        self._server.shutdown()
+
+
+def _parse_json(raw: str) -> dict:
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return {}
+
+
+def _parse_form(raw: str) -> dict:
+    return {k: v[0] for k, v in urllib.parse.parse_qs(raw).items()}
+
+
+class _Wire:
+    """Beide Stubs + Settings, die AUSSCHLIESSLICH auf 127.0.0.1 zeigen."""
+
+    def __init__(self, telegram: _RecordingServer, sms: _RecordingServer) -> None:
+        self.telegram = telegram
+        self.sms = sms
+
+    def settings(self, user_id: str) -> Settings:
+        chat = "99999"
+        profil_chat(user_id, chat)  # TelegramRecipient.for_user liest user.json
+        # SMS-Tageslimit (#2412): ohne Tarif gilt "free" (Cap 0) -> gesperrt.
+        nutzer_mit_tier(user_id, "premium")
+        return Settings().model_copy(update={
+            "smtp_host": "smtp.test.invalid", "smtp_user": "t@test.invalid",
+            "smtp_pass": "x", "mail_to": "to@test.invalid",
+            "telegram_bot_token": "test-token-2283", "telegram_chat_id": chat,
+            "telegram_test_chat_id": chat,
+            "sms_gateway_url": f"{self.sms.base_url}/api/sms",
+            "seven_api_key": "sandbox-key-2283", "seven_sandbox_key": "sandbox-key-2283",
+            "sms_to": "+49000000000", "sms_from": None,
+        })
+
+    def capture(self, send) -> dict:
+        """Fuehrt `send(mail_sink)` aus und liefert, was am Draht ankam."""
+        tg0, sms0 = len(self.telegram.received), len(self.sms.received)
+        mails: list[tuple[str, str]] = []
+        send(lambda subject, body: mails.append((subject, body)))
+        tgs = [p.get("text", "") for p in self.telegram.received[tg0:]]
+        smss = [p.get("text", "") for p in self.sms.received[sms0:]]
+        assert len(mails) == 1, f"Versand: {len(mails)} Mails an der Senke statt 1"
+        assert tgs, "Versand: keine Telegram-Nachricht am Stub angekommen"
+        assert len(smss) == 1, f"Versand: {len(smss)} SMS am Stub statt 1"
+        return {
+            "subject": mails[0][0], "email_plain": mails[0][1],
+            "sms": smss[0], "telegram_bubbles": tgs,
+        }
+
+
+@pytest.fixture
+def wire(monkeypatch):
+    telegram = _RecordingServer(_parse_json, b'{"ok": true, "result": {"message_id": 1}}')
+    sms = _RecordingServer(_parse_form, b"100")
+    monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", telegram.base_url)
+    assert tg_module.TELEGRAM_API_BASE.startswith("http://127.0.0.1:")
+    yield _Wire(telegram, sms)
+    telegram.stop()
+    sms.stop()
+
+
+# ---------------------------------------------------------------------------
 # AC-17 — Abweichung (to_multi_point_alert_message)
 # ---------------------------------------------------------------------------
 
 
-def _change_dicts(loc_ids: list[str]) -> list[dict]:
+_METRICS = [  # (metric, alt, neu, schwelle)
+    ("gust_max_kmh", 25.0, 72.0, 60.0), ("wind_max_kmh", 15.0, 55.0, 40.0),
+    ("precip_sum_mm", 1.0, 30.0, 20.0), ("temp_max_c", 20.0, 33.0, 30.0),
+]
+
+
+def _change_dicts(loc_ids: list[str], n_metrics: int = 1) -> list[dict]:
     out = []
     for i, loc_id in enumerate(loc_ids):
-        out.append({
-            "location_id": loc_id, "metric": "gust_max_kmh",
-            "old_value": 25.0 + i, "new_value": 72.0 + i, "delta": 47.0,
-            "threshold": 60.0, "severity": "major", "direction": "increase",
-        })
+        for metric, old, new, threshold in _METRICS[:n_metrics]:
+            out.append({
+                "location_id": loc_id, "metric": metric,
+                "old_value": old + i, "new_value": new + i, "delta": new - old,
+                "threshold": threshold, "severity": "major", "direction": "increase",
+            })
     return out
 
 
-def _deviation_reference(preset: dict, body: dict) -> dict:
-    """Nachbau-frei: genau die Aufrufe des Versandwegs (s. Modul-Docstring)."""
+_CHANNELS = {"email", "telegram", "sms"}
+
+
+def _deviation_reference(preset: dict, body: dict, user_id: str, wire: "_Wire") -> dict:
+    """Der ECHTE Versand `send_multi_location_deviation_alert`, aufgerufen wie
+    `compare_alert.py` es tut; gemessen wird, was am Draht ankommt."""
     from app.models import ChangeSeverity, WeatherChange
-    from output.renderers.alert.project import to_multi_point_alert_message
-    from output.renderers.alert.render import (
-        render_email, render_sms, render_subject, render_telegram,
-    )
     from services.compare_alert import CompareAlertService
     from services.compare_alert_channels import effective_compare_telegram_style
-    from utils.timezone import local_fmt, tz_for_coords
+    from services.notification_service import NotificationService
 
     by_loc: dict[str, list] = {}
     for c in body["changes"]:
@@ -169,40 +305,31 @@ def _deviation_reference(preset: dict, body: dict) -> dict:
             severity=ChangeSeverity(c["severity"]), direction=c["direction"],
         ))
     ordered = [lid for lid in preset["location_ids"] if lid in by_loc]
-    groups = [(_loc(lid).name, by_loc[lid], _loc(lid)) for lid in ordered]
-    first = _loc(ordered[0])
-    tz = tz_for_coords(first.lat, first.lon)
-    stand_at = local_fmt(datetime.now(timezone.utc), tz)
-    msg = to_multi_point_alert_message(groups, tz=tz, stand_at=stand_at)
-    html, plain = render_email(msg)
+    entities = [(_loc(lid).name, [_loc(lid)], by_loc[lid]) for lid in ordered]
     positions = CompareAlertService._location_positions(
         preset["location_ids"], {loc.id: loc for loc in LOCATIONS},
     )
-    sms = render_sms(msg, limit=140, location_positions=positions)
-    if effective_compare_telegram_style(preset) == "kurzform":
-        bubbles = [sms]
-    else:
-        bubbles = [
-            render_telegram(to_multi_point_alert_message([g], tz=tz, stand_at=stand_at))
-            for g in groups
-        ]
-    return {
-        "subject": render_subject(msg), "email_html": html, "email_plain": plain,
-        "sms": sms, "telegram_bubbles": bubbles,
-    }
+    service = NotificationService(wire.settings(user_id), user_id)
+    return wire.capture(lambda mail_sink: service.send_multi_location_deviation_alert(
+        entities, _CHANNELS, mail_sink=mail_sink, location_positions=positions,
+        telegram_style=effective_compare_telegram_style(preset),
+    ))
 
 
 @pytest.mark.parametrize(
-    "loc_ids,telegram_style",
+    "loc_ids,telegram_style,n_metrics",
     [
-        (["loc-bz"], None),
-        (["loc-ibk", "loc-mer"], None),
-        (["loc-ibk", "loc-bz", "loc-mer"], None),
-        (["loc-ibk", "loc-mer"], "kurzform"),
+        (["loc-bz"], None, 1),
+        (["loc-ibk", "loc-mer"], None, 1),
+        (["loc-ibk", "loc-bz", "loc-mer"], None, 1),
+        (["loc-ibk", "loc-mer"], "kurzform", 1),
+        (ALL_IDS, None, 4),
     ],
-    ids=["ein-ort", "zwei-orte", "drei-orte", "zwei-orte-kurzform"],
+    ids=["ein-ort", "zwei-orte", "drei-orte", "zwei-orte-kurzform", "acht-orte-sms-gekuerzt"],
 )
-def test_compare_deviation_alert_preview_equals_dispatch_projection(env, loc_ids, telegram_style):  # noqa: F811
+def test_compare_deviation_alert_preview_equals_dispatch_projection(
+    env, wire, loc_ids, telegram_style, n_metrics,  # noqa: F811
+):
     """AC-17: GIVEN ein Ortsvergleich mit Abweichung an einem/mehreren Orten
     WHEN die Alarm-Vorschau (Art Abweichung) abgerufen wird
     THEN ist jeder Kanal identisch zur Nachricht, die der Versand ueber
@@ -214,10 +341,10 @@ def test_compare_deviation_alert_preview_equals_dispatch_projection(env, loc_ids
 
     user_id = env
     preset = _seed(user_id, telegram_style=telegram_style)
-    body = {"changes": _change_dicts(loc_ids)}
+    body = {"changes": _change_dicts(loc_ids, n_metrics)}
 
     got, ref = _stable(
-        lambda: _deviation_reference(preset, body),
+        lambda: _deviation_reference(preset, body, user_id, wire),
         lambda: render_compare_alert_preview(PRESET_ID, user_id=user_id, body=body),
     )
     _assert_channels_equal(got, ref, f"Abweichung {loc_ids}")
@@ -238,15 +365,13 @@ def _onset_dicts(loc_ids: list[str]) -> list[dict]:
     ]
 
 
-def _onset_reference(preset: dict, body: dict) -> dict:
-    from output.renderers.alert.project import to_multi_location_onset_alert_message
-    from output.renderers.alert.render import (
-        render_email, render_sms, render_subject, render_telegram,
-    )
+def _onset_reference(preset: dict, body: dict, user_id: str, wire: "_Wire") -> dict:
+    """Der ECHTE Versand `send_multi_location_radar_alert`, aufgerufen wie
+    `compare_radar_alert.py` es tut; gemessen wird, was am Draht ankommt."""
     from services.compare_alert_channels import effective_compare_telegram_style
     from services.compare_radar_alert import _format_cooldown_display
+    from services.notification_service import NotificationService
     from services.radar_service import NowcastResult
-    from utils.timezone import local_fmt, resolve_location_tz
 
     by_loc = {o["location_id"]: o for o in body["onsets"]}
     ordered = [lid for lid in preset["location_ids"] if lid in by_loc]
@@ -259,43 +384,38 @@ def _onset_reference(preset: dict, body: dict) -> dict:
         ))
         for lid in ordered
     ]
-    tz = resolve_location_tz(entities[0][1])
-    stand_at = local_fmt(datetime.now(timezone.utc), tz)
-    msg = to_multi_location_onset_alert_message(
-        entities, tz=tz, stand_at=stand_at,
+    service = NotificationService(wire.settings(user_id), user_id)
+    return wire.capture(lambda mail_sink: service.send_multi_location_radar_alert(
+        entities, _CHANNELS, mail_sink=mail_sink,
         cooldown_display=_format_cooldown_display(COOLDOWN_MIN),
-    )
-    html, plain = render_email(msg)
-    sms = render_sms(msg, limit=140, location_positions=None)
-    bubbles = [sms] if effective_compare_telegram_style(preset) == "kurzform" else [
-        render_telegram(msg)
-    ]
-    return {
-        "subject": render_subject(msg), "email_html": html, "email_plain": plain,
-        "sms": sms, "telegram_bubbles": bubbles,
-    }
+        telegram_style=effective_compare_telegram_style(preset),
+    ))
 
 
 @pytest.mark.parametrize(
-    "loc_ids", [["loc-ibk"], ["loc-ibk", "loc-bz", "loc-mer"]], ids=["ein-ort", "drei-orte"],
+    "loc_ids,telegram_style",
+    [
+        (["loc-ibk"], None),
+        (["loc-ibk", "loc-bz", "loc-mer"], None),
+        (["loc-ibk", "loc-bz", "loc-mer"], "kurzform"),
+    ],
+    ids=["ein-ort", "drei-orte", "drei-orte-kurzform"],
 )
-def test_compare_onset_alert_preview_equals_dispatch_projection(env, loc_ids):  # noqa: F811
+def test_compare_onset_alert_preview_equals_dispatch_projection(env, wire, loc_ids, telegram_style):  # noqa: F811
     """AC-18: GIVEN ein Ortsvergleich und ein Regen-/Radar-Ereignis an einem
     oder mehreren Orten
     WHEN die Alarm-Vorschau (Art Radar/Onset) abgerufen wird
-    THEN ist jeder Kanal identisch zur Nachricht aus
-    `to_multi_location_onset_alert_message` (mit dem Cooldown-Hinweis des
-    Presets, wie im Versand).
-
-    RED: services.compare_alert_preview_service fehlt (ModuleNotFoundError)."""
+    THEN ist jeder Kanal identisch zur Nachricht, die der Versand
+    `send_multi_location_radar_alert` (mit dem Cooldown-Hinweis des Presets)
+    am Draht abliefert — auch im Telegram-Kurzstil."""
     from services.compare_alert_preview_service import render_compare_alert_preview
 
     user_id = env
-    preset = _seed(user_id)
+    preset = _seed(user_id, telegram_style=telegram_style)
     body = {"onsets": _onset_dicts(loc_ids)}
 
     got, ref = _stable(
-        lambda: _onset_reference(preset, body),
+        lambda: _onset_reference(preset, body, user_id, wire),
         lambda: render_compare_alert_preview(PRESET_ID, user_id=user_id, body=body),
     )
     _assert_channels_equal(got, ref, f"Onset {loc_ids}")
@@ -415,24 +535,27 @@ def test_compare_official_alert_preview_contains_no_recommendation(env):  # noqa
         assert not hits, f"AC-19: Kanal '{key}' enthaelt Handlungsempfehlung {hits}: {text[:300]!r}"
 
 
-def test_dispatch_references_are_buildable_for_all_three_kinds(env):  # noqa: F811
-    """Fixture-Probe (heute GRUEN): die drei Versand-Referenzen lassen sich
-    fuer die Testeingaben bauen, liefern nichtleere Kanaele, und die amtliche
-    Versand-Nachricht selbst enthaelt keine Handlungsempfehlung — die roten
-    Tests oben scheitern also allein am fehlenden Vorschau-Modul."""
+def test_dispatch_references_are_buildable_for_all_three_kinds(env, wire):  # noqa: F811
+    """Fixture-Probe: die drei Versand-Referenzen lassen sich fuer die
+    Testeingaben bauen (Abweichung/Onset am Draht der lokalen Stubs), liefern
+    nichtleere Kanaele, und die amtliche Versand-Nachricht selbst enthaelt
+    keine Handlungsempfehlung."""
     user_id = env
     preset = _seed(user_id)
     refs = {
         "abweichung": _deviation_reference(
-            preset, {"changes": _change_dicts(["loc-ibk", "loc-bz"])},
+            preset, {"changes": _change_dicts(["loc-ibk", "loc-bz"])}, user_id, wire,
         ),
-        "onset": _onset_reference(preset, {"onsets": _onset_dicts(["loc-ibk", "loc-bz"])}),
+        "onset": _onset_reference(
+            preset, {"onsets": _onset_dicts(["loc-ibk", "loc-bz"])}, user_id, wire,
+        ),
         "amtlich": _official_reference(
             preset, {"official": _official_dicts(["loc-ibk"])}, user_id,
         ),
     }
     for kind, ref in refs.items():
-        for key in ("subject", "email_html", "sms"):
+        mail_key = "email_html" if kind == "amtlich" else "email_plain"
+        for key in ("subject", mail_key, "sms"):
             assert ref[key], f"Referenz {kind}: Kanal '{key}' leer"
         assert ref["telegram_bubbles"] and all(ref["telegram_bubbles"]), (
             f"Referenz {kind}: Telegram leer"

@@ -215,7 +215,8 @@ for (const ctx of ['route', 'vergleich'] as Ctx[]) {
 				const wrapper = html.match(/<[^>]*data-testid="email-iframe-wrapper"[^>]*>/);
 				assert.ok(wrapper, 'email-iframe-wrapper fehlt');
 				assert.match(wrapper![0], new RegExp(`data-email-view="${view}"`), `die gewaehlte Ansicht (${view}) kommt nicht aus dem Lader`);
-				const iframes = [...html.matchAll(/<iframe\b[^>]*>/g)].map((m) => m[0]);
+				// Attributbewusst: Svelte laesst `>` im srcdoc roh (escaping.js ATTR_REGEX = /[&"<]/).
+				const iframes = [...html.matchAll(/<iframe\b(?:[^>"]|"[^"]*")*>/g)].map((m) => m[0]);
 				assert.equal(iframes.length, 1, `genau ein iframe erwartet, gefunden: ${iframes.length}`);
 				assert.match(iframes[0], /data-testid="email-iframe"/);
 				assert.match(iframes[0], /srcdoc="[^"]*Vergleich Refuge Ortu/, 'srcdoc traegt nicht das email_html der Vorschau');

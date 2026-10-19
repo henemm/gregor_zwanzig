@@ -367,11 +367,7 @@ class PreviewService:
         report, _segments, _stage_name, _trip_tz = self._build_report(
             trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
         )
-        # Issue #722: compact format — wrap plain text in <pre> for browser preview
-        if not report.email_html and report.email_plain:
-            import html as _html
-            return f"<pre style='font-family:monospace;white-space:pre-wrap;font-size:13px'>{_html.escape(report.email_plain)}</pre>"
-        return report.email_html
+        return _email_html_of(report)
 
     def render_sms_preview(
         self,
@@ -423,5 +419,48 @@ class PreviewService:
             trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
         )
         bubbles = report.telegram_bubbles or []
-        body = "\n\n---\n\n".join(bubbles)
-        return report.email_subject, body, bubbles
+        return report.email_subject, _telegram_body_of(bubbles), bubbles
+
+    def render_all_channels(
+        self,
+        trip_id: str,
+        *,
+        user_id: str,
+        report_type: str = "morning",
+        target_date: str | None = None,
+        demo: bool = False,
+    ) -> dict:
+        """Issue #2283 S1 (AC-1): EIN Report-Bau, ALLE Kanaele — dieselbe
+        Antwortform wie der Orts-Vergleich (`/api/briefings/{id}/preview`).
+        Je Kanal dieselbe Ableitung wie die Einzel-Methoden oben; der
+        Wetterabruf laeuft nur einmal statt je Kanal.
+        """
+        if report_type not in VALID_REPORT_TYPES:
+            raise ValueError(f"Ungültiger report_type '{report_type}'")
+        trip = self._load_trip(trip_id, user_id)
+        now_utc = datetime.now(timezone.utc)
+        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
+        report, _segments, _stage_name, _trip_tz = self._build_report(
+            trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
+        )
+        bubbles = report.telegram_bubbles or []
+        return {
+            "subject": report.email_subject,
+            "email_html": _email_html_of(report),
+            "sms": {"text": report.sms_text, "char_count": len(report.sms_text)},
+            "telegram": {"body": _telegram_body_of(bubbles), "bubbles": bubbles},
+        }
+
+
+def _email_html_of(report) -> str:
+    """E-Mail-HTML der Vorschau; Issue #722: compact format — wrap plain text
+    in <pre> for browser preview."""
+    if not report.email_html and report.email_plain:
+        import html as _html
+        return f"<pre style='font-family:monospace;white-space:pre-wrap;font-size:13px'>{_html.escape(report.email_plain)}</pre>"
+    return report.email_html
+
+
+def _telegram_body_of(bubbles: list[str]) -> str:
+    """Kette aller Bubbles (Rueckwaertskompatibilitaet, #1001 AC-7)."""
+    return "\n\n---\n\n".join(bubbles)

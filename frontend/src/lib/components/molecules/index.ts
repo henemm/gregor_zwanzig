@@ -41,8 +41,7 @@ export { default as CompareStatusRow } from './CompareStatusRow.svelte';
 export { default as HorizonChips }          from './HorizonChips.svelte';
 export { default as ScoreToggle }           from './ScoreToggle.svelte';
 export { default as CompareChannelSwitch }  from './CompareChannelSwitch.svelte';
-export { default as ComparePreviewMissing } from './ComparePreviewMissing.svelte';
 export { default as CompareChatBubble }     from './CompareChatBubble.svelte';
-export { default as CompareSmsPreview }     from './CompareSmsPreview.svelte';
-export { default as CompareBriefingPreview } from './CompareBriefingPreview.svelte';
+// #2283 AC-14: ComparePreviewMissing, CompareSmsPreview, CompareBriefingPreview
+// entfernt — die Vorschau beider Hubs laeuft ueber shared/PreviewTab.
 

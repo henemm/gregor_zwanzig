@@ -12,13 +12,8 @@
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
 	import { Dot, Pill, Btn, Eyebrow, Card, SectionH } from '$lib/components/atoms';
-	import CompareChannelSwitch from '$lib/components/molecules/CompareChannelSwitch.svelte';
-	// Issue #1270: CompareBriefingPreview-Mount entfernt — er wurde nie mit
-	// profile/data gemountet und rendert darum bedingungslos die Missing-Box
-	// „Vorschau-Daten nicht verfügbar." (KB-2). Die Kanal-Anzeige läuft jetzt
-	// direkt über die beiden Anzeige-Hüllen (ADR-0011).
-	import CompareChatBubble from '$lib/components/molecules/CompareChatBubble.svelte';
-	import CompareSmsPreview from '$lib/components/molecules/CompareSmsPreview.svelte';
+	// Issue #2283: geteilter Vorschau-Reiter (gleiche Anordnung wie im Trip-Hub).
+	import PreviewTab from '$lib/components/shared/PreviewTab.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	// SaveStatus-Typ/Helper (der Chip selbst kommt seit #2284 S2 vom SubscriptionHeader).
@@ -32,14 +27,12 @@
 		formatNextSend,
 		channelNamesLabel,
 		presetChannels,
-		premiumSmsPreviewNote,
 		presetProfileLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
-	import { api, langlaeufer } from '$lib/api.js';
-	import { sendComparePreset } from '$lib/utils/sendOutcome';
+	import { api } from '$lib/api.js';
 	import { onMount } from 'svelte';
 	// Issue #1256 Scheibe 6 (AC-14/15/16/31/32/33/34): Orte-Tab-Drag +
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
@@ -135,7 +128,11 @@
 	// Issue #2287: Tabelle und Aufloesung kommen aus der GEMEINSAMEN Reiter-Tabelle
 	// (shared/subscriptionTabs.ts) — dieselben Kennungen wie im Trip-Hub; die
 	// fruehere compareTabsResolve.ts (RETIRED_TABS) geht darin auf.
-	let activeTab = $state<string>('uebersicht');
+	// Issue #2283: synchron aus initialTab — SSR und erster Render zeigen sofort den
+	// richtigen Reiter (der $effect unten bereinigt nur noch die Adresszeile).
+	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert; spaetere
+	// initialTab-Aenderungen setzt der $effect unten.
+	let activeTab = $state<string>(resolveTab('vergleich', initialTab).tab);
 	// E4: Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState auf die neue
 	// Kennung; unbekannte Kennung → Parameter `tab` entfernt. Keine Schleife: danach
 	// ist die Kennung neu, und history.replaceState aendert `initialTab` nicht.
@@ -583,90 +580,12 @@
 	// behaupteten eine Orts-Kappung je Kanal ("Telegram · max 8"), die es im
 	// Ortsvergleich nicht gibt (AC-4).
 
-	// ── Vorschau-Tab (Issue #514, #582) ─────────────────────────────────────────
-	let previewChannel = $state<'email' | 'sms' | 'telegram'>('email');
-	// Issue #1256 S8b (AC-2, Rest-Inventur R1): Kanal-Liste fuer den Umschalter
-	// kommt aus der Preset-Konfiguration statt hart ['email','sms'] — dieselbe
-	// Ableitungsquelle wie channelNamesLabel (S3 AC-6), nur auf die von
-	// CompareChannelSwitch erwarteten Kleinschreib-Keys projiziert (kein neues
-	// Ableitungs-Duplikat).
+	// ── Vorschau-Tab (Issue #514, #582, #2283) ──────────────────────────────────
+	// Issue #2283: Zustand, Abruf und Markup liegen im geteilten PreviewTab
+	// (shared/previewLoader.ts) — hier nur die Kanal-Liste aus der Preset-
+	// Konfiguration (#1256 S8b AC-2), auf Kleinschreib-Keys projiziert.
+	// Test-Senden gibt es nur noch im Hub-Kopf (Aktionsmodell #2278).
 	const previewConfiguredChannels = $derived(presetChannels(preset).map((c) => c.toLowerCase()));
-	let emailView = $state('desktop');
-	let previewHtml = $state('');
-	// Issue #1270 (ADR-0011): Telegram/SMS kommen fertig gerendert aus dem
-	// Backend — das Frontend rendert Kanal-Inhalte nicht nach.
-	let previewTelegram = $state('');
-	let previewSms = $state('');
-	let previewSmsCount = $state(0);
-	let previewLoading = $state(false);
-	let previewError = $state<string | null>(null);
-	let sendQueued = $state(false);
-	let sendLoading = $state(false);
-	let sendError = $state<string | null>(null);
-
-	// Issue #1270 (AC-1/AC-2/AC-7): EIN Abruf auf /api/preview/compare/{id}
-	// liefert alle Kanäle aus EINEM ComparisonEngine-Lauf über die echten Orte
-	// des Presets. Vorher hing der Tab am Validator-Stub
-	// (/api/_validator/compare-email-preview, #464), der einen hartcodierten
-	// "Vorschau-Ort" rendert — der Endpoint selbst bleibt für den externen
-	// Validator bestehen, nur dieser Tab hängt um.
-	//
-	// AC-7: `previewChannel` wird hier bewusst NICHT gelesen — der Effect hängt
-	// nur an Tab + Preset-ID + Orte-Anzahl. Ein Kanalwechsel löst damit keinen
-	// neuen Request aus, er schaltet nur die Anzeige der bereits geladenen
-	// Payloads um. Vorbild: AlertPreviewCard.svelte:34-44.
-	$effect(() => {
-		if (activeTab !== 'vorschau') return;
-		if (preset.location_ids.length === 0) return;
-		const presetId = preset.id;
-		previewHtml = '';
-		previewTelegram = '';
-		previewSms = '';
-		previewSmsCount = 0;
-		previewError = null;
-		previewLoading = true;
-		// #2361: eigenes Budget 70 s (Go-Proxy 60 s), s. `langlaeufer` in api.ts.
-		langlaeufer
-			.compareVorschau<{
-				subject: string;
-				email_html: string;
-				telegram: string;
-				sms: string;
-				sms_char_count: number;
-			}>(presetId)
-			.then((r) => {
-				previewHtml = r.email_html;
-				previewTelegram = r.telegram;
-				previewSms = r.sms;
-				previewSmsCount = r.sms_char_count;
-			})
-			.catch((e: unknown) => {
-				previewError =
-					e && typeof e === 'object' && 'error' in e
-						? String((e as { error: unknown }).error)
-						: e instanceof Error
-							? e.message
-							: 'Vorschau konnte nicht geladen werden';
-			})
-			.finally(() => {
-				previewLoading = false;
-			});
-	});
-
-	async function handleSend() {
-		if (sendLoading) return;
-		sendLoading = true;
-		sendError = null;
-		sendQueued = false;
-		// Issue #2124: geteilter Laufzustand (compare:<id>) + Klassifikation.
-		try {
-			const o = await sendComparePreset(preset.id);
-			if (o.kind === 'ok') sendQueued = true;
-			else sendError = o.message;
-		} finally {
-			sendLoading = false;
-		}
-	}
 
 	// Issue #527/#558 + #631 — Pause/Aktivieren mit Schedule-Gedächtnis (persistiert).
 	// previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
@@ -1135,27 +1054,6 @@
 			>
 				{banner.cta}
 			</Btn>
-			<div style="margin-top: 10px">
-				{#if sendQueued}
-					<p class="send-success" data-testid="compare-send-success-versand">
-						Briefing wurde zur Zustellung vorgemerkt.
-					</p>
-				{:else}
-					<Btn
-						variant="quiet"
-						size="sm"
-						style="width: 100%; justify-content: center"
-						disabled={sendLoading}
-						onclick={handleSend}
-						data-testid="compare-hub-activation-testsend"
-					>
-						{sendLoading ? 'Wird gesendet…' : 'Test-Briefing jetzt senden'}
-					</Btn>
-				{/if}
-				{#if sendError !== null}
-					<p class="send-error">{sendError}</p>
-				{/if}
-			</div>
 		</Card>
 	{/snippet}
 
@@ -1166,90 +1064,15 @@
 					Noch keine Orte konfiguriert — Tab <strong>Orte</strong> besuchen um Kandidaten hinzuzufügen.
 				</div>
 			{:else}
-			<!-- Verifikations-Hinweis (Issue #582) -->
-			<div style="display: flex; align-items: center; gap: 14px; padding: 13px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3); margin-bottom: 20px">
-				<Eyebrow style="flex-shrink: 0">Vorschau · Prüfung</Eyebrow>
-				<div style="font-size: 13px; color: var(--g-ink-2); flex: 1; line-height: 1.5">
-					So sieht dein Briefing aus — gelesen wird es unterwegs im Postfach, nicht hier.
-				</div>
-				<Btn variant="ghost" size="sm" onclick={handleSend} disabled={sendLoading}>
-					{sendLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
-				</Btn>
-			</div>
-
-			{#if sendQueued}
-				<p style="font-size: 0.875rem; color: var(--g-success, #16a34a); margin: 0 0 12px" data-testid="compare-send-success">
-					Briefing wurde zur Zustellung vorgemerkt.
-				</p>
-			{/if}
-			{#if sendError !== null}
-				<p style="font-size: 0.875rem; color: var(--g-danger, #dc2626); margin: 0 0 12px" data-testid="compare-send-error">{sendError}</p>
-			{/if}
-
-			<!-- Kanal-Umschalter + Email-View-Toggle (Issue #582) -->
-			<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap">
-				<CompareChannelSwitch
-					value={previewChannel}
-					onChange={(v: string) => (previewChannel = v as 'email' | 'sms' | 'telegram')}
-					channels={previewConfiguredChannels}
-					note={premiumSmsPreviewNote(preset, previewChannel)}
-				/>
-				{#if previewChannel === 'email'}
-					<div style="display: inline-flex; background: var(--g-paper-deep); border: 1px solid var(--g-rule); border-radius: var(--g-r-2); padding: 3px; gap: 2px; margin-left: 12px">
-						{#each [['desktop', 'Desktop-Inbox'], ['iphone', 'iPhone-Mail']] as [v, l]}
-							<button onclick={() => (emailView = v)} style="padding: 7px 13px; border: none; cursor: pointer; border-radius: 4px; font-size: 12.5px; font-family: var(--g-font-sans); font-weight: {emailView === v ? 600 : 500}; background: {emailView === v ? 'var(--g-card)' : 'transparent'}; box-shadow: {emailView === v ? 'var(--g-shadow-1)' : 'none'}; color: {emailView === v ? 'var(--g-ink)' : 'var(--g-ink-3)'}">
-								{l}
-							</button>
-						{/each}
-					</div>
-				{/if}
-				{#if !previewConfiguredChannels.includes(previewChannel)}
-					<!-- AC-3 (Soll: screen-compare-detail.jsx:365-369): gewählter Kanal ist
-					     im Preset nicht konfiguriert — Beispiel-Render bleibt sichtbar,
-					     Hinweis läuft neben dem Umschalter statt die Render-Fläche zu leeren. -->
-					<span class="mono" data-testid="compare-preview-channel-not-configured" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em">
-						Kanal nicht konfiguriert · Beispiel-Render
-					</span>
-				{/if}
-			</div>
-
-			<!-- Render-Fläche -->
-			<div style="padding: {previewChannel === 'email' && emailView === 'desktop' ? '24px' : '0'}; background: {previewChannel === 'email' && emailView === 'desktop' ? 'var(--g-paper-deep)' : 'transparent'}; border-radius: var(--g-r-3)">
-				{#if previewLoading}
-					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0" data-testid="compare-preview-loading">
-						Vorschau wird geladen…
-					</p>
-				{:else if previewError !== null}
-					<p style="font-size: 0.875rem; color: var(--g-danger, #dc2626); margin: 0" data-testid="compare-preview-error">{previewError}</p>
-				{:else if previewChannel === 'email' && previewHtml !== ''}
-					<div style="width: 680px; max-width: 100%;">
-						<iframe
-							data-testid="compare-preview-iframe"
-							srcdoc={previewHtml}
-							sandbox="allow-same-origin"
-							title="E-Mail-Vorschau"
-							style="width: 100%; min-height: 500px; border: 0; display: block"
-						></iframe>
-					</div>
-				{:else if previewChannel === 'telegram' && previewTelegram !== ''}
-					<!-- Issue #1270 (AC-2): echte Telegram-Vorschau statt Platzhalter-Copy.
-					     Text kommt fertig aus dem Backend (ADR-0011), die Bubble ist reine Hülle. -->
-					<div data-testid="compare-preview-telegram">
-						<CompareChatBubble text={previewTelegram} />
-					</div>
-				{:else if previewChannel === 'sms' && previewSms !== ''}
-					<!-- Issue #1270 (AC-2): echte SMS-Vorschau statt Platzhalter-Copy. -->
-					<div data-testid="compare-preview-sms">
-						<CompareSmsPreview text={previewSms} charCount={previewSmsCount} />
-					</div>
-				{:else}
-					<!-- Ehrlicher Leerfall statt stiller Leere (KB-2/#1269): das Backend
-					     lieferte für diesen Kanal keinen Inhalt. -->
-					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0" data-testid="compare-preview-empty">
-						Für diesen Kanal hat das Briefing keinen Inhalt geliefert.
-					</p>
-				{/if}
-			</div>
+				<!-- #2283: anderer Vergleich (gleiche Seite, andere ID) ⇒ neuer Lader, neuer Abruf. -->
+				{#key preset.id}
+					<PreviewTab
+						context="vergleich"
+						id={preset.id}
+						premiumSms={preset.send_premium_sms === true}
+						configuredChannels={previewConfiguredChannels}
+					/>
+				{/key}
 			{/if}
 		</div>
 	{/if}
@@ -1288,18 +1111,6 @@
 		.compare-tabs-content {
 			padding: 16px 16px 60px;
 		}
-	}
-
-	/* ── Vorschau-Tab (Issue #514) — Design nach HubPreview ─────────────────── */
-	.send-success {
-		font-size: 0.875rem;
-		color: var(--g-success, #16a34a);
-		margin: 0;
-	}
-	.send-error {
-		font-size: 0.875rem;
-		color: var(--g-danger, #dc2626);
-		margin: 0;
 	}
 
 	@media (max-width: 899px) {

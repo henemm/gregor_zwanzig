@@ -7,8 +7,9 @@
 // Modul. Ob die .svelte-Auslöser es WIRKLICH nutzen, zeigt nur der echte Klick
 // (Dateiinhalt-Grep ist als Nachweis untersagt, die SSR-Harness sieht keine
 // Klick-Handler). Läuft seit dem Fix-Loop F001 in der CI-Ampel (`e2e`-Job,
-// Positivliste `.github/ci_e2e_specs.txt`). Alle fünf Auslöser kommen vor:
-//   Trip-Liste, Trip-Detail, Compare-Liste, Compare-Hub (Kopf), Compare-Tabs.
+// Positivliste `.github/ci_e2e_specs.txt`). Alle Auslöser kommen vor:
+//   Trip-Liste, Trip-Detail, Compare-Liste, Compare-Hub (Kopf). Der fünfte
+//   (Compare-Tabs, Versand-Reiter) ist mit #2283 AC-13 entfallen.
 //
 // Nicht vakuum: Jeder Auslöser sperrt sich heute schon SELBST (`disabled` während
 // des eigenen Laufs). Deshalb wird der zweite Versuch über einen ANDEREN Auslöser
@@ -195,7 +196,12 @@ async function cleanup(page: Page, presetId: string, locIds: string[]) {
 }
 
 test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
-	test('AC-3: Kopf „Test senden" + Versand-Tab-Knopf für dasselbe Preset → genau 1 Request', async ({ page }) => {
+	// Issue #2283 AC-13: der Test-Senden-Knopf im Versand-Reiter (CompareTabs) ist
+	// entfallen — Senden laeuft nur noch ueber das Aktionsmodell (#2278). Der zweite
+	// Ausloeser ist deshalb das „Senden" der Compare-Liste (Kebab-Aktion), erreicht
+	// per Klick auf den Rueck-Link (Modulzustand bleibt). Spiegel des Falls unten
+	// (Liste zuerst, dann Hub-Kopf).
+	test('AC-3: Hub-Kopf hält den Versand, Compare-Liste (per Klick erreicht) schickt keinen zweiten Request', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		await login(page);
 		const { presetId, locIds } = await seedPreset(page);
@@ -206,8 +212,12 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 			await compareHubSenden(page);
 			await expect.poll(() => halter.requests.length).toBe(1);
 
-			// Anderer Auslöser (CompareTabs, Versand-Tab) für dasselbe Preset.
-			await page.getByTestId('compare-hub-activation-testsend').click();
+			// Anderer Auslöser (Compare-Liste) für dasselbe Preset, clientseitig erreicht.
+			await page.locator('a.breadcrumb-link[href="/compare"]').click();
+			await page.waitForURL(/\/compare$/);
+			const zeile = page.getByTestId(`compare-tile-${presetId}`);
+			await zeile.getByRole('button', { name: 'Briefing senden' }).click();
+			await page.getByTestId('send-confirm-yes').click();
 			await expect(page.getByText(LAEUFT).first()).toBeVisible({ timeout: 8000 });
 			expect(halter.requests, 'zweiter Versand während des ersten').toHaveLength(1);
 		} finally {

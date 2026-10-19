@@ -198,15 +198,16 @@ test.describe('Issue #1719 S3 AC-6: Ortsvergleich nennt überall die echte SMS-Z
 		const smsBtn = panel.getByRole('button', { name: 'SMS' });
 		await expect(smsBtn).toBeVisible({ timeout: 10_000 });
 		await smsBtn.click();
-		const smsPreview = panel.locator('[data-testid="compare-preview-sms"]');
-		await expect(smsPreview).toBeVisible({ timeout: 15_000 });
+		// Issue #2283: geteilter Vorschau-Reiter — SMS im Telefonrahmen, Zaehler
+		// `sms-char-count` („N/153" im Vergleich).
+		const smsPreview = panel.locator('[data-testid="sms-phone-wrapper"]');
+		await expect(smsPreview).toBeVisible({ timeout: 90_000 });
+		const zaehler = smsPreview.getByTestId('sms-char-count');
 		await expect(
-			smsPreview,
-			'AC-6 FAIL: die SMS-Vorschau muss gegen 153 Zeichen zaehlen (COMPARE_SMS_MAX ist heute ' +
-				'faelschlich 140, CompareSmsPreview.svelte:15)'
-		).toContainText('153');
-		await expect(smsPreview, 'AC-6 FAIL: die SMS-Vorschau darf nicht gegen 140 Zeichen zaehlen').not.toContainText(
-			'/140 Zeichen'
-		);
+			zaehler,
+			'AC-6 FAIL: die SMS-Vorschau muss gegen 153 Zeichen zaehlen (SMS_COMPARE_CHAR_LIMIT, ' +
+				'nicht 140 und nicht das Trip-Budget 160)'
+		).toHaveText(/^\d+\/153$/);
+		await expect(zaehler, 'AC-6 FAIL: die SMS-Vorschau darf nicht gegen 140 Zeichen zaehlen').not.toContainText('/140');
 	});
 });
