@@ -432,8 +432,11 @@ def test_ac6_vorwaermen_laedt_hoechstens_zwei_fenster_gleichzeitig_und_ueberlapp
     Gesamtzeit < 0,75 x (4 x Einzelzeit eines Fensters)."""
     provider = dwd.DwdDirectProvider()
     einstieg = _vorwaermen_einstieg(provider)
-    fenster = [_fenster(i) for i in range(4)]
-    with _dwd_server(monkeypatch, verzoegerung_s=0.15) as server:
+    # Kurze Fenster (wenige Dateien) mit grosser Wartezeit je Download: gemessen wird das
+    # Ueberlappen der WARTEZEIT. Mit 5-h-Fenstern und 0,15 s dominierte auf dem CI-Runner die
+    # Entpack-Rechenzeit (Verhaeltnis 0,75 statt ~0,5).
+    fenster = [_fenster(i, laenge_h=1) for i in range(4)]
+    with _dwd_server(monkeypatch, verzoegerung_s=0.4) as server:
         # Referenz im SELBEN Lauf und unter denselben Bedingungen: dieselben vier Fenster
         # nacheinander (max_parallel=1) -- kein kalter Einzelabruf als Massstab.
         t0 = time.monotonic()
