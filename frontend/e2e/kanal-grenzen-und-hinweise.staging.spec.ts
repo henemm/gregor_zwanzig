@@ -196,3 +196,67 @@ test.describe('Issue #1719 S3: echte Platzgrenzen im Trip-Editor', () => {
 		).toHaveCount(0);
 	});
 });
+
+// Issue #2438 (S2b von #2422): Hinweis „Kanal kann nur abwählen" (AC-1, AC-5).
+// Spec: docs/specs/modules/feat_2438_kanal_abwahl_hinweis.md
+const ABWAHL_HINWEIS =
+	'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.';
+
+test.describe('Issue #2438: Abwahl-Hinweis im Trip-Editor', () => {
+	test.beforeAll(async ({ request }) => {
+		await createTrip(request);
+	});
+
+	test.afterAll(async ({ request }) => {
+		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
+	});
+
+	for (const kanal of ['email', 'telegram', 'sms']) {
+		test(`AC-1: Kanal-Reiter ${kanal} zeigt den Hinweis unter „Aus in diesem Kanal"`, async ({
+			page
+		}) => {
+			await page.setViewportSize({ width: 1440, height: 900 });
+			const tab = await openMetricsTab(page);
+			await tab.getByTestId(`channel-tab-${kanal}`).click();
+			const hinweis = tab.getByTestId('wm2-aus-gruppe').getByTestId('wm2-aus-hinweis');
+			await expect(hinweis).toBeVisible();
+			await expect(hinweis).toHaveText(ABWAHL_HINWEIS);
+		});
+	}
+
+	for (const breite of [320, 375]) {
+		test(`AC-5: ${breite}px ohne Überlauf, Kontrast >= 4.5:1`, async ({ page }) => {
+			await page.setViewportSize({ width: breite, height: 800 });
+			const tab = await openMetricsTab(page);
+			await tab.getByTestId('channel-tab-sms').click();
+			const hinweis = tab.getByTestId('wm2-aus-hinweis');
+			await expect(hinweis).toBeVisible();
+			const m = await hinweis.evaluate((el) => {
+				const lum = (c: string) => {
+					const [r, g, b] = (c.match(/[\d.]+/g) ?? ['0', '0', '0'])
+						.slice(0, 3)
+						.map(Number)
+						.map((v) => {
+							const s = v / 255;
+							return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+						});
+					return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+				};
+				let bg: Element | null = el;
+				let bgc = 'rgba(0, 0, 0, 0)';
+				while (bg && /rgba\(.*, 0\)|transparent/.test(bgc)) {
+					bgc = getComputedStyle(bg).backgroundColor;
+					bg = bg.parentElement;
+				}
+				const a = lum(getComputedStyle(el).color);
+				const b = lum(bgc);
+				return {
+					kontrast: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+					ueberlauf: document.documentElement.scrollWidth - document.documentElement.clientWidth
+				};
+			});
+			expect(m.ueberlauf, 'horizontales Scrollen').toBeLessThanOrEqual(0);
+			expect(m.kontrast, 'Kontrast').toBeGreaterThanOrEqual(4.5);
+		});
+	}
+});
