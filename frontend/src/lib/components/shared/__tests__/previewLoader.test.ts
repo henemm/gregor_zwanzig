@@ -259,6 +259,22 @@ describe('AC-10: Morgen/Abend und Demo nur im Trip (route)', () => {
 		assert.equal(l.getState().options.demo, false);
 	});
 
+	test('route: Optionswechsel VOR dem ersten load() ruft nicht ab, load() nutzt die neue Option', async () => {
+		// Adversary #2283 F004: ein Optionswechsel bei geschlossenem Reiter darf
+		// nicht vorab laden (AC-9: kein Laden vor dem Oeffnen).
+		const { createPreviewLoader } = await ladeModul();
+		installiereNetz();
+		const l = createPreviewLoader({ kind: 'route', id: 't-1', options: { type: 'morning', demo: true } });
+		await l.setOptions({ type: 'evening' });
+		await new Promise((r) => setImmediate(r));
+		assert.equal(aufrufe.length, 0, `Optionswechsel vor dem Oeffnen hat abgerufen: ${JSON.stringify(aufrufe)}`);
+		assert.equal(l.getState().status, 'idle');
+		assert.equal(l.getState().options.type, 'evening');
+		await l.load();
+		assert.equal(vorschauAufrufe().length, 1);
+		assert.equal(query(aufrufe[0].url).get('type'), 'evening');
+	});
+
 	test('vergleich: keine Berichtstyp-/Demo-/Datums-Parameter, Optionswechsel ruft nicht ab', async () => {
 		const { createPreviewLoader } = await ladeModul();
 		installiereNetz();

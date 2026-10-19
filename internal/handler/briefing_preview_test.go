@@ -566,12 +566,15 @@ func vbBodyFor(method string) string {
 // Am Wirkort gemessen: ein echter, langsamer Python-Core antwortet erst nach
 // 32 s. route muss vorher mit 502 abbrechen (Grenze 30 s), vergleich muss die
 // Antwort abwarten (Grenze 60 s, wie POST /api/preview/compare). Beide
-// Teiltests laufen parallel, Gesamtdauer ~32 s. Die Obergrenze 60 s wird
-// bewusst nicht ausgemessen (kostete > 60 s Laufzeit).
+// Teiltests laufen parallel. Seit der Adversary-Runde #2283 (F002) werden
+// auch die Obergrenzen am Wirkort gemessen: die Alarm-Vorschau bricht nach
+// 30 s ab (nicht 60 s wie die Vergleichs-Vorschau), und die Vergleichs-
+// Vorschau bricht nach 60 s ab (ein eigener Upstream antwortet erst nach
+// 62 s). Gesamtdauer damit ~62 s.
 
 func TestBriefingPreview_Zeitlimit_Route30sVergleich60s(t *testing.T) {
 	if testing.Short() {
-		t.Skip("Zeitlimit-Messung dauert ~32 s")
+		t.Skip("Zeitlimit-Messung dauert ~62 s")
 	}
 	py := newVBUpstream(t, nil)
 	py.delay = 32 * time.Second
@@ -593,6 +596,27 @@ func TestBriefingPreview_Zeitlimit_Route30sVergleich60s(t *testing.T) {
 		took := time.Since(start)
 		if w.Code != http.StatusOK || took < 31*time.Second {
 			t.Errorf("kind=vergleich: Status %d nach %v, erwartet 200 nach ~32 s (Zeitlimit 60 s)", w.Code, took)
+		}
+	})
+	t.Run("alarm-vorschau vergleich bricht nach 30 s ab", func(t *testing.T) {
+		t.Parallel()
+		start := time.Now()
+		w := env.do(t, "POST", "/api/briefings/cmp-7/alert-preview?kind=vergleich", "alice", "{}")
+		took := time.Since(start)
+		if w.Code != http.StatusBadGateway || took < 29*time.Second || took > 31*time.Second {
+			t.Errorf("alert-preview kind=vergleich: Status %d nach %v, erwartet 502 nach ~30 s", w.Code, took)
+		}
+	})
+	t.Run("vergleich bricht nach 60 s ab", func(t *testing.T) {
+		t.Parallel()
+		slow := newVBUpstream(t, nil)
+		slow.delay = 62 * time.Second
+		slowEnv := newVBEnv(t, slow.srv.URL, "alice")
+		start := time.Now()
+		w := slowEnv.do(t, "GET", "/api/briefings/cmp-7/preview?kind=vergleich", "alice", "")
+		took := time.Since(start)
+		if w.Code != http.StatusBadGateway || took < 59*time.Second || took > 61*time.Second {
+			t.Errorf("kind=vergleich: Status %d nach %v, erwartet 502 nach ~60 s", w.Code, took)
 		}
 	})
 }

@@ -21,8 +21,11 @@ veraendern. Kein Versand, kein Schreiben.
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+
+logger = logging.getLogger(__name__)
 
 _SMS_LIMIT = 140  # wie `_dispatch_alert_message` (Alarm-SMS-Limit)
 _BODY_KINDS = ("changes", "onsets", "official")
@@ -165,7 +168,17 @@ def _official(preset: dict, official: list[dict], all_locations: dict, style: st
         for o in official
     ]
     # Wie der Versand: alle (aufloesbaren) Orte des Vergleichs, erster Ort traegt die tz.
-    locations = [all_locations[lid] for lid in location_ids if lid in all_locations]
+    locations, dropped = [], []
+    for lid in location_ids:
+        if lid not in all_locations:
+            dropped.append(lid)
+            continue
+        locations.append(all_locations[lid])
+    if dropped:
+        logger.warning(
+            "compare alert preview %s: Orte %s nicht aufloesbar — "
+            "fehlen in der Vorschau (vgl. #2283)", preset.get("id"), dropped,
+        )
     dto_notices = build_compare_official_alert_notices(
         [loc.id for loc in locations], {loc.id: loc.name for loc in locations}, tagged,
     )

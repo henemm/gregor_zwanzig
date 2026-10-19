@@ -141,6 +141,39 @@ def test_bundle_honours_demo_flag_like_single_routes(env, client, live_fixture_d
     )
 
 
+def test_bundle_without_demo_parameter_uses_real_data(env, client, live_fixture_dir):  # noqa: F811
+    """GIVEN ein Trip, Demo-Fixtures und davon abweichende Offline-„Live"-Daten
+    WHEN das Buendel (kind=route) OHNE demo-Parameter abgerufen wird — so ruft
+    das Frontend bei „echte Daten" ab (kein demo-Parameter)
+    THEN liefert es denselben Inhalt wie demo=false und NICHT den Demo-Inhalt
+    (Standardwert des Parameters ist False, Adversary #2283 F003)."""
+    user_id = env
+    _seed_trip(user_id, TRIP_ID, "Demo-Trip 2283")
+
+    from services.weather_cache import get_shared_weather_cache
+
+    def abruf(**demo):
+        get_shared_weather_cache().clear()  # Cache schluesselt nicht nach Provider (#2581)
+        resp = client.get(
+            f"/api/briefings/{TRIP_ID}/preview",
+            params={"kind": "route", "user_id": user_id, "type": "morning",
+                    "date": TRIP_DATE, **demo},
+        )
+        assert resp.status_code == 200, f"Buendel {demo}: {resp.status_code} {resp.text[:200]}"
+        return resp.json()
+
+    ohne = abruf()
+    echt = abruf(demo="false")
+    demo_an = abruf(demo="true")
+    assert ohne["email_html"] == echt["email_html"], (
+        "ohne demo-Parameter weicht das Buendel von demo=false ab"
+    )
+    assert ohne["sms"]["text"] == echt["sms"]["text"]
+    assert ohne["email_html"] != demo_an["email_html"], (
+        "ohne demo-Parameter liefert das Buendel Demo-Daten — Standard muss False sein"
+    )
+
+
 # ---------------------------------------------------------------------------
 # F006a — mehrere Telegram-Nachrichten als Liste
 # ---------------------------------------------------------------------------

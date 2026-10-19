@@ -514,6 +514,46 @@ def test_compare_official_alert_preview_equals_official_dispatch(env, loc_ids): 
     _assert_channels_equal(got, ref, f"amtlich {loc_ids}")
 
 
+def test_compare_official_alert_preview_reports_unresolvable_location(env, caplog):  # noqa: F811
+    """Adversary #2283 F001: GIVEN ein Ortsvergleich, der neben echten Orten
+    eine Ort-ID fuehrt, die der Nutzer nicht (mehr) gespeichert hat
+    WHEN die Alarm-Vorschau (Art amtlich) abgerufen wird
+    THEN wird der nicht aufloesbare Ort per Warnung mit seiner ID gemeldet,
+    und die Vorschau fuer die uebrigen Orte ist identisch zu der eines
+    Vergleichs ohne diesen Ort (kein stilles Verwerfen, Ausgabe unveraendert)."""
+    import logging
+
+    from services.compare_alert_preview_service import render_compare_alert_preview
+
+    user_id = env
+    preset = _seed(user_id)
+    ghost = "loc-2283-geloescht"
+    with_ghost = {**preset, "id": PRESET_ID + "-geist",
+                  "location_ids": [ghost, *preset["location_ids"]]}
+    write_compare_briefings(get_data_dir(user_id), [preset, with_ghost])
+    body = {"official": _official_dicts(["loc-ibk"])}
+    logger_name = "services.compare_alert_preview_service"
+
+    def ref():
+        return render_compare_alert_preview(PRESET_ID, user_id=user_id, body=body)
+
+    with caplog.at_level(logging.WARNING, logger=logger_name):
+        got, clean = _stable(
+            ref,
+            lambda: render_compare_alert_preview(with_ghost["id"], user_id=user_id, body=body),
+        )
+    warnungen = [r for r in caplog.records
+                 if r.name == logger_name and r.levelno >= logging.WARNING]
+    assert any(ghost in r.getMessage() for r in warnungen), (
+        f"nicht aufloesbarer Ort {ghost} wurde nicht gemeldet: "
+        f"{[r.getMessage() for r in warnungen]}"
+    )
+    assert not any(lid in r.getMessage() for r in warnungen for lid in ALL_IDS), (
+        "aufloesbare Orte duerfen nicht als verworfen gemeldet werden"
+    )
+    _assert_channels_equal(got, clean, "amtlich mit nicht aufloesbarem Ort")
+
+
 def test_compare_official_alert_preview_contains_no_recommendation(env):  # noqa: F811
     """AC-19 (nur Daten): GIVEN eine amtliche Warnung ohne Verhaltenstext
     WHEN die Alarm-Vorschau (Art amtlich) abgerufen wird

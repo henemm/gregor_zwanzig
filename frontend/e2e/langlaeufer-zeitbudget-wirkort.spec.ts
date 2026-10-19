@@ -36,7 +36,11 @@ import { createTestComparePreset, createTestLocation, cleanupTracked, login, reg
 async function halteAbrufFest(page: Page, pfad: RegExp, antwort: unknown) {
 	const festgehalten: Route[] = [];
 	const abgebrochen: Request[] = [];
+	// Gesamtzahl aller Abrufe — anders als `festgehalten` nie geleert, damit
+	// ein Neuabruf auch NACH `freigeben()` noch zaehlbar bleibt.
+	let gesamt = 0;
 	await page.route(pfad, (route) => {
+		gesamt += 1;
 		festgehalten.push(route);
 	});
 	page.on('requestfailed', (req) => {
@@ -45,6 +49,7 @@ async function halteAbrufFest(page: Page, pfad: RegExp, antwort: unknown) {
 	return {
 		abgebrochen,
 		unterwegs: () => festgehalten.length,
+		aufrufe: () => gesamt,
 		freigeben: async () => {
 			for (const route of festgehalten.splice(0)) {
 				// Ein bereits vom Browser abgebrochener Abruf laesst sich nicht
@@ -124,7 +129,7 @@ test.describe('#2361 Langlaeufer-Budgets wirken an der Aufrufstelle', () => {
 		await panel.getByTestId('preview-email-view-mobile').click();
 		await panel.getByTestId('preview-email-view-desktop').click();
 		await page.evaluate(() => new Promise((r) => setTimeout(r, 0)));
-		expect(abruf.unterwegs(), 'Kanal-/Ansichtswechsel hat die Vorschau erneut abgerufen').toBe(1);
+		expect(abruf.aufrufe(), 'Kanal-/Ansichtswechsel hat die Vorschau erneut abgerufen').toBe(1);
 	});
 
 	test('Test-Versand im Konto (130 s): laeuft nach 26 s noch und meldet danach „Gesendet"', async ({ page }) => {
