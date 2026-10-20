@@ -39,7 +39,11 @@ async function hinweisText(): Promise<string> {
 	return mod.ltKanalAbwahlHinweisText();
 }
 
-async function rendere(offColumns?: string[], kanal: string = 'email'): Promise<string> {
+async function rendere(
+	offColumns?: string[],
+	kanal: string = 'email',
+	showAbwahlHinweis?: boolean
+): Promise<string> {
 	const { render } = await import('svelte/server');
 	const comp: any = (
 		await import(
@@ -65,6 +69,7 @@ async function rendere(offColumns?: string[], kanal: string = 'email'): Promise<
 		props.offColumns = offColumns;
 		props.onRestore = () => {};
 	}
+	if (showAbwahlHinweis !== undefined) props.showAbwahlHinweis = showAbwahlHinweis;
 	return render(comp, { props }).body;
 }
 
@@ -76,14 +81,14 @@ describe('#2438 Kanal-Abwahl-Hinweis', () => {
 	});
 
 	test('AC-3: leere Aus-Gruppe zeigt den Hinweis trotzdem', async () => {
-		const html = await rendere([]);
+		const html = await rendere([], 'email', true);
 		assert.match(html, /data-testid="wm2-aus-gruppe"/);
 		assert.match(html, /data-testid="wm2-aus-hinweis"/);
 		assert.ok(html.includes(WORTLAUT), 'Hinweistext fehlt im gerenderten Baustein');
 	});
 
 	test('AC-7: befüllte Aus-Gruppe: Hinweis NACH den Aus-Zeilen, Aus-Zeile bleibt', async () => {
-		const html = await rendere(['wind']);
+		const html = await rendere(['wind'], 'email', true);
 		const zeile = html.indexOf('data-testid="wm2-aus-row"');
 		const hinweis = html.indexOf('data-testid="wm2-aus-hinweis"');
 		assert.ok(zeile >= 0, 'wm2-aus-row muss unverändert erscheinen');
@@ -93,7 +98,7 @@ describe('#2438 Kanal-Abwahl-Hinweis', () => {
 
 	for (const kanal of ['telegram', 'sms']) {
 		test(`AC-1/AC-3: Hinweis erscheint auch im Kanal ${kanal} (leere Aus-Gruppe)`, async () => {
-			const html = await rendere([], kanal);
+			const html = await rendere([], kanal, true);
 			assert.match(html, /data-testid="wm2-aus-hinweis"/);
 			assert.ok(html.includes(WORTLAUT));
 		});
@@ -103,5 +108,20 @@ describe('#2438 Kanal-Abwahl-Hinweis', () => {
 		const html = await rendere(undefined);
 		assert.doesNotMatch(html, /wm2-aus-hinweis/);
 		assert.ok(!html.includes(WORTLAUT));
+	});
+
+	// Fix #2438 (fix_2438_hinweis_nur_kanal_block): Opt-in, Default aus.
+	test('AC-3/AC-6: offColumns OHNE showAbwahlHinweis (Ausblick) zeigt keinen Hinweis, Aus-Gruppe bleibt', async () => {
+		for (const off of [[], ['wind']]) {
+			const html = await rendere(off);
+			assert.match(html, /data-testid="wm2-aus-gruppe"/);
+			assert.doesNotMatch(html, /wm2-aus-hinweis/);
+			assert.ok(!html.includes(WORTLAUT));
+		}
+	});
+
+	test('AC-5: ohne offColumns bleibt der Hinweis auch mit showAbwahlHinweis=true aus', async () => {
+		const html = await rendere(undefined, 'email', true);
+		assert.doesNotMatch(html, /wm2-aus-hinweis/);
 	});
 });
