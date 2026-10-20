@@ -123,14 +123,16 @@ test.describe('Issue #1719 S3: echte Platzgrenzen im Trip-Editor', () => {
 		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 	});
 
-	test('AC-3: bei 9 aktiven Metriken sitzt die Telegram-Kapplinie nach der 7., Überlauf-Chip nennt 2', async ({
+	test('AC-3: bei 12 aktiven Zeilen sitzt die Telegram-Kapplinie nach der 7., Überlauf-Chip nennt 5', async ({
 		page
 	}) => {
 		const tab = await openMetricsTab(page);
 		const rows = tab
 			.getByTestId('weather-metrics-kanal-reihenfolge')
 			.locator('[data-testid="wm2-reihenfolge-row"]');
-		await expect(rows).toHaveCount(9);
+		// 9 gewählte Metriken, aber `temperature` bringt Nacht-/Tages-Tief/-Hoch als
+		// eigene Zeilen mit (#2454/#1613): 12 Zeilen im Kanal-Block.
+		await expect(rows).toHaveCount(12);
 
 		const telegramBtn = tab.getByTestId('channel-tab-telegram');
 		await telegramBtn.click();
@@ -144,8 +146,8 @@ test.describe('Issue #1719 S3: echte Platzgrenzen im Trip-Editor', () => {
 
 		await expect(
 			telegramBtn,
-			'AC-3 FAIL: Überlauf-Chip am Telegram-Tab muss "−2" zeigen (9 aktive Metriken − 7 Budget)'
-		).toContainText('−2');
+			'AC-3 FAIL: Überlauf-Chip am Telegram-Tab muss "−5" zeigen (12 aktive Zeilen − 7 Budget)'
+		).toContainText('−5');
 	});
 
 	test('AC-4: SMS-Reiter nennt die Zeichengrenze 160, nicht "—" und nicht "140", keine Spaltengrenze', async ({
