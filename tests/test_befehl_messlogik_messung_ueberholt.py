@@ -67,6 +67,14 @@ def test_ac11_gueltigkeit_der_sofortweg_messung(empfangen, gelaufen, erwartet, w
     assert ml.messung_ueberholt(_job(empfangen, gelaufen)) is erwartet, warum
 
 
+def test_f005_abstand_genau_an_der_grenze_ist_nicht_ueberholt():
+    """Exakt 60 s zwischen Webhook und Poll-Lauf, Tick-Grenze 10:05:00 liegt dahinter ->
+    gueltig (Grenze gehoert dazu). Mit Tick DAZWISCHEN waere nur >60 s ueberholt."""
+    ml = _messlogik()
+    assert ml.messung_ueberholt(_job("10:04:00", "10:05:00")) is False
+    assert ml.messung_ueberholt(_job("10:04:00", "10:05:01")) is True
+
+
 def test_ac11_grenze_und_takt_sind_parameter():
     ml = _messlogik()
     job = _job("10:01:10", "10:02:20")

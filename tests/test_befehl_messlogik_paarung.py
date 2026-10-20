@@ -171,6 +171,36 @@ def test_ac15_lauf_ausserhalb_des_fensters_wird_nicht_kalt():
     assert ml.kalt_laeufe(korsika, sorted(_journal(ml) + [spaet])) == []
 
 
+# ---------------------------------------------------------------------------
+# Fix-Loop 1 (Adversary F001/F005): Fensterbezug und Randwert der Paarung
+# ---------------------------------------------------------------------------
+
+def _dauer_journal(ml, *zeilen):
+    """Dauer-Zeilen im echten Journalformat (wie im Mitschnitt, UTC)."""
+    return ml.dauerzeilen(ml.lese_journal([
+        f"2026-10-19T{ts}+00:00 Rennwienix uv[1]: x INFO befehl_dauer: befehl={b} "
+        f"kanal=email trip=t dauer_ms={ms}" for ts, b, ms in zeilen]))
+
+
+def test_f001_fenster_zaehlt_ab_heute_start_nicht_ab_heute_ende():
+    """HEUTE dauerte 100 s und endete 09:00:00; das HELP kam 30 s nach dem HEUTE-ENDE, also
+    130 s nach dem HEUTE-START. Mit Fenster 60 s ist das KEIN Paar; Ende-Bezug waere 30 s."""
+    ml = _messlogik()
+    laeufe = _dauer_journal(ml, ("09:00:00.000000", "HEUTE", 100_000),
+                            ("09:00:30.000000", "HELP", 200))
+    assert ml.paare_heute_help(laeufe, EMAIL, 60) == []
+    assert len(ml.paare_heute_help(laeufe, EMAIL, 130)) == 1
+
+
+def test_f005_randwert_des_fensters_gehoert_noch_dazu():
+    """HELP genau `max_abstand_s` (60,000 s) nach dem HEUTE-Start: noch gepaart."""
+    ml = _messlogik()
+    laeufe = _dauer_journal(ml, ("09:00:10.000000", "HEUTE", 10_000),
+                            ("09:01:00.000000", "HELP", 200))
+    assert len(ml.paare_heute_help(laeufe, EMAIL, 60)) == 1
+    assert ml.paare_heute_help(laeufe, EMAIL, 59.9) == []
+
+
 @pytest.mark.parametrize("quellen", [("dwd_fenster", "fr_direct_fenster")])
 def test_ac15_standardquellen_umfassen_beide_provider(quellen):
     ml = _messlogik()

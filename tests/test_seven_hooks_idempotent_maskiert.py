@@ -190,6 +190,21 @@ def test_ac2_list_zeigt_hooks_maskiert(double):
     assert not _posts(double)
 
 
+def test_f005_list_maskiert_jedes_secret_vorkommen_in_einer_zeile(double):
+    """Eine Ziel-URL mit dem Pfad-Secret zweimal (z. B. als Rueckgabe-Parameter): beide Stellen
+    werden maskiert, nicht nur die erste."""
+    double["hooks"].append({
+        "id": "4800", "headers": "", "event_type": "sms_mo", "event_filter": "x",
+        "request_method": "POST", "enabled": True, "created": "2026-10-20 12:00:00",
+        "target_url": (f"{PROD}/api/webhooks/sms/{PFAD_SECRET}"
+                       f"?weiter={PROD}/api/webhooks/sms/{STAGING_SECRET}")})
+    erg = _lauf(double, "list", mit_set_env=False)
+    assert erg.returncode == 0, erg.stderr
+    zeile = next(z for z in erg.stdout.splitlines() if "4800" in z)
+    assert zeile.count("/api/webhooks/sms/****") == 2, zeile
+    _ohne_secrets(erg)
+
+
 def test_ac2_set_meldet_angelegten_hook_maskiert(double):
     erg = _lauf(double, "set")
     assert f"{PROD}/api/webhooks/sms/****" in erg.stdout, erg.stdout

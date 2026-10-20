@@ -202,3 +202,89 @@ def test_ac8_winterzeit_wird_als_europe_berlin_gelesen():
     assert b["antwort"] == _utc("2026-10-27T07:00:45.100")
     assert b["antwortzeit_s"] == pytest.approx(45.1, abs=0.001)
     assert b["befehl"] == "STATUS"
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 1 (Adversary F002/F003): Median, Absender, 30-s-Naehe, Einmal-Zuordnung
+# ---------------------------------------------------------------------------
+
+_ABS_B = "+49000ANDERER"
+
+
+def _von(absender: str, ts: str, text: str) -> dict:
+    return {**_ein(ts, text), "from": absender}
+
+
+def _an(absender: str, ts: str, text: str) -> dict:
+    return {**_aus(ts, text), "to": absender}
+
+
+def test_f002_median_ist_nicht_der_mittelwert():
+    """Drei beantwortete HELP nach 10, 12 und 100 s: Median 12 s (Mittelwert waere 40,67 s)."""
+    erg = _werte(
+        [_ein("2026-10-27 09:00:00", "help"), _ein("2026-10-27 09:10:00", "help"),
+         _ein("2026-10-27 09:20:00", "help")],
+        [_aus("2026-10-27 09:00:10", "Commands"), _aus("2026-10-27 09:10:12", "Commands"),
+         _aus("2026-10-27 09:21:40", "Commands")], [])
+    stat = erg["statistik"]["HELP"]
+    assert stat["anzahl"] == 3
+    assert stat["max_s"] == pytest.approx(100.0)
+    assert stat["median_s"] == pytest.approx(12.0)
+
+
+def test_f003_antwort_geht_an_den_absender_des_eingangs():
+    """Zwei Absender, zwei Eingaenge im selben Fenster. Die Antwort an B liegt der Dauer-Zeile
+    von A zeitlich naeher als die eigene -- sie darf A trotzdem nicht zugeordnet werden."""
+    erg = _werte(
+        [_von(_ABS, "2026-10-27 09:00:00", "help"), _von(_ABS_B, "2026-10-27 09:00:02", "codes")],
+        [_aus("2026-10-27 09:00:05.900", "Commands (A)"),
+         _an(_ABS_B, "2026-10-27 09:00:04.900", "Codes (B)")],
+        [_dauer("2026-10-27T08:00:05.000000", "HELP", 100),
+         _dauer("2026-10-27T08:00:06.000000", "CODES", 100)],
+    )
+    a = _eintrag(erg, "2026-10-27T08:00:00")
+    b = _eintrag(erg, "2026-10-27T08:00:02")
+    assert (a["befehl"], b["befehl"]) == ("HELP", "CODES")
+    assert a["antwort"] == _utc("2026-10-27T08:00:05.900")
+    assert b["antwort"] == _utc("2026-10-27T08:00:04.900")
+
+
+def test_f003_nachricht_einer_fremden_nummer_an_den_absender_ist_keine_antwort():
+    """Eine Nachricht VON einer anderen Nummer AN den Absender liegt der Dauer-Zeile naeher
+    als die echte Antwort der Servicenummer -- sie darf nicht als Antwort gelten."""
+    fremd = {**_aus("2026-10-27 09:00:05.000", "Werbung"), "from": "+49000FREMD"}
+    erg = _werte([_ein("2026-10-27 09:00:00", "help")],
+                 [fremd, _aus("2026-10-27 09:00:05.900", "Commands")],
+                 [_dauer("2026-10-27T08:00:05.000000", "HELP", 100)])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["antwort"] == _utc("2026-10-27T08:00:05.900")
+
+
+def test_f003_antwort_jenseits_von_30_sekunden_zur_dauer_zeile_gilt_nicht():
+    erg = _werte([_ein("2026-10-27 09:00:00", "help")],
+                 [_aus("2026-10-27 09:00:46", "spaeter, fremd")],
+                 [_dauer("2026-10-27T08:00:01.000000", "HELP", 100)])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert b["befehl"] == "HELP" and b["dauer_ms"] == 100
+    assert b["antwort"] is None and b["antwortzeit_s"] is None
+
+
+def test_f003_eine_antwort_gehoert_nur_einem_eingang_mit_dauer_zeile():
+    """Zwei Eingaenge, zwei Dauer-Zeilen, aber nur EINE Antwort im Journal."""
+    erg = _werte([_ein("2026-10-27 09:00:00", "heute"), _ein("2026-10-27 09:00:05", "help")],
+                 [_aus("2026-10-27 09:00:11", "E4: ...")],
+                 [_dauer("2026-10-27T08:00:10.000000", "HEUTE", 100),
+                  _dauer("2026-10-27T08:00:12.000000", "HELP", 100)])
+    antworten = [b["antwort"] for b in erg["befehle"] if b["antwort"]]
+    assert antworten == [_utc("2026-10-27T08:00:11")]
+
+
+def test_f003_von_der_dauer_zeile_vergebene_antwort_geht_nicht_nochmal_an_spaeteren_eingang():
+    """E1 (mit Dauer-Zeile) nimmt die Antwort 09:00:40; E2 (ohne Dauer-Zeile, spaeter, selber
+    Absender) darf sie nicht ein zweites Mal bekommen."""
+    erg = _werte([_ein("2026-10-27 09:00:00", "heute"), _ein("2026-10-27 09:00:10", "codes")],
+                 [_aus("2026-10-27 09:00:40", "E4: ...")],
+                 [_dauer("2026-10-27T08:00:40.000000", "HEUTE", 39000)])
+    e1 = _eintrag(erg, "2026-10-27T08:00:00")
+    e2 = _eintrag(erg, "2026-10-27T08:00:10")
+    assert e1["antwort"] == _utc("2026-10-27T08:00:40")
+    assert e2["antwort"] is None
