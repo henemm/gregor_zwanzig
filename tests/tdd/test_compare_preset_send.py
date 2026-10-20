@@ -413,3 +413,134 @@ def test_ac8_kontrolle_cron_mit_zustellung_bucht_und_setzt_anker(mit, anker, mon
     assert mit.kanaele == ["email"], mit
     assert hv.letzter_versand(uid, pid), "Erfolgs-Status nach Zustellung erwartet"
     assert len(anker) >= 1, f"Anker muss nach echter Zustellung gesetzt werden: {anker}"
+
+
+# --- Fix-Loop 1 F-ADV1: Cron OHNE Opt-in behaelt das Bestandsverhalten -------
+# Vor #2280 (git show HEAD): ein Engine-Ausfall an allen Orten schlug als die
+# urspruengliche Ausnahme durch (kein SendOutcomeError), und ein Lauf, in dem
+# jeder Ort nur ``LocationResult(error=...)`` liefert, wurde gerendert,
+# zugestellt und verbucht. ``weather_failure_as_outcome`` gilt nur fuer den
+# Handversand; ein Default ``True`` wuerde den Cron still umstellen.
+
+
+def test_cron_ohne_opt_in_engine_ausfall_ueberall_wirft_originalfehler(mit, monkeypatch):
+    """Given ein Engine-Ausfall an JEDEM Ort / When ``send_one_compare_preset``
+    ohne Opt-in (Cron-Form) laeuft / Then die urspruengliche Ausnahme schlaegt
+    durch -- KEIN ``SendOutcomeError('no_weather')`` -- und nichts geht hinaus."""
+    from app.loader import get_data_root
+    from services.scheduler_dispatch_service import send_one_compare_preset
+    from services.send_outcomes import SendOutcomeError
+
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-adv1-wirft")
+    hv.wetter_faellt_ueberall_aus(monkeypatch)
+
+    with pytest.raises(Exception) as info:
+        send_one_compare_preset(
+            preset_laden(uid, pid), settings_fuer(uid), uid, str(get_data_root()),
+            all_locations_cache=alle_orte(uid),
+        )
+
+    assert not isinstance(info.value, SendOutcomeError), (
+        f"Cron ohne Opt-in darf den Wetterausfall nicht in no_weather umdeuten: {info.value!r}"
+    )
+    assert "simulierter Ausfall" in str(info.value), info.value
+    assert not mit.kanaele, mit
+
+
+def test_cron_ohne_opt_in_alle_orte_mit_fehler_wird_wie_bisher_zugestellt(mit, anker, monkeypatch):
+    """Given jeder Ort liefert ``LocationResult(error=...)`` / When der Cron-
+    Wrapper laeuft / Then Bestandsverhalten: E-Mail geht hinaus, der Lauf gilt
+    als versendet, Erfolgs-Status wird gespeichert (kein no_weather-Abbruch)."""
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-adv1-fehlerorte")
+    hv.wetter_fehlt_je_ort(monkeypatch)
+
+    ergebnis = _cron(uid, pid)
+
+    assert ergebnis is True, "Cron ohne Opt-in: Bestandsverhalten 'zugestellt' erwartet"
+    assert mit.kanaele == ["email"], mit
+    assert hv.letzter_versand(uid, pid), "Erfolgs-Status wie vor #2280 erwartet"
+
+
+# --- Fix-Loop 1 F-ADV6 (a): Cron-Vergleich ohne Zustellung hinterlaesst Spur --
+
+
+def _versandfehler_eintraege(uid: str) -> list:
+    import json
+
+    from app.loader import get_data_dir
+
+    pfad = get_data_dir(uid) / "diagnostics" / "briefing_dispatch_failures.jsonl"
+    if not pfad.exists():
+        return []
+    return [json.loads(z) for z in pfad.read_text().splitlines() if z.strip()]
+
+
+def test_cron_alle_kanaele_gescheitert_schreibt_versandfehler_spur(mit, anker, monkeypatch):
+    """Given Cron-Lauf, einziger wirksamer Kanal (Telegram) scheitert / Then ein
+    Eintrag in briefing_dispatch_failures.jsonl (kind vergleich, Preset-ID) —
+    sichtbar in briefing_health — und kein Anker-Reset."""
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-adv6-cron", telegram=True)
+    hv.profil_ohne_mail_to(uid)
+    versuche = hv.telegram_vergleich_scheitert(monkeypatch)
+
+    assert _cron(uid, pid) is False
+    assert versuche, "Vorbedingung: Telegram-Ausgang betreten"
+    eintraege = _versandfehler_eintraege(uid)
+    assert [(e["kind"], e["entity_id"]) for e in eintraege] == [("vergleich", pid)], eintraege
+    assert "channels_unreachable" in eintraege[0]["error"], eintraege
+    assert anker == [], f"Kein Anker-Reset: {anker}"
+
+
+def test_handversand_alle_kanaele_gescheitert_schreibt_keine_versandfehler_spur(
+    mit, anker, monkeypatch,
+):
+    """Gegenstueck Handversand: 422 channels_unreachable, aber KEIN Eintrag."""
+    c = hv.client()
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-adv6-hand", telegram=True)
+    hv.profil_ohne_mail_to(uid)
+    versuche = hv.telegram_vergleich_scheitert(monkeypatch)
+
+    r = hv.alt_senden(c, "vergleich", pid, uid)
+
+    assert r.status_code == 422 and hv.body(r).get("code") == "channels_unreachable", r.text
+    assert versuche, "Vorbedingung: Telegram-Ausgang betreten"
+    assert _versandfehler_eintraege(uid) == []
+
+
+# --- Fix-Loop 1 F-ADV3: send_compare_report meldet 'kein Kanal' ---------------
+
+
+def _compare_report(uid: str, kanaele: set, ausgaenge: list):
+    from app.config import Settings
+    from services.notification_service import NotificationService
+
+    return NotificationService(settings=Settings(), user_id=uid).send_compare_report(
+        subject="Vergleich", html_body="<p>x</p>", text_body="x",
+        telegram_text="x", sms_text="x", recipients=["a@example.invalid"],
+        effective_channels=kanaele,
+        mail_sink=lambda **kw: ausgaenge.append(("email", kw)),
+        sms_sink=lambda t: ausgaenge.append(("sms", t)),
+        telegram_sink=lambda t: ausgaenge.append(("telegram", t)),
+        premium_sms_sink=lambda t: ausgaenge.append(("premium_sms", t)),
+    )
+
+
+def test_send_compare_report_ohne_wirksamen_kanal_setzt_no_channel_configured():
+    """Given keine wirksamen Kanaele / When ``send_compare_report`` laeuft /
+    Then ``no_channel_configured is True``, nichts gesendet (Trip-Paritaet).
+    Kontroll-Bein: mit E-Mail ist das Feld False."""
+    uid = nutzer_anlegen()
+    ausgaenge: list = []
+
+    leer = _compare_report(uid, set(), ausgaenge)
+
+    assert leer.no_channel_configured is True, leer
+    assert leer.sent is False and ausgaenge == [], (leer, ausgaenge)
+
+    mit_mail = _compare_report(uid, {"email"}, ausgaenge)
+    assert mit_mail.no_channel_configured is False and mit_mail.sent is True, mit_mail
+    assert [k for k, _ in ausgaenge] == ["email"], ausgaenge

@@ -1,10 +1,10 @@
-// Issue #2124 AC-3: Verdrahtung der Auslöser-Helfer `sendTripBriefing` /
-// `sendComparePreset` (von Trip-Detail, Trip-Liste, Compare-Hub, -Liste und
+// Issue #2124 AC-3: Verdrahtung der Auslöser-Helfer `sendBriefing`
+// (route/vergleich, #2280) (von Trip-Detail, Trip-Liste, Compare-Hub, -Liste und
 // -Tabs genutzt) auf den geteilten Laufzustand. Verhaltenstest, kein Datei-Grep.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { beginSend, endSend, isSending, sendTripBriefing, sendComparePreset } from './sendOutcome.ts';
+import { beginSend, endSend, isSending, sendBriefing } from './sendOutcome.ts';
 
 function haltendesFetch() {
 	const z = { aufrufe: 0, urls: [] as string[] };
@@ -26,8 +26,8 @@ const takt = () => new Promise<void>((ok) => setImmediate(ok));
 
 test('Trip: zweiter Versand für denselben Trip sendet keinen zweiten Request', async () => {
 	const h = haltendesFetch();
-	const erster = sendTripBriefing('v-trip', 'morning', h.fn);
-	const zweiter = await sendTripBriefing('v-trip', 'evening', h.fn);
+	const erster = sendBriefing('route', 'v-trip', { reportType: 'morning' }, h.fn);
+	const zweiter = await sendBriefing('route', 'v-trip', { reportType: 'evening' }, h.fn);
 	await takt();
 	assert.equal(h.z.aufrufe, 1);
 	assert.equal(zweiter.skipped, true);
@@ -39,13 +39,13 @@ test('Trip: zweiter Versand für denselben Trip sendet keinen zweiten Request', 
 
 test('Compare: zweiter Versand für dasselbe Preset sendet keinen zweiten Request, Trip-Schlüssel getrennt', async () => {
 	const h = haltendesFetch();
-	const erster = sendComparePreset('v-cmp', h.fn);
-	const zweiter = await sendComparePreset('v-cmp', h.fn);
+	const erster = sendBriefing('vergleich', 'v-cmp', {}, h.fn);
+	const zweiter = await sendBriefing('vergleich', 'v-cmp', {}, h.fn);
 	assert.equal(zweiter.skipped, true);
 	assert.equal(h.z.aufrufe, 1);
-	assert.match(h.z.urls[0], /\/api\/compare\/presets\/v-cmp\/send$/);
+	assert.match(h.z.urls[0], /\/api\/briefings\/v-cmp\/send\?kind=vergleich$/);
 	// gleicher Id-Raum, anderer Schlüssel: Trip blockiert Compare nicht
-	const trip = sendTripBriefing('v-cmp', 'morning', h.fn);
+	const trip = sendBriefing('route', 'v-cmp', { reportType: 'morning' }, h.fn);
 	await takt();
 	assert.equal(h.z.aufrufe, 2);
 	h.frei();
@@ -56,7 +56,7 @@ test('Auslöser sieht einen von außen laufenden Versand (z. B. aus dem Dialog) 
 	const h = haltendesFetch();
 	assert.equal(beginSend('compare:v-extern'), true);
 	try {
-		const r = await sendComparePreset('v-extern', h.fn);
+		const r = await sendBriefing('vergleich', 'v-extern', {}, h.fn);
 		assert.equal(r.skipped, true);
 		assert.equal(h.z.aufrufe, 0);
 	} finally {
@@ -66,14 +66,14 @@ test('Auslöser sieht einen von außen laufenden Versand (z. B. aus dem Dialog) 
 
 test('endSend läuft auch bei Netzfehler (finally) und ergibt unclear', async () => {
 	const kaputt: typeof fetch = () => Promise.reject(new TypeError('fetch failed'));
-	const r = await sendComparePreset('v-netz', kaputt);
+	const r = await sendBriefing('vergleich', 'v-netz', {}, kaputt);
 	assert.equal(r.kind, 'unclear');
 	assert.equal(isSending('compare:v-netz'), false);
 });
 
 test('502 vom Server: unclear und Laufzustand wieder frei', async () => {
 	const h = haltendesFetch();
-	const p = sendTripBriefing('v-502', 'morning', h.fn);
+	const p = sendBriefing('route', 'v-502', { reportType: 'morning' }, h.fn);
 	await takt();
 	h.frei(502);
 	const r = await p;
@@ -87,8 +87,8 @@ test('Kein Client-Abbruch: fetch bekommt für Trip UND Compare kein signal (kein
 		inits.push(init);
 		return Promise.resolve(new Response('{}', { status: 200 }));
 	};
-	await sendTripBriefing('v-signal-trip', 'morning', fn);
-	await sendComparePreset('v-signal-cmp', fn);
+	await sendBriefing('route', 'v-signal-trip', { reportType: 'morning' }, fn);
+	await sendBriefing('vergleich', 'v-signal-cmp', {}, fn);
 	assert.equal(inits.length, 2);
 	for (const init of inits) {
 		assert.equal(init?.method, 'POST');

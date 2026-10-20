@@ -7,7 +7,7 @@
 
 import type { ComparePreset } from '../../types.js';
 import { statusZielNutzlast } from '../compare/compareHubPersistenz.ts';
-import { readErrorDetail, sendComparePreset, sendTripBriefing, type SendRunResult } from '../../utils/sendOutcome.ts';
+import { readErrorDetail, sendBriefing, type SendRunResult } from '../../utils/sendOutcome.ts';
 import type { SubscriptionKind } from './subscriptionTabs.ts';
 
 const JSON_HEADER = { 'Content-Type': 'application/json' };
@@ -90,14 +90,15 @@ export async function deleteSubscription(
 	await pruefe(await fetchFn(basis(kind, id), { method: 'DELETE' }), 'Löschen');
 }
 
-/** Senden mit In-Flight-Schutz (#2124); `reportType` gilt nur beim Trip (Default morning). */
+/** Senden mit In-Flight-Schutz (#2124) ueber POST /api/briefings/{id}/send (#2280); `reportType` gilt nur beim Trip (Default morning). */
 export function sendSubscription(
 	kind: SubscriptionKind,
 	id: string,
 	opts: { reportType?: 'morning' | 'evening' } = {},
 	fetchFn: typeof fetch = fetch
 ): Promise<SendRunResult> {
+	// #2280: Frontend-Wort `trip` heisst im Endpunkt `route`.
 	return kind === 'trip'
-		? sendTripBriefing(id, opts.reportType ?? 'morning', fetchFn)
-		: sendComparePreset(id, fetchFn);
+		? sendBriefing('route', id, { reportType: opts.reportType ?? 'morning' }, fetchFn)
+		: sendBriefing('vergleich', id, {}, fetchFn);
 }

@@ -79,7 +79,7 @@ interface Aufzeichnung {
 /** Versand abfangen (Kunstantwort); DELETE nur mitschreiben, dann durchlassen. */
 async function aufzeichnen(page: Page, kind: Kind): Promise<Aufzeichnung> {
 	const rec: Aufzeichnung = { senden: [], loeschen: [] };
-	const sendMuster = kind === 'trip' ? '**/api/trips/*/send*' : '**/api/compare/presets/*/send*';
+	const sendMuster = kind === 'trip' ? '**/api/briefings/*/send*' : '**/api/briefings/*/send*';
 	await page.route(sendMuster, async (route) => {
 		const u = new URL(route.request().url());
 		rec.senden.push(`${route.request().method()} ${u.pathname}${u.search}`);
@@ -159,7 +159,7 @@ for (const kind of ['trip', 'vergleich'] as const) {
 				await page.getByTestId('send-confirm-yes').click();
 				await expect.poll(() => rec.senden.length).toBe(1);
 				expect(rec.senden[0]).toMatch(
-					kind === 'trip' ? /^POST \/api\/trips\/[^/]+\/send\?report_type=morning$/ : /^POST \/api\/compare\/presets\/[^/]+\/send$/
+					kind === 'trip' ? /^POST \/api\/briefings\/[^/]+\/send\?kind=route&report_type=morning$/ : /^POST \/api\/briefings\/[^/]+\/send\?kind=vergleich$/
 				);
 			});
 
@@ -341,7 +341,7 @@ test.describe('AC-3: Sende-Dialog sperrt Bestaetigen, wenn kein Kanal liefern ka
 			expect(res.ok()).toBeTruthy();
 			const seite = await kontext.newPage();
 			const gesendet: string[] = [];
-			await seite.route('**/api/trips/*/send*', async (route) => {
+			await seite.route('**/api/briefings/*/send*', async (route) => {
 				gesendet.push(route.request().url());
 				await route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"ok"}' });
 			});

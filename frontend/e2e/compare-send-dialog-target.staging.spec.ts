@@ -46,7 +46,7 @@ test.describe('Issue #1471 — Sende-Dialog nennt tatsaechliches Ziel (Staging-V
 		// Netzwerk-Beobachtung: kein POST an /send, egal ob Klick verhindert wird.
 		let sendPostFired = false;
 		page.on('request', (req) => {
-			if (req.method() === 'POST' && /\/api\/compare\/presets\/.*\/send/.test(req.url())) {
+			if (req.method() === 'POST' && /\/api\/briefings\/.*\/send\?kind=vergleich/.test(req.url())) {
 				sendPostFired = true;
 			}
 		});
@@ -83,7 +83,7 @@ test.describe('Runde 2 — Adversary Edge Cases', () => {
 		let sendPostFired = false;
 		let requestCount = 0;
 		page.on('request', (req) => {
-			if (req.method() === 'POST' && /\/api\/compare\/presets\/.*\/send/.test(req.url())) {
+			if (req.method() === 'POST' && /\/api\/briefings\/.*\/send\?kind=vergleich/.test(req.url())) {
 				sendPostFired = true;
 				requestCount++;
 			}

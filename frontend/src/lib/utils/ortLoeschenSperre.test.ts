@@ -5,7 +5,7 @@
 // Zwei reine Teile, per `node --test` prüfbar:
 //   1. `ortInUseHinweis(fehler)` (neues Modul `ortLoeschenSperre.ts`): deutet den
 //      von `api.del` geworfenen Fehlerkörper (flach: `{error, compare_presets, status}`).
-//   2. `sendComparePreset` (sendOutcome.ts): reicht `fehlende_orte` aus der
+//   2. `sendBriefing` (sendOutcome.ts, #2280): reicht `fehlende_orte` aus der
 //      200-Antwort als `fehlendeOrte` durch und hängt den Hinweis an die Meldung.
 //
 // Module werden je Test DYNAMISCH importiert, damit heute (Modul fehlt bzw. Feld
@@ -59,4 +59,4 @@ test('AC-4: location_in_use mit leerer Liste -> kein Hinweis (kein leerer Satz)'
 	assert.equal(ortInUseHinweis({ status: 409, error: 'location_in_use', compare_presets: [] }), null);
 });
 
-// AC-7 (sendComparePreset/fehlende_orte): Tests liegen in sendOutcome.test.ts.
+// AC-7 (sendBriefing/fehlende_orte): Tests liegen in sendOutcome.test.ts.

@@ -465,20 +465,26 @@ def test_nicht_zustellbares_trip_briefing_ohne_ausnahme_setzt_keinen_merker(mits
     assert not _merker_pfad(uid).exists(), "AC-13: nicht zugestelltes Briefing darf nicht abhaken"
 
 
-def test_nicht_zustellbarer_vergleich_ohne_ausnahme_setzt_keinen_merker(vergleich, monkeypatch):
-    """AC-13 (F002, Ortsvergleich): planmaessig, ``send_result.sent`` False.
+def test_vergleich_ohne_wirksamen_kanal_meldet_no_channels_und_setzt_keinen_merker(
+    vergleich, monkeypatch,
+):
+    """AC-13 (F002, Ortsvergleich): planmaessig, kein wirksamer Kanal.
 
-    E-Mail ist im Briefing-Pfad immer aktiv; die Kanalaufloesung wird daher im
-    VERBRAUCHENDEN Modul auf "keiner" gesetzt (vorgesehene Naht, s. Docstring
-    von ``_effective_compare_briefing_channels``). Der echte
-    ``send_compare_report`` liefert dann ``sent=False`` ohne Ausnahme.
+    Die Kanalaufloesung wird im VERBRAUCHENDEN Modul auf "keiner" gesetzt
+    (vorgesehene Naht, s. Docstring von ``_effective_compare_briefing_channels``).
+    Seit #2280 (AC-8) bricht ``send_one_compare_preset`` dann schon VOR
+    ``send_compare_report`` mit ``SendOutcomeError('no_channels')`` ab — nichts
+    geht hinaus, und der Erst-Briefing-Merker darf nicht gesetzt werden.
     """
     from services import scheduler_dispatch_service as sds
+    from services.send_outcomes import SendOutcomeError
 
     uid, preset_id = _vergleich_nutzer()
     monkeypatch.setattr(sds, "_effective_compare_briefing_channels", lambda *a, **k: set())
 
-    briefing_senden(uid, preset_id, settings_fuer(uid))
+    with pytest.raises(SendOutcomeError) as info:
+        briefing_senden(uid, preset_id, settings_fuer(uid))
+    assert info.value.code == "no_channels", info.value.code
 
     assert vergleich.kanaele == [], f"Vorbedingung: nichts zugestellt ({vergleich!r})"
     assert not _merker_pfad(uid).exists(), "AC-13: nicht zugestellter Vergleich darf nicht abhaken"

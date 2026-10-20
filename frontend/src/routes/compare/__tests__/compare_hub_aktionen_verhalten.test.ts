@@ -137,10 +137,10 @@ describe('F021/F024: Senden erst nach Bestaetigung', () => {
 		assert.equal(nach('POST', '/send').length, 0);
 	});
 
-	test('handleTestSend (Bestaetigung des Dialogs) -> genau ein POST /api/compare/presets/c1/send, Meldung gesetzt', async () => {
+	test('handleTestSend (Bestaetigung des Dialogs) -> genau ein POST /api/briefings/c1/send?kind=vergleich, Meldung gesetzt', async () => {
 		const { u } = await hub();
 		await u.handleTestSend();
-		assert.deepEqual(nach('POST', '/send').map((a) => a.url), ['/api/compare/presets/c1/send']);
+		assert.deepEqual(nach('POST', '/send').map((a) => a.url), ['/api/briefings/c1/send?kind=vergleich']);
 		assert.equal(typeof u.sendMsg, 'string');
 		assert.equal(u.isSending, false);
 	});

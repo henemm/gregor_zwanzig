@@ -99,52 +99,52 @@ Ein einziger, kind-neutraler Endpoint `POST /api/briefings/{id}/send?kind=route|
 
 ## Acceptance Criteria
 
-**AC-1:** Given ein angemeldeter Nutzer mit einem Trip und einem Ortsvergleich, die je einen wirksamen Kanal haben / When er `POST /api/briefings/{id}/send` mit `kind=route` bzw. `kind=vergleich` aufruft / Then wird das jeweilige Briefing zugestellt und die Antwort ist 200 mit `status:"ok"`, `kind`, `id` und `sent:true`. *(Neuer Endpoint für beide Arten)*
+- **AC-1:** Given ein angemeldeter Nutzer mit einem Trip und einem Ortsvergleich, die je einen wirksamen Kanal haben / When er `POST /api/briefings/{id}/send` mit `kind=route` bzw. `kind=vergleich` aufruft / Then wird das jeweilige Briefing zugestellt und die Antwort ist 200 mit `status:"ok"`, `kind`, `id` und `sent:true`. *(Neuer Endpoint für beide Arten)*
   - Test: Python-Kern `tests/tdd/test_briefings_send_endpoint.py` für beide kinds; Go-Dispatcher-Test.
 
-**AC-2:** Given ein Aufruf des Endpoints / When `kind` fehlt oder ist ungültig (zum Beispiel `trip`) / Then antwortet der Server mit 400 und `code:"kind_required"` und es wird nichts versendet. *(kind Pflicht)*
+- **AC-2:** Given ein Aufruf des Endpoints / When `kind` fehlt oder ist ungültig (zum Beispiel `trip`) / Then antwortet der Server mit 400 und `code:"kind_required"` und es wird nichts versendet. *(kind Pflicht)*
   - Test: Go `briefing_send_test.go` (Vorbild `briefing_preview_test.go:243`) und Python-Endpoint-Test.
 
-**AC-3:** Given Nutzer A besitzt ein Briefing und Nutzer B ist angemeldet / When B die ID von A aufruft, oder eine unbekannte ID, oder eine ungültig geformte ID / Then antwortet der Server mit 404 (fremd/unbekannt) bzw. 400 (ungültig geformte ID), und bei A wird nichts ausgelöst. *(ID und Eigentümerschaft, Zwei-Nutzer-Test)*
+- **AC-3:** Given Nutzer A besitzt ein Briefing und Nutzer B ist angemeldet / When B die ID von A aufruft, oder eine unbekannte ID, oder eine ungültig geformte ID / Then antwortet der Server mit 404 (fremd/unbekannt) bzw. 400 (ungültig geformte ID), und bei A wird nichts ausgelöst. *(ID und Eigentümerschaft, Zwei-Nutzer-Test)*
   - Test: Python- und Go-Test mit zwei verschiedenen Nutzern; Client-gesendeter `user_id`-Wert wird verworfen (`appendUserID`).
 
-**AC-4:** Given ein Ortsvergleich ohne wirksamen Kanal / When der Versand ausgelöst wird / Then antwortet der Server mit 422 und `code:"no_channels"` mit genau demselben Text wie beim Trip, statt wie bisher mit 200 „ok". *(Ortsvergleich ohne Kanal)*
+- **AC-4:** Given ein Ortsvergleich ohne wirksamen Kanal / When der Versand ausgelöst wird / Then antwortet der Server mit 422 und `code:"no_channels"` mit genau demselben Text wie beim Trip, statt wie bisher mit 200 „ok". *(Ortsvergleich ohne Kanal)*
   - Test: Python-Kern; Textgleichheit gegen den Trip-Fall (`tests/unit/test_trip_send_endpoint_no_channels.py` bleibt grün).
 
-**AC-5:** Given ein Ortsvergleich, dessen Kanäle alle beim Senden scheitern / When der Versand ausgelöst wird / Then antwortet der Server mit 422 und `code:"channels_unreachable"`, der Anker wird nicht zurückgesetzt und es wird kein Erfolgs-Status gespeichert. *(Ortsvergleich, alle Kanäle gescheitert)*
+- **AC-5:** Given ein Ortsvergleich, dessen Kanäle alle beim Senden scheitern / When der Versand ausgelöst wird / Then antwortet der Server mit 422 und `code:"channels_unreachable"`, der Anker wird nicht zurückgesetzt und es wird kein Erfolgs-Status gespeichert. *(Ortsvergleich, alle Kanäle gescheitert)*
   - Test: Python-Kern mit ausgefallenem Transport; Prüfung von Anker-Stand und gespeichertem Preset-Status vor und nach dem Aufruf.
 
-**AC-6:** Given ein Ortsvergleich, für dessen Orte keine Wetterdaten zu bekommen sind / When der Versand ausgelöst wird / Then antwortet der Server mit 422 und `code:"no_weather"` und einem verständlichen deutschen Text, statt mit einem Serverfehler 500. *(Ortsvergleich ohne Wetterdaten)*
+- **AC-6:** Given ein Ortsvergleich, für dessen Orte keine Wetterdaten zu bekommen sind / When der Versand ausgelöst wird / Then antwortet der Server mit 422 und `code:"no_weather"` und einem verständlichen deutschen Text, statt mit einem Serverfehler 500. *(Ortsvergleich ohne Wetterdaten)*
   - Test: Python-Kern mit Provider, der für alle Orte scheitert (`comparison_parallel`).
 
-**AC-7:** Given ein Ortsvergleich, dessen wirksame Kanäle nur Telegram und/oder SMS sind und der keine `mail_to` hat / When er per Hand oder per Cron versendet wird / Then wird er zugestellt; eine `mail_to` ist nur Pflicht, wenn der E-Mail-Kanal wirksam ist. *(Nur Telegram/SMS, keine E-Mail-Adresse)*
+- **AC-7:** Given ein Ortsvergleich, dessen wirksame Kanäle nur Telegram und/oder SMS sind und der keine `mail_to` hat / When er per Hand oder per Cron versendet wird / Then wird er zugestellt; eine `mail_to` ist nur Pflicht, wenn der E-Mail-Kanal wirksam ist. *(Nur Telegram/SMS, keine E-Mail-Adresse)*
   - Test: Python-Kern für Handversand und `send_one_compare_preset` (Cron-Pfad); Gegenprobe: E-Mail-Kanal wirksam und `mail_to` fehlt bleibt Fehler.
 
-**AC-8:** Given ein Cron-Lauf für einen Ortsvergleich ohne wirksamen Kanal oder mit nur gescheiterten Kanälen / When der Lauf endet / Then wird er nicht als „versendet" verbucht (kein Erfolgs-Status, kein Anker-Reset) und der Cron-Wrapper bricht dabei nicht ab. *(Cron-Pfad bucht ehrlich)*
+- **AC-8:** Given ein Cron-Lauf für einen Ortsvergleich ohne wirksamen Kanal oder mit nur gescheiterten Kanälen / When der Lauf endet / Then wird er nicht als „versendet" verbucht (kein Erfolgs-Status, kein Anker-Reset) und der Cron-Wrapper bricht dabei nicht ab. *(Cron-Pfad bucht ehrlich)*
   - Test: Python-Kern `tests/tdd/test_compare_preset_send.py` erweitert.
 
-**AC-9:** Given ein beliebiger Fehlschlag des Endpoints für Trip oder Ortsvergleich / When die Antwort gelesen wird / Then enthält sie `detail` (deutscher Text, unverändert anzeigbar) und auf oberster Ebene `code`, und alle Codes samt Texten stehen in **einer** Datei (`send_outcomes.py`). *(Einheitliche Fehlerform, ein Vokabular)*
+- **AC-9:** Given ein beliebiger Fehlschlag des Endpoints für Trip oder Ortsvergleich / When die Antwort gelesen wird / Then enthält sie `detail` (deutscher Text, unverändert anzeigbar) und auf oberster Ebene `code`, und alle Codes samt Texten stehen in **einer** Datei (`send_outcomes.py`). *(Einheitliche Fehlerform, ein Vokabular)*
   - Test: Python-Test über alle Codes (Status, Text, `code`); Wächter-Test, dass `scheduler.py` keine eigenen Fehlertexte für diese Fälle mehr enthält (Verhaltenstest über die Endpoints, kein Dateiinhalt-Check).
 
-**AC-10:** Given eine erfolgreiche Zustellung / When die Antwort gelesen wird / Then lautet sie `{status:"ok", kind, id, sent:true}` plus `report_type` nur bei Trip und `fehlende_orte` nur bei Ortsvergleich; ein Versand ohne Zustellung liefert nie `status:"ok"`. *(Einheitliche Erfolgsform, Erfolg heißt Zustellung)*
+- **AC-10:** Given eine erfolgreiche Zustellung / When die Antwort gelesen wird / Then lautet sie `{status:"ok", kind, id, sent:true}` plus `report_type` nur bei Trip und `fehlende_orte` nur bei Ortsvergleich; ein Versand ohne Zustellung liefert nie `status:"ok"`. *(Einheitliche Erfolgsform, Erfolg heißt Zustellung)*
   - Test: Python-Kern; `tests/test_success_status_guard.py` darf den Ortsvergleich-Versand nicht mehr als Ausnahme führen.
 
-**AC-11:** Given der Wächter `tests/test_success_status_guard.py` / When er läuft / Then enthält er keinen Bestandseintrag `send_compare_preset` mehr und bleibt grün, weil der Status aus dem echten Ausgang abgeleitet wird. *(Wächter-Bestandseintrag entfernt)*
+- **AC-11:** Given der Wächter `tests/test_success_status_guard.py` / When er läuft / Then enthält er keinen Bestandseintrag `send_compare_preset` mehr und bleibt grün, weil der Status aus dem echten Ausgang abgeleitet wird. *(Wächter-Bestandseintrag entfernt)*
   - Test: Lauf des Wächters; Gegenprobe: ein fest verdrahtetes „ok" in `send_compare_preset` macht ihn rot.
 
-**AC-12:** Given ein Ortsvergleich, dessen Versand gerade läuft / When der Versand ein zweites Mal ausgelöst wird / Then antwortet der Server mit 409 und `code:"already_in_progress"`, und der Empfänger erhält genau eine Zustellung. *(Doppelauslösung Ortsvergleich)*
+- **AC-12:** Given ein Ortsvergleich, dessen Versand gerade läuft / When der Versand ein zweites Mal ausgelöst wird / Then antwortet der Server mit 409 und `code:"already_in_progress"`, und der Empfänger erhält genau eine Zustellung. *(Doppelauslösung Ortsvergleich)*
   - Test: Kern `tests/tdd/test_compare_send_lock.py` (besteht bereits, bleibt grün); Live-Schicht: zwei gleichzeitige Aufrufe auf Staging mit Wegwerf-Nutzer `gregor-test+…`, Zählung der zugestellten Mails per IMAP = 1.
 
-**AC-13:** Given die bisherigen Routen `/api/scheduler/trips/{id}/send` und `/api/scheduler/compare-presets/{id}/send` (Python) bzw. deren Go-Pendants / When sie aufgerufen werden / Then liefern sie dieselbe Antwort- und Fehlerform wie der neue Endpoint (gleicher Status, `detail`, `code`), und die Alt-Trip-Route behält den Default `report_type=evening`. *(Alt-Routen als Delegates)*
+- **AC-13:** Given die bisherigen Routen `/api/scheduler/trips/{id}/send` und `/api/scheduler/compare-presets/{id}/send` (Python) bzw. deren Go-Pendants / When sie aufgerufen werden / Then liefern sie dieselbe Antwort- und Fehlerform wie der neue Endpoint (gleicher Status, `detail`, `code`), und die Alt-Trip-Route behält den Default `report_type=evening`. *(Alt-Routen als Delegates)*
   - Test: Python- und Go-Test mit Delegate-Gleichheit (gleiche Eingabe, gleiche Antwort); Bestandstests der Alt-URLs bleiben grün.
 
-**AC-14:** Given der neue Dispatcher und die beiden Alt-Handler in Go / When ein Versand weitergereicht wird / Then laufen alle über `forwardSend`, die Anfrage überlebt einen Verbindungsabbruch des Browsers (`context.WithoutCancel`), nutzt `sendProxyTimeout` und setzt `user_id` über `appendUserID`; der Client-Wert wird verworfen. *(Go: eine Proxy-Funktion)*
+- **AC-14:** Given der neue Dispatcher und die beiden Alt-Handler in Go / When ein Versand weitergereicht wird / Then laufen alle über `forwardSend`, die Anfrage überlebt einen Verbindungsabbruch des Browsers (`context.WithoutCancel`), nutzt `sendProxyTimeout` und setzt `user_id` über `appendUserID`; der Client-Wert wird verworfen. *(Go: eine Proxy-Funktion)*
   - Test: Go `send_proxy_context_test.go` und `proxy_timeout_chain_test.go` bleiben grün und werden auf den Dispatcher ausgeweitet; Spoofing-Test mit fremdem `user_id` im Query.
 
-**AC-15:** Given die Oberfläche von Trip-Liste, Trip-Hub, Ortsvergleich-Liste und Ortsvergleich-Hub / When ein Versand ausgelöst wird / Then entsteht die Send-URL an genau einer Stelle (`sendOutcome.ts`), alle Auslöser laufen über `sendSubscription`, und `compare/[id]/+page.svelte` ruft `sendComparePreset` nicht mehr direkt auf. *(Frontend: eine Stelle, ein Auslöser)*
+- **AC-15:** Given die Oberfläche von Trip-Liste, Trip-Hub, Ortsvergleich-Liste und Ortsvergleich-Hub / When ein Versand ausgelöst wird / Then entsteht die Send-URL an genau einer Stelle (`sendOutcome.ts`), alle Auslöser laufen über `sendSubscription`, und `compare/[id]/+page.svelte` ruft `sendComparePreset` nicht mehr direkt auf. *(Frontend: eine Stelle, ein Auslöser)*
   - Test: Frontend-Unit `subscriptionExec.test.ts`, `sendOutcome.test.ts` (URL für `route` und `vergleich`, `trip → route`); Verhaltenstest, dass der Hub-Klick den neuen Endpoint trifft.
 
-**AC-16:** Given ein Ortsvergleich, der nicht zugestellt werden kann / When der Nutzer auf „Senden" klickt / Then sieht er den konkreten Grund (kein Kanal eingestellt, Kanäle nicht erreichbar oder keine Wetterdaten) statt der generischen Fehlermeldung, und `fehlende_orte` wird bei Erfolg weiterhin angezeigt. *(Nutzer sieht den konkreten Grund)*
+- **AC-16:** Given ein Ortsvergleich, der nicht zugestellt werden kann / When der Nutzer auf „Senden" klickt / Then sieht er den konkreten Grund (kein Kanal eingestellt, Kanäle nicht erreichbar oder keine Wetterdaten) statt der generischen Fehlermeldung, und `fehlende_orte` wird bei Erfolg weiterhin angezeigt. *(Nutzer sieht den konkreten Grund)*
   - Test: Frontend-Unit mit den drei 422-Antworten; Playwright gegen Staging `compare-hub-versand-inline`.
 
 ## Bereits erfüllte Ticket-ACs (nicht neu bauen)
@@ -174,6 +174,7 @@ Ein einziger, kind-neutraler Endpoint `POST /api/briefings/{id}/send?kind=route|
 
 - Der Send-Lock gilt nur im eigenen Prozess und hat keine Ablaufzeit; der Cron-Pfad ist davon nicht gedeckt. Das ist Thema von #1777, nicht dieses Tickets.
 - Die Alt-Routen bleiben für Altbestand erhalten; ihre Entfernung ist nicht Teil dieses Tickets.
+- Ein Ortsvergleich-Zeitplan-Briefing, bei dem alle Kanäle scheitern, wird ehrlich als nicht zugestellt verbucht und im Monitoring (`record_briefing_dispatch_failure`, kind `vergleich`) sichtbar. Ein Nachhol-Versand wie beim Trip (`pending_briefings.json`) fehlt jedoch → #2587.
 - `confidence_pct` und andere Inhalte der Briefings sind nicht berührt; geändert wird ausschließlich der Versandweg.
 
 ## Architektur-Entscheidung (ADR)
@@ -184,3 +185,4 @@ Ein einziger, kind-neutraler Endpoint `POST /api/briefings/{id}/send?kind=route|
 ## Changelog
 
 - 2026-10-20: Initial spec created (Ticket #2280, Epic #2345 Etappe P4)
+- 2026-10-20: AC-Zeilen als Listeneinträge (`- **AC-N:**`) gemäß `_template.md` formatiert, damit der AC-Parser sie erkennt; Wortlaut unverändert

@@ -17,10 +17,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from app.config import Settings
-from services.scheduler_dispatch_service import (
-    run_compare_presets_daily,
-    send_compare_preset,
-)
+from api.routers.briefings_send import send_briefing
+from services.scheduler_dispatch_service import run_compare_presets_daily
 
 logger = logging.getLogger("scheduler")
 
@@ -280,112 +278,20 @@ def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = Que
 
 @router.post("/trips/{trip_id}/send")
 def send_test_trip_report(trip_id: str, user_id: str = Query(...), report_type: str = "evening"):
-    """Test-Versand für einen spezifischen Trip. Issue #695."""
-    from app.config import Settings
-    from app.loader import load_all_trips
-    from services.trip_report_scheduler import TripReportSchedulerService
+    """Test-Versand für einen spezifischen Trip. Issue #695.
 
-    # AC-5: Trip-Existenz zuerst prüfen — vor SMTP-Check (F002-Fix)
-    all_trips = load_all_trips(user_id=user_id)
-    trip = next((t for t in all_trips if t.id == trip_id), None)
-    if trip is None:
-        raise HTTPException(status_code=404, detail=f"Trip {trip_id} not found")
-
-    # Issue #904: Trip ohne Etappen muss 422 liefern, bevor der SMTP-Check
-    # eine irreführende "SMTP not configured"-Meldung zurückgibt.
-    if not trip.stages:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Kein Briefing für {report_type} — keine Etappen",
-        )
-
-    # AC-6: SMTP-Check nach Trip-Lookup
-    settings = Settings().with_user_profile(user_id)
-    if not settings.can_send_email():
-        raise HTTPException(status_code=422, detail="SMTP not configured for this user")
-
-    service = TripReportSchedulerService(user_id=user_id)
-    try:
-        outcome = service.send_test_report_outcome(trip, report_type)
-    except ValueError as e:
-        # F003-Fix: Ungültiger report_type → 422 statt 500
-        raise HTTPException(status_code=422, detail=str(e))
-    if outcome == "no_stage":
-        raise HTTPException(
-            status_code=422,
-            detail=f"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum",
-        )
-    # Issue #1325: "no_weather" ist ein genuiner Wetter-Ausfall (der
-    # Test-Fallback-Pfad klemmt Vergangenheits-Etappen bereits auf heute —
-    # dieser Fall bleibt trotzdem möglich, z.B. bei einem echten
-    # Provider-Ausfall) und wird NICHT mehr mit der irreführenden
-    # No-Stage-Meldung vermischt.
-    if outcome == "no_weather":
-        raise HTTPException(
-            status_code=422,
-            detail=f"Kein Briefing für {report_type} — keine Wetterdaten für die gewählte Etappe verfügbar",
-        )
-    # Issue #1403: "no_channels" bedeutet Etappe+Wetter waren da, aber E-Mail,
-    # Telegram und SMS sind alle deaktiviert — bisher fiel das fälschlich auf
-    # die Erfolgsantwort {"sent": true} durch. Analog zu "no_stage"/"no_weather"
-    # oben: eigener 422-Zweig mit sprechendem Grund statt stillem Erfolg.
-    if outcome == "no_channels":
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Kein Briefing für {report_type} versendet — kein "
-                "Versandweg aktiv (E-Mail, Telegram und SMS sind alle "
-                "deaktiviert)"
-            ),
-        )
-    # Issue #1403 AC-4: anderer Auslöser, gleiches Symptom — mindestens ein
-    # Versandweg war konfiguriert (send_telegram/send_sms/send_email=true),
-    # aber technisch nicht erreichbar (z.B. Telegram ohne gültige Bot-
-    # Verbindung), sodass kein einziger Kanal tatsächlich betreten wurde.
-    # Eigene Meldung, damit sie sich von "no_channels" (Konfiguration) und
-    # nicht mit ihr verwechseln lässt.
-    if outcome == "channels_unreachable":
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Kein Briefing für {report_type} versendet — Versandweg "
-                "konfiguriert, aber nicht einsatzbereit (Kanal technisch "
-                "nicht erreichbar)"
-            ),
-        )
-    # Issue #1756: ein zweiter Sendeversuch waehrend ein erster fuer
-    # denselben Schluessel noch laeuft wird abgewiesen statt parallel
-    # ausgefuehrt (Doppelversand-Schutz).
-    if outcome == "already_in_progress":
-        raise HTTPException(
-            status_code=409,
-            detail=f"Versand für {report_type} läuft bereits — bitte warten",
-        )
-    # Issue #1405 S1 (B1): Kennzeichen aus dem Ergebnis abgeleitet, nicht
-    # fest -- fuer `sent` byte-gleich zur bisherigen Antwort.
-    return {
-        "status": "ok" if outcome == "sent" else outcome,
-        "trip_id": trip_id, "report_type": report_type,
-        "sent": outcome == "sent",
-    }
+    Issue #2280 (AC-13): Delegate auf den geteilten Helfer des Endpoints
+    ``POST /api/briefings/{id}/send`` — gleiche Antwort- und Fehlerform; die
+    Alt-Route behaelt den Default ``report_type=evening``.
+    """
+    return send_briefing("route", trip_id, user_id, report_type)
 
 
 @router.post("/compare-presets/{preset_id}/send")
 def manual_send_compare_preset(preset_id: str, user_id: str = Query(...)):
     """Einzelversand-Trigger fuer ein Compare-Preset. Issue #627.
 
-    Ignoriert schedule — sendet sofort, egal ob daily/weekly/manual.
+    Ignoriert schedule — sendet sofort. Issue #2280 (AC-13): Delegate auf den
+    geteilten Helfer des Endpoints ``POST /api/briefings/{id}/send``.
     """
-    try:
-        result = send_compare_preset(user_id, preset_id)
-        # Issue #2124: Doppelversand-Schutz wie beim Trip-Versand (#1756).
-        if result.get("status") == "already_in_progress":
-            raise HTTPException(
-                status_code=409,
-                detail="Versand für diesen Ortsvergleich läuft bereits — bitte warten",
-            )
-        return result
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+    return send_briefing("vergleich", preset_id, user_id, "morning")

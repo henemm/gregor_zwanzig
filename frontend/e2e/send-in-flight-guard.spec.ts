@@ -93,7 +93,7 @@ test.describe('#2124 Trip — geteilter Laufzustand', () => {
 	test('AC-3/AC-4: Trip-Liste — erneut senden während des Laufs schickt keinen zweiten Request', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await login(page);
-		const halter = await versandHalten(page, '**/api/trips/*/send*');
+		const halter = await versandHalten(page, '**/api/briefings/*/send*');
 		try {
 			await page.goto('/trips');
 			await tripListeSenden(page);
@@ -114,7 +114,7 @@ test.describe('#2124 Trip — geteilter Laufzustand', () => {
 	test('AC-3: Trip-Liste hält den Versand, Trip-Detail (per Klick erreicht) schickt keinen zweiten Request', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await login(page);
-		const halter = await versandHalten(page, `**/api/trips/${TRIP_ID}/send*`);
+		const halter = await versandHalten(page, `**/api/briefings/${TRIP_ID}/send*`);
 		try {
 			await page.goto('/trips');
 			await tripListeSenden(page);
@@ -138,7 +138,7 @@ test.describe('#2124 Trip — geteilter Laufzustand', () => {
 	test('AC-2: Trip-Detail — 502 zeigt „Ergebnis unklar" statt „fehlgeschlagen"', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		await login(page);
-		const halter = await versandHalten(page, `**/api/trips/${TRIP_ID}/send*`);
+		const halter = await versandHalten(page, `**/api/briefings/${TRIP_ID}/send*`);
 		await page.goto(`/trips/${TRIP_ID}`);
 		await expect(page.getByTestId('trip-detail-breadcrumb-bar')).toBeVisible({ timeout: 8000 });
 
@@ -205,7 +205,7 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 		await page.setViewportSize(DESKTOP);
 		await login(page);
 		const { presetId, locIds } = await seedPreset(page);
-		const halter = await versandHalten(page, `**/api/compare/presets/${presetId}/send*`);
+		const halter = await versandHalten(page, `**/api/briefings/${presetId}/send*`);
 		try {
 			await page.goto(`/compare/${presetId}?tab=versand`);
 
@@ -233,7 +233,7 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 		await login(page);
 		const preset = await seedPreset(page);
 		const { presetId } = preset;
-		const halter = await versandHalten(page, `**/api/compare/presets/${presetId}/send*`);
+		const halter = await versandHalten(page, `**/api/briefings/${presetId}/send*`);
 		try {
 			await page.goto('/compare');
 			const zeile = page.getByTestId(`compare-tile-${presetId}`);
@@ -258,7 +258,7 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 		await page.setViewportSize(DESKTOP);
 		await login(page);
 		const { presetId, locIds } = await seedPreset(page);
-		const halter = await versandHalten(page, `**/api/compare/presets/${presetId}/send*`);
+		const halter = await versandHalten(page, `**/api/briefings/${presetId}/send*`);
 		try {
 			await page.goto(`/compare/${presetId}`);
 

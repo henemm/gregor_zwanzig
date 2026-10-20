@@ -219,12 +219,13 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/briefings/{id}` | DELETE, GET, PUT |
 | `/api/briefings/{id}/alert-preview` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; kind-neutrale Alarm-Vorschau, Section 20 (#2283 S4)
 | `/api/briefings/{id}/preview` | GET | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; EIN Abruf, alle Kanäle, Section 20 (#2283 S1)
+| `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
 | `/api/cockpit/status` | GET |
 | `/api/compare` | GET |
 | `/api/compare/metrics` | GET |
 | `/api/compare/presets` | GET, POST |
 | `/api/compare/presets/{id}` | DELETE, GET, PUT |
-| `/api/compare/presets/{id}/send` | POST |
+| `/api/compare/presets/{id}/send` | POST | — Delegate (Alt-Route) auf denselben Versandweg wie `/api/briefings/{id}/send?kind=vergleich` (#2280)
 | `/api/compare/presets/{id}/state` | PATCH |
 | `/api/config` | GET |
 | `/api/debug/trigger-radar-alert` | POST | — nur `GZ_ENV=staging`, nur Admin (401 ohne Sitzung, 403 Nicht-Admin, #2155 S2)
@@ -262,7 +263,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/trips/{id}` | DELETE, GET, PUT |
 | `/api/trips/{id}/alert-preview` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/alert-preview?kind=route` (#2283)
 | `/api/trips/{id}/briefing-history` | GET |
-| `/api/trips/{id}/send` | POST |
+| `/api/trips/{id}/send` | POST | — Delegate (Alt-Route) auf denselben Versandweg wie `/api/briefings/{id}/send?kind=route` (#2280)
 | `/api/trips/{id}/stages/weather` | GET |
 | `/api/trips/{id}/state` | PATCH |
 | `/api/trips/{id}/waypoints/{waypointId}/confirm` | PATCH |
@@ -868,6 +869,40 @@ Heute existieren zwei getrennte Domänenobjekte:
 
 Feld-Definitionen und Validierungsregeln: massgeblich sind die Go-Structs in
 `internal/model/` und die Handler-Validierung — hier nicht dupliziert.
+
+### 10.1) Handversand `POST /api/briefings/{id}/send` (Issue #2280, ADR-0023)
+
+EIN kind-neutraler Endpoint löst den Handversand eines Briefings aus — Trip und
+Ortsvergleich mit **einem** Fehlervokabular, **einer** Antwortform und **einem**
+Sende-Lock. „Erfolg heißt Zustellung": `200` nur, wenn mindestens ein Kanal
+tatsächlich zugestellt hat.
+
+| Query | Pflicht | Werte |
+|---|---|---|
+| `kind` | ja | `route` (Trip) \| `vergleich` (Ortsvergleich); fehlt/ungültig → 400 `kind_required` |
+| `report_type` | nein, nur `route` | `morning` (Default) \| `evening`; bei `vergleich` ignoriert |
+
+**Erfolg (200):** `{"status": "ok", "kind": "route"|"vergleich", "id": "<id>", "sent": true}`,
+bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: [<ort_id>, …]`
+(gelöschte Orte, Versand lief mit den übrigen). `winner`/`empfaenger_count` entfallen.
+
+**Fehler (Form A):** `{"detail": "<deutscher Text>", "code": "<maschinenlesbar>"}` mit 4xx.
+`detail` wird im Frontend unverändert angezeigt.
+
+| Status | `code` | Bedeutung |
+|---|---|---|
+| 400 | `kind_required` / `validation_error` | `kind` fehlt/ungültig bzw. ungültige ID |
+| 404 | — | ID gehört nicht dem angemeldeten Nutzer oder existiert nicht |
+| 409 | — | Versand für denselben Lock-Schlüssel läuft bereits |
+| 422 | `no_channels` | kein Kanal wirksam eingestellt |
+| 422 | `channels_unreachable` | alle eingestellten Kanäle sind gescheitert |
+| 422 | `no_weather` | für keinen Ort/keine Etappe liegen Wetterdaten vor |
+
+Lock-Schlüssel unverändert: Trip `(user_id, trip_id, report_type)`, Ortsvergleich
+`("compare", user_id, preset_id)`. Die Alt-Routen `POST /api/trips/{id}/send` und
+`POST /api/compare/presets/{id}/send` bleiben als **Delegate** erhalten; das Frontend
+nutzt ausschließlich den neuen Endpoint (`frontend/src/lib/utils/sendOutcome.ts`,
+`briefingSendUrl`). Spec: `docs/specs/modules/feat_2280_handversand_endpoint.md`.
 
 ---
 

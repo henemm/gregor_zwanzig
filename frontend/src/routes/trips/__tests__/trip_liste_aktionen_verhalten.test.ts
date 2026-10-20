@@ -131,7 +131,7 @@ describe('F016 Trip-Liste: Pausieren/Fortsetzen/Senden/Loeschen wirken', () => {
 		await u.confirmSend('evening');
 		const posts = nach('POST', '/send');
 		assert.equal(posts.length, 1);
-		assert.match(posts[0].url, /\/api\/trips\/t1\/send\?report_type=evening/);
+		assert.match(posts[0].url, /\/api\/briefings\/t1\/send\?kind=route&report_type=evening/);
 		assert.equal(u.sendTarget, null);
 		assert.equal(u.sendInfo, 'Briefing wurde versendet.');
 	});
@@ -184,14 +184,14 @@ describe('F016 Compare-Liste: Pausieren/Senden/Loeschen wirken', () => {
 		assert.equal(comparePreset.schedule, 'daily');
 	});
 
-	test('"send" merkt nur das Ziel; confirmSend sendet POST /api/compare/presets/c1/send', async () => {
+	test('"send" merkt nur das Ziel; confirmSend sendet POST /api/briefings/c1/send?kind=vergleich', async () => {
 		const { u, aktion } = await compareSeite();
 		aktion('send');
 		assert.equal(u.sendTarget?.id, 'c1');
 		await ruhe();
 		assert.equal(nach('POST', '/send').length, 0, 'Senden ohne Rueckfrage');
 		await u.confirmSend();
-		assert.equal(nach('POST', '/api/compare/presets/c1/send').length, 1);
+		assert.equal(nach('POST', '/api/briefings/c1/send?kind=vergleich').length, 1);
 		assert.equal(u.sendInfo, 'Briefing wurde versendet.');
 	});
 

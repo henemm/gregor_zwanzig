@@ -11,7 +11,7 @@
 // Der Versand selbst wird per `page.route` abgefangen und mit einer
 // Kunstantwort beantwortet — es geht nichts an Python/Empfaenger, und es
 // laeuft ohne Zugriff auf Prod. Aufgezeichnet werden ALLE Requests auf
-// `/api/trips/<id>/send` und `/api/scheduler/trip-reports`.
+// `/api/briefings/<id>/send` und `/api/scheduler/trip-reports`.
 //
 // Aufgerufen wird ueber das mobile Action-Sheet (bietet 7 UND 18 Uhr:
 // „Test Morgen-Report" / „Test Abend-Report"), damit beide Werte an einer
@@ -19,7 +19,7 @@
 // Funktion `runTestReport(trip, 7)`.
 //
 // RED-Grund: heute geht genau ein Request an /api/scheduler/trip-reports?hour=…
-// und keiner an /api/trips/<id>/send, der Dialogtext sagt „Alle aktiven Trips".
+// und keiner an /api/briefings/<id>/send, der Dialogtext sagt „Alle aktiven Trips".
 //
 // Ausfuehren (aus frontend/, lokaler E2E-Stack, siehe e2e/ci-stack.sh):
 //   npx playwright test e2e/trips-list-send.spec.ts
@@ -36,7 +36,7 @@ async function aufzeichnen(page: Page): Promise<Aufzeichnung> {
 	const rec: Aufzeichnung = { sendRequests: [], triggerRequests: [] };
 
 	// Versand abfangen: Kunstantwort 200, es wird nichts wirklich gesendet.
-	await page.route('**/api/trips/*/send*', async (route) => {
+	await page.route('**/api/briefings/*/send*', async (route) => {
 		const u = new URL(route.request().url());
 		rec.sendRequests.push(`${route.request().method()} ${u.pathname}${u.search}`);
 		await route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"ok"}' });
@@ -73,7 +73,7 @@ test('AC-10/AC-11: Berichtsart "Morgen" sendet genau EINEN Trip (morning), kein 
 	await page.getByTestId('send-confirm-yes').click();
 
 	await expect.poll(() => rec.sendRequests.length).toBe(1);
-	expect(rec.sendRequests[0]).toMatch(/^POST \/api\/trips\/[^/]+\/send\?report_type=morning$/);
+	expect(rec.sendRequests[0]).toMatch(/^POST \/api\/briefings\/[^/]+\/send\?kind=route&report_type=morning$/);
 	expect(rec.triggerRequests).toEqual([]);
 });
 
@@ -85,14 +85,14 @@ test('AC-10/AC-11: Berichtsart "Abend" sendet genau EINEN Trip (evening), kein S
 	await page.getByTestId('send-confirm-yes').click();
 
 	await expect.poll(() => rec.sendRequests.length).toBe(1);
-	expect(rec.sendRequests[0]).toMatch(/^POST \/api\/trips\/[^/]+\/send\?report_type=evening$/);
+	expect(rec.sendRequests[0]).toMatch(/^POST \/api\/briefings\/[^/]+\/send\?kind=route&report_type=evening$/);
 	expect(rec.triggerRequests).toEqual([]);
 });
 
 test('AC-11: 409 vom Versand zeigt die feste Meldung "Versand läuft bereits"', async ({ page }) => {
 	const rec = await aufzeichnen(page);
 	// Spaetere Route gewinnt: dieselbe URL jetzt mit 409 + detail beantworten.
-	await page.route('**/api/trips/*/send*', async (route) => {
+	await page.route('**/api/briefings/*/send*', async (route) => {
 		rec.sendRequests.push(route.request().method());
 		await route.fulfill({
 			status: 409,

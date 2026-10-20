@@ -366,7 +366,7 @@ test.describe('Issue #2283 AC-13: Senden nur im Hub-Kopf (mobil)', () => {
 		const id = await createPresetWithLocation(page, `E2E 2283 Mobil-Senden ${suffix}`, 'daily', locId);
 
 		const sende: string[] = [];
-		await page.route(new RegExp(`/api/compare/presets/${id}/send$`), async (route) => {
+		await page.route(new RegExp(`/api/briefings/${id}/send\\?kind=vergleich$`), async (route) => {
 			sende.push(route.request().url());
 			await route.fulfill({ status: 200, json: { status: 'queued' } });
 		});

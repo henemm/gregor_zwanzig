@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_2280_handversand_endpoint.md
-spec_sha256: 7cfc265237e8075074630fd210f6d30124ee3067f7c973dba492664aedf6b0e3
-spec_frozen_sha256: 84fc0c74130f9d70be0272ac37c283482f808bf3e94e32a9865b97274aa07f6f
+spec_sha256: c386f3f0d25933f6a5d1c17039234354a35d7ebd6d3da0038df18078824bfa36
+spec_frozen_sha256: e7bf4686f9cb5f19654e7dd93b6e855cd869bb2abcba0b3ce7f95685b098334b
 ---
 
 # PO-Briefing: feat-2280-handversand-endpoint
@@ -9,6 +9,7 @@ spec_frozen_sha256: 84fc0c74130f9d70be0272ac37c283482f808bf3e94e32a9865b97274aa0
 - **Spec:** docs/specs/modules/feat_2280_handversand_endpoint.md
 - **Issue:** #2280
 - **Erstellt:** 2026-10-20
+- **Hinweis:** Seit der Freigabe nur Spiegelstriche vor den Kriterien ergänzt (Formatierung); inhaltlich hat sich nichts geändert.
 
 ## Was gebaut wird
 
