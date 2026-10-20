@@ -26,7 +26,9 @@ Vertrag an ``.claude/tools/befehl_antwortzeit.py`` (nur lesend):
   }
   * Bruecke ist die Dauer-Zeile (kanal premium_sms/sms): Dauer-Zeilen nach Startzeit
     (ts - dauer_ms) aufsteigend; jede gehoert zum FRUEHESTEN noch freien Eingang mit
-    Eingang <= Start und Eingang >= Start - 600 s. Ihr `befehl` gilt.
+    Eingang <= Start und Eingang >= Start - 600 s, dessen Text-Befehl (Alias-normalisiert
+    wie im Prozessor, z. B. "Tomorrow" -> MORGEN) zum `befehl` der Dauer-Zeile passt.
+    Ihr `befehl` gilt.
     Antwort = noch freier outbound VON der Servicenummer AN den Absender, zeitlich am
     naechsten an der Dauer-Zeile (|Abstand| <= 30 s). So bekommt bei ueberlappenden
     Befehlen (HEUTE, 5 s spaeter HELP, HELP-Antwort zuerst) jeder seine eigene Antwort.
@@ -288,3 +290,220 @@ def test_f003_von_der_dauer_zeile_vergebene_antwort_geht_nicht_nochmal_an_spaete
     e2 = _eintrag(erg, "2026-10-27T08:00:10")
     assert e1["antwort"] == _utc("2026-10-27T08:00:40")
     assert e2["antwort"] is None
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 2 (Validierung V001): ein Eingang ohne eigene Dauer-Zeile ("hallo") darf die
+# Dauer-Zeile des echten Befehls nicht stehlen -- der Befehl der Dauer-Zeile muss zum
+# Text-Befehl des Eingangs passen.
+# ---------------------------------------------------------------------------
+
+def test_v001_eingang_ohne_dauer_zeile_stiehlt_nicht_die_dauer_des_folgebefehls():
+    erg = _werte([_ein("2026-10-27 09:00:00", "hallo"), _ein("2026-10-27 09:00:05", "heute")],
+                 [_aus("2026-10-27 09:00:41.300", "E4: W- WD:NW ...")],
+                 [_dauer("2026-10-27T08:00:41.500000", "HEUTE", 36000)])
+    heute = _eintrag(erg, "2026-10-27T08:00:05")
+    hallo = _eintrag(erg, "2026-10-27T08:00:00")
+    assert heute["befehl"] == "HEUTE" and heute["dauer_ms"] == 36000
+    assert heute["antwort"] == _utc("2026-10-27T08:00:41.300")
+    assert heute["antwortzeit_s"] == pytest.approx(36.3, abs=0.001)
+    assert hallo["dauer_ms"] is None
+    assert hallo["antwort"] is None and hallo["antwortzeit_s"] is None
+    assert erg["statistik"]["HEUTE"]["max_s"] == pytest.approx(36.3, abs=0.001)
+    assert erg["statistik"]["HEUTE"]["median_s"] == pytest.approx(36.3, abs=0.001)
+
+
+def test_v001_gespiegelt_spaeterer_eingang_ohne_dauer_zeile_bekommt_sie_auch_nicht():
+    """Schuetzt vor der Schein-Loesung 'spaetester Eingang vor dem Start'."""
+    erg = _werte([_ein("2026-10-27 09:00:00", "heute"), _ein("2026-10-27 09:00:05", "hallo")],
+                 [_aus("2026-10-27 09:00:41.300", "E4: W- WD:NW ...")],
+                 [_dauer("2026-10-27T08:00:41.500000", "HEUTE", 36000)])
+    heute = _eintrag(erg, "2026-10-27T08:00:00")
+    hallo = _eintrag(erg, "2026-10-27T08:00:05")
+    assert heute["befehl"] == "HEUTE" and heute["dauer_ms"] == 36000
+    assert heute["antwort"] == _utc("2026-10-27T08:00:41.300")
+    assert heute["antwortzeit_s"] == pytest.approx(41.3, abs=0.001)
+    assert hallo["dauer_ms"] is None
+    assert hallo["antwort"] is None and hallo["antwortzeit_s"] is None
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 1 zu V001 (Adversary F001/F002): Texterkennung wie im Prozessor
+# (erste Zeile, Zitat/Slash, ###, Satzzeichen), Einmalzuordnung je Eingang.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("text, befehl", [
+    ("Heute!", "HEUTE"),
+    ("Heute.", "HEUTE"),
+    ("/heute", "HEUTE"),
+    ("> heute", "HEUTE"),
+    ("### heute", "HEUTE"),
+    ("XXCJD224 Heute!", "HEUTE"),
+    ("Hilfe?", "HELP"),
+])
+def test_f001_eingang_mit_satzzeichen_oder_praefix_bekommt_seine_dauer_zeile(text, befehl):
+    erg = _werte([_ein("2026-10-27 09:00:00", text)],
+                 [_aus("2026-10-27 09:00:10", "...")],
+                 [_dauer("2026-10-27T08:00:10.200000", befehl, 9000)])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert (b["befehl"], b["dauer_ms"]) == (befehl, 9000)
+    assert b["antwort"] == _utc("2026-10-27T08:00:10")
+
+
+@pytest.mark.parametrize("text", ["Heute!", "/heute", "> heute", "XXCJD224 Heute!"])
+def test_f001_befehl_ohne_dauer_zeile_ist_normalisiert(text):
+    """Aeltere Daten ohne Dauer-Zeile: kein eigener Statistik-Schluessel 'HEUTE!'."""
+    erg = _werte([_ein("2026-10-27 09:00:00", text)], [_aus("2026-10-27 09:00:10", "...")], [])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["befehl"] == "HEUTE"
+    assert set(erg["statistik"]) == {"HEUTE"}
+
+
+def test_f002_zwei_gleiche_befehle_bekommen_je_ihre_eigene_dauer_zeile():
+    erg = _werte([_ein("2026-10-27 09:00:00", "heute"), _ein("2026-10-27 09:00:20", "heute")],
+                 [],
+                 [_dauer("2026-10-27T08:00:30.000000", "HEUTE", 5000),
+                  _dauer("2026-10-27T08:00:45.000000", "HEUTE", 10000)])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["dauer_ms"] == 5000
+    assert _eintrag(erg, "2026-10-27T08:00:20")["dauer_ms"] == 10000
+
+
+@pytest.mark.parametrize("dauer_zeile", [
+    # passender Befehl, aber Start 700 s nach dem Eingang (ausserhalb 600 s)
+    _dauer("2026-10-27T08:11:41.000000", "HEUTE", 1000),
+    # im Fenster, aber anderer Befehl
+    _dauer("2026-10-27T08:00:10.000000", "HELP", 100),
+])
+def test_f002_dauer_zeile_ohne_passenden_eingang_wird_niemandem_zugeordnet(dauer_zeile):
+    erg = _werte([_ein("2026-10-27 09:00:00", "heute")], [], [dauer_zeile])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert b["dauer_ms"] is None and b["befehl"] == "HEUTE"
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 2 zu V001 (Adversary F004-F006): Code-Abtrennung wie der Reader
+# (`split_link_code` auf dem GANZEN Text), erste Zeile, reiner Code, Aliase ohne Dauer-Zeile.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("text", ["XXCJD224\nheute", "### heute\nViele Gruesse\nHenning"])
+def test_f004_f005_befehl_in_erster_zeile_bzw_nach_code_zeile_bekommt_dauer(text):
+    erg = _werte([_ein("2026-10-27 09:00:00", text)], [],
+                 [_dauer("2026-10-27T08:00:10.200000", "HEUTE", 9000)])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert (b["befehl"], b["dauer_ms"]) == ("HEUTE", 9000)
+
+
+@pytest.mark.parametrize("text", ["xx heute", "XX1 > heute"])
+def test_f004_kein_code_in_code_gestalt_ist_kein_befehl(text):
+    """Der Prozessor erkennt hier keinen Befehl (UNKNOWN). Fix-Loop 3: ein UNKNOWN-Eingang
+    ist nur noch RUECKFALL -- steht ein echtes "heute" im Fenster, gewinnt dieses."""
+    erg = _werte([_ein("2026-10-27 09:00:00", text)], [], [])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["befehl"] == "UNKNOWN"
+    erg = _werte([_ein("2026-10-27 09:00:00", text), _ein("2026-10-27 09:00:05", "heute")], [],
+                 [_dauer("2026-10-27T08:00:15.200000", "HEUTE", 9000)])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert b["dauer_ms"] is None and b["befehl"] == "UNKNOWN"
+    assert _eintrag(erg, "2026-10-27T08:00:05")["dauer_ms"] == 9000
+
+
+def test_f005_reiner_code_ohne_befehl_bricht_nicht_ab():
+    erg = _werte([_ein("2026-10-27 09:00:00", "XXCJD224")], [], [])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert b["befehl"] == "UNKNOWN" and b["dauer_ms"] is None
+
+
+@pytest.mark.parametrize("text, befehl", [("hilfe", "HELP"), ("Tomorrow", "MORGEN"),
+                                          ("XXCJD224 kuerzel", "CODES")])
+def test_f006_befehl_ohne_dauer_zeile_traegt_den_journalnamen(text, befehl):
+    erg = _werte([_ein("2026-10-27 09:00:00", text)], [_aus("2026-10-27 09:00:10", "...")], [])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["befehl"] == befehl
+    assert set(erg["statistik"]) == {befehl}
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 3 zu V001 (Adversary F007/F008): Zuordnungsregel
+#   1. Vorrang: exakter Befehl,  2. Rueckfall: UNKNOWN-Eingang,  3. nie ein ANDERER Befehl.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("text", ["GR20 heute", "XXAAA234 GR20 heute"])
+def test_f007_trip_name_vor_dem_befehl_bekommt_die_dauer_zeile_im_rueckfall(text):
+    erg = _werte([_ein("2026-10-27 09:00:00", text)], [_aus("2026-10-27 09:00:10", "...")],
+                 [_dauer("2026-10-27T08:00:10.200000", "HEUTE", 9000)])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert (b["befehl"], b["dauer_ms"]) == ("HEUTE", 9000)
+    assert b["antwort"] == _utc("2026-10-27T08:00:10")
+    assert set(erg["statistik"]) == {"HEUTE"}
+
+
+@pytest.mark.parametrize("text", ["wind", "Temp"])
+def test_f007_metrik_wort_passt_exakt_zur_metrik_dauer_zeile(text):
+    erg = _werte([_ein("2026-10-27 09:00:00", text)], [],
+                 [_dauer("2026-10-27T08:00:10.200000", "METRIK", 900)])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert (b["befehl"], b["dauer_ms"]) == ("METRIK", 900)
+
+
+def test_f007_metrik_wort_ohne_dauer_zeile_heisst_metrik():
+    erg = _werte([_ein("2026-10-27 09:00:00", "wind")], [], [])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["befehl"] == "METRIK"
+
+
+def test_f007_exakter_treffer_hat_vorrang_vor_unknown_eingaengen():
+    erg = _werte([_ein("2026-10-27 09:00:00", "hallo"), _ein("2026-10-27 09:00:03", "GR20 heute"),
+                  _ein("2026-10-27 09:00:05", "heute")], [],
+                 [_dauer("2026-10-27T08:00:41.500000", "HEUTE", 36000)])
+    assert _eintrag(erg, "2026-10-27T08:00:05")["dauer_ms"] == 36000
+    assert _eintrag(erg, "2026-10-27T08:00:00")["dauer_ms"] is None
+    assert _eintrag(erg, "2026-10-27T08:00:03")["dauer_ms"] is None
+
+
+def test_f007_anderer_bekannter_befehl_bekommt_die_dauer_zeile_nie():
+    erg = _werte([_ein("2026-10-27 09:00:00", "hilfe")], [],
+                 [_dauer("2026-10-27T08:00:10.200000", "HEUTE", 9000)])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert (b["befehl"], b["dauer_ms"]) == ("HELP", None)
+
+
+@pytest.mark.parametrize("text, befehl", [("ABBRUCH", "UNKNOWN"), ("### abbruch", "ABBRUCH"),
+                                          ("stop", "ABBRUCH")])
+def test_f008_nacktes_abbruch_ist_wie_im_prozessor_unknown(text, befehl):
+    """Bare-Pfad nur ueber `_BARE_KEYWORD_MAP` (ABBRUCH ist dort kein Wort, STOP schon);
+    der `###`-Pfad nimmt wie `_parse_command` jedes Wort als Schluessel."""
+    erg = _werte([_ein("2026-10-27 09:00:00", text)], [], [])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["befehl"] == befehl
+
+
+# ---------------------------------------------------------------------------
+# Loop 4 (Adversary F009/F011): Kanalfilter, Fenstergrenze, Startzeit = ts - dauer_ms
+# ---------------------------------------------------------------------------
+
+def test_f009_telegram_dauer_zeile_gehoert_nie_zu_einem_sms_eingang():
+    telegram = ("2026-10-27T08:00:10.000000+00:00 Rennwienix uv[1]: x INFO befehl_dauer: "
+                "befehl=HEUTE kanal=telegram trip=khw-403 dauer_ms=100")
+    erg = _werte([_ein("2026-10-27 09:00:00", "heute")], [], [telegram])
+    b = _eintrag(erg, "2026-10-27T08:00:00")
+    assert b["befehl"] == "HEUTE" and b["dauer_ms"] is None
+
+
+def test_f011_eingang_nach_dem_start_der_dauer_zeile_bekommt_sie_nicht():
+    """Start = 08:00:30 - 20 s = 08:00:10; der Eingang 08:00:20 kam erst danach."""
+    erg = _werte([_ein("2026-10-27 09:00:20", "heute")], [],
+                 [_dauer("2026-10-27T08:00:30.000000", "HEUTE", 20000)])
+    assert _eintrag(erg, "2026-10-27T08:00:20")["dauer_ms"] is None
+
+
+def test_f011_lange_dauer_bringt_den_eingang_erst_ueber_ts_minus_ms_ins_fenster():
+    """Ende 08:10:30, 330 s Dauer => Start 08:05:00; der Eingang 08:00:00 liegt im Fenster
+    [Start - 600 s, Start], aber NICHT in [Ende - 600 s, Ende]."""
+    erg = _werte([_ein("2026-10-27 09:00:00", "heute")], [],
+                 [_dauer("2026-10-27T08:10:30.000000", "HEUTE", 330000)])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["dauer_ms"] == 330000
+
+
+def test_f011_ueberlappende_gleiche_befehle_werden_nach_start_nicht_nach_ende_zugeordnet():
+    """X: Start 08:00:05, Ende 08:01:00 (nur A davor). Y: Start 08:00:15, Ende 08:00:20.
+    Nach Ende sortiert kaeme Y zuerst und naehme A -- X faende dann keinen Eingang mehr."""
+    erg = _werte([_ein("2026-10-27 09:00:00", "heute"), _ein("2026-10-27 09:00:10", "heute")], [],
+                 [_dauer("2026-10-27T08:01:00.000000", "HEUTE", 55000),
+                  _dauer("2026-10-27T08:00:20.000000", "HEUTE", 5000)])
+    assert _eintrag(erg, "2026-10-27T08:00:00")["dauer_ms"] == 55000
+    assert _eintrag(erg, "2026-10-27T08:00:10")["dauer_ms"] == 5000

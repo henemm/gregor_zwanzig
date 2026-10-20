@@ -7,7 +7,8 @@ Push-Status von Prod (`/api/scheduler/status`). Versendet nichts, schreibt nicht
 Schluessel und Token kommen aus der Konfiguration und werden nie ausgegeben; Rufnummern
 erscheinen nicht in der Ausgabe.
 
-Aufruf:
+Aufruf NUR mit `uv run` (braucht die Projekt-venv: die Befehlserkennung kommt aus
+`src/services/trip_command_processor.py`; ohne venv ModuleNotFoundError):
     uv run python3 .claude/tools/befehl_antwortzeit.py --since 2026-10-20 [--kanal premium_sms|telegram|email]
 """
 from __future__ import annotations
@@ -24,6 +25,15 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import befehl_messlogik as ml  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+# Eine Quelle fuer Texterkennung und Journalnamen: dieselben Funktionen wie Reader/Prozessor.
+from services.trip_command_processor import (  # noqa: E402
+    TripCommandProcessor, _befehlsname, _erstes_wort, _metric_id_for_word,
+)
+from services.inbound_sms_reader import split_link_code  # noqa: E402
+
+_PARSER = TripCommandProcessor()  # nur `_parse_command`, wie `_ParseNurProcessor` im Reader
+
 BERLIN = ZoneInfo("Europe/Berlin")
 BRUECKE_FENSTER_S = 600
 ANTWORT_NAHE_S = 30
@@ -39,10 +49,24 @@ def _seven_zeit(text: str) -> datetime:
 
 
 def _befehl_aus_text(text: str) -> str:
-    woerter = (text or "").strip().split()
-    if woerter and woerter[0].upper().startswith("XX") and len(woerter) > 1:
-        woerter = woerter[1:]
-    return woerter[0].upper() if woerter else ""
+    """Journalname des Befehls wie in der Dauer-Zeile: `split_link_code` (Reader), dann
+    `_parse_command` + METRIK/`_befehlsname` wie `TripCommandProcessor._logge_dauer`.
+    Was so nicht deutbar ist (z. B. Trip-Name vor dem Befehl), wird UNKNOWN."""
+    _, befehl = split_link_code(text or "")
+    key, value = _PARSER._parse_command(befehl)
+    if key is None and _metric_id_for_word(_erstes_wort(befehl)):
+        return "METRIK"
+    return _befehlsname(key, value)
+
+
+def _ziel_fuer_dauerzeile(frei_im_fenster: list[dict], befehl: str) -> dict | None:
+    """V001/F007: Vorrang der frueheste Eingang mit EXAKT diesem Befehl; Rueckfall der
+    frueheste UNKNOWN-Eingang; ein Eingang mit ANDEREM bekanntem Befehl nie."""
+    for gesucht in (befehl, "UNKNOWN"):
+        ziel = next((e for e in frei_im_fenster if e["erkannt"] == gesucht), None)
+        if ziel is not None:
+            return ziel
+    return None
 
 
 def _push_passt(push, eingang: datetime) -> bool:
@@ -84,6 +108,7 @@ def auswerten(inbound, outbound, dauerzeilen, push=None) -> dict:
     eingaenge = sorted(
         ({"eingang": _seven_zeit(m["timestamp"]), "absender": m.get("from"),
           "service": m.get("to"), "text": m.get("text", ""), "befehl": None,
+          "erkannt": _befehl_aus_text(m.get("text", "")),
           "antwort": None, "dauer_ms": None} for m in inbound),
         key=lambda e: e["eingang"])
     frei = [{"ts": _seven_zeit(m["timestamp"]), "von": m.get("from"), "an": m.get("to")}
@@ -92,8 +117,9 @@ def auswerten(inbound, outbound, dauerzeilen, push=None) -> dict:
     sms = [d for d in dauerzeilen if d["kanal"] in ("premium_sms", "sms")]
     for dz in sorted(sms, key=lambda d: d["ts"] - timedelta(milliseconds=d["ms"])):
         start = dz["ts"] - timedelta(milliseconds=dz["ms"])
-        ziel = next((e for e in eingaenge if e["befehl"] is None and e["eingang"] <= start
-                     and e["eingang"] >= start - timedelta(seconds=BRUECKE_FENSTER_S)), None)
+        ziel = _ziel_fuer_dauerzeile(
+            [e for e in eingaenge if e["befehl"] is None and e["eingang"] <= start
+             and e["eingang"] >= start - timedelta(seconds=BRUECKE_FENSTER_S)], dz["befehl"])
         if ziel is None:
             continue
         ziel["befehl"], ziel["dauer_ms"] = dz["befehl"], dz["ms"]
@@ -105,7 +131,7 @@ def auswerten(inbound, outbound, dauerzeilen, push=None) -> dict:
     for i, e in enumerate(eingaenge):
         if e["befehl"] is not None:
             continue
-        e["befehl"] = _befehl_aus_text(e["text"])
+        e["befehl"] = e["erkannt"]
         spaeter = [x["eingang"] for x in eingaenge[i + 1:] if x["absender"] == e["absender"]]
         antwort = _antwort_waehlen(e, frei, None, spaeter[0] if spaeter else None)
         if antwort:
