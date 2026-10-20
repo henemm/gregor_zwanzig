@@ -351,8 +351,8 @@ class TestCorridorScoreIndependence:
 # HIGH). Nur der HTML-Teil aendert sich (Farbe steckt nur im HTML); der
 # Klartext-Teil bleibt byte-identisch (alte Summe unveraendert gueltig).
 # Alte HTML-Summe: 2ea4e178…, neue: 68b9c7d4….
-_COMPARE_HTML_SHA256_BEFORE = "68b9c7d42a75598aff70064aa1f512e936a8511d2e914fd60e41f66340fd541e"
-_COMPARE_TEXT_SHA256_BEFORE = "54f2982ccec411d91d7de9b0c6c13a4d3e80ac9e64e49fa8db9893827ee6311e"
+_COMPARE_HTML_SHA256_BEFORE = "645479b71c9b3fa4b2e3de0f42c6640fc6f04a8cf5b185d0d0a731eabfc3735b"
+_COMPARE_TEXT_SHA256_BEFORE = "e517e744390f0bfbd32f89407756de18a0038861f13008e90b8cca3ca438d621"
 
 
 def _byte_identity_fixture():

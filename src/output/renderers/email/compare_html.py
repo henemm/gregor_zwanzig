@@ -1747,6 +1747,8 @@ def render_compare_html(
     abo_html = _render_abo_footer(
         preset_name, preset_schedule, preset_weekday, len(locations), sig, header_tz,
     )
+    from output.renderers.email.command_block import render_commands_html
+    commands_html = render_commands_html("vergleich")
     app_footer_html = _render_app_footer()
 
     # Nur nicht-leere Bloecke einreihen (kein Doppel-Newline durch leeren
@@ -1755,7 +1757,7 @@ def render_compare_html(
         part for part in (
             header_html, warnings_html, warn_banner_html, unavailable_banner_html,
             overview_html, hourly_head_html, per_location_html,
-            undelivered_html, legend_html, abo_html, app_footer_html,
+            undelivered_html, legend_html, abo_html, commands_html, app_footer_html,
         ) if part
     )
 

@@ -30,6 +30,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     MAIL_FORMEN,
     _FakeImap,
     basis_settings,
+    befehlstext_fuer,
     install_transport_fakes,
     lege_lage_an,
     merkmal_fuer,
@@ -240,7 +241,7 @@ def test_jeder_befehl_in_allen_mailformen(monkeypatch, user_ids, spec, form):
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L2")
     settings = basis_settings()
-    body = f"{wort} 2d" if wort == "pause" else wort
+    body = befehlstext_fuer(wort)  # #2420: pause 2d / startdatum <Datum>
 
     ergebnis = sende_email(settings, nutzer, body, form=form)
 

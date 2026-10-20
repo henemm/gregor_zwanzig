@@ -15,7 +15,7 @@ RED-Ursache (acht divergierende Listen, keine zwei gleich):
   Liste.
 
 Mock-frei: echte Renderer-Aufrufe (`render_plain`,
-`_render_kommandos_section`), echter `process()`-Aufruf, echter
+`command_block.render_commands_html`), echter `process()`-Aufruf, echter
 `InboundTelegramReader._process_update`. Der Telegram-Versand haengt an einer
 ECHTEN `NotificationService`-Unterklasse als Naht (kein `Mock()`/`patch()`) —
 geprueft wird der TEXT, den der Reader erzeugt, nicht der Transport.
@@ -198,9 +198,9 @@ def _plain_kommandoblock() -> str:
 
 def _html_kommandoblock() -> str:
     """Der Block "Antwort-Kommandos" aus der ECHTEN HTML-Ausgabe, entmarkupt."""
-    from output.renderers.email.html import _render_kommandos_section
+    from output.renderers.email.command_block import render_commands_html
 
-    return re.sub(r"<[^>]+>", " ", _render_kommandos_section())
+    return re.sub(r"<[^>]+>", " ", render_commands_html("route"))
 
 
 def _befehlswoerter(text: str) -> set[str]:
@@ -352,3 +352,35 @@ def test_ac1_jeder_eintrag_traegt_englisches_wort_und_wirkung():
         f"AC-1: {len(ohne)} von {len(tcp._COMMAND_SPECS)} Eintraegen fehlt "
         f"wort_en oder wirkung_en: {ohne!r}"
     )
+
+
+# ===========================================================================
+# #2420 (Epic #2506) — STARTDATUM und REPORT: alle Kopien aus EINER Quelle
+# SPEC: docs/specs/modules/feat_2420_befehle_anzeigen.md AC-8, AC-15
+# ===========================================================================
+
+def test_2420_befehlssatz_wuchs_auf_fuenfzehn_und_alle_kopien_folgen():
+    """GIVEN ``_COMMAND_SPECS`` mit 15 Eintraegen WHEN Klartext-Block, HTML-Block
+    und der Fehlertext erzeugt werden THEN tragen ALLE drei ``STARTDATUM`` und
+    ``REPORT`` (harte Literale, nicht aus der Quelle abgeleitet) und der
+    Klartext-Block hat genau 15 Zeilen."""
+    from services import trip_command_processor as tcp
+
+    assert len(tcp._COMMAND_SPECS) == 15
+
+    plain = _plain_kommandoblock()
+    html = _befehlswoerter(_html_kommandoblock())
+    assert len([z for z in plain.splitlines() if z.startswith("  ")]) == 15, plain
+    for wort in ("STARTDATUM", "REPORT"):
+        assert wort in _befehlswoerter(plain), f"Klartext-Block ohne {wort}: {plain}"
+        assert wort in html, f"HTML-Block ohne {wort}: {sorted(html)!r}"
+
+    fix = lege_trip_an("t2420", mit_snapshot=False)
+    fehlertext = text_woerter(_fehlertext_unbekanntes_wort(fix))
+    for wort in ("startdatum", "report"):
+        assert wort in fehlertext, f"Fehlertext verschweigt {wort!r}"
+
+
+def test_2420_stop_zeile_nennt_abbruch_in_beiden_bloecken():
+    assert "ABBRUCH" in _befehlswoerter(_plain_kommandoblock())
+    assert "ABBRUCH" in _befehlswoerter(_html_kommandoblock())

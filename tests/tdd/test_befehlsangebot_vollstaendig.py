@@ -37,6 +37,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     install_transport_fakes,
     lege_lage_an,
     merkmal_fuer,
+    sende_email,
     sende_premium_sms,
     sende_telegram_text,
     spec_feld,
@@ -306,3 +307,98 @@ def test_ac28_zusatz_jeder_menueeintrag_loest_seinen_beschriebenen_befehl_aus(mo
         assert fehlertext not in text, (
             f"Menueeintrag '/{cmd}' liefert einen Fehlertext {fehlertext!r}: {text!r}"
         )
+
+
+# ---------------------------------------------------------------------------
+# #2420 (Epic #2506): STARTDATUM und REPORT werden angeboten. Harte Literale,
+# nicht aus dem Produkt abgeleitet -- sonst wuerde ein fehlender Eintrag den
+# Test nicht rot machen, sondern aus der Erwartung verschwinden.
+# SPEC: docs/specs/modules/feat_2420_befehle_anzeigen.md AC-1, AC-2, AC-15
+# ---------------------------------------------------------------------------
+
+_NEUE_LANGHILFE_ZEILEN = ("STARTDATUM JJJJ-MM-TT", "REPORT [morning / evening]")
+
+
+def _hilfezeilen(text: str) -> list[str]:
+    """Die Zeilen eines Hilfetexts, an den Raendern bereinigt."""
+    return [zeile.strip() for zeile in text.splitlines()]
+
+
+def _email_antworttext(gesendet: dict) -> str:
+    import email as email_lib
+    from email.header import decode_header, make_header
+
+    msg = email_lib.message_from_string(gesendet["raw"])
+    teile = [str(make_header(decode_header(msg.get("Subject", ""))))]
+    for teil in (msg.walk() if msg.is_multipart() else [msg]):
+        if teil.get_content_maintype() != "text":
+            continue
+        payload = teil.get_payload(decode=True)
+        if payload:
+            teile.append(payload.decode(teil.get_content_charset() or "utf-8", errors="replace"))
+    return "\n".join(teile)
+
+
+def test_ac15_befehlssatz_hat_fuenfzehn_eintraege_mit_startdatum_und_report():
+    assert len(_COMMAND_SPECS) == 15, (
+        f"_COMMAND_SPECS hat {len(_COMMAND_SPECS)} statt 15 Eintraegen: "
+        f"{_COMMAND_SPECS_WOERTER!r}"
+    )
+    assert {"startdatum", "report"} <= set(_COMMAND_SPECS_WOERTER)
+    # ABBRUCH und COLUMNS sind KEINE eigenen Befehle (Spec: Alias bzw. Button).
+    assert not {"abbruch", "columns"} & set(_COMMAND_SPECS_WOERTER)
+
+
+def test_ac2_bot_commands_enthalten_startdatum_startdate_und_report():
+    eintraege = {c["command"]: c["description"] for c in BOT_COMMANDS}
+    for name in ("startdatum", "startdate", "report"):
+        assert name in eintraege, f"Telegram-Menue ohne /{name}: {sorted(eintraege)!r}"
+        assert _BOT_COMMAND_NAME_RE.match(name)
+        assert 0 < len(eintraege[name]) <= 256
+    assert "abbruch" not in eintraege and "columns" not in eintraege
+
+
+def test_ac1_langhilfe_listet_startdatum_report_und_stop_nennt_abbruch():
+    zeilen = _hilfezeilen(_langhilfe_text())
+    for kopf in _NEUE_LANGHILFE_ZEILEN:
+        treffer = [z for z in zeilen if z.startswith(kopf)]
+        assert len(treffer) == 1, f"Langhilfe fuehrt {kopf!r} nicht genau einmal: {zeilen!r}"
+        assert len(treffer[0]) > len(kopf) + 3, f"{kopf!r} ohne Beschreibung: {treffer[0]!r}"
+    stop = [z for z in zeilen if z.startswith("STOP")]
+    assert len(stop) == 1 and "auch ABBRUCH" in stop[0], f"STOP-Zeile ohne ABBRUCH: {stop!r}"
+    eigene = [z for z in zeilen if z.split(" ")[0] in ("ABBRUCH", "COLUMNS")]
+    assert eigene == [], f"ABBRUCH/COLUMNS als eigene Hilfezeile: {eigene!r}"
+
+
+def test_ac1_hilfe_per_email_listet_startdatum_report_und_abbruch_alias(monkeypatch, user_ids):
+    """AC-1 durch den echten E-Mail-Eingang: die versendete Antwortmail."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+
+    verarbeitet = sende_email(basis_settings(), nutzer, "hilfe")
+
+    recorder.pruefe_keine_unbekannten_aufrufe()
+    assert verarbeitet == 1 and recorder.emails, "Keine Antwortmail auf HILFE."
+    zeilen = _hilfezeilen(_email_antworttext(recorder.emails[-1]))
+    for kopf in _NEUE_LANGHILFE_ZEILEN:
+        assert any(z.startswith(kopf) for z in zeilen), f"HILFE-Mail ohne {kopf!r}: {zeilen!r}"
+    stop = [z for z in zeilen if z.startswith("STOP")]
+    assert stop and "auch ABBRUCH" in stop[0], f"STOP-Zeile ohne ABBRUCH: {stop!r}"
+    assert not [z for z in zeilen if z.split(" ")[0] in ("ABBRUCH", "COLUMNS")]
+
+
+def test_ac2_hilfe_per_telegram_listet_startdatum_und_report(monkeypatch, user_ids):
+    """AC-2 durch den echten Telegram-Eingang (Langhilfe auf ``hilfe``)."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+
+    sende_telegram_text(basis_settings(), nutzer, "hilfe")
+
+    recorder.pruefe_keine_unbekannten_aufrufe()
+    inhalte = recorder.telegram_inhalte(nutzer.telegram_chat_id)
+    assert inhalte, "Telegram-HILFE blieb ohne Antwort."
+    zeilen = _hilfezeilen("\n".join(e["payload"].get("text", "") for e in inhalte))
+    for kopf in _NEUE_LANGHILFE_ZEILEN:
+        assert any(z.startswith(kopf) for z in zeilen), f"Telegram-Hilfe ohne {kopf!r}"
+    stop = [z for z in zeilen if z.startswith("STOP")]
+    assert stop and "auch ABBRUCH" in stop[0]

@@ -43,6 +43,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     _preset,
     _read,
     basis_settings,
+    befehlstext_fuer,
     deutsche_signale,
     gsm7_befunde_systemtext,
     install_transport_fakes,
@@ -55,6 +56,7 @@ from tests.tdd._befehl_e2e_fixtures import (
     sende_telegram_text,
     sms_segments,
     spec_feld,
+    startdatum_ziel,
     user_ids,
 )
 from tests.tdd._gsm7_charset import assert_gsm7_clean
@@ -279,11 +281,11 @@ def test_kurzhilfe_englisch_liste_existiert_nicht_mehr():
 # deutsche
 # ===========================================================================
 
-_MUTIEREND = {"pause", "skip", "stop", "resume", "restday"}
+_MUTIEREND = {"pause", "skip", "stop", "resume", "restday", "startdate"}
 
 
 def _befehlstext(wort: str) -> str:
-    return f"{wort} 2d" if wort == "pause" else wort
+    return befehlstext_fuer(wort)  # #2420: pause 2d / startdatum <Datum>
 
 
 def _pruefe_mutation(wort: str, nutzer: BefehlNutzer, vorher_morgen) -> None:
@@ -302,6 +304,13 @@ def _pruefe_mutation(wort: str, nutzer: BefehlNutzer, vorher_morgen) -> None:
         assert morgen.date == vorher_morgen + timedelta(days=1), (
             f"RUHETAG/RESTDAY hat 'Etappe Morgen' nicht um 1 Tag verschoben: "
             f"{vorher_morgen} -> {morgen.date}"
+        )
+    elif wort == "startdatum":
+        # #2420: erste Etappe auf das Zieldatum, alle weiteren um dieselbe Differenz.
+        ziel = startdatum_ziel()
+        daten = [s.date for s in sorted(trip.stages, key=lambda s: s.date)]
+        assert daten == [ziel, ziel + timedelta(days=1), ziel + timedelta(days=2)], (
+            f"STARTDATUM/STARTDATE hat die Etappen nicht auf {ziel} verschoben: {daten}"
         )
     else:
         raise AssertionError(f"Keine Mutations-Pruefung fuer {wort!r}")
@@ -622,9 +631,20 @@ def test_help_kurzform_ist_der_freigegebene_wortlaut(monkeypatch, user_ids, wort
 
     text = _sende("premium_sms", basis_settings(), recorder, nutzer, wort)
 
-    assert text == HELP_WORTLAUT, (
-        f"AC-8: die versendete HELP-Antwort weicht vom freigegebenen Wortlaut ab.\n"
-        f"--- erwartet ---\n{HELP_WORTLAUT}\n--- versendet ---\n{text}"
+    # #2420 AC-9: der freigegebene Wortlaut waechst um zwei Zeilen
+    # (STARTDATE / REPORT). Ihre Lage in der Liste legt die Spec nicht fest,
+    # ihre Zeichen-Form nur zum Teil -- strukturell geprueft: alle bisherigen
+    # Zeilen unveraendert und in alter Reihenfolge, genau zwei neue Zeilen.
+    zeilen = text.splitlines()
+    assert zeilen[0] == HELP_WORTLAUT.splitlines()[0]
+    assert zeilen[-1] == HELP_WORTLAUT.splitlines()[-1]
+    neue = [z for z in zeilen if z.split(" ")[0] in ("STARTDATE", "REPORT")]
+    assert sorted(z.split(" ")[0] for z in neue) == ["REPORT", "STARTDATE"], (
+        f"AC-9: die HELP-Antwort fuehrt nicht genau STARTDATE und REPORT:\n{text}"
+    )
+    assert [z for z in zeilen if z not in neue] == HELP_WORTLAUT.splitlines(), (
+        f"AC-8: die bisherigen HELP-Zeilen weichen vom freigegebenen Wortlaut ab.\n"
+        f"--- erwartet (ohne STARTDATE/REPORT) ---\n{HELP_WORTLAUT}\n--- versendet ---\n{text}"
     )
     wirkung = _wirkung_je_englischem_wort()
     for zeile in _befehlszeilen(text):
@@ -677,6 +697,46 @@ def test_help_kurzform_ortsvergleich_ist_der_freigegebene_wortlaut(monkeypatch, 
                 f"AC-8 Vergleich: Zeile {zeile!r} nicht aus wirkung_en abgeleitet."
             )
     _pruefe_sms_sauberkeit(text, max_segmente=3, kontext="AC-8 HELP Vergleich")
+
+
+def test_kurzhilfe_traegt_startdate_und_report_innerhalb_des_segmentbudgets(monkeypatch, user_ids):
+    """#2420 AC-9 GIVEN ``HELP`` per Premium-SMS WHEN die Antwort versendet
+    wird THEN steht ``STARTDATE date - move start`` und eine ``REPORT``-Zeile
+    mit ``wirkung_en`` darin, ALLE Zeichen sind GSM-7-sauber (auch kein
+    ``[``/``]`` -- beide kosten zwei Septets und sind fuer
+    ``assert_gsm7_clean`` kein Basiszeichen) und die Antwort braucht hoechstens
+    3 Segmente (harte Grenze 459 Zeichen). Die Vergleichs-Kurzhilfe bleibt bei
+    111 Zeichen ohne die zwei Zeilen.
+
+    HINWEIS fuer /50: die Spec-Zeile ``REPORT [evening] - send now`` ist mit
+    GSM-7-Sauberkeit und <= 3 Segmenten nicht vereinbar (``[``/``]`` sind
+    Extension-Zeichen, 460 statt 458 Septets). Verbindlich ist hier die
+    Grenze, nicht der Wortlaut der REPORT-Zeile."""
+    recorder = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+
+    text = _sende("premium_sms", basis_settings(), recorder, nutzer, "help")
+
+    zeilen = text.splitlines()
+    assert "STARTDATE date - move start" in zeilen, f"AC-9: STARTDATE-Zeile fehlt:\n{text}"
+    report = [z for z in zeilen if z.split(" ")[0] == "REPORT"]
+    assert len(report) == 1, f"AC-9: genau eine REPORT-Zeile erwartet:\n{text}"
+    wirkung = _wirkung_je_englischem_wort()["REPORT"]
+    assert report[0].endswith(f" - {wirkung}"), (
+        f"AC-9: REPORT-Zeile {report[0]!r} endet nicht mit wirkung_en {wirkung!r}"
+    )
+    assert_gsm7_clean(text, context="AC-9 Kurzhilfe mit STARTDATE/REPORT")
+    assert len(text) <= 459, f"AC-9: {len(text)} Zeichen > 459:\n{text}"
+    assert sms_segments(text) <= 3, f"AC-9: {sms_segments(text)} Segmente:\n{text}"
+
+    # Vergleichs-Kurzhilfe unveraendert (beide Befehle gelten nur fuer Trips).
+    vergleich = lege_lage_an(user_ids, "L4")
+    name = vergleich.presets[0]["name"]
+    text_v = _sende("premium_sms", basis_settings(), recorder, vergleich, f"{name} help")
+    assert len(text_v) == 111, f"AC-9: Vergleichs-Kurzhilfe hat {len(text_v)} statt 111 Zeichen"
+    assert "STARTDATE" not in text_v and "REPORT" not in text_v, (
+        f"AC-9: die Vergleichs-Kurzhilfe bietet Trip-Befehle an:\n{text_v}"
+    )
 
 
 # ===========================================================================

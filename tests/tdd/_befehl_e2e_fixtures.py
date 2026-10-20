@@ -359,6 +359,9 @@ BEFEHL_EN_ZU_DE: dict[str, str] = {
     "resume": "weiter",
     "help": "hilfe",
     "codes": "kuerzel",
+    # #2420: STARTDATUM/REPORT werden angeboten (Spec feat_2420_befehle_anzeigen).
+    "startdate": "startdatum",
+    "report": "report",
 }
 
 #: Deutsche Befehlswoerter, die es NUR auf Deutsch gibt (in einer englischen
@@ -1355,6 +1358,44 @@ ZIELLOSE_WOERTER = frozenset({"hilfe"})
 _ZIELLOS_KUERZEL_SCHLUESSEL = frozenset({"kuerzel", "codes"})
 ZIELLOSE_CALLBACKS = frozenset({"act_help", "act_columns"})
 
+#: #2420 AC-5: Befehlswoerter mit EIGENER Matrix-Pruefung
+#: (``test_befehle_startdatum_report_alleinwort.py``). ``startdatum`` braucht
+#: ein Datum, ``report`` loest einen echten Briefing-Versand aus -- beide
+#: passen nicht in die generischen Ein-Wort-Parametrisierungen. Die
+#: Ausnahme ist NICHT still: die neue Testdatei prueft, dass beide Woerter in
+#: ``_COMMAND_SPECS`` stehen und alle sechs Lagen je Kanal durchlaufen.
+EIGENE_E2E_BEFEHLE = frozenset({"startdatum", "report"})
+
+#: #2420 AC-5: Soll-Ergebnis je Befehl x Lage. Bewusst ein eigenes Woerterbuch
+#: (NICHT in ``SOLL_MATRIX``: dessen Struktur ist auf die vier Klassen
+#: festgenagelt, ``test_soll_matrix_deckt_alle_klassen_und_lagen_ab``). Aus der
+#: freigegebenen Spec abgeschrieben (gleiche Werte wie die route_only-Zeile).
+SOLL_MATRIX_STARTDATUM_REPORT: dict[str, dict[str, str]] = {
+    befehl: {
+        "L1": ERGEBNIS_KEIN_KANDIDAT, "L2": ERGEBNIS_ANTWORT_TRIP,
+        "L3": ERGEBNIS_ANTWORT_TRIP, "L4": ERGEBNIS_KEIN_AKTIVES_ZIEL,
+        "L5": ERGEBNIS_KEIN_AKTIVES_ZIEL, "L6": ERGEBNIS_ANTWORT_TRIP,
+    }
+    for befehl in ("startdatum", "report")
+}
+
+
+def startdatum_ziel() -> date:
+    """Das Zieldatum, auf das die STARTDATUM-Tests den Trip verschieben:
+    zehn Ortstage ab "jetzt" (kein fester Kalendertag -- sonst koppelt der
+    Test an die Systemuhr)."""
+    return _ortstag_jetzt() + timedelta(days=10)
+
+
+def befehlstext_fuer(wort: str) -> str:
+    """Der Text, den ein Nutzer fuer ``wort`` tatsaechlich tippt: manche
+    Befehle brauchen ein Argument (``pause 2d``, ``startdatum <Datum>``)."""
+    if wort == "pause":
+        return "pause 2d"
+    if wort in ("startdatum", "startdate"):
+        return f"{wort} {startdatum_ziel().isoformat()}"
+    return wort
+
 
 def _route_only_reader_woerter() -> frozenset[str]:
     """Reader-seitige Schluesselworte der ``_ROUTE_ONLY``-Zeile, UEBER
@@ -1428,7 +1469,7 @@ def angebotene_route_only_und_metrik_faelle() -> list[str]:
     handgetippte Liste."""
     from app.metric_catalog import metric_command_words
 
-    faelle = sorted(_route_only_reader_woerter())
+    faelle = sorted(_route_only_reader_woerter() - EIGENE_E2E_BEFEHLE)
     faelle += sorted(_QUERY_KEYS)
     faelle += sorted(metric_command_words())
     return faelle
@@ -1461,6 +1502,7 @@ def tippbare_route_only_und_metrik_woerter() -> list[tuple[str, str]]:
     faelle: list[tuple[str, str]] = [
         (spec_feld(s, "wort"), KLASSE_ROUTE_ONLY) for s in _COMMAND_SPECS
         if spec_feld(s, "kinds") == _ROUTE_ONLY
+        and spec_feld(s, "wort") not in EIGENE_E2E_BEFEHLE
     ]
     faelle += [(wort, KLASSE_METRIK_QUERY) for wort in sorted(_QUERY_KEYS)]
     faelle += [(wort, KLASSE_METRIK_QUERY) for wort in sorted(metric_command_words())]
@@ -1582,7 +1624,9 @@ def _premium_sms_merkmal_fuer(fall: str, *, nutzer: BefehlNutzer):
     # Spec nach GREEN. Leeres Tupel = kein Teilstring-Merkmal; der Aufrufer
     # MUSS dann ``pruefe_premium_sms_englisch_und_gsm7`` anwenden (tut
     # ``_pruefe_merkmal_premium_sms`` bzw. der Matrix-Zweig).
-    if fall in ("strecke", "pause", "gewitter", "heute_gewitter"):
+    if fall in ("strecke", "pause", "gewitter", "heute_gewitter", "report", "startdatum"):
+        # #2420: Betreff entfaellt auf Premium-SMS; der englische Wortlaut der
+        # REPORT-/STARTDATUM-Antworten steht in der Spec nur sinngemaess.
         return ()
     if fall in ("glance", "timeline_heute", "timeline_morgen"):
         # "°C" ist nicht GSM-7 und entfaellt auf Premium-SMS (AC-19);
@@ -1687,6 +1731,10 @@ def merkmal_fuer(fall: str, *, nutzer: BefehlNutzer, ziel_name: str | None = Non
     if fall in ("skip", "stop", "abbruch"):
         return ziel
     if fall in ("pause", "weiter"):
+        return ziel
+    if fall in ("startdatum", "report"):
+        # #2420: die Antwort-Betreffzeile traegt den Trip-Namen
+        # ("[<Trip>] Startdatum geaendert" / "[<Trip>] Report gesendet").
         return ziel
     if fall == "glance":
         return (get_metric("temperature").unit, get_metric("wind").unit)

@@ -274,7 +274,7 @@ def test_hilfe_command_in_processor():
     WHEN: TripCommandProcessor.process() is called
     THEN: CommandResult.success=True, body contains the consolidated #731 command set:
           HEUTE / MORGEN / JETZT / GEWITTER / RUHETAG / STATUS / STOP / WEITER / HILFE.
-          Entfernte Befehle (startdatum, config, pause, skip) tauchen NICHT mehr auf.
+          STARTDATUM und REPORT kommen seit #2420 hinzu.
     """
     from services.trip_command_processor import TripCommandProcessor, InboundMessage
 
@@ -302,7 +302,7 @@ def test_hilfe_command_in_processor():
     assert "weiter" in body_lower, "WEITER fehlt im Hilfetext"
     assert "hilfe" in body_lower, "HILFE fehlt im Hilfetext"
     # Entfernte Befehle dürfen NICHT mehr erscheinen
-    assert "startdatum" not in body_lower, "startdatum wurde in #731 entfernt, darf nicht mehr im Hilfetext stehen"
+    assert "startdatum" in body_lower, "STARTDATUM wird seit #2420 wieder angeboten"
 
 
 # =============================================================================
