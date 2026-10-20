@@ -211,3 +211,21 @@ test.describe('Issue #1719 S3 AC-6: Ortsvergleich nennt überall die echte SMS-Z
 		await expect(zaehler, 'AC-6 FAIL: die SMS-Vorschau darf nicht gegen 140 Zeichen zaehlen').not.toContainText('/140');
 	});
 });
+
+// Issue #2438 AC-2: derselbe Abwahl-Hinweis im Ortsvergleich-Editor, vom selben Baustein.
+test.describe('Issue #2438 AC-2: Ortsvergleich zeigt den Abwahl-Hinweis je Kanal-Reiter', () => {
+	for (const kanal of ['email', 'telegram', 'sms']) {
+		test(`Kanal-Reiter ${kanal}`, async ({ page }) => {
+			await page.setViewportSize({ width: 1280, height: 900 });
+			const id = await createComparePreset(page, Date.now());
+			await openCompareDetail(page, id);
+			await page.getByTestId('compare-detail-tab-wetter-metriken').click();
+			await page.getByTestId(`channel-tab-${kanal}`).click();
+			const hinweis = page.getByTestId('wm2-aus-hinweis');
+			await expect(hinweis).toBeVisible({ timeout: 10_000 });
+			await expect(hinweis).toHaveText(
+				'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.'
+			);
+		});
+	}
+});

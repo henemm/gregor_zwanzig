@@ -33,6 +33,7 @@
 	// Vergleich: zusaetzlich Stundenverlauf), und deren Marken blieben
 	// unerklaert. Hier ist „Marke ohne Erklaerung" baulich unmoeglich statt nur
 	// getestet: jeder Block bringt seine Legende mit.
+	import { ltKanalAbwahlHinweisText } from '../layout-tab/ltChannels.ts';
 	import { buildKuerzelLegende } from './kuerzelLegende.ts';
 
 	interface Props {
@@ -218,6 +219,7 @@
 					</div>
 				</div>
 			{/each}
+			<p class="aus-hinweis" data-testid="wm2-aus-hinweis">{ltKanalAbwahlHinweisText()}</p>
 		</div>
 	{/if}
 	<!-- Issue #1888 (E6 Scheibe B): Legende zu den Marken DIESES Blocks. Sie
@@ -436,6 +438,15 @@
 		font-size: 12.5px;
 		font-weight: 600;
 		color: var(--g-ink-3);
+	}
+	/* Issue #2438: Regel-Hinweis; --g-ink-muted (6,91:1), nie --g-ink-4. */
+	.aus-hinweis {
+		margin: 0;
+		padding: 6px 16px 12px;
+		font-size: 12.5px;
+		line-height: 1.4;
+		color: var(--g-ink-muted);
+		overflow-wrap: anywhere;
 	}
 	.row.aus-row {
 		grid-template-columns: 1fr auto;
