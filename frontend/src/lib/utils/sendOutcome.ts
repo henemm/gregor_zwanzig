@@ -109,22 +109,29 @@ export async function runSend(key: string, send: () => Promise<Response>): Promi
 	}
 }
 
-/** Trip-Briefing manuell senden (Trip-Detail, Trip-Liste). */
-export function sendTripBriefing(
-	tripId: string,
-	reportType: 'morning' | 'evening',
-	fetchFn: typeof fetch = fetch
-): Promise<SendRunResult> {
-	return runSend(tripSendKey(tripId), () =>
-		fetchFn(`/api/trips/${encodeURIComponent(tripId)}/send?report_type=${reportType}`, { method: 'POST' })
-	);
+/** Art des Briefings im Endpunkt-Vokabular (#2280): Trip = `route`, Ortsvergleich = `vergleich`. */
+export type SendBriefingKind = 'route' | 'vergleich';
+
+/** EINZIGE Stelle, die die Send-URL baut (#2280 AC-15). `reportType` gilt nur fuer `route`. */
+export function briefingSendUrl(kind: SendBriefingKind, id: string, reportType?: 'morning' | 'evening'): string {
+	const rt = kind === 'route' && reportType ? `&report_type=${reportType}` : '';
+	return `/api/briefings/${encodeURIComponent(id)}/send?kind=${kind}${rt}`;
 }
 
-/** Ortsvergleich-Briefing manuell senden (Hub, Liste, Tabs). */
-export async function sendComparePreset(presetId: string, fetchFn: typeof fetch = fetch): Promise<SendRunResult> {
+/**
+ * Briefing manuell senden (Trip und Ortsvergleich, #2280). Laufzustand je
+ * `trip:<id>` / `compare:<id>`; `fehlende_orte` (#2216) wird bei Erfolg gemeldet.
+ */
+export async function sendBriefing(
+	kind: SendBriefingKind,
+	id: string,
+	opts: { reportType?: 'morning' | 'evening' } = {},
+	fetchFn: typeof fetch = fetch
+): Promise<SendRunResult> {
 	let fehlende: string[] = [];
-	const r = await runSend(compareSendKey(presetId), async () => {
-		const res = await fetchFn(`/api/compare/presets/${encodeURIComponent(presetId)}/send`, { method: 'POST' });
+	const key = kind === 'route' ? tripSendKey(id) : compareSendKey(id);
+	const r = await runSend(key, async () => {
+		const res = await fetchFn(briefingSendUrl(kind, id, opts.reportType), { method: 'POST' });
 		if (res.ok) {
 			try {
 				const body = (await res.clone().json()) as { fehlende_orte?: unknown };

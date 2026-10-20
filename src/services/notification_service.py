@@ -1484,6 +1484,8 @@ class NotificationService:
 
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
+            # Issue #2280: Paritaet zum Trip — kein wirksamer Kanal.
+            no_channel_configured=not effective_channels,
             failed_channels=failed_channels,
             blocked_channels=blocked_channels, blocked_reason_codes=blocked_reason_codes,
         )

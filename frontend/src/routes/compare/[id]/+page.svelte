@@ -14,7 +14,7 @@
 	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
-	import { deleteSubscription, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
+	import { deleteSubscription, sendSubscription, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
 	import {
 		deriveStatusWithScheduleOverride,
 		presetProfileLabel,
@@ -38,7 +38,6 @@
 	import { ACTIVITY_PROFILE_OPTIONS, type ComparePreset } from '$lib/types';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
-	import { sendComparePreset } from '$lib/utils/sendOutcome';
 
 	let { data } = $props();
 
@@ -229,8 +228,9 @@
 		isSending = true;
 		sendMsg = null;
 		try {
-			// Issue #2124: geteilter Laufzustand (compare:<id>) + Klassifikation.
-			const o = await sendComparePreset(currentPreset.id);
+			// Issue #2124/#2280: geteilter Laufzustand (compare:<id>) + Klassifikation,
+			// einheitlicher Ausloeser -> POST /api/briefings/{id}/send?kind=vergleich.
+			const o = await sendSubscription('vergleich', currentPreset.id);
 			sendMsg = o.kind === 'ok' ? (o.message || 'Test-Briefing gesendet') : o.message;
 		} finally {
 			isSending = false;

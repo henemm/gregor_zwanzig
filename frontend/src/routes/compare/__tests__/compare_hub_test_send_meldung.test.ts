@@ -16,7 +16,7 @@ async function hub(ergebnis: unknown) {
 	const { u } = await umgebungFuer(SEITE, {
 		data: {},
 		currentPreset: { id: 'cmp-1' },
-		sendComparePreset: async () => ergebnis
+		sendSubscription: async () => ergebnis
 	});
 	return u;
 }

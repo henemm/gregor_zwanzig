@@ -404,7 +404,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 // frueher in der Versand-Aktivierungskarte und im Vorschau-Reiter liegende
 // „Test-Briefing (jetzt) senden" (testid compare-hub-activation-testsend) ist
 // auf den Hub-Kopf umgestellt: subscription-hub-send → send-confirm-dialog →
-// send-confirm-yes → POST /api/compare/presets/{id}/send (ohne Empfaenger im
+// send-confirm-yes → POST /api/briefings/{id}/send?kind=vergleich (ohne Empfaenger im
 // Koerper — der Server sendet an die konfigurierten Empfaenger dieses Nutzers).
 // Der Sende-Abruf wird hier abgefangen und beantwortet, damit keine echte Mail
 // rausgeht; bewiesen wird der Weg, nicht die Zustellung.
@@ -422,7 +422,7 @@ test.describe('Issue #2283 AC-13: Senden nur im Hub-Kopf (Desktop)', () => {
 		const id = await createPresetWithLocations(page, `E2E-2283 Senden ${suffix}`, [locA, locB]);
 
 		const sende: { url: string; body: string | null }[] = [];
-		await page.route(new RegExp(`/api/compare/presets/${id}/send$`), async (route) => {
+		await page.route(new RegExp(`/api/briefings/${id}/send\\?kind=vergleich$`), async (route) => {
 			sende.push({ url: route.request().url(), body: route.request().postData() });
 			await route.fulfill({ status: 200, json: { status: 'queued' } });
 		});

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -270,45 +269,12 @@ func ValidatorFormatMetricProxyHandler(pythonURL string) http.HandlerFunc {
 // SendTripReportProxyHandler proxies POST /api/trips/{id}/send.
 // Trip ID via chi.URLParam, user_id from auth context appended to query.
 // Spec: docs/specs/modules/issue_695_test_briefing_send.md
+// Issue #2280 AC-13: Alt-Route, Delegate auf forwardSend (send_proxy.go);
+// ohne ID-Validierung (Bestand), Default report_type=evening setzt Python.
 func SendTripReportProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
-		url := pythonURL + "/api/scheduler/trips/" + id + "/send"
-		if query != "" {
-			url += "?" + query
-		}
-
-		// Issue #2124: Upstream vom Client-Abbruch (Browser/nginx) entkoppeln;
-		// http.Client.Timeout bleibt die obere Grenze.
-		req, err := http.NewRequestWithContext(context.WithoutCancel(r.Context()), http.MethodPost, url, nil)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"proxy_error"}`))
-			return
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		// Issue #1756 (AC-8): 120s -> 300s, der reguläre Erfolgsfall
-		// (vollständiger Mehrtages-Ausblick) braucht 3-4 Minuten.
-		client := &http.Client{Timeout: sendProxyTimeout}
-		resp, err := client.Do(req)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
-			return
-		}
-		defer resp.Body.Close()
-
-		ct := resp.Header.Get("Content-Type")
-		if ct == "" {
-			ct = "application/json"
-		}
-		w.Header().Set("Content-Type", ct)
-		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		forwardSend(w, r, pythonURL+"/api/scheduler/trips/"+id+"/send", r.URL.RawQuery)
 	}
 }
 

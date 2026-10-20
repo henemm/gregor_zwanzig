@@ -109,7 +109,7 @@ describe('F001: „Senden" oeffnet nur den Dialog; gesendet wird erst nach Besta
 		assert.equal(attrKurz(btn, 'onclick'), '() => sendDialogOpen = true');
 		assert.equal(attrKurz(btn, 'disabled'), 'isSending || lifecycle === "archived"');
 		assert.equal(attrKurz(dlg(CMP_HUB), 'onConfirm'), '() => { sendDialogOpen = false; void handleTestSend() }');
-		assert.deepEqual(aufrufArgumente(funktion(CMP_HUB, 'handleTestSend'), 'sendComparePreset'), [['currentPreset.id']]);
+		assert.deepEqual(aufrufArgumente(funktion(CMP_HUB, 'handleTestSend'), 'sendSubscription'), [['"vergleich"', 'currentPreset.id']]);
 	});
 	test('F022: der Zeilen-Primaerknopf „Briefing senden" ist an die Liste gebunden (Trip UND Compare)', () => {
 		const tabelle = (ast: any) => komponenten(ast, 'ListTable')[0];
@@ -262,7 +262,7 @@ describe('F019/F015/F018: die Bindung steht UNTER DER ERWARTETEN Bedingung (kein
 			[CMP, 'confirmDelete', 'deleteSubscription'],
 			[TRIP_HUB, 'handleSendConfirm', 'sendSubscription'],
 			[TRIP_HUB, 'handleDeleteConfirm', 'deleteSubscription'],
-			[CMP_HUB, 'handleTestSend', 'sendComparePreset'],
+			[CMP_HUB, 'handleTestSend', 'sendSubscription'],
 			[CMP_HUB, 'deletePreset', 'deleteSubscription'],
 			[CMP_HUB, 'archivePreset', 'setArchived'],
 			[CMP_HUB, 'unarchivePreset', 'setArchived'],

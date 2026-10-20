@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from api.routers import config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
+from api.routers import briefings_send, config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
 from app.config import Settings
 from app.egress_guard import install_egress_guard
 from output.channels.telegram import TelegramOutput
@@ -110,6 +110,7 @@ app.include_router(compare.router)
 app.include_router(notify.router)
 app.include_router(internal.router)
 app.include_router(preview.router)
+app.include_router(briefings_send.router)  # Issue #2280
 app.include_router(validator.router)
 app.include_router(webhook.router)
 

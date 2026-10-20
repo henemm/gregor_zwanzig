@@ -23,6 +23,7 @@ from app.loader import (
 from services.alert_check_state import report_unit_failure
 from services.file_lock import LockTimeout, locked_json_rmw
 from services.send_lock import release_send_lock, try_acquire_send_lock
+from services.send_outcomes import SendOutcomeError, outcome_from_result
 from utils.pii_masking import mask_addr_for_pii_log
 from services.alert_briefing_anchor import (
     record_briefing_dispatch_failure,
@@ -465,6 +466,8 @@ def send_one_compare_preset(
     telegram_sink=None,
     on_demand: bool = False,
     premium_sms_sink=None,
+    *,
+    weather_failure_as_outcome: bool = False,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
@@ -484,7 +487,14 @@ def send_one_compare_preset(
     Transport-Naht, 1:1 durchgereicht an `NotificationService.send_compare_report`.
     `on_demand` (#1467 S2 AG5): Handversand — dann bleiben Δ-Anker UND
     Melde-Gedaechtnis unangetastet, genau wie beim Trip-Ad-hoc-Abruf (#1007).
-    Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
+    Gibt (top_ort, empfaenger) zurueck.
+    Issue #2280: ohne Zustellung wirft er ``SendOutcomeError`` (ein
+    ``ValueError``) mit ``no_channels``/``channels_unreachable``/``no_weather``
+    — VOR Anker-Reset und Erfolgs-Status. ``mail_to`` ist nur Pflicht, wenn
+    E-Mail wirksam ist: ohne ``mail_to`` faellt E-Mail aus der wirksamen Menge.
+    ``weather_failure_as_outcome`` (nur Handversand): eine Ausnahme des
+    Wetterlaufs oder ein Fehler an JEDEM Ort wird zu ``no_weather``; ohne
+    Opt-in (Cron) bleibt das Bestandsverhalten unveraendert.
     """
     if (target_date is None) != (tage_ab_ortstag is None):
         raise ValueError(
@@ -513,13 +523,19 @@ def send_one_compare_preset(
 
     # Empfaenger-Check: Issue #1452 — ausschliesslich die Konto-Settings des
     # Nutzers, `preset.empfaenger` ist inert (kein Preset-Override mehr).
-    # Fehlerverhalten bewusst unveraendert laut (KL-3): ValueError statt Skip.
+    # Issue #2280 (AC-7): mail_to nur Pflicht, wenn E-Mail wirksam ist — ohne
+    # mail_to faellt E-Mail aus der wirksamen Menge (Kanal-Paritaet).
     default_to = getattr(settings, "mail_to", None)
+    effective_channels = set(_effective_compare_briefing_channels(preset, settings, user_id))
     if not default_to:
-        raise ValueError(
-            f"Preset {preset_id}: kein Empfaenger — mail_to fehlt in den Konto-Settings"
-        )
-    empfaenger = [default_to]
+        effective_channels.discard("email")
+    if not effective_channels:
+        # Vor der Ortspruefung: die Reihenfolge der Fehlerpfade bleibt (#1727 AC-7).
+        raise SendOutcomeError("no_channels", (
+            f"Preset {preset_id}: kein Empfaenger — mail_to fehlt in den "
+            "Konto-Settings und kein anderer Versandweg ist wirksam"
+        ))
+    empfaenger = [default_to] if default_to else []
 
     if all_locations_cache is None:
         all_locations_cache = load_all_locations(user_id=user_id)
@@ -572,15 +588,24 @@ def send_one_compare_preset(
     # ``call_source`` MUSS ausdruecklich gesetzt werden: ein ThreadPoolExecutor
     # reicht den ContextVar-Kontext nicht an seine Arbeiter weiter, die
     # Stack-Marker des Aufruf-Journals liefen im Worker-Thread ins Leere.
-    result = run_comparison_parallel(
-        locations=locations,
-        time_window=resolve_compare_time_window(preset),
-        target_date=target_date,
-        forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
-        profile=profile,
-        official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
-        call_source="vergleich",
-    )
+    try:
+        result = run_comparison_parallel(
+            locations=locations,
+            time_window=resolve_compare_time_window(preset),
+            target_date=target_date,
+            forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
+            profile=profile,
+            official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
+            call_source="vergleich",
+        )
+    except Exception as exc:
+        if not weather_failure_as_outcome:
+            raise
+        raise SendOutcomeError("no_weather") from exc
+    # Issue #2280 (AC-6, nur Handversand): kein einziger Ort mit Wetterdaten.
+    if (weather_failure_as_outcome and result.locations
+            and all(lr.error for lr in result.locations)):
+        raise SendOutcomeError("no_weather")
 
     top_ort = result.locations[0].location.name if result.locations else None
 
@@ -688,7 +713,7 @@ def send_one_compare_preset(
             telegram_text=_telegram_text,
             sms_text=_sms_text,
             recipients=empfaenger,
-            effective_channels=_effective_compare_briefing_channels(preset, settings, user_id),
+            effective_channels=effective_channels,
             compare_hourly_enabled=opts.hourly_enabled,
             mail_sink=mail_sink,
             sms_sink=sms_sink,
@@ -709,6 +734,17 @@ def send_one_compare_preset(
             preset_id, _kanal, send_result.blocked_reason_codes.get(_kanal),
             send_result.blocked_channels.get(_kanal),
         )
+    # Issue #2280 (AC-4/5/8): Erfolg heisst Zustellung — ohne Zustellung weder
+    # Anker-Reset noch Erfolgs-Status (spiegelt VERMERK_AUSGAENGE beim Trip).
+    outcome = outcome_from_result(send_result)
+    if outcome == "channels_unreachable" and not on_demand:
+        # Diagnose-Spur wie der Ausnahme-Zweig oben (briefing_health), ohne Anker-Reset.
+        record_briefing_dispatch_failure(
+            user_id=user_id, kind="vergleich", entity_id=preset_id,
+            error=SendOutcomeError(outcome),
+        )
+    if outcome != "sent":
+        raise SendOutcomeError(outcome)
 
     # Issue #1714: im Briefing gezeigte amtliche Warnungen als „gemeldet"
     # vermerken, damit der unabhaengige Checker sie nicht kurz darauf erneut
@@ -778,16 +814,23 @@ def send_compare_preset(
         return {"status": "already_in_progress"}
     try:
         settings = Settings().with_user_profile(user_id)
-        top_ort, actual_empfaenger = send_one_compare_preset(
+        send_one_compare_preset(
             preset, settings, user_id, data_root, on_demand=True,
+            weather_failure_as_outcome=True,
         )
+        outcome = "sent"
+    except SendOutcomeError as e:
+        # Issue #2280: Status aus dem echten Ausgang, nie fest "ok".
+        outcome = e.code
     finally:
         release_send_lock("compare", user_id, preset_id)
+    if outcome != "sent":
+        return {"status": outcome}
     # #2216: Teilverlust an den Aufrufer melden (leer/fehlend = nichts fehlt).
     fehlende = _missing_location_ids(
         load_all_locations(user_id=user_id), preset.get("location_ids") or []
     )
-    return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger),
+    return {"status": "ok" if outcome == "sent" else outcome,
             **({"fehlende_orte": fehlende} if fehlende else {})}
 
 

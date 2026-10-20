@@ -92,3 +92,14 @@ Kernrisiko des Projekts (BUG-DATALOSS-GR221).
   `points`-Diskriminierung sind offene S6-Arbeit (dort ADR-Fortschreibung).
 - **Deploy:** Die Migration ist ein **per-Host-Schritt nach dem Code-Deploy** (erst Dry-Run-Report
   prüfen, dann `--execute` mit Backup), idempotent — siehe `reference_data_migration_per_host_deploy`.
+
+## Nachtrag 2026-10-20 — Handversand über `kind` (Issue #2280, Epic #2345 P4)
+
+Der Dispatcher über `kind` (`route` | `vergleich`) ist das hier beschlossene Modell; der
+Handversand fügt sich als weitere kind-neutrale Route ein, kein neues ADR:
+`POST /api/briefings/{id}/send?kind=route|vergleich[&report_type=morning|evening]` — mit einem
+Fehlervokabular (`{detail, code}`, 422 `no_channels`/`channels_unreachable`/`no_weather`),
+einer Antwortform und den bestehenden Sende-Locks. Die Alt-Routen `POST /api/trips/{id}/send`
+und `POST /api/compare/presets/{id}/send` bleiben als Delegate erhalten; das Frontend baut die
+Send-URL an genau einer Stelle (`sendOutcome.ts`, `briefingSendUrl`). Vertrag:
+`docs/reference/api_contract.md` Section 10.1.

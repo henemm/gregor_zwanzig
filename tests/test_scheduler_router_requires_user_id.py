@@ -34,7 +34,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api.routers import debug, scheduler
+from api.routers import briefings_send, debug, scheduler
 from app.loader import get_data_dir
 
 
@@ -52,7 +52,8 @@ def client(monkeypatch):
 @pytest.fixture
 def vergleichs_versand(monkeypatch) -> list[tuple[str, str]]:
     """Echte Aufzeichner-Funktion an der Versand-Naht des Vergleichs-Routers
-    (``scheduler.send_compare_preset``): zeichnet ``(user_id, preset_id)`` auf
+    (``briefings_send.send_compare_preset`` -- seit #2280 ruft die Alt-Route
+    den geteilten Helfer dort auf): zeichnet ``(user_id, preset_id)`` auf
     und versendet NICHTS -- auch vor dem Fix kann so keine echte Mail an eine
     lokal konfigurierte Adresse gehen. Kein ``Mock()``."""
     aufgerufen: list[tuple[str, str]] = []
@@ -61,7 +62,7 @@ def vergleichs_versand(monkeypatch) -> list[tuple[str, str]]:
         aufgerufen.append((user_id, preset_id))
         return {"status": "aufgezeichnet", "preset_id": preset_id}
 
-    monkeypatch.setattr(scheduler, "send_compare_preset", _aufzeichner)
+    monkeypatch.setattr(briefings_send, "send_compare_preset", _aufzeichner)
     return aufgerufen
 
 

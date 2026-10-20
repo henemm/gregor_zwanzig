@@ -360,6 +360,114 @@ paths:
               schema:
                 $ref: "#/components/schemas/PreconditionFailedError"
 
+  /api/briefings/{id}/send:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: kind
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [route, vergleich]
+      - name: report_type
+        in: query
+        required: false
+        description: Nur bei kind=route; Default morning, bei vergleich ignoriert.
+        schema:
+          type: string
+          enum: [morning, evening]
+    post:
+      summary: Briefing manuell senden (Trip und Ortsvergleich, Issue #2280)
+      description: >-
+        Einheitlicher Handversand. 200 nur, wenn mindestens ein Kanal
+        tatsaechlich zugestellt hat. Fehler tragen einen deutschen detail-Text
+        und einen maschinenlesbaren code.
+      operationId: sendBriefing
+      tags: [briefings]
+      responses:
+        "200":
+          description: Briefing zugestellt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BriefingSendOk"
+        "400":
+          description: kind fehlt/ungueltig (kind_required) oder ungueltige ID (validation_error)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BriefingSendError"
+        "404":
+          description: Briefing gehoert nicht dem Nutzer oder existiert nicht
+        "409":
+          description: Versand fuer denselben Lock-Schluessel laeuft bereits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BriefingSendError"
+        "422":
+          description: no_channels, channels_unreachable oder no_weather
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BriefingSendError"
+        "500":
+          description: >-
+            Unerwarteter Fehler im Versand (send_failed, Python-Core) oder
+            Anfrage an den Python-Core nicht baubar (proxy_error, Go-API)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BriefingSendError"
+        "502":
+          description: Python-Core nicht erreichbar oder Zeitlimit ueberschritten (upstream_unreachable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BriefingSendError"
+
+  /api/trips/{id}/send:
+    post:
+      summary: Delegate (Alt-Route) auf POST /api/briefings/{id}/send?kind=route
+      operationId: sendTripLegacy
+      deprecated: true
+      tags: [trips]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: report_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [morning, evening]
+      responses:
+        "200":
+          description: Siehe /api/briefings/{id}/send
+
+  /api/compare/presets/{id}/send:
+    post:
+      summary: Delegate (Alt-Route) auf POST /api/briefings/{id}/send?kind=vergleich
+      operationId: sendComparePresetLegacy
+      deprecated: true
+      tags: [compare]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Siehe /api/briefings/{id}/send
+
 components:
   headers:
     ETag:
@@ -553,3 +661,45 @@ components:
           example: >-
             Der Stand wurde zwischenzeitlich an anderer Stelle geaendert. Bitte
             neu laden und die Aenderung erneut vornehmen.
+
+    BriefingSendOk:
+      type: object
+      required: [status, kind, id, sent]
+      properties:
+        status:
+          type: string
+          example: ok
+        kind:
+          type: string
+          enum: [route, vergleich]
+        id:
+          type: string
+        sent:
+          type: boolean
+          example: true
+        report_type:
+          type: string
+          enum: [morning, evening]
+          description: Nur bei kind=route
+        fehlende_orte:
+          type: array
+          items:
+            type: string
+          description: Nur bei kind=vergleich — geloeschte Orte, Versand lief mit den uebrigen
+
+    BriefingSendError:
+      type: object
+      required: [detail, code]
+      properties:
+        detail:
+          type: string
+          description: Deutscher, nutzerlesbarer Text (wird unveraendert angezeigt)
+        code:
+          type: string
+          description: >-
+            kind_required, validation_error, upstream_unreachable und proxy_error
+            entstehen in der Go-API; alle uebrigen im Python-Core (send_outcomes.py).
+          enum: [kind_required, validation_error, not_found, already_in_progress,
+                 no_stage, no_weather, no_channels, channels_unreachable,
+                 invalid_report_type, smtp_not_configured, invalid_preset,
+                 send_failed, upstream_unreachable, proxy_error]

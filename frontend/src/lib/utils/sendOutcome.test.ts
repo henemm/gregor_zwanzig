@@ -174,7 +174,7 @@ test('AC-4: Dialog schließen + neu öffnen — Auslöser bleibt gesperrt, bis d
 });
 
 // ---------------------------------------------------------------------------
-// #2216 AC-7: sendComparePreset reicht fehlende_orte durch
+// #2216 AC-7: sendBriefing('vergleich', …) reicht fehlende_orte durch (#2280)
 // ---------------------------------------------------------------------------
 
 function antwort(status: number, body: unknown): typeof fetch {
@@ -182,10 +182,12 @@ function antwort(status: number, body: unknown): typeof fetch {
 }
 
 test('AC-7: Test-Versand mit fehlenden Orten -> fehlendeOrte + Hinweis in der Meldung', async () => {
-	const { sendComparePreset } = await mod();
-	const r = await sendComparePreset(
+	const { sendBriefing } = await mod();
+	const r = await sendBriefing(
+		'vergleich',
 		'cmp-fehlt-2216',
-		antwort(200, { status: 'ok', fehlende_orte: ['loc-weg'] }),
+		{},
+		antwort(200, { status: 'ok', kind: 'vergleich', id: 'cmp-fehlt-2216', sent: true, fehlende_orte: ['loc-weg'] }),
 	);
 	assert.equal(r.kind, 'ok');
 	assert.deepEqual((r as { fehlendeOrte?: string[] }).fehlendeOrte, ['loc-weg']);
@@ -193,9 +195,37 @@ test('AC-7: Test-Versand mit fehlenden Orten -> fehlendeOrte + Hinweis in der Me
 });
 
 test('AC-7: Test-Versand ohne fehlende Orte -> unveränderte (leere) ok-Meldung', async () => {
-	const { sendComparePreset } = await mod();
-	const r = await sendComparePreset('cmp-komplett-2216', antwort(200, { status: 'ok' }));
+	const { sendBriefing } = await mod();
+	const r = await sendBriefing('vergleich', 'cmp-komplett-2216', {}, antwort(200, { status: 'ok', kind: 'vergleich', id: 'cmp-komplett-2216', sent: true }));
 	assert.equal(r.kind, 'ok');
 	assert.equal(r.message, '');
 	assert.ok(!((r as { fehlendeOrte?: string[] }).fehlendeOrte?.length));
 });
+
+// ---------------------------------------------------------------------------
+// #2280 Fix-Loop 1 F-ADV4: sendBriefing('vergleich', …) zeigt bei den drei
+// konkreten 422-Antworten exakt den deutschen `detail`-Text (send_outcomes.py).
+// ---------------------------------------------------------------------------
+
+const VERGLEICH_422 = [
+	{
+		code: 'no_channels',
+		detail: 'Kein Briefing versendet — kein Versandweg aktiv (E-Mail, Telegram und SMS sind alle deaktiviert)',
+	},
+	{
+		code: 'channels_unreachable',
+		detail:
+			'Kein Briefing versendet — Versandweg konfiguriert, aber nicht einsatzbereit (Kanal technisch nicht erreichbar)',
+	},
+	{ code: 'no_weather', detail: 'Kein Briefing versendet — keine Wetterdaten verfügbar' },
+];
+
+for (const { code, detail } of VERGLEICH_422) {
+	test(`#2280: sendBriefing('vergleich') bei 422 ${code} zeigt exakt den detail-Text`, async () => {
+		const { sendBriefing } = await mod();
+		const r = await sendBriefing('vergleich', `cmp-422-${code}`, {}, antwort(422, { detail, code }));
+		assert.equal(r.kind, 'rejected');
+		assert.equal(r.skipped, false);
+		assert.equal(r.message, detail);
+	});
+}

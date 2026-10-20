@@ -12,7 +12,6 @@ package handler
 // /send ist ein Stub (Issue #461 implementiert die echte Versandlogik).
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -606,41 +605,11 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 }
 
 // POST /api/compare/presets/{id}/send — Proxy to Python Core. Issue #627.
+// Issue #2280 AC-13: Alt-Route, Delegate auf forwardSend (send_proxy.go);
+// ohne ID-Validierung (Bestand).
 func SendComparePresetHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
-		url := pythonURL + "/api/scheduler/compare-presets/" + id + "/send"
-		if query != "" {
-			url += "?" + query
-		}
-
-		// Issue #2124: vom Client-Abbruch entkoppelt (siehe SendTripReportProxyHandler).
-		req, err := http.NewRequestWithContext(context.WithoutCancel(r.Context()), http.MethodPost, url, nil)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"proxy_error"}`))
-			return
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		client := &http.Client{Timeout: sendProxyTimeout}
-		resp, err := client.Do(req)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
-			return
-		}
-		defer resp.Body.Close()
-
-		ct := resp.Header.Get("Content-Type")
-		if ct == "" {
-			ct = "application/json"
-		}
-		w.Header().Set("Content-Type", ct)
-		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		forwardSend(w, r, pythonURL+"/api/scheduler/compare-presets/"+id+"/send", r.URL.RawQuery)
 	}
 }

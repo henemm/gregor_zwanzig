@@ -2019,11 +2019,15 @@ class TripReportSchedulerService:
 
         _anchor_and_reset()
 
-        if result.no_channel_configured:
+        # Issue #2280: EINE Ableitung fuer Trip und Ortsvergleich (send_outcomes).
+        from services.send_outcomes import outcome_from_result
+
+        outcome = outcome_from_result(result)
+        if outcome == "no_channels":
             # Kein Vermerk: hier ist nichts ausgefallen, es war nichts
             # vorgesehen (#1662 — Abgrenzung zum Zweig darunter).
             return "no_channels"
-        if not result.sent:
+        if outcome == "channels_unreachable":
             # Issue #1403 AC-4: konfiguriert, aber kein Kanal tatsächlich
             # betreten (z.B. Telegram ohne gültige Bot-Verbindung) — ehrlich
             # unterscheidbar vom "no_channels"-Fall oben.

@@ -2,7 +2,7 @@
 // Spec: docs/specs/modules/feat_2278_aktionsmodell.md — Implementation Details 3.
 //
 // Ausfuehrungs-Adapter `shared/subscriptionExec.ts`. Jede Funktion nimmt als LETZTES
-// Argument eine injizierbare `fetchFn` (Muster `sendTripBriefing(id, typ, fetchFn)` in
+// Argument eine injizierbare `fetchFn` (Muster `sendBriefing(kind, id, opts, fetchFn)` in
 // lib/utils/sendOutcome.ts). Hier ist `fetchFn` ein echter Aufzeichner mit einem kleinen
 // SERVER-Modell (kein Spiegel der Annahme): GET liefert den Serverstand, PATCH/PUT
 // mergen den Body wie das Go-Backend (vorhandene Felder im Body ueberschreiben).
@@ -21,8 +21,8 @@
 //   deleteSubscription(kind, id, fetchFn?)
 //     trip: DELETE /api/trips/{id}; vergleich: DELETE /api/compare/presets/{id}
 //   sendSubscription(kind, id, opts: {reportType?: 'morning'|'evening'}, fetchFn?)
-//     trip: POST /api/trips/{id}/send?report_type=<morning|evening> (Default morning)
-//     vergleich: POST /api/compare/presets/{id}/send OHNE report_type
+//     trip: POST /api/briefings/{id}/send?kind=route&report_type=<morning|evening> (Default morning, #2280)
+//     vergleich: POST /api/briefings/{id}/send?kind=vergleich OHNE report_type (#2280)
 //
 // RED heute: Modul `shared/subscriptionExec.ts` fehlt.
 //
@@ -171,17 +171,17 @@ describe('Archivieren / Loeschen / Senden — beide Arten, richtige Endpunkte', 
 		const { sendSubscription } = braucheModul();
 		const a = baueServer({});
 		await sendSubscription('trip', 'send-t-a', { reportType: 'evening' }, a.fetchFn);
-		assert.deepEqual([a.aufrufe[0].method, a.aufrufe[0].url], ['POST', '/api/trips/send-t-a/send?report_type=evening']);
+		assert.deepEqual([a.aufrufe[0].method, a.aufrufe[0].url], ['POST', '/api/briefings/send-t-a/send?kind=route&report_type=evening']);
 		const b = baueServer({});
 		await sendSubscription('trip', 'send-t-b', {}, b.fetchFn);
-		assert.equal(b.aufrufe[0].url, '/api/trips/send-t-b/send?report_type=morning');
+		assert.equal(b.aufrufe[0].url, '/api/briefings/send-t-b/send?kind=route&report_type=morning');
 	});
 
 	test('sendSubscription Ortsvergleich: kein report_type, auch wenn einer uebergeben wird', async () => {
 		const { sendSubscription } = braucheModul();
 		const s = baueServer({});
 		await sendSubscription('vergleich', 'send-c-1', { reportType: 'evening' }, s.fetchFn);
-		assert.deepEqual([s.aufrufe[0].method, s.aufrufe[0].url], ['POST', '/api/compare/presets/send-c-1/send']);
+		assert.deepEqual([s.aufrufe[0].method, s.aufrufe[0].url], ['POST', '/api/briefings/send-c-1/send?kind=vergleich']);
 	});
 });
 

@@ -20,13 +20,13 @@ import { login, testMitZustellbaremZiel as test } from './helpers.js';
 const TRIP_ID = 'e2e-cockpit-test';
 const DESKTOP = { width: 1440, height: 900 };
 
-/** Erzwingt eine bestimmte Antwort für den nächsten POST /api/trips/{id}/send. */
+/** Erzwingt eine bestimmte Antwort für den nächsten POST /api/briefings/{id}/send?kind=route. */
 async function stubSend(
 	page: Page,
 	status: number,
 	body: Record<string, unknown>
 ): Promise<void> {
-	await page.route(`**/api/trips/${TRIP_ID}/send*`, async (route) => {
+	await page.route(`**/api/briefings/${TRIP_ID}/send*`, async (route) => {
 		if (route.request().method() === 'POST') {
 			await route.fulfill({
 				status,
@@ -56,7 +56,7 @@ async function sendeBriefing(page: Page, berichtsart: 'morning' | 'evening'): Pr
 /** Erfolgsantwort abfangen und die angefragte URL festhalten. */
 async function stubErfolg(page: Page): Promise<{ url: () => string }> {
 	let sentUrl = '';
-	await page.route(`**/api/trips/${TRIP_ID}/send*`, async (route) => {
+	await page.route(`**/api/briefings/${TRIP_ID}/send*`, async (route) => {
 		if (route.request().method() === 'POST') {
 			sentUrl = route.request().url();
 			await route.fulfill({
@@ -158,7 +158,7 @@ test.describe('Issue #768 — Abend/Morgen-Auswahl', () => {
 		/**
 		 * GIVEN: Trip-Detailseite, Sende-Dialog mit Morgen/Abend-Wahl (Vorauswahl Morgen)
 		 * WHEN:  der Nutzer "Morgen" bestätigt
-		 * THEN:  der POST geht an .../send?report_type=morning.
+		 * THEN:  der POST geht an .../send?kind=route&report_type=morning.
 		 */
 		await openTripAndMenu(page);
 		const gesendet = await stubErfolg(page);
