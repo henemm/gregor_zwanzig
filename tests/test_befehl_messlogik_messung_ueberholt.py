@@ -60,6 +60,7 @@ def _job(empfangen: str, gelaufen: str) -> dict:
     ("10:01:10", "10:02:20", False, "70 s ohne Tick dazwischen = echter Verstoss, rot bleiben"),
     ("10:01:10", "10:04:59", False, "knapp vor dem Tick = echter Verstoss, rot bleiben"),
     ("10:04:50", "10:05:01", False, "Tick-Grenze dazwischen, aber innerhalb der Grenze"),
+    ("10:03:55", "10:00:00", False, "Weckruf ausgefallen: last_run noch VOR dem Webhook -> rot"),
 ])
 def test_ac11_gueltigkeit_der_sofortweg_messung(empfangen, gelaufen, erwartet, warum):
     ml = _messlogik()

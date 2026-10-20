@@ -24,10 +24,17 @@ Vertrag an ``.claude/tools/befehl_antwortzeit.py`` (nur lesend):
                    "push_zugeordnet"}, ...]   # je Eingang, aufsteigend nach Eingang
       "statistik": {befehl: {"anzahl", "max_s", "median_s"}}  # nur beantwortete
   }
-  * Antwort = erster outbound VON der Servicenummer AN den Absender des Eingangs, nach
-    dem Eingang und vor dem naechsten Eingang desselben Absenders.
-  * Dauer = Dauer-Zeile mit kanal premium_sms/sms zwischen Eingang und Antwort; ihr
-    `befehl` gilt, sonst der Befehl aus dem SMS-Text (Gross, ohne XX-Code-Praefix).
+  * Bruecke ist die Dauer-Zeile (kanal premium_sms/sms): Dauer-Zeilen nach Startzeit
+    (ts - dauer_ms) aufsteigend; jede gehoert zum FRUEHESTEN noch freien Eingang mit
+    Eingang <= Start und Eingang >= Start - 600 s. Ihr `befehl` gilt.
+    Antwort = noch freier outbound VON der Servicenummer AN den Absender, zeitlich am
+    naechsten an der Dauer-Zeile (|Abstand| <= 30 s). So bekommt bei ueberlappenden
+    Befehlen (HEUTE, 5 s spaeter HELP, HELP-Antwort zuerst) jeder seine eigene Antwort.
+  * Ohne Dauer-Zeile (aeltere Daten): Antwort = erster freier outbound an den Absender
+    nach dem Eingang und vor dem naechsten Eingang desselben Absenders; Befehl aus dem
+    SMS-Text (Gross, ohne XX-Code-Praefix).
+  * Jede Antwort wird hoechstens einem Eingang zugeordnet.
+  * seven.io-Zeit wird als Europe/Berlin gelesen (Sommer- UND Winterzeit), nie fester Versatz.
   * push_zugeordnet = `push.last_received` liegt in [Eingang - 5 s, Eingang + 60 s].
 Die Dauer-Zeilen liest ``befehl_messlogik.dauerzeilen(lese_journal(...))``.
 """
@@ -134,3 +141,64 @@ def test_ac8_push_zuordnung_nur_beim_zeitlich_passenden_eingang():
 
 def test_ac8_ohne_push_status_ist_nichts_zugeordnet():
     assert not any(b["push_zugeordnet"] for b in _auswertung()["befehle"])
+
+
+# ---------------------------------------------------------------------------
+# Ueberlappung und Winterzeit -- im echten Format, Werte gesetzt (nach dem 25.10. gibt es
+# noch keinen Mitschnitt; genau dort liegt aber die offene Prod-Messung AC-6/AC-9/AC-10).
+# ---------------------------------------------------------------------------
+
+_SERVICE, _ABS = "+49000SERVICE", "+49000ABSENDER"
+
+
+def _ein(ts: str, text: str) -> dict:
+    return {"id": "1", "from": _ABS, "to": _SERVICE, "text": text, "timestamp": ts,
+            "reply_to_message_id": None, "price": 0.01}
+
+
+def _aus(ts: str, text: str) -> dict:
+    return {"id": "x", "to": _ABS, "from": _SERVICE, "text": text, "timestamp": ts,
+            "price": "0.1500", "dlr": "DELIVERED", "type": "direct", "channel": "SMS"}
+
+
+def _dauer(ts_utc: str, befehl: str, ms: int) -> str:
+    return (f"{ts_utc}+00:00 Rennwienix uv[1]: x INFO befehl_dauer: befehl={befehl} "
+            f"kanal=premium_sms trip=khw-403 dauer_ms={ms}")
+
+
+def _werte(inbound, outbound, dauer_zeilen):
+    ml = _lade("befehl_messlogik")
+    werkzeug = _lade("befehl_antwortzeit")
+    dauer = ml.dauerzeilen(ml.lese_journal(dauer_zeilen))
+    return werkzeug.auswerten(inbound, outbound, dauer)
+
+
+def test_ac8_ueberlappende_befehle_bekommen_jeweils_ihre_eigene_antwort():
+    """HEUTE 09:00:00, HELP 09:00:05 (Winterzeit, +01:00); die HELP-Antwort geht VOR der
+    HEUTE-Antwort raus. Die reine Eingangsreihenfolge wuerde HEUTE die HELP-Antwort geben."""
+    erg = _werte(
+        [_ein("2026-10-27 09:00:00", "heute"), _ein("2026-10-27 09:00:05", "help")],
+        [_aus("2026-10-27 09:00:06.200", "Commands: ..."),
+         _aus("2026-10-27 09:00:41.300", "E4: W- WD:NW ...")],
+        [_dauer("2026-10-27T08:00:06.400000", "HELP", 300),
+         _dauer("2026-10-27T08:00:41.500000", "HEUTE", 39000)],
+    )
+    heute = _eintrag(erg, "2026-10-27T08:00:00")
+    help_ = _eintrag(erg, "2026-10-27T08:00:05")
+    assert (heute["befehl"], help_["befehl"]) == ("HEUTE", "HELP")
+    assert heute["antwort"] == _utc("2026-10-27T08:00:41.300")
+    assert heute["antwortzeit_s"] == pytest.approx(41.3, abs=0.001)
+    assert heute["dauer_ms"] == 39000
+    assert help_["antwort"] == _utc("2026-10-27T08:00:06.200")
+    assert help_["antwortzeit_s"] == pytest.approx(1.2, abs=0.001)
+    assert help_["dauer_ms"] == 300
+
+
+def test_ac8_winterzeit_wird_als_europe_berlin_gelesen():
+    """Nach dem 25.10. gilt +01:00 -- ein fest verdrahteter Versatz von 2 h faellt hier auf."""
+    erg = _werte([_ein("2026-10-27 08:00:00", "Status")],
+                 [_aus("2026-10-27 08:00:45.100", "Status: KHW 403")], [])
+    b = _eintrag(erg, "2026-10-27T07:00:00")
+    assert b["antwort"] == _utc("2026-10-27T07:00:45.100")
+    assert b["antwortzeit_s"] == pytest.approx(45.1, abs=0.001)
+    assert b["befehl"] == "STATUS"

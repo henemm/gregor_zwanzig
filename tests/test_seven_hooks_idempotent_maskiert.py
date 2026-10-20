@@ -167,6 +167,19 @@ def test_ac2_staging_hook_mit_anderer_ziel_url_gilt_nicht_als_vorhanden(double):
     assert len(_posts(double)) == 1
 
 
+def test_ac2_gleiche_ziel_url_mit_anderem_event_gilt_nicht_als_vorhanden(double):
+    """Uebersprungen wird nur bei gleicher Ziel-URL UND gleichem Event (`sms_mo`)."""
+    double["hooks"].append({
+        "id": "4700", "target_url": f"{PROD}/api/webhooks/sms/{PFAD_SECRET}",
+        "headers": "", "event_type": "dlr", "event_filter": "", "request_method": "POST",
+        "enabled": True, "created": "2026-10-01 10:00:00"})
+    erg = _lauf(double, "set")
+    assert erg.returncode == 0, erg.stderr
+    posts = _posts(double)
+    assert len(posts) == 1 and posts[0]["felder"]["event_type"] == "sms_mo", posts
+    _ohne_secrets(erg)
+
+
 def test_ac2_list_zeigt_hooks_maskiert(double):
     erg = _lauf(double, "list", mit_set_env=False)
     assert erg.returncode == 0, erg.stderr
