@@ -124,3 +124,292 @@ class TestComparePresetSend:
             f"Erwartet ein FACHLICHES Not-Found (Preset benannt), bekam generisches "
             f"Routing-404 {detail!r} — Endpoint /compare-presets/{{id}}/send fehlt (RED)."
         )
+
+
+# ===========================================================================
+# #2280 (Epic #2345 P4) — Ortsvergleich meldet ehrlich: Erfolg heisst Zustellung
+# Spec: docs/specs/modules/feat_2280_handversand_endpoint.md (AC-4 bis AC-8)
+#
+# Echte Kette: HTTP-Router -> send_compare_preset -> send_one_compare_preset
+# -> NotificationService.send_compare_report. Naehte nur zu Wetter, Transport,
+# Kanallage und Anker-Netzabruf (tests/tdd/_handversand_fixtures.py). Jeder
+# Test benutzt frische Nutzer; AC-7 prueft Hand- UND Cron-Pfad.
+# ===========================================================================
+
+from tests.helpers.transport_mitschrift import Kanalmitschrift, aufzeichner_installieren  # noqa: E402
+from tests.tdd import _handversand_fixtures as hv  # noqa: E402
+from tests.tdd._compare_kette_fixtures import (  # noqa: E402
+    TARGET_DATE,
+    alle_orte,
+    engine_naht,
+    fixture_dict,
+    nutzer_anlegen,
+    orte_anlegen,
+    preset_ablegen,
+    preset_laden,
+    settings_fuer,
+    transport_einrichten,
+)
+
+
+@pytest.fixture
+def mit(monkeypatch) -> Kanalmitschrift:
+    transport_einrichten(monkeypatch)
+    engine_naht(monkeypatch)
+    return aufzeichner_installieren(monkeypatch)
+
+
+@pytest.fixture
+def anker(mit, monkeypatch) -> list:
+    """Nach ``engine_naht`` (das den Anker-Schreiber still legt) neu belegt."""
+    return hv.anker_zaehler(monkeypatch)
+
+
+def _vergleich(uid: str, preset_id: str, *, telegram: bool = False, sms: bool = False) -> str:
+    """Echtes Preset; die Kanallage entsteht ausschliesslich aus den
+    Opt-ins hier und dem Konto-Profil (mit/ohne mail_to) -- kein Resolver-Patch."""
+    roh = fixture_dict("basis")
+    roh["id"] = preset_id
+    roh["send_telegram"] = telegram
+    roh["send_sms"] = sms
+    orte_anlegen(uid)
+    preset_ablegen(uid, roh)
+    return preset_id
+
+
+def _cron(uid: str, preset_id: str, settings=None) -> bool:
+    """Cron-Pfad wie im Betrieb: der fehler-isolierende Wrapper
+    ``_dispatch_due_preset`` (Morgen-Slot, Versatz 0)."""
+    from app.loader import get_data_root
+    from services.scheduler_dispatch_service import _dispatch_due_preset
+
+    return _dispatch_due_preset(
+        preset_laden(uid, preset_id), TARGET_DATE,
+        settings if settings is not None else settings_fuer(uid),
+        uid, str(get_data_root()), alle_orte(uid), tage_ab_ortstag=0,
+    )
+
+
+# --- AC-4: kein wirksamer Kanal -> 422 no_channels, Text wie beim Trip --------
+
+
+def test_ac4_vergleich_ohne_wirksamen_kanal_liefert_422_no_channels_mit_trip_text(
+    mit, monkeypatch,
+):
+    """Given ein Ortsvergleich ohne wirksamen Kanal / When per Hand versendet /
+    Then 422, code 'no_channels', detail WORTGLEICH zum Trip-Fall ohne Kanal.
+    Echte Lage: keine mail_to im Konto, kein Telegram-/SMS-Opt-in im Preset.
+    RED: heute 422 'mail_to fehlt' ohne code."""
+    from app.config import Settings
+
+    hv.trip_naehte(monkeypatch)
+    c = hv.client()
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac4")
+    hv.profil_ohne_mail_to(uid)
+    assert not Settings().with_user_profile(uid).mail_to, "Vorbedingung: keine mail_to"
+    trip_uid = nutzer_anlegen()
+    hv.trip_anlegen(trip_uid, "trip-ac4", email=False)
+
+    r = hv.alt_senden(c, "vergleich", pid, uid)
+    trip = hv.alt_senden(c, "route", "trip-ac4", trip_uid, report_type="morning")
+
+    assert r.status_code == 422, f"Erwartet 422 statt stillem Erfolg: {r.status_code} {r.text}"
+    assert hv.body(r).get("code") == "no_channels", hv.body(r)
+    assert trip.status_code == 422 and hv.body(trip).get("code") == "no_channels", hv.body(trip)
+    assert hv.body(r)["detail"] == hv.body(trip)["detail"], (
+        f"Ein Vokabular: Vergleich {hv.body(r)['detail']!r} != Trip {hv.body(trip)['detail']!r}"
+    )
+    assert not mit.kanaele, f"Ohne Kanal darf nichts hinausgehen: {mit}"
+    assert hv.letzter_versand(uid, pid) is None, "Kein Erfolgs-Status ohne Zustellung"
+
+
+# --- AC-5: alle Kanaele scheitern -> 422 channels_unreachable -----------------
+
+
+def test_ac5_alle_kanaele_gescheitert_liefert_422_ohne_erfolgs_status(mit, anker, monkeypatch):
+    """Given ein Ortsvergleich, dessen einziger wirksamer Kanal (Telegram) beim
+    Senden scheitert / When per Hand versendet / Then 422 'channels_unreachable',
+    kein gespeicherter Erfolgs-Status, kein Anker-Reset (Zustand vor/nach).
+    Echte Lage: Preset send_telegram, Konto ohne mail_to (E-Mail unwirksam),
+    Telegram-Transport faellt aus. RED: heute 422 'mail_to fehlt' ohne code.
+    Hinweis: der Anker-Teil ist im Handversand strukturell schon heute erfuellt
+    (on_demand=True); die wirksame Anker-Pruefung steht im Cron-Pfad (AC-8)."""
+    c = hv.client()
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac5", telegram=True)
+    hv.profil_ohne_mail_to(uid)
+    versuche = hv.telegram_vergleich_scheitert(monkeypatch)
+    vorher = hv.letzter_versand(uid, pid)
+    assert vorher is None, "Vorbedingung: noch kein Versand-Status"
+
+    r = hv.alt_senden(c, "vergleich", pid, uid)
+
+    assert r.status_code == 422, f"Erwartet 422 statt 'ok': {r.status_code} {r.text}"
+    assert hv.body(r).get("code") == "channels_unreachable", hv.body(r)
+    assert versuche, "Der Telegram-Ausgang muss betreten worden sein"
+    assert hv.letzter_versand(uid, pid) == vorher, "Erfolgs-Status darf nicht gespeichert sein"
+    assert anker == [], f"Kein Anker-Reset bei gescheitertem Versand: {anker}"
+
+
+# --- AC-6: keine Wetterdaten -> 422 no_weather statt 500 ----------------------
+
+
+def test_ac6_keine_wetterdaten_liefert_422_no_weather_statt_500(mit, monkeypatch):
+    """Given die Wetterabfrage scheitert fuer ALLE Orte / When per Hand
+    versendet / Then 422 'no_weather' mit deutschem Text, kein 500, nichts
+    versendet. RED: heute 500 Internal Server Error."""
+    c = hv.client()
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac6")
+    hv.wetter_faellt_ueberall_aus(monkeypatch)
+
+    r = hv.alt_senden(c, "vergleich", pid, uid)
+
+    assert r.status_code == 422, f"Erwartet 422 statt Serverfehler: {r.status_code} {r.text}"
+    b = hv.body(r)
+    assert b.get("code") == "no_weather", b
+    assert isinstance(b.get("detail"), str) and "Wetter" in b["detail"], (
+        f"Verstaendlicher deutscher Text erwartet: {b}"
+    )
+    assert not mit.kanaele, mit
+    assert hv.letzter_versand(uid, pid) is None
+
+
+def test_ac6_alle_orte_ohne_daten_liefert_422_no_weather(mit, monkeypatch):
+    """Realistische Form desselben Givens: die Engine faengt den Provider-
+    Fehler je Ort selbst ab (``LocationResult(error=...)``, keine Ausnahme) —
+    fuer ALLE Orte. Auch das ist "keine Wetterdaten zu bekommen" und darf
+    weder als 200 'ok' noch als 500 enden."""
+    c = hv.client()
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac6-real")
+    hv.wetter_fehlt_je_ort(monkeypatch)
+
+    r = hv.alt_senden(c, "vergleich", pid, uid)
+
+    assert r.status_code == 422, f"Erwartet 422 no_weather: {r.status_code} {r.text}"
+    assert hv.body(r).get("code") == "no_weather", hv.body(r)
+    assert not mit.kanaele, f"Ohne Wetterdaten darf nichts hinausgehen: {mit}"
+    assert hv.letzter_versand(uid, pid) is None
+
+
+# --- AC-7: nur Telegram/SMS, keine mail_to -> zustellbar (Hand + Cron) --------
+
+
+@pytest.mark.parametrize("kanaele", [{"telegram"}, {"sms"}, {"telegram", "sms"}])
+def test_ac7_handversand_nur_telegram_sms_ohne_mail_to_wird_zugestellt(
+    mit, monkeypatch, kanaele,
+):
+    """Given Preset-Opt-in nur Telegram/SMS (echte Faehigkeit: Bot-Token +
+    Profil-Chat, SMS-Gateway + verifizierte Nummer, Tarif premium) und KEINE
+    mail_to im Profil / When per Hand versendet / Then 200 und Zustellung genau
+    ueber diese Kanaele. RED: heute 422 'kein Empfaenger — mail_to fehlt'."""
+    from app.config import Settings
+
+    c = hv.client()
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac7-hand",
+                     telegram="telegram" in kanaele, sms="sms" in kanaele)
+    # Vorbedingung: MIT mail_to erreichen die Opt-in-Kanaele die Ausgaenge
+    # (beweist, dass die echte Kanallage SMS/Telegram zustellen kann).
+    vorlauf = hv.alt_senden(c, "vergleich", pid, uid)
+    assert vorlauf.status_code == 200 and set(mit.kanaele) == kanaele | {"email"}, (
+        f"Vorbedingung verletzt: {vorlauf.status_code} {vorlauf.text} {mit}"
+    )
+    mit.leeren()
+    hv.profil_ohne_mail_to(uid)
+    assert not Settings().with_user_profile(uid).mail_to, "Vorbedingung: keine mail_to"
+
+    r = hv.alt_senden(c, "vergleich", pid, uid)
+
+    assert r.status_code == 200, f"Ohne E-Mail-Kanal ist mail_to keine Pflicht: {r.text}"
+    assert hv.body(r).get("status") == "ok", hv.body(r)
+    assert set(mit.kanaele) == kanaele, f"Zustellung ueber {kanaele} erwartet: {mit}"
+
+
+def test_ac7_cron_nur_telegram_ohne_mail_to_wird_zugestellt(mit, anker, monkeypatch):
+    """Cron-Pfad (``send_one_compare_preset`` ueber den Wrapper): gleiche
+    Kanal-Paritaet. RED: heute ValueError -> Wrapper verbucht 'nicht gesendet'."""
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac7-cron", telegram=True)
+    hv.profil_ohne_mail_to(uid)
+    settings = settings_fuer(uid)
+    assert not settings.mail_to and settings.can_send_telegram(), "Vorbedingung"
+
+    ergebnis = _cron(uid, pid, settings)
+
+    assert ergebnis is True, "Cron-Lauf nur mit Telegram muss als versendet gelten"
+    assert mit.kanaele == ["telegram"], mit
+    assert hv.letzter_versand(uid, pid), "Erfolgs-Status nach echter Zustellung erwartet"
+
+
+def test_ac7_gegenprobe_ohne_mail_to_und_ohne_telegram_sms_bleibt_fehler(mit, monkeypatch):
+    """Gegenprobe: keine mail_to UND kein Telegram-/SMS-Opt-in -> die Lockerung
+    darf keinen stillen Erfolg erzeugen: 422 'no_channels', nichts zugestellt.
+    RED: heute 422 'mail_to fehlt' ohne code (Fehler ja, Form noch nicht)."""
+    c = hv.client()
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac7-gegen")
+    hv.profil_ohne_mail_to(uid)
+
+    r = hv.alt_senden(c, "vergleich", pid, uid)
+
+    assert r.status_code == 422, f"Ohne jeden wirksamen Kanal muss es scheitern: {r.text}"
+    assert hv.body(r).get("status") != "ok", hv.body(r)
+    assert not mit.kanaele, mit
+    assert hv.letzter_versand(uid, pid) is None
+    assert hv.body(r).get("code") == "no_channels", hv.body(r)
+
+
+# --- AC-8: Cron bucht ehrlich ------------------------------------------------
+
+
+def test_ac8_cron_ohne_wirksamen_kanal_bucht_nicht_als_versendet(mit, anker, monkeypatch):
+    """Given Cron-Lauf ohne wirksamen Kanal / When der Lauf endet / Then kein
+    Erfolgs-Status, kein Anker-Reset, Wrapper wirft nicht und meldet False.
+    Echte Lage: keine mail_to, kein Telegram-/SMS-Opt-in.
+    RED-Charakter: heute endet der Lauf ueber den ValueError 'mail_to fehlt'
+    bereits mit False -- dieser Test ist HEUTE GRUEN und bewacht nach dem Fix
+    (ValueError entfaellt) die Ableitung 'no_channels -> nicht verbucht'."""
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac8-ohne")
+    hv.profil_ohne_mail_to(uid)
+
+    ergebnis = _cron(uid, pid)  # darf nicht werfen
+
+    assert ergebnis is False, "Ohne Kanal darf der Cron-Lauf nicht als versendet gelten"
+    assert hv.letzter_versand(uid, pid) is None, "Kein Erfolgs-Status"
+    assert anker == [], f"Kein Anker-Reset ohne Zustellung: {anker}"
+    assert not mit.kanaele, mit
+
+
+def test_ac8_cron_alle_kanaele_gescheitert_bucht_nicht_als_versendet(mit, anker, monkeypatch):
+    """Echte Lage: send_telegram, keine mail_to, Telegram-Transport faellt aus.
+    Heute endet der Lauf schon am ValueError 'mail_to fehlt' (False, ohne den
+    Telegram-Ausgang zu betreten) -> rot an der Vorbedingung 'Ausgang betreten'."""
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac8-tot", telegram=True)
+    hv.profil_ohne_mail_to(uid)
+    versuche = hv.telegram_vergleich_scheitert(monkeypatch)
+
+    ergebnis = _cron(uid, pid)  # darf nicht werfen
+
+    assert versuche, "Vorbedingung: Telegram-Ausgang betreten"
+    assert ergebnis is False, "Gescheiterter Cron-Lauf darf nicht als versendet gelten"
+    assert hv.letzter_versand(uid, pid) is None, "Kein Erfolgs-Status"
+    assert anker == [], f"Kein Anker-Reset bei gescheitertem Versand: {anker}"
+
+
+def test_ac8_kontrolle_cron_mit_zustellung_bucht_und_setzt_anker(mit, anker, monkeypatch):
+    """Kontroll-Bein (sonst waeren die beiden AC-8-Tests vakuum): ein Cron-Lauf
+    MIT Zustellung verbucht den Versand und setzt den Anker. Heute gruen."""
+    uid = nutzer_anlegen()
+    pid = _vergleich(uid, "vgl-ac8-ok")  # echte Lage: mail_to da, nur E-Mail
+
+    ergebnis = _cron(uid, pid)
+
+    assert ergebnis is True
+    assert mit.kanaele == ["email"], mit
+    assert hv.letzter_versand(uid, pid), "Erfolgs-Status nach Zustellung erwartet"
+    assert len(anker) >= 1, f"Anker muss nach echter Zustellung gesetzt werden: {anker}"

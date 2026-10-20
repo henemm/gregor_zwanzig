@@ -1588,11 +1588,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/services/notification_service.py::_send_service_error_email::0": (
         "B21 (#1405) — _send_service_error_email: EmailOutput, nacktes return (S-9)."
     ),
-    # --- B12: top_ort/actual_empfaenger sind abgeleitet und stehen im selben
-    # Dict — der Erfolgs-Schlüssel daneben ist trotzdem hartkodiert.
-    "src/services/scheduler_dispatch_service.py::send_compare_preset::0": (
-        "B12 (#1405) — send_compare_preset: 'status': 'ok' fest."
-    ),
+    # --- B12 entfernt (#2280 S1, Spec feat_2280_handversand_endpoint AC-11):
+    # send_compare_preset leitet "status" aus dem echten Versand-Ausgang ab.
     # B9/B10 entfernt (#2217) — die beiden Trip-Alarmprüfer zählen gescheiterte
     # Trips jetzt in AlertCheckRunResult.failed (Gegenzähler je Einheit).
     # --- B18 entfernt (#1405 S4a, Spec feat_1405_s4a_befehlsantwort_erfolg_wirkung):
@@ -1722,8 +1719,8 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # B8 entfernt (#1369) — Endpoint /inbound-telegram samt Poll-Pfad geloescht.
     # B9/B10/B11/B11b/B11c entfernt (#2217) — Trip- und Compare-Alarmprüfer
     # schotten jede Einheit ab und zählen Ausfälle in `failed`.
-    # B12 — top_ort/actual_empfaenger zugewiesen, "status" trotzdem festes "ok"
-    "src/services/scheduler_dispatch_service.py::send_compare_preset": 1,
+    # B12 entfernt (#2280 S1, AC-11) — send_compare_preset leitet "status"
+    # aus dem echten Versand-Ausgang ab, der Scanner findet dort nichts mehr.
     # B13 entfernt (#1407) — toter Compare-Heartbeat wurde geloescht statt
     # angeschlossen, der Scanner findet dort nichts mehr.
     # B14a/B14c entfernt (#1405 S1, ADR-0086) — send_official_alert und
@@ -1823,14 +1820,15 @@ def test_scanner_finds_every_spec_listed_finding():
     # durch Löschen des Poll-Pfads entfallen (Mechanik wie B13)
     # -> 19 Schlüssel, Summe 22.
     # #1405 S4a: minus B18 (zehn Funktionsschluessel, 13 Treffer) -> 9 / 9.
-    assert len(SPEC_LISTED_FINDINGS) == 9 and sum(SPEC_LISTED_FINDINGS.values()) == 9, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 9 "
-        "Funktionsschlüssel, Summe 9 — Version 1.2 minus B13, #1407, minus "
+    # #2280 S1 (AC-11): minus B12 (send_compare_preset) -> 8 / 8.
+    assert len(SPEC_LISTED_FINDINGS) == 8 and sum(SPEC_LISTED_FINDINGS.values()) == 8, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 8 "
+        "Funktionsschlüssel, Summe 8 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
         "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2, "
         "minus B9/B10/B11/B11b/B11c, #2217, minus B1/B14a/B14c/B15/B16, "
         "#1405 S1 ADR-0086, minus B8/B20, #1369 Poll-Pfad geloescht, minus B18 (zehn "
-        "Schluessel, 13 Treffer), #1405 S4a). Ist: "
+        "Schluessel, 13 Treffer), #1405 S4a, minus B12, #2280 S1). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )
