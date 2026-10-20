@@ -693,6 +693,18 @@ class MeteoFranceDirectProvider:
         # zaehlt NICHT als Versuch -- er ist keine frische Abfrage.
         versucht = 0
         fehlgeschlagen = 0
+        # #2439: Kalt-Signal je Abruf (Vorlage `dwd_fenster`); eigener Praefix,
+        # damit die DWD-Auswertung die Zeile nicht als DWD-Download zaehlt.
+        t_fenster = time.monotonic()
+        downloads = 0
+        cache_treffer = 0
+
+        def _fenster_zeile() -> None:
+            logger.info(
+                "fr_direct_fenster fenster_s=%.2f downloads=%d cache_treffer=%d",
+                time.monotonic() - t_fenster, downloads, cache_treffer,
+            )
+
         try:
             now = datetime.now(timezone.utc)
             # `run` bleibt der 3h-Lauf (unveraendert) und damit der Nullpunkt
@@ -731,6 +743,8 @@ class MeteoFranceDirectProvider:
                     # aelteren Lauf kann nie einen Treffer eines anderen Laufs
                     # liefern (AC-8).
                     raw = speicher.get(coverage_id, time_str, bbox)
+                    if raw is not None:
+                        cache_treffer += 1
                     if raw is None:
                         # Zeitgrenze im INNERSTEN Schritt (Lehre #1448): vor
                         # JEDEM Einzelabruf, nicht nur um die Schleife herum.
@@ -743,6 +757,7 @@ class MeteoFranceDirectProvider:
                                 signal_label,
                                 THUNDER_FETCH_DEADLINE_SECONDS,
                             )
+                            _fenster_zeile()
                             return ergebnis
                         while True:
                             versucht += 1
@@ -752,6 +767,7 @@ class MeteoFranceDirectProvider:
                                     gruppe[0].longitude, None, time_str,
                                     bbox=bbox, timeout=restzeit,
                                 )
+                                downloads += 1
                                 break
                             except httpx.HTTPStatusError as e:
                                 # #1457 S2a Fix, AC-4: der gewaehlte Lauf
@@ -806,6 +822,7 @@ class MeteoFranceDirectProvider:
                                         signal_label,
                                         THUNDER_FETCH_DEADLINE_SECONDS,
                                     )
+                                    _fenster_zeile()
                                     return ergebnis
                                 continue
                             except Exception as e:
@@ -827,12 +844,14 @@ class MeteoFranceDirectProvider:
                         ergebnis[schluessel][offset] = werte[schluessel]
         except Exception:
             logger.warning("%s-Abruf fehlgeschlagen", signal_label, exc_info=True)
+            _fenster_zeile()
             return {schluessel: {} for schluessel in ergebnis}
         # #1492 S2a Implementation Details Punkt 3: NACH dem try/except, damit
         # der neue Ausnahmetyp nicht vom generischen `except Exception:`
         # darueber verschluckt wird -- er soll zum Aufrufer (thunder_enrichment)
         # durchschlagen. Die budgetbedingten Fruehausstiege oben (`return
         # ergebnis`) pruefen bewusst NICHT auf Ausfall (Known Limitations 1).
+        _fenster_zeile()
         if versucht > 0 and fehlgeschlagen == versucht:
             raise ThunderSourceUnavailableError(self.name, versucht)
         return ergebnis

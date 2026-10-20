@@ -18,12 +18,16 @@ seven.io / Stalwart --POST--> Nginx --> Go  /api/webhooks/sms/{secret}
 | `SEVEN_WEBHOOK_SIGNING_KEY` | seven.io-Account-Signing-Key (HMAC) | 503 |
 | `STALWART_WEBHOOK_PATH_SECRET` | geheimes letztes Pfadsegment der Mail-URL | 503 |
 | `STALWART_WEBHOOK_SECRET` | Bearer-Token des Stalwart-Hooks | 503 |
-| `PUBLIC_HOST` | Basis der signierten URL (nie Host-Header) | Default Prod-Host |
+| `GZ_PUBLIC_HOST` | Basis der signierten URL (nie Host-Header; Go liest sie über das Präfix `GZ`, `internal/config/config.go`) | Default Prod-Host |
 
-Die signierte URL ist `PUBLIC_HOST + /api/webhooks/sms/ + SEVEN_WEBHOOK_PATH_SECRET`. Auf Staging
-muss `PUBLIC_HOST` die Staging-Adresse sein, sonst stimmt die Signatur nicht.
+Die signierte URL ist `GZ_PUBLIC_HOST + /api/webhooks/sms/ + SEVEN_WEBHOOK_PATH_SECRET`. Auf Staging
+muss `GZ_PUBLIC_HOST` die Staging-Adresse sein, sonst stimmt die Signatur nicht.
 
 ## seven.io registrieren
+
+Registrierung per Skript (idempotent, Secrets maskiert):
+`GZ_PUBLIC_HOST=… SEVEN_WEBHOOK_PATH_SECRET=… SEVEN_SERVICE_NUMBER=… scripts/seven_hooks.sh set`
+(dazu `list` und `delete <id>`; Rollback = `delete <Prod-ID>`). Gleichwertig die API direkt:
 
 ```
 POST https://gateway.seven.io/api/hooks
@@ -34,8 +38,9 @@ POST https://gateway.seven.io/api/hooks
 ```
 
 Der Signing-Key kommt aus dem seven.io-Dashboard (Env `SEVEN_WEBHOOK_SIGNING_KEY`, nie ins Repo).
-**Signaturverfahren** (gegen die echte seven.io-Gegenseite belegt, Nachweis
-`docs/artifacts/feat-2439-befehle-push-eingang/seven-signatur-nachweis.md`):
+**Signaturverfahren** (Beleg: echte Staging-Zustellung von seven.io am 15.10. wurde akzeptiert,
+`rejected_total` blieb 0; für Prod der Beleg aus der Prod-Messung AC-5/AC-6 der Spec
+`docs/specs/modules/feat_2439_push_eingang_prod_scharf.md`):
 
 ```
 string_to_sign = X-Timestamp \n X-Nonce \n METHODE \n volle URL \n md5_hex(roher Body)
@@ -58,6 +63,22 @@ verifiziert; `store.ingest` aus einem Doku-Beispiel existiert nicht). Ein falsch
 stille Nicht-Zustellung — sichtbar nur über ausbleibendes `push.last_received`. Netzpfad: Der
 Container erreicht Go nur über den öffentlichen Nginx-Pfad (Hairpin); Go bindet `127.0.0.1:8090`.
 
+**Empfängerfilter / Zuordnungs-Grenze:** Der Mail-Handler filtert nicht nach Empfänger
+(`internal/handler/inbound_webhooks.go`); im Stalwart-Hook ist ein Empfängerfilter bisher nicht
+belegt. Fremde Mails an andere Postfächer zählen deshalb als `received` und können ein echtes
+`missed` im 5-Minuten-Fenster verdecken. Ergebnis der Filterprüfung bei der Prod-Registrierung:
+_wird bei Registrierung in /70 eingetragen_. Belegt wird die Zuordnung zeitlich (Eingang → `last_received`).
+
+## Hook-IDs
+
+| Umgebung | seven.io (`sms_mo`) | Stalwart (`message-ingest.ham`) |
+|----------|---------------------|----------------------------------|
+| Staging | 4750 | `jjsl7jjqacaa` |
+| Prod | _wird bei Registrierung in /70 eingetragen_ | _wird bei Registrierung in /70 eingetragen_ |
+
+Ein seven.io-Hook auf dieselbe Servicenummer weckt beide Umgebungen; die Doppelantwort verhindert
+nur die Herkunftssperre auf Staging.
+
 ## Nginx (henemm-infra)
 
 Locations `/api/webhooks/sms/` und `/api/webhooks/mail/` an die Go-API (prod + staging), `limit_req`,
@@ -76,6 +97,11 @@ Zwischen Env-Wechsel und Hook-Update antwortet der Endpunkt 403; der Fallback-Po
 `kicks_coalesced`, `missed_total`, `last_missed`. Steigender `missed_total` heißt: der Sofort-Weg ist
 ausgefallen (Befehl wurde erst vom Fallback-Poll verarbeitet).
 
+**`missed` bleibt bedingungslos:** Ein per Cron verarbeiteter Befehl ohne vorherigen Weckruf zählt
+immer als `missed` -- nicht gekoppelt an „mindestens ein `received` seit Start“, auch nicht bei
+komplett ausgefallenem Push. Bewacht durch `internal/scheduler/scheduler_kick_test.go`
+`TestPushMissed_CronLaufMitBefehlenOhneKickZaehltAlsVerpasst`.
+
 ## Go→Core-Verbindung ohne Keep-Alive (2026-10-15, Nachbesserung #2439)
 
 Der geteilte Go-HTTP-Client zum Python-Core (`newCoreClient`, `internal/scheduler/scheduler.go`)
@@ -92,7 +118,7 @@ mit erfolgreichem Nachversuch dort unsichtbar; die Verbindungsebene ist nur im G
 
 ## Reihenfolge bei der Inbetriebnahme
 
-1. **Staging: `PUBLIC_HOST` auf den Staging-Host setzen.** Der Default ist der Prod-Host; sonst stimmt
+1. **Staging: `GZ_PUBLIC_HOST` auf den Staging-Host setzen.** Der Default ist der Prod-Host; sonst stimmt
    die signierte URL nicht und seven.io-Aufrufe enden dauerhaft in 403.
 2. **Basic-Auth-Ausnahme auf Staging** ist nur durch eine echte seven.io-Zustellung belegbar. Aufrufe
    vom Server selbst umgehen Basic-Auth (infra#229) und beweisen die Ausnahme nicht.

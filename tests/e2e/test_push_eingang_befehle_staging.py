@@ -25,10 +25,16 @@ ins Repo).
 from __future__ import annotations
 
 import os
+import sys
 from datetime import datetime
+from pathlib import Path
 
 import httpx
 import pytest
+
+# Gemeinsame Auswertelogik (#2439): dieselbe wie im Prod-Lese-Werkzeug befehl_antwortzeit.py.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / ".claude" / "tools"))
+import befehl_messlogik as ml  # noqa: E402
 
 STAGING = "https://staging.gregor20.henemm.com"
 GRENZE_SEKUNDEN = 60  # "Sekunden, nicht Minuten" -- weit unter dem 5-min-Raster
@@ -94,7 +100,7 @@ def _job_status(job_id: str) -> dict:
     raise AssertionError(f"Job {job_id!r} nicht im Staging-Status")
 
 
-def _pruefe_sofortweg(job_id: str):
+def _pruefe_sofortweg(job_id: str, *, ueberholt_ueberspringen: bool = False):
     job = _job_status(job_id)
     push = job.get("push")
     assert isinstance(push, dict) and "last_received" in push, (
@@ -105,6 +111,11 @@ def _pruefe_sofortweg(job_id: str):
         f"keinen Befehl ausgeloest oder der Sofort-Weg ist ausgefallen: {push!r}"
     )
     assert push.get("received_total", 0) >= 1
+    if ueberholt_ueberspringen and ml.messung_ueberholt(job, GRENZE_SEKUNDEN):
+        pytest.skip(
+            "Messung überholt: last_run stammt von einem späteren */5-Tick, nicht vom Poll-Lauf "
+            "nach dem Webhook -- direkt nach der SMS erneut fahren"
+        )
     empfangen = datetime.fromisoformat(push["last_received"])
     assert job.get("last_run"), f"{job_id}: kein last_run"
     assert job["last_run"].get("status") == "ok", (
@@ -121,7 +132,7 @@ def _pruefe_sofortweg(job_id: str):
 
 
 def test_ac1_sms_last_run_sekunden_nach_webhook():
-    _pruefe_sofortweg("premium_sms_poll")
+    _pruefe_sofortweg("premium_sms_poll", ueberholt_ueberspringen=True)
 
 
 def test_ac2_mail_last_run_sekunden_nach_webhook():
@@ -153,8 +164,6 @@ import statistics
 import subprocess
 from datetime import timedelta, timezone
 
-_ZEILE_DAUER = re.compile(r"befehl=(\S+) kanal=(\S+) trip=(\S+) dauer_ms=(\d+)")
-_ZEILE_DWD = re.compile(r"fenster_s=[\d.]+ downloads=(\d+) cache_treffer=\d+")
 _KANAL_GRUPPEN = {
     "email": {"email"},
     "telegram": {"telegram"},
@@ -168,6 +177,15 @@ MIN_LAEUFE_WETTER = 5
 MIN_LAEUFE_KORSIKA = 3
 HELP_NACH_HEUTE_MS = 30_000
 HELP_GESAMT_MS = 90_000
+PAAR_FENSTER_S = 300  # bewusst weiter als die 90-s-Pruefgrenze, damit ein Verstoss sichtbar bleibt
+
+
+def _nicht_messbar_premium_sms(eingang: str) -> None:
+    if eingang == "premium_sms":
+        pytest.skip(
+            "NOT_MEASURABLE_ON_STAGING: die Herkunftssperre laesst auf Staging keine "
+            "Premium-SMS-Antwort zu -- Prod-Messweg: .claude/tools/befehl_antwortzeit.py"
+        )
 
 
 def _messlauf_seit() -> str:
@@ -199,24 +217,8 @@ def _journal(unit: str, seit: str) -> list[tuple[datetime, str]]:
 
 
 def _dauerzeilen(seit: str, *, trip: str | None = None) -> list[dict]:
-    treffer = []
-    for zeit, text in _journal("gregor-python-staging", seit):
-        m = _ZEILE_DAUER.search(text)
-        if m and (trip is None or m.group(3) == trip):
-            treffer.append({"ts": zeit, "befehl": m.group(1), "kanal": m.group(2),
-                            "trip": m.group(3), "ms": int(m.group(4))})
-    return treffer
-
-
-def _kalt(lauf: dict, dwd_zeilen: list[tuple[datetime, int]]) -> bool:
-    """Kalt = im Zeitfenster des Befehls hat ein DWD-Fenster tatsaechlich heruntergeladen."""
-    anfang = lauf["ts"] - timedelta(milliseconds=lauf["ms"])
-    return any(anfang <= zeit <= lauf["ts"] and downloads > 0 for zeit, downloads in dwd_zeilen)
-
-
-def _dwd_downloads(seit: str) -> list[tuple[datetime, int]]:
-    return [(zeit, int(m.group(1))) for zeit, text in _journal("gregor-python-staging", seit)
-            if (m := _ZEILE_DWD.search(text))]
+    laeufe = ml.dauerzeilen(_journal("gregor-python-staging", seit))
+    return [l for l in laeufe if trip is None or l["trip"] == trip]
 
 
 def _auswahl(laeufe: list[dict], befehl: str, eingang: str | None = None) -> list[dict]:
@@ -228,6 +230,7 @@ def _auswahl(laeufe: list[dict], befehl: str, eingang: str | None = None) -> lis
 @pytest.mark.parametrize("eingang", ["email", "telegram", "premium_sms"])
 def test_ac3_befehle_ohne_wetterabruf_unter_30_sekunden_auf_jedem_eingang(eingang, befehl):
     """AC-3: jeder Lauf (>= 5 je Befehl und Eingang) liegt in der Dauer-Zeile unter 30 s."""
+    _nicht_messbar_premium_sms(eingang)
     laeufe = _auswahl(_dauerzeilen(_messlauf_seit()), befehl, eingang)
     werte = [l["ms"] for l in laeufe]
     assert len(werte) >= MIN_LAEUFE_OHNE_WETTER, (
@@ -243,12 +246,15 @@ def test_ac3_befehle_ohne_wetterabruf_unter_30_sekunden_auf_jedem_eingang(eingan
 
 @pytest.mark.parametrize("befehl", ["HEUTE", "MORGEN"])
 def test_ac4_wetterbefehle_kalt_auf_de_route_max_unter_60s_und_median_unter_45s(befehl):
-    """AC-4: >= 5 KALTE Laeufe je Befehl (E-Mail, Telegram, Premium-SMS je mindestens einmal
-    darunter): jeder < 60 s UND Median < 45 s; alle Einzelwerte werden ausgegeben."""
+    """AC-4: >= 5 KALTE Laeufe je Befehl, darunter mindestens einmal E-Mail (Pflicht): jeder
+    < 60 s UND Median < 45 s; alle Einzelwerte werden ausgegeben. Premium-SMS (Herkunftssperre)
+    und Telegram HEUTE/MORGEN (verwaistes Staging-Konto, Spec §9) sind auf Staging
+    NOT_MEASURABLE_ON_STAGING -- Prod-Messweg: .claude/tools/befehl_antwortzeit.py."""
+    print("AC-4 NOT_MEASURABLE_ON_STAGING: premium_sms, telegram -- Prod-Messweg "
+          ".claude/tools/befehl_antwortzeit.py")
     seit = _messlauf_seit()
     laeufe = _auswahl(_dauerzeilen(seit, trip=os.environ.get("GZ_STAGING_TRIP_DE")), befehl)
-    dwd_zeilen = _dwd_downloads(seit)
-    kalte = [l for l in laeufe if _kalt(l, dwd_zeilen)]
+    kalte = ml.kalt_laeufe(laeufe, _journal("gregor-python-staging", seit), quellen=("dwd_fenster",))
     werte = [l["ms"] for l in kalte]
     print(f"AC-4 {befehl}: kalte Einzelwerte (ms) = {werte}; alle Laeufe = "
           f"{[(l['kanal'], l['ms']) for l in laeufe]}")
@@ -257,8 +263,11 @@ def test_ac4_wetterbefehle_kalt_auf_de_route_max_unter_60s_und_median_unter_45s(
         f"downloads>0 im Befehlsfenster), erwartet >= {MIN_LAEUFE_WETTER}; alle Laeufe: "
         f"{[(l['kanal'], l['ms']) for l in laeufe]}"
     )
-    fehlende = [e for e, kanaele in _KANAL_GRUPPEN.items()
-                if not any(l["kanal"] in kanaele for l in kalte)]
+    # premium_sms entfaellt auf Staging (Herkunftssperre, Prod-Messweg befehl_antwortzeit.py);
+    # Telegram HEUTE/MORGEN ist auf Staging NOT_MEASURABLE (verwaistes Konto, Spec §9, AC-10).
+    pflicht = ("email",)
+    fehlende = [e for e in pflicht
+                if not any(l["kanal"] in _KANAL_GRUPPEN[e] for l in kalte)]
     assert not fehlende, f"AC-4: unter den kalten {befehl}-Laeufen fehlt der Eingang {fehlende}"
     assert max(werte) < GRENZE_MIT_WETTER_MS, (
         f"AC-4: {befehl} kalt, Einzelwerte {werte} ms: Maximum {max(werte)} ms >= "
@@ -276,11 +285,14 @@ def test_ac5_wetterbefehle_kalt_auf_korsika_route_jeder_lauf_unter_60s(befehl):
     trip = os.environ.get("GZ_STAGING_TRIP_KORSIKA", "")
     assert trip, "GZ_STAGING_TRIP_KORSIKA fehlt (Befund der Testumgebung): Korsika-Trip-ID"
     seit = _messlauf_seit()
-    laeufe = _auswahl(_dauerzeilen(seit, trip=trip), befehl)
+    alle = _auswahl(_dauerzeilen(seit, trip=trip), befehl)
+    laeufe = ml.kalt_laeufe(alle, _journal("gregor-python-staging", seit),
+                            quellen=("fr_direct_fenster",))
     werte = [l["ms"] for l in laeufe]
-    print(f"AC-5 {befehl} Korsika: Einzelwerte (ms) = {werte}")
+    print(f"AC-5 {befehl} Korsika: kalte Einzelwerte (ms) = {werte}; alle = {[l['ms'] for l in alle]}")
     assert len(werte) >= MIN_LAEUFE_KORSIKA, (
-        f"AC-5: nur {len(werte)} {befehl}-Laeufe fuer den Korsika-Trip, erwartet >= "
+        f"AC-5: nicht belegt -- nur {len(werte)} KALTE {befehl}-Laeufe (fr_direct_fenster "
+        f"downloads>0) von {len(alle)} Laeufen fuer den Korsika-Trip, erwartet >= "
         f"{MIN_LAEUFE_KORSIKA}"
     )
     assert max(werte) < GRENZE_MIT_WETTER_MS, (
@@ -295,16 +307,9 @@ def test_ac12_help_waehrend_heute_wird_spaetestens_30s_nach_dessen_ende_beantwor
     """AC-12: Der Treiber sendet `HEUTE` und direkt danach `HELP` ueber denselben Eingang.
     Gemessen aus den Journalzeitpunkten der beiden Dauer-Zeilen (Uebergabe der Antwort):
     HELP <= 30 s nach HEUTE-Ende; HELP-Gesamtzeit (ab HEUTE-Start, obere Schranke) < 90 s."""
+    _nicht_messbar_premium_sms(eingang)
     laeufe = sorted(_dauerzeilen(_messlauf_seit()), key=lambda l: l["ts"])
-    kanaele = _KANAL_GRUPPEN[eingang]
-    paare = []
-    for i, heute in enumerate(laeufe):
-        if heute["befehl"] != "HEUTE" or heute["kanal"] not in kanaele:
-            continue
-        for help_ in laeufe[i + 1:]:
-            if help_["befehl"] == "HELP" and help_["kanal"] in kanaele:
-                paare.append((heute, help_))
-                break
+    paare = ml.paare_heute_help(laeufe, _KANAL_GRUPPEN[eingang], PAAR_FENSTER_S)
     assert paare, (
         f"AC-12: kein HEUTE->HELP-Paar ueber {eingang} im Journal -- der Treiber hat den "
         f"HELP nicht direkt nach dem HEUTE gesendet"

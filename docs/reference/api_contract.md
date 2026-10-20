@@ -1406,7 +1406,7 @@ only — never trip or user identifiers.
 
 **Webhooks (#2439, ADR-0088, session-free):** `POST /api/webhooks/sms/{secret}` (seven.io
 `sms_mo`; headers `X-Signature`/`X-Timestamp`/`X-Nonce`, HMAC-SHA256, ±30 s, nonce cache; signed
-URL from `PUBLIC_HOST`) and `POST /api/webhooks/mail/{secret}` (Stalwart, Bearer). Valid ⇒ 200 and
+URL from `GZ_PUBLIC_HOST`) and `POST /api/webhooks/mail/{secret}` (Stalwart, Bearer). Valid ⇒ 200 and
 `Scheduler.Kick` runs `premium_sms_poll` / `inbound_command_poll` at once (coalescing, min gap 2 s);
 invalid ⇒ 403; missing env ⇒ 503 (fail-closed). Python `/api/scheduler/inbound-sms` and
 `/inbound-commands` hold a flock and answer `{"status":"busy"}` on a parallel run. Cron `*/5`
