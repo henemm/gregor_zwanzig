@@ -415,6 +415,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BriefingSendError"
+        "500":
+          description: >-
+            Unerwarteter Fehler im Versand (send_failed, Python-Core) oder
+            Anfrage an den Python-Core nicht baubar (proxy_error, Go-API)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BriefingSendError"
+        "502":
+          description: Python-Core nicht erreichbar oder Zeitlimit ueberschritten (upstream_unreachable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BriefingSendError"
 
   /api/trips/{id}/send:
     post:
@@ -675,11 +689,17 @@ components:
 
     BriefingSendError:
       type: object
-      required: [detail]
+      required: [detail, code]
       properties:
         detail:
           type: string
           description: Deutscher, nutzerlesbarer Text (wird unveraendert angezeigt)
         code:
           type: string
-          enum: [kind_required, validation_error, no_channels, channels_unreachable, no_weather]
+          description: >-
+            kind_required, validation_error, upstream_unreachable und proxy_error
+            entstehen in der Go-API; alle uebrigen im Python-Core (send_outcomes.py).
+          enum: [kind_required, validation_error, not_found, already_in_progress,
+                 no_stage, no_weather, no_channels, channels_unreachable,
+                 invalid_report_type, smtp_not_configured, invalid_preset,
+                 send_failed, upstream_unreachable, proxy_error]

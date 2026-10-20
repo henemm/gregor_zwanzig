@@ -10,6 +10,8 @@ Fehlerabbildung gibt es nur hier, ausschliesslich ueber ``send_outcomes``.
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
@@ -17,6 +19,7 @@ from services.scheduler_dispatch_service import send_compare_preset
 from services.send_outcomes import SEND_OUTCOMES, error_body
 
 router = APIRouter(tags=["briefings"])
+logger = logging.getLogger("briefings_send")
 
 _KINDS = ("route", "vergleich")
 
@@ -71,21 +74,29 @@ def _send_vergleich(entity_id: str, user_id: str):
 
 
 def send_briefing(kind: str, entity_id: str, user_id: str, report_type: str):
-    """Handversand je ``kind``; Fehler als ``{"detail", "code"}`` mit 4xx."""
+    """Handversand je ``kind``; Fehler als ``{"detail", "code"}`` (4xx/5xx).
+    Jede unerwartete Ausnahme wird mit Traceback geloggt und als 500
+    ``send_failed`` aus dem Vokabular gemeldet (AC-9) — auch fuer die Alt-Routen."""
     if kind not in _KINDS:
         return _error("kind_required")
-    if kind == "route":
-        return _send_trip(entity_id, user_id, report_type)
-    return _send_vergleich(entity_id, user_id)
+    try:
+        if kind == "route":
+            return _send_trip(entity_id, user_id, report_type)
+        return _send_vergleich(entity_id, user_id)
+    except Exception:
+        logger.exception("Handversand %s/%s (user %s) fehlgeschlagen", kind, entity_id, user_id)
+        return _error("send_failed")
 
 
 @router.post("/api/briefings/{entity_id}/send")
 def send_briefing_endpoint(
     entity_id: str,
-    kind: str = Query(...),
     user_id: str = Query(...),
+    kind: str | None = Query(None),
     report_type: str = "morning",
 ):
     """Handversand fuer Trip (``kind=route``) und Ortsvergleich (``kind=vergleich``).
-    ``user_id`` setzt der Go-Proxy aus der Anmeldung; ein Koerper wird ignoriert."""
+    ``user_id`` setzt der Go-Proxy aus der Anmeldung; ein Koerper wird ignoriert.
+    Fehlendes ``kind`` ist 400 ``kind_required`` aus dem Vokabular (AC-2), nicht
+    FastAPIs 422-Validierungsfehler."""
     return send_briefing(kind, entity_id, user_id, report_type)

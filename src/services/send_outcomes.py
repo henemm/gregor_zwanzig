@@ -34,6 +34,8 @@ SEND_OUTCOMES: dict[str, tuple[int, str]] = {
     # Ortsvergleich nicht versendbar (z.B. alle Orte geloescht, #2216) — der
     # Grund kommt aus dem Versand selbst.
     "invalid_preset": (422, "Ortsvergleich nicht versendbar: {reason}"),
+    # Unerwarteter Fehler im Versand (Ausnahme, Traceback im Log) — bewusst 500.
+    "send_failed": (500, "Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen"),
 }
 
 

@@ -82,6 +82,9 @@ func TestTimeoutChain_BothSendHandlersHonourSendProxyTimeout(t *testing.T) {
 	}{
 		{"Trip", "/api/trips/{id}/send", "/api/trips/t-2124/send?report_type=evening", SendTripReportProxyHandler(py.URL)},
 		{"Compare", "/api/compare/presets/{id}/send", "/api/compare/presets/cp-2124/send", SendComparePresetHandler(py.URL)},
+		// Issue #2280 AC-14: der neue Dispatcher laeuft ueber dieselbe Grenze.
+		{"Dispatcher route", "/api/briefings/{id}/send", "/api/briefings/t-2280/send?kind=route", BriefingSendHandler(py.URL)},
+		{"Dispatcher vergleich", "/api/briefings/{id}/send", "/api/briefings/cp-2280/send?kind=vergleich", BriefingSendHandler(py.URL)},
 	}
 	for _, c := range cases {
 		code, took := serveTimed(c.h, http.MethodPost, c.pattern, c.path)

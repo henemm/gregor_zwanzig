@@ -886,17 +886,25 @@ tatsächlich zugestellt hat.
 bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: [<ort_id>, …]`
 (gelöschte Orte, Versand lief mit den übrigen). `winner`/`empfaenger_count` entfallen.
 
-**Fehler (Form A):** `{"detail": "<deutscher Text>", "code": "<maschinenlesbar>"}` mit 4xx.
+**Fehler (Form A):** `{"detail": "<deutscher Text>", "code": "<maschinenlesbar>"}` mit 4xx/5xx.
 `detail` wird im Frontend unverändert angezeigt.
 
 | Status | `code` | Bedeutung |
 |---|---|---|
 | 400 | `kind_required` / `validation_error` | `kind` fehlt/ungültig bzw. ungültige ID |
-| 404 | — | ID gehört nicht dem angemeldeten Nutzer oder existiert nicht |
-| 409 | — | Versand für denselben Lock-Schlüssel läuft bereits |
+| 404 | `not_found` | ID gehört nicht dem angemeldeten Nutzer oder existiert nicht |
+| 409 | `already_in_progress` | Versand für denselben Lock-Schlüssel läuft bereits |
 | 422 | `no_channels` | kein Kanal wirksam eingestellt |
 | 422 | `channels_unreachable` | alle eingestellten Kanäle sind gescheitert |
 | 422 | `no_weather` | für keinen Ort/keine Etappe liegen Wetterdaten vor |
+| 500 | `send_failed` | unerwarteter Fehler im Versand (Ausnahme, Traceback im Python-Log) — das Frontend zeigt die generische Serverfehler-Meldung |
+| 500 | `proxy_error` | Go-API kann die Anfrage an den Python-Core nicht bauen |
+| 502 | `upstream_unreachable` | Go-API erreicht den Python-Core nicht (oder Zeitlimit 300 s überschritten) — Versandausgang unklar |
+
+Die Fehler mit `kind_required`, `validation_error` und `upstream_unreachable` (sowie 500
+`proxy_error`) entstehen in der Go-API, alle übrigen im Python-Core (`src/services/send_outcomes.py`);
+beide in derselben Form A. Gilt auch für die Alt-Routen (gleiche Proxy-Funktion `forwardSend`).
+Die Vorschau-/CRUD-Routen unter `/api/briefings` behalten ihre Form `{"error":"<code>"}`.
 
 Lock-Schlüssel unverändert: Trip `(user_id, trip_id, report_type)`, Ortsvergleich
 `("compare", user_id, preset_id)`. Die Alt-Routen `POST /api/trips/{id}/send` und

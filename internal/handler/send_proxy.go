@@ -26,9 +26,7 @@ func forwardSend(w http.ResponseWriter, r *http.Request, path, rawQuery string) 
 
 	req, err := http.NewRequestWithContext(context.WithoutCancel(r.Context()), http.MethodPost, target, nil)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"proxy_error"}`))
+		writeSendError(w, http.StatusInternalServerError, "proxy_error", sendDetailProxyError)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -36,9 +34,7 @@ func forwardSend(w http.ResponseWriter, r *http.Request, path, rawQuery string) 
 	client := &http.Client{Timeout: sendProxyTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		w.Write([]byte(`{"error":"upstream unreachable"}`))
+		writeSendError(w, http.StatusBadGateway, "upstream_unreachable", sendDetailUpstreamUnreached)
 		return
 	}
 	defer resp.Body.Close()

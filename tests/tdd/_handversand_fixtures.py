@@ -46,6 +46,7 @@ ERWARTETE_CODES = {
     "not_found": 404,
     "invalid_report_type": 422,
     "smtp_not_configured": 422,
+    "send_failed": 500,
 }
 
 

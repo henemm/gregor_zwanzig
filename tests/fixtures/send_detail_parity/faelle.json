@@ -1,0 +1,4 @@
+{
+  "_hinweis": "Geteilter Wortlaut Python (src/services/send_outcomes.py) <-> Go (internal/handler/briefing_send.go), Issue #2280 F004. Beide Seiten pruefen per Verhalten gegen diese Datei.",
+  "kind_required": "Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)"
+}

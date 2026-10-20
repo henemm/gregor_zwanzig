@@ -1,14 +1,10 @@
 package handler_test
 
-// TDD RED — Issue #2280 Scheibe S2 (Go): kind-neutraler Handversand-Endpoint
+// Issue #2280 Scheibe S2 (Go): kind-neutraler Handversand-Endpoint
 // POST /api/briefings/{id}/send?kind=route|vergleich.
 //
 // Spec: docs/specs/modules/feat_2280_handversand_endpoint.md (AC-1, AC-2,
 // AC-3 Go-Teil, AC-13 Go-Teil, AC-14).
-//
-// Zielort in /50: internal/handler/briefing_send_test.go (heute per
-// go-Overlay aus tests/_go_red/ eingeblendet, weil das Phase-5-Gate keine
-// .go-Datei unter internal/ zulaesst).
 //
 // Bauart wie briefing_preview_test.go (gleiches externes Testpaket, nutzt
 // dessen Helfer newVBUpstream/newVBEnv/vbInvalidIDs/vbAssertSingleUserID):
@@ -17,16 +13,19 @@ package handler_test
 // Kein Mock einer Go-Funktion — geprueft wird die tatsaechlich abgesetzte
 // Upstream-Anfrage und die Antwort am Client.
 //
-// RED heute: Die Route POST /api/briefings/{id}/send existiert nicht ->
-// chi antwortet 404/405, Upstream-Zaehler bleibt 0.
+// Fehlerform des Versandwegs ist Form A {"detail","code"} (AC-2/AC-3/AC-9,
+// api_contract.md 10.1) — strikt per JSON geprueft (bsAssertSendError).
 //
 // Python-Ziel (Python-Teil S1): POST /api/briefings/{id}/send?kind=<kind>
 // &user_id=<auth>[&report_type=...]; Status + Body werden 1:1 durchgereicht.
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +34,29 @@ import (
 )
 
 const bsPath = "/api/briefings/"
+
+// bsAssertSendError prueft die Fehlerform A des Versandwegs strikt: der Body
+// ist GENAU {"detail":<nicht-leerer Text>,"code":<wantCode>} — kein
+// {"error":…}, kein Code als "Text".
+func bsAssertSendError(t *testing.T, w *httptest.ResponseRecorder, wantCode string) {
+	t.Helper()
+	var got map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("Fehler-Body ist kein JSON-Objekt aus Strings: %v (body=%q)", err, w.Body.String())
+	}
+	if got["code"] != wantCode {
+		t.Errorf("code %q, erwartet %q (body=%q)", got["code"], wantCode, w.Body.String())
+	}
+	if d := got["detail"]; d == "" || d == wantCode {
+		t.Errorf("detail %q muss ein anzeigbarer Text sein (body=%q)", d, w.Body.String())
+	}
+	if len(got) != 2 {
+		t.Errorf("Fehler-Body hat Felder %v, erwartet genau detail+code", got)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("Content-Type %q, erwartet application/json", ct)
+	}
+}
 
 // ---------------------------------------------------------------------------
 // AC-2: kind Pflicht -> 400 kind_required, Python nicht erreicht
@@ -66,8 +88,8 @@ func TestBriefingSend_KindPflicht_400OhneUpstream(t *testing.T) {
 			if w.Code != c.wantStatus {
 				t.Errorf("Status %d, erwartet %d (body=%q)", w.Code, c.wantStatus, w.Body.String())
 			}
-			if c.wantCode != "" && !strings.Contains(w.Body.String(), `"`+c.wantCode+`"`) {
-				t.Errorf("Body %q enthaelt keinen Fehlercode %q", w.Body.String(), c.wantCode)
+			if c.wantCode != "" {
+				bsAssertSendError(t, w, c.wantCode)
 			}
 			if got := py.count(); got != c.wantUpstream {
 				t.Errorf("Python-Core %d-mal erreicht, erwartet %d — ohne gueltiges kind darf nichts versendet werden",
@@ -94,6 +116,7 @@ func TestBriefingSend_UngueltigeID_400OhneUpstream(t *testing.T) {
 				if w.Code != http.StatusBadRequest {
 					t.Errorf("Status %d, erwartet 400 bei ungueltiger ID %q (body=%q)", w.Code, id, w.Body.String())
 				}
+				bsAssertSendError(t, w, "validation_error")
 				if got := py.count(); got != 0 {
 					t.Errorf("Python-Core %d-mal erreicht — ungueltige ID darf nicht weitergereicht werden", got)
 				}
@@ -383,5 +406,136 @@ func TestBriefingSend_AltRoutenDelegateGleichheit(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// AC-9 / AC-13 / AC-14: Python-Core nicht erreichbar -> 502 in Form A, fuer
+// den neuen Endpoint UND beide Alt-Delegates (alle ueber forwardSend).
+// ---------------------------------------------------------------------------
+
+func TestBriefingSend_UpstreamUnerreichbar_502FormA(t *testing.T) {
+	tot := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	totURL := tot.URL
+	tot.Close() // Port ist zu: jede Verbindung scheitert.
+	env := newVBEnv(t, totURL, "alice")
+
+	for _, path := range []string{
+		bsPath + "t-2280/send?kind=route",
+		bsPath + "t-2280/send?kind=vergleich",
+		"/api/trips/t-2280/send",
+		"/api/compare/presets/t-2280/send",
+	} {
+		t.Run(path, func(t *testing.T) {
+			w := env.do(t, "POST", path, "alice", "")
+			if w.Code != http.StatusBadGateway {
+				t.Fatalf("Status %d, erwartet 502 (body=%q)", w.Code, w.Body.String())
+			}
+			bsAssertSendError(t, w, "upstream_unreachable")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F002 (Adversary): Alt-Trip-Route reicht die Client-Query (report_type)
+// unveraendert an Python weiter — gemessen an der Upstream-Anfrage.
+// ---------------------------------------------------------------------------
+
+func TestBriefingSend_AltTripRouteReichtReportTypeDurch(t *testing.T) {
+	py := newVBUpstream(t, nil)
+	env := newVBEnv(t, py.srv.URL, "alice")
+
+	w := env.do(t, "POST", "/api/trips/t-2280/send?report_type=morning", "alice", "")
+	if w.Code != 200 {
+		t.Fatalf("Status %d, erwartet 200 (body=%q)", w.Code, w.Body.String())
+	}
+	call, ok := py.last()
+	if !ok {
+		t.Fatal("Python-Core nicht erreicht")
+	}
+	if call.Path != "/api/scheduler/trips/t-2280/send" {
+		t.Errorf("Upstream-Pfad %q, erwartet /api/scheduler/trips/t-2280/send", call.Path)
+	}
+	if got := call.Query["report_type"]; len(got) != 1 || got[0] != "morning" {
+		t.Errorf("Upstream-report_type %v, erwartet genau [morning] (query=%v)", got, call.Query)
+	}
+	vbAssertSingleUserID(t, call, "alice")
+}
+
+// ---------------------------------------------------------------------------
+// F003 (Adversary): Anfrage an Python laesst sich nicht bauen (Python-URL mit
+// Steuerzeichen) -> 500 proxy_error in Form A, fuer alle vier Versand-Pfade.
+// ---------------------------------------------------------------------------
+
+func TestBriefingSend_AnfrageNichtBaubar_500ProxyError(t *testing.T) {
+	env := newVBEnv(t, "http://127.0.0.1\x7f", "alice")
+
+	for _, path := range []string{
+		bsPath + "t-2280/send?kind=route",
+		bsPath + "t-2280/send?kind=vergleich",
+		"/api/trips/t-2280/send",
+		"/api/compare/presets/t-2280/send",
+	} {
+		t.Run(path, func(t *testing.T) {
+			w := env.do(t, "POST", path, "alice", "")
+			if w.Code != http.StatusInternalServerError {
+				t.Fatalf("Status %d, erwartet 500 (body=%q)", w.Code, w.Body.String())
+			}
+			bsAssertSendError(t, w, "proxy_error")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// F004 (Adversary): kind_required-Wortlaut Go == Python. Beide Seiten pruefen
+// per Verhalten gegen die geteilte Fixture tests/fixtures/send_detail_parity/
+// faelle.json (Python-Gegenstueck: test_ac2_kind_required_text_gleich_der_go_
+// fassung in tests/tdd/test_briefings_send_endpoint.py). Kein Quelltext-Read.
+// ---------------------------------------------------------------------------
+
+func bsRepoRoot(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("os.Getwd: %v", err)
+	}
+	for i := 0; i < 8; i++ {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		dir = filepath.Dir(dir)
+	}
+	t.Fatal("bsRepoRoot: kein go.mod gefunden — Fixture nicht auffindbar")
+	return ""
+}
+
+func TestBriefingSend_KindRequiredTextGleichPythonFassung(t *testing.T) {
+	pfad := filepath.Join(bsRepoRoot(t), "tests", "fixtures", "send_detail_parity", "faelle.json")
+	raw, err := os.ReadFile(pfad)
+	if err != nil {
+		t.Fatalf("Geteilte Fixture fehlt: %s: %v", pfad, err)
+	}
+	var soll map[string]string
+	if err := json.Unmarshal(raw, &soll); err != nil {
+		t.Fatalf("%s ist kein JSON-Objekt aus Strings: %v", pfad, err)
+	}
+	if soll["kind_required"] == "" {
+		t.Fatalf("%s: kind_required leer — Paritaetsnachweis waere wirkungslos", pfad)
+	}
+
+	py := newVBUpstream(t, nil)
+	env := newVBEnv(t, py.srv.URL, "alice")
+	w := env.do(t, "POST", bsPath+"t-2280/send", "alice", "")
+
+	var got map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("Body kein JSON: %v (%q)", err, w.Body.String())
+	}
+	if w.Code != http.StatusBadRequest || got["detail"] != soll["kind_required"] {
+		t.Errorf("Status %d detail %q, erwartet 400 mit %q (Python-Wortlaut)",
+			w.Code, got["detail"], soll["kind_required"])
+	}
+	if py.count() != 0 {
+		t.Errorf("Python-Core %d-mal erreicht, erwartet 0 (Go meldet kind_required selbst)", py.count())
 	}
 }
