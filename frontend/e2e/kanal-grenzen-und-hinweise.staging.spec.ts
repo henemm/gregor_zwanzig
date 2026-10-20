@@ -127,7 +127,9 @@ test.describe('Issue #1719 S3: echte Platzgrenzen im Trip-Editor', () => {
 		page
 	}) => {
 		const tab = await openMetricsTab(page);
-		const rows = tab.locator('[data-testid="wm2-reihenfolge-row"]');
+		const rows = tab
+			.getByTestId('weather-metrics-kanal-reihenfolge')
+			.locator('[data-testid="wm2-reihenfolge-row"]');
 		await expect(rows).toHaveCount(9);
 
 		const telegramBtn = tab.getByTestId('channel-tab-telegram');
@@ -218,7 +220,10 @@ test.describe('Issue #2438: Abwahl-Hinweis im Trip-Editor', () => {
 			await page.setViewportSize({ width: 1440, height: 900 });
 			const tab = await openMetricsTab(page);
 			await tab.getByTestId(`channel-tab-${kanal}`).click();
-			const hinweis = tab.getByTestId('wm2-aus-gruppe').getByTestId('wm2-aus-hinweis');
+			const hinweis = tab
+				.getByTestId('weather-metrics-kanal-reihenfolge')
+				.getByTestId('wm2-aus-gruppe')
+				.getByTestId('wm2-aus-hinweis');
 			await expect(hinweis).toBeVisible();
 			await expect(hinweis).toHaveText(ABWAHL_HINWEIS);
 		});
@@ -229,7 +234,9 @@ test.describe('Issue #2438: Abwahl-Hinweis im Trip-Editor', () => {
 			await page.setViewportSize({ width: breite, height: 800 });
 			const tab = await openMetricsTab(page);
 			await tab.getByTestId('channel-tab-sms').click();
-			const hinweis = tab.getByTestId('wm2-aus-hinweis');
+			const hinweis = tab
+				.getByTestId('weather-metrics-kanal-reihenfolge')
+				.getByTestId('wm2-aus-hinweis');
 			await expect(hinweis).toBeVisible();
 			const m = await hinweis.evaluate((el) => {
 				const lum = (c: string) => {
