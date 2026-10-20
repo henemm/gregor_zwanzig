@@ -1,0 +1,6 @@
+2026-09-27T07:50:00.210000+00:00 Rennwienix uv[700001]: 2026-09-27 07:50:00,210 INFO befehl_dauer: befehl=HELP kanal=premium_sms trip=- dauer_ms=140
+2026-09-28T14:45:00.300000+00:00 Rennwienix uv[700002]: 2026-09-28 14:45:00,300 INFO befehl_dauer: befehl=HELP kanal=premium_sms trip=- dauer_ms=95
+2026-09-28T14:50:00.150000+00:00 Rennwienix uv[700002]: 2026-09-28 14:50:00,150 INFO befehl_dauer: befehl=CODES kanal=premium_sms trip=- dauer_ms=88
+2026-09-28T14:52:00.000000+00:00 Rennwienix uv[700002]: 2026-09-28 14:52:00,000 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=khw-403 dauer_ms=22000
+2026-09-28T14:58:36.200000+00:00 Rennwienix uv[700002]: 2026-09-28 14:58:36,200 INFO befehl_dauer: phase=versand trip=khw-403 dauer_ms=700
+2026-09-28T14:58:36.200100+00:00 Rennwienix uv[700002]: 2026-09-28 14:58:36,200 INFO befehl_dauer: befehl=MORGEN kanal=premium_sms trip=khw-403 dauer_ms=31250
