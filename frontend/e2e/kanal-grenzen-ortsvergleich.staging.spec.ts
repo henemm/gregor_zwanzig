@@ -221,11 +221,17 @@ test.describe('Issue #2438 AC-2: Ortsvergleich zeigt den Abwahl-Hinweis je Kanal
 			await openCompareDetail(page, id);
 			await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 			await page.getByTestId(`channel-tab-${kanal}`).click();
-			const hinweis = page.getByTestId('wm2-aus-hinweis');
+			const hinweis = page
+				.getByTestId('weather-metrics-vergleich-reihenfolge')
+				.getByTestId('wm2-aus-hinweis');
 			await expect(hinweis).toBeVisible({ timeout: 10_000 });
 			await expect(hinweis).toHaveText(
 				'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.'
 			);
+			// AC-3: im Ausblick-Block (nur E-Mail) steht kein Abwahl-Hinweis.
+			await expect(
+				page.getByTestId('weather-metrics-ausblick').getByTestId('wm2-aus-hinweis')
+			).toHaveCount(0);
 		});
 	}
 });

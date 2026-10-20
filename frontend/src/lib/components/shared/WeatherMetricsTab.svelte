@@ -1537,6 +1537,7 @@
 							onMode={noopMode}
 							offColumns={compareChannelSections.off}
 							onRestore={onCompareRestore}
+							showAbwahlHinweis
 							kuerzelById={compareKuerzelById}
 						/>
 					</Card>
@@ -1728,6 +1729,7 @@
 							{onMode}
 							offColumns={activeChannelSections.off}
 							onRestore={onRestoreMetric}
+							showAbwahlHinweis
 							kuerzelById={metricSymbols}
 							modeCapable={(id) =>
 								channel === 'sms'
