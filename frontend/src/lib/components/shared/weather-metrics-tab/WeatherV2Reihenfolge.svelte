@@ -51,6 +51,8 @@
 		 *  etwas anderes als "nicht übergeben" (kein Default-Wert hier). */
 		offColumns?: string[];
 		onRestore?: (id: string) => void;
+		/** Issue #2438: Opt-in. Abwahl-Hinweis nur in Kanal-Bloecken. */
+		showAbwahlHinweis?: boolean;
 		/** Issue #1719 S4: ALLE Kürzel, die der Kanal DIESER Fläche für eine
 		 *  Größe sendet (metric_id -> Kürzel-Liste). Die Quelle richtet sich
 		 *  nach der Fläche und wird deshalb von der Einbettung geliefert, nicht
@@ -74,7 +76,7 @@
 
 	let {
 		primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onDndReorder, onMode,
-		offColumns, onRestore, kuerzelById, modeCapable = indicatorCapable,
+		offColumns, onRestore, showAbwahlHinweis = false, kuerzelById, modeCapable = indicatorCapable,
 	}: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
@@ -219,7 +221,9 @@
 					</div>
 				</div>
 			{/each}
-			<p class="aus-hinweis" data-testid="wm2-aus-hinweis">{ltKanalAbwahlHinweisText()}</p>
+			{#if showAbwahlHinweis}
+				<p class="aus-hinweis" data-testid="wm2-aus-hinweis">{ltKanalAbwahlHinweisText()}</p>
+			{/if}
 		</div>
 	{/if}
 	<!-- Issue #1888 (E6 Scheibe B): Legende zu den Marken DIESES Blocks. Sie
