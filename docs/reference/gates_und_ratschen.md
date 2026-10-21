@@ -137,13 +137,12 @@ Zeichen). Grenzen — u. a. tote Pfade und Ketten ab 26 Gliedern — in
 ## Testnamens-Gate
 
 Testdateien nach Verhalten benennen (`test_alert_throttle.py`), NICHT nach Issue-Nummer. Durchgesetzt
-via `test_naming_gate.py`; Prüfdatum 2026-10-09. Bestand: 262 issue-nummerierte Dateien, Sanierung
+via `test_naming_gate.py`; Prüfdatum 2027-01-19 (verlängert 2026-10-21, PO). Bestand: 262 issue-nummerierte Dateien, Sanierung
 läuft unter #1196.
 
-**Stand 2026-10-21: Das Gate hat sich am Prüfdatum selbst abgeschaltet** (`EXPIRY = date(2026, 10, 9)`
-in `.claude/hooks/test_naming_gate.py`, danach Exit 0 ohne Prüfung). Die Namensregel gilt weiter
-(CLAUDE.md), wird aber **nicht mehr mechanisch erzwungen**; die Entscheidung behalten/entfernen
-steht laut Hook-Kopf im Gate-Audit #1197 aus.
+Das Gate hatte sich am ursprünglichen Prüfdatum 2026-10-09 selbst abgeschaltet; der PO hat es am
+2026-10-21 um 90 Tage verlängert (`EXPIRY = date(2027, 1, 19)` in `.claude/hooks/test_naming_gate.py`,
+PR `tooling/hooks-pruefdaten`). Entscheidung behalten/entfernen am neuen Prüfdatum im Gate-Audit #1197.
 
 **Kein Big-Bang-Reorg des Bestands (Tech-Lead-Entscheid 2026-08-08):** Testpfade sind hart verdrahtet
 in `.github/ci_tdd_excludes.txt`, den Collection-Meta-Tests und den Ratschen — Massen-Umbenennung
@@ -422,13 +421,13 @@ liegen **nicht** in `.claude/hooks/`.
 |---|---|---|---|
 | PreToolUse Bash | `renderer_mail_gate.py` | blockt Commit an Mail-Inhalts-Dateien ohne frischen Matrix-Test + Validator | oben „Renderer-Commit-Gate" |
 | PreToolUse Bash | `prod_send_gate.py` | blockt Bash-Kommandos, die einen echten Versand gegen Prod auslösen (Send-Pfad + Prod-Ziel Port 8000/8090 bzw. `gregor20.henemm.com` ohne `staging.` + kein reines GET) oder direkt `smtp.resend.com` ansprechen; Override `.claude/user_override_token.json` (TTL 1 h) | #1148, Spec `gate_1148_prod_send_deny.md` |
-| PreToolUse Bash | `nebenbefund_gate.py` | **Datei existiert nicht** — am Prüfdatum 2026-10-09 zurückgebaut (#1197, `docs/features/openspec_workflow.md`); der `settings.json`-Eintrag ist verblieben ⇒ No-op | Eintrag kann entfallen |
 | PreToolUse Bash | `broad_test_run_gate.py` | blockt `uv run pytest` ohne benannte Testdateien | oben „Breiter Testlauf gesperrt" |
 | PreToolUse Bash | `touched_tests_gate.py` | blockt Commit, der einen Test der berührten Dateien rot macht | oben „#1481 A" |
 | PreToolUse Bash | `pendant_gate.py` | blockt Neuanlage einseitiger Trip-/Compare-Dateien | oben „Pendant-Sperre" |
 | PreToolUse Bash | `pre_issue_close_design_gate.py` | blockt `gh issue close` bei Label `design-compliance` ohne bestandenes Design-Diff-Artefakt im aktiven Workflow | #603 |
 | PreToolUse Bash | `secret_in_repo_gate.py` | blockt `git commit`, wenn eine vorgemerkte Datei den Klartextwert eines `.env`-Geheimnisses (`*_PASS`/`_TOKEN`/`_KEY`/`_SECRET`, ≥ 10 Zeichen) enthält; schaltet sich **nicht** automatisch ab, Wirksamkeitsprüfung 2026-11-04 | #1537 S1 |
-| PreToolUse Write\|Edit | `test_naming_gate.py` | blockte neue issue-nummerierte Testdateien — **seit 2026-10-09 selbst deaktiviert** | oben „Testnamens-Gate" |
+| PreToolUse Write\|Edit | `test_naming_gate.py` | blockt neue issue-nummerierte Testdateien; Prüfdatum 2027-01-19 | oben „Testnamens-Gate" |
+| PreToolUse Write\|Edit | `data_schema_backup.py` | Snapshot von `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` vor Edit/Write an Schema-Dateien (Retention 20, übersprungen bei Snapshot < 5 Min) | CLAUDE.md „Daten-Schema-Reworks“, #102 |
 | PreToolUse Write\|Edit | `file_claim_gate.py` | trägt jede bearbeitete Datei in `.claude/file_claims.json` (Hauptrepo) ein und blockt Edit/Write bei Belegung durch eine andere aktive Session; deaktiviert sich selbst ab 2026-11-11 | PO-go 2026-08-13 |
 | PostToolUse * | `secret_output_gate.py` | ersetzt Klartextwerte von `.env`-Geheimnissen in **Tool-Ergebnissen** durch `***<SCHLÜSSEL>***` | #1537 S2 |
 | UserPromptSubmit | `context_budget_guard.py` | `⚑`-Zeile ab 180k Kontext, Aufforderung zu `/clear` ab 260k; blockiert nie | CLAUDE.md „Parallele Sessions & Token-Budget" |
@@ -442,13 +441,7 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 `email_spec_validator.py`, `official_alert_mail_validator.py`, `radar_alert_mail_validator.py`,
 `e2e_frontend_browser_gate.py`, `e2e_browser_test.py`, `e2e_telegram_live.py`, `design_fidelity_diff.py`,
 `e2e_commit_gate.py` (blockiert seit #339 nichts mehr, nur Hinweis + `detect_scope()`).
-**Achtung `data_schema_backup.py`:** CLAUDE.md und `operations_playbook.md` beschreiben ihn als
-automatischen Pre-Edit-Hook; in `.claude/settings.json` ist er **nicht** eingetragen. Ob das Plugin
-ihn verdrahtet, ist aus dem Repo nicht belegbar — vor Schema-Edits den Snapshot im Zweifel manuell
-anstoßen — der Hook liest Hook-JSON von stdin:
-`echo '{"tool_name":"Edit","tool_input":{"file_path":"src/app/models.py"}}' | python3 .claude/hooks/data_schema_backup.py`
-(Snapshot von `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz`, Retention 20, übersprungen bei
-Snapshot jünger als 5 Min).
+`data_schema_backup.py` ist seit PR `tooling/hooks-pruefdaten` (2026-10-21) als PreToolUse `Write|Edit` verdrahtet (Tabelle oben); vorher fehlte der Eintrag trotz gegenteiliger Doku.
 
 ## Regel-Budget: Prüfdaten im Überblick
 
@@ -459,7 +452,7 @@ Snapshot jünger als 5 Min).
 | CI-Ampel (eingeführt mit 5 Checks; seit #1771 S2 sechs, s. eigene Zeile `e2e`) | 2026-11-02 | 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196) |
 | Pendant-Sperre (#1481 B) | 2026-11-03 | — |
 | Touched-Tests-Gate (#1481 A) | 2026-11-03 | — |
-| Testnamens-Gate | 2026-10-09 (**abgelaufen**, Hook seitdem selbst inaktiv; Entscheidung #1197 offen) | — |
+| Testnamens-Gate | 2027-01-19 (verlängert 2026-10-21, PO) | — |
 | Test-Pfadregel-Ratsche (#1409) | 2026-10-27 | — |
 | Datei-Claim-Gate `file_claim_gate.py` | 2026-11-11 (Selbstabschaltung im Hook) | — |
 | Secret-in-Repo-Sperre `secret_in_repo_gate.py` (#1537 S1) | 2026-11-04 (Wirksamkeitsprüfung, **keine** Selbstabschaltung) | #1537 (`GZ_AUTH_PASS` im Klartext im öffentlichen Repo) |
@@ -482,8 +475,8 @@ Snapshot jünger als 5 Min).
 
 | Wächter-Datei | Prüfdatum |
 |---|---|
-| `tests/test_adr_index_drift.py` (ADR-Index ↔ Dateien, in CLAUDE.md genannt) | 2026-10-20 — **abgelaufen** |
-| `tests/test_api_contract_drift.py` (Routen + Kern-Struct-Tags ↔ `api_contract.md`) | 2026-10-20 — **abgelaufen** |
+| `tests/test_adr_index_drift.py` (ADR-Index ↔ Dateien, in CLAUDE.md genannt) | 2027-01-19 (verlängert 2026-10-21, PO: Doku-Audit fand reale Drift) |
+| `tests/test_api_contract_drift.py` (Routen + Kern-Struct-Tags ↔ `api_contract.md`) | 2027-01-19 (verlängert 2026-10-21, PO: Doku-Audit fand reale Drift) |
 | `tests/test_resolution_loss_guard.py` | 2026-10-26 |
 | `tests/test_success_status_guard.py` | 2026-10-26 |
 | `tests/unit/test_compare_hourly_vocabulary_single_source.py` | 2026-10-30 |
