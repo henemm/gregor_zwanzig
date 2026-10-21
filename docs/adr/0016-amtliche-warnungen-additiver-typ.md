@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-07-06
 - **Bezug:** GitHub-Epic #1033 (Slices #1034–#1037)
+- **Ergänzt durch:** [ADR-0089](0089-lawinen-lagebericht-zweite-skala.md) (ergänzt), [ADR-0090](0090-entwarnung-amtlicher-warnungen.md) (ergänzt)
 
 ## Kontext
 

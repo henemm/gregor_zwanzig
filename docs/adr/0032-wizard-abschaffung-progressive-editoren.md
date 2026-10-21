@@ -2,7 +2,7 @@
 
 - **Status:** Akzeptiert (rückwirkend dokumentiert 2026-07-22 — PO-bekräftigt 2026-07-19, Issue #1343)
 - **Datum:** 2026-07-22
-- **Bezug:** #622 (TripNewEditor), Epic #1273/#1301 (Compare-Konsolidierung), CLAUDE.md §Trip/Ortsvergleich-Code-Teilung, `shared/__tests__/legacy_wizard_removed.test.ts`
+- **Bezug:** #622 (TripNewEditor), Epic #1273/#1301 (Compare-Konsolidierung), CLAUDE.md §Trip/Ortsvergleich-Code-Teilung, `frontend/src/lib/components/shared/__tests__/legacy_wizard_removed.test.ts`
 
 ## Kontext
 

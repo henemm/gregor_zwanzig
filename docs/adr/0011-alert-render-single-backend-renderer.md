@@ -2,7 +2,7 @@
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-06-29
-- **Bezug:** GitHub-Issue #914 (Issue 27), `docs/context/alert-mail-design.md`, ADR-0007 (Daten statt Empfehlungen), ADR-0009 (Alerts als Abweichungs-Wächter)
+- **Bezug:** GitHub-Issue #914 (Issue 27), `docs/context/alert-mail-design.md` (gelöscht mit #1340, Git-Historie), ADR-0007 (Daten statt Empfehlungen), ADR-0009 (Alerts als Abweichungs-Wächter)
 
 ## Kontext
 

@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert (PO-Entscheidung 2026-08-01)
 - **Datum:** 2026-08-01
 - **Bezug:** Issue #1445 (S1 Italien, S3 Österreich), Issue #1397 (Ursprungsdefekt), Specs `docs/specs/modules/feat_1445_s1_feed_bestandsquelle.md` und `feat_1445_s3_oesterreich_feed.md`, Analyse `docs/context/fix-1397-wiederanlauf-ausbruch.md`
+- **Ergänzt durch:** [ADR-0074](0074-auffrischraster-meteoalarm-feed-deutschland.md) (konkretisiert)
 
 ## Kontext
 

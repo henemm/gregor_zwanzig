@@ -32,7 +32,7 @@ bestehen, die E-Mail-Bestätigung bleibt Pflicht.
 - Pro-Nutzer-Ablage (kein Eigentümer), Klartext-Token (Dateileck), Einlösen nach `SaveUser`
   (Race: zwei Konten), Einladung über OAuth/Passkey/Magic-Link (v1-Umfang).
 
-## Folgen
+## Konsequenzen
 
 Mehrere gregor-api-Prozesse auf derselben Datei sind nicht abgesichert. Ein nie bestätigtes
 Konto verbraucht die Einladung trotzdem.

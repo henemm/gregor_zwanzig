@@ -2,7 +2,8 @@
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-04-26 (E2E-gegen-Staging-Grundsatz, Issue #339)
-- **Bezug:** `CLAUDE.md` → „KEINE MOCKED TESTS", „E2E-Verifikation"; GitHub-Issues #339, #521, #564
+- **Bezug:** `CLAUDE.md` → „Test-Politik: Zwei Schichten", „E2E-Verifikation & Deploy" (vormals „KEINE MOCKED TESTS", „E2E-Verifikation"); GitHub-Issues #339, #521, #564
+- **Ergänzt durch:** [ADR-0054](0054-playwright-e2e-in-ci-ampel-positivliste.md) (schreibt fort), [ADR-0085](0085-ci-auto-deploy-nur-mit-echtem-e2e-verify-nachweis.md) (ergänzt)
 
 ## Kontext
 

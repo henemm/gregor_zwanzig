@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-06-06
 - **Bezug:** GitHub-Issue #610
+- **Ergänzt durch:** [ADR-0049](0049-premium-sms-vierter-kanal.md) (schreibt fort: Premium-SMS als vierter Kanal)
 
 ## Kontext
 

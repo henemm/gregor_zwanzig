@@ -3,8 +3,9 @@
 - **Status:** Akzeptiert (PO-Freigabe 2026-07-16)
 - **Datum:** 2026-07-16
 - **Bezug:** GitHub-Issue #1284, Spec `docs/specs/_archive/modules/fix_1284_admin_prod_testdata.md`,
-  Kontext `docs/context/fix-1284-e2e-leichen-prod.md`. Verändert die Schutzliste aus
+  Kontext `docs/context/fix-1284-e2e-leichen-prod.md` (gelöscht mit #1340, Git-Historie). Verändert die Schutzliste aus
   `docs/specs/_archive/modules/issue_1265_prod_testdata_cleanup.md` (dort `NEVER_DELETE` inkl. `admin`).
+- **Ergänzt durch:** [ADR-0054](0054-playwright-e2e-in-ci-ampel-positivliste.md) (schreibt fort)
 
 ## Kontext
 

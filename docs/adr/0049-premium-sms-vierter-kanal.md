@@ -7,6 +7,7 @@
   ADR-0004 fort** („Die unterstützten Kanäle sind nur noch E-Mail · Telegram ·
   SMS"), ohne es zu widerrufen; folgt ADR-0015 (Kanal-Transporte gehören in
   den Python-Kern)
+- **Ergänzt durch:** [ADR-0050](0050-metrik-kaskade-verfeinerung-nicht-ersetzung.md) (ergänzt)
 
 ## Kontext
 

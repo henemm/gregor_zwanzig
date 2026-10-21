@@ -7,6 +7,7 @@
   (Empfindlichkeitsstufe als einziger Alarm-Regler); nutzt die von ADR-0043/S3a
   eingeführte Dringlichkeitsskala (`services.alert_urgency`, `LOW`/`MODERATE`/
   `HIGH`)
+- **Ergänzt durch:** [ADR-0077](0077-metrik-genaue-kanal-schicht-als-top-level-map.md) (schreibt fort)
 
 ## Kontext
 
