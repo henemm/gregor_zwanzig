@@ -28,7 +28,9 @@ func writeLogFile(t *testing.T, dataDir, userID, name string, entries []map[stri
 }
 
 // AC-1: briefing_log.json mit mehreren Einträgen für zwei Trips → korrekte Map.
-func TestBriefingCountByTrip_CountsPerTrip(t *testing.T) {
+// #2281: Schluessel ist "<typ>:<kennung>" wie beim Alarm-Log (#1467);
+// Altbestand ohne entity_type wird beim Lesen als Typ "trip" gefuehrt.
+func TestBriefingCountByEntity_CountsPerTrip(t *testing.T) {
 	dataDir := t.TempDir()
 	writeLogFile(t, dataDir, "test", "briefing_log.json", []map[string]interface{}{
 		{"trip_id": "trip-A", "kind": "morning", "sent_at": "2026-06-10T07:00:00Z", "channels": []string{"email"}},
@@ -38,15 +40,15 @@ func TestBriefingCountByTrip_CountsPerTrip(t *testing.T) {
 	})
 
 	s := New(dataDir, "test")
-	counts, err := s.BriefingCountByTrip()
+	counts, err := s.BriefingCountByEntity()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if counts["trip-A"] != 3 {
-		t.Errorf("expected trip-A=3, got %d", counts["trip-A"])
+	if counts["trip:trip-A"] != 3 {
+		t.Errorf("expected trip:trip-A=3, got %d", counts["trip:trip-A"])
 	}
-	if counts["trip-B"] != 1 {
-		t.Errorf("expected trip-B=1, got %d", counts["trip-B"])
+	if counts["trip:trip-B"] != 1 {
+		t.Errorf("expected trip:trip-B=1, got %d", counts["trip:trip-B"])
 	}
 	if len(counts) != 2 {
 		t.Errorf("expected exactly 2 trips, got %d: %v", len(counts), counts)
@@ -84,9 +86,9 @@ func TestAlertCountByEntity_CountsPerEntity(t *testing.T) {
 func TestCountByTrip_FailSoftWhenNoLogs(t *testing.T) {
 	s := New(t.TempDir(), "test")
 
-	briefings, err := s.BriefingCountByTrip()
+	briefings, err := s.BriefingCountByEntity()
 	if err != nil {
-		t.Fatalf("BriefingCountByTrip returned error on missing log: %v", err)
+		t.Fatalf("BriefingCountByEntity returned error on missing log: %v", err)
 	}
 	if len(briefings) != 0 {
 		t.Errorf("expected empty briefings map, got %v", briefings)
@@ -126,14 +128,14 @@ func TestCountByTrip_IsolatedPerUser(t *testing.T) {
 	base := New(dataDir, "default")
 
 	// userA sieht nur trip-A1
-	aBrief, err := base.WithUser("userA").BriefingCountByTrip()
+	aBrief, err := base.WithUser("userA").BriefingCountByEntity()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if aBrief["trip-A1"] != 2 {
-		t.Errorf("userA: expected trip-A1=2 briefings, got %d", aBrief["trip-A1"])
+	if aBrief["trip:trip-A1"] != 2 {
+		t.Errorf("userA: expected trip:trip-A1=2 briefings, got %d", aBrief["trip:trip-A1"])
 	}
-	if _, leaked := aBrief["trip-B1"]; leaked {
+	if _, leaked := aBrief["trip:trip-B1"]; leaked {
 		t.Errorf("cross-user leak: userB trip-B1 appeared in userA briefings: %v", aBrief)
 	}
 
@@ -149,14 +151,14 @@ func TestCountByTrip_IsolatedPerUser(t *testing.T) {
 	}
 
 	// userB sieht nur trip-B1
-	bBrief, err := base.WithUser("userB").BriefingCountByTrip()
+	bBrief, err := base.WithUser("userB").BriefingCountByEntity()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bBrief["trip-B1"] != 1 {
-		t.Errorf("userB: expected trip-B1=1 briefing, got %d", bBrief["trip-B1"])
+	if bBrief["trip:trip-B1"] != 1 {
+		t.Errorf("userB: expected trip:trip-B1=1 briefing, got %d", bBrief["trip:trip-B1"])
 	}
-	if _, leaked := bBrief["trip-A1"]; leaked {
+	if _, leaked := bBrief["trip:trip-A1"]; leaked {
 		t.Errorf("cross-user leak: userA trip-A1 appeared in userB briefings: %v", bBrief)
 	}
 

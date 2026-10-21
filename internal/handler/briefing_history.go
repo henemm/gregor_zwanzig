@@ -9,43 +9,75 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// BriefingHistoryHandler returns the briefing-log entries for a specific trip,
-// filtered by trip ID. Issue #559 AC-1, AC-4, AC-5.
+// briefingLogEntityType maps the web briefing kind (route | vergleich) onto
+// the log entity type (trip | compare, same vocabulary as the alert log #1467).
+func briefingLogEntityType(kind string) string {
+	if kind == briefingKindVergleich {
+		return "compare"
+	}
+	return "trip"
+}
+
+// BriefingHistoryHandler returns the briefing-log entries of ONE briefing:
+// GET /api/briefings/{id}/briefing-history?kind=route|vergleich (Issue #2281,
+// formerly trip-only #559). Unknown or foreign IDs yield 200 [] (no existence
+// check); a malformed ID or a missing/invalid kind yields 400.
 // Fail-soft: missing log file yields empty array, never 500.
 func BriefingHistoryHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := middleware.UserIDFromContext(r.Context())
-		if userID == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		tripID := chi.URLParam(r, "id")
-
-		entries, err := s.WithUser(userID).LoadBriefingLog()
-		if err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
-		}
-
-		type responseEntry struct {
-			SentAt   string   `json:"sent_at"`
-			Kind     string   `json:"kind"`
-			Channels []string `json:"channels"`
-		}
-
-		result := []responseEntry{}
-		for _, e := range entries {
-			if e.TripID == tripID {
-				result = append(result, responseEntry{
-					SentAt:   e.SentAt,
-					Kind:     e.Kind,
-					Channels: e.Channels,
-				})
-			}
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(result)
+		briefingHistory(s, w, r, r.URL.Query().Get("kind"))
 	}
+}
+
+// TripBriefingHistoryHandler is the legacy alias GET /api/trips/{id}/briefing-history
+// — the same code path with kind=route (#2281 AC-9).
+func TripBriefingHistoryHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		briefingHistory(s, w, r, briefingKindRoute)
+	}
+}
+
+func briefingHistory(s *store.Store, w http.ResponseWriter, r *http.Request, kind string) {
+	userID := middleware.UserIDFromContext(r.Context())
+	if userID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if !isValidBriefingKind(kind) {
+		writeBriefingKindRequired(w)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+		return
+	}
+
+	entries, err := s.WithUser(userID).LoadBriefingLog()
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	type responseEntry struct {
+		SentAt   string   `json:"sent_at"`
+		Kind     string   `json:"kind"`
+		Channels []string `json:"channels"`
+		OnDemand bool     `json:"on_demand"`
+	}
+
+	entityType := briefingLogEntityType(kind)
+	result := []responseEntry{}
+	for _, e := range entries {
+		if e.EntityType == entityType && e.EntityID == id {
+			result = append(result, responseEntry{
+				SentAt:   e.SentAt,
+				Kind:     e.Kind,
+				Channels: e.Channels,
+				OnDemand: e.OnDemand,
+			})
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
 }

@@ -1202,7 +1202,7 @@ Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/spec
 | `/api/trips` | GET/POST | Trip CRUD |
 | `/api/trips/{id}` | GET/PUT/DELETE | Individual trip |
 | `/api/trips/{id}/stages` | GET/POST | Stage management |
-| `/api/trips/{id}/briefing-history` | GET | Briefing delivery log for archived trip (Issue #559) |
+| `/api/trips/{id}/briefing-history` | GET | Briefing delivery log for archived trip (Issue #559); Alias of `/api/briefings/{id}/briefing-history?kind=route` (kind-neutral, trip + comparison, #2281) |
 | `/api/locations` | GET/POST | Location library (for compare) |
 | `/api/compare/presets` | GET/POST | Compare-Presets (Orts-Vergleich) |
 | `/api/compare/presets/{id}` | GET/PUT/DELETE | Einzelnes Compare-Preset (`PATCH …/state`, `POST …/send`) |
