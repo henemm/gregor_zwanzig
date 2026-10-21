@@ -3,7 +3,7 @@ entity_id: fix_1271_status_zeitformat
 type: module
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-status, i18n, bugfix]
 ---
@@ -42,7 +42,7 @@ Betrifft **Frontend / User-UI** (SvelteKit, `frontend/src/...`). Kein Go-API-, k
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `Trip.archived_at`, `Trip.paused_at`, `Trip.stages[].date` | Datenmodell (unverändert) | Eingaben der Status-Ableitung |
-| `docs/specs/modules/epic_135_step2_trip_detail_actions.md` §4 | Spec | Bisherige `deriveTripStatus`-Reihenfolge, wird um `draft`/`finished` erweitert |
+| `docs/specs/_archive/modules/epic_135_step2_trip_detail_actions.md` §4 | Spec | Bisherige `deriveTripStatus`-Reihenfolge, wird um `draft`/`finished` erweitert |
 | `docs/specs/modules/screen_home_migration.md` | Spec | Bisherige `tripStatus`-Logik (Cockpit/Liste), wird Thin-Wrapper |
 | `docs/specs/modules/versand_tab_route.md` (AC-3, AC-4, KL-1, KL-2) | Spec | `VTSchedulePlan.svelte` Zeitfelder, betroffen vom `lang`-Fix |
 | `activeOrNextTrip()` (`tripStatus.ts`) | Intern | Cockpit-Hero-Auswahl — Regressionsschutz siehe Acceptance-Criteria-Abschnitt unten |

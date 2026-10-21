@@ -3,7 +3,7 @@ entity_id: feat_2030_vorhersage_mitschnitt
 type: feature
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 workflow: feat-2030-vorhersage-mitschnitt
 tags: [observability, diagnostics, adr-0018, forecast]

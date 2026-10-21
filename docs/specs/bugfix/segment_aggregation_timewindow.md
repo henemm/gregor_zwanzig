@@ -182,7 +182,7 @@ Transparenz-Hinweis in der Nacht-Tabelle:
 | Datei | Aenderung | LOC |
 |-------|-----------|-----|
 | `src/services/segment_weather.py` | Timeseries filtern vor Aggregation | ~8 |
-| `src/formatters/trip_report.py` | Highlights mit Uhrzeit + Nacht-Aggregation | ~40 |
+| `src/output/renderers/trip_report.py` | Highlights mit Uhrzeit + Nacht-Aggregation | ~40 |
 | `src/app/models.py` | Optional: NormalizedTimeseries.filter_range() Methode | ~10 |
 | **Gesamt** | | **~58 LOC** |
 

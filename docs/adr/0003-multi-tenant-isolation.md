@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-04-12 (mit dem Go/SvelteKit-Backend etabliert, siehe ADR-0001)
 - **Bezug:** `CLAUDE.md` → „Multi-User-Produkt", `docs/features/architecture.md`
+- **Ergänzt durch:** [ADR-0061](0061-pwa-service-worker-bauform.md) (ergänzt), [ADR-0063](0063-pwa-offline-inhalte-positivliste-und-mandanten-bucket.md) (ergänzt), [ADR-0075](0075-forecast-budget-fairness-je-nutzer.md) (ergänzt)
 
 ## Kontext
 

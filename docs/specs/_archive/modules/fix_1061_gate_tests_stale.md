@@ -3,7 +3,7 @@ entity_id: fix_1061_gate_tests_stale
 type: bugfix
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [gate-tests, plugin-shim, worktree-isolation, doc-drift, issue-1061]
 ---

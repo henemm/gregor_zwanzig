@@ -3,7 +3,7 @@ entity_id: fix_1719_s1_kaskade_pruefstand
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: approved
+status: implemented
 version: "1.0"
 tags: [metrics, cascade, adr, matrix-test, issue-1719]
 ---

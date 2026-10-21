@@ -3,7 +3,7 @@ entity_id: issue_396_archive_stats_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, archive, stats, briefing-log, alert-log, go-api, frontend, issue-396]
 parent: issue_396_archive_stats
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_396_archive_stats.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_396_archive_stats.md`.
 Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_396_archive_stats.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_396_archive_stats.md` v1.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: fix_1948_s3_sms_sofortfix
 type: bugfix
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, sms, format]
 ---

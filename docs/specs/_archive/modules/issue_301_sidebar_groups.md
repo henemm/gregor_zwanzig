@@ -3,7 +3,7 @@ entity_id: issue_301_sidebar_groups
 type: module
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 issue: 301
 tags: [frontend, svelte, compare, groups, sidebar, group-entity, issue-301, lieferung-a]

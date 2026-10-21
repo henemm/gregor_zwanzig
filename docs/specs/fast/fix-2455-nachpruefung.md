@@ -1,3 +1,10 @@
+---
+entity_id: fix_2455_nachpruefung
+type: fast
+created: 2026-10-13
+status: implemented
+---
+
 # Mini-Spec: fix-2455-nachpruefung
 
 Issue #2455 (Telegram-Kurzform folgt der SMS-Auswahl, PO-Entscheidung 09.10.). Die Lieferung steht seit PR #2552 auf `main`.

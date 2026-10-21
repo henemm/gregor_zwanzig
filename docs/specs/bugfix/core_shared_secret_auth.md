@@ -3,7 +3,7 @@ entity_id: core_shared_secret_auth
 type: bugfix
 created: 2026-09-07
 updated: 2026-09-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, bugfix, go-api, python-core, auth, multi-user, issue-2142]
 ---

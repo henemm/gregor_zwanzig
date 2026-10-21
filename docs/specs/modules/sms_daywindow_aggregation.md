@@ -3,7 +3,7 @@ entity_id: sms_daywindow_aggregation
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, sms, compact_summary, telegram, email-pillen, adr-0025, issue-1317, epic-1319, tagesfenster]
 ---

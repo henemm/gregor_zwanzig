@@ -3,7 +3,7 @@ entity_id: feat_1507_s5c_hagel_mf_fr
 type: module
 created: 2026-09-20
 updated: 2026-09-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, hagel, meteofrance, epic-1419, issue-1507, s5c]
 ---

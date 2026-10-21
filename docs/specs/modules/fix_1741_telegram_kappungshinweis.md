@@ -3,7 +3,7 @@ entity_id: fix_1741_telegram_kappungshinweis
 type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, channel_layout, kappungshinweis, dead-code]
 ---

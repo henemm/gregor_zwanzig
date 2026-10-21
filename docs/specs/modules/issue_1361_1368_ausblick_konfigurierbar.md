@@ -3,7 +3,7 @@ entity_id: issue_1361_1368_ausblick_konfigurierbar
 type: feature
 created: 2026-07-27
 updated: 2026-07-27
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1361-1368-ausblick-konfigurierbar
 tags: [compare, outlook, ausblick, mail, metrik-katalog, feature, epic-1372]

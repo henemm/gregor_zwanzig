@@ -3,7 +3,7 @@ entity_id: issue_326_alert_font_tokens
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, design-system, css, ap-017, ap-008]
 ---

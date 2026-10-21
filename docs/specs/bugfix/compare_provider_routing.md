@@ -4,12 +4,14 @@ type: bugfix
 created: 2026-04-12
 updated: 2026-04-12
 version: "1.0"
-status: draft
+status: deprecated
 severity: HIGH
 tags: [compare, provider, geosphere, openmeteo, subscription, mallorca]
 ---
 
 # Bugfix: Compare/Subscription nutzt hardcoded GeoSphereProvider — Locations ausserhalb Alpenraum bekommen keine Daten
+
+> Abgelöst/entfernt durch ADR-0001 / #129 — die NiceGUI-UI unter `src/web/` wurde am 2026-05-15 ersatzlos entfernt; diese Spec ist nur noch historisch.
 
 ## Approval
 

@@ -3,12 +3,14 @@ entity_id: issue_679_compare_editor_edit
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: implemented
+status: deprecated
 version: "1.0"
 tags: [frontend, compare, editor, edit-mode, dirty-tracking, datenloss-protection]
 ---
 
 # Compare-Editor — Edit-Modus + Dirty/Save-Flow (Slice 2/6, Epic #677)
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 (Alt-Editor `CompareEditor.svelte` ersatzlos gelöscht, `db0ca26b8`, 2026-07-19) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

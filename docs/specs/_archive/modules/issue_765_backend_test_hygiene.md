@@ -3,7 +3,7 @@ entity_id: issue_765_backend_test_hygiene
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, hygiene, backend, cleanup, gate]
 ---
@@ -62,7 +62,7 @@ Lehre aus #754).
 | `tests/tdd/test_issue_515_remove_subscription_jobs.py` | `api/routers/scheduler.py`, `internal/config/config.go`, `internal/scheduler/scheduler.go` | „Code entfernt"-Checks → echter HTTP-404/Verhaltensnachweis oder löschen |
 | `tests/tdd/test_issue_623_trend_channels.py` | `html.py`, `plain.py`, `narrow.py` | gemischt: Render-Asserts behalten, `read_text`-Block (Z.45) raus |
 | `tests/tdd/test_trip_alert_profile.py` | `src/services/trip_alert.py` | reine Source-Inspektion → auf echten Alert-Render-Test umstellen oder löschen wenn gedeckt |
-| `tests/unit/test_issue_131_alert_klarheit.py` | `src/formatters/trip_report.py` | gemischt: behaviorale Asserts behalten, Source-Read raus |
+| `tests/unit/test_issue_131_alert_klarheit.py` | `src/output/renderers/trip_report.py` | gemischt: behaviorale Asserts behalten, Source-Read raus |
 
 Die **maßgebliche** Liste produziert das Gate selbst (Pfad-Auflösung); diese
 Tabelle ist die Triage-Vorgabe. Falls das Gate weitere Treffer findet, gilt

@@ -3,7 +3,7 @@ entity_id: fix_2480_radar_alle_messpunkte
 type: bugfix
 created: 2026-10-02
 updated: 2026-10-02
-status: draft
+status: implemented
 workflow: fix-2480-radar-alle-messpunkte
 version: "1.0"
 tags: [alarm, radar, nowcast, messpunkt, folgepunkte, trip]

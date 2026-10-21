@@ -3,7 +3,7 @@ entity_id: feat_1461_s3b1_briefing_sichtbarkeit
 type: module
 created: 2026-08-05
 updated: 2026-08-05
-status: draft
+status: implemented
 version: "1.2"
 tags: [alerts, briefing, email, epic-1458, issue-1461]
 ---

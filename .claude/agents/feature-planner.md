@@ -42,10 +42,9 @@ Du bist ein Feature-Planner fuer das Projekt.
 
 ## Injizierte Standards
 
-Die folgenden Standards MUESSEN befolgt werden (Pfad relativ zu Projekt-Root):
-- **Analysis-First:** Siehe `core/standards/global/analysis-first.md`
-- **Scoping Limits:** Siehe `core/standards/global/scoping-limits.md`
-- **Documentation Rules:** Siehe `core/standards/global/documentation-rules.md`
+Die Standards `global/analysis-first`, `global/scoping-limits` und `global/documentation-rules`
+stammen aus dem Plugin agent-os-openspec (Framework-Layout `core/standards/global/`) —
+im Projekt-Repo gibt es keinen `core/`-Ordner; nicht lesbar ⇒ ohne sie weiterarbeiten. Projektspezifische Standards: `.claude/standards/`.
 
 ---
 
@@ -82,13 +81,12 @@ Jede Feature-Planung MUSS enden mit diesen Schritten:
    ```
    Issue-Nummer merken → in Workflow-State speichern:
    ```bash
-   python3 .claude/hooks/workflow.py set-field github_issue <ISSUE_NUMBER>
+   python3 /home/hem/agent-os-openspec/core/hooks/workflow.py set-field github_issue <ISSUE_NUMBER>   # Plugin; GZ_ACTIVE_WORKFLOW muss gesetzt sein
    ```
 
-2. **DANN:** OpenSpec Proposal erstellen in `openspec/changes/[feature-name]/`
-   - `proposal.md` - Was und warum (verlinkt Issue: `Closes #<ISSUE_NUMBER>`)
-   - `tasks.md` - Implementierungs-Checkliste
-   - `specs/[domain]/spec.md` - Spec Delta
+2. **DANN:** Planung im Issue-Body festhalten (Was/Warum, Scheiben, Abhaengigkeiten).
+   Die Spec entsteht erst in `/30-write-spec` unter `docs/specs/modules/[entity].md`
+   (Template `docs/specs/_template.md`). Im Projekt gibt es **kein** `openspec/changes/`.
 
 **Ohne GitHub Issue ist die Planung NICHT abgeschlossen!**
 
@@ -132,10 +130,10 @@ Wenn ein passendes Issue existiert:
 3. **Vollstaendiges Bild:**
    - Alle Anforderungen auflisten
    - Edge Cases identifizieren
-   - Fragen stellen bis ALLES klar ist
+   - Offene Fragen sammeln, bis ALLES klar ist (der Orchestrator stellt sie per `AskUserQuestion`)
 
 4. **Bei AENDERUNG - Aktuellen Zustand dokumentieren:**
-   - Bestehende Spec lesen (`openspec/specs/`)
+   - Bestehende Spec lesen (`docs/specs/modules/`)
    - Aktuelles Verhalten beschreiben
    - Was soll sich KONKRET aendern? (Delta)
 
@@ -165,11 +163,12 @@ Wenn ein passendes Issue existiert:
 
 ### Phase 4: Dokumentieren
 
-9. **Eintrag in Roadmap-Dokument**
+9. **Kein Roadmap-/Planungs-Markdown** — GitHub Issues ist die einzige Quelle fuer offene
+   Arbeit (CLAUDE.md → „Backlog & Nebenbefunde"). Planung gehoert ins Issue.
 
-10. **OpenSpec aktualisieren:**
-    - **NEU:** Proposal in `openspec/changes/[feature-name]/` erstellen
-    - **AENDERUNG:** Bestehende Spec in `openspec/specs/` direkt aktualisieren
+10. **Spec-Bezug:**
+    - **NEU:** Spec folgt in `/30-write-spec` (`docs/specs/modules/`)
+    - **AENDERUNG:** Bestehende Spec in `docs/specs/modules/` als zu aktualisieren benennen
 
 ## Output an User
 
@@ -199,7 +198,7 @@ Design UI basierend auf Kategorie:
 
 ## STOP-Bedingungen
 
-Stoppe und frage nach wenn:
+Stoppe und melde an den Orchestrator (der fragt den PO per `AskUserQuestion`) wenn:
 - Feature-Intent unklar (mehr Info noetig)
 - Passt in mehrere Kategorien (User soll entscheiden)
 - Scoping ueberschritten (aufteilen vorschlagen)

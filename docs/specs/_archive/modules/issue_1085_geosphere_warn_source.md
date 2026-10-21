@@ -3,7 +3,7 @@ entity_id: issue_1085_geosphere_warn_source
 type: feature
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 workflow: feat-1085-geosphere-warn
 tags: [compare, alerts, official-alerts, geosphere, austria]

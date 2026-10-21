@@ -3,7 +3,7 @@ entity_id: issue_1254_department_boundaries
 type: feature
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1254-department-boundaries
 tags: [official-alerts, meteofrance, geo, bugfix]

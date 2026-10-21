@@ -24,7 +24,7 @@ Zwei unabhängige Root Causes:
 - `test_precipitation_display_thresholds` (Zeile ~73): `{"blue": 5.0}` → `{"yellow": 1.0, "orange": 5.0, "red": 10.0}`
 - `test_rain_probability_display_thresholds` (Zeile ~83): `{"blue": 80.0}` → `{"yellow": 30.0, "orange": 60.0, "red": 80.0}`
 
-### 2. `src/formatters/trip_report.py`
+### 2. `src/output/renderers/trip_report.py`
 
 - `_fmt_val` für `precip` (~Zeile 706): `dt.get("blue")` → `dt.get("orange")`
 - `_fmt_val` für `pop` (~Zeile 748): `dt.get("blue")` → `dt.get("red")`

@@ -3,7 +3,7 @@ entity_id: feat_2417_befehle_e2e_echter_eingang
 type: module
 created: 2026-09-25
 updated: 2026-09-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, email, premium-sms, befehle, zielauflösung]
 ---

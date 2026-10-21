@@ -3,7 +3,7 @@ entity_id: issue_637_telegram_webhook_tests
 type: tests
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, webhook, inbound, multi-user, idempotency, issue-637]
 parent: telegram_webhook_inbound

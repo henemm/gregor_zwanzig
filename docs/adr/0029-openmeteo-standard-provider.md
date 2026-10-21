@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert (rückwirkend dokumentiert 2026-07-22 — die Entscheidung ist seit der Go/SvelteKit-Migration gelebte Praxis, hatte aber kein positives ADR; Issue #1343)
 - **Datum:** 2026-07-22
 - **Bezug:** Löst ADR-0002 ab. `docs/reference/decision_matrix.md` (Ist-Stand), ADR-0018 (Intra-Modell-Fallback, #1115), Epic #1127 (Cross-Provider-Fallback)
+- **Ergänzt durch:** [ADR-0075](0075-forecast-budget-fairness-je-nutzer.md) (ergänzt)
 
 ## Kontext
 

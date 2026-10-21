@@ -3,7 +3,7 @@ entity_id: issue_1321_e2e_storagestate_migration
 type: module
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [issue-1321, epic-1273, e2e, test-migration, compare, storagestate]
 ---
@@ -37,7 +37,7 @@ Sechs Compare-E2E-Spec-Dateien im Projekt `chromium-login` von `frontend/playwri
 | `internal/router/router.go:45` | Go-Produktivcode (nur Kontext, kein Change) | `loginLimiter := authmw.NewIPRateLimiter(30, time.Hour)` — Rate-Limit, das den Bug/die Notwendigkeit begründet |
 | `frontend/e2e/helpers.ts` (Zeile 8-17) | Test-Helper (unverändert) | `login(page)`-Funktion, deren Import/Aufruf aus den 6 Zieldateien entfernt wird |
 | `frontend/e2e/compare-editor-autosave.spec.ts` | Test (unverändert, Vorbild) | 1:1-Migrationsmuster — Teil des `chromium-storagestate`-Projekts, `beforeEach` (Zeile 143-145) enthält nur `page.setViewportSize(...)`, kein Login-Import, kein Login-Aufruf |
-| `docs/specs/modules/epic_1273_s4c_e2e_migration.md` | Spec (Vorgänger, bereits live) | Migrierte dieselben 6 Dateien bereits von `/edit`-Route auf Hub/Create-Wizard-Routen — Login-Konsolidierung war dort bewusst NICHT im Scope |
+| `docs/specs/_archive/modules/epic_1273_s4c_e2e_migration.md` | Spec (Vorgänger, bereits live) | Migrierte dieselben 6 Dateien bereits von `/edit`-Route auf Hub/Create-Wizard-Routen — Login-Konsolidierung war dort bewusst NICHT im Scope |
 
 ## Implementation Details
 

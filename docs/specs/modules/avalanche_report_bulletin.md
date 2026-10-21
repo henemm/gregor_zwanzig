@@ -3,7 +3,7 @@ entity_id: avalanche_report_bulletin
 type: feature
 created: 2026-10-13
 updated: 2026-10-14
-status: draft
+status: implemented
 version: "1.2"
 tags: [official_alerts, avalanche, eaws, avalanche-report, sms, telegram, premium-sms, email, egress, wintersport]
 workflow: feat-1441-s1-lawinenlagebericht

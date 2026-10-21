@@ -3,7 +3,7 @@ entity_id: issue_668_head_sha_dedup
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, e2e, staging-gate, refactor]
 ---

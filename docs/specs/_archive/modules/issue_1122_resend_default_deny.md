@@ -3,7 +3,7 @@ entity_id: issue_1122_resend_default_deny
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: approved
+status: implemented
 version: "1.0"
 tags: [email, resend, guardrail, default-deny, go, python]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_285_weather_section_restyle_tests
 type: tests
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, restyle, segmented-control, brand-tokens, issue-285]
 parent: issue_285_weather_section_restyle
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_285_weather_section_restyle.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_285_weather_section_restyle.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_285_weather_section_restyle.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_285_weather_section_restyle.md` v1.0
 
 ## Source
 

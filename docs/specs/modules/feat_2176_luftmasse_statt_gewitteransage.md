@@ -3,7 +3,7 @@ entity_id: feat_2176_luftmasse_statt_gewitteransage
 type: feature
 created: 2026-09-08
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, thunder-level, cape, low-level, wortlaut, issue-2176, epic-1419]
 ---

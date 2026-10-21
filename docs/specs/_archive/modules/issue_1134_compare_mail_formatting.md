@@ -3,7 +3,7 @@ entity_id: issue_1134_compare_mail_formatting
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 issue: 1134
 tags: [compare, email, renderer, official-alerts, frontend, bugfix]

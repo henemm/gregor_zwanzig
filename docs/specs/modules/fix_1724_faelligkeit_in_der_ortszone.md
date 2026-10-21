@@ -3,7 +3,7 @@ entity_id: fix_1724_faelligkeit_in_der_ortszone
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 workflow: fix-1724-faelligkeit-in-der-ortszone
 version: "1.1"
 tags: [issue-1724, epic-1722, timezone, adr-0051, adr-0044, scheduler, briefing]

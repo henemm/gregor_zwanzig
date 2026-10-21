@@ -3,7 +3,7 @@ entity_id: versandzeit_stundenwahl
 type: bug
 created: 2026-07-25
 updated: 2026-07-25
-status: approved
+status: implemented
 version: "1.0"
 tags: [frontend, mobile, versand-tab, shared-component, trip-compare-sharing]
 ---

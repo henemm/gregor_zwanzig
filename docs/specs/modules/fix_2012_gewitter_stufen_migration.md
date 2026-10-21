@@ -3,7 +3,7 @@ entity_id: fix_2012_gewitter_stufen_migration
 type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.1"
 tags: [trip, corridor-editor, thunder, migration, wertebereiche]
 ---

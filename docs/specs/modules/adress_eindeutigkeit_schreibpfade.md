@@ -3,7 +3,7 @@ entity_id: adress_eindeutigkeit_schreibpfade
 type: module
 created: 2026-09-13
 updated: 2026-09-14
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2147-b-adress-eindeutig
 tags: [security, multi-user, auth, issue-2147, issue-2311, epic-2138]

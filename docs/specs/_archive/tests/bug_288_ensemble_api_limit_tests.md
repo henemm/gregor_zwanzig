@@ -3,7 +3,7 @@ entity_id: bug_288_ensemble_api_limit_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, ensemble, api-limit, open-meteo, issue-288]
 parent: bug_288_ensemble_api_limit
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für den Fix aus `docs/specs/modules/bug_288_ensemble_api_limit.md`.
+Test-Manifest für den Fix aus `docs/specs/_archive/modules/bug_288_ensemble_api_limit.md`.
 Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_288_ensemble_api_limit.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_288_ensemble_api_limit.md` v1.0
 
 ## Source
 

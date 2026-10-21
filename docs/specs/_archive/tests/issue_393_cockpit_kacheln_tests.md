@@ -3,7 +3,7 @@ entity_id: issue_393_cockpit_kacheln_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, cockpit, briefing-log, alert-log, go-handler, frontend, issue-393]
 parent: issue_393_cockpit_kacheln
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_393_cockpit_kacheln.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_393_cockpit_kacheln.md`.
 Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_393_cockpit_kacheln.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_393_cockpit_kacheln.md` v1.0
 
 ## Source
 
@@ -78,7 +78,7 @@ cd /home/hem/gregor_zwanzig && uv run pytest tests/tdd/test_briefing_log.py test
 cd /home/hem/gregor_zwanzig && go test ./internal/handler/ -run TestCockpit -v
 
 # Frontend RED-Phase
-cd /home/hem/gregor_zwanzig/frontend && node --experimental-strip-types --test src/lib/issue_393_cockpit_kacheln.test.ts
+cd /home/hem/gregor_zwanzig/frontend && node --experimental-strip-types --test frontend/src/lib/issue_393_cockpit_kacheln.test.ts
 ```
 
 ## Expected RED-State

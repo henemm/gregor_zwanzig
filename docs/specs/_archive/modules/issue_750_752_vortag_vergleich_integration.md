@@ -26,7 +26,7 @@ kein leerer Block).
 
 - **File:** `src/services/trip_report_scheduler.py`
 - **Identifier:** `TripReportScheduler._send_trip_report`
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** `TripReportFormatter.format_email`
 - **File:** `src/app/models.py`
 - **Identifier:** `TripReportConfig.show_yesterday_comparison`

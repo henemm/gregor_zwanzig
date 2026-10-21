@@ -34,12 +34,16 @@ status: required       # Values: draft, active, deprecated
 
 ### 2. Required Sections
 
+Massgeblich: `docs/specs/_template.md`.
+
 - [ ] **Purpose** - Mindestens 1 Satz
 - [ ] **Source** - Dateipfad und Identifier
+- [ ] **Estimated Scope** - LoC + Files
 - [ ] **Dependencies** - Tabelle (darf leer sein)
-- [ ] **Scope** - Affected Files + Estimated Changes
-- [ ] **Test Plan** - Mindestens 1 Test
-- [ ] **Acceptance Criteria** - Mindestens 1 Kriterium
+- [ ] **Acceptance Criteria** - Mindestens 1 Kriterium im Format
+  `**AC-N:** Given.../When.../Then...` (>=30 Zeichen). Bei `created >= 2026-05-11` ist ein
+  fehlendes/falsches AC-Format ein **ERROR** (sonst blockt `workflow_gate` Phase 6)
+- [ ] **Architektur-Entscheidung (ADR)** - ADR-Nr. oder "keine" mit Rationale
 - [ ] **Changelog** - Mindestens Initial-Eintrag
 
 ### 3. No Placeholders

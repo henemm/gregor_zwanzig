@@ -3,7 +3,7 @@ entity_id: fix_1647_thunder_fallback_monitor
 type: module
 created: 2026-09-17
 updated: 2026-09-17
-status: approved
+status: implemented
 version: "1.0"
 tags: [observability, providers, health, monitoring]
 ---

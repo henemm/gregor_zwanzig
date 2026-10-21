@@ -3,7 +3,7 @@ entity_id: feat_2438_kanal_abwahl_hinweis
 type: module
 created: 2026-10-19
 updated: 2026-10-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, editor, hinweis, kanaele, trip, ortsvergleich, adr-0050]
 workflow: feat-2438-kanal-abwahl-hinweis

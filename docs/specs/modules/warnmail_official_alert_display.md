@@ -3,7 +3,7 @@ entity_id: warnmail_official_alert_display
 type: bugfix
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alert, warnmail, mail-darstellung, bundle:G-mail-darstellung]
 workflow: warnmail

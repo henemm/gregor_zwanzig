@@ -3,7 +3,7 @@ entity_id: bug717_waypointspanel_spread_fix
 type: bugfix
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip, stages, data-integrity, partial-update, waypointspanel]
 ---

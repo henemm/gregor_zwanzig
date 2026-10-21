@@ -3,10 +3,13 @@ entity_id: smtp_mailer
 type: module
 created: 2025-12-27
 updated: 2025-12-27
-status: implemented
+status: superseded
+superseded_by: "#1412"
 version: "1.0"
 tags: [email, smtp, channel]
 ---
+
+> Abgelöst durch #1412 S3a (`src/outputs/core.py` entfernt, Mailversand-Verbindung an einer Stelle, `e9cb8e4a0`, 2026-07-30).
 
 > **Archiviert 2026-07-30 (#1412 S3a):** der beschriebene Sendeweg `src/app/core.py` wurde ersatzlos entfernt — er hatte keinen Aufrufer und keine Schutzprüfungen.
 

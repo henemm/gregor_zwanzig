@@ -3,7 +3,7 @@ entity_id: issue_728_telegram_scope_neutral_paths
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [staging-gate, telegram, deploy-gate, tooling]
 ---
@@ -78,13 +78,13 @@ Standalone-Lauffähigkeit unter System-python3 zu erhalten.
 ## Acceptance Criteria
 
 - **AC-1:** Given ein echtes git-Repo, dessen letzter Commit ausschließlich eine Doku-Datei
-  `docs/specs/modules/issue_692_telegram_disabled_unconfigured.md` ändert / When
+  `docs/specs/_archive/modules/issue_692_telegram_disabled_unconfigured.md` ändert / When
   `_scope_touches_telegram()` gegen die reale `git diff`-Liste läuft / Then liefert sie
   `False` (Doku-`.md` löst keinen Telegram-Scope aus).
   - Test: Mini-Git-Repo in tmp_path, Commit nur mit der `.md`, Funktion gegen echte
     `git diff --name-only HEAD~1 HEAD`-Ausgabe — mock-frei.
 
-- **AC-2:** Given derselbe Aufbau, aber der Commit ändert `src/outputs/telegram.py` (echter
+- **AC-2:** Given derselbe Aufbau, aber der Commit ändert `src/output/channels/telegram.py` (echter
   Code-Pfad) zusätzlich zu einer Doku-`.md` / When `_scope_touches_telegram()` läuft / Then
   liefert sie weiterhin `True` (echter Telegram-Code wird nicht maskiert).
   - Test: Mini-Git-Repo mit gemischtem Commit, Funktion gegen echte `git diff`-Liste.

@@ -3,7 +3,7 @@ entity_id: epic_129a_3_ui_removed_tests
 type: tests
 created: 2026-05-12
 updated: 2026-05-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, refactor, epic-129, nicegui-removal, deletion-only]
 parent: epic_129a_3_ui_removal

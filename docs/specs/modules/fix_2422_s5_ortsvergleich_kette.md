@@ -3,7 +3,7 @@ entity_id: fix_2422_s5_ortsvergleich_kette
 type: bugfix
 created: 2026-09-30
 updated: 2026-09-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, ortsvergleich, compare, kanaele, metrik-auswahl, slots, end-date, telegram-kurzstil, alarm, fix]
 workflow: fix-2422-s5-ortsvergleich-kette

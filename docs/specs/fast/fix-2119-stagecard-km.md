@@ -1,3 +1,10 @@
+---
+entity_id: fix_2119_stagecard_km
+type: fast
+created: 2026-10-18
+status: implemented
+---
+
 # Mini-Spec: fix-2119-stagecard-km
 
 Issue #2119 — Etappen-Kachel zeigt Luftlinie statt GPX-Track-Distanz.

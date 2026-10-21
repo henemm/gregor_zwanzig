@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-09-06 (§3 fortgeschrieben 2026-09-13, Issue #2316: aktive Update-Erkennung; Titel/§2 korrigiert — seit #2131 sind es fünf Speicherregeln, nicht vier; §3 fortgeschrieben 2026-09-14, Issue #2317: Warten auf eine ausstehende Speicherung vor `SKIP_WAITING`)
 - **Bezug:** ergänzt [ADR-0003](0003-multi-tenant-isolation.md) (Mandantentrennung) · `frontend/src/service-worker.ts`, `frontend/src/lib/pwa/serviceWorkerUpdate.ts`, `frontend/static/offline.html`, Issue #2128 (Scheibe 1 von Epic #2127), Issue #2131 (Positivliste, Regel 2), Issue #2316 (aktive Update-Erkennung)
+- **Ergänzt durch:** [ADR-0063](0063-pwa-offline-inhalte-positivliste-und-mandanten-bucket.md) (schreibt fort)
 
 ## Kontext
 

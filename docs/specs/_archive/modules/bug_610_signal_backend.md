@@ -9,7 +9,7 @@
 
 Entfernen aller **Signal-Kanal**-Reste im Backend (Python `src/`, `api/`). **Nicht** angefasst: Unix-`signal`/`SIGTERM` o.ä. **Nicht** in diesem Schritt: Telegram-Budget/PRIMARY_SLOTS auf 8 (gehört zu #587).
 
-Betroffen (aus Analyse): `src/outputs/base.py` (signal-Factory-Zweig + dangling `from outputs.signal import`), `api/routers/scheduler.py` (toter `if sub.send_signal`/`can_send_signal`-Block), `src/output/renderers/channel_layout.py` (signal in CHANNEL_LIMITS + Kommentare), `src/output/renderers/narrow.py` (signal-Breite/-Zweige; telegram bleibt), `src/formatters/trip_report.py` (`signal_text`-Aufbau), `src/app/models.py` (`signal_text`-Feld — schema-relevant), `src/app/cli.py` (`signal`-Choice), `api/routers/preview.py` (`/api/preview/{trip}/signal`), `src/services/preview_service.py` (`render_signal_preview`), `api/routers/validator.py` (Channel-Beschreibung).
+Betroffen (aus Analyse): `src/output/channels/base.py` (signal-Factory-Zweig + dangling `from outputs.signal import`), `api/routers/scheduler.py` (toter `if sub.send_signal`/`can_send_signal`-Block), `src/output/renderers/channel_layout.py` (signal in CHANNEL_LIMITS + Kommentare), `src/output/renderers/narrow.py` (signal-Breite/-Zweige; telegram bleibt), `src/output/renderers/trip_report.py` (`signal_text`-Aufbau), `src/app/models.py` (`signal_text`-Feld — schema-relevant), `src/app/cli.py` (`signal`-Choice), `api/routers/preview.py` (`/api/preview/{trip}/signal`), `src/services/preview_service.py` (`render_signal_preview`), `api/routers/validator.py` (Channel-Beschreibung).
 
 ## Acceptance Criteria
 

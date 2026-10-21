@@ -3,7 +3,7 @@ entity_id: bug_383_hoehenprofil_kontrast
 type: bugfix
 created: 2026-05-26
 updated: 2026-05-26
-status: active
+status: implemented
 version: "1.0"
 tags: [bugfix, accessibility, wcag, contrast, svg, design-system, elevation-profile, issue-383]
 ---

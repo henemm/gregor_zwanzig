@@ -3,7 +3,7 @@ entity_id: fix_2036_alarm_kilometer_ortsangabe
 type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, sms, telegram, gpx, kilometer]
 workflow: fix-2036-alarm-kilometer

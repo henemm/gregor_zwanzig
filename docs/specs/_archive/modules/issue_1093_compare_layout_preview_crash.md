@@ -3,12 +3,15 @@ entity_id: issue_1093_compare_layout_preview_crash
 type: module
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: superseded
+superseded_by: "#1232"
 version: "1.0"
 tags: [bug, frontend, compare, layout]
 ---
 
 # Orts-Vergleich Layout-Tab: LayoutPreview-Crash bei echten Orten (#1093)
+
+> Abgelöst durch #1232 (geteilter LayoutTab-Organism, `LayoutPreview.svelte` gelöscht, `e279a0a85`, 2026-07-12).
 
 ## Approval
 

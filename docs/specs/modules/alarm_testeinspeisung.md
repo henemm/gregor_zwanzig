@@ -3,7 +3,7 @@ entity_id: alarm_testeinspeisung
 type: feature
 created: 2026-08-18
 updated: 2026-08-18
-status: draft
+status: implemented
 workflow: feat-1948-s2-testeinspeisung
 version: "1.0"
 tags: [alarm, testing, validator]

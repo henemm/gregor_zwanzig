@@ -3,7 +3,7 @@ entity_id: bug_353_trend_forecast_horizon
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [weather, trend, openmeteo, forecast-horizon, bugfix]
 ---

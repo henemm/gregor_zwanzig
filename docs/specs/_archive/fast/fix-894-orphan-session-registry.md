@@ -28,7 +28,7 @@ Resolver `hook_utils.resolve_active_workflow()` / `get_active_workflow_name()`.
 - **Block-/No-op-Logik:** Matrix-Hash-Prüfung, Validator-Log-Freshness, Exit-Codes
   (0 = erlaubt/no-op, 2 = blockiert) bleiben unverändert.
 - **Keine Mail-Inhalts-Datei** wird angefasst (`src/output/renderers/email/*`,
-  `src/formatters/*`, `src/outputs/email.py`) → das #811-Renderer-Commit-Gate wird
+  `src/formatters/*`, `src/output/channels/email.py`) → das #811-Renderer-Commit-Gate wird
   durch diese Änderung nicht ausgelöst.
 
 ## Manuelle Test-Schritte

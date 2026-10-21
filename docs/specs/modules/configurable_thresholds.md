@@ -22,7 +22,7 @@ Eliminates 14+ hardcoded thresholds in `trip_report.py` by moving them into Metr
 
 ## Source
 
-- **File:** `src/app/metric_catalog.py` (threshold fields), `src/formatters/trip_report.py` (refactored methods)
+- **File:** `src/app/metric_catalog.py` (threshold fields), `src/output/renderers/trip_report.py` (refactored methods)
 - **Identifier:** `MetricDefinition.display_thresholds`, `MetricDefinition.risk_thresholds`, `TripReportFormatter._determine_risk()`, `_compute_highlights()`, `_fmt_val()`
 
 ## Dependencies
@@ -31,7 +31,7 @@ Eliminates 14+ hardcoded thresholds in `trip_report.py` by moving them into Metr
 |--------|------|---------|
 | MetricCatalog | Registry | Source of truth for all metric configuration (src/app/metric_catalog.py) |
 | MetricDefinition | Dataclass | Holds threshold fields (already has summary_fields, default_change_threshold) |
-| TripReportFormatter | Formatter | Uses thresholds for display/risk logic (src/formatters/trip_report.py) |
+| TripReportFormatter | Formatter | Uses thresholds for display/risk logic (src/output/renderers/trip_report.py) |
 | UnifiedWeatherDisplayConfig | DTO | Future: will hold per-trip threshold overrides (Phase 2) |
 
 ## Related Specs
@@ -626,7 +626,7 @@ Update lines 406-497 color threshold documentation to reference catalog source.
    - Add `display_thresholds`, `highlight_threshold`, `risk_thresholds` to MetricDefinition
    - Populate 8 metrics with threshold values
 
-2. **src/formatters/trip_report.py** (MODIFY, +130 LoC)
+2. **src/output/renderers/trip_report.py** (MODIFY, +130 LoC)
    - Refactor `_determine_risk()` to use catalog lookups (~40 LoC change)
    - Refactor `_compute_highlights()` to use catalog lookups (~40 LoC change)
    - Add `_find_max_metric()` helper (~15 LoC new)

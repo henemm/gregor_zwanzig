@@ -3,7 +3,7 @@ entity_id: feat_2278_aktionsmodell
 type: module
 created: 2026-10-17
 updated: 2026-10-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip, compare, aktionsmodell, liste, hub, mobil, sende-dialog, epic-2345, p3]
 ---

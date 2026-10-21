@@ -3,7 +3,7 @@ entity_id: bug_273_coordinate_inputmode
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, ios, safari, mobile, inputmode, coordinates, frontend, issue-273]
 ---

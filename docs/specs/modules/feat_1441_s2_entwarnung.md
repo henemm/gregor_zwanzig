@@ -3,7 +3,7 @@ entity_id: feat_1441_s2_entwarnung
 type: module
 created: 2026-10-15
 updated: 2026-10-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alert, entwarnung, alarm, trip, ortsvergleich, vier-kanaele, issue-1441]
 ---

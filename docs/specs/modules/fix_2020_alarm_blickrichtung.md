@@ -3,7 +3,7 @@ entity_id: fix_2020_alarm_blickrichtung
 type: module
 created: 2026-08-21
 updated: 2026-08-21
-status: approved
+status: implemented
 version: "1.0"
 tags: [alert, deviation-alert, blickrichtung, restmenge, zeitangaben, issue-2020, scheibe-2]
 ---

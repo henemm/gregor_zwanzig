@@ -3,7 +3,7 @@ entity_id: bug_538_539_540_546_retrospective_test_fixes
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, tests, retrospective-audit, issue-538, issue-539, issue-540, issue-546]
 ---
@@ -40,7 +40,7 @@ Kein Produktionscode wird geändert — ausschließlich Testdateien und ein Svel
 | `pyproject.toml` `addopts = "-q -m 'not email and not live'"` | Konfiguration | Definiert welche Marker vom Default-Lauf ausgeschlossen sind |
 | `src/output/renderers/email/html.py` — `_render_mobile_compact_rows` | Implementierung | Bereits fertig mit `include_header`-Parameter (Zeilen 168, 329, 349) |
 | `internal/store/store.go:340` — `LoadMetricPresets` | Implementierung | Gibt `nil, error` bei korruptem JSON zurück — Test fehlt |
-| `docs/specs/modules/bug_463_mobile_email_table_headers.md` | Spec | AC-1–AC-5 für `include_header` |
+| `docs/specs/_archive/modules/bug_463_mobile_email_table_headers.md` | Spec | AC-1–AC-5 für `include_header` |
 
 ## Implementation Details
 

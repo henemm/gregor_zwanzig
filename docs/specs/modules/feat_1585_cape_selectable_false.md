@@ -3,7 +3,7 @@ entity_id: feat_1585_cape_selectable_false
 type: feature
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, sms, compare, trip-compare-sharing, thunder, adr-0005]
 workflow: 1585-cape-selectable-false

@@ -3,7 +3,7 @@ entity_id: feat_1824_sms_range_und_trenner
 type: module
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, premium-sms, token, format, wire-format]
 ---

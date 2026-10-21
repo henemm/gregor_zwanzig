@@ -3,7 +3,7 @@ entity_id: telegram_webhook_inbound
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, webhook, inbound, security, scheduler]
 ---

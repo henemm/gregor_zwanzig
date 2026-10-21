@@ -3,7 +3,7 @@ entity_id: fix_1726_ruhezeit_und_zaehler_ortszone
 type: bugfix
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 workflow: fix-1726-ruhezeit-ortszone
 version: "1.1"
 tags: [issue-1726, epic-1722, timezone, adr-0051, adr-0044, alert-daily-limit, quiet-hours, compare, scheduler]

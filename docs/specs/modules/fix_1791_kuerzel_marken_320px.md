@@ -3,7 +3,7 @@ entity_id: fix_1791_kuerzel_marken_320px
 type: module
 created: 2026-10-18
 updated: 2026-10-18
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1791-kuerzel-marken-320
 tags: [frontend, reihenfolge, kuerzel, responsive, issue-1791, epic-2507]

@@ -3,7 +3,7 @@ entity_id: fix_1697_ortstag_statt_servertag
 type: bugfix
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 workflow: fix-1697-ortstag-statt-servertag
 version: "1.0"
 tags: [issue-1697, timezone, adr-0044, trip-alert, radar-alert, calendar-day]

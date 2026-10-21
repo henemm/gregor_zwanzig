@@ -3,7 +3,7 @@ entity_id: compare_channel_preview_dispatch
 type: module
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1270-compare-channel-preview
 tags: [backend, frontend, preview, compare, dispatch, issue-1270]

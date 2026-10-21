@@ -3,7 +3,7 @@ entity_id: bug_320_sidebar_archiv
 type: bugfix
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, frontend, sidebar, navigation, design-compliance, issue-320]
 ---

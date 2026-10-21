@@ -3,7 +3,7 @@ entity_id: fix_997_validator_bundle
 type: module
 created: 2026-07-03
 updated: 2026-07-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [validator, gate, bugfix, bundle, formatter, frontend]
 ---
@@ -30,7 +30,7 @@ zusätzlich den unabhängigen `allOff`-Einzeiler im Alerts-Tab korrigieren
 > **Schicht-Hinweis:** Dieses Bündel betrifft **Tooling/Gate**
 > (`.claude/hooks/briefing_mail_validator.py` — kein Produktivcode, sondern
 > das Commit-Gate-Werkzeug selbst), **Python-Backend**
-> (`src/formatters/trip_report.py`) UND **Frontend**
+> (`src/output/renderers/trip_report.py`) UND **Frontend**
 > (`frontend/src/lib/components/alerts-tab/AlertsTab.svelte`). Kein Go-API-Code
 > betroffen.
 
@@ -38,7 +38,7 @@ zusätzlich den unabhängigen `allOff`-Einzeiler im Alerts-Tab korrigieren
 |---|------|------------|
 | #997 | `.claude/hooks/briefing_mail_validator.py:158-179` | `_column_values()` |
 | #997 | `.claude/hooks/briefing_mail_validator.py:182-198` | `_column_hours_sum()` |
-| #921 | `src/formatters/trip_report.py:619-620` | toter `report_type='alert'`-Sonderfall in `_email_subject()`-artigem Helper (Zeile 604ff, Methode um Zeile 595) |
+| #921 | `src/output/renderers/trip_report.py:619-620` | toter `report_type='alert'`-Sonderfall in `_email_subject()`-artigem Helper (Zeile 604ff, Methode um Zeile 595) |
 | #993 | `frontend/src/lib/components/alerts-tab/AlertsTab.svelte:50` | `allOff`-Derived |
 
 ## Estimated Scope
@@ -172,7 +172,7 @@ für einen noch aktiven Aufrufer das Verhalten stillschweigend ändern (statt
 nicht kennt).
 
 **Renderer-Gate-Reihenfolge (zwingend, da Datei unter `src/formatters/`
-liegt):** Dieser Commit staged `src/formatters/trip_report.py` → das
+liegt):** Dieser Commit staged `src/output/renderers/trip_report.py` → das
 Renderer-Commit-Gate (#811) verlangt vor dem Commit einen frischen Lauf von
 `tests/tdd/test_issue_811_mode_matrix.py` UND einen frischen grünen
 `briefing_mail_validator.py`-Lauf gegen eine echte, frisch zugestellte
@@ -258,7 +258,7 @@ der Cooldown-/QuietHours-Bereich normal sichtbar statt fälschlich gedämpft.
     `update`-Pfad-Tests und der Modus-Matrix-Vertragstest bleiben grün.
 
 - **AC-5 (#921, Gate-Nachweis):** Given den Commit, der
-  `src/formatters/trip_report.py` staged / When das Renderer-Commit-Gate
+  `src/output/renderers/trip_report.py` staged / When das Renderer-Commit-Gate
   (#811) greift / Then liegt ein frischer grüner Lauf von
   `.claude/hooks/briefing_mail_validator.py` gegen eine echte, frisch
   ausgelöste Staging-Briefing-Mail vor (Exit 0, gebauter Nachweis NACH dem

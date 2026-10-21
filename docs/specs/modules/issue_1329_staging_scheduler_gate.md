@@ -3,7 +3,7 @@ entity_id: issue_1329_staging_scheduler_gate
 type: module
 created: 2026-07-20
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, staging, open-meteo, go-api]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_488_compare_tile_atoms
 type: module
 created: 2026-05-31
 updated: 2026-05-31
-status: draft
+status: implemented
 version: "1.0"
 issue: 488
 tags: [sveltekit, frontend, compare, molecules, atoms, epic-485, bits-ui, svelte5]

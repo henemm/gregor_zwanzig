@@ -3,7 +3,7 @@ entity_id: shared_preview_tab
 type: module
 created: 2026-10-19
 updated: 2026-10-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [epic-2345, preview, trip, ortsvergleich, shared, alert-preview]
 issue: 2283

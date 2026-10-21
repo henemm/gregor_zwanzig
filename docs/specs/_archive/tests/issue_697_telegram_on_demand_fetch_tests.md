@@ -3,7 +3,7 @@ entity_id: issue_697_telegram_on_demand_fetch_tests
 type: tests
 created: 2026-06-10
 updated: 2026-06-10
-status: approved
+status: implemented
 version: "1.0"
 tags: [telegram, on-demand, fetch, snapshot, e2e, tdd]
 ---
@@ -17,7 +17,7 @@ tags: [telegram, on-demand, fetch, snapshot, e2e, tdd]
 ## Purpose
 
 TDD-Test-Inventar für den on-demand Wetter-Fetch wenn kein Snapshot vorhanden ist.
-Modul-Spec: `docs/specs/modules/issue_697_telegram_on_demand_fetch.md`.
+Modul-Spec: `docs/specs/_archive/modules/issue_697_telegram_on_demand_fetch.md`.
 
 Alle Tests beweisen echtes Nutzerverhalten: kein Snapshot vorab anlegen,
 on-demand Fetch muss selbst funktionieren. Keine Mocks.

@@ -3,7 +3,7 @@ entity_id: rework_1211b_rot_triage
 type: module
 created: 2026-07-18
 updated: 2026-07-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, pytest, rot-triage, testsuite]
 ---

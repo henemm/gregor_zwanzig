@@ -3,7 +3,7 @@ entity_id: admin_einladungslinks_2519
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: approved
+status: implemented
 version: "1.0"
 tags: [admin, auth, tier, einladung, registrierung, issue-2519]
 ---

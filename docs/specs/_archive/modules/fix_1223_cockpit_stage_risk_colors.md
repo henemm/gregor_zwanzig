@@ -3,7 +3,7 @@ entity_id: fix_1223_cockpit_stage_risk_colors
 type: module
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, weather, cockpit, bugfix]
 ---

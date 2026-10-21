@@ -3,7 +3,7 @@ entity_id: alert_quiet_hours_localtime
 type: module
 created: 2026-07-18
 updated: 2026-08-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, quiet-hours, timezone, bugfix, issue-1312, epic-1301]
 ---

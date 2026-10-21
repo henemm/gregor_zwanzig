@@ -3,12 +3,14 @@ entity_id: issue_300_wizard_redesign
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, wizard, svelte, redesign, issue-300]
 ---
 
 # Issue #300 — Trip-Wizard Redesign: Neue Schritt-Struktur Route/Etappen/Wetter/Reports
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

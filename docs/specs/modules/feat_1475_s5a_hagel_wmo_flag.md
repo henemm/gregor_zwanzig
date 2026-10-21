@@ -3,7 +3,7 @@ entity_id: feat_1475_s5a_hagel_wmo_flag
 type: feature
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, hagel, epic-1419, issue-1475]
 ---

@@ -3,7 +3,7 @@ entity_id: rework_1467_s4a_amtlich
 type: refactor
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, trip, compare, epic-1458, issue-1467, s4a, amtlich]
 ---

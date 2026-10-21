@@ -3,7 +3,7 @@ entity_id: web_ui
 type: feature
 created: 2025-12-28
 updated: 2026-05-15
-status: legacy
+status: deprecated
 version: "1.0"
 tags: [ui, nicegui, configuration, legacy, removed]
 ---

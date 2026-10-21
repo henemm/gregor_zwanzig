@@ -3,12 +3,14 @@ entity_id: issue_360_signal_channel_renderer
 type: module
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: deprecated
 version: "1.0"
 tags: [output, signal, telegram, channel-renderer, epic-331]
 ---
 
 # Kanal-bewusster Renderer für Signal/Telegram + Spalten-Datenmodell
+
+> Abgelöst/entfernt durch ADR-0004 / #610 (Signal-Kanal app-weit entfernt) — beschreibt keinen aktuellen Code.
 
 ## Approval
 
@@ -31,7 +33,7 @@ Teil 1 von Epic #331 (Backend). Frontend-Editor + Multi-Kanal-Vorschau folgen in
 - **Neu:** `src/output/renderers/narrow.py` — `render_narrow()` für Signal/Telegram (pure)
 - **Geändert:** `src/app/models.py` — `MetricConfig` +`bucket`/`order`; `TripReport` +`signal_text`/`telegram_text`
 - **Geändert:** `src/app/loader.py` — Persistenz der neuen Felder + Legacy-Migration
-- **Geändert:** `src/formatters/trip_report.py` — `format_email()` befüllt zusätzlich `signal_text`/`telegram_text`
+- **Geändert:** `src/output/renderers/trip_report.py` — `format_email()` befüllt zusätzlich `signal_text`/`telegram_text`
 - **Geändert:** `src/services/trip_report_scheduler.py:444/457`, `src/services/trip_alert.py` — Versand nutzt `signal_text`/`telegram_text`
 - **Geändert (optional, additiv):** `src/output/renderers/email/plain.py` — `_render_text_table()` akzeptiert explizite Spaltenliste
 

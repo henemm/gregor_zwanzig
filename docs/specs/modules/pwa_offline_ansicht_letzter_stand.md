@@ -3,7 +3,7 @@ entity_id: pwa_offline_ansicht_letzter_stand
 type: module
 created: 2026-09-06
 updated: 2026-09-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [pwa, frontend, offline, service-worker, tenant-isolation, issue-2131, epic-2127]
 workflow: feat-2131-offline-ansehen

@@ -3,7 +3,7 @@ entity_id: fix_1474b_gewitterschwelle_cockpit
 type: bugfix
 created: 2026-08-03
 updated: 2026-08-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, cockpit, mail, sms, issue-1474]
 ---

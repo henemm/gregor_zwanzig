@@ -3,7 +3,7 @@ entity_id: warn_service_consumption
 type: module
 created: 2026-07-22
 updated: 2026-07-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, egress, observability, meteoalarm]
 workflow: feat-1348-warn-consumption

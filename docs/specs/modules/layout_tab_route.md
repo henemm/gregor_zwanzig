@@ -3,7 +3,7 @@ entity_id: layout_tab_route
 type: feature
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 workflow: feat-1232-layout-tab-3b
 ---
 
@@ -48,8 +48,8 @@ konsolidiert, und #1232 ist vollständig umgesetzt.
 ## Source
 
 - **Files:**
-  - `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` — MODIFY (888 Z.)
-  - `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` — MODIFY
+  - `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` — MODIFY (888 Z.)
+  - `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` — MODIFY
   - `frontend/src/lib/components/trip-detail/WeatherV2MailPreview.svelte` — MODIFY
   - `frontend/e2e/layout-tab-route.spec.ts` — CREATE
   - `frontend/src/lib/components/shared/layout-tab/{LayoutTab,LTChannelPicker,LTCapNote,LTCutLine}.svelte`, `ltChannels.ts` — KEEP, unverändert konsumiert (Scheibe 3a)
@@ -114,8 +114,8 @@ konsolidiert, und #1232 ist vollständig umgesetzt.
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | MODIFY | Restrukturierung des Ausgabe-Teils: 01 Preset + 02 Grundauswahl bleiben oben unverändert; das bisherige `.v2-layout`-Grid (Reihenfolge + Vorschau) wird ersetzt durch `<LayoutTab context="route" bind:channel={activeChannel} colCount={buckets.primary.length + 1} subjectLabel="Metriken">` mit `WeatherV2Reihenfolge` im `editor`-Snippet (erhält `activeChannel={channel}` statt hartkodiert `"telegram"`) und `WeatherV2MailPreview` im `preview`-Snippet (erhält `channel={channel}` statt eigenem internen State); neuer lokaler `activeChannel` $state (`ChannelId`, Default `'email'`) — reiner View-State, geht NICHT in `snapshot()`/`isDirty` ein; SMS-Schwellwerte (04), `EditReportConfigSection` und die Amtliche-Warnungen-Checkbox bleiben unverändert einspaltig darunter; Mobile-FAB+Sheet erhält zusätzlich `channel={activeChannel}` für die Sheet-Instanz von `WeatherV2MailPreview`; CSS-Override versteckt die `LayoutTab`-Vorschau-Spalte im mobilen Breakpoint (ersetzt das bisherige `.preview-col{display:none}`) |
-| `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` | MODIFY | Die eigene, inline gebaute Cut-Line-Markup wird durch die geteilte `LTCutLine`-Komponente ersetzt (`label="Telegram"`, `max={tgBudget}`), gewrappt in ein Element mit `data-testid="wm2-cut-line"` (Testid bleibt am Wrapper erhalten, `LTCutLine` liefert zusätzlich intern `data-testid="lt-cut-line"`); die `activeChannel`-Prop-Signatur bleibt unverändert — sie kommt jetzt vom `channel`-Snippet-Parameter des `LayoutTab` statt vom bisherigen hartkodierten String `"telegram"` in `WeatherMetricsTab` |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | MODIFY | Restrukturierung des Ausgabe-Teils: 01 Preset + 02 Grundauswahl bleiben oben unverändert; das bisherige `.v2-layout`-Grid (Reihenfolge + Vorschau) wird ersetzt durch `<LayoutTab context="route" bind:channel={activeChannel} colCount={buckets.primary.length + 1} subjectLabel="Metriken">` mit `WeatherV2Reihenfolge` im `editor`-Snippet (erhält `activeChannel={channel}` statt hartkodiert `"telegram"`) und `WeatherV2MailPreview` im `preview`-Snippet (erhält `channel={channel}` statt eigenem internen State); neuer lokaler `activeChannel` $state (`ChannelId`, Default `'email'`) — reiner View-State, geht NICHT in `snapshot()`/`isDirty` ein; SMS-Schwellwerte (04), `EditReportConfigSection` und die Amtliche-Warnungen-Checkbox bleiben unverändert einspaltig darunter; Mobile-FAB+Sheet erhält zusätzlich `channel={activeChannel}` für die Sheet-Instanz von `WeatherV2MailPreview`; CSS-Override versteckt die `LayoutTab`-Vorschau-Spalte im mobilen Breakpoint (ersetzt das bisherige `.preview-col{display:none}`) |
+| `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` | MODIFY | Die eigene, inline gebaute Cut-Line-Markup wird durch die geteilte `LTCutLine`-Komponente ersetzt (`label="Telegram"`, `max={tgBudget}`), gewrappt in ein Element mit `data-testid="wm2-cut-line"` (Testid bleibt am Wrapper erhalten, `LTCutLine` liefert zusätzlich intern `data-testid="lt-cut-line"`); die `activeChannel`-Prop-Signatur bleibt unverändert — sie kommt jetzt vom `channel`-Snippet-Parameter des `LayoutTab` statt vom bisherigen hartkodierten String `"telegram"` in `WeatherMetricsTab` |
 | `frontend/src/lib/components/trip-detail/WeatherV2MailPreview.svelte` | MODIFY | Der interne `activeChannel`-`$state` und das zugehörige `.ch-tabs`-Markup (Kanal-Buttons + CSS) entfallen vollständig; neue Prop `channel: ChannelId` (controlled) steuert stattdessen, welches Template (Email/Telegram/SMS) gerendert wird; alle bestehenden `wm2-*`-Testids (`wm2-mail-preview`, `wm2-sample-badge`, `wm2-diff-banner`, `wm2-email-table`, `wm2-telegram-bubble`, `wm2-sms-line`) bleiben unverändert erhalten |
 | `frontend/e2e/layout-tab-route.spec.ts` | CREATE | Verhaltens-Playwright: Kanal-Picker-Wechsel schaltet Vorschau-Template + Cut-Line-Sichtbarkeit; Reihenfolge-DnD + Auto-Save + Reload-Beweis; reiner Kanalwechsel macht NICHT dirty; Mobile FAB+Sheet folgt dem gewählten Kanal; Desktop + Mobile (`:visible`) |
 | `frontend/src/lib/components/shared/layout-tab/{LayoutTab,LTChannelPicker,LTCapNote,LTCutLine}.svelte`, `ltChannels.ts` | KEEP | Aus Scheibe 3a unverändert konsumiert — kein Rework nötig, Snippet-Slot-Schnitt bereits kontextfähig |

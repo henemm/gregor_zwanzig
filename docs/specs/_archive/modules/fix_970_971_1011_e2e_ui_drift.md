@@ -3,7 +3,7 @@ entity_id: fix_970_971_1011_e2e_ui_drift
 type: module
 created: 2026-07-06
 updated: 2026-07-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [e2e, test-drift, weather-metrics-tab, mail-simplification, dead-code]
 ---
@@ -66,7 +66,7 @@ wird verifiziert statt erneut gefixt.
 | `WeatherV2Reihenfolge.svelte:32,45,56,90-96` | Referenz (read-only) | Aktuelle Reihenfolge-Test-IDs (unverändert gültig, nicht Teil dieses Fixes) |
 | `WeatherV2PresetBar.svelte:35,38,49,58` | Referenz (read-only) | Aktueller Preset-Pill-Selektor `weather-preset-pill-{id}` und Text-Trigger "als eigenes Profil speichern" für die #177-Migration |
 | `build_metrics_summary_pills()` (`src/output/renderers/email/html.py:1287`) | Referenz (read-only) | Beweis, dass der Metriken-Überblick-Block seit #790 unconditional gerendert wird — Grundlage für AC-4 |
-| `docs/specs/modules/fix_964_e2e_drift.md` | Vorgänger-Spec | Migrations-Methodik (Skip-Kommentar-Vorbild), aber dessen Tabellenzeilen zu `table-preview-day-*`/`weather-metrics-tab-checkbox-*` sind **veraltet** — durch diesen Fix implizit korrigiert |
+| `docs/specs/_archive/modules/fix_964_e2e_drift.md` | Vorgänger-Spec | Migrations-Methodik (Skip-Kommentar-Vorbild), aber dessen Tabellenzeilen zu `table-preview-day-*`/`weather-metrics-tab-checkbox-*` sind **veraltet** — durch diesen Fix implizit korrigiert |
 
 ## Implementation Details
 
@@ -135,14 +135,14 @@ Test-Anpassungen:
 
 ### 5. `#1011` — Verifikation statt Fix
 
-`npm run test -- src/lib/utils/alertMetricLabels.test.ts` wird real ausgeführt; der
+`npm run test -- frontend/src/lib/utils/alertMetricLabels.test.ts` wird real ausgeführt; der
 Output (15/15 grün) wird als Artefakt für den Issue-Schluss dokumentiert. Kein Edit an
 `alertMetricLabels.ts` oder `.test.ts`.
 
 ## Expected Behavior
 
 - **Input:** `npx playwright test` gegen Staging für die 4 betroffenen E2E-Spec-Dateien;
-  `npm run test -- src/lib/utils/alertMetricLabels.test.ts` für #1011.
+  `npm run test -- frontend/src/lib/utils/alertMetricLabels.test.ts` für #1011.
 - **Output:** Alle vormals roten Tests aus #970/#971 sind entweder grün (migrierte
   Selektoren) oder entfernt (PO-Entscheidung: kein Feature-Ersatz für Dead Code); die 2
   weiterhin aktiven `issue-343`-Tests bleiben grün; `alertMetricLabels.test.ts` bestätigt
@@ -202,10 +202,10 @@ Output (15/15 grün) wird als Artefakt für den Issue-Schluss dokumentiert. Kein
 
 - **AC-5:** Given #1011 meldet Drift in `frontend/src/lib/utils/alertMetricLabels.test.ts`,
   aber Commit `b65f22a0` (2026-07-03) hat die Ursache bereits vor der Meldung behoben /
-  When `npm run test -- src/lib/utils/alertMetricLabels.test.ts` real ausgeführt wird /
+  When `npm run test -- frontend/src/lib/utils/alertMetricLabels.test.ts` real ausgeführt wird /
   Then bestätigt der Lauf 15/15 grün, 0 Fails, ohne dass Code oder Testdatei verändert
   werden — der Testlauf-Output dient als Verifikationsnachweis für den Issue-Schluss.
-  - Test: `npm run test -- src/lib/utils/alertMetricLabels.test.ts`, Output als Artefakt
+  - Test: `npm run test -- frontend/src/lib/utils/alertMetricLabels.test.ts`, Output als Artefakt
     gespeichert, 15/15 PASS.
 
 ## Known Limitations

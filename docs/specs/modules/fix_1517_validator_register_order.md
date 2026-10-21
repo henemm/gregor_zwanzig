@@ -3,7 +3,7 @@ entity_id: fix_1517_validator_register_order
 type: module
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [auth, go-api, bugfix]
 ---

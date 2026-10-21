@@ -56,13 +56,13 @@ Mehrere Svelte-Komponenten referenzieren CSS-Variablen (`--g-primary`, `--g-bord
 | `frontend/src/lib/components/trip-detail/StageDetailRow.svelte` | 161 |
 | `frontend/src/lib/components/trip-detail/PreviewCard.svelte` | 50 |
 | `frontend/src/lib/components/trip-detail/TablePreview.svelte` | 101, 132 |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | 348, 377 |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | 348, 377 |
 | `frontend/src/lib/components/trip-detail/WeatherMetricsPreviewCard.svelte` | 50 |
 | `frontend/src/lib/components/trip-detail/BriefingPreviewCard.svelte` | 62 |
 | `frontend/src/lib/components/trip-detail/AlertsPreviewCard.svelte` | 52 |
 | `frontend/src/lib/components/trip-detail/PresetRow.svelte` | 40, 64 |
 | `frontend/src/lib/components/trip-detail/TripTabs.svelte` | 129 |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | 185, 226 |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | 185, 226 |
 
 ### Betroffene Dateien — unnötige/falsche Fallbacks entfernen
 

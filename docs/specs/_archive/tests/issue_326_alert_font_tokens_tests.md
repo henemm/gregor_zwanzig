@@ -3,7 +3,7 @@ entity_id: issue_326_alert_font_tokens_tests
 type: tests
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, design-system, css-tokens, font-size, ap-017, ap-008, frontend, issue-326]
 parent: issue_326_alert_font_tokens
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_326_alert_font_tokens.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_326_alert_font_tokens.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_326_alert_font_tokens.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_326_alert_font_tokens.md` v1.0
 
 ## Source
 

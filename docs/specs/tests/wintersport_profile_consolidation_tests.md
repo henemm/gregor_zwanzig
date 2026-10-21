@@ -3,7 +3,7 @@ entity_id: wintersport_profile_consolidation_tests
 type: tests
 created: 2026-04-28
 updated: 2026-04-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, output, pipeline, refactor, epic-render-pipeline, wintersport]
 parent: wintersport_profile_consolidation

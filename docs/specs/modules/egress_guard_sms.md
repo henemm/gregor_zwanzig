@@ -3,7 +3,7 @@ entity_id: egress_guard_sms
 type: module
 created: 2026-07-24
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.1"
 tags: [egress, isolation, sms, staging]
 workflow: fix-1336-sms-egress

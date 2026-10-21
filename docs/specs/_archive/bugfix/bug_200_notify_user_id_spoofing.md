@@ -3,7 +3,7 @@ entity_id: bug_200_notify_user_id_spoofing
 type: bugfix
 created: 2026-05-11
 updated: 2026-05-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, security, auth, proxy]
 ---

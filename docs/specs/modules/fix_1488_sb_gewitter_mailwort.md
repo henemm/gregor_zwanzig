@@ -3,7 +3,7 @@ entity_id: fix_1488_sb_gewitter_mailwort
 type: bugfix
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, mail-renderer, trip-briefing, backend]
 ---

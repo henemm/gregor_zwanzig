@@ -3,7 +3,7 @@ entity_id: fix_1948_s5_amtliche_sms_zielbild
 type: feature
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, sms, official-alert, format]
 ---

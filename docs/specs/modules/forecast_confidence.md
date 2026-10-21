@@ -3,7 +3,7 @@ entity_id: forecast_confidence
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [forecast, ensemble, openmeteo, risk, sms, email, dto]
 ---

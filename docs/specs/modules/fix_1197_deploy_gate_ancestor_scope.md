@@ -1,3 +1,10 @@
+---
+entity_id: fix_1197_deploy_gate_ancestor_scope
+type: module
+created: 2026-07-16
+status: implemented
+---
+
 # Spec: Deploy-Gate Ancestor+docs-only-Relaxierung (staging_gate.gate_check)
 
 - **Issue:** #1197 (Sammel-Gate-Audit), Scheibe „strikte-Gleichheits-Gate blockt gestapelten Tooling-Commit"

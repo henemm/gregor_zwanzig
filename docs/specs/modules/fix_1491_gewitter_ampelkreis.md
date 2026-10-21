@@ -3,7 +3,7 @@ entity_id: fix_1491_gewitter_ampelkreis
 type: bugfix
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, mail, ampel, renderer, issue-1491, issue-1474, issue-1419]
 ---

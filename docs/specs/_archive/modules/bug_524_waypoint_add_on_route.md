@@ -3,7 +3,7 @@ entity_id: bug_524_waypoint_add_on_route
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, svelte, waypoints, bugfix, edit-panel]
 ---

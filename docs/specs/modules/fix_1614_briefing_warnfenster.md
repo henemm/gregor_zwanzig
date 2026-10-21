@@ -3,7 +3,7 @@ entity_id: fix_1614_briefing_warnfenster
 type: bugfix
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 workflow: fix-1614-briefing-warnfenster
 ---
 

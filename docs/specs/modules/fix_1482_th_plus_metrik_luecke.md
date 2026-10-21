@@ -3,7 +3,7 @@ entity_id: fix_1482_th_plus_metrik_luecke
 type: bugfix
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, thunder, kurznachricht, telegram-kurzform]
 workflow: fix-1482-thplus-metrik-luecke

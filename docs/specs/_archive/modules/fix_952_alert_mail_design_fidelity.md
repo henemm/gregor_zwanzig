@@ -3,7 +3,7 @@ entity_id: fix_952_alert_mail_design_fidelity
 type: bugfix
 created: 2026-07-01
 updated: 2026-07-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, mail, design-fidelity, metric-catalog]
 workflow: fix-952-alert-mail-design-fidelity

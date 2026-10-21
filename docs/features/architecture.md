@@ -80,7 +80,7 @@ Die folgenden Komponenten leben im Python-Core:
 
 1. **Business-Logik**
    - **Provider-Adapter**: holen Rohdaten von Wetter-APIs — Standard Open-Meteo, Fallback-Kette siehe `docs/reference/decision_matrix.md`
-   - **Normalizer**: wandelt Daten in ein gemeinsames DTO ([api_contract.md](./api_contract.md))
+   - **Normalizer**: wandelt Daten in ein gemeinsames DTO ([api_contract.md](../reference/api_contract.md))
    - **Risk Engine**: bewertet Forecasts anhand Schwellen (Regen, Gewitter, Wind, Hitze)
    - **Report Formatter**: erzeugt kurze Texte + Debug-Anhang
    - **DebugBuffer**: gemeinsame Quelle für Console + E-Mail-Debug
@@ -322,7 +322,8 @@ wie der Prod-Key — siehe `docs/specs/modules/egress_guard_sms.md` → Known
 Limitations), außer der Trockenlauf-Schalter `GZ_PREMIUM_SMS_POLL_DRYRUN=1`
 ist gesetzt. Details: `docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md`.
 Der Versand über diese gelernte Rückadresse ist seit Scheibe S2a live (s. u.) —
-**nur fürs Trip-Briefing**.
+zunächst **nur fürs Trip-Briefing**; seit #2275 auch im Ortsvergleich-Briefing, als Alarm-Kanal
+seit #1701/#1745/#1752 in beiden Flächen (s. „Channels" oben).
 
 🔴 **Nachtrag (#2184, S4 Epic #2133, 2026-09-08):** „Kein Frontend, keine
 Befehlsausführung" galt nur bis hierhin. Seit #2184 wird der vor dem Kennzeichen
@@ -646,15 +647,15 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      standard/sensibel) ist wieder der EINZIGE Alarm-Regler (ADR-0009/ADR-0013 bestätigt).
      Der Aufruf von `_evaluate_corridors()` in `trip_alert.py` ist entfernt; `corridor_hits`
      ist strukturell immer leer, der Render-Vertrag (`CorridorEvent`) bleibt bestehen, wird
-     aber nie mehr gefüttert. `corridor_threshold.py` selbst bleibt unverändert im Repo,
-     nur ohne Aufrufer. Ein Trip, der bisher AUSSCHLIESSLICH über Korridore alarmiert wurde,
+     aber nie mehr gefüttert. `corridor_threshold.py` blieb zunächst ohne Aufrufer im Repo.
+     **Nachtrag (Audit 2026-10-21):** Seit #2230 (`rework_2230_corridor_path_removal.md`) ist der tote Pfad ganz entfernt — `src/services/corridor_threshold.py`, `CorridorEvent` und `corridor_hits` existieren nicht mehr (Beleg: `tests/tdd/test_alert_ausgabe_nach_korridor_rueckbau.py::test_ac1_modul_corridor_threshold_ist_weg`). Ein Trip, der bisher AUSSCHLIESSLICH über Korridore alarmiert wurde,
      alarmiert seither gar nicht mehr — das ist beabsichtigt, nicht stillschweigend in Kauf
      genommen. `Corridor.notify` bleibt Feld in Datenmodell/Persistenz (kein Datenverlust),
      nur wirkungslos. `Corridor.range`/`.mark` (Anzeige-Markierung) sind davon unberührt —
      sie waren nie ein Alarm-Auslöser.
      Spec: `docs/specs/modules/rework_1460_t1_relevanzfilter.md`.
    - Match-Logik `corridorInside(value, min, max)` wortgleich an zwei Stellen: TS
-     `frontend/src/lib/shared/corridor-editor/corridorMatch.ts` und Python
+     `frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts` und Python
      `src/services/corridor_match.py::corridor_inside()` (Consumer:
      `src/output/renderers/email/compare_html.py`, Slice 7) — darf nur einmal implementiert sein.
      Diese Anzeige-Markierung ist von der oben beschriebenen Alarm-Abschaltung unberührt.
@@ -743,7 +744,7 @@ send_one_compare_preset() [scheduler_dispatch_service.py, nach Report-Versand]
 - *Atomares Budget-`reserve()`*: `forecast_budget.reserve()` und `meteoalarm_budget.reserve()` entscheiden und buchen in EINER Dateisperre (kein Überbuchen bei Parallelität); ein Lock-Timeout ist laut (WARNING + Verlustzähler). `POST /api/_internal/forecast-budget/reserve` nutzt `reserve()`, Antwortform unverändert.
 - *`parallel_fetch`* (`src/services/parallel_fetch.py`): Ergebnisse in Eingabereihenfolge, Teilausfall isoliert, Slot-Semaphore je Provider, Deadline und Timeout unterscheidbar, verschachtelte Aufrufe laufen inline, `contextvars` werden je Aufgabe kopiert. Spec: `docs/specs/modules/feat_1539_s1b_s2_abruf_baustein.md`.
 
-Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/_archive/modules/issue_883_acute_danger_override.md`, `docs/specs/modules/alarm_eingangsprotokoll.md`
+Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/modules/issue_883_acute_danger_override.md`, `docs/specs/modules/alarm_eingangsprotokoll.md`
 
 ---
 

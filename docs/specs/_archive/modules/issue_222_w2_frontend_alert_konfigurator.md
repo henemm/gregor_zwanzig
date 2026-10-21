@@ -3,7 +3,7 @@ entity_id: issue_222_w2_frontend_alert_konfigurator
 type: module
 created: 2026-05-14
 updated: 2026-05-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, frontend, wizard, trip-detail, issue-222, workflow-2]
 ---

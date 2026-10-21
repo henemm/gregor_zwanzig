@@ -3,7 +3,7 @@ entity_id: feat_1435_e1a2_alarme_reiter_register
 type: feature
 created: 2026-07-31
 updated: 2026-07-31
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, alerts, compare, trip-compare-sharing, naming]
 workflow: feat-1435-e1a2-alarme-reiter-register

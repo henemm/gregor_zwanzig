@@ -42,7 +42,7 @@ tags: [frontend, atomic-design, organisms, issue-475, outputlayouteditor]
 | `frontend/src/lib/components/organisms/index.ts` | Barrel (upstream, ändern) | Erhält neuen Re-Export-Eintrag für `OutputLayoutEditor` |
 | `frontend/src/lib/components/organisms/organisms.test.ts` | Test (ändern) | CONSUMERS-Array bekommt 3 neue Einträge für die Consumer-Dateien |
 | `frontend/src/lib/components/compare/steps/Step4Layout.svelte` | Consumer (ändern) | Import auf `$lib/components/organisms` umstellen |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | Consumer (ändern) | Import auf `$lib/components/organisms` umstellen |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | Consumer (ändern) | Import auf `$lib/components/organisms` umstellen |
 | `frontend/src/lib/components/trip-wizard/steps/Step4Layout.svelte` | Consumer (ändern) | Import auf `$lib/components/organisms` umstellen |
 
 ## Implementation Details

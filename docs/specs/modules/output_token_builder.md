@@ -44,7 +44,7 @@ Heute existiert die Token-Logik **dreimal** in unterschiedlichen Ausprägungen (
 
 ### A1. Authority ist `sms_format.md` v2.0 — kein Cross-Check gegen Legacy
 
-In v1.0 forderte die Spec einen byte-Equal-Cross-Check `new == old` gegen `src/formatters/sms_trip.py`. Diese Anforderung wird **gestrichen**, weil:
+In v1.0 forderte die Spec einen byte-Equal-Cross-Check `new == old` gegen `src/output/renderers/sms_trip.py`. Diese Anforderung wird **gestrichen**, weil:
 
 1. **`sms_trip.py` ist deprecated dead code.** In aktuellen Pfaden ist `sms_text=None` — der Legacy-Formatter wird nicht mehr aktiv genutzt.
 2. **Format-Inkompatibilität.** Legacy erzeugt Form `E1:T12/18 W30 R5mm | E2:...` (Slash-Temperaturen, Pipe-Trennzeichen, Symbol "T"). Das ist **unvereinbar** mit `sms_format.md` v2.0 §2 / §3.2, das `{Name}: N D R PR W G TH: TH+: HR:TH:` mit getrennten N/D-Tokens vorschreibt.
@@ -228,7 +228,7 @@ def build_token_line(
 - **Keine Subject-Logik:** `filter_for_subject()` ist Stub, echte Logik in β2.
 - **Keine Migration der Caller:** `sms_trip.format_sms` und `trip_report.format_email` rufen weiterhin ihre eigene Logik auf. β3 stellt um.
 - **Keine Subscription:** β5.
-- **Keine Änderung an `src/formatters/sms_trip.py`** in β1.
+- **Keine Änderung an `src/output/renderers/sms_trip.py`** in β1.
 
 β1 baut nur den Builder + den DTO + Goldens + Conformance-Test. Die alten Pfade laufen unverändert weiter.
 
@@ -330,7 +330,7 @@ def test_render_never_exceeds_max_length(forecast, config):
 - [ ] HR/TH-Fusion korrekt: paarweise, kein Space, FR-only (außerhalb FR komplett weggelassen)
 - [ ] `@hour`-Pflicht für R, PR, W, G, TH, TH+, HR; Stunde 0–23 ohne führende Null
 - [ ] Threshold==Max-Optimierung: `(max@h)` entfällt wenn Threshold==Max
-- [ ] **Keine Änderung an `src/formatters/sms_trip.py`** in β1
+- [ ] **Keine Änderung an `src/output/renderers/sms_trip.py`** in β1
 - [ ] Keine bestehenden Tests gebrochen (`uv run pytest` zeigt keine Regression)
 - [ ] Public API dokumentiert (Docstrings auf `build_token_line` und `TokenLine`; `filter_for_subject`-Docstring klärt `D` = Tag-Max)
 - [ ] Property-Tests **optional** (empfohlen, nicht Pflicht)

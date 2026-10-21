@@ -3,7 +3,7 @@ entity_id: feat_2207_kurzform_verlauf
 type: module
 created: 2026-09-08
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, premium-sms, adhoc, metrik-katalog]
 ---

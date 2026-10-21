@@ -3,7 +3,7 @@ entity_id: bug_327_triphero_font_tokens
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.1"
 tags: [frontend, design-system, css, ap-017]
 ---

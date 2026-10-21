@@ -3,7 +3,7 @@ entity_id: bug_382_select_ios_zoom_tests
 type: tests
 created: 2026-05-25
 updated: 2026-05-26
-status: done
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, ios, safari, mobile, font-size, zoom, frontend, issue-382]
 parent: bug_382_select_ios_zoom
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_382_select_ios_zoom.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_382_select_ios_zoom.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_382_select_ios_zoom.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_382_select_ios_zoom.md` v1.0
 
 ## Source
 

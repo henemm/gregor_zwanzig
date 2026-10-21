@@ -3,7 +3,7 @@ entity_id: fix_1381_validator_spaltenreihenfolge
 type: bugfix
 created: 2026-07-26
 updated: 2026-07-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [validator, compare-mail, gate, issue-1381]
 ---

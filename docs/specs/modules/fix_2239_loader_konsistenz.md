@@ -3,7 +3,7 @@ entity_id: fix_2239_loader_konsistenz
 type: bugfix
 created: 2026-10-03
 updated: 2026-10-03
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2239-loader-divergenz
 issue: 2239

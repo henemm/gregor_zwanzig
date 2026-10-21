@@ -3,7 +3,7 @@ entity_id: issue_245_sms_prefix_separator
 type: bugfix
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, preview, formatting]
 ---

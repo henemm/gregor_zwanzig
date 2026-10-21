@@ -3,7 +3,7 @@ entity_id: fix_1537_s2b_secret_output_gate
 type: feature
 created: 2026-08-07
 updated: 2026-08-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [gate, security, post-tool-use, secrets]
 ---

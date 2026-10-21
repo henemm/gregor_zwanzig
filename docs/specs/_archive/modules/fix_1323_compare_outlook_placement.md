@@ -3,7 +3,7 @@ entity_id: fix_1323_compare_outlook_placement
 type: bugfix
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1323-outlook-placement
 tags: [compare, email, plain-text, outlook, placement, epic-1301]

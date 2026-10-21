@@ -3,7 +3,7 @@ entity_id: issue_342_pro_metrik_horizon_backend_tests
 type: tests
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, backend, weather, metric-preset, schema-migration, issue-342]
 parent: issue_342_pro_metrik_horizon_backend
@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer den Python-Renderer-Filter aus
-`docs/specs/modules/issue_342_pro_metrik_horizon_backend.md`. Jeder pytest-Test
+`docs/specs/_archive/modules/issue_342_pro_metrik_horizon_backend.md`. Jeder pytest-Test
 mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_342_pro_metrik_horizon_backend.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_342_pro_metrik_horizon_backend.md` v1.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: fix_1453_namensformen
 type: bugfix
 created: 2026-08-02
 updated: 2026-08-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, compare, trip-mail, validator, weather-metrics-tab, issue-1453]
 workflow: fix-1453-mail-deutsche-namen

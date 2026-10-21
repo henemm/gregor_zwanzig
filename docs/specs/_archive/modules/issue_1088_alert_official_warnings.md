@@ -3,7 +3,7 @@ entity_id: issue_1088_alert_official_warnings
 type: feature
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip-alert, alerts, official-alerts, epic-1073, epic-1073-slice-4]
 workflow: alert-1088-official-path

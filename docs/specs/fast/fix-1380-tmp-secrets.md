@@ -1,3 +1,10 @@
+---
+entity_id: fix_1380_tmp_secrets
+type: fast
+created: 2026-08-10
+status: implemented
+---
+
 # Mini-Spec: #1380 — Klartext-Zugangsdaten aus /tmp entfernen
 
 - **Issue:** #1380

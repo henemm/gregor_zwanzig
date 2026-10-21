@@ -3,7 +3,7 @@ entity_id: issue_180_alert_metric_table_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, alerts, frontend, svelte, issue-180, epic-139]
 parent: issue_180_alert_metric_table
@@ -18,7 +18,7 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_180_alert_metric_table.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_180_alert_metric_table.md`.
 Da Issue #180 rein Frontend ist (Svelte-Komponenten, kein Python-Code),
 prüfen die Tests Datei-Existenz und Inhalts-Invarianten der Svelte-Dateien.
 

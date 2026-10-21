@@ -3,7 +3,7 @@ entity_id: bug_288_ensemble_api_limit
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, ensemble, api-limit, open-meteo, alert-check, trip-report, issue-288]
 ---

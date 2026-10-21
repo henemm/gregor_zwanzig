@@ -3,7 +3,7 @@ entity_id: issue_348_parallel_workspaces
 type: infra
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [workflow, hooks, worktree, parallel-sessions, settings, tooling, issue-348]
 ---

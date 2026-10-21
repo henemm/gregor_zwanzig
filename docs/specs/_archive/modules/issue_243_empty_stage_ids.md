@@ -3,7 +3,7 @@ entity_id: issue_243_empty_stage_ids
 type: bugfix
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, frontend, backend, data-integrity]
 ---

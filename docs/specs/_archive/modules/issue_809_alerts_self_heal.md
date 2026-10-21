@@ -3,7 +3,7 @@ entity_id: issue_809_alerts_self_heal
 type: module
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, alerts, store, self-heal, frontend, bug]
 ---

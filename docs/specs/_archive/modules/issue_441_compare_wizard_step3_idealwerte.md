@@ -3,13 +3,15 @@ entity_id: issue_441_compare_wizard_step3_idealwerte
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: implemented
+status: deprecated
 version: "1.0"
 issue: 441
 tags: [sveltekit, frontend, wizard, step3, idealwerte, compare, epic-438]
 ---
 
 # Issue #441 — Orts-Vergleich Wizard Step 3 (Idealwerte)
+
+> Abgelöst/entfernt durch ADR-0032 / #683 (Compare-Wizard entfernt, `3bb5161a4`, 2026-06-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

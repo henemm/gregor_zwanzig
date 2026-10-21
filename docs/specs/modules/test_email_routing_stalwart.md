@@ -3,7 +3,7 @@ entity_id: test_email_routing_stalwart
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [backend, config, testing, email, stalwart]
 ---
@@ -30,7 +30,7 @@ Test-E-Mails gehen künftig an `gregor-test@henemm.com` (lokales Stalwart-Postfa
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `src/outputs/email.py` | bestehend | Resend-Guard: prüft `is_test_mode` + `"resend" in smtp_host` — bleibt unverändert korrekt |
+| `src/output/channels/email.py` | bestehend | Resend-Guard: prüft `is_test_mode` + `"resend" in smtp_host` — bleibt unverändert korrekt |
 | `data/users/default/user.json` | bestehend | `mail_to = gregor-test@henemm.com` — bereits geändert |
 | `.env` | bestehend | `GZ_TEST_SMTP_*` / `GZ_TEST_IMAP_*` bereits vorbereitet |
 | Stalwart `gregor-test@henemm.com` | Infrastruktur | Postfach existiert, IMAP + SMTP verifiziert |

@@ -3,7 +3,7 @@ entity_id: bug_401_segment_localtime
 type: module
 created: 2026-05-26
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.1"
 tags: [bug, timezone, scheduler, trip_report, segment, night_block, alert]
 ---
@@ -51,7 +51,7 @@ und bleiben korrekt.
 | `src/utils/timezone.py` | Upstream | `tz_for_coords`, `local_hour` — bereits in beiden Dateien verfügbar |
 | `src/app/models.py` | Constraint | `TripSegment.start_time/end_time: datetime` mit UTC-tzinfo |
 | `tests/tdd/test_issue_397_segment_timezone.py` | Referenz-Tests | Muster für UTC→CEST-Fixtures |
-| `docs/specs/modules/bug_397_segment_timezone_display.md` | Vorgänger | Anzeige-Konsistenz; dieser Fix macht Zeitfenster semantisch korrekt |
+| `docs/specs/_archive/modules/bug_397_segment_timezone_display.md` | Vorgänger | Anzeige-Konsistenz; dieser Fix macht Zeitfenster semantisch korrekt |
 
 ## Implementation Details
 

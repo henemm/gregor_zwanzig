@@ -3,7 +3,7 @@ entity_id: issue_479_f12_confidence_refactor_tests
 type: tests
 created: 2026-05-31
 updated: 2026-05-31
-status: approved
+status: implemented
 version: "1.0"
 tags: [tests, weather-pattern, sms, f12, issue-479]
 parent: issue_479_f12_confidence_refactor
@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_479_f12_confidence_refactor.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_479_f12_confidence_refactor.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion (AC-1 bis AC-10) der
 Parent-Spec. Keine Mocks — pure-funktionale Tests auf `compute_stability`,
 strukturelle Tests auf Klassen-Felder / Methoden-Signaturen.
 
-Parent-Spec: `docs/specs/modules/issue_479_f12_confidence_refactor.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_479_f12_confidence_refactor.md` v1.0
 
 ## Source
 

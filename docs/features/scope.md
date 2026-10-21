@@ -1,7 +1,7 @@
 # Gregor Zwanzig – Scope & Vision
 
 > Stand: 2026-07-21 (Doku-Audit #1341), 2026-08-10 (Issue #1676 S2a — Premium-SMS
-> ergänzt). Ersetzt die MVP-/CLI-Ära-Fassung (Git-Historie). Offene Arbeit steht
+> ergänzt), Kanal-Reichweite 2026-10-21 nachgezogen. Ersetzt die MVP-/CLI-Ära-Fassung (Git-Historie). Offene Arbeit steht
 > ausschließlich in GitHub Issues.
 
 ## Produkt
@@ -9,8 +9,11 @@
 Wetter-Risiko-Briefings für Weitwanderungen und Orts-Vergleiche — als
 Multi-User-Webprodukt (SvelteKit-Frontend) mit automatischem Versand über
 E-Mail, Telegram und SMS (seven.io), seit Issue #1676 S2a zusätzlich
-Premium-SMS (Garmin inReach, ADR-0049) — **ausschließlich fürs Trip-Briefing**,
-nicht für Alarme oder Orts-Vergleiche. Signal wurde entfernt (#610).
+Premium-SMS (Garmin inReach, ADR-0049) — heute (Stand 2026-10-21) als Versandkanal im
+Trip-Briefing (#1676 S2a) **und** im Ortsvergleich-Briefing (#2275), als Alarm-Kanal in beiden
+Flächen für alle Alarmarten (#1701, #1745, #1752). Die frühere Einschränkung „ausschließlich
+fürs Trip-Briefing" galt nur für S2a. Alle vier Kanäle sind gleichrangig (CLAUDE.md).
+Signal wurde entfernt (#610).
 
 ## Nutzer & Kontext
 
@@ -32,7 +35,8 @@ tauglich, unterwegs steuerbar (Inbound-Kommandos), kontextbezogen (Profil).
 
 - **Trip-Briefings:** Abend-/Morgen-Briefings pro Etappe (E-Mail full/compact,
   Telegram-Bubbles, SMS ≤160 Zeichen, seit #1676 S2a zusätzlich Premium-SMS
-  für Garmin-inReach-Nutzer mit Premium-Tier, kein UI bislang), Zeitpläne pro
+  für Garmin-inReach-Nutzer mit Premium-Tier; Oberflächen-Schalter im Versand-/Alarme-Reiter
+  seit #1745/#2293), Zeitpläne pro
   Nutzer.
 - **Orts-Vergleich:** Vergleichsmatrix über ≥2 Orte mit Idealbereichen,
   Winner-Logik, eigenem Mail-Template, Zeitplan-Versand.

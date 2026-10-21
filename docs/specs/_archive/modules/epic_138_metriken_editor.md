@@ -3,7 +3,7 @@ entity_id: epic_138_metriken_editor
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, sveltekit, weather-config, trip-detail, metrics, epic-138, bugfix]
 ---
@@ -20,7 +20,7 @@ Ersetzt den Platzhaltertext im „Wetter-Metriken"-Tab der Trip-Detail-Ansicht d
 
 ## Source
 
-- **CREATE:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **CREATE:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **MODIFY:** `frontend/src/lib/components/trip-detail/TripTabs.svelte`
 - **MODIFY:** `frontend/src/lib/components/trip-detail/index.ts`
 - **MODIFY:** `frontend/src/lib/components/WeatherConfigDialog.svelte`

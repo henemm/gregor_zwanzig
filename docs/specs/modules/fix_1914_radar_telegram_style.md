@@ -3,7 +3,7 @@ entity_id: fix_1914_radar_telegram_style
 type: module
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [radar, nowcast, alarm, telegram, telegram_style, trip, compare]
 ---

@@ -1,6 +1,6 @@
 # ADR-0009: Alerts sind Abweichungs-Wächter, keine absoluten Schwellen
 
-- **Status:** Teilweise abgelöst durch ADR-0056 (2026-08-16) — das Grundprinzip
+- **Status:** Teilweise abgelöst durch ADR-0056 (2026-08-16) und [ADR-0096](0096-radar-onset-alarm-absolute-schwelle.md) (Ausnahme Radar-/Onset-Alarm, Folgepflicht Zeile 49) — das Grundprinzip
   "Abweichungs-Wächter, nicht absolute Schwelle, nicht Vortagsvergleich" bleibt unverändert
   gültig; abgelöst ist nur die enge Kopplung "Snapshot wird ausschließlich beim
   Briefing-Versand persistiert, ohne Briefing kein Anker" (Zeile 22-23, 41-43 unten) — siehe

@@ -3,7 +3,7 @@ entity_id: issue_672_telegram_e2e_pipeline
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, e2e, tests, epic-639]
 ---
@@ -30,7 +30,7 @@ Verdrahtung, in der Bug **#671** lebt: das `setMyCommands`-Menü bewirbt Befehle
 - **File (neu, Test):** `tests/tdd/test_e2e_telegram_pipeline.py`
 - **Identifier:** Pipeline-E2E gegen `api.main:app` (FastAPI-`TestClient`)
 - **Fix #671 (PO-Entscheidung: gleich mitfixen) — Python-Backend:**
-  - `src/outputs/telegram.py` → `BOT_COMMANDS` auf das **vollständige Menü** setzen
+  - `src/output/channels/telegram.py` → `BOT_COMMANDS` auf das **vollständige Menü** setzen
     (PO-Entscheidung): glance, heute, morgen, heute_gewitter, timeline_heute,
     timeline_morgen, hilfe — alle mit gültigen Telegram-Command-Namen.
   - `src/services/inbound_telegram_reader.py` → `_SHORTCUT_MAP` um die

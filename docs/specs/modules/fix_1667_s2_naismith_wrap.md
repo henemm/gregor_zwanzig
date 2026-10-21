@@ -3,7 +3,7 @@ entity_id: fix_1667_s2_naismith_wrap
 type: bugfix
 created: 2026-08-10
 updated: 2026-08-11
-status: draft
+status: implemented
 workflow: fix-1667-s2-naismith-wrap
 version: "1.2"
 tags: [issue-1667, naismith, midnight-wrap, cross-language-parity, arrival-time]

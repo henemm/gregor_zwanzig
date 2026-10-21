@@ -3,7 +3,7 @@ entity_id: fix_1405_s1_alarm_zustellung
 type: module
 created: 2026-10-09
 updated: 2026-10-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, zustellung, erfolg-heisst-wirkung, backoff, kommando-report, issue-1405, epic-2505]
 ---

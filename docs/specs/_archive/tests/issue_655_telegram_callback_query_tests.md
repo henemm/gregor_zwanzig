@@ -25,13 +25,13 @@ an einem echten lokalen http.server-Socket beobachtet (Boundary-Capture via
 `TELEGRAM_API_BASE`); echter `TripCommandProcessor`, echter Trip + Snapshot, echte
 User-Auflösung. **Keine Mocks der Logik unter Test.**
 
-Parent-Spec: `docs/specs/modules/issue_655_telegram_callback_query.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_655_telegram_callback_query.md` v1.0
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_issue_655_telegram_callback_query.py` (NEU — mock-frei)
-- **Spec:** `docs/specs/modules/issue_655_telegram_callback_query.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/issue_655_telegram_callback_query.md` v1.0
 
 ## Test Inventory
 

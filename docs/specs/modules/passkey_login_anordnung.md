@@ -3,7 +3,7 @@ entity_id: passkey_login_anordnung
 type: module
 created: 2026-09-11
 updated: 2026-09-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [sveltekit, auth, webauthn, passkey, login, mobile]
 ---

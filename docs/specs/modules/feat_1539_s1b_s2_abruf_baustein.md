@@ -3,7 +3,7 @@ entity_id: feat_1539_s1b_s2_abruf_baustein
 type: feature
 created: 2026-10-08
 updated: 2026-10-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, nebenlaeufigkeit, single-flight, budget, parallel-fetch, multi-user, epic-2138, issue-1539]
 ---

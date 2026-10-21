@@ -2,7 +2,7 @@
 entity_id: issue_577_atoms_values_tests
 type: tests
 created: 2026-06-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, design-fidelity, issue-577, epic-575, foundation]
 parent: issue_577_atoms_sync_v2
@@ -23,7 +23,7 @@ zugehörigen `data-slot`/`data-size`/`data-variant`-Attributen), liest den
 computed style und prüft gegen JSX-Vorgaben. Token-Vergleich für Eyebrow als
 Bonus-AC.
 
-Parent-Spec: `docs/specs/modules/issue_577_atoms_sync_v2.md`.
+Parent-Spec: `docs/specs/_archive/modules/issue_577_atoms_sync_v2.md`.
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: epic_1301_b4_compare_outlook
 type: feature
 created: 2026-07-18
 updated: 2026-07-18
-status: draft
+status: implemented
 version: "1.0"
 workflow: epic-1301-b4-ausblick
 tags: [compare, email, plain-text, shared-with-trip, outlook, epic-1301]

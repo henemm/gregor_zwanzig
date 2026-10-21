@@ -3,7 +3,7 @@ entity_id: passkey_webauthn
 type: module
 created: 2026-05-30
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, sveltekit, multi-user, auth, webauthn, fido2, passkey, security]
 ---

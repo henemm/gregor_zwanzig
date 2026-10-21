@@ -3,7 +3,7 @@ entity_id: passkey_angebot_banner
 type: module
 created: 2026-09-12
 updated: 2026-09-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [passkey, login, profil]
 ---

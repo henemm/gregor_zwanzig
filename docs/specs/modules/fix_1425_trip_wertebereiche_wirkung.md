@@ -1,3 +1,10 @@
+---
+entity_id: fix_1425_trip_wertebereiche_wirkung
+type: module
+created: 2026-07-30
+status: implemented
+---
+
 # Fix #1425 — Trip: „Markieren" wirkt im Briefing (Schritt 1: Wirkung)
 
 - **Issue:** #1425 (Etappe S6 von #1372, Dach #1374) · Nachfolger des geschlossenen #1384

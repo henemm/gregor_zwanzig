@@ -3,7 +3,7 @@ entity_id: alarm_szenarien_waechter_4_9_11
 type: feature
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 workflow: feat-2050-s3a-waechter-szenarien-4-9-11
 version: "1.0"
 tags: [alarm, testing, harness]

@@ -3,7 +3,7 @@ entity_id: fix_2154_premium_sms_verknuepfungscode
 type: module
 created: 2026-09-13
 updated: 2026-09-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, inbound, premium, garmin, security, hijacking, seven-io]
 ---

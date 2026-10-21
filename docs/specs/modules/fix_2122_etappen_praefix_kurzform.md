@@ -3,7 +3,7 @@ entity_id: fix_2122_etappen_praefix_kurzform
 type: bugfix
 created: 2026-08-30
 updated: 2026-08-30
-status: draft
+status: implemented
 workflow: fix_2122_etappen_praefix_kurzform
 ---
 

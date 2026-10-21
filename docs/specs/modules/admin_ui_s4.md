@@ -3,7 +3,7 @@ entity_id: admin_ui_s4
 type: module
 created: 2026-09-30
 updated: 2026-09-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [admin, frontend, sveltekit, tier, kontosperre, navigation, epic-2138]
 ---

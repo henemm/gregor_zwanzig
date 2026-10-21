@@ -3,7 +3,7 @@ entity_id: fix_1422_warn_ausfall_alarm
 type: module
 created: 2026-07-30
 updated: 2026-07-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, observability, meteoalarm, geosphere-warn, scheduler-status]
 workflow: fix_1422_warn_ausfall_alarm

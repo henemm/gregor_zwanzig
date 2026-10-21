@@ -3,7 +3,7 @@ entity_id: fix_1796_official_alert_gsm7_extension
 type: bugfix
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, gsm7, alert, bugfix]
 ---

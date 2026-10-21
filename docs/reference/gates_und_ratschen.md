@@ -137,8 +137,12 @@ Zeichen). Grenzen — u. a. tote Pfade und Ketten ab 26 Gliedern — in
 ## Testnamens-Gate
 
 Testdateien nach Verhalten benennen (`test_alert_throttle.py`), NICHT nach Issue-Nummer. Durchgesetzt
-via `test_naming_gate.py`; Prüfdatum 2026-10-09. Bestand: 262 issue-nummerierte Dateien, Sanierung
+via `test_naming_gate.py`; Prüfdatum 2027-01-19 (verlängert 2026-10-21, PO). Bestand: 262 issue-nummerierte Dateien, Sanierung
 läuft unter #1196.
+
+Das Gate hatte sich am ursprünglichen Prüfdatum 2026-10-09 selbst abgeschaltet; der PO hat es am
+2026-10-21 um 90 Tage verlängert (`EXPIRY = date(2027, 1, 19)` in `.claude/hooks/test_naming_gate.py`,
+PR `tooling/hooks-pruefdaten`). Entscheidung behalten/entfernen am neuen Prüfdatum im Gate-Audit #1197.
 
 **Kein Big-Bang-Reorg des Bestands (Tech-Lead-Entscheid 2026-08-08):** Testpfade sind hart verdrahtet
 in `.github/ci_tdd_excludes.txt`, den Collection-Meta-Tests und den Ratschen — Massen-Umbenennung
@@ -166,7 +170,7 @@ nur mit Begründung im PR.
 ### e2e-Ratsche (umgekehrte Richtung)
 `.github/ci_e2e_specs.txt` ist eine **Positivliste** und darf nur WACHSEN — eine Ausschlussliste würde
 eine grüne Grundmenge voraussetzen, die eine Stichprobenmessung (30,6 % rot) widerlegt hat.
-Stand nach #1771 S3 (2026-08-14): **45 Dateien / 224 Testfälle**.
+Stand nach #1771 S3 (2026-08-14): 45 Dateien / 224 Testfälle; **Stand 2026-10-21 laut `.github/workflows/ci.yml`: `E2E_MIN_SPECS: 63` Dateien, `E2E_MIN_EXECUTED_HAUPT: 368` Testfälle** (dort ist jeder Zuwachs einzeln kommentiert).
 
 Aufnahme nur nach **Filter A** (strukturell) + **Filter B** (3× hintereinander grün) + **Filter C**
 (die Datei darf beim Laufen keine *versionierte* Datei verändern — 3 Specs schrieben Screenshots ohne
@@ -405,17 +409,53 @@ keinem Modell und nicht in der Fixture steht, fängt das Gate nicht — nur den 
 *Regel-Budget: trip_schema_drift — Prüfdatum 2027-01-03, siehe Tabelle unten. Spec:
 `docs/specs/modules/trip_schema_drift_gate.md`.*
 
+## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
+
+Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form
+`if [ -f … ]; then python3 … ; fi` — **fehlt die Datei, läuft der Hook still als No-op.** Die
+Workflow-Hooks (`workflow.py`, `workflow_gate`, Edit-Gate, `secret_egress_guard.py` u. a.) kommen
+aus dem Plugin `agent-os-openspec` (`.claude/framework_version.json`: `plugin_mode: true`) und
+liegen **nicht** in `.claude/hooks/`.
+
+| Ereignis | Hook | Wirkung | Abschnitt / Beleg |
+|---|---|---|---|
+| PreToolUse Bash | `renderer_mail_gate.py` | blockt Commit an Mail-Inhalts-Dateien ohne frischen Matrix-Test + Validator | oben „Renderer-Commit-Gate" |
+| PreToolUse Bash | `prod_send_gate.py` | blockt Bash-Kommandos, die einen echten Versand gegen Prod auslösen (Send-Pfad + Prod-Ziel Port 8000/8090 bzw. `gregor20.henemm.com` ohne `staging.` + kein reines GET) oder direkt `smtp.resend.com` ansprechen; Override `.claude/user_override_token.json` (TTL 1 h) | #1148, Spec `gate_1148_prod_send_deny.md` |
+| PreToolUse Bash | `broad_test_run_gate.py` | blockt `uv run pytest` ohne benannte Testdateien | oben „Breiter Testlauf gesperrt" |
+| PreToolUse Bash | `touched_tests_gate.py` | blockt Commit, der einen Test der berührten Dateien rot macht | oben „#1481 A" |
+| PreToolUse Bash | `pendant_gate.py` | blockt Neuanlage einseitiger Trip-/Compare-Dateien | oben „Pendant-Sperre" |
+| PreToolUse Bash | `pre_issue_close_design_gate.py` | blockt `gh issue close` bei Label `design-compliance` ohne bestandenes Design-Diff-Artefakt im aktiven Workflow | #603 |
+| PreToolUse Bash | `secret_in_repo_gate.py` | blockt `git commit`, wenn eine vorgemerkte Datei den Klartextwert eines `.env`-Geheimnisses (`*_PASS`/`_TOKEN`/`_KEY`/`_SECRET`, ≥ 10 Zeichen) enthält; schaltet sich **nicht** automatisch ab, Wirksamkeitsprüfung 2026-11-04 | #1537 S1 |
+| PreToolUse Write\|Edit | `test_naming_gate.py` | blockt neue issue-nummerierte Testdateien; Prüfdatum 2027-01-19 | oben „Testnamens-Gate" |
+| PreToolUse Write\|Edit | `data_schema_backup.py` | Snapshot von `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` vor Edit/Write an Schema-Dateien (Retention 20, übersprungen bei Snapshot < 5 Min) | CLAUDE.md „Daten-Schema-Reworks“, #102 |
+| PreToolUse Write\|Edit | `file_claim_gate.py` | trägt jede bearbeitete Datei in `.claude/file_claims.json` (Hauptrepo) ein und blockt Edit/Write bei Belegung durch eine andere aktive Session; deaktiviert sich selbst ab 2026-11-11 | PO-go 2026-08-13 |
+| PostToolUse * | `secret_output_gate.py` | ersetzt Klartextwerte von `.env`-Geheimnissen in **Tool-Ergebnissen** durch `***<SCHLÜSSEL>***` | #1537 S2 |
+| UserPromptSubmit | `context_budget_guard.py` | `⚑`-Zeile ab 180k Kontext, Aufforderung zu `/clear` ab 260k; blockiert nie | CLAUDE.md „Parallele Sessions & Token-Budget" |
+| Stop | `terminology_gate.py` | weist eine Antwort mit „Tour"/„Touren" zurück (Exit 2; Zitatzeilen `>` ausgenommen; fail-open) | Produktbegriffe Trip/Etappe/Ortsvergleich/Briefing |
+| Stop | `track_token_usage.py` | schreibt Token-Verbrauch ins Workflow-State-JSON (`token_usage`); immer Exit 0 | #829 |
+| Stop | `notify_sound.py` | Benachrichtigungston | — |
+| SessionStart | `/home/hem/claude-mq/check-messages.sh` | MQ-Posteingang prüfen (Pfad außerhalb des Repos) | `~/.claude/CLAUDE.md` |
+
+**Nicht in `settings.json` verdrahtet**, aber in `.claude/hooks/` vorhanden und manuell bzw. von
+Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mail_validator.py`,
+`email_spec_validator.py`, `official_alert_mail_validator.py`, `radar_alert_mail_validator.py`,
+`e2e_frontend_browser_gate.py`, `e2e_browser_test.py`, `e2e_telegram_live.py`, `design_fidelity_diff.py`,
+`e2e_commit_gate.py` (blockiert seit #339 nichts mehr, nur Hinweis + `detect_scope()`).
+`data_schema_backup.py` ist seit PR `tooling/hooks-pruefdaten` (2026-10-21) als PreToolUse `Write|Edit` verdrahtet (Tabelle oben); vorher fehlte der Eintrag trotz gegenteiliger Doku.
+
 ## Regel-Budget: Prüfdaten im Überblick
 
 | Regel / Gate | Prüfdatum | Fang-Beleg bei Einführung |
 |---|---|---|
 | Mutations-Gegenprobe | 2026-11-01 | #1448 (2 von 3 Scheiben), #1457 (6 Findings) |
 | Breiter Testlauf gesperrt | 2026-11-01 | #1477 (echter Telegram-Versand an Prod-Chat) |
-| CI-Ampel (5 Checks) | 2026-11-02 | 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196) |
+| CI-Ampel (eingeführt mit 5 Checks; seit #1771 S2 sechs, s. eigene Zeile `e2e`) | 2026-11-02 | 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196) |
 | Pendant-Sperre (#1481 B) | 2026-11-03 | — |
 | Touched-Tests-Gate (#1481 A) | 2026-11-03 | — |
-| Testnamens-Gate | 2026-10-09 | — |
+| Testnamens-Gate | 2027-01-19 (verlängert 2026-10-21, PO) | — |
 | Test-Pfadregel-Ratsche (#1409) | 2026-10-27 | — |
+| Datei-Claim-Gate `file_claim_gate.py` | 2026-11-11 (Selbstabschaltung im Hook) | — |
+| Secret-in-Repo-Sperre `secret_in_repo_gate.py` (#1537 S1) | 2026-11-04 (Wirksamkeitsprüfung, **keine** Selbstabschaltung) | #1537 (`GZ_AUTH_PASS` im Klartext im öffentlichen Repo) |
 | Frontend-Browser-Gate (#1558) | 2026-11-05 | #1552 (Kernseite unbedienbar bei grüner Ampel) |
 | 6. Check `e2e` (#1771 S2) | 2026-11-11 | offen — Kriterium: eine Regression, die die anderen fünf durchlassen |
 | staging_gate — `frontend/e2e/` nicht als Code klassifiziert (#1197) | 2026-11-15 | Live erlebt 2026-08-15 (PR-Stack #1736/#1852/#1881/#1882), Fix folgt |
@@ -429,6 +469,23 @@ keinem Modell und nicht in der Fixture steht, fängt das Gate nicht — nur den 
 | ADR-0049-Kanallisten-Ratsche `tests/test_adr0049_kanalliste_ratsche.py` — Dreier-Kanalliste ohne `premium_sms` nur mit Marke `ADR-0049` (#2229) | 2026-12-30 | — (bei Einführung 8 bewusst dreistellige Listen markiert; echter Fang offen) |
 | Trip-Schema-Drift-Gate `trip_schema_drift` — Test-Paar `tests/test_trip_schema_drift.py` + `internal/model/trip_schema_drift_test.go`, Allowlist `send_premium_sms`/`trip` (#2058) | 2027-01-03 | `suggestion_reason` nur in Python (Go-Editor-Save verwarf es still), bei Einführung geschlossen |
 | Egress-Struktur-Wächter `tests/tdd/test_egress_single_dial_point.py` — `smtplib` (#1412 S3a) und `httpx`-POST (#1412 S3b) nur an den erlaubten Ausgängen (`TelegramOutput._post`, `SevenIoChannelBase._post`), Deckel 3 localhost-Ausnahmen | 2027-01-04 | `seven_io_base.py:171` (`httpx.post` direkt in `SevenIoChannelBase.send`) bei Einführung gefangen und in `_post` verlegt |
+
+**Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per
+`grep -rn "Prüfdatum\|Pruefdatum" tests .claude/hooks`; Fang-Beleg hier nicht erhoben):
+
+| Wächter-Datei | Prüfdatum |
+|---|---|
+| `tests/test_adr_index_drift.py` (ADR-Index ↔ Dateien, in CLAUDE.md genannt) | 2027-01-19 (verlängert 2026-10-21, PO: Doku-Audit fand reale Drift) |
+| `tests/test_api_contract_drift.py` (Routen + Kern-Struct-Tags ↔ `api_contract.md`) | 2027-01-19 (verlängert 2026-10-21, PO: Doku-Audit fand reale Drift) |
+| `tests/test_resolution_loss_guard.py` | 2026-10-26 |
+| `tests/test_success_status_guard.py` | 2026-10-26 |
+| `tests/unit/test_compare_hourly_vocabulary_single_source.py` | 2026-10-30 |
+| `tests/unit/test_sms_token_symbol_register_ratchet.py` | 2026-10-30 |
+| `tests/tdd/test_data_root_hardcoding_ratchet.py` | 2026-11-07 |
+| `tests/tdd/test_fixture_wallclock_ratchet.py` | 2026-11-08 |
+| `tests/unit/test_metrik_listen_register_ratchet.py` (+ `tests/helpers/metrik_listen_scan.py`) | 2026-11-15 |
+| `tests/test_output_timezone_guard.py` | 2026-11-18 |
+| `tests/test_pii_log_guard.py` | 2026-12-26 |
 
 Am Prüfdatum gilt: kein nachweisbarer Fang → **Rückbau**. Wirkmodell:
 `docs/analysis/backlog-spirale-2026-07.md`.

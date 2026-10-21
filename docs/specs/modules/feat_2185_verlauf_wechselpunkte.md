@@ -3,7 +3,7 @@ entity_id: feat_2185_verlauf_wechselpunkte
 type: feature
 created: 2026-09-07
 updated: 2026-09-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [ad-hoc-abruf, trip-command-processor, wechselpunkte, epic-2133]
 ---

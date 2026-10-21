@@ -3,7 +3,7 @@ entity_id: fix_2065_verschaerfung_ueberholt_sperre
 type: module
 created: 2026-08-22
 updated: 2026-08-22
-status: approved
+status: implemented
 workflow: fix-2065-verschaerfung-durchbricht-sperrzeit
 version: "1.0"
 tags: [alarm, nowcast, sperrzeit, entdopplung]

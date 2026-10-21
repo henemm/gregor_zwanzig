@@ -3,7 +3,7 @@ entity_id: issue_722_email_compact_format
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: approved
+status: implemented
 version: "1.0"
 tags: [feature, email, compact, plain-text, renderer, byte-size, issue-722, slice-709]
 ---
@@ -47,10 +47,10 @@ dieselben `helpers.py`-Bausteine (`build_metrics_summary_pills`, Stabilitäts-Te
 - **File:** `src/output/renderers/email/__init__.py`
 - **Identifier:** `render_email()` (Gating full vs. compact)
 
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** `TripReportFormatter.format()` (email_format durchreichen, text-only Signal)
 
-- **File:** `src/outputs/email.py`
+- **File:** `src/output/channels/email.py`
 - **Identifier:** `EmailOutput.send()` (`html=False`-Pfad: reines ASCII → `us-ascii`/7bit statt base64)
 
 - **File:** `src/services/trip_report_scheduler.py`

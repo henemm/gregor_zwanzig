@@ -3,7 +3,7 @@ entity_id: issue_1324_compare_metric_parity
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, metrics, mapping, weather-metrics, catalog]
 workflow: 1324-compare-metric-catalog
@@ -83,7 +83,7 @@ Abweichungen von der ursprünglichen Analyse (`docs/context/1324-compare-metric-
    `_metric_visible(...)`-Zeilen (Klartext, `comparison.py`) sind getrennte
    Renderer-Zeilenlisten, die beide gepflegt werden müssen — sonst zeigt die
    HTML-Mail die neue Zeile, die Klartext-Mail nicht (HTML/Text-Asymmetrie,
-   exakt die Falle, die in `docs/specs/modules/issue_1296_compare_metrics_dropped.md`
+   exakt die Falle, die in `docs/specs/_archive/modules/issue_1296_compare_metrics_dropped.md`
    dokumentiert ist). `frontend/src/lib/components/compare/compareEditorSlice3.test.ts`
    und `issue_718_idealwert_validation.test.ts` (im Context als MODIFY
    gelistet) haben nach eigener Prüfung **keine** feste Metrik-Zahl/-Liste,

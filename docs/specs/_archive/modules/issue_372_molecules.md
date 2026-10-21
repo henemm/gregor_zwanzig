@@ -3,7 +3,7 @@ entity_id: issue_372_molecules
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, atomic-design, molecules, epic-368, issue-372]
 ---

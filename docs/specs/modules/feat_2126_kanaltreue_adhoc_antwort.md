@@ -3,7 +3,7 @@ entity_id: feat_2126_kanaltreue_adhoc_antwort
 type: module
 created: 2026-09-06
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.1"
 tags: [kanaltreue, adhoc-abruf, trip-command-processor, trip-report-scheduler, epic-2133]
 ---

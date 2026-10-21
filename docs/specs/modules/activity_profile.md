@@ -3,7 +3,7 @@ entity_id: activity_profile
 type: module
 created: 2026-05-01
 updated: 2026-05-01
-status: active
+status: implemented
 version: "1.0"
 tags: [refactor, model, harmonization, profile]
 issue: 98

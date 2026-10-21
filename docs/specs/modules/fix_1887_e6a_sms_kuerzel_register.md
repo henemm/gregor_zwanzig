@@ -3,7 +3,7 @@ entity_id: fix_1887_e6a_sms_kuerzel_register
 type: bugfix
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.1"
 tags: [metric-catalog, sms, trip, register, wind-chill]
 workflow: fix-1857-e6-temp-register

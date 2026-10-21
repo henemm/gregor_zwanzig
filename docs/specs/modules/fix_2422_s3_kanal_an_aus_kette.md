@@ -3,7 +3,7 @@ entity_id: fix_2422_s3_kanal_an_aus_kette
 type: bugfix
 created: 2026-09-28
 updated: 2026-09-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, invariante, versand, kanaele, schedule, orakel, fix]
 workflow: fix-2422-s3-kanal-an-aus-kette

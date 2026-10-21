@@ -3,7 +3,7 @@ entity_id: feat_1461_s3b2b_compare_kanal_schwelle
 type: feature
 created: 2026-08-06
 updated: 2026-08-06
-status: draft
+status: implemented
 version: "1.3"
 tags: [alerts, channels, threshold, compare, epic-1458, issue-1461, s3b2b]
 ---

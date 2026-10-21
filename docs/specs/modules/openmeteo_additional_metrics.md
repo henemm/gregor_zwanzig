@@ -36,7 +36,7 @@ tags: [openmeteo, provider, metrics, catalog, aggregation, formatter, highlights
   - `src/app/models.py` (MODIFY) - 2 neue Felder in SegmentWeatherSummary
   - `src/services/weather_metrics.py` (MODIFY) - 2 Compute-Methoden + Validation
   - `src/services/weather_change_detection.py` (MODIFY) - 2 Threshold-Eintraege
-  - `src/formatters/trip_report.py` (MODIFY) - 4 Formatter-Cases in _fmt_val + Highlights + Risk
+  - `src/output/renderers/trip_report.py` (MODIFY) - 4 Formatter-Cases in _fmt_val + Highlights + Risk
 
 ## Dependencies
 
@@ -162,7 +162,7 @@ Keine weiteren Code-Aenderungen noetig - `detect_changes()` iteriert bereits ueb
 
 #### 2.4 Formatter: _fmt_val fuer 4 neue col_keys
 
-**Datei:** `src/formatters/trip_report.py`, Methode `_fmt_val()` (Zeile 252-285)
+**Datei:** `src/output/renderers/trip_report.py`, Methode `_fmt_val()` (Zeile 252-285)
 
 **Einfuegen vor Zeile 285 (`return str(val)`):**
 
@@ -204,7 +204,7 @@ if key == "freeze_lvl":
 
 #### 3.1 _compute_highlights(): 2 neue Highlight-Zeilen
 
-**Datei:** `src/formatters/trip_report.py`, Methode `_compute_highlights()` (Zeile 157-212)
+**Datei:** `src/output/renderers/trip_report.py`, Methode `_compute_highlights()` (Zeile 157-212)
 
 **Einfuegen nach Zeile 211 (vor `return highlights`):**
 
@@ -237,7 +237,7 @@ if max_cape >= 1000:
 
 #### 3.2 _determine_risk(): 2 neue Risk-Bedingungen
 
-**Datei:** `src/formatters/trip_report.py`, Methode `_determine_risk()` (Zeile 230-246)
+**Datei:** `src/output/renderers/trip_report.py`, Methode `_determine_risk()` (Zeile 230-246)
 
 **Einfuegen nach Zeile 244 (vor letztem `return ("none", "✓ OK")`):**
 
@@ -375,7 +375,7 @@ if agg.pop_max_pct and agg.pop_max_pct >= 80:
 | 1 | `src/app/models.py` | MODIFY - 2 Felder (v2.0) | ~5 |
 | 2 | `src/services/weather_metrics.py` | MODIFY - 2 Methoden + Integration + Validation (v2.0) | ~55 |
 | 3 | `src/services/weather_change_detection.py` | MODIFY - 2 Thresholds (v2.0) | ~4 |
-| 4 | `src/formatters/trip_report.py` | MODIFY - 4 _fmt_val Cases (v2.0) + 2 Highlights + 3 Risk (v2.1) | ~50 |
+| 4 | `src/output/renderers/trip_report.py` | MODIFY - 4 _fmt_val Cases (v2.0) + 2 Highlights + 3 Risk (v2.1) | ~50 |
 
 **Total v2.0:** ~94 LoC, 4 Dateien (ERLEDIGT)
 **Total v2.1:** ~20 LoC, 1 Datei (DIESES TICKET)

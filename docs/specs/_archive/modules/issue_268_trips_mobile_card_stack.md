@@ -3,7 +3,7 @@ entity_id: issue_268_trips_mobile_card_stack
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: active
+status: implemented
 version: "1.0"
 tags: [frontend, mobile, trips, card-stack, bottom-sheet, touch-target, svelte, responsive, issue-268]
 ---

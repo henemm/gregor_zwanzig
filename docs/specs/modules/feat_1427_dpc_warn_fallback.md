@@ -3,7 +3,7 @@ entity_id: feat_1427_dpc_warn_fallback
 type: module
 created: 2026-07-31
 updated: 2026-07-31
-status: draft
+status: implemented
 version: "2.0"
 tags: [official-alerts, meteoalarm, dpc, italy, additive-source]
 workflow: feat-1427-dpc-fallback

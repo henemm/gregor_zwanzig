@@ -3,7 +3,7 @@ entity_id: issue_323_hex_fallbacks_cleanup
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [design-system, css-tokens, frontend, ap-007, bugfix]
 ---
@@ -38,8 +38,8 @@ Zwei Dateien (`SmsPhoneFrame.svelte` und `profileSignature.ts`) wurden beim AP-0
 |--------|------|---------|
 | `frontend/src/app.css` | Upstream | Definiert alle `--g-*` Token (Single Source of Truth); alle referenzierten Tokens bereits vorhanden |
 | `docs/design-system/ANTI-PATTERNS.md` | Referenz | Regel AP-007 mit Grep-Kommando |
-| `docs/specs/modules/issue_277_css_variable_fallbacks.md` | Referenz | Vorherige Bereinigung (26 Komponenten) — gleiche Ersetzungslogik |
-| `docs/specs/modules/issue_238_profile_signatures.md` | Abgelöst | AC-3/AC-5 forderten `accentFallback` mit Hex — Bug #323 hat Priorität |
+| `docs/specs/_archive/modules/issue_277_css_variable_fallbacks.md` | Referenz | Vorherige Bereinigung (26 Komponenten) — gleiche Ersetzungslogik |
+| `docs/specs/_archive/modules/issue_238_profile_signatures.md` | Abgelöst | AC-3/AC-5 forderten `accentFallback` mit Hex — Bug #323 hat Priorität |
 
 ## Implementation Details
 

@@ -3,7 +3,7 @@ entity_id: issue_1158_mobile_sheet_close
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [mobile, editor, bugfix, sheet]
 ---

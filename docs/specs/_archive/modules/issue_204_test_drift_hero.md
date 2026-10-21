@@ -3,12 +3,15 @@ entity_id: issue_204_test_drift_hero
 type: bugfix
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: superseded
+superseded_by: "#334"
 version: "1.0"
 tags: [frontend, e2e, test-drift]
 ---
 
 # Issue #204 — Test-Drift: trip-detail-hero AC-11 hartkodiertes Datum
+
+> Abgelöst durch #334 (TripHero als toter Code entfernt, `c75c87578`, 2026-05-24).
 
 ## Approval
 

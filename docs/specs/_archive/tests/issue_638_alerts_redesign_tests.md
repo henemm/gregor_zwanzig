@@ -3,7 +3,7 @@ entity_id: issue_638_alerts_redesign_tests
 type: tests
 created: 2026-06-08
 updated: 2026-06-08
-status: approved
+status: implemented
 version: "1.0"
 tags: [alerts, channels, severity, routing, multi-user]
 ---

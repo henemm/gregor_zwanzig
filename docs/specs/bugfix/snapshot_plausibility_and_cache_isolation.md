@@ -3,7 +3,7 @@ entity_id: snapshot_plausibility_and_cache_isolation
 type: bugfix
 created: 2026-02-20
 updated: 2026-02-20
-status: draft
+status: implemented
 version: "1.0"
 severity: HIGH
 tags: [test-isolation, cache, fallback, visibility, plausibility, openmeteo, weather-05b]

@@ -3,7 +3,7 @@ entity_id: fix_1447_s2a_scheduler_ueberlappung_teilerfolg
 type: bugfix
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.1"
 tags: [scheduler, go, observability, überlappung, teilerfolg]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_1207_versand_orchestrator
 type: bugfix
 created: 2026-07-16
 updated: 2026-07-16
-status: approved
+status: implemented
 version: "3.0"
 tags: [compare, dispatch-orchestrator, rate-limit]
 workflow: feat-1207-compare-sendepause-fehler

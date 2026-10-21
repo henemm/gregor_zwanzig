@@ -3,7 +3,7 @@ entity_id: feat_1676_s1_premium_sms_rueckkanal
 type: module
 created: 2026-08-10
 updated: 2026-09-14
-status: draft
+status: implemented
 version: "1.6"
 tags: [sms, inbound, premium, garmin, seven-io, dual-stack]
 ---

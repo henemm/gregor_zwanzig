@@ -3,7 +3,7 @@ entity_id: fix_1935_1779_alarm_nachricht_klarheit
 type: bugfix
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 workflow: fix-1935-1779-alarm-nachricht-klarheit
 ---
 

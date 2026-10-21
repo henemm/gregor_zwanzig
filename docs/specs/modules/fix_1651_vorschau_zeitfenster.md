@@ -3,7 +3,7 @@ entity_id: fix_1651_vorschau_zeitfenster
 type: bugfix
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "2.0"
 tags: [gewitter, vorschau, zeitfenster, issue-1651]
 ---

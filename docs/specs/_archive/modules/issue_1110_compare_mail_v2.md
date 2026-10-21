@@ -3,7 +3,7 @@ entity_id: issue_1110_compare_mail_v2
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 issue: 1110
 tags: [compare, email, renderer, html, python, redesign]
@@ -136,7 +136,7 @@ CV2_METRICS = [
   Scheibe 2 (2026-07-12):** `_sev_wind` ist auf `severity_for()`/Katalog-Schwellen
   umgestellt (`yellow:30, orange:50, red:70` statt der hartcodierten `>40/30/20`) — behebt
   eine Diskrepanz zur Trip-Briefing-Ampel bei 45 km/h (siehe
-  `docs/specs/modules/issue_1214_metric_format_slice1_2.md`). Die übrigen Schwellen
+  `docs/specs/_archive/modules/issue_1214_metric_format_slice1_2.md`). Die übrigen Schwellen
   (`_sev_temp`, `_sev_gust`, `_sev_rain`, `_sev_uv`) sind von dieser Migration nicht betroffen.
 
 ### 3. Warn-Lead-Block (oben) + Langform-Warn-Streifen (je Ort)
@@ -351,5 +351,5 @@ sondern dieselbe strukturelle Gliederung (Übersicht je Ort + amtliche Warnungen
 
 ## Changelog
 
-- 2026-07-08: Initial spec erstellt — Issue #1110, superseded `docs/specs/modules/issue_253_compare_email.md`.
-- 2026-07-12 (Issue #1214, Scheibe 2): Wind-Severity-Schwelle in Section 2 als überholt markiert — `_sev_wind` nutzt jetzt `severity_for()`/Katalog-Schwellen statt der hier ursprünglich dokumentierten hartcodierten `>40/30/20 km/h`. Sichtbare Folge: Wind 45 km/h zeigt in Compare-Mails jetzt gelb statt rot (Angleichung an Trip-Briefing). Siehe `docs/specs/modules/issue_1214_metric_format_slice1_2.md`.
+- 2026-07-08: Initial spec erstellt — Issue #1110, superseded `docs/specs/_archive/modules/issue_253_compare_email.md`.
+- 2026-07-12 (Issue #1214, Scheibe 2): Wind-Severity-Schwelle in Section 2 als überholt markiert — `_sev_wind` nutzt jetzt `severity_for()`/Katalog-Schwellen statt der hier ursprünglich dokumentierten hartcodierten `>40/30/20 km/h`. Sichtbare Folge: Wind 45 km/h zeigt in Compare-Mails jetzt gelb statt rot (Angleichung an Trip-Briefing). Siehe `docs/specs/_archive/modules/issue_1214_metric_format_slice1_2.md`.

@@ -25,7 +25,7 @@ Versand-Tab — weder in createMode noch in edit mode in WeatherMetricsTab.
 Dieser Fix hat `EditReportConfigSection` vollständig aus `WeatherMetricsTab.svelte` entfernt
 und damit ungewollt auch die E-Mail-Inhalt-Karte (Ausblick/Etappen-Kennzahlen/
 Vortagesvergleich/Format-Schalter) aus dem Inhalt-Reiter entfernt — entgegen AC-2 aus
-`docs/specs/modules/issue_736_tabs_reorg.md`, wonach die Karte dort sichtbar bleiben sollte.
-Durch Fix #1047 (`docs/specs/modules/fix_1047_mail_content_tab_restore.md`) wurde die Karte
+`docs/specs/_archive/modules/issue_736_tabs_reorg.md`, wonach die Karte dort sichtbar bleiben sollte.
+Durch Fix #1047 (`docs/specs/_archive/modules/fix_1047_mail_content_tab_restore.md`) wurde die Karte
 über eine neue `showSchedule`-Prop gezielt wieder eingebunden, ohne die hier beschriebenen
 Zeitplan-Karten zurückzubringen.

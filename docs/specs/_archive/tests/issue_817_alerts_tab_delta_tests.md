@@ -3,7 +3,7 @@ entity_id: issue_817_alerts_tab_delta_tests
 type: test
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, delta, alerts-tab, sync-alert-rules, cross-lang-contract]
 ---

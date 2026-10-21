@@ -3,7 +3,7 @@ entity_id: warn_service_isolation
 type: module
 created: 2026-07-22
 updated: 2026-07-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [egress, isolation, warn-services, staging, "1348", "1337"]
 workflow: feat-1348-warn-isolation-2b

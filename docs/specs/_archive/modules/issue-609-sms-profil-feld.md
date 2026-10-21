@@ -47,7 +47,7 @@ Ergaenzt das Nutzerprofil um ein `sms_to`-Feld (Handynummer im internationalen F
 | `PUT /api/auth/profile` | Go API endpoint | Nimmt `sms_to` als optionales Feld entgegen; bestehender Handler wird additiv erweitert |
 | `GET /api/auth/profile` (`profileResponse`) | Go API endpoint | Gibt `sms_to` zurueck damit das Frontend den gespeicherten Wert anzeigen kann |
 | `$lib/api.ts` — `api.put()` | SvelteKit helper | Sendet `sms_to` im bestehenden `save()`-Call mit |
-| `SMSOutput` (`src/outputs/sms.py`) | Python backend | Liest `user.SmsTo` aus der JSON-Persistenz — Downstream-Abhaenger, wird durch diese Spec erst einsatzbereit |
+| `SMSOutput` (`src/output/channels/sms.py`) | Python backend | Liest `user.SmsTo` aus der JSON-Persistenz — Downstream-Abhaenger, wird durch diese Spec erst einsatzbereit |
 | `EditReportConfigSection.svelte` | SvelteKit component | Trip-Report-Kanal-Auswahl — behebt `sms_phone`→`sms_to` Feldname-Mismatch, ergaenzt SMS-Checkbox |
 | `compareWizardState.svelte.ts` | SvelteKit state | Vergleichs-Wizard-State — ergaenzt `sendSms: boolean` |
 | `Step5Versand.svelte` | SvelteKit component | Compare-Wizard Step 5 — ergaenzt SMS-ChannelToggle analog zu E-Mail/Telegram |

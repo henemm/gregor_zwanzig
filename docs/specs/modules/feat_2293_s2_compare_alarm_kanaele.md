@@ -3,7 +3,7 @@ entity_id: feat_2293_s2_compare_alarm_kanaele
 type: feature
 created: 2026-09-28
 updated: 2026-09-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, compare, channels, frontend, go, python]
 ---

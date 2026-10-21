@@ -3,7 +3,7 @@ entity_id: hiking_window_single_source
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [renderer, sms, telegram, compact_summary, email-pillen, hiking-window, issue-1417, issue-1146, issue-806, issue-807]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_1214_metric_format_slice4
 type: module
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-format, trip-briefing, dead-code, konsolidierung, issue-1214]
 ---
@@ -38,7 +38,7 @@ Issue #1214 Scheibe 4 vollzieht die in Issue #778 (Spec `issue_783_776_778_brief
 | `src/output/renderers/email/helpers.py` (`fmt_val`) | module | Kanonischer, lebendiger Formatierungspfad (Scheibe 3) — Ziel für portierte Tests aus dem toten Test-Korpus |
 | `src/output/metric_format.py` | module | Scheibe-1-3-Modul — bleibt in dieser Scheibe **unverändert** |
 | `src/output/renderers/email/render_email` | module | Lebendiger Render-Pfad, an den `format_email` delegiert — bleibt unverändert, muss nach Löschung weiter fehlerfrei funktionieren |
-| `tests/tdd/test_issue_778_dead_code.py` | test | Vorbestehend kaputt (`FileNotFoundError` auf `src/formatters/trip_report.py`) — Pfad-Fix macht ihn zum GREEN-Nachweis dieser Scheibe |
+| `tests/tdd/test_issue_778_dead_code.py` | test | Vorbestehend kaputt (`FileNotFoundError` auf `src/output/renderers/trip_report.py`) — Pfad-Fix macht ihn zum GREEN-Nachweis dieser Scheibe |
 | `tests/tdd/test_issue_623_trend_channels.py` (`test_render_html_table_still_present`) | test | Veralteter Existenz-Guard — zu löschen |
 | `tests/unit/test_weather_metrics_ux.py`, `tests/integration/test_friendly_format_and_alerts_config.py`, `tests/integration/test_friendly_format_email_and_alerts.py`, `tests/unit/test_configurable_thresholds.py`, `tests/integration/test_config_persistence.py`, `tests/integration/test_units_legend.py`, `tests/unit/test_issue_347_sunshine_hours.py`, `tests/tdd/test_utc_localtime.py` | test | Rufen `formatter._fmt_val(...)` direkt auf — Triage nötig (Duplikat löschen / auf `helpers.fmt_val` portieren / Alt-Verhalten ersatzlos löschen) |
 | `.claude/hooks/renderer_mail_gate.py` | gate | Greift ECHT, da `trip_report.py` eine Mail-Inhalts-Datei ist (Renderer-Mail-Gate #811) — blockiert Commit ohne frischen `test_issue_811_mode_matrix.py`-Lauf + `briefing_mail_validator.py`-Nachweis gegen eine echte, frisch versendete Trip-Briefing-Test-Mail (Implementierungsdetail, kein AC) |
@@ -64,7 +64,7 @@ Dazwischenliegend bleiben **unverändert erhalten**: `_generate_compact_summary`
 
 **Explizit NICHT zu entfernen:** `ThunderLevel` (weitere Aufrufer Zeile 360, 501), `local_fmt` (weitere Aufrufer u.a. Zeile 504, 525, 562, 632), `DaylightWindow` (Konstruktor-Parametertyp Zeile 70), `get_metric` (weitere Aufrufer u.a. Zeile 510, 547, 574, 585), `_visible_cols` (weiterer Aufrufer Zeile 457) — alle bleiben durch lebendige Aufrufstellen außerhalb der gelöschten Methoden erforderlich.
 
-**`tests/tdd/test_issue_778_dead_code.py` Pfad-Fix:** `_TRIP_REPORT`-Konstante zeigt auf den nicht mehr existierenden Pfad `src/formatters/trip_report.py` (Umzug seit beta3) → korrigieren auf `src/output/renderers/trip_report.py`. Danach ist `test_dead_formatter_methods_removed` (aktuell `# doc-compliance-test`, RED weil Datei nicht gefunden wird) der Struktur-Nachweis der Löschung, `test_format_email_renders_after_dead_code_removal` der bereits grüne Verhaltens-Regressionsschutz.
+**`tests/tdd/test_issue_778_dead_code.py` Pfad-Fix:** `_TRIP_REPORT`-Konstante zeigt auf den nicht mehr existierenden Pfad `src/output/renderers/trip_report.py` (Umzug seit beta3) → korrigieren auf `src/output/renderers/trip_report.py`. Danach ist `test_dead_formatter_methods_removed` (aktuell `# doc-compliance-test`, RED weil Datei nicht gefunden wird) der Struktur-Nachweis der Löschung, `test_format_email_renders_after_dead_code_removal` der bereits grüne Verhaltens-Regressionsschutz.
 
 **`tests/tdd/test_issue_623_trend_channels.py::test_render_html_table_still_present`** (Zeile 437-441, Klasse `TestDeadCodeRemoved`): behauptet `_render_html_table` sei „still used" — nachweislich falsch (siehe Beweiskette oben). Wird ersatzlos gelöscht; die beiden Schwester-Tests derselben Klasse (`test_render_html_method_gone`, `test_render_plain_method_gone`) bleiben unverändert bestehen.
 

@@ -3,7 +3,7 @@ entity_id: fix_1409_worktree_test_paths
 type: bugfix
 created: 2026-07-28
 updated: 2026-07-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, worktree, gates, infrastructure]
 ---
@@ -60,7 +60,7 @@ in `src/`, `api/`, `internal/` oder `frontend/`.
 | `.claude/hooks/design_fidelity_diff.py` | Prüfling | löst Soll-Bilder + Artefaktziel zusätzlich über `Path(".")` relativ zum `cwd` auf (Zeilen 292-294) — deshalb Drei-Konstanten-Split |
 | `.claude/hooks/pre_issue_close_design_gate.py` | Prüfling | liest `CLAUDE_PROJECT_DIR`, kein harter Hauptrepo-Pfad |
 | `docs/specs/modules/fix_1382_deploy_gate_evidence.md` | Spec | Dieselbe Fehlerfamilie (Schreibweg ≠ Leseweg) |
-| `docs/specs/modules/issue_784_staging_gate_worktree_head.md` | Spec | Worktree-HEAD vs. Hauptrepo-HEAD |
+| `docs/specs/_archive/modules/issue_784_staging_gate_worktree_head.md` | Spec | Worktree-HEAD vs. Hauptrepo-HEAD |
 | `docs/context/fix-1409-worktree-pfade.md` | Kontext | Vollständige Bestandsaufnahme, Klassifikation A/B/C, PO-Schnitt |
 
 ## Implementation Details

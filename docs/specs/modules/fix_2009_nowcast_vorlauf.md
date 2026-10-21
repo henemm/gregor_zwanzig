@@ -3,10 +3,12 @@ entity_id: fix_2009_nowcast_vorlauf
 type: bugfix
 created: 2026-08-20
 updated: 2026-08-20
-status: approved
+status: implemented
 version: "1.0"
 tags: [alerts, radar, nowcast, trip, compare]
 ---
+
+> Teilweise abgelöst durch `feat_2261_a1_radar_vorlauf` (PO-Entscheid A-1, 2026-08-21): Schwelle 55 und deren Begründung gelten nicht mehr; der Drift-Schutz AC-1 bleibt gültig.
 
 # Nowcast-Vorlauf: geteilte Onset-Schwelle 20 → 55 Minuten (Issue #2009)
 

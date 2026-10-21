@@ -3,7 +3,7 @@ entity_id: public_host
 type: bugfix
 created: 2026-09-09
 updated: 2026-09-09
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2272-python-public-host
 tags: [config, staging, links]

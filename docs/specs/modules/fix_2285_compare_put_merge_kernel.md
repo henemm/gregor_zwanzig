@@ -3,7 +3,7 @@ entity_id: fix_2285_compare_put_merge_kernel
 type: refactor
 created: 2026-09-10
 updated: 2026-09-10
-status: approved
+status: implemented
 version: "1.0"
 tags: [compare, trips, go-api, persistence]
 ---

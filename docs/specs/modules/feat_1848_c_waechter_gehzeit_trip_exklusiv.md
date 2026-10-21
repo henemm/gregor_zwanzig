@@ -3,7 +3,7 @@ entity_id: feat_1848_c_waechter_gehzeit_trip_exklusiv
 type: module
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrik-register, ortsvergleich, waechter, 1848]
 ---

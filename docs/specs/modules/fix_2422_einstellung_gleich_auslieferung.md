@@ -3,7 +3,7 @@ entity_id: fix_2422_einstellung_gleich_auslieferung
 type: bugfix
 created: 2026-09-26
 updated: 2026-09-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, invariante, konfiguration, kanaele, orakel]
 workflow: fix-2422-konfig-auslieferung-testluecken

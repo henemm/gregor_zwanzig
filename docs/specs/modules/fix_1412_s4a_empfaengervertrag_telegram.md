@@ -3,7 +3,7 @@ entity_id: fix_1412_s4a_empfaengervertrag_telegram
 type: module
 created: 2026-10-13
 updated: 2026-10-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, empfaengervertrag, mandantentrennung, egress, test-knopf, 1412]
 workflow: feat-1412-s4a-empfaengervertrag-telegram

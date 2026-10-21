@@ -3,7 +3,7 @@ entity_id: issue_362_score_toggle
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 issue: 362
 tags: [frontend, sveltekit, go, compare, scoring, weather-config, locations, subscriptions]

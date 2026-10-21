@@ -3,7 +3,7 @@ entity_id: issue_773_radar_alert_wiring
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, scheduler, radar, e2e, wiring, mandantentrennung]
 ---

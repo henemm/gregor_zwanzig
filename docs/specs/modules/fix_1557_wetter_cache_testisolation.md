@@ -3,7 +3,7 @@ entity_id: fix_1557_wetter_cache_testisolation
 type: bugfix
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, weather-cache, test-isolation, ci-ratsche]
 workflow: fix-1557-no-weather-outcome

@@ -3,7 +3,7 @@ entity_id: issue_181_alert_cooldown_quiet_hours
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 issue: 181
 tags: [alerts, frontend, backend, trip-model, cooldown, quiet-hours, issue-181, epic-139]

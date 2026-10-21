@@ -3,7 +3,7 @@ entity_id: issue_257_trip_briefing_polish_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, dark-footer, pill, mobile, issue-257, epic-236]
 parent: issue_257_trip_briefing_mail_polish
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_257_trip_briefing_mail_polish.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_257_trip_briefing_mail_polish.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_257_trip_briefing_mail_polish.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_257_trip_briefing_mail_polish.md` v1.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: egress_guard_go
 type: module
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [egress, isolation, staging, security, go]
 workflow: feat-1337-go-egress-guard

@@ -3,7 +3,7 @@ entity_id: feat_1717_s3_premium_sms_ui
 type: module
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, premium, garmin, seven-io, channel, frontend, go-api]
 ---

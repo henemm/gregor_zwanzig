@@ -1,6 +1,6 @@
 ---
 entity_id: feat_1492_s2a_thunder_vertretung
-status: draft
+status: implemented
 type: module
 created: 2026-08-06
 updated: 2026-08-06

@@ -38,6 +38,8 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
 | `docs/reference/gates_und_ratschen.md` | **Detailmechanik aller Gates/Ratschen** — bei Blockade hier nachsehen |
 | `docs/reference/mail_validators.md` | Plausibilitäts-Schwellen, Anti-Stale-Mechanik |
 | `docs/reference/decision_matrix.md` | Provider-Ist-Stand (Open-Meteo + Fallback-Kette) |
+| `docs/reference/sms_format.md` | SMS-Wire-Vertrag (SSOT für SMS/Premium-SMS-Tokens) |
+| `docs/reference/renderer_email_spec.md` | E-Mail-Renderer-Vertrag |
 | `docs/features/epic-134-cockpit-dashboard.md` | Trip-Cockpit-Startseite |
 | `docs/adr/README.md` | Index der Architektur-Entscheidungen |
 | `docs/README.md` | Wegweiser durch docs/ (Referenz vs. Archiv) |
@@ -72,14 +74,16 @@ OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake`, `/00-bug`
 
 **Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation). >10 Min ohne grüne Tests → `TaskStop` + Neustart mit präziserem Briefing; max 2 Versuche, danach Eskalation.
 
-**Agenten-Modelle:** `developer` Opus · `bug-intake`/`feature-planner`/`implementation-validator`/`spec-writer`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/Explore Haiku.
+**Agenten-Modelle:** `developer` (Plugin-Pendant `developer-agent`)/`user-story-planner` Opus · `bug-intake`/`bug-investigator`/`analysis-challenger`/`feature-planner`/`spec-writer`/`implementation-validator`/`staging-validator`/`external-validator`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/`test-runner`/Explore Haiku.
+
+**Herkunft der Befehle:** `/00-…` bis `/60-…` kommen aus dem Plugin agent-os-openspec; projekteigen in `.claude/commands/` sind nur `/70-deploy` (ersetzt das Plugin-Template), `/e2e-verify`, `/next-ticket`, `/radar`.
 
 ### Workflow-State
 
 | Was | Regel |
 |-----|-------|
 | **GZ_ACTIVE_WORKFLOW** | `export GZ_ACTIVE_WORKFLOW=<name>` ist die EINZIGE erlaubte Methode. **Symlink-Fallback ist deaktiviert** — `workflow.py` bricht FATAL ab ohne die Variable. Niemals `state['active_workflow']` lesen. Beim Agent-Spawn immer im Prompt übergeben. |
-| **Execution-Log vor `finish`** | `python3 .claude/hooks/workflow.py write-log success`, dann `workflow.py finish`. Ohne Log blockt der Hook. |
+| **Execution-Log vor `finish`** | `workflow.py write-log success`, dann `workflow.py finish`. Ohne Log blockt der Hook. `workflow.py`/`qa_gate.py`/`adversary_dialog.py` liegen im Plugin agent-os-openspec, **nicht** in `.claude/hooks/` (Plugin-Modus seit 465380c1e). |
 | **LoC-Limit 250/Workflow** | `workflow.py status` zeigt `LoC-Delta: +N/250`. Überschritten → `workflow.py set-field loc_limit_override 500`. `docs/`/`*.md`/`.gitignore` und generierte Dateien zählen nicht. |
 | **Adversary-Verdict Gating** | `AMBIGUOUS` → `workflow.py override-ambiguous "<Grund>"` (TTL 1h); `None`/`BROKEN` → `qa_gate.py`. Commit blockt ohne Verdict. |
 | **State-Ablage** | `.claude/workflows/<name>.json` (laufend) / `_archive/<name>.json` (abgeschlossen) |
@@ -148,12 +152,14 @@ Ratschen-Pflege (`ci_tdd_excludes.txt`, `ci_e2e_specs.txt`, Aufnahmefilter): `do
 
 ## Mail-Validatoren & Renderer-Gate (ZWINGEND)
 
-Zwei Mail-Pfade, zwei Gates. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion.
+Je Mail-Pfad ein eigener Validator. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion.
 
 | Mail-Pfad | Validator (PFLICHT vor „E2E bestanden") | Marker-Header |
 |---|---|---|
-| **Orts-Vergleich** (Vergleichsmatrix, Winner-Box, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
+| **Orts-Vergleich** (Vergleichstabelle, kein Score/Winner seit #1108, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
 | **Trip-Briefing** (`full`/`compact`, Stundentabellen) | `uv run python3 .claude/hooks/briefing_mail_validator.py` | `X-GZ-Mail-Type: trip-briefing` + `X-GZ-Format: full\|compact` |
+| **Amtliche Warnung** (Alarm-Mail) | `uv run python3 .claude/hooks/official_alert_mail_validator.py` | `X-GZ-Mail-Type: official-alert` |
+| **Radar-/Regen-Alarm** | `uv run python3 .claude/hooks/radar_alert_mail_validator.py` | `X-GZ-Mail-Type: radar-alert` |
 
 **Regeln:** gegen **echt zugestellte Staging-Mail** aus dem Stalwart-Test-Postfach (`gregor-test@henemm.com`, Creds `GZ_IMAP_*`, nie im Klartext) — kein Mock, kein Gmail. Geprüft wird Plausibilität, nicht bloße String-Presence. **Nur bei Exit 0** darf „E2E bestanden" gesagt werden.
 

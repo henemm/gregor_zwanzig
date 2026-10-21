@@ -3,7 +3,7 @@ entity_id: telegram_kurzform_sms_auswahl_2455
 type: module
 created: 2026-10-09
 updated: 2026-10-09
-status: approved
+status: implemented
 version: "1.0"
 tags: [telegram, kurzform, sms, layout, doku, issue-2455]
 ---

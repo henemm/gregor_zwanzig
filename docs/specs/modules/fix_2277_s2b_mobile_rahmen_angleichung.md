@@ -3,7 +3,7 @@ entity_id: fix_2277_s2b_mobile_rahmen_angleichung
 type: bugfix
 created: 2026-09-27
 updated: 2026-09-27
-status: draft
+status: implemented
 version: "1.1"
 tags: [trip-new, compare-new, mobile-shell, page-header, editor-sticky-footer, shared-component]
 ---

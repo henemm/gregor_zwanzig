@@ -1,6 +1,6 @@
 # ADR-0005: Confidence ist keine pro-Etappe wählbare Wetter-Metrik
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch [ADR-0093](0093-confidence-token-in-sms-entfaellt.md) — abgelöst ist nur Entscheidung Punkt 2 „SMS-Token `C+`/`C~`/`C?`“ (Token entfällt, #2233); „keine wählbare Metrik“ und alle übrigen Punkte gelten weiter
 - **Datum:** 2026-06-10
 - **Bezug:** GitHub-Issue #710 (Regress nach #424-Fix), Issue #473 (frühere, unvollständige Entfernung)
 

@@ -3,7 +3,7 @@ entity_id: fix_2047_s2_ci_prod_gate
 type: bugfix
 created: 2026-10-06
 updated: 2026-10-06
-status: draft
+status: implemented
 version: "2.0"
 workflow: fix-2047-s2-prod-gate
 tags: [ci, deploy, prod-gate, adr-0006, idempotenz, selbsttest]

@@ -3,7 +3,7 @@ entity_id: issue_457_compare_email_tags
 type: module
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 issue: 457
 tags: [compare, email, winner-tags, per-recipient, error-handling, python]
@@ -22,7 +22,7 @@ Erweitert den bestehenden Compare-E-Mail-Renderer (`compare_html.py`) um einen p
 ## Source
 
 - **EDIT:** `src/output/renderers/email/compare_html.py` — neue private Funktion `_generate_winner_tags()` + `_render_tag()`, Integration in Winner-Card (~+55 LoC)
-- **EDIT:** `src/outputs/email.py` — `EmailOutput.send()` bei mehreren Empfängern pro Empfänger individuell senden mit try/except (~+22 LoC)
+- **EDIT:** `src/output/channels/email.py` — `EmailOutput.send()` bei mehreren Empfängern pro Empfänger individuell senden mit try/except (~+22 LoC)
 - **EDIT:** `tests/tdd/test_compare_html_email.py` — neue Test-Klasse für Tag-Assertions (~+65 LoC)
 - **NEU:** `tests/tdd/test_issue_457_email_per_recipient.py` — Tests für Per-Empfänger-Fehlerbehandlung (~+45 LoC)
 
@@ -34,7 +34,7 @@ Erweitert den bestehenden Compare-E-Mail-Renderer (`compare_html.py`) um einen p
 | `ActivityProfile` (`src/app/profile.py`) | intern | Profil-Dispatch für Tag-Regeln (WINTERSPORT / WANDERN / SUMMER_TREKKING / ALLGEMEIN) |
 | `ComparisonResult` (`src/app/user.py`) | intern | Wird an `render_compare_html()` übergeben; `.winner`-Property als Eingabe für `_generate_winner_tags()` |
 | `design_tokens.py` (`src/output/renderers/email/design_tokens.py`) | intern | Farbkonstanten (werden für Matrix und Footer genutzt); Tag-Farben sind eigene Inline-Hex-Werte, NICHT aus design_tokens |
-| `EmailOutput` (`src/outputs/email.py`) | intern | Versandkanal — wird um Per-Empfänger-Logik erweitert |
+| `EmailOutput` (`src/output/channels/email.py`) | intern | Versandkanal — wird um Per-Empfänger-Logik erweitert |
 
 ## Implementation Details
 
@@ -165,7 +165,7 @@ Klasse `TestPerRecipientSend` (kein SMTP, kein Mock, nur Logik via Subklasse):
 | Datei | Inhalt | LoC-Delta |
 |-------|--------|-----------|
 | `src/output/renderers/email/compare_html.py` | `_generate_winner_tags`, `_render_tag`, Winner-Card-Integration | +55 |
-| `src/outputs/email.py` | Per-Empfänger-Schleife mit try/except | +22 |
+| `src/output/channels/email.py` | Per-Empfänger-Schleife mit try/except | +22 |
 | `tests/tdd/test_compare_html_email.py` | Klasse `TestWinnerTags` mit 5 Tests | +65 |
 | `tests/tdd/test_issue_457_email_per_recipient.py` | Klasse `TestPerRecipientSend` mit 3 Tests | +45 |
 | **Summe** | | **~187 LoC** |

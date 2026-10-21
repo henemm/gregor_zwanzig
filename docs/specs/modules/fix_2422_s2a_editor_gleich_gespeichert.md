@@ -3,7 +3,7 @@ entity_id: fix_2422_s2a_editor_gleich_gespeichert
 type: bugfix
 created: 2026-09-27
 updated: 2026-09-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, invariante, editor, roundtrip, kanaele, orakel, fix]
 workflow: fix-2422-s2-editor-gleich-gespeichert

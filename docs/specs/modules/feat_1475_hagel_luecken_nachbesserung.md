@@ -3,7 +3,7 @@ entity_id: feat_1475_hagel_luecken_nachbesserung
 type: feature
 created: 2026-08-05
 updated: 2026-08-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, hagel, epic-1419, issue-1475, nachbesserung]
 ---

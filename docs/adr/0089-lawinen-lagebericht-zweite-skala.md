@@ -5,6 +5,7 @@
 - **Bezug:** GitHub-Issue #1441 Slice 1 (Epic #2258, erledigt #1473), Spec
   `docs/specs/modules/avalanche_report_bulletin.md`; ergänzt ADR-0016 (additiver Warntyp),
   nutzt ADR-0018 (fail-soft ohne Maskierung), ADR-0041 (Zuständigkeit), ADR-0044 (Ortszeit)
+- **Ergänzt durch:** [ADR-0090](0090-entwarnung-amtlicher-warnungen.md) (ergänzt)
 
 ## Kontext
 

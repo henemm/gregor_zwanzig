@@ -8,6 +8,7 @@
   (Modell-Fallback ohne Kaschieren); grenzt sich ab von [ADR-0025](0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md)
   (Eine Gewitter-Quelle für alle Briefing-Kanäle); Vorgänger-Scheibe (unabhängig):
   `docs/specs/modules/fix_1492_s1_wettercode_fallback.md` (kein ADR nötig, additive Lückenschließung).
+- **Ergänzt durch:** [ADR-0057](0057-mehrere-gewitter-signalquellen-je-gebiet.md) (ergänzt), [ADR-0065](0065-lpi-leiter-folgt-liefernder-quelle.md) (stellt §5 her)
 
 ## Kontext
 

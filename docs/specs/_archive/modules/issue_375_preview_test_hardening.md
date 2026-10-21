@@ -3,7 +3,7 @@ entity_id: issue_375_preview_test_hardening
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [test, preview, signal, telegram, epic-331, issue-363, issue-375]
 ---

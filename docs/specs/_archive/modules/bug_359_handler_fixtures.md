@@ -3,7 +3,7 @@ entity_id: bug_359_handler_fixtures
 type: bug
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, testing, handler]
 ---

@@ -3,12 +3,14 @@ entity_id: issue_681_compare_editor_slice4
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, compare, editor, design-compliance, epic-677]
 ---
 
 # Compare-Editor Slice 4 — Fidelity-Tabs „Layout" + „Versand" (CE_)
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 (Alt-Editor `CompareEditor.svelte` ersatzlos gelöscht, `db0ca26b8`, 2026-07-19) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

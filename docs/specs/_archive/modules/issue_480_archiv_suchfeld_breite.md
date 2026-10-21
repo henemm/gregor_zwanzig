@@ -3,7 +3,7 @@ entity_id: issue_480_archiv_suchfeld_breite
 type: module
 created: 2026-05-31
 updated: 2026-05-31
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, archiv, layout, bug]
 ---

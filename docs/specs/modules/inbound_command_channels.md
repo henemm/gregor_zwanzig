@@ -36,7 +36,7 @@ Kanal zurueck.
 | `src/app/config.py` | module | Settings: SMTP_USER, SMTP_PASS, MAIL_TO, `email_verified_at` (#2143) |
 | `src/app/loader.py` | module | `load_all_trips()` fuer Trip-Name -> Trip-ID Lookup; `lookup_user_by_email()` fuer Sender-Autorisierung (#2143) |
 | `src/app/shortcode.py` | module | generate_shortcode(trip_name, user_id) -> GZ#-Code mit Kollisions-Guard |
-| `src/outputs/email.py` | module | EmailOutput fuer Bestaetigungs-Email (Reply) |
+| `src/output/channels/email.py` | module | EmailOutput fuer Bestaetigungs-Email (Reply) |
 | `src/web/scheduler.py` | module | APScheduler-Registrierung des Poll-Jobs |
 | `imaplib` (stdlib) | module | IMAP4_SSL Client |
 | `email` (stdlib) | module | email.message_from_bytes(), email.header.decode_header() für RFC-2047 (Bug #775), `Authentication-Results`-Header-Parsing (#2143) |

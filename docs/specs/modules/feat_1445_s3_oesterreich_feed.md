@@ -3,7 +3,7 @@ entity_id: feat_1445_s3_oesterreich_feed
 type: feature
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, meteoalarm, warn-egress, quota, austria]
 workflow: feat-1445-s3-oesterreich-feed

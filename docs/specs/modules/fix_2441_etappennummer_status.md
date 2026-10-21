@@ -3,7 +3,7 @@ entity_id: fix_2441_etappennummer_status
 type: bugfix
 created: 2026-10-07
 updated: 2026-10-07
-status: draft
+status: implemented
 workflow: fix-2441-etappennummer-status
 version: "1.0"
 tags: [kanal-paritaet, etappennummer, status, epic-2506]
@@ -47,7 +47,7 @@ dieselbe Bezeichnung auf allen vier Kanälen (Epic #2506, Refs #2417 AC-27).
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `docs/specs/modules/issue_760_stage_number.md` | spec | Nummer = 1-basierte chronologische Position (`sorted(stages, key=date)`), „zwingend" |
+| `docs/specs/_archive/modules/issue_760_stage_number.md` | spec | Nummer = 1-basierte chronologische Position (`sorted(stages, key=date)`), „zwingend" |
 | `docs/specs/modules/fix_2122_etappen_praefix_kurzform.md` | spec | Alarm-Kurzform `S{N}` mit derselben Zählung; darf sich nicht ändern |
 | `docs/specs/modules/feat_2417_kurzform_englisch.md` | spec | EN-Ausgabe von STATUS über `self._en`, GSM-7-Strich |
 | `src/services/trip_report_scheduler.py` (Z.1547), `src/services/preview_service.py` (Z.203) | module | Briefing/Vorschau rufen `numbered_stage_label` — Regressionsfläche |

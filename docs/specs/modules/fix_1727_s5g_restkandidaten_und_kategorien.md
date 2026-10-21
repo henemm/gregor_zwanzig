@@ -3,7 +3,7 @@ entity_id: fix_1727_s5g_restkandidaten_und_kategorien
 type: refactor
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: implemented
 workflow: fix-1727-s5g-alarmkandidaten
 tags: [timezone, adr-0051, output-timezone-guard, alert-anchor, compare, radar-alert]
 ---

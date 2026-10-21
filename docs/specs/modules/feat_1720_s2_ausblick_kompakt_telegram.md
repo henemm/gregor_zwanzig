@@ -3,7 +3,7 @@ entity_id: feat_1720_s2_ausblick_kompakt_telegram
 type: feature
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 version: "1.0"
 workflow: feat-1720-s2-ausblick-kompakt-telegram
 tags: [trip, outlook, ausblick, kompakt-mail, telegram, metrik-katalog, feature, epic-1372, issue-1720]

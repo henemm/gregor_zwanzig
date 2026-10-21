@@ -3,7 +3,7 @@ entity_id: account_deletion
 type: module
 created: 2026-04-16
 updated: 2026-10-03
-status: draft
+status: implemented
 version: "2.0"
 tags: [go, auth, account-deletion, f15, reauth, multi-user, "2160"]
 ---

@@ -1,7 +1,7 @@
 ---
 issue: 596
 title: Breadcrumb-Inkonsistenz „MEINE TRIPS" vs „MEINE TOUREN"
-status: approved
+status: implemented
 ---
 
 # Spec: Bug #596 — Breadcrumb-Inkonsistenz

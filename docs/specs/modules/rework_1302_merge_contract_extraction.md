@@ -3,7 +3,7 @@ entity_id: rework_1302_merge_contract_extraction
 type: module
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, merge, weather-05b, issue-1302, epic-1301]
 ---

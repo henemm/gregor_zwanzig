@@ -3,7 +3,7 @@ entity_id: compare_metric_order
 type: module
 created: 2026-07-24
 updated: 2026-07-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, shared, metrics, reihenfolge, bugfix]
 ---

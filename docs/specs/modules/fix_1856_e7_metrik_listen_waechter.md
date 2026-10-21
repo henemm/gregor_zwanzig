@@ -3,7 +3,7 @@ entity_id: fix_1856_e7_metrik_listen_waechter
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, ratchet, ast-guard, test-only, register]
 workflow: fix-1856-e7-listen-waechter

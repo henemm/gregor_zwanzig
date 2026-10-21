@@ -3,7 +3,7 @@ entity_id: alert_render_foundation
 type: module
 created: 2026-06-29
 updated: 2026-06-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, metric-catalog, weather-change, slice-1]
 ---
@@ -33,7 +33,7 @@ und die Vorschau (Slice 3) folgen separat.
 
 > **Schicht:** Reines **Python-Backend** (`src/app`, `src/services`) + Go/Python-API-Router
 > (`api/routers`). **Keine** Mail-Inhalts-Dateien (`src/output/renderers/email/*`,
-> `src/formatters/*`, `src/outputs/email.py`) — bewusst, damit das Renderer-Mail-Gate
+> `src/formatters/*`, `src/output/channels/email.py`) — bewusst, damit das Renderer-Mail-Gate
 > in Slice 1 nicht greift. Kein Frontend-Code in diesem Slice.
 
 ## Estimated Scope

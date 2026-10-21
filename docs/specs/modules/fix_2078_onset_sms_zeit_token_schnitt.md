@@ -3,7 +3,7 @@ entity_id: fix_2078_onset_sms_zeit_token_schnitt
 type: bugfix
 created: 2026-08-23
 updated: 2026-08-23
-status: draft
+status: implemented
 workflow: fix-2078-onset-sms-zeit-token-schnitt
 ---
 

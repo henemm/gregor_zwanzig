@@ -3,7 +3,7 @@ entity_id: issue_496_channel_preview_layout_fix
 type: bugfix
 created: 2026-06-01
 updated: 2026-06-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, frontend, layout, overflow, channel-preview, issue-496]
 ---
@@ -22,7 +22,7 @@ Zwei Layout-Regressions im `ChannelPreviewBlock` werden behoben, die nach dem Is
 
 **Geänderte Dateien:**
 - `frontend/src/lib/components/trip-detail/ChannelPreviewBlock.svelte` (1 LoC: `class="overflow-visible"` auf `Card.Root`)
-- `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (~11 LoC: ChannelPreviewBlock aus `editor-col` herausziehen)
+- `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (~11 LoC: ChannelPreviewBlock aus `editor-col` herausziehen)
 
 **NICHT ändern:**
 - `frontend/src/lib/components/ui/card/card.svelte` — Library-Basisdatei, kein direktes Anfassen
@@ -42,7 +42,7 @@ Zwei Layout-Regressions im `ChannelPreviewBlock` werden behoben, die nach dem Is
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `frontend/src/lib/components/trip-detail/ChannelPreviewBlock.svelte` | Svelte-Komponente | Wrapper-Block für die Kanal-Vorschau; erhält `class="overflow-visible"` auf `Card.Root` (Bug 1) |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | Svelte-Komponente | Tab-Layout mit `editor-col` / `layout`-Grid; ChannelPreviewBlock wird aus `editor-col` herausgezogen (Bug 2) |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | Svelte-Komponente | Tab-Layout mit `editor-col` / `layout`-Grid; ChannelPreviewBlock wird aus `editor-col` herausgezogen (Bug 2) |
 | `frontend/src/lib/components/ui/card/card.svelte` | Shadcn-Basiskomponente | Hardcoded `overflow-hidden` in der Basisklasse; Tailwind-Merge überschreibt es korrekt wenn `overflow-visible` per `class`-Prop übergeben wird |
 | `frontend/src/lib/components/trip-detail/ChannelFidelityEmail.svelte` | Svelte-Komponente | Enthält `.table-wrap` mit `overflow-x: auto`; profitiert von Bug-1-Fix ohne eigene Änderung |
 

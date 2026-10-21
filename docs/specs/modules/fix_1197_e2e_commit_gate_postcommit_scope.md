@@ -1,3 +1,10 @@
+---
+entity_id: fix_1197_e2e_commit_gate_postcommit_scope
+type: module
+created: 2026-07-16
+status: implemented
+---
+
 # Spec: e2e_commit_gate.detect_scope — post-commit-Fallback statt False docs-only
 
 - **Issue:** #1197 (Sammel-Gate-Audit), Scheibe „e2e_commit_gate detect_scope post-commit" (#1137)

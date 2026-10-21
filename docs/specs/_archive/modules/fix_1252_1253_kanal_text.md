@@ -3,7 +3,7 @@ entity_id: fix_1252_1253_kanal_text
 type: bugfix
 created: 2026-07-13
 updated: 2026-07-13
-status: draft
+status: implemented
 workflow: fix-1252-1253-kanal-text-v2
 version: "1.0"
 tags: [telegram, sms, email, ascii-fold, escaping, adr-0012]

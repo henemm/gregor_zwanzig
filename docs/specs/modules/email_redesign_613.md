@@ -3,7 +3,7 @@ entity_id: email_redesign_613
 type: module
 created: 2026-06-05
 updated: 2026-06-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, email, design-fidelity, issue-613]
 ---

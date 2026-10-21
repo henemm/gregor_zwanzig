@@ -1,3 +1,10 @@
+---
+entity_id: fix_1535_env_snapshot_maskieren
+type: fast
+created: 2026-08-10
+status: implemented
+---
+
 # Mini-Spec: #1535 — Umgebungs-Abbild in Zusicherung maskieren
 
 **Issue:** https://github.com/henemm/gregor_zwanzig/issues/1535
@@ -28,7 +35,7 @@ menschliches Terminal, `pytest > logfile`, angehängte Protokolle, Artefaktablag
   (12 Zeichen) statt Wert. Ein Diff bleibt aussagekräftig (er nennt den geänderten
   Schlüssel und zeigt, dass sich der Wert geändert hat), enthält aber keinen Zugang.
 - **`== {}` fällt weg, `before == after` bleibt.** Die Aussage von AC-1 aus
-  `docs/specs/modules/issue_1014_telegram_live_optin.md` lautet „`os.environ` bleibt
+  `docs/specs/_archive/modules/issue_1014_telegram_live_optin.md` lautet „`os.environ` bleibt
   unverändert" — das ist `before == after`. Das zusätzliche `== {}` prüft nicht die
   Funktion, sondern den Zufallszustand der Umgebung: es wird rot, sobald irgendeine
   `GZ_TELEGRAM_*`-Variable gesetzt ist, die mit dem Opt-in nichts zu tun hat

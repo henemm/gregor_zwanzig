@@ -3,7 +3,7 @@ entity_id: feat_1439_starkregen_kurzfristhinweis
 type: module
 created: 2026-08-07
 updated: 2026-08-07
-status: draft
+status: implemented
 version: "1.0"
 workflow: feat-1439-starkregen-minutely15
 tags: [radar-nowcast, trip-briefing, email, telegram, alerts]

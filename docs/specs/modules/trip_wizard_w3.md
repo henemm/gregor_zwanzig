@@ -3,12 +3,14 @@ entity_id: trip_wizard_w3
 type: module
 created: 2026-04-19
 updated: 2026-04-19
-status: draft
+status: deprecated
 version: "1.0"
 tags: [sveltekit, frontend, trips, wizard, report-config, scheduling, alerts]
 ---
 
 # Trip Wizard W3: Report Configuration (SvelteKit)
+
+> Abgelöst/entfernt durch ADR-0032 / #190 (alter Wizard-Code rückgebaut, `d17433a8e`, 2026-05-15) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

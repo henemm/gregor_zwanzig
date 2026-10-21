@@ -3,7 +3,7 @@ entity_id: rework_2276_s6f_bridge_umzug
 type: module
 created: 2026-09-22
 updated: 2026-09-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, hub, bridge, refactor, ratsche]
 ---

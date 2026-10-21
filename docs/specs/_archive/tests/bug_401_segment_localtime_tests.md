@@ -3,7 +3,7 @@ entity_id: bug_401_segment_localtime_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "2.0"
 tags: [tests, timezone, scheduler, segment, alert, cest, utc, bug-400, bug-401]
 parent: bug_401_segment_localtime
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_401_segment_localtime.md` (kombiniert #400 + #401).
+Test-Manifest für `docs/specs/_archive/modules/bug_401_segment_localtime.md` (kombiniert #400 + #401).
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_401_segment_localtime.md` v1.1
+Parent-Spec: `docs/specs/_archive/modules/bug_401_segment_localtime.md` v1.1
 
 Source-Inspection-Ansatz (kein Mock): `trip_alert.py` und `trip_report_scheduler.py` haben
 viele Deps (SMTP, Provider). Geprüft wird der relevante Quelltext + eine echte CEST→UTC-Konvertierung.

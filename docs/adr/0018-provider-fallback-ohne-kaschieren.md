@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert (PO-„go" 2026-07-08)
 - **Datum:** 2026-07-08
 - **Bezug:** GitHub-Issue #1115, Spec `docs/specs/_archive/modules/issue_1115_openmeteo_model_fallback.md`; Folge-Issues #1127 (Cross-Provider-Redundanz), #1128 (Retry-Bug); verwandt [ADR-0002](0002-met-vs-mosmix-forecast-source.md) (Provider-Auswahl), [ADR-0009](0009-alerts-als-abweichungs-waechter.md)
+- **Ergänzt durch:** [ADR-0058](0058-wegpunkt-hoehe-an-provider-api.md) (verwandt/schreibt fort)
 
 ## Kontext
 

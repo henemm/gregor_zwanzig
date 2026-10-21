@@ -3,12 +3,14 @@ entity_id: daylight_service
 type: module
 created: 2026-02-19
 updated: 2026-02-19
-status: approved
+status: deprecated
 version: "1.0"
 tags: [f11, daylight, astral, hiking]
 ---
 
 # Daylight Service (F11)
+
+> Abgelöst/entfernt durch #1224 (`docs/specs/fast/fix-1224-remove-daylight-toggle.md`) — Tageslicht-Berechnung und `daylight_service.py` existieren nicht mehr.
 
 ## Approval
 

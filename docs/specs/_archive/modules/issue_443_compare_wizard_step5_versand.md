@@ -3,13 +3,15 @@ entity_id: issue_443_compare_wizard_step5_versand
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: implemented
+status: deprecated
 version: "1.0"
 issue: 443
 tags: [compare, wizard, step5, versand, subscriptions, frontend, svelte, epic-438]
 ---
 
 # Issue #443 — Orts-Vergleich · Wizard Step 5 — Versand + Aktivierung
+
+> Abgelöst/entfernt durch ADR-0032 / #683 (Compare-Wizard entfernt, `3bb5161a4`, 2026-06-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 
@@ -36,8 +38,8 @@ Implementiert Step 5 des Orts-Vergleich-Wizards als Versand- und Aktivierungs-Ko
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `ChannelToggle.svelte` (`frontend/src/lib/components/trip-wizard/steps/ChannelToggle.svelte`) | intern | Wiederverwendbare Toggle-Komponente für E-Mail/Signal/Telegram — Cross-Folder-Import |
-| `maskPhone()` (`frontend/src/lib/components/trip-wizard/wizardHelpers.ts`) | intern | Maskiert Telefonnummern für Kontaktinfo-Anzeige im UI |
+| `ChannelToggle.svelte` (`frontend/src/lib/components/shared/ChannelToggle.svelte`) | intern | Wiederverwendbare Toggle-Komponente für E-Mail/Signal/Telegram — Cross-Folder-Import |
+| `maskPhone()` (`frontend/src/lib/components/shared/wizardHelpers.ts`) | intern | Maskiert Telefonnummern für Kontaktinfo-Anzeige im UI |
 | `compareWizardState.svelte.ts` (`frontend/src/lib/components/compare/compareWizardState.svelte.ts`) | intern | Zentraler Wizard-State; wird durch 10 neue Versand-Felder und Getter `canAdvanceStep5` erweitert |
 | `CompareWizard.svelte` (`frontend/src/lib/components/compare/CompareWizard.svelte`) | intern | Shell-Komponente, die Step 5 im Render-Switch einbindet und den Activate-Button steuert |
 | `getContext('compare-wizard-profile')` (SvelteKit Context API) | intern | Liefert Profil-Kontaktdaten (`mail_to`, `signal_phone`, `telegram_chat_id`) aus dem SSR-Loader |

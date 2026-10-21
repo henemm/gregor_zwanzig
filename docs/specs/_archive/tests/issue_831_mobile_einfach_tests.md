@@ -18,10 +18,10 @@ phase: phase6_green
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_831_mobile_einfach_stundenraster.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_831_mobile_einfach_stundenraster.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_831_mobile_einfach_stundenraster.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_831_mobile_einfach_stundenraster.md` v1.0
 
 ## Source
 

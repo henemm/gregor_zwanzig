@@ -3,7 +3,7 @@ entity_id: password_reset_mail
 type: bugfix
 created: 2026-05-12
 updated: 2026-05-12
-status: approved
+status: implemented
 version: "1.0"
 tags: [backend, go, bugfix, auth, password-reset, email, smtp, issue-124]
 ---

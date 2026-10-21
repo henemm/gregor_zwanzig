@@ -3,7 +3,7 @@ entity_id: brand_icon_silhouette
 type: module
 created: 2026-09-16
 updated: 2026-09-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [brand, icon, pwa, favicon]
 ---

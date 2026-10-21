@@ -3,7 +3,7 @@ entity_id: feat_1848_a2_ausblick_kennungen
 type: module
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [ausblick, metriken, persistenz, issue-1848]
 ---

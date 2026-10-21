@@ -3,7 +3,7 @@ entity_id: bug_256_thunder_color
 type: bugfix
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, design-system, color-token, thunder, danger-palette, issue-256]
 ---

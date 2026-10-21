@@ -221,7 +221,7 @@ class TripSegment:
 #### HTML-Rendering anpassen
 
 ```python
-# src/formatters/trip_report.py:520-524
+# src/output/renderers/trip_report.py:520-524
 # VORHER:
 seg_html_parts.append(f"""
 <div class="section">
@@ -249,7 +249,7 @@ else:
 #### Plain-Text-Rendering anpassen
 
 ```python
-# src/formatters/trip_report.py:694-697
+# src/output/renderers/trip_report.py:694-697
 # VORHER:
 lines.append(f"━━ Segment {seg.segment_id}: {seg.start_time.strftime('%H:%M')}–{seg.end_time.strftime('%H:%M')} | {seg.distance_km:.1f} km | ↑{s_elev}m → {e_elev}m ━━")
 
@@ -265,7 +265,7 @@ else:
 Highlights sollen Ziel-Segment als "am Ziel" referenzieren, nicht als "Segment Ziel":
 
 ```python
-# src/formatters/trip_report.py:261, 323, 333
+# src/output/renderers/trip_report.py:261, 323, 333
 # VORHER:
 f"Segment {seg_data.segment.segment_id}"
 
@@ -286,7 +286,7 @@ Highlights:
 |-------|----------|-----|
 | `src/app/models.py` | TripSegment.segment_id Type: `int` → `int \| str` | ~1 |
 | `src/services/trip_report_scheduler.py` | Ziel-Segment erzeugen in `_convert_trip_to_segments()` | ~40 |
-| `src/formatters/trip_report.py` | Ziel-Segment speziell rendern (HTML + Text + Highlights) | ~15 |
+| `src/output/renderers/trip_report.py` | Ziel-Segment speziell rendern (HTML + Text + Highlights) | ~15 |
 | `tests/unit/test_trip_report_formatter_v2.py` | Test für Ziel-Segment (NEU) | ~35 |
 | **Gesamt** | | **~91 LOC** |
 

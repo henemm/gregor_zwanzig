@@ -3,7 +3,7 @@ entity_id: begriff_erklaerung_infobox
 type: module
 created: 2026-10-09
 updated: 2026-10-09
-status: draft
+status: implemented
 version: "1.0"
 workflow: feat-2521-s1-erklaerung-infobox
 tags: [frontend, onboarding, popover, infobox, i18n, textkatalog, issue-2521, s1]

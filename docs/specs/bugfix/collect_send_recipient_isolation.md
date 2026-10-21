@@ -3,7 +3,7 @@ entity_id: collect_send_recipient_isolation
 type: bugfix
 created: 2026-08-09
 updated: 2026-08-09
-status: done
+status: implemented
 version: "1.0"
 workflow: "fix-1426-sammelversand-ersatzweg"
 tags: [email, sammelversand, smtp, ersatzweg, fehlerbehandlung]

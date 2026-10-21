@@ -3,7 +3,7 @@ entity_id: bug_382_select_ios_zoom
 type: bugfix
 created: 2026-05-25
 updated: 2026-05-26
-status: done
+status: implemented
 version: "1.0"
 tags: [frontend, ios, accessibility, css]
 ---
@@ -28,7 +28,7 @@ tags: [frontend, ios, accessibility, css]
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `frontend/src/app.css` | Referenz | Globaler iOS-Guard Z. 457–462; Kommentar-Warnung Z. 440–441 |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | Muster | Referenz-Implementierung des scoped `@media`-Override (Z. 337–342) |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | Muster | Referenz-Implementierung des scoped `@media`-Override (Z. 337–342) |
 
 ## Implementation Details
 

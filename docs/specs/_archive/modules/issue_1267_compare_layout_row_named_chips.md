@@ -3,12 +3,15 @@ entity_id: issue_1267_compare_layout_row_named_chips
 type: bugfix
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: superseded
+superseded_by: "#1360"
 workflow: fix-1267-named-layout-chips
 tags: [compare, molecules, ui-fidelity]
 ---
 
 # Named Layout-Chips (Compare Hub Layout-Tab)
+
+> Abgelöst durch #1360 (Layout-Reiter im Ortsvergleich aufgelöst, `9ca676392`, 2026-07-25).
 
 ## Approval
 

@@ -45,7 +45,7 @@ Schicht: **Go-API** (`internal/`), Production-API Port 8090.
 | `internal/store/trip.go` (`LoadTrip`, `SaveTrip`) | store | RMW-Basis für Trip-Weather-Config-Update |
 | `internal/model/trip.go` (`DisplayConfig map[string]interface{}`) | model | Ziel-Map des Feld-Merges |
 | `internal/model` (`SyncAlertRules`, `extractActiveMetricIDs`) | logic | Alert-Rule-Sync liest weiterhin aus rohem `cfg`, bleibt unverändert korrekt (kein Merge-relevanter Pfad) |
-| `docs/specs/modules/fix_1129_config_map_merge.md` | spec | Vorgänger-Fix, etabliert das identische Merge-Pattern für `aggregation`/`weather_config`/`display_config` in `trip.go` |
+| `docs/specs/_archive/modules/fix_1129_config_map_merge.md` | spec | Vorgänger-Fix, etabliert das identische Merge-Pattern für `aggregation`/`weather_config`/`display_config` in `trip.go` |
 
 ## Implementation Details
 
@@ -143,7 +143,7 @@ bisherigen Verhalten.
   eigenständiges Folge-Issue **#1159** gemeldet, wird hier **nicht**
   mitgefixt (Scope dieses Fixes ist ausschließlich `PutTripWeatherConfigHandler`).
 - **Kein Live-Bug belegt:** Der einzige bekannte Client
-  (`frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`,
+  (`frontend/src/lib/components/shared/WeatherMetricsTab.svelte`,
   `buildWeatherPayload()`) sendet aktuell stets die volle
   `display_config`-Map (Spread-Pattern). Fix ist defensiv/präventiv, analog
   zu #1129.

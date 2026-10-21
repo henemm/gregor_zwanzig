@@ -3,7 +3,7 @@ entity_id: versand_tab_vergleich
 type: feature
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 workflow: feat-1232-versand-tab-2b
 ---
 

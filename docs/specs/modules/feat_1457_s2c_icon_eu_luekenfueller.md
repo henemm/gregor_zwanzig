@@ -1,6 +1,6 @@
 ---
 entity_id: feat_1457_s2c_icon_eu_luekenfueller
-status: draft
+status: implemented
 type: module
 created: 2026-08-04
 updated: 2026-08-04

@@ -3,7 +3,7 @@ entity_id: email_metrics_summary_664
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, email, config, issue-664]
 ---
@@ -33,7 +33,7 @@ Wenn aktiv, **ersetzt** der Überblick den Quick-Take **und** blendet den Tages-
 - **File:** `src/output/renderers/email/html.py` (`render_html`) — Param + Render-Block + Gating gegen Quick-Take/Tages-Summe
 - **File:** `src/output/renderers/email/plain.py` (`render_plain`) — Param + Plaintext-Block + Gating
 - **File:** `src/output/renderers/email/__init__.py` (`render_email`) — kwarg-Durchreichung
-- **File:** `src/formatters/trip_report.py` (`format_email`) — Flag aus `report_config` lesen + weiterreichen; aktive E-Mail-Metriken (enabled) als Eingabe für den Helper
+- **File:** `src/output/renderers/trip_report.py` (`format_email`) — Flag aus `report_config` lesen + weiterreichen; aktive E-Mail-Metriken (enabled) als Eingabe für den Helper
 - **File:** `frontend/src/lib/components/edit/EditReportConfigSection.svelte` — Toggle (State + onMount-Load + RMW-Write)
 - **File:** `frontend/src/lib/components/edit/reportConfigWrite.ts` — `MailElementUi`-Feld + `buildMailElementWrite`-Mapping
 - **Schicht:** Python-Backend + SvelteKit-Frontend. Go (`internal/model/trip.go`) speichert `report_config` als opaques `map[string]interface{}` und merged Top-Level (Issue #99) → **kein Go-Change nötig**.

@@ -1,3 +1,10 @@
+---
+entity_id: bug_inbound_email_loop
+type: module
+created: 2026-06-09
+status: implemented
+---
+
 # Spec: Bug Fix — Inbound Email Reader Feedback Loop
 
 ## Changelog

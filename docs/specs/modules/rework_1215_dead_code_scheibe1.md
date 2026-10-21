@@ -3,7 +3,7 @@ entity_id: rework_1215_dead_code_scheibe1
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.2"
 tags: [cleanup, dead-code, python, root-cleanup]
 ---

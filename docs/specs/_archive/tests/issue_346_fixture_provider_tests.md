@@ -3,7 +3,7 @@ entity_id: issue_346_fixture_provider_tests
 type: tests
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, python, provider, fixture, offline, openmeteo, issue-346]
 parent: issue_346_fixture_provider_e2e
@@ -19,12 +19,12 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für den Python-Fixture-Provider aus
-`docs/specs/modules/issue_346_fixture_provider_e2e.md`. Jeder Test mappt 1:1 auf
+`docs/specs/_archive/modules/issue_346_fixture_provider_e2e.md`. Jeder Test mappt 1:1 auf
 ein Acceptance Criterion der Parent-Spec. Geprüft werden Protocol-Erfüllung,
 Provider-Selektion via `GZ_TEST_FIXTURE_DIR`, Prod-Schutz, Offline-Fetch,
 Timestamp-Verankerung, der conftest-Mechanismus und der `live`-Marker-Opt-out.
 
-Parent-Spec: `docs/specs/modules/issue_346_fixture_provider_e2e.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_346_fixture_provider_e2e.md` v1.0
 
 ## Source
 

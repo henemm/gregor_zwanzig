@@ -3,7 +3,7 @@ entity_id: feat_1539_s0_s1a_beobachtbarkeit_atomare_schreiber
 type: feature
 created: 2026-10-07
 updated: 2026-10-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, beobachtbarkeit, nebenlaeufigkeit, atomares-schreiben, multi-user, epic-2138]
 ---

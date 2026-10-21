@@ -3,7 +3,7 @@ entity_id: issue_759_669_email_ampel_gewitter
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, renderer, ampel, gewitter, design-compliance]
 ---

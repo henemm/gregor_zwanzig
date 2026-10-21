@@ -3,7 +3,7 @@ entity_id: fix_1595_s1_staging_messverfahren
 type: module
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [infrastructure, data-root, staging, measurement]
 ---

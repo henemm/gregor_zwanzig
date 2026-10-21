@@ -3,7 +3,7 @@ entity_id: compact_summary
 type: module
 created: 2026-02-17
 updated: 2026-08-04
-status: approved
+status: implemented
 version: "1.4"
 workflow: F2 Kompakt-Summary
 tags: [formatter, email, compare, shared-with-trip]
@@ -31,7 +31,7 @@ Orts-Vergleich, NEU). Beide teilen sich denselben Fliesstext-Kern — es gibt
 keinen zweiten, fuer den Vergleich neu geschriebenen Formatierungscode
 (Trip/Compare-Teilungs-Invariante, CLAUDE.md). Details: Abschnitt
 "Aufrufkontexte (`route` / `vergleich`)" unten. Die urspruengliche Datei
-`src/formatters/compact_summary.py` (Stand 2026-02-17, s. "Scope"/"Data
+`src/output/renderers/compact_summary.py` (Stand 2026-02-17, s. "Scope"/"Data
 Flow" unten) existiert nicht mehr — der Baustein liegt seit einer spaeteren
 Renderer-Umstrukturierung unter `src/output/renderers/compact_summary.py`
 (aktueller, verifizierter Pfad; die "Scope"-Tabelle unten ist ein
@@ -43,8 +43,8 @@ historischer Implementierungs-Schnappschuss und bleibt unangetastet).
 
 | File | Change Type | LOC | Description |
 |------|-------------|-----|-------------|
-| `src/formatters/compact_summary.py` | CREATE | ~180 | CompactSummaryFormatter Klasse mit Zeitanalyse |
-| `src/formatters/trip_report.py` | MODIFY | +20 | Summary-Block in HTML + Plain-Text einfuegen |
+| `src/output/renderers/compact_summary.py` | CREATE | ~180 | CompactSummaryFormatter Klasse mit Zeitanalyse |
+| `src/output/renderers/trip_report.py` | MODIFY | +20 | Summary-Block in HTML + Plain-Text einfuegen |
 | `src/services/trip_report_scheduler.py` | MODIFY | +5 | Summary generieren und an Formatter uebergeben |
 | `src/app/models.py` | MODIFY | +1 | `show_compact_summary: bool = True` in UnifiedWeatherDisplayConfig |
 | `src/web/pages/weather_config.py` | MODIFY | +10 | UI-Checkbox fuer Kompakt-Summary an/aus |
@@ -246,7 +246,7 @@ Datei hier als das aktuell zu pflegende Duplikat fuer beide Aufrufer.
 ### 1. CompactSummaryFormatter
 
 **File (aktuell):** `src/output/renderers/compact_summary.py` (Stand 2026-02-17
-lag die Klasse noch unter `src/formatters/compact_summary.py`, s. Purpose-
+lag die Klasse noch unter `src/output/renderers/compact_summary.py`, s. Purpose-
 Nachtrag oben; der folgende Codeblock ist der urspruengliche v1.1-Entwurf und
 zeigt nicht den seit #1278 ergaenzten `tz`-Parameter — s. Abschnitt 0 fuer die
 aktuelle Signatur)
@@ -287,7 +287,7 @@ Interne Methoden:
 
 ### 2. Integration in TripReportFormatter
 
-**File:** `src/formatters/trip_report.py`
+**File:** `src/output/renderers/trip_report.py`
 
 In `format_email()`:
 ```python

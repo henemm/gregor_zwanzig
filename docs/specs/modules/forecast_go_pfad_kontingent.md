@@ -3,7 +3,7 @@ entity_id: forecast_go_pfad_kontingent
 type: module
 created: 2026-09-21
 updated: 2026-09-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [multi-user, forecast-budget, go-python-grenze, epic-2138]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1719_s2_kaskade_verfeinerung
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, cascade, adr-0050, issue-1719, telegram]
 ---

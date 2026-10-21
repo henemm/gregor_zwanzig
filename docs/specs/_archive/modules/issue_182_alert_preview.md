@@ -3,7 +3,7 @@ entity_id: issue_182_alert_preview
 type: module
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, alerts, svelte, epic-139, issue-182, preview, iframe]
 parent: epic-139-alert-konfigurator

@@ -3,7 +3,7 @@ entity_id: provider_tz_normalization
 type: bugfix
 created: 2026-07-22
 updated: 2026-07-22
-status: draft
+status: implemented
 version: "2.0"
 tags: [provider, geosphere, openmeteo, timezone, fallback, issue-1345]
 workflow: fix-1345-geosphere-tz-normalisierung

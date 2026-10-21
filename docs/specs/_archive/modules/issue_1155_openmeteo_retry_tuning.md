@@ -3,7 +3,7 @@ entity_id: issue_1155_openmeteo_retry_tuning
 type: bugfix
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [provider, weather, open-meteo, retry, fallback, bugfix, testing]
 ---
@@ -37,7 +37,7 @@ Begrenzt die Retry-Attempts pro Modell-Kandidat in der #1115-Fallback-Kette (`sr
 |--------|------|---------|
 | `tenacity.retry` / `Retrying.retry_with()` | library | Tenacity-natives Per-Call-Override der Retry-Konfiguration (`stop`, `wait`) fuer einzelne Aufrufe von `_request`, ohne den globalen `@retry`-Decorator zu aendern |
 | `ProviderRequestError` (`src/providers/base.py`) | class | Traegt `status_code`; unveraendert genutzt fuer 4xx-vs-5xx-Unterscheidung in der Fallback-Schleife |
-| `issue_1128_openmeteo_retry_fix` (`docs/specs/modules/issue_1128_openmeteo_retry_fix.md`) | spec | Vorgaenger-Fix: `_is_retryable_error()` erkennt 5xx/Connect-Error/Read-Timeout ueberhaupt erst als retryable — Voraussetzung dafuer, dass Retry-Timing in diesem Bereich ueberhaupt spuerbar wird |
+| `issue_1128_openmeteo_retry_fix` (`docs/specs/_archive/modules/issue_1128_openmeteo_retry_fix.md`) | spec | Vorgaenger-Fix: `_is_retryable_error()` erkennt 5xx/Connect-Error/Read-Timeout ueberhaupt erst als retryable — Voraussetzung dafuer, dass Retry-Timing in diesem Bereich ueberhaupt spuerbar wird |
 | `issue_1115_openmeteo_model_fallback` (Spec zu #1115) | spec | Definiert die Fallback-Kette selbst (Kandidatenliste, `fallback_model`/`fallback_reason`, AC-2 4xx-kein-Fallback) — dieser Fix aendert nur das Retry-Timing innerhalb dieser Kette, nicht ihre fachliche Logik |
 | `test_issue_1141_cross_provider_fallback.py::_total_outage_seam` | test-pattern | Bewaehrtes Muster fuer Retry-Neutralisierung in Tests (`wait_none()` + `stop_after_attempt(1)` auf `._request.retry`) — Vorlage fuer #1160 |
 | `test_openmeteo_retry.py::test_wrapped_connect_error_cause_is_retryable` | test-pattern | Vorlage fuer den #1154-ReadTimeout-Test |
@@ -78,7 +78,7 @@ else:
 
 **F002 (Test-Luecke):** `_is_retryable_error()` hat einen `httpx.ReadTimeout`-Erkennungszweig (Z.199 in `issue_1128`-Kontext), der bislang nicht durch einen eigenen Unit-Test abgedeckt ist — nur `httpx.ConnectError` wird getestet (`test_wrapped_connect_error_cause_is_retryable`, `tests/unit/test_openmeteo_retry.py:171-183`). Neuer Test `test_wrapped_read_timeout_cause_is_retryable` nach demselben Muster, aber mit `httpx.ReadTimeout` als `__cause__` der gewrappten `ProviderRequestError`.
 
-**F001 (Spec-Praezisierung):** `docs/specs/modules/issue_1128_openmeteo_retry_fix.md:74` formuliert aktuell "Input ist immer eine ProviderRequestError, da `_request()` alle `httpx`-Exceptions vor dem Reraise wrapped". Das ist nicht literal wahr: Ein `json.JSONDecodeError` aus `response.json()` (Z.508) wird von keinem der beiden `except`-Zweige (`httpx.HTTPStatusError`, `httpx.RequestError`) abgefangen und erreicht `_is_retryable_error()` roh und ungewrappt — die Funktion liefert dafuer sicher `False` (kein `isinstance`-Match, kein Crash), aber die Formulierung "immer ProviderRequestError" ist praezisierungsbeduerftig. Der betroffene Satz wird auf sinngemaess "alle `httpx`-Exceptions werden gewrappt (JSON-Decodefehler nicht, dort greift `_is_retryable_error` sicher mit `False`)" geaendert. Reine Doku-Aenderung, kein Code-Change.
+**F001 (Spec-Praezisierung):** `docs/specs/_archive/modules/issue_1128_openmeteo_retry_fix.md:74` formuliert aktuell "Input ist immer eine ProviderRequestError, da `_request()` alle `httpx`-Exceptions vor dem Reraise wrapped". Das ist nicht literal wahr: Ein `json.JSONDecodeError` aus `response.json()` (Z.508) wird von keinem der beiden `except`-Zweige (`httpx.HTTPStatusError`, `httpx.RequestError`) abgefangen und erreicht `_is_retryable_error()` roh und ungewrappt — die Funktion liefert dafuer sicher `False` (kein `isinstance`-Match, kein Crash), aber die Formulierung "immer ProviderRequestError" ist praezisierungsbeduerftig. Der betroffene Satz wird auf sinngemaess "alle `httpx`-Exceptions werden gewrappt (JSON-Decodefehler nicht, dort greift `_is_retryable_error` sicher mit `False`)" geaendert. Reine Doku-Aenderung, kein Code-Change.
 
 ### #1160 — Fehlender Retry-Backoff-Neutralisierer im #1115-Test-Seam (reiner Test-Fix)
 
@@ -123,7 +123,7 @@ monkeypatch.setattr(OpenMeteoProvider._request.retry, "stop", tenacity.stop_afte
 ## Known Limitations
 
 - `FALLBACK_RETRY_ATTEMPTS = 1` bedeutet: ein einzelner transienter Blip auf einem Folge-Kandidaten fuehrt sofort zum Weiterschalten, ohne einen zweiten Versuch auf demselben Kandidaten. Bewusste Design-Entscheidung (PO/Tech-Lead): bei einem bereits degradierten Provider zaehlt schnelles Durchreichen zum naechsten Kandidaten mehr als ein zusaetzlicher Versuch auf dem aktuellen; die Cross-Provider-Weiche (#1141) und der naechste Briefing-Zyklus fangen verbleibende Restfaelle ab.
-- Die Known-Limitation aus `docs/specs/modules/issue_1128_openmeteo_retry_fix.md` ("~62s-Verzoegerung pro 5xx-Kandidat vor Fallback") gilt nach diesem Fix nur noch fuer den Primaer-Kandidaten; Folge-Kandidaten sind davon nicht mehr betroffen. Diese Spec ersetzt die entsprechende Aussage funktional, die #1128-Spec selbst wird nur um den F001-Satz praezisiert (siehe Implementation Details), nicht strukturell umgeschrieben.
+- Die Known-Limitation aus `docs/specs/_archive/modules/issue_1128_openmeteo_retry_fix.md` ("~62s-Verzoegerung pro 5xx-Kandidat vor Fallback") gilt nach diesem Fix nur noch fuer den Primaer-Kandidaten; Folge-Kandidaten sind davon nicht mehr betroffen. Diese Spec ersetzt die entsprechende Aussage funktional, die #1128-Spec selbst wird nur um den F001-Satz praezisiert (siehe Implementation Details), nicht strukturell umgeschrieben.
 - `retry_with()` erzeugt bei jedem Folge-Kandidaten-Aufruf eine neue `Retrying`-Instanz zur Laufzeit — das ist tenacity-nativer, dokumentierter Mechanismus und kein Workaround, aber ein Implementierungsdetail, das bei zukuenftigen tenacity-Major-Upgrades erneut verifiziert werden sollte.
 
 ## Architektur-Entscheidung (ADR)

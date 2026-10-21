@@ -39,7 +39,7 @@ Post-Deploy-Selbsttest.
 - **Idempotenz über `LOCAL == origin/main`:** Der Ordner kann auf dem Zielstand stehen, ohne dass
   die Dienste neu gestartet wurden. Deshalb ist der Deploy-Marker die Quelle.
 
-## Folgen
+## Konsequenzen
 
 - Kein doppelter Dienst-Neustart für denselben Stand.
 - Ein manuell verändertes `last_prod_deploy.json` würde den Kurzschluss täuschen. Dafür gibt es

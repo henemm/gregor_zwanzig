@@ -3,7 +3,7 @@ entity_id: feat_1681_meteoalarm_de
 type: feature
 created: 2026-09-19
 updated: 2026-09-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, meteoalarm, germany, dwd, warn-egress]
 workflow: feat-1681-meteoalarm-de

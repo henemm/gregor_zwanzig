@@ -3,7 +3,7 @@ entity_id: fix_1727_s5a_befehlspfade_ortstag
 type: bugfix
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [timezone, telegram, trip-command-processor, issue-1727, issue-1722, adr-0044, adr-0051]
 workflow: fix-1727-s5a-befehlspfade

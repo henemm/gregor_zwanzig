@@ -3,7 +3,7 @@ entity_id: issue_241_email_profile_pipeline
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: 1.0.0
 tags: [email, design-system, activity-profile, issue-241, epic-236]
 parent: epic_236_email_design_system
@@ -49,7 +49,7 @@ gezeigt — ein Renderer-Fix repariert beides automatisch.
 **Geänderte Dateien:**
 - `src/output/renderers/email/html.py` — Header-Background auf Profil-Akzent, neuer Eyebrow-Block
 - `src/output/renderers/email/__init__.py` — `render_email` + `render_plain` erhalten `profile`-kwarg
-- `src/formatters/trip_report.py` — `format_email` erhält `profile`-kwarg
+- `src/output/renderers/trip_report.py` — `format_email` erhält `profile`-kwarg
 - `src/services/trip_report_scheduler.py` — übergibt `trip.aggregation.profile` an Formatter
 - `src/services/preview_service.py` — reicht `profile` durch für Preview-Iframe
 
@@ -63,7 +63,7 @@ gezeigt — ein Renderer-Fix repariert beides automatisch.
 | `src/output/renderers/email/html.py::render_html()` | Funktion | Empfänger von `profile`-kwarg; Header-Background + Eyebrow-Block |
 | `src/output/renderers/email/__init__.py::render_email()` | Funktion | Durchreiche-Stelle von `render_plain` und `render_html` |
 | `src/output/renderers/email/__init__.py::render_plain()` | Funktion | Erhält `profile` für Prefix-Zeile im Plain-Text-Fallback |
-| `src/formatters/trip_report.py::format_email()` | Funktion | Durchreiche-Stelle zwischen Scheduler und Renderer |
+| `src/output/renderers/trip_report.py::format_email()` | Funktion | Durchreiche-Stelle zwischen Scheduler und Renderer |
 | `src/services/trip_report_scheduler.py::_send_trip_report()` | Methode | Liefert `trip.aggregation.profile` als Einstiegspunkt |
 | `src/services/preview_service.py` | Modul | Reicht `profile` durch damit Preview-Iframe profil-spezifisch rendert |
 | `frontend/src/lib/utils/profileSignature.ts` | TS-Helper (#238) | Vorbild für Python-Port; Werte (Hex, Icon, Eyebrow) werden 1:1 übernommen |
@@ -97,7 +97,7 @@ Outlook ignoriert CSS-Variablen -- daher direkte Hex-Werte, kein var(--g-profile
 
 Bei None oder unbekanntem Wert wird die Signatur von ALLGEMEIN zurueckgegeben.
 
-SPEC: docs/specs/modules/issue_241_email_profile_pipeline.md
+SPEC: docs/specs/_archive/modules/issue_241_email_profile_pipeline.md
 VORBILD: frontend/src/lib/utils/profileSignature.ts
 """
 from dataclasses import dataclass
@@ -208,11 +208,11 @@ nicht verloren.
 | `src/output/renderers/email/profile_signature.py` (neu) | +50 | ja |
 | `src/output/renderers/email/html.py` | +20 | ja |
 | `src/output/renderers/email/__init__.py` | +5 | ja |
-| `src/formatters/trip_report.py` | +5 | ja |
+| `src/output/renderers/trip_report.py` | +5 | ja |
 | `src/services/trip_report_scheduler.py` | +3 | ja |
 | `src/services/preview_service.py` | +5 | ja |
 | `tests/tdd/test_email_profile_pipeline.py` (neu) | +120 | ja |
-| `docs/specs/tests/issue_241_email_profile_pipeline_tests.md` (neu) | 0 | nein (Doku) |
+| `docs/specs/_archive/tests/issue_241_email_profile_pipeline_tests.md` (neu) | 0 | nein (Doku) |
 | **Gesamt** | **~208** | **< 250 LoC-Limit** |
 
 ## Expected Behavior
@@ -236,7 +236,7 @@ nicht verloren.
 - **AC-3:** Given `render_email` aus `src/output/renderers/email/__init__.py` / When mit `profile=ActivityProfile.WINTERSPORT` aufgerufen / Then reicht es `profile` an `render_html` und `render_plain` durch, sodass beide Varianten das Profil korrekt abbilden
   - Test: (populated after /tdd-red)
 
-- **AC-4:** Given `format_email` in `src/formatters/trip_report.py` / When mit `profile=ActivityProfile.SUMMER_TREKKING` aufgerufen / Then reicht es `profile` an `render_email` durch, sodass der gerenderte HTML-Body `background:#c45a2a` und `Sommer-Trekking` enthält
+- **AC-4:** Given `format_email` in `src/output/renderers/trip_report.py` / When mit `profile=ActivityProfile.SUMMER_TREKKING` aufgerufen / Then reicht es `profile` an `render_email` durch, sodass der gerenderte HTML-Body `background:#c45a2a` und `Sommer-Trekking` enthält
   - Test: (populated after /tdd-red)
 
 - **AC-5:** Given `_send_trip_report(trip)` in `src/services/trip_report_scheduler.py` / When ein `Trip`-Objekt mit `trip.aggregation.profile = ActivityProfile.WANDERN` übergeben wird / Then wird `format_email` mit `profile=ActivityProfile.WANDERN` aufgerufen — Profil-Wert geht beim Aufruf nicht verloren

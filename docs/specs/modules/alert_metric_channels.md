@@ -3,7 +3,7 @@ entity_id: alert_metric_channels
 type: module
 created: 2026-09-22
 updated: 2026-09-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, channels, datamodel]
 ---

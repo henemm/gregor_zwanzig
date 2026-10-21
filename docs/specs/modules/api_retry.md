@@ -3,7 +3,7 @@ entity_id: api_retry
 type: module
 created: 2026-01-02
 updated: 2026-01-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [resilience, api, geosphere]
 ---

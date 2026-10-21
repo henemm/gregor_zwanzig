@@ -3,7 +3,7 @@ entity_id: feat_2284_s2_trip_kopf
 type: feature
 created: 2026-10-03
 updated: 2026-10-04
-status: draft
+status: implemented
 version: "1.3"
 tags: [trip-hub, compare-hub, kopf, shared, paritaet, save-chip, mobil]
 workflow: feat-2284-s2-trip-kopf

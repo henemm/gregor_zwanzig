@@ -3,7 +3,7 @@ entity_id: issue_571_home_cockpit_hero
 type: module
 created: 2026-06-03
 updated: 2026-06-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, home, cockpit, compare, molecules, svelte]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1289_e2e_env_minimal
 type: bugfix
 created: 2026-08-07
 updated: 2026-08-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [e2e, secrets, playwright, security]
 workflow: fix-1289-e2e-env-minimal

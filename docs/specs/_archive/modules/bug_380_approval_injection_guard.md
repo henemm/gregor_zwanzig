@@ -3,7 +3,7 @@ entity_id: bug_380_approval_injection_guard
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, workflow, hook, security]
 ---

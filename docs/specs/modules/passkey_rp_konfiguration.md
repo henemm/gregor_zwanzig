@@ -3,7 +3,7 @@ entity_id: passkey_rp_konfiguration
 type: bugfix
 created: 2026-09-08
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, tooling, e2e, auth, webauthn, passkey, config]
 ---

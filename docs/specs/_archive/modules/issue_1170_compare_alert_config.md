@@ -3,7 +3,7 @@ entity_id: issue_1170_compare_alert_config
 type: feature
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 workflow: feat-1170-compare-alert-config
 tags: [compare, alerts, epic-1095]
 ---

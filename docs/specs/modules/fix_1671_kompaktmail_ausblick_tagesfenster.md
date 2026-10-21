@@ -3,7 +3,7 @@ entity_id: fix_1671_kompaktmail_ausblick_tagesfenster
 type: bugfix
 created: 2026-08-14
 updated: 2026-08-14
-status: approved
+status: implemented
 version: "1.0"
 tags: [gewitter, ausblick, tag-nacht, compact, issue-1671]
 ---

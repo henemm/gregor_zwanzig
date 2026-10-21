@@ -3,7 +3,7 @@ entity_id: email_metrics_filter
 type: bugfix
 created: 2026-02-10
 updated: 2026-02-10
-status: done
+status: implemented
 version: "1.0"
 tags: [bugfix, story-3, feature-3.1, email, config, metrics]
 ---
@@ -20,7 +20,7 @@ Feature 3.1 (Email Trip-Formatter) akzeptiert `trip_config: Optional[TripWeather
 
 ## Source
 
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** `TripReportFormatter._generate_html()` und `_generate_plain_text()`
 - **Problem:** `trip_config` Parameter wird durchgereicht aber ignoriert
 
@@ -118,7 +118,7 @@ def test_filtered_columns_with_config():
 
 ## Scope
 
-- **Dateien geändert:** 1 (`src/formatters/trip_report.py`)
+- **Dateien geändert:** 1 (`src/output/renderers/trip_report.py`)
 - **Dateien für Tests:** 1 (`tests/unit/test_trip_report_formatter.py`)
 - **LoC Änderungen:** ~40 (Produktion) + ~30 (Tests)
 - **Keine Seiteneffekte** — Default-Verhalten bleibt identisch

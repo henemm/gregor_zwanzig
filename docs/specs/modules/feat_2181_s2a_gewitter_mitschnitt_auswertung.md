@@ -3,7 +3,7 @@ entity_id: feat_2181_s2a_gewitter_mitschnitt_auswertung
 type: feature
 created: 2026-09-07
 updated: 2026-09-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [analysis, gewitter, cape, mitschnitt, khw, messwerkzeug]
 ---

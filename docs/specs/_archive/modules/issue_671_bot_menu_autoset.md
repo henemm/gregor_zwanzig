@@ -3,7 +3,7 @@ entity_id: issue_671_bot_menu_autoset
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, bot-menu, startup, e2e, bugfix]
 ---
@@ -46,7 +46,7 @@ Diese Spec macht zwei Dinge:
 - **File (Test, neu):** `tests/tdd/test_issue_671_bot_menu_autoset.py`
 - **File (Selftest):** `.claude/hooks/prod_selftest.py` → optionaler Live-Menü-Check
   gegen den Prod-Bot (`getMyCommands` == erwartete Befehle), fail-soft/gated.
-- **Unter Test, nicht verändert:** `src/outputs/telegram.py` (`BOT_COMMANDS`,
+- **Unter Test, nicht verändert:** `src/output/channels/telegram.py` (`BOT_COMMANDS`,
   `set_my_commands`), `src/app/config.py` (`telegram_bot_token`).
 
 ## Estimated Scope

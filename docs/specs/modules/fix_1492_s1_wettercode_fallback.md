@@ -1,6 +1,6 @@
 ---
 entity_id: fix_1492_s1_wettercode_fallback
-status: draft
+status: implemented
 type: module
 created: 2026-08-05
 updated: 2026-08-05

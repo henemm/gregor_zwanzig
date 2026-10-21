@@ -22,7 +22,7 @@ superseded_by: docs/reference/sms_format.md
 > Re-Implementierung des Formatters auf Basis von `sms_format.md` v2.0 wird
 > in einem separaten Issue erfasst.
 >
-> Der bestehende Code unter `src/formatters/sms_trip.py` ist nicht aktiv
+> Der bestehende Code unter `src/output/renderers/sms_trip.py` ist nicht aktiv
 > eingebunden (`TripReport.sms_text=None`) und wird im Rahmen der
 > Re-Implementierung entweder abgelöst oder migriert.
 >
@@ -48,9 +48,9 @@ Ultra-compact SMS formatter that generates ≤160 character summaries of trip se
 
 | File | Change Type | LOC | Description |
 |------|-------------|-----|-------------|
-| `src/formatters/sms_trip.py` | CREATE | ~80 | SMSTripFormatter class |
+| `src/output/renderers/sms_trip.py` | CREATE | ~80 | SMSTripFormatter class |
 | `tests/unit/test_sms_trip.py` | CREATE | ~100 | Unit tests |
-| `src/formatters/trip_report.py` | MODIFY | +5 | Integration call |
+| `src/output/renderers/trip_report.py` | MODIFY | +5 | Integration call |
 
 **Total:** 3 files, ~185 LOC
 
@@ -118,7 +118,7 @@ Ultra-compact SMS formatter that generates ≤160 character summaries of trip se
 
 ### 1. SMSTripFormatter Class
 
-**File:** `src/formatters/sms_trip.py`
+**File:** `src/output/renderers/sms_trip.py`
 
 ```python
 """
@@ -307,7 +307,7 @@ class SMSTripFormatter:
 
 ### 2. Integration with TripReportFormatter
 
-**File:** `src/formatters/trip_report.py`
+**File:** `src/output/renderers/trip_report.py`
 
 **Modification at line ~5 (imports):**
 ```python
@@ -663,7 +663,7 @@ def get_compact_label_for_field(summary_field: str) -> tuple[str, str] | None:
 
 | File | Action | LOC |
 |------|--------|-----|
-| `src/formatters/sms_trip.py` | MODIFY | +35 |
+| `src/output/renderers/sms_trip.py` | MODIFY | +35 |
 | `src/app/metric_catalog.py` | MODIFY | +15 |
 
 **Total: ~50 LOC**

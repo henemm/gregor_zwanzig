@@ -1,7 +1,7 @@
 ---
 name: bug-intake
 description: Strukturierte Bug-Aufnahme mit paralleler Investigation via Subagenten
-model: haiku
+model: sonnet
 tools:
   - Read
   - Grep

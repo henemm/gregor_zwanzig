@@ -3,7 +3,7 @@ entity_id: gpx_multi_import
 type: module
 created: 2026-05-04
 updated: 2026-05-05
-status: draft
+status: implemented
 version: "1.1"
 issue: 127
 tags: [ui, gpx, trips, upload, sveltekit, natural-sort]

@@ -21,7 +21,7 @@ Upgrades the trip report email from aggregated segment summaries to **hourly wea
 
 ## Source
 
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** `TripReportFormatter` (in-place upgrade, same class)
 - **New config:** `EmailReportDisplayConfig` in `src/app/models.py`
 
@@ -397,7 +397,7 @@ data extraction functions. They differ only in rendering (HTML tags vs ASCII).
 
 | File | Change | LoC |
 |------|--------|-----|
-| `src/formatters/trip_report.py` | Major rewrite: hourly tables, night block, HTML/text | ~+250/-150 |
+| `src/output/renderers/trip_report.py` | Major rewrite: hourly tables, night block, HTML/text | ~+250/-150 |
 | `src/app/models.py` | Add `EmailReportDisplayConfig`, `show_clouds=True` | ~+25 |
 | `src/services/trip_report_scheduler.py` | Night fetch, haversine, stage stats, distance calc | ~+80 |
 | `src/providers/openmeteo.py` | Add `apparent_temperature` → `wind_chill_c` | ~+2 |

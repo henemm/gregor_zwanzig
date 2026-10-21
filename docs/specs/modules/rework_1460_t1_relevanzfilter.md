@@ -3,7 +3,7 @@ entity_id: rework_1460_t1_relevanzfilter
 type: refactor
 created: 2026-08-02
 updated: 2026-08-03
-status: draft
+status: implemented
 version: "1.2"
 tags: [alerts, trip, compare, epic-1458, adr-0040-ablösung]
 ---

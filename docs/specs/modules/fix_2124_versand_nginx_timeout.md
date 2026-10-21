@@ -3,7 +3,7 @@ entity_id: fix_2124_versand_nginx_timeout
 type: module
 created: 2026-10-07
 updated: 2026-10-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, versand, nginx, timeout, mandantenfaehigkeit, trip-compare-teilung]
 ---

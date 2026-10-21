@@ -3,7 +3,7 @@ entity_id: external_validator_auth
 type: module
 created: 2026-05-02
 updated: 2026-05-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [validator, auth, tooling, workflow]
 ---

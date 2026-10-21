@@ -3,7 +3,7 @@ entity_id: fix_2438_hinweis_nur_kanal_block
 type: module
 created: 2026-10-20
 updated: 2026-10-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, editor, hinweis, kanaele, trip, ortsvergleich, ausblick, adr-0050]
 workflow: fix-2438-hinweis-nur-kanal-block

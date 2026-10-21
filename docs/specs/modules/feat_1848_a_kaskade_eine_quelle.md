@@ -3,7 +3,7 @@ entity_id: feat_1848_a_kaskade_eine_quelle
 type: refactor
 created: 2026-08-18
 updated: 2026-08-18
-status: draft
+status: implemented
 version: "1.0"
 workflow: feat-1848-ausblick-vokabular
 tags: [trip, kaskade, adr-0050, refactor, issue-1848, epic-1435]

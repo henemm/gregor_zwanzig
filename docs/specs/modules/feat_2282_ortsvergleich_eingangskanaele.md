@@ -3,7 +3,7 @@ entity_id: feat_2282_ortsvergleich_eingangskanaele
 type: module
 created: 2026-09-16
 updated: 2026-09-26
-status: draft
+status: implemented
 version: "1.1"
 tags: [ortsvergleich, inbound, trip-command-processor, trip-selection, epic-2133, epic-1374, issue-2282]
 ---

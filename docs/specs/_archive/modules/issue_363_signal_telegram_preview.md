@@ -3,12 +3,14 @@ entity_id: issue_363_signal_telegram_preview
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: deprecated
 version: "1.0"
 tags: [output, preview, signal, telegram, epic-331, issue-361]
 ---
 
 # Signal/Telegram-Vorschau-Endpoints
+
+> Abgelöst/entfernt durch ADR-0004 / #610 (Signal-Kanal app-weit entfernt) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

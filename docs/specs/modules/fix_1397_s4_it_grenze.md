@@ -3,7 +3,7 @@ entity_id: fix_1397_s4_it_grenze
 type: bugfix
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, meteoalarm, italien, oesterreich, grenze, covers, false-positive]
 workflow: fix-1397-it-grenze

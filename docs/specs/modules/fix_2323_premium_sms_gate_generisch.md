@@ -3,7 +3,7 @@ entity_id: fix_2323_premium_sms_gate_generisch
 type: module
 created: 2026-09-14
 updated: 2026-09-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, inbound, premium, garmin, gate, seven-io]
 ---

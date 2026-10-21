@@ -3,12 +3,14 @@ entity_id: channel_test_button
 type: module
 created: 2026-04-22
 updated: 2026-04-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [sveltekit, account, email, signal, telegram, notify, test]
 ---
 
 # Kanal-Test-Button — "Testmeldung senden" auf der Account-Seite
+
+> Hinweis: Signal-Kanal entfernt durch ADR-0004 / #610 — alle Signal-Anteile dieser Spec sind gegenstandslos.
 
 ## Approval
 
@@ -47,9 +49,9 @@ Ergaenzt die `/account`-Seite um einen "Test senden"-Button neben jedem konfigur
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `src/outputs/email.py` | Python-Modul | `send(subject, body)` fuer E-Mail-Kanal |
+| `src/output/channels/email.py` | Python-Modul | `send(subject, body)` fuer E-Mail-Kanal |
 | `src/outputs/signal.py` | Python-Modul | `send(subject, body)` fuer Signal-Kanal |
-| `src/outputs/telegram.py` | Python-Modul | `send(subject, body)` fuer Telegram-Kanal |
+| `src/output/channels/telegram.py` | Python-Modul | `send(subject, body)` fuer Telegram-Kanal |
 | `Settings.with_user_profile(user_id)` | Python-Konfiguration | Laedt nutzer-spezifische Credentials (MailTo, SignalPhone, SignalAPIKey, TelegramChatID) |
 | `internal/model/user.go` | Go-Datenmodell | `MailTo`, `SignalPhone`, `SignalAPIKey`, `TelegramChatID` — spiegelt, welche Felder konfiguriert sein koennen |
 | `internal/handler/proxy.go` — `ProxyPostHandler` | Go-Handler | Wird korrigiert: leitet Request-Body an Python-API weiter statt `nil` |

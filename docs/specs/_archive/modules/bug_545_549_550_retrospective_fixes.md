@@ -3,7 +3,7 @@ entity_id: bug_545_549_550_retrospective_fixes
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, backend, frontend, compare-email, trip-detail, cleanup]
 ---

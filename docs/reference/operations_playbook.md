@@ -241,7 +241,7 @@ dessen CI-Ampel (alle 5 Checks) auf dem letzten Stand grün ist. Danach in diese
 
 | Schritt | Was | Wie |
 |---|---|---|
-| 1 | Branch + PR + Merge | `git push -u origin <branch>` → `gh pr create --fill` → Ampel grün → `gh pr merge --merge` |
+| 1 | Branch + PR + Merge | `git push -u origin <branch>` → `gh pr create --fill` → Ampel grün → `gh pr merge --merge --delete-branch` |
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min) | Cron `*/5` ruft `auto-deploy-gregor-staging.sh` |
 | 3 | Staging-Validierung | siehe Definition unten |
 | 4 | Prod-Deploy | `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
@@ -500,7 +500,9 @@ einem Stash überlebt haben.
 
 1. **Pre-Snapshot:** Hook `data_schema_backup.py` erstellt automatisch ein tar.gz von
    `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` bevor eine Schema-Datei editiert
-   wird (Retention: 20 Stück).
+   wird (Retention: 20 Stück). **Achtung (Audit 2026-10-21):** in `.claude/settings.json` ist der
+   Hook nicht eingetragen — „automatisch" gilt nur, falls das Plugin ihn verdrahtet. Manueller
+   Aufruf und Hintergrund: `docs/reference/gates_und_ratschen.md` → „Aktive Hooks".
 2. **Migration mit Test:** Bei Feldumbenennung/-removal: Migration-Skript schreiben +
    Roundtrip-Test (load alt → migrate → load neu → assert keine Daten-Diff)
 3. **Post-Verifikation:** Nach Deploy alle Trips/Locations/Subscriptions im Frontend laden,

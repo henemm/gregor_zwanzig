@@ -3,7 +3,7 @@ entity_id: feat_1468_onset_verschiebung_alarm
 type: feature
 created: 2026-08-18
 updated: 2026-08-18
-status: approved
+status: implemented
 version: "1.0"
 tags: [thunder, precipitation, alert, onset, issue-1468, issue-1493, issue-1954]
 ---

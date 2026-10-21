@@ -3,7 +3,7 @@ entity_id: trip_mehrreiter_konfliktschutz
 type: bugfix
 created: 2026-10-01
 updated: 2026-10-01
-status: draft
+status: implemented
 workflow: fix-1433-mehrreiter-412-datenverlust
 version: "1.0"
 tags: [trip, konfliktschutz, etag, if-match, teilfelder, mehrreiter, "#1433", "#2381", "#2375", "#2345"]

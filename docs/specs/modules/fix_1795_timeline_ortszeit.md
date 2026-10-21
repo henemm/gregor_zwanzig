@@ -3,7 +3,7 @@ entity_id: fix_1795_timeline_ortszeit
 type: module
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, zeitzonen, telegram, adr-0044]
 workflow: fix-1795-timeline-ortszeit

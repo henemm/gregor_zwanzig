@@ -3,7 +3,7 @@ entity_id: config_merge_helper
 type: module
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, backend, bugfix, refactor, dataloss-prevention]
 ---

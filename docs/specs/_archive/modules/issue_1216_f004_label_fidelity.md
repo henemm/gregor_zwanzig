@@ -3,7 +3,7 @@ entity_id: issue_1216_f004_label_fidelity
 type: bugfix
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, mail-subject, label-fidelity, access-ban, vigilance]
 ---

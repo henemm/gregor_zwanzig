@@ -3,7 +3,7 @@ entity_id: sms_nummer_verifikation
 type: module
 created: 2026-09-22
 updated: 2026-09-22
-status: draft
+status: implemented
 version: "1.0"
 workflow: feat-2406-sms-verifikation
 tags: [security, multi-user, auth, sms, issue-2406, issue-2153, epic-2138]

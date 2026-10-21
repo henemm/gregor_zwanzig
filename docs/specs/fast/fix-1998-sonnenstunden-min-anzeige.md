@@ -1,3 +1,10 @@
+---
+entity_id: fix_1998_sonnenstunden_min_anzeige
+type: fast
+created: 2026-08-20
+status: implemented
+---
+
 # Mini-Spec: fix-1998-sonnenstunden-min-anzeige
 
 ## Acceptance Criteria

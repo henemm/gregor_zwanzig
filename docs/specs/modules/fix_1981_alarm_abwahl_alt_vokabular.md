@@ -3,7 +3,7 @@ entity_id: fix_1981_alarm_abwahl_alt_vokabular
 type: module
 created: 2026-10-08
 updated: 2026-10-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, ortsvergleich, bug, metric_alert_levels, vokabular]
 ---

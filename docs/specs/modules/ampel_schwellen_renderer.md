@@ -3,7 +3,7 @@ entity_id: ampel_schwellen_renderer
 type: module
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [ampel, schwellen, renderer, issue-1377, epic-1374]
 ---
