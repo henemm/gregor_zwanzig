@@ -218,6 +218,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/briefings` | GET, POST |
 | `/api/briefings/{id}` | DELETE, GET, PUT |
 | `/api/briefings/{id}/alert-preview` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; kind-neutrale Alarm-Vorschau, Section 20 (#2283 S4)
+| `/api/briefings/{id}/briefing-history` | GET | — `?kind=route\|vergleich` Pflicht (400 bei fehlendem/ungültigem kind oder ungültiger ID), 401 ohne Nutzer, unbekannte ID 200 `[]`; kind-neutrales Versand-Log, Section 21 (#2281)
 | `/api/briefings/{id}/preview` | GET | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; EIN Abruf, alle Kanäle, Section 20 (#2283 S1)
 | `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
 | `/api/cockpit/status` | GET |
@@ -262,7 +263,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/trips` | GET, POST |
 | `/api/trips/{id}` | DELETE, GET, PUT |
 | `/api/trips/{id}/alert-preview` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/alert-preview?kind=route` (#2283)
-| `/api/trips/{id}/briefing-history` | GET |
+| `/api/trips/{id}/briefing-history` | GET | — Alias auf denselben Handler wie `/api/briefings/{id}/briefing-history?kind=route`, identische Antwort (#2281)
 | `/api/trips/{id}/send` | POST | — Delegate (Alt-Route) auf denselben Versandweg wie `/api/briefings/{id}/send?kind=route` (#2280)
 | `/api/trips/{id}/stages/weather` | GET |
 | `/api/trips/{id}/state` | PATCH |
@@ -4385,12 +4386,19 @@ Lists all sent briefings (morning/evening) for an archived trip, ordered chronol
 
 **Handler:** `internal/handler/briefing_history.go` | **Routing:** `internal/router/router.go`
 
-### GET /api/trips/{id}/briefing-history
+### GET /api/briefings/{id}/briefing-history?kind=route|vergleich
 
-Retrieves briefing delivery log for a specific trip (archived or active).
+Kind-neutral delivery log (#2281) for a trip (`kind=route`) or a location comparison (`kind=vergleich`). Entries are written by `src/services/briefing_log.py` (locked, atomic) for cron and manual sends of both kinds. `GET /api/trips/{id}/briefing-history` remains as an alias on the same handler with identical response (equals `kind=route`).
 
 **Path Parameter:**
-- `id`: Trip identifier
+- `id`: Trip or comparison identifier
+
+**Query Parameter:**
+- `kind` (required): `route` | `vergleich`
+
+**Status codes:** 401 without user; 400 for missing/invalid `kind` or invalid ID; 200 `[]` for unknown ID.
+
+**Log entry storage** (`briefing_log.json` per user): each entry carries `entity_type` (`"trip"` | `"compare"`) and `entity_id`. Legacy entries without `entity_*` are read by Go with `EntityID := TripID`, `EntityType := "trip"` (in-memory only, `internal/store/log.go`). Archive statistics count briefings per `"<type>:<id>"` (`BriefingCountByEntity`). The double-send guard (`briefing_slots.py`) evaluates trip entries only.
 
 **Response 200:**
 
