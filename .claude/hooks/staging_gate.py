@@ -711,8 +711,12 @@ def main() -> int:
     parser.add_argument("--expected-commit", help="Ziel-Commit für Preflight-Check (Issue #1130): prüft gegen diesen SHA statt HEAD")
     parser.add_argument("--detect-scope", action="store_true", help="Mode C: Scope ausgeben")
     args = parser.parse_args()
+    # Sammel #1197 (#1382 F003): ausdruecklich leerer --e2e-path= ist nicht
+    # "nicht angegeben" — fail-closed abbrechen statt Vorfahren-Suche.
+    if args.e2e_path is not None and not args.e2e_path.strip():
+        parser.error("--e2e-path ist ausdruecklich leer angegeben — Pfad fehlt (fail-closed)")
 
-    e2e_path = Path(args.e2e_path) if args.e2e_path else None
+    e2e_path = Path(args.e2e_path) if args.e2e_path is not None else None
 
     if args.detect_scope:
         print(_detect_committed_scope())

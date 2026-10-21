@@ -837,3 +837,28 @@ def test_replacement_keeps_the_original_key_order(tmp_path):
     assert list(ersatz["zuletzt"]) == list(antwort["zuletzt"]), (
         f"Die Schluesselreihenfolge weiter unten wurde veraendert: {list(ersatz['zuletzt'])}"
     )
+
+
+def test_werkzeugname_mit_geheimnis_erscheint_maskiert_in_der_meldung(tmp_path):
+    """(#1617) Steckt der Geheimniswert im Werkzeugnamen-Feld, darf die
+    Maskierungs-Meldung ihn nicht roh ausgeben — der Name laeuft durch dieselbe
+    Maskierung wie das Ergebnis."""
+    antwort = _bash_erfolg(f"login ok mit {WERT}\n")
+    r = _hook(tmp_path, f"mcp__dienst__{WERT}", antwort)
+    gesamt = _gesamtausgabe(r)
+    assert r.returncode == 0, gesamt
+    assert "maskiert" in r.stderr, f"Keine Maskierungs-Meldung: {gesamt!r}"
+    assert WERT not in gesamt, f"Geheimnis ueber den Werkzeugnamen ausgetreten: {gesamt!r}"
+
+
+def test_werkzeugname_mit_geheimnis_erscheint_maskiert_in_der_abbruchmeldung(tmp_path):
+    """(#1617) Auch die Notfallmeldung bei abgebrochener Pruefung gibt den
+    Werkzeugnamen nur maskiert aus — selbst wenn die Erkennung gestoert ist."""
+    antwort = _bash_erfolg("harmlos\n")
+    ordner = tmp_path / "projekt"
+    ordner.mkdir(exist_ok=True)
+    (ordner / "openspec.yaml").write_text(KAPUTTE_KONFIG)
+    r = _hook(tmp_path, f"mcp__dienst__{WERT}", antwort, zusatz_env=UNVERDAECHTIGE_ZEILE)
+    assert r.returncode == 0, _gesamtausgabe(r)
+    assert "NICHT abgeschlossen" in r.stderr, r.stderr
+    assert WERT not in _gesamtausgabe(r), f"Geheimnis ausgetreten: {_gesamtausgabe(r)!r}"
