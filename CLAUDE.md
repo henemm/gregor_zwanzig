@@ -156,7 +156,7 @@ Je Mail-Pfad ein eigener Validator. Falscher Validator auf einen Pfad → strukt
 
 | Mail-Pfad | Validator (PFLICHT vor „E2E bestanden") | Marker-Header |
 |---|---|---|
-| **Orts-Vergleich** (Vergleichsmatrix, kein Score/Winner seit #1108, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
+| **Orts-Vergleich** (Vergleichstabelle, kein Score/Winner seit #1108, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
 | **Trip-Briefing** (`full`/`compact`, Stundentabellen) | `uv run python3 .claude/hooks/briefing_mail_validator.py` | `X-GZ-Mail-Type: trip-briefing` + `X-GZ-Format: full\|compact` |
 | **Amtliche Warnung** (Alarm-Mail) | `uv run python3 .claude/hooks/official_alert_mail_validator.py` | `X-GZ-Mail-Type: official-alert` |
 | **Radar-/Regen-Alarm** | `uv run python3 .claude/hooks/radar_alert_mail_validator.py` | `X-GZ-Mail-Type: radar-alert` |
