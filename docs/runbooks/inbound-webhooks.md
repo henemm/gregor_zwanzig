@@ -66,15 +66,30 @@ Container erreicht Go nur über den öffentlichen Nginx-Pfad (Hairpin); Go binde
 **Empfängerfilter / Zuordnungs-Grenze:** Der Mail-Handler filtert nicht nach Empfänger
 (`internal/handler/inbound_webhooks.go`); im Stalwart-Hook ist ein Empfängerfilter bisher nicht
 belegt. Fremde Mails an andere Postfächer zählen deshalb als `received` und können ein echtes
-`missed` im 5-Minuten-Fenster verdecken. Ergebnis der Filterprüfung bei der Prod-Registrierung:
-_wird bei Registrierung in /70 eingetragen_. Belegt wird die Zuordnung zeitlich (Eingang → `last_received`).
+`missed` im 5-Minuten-Fenster verdecken. Ergebnis der Filterprüfung bei der Prod-Registrierung
+(21.10.2026): Das Stalwart-Objekt `x:WebHook` (v0.16.27) kennt nur einen Ereignisfilter
+(`events` + `eventsPolicy`), **keinen Empfängerfilter**. Die Grenze gilt also; belegt wird die
+Zuordnung zeitlich (Eingang → `last_received`).
+
+**Anlage per Admin-API** (JMAP `http://127.0.0.1:8082/jmap`, `x:WebHook/set`, Account `d333333`):
+Felder wie beim Staging-Hook — `url`, `httpAuth` (`@type: Bearer`, `bearerToken` = `STALWART_WEBHOOK_SECRET`),
+`events: {"message-ingest.ham": true}`, `eventsPolicy: include`, `throttle 1000`, `timeout 5000`,
+`discardAfter 60000`, `httpHeaders: {"X-GZ-Hook-Id": "<staging|prod>"}`.
+**Stalwart lädt Webhooks nur beim Start:** Ein neu angelegter Hook feuert erst nach einem Neustart des
+Containers (`docker restart stalwart-mail`). Am 20.10. blieb der frisch angelegte Prod-Hook deshalb
+stumm, während Staging dieselbe Mail binnen 1 s meldete; nach dem Neustart am 21.10. sofort aktiv.
+
+**Prod-Beleg (AC-5, 21.10.2026):** Probemail an `gregor_zwanzig@henemm.com` um 04:53:05 UTC →
+`inbound_command_poll` `last_received` 04:53:06, `last_run` 04:53:06 (`ok`), `received_total` 0 → 1,
+`rejected_total` 0, `missed_total` 0. Der Absender war kein Prod-Nutzer, daher keine Antwortmail;
+der Antwort-Teil wird mit dem nächsten echten Befehl belegt.
 
 ## Hook-IDs
 
 | Umgebung | seven.io (`sms_mo`) | Stalwart (`message-ingest.ham`) |
 |----------|---------------------|----------------------------------|
 | Staging | 4750 | `jjsl7jjqacaa` |
-| Prod | _wird bei Registrierung in /70 eingetragen_ | _wird bei Registrierung in /70 eingetragen_ |
+| Prod | 4795 (angelegt 20.10.2026) | `jkpkeiuuabqa` (angelegt 20.10.2026, aktiv seit Neustart 21.10.) |
 
 Ein seven.io-Hook auf dieselbe Servicenummer weckt beide Umgebungen; die Doppelantwort verhindert
 nur die Herkunftssperre auf Staging.
