@@ -132,7 +132,7 @@ dort wird der reaktivierte, parametrisierte Test ergänzt (alle 9 Zeichen aus
     diesem Zeichen rendert und `assert_gsm7_clean()` auf das Ergebnis
     anwendet — kein Dateiinhalt-Check.
 
-- **AC-2 (Regression):** Given ein Trip-Name mit bereits gefalteten Umlauten
+- **AC-2:** (Regression) Given ein Trip-Name mit bereits gefalteten Umlauten
   und Diakritika (`"Höhenweg Świnica"`) / When derselbe amtliche Alarm wie
   bisher gerendert wird / Then bleibt das Ergebnis byte-identisch zum
   bisherigen Verhalten.
@@ -140,7 +140,7 @@ dort wird der reaktivierte, parametrisierte Test ergänzt (alle 9 Zeichen aus
     `tests/tdd/test_trip_sms_gsm7_charset.py::test_official_alert_sms_stays_gsm7_clean_for_every_hazard_and_umlaut_trip_name`
     bleibt unverändert grün (keine Anpassung nötig).
 
-- **AC-3 (Bug-Nachweis aus dem Issue):** Given die drei im Issue #1796
+- **AC-3:** (Bug-Nachweis aus dem Issue) Given die drei im Issue #1796
   genannten Beispiel-Trip-Namen (`"KHW [Test]"`, `"Trip~Nord"`,
   `"Weg|Nord"`) / When jeweils eine amtliche Alarm-SMS gerendert wird / Then
   ist das Ergebnis GSM-7-sauber (`assert_gsm7_clean()` besteht für alle

@@ -499,7 +499,7 @@ Die Scheibe bleibt unteilbar: die Brücke von den `WeatherMetricsTab.svelte`-
 
 ## Acceptance Criteria
 
-- **AC-1 (`WeatherMetricsTab` ist im Vergleichs-Zweig wertprop-rein):** Im
+- **AC-1:** (`WeatherMetricsTab` ist im Vergleichs-Zweig wertprop-rein) Im
   Reiter „Wetter-Metriken" des Ortsvergleichs ändert sich für Nutzerinnen und
   Nutzer nichts — technisch verliert die Komponente intern jeden direkten
   Zugriff auf das Wizard-Zustandsobjekt. Given
@@ -552,7 +552,7 @@ Die Scheibe bleibt unteilbar: die Brücke von den `WeatherMetricsTab.svelte`-
     reines Werte-Diff bliebe grün, weil die Werte selbst korrekt sind — nur
     ihre Reaktivität bricht, was erst im Browser sichtbar würde).
 
-- **AC-3 (Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Fläche B):**
+- **AC-3:** (Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Fläche B)
   Automatisches Speichern beim Bearbeiten darf ausschließlich im
   Ortsvergleich-Hub passieren — auf der Trip und beim Neuanlegen eines
   Vergleichs darf nie im Hintergrund gespeichert werden. Given
@@ -614,7 +614,7 @@ Die Scheibe bleibt unteilbar: die Brücke von den `WeatherMetricsTab.svelte`-
     Staging-Durchklick bestätigt zusätzlich den sichtbaren Ausfall im
     Browser.
 
-- **AC-6 (Trip-Mounts bleiben vollständig unverändert):** Der
+- **AC-6:** (Trip-Mounts bleiben vollständig unverändert) Der
   Wetter-Metriken-Reiter einer einzelnen Trip verhält sich exakt wie vorher
   — diese Scheibe betrifft ausschließlich den Ortsvergleich. Given
   `TripTabs.svelte:224`, `TripEditView.svelte:201`,
@@ -674,7 +674,7 @@ Die Scheibe bleibt unteilbar: die Brücke von den `WeatherMetricsTab.svelte`-
     fehlt), UND der Datei-weite Grep-Check wird rot — zwei unabhängige
     Wirkorte fangen dieselbe Regression.
 
-- **AC-8 (Ratsche bleibt bei 47, fünf Einträge bewusst nachgeführt):** Ein
+- **AC-8:** (Ratsche bleibt bei 47, fünf Einträge bewusst nachgeführt) Ein
   automatisierter Wächter, der zählt, wie viele Programmstellen noch
   „Trip oder Vergleich?" unterscheiden, meldet nach dieser Scheibe weiterhin
   dieselbe Zahl — die fünf betroffenen Stellen rutschen nur nach unten,

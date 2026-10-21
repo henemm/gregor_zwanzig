@@ -368,7 +368,7 @@ kein Kandidat, unabhängig vom Staging-Setup-Befund.
 
 ## Acceptance Criteria
 
-- **AC-1 (Minimal-PUT Weg 1 verlustfrei):** Given ein gespeicherter
+- **AC-1:** (Minimal-PUT Weg 1 verlustfrei) Given ein gespeicherter
   Ortsvergleich mit gesetzten Alarm-Kanal-Schwellen auf allen vier Kanälen
   und gesetzten amtlichen Warnquellen / When ein PUT auf
   `/api/compare/presets/{id}` nur ein einzelnes Feld ohne die Pflichtfelder
@@ -379,7 +379,7 @@ kein Kandidat, unabhängig vom Staging-Setup-Befund.
     (`t.TempDir()`), Minimal-Body, Assertion auf jedes einzelne erhaltene
     Feld nach dem Laden vom Store.
 
-- **AC-2 (Konflikt-Wiederholen trifft die richtige Adresse):** Given ein
+- **AC-2:** (Konflikt-Wiederholen trifft die richtige Adresse) Given ein
   Ortsvergleich, dessen Speichern mit einem Konflikt (412) fehlschlägt /
   When der Nutzer „Wiederholen" auslöst / Then holt der Refresh den frischen
   Stand von `/api/compare/presets/{id}`, nicht von `/api/trips/{id}`, und der
@@ -415,7 +415,7 @@ kein Kandidat, unabhängig vom Staging-Setup-Befund.
     Controller existiert), sie würde aber den Konfliktzweig heute gar nicht
     erreichen.
 
-- **AC-3 (Trip-Verhalten unverändert):** Given dieselbe
+- **AC-3:** (Trip-Verhalten unverändert) Given dieselbe
   Konflikt-Wiederholen-Situation bei einer Trip / When Refresh und Retry
   laufen / Then bleibt das Verhalten exakt wie vor dieser Scheibe (Refresh
   gegen `/api/trips/{id}`, Retry gelingt).
@@ -423,7 +423,7 @@ kein Kandidat, unabhängig vom Staging-Setup-Befund.
     unverändert und bleibt vollständig grün — kein Testfall wird angepasst,
     nur ergänzt.
 
-- **AC-4 (Netz in der Ampel):** Given die neun benannten
+- **AC-4:** (Netz in der Ampel) Given die neun benannten
   Ortsvergleich-Hub-Persistenztest-Kandidaten / When jeder Kandidat gegen
   Filter A geprüft und die verbleibenden dreimal hintereinander lokal
   ausgeführt werden / Then stehen genau die dabei durchgehend grünen
@@ -434,7 +434,7 @@ kein Kandidat, unabhängig vom Staging-Setup-Befund.
     Merge (Live-E2E) plus lokales Drei-Läufe-Protokoll als Aufnahmebeleg,
     analog zum bestehenden Vorgehen im Kopfkommentar der Datei.
 
-- **AC-5 (Mutations-Gegenprobe, zwei Verfälschungen):** Given die übergebene
+- **AC-5:** (Mutations-Gegenprobe, zwei Verfälschungen) Given die übergebene
   Ressourcenart aus AC-2 ist umgesetzt / When sie versuchsweise verfälscht
   wird / Then wird jeweils mindestens ein Test rot:
   1. **Rückfall auf festen Trip-Pfad** (Refresh ruft wieder bedingungslos

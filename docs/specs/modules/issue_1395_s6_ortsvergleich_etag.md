@@ -330,13 +330,13 @@ Neuer Block „Trichter: Ortsvergleich (S6)":
 - **AC-8:** Given der Umgehungsweg `PUT /api/briefings/{id}?kind=vergleich` unterliegt derselben Vorbedingungs-Logik wie der dedizierte Preset-Endpunkt / When ohne, mit passendem oder mit veraltetem `If-Match` aufgerufen wird / Then verhaelt er sich analog AC-3/AC-4/AC-5
   - Test: `TestUpdateBriefingHandler_Vergleich_NoIfMatch_Accepted`, `TestUpdateBriefingHandler_Vergleich_StaleIfMatch_Returns412_FileUnchanged`, `TestUpdateBriefingHandler_Vergleich_ReturnsNewETag`
 
-- **AC-9 (Kern der Scheibe):** Given ein Preset wurde ueber EINEN der beiden Schreibwege zuletzt geschrieben / When ein Client mit einem inzwischen veralteten `If-Match`-Wert ueber den JEWEILS ANDEREN Schreibweg schreiben will / Then wird dieser Schreibvorgang ebenfalls mit `412` abgelehnt (in BEIDEN Richtungen: Preset→Briefings und Briefings→Preset) — kein Weg bleibt eine Umgehung des anderen
+- **AC-9:** (Kern der Scheibe) Given ein Preset wurde ueber EINEN der beiden Schreibwege zuletzt geschrieben / When ein Client mit einem inzwischen veralteten `If-Match`-Wert ueber den JEWEILS ANDEREN Schreibweg schreiben will / Then wird dieser Schreibvorgang ebenfalls mit `412` abgelehnt (in BEIDEN Richtungen: Preset→Briefings und Briefings→Preset) — kein Weg bleibt eine Umgehung des anderen
   - Test: `TestCrossPath_WriteViaComparePresetsThenStaleWriteViaBriefingsVergleich_Returns412`, `TestCrossPath_WriteViaBriefingsVergleichThenStaleWriteViaComparePresets_Returns412`
 
 - **AC-10:** Given `GET /api/briefings/{id}?kind=vergleich` liefert denselben Fingerabdruck wie `GET /api/compare/presets/{id}` (dieselbe Datei) / When beide GET-Aufrufe fuer dasselbe Preset hintereinander erfolgen / Then sind beide `ETag`-Werte identisch
   - Test: `TestGetBriefingHandler_Vergleich_ReturnsETag_MatchesComparePresetETag`
 
-- **AC-11 (Reentrancy):** Given `UpdateBriefingHandler` reicht `kind=route` per `ServeHTTP` an `UpdateTripHandler` durch, der bereits dieselbe Sperre nimmt / When nach dieser Aenderung `PUT /api/briefings/{id}?kind=route` aufgerufen wird / Then antwortet der Server weiterhin normal (kein Deadlock, keine Zeitueberschreitung) — die neue Sperre im `vergleich`-Zweig wird fuer `kind=route`-Aufrufe NIE genommen
+- **AC-11:** (Reentrancy) Given `UpdateBriefingHandler` reicht `kind=route` per `ServeHTTP` an `UpdateTripHandler` durch, der bereits dieselbe Sperre nimmt / When nach dieser Aenderung `PUT /api/briefings/{id}?kind=route` aufgerufen wird / Then antwortet der Server weiterhin normal (kein Deadlock, keine Zeitueberschreitung) — die neue Sperre im `vergleich`-Zweig wird fuer `kind=route`-Aufrufe NIE genommen
   - Test: `TestUpdateBriefingHandler_Route_StillWorks_NoDeadlock` — Aufruf mit `context.WithTimeout` oder Erfolgsnachweis innerhalb kurzer Frist
 
 - **AC-12:** Given zwei verschiedene Nutzer haben je ein eigenes Compare-Preset mit derselben Preset-ID / When Nutzer A einen `ETag` erhaelt und diesen als `If-Match` gegen Nutzer B's Preset sendet / Then greift die Pruefung nicht ueber die Mandantengrenze
@@ -354,7 +354,7 @@ Neuer Block „Trichter: Ortsvergleich (S6)":
 - **AC-16:** Given alle bestehenden Compare-Preset-Schreibtests senden heute keinen `If-Match`-Header / When diese Scheibe implementiert ist / Then bleiben alle diese Tests unveraendert gruen (siehe „Was nicht kaputtgehen darf")
   - Test: bestehende Suiten laufen unveraendert mit; kein neuer Testkoerper
 
-- **AC-17 (Frontend):** Given ein Compare-Preset wurde per `GET /api/compare/presets/{id}` ueber den Frontend-Trichter geladen / When derselbe Client danach `PUT /api/compare/presets/{id}` ueber `api.put` aufruft / Then traegt die Anfrage den zuvor erhaltenen Stempel automatisch als `If-Match`-Header — ohne dass die aufrufende Komponente (Compare-Editor) davon etwas weiss. Zusaetzlich: ein Trip- und ein Compare-Preset-Stempel mit numerisch aehnlichem Suffix kollidieren in der Registry nicht
+- **AC-17:** (Frontend) Given ein Compare-Preset wurde per `GET /api/compare/presets/{id}` ueber den Frontend-Trichter geladen / When derselbe Client danach `PUT /api/compare/presets/{id}` ueber `api.put` aufruft / Then traegt die Anfrage den zuvor erhaltenen Stempel automatisch als `If-Match`-Header — ohne dass die aufrufende Komponente (Compare-Editor) davon etwas weiss. Zusaetzlich: ein Trip- und ein Compare-Preset-Stempel mit numerisch aehnlichem Suffix kollidieren in der Registry nicht
   - Test: `test_get_capturesEtagFromComparePresetResponse`, `test_put_attachesIfMatch_whenComparePresetStampKnown`, `test_tripAndComparePresetStamps_doNotCollide_evenWithSameSuffix`
 
 ## Was nicht kaputtgehen darf

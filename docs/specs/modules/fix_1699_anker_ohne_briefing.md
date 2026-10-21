@@ -293,7 +293,7 @@ ist bereits generisch (nimmt jeden String entgegen) und braucht keinen Code-Eing
     Dateiinhalt, sondern strukturiert parsen) und den `reason`-Wert der letzten Zeile
     prüfen.
 
-- **AC-3 (zentrale Nicht-Regression):** Amtliche Warnungen bleiben unberührt. Given ein
+- **AC-3:** (zentrale Nicht-Regression) Amtliche Warnungen bleiben unberührt. Given ein
   Trip, dessen einziger Snapshot aus einer Abfrage stammt, und eine vorliegende amtliche
   Warnung / When der Alarm-Lauf stattfindet / Then wird die amtliche Warnung versendet,
   weil für sie nur die Geometrie zählt (`tagesgleicher_anker_noetig=False`,
@@ -313,7 +313,7 @@ ist bereits generisch (nimmt jeden String entgegen) und braucht keinen Code-Eing
     `True`) schreiben, Alarm-Lauf ausführen. Assert: Rückgabe sind die geladenen
     Segmente, keine neue Zeile in der Diagnose-Datei.
 
-- **AC-5 (Altbestand):** Given eine vor dem Deploy geschriebene Snapshot-Datei OHNE das
+- **AC-5:** (Altbestand) Given eine vor dem Deploy geschriebene Snapshot-Datei OHNE das
   Feld `briefing_backed`, mit `target_date` = heute / When der Alarm läuft / Then gilt sie
   als briefing-gestützt, der Abweichungsalarm arbeitet normal und es entsteht kein
   Diagnose-Eintrag.
@@ -329,21 +329,21 @@ ist bereits generisch (nimmt jeden String entgegen) und braucht keinen Code-Eing
     Kommando-Antworttexte nach der Abfrage prüfen — Assert: `available=True`, Daten
     vorhanden, unverändert gegenüber dem Stand vor dieser Scheibe.
 
-- **AC-7 (Selbstheilung):** Given ein durch eine Abfrage entstandener, als nicht
+- **AC-7:** (Selbstheilung) Given ein durch eine Abfrage entstandener, als nicht
   briefing-gestützt markierter Snapshot / When danach ein reguläres Briefing läuft / Then
   ist der Anker wieder briefing-gestützt und der Abweichungsalarm arbeitet wieder.
   - Test: Kern. Erst Abfrage (schreibt `briefing_backed=False`), dann regulären
     Briefing-Lauf ausführen (überschreibt den Snapshot mit `briefing_backed=True`),
     danach Alarm-Lauf. Assert: kein Verwerfen mehr, kein neuer Diagnose-Eintrag.
 
-- **AC-8 (Persistenz-Roundtrip):** Given `save(..., briefing_backed=False)` / When die
+- **AC-8:** (Persistenz-Roundtrip) Given `save(..., briefing_backed=False)` / When die
   Lesemethode das Feld liest / Then liefert sie `False`; bei regulärem `save()` ohne
   Angabe liefert sie `True`.
   - Test: Kern (`tests/integration/test_weather_snapshot.py`). Beide Fälle direkt gegen
     `WeatherSnapshotService` fahren (echte Datei in `tmp_path`), Rückgabewert der neuen
     Lesemethode prüfen.
 
-- **AC-9 (Regression `/heute`):** Given der bestehende On-Demand-Pfad über
+- **AC-9:** (Regression `/heute`) Given der bestehende On-Demand-Pfad über
   `send_on_demand_report` (`on_demand=True`) / When `/heute` oder `/morgen` gesendet wird
   / Then bleiben Anker und Melde-Gedächtnis unberührt wie bisher (bewacht durch
   `tests/tdd/test_trip_briefing_anchor_unchanged.py::test_ac27_ad_hoc_abruf_laesst_anker_und_gedaechtnis_unberuehrt`).
@@ -351,7 +351,7 @@ ist bereits generisch (nimmt jeden String entgegen) und braucht keinen Code-Eing
     dieser Fix den sauberen `/heute`-Pfad (der nie in `_fetch_and_save_snapshot` läuft)
     nicht anfasst.
 
-- **AC-10 (Naht zu #1916 — kein rollierender Anker aus verworfener Basis):** Given ein
+- **AC-10:** (Naht zu #1916 — kein rollierender Anker aus verworfener Basis) Given ein
   Trip, dessen einziger Δ-Anker in Stufe 3 der Prioritätskette wegen `not_briefing_backed`
   verworfen wird (kein Briefing-Anker in Stufe 1, kein gültiger rollierender Anker in
   Stufe 2) / When der Alarm-Lauf (`check_all_trips` → `check_and_send_alerts`) für diesen

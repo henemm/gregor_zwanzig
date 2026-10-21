@@ -345,7 +345,7 @@ Datei-Split").
 
 ## Acceptance Criteria
 
-- **AC-1 (Bridge-Datei vollständig aufgelöst, Exporte byte-identisch in zwei Zielmodulen):**
+- **AC-1:** (Bridge-Datei vollständig aufgelöst, Exporte byte-identisch in zwei Zielmodulen)
   Given `compareHubWizardBridge.ts` trägt heute acht Laufzeit-Exporte + einen Typ-Export,
   alle mit produktiven Importeuren / When die Datei aufgelöst wird in
   `compare/compareHubPersistenz.ts` (`buildHubPutPayload`, `HubEdit`, `snapshotForRollback`,
@@ -359,7 +359,7 @@ Datei-Split").
   - Test: Kern — Datei-Existenzprüfung, `totcode_rueckbau_speicherweg.test.ts` (Signaturtypen
     auf die zwei neuen Module aufgeteilt), plus die umgezogenen Verhaltenstests selbst.
 
-- **AC-2 (AC-4 aus #2276 — wörtliche Suche liefert 0 Treffer):** Given der Name
+- **AC-2:** (AC-4 aus #2276 — wörtliche Suche liefert 0 Treffer) Given der Name
   `compareHubWizardBridge` steht heute in 3 produktiven Dateien und 40 Testdateien (davon 38
   echte Importe/Signatur-Anker, 2 reine Kommentar-Erwähnungen) / When Datei gelöscht, alle
   Importpfade umgestellt und alle Kommentar-Erwähnungen an Ort und Stelle ersetzt werden /
@@ -367,7 +367,7 @@ Datei-Split").
   - Test: Kern — `compare_hub_bridge_restlos_entfernt.test.ts` (neu), Shell-Grep relativ zur
     eigenen Testdatei aufgelöst (Pfadregel #1409, Muster `context_herkunft_zweige_eingefroren.test.ts`).
 
-- **AC-3 (kein `shared/`-Organismus lädt die neuen Hub-Module zur Laufzeit):** Given die vier
+- **AC-3:** (kein `shared/`-Organismus lädt die neuen Hub-Module zur Laufzeit) Given die vier
   bestehenden Ladegraph-Wächter (`versand_tab_…`, `alarme_tab_…`, `corridor_editor_…`,
   `wetter_metriken_…laedt_keine_compare_klebeschicht.test.ts`) prüfen heute die Abwesenheit
   von `compare/compareHubWizardBridge.ts` im Ladegraphen der jeweiligen Organismen / When ihre
@@ -380,7 +380,7 @@ Datei-Split").
     Bestand sieht diese Regression, weil ein reiner Werte-Vergleich die Reaktivität/den
     Ladegraphen nicht prüft.
 
-- **AC-4 (toter Context-Aufruf entfernt, `/compare/new` unberührt):** Given
+- **AC-4:** (toter Context-Aufruf entfernt, `/compare/new` unberührt) Given
   `CompareTabs.svelte:330` ruft `setContext('compare-wizard-state', wizardState)` auf, obwohl
   im gesamten Hub-Baum kein `getContext('compare-wizard-state')` mehr existiert (verifiziert:
   `CorridorEditor(Mobile).svelte` liest seit S6d aus `corridorPropsAus(wizardState)`; die
@@ -396,7 +396,7 @@ Datei-Split").
     `issue-682-compare-editor-mobile.spec.ts` — alle in `.github/ci_e2e_specs.txt`),
     unverändert grün.
 
-- **AC-5 (F1 — Schreibschlange bleibt unverändert wirksam):** Given `hubPutQueue` serialisiert
+- **AC-5:** (F1 — Schreibschlange bleibt unverändert wirksam) Given `hubPutQueue` serialisiert
   heute alle vier Hub-PUT-Pfade, Payload-Bau liegt im `enqueue()`-Closure
   (`CompareTabs.svelte:265-267`), `hub_put_queue.test.ts` bewacht das bereits real (Cross-Tab-
   Sequenz gegen `fakeTripServer`) / When `createPutQueue`/`buildToggleActivePutPayload` nach
@@ -409,7 +409,7 @@ Datei-Split").
     Baseline sendet — kein anderer Test im Bestand sieht diese Regression, weil sie nur bei
     zwei schnell aufeinanderfolgenden Schreibvorgängen sichtbar wird.
 
-- **AC-6 (HERKUNFT-Ratsche unverändert grün, Datei nicht angefasst):** Given
+- **AC-6:** (HERKUNFT-Ratsche unverändert grün, Datei nicht angefasst) Given
   `context_herkunft_zweige_eingefroren.test.ts` zählt heute 47 Fundstellen ausschließlich
   unter `shared/`, vier davon liegen unterhalb von Kommentarzeilen, die in dieser Scheibe
   editiert werden (`versandVergleichSpeicherung.ts:221` unter `:10`,
@@ -427,7 +427,7 @@ Datei-Split").
     auf `:220` ⇒ `context_herkunft_zweige_eingefroren.test.ts` wird rot („Ist-Eintrag
     zusätzlich" bzw. „Soll-Eintrag fehlt").
 
-- **AC-7 (Verhaltensgleichheit — bestehendes E2E-Regressionsnetz unverändert grün):** Given
+- **AC-7:** (Verhaltensgleichheit — bestehendes E2E-Regressionsnetz unverändert grün) Given
   Orte-Speichern, Aktiv-Schalter im Hub und in der Liste `/compare`, Aktivierungs-Banner,
   Rollback bei Fehler und Hydration werden heute durch das bestehende Compare-Hub-E2E-Netz
   abgedeckt (`compare-hub-inline-edit.spec.ts`, `compare-detail-edit-entry.spec.ts`,

@@ -569,7 +569,7 @@ Kein AC in dieser Spec; eigenes Ticket je nach Messergebnis.
     das war der Fehler des ersten, verworfenen Lösungswegs (Umzug nach
     `test_prod_selftest_564.py`, das modulweit `pytest.mark.staging` trägt).
 
-- **AC-11 (Gesamtwirkung, Pflicht):** Given der volle `uv run pytest`-Lauf
+- **AC-11:** (Gesamtwirkung, Pflicht) Given der volle `uv run pytest`-Lauf
   (Standardfilter) zeigt vor dieser Scheibe die 21 in AC-1 bis AC-10
   beschriebenen roten Tests / When alle Maßnahmen aus AC-1 bis AC-10
   umgesetzt sind / Then zeigt derselbe volle Lauf genau 21 rote Tests

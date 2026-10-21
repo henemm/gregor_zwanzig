@@ -261,7 +261,7 @@ Segment-Startpunkt.
     `test_feature_656_radar_nowcast.py` belegt, dass ein später Onset nicht mehr pauschal
     unterdrückt wird (Positivnachweis der Entfernung, nicht nur Abwesenheit des alten Tests).
 
-- **AC-11 (Kontrollfall/Regressionsschutz):** Given ein Segment, dessen Dauer kürzer ist als der
+- **AC-11:** (Kontrollfall/Regressionsschutz) Given ein Segment, dessen Dauer kürzer ist als der
   verwendete Zieloffset (`RADAR_ONSET_THRESHOLD_MIN // 2` bzw. `NOWCAST_HORIZON_MIN // 2`), und
   bei dem die Vorwärtssuche kein weiteres Segment und keinen Folgetag findet / When
   `position_at_time()` läuft / Then bleibt das Verhalten aus AC-7 (Klemmen auf `end_point`,
@@ -277,7 +277,7 @@ Segment-Startpunkt.
     hinzukommenden Aufrufer stehen). Die Zusicherung ist dadurch nicht schwächer, sondern
     genauer benannt.
 
-- **AC-12 (Budget-Invariante):** Given ein Lauf von `check_radar_alerts()` für einen Trip mit
+- **AC-12:** (Budget-Invariante) Given ein Lauf von `check_radar_alerts()` für einen Trip mit
   aktivem Geh-Segment / When der Radar-Alarm-Pfad vollständig durchläuft / Then erfolgt **genau
   ein** `get_nowcast()`-Aufruf für diesen Trip — die Verlegung des Abrufpunkts erhöht die Zahl
   der Abrufe nicht. Dasselbe gilt analog für den Starkregen-Hinweis-Pfad in

@@ -190,7 +190,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
 
 ## Acceptance Criteria
 
-- **AC-1 (Einmal speichern, ohne Wrapper):** Given der Nutzer öffnet den
+- **AC-1:** (Einmal speichern, ohne Wrapper) Given der Nutzer öffnet den
   Alarme-Reiter eines Ortsvergleichs und ändert einen Alarm-Wert / When die
   Änderung abgeschlossen ist / Then erscheint „Gespeichert" nach genau
   einem PUT, ohne dass der Wrapper (`hub-alarme-wrap`) oder
@@ -204,7 +204,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
     Vergleich-Zweig entfernen ⇒ kein PUT ⇒ rot; SaveFn zweimal auslösen
     ⇒ zwei PUTs ⇒ rot.
 
-- **AC-2 (Kein Zurückschreiben alter Alarmwerte):** Given eine
+- **AC-2:** (Kein Zurückschreiben alter Alarmwerte) Given eine
   Alarm-Änderung wurde soeben gespeichert / When danach ein anderer Reiter
   (Versand oder Wertebereiche) ebenfalls einen PUT auslöst / Then trägt
   der abgefangene Request-Body dieses **zweiten** PUT die neuen
@@ -216,7 +216,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
   - Mutations-Gegenprobe: `onCompareUpdate` weglassen ⇒ dieser Test wird
     rot.
 
-- **AC-3 (Basis wird bei Ausführung gelesen, nicht beim Einreihen):**
+- **AC-3:** (Basis wird bei Ausführung gelesen, nicht beim Einreihen)
   Given zwei Alarm-Speichervorgänge werden kurz hintereinander in die
   Queue eingereiht / When die Basis (`preset`) zwischen dem Einreihen des
   ersten und der Ausführung des zweiten geändert wird / Then sieht die
@@ -246,7 +246,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
     Nicht-412) ⇒ Test wird rot, weil die Änderung nach dem Konflikt
     verschwindet statt erhalten zu bleiben.
 
-- **AC-5 (No-Op stempelt kein „Gespeichert"):** Given der Nutzer öffnet
+- **AC-5:** (No-Op stempelt kein „Gespeichert") Given der Nutzer öffnet
   den Alarme-Reiter, ändert nichts oder ändert einen Wert und dann wieder
   zurück auf den Ausgangswert / When der `$effect` läuft / Then entsteht
   kein PUT und keine neue „Gespeichert"-Meldung mit neuem Zeitstempel.
@@ -255,7 +255,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
   - Mutations-Gegenprobe: `schedule()` ohne vorheriges Diff-Gate gegen
     `lastPersistedAlarmSnapshot` aufrufen ⇒ Test wird rot.
 
-- **AC-6 (Reiterwechsel flusht ausstehende Änderung):** Given der Nutzer
+- **AC-6:** (Reiterwechsel flusht ausstehende Änderung) Given der Nutzer
   ändert einen Alarm-Wert und wechselt sofort, vor Ablauf der
   Debounce-Zeit, in den Versand-Reiter / When der Reiterwechsel
   stattfindet / Then wird die Alarm-Änderung vor dem Wechsel gesendet,
@@ -266,7 +266,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
   - Mutations-Gegenprobe: `flush()`-Aufruf beim Reiterwechsel entfernen
     ⇒ Test wird rot.
 
-- **AC-7 (Anlege-Seite unverändert):** Given der Nutzer legt einen neuen
+- **AC-7:** (Anlege-Seite unverändert) Given der Nutzer legt einen neuen
   Ortsvergleich an und bearbeitet den Alarme-Reiter vor dem ersten
   Speichern / When er die Anlage abschließt / Then läuft der Speicherweg
   weiter ausschließlich über `wiz.saveNewPreset()` (POST), ohne
@@ -275,7 +275,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
     unverändert grün (Mount ohne `preset`/`saveController` bewirkt, dass
     der neue Zweig inaktiv bleibt).
 
-- **AC-8 (Bestandsverhalten der umgehängten Tests bleibt erhalten):**
+- **AC-8:** (Bestandsverhalten der umgehängten Tests bleibt erhalten)
   Given Radar-Schalter, Kanal-Schwellen und Kurzstil-Schalter werden im
   Ortsvergleich gesetzt / When gespeichert wird / Then landen sie im
   gespeicherten Stand wie vor dieser Scheibe.
@@ -284,7 +284,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
     `compare_alarme_channel_threshold_save.test.ts`) laufen unverändert
     grün, nur mit neuem Import.
 
-- **AC-9 (Kein Laufzeit-Importeur der alten Klebeschicht mehr):** Given
+- **AC-9:** (Kein Laufzeit-Importeur der alten Klebeschicht mehr) Given
   der Alarm-Speicherpfad ist umgestellt / When der Modulgraph geladen wird
   / Then lädt `shared/AlarmeTab.svelte` zur Laufzeit kein Modul aus
   `compare/` (die Alarm-Helfer kommen aus
@@ -303,7 +303,7 @@ bleiben davon unberührt, nur die interne Umsetzung ändert sich.
     `flushPendingAlarmSave` aus der alten Bridge-Datei in `AlarmeTab.svelte`
     einfügen ⇒ der Mock-Ladenachweis schlägt an, Test wird rot.
 
-- **AC-10 (Keepalive-Weiterreichung):** Given der Nutzer schließt den Tab
+- **AC-10:** (Keepalive-Weiterreichung) Given der Nutzer schließt den Tab
   unmittelbar nach einer Alarm-Änderung / When der Browser den
   Entladen-Vorgang mit Keepalive auslöst / Then wird der `init`-Parameter
   der SaveFn an den `api.put`-Aufruf durchgereicht, statt verworfen zu

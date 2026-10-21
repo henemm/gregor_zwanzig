@@ -232,7 +232,7 @@ wird nie aufgerufen, Flag bleibt `False`, unverändertes Verhalten.
   - Test: Erfolgreichen Abruf faken, Journal auf genau eine `ok`-Zeile für
     `path="snowgrid"` prüfen, keine `unavailable`-Zeile.
 
-- **AC-3 (Regressions-Leitplanke, wichtigstes AC):** Given `fetch_snowgrid` wirft
+- **AC-3:** (Regressions-Leitplanke, wichtigstes AC) Given `fetch_snowgrid` wirft
   eine beliebige Exception (auch eine NICHT-httpx-Exception, z. B. ein simulierter
   Parsing-Fehler) / When `fetch_combined()` bzw. `fetch_forecast()` durchläuft /
   Then liefert der Aufruf trotzdem ein `NormalizedTimeseries`-Ergebnis mit den

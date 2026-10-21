@@ -274,7 +274,7 @@ Zwischenstand.
 
 ## Acceptance Criteria
 
-- **AC-1 (`VersandTab` ist im Vergleichs-Zweig wertprop-rein):** Given `VersandTab.svelte` liest/
+- **AC-1:** (`VersandTab` ist im Vergleichs-Zweig wertprop-rein) Given `VersandTab.svelte` liest/
   schreibt heute `wiz` an den gemessenen Stellen (Prop `:55`, Zähler `:194`, Schreiber
   `:218-222`, Selbst-Speicher-Block `:271-291`, Markup `:330-373`) und importiert den Typ
   `CompareWizardState` (`:18`) / When der Vergleichs-Zweig auf acht Wertprops
@@ -285,7 +285,7 @@ Zwischenstand.
     `compare_alarme_wertprops.test.ts`): kein `wiz`- und kein `CompareWizardState`-Identifier
     mehr im Instanz-Skript; die Prop-Schnittstelle bindet alle elf freigegebenen Namen.
 
-- **AC-2 (Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Fläche B):** Given
+- **AC-2:** (Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Fläche B) Given
   `vergleichSpeicherung` entsteht nur, wenn `versandVergleichSpeicherungAktiv({context, zustand,
   preset, saveController})` wahr ist / When der Effekt-Rumpf über `effekteVon()` an den
   negativen Orten (Fläche A Trip, Fläche C/D Anlegen mit `preset: null`/`saveController: null`)
@@ -300,7 +300,7 @@ Zwischenstand.
     (Negativ-Gegenprobe). Kein E2E-Test fängt diese Mutation, weil nur der Hub browserseitig
     geprüft wird und dort die Bedingung strukturell immer erfüllt ist.
 
-- **AC-3 (alle drei Vergleichs-Mounts speisen dasselbe Bündel ein, Aufrufform geprüft):** Given
+- **AC-3:** (alle drei Vergleichs-Mounts speisen dasselbe Bündel ein, Aufrufform geprüft) Given
   Mount (B) `CompareTabs.svelte:1070`, Mount (C) `CompareNewEditor.svelte:407`, Mount (D)
   `CompareNewEditor.svelte:493` übergeben heute `wiz`/`{wiz}` / When alle drei Mounts auf
   `{...versandPropsAus(wiz)}` umgestellt werden / Then rendern an allen drei Mounts weiterhin
@@ -317,7 +317,7 @@ Zwischenstand.
     Wächter wird rot (ein reines Werte-Diff bliebe grün, weil die Werte selbst korrekt sind — nur
     ihre Reaktivität bricht, was erst im Browser sichtbar würde).
 
-- **AC-4 (`sendEmail` bleibt eigenständig interaktiv, außerhalb der Speicherweg-Brücke):** Given
+- **AC-4:** (`sendEmail` bleibt eigenständig interaktiv, außerhalb der Speicherweg-Brücke) Given
   `wiz.sendEmail` wird heute über eine klickbare Checkbox (`VTBriefingChannels.svelte:127`)
   gelesen (`:335`) und geschrieben (`:339`, `makeWizChannelHandler('sendEmail')`), fließt aber
   NIE in `VersandSnapshot`/die Nutzlast ein / When `versandPropsAus` `sendEmail` +
@@ -336,7 +336,7 @@ Zwischenstand.
     ein Fehler, den kein bestehender Test heute fängt, weil `sendEmail` bisher hart an `wiz`
     hing).
 
-- **AC-5 (drei tote Legacy-Restfelder überleben Rollback und Payload unverändert):** Given
+- **AC-5:** (drei tote Legacy-Restfelder überleben Rollback und Payload unverändert) Given
   `alertCooldownMinutes`/`alertQuietFrom`/`alertQuietTo` haben kein Bedienelement im
   Versand-Reiter, müssen aber weiter durch Snapshot/Payload/Rollback laufen (S5 AC-11,
   BUG-DATALOSS-GR221-Klasse) / When sie als Wertprops ohne eigenen Rückruf gebündelt werden und
@@ -362,7 +362,7 @@ Zwischenstand.
     nie durch `VersandTab.svelte`s `werte()`-Closure — er kann eine Verdrahtungs-Regression dort
     also nicht sehen (Adversary-Finding F-S6e-1).
 
-- **AC-6 (Ratsche bewusst gepflegt — Strukturwächter, kein Verhaltensnachweis):** Given
+- **AC-6:** (Ratsche bewusst gepflegt — Strukturwächter, kein Verhaltensnachweis) Given
   `context_herkunft_zweige_eingefroren.test.ts` hält heute `VersandTab.svelte:284/294/330` als
   drei positionsstrikte Einträge, `EINGEFROREN_SOLL_ANZAHL = 47` / When im selben Commit wie der
   Umbau die drei Einträge auf ihre neu gemessenen Zeilennummern nachgeführt und per
@@ -381,7 +381,7 @@ Zwischenstand.
     8-Zeilen-Fenster setzen, ohne den Bedingungstext anzupassen ⇒ die `zeile`-Prüfung schlägt
     fehl.
 
-- **AC-7 (Verhaltensgleichheit am Hub, bestehender E2E-Nachweis):** Given
+- **AC-7:** (Verhaltensgleichheit am Hub, bestehender E2E-Nachweis) Given
   `compare-versand-speichert-selbst.spec.ts` deckt heute Morgen-Zeit-Änderung (ein PUT), „Bis auf
   Weiteres", Reiterwechsel-Flush mit Alarme, Konflikt-Handling, Pausieren und Reload-Überleben ab
   / When `VersandTab` im Hub-Mount auf `versandPropsAus(wizardState)` umgestellt wird / Then
@@ -389,7 +389,7 @@ Zwischenstand.
   - Test: Live-E2E — `frontend/e2e/compare-versand-speichert-selbst.spec.ts` (bereits in
     `.github/ci_e2e_specs.txt`), keine neue Datei.
 
-- **AC-8 (Fläche A bleibt vollständig unverändert):** Given die Trip (`/trips/[id]`) hat heute
+- **AC-8:** (Fläche A bleibt vollständig unverändert) Given die Trip (`/trips/[id]`) hat heute
   keinen `compare-wizard-state`-Context, `wiz` ist dort nie gesetzt, der Speicherweg läuft über
   `saveController` / When `VersandTab` auf Wertprops umgestellt wird, ohne dass sich an Mount (A)
   etwas ändert (`BriefingScheduleTab.svelte:130` reicht weiterhin nur

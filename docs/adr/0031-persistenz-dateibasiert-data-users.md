@@ -3,6 +3,7 @@
 - **Status:** Teilweise abgelöst durch [ADR-0083](0083-gemeinsame-schreibsperre-go-python.md) — abgelöst ist nur die Aussage „Go einzige Schreib-Autorität" (stimmt nicht: Python schreibt `briefings/` ebenfalls); dateibasierte Persistenz ohne Datenbank und die Folgepflichten (Read-Modify-Write mit Merge) gelten weiter, ADR-0083 verweist für „keine Datenbank" ausdrücklich hierher (rückwirkend dokumentiert 2026-07-22 — gelebte Praxis, Issue #1343)
 - **Datum:** 2026-07-22
 - **Bezug:** `internal/store/`, ADR-0003 (Mandantentrennung), ADR-0023 (briefings/-Persistenz), CLAUDE.md §Daten-Schema-Reworks
+- **Ergänzt durch:** ADR-0101 (Read-Modify-Write mit Merge, gilt unabhängig von ADR-0083 weiter)
 
 ## Kontext
 

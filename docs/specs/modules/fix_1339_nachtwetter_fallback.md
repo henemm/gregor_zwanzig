@@ -85,7 +85,7 @@ korrekt für `None` (Fix #1331/#1334, „Erkennung == Anzeige per Konstruktion")
 
 ## Acceptance Criteria
 
-- **AC-1 (Kernfix):** Given ein Provider, dessen `fetch_segment_weather()`-Aufruf für die
+- **AC-1:** (Kernfix) Given ein Provider, dessen `fetch_segment_weather()`-Aufruf für die
   Nacht-Zeitreihe eine Exception wirft / When `fetch_night_weather()` aufgerufen wird / Then
   liefert die Funktion `None`, NICHT die Zeitreihe der letzten Etappe.
   - Test: Provider-Double (kein Mock-Theater — simuliert reales Fehlerverhalten eines Providers,
@@ -94,7 +94,7 @@ korrekt für `None` (Fix #1331/#1334, „Erkennung == Anzeige per Konstruktion")
     `last_segment.timeseries` zurückkommt (z. B. `result != last_segment.timeseries` bzw.
     Vergleich der enthaltenen Datenpunkte, nicht nur Identitätsprüfung).
 
-- **AC-2 (Wirkung an der Stelle, an der sie zählt):** Given der Fehlerfall aus AC-1 / When das
+- **AC-2:** (Wirkung an der Stelle, an der sie zählt) Given der Fehlerfall aus AC-1 / When das
   Ergebnis (`None`) über `compute_has_gap()` an den vollen Renderpfad
   (`TripReportFormatter.format_email(..., has_gap=...)`) übergeben wird / Then zeigt mindestens
   ein Versandkanal (SMS-Text `TH:?` oder Klartext-Mail `?` statt „kein Gewitter") den
@@ -106,7 +106,7 @@ korrekt für `None` (Fix #1331/#1334, „Erkennung == Anzeige per Konstruktion")
     Renderpfad, nicht nur an `compute_has_gap()` isoliert — die Fehl-Entwarnung ist die
     sicherheitsrelevante Richtung, die an der Wirkstelle geprüft sein muss.
 
-- **AC-3 (Beide Aufrufer, kein Divergenzrisiko):** Given derselbe Fehlerfall wie in AC-1 / When
+- **AC-3:** (Beide Aufrufer, kein Divergenzrisiko) Given derselbe Fehlerfall wie in AC-1 / When
   sowohl der Versandpfad (`TripReportSchedulerService._fetch_night_weather()`) als auch die
   Vorschau (Aufruf von `fetch_night_weather()` in `preview_service.py:217`) denselben Fehler
   erleben / Then liefern beide `None` — identisches Verhalten, da beide dieselbe geteilte
@@ -117,7 +117,7 @@ korrekt für `None` (Fix #1331/#1334, „Erkennung == Anzeige per Konstruktion")
     provider=<werfender Provider>)`, wie es `preview_service.py` täte. Beide Aufrufe müssen
     `None` liefern.
 
-- **AC-4 (Mutations-Gegenprobe, PFLICHT):** Wird die entfernte Fallback-Zeile versuchsweise
+- **AC-4:** (Mutations-Gegenprobe, PFLICHT) Wird die entfernte Fallback-Zeile versuchsweise
   wieder eingebaut (`return last_segment.timeseries` im `except`-Block), MUSS mindestens ein Test
   aus AC-1 oder AC-2 rot werden. Verbindliche Vorgabe an den Adversary in Phase 6 — die
   Fehl-Entwarnung ist die sicherheitsrelevante Richtung, die geprüft sein muss.

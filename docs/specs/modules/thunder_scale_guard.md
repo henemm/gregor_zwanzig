@@ -471,10 +471,10 @@ Frontend-Läufe erfolgen über
   je Fixture einen erwarteten Fund-/Kein-Fund-Status prüfen.
 - **AC-6 bis AC-10 (Regel B/C/match-case):** dieselbe Vorgehensweise, Fixtures nach den in den
   ACs genannten realen Vorbildern.
-- **AC-11 (Treffsicherheit):** die acht Fixture-Vorlagen aus `faelle.py.txt` einzeln durch die
+- **AC-11:** (Treffsicherheit) die acht Fixture-Vorlagen aus `faelle.py.txt` einzeln durch die
   Scan-Funktion laufen lassen; **je Vorlage genau ein Fund an der erwarteten Fundstelle** — nicht
   bloß eine Gesamtsumme von acht, die auch bei ungleich verteilten Fehlfunden zustande käme.
-- **AC-12 (Fehlalarm-Obergrenze):** vollen Backend-Scan gegen den echten Repo-Baum ausführen;
+- **AC-12:** (Fehlalarm-Obergrenze) vollen Backend-Scan gegen den echten Repo-Baum ausführen;
   erwarteter Output: Exit 0, keine Erwähnung einer unbegründeten Stelle außer
   `narrow.py::_SEV_TO_THUNDER_LEVEL` (die durch den Marker bereits grün ist). Gegenprobe mit
   temporär entferntem Marker **nur an einer Kopie im Scratchpad**, nie am Repo-Stand.
@@ -485,33 +485,33 @@ Frontend-Läufe erfolgen über
   ein Fund" allein bliebe auch dann wahr, wenn der Wächter nur die halbe Baumfläche liefe.
 - **AC-13 bis AC-15, AC-17 (Frontend-Regeln):** Scan-Funktion des Frontend-Wächters auf
   In-Memory-AST-Fixtures anwenden; je Fixture erwarteten Fund-/Kein-Fund-Status prüfen.
-- **AC-16 (Live-Bezug der Ordnung):** die Ordnungsquelle per Injektion durch
+- **AC-16:** (Live-Bezug der Ordnung) die Ordnungsquelle per Injektion durch
   `['NONE','MED','LOW','HIGH']` ersetzen und **zwei** Fixtures prüfen — die der untergeschobenen
   Ordnung folgende bleibt grün, die der echten folgende wird rot. Beide Erwartungen sind nötig:
   eine allein wäre auch bei hartkodierter Liste erfüllbar. **Kein** Quelltext-Grep als Nachweis
   (Dateiinhalt-Check ist als Verhaltensnachweis unzulässig).
-- **AC-18 (Regel D):** Kommentar-Extraktion des jeweiligen Wächters auf Fixtures mit/ohne
+- **AC-18:** (Regel D) Kommentar-Extraktion des jeweiligen Wächters auf Fixtures mit/ohne
   Paritätsbehauptung anwenden, inklusive einer mehrzeiligen Kommentarvariante.
-- **AC-19 (Selbstbezug):** vollen Scan gegen `tests/fixtures/thunder_scale_guard_cases/` bzw.
+- **AC-19:** (Selbstbezug) vollen Scan gegen `tests/fixtures/thunder_scale_guard_cases/` bzw.
   `frontend/.../__tests__/fixtures/` ausführen; erwarteter Output: 0 Funde trotz vollem
   Stufen-Wortschatz in den Dateien.
-- **AC-20 (Wirkungsnachweis):** `len(funde) > 0` gegen eine Fixture mit bekanntem Verstoß prüfen.
-- **AC-21 (Marker-Duldung):** acht Fixtures je Wächter durch die Scan-Funktion laufen lassen —
+- **AC-20:** (Wirkungsnachweis) `len(funde) > 0` gegen eine Fixture mit bekanntem Verstoß prüfen.
+- **AC-21:** (Marker-Duldung) acht Fixtures je Wächter durch die Scan-Funktion laufen lassen —
   ausreichende Begründung, Alibi-Begründung (`x`), 15 Punkte, 15 Bindestriche, 15 gleiche
   Buchstaben, deutsche Begründung mit Umlauten sowie die Grenzproben mit 14 und 15 sinnvollen
   Zeichen. Erwarteter Output: Füllzeichen und 14 Zeichen liefern je einen Fund, die übrigen `[]`.
-- **AC-22 (Prüfdatum):** `grep -n "2026-11-01" tests/tdd/test_thunder_scale_local_copy_guard.py
+- **AC-22:** (Prüfdatum) `grep -n "2026-11-01" tests/tdd/test_thunder_scale_local_copy_guard.py
   frontend/src/lib/components/shared/weather-metrics-tab/__tests__/thunderScaleLocalCopyGuard.test.ts
   docs/reference/gates_und_ratschen.md` ausführen; erwarteter Output: mindestens ein Treffer je
   Datei. **Ausdrückliche Ausnahme von der Dateiinhalt-Check-Regel:** Geprüft wird hier reine
   Metadaten-Präsenz (Prüfdatum, Ratschen-Tabellenzeile), kein Laufzeitverhalten — ein
   Verhaltensnachweis ist dafür weder möglich noch sinnvoll. Die Testfunktion trägt deshalb den
   Marker `# doc-compliance-test`.
-- **AC-23 (Wächtertrennung):** `uv run pytest --collect-only` über `tests/` ausführen (erwarteter
+- **AC-23:** (Wächtertrennung) `uv run pytest --collect-only` über `tests/` ausführen (erwarteter
   Output: Exit 0, keine Collection-Fehler); ergänzend Quelltext-Grep des Backend-Wächters auf
   `node|tsc|svelte` (erwarteter Output: kein Treffer). Der Collection-Lauf ist der eigentliche
   Nachweis, der Grep nur eine Zusatzabsicherung.
-- **AC-24 (parametrisierter Kern):** den Erkennungs-Kern zweimal gegen **dieselbe** konstruierte
+- **AC-24:** (parametrisierter Kern) den Erkennungs-Kern zweimal gegen **dieselbe** konstruierte
   Fixture aufrufen — einmal mit `RiskLevel`-Parametern (Fund erwartet), einmal mit
   Gewitter-Parametern (kein Fund erwartet). Beide Erwartungen sind nötig: der Fund allein wiese
   nicht nach, dass der Kern sich wirklich nach den Parametern richtet und nicht ohnehin alles

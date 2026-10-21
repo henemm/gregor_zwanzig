@@ -109,7 +109,7 @@ nachbilden soll.
 
 ## Acceptance Criteria
 
-- **AC-1 (lauter Fehler):** Given ein Aufrufer verlangt per negativem Offset einen Wegpunkt in
+- **AC-1:** (lauter Fehler) Given ein Aufrufer verlangt per negativem Offset einen Wegpunkt in
   der Vergangenheit / When dieser Wegpunkt bei der aktuellen Ortsminute auf dem Etappentag nicht
   mehr vor „jetzt" darstellbar ist / Then scheitert `fenster_minuten` laut mit einer
   Fehlermeldung, die die verletzte Zusicherung benennt — statt ein Fenster zurückzugeben, in dem
@@ -119,7 +119,7 @@ nachbilden soll.
     `(-120, -60, 60)` bei Minute 0–59, `(-240, -120, 120)` bei Minute 0–119) und prüft, dass in
     jedem dieser Fälle `ValueError` geworfen wird — kein Rückgabewert wird akzeptiert.
 
-- **AC-2 (Positivkontrolle, PFLICHT):** Given die aktuelle Ortsminute liegt außerhalb des nicht
+- **AC-2:** (Positivkontrolle, PFLICHT) Given die aktuelle Ortsminute liegt außerhalb des nicht
   darstellbaren Bereichs einer Offset-Familie / When `fenster_minuten` aufgerufen wird / Then
   liefert es ein Fenster, in dem jeder negativ gewünschte Wegpunkt bei oder vor „jetzt" liegt —
   geprüft über alle Ortsminuten eines Tages und alle betroffenen Offset-Familien, nicht an einem
@@ -129,7 +129,7 @@ nachbilden soll.
     zugehörige zurückgegebene Wert `<= minuten_jetzt` ist. Der Zähler der außerhalb der
     Randzone verletzten Minuten muss 0 sein. Ohne diesen Test bewacht AC-1 die leere Menge.
 
-- **AC-3 (die Ampel wird grün):** Given die drei Aufrufstellen in
+- **AC-3:** (die Ampel wird grün) Given die drei Aufrufstellen in
   `test_issue_822_radar_nowcast_segment.py`, die ein bereits vergangenes erstes Segment
   brauchen (Zeile 194 AC-1, Zeile 260 AC-2, Zeile 406 AC-3) / When diese Tests zu einer
   beliebigen Wanduhrzeit laufen — insbesondere in den heute roten Fenstern 12:00–13:30 UTC und
@@ -139,7 +139,7 @@ nachbilden soll.
     23:30 UTC (den vorher reproduzierbar roten Wanduhrzeiten) und bestehen in beiden Läufen;
     vor der Änderung ist derselbe Lauf ohne gestellte Uhr in genau diesen Fenstern rot.
 
-- **AC-4 (bestehende Zusicherungen bleiben):** Given ein beliebiges Offset-Tupel und eine
+- **AC-4:** (bestehende Zusicherungen bleiben) Given ein beliebiges Offset-Tupel und eine
   beliebige Ortsminute aus `range(-1440, 2880)` / When `fenster_minuten` aufgerufen wird und
   kein `ValueError` wirft / Then gelten für das zurückgegebene Fenster weiterhin unverändert
   alle drei bisherigen Zusicherungen: erster Wegpunkt liegt in `[0, 1439]`, die Folge ist streng
@@ -150,7 +150,7 @@ nachbilden soll.
     wirft, prüfen sie unverändert alle drei bisherigen Zusicherungen, über alle Familien und
     den vollen `range(-1440, 2880)`.
 
-- **AC-5 (keine Kollateralschäden):** Given die 13 übrigen Testdateien nutzen `fenster_minuten`
+- **AC-5:** (keine Kollateralschäden) Given die 13 übrigen Testdateien nutzen `fenster_minuten`
   nur über die Offset-Familien `(-60, 120)`, `(-60, 180)`, `(-60, 60)` für „ein Segment ist
   jetzt aktiv" / When diese Familien über alle 1440 Ortsminuten eines Tages durchlaufen werden /
   Then wird der neue `ValueError` nie ausgelöst und die 13 Testdateien (samt Fan-out-Helfern
@@ -161,7 +161,7 @@ nachbilden soll.
     vollständige Testlauf der 13 betroffenen Dateien nach der Änderung unverändert grün durch
     (kein neu rot gewordener Testfall).
 
-- **AC-6 (zweite Ursache im selben Zeitfenster):** Given
+- **AC-6:** (zweite Ursache im selben Zeitfenster) Given
   `test_ac4_mail_body_contains_segment_label_and_cooldown`
   (`tests/tdd/test_issue_822_radar_nowcast_segment.py:484`) bestimmt den Etappentag über das
   **Server**datum (`datetime.now(timezone.utc).date()`) statt über den Ortstag / When die
@@ -178,7 +178,7 @@ nachbilden soll.
     23:00–00:00 UTC rot — das Ticketziel wäre verfehlt. Vom PO am 2026-08-17 ausdrücklich in
     den Umfang aufgenommen.
 
-- **AC-7 (dritte Fundstelle derselben Klasse — die Schwesterfunktion):** Given
+- **AC-7:** (dritte Fundstelle derselben Klasse — die Schwesterfunktion) Given
   `past_window_offsets` (`tests/helpers/arrival_window_fixtures.py:220-277`) **staucht** das
   Fenster still auf `[0, obergrenze]`, wenn die gewünschte Spanne nicht mehr auf den
   vergangenen Teil des Etappentags passt (Z. 270–275) / When ein Aufrufer damit ein

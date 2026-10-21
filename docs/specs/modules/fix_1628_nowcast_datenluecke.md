@@ -290,7 +290,7 @@ Abwägungsbedarf (Rauschen vs. Vollständigkeit), kein Nebenprodukt dieser Bugfi
 
 **S3 — Sichtbarkeit im Nutzertext**
 
-- **AC-6 (Wirkungs-AC — belegt die Nutzer-sichtbare Änderung):** Given ein `NowcastResult` mit
+- **AC-6:** (Wirkungs-AC — belegt die Nutzer-sichtbare Änderung) Given ein `NowcastResult` mit
   gesetztem Fehlerfeld (Datenlücke), When der Nutzer per `/jetzt`-Telegram-Kommando abfragt
   (`TripCommandProcessor._show_now()`), Then enthält die an den Nutzer gesendete Antwort einen
   Hinweis, dass die Regen-Kurzfristprüfung nicht möglich war — UND enthält NICHT den Satz "In den

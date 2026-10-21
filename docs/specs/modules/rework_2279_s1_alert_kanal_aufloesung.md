@@ -168,7 +168,7 @@ derselben Datei — reine Darstellungspräferenz, keine Kanal-Auflösung.
 
 ## Acceptance Criteria
 
-- **AC-1 (Parität):** Given ein Trip und ein Ortsvergleich mit identischer
+- **AC-1:** (Parität) Given ein Trip und ein Ortsvergleich mit identischer
   Alarm-Kanal-Konfiguration (`alert_channels` mit jeder der 16 Kombinationen
   aus email/telegram/sms/premium_sms, Nutzer mit Premium-Tier) / When
   `effective_alert_channels` für beide läuft / Then liefert sie für beide
@@ -176,7 +176,7 @@ derselben Datei — reine Darstellungspräferenz, keine Kanal-Auflösung.
   - Test: parametrisierter Test über 16 Kombinationen × 2 kinds, Assertion
     auf identische resultierende Kanalmenge je Kombination.
 
-- **AC-2 (E-Mail aus):** Given ein Ortsvergleich mit
+- **AC-2:** (E-Mail aus) Given ein Ortsvergleich mit
   `alert_channels.email=false` (Telegram an) / When ein Abweichungs-, Radar-
   oder amtlicher Alarm feuert / Then geht keine E-Mail raus (Mail-Sink bleibt
   leer), Telegram wird zugestellt.
@@ -184,7 +184,7 @@ derselben Datei — reine Darstellungspräferenz, keine Kanal-Auflösung.
     Mail-/Telegram-Sinks — Mail-Sink nach dem Lauf leer, Telegram-Sink enthält
     eine Zustellung.
 
-- **AC-3 (Bestand identisch):** Given ein Bestands-Preset OHNE
+- **AC-3:** (Bestand identisch) Given ein Bestands-Preset OHNE
   `alert_channels` (nur flache `send_telegram/send_sms/send_premium_sms`,
   alle 8 Kombinationen) / When die Auflösung läuft / Then ist das Ergebnis
   identisch zum heutigen Verhalten: E-Mail an plus die eingeschalteten
@@ -194,7 +194,7 @@ derselben Datei — reine Darstellungspräferenz, keine Kanal-Auflösung.
     Opt-in-Kanäle nach Tier-Gate), Preset-Dict bleibt nach dem Lauf
     bytegleich.
 
-- **AC-4 (Tier-Gates einmal):** Given ein Nutzer ohne SMS-/Premium-SMS-Tier
+- **AC-4:** (Tier-Gates einmal) Given ein Nutzer ohne SMS-/Premium-SMS-Tier
   / When Trip und Ortsvergleich mit eingeschaltetem sms und premium_sms
   aufgelöst werden / Then fehlen beide Kanäle in beiden kinds; das Gate
   existiert nur im gemeinsamen Kern.
@@ -203,7 +203,7 @@ derselben Datei — reine Darstellungspräferenz, keine Kanal-Auflösung.
   - Mutations-Gegenprobe (PFLICHT): Tier-Gate im Kern (`resolve_alert_channels`)
     entfernen ⇒ derselbe Test wird für BEIDE kinds rot.
 
-- **AC-5 (Settings inert):** Given identische Kanal-Konfiguration / When die
+- **AC-5:** (Settings inert) Given identische Kanal-Konfiguration / When die
   Auflösung einmal mit vollständig sendebereiten und einmal mit leeren
   `Settings` läuft / Then ist die Kanalmenge identisch — Sendebereitschaft
   entscheidet ausschließlich die Zustellung.
@@ -211,7 +211,7 @@ derselben Datei — reine Darstellungspräferenz, keine Kanal-Auflösung.
     `Settings`-Instanzen (alle `can_send_*` True vs. alle False/leer),
     Ergebnis-Set identisch.
 
-- **AC-6 (Verdrahtung):** Given der Umbau ist fertig / When die drei
+- **AC-6:** (Verdrahtung) Given der Umbau ist fertig / When die drei
   Compare-Alarmservices und der Trip-Service auflösen / Then delegieren sie
   nachweisbar an `effective_alert_channels`, der Compare-Briefing-Versand an
   `effective_compare_briefing_channels`, und `git grep effective_compare_channels`
@@ -222,7 +222,7 @@ derselben Datei — reine Darstellungspräferenz, keine Kanal-Auflösung.
     Ergebnis je Aufrufer; separat ein Shell-/Repo-Grep-Check auf
     `effective_compare_channels` mit 0 Treffern.
 
-- **AC-7 (Trip unverändert):** Given die bestehenden Trip-Tests
+- **AC-7:** (Trip unverändert) Given die bestehenden Trip-Tests
   (`test_trip_alert_channel_precedence.py`, `test_issue_684_alert_email_guard.py`,
   `test_914_slice4_alert_sms_dispatch.py`, `test_issue_1069_tier_channel_gating.py`,
   `test_issue_638_alerts_redesign.py`) / When sie gegen den Delegaten laufen

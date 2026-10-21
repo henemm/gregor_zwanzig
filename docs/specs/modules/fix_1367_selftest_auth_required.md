@@ -120,7 +120,7 @@ prüfbar**, nicht als Fehlschlag.
   - Test: Bericht eines Laufs mit beiden Fällen enthält für die beiden Kriterien
     unterschiedliche, sprechende Statusangaben.
 
-- **AC-6 (Worktree-Korrektheit, PO-Auftrag 2026-07-24; korrigiert nach Adversary-Befund F001):**
+- **AC-6:** (Worktree-Korrektheit, PO-Auftrag 2026-07-24; korrigiert nach Adversary-Befund F001)
   **AUSGEGLIEDERT (PO-Entscheidung 2026-07-28): nicht Teil dieser Umsetzung — siehe Sammel-Issue #1199.**
   Given der Selbsttest wird aus einem isolierten Arbeitsbaum (Worktree) heraus aufgerufen / When er
   den Bericht schreibt und den Änderungsumfang bestimmt / Then bezieht er sich dafür auf **diesen**

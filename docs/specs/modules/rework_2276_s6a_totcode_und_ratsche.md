@@ -236,7 +236,7 @@ jeweiligen Datei und werden von dieser Scheibe nicht angefasst.
 
 ## Acceptance Criteria
 
-- **AC-1 (Totcode ist entfernt, Signaturtypen bleiben stehen):** Given der
+- **AC-1:** (Totcode ist entfernt, Signaturtypen bleiben stehen) Given der
   in Befund 5 belegte Totcode (`CompareWizardState.saveComparePreset()`,
   `export type SaveStatus` in `compareWizardState.svelte.ts`,
   `subscriptionId`/`subscriptionEnabled`/`existingDisplayConfig`/
@@ -253,7 +253,7 @@ jeweiligen Datei und werden von dieser Scheibe nicht angefasst.
     (z. B. `HubEdit`) versehentlich mitlöschen ⇒ Typecheck schlägt fehl
     (Referenzen in `compareHubWizardBridge.ts` selbst brechen), Build rot.
 
-- **AC-2 (Ratsche hält 69 benannte Fundstellen):** Given die neue
+- **AC-2:** (Ratsche hält 69 benannte Fundstellen) Given die neue
   Testdatei
   `shared/__tests__/context_herkunft_zweige_eingefroren.test.ts` mit der im
   Anhang gelisteten, eingefrorenen 69-Zeilen-Liste / When der Test gegen den
@@ -266,7 +266,7 @@ jeweiligen Datei und werden von dieser Scheibe nicht angefasst.
     einfügen, ohne die eingefrorene Liste nachzuführen ⇒ Test rot (Ist-Menge
     enthält einen Eintrag, der nicht in der Soll-Liste steht).
 
-- **AC-3 (Rückdreh-Gegenprobe der Ratsche):** Given die eingefrorene
+- **AC-3:** (Rückdreh-Gegenprobe der Ratsche) Given die eingefrorene
   69-Zeilen-Liste in der Ratsche /
   When eine einzelne Zeile daraus künstlich aus der eingefrorenen Liste
   entfernt wird (Testdatei selbst, nicht der Quellcode) / Then wird **genau
@@ -280,7 +280,7 @@ jeweiligen Datei und werden von dieser Scheibe nicht angefasst.
     Soll-Menge zur Laufzeit statt sie einzufrieren) und die AC gilt als
     nicht erfüllt.
 
-- **AC-4 (#1250-Zusicherung bleibt vollständig erhalten):** Given
+- **AC-4:** (#1250-Zusicherung bleibt vollständig erhalten) Given
   `wizard_state_no_legacy_save.test.ts` mit drei Tests (Test 1: `save()`
   entfernt, Test 2: `toggleEnabled()` entfernt, Test 3: Gegenprobe) / When
   der dritte Test auf die Entfernung von `saveComparePreset` angepasst wird

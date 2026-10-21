@@ -86,33 +86,33 @@ Standard-Rahmen von 250 reicht; Testcode zählt nicht.
 
 ## Acceptance Criteria
 
-- **AC-1 (Kernwirkung — Ankunftszeit):** Given ein Trip mit Etappen in `Pacific/Auckland` und
+- **AC-1:** (Kernwirkung — Ankunftszeit) Given ein Trip mit Etappen in `Pacific/Auckland` und
   konfiguriertem Morgen-Briefing 07:00 / When der stündliche Versandlauf über alle 24 vollen
   Stunden eines Tages läuft / Then wird der Trip **genau in der Stunde** als fällig gesammelt, in
   der es an seinen Wegpunkten 07:00 Ortszeit ist — und in keiner anderen.
   - Test: parametrisierter Lauf über 24 Zeitpunkte, Assert auf die Menge der fälligen
     `(trip, report_type)`-Paare je Stunde.
 
-- **AC-2 (Kernwirkung — beide Vorzeichen):** Given je ein Trip in `America/Los_Angeles` (westlich),
+- **AC-2:** (Kernwirkung — beide Vorzeichen) Given je ein Trip in `America/Los_Angeles` (westlich),
   `Pacific/Auckland` (östlich), `Asia/Kathmandu` (halbstündiger Versatz) und `Europe/Paris`, alle
   mit Morgen-Briefing 07:00 / When derselbe Versandlauf über 24 Stunden läuft / Then ist jeder
   Trip genau einmal fällig, und zwar zu seiner eigenen Ortsstunde 07:00 — vier verschiedene
   Weltzeit-Stunden.
 
-- **AC-3 (Der Kalendertag folgt mit):** Given der Trip aus AC-1 ist fällig / When das Briefing
+- **AC-3:** (Der Kalendertag folgt mit) Given der Trip aus AC-1 ist fällig / When das Briefing
   erzeugt wird / Then ist der Zieltag des Inhalts der **Ortstag** dieses Trips
   (`trip_day.trip_local_today`), nicht `date.today()` der Serveruhr.
   - Damit ist der in #1697 ausdrücklich offen gelassene Briefing-Pfad
     (`_get_target_date`, `_get_active_trips`, `save_dated`) abgedeckt; #1697 kann erst mit dieser
     Scheibe geschlossen werden.
 
-- **AC-4 (Bestandsschutz Mitteleuropa):** Given ein Trip auf Korsika (`Europe/Paris`) mit
+- **AC-4:** (Bestandsschutz Mitteleuropa) Given ein Trip auf Korsika (`Europe/Paris`) mit
   Morgen-Briefing 07:00 und Abend-Briefing 18:00 / When der Versandlauf über 24 Stunden läuft /
   Then ist das Ergebnis **identisch** zum Verhalten vor dieser Änderung — gleiche Stunden, gleicher
   Zieltag. (Ausnahme und Teil der Behebung: bei Konfig-Stunden 00:00 und 01:00 weicht der Zieltag
   jetzt ab, weil er vorher falsch war.)
 
-- **AC-5 (Keine vorberechnete Stunde mehr im Briefing-Pfad):** Given der Produktivcode nach
+- **AC-5:** (Keine vorberechnete Stunde mehr im Briefing-Pfad) Given der Produktivcode nach
   dieser Änderung / When die Fälligkeitssammlung geprüft wird / Then nimmt sie einen Zeitpunkt
   statt einer Stunde, und die festen Zonen-Literale in `api/routers/scheduler.py` und
   `scheduler_dispatch_service.py` sind entfallen.
@@ -123,24 +123,24 @@ Standard-Rahmen von 250 reicht; Testcode zählt nicht.
     bestehenden Zeitzonen-Wächter und ist **#1723**. Geblieben ist die Signatur-Prüfung per
     `inspect` (Introspektion des lebenden Objekts, kein Dateiinhalt).
 
-- **AC-6 (Trip ohne Wegpunkte fällt sichtbar zurück):** Given ein Trip ohne Wegpunkte (Zone nicht
+- **AC-6:** (Trip ohne Wegpunkte fällt sichtbar zurück) Given ein Trip ohne Wegpunkte (Zone nicht
   auflösbar) / When der Versandlauf läuft / Then wird er nach dem dokumentierten UTC-Rückfall aus
   `trip_day.trip_tz` behandelt und **nicht übersprungen** — der Nutzer verliert sein Briefing
   nicht, weil eine Zone fehlt.
 
-- **AC-7 (Sommerzeit — gemessen, nicht behauptet):** Given ein Trip in `Europe/Paris` mit
+- **AC-7:** (Sommerzeit — gemessen, nicht behauptet) Given ein Trip in `Europe/Paris` mit
   Briefing-Stunde 02:00 / When der Lauf am 29.03.2026 (Ortsstunde 02 existiert nicht) und am
   25.10.2026 (Ortsstunde 02 existiert zweimal) durchgeführt wird / Then hält der Test das
   **tatsächliche** Verhalten fest: am 29.03. keine Fälligkeit, am 25.10. zwei.
   - Dieser Test ist bewusst ein Fest-Nageln der bekannten Lücke, kein Nachweis ihrer Behebung.
     Er wird von **#1725** rot gemacht und dort auf das Zielverhalten umgeschrieben.
 
-- **AC-8 (Ortsvergleich unverändert):** Given ein Ortsvergleichs-Preset mit konfigurierter
+- **AC-8:** (Ortsvergleich unverändert) Given ein Ortsvergleichs-Preset mit konfigurierter
   Slot-Stunde / When der Versandlauf läuft / Then ist sein Fälligkeitsverhalten **bit-identisch**
   zum Stand vor dieser Änderung — der Compare-Pfad wird von dieser Scheibe nicht verhaltensmäßig
   berührt (#1726).
 
-- **AC-9 (Ein Zeitpunkt für den ganzen Lauf):** Given ein Versandlauf über mehrere Trips / When
+- **AC-9:** (Ein Zeitpunkt für den ganzen Lauf) Given ein Versandlauf über mehrere Trips / When
   die Fälligkeit ermittelt wird / Then sehen alle Trips **denselben** „Jetzt"-Zeitpunkt — kein
   Trip darf eine andere Sekunde sehen als der nächste (Muster aus #1697: `now_utc` einmal vor der
   Schleife, Zone je Trip innerhalb).

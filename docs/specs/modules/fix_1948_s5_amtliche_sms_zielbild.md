@@ -242,7 +242,7 @@ Goldstring für den „heute"-Fall wäre wanduhr-abhängig rot, sobald der Testl
   - Test: drei Unit-Tests (oder ein parametrisierter Test), die je einen
     festen Level-Wert gegen den erwarteten Buchstaben prüfen.
 
-- **AC-5 (Wächter):** Given eine amtliche Warnung der Stufe GRÜN (1) UND ein
+- **AC-5:** (Wächter) Given eine amtliche Warnung der Stufe GRÜN (1) UND ein
   direkter Aufruf von `alert_urgency.urgency_from_official_level(1)` im selben
   Testlauf / When beide Pfade nacheinander ausgeführt werden / Then liefert
   die SMS-Darstellung den Buchstaben „-" für GRÜN, UND
@@ -316,7 +316,7 @@ Goldstring für den „heute"-Fall wäre wanduhr-abhängig rot, sobald der Testl
     `test_telegram_kurzstil_compare_official_alert.py` auf das neue Format,
     Assertion `telegram_body == sms_text` bleibt bestehen.
 
-- **AC-13 (TABU-Wächter):** Given dieselben Warnungen einmal vor und einmal
+- **AC-13:** (TABU-Wächter) Given dieselben Warnungen einmal vor und einmal
   nach der S5-Umstellung des SMS-Renderers / When Betreff
   (`render_official_alert_subject`), E-Mail-HTML (`render_warn_block`),
   Klartext-Mail (`render_official_alert_mail_plain`) und die ausführliche
@@ -338,7 +338,7 @@ Goldstring für den „heute"-Fall wäre wanduhr-abhängig rot, sobald der Testl
     den S4-Onset-Renderer) mit strukturell gleichem Segment-Input, plus
     Gegenprobe, dass der zugehörige E-Mail-Renderer „Segment" unverändert zeigt.
 
-- **AC-15 (Vorbedingung aus S4):** Given einen Preview-Aufruf über
+- **AC-15:** (Vorbedingung aus S4) Given einen Preview-Aufruf über
   `POST /api/trips/{id}/alert-preview` mit einem `onset`- oder
   `nowcast_frames`-Payload, der ein Segment benennt (`segment_id`/`segment_ids`)
   / When der Payload in ein `OnsetEvent` übersetzt wird (Onset-Zweig ~Z. 117,

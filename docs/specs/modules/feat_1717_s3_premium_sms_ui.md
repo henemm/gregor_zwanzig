@@ -14,6 +14,8 @@ tags: [sms, premium, garmin, seven-io, channel, frontend, go-api]
      (Alarm-/Vergleichspfad), S2c/#1702 (Kostenstelle), #1533 (Generalprobe
      auf dem Geraet). Kontext-Grundlage: docs/context/feat-1717-s3-premium-sms-ui.md. -->
 
+> Teilweise abgelöst durch [ADR-0095](../../adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md) (2026-10-21): „drei Kanäle“ (u. a. AC-12, Abschnitt zum bestehenden Klicktest) gilt nicht mehr als Soll — Premium-SMS ist der vierte gleichrangige Kanal, inklusive Alarm (CLAUDE.md, Kanäle).
+
 # Premium-SMS in der Oberfläche — S3
 
 ## Approval

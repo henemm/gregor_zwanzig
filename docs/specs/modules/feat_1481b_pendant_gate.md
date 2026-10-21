@@ -65,21 +65,21 @@ Issue (`src/output/renderers/{compare_*,trip_*}.py`) verfehlt ausgerechnet den b
 
 ## Acceptance Criteria
 
-**AC-1: Neue Datei im einseitigen Bereich ohne Begründung blockiert den Commit**
+**AC-1:** Neue Datei im einseitigen Bereich ohne Begründung blockiert den Commit
 Given eine neu erstellte Datei liegt in `compare/**`, `trip-detail/**` oder einem
 `compare_`/`trip_`-Renderer und trägt keine Begründungszeile im Kopf
 When `git commit` diese Datei als Neuanlage ausführt
 Then bricht der Commit ab (Exit-Code 2), und die Meldung nennt Datei und Bereich.
 - Test: Wegwerf-Repo, echte neue Datei ohne Begründung committen, Exit-Code 2 gemessen.
 
-**AC-2: Begründungszeile lässt den Commit durch**
+**AC-2:** Begründungszeile lässt den Commit durch
 Given dieselbe neue Datei trägt im Dateikopf `gz-eigenstaendig: <Grund mit >=15 sinnvollen
 Zeichen>` innerhalb der ersten 20 Zeilen
 When `git commit` ausgeführt wird
 Then läuft der Commit ohne Rückfrage durch (Exit-Code 0).
 - Test: identisches Wegwerf-Repo, Kopf um die Begründungszeile ergänzt, Exit-Code 0 gemessen.
 
-**AC-3: Zu kurze oder inhaltsleere Begründung blockiert weiterhin**
+**AC-3:** Zu kurze oder inhaltsleere Begründung blockiert weiterhin
 Given die Begründungszeile enthält nur Satzzeichen oder weniger als 15 sinnvolle Zeichen (nach
 Entfernen aller Nicht-Wortzeichen)
 When `git commit` ausgeführt wird
@@ -87,14 +87,14 @@ Then bricht der Commit weiterhin ab (Exit-Code 2), unabhängig von der Zeilenlä
 - Test: Wegwerf-Repo mit `gz-eigenstaendig: ...` und mit `gz-eigenstaendig: kurz`, beide
   Exit-Code 2.
 
-**AC-4: Der geteilte Bereich lässt jede neue Datei durch**
+**AC-4:** Der geteilte Bereich lässt jede neue Datei durch
 Given eine neue Datei liegt unter `shared/**` oder ist ein Renderer ohne
 `compare_`/`trip_`-Präfix
 When `git commit` ausgeführt wird
 Then läuft der Commit ohne Begründungszeile durch (Exit-Code 0).
 - Test: Wegwerf-Repo, neue Datei unter `shared/`, kein Kopfkommentar, Exit-Code 0 gemessen.
 
-**AC-5: Nur neu angelegte Dateien werden geprüft, der Bestand ist frei**
+**AC-5:** Nur neu angelegte Dateien werden geprüft, der Bestand ist frei
 Given eine bereits vorhandene Datei im einseitigen Bereich wird inhaltlich geändert, nicht neu
 angelegt
 When `git commit` ausgeführt wird
@@ -102,7 +102,7 @@ Then läuft der Commit unabhängig vom Inhalt durch (Exit-Code 0).
 - Test: Wegwerf-Repo, Bestandsdatei ändern und committen ohne jede Begründungszeile, Exit-Code 0
   gemessen.
 
-**AC-6: Testdateien sind über ihre Endung ausgenommen, unabhängig vom Ablageort**
+**AC-6:** Testdateien sind über ihre Endung ausgenommen, unabhängig vom Ablageort
 Given eine neue Testdatei liegt DIREKT im einseitigen Bereich statt in einem `__tests__/`-Ordner
 — gemessen liegt rund die Hälfte der Testdateien dort (`compare/channelChipCount.test.ts`), eine
 reine Ordnerregel würde sie also massenhaft blockieren
@@ -114,7 +114,7 @@ Then läuft der Commit durch (Exit-Code 0), weil die Ausnahme an der Endung hän
   ist der eigentliche Nachweis: ohne sie wäre die Ausnahme auch dann grün, wenn sie alles
   durchließe.
 
-**AC-7: Verschiebung in den geteilten Bereich lässt immer durch, auch unter der Ähnlichkeitsschwelle**
+**AC-7:** Verschiebung in den geteilten Bereich lässt immer durch, auch unter der Ähnlichkeitsschwelle
 Given eine Datei wandert von einem einseitigen Bereich nach `shared/**`, und die Änderung ist so
 groß, dass Git daraus Löschen+Neuanlegen macht statt einer erkannten Umbenennung
 When `git commit` ausgeführt wird
@@ -123,7 +123,7 @@ Erkennungsschwelle für Renames.
 - Test: Wegwerf-Repo, Datei nach `shared/` verschieben und Inhalt so stark ändern, dass Git keine
   Rename erkennt, Exit-Code 0 gemessen.
 
-**AC-8: Reine Umbenennung innerhalb derselben Seite blockiert nicht**
+**AC-8:** Reine Umbenennung innerhalb derselben Seite blockiert nicht
 Given eine Datei wird innerhalb desselben einseitigen Bereichs umbenannt (z.B. `compare/` bleibt
 `compare/`, kein Seitenwechsel) **und ihr Inhalt bleibt dabei praktisch unverändert** (von git
 gemeldete Ähnlichkeit >= 95 %)
@@ -148,7 +148,7 @@ Die beiden Reihen **überlappen** bei `R076`: eine echte Umbenennung mit 8 geän
 von einem unverwandten Paar mit gemeinsamem Gerüst nicht unterscheidbar. Deshalb 95 % — damit
 kommen `R100` und `R096` durch, das gesamte Zufallsband (bis `R076`) nicht.
 
-**AC-9: Verschiebung von der Gegenseite oder aus dem geteilten Bereich in einen einseitigen Bereich braucht Begründung**
+**AC-9:** Verschiebung von der Gegenseite oder aus dem geteilten Bereich in einen einseitigen Bereich braucht Begründung
 Given eine Datei wandert aus `trip-detail/**` oder `shared/**` neu nach `compare/**` (oder
 umgekehrt) — der bequemste Weg an der Sperre vorbei, den das Issue nicht nennt
 When `git commit` ohne Begründungszeile ausgeführt wird
@@ -156,7 +156,7 @@ Then bricht der Commit ab (Exit-Code 2), genauso wie bei einer komplett neuen Da
 - Test: Wegwerf-Repo, Datei von `trip-detail/` nach `compare/` verschieben, Exit-Code 2 ohne
   Begründung, Exit-Code 0 mit Begründungszeile.
 
-**AC-10: Drei Kommentarformen werden erkannt, im Fenster der ersten 20 Zeilen**
+**AC-10:** Drei Kommentarformen werden erkannt, im Fenster der ersten 20 Zeilen
 Given die Begründungszeile steht als `#`-Kommentar, als `//`-Kommentar (TS/Svelte) oder als
 bloße Zeile innerhalb eines Python-Moduls-Docstrings — die Python-Renderer haben gemessen
 überhaupt keine `#`-Kommentare im Kopf, nur `"""…"""`-Docstrings (`trip_metric_ids.py:1`,
@@ -167,7 +167,7 @@ innerhalb der ersten 20 Zeilen steht (längster gemessener Kopf-Docstring: 13 Ze
 - Test: drei Wegwerf-Dateien (`.py` mit `#`, `.ts` mit `//`, `.py` mit reiner Docstring-Zeile
   ohne `#`) — alle Exit-Code 0; vierte Variante mit Begründung erst ab Zeile 21 → Exit-Code 2.
 
-**AC-11: Der Wächter erkennt Commits an der Aufrufform, nicht am Wortlaut**
+**AC-11:** Der Wächter erkennt Commits an der Aufrufform, nicht am Wortlaut
 Given ein Commit über `git -C <pfad> commit`, verkettet (`cd /tmp && git -C <pfad> commit`) oder
 in mehrzeiliger Form ausgeführt wird, sowie ein Nicht-Commit-Aufruf wie
 `grep -rn "git commit" …`
@@ -177,7 +177,7 @@ Then greift der Wächter bei allen drei Commit-Formen und NICHT beim grep-Aufruf
   Wächter als parametrisierten Fall (keine neue Testdatei) — Exit-Code 2/0 je nach Aufrufform,
   am Wegwerf-Repo gemessen.
 
-**AC-12: Der Wächter prüft seinen eigenen Ordner und sagt, wenn er nicht zuständig ist**
+**AC-12:** Der Wächter prüft seinen eigenen Ordner und sagt, wenn er nicht zuständig ist
 *(neu gefasst 2026-08-04 nach Adversary-Fund F010 — die frühere Fassung „liest den Vormerk-Stand
 dort" ist zurückgebaut.)*
 Given der Commit-Befehl trägt ein Anzeichen dafür, dass er einen **anderen** Projektordner meint
@@ -207,7 +207,7 @@ durch statt geraten zu werden.
 - Test: `git commit -C HEAD` (git-eigenes Flag zum Übernehmen einer Nachricht, **kein**
   Verzeichnis) → Exit-Code 0 mit Benennung, statt `HEAD` als Pfad zu deuten.
 
-**AC-13: Eigene Störung des Wächters blockiert nie**
+**AC-13:** Eigene Störung des Wächters blockiert nie
 Given der Wächter selbst scheitert (Zeitüberschreitung, `git diff --cached` nicht aufrufbar,
 defekter Bestand, **nicht auflösbares Werkzeug-Paket `hook_utils`**, unerwarteter Fehler an
 einer Stelle ohne eigenen Störungszweig)
@@ -222,14 +222,14 @@ durchlassen und sagen.
   mitten im Zuschnitt → Exit-Code 0. Der zweite Test ist der Wächter über das äußerste
   Sicherheitsnetz selbst: es ließ sich zuvor ersatzlos entfernen, ohne dass ein Test rot wurde.
 
-**AC-14: Nach dem Prüfdatum schaltet sich der Wächter selbst ab**
+**AC-14:** Nach dem Prüfdatum schaltet sich der Wächter selbst ab
 Given das Systemdatum liegt nach dem 2026-11-03
 When `git commit` mit einer neuen einseitigen Datei ohne Begründung ausgeführt wird
 Then läuft der Commit durch (Exit-Code 0), und die Meldung weist auf das abgelaufene Prüfdatum
 hin.
 - Test: Wegwerf-Repo mit vorgetäuschtem Systemdatum nach 2026-11-03, Exit-Code 0 gemessen.
 
-**AC-15: Die Blockade-Meldung nennt eine namensähnliche Datei auf der Gegenseite**
+**AC-15:** Die Blockade-Meldung nennt eine namensähnliche Datei auf der Gegenseite
 Given eine neue Datei `compare/CompareTabs.svelte` wird angelegt, während
 `trip-detail/TripTabs.svelte` bereits existiert — nach Abschneiden des Seiten-Präfixes bleibt bei
 beiden `Tabs.svelte` übrig
@@ -242,7 +242,7 @@ die Begründung eine konkrete Frage beantwortet statt ins Leere zu schreiben.
   KEIN erfundener Pendant-Name in der Meldung. Ohne diese Gegenprobe wäre ein Wächter grün, der
   immer irgendetwas nennt.
 
-**AC-16: Die Meldung nennt beide Auswege ausdrücklich**
+**AC-16:** Die Meldung nennt beide Auswege ausdrücklich
 Given ein Commit wird durch die Sperre blockiert
 When die Meldung ausgegeben wird
 Then nennt sie sowohl den geteilten Bereich als auch die Begründungszeile als Weg zum

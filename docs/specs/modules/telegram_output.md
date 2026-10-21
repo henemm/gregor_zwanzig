@@ -8,6 +8,8 @@ version: "1.0"
 tags: [telegram, channel, notification, bot-api, output]
 ---
 
+> Teilweise abgelöst durch [ADR-0004](../../adr/0004-signal-channel-removed.md) (2026-06-06): der Signal-Zweig (`send_signal`, `SignalOutput`) im Versand-Beispiel gilt nicht mehr; Signal ist app-weit entfernt (#610).
+
 # Telegram Output
 
 ## Approval

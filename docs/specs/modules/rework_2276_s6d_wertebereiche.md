@@ -380,7 +380,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
 
 ## Acceptance Criteria
 
-- **AC-1 (Corridor-Bausteine sind im Vergleichs-Zweig wertprop-rein):**
+- **AC-1:** (Corridor-Bausteine sind im Vergleichs-Zweig wertprop-rein)
   Given `CorridorEditor.svelte` und `CorridorEditorMobile.svelte` lesen/
   schreiben heute `ws` an den in der Schicksals-Tabelle gemessenen Stellen
   (Lesen `:57,79,89,95`, Schreiben `:223-226`, Durchreichen `:63,66`) /
@@ -395,7 +395,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
     kein `CompareWizardState`-Identifier mehr im Instanz-Skript beider
     Dateien; die Prop-Schnittstelle bindet alle acht freigegebenen Namen.
 
-- **AC-2 (Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Fläche B):**
+- **AC-2:** (Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Fläche B)
   Given `vergleichSpeicherung` entsteht nur, wenn
   `wertebereicheVergleichSpeicherungAktiv({context, zustand, preset,
   saveController})` wahr ist / When der Effekt-Rumpf über `effekteVon()` an
@@ -433,7 +433,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
     und ein reines Werte-Diff blieben grün, weil die Werte selbst korrekt
     sind — nur ihre Reaktivität bricht, was erst im Browser sichtbar würde).
 
-- **AC-4 (Verhaltensgleichheit im Browser am Hub, Desktop):** Given vor der
+- **AC-4:** (Verhaltensgleichheit im Browser am Hub, Desktop) Given vor der
   Umstellung wirken alle Wertebereiche-Bedienelemente im Hub
   (`/compare/[id]`, Desktop-Viewport) und werden über den einen bestehenden
   PUT gespeichert / When derselbe Ablauf nach der Umstellung im Browser
@@ -444,7 +444,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
   - Test: Live-E2E — `frontend/e2e/compare-wertebereiche-wertprops.spec.ts`,
     Eintrag in `.github/ci_e2e_specs.txt`.
 
-- **AC-5 (Verhaltensgleichheit im Browser am Hub, Mobil):** Given dieselbe
+- **AC-5:** (Verhaltensgleichheit im Browser am Hub, Mobil) Given dieselbe
   Ausgangslage wie AC-4, aber im Mobil-Viewport mit Band-Drag/Ordinal-Stufen
   über Touch-Pointer-Events / When derselbe Ablauf nach der Umstellung im
   Mobil-Viewport durchgeführt wird / Then bleibt das Verhalten identisch zu
@@ -452,7 +452,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
   - Test: Live-E2E — dieselbe Spec-Datei wie AC-4, zweiter Testfall im
     Mobil-Viewport (Muster `speicherung-ueberlebt-neuladen.spec.ts:423`).
 
-- **AC-6 (E5, Trip-Fläche: ungültige Grenze setzt dirty):** Given der
+- **AC-6:** (E5, Trip-Fläche: ungültige Grenze setzt dirty) Given der
   Ungültig-Fall der Weiche `maybeSchedule` (`:240`/`:207`) setzt im
   Trip-Kontext aktiv `setDirty()`, damit der Indikator nicht fälschlich
   „Gespeichert ✓" neben einem sichtbaren Fehlerbanner zeigt / When im
@@ -481,7 +481,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
     beides — die Weiche liegt in einem DOM-Event-Handler, den SSR nicht
     ausführt (Design-Entscheidung 4).
 
-- **AC-8 (Adapter `corridorZustandsBruecke` erhält den Speicherweg):**
+- **AC-8:** (Adapter `corridorZustandsBruecke` erhält den Speicherweg)
   Given `erstelleWertebereicheVergleichSpeicherung`/
   `rollbackCorridorSnapshot` brauchen heute eine lebendige, mutierbare
   `ws`-Referenz / When `ws` durch `corridorZustandsBruecke(werte, setzen)`
@@ -521,7 +521,7 @@ hinterließe einen nicht kompilierenden Zwischenstand.
     Bedingungstext anzupassen ⇒ die `zeile`-Prüfung schlägt fehl, weil an
     der neuen Position eine andere Bedingung steht.
 
-- **AC-10 (Fläche A bleibt vollständig unverändert):** Given die Trip
+- **AC-10:** (Fläche A bleibt vollständig unverändert) Given die Trip
   (`/trips/[id]`) hat heute keinen `compare-wizard-state`-Context, `ws` ist
   dort stets `undefined`, der Speicherweg läuft über `saveController` /
   When beide Corridor-Dateien auf Wertprops umgestellt werden, ohne dass

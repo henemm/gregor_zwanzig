@@ -404,7 +404,7 @@ Mock, kein Mock-Theater.
     zweites Mal für dieselbe Nachricht aufgerufen; die tatsächlich
     verwendete Wartezeit überschreitet den Cap nicht.
 
-- **AC-6 (PO-Rückmeldung 2026-08-01, Kern des Tickets):** Given ein
+- **AC-6:** (PO-Rückmeldung 2026-08-01, Kern des Tickets) Given ein
   lokaler HTTP-Server nimmt die Verbindung für einen **einzelnen**
   `_request`-Aufruf an, antwortet aber nie — OHNE dass ein Wechsel zum
   nächsten Modell-Kandidaten stattfindet / When `_request(endpoint,

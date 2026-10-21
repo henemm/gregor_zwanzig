@@ -480,7 +480,7 @@ Eindruck einer Uhrzeit-Einschränkung erweckt.
 > unverändert weiter. Die folgende Fassung beschreibt den Stand **vor** dieser
 > Änderung und ist nur noch historisch zu lesen.
 
-- **AC-10 (HISTORISCH, abgelöst durch #1359 Scheibe 2):** Given ein Vergleich
+- **AC-10:** (HISTORISCH, abgelöst durch #1359 Scheibe 2) Given ein Vergleich
   mit mehreren Orten, When die Zusammenfassungs-Sektion erscheint, Then sind
   die Orte in der vom Nutzer konfigurierten Reihenfolge geordnet, identisch
   zur Reihenfolge in der Matrix darüber — es gibt keine Sortierung nach Score
