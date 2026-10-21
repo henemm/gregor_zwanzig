@@ -80,3 +80,25 @@ def test_here_string_und_kommentar_sind_kein_heredoc():
     assert "cd /x" in g._ohne_heredoc_inhalt(befehl)
     befehl2 = "ls # <<EOF\ncd /x\nEOF\ngit commit -m q"
     assert "cd /x" in g._ohne_heredoc_inhalt(befehl2)
+
+
+def test_arithmetik_shift_ist_kein_heredoc():
+    """`$((1<<2))` ist eine Bit-Verschiebung, kein Heredoc mit Endwort `2` —
+    das nachfolgende echte cd muss sichtbar bleiben (Adversary F4)."""
+    befehl = "echo $((1<<2))\ncd /evil\n2\ngit commit -m x"
+    assert "cd /evil" in _gate()._ohne_heredoc_inhalt(befehl)
+
+
+def test_heredoc_endwort_mit_ziffer_am_anfang_nur_gequotet():
+    """Unquotiertes Endwort muss mit Buchstabe/Unterstrich beginnen; `<<1`
+    oeffnet keinen Heredoc, das cd bleibt sichtbar."""
+    befehl = "cat <<1\ncd /evil\n1\ngit commit -m x"
+    assert "cd /evil" in _gate()._ohne_heredoc_inhalt(befehl)
+
+
+def test_arithmetik_shift_mit_variablen_ist_kein_heredoc():
+    """`$((a<<b))` und `((a<<b))`: auch mit Buchstaben-Operand kein Heredoc."""
+    g = _gate()
+    for arith in ("echo $((a<<b))", "((a<<b))"):
+        befehl = f"{arith}\ncd /evil\nb\ngit commit -m x"
+        assert "cd /evil" in g._ohne_heredoc_inhalt(befehl), arith

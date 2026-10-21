@@ -131,8 +131,22 @@ def _lauf(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
 
 # #1636 F008: Heredoc-Operator `<<WORT`, `<<-WORT`, `<<'WORT'`, `<<"WORT"`, `<<\WORT`.
 _HEREDOC_OP_RE = re.compile(
-    r"<<(-?)[ \t]*(?:'([^'\n]+)'|\"([^\"\n]+)\"|\\?([A-Za-z0-9_.-]+))"
+    r"<<(-?)[ \t]*(?:'([^'\n]+)'|\"([^\"\n]+)\"|\\?([A-Za-z_][A-Za-z0-9_.-]*))"
 )
+
+
+def _arithmetik_ende(befehl: str, i: int) -> int:
+    """Index hinter dem `))`, das die bei `i` beginnende Arithmetik `((`
+    schliesst (Klammertiefe). Ohne Abschluss: Kommandoende (Adversary F4)."""
+    tiefe = 0
+    for k in range(i, len(befehl)):
+        if befehl[k] == "(":
+            tiefe += 1
+        elif befehl[k] == ")":
+            tiefe -= 1
+            if tiefe == 0:
+                return k + 1
+    return len(befehl)
 
 
 def _heredoc_inhalt_ueberspringen(befehl: str, i: int, offen: list) -> int | None:
@@ -169,6 +183,9 @@ def _ohne_heredoc_inhalt(befehl: str) -> str:
             schritt = 2
         elif c in "'\"":
             quote, schritt = c, 1
+        elif befehl.startswith("((", i):
+            # Arithmetik `$((…))`/`((…))`: `<<` ist dort Bit-Shift, nie Heredoc.
+            schritt = _arithmetik_ende(befehl, i) - i
         elif befehl.startswith("<<<", i):
             schritt = 3
         elif c == "#" and (i == 0 or befehl[i - 1] in " \t\n;&|("):
