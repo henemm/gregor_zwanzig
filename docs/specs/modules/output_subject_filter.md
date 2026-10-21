@@ -3,7 +3,7 @@ entity_id: output_subject_filter
 type: module
 created: 2026-04-26
 updated: 2026-06-13
-status: live
+status: implemented
 version: "1.2"
 tags: [output, pipeline, refactor, epic-render-pipeline, shortcode]
 epic: render-pipeline-consolidation (#96)

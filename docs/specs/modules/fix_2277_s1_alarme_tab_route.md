@@ -3,7 +3,7 @@ entity_id: fix_2277_s1_alarme_tab_route
 type: bugfix
 created: 2026-09-25
 updated: 2026-09-25
-status: draft
+status: implemented
 version: "1.1"
 tags: [trip-new, alarme, alert-channels, premium-sms, shared-component]
 ---

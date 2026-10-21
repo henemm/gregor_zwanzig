@@ -3,7 +3,7 @@ entity_id: provider_dwd
 type: module
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, dwd, icon-d2, openmeteo, reliability, fallback, routing, briefing]
 workflow: feature-1144-dwd-de

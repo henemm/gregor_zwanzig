@@ -3,7 +3,7 @@ entity_id: telegram_send_pacing
 type: bug
 created: 2026-07-25
 updated: 2026-07-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, egress, rate-limit, notification_service]
 ---

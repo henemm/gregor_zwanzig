@@ -3,7 +3,7 @@ entity_id: bug_269_mobile_trip_tabs
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: completed
+status: implemented
 version: "1.0"
 tags: [bugfix, mobile, tabs, svelte, frontend, pill-scroller, issue-269]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_241_email_profile_pipeline
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: 1.0.0
 tags: [email, design-system, activity-profile, issue-241, epic-236]
 parent: epic_236_email_design_system

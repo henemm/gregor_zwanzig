@@ -3,7 +3,7 @@ entity_id: issue_667_snapshot_hourly_clip_fix
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: live
+status: implemented
 version: "1.0"
 tags: [telegram, drilldown, weather-snapshot, persistence, bugfix, epic-639]
 ---

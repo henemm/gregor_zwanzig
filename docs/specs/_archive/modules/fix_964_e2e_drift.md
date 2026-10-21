@@ -3,7 +3,7 @@ entity_id: fix_964_e2e_drift
 type: module
 created: 2026-07-02
 updated: 2026-07-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [e2e, test-drift, trip-new, weather-metrics-tab]
 ---

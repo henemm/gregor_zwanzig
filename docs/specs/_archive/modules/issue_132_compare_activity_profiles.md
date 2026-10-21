@@ -3,7 +3,7 @@ entity_id: issue_132_compare_activity_profiles
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, frontend, activity-profile, locations-rail, svelte]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_671_bot_menu_autoset_tests
 type: tests
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, bot-menu, startup, e2e, issue-671]
 parent: issue_671_bot_menu_autoset

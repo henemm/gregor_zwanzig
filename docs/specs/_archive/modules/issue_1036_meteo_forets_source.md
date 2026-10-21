@@ -3,7 +3,7 @@ entity_id: issue_1036_meteo_forets_source
 type: feature
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 workflow: feature-1036-meteo-forets
 tags: [compare, alerts, official-alerts, meteofrance, wildfire]

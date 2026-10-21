@@ -3,7 +3,7 @@ entity_id: bug_401_segment_localtime
 type: module
 created: 2026-05-26
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.1"
 tags: [bug, timezone, scheduler, trip_report, segment, night_block, alert]
 ---

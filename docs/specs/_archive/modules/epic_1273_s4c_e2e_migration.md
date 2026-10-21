@@ -3,7 +3,7 @@ entity_id: epic_1273_s4c_e2e_migration
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [epic-1273, epic-1301, e2e, test-migration, compare]
 ---

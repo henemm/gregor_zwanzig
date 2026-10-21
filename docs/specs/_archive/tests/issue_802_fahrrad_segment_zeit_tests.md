@@ -3,6 +3,7 @@ entity_id: issue_802_fahrrad_segment_zeit_tests
 type: tests
 created: 2026-06-14
 updated: 2026-06-14
+status: implemented
 version: "2.0"
 tags: [tests, python, go, naismith, cycling, persistence, migration, scheduler, issue-802]
 parent: issue_802_fahrrad_segment_zeit

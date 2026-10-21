@@ -3,12 +3,14 @@ entity_id: issue_265_smart_import_frontend
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: deprecated
 version: "1.0"
 tags: [compare, locations, frontend, wizard, import, resolve]
 ---
 
 # Issue #265 — Smart Import: URL/Koordinaten-Auflösung in NewLocationWizard
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

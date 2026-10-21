@@ -3,7 +3,7 @@ entity_id: fix_2168_antwort_an_den_fragenden
 type: module
 created: 2026-09-07
 updated: 2026-09-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, inbound, telegram, kanaltreue, issue-2168]
 ---

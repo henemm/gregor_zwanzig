@@ -3,7 +3,7 @@ entity_id: rework_2276_s6d_wertebereiche
 type: module
 created: 2026-09-22
 updated: 2026-09-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, wertebereiche, corridor, wertprops, ratsche, refactor]
 ---

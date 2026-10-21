@@ -3,7 +3,7 @@ entity_id: issue_617_briefing_channel_chaining
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, channels, briefing, trip-edit, epic-575]
 ---

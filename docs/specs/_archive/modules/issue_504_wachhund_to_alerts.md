@@ -3,12 +3,15 @@ entity_id: issue_504_wachhund_to_alerts
 type: module
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: superseded
+superseded_by: "#1435"
 version: "1.0"
 tags: [terminology, ui-text, rename]
 ---
 
 # Issue #504 — Begriff „Wachhund" → „Alarm-Schwellen"
+
+> Abgelöst durch #1435 E3a (`TripOverview.svelte` ersetzt, `fbffe6d44`, 2026-08-01).
 
 ## Approval
 

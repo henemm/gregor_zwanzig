@@ -3,7 +3,7 @@ entity_id: issue_449_magic_link
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, sveltekit, auth, magic-link, otp, email, issue-449]
 ---

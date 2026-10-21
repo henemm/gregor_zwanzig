@@ -3,7 +3,7 @@ entity_id: fix_1047_mail_content_tab_restore
 type: module
 created: 2026-07-06
 updated: 2026-07-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, e2e, bugfix]
 ---

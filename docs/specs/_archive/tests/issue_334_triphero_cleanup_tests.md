@@ -3,7 +3,7 @@ entity_id: issue_334_triphero_cleanup_tests
 type: tests
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, cleanup, dead-code, frontend, trip-detail, issue-334]
 parent: issue_334_triphero_cleanup

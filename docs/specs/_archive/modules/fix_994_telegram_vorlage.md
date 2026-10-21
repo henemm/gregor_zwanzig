@@ -3,7 +3,7 @@ entity_id: fix_994_telegram_vorlage
 type: bugfix
 created: 2026-07-03
 updated: 2026-07-03
-status: draft
+status: implemented
 workflow: fix-994-telegram-vorlage
 ---
 

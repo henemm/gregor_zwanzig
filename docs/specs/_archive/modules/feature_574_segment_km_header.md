@@ -3,7 +3,7 @@ entity_id: feature_574_segment_km_header
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, mail-render, segment-header, issue-574, po-1310]
 workflow: feat-574-segment-km-header

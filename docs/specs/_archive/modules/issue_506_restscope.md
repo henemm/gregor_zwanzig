@@ -3,7 +3,7 @@ entity_id: issue_506_restscope
 type: module
 created: 2026-06-01
 updated: 2026-06-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, cleanup, svelte, typescript, navigation, waypoint, deprecated]
 ---

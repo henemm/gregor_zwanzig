@@ -3,7 +3,7 @@ entity_id: hourlyvalue
 type: module
 created: 2026-04-26
 updated: 2026-04-26
-status: active
+status: implemented
 version: "1.0"
 tags: [output, sms, token-builder, dto]
 parent: output_token_builder

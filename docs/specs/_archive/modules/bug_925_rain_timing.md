@@ -1,7 +1,7 @@
 ---
 issue: "#925"
 workflow: bug-925-rain-timing
-status: draft
+status: implemented
 created: 2026-06-30
 ---
 

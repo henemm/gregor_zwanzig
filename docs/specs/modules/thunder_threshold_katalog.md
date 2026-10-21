@@ -3,7 +3,7 @@ entity_id: thunder_threshold_katalog
 type: feature
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [thunder, compare, metrics, frontend, backend, ssot]
 workflow: fix-1911-thunder-katalog

@@ -3,7 +3,7 @@ entity_id: issue_802_fahrrad_segment_zeit
 type: module
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "2.0"
 parent_issue: 802
 issues: [802]

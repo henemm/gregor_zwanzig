@@ -3,7 +3,7 @@ entity_id: issue_252_compare_presets
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 issue: 252
 tags: [compare, subscriptions, scheduler, frontend, svelte, python, go, email, recipients]

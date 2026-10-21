@@ -3,7 +3,7 @@ entity_id: issue_727_trips_null_safety
 type: bugfix
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trips, null-safety, ssr, bugfix]
 ---

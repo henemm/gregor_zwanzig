@@ -3,7 +3,7 @@ entity_id: issue_963_mobile_editor_controls
 type: module
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, frontend, mobile, editor]
 workflow: fix-963-mobile-editor-controls

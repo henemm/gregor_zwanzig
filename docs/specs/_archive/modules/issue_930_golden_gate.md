@@ -3,7 +3,7 @@ entity_id: issue_930_golden_gate
 type: feature
 created: 2026-06-30
 updated: 2026-06-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, gate, mail, golden-test, enforcement]
 workflow: fix-930-golden-gate

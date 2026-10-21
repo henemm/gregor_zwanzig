@@ -3,7 +3,7 @@ entity_id: issue_667_snapshot_hourly_clip_fix_tests
 type: tests
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [weather-snapshot, drilldown, persistence, bugfix, tdd]
 ---

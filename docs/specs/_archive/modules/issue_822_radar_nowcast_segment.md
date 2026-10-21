@@ -3,7 +3,7 @@ entity_id: issue_822_radar_nowcast_segment
 type: module
 created: 2026-06-15
 updated: 2026-06-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, radar, nowcast, segment, trip-alert, tz, mandantentrennung]
 ---

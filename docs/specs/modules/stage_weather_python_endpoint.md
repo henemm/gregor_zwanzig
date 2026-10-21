@@ -3,7 +3,7 @@ entity_id: stage_weather_python_endpoint
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [risk, weather, cockpit, adr-0015, issue-1212]
 ---

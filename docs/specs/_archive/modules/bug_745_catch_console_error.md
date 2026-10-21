@@ -3,7 +3,7 @@ entity_id: bug_745_catch_console_error
 type: bugfix
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, logging, tdd]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_181_alert_cooldown_quiet_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, alerts, cooldown, quiet-hours, issue-181, epic-139]
 parent: issue_181_alert_cooldown_quiet_hours

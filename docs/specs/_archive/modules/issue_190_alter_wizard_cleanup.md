@@ -3,7 +3,7 @@ entity_id: issue_190_alter_wizard_cleanup
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: implemented
 version: "1.0"
 title: Cleanup alter Wizard-Code nach Epic #136
 issue: 190

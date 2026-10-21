@@ -3,7 +3,7 @@ entity_id: issue_200_inbound_polling_global
 type: bugfix
 created: 2026-05-12
 updated: 2026-05-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, scheduler, imap, performance]
 ---

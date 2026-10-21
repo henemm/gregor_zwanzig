@@ -3,7 +3,7 @@ entity_id: bug_565_compact_to_clear
 type: bugfix
 created: 2026-06-03
 updated: 2026-06-03
-status: complete
+status: implemented
 version: "1.0"
 tags: [workflow, infra, context-management]
 ---

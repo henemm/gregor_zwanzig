@@ -3,7 +3,7 @@ entity_id: bug_332_approval_hook_session_id_tests
 type: tests
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, workflow, tooling, hooks, session-registry, issue-332]
 parent: bug_332_approval_hook_session_id

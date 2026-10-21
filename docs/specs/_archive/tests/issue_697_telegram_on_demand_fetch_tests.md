@@ -3,7 +3,7 @@ entity_id: issue_697_telegram_on_demand_fetch_tests
 type: tests
 created: 2026-06-10
 updated: 2026-06-10
-status: approved
+status: implemented
 version: "1.0"
 tags: [telegram, on-demand, fetch, snapshot, e2e, tdd]
 ---

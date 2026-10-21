@@ -3,7 +3,7 @@ entity_id: issue_393_cockpit_kacheln
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: approved
+status: implemented
 version: "1.0"
 tags: [frontend, go-api, python, cockpit, home, briefing-log, alert-log, ssr, issue-393]
 ---

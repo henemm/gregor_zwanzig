@@ -3,7 +3,7 @@ entity_id: issue_259_briefings_tab_tests
 type: tests
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, briefings, frontend, svelte, issue-259, epic-135]
 parent: issue_259_briefings_tab

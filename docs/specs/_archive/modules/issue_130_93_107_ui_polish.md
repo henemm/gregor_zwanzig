@@ -3,7 +3,7 @@ entity_id: issue_130_93_107_ui_polish
 type: bugfix
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, ui-polish, alert-mail, umlaute, dead-code, issue-130, issue-93, issue-107]
 ---

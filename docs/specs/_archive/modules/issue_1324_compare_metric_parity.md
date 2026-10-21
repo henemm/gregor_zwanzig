@@ -3,7 +3,7 @@ entity_id: issue_1324_compare_metric_parity
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, metrics, mapping, weather-metrics, catalog]
 workflow: 1324-compare-metric-catalog

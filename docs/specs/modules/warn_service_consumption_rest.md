@@ -3,7 +3,7 @@ entity_id: warn_service_consumption_rest
 type: module
 created: 2026-07-22
 updated: 2026-07-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [egress, warn-services, cache, backoff, "1348", "1337"]
 workflow: feat-1348-warn-rest

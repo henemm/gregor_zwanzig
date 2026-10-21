@@ -3,7 +3,7 @@ entity_id: issue_833_gate_tests
 type: tests
 created: 2026-06-22
 updated: 2026-06-22
-status: approved
+status: implemented
 version: "1.0"
 tags: [tests, mail, qa-gate, playwright, hooks, issue-833]
 parent: issue_833_mail_gate_structural

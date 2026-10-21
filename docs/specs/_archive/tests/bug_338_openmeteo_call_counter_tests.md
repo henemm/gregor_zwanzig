@@ -3,7 +3,7 @@ entity_id: bug_338_openmeteo_call_counter_tests
 type: tests
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, observability, open-meteo, api-limit, diagnostics, issue-338]
 parent: bug_338_openmeteo_call_counter

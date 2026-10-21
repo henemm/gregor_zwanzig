@@ -3,7 +3,7 @@ entity_id: fix_2149_scheduler_nutzer_sichtbarkeit
 type: bugfix
 created: 2026-09-15
 updated: 2026-09-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, multi-user, observability]
 ---

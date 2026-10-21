@@ -3,7 +3,7 @@ entity_id: fix_1750_zustell_hinweis_klartext
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, briefing, email, epic-1458, issue-1750, issue-1800]
 ---

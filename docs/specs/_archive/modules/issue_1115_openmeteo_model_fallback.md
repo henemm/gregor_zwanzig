@@ -3,7 +3,7 @@ entity_id: issue_1115_openmeteo_model_fallback
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: approved
+status: implemented
 version: "1.0"
 tags: [providers, openmeteo, reliability, fallback, briefing]
 ---

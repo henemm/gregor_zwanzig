@@ -3,7 +3,7 @@ entity_id: bug_281_290_stagestrip_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, svelte5, cockpit, stagestrip, pill, css-tokens, bug-281, bug-290]
 parent: bug_281_290_stagestrip

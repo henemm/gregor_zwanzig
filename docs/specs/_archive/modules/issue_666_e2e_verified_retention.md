@@ -3,7 +3,7 @@ entity_id: issue_666_e2e_verified_retention
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, e2e-gate, retention]
 ---

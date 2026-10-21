@@ -3,7 +3,7 @@ entity_id: issue_777_geosphere_nowcast_falsy
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: approved
+status: implemented
 version: 1.0
 issue: 777
 scope: backend-only

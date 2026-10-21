@@ -3,7 +3,7 @@ entity_id: issue_323_hex_fallbacks_tests
 type: tests
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, design-system, css-tokens, ap-007, hex-fallbacks, bug-323]
 parent: issue_323_hex_fallbacks_cleanup

@@ -3,7 +3,7 @@ entity_id: fix_1794_arome_precip_prob_null
 type: module
 created: 2026-09-18
 updated: 2026-09-18
-status: approved
+status: implemented
 version: "1.0"
 tags: [rendering, none-handling, rain-probability, sms, telegram, premium-sms]
 ---

@@ -3,7 +3,7 @@ entity_id: bug_333_test_issue_258_obsolete
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, tests, workflow, hooks, session-registry, symlink-deprecation, issue-333]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_323_hex_fallbacks_cleanup
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [design-system, css-tokens, frontend, ap-007, bugfix]
 ---

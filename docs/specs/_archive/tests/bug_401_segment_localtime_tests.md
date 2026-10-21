@@ -3,7 +3,7 @@ entity_id: bug_401_segment_localtime_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "2.0"
 tags: [tests, timezone, scheduler, segment, alert, cest, utc, bug-400, bug-401]
 parent: bug_401_segment_localtime

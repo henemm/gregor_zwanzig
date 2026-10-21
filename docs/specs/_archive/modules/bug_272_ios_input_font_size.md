@@ -3,7 +3,7 @@ entity_id: bug_272_ios_input_font_size
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: completed
+status: implemented
 version: "1.0"
 tags: [bugfix, ios, safari, mobile, font-size, zoom, tailwind, frontend, issue-272]
 ---

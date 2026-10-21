@@ -3,7 +3,7 @@ entity_id: fix_2436_tier_antrag_ehrliche_rueckmeldung
 type: bugfix
 created: 2026-10-07
 updated: 2026-10-07
-status: approved
+status: implemented
 workflow: fix-2436-tier-antrag-ehrliche-rueckmeldung
 ---
 

@@ -3,7 +3,7 @@ entity_id: issue_285_weather_section_restyle_tests
 type: tests
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, restyle, segmented-control, brand-tokens, issue-285]
 parent: issue_285_weather_section_restyle

@@ -3,7 +3,7 @@ entity_id: issue_765_backend_test_hygiene_tests
 type: tests
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, hygiene, backend, cleanup, gate, issue-765]
 parent: issue_765_backend_test_hygiene

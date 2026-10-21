@@ -3,7 +3,7 @@ entity_id: issue_1268_compare_timewindow_removal
 type: refactor
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, layout-tab, cleanup, dispatch]
 workflow: fix-1268-compare-dead-timewindow-fields

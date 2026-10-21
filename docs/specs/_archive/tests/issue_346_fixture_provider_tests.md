@@ -3,7 +3,7 @@ entity_id: issue_346_fixture_provider_tests
 type: tests
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, python, provider, fixture, offline, openmeteo, issue-346]
 parent: issue_346_fixture_provider_e2e

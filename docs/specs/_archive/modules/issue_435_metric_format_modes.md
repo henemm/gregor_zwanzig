@@ -3,7 +3,7 @@ entity_id: issue_435_metric_format_modes
 type: module
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, weather, metrics, frontend, backend, migration]
 ---

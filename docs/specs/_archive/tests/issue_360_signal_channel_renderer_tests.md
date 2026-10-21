@@ -3,7 +3,7 @@ entity_id: issue_360_signal_channel_renderer_tests
 type: tests
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: deprecated
 version: "1.0"
 tags: [tests, output, signal, telegram, channel-renderer, issue-360, epic-331]
 parent: issue_360_signal_channel_renderer
@@ -11,6 +11,8 @@ phase: phase5_tdd_red
 ---
 
 # Issue #360 — Kanal-bewusster Renderer für Signal/Telegram (Tests)
+
+> Abgelöst/entfernt durch ADR-0004 / #610 (Signal-Kanal app-weit entfernt) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

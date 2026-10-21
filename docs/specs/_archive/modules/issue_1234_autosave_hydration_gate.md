@@ -3,7 +3,7 @@ entity_id: issue_1234_autosave_hydration_gate
 type: bugfix
 created: 2026-07-14
 updated: 2026-07-14
-status: draft
+status: implemented
 version: "1.1"
 tags: [bug, dataloss, frontend, trip-editor, autosave, epic-1230]
 workflow: fix-1234-mount-autosave-metrics

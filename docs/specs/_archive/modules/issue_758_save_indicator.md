@@ -3,7 +3,7 @@ entity_id: issue_758_save_indicator
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, ux, trip-editor, compare-editor, auto-save, svelte5]
 ---

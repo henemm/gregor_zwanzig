@@ -3,7 +3,7 @@ entity_id: fix_2149_scheduler_budget_teilb
 type: bugfix
 created: 2026-09-16
 updated: 2026-09-17
-status: draft
+status: implemented
 version: "1.1"
 tags: [scheduler, multi-user, resilience, budget]
 ---

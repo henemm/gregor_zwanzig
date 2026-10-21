@@ -3,7 +3,7 @@ entity_id: issue_1214_metric_format_slice1_2
 type: module
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-format, compare-html, konsolidierung, issue-1214]
 ---

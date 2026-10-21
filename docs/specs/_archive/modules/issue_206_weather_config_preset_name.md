@@ -3,7 +3,7 @@ entity_id: issue_206_weather_config_preset_name
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 issue: 206
 tags: [weather-config, display-config, preset, frontend, python, trip-detail, issue-206]

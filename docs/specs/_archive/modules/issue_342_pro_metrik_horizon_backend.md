@@ -3,7 +3,7 @@ entity_id: issue_342_pro_metrik_horizon_backend
 type: module
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [backend, weather, metric-preset, schema-migration]
 parent_epic: 304

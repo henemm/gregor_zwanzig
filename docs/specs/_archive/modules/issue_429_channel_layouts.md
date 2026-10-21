@@ -3,7 +3,7 @@ entity_id: issue_429_channel_layouts
 type: module
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [backend, frontend, data-model, channel-layouts, issue-429, epic-428]
 ---

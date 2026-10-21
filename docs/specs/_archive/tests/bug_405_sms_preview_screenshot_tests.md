@@ -3,7 +3,7 @@ entity_id: bug_405_sms_preview_screenshot_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: active
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, screenshot, audit, tooling, issue-405]
 parent: bug_405_sms_preview_screenshot

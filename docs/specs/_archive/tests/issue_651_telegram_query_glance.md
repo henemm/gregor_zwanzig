@@ -3,7 +3,7 @@ entity_id: issue_651_telegram_query_glance_tests
 type: tests
 created: 2026-06-07
 updated: 2026-06-07
-status: approved
+status: implemented
 version: "1.0"
 tags: [telegram, query, glance, epic-639, tdd]
 ---

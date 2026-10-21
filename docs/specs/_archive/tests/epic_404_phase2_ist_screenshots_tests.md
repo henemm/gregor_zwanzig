@@ -3,7 +3,7 @@ entity_id: epic_404_phase2_ist_screenshots_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: active
+status: implemented
 version: "1.0"
 tags: [tests, playwright, screenshots, audit, staging, epic-404]
 parent: epic_404_phase2_ist_screenshots

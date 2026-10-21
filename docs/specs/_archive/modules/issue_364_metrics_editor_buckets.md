@@ -3,7 +3,7 @@ entity_id: issue_364_metrics_editor_buckets
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, frontend, editor, epic-331, issue-361]
 ---

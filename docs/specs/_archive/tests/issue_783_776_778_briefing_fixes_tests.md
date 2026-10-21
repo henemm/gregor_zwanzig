@@ -3,7 +3,7 @@ entity_id: issue_783_776_778_briefing_fixes_tests
 type: tests
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, briefing, email, scheduler, frontend, tech-debt, issue-783, issue-776, issue-778]
 parent: issue_783_776_778_briefing_fixes

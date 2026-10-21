@@ -3,7 +3,7 @@ entity_id: fix_1861_1865_alarm_mail_klarheit
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 workflow: fix-1861-1865-alarm-mail-klarheit
 ---
 

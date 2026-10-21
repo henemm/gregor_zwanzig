@@ -3,7 +3,7 @@ entity_id: issue_816_alert_deviation_tests
 type: tests
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, alert, deviation, alert-state, change-detection, epic-813, issue-816]
 parent: issue_816_alert_deviation_core

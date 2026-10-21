@@ -3,7 +3,7 @@ entity_id: issue_222_w1_alert_rules_service
 type: module
 created: 2026-05-14
 updated: 2026-05-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, change-detection, services, issue-222, workflow-1]
 ---

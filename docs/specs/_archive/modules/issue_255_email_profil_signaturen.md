@@ -3,7 +3,7 @@ entity_id: issue_255_email_profil_signaturen
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, design-system, activity-profile, issue-255, epic-236]
 parent: epic_236_email_design_system

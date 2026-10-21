@@ -3,7 +3,7 @@ entity_id: smtp_fallback
 type: bugfix
 created: 2026-06-30
 updated: 2026-06-30
-status: draft
+status: implemented
 workflow: fix-927-smtp-fallback
 ---
 

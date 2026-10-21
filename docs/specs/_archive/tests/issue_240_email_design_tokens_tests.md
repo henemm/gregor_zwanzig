@@ -3,7 +3,7 @@ entity_id: issue_240_email_design_tokens_tests
 type: tests
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, design-system, issue-240]
 parent: issue_240_email_design_tokens

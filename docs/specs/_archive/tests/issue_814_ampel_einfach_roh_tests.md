@@ -3,7 +3,7 @@ entity_id: issue_814_ampel_einfach_roh_tests
 type: tests
 created: 2026-06-14
 updated: 2026-06-14
-status: approved
+status: implemented
 version: "1.0"
 tags: [tests, email, renderer, ampel, format-mode, briefing, frontend, issue-814]
 parent: issue_814_ampel_einfach_roh

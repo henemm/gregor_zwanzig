@@ -3,7 +3,7 @@ entity_id: bug_824_archived_trip_filter
 type: bugfix
 created: 2026-06-23
 updated: 2026-06-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [trips, archive, scheduler, alert, telegram, email, stage-id, epic-825]
 ---

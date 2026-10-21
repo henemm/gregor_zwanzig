@@ -3,7 +3,7 @@ entity_id: issue_586_alert_config_fidelity_tests
 type: tests
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, design-fidelity, alert-config, issue-586]
 parent: issue_586_alert_config_fidelity_gate

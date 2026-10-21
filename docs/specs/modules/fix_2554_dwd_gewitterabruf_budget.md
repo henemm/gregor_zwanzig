@@ -3,7 +3,7 @@ entity_id: fix_2554_dwd_gewitterabruf_budget
 type: module
 created: 2026-10-13
 updated: 2026-10-13
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2554-dwd-gewitterabruf-budget
 tags: [provider, dwd, icon-d2, gewitter, zeitbudget, parallel, timeout, health-journal]

@@ -3,7 +3,7 @@ entity_id: issue_917_alert_renderer
 type: module
 created: 2026-06-30
 updated: 2026-06-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, renderer, sms, email, telegram, epic-914]
 ---

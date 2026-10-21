@@ -3,7 +3,7 @@ entity_id: issue_456_compare_auto_briefings
 type: module
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 issue: 456
 tags: [compare, subscription, auto-briefing, manual-send, top-ort]

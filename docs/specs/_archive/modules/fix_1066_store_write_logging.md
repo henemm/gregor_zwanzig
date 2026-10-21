@@ -3,7 +3,7 @@ entity_id: fix_1066_store_write_logging
 type: bugfix
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 workflow: fix-1066-store-write-logging
 ---
 

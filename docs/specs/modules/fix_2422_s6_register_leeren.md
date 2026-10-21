@@ -3,7 +3,7 @@ entity_id: fix_2422_s6_register_leeren
 type: bugfix
 created: 2026-09-30
 updated: 2026-09-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, invariante, konfiguration, kanaele, sms, telegram, roh-einfach, wind-chill, register, fix]
 workflow: fix-2422-s6-register

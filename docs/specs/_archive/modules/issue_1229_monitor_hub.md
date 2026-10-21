@@ -3,7 +3,7 @@ entity_id: issue_1229_monitor_hub
 type: feature
 created: 2026-07-13
 updated: 2026-07-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, hub, briefings, neutralisierung, frontend]
 workflow: feat-1229-monitor-hub

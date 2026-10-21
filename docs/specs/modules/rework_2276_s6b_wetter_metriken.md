@@ -3,7 +3,7 @@ entity_id: rework_2276_s6b_wetter_metriken
 type: refactor
 created: 2026-09-21
 updated: 2026-09-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, wetter-metriken, wertprops, ratsche, refactor]
 ---

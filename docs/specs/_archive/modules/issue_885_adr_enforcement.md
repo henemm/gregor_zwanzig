@@ -3,12 +3,14 @@ entity_id: issue_885_adr_enforcement
 type: module
 created: 2026-06-25
 updated: 2026-06-25
-status: draft
+status: deprecated
 version: "1.0"
 tags: [tooling, gate, adr, workflow]
 ---
 
 # ADR-Enforcement: Commit-Gate + Spec-Pflichtfeld
+
+> Abgelöst/entfernt durch ADR-0027 / #1197 (ADR-Commit-Guard entfernt, `1967d1a10`, 2026-07-16).
 
 ## Approval
 

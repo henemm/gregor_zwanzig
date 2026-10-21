@@ -1,7 +1,7 @@
 ---
 entity: issue_577_atoms_sync_v2
 type: feature
-status: draft
+status: implemented
 created: 2026-06-05
 issue: 577
 epic: 575

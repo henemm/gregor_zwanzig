@@ -3,7 +3,7 @@ entity_id: bug_600_tdd_verhaltenstest_tests
 type: tests
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, workflow, tdd, documentation]
 parent: bug_600_tdd_verhaltenstest

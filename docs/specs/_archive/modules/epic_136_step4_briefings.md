@@ -3,7 +3,7 @@ entity_id: epic_136_step4_briefings
 type: module
 created: 2026-05-09
 updated: 2026-05-11
-status: draft
+status: deprecated
 version: "1.0"
 parent_spec: epic_136_trip_wizard
 related: epic_136_trip_wizard
@@ -12,6 +12,8 @@ tags: [sveltekit, frontend, wizard, step4, briefings, channels, epic-136]
 ---
 
 # Epic 136 — Sub-Spec #164: Step 4 Briefings & Kanaele
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

@@ -3,7 +3,7 @@ entity_id: bug_282_295_trips_list_redesign
 type: module
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trips, desktop, table, kebab, visual-structure, redesign, issue-282, issue-295]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_294_home_kachel
 type: module
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [sveltekit, frontend, home, kachel, ux]
 ---

@@ -3,7 +3,7 @@ entity_id: feature_761_icon_d2_nowcast_tests
 type: tests
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 spec: docs/specs/modules/radar_nowcast_icon_d2.md
 issue: 761
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1756_send_idempotenz_lock
 type: module
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, scheduler, mandantenfaehigkeit]
 ---

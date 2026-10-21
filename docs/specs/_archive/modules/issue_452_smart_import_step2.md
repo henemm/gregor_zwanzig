@@ -3,7 +3,7 @@ entity_id: issue_452_smart_import_step2
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: active
+status: implemented
 version: "1.0"
 issue: 452
 tags: [compare, wizard, step2, smart-import, frontend, svelte, epic-246]

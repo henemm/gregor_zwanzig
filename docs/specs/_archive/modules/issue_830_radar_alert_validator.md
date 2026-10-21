@@ -3,7 +3,7 @@ entity_id: issue_830_radar_alert_validator
 type: module
 created: 2026-06-15
 updated: 2026-06-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, gate, radar, alert, mail, validator, staging, debug-endpoint]
 ---

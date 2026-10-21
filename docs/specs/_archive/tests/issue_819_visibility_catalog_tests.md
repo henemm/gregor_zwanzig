@@ -3,7 +3,7 @@ entity_id: issue_819_visibility_catalog_tests
 type: tests
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, metric-catalog, visibility, issue-819]
 parent: issue_819_visibility_catalog_honesty

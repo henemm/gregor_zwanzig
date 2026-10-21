@@ -3,7 +3,7 @@ entity_id: bug_330_modecard_fontsize_tests
 type: tests
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, design-system, css-tokens, font-size, ap-017, frontend, issue-330]
 parent: bug_330_modecard_fontsize

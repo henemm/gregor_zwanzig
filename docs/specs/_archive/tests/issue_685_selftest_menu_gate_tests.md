@@ -3,7 +3,7 @@ entity_id: issue_685_selftest_menu_gate_tests
 type: tests
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, prod-selftest, telegram, bot-menu, deploy-gate, issue-685]
 parent: issue_685_selftest_menu_gate

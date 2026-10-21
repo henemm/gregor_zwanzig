@@ -3,7 +3,7 @@ entity_id: issue_1321_e2e_storagestate_migration
 type: module
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [issue-1321, epic-1273, e2e, test-migration, compare, storagestate]
 ---

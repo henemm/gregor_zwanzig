@@ -3,7 +3,7 @@ entity_id: issue_1117_official_alerts_content_tab
 type: bugfix
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-detail, official-alerts, content-tab]
 ---

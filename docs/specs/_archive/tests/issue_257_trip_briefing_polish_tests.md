@@ -3,7 +3,7 @@ entity_id: issue_257_trip_briefing_polish_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, dark-footer, pill, mobile, issue-257, epic-236]
 parent: issue_257_trip_briefing_mail_polish

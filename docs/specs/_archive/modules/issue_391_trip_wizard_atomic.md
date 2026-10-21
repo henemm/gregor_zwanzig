@@ -3,7 +3,7 @@ entity_id: issue_391_trip_wizard_atomic
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, atomic-design, trip-wizard, epic-368, phase-2, svelte, issue-391]
 ---
@@ -11,6 +11,8 @@ tags: [frontend, atomic-design, trip-wizard, epic-368, phase-2, svelte, issue-39
 <!-- Issue #391 — Epic #368 Phase 2 (6/6): Trips-Assistent /trips/new auf Atomic-Bibliothek migrieren -->
 
 # Issue #391 — Trip-Wizard Atomic-Migration (`/trips/new`)
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

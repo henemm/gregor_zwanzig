@@ -3,7 +3,7 @@ entity_id: issue_248_smart_import
 type: module
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 issue: 248
 tags: [compare, go, location, import, resolver, endpoint]

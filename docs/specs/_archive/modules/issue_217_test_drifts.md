@@ -3,7 +3,7 @@ entity_id: issue_217_test_drifts
 type: module
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, test, e2e, drift-fix]
 issue: 217

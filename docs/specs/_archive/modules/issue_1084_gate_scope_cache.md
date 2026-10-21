@@ -3,7 +3,7 @@ entity_id: issue_1084_gate_scope_cache
 type: bugfix
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1084-stale-gate-marker
 tags: [gate, tooling, bugfix, deploy]

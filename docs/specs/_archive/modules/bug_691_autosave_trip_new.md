@@ -3,7 +3,7 @@ entity_id: bug_691_autosave_trip_new
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: completed
+status: implemented
 version: "1.0"
 tags: [frontend, trip-new, autosave, ux]
 ---

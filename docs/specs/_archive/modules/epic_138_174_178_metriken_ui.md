@@ -3,7 +3,7 @@ entity_id: epic_138_174_178_metriken_ui
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, sveltekit, go, weather-config, trip-detail, metrics, epic-138]
 ---

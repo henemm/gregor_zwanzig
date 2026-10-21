@@ -3,7 +3,7 @@ entity_id: issue_898_901_mail_layout
 type: bugfix
 created: 2026-06-28
 updated: 2026-06-28
-status: draft
+status: implemented
 workflow: fix-898-899-900-mail-layout
 ---
 

@@ -3,7 +3,7 @@ entity_id: issue_1110_compare_mail_v2
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 issue: 1110
 tags: [compare, email, renderer, html, python, redesign]

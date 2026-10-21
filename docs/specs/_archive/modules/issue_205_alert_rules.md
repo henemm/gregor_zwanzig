@@ -3,7 +3,7 @@ entity_id: issue_205_alert_rules
 type: module
 created: 2026-05-14
 updated: 2026-05-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [data-model, migration, alerts, trip, go, python, typescript]
 ---

@@ -3,7 +3,7 @@ entity_id: epic_136_step2_stages
 type: module
 created: 2026-05-09
 updated: 2026-05-10
-status: draft
+status: deprecated
 version: "1.0"
 parent_spec: epic_136_trip_wizard
 related: epic_136_trip_wizard
@@ -12,6 +12,8 @@ tags: [sveltekit, frontend, wizard, step2, stages, gpx, dnd, epic-136]
 ---
 
 # Epic 136 — Sub-Spec #162: Step 2 GPX-Multi-Upload + Drag-Sort + Pause
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

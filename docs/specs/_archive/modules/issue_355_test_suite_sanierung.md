@@ -3,7 +3,7 @@ entity_id: issue_355_test_suite_sanierung
 type: module
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, maintenance, test-drift, backend]
 issue: 355

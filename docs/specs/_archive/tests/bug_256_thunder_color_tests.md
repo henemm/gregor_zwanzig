@@ -3,7 +3,7 @@ entity_id: bug_256_thunder_color_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, design-tokens, thunder, bug-256]
 parent: bug_256_thunder_color

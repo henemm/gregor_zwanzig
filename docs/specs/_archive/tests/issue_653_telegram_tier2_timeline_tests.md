@@ -3,7 +3,7 @@ entity_id: issue_653_telegram_tier2_timeline_tests
 type: tests
 created: 2026-06-07
 updated: 2026-06-07
-status: approved
+status: implemented
 version: "1.0"
 tags: [telegram, query, timeline, tier2, epic-639, tdd]
 ---

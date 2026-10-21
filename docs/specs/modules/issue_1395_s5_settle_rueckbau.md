@@ -3,7 +3,7 @@ entity_id: issue_1395_s5_settle_rueckbau
 type: module
 created: 2026-07-31
 updated: 2026-07-31
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, svelte, trip, save-status, cleanup, cascade]
 ---

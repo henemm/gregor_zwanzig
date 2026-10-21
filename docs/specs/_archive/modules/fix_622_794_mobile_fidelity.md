@@ -3,7 +3,7 @@ entity_id: fix_622_794_mobile_fidelity
 type: bugfix
 created: 2026-06-24
 updated: 2026-06-24
-status: draft
+status: implemented
 workflow: fix-622-794-mobile-fidelity
 ---
 

@@ -3,7 +3,7 @@ entity_id: issue_430_431_wizard_layout_step_tests
 type: tests
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: deprecated
 version: "1.0"
 tags: [tests, frontend, wizard, stepper, layout-editor, issue-430, issue-431, epic-428]
 parent: issue_430_431_wizard_layout_step
@@ -11,6 +11,8 @@ phase: phase5_tdd_red
 ---
 
 # Issue #430 + #431 — Wizard auf 5 Steps + Layout-Editor (Tests)
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

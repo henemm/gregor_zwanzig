@@ -3,7 +3,7 @@ entity_id: provider_meteofrance
 type: module
 created: 2026-07-22
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, meteofrance, arome, openmeteo, reliability, fallback, routing, briefing]
 workflow: 1143-meteofrance-fr-fallback

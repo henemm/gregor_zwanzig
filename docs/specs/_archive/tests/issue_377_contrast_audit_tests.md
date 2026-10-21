@@ -3,7 +3,7 @@ entity_id: issue_377_contrast_audit_tests
 type: tests
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, design-system, wcag, accessibility, tokens, issue-377]
 parent: issue_377_contrast_audit

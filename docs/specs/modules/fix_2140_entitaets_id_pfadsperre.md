@@ -3,7 +3,7 @@ entity_id: fix_2140_entitaets_id_pfadsperre
 type: module
 created: 2026-09-06
 updated: 2026-09-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, path-traversal, multi-tenant, entity-id]
 ---

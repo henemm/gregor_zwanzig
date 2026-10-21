@@ -3,7 +3,7 @@ entity_id: fix_2353_auth_lookup_fehler_503
 type: bugfix
 created: 2026-09-17
 updated: 2026-09-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [auth, middleware, session]
 workflow: fix-2353-auth-lookup-fehler-503

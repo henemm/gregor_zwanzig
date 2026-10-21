@@ -3,7 +3,7 @@ entity_id: fix_alert_bundle_958ff
 type: module
 created: 2026-07-02
 updated: 2026-07-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, bugfix, bundle, renderer, frontend]
 ---

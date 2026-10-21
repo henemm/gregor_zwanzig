@@ -3,7 +3,7 @@ entity_id: bug_469_subject_encoding
 type: bugfix
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, backend, go, mail, smtp, rfc-2047, issue-469]
 ---

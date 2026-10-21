@@ -3,7 +3,7 @@ entity_id: issue_189_preview_tab_integration
 type: module
 created: 2026-05-16
 updated: 2026-05-17
-status: approved
+status: implemented
 version: "1.0"
 tags: [frontend, preview, trip-detail, epic-140]
 parent_spec: docs/specs/modules/epic_140_output_vorschau.md

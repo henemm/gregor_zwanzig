@@ -3,7 +3,7 @@ entity_id: fix_908_973_987_staging_auth
 type: bugfix
 created: 2026-07-05
 updated: 2026-07-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, testing, staging, auth, prod-selftest, playwright]
 ---

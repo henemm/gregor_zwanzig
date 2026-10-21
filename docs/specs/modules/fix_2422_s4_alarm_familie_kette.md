@@ -3,7 +3,7 @@ entity_id: fix_2422_s4_alarm_familie_kette
 type: bugfix
 created: 2026-09-29
 updated: 2026-09-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, alarm, radar, amtliche-warnungen, versand, kanaele, schwelle, fix]
 workflow: fix-2422-s4-alarm-familie-kette

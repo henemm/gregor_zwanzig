@@ -3,7 +3,7 @@ entity_id: issue_343_horizon_chip_ui_tests
 type: tests
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, weather, svelte, horizon-chip, issue-343]
 parent: issue_343_horizon_chip_ui

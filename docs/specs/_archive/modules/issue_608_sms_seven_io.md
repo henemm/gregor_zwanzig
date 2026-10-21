@@ -3,7 +3,7 @@ entity_id: issue_608_sms_seven_io
 type: module
 created: 2026-06-05
 updated: 2026-06-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, output, seven-io, channel]
 ---

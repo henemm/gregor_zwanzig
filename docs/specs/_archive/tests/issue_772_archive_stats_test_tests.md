@@ -3,7 +3,7 @@ entity_id: issue_772_archive_stats_test_tests
 type: tests
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, go, archive-stats, coverage, multi-tenant, issue-772]
 parent: issue_772_archive_stats_test

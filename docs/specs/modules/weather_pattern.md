@@ -3,7 +3,7 @@ entity_id: weather_pattern
 type: module
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [forecast, ensemble, openmeteo, stability, sms, email, z500, risk]
 ---

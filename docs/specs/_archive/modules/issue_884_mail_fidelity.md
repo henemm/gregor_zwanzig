@@ -3,7 +3,7 @@ entity_id: issue_884_mail_fidelity
 type: feature
 created: 2026-06-25
 updated: 2026-06-25
-status: draft
+status: implemented
 version: "3.0"
 tags: [email, renderer, html, design-fidelity, briefing]
 workflow: fix-884-mail-fidelity

@@ -3,7 +3,7 @@ entity_id: issue_732_email_validator_scope_docs
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [docs, workflow, email, validator]
 ---

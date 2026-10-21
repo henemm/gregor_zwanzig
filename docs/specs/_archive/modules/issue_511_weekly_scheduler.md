@@ -3,7 +3,7 @@ entity_id: issue_511_weekly_scheduler
 type: module
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 issue: 511
 tags: [compare, preset, scheduler, weekly, go, python, frontend, svelte, weekday]

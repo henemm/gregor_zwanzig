@@ -3,7 +3,7 @@ entity_id: epic_133_design_system_lauf_a
 type: module
 created: 2026-05-08
 updated: 2026-05-08
-status: completed
+status: implemented
 version: "1.0"
 tags: [sveltekit, frontend, css, design-system, epic-133]
 ---

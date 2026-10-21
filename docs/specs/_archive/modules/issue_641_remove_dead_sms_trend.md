@@ -3,7 +3,7 @@ entity_id: issue_641_remove_dead_sms_trend
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, cleanup, dead-code]
 ---

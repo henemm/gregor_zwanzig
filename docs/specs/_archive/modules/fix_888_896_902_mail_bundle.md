@@ -3,7 +3,7 @@ entity_id: fix_888_896_902_mail_bundle
 type: module
 created: 2026-07-02
 updated: 2026-07-02
-status: draft
+status: implemented
 version: "1.1"
 tags: [briefing-mail, renderer, day-comparison, outlook, bugfix-bundle]
 ---

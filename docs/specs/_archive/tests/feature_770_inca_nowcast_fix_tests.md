@@ -3,6 +3,7 @@ entity_id: feature_770_inca_nowcast_fix_tests
 type: tests
 created: 2026-06-12
 updated: 2026-06-12
+status: implemented
 spec: docs/specs/modules/radar_nowcast_inca_fix.md
 issue: 770
 ---

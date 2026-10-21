@@ -3,7 +3,7 @@ entity_id: bug_201_html_email_mocks_tests
 type: tests
 created: 2026-05-12
 updated: 2026-05-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, refactor, bugfix, mock-removal, issue-201]
 parent: issue_201_html_email_mocks_removal

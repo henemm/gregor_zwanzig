@@ -3,7 +3,7 @@ entity_id: issue_583_archive_demo_data_tests
 type: tests
 created: 2026-06-04
 updated: 2026-06-05
-status: draft
+status: implemented
 version: "1.1"
 tags: [tests, design-fidelity, issue-583, issue-611, epic-575]
 parent: issue_583_archiv_1to1

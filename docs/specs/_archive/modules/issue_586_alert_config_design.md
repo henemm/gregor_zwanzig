@@ -3,7 +3,7 @@ entity_id: issue_586_alert_config_design
 type: module
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 issue: 586
 tags: [alerts-tab, frontend, design-fidelity, jsx, modecard, alertmetrictable, alertmetricrow, cooldown, quiet-hours, preview, tokens, svelte, issue-586]

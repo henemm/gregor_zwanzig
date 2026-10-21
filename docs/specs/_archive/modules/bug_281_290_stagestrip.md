@@ -3,7 +3,7 @@ entity_id: bug_281_290_stagestrip
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, cockpit, stagestrip, css-tokens, design-system, bugfix]
 ---

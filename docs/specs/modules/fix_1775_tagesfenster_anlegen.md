@@ -3,7 +3,7 @@ entity_id: fix_1775_tagesfenster_anlegen
 type: feature
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 workflow: fix-1775-tagesfenster-anlegen
 version: "1.0"
 tags: [issue-1775, trip-new, day-window, weather-metrics-tab, adr-0035]

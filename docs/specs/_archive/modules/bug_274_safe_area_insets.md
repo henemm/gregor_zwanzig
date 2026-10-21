@@ -3,12 +3,15 @@ entity_id: bug_274_safe_area_insets
 type: bug-fix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: superseded
+superseded_by: "#2277"
 version: "1.0"
 tags: [frontend, mobile, css, ios]
 ---
 
 # Bug #274 — Safe-Area-Insets
+
+> Abgelöst durch #2277 S3 (`TripEditView.svelte` rückgebaut, `cf98d76f8`, 2026-10-01).
 
 ## Approval
 

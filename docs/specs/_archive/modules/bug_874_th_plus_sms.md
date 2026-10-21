@@ -3,7 +3,7 @@ entity_id: bug_874_th_plus_sms
 type: bugfix
 created: 2026-06-24
 updated: 2026-06-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, thunder, tdd, test-coverage]
 ---

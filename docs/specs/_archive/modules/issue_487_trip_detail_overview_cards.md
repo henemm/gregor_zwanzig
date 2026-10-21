@@ -3,12 +3,15 @@ entity_id: issue_487_trip_detail_overview_cards
 type: module
 created: 2026-05-31
 updated: 2026-05-31
-status: implemented
+status: superseded
+superseded_by: "#1435"
 version: "1.0"
 tags: [frontend, svelte, trip-detail, overview, design-compliance, issue-487]
 ---
 
 # Issue #487 — TripOverview: 4-Karten-2×2-Dashboard (Design-Compliance)
+
+> Abgelöst durch #1435 E3a (`TripOverview.svelte` ersetzt, `fbffe6d44`, 2026-08-01).
 
 ## Approval
 

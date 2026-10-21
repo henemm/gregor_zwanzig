@@ -3,7 +3,7 @@ entity_id: issue_665_e2e_path_helper
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [infra, tooling, e2e-gate, refactor, hardening]
 ---

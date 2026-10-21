@@ -3,7 +3,7 @@ entity_id: issue_1296_compare_metrics_dropped
 type: bugfix
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, metrics, mapping, bugfix, weather-metrics]
 workflow: fix-1296-compare-metrics-dropped

@@ -3,6 +3,7 @@ entity_id: trip_empty_metric_selection
 type: bugfix
 created: 2026-07-31
 updated: 2026-07-31
+status: implemented
 version: "1.0"
 tags: [trip, shared, metrics, leerauswahl, bugfix]
 ---

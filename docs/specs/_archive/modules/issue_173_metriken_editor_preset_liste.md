@@ -3,7 +3,7 @@ entity_id: issue_173_metriken_editor_preset_liste
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 issue: 173
 tags: [frontend, sveltekit, weather-config, trip-detail, metrics, presets, epic-138, ui-component, issue-173]

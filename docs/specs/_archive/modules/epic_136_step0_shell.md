@@ -3,7 +3,7 @@ entity_id: epic_136_step0_shell
 type: module
 created: 2026-05-09
 updated: 2026-05-10
-status: draft
+status: deprecated
 version: "1.0"
 parent_spec: epic_136_trip_wizard
 related: epic_136_trip_wizard
@@ -12,6 +12,8 @@ tags: [sveltekit, frontend, wizard, shell, stepper, epic-136]
 ---
 
 # Epic 136 — Sub-Spec #160: Wizard-Shell + 4-Schritt-Stepper
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

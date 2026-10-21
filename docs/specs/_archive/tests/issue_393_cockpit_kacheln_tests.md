@@ -3,7 +3,7 @@ entity_id: issue_393_cockpit_kacheln_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, cockpit, briefing-log, alert-log, go-handler, frontend, issue-393]
 parent: issue_393_cockpit_kacheln

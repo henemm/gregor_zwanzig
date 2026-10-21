@@ -3,7 +3,7 @@ entity_id: fix_1237_1238_1239_mail_darstellung
 type: module
 created: 2026-07-13
 updated: 2026-07-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, compare, email, hour-table, subject, design-fidelity]
 ---

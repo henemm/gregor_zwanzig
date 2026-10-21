@@ -3,7 +3,7 @@ entity_id: report_config_resolver
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.1"
 tags: [reporting, email, config, resolver, rework]
 ---

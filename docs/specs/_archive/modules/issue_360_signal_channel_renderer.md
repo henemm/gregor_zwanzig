@@ -3,12 +3,14 @@ entity_id: issue_360_signal_channel_renderer
 type: module
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: deprecated
 version: "1.0"
 tags: [output, signal, telegram, channel-renderer, epic-331]
 ---
 
 # Kanal-bewusster Renderer für Signal/Telegram + Spalten-Datenmodell
+
+> Abgelöst/entfernt durch ADR-0004 / #610 (Signal-Kanal app-weit entfernt) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

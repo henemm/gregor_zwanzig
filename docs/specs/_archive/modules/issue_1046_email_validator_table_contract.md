@@ -3,7 +3,7 @@ entity_id: issue_1046_email_validator_table_contract
 type: module
 created: 2026-07-06
 updated: 2026-07-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [validator, gate, bugfix, compare-mail, tooling]
 ---

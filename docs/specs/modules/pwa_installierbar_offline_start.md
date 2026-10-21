@@ -3,7 +3,7 @@ entity_id: pwa_installierbar_offline_start
 type: module
 created: 2026-09-06
 updated: 2026-09-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [pwa, frontend, offline, service-worker, issue-2128, epic-2127]
 ---

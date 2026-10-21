@@ -3,7 +3,7 @@ entity_id: fix_1929_warnung_anzeigetext_eindeutig
 type: bugfix
 created: 2026-08-17
 updated: 2026-08-17
-status: approved
+status: implemented
 version: "1.1"
 tags: [alerts, sms, official-alerts]
 workflow: fix-1929-warnung-anzeigetext-eindeutig

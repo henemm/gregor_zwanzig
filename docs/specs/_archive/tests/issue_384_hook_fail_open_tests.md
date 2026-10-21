@@ -3,7 +3,7 @@ entity_id: issue_384_hook_fail_open_tests
 type: tests
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bug, workflow, hooks, fail-open, issue-384]
 parent: issue_384_hook_fail_open

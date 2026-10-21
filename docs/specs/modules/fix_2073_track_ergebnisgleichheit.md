@@ -3,7 +3,7 @@ entity_id: fix_2073_track_ergebnisgleichheit
 type: bugfix
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [gpx, track-resolution, alarm]
 workflow: fix-2073-ergebnisgleichheit

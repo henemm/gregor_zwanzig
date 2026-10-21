@@ -3,7 +3,7 @@ entity_id: fix_2052_now_aufenthaltsort
 type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
-status: approved
+status: implemented
 workflow: fix-2052-now-aufenthaltsort
 version: "1.0"
 tags: [alerts, radar, nowcast, trip, now, telegram]

@@ -3,7 +3,7 @@ entity_id: issue_363_signal_telegram_preview_tests
 type: tests
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: deprecated
 version: "1.0"
 tags: [tests, output, preview, signal, telegram, issue-363, epic-331]
 parent: issue_363_signal_telegram_preview
@@ -11,6 +11,8 @@ phase: phase5_tdd_red
 ---
 
 # Issue #363 — Signal/Telegram-Vorschau-Endpoints (Tests)
+
+> Abgelöst/entfernt durch ADR-0004 / #610 (Signal-Kanal app-weit entfernt) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

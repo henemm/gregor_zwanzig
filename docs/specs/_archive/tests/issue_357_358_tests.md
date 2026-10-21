@@ -3,7 +3,7 @@ entity_id: issue_357_358_tests
 type: tests
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, sms, wind-exposition, token-pipeline, test-fix, issue-357, issue-358]
 parent: issue_357_358_wind_exposition_sms_and_warning_token

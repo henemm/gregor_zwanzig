@@ -3,7 +3,7 @@ entity_id: issue_445_metric_entry_cleanup
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: completed
+status: implemented
 version: "1.0"
 tags: [frontend, typescript, refactoring, types, metric-entry]
 ---

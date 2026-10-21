@@ -3,7 +3,7 @@ entity_id: fix_970_971_1011_e2e_ui_drift
 type: module
 created: 2026-07-06
 updated: 2026-07-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [e2e, test-drift, weather-metrics-tab, mail-simplification, dead-code]
 ---

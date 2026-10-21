@@ -3,7 +3,7 @@ entity_id: bug_663_trip_command_user_isolation
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, multi-user, trip-commands, mandantentrennung]
 ---

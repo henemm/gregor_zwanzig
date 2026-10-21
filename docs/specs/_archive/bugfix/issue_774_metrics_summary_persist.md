@@ -3,12 +3,15 @@ entity_id: issue_774_metrics_summary_persist
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: implemented
+status: superseded
+superseded_by: "#2277"
 version: "1.0"
 tags: [bug, frontend, trip-editor, report-config, persistence]
 ---
 
 # Issue #774 — Metriken-Überblick Checkbox persistieren + Einklapp-Element entfernen
+
+> Abgelöst durch #2277 S5 (`EditReportConfigSection.svelte` rückgebaut, `cdb09d2b5`, 2026-10-02).
 
 ## Approval
 

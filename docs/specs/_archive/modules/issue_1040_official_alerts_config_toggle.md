@@ -4,6 +4,7 @@ type: module
 created: 2026-07-06
 updated: 2026-07-07
 status: superseded
+superseded_by: "docs/specs/_archive/modules/issue_1040_alerts_toggle.md"
 version: "1.0"
 tags: [compare, alerts, official-alerts, config]
 ---

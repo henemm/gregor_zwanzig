@@ -3,7 +3,7 @@ entity_id: bug_272_ios_input_font_size_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, ios, safari, mobile, font-size, zoom, frontend, issue-272]
 parent: bug_272_ios_input_font_size

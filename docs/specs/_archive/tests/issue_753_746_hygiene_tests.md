@@ -3,7 +3,7 @@ entity_id: issue_753_746_hygiene_tests
 type: tests
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, tooling, hygiene, issue-753, issue-746, doc-compliance]
 parent: issue_753_746_test_hygiene_and_planner_checkpoint

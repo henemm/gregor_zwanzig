@@ -2,7 +2,7 @@
 entity_id: issue_701_alerts_metrik_sync_tests
 type: tests
 created: 2026-06-10
-status: approved
+status: implemented
 ---
 
 # Tests: Issue #701 — Alerts-Tab metrik-gekoppelt

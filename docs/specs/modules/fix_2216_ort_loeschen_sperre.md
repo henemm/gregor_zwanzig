@@ -3,7 +3,7 @@ entity_id: fix_2216_ort_loeschen_sperre
 type: module
 created: 2026-10-08
 updated: 2026-10-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [locations, compare, delete, 409, versand, bug, epic-2345]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_445_metric_entry_cleanup_tests
 type: tests
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, rework, typescript, frontend, metric-entry, issue-445]
 parent: issue_445_metric_entry_cleanup

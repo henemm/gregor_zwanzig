@@ -3,12 +3,15 @@ entity_id: bug_502_alert_test_fix
 type: bugfix
 created: 2026-06-01
 updated: 2026-06-01
-status: draft
+status: superseded
+superseded_by: "#1435"
 version: "1.0"
 tags: [frontend, alerts, e2e-test, trip-detail]
 ---
 
 # Bug #502 — AC-8 alert-rules-editor.spec.ts: right-card-alerts-edit-link fehlt im DOM
+
+> Abgelöst durch #1435 E3a (`TripOverview.svelte` ersetzt, `fbffe6d44`, 2026-08-01).
 
 ## Approval
 

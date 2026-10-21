@@ -3,7 +3,7 @@ entity_id: fix_2205_hagel_im_text_wettercode_bleibt
 type: module
 created: 2026-09-15
 updated: 2026-09-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, hagel, alarm, wettercode, nowcast, workflow-fix-2205-wettercode-zwischenstufe]
 ---

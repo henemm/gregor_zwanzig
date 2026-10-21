@@ -3,7 +3,7 @@ entity_id: fix_2441_etappennummer_status
 type: bugfix
 created: 2026-10-07
 updated: 2026-10-07
-status: draft
+status: implemented
 workflow: fix-2441-etappennummer-status
 version: "1.0"
 tags: [kanal-paritaet, etappennummer, status, epic-2506]

@@ -3,7 +3,7 @@ entity_id: bug_538_539_540_546_retrospective_test_fixes
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, tests, retrospective-audit, issue-538, issue-539, issue-540, issue-546]
 ---

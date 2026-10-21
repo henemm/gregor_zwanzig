@@ -3,7 +3,7 @@ entity_id: bug_328_savepreset_tokens
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, design-system, css, ap-007, ap-010, font-size, hex-color, issue-328]
 ---

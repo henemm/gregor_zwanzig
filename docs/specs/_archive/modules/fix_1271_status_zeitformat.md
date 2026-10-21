@@ -3,7 +3,7 @@ entity_id: fix_1271_status_zeitformat
 type: module
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-status, i18n, bugfix]
 ---

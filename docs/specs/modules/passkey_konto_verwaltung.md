@@ -3,7 +3,7 @@ entity_id: passkey_konto_verwaltung
 type: module
 created: 2026-09-08
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [sveltekit, auth, webauthn, passkey, account, multi-user]
 ---

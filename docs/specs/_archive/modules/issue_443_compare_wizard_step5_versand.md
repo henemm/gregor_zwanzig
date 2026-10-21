@@ -3,13 +3,15 @@ entity_id: issue_443_compare_wizard_step5_versand
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: implemented
+status: deprecated
 version: "1.0"
 issue: 443
 tags: [compare, wizard, step5, versand, subscriptions, frontend, svelte, epic-438]
 ---
 
 # Issue #443 — Orts-Vergleich · Wizard Step 5 — Versand + Aktivierung
+
+> Abgelöst/entfernt durch ADR-0032 / #683 (Compare-Wizard entfernt, `3bb5161a4`, 2026-06-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

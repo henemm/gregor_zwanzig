@@ -3,7 +3,7 @@ entity_id: issue_1142_geosphere_direct_fallback
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, geosphere, openmeteo, reliability, fallback, routing, briefing]
 ---

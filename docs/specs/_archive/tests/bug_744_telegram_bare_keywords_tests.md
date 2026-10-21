@@ -3,7 +3,7 @@ entity_id: bug_744_telegram_bare_keywords_tests
 type: tests
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, bare-keywords, channel-consistency, issue-744]
 parent: bug_744_telegram_bare_keywords

@@ -3,7 +3,7 @@ entity_id: issue_131_alert_email_klarheit_tests
 type: tests
 created: 2026-05-13
 updated: 2026-05-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bug, email, alert, change-detection, issue-131]
 parent: issue_131_alert_email_klarheit

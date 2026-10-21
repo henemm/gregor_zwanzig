@@ -3,7 +3,7 @@ entity_id: epic_135_step2_trip_detail_actions
 type: module
 created: 2026-05-12
 updated: 2026-05-12
-status: approved
+status: implemented
 version: "1.0"
 parent_spec: epic_135_trip_detail
 related: epic_135_step1_tab_navigation

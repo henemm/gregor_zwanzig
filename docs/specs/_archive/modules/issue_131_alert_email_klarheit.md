@@ -3,7 +3,7 @@ entity_id: issue_131_alert_email_klarheit
 type: module
 created: 2026-05-13
 updated: 2026-05-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, email, alert, formatter, change-detection]
 ---

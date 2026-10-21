@@ -3,7 +3,7 @@ entity_id: epic_137_wegpunkt_editor
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: active
+status: implemented
 version: "1.0"
 parent_spec: epic_136_trip_wizard
 related: epic_136_trip_wizard

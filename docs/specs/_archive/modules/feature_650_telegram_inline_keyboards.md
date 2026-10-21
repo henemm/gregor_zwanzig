@@ -3,7 +3,7 @@ entity_id: feature_650_telegram_inline_keyboards
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, output, foundation, epic-639]
 ---

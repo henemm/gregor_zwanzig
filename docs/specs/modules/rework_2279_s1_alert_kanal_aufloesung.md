@@ -3,7 +3,7 @@ entity_id: rework_2279_s1_alert_kanal_aufloesung
 type: refactor
 created: 2026-09-09
 updated: 2026-09-09
-status: active
+status: implemented
 version: "1.0"
 tags: [alerts, trips, compare, channels]
 ---

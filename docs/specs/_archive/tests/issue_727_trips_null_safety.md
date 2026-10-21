@@ -2,7 +2,7 @@
 entity_id: issue_727_trips_null_safety_tests
 type: tests
 created: 2026-06-10
-status: approved
+status: implemented
 ---
 
 # Tests: Issue #727 — /trips SSR 500 bei stages:null (null-safety)

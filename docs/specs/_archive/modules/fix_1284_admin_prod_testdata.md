@@ -3,7 +3,7 @@ entity_id: fix_1284_admin_prod_testdata
 type: bugfix
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 workflow: fix-1284-e2e-leichen-prod
 ---
 

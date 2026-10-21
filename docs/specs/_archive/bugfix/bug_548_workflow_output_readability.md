@@ -3,7 +3,7 @@ entity_id: bug_548_workflow_output_readability
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [workflow, infra, formatting]
 ---

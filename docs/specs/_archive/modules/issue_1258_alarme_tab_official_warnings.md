@@ -3,7 +3,7 @@ entity_id: issue_1258_alarme_tab_official_warnings
 type: module
 created: 2026-07-15
 updated: 2026-07-15
-status: approved
+status: implemented
 version: "1.0"
 tags: [compare, trip, alerts, shared-components, data-model, official-warnings]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_822_radar_nowcast_segment_tests
 type: tests
 created: 2026-06-15
 updated: 2026-06-15
-status: draft
+status: implemented
 version: 1.0
 spec: docs/specs/modules/issue_822_radar_nowcast_segment.md
 ---

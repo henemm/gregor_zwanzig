@@ -3,7 +3,7 @@ entity_id: bug_395_ssr_timeout
 type: bugfix
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, ssr, timeout, performance, page-server, frontend, issue-395]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_658_trip_new_wegpunkte_tab
 type: module
 created: 2026-06-07
 updated: 2026-06-08
-status: live
+status: implemented
 version: "1.0"
 tags: [trips, editor, frontend, design-compliance]
 ---

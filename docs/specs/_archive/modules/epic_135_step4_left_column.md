@@ -3,7 +3,7 @@ entity_id: epic_135_step4_left_column
 type: module
 created: 2026-05-12
 updated: 2026-05-12
-status: draft
+status: implemented
 version: "1.0"
 parent_spec: epic_135_trip_detail
 related: epic_135_step3_trip_hero, epic_136_step3_waypoints

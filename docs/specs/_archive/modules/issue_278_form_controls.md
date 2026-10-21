@@ -3,7 +3,7 @@ entity_id: issue_278_form_controls
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, svelte5, ui-primitive, checkbox, select, design-system, issue-278]
 ---

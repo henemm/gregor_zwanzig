@@ -3,7 +3,7 @@ entity_id: issue_1155_openmeteo_retry_tuning
 type: bugfix
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [provider, weather, open-meteo, retry, fallback, bugfix, testing]
 ---

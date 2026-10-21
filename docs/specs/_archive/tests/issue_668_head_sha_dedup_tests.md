@@ -3,7 +3,7 @@ entity_id: issue_668_head_sha_dedup_tests
 type: tests
 created: 2026-06-08
 updated: 2026-06-08
-status: active
+status: implemented
 version: "1.0"
 tags: [tests, hooks, e2e, staging-gate]
 parent: issue_668_head_sha_dedup

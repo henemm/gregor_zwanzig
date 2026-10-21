@@ -3,7 +3,7 @@ entity_id: issue_236_epic9_remaining_templates_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, design-system, epic-236, service-error-mail, comparison-mail]
 parent: issue_236_epic9_remaining_templates

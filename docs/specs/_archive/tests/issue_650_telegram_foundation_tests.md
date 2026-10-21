@@ -3,7 +3,7 @@ entity_id: issue_650_telegram_foundation_tests
 type: tests
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, outputs, inline-keyboard, bot-commands, tests, epic-639]
 ---

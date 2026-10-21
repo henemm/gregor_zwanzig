@@ -1,6 +1,8 @@
 # Decision Matrix — Wetterdaten-Provider (Ist-Stand)
 
-> Stand: 2026-08-02. Ersetzt das MET/MOSMIX-Auswahlmodell der MVP-Ära
+> Stand: 2026-08-02, Registry-Abgleich mit `src/providers/base.py::_load_providers()` am 2026-10-21
+> (registriert: `geosphere`, `openmeteo`, `brightsky`, `at_direct`, `fr_direct`, `de_direct`, `eu_direct`;
+> `fixture` ist kein Registry-Name, sondern ein Umleitungszweig in `get_provider()`). Ersetzt das MET/MOSMIX-Auswahlmodell der MVP-Ära
 > (historisch: ADR-0002, superseded). Quelle der Wahrheit für Details ist der
 > Code — dieses Dokument beschreibt nur die Auswahllogik und wo sie liegt.
 
@@ -22,6 +24,7 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 | Name | Zweck |
 |---|---|
 | `geosphere` | GeoSphere Austria (Direktanbindung, AT-Fallback-Basis) |
+| `at_direct` | Dünner Adapter `GeoSphereDirectProvider` (`src/providers/regional_stubs.py`, #1142) über `geosphere` — AT-Stufe der Cross-Provider-Kette, ruft **ohne** Open-Meteo-Wolkenanreicherung ab |
 | `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) — liefert seit #1457 S2a zusätzlich zu Temperatur/Wind/Niederschlag die erwartete Blitzdichte (`lightning_density_per_km2_3h`, nur Frankreich/Korsika; eigenes Feld, nicht mit dem DWD-Blitzpotenzial vermischt); seit #1507 S5c zusätzlich einen Hagel-Rohwert (`hail_potential_mf`, Coverage `HAIL__GROUND_OR_WATER_SURFACE`, Massenanteil `kg kg-1`; eigenes Feld, nicht mit `hail_potential_grau_gsp` (DWD) vermischt, **kein** Einfluss auf `hail_flag`); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
 | `de_direct` | DWD ICON-D2 Open Data (GRIB2-Direktanbindung, DE-Fallback, #1144) — liefert seit #1457 S2b zusätzlich zu Temperatur/Wind/Niederschlag Blitzpotenzial und Hagel-Potenzial (`lightning_potential_lpi_jkg` und `hail_potential_grau_gsp`, nur Deutschland/Alpen/Österreich; eigene Felder, nicht mit der Météo-France Blitzdichte vermischt); seit #1531 zusätzlich sieben Gewitter-**Roh**größen ohne Einstufung (`supercell_index_sdi2_1s`, `convective_inhibition_jkg`, `cape_ml_jkg`, `lightning_potential_max_lpi_jkg`, `updraft_helicity_max_m2s2`/`_med_m2s2`/`_low_m2s2` — Details `docs/reference/api_contract.md`); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
 | `eu_direct` | DWD ICON-EU Open Data (GRIB2-Direktanbindung, ~6,5 km Maschenweite, `src/providers/dwd_eu.py`) — **nur** Gewittersignale, kein `fetch_forecast`. Liefert seit #1457 S2c Blitzpotenzial (`lightning_potential_lpi_jkg`, externer Abrufname `lpi_con_max`) als Lückenfüller für alle europäischen Orte außerhalb von FR/Korsika (`fr_direct`) und DE/Alpen/Österreich (`de_direct`); kein Hagel-Signal (ICON-EU liefert kein Pendant zu `grau_gsp`, beabsichtigt). Seit #1531 zusätzlich `cape_ml_jkg` und `convective_inhibition_jkg` (Rohgrößen, keine Einstufung); `cape_con` wird providerintern mitabgerufen, bekommt aber bewusst **kein** eigenes Modellfeld. Gewitter-Zuständigkeit läuft über die eigene Tabelle, s. u. — Catch-all, letzte Zeile. |

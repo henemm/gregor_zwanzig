@@ -3,7 +3,7 @@ entity_id: issue_624_metric_thresholds_tests
 type: tests
 created: 2026-06-06
 updated: 2026-06-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, sms, telegram, threshold, tdd]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_370_brand_library
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, design-system, brand, svelte, svg, wordmark, glyph, epic-368, issue-370, issue-279]
 ---

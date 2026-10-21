@@ -3,7 +3,7 @@ entity_id: issue_1165_adr_index_cleanup
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [docs, adr, index-cleanup]
 ---

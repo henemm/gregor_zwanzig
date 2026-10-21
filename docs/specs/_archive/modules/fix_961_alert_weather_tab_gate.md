@@ -3,7 +3,7 @@ entity_id: fix_961_alert_weather_tab_gate
 type: module
 created: 2026-07-01
 updated: 2026-07-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, bugfix, weather-tab, metric_alert_levels]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_573_charter_fix_cockpit
 type: module
 created: 2026-06-03
 updated: 2026-06-03
-status: approved
+status: implemented
 version: "1.0"
 tags: [frontend, home, cockpit, design-compliance, tokens, atoms]
 ---

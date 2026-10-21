@@ -3,7 +3,7 @@ entity_id: bug_380_approval_injection_guard_tests
 type: tests
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, workflow, hooks, injection-guard, issue-380]
 parent: bug_380_approval_injection_guard

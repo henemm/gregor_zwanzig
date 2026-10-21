@@ -3,7 +3,7 @@ entity_id: issue_1231_korridor_editor
 type: feature
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [corridor-editor, alerts, compare, trip-editor, migration, epic-29]
 ---

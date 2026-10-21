@@ -3,7 +3,7 @@ entity_id: issue_392_category_labels_centralize
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: approved
+status: implemented
 version: "1.0"
 tags: [refactoring, frontend, metricsEditor, WeatherMetricsTab, WeatherConfigDialog, deduplication, issue-392]
 ---

@@ -154,7 +154,7 @@ Zwei Fallen, die beim Fix zutage traten:
 
 ## BUG-1275-TH-MISMATCH: SMS/Telegram zeigten kein Gewitterrisiko, während E-Mail-Outlook-Tabelle "hoch" zeigte
 
-**Status:** WIEDERERÖFFNET (2026-07-17) — der Fix vom 2026-07-16 behob nur einen von mehreren Defekten, s. „Zweiter Anlauf" unten | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Specs:** `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` (1. Anlauf), `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md` (2. Anlauf) | **ADR:** `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
+**Status:** RESOLVED (2026-07-17, zweiter Anlauf; GitHub #1275 geschlossen 2026-07-17) — zwischenzeitlich WIEDERERÖFFNET, weil der Fix vom 2026-07-16 nur einen von mehreren Defekten behob, s. „Zweiter Anlauf" unten | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Specs:** `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` (1. Anlauf), `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md` (2. Anlauf) | **ADR:** `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
 
 ### Symptom
 

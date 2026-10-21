@@ -3,7 +3,7 @@ entity_id: issue_674_aktivitaetstyp_fahrrad
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 parent_issue: 674
 issues: [674]

@@ -3,7 +3,7 @@ entity_id: issue_1256_compare_ui_rewire
 type: feature
 created: 2026-07-13
 updated: 2026-07-13
-status: draft
+status: implemented
 version: "1.2"
 tags: [compare, ui-fidelity, design-handoff-4, epic-1230, frontend]
 workflow: feat-1256-compare-ui-rewire

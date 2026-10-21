@@ -3,7 +3,7 @@ entity_id: fix_2217_stapellaeufe_abschotten
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: approved
+status: implemented
 version: "1.0"
 tags: [scheduler, radar, alarm, fehler-isolation, panic, stapellauf]
 ---

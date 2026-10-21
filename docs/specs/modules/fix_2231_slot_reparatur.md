@@ -3,7 +3,7 @@ entity_id: fix_2231_slot_reparatur
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, versand-zuverlaessigkeit, briefing-slots, reparatur, epic-2505]
 ---

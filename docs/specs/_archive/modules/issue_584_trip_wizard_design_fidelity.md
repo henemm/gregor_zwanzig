@@ -3,11 +3,13 @@ entity_id: issue_584_trip_wizard_design_fidelity
 type: module
 created: 2026-06-04
 updated: 2026-06-04
-status: implemented
+status: deprecated
 version: 1.0.0
 ---
 
 # Spec: Trip-Wizard Design-Fidelity 1:1 nach screen-trip-wizard.jsx
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 **Issue:** #584  
 **Typ:** Rework / Design-Compliance  

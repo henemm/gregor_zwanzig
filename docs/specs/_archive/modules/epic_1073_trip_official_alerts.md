@@ -3,7 +3,7 @@ entity_id: epic_1073_trip_official_alerts
 type: feature
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip-briefing, alerts, official-alerts, epic-1073, shared-renderer]
 workflow: 1087-trip-official-alerts

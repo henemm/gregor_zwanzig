@@ -3,7 +3,7 @@ entity_id: bug_557_confidence_pct_min
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, ensemble, confidence, trip-report-scheduler, issue-557, issue-288]
 ---

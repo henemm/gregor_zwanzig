@@ -3,12 +3,14 @@ entity_id: issue_432_step3_step5_polish
 type: module
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, wizard, svelte, step3, step5, issue-432, epic-428]
 ---
 
 # Issue #432 — Step 3 Wetter-Umbau + Step 5 Reports (PR 4/4 von Epic #428)
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

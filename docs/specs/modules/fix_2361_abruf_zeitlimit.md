@@ -3,7 +3,7 @@ entity_id: fix_2361_abruf_zeitlimit
 type: bugfix
 created: 2026-10-17
 updated: 2026-10-17
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2361-abruf-zeitlimit
 issue: 2361

@@ -3,7 +3,7 @@ entity_id: issue_351_derive_horizon_negative_delta_tests
 type: tests
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, backend, python, horizon-filter, issue-351]
 parent: issue_351_derive_horizon_negative_delta

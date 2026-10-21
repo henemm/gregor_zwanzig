@@ -3,7 +3,7 @@ entity_id: fix_1727_s5e_sperrcache_anzeige
 type: bugfix
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, massif-closure, account-page, adr-0051]
 ---

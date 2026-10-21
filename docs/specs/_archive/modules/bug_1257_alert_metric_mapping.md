@@ -3,7 +3,7 @@ entity_id: bug_1257_alert_metric_mapping
 type: bugfix
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, alerts, persistence, data-loss, migration]
 workflow: fix-1257-alert-metric-mapping

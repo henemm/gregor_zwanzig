@@ -3,7 +3,7 @@ entity_id: issue_434_per_report_layouts
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [backend, data-model, per-report, channel-layouts, issue-434]
 ---

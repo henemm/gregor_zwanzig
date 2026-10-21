@@ -3,7 +3,7 @@ entity_id: issue_379_session_self_isolate_tests
 type: tests
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, hooks, infrastructure, session, worktree, parallel-sessions]
 parent: issue_379_session_self_isolate

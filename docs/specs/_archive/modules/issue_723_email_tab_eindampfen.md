@@ -3,7 +3,7 @@ entity_id: issue_723_email_tab_eindampfen
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, email, report-config, ui-cleanup, slice]
 ---

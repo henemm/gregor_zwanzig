@@ -3,7 +3,7 @@ entity_id: issue_1009_1019_inbound_reader_robustness
 type: module
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [inbound, email, telegram, robustness, security, multi-user]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_1217_1218_mail_alert_dedup
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, official-alerts, email-renderer, dedup, bundle-G-mail-darstellung]
 ---

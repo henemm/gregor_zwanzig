@@ -3,7 +3,7 @@ entity_id: issue_1059_trip_resume_error_feedback
 type: module
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, svelte, trip-detail, error-handling, issue-1059]
 ---

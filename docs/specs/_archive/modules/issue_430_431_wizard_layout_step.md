@@ -3,12 +3,14 @@ entity_id: issue_430_431_wizard_layout_step
 type: module
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, wizard, svelte, stepper, layout-editor, issue-430, issue-431, epic-428]
 ---
 
 # Issue #430 + #431 — Wizard 4→5 Steps + OutputLayoutEditor + Step 4 Layout
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

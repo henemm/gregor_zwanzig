@@ -3,12 +3,14 @@ entity_id: issue_678_compare_editor_shell
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: implemented
+status: deprecated
 version: "1.0"
 tags: [frontend, compare, editor, design-compliance]
 ---
 
 # Compare-Editor — Gerüst + Lock-Engine + Tab „Vergleich" (Slice 1/6, Epic #677)
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 (Alt-Editor `CompareEditor.svelte` ersatzlos gelöscht, `db0ca26b8`, 2026-07-19) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

@@ -3,7 +3,7 @@ entity_id: issue_254_email_template_vorarbeit_tests
 type: tests
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, design-system, issue-254, epic9]
 parent: issue_254_email_template_vorarbeit

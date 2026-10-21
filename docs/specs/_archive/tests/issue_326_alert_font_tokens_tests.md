@@ -3,7 +3,7 @@ entity_id: issue_326_alert_font_tokens_tests
 type: tests
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, design-system, css-tokens, font-size, ap-017, ap-008, frontend, issue-326]
 parent: issue_326_alert_font_tokens

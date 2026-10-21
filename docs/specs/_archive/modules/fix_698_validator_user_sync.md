@@ -3,7 +3,7 @@ entity_id: fix_698_validator_user_sync
 type: bugfix
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, tooling, staging, validator, setup-script, validate-external, issue-698]
 ---

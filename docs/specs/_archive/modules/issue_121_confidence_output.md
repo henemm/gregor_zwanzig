@@ -3,7 +3,7 @@ entity_id: issue_121_confidence_output
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [forecast, confidence, sms, email, output, token-builder, metric-catalog]
 parent: forecast_confidence

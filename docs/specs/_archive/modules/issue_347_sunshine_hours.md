@@ -3,7 +3,7 @@ entity_id: issue_347_sunshine_hours
 type: bugfix
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, weather-metrics, sunshine-hours, dni, open-meteo, geosphere, trip-report, compare, issue-347]
 ---

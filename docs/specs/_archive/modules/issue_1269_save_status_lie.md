@@ -3,7 +3,7 @@ entity_id: issue_1269_save_status_lie
 type: bugfix
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, frontend, trip-editor, compare-editor, autosave, save-indicator, epic-1230, epic-1273]
 workflow: fix-1269-save-status-lie

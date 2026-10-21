@@ -3,7 +3,7 @@ entity_id: fix_2240_rolling_trip_test_versandsperre
 type: module
 created: 2026-09-10
 updated: 2026-09-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, pytest, staging-marker, versandrisiko, infrastructure]
 ---

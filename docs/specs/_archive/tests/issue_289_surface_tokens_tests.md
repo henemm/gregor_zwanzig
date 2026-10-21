@@ -3,7 +3,7 @@ entity_id: issue_289_surface_tokens_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, css, tokens, design-system, frontend, issue-289]
 parent: issue_289_surface_tokens

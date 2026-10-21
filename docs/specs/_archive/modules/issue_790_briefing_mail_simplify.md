@@ -3,7 +3,7 @@ entity_id: issue_790_briefing_mail_simplify
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, renderer, briefing, simplification]
 ---

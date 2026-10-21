@@ -3,7 +3,7 @@ entity_id: systemhinweise_unter_konto_sheet
 type: module
 created: 2026-09-19
 updated: 2026-09-22
-status: approved
+status: implemented
 version: "1.0"
 tags: [frontend, mobile-shell, pwa, konto-sheet, issue-2370]
 ---

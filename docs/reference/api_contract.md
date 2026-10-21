@@ -4709,7 +4709,7 @@ Zeilen, z.B. `thunder_level_max`, `snow_depth_cm`). Seit #1460 T1 ist dieser Auf
 Aufrufer aus `trip_alert.py` (s. o.) — die Beschreibung bleibt als Code-Doku für
 `corridor_threshold.py` gültig, betrifft aber keinen Alarm-Auslöser mehr. Die doppelte
 `corridor:<metrik>:<etappe>`-Namensraum-Problematik (#1455) betraf ausschließlich diesen nun
-unerreichbaren Melde-Gedächtnis-Schlüsselraum.
+unerreichbaren Melde-Gedächtnis-Schlüsselraum. **Nachtrag (Audit 2026-10-21):** Seit #2230 (`rework_2230_corridor_path_removal.md`) ist der tote Pfad ganz entfernt — `src/services/corridor_threshold.py`, `CorridorEvent` und `corridor_hits` existieren nicht mehr (Beleg: `tests/tdd/test_alert_ausgabe_nach_korridor_rueckbau.py::test_ac1_modul_corridor_threshold_ist_weg`).
 Spec: `docs/specs/modules/feat_1444_s2a_schwellen_namensraum.md`.
 
 ```go
@@ -4792,6 +4792,44 @@ function corridorInside(value, min, max) {
 **Spec:** `docs/specs/_archive/modules/issue_1231_korridor_editor.md`
 
 ---
+
+## 25) Location- und Group-DTO (Struct-Wahrheit, Nachtrag Audit 2026-10-21)
+
+Bis 2026-10-21 hatte das Orts-DTO keinen eigenen Abschnitt; der Drift-Wächter
+`tests/test_api_contract_drift.py` prüft nur `trip.go` und `compare_preset.go`. Die Tabellen
+geben ausschließlich den Struct-Stand wieder (Typ, `omitempty`), keine neue Semantik.
+Endpunkte: Sektion 0.5 (`/api/locations*`, `/api/groups*`).
+
+**`Location`** — `internal/model/location.go`, persistiert unter `data/users/<uid>/locations/<id>.json`
+
+| Feld | Go-Typ | JSON | Python (`src/app/user.py::SavedLocation`) |
+|---|---|---|---|
+| `id` | `string` | Pflicht | `id` |
+| `name` | `string` | Pflicht | `name` |
+| `lat` / `lon` | `float64` | Pflicht | `lat` / `lon` |
+| `elevation_m` | `*int` | omitempty | `elevation_m` (int, Pflicht) |
+| `region` | `*string` | omitempty | `region` (Lawinenregion, z. B. `AT-7`) |
+| `bergfex_slug` | `*string` | omitempty | `bergfex_slug` (Bergfex-Slug für Schneedaten) |
+| `activity_profile` | `*string` | omitempty | `activity_profile` (Enum `ActivityProfile`) |
+| `group` | `*string` | omitempty | `group` |
+| `group_id` | `*string` | omitempty | — (nur Go) |
+| `display_config` | `map[string]interface{}` | omitempty | `display_config` |
+| `timezone` | `string` | omitempty | `timezone` |
+| `data_source` | `string` | omitempty | — (nur Go) |
+| `created_at` | `*time.Time` | omitempty | `created_at` (str) |
+
+**`Group`** — `internal/model/group.go`
+
+| Feld | Go-Typ | JSON |
+|---|---|---|
+| `id` | `string` | Pflicht |
+| `name` | `string` | Pflicht |
+| `default_profile` | `*string` | omitempty |
+| `order` | `int` | Pflicht |
+
+**Hinweis:** `src/app/loader.py::save_location()` schreibt `group`, `group_id`, `timezone`,
+`data_source` und `created_at` nicht zurück (Replace statt Read-Modify-Write). Stand 2026-10-21 hat die
+Funktion in `src/`/`api/` keinen Aufrufer — schreibend ist allein die Go-API.
 
 ## Changelog
 
@@ -5118,7 +5156,7 @@ function corridorInside(value, min, max) {
   Siehe `docs/specs/modules/feat_1701_alarm_premium_sms.md`.
 - 2026-08-10: Issue #1676 Scheibe S2a (ADR-0049) — `TripReportConfig.send_premium_sms`
   (bool, default `false`) macht Premium-SMS (Garmin inReach) zum vierten, eigenständigen
-  Versandkanal `premium_sms` — **ausschließlich fürs Trip-Briefing**. Fester Absender
+  Versandkanal `premium_sms` — **ausschließlich fürs Trip-Briefing** (Stand S2a; seit #2275 zusätzlich Ortsvergleich-Briefing über `ComparePreset.send_premium_sms`, Alarm-Kanal seit #1701). Fester Absender
   `4916092172595` (unabhängig von `sms_from`), Empfänger ausschließlich die in Scheibe S1
   gelernte Rückadresse aus `user.json` (nie `sms_to`), Verfall nach 30 Tagen, fail-closed mit
   auswertbarem Grund. Lebt bislang nur im freien `report_config`-Schlüssel, kein eigenes

@@ -3,7 +3,7 @@ entity_id: issue_396_archive_stats
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [archive, stats, briefing-log, alert-log, go-api, frontend, issue-396]
 ---

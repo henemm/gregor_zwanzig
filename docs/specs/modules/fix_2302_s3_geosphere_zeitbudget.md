@@ -3,7 +3,7 @@ entity_id: fix_2302_s3_geosphere_zeitbudget
 type: module
 created: 2026-09-13
 updated: 2026-09-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [provider, zeitbudget, deadline, retry, httpx, tenacity, geosphere, snowgrid, nwp]
 ---

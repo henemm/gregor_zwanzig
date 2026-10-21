@@ -3,7 +3,7 @@ entity_id: issue_231_time_format
 type: module
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, refactor, normalization]
 issue: 231

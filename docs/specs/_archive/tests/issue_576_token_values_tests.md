@@ -2,7 +2,7 @@
 entity_id: issue_576_token_values_tests
 type: tests
 created: 2026-06-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, design-fidelity, issue-576, epic-575, foundation]
 parent: issue_576_tokens_sync_v2

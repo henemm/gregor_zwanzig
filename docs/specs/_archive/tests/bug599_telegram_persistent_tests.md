@@ -3,7 +3,7 @@ entity_id: bug599_telegram_persistent_tests
 type: tests
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, persistent, singleton, bug-599]
 parent: bug599_telegram_persistent

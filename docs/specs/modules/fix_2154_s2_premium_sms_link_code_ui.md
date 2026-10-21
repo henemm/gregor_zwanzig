@@ -3,7 +3,7 @@ entity_id: fix_2154_s2_premium_sms_link_code_ui
 type: module
 created: 2026-09-13
 updated: 2026-09-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [premium-sms, frontend, account, garmin]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1888_e6b_kuerzel_legende
 type: feature
 created: 2026-08-16
 updated: 2026-08-16
-status: approved
+status: implemented
 version: "1.1"
 tags: [frontend, weather-metrics-tab, sms, legende, compare, trip]
 workflow: fix-1888-e6b-kuerzel-legende

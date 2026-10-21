@@ -3,7 +3,7 @@ entity_id: bug_557_confidence_pct_min_tests
 type: tests
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, ensemble, confidence, apply-ensemble-spreads, issue-557]
 parent: bug_557_confidence_pct_min

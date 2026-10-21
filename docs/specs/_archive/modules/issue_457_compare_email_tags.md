@@ -3,7 +3,7 @@ entity_id: issue_457_compare_email_tags
 type: module
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 issue: 457
 tags: [compare, email, winner-tags, per-recipient, error-handling, python]

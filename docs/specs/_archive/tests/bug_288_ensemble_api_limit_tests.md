@@ -3,7 +3,7 @@ entity_id: bug_288_ensemble_api_limit_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, ensemble, api-limit, open-meteo, issue-288]
 parent: bug_288_ensemble_api_limit

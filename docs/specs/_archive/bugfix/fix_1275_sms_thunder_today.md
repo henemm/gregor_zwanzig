@@ -3,7 +3,7 @@ entity_id: fix_1275_sms_thunder_today
 type: bugfix
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1275-sms-thunder-today
 tags: [bug, sms, thunder, telegram, email, sicherheitsrelevant]

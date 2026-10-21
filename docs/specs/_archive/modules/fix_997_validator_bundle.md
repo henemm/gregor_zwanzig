@@ -3,7 +3,7 @@ entity_id: fix_997_validator_bundle
 type: module
 created: 2026-07-03
 updated: 2026-07-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [validator, gate, bugfix, bundle, formatter, frontend]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_1128_openmeteo_retry_fix
 type: bugfix
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [provider, weather, open-meteo, retry, bugfix]
 ---

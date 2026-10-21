@@ -3,7 +3,7 @@ entity_id: fix_1927_risk_dot_kombi_regel
 type: bugfix
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.1"
 tags: [trip-briefing, html-renderer, risk-dot, metric-format]
 workflow: fix-1927-risk-dot-kombi-regel

@@ -3,7 +3,7 @@ entity_id: fix_1297_sms_preview_thunder
 type: bugfix
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1297-sms-preview-thunder
 tags: [bug, sms, preview, thunder, email, adr-0025]

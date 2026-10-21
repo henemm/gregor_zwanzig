@@ -3,7 +3,7 @@ entity_id: issue_559_archiv_fertigstellen
 type: module
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, archiv, go-api, wizard, briefing-history, template-copy, issue-559]
 ---

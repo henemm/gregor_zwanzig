@@ -3,7 +3,7 @@ entity_id: fix_1761_korsika_arome_sidecar
 type: module
 created: 2026-09-20
 updated: 2026-09-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [radar, nowcast, korsika, provider, sidecar]
 ---

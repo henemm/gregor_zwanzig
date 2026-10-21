@@ -3,7 +3,7 @@ entity_id: fix_1945_nowcast_horizon
 type: bugfix
 created: 2026-08-17
 updated: 2026-08-17
-status: approved
+status: implemented
 ---
 
 ## Approval

@@ -3,7 +3,7 @@ entity_id: bug_382_select_ios_zoom_tests
 type: tests
 created: 2026-05-25
 updated: 2026-05-26
-status: done
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, ios, safari, mobile, font-size, zoom, frontend, issue-382]
 parent: bug_382_select_ios_zoom

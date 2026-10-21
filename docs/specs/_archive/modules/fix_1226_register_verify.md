@@ -3,7 +3,7 @@ entity_id: fix_1226_register_verify
 type: bugfix
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [auth, mail, verification, oauth, passkey, register]
 workflow: fix-1226-register-verify

@@ -3,7 +3,7 @@ entity_id: bug_463_mobile_email_table_headers
 type: bugfix
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, mobile, email, table-headers, html-renderer, issue-463]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_255_email_profil_signaturen_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, activity-profile, issue-255, epic-236]
 parent: issue_255_email_profil_signaturen

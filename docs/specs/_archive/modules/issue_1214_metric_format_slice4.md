@@ -3,7 +3,7 @@ entity_id: issue_1214_metric_format_slice4
 type: module
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-format, trip-briefing, dead-code, konsolidierung, issue-1214]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_684_alert_email_guard
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: active
+status: implemented
 version: "1.0"
 tags: [alert, deliverability, multi-channel, bugfix]
 ---

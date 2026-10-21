@@ -3,7 +3,7 @@ entity_id: issue_956_email_format
 type: bugfix
 created: 2026-07-01
 updated: 2026-07-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, renderer, html, trip-briefing, visual-tdd]
 workflow: fix-956-email-format

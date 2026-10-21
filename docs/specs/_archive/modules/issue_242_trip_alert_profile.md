@@ -3,7 +3,7 @@ entity_id: issue_242_trip_alert_profile
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: 1.0.0
 tags: [email, activity-profile, trip-alert, issue-242, epic-236]
 parent: epic_236_email_design_system

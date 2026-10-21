@@ -3,7 +3,7 @@ entity_id: loader_display_config_default
 type: module
 created: 2026-05-03
 updated: 2026-05-03
-status: draft
+status: implemented
 version: "1.1"
 tags: [bugfix, loader, display_config, defaults]
 issue: 111

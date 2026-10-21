@@ -3,7 +3,7 @@ entity_id: bug_397_segment_timezone_display_tests
 type: tests
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, timezone, email, sms, segment, cest, utc, bug-397]
 parent: bug_397_segment_timezone_display

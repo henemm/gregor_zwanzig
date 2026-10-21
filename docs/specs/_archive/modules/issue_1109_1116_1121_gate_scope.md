@@ -3,7 +3,7 @@ entity_id: issue_1109_1116_1121_gate_scope
 type: bugfix
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 workflow: gate-scope-1109-1116-1121
 tags: [gate, tooling, bugfix, deploy]

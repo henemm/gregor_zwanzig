@@ -2,7 +2,7 @@
 entity_id: bugfix-empty-subscription-emails
 type: bugfix
 created: 2026-02-03
-status: completed
+status: implemented
 workflow: Bugfix: Empty Subscription Emails
 severity: high
 ---

@@ -3,7 +3,7 @@ entity_id: issue_465_workflow_optimierung_tests
 type: tests
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, feature, workflow, infrastructure, hooks, issue-465]
 parent: issue_465_workflow_optimierung

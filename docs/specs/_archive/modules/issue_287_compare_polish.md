@@ -3,12 +3,15 @@ entity_id: issue_287_compare_polish
 type: module
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: superseded
+superseded_by: "#1256"
 version: "1.0"
 tags: [frontend, design-system, compare, ui-polish, svelte, issue-287]
 ---
 
 # Issue #287 — Orts-Vergleich (Compare): Brand Checkboxes, Profile Pills, Settings Card Polish
+
+> Abgelöst durch #1215/#1256 (Compare-Komponenten `LocationsRail`/`PresetHeader` gelöscht, `ea7af5301`/`a45e82161`).
 
 ## Approval
 

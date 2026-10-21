@@ -3,7 +3,7 @@ entity_id: issue_1235_stalwart_recipient_guard
 type: module
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, security, guard, resend, stalwart, issue-1235]
 ---

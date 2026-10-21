@@ -3,7 +3,7 @@ entity_id: epic_191_adversary_verschaerfung
 type: module
 created: 2026-05-11
 updated: 2026-05-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [hooks, workflow, adversary, validation]
 ---

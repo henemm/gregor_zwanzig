@@ -3,7 +3,7 @@ entity_id: issue_1378_compare_zeitbasis
 type: bugfix
 created: 2026-07-27
 updated: 2026-07-27
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1378-compare-zeitbasis
 tags: [compare, timezone, ortsvergleich, mail, sms, bugfix, epic-1372]

@@ -3,7 +3,7 @@ entity_id: fix_2098_ausblick_acc_und_sonnenstunden
 type: bugfix
 created: 2026-08-23
 updated: 2026-08-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [ausblick, acc, sonnenstunden, trip-briefing, issue-2098]
 workflow: fix-2098-ausblick-acc-und-sonnenstunden

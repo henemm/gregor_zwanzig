@@ -3,7 +3,7 @@ entity_id: bug_801_803_mail_segmente_vortag
 type: module
 created: 2026-06-13
 updated: 2026-06-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, mail, snapshot, day-comparison, alert]
 ---

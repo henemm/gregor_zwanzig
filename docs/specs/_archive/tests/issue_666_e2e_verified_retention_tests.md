@@ -3,7 +3,7 @@ entity_id: issue_666_e2e_verified_retention_tests
 type: tests
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, tooling, e2e-gate, retention, issue-666]
 parent: issue_666_e2e_verified_retention

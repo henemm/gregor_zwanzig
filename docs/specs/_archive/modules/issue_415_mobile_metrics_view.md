@@ -3,12 +3,15 @@ entity_id: issue_415_mobile_metrics_view
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: superseded
+superseded_by: "#618"
 version: "1.0"
 tags: [frontend, svelte, mobile, metrics, overlay, trip-detail, issue-415]
 ---
 
 # Issue #415 — Mobile Wetter-Metriken-Tab: Full-Screen-Overlay
+
+> Abgelöst durch #618 (`WeatherMetricsMobileView.svelte` ersetzt, `d0e819f37`, 2026-06-07).
 
 ## Approval
 

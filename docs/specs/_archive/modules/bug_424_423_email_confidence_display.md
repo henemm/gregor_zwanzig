@@ -3,7 +3,7 @@ entity_id: bug_424_423_email_confidence_display
 type: bugfix
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, metric_catalog, confidence, bugfix, ux]
 ---

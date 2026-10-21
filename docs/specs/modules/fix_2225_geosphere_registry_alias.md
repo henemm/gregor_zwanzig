@@ -3,7 +3,7 @@ entity_id: fix_2225_geosphere_registry_alias
 type: fix
 created: 2026-09-24
 updated: 2026-09-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, cape, model-registry, geosphere, issue-2225]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_753_746_test_hygiene_and_planner_checkpoint
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, tests, agents, hygiene]
 ---

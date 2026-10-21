@@ -3,7 +3,7 @@ entity_id: issue_316_docs_reference_cleanup
 type: refactor
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [docs, reference, frontend, cleanup, nicegui-removal]
 ---

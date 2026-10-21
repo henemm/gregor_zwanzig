@@ -3,7 +3,7 @@ entity_id: issue_728_telegram_scope_neutral_paths
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [staging-gate, telegram, deploy-gate, tooling]
 ---

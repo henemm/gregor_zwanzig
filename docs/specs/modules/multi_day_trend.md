@@ -3,7 +3,7 @@ entity_id: multi_day_trend
 type: module
 created: 2026-02-16
 updated: 2026-08-04
-status: implementing
+status: implemented
 version: "5.0"
 tags: [weather-metrics, aggregation, trip-reports, trend, email-rendering]
 extends: trip_report_scheduler, output_channel_renderers

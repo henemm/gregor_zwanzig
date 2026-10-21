@@ -3,7 +3,7 @@ entity_id: issue_654_telegram_thunder_drilldown_tests
 type: tests
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "2.0"
 tags: [tests, telegram, drilldown, thunder, epic-639, issue-654]
 parent: telegram_tier3_drilldown

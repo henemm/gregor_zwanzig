@@ -3,7 +3,7 @@ entity_id: fix_991_trip_roundtrip_fields
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, data-loss, python, persistence, read-modify-write, roundtrip]
 ---

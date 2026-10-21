@@ -3,7 +3,7 @@ entity_id: bug_382_select_ios_zoom
 type: bugfix
 created: 2026-05-25
 updated: 2026-05-26
-status: done
+status: implemented
 version: "1.0"
 tags: [frontend, ios, accessibility, css]
 ---

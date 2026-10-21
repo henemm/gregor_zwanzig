@@ -3,7 +3,7 @@ entity_id: radar_convective_stage
 type: module
 created: 2026-06-07
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, radar, convective]
 ---

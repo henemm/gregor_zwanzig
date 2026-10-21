@@ -3,7 +3,7 @@ entity_id: fix_2020_alarm_ausloesung
 type: module
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, nowcast, radar, briefing-sperre]
 ---

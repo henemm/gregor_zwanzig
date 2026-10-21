@@ -3,7 +3,8 @@ entity_id: issue_1395_s3_etag_registry
 type: module
 created: 2026-07-27
 updated: 2026-07-27
-status: draft
+status: superseded
+superseded_by: "docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md"
 version: "1.0"
 tags: [frontend, svelte, trip, weather-config, concurrency, etag, if-match]
 ---

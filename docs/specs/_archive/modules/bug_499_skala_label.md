@@ -1,7 +1,7 @@
 ---
 id: bug_499_skala_label
 title: "Bug #499 — Label «Skala» durch «Einfach» ersetzen"
-status: draft
+status: implemented
 workflow: bug-499-skala-label
 issue: 499
 created: 2026-05-31

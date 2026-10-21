@@ -3,7 +3,7 @@ entity_id: issue_995_mail_bugs_bundle
 type: bugfix
 created: 2026-07-03
 updated: 2026-07-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [briefing, email, scheduler, trip-model, mail-rendering]
 ---

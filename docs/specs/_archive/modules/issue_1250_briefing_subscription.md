@@ -3,7 +3,7 @@ entity_id: issue_1250_briefing_subscription
 type: feature
 created: 2026-07-13
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [briefing-subscription, compare, trip, migration, epic-1230, convergence]
 workflow: feat-1250-briefing-subscription

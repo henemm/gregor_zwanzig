@@ -3,7 +3,7 @@ entity_id: issue_296_fe_profile_editor_tests
 type: tests
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, sveltekit, naismith, arrival-times, waypoint, profile, issue-296]
 parent: issue_296_fe_profile_editor

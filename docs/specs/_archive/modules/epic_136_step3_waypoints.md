@@ -3,7 +3,7 @@ entity_id: epic_136_step3_waypoints
 type: module
 created: 2026-05-09
 updated: 2026-05-10
-status: draft
+status: deprecated
 version: "1.0"
 parent_spec: epic_136_trip_wizard
 related: epic_136_trip_wizard
@@ -12,6 +12,8 @@ tags: [sveltekit, frontend, wizard, step3, waypoints, ai, epic-136]
 ---
 
 # Epic 136 — Sub-Spec #163: Step 3 Wegpunkt-Vorschlaege bestaetigen
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Begriffsklaerung
 

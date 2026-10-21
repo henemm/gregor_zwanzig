@@ -3,7 +3,7 @@ entity_id: issue_321_copy_fix_deine_touren
 type: module
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [copy, frontend, trips]
 ---

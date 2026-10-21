@@ -3,7 +3,7 @@ entity_id: issue_1316_alert_time_window_filter
 type: bugfix
 created: 2026-07-18
 updated: 2026-07-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, briefing, compare, time-filter]
 ---

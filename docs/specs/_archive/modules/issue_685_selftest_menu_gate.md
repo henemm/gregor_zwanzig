@@ -3,7 +3,7 @@ entity_id: issue_685_selftest_menu_gate
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [prod-selftest, telegram, bot-menu, deploy-gate, bugfix, tooling]
 ---

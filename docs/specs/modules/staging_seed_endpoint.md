@@ -3,7 +3,7 @@ entity_id: staging_seed_endpoint
 type: feature
 created: 2026-09-25
 updated: 2026-09-25
-status: draft
+status: implemented
 workflow: feat-2423-staging-seed-endpoint
 version: "1.0"
 tags: [staging, test-infrastruktur, tiers, sms, epic-2138]

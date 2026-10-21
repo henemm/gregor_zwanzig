@@ -3,7 +3,7 @@ entity_id: fix_944_threshold_metricfilter
 type: bugfix
 created: 2026-07-01
 updated: 2026-07-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, frontend, backend, sms, thresholds]
 ---

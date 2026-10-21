@@ -3,7 +3,7 @@ entity_id: rework_2276_s6a_totcode_und_ratsche
 type: refactor
 created: 2026-09-20
 updated: 2026-09-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trips, persistenz, totcode, ratsche]
 ---

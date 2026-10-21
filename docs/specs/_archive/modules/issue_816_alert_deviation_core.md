@@ -3,7 +3,7 @@ entity_id: issue_816_alert_deviation_core
 type: module
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, deviation, briefing-snapshot, alert-state, change-detection, epic-813, slice-1]
 ---

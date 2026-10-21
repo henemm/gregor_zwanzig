@@ -3,7 +3,7 @@ entity_id: fix_1851_alarm_tests_vorlaufsperre
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 workflow: fix-1851-alarm-zeitfenster-fixtures
 version: "1.0"
 tags: [issue-1851, tests, fixtures, alerts, briefing-vorlauf, adr-0009]

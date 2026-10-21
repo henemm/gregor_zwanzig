@@ -3,7 +3,7 @@ entity_id: rework_2276_s2_alarme
 type: refactor
 created: 2026-09-19
 updated: 2026-09-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trips, alarme, persistenz]
 ---

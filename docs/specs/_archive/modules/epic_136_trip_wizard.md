@@ -3,12 +3,14 @@ entity_id: epic_136_trip_wizard
 type: module
 created: 2026-05-09
 updated: 2026-05-11
-status: approved
+status: deprecated
 version: "1.0"
 tags: [sveltekit, frontend, wizard, trip-creation, epic-136, master-spec]
 ---
 
 # Epic 136 — Trip-Wizard (Master-Spec, Issues #160–#165)
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

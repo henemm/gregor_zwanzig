@@ -3,7 +3,7 @@ entity_id: issue_336_status_dedup
 type: module
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [sveltekit, frontend, trip-detail, design-compliance, ux]
 ---

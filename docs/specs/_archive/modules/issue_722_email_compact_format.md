@@ -3,7 +3,7 @@ entity_id: issue_722_email_compact_format
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: approved
+status: implemented
 version: "1.0"
 tags: [feature, email, compact, plain-text, renderer, byte-size, issue-722, slice-709]
 ---

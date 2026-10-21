@@ -3,7 +3,7 @@ entity_id: fix_1771_s1_dnd_wartestrategie
 type: bugfix
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 workflow: fix-1771-s1-ziehgeste-wartestrategie
 tags: [testing, e2e, playwright, flake]
 ---

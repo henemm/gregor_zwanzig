@@ -3,7 +3,7 @@ entity_id: feature_734_arome_france_nowcast_tests
 type: tests
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 spec: docs/specs/modules/radar_nowcast_france.md
 issue: 734
 ---

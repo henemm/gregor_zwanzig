@@ -3,7 +3,7 @@ entity_id: bug-555-addmodehint-reset
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [waypoint-editor, ui-state]
 ---

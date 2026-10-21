@@ -3,7 +3,7 @@ entity_id: issue_872_threshold_ux
 type: feature
 created: 2026-06-23
 updated: 2026-06-23
-status: draft
+status: implemented
 workflow: feat-872-threshold-ux
 ---
 

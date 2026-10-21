@@ -3,7 +3,7 @@ entity_id: issue_1395_s6_ortsvergleich_etag
 type: module
 created: 2026-07-31
 updated: 2026-07-31
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, compare-preset, briefing-subscription, concurrency, etag, if-match, frontend]
 ---

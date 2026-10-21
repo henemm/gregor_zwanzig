@@ -3,7 +3,7 @@ entity_id: issue_421_preview_error_message
 type: bugfix
 created: 2026-05-27
 updated: 2026-05-27
-status: done
+status: implemented
 version: "1.0"
 tags: [frontend, ux, preview, i18n, error-handling]
 ---

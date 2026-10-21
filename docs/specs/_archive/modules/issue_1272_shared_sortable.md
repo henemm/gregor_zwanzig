@@ -3,7 +3,7 @@ entity_id: issue_1272_shared_sortable
 type: module
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 workflow: refactor-1272-drag-sort
 tags: [frontend, svelte, dnd, drag-and-drop, shared-component, layout-editor, bucket-section, compare, issue-1272, issue-433, issue-848]

@@ -3,7 +3,7 @@ entity_id: fix_1249_sms_telegram_scope
 type: module
 created: 2026-07-13
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.1"
 tags: [official-alerts, sms, telegram, scope, design-fidelity]
 ---

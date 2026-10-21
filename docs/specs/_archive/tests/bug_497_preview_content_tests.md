@@ -3,7 +3,7 @@ entity_id: bug_497_preview_content_tests
 type: tests
 created: 2026-05-31
 updated: 2026-05-31
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, preview, sms, fixture-provider, demo-mode, issue-497]
 parent: bug_497_preview_content

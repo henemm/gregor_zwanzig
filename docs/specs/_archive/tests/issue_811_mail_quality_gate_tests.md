@@ -3,7 +3,7 @@ entity_id: issue_811_mail_quality_gate_tests
 type: tests
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, tooling, gate, mail, quality, issue-811]
 parent: issue_811_mail_quality_gate

@@ -3,7 +3,7 @@ entity_id: issue_1003_regen_badge_widerspruch
 type: bugfix
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, briefing, regen, badge, bugfix]
 workflow: fix-1003-regen-badge-schwelle

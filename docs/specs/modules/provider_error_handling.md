@@ -3,7 +3,7 @@ entity_id: provider_error_handling
 type: module
 created: 2026-02-16
 updated: 2026-02-16
-status: active
+status: implemented
 version: "1.0"
 tags: [resilience, error-handling, email, provider]
 ---

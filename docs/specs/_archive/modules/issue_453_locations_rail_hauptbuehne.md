@@ -3,13 +3,16 @@ entity_id: issue_453_locations_rail_hauptbuehne
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: superseded
+superseded_by: "#1256"
 version: "1.0"
 issue: 453
 tags: [sveltekit, frontend, compare, locations, rail, drag-and-drop, epic-438]
 ---
 
 # Issue #453 — Locations-Rail Erweiterungen fuer die Compare-Hauptbuehne
+
+> Abgelöst durch #1256 (`LocationsRail.svelte` gelöscht, `ea7af5301`, 2026-07-13) und #2288 (`GroupSection.svelte` gelöscht).
 
 ## Approval
 

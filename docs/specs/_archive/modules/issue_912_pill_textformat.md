@@ -3,7 +3,7 @@ entity_id: issue_912_pill_textformat
 type: feature
 created: 2026-06-29
 updated: 2026-06-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, briefing, pills, metrics, format]
 ---

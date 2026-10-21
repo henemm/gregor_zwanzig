@@ -3,7 +3,7 @@ entity_id: rework_1300_compare_summary_block_removal
 type: module
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, email, renderer, rueckbau, issue-1300, epic-1273]
 ---

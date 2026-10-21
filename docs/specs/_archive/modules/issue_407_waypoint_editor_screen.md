@@ -3,7 +3,7 @@ entity_id: issue_407_waypoint_editor_screen
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, svelte, edit, waypoints, desktop, mobile, issue-407]
 ---

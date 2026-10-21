@@ -3,7 +3,7 @@ entity_id: issue_978_deviation_line_readability
 type: module
 created: 2026-07-02
 updated: 2026-07-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, email, telegram, readability]
 ---

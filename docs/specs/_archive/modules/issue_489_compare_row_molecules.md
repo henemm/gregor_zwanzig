@@ -3,7 +3,7 @@ entity_id: issue_489_compare_row_molecules
 type: module
 created: 2026-05-31
 updated: 2026-05-31
-status: active
+status: implemented
 version: "1.0"
 tags: [frontend, atomic-design, molecules, compare, issue-489, svelte5]
 ---

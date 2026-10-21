@@ -3,7 +3,7 @@ entity_id: issue_686_telegram_functional_live_tests_tests
 type: tests
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, e2e, live-test, fixture, issue-686]
 parent: issue_686_telegram_functional_live_tests

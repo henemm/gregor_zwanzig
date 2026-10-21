@@ -3,7 +3,7 @@ entity_id: issue_830_radar_alert_validator_tests
 type: tests
 created: 2026-06-15
 updated: 2026-06-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, radar, alert, validator, gate, staging, debug-endpoint, issue-830]
 parent: issue_830_radar_alert_validator

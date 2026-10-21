@@ -3,7 +3,7 @@ entity_id: issue_603_design_fidelity_gate
 type: module
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, design, gate, playwright]
 ---
