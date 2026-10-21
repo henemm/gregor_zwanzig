@@ -5,11 +5,23 @@ Radar-Pfad (#919) ohne Modell-Bruch zu konvergieren.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover — nur fuer Typpruefung
     from services.rain_extent import RainZone
+
+
+@dataclass(frozen=True)
+class AlertHourRow:
+    """Eine Stundenzeile des Abweichungsalarms (Issue #1737).
+
+    `time`: "HH:MM" in ORTSZEIT. `value_from`: Wert der ALTEN Reihe (`None` =
+    kein Anker). Stufenmetriken (Gewitter) tragen die Ordinale 0..3; die
+    Darstellung (Wort/Zahl/Punkt) bildet der Renderer."""
+    time: str
+    value_from: float | None
+    value_to: float
 
 
 @dataclass(frozen=True)
@@ -83,6 +95,13 @@ class AlertEvent:
     # `format_hail_note` bzw. `FORECAST_TH_HAIL_SUFFIX`; `None`/`False` -> keine
     # Hagelaussage (byte-identisch zum Bestand).
     hail_flag: bool | None = None
+    # Issue #1737: additiv, Default leer -> ohne Stundenreihe byte-identisch.
+    # Stundenzeilen des Ereignisses (alt -> neu je Stunde, Ortszeit), hoechstens
+    # 6; `hours_range` = erste/letzte betroffene Stunde ("HH:MM"), `hours_capped`
+    # = es wurde gekappt (Hinweiszeile "betroffen HH:MM–HH:MM").
+    hours: tuple[AlertHourRow, ...] = ()
+    hours_range: tuple[str, str] | None = None
+    hours_capped: bool = False
 
 
 @dataclass(frozen=True)
@@ -273,6 +292,14 @@ class AlertMessage:
     # und Voll-Telegram; der SMS-Renderer liest nur die Praesenz (nicht den
     # Inhalt) fuer sein Kompakt-Token -- der Satz passt nicht ins SMS-Budget.
     addendum_reference: str | None = None
+    # Issue #1737: additiv, Default leer. Kanal ("email"|"telegram"|"sms") ->
+    # {col_key: format_mode}, Form von `email.helpers.build_format_modes`. Leer/
+    # fehlend = "raw". Gelesen NUR von den Stundenzeilen.
+    format_modes: dict[str, dict[str, str]] = field(default_factory=dict)
+    # Issue #1737: Kanal -> col_keys, die im HTML einen Ampel-Punkt tragen
+    # (`email.helpers.build_html_indicator_keys`: der Editor speichert "Einfach"
+    # fuer Wind/Boeen/Regen/... als `use_friendly_format`, nicht als format_mode).
+    indicator_keys: dict[str, frozenset[str]] = field(default_factory=dict)
 
 
 def direction(e: AlertEvent) -> str:

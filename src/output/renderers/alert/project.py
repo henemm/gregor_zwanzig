@@ -21,6 +21,7 @@ from .model import (
 # Issue #2020 Scheibe 2: EIN Wochentagskuerzel-Erzeuger fuer die Kurzform --
 # derselbe, den die amtliche Warnung schon benutzt (kein Nachbau).
 from .official_alerts import _de_weekday_short
+from .hours import affected_hours
 from .segments import normalize_segment_id
 
 logger = logging.getLogger("alert_project")
@@ -308,9 +309,43 @@ def _remaining_fields(eintrag, ch, now_utc, tz) -> dict:
     }
 
 
+def _hour_fields(metric_id, ch, fresh_ts, anchor_ts, tz, window=None) -> dict:
+    """Stundenzeilen-Felder eines Ereignisses (Issue #1737) -- EINE Stelle fuer
+    Trip UND Ortsvergleich. Best-effort: scheitert die Berechnung (Metrik ohne
+    numerische Stundengroesse), bleibt das Ereignis ohne Zeilen -- der Alarm
+    selbst geht trotzdem raus."""
+    try:
+        return affected_hours(
+            metric_id, fresh_ts, anchor_ts, threshold=ch.threshold,
+            value_from=ch.old_value, tz=tz, window=window,
+        )
+    except Exception:
+        logger.warning("Stundenzeilen fuer %s nicht bestimmbar", metric_id, exc_info=True)
+        return {}
+
+
+def _anchor_entry(anchor_segments, segment_id):
+    """ALTE Reihe DESSELBEN Segments (strikt per Kennung, kein Rueckfall auf das
+    erste Segment -- eine fremde Etappe waere eine falsche Alt-Reihe)."""
+    return next(
+        (s for s in anchor_segments or []
+         if str(_trip_segment(s).segment_id) == str(segment_id)),
+        None,
+    )
+
+
+def _segment_window(eintrag):
+    """(Start, Ende) des Segments in UTC; `None` ohne Zeiten (dann alle Stunden)."""
+    seg = _trip_segment(eintrag)
+    if getattr(seg, "start_time", None) is None or getattr(seg, "end_time", None) is None:
+        return None
+    return _as_utc(seg.start_time), _as_utc(seg.end_time)
+
+
 def to_alert_message(
     changes, segments, trip_name, *, tz, stand_at,
     reference_at=None, now_utc=None, stage_number=None,
+    anchor_segments=None, format_modes=None, indicator_keys=None,
 ) -> AlertMessage:
     """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
 
@@ -329,6 +364,10 @@ def to_alert_message(
     Vom Aufrufer bereits ueber `Trip.get_stage_for_date()` aufgeloest -- reist
     unveraendert auf JEDES erzeugte `AlertEvent`/`OnsetShiftEvent`
     durch. `None` laesst die Ausgabe byte-identisch (AC-8).
+
+    Issue #1737: `anchor_segments` (ALTE Reihe, Anker) und `format_modes`
+    (Kanal -> {col_key: Modus}) sind additiv. Aus beiden Reihen entstehen die
+    Stundenzeilen je Ereignis; ohne Stundenreihe bleibt die Ausgabe gleich.
     """
     events: list[AlertEvent] = []
     onset_events: list[OnsetShiftEvent] = []
@@ -379,14 +418,24 @@ def to_alert_message(
             km_measured=km_measured,  # Issue #2036
             stage_number=stage_number,  # Issue #2122
             hail_flag=_hail_flag_for(metric_id, eintrag),  # Issue #2205
+            **_hour_fields(
+                metric_id, ch, getattr(eintrag, "timeseries", None),
+                getattr(_anchor_entry(anchor_segments, match.segment_id), "timeseries", None),
+                ev_tz, _segment_window(eintrag),
+            ),
         ))
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
         onset_shift_events=tuple(onset_events), reference_at=reference_at,
+        format_modes=dict(format_modes or {}),
+        indicator_keys=dict(indicator_keys or {}),
     )
 
 
-def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> AlertMessage:
+def to_multi_point_alert_message(
+    groups, *, tz, stand_at, reference_at=None, anchor_points=None, format_modes=None,
+    indicator_keys=None,
+) -> AlertMessage:
     """WeatherChange-Events MEHRERER gleichzeitig betroffener Vergleichs-Orte
     (Issue #1170, AC-7-Bündelung) → EINE kanonische AlertMessage.
 
@@ -407,6 +456,10 @@ def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> 
     nur das nachrichtenweite `AlertMessage.location_label` (Footer/Where)
     ist gesetzt — sonst zeigt der Mehr-Metrik-Zweig von `render_email` einen
     redundanten Orts-Präfix vor JEDER Metrik-Zeile (Issue #1170 Finding F007).
+
+    Issue #1737: `anchor_points` (`{Ortsname: PointWeatherData}`, ALTE Reihe
+    je Ort) und `format_modes` sind additiv; die frische Reihe steht in
+    `point.timeseries`. Dieselbe Stundenzeilen-Logik wie der Trip-Pfad.
     """
     events: list[AlertEvent] = []
     onset_events: list[OnsetShiftEvent] = []
@@ -432,12 +485,19 @@ def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> 
                 occurred_at=_fmt_occurred_at(ch.occurred_at, point_tz),
                 km_from=0.0, km_to=0.0,
                 location_label=location_name if multi else None,
+                **_hour_fields(
+                    metric_id, ch, getattr(point, "timeseries", None),
+                    getattr((anchor_points or {}).get(location_name), "timeseries", None),
+                    point_tz,
+                ),
             ))
     collective_label = ", ".join(name for name, _changes, _point in groups)
     return AlertMessage(
         trip_short=collective_label, stand_at=stand_at, events=tuple(events), source=None,
         location_label=collective_label,
         onset_shift_events=tuple(onset_events), reference_at=reference_at,
+        format_modes=dict(format_modes or {}),
+        indicator_keys=dict(indicator_keys or {}),
     )
 
 

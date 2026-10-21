@@ -937,7 +937,7 @@ class TripAlertService:
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
         notif_result = self._send_alert(
             trip, fresh_weather, to_report, official_notices=official_notices,
-            reference_at=reference_at,
+            reference_at=reference_at, anchor_weather=cached_weather,
         )
         # Issue #1459: Alarm-Protokoll VOR dem Zustellbarkeits-Guard — die
         # Funktion entscheidet selbst, ob der Eintrag nach `entries` (mindestens
@@ -3020,9 +3020,13 @@ class TripAlertService:
         changes: List[WeatherChange],
         official_notices: Optional[list] = None,
         reference_at: Optional[str] = None,
+        anchor_weather: Optional[List[SegmentWeatherData]] = None,
     ) -> "NotificationResult":
         """
         Format and send alert via all configured effective channels.
+
+        Issue #1737: `anchor_weather` ist die ALTE Reihe (Anker) fuer die
+        Stundenzeilen des Alarms.
 
         Issue #1023: Rendering und Versand werden an den NotificationService
         delegiert; TripAlertService kennt keine Renderer-/Transport-Details mehr.
@@ -3071,6 +3075,7 @@ class TripAlertService:
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
             reference_at=reference_at,
+            anchor_weather=anchor_weather,
         )
 
         if result.sent:

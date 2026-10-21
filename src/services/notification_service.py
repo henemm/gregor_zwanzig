@@ -541,6 +541,52 @@ def _official_source_url_for(dto_notices: list) -> str | None:
     return getattr(leading.alert, "url", None)
 
 
+def _alert_format_modes(display_config) -> dict[str, dict[str, str]]:
+    """Issue #1737: Kanal -> {col_key: Anzeigemodus} aus der Anzeige-
+    Konfiguration DES jeweiligen Trips bzw. Vergleichs (Kanal-Kaskade
+    `get_metrics_for_channel`, ADR-0050) -- dieselbe Aufloesung wie das
+    Briefing. Ohne Konfiguration leer (= ROH). Nie aus einem anderen Nutzer."""
+    if display_config is None:
+        return {}
+    from app.metric_catalog import get_metric
+    from output.renderers.email.helpers import _effective_format_mode
+
+    out: dict[str, dict[str, str]] = {}
+    for channel in ("email", "telegram"):
+        modes: dict[str, str] = {}
+        for report_type in ("morning", "evening"):
+            for mc in display_config.get_metrics_for_channel(channel, report_type):
+                try:
+                    col = get_metric(mc.metric_id).col_key
+                except KeyError:
+                    continue
+                modes.setdefault(col, _effective_format_mode(mc))
+        out[channel] = modes
+    return out
+
+
+def _alert_indicator_keys(display_config) -> dict[str, frozenset[str]]:
+    """Issue #1737: Kanal -> col_keys mit Ampel-Punkt im HTML -- wie
+    `build_html_indicator_keys` des Briefings, aber ueber die Kanal-Kaskade
+    DES jeweiligen Trips ("Einfach" ist dort `use_friendly_format`)."""
+    if display_config is None:
+        return {}
+    from app.metric_catalog import get_metric
+    from output.renderers.email.helpers import _AMPEL_CAPABLE_METRIC_IDS
+
+    out: dict[str, frozenset[str]] = {}
+    for channel in ("email", "telegram"):
+        keys: set[str] = set()
+        for report_type in ("morning", "evening"):
+            for mc in display_config.get_metrics_for_channel(channel, report_type):
+                if mc.metric_id in _AMPEL_CAPABLE_METRIC_IDS and getattr(
+                    mc, "use_friendly_format", True,
+                ):
+                    keys.add(get_metric(mc.metric_id).col_key)
+        out[channel] = frozenset(keys)
+    return out
+
+
 class NotificationService:
     """Wählt Renderer und Transporte für Trip-Briefings und Service-Hinweise."""
 
@@ -968,8 +1014,13 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         telegram_style: str = "rich",
         reference_at: Optional[str] = None,
+        anchor_weather: Optional[list["SegmentWeatherData"]] = None,
     ) -> NotificationResult:
         """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
+
+        Issue #1737: `anchor_weather` ist die ALTE Reihe (Anker, Quelle des
+        Vergleichs) -- aus ihr und `weather` entstehen die Stundenzeilen; der
+        Anzeigemodus je Kanal kommt aus `trip.display_config`.
 
         Issue #1023: Der AlertService kennt keine Renderer-/Transport-Details mehr.
         Issue #1088: optionale amtliche Warnungen werden in dieselbe Nachricht
@@ -1002,6 +1053,9 @@ class NotificationService:
             changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
             reference_at=reference_at,
             now_utc=now_utc, stage_number=stage_number,
+            anchor_segments=anchor_weather,
+            format_modes=_alert_format_modes(trip.display_config),
+            indicator_keys=_alert_indicator_keys(trip.display_config),
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
@@ -1045,6 +1099,8 @@ class NotificationService:
         location_positions: Optional[dict[str, int]] = None,
         telegram_style: str = "rich",
         reference_at: Optional[str] = None,
+        anchor_points: Optional[dict] = None,
+        display_config=None,
     ) -> NotificationResult:
         """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
         betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
@@ -1068,6 +1124,10 @@ class NotificationService:
 
         Issue #1916: `reference_at` ist additiv, analog `send_deviation_alert()`
         — kein bestehender Aufrufer setzt ihn, Verhalten bleibt unveraendert.
+
+        Issue #1737: `anchor_points` (`{Ortsname: PointWeatherData}`, ALTE Reihe
+        je Ort) und `display_config` (Anzeige-Konfiguration DIESES Vergleichs)
+        speisen die Stundenzeilen; beide additiv.
         """
         from utils.timezone import tz_for_coords
 
@@ -1078,8 +1138,10 @@ class NotificationService:
             (name, changes, points[0] if points else None)
             for name, points, changes in entities
         ]
+        format_modes = _alert_format_modes(display_config)
         alert_msg = to_multi_point_alert_message(
             groups, tz=alert_tz, stand_at=stand_at, reference_at=reference_at,
+            anchor_points=anchor_points, format_modes=format_modes,
         )
         target_name = ", ".join(name for name, _points, _changes in entities)
         # Issue #1467 S2 AG3a: NUR dieser Aufrufer (Ortsvergleich-
@@ -1099,6 +1161,7 @@ class NotificationService:
             telegram_style=telegram_style,
             telegram_groups=groups,
             sms_location_positions=location_positions,
+            anchor_points=anchor_points,
         )
 
     def send_multi_location_radar_alert(
@@ -1820,6 +1883,7 @@ class NotificationService:
         telegram_style: str = "rich",
         telegram_groups: Optional[list[tuple[str, list, object]]] = None,
         sms_location_positions: Optional[dict[str, int]] = None,
+        anchor_points: Optional[dict] = None,
     ) -> NotificationResult:
         """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
 
@@ -2020,6 +2084,10 @@ class NotificationService:
                         try:
                             single_msg = to_multi_point_alert_message(
                                 [group], tz=alert_tz, stand_at=alert_msg.stand_at,
+                                # Issue #1737: der Anker reist je Ort mit.
+                                anchor_points=anchor_points,
+                                format_modes=alert_msg.format_modes,
+                                indicator_keys=alert_msg.indicator_keys,
                             )
                             single_body = render_alert_telegram(single_msg)
                             self._telegram_output().send(

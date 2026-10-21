@@ -470,7 +470,7 @@ def test_ac2_ac3_mail_einfach_punkte_telegram_roh_wort_ueber_den_versandweg(monk
 # ===========================================================================
 
 def test_ac4_sms_token_traegt_zeitspanne_stufen_token_bleibt():
-    """AC-4 (Renderer): ``render_sms`` traegt ``14–16``, das Stufen-Token
+    """AC-4 (Renderer): ``render_sms`` traegt ``14-16`` (ASCII, GSM-7), das Stufen-Token
     ``TH:H->M`` des heutigen Alarms bleibt, Laenge <= 160."""
     from output.renderers.alert.render import render_sms
 
@@ -478,12 +478,12 @@ def test_ac4_sms_token_traegt_zeitspanne_stufen_token_bleibt():
     heute = render_sms(_baseline_msg(fx))
     assert "TH:H->M" in heute and "–" not in heute, f"Vorbedingung: {heute!r}"
     sms = render_sms(_trip_msg(fx, fm=modes(RAW)))
-    assert "14–16" in sms, f"Zeitspanne fehlt: {sms!r}"
+    assert "14-16" in sms and "–" not in sms, f"Zeitspanne fehlt: {sms!r}"
     assert "TH:H->M" in sms and len(sms) <= 160
 
 
 def test_ac4_sms_und_premium_sms_ueber_den_versandweg(monkeypatch):
-    """AC-4 (Versandweg): SMS UND Premium-SMS tragen ``14–16``, das Stufen-Token
+    """AC-4 (Versandweg): SMS UND Premium-SMS tragen ``14-16`` (ASCII, GSM-7), das Stufen-Token
     bleibt, jeweils <= 160 Zeichen (das Dispatch-Limit 140 gilt real)."""
     fx = _load("gewitter_14_16.json")
     mit = _send_trip(monkeypatch, fx, email_mode="raw", telegram_mode="raw",
@@ -492,7 +492,9 @@ def test_ac4_sms_und_premium_sms_ueber_den_versandweg(monkeypatch):
         sendungen = mit.sendungen(kanal)
         assert len(sendungen) == 1, f"Vorbedingung: {kanal} genau einmal gesendet ({mit!r})"
         text = sendungen[0]["body"]
-        assert "14–16" in text, f"{kanal}: Zeitspanne fehlt: {text!r}"
+        assert "14-16" in text and "–" not in text, f"{kanal}: Zeitspanne fehlt: {text!r}"
+        from tests.tdd._gsm7_charset import assert_gsm7_clean
+        assert_gsm7_clean(text, f"{kanal} (Issue #1737, GSM-7 #1796)")
         assert "TH:H->M" in text and len(text) <= 160, f"{kanal}: {text!r}"
 
 
@@ -854,3 +856,239 @@ def test_ac13_zwei_nutzer_jeder_alarm_folgt_nur_der_eigenen_anzeige_konfiguratio
     for r in b:
         assert "<span" not in r["html"] and re.search(r"hoch|mittel|leicht|kein", r["text"]), "B: Worte"
     assert [r["html"] for r in a1] == [r["html"] for r in a2], "A ist nach B unveraendert"
+
+
+# ===========================================================================
+# AC-2 (Ampel-Metrik) -- "Einfach" ist im Editor ``use_friendly_format``, kein format_mode
+# ===========================================================================
+
+def test_ac2_boeen_einfach_ueber_use_friendly_format_zeigt_punkte_im_alarm(monkeypatch):
+    """AC-2: der Editor speichert "Einfach" fuer Boeen als ``use_friendly_format=True``
+    (format_mode bleibt unbelegt = raw). Das Briefing leitet den Punkt aus
+    ``build_html_indicator_keys`` ab -- der Alarm muss dasselbe tun, sonst zeigt die
+    Alarm-Mail Zahlen, wo das Briefing Punkte zeigt. Gegenprobe: ``use_friendly_format=False``
+    -> Zahlen."""
+    from app.trip import Stage, Trip, Waypoint
+    from services.notification_service import NotificationService
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+
+    fx = _load("boeen_stufe_statt_schwelle.json")
+
+    def lauf(friendly: bool):
+        mit = aufzeichner_installieren(monkeypatch)
+        settings = _settings()
+        uid = mit_profil_chat(_user("gust"), settings)
+        tid = f"trip-1737-{uuid.uuid4().hex[:6]}"
+        stage = Stage(
+            id="T1", name="Tag 1", date=datetime(2026, 5, 1).date(),
+            waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
+        )
+        trip = Trip(
+            id=tid, name="Boeen-Trip", stages=[stage], official_warnings=None, corridors=[],
+            display_config=UnifiedWeatherDisplayConfig(
+                trip_id=tid,
+                metrics=[MetricConfig(metric_id="gust", enabled=True, use_friendly_format=friendly)],
+            ),
+        )
+        NotificationService(settings, uid).send_deviation_alert(
+            trip=trip, weather=[_segment_data(fx, fx["fresh"])], changes=[_wc(fx["change"])],
+            effective_channels={"email"}, anchor_weather=[_segment_data(fx, fx["anchor"])],
+        )
+        sendungen = mit.sendungen("email")
+        assert len(sendungen) == 1, f"Vorbedingung: eine Mail ({mit!r})"
+        return _html_rows(sendungen[0]["body"])
+
+    einfach, roh = lauf(True), lauf(False)
+    assert [r["time"] for r in einfach] == [r["time"] for r in roh] == ["14:00"]
+    alt = _norm_html(_html_cell("gust", 28.0, "simplified"))
+    neu = _norm_html(_html_cell("gust", 31.0, "simplified"))
+    assert alt in einfach[0]["html"] and neu in einfach[0]["html"], einfach[0]["html"]
+    assert "<span" not in roh[0]["html"] and "28" in roh[0]["text"] and "31" in roh[0]["text"]
+
+
+# ===========================================================================
+# Fix-Loop 1 (Adversary F001/F003/F005)
+# ===========================================================================
+
+def _compare_alert_lauf(monkeypatch, uid: str, ort: dict) -> list[str]:
+    """Ein REALER Lauf von ``CompareAlertService.check_all_compare_presets`` mit einem
+    Ort: echter Snapshot-Anker (``CompareWeatherSnapshotService.save``, Stundenreihe
+    inklusive), Fake-Wetterquelle mit der frischen Reihe aus der Fixture (kein Mock),
+    Transport-Aufzeichner. Gibt die versendeten Mail-Koerper zurueck."""
+    from app.loader import get_data_dir, save_location
+    from app.user import SavedLocation
+    from services.compare_alert import CompareAlertService
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+    from services.point_weather import PointWeatherData
+    from tests.helpers.alert_log_fixtures import settings_email_only
+    from tests.helpers.compare_briefings import write_compare_briefings
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+
+    mit = aufzeichner_installieren(monkeypatch)
+    preset_id, location_id = f"cp-1737-{uuid.uuid4().hex[:6]}", f"loc-1737-{uuid.uuid4().hex[:6]}"
+    loc = SavedLocation(id=location_id, name=ort["name"], lat=ort["lat"], lon=ort["lon"],
+                        elevation_m=1000)
+    save_location(loc, user_id=uid)
+    write_compare_briefings(get_data_dir(uid), [{
+        "id": preset_id, "name": preset_id, "user_id": "default",
+        "location_ids": [location_id], "schedule": "daily", "weekday": 4,
+        "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,
+        "empfaenger": ["dummy@example.com"], "letzter_versand": None,
+        "top_ort_letzter_versand": None, "created_at": "2026-07-09T00:00:00Z",
+        "cooldown_minutes": 0,
+    }])
+    now = datetime.now(UTC)
+
+    def punkt(rows, gust_max, fetched_at):
+        return PointWeatherData(
+            id=location_id, name=loc.name, lat=loc.lat, lon=loc.lon,
+            timeseries=_series(rows), aggregated=SegmentWeatherSummary(gust_max_kmh=gust_max),
+            fetched_at=fetched_at, provider="openmeteo",
+        )
+
+    CompareWeatherSnapshotService(user_id=uid).save(
+        preset_id, location_id, punkt(ort["anchor"], 10.0, now - timedelta(hours=1)))
+    frisch = punkt(ort["fresh"], 70.0, now)
+
+    class _Quelle:
+        def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None, **kw):
+            return frisch
+
+    mails: list[tuple[str, str]] = []
+    gesendet = CompareAlertService(
+        settings=settings_email_only(), user_id=uid, weather_source=_Quelle(),
+        mail_sink=lambda subject, body: mails.append((subject, body)),
+    ).check_all_compare_presets()
+    assert gesendet == 1 and len(mails) == 1, f"Vorbedingung: ein Alarm ({mit!r}, {mails!r})"
+    return [m[1] for m in mails]
+
+
+def test_f001_ortsvergleich_service_reicht_alte_reihe_bis_zur_versendeten_mail_durch(monkeypatch):
+    """F001: der PRODUKTIONSWEG des Ortsvergleich-Alarms (CompareAlertService, echter
+    Snapshot-Anker) liefert in der versendeten Mail Stundenzeilen ``alt → neu`` -- nicht
+    nur ``neu``. Rot, wenn compare_alert.py den Anker nicht durchreicht
+    (``anchor_points=None`` bzw. ``"anchor_point": None``)."""
+    fx = _load("ortsvergleich_drei_orte.json")
+    ort = fx["orte"][1]  # Joch Mitte: Boeen 10 -> 70 km/h
+    mails = _compare_alert_lauf(monkeypatch, _user("cmpsvc"), ort)
+    erwartet = [
+        (_local(h), f"{_cell('gust', _value_at(ort['anchor'], h, 'gust_kmh'), 'raw')} → "
+                    f"{_cell('gust', _value_at(ort['fresh'], h, 'gust_kmh'), 'raw')}")
+        for h in fx["erwartet_utc_stunden"]["Joch Mitte"]
+    ]
+    assert erwartet, "Vorbedingung: Fixture nennt betroffene Stunden"
+    assert _rows(mails[0]) == erwartet, mails[0]
+
+
+def test_f003_anker_kommt_vom_segment_der_aenderung_nicht_vom_ersten():
+    """F003: Trip mit zwei Segmenten, Anker-Werte je Segment verschieden. Die Aenderung
+    betrifft Segment "2" -> die Alt-Spalte stammt aus dem Anker von Segment "2"."""
+    from output.renderers.alert.project import to_alert_message
+
+    fx = _load("gewitter_14_16.json")
+    falsch = [dict(r, thunder_level="NONE") for r in fx["anchor"]]  # Segment 1: nie Gewitter
+    change = _wc(dict(fx["change"], segment_id="2"))
+    msg = to_alert_message(
+        [change], [_segment_data(fx, fx["fresh"], "2")], "Trip X", tz=TZ, stand_at=STAND,
+        anchor_segments=[_segment_data(fx, falsch, "1"), _segment_data(fx, fx["anchor"], "2")],
+    )
+    zeilen = [(h.time, h.value_from, h.value_to) for e in msg.events for h in e.hours]
+    assert zeilen, "Vorbedingung: Stundenzeilen entstanden"
+    assert all(von is not None and von > 0 for _t, von, _n in zeilen), zeilen
+    ohne_passenden_anker = to_alert_message(
+        [change], [_segment_data(fx, fx["fresh"], "2")], "Trip X", tz=TZ, stand_at=STAND,
+        anchor_segments=[_segment_data(fx, falsch, "1")],
+    )
+    assert all(h.value_from is None for e in ohne_passenden_anker.events for h in e.hours)
+
+
+def test_f005_nicht_numerischer_stundenwert_laesst_den_alarm_raus_ohne_stundenzeilen():
+    """F005: eine Stundenreihe mit nicht-numerischem Wert darf den Alarm nicht kippen --
+    das Ereignis bleibt, nur ohne Stundenzeilen (fail-soft in ``_hour_fields``)."""
+    from output.renderers.alert.project import to_alert_message
+
+    fx = _load("boeen_stufe_statt_schwelle.json")
+    gut = to_alert_message([_wc(fx["change"])], [_segment_data(fx, fx["fresh"])], "Trip X",
+                           tz=TZ, stand_at=STAND, anchor_segments=[_segment_data(fx, fx["anchor"])])
+    assert [h for e in gut.events for h in e.hours], "Vorbedingung: mit sauberen Daten Zeilen"
+    kaputt = [dict(r, gust_kmh="boe") for r in fx["fresh"]]
+    msg = to_alert_message([_wc(fx["change"])], [_segment_data(fx, kaputt)], "Trip X",
+                           tz=TZ, stand_at=STAND, anchor_segments=[_segment_data(fx, fx["anchor"])])
+    assert len(msg.events) == 1
+    assert all(not e.hours for e in msg.events)
+
+
+def test_f004_telegram_mehrere_ereignisse_folgen_dem_telegram_modus_nicht_dem_mail_modus():
+    """F004: zweiter Telegram-Zweig (mehrere Ereignisse, render.py ``else``-Block) liest
+    den Telegram-Modus -- Boeen ROH ``10 → 65`` vs. EINFACH Stufenwort."""
+    from output.renderers.alert.render import render_telegram
+
+    fx = _load("pop_und_boeen.json")
+    changes = [_wc(c) for c in fx["changes"]]
+    einfach_boeen = {**RAW, "gust": "simplified"}
+    gust_roh = (_local(13), f"{_cell('gust', 10.0, 'raw')} → {_cell('gust', 65.0, 'raw')}")
+    gust_einfach = (_local(13), f"{_cell('gust', 10.0, 'simplified')} → "
+                                f"{_cell('gust', 65.0, 'simplified')}")
+    assert gust_roh != gust_einfach, "Vorbedingung: ROH und EINFACH unterscheiden sich"
+
+    tg_einfach = render_telegram(_trip_msg(fx, fm=modes(RAW, einfach_boeen), changes=changes))
+    tg_roh = render_telegram(_trip_msg(fx, fm=modes(einfach_boeen, RAW), changes=changes))
+    assert len(_trip_msg(fx, fm=modes(RAW), changes=changes).events) == 2
+    assert gust_einfach in _rows(tg_einfach) and gust_roh not in _rows(tg_einfach)
+    assert gust_roh in _rows(tg_roh) and gust_einfach not in _rows(tg_roh)
+
+
+def test_f004_kanaltrennung_mail_und_telegram_folgen_je_ihrem_eigenen_modus_bei_boeen(monkeypatch):
+    """F004: Boeen sind in Klartext ROH (``31``) und EINFACH (Stufenwort) verschieden --
+    damit beweist DIESE Metrik (Gewitter ist es nicht), dass Mail und Telegram je dem
+    Modus des EIGENEN Kanals folgen, in beide Richtungen."""
+    from app.trip import Stage, Trip, Waypoint
+    from services.notification_service import NotificationService
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+
+    fx = _load("boeen_stufe_statt_schwelle.json")
+
+    def lauf(email_mode: str, telegram_mode: str):
+        mit = aufzeichner_installieren(monkeypatch)
+        settings = _settings()
+        uid = mit_profil_chat(_user("f004"), settings)
+        tid = f"trip-1737-{uuid.uuid4().hex[:6]}"
+        stage = Stage(
+            id="T1", name="Tag 1", date=datetime(2026, 5, 1).date(),
+            waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
+        )
+        trip = Trip(
+            id=tid, name="Boeen-Trip", stages=[stage], official_warnings=None, corridors=[],
+            display_config=UnifiedWeatherDisplayConfig(
+                trip_id=tid, metrics=[MetricConfig(metric_id="gust", enabled=True)],
+                per_channel_layouts={
+                    "email": [MetricConfig(metric_id="gust", enabled=True, format_mode=email_mode,
+                                           use_friendly_format=email_mode != "raw")],
+                    "telegram": [MetricConfig(metric_id="gust", enabled=True,
+                                              format_mode=telegram_mode,
+                                              use_friendly_format=telegram_mode != "raw")],
+                },
+            ),
+        )
+        NotificationService(settings, uid).send_deviation_alert(
+            trip=trip, weather=[_segment_data(fx, fx["fresh"])], changes=[_wc(fx["change"])],
+            effective_channels={"email", "telegram"},
+            anchor_weather=[_segment_data(fx, fx["anchor"])],
+        )
+        mails, tgs = mit.sendungen("email"), mit.sendungen("telegram")
+        assert len(mails) == 1 and len(tgs) == 1, f"Vorbedingung: je Kanal eine Sendung ({mit!r})"
+        return _html_rows(mails[0]["body"]), _rows(tgs[0]["body"])
+
+    roh = _expected(fx, fx["angezeigt_utc_stunden"], "gust", "gust_kmh", "raw")
+    einfach = _expected(fx, fx["angezeigt_utc_stunden"], "gust", "gust_kmh", "simplified")
+    assert roh != einfach, "Vorbedingung: Boeen sehen in ROH und EINFACH verschieden aus"
+
+    mail_a, tg_a = lauf("raw", "simplified")
+    assert tg_a == einfach, "Telegram EINFACH, obwohl die Mail ROH ist"
+    assert [(r["time"], r["text"]) for r in mail_a] == roh
+
+    mail_b, tg_b = lauf("simplified", "raw")
+    assert tg_b == roh, "Telegram ROH, obwohl die Mail EINFACH ist"
+    assert mail_b and mail_b[0]["time"] == "14:00"

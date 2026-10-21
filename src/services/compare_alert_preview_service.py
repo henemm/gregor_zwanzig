@@ -81,6 +81,30 @@ def _channels(msg, *, sms: str, bubbles: list[str]) -> dict:
     }
 
 
+def _hourly_series(rows):
+    """Stundenreihe im Snapshot-Format -> `NormalizedTimeseries` (oder None)."""
+    from services.weather_snapshot import _deserialize_timeseries
+
+    return _deserialize_timeseries({"hourly": rows}, "openmeteo") if rows else None
+
+
+def _hour_inputs(loc, change_dicts: list[dict]):
+    """(Frisch-Punkt, Anker-Punkt) eines Ortes aus `hourly_new`/`hourly_old`
+    (Issue #1737). Ohne Reihen: der Ort selbst (wie bisher) und kein Anker."""
+    from types import SimpleNamespace
+
+    new_rows = next((c["hourly_new"] for c in change_dicts if c.get("hourly_new")), None)
+    old_rows = next((c["hourly_old"] for c in change_dicts if c.get("hourly_old")), None)
+    if not new_rows:
+        return loc, None
+    fresh = SimpleNamespace(
+        lat=loc.lat, lon=loc.lon, timezone=getattr(loc, "timezone", None),
+        timeseries=_hourly_series(new_rows),
+    )
+    anchor = SimpleNamespace(timeseries=_hourly_series(old_rows)) if old_rows else None
+    return fresh, anchor
+
+
 def _deviation(preset: dict, changes: list[dict], all_locations: dict, style: str) -> dict:
     from app.models import ChangeSeverity, WeatherChange
     from output.renderers.alert.project import to_multi_point_alert_message
@@ -90,25 +114,36 @@ def _deviation(preset: dict, changes: list[dict], all_locations: dict, style: st
 
     location_ids = list(preset.get("location_ids") or [])
     by_loc: dict[str, list] = {}
+    dicts_by_loc: dict[str, list[dict]] = {}
     for c in changes:
+        dicts_by_loc.setdefault(c["location_id"], []).append(c)
         by_loc.setdefault(c["location_id"], []).append(WeatherChange(
             metric=c["metric"], old_value=c["old_value"], new_value=c["new_value"],
             delta=c["delta"], threshold=c["threshold"],
             severity=ChangeSeverity(c["severity"]), direction=c["direction"],
         ))
     ordered = _ordered(location_ids, list(by_loc), all_locations)
-    groups = [(all_locations[lid].name, by_loc[lid], all_locations[lid]) for lid in ordered]
+    inputs = {lid: _hour_inputs(all_locations[lid], dicts_by_loc[lid]) for lid in ordered}
+    groups = [(all_locations[lid].name, by_loc[lid], inputs[lid][0]) for lid in ordered]
+    # Issue #1737: dieselben Stundenzeilen wie der Versand (Anker je Ortsname).
+    anchors = {
+        all_locations[lid].name: inputs[lid][1] for lid in ordered if inputs[lid][1]
+    }
     first = all_locations[ordered[0]]
     tz = tz_for_coords(first.lat, first.lon)
     stand_at = local_fmt(datetime.now(timezone.utc), tz)
-    msg = to_multi_point_alert_message(groups, tz=tz, stand_at=stand_at)
+    msg = to_multi_point_alert_message(
+        groups, tz=tz, stand_at=stand_at, anchor_points=anchors,
+    )
     positions = CompareAlertService._location_positions(location_ids, all_locations)
     sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=positions)
     if style == "kurzform":
         bubbles = [sms]
     else:
         bubbles = [
-            render_telegram(to_multi_point_alert_message([g], tz=tz, stand_at=stand_at))
+            render_telegram(to_multi_point_alert_message(
+                [g], tz=tz, stand_at=stand_at, anchor_points=anchors,
+            ))
             for g in groups
         ]
     return _channels(msg, sms=sms, bubbles=bubbles)

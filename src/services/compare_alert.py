@@ -452,6 +452,12 @@ class CompareAlertService:
                 # Ortsvergleich-Alarm (ADR-0021, keine zweite Fassung).
                 telegram_style=telegram_style,
                 reference_at=reference_at,
+                # Issue #1737: ALTE Reihe je Ort. Ein Orts-Vergleich kennt noch
+                # keine ROH/EINFACH-Einstellung je Kanal (Datenmodell-Konvergenz,
+                # Epic #2345) -> kein `display_config`, Stundenzeilen in ROH.
+                anchor_points={
+                    t["loc"].name: t["anchor_point"] for t in group if t.get("anchor_point")
+                },
             )
             delivered_all |= set(notif_result.delivered_channels)
             reachable_all |= set(notif_result.attempted_channels)
@@ -664,6 +670,8 @@ class CompareAlertService:
             # Issue #2050 S6 (E-1): Rohwert-Quelle desselben Ankers, additiv
             # mitgefuehrt -- fuer `alert_log.append_entry(source=...)`.
             "anchor_provider": cached[0].provider if cached else None,
+            # Issue #1737: die ALTE Reihe dieses Ortes fuer die Stundenzeilen.
+            "anchor_point": cached[0] if cached else None,
         }
 
     @staticmethod
