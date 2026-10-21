@@ -1,6 +1,6 @@
 """TDD RED -- Issue #1737: Abweichungsalarm zeigt Stundenzeilen (alt -> neu je Stunde).
 
-Spec: docs/specs/modules/feat_1737_alarm_stundenzeilen.md (AC-1 bis AC-13, Test Plan 1-11).
+Spec: docs/specs/modules/feat_1737_alarm_stundenzeilen.md (v1.1, AC-1 bis AC-14, Test Plan 1-13).
 
 Kein Mock-Theater. Eingaben sind versionierte Stundenreihen in genau dem Format, in
 dem Anker und Snapshot sie persistieren (``{"ts": iso, <dp_feld>: wert}``,
@@ -21,45 +21,62 @@ Von diesen Tests festgelegte Schnittstellen (die GREEN-Phase baut genau diese):
   Modell (``output.renderers.alert.model``)
     ``AlertHourRow`` (frozen dataclass): ``time: str`` ("HH:MM" ORTSZEIT),
         ``value_from: float | None`` (None = kein Anker), ``value_to: float``.
-        Fuer Stufenmetriken tragen die Werte die Ordinale (Gewitter 0..3) bzw. den
-        Stundenwert -- die Darstellung (Wort/Zahl/Punkt) bildet der Renderer.
     ``AlertEvent.hours: tuple[AlertHourRow, ...] = ()`` (additiv, Default leer).
-    ``AlertMessage.format_modes: dict[str, dict[str, str]]`` (additiv, Default leer):
-        Kanal ("email"|"telegram"|"sms") -> {col_key: format_mode}, exakt die Form von
-        ``email.helpers.build_format_modes``. Leer/fehlend = "raw".
+    ``AlertMessage.format_modes`` (additiv): Kanal -> {col_key: format_mode}.
 
   Projektion (``output.renderers.alert.project``)
-    ``to_alert_message(..., anchor_segments=None, format_modes=None)``
-        ``anchor_segments``: ALTE Reihe = ``list[SegmentWeatherData]`` (Anker); die
-        frische Reihe ist ``segments`` (``SegmentWeatherData.timeseries``).
+    ``to_alert_message(..., anchor_segments=None, format_modes=None)``;
     ``to_multi_point_alert_message(..., anchor_points=None, format_modes=None)``
-        ``anchor_points``: ``dict[Ortsname, PointWeatherData]`` (alte Reihe je Ort); die
-        frische Reihe steht im 3. Glied jeder Gruppe (``point.timeseries``). Name-keyed
-        und NICHT als 4. Tupel-Glied, damit die Telegram-Aufspaltung je Ort
-        (``to_multi_point_alert_message([g], ...)``) und die Vorschau denselben Anker sehen.
-    Paarung der Stunden per UTC-Zeitstempel, nicht per Index.
+        (``anchor_points``: ``dict[Ortsname, PointWeatherData]``). Paarung per
+        UTC-Zeitstempel, nicht per Index.
 
   Renderer (``output.renderers.alert.render``) -- Stundenzeile in E-Mail (Klartext UND
-    HTML-Tabelle) und Telegram: ``HH:MM | alt -> neu`` (Pfeil U+2192, ``" | "`` zwischen
-    Zeit und Wert); ohne Anker ``HH:MM | neu``. HTML: eine ``<tr>`` je Stunde, erste Zelle
-    = ``HH:MM``, EINFACH = CSS-Punkte (``fmt_val(..., html=True)``), ROH = Wort/Zahl.
-    Kappung: hoechstens 6 Zeilen je Ereignis + Hinweiszeile ``betroffen HH:MM–HH:MM``.
-    SMS/Premium-SMS: Zeitspanne ``HH–HH`` (U+2013) am bestehenden Token.
+    HTML-Tabelle) und Telegram: ``HH:MM | alt -> neu`` (Pfeil U+2192); ohne Anker
+    ``HH:MM | neu``. Kappung: hoechstens 6 Zeilen je Ereignis + Hinweiszeile
+    ``betroffen HH:MM–HH:MM`` (U+2013 NUR hier). SMS/Premium-SMS: Zeitspanne ``HH-HH``
+    mit ASCII-Bindestrich (GSM-7; v1.1: NICHT U+2013).
 
   Dienste
     ``NotificationService.send_deviation_alert(..., anchor_weather=None)``: ALTE Reihe;
-        der Modus je Kanal wird aus ``trip.display_config`` (Kanal-Kaskade
-        ``get_metrics_for_channel``) aufgeloest.
-    ``NotificationService.send_multi_location_deviation_alert(..., anchor_points=None,
-        display_config=None)``.
+        Modus je Kanal aus ``trip.display_config`` (Kanal-Kaskade).
+    ``NotificationService.send_multi_location_deviation_alert(..., anchor_points=None)``:
+        Ortsvergleich-Stundenwerte sind IMMER ROH (v1.1, PO-Entscheid 2026-10-21) --
+        eine Anzeige-Konfiguration (``display_config``), falls der Parameter noch
+        existiert, darf sie nicht aendern.
     ``TripAlertService.check_and_send_alerts`` reicht ``cached_weather`` selbst durch.
-    ``render_compare_alert_preview``: jedes Element von ``body["changes"]`` darf
-        zusaetzlich ``hourly_old``/``hourly_new`` tragen (Stundenreihe des Ortes im
-        Snapshot-Format); sie speisen Anker und frische Reihe der Vorschau.
 
-Regressionsschutz, ABSICHTLICH GRUEN: ``test_ac10_ohne_stundenreihe_ausgabe_byte_gleich_zu_heute``
-(Ausgabe ohne jede Stundenreihe == eingefrorener Ist-Stand ``ohne_stundenreihe_golden.json``).
-Alle anderen Tests sind rot, bis die Stundenzeilen gebaut sind.
+  Vorschau (v1.1, Spec Schritt 8) -- STREICHT den alten Body-Vertrag ``hourly_old`` /
+    ``hourly_new``: die Oberflaeche (``buildAlertPreviewBody``) sendet nie Stundenreihen.
+    Die Vorschau beschafft Anker und frische Reihe SERVERSEITIG, strikt je Nutzer:
+      * Trip: ``api.routers.validator.alert_preview`` reicht die ECHTE ``user_id`` an
+        ``render_alert_preview`` durch; alte Reihe = ``TripAlertService(user_id).
+        _get_cached_weather(trip, tagesgleicher_anker_noetig=True, now_utc)``, frische
+        Reihe = ``_fetch_fresh_weather(anker)``.
+      * Ortsvergleich: ``render_compare_alert_preview`` liest den Anker aus
+        ``CompareWeatherSnapshotService(user_id).load(preset_id, location_id)`` und holt
+        die frische Reihe ueber ``CompareLocationWeatherSource().fetch`` (wie der Versand).
+    Die Stundenzeilen entstehen AUSSCHLIESSLICH aus (Anker, frischer Reihe); die
+    synthetischen Werte der Regeln bleiben in Kopfzeile/Ereignis. Kein Anker bzw.
+    scheiternder Frisch-Abruf: Ausgabe wie ohne Stundenreihe, kein Fehler.
+
+  Offline-Naht fuer den Frisch-Abruf (PRODUKTIV, keine Test-Weiche im Pruefling):
+    ``GZ_TEST_FIXTURE_DIR`` -> ``providers.base.get_provider("openmeteo")`` liefert den
+    ``FixtureProvider`` (``src/providers/fixture.py``). Beide Wege -- Trip
+    (``_fetch_fresh_weather``) und Ortsvergleich (``CompareLocationWeatherSource.fetch``)
+    -- laufen durch ``get_provider``; die Tests schreiben pro Szenario ein
+    Fixture-Verzeichnis mit eigenen Stundenreihen (Boeen je Stunde) und setzen die
+    Variable per ``monkeypatch.setenv``. Der FixtureProvider stempelt Eintrag i auf
+    HEUTE 00:00 UTC + i h -- die Tests bilden alle Zeiten relativ zu jetzt und leiten die
+    Ortszeit aus ``tz_for_coords`` ab (am 25.10. Zeitumstellung; kein fester Offset).
+    Der geteilte Wetter-Cache (Singleton, 600 s) wird je Szenario geleert.
+
+ABSICHTLICH GRUEN (Regressionsschutz): ``test_ac10_ohne_stundenreihe_*`` (Golden),
+``test_ac5_ortsvergleich_ereignis_zuordnung_*``, ``test_ac5_ortsvergleich_roh_*_versandweg``
+(der Produktionsweg uebergibt heute schon keine Anzeige-Konfiguration),
+``test_ac13_zwei_nutzer_ortsvergleich_*`` (Mandantentrennung im Versand ist Bestand).
+ROT sein muessen: die Vorschau-Tests AC-11/AC-14 (Trip und Ortsvergleich: keine
+Stundenzeilen in der Vorschau, Body-Reihen werden noch gelesen) und
+``test_ac5_ortsvergleich_ignoriert_trip_anzeige_konfiguration`` (EINFACH-Punkte statt roh).
 
 Reihenfolge je Test: Fixture laden und Vorbedingungen pruefen, dann ERST die neue
 Schnittstelle benutzen; Abwesenheits-Aussagen stehen immer NACH einer Anwesenheits-Aussage
@@ -81,11 +98,9 @@ from bs4 import BeautifulSoup
 from app.config import Settings
 from app.models import (
     ChangeSeverity,
-    ForecastMeta,
     GPXPoint,
     MetricConfig,
     NormalizedTimeseries,
-    Provider,
     SegmentWeatherData,
     SegmentWeatherSummary,
     ThunderLevel,
@@ -553,28 +568,146 @@ def test_ac5_ortsvergleich_stundenzeilen_nur_bei_betroffenen_orten_ueber_den_ver
     assert all("Tal Sued" not in b for b in bubbles)
 
 
-def test_ac5_ortsvergleich_einfach_html_punkte_und_ereignis_zuordnung():
-    """AC-5 (Renderer, EINFACH): im HTML tragen die Zeilen die Punkte des Briefings; jedes
-    Ereignis haengt an SEINEM Ort (``hours`` des Ortes), der dritte Ort hat keines."""
+def test_ac5_ortsvergleich_ereignis_zuordnung_nur_betroffene_orte():
+    """AC-5 (Renderer, REGRESSIONSSCHUTZ -- ABSICHTLICH GRUEN): jedes Ereignis haengt an
+    SEINEM Ort (``hours`` des Ortes), der dritte Ort (Stundenwerte weichen ab, aber kein
+    Alarm) hat kein Ereignis. Keine Darstellungs-Konfiguration beteiligt (v1.1: der
+    Ortsvergleich kennt keine Roh/Einfach-Wahl fuer Stundenwerte)."""
     from output.renderers.alert.project import to_multi_point_alert_message
-    from output.renderers.alert.render import render_email
 
     fx = _load("ortsvergleich_drei_orte.json")
     anchors, fresh, changes = _compare_inputs(fx)
     groups = [(n, changes[n], fresh[n]) for n in ("Alpe Nord", "Joch Mitte")]
-    msg = to_multi_point_alert_message(
-        groups, tz=TZ, stand_at=STAND, anchor_points=anchors, format_modes=modes(SIMPLE),
-    )
+    msg = to_multi_point_alert_message(groups, tz=TZ, stand_at=STAND, anchor_points=anchors)
     by_label = {e.location_label: e for e in msg.events}
     assert [h.time for h in by_label["Alpe Nord"].hours] == ["14:00", "15:00", "16:00"]
     assert [h.time for h in by_label["Joch Mitte"].hours] == ["15:00"]
-    html, _plain = render_email(msg)
-    hrows = _html_rows(html)
-    assert len(hrows) == 4
-    neu = _norm_html(_html_cell("gust", 70.0, "simplified"))
-    joch = next(r for r in hrows if r["time"] == "15:00" and neu in r["html"])
-    assert not _EMOJI.search(joch["html"])
-    assert not any("Tal Sued" in e.location_label for e in msg.events if e.location_label)
+    assert not any("Tal Sued" in (e.location_label or "") for e in msg.events)
+
+
+def _ort_fuer_lauf(ort: dict, gust_anker: float, gust_frisch: float) -> dict:
+    return dict(ort, gust_anker=gust_anker, gust_frisch=gust_frisch)
+
+
+def _compare_lauf(monkeypatch, uid: str, orte: list[dict], *, preset_id: str,
+                  display_config: dict | None = None):
+    """REALER Lauf von ``CompareAlertService.check_all_compare_presets`` fuer ein Preset mit
+    mehreren Orten: echter Snapshot-Anker je Ort (``CompareWeatherSnapshotService.save``,
+    Stundenreihe inklusive), Wetterquelle mit der frischen Reihe aus der Fixture, Transport-
+    Aufzeichner (HTML-Koerper der Mail). ``orte``: Eintraege aus ``ortsvergleich_drei_orte.json``
+    plus ``gust_anker``/``gust_frisch`` (Tageswerte, die den Alarm ausloesen bzw. nicht).
+    Gibt die Kanalmitschrift zurueck."""
+    from app.loader import get_data_dir, save_location
+    from app.user import SavedLocation
+    from services.compare_alert import CompareAlertService
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+    from services.point_weather import PointWeatherData
+    from tests.helpers.compare_briefings import write_compare_briefings
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+
+    mit = aufzeichner_installieren(monkeypatch)
+    settings = _settings()
+    mit_profil_chat(uid, settings)
+    ids = {o["name"]: f"loc-1737-{k}-{uuid.uuid4().hex[:5]}" for k, o in enumerate(orte)}
+    for o in orte:
+        save_location(SavedLocation(id=ids[o["name"]], name=o["name"], lat=o["lat"],
+                                    lon=o["lon"], elevation_m=1000), user_id=uid)
+    preset = {
+        "id": preset_id, "name": preset_id, "user_id": uid,
+        "location_ids": [ids[o["name"]] for o in orte], "schedule": "daily", "weekday": 4,
+        "profil": "ALLGEMEIN", "hour_from": 9, "hour_to": 16,
+        "empfaenger": ["dummy@example.com"], "letzter_versand": None,
+        "top_ort_letzter_versand": None, "created_at": "2026-07-09T00:00:00Z",
+        "cooldown_minutes": 0,
+    }
+    if display_config is not None:
+        preset["display_config"] = display_config
+    write_compare_briefings(get_data_dir(uid), [preset])
+    now = datetime.now(UTC)
+
+    def punkt(o, rows, gust_max, fetched_at):
+        return PointWeatherData(
+            id=ids[o["name"]], name=o["name"], lat=o["lat"], lon=o["lon"],
+            timeseries=_series(rows), aggregated=SegmentWeatherSummary(gust_max_kmh=gust_max),
+            fetched_at=fetched_at, provider="openmeteo",
+        )
+
+    frisch = {}
+    for o in orte:
+        CompareWeatherSnapshotService(user_id=uid).save(
+            preset_id, ids[o["name"]], punkt(o, o["anchor"], o["gust_anker"], now - timedelta(hours=1)))
+        frisch[ids[o["name"]]] = punkt(o, o["fresh"], o["gust_frisch"], now)
+
+    class _Quelle:
+        def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None, **kw):
+            return frisch[point_id]
+
+    gesendet = CompareAlertService(
+        settings=settings, user_id=uid, weather_source=_Quelle(),
+    ).check_all_compare_presets()
+    assert gesendet == 1 and len(mit.sendungen("email")) == 1, (
+        f"Vorbedingung: ein Alarm-Versand ({mit!r})")
+    return mit
+
+
+def test_ac5_ortsvergleich_roh_trotz_einfach_im_preset_ueber_den_versandweg(monkeypatch):
+    """AC-5 (Versandweg, REGRESSIONSSCHUTZ -- ABSICHTLICH GRUEN): ein Preset, dessen
+    ``outlook_metric_formats`` Boeen auf EINFACH stellen, aendert die Stundenzeilen des Alarms
+    nicht -- Zelle == Briefing-Zelle in ROH, keine CSS-Punkte im HTML (der Ortsvergleich kennt
+    die Roh/Einfach-Wahl nur fuer den 3-Tages-Ausblick, nicht fuer die Stundentabelle). Nur der
+    betroffene Ort (Joch Mitte) hat Stundenzeilen, der Ort ohne Alarm (Tal Sued) keine."""
+    fx = _load("ortsvergleich_drei_orte.json")
+    orte = [_ort_fuer_lauf(fx["orte"][1], 10.0, 70.0), _ort_fuer_lauf(fx["orte"][2], 10.0, 10.0)]
+    assert _cell("gust", 70.0, "raw") != _cell("gust", 70.0, "simplified"), (
+        "Vorbedingung: ROH und EINFACH sehen bei Boeen verschieden aus")
+    mit = _compare_lauf(
+        monkeypatch, _user("cmp5"), orte, preset_id=f"cp-1737-{uuid.uuid4().hex[:6]}",
+        display_config={"outlook_metric_formats": {
+            "gust": True, "wind": True, "precipitation": True, "rain_probability": True}},
+    )
+    body = mit.sendungen("email")[0]["body"]
+    hrows = _html_rows(body)
+    roh = f"{_cell('gust', 10.0, 'raw')} → {_cell('gust', 70.0, 'raw')}"
+    assert [r["time"] for r in hrows] == [_local(13)], f"Vorbedingung: eine Stundenzeile: {hrows!r}"
+    assert roh in hrows[0]["text"], hrows[0]["text"]
+    assert "<span" not in hrows[0]["html"], "Stundenzeile traegt CSS-Punkte statt roher Zahl"
+    assert "Tal Sued" not in body
+
+
+def test_ac5_ortsvergleich_ignoriert_trip_anzeige_konfiguration(monkeypatch):
+    """AC-5/Test Plan 13: der Ortsvergleich-Alarm zeigt Stundenwerte IMMER roh (PO 2026-10-21).
+    Reicht jemand an ``send_multi_location_deviation_alert`` eine Trip-artige Anzeige-
+    Konfiguration mit Gewitter auf EINFACH, bleiben die Zeilen roh (Wort wie in der Stundentabelle
+    der Vergleichs-Mail, kein CSS-Punkt). ROT bis die Konfiguration dort wirkungslos ist; wurde
+    der Parameter ganz entfernt, gibt es nichts mehr zu ignorieren (Aufruf ohne ihn)."""
+    import inspect
+
+    from services.notification_service import NotificationService
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+
+    fx = _load("ortsvergleich_drei_orte.json")
+    anchors, fresh, changes = _compare_inputs(fx)
+    mit = aufzeichner_installieren(monkeypatch)
+    settings = _settings()
+    uid = mit_profil_chat(_user("cmp5k"), settings)
+    cfg = _trip(uid, "symbol", "symbol").display_config
+    params = inspect.signature(NotificationService.send_multi_location_deviation_alert).parameters
+    extra = {"display_config": cfg} if "display_config" in params else {}
+    NotificationService(settings, uid).send_multi_location_deviation_alert(
+        entities=[("Alpe Nord", [fresh["Alpe Nord"]], changes["Alpe Nord"])],
+        effective_channels={"email"}, anchor_points=anchors, **extra,
+    )
+    mails = mit.sendungen("email")
+    assert len(mails) == 1, f"Vorbedingung: eine Mail ({mit!r})"
+    hrows = _html_rows(mails[0]["body"])
+    assert [r["time"] for r in hrows] == ["14:00", "15:00", "16:00"], "Vorbedingung: drei Zeilen"
+    for r, h in zip(hrows, fx["erwartet_utc_stunden"]["Alpe Nord"]):
+        alt = _cell("thunder", _value_at(fx["orte"][0]["anchor"], h, "thunder_level"), "raw")
+        neu = _cell("thunder", _value_at(fx["orte"][0]["fresh"], h, "thunder_level"), "raw")
+        assert f"{alt} → {neu}" in r["text"], f"{r['time']}: nicht roh: {r['text']!r}"
+        assert "<span" not in r["html"], f"{r['time']}: CSS-Punkte statt roher Worte"
 
 
 # ===========================================================================
@@ -751,55 +884,600 @@ def test_ac10_ohne_stundenreihe_bleibt_gleich_auch_mit_den_neuen_parametern():
 
 
 # ===========================================================================
-# AC-11 -- Vorschau == Versand  (Test Plan 9)
+# AC-11 / AC-14 -- Vorschau == Versand, je Nutzer  (Test Plan 9 + 12)
+#
+# Der Anfrage-Inhalt ist EXAKT die Form, die die Oberflaeche sendet
+# (``frontend/.../alertPreviewHelpers.ts`` ``buildAlertPreviewBody``): synthetische ``changes``
+# aus den Alarm-Regeln, OHNE Stundenreihen (Trip: ``segment_id`` = ``stages[0].id`` + feste
+# ``segment_times`` 08:00-17:00; Ortsvergleich: ``location_id`` je Ort, kein ``segment_times``).
+# Anker liegen im nutzergebundenen Speicher; der Frisch-Abruf laeuft durch die produktive
+# Offline-Naht ``GZ_TEST_FIXTURE_DIR`` (Modul-Docstring).
 # ===========================================================================
 
-def test_ac11_alarm_vorschau_zeigt_dieselben_stundenzeilen_wie_der_versand(env, monkeypatch):  # noqa: F811
-    """AC-11: Ortsvergleich-Alarm (zwei Orte). Referenz = der echte Versand
-    ``send_multi_location_deviation_alert`` (Anker + frische Reihe); Vorschau =
-    ``render_compare_alert_preview`` mit denselben Reihen im Body. Klartext-Mail und jede
-    Telegram-Blase tragen dieselben Stundenzeilen -- und es SIND welche."""
+REPO_FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "openmeteo"
+BASIS_BOEEN = 10.0
+TRIP_LAT, TRIP_LON = 47.2692, 11.4041
+TRIP_ID = "trip-1737-vorschau"
+# UTC-Stunden des heutigen Tages (Fixture-Eintrag i = HEUTE 00:00Z + i h) -> Boeen km/h.
+# Trip: 18Z-20Z liegt AUSSERHALB des festen UI-Platzhalterfensters 08:00-17:00 (die
+# Vorschau darf nicht dieses Fenster, sondern muss das Fenster der echten Etappe benutzen).
+TRIP_STURM = {18: 50.0, 19: 70.0, 20: 90.0}
+# Ortsvergleich: im Tagesfenster 9-16 Ortszeit (UTC+1/+2), damit der Versand ausloest.
+CMP_STURM = {10: 50.0, 11: 70.0, 12: 90.0}
+
+
+@pytest.fixture(autouse=True)
+def _wetter_cache_leeren():
+    """Der Segment-Wetter-Cache ist ein Prozess-Singleton (600 s) und wird von conftest NICHT
+    geleert -- geplante Reihen duerfen weder aus fremden Tests kommen noch in sie lecken."""
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+
+    reset_shared_weather_cache_for_tests()
+    yield
+    reset_shared_weather_cache_for_tests()
+
+
+def _heute0() -> datetime:
+    return datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _plant(tmp_path: Path, monkeypatch, name: str, boeen: dict[int, float] | None = None) -> Path:
+    """Fixture-Verzeichnis fuer ``GZ_TEST_FIXTURE_DIR``: Kopie der Demo-Fixtures, Boeen je
+    Stunde = Basis, an den genannten UTC-Stunden des heutigen Tages der gegebene Wert. Alle
+    drei Orte (der FixtureProvider nimmt den naechstgelegenen). ``boeen=None`` -> LEERES
+    Verzeichnis: der Abruf scheitert (``ProviderError``, Datei nicht gefunden)."""
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+
+    ziel = tmp_path / f"fx-{name}"
+    ziel.mkdir(exist_ok=True)
+    if boeen is not None:
+        for datei in REPO_FIXTURES.glob("*.json"):
+            raw = json.loads(datei.read_text(encoding="utf-8"))
+            for i, p in enumerate(raw["data"]):
+                p["gust_kmh"] = boeen.get(i, BASIS_BOEEN)
+            (ziel / datei.name).write_text(json.dumps(raw), encoding="utf-8")
+    monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", str(ziel))
+    reset_shared_weather_cache_for_tests()
+    return ziel
+
+
+def _erwartete_zeilen(tz, stunden: dict[int, float], alt: dict[int, float]) -> list[tuple[str, str]]:
+    """``[(HH:MM Ortszeit, 'alt → neu')]`` aus den GEPLANTEN Werten (Boeen, ROH)."""
+    from utils.timezone import local_fmt
+
+    return [
+        (local_fmt(_heute0() + timedelta(hours=h), tz),
+         f"{_cell('gust', alt.get(h, BASIS_BOEEN), 'raw')} → {_cell('gust', neu, 'raw')}")
+        for h, neu in sorted(stunden.items())
+    ]
+
+
+def _stunden_reihe(boeen: dict[int, float]) -> list[dict]:
+    """Stundenreihe im Snapshot-Format -- NUR fuer den toten Altvertrag ``hourly_*`` im Body."""
+    return [{"ts": (_heute0() + timedelta(hours=i)).isoformat(),
+             "gust_kmh": boeen.get(i, BASIS_BOEEN)} for i in range(24)]
+
+
+def _stabil_gleich(mit_reihen, ohne_reihen, versuche: int = 3):
+    """(a, b) mit ``b`` stabil (zweimal gleich, kein Minutenwechsel in der Stand-Zeile)."""
+    for _ in range(versuche):
+        a, b, c = mit_reihen(), ohne_reihen(), ohne_reihen()
+        if b == c:
+            return a, b
+    pytest.fail("Vorschau-Ausgabe war in drei Laeufen nicht stabil (Uhr springt?)")
+
+
+# ---- Trip ------------------------------------------------------------------
+
+def _trip_bauen(trip_id: str):
+    """Trip mit Etappe "1" HEUTE (Ortstag) und zwei Wegpunkten; ``segment_id`` der Oberflaeche
+    (= ``stages[0].id``) trifft damit die echte Segment-Kennung "1"."""
+    from app.trip import Stage, Trip, Waypoint
+    from tests.helpers.ortstag import ortstag
+
+    stage = Stage(
+        id="1", name="Etappe 1", date=ortstag(TRIP_LAT, TRIP_LON),
+        waypoints=[
+            Waypoint(id="G1", name="Start", lat=TRIP_LAT, lon=TRIP_LON, elevation_m=600.0),
+            Waypoint(id="G2", name="Ziel", lat=47.30, lon=11.45, elevation_m=1200.0),
+        ],
+    )
+    return Trip(
+        id=trip_id, name="Stunden-Trip", stages=[stage], official_warnings=None, corridors=[],
+        display_config=UnifiedWeatherDisplayConfig(
+            trip_id=trip_id, metrics=[MetricConfig(metric_id="gust", enabled=True)],
+            metric_alert_levels={"wind_gust": "standard"},
+        ),
+    )
+
+
+def _trip_anker_schreiben(monkeypatch, tmp_path, snap_uid: str, trip, boeen: dict, name: str,
+                          budget_uid: str | None = None) -> None:
+    """Tages-Anker (``WeatherSnapshotService.save_dated``, Datum = Ortstag des Trips) mit den
+    Boeen ``boeen``: erzeugt ueber den ECHTEN Abruf (FixtureProvider) fuer eine ganztaegige
+    Etappe, wie ein Briefing ihn schreibt."""
+    from providers.base import get_provider
+    from services.segment_weather import SegmentWeatherService
+    from services.trip_day import trip_local_today
+    from services.weather_snapshot import WeatherSnapshotService
+
+    _plant(tmp_path, monkeypatch, name, boeen)
+    start = _heute0()
+    punkt = GPXPoint(lat=TRIP_LAT, lon=TRIP_LON, elevation_m=600, distance_from_start_km=0.0)
+    ende = GPXPoint(lat=47.30, lon=11.45, elevation_m=1200, distance_from_start_km=5.0)
+    seg = TripSegment(
+        segment_id="1", start_point=punkt, end_point=ende, start_time=start,
+        end_time=start + timedelta(hours=23, minutes=59), duration_hours=23.98,
+        distance_km=5.0, ascent_m=600, descent_m=0,
+    )
+    anker = SegmentWeatherService(get_provider("openmeteo")).fetch_segment_weather(
+        seg, enrich_ensemble=False, enrich_snow=False, priority="alert_check",
+        user_id=budget_uid or snap_uid,
+    )
+    assert not anker.has_error and anker.timeseries and len(anker.timeseries.data) >= 24, (
+        "Vorbedingung: Anker-Abruf ueber die Fixture-Naht"
+    )
+    heute = trip_local_today(trip, datetime.now(UTC))
+    WeatherSnapshotService(snap_uid).save_dated(trip.id, heute, [anker])
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+
+    reset_shared_weather_cache_for_tests()
+
+
+def _trip_welt(monkeypatch, tmp_path, uid: str, *, anker_boeen: dict | None, trip_id: str = TRIP_ID):
+    """Trip des Nutzers im Speicher (``save_trip``) und, falls ``anker_boeen`` gegeben, sein
+    Tages-Anker. ``anker_boeen=None`` -> KEIN Anker."""
+    from app.loader import save_trip
+
+    trip = _trip_bauen(trip_id)
+    save_trip(trip, user_id=uid)
+    if anker_boeen is not None:
+        _trip_anker_schreiben(monkeypatch, tmp_path, uid, trip, anker_boeen, f"anker-{uid[-6:]}")
+    return trip
+
+
+def _trip_body(*, mit_altvertrag: dict | None = None) -> dict:
+    """Body wie ``buildAlertPreviewBody('route', ...)``: eine Boeen-Regel (Schwelle 50), die
+    synthetischen Werte 0.8x/1.2x der Schwelle, ``segment_id`` = ``stages[0].id``,
+    ``segment_times`` fix 08:00-17:00. ``mit_altvertrag`` haengt den ALTEN, toten ``hourly_*``-
+    Vertrag an (die Oberflaeche sendet ihn nie)."""
+    change = {
+        "metric": "gust_max_kmh", "old_value": 40.0, "new_value": 60.0, "delta": 20.0,
+        "threshold": 50.0, "severity": "moderate", "direction": "above", "segment_id": "1",
+    }
+    if mit_altvertrag is not None:
+        change["hourly_old"] = _stunden_reihe({})
+        change["hourly_new"] = _stunden_reihe(mit_altvertrag)
+    return {"changes": [change],
+            "segment_times": [{"segment_id": "1", "start": "08:00", "end": "17:00"}]}
+
+
+def _vorschau_trip(uid: str, body: dict, einstieg: str = "briefing", trip_id: str = TRIP_ID) -> dict:
+    """ECHTER Einstieg: Router-Funktion, kein test-eigener kwarg."""
+    from api.routers.validator import AlertPreviewBody, alert_preview, briefing_alert_preview
+
+    if einstieg == "alert_preview":
+        return alert_preview(trip_id, AlertPreviewBody.model_validate(body), user_id=uid)
+    return briefing_alert_preview(trip_id, body, kind="route", user_id=uid)
+
+
+def _trip_versand(monkeypatch, uid: str, trip) -> tuple[list[str], list[str]]:
+    """Referenz: derselbe Weg wie ``check_and_send_alerts`` -- Anker aus dem Speicher
+    (``_get_cached_weather``), frische Reihe (``_fetch_fresh_weather``), Versand ueber
+    ``NotificationService.send_deviation_alert`` (E-Mail-Klartext ueber ``mail_sink``, Telegram am
+    Transport-Aufzeichner). Aenderung = die, die die Engine bei 10 -> 90 km/h erzeugt; fuer die
+    Stufenmetrik Boeen haengen die Zeilen nicht an deren Zahlen. Gibt (Mails, Telegram-Koerper)."""
+    from services.notification_service import NotificationService
+    from services.trip_alert import TripAlertService
+    from tests.helpers.alert_log_fixtures import settings_email_only
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+
+    svc = TripAlertService(settings=settings_email_only(), user_id=uid)
+    anker = svc._get_cached_weather(
+        trip, tagesgleicher_anker_noetig=True, now_utc=datetime.now(UTC))
+    assert anker, "Vorbedingung: der Tages-Anker liegt im nutzergebundenen Speicher"
+    frisch = svc._fetch_fresh_weather(anker)
+    assert frisch and frisch[0].timeseries, "Vorbedingung: Frisch-Abruf ueber die Fixture-Naht"
+    mit = aufzeichner_installieren(monkeypatch)
+    settings = _settings()
+    mit_profil_chat(uid, settings)
+    change = WeatherChange(
+        metric="gust_max_kmh", old_value=10.0, new_value=90.0, delta=80.0, threshold=20.0,
+        severity=ChangeSeverity.MAJOR, direction="increase", segment_id="1",
+        occurred_at=_heute0() + timedelta(hours=19),
+    )
+    mails: list[str] = []
+    NotificationService(settings, uid).send_deviation_alert(
+        trip=trip, weather=frisch, changes=[change], effective_channels={"email", "telegram"},
+        mail_sink=lambda subject, body: mails.append(body), anchor_weather=anker,
+    )
+    return mails, [s["body"] for s in mit.sendungen("telegram")]
+
+
+@pytest.mark.parametrize("einstieg", ["briefing", "alert_preview"])
+def test_ac11_trip_vorschau_zeigt_dieselben_stundenzeilen_wie_der_versand(
+    env, monkeypatch, tmp_path, einstieg,  # noqa: F811
+):
+    """AC-11 (Trip): Anker im Speicher des Nutzers (Tages-Snapshot, heute), frische Reihe ueber
+    die Fixture-Naht. Body = Oberflaechen-Form OHNE Stundenreihen. Die Vorschau (E-Mail-Klartext
+    und Telegram) traegt dieselben Stundenzeilen wie der Versand auf demselben Datenstand --
+    und es SIND welche (18Z-20Z, ausserhalb des UI-Platzhalterfensters). Beide Einstiege."""
+    from utils.timezone import tz_for_coords
+
+    uid = env
+    trip = _trip_welt(monkeypatch, tmp_path, uid, anker_boeen={})
+    _plant(tmp_path, monkeypatch, "sturm", TRIP_STURM)
+    erwartet = _erwartete_zeilen(tz_for_coords(TRIP_LAT, TRIP_LON), TRIP_STURM, {})
+    assert len(erwartet) == 3
+
+    mails, tgs = _trip_versand(monkeypatch, uid, trip)
+    assert len(mails) == 1 and len(tgs) == 1, "Vorbedingung: je Kanal eine Sendung"
+    assert _rows(mails[0]) == erwartet, f"Vorbedingung: Versand-Mail traegt die Zeilen: {mails[0]!r}"
+    assert _rows(tgs[0]) == erwartet, f"Vorbedingung: Versand-Telegram traegt die Zeilen: {tgs[0]!r}"
+
+    vorschau = _vorschau_trip(uid, _trip_body(), einstieg)
+    assert _rows(vorschau["email_plain"]) == _rows(mails[0])
+    assert _rows(vorschau["telegram"]) == _rows(tgs[0])
+    assert [r["time"] for r in _html_rows(vorschau["email_html"])] == [t for t, _ in erwartet]
+
+
+def test_ac11_trip_ohne_anker_ist_die_vorschau_wie_ohne_stundenreihe_auch_mit_body_reihen(
+    env, monkeypatch, tmp_path,  # noqa: F811
+):
+    """AC-11/AC-10 (Trip): ohne Anker im Speicher kann keine alte Reihe entstehen. Die Vorschau
+    ist byte-gleich zur Vorschau OHNE ``hourly_*`` im Body -- die Reihen des Altvertrags im Body
+    erzeugen nichts. Zuerst die Anwesenheit mit Anker (sonst vakuum-gruen), dann ohne."""
+    from utils.timezone import tz_for_coords
+
+    uid = env
+    trip = _trip_welt(monkeypatch, tmp_path, uid, anker_boeen={})
+    _plant(tmp_path, monkeypatch, "sturm", TRIP_STURM)
+    erwartet = _erwartete_zeilen(tz_for_coords(TRIP_LAT, TRIP_LON), TRIP_STURM, {})
+    assert _rows(_vorschau_trip(uid, _trip_body())["email_plain"]) == erwartet, (
+        "Vorbedingung: mit Anker traegt die Vorschau die Stundenzeilen")
+
+    from app.loader import get_snapshots_dir
+
+    for datei in get_snapshots_dir(uid).glob(f"{trip.id}*.json"):
+        datei.unlink()
+    mit_reihen, ohne_reihen = _stabil_gleich(
+        lambda: _vorschau_trip(uid, _trip_body(mit_altvertrag=TRIP_STURM)),
+        lambda: _vorschau_trip(uid, _trip_body()),
+    )
+    assert mit_reihen == ohne_reihen, "Body-Reihen duerfen die Vorschau nicht veraendern"
+    assert not any("→" in rest for _t, rest in _rows(mit_reihen["email_plain"])), (
+        "ohne Anker darf es kein 'alt →' geben")
+
+
+def test_ac11_trip_scheiternder_frischabruf_laesst_die_vorschau_ohne_stundenzeilen_ohne_fehler(
+    env, monkeypatch, tmp_path,  # noqa: F811
+):
+    """AC-11/AC-10 (Trip): Anker da, aber der Frisch-Abruf scheitert (Fixture-Verzeichnis ohne
+    Dateien -> ``ProviderError``) -> keine Stundenzeilen, KEIN Fehler, Antwort vollstaendig.
+    Anwesenheit zuerst: mit funktionierendem Abruf gibt es Zeilen."""
+    from utils.timezone import tz_for_coords
+
+    uid = env
+    _trip_welt(monkeypatch, tmp_path, uid, anker_boeen={})
+    _plant(tmp_path, monkeypatch, "sturm", TRIP_STURM)
+    erwartet = _erwartete_zeilen(tz_for_coords(TRIP_LAT, TRIP_LON), TRIP_STURM, {})
+    assert _rows(_vorschau_trip(uid, _trip_body())["email_plain"]) == erwartet, (
+        "Vorbedingung: mit funktionierendem Abruf traegt die Vorschau die Stundenzeilen")
+
+    _plant(tmp_path, monkeypatch, "leer", None)
+    vorschau = _vorschau_trip(uid, _trip_body(mit_altvertrag=TRIP_STURM))
+    assert set(vorschau) >= {"subject", "email_html", "email_plain", "telegram", "sms"}
+    assert _rows(vorschau["email_plain"]) == [] and _rows(vorschau["telegram"]) == []
+    assert _html_rows(vorschau["email_html"]) == []
+
+
+# ---- Ortsvergleich -----------------------------------------------------------
+
+def _cmp_orte() -> list:
+    from tests.tdd.test_alert_preview_compare_paritaet import LOCATIONS
+
+    return [loc for loc in LOCATIONS if loc.id in ("loc-ibk", "loc-bz")]
+
+
+def _cmp_anker_schreiben(monkeypatch, tmp_path, snap_uid: str, boeen: dict, name: str) -> None:
+    """Anker je Ort (``CompareWeatherSnapshotService.save``): erzeugt ueber
+    ``CompareLocationWeatherSource().fetch`` -- dieselbe Quelle, die der Report-Versand beim
+    Schreiben des Ankers benutzt -- mit den Boeen ``boeen`` (FixtureProvider)."""
+    from services.compare_location_weather_source import CompareLocationWeatherSource
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+    from tests.tdd.test_alert_preview_compare_paritaet import PRESET_ID
+
+    _plant(tmp_path, monkeypatch, name, boeen)
+    snap = CompareWeatherSnapshotService(user_id=snap_uid)
+    for loc in _cmp_orte():
+        punkt = CompareLocationWeatherSource().fetch(
+            loc.id, loc.lat, loc.lon, 9, 16, elevation_m=loc.elevation_m, user_id=snap_uid)
+        assert punkt.timeseries and len(punkt.timeseries.data) >= 24, "Vorbedingung: Anker-Abruf"
+        snap.save(PRESET_ID, loc.id, punkt)
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+
+    reset_shared_weather_cache_for_tests()
+
+
+def _cmp_welt(monkeypatch, tmp_path, uid: str, *, anker_boeen: dict | None) -> dict:
+    """Preset + Orte des Nutzers (``_seed``) und, falls ``anker_boeen`` gegeben, die Anker."""
+    from tests.tdd.test_alert_preview_compare_paritaet import _seed
+
+    preset = _seed(uid)
+    if anker_boeen is not None:
+        _cmp_anker_schreiben(monkeypatch, tmp_path, uid, anker_boeen, f"canker-{uid[-6:]}")
+    return preset
+
+
+def _cmp_body(*, mit_altvertrag: dict | None = None) -> dict:
+    """Body wie ``buildAlertPreviewBody('vergleich', ...)``: je Ort dieselbe synthetische
+    Regel-Aenderung mit ``location_id``, ohne ``segment_times``/``segment_id``."""
+    out = []
+    for loc in _cmp_orte():
+        change = {
+            "metric": "gust_max_kmh", "old_value": 40.0, "new_value": 60.0, "delta": 20.0,
+            "threshold": 50.0, "severity": "moderate", "direction": "above",
+            "location_id": loc.id,
+        }
+        if mit_altvertrag is not None:
+            change["hourly_old"] = _stunden_reihe({})
+            change["hourly_new"] = _stunden_reihe(mit_altvertrag)
+        out.append(change)
+    return {"changes": out}
+
+
+def _vorschau_cmp(uid: str, body: dict, einstieg: str = "briefing") -> dict:
+    from api.routers.validator import briefing_alert_preview
     from services.compare_alert_preview_service import render_compare_alert_preview
+    from tests.tdd.test_alert_preview_compare_paritaet import PRESET_ID
+
+    if einstieg == "render":
+        return render_compare_alert_preview(PRESET_ID, user_id=uid, body=body)
+    return briefing_alert_preview(PRESET_ID, body, kind="vergleich", user_id=uid)
+
+
+def _cmp_versand(monkeypatch, uid: str, preset: dict) -> tuple[list[str], list[list[tuple[str, str]]]]:
+    """Referenz: ``_evaluate_one_location`` + ``send_multi_location_deviation_alert`` -- Anker
+    aus ``CompareWeatherSnapshotService.load``, frische Reihe ueber
+    ``CompareLocationWeatherSource().fetch`` (selbe Argumente wie ``compare_alert.py``), Versand
+    mit denselben Parametern wie der Produktionsweg. Gibt (Klartext-Mails, Telegram-Zeilen je
+    Blase)."""
+    from app.models import ChangeSeverity, WeatherChange
+    from services.compare_alert import CompareAlertService
+    from services.compare_alert_channels import effective_compare_telegram_style
+    from services.compare_location_weather_source import CompareLocationWeatherSource
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
     from services.notification_service import NotificationService
     from tests.helpers.telegram_empfaenger import mit_profil_chat
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
-    from tests.tdd.test_alert_preview_compare_paritaet import LOCATIONS, PRESET_ID, _seed
+    from tests.tdd.test_alert_preview_compare_paritaet import LOCATIONS, PRESET_ID
 
-    fx = _load("gewitter_14_16.json")
-    user_id = env
-    preset = _seed(user_id)
-    orte = [loc for loc in LOCATIONS if loc.id in ("loc-ibk", "loc-bz")]
-    chg = dict(fx["change"])
-
+    snap = CompareWeatherSnapshotService(user_id=uid)
     entities, anchors = [], {}
-    for loc in orte:
-        entities.append((loc.name, [_point(loc.name, loc.lat, loc.lon, fx["fresh"])], [_wc(chg)]))
-        anchors[loc.name] = _point(loc.name, loc.lat, loc.lon, fx["anchor"])
-
+    for loc in _cmp_orte():
+        geladen = snap.load(PRESET_ID, loc.id)
+        assert geladen, f"Vorbedingung: Anker fuer {loc.id} im Speicher des Nutzers"
+        frisch = CompareLocationWeatherSource().fetch(
+            loc.id, loc.lat, loc.lon, 9, 16, elevation_m=loc.elevation_m, user_id=uid)
+        change = WeatherChange(
+            metric="gust_max_kmh", old_value=10.0, new_value=90.0, delta=80.0, threshold=20.0,
+            severity=ChangeSeverity.MAJOR, direction="increase",
+        )
+        entities.append((loc.name, [frisch], [change]))
+        anchors[loc.name] = geladen[0]
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
-    mit_profil_chat(user_id, settings)
+    mit_profil_chat(uid, settings)
     mails: list[str] = []
-    NotificationService(settings, user_id).send_multi_location_deviation_alert(
+    positions = CompareAlertService._location_positions(
+        preset["location_ids"], {loc.id: loc for loc in LOCATIONS})
+    NotificationService(settings, uid).send_multi_location_deviation_alert(
         entities=entities, effective_channels={"email", "telegram"},
-        mail_sink=lambda subject, body: mails.append(body), anchor_points=anchors,
+        mail_sink=lambda subject, body: mails.append(body), location_positions=positions,
+        telegram_style=effective_compare_telegram_style(preset), anchor_points=anchors,
     )
-    versand_rows = _rows(mails[0])
-    erwartet = _expected(fx, fx["betroffen_utc_stunden"], "thunder", "thunder_level")
-    assert versand_rows and sorted(versand_rows) == sorted(erwartet * 2), "Vorbedingung: Versand traegt die Zeilen"
+    return mails, sorted(_rows(s["body"]) for s in mit.sendungen("telegram"))
 
-    body = {"changes": [{
-        "location_id": loc.id, "metric": chg["metric"], "old_value": chg["old_value"],
-        "new_value": chg["new_value"], "delta": chg["delta"], "threshold": chg["threshold"],
-        "severity": "major", "direction": chg["direction"],
-        "hourly_old": fx["anchor"], "hourly_new": fx["fresh"],
-    } for loc in orte]}
-    vorschau = render_compare_alert_preview(PRESET_ID, user_id=user_id, body=body)
 
-    assert _rows(vorschau["email_plain"]) == versand_rows
-    ref_bubbles = sorted(_rows(s["body"]) for s in mit.sendungen("telegram"))
-    assert ref_bubbles and all(ref_bubbles)
-    assert sorted(_rows(b) for b in vorschau["telegram_bubbles"]) == ref_bubbles
+@pytest.mark.parametrize("einstieg", ["briefing", "render"])
+def test_ac11_ortsvergleich_vorschau_zeigt_dieselben_stundenzeilen_wie_der_versand(
+    env, monkeypatch, tmp_path, einstieg,  # noqa: F811
+):
+    """AC-11 (Ortsvergleich): Anker je Ort im Speicher des Nutzers, frische Reihe ueber die
+    Fixture-Naht (Provider wie im Versand). Body = Oberflaechen-Form (``location_id``, OHNE
+    Stundenreihen). Vorschau (Klartext + jede Telegram-Blase) == Versand auf demselben Datenstand,
+    und es SIND Zeilen (3 je Ort). Beide Einstiege (Router-Funktion und Dienst)."""
+    from utils.timezone import tz_for_coords
+
+    uid = env
+    preset = _cmp_welt(monkeypatch, tmp_path, uid, anker_boeen={})
+    _plant(tmp_path, monkeypatch, "csturm", CMP_STURM)
+    erwartet = []
+    for loc in _cmp_orte():
+        erwartet += _erwartete_zeilen(tz_for_coords(loc.lat, loc.lon), CMP_STURM, {})
+
+    mails, blasen = _cmp_versand(monkeypatch, uid, preset)
+    assert len(mails) == 1 and len(blasen) == 2, f"Vorbedingung: eine Mail, zwei Blasen ({blasen!r})"
+    assert _rows(mails[0]) == erwartet, f"Vorbedingung: Versand traegt die Zeilen: {mails[0]!r}"
+    assert all(len(b) == 3 for b in blasen), "Vorbedingung: je Ort drei Zeilen in der Blase"
+
+    vorschau = _vorschau_cmp(uid, _cmp_body(), einstieg)
+    assert _rows(vorschau["email_plain"]) == _rows(mails[0])
+    assert sorted(_rows(b) for b in vorschau["telegram_bubbles"]) == blasen
+
+
+def test_ac11_ortsvergleich_ohne_anker_ist_die_vorschau_unabhaengig_von_body_reihen(
+    env, monkeypatch, tmp_path,  # noqa: F811
+):
+    """AC-11/AC-10 (Ortsvergleich): ohne Anker im Speicher erzeugen die Reihen des Altvertrags
+    im Body nichts -- Vorschau mit == Vorschau ohne ``hourly_*`` (ob die frische Reihe dann
+    'nur neu'-Zeilen ergibt, regelt AC-10; hier zaehlt: nie 'alt →' und nie Body-Reihen).
+    Anwesenheit zuerst."""
+    from utils.timezone import tz_for_coords
+
+    uid = env
+    _cmp_welt(monkeypatch, tmp_path, uid, anker_boeen={})
+    _plant(tmp_path, monkeypatch, "csturm", CMP_STURM)
+    erwartet = []
+    for loc in _cmp_orte():
+        erwartet += _erwartete_zeilen(tz_for_coords(loc.lat, loc.lon), CMP_STURM, {})
+    assert _rows(_vorschau_cmp(uid, _cmp_body())["email_plain"]) == erwartet, (
+        "Vorbedingung: mit Anker traegt die Vorschau die Stundenzeilen")
+
+    from app.loader import get_data_dir
+
+    for datei in (get_data_dir(uid) / "compare_weather_snapshots").glob("*.json"):
+        datei.unlink()
+    mit_reihen, ohne_reihen = _stabil_gleich(
+        lambda: _vorschau_cmp(uid, _cmp_body(mit_altvertrag=CMP_STURM)),
+        lambda: _vorschau_cmp(uid, _cmp_body()),
+    )
+    assert mit_reihen == ohne_reihen, "Body-Reihen duerfen die Vorschau nicht veraendern"
+    assert not any("→" in rest for _t, rest in _rows(mit_reihen["email_plain"])), (
+        "ohne Anker darf es kein 'alt →' geben")
+
+
+def test_ac11_ortsvergleich_scheiternder_frischabruf_ohne_stundenzeilen_ohne_fehler(
+    env, monkeypatch, tmp_path,  # noqa: F811
+):
+    """AC-11/AC-10 (Ortsvergleich): Anker da, Frisch-Abruf scheitert (leeres Fixture-Verzeichnis)
+    -> keine Stundenzeilen, kein Fehler, Antwort vollstaendig -- auch wenn der Body (Altvertrag)
+    Reihen traegt. Anwesenheit zuerst."""
+    from utils.timezone import tz_for_coords
+
+    uid = env
+    _cmp_welt(monkeypatch, tmp_path, uid, anker_boeen={})
+    _plant(tmp_path, monkeypatch, "csturm", CMP_STURM)
+    erwartet = []
+    for loc in _cmp_orte():
+        erwartet += _erwartete_zeilen(tz_for_coords(loc.lat, loc.lon), CMP_STURM, {})
+    assert _rows(_vorschau_cmp(uid, _cmp_body())["email_plain"]) == erwartet, (
+        "Vorbedingung: mit funktionierendem Abruf traegt die Vorschau die Stundenzeilen")
+
+    _plant(tmp_path, monkeypatch, "leer", None)
+    vorschau = _vorschau_cmp(uid, _cmp_body(mit_altvertrag=CMP_STURM))
+    assert set(vorschau) >= {"subject", "email_html", "email_plain", "telegram",
+                             "telegram_bubbles", "sms"}
+    assert _rows(vorschau["email_plain"]) == []
+    assert all(_rows(b) == [] for b in vorschau["telegram_bubbles"])
+
+
+# ---- AC-14: zwei Nutzer ----------------------------------------------------------------
+
+ANKER_B = {18: 10.0, 19: 10.0, 20: 10.0}           # Nutzer B: gruen (10)
+ANKER_A = {18: 20.0, 19: 25.0, 20: 30.0}           # Nutzer A: andere Alt-Werte
+ANKER_DEFAULT = {18: 25.0, 19: 25.0, 20: 25.0}     # "default": darf NIE sichtbar werden
+
+
+def test_ac14_trip_vorschau_liest_nie_anker_eines_anderen_nutzers_oder_default(
+    env, monkeypatch, tmp_path,  # noqa: F811
+):
+    """AC-14 (Trip): Nutzer A und B mit gleicher Trip-Kennung; Anker NUR bei B (plus einer unter
+    "default"). Vorschau B zeigt B-Zeilen (Anwesenheit). Vorschau A zeigt keine 'alt →'-Zeilen
+    (nichts aus B oder default). Mit eigenem Anker zeigt A seine Zeilen -- Alt-Werte aus A-Daten,
+    unterscheidbar von B."""
+    from app.loader import get_snapshots_dir
+    from utils.timezone import tz_for_coords
+
+    uid_a, uid_b = f"{env}-a", f"{env}-b"
+    assert str(get_snapshots_dir("default")).startswith(str(tmp_path)), "Daten-Root isoliert"
+    trip_b = _trip_welt(monkeypatch, tmp_path, uid_b, anker_boeen=ANKER_B)
+    _trip_anker_schreiben(monkeypatch, tmp_path, "default", trip_b, ANKER_DEFAULT, "anker-default",
+                          budget_uid=uid_b)
+    _trip_welt(monkeypatch, tmp_path, uid_a, anker_boeen=None)
+    _plant(tmp_path, monkeypatch, "sturm", TRIP_STURM)
+    tz = tz_for_coords(TRIP_LAT, TRIP_LON)
+    erwartet_b = _erwartete_zeilen(tz, TRIP_STURM, ANKER_B)
+    erwartet_a = _erwartete_zeilen(tz, TRIP_STURM, ANKER_A)
+    assert erwartet_a != erwartet_b
+
+    assert _rows(_vorschau_trip(uid_b, _trip_body())["email_plain"]) == erwartet_b, (
+        "Vorbedingung: Nutzer B sieht seine eigenen Stundenzeilen")
+    ohne = _vorschau_trip(uid_a, _trip_body())
+    for kanal in ("email_plain", "telegram"):
+        assert not any("→" in rest for _t, rest in _rows(ohne[kanal])), (
+            f"A sieht Alt-Werte aus fremdem Speicher ({kanal}): {ohne[kanal]!r}")
+
+    trip_a = _trip_bauen(TRIP_ID)
+    _trip_anker_schreiben(monkeypatch, tmp_path, uid_a, trip_a, ANKER_A, "anker-a")
+    _plant(tmp_path, monkeypatch, "sturm", TRIP_STURM)
+    mit_eigenem = _vorschau_trip(uid_a, _trip_body())
+    assert _rows(mit_eigenem["email_plain"]) == erwartet_a
+    assert _rows(mit_eigenem["telegram"]) == erwartet_a
+    assert _rows(_vorschau_trip(uid_b, _trip_body())["email_plain"]) == erwartet_b, "B unveraendert"
+
+
+def test_ac14_ortsvergleich_vorschau_liest_nie_anker_eines_anderen_nutzers_oder_default(
+    env, monkeypatch, tmp_path,  # noqa: F811
+):
+    """AC-14 (Ortsvergleich): wie der Trip-Test -- gleiche Preset- und Orts-Kennungen bei A und
+    B, Anker nur bei B (plus unter "default"). Vorschau A zeigt nie 'alt →' aus fremdem Speicher;
+    mit eigenem Anker zeigt A seine Zeilen (andere Alt-Werte als B)."""
+    from app.loader import get_data_dir
+    from utils.timezone import tz_for_coords
+
+    cmp_a = {10: 20.0, 11: 25.0, 12: 30.0}
+    cmp_b = {10: 10.0, 11: 10.0, 12: 10.0}
+    cmp_default = {10: 25.0, 11: 25.0, 12: 25.0}
+    uid_a, uid_b = f"{env}-a", f"{env}-b"
+    assert str(get_data_dir("default")).startswith(str(tmp_path)), "Daten-Root isoliert"
+    _cmp_welt(monkeypatch, tmp_path, uid_b, anker_boeen=cmp_b)
+    _cmp_anker_schreiben(monkeypatch, tmp_path, "default", cmp_default, "canker-default")
+    _cmp_welt(monkeypatch, tmp_path, uid_a, anker_boeen=None)
+    _plant(tmp_path, monkeypatch, "csturm", CMP_STURM)
+
+    def erwartet(alt):
+        out = []
+        for loc in _cmp_orte():
+            out += _erwartete_zeilen(tz_for_coords(loc.lat, loc.lon), CMP_STURM, alt)
+        return out
+
+    assert erwartet(cmp_a) != erwartet(cmp_b)
+    assert _rows(_vorschau_cmp(uid_b, _cmp_body())["email_plain"]) == erwartet(cmp_b), (
+        "Vorbedingung: Nutzer B sieht seine eigenen Stundenzeilen")
+    ohne = _vorschau_cmp(uid_a, _cmp_body())
+    assert not any("→" in rest for _t, rest in _rows(ohne["email_plain"])), (
+        f"A sieht Alt-Werte aus fremdem Speicher: {ohne['email_plain']!r}")
+    for blase in ohne["telegram_bubbles"]:
+        assert not any("→" in rest for _t, rest in _rows(blase))
+
+    _cmp_anker_schreiben(monkeypatch, tmp_path, uid_a, cmp_a, "canker-a")
+    _plant(tmp_path, monkeypatch, "csturm", CMP_STURM)
+    mit_eigenem = _vorschau_cmp(uid_a, _cmp_body())
+    assert _rows(mit_eigenem["email_plain"]) == erwartet(cmp_a)
+    assert _rows(_vorschau_cmp(uid_b, _cmp_body())["email_plain"]) == erwartet(cmp_b), "B unveraendert"
+
+
+# ===========================================================================
+# AC-13 (Ortsvergleich-Teil) -- Daten und Ausgabe bleiben beim eigenen Nutzer
+# ===========================================================================
+
+def test_ac13_zwei_nutzer_ortsvergleich_alarm_enthaelt_nur_eigene_orte_anker_und_zeilen(monkeypatch):
+    """AC-13 (Ortsvergleich, REGRESSIONSSCHUTZ -- ABSICHTLICH GRUEN): zwei Nutzer mit je einem
+    Ortsvergleich unter GLEICHER Preset-Kennung, aber eigenen Orten und eigenen Ankern. Der Alarm
+    jedes Nutzers (realer ``CompareAlertService``-Lauf) nennt nur den eigenen Ort und traegt nur
+    Stundenzeilen aus dem eigenen Anker/der eigenen frischen Reihe."""
+    fx = _load("ortsvergleich_drei_orte.json")
+    gleiche_kennung = f"cp-1737-{uuid.uuid4().hex[:6]}"
+    ort_a = dict(fx["orte"][1], name="Joch Alpha")
+    ort_b = dict(fx["orte"][1], name="Joch Beta",
+                 anchor=[dict(r, gust_kmh=25.0) for r in fx["orte"][1]["anchor"]])
+
+    def lauf(ort, prefix):
+        mit = _compare_lauf(
+            monkeypatch, _user(prefix), [_ort_fuer_lauf(ort, 10.0, 70.0)], preset_id=gleiche_kennung)
+        return mit.sendungen("email")[0]["body"]
+
+    mail_a, mail_b = lauf(ort_a, "cmpa"), lauf(ort_b, "cmpb")
+    roh_a = f"{_cell('gust', 10.0, 'raw')} → {_cell('gust', 70.0, 'raw')}"
+    roh_b = f"{_cell('gust', 25.0, 'raw')} → {_cell('gust', 70.0, 'raw')}"
+    assert roh_a != roh_b
+    rows_a, rows_b = _html_rows(mail_a), _html_rows(mail_b)
+    assert [r["time"] for r in rows_a] == [r["time"] for r in rows_b] == [_local(13)]
+    assert roh_a in rows_a[0]["text"] and roh_b in rows_b[0]["text"]
+    assert "Joch Alpha" in mail_a and "Joch Beta" not in mail_a
+    assert "Joch Beta" in mail_b and "Joch Alpha" not in mail_b
 
 
 # ===========================================================================

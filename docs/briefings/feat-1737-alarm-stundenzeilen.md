@@ -1,32 +1,33 @@
 ---
 spec_file: docs/specs/modules/feat_1737_alarm_stundenzeilen.md
-spec_sha256: 773028633af2151431c1ebd6587b8ed57e49aae816e6f0cf45c3842a2f63ce7c
-spec_frozen_sha256: 4942b620c8ece328b5befcc47c7af77b96af007cfba7960d02734436e72e5539
+spec_sha256: 15a6fcba1ed70400cb53bcf0e5151cb100d9ab3b9767ecad583f40f379e8d4ac
+spec_frozen_sha256: c336866d5b203d66f00c72fcda0e36c97e07ad5c54f69fda73b1bb962a11b65b
 ---
 
 # PO-Briefing: feat-1737-alarm-stundenzeilen
 
 - **Spec:** docs/specs/modules/feat_1737_alarm_stundenzeilen.md
 - **Issue:** #1737
-- **Erstellt:** 2026-10-20
+- **Erstellt:** 2026-10-21
 
 ## Was gebaut wird
 
-Der Abweichungsalarm zeigt je betroffener Stunde Uhrzeit und alten → neuen Wert, in derselben Darstellung wie das Briefing.
+Abweichungsalarme zeigen für Trips und Ortsvergleiche je betroffener Stunde Uhrzeit sowie alten und neuen Wert, in allen vier Kanälen.
 
 ## Definition of Done
 
-Eine Trip-Alarm-Mail zeigt je Stunde „14:00 | alt → neu" im Briefing-Stil; die SMS nennt die Zeitspanne.
+Eine echte Alarm-Mail zeigt unter jedem Ereignis Stundenzeilen mit Uhrzeit und alt → neu; SMS nennt die Zeitspanne, Vorschau und Versand stimmen überein.
 
 ## Wie geprüft wird
 
-Tests prüfen die gerenderten Texte aller vier Kanäle mit aufgezeichneten Daten; sie beweisen nicht, ob die Mail verständlich wirkt.
+Automatische Tests mit aufgezeichneten Wetterdaten prüfen alle Kanäle und Nutzertrennung; echte Zustellung wird erst auf Staging geprüft.
 
 ## Kritische Anmerkungen
 
-- Regen-Alarme (Radar) und amtliche Alarme bekommen keine Stundenzeilen; dort bleibt das „wann" offen.
-- Ungefragt: höchstens 6 Zeilen je Ereignis, längere Bereiche werden gekürzt.
+- „6 stärkste Stunden“ ist nirgends messbar definiert; Auswahl bei langen Ereignissen bleibt Ermessen.
+- Vorschau: Kopfzeile zeigt Regelwerte, Stundenzeilen echte Daten; ohne Anker fehlen sie, Vorschau wirkt leer.
+- Ortsvergleich zeigt Stundenwerte nur roh (PO-Entscheid), nie als Punkte.
 
 ## Freigabe-Frage
 
-Gibst du frei, dass der Abweichungsalarm Stundenzeilen mit Kappung auf 6 und nur Zeitspanne in der SMS bekommt?
+Soll die Stundenansicht in allen vier Kanälen so gebaut werden, mit Ortsvergleich nur roh?
