@@ -15,6 +15,8 @@ Pfadregel #1409: Pruefling relativ zu DIESER Datei aufgeloest.
 from __future__ import annotations
 
 import importlib.util
+import re
+import shlex
 from pathlib import Path
 
 _GATE = Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "secret_in_repo_gate.py"
@@ -102,3 +104,83 @@ def test_arithmetik_shift_mit_variablen_ist_kein_heredoc():
     for arith in ("echo $((a<<b))", "((a<<b))"):
         befehl = f"{arith}\ncd /evil\nb\ngit commit -m x"
         assert "cd /evil" in g._ohne_heredoc_inhalt(befehl), arith
+
+
+# ------------------------------------------------------------------------------
+# Entscheidungsfunktion `_commit_sicherheitslage` ohne Plugin (Adversary F1).
+# Die Zerlegungs-Bausteine stammen sonst aus dem Plugin; hier ersetzt sie eine
+# echte, minimale Zerlegung (shlex je Zeile, Trenner && || ; | & ( )). Geprueft
+# wird der AUSGANG der Gate-Entscheidung, nicht die Ersatz-Zerlegung.
+
+_TRENNER = {"&&", "||", ";", "|", "&", "(", ")"}
+_CD_GRUND = "enthaelt 'cd' vor dem Commit"
+
+
+def _zerlege(befehl: str):
+    segmente: list[list[str]] = []
+    for zeile in befehl.split("\n"):
+        lex = shlex.shlex(zeile, posix=True, punctuation_chars=";&|()")
+        lex.whitespace_split = True
+        aktuell: list[str] = []
+        try:
+            for tok in lex:
+                if tok in _TRENNER:
+                    if aktuell:
+                        segmente.append(aktuell)
+                    aktuell = []
+                else:
+                    aktuell.append(tok)
+        except ValueError:
+            return None
+        if aktuell:
+            segmente.append(aktuell)
+    return segmente
+
+
+def _gate_mit_zerlegung(zerleger=_zerlege):
+    g = _gate()
+    g._git_segments = zerleger
+    g._GIT_SHELL_BINARY_RE = re.compile(r"^(ba|z|da)?sh$")
+    g.git_subcommands = lambda s: ["commit"] if "git commit" in s else []
+    g._git_subcommands_in_segment = lambda t: ["commit"] if "commit" in t else []
+    g._git_subcommand_of_segment = (
+        lambda t: t[1] if len(t) > 1 and t[0] == "git" else None
+    )
+    g._ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+    g._GIT_COMMAND_PREFIXES = frozenset()
+    g._GIT_OPTS_WITH_VALUE = frozenset({"-C", "-c", "--git-dir", "--work-tree"})
+    return g
+
+
+def test_gate_entscheidung_cd_zeile_im_heredoc_blockt_nicht():
+    """Given `git commit -F - <<EOF` mit Nachrichtenzeile 'cd foo' / When die
+    Gate-Entscheidung faellt / Then 'sicher' (kein cd-Alarm)."""
+    lage, _wurzeln, grund = _gate_mit_zerlegung()._commit_sicherheitslage(
+        "git commit -F - <<EOF\nfix\ncd foo entfaellt\nEOF"
+    )
+    assert lage == "sicher", grund
+
+
+def test_gate_entscheidung_cd_nach_heredoc_blockt():
+    """Given ein echtes `cd /x && git commit` nach einem Heredoc / Then
+    'unsicher' mit cd-Grund."""
+    lage, _wurzeln, grund = _gate_mit_zerlegung()._commit_sicherheitslage(
+        "cat <<EOF > f\ninhalt\nEOF\ncd /x && git commit -m y"
+    )
+    assert lage == "unsicher" and _CD_GRUND in (grund or ""), (lage, grund)
+
+
+def test_gate_entscheidung_faellt_auf_ungekuerzte_zerlegung_zurueck():
+    """Given ein strenger Zerleger, der einen Heredoc-Operator OHNE Inhalt
+    (also das gekuerzte Kommando) nicht versteht / Then entscheidet das Gate
+    konservativ auf der UNGEKUERZTEN Zerlegung — die cd-Zeile zaehlt, Lage
+    'unsicher' statt Absturz oder Durchlass."""
+    def streng(befehl: str):
+        if re.search(r"<<\w+\s*$", befehl):
+            return None  # Heredoc ohne Inhalt/Endwort: nicht zerlegbar
+        return _zerlege(befehl)
+
+    lage, _wurzeln, grund = _gate_mit_zerlegung(streng)._commit_sicherheitslage(
+        "git commit -F - <<EOF\ncd foo\nEOF"
+    )
+    assert lage == "unsicher" and _CD_GRUND in (grund or ""), (lage, grund)
