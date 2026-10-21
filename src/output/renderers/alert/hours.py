@@ -7,10 +7,14 @@ Nur Daten -- keine Empfehlung, keine berechnete Prozentangabe.
 """
 from __future__ import annotations
 
+import logging
+
 from app.metric_catalog import get_metric
 from utils.timezone import _as_utc, local_fmt
 
 from .model import AlertHourRow
+
+logger = logging.getLogger(__name__)
 
 MAX_ROWS = 6
 # Metriken mit Stufe: ampelfaehig (helpers._AMPEL_CAPABLE_METRIC_IDS) + Gewitter.
@@ -77,7 +81,18 @@ def _affected_range(metric_id, series, old, threshold, value_from, level_metric)
     """Zusammenhaengender Bereich [(ts, alt|None, neu)] von der ersten bis zur
     letzten betroffenen Stunde (AC-6/AC-10)."""
     if old:
-        hours = [(t, old[t], series[t]) for t in sorted(series) if t in old]
+        hours, ohne_anker = [], []
+        for t in sorted(series):
+            if t not in old:
+                ohne_anker.append(t)
+                continue
+            hours.append((t, old[t], series[t]))
+        if ohne_anker:
+            logger.warning(
+                "Stundenzeilen %s: %d Stunde(n) der frischen Reihe ohne Anker-"
+                "Gegenstueck (erste %s) -- erscheinen nicht als alt -> neu (vgl. #1737)",
+                metric_id, len(ohne_anker), ohne_anker[0],
+            )
         hit = [
             i for i, (_t, o, n) in enumerate(hours)
             if _is_affected(metric_id, o, n, threshold, level_metric)

@@ -61,12 +61,15 @@ export interface AlertPreviewPayload {
 
 export function buildAlertPreviewPayload(
 	rules: AlertRule[],
-	stages: Stage[],
+	_stages: Stage[],
 ): AlertPreviewPayload {
-	// Issue #1244 F002: zweite Verteidigungslinie — falls ein Legacy-Trip auf
-	// Platte trotz Backend-Coercion noch mit "stages": null ankommt, darf der
-	// Zugriff hier nicht crashen (TypeError beim Versand-Tab).
-	const segmentId = (stages ?? [])[0]?.id ?? '1';
+	// Issue #1737: `segment_id` ist eine SEGMENT-Kennung des Tages (1..N,
+	// `trip_segments.py`), keine Etappen-Kennung. Frueher stand hier
+	// `stages[0].id` ("T01") -- das lehnte der Kern fuer jeden heute laufenden
+	// Trip mit 422 ab. Die Vorschau zeigt das erste Segment des Tages.
+	// (Issue #1244 F002: `stages` wird nicht mehr gelesen, ein Legacy-`null`
+	// kann hier also nicht mehr crashen.)
+	const segmentId = '1';
 	const enabled = rules.filter((r) => r.enabled);
 	const changes: ChangePayload[] = enabled.map((rule) => {
 		const mapped = METRIC_MAP[rule.metric];

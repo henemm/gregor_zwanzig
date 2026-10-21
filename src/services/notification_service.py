@@ -552,6 +552,7 @@ def _alert_format_modes(display_config) -> dict[str, dict[str, str]]:
     from output.renderers.email.helpers import _effective_format_mode
 
     out: dict[str, dict[str, str]] = {}
+    unknown: list[str] = []
     for channel in ("email", "telegram"):
         modes: dict[str, str] = {}
         for report_type in ("morning", "evening"):
@@ -559,9 +560,16 @@ def _alert_format_modes(display_config) -> dict[str, dict[str, str]]:
                 try:
                     col = get_metric(mc.metric_id).col_key
                 except KeyError:
+                    unknown.append(mc.metric_id)
                     continue
                 modes.setdefault(col, _effective_format_mode(mc))
         out[channel] = modes
+    if unknown:
+        logger.warning(
+            "_alert_format_modes: Metriken %s ohne Katalog-Eintrag -- ihre "
+            "Stundenzeilen erscheinen ROH statt im Anzeigemodus (vgl. #1737)",
+            sorted(set(unknown)),
+        )
     return out
 
 
@@ -1100,7 +1108,6 @@ class NotificationService:
         telegram_style: str = "rich",
         reference_at: Optional[str] = None,
         anchor_points: Optional[dict] = None,
-        display_config=None,
     ) -> NotificationResult:
         """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
         betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
@@ -1126,8 +1133,9 @@ class NotificationService:
         — kein bestehender Aufrufer setzt ihn, Verhalten bleibt unveraendert.
 
         Issue #1737: `anchor_points` (`{Ortsname: PointWeatherData}`, ALTE Reihe
-        je Ort) und `display_config` (Anzeige-Konfiguration DIESES Vergleichs)
-        speisen die Stundenzeilen; beide additiv.
+        je Ort) speist die Stundenzeilen (additiv). Die Stundenwerte sind
+        IMMER roh wie die Stundentabelle der Vergleichs-Mail (PO 2026-10-21,
+        AC-5) -- der Ortsvergleich kennt keine Roh/Einfach-Wahl dafuer.
         """
         from utils.timezone import tz_for_coords
 
@@ -1138,10 +1146,9 @@ class NotificationService:
             (name, changes, points[0] if points else None)
             for name, points, changes in entities
         ]
-        format_modes = _alert_format_modes(display_config)
         alert_msg = to_multi_point_alert_message(
             groups, tz=alert_tz, stand_at=stand_at, reference_at=reference_at,
-            anchor_points=anchor_points, format_modes=format_modes,
+            anchor_points=anchor_points,
         )
         target_name = ", ".join(name for name, _points, _changes in entities)
         # Issue #1467 S2 AG3a: NUR dieser Aufrufer (Ortsvergleich-

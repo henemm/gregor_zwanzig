@@ -372,7 +372,8 @@ def alert_preview(
         if not body.segment_times:
             body.segment_times = _synthesize_segment_times(trip_obj, body.changes)
 
-    return render_alert_preview(trip_obj, body)
+    # Issue #1737: echte user_id -> Stundenreihen der Vorschau nutzergebunden.
+    return render_alert_preview(trip_obj, body, user_id=user_id)
 
 
 @router.post("/api/briefings/{entity_id}/alert-preview")

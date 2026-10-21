@@ -56,7 +56,10 @@ def render_compare_alert_preview(preset_id: str, *, user_id: str, body: dict) ->
     style = effective_compare_telegram_style(preset)
     kind = provided[0]
     if kind == "changes":
-        return _deviation(preset, body["changes"], all_locations, style)
+        return _deviation(
+            preset, body["changes"], all_locations, style,
+            preset_id=preset_id, user_id=user_id,
+        )
     if kind == "onsets":
         return _onset(preset, body["onsets"], all_locations, style)
     return _official(preset, body["official"], all_locations, style)
@@ -81,31 +84,22 @@ def _channels(msg, *, sms: str, bubbles: list[str]) -> dict:
     }
 
 
-def _hourly_series(rows):
-    """Stundenreihe im Snapshot-Format -> `NormalizedTimeseries` (oder None)."""
-    from services.weather_snapshot import _deserialize_timeseries
+def _hour_inputs(preset: dict, preset_id: str, loc, user_id: str, deadline: float):
+    """(Frisch-Punkt, Anker-Punkt) eines Ortes (Issue #1737, Spec v1.1):
+    serverseitig aus Anker und frischem Abruf DIESES Nutzers -- nie aus dem
+    Anfrage-Inhalt. Ohne Anker/Abruf: der Ort selbst (wie bisher), kein Anker."""
+    from services.alert_preview_hours import compare_preview_point
 
-    return _deserialize_timeseries({"hourly": rows}, "openmeteo") if rows else None
-
-
-def _hour_inputs(loc, change_dicts: list[dict]):
-    """(Frisch-Punkt, Anker-Punkt) eines Ortes aus `hourly_new`/`hourly_old`
-    (Issue #1737). Ohne Reihen: der Ort selbst (wie bisher) und kein Anker."""
-    from types import SimpleNamespace
-
-    new_rows = next((c["hourly_new"] for c in change_dicts if c.get("hourly_new")), None)
-    old_rows = next((c["hourly_old"] for c in change_dicts if c.get("hourly_old")), None)
-    if not new_rows:
-        return loc, None
-    fresh = SimpleNamespace(
-        lat=loc.lat, lon=loc.lon, timezone=getattr(loc, "timezone", None),
-        timeseries=_hourly_series(new_rows),
+    fresh, anchor = compare_preview_point(
+        preset, preset_id, loc, user_id=user_id, deadline=deadline,
     )
-    anchor = SimpleNamespace(timeseries=_hourly_series(old_rows)) if old_rows else None
-    return fresh, anchor
+    return (fresh, anchor) if fresh is not None else (loc, None)
 
 
-def _deviation(preset: dict, changes: list[dict], all_locations: dict, style: str) -> dict:
+def _deviation(
+    preset: dict, changes: list[dict], all_locations: dict, style: str, *,
+    preset_id: str, user_id: str,
+) -> dict:
     from app.models import ChangeSeverity, WeatherChange
     from output.renderers.alert.project import to_multi_point_alert_message
     from output.renderers.alert.render import render_sms, render_telegram
@@ -114,16 +108,20 @@ def _deviation(preset: dict, changes: list[dict], all_locations: dict, style: st
 
     location_ids = list(preset.get("location_ids") or [])
     by_loc: dict[str, list] = {}
-    dicts_by_loc: dict[str, list[dict]] = {}
     for c in changes:
-        dicts_by_loc.setdefault(c["location_id"], []).append(c)
         by_loc.setdefault(c["location_id"], []).append(WeatherChange(
             metric=c["metric"], old_value=c["old_value"], new_value=c["new_value"],
             delta=c["delta"], threshold=c["threshold"],
             severity=ChangeSeverity(c["severity"]), direction=c["direction"],
         ))
     ordered = _ordered(location_ids, list(by_loc), all_locations)
-    inputs = {lid: _hour_inputs(all_locations[lid], dicts_by_loc[lid]) for lid in ordered}
+    from services.alert_preview_hours import preview_deadline
+
+    deadline = preview_deadline()  # EIN Budget fuer alle Orte (seriell)
+    inputs = {
+        lid: _hour_inputs(preset, preset_id, all_locations[lid], user_id, deadline)
+        for lid in ordered
+    }
     groups = [(all_locations[lid].name, by_loc[lid], inputs[lid][0]) for lid in ordered]
     # Issue #1737: dieselben Stundenzeilen wie der Versand (Anker je Ortsname).
     anchors = {

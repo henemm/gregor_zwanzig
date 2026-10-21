@@ -1302,7 +1302,7 @@ class TripAlertService:
 
     def _get_cached_weather(
         self, trip: "Trip", *, tagesgleicher_anker_noetig: bool,
-        now_utc: Optional[datetime] = None,
+        now_utc: Optional[datetime] = None, nur_lesen: bool = False,
     ) -> Optional[List[SegmentWeatherData]]:
         """
         Get cached weather data for a trip from the weather snapshot.
@@ -1359,6 +1359,9 @@ class TripAlertService:
                 eine reine "wie spaet ist es"-Frage, kein Verhaltensschalter
                 (Begruendung: Spec-Abschnitt "Bewusste Abweichung vom
                 'kein Default'-Muster").
+            nur_lesen: Issue #1737 -- Alarm-Vorschau. Gleiche Quellenkette,
+                aber ohne Diagnose-Spur und Alarmprotokoll-Eintrag bei
+                fehlendem/verworfenem Anker (die Vorschau schreibt nichts).
 
         Returns:
             Cached weather data or None if not available/not trustworthy
@@ -1412,9 +1415,10 @@ class TripAlertService:
         # AC-13/AC-14 gelten fuer BEIDE Aufrufer: "gar kein Anker" laesst auch
         # die Geometrie-Auswertung leerlaufen.
         if not undated:
-            self._report_missing_anchor(
-                trip, today, protokollieren=tagesgleicher_anker_noetig,
-            )
+            if not nur_lesen:  # Issue #1737: die Vorschau schreibt nichts
+                self._report_missing_anchor(
+                    trip, today, protokollieren=tagesgleicher_anker_noetig,
+                )
             return None
         if not tagesgleicher_anker_noetig:
             # Amtliche Warnungen: Geometrie genuegt, s. Docstring.
@@ -1457,6 +1461,9 @@ class TripAlertService:
                 f"heute ist {today.isoformat()}"
             )
 
+        if nur_lesen:  # Issue #1737: Vorschau -- keine Diagnose-/Protokoll-Spur
+            logger.info("Vorschau: Alarm-Anker fuer Trip %s unbrauchbar (%s)", trip.id, reason)
+            return None
         logger.warning(
             "Alarm-Anker fuer Trip %s verworfen (%s) — %s. Kein Abweichungsalarm "
             "bis zum naechsten Briefing-Versand.", trip.id, reason, detail,
