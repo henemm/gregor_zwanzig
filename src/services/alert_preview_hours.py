@@ -92,13 +92,15 @@ def compare_preview_point(
     """(frischer Punkt, Anker-Punkt) eines Orts dieses Nutzers -- dieselbe
     Quelle und dieselben Argumente wie `compare_alert._evaluate_one_location`.
     `(None, None)` ohne Anker oder bei scheiterndem Frisch-Abruf."""
+    from services.compare_alert import CompareAlertService
     from services.compare_location_weather_source import CompareLocationWeatherSource
     from services.compare_weather_snapshot import CompareWeatherSnapshotService
     from services.report_config_resolver import resolve_compare_time_window
 
     try:
         cached = CompareWeatherSnapshotService(user_id=user_id).load(preset_id, loc.id)
-        if not cached:
+        # Wie der Versand: Anker > 26 h -> kein Alarm, also keine Stundenzeilen.
+        if not cached or CompareAlertService._anchor_too_old(cached[0], preset_id, loc.id):
             return None, None
         start_hour, end_hour = resolve_compare_time_window(preset)
         zusatz = {"elevation_m": loc.elevation_m, "user_id": user_id}

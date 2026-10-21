@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from app.metric_catalog import get_metric
+from output.renderers.email.helpers import _AMPEL_CAPABLE_METRIC_IDS
 from utils.timezone import _as_utc, local_fmt
 
 from .model import AlertHourRow
@@ -18,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 MAX_ROWS = 6
 # Metriken mit Stufe: ampelfaehig (helpers._AMPEL_CAPABLE_METRIC_IDS) + Gewitter.
-_LEVEL_METRICS = frozenset(
-    {"thunder", "wind", "gust", "precipitation", "rain_probability", "cape"}
-)
+_LEVEL_METRICS = _AMPEL_CAPABLE_METRIC_IDS | {"thunder"}
 # fmt_val kennt nur "temp" als Temperatur-Spalte; die Varianten teilen ihr Format.
 _CELL_KEY_ALIAS = {
     "temp_cold": "temp", "temp_night": "temp",

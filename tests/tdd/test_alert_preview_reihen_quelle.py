@@ -101,3 +101,57 @@ def test_ortsvergleich_vorschau_ohne_verwertbare_frische_reihe_zeigt_keine_stund
 
     assert compare_preview_point(
         preset, PRESET_ID, _cmp_orte()[0], user_id=env, fetch=ohne_reihe) == (None, None)
+
+
+def _ortsvergleich_anker_mit_alter(env, monkeypatch, tmp_path, stunden: float):  # noqa: F811
+    """Preset des Nutzers + Anker fuer den ersten Ort mit ``fetched_at`` = jetzt - ``stunden``;
+    danach liefert der Frisch-Abruf die Sturm-Reihe."""
+    from services.compare_location_weather_source import CompareLocationWeatherSource
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+    from tests.tdd.test_alert_preview_compare_paritaet import PRESET_ID
+
+    preset = _cmp_welt(monkeypatch, tmp_path, env, anker_boeen=None)
+    ort = _cmp_orte()[0]
+    _plant(tmp_path, monkeypatch, f"canker-{int(stunden)}h", {})
+    punkt = CompareLocationWeatherSource().fetch(
+        ort.id, ort.lat, ort.lon, 9, 16, elevation_m=ort.elevation_m, user_id=env)
+    CompareWeatherSnapshotService(user_id=env).save(PRESET_ID, ort.id, dataclasses.replace(
+        punkt, fetched_at=datetime.now(timezone.utc) - timedelta(hours=stunden)))
+    _plant(tmp_path, monkeypatch, f"csturm-{int(stunden)}h", CMP_STURM)
+    return preset, ort
+
+
+def _dateistand(uid: str) -> dict:
+    from app.loader import get_data_dir
+
+    d = get_data_dir(uid)
+    return {str(p.relative_to(d)): p.stat().st_mtime_ns for p in d.rglob("*") if p.is_file()}
+
+
+def test_ortsvergleich_vorschau_mit_gerade_noch_frischem_anker_zeigt_stundenzeilen(
+    env, monkeypatch, tmp_path,  # noqa: F811
+):
+    """Gegenprobe zur 26-h-Grenze: 25 h alter Anker -> Vorschau liefert (frisch, Anker)."""
+    from services.alert_preview_hours import compare_preview_point
+    from tests.tdd.test_alert_preview_compare_paritaet import PRESET_ID
+
+    preset, ort = _ortsvergleich_anker_mit_alter(env, monkeypatch, tmp_path, 25)
+    frisch, anker = compare_preview_point(preset, PRESET_ID, ort, user_id=env)
+    assert frisch is not None and anker is not None
+
+
+def test_ortsvergleich_vorschau_mit_zu_altem_anker_zeigt_keine_stundenzeilen(
+    env, monkeypatch, tmp_path,  # noqa: F811
+):
+    """Anker aelter als 26 h: der Versand (``_evaluate_one_location``) verwirft ihn und meldet
+    fuer diesen Ort nichts -- die Vorschau baut dann ebenfalls keine Stundenzeilen aus ihm
+    (AC-11, Vorschau == Versand) und schreibt dabei nichts in den Nutzerordner (der Versand
+    protokolliert hier eine fehlende Basis; die Vorschau nicht)."""
+    from services.alert_preview_hours import compare_preview_point
+    from tests.tdd.test_alert_preview_compare_paritaet import PRESET_ID
+
+    preset, ort = _ortsvergleich_anker_mit_alter(env, monkeypatch, tmp_path, 27)
+    vorher = _dateistand(env)
+    out = compare_preview_point(preset, PRESET_ID, ort, user_id=env)
+    assert out == (None, None), "zu alter Anker: Vorschau baut Stundenzeilen, der Versand nicht"
+    assert _dateistand(env) == vorher, "Vorschau hat in den Nutzerordner geschrieben"

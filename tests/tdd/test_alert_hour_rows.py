@@ -486,7 +486,7 @@ def test_ac2_ac3_mail_einfach_punkte_telegram_roh_wort_ueber_den_versandweg(monk
 
 def test_ac4_sms_token_traegt_zeitspanne_stufen_token_bleibt():
     """AC-4 (Renderer): ``render_sms`` traegt ``14-16`` (ASCII, GSM-7), das Stufen-Token
-    ``TH:H->M`` des heutigen Alarms bleibt, Laenge <= 160."""
+    ``TH:H->M`` des heutigen Alarms bleibt, Laenge <= 140 (Default-Limit von ``render_sms``)."""
     from output.renderers.alert.render import render_sms
 
     fx = _load("gewitter_14_16.json")
@@ -494,12 +494,12 @@ def test_ac4_sms_token_traegt_zeitspanne_stufen_token_bleibt():
     assert "TH:H->M" in heute and "–" not in heute, f"Vorbedingung: {heute!r}"
     sms = render_sms(_trip_msg(fx, fm=modes(RAW)))
     assert "14-16" in sms and "–" not in sms, f"Zeitspanne fehlt: {sms!r}"
-    assert "TH:H->M" in sms and len(sms) <= 160
+    assert "TH:H->M" in sms and len(sms) <= 140, f"{len(sms)}: {sms!r}"
 
 
 def test_ac4_sms_und_premium_sms_ueber_den_versandweg(monkeypatch):
     """AC-4 (Versandweg): SMS UND Premium-SMS tragen ``14-16`` (ASCII, GSM-7), das Stufen-Token
-    bleibt, jeweils <= 160 Zeichen (das Dispatch-Limit 140 gilt real)."""
+    bleibt, jeweils <= 140 Zeichen (reales Dispatch-Limit, notification_service)."""
     fx = _load("gewitter_14_16.json")
     mit = _send_trip(monkeypatch, fx, email_mode="raw", telegram_mode="raw",
                      channels={"sms", "premium_sms"}, prefix="sms")
@@ -510,7 +510,76 @@ def test_ac4_sms_und_premium_sms_ueber_den_versandweg(monkeypatch):
         assert "14-16" in text and "–" not in text, f"{kanal}: Zeitspanne fehlt: {text!r}"
         from tests.tdd._gsm7_charset import assert_gsm7_clean
         assert_gsm7_clean(text, f"{kanal} (Issue #1737, GSM-7 #1796)")
-        assert "TH:H->M" in text and len(text) <= 160, f"{kanal}: {text!r}"
+        assert "TH:H->M" in text and len(text) <= 140, f"{kanal} ({len(text)}): {text!r}"
+
+
+# AC-4 Ueberlauf: sechs Etappen-Segmente mit je zwei Ereignissen (Regenwahrscheinlichkeit
+# ``@14-16``, Boeen ``@15``) -- zwoelf Tokens mit Zeitspanne, ungekuerzt deutlich ueber 140.
+_UEBERLAUF_SEGMENTE = [str(i) for i in range(1, 7)]
+_SMS_SUFFIX = re.compile(r" \+(\d+)$")
+# Ein ganzes Token: ``PR20->70@14-16`` bzw. an einem anderen Tag ``PR20->70@Fr15 14-16``
+# (Spanne NACH dem Tagesbezug, render.py ``_sms_token``).
+_SMS_TOKEN = r"(?:PR|G)\d+->\d+@(?:[A-Z][a-z])?\d{2}(?:-\d{2}| \d{2}-\d{2}| \d{2})?"
+
+
+def _ueberlauf_eingaben():
+    fx = _load("pop_und_boeen.json")
+    changes = [_wc(dict(c, segment_id=s)) for s in _UEBERLAUF_SEGMENTE for c in fx["changes"]]
+    frisch = [_segment_data(fx, fx["fresh"], s) for s in _UEBERLAUF_SEGMENTE]
+    anker = [_segment_data(fx, fx["anchor"], s) for s in _UEBERLAUF_SEGMENTE]
+    return changes, frisch, anker
+
+
+def _assert_sms_sauber_gekuerzt(text: str, n_ereignisse: int, wo: str) -> None:
+    """<= 140, endet auf dem Kuerzungs-Suffix `` +k`` und behaelt nur GANZE Tokens:
+    behaltene + weggelassene = alle Ereignisse (ein bloss abgeschnittener Text faellt hier)."""
+    assert len(text) <= 140, f"{wo} ({len(text)}): {text!r}"
+    m = _SMS_SUFFIX.search(text)
+    assert m, f"{wo}: Kuerzungs-Suffix ' +k' fehlt: {text!r}"
+    rumpf = text[:m.start()].split(": ", 1)[1]
+    assert re.fullmatch(f"{_SMS_TOKEN}(?: {_SMS_TOKEN})*", rumpf), (
+        f"{wo}: angeschnittenes Token: {rumpf!r}")
+    behalten = re.findall(_SMS_TOKEN, rumpf)
+    assert len(behalten) + int(m.group(1)) == n_ereignisse, f"{wo}: {text!r}"
+    assert any(re.search(r"\d{2}-\d{2}$", t) for t in behalten), f"{wo}: keine Zeitspanne"
+
+
+def test_ac4_sms_ueberlauf_mit_zeitspannen_wird_im_limit_gekuerzt():
+    """AC-4: viele Ereignisse mit Zeitspanne -- ``render_sms`` (Default-Limit) bleibt <= 140,
+    kuerzt ganze Tokens weg und haengt `` +k`` an."""
+    from output.renderers.alert.project import to_alert_message
+    from output.renderers.alert.render import render_sms
+
+    changes, frisch, anker = _ueberlauf_eingaben()
+    msg = to_alert_message(changes, frisch, "Trip X", tz=TZ, stand_at=STAND,
+                           anchor_segments=anker)
+    ungekuerzt = render_sms(msg, limit=10_000)
+    assert len(ungekuerzt) > 140 and "@14-16" in ungekuerzt, (
+        f"Vorbedingung: ungekuerzt ueber 140 ({len(ungekuerzt)}): {ungekuerzt!r}")
+    sms = render_sms(msg)
+    _assert_sms_sauber_gekuerzt(sms, len(changes), "render_sms")
+    assert "@14-16" in sms
+
+
+def test_ac4_sms_und_premium_sms_ueberlauf_ueber_den_versandweg(monkeypatch):
+    """AC-4 (Versandweg): derselbe Ueberlauf durch ``send_deviation_alert`` -- SMS UND
+    Premium-SMS <= 140 mit Kuerzungs-Suffix, nur ganze Tokens."""
+    from services.notification_service import NotificationService
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+
+    changes, frisch, anker = _ueberlauf_eingaben()
+    mit = aufzeichner_installieren(monkeypatch)
+    settings = _settings()
+    uid = mit_profil_chat(_user("smsvoll"), settings)
+    NotificationService(settings, uid).send_deviation_alert(
+        trip=_trip(uid, "raw", "raw"), weather=frisch, changes=changes,
+        effective_channels={"sms", "premium_sms"}, anchor_weather=anker,
+    )
+    for kanal in ("sms", "premium_sms"):
+        sendungen = mit.sendungen(kanal)
+        assert len(sendungen) == 1, f"Vorbedingung: {kanal} genau einmal gesendet ({mit!r})"
+        _assert_sms_sauber_gekuerzt(sendungen[0]["body"], len(changes), kanal)
 
 
 # ===========================================================================
@@ -754,6 +823,28 @@ def test_ac6_verteilte_abweichung_faellt_auf_jede_abweichende_stunde_zurueck():
     assert _rows(render_email(msg)[1]) == erwartet
 
 
+def test_ac6_gewitter_zaehlt_jeden_stufenwechsel_auch_unter_der_alarmschwelle():
+    """AC-6 (Gewitter = Metrik mit Stufe): betroffen ist JEDE Stunde mit Stufenwechsel,
+    unabhaengig von der Alarmschwelle. Aus ``gewitter_14_16.json`` abgeleitet: frisch
+    12Z MED (Anker HIGH, ein Schritt), 13Z LOW (HIGH, zwei), 14Z NONE (MED, zwei); die
+    Schwelle 2 erreicht 12Z NICHT -- trotzdem steht 14:00 Ortszeit in den Zeilen.
+    10Z/11Z und 15Z-17Z (kein Wechsel) erscheinen nicht. Ohne Stufen-Behandlung fiele
+    12Z heraus (nur Abstand >= 2)."""
+    from output.renderers.alert.render import render_email
+
+    fx = _load("gewitter_14_16.json")
+    neu = {12: "MED", 13: "LOW", 14: "NONE"}
+    fx["fresh_stufen"] = [
+        dict(r, thunder_level=neu.get(datetime.fromisoformat(r["ts"]).hour, r["thunder_level"]))
+        for r in fx["fresh"]
+    ]
+    change = _wc(dict(fx["change"], threshold=2.0))
+    erwartet = _expected(fx, [12, 13, 14], "thunder", "thunder_level", fresh_key="fresh_stufen")
+    assert [t for t, _ in erwartet] == ["14:00", "15:00", "16:00"]
+    msg = _trip_msg(fx, fresh_key="fresh_stufen", fm=modes(RAW), changes=[change])
+    assert _rows(render_email(msg)[1]) == erwartet
+
+
 # ===========================================================================
 # AC-7 -- Kappung auf 6 Zeilen + Hinweiszeile  (Test Plan 6)
 # ===========================================================================
@@ -972,11 +1063,15 @@ def _stabil_gleich(mit_reihen, ohne_reihen, versuche: int = 3):
 def _trip_bauen(trip_id: str):
     """Trip mit Etappe "1" HEUTE (Ortstag) und zwei Wegpunkten; ``segment_id`` der Oberflaeche
     (= ``stages[0].id``) trifft damit die echte Segment-Kennung "1"."""
+    from datetime import time
+
     from app.trip import Stage, Trip, Waypoint
     from tests.helpers.ortstag import ortstag
 
+    # Startzeit EXPLIZIT (#1709-Haertung): die Etappe haengt nicht am still
+    # berechneten Naismith-Default; 08:00 passt zu ``segment_times`` 08:00-17:00.
     stage = Stage(
-        id="1", name="Etappe 1", date=ortstag(TRIP_LAT, TRIP_LON),
+        id="1", name="Etappe 1", date=ortstag(TRIP_LAT, TRIP_LON), start_time=time(8, 0),
         waypoints=[
             Waypoint(id="G1", name="Start", lat=TRIP_LAT, lon=TRIP_LON, elevation_m=600.0),
             Waypoint(id="G2", name="Ziel", lat=47.30, lon=11.45, elevation_m=1200.0),
