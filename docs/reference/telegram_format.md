@@ -40,6 +40,8 @@ Der Stil wird je Trip/Vergleich über `report_config.telegram_style` gewählt: `
 | **Amtliche Warnung** | reiche Warnvorlage `render_official_alert_telegram` (+ Entwarnung), `parse_mode="HTML"`, ohne Betreffzeile | SMS-Text, `parse_mode=None` |
 | **Befehlsantwort** | Klartext-Bestätigung, optional mit Inline-Keyboard (Zoom-Navigation per `callback_query` + `editMessageText`, #655) | — |
 
+**Stundenzeilen im Änderungs-Alarm (`rich`, #1737):** Unter der Kopfzeile jedes Ereignisses steht je betroffener Stunde eine Zeile `HH:MM | alt → neu` (Ortszeit), dieselben Stunden wie in der E-Mail. Trip: Zellformat (ROH oder EINFACH) des Telegram-Briefings desselben Trips; Ortsvergleich: Werte roh, nur unter betroffenen Orten. Höchstens 6 stärkste Stunden in Zeitfolge plus Hinweiszeile „betroffen HH:MM–HH:MM"; Summen-Metriken tragen die Summe in der Kopfzeile. Ohne Anker nur der neue Wert, ohne Stundenreihe unverändert. Nur Daten, keine Empfehlung. Die Kurzform (`kurzform`) sendet den SMS-Alarmtext mit der Zeitspanne `HH-HH` (`sms_format.md` §3.4f).
+
 ## 3. Befehlseingang (Inbound)
 
 Telegram **hat** einen Befehlseingang — push-basiert, kein Poll-Job (`inbound_telegram_poll`
