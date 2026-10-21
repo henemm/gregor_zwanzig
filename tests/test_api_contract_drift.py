@@ -13,7 +13,8 @@ Fehler-Bodies. Dieser Test erzwingt die zwei billig prüfbaren Invarianten:
 
 Rot heißt IMMER: Doku nachziehen — niemals diesen Test aufweichen.
 
-Regel-Budget: Prüfdatum 2026-10-20 — kein nachweisbarer Fang bis dahin → Rückbau.
+Regel-Budget: Prüfdatum 2027-01-19 — kein nachweisbarer Fang bis dahin → Rückbau.
+(verlängert 2026-10-21 (PO): Doku-Audit fand reale Drift; vorher 2026-10-20)
 """
 from __future__ import annotations
 
