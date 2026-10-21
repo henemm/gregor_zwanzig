@@ -16,6 +16,9 @@ relativ zu DIESER Datei aufgeloest.
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
+import sys
 from pathlib import Path
 
 _GATE = Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "secret_output_gate.py"
@@ -53,3 +56,55 @@ def test_abbruchmeldung_nennt_harmlosen_werkzeugnamen_weiter(tmp_path, monkeypat
     g._WERKZEUG = "Bash"
     g._melde_abbruch(ValueError("egal"))
     assert "Ergebnisses von Bash" in capsys.readouterr().err
+
+
+def _env_paare(cfg, wurzel):
+    """Echte, minimale Ersatz-Erkennung fuer das fehlende Plugin: KEY=WERT
+    aus der `.env` der Projektwurzel."""
+    paare = []
+    for zeile in (Path(wurzel) / ".env").read_text().splitlines():
+        schluessel, _, wert = zeile.partition("=")
+        paare.append((schluessel, wert))
+    return paare
+
+
+def test_fundmeldung_gibt_geheimnis_im_werkzeugnamen_nicht_aus(
+        tmp_path, monkeypatch, capsys):
+    """(Adversary F2) Given eine .env mit Geheimnis, ein Ergebnis mit dem Wert
+    und ein Werkzeugname, der den Wert ebenfalls enthaelt / When main() den
+    Fund maskiert und meldet / Then steht der rohe Wert weder in der Meldung
+    noch im Ersatz-Ergebnis."""
+    (tmp_path / ".env").write_text(f"GZ_FAKE_TEST_PASS={WERT}\n")
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    g = _gate()
+    g.collect_secrets = _env_paare
+    g._is_secret_value = lambda wert, cfg: len(wert) >= 8
+    g._is_secret_key = lambda schluessel, cfg: schluessel.endswith("_PASS")
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({
+        "tool_name": f"mcp__dienst__{WERT}",
+        "tool_response": {"stdout": f"login {WERT}"},
+    })))
+    assert g.main() == 0
+    aus = capsys.readouterr()
+    assert "maskiert" in aus.err, aus.err
+    assert "***GZ_FAKE_TEST_PASS***" in aus.out, aus.out
+    assert WERT not in aus.err + aus.out, aus.err + aus.out
+
+
+def test_abbruchmeldung_zeigt_fragezeichen_wenn_keine_maskierung_moeglich(
+        tmp_path, monkeypatch, capsys):
+    """(Adversary F3) Given beide Geheimnis-Quellen scheitern (Plugin fehlt,
+    .env-Notbehelf wirft) / Then nennt die Notfallmeldung den Werkzeugnamen
+    NICHT, sondern '?'."""
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    g = _gate()
+
+    def env_unlesbar():
+        raise OSError("env unlesbar")
+
+    g._env_rohwerte = env_unlesbar
+    g._WERKZEUG = f"mcp__dienst__{WERT}"
+    g._melde_abbruch(ValueError("egal"))
+    meldung = capsys.readouterr().err
+    assert "Ergebnisses von ? NICHT abgeschlossen" in meldung, meldung
+    assert "mcp__dienst__" not in meldung
