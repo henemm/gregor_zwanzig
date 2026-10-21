@@ -1,6 +1,6 @@
 # ADR-0046: Kanal-Schwelle regelt AUF WELCHEM WEG eine Meldung ankommt — nicht OB (ergänzt ADR-0043)
 
-- **Status:** Akzeptiert (PO-„go" 2026-08-05)
+- **Status:** Teilweise abgelöst durch [ADR-0095](0095-kanal-paritaet-jeder-kanal-jede-frage.md) — abgelöst ist nur die Kanalliste „E-Mail · Telegram · SMS“ (Zeile 46): die Schwelle gilt seit #1701 S2b für alle vier Kanäle inkl. Premium-SMS; das Prinzip „WEG, nicht OB“ und der #638-Schutz gelten unverändert (PO-„go" 2026-08-05)
 - **Datum:** 2026-08-05
 - **Bezug:** Issue #1461 (Epic #1458 Scheibe S3, Teilscheibe S3b-2a), Spec
   `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md`; **ergänzt** ADR-0043

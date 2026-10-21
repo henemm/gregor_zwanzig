@@ -19,18 +19,35 @@ GitHub Issues — die Punkte hier sind Entscheidungsvorlage, kein Backlog.
 
 ### 1. Stille Rücknahmen dokumentierter Entscheidungen (Regel: Abweichung ⇒ neues ADR)
 
-| # | ADR sagt | Gelebt wird | Vorschlag |
+| # | ADR sagt | Gelebt wird | Stand |
 |---|---|---|---|
-| 1a | ADR-0005:21 erlaubt SMS-Token `C+/C~/C?` | gestrichen in 6924df6ec (#2233), CLAUDE.md „gibt es nicht" | neues ADR „Confidence-Token entfällt", 0005 → teilweise abgelöst |
-| 1b | ADR-0006:18-19: echte Mail-/API-Calls in allen Tests | CLAUDE.md „Zwei Schichten": Kern ohne Netz, aufgezeichnete Fixtures | neues ADR „Zwei Test-Schichten", 0006 → teilweise abgelöst |
-| 1c | ADR-0049:22/105/118 Premium-SMS „einziger Kanal ohne Netz", :115 „kein Alarm-Kanal" | Empfangslage korrigiert 2026-09-05; Alarm-Kanal Trip+Compare (#2275/#1533) | neues ADR „Kanal-Parität" (Epic #2133), löst 0049-Teile und 0046 ab |
-| 1d | ADR-0046 Kanal-Schwelle über 3 Kanäle | „Alarme erreichen **alle** Kanäle" (#1701) | in 1c mit klären |
-| 1e | ADR-0009:49 „keine absoluten Schwellen" | Radar-/Onset-Alarm ist absolut, ohne ADR | ADR „Radar-Alarm-Typ" |
-| 1f | ADR-0013 Schwelle `≥` | Code löst bei `>` aus | Code oder ADR angleichen (Bug-Prüfung) |
+| 1a | ADR-0005:21 erlaubt SMS-Token `C+/C~/C?` | gestrichen in 6924df6ec (#2233), CLAUDE.md „gibt es nicht" | **erledigt 2026-10-21:** [ADR-0093](../adr/0093-confidence-token-in-sms-entfaellt.md), 0005 → teilweise abgelöst |
+| 1b | ADR-0006:18-19: echte Mail-/API-Calls in allen Tests | CLAUDE.md „Zwei Schichten": Kern ohne Netz, aufgezeichnete Fixtures | **erledigt 2026-10-21:** [ADR-0094](../adr/0094-zwei-test-schichten-kern-und-live-e2e.md), 0006 → teilweise abgelöst |
+| 1c | ADR-0049:22/105/118 Premium-SMS „einziger Kanal ohne Netz", :115 „kein Alarm-Kanal" | Empfangslage korrigiert 2026-09-05; Alarm-Kanal Trip+Compare (#2275/#1533) | **erledigt 2026-10-21:** [ADR-0095](../adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md), 0049 + 0046 → teilweise abgelöst |
+| 1d | ADR-0046 Kanal-Schwelle über 3 Kanäle | „Alarme erreichen **alle** Kanäle" (#1701) | **erledigt 2026-10-21** in ADR-0095: Schwelle bleibt, gilt für alle vier Kanäle (`AlertChannelThresholdsConfig.PremiumSms` seit #1701 S2b, `split_by_threshold()` an allen sechs Nahtstellen); „alle Kanäle" = alle vom Nutzer gewählten |
+| 1e | ADR-0009:49 „keine absoluten Schwellen" | Radar-/Onset-Alarm ist absolut, ohne ADR | **erledigt 2026-10-21:** [ADR-0096](../adr/0096-radar-onset-alarm-absolute-schwelle.md), 0009 → teilweise abgelöst (Ausnahme) |
+| 1f | ADR-0013 Schwelle `≥` | Auslösung strikt `>` | **geprüft 2026-10-21, kein Bug** — s. Befund unten |
+
+**Befund 1f (ADR-0013 `≥` vs. Code `>`):** Zwei verschiedene Vergleiche, kein Widerspruch im
+Verhalten. ADR-0013 definiert nur die **Renderer-Einstufung** „über Schwelle":
+`over_thr()` = `abs(value_to − value_from) >= threshold` (`src/output/renderers/alert/model.py:298`)
+— deckt sich mit dem ADR. Die **Auslösung** liegt in der Erkennung:
+`triggered = abs(delta) > threshold` (`src/services/weather_change_detection.py:865`, stetige
+Größen; Gewitter läuft über Niveaus, `:862-863`). Daneben `≥`: Beginn-Verschiebung
+(`weather_change_detection.py:939`, `< threshold` ⇒ kein Alarm) und Melde-Gedächtnis
+(`src/services/deviation_alert_engine.py:246`). Nutzersichtbar ist nur der Grenzfall „Änderung
+genau gleich der Schwelle" bei stetigen Größen (z. B. Böen Δ = 20,0 km/h bei „standard"): kein
+Alarm. Dem Renderer kann so ein Ereignis aus der Erkennung nie erreichen, die Mail-Einstufung ist
+also nie falsch. Das strikte `>` ist PO-freigegebene Spec: `rework_1460_t1_relevanzfilter.md`
+AC-18 („striktes `>` — bei genau 20 km/h KEIN Alarm"), bewacht von
+`tests/tdd/test_alert_sensitivity_levels.py:333` (+ `:356` Δ = 20,01 löst aus) und
+`tests/integration/test_friendly_format_email_and_alerts.py:699/:751`. **Empfehlung: kein Bug,
+Code nicht ändern;** ADR-0013 bei nächster Berührung per Nachtrag präzisieren (Einstufung `≥`,
+Auslösung `>` laut AC-18).
 
 ### 2. Gelebte Grundsatzentscheidungen ohne ADR
 
-Kanal-Parität (#2133) · Trip/Compare-Code-Teilung (ADR-0026 war dafür reserviert) · PR statt
+~~Kanal-Parität (#2133)~~ (**erledigt 2026-10-21:** ADR-0095) · ~~Zwei Test-Schichten~~ (**erledigt:** ADR-0094) · Trip/Compare-Code-Teilung (ADR-0026 war dafür reserviert) · PR statt
 Direkt-Push + CI-Merge-Regel · autonomer Deploy ohne Freigabe-Halt · Regel-Budget · Read-Modify-Write-Merge
 (hängt nur noch an der teilweise abgelösten 0031) · ADR-Nummernvergabe ohne Kollisionsschutz
 (wiederholte Umnummerierungen paralleler Sessions).
