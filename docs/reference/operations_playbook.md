@@ -897,3 +897,34 @@ unberührt, der Mitschnitt ist durchgehend fail-soft.
   2048 statt 512 URLs (~28 MB Speicher).
 - **Monitoring:** `check-gregor20.sh` (henemm-infra) schlägt Alarm, wenn `push.missed_total` eines
   Befehls-Eingangs steigt (siehe `docs/runbooks/inbound-webhooks.md`).
+
+### Staging-Messlauf auslösen (`staging_messlauf.py`, #2439)
+
+Der Treiber löst auf **Staging** seriell alle Befehlsserien aus, die
+`tests/e2e/test_push_eingang_befehle_staging.py` danach aus dem Journal auswertet. Er wertet selbst
+nichts aus (keine Schwellen, kein Urteil). Spec: `docs/specs/modules/feat_2439_staging_messtreiber.md`.
+
+- **Aufruf** (Laufzeit ca. 2–2,5 h, Fortschritt auf stderr):
+  ```bash
+  eval "$(python3 .claude/tools/staging_messlauf.py)"   # setzt die drei Env-Werte nur bei Exit 0
+  GZ_STAGING_E2E=1 uv run pytest tests/e2e/test_push_eingang_befehle_staging.py
+  ```
+  stdout enthält bei Exit 0 genau `GZ_STAGING_MESSLAUF_SEIT=<ISO-UTC>`, `GZ_STAGING_TRIP_DE=<id>`,
+  `GZ_STAGING_TRIP_KORSIKA=<id>` (passen zu `trip=` der Dauerzeilen). Zugangsdaten kommen aus
+  `/home/hem/gregor_zwanzig_staging/.env` plus `GZ_*`-Umgebung; nichts davon wird ausgegeben.
+- **Exit-Codes:** `0` vollständig ausgelöst · `1` Befund (Probelauf warm, „Telegram nicht
+  verknüpfbar", Abbruch, Aufräumen gescheitert — Nutzer-Kennung steht in der Meldung) · `2`
+  Umgebungsfehler/Sperre (fehlende Env, Staging nicht erreichbar, Zeitfenster 23:45–00:15 Wien bzw.
+  Laufzeit über Mitternacht, Nicht-Staging-Adresse).
+- **Ablauf:** Wegwerf-Nutzer `gzp-<tag>` + genau 2 Trips (DE, Korsika) → Telegram-Verknüpfung
+  (`/start TOKEN` als Webhook-Update, bestätigt per `telegram-status`) → Probelauf (DE HEUTE/MORGEN,
+  Korsika HEUTE; ohne `downloads>0` im Journal ⇒ Exit 1, keine Serie) → E-Mail- und
+  Telegram-Kurzbefehle je 5× → DE 5×HEUTE+5×MORGEN, vor jedem Lauf neuer Ort per Read-Modify-Write
+  → Korsika 3×HEUTE+3×MORGEN mit >600 s Abstand → HEUTE-dann-HELP-Paar per E-Mail. Aufräumen
+  (Trips, Antwortmails, Nutzer) läuft immer, auch bei Abbruch.
+- **Messvorbehalt Telegram:** gemessen wird nur die Verarbeitung (Webhook-Eingang bis Dauerzeile)
+  und der schnelle Sendefehler an die erkennbar ungültige `chat_id` `gzp-ungueltig-<tag>` — keine
+  echte Zustellung. Telegram HEUTE/MORGEN wird auf Staging nicht ausgelöst (NOT_MEASURABLE).
+- **Niemals Produktion:** nur `127.0.0.1:8091`/`staging.gregor20.henemm.com` (Go) und
+  `127.0.0.1:8001` (Kern) sind erlaubt; Port 8090/8000 und `gregor20.henemm.com` werden vor jeder
+  Anfrage mit Exit 2 abgelehnt. Kein Sammelversand, nur die eigenen zwei Trips.

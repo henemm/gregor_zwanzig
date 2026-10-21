@@ -101,15 +101,17 @@ def baue_befehlsmail(plus_adresse: str, trip_name: str, befehl: str, wort: str |
     return msg
 
 
-def _etappe(i: int, name: str, datum: date) -> dict:
-    wp = [{"id": f"G{j + 1}", "name": ort, "lat": 47.10 + 0.01 * i + 0.01 * j,
-           "lon": 11.00 + 0.01 * i + 0.01 * j, "elevation_m": 1500 + 100 * j}
+def _etappe(i: int, name: str, datum: date, basis: tuple = (47.10, 11.00)) -> dict:
+    wp = [{"id": f"G{j + 1}", "name": ort, "lat": basis[0] + 0.01 * i + 0.01 * j,
+           "lon": basis[1] + 0.01 * i + 0.01 * j, "elevation_m": 1500 + 100 * j}
           for j, ort in enumerate(("Start", "Ziel"))]
     return {"id": f"T{i + 1}", "name": name, "date": datum.isoformat(), "waypoints": wp}
 
 
-def baue_trip(szenario: str, tag: str, heute: date) -> dict:
-    stages = [_etappe(i, name, heute + timedelta(days=off))
+def baue_trip(szenario: str, tag: str, heute: date, *, ort: tuple | None = None) -> dict:
+    """``ort`` = (lat, lon) des ersten Wegpunkts der ersten Etappe; ohne ort 47.10/11.00 (#2439)."""
+    basis = (47.10, 11.00) if ort is None else (float(ort[0]), float(ort[1]))
+    stages = [_etappe(i, name, heute + timedelta(days=off), basis)
               for i, (off, name) in enumerate(_PLAN[szenario])]
     return {"id": f"gzp-{tag}-{szenario.lower()}", "name": f"GZ-Pruefung {tag} {szenario}",
             "stages": stages}
