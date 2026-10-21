@@ -128,3 +128,43 @@ def test_ausblick_tabelle_mit_gleichem_header_verfaelscht_die_summe_nicht():
         + outlook
     )
     assert v._check_metric_plausibility(html) == []
+
+
+def _night_section(tbl: str) -> str:
+    """Renderer-Muster der 'Nacht am Ziel'-Sektion (html.py): h3-Kopf vor
+    der Desktop-Tabelle, Kopf-Div vor der Mobile-Fassung."""
+    return (
+        '<div class="section desktop-only"><h3>🌙 Nacht am Ziel (1800m)</h3>'
+        "<p>Ankunft 19:00 → Morgen 06:00</p>" + tbl + "</div>"
+        '<div class="mobile-compact"><div>🌙 Nacht am Ziel (1800m)</div>'
+        + tbl + "</div>"
+    )
+
+
+def _mehrsegment_mail(pill_min: int) -> str:
+    """Zwei Segmente mit doppelt gerenderter Nahtstunde 12:00 (5 distinkte
+    Etappenstunden je 1.0 h = 300 min) plus 'Nacht am Ziel'-Tabelle."""
+    s1 = _tbl([("09:00", "1.0 h"), ("10:00", "1.0 h"), ("11:00", "1.0 h"),
+               ("12:00", "1.0 h")])
+    s2 = _tbl([("12:00", "1.0 h"), ("13:00", "1.0 h")])
+    night = _tbl([("18:00", "1.0 h"), ("20:00", "0.3 h")])
+    return _mail(pill_min, [s1, s2]) + _night_section(night)
+
+
+def test_mehrsegment_etappe_mit_nahtstunden_und_nacht_ist_bestehbar():
+    """Given eine Etappe aus zwei Segmenten, deren Nahtstunde (12:00) bewusst
+    in BEIDEN Segmenttabellen steht, plus eine 'Nacht am Ziel'-Tabelle, und
+    eine Pill 300 min = 5 distinkte Etappenstunden / When der Pruefer prueft /
+    Then meldet er KEINEN Widerspruch (#2104: vorher Summe ueber alle Zeilen
+    = 6 h Segmente + 1.3 h Nacht = 438 min vs. 300)."""
+    v = _load_validator()
+    assert v._check_metric_plausibility(_mehrsegment_mail(300)) == []
+
+
+def test_mehrsegment_etappe_echte_verletzung_faellt_weiter_auf():
+    """Given dieselbe Mehrsegment-Etappe (300 min), aber eine Pill von
+    120 min / When der Pruefer prueft / Then meldet er weiterhin einen
+    Sonne-Widerspruch (Dedup/Nacht-Ausschluss frisst keine Verletzungen)."""
+    v = _load_validator()
+    errors = v._check_metric_plausibility(_mehrsegment_mail(120))
+    assert len(errors) == 1 and "Sonne" in errors[0]
