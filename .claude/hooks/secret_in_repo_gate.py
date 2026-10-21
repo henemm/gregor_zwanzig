@@ -129,6 +129,68 @@ def _lauf(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
 
 # ------------------------------------------------------------- Sicherheitslage
 
+# #1636 F008: Heredoc-Operator `<<WORT`, `<<-WORT`, `<<'WORT'`, `<<"WORT"`, `<<\WORT`.
+_HEREDOC_OP_RE = re.compile(
+    r"<<(-?)[ \t]*(?:'([^'\n]+)'|\"([^\"\n]+)\"|\\?([A-Za-z0-9_.-]+))"
+)
+
+
+def _heredoc_inhalt_ueberspringen(befehl: str, i: int, offen: list) -> int | None:
+    """Ab Zeilenanfang `i` die Inhalte aller offenen Heredocs samt Terminator
+    ueberspringen. None, wenn ein Terminator fehlt (unklare Lage)."""
+    n = len(befehl)
+    for strip_tabs, wort in offen:
+        while True:
+            if i >= n:
+                return None
+            j = befehl.find("\n", i)
+            j = n if j == -1 else j
+            zeile = befehl[i:j]
+            i = j + 1
+            if (zeile.lstrip("\t") if strip_tabs else zeile) == wort:
+                break
+    return i
+
+
+def _ohne_heredoc_inhalt(befehl: str) -> str:
+    """Kommando ohne Heredoc-Inhalte (quote-bewusst). Bei unklarer Lage
+    (Terminator fehlt) unveraendert — die cd-Pruefung bleibt fail-closed."""
+    aus: list[str] = []
+    offen: list[tuple[bool, str]] = []
+    quote: str | None = None
+    i, n = 0, len(befehl)
+    while i < n:
+        c = befehl[i]
+        if quote:
+            schritt = 2 if (c == "\\" and quote == '"') else 1
+            if c == quote:
+                quote = None
+        elif c == "\\":
+            schritt = 2
+        elif c in "'\"":
+            quote, schritt = c, 1
+        elif befehl.startswith("<<<", i):
+            schritt = 3
+        elif c == "#" and (i == 0 or befehl[i - 1] in " \t\n;&|("):
+            j = befehl.find("\n", i)
+            schritt = (n if j == -1 else j) - i
+        elif befehl.startswith("<<", i) and (m := _HEREDOC_OP_RE.match(befehl, i)):
+            offen.append((m.group(1) == "-", m.group(2) or m.group(3) or m.group(4)))
+            schritt = m.end() - i
+        elif c == "\n" and offen:
+            aus.append(c)
+            weiter = _heredoc_inhalt_ueberspringen(befehl, i + 1, offen)
+            if weiter is None:
+                return befehl
+            i, offen = weiter, []
+            continue
+        else:
+            schritt = 1
+        aus.append(befehl[i:i + schritt])
+        i += schritt
+    return "".join(aus)
+
+
 
 def _commit_sicherheitslage(befehl: str) -> tuple[str, list[Path], str | None]:
     """Bestimmt, WO der commit-Aufruf sicher geprueft werden kann.
@@ -151,7 +213,10 @@ def _commit_sicherheitslage(befehl: str) -> tuple[str, list[Path], str | None]:
     if segmente is None:
         return "unsicher", [], "Kommando nicht verlaesslich zerlegbar (kaputte/unklare Quotes)"
 
-    if any(tokens and tokens[0] == "cd" for tokens in segmente):
+    # #1636 F008: Heredoc-Inhalt ist Text, kein Befehl — eine Nachrichtenzeile
+    # `cd …` darf nicht als Umlenkung gelten. Unklare Lage -> ungekuerzt.
+    cd_segmente = _git_segments(_ohne_heredoc_inhalt(befehl)) or segmente
+    if any(tokens and tokens[0] == "cd" for tokens in cd_segmente):
         return "unsicher", [], "Kommando enthaelt 'cd' vor dem Commit — Ziel nicht sicher bestimmbar"
 
     wurzeln: list[Path] = []
