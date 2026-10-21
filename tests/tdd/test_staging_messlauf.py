@@ -244,8 +244,22 @@ class _Welt:
     CRON_S = 60.0
 
     def __init__(self, *, start=START, basis=BASIS, kern=KERN, warm=(), link_kaputt=None,
-                 loeschen_scheitert=(), abbruch: _Abbruch | None = None):
+                 loeschen_scheitert=(), abbruch: _Abbruch | None = None, keine_antwort=(),
+                 ohne_dauerzeile=(), telegram_still=(), telegram_verzoegerung_s=0.0,
+                 ohne_cron=False, verifikationsmail_s=None, antwort_verzoegerung=None,
+                 email_zeile_bei_telegram=None):
         self.uhr = _Uhr(start)
+        self.antwort_verzoegerung = dict(antwort_verzoegerung or {})  # {("STATUS", 1): 300.0}
+        self.email_zeile_bei_telegram = email_zeile_bei_telegram  # n: spaete kanal=email-Zeile
+        self.keine_antwort = set(keine_antwort)      # {("STATUS", 2)}: n-te Mail dieses Befehls
+        self.ohne_dauerzeile = set(ohne_dauerzeile)  # {("de", 0)}: Wetterlauf ohne Dauerzeile
+        self.telegram_still = set(telegram_still)    # {3}: n-tes Telegram-Kommando ohne Dauerzeile
+        self.telegram_verzoegerung_s = telegram_verzoegerung_s
+        self.verifikationsmail_s = verifikationsmail_s  # Verifikationsmail n s nach 1. Einlieferung
+        if ohne_cron:
+            self.CRON_S = 10.0 ** 9                  # Mails nur ueber den Poll-Ausloeser
+        self.befehl_nr: dict[str, int] = {}
+        self.telegram_nr = 0
         self.basis, self.kern = basis.rstrip("/"), kern.rstrip("/")
         self.warm = set(warm)                 # {("de", 0), ("korsika", 0), ...}
         self.link_kaputt = link_kaputt        # None | "link500" | "token"
@@ -421,10 +435,25 @@ class _Welt:
                              trip_art=self._trip_art(trip) if trip else None, stufen=stufen,
                              antwort_uid=None, abgeholt_seq=None, bereit=None)
         self.offen.append(cmd)
+        if self.verifikationsmail_s is not None and user and len(self.mails()) == 1:
+            self._verifikationsmail(von)
+
+    def _verifikationsmail(self, an: str) -> None:
+        """Go-Systemmail an die Plus-Adresse (internal/mail/verify.go:33), keine Befehlsantwort."""
+        m = EmailMessage()
+        m["From"], m["To"] = "gregor_zwanzig@henemm.com", an
+        m["Subject"] = "Bestätige deine E-Mail-Adresse für Gregor 20"
+        m.set_content("Bitte bestaetigen\n")
+        self.uid += 1
+        self.postfach.append({"uid": self.uid, "an": an, "roh": m.as_bytes(), "cmd": None,
+                              "sichtbar_ab": self.uhr.t + timedelta(seconds=self.verifikationsmail_s)})
 
     def _verarbeite(self, cmd: dict, beginn: datetime) -> datetime:
         befehl, art = cmd["befehl"], cmd["trip_art"]
+        self.befehl_nr[befehl] = self.befehl_nr.get(befehl, 0) + 1
+        stumm = (befehl, self.befehl_nr[befehl]) in self.keine_antwort
         wetter = befehl in ("HEUTE", "MORGEN") and art is not None
+        nr = None
         dauer = self.DAUER_S[art] if wetter else self.DAUER_S["kurz"]
         ende = beginn + timedelta(seconds=dauer)
         if wetter:
@@ -448,18 +477,25 @@ class _Welt:
             self._log(beginn + timedelta(seconds=1),
                       f"providers.x: {marker} fenster_s=4.20 downloads={downloads} "
                       f"cache_treffer={0 if downloads else 415}")
-        self._log(ende, f"services.trip_command_processor: befehl={befehl} kanal=email "
-                        f"trip={cmd['trip_id'] or '-'} dauer_ms={int(dauer * 1000)}")
+        if (art, nr) not in self.ohne_dauerzeile:
+            self._log(ende, f"services.trip_command_processor: befehl={befehl} kanal=email "
+                            f"trip={cmd['trip_id'] or '-'} dauer_ms={int(dauer * 1000)}")
+        self.verarbeitet_bis = ende
+        if stumm:
+            return ende
         antwort = EmailMessage()
         antwort["From"] = "gregor_zwanzig@henemm.com"
         antwort["To"] = cmd["von"]
         name = cmd["betreff"].split("]", 1)[0].lstrip(" [") if "]" in cmd["betreff"] else "?"
-        antwort["Subject"] = f"[{name}] {befehl}"
+        # Betreffe wie trip_command_processor.py: "Hilfe" (:1401), "Kürzel" (:1412), "[Trip] Status"
+        antwort["Subject"] = {"HELP": "Hilfe", "CODES": "Kürzel"}.get(
+            befehl, f"[{name}] {befehl.capitalize()}")
         if wetter:
             antwort["X-GZ-Mail-Type"] = "trip-briefing"
         antwort.set_content(f"Antwort auf {befehl}\n")
         self.uid += 1
-        bereit = ende + timedelta(seconds=self.TRANSIT_S)
+        extra = self.antwort_verzoegerung.get((befehl, self.befehl_nr[befehl]), 0.0)
+        bereit = ende + timedelta(seconds=self.TRANSIT_S + extra)
         self.postfach.append({"uid": self.uid, "an": cmd["von"], "roh": antwort.as_bytes(),
                               "sichtbar_ab": bereit, "cmd": cmd})
         cmd["antwort_uid"], cmd["bereit"] = self.uid, bereit
@@ -516,8 +552,15 @@ class _Welt:
         beginn = max(self.uhr.t, self.verarbeitet_bis)
         ende = beginn + timedelta(seconds=self.DAUER_S["telegram"])
         eigene = [t for t, b in self.besitzer.items() if b == user]
-        self._log(ende, f"services.trip_command_processor: befehl={befehl} kanal=telegram "
-                        f"trip={eigene[0] if eigene else '-'} dauer_ms=1500")
+        self.telegram_nr += 1
+        if self.telegram_nr == self.email_zeile_bei_telegram:   # spaete Mail-Dauerzeile, 3 s danach
+            self._log(beginn + timedelta(seconds=3),
+                      f"services.trip_command_processor: befehl=STATUS kanal=email "
+                      f"trip={eigene[0] if eigene else '-'} dauer_ms=2000")
+        if self.telegram_nr not in self.telegram_still:   # Journal-Zeile erst nach Verzoegerung
+            self._log(ende + timedelta(seconds=self.telegram_verzoegerung_s),
+                      f"services.trip_command_processor: befehl={befehl} kanal=telegram "
+                      f"trip={eigene[0] if eigene else '-'} dauer_ms=1500")
         self.uhr.t = max(self.uhr.t, ende)
         self.verarbeitet_bis = ende
         return 200, {"status": "ok"}
@@ -734,7 +777,7 @@ class _Imap:
             if m is None:
                 return ("OK", [None])
             cmd = m["cmd"]
-            if cmd["abgeholt_seq"] is None:
+            if cmd is not None and cmd["abgeholt_seq"] is None:
                 cmd["abgeholt_seq"] = self.w._ereignis("abgeholt", uid=uid)["seq"]
             teil = str(args[1]).upper() if len(args) > 1 else ""
             roh = m["roh"]
@@ -1017,6 +1060,14 @@ def test_scheiternde_telegram_verknuepfung_ist_ehrlicher_befund(capsys, kaputt):
     assert "GZ_STAGING_MESSLAUF_SEIT" not in out and "GZ_STAGING_TRIP_DE" not in out, (
         "Lauf trotz fehlender Telegram-Serie als vollstaendig gemeldet")
     assert not welt.eigene_reste() and welt.registrierter_nutzer() in welt.geloeschte_nutzer
+    # F-A2-01 (AC-6): nach gescheiterter Verknuepfung geht KEIN Telegram-Kommando mehr ab
+    start = [e["seq"] for e in welt.ereignisse
+             if e["art"] == "webhook" and str(e["text"]).startswith("/start")]
+    ab = start[-1] if start else 0
+    danach = [e for e in welt.ereignisse if e["art"] == "webhook" and e["seq"] > ab
+              and _befehl_aus(e["text"]) in ("HELP", "CODES", "STATUS")]
+    assert not danach, (f"Verknuepfung gescheitert ({kaputt}), trotzdem {len(danach)} "
+                        "Telegram-Kommandos gepostet")
 
 
 def test_oeffentliche_staging_url_verknuepft_ueber_start_token(capsys):
@@ -1283,3 +1334,178 @@ def test_baue_trip_nimmt_einen_ort_an():
     ohne = pw.baue_trip("A", "t1", HEUTE)
     assert [s["date"] for s in trip["stages"]] == [s["date"] for s in ohne["stages"]]
     assert pw.baue_trip("A", "t1", HEUTE, ort=None) == ohne
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 1 (Adversary F001-F006): Sicherungen dort pruefen, wo sie wirken
+# ---------------------------------------------------------------------------
+
+def _befund_ohne_env(welt: _Welt, rc, out: str) -> None:
+    assert rc == 1, f"Exit {rc}, erwartet 1 (Befund)"
+    assert "GZ_STAGING_MESSLAUF_SEIT" not in out and "GZ_STAGING_TRIP_DE" not in out, (
+        "unvollstaendiger Lauf meldet Env-Zeilen wie ein voller Lauf")
+    assert not welt.eigene_reste(), f"Trips nicht aufgeraeumt: {welt.eigene_reste()}"
+    assert welt.registrierter_nutzer() in welt.geloeschte_nutzer, "Wegwerf-Nutzer nicht geloescht"
+
+
+def _befund_zeilen(err: str) -> list[str]:
+    return [z for z in err.splitlines() if z.startswith("BEFUND:")]
+
+
+def test_chat_id_jedes_updates_ist_nicht_numerisch_und_traegt_den_vertragspraefix(capsys):
+    """F001: geprueft gegen das Vertrags-Literal, nicht gegen die Konstante des Prueflings."""
+    welt, rc, out, err = _erfolgslauf(capsys)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    alle = [e for e in welt.ereignisse if e["art"] == "webhook"]
+    assert len(alle) == 16, f"{len(alle)} Webhook-Updates, erwartet /start + 15 Befehle"
+    for e in alle:
+        cid = e["chat_id"]
+        assert isinstance(cid, str) and cid.startswith("gzp-ungueltig-"), f"chat_id {cid!r}"
+        with pytest.raises(ValueError):
+            int(cid)
+        assert re.search(r"[a-z]", cid) and not cid.startswith("@"), f"chat_id {cid!r} koennte echt sein"
+
+
+def test_zweiter_lauf_gegen_denselben_dedup_speicher_trifft_kein_duplikat(capsys):
+    """F002: der Kern haelt gesehene update_ids im Prozessspeicher (api/routers/webhook.py:40-48)
+    -- ueber Laeufe hinweg. Ein fester Startwert liefe im zweiten Lauf komplett ins Dedup."""
+    mod = _werkzeug()
+    w1 = _Welt()
+    assert w1.lauf(mod) == 0
+    w2 = _Welt()
+    w2.gesehene_updates = w1.gesehene_updates
+    rc2 = w2.lauf(mod)
+    out, err = _ausgabe(capsys)
+    assert rc2 == 0, f"zweiter Lauf: Exit {rc2}; stderr: {err[-800:]}"
+    assert not any(e["duplikat"] for e in w2.ereignisse if e["art"] == "webhook"), "Dedup-Treffer"
+    telegram = [l for l in _messlogik().dauerzeilen(w2.journal) if l["kanal"] == "telegram"]
+    assert len(telegram) == 15, f"zweiter Lauf: nur {len(telegram)} Telegram-Befehle verarbeitet"
+
+
+@pytest.mark.parametrize("lauf", [("de", 0), ("de", 1), ("korsika", 0)],
+                         ids=["de-heute", "de-morgen", "korsika-heute"])
+def test_probelauf_ohne_dauerzeile_ist_befund(capsys, lauf):
+    """F003: Fensterzeile mit downloads>0 liegt vor, nur die Dauerzeile fehlt -> kein Kaelte-Beleg."""
+    welt, rc, out, err = _erfolgslauf(capsys, ohne_dauerzeile={lauf})
+    _befund_ohne_env(welt, rc, out)
+    assert not [m for m in welt.mails() if m["befehl"] in ("HELP", "CODES", "STATUS")], (
+        "Probelauf ohne Dauerzeile, trotzdem Kurzbefehle eingeliefert")
+    assert not welt.kommando_posts() and not welt.put_historie, "Serie trotz fehlender Dauerzeile"
+
+
+@pytest.mark.parametrize("befehl,n,wort", [("HEUTE", 1, "heute"), ("STATUS", 3, "status"),
+                                           ("CODES", 5, "kuerzel"), ("HELP", 6, "hilfe")],
+                         ids=["probelauf-heute", "status-3", "kuerzel-5", "paar-hilfe"])
+def test_ausbleibende_mail_antwort_ist_befund(capsys, befehl, n, wort):
+    """F004 (E-Mail): Exit 0 heisst 'vollstaendig ausgeloest' (AC-12) -- ohne Antwort ist er es nicht."""
+    welt, rc, out, err = _erfolgslauf(capsys, keine_antwort={(befehl, n)})
+    _befund_ohne_env(welt, rc, out)
+    befund = _befund_zeilen(err)
+    assert any("E-Mail" in z and wort in z and "Antwort" in z for z in befund), (
+        f"Befund nennt Kanal E-Mail und Befehl {wort} nicht: {befund or err[-600:]}")
+
+
+def test_ausbleibende_telegram_dauerzeile_ist_befund(capsys):
+    """F004 (Telegram): das 4. Kommando (status, 2. Runde) erzeugt keine Dauerzeile."""
+    welt, rc, out, err = _erfolgslauf(capsys, telegram_still={4})
+    _befund_ohne_env(welt, rc, out)
+    befund = _befund_zeilen(err)
+    assert any("Telegram status" in z and "Dauerzeile" in z for z in befund), (
+        f"Befund nennt Kanal Telegram und Befehl status nicht: {befund or err[-600:]}")
+
+
+def test_telegram_wartet_auf_verspaetete_dauerzeile(capsys):
+    """F004: die Dauerzeile erscheint erst 10 s nach der Verarbeitung -- warten, nicht aufgeben."""
+    welt, rc, out, err = _erfolgslauf(capsys, telegram_verzoegerung_s=10.0)
+    assert rc == 0, f"verspaetete Dauerzeile: Exit {rc}; stderr: {err[-800:]}"
+    posts = welt.kommando_posts()
+    assert len(posts) == 15
+    zeilen = sorted(l["ts"] for l in _messlogik().dauerzeilen(welt.journal) if l["kanal"] == "telegram")
+    for p, z in zip(posts[1:], zeilen):
+        assert z <= p["t"], "naechstes Telegram-Kommando vor der Dauerzeile des vorigen gepostet"
+
+
+def test_mail_antwort_kommt_nur_ueber_den_poll_ausloeser(capsys):
+    """F004: ohne Cron-Takt verarbeitet nur der Poll-Ausloeser -- faellt er weg, keine Antwort."""
+    welt, rc, out, err = _erfolgslauf(capsys, ohne_cron=True)
+    assert rc == 0, f"ohne Cron: Exit {rc}; stderr: {err[-800:]}"
+    assert all(m["abgeholt_seq"] is not None for m in welt.mails()), "Antwort nie abgeholt"
+
+
+def test_startzeit_hat_die_z_form_fuer_journalctl_since(capsys):
+    """F005: der Konsument (tests/e2e/test_push_eingang_befehle_staging.py:191-205) parst den Wert
+    NICHT selbst, sondern reicht ihn roh an ``journalctl --since`` -- vereinbarte Form:
+    sekundengenaues UTC mit ``Z`` (wie es auch die Ersatzwelt-journal_quelle liest)."""
+    welt, rc, out, err = _erfolgslauf(capsys)
+    assert rc == 0
+    roh = _env_zeilen(out)["GZ_STAGING_MESSLAUF_SEIT"]
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", roh), f"Startzeit-Form {roh!r}"
+    assert datetime.strptime(roh, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) == (
+        START.astimezone(timezone.utc)), "Startzeit ist nicht der Laufbeginn in UTC"
+
+
+def test_verifikationsmail_nach_dem_schnappschuss_zaehlt_nicht_als_antwort(capsys):
+    """F006: Systemmail an die Plus-Adresse trifft 10 s nach der ersten Einlieferung ein."""
+    welt, rc, out, err = _erfolgslauf(capsys, verifikationsmail_s=10.0)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    assert any(m["cmd"] is None for m in welt.postfach), "Verifikationsmail nie eingestellt"
+    mails = welt.mails()
+    paar = _paar_help(welt)
+    for vor, nach in zip(mails, mails[1:]):
+        if nach is paar:
+            continue
+        assert vor["abgeholt_seq"] is not None and vor["abgeholt_seq"] < nach["seq"], (
+            f"{nach['befehl']} eingeliefert, bevor die echte Antwort auf {vor['befehl']} abgeholt war "
+            "(Verifikationsmail als Antwort gezaehlt?)")
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 2 (Adversary F-A2-02, F-A2-04)
+# ---------------------------------------------------------------------------
+
+def _telegram_zeilen_der_welt(welt: _Welt) -> list:
+    return sorted(l["ts"] for l in _messlogik().dauerzeilen(welt.journal) if l["kanal"] == "telegram")
+
+
+def test_telegram_warten_zaehlt_keine_verspaetete_mail_dauerzeile(capsys):
+    """F-A2-02 (AC-5/AC-8): waehrend des Wartens auf die (verzoegerte) Telegram-Dauerzeile des
+    4. Kommandos erscheint eine spaete kanal=email-Zeile -- sie beendet das Warten nicht."""
+    welt, rc, out, err = _erfolgslauf(capsys, telegram_verzoegerung_s=10.0, email_zeile_bei_telegram=4)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    spaet = [l for l in _messlogik().dauerzeilen(welt.journal)
+             if l["kanal"] == "email" and l["befehl"] == "STATUS"]
+    assert len(spaet) == 6, f"eingeworfene Mail-Dauerzeile nicht geparst ({len(spaet)} STATUS-Zeilen)"
+    posts = welt.kommando_posts()
+    zeilen = _telegram_zeilen_der_welt(welt)
+    assert len(posts) == 15 and len(zeilen) == 15
+    for i, (p, z) in enumerate(zip(posts[1:], zeilen), start=2):
+        assert z <= p["t"], (f"Telegram-Kommando {i} gepostet, bevor die Telegram-Dauerzeile des "
+                             "vorigen da war (Mail-Dauerzeile mitgezaehlt?)")
+
+
+def test_ausbleibende_telegram_dauerzeile_wird_nicht_durch_mail_zeile_ersetzt(capsys):
+    """F-A2-02: Telegram-Kommando 4 bleibt ohne Dauerzeile, dafuer kommt eine spaete Mail-Zeile."""
+    welt, rc, out, err = _erfolgslauf(capsys, telegram_still={4}, email_zeile_bei_telegram=4)
+    _befund_ohne_env(welt, rc, out)
+    befund = _befund_zeilen(err)
+    assert any("Telegram status" in z and "Dauerzeile" in z for z in befund), (
+        f"Befund nennt Kanal Telegram und Befehl status nicht: {befund or err[-600:]}")
+    assert len(welt.kommando_posts()) == 4, "nach der ausgebliebenen Dauerzeile weiter gepostet"
+
+
+def test_mail_antwort_nach_300_sekunden_wird_noch_angenommen(capsys):
+    """F-A2-04: die Antwort-Wartezeit ist 360 s -- eine Antwort nach ~300 s zaehlt noch."""
+    welt, rc, out, err = _erfolgslauf(capsys, antwort_verzoegerung={("STATUS", 1): 300.0})
+    assert rc == 0, f"Antwort nach 300 s: Exit {rc}; stderr: {err[-800:]}"
+    status = next(m for m in welt.mails() if m["befehl"] == "STATUS")
+    assert status["abgeholt_seq"] is not None, "verspaetete Antwort nie abgeholt"
+    assert (status["bereit"] - status["t"]).total_seconds() >= 300
+
+
+def test_mail_antwort_nach_mehr_als_360_sekunden_ist_befund(capsys):
+    """F-A2-04: kommt die Antwort erst nach > 360 s, ist der Lauf unvollstaendig."""
+    welt, rc, out, err = _erfolgslauf(capsys, antwort_verzoegerung={("STATUS", 1): 400.0})
+    _befund_ohne_env(welt, rc, out)
+    befund = _befund_zeilen(err)
+    assert any("E-Mail status" in z and "Antwort" in z for z in befund), (
+        f"Befund nennt E-Mail status nicht: {befund or err[-600:]}")
