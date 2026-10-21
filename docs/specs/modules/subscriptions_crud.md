@@ -8,6 +8,8 @@ version: "1.0"
 tags: [go, crud, subscriptions, chi, rest-api, json-store]
 ---
 
+> Teilweise abgelöst durch [ADR-0004](../../adr/0004-signal-channel-removed.md) (2026-06-06): das Feld `SendSignal`/`send_signal` und der Signal-Kanal gelten nicht mehr; Signal ist app-weit entfernt (#610).
+
 # Subscriptions CRUD
 
 ## Approval

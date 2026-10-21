@@ -351,7 +351,7 @@ erreicht, Entfernen ist Hygiene statt funktionale Notwendigkeit).
     einer CAPE-Grenzwert-Fixture (z.B. `cape_jkg=1200`), der dieselbe
     `ThunderLevel` vor und nach der `selectable`-Änderung liefert.
 
-- **AC-9 (ersetzt, PO-Nachtrag 2026-08-10):** Given ein Bestandstrip/-Preset
+- **AC-9:** (ersetzt, PO-Nachtrag 2026-08-10) Given ein Bestandstrip/-Preset
   mit bereits konfiguriertem CAPE-Alarm (`enabled=True` in der
   `display_config`, unabhängig ob Delta-Alarm #1592 oder Wertebereichs-
   Korridor) / When die Alarm-Engine die Aktivität der Größe prüft
@@ -368,7 +368,7 @@ erreicht, Entfernen ist Hygiene statt funktionale Notwendigkeit).
     `False`; Kollateralschaden-Wächter zeigt andere Alarmgrößen
     (`TEMPERATURE_MAX`, `WIND_GUST`) unverändert `True`.
 
-- **AC-10 (automatische Konsequenz von AC-1, gemessen):** Given ein CAPE-
+- **AC-10:** (automatische Konsequenz von AC-1, gemessen) Given ein CAPE-
   Wertebereichs-Korridor (`Corridor(metric="cape_max_jkg", ...)`) / When
   `resolve_corridor_summary_field()` das Feld auflöst / Then liefert sie
   `None` — der Korridor markiert nichts mehr. Kein eigener Code-Fix nötig

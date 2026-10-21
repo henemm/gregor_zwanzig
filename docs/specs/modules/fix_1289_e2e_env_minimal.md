@@ -151,7 +151,7 @@ Werte sind erfundene Test-Fixtures.
   - Test: `frontend/src/lib/__tests__/e2e_env_minimal.test.ts` liest die
     `env`-Ausgabe des Kindprozesses und prüft beide Werte.
 
-- **AC-2 (der eigentliche Sicherheitsgewinn):** Given dieselbe
+- **AC-2:** (der eigentliche Sicherheitsgewinn) Given dieselbe
   `.env`-Fixture enthält ein nicht benötigtes Secret wie `GZ_SMTP_PASS` /
   When derselbe Startvorgang läuft / Then ist `GZ_SMTP_PASS` NICHT im
   resultierenden Prozess-Environment vorhanden — die frühere

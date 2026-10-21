@@ -220,7 +220,7 @@ Zugriff auf E-Mail/Telegram.
 
 ## Acceptance Criteria
 
-- **AC-1 (Abweichungsalarm: Kanal-Auflösung + Schwelle konsistent bis zu allen vier Kanälen):**
+- **AC-1:** (Abweichungsalarm: Kanal-Auflösung + Schwelle konsistent bis zu allen vier Kanälen)
   Given ein über `app.loader` geladener Trip mit aktiven Wetter-Delta-Regeln, `alert_channels` mit
   genau zwei eingeschalteten Kanälen, `alert_metric_channels` mit einer abweichenden Kanal-Auswahl
   für eine einzelne Metrik, und einer `alert_channel_thresholds`-Schwelle, die den Auslöser für
@@ -232,7 +232,7 @@ Zugriff auf E-Mail/Telegram.
     — Erwartung aus `resolve_alert_channels()`/`split_by_threshold()` unabhängig nachgebildet im
     Orakel, nicht aus der Produktfunktion übernommen.
 
-- **AC-2 (Radar-Alarm: Kanal-Auflösung + Schwelle über alle vier Kanäle):** Given ein geladener Trip
+- **AC-2:** (Radar-Alarm: Kanal-Auflösung + Schwelle über alle vier Kanäle) Given ein geladener Trip
   mit `alert_channels` (drei von vier Kanälen an) und einer Radar-Schwelle, die den Auslöser knapp
   unterschreitet, sowie eine Gegenprobe knapp überschreitet / When der Radar-Alarm über dieselbe
   Prüfstrecke ausgelöst wird / Then bleibt die Auslieferung im ersten Fall aus, im zweiten Fall
@@ -240,7 +240,7 @@ Zugriff auf E-Mail/Telegram.
   anders behandelt als bei Abweichung.
   - Test: `test_alarm_radar_kette.py::test_radar_kanalmatrix_und_schwelle_konsistent`.
 
-- **AC-3 (Amtliche Warnungen, Fall 1 — aktueller Schalter):** Given ein geladener Trip mit
+- **AC-3:** (Amtliche Warnungen, Fall 1 — aktueller Schalter) Given ein geladener Trip mit
   `official_warnings.enabled=true` und einem beliebigen, auch widersprüchlichen Stand des
   Legacy-Felds `official_alert_triggers_enabled` (z. B. `false`), sowie **keine** aktive
   Wetter-Delta-Regel / When `check_official_alert_triggers()` über die Prüfstrecke für eine echte
@@ -248,13 +248,13 @@ Zugriff auf E-Mail/Telegram.
   eingeschalteten Kanäle ausgeliefert — der aktuelle Schalter hat Vorrang vor dem veralteten Feld.
   - Test: `test_alarm_amtliche_warnungen_kette.py::test_official_warnings_enabled_hat_vorrang`.
 
-- **AC-4 (Amtliche Warnungen, Fall 2 — Alt-Daten mit nur Legacy-Feld):** Given ein geladener Trip
+- **AC-4:** (Amtliche Warnungen, Fall 2 — Alt-Daten mit nur Legacy-Feld) Given ein geladener Trip
   ohne `official_warnings`-Block (Alt-Daten-Fall) und `official_alert_triggers_enabled=true` /
   When derselbe Auslöser läuft / Then wird die amtliche Alarm-Nachricht wie beim aktuellen Schalter
   ausgeliefert — Altbestand ohne den neuen Block funktioniert unverändert weiter.
   - Test: `test_alarm_amtliche_warnungen_kette.py::test_legacy_feld_traegt_bei_fehlendem_official_warnings_block`.
 
-- **AC-5 (Bug-Fix: der beschriebene Bug-Fall löst nach dem Fix eine amtliche Alarm-Nachricht aus):**
+- **AC-5:** (Bug-Fix: der beschriebene Bug-Fall löst nach dem Fix eine amtliche Alarm-Nachricht aus)
   Given ein geladener Trip mit `official_warnings.enabled=true`, `official_alert_triggers_enabled=false`
   (historisch vor #1258 ausgeschaltet) und **keiner** aktiven Wetter-Delta-Regel / When der reguläre
   Sammellauf (nicht nur `check_official_alert_triggers()` direkt, sondern der Vorab-Filter in
@@ -266,7 +266,7 @@ Zugriff auf E-Mail/Telegram.
     aus Nutzersicht: der Sammellauf-Einstieg wird verwendet, nicht der öffentliche Einstiegspunkt
     isoliert, sonst fängt der Test den Bug nicht.
 
-- **AC-6 (Cooldown/Quiet-Hours im Alarm-Pfad):** Given ein geladener Trip mit
+- **AC-6:** (Cooldown/Quiet-Hours im Alarm-Pfad) Given ein geladener Trip mit
   `alert_cooldown_minutes` und `alert_quiet_from`/`alert_quiet_to`, ein Abweichungsalarm, der
   innerhalb der Quiet-Hours ausgelöst wird, und ein zweiter Alarm-Auslöser innerhalb des
   Cooldown-Fensters nach einem bereits versendeten Alarm / When beide Fälle über die Prüfstrecke
@@ -275,14 +275,14 @@ Zugriff auf E-Mail/Telegram.
   - Test: `test_alarm_abweichung_kette.py::test_cooldown_und_quiet_hours_unterdruecken_den_alarm`,
     parametrisiert über beide Sperren; Gegenprobe außerhalb der Sperren im selben Test.
 
-- **AC-7 (SMS-Paritäts-Korrektur #1088):** Given ein Abweichungsalarm, dessen gebündelte Mail einen
+- **AC-7:** (SMS-Paritäts-Korrektur #1088) Given ein Abweichungsalarm, dessen gebündelte Mail einen
   eingebetteten amtlichen Zusatzblock trägt / When die zugehörige SMS gerendert und versendet wird /
   Then enthält die SMS mindestens einen kurzen Hinweistext auf die amtliche Warnung — vor dem Fix
   fehlt der Zusatzblock in der SMS vollständig und ohne jeden Hinweis.
   - Test: `test_alarm_sms_paritaet_amtlicher_zusatz.py::test_sms_enthaelt_hinweis_auf_amtliche_warnung_bei_gebuendeltem_alarm`
     — rot vor dem Fix, grün danach; prüft den gerenderten SMS-Text, kein Dateiinhalt-Check.
 
-- **AC-8 (Negativ-Test: bewusste Nicht-Parität `metrics` nur bei Abweichungsalarm):** Given ein
+- **AC-8:** (Negativ-Test: bewusste Nicht-Parität `metrics` nur bei Abweichungsalarm) Given ein
   geladener Trip mit `alert_metric_channels` gesetzt / When ein Radar-Alarm **und** eine amtliche
   Warnung ausgelöst werden / Then wird `alert_metric_channels` bei beiden **nicht** ausgewertet —
   die Kanalauflösung für Radar und amtlich hängt strukturell nicht von der Metrik ab. Der Test

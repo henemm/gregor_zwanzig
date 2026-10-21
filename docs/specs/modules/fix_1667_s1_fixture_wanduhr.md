@@ -268,7 +268,7 @@ Regel-Budget-Prüfdatum s. u.).
     (nach dem Fixture-Umbau); Assert Exit 0 bzw. `check_radar_alerts()`
     liefert wieder 1 Treffer.
 
-- **AC-3 (Kippkanten):** Given dieselben umgebauten Fixturen aus
+- **AC-3:** (Kippkanten) Given dieselben umgebauten Fixturen aus
   `test_alert_log_metrics.py`/`test_alert_urgency.py` (+1h/+4h-Familie),
   `test_issue_827_radar_throttle_recording.py`/`test_issue_1070_daily_alert_limit.py`/
   `test_alert_channel_threshold.py` (+2h/+4h-Familie) und die
@@ -298,7 +298,7 @@ Regel-Budget-Prüfdatum s. u.).
       Segmentliste. Ein Test dieser Familie an 22:00/23:00 UTC wäre
       **grün aus dem falschen Grund** und bewiese nichts.
 
-- **AC-4 (keine zeitabhängigen Skips mehr):** Given
+- **AC-4:** (keine zeitabhängigen Skips mehr) Given
   `test_issue_818_radar_briefing_integration.py::test_ac5_past_segment_no_alert_guard_test`
   und `test_alarm_zeitfenster_ziel.py` (die Testfunktion um Zeile 350) /
   When beide unter `freeze_time` auf eine Uhrzeit laufen, die vorher den
@@ -309,7 +309,7 @@ Regel-Budget-Prüfdatum s. u.).
     Zeitpunkte setzen, `pytest -rs` (zeigt Skip-Gründe) auf beide
     Testfunktionen; Assert keine Zeile mit `SKIPPED` für diese Tests.
 
-- **AC-5 (Mutations-Gegenprobe):** Given der Helfer
+- **AC-5:** (Mutations-Gegenprobe) Given der Helfer
   `active_window_offsets()` wird in der 02:00–22:00-Klemmung deaktiviert
   (z. B. `day_start`/`day_end`-Klemmung durch eine No-Op ersetzt, sodass er
   wieder rohe `now + N h`-Werte ohne Tagesgrenze liefert) / When
@@ -322,7 +322,7 @@ Regel-Budget-Prüfdatum s. u.).
     `active_window_offsets()`, dann `freeze_time("...23:30:00+00:00")` +
     Testlauf; Assert `AssertionError`. Mutation danach zurückspielen.
 
-- **AC-6 (Nicht-Wirkung, Produktivcode unangetastet):** Given der
+- **AC-6:** (Nicht-Wirkung, Produktivcode unangetastet) Given der
   vollständige Diff dieser Scheibe / When `git diff --stat
   origin/main...HEAD -- src/ api/ internal/ frontend/ cmd/` ausgeführt wird
   / Then ist die Ausgabe leer (null geänderte Zeilen in Produktivcode) —

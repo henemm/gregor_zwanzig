@@ -176,7 +176,7 @@ Ankunft an dieser Etappe ein Gewitter", nicht eine weitere Unterscheidung. Das h
   - Test: echter Aufruf von `render_telegram_bubbles()` — Assert auf den Fußzeilen-Text der
     zurückgegebenen Bubble(s).
 
-- **AC-5 (Konsistenz-Invariante):** Given denselben Fall wie AC-1 / When alle vier Kanäle
+- **AC-5:** (Konsistenz-Invariante) Given denselben Fall wie AC-1 / When alle vier Kanäle
   (SMS, Kurzzusammenfassung, Pille, Telegram-Fußzeile) **und** die Detailtabelle „Nacht am Ziel"
   aus demselben `TripReportFormatter.format_email()`-Aufruf erzeugt werden / Then melden alle
   fünf Ausgaben übereinstimmend ein Gewitter für dieselbe Etappe (keiner widerspricht einem
@@ -184,25 +184,25 @@ Ankunft an dieser Etappe ein Gewitter", nicht eine weitere Unterscheidung. Das h
   - Test: ein einziger `format_email()`-Aufruf mit derselben Fixture, Assert über alle fünf
     Ausgabefelder des `TripReport` hinweg.
 
-- **AC-6 (Zukunfts-Cutoff):** Given ein Gewitter in `night_weather`, dessen Zeitstempel **vor**
+- **AC-6:** (Zukunfts-Cutoff) Given ein Gewitter in `night_weather`, dessen Zeitstempel **vor**
   dem Report-Erzeugungszeitpunkt liegt (bereits vergangene Nachtstunde) / When einer der vier
   Kanäle gerendert wird / Then löst diese vergangene Stunde **kein** Gewitter-Token/keine
   Gewitter-Pille aus (nur zukunftsrelevante Stunden zählen).
   - Test: Fixture mit `night_weather`-Zeitstempeln vor und nach einem fixierten
     Report-Erzeugungszeitpunkt; Assert, dass nur die zukünftige Stunde durchschlägt.
 
-- **AC-7 (Regressionsschutz Wanderzeit):** Given eine Etappe ohne Gewitter in `night_weather`,
+- **AC-7:** (Regressionsschutz Wanderzeit) Given eine Etappe ohne Gewitter in `night_weather`,
   aber mit unverändertem Wanderzeit-Verhalten wie vor diesem Fix / When alle vier Kanäle
   gerendert werden / Then bleibt das Ergebnis identisch zum Vorzustand, und die
   ADR-0025-Bestandstests (SMS-`TH:`/`TH+:`, Telegram-Fußzeile, Kopfzeile) bleiben grün.
   - Test: bestehende ADR-0025-Testsuiten (u. a. zu #1275) unverändert grün nach dem Fix.
 
-- **AC-8 (kein neues SMS-Token):** Given den Fall aus AC-1 / When die SMS gerendert wird / Then
+- **AC-8:** (kein neues SMS-Token) Given den Fall aus AC-1 / When die SMS gerendert wird / Then
   bleibt die Token-Menge der SMS unverändert (`TH:` trägt die erweiterte Aussage, `TH+:` bleibt
   unverändert die Folgetag-Vorschau) und die SMS überschreitet weiterhin nicht 160 Zeichen.
   - Test: `format_sms()`-Aufruf mit `max_length=160`, Assert auf Zeichenlänge und Token-Anzahl.
 
-- **AC-9 (fehlendes night_weather → fail-soft):** Given `night_weather is None` (z. B.
+- **AC-9:** (fehlendes night_weather → fail-soft) Given `night_weather is None` (z. B.
   `dc.show_night_block == False`, kein Zielsegment oder kein Nacht-Fetch) / When einer der vier
   Kanäle gerendert wird / Then verhält sich der Kanal exakt wie vor diesem Fix (reine
   Wanderzeit-Fensterung), ohne Fehler oder Absturz.
@@ -210,7 +210,7 @@ Ankunft an dieser Etappe ein Gewitter", nicht eine weitere Unterscheidung. Das h
     `render_telegram_bubbles()` jeweils mit `night_weather=None` aufgerufen — Assert auf
     fail-soft-Verhalten (kein Exception, Ergebnis wie im Bestand).
 
-- **AC-10 (gemeldeter Fall #1317 — MORGEN-Report):** Given ein **Morgen-Report** (Erzeugung
+- **AC-10:** (gemeldeter Fall #1317 — MORGEN-Report) Given ein **Morgen-Report** (Erzeugung
   ~07:00), dessen `night_weather` (Nacht nach der heutigen Ankunft, seit #1313 auch morgens
   befüllt) ein Gewitter um 14:00 enthält / When das komplette Briefing über
   `TripReportFormatter.format_email()` mit `report_type="morning"` erzeugt wird / Then zeigen

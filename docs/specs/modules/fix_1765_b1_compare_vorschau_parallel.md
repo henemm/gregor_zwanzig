@@ -311,18 +311,18 @@ umzubauen.
   Vorhersage-Zeitraum wie zuvor — keiner der Orte darf beim Aufteilen der Arbeit ein falsches
   oder fehlendes Fenster bekommen.
 
-- **AC-7 (unverändert bleibt):** Given ein Orts-Vergleich mit mehreren Orten in einer vom
+- **AC-7:** (unverändert bleibt) Given ein Orts-Vergleich mit mehreren Orten in einer vom
   Nutzer festgelegten Reihenfolge / When die Vorschau als E-Mail, als Telegram-Nachricht, als
   SMS-Text und in der Weboberfläche dargestellt wird / Then erscheinen die Orte in allen vier
   Darstellungen weiterhin in genau der vom Nutzer festgelegten Reihenfolge — unverändert
   gegenüber dem heutigen Verhalten.
 
-- **AC-8 (unverändert bleibt):** Given eine Anfrage an die Vergleichs-Vorschau, die heute mit
+- **AC-8:** (unverändert bleibt) Given eine Anfrage an die Vergleichs-Vorschau, die heute mit
   „Preset nicht gefunden", „ungültige Eingabe" oder „Wetterdaten aktuell nicht verfügbar"
   beantwortet wird / When dieselbe Anfrage nach dieser Umstellung erneut gestellt wird / Then
   bleibt die Fehlermeldung in Form und Inhalt identisch zu vorher.
 
-- **AC-9 (unverändert bleibt, Scheibe-A-Ratsche):** Given eine Vergleichs-Vorschau mit
+- **AC-9:** (unverändert bleibt, Scheibe-A-Ratsche) Given eine Vergleichs-Vorschau mit
   mehreren Orten wird gerade berechnet / When währenddessen der allgemeine
   Erreichbarkeits-Check des Dienstes aufgerufen wird / Then antwortet dieser weiterhin sofort
   und erfolgreich — die neue gleichzeitige Ortsverarbeitung darf die mit Scheibe A bereits

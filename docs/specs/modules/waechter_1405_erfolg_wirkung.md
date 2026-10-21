@@ -663,10 +663,10 @@ keinen — sie sind jetzt B19/B20 in der Restliste.
 - **AC-16b (NEU, S-7):** Given eine synthetische Funktion mit einem Dekorator, der selbst ein `ast.Call` ist (`@router.get("/health")`), aber ohne jeden Aufruf im eigenen Funktionsrumpf / When der Scanner sie einliest / Then wird KEIN Klasse-1-Fund gemeldet — der Dekorator erfüllt Bedingung (a) nicht.
   - Test: bereits Teil von `test_scanner_ignores_pure_liveness_endpoint()` (synthetischer Zwilling); kein zusätzlicher Test nötig, da AC-16 den Dekorator-Fall bereits mit abdeckt.
 
-- **AC-17 (NEU, E3/B18):** Given die zehn in `trip_command_processor.py` gelisteten Funktionen (B18) / When der Wächter über die Scanfläche läuft / Then schlägt er in `_handle_query` mindestens 4× und in den übrigen neun je mindestens 1× an (Teil der AC-1-Gesamtprüfung, hier als eigene AC benannt, weil B18 ein dateiweites Muster ist, dessen Einzelnachweis sonst in der Summenzahl untergehen würde).
+- **AC-17:** (NEU, E3/B18) Given die zehn in `trip_command_processor.py` gelisteten Funktionen (B18) / When der Wächter über die Scanfläche läuft / Then schlägt er in `_handle_query` mindestens 4× und in den übrigen neun je mindestens 1× an (Teil der AC-1-Gesamtprüfung, hier als eigene AC benannt, weil B18 ein dateiweites Muster ist, dessen Einzelnachweis sonst in der Summenzahl untergehen würde).
   - Test: Teil von `test_scanner_finds_every_spec_listed_finding()` (AC-1); keine separate Testfunktion.
 
-- **AC-18 (NEU, E4/B19+B20):** Given `inbound_email_reader.py::poll_and_process` und `inbound_telegram_reader.py::poll_and_process` / When der Wächter läuft / Then werden beide als Klasse-2-Fund erkannt (nicht mehr als „kein Fund" behandelt).
+- **AC-18:** (NEU, E4/B19+B20) Given `inbound_email_reader.py::poll_and_process` und `inbound_telegram_reader.py::poll_and_process` / When der Wächter läuft / Then werden beide als Klasse-2-Fund erkannt (nicht mehr als „kein Fund" behandelt).
   - Test: Teil von `test_scanner_finds_every_spec_listed_finding()` (AC-1); die frühere Behauptung „kein Fund" ist entfallen (kein eigener Negativ-Test mehr nötig).
 
 ## Known Limitations

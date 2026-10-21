@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.34"
+version: "2.35"
 status: active
 created: 2025-12-27
-updated: 2026-10-08
+updated: 2026-10-21
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -55,6 +55,23 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 - **Werte-Rundung:** Temperaturen ganzzahlig gerundet; Niederschlag mit einer Nachkommastelle; Wind/Böen ganzzahlig.
 - **Threshold = Max:** Wenn Threshold-Wert UND Threshold-Stunde exakt dem Tagesmaximum entsprechen, wird der Peak-Block `(max@h)` weggelassen (Details §5).
 - **Priorität bei Truncation:** Thunderstorm > Wind/Gusts > Rain > Temperatur (siehe §6).
+
+### 1a. Befehlseingang je Kanal (Ist-Stand 2026-10-21)
+
+Die normale SMS (`sms`) ist ein **reiner Ausgangskanal**: Es gibt keinen Pfad, der eine
+eingehende SMS von der Nummer `sms_to` einem Nutzer zuordnet, keinen `InboundMessage` mit
+`channel="sms"` und keine `send_command_reply_sms`. Der einzige SMS-Eingang (seven.io-Journal,
+`src/services/inbound_sms_reader.py:239`) verarbeitet nur Nachrichten an die Dienstnummer und ordnet
+sie über den Premium-SMS-Lernpfad Premium-Konten zu — die Antwort geht als Premium-SMS.
+`TripCommandProcessor` führt `sms` zwar in `_KURZFORM_KANAELE` (`trip_command_processor.py:782`),
+dieser Zweig hat heute aber keinen eingehenden Aufrufer.
+
+| Kanal | Befehlseingang | Weg | Antwort |
+|---|---|---|---|
+| E-Mail | ja | IMAP-Poll `inbound_command_poll` (`*/5` + Push `/api/webhooks/mail/{secret}`), Absender → Nutzer, Trip aus Betreff | E-Mail |
+| Telegram | ja | Webhook `/api/webhooks/telegram/{secret}`, Chat-ID → Nutzer (`telegram_format.md` §3) | Telegram |
+| Premium-SMS | ja | seven.io-Journal-Poll `premium_sms_poll` (`*/5` + Push `/api/webhooks/sms/{secret}`) (`premium_sms_format.md` §4) | Premium-SMS |
+| SMS | **nein** | — | — |
 
 ---
 
@@ -727,6 +744,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.32 | 2026-09-27 | **Kurzform ist englisch — Kürzel bereinigt (Issue #2417).** Eingabe-Kürzel `temperature` (Stundenverlauf) wechselt von `D` auf `T`, weil `D` in der SMS bereits der Tageshöchstwert ist (kein Formatwechsel — nur betroffen ist die per Nachricht abfragbare Bedeutung, siehe §3.4c). Amtliche Warn-Kürzel `TS`/`FO`/`RA`/`WG`/`AB` ersetzen `TH`/`FL`/`HR`/`W`/`CL` (§3.4c), Météo-France-Vigilance `VR:`/`VT:` ersetzt `HR:`/`TH:` (§3.3/§3.4). Neuer Befehl `CODES`/`KUERZEL` liefert die vollständige Kürzel-Legende auf Anfrage. Spec: `docs/specs/modules/feat_2417_kurzform_englisch.md`. |
 | 2.33 | 2026-10-01 | **Register leeren (Issue #2422 S6).** (B1) `TF` ist jetzt auch im **Trip** ein Token (Eltern-Metrik `wind_chill`): `TF<Tiefstwert °C>@<Stunde>` über das Tagesfenster, `TF-` ohne Stundenwerte, `TF?` bei Datenlücke; fällt beim Kürzen als allererstes Komfort-Token (`TF`, `FN`, `FL`, `FD`); `KÜRZEL`/`CODES` im Trip-Kontext nennen `TF` wieder (löst #2454 AC-6/AC-7 ab). (B2) Roh/Einfach je Metrik wirkt jetzt in SMS, Premium-SMS und Telegram-Kurzform für Wolken (`cloud_total`/`low`/`mid`/`high`): Einfach-Stufen identisch zu den E-Mail-Bändern (z. B. `CT:SCT@4` statt `CT70@4`); Quelle `SMS_FORMAT_MODE_METRIC_IDS`, Bestandsnutzer behalten den Default. (B3) Telegram rich nutzt seine eigene Roh/Einfach-Einstellung statt der E-Mail-Einstellung. (B5) Keine Windrichtungs-Geisterspalte in Telegram, wenn `wind_direction` mit Wind zusammengeführt ist. Spec: `docs/specs/modules/fix_2422_s6_register_leeren.md`. |
 | 2.34 | 2026-10-08 | **Confidence-Symbol `C+`/`C~`/`C?` gestrichen (Issue #2233, PO-Entscheid 2026-09-08).** Das Token war seit v2.1 spezifiziert, wurde aber nie erzeugt (`"C"` fehlt in `POSITIONAL`/`PRIORITY` von `src/output/tokens/builder.py`). §2-Zeile und §3.4b entfernt; keine Codeänderung. |
+| 2.35 | 2026-10-21 | Neuer §1a: Befehlseingang je Kanal (Ist-Stand) — normale SMS hat keinen Befehlseingang; Verweise auf `telegram_format.md` und `premium_sms_format.md`. Keine Formatänderung. |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

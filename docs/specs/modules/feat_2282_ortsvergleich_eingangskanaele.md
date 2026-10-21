@@ -8,6 +8,8 @@ version: "1.1"
 tags: [ortsvergleich, inbound, trip-command-processor, trip-selection, epic-2133, epic-1374, issue-2282]
 ---
 
+> Teilweise abgelöst durch `feat_2417_befehle_e2e_echter_eingang` (2026-09-25): AC-4 (Rückfrage bei Trip+Ortsvergleich für jeden Befehl) gilt nicht mehr — nur `pause`/`weiter` fragen noch nach (Vermerk direkt an AC-4).
+
 # Ortsvergleich über Eingangskanäle ansprechbar — Scheibe S1 (Auswahl, Rückfrage, Pause/Weiter)
 
 ## Approval

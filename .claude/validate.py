@@ -38,6 +38,18 @@ def save_state(state: dict):
         json.dump(state, f, indent=2)
 
 
+def git_changed_py_files(root: Path = PROJECT_ROOT) -> list[str]:
+    """Geaenderte .py-Dateien im ARBEITSBAUM (#2228), relativ zur Repo-Wurzel:
+    gegenueber HEAD (staged + unstaged) plus untracked; geloeschte entfallen."""
+    names: set[str] = set()
+    for args in (["diff", "--name-only", "HEAD"],
+                 ["ls-files", "--others", "--exclude-standard"]):
+        r = subprocess.run(["git", *args], capture_output=True, text=True, cwd=root)
+        if r.returncode == 0:
+            names.update(line.strip() for line in r.stdout.splitlines() if line.strip())
+    return sorted(n for n in names if n.endswith(".py") and (root / n).is_file())
+
+
 def check_syntax(file_path: Path) -> tuple[bool, str]:
     """Check Python syntax."""
     result = subprocess.run(
@@ -53,7 +65,8 @@ def check_syntax(file_path: Path) -> tuple[bool, str]:
 
 def check_import(module_path: str) -> tuple[bool, str]:
     """Check if module can be imported."""
-    # Convert file path to module path
+    # Convert file path to module path (#2228: Pfade relativ zur Repo-Wurzel)
+    module_path = module_path.removeprefix("src/")
     if module_path.startswith("web/"):
         module = module_path.replace("/", ".").replace(".py", "")
     elif module_path.startswith("app/"):
@@ -93,7 +106,12 @@ def check_server_startup() -> tuple[bool, str]:
 def run_validation(quick: bool = False) -> bool:
     """Run all validation checks."""
     state = load_state()
-    files_changed = state.get("files_changed", [])
+    # #2228: Quelle ist der Arbeitsbaum (git); State-Eintraege (relativ zu
+    # src/) nur noch als Ergaenzung.
+    files_changed = git_changed_py_files()
+    for extra in state.get("files_changed", []):
+        if f"src/{extra}" not in files_changed:
+            files_changed.append(f"src/{extra}")
 
     if not files_changed:
         print("✓ Keine Änderungen zu validieren")
@@ -108,7 +126,7 @@ def run_validation(quick: bool = False) -> bool:
         print(f"  {rel_path}")
 
         # Find full path
-        full_path = PROJECT_ROOT / "src" / rel_path
+        full_path = PROJECT_ROOT / rel_path
         if not full_path.exists():
             print(f"    ⚠ Datei nicht gefunden")
             continue

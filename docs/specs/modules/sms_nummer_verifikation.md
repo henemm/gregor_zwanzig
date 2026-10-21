@@ -695,7 +695,7 @@ dem vorgezogenen `stop` um.
   - Test: Handler-Test-Sequenz: PUT (B) → PUT (C) → POST verify mit dem für B ausgestellten
     (Test-Seam-)Code → `400 invalid_code`; POST verify mit dem für C ausgestellten Code → `200`.
 
-- **AC-17 (Live-E2E):** Given ein Testkonto auf Staging (SMS-fähiger Tarif) / When es im Browser
+- **AC-17:** (Live-E2E) Given ein Testkonto auf Staging (SMS-fähiger Tarif) / When es im Browser
   (a) eine neue Nummer im Profil einträgt, (b) über `POST /api/auth/sms/staging-code` den
   Klartext-Code für das eigene Konto holt (Ersatz für echten SMS-Empfang), (c) den Code in der
   Kontoseite einträgt und bestätigt / Then zeigt die Kontoseite danach die Nummer als „bestätigt" an,

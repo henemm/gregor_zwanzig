@@ -218,6 +218,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/briefings` | GET, POST |
 | `/api/briefings/{id}` | DELETE, GET, PUT |
 | `/api/briefings/{id}/alert-preview` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; kind-neutrale Alarm-Vorschau, Section 20 (#2283 S4)
+| `/api/briefings/{id}/briefing-history` | GET | — `?kind=route\|vergleich` Pflicht (400 bei fehlendem/ungültigem kind oder ungültiger ID), 401 ohne Nutzer, unbekannte ID 200 `[]`; kind-neutrales Versand-Log, Section 21 (#2281)
 | `/api/briefings/{id}/preview` | GET | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; EIN Abruf, alle Kanäle, Section 20 (#2283 S1)
 | `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
 | `/api/cockpit/status` | GET |
@@ -262,7 +263,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/trips` | GET, POST |
 | `/api/trips/{id}` | DELETE, GET, PUT |
 | `/api/trips/{id}/alert-preview` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/alert-preview?kind=route` (#2283)
-| `/api/trips/{id}/briefing-history` | GET |
+| `/api/trips/{id}/briefing-history` | GET | — Alias auf denselben Handler wie `/api/briefings/{id}/briefing-history?kind=route`, identische Antwort (#2281)
 | `/api/trips/{id}/send` | POST | — Delegate (Alt-Route) auf denselben Versandweg wie `/api/briefings/{id}/send?kind=route` (#2280)
 | `/api/trips/{id}/stages/weather` | GET |
 | `/api/trips/{id}/state` | PATCH |
@@ -369,7 +370,21 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 |--------------------|-----------------|------------------------------------------------|
 | cloud_low_pct      | integer (0–100) | Tiefwolken-Anteil [%]                          |
 | pop_pct            | integer (0–100) | Niederschlagswahrscheinlichkeit [%] (Duplikat deprecated — siehe pop_pct Basis-Feld) |
-| wind_dir_deg       | integer (0–359) | Windrichtung [Grad]                            |
+| wind_direction_deg | integer (0–359) | Windrichtung [Grad], 0=N/90=O. Python nimmt `wind_dir_deg=` als Alias an und kanonisiert (`src/app/models.py`, #435) — auf der Leitung heißt das Feld `wind_direction_deg` |
+| cloud_mid_pct      | integer (0–100) | Mittelhohe Wolken (3–8 km) [%]                 |
+| cloud_high_pct     | integer (0–100) | Hohe Wolken (ab 8 km) [%]                      |
+| uv_index           | float           | UV-Index                                       |
+| wmo_code           | integer (0–99)  | WMO-Wettercode                                 |
+| is_day             | integer (0/1)   | 1 = Tag, 0 = Nacht (Open-Meteo)                |
+| dni_wm2            | float           | Direktnormalstrahlung [W/m²]                   |
+| confidence_pct     | integer (0–100) | Ensemble-Verlässlichkeit, lead-time-gedeckelt — **keine wählbare Metrik** (#710) |
+| spread_t2m_k       | float           | Ensemble-σ Temperatur [K]                      |
+| spread_precip_mm   | float           | Ensemble-σ Niederschlag [mm]                   |
+
+Go-Spiegel: `internal/model/forecast.go::ForecastDataPoint` trägt die Basis-, Wintersport- und diese
+Zusatzfelder (alle `omitempty`), **nicht** `symbol` und **nicht** die Gewitter-Roh-/Zusatzfelder unten —
+die existieren nur im Python-DTO. `ForecastMeta` (Go): `provider`, `model`, `run`, `grid_res_km`,
+`interp`, `stations_used`, `fallback_model`, `fallback_metrics`; Hülle `Timeseries` = `{timezone, meta, data}`.
 
 #### Gewitter-Zusatzfeld Météo-France (optional, Issue #1457 S2a)
 | Feld                          | Typ           | Beschreibung                                   |
@@ -673,7 +688,24 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | snowfall_limit_m      | int \| None          | Schneefallgrenze [m] — MIN über das Segment (#1391) |
 | thunder_onset_utc     | datetime \| None     | **Beginn** des Gewitters (#1468): erste Stunde **im Tagesfenster** mit Gewitterstufe ≥ `LOW`, als naiver UTC-Zeitstempel (Hausnorm `src/utils/timezone.py`), **keine** Stundenzahl. `None`, wenn im Fenster kein Gewitter auftritt — ebenso bei Wetter-Ankern aus der Zeit vor #1468 (additives Feld, alte Anker laden unverändert). Maßgeblich ist das **für die Tour konfigurierte** Tagesfenster (`day_window_start_hour`/`day_window_end_hour`), damit Alarm und Briefing dieselbe Uhrzeit nennen |
 | precip_heavy_onset_utc | datetime \| None    | **Beginn** des Starkregens (#1468), gleiche Semantik: erste Stunde im Tagesfenster mit einer Regenintensität ≥ 4,0 mm/h (dieselbe Schwelle wie `radar_service.INTENSITY_HEAVY`). Datenquelle ist `precip_rate_mmph`, wo der Provider sie liefert (Geosphere), sonst der Stundenwert `precip_1h_mm` (Open-Meteo führt keine Rate) — bei 1-Stunden-Auflösung dieselbe Zahl |
+| wind_direction_avg_deg | int \| None        | Mittlere Windrichtung [Grad] (Python-Alias `wind_dir_deg_avg=`) |
+| precip_type_dominant  | PrecipType \| None   | Vorherrschender Niederschlagstyp                 |
+| pop_max_pct           | int \| None          | Max. Niederschlagswahrscheinlichkeit [%]         |
+| cape_max_jkg          | float \| None        | Max. CAPE [J/kg]                                 |
+| uv_index_max          | float \| None        | Max. UV-Index                                    |
+| snow_new_sum_cm       | float \| None        | Neuschnee-Summe [cm]                             |
+| dominant_wmo_code     | int \| None          | Schwerster WMO-Code im Segment                   |
+| sunny_hours           | float \| None        | Sonnenstunden [h] (#347) — **Go-Struct heißt abweichend `sunny_hours_h`** |
 | aggregation_config    | dict[str, str]       | Metadata: Aggregations-Funktionen pro Metrik     |
+
+Go-Spiegel `internal/model/segment.go::SegmentWeatherSummary` (alle `omitempty`): `temp_min_c`,
+`temp_max_c`, `temp_avg_c`, `wind_max_kmh`, `gust_max_kmh`, `wind_direction_avg_deg`, `precip_sum_mm`,
+`precip_type_dominant`, `cloud_avg_pct`, `humidity_avg_pct`, `thunder_level_max`, `visibility_min_m`,
+`freezing_level_m`, `wind_chill_min_c`, `pop_max_pct`, `cape_max_jkg`, `pressure_avg_hpa`,
+`dewpoint_avg_c`, `uv_index_max`, `sunny_hours_h`, `snow_depth_cm`, `snow_new_sum_cm`,
+`dominant_wmo_code`. Der Go-Struct wird von keinem Handler/Store referenziert (Stand 2026-10-21) —
+maßgeblich ist das Python-DTO (`src/app/models.py`); die übrigen Python-Felder (Cloud-Schichten,
+Onset-Zeiten, `snowfall_limit_m`, `dni_avg_wm2`, `confidence_pct_min`, `hail_flag` u. a.) fehlen in Go.
 
 #### SegmentWeatherCache
 | Feld        | Typ                  | Beschreibung                         |
@@ -2819,7 +2851,7 @@ Google OAuth users receive the same session mechanism as password-auth users:
 
 ---
 
-## 17) Compare-Preset Model (Issue #458)
+## 17.1) Compare-Preset Model (Issue #458)
 
 Das neue `ComparePreset`-Datenmodell für Auto-Briefings (Orts-Vergleiche) mit CRUD-Endpoints.
 
@@ -2884,7 +2916,7 @@ Alle Endpoints filtern nach dem eingeloggten User (via `middleware.UserIDFromCon
 
 ---
 
-## 17) Compare-Presets Daily Dispatch Endpoint (Issue #461, Slot-Zeitplan seit #1232 Scheibe 2a)
+## 17.2) Compare-Presets Daily Dispatch Endpoint (Issue #461, Slot-Zeitplan seit #1232 Scheibe 2a)
 
 **Veraltet (bis #1232 Scheibe 2a):** Dispatch lief einmal täglich um 06:00 UTC und filterte grob
 auf `schedule='daily'`. **Aktuell:** Der Go-Cron `compare_presets_daily` läuft **stündlich**
@@ -3482,8 +3514,12 @@ Returns authenticated user profile (requires valid session cookie).
 | id | string | User identifier (immutable; also used as fallback display if `display_name` empty) |
 | display_name | string | User's chosen display name (optional, max 50 chars); shown in UI instead of `id` if set; null/empty if not configured |
 | email | string | Email address (for display only) |
+| email_verified | bool | Abgeleitet aus `user.json` → `email_verified_at` (gesetzt = `true`); **always present** (`internal/handler/auth.go`, `profileResponse`). Der Zeitstempel selbst wird nie ausgeliefert |
 | mail_to | string | Email recipient for trip reports (can differ from email) |
-| sms_to | string | SMS recipient phone number (international format, e.g. `+49151XXXXXXXX`); empty if not configured |
+| sms_to | string | SMS recipient phone number (international format, e.g. `+49151XXXXXXXX`); empty if not configured. Versand nur, wenn die Nummer bewiesen ist (`sms_verified`) — Wirkstelle `src/app/config.py::with_user_profile` (Issue #2406) |
+| sms_verified | bool | Issue #2406: abgeleitet — `sms_verified_number` (getrimmt) nicht leer UND gleich `sms_to` (getrimmt) (`internal/handler/sms_verify.go::smsVerifiziert`); **always present** (kein `omitempty`). Dieselbe Frage wie die Versandsperre in `config.py` |
+| pending_sms_to | string | Issue #2406: neue, noch unbestätigte Nummer eines Kontos mit bereits bestätigter Nummer; `omitempty`. Wird erst durch `POST /api/auth/sms/verify` nach `sms_to` befördert |
+| telegram_chat_id | string | Verknüpfte Telegram-Chat-ID; `omitempty`. Einziger Schreiber `POST /api/internal/telegram-connect`, `PUT` nimmt nur den Leerstring (Issue #2141, s. u.) |
 | tier | string | User's level: `free`/`standard`/`premium` (Issue #1068, Slice 1 of Epic #1067); always present, defaults to `free` if unset on the underlying `user.json` (fallback happens only at read time, never written back); display-only in this slice, no channel or alert-frequency enforcement yet |
 | sms_allowed | bool | Whether SMS channel is available for this user (Issue #1069, Slice 2 of Epic #1067); `true` if `tier` is `standard` or `premium`, `false` for `free`; determines server-side channel-gating in report-dispatch and alert-dispatch |
 | requested_tier | string | Level change requested by the user via `POST /api/auth/tier-change-request` (Issue #1071, Slice 4 of Epic #1067); `omitempty` — absent/empty if no request is pending. Does not change `tier` itself; only the PO setting `tier` manually clears the pending state (once `requested_tier == tier`, the frontend Pending-hint disappears) |
@@ -3565,7 +3601,14 @@ Returns updated profile object (same as `GET /api/auth/profile`).
   Ändert sich nur ein NICHT wirksames Feld, oder ist das Konto noch unbestätigt, gilt weiterhin die
   bisherige Sofort-Logik (Reset/Mail wie oben beschrieben). Details:
   `docs/specs/modules/adresswechsel_nach_bestaetigung.md`.
-- `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
+- `sms_to`: Optional, any string (no format validation). **Nummernwechsel (Issue #2406)** greift nur, wenn der
+  neue Wert sich von `sms_to` UND (bei nicht leerem Wert) von `pending_sms_to` unterscheidet — wiederholtes
+  Speichern ist ein No-op und löst keinen bezahlten Codeversand aus. Fälle: **leer** → `sms_to`,
+  `pending_sms_to`, `sms_verified_number`, `sms_verified_at` und `sms_verification.json` werden gelöscht;
+  **keine bestätigte Nummer** → direkt nach `sms_to` (bis zur Bestätigung für den Versand gesperrt);
+  **bestätigte Nummer vorhanden** → neue Nummer nur nach `pending_sms_to`, die alte bleibt wirksam. Ein
+  Bestätigungscode geht nur bei `sms_allowed` (Tarif ≥ standard) raus, Mengenbremse 3/h (eigener
+  `MailFloodLimiter`, `router.go`), sonst `429`. Details s. „SMS-Nummer-Verifikation“ unten
 - `passkey_prompt_dismissed`: Optional bool (Issue #2248); sets whether the one-time passkey setup offer stays hidden
 - Empty strings allowed (unset field)
 - **Not accepted (Issue #1717 S3, AC-7):** `premium_sms_reply_to`, `premium_sms_reply_at`,
@@ -4006,28 +4049,79 @@ or
 |--------|------|----------|
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
 
+#### SMS-Nummer-Verifikation (Issue #2406)
+
+Go erzeugt und prüft den Code (`internal/handler/sms_verify.go`), versendet wird er ausschließlich
+über den internen Python-Endpunkt `POST /api/_internal/sms/verification-code` (`{user_id, to, code}`).
+Code: 6 Ziffern aus `crypto/rand`, gültig 10 Minuten, max. 5 Fehlversuche (danach gelöscht);
+persistiert wird nur der bcrypt-Hash in `data/users/<id>/sms_verification.json`
+(`model.SmsVerificationCode`), gebunden an die zu beweisende Nummer (`pending_sms_to`, sonst `sms_to`).
+Alle drei Routen sind anmeldepflichtig; die Kennung kommt ausschließlich aus der Sitzung.
+
+| Route | Request | Antwort 200 | Fehler (`{"error": …}`) |
+|---|---|---|---|
+| `POST /api/auth/sms/verify` | `{"code": "123456"}` | Profilobjekt wie `GET /api/auth/profile`; `pending_sms_to` → `sms_to`, `sms_verified_number`/`sms_verified_at` gesetzt (Read-Modify-Write) | 400 `invalid request` · 404 `not_found` · 400 `code_expired` (fehlt/abgelaufen/≥5 Fehlversuche) · 400 `invalid_code` (falscher Code oder andere Nummer) · 500 `store_error` |
+| `POST /api/auth/sms/resend` | leer | `{"status":"sent"}` (Versand asynchron) | 404 `not_found` · 400 `no_number` · 400 `sms_not_allowed` (Tarif free) · 429 `rate_limit_exceeded` + `Retry-After` |
+| `POST /api/auth/sms/staging-code` | ignoriert | `{"code": "123456"}` — mintet frischen Code, **kein** Versand; nur `GZ_ENV=staging` (`internal/handler/staging_sms_code.go`) | 404 `not_found` / `no_number` · 500 `internal error` |
+
 ### User Model Extensions
 
 **File:** `internal/model/user.go`
 
 ```go
+// internal/model/user.go — Struct-Wahrheit (Stand 2026-10-21)
 type User struct {
-    ID                 string                 `json:"id"`
-    Email              string                 `json:"email,omitempty"`
-    PasswordHash       string                 `json:"password_hash,omitempty"`  // now optional (omitempty)
-    PasskeyCredentials []WebAuthnCredential   `json:"passkey_credentials,omitempty"`  // NEW (Issue #450)
-    CreatedAt          time.Time              `json:"created_at"`
-    MailTo             string                 `json:"mail_to,omitempty"`
-    SmsTo              string                 `json:"sms_to,omitempty"`  // NEW (Issue #609) — SMS recipient phone number
-    TelegramChatID     string                 `json:"telegram_chat_id,omitempty"`  // Identitätszuordnung, keine Einstellung (Issue #2141): einziger Schreiber ist `POST /api/internal/telegram-connect`; `PUT /api/auth/profile` nimmt nur den Leerstring an (Trennen)
-    OAuthProvider      string                 `json:"oauth_provider,omitempty"`
-    OAuthSub           string                 `json:"oauth_sub,omitempty"`
-    DisplayName        string                 `json:"display_name,omitempty"`  // NEW (Issue #642) — user's chosen display name; omitempty if not set
-    Tier               string                 `json:"tier,omitempty"`  // NEW (Issue #1068, Slice 1 of Epic #1067) — free/standard/premium; empty defaults to "free" at read time
-    RequestedTier      string                 `json:"requested_tier,omitempty"`  // NEW (Issue #1071, Slice 4 of Epic #1067) — pending level-change request
-    RequestedAt        *time.Time             `json:"requested_at,omitempty"`  // NEW (Issue #1071) — pointer type: plain time.Time's omitempty doesn't work, would serialize as zero-value "0001-01-01T00:00:00Z" instead of being omitted
-    PremiumSmsReplyTo  string                 `json:"premium_sms_reply_to,omitempty"`  // NEW (Issue #1676, Scheibe S1) — vom Garmin inReach zuletzt gelernte Rückadresse (seven.io-Journal, Kennzeichen `inreachlink.com`); einziger Schreiber bleibt der interne Endpoint `POST /api/internal/premium-sms-learn`. REVIDIERT durch #1717 S3: `GET /api/auth/profile` gibt den Wert seither LESEND aus (`premium_sms_reply_to` + abgeleitetes `premium_sms_reply_state`), damit die Oberfläche zeigen kann, wohin gesendet wird und ob die Adresse noch gilt — `PUT /api/auth/profile` nimmt ihn weiterhin NICHT an (AC-7)
-    PremiumSmsReplyAt  *time.Time             `json:"premium_sms_reply_at,omitempty"`  // NEW (Issue #1676, Scheibe S1) — Empfangszeitpunkt des Go-Endpoints (nicht der seven.io-`timestamp`); pointer-Muster analog RequestedAt
+    ID                     string               `json:"id"`
+    Email                  string               `json:"email,omitempty"`
+    PasswordHash           string               `json:"password_hash,omitempty"`        // optional seit #450
+    PasskeyCredentials     []WebAuthnCredential `json:"passkey_credentials,omitempty"`  // #450
+    CreatedAt              time.Time            `json:"created_at"`
+    MailTo                 string               `json:"mail_to,omitempty"`
+    SmsTo                  string               `json:"sms_to,omitempty"`               // #609; Versand nur wenn == SmsVerifiedNumber (#2406)
+    TelegramChatID         string               `json:"telegram_chat_id,omitempty"`     // einziger Schreiber POST /api/internal/telegram-connect (#2141)
+    OAuthProvider          string               `json:"oauth_provider,omitempty"`
+    OAuthSub               string               `json:"oauth_sub,omitempty"`
+    DisplayName            string               `json:"display_name,omitempty"`         // #642
+    Tier                   string               `json:"tier,omitempty"`                 // #1068; leer = "free" (nur beim Lesen)
+    RequestedTier          string               `json:"requested_tier,omitempty"`       // #1071
+    RequestedAt            *time.Time           `json:"requested_at,omitempty"`         // #1071; Pointer wegen omitempty
+    RequestedNotifiedAt    *time.Time           `json:"requested_notified_at,omitempty"` // #2436
+    EmailVerifiedAt        *time.Time           `json:"email_verified_at,omitempty"`    // #1219
+    PremiumSmsReplyTo      string               `json:"premium_sms_reply_to,omitempty"` // #1676 S1; einziger Schreiber premium-sms-learn
+    PremiumSmsReplyAt      *time.Time           `json:"premium_sms_reply_at,omitempty"` // #1676 S1
+    PasskeyPromptDismissed bool                 `json:"passkey_prompt_dismissed,omitempty"` // #2248
+    PendingContactAddress  string               `json:"pending_contact_address,omitempty"` // #2147 B2
+    PendingContactField    string               `json:"pending_contact_field,omitempty"`   // #2147 B2: "email"|"mail_to"
+    IsTestUser             bool                 `json:"is_test_user,omitempty"`            // #2152, ADR-0072
+    SmsVerifiedNumber      string               `json:"sms_verified_number,omitempty"`     // #2406: BEWIESENE Nummer
+    SmsVerifiedAt          *time.Time           `json:"sms_verified_at,omitempty"`         // #2406
+    PendingSmsTo           string               `json:"pending_sms_to,omitempty"`          // #2406: wartet auf Code
+    Disabled               bool                 `json:"disabled,omitempty"`                // #2155 S3, ADR-0080
+    OnboardingPending      bool                 `json:"onboarding_pending,omitempty"`      // #2521 S2
+    OnboardingDismissed    bool                 `json:"onboarding_dismissed,omitempty"`    // #2521 S2
+    ChecklistDismissed     bool                 `json:"checklist_dismissed,omitempty"`     // #2521 S2
+    TestMailSentAt         *time.Time           `json:"test_mail_sent_at,omitempty"`       // #2521 S2
+}
+
+// data/users/<id>/sms_verification.json — Issue #2406
+type SmsVerificationCode struct {
+    CodeHash       string    `json:"code_hash"`       // bcrypt, nie Klartext
+    ExpiresAt      time.Time `json:"expires_at"`      // +10 min
+    Number         string    `json:"number"`          // die zu beweisende Nummer
+    FailedAttempts int       `json:"failed_attempts,omitempty"` // ab 5 verbrannt
+}
+
+// E-Mail-Bestätigung (#1219) bzw. Passwort-Reset — Hash statt Klartext
+type EmailVerificationToken struct {
+    TokenHash string    `json:"token_hash"`
+    ExpiresAt time.Time `json:"expires_at"`
+    Address   string    `json:"address,omitempty"` // #2147 B2: zu beweisende Adresse
+}
+
+// data/users/<id>/premium_sms_link.json — internal/model/premium_sms_link.go (#2154 A)
+type PremiumSmsLinkCode struct {
+    CodeHash  string    `json:"code_hash"`
+    CreatedAt time.Time `json:"created_at"`
 }
 
 type WebAuthnCredential struct {
@@ -4292,12 +4386,19 @@ Lists all sent briefings (morning/evening) for an archived trip, ordered chronol
 
 **Handler:** `internal/handler/briefing_history.go` | **Routing:** `internal/router/router.go`
 
-### GET /api/trips/{id}/briefing-history
+### GET /api/briefings/{id}/briefing-history?kind=route|vergleich
 
-Retrieves briefing delivery log for a specific trip (archived or active).
+Kind-neutral delivery log (#2281) for a trip (`kind=route`) or a location comparison (`kind=vergleich`). Entries are written by `src/services/briefing_log.py` (locked, atomic) for cron and manual sends of both kinds. `GET /api/trips/{id}/briefing-history` remains as an alias on the same handler with identical response (equals `kind=route`).
 
 **Path Parameter:**
-- `id`: Trip identifier
+- `id`: Trip or comparison identifier
+
+**Query Parameter:**
+- `kind` (required): `route` | `vergleich`
+
+**Status codes:** 401 without user; 400 for missing/invalid `kind` or invalid ID; 200 `[]` for unknown ID.
+
+**Log entry storage** (`briefing_log.json` per user): each entry carries `entity_type` (`"trip"` | `"compare"`) and `entity_id`. Legacy entries without `entity_*` are read by Go with `EntityID := TripID`, `EntityType := "trip"` (in-memory only, `internal/store/log.go`). Archive statistics count briefings per `"<type>:<id>"` (`BriefingCountByEntity`). The double-send guard (`briefing_slots.py`) evaluates trip entries only.
 
 **Response 200:**
 
@@ -4833,6 +4934,11 @@ Funktion in `src/`/`api/` keinen Aufrufer — schreibend ist allein die Go-API.
 
 ## Changelog
 
+- 2026-10-21: Doku-Drift (kein Code) — Profil-DTO um `email_verified`, `sms_verified`, `pending_sms_to`,
+  `telegram_chat_id` ergänzt; neuer Unterabschnitt „SMS-Nummer-Verifikation“ (#2406); `User`-Struct-Block
+  auf Struct-Wahrheit inkl. `SmsVerificationCode`/`PremiumSmsLinkCode`; Forecast-Zusatzfelder
+  (`wind_dir_deg` → `wind_direction_deg`, +9 Felder) und SegmentWeatherSummary (+8 Felder, Go-Abweichung
+  `sunny_hours_h`) nachgezogen; doppelt vergebene „17)“ → 17 / 17.1 / 17.2.
 - 2026-10-17: Issue #2521 Scheibe S2 (ADR-0092) — Onboarding: Profil-DTO erhält
   `onboarding_pending`, `onboarding_dismissed`, `checklist_dismissed` (immer vorhanden) sowie
   `test_mail_sent_at`, `first_briefing_at` (`omitempty`, read-only); `PUT /api/auth/profile`
@@ -5602,7 +5708,7 @@ _snapshot_svc.save_dated(trip_id, target_date, segment_weather)  # neu, Issue #7
 - Bestandsdaten in `{trip_id}.json` bleiben unverändert
 - 2026-08-22: Issue #2050 S6 — `WeatherSnapshotService.load_dated()` bekommt additiven keyword-only Parameter `segment_fetched_at: bool = False`. Segmente im datierten JSON tragen zusätzlich ihren eigenen `fetched_at`-Wert (additiv, `_serialize_segment`). Nur die Alarm-Protokoll-Ableitung setzt `segment_fetched_at=True`; alle anderen Aufrufer unverändert. Details: `docs/specs/modules/alarm_protokoll_vorwarnzeit.md`.
 - 2026-08-17: Issue #1699 — `WeatherSnapshotService.save()` bekommt additiven keyword-only Parameter `briefing_backed: bool = True` (Herkunftsmerkmal des undatierten Snapshots) und neue Lesemethode `load_briefing_backed()` (fail-soft auf `True`). `TripAlertService._get_cached_weather` lehnt in Stufe 3 der #1916-Prioritätskette (undatierter Rückfall) einen nicht briefing-gestützten Anker für den Abweichungs-Alarm mit dem vierten Ablehnungsgrund `not_briefing_backed` ab (`diagnostics/alert_anchor_rejected.jsonl`, neben `wrong_day`/`too_old`/`missing` aus #1661); amtliche Warnungen (Geometrie-Lesart) bleiben unberührt. Siehe Zeile 3921 ff. oben und `docs/specs/modules/fix_1699_anker_ohne_briefing.md`.
-- 2026-05-30: Issue #461 — Compare-Presets Daily Dispatch (Cronjob): New `POST /api/scheduler/compare-presets-daily` endpoint (section 17) triggered daily by Go scheduler at 06:00 UTC. Filters presets by `schedule='daily'`, runs Compare Engine, renders/sends emails via Resend, updates `letzter_versand` and `top_ort_letzter_versand` fields. Per-preset error isolation; BetterStack Heartbeat pinged only on `error_count==0` (Readiness Principle). Config field `HeartbeatComparePresets` added to Go config; Go scheduler job count increased from 5 to 6. Tests: 11 new comprehensive tests in `test_issue_461_compare_preset_dispatch.py`.
+- 2026-05-30: Issue #461 — Compare-Presets Daily Dispatch (Cronjob): New `POST /api/scheduler/compare-presets-daily` endpoint (section 17.2) triggered daily by Go scheduler at 06:00 UTC. Filters presets by `schedule='daily'`, runs Compare Engine, renders/sends emails via Resend, updates `letzter_versand` and `top_ort_letzter_versand` fields. Per-preset error isolation; BetterStack Heartbeat pinged only on `error_count==0` (Readiness Principle). Config field `HeartbeatComparePresets` added to Go config; Go scheduler job count increased from 5 to 6. Tests: 11 new comprehensive tests in `test_issue_461_compare_preset_dispatch.py`.
 - 2026-05-30: Added section 18 — Authentication Endpoints (Issue #450 Passkey/WebAuthn V1): 5 passkey endpoints (register/begin|finish, login/begin|finish, delete), password auth methods (register, login), profile endpoint with `has_passkey`+`passkeys[]`. User model extended with `PasskeyCredentials[]` and `PasswordHash` now optional. Rate-limit 30/h per IP (alle 5 Endpoints), challenge TTL 5 min, RP-ID isolation (prod vs staging), 64 KB body cap.
 - 2026-05-30: Issue #459 — Auto-Briefings Sidepanel Frontend (ComparePreset-System): AutoReportsOverview, SavePresetDialog, subscriptionHelpers (presetScheduleLabel, formatLastSent), ComparePreset-Interface in types.ts; +page.server.ts lädt `/api/compare/presets`; AutoReportCard und AutoReportsOverview auf ComparePreset umgebaut mit manuellem Versand-Button. Spec #458-Backend-Endpoints vorausgesetzt (`GET /api/compare/presets`, `/send`).
 - 2026-05-31: Issue #475 — OutputLayoutEditor Organisms-Migration (Pure Frontend): OutputLayoutEditor verliert direkten `ui/card`-Import, nutzt stattdessen `atoms/Card.svelte`. Komponente wird als vierter Eintrag in `organisms/index.ts` re-exportiert. Consumer-Imports (Step4Layout×2, WeatherMetricsTab) auf `$lib/components/organisms` umgestellt. Keine API/DTO-Änderungen.

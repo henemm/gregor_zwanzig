@@ -746,6 +746,18 @@ def send_one_compare_preset(
     if outcome != "sent":
         raise SendOutcomeError(outcome)
 
+    # Issue #2281 (AC-1): Versand-Historie -- derselbe Schreib-Helfer wie der
+    # Trip; Kanaele = tatsaechlich zugestellte, Slot aus dem Versatz.
+    from services.briefing_log import append_briefing_log
+
+    append_briefing_log(
+        user_id, "compare", preset_id,
+        "evening" if tage_ab_ortstag else "morning",
+        send_result.sent_channels, on_demand,
+        mask_addr_for_pii_log(default_to)
+        if default_to and "email" in send_result.sent_channels else None,
+    )
+
     # Issue #1714: im Briefing gezeigte amtliche Warnungen als „gemeldet"
     # vermerken, damit der unabhaengige Checker sie nicht kurz darauf erneut
     # als eigenen Alarm verschickt (Trip-Gegenstueck seit #1614 Teil 1).

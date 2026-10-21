@@ -113,7 +113,7 @@ vorliegende Argumente:
 | `meteo_forets.covers` | Koordinaten als Funktionsargumente vorhanden | Saison-Monat über `tz_for_coords(lat, lon)` |
 | `api/routers/debug.py` | Trip liegt bereits vor, Segmente noch nicht | `trip_local_today(trip, now_utc)` statt `date_type.today()` |
 
-**AC-1 — `gpx_to_stage_data`, Rückfalltag aus dem ersten Wegpunkt:**
+**AC-1:** `gpx_to_stage_data`, Rückfalltag aus dem ersten Wegpunkt
 ```python
 d = stage_date
 if d is None:
@@ -132,7 +132,7 @@ Bei nicht auflösbarer Zone fällt `tz_for_coords` selbst schon fail-soft auf UT
 wird bereits zwei Zeilen weiter unten für dieselbe `track`-Variable aufgerufen; die
 Implementierung zieht diesen Aufruf lediglich vor, statt ihn zu duplizieren.
 
-**AC-2 — `compute_default_start_date`, ersatzlose Löschung:**
+**AC-2:** `compute_default_start_date`, ersatzlose Löschung
 Die Funktion (`gpx_processing.py:180-194`) entfällt vollständig. Der Struktur-Test
 (`test_epic_129a_2_module_structure.py:35`) verliert den Eintrag aus `expected` (analog zu
 `test_epic_129a_1_module_structure.py:46-49`, dort für `dict_to_comparison_result` in S5c
@@ -156,7 +156,7 @@ def fetch(self, lat: float, lon: float) -> list[OfficialAlert]:
 `_do_request()`-Closure bleibt parameterlos und liest `ymd` weiterhin aus dem umgebenden
 Namensraum — kein neuer Mechanismus, nur eine Ebene höher aufgelöst.
 
-**AC-5 — `meteo_forets.covers`, Saison-Monat der Ortszone:**
+**AC-5:** `meteo_forets.covers`, Saison-Monat der Ortszone
 ```python
 def covers(self, lat: float, lon: float) -> bool:
     monat = local_dt(datetime.now(timezone.utc), tz_for_coords(lat, lon)).month
@@ -166,7 +166,7 @@ def covers(self, lat: float, lon: float) -> bool:
             and _AROME_FR_LON_MIN <= lon <= _AROME_FR_LON_MAX)
 ```
 
-**AC-6 — `debug.py::trigger_radar_alert`, `trip_local_today` vor der Segmentwahl:**
+**AC-6:** `debug.py::trigger_radar_alert`, `trip_local_today` vor der Segmentwahl
 ```python
 now_utc = datetime.now(timezone.utc)
 today = trip_local_today(trip, now_utc)

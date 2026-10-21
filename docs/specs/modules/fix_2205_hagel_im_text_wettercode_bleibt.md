@@ -152,10 +152,10 @@ Alarm-Auslöselogik/Presets, thunder_branch.py:222,233 (Kompakt-Ausblick).
 
 > **AC-11 und AC-12 entfallen** (Messung 15.09. in TDD-RED): die Hervorhebungszeile ist seit #790 toter Code und erreicht keine Mail; die zugestellte Tages-Pille unterscheidet Hagel bereits (siehe Nicht-Ziele/Invarianten). Nummern bleiben zur Referenzstabilität stehen, es gibt keine Tests dazu.
 
-**AC-11 (entfällt):** Given eine Etappe mit Spitzenstunde Code 96 oder 99, für die eine Mail-Hervorhebungszeile „Gewitter möglich ab ..." erzeugt wird / When die Trip-Mail gerendert wird / Then enthält die Hervorhebungszeile die bestehende Hagelaussage.
+**AC-11:** (entfällt) Given eine Etappe mit Spitzenstunde Code 96 oder 99, für die eine Mail-Hervorhebungszeile „Gewitter möglich ab ..." erzeugt wird / When die Trip-Mail gerendert wird / Then enthält die Hervorhebungszeile die bestehende Hagelaussage.
   - Test: `tests/tdd/test_hagel_in_mail_hervorhebung.py` — `trip_report`-Hervorhebungsfunktion mit Fixture-Etappe (Code 96/99) gerendert, Hagelaussage in der Hervorhebungszeile geprüft.
 
-**AC-12 (entfällt):** Given eine Etappe mit ausschließlich Code 95 in der Spitzenstunde / When die Trip-Mail gerendert wird / Then enthält die Hervorhebungszeile keine Hagelaussage.
+**AC-12:** (entfällt) Given eine Etappe mit ausschließlich Code 95 in der Spitzenstunde / When die Trip-Mail gerendert wird / Then enthält die Hervorhebungszeile keine Hagelaussage.
   - Test: `tests/tdd/test_hagel_in_mail_hervorhebung.py` — identischer Fixture-Aufbau mit Code 95, Assertion auf Abwesenheit.
 
 - **AC-13:** Given ein Trip, dessen Tagesaggregat Gewitterstufe hoch mit Code 96 oder 99 trägt (`agg["hail_flag"]` wahr) / When das Glance-Kommando („⛈ Gewitter: …") und die HEUTE/MORGEN-Timeline als Kommandoantwort gerendert werden / Then enthalten beide Antworttexte die bestehende Hagelaussage.

@@ -139,7 +139,7 @@ Zwischenwerten wie `aggregated`, `segment.end_time` oder `duration_hours`.
 Jedes AC muss **diskriminierend** sein: ein Test, der in alter UND neuer
 Implementierung gleichermaßen grün bliebe, ist wertlos (s. Mutations-Block).
 
-- **AC-1 (Normalfall — unveränderte Vorhersage, verschiedene Tagesstunden):**
+- **AC-1:** (Normalfall — unveränderte Vorhersage, verschiedene Tagesstunden)
   Given ein Compare-Preset mit Ort in Mitteleuropa, Tagesfenster 4-19 Uhr
   (Default), Δ-Anker geschrieben um 07:00 Ortszeit, unveränderte
   Vorhersage-Zeitreihe für den gesamten Tag / When der Alarm-Check um 15:00
@@ -152,7 +152,7 @@ Implementierung gleichermaßen grün bliebe, ist wertlos (s. Mutations-Block).
     Echter Lauf über `CompareAlertService`; Assert kein Versand
     (`mail_sink` leer).
 
-- **AC-2 (echte Änderung außerhalb der Prüfstunde):** Given denselben
+- **AC-2:** (echte Änderung außerhalb der Prüfstunde) Given denselben
   Ortsvergleich wie AC-1, und eine echte Vorhersage-Änderung, die eine Schwelle nur um
   14:00 Ortszeit überschreitet (nicht um die aktuelle Prüfstunde) / When der
   Alarm-Check um 15:00 Ortszeit läuft / Then wird der Alarm tatsächlich
@@ -183,7 +183,7 @@ Implementierung gleichermaßen grün bliebe, ist wertlos (s. Mutations-Block).
   - Test: Fixture mit Änderung in Stunde 19, sonst identisch zu AC-3a; Assert
     kein Versand.
 
-- **AC-4 (Ortszeit-Auflösung außerhalb Mitteleuropas):** Given ein
+- **AC-4:** (Ortszeit-Auflösung außerhalb Mitteleuropas) Given ein
   Compare-Ort mit klarem UTC-Versatz zu `Europe/Vienna` (z. B. Nordamerika),
   Tagesfenster 4-19 Uhr Ortszeit am Ort (Default), eine echte Änderung um
   17:00 **Ortszeit am Ort** / When der Alarm-Check zu einer simulierten Zeit
@@ -230,7 +230,7 @@ Implementierung gleichermaßen grün bliebe, ist wertlos (s. Mutations-Block).
     Echter Lauf; Assert kein Versand UND WARNING-Log-Eintrag mit
     Preset-/Ortskennung.
 
-- **AC-7 (nach neuem Anker wird eine echte Änderung wieder gemeldet):**
+- **AC-7:** (nach neuem Anker wird eine echte Änderung wieder gemeldet)
   Given den unterdrückten Zustand aus AC-6b (26 h 10 min alter Anker), dann
   wird ein NEUER Δ-Anker geschrieben (`fetched_at` = jetzt, z. B. durch
   regulären Report-Versand) / When derselbe echte Änderungswert erneut

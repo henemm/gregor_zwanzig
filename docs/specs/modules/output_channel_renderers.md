@@ -10,6 +10,8 @@ epic: render-pipeline-consolidation (#96)
 phase: β3
 ---
 
+> Teilweise abgelöst durch [ADR-0004](../../adr/0004-signal-channel-removed.md) (2026-06-06): `SignalOutput` als Vertragspartner von `TripReport` gilt nicht mehr; Signal ist app-weit entfernt (#610).
+
 # Output Channel Renderers
 
 ## Approval

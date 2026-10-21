@@ -155,7 +155,7 @@ REIHENFOLGE-ABHÄNGIGKEIT (PFLICHT, PO-Vorgabe 2026-09-20):
 
 ## Acceptance Criteria
 
-- **AC-1 (Sperr-Voraussetzung, Live-Namens-/Einheiten-Verifikation):** Given
+- **AC-1:** (Sperr-Voraussetzung, Live-Namens-/Einheiten-Verifikation) Given
   der echte Météo-France-WCS-Dienst / When ein `pytest.mark.live`-Test
   (`tests/tdd/test_hail_coverage_name_live.py`, Vorbild
   `test_thunder_coverage_name_live.py`) eine frische `GetCapabilities`-Antwort
@@ -173,7 +173,7 @@ REIHENFOLGE-ABHÄNGIGKEIT (PFLICHT, PO-Vorgabe 2026-09-20):
   - **Reihenfolge:** Ohne grünen AC-1 wird KEIN Name in Produktivcode
     verdrahtet — AC-2 und AC-3 setzen einen bestandenen AC-1 voraus.
 
-- **AC-2 (Rohwert-Abruf, fail-soft):** Given ein Ort im AROME-FR-
+- **AC-2:** (Rohwert-Abruf, fail-soft) Given ein Ort im AROME-FR-
   Zuständigkeitsgebiet (`thunder_routing.thunder_provider_for` liefert
   `fr_direct`) / When eine Vorhersage über den regulären Anreicherungsweg
   abgerufen wird / Then liefert der neue Coverage-Abruf pro Stunde einen
@@ -188,7 +188,7 @@ REIHENFOLGE-ABHÄNGIGKEIT (PFLICHT, PO-Vorgabe 2026-09-20):
     Anreicherungspfad zugelassen, muss der Test rot werden (Muster #1457 S2a
     AC-2/AC-3).
 
-- **AC-3 (Speicherung ohne Ableitung — Scope-Grenze dieser Scheibe):** Given
+- **AC-3:** (Speicherung ohne Ableitung — Scope-Grenze dieser Scheibe) Given
   ein Datenpunkt, für den der neue Hagel-Rohwert erfolgreich abgerufen wurde /
   When der Datenpunkt gebaut wird / Then landet der Wert ausschließlich im
   neuen Feld (`hail_potential_mf`); `ForecastDataPoint.hail_flag` bleibt für
@@ -200,7 +200,7 @@ REIHENFOLGE-ABHÄNGIGKEIT (PFLICHT, PO-Vorgabe 2026-09-20):
     Gegenprobe (Mutationskandidat): Wird der neue Rohwert versehentlich in
     eine `hail_flag`-Ableitung eingespeist, muss dieser Test rot werden.
 
-- **AC-4 (Scope-Ausschluss als Known Limitation, architektonisch begründet):**
+- **AC-4:** (Scope-Ausschluss als Known Limitation, architektonisch begründet)
   Given der neue Hagel-Rohwert von Météo-France UND der bestehende
   WMO-Code-basierte `hail_flag` (#1475 S5a) / When beide für denselben
   Zeitpunkt/Ort vorliegen / Then bleiben sie **unverbunden** — eine
@@ -213,7 +213,7 @@ REIHENFOLGE-ABHÄNGIGKEIT (PFLICHT, PO-Vorgabe 2026-09-20):
     Dokumentation als explizite Known Limitation (kein stillschweigendes
     Weglassen).
 
-- **AC-5 (Budget-Teilung, kein Verdopplungseffekt):** Given ein
+- **AC-5:** (Budget-Teilung, kein Verdopplungseffekt) Given ein
   Anreicherungslauf für einen Ort im AROME-FR-Gebiet / When sowohl Blitzdichte
   als auch der neue Hagel-Rohwert abgerufen werden / Then teilen sich beide
   Abrufe **dasselbe** Zeitbudget (`FETCH_DEADLINE_SECONDS`) — kein zweites,

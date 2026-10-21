@@ -297,7 +297,7 @@ bereits bestehenden Vergleich-Tab-CTA (Z.1045-1071,
   - Test: Playwright Mobil-Viewport — auf dem Layout-Tab zeigt die CTA
     „Versand einrichten →"; Klick wechselt sichtbar in den Versand-Tab.
 
-- **AC-12 (PO-Entscheidungspunkt, s. Known Limitations (b)):** Given den
+- **AC-12:** (PO-Entscheidungspunkt, s. Known Limitations (b)) Given den
   Versand-Tab des mobilen Editors im Create-Modus / When der Tab geöffnet
   wird / Then ist KEIN Boden-Floating-CTA sichtbar — „Aktivieren" ist
   ausschließlich über den App-Bar-Button (AC-15) sowie die

@@ -201,7 +201,7 @@ nur Dateien gegeneinander vergleicht.
   - Test: Staging-Verifikation — Screenshot des Alarme-Reiters im
     Ortsvergleichs-Editor mit der Zeile „Nullgradgrenze" auf Standard.
 
-- **AC-4 (Verhaltensneutralität):** Given die zwölf übrigen
+- **AC-4:** (Verhaltensneutralität) Given die zwölf übrigen
   Backend-Größen (Windböen, Regenmenge, Gewitter, Temperatur-Minimum/
   -Maximum/-Wechsel, Windwechsel, Regenmengen-Wechsel, Neuschnee,
   Gewitterpotenzial, Sichtweite) / When ihre Schwellwerte nach der
@@ -228,7 +228,7 @@ nur Dateien gegeneinander vergleicht.
   - Test: `__tests__/alertPresetThresholdDisplay.test.ts` (muss nach der
     Umstellung auf Ableitung weiterhin grün bleiben).
 
-- **AC-7 (Mutations-Gegenprobe, PFLICHT — Drift wird benannt):** Given
+- **AC-7:** (Mutations-Gegenprobe, PFLICHT — Drift wird benannt) Given
   die generierte Datei wird lokal (nicht committet) von Hand verfälscht
   (z. B. Windböen-Standard 20→21) ODER die Backend-Tabelle wird geändert,
   ohne das Erzeuger-Skript erneut laufen zu lassen / When die
@@ -240,7 +240,7 @@ nur Dateien gegeneinander vergleicht.
     `fix_1435_e5_alert_mapping_unify.md` Abschnitt
     „Wirksamkeitsnachweis der Ratsche".
 
-- **AC-8 (fehlende Größe wird nicht übersehen):** Given eine ganze Zeile
+- **AC-8:** (fehlende Größe wird nicht übersehen) Given eine ganze Zeile
   (z. B. Sichtweite) wird aus der Backend-Tabelle `_PRESET_TABLE`
   gelöscht, ohne die generierte Datei neu zu erzeugen / When die
   Frische-Ratsche läuft / Then meldet sie die fehlende Größe ausdrücklich
@@ -249,7 +249,7 @@ nur Dateien gegeneinander vergleicht.
   - Test: derselbe Wächter-Test, zusätzlicher Fall „Zeile komplett aus
     der Quelle entfernt".
 
-- **AC-9 (die entscheidende Mutation — Ableitung wird wirklich genutzt):**
+- **AC-9:** (die entscheidende Mutation — Ableitung wird wirklich genutzt)
   Given die Ableitung in `alertMetricTable.ts` wird versuchsweise durch
   ein festes Literal ersetzt, während die generierte Datei unverändert
   korrekt bleibt / When die Frontend-Tests laufen / Then wird mindestens

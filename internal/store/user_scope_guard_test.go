@@ -84,10 +84,10 @@ var storeMethodRegister = map[string]guardEntry{
 
 	"BriefingFingerprint": guarded(func(s *Store) error { _, err := s.BriefingFingerprint("b1"); return err }),
 
-	"LoadBriefingLog":     guarded(func(s *Store) error { _, err := s.LoadBriefingLog(); return err }),
-	"LoadAlertLog":        guarded(func(s *Store) error { _, err := s.LoadAlertLog(); return err }),
-	"BriefingCountByTrip": guarded(func(s *Store) error { _, err := s.BriefingCountByTrip(); return err }),
-	"AlertCountByEntity":  guarded(func(s *Store) error { _, err := s.AlertCountByEntity(); return err }),
+	"LoadBriefingLog":       guarded(func(s *Store) error { _, err := s.LoadBriefingLog(); return err }),
+	"LoadAlertLog":          guarded(func(s *Store) error { _, err := s.LoadAlertLog(); return err }),
+	"BriefingCountByEntity": guarded(func(s *Store) error { _, err := s.BriefingCountByEntity(); return err }), // #2281: ersetzt BriefingCountByTrip
+	"AlertCountByEntity":    guarded(func(s *Store) error { _, err := s.AlertCountByEntity(); return err }),
 
 	// --- exempt: Kennung als expliziter Parameter, kein Pfad aus s.UserID ---
 	"LoadUser":                exempt("Kennung als expliziter Parameter, nicht s.UserID"),

@@ -285,7 +285,7 @@ def _fuse_thunder_levels(
 
 ## Acceptance Criteria
 
-- **AC-1 (Neue Leiter-Funktion — drei Werte, proportional zur bestehenden Kalibrierung):** Given
+- **AC-1:** (Neue Leiter-Funktion — drei Werte, proportional zur bestehenden Kalibrierung) Given
   `model_registry.cape_ladder_thresholds_jkg(model_id, region)` für eine kalibrierte Kombination
   (z. B. `("icon_d2", "DE_ALPEN")`, `cape_threshold_jkg` liefert dort `300.0`) / When die Funktion
   aufgerufen wird / Then liefert sie `(300.0, 750.0, 1200.0)` — LOW unverändert die bestehende
@@ -298,7 +298,7 @@ def _fuse_thunder_levels(
     `cape_threshold_jkg` ≠ 1000 (z. B. 300 in DE_ALPEN) falsch — der Test muss diese Abweichung
     fangen.
 
-- **AC-2 (unbekannte/fehlende Kombination — kein Signal, kein TypeError):** Given `model_id=None`
+- **AC-2:** (unbekannte/fehlende Kombination — kein Signal, kein TypeError) Given `model_id=None`
   ODER `region=None` ODER eine Kombination ohne Eintrag in `CAPE_THRESHOLDS_JKG` / When
   `cape_ladder_thresholds_jkg()` aufgerufen wird / Then liefert sie `None` — identisch zu
   `cape_threshold_jkg()`.
@@ -306,7 +306,7 @@ def _fuse_thunder_levels(
   - Gegenprobe: Fiele die Funktion auf einen Default (z. B. die rohe NWS-Leiter 1000/2500/4000)
     zurück, läge ein Ergebnis vor, wo `None` erwartet wird — der Test muss das fangen.
 
-- **AC-3 (schwacher Deckel — CAPE zählt voll, erreicht MED/HIGH):** Given CIN-Werte 0 / −10 / −24,9
+- **AC-3:** (schwacher Deckel — CAPE zählt voll, erreicht MED/HIGH) Given CIN-Werte 0 / −10 / −24,9
   J/kg (alle im Band „schwacher Deckel", `>= -25`) und ein CAPE-Wert, der auf der vollen Leiter
   `MED` erreichen würde / When `thunder_level_from_signals()` mit CAPE-Leiter und diesen
   CIN-Werten aufgerufen wird / Then liefert sie in allen drei Fällen `MED` — unverändert zur
@@ -319,7 +319,7 @@ def _fuse_thunder_levels(
     läge das Ergebnis bei `LOW` statt `MED`/`HIGH` — der Test muss das fangen. Das ist der
     wichtigste Test dieser Spec: Er beweist die Kernänderung.
 
-- **AC-4 (moderater Deckel — eine Stufe weniger):** Given CIN-Werte −25 / −40 / −49,9 J/kg (Band
+- **AC-4:** (moderater Deckel — eine Stufe weniger) Given CIN-Werte −25 / −40 / −49,9 J/kg (Band
   „moderat") und ein CAPE-Wert, der auf der vollen Leiter `HIGH` erreichen würde / When die Fusion
   läuft / Then liefert sie in allen drei Fällen `MED` (eine Stufe unter `HIGH`). Given zusätzlich
   ein CAPE-Wert im LOW-Band mit CIN=−30 / Then liefert die Fusion `NONE` (eine Stufe unter `LOW`,
@@ -343,7 +343,7 @@ def _fuse_thunder_levels(
     `HIGH` eskalieren — genau der Fehler, den die AC-5-Notbremse verhindern soll. Der Test muss
     das fangen.
 
-- **AC-6 (Deckel hält — kein Beitrag):** Given CIN-Werte −100 / −150 / −200 J/kg (Band „Deckel
+- **AC-6:** (Deckel hält — kein Beitrag) Given CIN-Werte −100 / −150 / −200 J/kg (Band „Deckel
   hält") mit einem sehr hohen CAPE-Wert (z. B. weit über der HIGH-Schwelle) / When die Fusion
   läuft / Then trägt CAPE `NONE` bei — unabhängig von seiner Höhe.
   - Test: drei Aufrufe mit extremem CAPE und den genannten CIN-Werten, Ergebnis jeweils `NONE`.
@@ -363,7 +363,7 @@ def _fuse_thunder_levels(
     das nirgends belegt ist (Météo-France liefert dort keine Hemmungsgröße). Der Test muss das
     fangen.
 
-- **AC-8 (TypeError ohne die neuen Parameter — kein stiller Rückfall über die gesamte Kette):**
+- **AC-8:** (TypeError ohne die neuen Parameter — kein stiller Rückfall über die gesamte Kette)
   Given ein Aufruf von `thunder_level_from_signals()` OHNE `cin_jkg` (keyword-only, ohne Default)
   / When der Aufruf ausgeführt wird / Then bricht er mit `TypeError` — exaktes Muster von
   `cape_threshold_jkg`/`lpi_low_min`. Given zusätzlich ein Aufruf von `_fuse_thunder_levels()` mit

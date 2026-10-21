@@ -28,8 +28,8 @@ eingeholt wurde; siehe „Premium-SMS als Versandkanal" unten); 2026-08-11 (Issu
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und einem Dual-Stack-Backend (Go + Python):
 
-- **Go-API:** REST-API (Port 8090), Auth/Sessions, Mandantentrennung, Persistenz/Store, Proxy zum Python-Core
-- **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, Scheduler, Alerts, Inbound-Handler (FastAPI, Port 8000)
+- **Go-API:** REST-API (Port 8090), Auth/Sessions, Mandantentrennung, Persistenz/Store, Proxy zum Python-Core, **Cron-Taktgeber** (einzige Zeitsteuerung, ruft die Python-Job-Endpunkte auf)
+- **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, **Job-Ausführung** (Fälligkeit je Trip/Vergleich, Versand), Alerts, Inbound-Handler (FastAPI, Port 8000) — ohne eigenen Timer
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
 - **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io), Premium-SMS (seven.io, Garmin
   inReach) — als **Versandkanal** seit Issue #1676 S2a im Trip-Briefing UND seit #2275
@@ -52,10 +52,38 @@ Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zustä
 Das Backend besteht aus zwei klar getrennten Schichten (siehe `docs/adr/0015-dual-stack-zielarchitektur.md`):
 
 - **Go-API (`gregor-api`, Port 8090):** REST-API, Auth/Sessions, Mandantentrennung,
-  Persistenz/Store (`internal/store/`) und Proxy zum Python-Core.
+  Persistenz/Store (`internal/store/`), Proxy zum Python-Core und Cron-Taktgeber
+  (`internal/scheduler/`, s. „Scheduler-Zuständigkeit“).
 - **Python-Core (`api/` + `src/`, interner Port 8000):** Wetter-Domäne
   (Provider, Normalisierung, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte,
-  Scheduler, Alert-System, Inbound-Handler.
+  Job-Ausführung der Scheduler-Endpunkte (ohne eigenen Timer), Alert-System, Inbound-Handler.
+
+### Scheduler-Zuständigkeit (Ist-Stand, Code-belegt 2026-10-21)
+
+**Go löst aus, Python führt aus.** Die einzige Zeitsteuerung ist der Go-Cron in
+`internal/scheduler/scheduler.go` (robfig/cron, Zone `cfg.SchedulerTimezone`, Jobtabelle
+`scheduler.go:333-361`, 9 Cron-Einträge / 10 Jobs). Der Python-Core hat **keinen eigenen Timer**
+(kein APScheduler o. ä.); er stellt je Job einen `POST /api/scheduler/<job>`-Endpunkt
+(`api/routers/scheduler.py`) und entscheidet dort selbst die **Fälligkeit** (welcher Trip/Vergleich
+in seiner Ortszeit jetzt dran ist: `trip_report_scheduler.py`, `compare_slot_scheduler.py`,
+Idempotenz `briefing_slots.py`), rendert und versendet.
+
+| Go-Job (`jobID`) | Takt | Python-Endpunkt | Aufruf |
+|---|---|---|---|
+| `briefing_dispatch` → `trip_reports_hourly` + `compare_presets_daily` | `0 * * * *` | `/trip-reports`, `/compare-presets-daily` | je Nutzer (`runForAllUsers`) |
+| `alert_checks` | `*/15` | `/alert-checks` | je Nutzer |
+| `compare_alert_checks` | `*/15` | `/compare-alert-checks` | je Nutzer |
+| `compare_official_alert_checks` | `*/15` | `/compare-official-alert-checks` | je Nutzer |
+| `radar_alert_checks` | `3-58/5` | `/radar-alert-checks` | je Nutzer |
+| `compare_radar_alert_checks` | `3-58/5` | `/compare-radar-alert-checks` | je Nutzer |
+| `inbound_command_poll` | `*/5` + Push-Kick `/api/webhooks/mail/{secret}` | `/inbound-commands` (IMAP) | global |
+| `premium_sms_poll` | `*/5` + Push-Kick `/api/webhooks/sms/{secret}` | `/inbound-sms` (seven.io-Journal) | global |
+| `data_write_selftest` | `*/15` | — (Go-intern, `probeDataWritable`) | — |
+
+Telegram-Eingang hat keinen Cron-Job: Push über `POST /api/webhooks/telegram/{secret}` (Go) →
+`POST /api/internal/telegram-webhook` (Python). Status/Observability: `GET /api/scheduler/status`
+(Go). Manuelle Sofortversände (`/api/scheduler/trips/{id}/send`, `.../compare-presets/{id}/send`)
+laufen nicht über den Cron.
 
 **Schreib-Autorität (#2158, ADR-0083):** Go ist **nicht** alleiniger Schreiber — auch der
 Python-Kern schreibt `data/users/<uid>/briefings/<id>.json` (Telegram-/SMS-Kommandos,
@@ -156,8 +184,8 @@ Die folgenden Komponenten leben im Python-Core:
 
 ### Datenfluss (Produktiv)
 
-Der Produktivpfad läuft über den Python-Core-Scheduler und wird von der Go-API getriggert
-oder über Cron-Jobs gesteuert:
+Der Produktivpfad wird vom Go-Cron ausgelöst (`internal/scheduler/scheduler.go`) und im
+Python-Core ausgeführt (`POST /api/scheduler/*`, s. „Scheduler-Zuständigkeit“):
 
 ```
 Scheduler / API-Trigger
@@ -1174,7 +1202,7 @@ Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/spec
 | `/api/trips` | GET/POST | Trip CRUD |
 | `/api/trips/{id}` | GET/PUT/DELETE | Individual trip |
 | `/api/trips/{id}/stages` | GET/POST | Stage management |
-| `/api/trips/{id}/briefing-history` | GET | Briefing delivery log for archived trip (Issue #559) |
+| `/api/trips/{id}/briefing-history` | GET | Briefing delivery log for archived trip (Issue #559); Alias of `/api/briefings/{id}/briefing-history?kind=route` (kind-neutral, trip + comparison, #2281) |
 | `/api/locations` | GET/POST | Location library (for compare) |
 | `/api/compare/presets` | GET/POST | Compare-Presets (Orts-Vergleich) |
 | `/api/compare/presets/{id}` | GET/PUT/DELETE | Einzelnes Compare-Preset (`PATCH …/state`, `POST …/send`) |
@@ -1198,7 +1226,7 @@ Feld-Definitionen: `internal/model/` und `docs/reference/api_contract.md` Sektio
 
 Frontend **does not** directly call E-Mail/SMS channels. Instead:
 - User configures subscriptions in `/account`
-- Backend scheduler handles actual sends (cron-based)
+- Go-Cron (`internal/scheduler/`) triggers, Python-Core (`/api/scheduler/*`) decides due-ness and sends
 - Frontend displays subscription status + last-send timestamps
 
 ---

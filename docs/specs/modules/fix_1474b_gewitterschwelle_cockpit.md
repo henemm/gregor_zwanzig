@@ -184,7 +184,7 @@ Known Limitations zur heutigen Alleinstellung von Gewitter).
 
 **Regressions-ACs (PFLICHT, aus dem Kontext-Dokument)**
 
-- **AC-1 (SMS/Telegram bleiben am Standard-Trip bit-identisch):** Given ein Trip OHNE eigene
+- **AC-1:** (SMS/Telegram bleiben am Standard-Trip bit-identisch) Given ein Trip OHNE eigene
   Gewitter-Schwellen-Einstellung / When das SMS-Kürzel `TH:` und die Telegram-Fußzeile für
   eine Etappe mit gemischten Gewitterstufen gerendert werden / Then ist der erzeugte Text
   exakt derselbe wie vor dieser Änderung.
@@ -192,7 +192,7 @@ Known Limitations zur heutigen Alleinstellung von Gewitter).
     `tests/tdd/test_daywindow_configurable.py`) laufen ohne Codeänderung an diesen Dateien
     unverändert grün.
 
-- **AC-2 (Cockpit: eine risikofreie Etappe bleibt grün):** Given eine Etappe ohne jedes
+- **AC-2:** (Cockpit: eine risikofreie Etappe bleibt grün) Given eine Etappe ohne jedes
   erkannte Risiko (kein Gewitter, kein Wind-/Regen-/Sicht-Risiko) / When die
   Cockpit-Etappenfarbe berechnet wird / Then bleibt sie „grün" — unverändert.
   - Test: der bestehende `tests/tdd/test_stage_weather_parity.py::
@@ -202,7 +202,7 @@ Known Limitations zur heutigen Alleinstellung von Gewitter).
 
 **Hälfte B — Cockpit**
 
-- **AC-3 (Cockpit zeigt „leicht" künftig als Gelb):** Given eine Etappe, deren einziges
+- **AC-3:** (Cockpit zeigt „leicht" künftig als Gelb) Given eine Etappe, deren einziges
   erkanntes Risiko ein leichtes Gewitter ist (`ThunderLevel.LOW`, sonst keine Risiken) /
   When die Cockpit-Etappenfarbe berechnet wird / Then zeigt sie „gelb" — nicht mehr „grün"
   wie vor dieser Änderung, aber auch keine neue, vierte Farbe.
@@ -212,7 +212,7 @@ Known Limitations zur heutigen Alleinstellung von Gewitter).
     (`has_any_risk`), liefert dieselbe Fixture fälschlich `"green"` — der Test muss das
     fangen.
 
-- **AC-4 (Cockpit: „mittel"/„hoch" bleiben unverändert gelb/rot):** Given Etappen mit
+- **AC-4:** (Cockpit: „mittel"/„hoch" bleiben unverändert gelb/rot) Given Etappen mit
   mittlerem bzw. hohem Gewitter-Risiko / When die Cockpit-Etappenfarbe berechnet wird /
   Then bleiben sie „gelb" bzw. „rot" — unverändert gegenüber vor dieser Änderung.
   - Test: zwei Fixtures (`ThunderLevel.MED`, `ThunderLevel.HIGH`) über
@@ -220,7 +220,7 @@ Known Limitations zur heutigen Alleinstellung von Gewitter).
 
 **Hälfte A — Mail/SMS-Konsistenz**
 
-- **AC-5 (Prosa-Satz meldet am Standard-Trip künftig schon ab „leicht"):** Given ein Trip
+- **AC-5:** (Prosa-Satz meldet am Standard-Trip künftig schon ab „leicht") Given ein Trip
   OHNE eigene Gewitter-Schwellen-Einstellung, dessen Stundenreihe für eine Etappe NUR
   „leicht" (nie „mittel"/„hoch") erreicht / When die Mail-Pille „Gewitter" gerendert wird /
   Then erscheint der Satz „Gewitter ab HH:00 · stärkste HH:00" — anders als vor dieser
@@ -244,7 +244,7 @@ Known Limitations zur heutigen Alleinstellung von Gewitter).
     `format_trend_tokens` geschleust; beide Ausgaben auf „kein Auslösen bei reinem leicht"
     geprüft.
 
-- **AC-7 (Trend-Block war bisher NICHT konfigurierbar — jetzt schon):** Given ein Trip,
+- **AC-7:** (Trend-Block war bisher NICHT konfigurierbar — jetzt schon) Given ein Trip,
   dessen Gewitter-Erwähnungsschwelle einmal auf den Ordinalwert von „leicht" (1.0, Standard)
   und einmal auf „mittel" (2.0) gestellt ist / When der Mail-Trend-Block für dieselbe
   Etappe mit gemischten Stufen gerendert wird / Then unterscheidet sich die im Text

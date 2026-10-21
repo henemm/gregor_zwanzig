@@ -157,7 +157,7 @@ where_when = f" {_where_when(e)}" if e.segment_id else ""
     Zeile ~747-766) auf denselben neuen Wortlaut nachgezogen — diese Datei läuft NUR mit
     `-m "email"` (Marker, s. AC-6), sonst wird sie still deselektiert.
 
-- **AC-4 (Regressionsschutz #958):** Given dieselben Events wie im bestehenden
+- **AC-4:** (Regressionsschutz #958) Given dieselben Events wie im bestehenden
   `over_thr()`-Test (steigende UND fallende Richtung, gleicher Betrag) / When
   `over_thr()`/`side_label()` unverändert aufgerufen werden / Then liefern beide exakt
   dieselben Rückgabewerte wie vor diesem Fix — die #1865-Textänderung darf NUR die
@@ -168,7 +168,7 @@ where_when = f" {_where_when(e)}" if e.segment_id else ""
     für die AC-1/AC-2-Fixture-Events dieselben Werte liefern wie vor der Änderung
     (Funktionsaufruf, kein Text-Vergleich).
 
-- **AC-5 (Regressionsschutz #1170):** Given den bestehenden Compare-Bündel-Fall (ein
+- **AC-5:** (Regressionsschutz #1170) Given den bestehenden Compare-Bündel-Fall (ein
   einzelner Vergleichs-Ort, zwei Metriken, `segment_id` nie gesetzt) / When
   `render_email()` den Multi-Event-Datenblock rendert / Then bleibt die Ausgabe
   UNVERÄNDERT (kein `"km 0–0"`- oder sonstiger neuer Zusatz) — der #1861-Differenzierer
@@ -181,7 +181,7 @@ where_when = f" {_where_when(e)}" if e.segment_id else ""
     `True` liefern lässt, schrieb `"km 0–0"` in jede Compare-Zeile und ließ ihn trotzdem
     grün. Gegenprobe nachgemessen: mit der Assertion ist die Mutation rot.
 
-- **AC-6 (gebundene Tests grün):** Given den vollständigen geänderten Renderer / When die
+- **AC-6:** (gebundene Tests grün) Given den vollständigen geänderten Renderer / When die
   ZWEI folgenden Aufrufe ausgeführt werden / Then sind alle fünf Dateien grün
   (Renderer-Commit-Gate #811-Vorbedingung):
   1. `uv run pytest tests/tdd/test_alert_bundle_958ff.py tests/tdd/test_issue_1170_compare_alert_config.py tests/tdd/test_alert_multi_event_where_when.py tests/tdd/test_issue_811_mode_matrix.py`

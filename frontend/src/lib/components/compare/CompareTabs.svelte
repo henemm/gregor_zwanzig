@@ -16,6 +16,7 @@
 	import PreviewTab from '$lib/components/shared/PreviewTab.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	import VersandTab from '$lib/components/shared/VersandTab.svelte';
+	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
 	// SaveStatus-Typ/Helper (der Chip selbst kommt seit #2284 S2 vom SubscriptionHeader).
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
@@ -862,6 +863,10 @@
 					</Card>
 				</div>
 				{/if}
+
+				<!-- Issue #2281: Versand-Historie, geteilter Baustein mit dem Trip-Hub
+				     (mobil und Desktop). -->
+				<BriefingHistory id={preset.id} kind="vergleich" />
 
 				<!-- Verifikations-Hinweis -->
 				<div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3)">

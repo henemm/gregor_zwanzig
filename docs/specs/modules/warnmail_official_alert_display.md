@@ -146,7 +146,7 @@ per-Event-Provider im Footer wünscht (dann eigenes Issue, da model.py-Änderung
 
 ## Acceptance Criteria
 
-- **AC-1 (Befund 1, #1326a):** Given ein Trip mit vielen Segmenten (z.B. 63)
+- **AC-1:** (Befund 1, #1326a) Given ein Trip mit vielen Segmenten (z.B. 63)
   und einer amtlichen Warnung, die nur 1 Segment betrifft / When die
   Warn-Karte (E-Mail-HTML, Standalone oder eingebettet) gerendert wird / Then
   erscheinen KEINE durchgestrichenen Chips der übrigen 62 Segmente — die Karte
@@ -157,7 +157,7 @@ per-Event-Provider im Footer wünscht (dann eigenes Issue, da model.py-Änderung
     `.seg.off` UND auf Abwesenheit der 62 unbetroffenen Segment-Bezeichner
     prüfen (kein Datei-Inhalts-Check, sondern tatsächliches Renderer-Ergebnis).
 
-- **AC-2 (Befund 2, #1326b):** Given eine gemappte Gefahr mit deutschem
+- **AC-2:** (Befund 2, #1326b) Given eine gemappte Gefahr mit deutschem
   Anzeigetext „Gewitter" und rohem, abweichendem Quell-Label „Orange
   Thunderstorm Warning" / When Betreff UND Body (HTML/Plain/Telegram/SMS)
   gerendert werden / Then erscheint NUR „Gewitter" — nirgends die Kombination
@@ -168,7 +168,7 @@ per-Event-Provider im Footer wünscht (dann eigenes Issue, da model.py-Änderung
     label="Orange Thunderstorm Warning")` aufrufen, Betreff+Body auf
     Abwesenheit des Roh-Labels UND Anwesenheit von „Gewitter" prüfen.
 
-- **AC-3 (Befund 3, #1248):** Given mehrere Warnungen mit VERSCHIEDENEM Umfang
+- **AC-3:** (Befund 3, #1248) Given mehrere Warnungen mit VERSCHIEDENEM Umfang
   (unterschiedliche `scope_ids`, egal ob `scope_kind="route"` oder
   `"locations"`) / When der Betreff gerendert wird / Then nennt der Betreff
   KEIN einzelnes Segment/keinen einzelnen Ort als gemeinsamen Umfang, sondern
@@ -181,7 +181,7 @@ per-Event-Provider im Footer wünscht (dann eigenes Issue, da model.py-Änderung
     (Fr)"` (statt `"Segment 3 · ..."`) umgestellt werden — reproduziert exakt
     den Bug (führendes Segment fälschlich als Gesamt-Umfang behauptet).
 
-- **AC-4 (#1251):** Given eine gebündelte Warn-Karte aus zwei verschiedenen
+- **AC-4:** (#1251) Given eine gebündelte Warn-Karte aus zwei verschiedenen
   amtlichen Quellen (z.B. GeoSphere Austria + Météo-France) / When die
   Quelle-Box (Standalone-HTML) bzw. die Quellen-Angabe im eingebetteten
   Warn-Block gerendert wird / Then nennt die Mail BEIDE beteiligten Quellen
@@ -192,7 +192,7 @@ per-Event-Provider im Footer wünscht (dann eigenes Issue, da model.py-Änderung
     aufrufen, geprüft wird dass BEIDE Quell-Anzeigenamen im Output stehen
     (nicht nur einer).
 
-- **AC-5 (Befund 4a, #1338 Footer):** Given eine Mail eines beliebigen Typs
+- **AC-5:** (Befund 4a, #1338 Footer) Given eine Mail eines beliebigen Typs
   wird gerendert / When die Herkunfts-Fußzeile (Zeile 2, `build_origin_footer`)
   gebaut wird / Then zeigt Zeile 2 je nach Mail-Typ die tatsächliche
   Datenquelle statt des internen Renderer-Pfads oder des Git-Fallbacks
@@ -213,7 +213,7 @@ per-Event-Provider im Footer wünscht (dann eigenes Issue, da model.py-Änderung
     werden; AC-9 dort (`_deployed_commit`-Verhalten selbst) bleibt als
     Hilfsfunktion ggf. bestehen, wird aber nicht mehr in Zeile 2 verbaut.
 
-- **AC-6 (Befund 4b, #1338 Format):** Given ein Abweichungs-Alarm (Trip) mit
+- **AC-6:** (Befund 4b, #1338 Format) Given ein Abweichungs-Alarm (Trip) mit
   eingebetteten amtlichen Warnungen (`official_notices` gesetzt) / When
   `_dispatch_alert_message` die Mail baut / Then wird der amtliche Zusatzblock
   über `render_warn_block(notices, variant="embedded", ...)` gerendert (wie

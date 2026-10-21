@@ -42,11 +42,7 @@ from services.alert_briefing_anchor import (
     write_anchor_and_reset_memory,
 )
 from services.alert_check_state import report_unit_failure
-from services.briefing_slots import (
-    BriefingSlotStore,
-    lege_beschaedigte_datei_beiseite,
-    lesefehler,
-)
+from services.briefing_slots import BriefingSlotStore
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
 from services.user_tier import premium_sms_allowed, sms_allowed
@@ -2383,32 +2379,14 @@ class TripReportSchedulerService:
         die bestehenden Schlüssel bleiben unverändert, Go ignoriert den neuen
         (s.o.).
         """
-        path = get_data_dir(self._user_id) / "briefing_log.json"
-        data = {"entries": []}
-        if path.exists():
-            grund = lesefehler(path)
-            if grund is None:
-                data = json.loads(path.read_text())
-            else:  # #2231 AC-6: beiseitelegen statt Absturz nach dem Versand
-                if lege_beschaedigte_datei_beiseite(
-                    path, grund, datetime.now(tz=timezone.utc), logger,
-                ) is None:
-                    return  # Original bleibt; ERROR ist geloggt, kein Absturz
-        eintrag: Dict[str, object] = {
-            "trip_id": trip_id,
-            "kind": kind,
-            "sent_at": datetime.now(tz=timezone.utc).isoformat(),
-            "channels": channels,
-            "on_demand": angefordert,
-        }
-        if mail_empfaenger:
-            eintrag["mail_to"] = mail_empfaenger
-        data["entries"].append(eintrag)
-        # Issue #1614: ein frischer Nutzer ohne jedes vorherige Datenverzeichnis
-        # (kein Trip-Snapshot, kein Alert-State) hatte hier noch kein
-        # Zielverzeichnis — path.write_text() scheiterte mit FileNotFoundError.
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, indent=2))
+        # Issue #2281: duenner Wrapper um den geteilten, gesperrten Schreib-
+        # Helfer (Trip/Ortsvergleich). `trip_id` bleibt zusaetzlich im Eintrag.
+        from services.briefing_log import append_briefing_log
+
+        append_briefing_log(
+            self._user_id, "trip", trip_id, kind, channels, angefordert,
+            mail_empfaenger,
+        )
 
     def _convert_trip_to_segments(
         self,

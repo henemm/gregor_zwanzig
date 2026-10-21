@@ -178,7 +178,7 @@ ein, das Hagelsignal bleibt weiterhin außen vor."
 
 ## Acceptance Criteria
 
-- **AC-1 (Blitzpotenzial-Dreiteilung nach PO-Tabelle, mit Plausibilitätsankern):** Given die
+- **AC-1:** (Blitzpotenzial-Dreiteilung nach PO-Tabelle, mit Plausibilitätsankern) Given die
   Blitzpotenzial-Werte 4,9 / 5,0 / 19,9 / 20,0 / 49,9 / 50,0 sowie die beiden PO-Messwerte vom
   2026-08-02 (GR20/Refuge de Petra Piana 88,2 J/kg; Zillertal, ruhiges Wetter, 0,9 J/kg) / When
   `thunder_level_from_signals()` mit jeweils NUR diesem Signal (Wettercode, Blitzdichte, CAPE
@@ -191,7 +191,7 @@ ein, das Hagelsignal bleibt weiterhin außen vor."
     0,075) statt der eigenen Blitzpotenzial-Schwellen, liefert bereits 4,9 fälschlich `HIGH`
     (weit über 0,075) — der Test muss das fangen.
 
-- **AC-2 (DRY — eine geteilte Leiter-Funktion, keine Kopie, #1481):** Given die
+- **AC-2:** (DRY — eine geteilte Leiter-Funktion, keine Kopie, #1481) Given die
   Schwellen-Übersetzung für Blitzdichte UND Blitzpotenzial / When beide Zweige in
   `thunder_level_from_signals()` ausgeführt werden / Then rufen beide dieselbe benannte
   Leiter-Funktion `(wert, low_min, med_min, high_min) -> ThunderLevel` auf — es gibt in der
@@ -208,7 +208,7 @@ ein, das Hagelsignal bleibt weiterhin außen vor."
     nutzen, sinkt die per AST gezählte Aufrufzahl der geteilten Funktion auf 1 (nur
     Blitzdichte) — der Test muss das fangen.
 
-- **AC-3 (None ≠ NONE für das vierte Signal):** Given `lightning_potential_jkg=None` (kein
+- **AC-3:** (None ≠ NONE für das vierte Signal) Given `lightning_potential_jkg=None` (kein
   Signal) UND alle anderen Signale `None` / When `thunder_level_from_signals()` aufgerufen
   wird / Then liefert sie `None` (keine Aussage). Given STATTDESSEN
   `lightning_potential_jkg=0.0` (aktiv geprüft, unter 5) bei sonst `None` / Then liefert sie
@@ -219,7 +219,7 @@ ein, das Hagelsignal bleibt weiterhin außen vor."
     (z. B. weil intern ein Default `0.0` statt `None` verwendet wird), liefern beide Aufrufe
     `ThunderLevel.NONE` — der Test muss das fangen.
 
-- **AC-4 (Wirkungs-Nachweis über den Produktionspfad — die Aussparung aus S2b AC-8 fällt):**
+- **AC-4:** (Wirkungs-Nachweis über den Produktionspfad — die Aussparung aus S2b AC-8 fällt)
   Given eine Position im ICON-D2-Zuständigkeitsgebiet (Karnischer Höhenweg, 46,40 N / 12,52 O)
   mit einem aufgezeichneten ICON-D2-Blitzpotenzial-Wert 48,1562 J/kg
   (`icon_d2_alpen_lpi_2026080315_024.grib2.bz2`, unveränderte S2b-Fixture) UND einer
@@ -243,7 +243,7 @@ ein, das Hagelsignal bleibt weiterhin außen vor."
     Entscheidung 5; in #1457 erzeugte die isolierte Variante dreimal ein grünes AC ohne
     Wirkung.
 
-- **AC-5 (doc-compliance-test — Docstring folgt dem neuen Verhalten):** Given der Docstring
+- **AC-5:** (doc-compliance-test — Docstring folgt dem neuen Verhalten) Given der Docstring
   von `thunder_enrichment.enrich_thunder()` behauptete bisher, Blitzpotenzial UND Hagel gingen
   „BEWUSST nicht in die Stufen-Fusion" ein (S2b AC-8) / When der Docstring nach dieser Scheibe
   gelesen wird / Then behauptet er das für Blitzpotenzial **nicht mehr** — er hält stattdessen
@@ -257,7 +257,7 @@ ein, das Hagelsignal bleibt weiterhin außen vor."
   - Gegenprobe: Bleibt der alte Satz unverändert stehen, während das Verhalten (AC-4) bereits
     geändert ist, steht eine falsche Zusicherung im Code — der Test muss das fangen.
 
-- **AC-6 (Abgrenzung — Hagel bleibt draußen, S5/#1475):** Given `hail_potential_grau_gsp` ist
+- **AC-6:** (Abgrenzung — Hagel bleibt draußen, S5/#1475) Given `hail_potential_grau_gsp` ist
   für einen Datenpunkt gefüllt, `lightning_potential_lpi_jkg` ist `None` / When die Fusion über
   den regulären Weg läuft / Then bleibt `dp.thunder_level` identisch zum selben Fall OHNE
   gesetztes Hagelfeld — Hagel liefert weiterhin keinen eigenen Beitrag zur Stufe.

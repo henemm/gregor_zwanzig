@@ -168,7 +168,7 @@ direkt — die Golden-Dateien bleiben ausschließlich der Paritäts-Wächter fü
   - Test: Klartext-Ausgabe des konfigurierten Ausblicks, Zeilen-Tokens gegen `col_label`
     verglichen, Vergleich mit dem Klartext-Etappentabellen-Kopf derselben Mail.
 
-- **AC-4 (korrigiert in TDD-RED, 2026-09-15 — ursprüngliche Fassung war widersprüchlich):**
+- **AC-4:** (korrigiert in TDD-RED, 2026-09-15 — ursprüngliche Fassung war widersprüchlich)
   Given eine Ortsvergleichs- oder Trip-Mail (Klartext) OHNE konfigurierte Auswahl (Pfad 1,
   `render_outlook_plain()`) / When der Ausblick-Block gerendert wird / Then trägt **jedes
   tatsächlich gerenderte Token** die `col_label`-Überschrift seiner Größe — die Temperatur
@@ -197,7 +197,7 @@ direkt — die Golden-Dateien bleiben ausschließlich der Paritäts-Wächter fü
     dass die Trip-Legende nach der Umstellung weiterhin die Ausblick-Kürzel korrekt auflöst —
     diese RED-Testreihe bewacht nur die Compare-Seite.
 
-- **AC-6 (Temperatur-Kollision, konfigurierbarer Ausblick):** Given eine Ortsvergleichs-Mail mit
+- **AC-6:** (Temperatur-Kollision, konfigurierbarer Ausblick) Given eine Ortsvergleichs-Mail mit
   `outlook_metrics`-Auswahl `temperature` mit den drei Aggregationen min, max UND avg gleichzeitig
   gewählt (Pfad 2) / When `outlook_columns()` die Spalten baut / Then verschmilzt Min+Max zu einer
   Spannen-Spalte (`_merge_min_max_pairs()`, unverändert) und die verbleibende Avg-Spalte trägt
@@ -207,7 +207,7 @@ direkt — die Golden-Dateien bleiben ausschließlich der Paritäts-Wächter fü
     Temperatur-Aggregationen, `<th>`-Texte des gerenderten Ausblicks enthalten `"Temp"` (Spanne)
     und `"Temp Mittel"` als zwei unterscheidbare Strings, nie zweimal denselben Text.
 
-- **AC-7 (Temperatur-Kollision, Standardfall-Ausblick):** Given eine Trip- oder
+- **AC-7:** (Temperatur-Kollision, Standardfall-Ausblick) Given eine Trip- oder
   Ortsvergleichs-Mail OHNE konfigurierte Auswahl (Pfad 1, Standardfall mit fest verdrahteten
   Minimum-/Maximum-Temperaturspalten `N`/`D`) / When der Ausblick-Block gerendert wird / Then
   tragen die beiden Temperaturspalten unterscheidbare Köpfe (`"Temp Min"`/`"Temp Max"` oder
@@ -218,7 +218,7 @@ direkt — die Golden-Dateien bleiben ausschließlich der Paritäts-Wächter fü
     gesetzt), `<th>`-Texte an Position von `N` und `D` sind zwei unterscheidbare Strings, beide
     enthalten `"Temp"` als Präfix; Spaltenanzahl bleibt bei acht (`Tag` + 7) wie bisher.
 
-- **AC-8 (Ableitung statt Doppelpflege, Mutations-Gegenprobe):** Given ein `col_label`-Wert einer
+- **AC-8:** (Ableitung statt Doppelpflege, Mutations-Gegenprobe) Given ein `col_label`-Wert einer
   Ausblick-Größe im Metrik-Katalog wird verfälscht (z. B. `temperature.col_label` von `"Temp"` auf
   einen Testwert geändert) / When die Ausblick-Tests aus AC-1/AC-2 laufen / Then werden sie rot,
   weil der Ausblick-Kopf direkt aus dem Katalogfeld abgeleitet ist und nicht mehr an einer

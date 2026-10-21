@@ -239,7 +239,7 @@ def _args_after(tokens: list[str], start: int) -> list[str]:
   werden.
   - Test: End-to-End über Payload, `BLOCKED` in stderr.
 
-- **AC-6 (Adversary-Fund F001, PFLICHT):** Given ein breiter Lauf hinter
+- **AC-6:** (Adversary-Fund F001, PFLICHT) Given ein breiter Lauf hinter
   einem Launcher-Präfix (`env`, `nice`, `timeout 60`, `sudo`, `xargs`,
   jeweils gefolgt von `pytest tests/` ohne benannte Datei) / When das volle
   Gate geprüft wird / Then bleibt der Befehl BLOCKIERT für JEDEN dieser
@@ -248,7 +248,7 @@ def _args_after(tokens: list[str], start: int) -> list[str]:
   KEINEN davon mehr (Regression).
   - Test: End-to-End über Payload, je Launcher-Variante, `BLOCKED` in stderr.
 
-- **AC-7 (Adversary-Fund F002):** Given `sleep 1 & pytest tests/`
+- **AC-7:** (Adversary-Fund F002) Given `sleep 1 & pytest tests/`
   (Hintergrund-Trenner `&`, kein `&&`) / When geprüft wird / Then bleibt der
   Befehl BLOCKIERT.
   - Test: End-to-End über Payload.
@@ -266,7 +266,7 @@ def _args_after(tokens: list[str], start: int) -> list[str]:
     wenn sie unter der aktuellen `_TEXT_MATCH_COMMANDS`-Liste keinen
     beobachtbaren Unterschied macht.
 
-- **AC-8 (Adversary-Fund F005, Runde 2, PFLICHT):** Given ein Kommando, bei
+- **AC-8:** (Adversary-Fund F005, Runde 2, PFLICHT) Given ein Kommando, bei
   dem "pytest" unmittelbar hinter einem Freitext-Flag eines NICHT-Python-
   Kommandos steht (`git commit -m pytest`, `git log --grep pytest`,
   `grep -m pytest datei`) / When das volle Gate geprüft wird / Then wird
@@ -275,13 +275,13 @@ def _args_after(tokens: list[str], start: int) -> list[str]:
   0 für alle drei Beispiele).
   - Test: End-to-End über Payload, je Beispiel.
 
-- **AC-9 (Regressionswächter zu AC-8):** Given `python3 -m pytest
+- **AC-9:** (Regressionswächter zu AC-8) Given `python3 -m pytest
   tests/tdd/x.py` (der einzige legitime `-m`-Fall) / When geprüft wird /
   Then bleibt der Aufruf weiterhin erkannt — die AC-8-Korrektur darf
   `python -m pytest` nicht mit ausschließen.
   - Test: `_pytest_invocations()` direkt + End-to-End.
 
-- **AC-10 (Adversary-Fund F006, Runde 3, PFLICHT):** Given ein bekannter
+- **AC-10:** (Adversary-Fund F006, Runde 3, PFLICHT) Given ein bekannter
   Prozess-Launcher mit EINEM Flag zwischen ihm und `pytest`
   (`sudo -E pytest tests/`, `nice -n10 pytest tests/`,
   `xargs -I{} pytest {} tests/`, `xargs -n1 pytest tests/`,
@@ -291,7 +291,7 @@ def _args_after(tokens: list[str], start: int) -> list[str]:
   reproduziert (RC=0 statt 2 für alle fünf Beispiele).
   - Test: End-to-End über Payload, je Beispiel.
 
-- **AC-11 (Adversary-Fund F007, Runde 3):** Given ein pfad-qualifizierter
+- **AC-11:** (Adversary-Fund F007, Runde 3) Given ein pfad-qualifizierter
   Python-Interpreter (`/usr/bin/python3 -m pytest tests/`,
   `.venv/bin/python3 -m pytest tests/`, `/usr/bin/python3.12 -m pytest
   tests/`) / When geprüft wird / Then bleibt der Befehl BLOCKIERT — die
@@ -300,7 +300,7 @@ def _args_after(tokens: list[str], start: int) -> list[str]:
   - Test: End-to-End über Payload, je Beispiel + Unit gegen
     `_pytest_invocations()`.
 
-- **AC-12 (Adversary-Fund F-ADV1, Runde 4, KRITISCH, PFLICHT):** Given ein
+- **AC-12:** (Adversary-Fund F-ADV1, Runde 4, KRITISCH, PFLICHT) Given ein
   erkannter breiter pytest-Aufruf, gefolgt von einem Hintergrund-Trenner
   `&` und einem beliebigen weiteren Token mit `.py`-Endung
   (`pytest tests/ & x.py`, `pytest tests/ & echo x.py`) / When das volle
