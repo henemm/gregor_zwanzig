@@ -51,7 +51,7 @@ def _nutzer_mit_allem() -> tuple[str, str]:
     return uid, preset_id
 
 
-def test_eintraege_landen_nur_beim_versendenden_nutzer(vergleich):
+def test_eintraege_landen_nur_beim_versendenden_nutzer(vergleich):  # noqa: F401, F811
     """AC-11: A sendet (Vergleich Cron + Hand, Trip) -> nur As Log."""
     a, preset_a = _nutzer_mit_allem()
     b, _preset_b = _nutzer_mit_allem()

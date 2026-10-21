@@ -165,8 +165,14 @@ export function plannedBriefings(
 
 	const isSent = (kind: string): boolean => {
 		if (!sentLog || !tripId) return false;
+		// #2281: Typ UND Kennung (Muster alertsForTrip) — ein Ortsvergleich mit
+		// gleicher ID zaehlt nie als Trip-Briefing.
 		return sentLog.some(
-			(e) => e.trip_id === tripId && e.kind === kind && e.sent_at.startsWith(todayPrefix)
+			(e) =>
+				e.entity_type === 'trip' &&
+				e.entity_id === tripId &&
+				e.kind === kind &&
+				e.sent_at.startsWith(todayPrefix)
 		);
 	};
 

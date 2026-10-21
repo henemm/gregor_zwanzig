@@ -4,6 +4,7 @@
 	import TripStageRow from './TripStageRow.svelte';
 	import ReportLine from './ReportLine.svelte';
 	import ChannelDot from './ChannelDot.svelte';
+	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
 	import type { Trip } from '$lib/types';
 	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
 	// Feature #1435 Etappe E3a: Wetter-Metriken-Block. `metricsCatalog` kommt
@@ -115,6 +116,9 @@
 				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('versand')}>Zeitplan bearbeiten →</Btn>
 			</div>
 		</Card>
+
+		<!-- Issue #2281: Versand-Historie, geteilter Baustein mit dem Ortsvergleich. -->
+		<BriefingHistory id={trip.id} kind="route" />
 
 		<Card padding={18}>
 			<Eyebrow style="margin-bottom: 10px;">Alerts (letzte 7 Tage)</Eyebrow>

@@ -629,11 +629,16 @@ export interface StagesWeatherResponse {
 }
 
 // Issue #393 — Cockpit-Kacheln: Versandstatus + Alarm-Historie.
+// Issue #2281: kind-neutral wie AlertLogEntry (#1467). `kind` ist der Slot.
+// `trip_id` ist optionales Altfeld; Go leitet entity_id/entity_type beim Lesen ab.
 export interface BriefingLogEntry {
-	trip_id: string;
+	entity_id: string;
+	entity_type: string;
+	trip_id?: string;
 	kind: 'morning' | 'evening';
 	sent_at: string;
 	channels: string[];
+	on_demand?: boolean;
 }
 
 // Issue #1467 S1: EINE Kennung + Typfeld statt trip_id/preset_id. `trip_id` ist

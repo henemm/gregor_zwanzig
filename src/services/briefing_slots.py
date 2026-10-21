@@ -429,6 +429,10 @@ class BriefingSlotStore:
         for eintrag in data.get("entries", []):
             if not isinstance(eintrag, dict):
                 continue
+            # #2281 AC-5: nur Trip-Eintraege (Altbestand ohne Typ = Trip) --
+            # ein Ortsvergleich mit gleicher ID nimmt dem Trip kein Briefing.
+            if eintrag.get("entity_type") not in (None, "trip"):
+                continue
             if eintrag.get("trip_id") != trip_id or eintrag.get("kind") != slot:
                 continue
             if eintrag.get("on_demand") is True:

@@ -53,7 +53,7 @@ FAELLE = [
 
 @pytest.mark.parametrize("on_demand, tage_ab_ortstag, slot", FAELLE)
 def test_vergleich_versand_schreibt_genau_einen_compare_eintrag(
-    vergleich, on_demand, tage_ab_ortstag, slot,
+    vergleich, on_demand, tage_ab_ortstag, slot,  # noqa: F401, F811
 ):
     """AC-1 / Test 1.
 
@@ -95,7 +95,7 @@ def test_vergleich_versand_schreibt_genau_einen_compare_eintrag(
 
 
 @pytest.mark.parametrize("slot", ["morning", "evening"])
-def test_trip_versand_schreibt_trip_eintrag_mit_entity_feldern(mitschrift, slot):
+def test_trip_versand_schreibt_trip_eintrag_mit_entity_feldern(mitschrift, slot):  # noqa: F401, F811
     """AC-1 / Test 2.
 
     GIVEN ein Trip (nur E-Mail).

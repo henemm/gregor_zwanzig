@@ -247,7 +247,7 @@ func New(deps Deps) chi.Router {
 	r.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", handler.ConfirmWaypointHandler(deps.Store))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(deps.Store))
 	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherProxyHandler(deps.Config.PythonCoreURL))
-	r.Get("/api/trips/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
+	r.Get("/api/trips/{id}/briefing-history", handler.TripBriefingHistoryHandler(deps.Store))
 	r.Get("/api/trips/{id}/weather-config", handler.GetTripWeatherConfigHandler(deps.Store))
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(deps.Store))
 	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(deps.Store))
@@ -295,6 +295,7 @@ func New(deps Deps) chi.Router {
 	r.Put("/api/briefings/{id}", handler.UpdateBriefingHandler(deps.Store))
 	r.Delete("/api/briefings/{id}", handler.DeleteBriefingHandler(deps.Store))
 	// Issue #2283: kind-neutrale Vorschau + Alarm-Vorschau (Alt-Routen oben als Delegates).
+	r.Get("/api/briefings/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
 	r.Get("/api/briefings/{id}/preview", handler.BriefingPreviewHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/briefings/{id}/alert-preview", handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL))
 	// Issue #2280: kind-neutraler Handversand (Alt-Routen oben sind Delegates).

@@ -70,7 +70,7 @@ def _beiseite_pruefen(uid: str, vorher: bytes) -> None:
 
 
 @KAPUTT
-def test_vergleich_versand_trotz_kaputtem_log(vergleich, inhalt):
+def test_vergleich_versand_trotz_kaputtem_log(vergleich, inhalt):  # noqa: F401, F811
     """AC-7 (Ortsvergleich, Cron).
 
     GIVEN ``briefing_log.json`` des Nutzers ist kaputt.
@@ -94,7 +94,7 @@ def test_vergleich_versand_trotz_kaputtem_log(vergleich, inhalt):
 
 
 @KAPUTT
-def test_trip_versand_trotz_kaputtem_log(mitschrift, inhalt):
+def test_trip_versand_trotz_kaputtem_log(mitschrift, inhalt):  # noqa: F401, F811
     """AC-7 (Trip).
 
     GIVEN ``briefing_log.json`` des Nutzers ist kaputt.

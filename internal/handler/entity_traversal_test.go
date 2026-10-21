@@ -597,6 +597,8 @@ func entityConfigTestRouter(s *store.Store) *chi.Mux {
 	r.Get("/api/compare/presets/{id}", GetComparePresetHandler(s))
 	r.Get("/api/briefings/{id}", GetBriefingHandler(s))
 	r.Put("/api/briefings/{id}", UpdateBriefingHandler(s))
+	// #2281 AC-8: kind-neutrale Versand-Historie.
+	r.Get("/api/briefings/{id}/briefing-history", BriefingHistoryHandler(s))
 	return r
 }
 
@@ -619,6 +621,11 @@ func TestConfigAndBriefingRoutes_InvalidPathID_Rejected_F002(t *testing.T) {
 		// UpdateTripHandler — nur kind=vergleich erreicht den hier
 		// bewachten Pre-Check.
 		{"PUT_briefing_vergleich", http.MethodPut, "/api/briefings/" + invalidID + "?kind=vergleich", `{"name":"x"}`},
+		// #2281 AC-8: Versand-Historie prueft die Kennung (gueltiges kind,
+		// damit der ID-Check und nicht die kind-Pruefung die 400 liefert).
+		{"GET_briefing_history_route", http.MethodGet, "/api/briefings/" + invalidID + "/briefing-history?kind=route", ""},
+		{"GET_briefing_history_vergleich", http.MethodGet, "/api/briefings/" + invalidID + "/briefing-history?kind=vergleich", ""},
+		{"GET_briefing_history_dotdot", http.MethodGet, "/api/briefings/../briefing-history?kind=vergleich", ""},
 	}
 
 	for _, f := range faelle {
