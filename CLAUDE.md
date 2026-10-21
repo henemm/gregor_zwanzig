@@ -24,7 +24,7 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
                         Auth/Store/Scheduler     Provider -> Risk Engine -> Renderer -> Channel
 ```
 
-- **Go-API** (`internal/`, `cmd/`): Auth/Sessions, Mandantentrennung, Persistenz (`data/users/<user_id>/`), Cron-Scheduler, Proxy zum Python-Core
+- **Go-API** (`internal/`, `cmd/`): Auth/Sessions, Mandantentrennung, Persistenz (`data/users/<user_id>/`), Cron-Taktgeber (`internal/scheduler/`, einzige Zeitsteuerung — ruft `POST /api/scheduler/*` des Python-Core auf, der die Fälligkeit je Trip/Vergleich entscheidet und versendet), Proxy zum Python-Core
 - **Python-Core** (`api/`, `src/`): Wetter-Domäne (Provider Open-Meteo + Fallbacks, Risk Engine, Aggregation), alle Kanal-Renderer/-Transporte, Alerts, Inbound-Handler
 - Die Legacy-CLI (`python -m src.app.cli`, Priorität CLI > ENV > config.ini) ist Debug-Werkzeug, nicht der Produktivpfad
 
@@ -40,6 +40,7 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
 | `docs/reference/decision_matrix.md` | Provider-Ist-Stand (Open-Meteo + Fallback-Kette) |
 | `docs/reference/sms_format.md` | SMS-Wire-Vertrag (SSOT für SMS/Premium-SMS-Tokens) |
 | `docs/reference/renderer_email_spec.md` | E-Mail-Renderer-Vertrag |
+| `docs/reference/telegram_format.md` · `premium_sms_format.md` | Format-Referenz Telegram bzw. Premium-SMS (inReach) |
 | `docs/features/epic-134-cockpit-dashboard.md` | Trip-Cockpit-Startseite |
 | `docs/adr/README.md` | Index der Architektur-Entscheidungen |
 | `docs/README.md` | Wegweiser durch docs/ (Referenz vs. Archiv) |

@@ -47,12 +47,11 @@ Auslösung `>` laut AC-18).
 
 ### 2. Gelebte Grundsatzentscheidungen ohne ADR
 
-~~Kanal-Parität (#2133)~~ (**erledigt 2026-10-21:** ADR-0095) · ~~Zwei Test-Schichten~~ (**erledigt:** ADR-0094) · Trip/Compare-Code-Teilung (ADR-0026 war dafür reserviert) · PR statt
-Direkt-Push + CI-Merge-Regel · autonomer Deploy ohne Freigabe-Halt · Regel-Budget · Read-Modify-Write-Merge
-(hängt nur noch an der teilweise abgelösten 0031) · ADR-Nummernvergabe ohne Kollisionsschutz
-(wiederholte Umnummerierungen paralleler Sessions).
+**Erledigt 2026-10-21:** ADR-0094/0095 sowie 0097 Code-Teilung (0026 aufgegangen), 0098 Liefer-Workflow, 0099 autonomer Deploy, 0100 Regel-Budget, 0101 Read-Modify-Write-Merge. Offen: ADR-Nummernvergabe ohne Kollisionsschutz.
 
 ### 3. Wizard-Abschaffung unvollständig (ADR-0032)
+
+Code-Rest gebucht in #1199; ADR-0032-Nachtrag klärt `CompareNewEditor` (dünne Shell über geteilte Bausteine, s. ADR-0097). Kopfkommentar von `CompareNewEditor.svelte` verweist fälschlich auf „ADR-0029" (gemeint 0097) — Code, bei nächster Berührung korrigieren.
 
 - `frontend/src/lib/components/compare/compareWizardState.svelte.ts` und `compare/steps/` leben weiter;
   `feat_2277_s2c_compare_from_vorlage.md` (30.09.) baut noch darauf auf.
@@ -66,25 +65,20 @@ Direkt-Push + CI-Merge-Regel · autonomer Deploy ohne Freigabe-Halt · Regel-Bud
 `feat_1703_s8_compare_kanal_tabs.md:21`. Außerdem `forecast_confidence.md:21,42` (Confidence-Spalte/
 SMS-Symbole, widerspricht ADR-0005/#2233) und `warn_unavailable_hint.md:226` (`C+/C~/C?`).
 
-### 5. Gates/Konfiguration (`.claude/settings.json`, nicht Teil dieses PR)
+### 5. Gates/Konfiguration
 
-- **`data_schema_backup.py` ist nicht verdrahtet** — CLAUDE.md und Playbook behaupten automatischen
-  Pre-Snapshot bei Schema-Edits. Datenverlust-Schutz fehlt faktisch (sofern das Plugin ihn nicht einhängt).
-- `nebenbefund_gate.py` ist verdrahtet, die Datei existiert nicht (wirkungslos).
-- Abgelaufene Prüfdaten: `test_naming_gate` (selbst abgeschaltet 2026-10-09 → Namensregel nicht mehr
-  erzwungen), `tests/test_adr_index_drift.py` und `test_api_contract_drift.py` (2026-10-20).
-  `file_claim_gate` läuft am 2026-11-11 ab.
+**Erledigt 2026-10-21 (#2592):** `data_schema_backup.py` verdrahtet, toter `nebenbefund_gate`-Eintrag entfernt, Prüfdaten auf 2027-01-19 verlängert (gebucht in #1197). Offen: `file_claim_gate` läuft am 2026-11-11 ab (#1197).
 
 ### 6. Kleinere Lücken
 
-- `api_contract.md`: ~25 Go-Felder fehlen (User/SMS-Verifikation, Segment, Forecast); Drift-Test prüft
-  nur Trip/ComparePreset mit Teilwort-Treffern; Abschnitt „17)" dreifach vergeben.
-- Keine Format-Referenz für Telegram und Premium-SMS.
-- Normale SMS hat keinen Befehlseingang — reibt sich mit „jeder Kanal beantwortet jede Frage".
-- Scheduler-Zuständigkeit Go vs. Python unterschiedlich beschrieben.
+- ~~`api_contract.md`: ~25 Go-Felder fehlen (User/SMS-Verifikation, Segment, Forecast); Drift-Test prüft
+  nur Trip/ComparePreset mit Teilwort-Treffern; Abschnitt „17)" dreifach vergeben.~~ **Erledigt** (Felder ergänzt, 17/17.1/17.2; Drift-Test-Schwäche bleibt).
+- ~~Keine Format-Referenz für Telegram und Premium-SMS.~~ **Erledigt:** `telegram_format.md`, `premium_sms_format.md`.
+- Normale SMS hat keinen Befehlseingang — reibt sich mit „jeder Kanal beantwortet jede Frage". Ist-Stand in `sms_format.md` §1a; Produktfrage in #1199.
+- ~~Scheduler-Zuständigkeit Go vs. Python unterschiedlich beschrieben.~~ **Erledigt:** Go-Cron taktet, Python entscheidet/versendet (architecture.md, CLAUDE.md).
 - ~50 Specs ab 2026-05-11 nutzen AC-Schreibweisen (`**AC-1 (Titel):**`, `**AC-A1:**`), die die
   Gate-Regex nicht erkennt; 7 haben keine Given/When/Then-ACs.
-- `developer` vs. `developer-agent`: zwei Developer-Definitionen.
+- `developer` vs. `developer-agent`: zwei Developer-Definitionen (gebucht in #1197).
 - ~1 600 tote Pfade auf bewusst gelöschten Code bleiben als historische Verweise stehen.
 
 Detailberichte mit Datei:Zeile lagen im Session-Scratchpad; die hier genannten Stellen sind die
